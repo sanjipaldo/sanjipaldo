@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1761e8" />
+  <title>두고마켓 | 브랜드와 셀러를 연결하는 오픈마켓</title>
+  <link rel="icon" type="image/png" href="assets/doogomarket-symbol.png" />
+  <link rel="stylesheet" href="styles.css?v=19" />
+</head>
+<body>
+  <section id="loginView" class="login-screen seller-login-screen">
+    <div class="login-visual">
+      <div class="login-visual-mesh" aria-hidden="true"></div>
+      <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고마켓">
+        <span class="brand-mark"><img src="assets/doogomarket-symbol.png" alt=""></span>
+        <span class="brand-word"><b>두고마켓</b><small>DOOGO MARKET</small></span>
+      </div>
+      <div class="login-message">
+        <span>DOOGO MARKET SELLER</span>
+        <h1 id="sellerTypingText" class="typing-headline" aria-live="polite"></h1>
+        <p>상품 소싱부터 주문·송장·가격 변경까지<br>두고마켓이 공급과 판매를 하나의 흐름으로 연결합니다.</p>
+        <ul class="login-feature-list">
+          <li><i>✓</i>국내외 브랜드·공급사 상품 무제한 소싱</li>
+          <li><i>✓</i>주문 접수부터 송장 자동전송까지 한 흐름</li>
+          <li><i>✓</i>환불 확정과 동시에 두고머니 자동 정산</li>
+        </ul>
+      </div>
+      <div class="login-visual-footer"><button id="openPartnerCenter" class="partner-center-link" type="button"><span>P</span> 파트너센터 →</button><span>© 2026 DOOGO HOLDINGS</span></div>
+    </div>
+
+    <div class="login-panel">
+      <div class="login-box">
+        <div class="login-panel-brand brand-lockup" aria-label="두고마켓"><img src="assets/doogomarket-symbol.png" alt=""><span class="brand-word"><b>두고마켓</b><small>DOOGO MARKET</small></span></div>
+        <div class="login-heading"><span>SELLER CENTER</span><h2>두고마켓 시작하기</h2><p>위탁셀러 전용 계정으로 로그인해 주세요.</p></div>
+        <form id="loginForm" class="login-form" autocomplete="off">
+          <div class="login-field"><label for="loginId">아이디</label><input id="loginId" name="loginId" placeholder="아이디를 입력해 주세요" required autofocus></div>
+          <div class="login-field"><div class="password-label"><label for="loginPassword">비밀번호</label><button type="button" id="togglePassword">보기</button></div><input id="loginPassword" name="loginPassword" type="password" placeholder="비밀번호를 입력해 주세요" required></div>
+          <div class="login-options"><label><input id="rememberId" type="checkbox"> 로그인정보 저장</label><span>위탁셀러 전용</span></div>
+          <p id="loginError" class="login-error" role="alert"></p>
+          <button type="submit" class="login-submit">로그인</button>
+        </form>
+        <div class="demo-accounts">
+          <p>클릭해서 데모 계정 입력</p>
+          <div><button data-demo-login="seller">위탁셀러 데모 <b>seller / seller</b></button></div>
+        </div>
+        <div class="signup-prompt"><span>계정이 없으신가요?</span><button id="openSignup" type="button">무료 가입</button></div>
+        <div class="login-links"><button type="button" data-find-account>아이디·비밀번호 찾기</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="partnerLoginView" class="login-screen partner-login-screen" hidden>
+    <div class="login-visual partner-visual">
+      <div class="login-visual-mesh" aria-hidden="true"></div>
+      <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고마켓">
+        <span class="brand-mark"><img src="assets/doogomarket-symbol.png" alt=""></span>
+        <span class="brand-word"><b>두고마켓</b><small>DOOGO MARKET</small></span>
+      </div>
+      <div class="partner-badge">두고마켓 파트너센터</div>
+      <div class="login-message partner-message">
+        <span>SUPPLIER · MASTER</span>
+        <h1 id="partnerTypingText" class="typing-headline" aria-live="polite"></h1>
+        <p>공급사는 상품과 출고를 관리하고,<br>관리자는 모든 운영 현황을 확인합니다.</p>
+        <ul class="login-feature-list">
+          <li><i>✓</i>상품·재고·공급가 실시간 관리</li>
+          <li><i>✓</i>배송준비중 주문 송장 자동 발급</li>
+          <li><i>✓</i>월별 정산 리포트와 수수료 내역 확인</li>
+        </ul>
+      </div>
+      <div class="login-visual-footer"><button id="backToSellerLogin" class="partner-center-link" type="button">← 위탁셀러 로그인</button><span>© 2026 DOOGO HOLDINGS</span></div>
+    </div>
+    <div class="login-panel partner-panel">
+      <div class="login-box">
+        <div class="login-panel-brand brand-lockup" aria-label="두고마켓"><img src="assets/doogomarket-symbol.png" alt=""><span class="brand-word"><b>두고마켓</b><small>DOOGO MARKET</small></span></div>
+        <div class="partner-tabs" role="tablist" aria-label="파트너 로그인 유형">
+          <button class="active" type="button" data-partner-role="supplier">공급사</button>
+          <button type="button" data-partner-role="master">관리자</button>
+        </div>
+        <div class="login-heading partner-heading"><span>PARTNER CENTER</span><h2 id="partnerLoginTitle">공급사 로그인</h2><p id="partnerLoginDescription">상품·재고·주문·송장을 관리합니다.</p></div>
+        <form id="partnerLoginForm" class="login-form" autocomplete="off">
+          <div class="login-field"><label for="partnerLoginId">아이디</label><input id="partnerLoginId" name="loginId" placeholder="아이디를 입력해 주세요" required></div>
+          <div class="login-field"><div class="password-label"><label for="partnerLoginPassword">비밀번호</label><button type="button" id="togglePartnerPassword">보기</button></div><input id="partnerLoginPassword" name="loginPassword" type="password" placeholder="비밀번호를 입력해 주세요" required></div>
+          <div class="login-options"><label><input id="rememberPartnerId" type="checkbox"> 로그인정보 저장</label><span id="partnerAccessLabel">공급사 전용</span></div>
+          <p id="partnerLoginError" class="login-error" role="alert"></p>
+          <button type="submit" class="login-submit">로그인</button>
+        </form>
+        <div id="partnerDemoAccounts" class="demo-accounts"><p>클릭해서 데모 계정 입력</p><div><button data-partner-demo="supplier">공급사 데모 <b>sup / sup</b></button></div></div>
+        <div id="supplierSignupPrompt" class="signup-prompt"><span>공급사 계정이 없으신가요?</span><button id="openSupplierSignup" type="button">입점 회원가입</button></div>
+        <div id="partnerFindAccount" class="login-links"><button type="button" data-find-account>아이디·비밀번호 찾기</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="signupView" class="signup-screen" hidden>
+    <div class="signup-visual">
+      <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고마켓">
+        <span class="brand-mark"><img src="assets/doogomarket-symbol.png" alt=""></span>
+        <span class="brand-word"><b>두고마켓</b><small>DOOGO MARKET</small></span>
+      </div>
+      <div class="login-message"><span>BUSINESS REGISTRATION</span><h1>좋은 파트너와 함께,<br>더 쉬운 유통을 시작하세요.</h1><p>사업자 정보를 입력하고 승인 요청을 보내면<br>마스터 검토 후 서비스를 이용할 수 있습니다.</p></div>
+      <div class="login-visual-footer"><span>DOOGO MARKET BUSINESS</span><span>안전한 데모 환경</span></div>
+    </div>
+    <div class="signup-panel">
+      <div class="signup-card">
+        <button id="backToLogin" class="signup-back" type="button">← 로그인으로</button>
+        <div id="signupFormWrap">
+        <div class="signup-heading"><span id="signupTypeLabel">SELLER REGISTRATION</span><h2 id="signupTitle">위탁셀러 회원가입</h2><p>가입 신청 후 마스터 승인이 완료되면 서비스를 이용할 수 있습니다.</p></div>
+        <div class="signup-steps"><span class="active"><b>1</b>계정 정보</span><i></i><span><b>2</b>사업자 정보</span><i></i><span><b>3</b>약관 및 승인</span></div>
+        <div class="prototype-warning">프로토타입 검증용 화면입니다. 실제 개인정보나 사업자등록증은 입력하지 마세요.</div>
+        <form id="signupForm" class="signup-form" autocomplete="off">
+          <input id="signupRole" type="hidden" name="role" value="seller">
+          <div class="signup-fields">
+            <div class="signup-field"><label>아이디 *</label><input name="loginId" placeholder="영문·숫자 4자 이상" minlength="4" required></div>
+            <div class="signup-field"><label>비밀번호 *</label><input name="password" type="password" placeholder="6자 이상" minlength="6" required></div>
+            <div class="signup-field"><label>상호명 *</label><input name="company" placeholder="예: 두고셀러" required></div>
+            <div class="signup-field"><label>대표자명 *</label><input name="representative" placeholder="예: 홍길동" required></div>
+            <div class="signup-field"><label>사업자등록번호 *</label><input name="businessNo" placeholder="000-00-00000" required></div>
+            <div class="signup-field"><label>연락처 *</label><input name="contact" placeholder="010-0000-0000" required></div>
+            <div class="signup-field full"><label>이메일 *</label><input name="email" type="email" placeholder="business@example.com" required></div>
+            <div class="signup-field full"><label>사업자등록증 <small>선택 · 파일명만 저장</small></label><input name="businessFile" type="file" accept=".jpg,.jpeg,.png,.pdf"></div>
+          </div>
+          <label class="terms-check"><input name="terms" type="checkbox" required> 이용약관과 개인정보 수집 안내에 동의합니다.</label>
+          <button class="login-submit" type="submit">가입 승인 요청</button>
+        </form>
+      </div>
+      <div id="signupComplete" class="signup-complete" hidden>
+        <span class="complete-icon">✓</span><h2>가입 신청이 접수되었습니다</h2><p><b id="signupCompleteCompany"></b>의 신청이 승인 대기 상태로 저장되었습니다.<br>마스터 승인 후 로그인할 수 있습니다.</p>
+        <div class="complete-flow"><span class="done">신청 완료</span><i></i><span>마스터 검토</span><i></i><span>로그인 가능</span></div>
+        <button id="completeToLogin" class="login-submit" type="button">로그인 화면으로</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="appView" class="app-shell" data-sidebar-open="false" hidden>
+    <button id="mobileSidebarBackdrop" class="mobile-sidebar-backdrop" type="button" aria-label="메뉴 닫기" hidden></button>
+    <aside id="appSidebar" class="sidebar" aria-label="두고마켓 업무 메뉴">
+      <div class="sidebar-brand-row">
+        <a class="brand brand-lockup sidebar-market-brand" href="#" data-action="open-dashboard" aria-label="두고마켓 대시보드로 이동">
+          <img src="assets/doogomarket-wordmark.png" alt="두고마켓"><span class="sidebar-market-label">두고마켓<small>DOOGO MARKET</small></span>
+        </a>
+        <button id="mobileSidebarClose" class="mobile-sidebar-close" type="button" aria-label="메뉴 닫기">×</button>
+      </div>
+
+      <nav class="role-nav" aria-label="역할별 화면">
+        <p class="nav-label">현재 워크스페이스</p>
+        <button id="sidebarWorkspaceSwitcher" class="workspace-switcher-entry" type="button" data-action="open-user-switch">
+          <span id="sidebarRoleIcon" class="role-icon">셀</span><span><b id="sidebarRoleName">위탁셀러</b><small>사용자 전환 · 권한 관리</small></span><i>›</i>
+        </button>
+      </nav>
+
+      <nav id="workspaceMenu" class="workspace-menu" aria-label="업무 메뉴"></nav>
+
+      <div class="integration-card">
+        <div class="integration-head"><span class="balju-logo">D</span><b>두고마켓</b></div>
+        <div class="status-line"><span class="status-dot"></span> 데모 안전 모드</div>
+        <p>주문·송장·환불은 브라우저 샘플 데이터로만 처리합니다.</p>
+      </div>
+
+      <button id="resetDemo" class="ghost-button reset-button">↻ 데모 데이터 초기화</button>
+      <button id="logoutButton" class="ghost-button logout-button">↪ 로그아웃</button>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <button id="mobileMenuButton" class="mobile-menu-button" type="button" aria-controls="appSidebar" aria-expanded="false" aria-label="전체 메뉴 열기"><span></span><span></span><span></span></button>
+        <div>
+          <p class="eyebrow">DOOGO MARKET</p>
+          <h1 id="pageTitle">위탁셀러 워크스페이스</h1>
+        </div>
+        <label class="quick-search"><span>⌕</span><input id="globalSearch" aria-label="주문번호 또는 주문자 검색" placeholder="주문번호·주문자명 빠른 검색"></label>
+        <div class="top-actions">
+          <button id="guideButton" class="secondary-button">전체 흐름 보기</button>
+          <button id="notificationButton" class="notification-button" type="button" data-action="open-notifications" aria-label="알림함 열기"><span>♢</span><b id="notificationCount">0</b></button>
+          <div class="account-menu-wrap">
+            <button id="accountMenuButton" class="account-summary account-menu-button" type="button" aria-haspopup="menu" aria-expanded="false">
+              <span class="avatar-button" aria-hidden="true">문</span><span><b id="accountName">문원오</b><small id="accountRole">위탁셀러</small></span><i>⌄</i>
+            </button>
+            <div id="accountDropdown" class="account-dropdown" role="menu" hidden>
+              <div><b id="dropdownAccountName">두고 셀러</b><small>두고셀러 계정</small></div>
+              <button type="button" data-account-action="profile">정보 수정</button>
+              <button type="button" data-account-action="mypage">마이페이지 설정</button>
+              <button type="button" data-account-action="business">사업자 정보 수정</button>
+              <button type="button" data-account-action="subscription">정기구독 관리 <b>월 5,900원</b></button>
+              <button id="workspaceSwitchButton" class="workspace-switch-action" type="button" data-account-action="role-switch" hidden><span>⇄</span><b id="workspaceSwitchLabel">사용자 전환</b></button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div id="demoNotice" class="demo-notice">
+        <span>안전한 샘플 데이터</span>
+        <p>이 프로토타입의 모든 작업은 브라우저 안에서만 반영되며 외부 시스템으로 전송되지 않습니다.</p>
+        <button id="dismissNotice" aria-label="안내 닫기">×</button>
+      </div>
+
+      <section id="sellerView" class="role-view active"></section>
+      <section id="supplierView" class="role-view"></section>
+      <section id="masterView" class="role-view"></section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" data-close-modal aria-label="닫기">×</button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js?v=19"></script>
+</body>
+</html>

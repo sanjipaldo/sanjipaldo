@@ -1,0 +1,18 @@
+DOOGO MARKET latest source package
+Generated: 2026-09-14 UTC
+Source branch: main
+Source commit: f1a43bc471ca6d689bbb8209a99a00e26224cf6e
+Source commit subject: feat: add return-confirmed refunds and Doogo Money wallet
+Live preview: https://doogofood-ops-hub.eugenemoon.chatgpt.site
+Static entry: dist/index.html
+
+Run locally:
+  python3 -m http.server 4173 --directory dist
+
+Demo accounts:
+  seller / seller
+  sup / sup
+  admin / admin
+
+Security note:
+  This package contains demo credentials only. No real external-service credentials are included.
