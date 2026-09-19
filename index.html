@@ -204,7 +204,7 @@
           </div>
           <div class="account-menu-wrap">
             <button id="accountMenuButton" class="account-summary account-menu-button" type="button" aria-haspopup="menu" aria-expanded="false">
-              <span class="avatar-button" aria-hidden="true"><img src="assets/doogomarket-symbol.png" alt=""></span><span><b id="accountName">문원오</b><small id="accountRole">위탁셀러</small></span><i>⌄</i>
+              <span class="avatar-button" id="accountAvatar" aria-hidden="true"></span><span><b id="accountName">문원오</b><small id="accountRole">위탁셀러</small></span><i>⌄</i>
             </button>
             <div id="accountDropdown" class="account-dropdown" role="menu" hidden>
               <div><b id="dropdownAccountName">두고 셀러</b><small>두고셀러 계정</small></div>
@@ -217,12 +217,6 @@
           </div>
         </div>
       </header>
-
-      <div id="demoNotice" class="demo-notice">
-        <span>안전한 샘플 데이터</span>
-        <p>이 프로토타입의 모든 작업은 브라우저 안에서만 반영되며 외부 시스템으로 전송되지 않습니다.</p>
-        <button id="dismissNotice" aria-label="안내 닫기">×</button>
-      </div>
 
       <section id="sellerView" class="role-view active"></section>
       <section id="supplierView" class="role-view"></section>

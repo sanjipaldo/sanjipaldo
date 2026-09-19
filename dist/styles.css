@@ -834,7 +834,7 @@ h1 { margin: 0; font-size: clamp(23px, 2.5vw, 30px); letter-spacing: -.04em; }
 .account-summary span { display: grid; }
 .account-summary b { font-size: 11px; }
 .account-summary small { margin-top: 2px; color: #8a96a3; font-size: 9px; }
-.avatar-button { width: 40px; height: 40px; overflow:hidden; color: white; background: #eaf2ff; border: 1px solid #d7e4f8; border-radius: 50%; font-weight: 800; }
+.avatar-button { width: 40px; height: 40px; overflow:hidden; display:grid; place-items:center; color: white; background: #1761e8; border: 1px solid #d7e4f8; border-radius: 50%; font-size:16px; font-weight: 800; text-transform:uppercase; }
 .avatar-button img { width:100%; height:100%; display:block; object-fit:cover; }
 
 .demo-notice { position: relative; display: flex; align-items: center; gap: 13px; margin-bottom: 20px; padding: 11px 44px 11px 13px; background: #fffbeb; border: 1px solid #f5df9f; border-radius: 12px; }
@@ -3951,30 +3951,60 @@ body { letter-spacing:-.012em; }
   .login-box::before { left: 20px; right: 20px; }
 }
 
-/* --- Role dashboards: shared polish for hero/stat cards --- */
-.hero-row { position: relative; padding: 22px 24px; border-radius: 18px; overflow: hidden; }
-.hero-copy h2 { font-size: 21px; }
-.stats-grid { gap: 14px; }
-.stat-card { position: relative; padding: 18px 17px; transition: transform .16s ease, box-shadow .16s ease; }
+/* --- Role dashboards: shared polish for hero/stat cards (no color overrides — keep Skywork's own white/plain hero look) --- */
+.stat-card { transition: transform .16s ease, box-shadow .16s ease; }
 .stat-card:hover, .stat-card:focus-visible { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(20,36,30,.08); }
 .panel { transition: box-shadow .16s ease; }
-.panel-head h3 { letter-spacing: -.02em; }
 
-.app-shell[data-role="seller"] .hero-row.seller-dashboard-head { color: white; background: linear-gradient(120deg, #0e4cc2 0%, #1761e8 55%, #3f88f8 100%); }
-.app-shell[data-role="seller"] .hero-row.seller-dashboard-head .hero-copy p { color: #dbe8ff; }
-.app-shell[data-role="seller"] .hero-row.seller-dashboard-head .chip { color: #16305f; background: rgba(255,255,255,.85); }
-.app-shell[data-role="seller"] .stat-card { border-top: 3px solid #1761e8; }
-.app-shell[data-role="seller"] .stat-card.dashboard-stat-link:hover { border-color: #1761e8; }
+/* ============================================================
+   v20(Claude) — PlayAuto-style grouped order status (seller dashboard),
+   avatar initial, mobile pass. No hero/stat-card color overrides here —
+   dashboard heroes keep Skywork's own white/plain look.
+   ============================================================ */
 
-.app-shell[data-role="supplier"] .hero-row:not(.section-hero),
-.app-shell[data-role="master"] .hero-row:not(.section-hero) { color: white; background: linear-gradient(120deg, #0a0a0b 0%, #17191d 55%, #2c313a 100%); }
-.app-shell[data-role="supplier"] .hero-row:not(.section-hero) .hero-copy p,
-.app-shell[data-role="master"] .hero-row:not(.section-hero) .hero-copy p { color: #c9cdd4; }
-.app-shell[data-role="supplier"] .hero-row:not(.section-hero) .chip,
-.app-shell[data-role="master"] .hero-row:not(.section-hero) .chip { color: #17191d; background: rgba(255,255,255,.88); }
-.app-shell[data-role="supplier"] .stat-card,
-.app-shell[data-role="master"] .stat-card { border-top: 3px solid #17191d; }
+/* --- Order status grouped by stage, arrow separators, PlayAuto-style --- */
+.order-kpi-groups { display: flex; align-items: flex-start; gap: 0; }
+.kpi-group { min-width: 0; }
+.kpi-group:not(.kpi-group-single) { flex: 2 1 0; }
+.kpi-group-single { flex: 1 1 0; max-width: 190px; }
+.kpi-group-label { display: block; margin: 0 0 10px 2px; color: #5b6472; font-size: 11px; font-weight: 800; letter-spacing: -.01em; }
+.kpi-group-cards { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+.kpi-group-single .kpi-group-cards { grid-template-columns: 1fr; }
+.kpi-group-arrow { flex: 0 0 auto; align-self: center; margin: 28px 14px 0; display: flex; flex-direction: column; align-items: center; gap: 2px; color: #9aa5b2; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.kpi-group-arrow i { font-style: normal; font-size: 16px; line-height: 1; }
 
-@media (max-width: 720px) {
-  .hero-row { padding: 18px; border-radius: 14px; }
+@media (max-width: 1280px) {
+  .kpi-group-arrow { margin: 24px 8px 0; }
 }
+@media (max-width: 900px) {
+  .order-kpi-groups { flex-wrap: wrap; row-gap: 16px; }
+  .kpi-group-single { flex: 1 1 100%; max-width: none; }
+  .kpi-group-single .kpi-group-cards { grid-template-columns: minmax(0,220px); }
+  .kpi-group:not(.kpi-group-single) { flex: 1 1 auto; min-width: 220px; }
+  .kpi-group-arrow { display: none; }
+}
+@media (max-width: 720px) {
+  .order-kpi-groups.seller-order-kpis { padding: 12px; gap: 14px; }
+  .kpi-group:not(.kpi-group-single) { flex: 1 1 100%; }
+  .kpi-group-cards { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+  .dashboard-kpi-card { min-height: 132px; padding: 13px; }
+  .dashboard-kpi-card > strong { font-size: 24px; }
+  .dashboard-kpi-icon { width: 38px; height: 38px; }
+}
+
+/* --- Broader mobile readability pass (dashboard-wide) --- */
+@media (max-width: 720px) {
+  .hero-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .hero-row .dashboard-head-actions { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+  .seller-quick-actions { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .content-grid.seller-lower-grid,
+  .seller-dashboard-grid { grid-template-columns: 1fr; }
+  .quick-search { max-width: none; }
+}
+@media (max-width: 480px) {
+  .seller-quick-actions { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
+/* --- Avatar initial letter (matches original base template's initial-avatar pattern) --- */
+.avatar-button { line-height: 1; }

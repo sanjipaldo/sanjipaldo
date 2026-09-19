@@ -558,8 +558,10 @@ function render() {
 
 function updateAccountUI() {
   if (!currentAccount) return;
-  document.getElementById("accountName").textContent = activeRole === "supplier" ? workspaceCompany("supplier") : currentAccount.name;
+  const accountNameText = activeRole === "supplier" ? workspaceCompany("supplier") : currentAccount.name;
+  document.getElementById("accountName").textContent = accountNameText;
   document.getElementById("accountRole").textContent = `${roleLabel()} 모드`;
+  document.getElementById("accountAvatar").textContent = String(accountNameText || "?").trim().charAt(0);
   const dropdownName = document.getElementById("dropdownAccountName");
   if (dropdownName) dropdownName.textContent = activeRole === "supplier" ? (currentAccount.supplierCompany || currentAccount.company || currentAccount.name) : (currentAccount.company || currentAccount.name);
   const subscriptionAction = document.querySelector('[data-account-action="subscription"]');
@@ -1203,14 +1205,24 @@ function renderSeller() {
     "order-control": `${(mappingRequired.length || paymentRequired.length) ? `<section class="seller-mapping-banner"><div><span>ORDER MAPPING</span><h3>공급사 전달 전 확인할 주문이 ${mappingRequired.length + paymentRequired.length}건 있습니다.</h3><p>매핑 ${mappingRequired.length}건 · 결제 대기 ${paymentRequired.length}건</p></div><button data-action="open-order-mapping">주문 매핑하기 →</button></section>` : ""}
     <section class="order-command-center panel">
       <div class="command-center-head"><div><span>ORDER CONTROL</span><h3>${escapeHtml(contentText("seller.dashboard.orderTitle", "주문 처리 현황"))}</h3><p>${escapeHtml(contentText("seller.dashboard.orderDescription", "숫자를 누르면 해당 주문만 바로 조회됩니다."))}</p></div><button class="secondary-button" data-action="open-orders">전체 주문 보기 →</button></div>
-      <div class="dashboard-kpi-grid seller-order-kpis">
-        ${statusButton("all","total","총 주문",sellerOrders.length,"전체 주문 내역","blue")}
-        ${statusButton("received","new","신규주문",waiting,"확인이 필요한 주문","yellow")}
-        ${statusButton("received","received","주문접수",received,"공급사 발주 대기","cyan")}
-        ${statusButton("ordered","ordered","발주완료",ordered,"공급사 확인 대기","purple")}
-        ${statusButton("preparing","preparing","배송준비중",preparing,"송장 발급 대기","orange")}
-        ${statusButton("shipping","shipping","배송중",shipping,"택배 이동중","green")}
-        ${statusButton("delivered","delivered","배송완료",delivered,"구매자 수령","mint")}
+      <div class="order-kpi-groups seller-order-kpis">
+        <div class="kpi-group kpi-group-single"><span class="kpi-group-label">결제완료</span><div class="kpi-group-cards">
+          ${statusButton("all","total","총 주문",sellerOrders.length,"전체 주문 내역","blue")}
+        </div></div>
+        <div class="kpi-group"><span class="kpi-group-label">신규주문</span><div class="kpi-group-cards">
+          ${statusButton("received","new","신규주문",waiting,"확인이 필요한 주문","yellow")}
+          ${statusButton("received","received","주문접수",received,"공급사 발주 대기","cyan")}
+        </div></div>
+        <div class="kpi-group-arrow" aria-hidden="true"><span>주문확인</span><i>›</i></div>
+        <div class="kpi-group"><span class="kpi-group-label">출고관리</span><div class="kpi-group-cards">
+          ${statusButton("ordered","ordered","발주완료",ordered,"공급사 확인 대기","purple")}
+          ${statusButton("preparing","preparing","배송준비중",preparing,"송장 발급 대기","orange")}
+        </div></div>
+        <div class="kpi-group-arrow" aria-hidden="true"><span>배송시작</span><i>›</i></div>
+        <div class="kpi-group"><span class="kpi-group-label">배송관리 · 최근 7일</span><div class="kpi-group-cards">
+          ${statusButton("shipping","shipping","배송중",shipping,"택배 이동중","green")}
+          ${statusButton("delivered","delivered","배송완료",delivered,"구매자 수령","mint")}
+        </div></div>
       </div>
       <div class="dashboard-claim-strip"><div><span>클레임 관리</span><b>취소·반품·교환 요청을 바로 확인하세요.</b></div><button type="button" data-action="open-refunds" data-type="주문 취소"><span>취소</span><b>${refundCounts.cancel}</b></button><button type="button" data-action="open-refunds" data-type="반품"><span>반품</span><b>${refundCounts.return}</b></button><button type="button" data-action="open-refunds" data-type="교환"><span>교환</span><b>${refundCounts.exchange}</b></button>
       </div>
@@ -3190,7 +3202,7 @@ document.addEventListener("submit", event => {
 });
 
 document.getElementById("guideButton").addEventListener("click", guideModal);
-document.getElementById("dismissNotice").addEventListener("click", e => e.currentTarget.parentElement.remove());
+document.getElementById("dismissNotice")?.addEventListener("click", e => e.currentTarget.parentElement.remove());
 document.getElementById("resetDemo")?.addEventListener("click", () => { state = cloneInitial(); saveState(); activeRole = accountRoles().includes(activeRole) ? activeRole : (currentAccount?.role || "seller"); render(); updateAccountUI(); showToast("샘플 데이터를 처음 상태로 돌렸습니다."); });
 document.getElementById("logoutButton").addEventListener("click", () => { const role = currentAccount?.role; sessionStorage.removeItem(AUTH_KEY); if (role === "supplier" || role === "master") showPartnerLogin(role); else showLogin(); });
 document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
