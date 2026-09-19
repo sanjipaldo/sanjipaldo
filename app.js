@@ -558,7 +558,7 @@ function render() {
 
 function updateAccountUI() {
   if (!currentAccount) return;
-  const accountNameText = activeRole === "supplier" ? workspaceCompany("supplier") : currentAccount.name;
+  const accountNameText = activeRole === "supplier" ? workspaceCompany("supplier") : activeRole === "seller" ? (currentAccount.company || currentAccount.name) : currentAccount.name;
   document.getElementById("accountName").textContent = accountNameText;
   document.getElementById("accountRole").textContent = `${roleLabel()} 모드`;
   document.getElementById("accountAvatar").textContent = String(accountNameText || "?").trim().charAt(0);
