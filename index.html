@@ -44,7 +44,10 @@
         <div class="demo-accounts">
           <div><button data-demo-login="seller">데모 계정으로 체험하기 <b>seller / seller</b></button></div>
         </div>
-        <div class="login-footer-links"><span>계정이 없으신가요?</span><button id="openSignup" type="button">무료 가입</button><i></i><button type="button" data-find-account>아이디·비밀번호 찾기</button></div>
+        <div class="login-footer-links">
+          <div class="login-signup-card"><span>아직 계정이 없으신가요?</span><button id="openSignup" type="button">무료로 시작하기 →</button></div>
+          <button type="button" class="login-textlink" data-find-account>아이디·비밀번호 찾기</button>
+        </div>
         <button id="mobilePartnerCenterLink" class="mobile-partner-link" type="button"><span>P</span> 공급사·관리자는 파트너센터로 →</button>
       </div>
     </div>
@@ -197,7 +200,6 @@
         </div>
         <label class="quick-search"><span>⌕</span><input id="globalSearch" aria-label="주문번호 또는 주문자 검색" placeholder="주문번호·주문자명 빠른 검색"></label>
         <div class="top-actions">
-          <button id="editModeButton" class="edit-mode-button" type="button" data-action="toggle-edit-mode" hidden>화면 편집</button>
           <button id="resetContentButton" class="edit-reset-button" type="button" data-action="reset-content-overrides" hidden>문구 초기화</button>
           <button id="guideButton" class="secondary-button">전체 흐름 보기</button>
           <div class="notification-center-wrap">

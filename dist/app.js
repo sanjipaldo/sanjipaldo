@@ -9,7 +9,7 @@ const accounts = {
 const roleMenus = {
   master: ["대시보드", "회원 승인", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그"],
   supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "배송 · 송장 설정", "가격 관리", "정산 내역", "내 정보"],
-  seller: ["대시보드", "상품 소싱", "내가 PICK 상품", "공급사 문의", "주문관리", "취소 환불", "매출 캘린더", "가격 변경알림", "쇼핑몰 연동", "정기구독", "내정보", "상품 판매중", "두고머니"]
+  seller: ["대시보드", "상품 소싱", "내가 PICK 상품", "공급사 문의", "주문관리", "취소 환불", "매출 캘린더", "가격 변경알림", "쇼핑몰 연동", "정기구독", "내정보", "상품 판매중", "두고머니", "공지사항"]
 };
 const roleMenuGroups = {
   master: [
@@ -25,7 +25,7 @@ const roleMenuGroups = {
     { label: "계정", indexes: [8] }
   ],
   seller: [
-    { label: "홈", indexes: [0] },
+    { label: "홈", indexes: [0, 13] },
     { label: "상품", indexes: [1, 2, 11] },
     { label: "거래처", indexes: [3] },
     { label: "주문 · 정산", indexes: [4, 5, 12, 6, 7] },
@@ -36,10 +36,31 @@ const roleMenuGroups = {
 const menuIcons = {
   master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log"],
   supplier: ["home", "product", "connection", "order", "refund", "printer", "price", "settlement", "settings"],
-  seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement"]
+  seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice"]
 };
 
 const DEFAULT_DASHBOARD_LAYOUT = ["hero", "order-control", "quick-actions", "notices", "sales", "product-sales", "price-alerts", "recent-orders"];
+
+const naverCategoryGroups = [
+  { label: "식품", options: ["농산물", "수산물", "가공식품", "건강식품", "정육·계란", "쌀·잡곡·견과", "생수·음료", "커피·원두·차"] },
+  { label: "패션의류", options: ["여성의류", "남성의류", "베이비의류", "언더웨어·잠옷"] },
+  { label: "패션잡화", options: ["여성가방", "남성가방", "신발", "패션소품"] },
+  { label: "화장품/미용", options: ["스킨케어", "메이크업", "헤어케어", "바디케어"] },
+  { label: "디지털/가전", options: ["휴대폰", "노트북", "생활가전", "카메라"] },
+  { label: "가구/인테리어", options: ["침실가구", "거실가구", "홈데코", "조명"] },
+  { label: "출산/육아", options: ["기저귀·물티슈", "분유·이유식", "유아동의류", "유모차·카시트"] },
+  { label: "스포츠/레저", options: ["골프", "캠핑·등산", "헬스·요가", "자전거"] },
+  { label: "생활/건강", options: ["생활용품", "건강용품", "반려동물용품", "문구·사무용품"] },
+  { label: "여가/생활편의", options: ["도서", "티켓·공연", "여행·항공권", "상품권"] },
+  { label: "면세점", options: ["향수·화장품", "주류", "패션잡화"] }
+];
+
+const sellerNoticeBoard = [
+  { id: "notice-1", title: "상품 썸네일·상세페이지 복사 기능 안내", detail: "내가 PICK 상품에서 판매정보를 수정하고 채널별로 등록할 수 있습니다.", date: "오늘", cta: "내가 PICK 상품 바로가기", action: "open-my-products" },
+  { id: "notice-2", title: "상품코드 기반 주문 매핑 기능 업데이트", detail: "외부몰 상품명을 바꿔도 DF-코드로 공급사 상품에 연결됩니다.", date: "오늘", cta: "주문 매핑 바로가기", action: "open-order-mapping" },
+  { id: "notice-3", title: "거래처 연결 코드 이용 안내", detail: "승인된 공급사의 코드를 등록하면 매핑 가능한 상품이 열립니다.", date: "09.08", cta: "거래처 연결 바로가기", action: "open-connections" },
+  { id: "notice-4", title: "송장 자동전송 설정 안내", detail: "공급사 송장이 등록되면 연결 쇼핑몰에 반영할 수 있습니다.", date: "09.07", cta: "쇼핑몰 연동 바로가기", action: "open-seller-channels" }
+];
 
 const initialState = {
   schemaVersion: 21,
@@ -478,7 +499,8 @@ function menuIcon(name) {
     printer: '<path d="M7 8V3h10v5M7 17H4v-7h16v7h-3M7 14h10v7H7z"/><path d="M17 11h.01"/>',
     price: '<path d="M4 5h10l6 6-9 9-7-7V5Z"/><circle cx="9" cy="10" r="1"/>',
     settlement: '<path d="M4 5h16v14H4zM8 9h8M8 13h5M16 16h.01"/>',
-    onsale: '<path d="M20.5 7.5 12 3 3.5 7.5 12 12l8.5-4.5Z"/><path d="M3.5 7.5v9L12 21l8.5-4.5v-9"/><path d="m9 14 2 2 4-4"/>'
+    onsale: '<path d="M20.5 7.5 12 3 3.5 7.5 12 12l8.5-4.5Z"/><path d="M3.5 7.5v9L12 21l8.5-4.5v-9"/><path d="m9 14 2 2 4-4"/>',
+    notice: '<path d="M3 11v2a2 2 0 0 0 2 2h1l3 4v-4h2l7-4V7l-7-4H9L6 7H5a2 2 0 0 0-2 2Z"/><path d="M13 15.5V19a2 2 0 0 0 4 0v-2"/>'
   };
   return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name] || paths.product}</svg>`;
 }
@@ -558,7 +580,7 @@ function render() {
     : `${roleLabel()} 업무를 한 화면에서 확인하고 처리하세요.`;
   const demoNotice = document.getElementById("demoNotice");
   if (demoNotice) demoNotice.hidden = activeRole === "seller" && (editMode || [3, 6].includes(activeMenuIndex));
-  document.getElementById("appView").dataset.editMode = String(editMode && activeRole === "seller");
+  document.getElementById("appView").dataset.editMode = String(editMode && activeRole === "seller" && activeMenuIndex === 0);
 }
 
 function updateAccountUI() {
@@ -594,13 +616,7 @@ function updateAccountUI() {
     return `<section class="workspace-menu-group"><p>${escapeHtml(group.label)}</p>${buttons}</section>`;
   }).join("");
   renderNotificationDropdown();
-  const editButton = document.getElementById("editModeButton");
   const resetContentButton = document.getElementById("resetContentButton");
-  if (editButton) {
-    editButton.hidden = activeRole !== "seller";
-    editButton.classList.toggle("active", editMode);
-    editButton.textContent = editMode ? "편집 완료" : "대시보드 편집";
-  }
   if (resetContentButton) resetContentButton.hidden = true;
 }
 
@@ -789,7 +805,7 @@ function marketToolbar() {
   const categories = ["전체보기", "농산물", "수산물", "가공식품", "건강식품"];
   const countries = ["전체 국가", ...new Set(state.products.map(product => product.originCountry || "대한민국"))];
   const brands = ["전체 브랜드", ...new Set(state.products.map(product => product.supplier))];
-  return `<div class="market-toolbar market-toolbar-shop"><label class="catalog-search"><span>⌕</span><input id="sellerCatalogSearch" value="${escapeHtml(sellerProductSearch)}" placeholder="상품명·브랜드·원산지 검색"></label><div class="market-filter-row"><label><span>카테고리</span><select id="marketCategorySelect">${categories.map(category => `<option ${sellerCategory === category ? "selected" : ""}>${category}</option>`).join("")}</select></label><label><span>소싱 국가</span><select id="marketCountrySelect">${countries.map(country => `<option ${sellerCountry === country ? "selected" : ""}>${escapeHtml(country)}</option>`).join("")}</select></label><label><span>브랜드</span><select id="marketBrandSelect">${brands.map(brand => `<option ${sellerBrand === brand ? "selected" : ""}>${escapeHtml(brand)}</option>`).join("")}</select></label><div class="shipping-tabs"><button class="${sellerShippingFilter === "all" ? "active" : ""}" data-action="filter-shipping" data-filter="all">전체</button><button class="${sellerShippingFilter === "domestic" ? "active" : ""}" data-action="filter-shipping" data-filter="domestic">국내배송</button><button class="${sellerShippingFilter === "overseas" ? "active" : ""}" data-action="filter-shipping" data-filter="overseas">해외소싱</button></div><button class="market-reset" data-action="reset-market-filter">초기화</button></div><div class="category-pills">${categories.slice(1).map(category => `<button class="${sellerCategory === category ? "active" : ""}" data-action="filter-products" data-category="${category}">${category}</button>`).join("")}</div><span>검색 결과 <b>${sellerCatalogProducts().length}</b>개</span></div>`;
+  return `<div class="market-toolbar market-toolbar-shop"><label class="catalog-search"><span>⌕</span><input id="sellerCatalogSearch" value="${escapeHtml(sellerProductSearch)}" placeholder="상품명·브랜드·원산지 검색"></label><div class="market-filter-row"><label><span>카테고리 <small>네이버쇼핑 기준</small></span><input id="marketCategorySearch" list="marketCategoryOptions" value="${sellerCategory === "전체보기" ? "" : escapeHtml(sellerCategory)}" placeholder="카테고리 검색 (예: 농산물)"><datalist id="marketCategoryOptions">${naverCategoryGroups.flatMap(group => group.options.map(option => `<option value="${escapeHtml(option)}" label="${escapeHtml(group.label)}">`)).join("")}</datalist></label><label><span>소싱 국가</span><select id="marketCountrySelect">${countries.map(country => `<option ${sellerCountry === country ? "selected" : ""}>${escapeHtml(country)}</option>`).join("")}</select></label><label><span>브랜드</span><select id="marketBrandSelect">${brands.map(brand => `<option ${sellerBrand === brand ? "selected" : ""}>${escapeHtml(brand)}</option>`).join("")}</select></label><div class="shipping-tabs"><button class="${sellerShippingFilter === "all" ? "active" : ""}" data-action="filter-shipping" data-filter="all">전체</button><button class="${sellerShippingFilter === "domestic" ? "active" : ""}" data-action="filter-shipping" data-filter="domestic">국내배송</button><button class="${sellerShippingFilter === "overseas" ? "active" : ""}" data-action="filter-shipping" data-filter="overseas">해외소싱</button></div><button class="market-reset" data-action="reset-market-filter">초기화</button></div><div class="category-pills">${categories.slice(1).map(category => `<button class="${sellerCategory === category ? "active" : ""}" data-action="filter-products" data-category="${category}">${category}</button>`).join("")}</div><span>검색 결과 <b>${sellerCatalogProducts().length}</b>개</span></div>`;
 }
 
 function marketplaceHeroTemplate() {
@@ -906,8 +922,8 @@ function partnerMessengerTemplate(connections, perspective) {
   const tradedProducts = new Set(orders.map(order => order.productId)).size;
   const favorite = Boolean(state.chatFavorites?.[active.id]);
   return `<div id="supplierInquiryPanel" class="messenger-shell panel">
-    <aside class="messenger-list"><div class="messenger-list-head"><b>메시지</b><span>${connections.length}</span></div><div class="messenger-tabs">${[["all","전체"],["unread","안읽음"],["trading","거래중"],["favorite","즐겨찾기"]].map(([key,label]) => `<button type="button" class="${chatRoomFilter === key ? "active" : ""}" data-action="chat-filter" data-filter="${key}">${label}</button>`).join("")}</div><label><span>⌕</span><input id="chatRoomSearch" value="${escapeHtml(chatRoomSearch)}" placeholder="거래처·메시지 검색"></label><div class="room-policy"><b>거래처 1곳 = 채팅방 1개</b><small>상품과 주문이 늘어나도 한 대화에서 이력을 이어갑니다.</small></div><div class="messenger-room-list">${visibleRooms.length ? visibleRooms.map(room => `<button class="messenger-party ${room.connection.id === active.id ? "active" : ""}" type="button" data-action="select-chat-room" data-id="${room.connection.id}"><span class="connection-avatar ${perspective === "supplier" ? "seller" : ""}">${perspective === "seller" ? "공" : "셀"}</span><span><b>${escapeHtml(room.name)}</b><small>${escapeHtml(room.last?.text || "새 대화를 시작하세요")}</small></span><em>${room.unread ? `<i>새 메시지</i>` : escapeHtml(room.last?.createdAt || room.connection.createdAt)}</em></button>`).join("") : `<div class="messenger-empty">조건에 맞는 대화가 없습니다.</div>`}</div></aside>
-    <section class="messenger-main"><header><div><b>${escapeHtml(otherName)}</b><small><i></i> 거래중 · 평균 응답 1시간 이내</small></div><div class="messenger-head-actions"><button type="button" data-action="toggle-chat-favorite" data-id="${active.id}" aria-pressed="${favorite}">${favorite ? "★ 즐겨찾기" : "☆ 즐겨찾기"}</button><button type="button" data-action="${perspective === "seller" ? "supplier-contact" : "partner-detail"}" data-id="${perspective === "seller" ? active.supplierLoginId : active.sellerLoginId}">거래처 정보</button></div></header><div class="chat-context-strip"><span>상품·주문번호를 메시지에 연결해 거래 기록을 한곳에 남길 수 있습니다.</span><button type="button" data-action="${perspective === "seller" ? "open-catalog" : "open-supplier-orders"}">${perspective === "seller" ? "공급 상품 보기" : "주문 확인"} →</button></div><div class="chat-thread rich-thread"><div class="chat-date"><span>오늘</span></div>${messages.map(message => { const mine = message.senderLoginId === currentAccount.loginId; const senderName = message.senderLoginId === active.supplierLoginId ? supplierName(active.supplierLoginId) : (seller?.company || active.sellerLoginId); return `<div class="chat-message ${mine ? "mine" : ""}"><small>${escapeHtml(senderName)} · ${message.createdAt}</small><p>${escapeHtml(message.text)}</p>${message.productId ? `<button data-action="product-detail" data-id="${message.productId}">연결 상품 보기 →</button>` : ""}${message.orderId ? `<button data-action="order-detail" data-id="${message.orderId}">주문 ${escapeHtml(message.orderId)} 보기 →</button>` : ""}</div>`; }).join("")}</div><form id="connectionMessageForm" class="chat-compose rich-compose"><input type="hidden" name="supplierLoginId" value="${active.supplierLoginId}"><input type="hidden" name="sellerLoginId" value="${active.sellerLoginId}"><button type="button" data-action="chat-attach" aria-label="파일 첨부">＋</button><input name="text" placeholder="메시지를 입력해 주세요 (Enter 전송)" maxlength="240" required><button class="primary-button" type="submit">전송</button></form></section>
+    <aside class="messenger-list"><div class="messenger-list-head"><b>메시지</b><span>${connections.length}</span></div><div class="messenger-tabs">${[["all","전체"],["unread","안읽음"],["trading","거래중"],["favorite","즐겨찾기"]].map(([key,label]) => `<button type="button" class="${chatRoomFilter === key ? "active" : ""}" data-action="chat-filter" data-filter="${key}">${label}</button>`).join("")}</div><label><span>⌕</span><input id="chatRoomSearch" value="${escapeHtml(chatRoomSearch)}" placeholder="거래처·메시지 검색"></label><div class="messenger-room-list">${visibleRooms.length ? visibleRooms.map(room => `<button class="messenger-party ${room.connection.id === active.id ? "active" : ""}" type="button" data-action="select-chat-room" data-id="${room.connection.id}"><span class="connection-avatar ${perspective === "supplier" ? "seller" : ""}">${perspective === "seller" ? "공" : "셀"}</span><span><b>${escapeHtml(room.name)}</b><small>${escapeHtml(room.last?.text || "새 대화를 시작하세요")}</small></span><em>${room.unread ? `<i>새 메시지</i>` : escapeHtml(room.last?.createdAt || room.connection.createdAt)}</em></button>`).join("") : `<div class="messenger-empty">조건에 맞는 대화가 없습니다.</div>`}</div></aside>
+    <section class="messenger-main"><header><div><b>${escapeHtml(otherName)}</b><small><i></i> 거래중 · 평균 응답 1시간 이내</small></div><div class="messenger-head-actions"><button type="button" data-action="toggle-chat-favorite" data-id="${active.id}" aria-pressed="${favorite}">${favorite ? "★ 즐겨찾기" : "☆ 즐겨찾기"}</button><button type="button" data-action="${perspective === "seller" ? "supplier-contact" : "partner-detail"}" data-id="${perspective === "seller" ? active.supplierLoginId : active.sellerLoginId}">거래처 정보</button></div></header><div class="chat-context-strip"><span>상품·주문번호를 메시지에 연결해 거래 기록을 한곳에 남길 수 있습니다.</span><button type="button" data-action="${perspective === "seller" ? "open-catalog" : "open-supplier-orders"}">${perspective === "seller" ? "공급 상품 보기" : "주문 확인"} →</button></div><div class="chat-thread rich-thread"><div class="chat-date"><span>오늘</span></div>${messages.map(message => { const mine = message.senderLoginId === currentAccount.loginId; const senderName = message.senderLoginId === active.supplierLoginId ? supplierName(active.supplierLoginId) : (seller?.company || active.sellerLoginId); return `<div class="chat-message ${mine ? "mine" : ""}"><small>${escapeHtml(senderName)} · ${message.createdAt}</small><p>${escapeHtml(message.text)}</p>${message.productId ? `<button data-action="product-detail" data-id="${message.productId}">연결 상품 보기 →</button>` : ""}${message.orderId ? `<button data-action="order-detail" data-id="${message.orderId}">주문 ${escapeHtml(message.orderId)} 보기 →</button>` : ""}</div>`; }).join("")}</div><form id="connectionMessageForm" class="chat-compose rich-compose"><input type="hidden" name="supplierLoginId" value="${active.supplierLoginId}"><input type="hidden" name="sellerLoginId" value="${active.sellerLoginId}"><button type="button" class="chat-attach-photo" data-action="chat-attach" aria-label="사진 첨부하기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg><span>사진 첨부하기</span></button><input name="text" placeholder="메시지를 입력해 주세요 (Enter 전송)" maxlength="240" required><button class="primary-button" type="submit">전송</button></form></section>
     <aside class="messenger-profile"><span class="connection-avatar large">${perspective === "seller" ? "공" : "셀"}</span><h3>${escapeHtml(otherName)}</h3><p>${escapeHtml(other?.representative || "담당자")} · ${perspective === "seller" ? "공급사" : "위탁셀러"}</p><div class="messenger-rating"><b>★ 4.9</b><span>거래 만족도</span></div><div class="messenger-profile-kpis"><span><small>거래 상품</small><b>${tradedProducts}개</b></span><span><small>누적 주문</small><b>${orders.length}건</b></span><span><small>평균 응답</small><b>1시간</b></span><span><small>공급 상품</small><b>${products.length}개</b></span></div><div><span>연락처</span><b>${escapeHtml(other?.contact || "-")}</b></div><div><span>이메일</span><b>${escapeHtml(other?.email || "-")}</b></div><label class="partner-note"><span>거래처 메모</span><textarea id="partnerNoteInput" rows="3" placeholder="내부 메모를 남겨주세요.">${escapeHtml(state.partnerNotes?.[active.id] || "")}</textarea></label><button type="button" data-action="save-chat-note" data-id="${active.id}">메모 저장</button><div class="messenger-products"><span>최근 공급상품</span>${products.slice(0,2).map(product => `<button type="button" data-action="product-detail" data-id="${product.id}">${productPhoto(product,"table-photo")}<b>${escapeHtml(product.name)}</b></button>`).join("")}</div><small>두고톡은 주문 건수가 아니라 거래처 관계를 기준으로 하나만 열립니다.</small></aside>
   </div>`;
 }
@@ -915,8 +931,7 @@ function partnerMessengerTemplate(connections, perspective) {
 function sellerConnectionTemplate() {
   const connections = currentSellerConnections();
   const pcNotice = notificationService().pcNotice;
-  return `${sectionHero("두고톡", "공급사와 상품·재고·출고를 한 대화방에서 이어서 관리합니다.", `<span class="relationship-pill">거래처 관계형 대화</span>`)}
-    ${partnerMessengerTemplate(connections, "seller")}
+  return `${partnerMessengerTemplate(connections, "seller")}
     <div class="pc-notice-bar pc-notice-below ${pcNotice ? "on" : ""}"><span>🔔</span><div><b>PC 알림으로 새 메시지를 바로 확인하세요</b><small>거래처가 답변하면 브라우저 알림으로 안내합니다.</small></div><button class="notification-permission" data-action="toggle-pc-notifications">${pcNotice ? "PC 알림 켜짐" : "PC 알림 받기"}</button><button class="text-button" data-action="open-chat-settings">알림 설정</button></div>
     <div class="connection-utility panel connection-utility-bottom"><div><span class="connection-avatar">＋</span><p><b>새 공급사 연결</b><small>공급사가 발급한 코드를 등록합니다. 주문이 여러 건 생성되어도 거래처별 채팅방은 하나만 유지됩니다.</small></p></div><form id="connectSupplierForm" class="connection-code-form"><input name="code" placeholder="예: SANDI-84H3" required><button class="primary-button" type="submit">연결하기</button></form></div>`;
 }
@@ -1140,6 +1155,7 @@ function renderSellerSection(index) {
   if (index === 2) return `${sectionHero("내가 PICK 상품", "두고에서 PICK한 상품의 판매명·가격을 수정하고 연결된 쇼핑몰에 등록합니다.")}<div class="panel"><div class="panel-head"><div><h3>내가 PICK 상품 목록</h3><p>상품을 펼친 뒤 판매정보를 수정하거나 ‘쇼핑몰 자동등록’을 진행할 수 있습니다.</p></div><span class="chip">${currentSellerProducts().length}개 PICK</span></div>${sellerProductsTable()}</div>`;
   if (index === 11) return sellerOnSaleProductsTemplate();
   if (index === 12) return sellerDoogoMoneyTemplate();
+  if (index === 13) return sellerNoticesTemplate();
   if (index === 3) return sellerConnectionTemplate();
   if (index === 4) return sellerOrderManagementTemplate();
   if (index === 5) return refundTemplate("seller");
@@ -1239,10 +1255,17 @@ function renderSeller() {
     tone,
     attributes: `data-stage="${stage}"`
   });
+  const todaysNewOrders = sellerOrders.filter(o => String(o.createdAt || "").includes("오늘")).length;
+  const shippingDelayed = sellerOrders.filter(o => o.status === "배송준비중" && !String(o.createdAt || "").includes("오늘")).length;
   const widgets = {
     hero: `<div class="hero-row seller-dashboard-head">
       <div class="hero-copy"><span class="dashboard-eyebrow">SELLER OPERATIONS</span><h2>${escapeHtml(contentText("seller.dashboard.title", "오늘 처리할 주문을 한눈에 확인하세요."))}</h2><p>${escapeHtml(contentText("seller.dashboard.description", "상품 매핑부터 결제·발주·배송·클레임까지 단계별로 바로 이동할 수 있습니다."))}</p></div>
       <div class="dashboard-head-actions"><span>마지막 업데이트 · 방금 전</span><button class="secondary-button" data-action="refresh-dashboard">↻ 새로고침</button></div>
+      <div class="dashboard-quick-stats">
+        <button type="button" data-action="dashboard-order-stage" data-stage="received"><b>${todaysNewOrders}</b><span>오늘 수집된 주문(신규)</span></button>
+        <button type="button" data-action="dashboard-order-stage" data-stage="preparing"><b>${shippingDelayed}</b><span>출고지연 주문</span></button>
+        <button type="button" data-action="open-order-mapping"><b>${mappingRequired.length}</b><span>주문재확인 건</span></button>
+      </div>
     </div>`,
     "order-control": `${(mappingRequired.length || paymentRequired.length) ? `<section class="seller-mapping-banner"><div><span>ORDER MAPPING</span><h3>공급사 전달 전 확인할 주문이 ${mappingRequired.length + paymentRequired.length}건 있습니다.</h3><p>매핑 ${mappingRequired.length}건 · 결제 대기 ${paymentRequired.length}건</p></div><button data-action="open-order-mapping">주문 매핑하기 →</button></section>` : ""}
     <section class="order-command-center panel">
@@ -1270,7 +1293,7 @@ function renderSeller() {
       </div>
     </section>`,
     "quick-actions": `<div class="seller-quick-actions"><button data-action="open-catalog"><span>＋</span><b>상품 소싱하기</b><small>국가·브랜드·카테고리별 소싱</small></button><button data-action="open-connections"><span>⌁</span><b>거래처 연결</b><small>공급사 코드 등록</small></button><button data-action="open-my-products"><span>▦</span><b>내가 PICK 상품</b><small>상품명·가격·쇼핑몰 관리</small></button><button data-action="open-order-mapping"><span>⇄</span><b>주문 매핑</b><small>${mappingRequired.length + paymentRequired.length ? `${mappingRequired.length + paymentRequired.length}건 처리 필요` : "상품코드·결제 연결"}</small></button></div>`,
-    notices: `<div class="panel dashboard-notices"><div class="panel-head"><div><h3>공지사항</h3><p>두고 운영 안내</p></div><button class="text-button" data-action="open-notices">더보기 →</button></div><div class="notice-list"><button data-action="open-my-products"><b>상품 썸네일·상세페이지 복사 기능 안내</b><span>오늘</span></button><button data-action="open-order-mapping"><b>상품코드 기반 주문 매핑 기능 업데이트</b><span>오늘</span></button><button data-action="open-connections"><b>거래처 연결 코드 이용 안내</b><span>09.08</span></button><button data-action="open-seller-channels"><b>송장 자동전송 설정 안내</b><span>09.07</span></button></div></div>`,
+    notices: `<div class="panel dashboard-notices"><div class="panel-head"><div><h3>공지사항</h3><p>두고 운영 안내</p></div><button class="text-button" data-action="open-notices">더보기 →</button></div><div class="notice-list">${sellerNoticeBoard.map(n => `<button data-action="open-notices" data-id="${n.id}"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></button>`).join("")}</div></div>`,
     sales: `<div class="panel sales-summary"><div class="panel-head"><div><h3>9월 매출·두고머니</h3><p>4개 판매채널 샘플 집계</p></div><div class="refund-head-actions"><button class="text-button" data-action="open-sales-calendar">달력</button><button class="text-button" data-action="open-doogo-money">두고머니 관리 →</button></div></div><dl><div><dt>오늘 매출</dt><dd>${money(state.salesLedger.filter(item=>item.date==="2026-09-08").reduce((sum,item)=>sum+item.sales,0))}</dd></div><div><dt>이번 달 매출</dt><dd>${money(salesTotal)}</dd></div><div><dt>예상 순수익</dt><dd>${money(profitTotal)}</dd></div><div><dt>사용 가능 두고머니</dt><dd class="deposit-value">${money(deposit.balance)}</dd></div></dl></div>`,
     "product-sales": `<div class="panel product-sales"><div class="panel-head"><div><h3>PICK 상품</h3><p>내가 선택한 판매상품</p></div><button class="text-button" data-action="open-my-products">관리 →</button></div>${sellerProducts.length ? sellerProducts.slice(0,3).map(item => { const product = productOf(item.productId); const amount = sellerOrders.filter(order => (order.mappedProductId || order.productId) === item.productId).reduce((sum,order)=>sum+order.amount,0); const isOnSale = sellerChannels().some(channel => sellerProductChannelStatus(item, channel) === "판매중"); return `<button class="product-sale-row" data-action="edit-seller-product" data-id="${item.id}">${productPhoto(product,"sale-photo")}<span><b>${escapeHtml(sellerProductTitle(item, product))}</b><small>${money(amount)} · ${isOnSale ? "판매중" : "등록대기"}</small></span></button>`; }).join("") : `<div class="empty">PICK한 상품이 없습니다.</div>`}</div>`,
     "price-alerts": `<div class="panel">
@@ -1285,7 +1308,7 @@ function renderSeller() {
   const labels = { hero: "오늘의 운영 안내", "order-control": "주문 처리 현황", "quick-actions": "빠른 실행", notices: "공지사항", sales: "매출·두고머니", "product-sales": "PICK 상품", "price-alerts": "가격 변경 알림", "recent-orders": "최근 주문" };
   const layout = sellerDashboardLayout();
   document.getElementById("sellerView").innerHTML = `
-    ${editMode ? `<div class="dashboard-edit-toolbar"><div><span>대시보드 편집 중</span><b>위젯을 드래그해 순서를 바꾸고 × 버튼으로 숨길 수 있습니다.</b></div><div><button type="button" class="secondary-button" data-action="add-dashboard-widget">＋ 위젯 추가</button><button type="button" class="secondary-button" data-action="reset-dashboard-layout">기본 배치</button><button type="button" class="secondary-button" data-action="cancel-dashboard-edit">취소</button><button type="button" class="primary-button" data-action="save-dashboard-layout">변경사항 저장</button></div></div>` : ""}
+    ${editMode ? `<div class="dashboard-edit-toolbar"><div><span>대시보드 편집 중</span><b>위젯을 드래그해 순서를 바꾸고 × 버튼으로 숨길 수 있습니다.</b></div><div><button type="button" class="secondary-button" data-action="add-dashboard-widget">＋ 위젯 추가</button><button type="button" class="secondary-button" data-action="reset-dashboard-layout">기본 배치</button><button type="button" class="secondary-button" data-action="cancel-dashboard-edit">취소</button><button type="button" class="primary-button" data-action="save-dashboard-layout">변경사항 저장</button></div></div>` : `<div class="dashboard-widget-toolbar"><span>내 대시보드</span><button type="button" class="secondary-button" data-action="toggle-edit-mode">⚙ 위젯 설정</button></div>`}
     <div class="dashboard-widget-canvas">${layout.map(id => dashboardWidgetFrame(id, labels[id], widgets[id])).join("")}${editMode ? `<button type="button" class="dashboard-add-widget" data-action="add-dashboard-widget"><span>＋</span><b>위젯 추가</b><small>필요한 위젯을 선택해 대시보드를 구성하세요.</small></button>` : ""}</div>`;
 }
 
@@ -1695,8 +1718,8 @@ function orderPaymentModal(orderId) {
     </form>`);
 }
 
-function noticesModal() {
-  openModal(`<div class="notice-modal-head"><span>DOOGO NOTICE</span><h2>공지사항</h2><p>위탁셀러 운영에 필요한 최근 업데이트입니다.</p></div><div class="notice-modal-list"><button data-action="open-my-products"><b>상품 썸네일·상세페이지 복사 기능 안내</b><small>내가 PICK 상품에서 판매정보를 수정하고 채널별로 등록할 수 있습니다.</small><em>오늘</em></button><button data-action="open-orders"><b>상품코드 기반 주문 매핑 기능 업데이트</b><small>외부몰 상품명을 바꿔도 DF-코드로 공급사 상품에 연결됩니다.</small><em>오늘</em></button><button data-action="open-connections"><b>거래처 연결 코드 이용 안내</b><small>승인된 공급사의 코드를 등록하면 매핑 가능한 상품이 열립니다.</small><em>09.08</em></button><button data-action="open-seller-channels"><b>송장 자동전송 설정 안내</b><small>공급사 송장이 등록되면 연결 쇼핑몰에 반영할 수 있습니다.</small><em>09.07</em></button></div><div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button></div>`);
+function sellerNoticesTemplate() {
+  return `${sectionHero("공지사항", "두고 운영에 필요한 최근 업데이트와 안내를 확인하세요.")}<div class="panel notice-board">${sellerNoticeBoard.map(n => `<article class="notice-card" id="${n.id}"><div class="notice-card-head"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></div><p>${escapeHtml(n.detail)}</p><button type="button" class="text-button" data-action="${escapeHtml(n.action)}">${escapeHtml(n.cta)} →</button></article>`).join("")}</div>`;
 }
 
 function copiedContentModal(sellerProductId) {
@@ -2407,7 +2430,7 @@ document.addEventListener("click", event => {
   if (action === "single-order") { externalOrderModal(); return; }
   if (action === "toggle-address-search") { const panel = document.getElementById("addressSearchResults"); if (panel) panel.hidden = !panel.hidden; return; }
   if (action === "select-address") { const form = target.closest("form"); if (form) { form.elements.postalCode.value = target.dataset.postal; form.elements.address.value = target.dataset.address; document.getElementById("addressSearchResults").hidden = true; form.elements.addressDetail.focus(); } return; }
-  if (action === "chat-attach") { showToast("데모에서는 파일을 업로드하지 않고 첨부 위치만 확인합니다."); return; }
+  if (action === "chat-attach") { showToast("데모에서는 사진을 업로드하지 않고 첨부 위치만 확인합니다."); return; }
   if (action === "chat-filter") { chatRoomFilter = target.dataset.filter || "all"; render(); updateAccountUI(); return; }
   if (action === "select-chat-room") { activeChatConnectionId = id; render(); updateAccountUI(); return; }
   if (action === "toggle-chat-favorite") {
@@ -2449,7 +2472,7 @@ document.addEventListener("click", event => {
   if (action === "edit-seller-product") editSellerProductModal(id);
   if (action === "map-order") orderMappingModal(id);
   if (action === "pay-order") orderPaymentModal(id);
-  if (action === "open-notices") noticesModal();
+  if (action === "open-notices") { activeMenuIndex = 13; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); const id = target.dataset.id; if (id) requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" })); return; }
   if (action === "toggle-product-channels") { expandedSellerProductId = expandedSellerProductId === id ? null : id; render(); updateAccountUI(); return; }
   if (action === "focus-inquiry") document.getElementById("supplierInquiryPanel")?.scrollIntoView({ behavior: "smooth", block: "center" });
   if (action === "order-detail") orderDetailModal(id);
@@ -2760,6 +2783,7 @@ document.getElementById("workspaceMenu").addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
   activeMenuIndex = Number(button.dataset.menuIndex);
+  if (activeMenuIndex !== 0) editMode = false;
   closeMobileSidebar(); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
@@ -2768,7 +2792,7 @@ document.addEventListener("change", event => {
     supplierSettlementMonth = event.target.value;
     render(); updateAccountUI();
   }
-  if (event.target.id === "marketCategorySelect") { sellerCategory = event.target.value; render(); updateAccountUI(); }
+  if (event.target.id === "marketCategorySearch") { sellerCategory = event.target.value.trim() || "전체보기"; render(); updateAccountUI(); }
   if (event.target.id === "marketCountrySelect") { sellerCountry = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "marketBrandSelect") { sellerBrand = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "refundMonthSelect") { refundMonth = event.target.value; render(); updateAccountUI(); }
