@@ -9,7 +9,7 @@ const accounts = {
 const roleMenus = {
   master: ["대시보드", "회원 승인", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리"],
   supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "배송 · 송장 설정", "가격 관리", "정산 내역", "내 정보"],
-  seller: ["대시보드", "상품 소싱", "PICK 상품", "공급사 문의", "주문관리", "취소 환불", "매출 캘린더", "가격 변경알림", "쇼핑몰 연동", "정기구독", "내정보", "상품 판매중", "두고머니", "공지사항"]
+  seller: ["대시보드", "상품 소싱", "PICK 상품", "공급사 문의", "주문관리", "취소 환불", "매출 캘린더", "가격 변경알림", "쇼핑몰 연동", "정기구독", "내정보", "상품 판매중", "두고머니", "공지사항", "상품승인"]
 };
 const roleMenuGroups = {
   master: [
@@ -26,7 +26,7 @@ const roleMenuGroups = {
   ],
   seller: [
     { label: "홈", indexes: [0] },
-    { label: "상품", indexes: [1, 2, 11, 7] },
+    { label: "상품", indexes: [1, 2, 14, 11, 7] },
     { label: "거래처", indexes: [3] },
     { label: "주문 · 정산", indexes: [4, 5, 12, 6] },
     { label: "판매채널", indexes: [8] },
@@ -36,7 +36,7 @@ const roleMenuGroups = {
 const menuIcons = {
   master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log", "notice"],
   supplier: ["home", "product", "connection", "order", "refund", "printer", "price", "settlement", "settings"],
-  seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice"]
+  seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice", "approval"]
 };
 
 const DEFAULT_DASHBOARD_LAYOUT = ["hero", "order-control", "quick-actions", "notices", "sales", "product-sales", "price-alerts", "recent-orders"];
@@ -844,20 +844,20 @@ function sellerProductsTable() {
   if (!items.length) return `${tabsHtml}<div class="empty">${pickStatusFilter === "pending" ? "승인 대기중인 상품이 없습니다." : "승인완료된 상품이 없습니다."}</div>`;
   return `${tabsHtml}<div class="seller-product-tree">${items.map(item => {
     const product = productOf(item.productId);
-    const expanded = expandedSellerProductId === item.id;
     const approved = item.approvalStatus !== "승인대기";
     const liveChannels = channels.filter(channel => sellerProductChannelStatus(item, channel) === "판매중");
     const liveCount = liveChannels.length;
-    return `<article class="seller-product-node ${expanded ? "expanded" : ""}">
-      <button class="seller-product-parent" type="button" data-action="toggle-product-channels" data-id="${item.id}" aria-expanded="${expanded}">
-        <span class="tree-chevron">${expanded ? "⌄" : "›"}</span>${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
+    return `<article class="seller-product-node pick-approval-node">
+      <div class="seller-product-parent pick-approval-row">
+        ${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
         <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>공급가 ${money(product?.supply || 0)} · 지정판매가 ${money(product?.recommended || 0)}</em></span>
         <span class="seller-product-price"><small>내가 판매하고 싶은 가격</small><b>${money(item.salePrice)}</b><em>마진 ${margin(product?.supply || 0, item.salePrice)}%</em></span>
-        <span class="seller-product-live">${!approved ? `<b class="approval-pending-badge">승인대기</b><small>공급사 승인 후 진행 가능</small>` : liveCount ? `<b class="deployed-badge">상품 배포완료</b><small>${liveChannels.map(channel => escapeHtml(channel.name)).join(" · ")}</small>` : `<b>승인완료 · 판매 시작 전</b><small>클릭해 판매를 시작하세요</small>`}</span>
-      </button>
-      ${expanded ? `<div class="seller-channel-branches">
-        ${!approved ? `<div class="approval-wait-banner"><span>공급사 승인 대기중입니다. 승인되면 가격·상품명·배송정책·상세페이지를 자유롭게 수정하고 원하는 쇼핑몰에 바로 전송할 수 있어요.</span><button type="button" class="secondary-button" data-action="simulate-supplier-approval" data-id="${item.id}">데모: 공급사 승인 시뮬레이션</button></div>` : ""}
-        <div class="branch-guide"><span></span><b>쇼핑몰 등록 상태</b><small>PICK 상품 아래에 채널별 자동등록 결과를 표시합니다.</small></div>${channels.map(channel => channelBranchRow(item, channel, product)).join("")}<div class="seller-product-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}" ${approved ? "" : "disabled"}>상품 수정</button><button class="secondary-button" data-action="copied-content" data-id="${item.id}">복사 콘텐츠</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="primary-button" data-action="manage-product-channels" data-id="${item.id}" ${approved ? "" : "disabled"}>${liveCount ? "쇼핑몰 자동등록" : "내 판매 시작"}</button><button class="secondary-button" data-action="simulate-order" data-id="${item.id}">단건 주문접수</button></div></div>` : ""}
+        ${!approved
+          ? `<span class="seller-product-live"><b class="approval-pending-badge">승인대기</b><small>공급사 승인 후 진행 가능</small></span><div class="pick-approval-actions"><button type="button" class="secondary-button" data-action="simulate-supplier-approval" data-id="${item.id}">데모: 공급사 승인 시뮬레이션</button></div>`
+          : liveCount
+            ? `<span class="seller-product-live"><b class="deployed-badge">판매중</b><small>${liveChannels.map(channel => escapeHtml(channel.name)).join(" · ")}</small></span><div class="pick-approval-actions"><button type="button" class="secondary-button" data-action="open-onsale-products">상품 판매중 보기 →</button></div>`
+            : `<span class="seller-product-live"><b>승인완료 · 미게시</b><small>판매 채널을 선택해 게시하세요</small></span><div class="pick-approval-actions"><button type="button" class="primary-button" data-action="open-approved-products">상품승인으로 이동 →</button></div>`}
+      </div>
     </article>`;
   }).join("")}</div>`;
 }
@@ -1155,6 +1155,26 @@ function subscriptionTemplate() {
   return `${sectionHero("정기구독", "두고셀러 기본 이용권과 실시간 알림톡 유료 부가서비스를 함께 관리합니다.")}<div class="subscription-layout"><div class="panel subscription-plan-card"><span class="plan-kicker">CURRENT PLAN</span><h2>${escapeHtml(subscription.plan)}</h2><div class="plan-price"><strong>${money(subscription.monthlyFee).replace("원","")}</strong><span>원 / 월</span></div><ul><li>공급상품 무제한 열람</li><li>상품 썸네일·상세페이지 복사</li><li>주문·송장·환불 통합관리</li><li>4개 판매채널 연동 설정</li></ul><button class="primary-button" data-action="billing-settings">결제수단 관리</button><small>실제 결제는 연결하지 않은 데모입니다.</small></div><div class="subscription-info"><div class="panel"><div class="panel-head"><div><h3>이용중인 서비스</h3><p>다음 결제 예정일과 월 청구액을 확인합니다.</p></div><span class="chip blue">월 ${money(total)}</span></div><dl class="subscription-dl"><div><dt>두고셀러 베이직</dt><dd>${money(subscription.monthlyFee)}</dd></div><div><dt>${escapeHtml(notice.plan)}</dt><dd>${money(notice.monthlyFee)}</dd></div><div><dt>다음 결제 예정</dt><dd>${escapeHtml(subscription.nextBilling)}</dd></div><div><dt>자동 갱신</dt><dd><button class="subscription-toggle ${subscription.autoRenew ? "on" : ""}" data-action="toggle-subscription"><i></i>${subscription.autoRenew ? "켜짐" : "꺼짐"}</button></dd></div></dl><button class="alert-plan-link" data-action="manage-alert-plan"><span class="talk-symbol small">TALK</span><span><b>실시간 알림톡 부가서비스</b><small>월 2,900원 · 500건 포함 · 현재 ${notice.used}건 사용</small></span><strong>설정 →</strong></button></div><div class="panel billing-history"><div class="panel-head"><div><h3>결제 내역</h3><p>샘플 청구 기록</p></div></div><div><span>2026.09.08</span><b>기본 구독 + 알림톡</b><strong>${money(total)} <em>결제완료</em></strong></div><div><span>2026.08.08</span><b>두고셀러 베이직</b><strong>5,900원 <em>결제완료</em></strong></div></div></div></div>`;
 }
 
+function sellerApprovedProductsTemplate() {
+  const channels = sellerChannels();
+  const items = currentSellerProducts().filter(item => item.approvalStatus !== "승인대기" && !channels.some(channel => sellerProductChannelStatus(item, channel) === "판매중"));
+  return `${sectionHero("상품승인", "공급사 승인이 끝난 상품 중 아직 어느 채널에도 게시되지 않은 상품입니다. 판매 채널을 선택해 내보내면 ‘상품 판매중’으로 이동합니다.")}<div class="panel">
+    <div class="panel-head"><div><h3>게시 대기 상품</h3><p>채널을 선택해 내보내기하면 자동으로 판매중 상태가 됩니다.</p></div><span class="chip">${items.length}개</span></div>
+    ${items.length ? `<div class="seller-product-tree">${items.map(item => {
+      const product = productOf(item.productId);
+      const marginPct = margin(product?.supply || 0, item.salePrice);
+      return `<article class="seller-product-node pick-approval-node">
+        <div class="seller-product-parent pick-approval-row">
+          ${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
+          <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>공급가 ${money(product?.supply || 0)} · 지정판매가 ${money(product?.recommended || 0)}</em></span>
+          <span class="seller-product-price"><small>내가 판매하고 싶은 가격</small><b>${money(item.salePrice)}</b><em>마진 ${marginPct}%</em></span>
+          <span class="seller-product-live"><b>승인완료 · 미게시</b><small>쿠팡 · 카카오쇼핑 · 스마트스토어 중 선택</small></span>
+          <div class="pick-approval-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">상품 수정</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="primary-button" data-action="manage-product-channels" data-id="${item.id}">채널 선택 후 내보내기</button></div>
+        </div>
+      </article>`;
+    }).join("")}</div>` : `<div class="empty">게시 대기중인 상품이 없습니다. PICK 상품에서 공급사 승인이 완료되면 여기에 표시됩니다.</div>`}
+  </div>`;
+}
 function sellerOnSaleProductsTemplate() {
   const channels = sellerChannels();
   const liveItems = currentSellerProducts().filter(item => item.approvalStatus !== "승인대기" && channels.some(channel => sellerProductChannelStatus(item, channel) === "판매중"));
@@ -1192,7 +1212,7 @@ function sellerOnSaleProductsTemplate() {
         ${expanded ? `<div class="seller-channel-branches">
           <div class="branch-guide"><span></span><b>채널별 판매 현황</b><small>채널마다 실제 판매 상태·소비자가와 동기화 여부를 표시합니다.</small></div>
           ${channels.map(channel => channelBranchRow(item, channel, product)).join("")}
-          <div class="seller-product-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">상품 수정</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="primary-button" data-action="manage-product-channels" data-id="${item.id}">쇼핑몰 자동등록</button></div>
+          <div class="seller-product-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">상품 수정</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="secondary-button" data-action="manage-product-channels" data-id="${item.id}">쇼핑몰 자동등록</button><button class="secondary-button" data-action="simulate-order" data-id="${item.id}">단건 주문접수</button></div>
         </div>` : ""}
       </article>`;
     }).join("")}</div>` : `<div class="empty">${liveItems.length ? "조건에 맞는 판매중 상품이 없습니다." : "아직 판매중인 상품이 없습니다. PICK 상품에서 판매를 시작해 주세요."}</div>`}
@@ -1200,10 +1220,11 @@ function sellerOnSaleProductsTemplate() {
 }
 function renderSellerSection(index) {
   if (index === 1) return sellerMarketplaceTemplate();
-  if (index === 2) return `${sectionHero("PICK 상품", "PICK한 상품의 가격·상품명을 관리하고 승인 후 원하는 쇼핑몰에 전송합니다.")}<div class="panel"><div class="panel-head"><div><h3>PICK 상품 목록</h3><p>상품을 펼친 뒤 판매정보를 수정하거나 ‘내 판매 시작’을 진행할 수 있습니다.</p></div><span class="chip">${currentSellerProducts().length}개 PICK</span></div>${sellerProductsTable()}</div>`;
+  if (index === 2) return `${sectionHero("PICK 상품", "공급사 승인 상태를 확인합니다. 승인완료되면 ‘상품승인’ 메뉴에서 판매 채널을 선택해 게시하세요.")}<div class="panel"><div class="panel-head"><div><h3>PICK 상품 목록</h3><p>승인대기·승인완료 상태만 간단히 확인하는 화면입니다.</p></div><span class="chip">${currentSellerProducts().length}개 PICK</span></div>${sellerProductsTable()}</div>`;
   if (index === 11) return sellerOnSaleProductsTemplate();
   if (index === 12) return sellerDoogoMoneyTemplate();
   if (index === 13) return sellerNoticesTemplate();
+  if (index === 14) return sellerApprovedProductsTemplate();
   if (index === 3) return sellerConnectionTemplate();
   if (index === 4) return sellerOrderManagementTemplate();
   if (index === 5) return refundTemplate("seller");
@@ -2765,6 +2786,8 @@ document.addEventListener("click", event => {
   if (action === "open-catalog") { closeModal(); activeMenuIndex = 1; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); showToast("두고로 이동했습니다."); }
   if (action === "open-connections") { closeModal(); activeMenuIndex = 3; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }
   if (action === "open-my-products") { closeModal(); activeMenuIndex = 2; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }
+  if (action === "open-approved-products") { closeModal(); activeMenuIndex = 14; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }
+  if (action === "open-onsale-products") { closeModal(); activeMenuIndex = 11; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }
   if (action === "open-orders") { closeModal(); activeMenuIndex = 4; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }
   if (action === "open-order-mapping") { closeModal(); activeMenuIndex = 4; sellerOrderStage = sellerMappingRequiredOrders().length ? "mapping" : sellerPaymentRequiredOrders().length ? "payment" : "overview"; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }
   if (action === "open-sales-calendar") { closeModal(); activeMenuIndex = 6; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }

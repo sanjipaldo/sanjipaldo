@@ -4217,3 +4217,18 @@ body { letter-spacing:-.012em; }
 @media (max-width: 720px) {
   .seller-channel-branch.channel-commerce-detail .channel-status-stack { grid-column: 2; justify-items: start; }
 }
+
+/* --- PICK 상품 · 상품승인: 펼침 없이 상태와 다음 단계만 보여주는 단순 행 --- */
+.pick-approval-row { grid-template-columns: 58px minmax(210px,1fr) 140px minmax(160px,220px); row-gap: 12px; cursor: default; }
+.pick-approval-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; white-space: nowrap; }
+@media (max-width: 1100px) {
+  .pick-approval-row { grid-template-columns: 58px minmax(180px,1fr) 120px; }
+  .pick-approval-row .seller-product-live { display: none; }
+}
+@media (max-width: 720px) {
+  .pick-approval-row { grid-template-columns: 50px minmax(0,1fr); row-gap: 10px; padding-bottom: 14px; }
+  .pick-approval-row .seller-product-price { grid-column: 2; }
+  .pick-approval-row .seller-product-live { display: grid; grid-column: 1 / -1; }
+  .pick-approval-actions { flex-direction: column; }
+  .pick-approval-actions .primary-button, .pick-approval-actions .secondary-button { width: 100%; }
+}
