@@ -21,12 +21,20 @@
 .doogo-money-head h2 { margin:7px 0 5px; font-size:28px; }
 .doogo-money-head p { margin:0; color:#718094; font-size:16px; line-height:1.6; }
 .doogo-money-balances { margin:20px 0 14px; display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:10px; }
-.doogo-money-balances > div { min-height:118px; padding:20px; display:flex; flex-direction:column; justify-content:center; border:1px solid #e2e8f0; border-radius:16px; background:#f7f9fc; }
-.doogo-money-balances > div.primary { color:#fff; border:0; background:linear-gradient(135deg,#3182f6 0%,#38a5f5 100%); box-shadow:0 15px 34px rgba(49,130,246,.2); }
+.doogo-money-balances > div, .doogo-money-balances > button { min-height:118px; padding:20px; display:flex; flex-direction:column; justify-content:center; border:1px solid #e2e8f0; border-radius:16px; background:#f7f9fc; text-align:left; font-family:inherit; }
+.doogo-money-balances > button.primary { color:#fff; border:0; background:linear-gradient(135deg,#3182f6 0%,#38a5f5 100%); box-shadow:0 15px 34px rgba(49,130,246,.2); cursor:pointer; }
+.doogo-money-balances > button.primary:hover { box-shadow:0 18px 38px rgba(49,130,246,.28); }
 .doogo-money-balances span,.doogo-money-balances small { font-size:15px; }
 .doogo-money-balances strong { margin:7px 0 5px; font-size:25px; letter-spacing:-.03em; }
 .doogo-money-balances small { color:#7b8999; }
 .doogo-money-balances .primary small { color:rgba(255,255,255,.78); }
+.money-history-link { width:100%; margin-top:10px; padding:14px 16px; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px; color:#26364b; background:#f7f9fc; border:1px solid #e5eaf1; border-radius:14px; text-align:left; cursor:pointer; }
+.money-history-link:hover { border-color:#bcd0f5; background:#f1f6ff; }
+.money-history-link span { font-size:18px; }
+.money-history-link b { grid-column:2; font-size:15px; }
+.money-history-link small { grid-column:2; margin-top:2px; color:#8491a0; font-size:13px; }
+.money-history-link em { color:#3182f6; font-style:normal; font-weight:900; }
+.money-history-full { margin-top:0; max-height:420px; overflow-y:auto; }
 .money-bank-card { padding:17px 18px; display:flex; align-items:center; gap:16px; border:1px solid #dfe6ef; border-radius:14px; background:#fff; }
 .money-bank-card > div { margin-right:auto; }
 .money-bank-card span,.money-bank-card b,.money-bank-card small { display:block; }
@@ -111,8 +119,8 @@
   .doogo-money-head h2 { font-size:25px; }
   .doogo-money-head p { font-size:16px; }
   .doogo-money-balances { grid-template-columns:1fr 1fr; }
-  .doogo-money-balances > div { min-height:112px; padding:16px; }
-  .doogo-money-balances > div.primary { grid-column:1 / 3; min-height:128px; }
+  .doogo-money-balances > div, .doogo-money-balances > button { min-height:112px; padding:16px; }
+  .doogo-money-balances > button.primary { grid-column:1 / 3; min-height:128px; }
   .doogo-money-balances span,.doogo-money-balances small { font-size:15px; }
   .doogo-money-balances strong { font-size:26px; }
   .money-bank-card { align-items:stretch; flex-direction:column; }
@@ -668,7 +676,13 @@ body { max-width:100%; overflow-x:hidden; }
   .mobile-order-card > footer > .small-button,
   .mobile-refund-card > footer > .text-button,
   .mobile-refund-card > footer > .small-button,
-  .mobile-refund-card .refund-row-actions > button { min-height:44px; padding:0 13px; font-size:16px; }
+  .mobile-refund-card .refund-row-actions > button { min-height:44px; padding:0 16px; font-size:16px; }
+  .mobile-order-card > footer > .text-button,
+  .mobile-refund-card > footer > .text-button { flex:1; border:1px solid #d5e6fd; border-radius:11px; background:#eef5ff; font-weight:800; }
+  .mobile-order-card > footer > .text-button.refund-link,
+  .mobile-refund-card > footer > .text-button.refund-link { border-color:#f3d4d4; background:#fdf1f1; }
+  .mobile-order-card > footer > .text-button.label-reprint,
+  .mobile-refund-card > footer > .text-button.label-reprint { border-color:#dce3ec; background:#f4f6f9; color:#4b5768; }
   .mobile-order-card .tracking-inline { width:100%; padding:10px 12px; grid-template-columns:auto 1fr auto; align-items:center; gap:8px; background:#eef5ff; border-radius:10px; font-size:16px; }
   .mobile-order-card .tracking-inline strong { overflow-wrap:anywhere; font-size:16px; }
   .mobile-order-card .waiting-text { width:100%; padding:10px 12px; background:#fff6df; border-radius:10px; font-size:16px; }
@@ -698,8 +712,10 @@ button { cursor: pointer; }
 .brand-word small { margin-top: 6px; color: #67809e; font-size: 13px; font-weight: 900; letter-spacing: .18em; }
 .brand-lockup-inverse .brand-word b { color: white; }
 .brand-lockup-inverse .brand-word small { color: #cfe0ff; }
-.login-panel-brand { display: none; margin: 0 auto 24px; }
+.login-panel-brand-wrap { display: none; }
+.login-panel-brand { display: none; margin: 0 auto; }
 .login-panel-brand > img { width: 48px; height: 42px; object-fit: contain; }
+.login-panel-tagline { margin: 10px 0 24px; color: #7c8797; font-size: 13px; font-weight: 700; text-align: center; letter-spacing: -.01em; }
 .login-white-logo { display: flex; align-items: center; gap: 12px; width: max-content; }
 .login-white-logo svg { width: 51px; height: 51px; }
 .login-white-logo span { display: grid; line-height: .8; font-size: 21px; letter-spacing: -.04em; }
@@ -2395,6 +2411,7 @@ button.cashflow-day:hover { z-index:1; background:#f8fbff; box-shadow:inset 0 0 
 }
 
 @media (max-width: 720px) {
+  .login-panel-brand-wrap { display:block; }
   .login-panel-brand { display:flex; }
   .brand > img { width:39px; height:35px; }
   .brand .brand-word b { font-size:18px; }
@@ -3655,6 +3672,15 @@ body { letter-spacing:-.012em; }
   border-top:1px solid #e8edf3;
 }
 .order-detail-section h3 { margin:0 0 10px; font-size:15px; }
+.order-profit-grid > div { background:#f0f6ff; }
+.order-profit-grid b { color:#1554bd; }
+.order-profit-grid b.profit-positive { color:#1c8a54; }
+.order-recipient-details summary { display:flex; align-items:center; justify-content:space-between; cursor:pointer; list-style:none; }
+.order-recipient-details summary::-webkit-details-marker { display:none; }
+.order-recipient-details summary h3 { margin:0; }
+.order-recipient-details summary i { color:#8a97a7; font-style:normal; font-size:14px; transition:transform .15s ease; }
+.order-recipient-details[open] summary i { transform:rotate(180deg); }
+.order-recipient-details .member-detail-grid { margin-top:10px; }
 .tracking-summary {
   padding:12px;
   display:grid;
@@ -3804,17 +3830,15 @@ body { letter-spacing:-.012em; }
     border-radius:22px 22px 0 0;
   }
   .order-status-timeline {
-    grid-template-columns:none;
-    grid-auto-flow:column;
-    grid-auto-columns:minmax(120px,42vw);
-    overflow-x:auto;
-    scroll-snap-type:x proximity;
+    grid-template-columns:repeat(3,1fr);
+    grid-template-rows:repeat(2,auto);
   }
   .order-status-timeline > div {
     min-height:86px;
-    border-right:1px solid #e6ebf2;
-    scroll-snap-align:start;
+    border-bottom:1px solid #e6ebf2;
   }
+  .order-status-timeline > div:nth-child(3n) { border-right:0; }
+  .order-status-timeline > div:nth-child(n+4) { border-bottom:0; }
   .order-detail-head { gap:10px; }
   .order-product-summary { align-items:flex-start; }
   .order-product-summary img { width:58px; height:58px; }
