@@ -3966,7 +3966,7 @@ body { letter-spacing:-.012em; }
 .order-kpi-groups { display: flex; align-items: flex-start; gap: 0; }
 .kpi-group { min-width: 0; }
 .kpi-group:not(.kpi-group-single) { flex: 2 1 0; }
-.kpi-group-single { flex: 1 1 0; max-width: 190px; }
+.kpi-group-single { flex: 1 1 0; max-width: 190px; margin-right: 20px; }
 .kpi-group-label { display: block; margin: 0 0 10px 2px; color: #5b6472; font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
 .kpi-group-cards { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
 .kpi-group-single .kpi-group-cards { grid-template-columns: 1fr; }
@@ -3978,7 +3978,7 @@ body { letter-spacing:-.012em; }
 }
 @media (max-width: 900px) {
   .order-kpi-groups { flex-wrap: wrap; row-gap: 16px; }
-  .kpi-group-single { flex: 1 1 100%; max-width: none; }
+  .kpi-group-single { flex: 1 1 100%; max-width: none; margin-right: 0; }
   .kpi-group-single .kpi-group-cards { grid-template-columns: minmax(0,220px); }
   .kpi-group:not(.kpi-group-single) { flex: 1 1 auto; min-width: 220px; }
   .kpi-group-arrow { display: none; }
@@ -4008,3 +4008,30 @@ body { letter-spacing:-.012em; }
 
 /* --- Avatar initial letter (matches original base template's initial-avatar pattern) --- */
 .avatar-button { line-height: 1; }
+
+/* ============================================================
+   v21(Claude) — refund type tabs, business settings subsection,
+   order-kpi gap fix, sidebar menu size nudge
+   ============================================================ */
+
+/* --- Refund page: 취소/반품/교환 type tabs --- */
+.refund-type-tabs { margin-bottom: 12px; padding: 6px; display: flex; gap: 6px; background: #f4f6f9; border-radius: 12px; }
+.refund-type-tabs button { flex: 1; min-height: 40px; padding: 8px 10px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #6f7d8e; background: transparent; border: 0; border-radius: 9px; font-size: 14px; font-weight: 800; }
+.refund-type-tabs button b { padding: 1px 7px; color: inherit; background: rgba(0,0,0,.06); border-radius: 99px; font-size: 12px; }
+.refund-type-tabs button.active { color: white; background: #3182f6; box-shadow: 0 4px 12px rgba(49,130,246,.22); }
+.refund-type-tabs button.active b { color: white; background: rgba(255,255,255,.22); }
+@media (max-width: 720px) {
+  .refund-type-tabs { overflow-x: auto; }
+  .refund-type-tabs button { flex: 0 0 auto; min-width: 84px; }
+}
+
+/* --- Account settings modal: section divider for bank/settlement fields --- */
+.settings-subsection { margin-top: 6px; padding-top: 14px; border-top: 1px solid #e7ecf3; }
+.settings-subsection b { display: block; font-size: 15px; }
+.settings-subsection small { display: block; margin-top: 3px; color: #8290a1; font-size: 13px; }
+
+/* --- Sidebar workspace menu: modest size nudge back down --- */
+.workspace-menu button { font-size: 15px; }
+@media (max-width: 720px) {
+  .workspace-menu button { font-size: 16px; }
+}
