@@ -458,7 +458,23 @@ function channelBranchRow(item, channel, product) {
   const statusClass = status === "판매중" ? "live" : status === "미연동" ? "unlinked" : "paused";
   const detail = sellerChannelDetail(item, channel, product);
   const channelMargin = margin(product?.supply || 0, detail.salePrice || item.salePrice);
-  return `<div class="seller-channel-branch channel-commerce-detail">${channelMark(channel.id)}<span class="channel-product-copy"><b>${escapeHtml(channel.name)}</b><strong>${escapeHtml(detail.title)}</strong><small>${escapeHtml(detail.category)}</small></span><span class="channel-price-stack"><small>소비자가</small><b>${money(detail.salePrice)}</b><em>원가 ${money(product?.supply || 0)}</em></span><span class="channel-review channel-margin-stat"><b>${channelMargin}%</b><small>마진율</small></span><span class="channel-status-stack"><em class="channel-sale-status ${statusClass}">[${escapeHtml(status)}]</em>${channelSyncBadge(item, channel, status)}</span>${status === "판매중" ? `<div class="channel-sync-actions"><button type="button" class="channel-sync-btn pull" data-action="sync-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 동기화</button><button type="button" class="channel-sync-btn push" data-action="push-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 전송</button></div>` : ""}</div>`;
+  return `<div class="seller-channel-branch channel-commerce-detail">${channelMark(channel.id)}<span class="channel-product-copy"><b>${escapeHtml(channel.name)}</b><strong>${escapeHtml(detail.title)}</strong><small>${escapeHtml(detail.category)}</small></span><span class="channel-price-stack"><small>소비자가</small><b>${money(detail.salePrice)}</b><em>원가 ${money(product?.supply || 0)}</em></span><span class="channel-review channel-margin-stat"><b>${channelMargin}%</b><small>마진율</small></span><span class="channel-status-stack"><em class="channel-sale-status ${statusClass}">[${escapeHtml(status)}]</em>${channelSyncBadge(item, channel, status)}</span>${status === "판매중" ? `<div class="channel-sync-actions"><button type="button" class="channel-sync-btn pull" data-action="sync-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 동기화</button><button type="button" class="channel-sync-btn push" data-action="push-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 전송</button><button type="button" class="channel-sync-btn stop" data-action="open-stop-channel" data-id="${item.id}" data-channel="${channel.id}">판매중지</button></div>` : ""}</div>`;
+}
+function stopChannelListingModal(sellerProductId, channelId) {
+  const item = state.sellerProducts.find(entry => entry.id === sellerProductId);
+  const channel = sellerChannels().find(entry => entry.id === channelId);
+  if (!item || !channel) return;
+  const reasons = [
+    { value: "상품중지", desc: "판매를 일시적으로 중단합니다." },
+    { value: "품절", desc: "재고가 소진되어 주문을 받을 수 없습니다." },
+    { value: "미진열", desc: "채널 진열대에서 내립니다." },
+    { value: "미노출", desc: "검색·카테고리에서 노출을 숨깁니다." }
+  ];
+  openModal(`<h2>판매중지 처리</h2><p>${escapeHtml(channel.name)} · ${escapeHtml(sellerProductTitle(item))}<br>중지 사유를 선택하면 해당 채널의 상태가 즉시 변경됩니다.</p>
+    <form id="stopChannelForm" class="form-grid" data-id="${item.id}" data-channel="${channelId}">
+      <div class="form-field full stop-reason-list">${reasons.map((reason, index) => `<label><input type="radio" name="reason" value="${escapeHtml(reason.value)}" ${index === 0 ? "checked" : ""}><span><b>${escapeHtml(reason.value)}</b><small>${escapeHtml(reason.desc)}</small></span></label>`).join("")}</div>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="refund-button">판매중지 처리</button></div>
+    </form>`);
 }
 function queueTrackingSync(order) {
   if (!order?.tracking) return;
@@ -1158,7 +1174,7 @@ function sellerApprovedProductsTemplate() {
           <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>공급가 ${money(product?.supply || 0)} · 지정판매가 ${money(product?.recommended || 0)}</em></span>
           <span class="seller-product-price"><small>내가 판매하고 싶은 가격</small><b>${money(item.salePrice)}</b><em>마진 ${marginPct}%</em></span>
           <span class="seller-product-live">${liveCount ? `<b class="deployed-badge">${liveCount === channels.length ? "판매중" : "부분판매중"}</b><span class="live-channel-icons">${liveChannels.map(channel => channelMark(channel.id, true)).join("")}</span>` : `<b>승인완료 · 미게시</b><small>판매 채널을 선택해 전송하세요</small>`}</span>
-          <div class="pick-approval-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">상품 수정</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="primary-button" data-action="manage-product-channels" data-id="${item.id}">상품 전송</button></div>
+          <div class="pick-approval-actions"><button class="master-edit-button" data-action="edit-seller-product" data-id="${item.id}">마스터상품 수정</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="primary-button" data-action="manage-product-channels" data-id="${item.id}">상품 전송</button></div>
         </div>
       </article>`;
     }).join("")}</div>` : `<div class="empty">승인완료된 상품이 없습니다. PICK 상품에서 공급사 승인이 완료되면 여기에 표시됩니다.</div>`}
@@ -2684,6 +2700,7 @@ document.addEventListener("click", event => {
     }, 700);
     return;
   }
+  if (action === "open-stop-channel") { stopChannelListingModal(id, target.dataset.channel); return; }
   if (action === "focus-inquiry") document.getElementById("supplierInquiryPanel")?.scrollIntoView({ behavior: "smooth", block: "center" });
   if (action === "order-detail") orderDetailModal(id);
   if (action === "request-refund") refundRequestModal(id);
@@ -3313,6 +3330,19 @@ document.addEventListener("submit", event => {
     sellerChannels().forEach(channel => { item.channelStatuses[channel.id] = channels.includes(channel.id) ? "판매중" : channel.status === "connected" ? "판매중지/미노출" : channel.status === "pending" ? "연동 대기" : "미연동"; });
     audit("쇼핑몰 상품 자동등록", `${item.id} · ${channels.map(id => channelMeta(id).name).join(", ")}에 상품명·판매가·카테고리·콘텐츠 등록 결과를 반영했습니다.`, "done", "channel");
     saveState(); closeModal(); activeMenuIndex = 11; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); showToast(`${channels.length}개 쇼핑몰에 상품을 전송했습니다.`);
+  }
+  if (form.id === "stopChannelForm") {
+    const item = state.sellerProducts.find(entry => entry.id === form.dataset.id);
+    const channelId = form.dataset.channel;
+    const channel = sellerChannels().find(entry => entry.id === channelId);
+    const reason = String(data.reason || "상품중지");
+    if (!item || !channelId) return;
+    item.channels = (item.channels || []).filter(id => id !== channelId);
+    item.channelStatuses = item.channelStatuses || {};
+    item.channelStatuses[channelId] = reason;
+    if (item.channelSyncStatus) delete item.channelSyncStatus[channelId];
+    audit("판매채널 판매중지", `${item.id} · ${channel?.name || channelId} 채널을 '${reason}' 상태로 변경했습니다.`, "done", "channel");
+    saveState(); closeModal(); render(); updateAccountUI(); showToast(`${channel?.name || "채널"}을(를) '${reason}' 상태로 변경했습니다.`);
   }
   if (form.id === "shippingProfileForm") {
     state.shippingProfiles[currentAccount.loginId] = { carrier: data.carrier, sender: data.sender, contractCode: data.contractCode, labelFormat: data.labelFormat, autoIssue: Boolean(data.autoIssue) };

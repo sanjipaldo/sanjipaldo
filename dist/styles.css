@@ -2702,7 +2702,7 @@ body { letter-spacing:-.012em; }
 .order-stage-overview small { color:#8b97a4; font-size:13px; }
 
 /* Per-channel commerce details */
-.seller-channel-branch.channel-commerce-detail { grid-template-columns:38px minmax(220px,1.4fr) minmax(150px,.7fr) minmax(120px,.55fr) auto; }
+.seller-channel-branch.channel-commerce-detail { grid-template-columns:38px minmax(220px,1.4fr) minmax(150px,.7fr) minmax(120px,.55fr) 152px; }
 .channel-product-copy { min-width:0; display:grid; gap:3px; }
 .channel-product-copy > b { color:#3182f6; font-size:13px; }
 .channel-product-copy > strong { overflow:hidden; font-size:15px; text-overflow:ellipsis; white-space:nowrap; }
@@ -2825,7 +2825,7 @@ body { letter-spacing:-.012em; }
   .market-discovery { grid-template-columns:1fr; }
   .market-filter-row { grid-template-columns:repeat(3,1fr); }
   .market-filter-row .shipping-tabs { grid-column:1 / 3; }
-  .seller-channel-branch.channel-commerce-detail { grid-template-columns:38px minmax(200px,1fr) 145px auto; }
+  .seller-channel-branch.channel-commerce-detail { grid-template-columns:38px minmax(200px,1fr) 145px 152px; }
   .channel-review { grid-column:2; }
 }
 
@@ -4244,3 +4244,25 @@ body { letter-spacing:-.012em; }
 
 /* --- 위탁셀러 로그인 비주얼: 신규 로고 + 태그라인, 텍스트 정리 --- */
 .login-visual-tagline { margin: 10px 0 0; color: rgba(255,255,255,.85); font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.login-visual-logo { display: block; width: max-content; }
+.login-visual-logo img { height: 64px; width: auto; display: block; filter: brightness(0) invert(1); }
+.login-panel-brand-logo.login-panel-brand { display: flex; }
+.login-panel-brand-logo > img { width: auto; height: 48px; object-fit: contain; }
+
+/* --- 상품승인: 마스터상품 수정 버튼 (노란색) --- */
+.master-edit-button { padding: 10px 15px; border-radius: 9999px; color: #8a6d0a; background: #fff6d9; border: 1px solid #f0dd9c; font-weight: 700; transition: .16s ease; }
+.master-edit-button:hover { border-color: #e3c976; background: #fff1c2; }
+
+/* --- 채널 판매중지 버튼 + 사유 선택 모달 --- */
+.channel-sync-btn.stop { color: #bd2130; background: #fff0f0; border: 1px solid #f3c6c6; }
+.channel-sync-btn.stop:hover { background: #ffe4e4; }
+.stop-reason-list { display: grid; gap: 8px; }
+.stop-reason-list label { display: block; cursor: pointer; }
+.stop-reason-list label input { position: absolute; opacity: 0; }
+.stop-reason-list label span { display: grid; gap: 2px; padding: 12px 14px; border: 1px solid #dfe5ed; border-radius: 11px; }
+.stop-reason-list label input:checked + span { border-color: #e39a9a; background: #fff5f5; box-shadow: inset 0 0 0 1px #e39a9a; }
+.stop-reason-list label span b { font-size: 15px; color: #23282f; }
+.stop-reason-list label span small { color: #84909d; font-size: 13px; }
+@media (max-width: 720px) {
+  .channel-sync-actions { flex-wrap: wrap; }
+}
