@@ -922,6 +922,8 @@ h1 { margin: 0; font-size: clamp(23px, 2.5vw, 30px); font-weight: 650; letter-sp
 .small-button.done { color: #668078; background: #f1f4f3; border-color: #e3e8e6; }
 .small-button.picked { color: #b6791a; background: #fff6e8; border-color: #f3dfb3; }
 .alert-item, .activity-item { padding: 14px 17px; border-bottom: 1px solid #edf1ef; }
+.alert-item.acked { background: #fafbfc; }
+.alert-item.acked strong { color: #6b7684; }
 .alert-item:last-child, .activity-item:last-child { border-bottom: 0; }
 .alert-top { display: flex; justify-content: space-between; gap: 8px; }
 .alert-item strong, .activity-item strong { font-size: 15px; }
@@ -1313,6 +1315,7 @@ td strong { font-size: 16px; }
 .product-sale-row b, .product-sale-row small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .product-sale-row b { font-size: 15px; }
 .product-sale-row small { margin-top: 4px; color: #3182f6; font-size: 15px; font-weight: 700; }
+.product-sale-row em { flex: 0 0 auto; font-style: normal; }
 .seller-lower-grid { grid-template-columns: minmax(0,1.65fr) minmax(280px,.7fr); }
 
 .connection-layout { display: grid; grid-template-columns: minmax(390px,.9fr) minmax(430px,1.1fr); gap: 16px; }
@@ -4147,8 +4150,20 @@ body { letter-spacing:-.012em; }
 .channel-sync-actions { grid-column: 2 / -1; margin-top: -4px; padding-bottom: 6px; display: flex; justify-content: flex-end; gap: 14px; }
 .channel-sync-actions .text-button { padding: 2px 0; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .seller-product-actions button[disabled] { color: #b7c0cb; background: #f4f6f9; border-color: #e5eaf1; cursor: not-allowed; }
+
+/* --- 상품 판매중: 검색 + 등록일 range 필터 바 --- */
+.onsale-filter-bar { margin-bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.onsale-filter-bar .catalog-search { flex: 1 1 240px; }
+.onsale-date-field { display: flex; flex-direction: column; gap: 4px; }
+.onsale-date-field span { color: #788697; font-size: 13px; font-weight: 800; }
+.onsale-date-field input { height: 38px; padding: 0 10px; color: #26364b; background: #fff; border: 1px solid #dce3ec; border-radius: 9px; font-size: 14px; }
+.onsale-date-sep { align-self: flex-end; padding-bottom: 9px; color: #9aa5b2; }
 @media (max-width: 720px) {
   .pick-status-tabs { overflow-x: auto; }
   .pick-status-tabs button { flex: 0 0 auto; min-width: 84px; }
   .approval-wait-banner { flex-direction: column; align-items: stretch; }
+  .onsale-filter-bar { flex-direction: column; align-items: stretch; }
+  .onsale-filter-bar .catalog-search { width: 100%; flex: 0 0 auto; }
+  .onsale-date-field, .onsale-date-field input { width: 100%; }
+  .onsale-date-sep { display: none; }
 }

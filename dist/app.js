@@ -26,7 +26,7 @@ const roleMenuGroups = {
   ],
   seller: [
     { label: "홈", indexes: [0] },
-    { label: "상품", indexes: [1, 2, 7] },
+    { label: "상품", indexes: [1, 2, 11, 7] },
     { label: "거래처", indexes: [3] },
     { label: "주문 · 정산", indexes: [4, 5, 12, 6] },
     { label: "판매채널", indexes: [8] },
@@ -188,6 +188,9 @@ let sellerCountry = "전체 국가";
 let sellerBrand = "전체 브랜드";
 let sellerProductSearch = "";
 let pickStatusFilter = "all";
+let onSaleSearch = "";
+let onSaleDateFrom = "";
+let onSaleDateTo = "";
 let noticeModalIndex = -1;
 let sellerOrderSearch = "";
 let sellerOrderStage = "all";
@@ -1144,9 +1147,47 @@ function subscriptionTemplate() {
   return `${sectionHero("정기구독", "두고셀러 기본 이용권과 실시간 알림톡 유료 부가서비스를 함께 관리합니다.")}<div class="subscription-layout"><div class="panel subscription-plan-card"><span class="plan-kicker">CURRENT PLAN</span><h2>${escapeHtml(subscription.plan)}</h2><div class="plan-price"><strong>${money(subscription.monthlyFee).replace("원","")}</strong><span>원 / 월</span></div><ul><li>공급상품 무제한 열람</li><li>상품 썸네일·상세페이지 복사</li><li>주문·송장·환불 통합관리</li><li>4개 판매채널 연동 설정</li></ul><button class="primary-button" data-action="billing-settings">결제수단 관리</button><small>실제 결제는 연결하지 않은 데모입니다.</small></div><div class="subscription-info"><div class="panel"><div class="panel-head"><div><h3>이용중인 서비스</h3><p>다음 결제 예정일과 월 청구액을 확인합니다.</p></div><span class="chip blue">월 ${money(total)}</span></div><dl class="subscription-dl"><div><dt>두고셀러 베이직</dt><dd>${money(subscription.monthlyFee)}</dd></div><div><dt>${escapeHtml(notice.plan)}</dt><dd>${money(notice.monthlyFee)}</dd></div><div><dt>다음 결제 예정</dt><dd>${escapeHtml(subscription.nextBilling)}</dd></div><div><dt>자동 갱신</dt><dd><button class="subscription-toggle ${subscription.autoRenew ? "on" : ""}" data-action="toggle-subscription"><i></i>${subscription.autoRenew ? "켜짐" : "꺼짐"}</button></dd></div></dl><button class="alert-plan-link" data-action="manage-alert-plan"><span class="talk-symbol small">TALK</span><span><b>실시간 알림톡 부가서비스</b><small>월 2,900원 · 500건 포함 · 현재 ${notice.used}건 사용</small></span><strong>설정 →</strong></button></div><div class="panel billing-history"><div class="panel-head"><div><h3>결제 내역</h3><p>샘플 청구 기록</p></div></div><div><span>2026.09.08</span><b>기본 구독 + 알림톡</b><strong>${money(total)} <em>결제완료</em></strong></div><div><span>2026.08.08</span><b>두고셀러 베이직</b><strong>5,900원 <em>결제완료</em></strong></div></div></div></div>`;
 }
 
+function sellerOnSaleProductsTemplate() {
+  const channels = sellerChannels();
+  const liveItems = currentSellerProducts().filter(item => item.approvalStatus !== "승인대기" && channels.some(channel => sellerProductChannelStatus(item, channel) === "판매중"));
+  const query = onSaleSearch.trim().toLowerCase();
+  const normalizeDate = value => String(value || "").replace(/\./g, "-");
+  const filtered = liveItems.filter(item => {
+    const product = productOf(item.productId);
+    const matchesQuery = !query || [sellerProductTitle(item, product), item.productId, item.id].some(value => String(value || "").toLowerCase().includes(query));
+    const itemDate = normalizeDate(item.copiedAt);
+    const matchesFrom = !onSaleDateFrom || (itemDate && itemDate >= onSaleDateFrom);
+    const matchesTo = !onSaleDateTo || (itemDate && itemDate <= onSaleDateTo);
+    return matchesQuery && matchesFrom && matchesTo;
+  });
+  return `${sectionHero("상품 판매중", "실제로 채널에 배포되어 판매중인 상품과 마진을 확인합니다.")}<div class="panel">
+    <div class="panel-head"><div><h3>판매중 상품 목록</h3><p>검색 또는 등록일 범위로 상품을 좁혀볼 수 있습니다.</p></div><span class="chip">${filtered.length}개</span></div>
+    <div class="onsale-filter-bar">
+      <label class="catalog-search"><span>⌕</span><input id="onSaleSearchInput" value="${escapeHtml(onSaleSearch)}" placeholder="상품명·코드 검색"></label>
+      <label class="onsale-date-field"><span>등록일</span><input type="date" id="onSaleDateFromInput" value="${escapeHtml(onSaleDateFrom)}"></label>
+      <span class="onsale-date-sep">~</span>
+      <label class="onsale-date-field"><span>&nbsp;</span><input type="date" id="onSaleDateToInput" value="${escapeHtml(onSaleDateTo)}"></label>
+      <button type="button" class="secondary-button" data-action="reset-onsale-filter">초기화</button>
+    </div>
+    ${filtered.length ? `<div class="seller-product-tree">${filtered.map(item => {
+      const product = productOf(item.productId);
+      const liveChannels = channels.filter(channel => sellerProductChannelStatus(item, channel) === "판매중");
+      const marginPct = margin(product?.supply || 0, item.salePrice);
+      return `<article class="seller-product-node">
+        <button class="seller-product-parent" type="button" data-action="edit-seller-product" data-id="${item.id}">
+          <span class="tree-chevron">›</span>${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
+          <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>등록일 ${escapeHtml(item.copiedAt || "-")}</em></span>
+          <span class="seller-product-price"><small>내 판매가</small><b>${money(item.salePrice)}</b><em>마진 ${marginPct}%</em></span>
+          <span class="seller-product-live"><b class="deployed-badge">상품 배포완료</b><small>${liveChannels.map(channel => escapeHtml(channel.name)).join(" · ")}</small></span>
+        </button>
+      </article>`;
+    }).join("")}</div>` : `<div class="empty">${liveItems.length ? "조건에 맞는 판매중 상품이 없습니다." : "아직 판매중인 상품이 없습니다. PICK 상품에서 판매를 시작해 주세요."}</div>`}
+  </div>`;
+}
 function renderSellerSection(index) {
   if (index === 1) return sellerMarketplaceTemplate();
   if (index === 2) return `${sectionHero("PICK 상품", "PICK한 상품의 가격·상품명을 관리하고 승인 후 원하는 쇼핑몰에 전송합니다.")}<div class="panel"><div class="panel-head"><div><h3>PICK 상품 목록</h3><p>상품을 펼친 뒤 판매정보를 수정하거나 ‘내 판매 시작’을 진행할 수 있습니다.</p></div><span class="chip">${currentSellerProducts().length}개 PICK</span></div>${sellerProductsTable()}</div>`;
+  if (index === 11) return sellerOnSaleProductsTemplate();
   if (index === 12) return sellerDoogoMoneyTemplate();
   if (index === 13) return sellerNoticesTemplate();
   if (index === 3) return sellerConnectionTemplate();
@@ -1304,7 +1345,7 @@ function renderSeller() {
     "quick-actions": `<div class="seller-quick-actions"><button data-action="open-catalog"><span>＋</span><b>상품 소싱하기</b><small>국가·브랜드·카테고리별 소싱</small></button><button data-action="open-connections"><span>⌁</span><b>거래처 연결</b><small>공급사 코드 등록</small></button><button data-action="open-my-products"><span>▦</span><b>PICK 상품</b><small>상품명·가격·쇼핑몰 관리</small></button><button data-action="open-order-mapping"><span>⇄</span><b>주문 매핑</b><small>${mappingRequired.length + paymentRequired.length ? `${mappingRequired.length + paymentRequired.length}건 처리 필요` : "상품코드·결제 연결"}</small></button></div>`,
     notices: `<div class="panel dashboard-notices"><div class="panel-head"><div><h3>공지사항</h3><p>두고 운영 안내</p></div><button class="text-button" data-action="open-notices">더보기 →</button></div><div class="notice-list">${(state.notices || []).map(n => `<button data-action="open-notice-detail" data-id="${n.id}"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></button>`).join("")}</div></div>`,
     sales: `<div class="panel sales-summary"><div class="panel-head"><div><h3>9월 매출·두고머니</h3><p>4개 판매채널 샘플 집계</p></div><div class="refund-head-actions"><button class="text-button" data-action="open-sales-calendar">달력</button><button class="text-button" data-action="open-doogo-money">두고머니 관리 →</button></div></div><dl><div><dt>오늘 매출</dt><dd>${money(state.salesLedger.filter(item=>item.date==="2026-09-08").reduce((sum,item)=>sum+item.sales,0))}</dd></div><div><dt>이번 달 매출</dt><dd>${money(salesTotal)}</dd></div><div><dt>예상 순수익</dt><dd>${money(profitTotal)}</dd></div><div><dt>사용 가능 두고머니</dt><dd class="deposit-value">${money(deposit.balance)}</dd></div></dl></div>`,
-    "product-sales": `<div class="panel product-sales"><div class="panel-head"><div><h3>PICK 상품</h3><p>내가 선택한 판매상품</p></div><button class="text-button" data-action="open-my-products">관리 →</button></div>${sellerProducts.length ? sellerProducts.slice(0,3).map(item => { const product = productOf(item.productId); const amount = sellerOrders.filter(order => (order.mappedProductId || order.productId) === item.productId).reduce((sum,order)=>sum+order.amount,0); const isOnSale = sellerChannels().some(channel => sellerProductChannelStatus(item, channel) === "판매중"); return `<button class="product-sale-row" data-action="edit-seller-product" data-id="${item.id}">${productPhoto(product,"sale-photo")}<span><b>${escapeHtml(sellerProductTitle(item, product))}</b><small>${money(amount)} · ${isOnSale ? "판매중" : "등록대기"}</small></span></button>`; }).join("") : `<div class="empty">PICK한 상품이 없습니다.</div>`}</div>`,
+    "product-sales": `<div class="panel product-sales"><div class="panel-head"><div><h3>PICK 상품</h3><p>내가 선택한 판매상품</p></div><button class="text-button" data-action="open-my-products">관리 →</button></div>${sellerProducts.length ? sellerProducts.slice(0,3).map(item => { const product = productOf(item.productId); const amount = sellerOrders.filter(order => (order.mappedProductId || order.productId) === item.productId).reduce((sum,order)=>sum+order.amount,0); const isOnSale = sellerChannels().some(channel => sellerProductChannelStatus(item, channel) === "판매중"); return `<button class="product-sale-row" data-action="edit-seller-product" data-id="${item.id}">${productPhoto(product,"sale-photo")}<span><b>${escapeHtml(sellerProductTitle(item, product))}</b><small>${money(amount)}</small></span><em class="chip ${isOnSale ? "" : "orange"}">${isOnSale ? "판매중" : "판매대기"}</em></button>`; }).join("") : `<div class="empty">PICK한 상품이 없습니다.</div>`}</div>`,
     "price-alerts": `<div class="panel">
         <div class="panel-head"><div><h3>가격 변경 알림</h3><p>공급가 변동이 있는 상품입니다.</p></div>${alerts.length ? `<span class="chip red">${alerts.length}건</span>` : `<span class="chip">완료</span>`}</div>
         <div class="alert-list">${alerts.length ? alerts.map(priceAlertRow).join("") : `<div class="empty">확인할 가격 변경이 없습니다.</div>`}</div>
@@ -1326,7 +1367,7 @@ function productRowSeller(p) {
   const changed = currentPriceAlerts().some(alert => alert.productId === p.id && alert.status === "확인필요");
   const isLive = sellerItem ? sellerChannels().some(channel => sellerProductChannelStatus(sellerItem, channel) === "판매중") : false;
   const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
-  const pickLabel = { none: "이 상품 PICK하기", pending: "PICK완료 · 승인대기중", approved: "PICK완료 · 판매 시작하기", live: "판매중 · PICK 상품에서 보기" }[pickState];
+  const pickLabel = { none: "이 상품 PICK하기", pending: "승인대기", approved: "판매 시작하기", live: "판매중" }[pickState];
   const pickClass = pickState === "none" ? "" : pickState === "live" ? "done" : "picked";
   return `<article class="market-product-card" data-action="product-detail" data-id="${p.id}" tabindex="0" aria-label="${escapeHtml(p.name)} 상세 보기">
     <div class="market-product-image">${productPhoto(p, "catalog-photo")}<b>발주마감 ${escapeHtml(p.cutoff || "10:00")}</b><em>${escapeHtml(p.category)}</em><span class="shipping-badge ${p.shippingType === "overseas" ? "overseas" : "domestic"}">${p.shippingType === "overseas" ? `해외직구 · ${escapeHtml(p.originCountry)}` : "국내배송"}</span>${changed ? `<strong class="price-alert-flag">공급가 변경</strong>` : ""}</div>
@@ -1340,11 +1381,12 @@ function productRowSeller(p) {
 
 function priceAlertRow(a) {
   const p = productOf(a.productId);
-  return `<div class="alert-item">
-    <div class="alert-top"><strong>${p.name}</strong><span class="chip red">변경</span></div>
+  const acked = a.status !== "확인필요";
+  return `<div class="alert-item ${acked ? "acked" : ""}">
+    <div class="alert-top"><strong>${p.name}</strong><span class="chip ${acked ? "" : "red"}">${acked ? "확인완료" : "변경"}</span></div>
     <p>${p.supplier}에서 공급가를 변경했습니다.</p>
     <div class="price-change"><del>${money(a.oldPrice)}</del><span>→</span><b>${money(a.newPrice)}</b></div>
-    <div class="alert-actions"><button class="small-button" data-action="review-price" data-id="${a.id}">채널 판매가 일괄 변경</button><button class="text-button" data-action="ack-price" data-id="${a.id}">확인 처리</button></div>
+    <div class="alert-actions"><button class="small-button" data-action="review-price" data-id="${a.id}">채널 판매가 일괄 변경</button>${acked ? "" : `<button class="text-button" data-action="ack-price" data-id="${a.id}">확인 처리</button>`}</div>
   </div>`;
 }
 
@@ -1603,7 +1645,7 @@ function productDetailModal(id) {
   const isLive = sellerItem ? sellerChannels().some(channel => sellerProductChannelStatus(sellerItem, channel) === "판매중") : false;
   const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
   const pickAction = sellerItem ? "open-picked-product" : "import-product";
-  const pickLabel = { none: "이 상품 PICK하기", pending: "PICK완료 · 승인대기중", approved: "PICK완료 · 판매 시작하기", live: "판매중 · PICK 상품에서 보기" }[pickState];
+  const pickLabel = { none: "이 상품 PICK하기", pending: "승인대기", approved: "판매 시작하기", live: "판매중" }[pickState];
   openModal(`<div class="product-detail-page"><div class="product-breadcrumb"><button type="button" data-action="open-catalog">공급 상품몰</button><span>›</span><button type="button" data-action="filter-products" data-category="${escapeHtml(p.category)}">${escapeHtml(p.category)}</button><span>›</span> ${escapeHtml(p.name)}</div><div class="product-detail">
     <div class="product-detail-visual">${productPhoto(p, "detail-photo")}<small>${escapeHtml(p.category)}</small><span class="detail-shipping-badge ${overseas ? "overseas" : ""}">${overseas ? `해외직구 · ${escapeHtml(p.originCountry)}` : "국내배송"}</span></div>
     <div class="product-detail-copy">
@@ -2500,6 +2542,7 @@ document.addEventListener("click", event => {
   if (action === "filter-shipping") { sellerShippingFilter = target.dataset.filter || "all"; render(); updateAccountUI(); return; }
   if (action === "market-preset") { sellerCategory = target.dataset.category || "전체보기"; sellerShippingFilter = target.dataset.filter || "all"; sellerCountry = target.dataset.country || "전체 국가"; sellerBrand = target.dataset.brand || "전체 브랜드"; render(); updateAccountUI(); requestAnimationFrame(() => document.getElementById("marketProductGrid")?.scrollIntoView({ behavior:"smooth", block:"start" })); return; }
   if (action === "reset-market-filter") { sellerCategory = "전체보기"; sellerShippingFilter = "all"; sellerCountry = "전체 국가"; sellerBrand = "전체 브랜드"; sellerProductSearch = ""; render(); updateAccountUI(); return; }
+  if (action === "reset-onsale-filter") { onSaleSearch = ""; onSaleDateFrom = ""; onSaleDateTo = ""; render(); updateAccountUI(); return; }
   if (action === "market-scroll") { document.getElementById("marketProductGrid")?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
   if (action === "product-detail") { productDetailModal(id); return; }
   if (action === "product-detail-tab") {
@@ -2888,6 +2931,9 @@ document.addEventListener("change", event => {
     render(); updateAccountUI();
   }
   if (event.target.id === "marketCategorySearch") { sellerCategory = event.target.value.trim() || "전체보기"; render(); updateAccountUI(); }
+  if (event.target.id === "onSaleSearchInput") { onSaleSearch = event.target.value; render(); updateAccountUI(); }
+  if (event.target.id === "onSaleDateFromInput") { onSaleDateFrom = event.target.value; render(); updateAccountUI(); }
+  if (event.target.id === "onSaleDateToInput") { onSaleDateTo = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "marketCountrySelect") { sellerCountry = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "marketBrandSelect") { sellerBrand = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "refundMonthSelect") { refundMonth = event.target.value; render(); updateAccountUI(); }
