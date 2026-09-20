@@ -42,13 +42,13 @@ const menuIcons = {
 const DEFAULT_DASHBOARD_LAYOUT = ["hero", "order-control", "quick-actions", "notices", "sales", "product-sales", "price-alerts", "recent-orders"];
 
 const naverCategoryGroups = [
-  { label: "식품", options: ["농산물", "수산물", "가공식품", "건강식품", "정육·계란", "쌀·잡곡·견과", "생수·음료", "커피·원두·차"] },
   { label: "패션의류", options: ["여성의류", "남성의류", "베이비의류", "언더웨어·잠옷"] },
   { label: "패션잡화", options: ["여성가방", "남성가방", "신발", "패션소품"] },
   { label: "화장품/미용", options: ["스킨케어", "메이크업", "헤어케어", "바디케어"] },
   { label: "디지털/가전", options: ["휴대폰", "노트북", "생활가전", "카메라"] },
   { label: "가구/인테리어", options: ["침실가구", "거실가구", "홈데코", "조명"] },
   { label: "출산/육아", options: ["기저귀·물티슈", "분유·이유식", "유아동의류", "유모차·카시트"] },
+  { label: "식품", options: ["농산물", "수산물", "축산물", "가공식품", "건강식품", "생수·음료", "커피·원두·차", "간편조리식품"] },
   { label: "스포츠/레저", options: ["골프", "캠핑·등산", "헬스·요가", "자전거"] },
   { label: "생활/건강", options: ["생활용품", "건강용품", "반려동물용품", "문구·사무용품"] },
   { label: "여가/생활편의", options: ["도서", "티켓·공연", "여행·항공권", "상품권"] },
@@ -184,10 +184,12 @@ let partnerLoginRole = "supplier";
 let signupReturnTarget = "seller";
 let signupStep = 1;
 let sellerCategory = "전체보기";
+let sellerCategoryGroup = "식품";
 let sellerShippingFilter = "all";
 let sellerCountry = "전체 국가";
 let sellerBrand = "전체 브랜드";
 let sellerProductSearch = "";
+let marketViewMode = "grid";
 let pickStatusFilter = "all";
 let onSaleSearch = "";
 let onSaleDateFrom = "";
@@ -702,6 +704,7 @@ function showApp(accountId) {
   activeRole = currentAccount.role;
   activeMenuIndex = 0;
   sellerCategory = "전체보기";
+  sellerCategoryGroup = "식품";
   sellerShippingFilter = "all";
   sellerCountry = "전체 국가";
   sellerBrand = "전체 브랜드";
@@ -842,13 +845,36 @@ function marketToolbar() {
   const categories = ["전체보기", "농산물", "수산물", "가공식품", "건강식품"];
   const countries = ["전체 국가", ...new Set(state.products.map(product => product.originCountry || "대한민국"))];
   const brands = ["전체 브랜드", ...new Set(state.products.map(product => product.supplier))];
-  return `<div class="market-toolbar market-toolbar-shop"><label class="catalog-search"><span>⌕</span><input id="sellerCatalogSearch" value="${escapeHtml(sellerProductSearch)}" placeholder="상품명·브랜드·원산지 검색"></label><div class="market-filter-row"><label><span>카테고리 <small>네이버쇼핑 기준</small></span><input id="marketCategorySearch" list="marketCategoryOptions" value="${sellerCategory === "전체보기" ? "" : escapeHtml(sellerCategory)}" placeholder="카테고리 검색 (예: 농산물)"><datalist id="marketCategoryOptions">${naverCategoryGroups.flatMap(group => group.options.map(option => `<option value="${escapeHtml(option)}" label="${escapeHtml(group.label)}">`)).join("")}</datalist></label><label><span>소싱 국가</span><select id="marketCountrySelect">${countries.map(country => `<option ${sellerCountry === country ? "selected" : ""}>${escapeHtml(country)}</option>`).join("")}</select></label><label><span>브랜드</span><select id="marketBrandSelect">${brands.map(brand => `<option ${sellerBrand === brand ? "selected" : ""}>${escapeHtml(brand)}</option>`).join("")}</select></label><div class="shipping-tabs"><button class="${sellerShippingFilter === "all" ? "active" : ""}" data-action="filter-shipping" data-filter="all">전체</button><button class="${sellerShippingFilter === "domestic" ? "active" : ""}" data-action="filter-shipping" data-filter="domestic">국내배송</button><button class="${sellerShippingFilter === "overseas" ? "active" : ""}" data-action="filter-shipping" data-filter="overseas">해외소싱</button></div><button class="market-reset" data-action="reset-market-filter">초기화</button></div><div class="category-pills">${categories.slice(1).map(category => `<button class="${sellerCategory === category ? "active" : ""}" data-action="filter-products" data-category="${category}">${category}</button>`).join("")}</div><span>검색 결과 <b>${sellerCatalogProducts().length}</b>개</span></div>`;
+  const activeGroup = naverCategoryGroups.find(group => group.label === sellerCategoryGroup) || naverCategoryGroups[0];
+  return `<div class="market-toolbar market-toolbar-shop"><label class="catalog-search"><span>⌕</span><input id="sellerCatalogSearch" value="${escapeHtml(sellerProductSearch)}" placeholder="상품명·브랜드·원산지 검색"></label><div class="market-filter-row">
+    <div class="category-select-group"><span class="category-select-label">카테고리 <small>네이버쇼핑 기준</small></span><div class="category-select-pair">
+      <select id="marketCategoryGroupSelect">${naverCategoryGroups.map(group => `<option value="${escapeHtml(group.label)}" ${sellerCategoryGroup === group.label ? "selected" : ""}>${escapeHtml(group.label)}</option>`).join("")}</select>
+      <select id="marketCategorySelect"><option value="전체보기" ${sellerCategory === "전체보기" ? "selected" : ""}>전체보기</option>${activeGroup.options.map(option => `<option ${sellerCategory === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>
+    </div></div>
+    <label><span>소싱 국가</span><select id="marketCountrySelect">${countries.map(country => `<option ${sellerCountry === country ? "selected" : ""}>${escapeHtml(country)}</option>`).join("")}</select></label><label><span>브랜드</span><select id="marketBrandSelect">${brands.map(brand => `<option ${sellerBrand === brand ? "selected" : ""}>${escapeHtml(brand)}</option>`).join("")}</select></label><div class="shipping-tabs"><button class="${sellerShippingFilter === "all" ? "active" : ""}" data-action="filter-shipping" data-filter="all">전체</button><button class="${sellerShippingFilter === "domestic" ? "active" : ""}" data-action="filter-shipping" data-filter="domestic">국내배송</button><button class="${sellerShippingFilter === "overseas" ? "active" : ""}" data-action="filter-shipping" data-filter="overseas">해외소싱</button></div><button class="market-reset" data-action="reset-market-filter">초기화</button></div><div class="category-pills">${categories.slice(1).map(category => `<button class="${sellerCategory === category ? "active" : ""}" data-action="filter-products" data-category="${category}">${category}</button>`).join("")}<div class="market-view-toggle" role="group" aria-label="상품 보기 방식"><button type="button" class="${marketViewMode === "grid" ? "active" : ""}" data-action="set-market-view" data-view="grid" aria-label="바둑판 보기"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></button><button type="button" class="${marketViewMode === "list" ? "active" : ""}" data-action="set-market-view" data-view="list" aria-label="목록 보기"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg></button></div></div><span>검색 결과 <b>${sellerCatalogProducts().length}</b>개</span></div>`;
 }
 
 function marketplaceHeroTemplate() {
   const countries = [...new Set(state.products.map(product => product.originCountry || "대한민국"))];
   return `<div class="marketplace-hero open-market-hero"><div><span>DOOGO SOURCING</span><h2>나라·브랜드·카테고리로<br>내 매장 상품을 찾으세요</h2><p>승인된 공급사의 판매 콘텐츠와 공급 조건을 비교하고 바로 내 쇼핑몰로 가져올 수 있습니다.</p><button class="white-button" data-action="market-scroll">지금 소싱 시작하기 →</button></div><div class="marketplace-hero-stats"><div><b>${state.products.filter(product => product.status === "판매중").length}</b><span>판매 가능 상품</span></div><div><b>${countries.length}개국</b><span>글로벌 소싱</span></div><div><b>${currentSellerConnections().length}곳</b><span>승인 공급사</span></div></div></div>
-    <section class="market-discovery"><div class="market-discovery-head"><span>DISCOVER</span><h3>어떤 방식으로 소싱할까요?</h3><p>원하는 탐색 기준을 먼저 선택하면 상품을 더 빠르게 비교할 수 있습니다.</p></div><div class="market-discovery-grid"><button data-action="market-preset" data-country="대한민국"><span>🇰🇷</span><b>국내 산지직송</b><small>당일·익일 출고 상품</small></button><button data-action="market-preset" data-filter="overseas"><span>🌏</span><b>해외 소싱</b><small>국가별 정식 수입 상품</small></button><button data-action="market-preset" data-brand="산지팔도"><span>✦</span><b>브랜드별 보기</b><small>검증된 공급사 상품</small></button><button data-action="market-preset" data-category="건강식품"><span>▦</span><b>카테고리 소싱</b><small>업종별 인기 상품</small></button></div></section>`;
+    <section class="market-discovery"><div class="market-discovery-head"><span>DISCOVER</span><h3>어떤 방식으로 소싱할까요?</h3><p>원하는 탐색 기준을 먼저 선택하면 상품을 더 빠르게 비교할 수 있습니다.</p></div><div class="market-discovery-grid"><button data-action="market-preset" data-country="대한민국"><span>🇰🇷</span><b>국내 산지직송</b><small>당일·익일 출고 상품</small></button><button data-action="market-preset" data-filter="overseas"><span>🌏</span><b>해외 소싱</b><small>국가별 정식 수입 상품</small></button><button data-action="open-brand-directory"><span>✦</span><b>브랜드별 보기</b><small>검증된 공급사 상품</small></button><button data-action="market-preset" data-category="건강식품"><span>▦</span><b>카테고리 소싱</b><small>업종별 인기 상품</small></button></div></section>`;
+}
+function brandDirectoryGroups() {
+  const groups = {};
+  state.products.forEach(product => {
+    const brand = product.supplier;
+    groups[product.category] = groups[product.category] || new Map();
+    const bucket = groups[product.category];
+    bucket.set(brand, (bucket.get(brand) || 0) + 1);
+  });
+  return groups;
+}
+function brandDirectoryModal() {
+  const groups = brandDirectoryGroups();
+  const categories = Object.keys(groups);
+  openModal(`<div class="brand-directory-head"><span>DOOGO BRAND</span><h2>브랜드관</h2><p>카테고리별 입점 브랜드를 확인하고, 브랜드를 선택하면 해당 브랜드 상품만 바로 검색됩니다.</p></div>
+    <div class="brand-directory-body">${categories.length ? categories.map(category => `<section class="brand-directory-group"><h3>${escapeHtml(category)}</h3><div class="brand-directory-grid">${[...groups[category].entries()].map(([brand, count]) => `<button type="button" class="brand-directory-card" data-action="select-brand" data-brand="${escapeHtml(brand)}" data-category="${escapeHtml(category)}"><span class="brand-directory-avatar">${escapeHtml(brand.slice(0,1))}</span><b>${escapeHtml(brand)}</b><small>${count}개 상품</small></button>`).join("")}</div></section>`).join("") : `<div class="empty">등록된 브랜드가 없습니다.</div>`}</div>`);
+  document.querySelector("#modal .modal").classList.add("brand-directory-modal");
 }
 
 function sellerProductsTable() {
@@ -993,7 +1019,11 @@ function shippingSettingsTemplate() {
 
 function sellerMarketplaceTemplate() {
   const products = sellerCatalogProducts();
-  return `${marketplaceHeroTemplate()}<div id="marketProductGrid" class="panel seller-market-panel">${marketToolbar()}<div class="catalog-summary"><span>공급 상품 <b>${products.length}</b>개</span><small>국가·브랜드·카테고리 조건을 비교한 뒤 원본 상세페이지와 공급사 정보를 확인하세요.</small></div><div class="product-card-grid shop-grid">${products.length ? products.map(productRowSeller).join("") : `<div class="empty catalog-empty"><b>검색 결과가 없습니다.</b><span>국가·브랜드·카테고리 조건을 바꿔 다시 확인해 주세요.</span><button class="secondary-button" data-action="reset-market-filter">필터 초기화</button></div>`}</div></div>`;
+  const empty = `<div class="empty catalog-empty"><b>검색 결과가 없습니다.</b><span>국가·브랜드·카테고리 조건을 바꿔 다시 확인해 주세요.</span><button class="secondary-button" data-action="reset-market-filter">필터 초기화</button></div>`;
+  const listing = marketViewMode === "list"
+    ? `<div class="market-product-list">${products.length ? products.map(productRowSellerList).join("") : empty}</div>`
+    : `<div class="product-card-grid shop-grid">${products.length ? products.map(productRowSeller).join("") : empty}</div>`;
+  return `${marketplaceHeroTemplate()}<div id="marketProductGrid" class="panel seller-market-panel">${marketToolbar()}<div class="catalog-summary"><span>공급 상품 <b>${products.length}</b>개</span><small>국가·브랜드·카테고리 조건을 비교한 뒤 원본 상세페이지와 공급사 정보를 확인하세요.</small></div>${listing}</div>`;
 }
 
 function roleRefunds(role) {
@@ -1432,6 +1462,13 @@ function renderSeller() {
     <div class="dashboard-widget-canvas">${layout.map(id => dashboardWidgetFrame(id, labels[id], widgets[id])).join("")}${editMode ? `<button type="button" class="dashboard-add-widget" data-action="add-dashboard-widget"><span>＋</span><b>위젯 추가</b><small>필요한 위젯을 선택해 대시보드를 구성하세요.</small></button>` : ""}</div>`;
 }
 
+function isFreePricedProduct(p) { return p.category === "농산물" || p.category === "수산물"; }
+function catalogPriceRows(p) {
+  const freePriced = isFreePricedProduct(p);
+  const profitRow = freePriced ? `<div><dt>지정판매가</dt><dd>자율</dd></div>` : `<div><dt>예상 수익</dt><dd class="profit-text">${money(p.recommended - p.supply)}</dd></div>`;
+  const marginRow = freePriced ? `<div><dt>마진율</dt><dd class="margin-free">-%</dd></div>` : `<div><dt>마진율</dt><dd>${margin(p.supply, p.recommended)}%</dd></div>`;
+  return `<div><dt>공급가</dt><dd>${money(p.supply)}</dd></div>${profitRow}${marginRow}`;
+}
 function productRowSeller(p) {
   const sellerItem = currentSellerProducts().find(x => x.productId === p.id);
   const changed = currentPriceAlerts().some(alert => alert.productId === p.id && alert.status === "확인필요");
@@ -1443,9 +1480,28 @@ function productRowSeller(p) {
     <div class="market-product-image">${productPhoto(p, "catalog-photo")}<b>발주마감 ${escapeHtml(p.cutoff || "10:00")}</b><em>${escapeHtml(p.category)}</em><span class="shipping-badge ${p.shippingType === "overseas" ? "overseas" : "domestic"}">${p.shippingType === "overseas" ? `해외직구 · ${escapeHtml(p.originCountry)}` : "국내배송"}</span>${changed ? `<strong class="price-alert-flag">공급가 변경</strong>` : ""}</div>
     <div class="market-product-body">
       <small>${escapeHtml(p.supplier)} · ${p.id}</small><h4>${escapeHtml(p.name)}</h4>
-      <dl><div><dt>공급가</dt><dd>${money(p.supply)}</dd></div><div><dt>예상 수익</dt><dd class="profit-text">${money(p.recommended - p.supply)}</dd></div><div><dt>배송</dt><dd>${escapeHtml(p.deliveryDays || "1~3일")} · 무료</dd></div></dl>
+      <dl>${catalogPriceRows(p)}</dl>
       <div class="market-card-actions"><button class="text-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button><button class="small-button ${pickClass}" data-action="${sellerItem ? "open-picked-product" : "import-product"}" data-id="${p.id}">${pickLabel}</button></div>
     </div>
+  </article>`;
+}
+function productRowSellerList(p) {
+  const sellerItem = currentSellerProducts().find(x => x.productId === p.id);
+  const changed = currentPriceAlerts().some(alert => alert.productId === p.id && alert.status === "확인필요");
+  const isLive = sellerItem ? sellerChannels().some(channel => sellerProductChannelStatus(sellerItem, channel) === "판매중") : false;
+  const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
+  const pickLabel = { none: "PICK하기", pending: "승인대기", approved: "판매중", live: "판매중" }[pickState];
+  const pickClass = pickState === "none" ? "" : pickState === "live" ? "done" : "picked";
+  const freePriced = isFreePricedProduct(p);
+  return `<article class="market-product-list-row" data-action="product-detail" data-id="${p.id}" tabindex="0" aria-label="${escapeHtml(p.name)} 상세 보기">
+    <div class="list-row-image">${productPhoto(p, "catalog-photo")}${changed ? `<strong class="price-alert-flag">공급가 변경</strong>` : ""}</div>
+    <div class="list-row-body">
+      <span class="list-row-badges"><em class="shipping-badge ${p.shippingType === "overseas" ? "overseas" : "domestic"}">${p.shippingType === "overseas" ? `해외직구 · ${escapeHtml(p.originCountry)}` : "국내배송"}</em><small>발주마감 ${escapeHtml(p.cutoff || "10:00")}</small></span>
+      <h4>${escapeHtml(p.name)}</h4>
+      <small class="list-row-meta">${escapeHtml(p.supplier)} · ${p.id} · ${escapeHtml(p.category)}</small>
+    </div>
+    <div class="list-row-price"><span><small>공급가</small><b>${money(p.supply)}</b></span><span>${freePriced ? `<small>지정판매가</small><b>자율</b>` : `<small>예상 수익</small><b class="profit-text">${money(p.recommended - p.supply)}</b>`}</span><span><small>마진율</small><b class="${freePriced ? "margin-free" : ""}">${freePriced ? "-%" : `${margin(p.supply, p.recommended)}%`}</b></span></div>
+    <div class="list-row-actions"><button class="text-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button><button class="small-button ${pickClass}" data-action="${sellerItem ? "open-picked-product" : "import-product"}" data-id="${p.id}">${pickLabel}</button></div>
   </article>`;
 }
 
@@ -2670,7 +2726,10 @@ document.addEventListener("click", event => {
   if (action === "filter-products") { sellerCategory = target.dataset.category || "전체보기"; render(); updateAccountUI(); return; }
   if (action === "filter-shipping") { sellerShippingFilter = target.dataset.filter || "all"; render(); updateAccountUI(); return; }
   if (action === "market-preset") { sellerCategory = target.dataset.category || "전체보기"; sellerShippingFilter = target.dataset.filter || "all"; sellerCountry = target.dataset.country || "전체 국가"; sellerBrand = target.dataset.brand || "전체 브랜드"; render(); updateAccountUI(); requestAnimationFrame(() => document.getElementById("marketProductGrid")?.scrollIntoView({ behavior:"smooth", block:"start" })); return; }
-  if (action === "reset-market-filter") { sellerCategory = "전체보기"; sellerShippingFilter = "all"; sellerCountry = "전체 국가"; sellerBrand = "전체 브랜드"; sellerProductSearch = ""; render(); updateAccountUI(); return; }
+  if (action === "open-brand-directory") { brandDirectoryModal(); return; }
+  if (action === "select-brand") { closeModal(); sellerBrand = target.dataset.brand || "전체 브랜드"; sellerCategory = "전체보기"; render(); updateAccountUI(); requestAnimationFrame(() => document.getElementById("marketProductGrid")?.scrollIntoView({ behavior:"smooth", block:"start" })); return; }
+  if (action === "reset-market-filter") { sellerCategory = "전체보기"; sellerCategoryGroup = "식품"; sellerShippingFilter = "all"; sellerCountry = "전체 국가"; sellerBrand = "전체 브랜드"; sellerProductSearch = ""; render(); updateAccountUI(); return; }
+  if (action === "set-market-view") { marketViewMode = target.dataset.view || "grid"; render(); updateAccountUI(); return; }
   if (action === "reset-onsale-filter") { onSaleSearch = ""; onSaleDateFrom = ""; onSaleDateTo = ""; render(); updateAccountUI(); return; }
   if (action === "market-scroll") { document.getElementById("marketProductGrid")?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
   if (action === "product-detail") { productDetailModal(id); return; }
@@ -3077,7 +3136,8 @@ document.addEventListener("change", event => {
     supplierSettlementMonth = event.target.value;
     render(); updateAccountUI();
   }
-  if (event.target.id === "marketCategorySearch") { sellerCategory = event.target.value.trim() || "전체보기"; render(); updateAccountUI(); }
+  if (event.target.id === "marketCategoryGroupSelect") { sellerCategoryGroup = event.target.value; sellerCategory = "전체보기"; render(); updateAccountUI(); }
+  if (event.target.id === "marketCategorySelect") { sellerCategory = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "onSaleSearchInput") { onSaleSearch = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "onSaleDateFromInput") { onSaleDateFrom = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "onSaleDateToInput") { onSaleDateTo = event.target.value; render(); updateAccountUI(); }
