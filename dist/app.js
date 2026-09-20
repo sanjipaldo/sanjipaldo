@@ -446,6 +446,20 @@ function sellerProductChannelStatus(item, channel) {
 function sellerChannelDetail(item, channel, product = productOf(item.productId)) {
   return item.channelDetails?.[channel.id] || { title: product?.name || "판매 상품", salePrice: Number(item.salePrice || product?.recommended || 0), category: `${product?.category || "식품"} > ${product?.originCountry || "상품"}`, reviews: 0 };
 }
+function channelSyncBadge(item, channel, status) {
+  if (status !== "판매중") return "";
+  const sync = item.channelSyncStatus?.[channel.id] || "synced";
+  if (sync === "edited") return `<em class="channel-sync-chip edited">수정완료 · 전송전</em>`;
+  if (sync === "sending") return `<em class="channel-sync-chip sending">전송중…</em>`;
+  return `<em class="channel-sync-chip synced">동기화 완료</em>`;
+}
+function channelBranchRow(item, channel, product) {
+  const status = sellerProductChannelStatus(item, channel);
+  const statusClass = status === "판매중" ? "live" : status === "미연동" ? "unlinked" : "paused";
+  const detail = sellerChannelDetail(item, channel, product);
+  const channelMargin = margin(product?.supply || 0, detail.salePrice || item.salePrice);
+  return `<div class="seller-channel-branch channel-commerce-detail">${channelMark(channel.id)}<span class="channel-product-copy"><b>${escapeHtml(channel.name)}</b><strong>${escapeHtml(detail.title)}</strong><small>${escapeHtml(detail.category)}</small></span><span class="channel-price-stack"><small>소비자가</small><b>${money(detail.salePrice)}</b><em>원가 ${money(product?.supply || 0)} · 마진 ${channelMargin}%</em></span><span class="channel-review"><b>${Number(detail.reviews || 0).toLocaleString("ko-KR")} review${Number(detail.reviews || 0) === 1 ? "" : "s"}</b><small>${escapeHtml(channel.storeName)}</small></span><span class="channel-status-stack"><em class="channel-sale-status ${statusClass}">[${escapeHtml(status)}]</em>${channelSyncBadge(item, channel, status)}</span>${status === "판매중" ? `<div class="channel-sync-actions"><button type="button" class="channel-sync-btn pull" data-action="sync-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 동기화</button><button type="button" class="channel-sync-btn push" data-action="push-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 전송</button></div>` : ""}</div>`;
+}
 function queueTrackingSync(order) {
   if (!order?.tracking) return;
   const item = state.sellerProducts.find(product => product.sellerLoginId === order.sellerLoginId && product.productId === order.productId);
@@ -843,13 +857,7 @@ function sellerProductsTable() {
       </button>
       ${expanded ? `<div class="seller-channel-branches">
         ${!approved ? `<div class="approval-wait-banner"><span>공급사 승인 대기중입니다. 승인되면 가격·상품명·배송정책·상세페이지를 자유롭게 수정하고 원하는 쇼핑몰에 바로 전송할 수 있어요.</span><button type="button" class="secondary-button" data-action="simulate-supplier-approval" data-id="${item.id}">데모: 공급사 승인 시뮬레이션</button></div>` : ""}
-        <div class="branch-guide"><span></span><b>쇼핑몰 등록 상태</b><small>PICK 상품 아래에 채널별 자동등록 결과를 표시합니다.</small></div>${channels.map(channel => {
-        const status = sellerProductChannelStatus(item, channel);
-        const statusClass = status === "판매중" ? "live" : status === "미연동" ? "unlinked" : "paused";
-        const detail = sellerChannelDetail(item, channel, product);
-        const channelMargin = margin(product?.supply || 0, detail.salePrice || item.salePrice);
-        return `<div class="seller-channel-branch channel-commerce-detail">${channelMark(channel.id)}<span class="channel-product-copy"><b>${escapeHtml(channel.name)}</b><strong>${escapeHtml(detail.title)}</strong><small>${escapeHtml(detail.category)}</small></span><span class="channel-price-stack"><small>소비자가</small><b>${money(detail.salePrice)}</b><em>원가 ${money(product?.supply || 0)} · 마진 ${channelMargin}%</em></span><span class="channel-review"><b>${Number(detail.reviews || 0).toLocaleString("ko-KR")} review${Number(detail.reviews || 0) === 1 ? "" : "s"}</b><small>${escapeHtml(channel.storeName)}</small></span><em class="channel-sale-status ${statusClass}">[${escapeHtml(status)}]</em>${status === "판매중" ? `<div class="channel-sync-actions"><button type="button" class="text-button" data-action="sync-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 동기화</button><button type="button" class="text-button" data-action="push-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 전송</button></div>` : ""}</div>`;
-      }).join("")}<div class="seller-product-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}" ${approved ? "" : "disabled"}>상품 수정</button><button class="secondary-button" data-action="copied-content" data-id="${item.id}">복사 콘텐츠</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="primary-button" data-action="manage-product-channels" data-id="${item.id}" ${approved ? "" : "disabled"}>${liveCount ? "쇼핑몰 자동등록" : "내 판매 시작"}</button><button class="secondary-button" data-action="simulate-order" data-id="${item.id}">단건 주문접수</button></div></div>` : ""}
+        <div class="branch-guide"><span></span><b>쇼핑몰 등록 상태</b><small>PICK 상품 아래에 채널별 자동등록 결과를 표시합니다.</small></div>${channels.map(channel => channelBranchRow(item, channel, product)).join("")}<div class="seller-product-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}" ${approved ? "" : "disabled"}>상품 수정</button><button class="secondary-button" data-action="copied-content" data-id="${item.id}">복사 콘텐츠</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="primary-button" data-action="manage-product-channels" data-id="${item.id}" ${approved ? "" : "disabled"}>${liveCount ? "쇼핑몰 자동등록" : "내 판매 시작"}</button><button class="secondary-button" data-action="simulate-order" data-id="${item.id}">단건 주문접수</button></div></div>` : ""}
     </article>`;
   }).join("")}</div>`;
 }
@@ -1171,15 +1179,21 @@ function sellerOnSaleProductsTemplate() {
     </div>
     ${filtered.length ? `<div class="seller-product-tree">${filtered.map(item => {
       const product = productOf(item.productId);
+      const expanded = expandedSellerProductId === item.id;
       const liveChannels = channels.filter(channel => sellerProductChannelStatus(item, channel) === "판매중");
       const marginPct = margin(product?.supply || 0, item.salePrice);
-      return `<article class="seller-product-node">
-        <button class="seller-product-parent" type="button" data-action="edit-seller-product" data-id="${item.id}">
-          <span class="tree-chevron">›</span>${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
+      return `<article class="seller-product-node ${expanded ? "expanded" : ""}">
+        <button class="seller-product-parent" type="button" data-action="toggle-product-channels" data-id="${item.id}" aria-expanded="${expanded}">
+          <span class="tree-chevron">${expanded ? "⌄" : "›"}</span>${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
           <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>등록일 ${escapeHtml(item.copiedAt || "-")}</em></span>
           <span class="seller-product-price"><small>내 판매가</small><b>${money(item.salePrice)}</b><em>마진 ${marginPct}%</em></span>
-          <span class="seller-product-live"><b class="deployed-badge">상품 배포완료</b><small>${liveChannels.map(channel => escapeHtml(channel.name)).join(" · ")}</small></span>
+          <span class="seller-product-live"><b class="deployed-badge">판매중</b><small>${liveChannels.map(channel => escapeHtml(channel.name)).join(" · ")}</small></span>
         </button>
+        ${expanded ? `<div class="seller-channel-branches">
+          <div class="branch-guide"><span></span><b>채널별 판매 현황</b><small>채널마다 실제 판매 상태·소비자가와 동기화 여부를 표시합니다.</small></div>
+          ${channels.map(channel => channelBranchRow(item, channel, product)).join("")}
+          <div class="seller-product-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">상품 수정</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="primary-button" data-action="manage-product-channels" data-id="${item.id}">쇼핑몰 자동등록</button></div>
+        </div>` : ""}
       </article>`;
     }).join("")}</div>` : `<div class="empty">${liveItems.length ? "조건에 맞는 판매중 상품이 없습니다." : "아직 판매중인 상품이 없습니다. PICK 상품에서 판매를 시작해 주세요."}</div>`}
   </div>`;
@@ -1620,6 +1634,31 @@ function openModal(html) {
   document.getElementById("modal").hidden = false;
 }
 function closeModal() { const modal = document.querySelector("#modal .modal"); document.getElementById("modal").hidden = true; modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal"); }
+
+const ADDRESS_SEARCH_RESULTS = [
+  { postal: "06236", address: "서울특별시 강남구 테헤란로 152", building: "강남파이낸스센터" },
+  { postal: "04524", address: "서울특별시 중구 세종대로 110", building: "서울시청" },
+  { postal: "03181", address: "서울특별시 종로구 종로 1", building: "교보생명빌딩" },
+  { postal: "48058", address: "부산광역시 해운대구 센텀중앙로 90", building: "센텀시티" },
+  { postal: "41911", address: "대구광역시 동구 동대구로 550", building: "동대구역" },
+  { postal: "63122", address: "제주특별자치도 제주시 연삼로 473", building: "제주시청" },
+  { postal: "21554", address: "인천광역시 남동구 정각로 29", building: "인천시청" },
+  { postal: "35240", address: "대전광역시 서구 둔산로 100", building: "대전시청" }
+];
+function openAddressPopup() {
+  document.getElementById("addressPopupInput").value = "";
+  renderAddressPopupResults("");
+  document.getElementById("addressPopup").hidden = false;
+  requestAnimationFrame(() => document.getElementById("addressPopupInput").focus());
+}
+function closeAddressPopup() { document.getElementById("addressPopup").hidden = true; }
+function renderAddressPopupResults(query) {
+  const results = document.getElementById("addressPopupResults");
+  if (!results) return;
+  const q = query.trim().toLowerCase();
+  const matches = ADDRESS_SEARCH_RESULTS.filter(item => !q || `${item.address} ${item.building} ${item.postal}`.toLowerCase().includes(q));
+  results.innerHTML = matches.length ? matches.map(item => `<button type="button" data-action="select-address" data-postal="${item.postal}" data-address="${item.address}"><b>${item.postal}</b><span>${escapeHtml(item.address)}<small>${escapeHtml(item.building)}</small></span></button>`).join("") : `<div class="empty">검색 결과가 없습니다. 도로명·건물명으로 다시 검색해 주세요.</div>`;
+}
 
 function accountRecoveryModal(role = "seller") {
   if (role === "master") return showToast("마스터 계정은 운영 보안 담당자에게 문의해 주세요.");
@@ -2182,9 +2221,8 @@ function simulateOrderModal(sellerProductId) {
       <div class="form-field"><label>수취인 성함 *</label><input name="recipientName" value="홍두고" required></div>
       <div class="form-field"><label>연락처 *</label><input name="phone" value="010-1234-5678" placeholder="010-0000-0000" required></div>
       <div class="form-field"><label>판매채널 *</label><select name="channel"><option selected>[샘플주문]</option><option>네이버 스마트스토어</option><option>쿠팡</option><option>카카오 쇼핑</option><option>CAFE24</option></select></div>
-      <div class="form-field"><label>우편번호 *</label><div class="postcode-row"><input name="postalCode" value="06236" required><button type="button" data-action="toggle-address-search">주소 검색</button></div></div>
-      <div class="form-field"><label>수량 *</label><input name="qty" type="number" value="1" min="1" max="${product.stock}" required></div>
-      <div class="form-field full address-search-results" id="addressSearchResults" hidden><label>주소 검색 결과</label><button type="button" data-action="select-address" data-postal="06236" data-address="서울특별시 강남구 테헤란로 152"><b>06236</b><span>서울특별시 강남구 테헤란로 152</span></button><button type="button" data-action="select-address" data-postal="48058" data-address="부산광역시 해운대구 센텀중앙로 90"><b>48058</b><span>부산광역시 해운대구 센텀중앙로 90</span></button><button type="button" data-action="select-address" data-postal="63122" data-address="제주특별자치도 제주시 연삼로 473"><b>63122</b><span>제주특별자치도 제주시 연삼로 473</span></button></div>
+      <div class="form-field"><label>우편번호 *</label><div class="postcode-row"><input name="postalCode" value="06236" required><button type="button" data-action="open-address-popup">주소 검색</button></div></div>
+      <div class="form-field"><label>수량 *</label><div class="qty-stepper"><button type="button" class="qty-step-btn" data-action="qty-step" data-step="-1" aria-label="수량 감소">−</button><input name="qty" type="number" value="1" min="1" max="${product.stock}" required><button type="button" class="qty-step-btn" data-action="qty-step" data-step="1" aria-label="수량 증가">+</button></div></div>
       <div class="form-field full"><label>주소 *</label><input name="address" value="서울특별시 강남구 테헤란로 152" required></div>
       <div class="form-field full"><label>상세주소</label><input name="addressDetail" value="두고빌딩 7층"></div>
       ${overseas ? `<div class="form-field full customs-input"><label>개인통관고유부호 *</label><input name="personalCustomsCode" value="P123456789012" pattern="P[0-9]{12}" placeholder="P로 시작하는 13자리" required><small>해외직구 주문에만 공급사에 전달됩니다.</small></div>` : `<input type="hidden" name="personalCustomsCode" value="">`}
@@ -2523,8 +2561,17 @@ document.addEventListener("click", event => {
   if (action === "toggle-pc-notifications") { const notice = notificationService(); notice.pcNotice = !notice.pcNotice; audit("두고톡 PC 알림 설정", `새 메시지 PC 알림을 ${notice.pcNotice ? "켰습니다" : "껐습니다"}.`, "done", "notification"); saveState(); render(); updateAccountUI(); showToast(`PC 알림을 ${notice.pcNotice ? "켰습니다" : "껐습니다"}.`); return; }
   if (action === "open-chat-settings") { const notice = notificationService(); openModal(`<h2>두고톡 알림 설정</h2><p>거래처 메시지를 어떤 방식으로 확인할지 선택합니다.</p><div class="chat-setting-list"><button data-action="toggle-pc-notifications"><span><b>PC 브라우저 알림</b><small>새 메시지와 공급사 답변</small></span><em>${notice.pcNotice ? "켜짐" : "꺼짐"}</em></button><button data-action="toggle-notice-setting" data-setting="trackingNotice"><span><b>송장 등록 알림</b><small>두고톡·상단 알림함</small></span><em>${notice.trackingNotice ? "켜짐" : "꺼짐"}</em></button></div><div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button></div>`); return; }
   if (action === "single-order") { externalOrderModal(); return; }
-  if (action === "toggle-address-search") { const panel = document.getElementById("addressSearchResults"); if (panel) panel.hidden = !panel.hidden; return; }
-  if (action === "select-address") { const form = target.closest("form"); if (form) { form.elements.postalCode.value = target.dataset.postal; form.elements.address.value = target.dataset.address; document.getElementById("addressSearchResults").hidden = true; form.elements.addressDetail.focus(); } return; }
+  if (action === "open-address-popup") { openAddressPopup(); return; }
+  if (action === "close-address-popup") { closeAddressPopup(); return; }
+  if (action === "select-address") { const form = document.querySelector("#modal form"); if (form) { form.elements.postalCode.value = target.dataset.postal; form.elements.address.value = target.dataset.address; closeAddressPopup(); form.elements.addressDetail.focus(); } return; }
+  if (action === "qty-step") {
+    const input = target.parentElement.querySelector('input[name="qty"]');
+    if (!input) return;
+    const min = Number(input.min || 1), max = Number(input.max || Infinity);
+    const next = Number(input.value || 1) + Number(target.dataset.step);
+    input.value = Math.min(max, Math.max(min, next));
+    return;
+  }
   if (action === "chat-attach") { showToast("데모에서는 사진을 업로드하지 않고 첨부 위치만 확인합니다."); return; }
   if (action === "chat-filter") { chatRoomFilter = target.dataset.filter || "all"; render(); updateAccountUI(); return; }
   if (action === "select-chat-room") { activeChatConnectionId = id; render(); updateAccountUI(); return; }
@@ -2598,19 +2645,32 @@ document.addEventListener("click", event => {
     const item = state.sellerProducts.find(entry => entry.id === id);
     const channel = sellerChannels().find(entry => entry.id === target.dataset.channel);
     const detail = item?.channelDetails?.[target.dataset.channel];
-    if (item && detail) { item.salePrice = Number(detail.salePrice) || item.salePrice; item.customTitle = detail.title || item.customTitle; saveState(); }
+    if (item && detail) {
+      item.salePrice = Number(detail.salePrice) || item.salePrice;
+      item.customTitle = detail.title || item.customTitle;
+      item.channelSyncStatus = item.channelSyncStatus || {};
+      item.channelSyncStatus[target.dataset.channel] = "synced";
+      saveState();
+    }
     render(); updateAccountUI(); showToast(`${channel?.name || "채널"}의 최신 상품명·가격을 두고로 불러와 동기화했습니다.`); return;
   }
   if (action === "push-channel-listing") {
     const item = state.sellerProducts.find(entry => entry.id === id);
-    const channel = sellerChannels().find(entry => entry.id === target.dataset.channel);
-    if (item && target.dataset.channel) {
+    const channelId = target.dataset.channel;
+    const channel = sellerChannels().find(entry => entry.id === channelId);
+    if (!item || !channelId) return;
+    item.channelSyncStatus = item.channelSyncStatus || {};
+    item.channelSyncStatus[channelId] = "sending";
+    saveState(); render(); updateAccountUI();
+    setTimeout(() => {
       item.channelDetails = item.channelDetails || {};
-      const previous = item.channelDetails[target.dataset.channel] || {};
-      item.channelDetails[target.dataset.channel] = { ...previous, title: sellerProductTitle(item), salePrice: item.salePrice };
-      saveState();
-    }
-    render(); updateAccountUI(); showToast(`${channel?.name || "채널"}에 최신 상품 정보를 전송했습니다.`); return;
+      const previous = item.channelDetails[channelId] || {};
+      item.channelDetails[channelId] = { ...previous, title: sellerProductTitle(item), salePrice: item.salePrice };
+      item.channelSyncStatus[channelId] = "synced";
+      audit("판매채널 상품 전송", `${item.id} · ${channel?.name || channelId}에 최신 상품명·가격을 전송해 동기화를 완료했습니다.`, "done", "channel");
+      saveState(); render(); updateAccountUI(); showToast(`${channel?.name || "채널"}에 전송을 완료했습니다.`);
+    }, 700);
+    return;
   }
   if (action === "focus-inquiry") document.getElementById("supplierInquiryPanel")?.scrollIntoView({ behavior: "smooth", block: "center" });
   if (action === "order-detail") orderDetailModal(id);
@@ -2940,6 +3000,7 @@ document.addEventListener("change", event => {
 });
 
 document.addEventListener("input", event => {
+  if (event.target.id === "addressPopupInput") { renderAddressPopupResults(event.target.value); return; }
   if (event.target.id === "chatRoomSearch") {
     chatRoomSearch = event.target.value;
     render(); updateAccountUI();
@@ -3101,8 +3162,10 @@ document.addEventListener("submit", event => {
         category: String(data[`channelCategory__${channel.id}`] || item.sellerCategory).trim()
       };
     });
+    item.channelSyncStatus = item.channelSyncStatus || {};
+    sellerChannels().forEach(channel => { if (sellerProductChannelStatus(item, channel) === "판매중") item.channelSyncStatus[channel.id] = "edited"; });
     audit("위탁셀러 상품 수정", `${item.id} · 원본 ${item.productId} 유지 · ${oldTitle} → ${item.customTitle} · 판매가 ${money(item.salePrice)} · 채널별 정보 저장`, "done", "product");
-    saveState(); closeModal(); render(); updateAccountUI(); showToast("상품 정보를 저장했습니다. 공급사 원본 상품코드는 유지됩니다.");
+    saveState(); closeModal(); render(); updateAccountUI(); showToast("상품 정보를 저장했습니다. 판매중인 채널은 전송 전까지 '수정완료 · 전송전' 상태로 표시됩니다.");
   }
   if (form.id === "externalOrderForm") {
     const orderId = `DO-${String(Date.now()).slice(-9)}`;
@@ -3440,8 +3503,10 @@ document.getElementById("dismissNotice")?.addEventListener("click", e => e.curre
 document.getElementById("resetDemo")?.addEventListener("click", () => { state = cloneInitial(); saveState(); activeRole = accountRoles().includes(activeRole) ? activeRole : (currentAccount?.role || "seller"); render(); updateAccountUI(); showToast("샘플 데이터를 처음 상태로 돌렸습니다."); });
 document.getElementById("logoutButton").addEventListener("click", () => { const role = currentAccount?.role; sessionStorage.removeItem(AUTH_KEY); if (role === "supplier" || role === "master") showPartnerLogin(role); else showLogin(); });
 document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
+document.getElementById("addressPopup").addEventListener("click", e => { if (e.target.id === "addressPopup") closeAddressPopup(); });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && document.getElementById("appView").dataset.sidebarOpen === "true") { closeMobileSidebar(true); return; }
+  if (e.key === "Escape" && !document.getElementById("addressPopup").hidden) { closeAddressPopup(); return; }
   if (e.key === "Escape") closeModal();
   if ((e.key === "Enter" || e.key === " ") && e.target.matches(".market-product-card")) { e.preventDefault(); productDetailModal(e.target.dataset.id); }
   if ((e.key === "Enter" || e.key === " ") && e.target.matches(".order-click-row")) { e.preventDefault(); orderDetailModal(e.target.dataset.id); }

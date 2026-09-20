@@ -240,6 +240,13 @@
       <div id="modalContent"></div>
     </div>
   </div>
+  <div id="addressPopup" class="address-popup-backdrop" hidden>
+    <div class="address-popup" role="dialog" aria-modal="true" aria-labelledby="addressPopupTitle">
+      <div class="address-popup-head"><div><span>ADDRESS SEARCH</span><h3 id="addressPopupTitle">고객 주소 검색</h3></div><button type="button" class="modal-close" data-action="close-address-popup" aria-label="닫기">×</button></div>
+      <label class="address-popup-search"><span>⌕</span><input id="addressPopupInput" placeholder="도로명, 지번, 건물명으로 검색" autocomplete="off"></label>
+      <div id="addressPopupResults" class="address-popup-results"></div>
+    </div>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="app.js?v=23"></script>

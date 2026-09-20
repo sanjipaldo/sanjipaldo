@@ -2850,7 +2850,7 @@ body { letter-spacing:-.012em; }
   .order-search-panel { align-items:stretch; flex-direction:column; }
   .order-search-panel > div { overflow-x:auto; }
   .seller-channel-branch.channel-commerce-detail { grid-template-columns:34px 1fr; gap:8px; }
-  .channel-price-stack, .channel-review, .seller-channel-branch.channel-commerce-detail .channel-sale-status { grid-column:2; }
+  .channel-price-stack, .channel-review, .seller-channel-branch.channel-commerce-detail .channel-status-stack { grid-column:2; justify-items:start; }
   .channel-product-copy > strong { white-space:normal; }
   .channel-price-stack { padding:8px; background:#f6f8fb; border-radius:8px; }
   .pc-notice-bar { grid-template-columns:34px 1fr; }
@@ -4171,3 +4171,49 @@ body { letter-spacing:-.012em; }
 /* --- 사이드바 메뉴 텍스트를 볼드로: 아이콘은 유지, 글씨만 더 진하고 깔끔하게 --- */
 .workspace-menu button { font-weight: 700; }
 .workspace-menu-group > p { font-weight: 800; }
+
+/* --- 고객 주소 검색 팝업 (단건 주문접수) --- */
+.address-popup-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 20px; background: rgba(11,29,23,.55); backdrop-filter: blur(4px); }
+.address-popup-backdrop[hidden] { display: none; }
+.address-popup { position: relative; width: min(460px, 100%); max-height: 82vh; overflow-y: auto; padding: 22px; background: #fff; border-radius: 18px; box-shadow: var(--shadow); }
+.address-popup-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.address-popup-head span { display: block; color: #3182f6; font-size: 11px; font-weight: 900; letter-spacing: .06em; }
+.address-popup-head h3 { margin: 4px 0 0; font-size: 18px; }
+.address-popup-head .modal-close { position: static; }
+.address-popup-search { position: relative; display: block; margin-bottom: 12px; }
+.address-popup-search span { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #9aa5b1; }
+.address-popup-search input { width: 100%; padding: 12px 14px 12px 36px; border: 1px solid #dfe4ea; border-radius: 12px; font-size: 14px; background: #f7f9fb; }
+.address-popup-search input:focus { outline: none; border-color: #3182f6; background: #fff; }
+.address-popup-results { display: grid; gap: 6px; max-height: 320px; overflow-y: auto; }
+.address-popup-results button { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border: 1px solid #edf1f5; border-radius: 12px; background: #fff; text-align: left; cursor: pointer; transition: .12s ease; }
+.address-popup-results button:hover { border-color: #bcd6fb; background: #f3f8ff; }
+.address-popup-results button b { flex: 0 0 auto; padding: 3px 7px; border-radius: 7px; background: #eef4ff; color: #1761e8; font-size: 12px; font-weight: 900; }
+.address-popup-results button span { display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: #23282f; }
+.address-popup-results button span small { color: #8a95a3; font-size: 12px; }
+.address-popup-results .empty { padding: 24px 8px; text-align: center; color: #8a95a3; font-size: 13px; }
+
+/* --- 수량 -/+ 스테퍼 --- */
+.qty-stepper { display: grid; grid-template-columns: 34px 1fr 34px; align-items: stretch; border: 1px solid #dfe4ea; border-radius: 10px; overflow: hidden; }
+.qty-stepper input { border: 0; border-left: 1px solid #dfe4ea; border-right: 1px solid #dfe4ea; border-radius: 0; text-align: center; padding: 0; -moz-appearance: textfield; }
+.qty-stepper input::-webkit-outer-spin-button, .qty-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.qty-step-btn { border: 0; background: #f7f9fb; color: #3d4652; font-size: 16px; font-weight: 800; cursor: pointer; }
+.qty-step-btn:hover { background: #eef2f6; }
+.qty-step-btn:active { background: #e4e9ee; }
+
+/* --- 채널 판매현황 행: 소비자가 정렬을 모든 행에서 일관되게, 동기화/전송 버튼 재설계 --- */
+.seller-channel-branch.channel-commerce-detail { align-items: start; }
+.seller-channel-branch.channel-commerce-detail > .channel-mark { margin-top: 2px; }
+.channel-status-stack { display: grid; gap: 6px; justify-items: end; }
+.channel-sync-chip { padding: 3px 8px; border-radius: 99px; font-size: 11px; font-style: normal; font-weight: 800; white-space: nowrap; }
+.channel-sync-chip.synced { color: #05864f; background: #e9fbf2; }
+.channel-sync-chip.edited { color: #8a5e0b; background: #fff5d9; }
+.channel-sync-chip.sending { color: #1761e8; background: #eaf1ff; }
+.channel-sync-actions { grid-column: 2 / -1; margin-top: 4px; padding-top: 9px; padding-bottom: 2px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px dashed #edf1f5; }
+.channel-sync-btn { padding: 6px 13px; border-radius: 9999px; font-size: 12px; font-weight: 800; white-space: nowrap; cursor: pointer; transition: .12s ease; }
+.channel-sync-btn.pull { color: #5c6b7a; background: #f3f5f7; border: 1px solid #e1e6eb; }
+.channel-sync-btn.pull:hover { background: #eaeef2; }
+.channel-sync-btn.push { color: #1761e8; background: #eef4ff; border: 1px solid #cfe0fb; }
+.channel-sync-btn.push:hover { background: #e2edff; }
+@media (max-width: 720px) {
+  .seller-channel-branch.channel-commerce-detail .channel-status-stack { grid-column: 2; justify-items: start; }
+}
