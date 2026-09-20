@@ -4373,3 +4373,31 @@ body { letter-spacing:-.012em; }
   .alert-row { flex-wrap: wrap; }
   .alert-row-actions { width: 100%; justify-content: flex-end; }
 }
+
+/* --- 로그인 비주얼: 글로우 원형 장식으로 3D 입체감 --- */
+.login-orb { position: absolute; z-index: 0; border-radius: 50%; pointer-events: none; }
+.login-orb-1 { width: 240px; height: 240px; right: 6%; top: 10%; background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.5), rgba(255,255,255,.08) 46%, transparent 72%); box-shadow: 0 40px 70px rgba(4,24,64,.22); }
+.login-orb-2 { width: 140px; height: 140px; left: -34px; bottom: 20%; background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.32), rgba(255,255,255,.04) 50%, transparent 75%); }
+.partner-login-screen .login-orb-1 { background: radial-gradient(circle at 32% 28%, rgba(150,180,255,.26), rgba(150,180,255,.05) 46%, transparent 72%); box-shadow: 0 40px 70px rgba(0,0,0,.4); }
+.partner-login-screen .login-orb-2 { background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.12), rgba(255,255,255,.02) 50%, transparent 75%); }
+@media (max-width: 900px) {
+  .login-orb { display: none; }
+}
+
+/* --- 파트너센터(검정) 비주얼: 더 온화한 그라데이션 + 입체감 --- */
+.partner-login-screen .partner-visual {
+  background:
+    radial-gradient(560px circle at 90% -8%, rgba(120,150,255,.16), transparent 60%),
+    radial-gradient(460px circle at -6% 100%, rgba(70,90,140,.42), transparent 62%),
+    radial-gradient(380px circle at 55% 38%, rgba(255,255,255,.05), transparent 70%),
+    linear-gradient(155deg, #0a0d14 0%, #171b23 42%, #262b35 78%, #363c49 100%);
+}
+
+/* --- 위탁셀러(파랑) 비주얼: 중앙 글로우로 입체감 보강 --- */
+.seller-login-screen .login-visual {
+  background:
+    radial-gradient(560px circle at 88% -8%, rgba(255,255,255,.24), transparent 60%),
+    radial-gradient(460px circle at -6% 96%, rgba(6,32,86,.55), transparent 62%),
+    radial-gradient(340px circle at 55% 42%, rgba(255,255,255,.07), transparent 70%),
+    linear-gradient(155deg, #0c47ba 0%, #3182f6 42%, #2f7ef8 78%, #57a2ff 100%);
+}
