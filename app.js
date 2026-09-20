@@ -432,7 +432,8 @@ function channelAsset(id) {
   return {
     smartstore: { slot: "channel.smartstore", src: "assets/channel-smartstore.webp", alt: "네이버 스마트스토어" },
     coupang: { slot: "channel.coupang", src: "assets/channel-coupang.png", alt: "쿠팡" },
-    kakao: { slot: "channel.kakao", src: "assets/channel-kakao.png", alt: "카카오 쇼핑" }
+    kakao: { slot: "channel.kakao", src: "assets/channel-kakao.png", alt: "카카오 쇼핑" },
+    cafe24: { slot: "channel.cafe24", src: "assets/channel-cafe24.png", alt: "CAFE24" }
   }[id] || null;
 }
 function sellerChannels(loginId = currentAccount?.loginId || "seller") {
