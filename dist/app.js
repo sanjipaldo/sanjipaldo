@@ -7,15 +7,15 @@ const accounts = {
   seller: { password: "seller", role: "seller", roles: ["seller"], name: "위탁셀러 데모", roleLabel: "위탁셀러" }
 };
 const roleMenus = {
-  master: ["대시보드", "회원 승인", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그"],
+  master: ["대시보드", "회원 승인", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리"],
   supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "배송 · 송장 설정", "가격 관리", "정산 내역", "내 정보"],
-  seller: ["대시보드", "상품 소싱", "내가 PICK 상품", "공급사 문의", "주문관리", "취소 환불", "매출 캘린더", "가격 변경알림", "쇼핑몰 연동", "정기구독", "내정보", "상품 판매중", "두고머니", "공지사항"]
+  seller: ["대시보드", "상품 소싱", "PICK 상품", "공급사 문의", "주문관리", "취소 환불", "매출 캘린더", "가격 변경알림", "쇼핑몰 연동", "정기구독", "내정보", "상품 판매중", "두고머니", "공지사항"]
 };
 const roleMenuGroups = {
   master: [
     { label: "홈", indexes: [0] },
     { label: "회원 · 권한", indexes: [1, 2, 3, 4] },
-    { label: "통합 운영", indexes: [5, 6, 7, 8] }
+    { label: "통합 운영", indexes: [5, 6, 7, 8, 9] }
   ],
   supplier: [
     { label: "홈", indexes: [0] },
@@ -25,16 +25,16 @@ const roleMenuGroups = {
     { label: "계정", indexes: [8] }
   ],
   seller: [
-    { label: "홈", indexes: [0, 13] },
-    { label: "상품", indexes: [1, 2, 11] },
+    { label: "홈", indexes: [0] },
+    { label: "상품", indexes: [1, 2, 7] },
     { label: "거래처", indexes: [3] },
-    { label: "주문 · 정산", indexes: [4, 5, 12, 6, 7] },
+    { label: "주문 · 정산", indexes: [4, 5, 12, 6] },
     { label: "판매채널", indexes: [8] },
-    { label: "계정", indexes: [9, 10] }
+    { label: "계정", indexes: [13, 9, 10] }
   ]
 };
 const menuIcons = {
-  master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log"],
+  master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log", "notice"],
   supplier: ["home", "product", "connection", "order", "refund", "printer", "price", "settlement", "settings"],
   seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice"]
 };
@@ -55,16 +55,15 @@ const naverCategoryGroups = [
   { label: "면세점", options: ["향수·화장품", "주류", "패션잡화"] }
 ];
 
-const sellerNoticeBoard = [
-  { id: "notice-1", title: "상품 썸네일·상세페이지 복사 기능 안내", detail: "내가 PICK 상품에서 판매정보를 수정하고 채널별로 등록할 수 있습니다.", date: "오늘", cta: "내가 PICK 상품 바로가기", action: "open-my-products" },
-  { id: "notice-2", title: "상품코드 기반 주문 매핑 기능 업데이트", detail: "외부몰 상품명을 바꿔도 DF-코드로 공급사 상품에 연결됩니다.", date: "오늘", cta: "주문 매핑 바로가기", action: "open-order-mapping" },
-  { id: "notice-3", title: "거래처 연결 코드 이용 안내", detail: "승인된 공급사의 코드를 등록하면 매핑 가능한 상품이 열립니다.", date: "09.08", cta: "거래처 연결 바로가기", action: "open-connections" },
-  { id: "notice-4", title: "송장 자동전송 설정 안내", detail: "공급사 송장이 등록되면 연결 쇼핑몰에 반영할 수 있습니다.", date: "09.07", cta: "쇼핑몰 연동 바로가기", action: "open-seller-channels" }
-];
-
 const initialState = {
-  schemaVersion: 21,
+  schemaVersion: 22,
   contentOverrides: {},
+  notices: [
+    { id: "notice-1", title: "상품 썸네일·상세페이지 복사 기능 안내", detail: "PICK 상품에서 판매정보를 수정하고 채널별로 등록할 수 있습니다.", date: "오늘", cta: "PICK 상품 바로가기", action: "open-my-products" },
+    { id: "notice-2", title: "상품코드 기반 주문 매핑 기능 업데이트", detail: "외부몰 상품명을 바꿔도 DF-코드로 공급사 상품에 연결됩니다.", date: "오늘", cta: "주문 매핑 바로가기", action: "open-order-mapping" },
+    { id: "notice-3", title: "거래처 연결 코드 이용 안내", detail: "승인된 공급사의 코드를 등록하면 매핑 가능한 상품이 열립니다.", date: "09.08", cta: "거래처 연결 바로가기", action: "open-connections" },
+    { id: "notice-4", title: "송장 자동전송 설정 안내", detail: "공급사 송장이 등록되면 연결 쇼핑몰에 반영할 수 있습니다.", date: "09.07", cta: "쇼핑몰 연동 바로가기", action: "open-seller-channels" }
+  ],
   sellerDashboard: { layout: [...DEFAULT_DASHBOARD_LAYOUT] },
   chatFavorites: {},
   partnerNotes: {},
@@ -91,9 +90,9 @@ const initialState = {
     { id: "DF-3420", imageIndex: 2, emoji: "🍄", name: "중국 운남성 건표고 슬라이스 500g", supplier: "산지팔도", supplierLoginId: "sup", supply: 9900, recommended: 15900, stock: 106, category: "가공식품", status: "판매중", imported: false, origin: "중국 운남성", shippingType: "overseas", originCountry: "중국", deliveryDays: "7~14일", customsRequired: true, detail: "운남성 건표고 선별 상품 · 해외직구 합배송 가능 · 개인통관부호 필요" }
   ],
   sellerProducts: [
-    { id: "SP-1001", sellerLoginId: "seller", productId: "DF-1024", salePrice: 29900, channel: "네이버 스마트스토어", channels: ["smartstore", "coupang"], channelStatuses: { smartstore: "판매중", coupang: "판매중", kakao: "판매중지/미노출", cafe24: "미연동" }, channelDetails: { smartstore: { title: "산지직송 경북 프리미엄 사과 3kg", salePrice: 29900, category: "식품 > 농산물 > 사과", reviews: 128 }, coupang: { title: "고당도 경북 사과 실속형 3kg", salePrice: 30900, category: "식품 > 과일 > 사과", reviews: 42 }, kakao: { title: "선물용 경북 프리미엄 사과 3kg", salePrice: 31900, category: "푸드 > 신선식품 > 과일", reviews: 8 }, cafe24: { title: "경북 프리미엄 사과 3kg", salePrice: 29900, category: "농산물 > 과일", reviews: 0 } }, status: "판매중", copiedAt: "2026.09.07", imageIndex: 0, detailSnapshot: "정품 선별 사과 · 센터배송 · 상세페이지 제공", contentCopied: true },
-    { id: "SP-1002", sellerLoginId: "seller", productId: "DF-2088", salePrice: 49800, channel: "네이버 스마트스토어", channels: [], channelStatuses: { smartstore: "판매중지/미노출", coupang: "미연동", kakao: "미연동", cafe24: "미연동" }, channelDetails: { smartstore: { title: "뉴질랜드 마누카 허니 UMF 15+", salePrice: 49800, category: "식품 > 건강식품 > 꿀", reviews: 0 } }, status: "등록대기", copiedAt: "2026.09.08", imageIndex: 1, detailSnapshot: "뉴질랜드 현지 정식 수입 상품 · 안전 포장 · 개인통관부호 필요", contentCopied: true },
-    { id: "SP-1003", sellerLoginId: "seller", productId: "DF-3201", salePrice: 23900, channel: "쿠팡", channels: ["coupang"], channelStatuses: { smartstore: "미연동", coupang: "판매중", kakao: "미연동", cafe24: "미연동" }, channelDetails: { coupang: { title: "달콤한 제주 하우스 감귤 3kg", salePrice: 24900, category: "식품 > 과일 > 감귤", reviews: 15 } }, status: "판매중", copiedAt: "2026.09.08", imageIndex: 3, detailSnapshot: "고당도 하우스 감귤 · 산지직송 · 상세페이지 제공", contentCopied: true }
+    { id: "SP-1001", sellerLoginId: "seller", productId: "DF-1024", salePrice: 29900, approvalStatus: "승인완료", channel: "네이버 스마트스토어", channels: ["smartstore", "coupang"], channelStatuses: { smartstore: "판매중", coupang: "판매중", kakao: "판매중지/미노출", cafe24: "미연동" }, channelDetails: { smartstore: { title: "산지직송 경북 프리미엄 사과 3kg", salePrice: 29900, category: "식품 > 농산물 > 사과", reviews: 128 }, coupang: { title: "고당도 경북 사과 실속형 3kg", salePrice: 30900, category: "식품 > 과일 > 사과", reviews: 42 }, kakao: { title: "선물용 경북 프리미엄 사과 3kg", salePrice: 31900, category: "푸드 > 신선식품 > 과일", reviews: 8 }, cafe24: { title: "경북 프리미엄 사과 3kg", salePrice: 29900, category: "농산물 > 과일", reviews: 0 } }, status: "판매중", copiedAt: "2026.09.07", imageIndex: 0, detailSnapshot: "정품 선별 사과 · 센터배송 · 상세페이지 제공", contentCopied: true },
+    { id: "SP-1002", sellerLoginId: "seller", productId: "DF-2088", salePrice: 49800, approvalStatus: "승인대기", channel: "네이버 스마트스토어", channels: [], channelStatuses: { smartstore: "판매중지/미노출", coupang: "미연동", kakao: "미연동", cafe24: "미연동" }, channelDetails: { smartstore: { title: "뉴질랜드 마누카 허니 UMF 15+", salePrice: 49800, category: "식품 > 건강식품 > 꿀", reviews: 0 } }, status: "등록대기", copiedAt: "2026.09.08", imageIndex: 1, detailSnapshot: "뉴질랜드 현지 정식 수입 상품 · 안전 포장 · 개인통관부호 필요", contentCopied: true },
+    { id: "SP-1003", sellerLoginId: "seller", productId: "DF-3201", salePrice: 23900, approvalStatus: "승인완료", channel: "쿠팡", channels: ["coupang"], channelStatuses: { smartstore: "미연동", coupang: "판매중", kakao: "미연동", cafe24: "미연동" }, channelDetails: { coupang: { title: "달콤한 제주 하우스 감귤 3kg", salePrice: 24900, category: "식품 > 과일 > 감귤", reviews: 15 } }, status: "판매중", copiedAt: "2026.09.08", imageIndex: 3, detailSnapshot: "고당도 하우스 감귤 · 산지직송 · 상세페이지 제공", contentCopied: true }
   ],
   orders: [
     { id: "DO-260909-044", sellerLoginId: "seller", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-2088", customer: "최마누카", recipientName: "최마누카", phone: "010-7721-4408", postalCode: "06028", address: "서울특별시 강남구 압구정로 28", addressDetail: "502호", deliveryMessage: "통관 완료 후 연락주세요.", shippingType: "overseas", personalCustomsCode: "P260909044001", qty: 1, amount: 49800, channel: "카카오 쇼핑", status: "배송준비중", tracking: "", carrier: "한진택배", orderDate: "2026-09-09", createdAt: "오늘 10:18", settlementStatus: "scheduled" },
@@ -188,6 +187,8 @@ let sellerShippingFilter = "all";
 let sellerCountry = "전체 국가";
 let sellerBrand = "전체 브랜드";
 let sellerProductSearch = "";
+let pickStatusFilter = "all";
+let noticeModalIndex = -1;
 let sellerOrderSearch = "";
 let sellerOrderStage = "all";
 let refundMonth = "2026-09";
@@ -216,7 +217,7 @@ function loadState() {
     const isPreV10 = savedSchemaVersion < 10;
     const isPreV21 = savedSchemaVersion < 21;
     const mergeById = (savedItems, seedItems) => [...(savedItems || []), ...seedItems.filter(seed => !(savedItems || []).some(item => item.id === seed.id))];
-    const merged = { ...base, ...saved, schemaVersion: 21, sellerDashboard: { ...base.sellerDashboard, ...(saved.sellerDashboard || {}) }, contentOverrides: { ...(base.contentOverrides || {}), ...(saved.contentOverrides || {}) }, chatFavorites: { ...(base.chatFavorites || {}), ...(saved.chatFavorites || {}) }, partnerNotes: { ...(base.partnerNotes || {}), ...(saved.partnerNotes || {}) }, members: saved.members || base.members, supplierApplications: saved.supplierApplications || base.supplierApplications, logs: saved.logs || base.logs, errors: saved.errors || base.errors, connections: saved.connections || base.connections, connectionInvites: saved.connectionInvites || base.connectionInvites, connectionMessages: saved.connectionMessages || base.connectionMessages, shippingProfiles: { ...base.shippingProfiles, ...(saved.shippingProfiles || {}) }, goodflowConnections: { ...base.goodflowConnections, ...(saved.goodflowConnections || {}) }, refunds: saved.refunds || base.refunds, channelConnections: { ...base.channelConnections, ...(saved.channelConnections || {}) }, subscriptions: { ...base.subscriptions, ...(saved.subscriptions || {}) }, notificationServices: { ...base.notificationServices, ...(saved.notificationServices || {}) }, notificationEvents: saved.notificationEvents || base.notificationEvents, deposits: { ...base.deposits, ...(saved.deposits || {}) }, salesLedger: saved.salesLedger || base.salesLedger };
+    const merged = { ...base, ...saved, schemaVersion: 22, sellerDashboard: { ...base.sellerDashboard, ...(saved.sellerDashboard || {}) }, contentOverrides: { ...(base.contentOverrides || {}), ...(saved.contentOverrides || {}) }, chatFavorites: { ...(base.chatFavorites || {}), ...(saved.chatFavorites || {}) }, partnerNotes: { ...(base.partnerNotes || {}), ...(saved.partnerNotes || {}) }, members: saved.members || base.members, supplierApplications: saved.supplierApplications || base.supplierApplications, logs: saved.logs || base.logs, errors: saved.errors || base.errors, connections: saved.connections || base.connections, connectionInvites: saved.connectionInvites || base.connectionInvites, connectionMessages: saved.connectionMessages || base.connectionMessages, shippingProfiles: { ...base.shippingProfiles, ...(saved.shippingProfiles || {}) }, goodflowConnections: { ...base.goodflowConnections, ...(saved.goodflowConnections || {}) }, refunds: saved.refunds || base.refunds, channelConnections: { ...base.channelConnections, ...(saved.channelConnections || {}) }, subscriptions: { ...base.subscriptions, ...(saved.subscriptions || {}) }, notificationServices: { ...base.notificationServices, ...(saved.notificationServices || {}) }, notificationEvents: saved.notificationEvents || base.notificationEvents, deposits: { ...base.deposits, ...(saved.deposits || {}) }, salesLedger: saved.salesLedger || base.salesLedger };
     merged.sellerDashboard.layout = [...new Set((merged.sellerDashboard.layout || DEFAULT_DASHBOARD_LAYOUT).filter(id => DEFAULT_DASHBOARD_LAYOUT.includes(id)))];
     if (!merged.sellerDashboard.layout.length) merged.sellerDashboard.layout = [...DEFAULT_DASHBOARD_LAYOUT];
     merged.supplierApplications = mergeById(saved.supplierApplications, base.supplierApplications).map(application => ({ ...application, introduction: application.introduction === "자체 브랜드 상품을 두고푸드 위탁셀러에게 공급하고 싶습니다." ? "자체 브랜드 상품을 두고 위탁셀러에게 공급하고 싶습니다." : application.introduction }));
@@ -238,7 +239,7 @@ function loadState() {
       const channelStatuses = Object.fromEntries(merged.channelConnections.seller.map(channel => [channel.id, channels.includes(channel.id) ? "판매중" : channel.status === "disconnected" ? "미연동" : "판매중지/미노출"]));
       const seedDetails = base.sellerProducts.find(seed => seed.productId === item.productId)?.channelDetails || {};
       const channelDetails = Object.fromEntries(merged.channelConnections.seller.map((channel, channelIndex) => [channel.id, { title: product?.name || "판매 상품", salePrice: Number(item.salePrice || product?.recommended || 0) + channelIndex * 500, category: `${product?.category || "식품"} > ${product?.originCountry || "상품"}`, reviews: channelIndex ? 1 : 12, ...(seedDetails[channel.id] || {}), ...(item.channelDetails?.[channel.id] || {}) }]));
-      return { id: `SP-${1001 + index}`, sellerLoginId: "seller", copiedAt: "2026.09.07", imageIndex: product?.imageIndex ?? 0, customTitle: product?.name || "판매 상품", managementCode: item.id || `SP-${1001 + index}`, sellerCategory: product?.category || "식품", retailPrice: Number(item.salePrice || product?.recommended || 0), shippingPolicyOverride: product?.shippingPolicy || "공급사 정책 사용", carrierOverride: product?.carrier || "공급사 지정 택배", deliveryDaysOverride: product?.deliveryDays || "1~3일", summaryOverride: product?.summary || "", detailOverride: product?.detail || "상세페이지 제공", returnPolicy: "공급사 반품 정책에 따름", detailSnapshot: product?.detail || "상세페이지 제공", contentCopied: true, channels, channelStatuses, channelDetails, ...item, channelStatuses: { ...channelStatuses, ...(item.channelStatuses || {}) }, channelDetails };
+      return { id: `SP-${1001 + index}`, sellerLoginId: "seller", copiedAt: "2026.09.07", imageIndex: product?.imageIndex ?? 0, customTitle: product?.name || "판매 상품", managementCode: item.id || `SP-${1001 + index}`, sellerCategory: product?.category || "식품", retailPrice: Number(item.salePrice || product?.recommended || 0), shippingPolicyOverride: product?.shippingPolicy || "공급사 정책 사용", carrierOverride: product?.carrier || "공급사 지정 택배", deliveryDaysOverride: product?.deliveryDays || "1~3일", summaryOverride: product?.summary || "", detailOverride: product?.detail || "상세페이지 제공", returnPolicy: "공급사 반품 정책에 따름", detailSnapshot: product?.detail || "상세페이지 제공", contentCopied: true, approvalStatus: item.approvalStatus || "승인완료", channels, channelStatuses, channelDetails, ...item, channelStatuses: { ...channelStatuses, ...(item.channelStatuses || {}) }, channelDetails };
     });
     merged.orders = mergeById(saved.orders, base.orders).filter(order => !isPreV10 || order.id !== "DO-260908-041").map((order, index) => {
       const sourceProduct = merged.products.find(product => product.id === order.productId);
@@ -815,27 +816,37 @@ function marketplaceHeroTemplate() {
 }
 
 function sellerProductsTable() {
-  const items = currentSellerProducts();
+  const allItems = currentSellerProducts();
   const channels = sellerChannels();
-  if (!items.length) return `<div class="empty">아직 가져온 판매상품이 없습니다.</div>`;
-  return `<div class="seller-product-tree">${items.map(item => {
+  const pendingItems = allItems.filter(item => item.approvalStatus === "승인대기");
+  const approvedItems = allItems.filter(item => item.approvalStatus !== "승인대기");
+  const items = pickStatusFilter === "pending" ? pendingItems : pickStatusFilter === "approved" ? approvedItems : allItems;
+  const tabs = [["all", "전체", allItems.length], ["pending", "승인대기", pendingItems.length], ["approved", "승인완료", approvedItems.length]];
+  const tabsHtml = `<div class="pick-status-tabs" role="tablist">${tabs.map(([key, label, count]) => `<button type="button" class="${pickStatusFilter === key ? "active" : ""}" data-action="pick-status-filter" data-status="${key}"><span>${label}</span><b>${count}</b></button>`).join("")}</div>`;
+  if (!allItems.length) return `${tabsHtml}<div class="empty">아직 가져온 판매상품이 없습니다.</div>`;
+  if (!items.length) return `${tabsHtml}<div class="empty">${pickStatusFilter === "pending" ? "승인 대기중인 상품이 없습니다." : "승인완료된 상품이 없습니다."}</div>`;
+  return `${tabsHtml}<div class="seller-product-tree">${items.map(item => {
     const product = productOf(item.productId);
     const expanded = expandedSellerProductId === item.id;
-    const liveCount = channels.filter(channel => sellerProductChannelStatus(item, channel) === "판매중").length;
+    const approved = item.approvalStatus !== "승인대기";
+    const liveChannels = channels.filter(channel => sellerProductChannelStatus(item, channel) === "판매중");
+    const liveCount = liveChannels.length;
     return `<article class="seller-product-node ${expanded ? "expanded" : ""}">
       <button class="seller-product-parent" type="button" data-action="toggle-product-channels" data-id="${item.id}" aria-expanded="${expanded}">
         <span class="tree-chevron">${expanded ? "⌄" : "›"}</span>${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
-        <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>공급사 원본: ${escapeHtml(product?.name || "삭제 상품")} · 공급가 ${money(product?.supply || 0)}</em></span>
-        <span class="seller-product-price"><small>내 판매가</small><b>${money(item.salePrice)}</b><em>마진 ${margin(product?.supply || 0, item.salePrice)}%</em></span>
-        <span class="seller-product-live"><b>${liveCount ? `${liveCount}개 채널 판매중` : "쇼핑몰 등록 전"}</b><small>클릭해 채널 상태 보기</small></span>
+        <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>공급가 ${money(product?.supply || 0)} · 지정판매가 ${money(product?.recommended || 0)}</em></span>
+        <span class="seller-product-price"><small>내가 판매하고 싶은 가격</small><b>${money(item.salePrice)}</b><em>마진 ${margin(product?.supply || 0, item.salePrice)}%</em></span>
+        <span class="seller-product-live">${!approved ? `<b class="approval-pending-badge">승인대기</b><small>공급사 승인 후 진행 가능</small>` : liveCount ? `<b class="deployed-badge">상품 배포완료</b><small>${liveChannels.map(channel => escapeHtml(channel.name)).join(" · ")}</small>` : `<b>승인완료 · 판매 시작 전</b><small>클릭해 판매를 시작하세요</small>`}</span>
       </button>
-      ${expanded ? `<div class="seller-channel-branches"><div class="branch-guide"><span></span><b>쇼핑몰 등록 상태</b><small>내가 PICK 상품 아래에 채널별 자동등록 결과를 표시합니다.</small></div>${channels.map(channel => {
+      ${expanded ? `<div class="seller-channel-branches">
+        ${!approved ? `<div class="approval-wait-banner"><span>공급사 승인 대기중입니다. 승인되면 가격·상품명·배송정책·상세페이지를 자유롭게 수정하고 원하는 쇼핑몰에 바로 전송할 수 있어요.</span><button type="button" class="secondary-button" data-action="simulate-supplier-approval" data-id="${item.id}">데모: 공급사 승인 시뮬레이션</button></div>` : ""}
+        <div class="branch-guide"><span></span><b>쇼핑몰 등록 상태</b><small>PICK 상품 아래에 채널별 자동등록 결과를 표시합니다.</small></div>${channels.map(channel => {
         const status = sellerProductChannelStatus(item, channel);
         const statusClass = status === "판매중" ? "live" : status === "미연동" ? "unlinked" : "paused";
         const detail = sellerChannelDetail(item, channel, product);
         const channelMargin = margin(product?.supply || 0, detail.salePrice || item.salePrice);
-        return `<div class="seller-channel-branch channel-commerce-detail">${channelMark(channel.id)}<span class="channel-product-copy"><b>${escapeHtml(channel.name)}</b><strong>${escapeHtml(detail.title)}</strong><small>${escapeHtml(detail.category)}</small></span><span class="channel-price-stack"><small>소비자가</small><b>${money(detail.salePrice)}</b><em>원가 ${money(product?.supply || 0)} · 마진 ${channelMargin}%</em></span><span class="channel-review"><b>${Number(detail.reviews || 0).toLocaleString("ko-KR")} review${Number(detail.reviews || 0) === 1 ? "" : "s"}</b><small>${escapeHtml(channel.storeName)}</small></span><em class="channel-sale-status ${statusClass}">[${escapeHtml(status)}]</em></div>`;
-      }).join("")}<div class="seller-product-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">상품 수정</button><button class="secondary-button" data-action="copied-content" data-id="${item.id}">복사 콘텐츠</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="primary-button" data-action="manage-product-channels" data-id="${item.id}">쇼핑몰 자동등록</button><button class="secondary-button" data-action="simulate-order" data-id="${item.id}">단건 주문접수</button></div></div>` : ""}
+        return `<div class="seller-channel-branch channel-commerce-detail">${channelMark(channel.id)}<span class="channel-product-copy"><b>${escapeHtml(channel.name)}</b><strong>${escapeHtml(detail.title)}</strong><small>${escapeHtml(detail.category)}</small></span><span class="channel-price-stack"><small>소비자가</small><b>${money(detail.salePrice)}</b><em>원가 ${money(product?.supply || 0)} · 마진 ${channelMargin}%</em></span><span class="channel-review"><b>${Number(detail.reviews || 0).toLocaleString("ko-KR")} review${Number(detail.reviews || 0) === 1 ? "" : "s"}</b><small>${escapeHtml(channel.storeName)}</small></span><em class="channel-sale-status ${statusClass}">[${escapeHtml(status)}]</em>${status === "판매중" ? `<div class="channel-sync-actions"><button type="button" class="text-button" data-action="sync-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 동기화</button><button type="button" class="text-button" data-action="push-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 전송</button></div>` : ""}</div>`;
+      }).join("")}<div class="seller-product-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}" ${approved ? "" : "disabled"}>상품 수정</button><button class="secondary-button" data-action="copied-content" data-id="${item.id}">복사 콘텐츠</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="primary-button" data-action="manage-product-channels" data-id="${item.id}" ${approved ? "" : "disabled"}>${liveCount ? "쇼핑몰 자동등록" : "내 판매 시작"}</button><button class="secondary-button" data-action="simulate-order" data-id="${item.id}">단건 주문접수</button></div></div>` : ""}
     </article>`;
   }).join("")}</div>`;
 }
@@ -1133,27 +1144,9 @@ function subscriptionTemplate() {
   return `${sectionHero("정기구독", "두고셀러 기본 이용권과 실시간 알림톡 유료 부가서비스를 함께 관리합니다.")}<div class="subscription-layout"><div class="panel subscription-plan-card"><span class="plan-kicker">CURRENT PLAN</span><h2>${escapeHtml(subscription.plan)}</h2><div class="plan-price"><strong>${money(subscription.monthlyFee).replace("원","")}</strong><span>원 / 월</span></div><ul><li>공급상품 무제한 열람</li><li>상품 썸네일·상세페이지 복사</li><li>주문·송장·환불 통합관리</li><li>4개 판매채널 연동 설정</li></ul><button class="primary-button" data-action="billing-settings">결제수단 관리</button><small>실제 결제는 연결하지 않은 데모입니다.</small></div><div class="subscription-info"><div class="panel"><div class="panel-head"><div><h3>이용중인 서비스</h3><p>다음 결제 예정일과 월 청구액을 확인합니다.</p></div><span class="chip blue">월 ${money(total)}</span></div><dl class="subscription-dl"><div><dt>두고셀러 베이직</dt><dd>${money(subscription.monthlyFee)}</dd></div><div><dt>${escapeHtml(notice.plan)}</dt><dd>${money(notice.monthlyFee)}</dd></div><div><dt>다음 결제 예정</dt><dd>${escapeHtml(subscription.nextBilling)}</dd></div><div><dt>자동 갱신</dt><dd><button class="subscription-toggle ${subscription.autoRenew ? "on" : ""}" data-action="toggle-subscription"><i></i>${subscription.autoRenew ? "켜짐" : "꺼짐"}</button></dd></div></dl><button class="alert-plan-link" data-action="manage-alert-plan"><span class="talk-symbol small">TALK</span><span><b>실시간 알림톡 부가서비스</b><small>월 2,900원 · 500건 포함 · 현재 ${notice.used}건 사용</small></span><strong>설정 →</strong></button></div><div class="panel billing-history"><div class="panel-head"><div><h3>결제 내역</h3><p>샘플 청구 기록</p></div></div><div><span>2026.09.08</span><b>기본 구독 + 알림톡</b><strong>${money(total)} <em>결제완료</em></strong></div><div><span>2026.08.08</span><b>두고셀러 베이직</b><strong>5,900원 <em>결제완료</em></strong></div></div></div></div>`;
 }
 
-function sellerOnSaleProductsTemplate() {
-  const items = currentSellerProducts();
-  const channels = sellerChannels();
-  const onSaleItems = items.filter(item => channels.some(channel => sellerProductChannelStatus(item, channel) === "판매중"));
-  return `${sectionHero("상품 판매중", "쇼핑몰에 실제로 등록되어 판매가 시작된 상품만 모아서 보여줍니다.")}<div class="panel"><div class="panel-head"><div><h3>판매중 상품 목록</h3><p>내가 PICK 상품에서 ‘쇼핑몰 자동등록’을 진행해 채널에 노출되면 이 목록으로 자동으로 넘어옵니다.</p></div><span class="chip blue">${onSaleItems.length}개 판매중</span></div>${onSaleItems.length ? `<div class="seller-product-tree">${onSaleItems.map(item => {
-    const product = productOf(item.productId);
-    const liveChannels = channels.filter(channel => sellerProductChannelStatus(item, channel) === "판매중");
-    return `<article class="seller-product-node">
-      <button class="seller-product-parent" type="button" data-action="edit-seller-product" data-id="${item.id}">
-        <span class="tree-chevron">›</span>${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
-        <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>공급사 원본: ${escapeHtml(product?.name || "삭제 상품")} · 공급가 ${money(product?.supply || 0)}</em></span>
-        <span class="seller-product-price"><small>내 판매가</small><b>${money(item.salePrice)}</b><em>마진 ${margin(product?.supply || 0, item.salePrice)}%</em></span>
-        <span class="seller-product-live"><b>${liveChannels.length}개 채널 판매중</b><small>${liveChannels.map(channel => escapeHtml(channel.name)).join(" · ")}</small></span>
-      </button>
-    </article>`;
-  }).join("")}</div>` : `<div class="empty">아직 판매중인 상품이 없습니다. 내가 PICK 상품에서 쇼핑몰 자동등록을 진행해 주세요.</div>`}</div>`;
-}
 function renderSellerSection(index) {
   if (index === 1) return sellerMarketplaceTemplate();
-  if (index === 2) return `${sectionHero("내가 PICK 상품", "두고에서 PICK한 상품의 판매명·가격을 수정하고 연결된 쇼핑몰에 등록합니다.")}<div class="panel"><div class="panel-head"><div><h3>내가 PICK 상품 목록</h3><p>상품을 펼친 뒤 판매정보를 수정하거나 ‘쇼핑몰 자동등록’을 진행할 수 있습니다.</p></div><span class="chip">${currentSellerProducts().length}개 PICK</span></div>${sellerProductsTable()}</div>`;
-  if (index === 11) return sellerOnSaleProductsTemplate();
+  if (index === 2) return `${sectionHero("PICK 상품", "PICK한 상품의 가격·상품명을 관리하고 승인 후 원하는 쇼핑몰에 전송합니다.")}<div class="panel"><div class="panel-head"><div><h3>PICK 상품 목록</h3><p>상품을 펼친 뒤 판매정보를 수정하거나 ‘내 판매 시작’을 진행할 수 있습니다.</p></div><span class="chip">${currentSellerProducts().length}개 PICK</span></div>${sellerProductsTable()}</div>`;
   if (index === 12) return sellerDoogoMoneyTemplate();
   if (index === 13) return sellerNoticesTemplate();
   if (index === 3) return sellerConnectionTemplate();
@@ -1181,6 +1174,21 @@ function logsTemplate() {
   return `<div class="content-grid equal"><div class="panel"><div class="panel-head"><div><h3>전체 변경 이력</h3><p>회원·상품·가격·주문·송장 작업 기록</p></div><span class="chip">${state.logs.length}건</span></div><div class="activity-list log-scroll">${state.logs.map(log => `<div class="activity-item"><strong><span class="timeline-dot ${log.state}"></span>${escapeHtml(log.title)}</strong><p>${escapeHtml(log.detail)}<br><b>${escapeHtml(log.actor || "시스템")}</b> · ${escapeHtml(log.time)}</p></div>`).join("")}</div></div><div class="panel"><div class="panel-head"><div><h3>오류·연동 로그</h3><p>외부 연동 보류와 처리 오류</p></div><span class="chip red">${state.errors.length}건</span></div><div class="activity-list">${state.errors.map(error => `<div class="activity-item error-item"><strong><span class="timeline-dot blocked"></span>${escapeHtml(error.title)}</strong><p>${escapeHtml(error.source)} · ${escapeHtml(error.detail)}<br>${escapeHtml(error.time)}</p></div>`).join("")}</div></div></div>`;
 }
 
+function masterNoticesAdminTemplate() {
+  const list = state.notices || [];
+  return `${sectionHero("공지사항 관리", "위탁셀러·공급사에게 노출되는 공지사항을 등록하고 수정합니다.", `<button type="button" class="primary-button" data-action="edit-notice">+ 공지 등록</button>`)}
+    <div class="panel notice-admin-panel"><div class="panel-head"><div><h3>등록된 공지사항</h3><p>새 공지는 목록 맨 위에 노출됩니다.</p></div><span class="chip">${list.length}건</span></div>
+    <div class="notice-admin-list">${list.length ? list.map(n => `<article class="notice-admin-row"><div><b>${escapeHtml(n.title)}</b><small>${escapeHtml(n.date)} · ${escapeHtml(n.detail)}</small></div><div class="row-actions"><button type="button" class="text-button" data-action="edit-notice" data-id="${n.id}">수정</button><button type="button" class="small-button reject" data-action="delete-notice" data-id="${n.id}">삭제</button></div></article>`).join("") : `<div class="empty">등록된 공지사항이 없습니다.</div>`}</div></div>`;
+}
+function noticeFormModal(id) {
+  const notice = id ? (state.notices || []).find(n => n.id === id) : null;
+  openModal(`<h2>${notice ? "공지사항 수정" : "공지사항 등록"}</h2><form id="noticeForm" class="form-grid" data-id="${notice?.id || ""}">
+    <div class="form-field full"><label>제목</label><input name="title" value="${escapeHtml(notice?.title || "")}" required></div>
+    <div class="form-field full"><label>내용</label><textarea name="detail" rows="4" required>${escapeHtml(notice?.detail || "")}</textarea></div>
+    <div class="form-field"><label>날짜 표기</label><input name="date" value="${escapeHtml(notice?.date || "오늘")}" placeholder="예: 오늘, 09.08" required></div>
+    <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button class="primary-button" type="submit">${notice ? "저장" : "등록"}</button></div>
+  </form>`);
+}
 function renderMasterSection(index) {
   if (index === 1) return `${sectionHero("회원 · 권한 승인", "신규 사업자 가입과 위탁셀러의 공급사 요청을 한 화면에서 검토합니다.")}${supplierApplicationsTemplate()}<div class="panel approval-panel"><div class="panel-head"><div><h3>신규 사업자 가입 승인</h3><p>승인 전에는 로그인할 수 없습니다.</p></div><span class="chip ${state.members.some(member => member.status === "pending") ? "red" : ""}">${state.members.filter(member => member.status === "pending").length}건 대기</span></div>${membersTable()}</div>`;
   if (index === 2) return `${sectionHero("공급사 관리", "공급사 사업자 정보와 상품·주문 현황, 이용 상태를 전체 조회합니다.")}<div class="panel"><div class="panel-head"><div><h3>전체 공급사</h3><p>상세정보 확인과 계정 이용 정지가 가능합니다. 복수 역할 계정도 함께 표시됩니다.</p></div><span class="chip">${state.members.filter(member => (member.roles || [member.role]).includes("supplier")).length}곳</span></div>${memberDirectoryTable("supplier")}</div>`;
@@ -1189,6 +1197,7 @@ function renderMasterSection(index) {
   if (index === 5) return `${sectionHero("전체 상품 관리", "모든 공급사의 상품·공급가·재고·셀러 선택 현황을 조회합니다.")}<div class="panel"><div class="panel-head"><div><h3>통합 상품 목록</h3><p>변경 이력으로 공급사의 작업 기록을 추적합니다.</p></div><span class="chip">${state.products.length}개</span></div>${masterProductsTable()}</div>`;
   if (index === 6) return `${sectionHero("전체 주문 관리", "주문 접수부터 공급사 자동 배정, 송장 반영까지 한 화면에서 확인합니다.")}<div class="panel"><div class="panel-head"><div><h3>통합 주문 목록</h3><p>셀러와 공급사 사이의 처리 상태를 모니터링합니다.</p></div><span class="chip orange">처리 필요 ${state.orders.filter(order => ["신규주문","주문접수","발주완료","배송준비중"].includes(order.status)).length}건</span></div>${ordersTable("master")}</div>`;
   if (index === 7) return refundTemplate("master");
+  if (index === 9) return masterNoticesAdminTemplate();
   return `${sectionHero("연동·변경 로그", "모든 주요 변경과 오류를 시간순으로 저장하고 확인합니다.")}${logsTemplate()}`;
 }
 
@@ -1292,8 +1301,8 @@ function renderSeller() {
       <div class="dashboard-claim-strip"><div><span>클레임 관리</span><b>취소·반품·교환 요청을 바로 확인하세요.</b></div><button type="button" data-action="open-refunds" data-type="주문 취소"><span>취소</span><b>${refundCounts.cancel}</b></button><button type="button" data-action="open-refunds" data-type="반품"><span>반품</span><b>${refundCounts.return}</b></button><button type="button" data-action="open-refunds" data-type="교환"><span>교환</span><b>${refundCounts.exchange}</b></button>
       </div>
     </section>`,
-    "quick-actions": `<div class="seller-quick-actions"><button data-action="open-catalog"><span>＋</span><b>상품 소싱하기</b><small>국가·브랜드·카테고리별 소싱</small></button><button data-action="open-connections"><span>⌁</span><b>거래처 연결</b><small>공급사 코드 등록</small></button><button data-action="open-my-products"><span>▦</span><b>내가 PICK 상품</b><small>상품명·가격·쇼핑몰 관리</small></button><button data-action="open-order-mapping"><span>⇄</span><b>주문 매핑</b><small>${mappingRequired.length + paymentRequired.length ? `${mappingRequired.length + paymentRequired.length}건 처리 필요` : "상품코드·결제 연결"}</small></button></div>`,
-    notices: `<div class="panel dashboard-notices"><div class="panel-head"><div><h3>공지사항</h3><p>두고 운영 안내</p></div><button class="text-button" data-action="open-notices">더보기 →</button></div><div class="notice-list">${sellerNoticeBoard.map(n => `<button data-action="open-notices" data-id="${n.id}"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></button>`).join("")}</div></div>`,
+    "quick-actions": `<div class="seller-quick-actions"><button data-action="open-catalog"><span>＋</span><b>상품 소싱하기</b><small>국가·브랜드·카테고리별 소싱</small></button><button data-action="open-connections"><span>⌁</span><b>거래처 연결</b><small>공급사 코드 등록</small></button><button data-action="open-my-products"><span>▦</span><b>PICK 상품</b><small>상품명·가격·쇼핑몰 관리</small></button><button data-action="open-order-mapping"><span>⇄</span><b>주문 매핑</b><small>${mappingRequired.length + paymentRequired.length ? `${mappingRequired.length + paymentRequired.length}건 처리 필요` : "상품코드·결제 연결"}</small></button></div>`,
+    notices: `<div class="panel dashboard-notices"><div class="panel-head"><div><h3>공지사항</h3><p>두고 운영 안내</p></div><button class="text-button" data-action="open-notices">더보기 →</button></div><div class="notice-list">${(state.notices || []).map(n => `<button data-action="open-notice-detail" data-id="${n.id}"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></button>`).join("")}</div></div>`,
     sales: `<div class="panel sales-summary"><div class="panel-head"><div><h3>9월 매출·두고머니</h3><p>4개 판매채널 샘플 집계</p></div><div class="refund-head-actions"><button class="text-button" data-action="open-sales-calendar">달력</button><button class="text-button" data-action="open-doogo-money">두고머니 관리 →</button></div></div><dl><div><dt>오늘 매출</dt><dd>${money(state.salesLedger.filter(item=>item.date==="2026-09-08").reduce((sum,item)=>sum+item.sales,0))}</dd></div><div><dt>이번 달 매출</dt><dd>${money(salesTotal)}</dd></div><div><dt>예상 순수익</dt><dd>${money(profitTotal)}</dd></div><div><dt>사용 가능 두고머니</dt><dd class="deposit-value">${money(deposit.balance)}</dd></div></dl></div>`,
     "product-sales": `<div class="panel product-sales"><div class="panel-head"><div><h3>PICK 상품</h3><p>내가 선택한 판매상품</p></div><button class="text-button" data-action="open-my-products">관리 →</button></div>${sellerProducts.length ? sellerProducts.slice(0,3).map(item => { const product = productOf(item.productId); const amount = sellerOrders.filter(order => (order.mappedProductId || order.productId) === item.productId).reduce((sum,order)=>sum+order.amount,0); const isOnSale = sellerChannels().some(channel => sellerProductChannelStatus(item, channel) === "판매중"); return `<button class="product-sale-row" data-action="edit-seller-product" data-id="${item.id}">${productPhoto(product,"sale-photo")}<span><b>${escapeHtml(sellerProductTitle(item, product))}</b><small>${money(amount)} · ${isOnSale ? "판매중" : "등록대기"}</small></span></button>`; }).join("") : `<div class="empty">PICK한 상품이 없습니다.</div>`}</div>`,
     "price-alerts": `<div class="panel">
@@ -1313,14 +1322,18 @@ function renderSeller() {
 }
 
 function productRowSeller(p) {
-  const owned = currentSellerProducts().some(x => x.productId === p.id);
+  const sellerItem = currentSellerProducts().find(x => x.productId === p.id);
   const changed = currentPriceAlerts().some(alert => alert.productId === p.id && alert.status === "확인필요");
+  const isLive = sellerItem ? sellerChannels().some(channel => sellerProductChannelStatus(sellerItem, channel) === "판매중") : false;
+  const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
+  const pickLabel = { none: "이 상품 PICK하기", pending: "PICK완료 · 승인대기중", approved: "PICK완료 · 판매 시작하기", live: "판매중 · PICK 상품에서 보기" }[pickState];
+  const pickClass = pickState === "none" ? "" : pickState === "live" ? "done" : "picked";
   return `<article class="market-product-card" data-action="product-detail" data-id="${p.id}" tabindex="0" aria-label="${escapeHtml(p.name)} 상세 보기">
     <div class="market-product-image">${productPhoto(p, "catalog-photo")}<b>발주마감 ${escapeHtml(p.cutoff || "10:00")}</b><em>${escapeHtml(p.category)}</em><span class="shipping-badge ${p.shippingType === "overseas" ? "overseas" : "domestic"}">${p.shippingType === "overseas" ? `해외직구 · ${escapeHtml(p.originCountry)}` : "국내배송"}</span>${changed ? `<strong class="price-alert-flag">공급가 변경</strong>` : ""}</div>
     <div class="market-product-body">
       <small>${escapeHtml(p.supplier)} · ${p.id}</small><h4>${escapeHtml(p.name)}</h4>
       <dl><div><dt>공급가</dt><dd>${money(p.supply)}</dd></div><div><dt>예상 수익</dt><dd class="profit-text">${money(p.recommended - p.supply)}</dd></div><div><dt>배송</dt><dd>${escapeHtml(p.deliveryDays || "1~3일")} · 무료</dd></div></dl>
-      <div class="market-card-actions"><button class="text-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button><button class="small-button ${owned ? "done" : ""}" data-action="${owned ? "open-picked-product" : "import-product"}" data-id="${p.id}">${owned ? "내가 PICK 상품에서 보기 ✓" : "이 상품 PICK하기"}</button></div>
+      <div class="market-card-actions"><button class="text-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button><button class="small-button ${pickClass}" data-action="${sellerItem ? "open-picked-product" : "import-product"}" data-id="${p.id}">${pickLabel}</button></div>
     </div>
   </article>`;
 }
@@ -1584,11 +1597,13 @@ function accountRecoveryResult(title, detail) {
 function productDetailModal(id) {
   const p = productOf(id);
   if (!p) return;
-  const owned = currentSellerProducts().some(item => item.productId === p.id);
+  const sellerItem = currentSellerProducts().find(item => item.productId === p.id);
   const supplier = memberByLogin(p.supplierLoginId);
   const overseas = p.shippingType === "overseas";
-  const pickAction = owned ? "open-picked-product" : "import-product";
-  const pickLabel = owned ? "내가 PICK 상품에서 보기 ✓" : "이 상품 PICK하기";
+  const isLive = sellerItem ? sellerChannels().some(channel => sellerProductChannelStatus(sellerItem, channel) === "판매중") : false;
+  const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
+  const pickAction = sellerItem ? "open-picked-product" : "import-product";
+  const pickLabel = { none: "이 상품 PICK하기", pending: "PICK완료 · 승인대기중", approved: "PICK완료 · 판매 시작하기", live: "판매중 · PICK 상품에서 보기" }[pickState];
   openModal(`<div class="product-detail-page"><div class="product-breadcrumb"><button type="button" data-action="open-catalog">공급 상품몰</button><span>›</span><button type="button" data-action="filter-products" data-category="${escapeHtml(p.category)}">${escapeHtml(p.category)}</button><span>›</span> ${escapeHtml(p.name)}</div><div class="product-detail">
     <div class="product-detail-visual">${productPhoto(p, "detail-photo")}<small>${escapeHtml(p.category)}</small><span class="detail-shipping-badge ${overseas ? "overseas" : ""}">${overseas ? `해외직구 · ${escapeHtml(p.originCountry)}` : "국내배송"}</span></div>
     <div class="product-detail-copy">
@@ -1610,14 +1625,14 @@ function productDetailModal(id) {
 function importModal(id) {
   const p = productOf(id);
   document.querySelector("#modal .modal").classList.remove("product-detail-modal");
-  openModal(`<h2>두고 상품 PICK</h2><p>공급사 원본은 유지하고 썸네일·상세페이지 사본과 내 판매가를 ‘내가 PICK 상품’에 보관합니다.</p>
+  openModal(`<h2>두고 상품 PICK</h2><p>공급사 원본은 유지하고 썸네일·상세페이지 사본과 내 판매가를 ‘PICK 상품’에 보관합니다.</p>
     <form id="importForm" class="form-grid" data-id="${p.id}">
       <div class="copy-preview full">${productPhoto(p,"copy-preview-photo")}<div><span>복사할 원본 콘텐츠</span><b>${escapeHtml(p.name)}</b><small>AI 상품 썸네일 ✓ · 상세페이지 ✓ · 공급 옵션 ✓</small></div></div>
       <div class="form-field full"><label>내 판매 상품명</label><input name="customTitle" value="${escapeHtml(p.name)}" maxlength="100" required><small>쇼핑몰에는 이 상품명으로 등록되며 공급사 원본 상품코드 ${escapeHtml(p.id)}는 그대로 유지됩니다.</small></div>
       <div class="form-field full"><label>기본 판매가</label><input name="salePrice" type="number" value="${p.recommended}" min="${p.supply}"></div>
       <div class="calc-box"><span>공급가 ${money(p.supply)}</span><strong id="marginPreview">예상 마진율 ${margin(p.supply,p.recommended)}%</strong></div>
-      <label class="auto-issue-check full"><input type="checkbox" name="copyContent" checked><span><b>썸네일·상세페이지 함께 복사</b><small>복사 시점의 콘텐츠를 내가 PICK 상품에 저장합니다.</small></span></label>
-      <div class="import-flow-note full"><b>다음 단계</b><span>내가 PICK 상품에서 ‘쇼핑몰 자동등록’을 눌러 연결된 채널을 선택하세요.</span></div>
+      <label class="auto-issue-check full"><input type="checkbox" name="copyContent" checked><span><b>썸네일·상세페이지 함께 복사</b><small>복사 시점의 콘텐츠를 PICK 상품에 저장합니다.</small></span></label>
+      <div class="import-flow-note full"><b>다음 단계</b><span>PICK 상품에서 ‘쇼핑몰 자동등록’을 눌러 연결된 채널을 선택하세요.</span></div>
       <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">이 상품 PICK하기</button></div>
     </form>`);
 }
@@ -1719,14 +1734,39 @@ function orderPaymentModal(orderId) {
 }
 
 function sellerNoticesTemplate() {
-  return `${sectionHero("공지사항", "두고 운영에 필요한 최근 업데이트와 안내를 확인하세요.")}<div class="panel notice-board">${sellerNoticeBoard.map(n => `<article class="notice-card" id="${n.id}"><div class="notice-card-head"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></div><p>${escapeHtml(n.detail)}</p><button type="button" class="text-button" data-action="${escapeHtml(n.action)}">${escapeHtml(n.cta)} →</button></article>`).join("")}</div>`;
+  const list = state.notices || [];
+  return `${sectionHero("공지사항", "두고 운영에 필요한 최근 업데이트와 안내를 확인하세요.")}<div class="panel notice-board">${list.length ? list.map(n => `<button type="button" class="notice-row" data-action="open-notice-detail" data-id="${n.id}"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></button>`).join("") : `<div class="empty">등록된 공지사항이 없습니다.</div>`}</div>`;
+}
+function renderNoticeModal() {
+  const list = state.notices || [];
+  if (!list.length) return closeModal();
+  noticeModalIndex = Math.min(Math.max(noticeModalIndex, 0), list.length - 1);
+  const n = list[noticeModalIndex];
+  openModal(`<div class="notice-popup">
+    <div class="notice-popup-head"><span>DOOGO NOTICE</span><b>${escapeHtml(n.date)}</b></div>
+    <h2>${escapeHtml(n.title)}</h2>
+    <p>${escapeHtml(n.detail)}</p>
+    ${n.action ? `<button type="button" class="secondary-button" data-action="${escapeHtml(n.action)}">${escapeHtml(n.cta || "바로가기")} →</button>` : ""}
+    <div class="notice-popup-nav">
+      <button type="button" class="text-button" data-action="notice-modal-nav" data-dir="prev" ${noticeModalIndex === 0 ? "disabled" : ""}>← 이전</button>
+      <span>${noticeModalIndex + 1} / ${list.length}</span>
+      <button type="button" class="text-button" data-action="notice-modal-nav" data-dir="next" ${noticeModalIndex === list.length - 1 ? "disabled" : ""}>다음 →</button>
+    </div>
+    <div class="modal-actions"><button class="secondary-button" type="button" data-close-modal>닫기</button></div>
+  </div>`);
+}
+function noticeDetailModal(id) {
+  const list = state.notices || [];
+  const index = list.findIndex(n => n.id === id);
+  noticeModalIndex = index >= 0 ? index : 0;
+  renderNoticeModal();
 }
 
 function copiedContentModal(sellerProductId) {
   const item = state.sellerProducts.find(product => product.id === sellerProductId);
   const source = item && productOf(item.productId);
   if (!item || !source) return;
-  openModal(`<div class="copied-content-view"><div class="copy-content-head">${productPhoto({ ...source, imageIndex: item.imageIndex },"copied-detail-photo")}<div><span>내가 PICK 상품 콘텐츠 사본</span><h2>${escapeHtml(sellerProductTitle(item, source))}</h2><p>원본 ${escapeHtml(source.id)} · ${escapeHtml(item.channel || "쇼핑몰 등록 전")} · ${item.copiedAt} 복사</p></div></div><div class="copy-check-grid"><div><span>상품 썸네일</span><b>복사 완료 ✓</b></div><div><span>상세페이지</span><b>복사 완료 ✓</b></div><div><span>옵션·원산지</span><b>복사 완료 ✓</b></div><div><span>상품코드 연결</span><b>${escapeHtml(source.id)} 유지 ✓</b></div></div><div class="copied-detail-text"><span>복사된 상세설명</span><p>${escapeHtml(item.detailSnapshot || source.detail)}</p></div><div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button></div></div>`);
+  openModal(`<div class="copied-content-view"><div class="copy-content-head">${productPhoto({ ...source, imageIndex: item.imageIndex },"copied-detail-photo")}<div><span>PICK 상품 콘텐츠 사본</span><h2>${escapeHtml(sellerProductTitle(item, source))}</h2><p>원본 ${escapeHtml(source.id)} · ${escapeHtml(item.channel || "쇼핑몰 등록 전")} · ${item.copiedAt} 복사</p></div></div><div class="copy-check-grid"><div><span>상품 썸네일</span><b>복사 완료 ✓</b></div><div><span>상세페이지</span><b>복사 완료 ✓</b></div><div><span>옵션·원산지</span><b>복사 완료 ✓</b></div><div><span>상품코드 연결</span><b>${escapeHtml(source.id)} 유지 ✓</b></div></div><div class="copied-detail-text"><span>복사된 상세설명</span><p>${escapeHtml(item.detailSnapshot || source.detail)}</p></div><div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button></div></div>`);
 }
 
 function supplierContactModal(supplierLoginId, productId = "") {
@@ -2057,7 +2097,7 @@ function productEditorModal(product = null) {
       <section class="editor-section"><div class="editor-section-title"><span>02</span><div><h3>매입·판매 가격</h3><p>공급사 매입처와 셀러 공급가격을 구분합니다.</p></div></div><div class="purchase-strip"><div><span>기본 매입처</span><b>${escapeHtml(workspaceCompany("supplier"))}</b></div><div><span>매입 원가</span><input name="purchasePrice" type="number" value="${value("purchasePrice", product?.supply || 15900)}" min="100" required></div><div><span>매입 배송정책</span><input name="purchaseShipping" value="${value("purchaseShipping","공급사 직배송")}" required></div><div><span>부자재비</span><input name="surcharge" type="number" value="${value("surcharge",0)}" min="0"></div></div><div class="editor-grid cols-4 price-editor-grid">
         <div class="form-field"><label>공급가 *</label><input name="supply" type="number" value="${value("supply",15900)}" min="100" required></div><div class="form-field"><label>권장 판매가 *</label><input name="recommended" type="number" value="${value("recommended",22900)}" min="100" required></div><div class="form-field"><label>소비자가</label><input name="retailPrice" type="number" value="${value("retailPrice",29900)}" min="0"></div><div class="form-field"><label>판매 배송정책 *</label><select name="shippingPolicy"><option ${selected("shippingPolicy","무료배송","무료배송")}>무료배송</option><option ${selected("shippingPolicy","조건부 무료")}>조건부 무료</option><option ${selected("shippingPolicy","유료배송 3,000원")}>유료배송 3,000원</option></select></div>
       </div><div class="balju-partner-table"><div class="balju-table-title"><b>매출처/그룹 개별공급가 설정</b><span>연결 거래처별 노출 및 공급가</span></div><div class="balju-table-row heading"><span>타입</span><span>거래처명</span><span>공급가</span><span>판매 배송정책</span><span>노출</span></div><div class="balju-table-row"><span>기본</span><b>연결된 위탁셀러 전체</b><strong>${money(product?.supply || 15900)}</strong><span>${escapeHtml(product?.shippingPolicy || "무료배송")}</span><em>노출</em></div></div></section>
-      <section class="editor-section"><div class="editor-section-title"><span>03</span><div><h3>상품 이미지·매출처 안내사항</h3><p>대표 이미지를 선택하고 셀러에게 복사될 상품정보를 입력합니다.</p></div></div><div class="image-picker">${Array.from({length:8},(_,index)=>`<label><input type="radio" name="imageIndex" value="${index}" ${(product?.imageIndex ?? 0) === index ? "checked" : ""}><span>${productPhoto({name:`AI 상품 이미지 ${index+1}`,imageIndex:index},"picker-photo")}<b>이미지 ${index+1}</b></span></label>`).join("")}</div><div class="editor-grid"><div class="form-field full balju-file-field"><label>상품 이미지 파일</label><input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp"><small>JPG·PNG·WEBP, 10MB 이하. 파일을 선택하지 않으면 위 대표 이미지가 사용됩니다.</small></div><div class="form-field"><label>원산지</label><input name="origin" value="${value("origin","대한민국")}" placeholder="예: 제주특별자치도"></div><div class="form-field"><label>원산 국가</label><select name="originCountry"><option ${selected("originCountry","대한민국","대한민국")}>대한민국</option><option ${selected("originCountry","중국")}>중국</option><option ${selected("originCountry","뉴질랜드")}>뉴질랜드</option><option ${selected("originCountry","호주")}>호주</option></select></div><div class="form-field"><label>예상 배송기간</label><input name="deliveryDays" value="${value("deliveryDays","1~3일")}"></div><div class="form-field"><label>제조·수확일</label><input name="manufactureDate" value="${value("manufactureDate")}" placeholder="예: 주문일 기준 2일 이내"></div><div class="form-field"><label>소비기한·보관법</label><input name="shelfLife" value="${value("shelfLife","수령 후 냉장·냉동 보관")}"></div><div class="form-field full"><label>상품 간략설명</label><input name="summary" value="${value("summary")}" maxlength="100" placeholder="상품 목록에 표시할 100자 이내 설명"></div><div class="form-field full"><label>상품 상세설명 *</label><textarea name="detail" rows="8" maxlength="1000" required>${value("detail","센터배송 · 전 채널 판매 가능 · 상세페이지 제공")}</textarea><small>이 내용과 선택한 상품 이미지가 위탁셀러의 내가 PICK 상품에 함께 복사됩니다.</small></div></div></section>
+      <section class="editor-section"><div class="editor-section-title"><span>03</span><div><h3>상품 이미지·매출처 안내사항</h3><p>대표 이미지를 선택하고 셀러에게 복사될 상품정보를 입력합니다.</p></div></div><div class="image-picker">${Array.from({length:8},(_,index)=>`<label><input type="radio" name="imageIndex" value="${index}" ${(product?.imageIndex ?? 0) === index ? "checked" : ""}><span>${productPhoto({name:`AI 상품 이미지 ${index+1}`,imageIndex:index},"picker-photo")}<b>이미지 ${index+1}</b></span></label>`).join("")}</div><div class="editor-grid"><div class="form-field full balju-file-field"><label>상품 이미지 파일</label><input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp"><small>JPG·PNG·WEBP, 10MB 이하. 파일을 선택하지 않으면 위 대표 이미지가 사용됩니다.</small></div><div class="form-field"><label>원산지</label><input name="origin" value="${value("origin","대한민국")}" placeholder="예: 제주특별자치도"></div><div class="form-field"><label>원산 국가</label><select name="originCountry"><option ${selected("originCountry","대한민국","대한민국")}>대한민국</option><option ${selected("originCountry","중국")}>중국</option><option ${selected("originCountry","뉴질랜드")}>뉴질랜드</option><option ${selected("originCountry","호주")}>호주</option></select></div><div class="form-field"><label>예상 배송기간</label><input name="deliveryDays" value="${value("deliveryDays","1~3일")}"></div><div class="form-field"><label>제조·수확일</label><input name="manufactureDate" value="${value("manufactureDate")}" placeholder="예: 주문일 기준 2일 이내"></div><div class="form-field"><label>소비기한·보관법</label><input name="shelfLife" value="${value("shelfLife","수령 후 냉장·냉동 보관")}"></div><div class="form-field full"><label>상품 간략설명</label><input name="summary" value="${value("summary")}" maxlength="100" placeholder="상품 목록에 표시할 100자 이내 설명"></div><div class="form-field full"><label>상품 상세설명 *</label><textarea name="detail" rows="8" maxlength="1000" required>${value("detail","센터배송 · 전 채널 판매 가능 · 상세페이지 제공")}</textarea><small>이 내용과 선택한 상품 이미지가 위탁셀러의 PICK 상품에 함께 복사됩니다.</small></div></div></section>
       <section class="editor-section"><div class="editor-section-title"><span>04</span><div><h3>배송·재고·노출</h3><p>물류정보와 연결 셀러 노출 범위를 설정합니다.</p></div></div><div class="editor-grid cols-4"><div class="form-field"><label>택배사</label><select name="carrier"><option ${selected("carrier","한진택배","한진택배")}>한진택배</option><option ${selected("carrier","CJ대한통운")}>CJ대한통운</option><option ${selected("carrier","롯데택배")}>롯데택배</option></select></div><div class="form-field"><label>창고</label><input name="warehouse" value="${value("warehouse","공급사 직배송")}"></div><div class="form-field"><label>초기 재고 *</label><input name="stock" type="number" value="${value("stock",100)}" min="0" required></div><div class="form-field"><label>단위</label><div class="unit-input"><input name="weight" type="number" value="${value("weight",1)}" min="0" step="0.1"><select name="unit"><option ${selected("unit","KG","KG")}>KG</option><option ${selected("unit","EA")}>EA</option><option ${selected("unit","BOX")}>BOX</option></select></div></div><div class="form-field"><label>관리코드</label><input name="managementCode" value="${value("managementCode")}" placeholder="최대 50자"></div><div class="form-field"><label>바코드</label><input name="barcode" value="${value("barcode")}" placeholder="영문·숫자 입력"></div><div class="form-field span-2"><label>상품 노출 범위</label><select name="visibility"><option value="연결 셀러" ${selected("visibility","연결 셀러","연결 셀러")}>연결 셀러 전체</option><option value="선택 셀러" ${selected("visibility","선택 셀러")}>선택 셀러만</option><option value="비노출" ${selected("visibility","비노출")}>비노출</option></select></div></div><div class="connected-visibility"><span>연결 거래처</span>${connected.length ? connected.map(connection=>`<b>✓ ${escapeHtml(memberByLogin(connection.sellerLoginId)?.company || connection.sellerLoginId)}</b>`).join("") : `<small>연결된 셀러가 없습니다.</small>`}</div></section>
       <div class="editor-sticky-actions"><span>필수항목을 확인한 뒤 저장해 주세요.</span><div><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">${isEdit ? "수정 내용 저장" : "상품 등록·셀러 노출"}</button></div></div>
     </form>`);
@@ -2120,7 +2160,7 @@ function changePriceModal(id) {
 function reviewPriceModal(alertId) {
   const alert = state.priceAlerts.find(a => a.id === alertId), p = productOf(alert.productId);
   const sellerProduct = currentSellerProducts().find(x => x.productId === p.id);
-  if (!sellerProduct) return showToast("먼저 이 상품을 내가 PICK 상품에 보관해 주세요.");
+  if (!sellerProduct) return showToast("먼저 이 상품을 PICK 상품에 보관해 주세요.");
   const channels = sellerChannels().filter(channel => sellerProductChannelStatus(sellerProduct, channel) !== "미연동");
   openModal(`<div class="channel-price-head"><span>CHANNEL PRICE CONTROL</span><h2>채널 판매가 일괄 변경</h2><p>${escapeHtml(p.name)}의 원가와 목표 마진율을 기준으로 채널별 판매가를 계산합니다.</p><div class="price-cost-summary"><span>이전 원가 <del>${money(alert.oldPrice)}</del></span><strong><small>현재 원가</small>${money(alert.newPrice)}</strong><button type="button" class="secondary-button" data-action="apply-recommended-prices" data-price="${p.recommended}">모두 권장가 적용</button></div></div>
     <form id="reviewPriceForm" class="channel-price-form" data-id="${alert.id}" data-supply="${alert.newPrice}">
@@ -2150,7 +2190,7 @@ function reviewPriceModal(alertId) {
 function guideModal() {
   openModal(`<h2>두고 클릭 검증 흐름</h2><p>각 역할은 별도 계정으로 로그인합니다. 같은 브라우저의 샘플 데이터가 세 화면에 이어집니다.</p>
     <div class="guide-steps">
-      <div class="guide-step"><span>1</span><div><b>두고 · 상품 PICK</b><small>상품과 상세페이지를 내가 PICK 상품에 먼저 보관</small></div><b class="guide-account">seller</b></div>
+      <div class="guide-step"><span>1</span><div><b>두고 · 상품 PICK</b><small>상품과 상세페이지를 PICK 상품에 먼저 보관</small></div><b class="guide-account">seller</b></div>
       <div class="guide-step"><span>2</span><div><b>공급사에 직접 문의</b><small>상품별 문의를 남기고 공급사 계정에서 같은 메시지 확인</small></div><b class="guide-account">seller</b></div>
       <div class="guide-step"><span>3</span><div><b>주문 접수 · 자동 배정</b><small>수취인·주소·배송메시지·해외직구 통관정보 입력</small></div><b class="guide-account">seller</b></div>
       <div class="guide-step"><span>4</span><div><b>송장 자동발급 · 출력</b><small>공급사 계정 배송 설정으로 번호 생성 후 셀러 즉시 반영</small></div><b class="guide-account">sup</b></div>
@@ -2463,7 +2503,7 @@ document.addEventListener("click", event => {
   if (action === "open-picked-product") {
     closeModal(); activeMenuIndex = 2;
     expandedSellerProductId = state.sellerProducts.find(item => item.sellerLoginId === currentAccount.loginId && item.productId === id)?.id || null;
-    render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); showToast("내가 PICK 상품에서 판매정보를 확인할 수 있습니다."); return;
+    render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); showToast("PICK 상품에서 판매정보를 확인할 수 있습니다."); return;
   }
   if (action === "import-product") { importModal(id); return; }
   if (action === "supplier-contact") { supplierContactModal(id, target.dataset.productId || ""); return; }
@@ -2472,8 +2512,50 @@ document.addEventListener("click", event => {
   if (action === "edit-seller-product") editSellerProductModal(id);
   if (action === "map-order") orderMappingModal(id);
   if (action === "pay-order") orderPaymentModal(id);
-  if (action === "open-notices") { activeMenuIndex = 13; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); const id = target.dataset.id; if (id) requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" })); return; }
+  if (action === "open-notices") { activeMenuIndex = 13; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (action === "open-notice-detail") { noticeDetailModal(id); return; }
+  if (action === "edit-notice") { noticeFormModal(id); return; }
+  if (action === "delete-notice") {
+    state.notices = (state.notices || []).filter(n => n.id !== id);
+    audit("공지사항 삭제", `${id} 공지사항을 삭제했습니다.`, "done", "product");
+    saveState(); render(); updateAccountUI(); showToast("공지사항을 삭제했습니다."); return;
+  }
+  if (action === "notice-modal-nav") {
+    const list = state.notices || [];
+    if (target.dataset.dir === "prev" && noticeModalIndex > 0) noticeModalIndex--;
+    if (target.dataset.dir === "next" && noticeModalIndex < list.length - 1) noticeModalIndex++;
+    renderNoticeModal();
+    return;
+  }
   if (action === "toggle-product-channels") { expandedSellerProductId = expandedSellerProductId === id ? null : id; render(); updateAccountUI(); return; }
+  if (action === "pick-status-filter") { pickStatusFilter = target.dataset.status || "all"; render(); updateAccountUI(); return; }
+  if (action === "simulate-supplier-approval") {
+    const item = state.sellerProducts.find(entry => entry.id === id);
+    if (item) {
+      item.approvalStatus = "승인완료";
+      audit("PICK 상품 승인", `${item.id} 상품이 공급사 승인을 받아 자유롭게 수정할 수 있습니다.`, "done", "product");
+      saveState();
+    }
+    render(); updateAccountUI(); showToast("데모: 공급사가 상품을 승인했습니다. 이제 자유롭게 수정할 수 있어요."); return;
+  }
+  if (action === "sync-channel-listing") {
+    const item = state.sellerProducts.find(entry => entry.id === id);
+    const channel = sellerChannels().find(entry => entry.id === target.dataset.channel);
+    const detail = item?.channelDetails?.[target.dataset.channel];
+    if (item && detail) { item.salePrice = Number(detail.salePrice) || item.salePrice; item.customTitle = detail.title || item.customTitle; saveState(); }
+    render(); updateAccountUI(); showToast(`${channel?.name || "채널"}의 최신 상품명·가격을 두고로 불러와 동기화했습니다.`); return;
+  }
+  if (action === "push-channel-listing") {
+    const item = state.sellerProducts.find(entry => entry.id === id);
+    const channel = sellerChannels().find(entry => entry.id === target.dataset.channel);
+    if (item && target.dataset.channel) {
+      item.channelDetails = item.channelDetails || {};
+      const previous = item.channelDetails[target.dataset.channel] || {};
+      item.channelDetails[target.dataset.channel] = { ...previous, title: sellerProductTitle(item), salePrice: item.salePrice };
+      saveState();
+    }
+    render(); updateAccountUI(); showToast(`${channel?.name || "채널"}에 최신 상품 정보를 전송했습니다.`); return;
+  }
   if (action === "focus-inquiry") document.getElementById("supplierInquiryPanel")?.scrollIntoView({ behavior: "smooth", block: "center" });
   if (action === "order-detail") orderDetailModal(id);
   if (action === "request-refund") refundRequestModal(id);
@@ -2927,9 +3009,9 @@ document.addEventListener("submit", event => {
     const customTitle = String(data.customTitle || source.name).trim();
     const channelStatuses = Object.fromEntries(sellerChannels().map(channel => [channel.id, channel.status === "connected" ? "자동등록 전" : channel.status === "pending" ? "연동 대기" : "미연동"]));
     const channelDetails = Object.fromEntries(sellerChannels().map((channel,index) => [channel.id, { title: customTitle, salePrice: Number(data.salePrice) + index * 500, category: `${source.category} > ${source.originCountry || "상품"}`, reviews: 0 }]));
-    state.sellerProducts.push({ id: `SP-${sequence}`, sellerLoginId: currentAccount.loginId, productId: form.dataset.id, customTitle, salePrice: Number(data.salePrice), channel: "", channels: [], channelStatuses, channelDetails, status: "가져오기 완료", copiedAt: "방금 전", imageIndex: source.imageIndex, detailSnapshot: source.detail, contentCopied: Boolean(data.copyContent), channelPrepared: false, sourceUpdatedAt: "방금 전" });
-    audit("두고 상품 PICK", `${form.dataset.id} 상품의 썸네일·상세페이지·공급조건을 내가 PICK 상품에 보관했습니다.`, "done", "product");
-    saveState(); closeModal(); activeMenuIndex = 2; expandedSellerProductId = `SP-${sequence}`; render(); updateAccountUI(); showToast("내가 PICK 상품에 보관했습니다. 쇼핑몰 자동등록을 진행해 주세요.");
+    state.sellerProducts.push({ id: `SP-${sequence}`, sellerLoginId: currentAccount.loginId, productId: form.dataset.id, customTitle, salePrice: Number(data.salePrice), approvalStatus: "승인대기", channel: "", channels: [], channelStatuses, channelDetails, status: "가져오기 완료", copiedAt: "방금 전", imageIndex: source.imageIndex, detailSnapshot: source.detail, contentCopied: Boolean(data.copyContent), channelPrepared: false, sourceUpdatedAt: "방금 전" });
+    audit("두고 상품 PICK", `${form.dataset.id} 상품의 썸네일·상세페이지·공급조건을 PICK 상품에 보관했습니다. 공급사 승인 후 자유롭게 수정할 수 있습니다.`, "done", "product");
+    saveState(); closeModal(); activeMenuIndex = 2; pickStatusFilter = "pending"; expandedSellerProductId = `SP-${sequence}`; render(); updateAccountUI(); showToast("PICK 상품에 보관했습니다. 공급사 승인 후 판매를 시작할 수 있어요.");
   }
   if (form.id === "sellerProductEditForm") {
     const item = state.sellerProducts.find(product => product.id === form.dataset.id);
@@ -3054,6 +3136,21 @@ document.addEventListener("submit", event => {
     state.connections.push({ id: `CN-${Date.now()}`, supplierLoginId: invite.supplierLoginId, sellerLoginId: currentAccount.loginId, status: "connected", createdAt: "방금 전" });
     audit("공급사·셀러 거래처 연결", `${currentAccount.company} 위탁셀러가 ${memberByLogin(invite.supplierLoginId)?.company || invite.supplierLoginId} 공급사와 연결되었습니다.`, "done", "connection");
     saveState(); render(); updateAccountUI(); showToast("공급사와 연결되어 상품이 열렸습니다.");
+  }
+  if (form.id === "noticeForm") {
+    const id = form.dataset.id;
+    state.notices = state.notices || [];
+    if (id) {
+      const notice = state.notices.find(item => item.id === id);
+      if (notice) { notice.title = String(data.title || "").trim(); notice.detail = String(data.detail || "").trim(); notice.date = String(data.date || "").trim() || "오늘"; }
+      audit("공지사항 수정", `${id} 공지사항을 수정했습니다.`, "done", "product");
+    } else {
+      const newId = `notice-${Date.now()}`;
+      state.notices.unshift({ id: newId, title: String(data.title || "").trim(), detail: String(data.detail || "").trim(), date: String(data.date || "").trim() || "오늘" });
+      audit("공지사항 등록", `${newId} 공지사항을 새로 등록했습니다.`, "done", "product");
+    }
+    saveState(); closeModal(); render(); updateAccountUI(); showToast(id ? "공지사항을 수정했습니다." : "공지사항을 등록했습니다.");
+    return;
   }
   if (form.id === "connectionMessageForm") {
     state.connectionMessages.push({ id: `MSG-${Date.now()}`, supplierLoginId: data.supplierLoginId, sellerLoginId: data.sellerLoginId, senderLoginId: currentAccount.loginId, text: String(data.text || "").trim(), createdAt: "방금 전" });

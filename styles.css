@@ -904,6 +904,7 @@ h1 { margin: 0; font-size: clamp(23px, 2.5vw, 30px); letter-spacing: -.04em; }
 .small-button { padding: 8px 10px; color: var(--forest); background: white; border: 1px solid #cdd9d4; font-size: 14px; }
 .small-button:hover { background: #f3f8f5; }
 .small-button.done { color: #668078; background: #f1f4f3; border-color: #e3e8e6; }
+.small-button.picked { color: #b6791a; background: #fff6e8; border-color: #f3dfb3; }
 .alert-item, .activity-item { padding: 14px 17px; border-bottom: 1px solid #edf1ef; }
 .alert-item:last-child, .activity-item:last-child { border-bottom: 0; }
 .alert-top { display: flex; justify-content: space-between; gap: 8px; }
@@ -4084,10 +4085,46 @@ body { letter-spacing:-.012em; }
 }
 
 /* --- Dedicated 공지사항 page (was: notice items linked to unrelated menus) --- */
-.notice-board { display: grid; gap: 12px; }
-.notice-card { padding: 18px 20px; background: #f7f9fc; border: 1px solid #e5eaf1; border-radius: 14px; }
-.notice-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.notice-card-head b { font-size: 16px; color: #191f28; }
-.notice-card-head span { flex: 0 0 auto; color: #9aa5b2; font-size: 13px; }
-.notice-card p { margin: 8px 0 12px; color: #4b5768; font-size: 15px; line-height: 1.6; }
-.notice-card .text-button { font-weight: 700; }
+.notice-board { display: grid; gap: 10px; }
+.notice-row { padding: 18px 20px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: inherit; text-align: left; background: #f7f9fc; border: 1px solid #e5eaf1; border-radius: 14px; cursor: pointer; }
+.notice-row:hover { border-color: #bcd0f5; background: #f1f6ff; }
+.notice-row b { font-size: 16px; color: #191f28; }
+.notice-row span { flex: 0 0 auto; color: #9aa5b2; font-size: 13px; }
+
+/* --- 공지사항 상세 팝업: 흰 배경 + 이전/다음 탐색 --- */
+.notice-popup { padding: 6px; background: #fff; }
+.notice-popup-head { display: flex; align-items: center; justify-content: space-between; }
+.notice-popup-head span { color: #3182f6; font-size: 13px; font-weight: 900; letter-spacing: .1em; }
+.notice-popup-head b { color: #9aa5b2; font-size: 13px; font-weight: 700; }
+.notice-popup h2 { margin: 10px 0 0; font-size: 22px; }
+.notice-popup p { margin: 14px 0 20px; color: #4b5768; font-size: 15px; line-height: 1.7; }
+.notice-popup-nav { margin-top: 20px; padding-top: 16px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #edf0f4; }
+.notice-popup-nav span { color: #9aa5b2; font-size: 13px; font-weight: 700; }
+.notice-popup-nav button { font-weight: 800; }
+.notice-popup-nav button[disabled] { color: #c7cfd8; cursor: not-allowed; }
+
+/* --- 마스터: 공지사항 관리 --- */
+.notice-admin-list { display: grid; gap: 10px; padding: 4px 18px 18px; }
+.notice-admin-row { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; background: #f7f9fc; border: 1px solid #e5eaf1; border-radius: 12px; }
+.notice-admin-row b { display: block; font-size: 15px; color: #191f28; }
+.notice-admin-row small { display: block; margin-top: 4px; color: #7a8797; font-size: 13px; }
+.notice-admin-row .row-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+
+/* --- PICK 상품: 승인 상태 탭 + 배지 + 채널 전송/동기화 --- */
+.pick-status-tabs { margin-bottom: 14px; padding: 6px; display: flex; gap: 6px; background: #f4f6f9; border-radius: 12px; }
+.pick-status-tabs button { flex: 1; min-height: 40px; padding: 8px 10px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #6f7d8e; background: transparent; border: 0; border-radius: 9px; font-size: 14px; font-weight: 800; }
+.pick-status-tabs button b { padding: 1px 7px; color: inherit; background: rgba(0,0,0,.06); border-radius: 99px; font-size: 12px; }
+.pick-status-tabs button.active { color: white; background: #3182f6; box-shadow: 0 4px 12px rgba(49,130,246,.22); }
+.pick-status-tabs button.active b { color: white; background: rgba(255,255,255,.22); }
+.approval-pending-badge { color: #b6791a !important; }
+.deployed-badge { color: #1c8a54 !important; }
+.approval-wait-banner { margin-bottom: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; color: #8a5a12; background: #fff6e8; border: 1px solid #f3dfb3; border-radius: 12px; font-size: 14px; line-height: 1.55; }
+.approval-wait-banner button { flex: 0 0 auto; white-space: nowrap; }
+.channel-sync-actions { grid-column: 2 / -1; margin-top: -4px; padding-bottom: 6px; display: flex; justify-content: flex-end; gap: 14px; }
+.channel-sync-actions .text-button { padding: 2px 0; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.seller-product-actions button[disabled] { color: #b7c0cb; background: #f4f6f9; border-color: #e5eaf1; cursor: not-allowed; }
+@media (max-width: 720px) {
+  .pick-status-tabs { overflow-x: auto; }
+  .pick-status-tabs button { flex: 0 0 auto; min-width: 84px; }
+  .approval-wait-banner { flex-direction: column; align-items: stretch; }
+}
