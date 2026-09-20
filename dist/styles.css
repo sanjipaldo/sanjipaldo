@@ -4232,3 +4232,12 @@ body { letter-spacing:-.012em; }
   .pick-approval-actions { flex-direction: column; }
   .pick-approval-actions .primary-button, .pick-approval-actions .secondary-button { width: 100%; }
 }
+
+/* --- 판매 채널을 텍스트 대신 아이콘으로, 채널별 REVIEW 칸을 마진율로 --- */
+.live-channel-icons { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+.live-channel-icons .channel-mark { box-shadow: none; }
+.channel-margin-stat b { color: #1761e8; font-size: 16px; }
+.channel-margin-stat small { color: #8995a3; }
+
+/* --- 상품 판매중 요약 행: 평균 마진 강조 --- */
+.onsale-avg-margin em { color: #1761e8; font-size: 15px; font-weight: 800; font-style: normal; }

@@ -458,7 +458,7 @@ function channelBranchRow(item, channel, product) {
   const statusClass = status === "판매중" ? "live" : status === "미연동" ? "unlinked" : "paused";
   const detail = sellerChannelDetail(item, channel, product);
   const channelMargin = margin(product?.supply || 0, detail.salePrice || item.salePrice);
-  return `<div class="seller-channel-branch channel-commerce-detail">${channelMark(channel.id)}<span class="channel-product-copy"><b>${escapeHtml(channel.name)}</b><strong>${escapeHtml(detail.title)}</strong><small>${escapeHtml(detail.category)}</small></span><span class="channel-price-stack"><small>소비자가</small><b>${money(detail.salePrice)}</b><em>원가 ${money(product?.supply || 0)} · 마진 ${channelMargin}%</em></span><span class="channel-review"><b>${Number(detail.reviews || 0).toLocaleString("ko-KR")} review${Number(detail.reviews || 0) === 1 ? "" : "s"}</b><small>${escapeHtml(channel.storeName)}</small></span><span class="channel-status-stack"><em class="channel-sale-status ${statusClass}">[${escapeHtml(status)}]</em>${channelSyncBadge(item, channel, status)}</span>${status === "판매중" ? `<div class="channel-sync-actions"><button type="button" class="channel-sync-btn pull" data-action="sync-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 동기화</button><button type="button" class="channel-sync-btn push" data-action="push-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 전송</button></div>` : ""}</div>`;
+  return `<div class="seller-channel-branch channel-commerce-detail">${channelMark(channel.id)}<span class="channel-product-copy"><b>${escapeHtml(channel.name)}</b><strong>${escapeHtml(detail.title)}</strong><small>${escapeHtml(detail.category)}</small></span><span class="channel-price-stack"><small>소비자가</small><b>${money(detail.salePrice)}</b><em>원가 ${money(product?.supply || 0)}</em></span><span class="channel-review channel-margin-stat"><b>${channelMargin}%</b><small>마진율</small></span><span class="channel-status-stack"><em class="channel-sale-status ${statusClass}">[${escapeHtml(status)}]</em>${channelSyncBadge(item, channel, status)}</span>${status === "판매중" ? `<div class="channel-sync-actions"><button type="button" class="channel-sync-btn pull" data-action="sync-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 동기화</button><button type="button" class="channel-sync-btn push" data-action="push-channel-listing" data-id="${item.id}" data-channel="${channel.id}">상품 전송</button></div>` : ""}</div>`;
 }
 function queueTrackingSync(order) {
   if (!order?.tracking) return;
@@ -833,30 +833,17 @@ function marketplaceHeroTemplate() {
 }
 
 function sellerProductsTable() {
-  const allItems = currentSellerProducts();
-  const channels = sellerChannels();
-  const pendingItems = allItems.filter(item => item.approvalStatus === "승인대기");
-  const approvedItems = allItems.filter(item => item.approvalStatus !== "승인대기");
-  const items = pickStatusFilter === "pending" ? pendingItems : pickStatusFilter === "approved" ? approvedItems : allItems;
-  const tabs = [["all", "전체", allItems.length], ["pending", "승인대기", pendingItems.length], ["approved", "승인완료", approvedItems.length]];
-  const tabsHtml = `<div class="pick-status-tabs" role="tablist">${tabs.map(([key, label, count]) => `<button type="button" class="${pickStatusFilter === key ? "active" : ""}" data-action="pick-status-filter" data-status="${key}"><span>${label}</span><b>${count}</b></button>`).join("")}</div>`;
-  if (!allItems.length) return `${tabsHtml}<div class="empty">아직 가져온 판매상품이 없습니다.</div>`;
-  if (!items.length) return `${tabsHtml}<div class="empty">${pickStatusFilter === "pending" ? "승인 대기중인 상품이 없습니다." : "승인완료된 상품이 없습니다."}</div>`;
-  return `${tabsHtml}<div class="seller-product-tree">${items.map(item => {
+  const items = currentSellerProducts().filter(item => item.approvalStatus === "승인대기");
+  if (!items.length) return `<div class="empty">승인 대기중인 상품이 없습니다. 공급사 승인이 완료되면 ‘상품승인’ 메뉴로 이동합니다.</div>`;
+  return `<div class="seller-product-tree">${items.map(item => {
     const product = productOf(item.productId);
-    const approved = item.approvalStatus !== "승인대기";
-    const liveChannels = channels.filter(channel => sellerProductChannelStatus(item, channel) === "판매중");
-    const liveCount = liveChannels.length;
     return `<article class="seller-product-node pick-approval-node">
       <div class="seller-product-parent pick-approval-row">
         ${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
         <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>공급가 ${money(product?.supply || 0)} · 지정판매가 ${money(product?.recommended || 0)}</em></span>
         <span class="seller-product-price"><small>내가 판매하고 싶은 가격</small><b>${money(item.salePrice)}</b><em>마진 ${margin(product?.supply || 0, item.salePrice)}%</em></span>
-        ${!approved
-          ? `<span class="seller-product-live"><b class="approval-pending-badge">승인대기</b><small>공급사 승인 후 진행 가능</small></span><div class="pick-approval-actions"><button type="button" class="secondary-button" data-action="simulate-supplier-approval" data-id="${item.id}">데모: 공급사 승인 시뮬레이션</button></div>`
-          : liveCount
-            ? `<span class="seller-product-live"><b class="deployed-badge">판매중</b><small>${liveChannels.map(channel => escapeHtml(channel.name)).join(" · ")}</small></span><div class="pick-approval-actions"><button type="button" class="secondary-button" data-action="open-onsale-products">상품 판매중 보기 →</button></div>`
-            : `<span class="seller-product-live"><b>승인완료 · 미게시</b><small>판매 채널을 선택해 게시하세요</small></span><div class="pick-approval-actions"><button type="button" class="primary-button" data-action="open-approved-products">상품승인으로 이동 →</button></div>`}
+        <span class="seller-product-live"><b class="approval-pending-badge">승인대기</b><small>공급사 승인 후 진행 가능</small></span>
+        <div class="pick-approval-actions"><button type="button" class="secondary-button" data-action="simulate-supplier-approval" data-id="${item.id}">데모: 공급사 승인 시뮬레이션</button></div>
       </div>
     </article>`;
   }).join("")}</div>`;
@@ -1157,22 +1144,24 @@ function subscriptionTemplate() {
 
 function sellerApprovedProductsTemplate() {
   const channels = sellerChannels();
-  const items = currentSellerProducts().filter(item => item.approvalStatus !== "승인대기" && !channels.some(channel => sellerProductChannelStatus(item, channel) === "판매중"));
-  return `${sectionHero("상품승인", "공급사 승인이 끝난 상품 중 아직 어느 채널에도 게시되지 않은 상품입니다. 판매 채널을 선택해 내보내면 ‘상품 판매중’으로 이동합니다.")}<div class="panel">
-    <div class="panel-head"><div><h3>게시 대기 상품</h3><p>채널을 선택해 내보내기하면 자동으로 판매중 상태가 됩니다.</p></div><span class="chip">${items.length}개</span></div>
+  const items = currentSellerProducts().filter(item => item.approvalStatus !== "승인대기");
+  return `${sectionHero("상품승인", "공급사 승인이 끝난 상품을 내 상품으로 관리합니다. 가격·상품명·상세페이지를 자유롭게 수정하고, 판매 채널을 선택해 상품을 전송하세요.")}<div class="panel">
+    <div class="panel-head"><div><h3>승인완료 상품</h3><p>상품 전송을 완료하면 ‘상품 판매중’으로 이동합니다.</p></div><span class="chip">${items.length}개</span></div>
     ${items.length ? `<div class="seller-product-tree">${items.map(item => {
       const product = productOf(item.productId);
       const marginPct = margin(product?.supply || 0, item.salePrice);
+      const liveChannels = channels.filter(channel => sellerProductChannelStatus(item, channel) === "판매중");
+      const liveCount = liveChannels.length;
       return `<article class="seller-product-node pick-approval-node">
         <div class="seller-product-parent pick-approval-row">
           ${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
           <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>공급가 ${money(product?.supply || 0)} · 지정판매가 ${money(product?.recommended || 0)}</em></span>
           <span class="seller-product-price"><small>내가 판매하고 싶은 가격</small><b>${money(item.salePrice)}</b><em>마진 ${marginPct}%</em></span>
-          <span class="seller-product-live"><b>승인완료 · 미게시</b><small>쿠팡 · 카카오쇼핑 · 스마트스토어 중 선택</small></span>
-          <div class="pick-approval-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">상품 수정</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="primary-button" data-action="manage-product-channels" data-id="${item.id}">채널 선택 후 내보내기</button></div>
+          <span class="seller-product-live">${liveCount ? `<b class="deployed-badge">${liveCount === channels.length ? "판매중" : "부분판매중"}</b><span class="live-channel-icons">${liveChannels.map(channel => channelMark(channel.id, true)).join("")}</span>` : `<b>승인완료 · 미게시</b><small>판매 채널을 선택해 전송하세요</small>`}</span>
+          <div class="pick-approval-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">상품 수정</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="primary-button" data-action="manage-product-channels" data-id="${item.id}">상품 전송</button></div>
         </div>
       </article>`;
-    }).join("")}</div>` : `<div class="empty">게시 대기중인 상품이 없습니다. PICK 상품에서 공급사 승인이 완료되면 여기에 표시됩니다.</div>`}
+    }).join("")}</div>` : `<div class="empty">승인완료된 상품이 없습니다. PICK 상품에서 공급사 승인이 완료되면 여기에 표시됩니다.</div>`}
   </div>`;
 }
 function sellerOnSaleProductsTemplate() {
@@ -1201,13 +1190,15 @@ function sellerOnSaleProductsTemplate() {
       const product = productOf(item.productId);
       const expanded = expandedSellerProductId === item.id;
       const liveChannels = channels.filter(channel => sellerProductChannelStatus(item, channel) === "판매중");
-      const marginPct = margin(product?.supply || 0, item.salePrice);
+      const liveMargins = liveChannels.map(channel => margin(product?.supply || 0, sellerChannelDetail(item, channel, product).salePrice || item.salePrice));
+      const avgMarginPct = liveMargins.length ? Math.round(liveMargins.reduce((sum, value) => sum + value, 0) / liveMargins.length) : margin(product?.supply || 0, item.salePrice);
+      const fullyLive = liveChannels.length === channels.length;
       return `<article class="seller-product-node ${expanded ? "expanded" : ""}">
         <button class="seller-product-parent" type="button" data-action="toggle-product-channels" data-id="${item.id}" aria-expanded="${expanded}">
           <span class="tree-chevron">${expanded ? "⌄" : "›"}</span>${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
           <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>등록일 ${escapeHtml(item.copiedAt || "-")}</em></span>
-          <span class="seller-product-price"><small>내 판매가</small><b>${money(item.salePrice)}</b><em>마진 ${marginPct}%</em></span>
-          <span class="seller-product-live"><b class="deployed-badge">판매중</b><small>${liveChannels.map(channel => escapeHtml(channel.name)).join(" · ")}</small></span>
+          <span class="seller-product-price onsale-avg-margin"><small>내 판매가</small><b>${money(item.salePrice)}</b><em>평균 마진 ${avgMarginPct}%</em></span>
+          <span class="seller-product-live"><b class="deployed-badge">${fullyLive ? "판매중" : "부분판매중"}</b><span class="live-channel-icons">${liveChannels.map(channel => channelMark(channel.id, true)).join("")}</span></span>
         </button>
         ${expanded ? `<div class="seller-channel-branches">
           <div class="branch-guide"><span></span><b>채널별 판매 현황</b><small>채널마다 실제 판매 상태·소비자가와 동기화 여부를 표시합니다.</small></div>
@@ -1220,7 +1211,7 @@ function sellerOnSaleProductsTemplate() {
 }
 function renderSellerSection(index) {
   if (index === 1) return sellerMarketplaceTemplate();
-  if (index === 2) return `${sectionHero("PICK 상품", "공급사 승인 상태를 확인합니다. 승인완료되면 ‘상품승인’ 메뉴에서 판매 채널을 선택해 게시하세요.")}<div class="panel"><div class="panel-head"><div><h3>PICK 상품 목록</h3><p>승인대기·승인완료 상태만 간단히 확인하는 화면입니다.</p></div><span class="chip">${currentSellerProducts().length}개 PICK</span></div>${sellerProductsTable()}</div>`;
+  if (index === 2) return `${sectionHero("PICK 상품", "공급사 승인을 기다리는 상품만 표시합니다. 승인완료되면 ‘상품승인’ 메뉴로 이동합니다.")}<div class="panel"><div class="panel-head"><div><h3>승인대기 상품</h3><p>공급사 승인이 완료될 때까지 이 화면에서 확인합니다.</p></div><span class="chip">${currentSellerProducts().filter(item => item.approvalStatus === "승인대기").length}개 대기중</span></div>${sellerProductsTable()}</div>`;
   if (index === 11) return sellerOnSaleProductsTemplate();
   if (index === 12) return sellerDoogoMoneyTemplate();
   if (index === 13) return sellerNoticesTemplate();
@@ -3321,7 +3312,7 @@ document.addEventListener("submit", event => {
     item.channelStatuses = item.channelStatuses || {};
     sellerChannels().forEach(channel => { item.channelStatuses[channel.id] = channels.includes(channel.id) ? "판매중" : channel.status === "connected" ? "판매중지/미노출" : channel.status === "pending" ? "연동 대기" : "미연동"; });
     audit("쇼핑몰 상품 자동등록", `${item.id} · ${channels.map(id => channelMeta(id).name).join(", ")}에 상품명·판매가·카테고리·콘텐츠 등록 결과를 반영했습니다.`, "done", "channel");
-    saveState(); closeModal(); render(); showToast(`${channels.length}개 쇼핑몰에 상품 자동등록을 완료했습니다.`);
+    saveState(); closeModal(); activeMenuIndex = 11; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); showToast(`${channels.length}개 쇼핑몰에 상품을 전송했습니다.`);
   }
   if (form.id === "shippingProfileForm") {
     state.shippingProfiles[currentAccount.loginId] = { carrier: data.carrier, sender: data.sender, contractCode: data.contractCode, labelFormat: data.labelFormat, autoIssue: Boolean(data.autoIssue) };
