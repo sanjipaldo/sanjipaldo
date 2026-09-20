@@ -3597,6 +3597,6 @@ const requestedPortal = new URLSearchParams(window.location.search).get("portal"
 initAuth();
 if (requestedPortal === "partner") showPartnerLogin("supplier");
 if (requestedPortal === "master") showPartnerLogin("master");
-startTyping("sellerTypingText", ["좋은 공급상품을 골라,\n바로 판매를 시작하세요.", "주문부터 송장 전송까지,\n드랍쉬핑을 자동화하세요.", "브랜드와 셀러가 만나는 곳,\n두고입니다."]);
+startTyping("sellerTypingText", ["좋은 공급상품을 소싱받아,\n원클릭으로 바로 판매를 시작해보세요.", "주문부터 송장 전송까지,\n드랍쉬핑을 자동화하세요.", "브랜드와 셀러가 만나는 곳,\n두고입니다."]);
 startTyping("partnerTypingText", ["내 브랜드 상품을 등록하고,\n새로운 셀러를 만나세요.", "상품과 주문을 한곳에서,\n운영은 더 정확하게.", "공급과 판매가 연결되는 곳,\n두고입니다."]);
 window.setInterval(() => runSellerTrackingSync(false), 10 * 60 * 1000);

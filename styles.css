@@ -4245,7 +4245,7 @@ body { letter-spacing:-.012em; }
 /* --- 위탁셀러 로그인 비주얼: 신규 로고 + 태그라인, 텍스트 정리 --- */
 .login-visual-tagline { margin: 10px 0 0; color: rgba(255,255,255,.85); font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
 .login-visual-logo { display: block; width: max-content; }
-.login-visual-logo img { height: 128px; width: auto; max-width: 100%; display: block; filter: brightness(0) invert(1); }
+.login-visual-logo img { height: 56px; width: auto; max-width: 100%; display: block; filter: brightness(0) invert(1); }
 .login-panel-brand-logo.login-panel-brand { display: flex; }
 .login-panel-brand-logo > img { width: auto; height: 48px; object-fit: contain; }
 
