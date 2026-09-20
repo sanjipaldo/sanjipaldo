@@ -4353,3 +4353,23 @@ body { letter-spacing:-.012em; }
 .brand-directory-avatar { width: 40px; height: 40px; display: grid; place-items: center; color: #fff; background: #3182f6; border-radius: 50%; font-weight: 800; }
 .brand-directory-card b { font-size: 14px; color: #23282f; }
 .brand-directory-card small { color: #8a96a3; font-size: 12px; }
+
+/* --- 로그인 화면: 로고 + 센터 배지 한 줄 배치 --- */
+.login-brand-row { display: flex; align-items: center; gap: 14px; }
+.login-brand-row .partner-badge { margin-top: 0; }
+
+/* --- 가격 변경알림: 가로형 행 레이아웃 --- */
+.price-alert-rows { display: grid; }
+.alert-row { display: flex; align-items: center; gap: 16px; padding: 15px 18px; border-bottom: 1px solid #edf1ef; }
+.alert-row:last-child { border-bottom: 0; }
+.alert-row.acked { background: #fafbfc; }
+.alert-row.acked strong { color: #6b7684; }
+.alert-row-main { flex: 1 1 220px; min-width: 0; display: grid; gap: 3px; }
+.alert-row-main strong { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alert-row-main small { color: var(--muted); font-size: 13px; }
+.alert-row .price-change { margin-top: 0; flex: 0 0 auto; }
+.alert-row-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+@media (max-width: 720px) {
+  .alert-row { flex-wrap: wrap; }
+  .alert-row-actions { width: 100%; justify-content: flex-end; }
+}

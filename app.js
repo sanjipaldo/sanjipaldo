@@ -1294,7 +1294,7 @@ function renderSellerSection(index) {
   if (index === 4) return sellerOrderManagementTemplate();
   if (index === 5) return refundTemplate("seller");
   if (index === 6) return salesCalendarTemplate();
-  if (index === 7) { const alerts = currentPriceAlerts(); return `${sectionHero("가격 변경알림", "공급가가 바뀐 상품을 빨간색 알림으로 확인하고 판매가를 검토합니다.")}<div class="panel"><div class="panel-head"><div><h3>공급가 변경 내역</h3><p>확인하지 않은 변경을 우선 표시합니다.</p></div><span class="chip red">${alerts.filter(alert => alert.status === "확인필요").length}건 확인 필요</span></div><div class="alert-list grid-alerts">${alerts.length ? alerts.map(priceAlertRow).join("") : `<div class="empty">가격 변경 알림이 없습니다.</div>`}</div></div>`; }
+  if (index === 7) { const alerts = currentPriceAlerts(); return `${sectionHero("가격 변경알림", "공급가가 바뀐 상품을 빨간색 알림으로 확인하고 판매가를 검토합니다.")}<div class="panel"><div class="panel-head"><div><h3>공급가 변경 내역</h3><p>확인하지 않은 변경을 우선 표시합니다. 신경 쓸 필요가 없는 변경은 삭제로 바로 정리하세요.</p></div><span class="chip red">${alerts.filter(alert => alert.status === "확인필요").length}건 확인 필요</span></div><div class="alert-list price-alert-rows">${alerts.length ? alerts.map(alert => priceAlertRow(alert, "row")).join("") : `<div class="empty">가격 변경 알림이 없습니다.</div>`}</div></div>`; }
   if (index === 8) return channelIntegrationTemplate();
   if (index === 9) return subscriptionTemplate();
   return sellerAccountProfileTemplate();
@@ -1505,9 +1505,17 @@ function productRowSellerList(p) {
   </article>`;
 }
 
-function priceAlertRow(a) {
+function priceAlertRow(a, layout = "card") {
   const p = productOf(a.productId);
   const acked = a.status !== "확인필요";
+  if (layout === "row") {
+    return `<div class="alert-row ${acked ? "acked" : ""}">
+      <span class="chip ${acked ? "" : "red"}">${acked ? "확인완료" : "변경"}</span>
+      <div class="alert-row-main"><strong>${p.name}</strong><small>${p.supplier}에서 공급가를 변경했습니다.</small></div>
+      <div class="price-change"><del>${money(a.oldPrice)}</del><span>→</span><b>${money(a.newPrice)}</b></div>
+      <div class="alert-row-actions"><button class="small-button" data-action="review-price" data-id="${a.id}">채널 판매가 일괄 변경</button>${acked ? "" : `<button class="text-button" data-action="ack-price" data-id="${a.id}">확인 처리</button>`}<button class="small-button reject" data-action="delete-price-alert" data-id="${a.id}">삭제</button></div>
+    </div>`;
+  }
   return `<div class="alert-item ${acked ? "acked" : ""}">
     <div class="alert-top"><strong>${p.name}</strong><span class="chip ${acked ? "" : "red"}">${acked ? "확인완료" : "변경"}</span></div>
     <p>${p.supplier}에서 공급가를 변경했습니다.</p>
@@ -2961,6 +2969,11 @@ document.addEventListener("click", event => {
   }
   if (action === "ack-price") {
     const alert = state.priceAlerts.find(a => a.id === id); alert.status = "반영완료"; audit("가격 알림 확인", `${alert.productId} 공급가 변경을 확인 처리했습니다.`, "done", "price"); saveState(); render(); updateAccountUI(); showToast("가격 변경을 확인 처리했습니다.");
+  }
+  if (action === "delete-price-alert") {
+    const alert = state.priceAlerts.find(a => a.id === id);
+    if (alert) { audit("가격 알림 삭제", `${alert.productId} 공급가 변경 알림을 삭제했습니다.`, "done", "price"); state.priceAlerts = state.priceAlerts.filter(a => a.id !== id); }
+    saveState(); render(); updateAccountUI(); showToast("가격 변경 알림을 삭제했습니다.");
   }
   if (action === "show-boundary") guideModal();
 });
