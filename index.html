@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#1761e8" />
-  <title>두고마켓 | 브랜드와 셀러를 연결하는 오픈마켓</title>
+  <title>두고 | 브랜드와 셀러를 연결하는 오픈마켓</title>
   <link rel="icon" type="image/jpeg" href="assets/doogomarket-favicon.jpg" />
   <link rel="apple-touch-icon" href="assets/doogomarket-favicon.jpg" />
   <link rel="stylesheet" href="styles.css?v=23" />
@@ -13,14 +13,14 @@
   <section id="loginView" class="login-screen seller-login-screen">
     <div class="login-visual">
       <div class="login-visual-mesh" aria-hidden="true"></div>
-      <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고마켓">
+      <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고">
         <span class="brand-mark"><img src="assets/doogomarket-symbol.png" alt=""></span>
-        <span class="brand-word"><b>두고마켓</b><small>DOOGO MARKET</small></span>
+        <span class="brand-word"><b>두고</b><small>DOOGO</small></span>
       </div>
       <div class="login-message">
-        <span>DOOGO MARKET SELLER</span>
+        <span>DOOGO SELLER</span>
         <h1 id="sellerTypingText" class="typing-headline" aria-live="polite"></h1>
-        <p>상품 소싱부터 주문·송장·가격 변경까지<br>두고마켓이 공급과 판매를 하나의 흐름으로 연결합니다.</p>
+        <p>상품 소싱부터 주문·송장·가격 변경까지<br>두고가 공급과 판매를 하나의 흐름으로 연결합니다.</p>
         <ul class="login-feature-list">
           <li><i>✓</i>국내외 브랜드·공급사 상품 무제한 소싱</li>
           <li><i>✓</i>주문 접수부터 송장 자동전송까지 한 흐름</li>
@@ -32,21 +32,20 @@
 
     <div class="login-panel">
       <div class="login-box">
-        <div class="login-panel-brand brand-lockup" aria-label="두고마켓"><img src="assets/doogomarket-symbol.png" alt=""><span class="brand-word"><b>두고마켓</b><small>DOOGO MARKET</small></span></div>
-        <div class="login-heading"><span>SELLER CENTER</span><h2>두고마켓 시작하기</h2><p>위탁셀러 전용 계정으로 로그인해 주세요.</p></div>
+        <div class="login-panel-brand brand-lockup" aria-label="두고"><img src="assets/doogomarket-symbol.png" alt=""><span class="brand-word"><b>두고</b><small>DOOGO</small></span></div>
+        <div class="login-heading"><span>SELLER CENTER</span><h2>두고 시작하기</h2><p>위탁셀러 전용 계정으로 로그인해 주세요.</p></div>
         <form id="loginForm" class="login-form" autocomplete="on">
           <div class="login-field"><label for="loginId">아이디 또는 이메일</label><input id="loginId" name="loginId" placeholder="아이디 또는 가입 이메일" autocomplete="username" required autofocus></div>
           <div class="login-field"><div class="password-label"><label for="loginPassword">비밀번호</label><button type="button" id="togglePassword">보기</button></div><input id="loginPassword" name="loginPassword" type="password" placeholder="비밀번호를 입력해 주세요" autocomplete="current-password" required></div>
-          <div class="login-options"><label><input id="rememberId" type="checkbox"> 로그인정보 저장</label><span>위탁셀러 전용</span></div>
+          <div class="login-options"><label><input id="rememberId" type="checkbox"> 로그인정보 저장</label></div>
           <p id="loginError" class="login-error" role="alert"></p>
           <button type="submit" class="login-submit">로그인</button>
         </form>
         <div class="demo-accounts">
-          <p>클릭해서 데모 계정 입력</p>
-          <div><button data-demo-login="seller">위탁셀러 데모 <b>seller / seller</b></button></div>
+          <div><button data-demo-login="seller">데모 계정으로 체험하기 <b>seller / seller</b></button></div>
         </div>
-        <div class="signup-prompt"><span>계정이 없으신가요?</span><button id="openSignup" type="button">무료 가입</button></div>
-        <div class="login-links"><button type="button" data-find-account>아이디·비밀번호 찾기</button></div>
+        <div class="login-footer-links"><span>계정이 없으신가요?</span><button id="openSignup" type="button">무료 가입</button><i></i><button type="button" data-find-account>아이디·비밀번호 찾기</button></div>
+        <button id="mobilePartnerCenterLink" class="mobile-partner-link" type="button"><span>P</span> 공급사·관리자는 파트너센터로 →</button>
       </div>
     </div>
   </section>
@@ -54,11 +53,11 @@
   <section id="partnerLoginView" class="login-screen partner-login-screen" hidden>
     <div class="login-visual partner-visual">
       <div class="login-visual-mesh" aria-hidden="true"></div>
-      <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고마켓">
+      <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고">
         <span class="brand-mark"><img src="assets/doogomarket-symbol.png" alt=""></span>
-        <span class="brand-word"><b>두고마켓</b><small>DOOGO MARKET</small></span>
+        <span class="brand-word"><b>두고</b><small>DOOGO</small></span>
       </div>
-      <div class="partner-badge">두고마켓 파트너센터</div>
+      <div class="partner-badge">두고 파트너센터</div>
       <div class="login-message partner-message">
         <span>SUPPLIER · MASTER</span>
         <h1 id="partnerTypingText" class="typing-headline" aria-live="polite"></h1>
@@ -73,7 +72,7 @@
     </div>
     <div class="login-panel partner-panel">
       <div class="login-box">
-        <div class="login-panel-brand brand-lockup" aria-label="두고마켓"><img src="assets/doogomarket-symbol.png" alt=""><span class="brand-word"><b>두고마켓</b><small>DOOGO MARKET</small></span></div>
+        <div class="login-panel-brand brand-lockup" aria-label="두고"><img src="assets/doogomarket-symbol.png" alt=""><span class="brand-word"><b>두고</b><small>DOOGO</small></span></div>
         <div class="partner-tabs" role="tablist" aria-label="파트너 로그인 유형">
           <button class="active" type="button" data-partner-role="supplier">공급사</button>
           <button type="button" data-partner-role="master">관리자</button>
@@ -87,27 +86,30 @@
           <button type="submit" class="login-submit">로그인</button>
         </form>
         <div id="partnerDemoAccounts" class="demo-accounts"><p>클릭해서 데모 계정 입력</p><div><button data-partner-demo="supplier">공급사 데모 <b>sup / sup</b></button></div></div>
-        <div id="supplierSignupPrompt" class="signup-prompt"><span>공급사 계정이 없으신가요?</span><button id="openSupplierSignup" type="button">입점 회원가입</button></div>
-        <div id="partnerFindAccount" class="login-links"><button type="button" data-find-account>아이디·비밀번호 찾기</button></div>
+        <div class="login-footer-links">
+          <div id="supplierSignupPrompt" class="signup-prompt"><span>공급사 계정이 없으신가요?</span><button id="openSupplierSignup" type="button">입점 회원가입</button></div>
+          <div id="partnerFindAccount" class="login-links"><button type="button" data-find-account>아이디·비밀번호 찾기</button></div>
+        </div>
+        <button id="mobileBackToSellerLogin" class="mobile-partner-link" type="button">← 위탁셀러 로그인으로</button>
       </div>
     </div>
   </section>
 
   <section id="signupView" class="signup-screen" hidden>
     <div class="signup-visual">
-      <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고마켓">
+      <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고">
         <span class="brand-mark"><img src="assets/doogomarket-symbol.png" alt=""></span>
-        <span class="brand-word"><b>두고마켓</b><small>DOOGO MARKET</small></span>
+        <span class="brand-word"><b>두고</b><small>DOOGO</small></span>
       </div>
-      <div class="login-message"><span id="signupVisualEyebrow">DOOGO MARKET SELLER</span><h1 id="signupVisualTitle">좋은 공급상품을 골라,<br>바로 판매를 시작하세요.</h1><p id="signupVisualDescription">상품 소싱부터 주문·송장·가격 변경까지<br>두고마켓이 공급과 판매를 하나의 흐름으로 연결합니다.</p></div>
+      <div class="login-message"><span id="signupVisualEyebrow">DOOGO SELLER</span><h1 id="signupVisualTitle">좋은 공급상품을 골라,<br>바로 판매를 시작하세요.</h1><p id="signupVisualDescription">상품 소싱부터 주문·송장·가격 변경까지<br>두고가 공급과 판매를 하나의 흐름으로 연결합니다.</p></div>
       <div class="signup-visual-points"><span>✓ 공급사 원본 상품코드 자동 연결</span><span>✓ 판매 상품명·가격 자유롭게 수정</span><span>✓ 결제 완료 주문은 공급사에 자동 전달</span></div>
-      <div class="login-visual-footer"><span>DOOGO MARKET SELLER</span><span>안전한 데모 환경</span></div>
+      <div class="login-visual-footer"><span>DOOGO SELLER</span><span>안전한 데모 환경</span></div>
     </div>
     <div class="signup-panel">
       <div class="signup-card">
         <button id="backToLogin" class="signup-back" type="button">← 로그인으로</button>
         <div id="signupFormWrap">
-        <div class="signup-heading"><span id="signupTypeLabel">SELLER REGISTRATION</span><h2 id="signupTitle">두고마켓 가입하기</h2><p id="signupDescription">3단계 입력 후 마스터 승인을 요청합니다.</p></div>
+        <div class="signup-heading"><span id="signupTypeLabel">SELLER REGISTRATION</span><h2 id="signupTitle">두고 가입하기</h2><p id="signupDescription">3단계 입력 후 마스터 승인을 요청합니다.</p></div>
         <div class="signup-steps" aria-label="회원가입 진행 단계">
           <button type="button" class="active" data-signup-step-nav="1"><b>1</b><span>계정 정보</span></button><i></i>
           <button type="button" data-signup-step-nav="2"><b>2</b><span>사업자 정보</span></button><i></i>
@@ -163,10 +165,10 @@
 
   <div id="appView" class="app-shell" data-sidebar-open="false" hidden>
     <button id="mobileSidebarBackdrop" class="mobile-sidebar-backdrop" type="button" aria-label="메뉴 닫기" hidden></button>
-    <aside id="appSidebar" class="sidebar" aria-label="두고마켓 업무 메뉴">
+    <aside id="appSidebar" class="sidebar" aria-label="두고 업무 메뉴">
       <div class="sidebar-brand-row">
-        <a class="brand brand-lockup sidebar-market-brand" href="#" data-action="open-dashboard" aria-label="두고마켓 대시보드로 이동">
-          <img src="assets/doogomarket-wordmark.png" alt="두고마켓"><span class="sidebar-market-label">두고마켓<small>DOOGO MARKET</small></span>
+        <a class="brand brand-lockup sidebar-market-brand" href="#" data-action="open-dashboard" aria-label="두고 대시보드로 이동">
+          <img src="assets/doogomarket-wordmark.png" alt="두고"><span class="sidebar-market-label">두고<small>DOOGO</small></span>
         </a>
         <button id="mobileSidebarClose" class="mobile-sidebar-close" type="button" aria-label="메뉴 닫기">×</button>
       </div>
@@ -191,7 +193,7 @@
         <div class="topbar-heading">
           <p id="pageContext" class="eyebrow">위탁셀러 대시보드</p>
           <h1 id="pageTitle">위탁셀러 워크스페이스</h1>
-          <p id="pageSubtitle" class="topbar-subtitle">오늘도 두고마켓과 함께 쇼핑몰 성장을 만들어 가세요!</p>
+          <p id="pageSubtitle" class="topbar-subtitle">오늘도 두고와 함께 쇼핑몰 성장을 만들어 가세요!</p>
         </div>
         <label class="quick-search"><span>⌕</span><input id="globalSearch" aria-label="주문번호 또는 주문자 검색" placeholder="주문번호·주문자명 빠른 검색"></label>
         <div class="top-actions">

@@ -4035,3 +4035,38 @@ body { letter-spacing:-.012em; }
 @media (max-width: 720px) {
   .workspace-menu button { font-size: 16px; }
 }
+
+/* ============================================================
+   v22(Claude) — login declutter, calendar breathing room,
+   wide-table scroll hint
+   ============================================================ */
+
+/* --- Login: combine signup/find-account into one row --- */
+.login-footer-links { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.login-footer-links .signup-prompt,
+.login-footer-links .login-links { margin-top: 0; }
+.login-footer-links > i { width: 1px; height: 10px; background: #dde2e7; }
+@media (max-width: 480px) {
+  .login-footer-links > i { display: none; }
+}
+.demo-accounts { text-align: center; }
+.demo-accounts button { width: 100%; }
+
+/* --- Sales calendar: more breathing room, drop redundant "예상 잔액" row --- */
+.cashflow-day { min-height: 116px; padding-bottom: 8px; }
+.cashflow-day-head { padding: 11px 12px 6px; }
+.cashflow-amount { padding: 6px 12px 4px; }
+.cashflow-amount b { font-size: 17px; }
+.cashflow-amount small { margin-top: 6px; color: #8290a1; font-size: 13px; }
+.cashflow-empty { padding: 11px 12px; }
+
+/* --- Mobile-only partner-center / back-to-seller links ---
+   On mobile the .login-visual / .partner-visual panel (which holds the
+   desktop partner-center and back-to-seller links) is hidden entirely,
+   so without this, mobile users have no way to reach or leave the
+   partner (supplier/master) login. --- */
+.mobile-partner-link { display: none; }
+@media (max-width: 720px) {
+  .mobile-partner-link { width: 100%; margin-top: 18px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #4b5768; background: #f4f6f9; border: 0; border-radius: 11px; font-size: 13px; font-weight: 700; }
+  .mobile-partner-link span { width: 20px; height: 20px; display: grid; place-items: center; color: white; background: #17191d; border-radius: 50%; font-size: 10px; font-weight: 900; }
+}
