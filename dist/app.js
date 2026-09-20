@@ -9,7 +9,7 @@ const accounts = {
 const roleMenus = {
   master: ["대시보드", "회원 승인", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리"],
   supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "배송 · 송장 설정", "가격 관리", "정산 내역", "내 정보"],
-  seller: ["대시보드", "상품 소싱", "PICK 상품", "공급사 문의", "주문관리", "취소 환불", "매출 캘린더", "가격 변경알림", "쇼핑몰 연동", "정기구독", "내정보", "상품 판매중", "두고머니", "공지사항", "상품승인"]
+  seller: ["대시보드", "상품 소싱", "PICK 상품", "공급사 문의", "주문관리", "취소 환불", "매출 캘린더", "가격 변경알림", "쇼핑몰 연동", "정기구독", "내정보", "상품 판매중", "두고머니", "공지사항", "상품승인", "상품매핑"]
 };
 const roleMenuGroups = {
   master: [
@@ -26,7 +26,7 @@ const roleMenuGroups = {
   ],
   seller: [
     { label: "홈", indexes: [0] },
-    { label: "상품", indexes: [1, 2, 14, 11, 7] },
+    { label: "상품", indexes: [1, 2, 14, 15, 11, 7] },
     { label: "거래처", indexes: [3] },
     { label: "주문 · 정산", indexes: [4, 5, 12, 6] },
     { label: "판매채널", indexes: [8] },
@@ -36,7 +36,7 @@ const roleMenuGroups = {
 const menuIcons = {
   master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log", "notice"],
   supplier: ["home", "product", "connection", "order", "refund", "printer", "price", "settlement", "settings"],
-  seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice", "approval"]
+  seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice", "approval", "mapping"]
 };
 
 const DEFAULT_DASHBOARD_LAYOUT = ["hero", "order-control", "quick-actions", "notices", "sales", "product-sales", "price-alerts", "recent-orders"];
@@ -165,6 +165,7 @@ const initialState = {
   priceAlerts: [
     { id: "PA-01", productId: "DF-1024", recipients: ["seller"], oldPrice: 20500, newPrice: 21800, status: "확인필요", createdAt: "오늘 09:10" }
   ],
+  productMappings: [],
   errors: [
     { id: "ER-001", source: "두고", title: "외부 연동 비활성", detail: "프로토타입 안전 모드로 인해 외부 채널 전송이 보류되었습니다.", time: "상시", level: "info" }
   ],
@@ -535,7 +536,8 @@ function menuIcon(name) {
     price: '<path d="M4 5h10l6 6-9 9-7-7V5Z"/><circle cx="9" cy="10" r="1"/>',
     settlement: '<path d="M4 5h16v14H4zM8 9h8M8 13h5M16 16h.01"/>',
     onsale: '<path d="M20.5 7.5 12 3 3.5 7.5 12 12l8.5-4.5Z"/><path d="M3.5 7.5v9L12 21l8.5-4.5v-9"/><path d="m9 14 2 2 4-4"/>',
-    notice: '<path d="M3 11v2a2 2 0 0 0 2 2h1l3 4v-4h2l7-4V7l-7-4H9L6 7H5a2 2 0 0 0-2 2Z"/><path d="M13 15.5V19a2 2 0 0 0 4 0v-2"/>'
+    notice: '<path d="M3 11v2a2 2 0 0 0 2 2h1l3 4v-4h2l7-4V7l-7-4H9L6 7H5a2 2 0 0 0-2 2Z"/><path d="M13 15.5V19a2 2 0 0 0 4 0v-2"/>',
+    mapping: '<path d="M8 7h5a4 4 0 0 1 0 8h-1"/><path d="m10 4-3 3 3 3"/><path d="M16 17h-5a4 4 0 0 1 0-8h1"/><path d="m14 20 3-3-3-3"/>'
   };
   return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name] || paths.product}</svg>`;
 }
@@ -1226,6 +1228,30 @@ function sellerOnSaleProductsTemplate() {
     }).join("")}</div>` : `<div class="empty">${liveItems.length ? "조건에 맞는 판매중 상품이 없습니다." : "아직 판매중인 상품이 없습니다. PICK 상품에서 판매를 시작해 주세요."}</div>`}
   </div>`;
 }
+function currentProductMappings() { const id = currentAccount?.loginId || "seller"; return (state.productMappings || []).filter(mapping => mapping.sellerLoginId === id); }
+function unmappedExternalProducts() {
+  const mappedCodes = new Set(currentProductMappings().filter(mapping => mapping.status === "매핑완료").map(mapping => mapping.externalProductCode));
+  const seen = new Set();
+  return currentSellerOrders().filter(order => {
+    const code = order.externalProductCode;
+    if (!code || mappedCodes.has(code) || seen.has(code) || orderMappingStatus(order) === "mapped") return false;
+    seen.add(code);
+    return true;
+  });
+}
+function sellerProductMappingTemplate() {
+  const pending = unmappedExternalProducts();
+  const mapped = currentProductMappings().filter(mapping => mapping.status === "매핑완료");
+  return `${sectionHero("상품매핑", "외부 판매채널 상품코드를 공급사 원본 상품에 연결합니다. 한 번 매핑하면 같은 상품코드의 신규 주문이 자동으로 연결되며, 연결을 바꾸려면 먼저 매핑을 해지해야 합니다.", `<button type="button" class="primary-button" data-action="open-product-mapping-form">+ 매핑 설정</button>`)}
+    <div class="panel">
+      <div class="panel-head"><div><h3>매핑 필요</h3><p>신규 주문에서 수집되었지만 아직 공급사 상품과 연결되지 않았습니다.</p></div><span class="chip red">${pending.length}건</span></div>
+      <div class="mapping-list">${pending.length ? pending.map(order => `<article class="mapping-row"><span class="mapping-status unmapped">매핑 필요</span><div class="mapping-main"><b>${escapeHtml(order.externalProductName || "외부 상품")}</b><small>${escapeHtml(order.channel)} · 외부코드 ${escapeHtml(order.externalProductCode || "-")}</small></div><button type="button" class="small-button approve" data-action="open-product-mapping-form" data-code="${escapeHtml(order.externalProductCode || "")}" data-name="${escapeHtml(order.externalProductName || "")}" data-channel="${escapeHtml(order.channel || "")}">매핑 설정</button></article>`).join("") : `<div class="empty">매핑이 필요한 신규 주문이 없습니다.</div>`}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h3>매핑완료</h3><p>매핑을 해지하기 전까지 같은 상품코드의 주문은 자동으로 연결됩니다.</p></div><span class="chip">${mapped.length}건</span></div>
+      <div class="mapping-list">${mapped.length ? mapped.map(mapping => { const product = productOf(mapping.productId); return `<article class="mapping-row mapped"><span class="mapping-status mapped">매핑완료</span><div class="mapping-main"><b>${escapeHtml(mapping.externalProductName || "외부 상품")}</b><small>${escapeHtml(mapping.channel || "-")} · 외부코드 ${escapeHtml(mapping.externalProductCode)}</small></div><span class="mapping-arrow">→</span><div class="mapping-target"><b>${escapeHtml(product?.name || "공급사 상품")}</b><small>${escapeHtml(mapping.supplier || product?.supplier || "-")} · ${escapeHtml(mapping.productId)}</small></div><button type="button" class="small-button reject" data-action="unmap-product-mapping" data-id="${mapping.id}">매핑 해지</button></article>`; }).join("") : `<div class="empty">매핑된 상품이 없습니다.</div>`}</div>
+    </div>`;
+}
 function renderSellerSection(index) {
   if (index === 1) return sellerMarketplaceTemplate();
   if (index === 2) return `${sectionHero("PICK 상품", "공급사 승인을 기다리는 상품만 표시합니다. 승인완료되면 ‘상품승인’ 메뉴로 이동합니다.")}<div class="panel"><div class="panel-head"><div><h3>승인대기 상품</h3><p>공급사 승인이 완료될 때까지 이 화면에서 확인합니다.</p></div><span class="chip">${currentSellerProducts().filter(item => item.approvalStatus === "승인대기").length}개 대기중</span></div>${sellerProductsTable()}</div>`;
@@ -1233,6 +1259,7 @@ function renderSellerSection(index) {
   if (index === 12) return sellerDoogoMoneyTemplate();
   if (index === 13) return sellerNoticesTemplate();
   if (index === 14) return sellerApprovedProductsTemplate();
+  if (index === 15) return sellerProductMappingTemplate();
   if (index === 3) return sellerConnectionTemplate();
   if (index === 4) return sellerOrderManagementTemplate();
   if (index === 5) return refundTemplate("seller");
@@ -1388,7 +1415,7 @@ function renderSeller() {
     "quick-actions": `<div class="seller-quick-actions"><button data-action="open-catalog"><span>＋</span><b>상품 소싱하기</b><small>국가·브랜드·카테고리별 소싱</small></button><button data-action="open-connections"><span>⌁</span><b>거래처 연결</b><small>공급사 코드 등록</small></button><button data-action="open-my-products"><span>▦</span><b>PICK 상품</b><small>상품명·가격·쇼핑몰 관리</small></button><button data-action="open-order-mapping"><span>⇄</span><b>주문 매핑</b><small>${mappingRequired.length + paymentRequired.length ? `${mappingRequired.length + paymentRequired.length}건 처리 필요` : "상품코드·결제 연결"}</small></button></div>`,
     notices: `<div class="panel dashboard-notices"><div class="panel-head"><div><h3>공지사항</h3><p>두고 운영 안내</p></div><button class="text-button" data-action="open-notices">더보기 →</button></div><div class="notice-list">${(state.notices || []).map(n => `<button data-action="open-notice-detail" data-id="${n.id}"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></button>`).join("")}</div></div>`,
     sales: `<div class="panel sales-summary"><div class="panel-head"><div><h3>9월 매출·두고머니</h3><p>4개 판매채널 샘플 집계</p></div><div class="refund-head-actions"><button class="text-button" data-action="open-sales-calendar">달력</button><button class="text-button" data-action="open-doogo-money">두고머니 관리 →</button></div></div><dl><div><dt>오늘 매출</dt><dd>${money(state.salesLedger.filter(item=>item.date==="2026-09-08").reduce((sum,item)=>sum+item.sales,0))}</dd></div><div><dt>이번 달 매출</dt><dd>${money(salesTotal)}</dd></div><div><dt>예상 순수익</dt><dd>${money(profitTotal)}</dd></div><div><dt>사용 가능 두고머니</dt><dd class="deposit-value">${money(deposit.balance)}</dd></div></dl></div>`,
-    "product-sales": `<div class="panel product-sales"><div class="panel-head"><div><h3>PICK 상품</h3><p>내가 선택한 판매상품</p></div><button class="text-button" data-action="open-my-products">관리 →</button></div>${sellerProducts.length ? sellerProducts.slice(0,3).map(item => { const product = productOf(item.productId); const amount = sellerOrders.filter(order => (order.mappedProductId || order.productId) === item.productId).reduce((sum,order)=>sum+order.amount,0); const isOnSale = sellerChannels().some(channel => sellerProductChannelStatus(item, channel) === "판매중"); return `<button class="product-sale-row" data-action="edit-seller-product" data-id="${item.id}">${productPhoto(product,"sale-photo")}<span><b>${escapeHtml(sellerProductTitle(item, product))}</b><small>${money(amount)}</small></span><em class="chip ${isOnSale ? "" : "orange"}">${isOnSale ? "판매중" : "판매대기"}</em></button>`; }).join("") : `<div class="empty">PICK한 상품이 없습니다.</div>`}</div>`,
+    "product-sales": `<div class="panel product-sales"><div class="panel-head"><div><h3>PICK 상품</h3><p>내가 선택한 판매상품</p></div><button class="text-button" data-action="open-my-products">관리 →</button></div>${sellerProducts.length ? `<div class="product-sale-list">${sellerProducts.map(item => { const product = productOf(item.productId); const amount = sellerOrders.filter(order => (order.mappedProductId || order.productId) === item.productId).reduce((sum,order)=>sum+order.amount,0); const isOnSale = sellerChannels().some(channel => sellerProductChannelStatus(item, channel) === "판매중"); return `<button class="product-sale-row" data-action="edit-seller-product" data-id="${item.id}">${productPhoto(product,"sale-photo")}<span><b>${escapeHtml(sellerProductTitle(item, product))}</b><small>${money(amount)}</small></span><em class="chip ${isOnSale ? "" : "orange"}">${isOnSale ? "판매중" : "판매대기"}</em></button>`; }).join("")}</div>` : `<div class="empty">PICK한 상품이 없습니다.</div>`}</div>`,
     "price-alerts": `<div class="panel">
         <div class="panel-head"><div><h3>가격 변경 알림</h3><p>공급가 변동이 있는 상품입니다.</p></div>${alerts.length ? `<span class="chip red">${alerts.length}건</span>` : `<span class="chip">완료</span>`}</div>
         <div class="alert-list">${alerts.length ? alerts.map(priceAlertRow).join("") : `<div class="empty">확인할 가격 변경이 없습니다.</div>`}</div>
@@ -1410,7 +1437,7 @@ function productRowSeller(p) {
   const changed = currentPriceAlerts().some(alert => alert.productId === p.id && alert.status === "확인필요");
   const isLive = sellerItem ? sellerChannels().some(channel => sellerProductChannelStatus(sellerItem, channel) === "판매중") : false;
   const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
-  const pickLabel = { none: "이 상품 PICK하기", pending: "승인대기", approved: "판매 시작하기", live: "판매중" }[pickState];
+  const pickLabel = { none: "PICK하기", pending: "승인대기", approved: "판매중", live: "판매중" }[pickState];
   const pickClass = pickState === "none" ? "" : pickState === "live" ? "done" : "picked";
   return `<article class="market-product-card" data-action="product-detail" data-id="${p.id}" tabindex="0" aria-label="${escapeHtml(p.name)} 상세 보기">
     <div class="market-product-image">${productPhoto(p, "catalog-photo")}<b>발주마감 ${escapeHtml(p.cutoff || "10:00")}</b><em>${escapeHtml(p.category)}</em><span class="shipping-badge ${p.shippingType === "overseas" ? "overseas" : "domestic"}">${p.shippingType === "overseas" ? `해외직구 · ${escapeHtml(p.originCountry)}` : "국내배송"}</span>${changed ? `<strong class="price-alert-flag">공급가 변경</strong>` : ""}</div>
@@ -1713,7 +1740,7 @@ function productDetailModal(id) {
   const isLive = sellerItem ? sellerChannels().some(channel => sellerProductChannelStatus(sellerItem, channel) === "판매중") : false;
   const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
   const pickAction = sellerItem ? "open-picked-product" : "import-product";
-  const pickLabel = { none: "이 상품 PICK하기", pending: "승인대기", approved: "판매 시작하기", live: "판매중" }[pickState];
+  const pickLabel = { none: "PICK하기", pending: "승인대기", approved: "판매중", live: "판매중" }[pickState];
   openModal(`<div class="product-detail-page"><div class="product-breadcrumb"><button type="button" data-action="open-catalog">공급 상품몰</button><span>›</span><button type="button" data-action="filter-products" data-category="${escapeHtml(p.category)}">${escapeHtml(p.category)}</button><span>›</span> ${escapeHtml(p.name)}</div><div class="product-detail">
     <div class="product-detail-visual">${productPhoto(p, "detail-photo")}<small>${escapeHtml(p.category)}</small><span class="detail-shipping-badge ${overseas ? "overseas" : ""}">${overseas ? `해외직구 · ${escapeHtml(p.originCountry)}` : "국내배송"}</span></div>
     <div class="product-detail-copy">
@@ -1743,7 +1770,7 @@ function importModal(id) {
       <div class="calc-box"><span>공급가 ${money(p.supply)}</span><strong id="marginPreview">예상 마진율 ${margin(p.supply,p.recommended)}%</strong></div>
       <label class="auto-issue-check full"><input type="checkbox" name="copyContent" checked><span><b>썸네일·상세페이지 함께 복사</b><small>복사 시점의 콘텐츠를 PICK 상품에 저장합니다.</small></span></label>
       <div class="import-flow-note full"><b>다음 단계</b><span>PICK 상품에서 ‘쇼핑몰 자동등록’을 눌러 연결된 채널을 선택하세요.</span></div>
-      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">이 상품 PICK하기</button></div>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">PICK하기</button></div>
     </form>`);
 }
 
@@ -1823,6 +1850,32 @@ function orderMappingModal(orderId) {
       <div class="form-field full"><label>공급사 원본 상품 *</label><select name="productId" required>${products.map(product => `<option value="${product.id}" ${product.id === (order.mappedProductId || order.productId) ? "selected" : ""}>${escapeHtml(product.supplier)} · ${product.id} · ${escapeHtml(product.name)} · 공급가 ${money(product.supply)}</option>`).join("")}</select></div>
       <div class="mapping-code-card full"><span>매핑 기준</span><b>상품명 대신 DF-코드를 저장합니다.</b><small>셀러가 상품명·판매가를 변경해도 공급사 주문 전달 대상은 변하지 않습니다.</small></div>
       <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">상품코드 매핑 저장</button></div>
+    </form>`);
+}
+
+function productMappingFormModal(prefill = {}) {
+  const connectedSupplierIds = new Set(currentSellerConnections().map(connection => connection.supplierLoginId));
+  const products = state.products.filter(product => product.status === "판매중" && connectedSupplierIds.has(product.supplierLoginId));
+  if (!products.length) return showToast("먼저 거래처 연결에서 공급사 코드를 등록해 주세요.");
+  const channels = ["쿠팡", "네이버 스마트스토어", "카카오 쇼핑", "CAFE24"];
+  openModal(`<div class="mapping-modal-head"><span>PRODUCT MAPPING</span><h2>상품 매핑 설정</h2><p>외부 상품코드를 공급사 원본 상품에 연결합니다. 매핑 후에는 같은 상품코드의 신규 주문이 자동으로 연결됩니다.</p></div>
+    <form id="productMappingForm" class="form-grid">
+      <div class="form-field full"><label>외부 상품명 *</label><input name="externalProductName" value="${escapeHtml(prefill.externalProductName || "")}" placeholder="판매채널에 등록한 상품명" required></div>
+      <div class="form-field"><label>외부 상품코드 *</label><input name="externalProductCode" value="${escapeHtml(prefill.externalProductCode || "")}" placeholder="쿠팡 sellerProductId 등" required></div>
+      <div class="form-field"><label>판매채널</label><select name="channel">${channels.map(channel => `<option ${prefill.channel === channel ? "selected" : ""}>${channel}</option>`).join("")}</select></div>
+      <div class="form-field full"><label>공급사 원본 상품 *</label><select name="productId" required>${products.map(product => `<option value="${product.id}">${escapeHtml(product.supplier)} · ${product.id} · ${escapeHtml(product.name)} · 공급가 ${money(product.supply)}</option>`).join("")}</select></div>
+      <div class="mapping-code-card full"><span>매핑 안내</span><b>한 번 매핑하면 자동으로 유지됩니다.</b><small>같은 상품코드의 신규 주문은 이후 매핑 확인 없이 바로 결제 단계로 진행됩니다. 매핑을 바꾸려면 먼저 ‘매핑 해지’를 눌러주세요.</small></div>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">매핑 설정</button></div>
+    </form>`);
+}
+
+function unmapProductMappingModal(mappingId) {
+  const mapping = currentProductMappings().find(item => item.id === mappingId);
+  if (!mapping) return;
+  const product = productOf(mapping.productId);
+  openModal(`<h2>매핑 해지</h2><p>${escapeHtml(mapping.externalProductName || "외부 상품")} · 외부코드 ${escapeHtml(mapping.externalProductCode)}<br>매핑을 해지하면 ${escapeHtml(product?.name || "연결된 공급사 상품")}과의 연결이 끊어지고, 같은 상품코드의 신규 주문은 다시 매핑이 필요합니다.</p>
+    <form id="unmapProductMappingForm" data-id="${mapping.id}">
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="refund-button">매핑 해지</button></div>
     </form>`);
 }
 
@@ -2644,6 +2697,8 @@ document.addEventListener("click", event => {
   if (action === "edit-seller-product") editSellerProductModal(id);
   if (action === "map-order") orderMappingModal(id);
   if (action === "pay-order") orderPaymentModal(id);
+  if (action === "open-product-mapping-form") { productMappingFormModal({ externalProductCode: target.dataset.code || "", externalProductName: target.dataset.name || "", channel: target.dataset.channel || "" }); return; }
+  if (action === "unmap-product-mapping") { unmapProductMappingModal(id); return; }
   if (action === "open-notices") { activeMenuIndex = 13; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (action === "open-notice-detail") { noticeDetailModal(id); return; }
   if (action === "edit-notice") { noticeFormModal(id); return; }
@@ -3201,19 +3256,22 @@ document.addEventListener("submit", event => {
   }
   if (form.id === "externalOrderForm") {
     const orderId = `DO-${String(Date.now()).slice(-9)}`;
+    const externalProductCode = String(data.externalProductCode || "").trim();
+    const existingMapping = currentProductMappings().find(mapping => mapping.externalProductCode === externalProductCode && mapping.status === "매핑완료");
+    const mappedProduct = existingMapping ? productOf(existingMapping.productId) : null;
     state.orders.unshift({
       id: orderId,
       sellerLoginId: currentAccount.loginId,
       supplierLoginId: "",
-      assignedSupplier: "",
-      productId: "",
-      mappedProductId: "",
+      assignedSupplier: mappedProduct?.supplier || "",
+      productId: mappedProduct?.id || "",
+      mappedProductId: mappedProduct?.id || "",
       externalProductName: String(data.externalProductName || "").trim(),
-      externalProductCode: String(data.externalProductCode || "").trim(),
-      mappingStatus: "unmapped",
+      externalProductCode,
+      mappingStatus: mappedProduct ? "mapped" : "unmapped",
       paymentStatus: "pending",
       paymentMethod: "",
-      supplyTotal: 0,
+      supplyTotal: mappedProduct ? mappedProduct.supply * Number(data.qty || 1) : 0,
       forwardedAt: "",
       customer: data.customer,
       recipientName: data.recipientName,
@@ -3222,21 +3280,24 @@ document.addEventListener("submit", event => {
       address: data.address,
       addressDetail: data.addressDetail,
       deliveryMessage: data.deliveryMessage,
-      shippingType: "domestic",
+      shippingType: mappedProduct?.shippingType || "domestic",
       personalCustomsCode: "",
       qty: Number(data.qty),
       amount: Number(data.amount),
       channel: data.channel,
       status: "신규주문",
       tracking: "",
-      carrier: "",
+      carrier: mappedProduct?.carrier || "",
       channelTrackingStatuses: {},
       orderDate: "2026-09-13",
       createdAt: "방금 전",
       settlementStatus: "pending-payment"
     });
-    audit("외부 주문 수집", `${orderId} · ${data.channel} · ${data.externalProductName} · 상품 매핑 대기`, "pending", "order");
-    saveState(); closeModal(); activeMenuIndex = 4; sellerOrderStage = "mapping"; render(); updateAccountUI(); showToast("신규주문을 불러왔습니다. 공급사 상품을 매핑해 주세요.");
+    if (mappedProduct) audit("외부 주문 자동 매핑", `${orderId} · ${data.channel} · ${data.externalProductName} · 기존 매핑으로 ${mappedProduct.id} 자동 연결`, "done", "order");
+    else audit("외부 주문 수집", `${orderId} · ${data.channel} · ${data.externalProductName} · 상품 매핑 대기`, "pending", "order");
+    saveState(); closeModal();
+    if (mappedProduct) { activeMenuIndex = 4; sellerOrderStage = "payment"; render(); updateAccountUI(); showToast("신규주문을 불러왔습니다. 기존 매핑으로 자동 연결되어 결제 단계로 이동했습니다."); }
+    else { activeMenuIndex = 4; sellerOrderStage = "mapping"; render(); updateAccountUI(); showToast("신규주문을 불러왔습니다. 공급사 상품을 매핑해 주세요."); }
   }
   if (form.id === "orderMappingForm") {
     const order = state.orders.find(item => item.id === form.dataset.id);
@@ -3252,8 +3313,57 @@ document.addEventListener("submit", event => {
     order.supplyTotal = product.supply * Number(order.qty || 1);
     order.paymentStatus = "pending";
     order.settlementStatus = "pending-payment";
+    if (order.externalProductCode) {
+      state.productMappings = state.productMappings || [];
+      let mapping = state.productMappings.find(item => item.sellerLoginId === currentAccount.loginId && item.externalProductCode === order.externalProductCode);
+      if (!mapping) { mapping = { id: `PM-${Date.now()}`, sellerLoginId: currentAccount.loginId, createdAt: "방금 전" }; state.productMappings.unshift(mapping); }
+      mapping.externalProductCode = order.externalProductCode;
+      mapping.externalProductName = order.externalProductName || mapping.externalProductName;
+      mapping.channel = order.channel || mapping.channel;
+      mapping.productId = product.id;
+      mapping.supplier = product.supplier;
+      mapping.status = "매핑완료";
+      mapping.mappedAt = "방금 전";
+    }
     audit("외부 주문 상품코드 매핑", `${order.id} · ${order.externalProductName || "외부 상품"} → ${product.id} ${product.name} · 공급사 전달 전`, "pending", "order");
-    saveState(); closeModal(); render(); updateAccountUI(); orderPaymentModal(order.id); showToast(`${product.id} 상품으로 매핑했습니다.`);
+    saveState(); closeModal(); render(); updateAccountUI(); orderPaymentModal(order.id); showToast(`${product.id} 상품으로 매핑했습니다. 같은 상품코드의 다음 주문부터는 자동으로 연결됩니다.`);
+  }
+  if (form.id === "productMappingForm") {
+    const product = productOf(data.productId);
+    const code = String(data.externalProductCode || "").trim();
+    if (!product) return showToast("매핑할 공급사 상품을 찾지 못했습니다.");
+    if (!code) return showToast("외부 상품코드를 입력해 주세요.");
+    state.productMappings = state.productMappings || [];
+    let mapping = state.productMappings.find(item => item.sellerLoginId === currentAccount.loginId && item.externalProductCode === code);
+    if (!mapping) { mapping = { id: `PM-${Date.now()}`, sellerLoginId: currentAccount.loginId, createdAt: "방금 전" }; state.productMappings.unshift(mapping); }
+    mapping.externalProductCode = code;
+    mapping.externalProductName = String(data.externalProductName || "").trim();
+    mapping.channel = data.channel;
+    mapping.productId = product.id;
+    mapping.supplier = product.supplier;
+    mapping.status = "매핑완료";
+    mapping.mappedAt = "방금 전";
+    currentSellerOrders().forEach(order => {
+      if (order.externalProductCode === code && orderMappingStatus(order) !== "mapped") {
+        order.mappedProductId = product.id;
+        order.productId = product.id;
+        order.mappingStatus = "mapped";
+        order.assignedSupplier = product.supplier;
+        order.shippingType = product.shippingType || order.shippingType;
+        order.carrier = product.carrier || order.carrier;
+        order.supplyTotal = product.supply * Number(order.qty || 1);
+      }
+    });
+    audit("상품 매핑 설정", `${code} · ${mapping.externalProductName || "외부 상품"} → ${product.id} ${product.name} · 자동 매핑 등록`, "done", "product");
+    saveState(); closeModal(); render(); updateAccountUI(); showToast("상품 매핑을 설정했습니다. 이후 같은 상품코드의 주문은 자동으로 연결됩니다.");
+  }
+  if (form.id === "unmapProductMappingForm") {
+    const mapping = currentProductMappings().find(item => item.id === form.dataset.id);
+    if (mapping) {
+      audit("상품 매핑 해지", `${mapping.externalProductCode} · ${mapping.externalProductName || "외부 상품"} 매핑을 해지했습니다.`, "done", "product");
+      state.productMappings = (state.productMappings || []).filter(item => item.id !== mapping.id);
+    }
+    saveState(); closeModal(); render(); updateAccountUI(); showToast("매핑을 해지했습니다.");
   }
   if (form.id === "orderPaymentForm") {
     const order = state.orders.find(item => item.id === form.dataset.id);

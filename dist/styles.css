@@ -4266,3 +4266,21 @@ body { letter-spacing:-.012em; }
 @media (max-width: 720px) {
   .channel-sync-actions { flex-wrap: wrap; }
 }
+
+/* --- 대시보드 PICK 상품 위젯: 스크롤 가능한 목록, 흰색 배경 --- */
+.product-sale-list { max-height: 226px; overflow-y: auto; background: var(--paper); }
+.product-sale-list .product-sale-row:last-child { border-bottom: 0; }
+
+/* --- 상품 매핑 페이지 --- */
+.mapping-status.mapped { color: #1a7f4b; background: #eafaf1; }
+.mapping-list { display: grid; }
+.mapping-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-bottom: 1px solid #edf0f4; }
+.mapping-row:last-child { border-bottom: 0; }
+.mapping-main, .mapping-target { display: grid; gap: 3px; min-width: 0; }
+.mapping-main b, .mapping-target b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mapping-main small, .mapping-target small { color: #8995a3; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mapping-row.mapped .mapping-main { flex: 1 1 auto; }
+.mapping-row .mapping-main { flex: 1 1 auto; }
+.mapping-arrow { color: #b7c0cc; font-weight: 700; flex: 0 0 auto; }
+.mapping-target { flex: 1 1 auto; }
+.mapping-row > button { flex: 0 0 auto; }
