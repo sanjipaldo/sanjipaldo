@@ -4241,3 +4241,6 @@ body { letter-spacing:-.012em; }
 
 /* --- 상품 판매중 요약 행: 평균 마진 강조 --- */
 .onsale-avg-margin em { color: #1761e8; font-size: 15px; font-weight: 800; font-style: normal; }
+
+/* --- 위탁셀러 로그인 비주얼: 신규 로고 + 태그라인, 텍스트 정리 --- */
+.login-visual-tagline { margin: 10px 0 0; color: rgba(255,255,255,.85); font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
