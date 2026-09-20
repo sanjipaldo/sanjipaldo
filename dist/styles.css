@@ -4167,3 +4167,7 @@ body { letter-spacing:-.012em; }
   .onsale-date-field, .onsale-date-field input { width: 100%; }
   .onsale-date-sep { display: none; }
 }
+
+/* --- 사이드바 메뉴 텍스트를 볼드로: 아이콘은 유지, 글씨만 더 진하고 깔끔하게 --- */
+.workspace-menu button { font-weight: 700; }
+.workspace-menu-group > p { font-weight: 800; }
