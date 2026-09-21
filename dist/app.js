@@ -799,8 +799,11 @@ function updateAccountUI() {
   document.getElementById("sidebarRoleIcon").innerHTML = roleIconMarkup(activeRole);
   document.getElementById("sidebarRoleName").textContent = roleLabel();
   const notices = visibleNotifications();
-  document.getElementById("notificationCount").textContent = notices.filter(item => !item.read).length;
-  document.getElementById("notificationButton").classList.toggle("has-alert", notices.some(item => !item.read));
+  const unreadNoticeCount = notices.filter(item => !item.read).length;
+  const notificationCountEl = document.getElementById("notificationCount");
+  notificationCountEl.textContent = unreadNoticeCount > 99 ? "99+" : unreadNoticeCount;
+  notificationCountEl.hidden = unreadNoticeCount === 0;
+  document.getElementById("notificationButton").classList.toggle("has-alert", unreadNoticeCount > 0);
   const alertCount = activeRole === "seller" ? currentPriceAlerts().filter(alert => alert.status === "확인필요").length : 0;
   const pendingCount = activeRole === "master" ? pendingApprovalCount() : 0;
   const shippingCount = activeRole === "supplier" ? currentSupplierOrders().filter(order => ["신규주문", "배송준비중"].includes(order.status)).length : 0;

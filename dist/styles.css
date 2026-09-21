@@ -4748,3 +4748,72 @@ body { letter-spacing: normal; }
 .notice-row-chevron { margin-left: 10px; color: #9aa5b2; font-size: 15px; }
 .notice-detail { padding: 18px 20px 20px; background: #fff; border: 1px solid #bcd0f5; border-top: 0; border-radius: 0 0 14px 14px; }
 .notice-detail p { margin: 0 0 14px; color: #4b5768; font-size: 15px; line-height: 1.7; }
+
+/* 모바일에서 모달 배경 딤(dim)이 사라져 보이던 근본 원인 수정:
+   모바일 .topbar가 z-index:100 sticky라 modal-backdrop(z-index:20)보다
+   위에 그려져, 모달이 열려도 헤더 영역만 딤 처리 없이 그대로 보였음. */
+.modal-backdrop { z-index: 500; }
+.address-popup-backdrop { z-index: 510; }
+
+/* 상품 상세 팝업: 모바일에서 정사각 썸네일이 모달 세로 공간을 너무 많이 차지하던 문제 */
+@media (max-width: 720px) {
+  .product-detail-page .product-detail-visual { aspect-ratio: auto; height: 200px; }
+}
+
+/* 모바일 모달: 제목 텍스트가 우상단 닫기(×) 버튼과 겹치던 문제 */
+@media (max-width: 720px) {
+  .modal h2 { padding-right: 30px; }
+}
+
+/* 모바일 로그인 화면: 스크롤이 필요할 만큼 세로로 길어서 답답해 보이던 문제
+   -> 로고/여백/입력칸 높이를 줄여 뷰포트 안에 컴팩트하게 모이도록 축소 */
+@media (max-width: 720px) {
+  .login-panel { padding: 20px 20px; }
+  .login-box { padding: 20px 18px 18px; }
+  .login-panel-brand-logo > img { height: 36px; }
+  .login-panel-tagline { margin: 8px 0 18px; }
+  .login-heading { margin-bottom: 20px; }
+  .login-heading h2 { margin: 6px 0 6px; font-size: 20px; }
+  .login-heading p { font-size: 13px; }
+  .login-form { gap: 13px; }
+  .login-field { gap: 6px; }
+  .login-field input { height: 44px; }
+  .login-submit { height: 44px; font-size: 15px; }
+  .demo-accounts { margin-top: 14px; padding: 10px; }
+  .login-footer-links { margin-top: 14px; }
+  .signup-prompt { margin-top: 14px; }
+}
+
+/* 알림 벨 배지: 안읽음 0개일 때도 회색 "0"이 항상 떠서 깨져 보이던 문제
+   -> 안읽음이 있을 때만 배지를 표시하고, 숫자 배지 자체도 더 또렷하게 다듬음 */
+.notification-button > b { min-width: 19px; height: 19px; padding: 0 5px; border-width: 2px; font-size: 11px; font-weight: 700; line-height: 1; box-sizing: border-box; }
+.notification-button > b[hidden] { display: none; }
+
+/* 사이드바 태그라인(쇼핑몰에 쉬운 시작 · 두고마켓): 연한 회색이라 가독성이 떨어지던 문제 -> 검정색으로 */
+.sidebar-top-band .nav-label { color: #14181f !important; font-weight: 700; }
+
+/* 색상 팔레트 다양화: 위탁셀러(블루)만 있고 공급사·마스터는 둘 다 동일한 무채색(#111827)이라
+   전체적으로 단색처럼 보이던 문제 -> 역할별 고유 포인트 컬러 부여 (공급사=틸, 마스터=바이올렛) */
+.app-shell[data-role="supplier"] .role-button.active { background: #0f8a72; box-shadow: 0 8px 22px rgba(15,138,114,.22); }
+.app-shell[data-role="master"] .role-button.active { background: #6d3fc9; box-shadow: 0 8px 22px rgba(109,63,201,.22); }
+.app-shell[data-role="supplier"] .role-button.active .role-icon { color: #0f8a72; }
+.app-shell[data-role="master"] .role-button.active .role-icon { color: #6d3fc9; }
+.app-shell[data-role="supplier"] .workspace-menu button.active { background: #0f8a72; box-shadow: 0 7px 17px rgba(15,138,114,.18); }
+.app-shell[data-role="master"] .workspace-menu button.active { background: #6d3fc9; box-shadow: 0 7px 17px rgba(109,63,201,.18); }
+.app-shell[data-role="supplier"] .workspace-menu button.active .menu-icon { color: #0f8a72; }
+.app-shell[data-role="master"] .workspace-menu button.active .menu-icon { color: #6d3fc9; }
+.app-shell[data-role="supplier"] .workspace-switcher-entry { background: #0f8a72; border-color: #0f8a72; }
+.app-shell[data-role="master"] .workspace-switcher-entry { background: #6d3fc9; border-color: #6d3fc9; }
+.app-shell[data-role="supplier"] .workspace-switcher-entry .role-icon { color: #0f8a72; }
+.app-shell[data-role="master"] .workspace-switcher-entry .role-icon { color: #6d3fc9; }
+.app-shell[data-role="supplier"] .avatar-button { background: linear-gradient(135deg, #0f8a72, #0a6b58); }
+.app-shell[data-role="master"] .avatar-button { background: linear-gradient(135deg, #6d3fc9, #4f2a9c); }
+.app-shell[data-role="seller"] .avatar-button { background: linear-gradient(135deg, #3182f6, #245fc4); }
+@media (max-width: 720px) {
+  .app-shell[data-role="supplier"] .workspace-switcher-entry { background: #0f8a72; }
+  .app-shell[data-role="master"] .workspace-switcher-entry { background: #6d3fc9; }
+  .app-shell[data-role="supplier"] .workspace-menu button.active { background: #0f8a72 !important; box-shadow: 0 7px 17px rgba(15,138,114,.2) !important; }
+  .app-shell[data-role="master"] .workspace-menu button.active { background: #6d3fc9 !important; box-shadow: 0 7px 17px rgba(109,63,201,.2) !important; }
+  .app-shell[data-role="supplier"] .workspace-menu button.active .menu-icon { color: #0f8a72 !important; }
+  .app-shell[data-role="master"] .workspace-menu button.active .menu-icon { color: #6d3fc9 !important; }
+}
