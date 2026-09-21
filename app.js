@@ -84,63 +84,87 @@ const naverCategoryTree = {
     }
   },
   "패션의류": {
-    "여성의류": { "아우터": ["코트", "자켓", "패딩"], "상의": ["니트", "블라우스", "티셔츠"], "하의": ["청바지", "슬랙스", "스커트"] },
-    "남성의류": { "아우터": ["코트", "자켓", "패딩"], "상의": ["셔츠", "티셔츠"], "하의": ["청바지", "슬랙스"] },
-    "베이비의류": { "상의": ["바디수트", "우주복"], "하의": ["레깅스"] },
-    "언더웨어·잠옷": { "언더웨어": ["속옷세트"], "잠옷": ["파자마"] }
+    "여성의류": { "아우터": ["코트", "자켓", "패딩", "가디건", "점퍼"], "상의": ["니트", "블라우스", "티셔츠", "셔츠"], "원피스": ["미니원피스", "미디원피스", "롱원피스"], "하의": ["청바지", "슬랙스", "스커트", "레깅스"] },
+    "남성의류": { "아우터": ["코트", "자켓", "패딩", "점퍼"], "상의": ["셔츠", "티셔츠", "니트", "후드"], "하의": ["청바지", "슬랙스", "반바지"], "정장": ["수트", "자켓", "조끼"] },
+    "베이비·아동의류": { "상의": ["바디수트", "우주복", "티셔츠"], "하의": ["레깅스", "바지"], "아우터": ["패딩", "점퍼"] },
+    "언더웨어·홈웨어": { "언더웨어": ["속옷세트", "브라팬티"], "잠옷": ["파자마", "홈웨어세트"], "양말": ["스타킹", "팬티스타킹"] },
+    "빅사이즈": { "여성빅사이즈": ["원피스", "상의", "하의"], "남성빅사이즈": ["상의", "하의"] }
   },
   "패션잡화": {
-    "여성가방": { "숄더백": ["미니백", "크로스백"], "토트백": ["에코백"] },
-    "남성가방": { "백팩": ["노트북백팩"], "서류가방": ["브리프케이스"] },
-    "신발": { "스니커즈": ["캔버스화", "러닝화"], "구두": ["로퍼", "옥스포드"] },
-    "패션소품": { "벨트": ["가죽벨트"], "지갑": ["카드지갑", "장지갑"] }
+    "여성가방": { "숄더백": ["미니백", "크로스백"], "토트백": ["에코백", "캔버스백"], "백팩": ["미니백팩"], "클러치": ["파우치"] },
+    "남성가방": { "백팩": ["노트북백팩", "데일리백팩"], "서류가방": ["브리프케이스"], "크로스백": ["메신저백"] },
+    "신발": { "스니커즈": ["캔버스화", "러닝화", "단화"], "구두": ["로퍼", "옥스포드", "더비슈즈"], "부츠": ["앵클부츠", "롱부츠"], "샌들·슬리퍼": ["플립플롭", "슬라이드"] },
+    "패션소품": { "벨트": ["가죽벨트", "버클벨트"], "지갑": ["카드지갑", "장지갑", "반지갑"], "스카프·머플러": ["실크스카프", "니트머플러"] },
+    "주얼리·시계": { "목걸이": ["펜던트목걸이"], "반지": ["커플링"], "시계": ["손목시계", "스마트워치밴드"] },
+    "모자·양말": { "모자": ["캡", "버킷햇"], "양말": ["발목양말", "중목양말"] }
   },
   "화장품/미용": {
-    "스킨케어": { "기초케어": ["토너", "에센스", "크림"], "마스크팩": ["시트팩"] },
-    "메이크업": { "베이스메이크업": ["파운데이션", "쿠션"], "포인트메이크업": ["립스틱", "아이섀도"] },
-    "헤어케어": { "샴푸·린스": ["탈모샴푸"], "헤어스타일링": ["왁스", "에센스"] },
-    "바디케어": { "바디워시": ["바디워시"], "바디로션": ["바디로션"] }
+    "스킨케어": { "토너·에센스": ["토너", "에센스", "세럼"], "크림·로션": ["수분크림", "아이크림"], "마스크팩": ["시트팩", "슬리핑팩"] },
+    "메이크업": { "베이스메이크업": ["파운데이션", "쿠션", "프라이머"], "포인트메이크업": ["립스틱", "아이섀도", "블러셔"], "네일": ["네일폴리시", "젤네일"] },
+    "헤어케어": { "샴푸·린스": ["탈모샴푸", "두피케어샴푸"], "헤어스타일링": ["왁스", "에센스", "헤어오일"], "염색·펌": ["새치염색약"] },
+    "바디케어": { "바디워시": ["바디워시", "입욕제"], "바디로션": ["바디로션", "핸드크림"], "제모·왁싱": ["제모기", "왁싱스트립"] },
+    "향수": { "여성향수": ["오드퍼퓸"], "남성향수": ["오드코롱"] },
+    "미용기기": { "클렌징기기": ["클렌징브러시"], "피부관리기기": ["LED마스크", "갈바닉기기"] }
   },
   "디지털/가전": {
-    "PC": { "PC부품": ["CPU", "메인보드", "RAM", "그래픽카드", "SSD"], "PC액세서리": ["마우스", "키보드", "모니터암"], "게임기/타이틀": ["콘솔게임기", "게임타이틀"] },
-    "휴대폰": { "스마트폰": ["갤럭시", "아이폰"], "액세서리": ["케이스", "보호필름"] },
-    "노트북": { "노트북": ["울트라북", "게이밍노트북"], "액세서리": ["파우치", "독"] },
-    "생활가전": { "주방가전": ["에어프라이어", "전자레인지"], "계절가전": ["에어컨", "선풍기"] }
+    "PC": { "PC본체": ["데스크탑", "브랜드PC"], "PC부품": ["CPU", "메인보드", "RAM", "그래픽카드", "SSD"], "PC액세서리": ["마우스", "키보드", "모니터암"], "모니터": ["게이밍모니터", "사무용모니터"] },
+    "노트북": { "노트북": ["울트라북", "게이밍노트북", "투인원"], "액세서리": ["파우치", "독", "거치대"] },
+    "태블릿": { "태블릿PC": ["아이패드", "갤럭시탭"], "액세서리": ["케이스", "펜슬"] },
+    "휴대폰": { "스마트폰": ["갤럭시", "아이폰"], "케이스·필름": ["케이스", "보호필름"], "충전기·케이블": ["고속충전기", "보조배터리"] },
+    "TV·영상가전": { "TV": ["OLED TV", "QLED TV"], "프로젝터": ["빔프로젝터"] },
+    "생활가전": { "주방가전": ["에어프라이어", "전자레인지", "커피머신"], "계절가전": ["에어컨", "선풍기", "히터"], "청소가전": ["로봇청소기", "무선청소기"] },
+    "카메라·캠코더": { "디지털카메라": ["미러리스", "DSLR"], "액션캠": ["고프로"], "렌즈·액세서리": ["카메라렌즈", "삼각대"] },
+    "게임기": { "콘솔게임기": ["플레이스테이션", "닌텐도스위치"], "게임타이틀": ["액션게임", "RPG게임"] }
   },
   "가구/인테리어": {
-    "침실가구": { "침대": ["프레임", "매트리스"], "옷장": ["붙박이장", "드레스룸"] },
-    "거실가구": { "소파": ["패브릭소파", "가죽소파"], "테이블": ["거실테이블"] },
-    "홈데코": { "패브릭": ["커튼", "러그"], "액자·소품": ["액자", "화병"] },
-    "조명": { "실내조명": ["LED조명", "스탠드"], "무드등": ["무드등"] }
+    "침실가구": { "침대": ["프레임", "매트리스"], "옷장": ["붙박이장", "드레스룸", "행거"], "화장대": ["거울화장대"] },
+    "거실가구": { "소파": ["패브릭소파", "가죽소파", "리클라이너"], "테이블": ["거실테이블", "좌식테이블"], "TV장": ["거실장"] },
+    "서재·사무가구": { "책상": ["컴퓨터책상", "좌식책상"], "의자": ["사무용의자", "게이밍체어"], "책장": ["단행본책장", "코너책장"] },
+    "주방가구": { "식탁": ["2인용식탁", "4인용식탁"], "주방수납장": ["펜트리장", "수납장"] },
+    "홈데코": { "패브릭": ["커튼", "러그", "쿠션"], "액자·소품": ["액자", "화병", "캔들"], "시계": ["벽시계", "탁상시계"] },
+    "조명": { "실내조명": ["LED조명", "팬던트조명"], "무드등": ["무드등", "취침등"], "스탠드": ["독서스탠드"] },
+    "DIY자재·부자재": { "벽지·시트지": ["포인트벽지"], "바닥재": ["장판", "데코타일"] }
   },
   "출산/육아": {
-    "기저귀·물티슈": { "기저귀": ["팬티형", "밴드형"], "물티슈": ["휴대용", "리필용"] },
-    "분유·이유식": { "분유": ["단계별분유"], "이유식": ["초기이유식"] },
-    "유아동의류": { "상의": ["바디수트"], "하의": ["레깅스"] },
-    "유모차·카시트": { "유모차": ["절충형", "디럭스형"], "카시트": ["신생아용", "확장형"] }
+    "기저귀·물티슈": { "기저귀": ["팬티형", "밴드형", "수영장기저귀"], "물티슈": ["휴대용", "리필용"] },
+    "분유·이유식": { "분유": ["단계별분유", "산양분유"], "이유식": ["초기이유식", "후기이유식"], "이유식용품": ["이유식용기", "보관팩"] },
+    "유아동의류": { "상의": ["바디수트", "티셔츠"], "하의": ["레깅스", "바지"], "아우터": ["패딩", "우주복"] },
+    "유모차·카시트": { "유모차": ["절충형", "디럭스형", "휴대용"], "카시트": ["신생아용", "확장형"], "웨건·웨빙": ["다목적웨건"] },
+    "완구·교육": { "완구": ["블록", "인형", "자동차완구"], "교육용품": ["한글교재", "숫자놀이"] },
+    "수유·이유용품": { "수유용품": ["젖병", "유축기"], "식기": ["빨대컵", "유아식기세트"] },
+    "임부용품": { "임부복": ["임부복원피스", "임부내의"], "출산준비물": ["출산가방", "산모패드"] }
   },
   "스포츠/레저": {
-    "골프": { "골프클럽": ["드라이버", "아이언"], "골프웨어": ["상의", "하의"] },
-    "캠핑·등산": { "캠핑용품": ["텐트", "침낭"], "등산용품": ["등산화", "배낭"] },
-    "헬스·요가": { "헬스용품": ["덤벨", "요가매트"], "요가웨어": ["레깅스"] },
-    "자전거": { "자전거": ["로드바이크", "MTB"], "액세서리": ["헬멧", "라이트"] }
+    "골프": { "골프클럽": ["드라이버", "아이언", "퍼터"], "골프웨어": ["상의", "하의", "아우터"], "골프용품": ["골프공", "골프백"] },
+    "캠핑·등산": { "캠핑용품": ["텐트", "침낭", "타프"], "등산용품": ["등산화", "배낭", "등산스틱"], "캠핑가구": ["캠핑테이블", "캠핑체어"] },
+    "헬스·요가": { "헬스용품": ["덤벨", "벤치프레스", "바벨"], "요가용품": ["요가매트", "요가블럭"], "스포츠웨어": ["레깅스", "스포츠브라"] },
+    "자전거": { "자전거": ["로드바이크", "MTB", "전기자전거"], "액세서리": ["헬멧", "라이트", "자물쇠"] },
+    "낚시": { "낚시용품": ["낚싯대", "릴"], "낚시의류": ["방수복"] },
+    "수영·수상스포츠": { "수영용품": ["수영복", "수경", "수모"], "수상레저": ["패들보드", "구명조끼"] },
+    "구기스포츠": { "축구·풋살": ["축구화", "유니폼"], "야구·배드민턴": ["배트", "글러브", "라켓"] }
   },
   "생활/건강": {
-    "생활용품": { "주방용품": ["밀폐용기", "냄비"], "세탁·청소": ["세제", "청소도구"] },
-    "건강용품": { "혈압·체온계": ["혈압계"], "마사지기": ["안마의자"] },
-    "반려동물용품": { "사료": ["강아지사료", "고양이사료"], "용품": ["장난감", "하네스"] },
-    "문구·사무용품": { "필기구": ["볼펜", "연필"], "사무용품": ["파일", "노트"] }
+    "생활용품": { "주방용품": ["밀폐용기", "냄비", "프라이팬"], "세탁·청소": ["세제", "청소도구", "수납용품"], "욕실용품": ["샤워커튼", "욕실매트"] },
+    "건강용품": { "혈압·체온계": ["혈압계", "체온계"], "마사지기": ["안마의자", "마사지건"], "건강보조기구": ["온열기", "저주파마사지기"] },
+    "반려동물용품": { "사료": ["강아지사료", "고양이사료"], "용품": ["장난감", "하네스", "켄넬"], "위생용품": ["배변패드", "고양이모래"] },
+    "문구·사무용품": { "필기구": ["볼펜", "연필", "만년필"], "사무용품": ["파일", "노트", "프린터용지"], "다이어리·플래너": ["스케줄러"] },
+    "일회용품": { "위생용품": ["마스크", "장갑"], "주방일회용품": ["나무젓가락", "빨대", "랩"] },
+    "건강관리용품": { "다이어트용품": ["체지방계"], "금연·금주용품": ["금연보조제"] }
   },
   "여가/생활편의": {
-    "도서": { "소설": ["국내소설", "해외소설"], "자기계발": ["에세이"] },
-    "티켓·공연": { "공연": ["콘서트", "뮤지컬"], "전시": ["미술전시"] },
-    "여행·항공권": { "항공권": ["국내선", "국제선"], "숙박": ["호텔", "펜션"] },
-    "상품권": { "온라인상품권": ["문화상품권"], "모바일상품권": ["기프티콘"] }
+    "도서": { "소설": ["국내소설", "해외소설"], "자기계발": ["에세이", "경제경영"], "어린이도서": ["그림책", "동화책"] },
+    "티켓·공연": { "공연": ["콘서트", "뮤지컬", "연극"], "전시": ["미술전시", "체험전"], "스포츠관람": ["야구티켓", "축구티켓"] },
+    "여행·항공권": { "항공권": ["국내선", "국제선"], "숙박": ["호텔", "펜션", "게스트하우스"], "투어·입장권": ["테마파크입장권"] },
+    "상품권": { "온라인상품권": ["문화상품권", "도서문화상품권"], "모바일상품권": ["기프티콘"], "백화점상품권": ["신세계상품권"] },
+    "취미": { "음반·DVD": ["K팝음반"], "악기": ["기타", "피아노"], "핸드메이드": ["DIY키트"] },
+    "자동차용품": { "카액세서리": ["방향제", "거치대"], "카케어": ["세차용품"] }
   },
   "면세점": {
-    "향수·화장품": { "향수": ["여성향수", "남성향수"], "화장품": ["스킨케어세트"] },
-    "주류": { "위스키": ["싱글몰트"], "와인": ["레드와인"] },
-    "패션잡화": { "가방": ["명품가방"], "지갑": ["명품지갑"] }
+    "향수·화장품": { "향수": ["여성향수", "남성향수"], "스킨케어": ["에센스세트"], "메이크업": ["립스틱세트"] },
+    "주류": { "위스키": ["싱글몰트", "블렌디드"], "와인": ["레드와인", "화이트와인"], "전통주": ["사케"] },
+    "패션잡화": { "가방": ["명품가방"], "지갑": ["명품지갑"], "벨트": ["명품벨트"] },
+    "선글라스·시계": { "선글라스": ["명품선글라스"], "시계": ["명품시계"] },
+    "건강식품": { "영양제": ["비타민세트"], "홍삼": ["홍삼정"] }
   }
 };
 function categoryLevelOptions(level, path) {
@@ -159,6 +183,20 @@ function categorySelectTag(name, level, path, extraAttrs = "") {
   const current = path[level - 1] || "";
   const placeholder = level === 1 ? "대분류 선택" : "선택";
   return `<select name="${name}" data-category-level="${level}" ${options.length ? "" : "disabled"} ${extraAttrs}><option value="">${placeholder}</option>${options.map(option => `<option value="${escapeHtml(option)}" ${current === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>`;
+}
+function flattenCategoryLeaves() {
+  const leaves = [];
+  Object.entries(naverCategoryTree).forEach(([group, mids]) => {
+    Object.entries(mids).forEach(([mid, subs]) => {
+      Object.entries(subs).forEach(([sub, details]) => {
+        details.forEach(detail => leaves.push({ group, mid, sub, detail }));
+      });
+    });
+  });
+  return leaves;
+}
+function categorySearchResultRow(leaf) {
+  return `<button type="button" class="category-search-result" data-action="category-search-pick" data-group="${escapeHtml(leaf.group)}" data-mid="${escapeHtml(leaf.mid)}" data-sub="${escapeHtml(leaf.sub)}" data-detail="${escapeHtml(leaf.detail)}"><span>${escapeHtml(leaf.group)} › ${escapeHtml(leaf.mid)} › ${escapeHtml(leaf.sub)}</span><b>${escapeHtml(leaf.detail)}</b></button>`;
 }
 
 const initialState = {
@@ -966,7 +1004,7 @@ function marketToolbar() {
   const brands = ["전체 브랜드", ...new Set(state.products.map(product => product.supplier))];
   const path = [sellerCategoryGroup, sellerCategory === "전체보기" ? "" : sellerCategory, sellerCategorySub === "전체보기" ? "" : sellerCategorySub, sellerCategoryDetail === "전체보기" ? "" : sellerCategoryDetail];
   return `<div class="market-toolbar market-toolbar-shop"><label class="catalog-search"><span>⌕</span><input id="sellerCatalogSearch" value="${escapeHtml(sellerProductSearch)}" placeholder="상품명·브랜드·원산지 검색"></label><div class="market-filter-row">
-    <div class="category-select-group"><span class="category-select-label">카테고리 <small>네이버쇼핑 기준 4단계</small></span><div class="category-select-pair category-select-quad">
+    <div class="category-select-group"><span class="category-select-label">카테고리 <small>네이버쇼핑 기준 4단계</small></span><div class="category-search-box"><input type="text" class="category-search-input" data-category-search placeholder="예: 프로폴리스, 노트북 검색" autocomplete="off"><div class="category-search-results" data-category-search-results hidden></div></div><div class="category-select-pair category-select-quad">
       <select id="marketCategoryGroupSelect">${categoryLevelOptions(1, path).map(option => `<option value="${escapeHtml(option)}" ${sellerCategoryGroup === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>
       <select id="marketCategoryMidSelect"><option value="전체보기" ${sellerCategory === "전체보기" ? "selected" : ""}>전체보기</option>${categoryLevelOptions(2, path).map(option => `<option ${sellerCategory === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>
       <select id="marketCategorySubSelect"><option value="전체보기" ${sellerCategorySub === "전체보기" ? "selected" : ""}>전체보기</option>${categoryLevelOptions(3, path).map(option => `<option ${sellerCategorySub === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>
@@ -1586,9 +1624,9 @@ function renderSeller() {
 function isFreePricedProduct(p) { return p.category === "농산물" || p.category === "수산물"; }
 function catalogPriceRows(p) {
   const freePriced = isFreePricedProduct(p);
-  const profitRow = freePriced ? `<div><dt>지정판매가</dt><dd>자율</dd></div>` : `<div><dt>예상 수익</dt><dd class="profit-text">${money(p.recommended - p.supply)}</dd></div>`;
-  const marginRow = freePriced ? `<div><dt>마진율</dt><dd class="margin-free">-%</dd></div>` : `<div><dt>마진율</dt><dd>${margin(p.supply, p.recommended)}%</dd></div>`;
-  return `<div><dt>공급가</dt><dd>${money(p.supply)}</dd></div>${profitRow}${marginRow}`;
+  const priceRow = `<div><dt>지정판매가</dt><dd class="${freePriced ? "" : "profit-text"}">${freePriced ? "자율" : money(p.recommended)}</dd></div>`;
+  const marginRow = `<div><dt>마진율</dt><dd class="${freePriced ? "margin-free" : ""}">${freePriced ? "-%" : `${margin(p.supply, p.recommended)}%`}</dd></div>`;
+  return `<div><dt>공급가</dt><dd>${money(p.supply)}</dd></div>${priceRow}${marginRow}`;
 }
 function productRowSeller(p) {
   const sellerItem = currentSellerProducts().find(x => x.productId === p.id);
@@ -1621,7 +1659,7 @@ function productRowSellerList(p) {
       <h4>${escapeHtml(p.name)}</h4>
       <small class="list-row-meta">${escapeHtml(p.supplier)} · ${p.id} · ${escapeHtml(p.category)}</small>
     </div>
-    <div class="list-row-price"><span><small>공급가</small><b>${money(p.supply)}</b></span><span>${freePriced ? `<small>지정판매가</small><b>자율</b>` : `<small>예상 수익</small><b class="profit-text">${money(p.recommended - p.supply)}</b>`}</span><span><small>마진율</small><b class="${freePriced ? "margin-free" : ""}">${freePriced ? "-%" : `${margin(p.supply, p.recommended)}%`}</b></span></div>
+    <div class="list-row-price"><span><small>공급가</small><b>${money(p.supply)}</b></span><span><small>지정판매가</small><b class="${freePriced ? "" : "profit-text"}">${freePriced ? "자율" : money(p.recommended)}</b></span><span><small>마진율</small><b class="${freePriced ? "margin-free" : ""}">${freePriced ? "-%" : `${margin(p.supply, p.recommended)}%`}</b></span></div>
     <div class="list-row-actions"><button class="text-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button><button class="small-button ${pickClass}" data-action="${sellerItem ? "open-picked-product" : "import-product"}" data-id="${p.id}">${pickLabel}</button></div>
   </article>`;
 }
@@ -2442,7 +2480,7 @@ function productEditorModal(product = null) {
   openModal(`<div class="product-editor-head balju-product-head"><div><span>DOOGO · SINGLE PRODUCT</span><h2>${isEdit ? "상품 정보 수정" : "상품 등록"}</h2><p>${isEdit ? `${product.id} · 모든 수정 내용은 마스터 변경 이력에 저장됩니다.` : "발주오라 단일 상품등록 구조를 기준으로 매입·가격·배송·노출 정보를 한 번에 입력합니다."}</p></div><div class="editor-progress"><b>1 기본정보</b><b>2 매입·가격</b><b>3 이미지·안내</b><b>4 배송·노출</b></div></div>
     <form id="${isEdit ? "editProductForm" : "productForm"}" class="product-editor-form balju-product-form" ${isEdit ? `data-id="${product.id}"` : ""}>
       <section class="editor-section"><div class="editor-section-title"><span>01</span><div><h3>상품 기본정보</h3><p>상품 상태와 발주 기준을 설정합니다.</p></div></div><div class="editor-grid cols-4">
-        <div class="form-field full category-cascade-field"><label>카테고리 * <small>네이버쇼핑 기준 대분류·중분류·소분류·세분류</small></label><div class="category-cascade-row">${(() => { const path = [product?.categoryGroup || "식품", product?.category || "", product?.categorySub || "", product?.categoryDetail || ""]; return `${categorySelectTag("categoryGroup", 1, path, "required")}${categorySelectTag("category", 2, path, "required")}${categorySelectTag("categorySub", 3, path, "required")}${categorySelectTag("categoryDetail", 4, path, "required")}`; })()}</div></div>
+        <div class="form-field full category-cascade-field"><label>카테고리 * <small>네이버쇼핑 기준 대분류·중분류·소분류·세분류</small></label><div class="category-search-box"><input type="text" class="category-search-input" data-category-search placeholder="예: 프로폴리스, 노트북, 캠핑용품 검색" autocomplete="off"><div class="category-search-results" data-category-search-results hidden></div></div><div class="category-cascade-row">${(() => { const path = [product?.categoryGroup || "식품", product?.category || "", product?.categorySub || "", product?.categoryDetail || ""]; return `${categorySelectTag("categoryGroup", 1, path, "required")}${categorySelectTag("category", 2, path, "required")}${categorySelectTag("categorySub", 3, path, "required")}${categorySelectTag("categoryDetail", 4, path, "required")}`; })()}</div></div>
         <div class="form-field"><label>판매 상태 *</label><select name="status"><option ${selected("status","판매중","판매중")}>판매중</option><option ${selected("status","판매중지")}>판매중지</option></select></div>
         <div class="form-field"><label>과세 여부 *</label><select name="tax"><option ${selected("tax","과세","과세")}>과세</option><option ${selected("tax","비과세")}>비과세</option></select></div>
         <div class="form-field span-2"><label>상품코드</label><input value="${value("id", "등록 시 자동 생성")}" disabled></div>
@@ -2642,9 +2680,33 @@ document.addEventListener("click", event => {
   if (event.target.closest("[data-close-modal]")) return closeModal();
   const jump = event.target.closest("[data-jump]")?.dataset.jump;
   if (jump) { closeModal(); return setRole(jump); }
+  if (!event.target.closest(".category-search-box")) document.querySelectorAll("[data-category-search-results]").forEach(el => { el.hidden = true; });
   const target = event.target.closest("[data-action]");
   if (!target) return;
   const { action, id } = target.dataset;
+  if (action === "category-search-pick") {
+    const path = [target.dataset.group, target.dataset.mid, target.dataset.sub, target.dataset.detail];
+    const form = target.closest("form");
+    if (form) {
+      [1, 2, 3, 4].forEach(level => {
+        const select = form.querySelector(`[data-category-level="${level}"]`);
+        if (!select) return;
+        const options = categoryLevelOptions(level, path);
+        select.innerHTML = `<option value="">${level === 1 ? "대분류 선택" : "선택"}</option>${options.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join("")}`;
+        select.disabled = !options.length;
+        select.value = path[level - 1] || "";
+      });
+      const searchInput = form.querySelector("[data-category-search]");
+      const resultsEl = form.querySelector("[data-category-search-results]");
+      if (searchInput) searchInput.value = "";
+      if (resultsEl) { resultsEl.hidden = true; resultsEl.innerHTML = ""; }
+    } else {
+      sellerCategoryGroup = path[0]; sellerCategory = path[1]; sellerCategorySub = path[2]; sellerCategoryDetail = path[3];
+      render(); updateAccountUI();
+    }
+    showToast(`카테고리를 ${path.join(" › ")} (으)로 설정했습니다.`);
+    return;
+  }
   if (action === "toggle-edit-mode") {
     if (!editMode) {
       dashboardEditSnapshot = [...(state.sellerDashboard?.layout || DEFAULT_DASHBOARD_LAYOUT)];
@@ -3300,6 +3362,17 @@ document.addEventListener("change", event => {
 
 document.addEventListener("input", event => {
   if (event.target.id === "addressPopupInput") { renderAddressPopupResults(event.target.value); return; }
+  if (event.target.dataset && event.target.dataset.categorySearch !== undefined) {
+    const box = event.target.closest(".category-search-box");
+    const resultsEl = box?.querySelector("[data-category-search-results]");
+    const query = event.target.value.trim().toLowerCase();
+    if (!resultsEl) return;
+    if (!query) { resultsEl.hidden = true; resultsEl.innerHTML = ""; return; }
+    const matches = flattenCategoryLeaves().filter(leaf => [leaf.group, leaf.mid, leaf.sub, leaf.detail].some(part => part.toLowerCase().includes(query))).slice(0, 8);
+    resultsEl.innerHTML = matches.length ? matches.map(categorySearchResultRow).join("") : `<div class="category-search-empty">일치하는 카테고리가 없습니다.</div>`;
+    resultsEl.hidden = false;
+    return;
+  }
   if (event.target.id === "chatRoomSearch") {
     chatRoomSearch = event.target.value;
     render(); updateAccountUI();
