@@ -4452,3 +4452,25 @@ h4 { font-weight: 600; letter-spacing: -.01em; }
 .secondary-button:active,
 .small-button:active,
 .login-submit:active { transform: scale(.96); }
+
+/* --- 네이버쇼핑 4단계 카테고리(대/중/소/세) 캐스케이드 선택 --- */
+.category-select-quad { grid-template-columns: repeat(4, minmax(0,1fr)); }
+.market-filter-row { grid-template-columns: 2.6fr repeat(2, minmax(110px,1fr)) auto auto; }
+@media (max-width: 1180px) {
+  .category-select-quad { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 900px) {
+  .market-filter-row { grid-template-columns: 1fr 1fr; }
+  .category-select-group,
+  .market-filter-row .shipping-tabs,
+  .market-filter-row .market-reset { grid-column: 1 / 3; }
+  .category-select-quad { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+.category-cascade-field { display: grid; gap: 6px; }
+.category-cascade-field label small { margin-left: 4px; color: #a7b1bd; font-size: 11px; font-weight: 700; }
+.category-cascade-row { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
+.category-cascade-row select { width: 100%; height: 42px; padding: 0 10px; color: #26364b; background: #fff; border: 1px solid #dce3ec; border-radius: 9px; font-size: 14px; outline: none; }
+.category-cascade-row select:disabled { color: #b7c0cc; background: #f5f7fa; }
+@media (max-width: 720px) {
+  .category-cascade-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}

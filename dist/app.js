@@ -41,19 +41,125 @@ const menuIcons = {
 
 const DEFAULT_DASHBOARD_LAYOUT = ["hero", "order-control", "quick-actions", "notices", "sales", "product-sales", "price-alerts", "recent-orders"];
 
-const naverCategoryGroups = [
-  { label: "패션의류", options: ["여성의류", "남성의류", "베이비의류", "언더웨어·잠옷"] },
-  { label: "패션잡화", options: ["여성가방", "남성가방", "신발", "패션소품"] },
-  { label: "화장품/미용", options: ["스킨케어", "메이크업", "헤어케어", "바디케어"] },
-  { label: "디지털/가전", options: ["휴대폰", "노트북", "생활가전", "카메라"] },
-  { label: "가구/인테리어", options: ["침실가구", "거실가구", "홈데코", "조명"] },
-  { label: "출산/육아", options: ["기저귀·물티슈", "분유·이유식", "유아동의류", "유모차·카시트"] },
-  { label: "식품", options: ["농산물", "수산물", "축산물", "가공식품", "건강식품", "생수·음료", "커피·원두·차", "간편조리식품"] },
-  { label: "스포츠/레저", options: ["골프", "캠핑·등산", "헬스·요가", "자전거"] },
-  { label: "생활/건강", options: ["생활용품", "건강용품", "반려동물용품", "문구·사무용품"] },
-  { label: "여가/생활편의", options: ["도서", "티켓·공연", "여행·항공권", "상품권"] },
-  { label: "면세점", options: ["향수·화장품", "주류", "패션잡화"] }
-];
+/* 네이버쇼핑/스마트스토어 기준 4단계 카테고리 체계: 대분류 > 중분류 > 소분류 > 세분류 */
+const naverCategoryTree = {
+  "식품": {
+    "농산물": {
+      "과일": ["사과", "감귤", "포도", "배", "딸기"],
+      "채소": ["배추", "무", "감자", "고구마"],
+      "버섯": ["표고버섯", "느타리버섯", "새송이버섯"],
+      "쌀·잡곡·견과": ["쌀", "잡곡", "견과류"]
+    },
+    "수산물": {
+      "어류": ["고등어", "갈치", "연어", "참치"],
+      "갑각류": ["꽃게", "새우", "랍스터"],
+      "건어물": ["멸치", "미역", "다시마"]
+    },
+    "축산물": {
+      "쇠고기": ["한우", "수입육"],
+      "돼지고기": ["삼겹살", "목살"],
+      "닭고기": ["삼계용", "구이용"]
+    },
+    "가공식품": {
+      "김치·반찬": ["포기김치", "깍두기", "밑반찬"],
+      "건조식품": ["건표고버섯", "건나물", "육포"],
+      "즉석·간편식": ["즉석밥", "국·탕", "냉동식품"]
+    },
+    "건강식품": {
+      "꿀·프로폴리스": ["마누카꿀", "아카시아꿀", "프로폴리스"],
+      "영양제": ["오메가3", "비타민", "홍삼", "유산균"],
+      "차·건강즙": ["전통차", "건강즙"]
+    },
+    "생수·음료": {
+      "생수": ["먹는샘물", "탄산수"],
+      "음료": ["주스", "탄산음료"]
+    },
+    "커피·원두·차": {
+      "원두·커피": ["원두", "인스턴트커피"],
+      "차": ["녹차", "홍차"]
+    },
+    "간편조리식품": {
+      "밀키트": ["국·찌개", "요리"],
+      "냉동안주": ["튀김", "만두"]
+    }
+  },
+  "패션의류": {
+    "여성의류": { "아우터": ["코트", "자켓", "패딩"], "상의": ["니트", "블라우스", "티셔츠"], "하의": ["청바지", "슬랙스", "스커트"] },
+    "남성의류": { "아우터": ["코트", "자켓", "패딩"], "상의": ["셔츠", "티셔츠"], "하의": ["청바지", "슬랙스"] },
+    "베이비의류": { "상의": ["바디수트", "우주복"], "하의": ["레깅스"] },
+    "언더웨어·잠옷": { "언더웨어": ["속옷세트"], "잠옷": ["파자마"] }
+  },
+  "패션잡화": {
+    "여성가방": { "숄더백": ["미니백", "크로스백"], "토트백": ["에코백"] },
+    "남성가방": { "백팩": ["노트북백팩"], "서류가방": ["브리프케이스"] },
+    "신발": { "스니커즈": ["캔버스화", "러닝화"], "구두": ["로퍼", "옥스포드"] },
+    "패션소품": { "벨트": ["가죽벨트"], "지갑": ["카드지갑", "장지갑"] }
+  },
+  "화장품/미용": {
+    "스킨케어": { "기초케어": ["토너", "에센스", "크림"], "마스크팩": ["시트팩"] },
+    "메이크업": { "베이스메이크업": ["파운데이션", "쿠션"], "포인트메이크업": ["립스틱", "아이섀도"] },
+    "헤어케어": { "샴푸·린스": ["탈모샴푸"], "헤어스타일링": ["왁스", "에센스"] },
+    "바디케어": { "바디워시": ["바디워시"], "바디로션": ["바디로션"] }
+  },
+  "디지털/가전": {
+    "PC": { "PC부품": ["CPU", "메인보드", "RAM", "그래픽카드", "SSD"], "PC액세서리": ["마우스", "키보드", "모니터암"], "게임기/타이틀": ["콘솔게임기", "게임타이틀"] },
+    "휴대폰": { "스마트폰": ["갤럭시", "아이폰"], "액세서리": ["케이스", "보호필름"] },
+    "노트북": { "노트북": ["울트라북", "게이밍노트북"], "액세서리": ["파우치", "독"] },
+    "생활가전": { "주방가전": ["에어프라이어", "전자레인지"], "계절가전": ["에어컨", "선풍기"] }
+  },
+  "가구/인테리어": {
+    "침실가구": { "침대": ["프레임", "매트리스"], "옷장": ["붙박이장", "드레스룸"] },
+    "거실가구": { "소파": ["패브릭소파", "가죽소파"], "테이블": ["거실테이블"] },
+    "홈데코": { "패브릭": ["커튼", "러그"], "액자·소품": ["액자", "화병"] },
+    "조명": { "실내조명": ["LED조명", "스탠드"], "무드등": ["무드등"] }
+  },
+  "출산/육아": {
+    "기저귀·물티슈": { "기저귀": ["팬티형", "밴드형"], "물티슈": ["휴대용", "리필용"] },
+    "분유·이유식": { "분유": ["단계별분유"], "이유식": ["초기이유식"] },
+    "유아동의류": { "상의": ["바디수트"], "하의": ["레깅스"] },
+    "유모차·카시트": { "유모차": ["절충형", "디럭스형"], "카시트": ["신생아용", "확장형"] }
+  },
+  "스포츠/레저": {
+    "골프": { "골프클럽": ["드라이버", "아이언"], "골프웨어": ["상의", "하의"] },
+    "캠핑·등산": { "캠핑용품": ["텐트", "침낭"], "등산용품": ["등산화", "배낭"] },
+    "헬스·요가": { "헬스용품": ["덤벨", "요가매트"], "요가웨어": ["레깅스"] },
+    "자전거": { "자전거": ["로드바이크", "MTB"], "액세서리": ["헬멧", "라이트"] }
+  },
+  "생활/건강": {
+    "생활용품": { "주방용품": ["밀폐용기", "냄비"], "세탁·청소": ["세제", "청소도구"] },
+    "건강용품": { "혈압·체온계": ["혈압계"], "마사지기": ["안마의자"] },
+    "반려동물용품": { "사료": ["강아지사료", "고양이사료"], "용품": ["장난감", "하네스"] },
+    "문구·사무용품": { "필기구": ["볼펜", "연필"], "사무용품": ["파일", "노트"] }
+  },
+  "여가/생활편의": {
+    "도서": { "소설": ["국내소설", "해외소설"], "자기계발": ["에세이"] },
+    "티켓·공연": { "공연": ["콘서트", "뮤지컬"], "전시": ["미술전시"] },
+    "여행·항공권": { "항공권": ["국내선", "국제선"], "숙박": ["호텔", "펜션"] },
+    "상품권": { "온라인상품권": ["문화상품권"], "모바일상품권": ["기프티콘"] }
+  },
+  "면세점": {
+    "향수·화장품": { "향수": ["여성향수", "남성향수"], "화장품": ["스킨케어세트"] },
+    "주류": { "위스키": ["싱글몰트"], "와인": ["레드와인"] },
+    "패션잡화": { "가방": ["명품가방"], "지갑": ["명품지갑"] }
+  }
+};
+function categoryLevelOptions(level, path) {
+  if (level === 1) return Object.keys(naverCategoryTree);
+  const major = naverCategoryTree[path[0]];
+  if (!major) return [];
+  if (level === 2) return Object.keys(major);
+  const mid = major[path[1]];
+  if (!mid) return [];
+  if (level === 3) return Object.keys(mid);
+  const sub = mid[path[2]];
+  return Array.isArray(sub) ? sub : [];
+}
+function categorySelectTag(name, level, path, extraAttrs = "") {
+  const options = categoryLevelOptions(level, path);
+  const current = path[level - 1] || "";
+  const placeholder = level === 1 ? "대분류 선택" : "선택";
+  return `<select name="${name}" data-category-level="${level}" ${options.length ? "" : "disabled"} ${extraAttrs}><option value="">${placeholder}</option>${options.map(option => `<option value="${escapeHtml(option)}" ${current === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>`;
+}
 
 const initialState = {
   schemaVersion: 22,
@@ -79,15 +185,15 @@ const initialState = {
     { id: "SA-1001", sellerLoginId: "brandlab", company: "브랜드랩 푸드", businessNo: "567-89-01234", category: "건강식품·브랜드 상품", website: "brandlab.example", introduction: "자체 기획 건강식품을 위탁셀러에게 공급하고 싶습니다.", businessFile: "브랜드랩_사업자등록증.pdf", status: "pending", appliedAt: "오늘 10:40", reviewedAt: "", rejectionReason: "", attempt: 1 }
   ],
   products: [
-    { id: "DF-1024", imageIndex: 0, emoji: "🍎", name: "경북 프리미엄 사과 3kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 21800, recommended: 29900, stock: 84, category: "농산물", status: "판매중", imported: true, origin: "경상북도", shippingType: "domestic", originCountry: "대한민국", deliveryDays: "1~2일", detail: "정품 선별 사과 · 센터배송 · 상세페이지 제공" },
-    { id: "DF-2088", imageIndex: 1, emoji: "🍯", name: "뉴질랜드 마누카 허니 UMF 15+", supplier: "산지팔도", supplierLoginId: "sup", supply: 34900, recommended: 49800, stock: 42, category: "건강식품", status: "판매중", imported: false, origin: "뉴질랜드", shippingType: "overseas", originCountry: "뉴질랜드", deliveryDays: "7~12일", customsRequired: true, detail: "뉴질랜드 현지 정식 수입 상품 · 안전 포장 · 개인통관부호 필요" },
-    { id: "DF-3142", imageIndex: 2, emoji: "🍄", name: "무농약 생표고버섯 1kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 12400, recommended: 18900, stock: 120, category: "농산물", status: "판매중", imported: false, origin: "충청남도", detail: "당일 선별 생표고 · 신선 포장 · 상세페이지 제공" },
-    { id: "DF-3201", imageIndex: 3, emoji: "🍊", name: "제주 하우스 감귤 3kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 16500, recommended: 23900, stock: 76, category: "농산물", status: "판매중", imported: false, origin: "제주특별자치도", detail: "고당도 하우스 감귤 · 산지직송 · 상세페이지 제공" },
-    { id: "DF-3240", imageIndex: 4, emoji: "🦀", name: "국내산 손질 꽃게 1kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 18900, recommended: 26900, stock: 38, category: "수산물", status: "판매중", imported: false, origin: "서해안", detail: "선별 손질 꽃게 · 아이스 포장 · 상세페이지 제공" },
-    { id: "DF-3268", imageIndex: 5, emoji: "🐟", name: "제주 은갈치 실속세트", supplier: "산지팔도", supplierLoginId: "sup", supply: 27800, recommended: 38900, stock: 55, category: "수산물", status: "판매중", imported: false, origin: "제주특별자치도", detail: "제주 은갈치 선물 구성 · 냉동배송 · 상세페이지 제공" },
-    { id: "DF-3304", imageIndex: 6, emoji: "🥬", name: "국산 3도씨 포기김치 5kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 19600, recommended: 28900, stock: 92, category: "가공식품", status: "판매중", imported: false, origin: "대한민국", detail: "국산 원재료 포기김치 · 냉장배송 · 상세페이지 제공" },
-    { id: "DF-3357", imageIndex: 7, emoji: "🍇", name: "호주산 씨없는 청포도 1.5kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 24500, recommended: 34900, stock: 64, category: "농산물", status: "판매중", imported: false, origin: "호주 빅토리아", shippingType: "overseas", originCountry: "호주", deliveryDays: "6~10일", customsRequired: true, detail: "호주 산지 선별 청포도 · 해외직구 냉장 포장 · 개인통관부호 필요" },
-    { id: "DF-3420", imageIndex: 2, emoji: "🍄", name: "중국 운남성 건표고 슬라이스 500g", supplier: "산지팔도", supplierLoginId: "sup", supply: 9900, recommended: 15900, stock: 106, category: "가공식품", status: "판매중", imported: false, origin: "중국 운남성", shippingType: "overseas", originCountry: "중국", deliveryDays: "7~14일", customsRequired: true, detail: "운남성 건표고 선별 상품 · 해외직구 합배송 가능 · 개인통관부호 필요" }
+    { id: "DF-1024", imageIndex: 0, emoji: "🍎", name: "경북 프리미엄 사과 3kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 21800, recommended: 29900, stock: 84, categoryGroup: "식품", category: "농산물", categorySub: "과일", categoryDetail: "사과", status: "판매중", imported: true, origin: "경상북도", shippingType: "domestic", originCountry: "대한민국", deliveryDays: "1~2일", detail: "정품 선별 사과 · 센터배송 · 상세페이지 제공" },
+    { id: "DF-2088", imageIndex: 1, emoji: "🍯", name: "뉴질랜드 마누카 허니 UMF 15+", supplier: "산지팔도", supplierLoginId: "sup", supply: 34900, recommended: 49800, stock: 42, categoryGroup: "식품", category: "건강식품", categorySub: "꿀·프로폴리스", categoryDetail: "마누카꿀", status: "판매중", imported: false, origin: "뉴질랜드", shippingType: "overseas", originCountry: "뉴질랜드", deliveryDays: "7~12일", customsRequired: true, detail: "뉴질랜드 현지 정식 수입 상품 · 안전 포장 · 개인통관부호 필요" },
+    { id: "DF-3142", imageIndex: 2, emoji: "🍄", name: "무농약 생표고버섯 1kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 12400, recommended: 18900, stock: 120, categoryGroup: "식품", category: "농산물", categorySub: "버섯", categoryDetail: "표고버섯", status: "판매중", imported: false, origin: "충청남도", detail: "당일 선별 생표고 · 신선 포장 · 상세페이지 제공" },
+    { id: "DF-3201", imageIndex: 3, emoji: "🍊", name: "제주 하우스 감귤 3kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 16500, recommended: 23900, stock: 76, categoryGroup: "식품", category: "농산물", categorySub: "과일", categoryDetail: "감귤", status: "판매중", imported: false, origin: "제주특별자치도", detail: "고당도 하우스 감귤 · 산지직송 · 상세페이지 제공" },
+    { id: "DF-3240", imageIndex: 4, emoji: "🦀", name: "국내산 손질 꽃게 1kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 18900, recommended: 26900, stock: 38, categoryGroup: "식품", category: "수산물", categorySub: "갑각류", categoryDetail: "꽃게", status: "판매중", imported: false, origin: "서해안", detail: "선별 손질 꽃게 · 아이스 포장 · 상세페이지 제공" },
+    { id: "DF-3268", imageIndex: 5, emoji: "🐟", name: "제주 은갈치 실속세트", supplier: "산지팔도", supplierLoginId: "sup", supply: 27800, recommended: 38900, stock: 55, categoryGroup: "식품", category: "수산물", categorySub: "어류", categoryDetail: "갈치", status: "판매중", imported: false, origin: "제주특별자치도", detail: "제주 은갈치 선물 구성 · 냉동배송 · 상세페이지 제공" },
+    { id: "DF-3304", imageIndex: 6, emoji: "🥬", name: "국산 3도씨 포기김치 5kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 19600, recommended: 28900, stock: 92, categoryGroup: "식품", category: "가공식품", categorySub: "김치·반찬", categoryDetail: "포기김치", status: "판매중", imported: false, origin: "대한민국", detail: "국산 원재료 포기김치 · 냉장배송 · 상세페이지 제공" },
+    { id: "DF-3357", imageIndex: 7, emoji: "🍇", name: "호주산 씨없는 청포도 1.5kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 24500, recommended: 34900, stock: 64, categoryGroup: "식품", category: "농산물", categorySub: "과일", categoryDetail: "포도", status: "판매중", imported: false, origin: "호주 빅토리아", shippingType: "overseas", originCountry: "호주", deliveryDays: "6~10일", customsRequired: true, detail: "호주 산지 선별 청포도 · 해외직구 냉장 포장 · 개인통관부호 필요" },
+    { id: "DF-3420", imageIndex: 2, emoji: "🍄", name: "중국 운남성 건표고 슬라이스 500g", supplier: "산지팔도", supplierLoginId: "sup", supply: 9900, recommended: 15900, stock: 106, categoryGroup: "식품", category: "가공식품", categorySub: "건조식품", categoryDetail: "건표고버섯", status: "판매중", imported: false, origin: "중국 운남성", shippingType: "overseas", originCountry: "중국", deliveryDays: "7~14일", customsRequired: true, detail: "운남성 건표고 선별 상품 · 해외직구 합배송 가능 · 개인통관부호 필요" }
   ],
   sellerProducts: [
     { id: "SP-1001", sellerLoginId: "seller", productId: "DF-1024", salePrice: 29900, approvalStatus: "승인완료", channel: "네이버 스마트스토어", channels: ["smartstore", "coupang"], channelStatuses: { smartstore: "판매중", coupang: "판매중", kakao: "판매중지/미노출", cafe24: "미연동" }, channelDetails: { smartstore: { title: "산지직송 경북 프리미엄 사과 3kg", salePrice: 29900, category: "식품 > 농산물 > 사과", reviews: 128 }, coupang: { title: "고당도 경북 사과 실속형 3kg", salePrice: 30900, category: "식품 > 과일 > 사과", reviews: 42 }, kakao: { title: "선물용 경북 프리미엄 사과 3kg", salePrice: 31900, category: "푸드 > 신선식품 > 과일", reviews: 8 }, cafe24: { title: "경북 프리미엄 사과 3kg", salePrice: 29900, category: "농산물 > 과일", reviews: 0 } }, status: "판매중", copiedAt: "2026.09.07", imageIndex: 0, detailSnapshot: "정품 선별 사과 · 센터배송 · 상세페이지 제공", contentCopied: true },
@@ -185,6 +291,8 @@ let signupReturnTarget = "seller";
 let signupStep = 1;
 let sellerCategory = "전체보기";
 let sellerCategoryGroup = "식품";
+let sellerCategorySub = "전체보기";
+let sellerCategoryDetail = "전체보기";
 let sellerShippingFilter = "all";
 let sellerCountry = "전체 국가";
 let sellerBrand = "전체 브랜드";
@@ -711,6 +819,8 @@ function showApp(accountId) {
   activeMenuIndex = 0;
   sellerCategory = "전체보기";
   sellerCategoryGroup = "식품";
+  sellerCategorySub = "전체보기";
+  sellerCategoryDetail = "전체보기";
   sellerShippingFilter = "all";
   sellerCountry = "전체 국가";
   sellerBrand = "전체 브랜드";
@@ -838,7 +948,10 @@ function sellerCatalogProducts() {
     const matchesShipping = sellerShippingFilter === "all" || (sellerShippingFilter === "overseas" ? product.shippingType === "overseas" : product.shippingType !== "overseas");
     const matchesCountry = sellerCountry === "전체 국가" || product.originCountry === sellerCountry;
     const matchesBrand = sellerBrand === "전체 브랜드" || product.supplier === sellerBrand;
-    return product.status === "판매중" && product.soldOut !== "품절" && product.exposure !== "미노출" && product.visibility !== "비노출" && connectedSuppliers.has(product.supplierLoginId) && (sellerCategory === "전체보기" || product.category === sellerCategory) && matchesText && matchesShipping && matchesCountry && matchesBrand;
+    const matchesCategory = sellerCategory === "전체보기" || product.category === sellerCategory;
+    const matchesSub = sellerCategorySub === "전체보기" || product.categorySub === sellerCategorySub;
+    const matchesDetail = sellerCategoryDetail === "전체보기" || product.categoryDetail === sellerCategoryDetail;
+    return product.status === "판매중" && product.soldOut !== "품절" && product.exposure !== "미노출" && product.visibility !== "비노출" && connectedSuppliers.has(product.supplierLoginId) && matchesCategory && matchesSub && matchesDetail && matchesText && matchesShipping && matchesCountry && matchesBrand;
   });
 }
 
@@ -851,11 +964,13 @@ function marketToolbar() {
   const categories = ["전체보기", "농산물", "수산물", "가공식품", "건강식품"];
   const countries = ["전체 국가", ...new Set(state.products.map(product => product.originCountry || "대한민국"))];
   const brands = ["전체 브랜드", ...new Set(state.products.map(product => product.supplier))];
-  const activeGroup = naverCategoryGroups.find(group => group.label === sellerCategoryGroup) || naverCategoryGroups[0];
+  const path = [sellerCategoryGroup, sellerCategory === "전체보기" ? "" : sellerCategory, sellerCategorySub === "전체보기" ? "" : sellerCategorySub, sellerCategoryDetail === "전체보기" ? "" : sellerCategoryDetail];
   return `<div class="market-toolbar market-toolbar-shop"><label class="catalog-search"><span>⌕</span><input id="sellerCatalogSearch" value="${escapeHtml(sellerProductSearch)}" placeholder="상품명·브랜드·원산지 검색"></label><div class="market-filter-row">
-    <div class="category-select-group"><span class="category-select-label">카테고리 <small>네이버쇼핑 기준</small></span><div class="category-select-pair">
-      <select id="marketCategoryGroupSelect">${naverCategoryGroups.map(group => `<option value="${escapeHtml(group.label)}" ${sellerCategoryGroup === group.label ? "selected" : ""}>${escapeHtml(group.label)}</option>`).join("")}</select>
-      <select id="marketCategorySelect"><option value="전체보기" ${sellerCategory === "전체보기" ? "selected" : ""}>전체보기</option>${activeGroup.options.map(option => `<option ${sellerCategory === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>
+    <div class="category-select-group"><span class="category-select-label">카테고리 <small>네이버쇼핑 기준 4단계</small></span><div class="category-select-pair category-select-quad">
+      <select id="marketCategoryGroupSelect">${categoryLevelOptions(1, path).map(option => `<option value="${escapeHtml(option)}" ${sellerCategoryGroup === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>
+      <select id="marketCategoryMidSelect"><option value="전체보기" ${sellerCategory === "전체보기" ? "selected" : ""}>전체보기</option>${categoryLevelOptions(2, path).map(option => `<option ${sellerCategory === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>
+      <select id="marketCategorySubSelect"><option value="전체보기" ${sellerCategorySub === "전체보기" ? "selected" : ""}>전체보기</option>${categoryLevelOptions(3, path).map(option => `<option ${sellerCategorySub === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>
+      <select id="marketCategoryDetailSelect"><option value="전체보기" ${sellerCategoryDetail === "전체보기" ? "selected" : ""}>전체보기</option>${categoryLevelOptions(4, path).map(option => `<option ${sellerCategoryDetail === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>
     </div></div>
     <label><span>소싱 국가</span><select id="marketCountrySelect">${countries.map(country => `<option ${sellerCountry === country ? "selected" : ""}>${escapeHtml(country)}</option>`).join("")}</select></label><label><span>브랜드</span><select id="marketBrandSelect">${brands.map(brand => `<option ${sellerBrand === brand ? "selected" : ""}>${escapeHtml(brand)}</option>`).join("")}</select></label><div class="shipping-tabs"><button class="${sellerShippingFilter === "all" ? "active" : ""}" data-action="filter-shipping" data-filter="all">전체</button><button class="${sellerShippingFilter === "domestic" ? "active" : ""}" data-action="filter-shipping" data-filter="domestic">국내배송</button><button class="${sellerShippingFilter === "overseas" ? "active" : ""}" data-action="filter-shipping" data-filter="overseas">해외소싱</button></div><button class="market-reset" data-action="reset-market-filter">초기화</button></div><div class="category-pills">${categories.slice(1).map(category => `<button class="${sellerCategory === category ? "active" : ""}" data-action="filter-products" data-category="${category}">${category}</button>`).join("")}<div class="market-view-toggle" role="group" aria-label="상품 보기 방식"><button type="button" class="${marketViewMode === "grid" ? "active" : ""}" data-action="set-market-view" data-view="grid" aria-label="바둑판 보기"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></button><button type="button" class="${marketViewMode === "list" ? "active" : ""}" data-action="set-market-view" data-view="list" aria-label="목록 보기"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg></button></div></div><span>검색 결과 <b>${sellerCatalogProducts().length}</b>개</span></div>`;
 }
@@ -2327,7 +2442,7 @@ function productEditorModal(product = null) {
   openModal(`<div class="product-editor-head balju-product-head"><div><span>DOOGO · SINGLE PRODUCT</span><h2>${isEdit ? "상품 정보 수정" : "상품 등록"}</h2><p>${isEdit ? `${product.id} · 모든 수정 내용은 마스터 변경 이력에 저장됩니다.` : "발주오라 단일 상품등록 구조를 기준으로 매입·가격·배송·노출 정보를 한 번에 입력합니다."}</p></div><div class="editor-progress"><b>1 기본정보</b><b>2 매입·가격</b><b>3 이미지·안내</b><b>4 배송·노출</b></div></div>
     <form id="${isEdit ? "editProductForm" : "productForm"}" class="product-editor-form balju-product-form" ${isEdit ? `data-id="${product.id}"` : ""}>
       <section class="editor-section"><div class="editor-section-title"><span>01</span><div><h3>상품 기본정보</h3><p>상품 상태와 발주 기준을 설정합니다.</p></div></div><div class="editor-grid cols-4">
-        <div class="form-field span-2"><label>카테고리 *</label><select name="category"><option ${selected("category","농산물","농산물")}>농산물</option><option ${selected("category","수산물")}>수산물</option><option ${selected("category","가공식품")}>가공식품</option><option ${selected("category","건강식품")}>건강식품</option></select></div>
+        <div class="form-field full category-cascade-field"><label>카테고리 * <small>네이버쇼핑 기준 대분류·중분류·소분류·세분류</small></label><div class="category-cascade-row">${(() => { const path = [product?.categoryGroup || "식품", product?.category || "", product?.categorySub || "", product?.categoryDetail || ""]; return `${categorySelectTag("categoryGroup", 1, path, "required")}${categorySelectTag("category", 2, path, "required")}${categorySelectTag("categorySub", 3, path, "required")}${categorySelectTag("categoryDetail", 4, path, "required")}`; })()}</div></div>
         <div class="form-field"><label>판매 상태 *</label><select name="status"><option ${selected("status","판매중","판매중")}>판매중</option><option ${selected("status","판매중지")}>판매중지</option></select></div>
         <div class="form-field"><label>과세 여부 *</label><select name="tax"><option ${selected("tax","과세","과세")}>과세</option><option ${selected("tax","비과세")}>비과세</option></select></div>
         <div class="form-field span-2"><label>상품코드</label><input value="${value("id", "등록 시 자동 생성")}" disabled></div>
@@ -2737,12 +2852,12 @@ document.addEventListener("click", event => {
     state.partnerNotes[id] = document.getElementById("partnerNoteInput")?.value.trim() || "";
     saveState(); showToast("거래처 메모를 저장했습니다."); return;
   }
-  if (action === "filter-products") { sellerCategory = target.dataset.category || "전체보기"; render(); updateAccountUI(); return; }
+  if (action === "filter-products") { sellerCategoryGroup = "식품"; sellerCategory = target.dataset.category || "전체보기"; sellerCategorySub = "전체보기"; sellerCategoryDetail = "전체보기"; render(); updateAccountUI(); return; }
   if (action === "filter-shipping") { sellerShippingFilter = target.dataset.filter || "all"; render(); updateAccountUI(); return; }
   if (action === "market-preset") { sellerCategory = target.dataset.category || "전체보기"; sellerShippingFilter = target.dataset.filter || "all"; sellerCountry = target.dataset.country || "전체 국가"; sellerBrand = target.dataset.brand || "전체 브랜드"; render(); updateAccountUI(); requestAnimationFrame(() => document.getElementById("marketProductGrid")?.scrollIntoView({ behavior:"smooth", block:"start" })); return; }
   if (action === "open-brand-directory") { brandDirectoryModal(); return; }
   if (action === "select-brand") { closeModal(); sellerBrand = target.dataset.brand || "전체 브랜드"; sellerCategory = "전체보기"; render(); updateAccountUI(); requestAnimationFrame(() => document.getElementById("marketProductGrid")?.scrollIntoView({ behavior:"smooth", block:"start" })); return; }
-  if (action === "reset-market-filter") { sellerCategory = "전체보기"; sellerCategoryGroup = "식품"; sellerShippingFilter = "all"; sellerCountry = "전체 국가"; sellerBrand = "전체 브랜드"; sellerProductSearch = ""; render(); updateAccountUI(); return; }
+  if (action === "reset-market-filter") { sellerCategory = "전체보기"; sellerCategoryGroup = "식품"; sellerCategorySub = "전체보기"; sellerCategoryDetail = "전체보기"; sellerShippingFilter = "all"; sellerCountry = "전체 국가"; sellerBrand = "전체 브랜드"; sellerProductSearch = ""; render(); updateAccountUI(); return; }
   if (action === "set-market-view") { marketViewMode = target.dataset.view || "grid"; render(); updateAccountUI(); return; }
   if (action === "reset-onsale-filter") { onSaleSearch = ""; onSaleDateFrom = ""; onSaleDateTo = ""; render(); updateAccountUI(); return; }
   if (action === "market-scroll") { document.getElementById("marketProductGrid")?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
@@ -3155,8 +3270,26 @@ document.addEventListener("change", event => {
     supplierSettlementMonth = event.target.value;
     render(); updateAccountUI();
   }
-  if (event.target.id === "marketCategoryGroupSelect") { sellerCategoryGroup = event.target.value; sellerCategory = "전체보기"; render(); updateAccountUI(); }
-  if (event.target.id === "marketCategorySelect") { sellerCategory = event.target.value; render(); updateAccountUI(); }
+  if (event.target.id === "marketCategoryGroupSelect") { sellerCategoryGroup = event.target.value; sellerCategory = "전체보기"; sellerCategorySub = "전체보기"; sellerCategoryDetail = "전체보기"; render(); updateAccountUI(); }
+  if (event.target.id === "marketCategoryMidSelect") { sellerCategory = event.target.value; sellerCategorySub = "전체보기"; sellerCategoryDetail = "전체보기"; render(); updateAccountUI(); }
+  if (event.target.id === "marketCategorySubSelect") { sellerCategorySub = event.target.value; sellerCategoryDetail = "전체보기"; render(); updateAccountUI(); }
+  if (event.target.id === "marketCategoryDetailSelect") { sellerCategoryDetail = event.target.value; render(); updateAccountUI(); }
+  if (event.target.dataset && event.target.dataset.categoryLevel) {
+    const level = Number(event.target.dataset.categoryLevel);
+    const form = event.target.closest("form");
+    if (form) {
+      const getSelect = l => form.querySelector(`[data-category-level="${l}"]`);
+      const path = [1, 2, 3, 4].map(l => getSelect(l)?.value || "");
+      for (let l = level + 1; l <= 4; l++) {
+        const select = getSelect(l);
+        if (!select) continue;
+        const options = categoryLevelOptions(l, path);
+        select.innerHTML = `<option value="">${l === 1 ? "대분류 선택" : "선택"}</option>${options.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join("")}`;
+        select.disabled = !options.length;
+        path[l - 1] = "";
+      }
+    }
+  }
   if (event.target.id === "onSaleSearchInput") { onSaleSearch = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "onSaleDateFromInput") { onSaleDateFrom = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "onSaleDateToInput") { onSaleDateTo = event.target.value; render(); updateAccountUI(); }
@@ -3564,7 +3697,7 @@ document.addEventListener("submit", event => {
   }
   if (form.id === "productForm") {
     const id = `DF-${4000 + state.products.length * 17}`;
-    state.products.unshift({ id, emoji: "📦", imageIndex: Number(data.imageIndex), name: data.name, supplier: workspaceCompany("supplier"), supplierLoginId: currentAccount.loginId, supply: Number(data.supply), recommended: Number(data.recommended), retailPrice: Number(data.retailPrice || 0), purchasePrice: Number(data.purchasePrice), purchaseShipping: data.purchaseShipping, surcharge: Number(data.surcharge || 0), soldOut: data.soldOut, exposure: data.exposure, stock: Number(data.stock), category: data.category, status: data.status, tax: data.tax, cutoff: data.cutoff, orderName: data.orderName || data.name, orderUnit: Number(data.orderUnit || 1), shippingPolicy: data.shippingPolicy, carrier: data.carrier, warehouse: data.warehouse, weight: Number(data.weight || 0), unit: data.unit, managementCode: data.managementCode || id, barcode: data.barcode || "", origin: data.origin, originCountry: data.originCountry, deliveryDays: data.deliveryDays, shippingType: data.shippingType, customsRequired: data.shippingType === "overseas", manufactureDate: data.manufactureDate, shelfLife: data.shelfLife, summary: data.summary || "", detail: data.detail, visibility: data.visibility, imported: false });
+    state.products.unshift({ id, emoji: "📦", imageIndex: Number(data.imageIndex), name: data.name, supplier: workspaceCompany("supplier"), supplierLoginId: currentAccount.loginId, supply: Number(data.supply), recommended: Number(data.recommended), retailPrice: Number(data.retailPrice || 0), purchasePrice: Number(data.purchasePrice), purchaseShipping: data.purchaseShipping, surcharge: Number(data.surcharge || 0), soldOut: data.soldOut, exposure: data.exposure, stock: Number(data.stock), categoryGroup: data.categoryGroup, category: data.category, categorySub: data.categorySub, categoryDetail: data.categoryDetail, status: data.status, tax: data.tax, cutoff: data.cutoff, orderName: data.orderName || data.name, orderUnit: Number(data.orderUnit || 1), shippingPolicy: data.shippingPolicy, carrier: data.carrier, warehouse: data.warehouse, weight: Number(data.weight || 0), unit: data.unit, managementCode: data.managementCode || id, barcode: data.barcode || "", origin: data.origin, originCountry: data.originCountry, deliveryDays: data.deliveryDays, shippingType: data.shippingType, customsRequired: data.shippingType === "overseas", manufactureDate: data.manufactureDate, shelfLife: data.shelfLife, summary: data.summary || "", detail: data.detail, visibility: data.visibility, imported: false });
     audit("공급 상품 등록", `${id} · ${data.name} · AI 썸네일·상세페이지 포함 · 연결 셀러 마켓에 공개되었습니다.`, "done", "product");
     saveState(); closeModal(); render(); showToast("상품이 등록되어 셀러 마켓에 반영됐습니다.");
   }
@@ -3572,7 +3705,7 @@ document.addEventListener("submit", event => {
     const product = productOf(form.dataset.id);
     const before = `${product.name} / ${product.category} / ${money(product.supply)} / ${money(product.recommended)} / ${product.status}`;
     const oldSupply = product.supply;
-    Object.assign(product, { imageIndex: Number(data.imageIndex), name: data.name, supply: Number(data.supply), recommended: Number(data.recommended), retailPrice: Number(data.retailPrice || 0), purchasePrice: Number(data.purchasePrice), purchaseShipping: data.purchaseShipping, surcharge: Number(data.surcharge || 0), soldOut: data.soldOut, exposure: data.exposure, stock: Number(data.stock), category: data.category, status: data.status, tax: data.tax, cutoff: data.cutoff, orderName: data.orderName || data.name, orderUnit: Number(data.orderUnit || 1), shippingPolicy: data.shippingPolicy, carrier: data.carrier, warehouse: data.warehouse, weight: Number(data.weight || 0), unit: data.unit, managementCode: data.managementCode || product.id, barcode: data.barcode || "", origin: data.origin, originCountry: data.originCountry, deliveryDays: data.deliveryDays, shippingType: data.shippingType, customsRequired: data.shippingType === "overseas", manufactureDate: data.manufactureDate, shelfLife: data.shelfLife, summary: data.summary || "", detail: data.detail, visibility: data.visibility });
+    Object.assign(product, { imageIndex: Number(data.imageIndex), name: data.name, supply: Number(data.supply), recommended: Number(data.recommended), retailPrice: Number(data.retailPrice || 0), purchasePrice: Number(data.purchasePrice), purchaseShipping: data.purchaseShipping, surcharge: Number(data.surcharge || 0), soldOut: data.soldOut, exposure: data.exposure, stock: Number(data.stock), categoryGroup: data.categoryGroup, category: data.category, categorySub: data.categorySub, categoryDetail: data.categoryDetail, status: data.status, tax: data.tax, cutoff: data.cutoff, orderName: data.orderName || data.name, orderUnit: Number(data.orderUnit || 1), shippingPolicy: data.shippingPolicy, carrier: data.carrier, warehouse: data.warehouse, weight: Number(data.weight || 0), unit: data.unit, managementCode: data.managementCode || product.id, barcode: data.barcode || "", origin: data.origin, originCountry: data.originCountry, deliveryDays: data.deliveryDays, shippingType: data.shippingType, customsRequired: data.shippingType === "overseas", manufactureDate: data.manufactureDate, shelfLife: data.shelfLife, summary: data.summary || "", detail: data.detail, visibility: data.visibility });
     if (oldSupply !== product.supply) {
       const recipients = [...new Set(state.sellerProducts.filter(item => item.productId === product.id).map(item => item.sellerLoginId))];
       recipients.forEach((recipient,index)=>state.priceAlerts.unshift({ id:`PA-${Date.now()}-${index}`, productId:product.id, recipients:[recipient], oldPrice:oldSupply, newPrice:product.supply, status:"확인필요", createdAt:"방금 전" }));
