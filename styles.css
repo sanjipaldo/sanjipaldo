@@ -4560,3 +4560,80 @@ h4 { font-weight: 600; letter-spacing: -.01em; }
 .order-channel-alert b { font-size: 14px; }
 .order-channel-alert span { font-size: 13px; line-height: 1.55; }
 .waiting-text.waiting-alert { color: #c0362c; font-weight: 700; }
+
+/* ============================================================
+   v28 — 사이드바 상단 로고 밴드(블랙) + 로고 확대
+   ============================================================ */
+.sidebar-top-band { margin: -22px -14px 16px; padding: 20px 18px 16px; background: #0b0e14; border-radius: 0 0 18px 18px; }
+.sidebar-top-band .sidebar-brand-row { margin-bottom: 10px; }
+.sidebar-top-band .nav-label { margin: 0; color: #aab4c4 !important; }
+.sidebar-top-band .mobile-sidebar-close { color: #e7ebf1; background: rgba(255,255,255,.1); }
+.sidebar-market-brand > img { width: 207px; height: 60px; }
+@media (max-width: 720px) {
+  .sidebar-top-band { margin: -17px -15px 14px; padding: 16px 16px 14px; }
+  .sidebar-market-brand > img { width: 192px; height: 57px; }
+}
+
+/* ============================================================
+   v29 — 상품 판매중 페이지 레이아웃 정리 + 페이지네이션 +
+         공급사 매핑 정보 + 채널 동기화/마진 강조 +
+         가격변경알림 미판매 채널 비활성화
+   ============================================================ */
+
+/* 검색/등록일 필터 바: flex-wrap 대신 고정 비율로 한 줄에 정렬,
+   좁은 화면에서만 단계적으로 줄바꿈 */
+.onsale-filter-bar { margin-bottom: 16px; display: flex; flex-wrap: nowrap; align-items: flex-end; gap: 10px; }
+.onsale-filter-bar .catalog-search { flex: 1 1 auto; width: auto; min-width: 200px; max-width: none; }
+.onsale-filter-bar .catalog-search span { flex: 0 0 auto; font-size: 15px; line-height: 1; }
+.onsale-date-field { flex: 0 0 148px; }
+.onsale-date-field input { width: 100%; }
+.onsale-page-size { display: flex; flex: 0 0 auto; flex-direction: column; gap: 4px; }
+.onsale-page-size span { color: #788697; font-size: 13px; font-weight: 600; }
+.onsale-page-size select { height: 38px; padding: 0 10px; color: #26364b; background: #fff; border: 1px solid #dce3ec; border-radius: 9px; font-size: 14px; }
+@media (max-width: 1100px) {
+  .onsale-filter-bar { flex-wrap: wrap; }
+  .onsale-filter-bar .catalog-search { flex: 1 1 100%; }
+}
+@media (max-width: 720px) {
+  .onsale-filter-bar { flex-direction: column; align-items: stretch; }
+  .onsale-filter-bar .catalog-search { width: 100%; flex: 0 0 auto; }
+  .onsale-date-field { flex: 0 0 auto; width: 100%; }
+  .onsale-date-field input, .onsale-page-size, .onsale-page-size select { width: 100%; }
+  .onsale-date-sep { display: none; }
+}
+
+/* 페이지네이션 */
+.onsale-pagination { margin-top: 16px; padding-top: 14px; display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap; border-top: 1px solid #edf1f5; }
+.onsale-pagination button { min-width: 34px; height: 34px; padding: 0 8px; color: #5f6d7e; background: transparent; border: 1px solid transparent; border-radius: 9px; font-size: 13px; font-weight: 700; }
+.onsale-pagination button:hover:not(:disabled) { background: #f1f5f9; }
+.onsale-pagination button.active { color: #fff; background: #3182f6; }
+.onsale-pagination button:disabled { color: #c7cfd8; cursor: default; }
+
+/* 순번 + 공급사 매핑 컬럼 추가 */
+.seller-product-parent { grid-template-columns: 22px 24px 58px minmax(180px,1fr) 130px 140px 145px; }
+.seller-product-index { color: #9aa5b1; font-size: 13px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+.seller-product-supplier { min-width: 0; display: grid; gap: 2px; }
+.seller-product-supplier small { color: #8995a3; font-size: 12px; }
+.seller-product-supplier b { overflow: hidden; color: #26364b; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.seller-product-supplier em { color: #8b97a5; font-size: 12px; font-style: normal; }
+@media (max-width: 1180px) {
+  .seller-product-parent { grid-template-columns: 22px 24px 58px minmax(180px,1fr) 125px; }
+  .seller-product-supplier { display: none; }
+}
+@media (max-width: 720px) {
+  .seller-product-parent { grid-template-columns: 22px 50px minmax(0,1fr); }
+  .seller-product-index { display: none; }
+}
+
+/* 채널 펼침: 전체상품 동기화 버튼 + 마진율/소비자가 라벨 강조 */
+.seller-product-actions [data-action="sync-all-channels"] { margin-right: auto; }
+.channel-price-stack small, .channel-review small { color: #191f28; }
+.channel-review b { font-size: 28px; }
+@media (max-width: 720px) {
+  .channel-review b { font-size: 22px; }
+}
+
+/* 가격변경알림: 판매중이 아닌 채널 행 비활성화 */
+.channel-price-row.channel-price-disabled { background: #f7f9fb; opacity: .6; }
+.channel-price-row.channel-price-disabled input:not([type="checkbox"]) { color: #9aa5b1; background: #eef1f5; cursor: not-allowed; }
+.channel-price-row.channel-price-disabled input[type="checkbox"] { cursor: not-allowed; }

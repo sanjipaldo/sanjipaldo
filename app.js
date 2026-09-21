@@ -340,6 +340,8 @@ let pickStatusFilter = "all";
 let onSaleSearch = "";
 let onSaleDateFrom = "";
 let onSaleDateTo = "";
+let onSalePageSize = 10;
+let onSalePage = 1;
 let noticeModalIndex = -1;
 let sellerOrderSearch = "";
 let sellerOrderStage = "all";
@@ -1374,6 +1376,11 @@ function sellerApprovedProductsTemplate() {
     }).join("")}</div>` : `<div class="empty">승인완료된 상품이 없습니다. PICK 상품에서 공급사 승인이 완료되면 여기에 표시됩니다.</div>`}
   </div>`;
 }
+function onSalePagination(totalPages) {
+  if (totalPages <= 1) return "";
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  return `<div class="onsale-pagination"><button type="button" class="text-button" data-action="onsale-page" data-page="${Math.max(1, onSalePage - 1)}" ${onSalePage === 1 ? "disabled" : ""}>‹ 이전</button>${pages.map(page => `<button type="button" class="${page === onSalePage ? "active" : ""}" data-action="onsale-page" data-page="${page}">${page}</button>`).join("")}<button type="button" class="text-button" data-action="onsale-page" data-page="${Math.min(totalPages, onSalePage + 1)}" ${onSalePage === totalPages ? "disabled" : ""}>다음 ›</button></div>`;
+}
 function sellerOnSaleProductsTemplate() {
   const channels = sellerChannels();
   const liveItems = currentSellerProducts().filter(item => item.approvalStatus !== "승인대기" && channels.some(channel => sellerProductChannelStatus(item, channel) === "판매중"));
@@ -1387,6 +1394,10 @@ function sellerOnSaleProductsTemplate() {
     const matchesTo = !onSaleDateTo || (itemDate && itemDate <= onSaleDateTo);
     return matchesQuery && matchesFrom && matchesTo;
   });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / onSalePageSize));
+  onSalePage = Math.min(onSalePage, totalPages);
+  const pageStart = (onSalePage - 1) * onSalePageSize;
+  const paged = filtered.slice(pageStart, pageStart + onSalePageSize);
   return `${sectionHero("상품 판매중", "실제로 채널에 배포되어 판매중인 상품과 마진을 확인합니다.")}<div class="panel">
     <div class="panel-head"><div><h3>판매중 상품 목록</h3><p>검색 또는 등록일 범위로 상품을 좁혀볼 수 있습니다.</p></div><span class="chip">${filtered.length}개</span></div>
     <div class="onsale-filter-bar">
@@ -1394,9 +1405,10 @@ function sellerOnSaleProductsTemplate() {
       <label class="onsale-date-field"><span>등록일</span><input type="date" id="onSaleDateFromInput" value="${escapeHtml(onSaleDateFrom)}"></label>
       <span class="onsale-date-sep">~</span>
       <label class="onsale-date-field"><span>&nbsp;</span><input type="date" id="onSaleDateToInput" value="${escapeHtml(onSaleDateTo)}"></label>
+      <label class="onsale-page-size"><span>보기</span><select id="onSalePageSizeSelect">${[10, 20, 30].map(size => `<option value="${size}" ${onSalePageSize === size ? "selected" : ""}>${size}개</option>`).join("")}</select></label>
       <button type="button" class="secondary-button" data-action="reset-onsale-filter">초기화</button>
     </div>
-    ${filtered.length ? `<div class="seller-product-tree">${filtered.map(item => {
+    ${paged.length ? `<div class="seller-product-tree">${paged.map((item, index) => {
       const product = productOf(item.productId);
       const expanded = expandedSellerProductId === item.id;
       const liveChannels = channels.filter(channel => sellerProductChannelStatus(item, channel) === "판매중");
@@ -1405,18 +1417,21 @@ function sellerOnSaleProductsTemplate() {
       const fullyLive = liveChannels.length === channels.length;
       return `<article class="seller-product-node ${expanded ? "expanded" : ""}">
         <button class="seller-product-parent" type="button" data-action="toggle-product-channels" data-id="${item.id}" aria-expanded="${expanded}">
-          <span class="tree-chevron">${expanded ? "⌄" : "›"}</span>${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
-          <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>등록일 ${escapeHtml(item.copiedAt || "-")}</em></span>
+          <span class="tree-chevron">${expanded ? "⌄" : "›"}</span>
+          <span class="seller-product-index">${pageStart + index + 1}</span>
+          ${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
+          <span class="seller-product-main"><small>${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>등록일 ${escapeHtml(item.copiedAt || "-")}</em></span>
+          <span class="seller-product-supplier"><small>공급사 매핑</small><b>${escapeHtml(product?.supplier || "-")}</b><em>원본코드 ${escapeHtml(item.productId)}</em></span>
           <span class="seller-product-price onsale-avg-margin"><small>내 판매가</small><b>${money(item.salePrice)}</b><em>평균 마진 ${avgMarginPct}%</em></span>
           <span class="seller-product-live"><b class="deployed-badge">${fullyLive ? "판매중" : "부분판매중"}</b><span class="live-channel-icons">${liveChannels.map(channel => channelMark(channel.id, true)).join("")}</span></span>
         </button>
         ${expanded ? `<div class="seller-channel-branches">
           <div class="branch-guide"><span></span><b>채널별 판매 현황</b><small>채널마다 실제 판매 상태·소비자가와 동기화 여부를 표시합니다.</small></div>
           ${channels.map(channel => channelBranchRow(item, channel, product)).join("")}
-          <div class="seller-product-actions"><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">상품 수정</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="secondary-button" data-action="manage-product-channels" data-id="${item.id}">쇼핑몰 자동등록</button><button class="secondary-button" data-action="simulate-order" data-id="${item.id}">단건 주문접수</button></div>
+          <div class="seller-product-actions"><button class="primary-button" data-action="sync-all-channels" data-id="${item.id}">⟳ 전체상품 동기화</button><button class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">상품 수정</button><button class="secondary-button" data-action="product-detail" data-id="${product?.id}">상품 상세</button><button class="secondary-button" data-action="manage-product-channels" data-id="${item.id}">쇼핑몰 자동등록</button><button class="secondary-button" data-action="simulate-order" data-id="${item.id}">단건 주문접수</button></div>
         </div>` : ""}
       </article>`;
-    }).join("")}</div>` : `<div class="empty">${liveItems.length ? "조건에 맞는 판매중 상품이 없습니다." : "아직 판매중인 상품이 없습니다. PICK 상품에서 판매를 시작해 주세요."}</div>`}
+    }).join("")}</div>${onSalePagination(totalPages)}` : `<div class="empty">${liveItems.length ? "조건에 맞는 판매중 상품이 없습니다." : "아직 판매중인 상품이 없습니다. PICK 상품에서 판매를 시작해 주세요."}</div>`}
   </div>`;
 }
 function currentProductMappings() { const id = currentAccount?.loginId || "seller"; return (state.productMappings || []).filter(mapping => mapping.sellerLoginId === id); }
@@ -2587,14 +2602,15 @@ function reviewPriceModal(alertId) {
         ${channels.map(channel => {
           const detail = sellerChannelDetail(sellerProduct, channel, p);
           const status = sellerProductChannelStatus(sellerProduct, channel);
+          const isLive = status === "판매중";
           const currentMargin = margin(alert.newPrice, detail.salePrice);
-          return `<div class="channel-price-row">
-            <input type="checkbox" name="channels" value="${channel.id}" ${status === "판매중" ? "checked" : ""}>
+          return `<div class="channel-price-row ${isLive ? "" : "channel-price-disabled"}">
+            <input type="checkbox" name="channels" value="${channel.id}" ${isLive ? "checked" : "disabled"}>
             <span class="channel-price-channel">${channelMark(channel.id)}<b>${escapeHtml(channel.name)}</b><small>[${escapeHtml(status)}]</small></span>
             <span class="channel-price-copy"><b>${escapeHtml(detail.title)}</b><small>${escapeHtml(detail.category)} · ${detail.reviews} review${detail.reviews === 1 ? "" : "s"}</small></span>
             <span class="current-sale-price"><small>현재 판매가</small><b>${money(detail.salePrice)}</b></span>
-            <label class="target-margin-field"><input class="channel-target-margin" name="margin_${channel.id}" type="number" min="-100" max="95" step="1" value="${currentMargin}" aria-label="${escapeHtml(channel.name)} 목표 마진율"><em>%</em></label>
-            <label class="new-price-field"><span>변경 판매가</span><input class="channel-new-price" name="price_${channel.id}" type="number" min="0" step="100" value="${detail.salePrice}" required aria-label="${escapeHtml(channel.name)} 변경 판매가"></label>
+            <label class="target-margin-field"><input class="channel-target-margin" name="margin_${channel.id}" type="number" min="-100" max="95" step="1" value="${currentMargin}" aria-label="${escapeHtml(channel.name)} 목표 마진율" ${isLive ? "" : "disabled"}><em>%</em></label>
+            <label class="new-price-field"><span>변경 판매가</span><input class="channel-new-price" name="price_${channel.id}" type="number" min="0" step="100" value="${detail.salePrice}" ${isLive ? "required" : "disabled"} aria-label="${escapeHtml(channel.name)} 변경 판매가"></label>
             <strong class="calculated-margin"><small>마진</small><b>${currentMargin}%</b></strong>
           </div>`;
         }).join("")}
@@ -2952,7 +2968,28 @@ document.addEventListener("click", event => {
   if (action === "select-brand") { closeModal(); sellerBrand = target.dataset.brand || "전체 브랜드"; sellerCategory = "전체보기"; render(); updateAccountUI(); requestAnimationFrame(() => document.getElementById("marketProductGrid")?.scrollIntoView({ behavior:"smooth", block:"start" })); return; }
   if (action === "reset-market-filter") { sellerCategory = "전체보기"; sellerCategoryGroup = "식품"; sellerCategorySub = "전체보기"; sellerCategoryDetail = "전체보기"; sellerShippingFilter = "all"; sellerCountry = "전체 국가"; sellerBrand = "전체 브랜드"; sellerProductSearch = ""; render(); updateAccountUI(); return; }
   if (action === "set-market-view") { marketViewMode = target.dataset.view || "grid"; render(); updateAccountUI(); return; }
-  if (action === "reset-onsale-filter") { onSaleSearch = ""; onSaleDateFrom = ""; onSaleDateTo = ""; render(); updateAccountUI(); return; }
+  if (action === "reset-onsale-filter") { onSaleSearch = ""; onSaleDateFrom = ""; onSaleDateTo = ""; onSalePage = 1; render(); updateAccountUI(); return; }
+  if (action === "onsale-page") { onSalePage = Number(target.dataset.page) || 1; render(); updateAccountUI(); return; }
+  if (action === "sync-all-channels") {
+    const item = state.sellerProducts.find(entry => entry.id === id);
+    if (!item) return;
+    const liveChannelIds = sellerChannels().filter(channel => sellerProductChannelStatus(item, channel) === "판매중").map(channel => channel.id);
+    if (!liveChannelIds.length) { showToast("동기화할 판매중 채널이 없습니다."); return; }
+    item.channelSyncStatus = item.channelSyncStatus || {};
+    liveChannelIds.forEach(channelId => { item.channelSyncStatus[channelId] = "sending"; });
+    saveState(); render(); updateAccountUI();
+    setTimeout(() => {
+      item.channelDetails = item.channelDetails || {};
+      liveChannelIds.forEach(channelId => {
+        const previous = item.channelDetails[channelId] || {};
+        item.channelDetails[channelId] = { ...previous, title: sellerProductTitle(item), salePrice: item.salePrice };
+        item.channelSyncStatus[channelId] = "synced";
+      });
+      audit("전체 채널 상품 동기화", `${item.id} · 판매중 채널 ${liveChannelIds.length}곳에 최신 상품명·가격을 전송해 동기화를 완료했습니다.`, "done", "channel");
+      saveState(); render(); updateAccountUI(); showToast(`판매중 채널 ${liveChannelIds.length}곳을 모두 동기화했습니다.`);
+    }, 700);
+    return;
+  }
   if (action === "market-scroll") { document.getElementById("marketProductGrid")?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
   if (action === "product-detail") { productDetailModal(id); return; }
   if (action === "product-detail-tab") {
@@ -3383,9 +3420,10 @@ document.addEventListener("change", event => {
       }
     }
   }
-  if (event.target.id === "onSaleSearchInput") { onSaleSearch = event.target.value; render(); updateAccountUI(); }
-  if (event.target.id === "onSaleDateFromInput") { onSaleDateFrom = event.target.value; render(); updateAccountUI(); }
-  if (event.target.id === "onSaleDateToInput") { onSaleDateTo = event.target.value; render(); updateAccountUI(); }
+  if (event.target.id === "onSaleSearchInput") { onSaleSearch = event.target.value; onSalePage = 1; render(); updateAccountUI(); }
+  if (event.target.id === "onSaleDateFromInput") { onSaleDateFrom = event.target.value; onSalePage = 1; render(); updateAccountUI(); }
+  if (event.target.id === "onSaleDateToInput") { onSaleDateTo = event.target.value; onSalePage = 1; render(); updateAccountUI(); }
+  if (event.target.id === "onSalePageSizeSelect") { onSalePageSize = Number(event.target.value) || 10; onSalePage = 1; render(); updateAccountUI(); }
   if (event.target.id === "marketCountrySelect") { sellerCountry = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "marketBrandSelect") { sellerBrand = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "refundMonthSelect") { refundMonth = event.target.value; render(); updateAccountUI(); }

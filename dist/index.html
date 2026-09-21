@@ -183,15 +183,17 @@
   <div id="appView" class="app-shell" data-sidebar-open="false" hidden>
     <button id="mobileSidebarBackdrop" class="mobile-sidebar-backdrop" type="button" aria-label="메뉴 닫기" hidden></button>
     <aside id="appSidebar" class="sidebar" aria-label="두고 업무 메뉴">
-      <div class="sidebar-brand-row">
-        <a class="brand brand-lockup sidebar-market-brand" href="#" data-action="open-dashboard" aria-label="두고 대시보드로 이동">
-          <img src="assets/doogomarket-wordmark.png" alt="두고"><span class="sidebar-market-label">두고<small>DOOGO</small></span>
-        </a>
-        <button id="mobileSidebarClose" class="mobile-sidebar-close" type="button" aria-label="메뉴 닫기">×</button>
+      <div class="sidebar-top-band">
+        <div class="sidebar-brand-row">
+          <a class="brand brand-lockup sidebar-market-brand" href="#" data-action="open-dashboard" aria-label="두고 대시보드로 이동">
+            <img src="assets/doogomarket-wordmark.png" alt="두고"><span class="sidebar-market-label">두고<small>DOOGO</small></span>
+          </a>
+          <button id="mobileSidebarClose" class="mobile-sidebar-close" type="button" aria-label="메뉴 닫기">×</button>
+        </div>
+        <p class="nav-label">쇼핑몰에 쉬운 시작 · 두고마켓</p>
       </div>
 
       <nav class="role-nav" aria-label="역할별 화면">
-        <p class="nav-label">쇼핑몰에 쉬운 시작 · 두고마켓</p>
         <button id="sidebarWorkspaceSwitcher" class="workspace-switcher-entry" type="button" data-action="open-user-switch">
           <span id="sidebarRoleIcon" class="role-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9h14l-1 11H6L5 9Z"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/><circle cx="12" cy="14" r="2.2"/><path d="M9 19a3 3 0 0 1 6 0"/></svg></span><span><b id="sidebarRoleName">위탁셀러</b><small>사용자 전환 · 권한 관리</small></span><i>›</i>
         </button>
