@@ -2122,7 +2122,7 @@ td strong { font-size: 16px; }
 .app-shell[data-role="seller"] .sidebar { color:var(--ink); background:white; border-right-color:#e3e8ee; }
 .app-shell[data-role="seller"] .brand { margin:0; padding:0 7px 26px; background:transparent; border-radius:0; }
 .app-shell[data-role="seller"] .nav-label { color:#a0a9b4; }
-.app-shell[data-role="seller"] .workspace-menu button { color:#191f28; }
+.app-shell[data-role="seller"] .workspace-menu button { color:#5e6976; }
 .app-shell[data-role="seller"] .workspace-menu button:hover { background:#f4f7fb; }
 .app-shell[data-role="seller"] .workspace-menu button.active { color:white; background:#3182f6; box-shadow:0 7px 18px rgba(49,130,246,.18); font-weight: 700; }
 .app-shell[data-role="seller"] .workspace-menu .menu-icon { color:inherit; background:white; border-color:#dbe2eb; }
