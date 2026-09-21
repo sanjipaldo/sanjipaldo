@@ -239,7 +239,7 @@ const initialState = {
     { id: "SP-1003", sellerLoginId: "seller", productId: "DF-3201", salePrice: 23900, approvalStatus: "승인완료", channel: "쿠팡", channels: ["coupang"], channelStatuses: { smartstore: "미연동", coupang: "판매중", kakao: "미연동", cafe24: "미연동" }, channelDetails: { coupang: { title: "달콤한 제주 하우스 감귤 3kg", salePrice: 24900, category: "식품 > 과일 > 감귤", reviews: 15 } }, status: "판매중", copiedAt: "2026.09.08", imageIndex: 3, detailSnapshot: "고당도 하우스 감귤 · 산지직송 · 상세페이지 제공", contentCopied: true }
   ],
   orders: [
-    { id: "DO-260909-044", sellerLoginId: "seller", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-2088", customer: "최마누카", recipientName: "최마누카", phone: "010-7721-4408", postalCode: "06028", address: "서울특별시 강남구 압구정로 28", addressDetail: "502호", deliveryMessage: "통관 완료 후 연락주세요.", shippingType: "overseas", personalCustomsCode: "P260909044001", qty: 1, amount: 49800, channel: "카카오 쇼핑", status: "배송준비중", tracking: "", carrier: "한진택배", orderDate: "2026-09-09", createdAt: "오늘 10:18", settlementStatus: "scheduled" },
+    { id: "DO-260909-044", sellerLoginId: "seller", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-2088", customer: "최마누카", recipientName: "최마누카", phone: "010-7721-4408", postalCode: "06028", address: "서울특별시 강남구 압구정로 28", addressDetail: "502호", deliveryMessage: "통관 완료 후 연락주세요.", shippingType: "overseas", personalCustomsCode: "P260909044001", qty: 1, amount: 49800, channel: "카카오 쇼핑", status: "주문확인필요", tracking: "", carrier: "한진택배", orderDate: "2026-09-09", createdAt: "오늘 10:18", settlementStatus: "scheduled" },
     { id: "DO-260907-031", sellerLoginId: "seller", supplierLoginId: "", assignedSupplier: "산지팔도", productId: "DF-1024", mappedProductId: "DF-1024", mappingStatus: "mapped", paymentStatus: "paid", paymentMethod: "deposit", supplyTotal: 43600, forwardedAt: "", customer: "김두고", recipientName: "김두고", phone: "010-8291-4402", postalCode: "06236", address: "서울특별시 강남구 테헤란로 152", addressDetail: "두고빌딩 7층", deliveryMessage: "문 앞에 놓아주세요.", shippingType: "domestic", personalCustomsCode: "", qty: 2, amount: 59800, channel: "네이버 스마트스토어", status: "주문접수", tracking: "", carrier: "한진택배", orderDate: "2026-09-07", createdAt: "오늘 09:31", settlementStatus: "scheduled" },
     { id: "DO-260907-028", sellerLoginId: "seller", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-1024", customer: "이푸드", recipientName: "이푸드", phone: "010-3567-9088", postalCode: "48058", address: "부산광역시 해운대구 센텀중앙로 90", addressDetail: "1203호", deliveryMessage: "경비실에 맡겨주세요.", shippingType: "domestic", personalCustomsCode: "", qty: 1, amount: 29900, channel: "쿠팡", status: "배송중", tracking: "456823901155", carrier: "CJ대한통운", provisionalTracking: true, channelTrackingStatuses: { coupang: "전송완료" }, orderDate: "2026-09-06", createdAt: "오늘 08:42", settlementStatus: "scheduled" },
     { id: "DO-260905-022", sellerLoginId: "seller", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-1024", customer: "박환불", recipientName: "박환불", phone: "010-4521-0022", postalCode: "04524", address: "서울특별시 중구 세종대로 110", addressDetail: "샘플동 301호", deliveryMessage: "출고 전 취소 요청", shippingType: "domestic", personalCustomsCode: "", qty: 2, amount: 59800, channel: "[샘플주문]", status: "환불완료", tracking: "", carrier: "한진택배", orderDate: "2026-09-05", createdAt: "09.05 15:34", settlementStatus: "excluded" },
@@ -475,6 +475,7 @@ function orderPaymentStatus(order) { return order?.paymentStatus || "paid"; }
 function orderSupplierProgressLabel(order) {
   if (orderPaymentStatus(order) === "pending") return "공급사 전달 전";
   if (order.status === "배송준비중") return "공급사에게 주문전송";
+  if (order.status === "주문확인필요") return "채널 상태 확인 중";
   if (order.status === "배송중" || order.status === "배송완료") return "공급사 송장등록 완료";
   return order.supplierLoginId ? "공급사 전달 완료" : "공급사 발주 대기";
 }
@@ -711,7 +712,8 @@ function dashboardStatusIcon(type) {
     ordered: '<path d="m12 3 8 4.5-8 4.5-8-4.5L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5V16l-8 5-8-5V7.5Z"/><path d="M12 12v9"/>',
     preparing: '<path d="M4 7h16v13H4z"/><path d="M8 7a4 4 0 0 1 8 0M8 12h8M8 16h5"/>',
     shipping: '<path d="M3 7h11v10H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>',
-    delivered: '<path d="m12 3 8 4.5-8 4.5-8-4.5L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5V16l-8 5-8-5V7.5Z"/><path d="m8.5 15.5 2 2 4.5-4.5"/>'
+    delivered: '<path d="m12 3 8 4.5-8 4.5-8-4.5L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5V16l-8 5-8-5V7.5Z"/><path d="m8.5 15.5 2 2 4.5-4.5"/>',
+    alert: '<path d="M12 3 2 21h20L12 3Z"/><path d="M12 10v5"/><circle cx="12" cy="18" r="1"/>'
   };
   return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[type] || paths.total}</svg>`;
 }
@@ -738,7 +740,7 @@ function editableText(key, fallback, className = "") {
   return `<span class="editable-copy ${className}" data-edit-key="${escapeHtml(key)}" contenteditable="${editMode ? "true" : "false"}" spellcheck="false">${escapeHtml(contentText(key, fallback))}</span>`;
 }
 function statusChip(status) {
-  const colors = { "신규주문": "orange", "주문접수": "orange", "발주완료": "blue", "배송준비중": "orange", "배송중": "blue", "배송완료": "green", "출고취소": "red", "판매중": "green", "판매중지": "red", "확인필요": "red", "반영완료": "green", "공급사 확인중": "orange", "공급사 검토중": "orange", "협의 필요": "red", "회수 진행중": "blue", "반품 회수중": "blue", "공급사 입고확인 대기": "orange", "환불완료": "green", "두고머니 충전완료": "green", "예치금 충전완료": "green", "반품접수": "red", "환불접수": "red", "연동중": "blue", "확인중": "orange", "미연동": "red" };
+  const colors = { "신규주문": "orange", "주문접수": "orange", "발주완료": "blue", "배송준비중": "orange", "주문확인필요": "red", "배송중": "blue", "배송완료": "green", "출고취소": "red", "판매중": "green", "판매중지": "red", "확인필요": "red", "반영완료": "green", "공급사 확인중": "orange", "공급사 검토중": "orange", "협의 필요": "red", "회수 진행중": "blue", "반품 회수중": "blue", "공급사 입고확인 대기": "orange", "환불완료": "green", "두고머니 충전완료": "green", "예치금 충전완료": "green", "반품접수": "red", "환불접수": "red", "연동중": "blue", "확인중": "orange", "미연동": "red" };
   return `<span class="chip ${colors[status] || ""}">${status}</span>`;
 }
 
@@ -1258,7 +1260,7 @@ function refundTemplate(role) {
 }
 
 const sellerOrderStages = [
-  ["overview", "주문 등록 현황"], ["all", "전체 주문 리스트"], ["mapping", "매핑 필요"], ["payment", "결제 대기"], ["received", "주문접수"], ["ordered", "발주완료"], ["preparing", "배송준비중"], ["shipping", "배송중"], ["delivered", "배송완료"]
+  ["overview", "주문 등록 현황"], ["all", "전체 주문 리스트"], ["mapping", "매핑 필요"], ["payment", "결제 대기"], ["received", "주문접수"], ["ordered", "발주완료"], ["preparing", "배송준비중"], ["needs-check", "주문확인필요"], ["shipping", "배송중"], ["delivered", "배송완료"]
 ];
 function sellerOrderSubset(stage = sellerOrderStage) {
   const orders = currentSellerOrders();
@@ -1266,7 +1268,7 @@ function sellerOrderSubset(stage = sellerOrderStage) {
   if (stage === "mapping") return orders.filter(order => orderMappingStatus(order) !== "mapped");
   if (stage === "payment") return orders.filter(order => orderMappingStatus(order) === "mapped" && orderPaymentStatus(order) === "pending");
   if (stage === "ordered") return orders.filter(order => order.status === "발주완료");
-  const statuses = { waiting: ["주문대기"], received: ["신규주문", "주문접수"], preparing: ["배송준비중"], shipping: ["배송중"], delivered: ["배송완료"] }[stage] || [];
+  const statuses = { waiting: ["주문대기"], received: ["신규주문", "주문접수"], preparing: ["배송준비중"], "needs-check": ["주문확인필요"], shipping: ["배송중"], delivered: ["배송완료"] }[stage] || [];
   return orders.filter(order => statuses.includes(order.status));
 }
 function sellerOrderStageCount(stage) { return sellerOrderSubset(stage).length; }
@@ -1276,7 +1278,7 @@ function sellerOrderManagementTemplate() {
   const activeLabel = sellerOrderStages.find(item => item[0] === sellerOrderStage)?.[1] || "전체 주문 리스트";
   const overview = `<div class="order-stage-overview"><button class="needs-action" data-action="filter-order-stage" data-stage="mapping"><span>매핑 필요</span><strong>${sellerOrderStageCount("mapping")}</strong><small>공급사 상품 선택</small></button><button class="needs-payment" data-action="filter-order-stage" data-stage="payment"><span>결제 대기</span><strong>${sellerOrderStageCount("payment")}</strong><small>결제 후 공급사 전달</small></button><button data-action="filter-order-stage" data-stage="preparing"><span>배송준비중</span><strong>${sellerOrderStageCount("preparing")}</strong><small>송장 발급 대기</small></button><button data-action="filter-order-stage" data-stage="shipping"><span>배송중</span><strong>${sellerOrderStageCount("shipping")}</strong><small>송장 전송 완료</small></button></div>`;
   return `${sectionHero("주문 관리", "외부 주문을 상품코드로 매핑하고 공급가 결제 후 공급사에 전달합니다.", `<button class="primary-button" data-action="single-order">+ 외부 주문 불러오기</button>`)}
-    <div class="order-workspace"><details class="order-stage-menu panel" open><summary><span>${menuIcon("order")}</span><b>주문 관리</b><small>단계별 메뉴 열기</small><i>⌄</i></summary><nav>${sellerOrderStages.map(([key,label]) => `<button class="${sellerOrderStage === key ? "active" : ""}" type="button" data-action="filter-order-stage" data-stage="${key}"><span>${label}</span><b>${sellerOrderStageCount(key)}</b></button>`).join("")}</nav></details><section class="order-stage-content">
+    <div class="order-workspace"><details class="order-stage-menu panel" open><summary><span>${menuIcon("order")}</span><b>주문 관리</b><small>단계별 메뉴 열기</small><i>⌄</i></summary><nav>${sellerOrderStages.map(([key,label]) => { const count = sellerOrderStageCount(key); const urgent = key === "needs-check" && count > 0; return `<button class="${sellerOrderStage === key ? "active" : ""}" type="button" data-action="filter-order-stage" data-stage="${key}"><span>${label}</span><b class="stage-count ${count > 0 ? (urgent ? "urgent" : "has-count") : "zero"}">${count}</b></button>`; }).join("")}</nav></details><section class="order-stage-content">
       <div class="order-search-panel panel"><label><span>⌕</span><input id="sellerOrderSearch" value="${escapeHtml(sellerOrderSearch)}" placeholder="주문번호, 고객명, 외부 상품명, 상품코드 검색"></label><div><span>전체 ${orders.length}건</span><span>매핑 ${sellerMappingRequiredOrders().length}건</span><span>결제 ${sellerPaymentRequiredOrders().length}건</span></div></div>
       ${sellerOrderStage === "overview" ? overview : ""}
       <div class="panel"><div class="panel-head"><div><h3>${activeLabel}</h3><p>행을 열어 주소·배송메시지·개인통관부호·송장 상태까지 확인할 수 있습니다.</p></div><button class="secondary-button" data-action="clear-order-search">검색 초기화</button></div><div id="sellerOrderResults">${ordersTable("seller", sellerOrderSearch, filteredOrders)}</div></div>
@@ -1543,6 +1545,7 @@ function renderSeller() {
   const received = sellerOrders.filter(o => o.status === "주문접수").length;
   const ordered = sellerOrders.filter(o => o.status === "발주완료").length;
   const preparing = sellerOrders.filter(o => o.status === "배송준비중").length;
+  const needsCheck = sellerOrders.filter(o => o.status === "주문확인필요").length;
   const shipping = sellerOrders.filter(o => o.status === "배송중").length;
   const delivered = sellerOrders.filter(o => o.status === "배송완료").length;
   const salesTotal = state.salesLedger.reduce((sum, item) => sum + item.sales, 0);
@@ -1591,6 +1594,7 @@ function renderSeller() {
         <div class="kpi-group"><span class="kpi-group-label">출고관리</span><div class="kpi-group-cards">
           ${statusButton("ordered","ordered","발주완료",ordered,"공급사 확인 대기","purple")}
           ${statusButton("preparing","preparing","배송준비중",preparing,"송장 발급 대기","orange")}
+          ${statusButton("needs-check","alert","주문확인필요",needsCheck,"채널 상태 재확인 필요","red")}
         </div></div>
         <div class="kpi-group-arrow" aria-hidden="true"><span>배송시작</span><i>›</i></div>
         <div class="kpi-group"><span class="kpi-group-label">배송관리 · 최근 7일</span><div class="kpi-group-cards">
@@ -1708,7 +1712,7 @@ function supplierPerformanceTemplate() {
 
 function supplierOrderManagementTemplate() {
   const allOrders = currentSupplierOrders();
-  const statuses = ["발주완료", "배송준비중", "배송중", "배송완료"];
+  const statuses = ["발주완료", "배송준비중", "주문확인필요", "배송중", "배송완료"];
   const filtered = supplierOrderStatus === "all" ? allOrders : allOrders.filter(order => order.status === supplierOrderStatus);
   const readyCount = allOrders.filter(order => order.status === "배송준비중" && !order.tracking).length;
   return `${sectionHero("주문 · 출고 관리", "신규주문 확인부터 굿스플로 송장 발급, 배송완료까지 단계별로 처리합니다.", `<button class="primary-button" data-action="auto-issue-all" ${readyCount ? "" : "disabled"}>배송준비중 송장 일괄발급</button>`)}
@@ -1798,8 +1802,8 @@ function orderActionsMarkup(order, role) {
   if (role === "seller" && ["신규주문", "주문접수"].includes(order.status)) {
     return `<span class="mapping-status payment">공급사 발주 대기</span><button class="small-button approve" data-action="dispatch-supplier-order" data-id="${order.id}">공급사 발주</button><button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${!hasRefund ? `<button class="text-button refund-link" data-action="request-refund" data-id="${order.id}">취소·환불</button>` : ""}`;
   }
-  const supplierActions = ["신규주문", "발주완료"].includes(order.status) ? `<button class="small-button approve" data-action="prepare-shipment" data-id="${order.id}">주문 확인·포장</button>` : order.status === "배송준비중" && !order.tracking ? `<div class="row-actions"><button class="small-button approve" data-action="auto-tracking" data-id="${order.id}">자동송장출력</button><button class="text-button" data-action="tracking" data-id="${order.id}">직접 입력</button></div>` : order.status === "배송중" ? `<div class="shipment-inline-actions"><button class="text-button label-reprint" data-action="show-label" data-id="${order.id}">송장 보기</button><button class="text-button" data-action="complete-shipping" data-id="${order.id}">배송완료</button>${order.provisionalTracking ? `<button class="text-button refund-link" data-action="cancel-shipment" data-id="${order.id}">집하 전 취소</button>` : ""}</div>` : order.tracking ? `<button class="text-button label-reprint" data-action="show-label" data-id="${order.id}">송장 보기</button>` : "";
-  return `${role === "supplier" ? `${order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong>${order.provisionalTracking ? `<small>가송장</small>` : ""}</span>` : ""}${supplierActions}` : order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong></span>` : `<span class="waiting-text">${order.status === "발주완료" ? "공급사 주문 확인 대기" : "공급사 처리 대기"}</span>`}<button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${role === "seller" && !hasRefund ? `<button class="text-button refund-link" data-action="request-refund" data-id="${order.id}">취소·환불</button>` : ""}`;
+  const supplierActions = ["신규주문", "발주완료"].includes(order.status) ? `<button class="small-button approve" data-action="prepare-shipment" data-id="${order.id}">주문 확인·포장</button>` : order.status === "주문확인필요" ? `<div class="row-actions"><button class="small-button approve" data-action="confirm-channel-order" data-id="${order.id}">채널 확인 완료</button><button class="text-button refund-link" data-action="cancel-channel-order" data-id="${order.id}">채널 취소 처리</button></div>` : order.status === "배송준비중" && !order.tracking ? `<div class="row-actions"><button class="small-button approve" data-action="auto-tracking" data-id="${order.id}">자동송장출력</button><button class="text-button" data-action="tracking" data-id="${order.id}">직접 입력</button></div>` : order.status === "배송중" ? `<div class="shipment-inline-actions"><button class="text-button label-reprint" data-action="show-label" data-id="${order.id}">송장 보기</button><button class="text-button" data-action="complete-shipping" data-id="${order.id}">배송완료</button>${order.provisionalTracking ? `<button class="text-button refund-link" data-action="cancel-shipment" data-id="${order.id}">집하 전 취소</button>` : ""}</div>` : order.tracking ? `<button class="text-button label-reprint" data-action="show-label" data-id="${order.id}">송장 보기</button>` : "";
+  return `${role === "supplier" ? `${order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong>${order.provisionalTracking ? `<small>가송장</small>` : ""}</span>` : ""}${supplierActions}` : order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong></span>` : `<span class="waiting-text ${order.status === "주문확인필요" ? "waiting-alert" : ""}">${order.status === "발주완료" ? "공급사 주문 확인 대기" : order.status === "주문확인필요" ? "채널 주문 상태 확인 필요" : "공급사 처리 대기"}</span>`}<button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${role === "seller" && !hasRefund ? `<button class="text-button refund-link" data-action="request-refund" data-id="${order.id}">취소·환불</button>` : ""}`;
 }
 
 function mobileOrderCards(orders, role) {
@@ -1811,11 +1815,24 @@ function mobileOrderCards(orders, role) {
   }).join("")}</div>`;
 }
 
+const ORDER_STATUS_HELP_HTML = `<b>주문 상태 흐름</b><ol>
+  <li><em>신규주문</em> 판매채널(쿠팡 등)에서 주문이 수집된 상태</li>
+  <li><em>주문접수</em> 상품 매핑과 공급가 결제를 마친 상태</li>
+  <li><em>발주완료</em> 공급사에 주문을 전달한 상태</li>
+  <li><em>배송준비중</em> 공급사가 주문을 확인하고 포장 중인 상태</li>
+  <li><em>주문확인필요</em> 송장을 입력하기 전 판매채널 상태를 다시 확인해야 하는 상태 — 채널에서 취소되었거나 결제완료·신규주문 목록에 없으면 여기로 전환됩니다.</li>
+  <li><em>배송중</em> 송장이 등록되어 판매채널에도 배송중으로 자동 반영된 상태</li>
+  <li><em>배송완료</em> 구매자가 상품을 수령한 상태</li>
+</ol><p>주문확인필요 상태는 공급사가 채널을 다시 확인해 처리합니다. 정상 주문이면 배송준비중으로 돌아가 송장을 입력하고, 채널에서도 취소가 맞다면 출고취소로 처리합니다.</p>`;
+function orderStatusHelpIcon() {
+  return `<span class="status-help"><button type="button" class="status-help-trigger" aria-label="주문 상태 흐름 안내">?</button></span>`;
+}
+
 function ordersTable(role, query = "", sourceOverride = null) {
   const source = sourceOverride || (role === "seller" ? currentSellerOrders() : role === "supplier" ? currentSupplierOrders() : state.orders);
   const normalized = String(query || "").trim().toLowerCase();
   const orders = source.filter(order => { const product = orderSourceProduct(order); return !normalized || [order.id, order.customer, order.recipientName, order.phone, order.channel, order.tracking, order.externalProductName, order.externalProductCode, order.mappedProductId, product?.name].some(value => String(value || "").toLowerCase().includes(normalized)); });
-  return `<div class="table-wrap order-desktop-table"><table><thead><tr><th>주문번호</th><th>상품</th><th>배정 공급사</th><th>수취인</th><th>수량/금액</th><th>상태</th><th>송장·관리</th></tr></thead><tbody>
+  return `<div class="table-wrap order-desktop-table"><table><thead><tr><th>주문번호</th><th>상품</th><th>배정 공급사</th><th>수취인</th><th>수량/금액</th><th>상태${orderStatusHelpIcon()}</th><th>송장·관리</th></tr></thead><tbody>
     ${orders.length ? orders.map(o => {
       const p = orderSourceProduct(o);
       const displayName = role === "supplier" ? p?.name : orderSellerTitle(o);
@@ -2183,8 +2200,10 @@ function orderDetailModal(orderId) {
   const mapped = orderMappingStatus(order) === "mapped";
   const paid = orderPaymentStatus(order) !== "pending";
   const flow = ["신규주문", "주문접수", "발주완료", "배송준비중", "배송중", "배송완료"];
-  const currentIndex = flow.indexOf(order.status);
-  const timeline = flow.map((label, index) => `<div class="${index < currentIndex ? "done" : index === currentIndex ? "active" : ""}"><i>${index < currentIndex ? "✓" : index + 1}</i><span><b>${label}</b><small>${label === "신규주문" ? "판매채널 주문 수집" : label === "주문접수" ? "상품 매핑·공급가 결제" : label === "발주완료" ? "공급사 주문 전달" : label === "배송준비중" ? "공급사 확인·포장" : label === "배송중" ? "송장 등록·채널 전송" : "구매자 수령"}</small></span></div>`).join("");
+  const needsCheck = order.status === "주문확인필요";
+  const currentIndex = needsCheck ? flow.indexOf("배송준비중") : flow.indexOf(order.status);
+  const timeline = flow.map((label, index) => `<div class="${needsCheck && label === "배송준비중" ? "alert" : index < currentIndex ? "done" : index === currentIndex ? "active" : ""}"><i>${needsCheck && label === "배송준비중" ? "!" : index < currentIndex ? "✓" : index + 1}</i><span><b>${label}</b><small>${label === "신규주문" ? "판매채널 주문 수집" : label === "주문접수" ? "상품 매핑·공급가 결제" : label === "발주완료" ? "공급사 주문 전달" : label === "배송준비중" ? "공급사 확인·포장" : label === "배송중" ? "송장 등록·채널 전송" : "구매자 수령"}</small></span></div>`).join("");
+  const channelAlertBanner = needsCheck ? `<div class="order-channel-alert"><b>⚠ 주문확인필요</b><span>판매채널(쿠팡 등)에서 이 주문을 확인할 수 없습니다. 취소되었거나 결제완료·신규주문 목록에 없는 상태입니다. 채널 상태를 다시 확인한 뒤 송장을 입력해 주세요.</span></div>` : "";
   const sellerPrimary = !mapped
     ? `<button class="primary-button" data-action="map-order" data-id="${order.id}">상품 매핑</button>`
     : !paid
@@ -2194,13 +2213,15 @@ function orderDetailModal(orderId) {
         : "";
   const supplierPrimary = ["신규주문", "발주완료"].includes(order.status)
     ? `<button class="primary-button" data-action="prepare-shipment" data-id="${order.id}">주문 확인·포장 시작</button>`
-    : order.status === "배송준비중" && !order.tracking
+    : order.status === "주문확인필요"
+      ? `<div class="row-actions"><button class="primary-button" data-action="confirm-channel-order" data-id="${order.id}">채널 확인 완료</button><button class="secondary-button" data-action="cancel-channel-order" data-id="${order.id}">채널 취소 처리</button></div>`
+      : order.status === "배송준비중" && !order.tracking
       ? `<button class="primary-button" data-action="tracking" data-id="${order.id}">송장 입력</button>`
       : order.status === "배송중"
         ? `<button class="primary-button" data-action="complete-shipping" data-id="${order.id}">배송완료 처리</button>`
         : "";
   openModal(`<div class="order-detail-head"><div><span>DOOGO ORDER</span><h2>${order.id}</h2><p>${escapeHtml(order.createdAt)} · ${channelMark(channelIdFromName(order.channel),true)} ${escapeHtml(order.channel)}</p></div>${statusChip(order.status)}</div>
-    <div class="order-status-timeline">${timeline}</div>
+    <div class="order-status-timeline">${timeline}</div>${channelAlertBanner}
     <div class="order-product-summary">${productPhoto(product,"order-detail-photo")}<div><b>${escapeHtml(activeRole === "supplier" ? (product?.name || "상품") : orderSellerTitle(order))}</b><span>${order.qty}개 · ${money(order.amount)}</span><small>${mapped ? `원본코드 ${escapeHtml(order.mappedProductId || order.productId)} · ${escapeHtml(order.assignedSupplier || product?.supplier || "미배정")}` : `외부코드 ${escapeHtml(order.externalProductCode || "-")} · 상품 매핑 필요`}</small></div></div>
     ${activeRole === "seller" && mapped ? (() => {
       const supplyTotal = Number(product?.supply || 0) * Number(order.qty || 1);
@@ -2878,6 +2899,16 @@ document.addEventListener("click", event => {
     saveState(); closeModal(); render(); updateAccountUI(); showToast(`${product.supplier} 공급사에 발주를 완료했습니다.`);
     return;
   }
+  if (action === "confirm-channel-order") {
+    const order = state.orders.find(item => item.id === id);
+    if (order?.status === "주문확인필요") { order.status = "배송준비중"; audit("채널 주문 재확인", `${order.id} · 판매채널에서 주문이 살아있음을 확인하고 배송준비중으로 되돌렸습니다.`, "pending", "order"); saveState(); closeModal(); render(); updateAccountUI(); showToast("채널에서 주문을 재확인했습니다. 송장을 입력해 주세요."); }
+    return;
+  }
+  if (action === "cancel-channel-order") {
+    const order = state.orders.find(item => item.id === id);
+    if (order?.status === "주문확인필요") { order.status = "출고취소"; order.shippingCancelReason = "판매채널 주문 취소·미확인"; order.shippingCancelMemo = "판매채널의 결제완료·신규주문 목록에서 해당 주문을 찾을 수 없어 송장을 발급하지 않고 취소 처리했습니다."; order.settlementStatus = "excluded"; audit("채널 주문 취소 처리", `${order.id} · 판매채널에서 주문을 확인할 수 없어 출고취소로 처리했습니다.`, "done", "order"); saveState(); closeModal(); render(); updateAccountUI(); showToast("주문을 출고취소로 처리했습니다."); }
+    return;
+  }
   if (action === "complete-shipping") {
     const order = state.orders.find(item => item.id === id);
     if (order?.status === "배송중") { order.status = "배송완료"; order.deliveredAt = "방금 전"; order.provisionalTracking = false; audit("배송 완료", `${order.id} · 배송완료 처리`, "done", "shipment"); pushNotification(order.sellerLoginId, "seller", "shipment", "배송이 완료되었습니다", `${order.id} · ${order.carrier} ${order.tracking}`); saveState(); render(); updateAccountUI(); showToast("배송완료로 변경했습니다."); }
@@ -3472,6 +3503,48 @@ document.addEventListener("blur", event => {
   if (key.startsWith("seller.menu.") || key.startsWith("seller.page.")) updateAccountUI();
   showToast("문구를 저장했습니다.");
 }, true);
+
+function statusHelpPopoverEl() {
+  let el = document.getElementById("statusHelpPopover");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "statusHelpPopover";
+    el.className = "status-help-popover";
+    el.setAttribute("role", "tooltip");
+    el.innerHTML = ORDER_STATUS_HELP_HTML;
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function showStatusHelp(trigger) {
+  const el = statusHelpPopoverEl();
+  const rect = trigger.getBoundingClientRect();
+  el.classList.add("visible");
+  const maxLeft = window.innerWidth - el.offsetWidth - 16;
+  el.style.left = `${Math.max(16, Math.min(rect.left, maxLeft))}px`;
+  el.style.top = `${Math.min(rect.bottom + 8, window.innerHeight - el.offsetHeight - 16)}px`;
+}
+function hideStatusHelp() {
+  document.getElementById("statusHelpPopover")?.classList.remove("visible");
+}
+document.addEventListener("mouseover", event => {
+  const trigger = event.target.closest?.(".status-help-trigger");
+  if (trigger) showStatusHelp(trigger);
+});
+document.addEventListener("mouseout", event => {
+  const trigger = event.target.closest?.(".status-help-trigger");
+  if (!trigger) return;
+  const related = event.relatedTarget;
+  if (related && (related.closest?.(".status-help-trigger") || related.closest?.("#statusHelpPopover"))) return;
+  hideStatusHelp();
+});
+document.addEventListener("focusin", event => {
+  const trigger = event.target.closest?.(".status-help-trigger");
+  if (trigger) showStatusHelp(trigger);
+});
+document.addEventListener("focusout", event => {
+  if (event.target.closest?.(".status-help-trigger")) hideStatusHelp();
+});
 
 document.addEventListener("submit", event => {
   event.preventDefault();

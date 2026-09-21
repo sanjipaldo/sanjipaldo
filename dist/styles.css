@@ -4527,3 +4527,36 @@ h4 { font-weight: 600; letter-spacing: -.01em; }
 
 /* 검색·카테고리 컨트롤 라운딩 통일 */
 .category-search-input, .category-cascade-row select { border-radius: var(--radius-control); }
+
+/* ============================================================
+   v27 — 주문 상태 '주문확인필요' + 상태 흐름 툴팁 + 단계 카운트 배지
+   ============================================================ */
+.dashboard-kpi-card.tone-red .dashboard-kpi-icon { color:#c0362c; background:#fde8e6; }
+
+/* 상태 흐름 안내(?) — table-wrap의 overflow:auto에 잘리지 않도록
+   position:fixed 좌표는 JS에서 계산해 넣는다 */
+.status-help { display: inline-flex; margin-left: 5px; vertical-align: middle; }
+.status-help-trigger { width: 16px; height: 16px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #8b97a5; background: #eef1f5; border: 0; border-radius: 50%; font-size: 10.5px; font-weight: 700; line-height: 1; cursor: help; }
+.status-help-trigger:hover, .status-help-trigger:focus-visible { color: #fff; background: #3182f6; outline: none; }
+.status-help-popover { position: fixed; z-index: 200; width: 300px; max-width: calc(100vw - 32px); padding: 14px 16px; color: #26364b; background: #fff; border: 1px solid #e4e9f0; border-radius: var(--radius-card); box-shadow: var(--shadow-2); font-size: 12.5px; line-height: 1.55; text-align: left; opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(4px); transition: opacity .15s ease, transform .15s ease; }
+.status-help-popover.visible { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); }
+.status-help-popover b { display: block; margin-bottom: 8px; font-size: 13px; }
+.status-help-popover ol { margin: 0 0 10px; padding-left: 18px; display: grid; gap: 5px; }
+.status-help-popover em { color: #3182f6; font-style: normal; font-weight: 700; }
+.status-help-popover p { margin: 0; padding-top: 10px; border-top: 1px dashed #e4e9f0; color: #6f7d8e; }
+
+/* 주문 단계 메뉴 카운트 배지: 0건/유효건/긴급(주문확인필요)건 3단계 톤 */
+.order-stage-menu nav button b.stage-count { min-width: 22px; height: 22px; padding: 0 7px; display: inline-flex; align-items: center; justify-content: center; color: #9aa5b1; background: #eef1f5; border-radius: 999px; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.order-stage-menu nav button b.stage-count.has-count { color: #fff; background: #3182f6; box-shadow: 0 2px 6px rgba(49,130,246,.35); }
+.order-stage-menu nav button b.stage-count.urgent { color: #fff; background: #e0483f; box-shadow: 0 2px 6px rgba(224,72,63,.35); }
+.order-stage-menu nav button.active b.stage-count.zero { color: #3182f6; background: #dce9ff; }
+.order-stage-menu nav button.active b.stage-count.has-count { background: #1758ca; }
+
+/* 주문확인필요 타임라인 알림 상태 */
+.order-status-timeline > div.alert { background: #fdeeec; }
+.order-status-timeline > div.alert i { color: #fff; background: #e0483f; }
+.order-status-timeline > div.alert b { color: #c0362c; }
+.order-channel-alert { margin: 0 0 18px; padding: 13px 16px; display: grid; gap: 4px; color: #7a2b25; background: #fdeeec; border: 1px solid #f6c9c4; border-radius: var(--radius-control); }
+.order-channel-alert b { font-size: 14px; }
+.order-channel-alert span { font-size: 13px; line-height: 1.55; }
+.waiting-text.waiting-alert { color: #c0362c; font-weight: 700; }
