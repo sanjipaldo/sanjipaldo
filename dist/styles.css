@@ -322,8 +322,8 @@
 }
 
 /* v17 seller signup, product-code mapping and responsive dashboard */
-html,
-body { max-width:100%; overflow-x:hidden; }
+html { max-width:100%; overflow-x:hidden; }
+body { max-width:100%; }
 
 .signup-screen {
   min-height:100svh;
@@ -4401,3 +4401,9 @@ body { letter-spacing:-.012em; }
     radial-gradient(340px circle at 55% 42%, rgba(255,255,255,.07), transparent 70%),
     linear-gradient(155deg, #0c47ba 0%, #3182f6 42%, #2f7ef8 78%, #57a2ff 100%);
 }
+
+/* --- 상태 배지: 초록 색상 추가 (완료·성공 상태 구분) --- */
+.chip.green { color: #1a7f4b; background: #eafaf1; }
+
+/* --- 대시보드 PICK 상품 위젯: 버튼 기본 회색 배경 제거 --- */
+.product-sale-row { background: white; }

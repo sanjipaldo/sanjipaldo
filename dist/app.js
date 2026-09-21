@@ -326,6 +326,12 @@ function currentSellerOrders() { return state.orders.filter(order => order.selle
 function currentSupplierOrders() { return state.orders.filter(order => order.supplierLoginId === (currentAccount?.loginId || "sup") && order.paymentStatus !== "pending"); }
 function orderMappingStatus(order) { return order?.mappingStatus || (order?.productId ? "mapped" : "unmapped"); }
 function orderPaymentStatus(order) { return order?.paymentStatus || "paid"; }
+function orderSupplierProgressLabel(order) {
+  if (orderPaymentStatus(order) === "pending") return "공급사 전달 전";
+  if (order.status === "배송준비중") return "공급사에게 주문전송";
+  if (order.status === "배송중" || order.status === "배송완료") return "공급사 송장등록 완료";
+  return order.supplierLoginId ? "공급사 전달 완료" : "공급사 발주 대기";
+}
 function orderSourceProduct(order) { return productOf(order?.mappedProductId || order?.productId); }
 function sellerProductTitle(item, product = productOf(item?.productId)) { return item?.customTitle || item?.sellerTitle || product?.name || "판매 상품"; }
 function orderSellerTitle(order) {
@@ -586,7 +592,7 @@ function editableText(key, fallback, className = "") {
   return `<span class="editable-copy ${className}" data-edit-key="${escapeHtml(key)}" contenteditable="${editMode ? "true" : "false"}" spellcheck="false">${escapeHtml(contentText(key, fallback))}</span>`;
 }
 function statusChip(status) {
-  const colors = { "신규주문": "orange", "주문접수": "orange", "발주완료": "blue", "배송준비중": "orange", "배송중": "blue", "배송완료": "", "출고취소": "red", "판매중": "", "판매중지": "red", "확인필요": "red", "반영완료": "", "공급사 확인중": "orange", "공급사 검토중": "orange", "협의 필요": "red", "회수 진행중": "blue", "반품 회수중": "blue", "공급사 입고확인 대기": "orange", "환불완료": "", "두고머니 충전완료": "", "예치금 충전완료": "", "반품접수": "red", "환불접수": "red", "연동중": "blue", "확인중": "orange", "미연동": "red" };
+  const colors = { "신규주문": "orange", "주문접수": "orange", "발주완료": "blue", "배송준비중": "orange", "배송중": "blue", "배송완료": "green", "출고취소": "red", "판매중": "green", "판매중지": "red", "확인필요": "red", "반영완료": "green", "공급사 확인중": "orange", "공급사 검토중": "orange", "협의 필요": "red", "회수 진행중": "blue", "반품 회수중": "blue", "공급사 입고확인 대기": "orange", "환불완료": "green", "두고머니 충전완료": "green", "예치금 충전완료": "green", "반품접수": "red", "환불접수": "red", "연동중": "blue", "확인중": "orange", "미연동": "red" };
   return `<span class="chip ${colors[status] || ""}">${status}</span>`;
 }
 
@@ -1660,7 +1666,7 @@ function ordersTable(role, query = "", sourceOverride = null) {
     ${orders.length ? orders.map(o => {
       const p = orderSourceProduct(o);
       const displayName = role === "supplier" ? p?.name : orderSellerTitle(o);
-      return `<tr class="order-click-row ${orderMappingStatus(o) !== "mapped" ? "mapping-required-row" : ""}" data-action="order-detail" data-id="${o.id}" tabindex="0" aria-label="${escapeHtml(o.id)} 주문 상세 보기"><td class="order-id"><button data-action="order-detail" data-id="${o.id}">${o.id}</button><br><small>${escapeHtml(o.createdAt)}</small></td><td><button class="order-product-link" data-action="order-detail" data-id="${o.id}"><strong>${escapeHtml(displayName || "매핑 전 외부 상품")}</strong><small>${channelMark(channelIdFromName(o.channel),true)} ${escapeHtml(o.channel)} · ${orderMappingStatus(o) === "mapped" ? `원본 ${escapeHtml(o.mappedProductId || o.productId)}` : `외부코드 ${escapeHtml(o.externalProductCode || "-")}`}</small></button></td><td><strong>${escapeHtml(orderMappingStatus(o) === "mapped" ? (o.assignedSupplier || p?.supplier || "미배정") : "매핑 필요")}</strong><br><small>${orderPaymentStatus(o) === "pending" ? "공급사 전달 전" : o.supplierLoginId ? "공급사 전달 완료" : "공급사 발주 대기"}</small></td><td>${escapeHtml(o.recipientName || o.customer)}<br><small>${escapeHtml(o.phone || "-")}</small></td><td>${o.qty}개 · ${money(o.amount)}</td><td>${statusChip(o.status)}</td><td><div class="order-cell-actions">${orderActionsMarkup(o, role)}</div></td></tr>`;
+      return `<tr class="order-click-row ${orderMappingStatus(o) !== "mapped" ? "mapping-required-row" : ""}" data-action="order-detail" data-id="${o.id}" tabindex="0" aria-label="${escapeHtml(o.id)} 주문 상세 보기"><td class="order-id"><button data-action="order-detail" data-id="${o.id}">${o.id}</button><br><small>${escapeHtml(o.createdAt)}</small></td><td><button class="order-product-link" data-action="order-detail" data-id="${o.id}"><strong>${escapeHtml(displayName || "매핑 전 외부 상품")}</strong><small>${channelMark(channelIdFromName(o.channel),true)} ${escapeHtml(o.channel)} · ${orderMappingStatus(o) === "mapped" ? `원본 ${escapeHtml(o.mappedProductId || o.productId)}` : `외부코드 ${escapeHtml(o.externalProductCode || "-")}`}</small></button></td><td><strong>${escapeHtml(orderMappingStatus(o) === "mapped" ? (o.assignedSupplier || p?.supplier || "미배정") : "매핑 필요")}</strong><br><small>${orderSupplierProgressLabel(o)}</small></td><td>${escapeHtml(o.recipientName || o.customer)}<br><small>${escapeHtml(o.phone || "-")}</small></td><td>${o.qty}개 · ${money(o.amount)}</td><td>${statusChip(o.status)}</td><td><div class="order-cell-actions">${orderActionsMarkup(o, role)}</div></td></tr>`;
     }).join("") : `<tr><td colspan="7"><div class="empty">표시할 주문이 없습니다.</div></td></tr>`}
   </tbody></table></div>${mobileOrderCards(orders, role)}`;
 }
