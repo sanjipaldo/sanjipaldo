@@ -4562,12 +4562,12 @@ h4 { font-weight: 600; letter-spacing: -.01em; }
 .waiting-text.waiting-alert { color: #c0362c; font-weight: 700; }
 
 /* ============================================================
-   v28 — 사이드바 상단 로고 밴드(블랙) + 로고 확대
+   v28 — 사이드바 상단 로고 밴드(흰색) + 로고 확대
    ============================================================ */
-.sidebar-top-band { margin: -22px -14px 16px; padding: 20px 18px 16px; background: #0b0e14; border-radius: 0 0 18px 18px; }
+.sidebar-top-band { margin: -22px -14px 16px; padding: 20px 18px 16px; background: #fff; border-bottom: 1px solid #eef1f5; }
 .sidebar-top-band .sidebar-brand-row { margin-bottom: 10px; }
-.sidebar-top-band .nav-label { margin: 0; color: #aab4c4 !important; }
-.sidebar-top-band .mobile-sidebar-close { color: #e7ebf1; background: rgba(255,255,255,.1); }
+.sidebar-top-band .nav-label { margin: 0; color: #a0a9b4 !important; }
+.sidebar-top-band .mobile-sidebar-close { color: #5f6d7e; background: #f1f4f8; }
 .sidebar-market-brand > img { width: 207px; height: 60px; }
 @media (max-width: 720px) {
   .sidebar-top-band { margin: -17px -15px 14px; padding: 16px 16px 14px; }
@@ -4637,3 +4637,33 @@ h4 { font-weight: 600; letter-spacing: -.01em; }
 .channel-price-row.channel-price-disabled { background: #f7f9fb; opacity: .6; }
 .channel-price-row.channel-price-disabled input:not([type="checkbox"]) { color: #9aa5b1; background: #eef1f5; cursor: not-allowed; }
 .channel-price-row.channel-price-disabled input[type="checkbox"] { cursor: not-allowed; }
+
+/* 상품매핑: 매핑 필요 / 매핑완료 패널 간격 */
+.mapping-sections { display: flex; flex-direction: column; gap: 24px; }
+
+/* .form-grid 내부 .full 클래스는 요소 종류와 무관하게 전체 폭을 차지해야 함
+   (.form-field.full 전용 규칙만 있어 modal-actions.full·api-safe-notice.full 등이
+   2단 그리드에서 반쪽씩 나란히 배치되던 문제 수정) */
+.form-grid > .full { grid-column: 1 / -1; }
+
+/* 메인 콘텐츠 배경: 회색 캔버스 → 흰색 */
+.app-shell { background: #fff; }
+
+/* 브랜드관: 팝업 모달 → 전체 화면 페이지 */
+.brand-directory-body { display: flex; flex-direction: column; gap: 24px; max-height: none; overflow-y: visible; }
+.brand-directory-group .panel-head { margin-bottom: 14px; }
+
+/* 상품 판매중: 검색창 재디자인(너무 길지 않게) + 카테고리 필터 추가 */
+.onsale-search { flex: 0 1 240px; width: auto; min-width: 180px; max-width: 260px; height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: #fff; border: 1px solid #dce3ec; border-radius: 9px; }
+.onsale-search span { flex: 0 0 auto; color: #82909f; font-size: 15px; line-height: 1; }
+.onsale-search input { min-width: 0; width: 100%; color: #2f3b4c; background: transparent; border: 0; outline: 0; font-size: 14px; }
+.onsale-category-field { display: flex; flex: 0 0 auto; flex-direction: column; gap: 4px; }
+.onsale-category-field span { color: #788697; font-size: 13px; font-weight: 600; }
+.onsale-category-field select { height: 38px; min-width: 130px; padding: 0 10px; color: #26364b; background: #fff; border: 1px solid #dce3ec; border-radius: 9px; font-size: 14px; }
+@media (max-width: 1100px) {
+  .onsale-search { flex: 1 1 220px; max-width: none; }
+}
+@media (max-width: 720px) {
+  .onsale-search { width: 100%; flex: 0 0 auto; max-width: none; }
+  .onsale-category-field, .onsale-category-field select { width: 100%; }
+}

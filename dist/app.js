@@ -91,45 +91,45 @@ const naverCategoryTree = {
     "빅사이즈": { "여성빅사이즈": ["원피스", "상의", "하의"], "남성빅사이즈": ["상의", "하의"] }
   },
   "패션잡화": {
-    "여성가방": { "숄더백": ["미니백", "크로스백"], "토트백": ["에코백", "캔버스백"], "백팩": ["미니백팩"], "클러치": ["파우치"] },
-    "남성가방": { "백팩": ["노트북백팩", "데일리백팩"], "서류가방": ["브리프케이스"], "크로스백": ["메신저백"] },
+    "여성가방": { "숄더백": ["미니백", "크로스백"], "토트백": ["에코백", "캔버스백"], "백팩": ["미니백팩", "노트북백팩"], "클러치": ["파우치", "이브닝클러치"] },
+    "남성가방": { "백팩": ["노트북백팩", "데일리백팩"], "서류가방": ["브리프케이스", "토트형서류가방"], "크로스백": ["메신저백", "슬링백"] },
     "신발": { "스니커즈": ["캔버스화", "러닝화", "단화"], "구두": ["로퍼", "옥스포드", "더비슈즈"], "부츠": ["앵클부츠", "롱부츠"], "샌들·슬리퍼": ["플립플롭", "슬라이드"] },
     "패션소품": { "벨트": ["가죽벨트", "버클벨트"], "지갑": ["카드지갑", "장지갑", "반지갑"], "스카프·머플러": ["실크스카프", "니트머플러"] },
-    "주얼리·시계": { "목걸이": ["펜던트목걸이"], "반지": ["커플링"], "시계": ["손목시계", "스마트워치밴드"] },
+    "주얼리·시계": { "목걸이": ["펜던트목걸이", "체인목걸이"], "반지": ["커플링", "미니멀링"], "시계": ["손목시계", "스마트워치밴드"] },
     "모자·양말": { "모자": ["캡", "버킷햇"], "양말": ["발목양말", "중목양말"] }
   },
   "화장품/미용": {
     "스킨케어": { "토너·에센스": ["토너", "에센스", "세럼"], "크림·로션": ["수분크림", "아이크림"], "마스크팩": ["시트팩", "슬리핑팩"] },
     "메이크업": { "베이스메이크업": ["파운데이션", "쿠션", "프라이머"], "포인트메이크업": ["립스틱", "아이섀도", "블러셔"], "네일": ["네일폴리시", "젤네일"] },
-    "헤어케어": { "샴푸·린스": ["탈모샴푸", "두피케어샴푸"], "헤어스타일링": ["왁스", "에센스", "헤어오일"], "염색·펌": ["새치염색약"] },
+    "헤어케어": { "샴푸·린스": ["탈모샴푸", "두피케어샴푸"], "헤어스타일링": ["왁스", "에센스", "헤어오일"], "염색·펌": ["새치염색약", "헤어매니큐어"] },
     "바디케어": { "바디워시": ["바디워시", "입욕제"], "바디로션": ["바디로션", "핸드크림"], "제모·왁싱": ["제모기", "왁싱스트립"] },
-    "향수": { "여성향수": ["오드퍼퓸"], "남성향수": ["오드코롱"] },
-    "미용기기": { "클렌징기기": ["클렌징브러시"], "피부관리기기": ["LED마스크", "갈바닉기기"] }
+    "향수": { "여성향수": ["오드퍼퓸", "오드뜨왈렛"], "남성향수": ["오드코롱", "애프터쉐이브"] },
+    "미용기기": { "클렌징기기": ["클렌징브러시", "초음파클렌저"], "피부관리기기": ["LED마스크", "갈바닉기기"] }
   },
   "디지털/가전": {
     "PC": { "PC본체": ["데스크탑", "브랜드PC"], "PC부품": ["CPU", "메인보드", "RAM", "그래픽카드", "SSD"], "PC액세서리": ["마우스", "키보드", "모니터암"], "모니터": ["게이밍모니터", "사무용모니터"] },
     "노트북": { "노트북": ["울트라북", "게이밍노트북", "투인원"], "액세서리": ["파우치", "독", "거치대"] },
     "태블릿": { "태블릿PC": ["아이패드", "갤럭시탭"], "액세서리": ["케이스", "펜슬"] },
     "휴대폰": { "스마트폰": ["갤럭시", "아이폰"], "케이스·필름": ["케이스", "보호필름"], "충전기·케이블": ["고속충전기", "보조배터리"] },
-    "TV·영상가전": { "TV": ["OLED TV", "QLED TV"], "프로젝터": ["빔프로젝터"] },
+    "TV·영상가전": { "TV": ["OLED TV", "QLED TV"], "프로젝터": ["빔프로젝터", "미니빔프로젝터"] },
     "생활가전": { "주방가전": ["에어프라이어", "전자레인지", "커피머신"], "계절가전": ["에어컨", "선풍기", "히터"], "청소가전": ["로봇청소기", "무선청소기"] },
-    "카메라·캠코더": { "디지털카메라": ["미러리스", "DSLR"], "액션캠": ["고프로"], "렌즈·액세서리": ["카메라렌즈", "삼각대"] },
+    "카메라·캠코더": { "디지털카메라": ["미러리스", "DSLR"], "액션캠": ["고프로", "짐벌"], "렌즈·액세서리": ["카메라렌즈", "삼각대"] },
     "게임기": { "콘솔게임기": ["플레이스테이션", "닌텐도스위치"], "게임타이틀": ["액션게임", "RPG게임"] }
   },
   "가구/인테리어": {
-    "침실가구": { "침대": ["프레임", "매트리스"], "옷장": ["붙박이장", "드레스룸", "행거"], "화장대": ["거울화장대"] },
-    "거실가구": { "소파": ["패브릭소파", "가죽소파", "리클라이너"], "테이블": ["거실테이블", "좌식테이블"], "TV장": ["거실장"] },
+    "침실가구": { "침대": ["프레임", "매트리스"], "옷장": ["붙박이장", "드레스룸", "행거"], "화장대": ["거울화장대", "화장대의자"] },
+    "거실가구": { "소파": ["패브릭소파", "가죽소파", "리클라이너"], "테이블": ["거실테이블", "좌식테이블"], "TV장": ["거실장", "콘솔장"] },
     "서재·사무가구": { "책상": ["컴퓨터책상", "좌식책상"], "의자": ["사무용의자", "게이밍체어"], "책장": ["단행본책장", "코너책장"] },
     "주방가구": { "식탁": ["2인용식탁", "4인용식탁"], "주방수납장": ["펜트리장", "수납장"] },
     "홈데코": { "패브릭": ["커튼", "러그", "쿠션"], "액자·소품": ["액자", "화병", "캔들"], "시계": ["벽시계", "탁상시계"] },
-    "조명": { "실내조명": ["LED조명", "팬던트조명"], "무드등": ["무드등", "취침등"], "스탠드": ["독서스탠드"] },
-    "DIY자재·부자재": { "벽지·시트지": ["포인트벽지"], "바닥재": ["장판", "데코타일"] }
+    "조명": { "실내조명": ["LED조명", "팬던트조명"], "무드등": ["무드등", "취침등"], "스탠드": ["독서스탠드", "LED스탠드"] },
+    "DIY자재·부자재": { "벽지·시트지": ["포인트벽지", "합지벽지"], "바닥재": ["장판", "데코타일"] }
   },
   "출산/육아": {
     "기저귀·물티슈": { "기저귀": ["팬티형", "밴드형", "수영장기저귀"], "물티슈": ["휴대용", "리필용"] },
     "분유·이유식": { "분유": ["단계별분유", "산양분유"], "이유식": ["초기이유식", "후기이유식"], "이유식용품": ["이유식용기", "보관팩"] },
     "유아동의류": { "상의": ["바디수트", "티셔츠"], "하의": ["레깅스", "바지"], "아우터": ["패딩", "우주복"] },
-    "유모차·카시트": { "유모차": ["절충형", "디럭스형", "휴대용"], "카시트": ["신생아용", "확장형"], "웨건·웨빙": ["다목적웨건"] },
+    "유모차·카시트": { "유모차": ["절충형", "디럭스형", "휴대용"], "카시트": ["신생아용", "확장형"], "웨건·웨빙": ["다목적웨건", "웨빙캐리어"] },
     "완구·교육": { "완구": ["블록", "인형", "자동차완구"], "교육용품": ["한글교재", "숫자놀이"] },
     "수유·이유용품": { "수유용품": ["젖병", "유축기"], "식기": ["빨대컵", "유아식기세트"] },
     "임부용품": { "임부복": ["임부복원피스", "임부내의"], "출산준비물": ["출산가방", "산모패드"] }
@@ -139,7 +139,7 @@ const naverCategoryTree = {
     "캠핑·등산": { "캠핑용품": ["텐트", "침낭", "타프"], "등산용품": ["등산화", "배낭", "등산스틱"], "캠핑가구": ["캠핑테이블", "캠핑체어"] },
     "헬스·요가": { "헬스용품": ["덤벨", "벤치프레스", "바벨"], "요가용품": ["요가매트", "요가블럭"], "스포츠웨어": ["레깅스", "스포츠브라"] },
     "자전거": { "자전거": ["로드바이크", "MTB", "전기자전거"], "액세서리": ["헬멧", "라이트", "자물쇠"] },
-    "낚시": { "낚시용품": ["낚싯대", "릴"], "낚시의류": ["방수복"] },
+    "낚시": { "낚시용품": ["낚싯대", "릴"], "낚시의류": ["방수복", "낚시조끼"] },
     "수영·수상스포츠": { "수영용품": ["수영복", "수경", "수모"], "수상레저": ["패들보드", "구명조끼"] },
     "구기스포츠": { "축구·풋살": ["축구화", "유니폼"], "야구·배드민턴": ["배트", "글러브", "라켓"] }
   },
@@ -147,24 +147,24 @@ const naverCategoryTree = {
     "생활용품": { "주방용품": ["밀폐용기", "냄비", "프라이팬"], "세탁·청소": ["세제", "청소도구", "수납용품"], "욕실용품": ["샤워커튼", "욕실매트"] },
     "건강용품": { "혈압·체온계": ["혈압계", "체온계"], "마사지기": ["안마의자", "마사지건"], "건강보조기구": ["온열기", "저주파마사지기"] },
     "반려동물용품": { "사료": ["강아지사료", "고양이사료"], "용품": ["장난감", "하네스", "켄넬"], "위생용품": ["배변패드", "고양이모래"] },
-    "문구·사무용품": { "필기구": ["볼펜", "연필", "만년필"], "사무용품": ["파일", "노트", "프린터용지"], "다이어리·플래너": ["스케줄러"] },
+    "문구·사무용품": { "필기구": ["볼펜", "연필", "만년필"], "사무용품": ["파일", "노트", "프린터용지"], "다이어리·플래너": ["스케줄러", "위클리플래너"] },
     "일회용품": { "위생용품": ["마스크", "장갑"], "주방일회용품": ["나무젓가락", "빨대", "랩"] },
-    "건강관리용품": { "다이어트용품": ["체지방계"], "금연·금주용품": ["금연보조제"] }
+    "건강관리용품": { "다이어트용품": ["체지방계", "폼롤러"], "금연·금주용품": ["금연보조제", "금연패치"] }
   },
   "여가/생활편의": {
     "도서": { "소설": ["국내소설", "해외소설"], "자기계발": ["에세이", "경제경영"], "어린이도서": ["그림책", "동화책"] },
     "티켓·공연": { "공연": ["콘서트", "뮤지컬", "연극"], "전시": ["미술전시", "체험전"], "스포츠관람": ["야구티켓", "축구티켓"] },
-    "여행·항공권": { "항공권": ["국내선", "국제선"], "숙박": ["호텔", "펜션", "게스트하우스"], "투어·입장권": ["테마파크입장권"] },
-    "상품권": { "온라인상품권": ["문화상품권", "도서문화상품권"], "모바일상품권": ["기프티콘"], "백화점상품권": ["신세계상품권"] },
-    "취미": { "음반·DVD": ["K팝음반"], "악기": ["기타", "피아노"], "핸드메이드": ["DIY키트"] },
-    "자동차용품": { "카액세서리": ["방향제", "거치대"], "카케어": ["세차용품"] }
+    "여행·항공권": { "항공권": ["국내선", "국제선"], "숙박": ["호텔", "펜션", "게스트하우스"], "투어·입장권": ["테마파크입장권", "워터파크입장권"] },
+    "상품권": { "온라인상품권": ["문화상품권", "도서문화상품권"], "모바일상품권": ["기프티콘", "카카오페이상품권"], "백화점상품권": ["신세계상품권", "롯데상품권"] },
+    "취미": { "음반·DVD": ["K팝음반", "OST음반"], "악기": ["기타", "피아노"], "핸드메이드": ["DIY키트", "자수키트"] },
+    "자동차용품": { "카액세서리": ["방향제", "거치대"], "카케어": ["세차용품", "광택제"] }
   },
   "면세점": {
-    "향수·화장품": { "향수": ["여성향수", "남성향수"], "스킨케어": ["에센스세트"], "메이크업": ["립스틱세트"] },
-    "주류": { "위스키": ["싱글몰트", "블렌디드"], "와인": ["레드와인", "화이트와인"], "전통주": ["사케"] },
-    "패션잡화": { "가방": ["명품가방"], "지갑": ["명품지갑"], "벨트": ["명품벨트"] },
-    "선글라스·시계": { "선글라스": ["명품선글라스"], "시계": ["명품시계"] },
-    "건강식품": { "영양제": ["비타민세트"], "홍삼": ["홍삼정"] }
+    "향수·화장품": { "향수": ["여성향수", "남성향수"], "스킨케어": ["에센스세트", "크림세트"], "메이크업": ["립스틱세트", "쿠션세트"] },
+    "주류": { "위스키": ["싱글몰트", "블렌디드"], "와인": ["레드와인", "화이트와인"], "전통주": ["사케", "청주"] },
+    "패션잡화": { "가방": ["명품가방", "여행가방"], "지갑": ["명품지갑", "카드지갑"], "벨트": ["명품벨트", "버클벨트"] },
+    "선글라스·시계": { "선글라스": ["명품선글라스", "편광선글라스"], "시계": ["명품시계", "스마트워치"] },
+    "건강식품": { "영양제": ["비타민세트", "오메가3세트"], "홍삼": ["홍삼정", "홍삼스틱"] }
   }
 };
 function categoryLevelOptions(level, path) {
@@ -336,10 +336,12 @@ let sellerCountry = "전체 국가";
 let sellerBrand = "전체 브랜드";
 let sellerProductSearch = "";
 let marketViewMode = "grid";
+let sellerBrandDirectoryView = false;
 let pickStatusFilter = "all";
 let onSaleSearch = "";
 let onSaleDateFrom = "";
 let onSaleDateTo = "";
+let onSaleCategoryFilter = "전체";
 let onSalePageSize = 10;
 let onSalePage = 1;
 let noticeModalIndex = -1;
@@ -1032,12 +1034,11 @@ function brandDirectoryGroups() {
   });
   return groups;
 }
-function brandDirectoryModal() {
+function brandDirectoryTemplate() {
   const groups = brandDirectoryGroups();
   const categories = Object.keys(groups);
-  openModal(`<div class="brand-directory-head"><span>DOOGO BRAND</span><h2>브랜드관</h2><p>카테고리별 입점 브랜드를 확인하고, 브랜드를 선택하면 해당 브랜드 상품만 바로 검색됩니다.</p></div>
-    <div class="brand-directory-body">${categories.length ? categories.map(category => `<section class="brand-directory-group"><h3>${escapeHtml(category)}</h3><div class="brand-directory-grid">${[...groups[category].entries()].map(([brand, count]) => `<button type="button" class="brand-directory-card" data-action="select-brand" data-brand="${escapeHtml(brand)}" data-category="${escapeHtml(category)}"><span class="brand-directory-avatar">${escapeHtml(brand.slice(0,1))}</span><b>${escapeHtml(brand)}</b><small>${count}개 상품</small></button>`).join("")}</div></section>`).join("") : `<div class="empty">등록된 브랜드가 없습니다.</div>`}</div>`);
-  document.querySelector("#modal .modal").classList.add("brand-directory-modal");
+  return `${sectionHero("브랜드관", "카테고리별 입점 브랜드를 확인하고, 브랜드를 선택하면 해당 브랜드 상품만 바로 검색됩니다.", `<button type="button" class="secondary-button" data-action="close-brand-directory">← 상품 소싱으로 돌아가기</button>`)}
+    <div class="brand-directory-body">${categories.length ? categories.map(category => `<section class="panel brand-directory-group"><div class="panel-head"><h3>${escapeHtml(category)}</h3></div><div class="brand-directory-grid">${[...groups[category].entries()].map(([brand, count]) => `<button type="button" class="brand-directory-card" data-action="select-brand" data-brand="${escapeHtml(brand)}" data-category="${escapeHtml(category)}"><span class="brand-directory-avatar">${escapeHtml(brand.slice(0,1))}</span><b>${escapeHtml(brand)}</b><small>${count}개 상품</small></button>`).join("")}</div></section>`).join("") : `<div class="empty">등록된 브랜드가 없습니다.</div>`}</div>`;
 }
 
 function sellerProductsTable() {
@@ -1181,6 +1182,7 @@ function shippingSettingsTemplate() {
 }
 
 function sellerMarketplaceTemplate() {
+  if (sellerBrandDirectoryView) return brandDirectoryTemplate();
   const products = sellerCatalogProducts();
   const empty = `<div class="empty catalog-empty"><b>검색 결과가 없습니다.</b><span>국가·브랜드·카테고리 조건을 바꿔 다시 확인해 주세요.</span><button class="secondary-button" data-action="reset-market-filter">필터 초기화</button></div>`;
   const listing = marketViewMode === "list"
@@ -1386,13 +1388,15 @@ function sellerOnSaleProductsTemplate() {
   const liveItems = currentSellerProducts().filter(item => item.approvalStatus !== "승인대기" && channels.some(channel => sellerProductChannelStatus(item, channel) === "판매중"));
   const query = onSaleSearch.trim().toLowerCase();
   const normalizeDate = value => String(value || "").replace(/\./g, "-");
+  const onSaleCategories = ["전체", ...new Set(liveItems.map(item => productOf(item.productId)?.category).filter(Boolean))];
   const filtered = liveItems.filter(item => {
     const product = productOf(item.productId);
     const matchesQuery = !query || [sellerProductTitle(item, product), item.productId, item.id].some(value => String(value || "").toLowerCase().includes(query));
     const itemDate = normalizeDate(item.copiedAt);
     const matchesFrom = !onSaleDateFrom || (itemDate && itemDate >= onSaleDateFrom);
     const matchesTo = !onSaleDateTo || (itemDate && itemDate <= onSaleDateTo);
-    return matchesQuery && matchesFrom && matchesTo;
+    const matchesCategory = onSaleCategoryFilter === "전체" || product?.category === onSaleCategoryFilter;
+    return matchesQuery && matchesFrom && matchesTo && matchesCategory;
   });
   const totalPages = Math.max(1, Math.ceil(filtered.length / onSalePageSize));
   onSalePage = Math.min(onSalePage, totalPages);
@@ -1401,7 +1405,8 @@ function sellerOnSaleProductsTemplate() {
   return `${sectionHero("상품 판매중", "실제로 채널에 배포되어 판매중인 상품과 마진을 확인합니다.")}<div class="panel">
     <div class="panel-head"><div><h3>판매중 상품 목록</h3><p>검색 또는 등록일 범위로 상품을 좁혀볼 수 있습니다.</p></div><span class="chip">${filtered.length}개</span></div>
     <div class="onsale-filter-bar">
-      <label class="catalog-search"><span>⌕</span><input id="onSaleSearchInput" value="${escapeHtml(onSaleSearch)}" placeholder="상품명·코드 검색"></label>
+      <label class="onsale-search"><span>⌕</span><input id="onSaleSearchInput" value="${escapeHtml(onSaleSearch)}" placeholder="상품명·코드 검색"></label>
+      <label class="onsale-category-field"><span>카테고리</span><select id="onSaleCategorySelect">${onSaleCategories.map(category => `<option value="${escapeHtml(category)}" ${onSaleCategoryFilter === category ? "selected" : ""}>${escapeHtml(category)}</option>`).join("")}</select></label>
       <label class="onsale-date-field"><span>등록일</span><input type="date" id="onSaleDateFromInput" value="${escapeHtml(onSaleDateFrom)}"></label>
       <span class="onsale-date-sep">~</span>
       <label class="onsale-date-field"><span>&nbsp;</span><input type="date" id="onSaleDateToInput" value="${escapeHtml(onSaleDateTo)}"></label>
@@ -1449,6 +1454,7 @@ function sellerProductMappingTemplate() {
   const pending = unmappedExternalProducts();
   const mapped = currentProductMappings().filter(mapping => mapping.status === "매핑완료");
   return `${sectionHero("상품매핑", "외부 판매채널 상품코드를 공급사 원본 상품에 연결합니다. 한 번 매핑하면 같은 상품코드의 신규 주문이 자동으로 연결되며, 연결을 바꾸려면 먼저 매핑을 해지해야 합니다.", `<button type="button" class="primary-button" data-action="open-product-mapping-form">+ 매핑 설정</button>`)}
+    <div class="mapping-sections">
     <div class="panel">
       <div class="panel-head"><div><h3>매핑 필요</h3><p>신규 주문에서 수집되었지만 아직 공급사 상품과 연결되지 않았습니다.</p></div><span class="chip red">${pending.length}건</span></div>
       <div class="mapping-list">${pending.length ? pending.map(order => `<article class="mapping-row"><span class="mapping-status unmapped">매핑 필요</span><div class="mapping-main"><b>${escapeHtml(order.externalProductName || "외부 상품")}</b><small>${escapeHtml(order.channel)} · 외부코드 ${escapeHtml(order.externalProductCode || "-")}</small></div><button type="button" class="small-button approve" data-action="open-product-mapping-form" data-code="${escapeHtml(order.externalProductCode || "")}" data-name="${escapeHtml(order.externalProductName || "")}" data-channel="${escapeHtml(order.channel || "")}">매핑 설정</button></article>`).join("") : `<div class="empty">매핑이 필요한 신규 주문이 없습니다.</div>`}</div>
@@ -1456,6 +1462,7 @@ function sellerProductMappingTemplate() {
     <div class="panel">
       <div class="panel-head"><div><h3>매핑완료</h3><p>매핑을 해지하기 전까지 같은 상품코드의 주문은 자동으로 연결됩니다.</p></div><span class="chip">${mapped.length}건</span></div>
       <div class="mapping-list">${mapped.length ? mapped.map(mapping => { const product = productOf(mapping.productId); return `<article class="mapping-row mapped"><span class="mapping-status mapped">매핑완료</span><div class="mapping-main"><b>${escapeHtml(mapping.externalProductName || "외부 상품")}</b><small>${escapeHtml(mapping.channel || "-")} · 외부코드 ${escapeHtml(mapping.externalProductCode)}</small></div><span class="mapping-arrow">→</span><div class="mapping-target"><b>${escapeHtml(product?.name || "공급사 상품")}</b><small>${escapeHtml(mapping.supplier || product?.supplier || "-")} · ${escapeHtml(mapping.productId)}</small></div><button type="button" class="small-button reject" data-action="unmap-product-mapping" data-id="${mapping.id}">매핑 해지</button></article>`; }).join("") : `<div class="empty">매핑된 상품이 없습니다.</div>`}</div>
+    </div>
     </div>`;
 }
 function renderSellerSection(index) {
@@ -2964,11 +2971,12 @@ document.addEventListener("click", event => {
   if (action === "filter-products") { sellerCategoryGroup = "식품"; sellerCategory = target.dataset.category || "전체보기"; sellerCategorySub = "전체보기"; sellerCategoryDetail = "전체보기"; render(); updateAccountUI(); return; }
   if (action === "filter-shipping") { sellerShippingFilter = target.dataset.filter || "all"; render(); updateAccountUI(); return; }
   if (action === "market-preset") { sellerCategory = target.dataset.category || "전체보기"; sellerShippingFilter = target.dataset.filter || "all"; sellerCountry = target.dataset.country || "전체 국가"; sellerBrand = target.dataset.brand || "전체 브랜드"; render(); updateAccountUI(); requestAnimationFrame(() => document.getElementById("marketProductGrid")?.scrollIntoView({ behavior:"smooth", block:"start" })); return; }
-  if (action === "open-brand-directory") { brandDirectoryModal(); return; }
-  if (action === "select-brand") { closeModal(); sellerBrand = target.dataset.brand || "전체 브랜드"; sellerCategory = "전체보기"; render(); updateAccountUI(); requestAnimationFrame(() => document.getElementById("marketProductGrid")?.scrollIntoView({ behavior:"smooth", block:"start" })); return; }
+  if (action === "open-brand-directory") { sellerBrandDirectoryView = true; render(); updateAccountUI(); return; }
+  if (action === "close-brand-directory") { sellerBrandDirectoryView = false; render(); updateAccountUI(); return; }
+  if (action === "select-brand") { sellerBrandDirectoryView = false; sellerBrand = target.dataset.brand || "전체 브랜드"; sellerCategory = "전체보기"; render(); updateAccountUI(); requestAnimationFrame(() => document.getElementById("marketProductGrid")?.scrollIntoView({ behavior:"smooth", block:"start" })); return; }
   if (action === "reset-market-filter") { sellerCategory = "전체보기"; sellerCategoryGroup = "식품"; sellerCategorySub = "전체보기"; sellerCategoryDetail = "전체보기"; sellerShippingFilter = "all"; sellerCountry = "전체 국가"; sellerBrand = "전체 브랜드"; sellerProductSearch = ""; render(); updateAccountUI(); return; }
   if (action === "set-market-view") { marketViewMode = target.dataset.view || "grid"; render(); updateAccountUI(); return; }
-  if (action === "reset-onsale-filter") { onSaleSearch = ""; onSaleDateFrom = ""; onSaleDateTo = ""; onSalePage = 1; render(); updateAccountUI(); return; }
+  if (action === "reset-onsale-filter") { onSaleSearch = ""; onSaleDateFrom = ""; onSaleDateTo = ""; onSaleCategoryFilter = "전체"; onSalePage = 1; render(); updateAccountUI(); return; }
   if (action === "onsale-page") { onSalePage = Number(target.dataset.page) || 1; render(); updateAccountUI(); return; }
   if (action === "sync-all-channels") {
     const item = state.sellerProducts.find(entry => entry.id === id);
@@ -3392,6 +3400,7 @@ document.getElementById("workspaceMenu").addEventListener("click", event => {
   if (!button) return;
   activeMenuIndex = Number(button.dataset.menuIndex);
   if (activeMenuIndex !== 0) editMode = false;
+  sellerBrandDirectoryView = false;
   closeMobileSidebar(); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
@@ -3423,6 +3432,7 @@ document.addEventListener("change", event => {
   if (event.target.id === "onSaleSearchInput") { onSaleSearch = event.target.value; onSalePage = 1; render(); updateAccountUI(); }
   if (event.target.id === "onSaleDateFromInput") { onSaleDateFrom = event.target.value; onSalePage = 1; render(); updateAccountUI(); }
   if (event.target.id === "onSaleDateToInput") { onSaleDateTo = event.target.value; onSalePage = 1; render(); updateAccountUI(); }
+  if (event.target.id === "onSaleCategorySelect") { onSaleCategoryFilter = event.target.value; onSalePage = 1; render(); updateAccountUI(); }
   if (event.target.id === "onSalePageSizeSelect") { onSalePageSize = Number(event.target.value) || 10; onSalePage = 1; render(); updateAccountUI(); }
   if (event.target.id === "marketCountrySelect") { sellerCountry = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "marketBrandSelect") { sellerBrand = event.target.value; render(); updateAccountUI(); }
