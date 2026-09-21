@@ -2043,6 +2043,12 @@ function editSellerProductModal(sellerProductId) {
   const value = (key, fallback = "") => escapeHtml(item?.[key] ?? fallback);
   const selected = (key, option, fallback = "") => (item?.[key] ?? fallback) === option ? "selected" : "";
   const channels = sellerChannels();
+  const categoryPath = [
+    item.sellerCategoryGroup || source.categoryGroup || "",
+    item.sellerCategory || source.category || "",
+    item.sellerCategorySub || source.categorySub || "",
+    item.sellerCategoryDetail || source.categoryDetail || ""
+  ];
   openModal(`<div class="product-editor-head balju-product-head seller-product-editor-head"><div><span>DOOGO SELLER · PRODUCT EDITOR</span><h2>상품 수정</h2><p>발주오라형 단일 상품 편집 화면에서 판매명·가격·콘텐츠·배송·채널 정보를 관리합니다.</p></div><div class="editor-progress"><b>1 기본정보</b><b>2 판매가격</b><b>3 이미지·상세</b><b>4 배송·채널</b></div></div>
     <form id="sellerProductEditForm" class="product-editor-form balju-product-form seller-product-editor-form" data-id="${item.id}">
       <div class="source-code-lock seller-source-lock"><span>공급사 원본 상품 · 수정 잠금</span><b>${escapeHtml(source.id)} · ${escapeHtml(source.name)}</b><small>주문 매핑과 공급사 전달은 항상 이 DF 상품코드를 사용합니다. 아래 변경사항은 위탁셀러 판매 사본에만 저장됩니다.</small></div>
@@ -2050,7 +2056,7 @@ function editSellerProductModal(sellerProductId) {
         <div class="form-field span-3"><label>내 판매 상품명 *</label><input name="customTitle" value="${escapeHtml(sellerProductTitle(item, source))}" maxlength="100" required></div>
         <div class="form-field"><label>판매 상태 *</label><select name="status"><option ${selected("status","판매중","판매중")}>판매중</option><option ${selected("status","판매중지")}>판매중지</option><option ${selected("status","가져오기 완료")}>등록 준비중</option></select></div>
         <div class="form-field span-2"><label>셀러 관리코드</label><input name="managementCode" value="${value("managementCode", item.id)}" maxlength="50"></div>
-        <div class="form-field"><label>내 카테고리</label><select name="sellerCategory"><option ${selected("sellerCategory","농산물",source.category)}>농산물</option><option ${selected("sellerCategory","수산물",source.category)}>수산물</option><option ${selected("sellerCategory","가공식품",source.category)}>가공식품</option><option ${selected("sellerCategory","건강식품",source.category)}>건강식품</option></select></div>
+        <div class="form-field full category-cascade-field"><label>내 카테고리 <small>네이버쇼핑 기준 4단계</small></label><div class="category-select-pair category-select-quad">${categorySelectTag("sellerCategoryGroup", 1, categoryPath)}${categorySelectTag("sellerCategory", 2, categoryPath)}${categorySelectTag("sellerCategorySub", 3, categoryPath)}${categorySelectTag("sellerCategoryDetail", 4, categoryPath)}</div></div>
         <div class="form-field"><label>과세 구분</label><input value="${escapeHtml(source.tax || "과세")} · 공급사 원본" disabled></div>
         <div class="form-field span-2"><label>공급사 상품명</label><input value="${escapeHtml(source.name)}" disabled></div>
         <div class="form-field"><label>공급사 상품코드</label><input value="${escapeHtml(source.id)}" disabled></div>
@@ -3635,7 +3641,10 @@ document.addEventListener("submit", event => {
     item.salePrice = Number(data.salePrice);
     item.retailPrice = Number(data.retailPrice || data.salePrice);
     item.managementCode = String(data.managementCode || item.id).trim();
-    item.sellerCategory = String(data.sellerCategory || source.category);
+    item.sellerCategoryGroup = String(data.sellerCategoryGroup || source.categoryGroup || "");
+    item.sellerCategory = String(data.sellerCategory || source.category || "");
+    item.sellerCategorySub = String(data.sellerCategorySub || source.categorySub || "");
+    item.sellerCategoryDetail = String(data.sellerCategoryDetail || source.categoryDetail || "");
     item.status = String(data.status || "판매중");
     item.imageIndex = Number(data.imageIndex ?? item.imageIndex ?? source.imageIndex ?? 0);
     item.summaryOverride = String(data.summaryOverride || "").trim();
@@ -3824,8 +3833,8 @@ document.addEventListener("submit", event => {
   }
   if (form.id === "connectionMessageForm") {
     state.connectionMessages.push({ id: `MSG-${Date.now()}`, supplierLoginId: data.supplierLoginId, sellerLoginId: data.sellerLoginId, senderLoginId: currentAccount.loginId, text: String(data.text || "").trim(), createdAt: "방금 전" });
-    audit("거래처 운영 메모 등록", `${memberByLogin(data.supplierLoginId)?.company || data.supplierLoginId} ↔ ${memberByLogin(data.sellerLoginId)?.company || data.sellerLoginId} 연결에 운영 메모를 저장했습니다.`, "done", "connection");
-    saveState(); render(); updateAccountUI(); showToast("거래처 양쪽 화면에 메모를 반영했습니다.");
+    audit("두고톡 메시지 전송", `${memberByLogin(data.supplierLoginId)?.company || data.supplierLoginId} ↔ ${memberByLogin(data.sellerLoginId)?.company || data.sellerLoginId} 대화에 메시지를 전송했습니다.`, "done", "connection");
+    saveState(); render(); updateAccountUI();
   }
   if (form.id === "supplierInquiryForm") {
     const product = productOf(data.productId);

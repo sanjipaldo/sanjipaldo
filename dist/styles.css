@@ -4667,3 +4667,40 @@ h4 { font-weight: 600; letter-spacing: -.01em; }
   .onsale-search { width: 100%; flex: 0 0 auto; max-width: none; }
   .onsale-category-field, .onsale-category-field select { width: 100%; }
 }
+
+/* 상품판매중 필터바: 왼쪽에 몰리지 않도록 행 전체에 고르게 분산 */
+.onsale-filter-bar { justify-content: space-between; }
+
+/* 상품 수정 모달: 내 카테고리 → 네이버쇼핑 4단계 캐스케이드 */
+.category-cascade-field label { display: flex; align-items: baseline; gap: 6px; }
+.category-cascade-field label small { color: #a7b1bd; font-size: 11px; font-weight: 700; }
+.category-cascade-field .category-select-quad { margin-top: 6px; }
+
+/* ============================================================
+   전반적인 여백/자간 확대 (너무 붙어있어 답답하다는 피드백 반영)
+   ============================================================ */
+body { letter-spacing: normal; }
+.form-field { gap: 8px; }
+.form-grid { gap: 16px; }
+.editor-grid { gap: 18px; }
+.editor-section { margin-bottom: 22px; padding: 24px; }
+.editor-section-title { margin-bottom: 20px; padding-bottom: 15px; }
+.purchase-strip > div { padding: 14px; }
+.panel-head { padding: 20px 22px; }
+.messenger-list { padding: 20px 16px; }
+.messenger-main > header { padding: 18px 20px; }
+.chat-thread { padding: 22px; }
+.chat-message { margin-bottom: 18px; }
+.rich-thread .chat-message p { padding: 14px 16px; }
+.chat-compose { gap: 10px; padding: 16px; }
+.messenger-profile { padding: 28px 22px 22px; }
+.messenger-profile > div { padding: 13px 0; gap: 10px; }
+.messenger-profile-kpis { gap: 10px !important; }
+.messenger-profile-kpis > span { padding: 12px 8px; }
+.contact-modal-head { gap: 14px; margin-bottom: 24px; }
+.contact-info-grid div { padding: 14px; }
+@media (max-width: 720px) {
+  .editor-section { padding: 18px; }
+  .chat-thread { padding: 16px; }
+  .messenger-main > header { padding: 14px 16px; }
+}
