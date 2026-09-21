@@ -4704,3 +4704,21 @@ body { letter-spacing: normal; }
   .chat-thread { padding: 16px; }
   .messenger-main > header { padding: 14px 16px; }
 }
+
+/* 두고톡: 메시지가 쌓일수록 채팅창이 페이지 전체를 끝없이 늘리던 버그 수정.
+   .rich-thread가 max-height:none이라 메시지가 쌓일수록 무한정 늘어났고,
+   중첩 grid(1fr 트랙)의 자동 최소 크기 규칙 때문에 min-height:0만으로는
+   상위 .messenger-shell까지 안정적으로 제한되지 않았음. 채팅창 자체에
+   고정 높이를 줘서 메시지 수와 무관하게 내부 스크롤만 생기도록 수정. */
+.rich-thread { height: 420px; min-height: 0; }
+.messenger-shell { height: 650px; grid-template-rows: 650px; }
+.messenger-main { grid-template-rows: auto auto auto auto; align-content: start; overflow: hidden; }
+@media (max-width: 720px) {
+  .rich-thread { height: 320px; }
+  .messenger-shell { height: auto; grid-template-rows: none; }
+}
+
+/* 메인 콘텐츠 좌우 여백 확대 (사이드바에 너무 붙어 보인다는 피드백, 모바일 좁은 화면은 제외) */
+@media (min-width: 721px) {
+  main { padding: 0 40px 60px; }
+}
