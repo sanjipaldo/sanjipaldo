@@ -355,6 +355,7 @@ let supplierOrderStatus = "all";
 let supplierSettlementMonth = "2026-09";
 let supplierSettlementTab = "scheduled";
 let expandedSellerProductId = null;
+let expandedNoticeId = null;
 let editMode = false;
 let dashboardDraftLayout = null;
 let dashboardEditSnapshot = null;
@@ -1945,6 +1946,12 @@ function showToast(message) {
   toast.textContent = message; toast.classList.add("show");
   clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.classList.remove("show"), 2500);
 }
+function scrollChatThreadToBottom() {
+  requestAnimationFrame(() => {
+    const thread = document.querySelector(".rich-thread");
+    if (thread) thread.scrollTop = thread.scrollHeight;
+  });
+}
 function openModal(html) {
   const modal = document.querySelector("#modal .modal");
   modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal");
@@ -2166,7 +2173,13 @@ function orderPaymentModal(orderId) {
 
 function sellerNoticesTemplate() {
   const list = state.notices || [];
-  return `${sectionHero("공지사항", "두고 운영에 필요한 최근 업데이트와 안내를 확인하세요.")}<div class="panel notice-board">${list.length ? list.map(n => `<button type="button" class="notice-row" data-action="open-notice-detail" data-id="${n.id}"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></button>`).join("") : `<div class="empty">등록된 공지사항이 없습니다.</div>`}</div>`;
+  return `${sectionHero("공지사항", "두고 운영에 필요한 최근 업데이트와 안내를 확인하세요.")}<div class="panel notice-board">${list.length ? list.map(n => {
+    const expanded = expandedNoticeId === n.id;
+    return `<article class="notice-item ${expanded ? "expanded" : ""}">
+      <button type="button" class="notice-row" data-action="toggle-notice-detail" data-id="${n.id}" aria-expanded="${expanded}"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}<i class="notice-row-chevron">${expanded ? "⌄" : "›"}</i></span></button>
+      ${expanded ? `<div class="notice-detail"><p>${escapeHtml(n.detail)}</p>${n.action ? `<button type="button" class="secondary-button" data-action="${escapeHtml(n.action)}">${escapeHtml(n.cta || "바로가기")} →</button>` : ""}</div>` : ""}
+    </article>`;
+  }).join("") : `<div class="empty">등록된 공지사항이 없습니다.</div>`}</div>`;
 }
 function renderNoticeModal() {
   const list = state.notices || [];
@@ -2963,7 +2976,7 @@ document.addEventListener("click", event => {
   }
   if (action === "chat-attach") { showToast("데모에서는 사진을 업로드하지 않고 첨부 위치만 확인합니다."); return; }
   if (action === "chat-filter") { chatRoomFilter = target.dataset.filter || "all"; render(); updateAccountUI(); return; }
-  if (action === "select-chat-room") { activeChatConnectionId = id; render(); updateAccountUI(); return; }
+  if (action === "select-chat-room") { activeChatConnectionId = id; render(); updateAccountUI(); scrollChatThreadToBottom(); return; }
   if (action === "toggle-chat-favorite") {
     state.chatFavorites = state.chatFavorites || {};
     state.chatFavorites[id] = !state.chatFavorites[id];
@@ -3033,6 +3046,7 @@ document.addEventListener("click", event => {
   if (action === "unmap-product-mapping") { unmapProductMappingModal(id); return; }
   if (action === "open-notices") { activeMenuIndex = 13; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (action === "open-notice-detail") { noticeDetailModal(id); return; }
+  if (action === "toggle-notice-detail") { expandedNoticeId = expandedNoticeId === id ? null : id; render(); updateAccountUI(); return; }
   if (action === "edit-notice") { noticeFormModal(id); return; }
   if (action === "delete-notice") {
     state.notices = (state.notices || []).filter(n => n.id !== id);
@@ -3141,7 +3155,7 @@ document.addEventListener("click", event => {
     if (!refund) return;
     closeModal();
     activeMenuIndex = activeRole === "seller" ? 3 : activeRole === "supplier" ? 2 : activeMenuIndex;
-    render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" });
+    render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); scrollChatThreadToBottom();
     showToast(`${refund.orderId} 환불 협의가 연결된 거래처 두고톡에 표시됩니다.`);
     return;
   }
@@ -3407,7 +3421,7 @@ document.getElementById("workspaceMenu").addEventListener("click", event => {
   activeMenuIndex = Number(button.dataset.menuIndex);
   if (activeMenuIndex !== 0) editMode = false;
   sellerBrandDirectoryView = false;
-  closeMobileSidebar(); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" });
+  closeMobileSidebar(); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); scrollChatThreadToBottom();
 });
 
 document.addEventListener("change", event => {
@@ -3834,7 +3848,7 @@ document.addEventListener("submit", event => {
   if (form.id === "connectionMessageForm") {
     state.connectionMessages.push({ id: `MSG-${Date.now()}`, supplierLoginId: data.supplierLoginId, sellerLoginId: data.sellerLoginId, senderLoginId: currentAccount.loginId, text: String(data.text || "").trim(), createdAt: "방금 전" });
     audit("두고톡 메시지 전송", `${memberByLogin(data.supplierLoginId)?.company || data.supplierLoginId} ↔ ${memberByLogin(data.sellerLoginId)?.company || data.sellerLoginId} 대화에 메시지를 전송했습니다.`, "done", "connection");
-    saveState(); render(); updateAccountUI();
+    saveState(); render(); updateAccountUI(); scrollChatThreadToBottom();
   }
   if (form.id === "supplierInquiryForm") {
     const product = productOf(data.productId);

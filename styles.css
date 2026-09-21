@@ -4668,8 +4668,13 @@ h4 { font-weight: 600; letter-spacing: -.01em; }
   .onsale-category-field, .onsale-category-field select { width: 100%; }
 }
 
-/* 상품판매중 필터바: 왼쪽에 몰리지 않도록 행 전체에 고르게 분산 */
-.onsale-filter-bar { justify-content: space-between; }
+/* 상품판매중 필터바: space-between이 넓은 화면에서 요소들을 섬처럼 흩어지게
+   만들어 자연스럽게 그룹핑되도록 원복. 초기화 버튼만 오른쪽 끝에 고정. */
+.onsale-filter-bar { justify-content: flex-start; }
+.onsale-filter-bar [data-action="reset-onsale-filter"] { margin-left: auto; }
+@media (max-width: 720px) {
+  .onsale-filter-bar [data-action="reset-onsale-filter"] { margin-left: 0; }
+}
 
 /* 상품 수정 모달: 내 카테고리 → 네이버쇼핑 4단계 캐스케이드 */
 .category-cascade-field label { display: flex; align-items: baseline; gap: 6px; }
@@ -4722,3 +4727,24 @@ body { letter-spacing: normal; }
 @media (min-width: 721px) {
   main { padding: 0 40px 60px; }
 }
+
+/* 두고톡: 말풍선 글씨 크기 확대 */
+.rich-thread .chat-message small { font-size: 14px; }
+.rich-thread .chat-message p { font-size: 17px; line-height: 1.6; }
+
+/* 넓은 화면에서 콘텐츠가 끝없이 늘어나 필터바·패널이 부자연스럽게 벌어지던 문제:
+   본문 콘텐츠 폭에 상한을 두고 가운데 정렬해 좌우에 여유 있는 흰 여백을 둠 */
+@media (min-width: 1600px) {
+  .role-view.active { max-width: 1480px; margin-inline: auto; }
+}
+
+/* 공지사항: 패널에 좌우 여백이 전혀 없어 목록이 패널 가장자리에 바로 붙어있던 문제 수정 */
+.notice-board { padding: 22px; }
+
+/* 공지사항: 모달 팝업 대신 클릭한 자리에서 바로 펼쳐지는 아코디언으로 변경 */
+.notice-item { display: grid; gap: 0; }
+.notice-item .notice-row { border-radius: 14px; }
+.notice-item.expanded .notice-row { border-color: #bcd0f5; background: #f1f6ff; border-radius: 14px 14px 0 0; }
+.notice-row-chevron { margin-left: 10px; color: #9aa5b2; font-size: 15px; }
+.notice-detail { padding: 18px 20px 20px; background: #fff; border: 1px solid #bcd0f5; border-top: 0; border-radius: 0 0 14px 14px; }
+.notice-detail p { margin: 0 0 14px; color: #4b5768; font-size: 15px; line-height: 1.7; }
