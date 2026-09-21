@@ -4609,19 +4609,19 @@ h4 { font-weight: 600; letter-spacing: -.01em; }
 .onsale-pagination button.active { color: #fff; background: #3182f6; }
 .onsale-pagination button:disabled { color: #c7cfd8; cursor: default; }
 
-/* 순번 + 공급사 매핑 컬럼 추가 */
-.seller-product-parent { grid-template-columns: 22px 24px 58px minmax(180px,1fr) 130px 140px 145px; }
+/* 순번 + 공급사 매핑 컬럼 추가 (상품 판매중 전용 — 상품승인/PICK 상품의 .pick-approval-row는 제외) */
+.seller-product-parent:not(.pick-approval-row) { grid-template-columns: 22px 24px 58px minmax(180px,1fr) 130px 140px 145px; }
 .seller-product-index { color: #9aa5b1; font-size: 13px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
 .seller-product-supplier { min-width: 0; display: grid; gap: 2px; }
 .seller-product-supplier small { color: #8995a3; font-size: 12px; }
 .seller-product-supplier b { overflow: hidden; color: #26364b; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .seller-product-supplier em { color: #8b97a5; font-size: 12px; font-style: normal; }
 @media (max-width: 1180px) {
-  .seller-product-parent { grid-template-columns: 22px 24px 58px minmax(180px,1fr) 125px; }
+  .seller-product-parent:not(.pick-approval-row) { grid-template-columns: 22px 24px 58px minmax(180px,1fr) 125px; }
   .seller-product-supplier { display: none; }
 }
 @media (max-width: 720px) {
-  .seller-product-parent { grid-template-columns: 22px 50px minmax(0,1fr); }
+  .seller-product-parent:not(.pick-approval-row) { grid-template-columns: 22px 50px minmax(0,1fr); }
   .seller-product-index { display: none; }
 }
 
