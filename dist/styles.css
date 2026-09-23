@@ -5745,3 +5745,44 @@ body { letter-spacing: normal; }
 @media (max-width: 900px) {
   .order-automation-bar { grid-template-columns: minmax(0, 1fr); padding: 10px; }
 }
+
+/* ===== 휴대폰 하단 탭바 ===== */
+.mobile-tabbar { display: none; }
+@media (max-width: 720px) {
+  .app-shell[hidden] .mobile-tabbar { display: none; }
+  .mobile-tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 250; padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(255,255,255,.97); border-top: 1px solid #e6ebf1; box-shadow: 0 -6px 20px rgba(15,32,66,.06); backdrop-filter: blur(10px); }
+  .mobile-tabbar button { min-width: 0; min-height: 52px; padding: 4px 2px; display: grid; justify-items: center; align-content: center; gap: 3px; color: #8b95a1; background: transparent; border: 0; border-radius: 12px; font-size: 11.5px; font-weight: 700; cursor: pointer; }
+  .mobile-tabbar button.active { color: #1b64da; }
+  .tabbar-icon { position: relative; width: 26px; height: 26px; display: grid; place-items: center; }
+  .tabbar-icon svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .mobile-tabbar button.active .tabbar-icon svg { stroke-width: 2.2; }
+  .tabbar-icon b { position: absolute; top: -4px; right: -9px; min-width: 18px; height: 18px; padding: 0 5px; display: grid; place-items: center; color: #fff; background: #f04452; border: 2px solid #fff; border-radius: 99px; font-size: 10.5px; font-weight: 800; line-height: 1; }
+  .app-shell main { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  body.mobile-menu-open .mobile-tabbar { display: none; }
+}
+
+/* 공급사 상품: 휴대폰은 카드형 */
+.supplier-product-cards { display: none; }
+@media (max-width: 720px) {
+  .supplier-product-cards { padding: 12px; display: grid; gap: 10px; }
+  .supplier-product-cards + * {}
+  .panel .table-wrap:has(+ .supplier-product-cards) { display: none; }
+  .supplier-product-card { padding: 14px; display: grid; gap: 10px; background: #fff; border: 1px solid #e6ebf1; border-radius: 16px; }
+  .supplier-product-card-top { display: grid; grid-template-columns: 60px minmax(0, 1fr); align-items: center; gap: 12px; }
+  .supplier-card-photo { width: 60px; height: 60px; display: block; object-fit: cover; border-radius: 12px; }
+  .supplier-product-card-top > div { min-width: 0; display: grid; gap: 3px; }
+  .supplier-product-card-top small { color: #8b95a1; font-size: 12.5px; }
+  .supplier-product-card-top strong { color: #191f28; font-size: 16px; line-height: 1.35; }
+  .supplier-product-card-top span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .supplier-product-card dl { margin: 0; padding: 10px 12px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; background: #f7f8fa; border-radius: 12px; }
+  .supplier-product-card dl div { display: grid; gap: 2px; }
+  .supplier-product-card dt { color: #8b95a1; font-size: 12.5px; }
+  .supplier-product-card dd { margin: 0; color: #191f28; font-size: 15px; font-weight: 800; }
+  .supplier-card-options { display: grid; gap: 4px; }
+  .supplier-card-options span { padding: 6px 10px; display: flex; align-items: center; gap: 8px; background: #fbfcfd; border: 1px solid #eef1f4; border-radius: 10px; font-size: 13.5px; }
+  .supplier-card-options b { margin-left: auto; }
+  .supplier-card-options em { color: #6b7684; font-size: 12.5px; font-style: normal; }
+  .supplier-card-options em.stock-low { color: #e5484d; font-weight: 700; }
+  .supplier-card-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .supplier-card-actions button { min-height: 44px; padding: 0 6px; }
+}
