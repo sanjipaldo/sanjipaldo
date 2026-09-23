@@ -2134,7 +2134,13 @@ function renderSupplierSection(index) {
   if (index === 5) return shippingSettingsTemplate();
   if (index === 6) return `${sectionHero("가격 관리", "공급가 변경 시 상품을 가져간 위탁셀러에게 빨간색 알림이 생성됩니다.")}<div class="panel"><div class="panel-head"><div><h3>상품별 공급가</h3><p>가격 버튼을 눌러 변경 알림 흐름을 확인하세요.</p></div></div>${supplierProductsTable()}</div>`;
   if (index === 7) return supplierSettlementTemplate();
-  return accountProfileTemplate();
+  return `${supplierSettingsCard()}${accountProfileTemplate()}`;
+}
+/* 공급사 설정: 상품 자동 승인 (켜 두면 위탁셀러가 PICK하자마자 바로 가져가 판매) */
+function supplierSettingsCard() {
+  const auto = supplierAutoApprove(currentAccount?.loginId || "sup");
+  return `<section class="panel seller-automation-card supplier-settings-card"><div class="profile-section-head"><div><span>SETTINGS</span><h3>상품 승인 설정</h3><p>위탁셀러가 내 상품을 PICK했을 때 어떻게 처리할지 정해요.</p></div></div>
+    <div class="automation-setting-list"><div class="automation-setting-row"><span><b>상품 자동 승인</b><small>${auto ? "켜짐 · 위탁셀러가 PICK하면 바로 승인돼 곧장 판매를 시작할 수 있어요." : "꺼짐 · PICK 요청을 ‘상품 관리’에서 직접 확인하고 승인해요."}</small></span><button type="button" class="automation-switch ${auto ? "on" : ""}" data-action="toggle-supplier-auto-approve" aria-pressed="${auto}"><i></i>${auto ? "켜짐" : "꺼짐"}</button></div></div></section>`;
 }
 
 function logsTemplate() {

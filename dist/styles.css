@@ -5786,3 +5786,8 @@ body { letter-spacing: normal; }
   .supplier-card-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .supplier-card-actions button { min-height: 44px; padding: 0 6px; }
 }
+/* 켜짐일 때 동그라미가 오른쪽으로 (일반 토글 스위치처럼 보이게) */
+.automation-switch { justify-content: flex-start; transition: background .15s ease; cursor: pointer; }
+.automation-switch.on { flex-direction: row-reverse; justify-content: flex-start; padding: 4px 4px 4px 9px; }
+.seller-automation-card { padding: 20px; }
+@media (max-width: 720px) { .seller-automation-card { padding: 15px; } }
