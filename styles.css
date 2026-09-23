@@ -4817,3 +4817,180 @@ body { letter-spacing: normal; }
   .app-shell[data-role="supplier"] .workspace-menu button.active .menu-icon { color: #0f8a72 !important; }
   .app-shell[data-role="master"] .workspace-menu button.active .menu-icon { color: #6d3fc9 !important; }
 }
+
+/* ===== 상품 흐름 재구성: 사이드바 단계 번호 ===== */
+.workspace-menu .menu-step { width: 20px; height: 20px; flex: 0 0 auto; display: grid; place-items: center; margin-right: -4px; color: #3182f6; background: #eaf2ff; border-radius: 50%; font-size: 12px; font-style: normal; font-weight: 800; }
+.workspace-menu button.active .menu-step { color: #3182f6; background: #fff; }
+
+/* ===== 상품 매핑 페이지 ===== */
+.mapping-steps { margin: 0 0 16px; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.mapping-steps li { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #f7f9fc; border: 1px solid #e6ebf2; border-radius: 14px; }
+.mapping-steps li > b { width: 30px; height: 30px; flex: 0 0 auto; display: grid; place-items: center; color: #fff; background: #3182f6; border-radius: 50%; font-size: 15px; }
+.mapping-steps li:nth-child(2) > b { background: #0f8a72; }
+.mapping-steps li:nth-child(3) > b { background: #6d3fc9; }
+.mapping-steps strong { display: block; color: #191f28; font-size: 16px; }
+.mapping-steps small { display: block; margin-top: 2px; color: #6b7684; font-size: 14px; }
+.mapping-summary { margin-bottom: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.mapping-summary > div { padding: 16px 18px; background: #fff; border: 1px solid #e6ebf2; border-radius: 14px; }
+.mapping-summary span { display: block; color: #6b7684; font-size: 15px; font-weight: 600; }
+.mapping-summary strong { display: block; margin-top: 6px; color: #191f28; font-size: 26px; letter-spacing: -.02em; }
+.mapping-summary .danger { background: #fff5f5; border-color: #ffd3d3; }
+.mapping-summary .danger strong { color: #e5484d; }
+.mapping-summary .auto strong { color: #0f8a72; }
+.mapping-callout { margin-bottom: 16px; padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; background: #fff8ec; border: 1px solid #ffe0a8; border-radius: 14px; }
+.mapping-callout b { display: block; color: #8a4b00; font-size: 16px; }
+.mapping-callout span { display: block; margin-top: 3px; color: #9a6a2a; font-size: 14px; }
+.mapping-callout .primary-button { flex: 0 0 auto; }
+.mapping-row { flex-wrap: wrap; row-gap: 10px; }
+.mapping-row .mapping-main em { width: max-content; margin-top: 3px; padding: 3px 8px; color: #c2323a; background: #fff0f1; border-radius: 99px; font-size: 13px; font-style: normal; font-weight: 700; }
+.mapping-row.needs-link .primary-button { min-height: 44px; }
+.mapping-status.auto { color: #0f7a64; background: #e3f7f1; }
+.mapping-status.mapped { color: #2a5bd7; background: #eaf1ff; }
+.mapping-codes { display: flex; flex-wrap: wrap; gap: 6px 12px; white-space: normal !important; }
+.mapping-codes span { display: inline-flex; align-items: center; gap: 5px; }
+.mapping-empty { display: grid; gap: 4px; text-align: center; }
+.mapping-empty b { color: #3b4655; font-size: 16px; }
+.mapping-empty span { color: #8a95a3; font-size: 14px; }
+
+/* 매핑 모달: 두고 상품 카드 선택 */
+.mapping-picker-field > label:first-child { font-size: 16px; }
+.mapping-picker-search { display: flex; align-items: center; gap: 8px; padding: 0 12px; background: #f6f8fb; border: 1px solid #e0e6ee; border-radius: 12px; }
+.mapping-picker-search span { color: #8a95a3; }
+.mapping-picker-search input { flex: 1; min-width: 0; height: 44px; padding: 0; background: transparent; border: 0; outline: none; font-size: 15px; }
+.mapping-picker { max-height: 330px; margin-top: 10px; padding: 2px; display: grid; gap: 8px; overflow-y: auto; }
+.mapping-pick-card { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #fff; border: 2px solid #e6ebf2; border-radius: 14px; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+.mapping-pick-card[hidden] { display: none; }
+.mapping-pick-card:hover { border-color: #b9cff5; }
+.mapping-pick-card input { position: absolute; opacity: 0; pointer-events: none; }
+.mapping-pick-card:has(input:checked) { background: #f1f6ff; border-color: #3182f6; }
+.mapping-pick-card:has(input:checked)::after { content: "✓"; position: absolute; right: 12px; top: 50%; width: 24px; height: 24px; display: grid; place-items: center; color: #fff; background: #3182f6; border-radius: 50%; font-size: 13px; font-weight: 800; transform: translateY(-50%); }
+.mapping-pick-photo { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 10px; object-fit: cover; }
+.mapping-pick-card > span { min-width: 0; padding-right: 30px; display: grid; gap: 2px; }
+.mapping-pick-card b { color: #191f28; font-size: 15px; line-height: 1.35; }
+.mapping-pick-card small { color: #7a8594; font-size: 13px; }
+.mapping-pick-card em { color: #3b4655; font-size: 14px; font-style: normal; font-weight: 700; }
+.mapping-pick-card em i { color: #0f8a72; font-style: normal; }
+.mapping-picker-empty { margin: 10px 0 0; color: #8a95a3; font-size: 14px; text-align: center; }
+.field-hint { display: block; margin-top: 6px; color: #7a8594; font-size: 13px; }
+
+/* ===== 공급사: PICK 승인 요청 ===== */
+.pick-approval-panel { margin-bottom: 18px; }
+.pick-approval-head { padding: 20px 22px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; border-bottom: 1px solid #edf0f4; }
+.pick-approval-head span { color: #0f8a72; font-size: 13px; font-weight: 800; letter-spacing: .04em; }
+.pick-approval-head h3 { margin: 4px 0; font-size: 19px; }
+.pick-approval-head p { margin: 0; color: #6b7684; font-size: 15px; }
+.auto-approve-setting { flex: 0 0 auto; padding: 12px 14px; display: flex; align-items: center; gap: 12px; background: #f6f8fb; border: 1px solid #e6ebf2; border-radius: 14px; }
+.auto-approve-setting b { display: block; font-size: 16px; }
+.auto-approve-setting small { display: block; margin-top: 2px; color: #7a8594; font-size: 13px; }
+.auto-approve-setting .automation-switch.on { background: #0f8a72; }
+.pick-request-list { display: grid; }
+.pick-request-row { padding: 14px 22px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #edf0f4; }
+.pick-request-row:last-child { border-bottom: 0; }
+.pick-request-row > span { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.pick-request-row b { font-size: 16px; }
+.pick-request-row small { color: #7a8594; font-size: 14px; }
+.pick-request-row em { color: #3b4655; font-size: 14px; font-style: normal; font-weight: 600; }
+.pick-request-row .primary-button { flex: 0 0 auto; min-height: 44px; }
+.pick-request-footer { padding: 12px 22px 18px; display: flex; justify-content: flex-end; }
+.app-shell[data-role="supplier"] .pick-request-row .primary-button { background: #0f8a72; border-color: #0f8a72; }
+.send-product-button { font-weight: 800; }
+
+/* ===== 위탁셀러 홈 (단순화) ===== */
+.home-canvas { gap: 18px; }
+.dashboard-widget-money { grid-column: span 7; }
+.dashboard-widget-notices { grid-column: span 5; }
+.home-today { padding: 26px 28px; background: linear-gradient(135deg, #f3f8ff 0%, #ffffff 60%); border: 1px solid #dfe9f8; border-radius: var(--radius-card, 18px); }
+.home-greeting span { color: #3182f6; font-size: 15px; font-weight: 700; }
+.home-greeting h2 { margin: 6px 0 4px; color: #191f28; font-size: 26px; letter-spacing: -.03em; }
+.home-greeting h2 em { color: #e5484d; font-style: normal; }
+.home-greeting p { margin: 0; color: #6b7684; font-size: 15px; }
+.home-todo-list { margin-top: 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.home-todo { min-height: 76px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; text-align: left; background: #fff; border: 1px solid #e6ebf2; border-left: 5px solid var(--tone, #3182f6); border-radius: 14px; transition: box-shadow .15s ease, transform .15s ease; }
+.home-todo:hover { box-shadow: 0 8px 20px rgba(20,40,80,.08); transform: translateY(-1px); }
+.home-todo strong { min-width: 44px; color: var(--tone, #3182f6); font-size: 28px; line-height: 1; text-align: center; }
+.home-todo > span { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.home-todo b { color: #191f28; font-size: 17px; }
+.home-todo small { color: #6b7684; font-size: 14px; }
+.home-todo em { flex: 0 0 auto; padding: 9px 13px; color: #fff; background: var(--tone, #3182f6); border-radius: 99px; font-size: 14px; font-style: normal; font-weight: 700; }
+.tone-red { --tone: #e5484d; --tone-bg: #fff1f1; }
+.tone-orange { --tone: #e07a10; --tone-bg: #fff5e8; }
+.tone-blue { --tone: #3182f6; --tone-bg: #eef5ff; }
+.tone-purple { --tone: #6d3fc9; --tone-bg: #f3edff; }
+.tone-green { --tone: #0f8a5f; --tone-bg: #e8f8ef; }
+.tone-yellow { --tone: #b7791f; --tone-bg: #fff8e1; }
+.home-todo-done { margin-top: 18px; padding: 18px; display: grid; gap: 4px; background: #eefaf4; border: 1px solid #c9ecd9; border-radius: 14px; }
+.home-todo-done b { color: #0f8a5f; font-size: 18px; }
+.home-todo-done span { color: #4e6b5c; font-size: 15px; }
+.home-section { padding-bottom: 20px; }
+.home-section-head { padding: 20px 22px 14px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.home-section-head h3 { margin: 0; font-size: 19px; }
+.home-section-head p { margin: 4px 0 0; color: #6b7684; font-size: 15px; }
+.home-flow { padding: 0 22px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; counter-reset: flow; }
+.home-flow-step { position: relative; padding: 16px; display: grid; gap: 4px; text-align: left; background: var(--tone-bg); border: 1px solid transparent; border-radius: 14px; transition: border-color .15s ease; }
+.home-flow-step:hover { border-color: var(--tone); }
+.home-flow-step:not(:last-child)::after { content: "›"; position: absolute; right: -11px; top: 50%; z-index: 1; width: 22px; height: 22px; display: grid; place-items: center; color: #9aa5b2; background: #fff; border: 1px solid #e6ebf2; border-radius: 50%; font-size: 15px; transform: translateY(-50%); }
+.home-flow-step i { width: 24px; height: 24px; display: grid; place-items: center; color: #fff; background: var(--tone); border-radius: 50%; font-size: 13px; font-style: normal; font-weight: 800; }
+.home-flow-step b { margin-top: 6px; color: #191f28; font-size: 16px; }
+.home-flow-step strong { color: var(--tone); font-size: 28px; line-height: 1.1; }
+.home-flow-step small { color: #6b7684; font-size: 14px; }
+.home-orders { padding: 0 22px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.home-order-step { padding: 16px; display: grid; gap: 4px; text-align: left; background: #fff; border: 1px solid #e6ebf2; border-top: 4px solid var(--tone); border-radius: 14px; transition: box-shadow .15s ease; }
+.home-order-step:hover { box-shadow: 0 8px 20px rgba(20,40,80,.08); }
+.home-order-step b { color: #3b4655; font-size: 16px; }
+.home-order-step strong { color: #191f28; font-size: 30px; line-height: 1.1; }
+.home-order-step strong em { margin-left: 2px; color: #6b7684; font-size: 16px; font-style: normal; font-weight: 600; }
+.home-order-step small { color: #7a8594; font-size: 14px; }
+.home-money { padding: 0 22px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.home-money button { padding: 16px; display: grid; gap: 4px; text-align: left; background: #f7f9fc; border: 1px solid #e6ebf2; border-radius: 14px; }
+.home-money button:hover { border-color: #b9cff5; }
+.home-money span { color: #6b7684; font-size: 14px; font-weight: 600; }
+.home-money strong { color: #191f28; font-size: 21px; letter-spacing: -.02em; }
+.home-money strong.profit { color: #0f8a5f; }
+.home-money small { color: #8a95a3; font-size: 13px; }
+.home-edit-link { margin-top: 14px; display: flex; justify-content: flex-end; }
+.home-edit-link .text-button { color: #8a95a3; font-size: 14px; }
+
+@media (max-width: 1100px) {
+  .dashboard-widget-money, .dashboard-widget-notices { grid-column: 1 / -1; }
+  .home-flow, .home-orders { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-flow-step:nth-child(2)::after { display: none; }
+}
+
+@media (max-width: 720px) {
+  .mapping-steps, .mapping-summary { grid-template-columns: 1fr; gap: 8px; }
+  .mapping-summary > div { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; }
+  .mapping-summary strong { margin: 0; font-size: 22px; }
+  .mapping-callout { flex-direction: column; align-items: stretch; }
+  .mapping-row { padding: 14px 16px; }
+  .mapping-row .mapping-main { flex-basis: 100%; }
+  .mapping-row .mapping-arrow { display: none; }
+  .mapping-row .mapping-target { flex-basis: 100%; padding: 10px 12px; background: #f7f9fc; border-radius: 10px; }
+  .mapping-row > button { width: 100%; }
+  .mapping-main b, .mapping-target b { white-space: normal; }
+  .mapping-picker { max-height: 46vh; }
+  .pick-approval-head { padding: 16px; flex-direction: column; }
+  .auto-approve-setting { width: 100%; justify-content: space-between; }
+  .pick-request-row { padding: 14px 16px; flex-wrap: wrap; }
+  .pick-request-row .primary-button { width: 100%; }
+  .pick-request-footer { padding: 10px 16px 16px; }
+  .pick-request-footer .secondary-button { width: 100%; }
+  .home-today { padding: 20px 16px; }
+  .home-greeting h2 { font-size: 22px; }
+  .home-todo-list { grid-template-columns: 1fr; }
+  .home-todo { flex-wrap: wrap; min-height: 0; }
+  .home-todo em { width: 100%; text-align: center; padding: 11px; }
+  .home-section-head { padding: 16px 16px 12px; flex-wrap: wrap; }
+  .home-section-head .secondary-button { width: 100%; }
+  .home-flow, .home-orders, .home-money { padding: 0 16px; gap: 8px; }
+  .home-money { grid-template-columns: 1fr; }
+  .home-flow-step::after { display: none; }
+  .home-flow-step, .home-order-step { padding: 14px; }
+  .home-flow-step strong, .home-order-step strong { font-size: 24px; }
+}
+
+/* 사이드바 메뉴가 길어 아래 그룹(돈 관리·설정)이 가려질 때 스크롤할 수 있다는 힌트 + 데스크톱 간격 소폭 축소 */
+@media (min-width: 721px) {
+  .workspace-menu { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent); padding-bottom: 30px; }
+  .workspace-menu-group button { min-height: 40px; padding-top: 6px; padding-bottom: 6px; }
+  .workspace-menu-group + .workspace-menu-group { margin-top: 12px; }
+}
