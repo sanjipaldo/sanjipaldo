@@ -395,7 +395,7 @@ function loadState() {
       const seed = base.channelConnections.seller.find(item => item.id === channel.id) || {};
       return { trackingAutomation: false, syncInterval: 10, lastTrackingPush: "-", ...seed, ...channel };
     });
-    merged.sellerProducts = mergeById(saved.sellerProducts, base.sellerProducts).map((item, index) => {
+    merged.sellerProducts = mergeById(saved.sellerProducts, base.sellerProducts.filter(seed => !(saved.deletedSellerProductIds || []).includes(seed.id))).map((item, index) => {
       const product = merged.products.find(product => product.id === item.productId);
       const channels = Array.isArray(item.channels) ? item.channels : [channelIdFromName(item.channel || "네이버 스마트스토어")];
       const channelStatuses = Object.fromEntries(merged.channelConnections.seller.map(channel => [channel.id, channels.includes(channel.id) ? "판매중" : channel.status === "disconnected" ? "미연동" : "판매중지/미노출"]));
@@ -482,6 +482,15 @@ function supplierAutoApprove(supplierLoginId) { return Boolean(state.supplierSet
 function supplierPickRequests(supplierLoginId = currentAccount?.loginId || "sup") {
   const productIds = new Set(state.products.filter(product => product.supplierLoginId === supplierLoginId).map(product => product.id));
   return state.sellerProducts.filter(item => item.approvalStatus === "승인대기" && productIds.has(item.productId));
+}
+const PICK_REJECT_REASONS = ["재고가 부족해요", "이 판매 채널에는 공급하지 않아요", "판매가가 가격 정책과 맞지 않아요", "현재 신규 거래를 받지 않아요"];
+function rejectPickRequest(item, reason) {
+  const product = productOf(item.productId);
+  item.approvalStatus = "승인거절";
+  item.rejectReason = reason;
+  item.rejectedAt = "방금 전";
+  pushNotification(item.sellerLoginId, "seller", "approval", "PICK 상품이 거절되었습니다", `${product?.name || item.productId} · 사유: ${reason}`);
+  audit("PICK 상품 거절", `${item.id} · ${product?.supplier || "공급사"} 거절 · ${reason}`, "done", "product");
 }
 function approvePickRequest(item, auto = false) {
   const product = productOf(item.productId);
@@ -824,11 +833,14 @@ function updateAccountUI() {
   const alertCount = activeRole === "seller" ? currentPriceAlerts().filter(alert => alert.status === "확인필요").length : 0;
   const pendingCount = activeRole === "master" ? pendingApprovalCount() : 0;
   const shippingCount = activeRole === "supplier" ? currentSupplierOrders().filter(order => ["신규주문", "배송준비중"].includes(order.status)).length : 0;
+  const pickRequestCount = activeRole === "supplier" ? supplierPickRequests().length : 0;
+  const mappingCount = activeRole === "seller" ? sellerMappingRequiredOrders().length : 0;
+  const rejectedPickCount = activeRole === "seller" ? currentSellerProducts().filter(item => item.approvalStatus === "승인거절").length : 0;
   document.getElementById("workspaceMenu").innerHTML = roleMenuGroups[activeRole].map(group => {
     const buttons = group.indexes.map(index => {
       const item = roleMenus[activeRole][index];
-      const badge = (activeRole === "seller" && index === 7 && alertCount) || (activeRole === "master" && index === 1 && pendingCount) || (activeRole === "supplier" && index === 3 && shippingCount);
-      const badgeValue = activeRole === "seller" ? alertCount : activeRole === "supplier" ? shippingCount : pendingCount;
+      const badgeValue = activeRole === "seller" ? ({ 7: alertCount, 15: mappingCount, 2: rejectedPickCount })[index] || 0 : activeRole === "supplier" ? ({ 3: shippingCount, 1: pickRequestCount })[index] || 0 : index === 1 ? pendingCount : 0;
+      const badge = badgeValue > 0;
       return `<button type="button" class="${index === activeMenuIndex ? "active" : ""}" data-menu-index="${index}"${index === activeMenuIndex ? ' aria-current="page"' : ""}><span class="menu-icon">${menuIcon(menuIcons[activeRole][index])}</span>${menuSteps[activeRole]?.[index] ? `<i class="menu-step">${menuSteps[activeRole][index]}</i>` : ""}<span class="menu-text">${escapeHtml(item)}</span>${badge ? `<b class="menu-badge">${badgeValue}</b>` : ""}</button>`;
     }).join("");
     return `<section class="workspace-menu-group"><p>${escapeHtml(group.label)}</p>${buttons}</section>`;
@@ -1063,17 +1075,21 @@ function brandDirectoryTemplate() {
 }
 
 function sellerProductsTable() {
-  const items = currentSellerProducts().filter(item => item.approvalStatus === "승인대기");
+  const items = currentSellerProducts().filter(item => ["승인대기", "승인거절"].includes(item.approvalStatus)).sort((a, b) => Number(b.approvalStatus === "승인거절") - Number(a.approvalStatus === "승인거절"));
   if (!items.length) return `<div class="empty mapping-empty"><b>승인을 기다리는 상품이 없어요.</b><span>상품 소싱에서 마음에 드는 상품을 PICK해 보세요.</span></div>`;
   return `<div class="seller-product-tree">${items.map(item => {
     const product = productOf(item.productId);
-    return `<article class="seller-product-node pick-approval-node">
+    const rejected = item.approvalStatus === "승인거절";
+    return `<article class="seller-product-node pick-approval-node ${rejected ? "is-rejected" : ""}">
       <div class="seller-product-parent pick-approval-row">
         ${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}
-        <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(item.id)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>공급가 ${money(product?.supply || 0)} · 지정판매가 ${money(product?.recommended || 0)}</em></span>
+        <span class="seller-product-main"><small>원본코드 ${escapeHtml(item.productId)} · ${escapeHtml(product?.supplier || "")}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><em>공급가 ${money(product?.supply || 0)} · 지정판매가 ${money(product?.recommended || 0)}</em></span>
         <span class="seller-product-price"><small>내가 판매하고 싶은 가격</small><b>${money(item.salePrice)}</b><em>마진 ${margin(product?.supply || 0, item.salePrice)}%</em></span>
-        <span class="seller-product-live"><b class="approval-pending-badge">승인대기</b><small>공급사 승인 후 진행 가능</small></span>
-        <div class="pick-approval-actions"><button type="button" class="secondary-button" data-action="simulate-supplier-approval" data-id="${item.id}">데모: 공급사 승인하기</button></div>
+        ${rejected
+          ? `<span class="seller-product-live"><b class="approval-rejected-badge">승인 거절</b><small>사유: ${escapeHtml(item.rejectReason || "공급사 사정")}</small></span>
+        <div class="pick-approval-actions"><button type="button" class="secondary-button" data-action="supplier-contact" data-id="${escapeHtml(product?.supplierLoginId || "")}" data-product-id="${escapeHtml(item.productId)}">공급사에 문의</button><button type="button" class="primary-button" data-action="rerequest-pick" data-id="${item.id}">다시 요청하기</button><button type="button" class="text-button danger-text" data-action="delete-pick" data-id="${item.id}">목록에서 삭제</button></div>`
+          : `<span class="seller-product-live"><b class="approval-pending-badge">승인대기</b><small>${escapeHtml(product?.supplier || "공급사")} 확인 중 · 승인되면 알려 드려요</small></span>
+        <div class="pick-approval-actions"><button type="button" class="secondary-button" data-action="simulate-supplier-approval" data-id="${item.id}">데모: 공급사 승인하기</button><button type="button" class="text-button danger-text" data-action="delete-pick" data-id="${item.id}">요청 취소</button></div>`}
       </div>
     </article>`;
   }).join("")}</div>`;
@@ -1379,7 +1395,7 @@ function subscriptionTemplate() {
 
 function sellerApprovedProductsTemplate() {
   const channels = sellerChannels();
-  const items = currentSellerProducts().filter(item => item.approvalStatus !== "승인대기");
+  const items = currentSellerProducts().filter(item => item.approvalStatus === "승인완료");
   return `${sectionHero("마스터 상품", "공급사가 승인한 내 상품이에요. 상품명·가격을 내 마음대로 고친 뒤 ‘상품 전송’을 누르면 쿠팡·스마트스토어에 한 번에 등록됩니다.")}<div class="panel">
     <div class="panel-head"><div><h3>내 마스터 상품</h3><p>상품 전송을 마치면 ‘판매중 상품’에서 채널별 판매 현황을 볼 수 있어요.</p></div><span class="chip">${items.length}개</span></div>
     ${items.length ? `<div class="seller-product-tree">${items.map(item => {
@@ -1406,7 +1422,7 @@ function onSalePagination(totalPages) {
 }
 function sellerOnSaleProductsTemplate() {
   const channels = sellerChannels();
-  const liveItems = currentSellerProducts().filter(item => item.approvalStatus !== "승인대기" && channels.some(channel => sellerProductChannelStatus(item, channel) === "판매중"));
+  const liveItems = currentSellerProducts().filter(item => item.approvalStatus === "승인완료" && channels.some(channel => sellerProductChannelStatus(item, channel) === "판매중"));
   const query = onSaleSearch.trim().toLowerCase();
   const normalizeDate = value => String(value || "").replace(/\./g, "-");
   const onSaleCategories = ["전체", ...new Set(liveItems.map(item => productOf(item.productId)?.category).filter(Boolean))];
@@ -1467,7 +1483,7 @@ function liveChannelIds(item) { return sellerChannels().filter(channel => seller
 /* 두고에서 '상품 전송'으로 쇼핑몰에 올린 상품은 쇼핑몰 상품코드가 곧 두고 상품이므로 매핑 없이 자동 연결된다. */
 function autoLinkedSellerProduct(code, sellerLoginId = currentAccount?.loginId || "seller") {
   if (!code) return null;
-  return state.sellerProducts.find(item => item.sellerLoginId === sellerLoginId && item.approvalStatus !== "승인대기" && (item.id === code || (item.channels || []).some(channelId => channelProductCode(item, channelId) === code))) || null;
+  return state.sellerProducts.find(item => item.sellerLoginId === sellerLoginId && item.approvalStatus === "승인완료" && (item.id === code || (item.channels || []).some(channelId => channelProductCode(item, channelId) === code))) || null;
 }
 function resolveMappingForCode(code) {
   const linked = autoLinkedSellerProduct(code);
@@ -1497,7 +1513,7 @@ function unmappedExternalProducts() {
   return [...groups.values()];
 }
 function autoLinkedProductsForMapping() {
-  return currentSellerProducts().filter(item => item.approvalStatus !== "승인대기" && liveChannelIds(item).length);
+  return currentSellerProducts().filter(item => item.approvalStatus === "승인완료" && liveChannelIds(item).length);
 }
 function sellerProductMappingTemplate() {
   const pending = unmappedExternalProducts();
@@ -1529,7 +1545,7 @@ function sellerProductMappingTemplate() {
 }
 function renderSellerSection(index) {
   if (index === 1) return sellerMarketplaceTemplate();
-  if (index === 2) return `${sectionHero("승인 대기", "PICK한 상품을 공급사가 확인하고 있어요. 승인되면 ‘마스터 상품’으로 자동으로 넘어갑니다. (자동 승인 공급사는 바로 넘어가요)")}<div class="panel"><div class="panel-head"><div><h3>승인을 기다리는 상품</h3><p>공급사가 승인하면 알림으로 알려 드려요.</p></div><span class="chip">${currentSellerProducts().filter(item => item.approvalStatus === "승인대기").length}개 대기중</span></div>${sellerProductsTable()}</div>`;
+  if (index === 2) return `${sectionHero("승인 대기", "PICK한 상품을 공급사가 확인하고 있어요. 승인되면 ‘마스터 상품’으로 자동으로 넘어갑니다. (자동 승인 공급사는 바로 넘어가요)")}<div class="panel"><div class="panel-head"><div><h3>승인을 기다리는 상품</h3><p>공급사가 승인하면 알림으로 알려 드려요.</p></div>${(() => { const waiting = currentSellerProducts().filter(item => item.approvalStatus === "승인대기").length; const rejected = currentSellerProducts().filter(item => item.approvalStatus === "승인거절").length; return `<span class="chip">${waiting}개 대기중</span>${rejected ? ` <span class="chip red">${rejected}개 거절</span>` : ""}`; })()}</div>${sellerProductsTable()}</div>`;
   if (index === 11) return sellerOnSaleProductsTemplate();
   if (index === 12) return sellerDoogoMoneyTemplate();
   if (index === 13) return sellerNoticesTemplate();
@@ -1551,7 +1567,7 @@ function supplierPickApprovalPanel() {
   return `<section class="panel pick-approval-panel">
     <div class="pick-approval-head"><div><span>PICK 승인 요청</span><h3>위탁셀러가 판매하고 싶은 상품이에요</h3><p>승인하면 위탁셀러의 ‘마스터 상품’으로 넘어가 쇼핑몰에 등록할 수 있습니다.</p></div>
       <div class="auto-approve-setting"><span><b>자동 승인</b><small>${auto ? "PICK하면 바로 승인됩니다" : "요청을 직접 확인하고 승인합니다"}</small></span><button type="button" class="automation-switch ${auto ? "on" : ""}" data-action="toggle-supplier-auto-approve" aria-pressed="${auto}"><i></i>${auto ? "켜짐" : "꺼짐"}</button></div></div>
-    ${requests.length ? `<div class="pick-request-list">${requests.map(item => { const product = productOf(item.productId); const seller = memberByLogin(item.sellerLoginId); return `<article class="pick-request-row">${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}<span><b>${escapeHtml(product?.name || item.productId)}</b><small>${escapeHtml(seller?.company || item.sellerLoginId)} · ${escapeHtml(item.copiedAt || "방금 전")} 요청</small><em>공급가 ${money(product?.supply || 0)} · 셀러 판매가 ${money(item.salePrice)}</em></span><button type="button" class="primary-button" data-action="supplier-approve-pick" data-id="${item.id}">승인하기</button></article>`; }).join("")}</div>${requests.length > 1 ? `<div class="pick-request-footer"><button type="button" class="secondary-button" data-action="supplier-approve-all-picks">${requests.length}건 모두 승인</button></div>` : ""}` : `<div class="empty">${auto ? "자동 승인이 켜져 있어 대기 중인 요청이 없어요." : "새로운 승인 요청이 없어요."}</div>`}
+    ${requests.length ? `<div class="pick-request-list">${requests.map(item => { const product = productOf(item.productId); const seller = memberByLogin(item.sellerLoginId); return `<article class="pick-request-row">${productPhoto({ ...product, imageIndex: item.imageIndex }, "table-photo")}<span><b>${escapeHtml(product?.name || item.productId)}</b><small>${escapeHtml(seller?.company || item.sellerLoginId)} · ${escapeHtml(item.copiedAt || "방금 전")} 요청</small><em>공급가 ${money(product?.supply || 0)} · 셀러 판매가 ${money(item.salePrice)}</em></span><div class="pick-request-actions"><button type="button" class="secondary-button" data-action="supplier-reject-pick" data-id="${item.id}">거절</button><button type="button" class="primary-button" data-action="supplier-approve-pick" data-id="${item.id}">승인하기</button></div></article>`; }).join("")}</div>${requests.length > 1 ? `<div class="pick-request-footer"><button type="button" class="secondary-button" data-action="supplier-approve-all-picks">${requests.length}건 모두 승인</button></div>` : ""}` : `<div class="empty">${auto ? "자동 승인이 켜져 있어 대기 중인 요청이 없어요." : "새로운 승인 요청이 없어요."}</div>`}
   </section>`;
 }
 
@@ -1630,6 +1646,7 @@ function renderSeller() {
   const mappingRequired = sellerMappingRequiredOrders();
   const paymentRequired = sellerPaymentRequiredOrders();
   const pendingPicks = sellerProducts.filter(item => item.approvalStatus === "승인대기");
+  const rejectedPicks = sellerProducts.filter(item => item.approvalStatus === "승인거절");
   const masterReady = sellerProducts.filter(item => item.approvalStatus === "승인완료" && !liveChannelIds(item).length);
   const liveProducts = sellerProducts.filter(item => item.approvalStatus === "승인완료" && liveChannelIds(item).length);
   const needsCheck = countStatus("주문확인필요");
@@ -1641,6 +1658,7 @@ function renderSeller() {
     { count: mappingRequired.length, tone: "red", title: "두고 상품 연결이 필요한 주문", hint: "어떤 상품으로 보낼지 골라 주세요", button: "연결하기", action: "go-seller-menu", index: 15 },
     { count: paymentRequired.length, tone: "orange", title: "결제를 기다리는 주문", hint: "결제하면 공급사로 바로 전달됩니다", button: "결제하기", action: "open-order-payment-stage" },
     { count: needsCheck, tone: "red", title: "쇼핑몰 확인이 필요한 주문", hint: "취소 여부를 확인해 주세요", button: "확인하기", action: "dashboard-order-stage", stage: "needs-check" },
+    { count: rejectedPicks.length, tone: "red", title: "공급사가 거절한 PICK 상품", hint: "사유를 확인하고 다시 요청할 수 있어요", button: "확인하기", action: "go-seller-menu", index: 2 },
     { count: masterReady.length, tone: "blue", title: "쇼핑몰에 아직 안 올린 상품", hint: "‘상품 전송’ 한 번이면 등록돼요", button: "전송하기", action: "go-seller-menu", index: 14 },
     { count: alerts.length, tone: "orange", title: "공급가가 바뀐 상품", hint: "판매가를 확인해 주세요", button: "확인하기", action: "go-seller-menu", index: 7 },
     { count: refundsOpen, tone: "purple", title: "처리 중인 취소·반품", hint: "공급사와 진행 상황을 확인하세요", button: "보기", action: "go-seller-menu", index: 5 }
@@ -1682,9 +1700,9 @@ function productRowSeller(p) {
   const sellerItem = currentSellerProducts().find(x => x.productId === p.id);
   const changed = currentPriceAlerts().some(alert => alert.productId === p.id && alert.status === "확인필요");
   const isLive = sellerItem ? sellerChannels().some(channel => sellerProductChannelStatus(sellerItem, channel) === "판매중") : false;
-  const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
-  const pickLabel = { none: "PICK하기", pending: "승인대기", approved: "판매중", live: "판매중" }[pickState];
-  const pickClass = pickState === "none" ? "" : pickState === "live" ? "done" : "picked";
+  const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인거절" ? "rejected" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
+  const pickLabel = { none: "PICK하기", pending: "승인대기", rejected: "승인 거절", approved: "마스터 상품", live: "판매중" }[pickState];
+  const pickClass = pickState === "none" ? "" : pickState === "live" ? "done" : pickState === "rejected" ? "rejected" : "picked";
   return `<article class="market-product-card" data-action="product-detail" data-id="${p.id}" tabindex="0" aria-label="${escapeHtml(p.name)} 상세 보기">
     <div class="market-product-image">${productPhoto(p, "catalog-photo")}<b>발주마감 ${escapeHtml(p.cutoff || "10:00")}</b><em>${escapeHtml(p.category)}</em><span class="shipping-badge ${p.shippingType === "overseas" ? "overseas" : "domestic"}">${p.shippingType === "overseas" ? `해외직구 · ${escapeHtml(p.originCountry)}` : "국내배송"}</span>${changed ? `<strong class="price-alert-flag">공급가 변경</strong>` : ""}</div>
     <div class="market-product-body">
@@ -1698,9 +1716,9 @@ function productRowSellerList(p) {
   const sellerItem = currentSellerProducts().find(x => x.productId === p.id);
   const changed = currentPriceAlerts().some(alert => alert.productId === p.id && alert.status === "확인필요");
   const isLive = sellerItem ? sellerChannels().some(channel => sellerProductChannelStatus(sellerItem, channel) === "판매중") : false;
-  const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
-  const pickLabel = { none: "PICK하기", pending: "승인대기", approved: "판매중", live: "판매중" }[pickState];
-  const pickClass = pickState === "none" ? "" : pickState === "live" ? "done" : "picked";
+  const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인거절" ? "rejected" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
+  const pickLabel = { none: "PICK하기", pending: "승인대기", rejected: "승인 거절", approved: "마스터 상품", live: "판매중" }[pickState];
+  const pickClass = pickState === "none" ? "" : pickState === "live" ? "done" : pickState === "rejected" ? "rejected" : "picked";
   const freePriced = isFreePricedProduct(p);
   return `<article class="market-product-list-row" data-action="product-detail" data-id="${p.id}" tabindex="0" aria-label="${escapeHtml(p.name)} 상세 보기">
     <div class="list-row-image">${productPhoto(p, "catalog-photo")}${changed ? `<strong class="price-alert-flag">공급가 변경</strong>` : ""}</div>
@@ -1799,6 +1817,7 @@ function renderSupplier() {
       <div class="hero-copy"><h2>상품부터 출고까지, 한 흐름으로 처리하세요</h2><p>상품을 등록하고 계정 전용 택배 설정으로 송장을 자동 발급하면 셀러 화면에 즉시 반영됩니다.</p></div>
       <div class="row-actions"><button class="secondary-button" data-action="auto-issue-all" ${readyOrders.length ? "" : "disabled"}>송장 일괄발급</button><button class="primary-button" data-action="register-product">+ 새 상품 등록</button></div>
     </div>
+    ${supplierPickRequests().length ? `<div class="mapping-callout supplier-pick-callout"><div><b>위탁셀러 PICK 승인 요청 ${supplierPickRequests().length}건이 기다리고 있어요.</b><span>승인하면 위탁셀러가 바로 쇼핑몰에 상품을 올릴 수 있어요. 자동 승인으로 바꿀 수도 있습니다.</span></div><button type="button" class="primary-button" data-action="open-supplier-products">요청 확인하기 →</button></div>` : ""}
     <div class="dashboard-kpi-grid role-dashboard-kpis">
       ${dashboardKpiCard({ action:"open-supplier-products", icon:"ordered", label:"등록 상품", value:`${products.length}개`, description:`판매중 ${products.filter(product => product.status === "판매중").length}개`, tone:"blue" })}
       ${dashboardKpiCard({ action:"open-supplier-orders", icon:"new", label:"신규 주문", value:`${newOrders.length}건`, description:"셀러 발주 확인 필요", tone:"yellow", attributes:'data-status="발주완료"' })}
@@ -2030,9 +2049,9 @@ function productDetailModal(id) {
   const supplier = memberByLogin(p.supplierLoginId);
   const overseas = p.shippingType === "overseas";
   const isLive = sellerItem ? sellerChannels().some(channel => sellerProductChannelStatus(sellerItem, channel) === "판매중") : false;
-  const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
+  const pickState = !sellerItem ? "none" : sellerItem.approvalStatus === "승인거절" ? "rejected" : sellerItem.approvalStatus === "승인대기" ? "pending" : isLive ? "live" : "approved";
   const pickAction = sellerItem ? "open-picked-product" : "import-product";
-  const pickLabel = { none: "PICK하기", pending: "승인대기", approved: "판매중", live: "판매중" }[pickState];
+  const pickLabel = { none: "PICK하기", pending: "승인대기", rejected: "승인 거절", approved: "마스터 상품", live: "판매중" }[pickState];
   openModal(`<div class="product-detail-page"><div class="product-breadcrumb"><button type="button" data-action="open-catalog">공급 상품몰</button><span>›</span><button type="button" data-action="filter-products" data-category="${escapeHtml(p.category)}">${escapeHtml(p.category)}</button><span>›</span> ${escapeHtml(p.name)}</div><div class="product-detail">
     <div class="product-detail-visual">${productPhoto(p, "detail-photo")}<small>${escapeHtml(p.category)}</small><span class="detail-shipping-badge ${overseas ? "overseas" : ""}">${overseas ? `해외직구 · ${escapeHtml(p.originCountry)}` : "국내배송"}</span></div>
     <div class="product-detail-copy">
@@ -3076,7 +3095,7 @@ document.addEventListener("click", event => {
   if (action === "open-picked-product") {
     const picked = state.sellerProducts.find(item => item.sellerLoginId === currentAccount.loginId && item.productId === id);
     closeModal();
-    const step = !picked || picked.approvalStatus === "승인대기" ? [2, "승인 대기"] : liveChannelIds(picked).length ? [11, "판매중 상품"] : [14, "마스터 상품"];
+    const step = !picked || picked.approvalStatus !== "승인완료" ? [2, "승인 대기"] : liveChannelIds(picked).length ? [11, "판매중 상품"] : [14, "마스터 상품"];
     activeMenuIndex = step[0];
     expandedSellerProductId = picked?.id || null;
     render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); showToast(`‘${step[1]}’에서 이 상품을 확인할 수 있어요.`); return;
@@ -3119,6 +3138,44 @@ document.addEventListener("click", event => {
     const item = state.sellerProducts.find(entry => entry.id === id);
     if (item && item.approvalStatus === "승인대기") { approvePickRequest(item); saveState(); }
     render(); updateAccountUI(); showToast("승인했어요. 위탁셀러의 마스터 상품으로 이동했습니다."); return;
+  }
+  if (action === "supplier-reject-pick") {
+    const item = state.sellerProducts.find(entry => entry.id === id);
+    const product = item && productOf(item.productId);
+    if (!item || item.approvalStatus !== "승인대기") return;
+    openModal(`<div class="mapping-modal-head"><span>PICK 거절</span><h2>이 요청을 거절할까요?</h2><p>거절 사유는 위탁셀러에게 알림으로 전달됩니다. 위탁셀러는 사유를 보고 다시 요청할 수 있어요.</p></div>
+      <div class="external-order-summary"><span>요청 상품</span><b>${escapeHtml(product?.name || item.productId)}</b><small>${escapeHtml(memberByLogin(item.sellerLoginId)?.company || item.sellerLoginId)} · 셀러 판매가 ${money(item.salePrice)}</small></div>
+      <form id="rejectPickForm" class="form-grid" data-id="${item.id}">
+        <fieldset class="form-field full reject-reason-list"><legend>거절 사유 *</legend>${PICK_REJECT_REASONS.map((reason, index) => `<label><input type="radio" name="reason" value="${escapeHtml(reason)}" ${index === 0 ? "checked" : ""}><span>${escapeHtml(reason)}</span></label>`).join("")}<label><input type="radio" name="reason" value="__custom"><span>직접 입력</span></label></fieldset>
+        <div class="form-field full"><label>추가 메모 (선택)</label><input name="memo" maxlength="80" placeholder="예: 10월 입고 후 다시 요청해 주세요"></div>
+        <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="refund-button">거절하기</button></div>
+      </form>`);
+    return;
+  }
+  if (action === "rerequest-pick") {
+    const item = state.sellerProducts.find(entry => entry.id === id && entry.sellerLoginId === currentAccount.loginId);
+    const product = item && productOf(item.productId);
+    if (!item || item.approvalStatus !== "승인거절") return;
+    if (supplierAutoApprove(product?.supplierLoginId)) { approvePickRequest(item, true); saveState(); activeMenuIndex = 14; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); showToast("자동 승인 공급사라 바로 승인됐어요. 마스터 상품으로 이동했습니다."); return; }
+    item.approvalStatus = "승인대기"; item.rejectReason = ""; item.copiedAt = "방금 전";
+    pushNotification(product?.supplierLoginId || "sup", "supplier", "approval", "PICK 승인 재요청이 도착했습니다", `${currentAccount.company || currentAccount.loginId} · ${product?.name || item.productId}`);
+    audit("PICK 승인 재요청", `${item.id} · ${product?.supplier || "공급사"}에 다시 요청했습니다.`, "pending", "product");
+    saveState(); render(); updateAccountUI(); showToast("공급사에 다시 요청했어요. 승인되면 알려 드릴게요."); return;
+  }
+  if (action === "delete-pick") {
+    const item = state.sellerProducts.find(entry => entry.id === id && entry.sellerLoginId === currentAccount.loginId);
+    if (!item || item.approvalStatus === "승인완료") return;
+    const pending = item.approvalStatus === "승인대기";
+    openModal(`<h2>${pending ? "PICK 요청을 취소할까요?" : "목록에서 삭제할까요?"}</h2><p>${escapeHtml(sellerProductTitle(item, productOf(item.productId)))}<br>${pending ? "공급사 승인 요청이 취소되고 목록에서 사라집니다." : "삭제 후에도 상품 소싱에서 언제든 다시 PICK할 수 있어요."}</p><div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>아니요</button><button type="button" class="refund-button" data-action="confirm-delete-pick" data-id="${item.id}">${pending ? "요청 취소" : "삭제"}</button></div>`);
+    return;
+  }
+  if (action === "confirm-delete-pick") {
+    const item = state.sellerProducts.find(entry => entry.id === id && entry.sellerLoginId === currentAccount.loginId);
+    if (!item || item.approvalStatus === "승인완료") return closeModal();
+    state.sellerProducts = state.sellerProducts.filter(entry => entry !== item);
+    state.deletedSellerProductIds = [...new Set([...(state.deletedSellerProductIds || []), item.id])];
+    audit(item.approvalStatus === "승인대기" ? "PICK 요청 취소" : "거절된 PICK 삭제", `${item.id} · ${item.productId}`, "done", "product");
+    saveState(); closeModal(); render(); updateAccountUI(); showToast(item.approvalStatus === "승인대기" ? "PICK 요청을 취소했어요." : "목록에서 삭제했어요."); return;
   }
   if (action === "supplier-approve-all-picks") {
     const requests = supplierPickRequests();
@@ -3721,7 +3778,7 @@ document.addEventListener("submit", event => {
     saveState(); accountRecoveryResult("비밀번호를 변경했습니다", "새 비밀번호로 로그인해 주세요."); return;
   }
   if (form.id === "importForm") {
-    const sequence = 1001 + state.sellerProducts.length;
+    const sequence = Math.max(1000, ...[...state.sellerProducts.map(item => item.id), ...(state.deletedSellerProductIds || [])].map(value => Number(String(value).replace(/^SP-/, "")) || 0)) + 1;
     const source = productOf(form.dataset.id);
     const customTitle = String(data.customTitle || source.name).trim();
     const channelStatuses = Object.fromEntries(sellerChannels().map(channel => [channel.id, channel.status === "connected" ? "자동등록 전" : channel.status === "pending" ? "연동 대기" : "미연동"]));
@@ -3941,6 +3998,16 @@ document.addEventListener("submit", event => {
     state.connectionMessages.push({ id: `MSG-${Date.now()}`, supplierLoginId: data.supplierLoginId, sellerLoginId: data.sellerLoginId, senderLoginId: currentAccount.loginId, productId: data.productId || "", text: messageText, createdAt: "방금 전" });
     audit("공급사 직접 문의", `${memberByLogin(data.supplierLoginId)?.company || data.supplierLoginId}에 상품·운영 문의를 저장했습니다.`, "done", "connection");
     saveState(); closeModal(); render(); updateAccountUI(); showToast("공급사 문의가 내부 메시지에 저장되었습니다.");
+  }
+  if (form.id === "rejectPickForm") {
+    const item = state.sellerProducts.find(entry => entry.id === form.dataset.id);
+    const memo = String(data.memo || "").trim();
+    let reason = data.reason === "__custom" ? memo : String(data.reason || "");
+    if (!reason) return showToast("거절 사유를 입력해 주세요.");
+    if (data.reason !== "__custom" && memo) reason = `${reason} (${memo})`;
+    if (!item || item.approvalStatus !== "승인대기") { closeModal(); return; }
+    rejectPickRequest(item, reason);
+    saveState(); closeModal(); render(); updateAccountUI(); showToast("거절했어요. 위탁셀러에게 사유를 알렸습니다."); return;
   }
   if (form.id === "productChannelsForm") {
     const item = state.sellerProducts.find(product => product.id === form.dataset.id);

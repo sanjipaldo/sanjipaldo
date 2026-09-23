@@ -4994,3 +4994,26 @@ body { letter-spacing: normal; }
   .workspace-menu-group button { min-height: 40px; padding-top: 6px; padding-bottom: 6px; }
   .workspace-menu-group + .workspace-menu-group { margin-top: 12px; }
 }
+
+/* ===== PICK 거절 흐름 ===== */
+.approval-rejected-badge { display: inline-flex; width: max-content; padding: 5px 10px; color: #c2323a; background: #fff0f1; border: 1px solid #ffd1d4; border-radius: 99px; font-size: 13px; font-weight: 800; }
+.pick-approval-node.is-rejected { border-color: #ffd6d9; background: #fffafa; }
+.pick-approval-node.is-rejected .seller-product-live small { color: #b4434a; font-weight: 600; }
+.text-button.danger-text { color: #c2323a; }
+.small-button.rejected { color: #c2323a; background: #fff0f1; border-color: #ffd1d4; }
+.pick-request-actions { flex: 0 0 auto; display: flex; gap: 8px; }
+.pick-request-actions button { min-height: 44px; }
+.reject-reason-list { margin: 0; padding: 0; border: 0; display: grid; gap: 8px; }
+.reject-reason-list legend { margin-bottom: 8px; color: #3b4655; font-size: 15px; font-weight: 700; }
+.reject-reason-list label { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #fff; border: 2px solid #e6ebf2; border-radius: 12px; cursor: pointer; font-size: 15px; }
+.reject-reason-list label:has(input:checked) { background: #fff5f5; border-color: #e5484d; }
+.reject-reason-list input { width: 18px; height: 18px; accent-color: #e5484d; }
+.supplier-pick-callout { margin-top: 4px; background: #eefaf6; border-color: #bfe7da; }
+.supplier-pick-callout b { color: #0b6b58; }
+.supplier-pick-callout span { color: #3e7a6c; }
+.supplier-pick-callout .primary-button { background: #0f8a72; border-color: #0f8a72; }
+@media (max-width: 720px) {
+  .pick-request-actions { width: 100%; }
+  .pick-request-actions button { flex: 1; }
+}
+@media (max-width: 720px) { .pick-request-actions .primary-button { width: auto; } }
