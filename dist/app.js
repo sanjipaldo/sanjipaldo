@@ -411,6 +411,7 @@ let dashboardEditSnapshot = null;
 let dashboardDraggingId = "";
 let activeChatConnectionId = "";
 let chatRoomFilter = "all";
+let chatMobileView = "list";
 let chatRoomSearch = "";
 
 function cloneInitial() { return JSON.parse(JSON.stringify(initialState)); }
@@ -526,7 +527,10 @@ function loadState() {
   catch { return cloneInitial(); }
 }
 function productNameSupplier(productId, products = state?.products || []) { return products.find(product => product.id === productId)?.supplier || "미배정"; }
-function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch (error) { console.warn("saveState", error); showToast("브라우저 저장 공간이 가득 찼습니다. 오래된 사진 메시지나 상품 이미지를 정리해 주세요."); }
+}
 function money(value) { return Number(value).toLocaleString("ko-KR") + "원"; }
 function productOf(id) { return state.products.find(p => p.id === id); }
 function currentSellerProducts() { return state.sellerProducts.filter(item => item.sellerLoginId === (currentAccount?.loginId || "seller")); }
@@ -929,13 +933,14 @@ function showPartnerLogin(role = "supplier") {
 function setPartnerLoginRole(role) {
   partnerLoginRole = role === "master" ? "master" : "supplier";
   const isSupplier = partnerLoginRole === "supplier";
-  document.querySelectorAll("[data-partner-role]").forEach(button => button.classList.toggle("active", button.dataset.partnerRole === partnerLoginRole));
+  document.getElementById("partnerLoginKicker").textContent = isSupplier ? "PARTNER CENTER" : "MASTER CENTER";
   document.getElementById("partnerLoginTitle").textContent = isSupplier ? "공급사 로그인" : "관리자 로그인";
   document.getElementById("partnerLoginDescription").textContent = isSupplier ? "상품·재고·주문·송장을 관리합니다." : "전체 회원·상품·주문·이력을 관리합니다.";
-  document.getElementById("partnerAccessLabel").textContent = isSupplier ? "공급사 전용" : "관리자 전용";
   document.getElementById("supplierSignupPrompt").hidden = !isSupplier;
-  document.getElementById("partnerFindAccount").hidden = !isSupplier;
-  document.getElementById("partnerDemoAccounts").innerHTML = `<p>클릭해서 데모 계정 입력</p><div><button data-partner-demo="${partnerLoginRole}">${isSupplier ? "공급사" : "관리자"} 데모 <b>${isSupplier ? "sup / sup" : "admin / admin"}</b></button></div>`;
+  const roleSwitch = document.getElementById("partnerRoleSwitch");
+  roleSwitch.dataset.partnerRole = isSupplier ? "master" : "supplier";
+  roleSwitch.textContent = isSupplier ? "관리자 로그인" : "공급사 로그인";
+  document.getElementById("partnerDemoAccounts").innerHTML = `<div><button data-partner-demo="${partnerLoginRole}">데모 계정으로 체험하기 <b>${isSupplier ? "sup / sup" : "admin / admin"}</b></button></div>`;
   document.getElementById("partnerLoginId").value = "";
   document.getElementById("partnerLoginPassword").value = "";
   document.getElementById("partnerLoginError").textContent = "";
@@ -1248,14 +1253,55 @@ function goodflowIntegrationTemplate() {
   return `<section class="panel goodflow-card"><div class="goodflow-brand"><span>G</span><div><small>DELIVERY API</small><h3>굿스플로 택배 연동</h3><p>계약 택배사를 연결해 배송준비중 주문의 송장번호와 라벨을 자동 생성합니다.</p></div></div><dl><div><dt>연동 상태</dt><dd>${connected ? `<span class="live-dot">연동중</span>` : `<span class="chip red">미연동</span>`}</dd></div><div><dt>연동 택배사</dt><dd>${escapeHtml(profile.carrier || "미설정")}</dd></div><div><dt>계정 코드</dt><dd>${escapeHtml(profile.merchantId || "미설정")}</dd></div><div><dt>마지막 동기화</dt><dd>${escapeHtml(profile.lastSync || "-")}</dd></div></dl><button class="${connected ? "secondary-button" : "primary-button"}" data-action="goodflow-settings">${connected ? "굿스플로 연동 설정" : "굿스플로 연동 시작"}</button><small class="integration-disclaimer">프로토타입에서는 연동 정보만 브라우저에 저장되며 실제 굿스플로 API를 호출하지 않습니다.</small></section>`;
 }
 
+function talkTimeLabel(message) {
+  if (message?.sentAt) {
+    const date = new Date(message.sentAt);
+    if (!Number.isNaN(date.getTime())) return date.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+  }
+  const match = String(message?.createdAt || "").match(/(\d{1,2}):(\d{2})/);
+  if (match) { const hour = Number(match[1]); return `${hour < 12 ? "오전" : "오후"} ${hour % 12 || 12}:${match[2]}`; }
+  return String(message?.createdAt || "");
+}
+function talkRoomMessages(connection) {
+  return state.connectionMessages.filter(message => message.supplierLoginId === connection.supplierLoginId && message.sellerLoginId === connection.sellerLoginId);
+}
+function talkUnreadCount(connection) {
+  const messages = talkRoomMessages(connection);
+  const lastReadId = state.chatReads?.[currentAccount.loginId]?.[connection.id];
+  const startIndex = lastReadId ? messages.findIndex(message => message.id === lastReadId) + 1 : 0;
+  return messages.slice(startIndex).filter(message => message.senderLoginId !== currentAccount.loginId).length;
+}
+function markTalkRead(connection) {
+  const last = talkRoomMessages(connection).at(-1);
+  if (!last) return;
+  state.chatReads = state.chatReads || {};
+  state.chatReads[currentAccount.loginId] = state.chatReads[currentAccount.loginId] || {};
+  if (state.chatReads[currentAccount.loginId][connection.id] !== last.id) { state.chatReads[currentAccount.loginId][connection.id] = last.id; saveState(); }
+}
+function talkMessageRows(messages, active, perspective, otherName) {
+  const mark = perspective === "seller" ? "공" : "셀";
+  return messages.map((message, index) => {
+    const mine = message.senderLoginId === currentAccount.loginId;
+    const prev = messages[index - 1];
+    const next = messages[index + 1];
+    const continued = prev && prev.senderLoginId === message.senderLoginId;
+    const showTime = !next || next.senderLoginId !== message.senderLoginId || talkTimeLabel(next) !== talkTimeLabel(message);
+    const attachments = `${message.image ? `<img class="talk-photo" data-action="talk-photo-view" src="${escapeHtml(message.image)}" alt="첨부 사진">` : ""}${message.productId ? `<button type="button" class="talk-card" data-action="product-detail" data-id="${escapeHtml(message.productId)}">${productPhoto(productOf(message.productId), "talk-card-photo")}<span><b>${escapeHtml(productOf(message.productId)?.name || "연결 상품")}</b><small>상품 보기 ›</small></span></button>` : ""}${message.orderId ? `<button type="button" class="talk-card order" data-action="order-detail" data-id="${escapeHtml(message.orderId)}"><span><b>주문 ${escapeHtml(message.orderId)}</b><small>주문 보기 ›</small></span></button>` : ""}`;
+    const text = message.text ? `<p>${escapeHtml(message.text).replace(/\n/g, "<br>")}</p>` : "";
+    const time = showTime ? `<span class="talk-time">${escapeHtml(talkTimeLabel(message))}</span>` : "";
+    return `<div class="talk-row ${mine ? "mine" : "theirs"} ${continued ? "continued" : ""}">
+      ${mine ? "" : continued ? `<span class="talk-avatar-gap"></span>` : `<span class="talk-avatar small" aria-hidden="true">${mark}</span>`}
+      <div class="talk-body">${!mine && !continued ? `<b class="talk-name">${escapeHtml(otherName)}</b>` : ""}<div class="talk-line">${mine ? time : ""}<div class="talk-bubble ${message.image && !message.text ? "photo-only" : ""}">${text}${attachments}</div>${mine ? "" : time}</div></div>
+    </div>`;
+  }).join("");
+}
 function partnerMessengerTemplate(connections, perspective) {
   if (!connections.length) return `<div class="panel empty connection-empty">연결된 거래처가 생기면 두고톡으로 상품·출고 메시지를 주고받을 수 있습니다.</div>`;
   const roomRows = connections.map(connection => {
     const party = perspective === "seller" ? memberByLogin(connection.supplierLoginId) : memberByLogin(connection.sellerLoginId);
     const name = perspective === "seller" ? supplierName(connection.supplierLoginId) : (party?.company || connection.sellerLoginId);
-    const roomMessages = state.connectionMessages.filter(message => message.supplierLoginId === connection.supplierLoginId && message.sellerLoginId === connection.sellerLoginId);
-    const last = roomMessages.at(-1);
-    const unread = Boolean(last && last.senderLoginId !== currentAccount.loginId);
+    const last = talkRoomMessages(connection).at(-1);
+    const unread = talkUnreadCount(connection);
     const trading = state.orders.some(order => order.supplierLoginId === connection.supplierLoginId && order.sellerLoginId === connection.sellerLoginId);
     const favorite = Boolean(state.chatFavorites?.[connection.id]);
     return { connection, party, name, last, unread, trading, favorite };
@@ -1268,28 +1314,47 @@ function partnerMessengerTemplate(connections, perspective) {
   });
   const active = connections.find(connection => connection.id === activeChatConnectionId) || visibleRooms[0]?.connection || connections[0];
   activeChatConnectionId = active.id;
+  const seller = memberByLogin(active.sellerLoginId);
+  const otherName = perspective === "seller" ? supplierName(active.supplierLoginId) : (seller?.company || active.sellerLoginId);
+  const messages = talkRoomMessages(active);
+  const favorite = Boolean(state.chatFavorites?.[active.id]);
+  const mark = perspective === "seller" ? "공" : "셀";
+  if (chatMobileView === "room" || window.innerWidth > 720) markTalkRead(active);
+  return `<div id="supplierInquiryPanel" class="talk-shell panel ${chatMobileView === "room" ? "show-room" : "show-list"}">
+    <aside class="talk-list">
+      <div class="talk-list-head"><b>두고톡</b><span>${connections.length}</span></div>
+      <label class="talk-search"><span>⌕</span><input id="chatRoomSearch" value="${escapeHtml(chatRoomSearch)}" placeholder="거래처·메시지 검색" autocomplete="off"></label>
+      <div class="talk-tabs">${[["all","전체"],["unread","안읽음"],["trading","거래중"],["favorite","즐겨찾기"]].map(([key,label]) => `<button type="button" class="${chatRoomFilter === key ? "active" : ""}" data-action="chat-filter" data-filter="${key}">${label}</button>`).join("")}</div>
+      <div class="talk-room-list">${visibleRooms.length ? visibleRooms.map(room => `<button class="talk-room-item ${room.connection.id === active.id ? "active" : ""}" type="button" data-action="select-chat-room" data-id="${room.connection.id}"><span class="talk-avatar">${mark}</span><span class="talk-room-text"><b>${escapeHtml(room.name)}${room.favorite ? ` <i class="talk-star">★</i>` : ""}</b><small>${escapeHtml(room.last?.image && !room.last?.text ? "사진" : (room.last?.text || "새 대화를 시작하세요"))}</small></span><span class="talk-room-side"><em>${escapeHtml(room.last ? talkTimeLabel(room.last) : "")}</em>${room.unread && !(room.connection.id === active.id && (chatMobileView === "room" || window.innerWidth > 720)) ? `<i class="talk-unread">${room.unread}</i>` : ""}</span></button>`).join("") : `<div class="talk-empty">조건에 맞는 대화가 없습니다.</div>`}</div>
+    </aside>
+    <section class="talk-room">
+      <header class="talk-room-head"><button type="button" class="talk-back" data-action="chat-back" aria-label="대화 목록으로">‹</button><span class="talk-avatar">${mark}</span><div class="talk-room-title"><b>${escapeHtml(otherName)}</b><small><i></i>거래중 · 평균 응답 1시간 이내</small></div><div class="talk-head-actions"><button type="button" class="${favorite ? "on" : ""}" data-action="toggle-chat-favorite" data-id="${active.id}" aria-pressed="${favorite}" aria-label="즐겨찾기">${favorite ? "★" : "☆"}</button><button type="button" data-action="chat-partner-info" data-id="${active.id}" data-perspective="${perspective}" aria-label="거래처 정보">ⓘ</button></div></header>
+      <div class="talk-thread rich-thread" id="talkThread"><div class="talk-date"><span>${escapeHtml(new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" }))}</span></div>${messages.length ? talkMessageRows(messages, active, perspective, otherName) : `<div class="talk-empty-room">첫 메시지를 보내 대화를 시작해 보세요.</div>`}</div>
+      <form id="connectionMessageForm" class="talk-compose"><input type="hidden" name="supplierLoginId" value="${active.supplierLoginId}"><input type="hidden" name="sellerLoginId" value="${active.sellerLoginId}"><input type="file" id="talkImageInput" accept="image/*" hidden><button type="button" class="talk-plus" data-action="chat-attach" aria-label="사진 보내기">＋</button><textarea id="talkInput" name="text" rows="1" maxlength="500" placeholder="메시지 입력" autocomplete="off"></textarea><button type="submit" class="talk-send" aria-label="보내기" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-6 16-3-7-7-1Z"/></svg></button></form>
+    </section>
+    <aside class="talk-profile">${talkPartnerProfile(active, perspective)}</aside>
+  </div>`;
+}
+function talkPartnerProfile(active, perspective) {
   const supplier = memberByLogin(active.supplierLoginId);
   const seller = memberByLogin(active.sellerLoginId);
   const other = perspective === "seller" ? supplier : seller;
   const otherName = perspective === "seller" ? supplierName(active.supplierLoginId) : (seller?.company || active.sellerLoginId);
-  const messages = state.connectionMessages.filter(message => message.supplierLoginId === active.supplierLoginId && message.sellerLoginId === active.sellerLoginId);
   const products = state.products.filter(product => product.supplierLoginId === active.supplierLoginId);
   const orders = state.orders.filter(order => order.supplierLoginId === active.supplierLoginId && order.sellerLoginId === active.sellerLoginId);
-  const tradedProducts = new Set(orders.map(order => order.productId)).size;
-  const favorite = Boolean(state.chatFavorites?.[active.id]);
-  return `<div id="supplierInquiryPanel" class="messenger-shell panel">
-    <aside class="messenger-list"><div class="messenger-list-head"><b>메시지</b><span>${connections.length}</span></div><div class="messenger-tabs">${[["all","전체"],["unread","안읽음"],["trading","거래중"],["favorite","즐겨찾기"]].map(([key,label]) => `<button type="button" class="${chatRoomFilter === key ? "active" : ""}" data-action="chat-filter" data-filter="${key}">${label}</button>`).join("")}</div><label><span>⌕</span><input id="chatRoomSearch" value="${escapeHtml(chatRoomSearch)}" placeholder="거래처·메시지 검색"></label><div class="messenger-room-list">${visibleRooms.length ? visibleRooms.map(room => `<button class="messenger-party ${room.connection.id === active.id ? "active" : ""}" type="button" data-action="select-chat-room" data-id="${room.connection.id}"><span class="connection-avatar ${perspective === "supplier" ? "seller" : ""}">${perspective === "seller" ? "공" : "셀"}</span><span><b>${escapeHtml(room.name)}</b><small>${escapeHtml(room.last?.text || "새 대화를 시작하세요")}</small></span><em>${room.unread ? `<i>새 메시지</i>` : escapeHtml(room.last?.createdAt || room.connection.createdAt)}</em></button>`).join("") : `<div class="messenger-empty">조건에 맞는 대화가 없습니다.</div>`}</div></aside>
-    <section class="messenger-main"><header><div><b>${escapeHtml(otherName)}</b><small><i></i> 거래중 · 평균 응답 1시간 이내</small></div><div class="messenger-head-actions"><button type="button" data-action="toggle-chat-favorite" data-id="${active.id}" aria-pressed="${favorite}">${favorite ? "★ 즐겨찾기" : "☆ 즐겨찾기"}</button><button type="button" data-action="${perspective === "seller" ? "supplier-contact" : "partner-detail"}" data-id="${perspective === "seller" ? active.supplierLoginId : active.sellerLoginId}">거래처 정보</button></div></header><div class="chat-context-strip"><span>상품·주문번호를 메시지에 연결해 거래 기록을 한곳에 남길 수 있습니다.</span><button type="button" data-action="${perspective === "seller" ? "open-catalog" : "open-supplier-orders"}">${perspective === "seller" ? "공급 상품 보기" : "주문 확인"} →</button></div><div class="chat-thread rich-thread"><div class="chat-date"><span>오늘</span></div>${messages.map(message => { const mine = message.senderLoginId === currentAccount.loginId; const senderName = message.senderLoginId === active.supplierLoginId ? supplierName(active.supplierLoginId) : (seller?.company || active.sellerLoginId); return `<div class="chat-message ${mine ? "mine" : ""}"><small>${escapeHtml(senderName)} · ${message.createdAt}</small><p>${escapeHtml(message.text)}</p>${message.productId ? `<button data-action="product-detail" data-id="${message.productId}">연결 상품 보기 →</button>` : ""}${message.orderId ? `<button data-action="order-detail" data-id="${message.orderId}">주문 ${escapeHtml(message.orderId)} 보기 →</button>` : ""}</div>`; }).join("")}</div><form id="connectionMessageForm" class="chat-compose rich-compose"><input type="hidden" name="supplierLoginId" value="${active.supplierLoginId}"><input type="hidden" name="sellerLoginId" value="${active.sellerLoginId}"><button type="button" class="chat-attach-photo" data-action="chat-attach" aria-label="사진 첨부하기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg><span>사진 첨부하기</span></button><input name="text" placeholder="메시지를 입력해 주세요 (Enter 전송)" maxlength="240" required><button class="primary-button" type="submit">전송</button></form></section>
-    <aside class="messenger-profile"><span class="connection-avatar large">${perspective === "seller" ? "공" : "셀"}</span><h3>${escapeHtml(otherName)}</h3><p>${escapeHtml(other?.representative || "담당자")} · ${perspective === "seller" ? "공급사" : "위탁셀러"}</p><div class="messenger-rating"><b>★ 4.9</b><span>거래 만족도</span></div><div class="messenger-profile-kpis"><span><small>거래 상품</small><b>${tradedProducts}개</b></span><span><small>누적 주문</small><b>${orders.length}건</b></span><span><small>평균 응답</small><b>1시간</b></span><span><small>공급 상품</small><b>${products.length}개</b></span></div><div><span>연락처</span><b>${escapeHtml(other?.contact || "-")}</b></div><div><span>이메일</span><b>${escapeHtml(other?.email || "-")}</b></div><label class="partner-note"><span>거래처 메모</span><textarea id="partnerNoteInput" rows="3" placeholder="내부 메모를 남겨주세요.">${escapeHtml(state.partnerNotes?.[active.id] || "")}</textarea></label><button type="button" data-action="save-chat-note" data-id="${active.id}">메모 저장</button><div class="messenger-products"><span>최근 공급상품</span>${products.slice(0,2).map(product => `<button type="button" data-action="product-detail" data-id="${product.id}">${productPhoto(product,"table-photo")}<b>${escapeHtml(product.name)}</b></button>`).join("")}</div><small>두고톡은 주문 건수가 아니라 거래처 관계를 기준으로 하나만 열립니다.</small></aside>
-  </div>`;
+  return `<span class="talk-avatar large">${perspective === "seller" ? "공" : "셀"}</span><h3>${escapeHtml(otherName)}</h3><p>${escapeHtml(other?.representative || "담당자")} · ${perspective === "seller" ? "공급사" : "위탁셀러"}</p>
+    <div class="talk-profile-kpis"><span><small>거래 상품</small><b>${new Set(orders.map(order => order.productId)).size}개</b></span><span><small>누적 주문</small><b>${orders.length}건</b></span><span><small>공급 상품</small><b>${products.length}개</b></span><span><small>평균 응답</small><b>1시간</b></span></div>
+    <dl class="talk-profile-info"><div><dt>연락처</dt><dd>${escapeHtml(other?.contact || "-")}</dd></div><div><dt>이메일</dt><dd>${escapeHtml(other?.email || "-")}</dd></div></dl>
+    <label class="partner-note"><span>거래처 메모 (나만 보기)</span><textarea id="partnerNoteInput" rows="3" placeholder="내부 메모를 남겨주세요.">${escapeHtml(state.partnerNotes?.[active.id] || "")}</textarea></label><button type="button" class="secondary-button" data-action="save-chat-note" data-id="${active.id}">메모 저장</button>
+    ${perspective === "seller" ? `<div class="talk-profile-products"><span>최근 공급상품</span>${products.slice(0, 3).map(product => `<button type="button" data-action="product-detail" data-id="${product.id}">${productPhoto(product, "table-photo")}<b>${escapeHtml(product.name)}</b></button>`).join("")}</div>` : ""}`;
 }
 
 function sellerConnectionTemplate() {
   const connections = currentSellerConnections();
   const pcNotice = notificationService().pcNotice;
-  return `${partnerMessengerTemplate(connections, "seller")}
+  return `<div class="talk-page ${chatMobileView === "room" ? "show-room" : ""}">${partnerMessengerTemplate(connections, "seller")}
     <div class="pc-notice-bar pc-notice-below ${pcNotice ? "on" : ""}"><span>🔔</span><div><b>PC 알림으로 새 메시지를 바로 확인하세요</b><small>거래처가 답변하면 브라우저 알림으로 안내합니다.</small></div><button class="notification-permission" data-action="toggle-pc-notifications">${pcNotice ? "PC 알림 켜짐" : "PC 알림 받기"}</button><button class="text-button" data-action="open-chat-settings">알림 설정</button></div>
-    <div class="connection-utility panel connection-utility-bottom"><div><span class="connection-avatar">＋</span><p><b>새 공급사 연결</b><small>공급사가 발급한 코드를 등록합니다. 주문이 여러 건 생성되어도 거래처별 채팅방은 하나만 유지됩니다.</small></p></div><form id="connectSupplierForm" class="connection-code-form"><input name="code" placeholder="예: SANDI-84H3" required><button class="primary-button" type="submit">연결하기</button></form></div>`;
+    <div class="connection-utility panel connection-utility-bottom"><div><span class="connection-avatar">＋</span><p><b>새 공급사 연결</b><small>공급사가 발급한 코드를 등록합니다. 주문이 여러 건 생성되어도 거래처별 채팅방은 하나만 유지됩니다.</small></p></div><form id="connectSupplierForm" class="connection-code-form"><input name="code" placeholder="예: SANDI-84H3" required><button class="primary-button" type="submit">연결하기</button></form></div></div>`;
 }
 
 function supplierConnectionTemplate() {
@@ -2082,12 +2147,22 @@ function renderMaster() {
 
 function setRole(role) {
   if (currentAccount && !accountRoles().includes(role)) return showToast("이 계정에는 해당 역할 권한이 없습니다.");
-  activeRole = role; activeMenuIndex = 0; closeModal(); closeMobileSidebar(); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" });
+  activeRole = role; activeMenuIndex = 0; chatMobileView = "list"; closeModal(); closeMobileSidebar(); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function showToast(message) {
   const toast = document.getElementById("toast");
   toast.textContent = message; toast.classList.add("show");
   clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.classList.remove("show"), 2500);
+}
+function sendTalkMessage({ supplierLoginId, sellerLoginId, text = "", image = "" }) {
+  state.connectionMessages.push({ id: `MSG-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, supplierLoginId, sellerLoginId, senderLoginId: currentAccount.loginId, text, image, createdAt: "방금 전", sentAt: new Date().toISOString() });
+  audit("두고톡 메시지 전송", `${memberByLogin(supplierLoginId)?.company || supplierLoginId} ↔ ${memberByLogin(sellerLoginId)?.company || sellerLoginId} 대화에 ${image ? "사진을" : "메시지를"} 보냈습니다.`, "done", "connection");
+  const otherLoginId = currentAccount.loginId === supplierLoginId ? sellerLoginId : supplierLoginId;
+  pushNotification(otherLoginId, otherLoginId === supplierLoginId ? "supplier" : "seller", "system", "두고톡 새 메시지", `${currentAccount.company || currentAccount.loginId}: ${image ? "사진" : text.slice(0, 40)}`);
+  const wasFocused = document.activeElement?.id === "talkInput";
+  saveState(); render(); updateAccountUI();
+  scrollChatThreadToBottom();
+  if (wasFocused || window.innerWidth > 720) document.getElementById("talkInput")?.focus({ preventScroll: true });
 }
 function scrollChatThreadToBottom() {
   requestAnimationFrame(() => {
@@ -3141,9 +3216,16 @@ document.addEventListener("click", event => {
     input.value = Math.min(max, Math.max(min, next));
     return;
   }
-  if (action === "chat-attach") { showToast("데모에서는 사진을 업로드하지 않고 첨부 위치만 확인합니다."); return; }
+  if (action === "chat-attach") { document.getElementById("talkImageInput")?.click(); return; }
+  if (action === "talk-photo-view") { openModal(`<div class="talk-photo-viewer"><img src="${escapeHtml(target.getAttribute("src") || "")}" alt="첨부 사진"></div><div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button></div>`); return; }
+  if (action === "chat-back") { chatMobileView = "list"; render(); updateAccountUI(); window.scrollTo({ top: 0 }); return; }
+  if (action === "chat-partner-info") {
+    const connection = state.connections.find(item => item.id === id);
+    if (connection) openModal(`<div class="talk-profile talk-profile-modal">${talkPartnerProfile(connection, target.dataset.perspective || "seller")}</div><div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button></div>`);
+    return;
+  }
   if (action === "chat-filter") { chatRoomFilter = target.dataset.filter || "all"; render(); updateAccountUI(); return; }
-  if (action === "select-chat-room") { activeChatConnectionId = id; render(); updateAccountUI(); scrollChatThreadToBottom(); return; }
+  if (action === "select-chat-room") { activeChatConnectionId = id; chatMobileView = "room"; render(); updateAccountUI(); if (window.innerWidth <= 720) window.scrollTo({ top: 0 }); scrollChatThreadToBottom(); return; }
   if (action === "toggle-chat-favorite") {
     state.chatFavorites = state.chatFavorites || {};
     state.chatFavorites[id] = !state.chatFavorites[id];
@@ -3402,6 +3484,9 @@ document.addEventListener("click", event => {
     const refund = state.refunds.find(item => item.id === id);
     if (!refund) return;
     closeModal();
+    const refundOrder = state.orders.find(order => order.id === refund.orderId);
+    const refundConnection = refundOrder && state.connections.find(connection => connection.supplierLoginId === refundOrder.supplierLoginId && connection.sellerLoginId === refundOrder.sellerLoginId);
+    if (refundConnection) { activeChatConnectionId = refundConnection.id; chatMobileView = "room"; }
     activeMenuIndex = activeRole === "seller" ? 3 : activeRole === "supplier" ? 2 : activeMenuIndex;
     render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); scrollChatThreadToBottom();
     showToast(`${refund.orderId} 환불 협의가 연결된 거래처 두고톡에 표시됩니다.`);
@@ -3669,10 +3754,22 @@ document.getElementById("workspaceMenu").addEventListener("click", event => {
   activeMenuIndex = Number(button.dataset.menuIndex);
   if (activeMenuIndex !== 0) editMode = false;
   sellerBrandDirectoryView = false;
+  chatMobileView = "list";
   closeMobileSidebar(); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); scrollChatThreadToBottom();
 });
 
 document.addEventListener("change", event => {
+  if (event.target.id === "talkImageInput") {
+    const file = event.target.files?.[0];
+    const form = event.target.form;
+    event.target.value = "";
+    if (!file || !form) return;
+    if (!file.type.startsWith("image/")) { showToast("사진 파일만 보낼 수 있습니다."); return; }
+    const supplierLoginId = form.elements.supplierLoginId.value;
+    const sellerLoginId = form.elements.sellerLoginId.value;
+    shrinkImageFile(file).then(image => sendTalkMessage({ supplierLoginId, sellerLoginId, image })).catch(() => showToast("사진을 불러오지 못했습니다. 다른 사진을 선택해 주세요."));
+    return;
+  }
   if (event.target.id === "externalOrderSource") {
     const option = event.target.selectedOptions[0];
     const form = event.target.closest("form");
@@ -3710,7 +3807,6 @@ document.addEventListener("change", event => {
       }
     }
   }
-  if (event.target.id === "onSaleSearchInput") { onSaleSearch = event.target.value; onSalePage = 1; render(); updateAccountUI(); }
   if (event.target.id === "onSaleDateFromInput") { onSaleDateFrom = event.target.value; onSalePage = 1; render(); updateAccountUI(); }
   if (event.target.id === "onSaleDateToInput") { onSaleDateTo = event.target.value; onSalePage = 1; render(); updateAccountUI(); }
   if (event.target.id === "onSaleCategorySelect") { onSaleCategoryFilter = event.target.value; onSalePage = 1; render(); updateAccountUI(); }
@@ -3720,7 +3816,91 @@ document.addEventListener("change", event => {
   if (event.target.id === "refundMonthSelect") { refundMonth = event.target.value; render(); updateAccountUI(); }
 });
 
+/* 검색창: 한글 조합(IME) 중에는 다시 그리지 않고, 잠깐 멈추면 전체를 다시 그린 뒤 입력 위치를 되돌린다. */
+const LIVE_SEARCH_INPUTS = {
+  chatRoomSearch: value => { chatRoomSearch = value; },
+  sellerCatalogSearch: value => { sellerProductSearch = value; },
+  onSaleSearchInput: value => { onSaleSearch = value; onSalePage = 1; }
+};
+let liveSearchTimer = null;
+function handleLiveSearchInput(event) {
+  const input = event.target;
+  LIVE_SEARCH_INPUTS[input.id](input.value);
+  if (event.isComposing) return;
+  clearTimeout(liveSearchTimer);
+  liveSearchTimer = setTimeout(() => {
+    const id = input.id;
+    const hadFocus = document.activeElement?.id === id;
+    const caret = document.getElementById(id)?.selectionStart ?? null;
+    render(); updateAccountUI();
+    const next = document.getElementById(id);
+    if (hadFocus && next) { next.focus(); const position = caret ?? next.value.length; next.setSelectionRange(position, position); }
+  }, 280);
+}
+// 두고톡 입력창: 카카오톡처럼 입력 내용에 따라 높이가 늘어나고, 내용이 있을 때만 전송 버튼이 노랗게 켜짐
+function syncTalkComposer(textarea = document.getElementById("talkInput")) {
+  if (!textarea) return;
+  textarea.style.height = "auto";
+  const next = Math.min(textarea.scrollHeight + 2, 120);
+  textarea.style.height = `${next}px`;
+  textarea.style.overflowY = textarea.scrollHeight + 2 > 120 ? "auto" : "hidden";
+  const send = textarea.form?.querySelector(".talk-send");
+  if (send) send.disabled = !textarea.value.trim();
+}
+// 사진은 긴 변 기준으로 줄여서(JPEG) 저장 — 휴대폰 원본 사진도 가볍게 전송
+function shrinkImageFile(file, maxSize = 720, quality = .78) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = reject;
+      image.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext("2d");
+        context.fillStyle = "#fff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+// 모바일 키보드가 올라오면 보이는 영역(visualViewport)에 맞춰 대화방 높이를 줄여 입력창이 가려지지 않게 함
+let talkViewportHeight = 0;
+function syncTalkViewport() {
+  const viewport = window.visualViewport;
+  if (!viewport || Math.abs(viewport.scale - 1) > .01) return;
+  const root = document.documentElement;
+  root.style.setProperty("--talk-vh", `${Math.round(viewport.height)}px`);
+  root.style.setProperty("--talk-top", `${Math.round(viewport.offsetTop)}px`);
+  if (viewport.height < talkViewportHeight) {
+    const thread = document.querySelector(".talk-shell.show-room .talk-thread");
+    if (thread) thread.scrollTop = thread.scrollHeight;
+  }
+  talkViewportHeight = viewport.height;
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", syncTalkViewport);
+  window.visualViewport.addEventListener("scroll", syncTalkViewport);
+  syncTalkViewport();
+}
+document.addEventListener("keydown", event => {
+  if (event.target.id !== "talkInput" || event.key !== "Enter" || event.shiftKey) return;
+  if (event.isComposing || event.keyCode === 229) return;
+  // 휴대폰은 카카오톡처럼 Enter = 줄바꿈, 보내기는 노란 버튼. PC는 Enter = 보내기, Shift+Enter = 줄바꿈
+  if (window.matchMedia("(max-width: 720px), (pointer: coarse)").matches) return;
+  event.preventDefault();
+  if (event.target.value.trim()) event.target.form?.requestSubmit();
+});
+document.addEventListener("compositionend", event => { if (LIVE_SEARCH_INPUTS[event.target.id]) handleLiveSearchInput({ target: event.target, isComposing: false }); });
 document.addEventListener("input", event => {
+  if (event.target.id === "talkInput") { syncTalkComposer(event.target); return; }
   if (event.target.id === "addressPopupInput") { renderAddressPopupResults(event.target.value); return; }
   if (event.target.dataset && event.target.dataset.brandSearchInput !== undefined) { filterBrandBanners(); return; }
   if (event.target.dataset && event.target.dataset.mappingSearch !== undefined) {
@@ -3743,23 +3923,7 @@ document.addEventListener("input", event => {
     resultsEl.hidden = false;
     return;
   }
-  if (event.target.id === "chatRoomSearch") {
-    chatRoomSearch = event.target.value;
-    render(); updateAccountUI();
-    requestAnimationFrame(() => {
-      const input = document.getElementById("chatRoomSearch");
-      if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
-    });
-    return;
-  }
-  if (event.target.id === "sellerCatalogSearch") {
-    sellerProductSearch = event.target.value;
-    const products = sellerCatalogProducts();
-    const panel = event.target.closest(".panel");
-    const grid = panel?.querySelector(".product-card-grid");
-    if (grid) grid.innerHTML = products.length ? products.slice(0, panel.classList.contains("seller-market-panel") ? products.length : 6).map(productRowSeller).join("") : `<div class="empty catalog-empty"><b>검색 결과가 없습니다.</b><span>상품명·공급사·원산지를 다시 검색해 주세요.</span></div>`;
-    panel?.querySelectorAll(".market-toolbar > span b, .catalog-summary span b").forEach(element => element.textContent = products.length);
-  }
+  if (LIVE_SEARCH_INPUTS[event.target.id]) { handleLiveSearchInput(event); return; }
   if (event.target.id === "sellerOrderSearch") {
     sellerOrderSearch = event.target.value;
     const results = document.getElementById("sellerOrderResults");
@@ -4126,9 +4290,10 @@ document.addEventListener("submit", event => {
     return;
   }
   if (form.id === "connectionMessageForm") {
-    state.connectionMessages.push({ id: `MSG-${Date.now()}`, supplierLoginId: data.supplierLoginId, sellerLoginId: data.sellerLoginId, senderLoginId: currentAccount.loginId, text: String(data.text || "").trim(), createdAt: "방금 전" });
-    audit("두고톡 메시지 전송", `${memberByLogin(data.supplierLoginId)?.company || data.supplierLoginId} ↔ ${memberByLogin(data.sellerLoginId)?.company || data.sellerLoginId} 대화에 메시지를 전송했습니다.`, "done", "connection");
-    saveState(); render(); updateAccountUI(); scrollChatThreadToBottom();
+    const text = String(data.text || "").trim();
+    if (!text) return;
+    sendTalkMessage({ supplierLoginId: data.supplierLoginId, sellerLoginId: data.sellerLoginId, text });
+    return;
   }
   if (form.id === "supplierInquiryForm") {
     const product = productOf(data.productId);

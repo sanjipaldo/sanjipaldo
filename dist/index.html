@@ -78,7 +78,6 @@
       <div class="login-message partner-message">
         <span>SUPPLIER · MASTER</span>
         <h1 id="partnerTypingText" class="typing-headline" aria-live="polite"></h1>
-        <p>공급사는 상품과 출고를 관리하고,<br>관리자는 모든 운영 현황을 확인합니다.</p>
         <ul class="login-feature-list">
           <li><i>✓</i>상품·재고·공급가 실시간 관리</li>
           <li><i>✓</i>배송준비중 주문 송장 자동 발급</li>
@@ -89,23 +88,24 @@
     </div>
     <div class="login-panel partner-panel">
       <div class="login-box">
-        <div class="login-panel-brand brand-lockup" aria-label="두고"><img src="assets/doogomarket-symbol.png" alt=""><span class="brand-word"><b>두고</b><small>DOOGO</small></span></div>
-        <div class="partner-tabs" role="tablist" aria-label="파트너 로그인 유형">
-          <button class="active" type="button" data-partner-role="supplier">공급사</button>
-          <button type="button" data-partner-role="master">관리자</button>
+        <div class="login-panel-brand-wrap">
+          <div class="login-panel-brand login-panel-brand-logo" aria-label="두고"><img src="assets/doogo-logo-horizontal.png" alt="두고"></div>
+          <p class="login-panel-tagline">쇼핑몰에 쉬운 시작 · 두고마켓</p>
         </div>
-        <div class="login-heading partner-heading"><span>PARTNER CENTER</span><h2 id="partnerLoginTitle">공급사 로그인</h2><p id="partnerLoginDescription">상품·재고·주문·송장을 관리합니다.</p></div>
+        <div class="login-heading partner-heading"><span id="partnerLoginKicker">PARTNER CENTER</span><h2 id="partnerLoginTitle">공급사 로그인</h2><p id="partnerLoginDescription">상품·재고·주문·송장을 관리합니다.</p></div>
         <form id="partnerLoginForm" class="login-form" autocomplete="on">
-          <div class="login-field"><label for="partnerLoginId">아이디</label><input id="partnerLoginId" name="loginId" placeholder="아이디를 입력해 주세요" autocomplete="username" required></div>
+          <div class="login-field"><label for="partnerLoginId">아이디 또는 이메일</label><input id="partnerLoginId" name="loginId" placeholder="아이디 또는 가입 이메일" autocomplete="username" required></div>
           <div class="login-field"><div class="password-label"><label for="partnerLoginPassword">비밀번호</label><button type="button" id="togglePartnerPassword">보기</button></div><input id="partnerLoginPassword" name="loginPassword" type="password" placeholder="비밀번호를 입력해 주세요" autocomplete="current-password" required></div>
-          <div class="login-options"><label><input id="rememberPartnerId" type="checkbox"> 로그인정보 저장</label><span id="partnerAccessLabel">공급사 전용</span></div>
+          <div class="login-options"><label><input id="rememberPartnerId" type="checkbox"> 로그인정보 저장</label></div>
           <p id="partnerLoginError" class="login-error" role="alert"></p>
           <button type="submit" class="login-submit">로그인</button>
         </form>
-        <div id="partnerDemoAccounts" class="demo-accounts"><p>클릭해서 데모 계정 입력</p><div><button data-partner-demo="supplier">공급사 데모 <b>sup / sup</b></button></div></div>
+        <div id="partnerDemoAccounts" class="demo-accounts">
+          <div><button data-partner-demo="supplier">데모 계정으로 체험하기 <b>sup / sup</b></button></div>
+        </div>
         <div class="login-footer-links">
-          <div id="supplierSignupPrompt" class="signup-prompt"><span>공급사 계정이 없으신가요?</span><button id="openSupplierSignup" type="button">입점 회원가입</button></div>
-          <div id="partnerFindAccount" class="login-links"><button type="button" data-find-account>아이디·비밀번호 찾기</button></div>
+          <div id="supplierSignupPrompt" class="login-signup-card"><span>공급사 계정이 없으신가요?</span><button id="openSupplierSignup" type="button">입점 신청하기 →</button></div>
+          <div class="login-textlink-row"><button type="button" id="partnerFindAccount" class="login-textlink" data-find-account>아이디·비밀번호 찾기</button><i aria-hidden="true">·</i><button type="button" id="partnerRoleSwitch" class="login-textlink" data-partner-role="master">관리자 로그인</button></div>
         </div>
         <button id="mobileBackToSellerLogin" class="mobile-partner-link" type="button">← 위탁셀러 로그인으로</button>
       </div>
