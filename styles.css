@@ -5888,3 +5888,36 @@ body { letter-spacing: normal; }
 @media (max-width: 720px) {
   .api-safe-notice.full { flex-direction: column; align-items: flex-start; gap: 6px; }
 }
+
+/* ===== 주문 단계 메뉴: 위탁셀러/공급사/택배 구분 색 ===== */
+.order-stage-menu nav.stage-grouped { padding: 10px; display: grid; gap: 8px; grid-template-columns: 1fr; }
+.stage-group { border-radius: 12px; padding: 6px; }
+.stage-group-items { display: grid; gap: 3px; }
+.stage-group-head { margin: 2px 4px 6px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; line-height: 1.3; }
+.stage-group-head em { padding: 2px 7px; font-style: normal; font-size: 11px; color: #fff; border-radius: 99px; flex: 0 0 auto; }
+.stage-group-head span { min-width: 0; }
+.stage-group.tone-neutral { padding: 0 6px; }
+.stage-group.tone-seller { background: #f0f6ff; border: 1px solid #d7e7ff; }
+.stage-group.tone-seller .stage-group-head { color: #1b64da; }
+.stage-group.tone-seller .stage-group-head em { background: #3182f6; }
+.stage-group.tone-supplier { background: #fff6ec; border: 1px solid #ffe0bd; }
+.stage-group.tone-supplier .stage-group-head { color: #c25400; }
+.stage-group.tone-supplier .stage-group-head em { background: #f57c00; }
+.stage-group.tone-ship { background: #effaf3; border: 1px solid #cdeed9; }
+.stage-group.tone-ship .stage-group-head { color: #0f8a4a; }
+.stage-group.tone-ship .stage-group-head em { background: #1aa35c; }
+.stage-group:not(.tone-neutral) .stage-group-items button:hover { background: rgba(255,255,255,.7); }
+.stage-group:not(.tone-neutral) .stage-group-items button.active { background: #fff; box-shadow: 0 1px 4px rgba(15,32,66,.08); }
+.stage-group.tone-supplier .stage-group-items button.active { color: #c25400; }
+.stage-group.tone-ship .stage-group-items button.active { color: #0f8a4a; }
+.auto-tracking-hint { display: block; margin: 2px 0 4px; color: #1b64da; font-size: 12px; font-weight: 700; }
+.demo-forward { font-size: 12px; color: #8b95a1; }
+@media (max-width: 720px) {
+  .order-stage-menu nav.stage-grouped { grid-template-columns: 1fr; }
+  .stage-group-items { grid-template-columns: repeat(2, 1fr); }
+  .stage-group-items button { min-height: 44px; }
+}
+.stage-group-head span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.order-stage-legend { margin: 0 0 12px; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12.5px; color: #4e5968; }
+.order-stage-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.order-stage-legend i { width: 10px; height: 10px; border-radius: 3px; }

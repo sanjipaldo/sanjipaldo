@@ -818,7 +818,7 @@ function stopChannelListingModal(sellerProductId, channelId) {
    ‘송장 자동 쇼핑몰 전송’을 켜 두면 기다리지 않고 바로 보낸다. */
 const TRACKING_PENDING_STATUSES = ["전송 대기", "자동화 꺼짐", "10분 자동전송 대기"];
 function isTrackingPending(status) { return TRACKING_PENDING_STATUSES.includes(status); }
-function trackingStatusLabel(status) { return ({ "자동전송 완료 · 데모": "전송 완료 · 자동", "자동화 꺼짐": "전송 대기", "10분 자동전송 대기": "전송 대기" })[status] || status; }
+function trackingStatusLabel(status) { return ({ "자동전송 완료 · 데모": "전송 완료 · 자동", "자동화 꺼짐": "전송 대기", "10분 자동전송 대기": "자동 전송 예정" })[status] || status; }
 function orderNeedsTrackingPush(order) { return Boolean(order?.tracking) && Object.values(order.channelTrackingStatuses || {}).some(isTrackingPending); }
 function sellerTrackingPushOrders() { return currentSellerOrders().filter(orderNeedsTrackingPush); }
 function autoTrackingPushEnabled(loginId = currentAccount?.loginId || "seller") {
@@ -835,12 +835,61 @@ function queueTrackingSync(order) {
   const channel = sellerChannels(order.sellerLoginId).find(item => item.id === channelId);
   if (!channel || channel.status !== "connected") order.channelTrackingStatuses[channelId] = "연동 필요";
   else if (channel.trackingAutomation) {
-    order.channelTrackingStatuses[channelId] = "전송 완료 · 자동";
-    order.trackingPushedAt = "방금 전";
-    channel.lastTrackingPush = "방금 전";
-    pushNotification(order.sellerLoginId, "seller", "tracking", `${channel.name}에 송장을 자동으로 보냈어요`, `${order.id} · ${order.carrier} ${order.tracking}`, ["내부 알림"]);
+    /* 자동 전송을 켜 두면 바로 보내지 않고 10분 단위 전송 시각(예: 12:40)에 모아서 보낸다. */
+    order.channelTrackingStatuses[channelId] = "10분 자동전송 대기";
+    if (!(Number(order.trackingAutoDueAt || 0) > Date.now())) order.trackingAutoDueAt = nextTrackingSlot();
   } else order.channelTrackingStatuses[channelId] = "전송 대기";
   order.channelTrackingSyncedAt = "방금 전";
+}
+/* 10분 단위 송장 자동 전송 시각: 12:31에 들어온 송장은 12:40에 보낸다. */
+function nextTrackingSlot(from = Date.now()) { const step = 10 * 60 * 1000; return Math.floor(from / step) * step + step; }
+function trackingSlotLabel(ts) { return ts ? new Date(ts).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : "-"; }
+function orderWaitsAutoTracking(order) { return Boolean(order?.tracking) && Object.values(order.channelTrackingStatuses || {}).includes("10분 자동전송 대기"); }
+function sellerAutoTrackingQueue(loginId = currentAccount?.loginId || "seller") {
+  const orders = (state.orders || []).filter(order => order.sellerLoginId === loginId && orderWaitsAutoTracking(order));
+  const dueAt = orders.length ? Math.min(...orders.map(order => Number(order.trackingAutoDueAt || 0) || nextTrackingSlot())) : 0;
+  return { orders, count: orders.length, dueAt };
+}
+function orderAutoTrackingHint(order) {
+  if (!orderWaitsAutoTracking(order)) return "";
+  return `<small class="auto-tracking-hint">⏱ ${escapeHtml(trackingSlotLabel(order.trackingAutoDueAt))} 자동 전송 예정</small>`;
+}
+/* 서버 스케줄러 역할(데모): 전송 시각이 지난 송장을 쇼핑몰로 보낸다. 자동 전송을 끈 쇼핑몰은 ‘전송 대기’로 돌려놓는다. */
+function processDueTrackingPushes(now = Date.now()) {
+  const sentBySeller = {};
+  (state.orders || []).forEach(order => {
+    if (!order.tracking) return;
+    Object.entries(order.channelTrackingStatuses || {}).forEach(([channelId, status]) => {
+      if (status !== "10분 자동전송 대기") return;
+      const channel = sellerChannels(order.sellerLoginId).find(item => item.id === channelId);
+      if (!channel || channel.status !== "connected" || !channel.trackingAutomation) { order.channelTrackingStatuses[channelId] = "전송 대기"; return; }
+      if (Number(order.trackingAutoDueAt || 0) > now) return;
+      const sentAt = trackingSlotLabel(now);
+      order.channelTrackingStatuses[channelId] = "전송 완료 · 자동";
+      order.trackingPushedAt = `${sentAt} 자동 전송`;
+      order.channelTrackingSyncedAt = `${sentAt} 자동 전송`;
+      channel.lastTrackingPush = `${sentAt} · 자동`;
+      const bucket = sentBySeller[order.sellerLoginId] = sentBySeller[order.sellerLoginId] || { orders: new Set(), channels: new Set() };
+      bucket.orders.add(order.id); bucket.channels.add(channel.name);
+    });
+  });
+  let total = 0;
+  Object.entries(sentBySeller).forEach(([loginId, bucket]) => {
+    total += bucket.orders.size;
+    pushNotification(loginId, "seller", "tracking", `송장 ${bucket.orders.size}건을 쇼핑몰에 자동으로 보냈어요`, `${[...bucket.channels].join(", ")} · 10분 자동 전송`, ["내부 알림"]);
+    state.logs.unshift({ id: Date.now() + Math.random(), type: "tracking", title: "송장 10분 자동 전송", detail: `${bucket.orders.size}건 · ${[...bucket.channels].join(", ")}에 송장번호를 보냈습니다. (데모: 실제 쇼핑몰 API 호출 없음)`, actor: "두고 자동화", time: "방금 전", state: "done" });
+  });
+  return total;
+}
+function runTrackingScheduler() {
+  if (typeof state === "undefined" || !state) return;
+  const sent = processDueTrackingPushes();
+  if (!sent) return;
+  saveState();
+  if (!currentAccount) return;
+  const typing = document.activeElement?.matches?.("input, textarea, select");
+  if (!typing) { render(); updateAccountUI(); }
+  if (activeRole === "seller") { const mine = sent; showToast(`⏱ 10분 자동 전송: 송장 ${mine}건을 쇼핑몰에 보냈어요.`); }
 }
 function pushOrderTracking(order, mode = "manual") {
   const sentTo = [];
@@ -1511,7 +1560,7 @@ function sellerAutomationSettingsCard() {
   return `<section class="panel seller-automation-card"><div class="profile-section-head"><div><span>AUTOMATION</span><h3>자동화 설정</h3><p>켜 두면 주문 수집과 송장 전송을 두고가 대신 해 드려요.</p></div></div>
     <div class="automation-setting-list">
       <div class="automation-setting-row"><span><b>주문 자동 수집</b><small>쿠팡·스마트스토어에 들어온 주문을 5분마다 자동으로 가져와요.</small></span><button type="button" class="automation-switch ${settings.autoCollectOrders ? "on" : ""}" data-action="toggle-auto-collect" aria-pressed="${settings.autoCollectOrders}"><i></i>${settings.autoCollectOrders ? "켜짐" : "꺼짐"}</button></div>
-      <div class="automation-setting-row"><span><b>송장 자동 쇼핑몰 전송</b><small>공급사가 송장을 넣으면 주문이 들어온 쇼핑몰로 바로 보내요. 끄면 ‘쇼핑몰 전송’ 버튼으로 직접 보내요.</small></span><button type="button" class="automation-switch ${autoPush ? "on" : ""}" data-action="toggle-auto-tracking" aria-pressed="${autoPush}"><i></i>${autoPush ? "켜짐" : "꺼짐"}</button></div>
+      <div class="automation-setting-row"><span><b>송장 자동 쇼핑몰 전송</b><small>공급사가 넣은 송장을 10분마다 모아서 주문이 들어온 쇼핑몰로 자동 전송해요. 끄면 ‘쇼핑몰 전송’ 버튼으로 직접 보내요.</small></span><button type="button" class="automation-switch ${autoPush ? "on" : ""}" data-action="toggle-auto-tracking" aria-pressed="${autoPush}"><i></i>${autoPush ? "켜짐" : "꺼짐"}</button></div>
     </div></section>`;
 }
 function sellerAccountProfileTemplate() {
@@ -1754,6 +1803,14 @@ function refundTemplate(role) {
 const sellerOrderStages = [
   ["overview", "주문 등록 현황"], ["all", "전체 주문 리스트"], ["mapping", "매핑 필요"], ["payment", "결제 대기"], ["received", "주문접수"], ["ordered", "발주완료"], ["preparing", "배송준비중"], ["needs-check", "주문확인필요"], ["tracking-push", "송장 전송 대기"], ["shipping", "배송중"], ["delivered", "배송완료"]
 ];
+/* 주문 단계 메뉴를 ‘누가 처리하는 단계인지’로 묶어 색으로 구분한다. 위탁셀러(파랑) → 공급사(주황) → 위탁셀러(파랑) → 택배(초록) */
+const SELLER_ORDER_STAGE_GROUPS = [
+  { tone: "neutral", who: "", title: "", stages: ["overview", "all"] },
+  { tone: "seller", who: "위탁셀러", title: "매핑 · 결제", stages: ["mapping", "payment", "received"] },
+  { tone: "supplier", who: "공급사", title: "확인 · 포장 · 송장", stages: ["ordered", "preparing", "needs-check"] },
+  { tone: "seller", who: "위탁셀러", title: "송장 쇼핑몰 전송", stages: ["tracking-push"] },
+  { tone: "ship", who: "택배사", title: "배송 진행", stages: ["shipping", "delivered"] }
+];
 function sellerOrderSubset(stage = sellerOrderStage) {
   const orders = currentSellerOrders();
   if (["all", "overview"].includes(stage)) return orders;
@@ -1773,12 +1830,13 @@ function sellerOrderManagementTemplate() {
   const automation = sellerAutomationSettings();
   const pendingTracking = sellerTrackingPushOrders();
   const autoPush = autoTrackingPushEnabled();
+  const autoQueue = sellerAutoTrackingQueue();
   const collectCard = `<section class="order-automation-bar panel">
     <div class="order-auto-item"><span class="order-auto-icon">⟳</span><div><b>쇼핑몰 주문 수집</b><small>마지막 수집 ${escapeHtml(automation.lastCollectedAt || "-")} · 자동 수집 ${automation.autoCollectOrders ? "켜짐 (5분마다)" : "꺼짐"}</small></div><button type="button" class="automation-switch ${automation.autoCollectOrders ? "on" : ""}" data-action="toggle-auto-collect" aria-pressed="${automation.autoCollectOrders}" aria-label="주문 자동 수집"><i></i>${automation.autoCollectOrders ? "자동" : "수동"}</button><button type="button" class="primary-button" data-action="collect-orders">지금 주문 가져오기</button></div>
-    <div class="order-auto-item"><span class="order-auto-icon">🚚</span><div><b>송장 쇼핑몰 전송</b><small>${autoPush ? "공급사 송장이 들어오면 바로 쇼핑몰로 보내요" : pendingTracking.length ? `보낼 송장 ${pendingTracking.length}건이 기다리고 있어요` : "송장이 들어오면 ‘쇼핑몰 전송’ 버튼으로 보내요"}</small></div><button type="button" class="automation-switch ${autoPush ? "on" : ""}" data-action="toggle-auto-tracking" aria-pressed="${autoPush}" aria-label="송장 자동 쇼핑몰 전송"><i></i>${autoPush ? "자동" : "수동"}</button><button type="button" class="${pendingTracking.length ? "primary-button" : "secondary-button"}" data-action="push-all-tracking" ${pendingTracking.length ? "" : "disabled"}>${pendingTracking.length ? `송장 ${pendingTracking.length}건 쇼핑몰 전송` : "보낼 송장 없음"}</button></div>
+    <div class="order-auto-item"><span class="order-auto-icon">🚚</span><div><b>송장 쇼핑몰 전송</b><small>${autoQueue.count ? `⏱ 다음 자동 전송 ${escapeHtml(trackingSlotLabel(autoQueue.dueAt))} · ${autoQueue.count}건 대기` : autoPush ? "공급사 송장을 10분마다 모아서 쇼핑몰로 자동 전송해요" : pendingTracking.length ? `보낼 송장 ${pendingTracking.length}건이 기다리고 있어요` : "송장이 들어오면 ‘쇼핑몰 전송’ 버튼으로 보내요"}</small></div><button type="button" class="automation-switch ${autoPush ? "on" : ""}" data-action="toggle-auto-tracking" aria-pressed="${autoPush}" aria-label="송장 자동 쇼핑몰 전송"><i></i>${autoPush ? "자동" : "수동"}</button><button type="button" class="${pendingTracking.length ? "primary-button" : "secondary-button"}" data-action="push-all-tracking" ${pendingTracking.length ? "" : "disabled"}>${pendingTracking.length ? `${autoQueue.count ? "지금 바로 " : "송장 "}${pendingTracking.length}건 전송` : "보낼 송장 없음"}</button>${autoQueue.count ? `<button type="button" class="text-button demo-forward" data-action="demo-forward-tracking">데모: 10분 지난 것처럼</button>` : ""}</div>
   </section>`;
   return `${sectionHero("주문 관리", "쇼핑몰 주문을 가져와 결제하면 공급사가 출고하고, 받은 송장을 쇼핑몰로 보냅니다.", `<button class="secondary-button" data-action="single-order">주문 직접 입력</button>`)}${collectCard}
-    <div class="order-workspace"><details class="order-stage-menu panel" open><summary><span>${menuIcon("order")}</span><b>주문 관리</b><small>단계별 메뉴 열기</small><i>⌄</i></summary><nav>${sellerOrderStages.map(([key,label]) => { const count = sellerOrderStageCount(key); const urgent = key === "needs-check" && count > 0; return `<button class="${sellerOrderStage === key ? "active" : ""}" type="button" data-action="filter-order-stage" data-stage="${key}"><span>${label}</span><b class="stage-count ${count > 0 ? (urgent ? "urgent" : "has-count") : "zero"}">${count}</b></button>`; }).join("")}</nav></details><section class="order-stage-content">
+    <div class="order-workspace"><details class="order-stage-menu panel" open><summary><span>${menuIcon("order")}</span><b>주문 관리</b><small>단계별 메뉴 열기</small><i>⌄</i></summary><nav class="stage-grouped">${SELLER_ORDER_STAGE_GROUPS.map(group => `<div class="stage-group tone-${group.tone}">${group.title ? `<p class="stage-group-head"><em>${group.who}</em><span>${group.title}</span></p>` : ""}<div class="stage-group-items">${group.stages.map(key => { const label = sellerOrderStages.find(item => item[0] === key)?.[1] || key; const count = sellerOrderStageCount(key); const urgent = key === "needs-check" && count > 0; return `<button class="${sellerOrderStage === key ? "active" : ""}" type="button" data-action="filter-order-stage" data-stage="${key}"><span>${label}</span><b class="stage-count ${count > 0 ? (urgent ? "urgent" : "has-count") : "zero"}">${count}</b></button>`; }).join("")}</div></div>`).join("")}</nav></details><section class="order-stage-content">
       <div class="order-search-panel panel"><label><span>⌕</span><input id="sellerOrderSearch" value="${escapeHtml(sellerOrderSearch)}" placeholder="주문번호, 고객명, 외부 상품명, 상품코드 검색"></label><div><span>전체 ${orders.length}건</span><span>매핑 ${sellerMappingRequiredOrders().length}건</span><span>결제 ${sellerPaymentRequiredOrders().length}건</span></div></div>
       ${sellerOrderStage === "overview" ? overview : ""}
       <div class="panel"><div class="panel-head"><div><h3>${activeLabel}</h3><p>행을 열어 주소·배송메시지·개인통관부호·송장 상태까지 확인할 수 있습니다.</p></div><button class="secondary-button" data-action="clear-order-search">검색 초기화</button></div><div id="sellerOrderResults">${ordersTable("seller", sellerOrderSearch, filteredOrders)}</div></div>
@@ -1837,9 +1895,9 @@ function channelIntegrationTemplate() {
   const events = visibleNotifications().slice(0,4);
   const automationCount = channels.filter(channel => channel.status === "connected" && channel.trackingAutomation).length;
   const pendingTotal = sellerTrackingPushOrders().length;
-  return `${sectionHero("쇼핑몰 연동 · 드랍쉬핑 자동화", "공급사가 발급한 송장을 내 주문에 바로 받고, 주문이 들어온 쇼핑몰로 보냅니다. 자동 전송을 켜면 기다리지 않고 바로 보내요.", `<button class="secondary-button" data-action="run-tracking-sync">대기 송장 지금 보내기</button>`)}
+  return `${sectionHero("쇼핑몰 연동 · 드랍쉬핑 자동화", "공급사가 발급한 송장을 내 주문에 바로 받고, 주문이 들어온 쇼핑몰로 보냅니다. 자동 전송을 켜면 10분마다 알아서 보내요.", `<button class="secondary-button" data-action="run-tracking-sync">대기 송장 지금 보내기</button>`)}
     ${sellerAutomationSettingsCard()}
-    <section class="tracking-automation-hero"><div><span>AUTOMATED DROPSHIPPING</span><h3>송장 자동전송 ${automationCount}개 쇼핑몰 사용중</h3><p>보낼 송장 ${pendingTotal}건 · 쇼핑몰마다 자동 전송을 따로 켜고 끌 수 있어요.</p></div><div class="automation-flow"><span><b>1</b>공급사 송장 입력</span><i>→</i><span><b>2</b>내 주문에 바로 표시</span><i>→</i><span><b>3</b>쇼핑몰 전송 (버튼·자동)</span></div></section>
+    <section class="tracking-automation-hero"><div><span>AUTOMATED DROPSHIPPING</span><h3>송장 자동전송 ${automationCount}개 쇼핑몰 사용중</h3><p>보낼 송장 ${pendingTotal}건 · 쇼핑몰마다 자동 전송을 따로 켜고 끌 수 있어요.</p></div><div class="automation-flow"><span><b>1</b>공급사 송장 입력</span><i>→</i><span><b>2</b>내 주문에 바로 표시</span><i>→</i><span><b>3</b>쇼핑몰 전송 (버튼·10분 자동)</span></div></section>
     <div class="api-safe-notice"><b>데모 안전 모드</b><span>현재 화면은 자동화 상태와 전송 대기열만 브라우저에 저장하며 실제 쇼핑몰 API에는 전송하지 않습니다.</span></div>
     <div class="channel-connect-grid">${channels.map(channel => { const pending = currentSellerOrders().filter(order => isTrackingPending(order.channelTrackingStatuses?.[channel.id])).length; const automationEnabled = channel.status === "connected" && channel.trackingAutomation; return `<article class="panel channel-connect-card ${automationEnabled ? "automation-on" : ""}"><div class="channel-card-head">${channelMark(channel.id)}<div><h3>${escapeHtml(channel.name)}</h3><p>${escapeHtml(channel.storeName)}</p></div>${statusChip(channel.status === "connected" ? "연동중" : channel.status === "pending" ? "확인중" : "미연동")}</div><div class="automation-setting"><span><b>송장 자동전송</b><small>${channel.status === "connected" ? "켜 두면 공급사 송장을 10분마다 자동 전송" : "채널 연동 후 사용할 수 있습니다."}</small></span><button type="button" class="automation-switch ${automationEnabled ? "on" : ""}" data-action="toggle-channel-automation" data-id="${channel.id}" ${channel.status === "connected" ? "" : "disabled"} aria-pressed="${automationEnabled}"><i></i>${automationEnabled ? "켜짐" : "꺼짐"}</button></div>${channel.status === "connected" ? `<button type="button" class="channel-policy-summary" data-action="connect-channel" data-id="${channel.id}"><span>배송 정책 ${channelShippingPolicies(channel).length}개 불러옴</span><b>기본 · ${escapeHtml(channelDefaultPolicy(channel)?.name || "불러오기 필요")}</b><small>${escapeHtml(policyFeeText(channelDefaultPolicy(channel)))}</small></button>` : ""}<dl><div><dt>주문 수집</dt><dd>${channel.status === "connected" ? "자동" : "대기"}</dd></div><div><dt>송장 대기열</dt><dd>${pending}건</dd></div><div><dt>최근 송장 전송</dt><dd>${escapeHtml(channel.lastTrackingPush || "-")}</dd></div></dl><button class="${channel.status === "connected" ? "secondary-button" : "primary-button"}" data-action="connect-channel" data-id="${channel.id}">${channel.status === "connected" ? "연동 정보·배송 정책" : "API 키로 연동하기"}</button></article>`; }).join("")}</div>
     <form id="dropshippingEmailForm" class="panel dropshipping-email-card"><div class="dropshipping-email-head"><div><span>EMAIL AUTOMATION</span><h3>드랍쉬핑 이메일 알림</h3><p>API 자동화에서 놓치기 쉬운 주문·송장·환불·가격 변동을 원하는 이메일로 받아보세요.</p></div><label class="email-master-switch"><input type="checkbox" name="emailEnabled" ${notice.emailEnabled ? "checked" : ""}><i></i><span>${notice.emailEnabled ? "ON" : "OFF"}</span></label></div><div class="email-recipient-row"><label><span>수신 이메일</span><input name="emailAddress" type="email" value="${escapeHtml(notice.emailAddress || currentAccount.email || "")}" placeholder="ops@example.com" required></label><small>주문 운영 담당자 메일을 입력해 주세요.</small></div><fieldset><legend>수신할 알림 선택</legend><label><input type="checkbox" name="events" value="orderNotice" ${notice.orderNotice ? "checked" : ""}><span><b>신규 주문</b><small>채널 주문 수집·공급사 자동배정</small></span></label><label><input type="checkbox" name="events" value="trackingNotice" ${notice.trackingNotice ? "checked" : ""}><span><b>송장 등록</b><small>공급사 송장 발급·채널 전송</small></span></label><label><input type="checkbox" name="events" value="refundNotice" ${notice.refundNotice ? "checked" : ""}><span><b>취소·환불</b><small>반품 완료·예치금 환불</small></span></label><label><input type="checkbox" name="events" value="priceNotice" ${notice.priceNotice ? "checked" : ""}><span><b>가격 변경</b><small>공급가 변동·마진 위험</small></span></label><label><input type="checkbox" name="events" value="deliveryDelayNotice" ${notice.deliveryDelayNotice ? "checked" : ""}><span><b>배송 지연</b><small>송장 미등록·집하 지연</small></span></label><label><input type="checkbox" name="events" value="stockNotice" ${notice.stockNotice ? "checked" : ""}><span><b>재고 부족</b><small>품절 임박·판매중지 권고</small></span></label></fieldset><div class="email-form-actions"><span>설정은 쇼핑몰 API 자동화와 함께 적용됩니다.</span><button class="primary-button" type="submit">이메일 알림 저장</button></div></form>
@@ -2441,7 +2499,7 @@ function orderActionsMarkup(order, role) {
     return `<span class="mapping-status payment">공급사 발주 대기</span><button class="small-button approve" data-action="dispatch-supplier-order" data-id="${order.id}">공급사 발주</button><button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${!hasRefund ? `<button class="text-button refund-link" data-action="request-refund" data-id="${order.id}">취소·환불</button>` : ""}`;
   }
   const supplierActions = ["신규주문", "발주완료"].includes(order.status) ? `<button class="small-button approve" data-action="prepare-shipment" data-id="${order.id}">주문 확인·포장</button>` : order.status === "주문확인필요" ? `<div class="row-actions"><button class="small-button approve" data-action="confirm-channel-order" data-id="${order.id}">채널 확인 완료</button><button class="text-button refund-link" data-action="cancel-channel-order" data-id="${order.id}">채널 취소 처리</button></div>` : order.status === "배송준비중" && !order.tracking ? `<div class="row-actions"><button class="small-button approve" data-action="auto-tracking" data-id="${order.id}">자동송장출력</button><button class="text-button" data-action="tracking" data-id="${order.id}">직접 입력</button></div>` : order.status === "배송중" ? `<div class="shipment-inline-actions"><button class="text-button label-reprint" data-action="show-label" data-id="${order.id}">송장 보기</button><button class="text-button" data-action="complete-shipping" data-id="${order.id}">배송완료</button>${order.provisionalTracking ? `<button class="text-button refund-link" data-action="cancel-shipment" data-id="${order.id}">집하 전 취소</button>` : ""}</div>` : order.tracking ? `<button class="text-button label-reprint" data-action="show-label" data-id="${order.id}">송장 보기</button>` : "";
-  return `${role === "supplier" ? `${order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong>${order.provisionalTracking ? `<small>가송장</small>` : ""}</span>` : ""}${supplierActions}` : order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong></span>${orderNeedsTrackingPush(order) ? `<button class="small-button approve push-tracking-button" data-action="push-tracking" data-id="${order.id}">쇼핑몰 전송</button>` : Object.values(order.channelTrackingStatuses || {}).some(status => String(trackingStatusLabel(status)).startsWith("전송 완료")) ? `<span class="tracking-sent-chip">쇼핑몰 전송 완료</span>` : ""}` : `<span class="waiting-text ${order.status === "주문확인필요" ? "waiting-alert" : ""}">${order.status === "발주완료" ? "공급사 주문 확인 대기" : order.status === "주문확인필요" ? "채널 주문 상태 확인 필요" : "공급사 처리 대기"}</span>`}<button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${role === "seller" && !hasRefund ? `<button class="text-button refund-link" data-action="request-refund" data-id="${order.id}">취소·환불</button>` : ""}`;
+  return `${role === "supplier" ? `${order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong>${order.provisionalTracking ? `<small>가송장</small>` : ""}</span>` : ""}${supplierActions}` : order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong></span>${orderNeedsTrackingPush(order) ? `${orderAutoTrackingHint(order)}<button class="small-button approve push-tracking-button" data-action="push-tracking" data-id="${order.id}">${orderWaitsAutoTracking(order) ? "지금 전송" : "쇼핑몰 전송"}</button>` : Object.values(order.channelTrackingStatuses || {}).some(status => String(trackingStatusLabel(status)).startsWith("전송 완료")) ? `<span class="tracking-sent-chip">쇼핑몰 전송 완료</span>` : ""}` : `<span class="waiting-text ${order.status === "주문확인필요" ? "waiting-alert" : ""}">${order.status === "발주완료" ? "공급사 주문 확인 대기" : order.status === "주문확인필요" ? "채널 주문 상태 확인 필요" : "공급사 처리 대기"}</span>`}<button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${role === "seller" && !hasRefund ? `<button class="text-button refund-link" data-action="request-refund" data-id="${order.id}">취소·환불</button>` : ""}`;
 }
 
 function mobileOrderCards(orders, role) {
@@ -3058,7 +3116,7 @@ function orderDetailModal(orderId) {
     })() : ""}
     <section class="order-detail-section"><h3>상품 매핑·결제·발주</h3><div class="mapping-detail-grid"><div><span>외부몰 상품명</span><b>${escapeHtml(order.externalProductName || orderSellerTitle(order))}</b></div><div><span>공급사 원본코드</span><b>${mapped ? escapeHtml(order.mappedProductId || order.productId) : "매핑 전"}</b></div><div><span>공급가 결제</span><b>${paid ? `결제 완료 · ${escapeHtml(order.paymentMethod === "deposit" ? "두고머니" : order.paymentMethod === "card" ? "신용카드 데모" : "기존 주문")}` : "결제 대기"}</b></div><div><span>공급사 발주</span><b>${order.supplierLoginId ? `${escapeHtml(order.supplierOrderId || "발주번호 생성")} · ${escapeHtml(order.forwardedAt || "전달 완료")}` : paid ? "위탁셀러 발주 대기" : "결제 후 발주 가능"}</b></div></div></section>
     <details class="order-detail-section order-recipient-details"><summary><h3>수취인·배송 정보</h3><i>⌄</i></summary><div class="member-detail-grid"><div><span>성함</span><b>${escapeHtml(order.recipientName || order.customer)}</b></div><div><span>연락처</span><b>${escapeHtml(order.phone || "-")}</b></div><div class="full"><span>주소</span><b>(${escapeHtml(order.postalCode || "-")}) ${escapeHtml(order.address || "-")} ${escapeHtml(order.addressDetail || "")}</b></div><div class="full"><span>배송 메시지</span><b>${escapeHtml(order.deliveryMessage || "없음")}</b></div>${order.shippingType === "overseas" ? `<div class="full customs-field ${isValidCustomsCode(order.personalCustomsCode) ? "" : "missing"}"><span>개인통관고유부호</span><b>${escapeHtml(order.personalCustomsCode || "미입력 · 결제할 때 입력해 주세요")}</b></div>` : ""}</div></details>
-    <section class="order-detail-section"><h3>송장·판매채널 전송</h3><div class="tracking-summary"><span>${order.tracking ? "송장 반영 완료" : order.status === "배송준비중" ? "공급사 송장 입력 대기" : order.supplierLoginId ? "공급사 주문 확인 대기" : "공급사 발주 전"}</span><b>${order.tracking ? `${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)}` : "아직 송장번호가 없습니다."}</b></div>${trackingStatuses.length ? `<div class="tracking-channel-statuses">${trackingStatuses.map(([channelId,status]) => `<div>${channelMark(channelId,true)}<span>${escapeHtml(channelMeta(channelId).name)}</span><b class="${isTrackingPending(status) ? "pending" : ""}">${escapeHtml(trackingStatusLabel(status))}</b></div>`).join("")}</div>${activeRole === "seller" && orderNeedsTrackingPush(order) ? `<button type="button" class="primary-button tracking-push-cta" data-action="push-tracking" data-id="${order.id}">쇼핑몰에 송장 보내기</button>` : ""}` : `<div class="channel-sync-empty">송장이 입력되면 주문이 들어온 쇼핑몰로 보낼 준비가 됩니다.</div>`}</section>
+    <section class="order-detail-section"><h3>송장·판매채널 전송</h3><div class="tracking-summary"><span>${order.tracking ? "송장 반영 완료" : order.status === "배송준비중" ? "공급사 송장 입력 대기" : order.supplierLoginId ? "공급사 주문 확인 대기" : "공급사 발주 전"}</span><b>${order.tracking ? `${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)}` : "아직 송장번호가 없습니다."}</b></div>${trackingStatuses.length ? `<div class="tracking-channel-statuses">${trackingStatuses.map(([channelId,status]) => `<div>${channelMark(channelId,true)}<span>${escapeHtml(channelMeta(channelId).name)}</span><b class="${isTrackingPending(status) ? "pending" : ""}">${escapeHtml(trackingStatusLabel(status))}${status === "10분 자동전송 대기" ? ` · ${escapeHtml(trackingSlotLabel(order.trackingAutoDueAt))}` : ""}</b></div>`).join("")}</div>${activeRole === "seller" && orderNeedsTrackingPush(order) ? `<button type="button" class="primary-button tracking-push-cta" data-action="push-tracking" data-id="${order.id}">${orderWaitsAutoTracking(order) ? `기다리지 않고 지금 보내기` : "쇼핑몰에 송장 보내기"}</button>` : ""}` : `<div class="channel-sync-empty">송장이 입력되면 주문이 들어온 쇼핑몰로 보낼 준비가 됩니다.</div>`}</section>
     <div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button>${activeRole === "seller" ? sellerPrimary : activeRole === "supplier" ? supplierPrimary : ""}${activeRole === "seller" && !refund && !["배송완료", "환불완료"].includes(order.status) ? `<button class="refund-button" data-action="request-refund" data-id="${order.id}">취소·환불 요청</button>` : ""}</div>`);
   document.querySelector("#modal .modal").classList.add("order-detail-modal");
 }
@@ -4252,7 +4310,7 @@ document.addEventListener("click", event => {
     channel.trackingAutomation = !channel.trackingAutomation;
     currentSellerOrders().filter(order => order.tracking).forEach(queueTrackingSync);
     audit("쇼핑몰 송장 자동화 변경", `${channel.name} · 송장 자동전송을 ${channel.trackingAutomation ? "켰습니다" : "껐습니다"}.`, "done", "channel");
-    saveState(); render(); updateAccountUI(); showToast(`${channel.name} 송장 자동전송을 ${channel.trackingAutomation ? "켰습니다" : "껐습니다"}.`); return;
+    saveState(); render(); updateAccountUI(); showToast(channel.trackingAutomation ? `${channel.name} 송장 자동전송을 켰어요. 10분마다 모아서 보내요.` : `${channel.name} 송장 자동전송을 껐어요.`); return;
   }
   if (action === "run-tracking-sync") {
     runSellerTrackingSync(true); render(); updateAccountUI(); return;
@@ -4267,6 +4325,13 @@ document.addEventListener("click", event => {
     showToast(`${sentTo.join(", ")}에 송장을 보냈어요.`);
     return;
   }
+  if (action === "demo-forward-tracking") {
+    sellerAutoTrackingQueue().orders.forEach(order => { order.trackingAutoDueAt = Date.now() - 1000; });
+    const sent = processDueTrackingPushes();
+    saveState(); render(); updateAccountUI();
+    showToast(sent ? `⏱ 10분 자동 전송: 송장 ${sent}건을 쇼핑몰에 보냈어요.` : "자동 전송을 기다리는 송장이 없어요.");
+    return;
+  }
   if (action === "push-all-tracking") {
     const result = pushAllPendingTracking("manual");
     saveState(); render(); updateAccountUI();
@@ -4278,10 +4343,11 @@ document.addEventListener("click", event => {
     const connected = sellerChannels().filter(channel => channel.status === "connected");
     if (!connected.length) return showToast("먼저 ‘쇼핑몰 연동’에서 쇼핑몰을 연결해 주세요.");
     connected.forEach(channel => { channel.trackingAutomation = enable; });
-    const flushed = enable ? pushAllPendingTracking("auto") : { count: 0 };
+    currentSellerOrders().filter(order => order.tracking).forEach(order => queueTrackingSync(order));
+    const queue = sellerAutoTrackingQueue();
     audit("송장 자동 쇼핑몰 전송 설정", `송장 자동 쇼핑몰 전송을 ${enable ? "켰습니다" : "껐습니다"}.`, "done", "channel");
     saveState(); render(); updateAccountUI();
-    showToast(enable ? `송장 자동 전송을 켰어요.${flushed.count ? ` 기다리던 송장 ${flushed.count}건도 바로 보냈어요.` : ""}` : "송장 자동 전송을 껐어요. 이제 ‘쇼핑몰 전송’ 버튼으로 보내요.");
+    showToast(enable ? `송장 자동 전송을 켰어요. 10분마다 모아서 보내요.${queue.count ? ` 기다리던 ${queue.count}건은 ${trackingSlotLabel(queue.dueAt)}에 보내요.` : ""}` : "송장 자동 전송을 껐어요. 이제 ‘쇼핑몰 전송’ 버튼으로 보내요.");
     return;
   }
   if (action === "toggle-auto-collect") {
@@ -5446,4 +5512,6 @@ if (requestedPortal === "partner") showPartnerLogin("supplier");
 if (requestedPortal === "master") showPartnerLogin("master");
 startTyping("sellerTypingText", ["좋은 공급상품을 소싱받아,\n원클릭으로 바로 판매를 시작해보세요.", "주문부터 송장 전송까지,\n드랍쉬핑을 자동화하세요.", "브랜드와 셀러가 만나는 곳,\n두고입니다."]);
 startTyping("partnerTypingText", ["내 브랜드 상품을 등록하고,\n새로운 셀러를 만나세요.", "상품과 주문을 한곳에서,\n운영은 더 정확하게.", "공급과 판매가 연결되는 곳,\n두고입니다."]);
-window.setInterval(() => runSellerTrackingSync(false), 10 * 60 * 1000);
+/* 송장 자동 전송 스케줄러: 30초마다 전송 시각(10분 단위)이 된 송장이 있는지 확인한다. */
+window.setInterval(() => { if (!document.hidden) runTrackingScheduler(); }, 30 * 1000);
+window.setTimeout(runTrackingScheduler, 2500);
