@@ -187,17 +187,34 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 .price-change-card { border-radius: var(--w-radius-xl) !important; box-shadow: none !important; }
 .change-direction-badge, .history-difference { border-radius: 999px !important; }
 
-/* 푸터 (요청: 글씨 크게, 메뉴 일반 굵기) */
-.public-footer { border-top: 1px solid var(--w-line); color: var(--w-body); background: var(--w-canvas); }
-.footer-brand-block strong { color: var(--w-ink); font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
-.footer-brand-block span { color: var(--w-body); font-size: 16px; }
-.footer-information nav a { color: var(--w-ink); font-size: 17px; font-weight: 400; }
-.footer-information nav a:hover { color: var(--w-positive-deep); text-decoration: underline; text-underline-offset: 4px; }
-.footer-business-info { color: var(--w-body); font-size: 15px; }
-.footer-business-info b { color: var(--w-line); }
-.footer-information small { color: var(--w-mute); font-size: 14px; }
-
-.weather-region-list { grid-template-columns: repeat(9, minmax(56px, 1fr)); }
+/* 푸터: Wise 다크 밴드(잉크 배경·밝은 글씨·라임 CTA) */
+.public-footer {
+  display: flex; flex-direction: column; gap: 36px;
+  margin-top: 24px; padding: 48px max(24px, calc((100% - 1200px) / 2)) 36px;
+  border-top: 0; border-radius: var(--w-radius-xl) var(--w-radius-xl) 0 0;
+  color: #c9cdc6; background: var(--w-ink);
+}
+.footer-top { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.public-footer .footer-brand-block { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.public-footer .footer-brand-block .doogo-logo { width: 132px; height: auto; }
+.public-footer .footer-brand-block > div { display: flex; flex-direction: column; gap: 6px; }
+.public-footer .footer-brand-block strong { color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.public-footer .footer-brand-block span { color: #c9cdc6; font-size: 16px; }
+.footer-cta { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 999px; color: var(--w-ink); background: var(--w-primary); font-size: 16px; font-weight: 700; white-space: nowrap; }
+.footer-cta:hover { background: var(--w-primary-active); }
+.footer-link-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 28px 0; border-top: 1px solid #2d302a; border-bottom: 1px solid #2d302a; }
+.footer-link-groups > div { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.footer-link-groups h3 { margin: 0 0 4px; color: var(--w-primary); font-size: 13px; font-weight: 700; letter-spacing: .06em; }
+.footer-link-groups a, .footer-link-groups button { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; color: #f2f4f1; background: none; font-size: 16px; font-weight: 400; text-align: left; }
+.footer-link-groups a svg { color: #868685; }
+.footer-link-groups a:hover, .footer-link-groups button:hover { color: var(--w-primary); }
+.footer-link-groups a:focus-visible, .footer-link-groups button:focus-visible, .footer-cta:focus-visible { outline: 2px solid var(--w-primary); outline-offset: 3px; border-radius: 6px; }
+.footer-bottom { display: flex; flex-direction: column; gap: 10px; }
+.public-footer .footer-business-info { display: grid; gap: 4px; color: #a3a7a0; font-size: 14px; line-height: 1.7; }
+.public-footer .footer-business-info p { margin: 0; }
+.public-footer .footer-business-info span { white-space: nowrap; }
+.public-footer .footer-business-info b { color: #454745; font-weight: 400; }
+.public-footer .footer-bottom small { color: #868685; font-size: 13px; }
 
 /* ---------- 관리자 화면(가볍게 적용) ---------- */
 .admin-shell { background: var(--w-soft); font-family: var(--w-font); }
@@ -266,7 +283,20 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
   .catalog-page-numbers > span { display: none; }
   .catalog-pagination .catalog-page-edge span { display: none; }
   .catalog-pagination .catalog-page-edge { min-width: 38px; padding: 0; }
-  .footer-brand-block strong { font-size: 18px; }
-  .footer-information nav a { font-size: 16px; }
+  .public-footer { gap: 26px; padding: 36px 20px 28px; }
+  .public-footer .footer-brand-block { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .public-footer .footer-brand-block strong { font-size: 20px; }
+  .public-footer .footer-brand-block span { font-size: 15px; }
+  .footer-cta { width: 100%; justify-content: center; }
+  .footer-link-groups { grid-template-columns: 1fr 1fr; gap: 26px 16px; padding: 24px 0; }
+  .footer-link-groups > div:last-child { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; gap: 10px 20px; }
+  .footer-link-groups > div:last-child h3 { flex-basis: 100%; }
+  .footer-link-groups a, .footer-link-groups button { min-height: 32px; font-size: 16px; }
+  .public-footer .footer-business-info { font-size: 13px; }
   .season-highlight { padding: 12px; }
+}
+
+/* 태블릿: 하단 고정 메뉴에 가리지 않도록 푸터 아래 여백 */
+@media (min-width: 721px) and (max-width: 1050px) {
+  .public-footer { padding-bottom: 104px; }
 }

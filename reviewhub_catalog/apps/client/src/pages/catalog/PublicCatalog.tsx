@@ -429,23 +429,36 @@ function PageFrame({ children }: { children: ReactNode }) {
       <BrandHeader />
       {children}
       <footer className="public-footer">
-        <div className="footer-brand-block">
-          <BrandLogo />
-          <div><strong>두고푸드 데이터 센터</strong><span>위탁셀러를 위한 실시간 상품/단가 정보센터</span></div>
+        <div className="footer-top">
+          <div className="footer-brand-block">
+            <BrandLogo light />
+            <div><strong>두고푸드 데이터 센터</strong><span>위탁셀러를 위한 실시간 상품/단가 정보센터</span></div>
+          </div>
+          <a className="footer-cta" href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer"><MessageCircle size={17} /> 1:1 상담하기</a>
         </div>
-        <div className="footer-information">
-          <nav aria-label="푸터 바로가기">
+        <nav className="footer-link-groups" aria-label="푸터 바로가기">
+          <div>
+            <h3>상품 정보</h3>
             <Link to="/">상품 단가표</Link>
-            <Link to="/guide">공지사항</Link>
             <Link to="/notices">가격변동</Link>
-            <a href="https://www.doogofood.com/" target="_blank" rel="noreferrer">공식홈페이지</a>
-            <a href="https://shop.baljuora.com/doogofood" target="_blank" rel="noreferrer">도매몰</a>
-            <a href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer">1:1 상담</a>
+            <Link to="/guide">공지사항</Link>
+          </div>
+          <div>
+            <h3>두고푸드</h3>
+            <a href="https://www.doogofood.com/" target="_blank" rel="noreferrer">공식홈페이지 <ExternalLink size={13} /></a>
+            <a href="https://shop.baljuora.com/doogofood" target="_blank" rel="noreferrer">도매몰 <ExternalLink size={13} /></a>
+          </div>
+          <div>
+            <h3>고객 지원</h3>
+            <a href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer">1:1 상담 <ExternalLink size={13} /></a>
+            <button type="button" onClick={() => setSourcingOpen(true)}>소싱 요청</button>
             <Link to="/admin">관리자센터</Link>
-          </nav>
+          </div>
+        </nav>
+        <div className="footer-bottom">
           <div className="footer-business-info">
-            <p>(주) 두고홀딩스 <b>|</b> 대표: 문원오 <b>|</b> 사업자등록번호: 726-87-03167 <b>|</b> 통신판매업신고: 제 2024-세종아름 0878호</p>
-            <p>주소: 세종특별자치시 갈매로 353 에비뉴힐 5층 5023호 (우) 30121</p>
+            <p><span>(주) 두고홀딩스</span> <b>|</b> <span>대표: 문원오</span> <b>|</b> <span>사업자등록번호: 726-87-03167</span> <b>|</b> <span>통신판매업신고: 제 2024-세종아름 0878호</span></p>
+            <p><span>주소: 세종특별자치시 갈매로 353 에비뉴힐 5층 5023호</span> <span>(우) 30121</span></p>
           </div>
           <small>© 2026 DOOGO FOOD. 상품 정보는 최신 공지와 단가표를 기준으로 확인해 주세요.</small>
         </div>
