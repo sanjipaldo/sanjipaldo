@@ -3227,7 +3227,7 @@ function finalizeRefund(refund, options = {}) {
    충전 신청 → 전용 입금 계좌 안내 → 입금 확인(운영: 은행 입금 확인/가상계좌 웹훅, 데모: 버튼) → 예치금 적립. */
 let depositView = "charge";
 let depositHistoryFilter = "all";
-const DEPOSIT_ACCOUNT = { bank: "기업은행", number: "081-123456-01-017", holder: "(주)두고홀딩스" };
+const DEPOSIT_ACCOUNT = { bank: "하나은행", number: "541-910020-11704", holder: "(주) 두고홀딩스" };
 function depositStamp(date = new Date()) { const pad = n => String(n).padStart(2, "0"); return `${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`; }
 function depositCharges(wallet = sellerDeposit()) { wallet.charges = wallet.charges || []; return wallet.charges; }
 function depositTxKind(item) {
