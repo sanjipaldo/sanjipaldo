@@ -431,7 +431,7 @@ function PageFrame({ children }: { children: ReactNode }) {
       <footer className="public-footer">
         <div className="footer-top">
           <div className="footer-brand-block">
-            <BrandLogo light />
+            <BrandLogo />
             <div><strong>두고푸드 데이터 센터</strong><span>위탁셀러를 위한 실시간 상품/단가 정보센터</span></div>
           </div>
           <a className="footer-cta" href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer"><MessageCircle size={17} /> 1:1 상담하기</a>
@@ -1073,7 +1073,7 @@ export function CatalogHome() {
         <section className="catalog-hero">
           <div>
             <span className="hero-eyebrow"><Sparkles size={14} /> 판매자를 위한 실시간 상품 정보</span>
-            <h1>좋은 먹거리 신선함 그대로</h1>
+            <h1>좋은 먹거리 <mark className="hero-highlight">신선함</mark> 그대로</h1>
             <p>생산자와 판매자를 연결하고, 필요한 먹거리를 빠르게 공급하는,<br className="hero-motto-break" /> 대한민국 도매 플랫폼 두고푸드.</p>
           </div>
           <div className="hero-summary">
