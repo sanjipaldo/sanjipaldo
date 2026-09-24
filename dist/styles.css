@@ -6367,3 +6367,71 @@ body.kakao-sheet-open { overflow: hidden; }
 .cat-rail .cat-rail-item .cat-rail-icon { justify-self: center !important; margin: 0 auto !important; }
 /* 토스트가 버튼 클릭을 막지 않게 */
 .toast { pointer-events: none; }
+/* 공지: 영상 있는 공지는 빨간 유튜브 배지 */
+.notice-video-badge { padding: 3px 8px; color: #fff; background: #ff0000; border-radius: 6px; font-size: 11.5px; letter-spacing: .01em; box-shadow: 0 2px 6px rgba(255,0,0,.25); }
+.notice-board .notice-item.has-video .notice-row { border-color: #ffd0d0; background: #fff8f8; }
+.notice-board .notice-item.has-video .notice-row b { color: #d91a1a; }
+/* 사이드바 태그라인 글씨 키움 */
+.sidebar-top-band .nav-label { font-size: 13.5px !important; font-weight: 700; letter-spacing: -.01em; }
+@media (max-width: 720px) { .sidebar-top-band .nav-label { font-size: 13px !important; } }
+/* ===== 상품 소싱 카드: 단계 버튼 새 디자인 ===== */
+.pick-btn { position: relative; display: inline-flex !important; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 14px 0 10px !important; border: 1px solid transparent !important; border-radius: 99px !important; font-weight: 800 !important; box-shadow: none; transition: transform .12s ease, box-shadow .15s ease; }
+.pick-btn:hover { transform: translateY(-1px); }
+.pick-btn .pick-icon { width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 50%; font-size: 11px; font-weight: 900; line-height: 1; }
+.pick-btn .pick-steps { display: inline-flex; gap: 2px; margin-left: 2px; }
+.pick-btn .pick-steps i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .22; }
+.pick-btn .pick-steps i.on { opacity: .9; }
+/* PICK하기: 가장 눈에 띄는 파란 버튼 */
+.pick-btn.pick-none { color: #fff !important; background: linear-gradient(135deg, #3182f6, #1b64da) !important; box-shadow: 0 6px 14px rgba(49,130,246,.28); }
+.pick-btn.pick-none .pick-icon { color: #3182f6; background: #fff; font-size: 14px; }
+.pick-btn.pick-none:hover { box-shadow: 0 8px 18px rgba(49,130,246,.36); }
+/* 진행 중 상태들: 연한 배경 칩 */
+.pick-btn.pick-pending { color: #b25e00 !important; background: #fff4e0 !important; border-color: #ffd9a3 !important; }
+.pick-btn.pick-pending .pick-icon { background: #ffe2b3; }
+.pick-btn.pick-rejected { color: #d92d20 !important; background: #fff0ef !important; border-color: #ffc9c4 !important; }
+.pick-btn.pick-rejected .pick-icon { color: #fff; background: #f04438; }
+.pick-btn.pick-ready { color: #6b3fd4 !important; background: #f4efff !important; border-color: #ddd0ff !important; }
+.pick-btn.pick-ready .pick-icon { color: #fff; background: #8a5cf6; }
+.pick-btn.pick-master { color: #1b64da !important; background: #eef5ff !important; border-color: #c9ddff !important; }
+.pick-btn.pick-master .pick-icon { color: #fff; background: #3182f6; }
+.pick-btn.pick-live { color: #0a7d45 !important; background: #e9f9f0 !important; border-color: #bfe9d1 !important; }
+.pick-btn.pick-live .pick-icon { color: #fff; background: #12b76a; }
+.market-card-actions .pick-btn, .list-row-actions .pick-btn { font-size: 13px !important; }
+.list-row-actions .pick-btn { min-width: 132px; }
+/* 리스트 보기: 배송 배지가 화면 밖으로 튀어나가던 문제 (위치 기준 없는 absolute) */
+.list-row-badges .shipping-badge, .list-row-badges > em, .list-row-badges > span { position: static !important; inset: auto !important; transform: none !important; }
+.list-row-badges .shipping-badge { padding: 2px 8px; border-radius: 99px; font-size: 12px; font-style: normal; font-weight: 800; }
+.list-row-badges .shipping-badge.domestic { color: #0a7d45; background: #e9f9f0; }
+.list-row-badges .shipping-badge.overseas { color: #b25e00; background: #fff4e0; }
+@media (max-width: 720px) { .seller-market-panel .market-card-actions .pick-btn { width: 100%; min-height: 42px; } }
+.market-card-actions { overflow: hidden; }
+.market-card-actions .pick-btn { flex: 1 1 auto !important; min-width: 0 !important; max-width: 170px; margin-left: auto; padding: 0 10px 0 8px !important; }
+.market-card-actions .pick-btn .pick-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.market-card-actions .pick-btn .pick-steps { display: none; }
+@media (max-width: 720px) { .seller-market-panel .market-card-actions .pick-btn { max-width: none; } .seller-market-panel .market-card-actions .pick-btn .pick-steps { display: inline-flex; } }
+
+/* ===== 입력칸 디자인 통일 (단건 주문 폼 기준) =====
+   textarea·select·파일첨부가 브라우저 기본 모양으로 보이던 곳을 모두 같은 스타일로 맞춘다. */
+.form-field textarea, #modal textarea:not(.talk-input):not([data-block-text]) {
+  width: 100%; min-height: 112px; padding: 12px 14px; color: #191f28; background: #fff; border: 1px solid #d7e0dc; border-radius: 10px; outline: none;
+  font: inherit; font-size: 15px; line-height: 1.6; resize: vertical;
+}
+.form-field textarea:focus, #modal textarea:focus { border-color: #8db9fa; box-shadow: 0 0 0 3px #edf3ff; }
+.form-field select, #modal select {
+  -webkit-appearance: none; appearance: none; background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%236b7684' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px !important; color: #191f28; font: inherit; font-size: 15px;
+}
+.form-field input[type="file"], #modal input[type="file"]:not([hidden]) {
+  width: 100%; padding: 8px 10px; color: #6b7684; background: #f9fafb; border: 1px dashed #c9d3dd; border-radius: 10px; font: inherit; font-size: 14px; cursor: pointer;
+}
+.form-field input[type="file"]::file-selector-button, #modal input[type="file"]::file-selector-button {
+  margin-right: 10px; padding: 8px 14px; color: #1b64da; background: #eaf2ff; border: 0; border-radius: 8px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+}
+.form-field input[type="file"]:hover, #modal input[type="file"]:hover { border-color: #8db9fa; background: #f5f9ff; }
+.form-field input::placeholder, .form-field textarea::placeholder, #modal textarea::placeholder { color: #aab4bf; }
+#modal input[type="checkbox"], #modal input[type="radio"] { accent-color: #3182f6; }
+.auto-issue-check input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 18px; }
+/* 회원가입·카카오 프로필 화면 파일 첨부도 같은 모양 */
+.signup-field input[type="file"] { padding: 8px 10px; background: #f9fafb; border: 1px dashed #c9d3dd; border-radius: 10px; color: #6b7684; font-size: 14px; }
+.signup-field input[type="file"]::file-selector-button { margin-right: 10px; padding: 8px 14px; color: #1b64da; background: #eaf2ff; border: 0; border-radius: 8px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }

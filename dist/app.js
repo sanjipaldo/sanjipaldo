@@ -304,7 +304,7 @@ const initialState = {
   schemaVersion: 22,
   contentOverrides: {},
   notices: [
-    { id: "notice-1", title: "상품 썸네일·상세페이지 복사 기능 안내", detail: "PICK 상품에서 판매정보를 수정하고 채널별로 등록할 수 있습니다.", date: "오늘", cta: "PICK 상품 바로가기", action: "open-my-products" },
+    { id: "notice-1", title: "상품 썸네일·상세페이지 복사 기능 안내", detail: "공급사 상품을 PICK하면 썸네일과 상세페이지가 그대로 복사돼요.\n‘상품 꾸미기’에서 상품명·사진·상세페이지를 내 스타일로 바꾼 뒤, 마스터 상품에서 ‘상품 전송’ 한 번이면 연동된 쇼핑몰에 바로 올라갑니다.\n아래 영상으로 전체 흐름을 확인해 보세요.", date: "오늘", cta: "마스터 상품 바로가기", action: "open-my-products", videoUrl: "https://www.youtube.com/watch?v=ILuBxYqHFbo" },
     { id: "notice-2", title: "상품코드 기반 주문 매핑 기능 업데이트", detail: "외부몰 상품명을 바꿔도 DF-코드로 공급사 상품에 연결됩니다.", date: "오늘", cta: "주문 매핑 바로가기", action: "open-order-mapping" },
     { id: "notice-3", title: "거래처 연결 코드 이용 안내", detail: "승인된 공급사의 코드를 등록하면 매핑 가능한 상품이 열립니다.", date: "09.08", cta: "거래처 연결 바로가기", action: "open-connections" },
     { id: "notice-4", title: "송장 자동전송 설정 안내", detail: "공급사 송장이 등록되면 연결 쇼핑몰에 반영할 수 있습니다.", date: "09.07", cta: "쇼핑몰 연동 바로가기", action: "open-seller-channels" }
@@ -547,6 +547,16 @@ function loadState() {
       (merged.orders || []).forEach(order => { Object.entries(order.channelTrackingStatuses || {}).forEach(([channelId, status]) => { if (status === "자동화 꺼짐" || status === "10분 자동전송 대기") order.channelTrackingStatuses[channelId] = "전송 대기"; else if (status === "자동전송 완료 · 데모") order.channelTrackingStatuses[channelId] = "전송 완료 · 자동"; }); });
     }
     merged.automationVersion = 1;
+    /* 공지 1번: 안내 영상 연결 + 예전 안내 문구 교체 */
+    if (Number(saved.noticeVersion || 0) < 1) {
+      const seedNotice = base.notices.find(item => item.id === "notice-1");
+      const savedNotice = (merged.notices || []).find(item => item.id === "notice-1");
+      if (seedNotice && savedNotice) {
+        if (!savedNotice.videoUrl) savedNotice.videoUrl = seedNotice.videoUrl;
+        if (savedNotice.detail === "PICK 상품에서 판매정보를 수정하고 채널별로 등록할 수 있습니다.") Object.assign(savedNotice, { detail: seedNotice.detail, cta: seedNotice.cta });
+      }
+    }
+    merged.noticeVersion = 1;
     /* 두고머니 → 예치금 이름 변경: 저장된 내역 문구도 바꾼다. */
     Object.values(merged.deposits || {}).forEach(wallet => (wallet.transactions || []).forEach(item => { ["type", "reference"].forEach(key => { if (typeof item[key] === "string") item[key] = item[key].replace(/두고머니/g, "예치금"); }); }));
     (merged.channelConnections.seller || []).forEach(channel => {
@@ -1958,6 +1968,20 @@ function sellerItemStage(item) {
   return item.masterRegistered === false ? "ready" : "master";
 }
 const PICK_STAGE_LABELS = { none: "PICK하기", pending: "승인대기", rejected: "승인 거절", ready: "승인 완료", master: "마스터 상품", live: "판매중" };
+/* 상품 소싱 카드의 진행 단계 버튼: PICK → 승인대기 → 승인 완료(꾸미기) → 마스터 상품(전송 대기) → 판매중 */
+const PICK_STAGE_META = {
+  none: { icon: "＋", step: 0, hint: "누르면 공급사에 판매 승인을 요청해요" },
+  pending: { icon: "⏳", step: 1, hint: "공급사 승인을 기다리는 중이에요" },
+  rejected: { icon: "!", step: 1, hint: "공급사가 거절했어요. 사유를 확인하고 다시 요청할 수 있어요" },
+  ready: { icon: "✎", step: 2, hint: "승인 완료 · 상품을 꾸민 뒤 마스터 상품으로 등록하세요" },
+  master: { icon: "★", step: 3, hint: "마스터 상품에 등록됨 · 아직 쇼핑몰 전송 전이에요" },
+  live: { icon: "✓", step: 4, hint: "쇼핑몰에 올라가 판매 중이에요" }
+};
+function pickStageButton(product, sellerItem, pickState, pickClass) {
+  const meta = PICK_STAGE_META[pickState] || PICK_STAGE_META.none;
+  const steps = pickState === "none" ? "" : `<span class="pick-steps" aria-hidden="true">${[0, 1, 2, 3, 4].map(index => `<i class="${index <= meta.step ? "on" : ""}"></i>`).join("")}</span>`;
+  return `<button type="button" class="small-button pick-btn pick-${pickState} ${pickClass}" data-action="${sellerItem ? "open-picked-product" : "import-product"}" data-id="${product.id}" title="${escapeHtml(meta.hint)}" aria-label="${escapeHtml(PICK_STAGE_LABELS[pickState])} · ${escapeHtml(meta.hint)}"><span class="pick-icon" aria-hidden="true">${meta.icon}</span><span class="pick-label">${escapeHtml(PICK_STAGE_LABELS[pickState])}</span>${steps}</button>`;
+}
 function sellerPendingProducts() { return currentSellerProducts().filter(item => ["승인대기", "승인거절"].includes(item.approvalStatus)); }
 function sellerReadyProducts() { return currentSellerProducts().filter(item => sellerItemStage(item) === "ready"); }
 function sellerMasterProducts() { return currentSellerProducts().filter(item => item.approvalStatus === "승인완료" && item.masterRegistered !== false); }
@@ -2370,7 +2394,7 @@ function renderSeller() {
     money: `<section class="panel home-section"><div class="home-section-head"><div><h3>예치금·매출</h3><p>9월 누적 기준이에요.</p></div></div>
       <div class="home-money"><button type="button" data-action="go-seller-menu" data-index="12"><span>사용 가능 예치금</span><strong>${money(deposit.balance)}</strong><small>주문 결제에 사용</small></button><button type="button" data-action="open-sales-calendar"><span>이번 달 매출</span><strong>${money(salesTotal)}</strong><small>매출 달력 보기</small></button><button type="button" data-action="open-sales-calendar"><span>예상 순수익</span><strong class="profit">${money(profitTotal)}</strong><small>공급가 차감 기준</small></button></div>
     </section>`,
-    notices: `<section class="panel home-section dashboard-notices"><div class="home-section-head"><div><h3>공지사항</h3></div><button class="text-button" data-action="open-notices">전체보기 →</button></div><div class="notice-list">${(state.notices || []).slice(0, 3).map(n => `<button data-action="open-notice-detail" data-id="${n.id}"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></button>`).join("")}</div></section>`
+    notices: `<section class="panel home-section dashboard-notices"><div class="home-section-head"><div><h3>공지사항</h3></div><button class="text-button" data-action="open-notices">전체보기 →</button></div><div class="notice-list">${(state.notices || []).slice(0, 3).map(n => `<button data-action="open-notice-detail" data-id="${n.id}"><b>${youtubeVideoId(n.videoUrl) ? `<em class="notice-video-badge">▶ 영상</em> ` : ""}${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></button>`).join("")}</div></section>`
   };
   const layout = sellerDashboardLayout();
   document.getElementById("sellerView").innerHTML = `
@@ -2397,7 +2421,7 @@ function productRowSeller(p) {
     <div class="market-product-body">
       <small><button type="button" class="card-brand-link" data-action="select-brand" data-brand="${escapeHtml(productBrand(p))}">${escapeHtml(productBrand(p))}</button><span class="card-code"> · ${p.id}</span></small><h4>${escapeHtml(p.name)}</h4>
       <dl>${catalogPriceRows(p)}</dl>
-      <div class="market-card-actions"><button class="text-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button><button class="small-button ${pickClass}" data-action="${sellerItem ? "open-picked-product" : "import-product"}" data-id="${p.id}">${pickLabel}</button></div>
+      <div class="market-card-actions"><button class="text-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button>${pickStageButton(p, sellerItem, pickState, pickClass)}</div>
     </div>
   </article>`;
 }
@@ -2416,7 +2440,7 @@ function productRowSellerList(p) {
       <small class="list-row-meta">${escapeHtml(productBrand(p))} · ${p.id} · ${escapeHtml(productCategoryPath(p).slice(1).join(" › "))}</small>
     </div>
     <div class="list-row-price"><span><small>공급가</small><b>${productPriceLabel(p)}</b></span><span><small>지정판매가</small><b class="${freePriced ? "" : "profit-text"}">${freePriced ? "자율" : productPriceLabel(p, "recommended")}</b></span><span><small>마진율</small><b class="${freePriced ? "margin-free" : ""}">${freePriced ? "-%" : `${margin(p.supply, p.recommended)}%`}</b></span></div>
-    <div class="list-row-actions"><button class="text-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button><button class="small-button ${pickClass}" data-action="${sellerItem ? "open-picked-product" : "import-product"}" data-id="${p.id}">${pickLabel}</button></div>
+    <div class="list-row-actions"><button class="text-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button>${pickStageButton(p, sellerItem, pickState, pickClass)}</div>
   </article>`;
 }
 
@@ -3059,7 +3083,7 @@ function orderPaymentModal(orderId) {
 
 function sellerNoticesTemplate() {
   const list = state.notices || [];
-  return `${sectionHero("공지사항", "두고 운영에 꼭 필요한 업데이트와 안내예요. 누르면 크게 열려요.")}<div class="panel notice-board">${list.length ? list.map((n, index) => `<article class="notice-item">
+  return `${sectionHero("공지사항", "두고 운영에 꼭 필요한 업데이트와 안내예요. 누르면 크게 열려요.")}<div class="panel notice-board">${list.length ? list.map((n, index) => `<article class="notice-item ${youtubeVideoId(n.videoUrl) ? "has-video" : ""}">
       <button type="button" class="notice-row" data-action="open-notice-detail" data-id="${n.id}"><span class="notice-row-title">${index === 0 ? `<em class="notice-new">NEW</em>` : ""}${youtubeVideoId(n.videoUrl) ? `<em class="notice-video-badge">▶ 영상</em>` : ""}<b>${escapeHtml(n.title)}</b></span><span>${escapeHtml(n.date)}<i class="notice-row-chevron">›</i></span></button>
     </article>`).join("") : `<div class="empty">등록된 공지사항이 없습니다.</div>`}</div>`;
 }
@@ -4673,7 +4697,7 @@ document.addEventListener("click", event => {
   if (action === "clear-order-search") { sellerOrderSearch = ""; render(); updateAccountUI(); }
   if (action === "open-catalog") { closeModal(); activeMenuIndex = 1; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); showToast("두고로 이동했습니다."); }
   if (action === "open-connections") { closeModal(); activeMenuIndex = 3; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }
-  if (action === "open-my-products") { closeModal(); activeMenuIndex = 2; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }
+  if (action === "open-my-products") { closeModal(); activeMenuIndex = menuIndexOf("마스터 상품", "seller"); render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }
   if (action === "open-approved-products") { closeModal(); activeMenuIndex = 14; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }
   if (action === "open-onsale-products") { closeModal(); activeMenuIndex = 11; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }
   if (action === "open-orders") { closeModal(); activeMenuIndex = 4; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); }
