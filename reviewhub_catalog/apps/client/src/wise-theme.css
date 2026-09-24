@@ -1,0 +1,239 @@
+/*
+ * 두고푸드 × Wise 디자인 토큰 (2026-09 사용자 요청: Wise MD 참고, 더 깔끔한 UI)
+ * - 세이지 캔버스(#e8ebe6) 위 흰 카드, 24px 둥근 모서리, 그림자 대신 면 대비로 깊이 표현
+ * - 잉크(#0e0f0c) 본문, 라임 그린(#9fe870)은 주요 행동 버튼에만 사용
+ * - 선택 상태는 잉크 배경, 품절·주문불가는 빨간 계열(negative)
+ * catalog.css 다음에 불러와 색·모서리·글꼴만 덮어씁니다(레이아웃 구조는 유지).
+ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+:root {
+  --w-primary: #9fe870;
+  --w-primary-active: #cdffad;
+  --w-primary-neutral: #c5edab;
+  --w-primary-pale: #e2f6d5;
+  --w-canvas: #ffffff;
+  --w-soft: #e8ebe6;
+  --w-soft-2: #f2f4f1;
+  --w-line: #d8dcd5;
+  --w-ink: #0e0f0c;
+  --w-ink-deep: #163300;
+  --w-body: #454745;
+  --w-mute: #868685;
+  --w-positive: #2ead4b;
+  --w-positive-deep: #054d28;
+  --w-warning: #ffd11a;
+  --w-warning-content: #4a3b1c;
+  --w-warning-pale: #fff4c2;
+  --w-negative: #d03238;
+  --w-negative-deep: #a72027;
+  --w-negative-row: #fde8e8;
+  --w-negative-row-hover: #fbdcdc;
+  --w-radius-sm: 8px;
+  --w-radius-md: 12px;
+  --w-radius-lg: 16px;
+  --w-radius-xl: 24px;
+  --w-font: "Inter", Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
+  font-family: var(--w-font);
+  font-feature-settings: "calt";
+  color: var(--w-ink);
+}
+
+body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font); letter-spacing: -.01em; }
+
+/* ---------- 공개 화면 공통 ---------- */
+.public-app { background: var(--w-soft); color: var(--w-ink); }
+.section-kicker { color: var(--w-positive-deep) !important; letter-spacing: .08em; }
+
+.public-header { border-bottom: 1px solid var(--w-line); background: var(--w-canvas); backdrop-filter: none; }
+.public-nav { border: 0; border-radius: 999px; background: var(--w-soft-2); box-shadow: none; }
+.public-nav a, .public-nav .sourcing-nav-button { border-radius: 999px; color: var(--w-ink); background: transparent; font-size: 14px; font-weight: 600; }
+.public-nav a:hover, .public-nav .sourcing-nav-button:hover { color: var(--w-ink); background: var(--w-canvas); transform: none; }
+.public-nav a.active { color: var(--w-canvas); background: var(--w-ink); box-shadow: none; }
+.company-profile-link, .wholesale-mall-link { border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: none; }
+.company-profile-link { border: 1px solid var(--w-ink); color: var(--w-ink); background: var(--w-canvas); }
+.company-profile-link:hover { border-color: var(--w-ink); background: var(--w-soft-2); transform: none; }
+.wholesale-mall-link { border: 1px solid var(--w-primary); color: var(--w-ink); background: var(--w-primary); }
+.wholesale-mall-link:hover { border-color: var(--w-primary-active); background: var(--w-primary-active); transform: none; box-shadow: none; }
+
+/* 운영 현황 카드 3종 */
+.operations-card { border: 0; border-radius: var(--w-radius-xl); background: var(--w-canvas); box-shadow: none; padding: 20px 22px; }
+.operations-card-heading > svg { color: var(--w-positive-deep); }
+.operations-card-heading span { color: var(--w-mute); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.operations-card-heading strong { color: var(--w-ink); font-size: 16px; font-weight: 700; }
+.weather-primary { border-radius: var(--w-radius-lg); }
+.weather-primary strong { color: var(--w-ink); font-family: var(--w-font); font-weight: 800; }
+.weather-region-list > button { border-radius: var(--w-radius-md); background: var(--w-soft-2); }
+.weather-region-list > button:hover { border-color: var(--w-line); background: var(--w-soft); transform: none; }
+.weather-region-list > button.active { border-color: var(--w-ink); background: var(--w-canvas); box-shadow: none; }
+.weather-region-list span { color: var(--w-body); font-size: 10px; font-weight: 600; }
+.weather-region-list strong { color: var(--w-ink); font-weight: 700; }
+.weather-region-list small { color: var(--w-mute); font-size: 9px; }
+.weather-source { color: var(--w-mute); font-size: 10px; }
+.facility-card::after { display: none; }
+.facility-card.open { border: 0; background: var(--w-primary-pale); box-shadow: none; }
+.facility-card.closed { border: 0; background: var(--w-negative-row); box-shadow: none; }
+.facility-card.open .operations-card-heading > svg { color: var(--w-positive-deep); }
+.facility-card.closed .operations-card-heading > svg { color: var(--w-negative); }
+.facility-status { border-radius: var(--w-radius-lg); background: var(--w-canvas); }
+.facility-card.open .facility-status, .facility-card.closed .facility-status { border: 0; box-shadow: none; }
+.facility-status strong { font-size: 15px; font-weight: 700; }
+.facility-status small { color: var(--w-body); font-size: 12px; }
+.monthly-stat-list > div { border-radius: var(--w-radius-lg); background: var(--w-soft-2); }
+.monthly-stat-list svg { color: var(--w-positive-deep); }
+.monthly-stat-list span { color: var(--w-body); font-size: 12px; font-weight: 600; }
+.monthly-stat-list strong { color: var(--w-ink); font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* 히어로: 잉크 배경 + 라임 헤드라인(Wise hero-band-dark) */
+.catalog-hero { border: 0; border-radius: var(--w-radius-xl); background: var(--w-ink); box-shadow: none; }
+.catalog-hero::before, .catalog-hero::after { display: none; }
+.catalog-hero .section-kicker, .catalog-hero > div > span { color: var(--w-primary) !important; }
+.catalog-hero h1 { color: var(--w-primary); font-weight: 900; letter-spacing: -.04em; }
+.catalog-hero p { color: #c9cdc6; font-size: 17px; }
+.hero-summary { border: 0; border-radius: var(--w-radius-xl); background: #1b1d18; box-shadow: none; }
+.hero-summary div { border-right-color: #2d302a; }
+.hero-summary strong { color: var(--w-primary); font-size: 32px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.hero-summary span { color: #c9cdc6; font-size: 13px; font-weight: 500; }
+
+/* 상품 단가표 패널 */
+.catalog-panel { border: 0 !important; border-radius: var(--w-radius-xl) !important; background: var(--w-canvas) !important; box-shadow: none !important; }
+.catalog-panel h2 { color: var(--w-ink); font-weight: 800; letter-spacing: -.03em; }
+.search-field { height: 48px; border: 1px solid var(--w-line); border-radius: var(--w-radius-md); }
+.search-field:focus-within { border-color: var(--w-ink); }
+.search-field svg { color: var(--w-mute); }
+.search-field input { color: var(--w-ink); font-size: 15px; }
+.segmented-control { border-radius: 999px; background: var(--w-soft-2); }
+.segmented-control button { border-radius: 999px; color: var(--w-body); font-size: 13px; font-weight: 600; }
+.segmented-control button.active { color: var(--w-canvas); background: var(--w-ink); box-shadow: none; }
+.category-chips button { border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-ink); background: var(--w-canvas); font-size: 13px; font-weight: 600; }
+.category-chips button:hover { border-color: var(--w-ink); }
+.category-chips button.active { color: var(--w-canvas); border-color: var(--w-ink); background: var(--w-ink); }
+.page-size-control select, .page-size-select select { border-radius: 999px; }
+
+/* 월별 제철 */
+.month-filter { border: 0; border-radius: var(--w-radius-xl); background: var(--w-soft-2); padding: 16px 18px; }
+.month-filter > span { color: var(--w-ink); font-size: 13px; font-weight: 700; }
+.month-filter button { min-width: 44px; padding: 7px 10px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-ink); background: var(--w-canvas); font-size: 12px; font-weight: 600; }
+.month-filter button.current { border-color: var(--w-positive); box-shadow: inset 0 0 0 1px var(--w-positive); }
+.month-filter button.active { color: var(--w-canvas); border-color: var(--w-ink); background: var(--w-ink); box-shadow: none; }
+.month-filter > small { color: var(--w-mute); font-size: 11px; }
+.season-prep-message { border-radius: 999px !important; }
+.season-highlight { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--w-radius-lg); background: var(--w-canvas); }
+.season-highlight-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+.season-highlight-title strong { color: var(--w-ink); font-size: 16px; font-weight: 800; }
+.season-highlight-title span { color: var(--w-body); font-size: 13px; }
+.season-highlight-keywords { display: flex; flex-wrap: wrap; gap: 6px; }
+.season-highlight-keywords button { display: inline-flex; align-items: center; gap: 6px; min-width: 0; padding: 7px 12px; border: 0; border-radius: 999px; color: var(--w-ink-deep); background: var(--w-primary-pale); font-size: 13px; font-weight: 600; }
+.season-highlight-keywords button small { color: var(--w-positive-deep); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.season-highlight-keywords button:hover { background: var(--w-primary-neutral); }
+.season-highlight-keywords button.active { color: var(--w-ink); background: var(--w-primary); }
+
+/* 주문 가능 여부 안내 */
+.order-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 12px; color: var(--w-body); font-size: 13px; font-weight: 500; }
+.order-legend-item { display: inline-flex; align-items: center; gap: 7px; }
+.order-legend-item i { width: 18px; height: 12px; border-radius: 4px; }
+.order-legend-item.available i { border: 1px solid var(--w-line); background: var(--w-canvas); }
+.order-legend-item.unavailable i { border: 1px solid #f2b8ba; background: var(--w-negative-row); box-shadow: inset 3px 0 0 var(--w-negative); }
+
+/* 단가표 표 */
+.catalog-table-wrap { border: 1px solid var(--w-line); border-radius: var(--w-radius-lg); }
+.catalog-table { min-width: 1100px; }
+.catalog-col-product { width: 30%; }
+.catalog-col-category { width: 16%; }
+.catalog-col-price { width: 11%; }
+.catalog-col-sale { width: 10%; }
+.catalog-col-notes { width: 22%; }
+.catalog-table th { color: var(--w-body); background: var(--w-soft-2); font-size: 13px; font-weight: 600; letter-spacing: .02em; border-bottom: 1px solid var(--w-line); }
+.catalog-table th:first-child { border-radius: var(--w-radius-lg) 0 0; }
+.catalog-table th:last-child { border-radius: 0 var(--w-radius-lg) 0 0; }
+.catalog-table td { border-top-color: #e9ece7; color: var(--w-ink); }
+.catalog-table tbody tr:hover td { background: #fafbf9; }
+.catalog-table tbody tr.order-unavailable td,
+.catalog-table tbody tr.order-unavailable:hover td { background: var(--w-negative-row); }
+.catalog-table tbody tr.order-unavailable:hover td { background: var(--w-negative-row-hover); }
+.catalog-table tbody tr.order-unavailable > td:first-child { box-shadow: inset 4px 0 0 var(--w-negative); }
+.catalog-table tbody tr.order-unavailable td { border-top-color: #f5cfd0; }
+.catalog-table tbody tr.order-unavailable .price { color: #8a5557; }
+.catalog-table .price { font-family: var(--w-font); font-weight: 700; font-variant-numeric: tabular-nums; }
+.catalog-table .price.a-price { color: var(--w-positive-deep); }
+.catalog-table .product-cell strong { color: var(--w-ink); font-weight: 700; }
+.delivery-badge { border-radius: 999px; font-size: 12px; font-weight: 600; }
+.delivery-badge.domestic { color: var(--w-positive-deep); background: var(--w-primary-pale); }
+.delivery-badge.overseas { color: var(--w-warning-content); background: var(--w-warning-pale); }
+.season-badge { border-radius: 999px; color: var(--w-ink); background: var(--w-soft-2); font-weight: 600; }
+.supply-sold-out, .supply-season-waiting { border-radius: 999px !important; font-style: normal; font-weight: 700 !important; }
+.supply-sold-out { color: #fff !important; background: var(--w-negative) !important; border-color: var(--w-negative) !important; }
+.supply-season-waiting { color: var(--w-negative-deep) !important; background: var(--w-canvas) !important; border: 1px solid var(--w-negative) !important; }
+.option-toggle { border: 1px solid var(--w-ink); border-radius: 999px; color: var(--w-ink); background: var(--w-canvas); font-weight: 600; }
+.option-toggle:hover { border-color: var(--w-ink); background: var(--w-soft-2); }
+.option-price-list article.sold-out { background: var(--w-negative-row); box-shadow: inset 4px 0 0 var(--w-negative); }
+.option-price-list article.sold-out em { color: #fff; background: var(--w-negative); border-radius: 999px; }
+
+/* 페이지 이동 */
+.catalog-pagination, .price-change-pagination { border: 0; border-radius: var(--w-radius-xl); background: var(--w-soft-2); }
+.catalog-pagination button, .price-change-pagination button { border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-ink); background: var(--w-canvas); font-weight: 600; font-variant-numeric: tabular-nums; }
+.catalog-pagination button:hover:not(:disabled), .price-change-pagination button:hover:not(:disabled) { color: var(--w-ink); border-color: var(--w-ink); background: var(--w-canvas); transform: none; }
+.catalog-pagination button.active, .price-change-pagination button.active { color: var(--w-canvas); border-color: var(--w-ink); background: var(--w-ink); box-shadow: none; }
+.catalog-pagination-summary { color: var(--w-ink); font-weight: 700; }
+.catalog-pagination-summary small { color: var(--w-mute); }
+.catalog-page-numbers > span { color: var(--w-line); }
+
+/* 가격변동·공지 등 콘텐츠 카드 */
+.history-page-panel, .sold-out-issue-board, .guide-section-card, .guide-highlight-card, .faq-list, .content-page .panel, .sourcing-form, .submitted-card {
+  border-color: transparent !important;
+  border-radius: var(--w-radius-xl) !important;
+  box-shadow: none !important;
+}
+.price-change-card { border-radius: var(--w-radius-xl) !important; box-shadow: none !important; }
+.change-direction-badge, .history-difference { border-radius: 999px !important; }
+
+/* 푸터 (요청: 글씨 크게, 메뉴 일반 굵기) */
+.public-footer { border-top: 1px solid var(--w-line); color: var(--w-body); background: var(--w-canvas); }
+.footer-brand-block strong { color: var(--w-ink); font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+.footer-brand-block span { color: var(--w-body); font-size: 16px; }
+.footer-information nav a { color: var(--w-ink); font-size: 17px; font-weight: 400; }
+.footer-information nav a:hover { color: var(--w-positive-deep); text-decoration: underline; text-underline-offset: 4px; }
+.footer-business-info { color: var(--w-body); font-size: 15px; }
+.footer-business-info b { color: var(--w-line); }
+.footer-information small { color: var(--w-mute); font-size: 14px; }
+
+/* ---------- 관리자 화면(가볍게 적용) ---------- */
+.admin-shell { background: var(--w-soft); font-family: var(--w-font); }
+.admin-main { background: var(--w-soft); }
+.admin-sidebar { background: var(--w-canvas); }
+.admin-sidebar-primary { border-radius: 999px; color: var(--w-ink) !important; background: var(--w-primary) !important; box-shadow: none !important; }
+.admin-sidebar-primary:hover { background: var(--w-primary-active) !important; transform: none; }
+.admin-sidebar nav a:hover { color: var(--w-ink); background: var(--w-soft-2); }
+.admin-sidebar nav a.active, .admin-sidebar nav a.nav-child.active { color: var(--w-canvas); background: var(--w-ink); }
+.admin-topbar { background: var(--w-canvas); }
+.admin-card, .admin-home-stat, .admin-stat-card, .admin-home-hero { border-color: transparent !important; border-radius: var(--w-radius-xl) !important; box-shadow: none !important; }
+.primary-action { border-radius: 999px; color: var(--w-ink) !important; background: var(--w-primary) !important; box-shadow: none !important; }
+.primary-action:hover:not(:disabled) { background: var(--w-primary-active) !important; }
+.admin-table-wrap { border-color: var(--w-line); border-radius: var(--w-radius-lg); }
+.admin-table th { color: var(--w-body); background: var(--w-soft-2); font-weight: 600; }
+.catalog-pagination.admin-product-pagination { background: var(--w-soft-2); }
+
+/* ---------- 모바일(카드형 단가표) ---------- */
+@media (max-width: 720px) {
+  .catalog-table-wrap { border: 0; border-radius: 0; }
+  .catalog-table { min-width: 0; }
+  .catalog-table tbody > tr:not(.option-detail-row) { border-color: var(--w-line); border-radius: var(--w-radius-xl); box-shadow: none; }
+  .catalog-hero h1 { font-size: 34px; }
+  .catalog-table tbody > tr.order-unavailable:not(.option-detail-row) { border-color: #f2b8ba !important; box-shadow: inset 4px 0 0 var(--w-negative) !important; }
+  .catalog-table tbody > tr.order-unavailable:not(.option-detail-row) > td,
+  .catalog-table tbody > tr.order-unavailable:not(.option-detail-row) > .catalog-product-cell,
+  .catalog-table tbody > tr.order-unavailable:hover:not(.option-detail-row) > td,
+  .catalog-table tbody > tr.order-unavailable:hover:not(.option-detail-row) > .catalog-product-cell { background: var(--w-negative-row); }
+  .catalog-table tbody > tr.order-unavailable > td:first-child { box-shadow: none; }
+  .public-nav a, .public-nav .sourcing-nav-button { padding: 9px 10px; font-size: 12.5px; white-space: nowrap; }
+  .catalog-pagination nav { flex-wrap: nowrap; gap: 3px; }
+  .catalog-pagination { padding: 12px 8px; }
+  .catalog-pagination button { min-width: 32px; height: 32px; padding: 0; }
+  .catalog-page-numbers { gap: 4px; }
+  .catalog-page-numbers > span { display: none; }
+  .catalog-pagination .catalog-page-edge span { display: none; }
+  .catalog-pagination .catalog-page-edge { min-width: 38px; padding: 0; }
+  .footer-brand-block strong { font-size: 18px; }
+  .footer-information nav a { font-size: 16px; }
+  .season-highlight { padding: 12px; }
+}

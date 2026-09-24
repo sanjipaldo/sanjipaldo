@@ -8,6 +8,8 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
   ChevronRight,
   CircleHelp,
   ClipboardList,
@@ -483,7 +485,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
             return <Fragment key={item.section}>{groupCaption}{groupOpen && <Link to={`/admin/${item.section}`} className={`${section === item.section ? "active" : ""} ${item.group ? "nav-child" : ""}`} onClick={() => setSidebarOpen(false)}><Icon size={18} />{item.label}<ChevronRight size={15} /></Link>}</Fragment>;
           })}
         </nav>
-        <div className="sidebar-bottom"><Link to="/" target="_blank"><Truck size={17} /> 공개 페이지 보기</Link><button onClick={() => void signOut()}><LogOut size={17} /> 로그아웃</button></div>
+        <div className="sidebar-bottom"><Link to="/" onClick={() => setSidebarOpen(false)}><Truck size={17} /> 공개 페이지 보기</Link><button onClick={() => void signOut()}><LogOut size={17} /> 로그아웃</button></div>
       </aside>
       {sidebarOpen && <button className="admin-sidebar-backdrop" type="button" onClick={() => setSidebarOpen(false)} aria-label="관리자 메뉴 닫기" />}
       <main className="admin-main">
@@ -1106,9 +1108,12 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <div className="catalog-pagination admin-product-pagination">
           <span>{products.length === 0 ? "0개" : `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, products.length)}개`} <small>/ 총 {products.length}개</small></span>
           <nav aria-label="상품 목록 페이지">
+            <button type="button" onClick={() => setPage(1)} disabled={currentPage === 1} aria-label="첫 페이지"><ChevronsLeft size={15} /></button>
             <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1} aria-label="이전 페이지"><ChevronLeft size={15} /></button>
             {pageNumbers.map((value, index) => <Fragment key={value}>{index > 0 && pageNumbers[index - 1] !== value - 1 ? <span>…</span> : null}<button type="button" className={value === currentPage ? "active" : ""} onClick={() => setPage(value)}>{value}</button></Fragment>)}
             <button type="button" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={currentPage === pageCount} aria-label="다음 페이지"><ChevronRight size={15} /></button>
+            <button type="button" onClick={() => setPage(pageCount)} disabled={currentPage === pageCount} aria-label="마지막 페이지"><ChevronsRight size={15} /></button>
+          
           </nav>
         </div>
       </section>

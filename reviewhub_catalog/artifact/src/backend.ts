@@ -63,9 +63,22 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     if (!values) throw new Error("내장 공휴일 데이터가 없는 연도입니다.");
     return new Response(JSON.stringify(values.map((item) => ({ ...item, types: ["Public"] }))), { headers: { "content-type": "application/json" } });
   }
-  if (/^https:\/\/(api\.open-meteo\.com|ipwho\.is)\//.test(url)) throw new Error("claude.ai 페이지에서는 외부 날씨 서비스에 연결할 수 없습니다.");
+  if (url.startsWith("https://api.open-meteo.com/")) {
+    // 외부 날씨 API 대신, 페이지 DB의 weather/current 문서(날씨 중계 작업이 1시간마다 기록)를 같은 응답 형식으로 돌려줍니다.
+    const params = new URL(url).searchParams;
+    const point = weatherSnapshot?.points?.[weatherKey(params.get("latitude"), params.get("longitude"))];
+    if (!point) throw new Error("날씨 정보가 아직 없습니다.");
+    return new Response(JSON.stringify({ current: point }), { headers: { "content-type": "application/json" } });
+  }
+  if (url.startsWith("https://ipwho.is/")) throw new Error("claude.ai 페이지에서는 접속 위치를 확인할 수 없습니다.");
   return pageFetch(input, init);
 }) as typeof fetch;
+
+type WeatherPoint = { time?: string; temperature_2m?: number; weather_code?: number };
+let weatherSnapshot: { updatedAt?: string; points?: Record<string, WeatherPoint> } | null = null;
+function weatherKey(latitude: string | null, longitude: string | null) {
+  return `${Number(latitude).toFixed(4)},${Number(longitude).toFixed(4)}`;
+}
 
 function notifyCatalogChanged() {
   window.dispatchEvent(new Event("doogo:catalog-changed"));
@@ -326,7 +339,12 @@ async function boot() {
   } else {
     state.pubMeta = loaded.meta;
   }
+  const weatherDoc = await store.doc("weather/current").get().catch(() => null);
+  weatherSnapshot = weatherDoc?.exists ? (weatherDoc.data() as typeof weatherSnapshot) : null;
   watchRemote();
+  store.doc("weather/current").onSnapshot((snap) => {
+    weatherSnapshot = snap.exists ? (snap.data() as typeof weatherSnapshot) : null;
+  }, () => undefined);
   if (state.isEditor) {
     if (await applyPendingMigrations()) scheduleSave();
     void importInbox().catch(() => undefined);

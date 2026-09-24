@@ -2,6 +2,7 @@ import { createRoot, hydrateRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import './catalog.css'
+import './wise-theme.css'
 import { syncAuthTokenFromUrl } from "@/lib/api";
 
 // Prerender (scripts/prerender.mjs) bakes the home page into #root at build time

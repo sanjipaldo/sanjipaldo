@@ -11,6 +11,8 @@ import {
   CloudSnow,
   ChevronDown,
   ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
   ChevronRight,
   ChevronUp,
   CircleHelp,
@@ -428,7 +430,7 @@ function PageFrame({ children }: { children: ReactNode }) {
       <footer className="public-footer">
         <div className="footer-brand-block">
           <BrandLogo />
-          <div><strong>DOOGO FOOD DATA CENTER</strong><span>위탁셀러를 위한 상품·단가 정보센터</span></div>
+          <div><strong>두고푸드 데이터 센터</strong><span>위탁셀러를 위한 실시간 상품/단가 정보센터</span></div>
         </div>
         <div className="footer-information">
           <nav aria-label="푸터 바로가기">
@@ -444,7 +446,6 @@ function PageFrame({ children }: { children: ReactNode }) {
             <p>주소: 세종특별자치시 갈매로 353 에비뉴힐 5층 5023호 (우) 30121</p>
           </div>
           <small>© 2026 DOOGO FOOD. 상품 정보는 최신 공지와 단가표를 기준으로 확인해 주세요.</small>
-          <small className="footer-copyright">© 2025 DOOGOFOOD All rights reserved.</small>
         </div>
       </footer>
       {sourcingOpen && <SourcingModal onClose={() => setSourcingOpen(false)} />}
@@ -490,7 +491,7 @@ function PublicOptionList({ product }: { product: Product }) {
       {sortedProductOptions(product).map((option) => (
         <article className={option.isSoldOut ? "sold-out" : ""} key={option.id}>
           <ProductThumb product={product} />
-          <div className="option-name-cell"><strong>{product.name}</strong><small>{option.name}</small>{option.isSoldOut && <em>상품준비중</em>}</div>
+          <div className="option-name-cell"><strong>{product.name}</strong><small>{option.name}</small>{option.isSoldOut && <em>품절</em>}</div>
           <dl>
             <div><dt>A단가</dt><dd>{formatPrice(option.aPrice)}</dd></div>
             <div><dt>일반공급가</dt><dd>{formatPrice(option.generalPrice)}</dd></div>
@@ -736,9 +737,11 @@ function PriceChangeBoard({
       )}
       {totalPages > 1 && (
         <nav className="price-change-pagination" aria-label="가격변동 페이지">
+          <button type="button" onClick={() => setPage(1)} disabled={currentPage === 1} aria-label="첫 가격변동 페이지"><ChevronsLeft size={16} /></button>
           <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1} aria-label="이전 가격변동 페이지"><ChevronLeft size={16} /></button>
           {pageNumbers.map((value, index) => <Fragment key={value}>{index > 0 && pageNumbers[index - 1] !== value - 1 && <span>…</span>}<button type="button" className={value === currentPage ? "active" : ""} onClick={() => setPage(value)} aria-current={value === currentPage ? "page" : undefined}>{value}</button></Fragment>)}
           <button type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={currentPage === totalPages} aria-label="다음 가격변동 페이지"><ChevronRight size={16} /></button>
+          <button type="button" onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} aria-label="마지막 가격변동 페이지"><ChevronsRight size={16} /></button>
         </nav>
       )}
     </>
@@ -1006,6 +1009,31 @@ export function CatalogHome() {
   const catalogTotalCount = data.catalogTotals?.productCount ?? catalogItemCount;
   const recentChangeCount = data.priceHistory.length;
   const currentMonth = clock ? seoulMonth(clock) : 0;
+  // 제철 정보: 선택한 달(전체면 이번 달)에 판매기간이 걸친 제철 상품을 품목명 기준으로 묶어 보여줍니다.
+  const highlightMonth = saleMonth === "all" ? currentMonth : saleMonth;
+  const seasonalHighlights = useMemo(() => {
+    if (!highlightMonth) return { total: 0, byCategory: [] as Array<{ name: string; count: number }>, keywords: [] as Array<{ keyword: string; count: number }> };
+    const inSeason = data.products.filter((product) => {
+      const category = data.categories.find((item) => item.id === product.categoryId);
+      if (!isSeasonalCategory(category?.name) || product.isAlwaysOnSale) return false;
+      if (!product.saleStartMonth || !product.saleEndMonth) return false;
+      return isMonthInSeason(highlightMonth, product.saleStartMonth, product.saleEndMonth);
+    });
+    const categoryCounts = new Map<string, number>();
+    const keywordCounts = new Map<string, number>();
+    for (const product of inSeason) {
+      const category = data.categories.find((item) => item.id === product.categoryId);
+      const categoryName = category?.name ?? "기타";
+      categoryCounts.set(categoryName, (categoryCounts.get(categoryName) ?? 0) + 1);
+      const keyword = product.name.replace(/[[(].*?[\])]/g, " ").split(/\s+/).find((token) => /[가-힣A-Za-z]{2,}/.test(token))?.replace(/[^가-힣A-Za-z]/g, "") ?? "";
+      if (keyword.length >= 2) keywordCounts.set(keyword, (keywordCounts.get(keyword) ?? 0) + 1);
+    }
+    return {
+      total: inSeason.length,
+      byCategory: [...categoryCounts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+      keywords: [...keywordCounts.entries()].map(([keyword, count]) => ({ keyword, count })).sort((a, b) => b.count - a.count).slice(0, 12)
+    };
+  }, [data.products, data.categories, highlightMonth]);
   return (
     <PageFrame>
       <main className="catalog-main">
@@ -1058,6 +1086,27 @@ export function CatalogHome() {
             </div>
             <small>농산·수산·축산·선물세트·식품만 월별 판매기간에 따라 검색됩니다.</small>
             <strong className="season-prep-message"><span>SEASON TIP</span> 미리미리 제철 시즌이 되기 전에, 판매 상품을 준비해보세요!</strong>
+            {highlightMonth > 0 && (
+              <div className="season-highlight" aria-live="polite">
+                <div className="season-highlight-title">
+                  <strong>{highlightMonth}월 제철</strong>
+                  <span>{seasonalHighlights.total > 0 ? `${seasonalHighlights.total}개 상품 · ${seasonalHighlights.byCategory.map((item) => `${item.name} ${item.count}`).join(" · ")}` : "등록된 제철 상품이 없습니다."}</span>
+                </div>
+                {seasonalHighlights.keywords.length > 0 && (
+                  <div className="season-highlight-keywords">
+                    {seasonalHighlights.keywords.map((item) => (
+                      <button type="button" key={item.keyword} className={query.trim() === item.keyword ? "active" : ""} onClick={() => setQuery(query.trim() === item.keyword ? "" : item.keyword)} aria-pressed={query.trim() === item.keyword}>
+                        {item.keyword}<small>{item.count}</small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="order-legend" aria-label="주문 가능 여부 안내">
+            <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 행 · 지금 주문 가능</span>
+            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 빨간색 행 · 품절 또는 상품준비중(주문 불가)</span>
           </div>
           <div className="catalog-table-wrap">
             <table className="catalog-table">
@@ -1094,7 +1143,7 @@ export function CatalogHome() {
                   const supplyLabel = soldOutNow ? "품절" : availableNow ? "" : "상품준비중";
                   return (
                     <Fragment key={product.id}>
-                      <tr className={`${expanded ? "expanded " : ""}${soldOutNow ? "sold-out" : availableNow ? "supply-active" : "season-waiting"}`.trim()}>
+                      <tr className={`${expanded ? "expanded " : ""}${soldOutNow ? "sold-out order-unavailable" : availableNow ? "supply-active" : "season-waiting order-unavailable"}`.trim()}>
                         <td className="catalog-product-cell">
                           <div className="product-cell"><button type="button" className="product-image-button" onClick={() => { const src = productImageSrc(product); if (src) setImagePreview({ src, alt: product.name }); }} aria-label={`${product.name} 이미지 크게 보기`}><ProductThumb product={product} /></button><div><span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><strong>{product.name}</strong>{product.origin && <small>{product.origin}</small>}{!availableNow || soldOutNow ? <em className={soldOutNow ? "supply-sold-out" : "supply-season-waiting"}>{supplyLabel}</em> : null}{options.length > 0 && <button className="option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />} 옵션 {options.length}개 {expanded ? "접기" : "보기"}</button>}</div></div>
                           {expanded && options.length > 0 && <div className="mobile-inline-options"><PublicOptionList product={product} /></div>}
@@ -1131,6 +1180,15 @@ export function CatalogHome() {
               <nav aria-label="상품 단가표 페이지">
                 <button
                   type="button"
+                  className="catalog-page-step catalog-page-edge"
+                  onClick={() => changeCatalogPage(1)}
+                  disabled={currentPage === 1}
+                  aria-label="첫 상품 페이지"
+                >
+                  <ChevronsLeft size={16} /><span>처음</span>
+                </button>
+                <button
+                  type="button"
                   className="catalog-page-step"
                   onClick={() => changeCatalogPage(currentPage - 1)}
                   disabled={currentPage === 1}
@@ -1162,6 +1220,15 @@ export function CatalogHome() {
                   aria-label="다음 상품 페이지"
                 >
                   <span>다음</span><ChevronRight size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="catalog-page-step catalog-page-edge"
+                  onClick={() => changeCatalogPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  aria-label="마지막 상품 페이지"
+                >
+                  <span>마지막</span><ChevronsRight size={16} />
                 </button>
               </nav>
             </div>
