@@ -1152,6 +1152,14 @@ function renderMobileTabbar() {
 function updateAccountUI() {
   if (!currentAccount) return;
   renderMobileTabbar();
+  const depositPill = document.getElementById("depositPill");
+  if (depositPill) {
+    const showPill = activeRole === "seller" && staffCanMenu(menuIndexOf("예치금", "seller"));
+    depositPill.hidden = !showPill;
+    if (showPill) { document.getElementById("depositPillAmount").textContent = money(sellerDeposit().balance); depositPill.classList.toggle("active", activeMenuIndex === menuIndexOf("예치금", "seller")); }
+    const mobilePill = document.getElementById("depositPillMobile");
+    if (mobilePill) { mobilePill.hidden = !showPill; if (showPill) document.getElementById("depositPillMobileAmount").textContent = money(sellerDeposit().balance); }
+  }
   const accountNameText = activeRole === "supplier" ? workspaceCompany("supplier") : activeRole === "seller" ? (currentAccount.company || currentAccount.name) : currentAccount.name;
   document.getElementById("accountName").textContent = currentAccount.staff ? currentAccount.staff.name : accountNameText;
   document.getElementById("accountRole").textContent = currentAccount.staff ? `직원 · ${accountNameText}` : `${roleLabel()} 모드`;
@@ -1636,7 +1644,14 @@ function markTalkRead(connection) {
   state.chatReads[currentAccount.loginId] = state.chatReads[currentAccount.loginId] || {};
   if (state.chatReads[currentAccount.loginId][connection.id] !== last.id) { state.chatReads[currentAccount.loginId][connection.id] = last.id; saveState(); }
 }
+/* 카카오톡처럼: 상대가 아직 읽지 않은 내 메시지 옆에 노란 ‘1’을 붙이고, 상대가 대화방을 열면 사라진다. */
+function talkPartnerReadIndex(messages, connection, perspective) {
+  const otherLoginId = perspective === "seller" ? connection.supplierLoginId : connection.sellerLoginId;
+  const lastReadId = state.chatReads?.[otherLoginId]?.[connection.id];
+  return lastReadId ? messages.findIndex(message => message.id === lastReadId) : -1;
+}
 function talkMessageRows(messages, active, perspective, otherName) {
+  const partnerReadIndex = talkPartnerReadIndex(messages, active, perspective);
   const mark = perspective === "seller" ? "공" : "셀";
   return messages.map((message, index) => {
     const mine = message.senderLoginId === currentAccount.loginId;
@@ -1646,7 +1661,8 @@ function talkMessageRows(messages, active, perspective, otherName) {
     const showTime = !next || next.senderLoginId !== message.senderLoginId || talkTimeLabel(next) !== talkTimeLabel(message);
     const attachments = `${message.image ? `<img class="talk-photo" data-action="talk-photo-view" src="${escapeHtml(message.image)}" alt="첨부 사진">` : ""}${message.productId ? `<button type="button" class="talk-card" data-action="product-detail" data-id="${escapeHtml(message.productId)}">${productPhoto(productOf(message.productId), "talk-card-photo")}<span><b>${escapeHtml(productOf(message.productId)?.name || "연결 상품")}</b><small>상품 보기 ›</small></span></button>` : ""}${message.orderId ? `<button type="button" class="talk-card order" data-action="order-detail" data-id="${escapeHtml(message.orderId)}"><span><b>주문 ${escapeHtml(message.orderId)}</b><small>주문 보기 ›</small></span></button>` : ""}`;
     const text = message.text ? `<p>${escapeHtml(message.text).replace(/\n/g, "<br>")}</p>` : "";
-    const time = showTime ? `<span class="talk-time">${escapeHtml(talkTimeLabel(message))}</span>` : "";
+    const unreadByPartner = mine && message.sentAt && index > partnerReadIndex;
+    const time = showTime || unreadByPartner ? `<span class="talk-meta">${unreadByPartner ? `<b class="talk-read" aria-label="상대방이 아직 읽지 않음">1</b>` : ""}${showTime ? `<span class="talk-time">${escapeHtml(talkTimeLabel(message))}</span>` : ""}</span>` : "";
     return `<div class="talk-row ${mine ? "mine" : "theirs"} ${continued ? "continued" : ""}">
       ${mine ? "" : continued ? `<span class="talk-avatar-gap"></span>` : `<span class="talk-avatar small" aria-hidden="true">${mark}</span>`}
       <div class="talk-body">${!mine && !continued ? `<b class="talk-name">${escapeHtml(otherName)}</b>` : ""}<div class="talk-line">${mine ? time : ""}<div class="talk-bubble ${message.image && !message.text ? "photo-only" : ""}">${text}${attachments}</div>${mine ? "" : time}</div></div>
@@ -1677,10 +1693,12 @@ function partnerMessengerTemplate(connections, perspective) {
   const messages = talkRoomMessages(active);
   const favorite = Boolean(state.chatFavorites?.[active.id]);
   const mark = perspective === "seller" ? "공" : "셀";
-  if (chatMobileView === "room" || window.innerWidth > 720) markTalkRead(active);
+  const activeIsOpen = chatMobileView === "room" || window.innerWidth > 720;
+  if (activeIsOpen) { markTalkRead(active); roomRows.forEach(room => { if (room.connection.id === active.id) room.unread = 0; }); }
+  const totalUnread = roomRows.reduce((sum, room) => sum + room.unread, 0);
   return `<div id="supplierInquiryPanel" class="talk-shell panel ${chatMobileView === "room" ? "show-room" : "show-list"}">
     <aside class="talk-list">
-      <div class="talk-list-head"><b>두고톡</b><span>${connections.length}</span></div>
+      <div class="talk-list-head"><b>두고톡</b>${totalUnread ? `<span class="talk-total-unread">${totalUnread > 99 ? "99+" : totalUnread}</span>` : ""}</div>
       <label class="talk-search"><span>⌕</span><input id="chatRoomSearch" value="${escapeHtml(chatRoomSearch)}" placeholder="거래처·메시지 검색" autocomplete="off"></label>
       <div class="talk-tabs">${[["all","전체"],["unread","안읽음"],["trading","거래중"],["favorite","즐겨찾기"]].map(([key,label]) => `<button type="button" class="${chatRoomFilter === key ? "active" : ""}" data-action="chat-filter" data-filter="${key}">${label}</button>`).join("")}</div>
       <div class="talk-room-list">${visibleRooms.length ? visibleRooms.map(room => `<button class="talk-room-item ${room.connection.id === active.id ? "active" : ""}" type="button" data-action="select-chat-room" data-id="${room.connection.id}"><span class="talk-avatar">${mark}</span><span class="talk-room-text"><b>${escapeHtml(room.name)}${room.favorite ? ` <i class="talk-star">★</i>` : ""}</b><small>${escapeHtml(room.last?.image && !room.last?.text ? "사진" : (room.last?.text || "새 대화를 시작하세요"))}</small></span><span class="talk-room-side"><em>${escapeHtml(room.last ? talkTimeLabel(room.last) : "")}</em>${room.unread && !(room.connection.id === active.id && (chatMobileView === "room" || window.innerWidth > 720)) ? `<i class="talk-unread">${room.unread}</i>` : ""}</span></button>`).join("") : `<div class="talk-empty">조건에 맞는 대화가 없습니다.</div>`}</div>
@@ -2260,7 +2278,8 @@ function noticeFormModal(id) {
   const notice = id ? (state.notices || []).find(n => n.id === id) : null;
   openModal(`<h2>${notice ? "공지사항 수정" : "공지사항 등록"}</h2><form id="noticeForm" class="form-grid" data-id="${notice?.id || ""}">
     <div class="form-field full"><label>제목</label><input name="title" value="${escapeHtml(notice?.title || "")}" required></div>
-    <div class="form-field full"><label>내용</label><textarea name="detail" rows="4" required>${escapeHtml(notice?.detail || "")}</textarea></div>
+    <div class="form-field full"><label>내용</label><textarea name="detail" rows="6" required>${escapeHtml(notice?.detail || "")}</textarea></div>
+    <div class="form-field full"><label>유튜브 영상 링크 <small>선택 · 공지 팝업에 영상이 크게 나와요</small></label><input name="videoUrl" value="${escapeHtml(notice?.videoUrl || "")}" placeholder="예: https://www.youtube.com/watch?v=… 또는 https://youtu.be/…"></div>
     <div class="form-field"><label>날짜 표기</label><input name="date" value="${escapeHtml(notice?.date || "오늘")}" placeholder="예: 오늘, 09.08" required></div>
     <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button class="primary-button" type="submit">${notice ? "저장" : "등록"}</button></div>
   </form>`);
@@ -2673,7 +2692,22 @@ function sendTalkMessage({ supplierLoginId, sellerLoginId, text = "", image = ""
   const wasFocused = document.activeElement?.id === "talkInput";
   saveState(); render(); updateAccountUI();
   scrollChatThreadToBottom();
+  scheduleDemoPartnerRead(supplierLoginId, sellerLoginId, otherLoginId);
   if (wasFocused || window.innerWidth > 720) document.getElementById("talkInput")?.focus({ preventScroll: true });
+}
+/* 데모: 상대 거래처가 몇 초 뒤 대화방을 열어 읽은 것처럼 처리 (실서비스에서는 상대가 실제로 방을 열 때 읽음 처리) */
+function scheduleDemoPartnerRead(supplierLoginId, sellerLoginId, otherLoginId) {
+  clearTimeout(scheduleDemoPartnerRead.timer);
+  scheduleDemoPartnerRead.timer = setTimeout(() => {
+    const connection = state.connections.find(item => item.supplierLoginId === supplierLoginId && item.sellerLoginId === sellerLoginId && item.status === "connected") || state.connections.find(item => item.supplierLoginId === supplierLoginId && item.sellerLoginId === sellerLoginId);
+    const last = state.connectionMessages.filter(message => message.supplierLoginId === supplierLoginId && message.sellerLoginId === sellerLoginId).at(-1);
+    if (!connection || !last) return;
+    state.chatReads = state.chatReads || {};
+    state.chatReads[otherLoginId] = state.chatReads[otherLoginId] || {};
+    state.chatReads[otherLoginId][connection.id] = last.id;
+    saveState();
+    document.querySelectorAll("#talkThread .talk-read").forEach(el => el.remove());
+  }, 5000);
 }
 function scrollChatThreadToBottom() {
   requestAnimationFrame(() => {
@@ -2683,11 +2717,11 @@ function scrollChatThreadToBottom() {
 }
 function openModal(html) {
   const modal = document.querySelector("#modal .modal");
-  modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal");
+  modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal", "notice-modal");
   document.getElementById("modalContent").innerHTML = html;
   document.getElementById("modal").hidden = false;
 }
-function closeModal() { const modal = document.querySelector("#modal .modal"); document.getElementById("modal").hidden = true; modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal"); }
+function closeModal() { const modal = document.querySelector("#modal .modal"); document.getElementById("modal").hidden = true; modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal", "notice-modal"); document.querySelectorAll("#modalContent iframe").forEach(frame => frame.remove()); }
 
 const ADDRESS_SEARCH_RESULTS = [
   { postal: "06236", address: "서울특별시 강남구 테헤란로 152", building: "강남파이낸스센터" },
@@ -3025,24 +3059,22 @@ function orderPaymentModal(orderId) {
 
 function sellerNoticesTemplate() {
   const list = state.notices || [];
-  return `${sectionHero("공지사항", "두고 운영에 필요한 최근 업데이트와 안내를 확인하세요.")}<div class="panel notice-board">${list.length ? list.map(n => {
-    const expanded = expandedNoticeId === n.id;
-    return `<article class="notice-item ${expanded ? "expanded" : ""}">
-      <button type="button" class="notice-row" data-action="toggle-notice-detail" data-id="${n.id}" aria-expanded="${expanded}"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}<i class="notice-row-chevron">${expanded ? "⌄" : "›"}</i></span></button>
-      ${expanded ? `<div class="notice-detail"><p>${escapeHtml(n.detail)}</p>${n.action ? `<button type="button" class="secondary-button" data-action="${escapeHtml(n.action)}">${escapeHtml(n.cta || "바로가기")} →</button>` : ""}</div>` : ""}
-    </article>`;
-  }).join("") : `<div class="empty">등록된 공지사항이 없습니다.</div>`}</div>`;
+  return `${sectionHero("공지사항", "두고 운영에 꼭 필요한 업데이트와 안내예요. 누르면 크게 열려요.")}<div class="panel notice-board">${list.length ? list.map((n, index) => `<article class="notice-item">
+      <button type="button" class="notice-row" data-action="open-notice-detail" data-id="${n.id}"><span class="notice-row-title">${index === 0 ? `<em class="notice-new">NEW</em>` : ""}${youtubeVideoId(n.videoUrl) ? `<em class="notice-video-badge">▶ 영상</em>` : ""}<b>${escapeHtml(n.title)}</b></span><span>${escapeHtml(n.date)}<i class="notice-row-chevron">›</i></span></button>
+    </article>`).join("") : `<div class="empty">등록된 공지사항이 없습니다.</div>`}</div>`;
 }
 function renderNoticeModal() {
   const list = state.notices || [];
   if (!list.length) return closeModal();
   noticeModalIndex = Math.min(Math.max(noticeModalIndex, 0), list.length - 1);
   const n = list[noticeModalIndex];
+  const videoId = youtubeVideoId(n.videoUrl);
   openModal(`<div class="notice-popup">
-    <div class="notice-popup-head"><span>DOOGO NOTICE</span><b>${escapeHtml(n.date)}</b></div>
+    <div class="notice-popup-head"><span>📢 DOOGO NOTICE · 중요 공지</span><b>${escapeHtml(n.date)}</b></div>
     <h2>${escapeHtml(n.title)}</h2>
-    <p>${escapeHtml(n.detail)}</p>
-    ${n.action ? `<button type="button" class="secondary-button" data-action="${escapeHtml(n.action)}">${escapeHtml(n.cta || "바로가기")} →</button>` : ""}
+    ${videoId ? `<div class="notice-video"><iframe src="https://www.youtube-nocookie.com/embed/${videoId}?rel=0&playsinline=1" title="${escapeHtml(n.title)} 영상" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div><a class="notice-video-link" href="https://www.youtube.com/watch?v=${videoId}" target="_blank" rel="noopener">영상이 안 보이면 유튜브에서 보기 ↗</a>` : ""}
+    <div class="notice-body">${escapeHtml(n.detail).replace(/\n/g, "<br>")}</div>
+    ${n.action ? `<button type="button" class="primary-button notice-cta" data-action="${escapeHtml(n.action)}">${escapeHtml(n.cta || "바로가기")} →</button>` : ""}
     <div class="notice-popup-nav">
       <button type="button" class="text-button" data-action="notice-modal-nav" data-dir="prev" ${noticeModalIndex === 0 ? "disabled" : ""}>← 이전</button>
       <span>${noticeModalIndex + 1} / ${list.length}</span>
@@ -3050,6 +3082,14 @@ function renderNoticeModal() {
     </div>
     <div class="modal-actions"><button class="secondary-button" type="button" data-close-modal>닫기</button></div>
   </div>`);
+  document.querySelector("#modal .modal").classList.add("notice-modal");
+}
+/* 유튜브 링크(watch·youtu.be·shorts·embed·live)에서 영상 ID만 뽑는다. */
+function youtubeVideoId(url) {
+  const text = String(url || "").trim();
+  if (!text) return "";
+  const match = text.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/|v\/))([A-Za-z0-9_-]{11})/);
+  return match ? match[1] : (/^[A-Za-z0-9_-]{11}$/.test(text) ? text : "");
 }
 function noticeDetailModal(id) {
   const list = state.notices || [];
@@ -3314,7 +3354,7 @@ function depositHistoryView(wallet) {
 }
 function sellerDoogoMoneyTemplate() {
   const wallet = sellerDeposit();
-  return `${sectionHero("예치금", "무통장입금으로 예치금을 충전해 두고 주문 공급가를 바로 결제하세요. 주문마다 신용카드 결제도 고를 수 있어요.", `<button type="button" class="primary-button" data-action="deposit-view" data-view="charge">＋ 예치금 충전</button>`)}
+  return `${sectionHero("예치금", "무통장입금으로 예치금을 충전해 두고 주문 공급가를 바로 결제하세요. 주문마다 신용카드 결제도 고를 수 있어요.")}
     ${depositTabs()}
     <div class="doogo-money-page deposit-page">${depositView === "history" ? depositHistoryView(wallet) : depositChargeView(wallet)}</div>`;
 }
@@ -5462,14 +5502,16 @@ document.addEventListener("submit", event => {
   }
   if (form.id === "noticeForm") {
     const id = form.dataset.id;
+    const videoUrl = String(data.videoUrl || "").trim();
+    if (videoUrl && !youtubeVideoId(videoUrl)) return showToast("유튜브 영상 링크를 확인해 주세요. (youtube.com 또는 youtu.be 주소)");
     state.notices = state.notices || [];
     if (id) {
       const notice = state.notices.find(item => item.id === id);
-      if (notice) { notice.title = String(data.title || "").trim(); notice.detail = String(data.detail || "").trim(); notice.date = String(data.date || "").trim() || "오늘"; }
+      if (notice) { notice.title = String(data.title || "").trim(); notice.detail = String(data.detail || "").trim(); notice.date = String(data.date || "").trim() || "오늘"; notice.videoUrl = videoUrl; }
       audit("공지사항 수정", `${id} 공지사항을 수정했습니다.`, "done", "product");
     } else {
       const newId = `notice-${Date.now()}`;
-      state.notices.unshift({ id: newId, title: String(data.title || "").trim(), detail: String(data.detail || "").trim(), date: String(data.date || "").trim() || "오늘" });
+      state.notices.unshift({ id: newId, title: String(data.title || "").trim(), detail: String(data.detail || "").trim(), date: String(data.date || "").trim() || "오늘", videoUrl });
       audit("공지사항 등록", `${newId} 공지사항을 새로 등록했습니다.`, "done", "product");
     }
     saveState(); closeModal(); render(); updateAccountUI(); showToast(id ? "공지사항을 수정했습니다." : "공지사항을 등록했습니다.");

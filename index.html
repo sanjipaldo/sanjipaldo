@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=34" />
+  <link rel="stylesheet" href="styles.css?v=35" />
 </head>
 <body>
   <section id="loginView" class="login-screen seller-login-screen">
@@ -221,9 +221,11 @@
           <p id="pageSubtitle" class="topbar-subtitle">오늘도 두고와 함께 쇼핑몰 성장을 만들어 가세요!</p>
         </div>
         <label class="quick-search"><span>⌕</span><input id="globalSearch" aria-label="주문번호 또는 주문자 검색" placeholder="주문번호·주문자명 빠른 검색"></label>
+        <button id="depositPillMobile" class="deposit-pill deposit-pill-mobile" type="button" data-action="deposit-view" data-view="charge" aria-label="예치금 잔액 보기" hidden><span class="deposit-pill-label">예치금</span><b id="depositPillMobileAmount">0원</b></button>
         <div class="top-actions">
           <button id="resetContentButton" class="edit-reset-button" type="button" data-action="reset-content-overrides" hidden>문구 초기화</button>
           <button id="guideButton" class="secondary-button">전체 흐름 보기</button>
+          <button id="depositPill" class="deposit-pill" type="button" data-action="deposit-view" data-view="charge" aria-label="예치금 잔액 보기" hidden><span class="deposit-pill-label">예치금</span><b id="depositPillAmount">0원</b></button>
           <div class="notification-center-wrap">
             <button id="notificationButton" class="notification-button" type="button" data-action="open-notifications" aria-label="알림함 열기" aria-haspopup="true" aria-expanded="false"><span aria-hidden="true">🔔</span><b id="notificationCount">0</b></button>
             <div id="notificationDropdown" class="notification-dropdown" role="dialog" aria-label="알림" hidden></div>
@@ -265,6 +267,6 @@
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=34"></script>
+  <script src="app.js?v=35"></script>
 </body>
 </html>

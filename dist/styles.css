@@ -6295,3 +6295,75 @@ body.kakao-sheet-open { overflow: hidden; }
 #supplierView .profile-panel, #supplierView .goodflow-card, #supplierView .supplier-settings-card { max-width: 960px; }
 #supplierView .supplier-settings-card { margin-top: 14px; }
 @media (max-width: 720px) { #modal .settings-tabs { margin-right: 40px; } }
+
+/* ===== 2026-09-25 요청 반영 ===== */
+/* 상단 예치금 잔액 */
+.deposit-pill { height: 40px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; color: #191f28; background: #f2f7ff; border: 1px solid #d6e6ff; border-radius: 99px; font-size: 14px; cursor: pointer; white-space: nowrap; transition: .15s ease; }
+.deposit-pill:hover, .deposit-pill.active { background: #e6f0ff; border-color: #9fc1f7; }
+.deposit-pill-label { color: #4e5968; font-size: 13px; font-weight: 600; }
+.deposit-pill-label::after { content: " :"; }
+.deposit-pill b { color: #1b64da; font-size: 15px; font-weight: 800; }
+@media (max-width: 720px) {
+  .deposit-pill { height: 34px; padding: 0 10px; gap: 4px; }
+  .deposit-pill-label { font-size: 11px; }
+  .deposit-pill-label::after { content: ""; }
+  .deposit-pill b { font-size: 12.5px; }
+}
+/* 사이드바 로고 1.5배 */
+.sidebar-market-brand > img { width: 186px; height: 54px; }
+@media (max-width: 720px) { .sidebar-market-brand > img { width: 160px; height: 47px; } }
+/* 상품 소싱 카테고리: 이모지 작게, 상품 수 숫자 숨김 */
+.cat-rail .cat-rail-item .cat-rail-icon { width: 28px; height: 28px; font-size: 17px !important; border-radius: 8px; }
+@media (max-width: 720px) { .cat-rail .cat-rail-item .cat-rail-icon { width: 26px; height: 26px; font-size: 16px !important; } }
+.cat-rail-item { gap: 4px; padding-top: 10px; padding-bottom: 10px; }
+.cat-rail-item em, .category-nav .category-chip em { display: none !important; }
+/* 두고톡 읽음 표시 (카카오톡 ‘1’) */
+.talk-meta { flex: 0 0 auto; display: inline-flex; flex-direction: column; align-items: flex-end; gap: 1px; padding-bottom: 2px; }
+.talk-row.theirs .talk-meta { align-items: flex-start; }
+.talk-meta .talk-time { padding-bottom: 0; }
+.talk-read { color: #f5b800; font-size: 11.5px; font-weight: 800; line-height: 1; }
+.talk-total-unread { min-width: 20px; height: 20px; padding: 0 6px; display: inline-grid; place-items: center; color: #fff !important; background: #ff4d4f !important; border-radius: 99px; font-size: 11.5px; font-weight: 800; }
+.talk-read { font-size: 12.5px; }
+/* 상단바: 예치금 추가 후 버튼·이름 줄바꿈 방지 */
+.top-actions { flex-shrink: 0; }
+.top-actions > * { flex-shrink: 0; }
+#guideButton, .account-summary, .account-summary * { white-space: nowrap; }
+.topbar .quick-search { min-width: 160px; flex: 1 1 220px; }
+@media (max-width: 1280px) and (min-width: 721px) { #guideButton { display: none; } }
+@media (min-width: 721px) { .topbar { grid-template-columns: minmax(300px, 1fr) minmax(160px, 280px) auto; } }
+.deposit-pill-mobile { display: none; }
+@media (max-width: 720px) {
+  .top-actions .deposit-pill { display: none; }
+  .deposit-pill-mobile:not([hidden]) { display: inline-flex; grid-column: 3; grid-row: 2; align-self: center; height: 46px; }
+  .topbar:has(.deposit-pill-mobile:not([hidden])) .quick-search { grid-column: 1 / 3; }
+  .deposit-pill-mobile .deposit-pill-label { font-size: 11.5px; }
+  .deposit-pill-mobile b { font-size: 13px; }
+}
+@media (min-width: 721px) and (max-width: 1560px) { #pageTitle { font-size: 25px; white-space: nowrap; } .topbar-heading { min-width: 0; } }
+/* 공지사항: 크게 뜨는 팝업 + 유튜브 영상 */
+#modal .modal.notice-modal { width: min(920px, calc(100vw - 32px)); max-width: 920px; max-height: calc(100dvh - 40px); padding: 28px 32px; }
+.notice-modal .notice-popup { padding: 0; }
+.notice-modal .notice-popup-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.notice-modal .notice-popup-head span { color: #e5484d; font-size: 13px; font-weight: 800; letter-spacing: .02em; }
+.notice-modal .notice-popup-head b { color: #8b95a1; font-size: 13px; font-weight: 600; }
+.notice-modal .notice-popup h2 { margin: 10px 0 18px; font-size: 28px; line-height: 1.35; letter-spacing: -.02em; }
+.notice-video { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #0b1220; border-radius: 16px; box-shadow: 0 12px 30px rgba(15,23,42,.18); }
+.notice-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.notice-video-link { display: inline-block; margin: 8px 0 0; color: #6b7684; font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px; }
+.notice-body { margin: 18px 0 20px; color: #333d4b; font-size: 17px; line-height: 1.8; word-break: keep-all; }
+.notice-cta { min-height: 50px; padding: 0 22px; font-size: 16px; }
+.notice-modal .notice-popup-nav { margin-top: 18px; padding-top: 14px; border-top: 1px solid #eef1f4; }
+.notice-row-title { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.notice-new { padding: 2px 7px; color: #fff; background: #e5484d; border-radius: 6px; font-style: normal; font-size: 11px; font-weight: 800; }
+.notice-video-badge { padding: 2px 7px; color: #c4302b; background: #ffecec; border-radius: 6px; font-style: normal; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.notice-board .notice-row { cursor: pointer; }
+.notice-board .notice-row:hover { background: #f5f9ff; }
+@media (max-width: 720px) {
+  #modal .modal.notice-modal { width: 100%; max-height: 94dvh; padding: 20px 16px; }
+  .notice-modal .notice-popup h2 { font-size: 22px; }
+  .notice-body { font-size: 16px; }
+}
+.notice-modal .notice-popup-head { padding-right: 40px; }
+.cat-rail .cat-rail-item .cat-rail-icon { justify-self: center !important; margin: 0 auto !important; }
+/* 토스트가 버튼 클릭을 막지 않게 */
+.toast { pointer-events: none; }
