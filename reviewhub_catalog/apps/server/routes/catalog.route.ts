@@ -89,7 +89,7 @@ const ProductSchema = z.object({
   categoryId: z.string().trim().min(1),
   isVisible: z.boolean().optional(),
   isSoldOut: z.boolean().optional(),
-  options: z.array(ProductOptionSchema).max(50).optional()
+  options: z.array(ProductOptionSchema).max(200).optional()
 }).refine(
   (value) => value.isAlwaysOnSale
     ? value.saleStartMonth == null && value.saleEndMonth == null

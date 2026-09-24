@@ -759,45 +759,71 @@ export async function createProduct(input: ProductInput) {
   const productInput = { ...input };
   delete productInput.options;
   const id = crypto.randomUUID();
-  const rows = await db
-    .insert(products)
-    .values({
-      id,
-      ...productInput,
-      productCode: input.productCode?.trim() || `DG-${id.slice(0, 8).toUpperCase()}`,
-      imageUrl: input.imageUrl || null,
-      supplierName: input.supplierName?.trim() || null,
-      salePrice: normalizedSaleFields.salePrice,
-      salePriceMode: normalizedSaleFields.salePriceMode,
-      saleStartMonth: normalizedSaleFields.saleStartMonth,
-      saleEndMonth: normalizedSaleFields.saleEndMonth,
-      isAlwaysOnSale: normalizedSaleFields.isAlwaysOnSale,
-      displayOrder,
-      shippingFee: selectedShippingPolicy
-        ? `${selectedShippingPolicy.name}${selectedShippingPolicy.feeLabel ? ` [${selectedShippingPolicy.feeLabel}]` : ""}`
-        : input.shippingFee || "무료",
-      courier: selectedShippingPolicy?.courier || input.courier || null,
-      isVisible: input.isVisible ?? true,
-      isSoldOut: input.isSoldOut ?? false,
+  // 상품·옵션·신규 등록 기록을 한 번에 저장합니다(중간 실패 시 모두 되돌림).
+  const { product, normalizedOptions } = await db.transaction(async (tx) => {
+    const rows = await tx
+      .insert(products)
+      .values({
+        id,
+        ...productInput,
+        productCode: input.productCode?.trim() || `DG-${id.slice(0, 8).toUpperCase()}`,
+        imageUrl: input.imageUrl || null,
+        supplierName: input.supplierName?.trim() || null,
+        salePrice: normalizedSaleFields.salePrice,
+        salePriceMode: normalizedSaleFields.salePriceMode,
+        saleStartMonth: normalizedSaleFields.saleStartMonth,
+        saleEndMonth: normalizedSaleFields.saleEndMonth,
+        isAlwaysOnSale: normalizedSaleFields.isAlwaysOnSale,
+        displayOrder,
+        shippingFee: selectedShippingPolicy
+          ? `${selectedShippingPolicy.name}${selectedShippingPolicy.feeLabel ? ` [${selectedShippingPolicy.feeLabel}]` : ""}`
+          : input.shippingFee || "무료",
+        courier: selectedShippingPolicy?.courier || input.courier || null,
+        isVisible: input.isVisible ?? true,
+        isSoldOut: input.isSoldOut ?? false,
+        updatedAt
+      })
+      .returning();
+    const product = rows[0];
+    if (!product) throw new DatabaseError("DATABASE_QUERY_FAILED", "상품을 등록하지 못했습니다.", 502);
+    const normalizedOptions = normalizedSaleFields.options.map((option, index) => ({
+      id: option.id || crypto.randomUUID(),
+      productId: product.id,
+      name: option.name,
+      costPrice: option.costPrice,
+      aPrice: option.aPrice,
+      generalPrice: option.generalPrice,
+      salePrice: option.salePrice,
+      salePriceMode: option.salePriceMode,
+      isSoldOut: option.isSoldOut ?? false,
+      sortOrder: option.sortOrder ?? (index + 1) * 10,
       updatedAt
-    })
-    .returning();
-  const product = rows[0];
-  if (!product) throw new DatabaseError("DATABASE_QUERY_FAILED", "상품을 등록하지 못했습니다.", 502);
-  const normalizedOptions = normalizedSaleFields.options.map((option, index) => ({
-    id: option.id || crypto.randomUUID(),
-    productId: product.id,
-    name: option.name,
-    costPrice: option.costPrice,
-    aPrice: option.aPrice,
-    generalPrice: option.generalPrice,
-    salePrice: option.salePrice,
-    salePriceMode: option.salePriceMode,
-    isSoldOut: option.isSoldOut ?? false,
-    sortOrder: option.sortOrder ?? (index + 1) * 10,
-    updatedAt
-  }));
-  if (normalizedOptions.length > 0) await db.insert(productOptions).values(normalizedOptions);
+    }));
+    if (normalizedOptions.length > 0) await tx.insert(productOptions).values(normalizedOptions);
+    await tx.insert(catalogActivityLogs).values([
+      {
+        productId: product.id,
+        productName: product.name,
+        eventType: "new_product",
+        createdAt: updatedAt
+      },
+      ...(product.isSoldOut ? [{
+        productId: product.id,
+        productName: product.name,
+        eventType: "sold_out" as const,
+        createdAt: updatedAt
+      }] : []),
+      ...normalizedOptions.filter((option) => option.isSoldOut).map((option) => ({
+        productId: product.id,
+        productName: product.name,
+        optionId: option.id,
+        optionName: option.name,
+        eventType: "sold_out" as const,
+        createdAt: updatedAt
+      }))
+    ]);
+    return { product, normalizedOptions };
+  });
   await enqueueProductSync(product.id, "create", {
     productCode: product.productCode,
     name: product.name,
@@ -810,28 +836,6 @@ export async function createProduct(input: ProductInput) {
     isVisible: product.isVisible,
     isSoldOut: product.isSoldOut
   });
-  await db.insert(catalogActivityLogs).values([
-    {
-      productId: product.id,
-      productName: product.name,
-      eventType: "new_product",
-      createdAt: updatedAt
-    },
-    ...(product.isSoldOut ? [{
-      productId: product.id,
-      productName: product.name,
-      eventType: "sold_out" as const,
-      createdAt: updatedAt
-    }] : []),
-    ...normalizedOptions.filter((option) => option.isSoldOut).map((option) => ({
-      productId: product.id,
-      productName: product.name,
-      optionId: option.id,
-      optionName: option.name,
-      eventType: "sold_out" as const,
-      createdAt: updatedAt
-    }))
-  ]);
   return { ...product, options: normalizedOptions };
 }
 
@@ -874,145 +878,149 @@ export async function updateProduct(id: string, input: ProductInput, changedBy: 
     updatedAt: changedAt
   }));
 
-  const updated = await db
-    .update(products)
-    .set({
-      ...productInput,
-      productCode: input.productCode?.trim() || previous[0].productCode || `DG-${id.slice(0, 8).toUpperCase()}`,
-      imageUrl: input.imageUrl || null,
-      supplierName: input.supplierName?.trim() || null,
-      salePrice: normalizedSaleFields.salePrice,
-      salePriceMode: normalizedSaleFields.salePriceMode,
-      saleStartMonth: normalizedSaleFields.saleStartMonth,
-      saleEndMonth: normalizedSaleFields.saleEndMonth,
-      isAlwaysOnSale: normalizedSaleFields.isAlwaysOnSale,
-      shippingFee: selectedShippingPolicy
-        ? `${selectedShippingPolicy.name}${selectedShippingPolicy.feeLabel ? ` [${selectedShippingPolicy.feeLabel}]` : ""}`
-        : input.shippingFee || "무료",
-      courier: selectedShippingPolicy?.courier || input.courier || null,
-      isVisible: input.isVisible ?? true,
-      isSoldOut: input.isSoldOut ?? false,
-      updatedAt: changedAt
-    })
-    .where(eq(products.id, id))
-    .returning();
+  // 상품·가격이력·활동기록·옵션을 한 번에 저장합니다. 중간에 실패하면 모두 되돌려 반쯤 저장된 상품이 남지 않게 합니다.
+  const { updated, changes } = await db.transaction(async (tx) => {
+    const updated = await tx
+      .update(products)
+      .set({
+        ...productInput,
+        productCode: input.productCode?.trim() || previous[0].productCode || `DG-${id.slice(0, 8).toUpperCase()}`,
+        imageUrl: input.imageUrl || null,
+        supplierName: input.supplierName?.trim() || null,
+        salePrice: normalizedSaleFields.salePrice,
+        salePriceMode: normalizedSaleFields.salePriceMode,
+        saleStartMonth: normalizedSaleFields.saleStartMonth,
+        saleEndMonth: normalizedSaleFields.saleEndMonth,
+        isAlwaysOnSale: normalizedSaleFields.isAlwaysOnSale,
+        shippingFee: selectedShippingPolicy
+          ? `${selectedShippingPolicy.name}${selectedShippingPolicy.feeLabel ? ` [${selectedShippingPolicy.feeLabel}]` : ""}`
+          : input.shippingFee || "무료",
+        courier: selectedShippingPolicy?.courier || input.courier || null,
+        isVisible: input.isVisible ?? true,
+        isSoldOut: input.isSoldOut ?? false,
+        updatedAt: changedAt
+      })
+      .where(eq(products.id, id))
+      .returning();
 
-  const changes: Array<{
-    field: "costPrice" | "aPrice" | "generalPrice" | "salePrice";
-    oldPrice: number;
-    newPrice: number;
-    optionId?: string;
-    optionName?: string;
-  }> = [];
-  if (previous[0].costPrice !== input.costPrice) {
-    changes.push({ field: "costPrice", oldPrice: previous[0].costPrice, newPrice: input.costPrice });
-  }
-  if (previous[0].aPrice !== input.aPrice) {
-    changes.push({ field: "aPrice", oldPrice: previous[0].aPrice, newPrice: input.aPrice });
-  }
-  if (previous[0].generalPrice !== input.generalPrice) {
-    changes.push({ field: "generalPrice", oldPrice: previous[0].generalPrice, newPrice: input.generalPrice });
-  }
-  if ((previous[0].salePrice ?? 0) !== (normalizedSaleFields.salePrice ?? 0)) {
-    changes.push({
-      field: "salePrice",
-      oldPrice: previous[0].salePrice ?? 0,
-      newPrice: normalizedSaleFields.salePrice ?? 0
-    });
-  }
-
-  for (const option of normalizedOptions) {
-    const prior = previousOptions.find((item) => item.id === option.id);
-    if (!prior) continue;
-    if (prior.costPrice !== option.costPrice) {
-      changes.push({
-        field: "costPrice",
-        oldPrice: prior.costPrice,
-        newPrice: option.costPrice,
-        optionId: option.id,
-        optionName: option.name
-      });
+    const changes: Array<{
+      field: "costPrice" | "aPrice" | "generalPrice" | "salePrice";
+      oldPrice: number;
+      newPrice: number;
+      optionId?: string;
+      optionName?: string;
+    }> = [];
+    if (previous[0].costPrice !== input.costPrice) {
+      changes.push({ field: "costPrice", oldPrice: previous[0].costPrice, newPrice: input.costPrice });
     }
-    if (prior.aPrice !== option.aPrice) {
-      changes.push({
-        field: "aPrice",
-        oldPrice: prior.aPrice,
-        newPrice: option.aPrice,
-        optionId: option.id,
-        optionName: option.name
-      });
+    if (previous[0].aPrice !== input.aPrice) {
+      changes.push({ field: "aPrice", oldPrice: previous[0].aPrice, newPrice: input.aPrice });
     }
-    if (prior.generalPrice !== option.generalPrice) {
-      changes.push({
-        field: "generalPrice",
-        oldPrice: prior.generalPrice,
-        newPrice: option.generalPrice,
-        optionId: option.id,
-        optionName: option.name
-      });
+    if (previous[0].generalPrice !== input.generalPrice) {
+      changes.push({ field: "generalPrice", oldPrice: previous[0].generalPrice, newPrice: input.generalPrice });
     }
-    if ((prior.salePrice ?? 0) !== (option.salePrice ?? 0)) {
+    if ((previous[0].salePrice ?? 0) !== (normalizedSaleFields.salePrice ?? 0)) {
       changes.push({
         field: "salePrice",
-        oldPrice: prior.salePrice ?? 0,
-        newPrice: option.salePrice ?? 0,
-        optionId: option.id,
-        optionName: option.name
+        oldPrice: previous[0].salePrice ?? 0,
+        newPrice: normalizedSaleFields.salePrice ?? 0
       });
     }
-  }
 
-  if (changes.length > 0) {
-    await db.insert(priceHistories).values(
-      changes.map((item) => ({
-        productId: id,
-        productName: input.name,
-        optionId: item.optionId || null,
-        optionName: item.optionName || null,
-        field: item.field,
-        oldPrice: item.oldPrice,
-        newPrice: item.newPrice,
-        changedBy,
-        changedAt
-      }))
-    );
-  }
+    for (const option of normalizedOptions) {
+      const prior = previousOptions.find((item) => item.id === option.id);
+      if (!prior) continue;
+      if (prior.costPrice !== option.costPrice) {
+        changes.push({
+          field: "costPrice",
+          oldPrice: prior.costPrice,
+          newPrice: option.costPrice,
+          optionId: option.id,
+          optionName: option.name
+        });
+      }
+      if (prior.aPrice !== option.aPrice) {
+        changes.push({
+          field: "aPrice",
+          oldPrice: prior.aPrice,
+          newPrice: option.aPrice,
+          optionId: option.id,
+          optionName: option.name
+        });
+      }
+      if (prior.generalPrice !== option.generalPrice) {
+        changes.push({
+          field: "generalPrice",
+          oldPrice: prior.generalPrice,
+          newPrice: option.generalPrice,
+          optionId: option.id,
+          optionName: option.name
+        });
+      }
+      if ((prior.salePrice ?? 0) !== (option.salePrice ?? 0)) {
+        changes.push({
+          field: "salePrice",
+          oldPrice: prior.salePrice ?? 0,
+          newPrice: option.salePrice ?? 0,
+          optionId: option.id,
+          optionName: option.name
+        });
+      }
+    }
 
-  const activityChanges: Array<typeof catalogActivityLogs.$inferInsert> = [];
-  if (previous[0].isSoldOut !== (input.isSoldOut ?? false)) {
-    activityChanges.push({
-      productId: id,
-      productName: input.name,
-      eventType: input.isSoldOut ? "sold_out" : "restocked",
-      createdAt: changedAt
-    });
-  }
-  for (const option of normalizedOptions) {
-    const prior = previousOptions.find((item) => item.id === option.id);
-    if (prior && prior.isSoldOut !== option.isSoldOut) {
+    if (changes.length > 0) {
+      await tx.insert(priceHistories).values(
+        changes.map((item) => ({
+          productId: id,
+          productName: input.name,
+          optionId: item.optionId || null,
+          optionName: item.optionName || null,
+          field: item.field,
+          oldPrice: item.oldPrice,
+          newPrice: item.newPrice,
+          changedBy,
+          changedAt
+        }))
+      );
+    }
+
+    const activityChanges: Array<typeof catalogActivityLogs.$inferInsert> = [];
+    if (previous[0].isSoldOut !== (input.isSoldOut ?? false)) {
       activityChanges.push({
         productId: id,
         productName: input.name,
-        optionId: option.id,
-        optionName: option.name,
-        eventType: option.isSoldOut ? "sold_out" : "restocked",
-        createdAt: changedAt
-      });
-    } else if (!prior && option.isSoldOut) {
-      activityChanges.push({
-        productId: id,
-        productName: input.name,
-        optionId: option.id,
-        optionName: option.name,
-        eventType: "sold_out",
+        eventType: input.isSoldOut ? "sold_out" : "restocked",
         createdAt: changedAt
       });
     }
-  }
-  if (activityChanges.length > 0) await db.insert(catalogActivityLogs).values(activityChanges);
+    for (const option of normalizedOptions) {
+      const prior = previousOptions.find((item) => item.id === option.id);
+      if (prior && prior.isSoldOut !== option.isSoldOut) {
+        activityChanges.push({
+          productId: id,
+          productName: input.name,
+          optionId: option.id,
+          optionName: option.name,
+          eventType: option.isSoldOut ? "sold_out" : "restocked",
+          createdAt: changedAt
+        });
+      } else if (!prior && option.isSoldOut) {
+        activityChanges.push({
+          productId: id,
+          productName: input.name,
+          optionId: option.id,
+          optionName: option.name,
+          eventType: "sold_out",
+          createdAt: changedAt
+        });
+      }
+    }
+    if (activityChanges.length > 0) await tx.insert(catalogActivityLogs).values(activityChanges);
 
-  await db.delete(productOptions).where(eq(productOptions.productId, id));
-  if (normalizedOptions.length > 0) await db.insert(productOptions).values(normalizedOptions);
+    await tx.delete(productOptions).where(eq(productOptions.productId, id));
+    if (normalizedOptions.length > 0) await tx.insert(productOptions).values(normalizedOptions);
+    return { updated, changes };
+  });
 
   const changedAction = changes.length > 0
     ? "price" as const

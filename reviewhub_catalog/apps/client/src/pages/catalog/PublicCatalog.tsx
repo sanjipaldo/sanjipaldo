@@ -307,6 +307,30 @@ async function loadNotices() {
   return payload.ok ? payload.data?.notices ?? null : null;
 }
 
+// 관리자가 상품·가격을 바꾸면 공개 화면이 곧바로 다시 불러오도록: 창 포커스·탭 복귀·데이터 변경 알림(doogo:catalog-changed)에 반응합니다.
+const CATALOG_CHANGED_EVENT = "doogo:catalog-changed";
+
+function onCatalogRefreshSignal(refresh: () => void) {
+  let lastRun = 0;
+  const run = () => {
+    const now = Date.now();
+    if (now - lastRun < 3000) return;
+    lastRun = now;
+    refresh();
+  };
+  const onVisible = () => {
+    if (document.visibilityState === "visible") run();
+  };
+  window.addEventListener("focus", run);
+  window.addEventListener(CATALOG_CHANGED_EVENT, run);
+  document.addEventListener("visibilitychange", onVisible);
+  return () => {
+    window.removeEventListener("focus", run);
+    window.removeEventListener(CATALOG_CHANGED_EVENT, run);
+    document.removeEventListener("visibilitychange", onVisible);
+  };
+}
+
 const seasonalCategories = new Set(["농산", "수산", "축산", "선물세트", "식품"]);
 
 function plainCategoryName(name?: string) {
@@ -897,14 +921,17 @@ export function CatalogHome() {
       }
     };
     void refreshCatalog();
-    const timer = window.setInterval(() => {
+    const reloadCatalog = () => {
       void loadCatalog().then((next) => {
         if (active && next) setData(next);
       });
-    }, 60 * 1000);
+    };
+    const timer = window.setInterval(reloadCatalog, 60 * 1000);
+    const stopRefreshSignal = onCatalogRefreshSignal(reloadCatalog);
     return () => {
       active = false;
       window.clearInterval(timer);
+      stopRefreshSignal();
     };
   }, []);
 
@@ -1249,7 +1276,20 @@ export function GuidePage() {
 export function NoticesPage() {
   const [data, setData] = useState<CatalogData>(emptyCatalogData);
   useEffect(() => {
-    void loadCatalog().then((next) => next && setData(next));
+    let active = true;
+    const reloadCatalog = () => {
+      void loadCatalog().then((next) => {
+        if (active && next) setData(next);
+      });
+    };
+    reloadCatalog();
+    const timer = window.setInterval(reloadCatalog, 60 * 1000);
+    const stopRefreshSignal = onCatalogRefreshSignal(reloadCatalog);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      stopRefreshSignal();
+    };
   }, []);
   return (
     <PageFrame>
