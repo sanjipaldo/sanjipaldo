@@ -15,8 +15,11 @@ const SEGMENT = 160 * 1024;
 const SQL = await initSqlJs();
 const db = new SQL.Database();
 const migrationsDir = path.join(here, "../apps/server/migrations");
+db.exec("CREATE TABLE IF NOT EXISTS _artifact_migrations (name TEXT PRIMARY KEY, appliedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
 for (const name of fs.readdirSync(migrationsDir).filter((f) => f.endsWith(".sql")).sort()) {
   db.exec(fs.readFileSync(path.join(migrationsDir, name), "utf8"));
+  // 018 이후는 페이지(backend.ts)가 이 표로 적용 여부를 판단합니다.
+  if (Number(name.slice(0, 3)) > 17) db.run("INSERT OR IGNORE INTO _artifact_migrations (name) VALUES (?)", [name]);
 }
 // 로그인은 claude.ai 편집 권한으로 대체하므로 마이그레이션의 관리자 비밀번호 해시는 페이지 DB에 넣지 않습니다.
 db.exec("UPDATE account SET password = NULL");

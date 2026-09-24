@@ -29,7 +29,12 @@ cd ../.. && node artifact/assemble.mjs         # → .artifact-build/doogofood.h
 처음 한 번만: `node artifact/seed.mjs` 로 마이그레이션 000~017에서 DB를 만들어 `.artifact-build/seed/`의 조각을 페이지 DB에 넣었습니다.
 이미 운영 중인 페이지에 다시 넣으면 저장된 변경이 덮어써지니 주의하세요.
 
+## 마이그레이션
+
+저장된 DB는 000~017로 만들어졌습니다. 018 이후 마이그레이션은 편집 권한자가 페이지를 열 때 `_artifact_migrations` 표를 기준으로 한 번 적용되고 저장됩니다(`src/backend.ts`의 `applyPendingMigrations`).
+
 ## 제한
 
-- 외부 이미지(발주오라 CDN)·날씨(Open-Meteo)·공휴일(Nager.Date)은 claude.ai 페이지 보안 정책상 불러올 수 없습니다.
+- 외부 이미지(발주오라 CDN)·날씨(Open-Meteo)는 claude.ai 페이지 보안 정책상 불러올 수 없습니다.
+- 공휴일(Nager.Date)도 막혀 있어 2026년 대한민국 공휴일을 `src/backend.ts`에 내장했습니다. 2027년이 되기 전에 목록을 추가해야 합니다.
 - 페이지 DB를 쓰는 페이지는 조직 내부 전용이라 외부 공개 링크로 공유할 수 없습니다.

@@ -26,6 +26,50 @@ type UserApi = { canEdit(): Promise<boolean>; id(): Promise<string | null> };
 type ClaudeGlobal = { use(name: string): Promise<unknown> };
 
 const EDITOR_TOKEN = "doogo-artifact-editor";
+
+// claude.ai 페이지는 외부 서비스(Nager.Date 공휴일, Open-Meteo 날씨, ipwho.is)에 접속할 수 없습니다.
+// 공휴일은 날짜가 정해져 있으므로 2026년 대한민국 공휴일(대체공휴일·지방선거일 포함)을 내장해 선과장 휴무를 판단합니다.
+const BUILT_IN_HOLIDAYS: Record<number, Array<{ date: string; localName: string }>> = {
+  2026: [
+    { date: "2026-01-01", localName: "신정" },
+    { date: "2026-02-16", localName: "설날 연휴" },
+    { date: "2026-02-17", localName: "설날" },
+    { date: "2026-02-18", localName: "설날 연휴" },
+    { date: "2026-03-01", localName: "삼일절" },
+    { date: "2026-03-02", localName: "대체공휴일(삼일절)" },
+    { date: "2026-05-05", localName: "어린이날" },
+    { date: "2026-05-24", localName: "부처님오신날" },
+    { date: "2026-05-25", localName: "대체공휴일(부처님오신날)" },
+    { date: "2026-06-03", localName: "전국동시지방선거" },
+    { date: "2026-06-06", localName: "현충일" },
+    { date: "2026-08-15", localName: "광복절" },
+    { date: "2026-08-17", localName: "대체공휴일(광복절)" },
+    { date: "2026-09-24", localName: "추석 연휴" },
+    { date: "2026-09-25", localName: "추석" },
+    { date: "2026-09-26", localName: "추석 연휴" },
+    { date: "2026-10-03", localName: "개천절" },
+    { date: "2026-10-05", localName: "대체공휴일(개천절)" },
+    { date: "2026-10-09", localName: "한글날" },
+    { date: "2026-12-25", localName: "기독탄신일" }
+  ]
+};
+
+const pageFetch = globalThis.fetch.bind(globalThis);
+globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  const holiday = url.match(/^https:\/\/date\.nager\.at\/api\/v3\/PublicHolidays\/(\d{4})\/KR/);
+  if (holiday) {
+    const values = BUILT_IN_HOLIDAYS[Number(holiday[1])];
+    if (!values) throw new Error("내장 공휴일 데이터가 없는 연도입니다.");
+    return new Response(JSON.stringify(values.map((item) => ({ ...item, types: ["Public"] }))), { headers: { "content-type": "application/json" } });
+  }
+  if (/^https:\/\/(api\.open-meteo\.com|ipwho\.is)\//.test(url)) throw new Error("claude.ai 페이지에서는 외부 날씨 서비스에 연결할 수 없습니다.");
+  return pageFetch(input, init);
+}) as typeof fetch;
+
+function notifyCatalogChanged() {
+  window.dispatchEvent(new Event("doogo:catalog-changed"));
+}
 const ADMIN_USER: AuthUser = {
   id: "reviewhub-master-admin",
   name: "마스터 관리자",
@@ -111,6 +155,7 @@ async function handle(request: Request): Promise<Response> {
     const isSourcingSubmit = method === "POST" && url.pathname.replace(/\/$/, "") === "/api/catalog/sourcing";
     const response = await app.fetch(request);
     if (method === "GET" || !response.ok) return response;
+    notifyCatalogChanged();
     if (state.isEditor && request.headers.get("Authorization") === `Bearer ${EDITOR_TOKEN}`) {
       scheduleSave();
     } else if (state.isEditor && isSourcingSubmit) {
@@ -223,8 +268,41 @@ function watchRemote() {
         previous.close();
       });
       if (state.mode === "full") state.meta = loaded.meta; else state.pubMeta = loaded.meta;
+      notifyCatalogChanged();
     })().catch(() => undefined);
   }, () => undefined);
+}
+
+// 저장된 DB는 000~017로 만들어졌습니다. 이후 추가된 마이그레이션(018~)은 편집자가 페이지를 열 때 한 번 적용하고 저장합니다.
+const migrationFiles = import.meta.glob(["../../apps/server/migrations/*.sql", "!../../apps/server/migrations/00*.sql", "!../../apps/server/migrations/01[0-7]_*.sql"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const BASELINE_MIGRATION = 17;
+
+async function applyPendingMigrations() {
+  const pending = Object.entries(migrationFiles)
+    .map(([file, sql]) => ({ name: file.split("/").pop() ?? file, sql }))
+    .filter((item) => Number(item.name.slice(0, 3)) > BASELINE_MIGRATION)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (pending.length === 0) return 0;
+  return serialize(async () => {
+    const db = getSqlDatabase();
+    db.run("CREATE TABLE IF NOT EXISTS _artifact_migrations (name TEXT PRIMARY KEY, appliedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+    const applied = new Set((db.exec("SELECT name FROM _artifact_migrations")[0]?.values ?? []).map((row) => String(row[0])));
+    let count = 0;
+    for (const item of pending) {
+      if (applied.has(item.name)) continue;
+      db.run("BEGIN");
+      try {
+        db.exec(item.sql);
+        db.run("INSERT INTO _artifact_migrations (name) VALUES (?)", [item.name]);
+        db.run("COMMIT");
+        count += 1;
+      } catch (error) {
+        db.run("ROLLBACK");
+        throw error;
+      }
+    }
+    return count;
+  });
 }
 
 async function boot() {
@@ -250,6 +328,7 @@ async function boot() {
   }
   watchRemote();
   if (state.isEditor) {
+    if (await applyPendingMigrations()) scheduleSave();
     void importInbox().catch(() => undefined);
     window.addEventListener("beforeunload", (event) => { if (state.dirty || state.saving) event.preventDefault(); });
   }
