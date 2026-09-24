@@ -1,0 +1,436 @@
+{
+  "schemaVersion": 1,
+  "verifyContractVersion": "website-verify-local-v4",
+  "cliVersion": "(devel)",
+  "createdAt": "2026-09-23T16:37:31.083604066Z",
+  "projectType": "fullStack",
+  "templateId": "self-host",
+  "templateVersion": "prod_selfhost",
+  "manifestHash": "sha256:f7e359c80b4bcb9caecce62ad71df85921bd784d81b48024cdd44f6181f091ba",
+  "inputFingerprint": "sha256:32105ef608f321456eefb39f83132eed912a5b01ea78ba8978846c2b855b5984",
+  "outputs": {
+    "frontend": {
+      "path": "apps/client/dist",
+      "fingerprint": "sha256:1988a07243415997a97dae05989230a38de42cff35dd97b3f17a96477142a80a"
+    },
+    "server": {
+      "path": "apps/server/dist",
+      "fingerprint": "sha256:8c07c4c3ac54554af985efc87c45ccee50b3486d955ad4fc4f340a8e5c83e934"
+    }
+  },
+  "checks": [
+    {
+      "name": "shape",
+      "status": "passed",
+      "stage": "inspect",
+      "required": true,
+      "retryable": false
+    },
+    {
+      "name": "backendCapability",
+      "status": "passed",
+      "stage": "inspect",
+      "required": true,
+      "retryable": false
+    },
+    {
+      "name": "websiteImages",
+      "status": "passed",
+      "stage": "websiteImages",
+      "required": true,
+      "retryable": false
+    },
+    {
+      "name": "sourceValidation",
+      "status": "passed",
+      "stage": "sourceValidation",
+      "required": true,
+      "retryable": false
+    },
+    {
+      "name": "overlayReceipt",
+      "status": "passed",
+      "stage": "overlayReceipt",
+      "required": true,
+      "retryable": false
+    },
+    {
+      "name": "clientES2020",
+      "status": "passed",
+      "stage": "preflight",
+      "required": true,
+      "retryable": false
+    },
+    {
+      "name": "build",
+      "status": "passed",
+      "stage": "build",
+      "required": true,
+      "retryable": false,
+      "dependsOn": [
+        "shape",
+        "backendCapability",
+        "websiteImages",
+        "sourceValidation",
+        "overlayReceipt"
+      ]
+    },
+    {
+      "name": "distReferences",
+      "status": "passed",
+      "stage": "postBuild",
+      "required": true,
+      "retryable": false,
+      "dependsOn": [
+        "build"
+      ]
+    },
+    {
+      "name": "websiteImageUsage",
+      "status": "passed",
+      "stage": "postBuild",
+      "required": true,
+      "retryable": false,
+      "dependsOn": [
+        "build"
+      ]
+    },
+    {
+      "name": "appConfigReference",
+      "status": "passed",
+      "stage": "postBuild",
+      "required": true,
+      "retryable": false,
+      "dependsOn": [
+        "build"
+      ]
+    },
+    {
+      "name": "lint",
+      "status": "passed",
+      "reason": "cache_hit",
+      "stage": "postBuild",
+      "required": true,
+      "retryable": false,
+      "dependsOn": [
+        "build"
+      ]
+    },
+    {
+      "name": "test:infra",
+      "status": "passed",
+      "stage": "postBuild",
+      "required": true,
+      "retryable": false,
+      "dependsOn": [
+        "build"
+      ]
+    },
+    {
+      "name": "sourceRevision",
+      "status": "passed",
+      "stage": "postBuild",
+      "required": true,
+      "retryable": false,
+      "dependsOn": [
+        "build"
+      ]
+    }
+  ],
+  "sourceRevision": "src_4033d9282ed8",
+  "summary": {
+    "projectType": "fullStack",
+    "sourceRevision": "src_4033d9282ed8",
+    "checks": [
+      {
+        "name": "shape",
+        "status": "passed",
+        "stage": "inspect",
+        "required": true,
+        "retryable": false
+      },
+      {
+        "name": "backendCapability",
+        "status": "passed",
+        "stage": "inspect",
+        "required": true,
+        "retryable": false
+      },
+      {
+        "name": "websiteImages",
+        "status": "passed",
+        "stage": "websiteImages",
+        "required": true,
+        "retryable": false
+      },
+      {
+        "name": "sourceValidation",
+        "status": "passed",
+        "stage": "sourceValidation",
+        "required": true,
+        "retryable": false
+      },
+      {
+        "name": "overlayReceipt",
+        "status": "passed",
+        "stage": "overlayReceipt",
+        "required": true,
+        "retryable": false
+      },
+      {
+        "name": "clientES2020",
+        "status": "passed",
+        "stage": "preflight",
+        "required": true,
+        "retryable": false
+      },
+      {
+        "name": "build",
+        "status": "passed",
+        "stage": "build",
+        "required": true,
+        "retryable": false,
+        "dependsOn": [
+          "shape",
+          "backendCapability",
+          "websiteImages",
+          "sourceValidation",
+          "overlayReceipt"
+        ]
+      },
+      {
+        "name": "distReferences",
+        "status": "passed",
+        "stage": "postBuild",
+        "required": true,
+        "retryable": false,
+        "dependsOn": [
+          "build"
+        ]
+      },
+      {
+        "name": "websiteImageUsage",
+        "status": "passed",
+        "stage": "postBuild",
+        "required": true,
+        "retryable": false,
+        "dependsOn": [
+          "build"
+        ]
+      },
+      {
+        "name": "appConfigReference",
+        "status": "passed",
+        "stage": "postBuild",
+        "required": true,
+        "retryable": false,
+        "dependsOn": [
+          "build"
+        ]
+      },
+      {
+        "name": "lint",
+        "status": "passed",
+        "reason": "cache_hit",
+        "stage": "postBuild",
+        "required": true,
+        "retryable": false,
+        "dependsOn": [
+          "build"
+        ]
+      },
+      {
+        "name": "test:infra",
+        "status": "passed",
+        "stage": "postBuild",
+        "required": true,
+        "retryable": false,
+        "dependsOn": [
+          "build"
+        ]
+      },
+      {
+        "name": "sourceRevision",
+        "status": "passed",
+        "stage": "postBuild",
+        "required": true,
+        "retryable": false,
+        "dependsOn": [
+          "build"
+        ]
+      }
+    ],
+    "failures": [],
+    "warnings": [],
+    "skipped": [],
+    "parallelTrace": [
+      {
+        "id": "shape",
+        "stage": "preflight",
+        "status": "passed",
+        "durationMs": 2
+      },
+      {
+        "id": "backendCapability",
+        "stage": "preflight",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "id": "websiteImages",
+        "stage": "preflight",
+        "status": "passed",
+        "durationMs": 390
+      },
+      {
+        "id": "sourceValidation",
+        "stage": "preflight",
+        "status": "passed",
+        "durationMs": 297
+      },
+      {
+        "id": "overlayReceipt",
+        "stage": "preflight",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "id": "clientES2020",
+        "stage": "preflight",
+        "status": "passed",
+        "durationMs": 168
+      },
+      {
+        "id": "build",
+        "stage": "build",
+        "status": "passed",
+        "durationMs": 7743,
+        "dependsOn": [
+          "shape",
+          "backendCapability",
+          "websiteImages",
+          "sourceValidation",
+          "overlayReceipt"
+        ],
+        "reason": "dependencyInstall runs first; clientBuild and backendBuild run in parallel; distValidation waits for both"
+      },
+      {
+        "id": "dependencyInstall",
+        "stage": "build",
+        "status": "skipped",
+        "durationMs": 864,
+        "dependsOn": [
+          "shape",
+          "backendCapability",
+          "websiteImages",
+          "sourceValidation",
+          "overlayReceipt"
+        ],
+        "reason": "install_receipt_hit"
+      },
+      {
+        "id": "clientBuild",
+        "stage": "build",
+        "status": "passed",
+        "durationMs": 6684,
+        "dependsOn": [
+          "dependencyInstall"
+        ]
+      },
+      {
+        "id": "backendBuild",
+        "stage": "build",
+        "status": "passed",
+        "durationMs": 2223,
+        "dependsOn": [
+          "dependencyInstall"
+        ]
+      },
+      {
+        "id": "distValidation",
+        "stage": "build",
+        "status": "passed",
+        "durationMs": 24,
+        "dependsOn": [
+          "clientBuild",
+          "backendBuild"
+        ]
+      },
+      {
+        "id": "distReferences",
+        "stage": "postBuild",
+        "status": "passed",
+        "durationMs": 22,
+        "dependsOn": [
+          "build"
+        ]
+      },
+      {
+        "id": "websiteImageUsage",
+        "stage": "postBuild",
+        "status": "passed",
+        "durationMs": 398,
+        "dependsOn": [
+          "build"
+        ]
+      },
+      {
+        "id": "appConfigReference",
+        "stage": "postBuild",
+        "status": "passed",
+        "durationMs": 1,
+        "dependsOn": [
+          "build"
+        ]
+      },
+      {
+        "id": "lint",
+        "stage": "postBuild",
+        "status": "reused",
+        "durationMs": 442,
+        "dependsOn": [
+          "build"
+        ],
+        "reason": "cache_hit"
+      },
+      {
+        "id": "test:infra",
+        "stage": "postBuild",
+        "status": "passed",
+        "durationMs": 8264,
+        "dependsOn": [
+          "build"
+        ]
+      }
+    ],
+    "dependencyInstall": {
+      "status": "skipped",
+      "reason": "install_receipt_hit",
+      "packageManager": "pnpm",
+      "command": [
+        "pnpm",
+        "install",
+        "--frozen-lockfile=false",
+        "--prefer-offline"
+      ],
+      "durationMs": 864
+    },
+    "build": {
+      "dependencyInstall": {
+        "status": "skipped",
+        "reason": "install_receipt_hit",
+        "packageManager": "pnpm",
+        "command": [
+          "pnpm",
+          "install",
+          "--frozen-lockfile=false",
+          "--prefer-offline"
+        ],
+        "durationMs": 864
+      },
+      "clientBuildDurationMs": 6684,
+      "backendBuildDurationMs": 2223,
+      "distValidationDurationMs": 24
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "sourceUrl": "https://desktop-iv8sp13.tail3faaa2.ts.net/c/ad7chhg6",
+  "targetPath": ".",
+  "comparedAt": "2026-09-13T14:36:07Z",
+  "round": 1,
+  "viewports": [
+    "desktop 1823x900",
+    "mobile 390x844"
+  ],
+  "findings": [
+    {
+      "evidence": "상단 탭형 메뉴와 블루·화이트 브랜드 헤더",
+      "region": "public-header",
+      "status": "matched"
+    },
+    {
+      "evidence": "필독 공지와 최근 가격변동 카드",
+      "region": "notice-price-summary",
+      "status": "matched"
+    },
+    {
+      "evidence": "큰 썸네일과 이중 공급가·배송 카테고리",
+      "region": "product-table",
+      "status": "matched"
+    },
+    {
+      "evidence": "인증된 좌측 사이드바와 운영 테이블",
+      "region": "admin-shell",
+      "status": "matched"
+    }
+  ],
+  "regions": [
+    {
+      "desktop": "matched",
+      "id": "public-header",
+      "mobile": "matched"
+    },
+    {
+      "desktop": "matched",
+      "id": "notice-price-summary",
+      "mobile": "matched"
+    },
+    {
+      "desktop": "matched",
+      "id": "product-table",
+      "mobile": "matched"
+    },
+    {
+      "desktop": "matched",
+      "id": "admin-shell",
+      "mobile": "matched"
+    }
+  ],
+  "reference": {
+    "sourceUrl": "https://desktop-iv8sp13.tail3faaa2.ts.net/c/ad7chhg6",
+    "sourceHash": "sha256:cc24c29b5c07e1c4338fcd1ca6660dec6d7bb23e89123de79beef7e057e4a09e",
+    "referenceRevision": "ref_cc24c29b5c07e1c4"
+  },
+  "subject": {
+    "sourceRevision": "src_ad7424ca5f7c",
+    "websiteId": "01a09b15-cc65-746e-93cf-389e5af4ab6b",
+    "artifactVersionId": "2099142682538831872",
+    "path": "."
+  },
+  "structureParity": {
+    "referenceStructureHash": "sha256:16f7b426b52e5847af8b8717d33389dfdc407d0fb4bb72677e650041188b0a7c",
+    "status": "matched",
+    "subjectStructureHash": "sha256:16f7b426b52e5847af8b8717d33389dfdc407d0fb4bb72677e650041188b0a7c"
+  },
+  "qaStatus": "deliveryReady",
+  "report": {
+    "consoleErrors": 0,
+    "desktopEvidence": "공개 URL 1823x900 렌더 확인",
+    "mobileEvidence": "공개 URL 390x844 렌더 확인",
+    "summary": "레퍼런스 정보 구조와 운영 UI 패턴 재현"
+  }
+}

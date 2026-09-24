@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 5,
+  "manifestSchemaVersion": "website-manifest-v5",
+  "verifyContractVersion": "website-verify-local-v4",
+  "kind": "website",
+  "websiteId": "01a09b15-cc65-746e-93cf-389e5af4ab6b",
+  "projectType": "fullStack",
+  "layout": "selfHostClient",
+  "template": {
+    "id": "self-host",
+    "version": "prod_selfhost"
+  },
+  "build": {
+    "command": "pnpm --filter client build",
+    "distDir": "apps/client/dist"
+  },
+  "backend": {
+    "enabled": true,
+    "runtime": "node",
+    "framework": "hono",
+    "buildCommand": "SERVER_BUILD_TARGET=web pnpm --filter server build",
+    "startCommand": "npm start",
+    "port": 3000,
+    "database": "libsql",
+    "healthPath": "/api/health",
+    "migrationsDir": "apps/server/migrations"
+  },
+  "deployment": {
+    "target": "skybase"
+  },
+  "capabilities": {},
+  "backendBaseline": {
+    "fingerprint": "01a6e78c7e6dd99252f3f1ab846463b3339ddf00f1a9880930a1d3a4d100563d",
+    "paths": [
+      "apps/server/_core",
+      "apps/server/db",
+      "apps/server/middlewares",
+      "apps/server/routes",
+      "apps/server/services",
+      "apps/server/migrations",
+      "apps/server/package.json",
+      "apps/server/vite.config.ts",
+      "apps/server/tsconfig.json",
+      "packages/shared"
+    ]
+  },
+  "repository": {
+    "initId": "7be0d7b8-78ec-4618-b338-4732194c0ca7",
+    "state": "active",
+    "repositoryId": 292552,
+    "owner": "prod_5648700327973703271",
+    "name": "01a09b15-cc65-746e-93cf-389e5af4ab6b",
+    "host": "gitea.skywork.ai",
+    "webUrl": "https://gitea.skywork.ai/prod_5648700327973703271/01a09b15-cc65-746e-93cf-389e5af4ab6b",
+    "sshUrl": "ssh://git@gitea.skywork.ai/prod_5648700327973703271/01a09b15-cc65-746e-93cf-389e5af4ab6b.git",
+    "cloneUrl": "https://gitea.skywork.ai/prod_5648700327973703271/01a09b15-cc65-746e-93cf-389e5af4ab6b.git",
+    "initialCommitId": "4bf3f55415328416b90143f71e228ca77282296d"
+  },
+  "routeInventory": {},
+  "receipt": {
+    "status": "active",
+    "activeReceiptDigest": "6df657df89b3fe3b044b26ed7a1b60cc4132057aaeab6ffd0183f2b6f0cd53a5"
+  }
+}
