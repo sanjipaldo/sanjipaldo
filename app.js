@@ -9,7 +9,7 @@ const accounts = {
 const roleMenus = {
   master: ["대시보드", "회원 승인", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리"],
   supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "배송 · 송장 설정", "가격 관리", "정산 내역", "내 정보"],
-  seller: ["홈", "상품 소싱", "승인 대기", "공급사 문의", "주문 관리", "취소·반품", "매출 달력", "가격 변경 알림", "쇼핑몰 연동", "정기구독", "내 정보", "판매중 상품", "두고머니", "공지사항", "마스터 상품", "상품 매핑", "브랜드 소싱", "승인 완료"]
+  seller: ["홈", "상품 소싱", "승인 대기", "공급사 문의", "주문 관리", "취소·반품", "매출 달력", "가격 변경 알림", "쇼핑몰 연동", "정기구독", "내 정보", "판매중 상품", "예치금", "공지사항", "마스터 상품", "상품 매핑", "브랜드 소싱", "승인 완료"]
 };
 const roleMenuGroups = {
   master: [
@@ -45,7 +45,7 @@ const menuIcons = {
 
 const DEFAULT_DASHBOARD_LAYOUT = ["today", "product-flow", "order-flow", "money", "notices"];
 const DASHBOARD_LAYOUT_VERSION = 2;
-const SELLER_WIDGET_LABELS = { today: "오늘 할 일", "product-flow": "상품 등록 현황", "order-flow": "주문·배송 현황", money: "두고머니·매출", notices: "공지사항" };
+const SELLER_WIDGET_LABELS = { today: "오늘 할 일", "product-flow": "상품 등록 현황", "order-flow": "주문·배송 현황", money: "예치금·매출", notices: "공지사항" };
 
 /* 네이버쇼핑/스마트스토어 기준 4단계 카테고리 체계: 대분류 > 중분류 > 소분류 > 세분류 */
 const naverCategoryTree = {
@@ -371,7 +371,7 @@ const initialState = {
   },
   refunds: [
     { id: "RF-260908-01", orderId: "DO-260907-028", sellerLoginId: "seller", supplierLoginId: "sup", type: "반품", reason: "상품 일부 파손", detail: "포장 개봉 시 사과 1개가 눌려 있었습니다.", consumerRefundAmount: 29900, amount: 21800, status: "공급사 입고확인 대기", responsibility: "공급사 귀책", consumerRefunded: true, consumerRefundedAt: "오늘 13:08", returnCarrier: "한진택배", returnTracking: "507891234567", returnRequestedAt: "오늘 13:20", returnDeliveredAt: "오늘 16:35", supplierReceived: false, depositCredited: false, supplierSettlementOffset: false, requestedAt: "오늘 13:10" },
-    { id: "RF-260905-02", orderId: "DO-260905-022", sellerLoginId: "seller", supplierLoginId: "sup", type: "주문 취소", reason: "출고 전 고객 요청", detail: "출고 전 취소가 확인되어 두고머니 환불이 완료되었습니다.", consumerRefundAmount: 59800, amount: 43600, status: "환불완료", responsibility: "공급사 승인 · 회수 없음", consumerRefunded: true, consumerRefundedAt: "09.05 15:38", noPickup: true, supplierReceived: true, depositCredited: true, supplierSettlementOffset: true, requestedAt: "09.05 15:40", completedAt: "09.05 16:02" }
+    { id: "RF-260905-02", orderId: "DO-260905-022", sellerLoginId: "seller", supplierLoginId: "sup", type: "주문 취소", reason: "출고 전 고객 요청", detail: "출고 전 취소가 확인되어 예치금 환불이 완료되었습니다.", consumerRefundAmount: 59800, amount: 43600, status: "환불완료", responsibility: "공급사 승인 · 회수 없음", consumerRefunded: true, consumerRefundedAt: "09.05 15:38", noPickup: true, supplierReceived: true, depositCredited: true, supplierSettlementOffset: true, requestedAt: "09.05 15:40", completedAt: "09.05 16:02" }
   ],
   channelConnections: {
     seller: [
@@ -393,7 +393,7 @@ const initialState = {
     { id: "NT-1003", recipientLoginId: "admin", audienceRole: "master", type: "approval", channels: ["운영센터"], title: "공급사 요청이 도착했습니다", detail: "브랜드랩 푸드 · 1차 검토 대기", createdAt: "오늘 10:40", read: false, delivery: "내부 알림" }
   ],
   deposits: {
-    seller: { balance: 43600, totalRefunded: 43600, pending: 21800, withdrawalPending: 0, bankAccount: null, withdrawals: [], transactions: [{ id: "DP-260905-01", type: "환불 충전", amount: 43600, reference: "RF-260905-02", createdAt: "09.05 16:02" }] }
+    seller: { balance: 243600, totalRefunded: 43600, pending: 21800, withdrawalPending: 0, bankAccount: null, withdrawals: [], charges: [{ id: "CH-26090101", amount: 200000, depositor: "두고 셀러샵", status: "충전 완료", requestedAt: "09.01 10:12", dueAt: "9월 4일", completedAt: "09.01 10:40" }], transactions: [{ id: "DP-260905-01", type: "환불 충전", amount: 43600, reference: "RF-260905-02", createdAt: "09.05 16:02" }, { id: "DP-260901-01", type: "무통장입금 충전", amount: 200000, reference: "CH-26090101 · 입금자 두고 셀러샵", createdAt: "09.01 10:40" }] }
   },
   salesLedger: [
     { date: "2026-09-01", channel: "smartstore", sales: 159800, cost: 111200, orders: 5 },
@@ -547,6 +547,8 @@ function loadState() {
       (merged.orders || []).forEach(order => { Object.entries(order.channelTrackingStatuses || {}).forEach(([channelId, status]) => { if (status === "자동화 꺼짐" || status === "10분 자동전송 대기") order.channelTrackingStatuses[channelId] = "전송 대기"; else if (status === "자동전송 완료 · 데모") order.channelTrackingStatuses[channelId] = "전송 완료 · 자동"; }); });
     }
     merged.automationVersion = 1;
+    /* 두고머니 → 예치금 이름 변경: 저장된 내역 문구도 바꾼다. */
+    Object.values(merged.deposits || {}).forEach(wallet => (wallet.transactions || []).forEach(item => { ["type", "reference"].forEach(key => { if (typeof item[key] === "string") item[key] = item[key].replace(/두고머니/g, "예치금"); }); }));
     (merged.channelConnections.seller || []).forEach(channel => {
       if (channel.status !== "connected") return;
       if (!channel.api) channel.api = { sellerId: channel.id === "coupang" ? "A00012345" : "doogo_store", apiKeyMasked: "••••••••7F2A", secretMasked: "••••••••91C0", connectedAt: "이전 연동" };
@@ -1067,7 +1069,7 @@ function editableText(key, fallback, className = "") {
   return `<span class="editable-copy ${className}" data-edit-key="${escapeHtml(key)}" contenteditable="${editMode ? "true" : "false"}" spellcheck="false">${escapeHtml(contentText(key, fallback))}</span>`;
 }
 function statusChip(status) {
-  const colors = { "신규주문": "orange", "주문접수": "orange", "발주완료": "blue", "배송준비중": "orange", "주문확인필요": "red", "배송중": "blue", "배송완료": "green", "출고취소": "red", "판매중": "green", "판매중지": "red", "확인필요": "red", "반영완료": "green", "공급사 확인중": "orange", "공급사 검토중": "orange", "협의 필요": "red", "회수 진행중": "blue", "반품 회수중": "blue", "공급사 입고확인 대기": "orange", "환불완료": "green", "두고머니 충전완료": "green", "예치금 충전완료": "green", "반품접수": "red", "환불접수": "red", "연동중": "blue", "확인중": "orange", "미연동": "red" };
+  const colors = { "신규주문": "orange", "주문접수": "orange", "발주완료": "blue", "배송준비중": "orange", "주문확인필요": "red", "배송중": "blue", "배송완료": "green", "출고취소": "red", "판매중": "green", "판매중지": "red", "확인필요": "red", "반영완료": "green", "공급사 확인중": "orange", "공급사 검토중": "orange", "협의 필요": "red", "회수 진행중": "blue", "반품 회수중": "blue", "공급사 입고확인 대기": "orange", "환불완료": "green", "예치금 충전완료": "green", "예치금 충전완료": "green", "반품접수": "red", "환불접수": "red", "연동중": "blue", "확인중": "orange", "미연동": "red" };
   return `<span class="chip ${colors[status] || ""}">${status}</span>`;
 }
 
@@ -1784,7 +1786,7 @@ function refundRows(role, items = filteredRefunds(role)) {
     const order = state.orders.find(order => order.id === item.orderId);
     const product = productOf(order?.mappedProductId || order?.productId);
     const returnInfo = item.noPickup ? "회수 없음" : item.returnTracking ? `${item.returnCarrier || "택배"} ${item.returnTracking}` : "회수 방법 결정 전";
-    return `<tr><td class="order-id">${item.id}<br><small>${escapeHtml(order?.orderDate || item.requestedAt)}</small></td><td><div class="table-product">${productPhoto(product,"table-photo")}<span><button class="supplier-link" data-action="order-detail" data-id="${order?.id}">${order?.id || "-"}</button><strong>${escapeHtml(product?.name || "상품")}</strong><small>${order?.qty || 0}개 · ${escapeHtml(order?.channel || "-")}</small></span></div></td><td><strong>${escapeHtml(order?.recipientName || order?.customer || "-")}</strong><br><small>${escapeHtml(order?.phone || "-")}</small></td><td><strong>${escapeHtml(item.type)}</strong><br><small>${escapeHtml(item.reason)} · ${escapeHtml(returnInfo)}</small></td><td><strong>${money(item.amount)}</strong><br><small>소비자 ${money(item.consumerRefundAmount || item.amount)}</small></td><td><div class="settlement-state"><b>${item.depositCredited ? "두고머니 충전완료" : "두고머니 충전 대기"}</b><small>${item.supplierSettlementOffset ? "공급사 정산 0원" : "공급사 정산 보류"}</small></div></td><td>${statusChip(item.status)}</td><td>${refundActionMarkup(role, item)}</td></tr>`;
+    return `<tr><td class="order-id">${item.id}<br><small>${escapeHtml(order?.orderDate || item.requestedAt)}</small></td><td><div class="table-product">${productPhoto(product,"table-photo")}<span><button class="supplier-link" data-action="order-detail" data-id="${order?.id}">${order?.id || "-"}</button><strong>${escapeHtml(product?.name || "상품")}</strong><small>${order?.qty || 0}개 · ${escapeHtml(order?.channel || "-")}</small></span></div></td><td><strong>${escapeHtml(order?.recipientName || order?.customer || "-")}</strong><br><small>${escapeHtml(order?.phone || "-")}</small></td><td><strong>${escapeHtml(item.type)}</strong><br><small>${escapeHtml(item.reason)} · ${escapeHtml(returnInfo)}</small></td><td><strong>${money(item.amount)}</strong><br><small>소비자 ${money(item.consumerRefundAmount || item.amount)}</small></td><td><div class="settlement-state"><b>${item.depositCredited ? "예치금 충전완료" : "예치금 충전 대기"}</b><small>${item.supplierSettlementOffset ? "공급사 정산 0원" : "공급사 정산 보류"}</small></div></td><td>${statusChip(item.status)}</td><td>${refundActionMarkup(role, item)}</td></tr>`;
   }).join("");
 }
 function refundMobileCards(role, items = filteredRefunds(role)) {
@@ -1792,7 +1794,7 @@ function refundMobileCards(role, items = filteredRefunds(role)) {
   return `<div id="refundMobileResults" class="mobile-refund-list" data-role="${role}">${items.map(item => {
     const order = state.orders.find(order => order.id === item.orderId);
     const product = productOf(order?.mappedProductId || order?.productId);
-    return `<article class="mobile-refund-card"><header><div><b>${escapeHtml(item.id)}</b><small>${escapeHtml(order?.orderDate || item.requestedAt)}</small></div>${statusChip(item.status)}</header><button class="mobile-card-product" data-action="order-detail" data-id="${order?.id}">${productPhoto(product,"table-photo")}<span><small>${escapeHtml(order?.id || "-")} · ${escapeHtml(order?.channel || "-")}</small><strong>${escapeHtml(product?.name || "상품")}</strong><em>${order?.qty || 0}개 · 두고머니 ${money(item.amount)}</em></span></button><dl><div><dt>주문자</dt><dd>${escapeHtml(order?.recipientName || order?.customer || "-")}<small>${escapeHtml(order?.phone || "-")}</small></dd></div><div><dt>소비자 환불액</dt><dd>${money(item.consumerRefundAmount || item.amount)}</dd></div><div><dt>요청 내용</dt><dd>${escapeHtml(item.type)}<small>${escapeHtml(item.reason)}</small></dd></div><div><dt>반품 회수</dt><dd>${item.noPickup ? "회수 없음" : item.returnTracking ? `${escapeHtml(item.returnCarrier || "택배")}<small>${escapeHtml(item.returnTracking)}</small>` : "결정 대기"}</dd></div><div><dt>두고머니</dt><dd>${item.depositCredited ? `${money(item.amount)} 충전완료` : "입고 확인 후 충전"}</dd></div><div><dt>공급사 정산</dt><dd>${item.supplierSettlementOffset ? "0원 · 제외완료" : "정산 보류"}</dd></div></dl><footer>${refundActionMarkup(role, item)}</footer></article>`;
+    return `<article class="mobile-refund-card"><header><div><b>${escapeHtml(item.id)}</b><small>${escapeHtml(order?.orderDate || item.requestedAt)}</small></div>${statusChip(item.status)}</header><button class="mobile-card-product" data-action="order-detail" data-id="${order?.id}">${productPhoto(product,"table-photo")}<span><small>${escapeHtml(order?.id || "-")} · ${escapeHtml(order?.channel || "-")}</small><strong>${escapeHtml(product?.name || "상품")}</strong><em>${order?.qty || 0}개 · 예치금 ${money(item.amount)}</em></span></button><dl><div><dt>주문자</dt><dd>${escapeHtml(order?.recipientName || order?.customer || "-")}<small>${escapeHtml(order?.phone || "-")}</small></dd></div><div><dt>소비자 환불액</dt><dd>${money(item.consumerRefundAmount || item.amount)}</dd></div><div><dt>요청 내용</dt><dd>${escapeHtml(item.type)}<small>${escapeHtml(item.reason)}</small></dd></div><div><dt>반품 회수</dt><dd>${item.noPickup ? "회수 없음" : item.returnTracking ? `${escapeHtml(item.returnCarrier || "택배")}<small>${escapeHtml(item.returnTracking)}</small>` : "결정 대기"}</dd></div><div><dt>예치금</dt><dd>${item.depositCredited ? `${money(item.amount)} 충전완료` : "입고 확인 후 충전"}</dd></div><div><dt>공급사 정산</dt><dd>${item.supplierSettlementOffset ? "0원 · 제외완료" : "정산 보류"}</dd></div></dl><footer>${refundActionMarkup(role, item)}</footer></article>`;
   }).join("")}</div>`;
 }
 function refundTemplate(role) {
@@ -1803,11 +1805,11 @@ function refundTemplate(role) {
   const offset = completed.filter(item => item.supplierSettlementOffset).reduce((sum, item) => sum + item.amount, 0);
   const deposit = role === "seller" ? sellerDeposit() : null;
   const awaitingReceipt = allItems.filter(item => item.status === "공급사 입고확인 대기").length;
-  const summary = role === "seller" ? `<div class="refund-summary-grid"><div class="refund-summary-card primary"><span>사용 가능 두고머니</span><strong>${money(deposit.balance)}</strong><small>상품 결제 또는 계좌 출금 가능</small></div><div class="refund-summary-card"><span>환불 처리중</span><strong>${money(deposit.pending)}</strong><small>입고 확인 전에는 충전 보류</small></div><div class="refund-summary-card"><span>출금 처리중</span><strong>${money(deposit.withdrawalPending)}</strong><small>은행 이체 결과 대기</small></div><div class="refund-summary-card"><span>누적 환불 충전</span><strong>${money(deposit.totalRefunded)}</strong><small>${deposit.transactions.filter(item => item.type === "환불 충전").length}건 환불</small></div></div>` : role === "supplier" ? `<div class="refund-summary-grid"><div class="refund-summary-card primary dark"><span>환불 완료 주문 지급액</span><strong>0원</strong><small>입고 확인 즉시 정산 대상 제외</small></div><div class="refund-summary-card"><span>이번 달 정산 제외</span><strong>-${money(offset)}</strong><small>${completed.length}건 환불 확정</small></div><div class="refund-summary-card"><span>입고 확인 대기</span><strong>${awaitingReceipt}건</strong><small>실물 확인 후 완료 처리</small></div><div class="refund-summary-card"><span>전체 처리 대기</span><strong>${allItems.filter(item => item.status !== "환불완료").length}건</strong><small>농수산물은 회수 없이 승인 가능</small></div></div>` : `<div class="refund-summary-grid"><div class="refund-summary-card primary dark"><span>두고머니 지급 완료</span><strong>${money(completed.reduce((sum,item)=>sum+item.amount,0))}</strong><small>${completed.length}건</small></div><div class="refund-summary-card"><span>공급사 정산 제외</span><strong>${money(offset)}</strong><small>정산지급대행 자동 조정</small></div><div class="refund-summary-card"><span>입고 확인 대기</span><strong>${awaitingReceipt}건</strong><small>공급사 확정 필요</small></div><div class="refund-summary-card"><span>전체 처리중</span><strong>${allItems.filter(item=>item.status!=="환불완료").length}건</strong><small>통합 모니터링</small></div></div>`;
-  const policyMessage = role === "seller" ? "판매채널에서 소비자 환불을 먼저 완료한 뒤 요청하세요. 반품 상품이 공급사에 입고되면 공급대금이 두고머니로 자동 충전됩니다." : role === "supplier" ? "반품 실물을 받은 뒤 ‘반품 입고 확인’을 눌러야 셀러 두고머니 충전과 내 정산 제외가 동시에 확정됩니다." : "입고 확인 또는 회수 없음 승인을 기준으로 두고머니 충전과 공급사 정산 제외가 한 번에 처리됩니다.";
-  return `${sectionHero("취소 · 환불 관리", "소비자 환불, 반품 회수, 공급사 입고 확인, 두고머니 충전까지 하나의 상태로 연결합니다.", role === "seller" ? `<button class="primary-button" data-action="open-doogo-money">두고머니 관리</button>` : "")}${summary}
+  const summary = role === "seller" ? `<div class="refund-summary-grid"><div class="refund-summary-card primary"><span>사용 가능 예치금</span><strong>${money(deposit.balance)}</strong><small>상품 결제 또는 계좌 출금 가능</small></div><div class="refund-summary-card"><span>환불 처리중</span><strong>${money(deposit.pending)}</strong><small>입고 확인 전에는 충전 보류</small></div><div class="refund-summary-card"><span>출금 처리중</span><strong>${money(deposit.withdrawalPending)}</strong><small>은행 이체 결과 대기</small></div><div class="refund-summary-card"><span>누적 환불 충전</span><strong>${money(deposit.totalRefunded)}</strong><small>${deposit.transactions.filter(item => item.type === "환불 충전").length}건 환불</small></div></div>` : role === "supplier" ? `<div class="refund-summary-grid"><div class="refund-summary-card primary dark"><span>환불 완료 주문 지급액</span><strong>0원</strong><small>입고 확인 즉시 정산 대상 제외</small></div><div class="refund-summary-card"><span>이번 달 정산 제외</span><strong>-${money(offset)}</strong><small>${completed.length}건 환불 확정</small></div><div class="refund-summary-card"><span>입고 확인 대기</span><strong>${awaitingReceipt}건</strong><small>실물 확인 후 완료 처리</small></div><div class="refund-summary-card"><span>전체 처리 대기</span><strong>${allItems.filter(item => item.status !== "환불완료").length}건</strong><small>농수산물은 회수 없이 승인 가능</small></div></div>` : `<div class="refund-summary-grid"><div class="refund-summary-card primary dark"><span>예치금 지급 완료</span><strong>${money(completed.reduce((sum,item)=>sum+item.amount,0))}</strong><small>${completed.length}건</small></div><div class="refund-summary-card"><span>공급사 정산 제외</span><strong>${money(offset)}</strong><small>정산지급대행 자동 조정</small></div><div class="refund-summary-card"><span>입고 확인 대기</span><strong>${awaitingReceipt}건</strong><small>공급사 확정 필요</small></div><div class="refund-summary-card"><span>전체 처리중</span><strong>${allItems.filter(item=>item.status!=="환불완료").length}건</strong><small>통합 모니터링</small></div></div>`;
+  const policyMessage = role === "seller" ? "판매채널에서 소비자 환불을 먼저 완료한 뒤 요청하세요. 반품 상품이 공급사에 입고되면 공급대금이 예치금으로 자동 충전됩니다." : role === "supplier" ? "반품 실물을 받은 뒤 ‘반품 입고 확인’을 눌러야 셀러 예치금 충전과 내 정산 제외가 동시에 확정됩니다." : "입고 확인 또는 회수 없음 승인을 기준으로 예치금 충전과 공급사 정산 제외가 한 번에 처리됩니다.";
+  return `${sectionHero("취소 · 환불 관리", "소비자 환불, 반품 회수, 공급사 입고 확인, 예치금 충전까지 하나의 상태로 연결합니다.", role === "seller" ? `<button class="primary-button" data-action="open-doogo-money">예치금 관리</button>` : "")}${summary}
     <div class="refund-policy-callout panel"><span>안전한 환불 기준</span><b>${policyMessage}</b><small>위탁셀러는 환불을 요청하고, 환불 확정 권한은 공급사의 입고 확인 또는 회수 없음 승인에만 부여됩니다.</small></div>
-    <div class="refund-flow refund-flow-five panel"><div class="refund-step done"><b>1</b><span>소비자 환불<small>판매채널에서 처리</small></span></div><i></i><div class="refund-step done"><b>2</b><span>셀러 요청<small>증빙·사유 접수</small></span></div><i></i><div class="refund-step active"><b>3</b><span>공급사 판단<small>회수·미회수·협의</small></span></div><i></i><div class="refund-step"><b>4</b><span>입고 확인<small>택배 도착·실물 확인</small></span></div><i></i><div class="refund-step"><b>5</b><span>자동 정산<small>두고머니 충전·지급 0원</small></span></div></div>
+    <div class="refund-flow refund-flow-five panel"><div class="refund-step done"><b>1</b><span>소비자 환불<small>판매채널에서 처리</small></span></div><i></i><div class="refund-step done"><b>2</b><span>셀러 요청<small>증빙·사유 접수</small></span></div><i></i><div class="refund-step active"><b>3</b><span>공급사 판단<small>회수·미회수·협의</small></span></div><i></i><div class="refund-step"><b>4</b><span>입고 확인<small>택배 도착·실물 확인</small></span></div><i></i><div class="refund-step"><b>5</b><span>자동 정산<small>예치금 충전·지급 0원</small></span></div></div>
     <div class="refund-type-tabs panel" role="tablist" aria-label="취소·반품·교환 구분">
       <button type="button" class="${refundTypeFilter === "all" ? "active" : ""}" data-action="refund-type-filter" data-type="all"><span>전체</span><b>${typeCounts.all}</b></button>
       <button type="button" class="${refundTypeFilter === "주문 취소" ? "active" : ""}" data-action="refund-type-filter" data-type="주문 취소"><span>취소</span><b>${typeCounts["주문 취소"]}</b></button>
@@ -1815,7 +1817,7 @@ function refundTemplate(role) {
       <button type="button" class="${refundTypeFilter === "교환" ? "active" : ""}" data-action="refund-type-filter" data-type="교환"><span>교환</span><b>${typeCounts["교환"]}</b></button>
     </div>
     <div class="refund-filter-panel panel"><label><span>월별 조회</span><select id="refundMonthSelect"><option value="all" ${refundMonth === "all" ? "selected" : ""}>전체 기간</option><option value="2026-09" ${refundMonth === "2026-09" ? "selected" : ""}>2026년 9월</option><option value="2026-08" ${refundMonth === "2026-08" ? "selected" : ""}>2026년 8월</option></select></label><label class="refund-search"><span>빠른 검색</span><input id="refundSearch" value="${escapeHtml(refundSearch)}" placeholder="주문번호·상품·주문자명·연락처"></label><button class="secondary-button" data-action="clear-refund-filter">검색 초기화</button><em id="refundResultCount">${items.length}건</em></div>
-    <div class="panel"><div class="panel-head"><div><h3>${role === "master" ? "전체 환불 요청" : "환불 요청 목록"}</h3><p>소비자 환불액과 공급대금 두고머니를 분리해 처리 상태를 관리합니다.</p></div><span class="chip orange">${allItems.filter(item => item.status !== "환불완료").length}건 처리중</span></div><div class="table-wrap refund-desktop-table"><table><thead><tr><th>요청번호</th><th>주문/상품</th><th>주문자</th><th>유형·사유</th><th>두고머니</th><th>두고머니/정산</th><th>상태</th><th>처리</th></tr></thead><tbody id="refundResults" data-role="${role}">${refundRows(role, items)}</tbody></table></div>${refundMobileCards(role, items)}</div>`;
+    <div class="panel"><div class="panel-head"><div><h3>${role === "master" ? "전체 환불 요청" : "환불 요청 목록"}</h3><p>소비자 환불액과 공급대금 예치금을 분리해 처리 상태를 관리합니다.</p></div><span class="chip orange">${allItems.filter(item => item.status !== "환불완료").length}건 처리중</span></div><div class="table-wrap refund-desktop-table"><table><thead><tr><th>요청번호</th><th>주문/상품</th><th>주문자</th><th>유형·사유</th><th>예치금</th><th>예치금/정산</th><th>상태</th><th>처리</th></tr></thead><tbody id="refundResults" data-role="${role}">${refundRows(role, items)}</tbody></table></div>${refundMobileCards(role, items)}</div>`;
 }
 
 const sellerOrderStages = [
@@ -1971,10 +1973,24 @@ function myProductCard(item, stage) {
     : `<button type="button" class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">✎ 상품 수정</button><button type="button" class="primary-button send-product-button" data-action="manage-product-channels" data-id="${item.id}">${live.length ? "쇼핑몰 추가 전송" : "상품 전송 →"}</button>`;
   return `<article class="my-product-card ${stage}" data-item="${item.id}">
     <div class="my-product-top">${sellerItemThumb(item, product, "my-product-photo")}<div class="my-product-info"><small>${escapeHtml(product?.supplier || "공급사")} · 원본 ${escapeHtml(item.productId)}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong><div class="my-product-meta">${status}${hasOptions(product) ? `<span class="option-pill">${escapeHtml(sellerItemOptionSummary(item, product))}</span>` : ""}</div></div></div>
+    ${stage === "master" ? myProductCategoryLine(item, product) : ""}
     <dl class="my-product-prices"><div><dt>공급가</dt><dd>${productPriceLabel(product)}</dd></div><div><dt>내 판매가</dt><dd>${sellerItemPriceLabel(item, product)}</dd></div><div><dt>마진</dt><dd class="profit-text">${sellerItemMarginLabel(item, product)}</dd></div></dl>
     ${checklist}<div class="my-product-actions">${actions}</div>
   </article>`;
 }
+/* 마스터 상품 카드: 쇼핑몰별로 어떤 카테고리로 올라가는지(판매중인지) 보여 준다. */
+function myProductCategoryLine(item, product) {
+  const live = liveChannelIds(item);
+  const channels = sellerChannels().filter(channel => channel.status === "connected" || live.includes(channel.id));
+  const naver = channelCategoryFor(item, "smartstore", product).path;
+  const rows = channels.map(channel => {
+    const detail = item.channelDetails?.[channel.id];
+    const path = live.includes(channel.id) && detail?.category ? detail.category : channelCategoryFor(item, channel.id, product).path;
+    return `<li>${channelMark(channel.id, true)}<span>${escapeHtml(path)}</span>${live.includes(channel.id) ? `<em>판매중</em>` : ""}</li>`;
+  }).join("");
+  return `<div class="my-product-category"><div class="my-cat-main"><span>카테고리</span><b title="${escapeHtml(naver)}">${escapeHtml(naver)}</b></div>${rows ? `<ul class="my-cat-channels">${rows}</ul>` : ""}</div>`;
+}
+let masterProductView = (() => { try { return localStorage.getItem("doogo-master-view") || "grid"; } catch { return "grid"; } })();
 function sellerReadyProductsTemplate() {
   const items = sellerReadyProducts();
   return `${sectionHero("승인 완료", "공급사가 승인해서 이제 ‘내 상품’이 됐어요. 상품명·대표 사진·상세페이지·옵션 가격을 내 스타일로 꾸민 뒤 ‘마스터 상품 등록’을 눌러 주세요.")}
@@ -1990,8 +2006,8 @@ function sellerApprovedProductsTemplate() {
   return `${sectionHero("마스터 상품", "내 상품으로 등록된 목록이에요. ‘상품 전송’을 누르면 쿠팡·스마트스토어에 옵션까지 그대로 한 번에 등록됩니다.")}
     ${productStageTabs("마스터 상품")}
     ${waiting.length ? `<div class="mapping-callout"><div><b>전송을 기다리는 상품 ${waiting.length}개</b><span>‘상품 전송’ 한 번이면 연동된 쇼핑몰에 옵션까지 그대로 올라가요.</span></div></div>` : ""}
-    <div class="panel"><div class="panel-head"><div><h3>내 마스터 상품</h3><p>전송을 마친 상품은 ‘판매중 상품’에서 쇼핑몰별 현황을 볼 수 있어요.</p></div><span class="chip">${items.length}개</span></div>
-    ${items.length ? `<div class="my-product-list">${[...waiting, ...live].map(item => myProductCard(item, "master")).join("")}</div>` : `<div class="empty mapping-empty"><b>아직 마스터 상품이 없어요.</b><span>‘승인 완료’에서 상품을 꾸민 뒤 등록하면 여기에 들어와요.</span><button type="button" class="primary-button" data-action="go-menu" data-menu="승인 완료">승인 완료 보기</button></div>`}
+    <div class="panel"><div class="panel-head master-list-head"><div><h3>내 마스터 상품 <span class="chip">${items.length}개</span></h3><p>전송을 마친 상품은 ‘판매중 상품’에서 쇼핑몰별 현황을 볼 수 있어요.</p></div><div class="view-toggle" role="group" aria-label="보기 방식"><button type="button" class="${masterProductView === "grid" ? "active" : ""}" data-action="master-view" data-view="grid" aria-pressed="${masterProductView === "grid"}"><span aria-hidden="true">▦</span> 바둑판</button><button type="button" class="${masterProductView === "list" ? "active" : ""}" data-action="master-view" data-view="list" aria-pressed="${masterProductView === "list"}"><span aria-hidden="true">☰</span> 가로형</button></div></div>
+    ${items.length ? `<div class="my-product-list view-${masterProductView}">${[...waiting, ...live].map(item => myProductCard(item, "master")).join("")}</div>` : `<div class="empty mapping-empty"><b>아직 마스터 상품이 없어요.</b><span>‘승인 완료’에서 상품을 꾸민 뒤 등록하면 여기에 들어와요.</span><button type="button" class="primary-button" data-action="go-menu" data-menu="승인 완료">승인 완료 보기</button></div>`}
     </div>`;
 }
 function onSalePagination(totalPages) {
@@ -2332,8 +2348,8 @@ function renderSeller() {
     "order-flow": `<section class="panel home-section"><div class="home-section-head"><div><h3>주문·배송 현황</h3><p>숫자를 누르면 해당 주문만 볼 수 있어요.</p></div><button type="button" class="secondary-button" data-action="open-orders">주문 관리 →</button></div>
       <div class="home-orders">${orderStep("mapping-payment", "처리 필요", mappingRequired.length + paymentRequired.length, "연결·결제 대기", "red")}${orderStep("ordered", "공급사 준비중", countStatus("주문접수", "발주완료", "배송준비중"), "포장·출고 준비", "orange")}${orderStep("shipping", "배송중", countStatus("배송중"), "송장 자동 입력됨", "blue")}${orderStep("delivered", "배송완료", countStatus("배송완료"), "고객 수령", "green")}</div>
     </section>`,
-    money: `<section class="panel home-section"><div class="home-section-head"><div><h3>두고머니·매출</h3><p>9월 누적 기준이에요.</p></div></div>
-      <div class="home-money"><button type="button" data-action="go-seller-menu" data-index="12"><span>사용 가능 두고머니</span><strong>${money(deposit.balance)}</strong><small>주문 결제에 사용</small></button><button type="button" data-action="open-sales-calendar"><span>이번 달 매출</span><strong>${money(salesTotal)}</strong><small>매출 달력 보기</small></button><button type="button" data-action="open-sales-calendar"><span>예상 순수익</span><strong class="profit">${money(profitTotal)}</strong><small>공급가 차감 기준</small></button></div>
+    money: `<section class="panel home-section"><div class="home-section-head"><div><h3>예치금·매출</h3><p>9월 누적 기준이에요.</p></div></div>
+      <div class="home-money"><button type="button" data-action="go-seller-menu" data-index="12"><span>사용 가능 예치금</span><strong>${money(deposit.balance)}</strong><small>주문 결제에 사용</small></button><button type="button" data-action="open-sales-calendar"><span>이번 달 매출</span><strong>${money(salesTotal)}</strong><small>매출 달력 보기</small></button><button type="button" data-action="open-sales-calendar"><span>예상 순수익</span><strong class="profit">${money(profitTotal)}</strong><small>공급가 차감 기준</small></button></div>
     </section>`,
     notices: `<section class="panel home-section dashboard-notices"><div class="home-section-head"><div><h3>공지사항</h3></div><button class="text-button" data-action="open-notices">전체보기 →</button></div><div class="notice-list">${(state.notices || []).slice(0, 3).map(n => `<button data-action="open-notice-detail" data-id="${n.id}"><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></button>`).join("")}</div></section>`
   };
@@ -2564,7 +2580,7 @@ function membersTable() {
   const members = [...state.members].filter(member => member.role !== "master").sort((a, b) => (order[a.status] ?? 4) - (order[b.status] ?? 4));
   return `<div class="table-wrap"><table class="member-table"><thead><tr><th>신청자</th><th>가입 유형</th><th>사업자 정보</th><th>신청일</th><th>상태</th><th>처리</th></tr></thead><tbody>
     ${members.map(member => `<tr>
-      <td><strong>${escapeHtml(member.company || member.kakaoNickname || member.loginId)}</strong>${member.kakaoId ? ` <span class="kakao-badge">카카오</span>` : ""}<br><small>${escapeHtml(member.representative || "사업자 정보 입력 전")} · ${escapeHtml(member.loginId)}</small></td>
+      <td><strong>${escapeHtml(member.company || member.kakaoNickname || member.loginId)}</strong>${member.kakaoId ? ` <span class="kakao-badge">카카오</span>` : ""}${member.autoApproved ? ` <span class="auto-join-badge">자동 가입</span>` : ""}<br><small>${escapeHtml(member.representative || "사업자 정보 입력 전")} · ${escapeHtml(member.loginId)}</small></td>
       <td><span class="member-role ${member.role}">${member.roleLabel}</span></td>
       <td>${escapeHtml(member.businessNo)}<br><small>${escapeHtml(member.contact)}</small></td>
       <td>${escapeHtml(member.appliedAt)}</td>
@@ -2841,7 +2857,8 @@ function editSellerProductModal(sellerProductId) {
   const source = item && productOf(item.productId);
   if (!item || !source) return;
   const stage = sellerItemStage(item);
-  studioDraft = { itemId: item.id, tags: [...itemTags(item, source)], thumbnail: item.customThumbnail || "", blocks: JSON.parse(JSON.stringify(item.detailBlocks?.length ? item.detailBlocks : defaultDetailBlocks(source, item))), detailTouched: false };
+  studioDraft = { itemId: item.id, channelCategories: JSON.parse(JSON.stringify(item.channelCategories || {})), tags: [...itemTags(item, source)], thumbnail: item.customThumbnail || "", blocks: JSON.parse(JSON.stringify(item.detailBlocks?.length ? item.detailBlocks : defaultDetailBlocks(source, item))), detailTouched: false };
+  setTimeout(refreshStudioCategory, 0);
   const title = sellerProductTitle(item, source);
   const categoryPath = [item.sellerCategoryGroup || source.categoryGroup || "", item.sellerCategory || source.category || "", item.sellerCategorySub || source.categorySub || "", item.sellerCategoryDetail || source.categoryDetail || ""];
   const live = liveChannelIds(item);
@@ -2867,9 +2884,7 @@ function editSellerProductModal(sellerProductId) {
         <div id="studioBlocks" class="studio-blocks">${studioBlocksMarkup(source)}</div>
         <div class="studio-block-add"><button type="button" data-action="studio-add-text">＋ 글 추가</button><label class="studio-upload"><input type="file" id="studioBlockImageInput" accept="image/*" hidden>＋ 사진 추가</label><button type="button" class="studio-ghost" data-action="studio-reset-detail">공급사 원본으로</button></div>
       </section>
-      <section id="studio-category" class="studio-section"><h3><i>5</i> 카테고리 <small>네이버쇼핑 기준</small></h3><p>쇼핑몰에 등록될 카테고리예요. 공급사가 정한 카테고리로 미리 채워 두었어요.</p>
-        <div class="category-select-pair category-select-quad">${categorySelectTag("sellerCategoryGroup", 1, categoryPath)}${categorySelectTag("sellerCategory", 2, categoryPath)}${categorySelectTag("sellerCategorySub", 3, categoryPath)}${categorySelectTag("sellerCategoryDetail", 4, categoryPath)}</div>
-      </section>
+      ${studioCategorySection(item, source, categoryPath)}
       <section id="studio-tags" class="studio-section"><h3><i>6</i> 검색 태그 <small>네이버 태그 · 최대 10개</small></h3><p>손님이 검색할 단어를 넣으면 쇼핑몰 검색에 더 잘 걸려요.</p>
         <div id="studioTags" class="tag-chips">${studioTagChips()}</div>
         <div class="tag-input-row"><input id="studioTagInput" placeholder="예: 제주감귤" maxlength="20" autocomplete="off" enterkeyhint="done"><button type="button" class="secondary-button" data-action="studio-add-tag">추가</button></div>
@@ -2992,8 +3007,8 @@ function orderPaymentModal(orderId) {
   openModal(`<div class="payment-modal-head"><span>SUPPLY PAYMENT</span><h2>공급가 결제</h2><p>결제가 완료되면 ${escapeHtml(product.supplier)} 공급사의 신규주문으로 즉시 전달됩니다.</p></div>
     <div class="payment-order-card">${productPhoto(product,"order-detail-photo")}<div><small>${escapeHtml(product.id)} · 불변 상품코드</small><b>${escapeHtml(product.name)}</b>${orderOptionTag(order)}<span>${order.qty}개 · 공급가 합계 ${money(supplyTotal)}</span></div></div>
     <form id="orderPaymentForm" class="payment-method-form" data-id="${order.id}">
-      <label class="payment-method-option"><input type="radio" name="paymentMethod" value="deposit" checked><span><b>두고머니 결제</b><small>현재 잔액 ${money(deposit.balance)}</small></span><strong>${deposit.balance >= supplyTotal ? "결제 가능" : "잔액 부족"}</strong></label>
-      <label class="payment-method-option"><input type="radio" name="paymentMethod" value="card"><span><b>신용카드 결제</b><small>카드정보를 받지 않는 데모 승인</small></span><strong>데모</strong></label>
+      <label class="payment-method-option"><input type="radio" name="paymentMethod" value="deposit" ${deposit.balance >= supplyTotal ? "checked" : ""}><span><b>예치금 결제</b><small>현재 잔액 ${money(deposit.balance)}${deposit.balance < supplyTotal ? ` · ${money(supplyTotal - deposit.balance)} 부족` : ` · 결제 후 ${money(deposit.balance - supplyTotal)}`}</small></span><strong>${deposit.balance >= supplyTotal ? "결제 가능" : "잔액 부족"}</strong></label>${deposit.balance < supplyTotal ? `<button type="button" class="text-button payment-charge-link" data-action="deposit-view" data-view="charge">예치금 충전하러 가기 →</button>` : ""}
+      <label class="payment-method-option"><input type="radio" name="paymentMethod" value="card" ${deposit.balance < supplyTotal ? "checked" : ""}><span><b>신용카드 결제</b><small>예치금 없이 카드로 바로 결제 (데모 승인)</small></span><strong>카드</strong></label>
       ${productNeedsCustoms(product) ? `<div class="payment-customs"><b>해외직구 상품이라 개인통관고유부호가 필요해요.</b>${customsInputMarkup(order.personalCustomsCode || "")}</div>` : ""}
       <div class="payment-total"><span>공급가 결제금액</span><strong>${money(supplyTotal)}</strong></div>
       <div class="api-safe-notice"><b>데모 결제 안내</b><span>실제 카드 승인이나 외부 PG 호출 없이 주문 전달 흐름만 검증합니다.</span></div>
@@ -3137,7 +3152,7 @@ function orderDetailModal(orderId) {
       const netProfit = order.amount - supplyTotal;
       return `<section class="order-detail-section"><h3>수익 정보</h3><div class="mapping-detail-grid order-profit-grid"><div><span>공급가 결제</span><b>${money(supplyTotal)}</b></div><div><span>판매채널</span><b>${escapeHtml(order.channel)}</b></div><div><span>마진</span><b>${marginPct}%</b></div><div><span>순이익</span><b class="profit-positive">${money(netProfit)}</b></div></div></section>`;
     })() : ""}
-    <section class="order-detail-section"><h3>상품 매핑·결제·발주</h3><div class="mapping-detail-grid"><div><span>외부몰 상품명</span><b>${escapeHtml(order.externalProductName || orderSellerTitle(order))}</b></div><div><span>공급사 원본코드</span><b>${mapped ? escapeHtml(order.mappedProductId || order.productId) : "매핑 전"}</b></div><div><span>공급가 결제</span><b>${paid ? `결제 완료 · ${escapeHtml(order.paymentMethod === "deposit" ? "두고머니" : order.paymentMethod === "card" ? "신용카드 데모" : "기존 주문")}` : "결제 대기"}</b></div><div><span>공급사 발주</span><b>${order.supplierLoginId ? `${escapeHtml(order.supplierOrderId || "발주번호 생성")} · ${escapeHtml(order.forwardedAt || "전달 완료")}` : paid ? "위탁셀러 발주 대기" : "결제 후 발주 가능"}</b></div></div></section>
+    <section class="order-detail-section"><h3>상품 매핑·결제·발주</h3><div class="mapping-detail-grid"><div><span>외부몰 상품명</span><b>${escapeHtml(order.externalProductName || orderSellerTitle(order))}</b></div><div><span>공급사 원본코드</span><b>${mapped ? escapeHtml(order.mappedProductId || order.productId) : "매핑 전"}</b></div><div><span>공급가 결제</span><b>${paid ? `결제 완료 · ${escapeHtml(order.paymentMethod === "deposit" ? "예치금" : order.paymentMethod === "card" ? "신용카드 데모" : "기존 주문")}` : "결제 대기"}</b></div><div><span>공급사 발주</span><b>${order.supplierLoginId ? `${escapeHtml(order.supplierOrderId || "발주번호 생성")} · ${escapeHtml(order.forwardedAt || "전달 완료")}` : paid ? "위탁셀러 발주 대기" : "결제 후 발주 가능"}</b></div></div></section>
     <details class="order-detail-section order-recipient-details"><summary><h3>수취인·배송 정보</h3><i>⌄</i></summary><div class="member-detail-grid"><div><span>성함</span><b>${escapeHtml(order.recipientName || order.customer)}</b></div><div><span>연락처</span><b>${escapeHtml(order.phone || "-")}</b></div><div class="full"><span>주소</span><b>(${escapeHtml(order.postalCode || "-")}) ${escapeHtml(order.address || "-")} ${escapeHtml(order.addressDetail || "")}</b></div><div class="full"><span>배송 메시지</span><b>${escapeHtml(order.deliveryMessage || "없음")}</b></div>${order.shippingType === "overseas" ? `<div class="full customs-field ${isValidCustomsCode(order.personalCustomsCode) ? "" : "missing"}"><span>개인통관고유부호</span><b>${escapeHtml(order.personalCustomsCode || "미입력 · 결제할 때 입력해 주세요")}</b></div>` : ""}</div></details>
     <section class="order-detail-section"><h3>송장·판매채널 전송</h3><div class="tracking-summary"><span>${order.tracking ? "송장 반영 완료" : order.status === "배송준비중" ? "공급사 송장 입력 대기" : order.supplierLoginId ? "공급사 주문 확인 대기" : "공급사 발주 전"}</span><b>${order.tracking ? `${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)}` : "아직 송장번호가 없습니다."}</b></div>${trackingStatuses.length ? `<div class="tracking-channel-statuses">${trackingStatuses.map(([channelId,status]) => `<div>${channelMark(channelId,true)}<span>${escapeHtml(channelMeta(channelId).name)}</span><b class="${isTrackingPending(status) ? "pending" : ""}">${escapeHtml(trackingStatusLabel(status))}${status === "10분 자동전송 대기" ? ` · ${escapeHtml(trackingSlotLabel(order.trackingAutoDueAt))}` : ""}</b></div>`).join("")}</div>${activeRole === "seller" && orderNeedsTrackingPush(order) ? `<button type="button" class="primary-button tracking-push-cta" data-action="push-tracking" data-id="${order.id}">${orderWaitsAutoTracking(order) ? `기다리지 않고 지금 보내기` : "쇼핑몰에 송장 보내기"}</button>` : ""}` : `<div class="channel-sync-empty">송장이 입력되면 주문이 들어온 쇼핑몰로 보낼 준비가 됩니다.</div>`}</section>
     <div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button>${activeRole === "seller" ? sellerPrimary : activeRole === "supplier" ? supplierPrimary : ""}${activeRole === "seller" && !refund && !["배송완료", "환불완료"].includes(order.status) ? `<button class="refund-button" data-action="request-refund" data-id="${order.id}">취소·환불 요청</button>` : ""}</div>`);
@@ -3149,7 +3164,7 @@ function refundRequestModal(orderId) {
   const product = productOf(order?.mappedProductId || order?.productId);
   if (!order) return;
   const supplyRefundAmount = orderUnitSupply(order, product) * Number(order.qty || 1);
-  openModal(`<div class="refund-request-head"><span>SELLER REFUND REQUEST</span><h2>취소 · 환불 요청</h2><p>${order.id} · ${escapeHtml(product?.name || "상품")}</p></div><form id="refundRequestForm" class="form-grid" data-id="${order.id}"><div class="form-field"><label>요청 유형</label><select name="type"><option>반품</option><option>주문 취소</option><option>교환</option></select></div><div class="form-field"><label>소비자 환불액</label><input name="consumerRefundAmount" type="number" value="${order.amount}" readonly><small>판매채널에서 소비자에게 돌려준 주문 금액</small></div><div class="form-field full money-refund-field"><label>두고머니 환급 예정액</label><input name="amount" type="number" value="${supplyRefundAmount}" readonly><small>공급가 ${money(orderUnitSupply(order, product))}${order.optionName ? ` (${escapeHtml(order.optionName)})` : ""} × ${order.qty || 1}개 기준이며, 공급사 확정 후 충전됩니다.</small></div><div class="form-field full"><label>사유</label><select name="reason"><option>상품 파손</option><option>오배송</option><option>단순 변심</option><option>배송 지연</option></select></div><div class="form-field full"><label>상세 내용</label><textarea name="detail" rows="4" placeholder="상품 상태와 소비자 요청 내용을 구체적으로 입력해 주세요." required>소비자 환불 처리를 완료했습니다. 상품 상태 확인이 필요합니다.</textarea></div><label class="consumer-refund-confirm full"><input type="checkbox" name="consumerRefunded" required><span><b>판매채널에서 소비자 환불을 완료했습니다.</b><small>소비자 결제 환불은 판매채널에서 먼저 처리하고, 두고에서는 공급대금만 두고머니로 복구합니다.</small></span></label><div class="refund-rule-preview full"><div><b>반품 회수 건</b><span>택배 도착 → 공급사 입고 확인 → 두고머니 자동 충전</span></div><div><b>회수하지 않는 건</b><span>공급사 승인 → 두고머니 자동 충전</span></div></div><div class="api-safe-notice full"><b>정산 안전장치</b><span>위탁셀러가 임의로 환불완료 처리할 수 없으며, 확정 시 공급사 정산도 자동으로 0원 처리됩니다.</span></div><div class="modal-actions full"><button class="secondary-button" data-close-modal>취소</button><button class="refund-button" type="submit">공급사 확인 요청</button></div></form>`);
+  openModal(`<div class="refund-request-head"><span>SELLER REFUND REQUEST</span><h2>취소 · 환불 요청</h2><p>${order.id} · ${escapeHtml(product?.name || "상품")}</p></div><form id="refundRequestForm" class="form-grid" data-id="${order.id}"><div class="form-field"><label>요청 유형</label><select name="type"><option>반품</option><option>주문 취소</option><option>교환</option></select></div><div class="form-field"><label>소비자 환불액</label><input name="consumerRefundAmount" type="number" value="${order.amount}" readonly><small>판매채널에서 소비자에게 돌려준 주문 금액</small></div><div class="form-field full money-refund-field"><label>예치금 환급 예정액</label><input name="amount" type="number" value="${supplyRefundAmount}" readonly><small>공급가 ${money(orderUnitSupply(order, product))}${order.optionName ? ` (${escapeHtml(order.optionName)})` : ""} × ${order.qty || 1}개 기준이며, 공급사 확정 후 충전됩니다.</small></div><div class="form-field full"><label>사유</label><select name="reason"><option>상품 파손</option><option>오배송</option><option>단순 변심</option><option>배송 지연</option></select></div><div class="form-field full"><label>상세 내용</label><textarea name="detail" rows="4" placeholder="상품 상태와 소비자 요청 내용을 구체적으로 입력해 주세요." required>소비자 환불 처리를 완료했습니다. 상품 상태 확인이 필요합니다.</textarea></div><label class="consumer-refund-confirm full"><input type="checkbox" name="consumerRefunded" required><span><b>판매채널에서 소비자 환불을 완료했습니다.</b><small>소비자 결제 환불은 판매채널에서 먼저 처리하고, 두고에서는 공급대금만 예치금으로 복구합니다.</small></span></label><div class="refund-rule-preview full"><div><b>반품 회수 건</b><span>택배 도착 → 공급사 입고 확인 → 예치금 자동 충전</span></div><div><b>회수하지 않는 건</b><span>공급사 승인 → 예치금 자동 충전</span></div></div><div class="api-safe-notice full"><b>정산 안전장치</b><span>위탁셀러가 임의로 환불완료 처리할 수 없으며, 확정 시 공급사 정산도 자동으로 0원 처리됩니다.</span></div><div class="modal-actions full"><button class="secondary-button" data-close-modal>취소</button><button class="refund-button" type="submit">공급사 확인 요청</button></div></form>`);
 }
 
 function refundProgressIndex(refund) {
@@ -3169,8 +3184,8 @@ function refundDetailModal(refundId) {
   const customer = order?.recipientName || order?.customer || "-";
   const progress = refundProgressIndex(refund);
   const returnMethod = refund.noPickup ? "공급사 승인 · 회수 없음" : refund.returnTracking ? `${refund.returnCarrier || "택배"} ${refund.returnTracking}` : "공급사 확인 후 결정";
-  const steps = [["소비자 환불", refund.consumerRefundedAt || "완료"], ["두고 요청", refund.requestedAt || "접수"], ["회수·협의", refund.noPickup ? "회수 없음 승인" : refund.returnRequestedAt || refund.status], ["공급사 입고 확인", refund.supplierReceivedAt || (refund.returnDeliveredAt ? "택배 도착 · 확인 대기" : "대기")], ["두고머니·정산 확정", refund.completedAt || "대기"]];
-  openModal(`<div class="refund-detail-head"><span>REFUND DETAIL</span><h2>${refund.id}</h2><p>${statusChip(refund.status)} · 주문 ${refund.orderId}</p></div><div class="refund-product-summary">${productPhoto(product,"order-detail-photo")}<div><b>${escapeHtml(product?.name || "상품")}</b><span>${order?.qty || 1}개 · 소비자 환불 ${money(refund.consumerRefundAmount || refund.amount)}</span><small>두고머니 ${money(refund.amount)} · ${escapeHtml(order?.channel || "판매채널 미확인")} · 주문일 ${escapeHtml(order?.orderDate || order?.createdAt || "-")}</small></div></div>${refund.consultationNote ? `<div class="refund-consult-note"><b>공급사 협의 요청</b><span>${escapeHtml(refund.consultationNote)}</span><button class="text-button" data-action="open-refund-chat" data-id="${refund.id}">두고톡에서 협의하기 →</button></div>` : ""}<div class="member-detail-grid refund-detail-grid"><div><span>주문자명</span><b>${escapeHtml(customer)}</b></div><div><span>연락처</span><b>${escapeHtml(order?.phone || "-")}</b></div><div><span>소비자 환불</span><b>${money(refund.consumerRefundAmount || refund.amount)} · ${refund.consumerRefunded ? `처리 완료 ${escapeHtml(refund.consumerRefundedAt || "-")}` : "미확인"}</b></div><div><span>두고머니 환급</span><b>${completed ? `${money(refund.amount)} 충전완료` : `${money(refund.amount)} 충전 대기`}</b></div><div><span>요청 유형</span><b>${escapeHtml(refund.type)}</b></div><div><span>요청 사유</span><b>${escapeHtml(refund.reason)}</b></div><div><span>회수 방식</span><b>${escapeHtml(returnMethod)}</b></div><div><span>공급사 정산</span><b>${completed ? "지급 대상 제외 · 0원" : "확정 전 보류"}</b></div><div class="full"><span>상세 내용</span><b>${escapeHtml(refund.detail)}</b></div><div class="full"><span>반품 회수지</span><b>${refund.noPickup ? "회수하지 않음" : escapeHtml(order ? `(${order.postalCode || "-"}) ${order.address || ""} ${order.addressDetail || ""}` : "-")}</b></div></div>${refund.returnTracking ? `<div class="return-tracking-box"><span>반품 송장</span><b>${escapeHtml(refund.returnCarrier || "택배사")} ${escapeHtml(refund.returnTracking)}</b><small>${refund.returnDeliveredAt ? `택배 도착 ${escapeHtml(refund.returnDeliveredAt)} · 공급사 입고 확인 ${refund.supplierReceived ? "완료" : "대기"}` : "반품 회수중"}</small></div>` : ""}<div class="refund-timeline refund-timeline-five">${steps.map(([label,time], index) => { const step = index + 1; const stepClass = completed || progress > step ? "done" : progress === step ? "active" : ""; return `<div class="${stepClass}"><i></i><b>${label}</b><span>${escapeHtml(time)}</span></div>`; }).join("")}</div><div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button>${activeRole === "supplier" && refund.status === "공급사 입고확인 대기" ? `<button class="primary-button" data-action="confirm-return-receipt" data-id="${refund.id}">반품 입고 확인</button>` : ""}${refund.status === "협의 필요" ? `<button class="primary-button" data-action="open-refund-chat" data-id="${refund.id}">두고톡 협의</button>` : ""}</div>`);
+  const steps = [["소비자 환불", refund.consumerRefundedAt || "완료"], ["두고 요청", refund.requestedAt || "접수"], ["회수·협의", refund.noPickup ? "회수 없음 승인" : refund.returnRequestedAt || refund.status], ["공급사 입고 확인", refund.supplierReceivedAt || (refund.returnDeliveredAt ? "택배 도착 · 확인 대기" : "대기")], ["예치금·정산 확정", refund.completedAt || "대기"]];
+  openModal(`<div class="refund-detail-head"><span>REFUND DETAIL</span><h2>${refund.id}</h2><p>${statusChip(refund.status)} · 주문 ${refund.orderId}</p></div><div class="refund-product-summary">${productPhoto(product,"order-detail-photo")}<div><b>${escapeHtml(product?.name || "상품")}</b><span>${order?.qty || 1}개 · 소비자 환불 ${money(refund.consumerRefundAmount || refund.amount)}</span><small>예치금 ${money(refund.amount)} · ${escapeHtml(order?.channel || "판매채널 미확인")} · 주문일 ${escapeHtml(order?.orderDate || order?.createdAt || "-")}</small></div></div>${refund.consultationNote ? `<div class="refund-consult-note"><b>공급사 협의 요청</b><span>${escapeHtml(refund.consultationNote)}</span><button class="text-button" data-action="open-refund-chat" data-id="${refund.id}">두고톡에서 협의하기 →</button></div>` : ""}<div class="member-detail-grid refund-detail-grid"><div><span>주문자명</span><b>${escapeHtml(customer)}</b></div><div><span>연락처</span><b>${escapeHtml(order?.phone || "-")}</b></div><div><span>소비자 환불</span><b>${money(refund.consumerRefundAmount || refund.amount)} · ${refund.consumerRefunded ? `처리 완료 ${escapeHtml(refund.consumerRefundedAt || "-")}` : "미확인"}</b></div><div><span>예치금 환급</span><b>${completed ? `${money(refund.amount)} 충전완료` : `${money(refund.amount)} 충전 대기`}</b></div><div><span>요청 유형</span><b>${escapeHtml(refund.type)}</b></div><div><span>요청 사유</span><b>${escapeHtml(refund.reason)}</b></div><div><span>회수 방식</span><b>${escapeHtml(returnMethod)}</b></div><div><span>공급사 정산</span><b>${completed ? "지급 대상 제외 · 0원" : "확정 전 보류"}</b></div><div class="full"><span>상세 내용</span><b>${escapeHtml(refund.detail)}</b></div><div class="full"><span>반품 회수지</span><b>${refund.noPickup ? "회수하지 않음" : escapeHtml(order ? `(${order.postalCode || "-"}) ${order.address || ""} ${order.addressDetail || ""}` : "-")}</b></div></div>${refund.returnTracking ? `<div class="return-tracking-box"><span>반품 송장</span><b>${escapeHtml(refund.returnCarrier || "택배사")} ${escapeHtml(refund.returnTracking)}</b><small>${refund.returnDeliveredAt ? `택배 도착 ${escapeHtml(refund.returnDeliveredAt)} · 공급사 입고 확인 ${refund.supplierReceived ? "완료" : "대기"}` : "반품 회수중"}</small></div>` : ""}<div class="refund-timeline refund-timeline-five">${steps.map(([label,time], index) => { const step = index + 1; const stepClass = completed || progress > step ? "done" : progress === step ? "active" : ""; return `<div class="${stepClass}"><i></i><b>${label}</b><span>${escapeHtml(time)}</span></div>`; }).join("")}</div><div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button>${activeRole === "supplier" && refund.status === "공급사 입고확인 대기" ? `<button class="primary-button" data-action="confirm-return-receipt" data-id="${refund.id}">반품 입고 확인</button>` : ""}${refund.status === "협의 필요" ? `<button class="primary-button" data-action="open-refund-chat" data-id="${refund.id}">두고톡 협의</button>` : ""}</div>`);
 }
 
 function refundConsultModal(refundId) {
@@ -3197,38 +3212,108 @@ function finalizeRefund(refund, options = {}) {
     deposit.balance += Number(refund.amount || 0);
     deposit.totalRefunded += Number(refund.amount || 0);
     deposit.pending = Math.max(0, deposit.pending - Number(refund.amount || 0));
-    deposit.transactions.unshift({ id: `DP-${Date.now()}`, type: "환불 충전", amount: refund.amount, reference: refund.id, createdAt: "방금 전" });
+    deposit.transactions.unshift({ id: `DP-${Date.now()}`, type: "환불 충전", amount: refund.amount, reference: refund.id, createdAt: depositStamp() });
   }
   const order = state.orders.find(item => item.id === refund.orderId);
   if (order) { order.status = "환불완료"; order.settlementStatus = "excluded"; }
   const product = productOf(order?.mappedProductId || order?.productId);
-  pushNotification(refund.sellerLoginId, "seller", "refund", "환불 공급대금이 두고머니로 충전되었습니다", `${product?.name || refund.orderId} · ${order?.qty || 1}개 · 두고머니 ${money(refund.amount)} · 공급사 정산 제외`);
-  audit("환불 두고머니 지급·정산 제외", `${refund.id} · ${product?.name || refund.orderId} · ${noPickup ? "회수 없음 승인" : "공급사 반품 입고 확인"} · 셀러 두고머니 ${money(refund.amount)} 충전, 공급사 정산 0원 처리`, "done", "refund");
+  pushNotification(refund.sellerLoginId, "seller", "refund", "환불 공급대금이 예치금으로 충전되었습니다", `${product?.name || refund.orderId} · ${order?.qty || 1}개 · 예치금 ${money(refund.amount)} · 공급사 정산 제외`);
+  audit("환불 예치금 지급·정산 제외", `${refund.id} · ${product?.name || refund.orderId} · ${noPickup ? "회수 없음 승인" : "공급사 반품 입고 확인"} · 셀러 예치금 ${money(refund.amount)} 충전, 공급사 정산 0원 처리`, "done", "refund");
   return { order, product };
 }
 
-function doogoMoneyContent() {
-  const wallet = sellerDeposit();
-  const bank = wallet.bankAccount;
-  const transactions = wallet.transactions.slice(0, 8);
-  return `<div class="doogo-money-balances"><button type="button" class="primary" data-action="open-doogo-money-history"><span>사용 가능</span><strong>${money(wallet.balance)}</strong><small>구매·출금 가능 · 사용내역 보기 →</small></button><div><span>환불 처리중</span><strong>${money(wallet.pending)}</strong><small>공급사 입고 확인 전</small></div><div><span>출금 처리중</span><strong>${money(wallet.withdrawalPending)}</strong><small>은행 이체 결과 대기</small></div></div><section class="money-bank-card"><div><span>출금 계좌</span>${bank ? `<b>${escapeHtml(bank.bankName)} · •••• ${escapeHtml(bank.accountNumber.slice(-4))}</b><small>${escapeHtml(bank.holder)} · 계좌 확인 완료</small>` : `<b>등록된 계좌가 없습니다.</b><small>본인 또는 사업자 명의 계좌를 등록해 주세요.</small>`}</div><button class="secondary-button" data-action="edit-doogo-money-bank">${bank ? "계좌 변경" : "계좌 등록"}</button></section><button type="button" class="money-history-link" data-action="open-doogo-money-history"><span>📄</span><b>사용내역 확인</b><small>충전·사용·출금 전체 내역 보기</small><em>→</em></button>${bank ? `<form id="doogoMoneyWithdrawForm" class="money-withdraw-form"><label><span>출금 신청 금액</span><div><input name="amount" type="number" min="1000" max="${wallet.balance}" step="100" value="${wallet.balance}" required><b>원</b></div><small>신청 즉시 사용 가능 두고머니에서 차감되고, 이체 실패 시 자동 복구됩니다.</small></label><button class="primary-button" type="submit" ${wallet.balance < 1000 ? "disabled" : ""}>등록 계좌로 출금</button></form>` : `<div class="money-empty-action"><b>먼저 출금 계좌를 등록해 주세요.</b><button class="primary-button" data-action="edit-doogo-money-bank">출금 계좌 등록</button></div>`}<div class="money-usage-strip"><div><b>상품 공급대금</b><span>두고 주문 접수 시 사용</span></div><div><b>서비스 결제</b><span>정기구독·부가서비스에 사용</span></div><div><b>계좌 출금</b><span>등록 계좌로 환급 신청</span></div></div><section class="money-history"><div class="panel-head"><div><h3>두고머니 내역</h3><p>충전·사용·출금 상태가 원장에 남습니다.</p></div></div>${transactions.length ? transactions.map(item => `<div class="money-history-row"><span><b>${escapeHtml(item.type)}</b><small>${escapeHtml(item.reference || "두고머니")} · ${escapeHtml(item.createdAt || "-")}</small></span><strong class="${Number(item.amount) < 0 ? "minus" : "plus"}">${Number(item.amount) > 0 ? "+" : ""}${money(item.amount)}</strong></div>`).join("") : `<div class="empty">두고머니 내역이 없습니다.</div>`}</section>${wallet.withdrawals.length ? `<section class="withdrawal-list"><h3>출금 진행 내역</h3>${wallet.withdrawals.slice(0,4).map(item => `<div><span><b>${escapeHtml(item.bankName)} •••• ${escapeHtml(item.accountLast4)}</b><small>${escapeHtml(item.requestedAt)} · ${escapeHtml(item.status)}</small></span><strong>${money(item.amount)}</strong>${item.status === "이체 처리중" ? `<em><button class="text-button" data-action="complete-withdrawal-demo" data-id="${item.id}">이체 성공</button><button class="text-button danger" data-action="fail-withdrawal-demo" data-id="${item.id}">이체 실패</button></em>` : ""}</div>`).join("")}</section>` : ""}<div class="api-safe-notice"><b>프로토타입 안내</b><span>현재는 실제 은행 계좌 확인·이체를 실행하지 않습니다. 운영 적용 시 전자금융업자 또는 지급대행사의 계좌 인증·이체 결과 웹훅과 연결해야 합니다.</span></div>`;
+/* ===== 예치금 (무통장입금 충전식) =====
+   위탁셀러가 무통장입금으로 예치금을 충전해 두고 주문 공급가를 결제한다. 주문마다 신용카드 결제도 고를 수 있다.
+   충전 신청 → 전용 입금 계좌 안내 → 입금 확인(운영: 은행 입금 확인/가상계좌 웹훅, 데모: 버튼) → 예치금 적립. */
+let depositView = "charge";
+let depositHistoryFilter = "all";
+const DEPOSIT_ACCOUNT = { bank: "기업은행", number: "081-123456-01-017", holder: "(주)두고홀딩스" };
+function depositStamp(date = new Date()) { const pad = n => String(n).padStart(2, "0"); return `${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`; }
+function depositCharges(wallet = sellerDeposit()) { wallet.charges = wallet.charges || []; return wallet.charges; }
+function depositTxKind(item) {
+  const type = String(item.type || "");
+  if (type.includes("환불")) return "refund";
+  if (type.includes("출금")) return "withdraw";
+  if (Number(item.amount) > 0) return "charge";
+  return "use";
 }
-function doogoMoneyModal() {
-  openModal(`<div class="doogo-money-head"><span>DOOGO MONEY</span><h2>두고머니</h2><p>환불금은 공급사 입고 확인 후 두고머니로 충전되며, 공급대금 결제 또는 등록 계좌 출금에 사용할 수 있습니다.</p></div>${doogoMoneyContent()}<div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button></div>`);
-  document.querySelector("#modal .modal").classList.add("doogo-money-modal");
+const DEPOSIT_KIND_LABELS = { all: "전체", charge: "충전", use: "사용", refund: "환불", withdraw: "출금" };
+function goDepositPage(view = "charge") {
+  closeModal(); closeMobileSidebar?.();
+  activeMenuIndex = menuIndexOf("예치금", "seller"); depositView = view;
+  render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function doogoMoneyModal() { goDepositPage("charge"); }
+function doogoMoneyHistoryModal() { goDepositPage("history"); }
+function depositTabs() {
+  return `<div class="deposit-tabs" role="tablist"><button type="button" role="tab" class="${depositView === "charge" ? "active" : ""}" aria-selected="${depositView === "charge"}" data-action="deposit-view" data-view="charge">잔액 · 충전</button><button type="button" role="tab" class="${depositView === "history" ? "active" : ""}" aria-selected="${depositView === "history"}" data-action="deposit-view" data-view="history">사용내역</button></div>`;
+}
+function depositBalanceCard(wallet) {
+  const waiting = depositCharges(wallet).filter(charge => charge.status === "입금 대기");
+  return `<section class="deposit-balance-card"><div class="deposit-balance-main"><span>사용 가능 예치금</span><strong>${money(wallet.balance)}</strong><small>주문 공급가 결제에 바로 쓸 수 있어요</small></div>
+    <dl class="deposit-balance-sub"><div><dt>입금 확인 중</dt><dd>${money(waiting.reduce((sum, charge) => sum + Number(charge.amount || 0), 0))}</dd></div><div><dt>환불 처리중</dt><dd>${money(wallet.pending)}</dd></div><div><dt>출금 처리중</dt><dd>${money(wallet.withdrawalPending)}</dd></div></dl></section>`;
+}
+function depositChargeCard(charge) {
+  const waiting = charge.status === "입금 대기";
+  return `<article class="deposit-charge-item ${waiting ? "waiting" : charge.status === "충전 완료" ? "done" : "cancel"}">
+    <div class="deposit-charge-top"><b>${money(charge.amount)}</b><span class="chip ${waiting ? "orange" : charge.status === "충전 완료" ? "green" : ""}">${escapeHtml(charge.status)}</span></div>
+    ${waiting ? `<div class="deposit-account"><span>입금 계좌</span><b>${DEPOSIT_ACCOUNT.bank} ${DEPOSIT_ACCOUNT.number}</b><small>예금주 ${DEPOSIT_ACCOUNT.holder} · 입금자명 <em>${escapeHtml(charge.depositor)}</em> · ${escapeHtml(charge.dueAt)}까지</small></div>
+    <div class="deposit-charge-actions"><button type="button" class="secondary-button" data-action="deposit-copy-account">계좌번호 복사</button><button type="button" class="primary-button" data-action="deposit-confirm-demo" data-id="${charge.id}">데모: 입금 완료 처리</button><button type="button" class="text-button danger-text" data-action="deposit-cancel-charge" data-id="${charge.id}">신청 취소</button></div>` : `<small class="deposit-charge-meta">${escapeHtml(charge.requestedAt)} 신청 · 입금자명 ${escapeHtml(charge.depositor)}${charge.completedAt ? ` · ${escapeHtml(charge.completedAt)} 충전` : ""}</small>`}
+  </article>`;
+}
+function depositChargeView(wallet) {
+  const charges = depositCharges(wallet);
+  const bank = wallet.bankAccount;
+  const recent = (wallet.transactions || []).slice(0, 5);
+  return `${depositBalanceCard(wallet)}
+    <div class="deposit-grid">
+      <section class="panel deposit-charge-panel"><div class="deposit-section-head"><span>CHARGE</span><h3>무통장입금으로 충전</h3><p>충전 신청 → 안내된 계좌로 입금 → 입금이 확인되면 바로 예치금으로 들어와요.</p></div>
+        <form id="depositChargeForm" class="deposit-charge-form">
+          <label class="deposit-amount"><span>충전 금액</span><div><input name="amount" id="depositAmountInput" type="number" inputmode="numeric" min="10000" step="1000" placeholder="10,000원 이상" required><b>원</b></div></label>
+          <div class="deposit-quick">${[100000, 300000, 500000, 1000000].map(value => `<button type="button" data-action="deposit-quick" data-amount="${value}">+${value >= 1000000 ? `${value / 10000}만` : `${value / 10000}만`}</button>`).join("")}<button type="button" data-action="deposit-quick" data-amount="0">지우기</button></div>
+          <label class="deposit-depositor"><span>입금자명</span><input name="depositor" maxlength="20" value="${escapeHtml(currentAccount?.company || currentAccount?.name || "")}" required><small>통장에 찍히는 이름과 같아야 빨리 확인돼요.</small></label>
+          <div class="deposit-account-preview"><span>입금 계좌</span><b>${DEPOSIT_ACCOUNT.bank} ${DEPOSIT_ACCOUNT.number}</b><small>예금주 ${DEPOSIT_ACCOUNT.holder}</small></div>
+          <button type="submit" class="primary-button deposit-submit">충전 신청하기</button>
+        </form>
+      </section>
+      <section class="panel deposit-requests"><div class="deposit-section-head"><span>REQUESTS</span><h3>충전 신청 내역</h3><p>입금 대기 중인 신청은 3일 안에 입금해 주세요.</p></div>
+        <div class="deposit-charge-list">${charges.length ? charges.slice(0, 6).map(depositChargeCard).join("") : `<div class="empty">아직 충전 신청이 없어요.</div>`}</div>
+      </section>
+    </div>
+    <section class="panel deposit-pay-guide"><div class="deposit-section-head"><span>PAYMENT</span><h3>주문 결제는 두 가지 중에 골라요</h3></div>
+      <div class="deposit-pay-options"><div><b>💰 예치금 결제</b><span>충전해 둔 예치금에서 공급가가 바로 빠져요. 잔액이 부족하면 충전하거나 카드로 결제하세요.</span></div><div><b>💳 신용카드 결제</b><span>주문 결제 화면에서 ‘신용카드 결제’를 고르면 예치금 없이도 결제돼요.</span></div></div>
+    </section>
+    <section class="panel deposit-recent"><div class="panel-head"><div><h3>최근 내역</h3><p>충전·사용·환불·출금이 모두 기록돼요.</p></div><button type="button" class="secondary-button" data-action="deposit-view" data-view="history">사용내역 전체 보기 →</button></div>
+      ${recent.length ? recent.map(item => `<div class="money-history-row"><span><b>${escapeHtml(item.type)}</b><small>${escapeHtml(item.reference || "예치금")} · ${escapeHtml(item.createdAt || "-")}</small></span><strong class="${Number(item.amount) < 0 ? "minus" : "plus"}">${Number(item.amount) > 0 ? "+" : ""}${money(item.amount)}</strong></div>`).join("") : `<div class="empty">예치금 내역이 없습니다.</div>`}
+    </section>
+    <details class="panel deposit-withdraw"><summary><b>예치금 출금 (환불 계좌로 돌려받기)</b><small>${bank ? `${escapeHtml(bank.bankName)} •••• ${escapeHtml(bank.accountNumber.slice(-4))}` : "출금 계좌 미등록"}</small><i>⌄</i></summary>
+      <section class="money-bank-card"><div><span>출금 계좌</span>${bank ? `<b>${escapeHtml(bank.bankName)} · •••• ${escapeHtml(bank.accountNumber.slice(-4))}</b><small>${escapeHtml(bank.holder)} · 계좌 확인 완료</small>` : `<b>등록된 계좌가 없습니다.</b><small>본인 또는 사업자 명의 계좌를 등록해 주세요.</small>`}</div><button class="secondary-button" data-action="edit-doogo-money-bank">${bank ? "계좌 변경" : "계좌 등록"}</button></section>
+      ${bank ? `<form id="doogoMoneyWithdrawForm" class="money-withdraw-form"><label><span>출금 신청 금액</span><div><input name="amount" type="number" min="1000" max="${wallet.balance}" step="100" value="${wallet.balance}" required><b>원</b></div><small>신청 즉시 사용 가능 예치금에서 차감되고, 이체 실패 시 자동 복구됩니다.</small></label><button class="primary-button" type="submit" ${wallet.balance < 1000 ? "disabled" : ""}>등록 계좌로 출금</button></form>` : ""}
+      ${wallet.withdrawals.length ? `<section class="withdrawal-list"><h3>출금 진행 내역</h3>${wallet.withdrawals.slice(0, 4).map(item => `<div><span><b>${escapeHtml(item.bankName)} •••• ${escapeHtml(item.accountLast4)}</b><small>${escapeHtml(item.requestedAt)} · ${escapeHtml(item.status)}</small></span><strong>${money(item.amount)}</strong>${item.status === "이체 처리중" ? `<em><button class="text-button" data-action="complete-withdrawal-demo" data-id="${item.id}">이체 성공</button><button class="text-button danger" data-action="fail-withdrawal-demo" data-id="${item.id}">이체 실패</button></em>` : ""}</div>`).join("")}</section>` : ""}
+    </details>
+    <div class="api-safe-notice"><b>프로토타입 안내</b><span>실제 입금 확인·이체는 하지 않아요. 운영에서는 은행 입금 확인(가상계좌 입금 알림)과 연결해 자동으로 충전돼요.</span></div>`;
+}
+function depositHistoryView(wallet) {
+  const all = wallet.transactions || [];
+  let running = Number(wallet.balance || 0);
+  const withBalance = all.map(item => { const row = { ...item, balanceAfter: running, kind: depositTxKind(item) }; running -= Number(item.amount || 0); return row; });
+  const rows = depositHistoryFilter === "all" ? withBalance : withBalance.filter(row => row.kind === depositHistoryFilter);
+  const sum = kind => withBalance.filter(row => row.kind === kind).reduce((total, row) => total + Math.abs(Number(row.amount || 0)), 0);
+  return `<section class="deposit-history-summary"><div><span>현재 잔액</span><strong>${money(wallet.balance)}</strong></div><div><span>충전 합계</span><strong class="plus">${sum("charge") ? "+" : ""}${money(sum("charge"))}</strong></div><div><span>사용 합계</span><strong class="minus">${sum("use") ? "-" : ""}${money(sum("use"))}</strong></div><div><span>환불 적립</span><strong class="plus">${sum("refund") ? "+" : ""}${money(sum("refund"))}</strong></div></section>
+    <section class="panel deposit-history-panel"><div class="panel-head"><div><h3>예치금 사용내역</h3><p>최근 순서로 모든 충전·사용·환불·출금을 보여 줘요.</p></div><button type="button" class="primary-button" data-action="deposit-view" data-view="charge">＋ 충전하기</button></div>
+      <div class="deposit-filter">${Object.entries(DEPOSIT_KIND_LABELS).map(([key, label]) => `<button type="button" class="${depositHistoryFilter === key ? "active" : ""}" data-action="deposit-filter" data-kind="${key}">${label}<b>${key === "all" ? withBalance.length : withBalance.filter(row => row.kind === key).length}</b></button>`).join("")}</div>
+      ${rows.length ? `<div class="deposit-history-table" role="table"><div class="deposit-history-row head" role="row"><span>일시</span><span>구분</span><span>내용</span><span>금액</span><span>잔액</span></div>${rows.map(row => `<div class="deposit-history-row" role="row"><span class="when">${escapeHtml(row.createdAt || "-")}</span><span class="kind"><em class="kind-${row.kind}">${DEPOSIT_KIND_LABELS[row.kind]}</em></span><span class="what"><b>${escapeHtml(row.type)}</b><small>${escapeHtml(row.reference || "")}</small></span><strong class="amount ${Number(row.amount) < 0 ? "minus" : "plus"}">${Number(row.amount) > 0 ? "+" : ""}${money(row.amount)}</strong><span class="after">${money(row.balanceAfter)}</span></div>`).join("")}</div>` : `<div class="empty">해당하는 내역이 없어요.</div>`}
+    </section>`;
 }
 function sellerDoogoMoneyTemplate() {
-  return `${sectionHero("두고머니", "환불 충전, 공급대금 결제, 계좌 출금까지 두고머니 흐름을 한 화면에서 확인합니다.")}<div class="panel doogo-money-page">${doogoMoneyContent()}</div>`;
-}
-
-function doogoMoneyHistoryModal() {
   const wallet = sellerDeposit();
-  const transactions = wallet.transactions || [];
-  openModal(`<div class="doogo-money-head"><span>DOOGO MONEY</span><h2>두고머니 사용내역</h2><p>충전·사용·출금이 발생한 순서대로 모두 표시합니다.</p></div><section class="money-history money-history-full">${transactions.length ? transactions.map(item => `<div class="money-history-row"><span><b>${escapeHtml(item.type)}</b><small>${escapeHtml(item.reference || "두고머니")} · ${escapeHtml(item.createdAt || "-")}</small></span><strong class="${Number(item.amount) < 0 ? "minus" : "plus"}">${Number(item.amount) > 0 ? "+" : ""}${money(item.amount)}</strong></div>`).join("") : `<div class="empty">두고머니 내역이 없습니다.</div>`}</section><div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button></div>`);
+  return `${sectionHero("예치금", "무통장입금으로 예치금을 충전해 두고 주문 공급가를 바로 결제하세요. 주문마다 신용카드 결제도 고를 수 있어요.", `<button type="button" class="primary-button" data-action="deposit-view" data-view="charge">＋ 예치금 충전</button>`)}
+    ${depositTabs()}
+    <div class="doogo-money-page deposit-page">${depositView === "history" ? depositHistoryView(wallet) : depositChargeView(wallet)}</div>`;
 }
 function doogoMoneyBankModal() {
   const bank = sellerDeposit().bankAccount || {};
-  openModal(`<div class="doogo-money-head"><span>WITHDRAWAL ACCOUNT</span><h2>두고머니 출금 계좌</h2><p>환불금을 받을 본인 또는 사업자 명의 계좌를 등록합니다.</p></div><form id="doogoMoneyBankForm" class="form-grid"><div class="form-field"><label>은행</label><select name="bankName"><option ${bank.bankName === "국민은행" ? "selected" : ""}>국민은행</option><option ${bank.bankName === "신한은행" ? "selected" : ""}>신한은행</option><option ${bank.bankName === "우리은행" ? "selected" : ""}>우리은행</option><option ${bank.bankName === "하나은행" ? "selected" : ""}>하나은행</option><option ${bank.bankName === "농협은행" ? "selected" : ""}>농협은행</option><option ${bank.bankName === "카카오뱅크" ? "selected" : ""}>카카오뱅크</option></select></div><div class="form-field"><label>예금주</label><input name="holder" value="${escapeHtml(bank.holder || currentAccount?.representative || "위탁셀러")}" required></div><div class="form-field full"><label>계좌번호</label><input name="accountNumber" inputmode="numeric" value="${escapeHtml(bank.accountNumber || "")}" placeholder="숫자만 입력" pattern="[0-9]{10,16}" required></div><label class="consumer-refund-confirm full"><input type="checkbox" name="ownershipConfirmed" required><span><b>본인 또는 사업자 명의 계좌임을 확인했습니다.</b><small>실운영에서는 1원 인증 또는 오픈뱅킹 계좌 실명 확인 절차가 필요합니다.</small></span></label><div class="modal-actions full"><button class="secondary-button" data-action="open-doogo-money">취소</button><button class="primary-button" type="submit">계좌 확인·등록</button></div></form>`);
+  openModal(`<div class="doogo-money-head"><span>WITHDRAWAL ACCOUNT</span><h2>예치금 출금 계좌</h2><p>환불금을 받을 본인 또는 사업자 명의 계좌를 등록합니다.</p></div><form id="doogoMoneyBankForm" class="form-grid"><div class="form-field"><label>은행</label><select name="bankName"><option ${bank.bankName === "국민은행" ? "selected" : ""}>국민은행</option><option ${bank.bankName === "신한은행" ? "selected" : ""}>신한은행</option><option ${bank.bankName === "우리은행" ? "selected" : ""}>우리은행</option><option ${bank.bankName === "하나은행" ? "selected" : ""}>하나은행</option><option ${bank.bankName === "농협은행" ? "selected" : ""}>농협은행</option><option ${bank.bankName === "카카오뱅크" ? "selected" : ""}>카카오뱅크</option></select></div><div class="form-field"><label>예금주</label><input name="holder" value="${escapeHtml(bank.holder || currentAccount?.representative || "위탁셀러")}" required></div><div class="form-field full"><label>계좌번호</label><input name="accountNumber" inputmode="numeric" value="${escapeHtml(bank.accountNumber || "")}" placeholder="숫자만 입력" pattern="[0-9]{10,16}" required></div><label class="consumer-refund-confirm full"><input type="checkbox" name="ownershipConfirmed" required><span><b>본인 또는 사업자 명의 계좌임을 확인했습니다.</b><small>실운영에서는 1원 인증 또는 오픈뱅킹 계좌 실명 확인 절차가 필요합니다.</small></span></label><div class="modal-actions full"><button class="secondary-button" data-action="open-doogo-money">취소</button><button class="primary-button" type="submit">계좌 확인·등록</button></div></form>`);
 }
 
 /* ===== 쇼핑몰 API 연동 =====
@@ -3269,11 +3354,17 @@ function channelDefaultPolicy(channel) { const list = channelShippingPolicies(ch
 function maskSecret(value) { const text = String(value || ""); return text.length <= 4 ? "••••" : `${"•".repeat(Math.min(8, text.length - 4))}${text.slice(-4)}`; }
 function stableCode(text, prefix, length = 8) { let hash = 7; for (const char of String(text)) hash = (hash * 31 + char.charCodeAt(0)) % 99991997; return `${prefix}${String(hash).padStart(length, "0").slice(-length)}`; }
 /* 두고(네이버쇼핑 기준) 카테고리를 각 쇼핑몰 카테고리로 자동 매칭 */
+function coupangPathFor(path) {
+  if (path[0] !== "식품") return path.filter(Boolean);
+  const mid = { "농산물": "신선식품", "수산물": "수산/건어물", "축산물": "정육/계란", "건강식품": "건강식품", "김치": "김치/반찬", "반찬": "김치/반찬", "가공식품": "가공/즉석식품" }[path[1]] || path[1];
+  return ["식품", mid, path[2], path[3]].filter(Boolean);
+}
 function channelCategoryFor(item, channelId, product = productOf(item?.productId)) {
   const path = [item?.sellerCategoryGroup || product?.categoryGroup, item?.sellerCategory || product?.category, item?.sellerCategorySub || product?.categorySub, item?.sellerCategoryDetail || product?.categoryDetail].filter(Boolean);
+  const override = item?.channelCategories?.[channelId];
+  if (channelId !== "smartstore" && Array.isArray(override) && override.length) return { path: override.join(" > "), code: stableCode(override.join(">"), "", 5), matched: "직접 선택" };
   if (channelId === "coupang") {
-    const mid = { "농산물": "신선식품", "수산물": "수산/건어물", "축산물": "정육/계란", "건강식품": "건강식품", "김치": "김치/반찬", "반찬": "김치/반찬", "가공식품": "가공/즉석식품" }[path[1]] || path[1];
-    const coupangPath = ["식품", mid, path[2], path[3]].filter(Boolean);
+    const coupangPath = coupangPathFor(path);
     return { path: coupangPath.join(" > "), code: stableCode(coupangPath.join(">"), "", 5), matched: "자동 매칭" };
   }
   return { path: path.join(" > "), code: stableCode(path.join(">"), channelId === "smartstore" ? "50" : "", channelId === "smartstore" ? 6 : 5), matched: channelId === "smartstore" ? "네이버 카테고리 그대로" : "자동 매칭" };
@@ -3285,6 +3376,90 @@ function suggestedTags(item, product = productOf(item?.productId)) {
   return [...new Set([...words, ...extra].map(word => String(word || "").replace(/[^0-9A-Za-z가-힣/]/g, "").replace(/\//g, "")).filter(word => word.length >= 2 && !/^\d+(kg|g)?$/i.test(word)))].slice(0, 8);
 }
 function itemTags(item, product) { return Array.isArray(item?.searchTags) && item.searchTags.length ? item.searchTags : suggestedTags(item, product); }
+/* ===== 카테고리 검색 (네이버 ‘카테고리명 검색’처럼) =====
+   ‘프로폴리스’처럼 상품 단어를 넣으면 가장 비슷한 카테고리를 점수순으로 찾는다. 상품명으로 추천도 해 준다. */
+const CATEGORY_SYNONYMS = { "허니": "꿀", "벌꿀": "꿀", "마누카": "마누카꿀", "귤": "감귤/한라봉", "감귤": "감귤/한라봉", "한라봉": "감귤/한라봉", "천혜향": "감귤/한라봉", "표고": "표고버섯", "비타민": "비타민제", "오메가": "오메가3", "프로바이오틱스": "유산균", "홍삼정": "홍삼", "쌀": "쌀", "현미": "현미", "고등어": "고등어", "새우": "새우", "한우": "소고기", "돼지": "돼지고기", "삼겹살": "돼지고기", "닭가슴살": "닭가슴살 가공품", "커피": "커피", "원두": "원두커피", "김치": "김치", "포기김치": "배추김치", "견과": "견과류", "아몬드": "아몬드" };
+function categoryLeavesFor(channelId = "smartstore") {
+  const leaves = flattenCategoryLeaves();
+  if (channelId !== "coupang") return leaves.map(leaf => ({ path: [leaf.group, leaf.mid, leaf.sub, leaf.detail], naver: [leaf.group, leaf.mid, leaf.sub, leaf.detail] }));
+  const seen = new Set();
+  return leaves.map(leaf => { const naver = [leaf.group, leaf.mid, leaf.sub, leaf.detail]; return { path: coupangPathFor(naver), naver }; }).filter(leaf => { const key = leaf.path.join(">"); if (seen.has(key)) return false; seen.add(key); return true; });
+}
+function searchCategories(query, channelId = "smartstore", limit = 8) {
+  const words = String(query || "").toLowerCase().replace(/[\[\]()+,·]/g, " ").split(/\s+/).filter(word => word.length >= 1);
+  if (!words.length) return [];
+  const expanded = words.flatMap(word => [word, CATEGORY_SYNONYMS[word]?.toLowerCase()].filter(Boolean));
+  return categoryLeavesFor(channelId).map(leaf => {
+    const [group, mid, sub, detail] = leaf.path.map(part => String(part || "").toLowerCase());
+    let score = 0;
+    expanded.forEach(word => {
+      if (word.length < 2 && ![detail, sub].includes(word)) return;
+      if (detail === word) score += 100; else if (detail?.includes(word) || word.includes(detail || "@@")) score += 60;
+      if (sub === word) score += 70; else if (sub?.includes(word) || (sub && sub.split("/").some(part => part && word.includes(part)))) score += 45;
+      if (mid?.includes(word)) score += 25;
+      if (group?.includes(word)) score += 8;
+    });
+    return { ...leaf, score };
+  }).filter(leaf => leaf.score > 0).sort((a, b) => b.score - a.score).slice(0, limit);
+}
+function highlightWords(text, query) {
+  let html = escapeHtml(text);
+  String(query || "").split(/\s+/).filter(word => word.length >= 1).forEach(word => { const safe = escapeHtml(word).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); html = html.replace(new RegExp(safe, "gi"), match => `<mark>${match}</mark>`); });
+  return html;
+}
+function studioCatResultMarkup(results, query, emptyText) {
+  if (!results.length) return `<div class="cat-result-empty">${escapeHtml(emptyText)}</div>`;
+  return results.map((leaf, index) => `<button type="button" class="cat-result ${index === 0 && query ? "best" : ""}" data-action="category-search-pick" data-group="${escapeHtml(leaf.naver[0])}" data-mid="${escapeHtml(leaf.naver[1])}" data-sub="${escapeHtml(leaf.naver[2])}" data-detail="${escapeHtml(leaf.naver[3])}"><span>${leaf.path.map(part => highlightWords(part, query)).join(' <i>›</i> ')}</span>${index === 0 && query ? `<em>가장 비슷해요</em>` : ""}</button>`).join("");
+}
+function studioSuggestionQuery(item, source) { return [sellerProductTitle(item, source), source?.name, ...(studioDraft?.tags || [])].join(" "); }
+function studioCurrentNaverPath() {
+  const form = document.getElementById("studioForm");
+  if (!form) return [];
+  return [1, 2, 3, 4].map(level => form.querySelector(`[data-category-level="${level}"]`)?.value || "");
+}
+function studioChannelCatRows() {
+  const item = state.sellerProducts.find(entry => entry.id === studioDraft?.itemId);
+  if (!item) return "";
+  const naver = studioCurrentNaverPath();
+  const temp = { ...item, sellerCategoryGroup: naver[0], sellerCategory: naver[1], sellerCategorySub: naver[2], sellerCategoryDetail: naver[3], channelCategories: studioDraft.channelCategories || {} };
+  const complete = naver.every(Boolean);
+  const channels = sellerChannels();
+  return channels.map(channel => {
+    const connected = channel.status === "connected";
+    const mapped = channelCategoryFor(temp, channel.id, productOf(item.productId));
+    const override = channel.id !== "smartstore" && (studioDraft.channelCategories || {})[channel.id]?.length;
+    const note = channel.id === "smartstore" ? "위에서 고른 네이버 카테고리 그대로" : override ? "직접 고름" : "네이버 카테고리로 자동 매칭";
+    return `<div class="cat-channel-row ${connected ? "" : "off"}" data-cat-channel="${channel.id}">
+      <div class="cat-channel-head">${channelMark(channel.id, true)}<b>${escapeHtml(channel.name)}</b><em class="${override ? "manual" : channel.id === "smartstore" ? "base" : "auto"}">${connected ? note : "미연동 · 연동하면 같이 세팅돼요"}</em></div>
+      <div class="cat-channel-path">${complete || override ? `<span>${escapeHtml(mapped.path)}</span><small>코드 ${escapeHtml(mapped.code)}</small>` : `<span class="warn">최종 카테고리(4단계)까지 골라 주세요.</span>`}</div>
+      ${connected && channel.id !== "smartstore" ? `<div class="cat-channel-actions"><button type="button" class="text-button" data-action="studio-channel-cat-edit" data-channel="${channel.id}">${escapeHtml(channel.name)} 카테고리 바꾸기</button>${override ? `<button type="button" class="text-button" data-action="studio-channel-cat-reset" data-channel="${channel.id}">자동 매칭으로</button>` : ""}</div>
+      <div class="cat-channel-search" data-channel-search-box="${channel.id}" hidden><input data-channel-cat-search="${channel.id}" placeholder="${escapeHtml(channel.name)} 카테고리 검색 (예: 프로폴리스)" autocomplete="off"><div class="cat-results" data-channel-cat-results="${channel.id}"></div></div>` : ""}
+    </div>`;
+  }).join("");
+}
+function refreshStudioCategory() {
+  const rows = document.getElementById("studioChannelCats");
+  if (rows) rows.innerHTML = studioChannelCatRows();
+  const current = document.getElementById("studioCatCurrent");
+  const naver = studioCurrentNaverPath();
+  if (current) current.innerHTML = naver.every(Boolean) ? `<span>선택한 카테고리</span><b>${naver.map(escapeHtml).join(" › ")}</b>` : `<span class="warn">최종 카테고리까지 선택해 주세요.</span><b>${naver.filter(Boolean).map(escapeHtml).join(" › ") || "-"}</b>`;
+}
+function studioCategorySection(item, source, categoryPath) {
+  const suggestions = searchCategories(studioSuggestionQuery(item, source), "smartstore", 3);
+  return `<section id="studio-category" class="studio-section"><h3><i>5</i> 카테고리 <small>연동 쇼핑몰 동시 세팅</small></h3><p>카테고리를 한 번 고르면 연동된 쇼핑몰(네이버·쿠팡 등)에 맞는 카테고리가 같이 세팅돼요.</p>
+    <div class="cat-finder">
+      <div class="cat-mode-tabs" role="tablist"><button type="button" class="active" data-cat-mode="search">카테고리명 검색</button><button type="button" data-cat-mode="select">카테고리명 선택</button></div>
+      <div class="cat-pane" data-cat-pane="search">
+        <div class="cat-search-field"><input id="studioCatSearch" placeholder="상품 단어로 검색 (예: 프로폴리스, 표고버섯, 사과)" autocomplete="off" enterkeyhint="search"><span aria-hidden="true">⌕</span></div>
+        <div class="cat-results" id="studioCatResults"><p class="cat-suggest-label">상품명으로 추천</p>${studioCatResultMarkup(suggestions, "", "추천할 카테고리를 찾지 못했어요. 검색해 보세요.")}</div>
+      </div>
+      <div class="cat-pane" data-cat-pane="select" hidden><div class="category-select-pair category-select-quad">${categorySelectTag("sellerCategoryGroup", 1, categoryPath)}${categorySelectTag("sellerCategory", 2, categoryPath)}${categorySelectTag("sellerCategorySub", 3, categoryPath)}${categorySelectTag("sellerCategoryDetail", 4, categoryPath)}</div></div>
+      <div class="cat-current" id="studioCatCurrent"></div>
+    </div>
+    <div class="cat-channels"><h4>쇼핑몰별 카테고리 <small>같이 세팅돼요 · 필요하면 쇼핑몰마다 바꿀 수 있어요</small></h4><div id="studioChannelCats"></div></div>
+  </section>`;
+}
+
 function channelConnectModal(channelId) {
   const channel = sellerChannels().find(item => item.id === channelId);
   if (!channel) return;
@@ -3402,7 +3577,7 @@ function accountSettingsModal(tab = "profile") {
   const titles = { profile: "정보 수정", mypage: "마이페이지 설정", business: "사업자 정보 수정" };
   const mypageFields = `<div class="form-field full"><label>스토어 표시명</label><input name="displayName" value="${escapeHtml(company)}"></div><div class="form-field"><label>알림 이메일</label><input name="email" value="${escapeHtml(account.email)}"></div><div class="form-field"><label>연락 가능 시간</label><input name="contactTime" value="${escapeHtml(account.contactTime || "평일 09:00~18:00")}"></div><div class="form-field"><label>공급사 노출 전화번호 <small>공급사와의 거래처 연결·주문 문의에 표시됩니다</small></label><input name="supplierVisiblePhone" value="${escapeHtml(account.supplierVisiblePhone || "")}" placeholder="010-0000-0000"></div>`;
   const profileFields = `<div class="form-field"><label>상호명</label><input name="company" value="${escapeHtml(company)}" ${tab === "business" ? "required" : ""}></div><div class="form-field"><label>대표자</label><input name="representative" value="${escapeHtml(account.representative)}"></div><div class="form-field"><label>연락처</label><input name="contact" value="${escapeHtml(account.contact)}"></div><div class="form-field"><label>이메일</label><input name="email" value="${escapeHtml(account.email)}"></div>`;
-  const businessFields = `<div class="form-field"><label>사업자등록번호</label><input name="businessNo" value="${escapeHtml(account.businessNo)}"></div><div class="form-field"><label>업태</label><input name="businessType" value="${escapeHtml(account.businessType || "")}" placeholder="도소매업"></div><div class="form-field"><label>종목</label><input name="businessItem" value="${escapeHtml(account.businessItem || "")}" placeholder="전자상거래업"></div><div class="form-field full"><label>사업장 주소</label><input name="businessAddress" value="${escapeHtml(account.businessAddress || "")}" placeholder="사업장 소재지를 입력해 주세요"></div><div class="form-field full"><label>세금계산서 발행 이메일</label><input name="taxInvoiceEmail" type="email" value="${escapeHtml(account.taxInvoiceEmail || account.email || "")}" placeholder="tax@example.com"></div><div class="settings-subsection full"><b>정산 계좌 정보</b><small>두고머니 출금 및 정산 지급에 사용됩니다.</small></div><div class="form-field"><label>은행명</label><input name="bankName" value="${escapeHtml(account.bankName || "")}" placeholder="예: 국민은행"></div><div class="form-field"><label>계좌번호</label><input name="bankAccountNumber" value="${escapeHtml(account.bankAccountNumber || "")}" placeholder="계좌번호 입력"></div><div class="form-field full"><label>예금주</label><input name="bankAccountHolder" value="${escapeHtml(account.bankAccountHolder || account.representative || "")}"></div>`;
+  const businessFields = `<div class="form-field"><label>사업자등록번호</label><input name="businessNo" value="${escapeHtml(account.businessNo)}"></div><div class="form-field"><label>업태</label><input name="businessType" value="${escapeHtml(account.businessType || "")}" placeholder="도소매업"></div><div class="form-field"><label>종목</label><input name="businessItem" value="${escapeHtml(account.businessItem || "")}" placeholder="전자상거래업"></div><div class="form-field full"><label>사업장 주소</label><input name="businessAddress" value="${escapeHtml(account.businessAddress || "")}" placeholder="사업장 소재지를 입력해 주세요"></div><div class="form-field full"><label>세금계산서 발행 이메일</label><input name="taxInvoiceEmail" type="email" value="${escapeHtml(account.taxInvoiceEmail || account.email || "")}" placeholder="tax@example.com"></div><div class="settings-subsection full"><b>정산 계좌 정보</b><small>예치금 출금 및 정산 지급에 사용됩니다.</small></div><div class="form-field"><label>은행명</label><input name="bankName" value="${escapeHtml(account.bankName || "")}" placeholder="예: 국민은행"></div><div class="form-field"><label>계좌번호</label><input name="bankAccountNumber" value="${escapeHtml(account.bankAccountNumber || "")}" placeholder="계좌번호 입력"></div><div class="form-field full"><label>예금주</label><input name="bankAccountHolder" value="${escapeHtml(account.bankAccountHolder || account.representative || "")}"></div>`;
   openModal(`<div class="settings-tabs"><button class="${tab === "profile" ? "active" : ""}" data-action="account-tab" data-tab="profile">기본 정보</button><button class="${tab === "mypage" ? "active" : ""}" data-action="account-tab" data-tab="mypage">마이페이지</button><button class="${tab === "business" ? "active" : ""}" data-action="account-tab" data-tab="business">사업자 정보</button></div><h2>${titles[tab]}</h2><p>데모 계정의 설정을 확인하고 브라우저 안에서 수정합니다.</p><form id="accountSettingsForm" class="form-grid" data-tab="${tab}">${tab === "mypage" ? mypageFields : tab === "business" ? profileFields + businessFields : profileFields}<div class="modal-actions full"><button class="secondary-button" data-close-modal>취소</button><button class="primary-button" type="submit">설정 저장</button></div></form>`);
 }
 
@@ -3629,7 +3804,7 @@ function guideModal() {
       <div class="guide-step"><span>3</span><div><b>주문 접수 · 자동 배정</b><small>수취인·주소·배송메시지·해외직구 통관정보 입력</small></div><b class="guide-account">seller</b></div>
       <div class="guide-step"><span>4</span><div><b>송장 자동발급 · 출력</b><small>공급사 계정 배송 설정으로 번호 생성 후 셀러 즉시 반영</small></div><b class="guide-account">sup</b></div>
       <div class="guide-step"><span>5</span><div><b>알림톡·이메일 미리보기</b><small>주문 배정은 공급사, 송장 등록은 셀러 알림함에 자동 생성</small></div><b class="guide-account">seller / sup</b></div>
-      <div class="guide-step"><span>6</span><div><b>두고머니 환불 · 정산 제외</b><small>공급사 입고 확인 시 셀러 두고머니 충전, 공급사 지급 예정금 0원</small></div><b class="guide-account">seller / sup</b></div>
+      <div class="guide-step"><span>6</span><div><b>예치금 환불 · 정산 제외</b><small>공급사 입고 확인 시 셀러 예치금 충전, 공급사 지급 예정금 0원</small></div><b class="guide-account">seller / sup</b></div>
       <div class="guide-step"><span>7</span><div><b>복수 역할 전환</b><small>seller 계정 우측 메뉴에서 공급사 모드로 전환</small></div><b class="guide-account">seller</b></div>
       <div class="guide-step"><span>8</span><div><b>전체 운영 확인</b><small>회원·상품·주문·환불·변경 로그를 마스터에서 통합 조회</small></div><b class="guide-account">admin</b></div>
     </div>`);
@@ -3774,8 +3949,29 @@ document.addEventListener("click", event => {
       sellerCategoryGroup = path[0]; sellerCategory = path[1]; sellerCategorySub = path[2]; sellerCategoryDetail = path[3];
       render(); updateAccountUI();
     }
+    if (form?.id === "studioForm") { refreshStudioCategory(); return showToast(`${path.join(" › ")} · 연동 쇼핑몰에도 같이 세팅했어요.`); }
     showToast(`카테고리를 ${path.join(" › ")} (으)로 설정했습니다.`);
     return;
+  }
+  if (action === "master-view") {
+    masterProductView = target.dataset.view === "list" ? "list" : "grid";
+    try { localStorage.setItem("doogo-master-view", masterProductView); } catch {}
+    render(); updateAccountUI(); return;
+  }
+  if (action === "studio-channel-cat-edit") {
+    const box = document.querySelector(`[data-channel-search-box="${target.dataset.channel}"]`);
+    if (box) { box.hidden = !box.hidden; if (!box.hidden) { const input = box.querySelector("input"); const naver = studioCurrentNaverPath(); input.value = naver[3] || naver[2] || ""; input.dispatchEvent(new Event("input", { bubbles: true })); input.focus(); } }
+    return;
+  }
+  if (action === "studio-channel-cat-pick") {
+    if (!studioDraft) return;
+    studioDraft.channelCategories = studioDraft.channelCategories || {};
+    studioDraft.channelCategories[target.dataset.channel] = String(target.dataset.path || "").split("|").filter(Boolean);
+    refreshStudioCategory(); showToast(`${channelMeta(target.dataset.channel).name} 카테고리를 직접 골랐어요.`); return;
+  }
+  if (action === "studio-channel-cat-reset") {
+    if (studioDraft?.channelCategories) delete studioDraft.channelCategories[target.dataset.channel];
+    refreshStudioCategory(); showToast("네이버 카테고리 기준 자동 매칭으로 돌렸어요."); return;
   }
   if (action === "toggle-edit-mode") {
     if (!editMode) {
@@ -3855,6 +4051,32 @@ document.addEventListener("click", event => {
   if (action === "open-seller-channels") { activeMenuIndex = 8; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (action === "open-seller-subscription") { activeMenuIndex = 9; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (action === "open-doogo-money") { doogoMoneyModal(); return; }
+  if (action === "deposit-view") { goDepositPage(target.dataset.view === "history" ? "history" : "charge"); return; }
+  if (action === "deposit-filter") { depositHistoryFilter = target.dataset.kind || "all"; render(); updateAccountUI(); return; }
+  if (action === "deposit-quick") {
+    const input = document.getElementById("depositAmountInput");
+    if (input) { const add = Number(target.dataset.amount || 0); input.value = add ? Number(input.value || 0) + add : ""; input.focus(); }
+    return;
+  }
+  if (action === "deposit-copy-account") { const text = `${DEPOSIT_ACCOUNT.bank} ${DEPOSIT_ACCOUNT.number}`; Promise.resolve(navigator.clipboard?.writeText(text)).then(() => showToast("입금 계좌번호를 복사했어요."), () => showToast(text)); return; }
+  if (action === "deposit-cancel-charge") {
+    const charge = depositCharges().find(item => item.id === id);
+    if (!charge || charge.status !== "입금 대기") return;
+    if (!window.confirm(`${money(charge.amount)} 충전 신청을 취소할까요?`)) return;
+    charge.status = "신청 취소"; audit("예치금 충전 신청 취소", `${charge.id} · ${money(charge.amount)}`, "done", "money");
+    saveState(); render(); updateAccountUI(); showToast("충전 신청을 취소했어요."); return;
+  }
+  if (action === "deposit-confirm-demo") {
+    const wallet = sellerDeposit();
+    const charge = depositCharges(wallet).find(item => item.id === id);
+    if (!charge || charge.status !== "입금 대기") return;
+    charge.status = "충전 완료"; charge.completedAt = depositStamp();
+    wallet.balance = Number(wallet.balance || 0) + Number(charge.amount);
+    wallet.transactions.unshift({ id: `DP-${Date.now()}`, type: "무통장입금 충전", amount: Number(charge.amount), reference: `${charge.id} · 입금자 ${charge.depositor}`, createdAt: depositStamp() });
+    pushNotification(currentAccount.loginId, "seller", "money", "예치금 충전이 완료됐어요", `${money(charge.amount)} · 잔액 ${money(wallet.balance)}`, ["내부 알림"]);
+    audit("예치금 충전 완료", `${charge.id} · ${money(charge.amount)} · 무통장입금 확인 (데모)`, "done", "money");
+    saveState(); render(); updateAccountUI(); showToast(`${money(charge.amount)} 충전 완료! 사용 가능 예치금 ${money(wallet.balance)}`); return;
+  }
   if (action === "open-doogo-money-history") { doogoMoneyHistoryModal(); return; }
   if (action === "edit-doogo-money-bank") { doogoMoneyBankModal(); return; }
   if (action === "complete-withdrawal-demo") {
@@ -3864,8 +4086,8 @@ document.addEventListener("click", event => {
       withdrawal.status = "출금완료";
       withdrawal.completedAt = "방금 전";
       wallet.withdrawalPending = Math.max(0, wallet.withdrawalPending - withdrawal.amount);
-      audit("두고머니 계좌 출금 완료", `${withdrawal.id} · ${money(withdrawal.amount)} · ${withdrawal.bankName} •••• ${withdrawal.accountLast4}`, "done", "money");
-      saveState(); render(); updateAccountUI(); doogoMoneyModal(); showToast("등록 계좌로 두고머니 출금을 완료했습니다.");
+      audit("예치금 계좌 출금 완료", `${withdrawal.id} · ${money(withdrawal.amount)} · ${withdrawal.bankName} •••• ${withdrawal.accountLast4}`, "done", "money");
+      saveState(); render(); updateAccountUI(); doogoMoneyModal(); showToast("등록 계좌로 예치금 출금을 완료했습니다.");
     }
     return;
   }
@@ -3877,9 +4099,9 @@ document.addEventListener("click", event => {
       withdrawal.failedAt = "방금 전";
       wallet.withdrawalPending = Math.max(0, wallet.withdrawalPending - withdrawal.amount);
       wallet.balance += withdrawal.amount;
-      wallet.transactions.unshift({ id: `DM-${Date.now()}`, type: "출금 실패 복구", amount: withdrawal.amount, reference: withdrawal.id, createdAt: "방금 전" });
-      audit("두고머니 출금 실패 복구", `${withdrawal.id} · ${money(withdrawal.amount)}을 사용 가능 두고머니로 복구했습니다.`, "blocked", "money");
-      saveState(); render(); updateAccountUI(); doogoMoneyModal(); showToast("이체 실패 금액을 사용 가능 두고머니로 복구했습니다.");
+      wallet.transactions.unshift({ id: `DM-${Date.now()}`, type: "출금 실패 복구", amount: withdrawal.amount, reference: withdrawal.id, createdAt: depositStamp() });
+      audit("예치금 출금 실패 복구", `${withdrawal.id} · ${money(withdrawal.amount)}을 사용 가능 예치금으로 복구했습니다.`, "blocked", "money");
+      saveState(); render(); updateAccountUI(); doogoMoneyModal(); showToast("이체 실패 금액을 사용 가능 예치금으로 복구했습니다.");
     }
     return;
   }
@@ -4273,7 +4495,7 @@ document.addEventListener("click", event => {
       refund.returnRequestedAt = "방금 전";
       refund.responsibility = "반품 회수 요청";
       pushNotification(refund.sellerLoginId, "seller", "refund", "공급사가 반품 회수를 요청했습니다", `${refund.orderId} · ${refund.returnCarrier} ${refund.returnTracking}`);
-      audit("반품 회수 요청", `${refund.id} · ${refund.returnCarrier} ${refund.returnTracking} · 공급사 입고 확인 전 두고머니·정산 보류`, "pending", "refund");
+      audit("반품 회수 요청", `${refund.id} · ${refund.returnCarrier} ${refund.returnTracking} · 공급사 입고 확인 전 예치금·정산 보류`, "pending", "refund");
       saveState(); render(); updateAccountUI(); showToast("반품 회수를 요청했습니다. 택배 도착 후 입고 확인이 필요합니다.");
     }
     return;
@@ -4293,7 +4515,7 @@ document.addEventListener("click", event => {
     const refund = state.refunds.find(item => item.id === id);
     if (refund?.status === "공급사 입고확인 대기") {
       const result = finalizeRefund(refund, { supplierReceivedAt: "방금 전" });
-      saveState(); closeModal(); render(); updateAccountUI(); showToast(`${result?.product?.name || "상품"} 반품 입고를 확인했습니다. 두고머니 충전과 정산 제외가 완료되었습니다.`);
+      saveState(); closeModal(); render(); updateAccountUI(); showToast(`${result?.product?.name || "상품"} 반품 입고를 확인했습니다. 예치금 충전과 정산 제외가 완료되었습니다.`);
     }
     return;
   }
@@ -4301,7 +4523,7 @@ document.addEventListener("click", event => {
     const refund = state.refunds.find(item => item.id === id);
     if (refund && ["공급사 검토중", "협의 필요"].includes(refund.status)) {
       const result = finalizeRefund(refund, { noPickup: true, supplierReceivedAt: "회수 없음 승인" });
-      saveState(); closeModal(); render(); updateAccountUI(); showToast(`${result?.product?.name || "상품"}을 회수 없이 승인했습니다. 셀러 두고머니가 충전되었습니다.`);
+      saveState(); closeModal(); render(); updateAccountUI(); showToast(`${result?.product?.name || "상품"}을 회수 없이 승인했습니다. 셀러 예치금이 충전되었습니다.`);
     }
     return;
   }
@@ -4718,6 +4940,7 @@ document.addEventListener("change", event => {
         select.disabled = !options.length;
         path[l - 1] = "";
       }
+      if (form.id === "studioForm") refreshStudioCategory();
     }
   }
   if (event.target.id === "onSaleDateFromInput") { onSaleDateFrom = event.target.value; onSalePage = 1; render(); updateAccountUI(); }
@@ -4970,6 +5193,20 @@ document.addEventListener("submit", event => {
   event.preventDefault();
   const form = event.target, data = Object.fromEntries(new FormData(form));
   if (handleStaffForm(form, data)) return;
+  if (form.id === "depositChargeForm") {
+    const amount = Math.round(Number(data.amount || 0));
+    const depositor = String(data.depositor || "").trim();
+    if (amount < 10000) return showToast("충전은 10,000원 이상부터 할 수 있어요.");
+    if (amount > 50000000) return showToast("한 번에 5천만 원까지 충전할 수 있어요.");
+    if (!depositor) return showToast("입금자명을 입력해 주세요.");
+    const due = new Date(Date.now() + 3 * 24 * 3600 * 1000);
+    const charge = { id: `CH-${String(Date.now()).slice(-8)}`, amount, depositor, status: "입금 대기", requestedAt: depositStamp(), dueAt: `${due.getMonth() + 1}월 ${due.getDate()}일` };
+    depositCharges().unshift(charge);
+    audit("예치금 충전 신청", `${charge.id} · ${money(amount)} · 무통장입금 · 입금자 ${depositor}`, "pending", "money");
+    saveState(); render(); updateAccountUI();
+    showToast(`${money(amount)} 충전 신청 완료! ${DEPOSIT_ACCOUNT.bank} ${DEPOSIT_ACCOUNT.number}로 입금해 주세요.`);
+    return;
+  }
   if (form.id === "findAccountIdForm") {
     const role = data.role === "supplier" ? "supplier" : "seller";
     const email = String(data.email || "").trim().toLowerCase();
@@ -5045,7 +5282,7 @@ document.addEventListener("submit", event => {
     item.sellerCategorySub = String(data.sellerCategorySub || source.categorySub || "");
     item.sellerCategoryDetail = String(data.sellerCategoryDetail || source.categoryDetail || "");
     item.pricesEdited = true;
-    if (studioDraft?.itemId === item.id) item.searchTags = [...studioDraft.tags];
+    if (studioDraft?.itemId === item.id) { item.searchTags = [...studioDraft.tags]; item.channelCategories = JSON.parse(JSON.stringify(studioDraft.channelCategories || {})); }
     const live = liveChannelIds(item);
     if (live.length) { item.channelSyncStatus = item.channelSyncStatus || {}; live.forEach(channelId => { item.channelSyncStatus[channelId] = "edited"; }); }
     if (intent === "register") { item.masterRegistered = true; item.masterRegisteredAt = "방금 전"; }
@@ -5187,9 +5424,9 @@ document.addEventListener("submit", event => {
     if ((option ? Number(option.stock || 0) : product.stock) < Number(order.qty || 1)) return showToast(option ? `‘${option.name}’ 옵션 재고가 부족해 결제할 수 없어요.` : "공급사 재고가 부족해 결제할 수 없습니다.");
     if (paymentMethod === "deposit") {
       const deposit = sellerDeposit(order.sellerLoginId);
-      if (deposit.balance < supplyTotal) return showToast("두고머니 잔액이 부족합니다. 신용카드 데모 결제를 선택해 주세요.");
+      if (deposit.balance < supplyTotal) return showToast("예치금이 부족해요. 예치금을 충전하거나 신용카드 결제를 골라 주세요.");
       deposit.balance -= supplyTotal;
-      deposit.transactions.unshift({ id: `DP-${Date.now()}`, type: "주문 공급가 결제", amount: -supplyTotal, reference: order.id, createdAt: "방금 전" });
+      deposit.transactions.unshift({ id: `DP-${Date.now()}`, type: "주문 공급가 결제", amount: -supplyTotal, reference: order.id, createdAt: depositStamp() });
     }
     if (option) { option.stock = Number(option.stock || 0) - Number(order.qty || 1); syncProductOptionTotals(product); }
     else product.stock -= Number(order.qty || 1);
@@ -5203,7 +5440,7 @@ document.addEventListener("submit", event => {
     order.supplierOrderId = order.supplierOrderId || `PO-${String(Date.now()).slice(-8)}`;
     order.settlementStatus = "scheduled";
     pushNotification(product.supplierLoginId, "supplier", "order", "신규 발주가 도착했습니다", `${order.id} · ${product.id} ${product.name}${order.optionName ? ` [${order.optionName}]` : ""} ${order.qty}개`);
-    audit("공급가 결제·공급사 자동 발주", `${order.id} · ${product.id} · ${money(supplyTotal)} · ${paymentMethod === "deposit" ? "두고머니" : "신용카드 데모"} 결제 · ${product.supplier} 공급사에 바로 전달`, "done", "order");
+    audit("공급가 결제·공급사 자동 발주", `${order.id} · ${product.id} · ${money(supplyTotal)} · ${paymentMethod === "deposit" ? "예치금" : "신용카드 데모"} 결제 · ${product.supplier} 공급사에 바로 전달`, "done", "order");
     saveState(); closeModal(); sellerOrderStage = "ordered"; render(); updateAccountUI(); showToast(`결제 완료! ${product.supplier} 공급사에 주문을 바로 전달했어요.`);
   }
   if (form.id === "connectSupplierForm") {
@@ -5372,21 +5609,21 @@ document.addEventListener("submit", event => {
     const accountNumber = String(data.accountNumber || "").replace(/\D/g, "");
     if (!/^[0-9]{10,16}$/.test(accountNumber)) return showToast("계좌번호는 숫자 10~16자리로 입력해 주세요.");
     wallet.bankAccount = { bankName: data.bankName, holder: data.holder, accountNumber, verified: true, verifiedAt: "방금 전" };
-    audit("두고머니 출금 계좌 등록", `${data.bankName} · ${data.holder} · •••• ${accountNumber.slice(-4)} · 데모 계좌 확인`, "done", "money");
-    saveState(); render(); updateAccountUI(); doogoMoneyModal(); showToast("두고머니 출금 계좌를 등록했습니다.");
+    audit("예치금 출금 계좌 등록", `${data.bankName} · ${data.holder} · •••• ${accountNumber.slice(-4)} · 데모 계좌 확인`, "done", "money");
+    saveState(); render(); updateAccountUI(); doogoMoneyModal(); showToast("예치금 출금 계좌를 등록했습니다.");
   }
   if (form.id === "doogoMoneyWithdrawForm") {
     const wallet = sellerDeposit();
     const amount = Number(data.amount || 0);
     if (!wallet.bankAccount) return showToast("출금 계좌를 먼저 등록해 주세요.");
-    if (amount < 1000 || amount > wallet.balance) return showToast("사용 가능 두고머니 안에서 1,000원 이상 입력해 주세요.");
+    if (amount < 1000 || amount > wallet.balance) return showToast("사용 가능 예치금 안에서 1,000원 이상 입력해 주세요.");
     const withdrawal = { id: `WD-${String(Date.now()).slice(-9)}`, amount, status: "이체 처리중", bankName: wallet.bankAccount.bankName, accountLast4: wallet.bankAccount.accountNumber.slice(-4), requestedAt: "방금 전" };
     wallet.balance -= amount;
     wallet.withdrawalPending += amount;
     wallet.withdrawals.unshift(withdrawal);
-    wallet.transactions.unshift({ id: `DM-${Date.now()}`, type: "계좌 출금 신청", amount: -amount, reference: withdrawal.id, createdAt: "방금 전" });
-    audit("두고머니 계좌 출금 신청", `${withdrawal.id} · ${money(amount)} · 사용 가능 잔액 즉시 차감, 은행 이체 결과 대기`, "pending", "money");
-    saveState(); render(); updateAccountUI(); doogoMoneyModal(); showToast("출금을 신청했습니다. 사용 가능 두고머니에서 즉시 차감했습니다.");
+    wallet.transactions.unshift({ id: `DM-${Date.now()}`, type: "계좌 출금 신청", amount: -amount, reference: withdrawal.id, createdAt: depositStamp() });
+    audit("예치금 계좌 출금 신청", `${withdrawal.id} · ${money(amount)} · 사용 가능 잔액 즉시 차감, 은행 이체 결과 대기`, "pending", "money");
+    saveState(); render(); updateAccountUI(); doogoMoneyModal(); showToast("출금을 신청했습니다. 사용 가능 예치금에서 즉시 차감했습니다.");
   }
   if (form.id === "refundRequestForm") {
     const order = state.orders.find(item => item.id === form.dataset.id);
@@ -5399,7 +5636,7 @@ document.addEventListener("submit", event => {
     order.status = data.type === "주문 취소" ? "환불접수" : "반품접수";
     order.settlementStatus = "hold";
     pushNotification(order.supplierLoginId, "supplier", "refund", "새 환불 요청을 확인해 주세요", `${order.id} · 소비자 ${money(refund.consumerRefundAmount)} · 공급대금 ${money(refund.amount)} · 회수 여부 선택 필요`, ["운영센터", "이메일"]);
-    audit("취소·환불 요청 접수", `${refund.id} · ${order.id} · 소비자 환불 ${money(refund.consumerRefundAmount)} 완료 · 두고머니 예정 ${money(refund.amount)} · 공급사 회수 판단 대기`, "pending", "refund");
+    audit("취소·환불 요청 접수", `${refund.id} · ${order.id} · 소비자 환불 ${money(refund.consumerRefundAmount)} 완료 · 예치금 예정 ${money(refund.amount)} · 공급사 회수 판단 대기`, "pending", "refund");
     saveState(); closeModal(); activeMenuIndex = 5; render(); updateAccountUI(); showToast("두고에 환불 요청을 접수했습니다.");
   }
   if (form.id === "refundConsultForm") {
@@ -5633,14 +5870,14 @@ function showKakaoProfile(member) {
   view.dataset.memberId = member.id;
   view.innerHTML = `<div class="signup-visual kakao-visual">
       <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고"><span class="brand-mark"><img src="assets/doogomarket-symbol.png" alt=""></span><span class="brand-word"><b>두고</b><small>DOOGO</small></span></div>
-      <div class="login-message"><span>KAKAO 1초 가입</span><h1>카카오 가입 완료!<br>사업자 정보만 남았어요.</h1><p>아래 정보를 모두 입력하면 마스터 승인 후<br>카카오 버튼 한 번으로 로그인할 수 있어요.</p></div>
+      <div class="login-message"><span>KAKAO 1초 가입</span><h1>카카오 가입 완료!<br>사업자 정보만 남았어요.</h1><p>아래 정보를 모두 입력하면 바로 가입이 끝나요.<br>다음부터는 카카오 버튼 한 번으로 로그인해요.</p></div>
       <div class="signup-visual-points"><span>✓ 사업자등록증 사본</span><span>✓ 세금계산서 받을 이메일</span><span>✓ 환불 받을 계좌 (계좌번호 또는 통장 사본)</span></div>
       <div class="login-visual-footer"><span>DOOGO SELLER</span><span>안전한 데모 환경</span></div>
     </div>
     <div class="signup-panel"><div class="signup-card kakao-profile-card">
       <button type="button" class="signup-back" data-kakao-profile-back>← 로그인으로</button>
       <div data-kakao-profile-form>
-      <div class="signup-heading"><span>BUSINESS INFORMATION</span><h2>사업자 정보를 완성해 주세요</h2><p>모두 입력해야 두고를 이용할 수 있어요.</p></div>
+      <div class="signup-heading"><span>BUSINESS INFORMATION</span><h2>사업자 정보를 완성해 주세요</h2><p>모두 입력하면 바로 두고를 시작할 수 있어요.</p></div>
       <div class="kakao-linked-chip"><span class="kakao-sheet-logo">${KAKAO_ICON}</span><span><b>${escapeHtml(member.kakaoNickname || member.name)}</b> · ${escapeHtml(member.kakaoId)}</span><em>카카오 연결됨</em></div>
       ${rejected ? `<div class="signup-guide danger"><b>반려된 신청이에요</b><span>${escapeHtml(member.rejectReason || "사업자 정보를 다시 확인해 주세요.")} 수정 후 다시 제출해 주세요.</span></div>` : ""}
       <form id="kakaoProfileForm" class="signup-form kakao-profile-form" novalidate>
@@ -5672,7 +5909,7 @@ function showKakaoProfile(member) {
         </section>
         <div class="prototype-warning">프로토타입 검증용 화면입니다. 실제 개인정보·사업자등록증·통장 사본은 올리지 마세요. (파일명만 저장)</div>
         <p class="signup-step-error" data-kakao-profile-error></p>
-        <button class="login-submit kakao-profile-submit" type="submit">사업자 정보 제출하고 승인 요청</button>
+        <button class="login-submit kakao-profile-submit" type="submit">사업자 정보 제출하고 가입 완료</button>
       </form>
       </div>
       <div class="signup-complete" data-kakao-profile-done hidden><span class="complete-icon">✓</span><h2>제출이 완료되었어요</h2><p>마스터가 사업자 정보를 확인하면 승인돼요.<br>승인 후에는 <b>카카오로 1초 로그인</b>으로 바로 들어올 수 있어요.</p>
@@ -5707,15 +5944,15 @@ function submitKakaoProfile(form) {
     company: data.company.trim(), name: data.company.trim(), representative: data.representative.trim(), businessNo: data.businessNo.trim(), contact: data.contact.trim(),
     businessFile, taxInvoiceEmail: data.taxInvoiceEmail.trim(), referralCode: data.referralCode.trim().toUpperCase(), marketingConsent: Boolean(data.marketingConsent),
     bankName: data.refundMode === "file" ? "" : data.bankName, bankAccountHolder: data.refundMode === "file" ? "" : data.bankAccountHolder.trim(), bankAccountNumber: data.refundMode === "file" ? "" : data.bankAccountNumber.replace(/[^\d-]/g, ""),
-    bankbookFile: data.refundMode === "file" ? bankbookFile : "", status: "pending", appliedAt: "방금 전", rejectReason: "", profileCompletedAt: new Date().toISOString()
+    bankbookFile: data.refundMode === "file" ? bankbookFile : "", status: "approved", autoApproved: true, appliedAt: "방금 전", approvedAt: "방금 전 · 자동 가입", rejectReason: "", profileCompletedAt: new Date().toISOString()
   });
-  state.logs.unshift({ id: Date.now(), type: "member", title: "신규 사업자 가입 신청 (카카오)", detail: `${member.company} · 사업자등록증·세금계산서 이메일·환불 계좌 제출 완료 · 승인 요청`, actor: member.kakaoNickname || member.company, time: "방금 전", state: "pending" });
+  /* 필수 정보를 모두 받았으므로 마스터 승인 없이 바로 가입 완료. 마스터에게는 알림과 제출 서류가 남는다. */
+  state.logs.unshift({ id: Date.now(), type: "member", title: "카카오 자동 가입 완료", detail: `${member.company} · 사업자등록증·세금계산서 이메일·환불 계좌 제출 완료 · 자동 승인`, actor: member.kakaoNickname || member.company, time: "방금 전", state: "done" });
+  state.members.filter(item => item.role === "master").forEach(master => pushNotification(master.loginId, "master", "member", "카카오 신규 위탁셀러 자동 가입", `${member.company} · ${member.businessNo} · 제출 서류 확인 가능`));
   saveState();
   error.textContent = "";
-  const card = form.closest(".kakao-profile-card");
-  card.querySelector("[data-kakao-profile-form]").hidden = true;
-  card.querySelector("[data-kakao-profile-done]").hidden = false;
-  window.scrollTo({ top: 0 });
+  showApp(member.loginId);
+  showToast(`가입 완료! ${member.company}님, 두고에 오신 걸 환영해요.`);
   return true;
 }
 document.addEventListener("click", event => {
@@ -5751,7 +5988,7 @@ function staffPermissionDefs() {
   return [
     { key: "products", label: "상품", desc: "소싱·PICK·마스터 상품·쇼핑몰 전송", menus: [1, 16, 2, 17, 14, 11, 15, 7] },
     { key: "orders", label: "주문·배송", desc: "주문 결제·송장 전송·취소반품·공급사 문의", menus: [4, 5, 3] },
-    { key: "money", label: "두고머니·매출", desc: "충전·결제·매출 달력·정기구독", menus: [12, 6, 9] },
+    { key: "money", label: "예치금·매출", desc: "충전·결제·매출 달력·정기구독", menus: [12, 6, 9] },
     { key: "channels", label: "쇼핑몰 연동", desc: "API 키·배송 정책·자동화 설정", menus: [8] }
   ];
 }
@@ -5759,7 +5996,7 @@ const STAFF_OWNER_ONLY_ACTIONS = ["account-tab", "open-user-switch", "switch-wor
 const STAFF_ACTION_PERMISSIONS = {
   "push-all-tracking": "orders", "push-tracking": "orders", "run-tracking-sync": "orders", "collect-orders": "orders", "pay-order": "orders", "open-order-payment-stage": "orders", "dispatch-supplier-order": "orders", "single-order": "orders", "map-order": "orders", "request-refund": "orders", "demo-forward-tracking": "orders",
   "manage-product-channels": "products", "sync-all-channels": "products", "sync-channel-listing": "products", "push-channel-listing": "products", "edit-seller-product": "products", "register-master-product": "products", "simulate-order": "products", "open-stop-channel": "products", "delete-pick": "products", "rerequest-pick": "products",
-  "open-doogo-money": "money", "open-doogo-money-history": "money", "edit-doogo-money-bank": "money", "toggle-subscription": "money", "billing-settings": "money",
+  "open-doogo-money": "money", "deposit-view": "money", "deposit-confirm-demo": "money", "deposit-cancel-charge": "money", "deposit-filter": "money", "open-doogo-money-history": "money", "edit-doogo-money-bank": "money", "toggle-subscription": "money", "billing-settings": "money",
   "connect-channel": "channels", "refresh-channel-policies": "channels", "toggle-channel-automation": "channels", "toggle-auto-tracking": "channels", "toggle-auto-collect": "channels"
 };
 function staffByEmail(email) { const key = String(email || "").trim().toLowerCase(); return (state.staff || []).find(member => member.email.toLowerCase() === key && member.status !== "removed"); }
@@ -5959,6 +6196,38 @@ document.addEventListener("submit", event => {
   closeKakaoSheet();
   showApp(owner.loginId, staff);
   showToast(`환영해요, ${staff.name}님! ${owner.company || owner.name} 직원으로 가입했어요.`);
+});
+
+/* 상품 꾸미기 카테고리 검색 입력 */
+document.addEventListener("input", event => {
+  if (event.target.id === "studioCatSearch") {
+    const query = event.target.value.trim();
+    const box = document.getElementById("studioCatResults");
+    if (!box) return;
+    if (!query) { const item = state.sellerProducts.find(entry => entry.id === studioDraft?.itemId); box.innerHTML = `<p class="cat-suggest-label">상품명으로 추천</p>${studioCatResultMarkup(item ? searchCategories(studioSuggestionQuery(item, productOf(item.productId)), "smartstore", 3) : [], "", "검색어를 넣어 주세요.")}`; return; }
+    box.innerHTML = studioCatResultMarkup(searchCategories(query, "smartstore", 8), query, `‘${query}’와 비슷한 카테고리가 없어요. 다른 단어로 찾아보세요.`);
+    return;
+  }
+  const channelId = event.target.dataset?.channelCatSearch;
+  if (channelId) {
+    const query = event.target.value.trim();
+    const box = document.querySelector(`[data-channel-cat-results="${channelId}"]`);
+    if (!box) return;
+    const results = query ? searchCategories(query, channelId, 6) : [];
+    box.innerHTML = results.length ? results.map(leaf => `<button type="button" class="cat-result" data-action="studio-channel-cat-pick" data-channel="${channelId}" data-path="${escapeHtml(leaf.path.join("|"))}"><span>${leaf.path.map(part => highlightWords(part, query)).join(" <i>›</i> ")}</span></button>`).join("") : `<div class="cat-result-empty">${query ? "비슷한 카테고리가 없어요." : "검색어를 넣어 주세요."}</div>`;
+  }
+});
+document.addEventListener("keydown", event => {
+  if (event.key !== "Enter" || event.isComposing) return;
+  if (event.target.id === "studioCatSearch") { event.preventDefault(); document.querySelector("#studioCatResults .cat-result")?.click(); }
+  else if (event.target.dataset?.channelCatSearch) { event.preventDefault(); document.querySelector(`[data-channel-cat-results="${event.target.dataset.channelCatSearch}"] .cat-result`)?.click(); }
+});
+document.addEventListener("click", event => {
+  const tab = event.target.closest("[data-cat-mode]");
+  if (!tab) return;
+  const finder = tab.closest(".cat-finder");
+  finder.querySelectorAll("[data-cat-mode]").forEach(button => button.classList.toggle("active", button === tab));
+  finder.querySelectorAll("[data-cat-pane]").forEach(pane => { pane.hidden = pane.dataset.catPane !== tab.dataset.catMode; });
 });
 
 const requestedPortal = new URLSearchParams(window.location.search).get("portal");
