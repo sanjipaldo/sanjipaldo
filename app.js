@@ -1071,7 +1071,8 @@ function memberStatusChip(status) {
     pending: ["승인 대기", "orange"],
     approved: ["승인 완료", "blue"],
     rejected: ["반려", "red"],
-    suspended: ["이용 정지", "red"]
+    suspended: ["이용 정지", "red"],
+    "profile-incomplete": ["정보 입력 중", ""]
   }[status] || [status, ""];
   return `<span class="chip ${meta[1]}">${meta[0]}</span>`;
 }
@@ -1189,6 +1190,7 @@ function showLogin() {
   currentAccount = null;
   document.getElementById("appView").hidden = true;
   document.getElementById("signupView").hidden = true;
+  document.getElementById("kakaoProfileView").hidden = true;
   document.getElementById("partnerLoginView").hidden = true;
   document.getElementById("loginView").hidden = false;
   document.getElementById("loginPassword").value = "";
@@ -1200,6 +1202,7 @@ function showPartnerLogin(role = "supplier") {
   currentAccount = null;
   document.getElementById("appView").hidden = true;
   document.getElementById("signupView").hidden = true;
+  document.getElementById("kakaoProfileView").hidden = true;
   document.getElementById("loginView").hidden = true;
   document.getElementById("partnerLoginView").hidden = false;
   setPartnerLoginRole(role);
@@ -1251,6 +1254,7 @@ function showApp(accountId) {
   document.getElementById("loginView").hidden = true;
   document.getElementById("partnerLoginView").hidden = true;
   document.getElementById("signupView").hidden = true;
+  document.getElementById("kakaoProfileView").hidden = true;
   document.getElementById("appView").hidden = false;
   closeMobileSidebar();
   render();
@@ -1277,6 +1281,8 @@ function showSignup(role = "seller", returnTarget = "seller") {
   document.getElementById("partnerLoginView").hidden = true;
   document.getElementById("appView").hidden = true;
   document.getElementById("signupView").hidden = false;
+  document.getElementById("kakaoProfileView").hidden = true;
+  document.getElementById("signupKakaoBlock").hidden = normalizedRole !== "seller";
   document.getElementById("signupFormWrap").hidden = false;
   document.getElementById("signupComplete").hidden = true;
   document.getElementById("signupForm").reset();
@@ -1579,7 +1585,7 @@ function sellerAccountProfileTemplate() {
       <div class="profile-glance"><div><span>판매 상품</span><strong>${currentSellerProducts().length}개</strong></div><div><span>연결 공급사</span><strong>${currentSellerConnections().length}곳</strong></div><div><span>연동 채널</span><strong>${connectedChannels}개</strong></div><div><span>이용 플랜</span><strong>${escapeHtml(subscription.plan)}</strong></div></div>
     </section>
     <div class="seller-profile-layout">
-      <section class="panel seller-business-card"><div class="profile-section-head"><div><span>BUSINESS INFORMATION</span><h3>사업자 기본 정보</h3><p>주문·정산·세금계산서에 사용되는 계정 정보입니다.</p></div><button class="secondary-button" data-action="account-tab" data-tab="business">정보 수정</button></div><div class="profile-detail-grid"><div><span>상호명</span><b>${escapeHtml(account.company)}</b></div><div><span>대표자명</span><b>${escapeHtml(account.representative)}</b></div><div><span>사업자등록번호</span><b>${escapeHtml(account.businessNo)}</b></div><div><span>연락처</span><b>${escapeHtml(account.contact)}</b></div><div class="wide"><span>이메일</span><b>${escapeHtml(account.email)}</b></div><div><span>계정 권한</span><b>${accountRoles().length > 1 ? "위탁셀러 · 공급사" : "위탁셀러"}</b></div><div><span>업태 · 종목</span><b>${escapeHtml(account.businessType || "미입력")} · ${escapeHtml(account.businessItem || "미입력")}</b></div><div class="wide"><span>사업장 주소</span><b>${escapeHtml(account.businessAddress || "미입력")}</b></div><div><span>세금계산서 이메일</span><b>${escapeHtml(account.taxInvoiceEmail || account.email)}</b></div><div><span>공급사 노출 전화번호</span><b>${escapeHtml(account.supplierVisiblePhone || "미입력")}</b></div><div class="wide"><span>정산 계좌</span><b>${account.bankName ? `${escapeHtml(account.bankName)} ${escapeHtml(account.bankAccountNumber || "")} (${escapeHtml(account.bankAccountHolder || account.representative)})` : "미입력"}</b></div></div></section>
+      <section class="panel seller-business-card"><div class="profile-section-head"><div><span>BUSINESS INFORMATION</span><h3>사업자 기본 정보</h3><p>주문·정산·세금계산서에 사용되는 계정 정보입니다.</p></div><button class="secondary-button" data-action="account-tab" data-tab="business">정보 수정</button></div><div class="profile-detail-grid"><div><span>상호명</span><b>${escapeHtml(account.company)}</b></div><div><span>대표자명</span><b>${escapeHtml(account.representative)}</b></div><div><span>사업자등록번호</span><b>${escapeHtml(account.businessNo)}</b></div><div><span>연락처</span><b>${escapeHtml(account.contact)}</b></div><div class="wide"><span>이메일</span><b>${escapeHtml(account.email)}</b></div><div><span>계정 권한</span><b>${accountRoles().length > 1 ? "위탁셀러 · 공급사" : "위탁셀러"}</b></div><div><span>업태 · 종목</span><b>${escapeHtml(account.businessType || "미입력")} · ${escapeHtml(account.businessItem || "미입력")}</b></div><div class="wide"><span>사업장 주소</span><b>${escapeHtml(account.businessAddress || "미입력")}</b></div><div><span>세금계산서 이메일</span><b>${escapeHtml(account.taxInvoiceEmail || account.email)}</b></div><div><span>공급사 노출 전화번호</span><b>${escapeHtml(account.supplierVisiblePhone || "미입력")}</b></div><div class="wide"><span>정산·환불 계좌</span><b>${account.bankName ? `${escapeHtml(account.bankName)} ${escapeHtml(account.bankAccountNumber || "")} (${escapeHtml(account.bankAccountHolder || account.representative)})` : account.bankbookFile ? `통장 사본 ${escapeHtml(account.bankbookFile)}` : "미입력"}</b></div><div class="wide"><span>로그인 방식</span><b>${account.kakaoId ? `<span class="kakao-badge">카카오</span> ${escapeHtml(account.kakaoId)} · 카카오로 1초 로그인` : "이메일 · 비밀번호"}</b></div></div></section>
       ${sellerAutomationSettingsCard()}
       <section class="panel seller-service-card"><div class="profile-section-head"><div><span>QUICK SETTINGS</span><h3>서비스 및 권한 관리</h3><p>자주 사용하는 설정으로 바로 이동합니다.</p></div></div><div class="profile-link-list"><button class="profile-link-button" data-action="open-seller-channels"><span>↗</span><b>쇼핑몰 연동</b><small>네이버·쿠팡·카카오·CAFE24</small><em>관리</em></button><button class="profile-link-button" data-action="open-seller-subscription"><span>₩</span><b>정기구독</b><small>${money(subscription.monthlyFee)} · 다음 결제 ${escapeHtml(subscription.nextBilling)}</small><em>관리</em></button>${supplierButton}</div></section>
     </div>`;
@@ -2538,10 +2544,11 @@ function ordersTable(role, query = "", sourceOverride = null) {
 }
 
 function membersTable() {
-  const members = [...state.members].filter(member => member.role !== "master").sort((a, b) => ({ pending: 0, rejected: 1, approved: 2 }[a.status] ?? 3) - ({ pending: 0, rejected: 1, approved: 2 }[b.status] ?? 3));
+  const order = { pending: 0, "profile-incomplete": 1, rejected: 2, approved: 3 };
+  const members = [...state.members].filter(member => member.role !== "master").sort((a, b) => (order[a.status] ?? 4) - (order[b.status] ?? 4));
   return `<div class="table-wrap"><table class="member-table"><thead><tr><th>신청자</th><th>가입 유형</th><th>사업자 정보</th><th>신청일</th><th>상태</th><th>처리</th></tr></thead><tbody>
     ${members.map(member => `<tr>
-      <td><strong>${escapeHtml(member.company)}</strong><br><small>${escapeHtml(member.representative)} · ${escapeHtml(member.loginId)}</small></td>
+      <td><strong>${escapeHtml(member.company || member.kakaoNickname || member.loginId)}</strong>${member.kakaoId ? ` <span class="kakao-badge">카카오</span>` : ""}<br><small>${escapeHtml(member.representative || "사업자 정보 입력 전")} · ${escapeHtml(member.loginId)}</small></td>
       <td><span class="member-role ${member.role}">${member.roleLabel}</span></td>
       <td>${escapeHtml(member.businessNo)}<br><small>${escapeHtml(member.contact)}</small></td>
       <td>${escapeHtml(member.appliedAt)}</td>
@@ -3628,7 +3635,9 @@ function memberDetailModal(id) {
       <div><span>연락처</span><b>${escapeHtml(member.contact)}</b></div><div><span>이메일</span><b>${escapeHtml(member.email)}</b></div>
       <div><span>추천인 코드</span><b>${escapeHtml(member.referralCode || "기존 회원")}</b></div><div><span>마케팅 수신</span><b>${member.marketingConsent ? "동의" : "미동의"}</b></div>
       ${roles.length > 1 ? `<div><span>공급사 상호</span><b>${escapeHtml(member.supplierCompany || member.company)}</b></div><div><span>사용 가능 모드</span><b>위탁셀러 ↔ 공급사</b></div>` : ""}
-      <div class="full"><span>사업자등록증</span><b>${escapeHtml(member.businessFile || "첨부 없음")}</b></div>
+      <div><span>가입 방식</span><b>${member.kakaoId ? `카카오 1초 가입 (${escapeHtml(member.kakaoNickname || "")})` : "이메일 가입"}</b></div><div><span>세금계산서 이메일</span><b>${escapeHtml(member.taxInvoiceEmail || member.email || "-")}</b></div>
+      <div class="full"><span>사업자등록증 사본</span><b>${escapeHtml(member.businessFile || "첨부 없음")}</b></div>
+      <div class="full"><span>환불 계좌</span><b>${member.bankName ? `${escapeHtml(member.bankName)} ${escapeHtml(member.bankAccountNumber || "")} (${escapeHtml(member.bankAccountHolder || "")})` : "직접 입력 없음"}${member.bankbookFile ? ` · 통장 사본 ${escapeHtml(member.bankbookFile)}` : ""}</b></div>
       <div class="full"><span>신청일</span><b>${escapeHtml(member.appliedAt)}</b></div>
       ${member.rejectReason ? `<div class="full reject-box"><span>반려 사유</span><b>${escapeHtml(member.rejectReason)}</b></div>` : ""}
     </div>
@@ -4479,6 +4488,10 @@ document.getElementById("loginForm").addEventListener("submit", event => {
   const id = document.getElementById("loginId").value.trim().toLowerCase();
   const password = document.getElementById("loginPassword").value.trim();
   const account = getAccount(id);
+  if (account?.kakaoId && !account.password) {
+    document.getElementById("loginError").textContent = "카카오로 가입한 계정이에요. 아래 ‘카카오로 1초 로그인’을 눌러 주세요.";
+    return;
+  }
   if (!account || String(account.password) !== password) {
     document.getElementById("loginError").textContent = "아이디 또는 비밀번호를 다시 확인해 주세요.";
     document.getElementById("loginPassword").focus();
@@ -4490,6 +4503,10 @@ document.getElementById("loginForm").addEventListener("submit", event => {
   }
   if (account.status === "pending") {
     document.getElementById("loginError").textContent = "마스터 승인 대기 중인 계정입니다.";
+    return;
+  }
+  if (account.status === "profile-incomplete") {
+    document.getElementById("loginError").textContent = "사업자 정보 입력이 끝나지 않았어요. ‘카카오로 1초 로그인’을 눌러 이어서 입력해 주세요.";
     return;
   }
   if (account.status === "rejected") {
@@ -5505,6 +5522,188 @@ function startTyping(elementId, messages) {
   };
   tick();
 }
+
+/* ===== 카카오 1초 가입·로그인 (데모) =====
+   카카오 동의만으로 계정을 만들고, 사업자 정보(사업자등록증 사본·세금계산서 이메일·환불 계좌)를 모두 제출해야 승인 요청이 된다.
+   마스터 승인 후에는 카카오 버튼 한 번으로 로그인한다. 실제 카카오 API는 호출하지 않는다. */
+const KAKAO_SESSION_KEY = "doogo-kakao-demo-session";
+const KAKAO_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.2C6.6 3.2 2.3 6.6 2.3 10.8c0 2.7 1.8 5.1 4.5 6.4l-1 3.6c-.1.4.3.7.6.5l4.3-2.8c.4 0 .9.1 1.3.1 5.4 0 9.7-3.4 9.7-7.6S17.4 3.2 12 3.2Z"/></svg>`;
+const REFUND_BANKS = ["국민은행", "신한은행", "우리은행", "하나은행", "농협은행", "기업은행", "카카오뱅크", "토스뱅크", "케이뱅크", "새마을금고", "우체국"];
+function kakaoSession() { try { return JSON.parse(localStorage.getItem(KAKAO_SESSION_KEY) || "null"); } catch { return null; } }
+function kakaoMemberOf(kakaoId) { const key = String(kakaoId || "").toLowerCase(); return state.members.find(member => String(member.kakaoId || "").toLowerCase() === key); }
+function openKakaoSheet() {
+  const session = kakaoSession();
+  const sheet = document.getElementById("kakaoSheet");
+  sheet.innerHTML = `<div class="kakao-sheet-backdrop" data-kakao-close></div><div class="kakao-sheet-card" role="dialog" aria-modal="true" aria-labelledby="kakaoSheetTitle">
+    <div class="kakao-sheet-top"><span class="kakao-sheet-logo">${KAKAO_ICON}</span><b>kakao</b><button type="button" class="kakao-sheet-x" data-kakao-close aria-label="닫기">×</button></div>
+    ${session ? `<div class="kakao-quick" data-kakao-quick><p>이 기기에서 사용한 카카오계정</p><button type="button" class="kakao-quick-account" data-kakao-continue><span class="kakao-avatar">${escapeHtml(String(session.nickname || "K").slice(0, 1))}</span><span><b>${escapeHtml(session.nickname)}</b><small>${escapeHtml(session.email)}</small></span><i>계속하기</i></button><button type="button" class="text-button" data-kakao-other>다른 카카오계정으로</button></div>` : ""}
+    <form id="kakaoConsentForm" class="kakao-consent" ${session ? "hidden" : ""}>
+      <h3 id="kakaoSheetTitle"><b>두고</b>에서 카카오계정 정보를 요청해요</h3>
+      <label>카카오계정 (이메일)<input name="email" type="email" required autocomplete="email" placeholder="kakao@example.com"></label>
+      <label>닉네임<input name="nickname" required maxlength="20" placeholder="예: 두고사장님"></label>
+      <div class="kakao-consent-list">
+        <label class="all"><input type="checkbox" data-kakao-all><b>전체 동의하기</b></label>
+        <label><input type="checkbox" name="agreeEmail" required><span>[필수] 카카오계정(이메일)</span></label>
+        <label><input type="checkbox" name="agreeProfile" required><span>[필수] 프로필 정보(닉네임)</span></label>
+        <label><input type="checkbox" name="agreeChannel"><span>[선택] 두고 카카오톡 채널 추가</span></label>
+      </div>
+      <p class="kakao-consent-error" data-kakao-error></p>
+      <button type="submit" class="kakao-submit">동의하고 계속하기</button>
+      <p class="kakao-demo-note">데모 화면이에요. 실제 카카오 API는 호출하지 않고 이 브라우저에만 저장돼요.</p>
+    </form></div>`;
+  sheet.hidden = false;
+  document.body.classList.add("kakao-sheet-open");
+  setTimeout(() => (sheet.querySelector("[data-kakao-continue]") || sheet.querySelector("#kakaoConsentForm input[name=email]"))?.focus(), 30);
+}
+function closeKakaoSheet() {
+  const sheet = document.getElementById("kakaoSheet");
+  sheet.hidden = true; sheet.innerHTML = "";
+  document.body.classList.remove("kakao-sheet-open");
+}
+function continueWithKakao(profile) {
+  const email = String(profile.email || "").trim().toLowerCase();
+  const nickname = String(profile.nickname || "").trim() || email.split("@")[0];
+  try { localStorage.setItem(KAKAO_SESSION_KEY, JSON.stringify({ email, nickname })); } catch {}
+  closeKakaoSheet();
+  let member = kakaoMemberOf(email);
+  if (!member) {
+    const existing = getAccount(email);
+    if (existing && state.members.includes(existing)) {
+      /* 같은 이메일로 가입한 계정이 있으면 카카오를 연결한다. */
+      existing.kakaoId = email; existing.kakaoNickname = nickname;
+      member = existing;
+      audit("카카오 계정 연결", `${existing.company || email} 계정에 카카오 로그인을 연결했습니다.`, "done", "member");
+    } else {
+      member = { id: nextMemberId(), loginId: email, password: "", role: "seller", roles: ["seller"], roleLabel: "위탁셀러", name: nickname, company: "", representative: "", businessNo: "", contact: "", email, referralCode: "", marketingConsent: false, status: "profile-incomplete", appliedAt: "방금 전", approvedAt: "", businessFile: "", rejectReason: "", kakaoId: email, kakaoNickname: nickname, signupMethod: "kakao" };
+      state.members.push(member);
+      state.logs.unshift({ id: Date.now(), type: "member", title: "카카오 1초 가입", detail: `${nickname} (${email}) · 사업자 정보 입력 전`, actor: nickname, time: "방금 전", state: "pending" });
+    }
+    saveState();
+  }
+  if (member.role !== "seller") { showLogin(); document.getElementById("loginError").textContent = "카카오 로그인은 위탁셀러 계정에서만 쓸 수 있어요."; return; }
+  if (member.status === "approved") { showApp(member.loginId); showToast(`카카오로 로그인했어요. 반가워요, ${member.kakaoNickname || member.name}님!`); return; }
+  if (member.status === "pending") { showLogin(); document.getElementById("loginError").textContent = "사업자 정보 제출 완료! 마스터 승인을 기다리고 있어요. 승인되면 카카오로 바로 로그인돼요."; return; }
+  if (["profile-incomplete", "rejected"].includes(member.status)) return showKakaoProfile(member);
+  showLogin(); document.getElementById("loginError").textContent = "현재 이용할 수 없는 계정입니다.";
+}
+function showKakaoProfile(member) {
+  ["loginView", "partnerLoginView", "signupView", "appView"].forEach(id => { document.getElementById(id).hidden = true; });
+  const view = document.getElementById("kakaoProfileView");
+  const rejected = member.status === "rejected";
+  const bankMode = member.bankbookFile && !member.bankName ? "file" : "account";
+  view.dataset.memberId = member.id;
+  view.innerHTML = `<div class="signup-visual kakao-visual">
+      <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고"><span class="brand-mark"><img src="assets/doogomarket-symbol.png" alt=""></span><span class="brand-word"><b>두고</b><small>DOOGO</small></span></div>
+      <div class="login-message"><span>KAKAO 1초 가입</span><h1>카카오 가입 완료!<br>사업자 정보만 남았어요.</h1><p>아래 정보를 모두 입력하면 마스터 승인 후<br>카카오 버튼 한 번으로 로그인할 수 있어요.</p></div>
+      <div class="signup-visual-points"><span>✓ 사업자등록증 사본</span><span>✓ 세금계산서 받을 이메일</span><span>✓ 환불 받을 계좌 (계좌번호 또는 통장 사본)</span></div>
+      <div class="login-visual-footer"><span>DOOGO SELLER</span><span>안전한 데모 환경</span></div>
+    </div>
+    <div class="signup-panel"><div class="signup-card kakao-profile-card">
+      <button type="button" class="signup-back" data-kakao-profile-back>← 로그인으로</button>
+      <div data-kakao-profile-form>
+      <div class="signup-heading"><span>BUSINESS INFORMATION</span><h2>사업자 정보를 완성해 주세요</h2><p>모두 입력해야 두고를 이용할 수 있어요.</p></div>
+      <div class="kakao-linked-chip"><span class="kakao-sheet-logo">${KAKAO_ICON}</span><span><b>${escapeHtml(member.kakaoNickname || member.name)}</b> · ${escapeHtml(member.kakaoId)}</span><em>카카오 연결됨</em></div>
+      ${rejected ? `<div class="signup-guide danger"><b>반려된 신청이에요</b><span>${escapeHtml(member.rejectReason || "사업자 정보를 다시 확인해 주세요.")} 수정 후 다시 제출해 주세요.</span></div>` : ""}
+      <form id="kakaoProfileForm" class="signup-form kakao-profile-form" novalidate>
+        <section class="kakao-profile-section"><h3><i>1</i>사업자 정보</h3><div class="signup-fields">
+          <div class="signup-field"><label>상호명 <em>필수</em></label><input name="company" value="${escapeHtml(member.company)}" placeholder="예: 두고셀러"></div>
+          <div class="signup-field"><label>대표자명 <em>필수</em></label><input name="representative" value="${escapeHtml(member.representative)}" placeholder="예: 홍길동"></div>
+          <div class="signup-field"><label>사업자등록번호 <em>필수</em></label><input name="businessNo" inputmode="numeric" value="${escapeHtml(member.businessNo)}" placeholder="000-00-00000"></div>
+          <div class="signup-field"><label>연락처 <em>필수</em></label><input name="contact" inputmode="tel" value="${escapeHtml(member.contact)}" placeholder="010-0000-0000"></div>
+          <div class="signup-field full"><label>사업자등록증 사본 <em>필수</em>${member.businessFile ? ` <small>제출됨: ${escapeHtml(member.businessFile)}</small>` : ""}</label><input name="businessFile" type="file" accept=".jpg,.jpeg,.png,.pdf"></div>
+        </div></section>
+        <section class="kakao-profile-section"><h3><i>2</i>세금계산서 받을 이메일</h3><div class="signup-fields single">
+          <div class="signup-field full"><label>세금계산서 이메일 <em>필수</em></label><input name="taxInvoiceEmail" type="email" value="${escapeHtml(member.taxInvoiceEmail || member.email)}" placeholder="tax@example.com"></div>
+        </div></section>
+        <section class="kakao-profile-section"><h3><i>3</i>환불 받을 계좌</h3>
+          <div class="refund-mode-toggle" role="radiogroup"><label><input type="radio" name="refundMode" value="account" ${bankMode === "account" ? "checked" : ""}><span>계좌번호 입력</span></label><label><input type="radio" name="refundMode" value="file" ${bankMode === "file" ? "checked" : ""}><span>통장 사본 첨부</span></label></div>
+          <div class="signup-fields" data-refund-mode="account" ${bankMode === "account" ? "" : "hidden"}>
+            <div class="signup-field"><label>은행 <em>필수</em></label><select name="bankName"><option value="">은행 선택</option>${REFUND_BANKS.map(bank => `<option ${member.bankName === bank ? "selected" : ""}>${bank}</option>`).join("")}</select></div>
+            <div class="signup-field"><label>예금주 <em>필수</em></label><input name="bankAccountHolder" value="${escapeHtml(member.bankAccountHolder || "")}" placeholder="예: 홍길동"></div>
+            <div class="signup-field full"><label>계좌번호 <em>필수</em></label><input name="bankAccountNumber" inputmode="numeric" value="${escapeHtml(member.bankAccountNumber || "")}" placeholder="- 없이 숫자만"></div>
+          </div>
+          <div class="signup-fields single" data-refund-mode="file" ${bankMode === "file" ? "" : "hidden"}>
+            <div class="signup-field full"><label>통장 사본 <em>필수</em>${member.bankbookFile ? ` <small>제출됨: ${escapeHtml(member.bankbookFile)}</small>` : ""}</label><input name="bankbookFile" type="file" accept=".jpg,.jpeg,.png,.pdf"></div>
+          </div>
+        </section>
+        <section class="kakao-profile-section"><h3><i>4</i>추천인 코드 · 약관</h3>
+          <div class="signup-field full referral-field"><label>추천인 코드 <em>필수</em></label><input name="referralCode" value="${escapeHtml(member.referralCode || "")}" autocomplete="off" placeholder="추천인 코드 입력 (예: MOON2026)"></div>
+          <label class="signup-agreement"><input name="terms" type="checkbox"><span><b>(필수) 서비스 이용약관 및 개인정보 처리방침에 동의합니다.</b></span></label>
+          <label class="signup-agreement"><input name="marketingConsent" type="checkbox" ${member.marketingConsent ? "checked" : ""}><span><b>(선택) 마케팅 정보 수신에 동의합니다.</b></span></label>
+        </section>
+        <div class="prototype-warning">프로토타입 검증용 화면입니다. 실제 개인정보·사업자등록증·통장 사본은 올리지 마세요. (파일명만 저장)</div>
+        <p class="signup-step-error" data-kakao-profile-error></p>
+        <button class="login-submit kakao-profile-submit" type="submit">사업자 정보 제출하고 승인 요청</button>
+      </form>
+      </div>
+      <div class="signup-complete" data-kakao-profile-done hidden><span class="complete-icon">✓</span><h2>제출이 완료되었어요</h2><p>마스터가 사업자 정보를 확인하면 승인돼요.<br>승인 후에는 <b>카카오로 1초 로그인</b>으로 바로 들어올 수 있어요.</p>
+        <div class="complete-flow"><span class="done">카카오 가입</span><i></i><span class="done">사업자 정보 제출</span><i></i><span>마스터 승인</span></div>
+        <button type="button" class="login-submit" data-kakao-profile-back>로그인 화면으로</button></div>
+    </div></div>`;
+  view.hidden = false;
+  window.scrollTo({ top: 0 });
+}
+function submitKakaoProfile(form) {
+  const member = state.members.find(item => item.id === document.getElementById("kakaoProfileView").dataset.memberId);
+  const error = form.closest(".kakao-profile-card").querySelector("[data-kakao-profile-error]");
+  if (!member) return;
+  const data = Object.fromEntries(new FormData(form));
+  const businessFile = form.elements.businessFile.files?.[0]?.name || member.businessFile || "";
+  const bankbookFile = form.elements.bankbookFile.files?.[0]?.name || member.bankbookFile || "";
+  const fail = (message, name) => { error.textContent = message; const field = form.elements[name]; if (field) { field.focus?.(); field.closest(".signup-field")?.classList.add("has-error"); } return false; };
+  form.querySelectorAll(".has-error").forEach(item => item.classList.remove("has-error"));
+  for (const [name, label] of [["company", "상호명"], ["representative", "대표자명"], ["businessNo", "사업자등록번호"], ["contact", "연락처"]]) if (!String(data[name] || "").trim()) return fail(`${label}을(를) 입력해 주세요.`, name);
+  if (String(data.businessNo).replace(/\D/g, "").length !== 10) return fail("사업자등록번호 10자리를 확인해 주세요.", "businessNo");
+  if (!businessFile) return fail("사업자등록증 사본을 첨부해 주세요.", "businessFile");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(data.taxInvoiceEmail || ""))) return fail("세금계산서 받을 이메일을 확인해 주세요.", "taxInvoiceEmail");
+  if (data.refundMode === "file") { if (!bankbookFile) return fail("통장 사본을 첨부해 주세요.", "bankbookFile"); }
+  else {
+    if (!data.bankName) return fail("환불 받을 은행을 골라 주세요.", "bankName");
+    if (!String(data.bankAccountHolder || "").trim()) return fail("예금주를 입력해 주세요.", "bankAccountHolder");
+    if (String(data.bankAccountNumber || "").replace(/\D/g, "").length < 8) return fail("계좌번호를 확인해 주세요.", "bankAccountNumber");
+  }
+  if (!String(data.referralCode || "").trim()) return fail("추천인 코드를 입력해 주세요.", "referralCode");
+  if (!data.terms) return fail("필수 약관에 동의해 주세요.", "terms");
+  Object.assign(member, {
+    company: data.company.trim(), name: data.company.trim(), representative: data.representative.trim(), businessNo: data.businessNo.trim(), contact: data.contact.trim(),
+    businessFile, taxInvoiceEmail: data.taxInvoiceEmail.trim(), referralCode: data.referralCode.trim().toUpperCase(), marketingConsent: Boolean(data.marketingConsent),
+    bankName: data.refundMode === "file" ? "" : data.bankName, bankAccountHolder: data.refundMode === "file" ? "" : data.bankAccountHolder.trim(), bankAccountNumber: data.refundMode === "file" ? "" : data.bankAccountNumber.replace(/[^\d-]/g, ""),
+    bankbookFile: data.refundMode === "file" ? bankbookFile : "", status: "pending", appliedAt: "방금 전", rejectReason: "", profileCompletedAt: new Date().toISOString()
+  });
+  state.logs.unshift({ id: Date.now(), type: "member", title: "신규 사업자 가입 신청 (카카오)", detail: `${member.company} · 사업자등록증·세금계산서 이메일·환불 계좌 제출 완료 · 승인 요청`, actor: member.kakaoNickname || member.company, time: "방금 전", state: "pending" });
+  saveState();
+  error.textContent = "";
+  const card = form.closest(".kakao-profile-card");
+  card.querySelector("[data-kakao-profile-form]").hidden = true;
+  card.querySelector("[data-kakao-profile-done]").hidden = false;
+  window.scrollTo({ top: 0 });
+  return true;
+}
+document.addEventListener("click", event => {
+  if (event.target.closest("[data-kakao-start]")) { event.preventDefault(); return openKakaoSheet(); }
+  if (event.target.closest("[data-kakao-close]")) return closeKakaoSheet();
+  if (event.target.closest("[data-kakao-continue]")) { const session = kakaoSession(); if (session) continueWithKakao(session); return; }
+  if (event.target.closest("[data-kakao-other]")) { const sheet = document.getElementById("kakaoSheet"); sheet.querySelector("[data-kakao-quick]").hidden = true; sheet.querySelector("#kakaoConsentForm").hidden = false; sheet.querySelector("#kakaoConsentForm input[name=email]").focus(); return; }
+  if (event.target.closest("[data-kakao-profile-back]")) { showLogin(); return; }
+});
+document.addEventListener("change", event => {
+  if (event.target.matches("[data-kakao-all]")) { event.target.closest("form").querySelectorAll(".kakao-consent-list input[type=checkbox]").forEach(input => { input.checked = event.target.checked; }); return; }
+  if (event.target.closest("#kakaoConsentForm .kakao-consent-list")) { const form = event.target.closest("form"); const boxes = [...form.querySelectorAll(".kakao-consent-list input[name]")]; form.querySelector("[data-kakao-all]").checked = boxes.every(box => box.checked); return; }
+  if (event.target.matches("#kakaoProfileForm input[name=refundMode]")) { const form = event.target.closest("form"); form.querySelectorAll("[data-refund-mode]").forEach(group => { group.hidden = group.dataset.refundMode !== event.target.value; }); }
+});
+document.addEventListener("submit", event => {
+  if (event.target.id === "kakaoConsentForm") {
+    event.preventDefault();
+    const form = event.target; const data = Object.fromEntries(new FormData(form));
+    const error = form.querySelector("[data-kakao-error]");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(data.email || "").trim())) { error.textContent = "카카오계정 이메일을 확인해 주세요."; return; }
+    if (!String(data.nickname || "").trim()) { error.textContent = "닉네임을 입력해 주세요."; return; }
+    if (!data.agreeEmail || !data.agreeProfile) { error.textContent = "필수 항목에 동의해 주세요."; return; }
+    continueWithKakao({ email: data.email, nickname: data.nickname });
+  }
+  if (event.target.id === "kakaoProfileForm") { event.preventDefault(); submitKakaoProfile(event.target); }
+});
+document.addEventListener("keydown", event => { if (event.key === "Escape" && !document.getElementById("kakaoSheet").hidden) closeKakaoSheet(); });
 
 const requestedPortal = new URLSearchParams(window.location.search).get("portal");
 initAuth();
