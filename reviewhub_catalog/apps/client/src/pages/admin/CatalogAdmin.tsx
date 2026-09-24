@@ -558,9 +558,6 @@ function AdminHome({ data }: { data: AdminHomeData | null }) {
           <h1>운영 홈</h1>
           <p>상품, 가격, 소싱 요청과 발주오라 연결 상태를 한눈에 확인합니다.</p>
         </div>
-        <div className="admin-heading-actions">
-          <Link className="primary-action" to="/admin/products"><Boxes size={16} /> 상품 관리</Link>
-        </div>
       </div>
       <section className="admin-home-hero">
         <div>
@@ -1069,11 +1066,23 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             const costPrice = representativeOption?.costPrice ?? product.costPrice ?? 0;
             const margin = marginRate(minimumAPrice, costPrice);
             const expanded = expandedProductId === product.id;
+            // 옵션 단가 패널: PC는 표 아래 펼침 행, 모바일은 옵션 버튼 바로 아래에 같은 내용을 보여줍니다.
+            const optionPanel = expanded && options.length > 0 ? (
+              <div className="admin-option-panel">
+                        <div className="admin-option-panel-heading"><div><span>OPTION PRICE</span><strong>{product.name} 옵션 단가</strong></div><small>옵션별 원가와 A단가 마진을 한눈에 확인할 수 있습니다.</small></div>
+                        <div className="admin-option-list">
+                          {options.map((option) => {
+                            const optionMargin = marginRate(effectiveAPrice(option.aPrice, option.generalPrice), option.costPrice);
+                            return <article key={option.id}>{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={18} /></span>}<div className="admin-option-name"><strong>{option.name}</strong><small>{product.name}</small></div><div><span>원가</span><b className="cost-price">{formatPrice(option.costPrice ?? 0)}</b></div><div><span>A단가</span><b className="admin-a-price">{formatPrice(effectiveAPrice(option.aPrice, option.generalPrice))}</b></div><div><span>일반공급가</span><b className="admin-general-price">{formatPrice(option.generalPrice)}</b></div><div><span>판매가</span><b className="admin-sale-price">{option.salePriceMode === "fixed" ? option.salePrice === null ? "미설정" : formatPrice(option.salePrice) : "자율"}</b></div><div><span>마진율</span><em className="prominent">{optionMargin !== null ? `${Math.round(optionMargin)}%` : "-"}</em></div><div><span>상태</span><b className={option.isSoldOut ? "admin-option-sold-out" : ""}>{option.isSoldOut ? "품절" : "판매중"}</b></div></article>;
+                          })}
+                        </div>
+                      </div>
+            ) : null;
             return (
               <Fragment key={product.id}>
                 <tr className={expanded ? "expanded" : ""}>
                   <td className="product-select-cell" data-label="선택"><label className="product-select-control"><input type="checkbox" checked={selectedProductIds.has(product.id)} onChange={() => toggleProductSelection(product.id)} aria-label={`${product.name} 선택`} /><span>선택</span></label></td>
-                  <td className="admin-product-primary"><div className="admin-product-cell">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={20} /></span>}<div className="admin-product-copy"><strong>{product.name}</strong><small>{product.productCode || product.id} · {product.origin || "-"} · 옵션 {options.length}개</small>{options.length > 0 && <button type="button" className="admin-option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? "옵션 접기" : `옵션 ${options.length}개 보기`} <ChevronRight size={14} /></button>}</div></div></td>
+                  <td className="admin-product-primary"><div className="admin-product-cell">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={20} /></span>}<div className="admin-product-copy"><strong>{product.name}</strong><small>{product.productCode || product.id} · {product.origin || "-"} · 옵션 {options.length}개</small>{options.length > 0 && <button type="button" className="admin-option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? "옵션 접기" : `옵션 ${options.length}개 보기`} <ChevronRight size={14} /></button>}</div></div>{optionPanel && <div className="admin-inline-options">{optionPanel}</div>}</td>
                   <td data-label="노출순서"><strong className="display-order-number">{productOrderMap.get(product.id) ?? "-"}</strong></td>
                   <td data-label="배송·카테고리"><strong>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</strong><small>{category?.name || "-"}</small></td>
                   <td data-label="판매기간"><strong>{isSeasonalCategory(category) ? product.isAlwaysOnSale ? "상시 판매" : `${product.saleStartMonth || "-"}월 ~ ${product.saleEndMonth || "-"}월` : "상시"}</strong><small>{isSeasonalCategory(category) ? product.isAlwaysOnSale ? "연중 판매" : "월별 제철상품" : "기간 적용 제외"}</small></td>
@@ -1083,21 +1092,13 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
                   <td data-label="일반공급가"><b className="admin-general-price">{formatPrice(minimumGeneralPrice)}</b><small>{options.length > 0 ? "옵션 최저가" : "기본가"}</small></td>
                   <td data-label="판매가"><b className="admin-sale-price">{product.salePriceMode === "fixed" ? product.salePrice === null ? "미설정" : formatPrice(product.salePrice) : "자율"}</b><small>{product.salePriceMode === "fixed" ? "지정 판매가" : "판매자 자율"}</small></td>
                   <td data-label="마진율">{margin !== null ? <strong className="margin-rate prominent">{Math.round(margin)}%</strong> : <small>계산 대기</small>}</td>
-                  <td data-label="상태"><span className={`status-pill ${product.isVisible ? "active" : ""}`}>{product.isVisible ? "노출" : "숨김"}</span><span className={`status-pill ${product.isSoldOut ? "danger" : ""}`}>{product.isSoldOut ? "준비중" : "판매중"}</span></td>
+                  <td data-label="상태"><span className={`status-pill ${product.isVisible ? "active" : ""}`}>{product.isVisible ? "노출" : "숨김"}</span><span className={`status-pill ${product.isSoldOut ? "danger" : ""}`}>{product.isSoldOut ? "품절" : "판매중"}</span></td>
                   <td data-label="관리"><div className="row-actions product-row-actions"><button type="button" onClick={() => startEdit(product)}><Pencil size={15} /> 수정</button><button type="button" className="danger" onClick={() => void remove(product)} aria-label={`${product.name} 삭제`}><Trash2 size={15} /> 삭제</button></div></td>
                 </tr>
                 {expanded && options.length > 0 && (
                   <tr className="admin-option-detail-row">
                     <td colSpan={13}>
-                      <div className="admin-option-panel">
-                        <div className="admin-option-panel-heading"><div><span>OPTION PRICE</span><strong>{product.name} 옵션 단가</strong></div><small>옵션별 원가와 A단가 마진을 한눈에 확인할 수 있습니다.</small></div>
-                        <div className="admin-option-list">
-                          {options.map((option) => {
-                            const optionMargin = marginRate(effectiveAPrice(option.aPrice, option.generalPrice), option.costPrice);
-                            return <article key={option.id}>{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={18} /></span>}<div className="admin-option-name"><strong>{option.name}</strong><small>{product.name}</small></div><div><span>원가</span><b className="cost-price">{formatPrice(option.costPrice ?? 0)}</b></div><div><span>A단가</span><b className="admin-a-price">{formatPrice(effectiveAPrice(option.aPrice, option.generalPrice))}</b></div><div><span>일반공급가</span><b className="admin-general-price">{formatPrice(option.generalPrice)}</b></div><div><span>판매가</span><b className="admin-sale-price">{option.salePriceMode === "fixed" ? option.salePrice === null ? "미설정" : formatPrice(option.salePrice) : "자율"}</b></div><div><span>마진율</span><em className="prominent">{optionMargin !== null ? `${Math.round(optionMargin)}%` : "-"}</em></div><div><span>상태</span><b>{option.isSoldOut ? "준비중" : "판매중"}</b></div></article>;
-                          })}
-                        </div>
-                      </div>
+                      {optionPanel}
                     </td>
                   </tr>
                 )}

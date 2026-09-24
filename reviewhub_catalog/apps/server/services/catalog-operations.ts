@@ -19,6 +19,7 @@ const weatherRegions: WeatherRegion[] = [
   { region: "경기도", city: "수원", latitude: 37.2636, longitude: 127.0286 },
   { region: "강원도", city: "춘천", latitude: 37.8813, longitude: 127.7298 },
   { region: "충청도", city: "대전", latitude: 36.3504, longitude: 127.3845 },
+  { region: "세종", city: "세종", latitude: 36.4800, longitude: 127.2890 },
   { region: "전라도", city: "광주", latitude: 35.1595, longitude: 126.8526 },
   { region: "경상도", city: "대구", latitude: 35.8714, longitude: 128.6014 },
   { region: "제주도", city: "제주", latitude: 33.4996, longitude: 126.5312 }

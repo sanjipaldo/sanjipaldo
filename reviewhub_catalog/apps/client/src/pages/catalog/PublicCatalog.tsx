@@ -400,6 +400,7 @@ function BrandHeader() {
       </Link>
       <nav className="public-nav" aria-label="주요 메뉴">
         <NavLink to="/" end>단가표</NavLink>
+        <NavLink to="/guide">공지사항</NavLink>
         <NavLink to="/notices">가격변동</NavLink>
         <button className="sourcing-nav-button" type="button" onClick={() => window.dispatchEvent(new CustomEvent("doogo:sourcing-open"))}><PackageSearch size={14} /> 소싱해주세요!</button>
         <a href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer"><MessageCircle size={14} /> 1:1 상담</a>
@@ -435,6 +436,7 @@ function PageFrame({ children }: { children: ReactNode }) {
         <div className="footer-information">
           <nav aria-label="푸터 바로가기">
             <Link to="/">상품 단가표</Link>
+            <Link to="/guide">공지사항</Link>
             <Link to="/notices">가격변동</Link>
             <a href="https://www.doogofood.com/" target="_blank" rel="noreferrer">공식홈페이지</a>
             <a href="https://shop.baljuora.com/doogofood" target="_blank" rel="noreferrer">도매몰</a>
@@ -783,8 +785,25 @@ function OperationsBoard({
   operations: OperationsOverview | null;
   clock: Date | null;
 }) {
-  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
-  const selectedWeather = selectedRegion
+  // 사용자가 고른 지역을 기억합니다(우선순위: 직접 고른 지역 > 접속 IP 위치 > 서울).
+  const [selectedRegion, setSelectedRegionState] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("doogo-weather-region");
+      if (saved) setSelectedRegionState(saved);
+    } catch {
+      // 저장소를 쓸 수 없는 환경에서는 기본 위치를 사용합니다.
+    }
+  }, []);
+  const setSelectedRegion = (region: string) => {
+    setSelectedRegionState(region);
+    try {
+      window.localStorage.setItem("doogo-weather-region", region);
+    } catch {
+      // 저장 실패는 무시합니다.
+    }
+  };
+  const selectedWeather = selectedRegion && operations?.weather.some((item) => item.region === selectedRegion)
     ? operations?.weather.find((item) => item.region === selectedRegion)
     : operations?.currentWeather ?? operations?.weather.find((item) => item.region === "서울") ?? operations?.weather[0];
   const selectableWeather = operations?.weather ?? [];

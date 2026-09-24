@@ -197,6 +197,8 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 .footer-business-info b { color: var(--w-line); }
 .footer-information small { color: var(--w-mute); font-size: 14px; }
 
+.weather-region-list { grid-template-columns: repeat(9, minmax(56px, 1fr)); }
+
 /* ---------- 관리자 화면(가볍게 적용) ---------- */
 .admin-shell { background: var(--w-soft); font-family: var(--w-font); }
 .admin-main { background: var(--w-soft); }
@@ -212,9 +214,40 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 .admin-table-wrap { border-color: var(--w-line); border-radius: var(--w-radius-lg); }
 .admin-table th { color: var(--w-body); background: var(--w-soft-2); font-weight: 600; }
 .catalog-pagination.admin-product-pagination { background: var(--w-soft-2); }
+.admin-inline-options { display: none; }
+.admin-option-sold-out { color: var(--w-negative); }
 
 /* ---------- 모바일(카드형 단가표) ---------- */
 @media (max-width: 720px) {
+  /* 공개 헤더 메뉴 5개: 가로로 넘겨 보기 */
+  .public-nav { display: flex !important; overflow-x: auto; flex-wrap: nowrap; gap: 4px; scrollbar-width: none; }
+  .public-nav::-webkit-scrollbar { display: none; }
+  .public-nav a, .public-nav .sourcing-nav-button { flex: 0 0 auto; min-height: 44px; }
+
+  /* 관리자 모바일 가독성: 상품 카드·옵션·편집기 글씨 확대 */
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > td[data-label]::before { font-size: 13px !important; font-weight: 700; color: var(--w-body) !important; }
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > td strong,
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > td b { font-size: 18px !important; }
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > td small { font-size: 14px !important; }
+  .admin-product-cell strong { font-size: 18px !important; }
+  .admin-product-cell small { font-size: 14px !important; }
+  .admin-option-toggle { min-height: 44px; padding: 0 14px; font-size: 15px !important; }
+  .product-row-actions button { min-height: 48px; font-size: 16px !important; }
+  .status-pill { font-size: 14px !important; }
+  .product-select-cell label, .product-select-cell span { font-size: 15px !important; }
+  .admin-option-detail-row { display: none !important; }
+  .admin-inline-options { display: block; margin-top: 12px; }
+  .admin-inline-options .admin-option-panel { padding: 12px; border-radius: var(--w-radius-lg); background: var(--w-soft-2); }
+  .admin-option-list strong, .admin-option-list b, .admin-option-list em { font-size: 16px !important; }
+  .admin-option-list span, .admin-option-list small { font-size: 13px !important; }
+  .admin-option-panel-heading strong { font-size: 16px !important; }
+  .editor-panel .editor-grid label, .editor-panel label { font-size: 15px !important; }
+  .editor-panel input, .editor-panel select, .editor-panel textarea { font-size: 16px !important; }
+  .editor-panel small { font-size: 13px !important; }
+  .editor-panel .editor-header h2 { font-size: 23px !important; }
+  .option-editor-heading h3 { font-size: 18px !important; }
+  .option-editor-heading p { font-size: 13px !important; }
+
   .catalog-table-wrap { border: 0; border-radius: 0; }
   .catalog-table { min-width: 0; }
   .catalog-table tbody > tr:not(.option-detail-row) { border-color: var(--w-line); border-radius: var(--w-radius-xl); box-shadow: none; }
