@@ -112,3 +112,5 @@ uploaded_files/
 /preview/
 /.preview-build/
 /.preview-build-data/
+/.artifact-build/
+/artifact/node_modules/
