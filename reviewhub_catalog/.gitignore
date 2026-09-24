@@ -109,6 +109,6 @@ uploaded_files/
 # !!! END: changing this will break FC deployment !!!
 
 # --- 단일 HTML 미리보기 생성물 (scripts/preview) ---
-preview/
-.preview-build/
-.preview-build-data/
+/preview/
+/.preview-build/
+/.preview-build-data/
