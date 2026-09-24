@@ -5791,3 +5791,100 @@ body { letter-spacing: normal; }
 .automation-switch.on { flex-direction: row-reverse; justify-content: flex-start; padding: 4px 4px 4px 9px; }
 .seller-automation-card { padding: 20px; }
 @media (max-width: 720px) { .seller-automation-card { padding: 15px; } }
+
+/* ===== 2026-09-24 요청 반영 ===== */
+/* 내 정보 상단: 색 그라데이션 없이 깔끔한 흰 배경 */
+.profile-gradient { height: 20px; background: #fff; }
+.seller-profile-hero .profile-identity { margin-top: 0; padding-top: 6px; align-items: center; }
+.seller-profile-hero .profile-symbol { box-shadow: 0 4px 14px rgba(15,32,66,.08); border: 1px solid #eef1f5; }
+@media (max-width: 720px) { .profile-gradient { height: 12px; } .seller-profile-hero .profile-identity { margin-top: 0; } }
+/* 사이드바 로고·문구 약 절반 크기로 */
+.sidebar-market-brand > img { width: 124px; height: 36px; }
+.sidebar-top-band { padding-top: 16px; padding-bottom: 12px; }
+.sidebar-top-band .sidebar-brand-row { margin-bottom: 6px; }
+.sidebar-top-band .nav-label { font-size: 11.5px; letter-spacing: 0; font-weight: 600; color: #4e5968 !important; }
+@media (max-width: 720px) { .sidebar-market-brand > img { width: 112px; height: 33px; } }
+/* 회원가입 단계: 휴대폰에서도 1-2-3 가로 */
+.signup-steps { display: grid !important; grid-template-columns: 1fr 18px 1fr 18px 1fr !important; gap: 4px !important; align-items: start; }
+.signup-steps i { display: block !important; height: 2px; margin-top: 16px !important; background: #dfe5ec; border-radius: 2px; }
+.signup-steps button { display: grid; justify-items: center; gap: 6px; min-width: 0; padding: 0; background: transparent; border: 0; }
+.signup-steps button span { max-width: none; font-size: 13px; line-height: 1.25; text-align: center; white-space: normal; word-break: keep-all; }
+
+/* ===== 쇼핑몰 API 연동 · 배송 정책 ===== */
+.channel-api-steps { padding: 12px 14px; display: grid; gap: 4px; background: #f2f7ff; border: 1px solid #d9e7fd; border-radius: 12px; font-size: 13.5px; color: #4e5968; }
+.channel-api-steps b { color: #191f28; font-size: 14.5px; }
+.channel-api-steps em { color: #1b64da; font-style: normal; font-weight: 800; }
+.channel-api-info { margin: 0 0 14px; padding: 4px 14px; background: #f7f9fc; border: 1px solid #e6ebf1; border-radius: 12px; }
+.channel-api-info div { padding: 8px 0; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid #eef1f4; font-size: 14px; }
+.channel-api-info div:first-child { border-top: 0; }
+.channel-api-info dt { color: #8b95a1; }
+.channel-api-info dd { margin: 0; font-weight: 700; font-family: inherit; }
+.policy-list { display: grid; gap: 8px; margin-bottom: 12px; }
+.policy-card { padding: 12px; display: flex; align-items: flex-start; gap: 10px; background: #fff; border: 1px solid #e5e8eb; border-radius: 12px; cursor: pointer; }
+.policy-card:has(input:checked) { border-color: #3182f6; box-shadow: inset 0 0 0 1px #3182f6; background: #f7fbff; }
+.policy-card input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: #3182f6; flex: 0 0 20px; }
+.policy-card span { display: grid; gap: 3px; min-width: 0; }
+.policy-card b { color: #191f28; font-size: 15px; }
+.policy-card small { color: #4e5968; font-size: 13px; }
+.policy-card em { color: #8b95a1; font-size: 12px; font-style: normal; }
+.channel-detail-actions { flex-wrap: wrap; }
+.channel-detail-actions .text-button { margin-right: auto; }
+.channel-policy-summary { width: 100%; margin: 10px 0 0; padding: 10px 12px; display: grid; gap: 2px; text-align: left; background: #f7f9fc; border: 1px solid #e6ebf1; border-radius: 12px; cursor: pointer; }
+.channel-policy-summary span { color: #0a8a4a; font-size: 12.5px; font-weight: 800; }
+.channel-policy-summary b { color: #191f28; font-size: 14px; }
+.channel-policy-summary small { color: #6b7684; font-size: 12.5px; }
+/* 상품 전송 시트: 필수값 */
+.publish-form .req { padding: 8px 0; display: grid; grid-template-columns: 22px 88px minmax(0, 1fr); align-items: start; gap: 8px; border-top: 1px solid #f2f4f6; font-size: 14px; }
+.publish-form .req:first-child { border-top: 0; }
+.publish-form .req > i { width: 20px; height: 20px; display: grid; place-items: center; color: #fff; background: #0a8a4a; border-radius: 50%; font-size: 11px; font-style: normal; font-weight: 800; }
+.publish-form .req.warn > i { background: #f59f00; }
+.publish-form .req > span { color: #6b7684; font-weight: 700; padding-top: 1px; }
+.publish-form .req > b { min-width: 0; color: #191f28; font-weight: 700; overflow-wrap: anywhere; }
+.publish-form .req b small { display: block; margin-top: 2px; color: #8b95a1; font-size: 12px; font-weight: 600; }
+.publish-form label.req { cursor: default; background: none; border-left: 0; border-right: 0; border-bottom: 0; border-radius: 0; margin: 0; min-height: 0; }
+.publish-form .req select { width: 100%; height: 40px; padding: 0 10px; font-size: 14px; border: 1px solid #d1d6db; border-radius: 10px; background: #fff; }
+.publish-common { padding: 4px 12px; background: #fff; border: 1px solid #e5e8eb; border-radius: 12px; }
+.publish-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.publish-tags em { padding: 2px 8px; color: #1b64da; background: #eaf2ff; border-radius: 99px; font-size: 12.5px; font-style: normal; font-weight: 700; }
+.publish-price-table { overflow: hidden; background: #fff; border: 1px solid #e5e8eb; border-radius: 12px; }
+.publish-price-table > div { padding: 8px 12px; display: grid; grid-template-columns: minmax(0, 1fr) 76px 84px 44px; align-items: center; gap: 8px; border-top: 1px solid #f2f4f6; font-size: 14px; }
+.publish-price-table > div:first-child { border-top: 0; }
+.publish-price-table .head { color: #8b95a1; font-size: 12px; font-weight: 700; background: #f9fafb; }
+.publish-price-table em { color: #6b7684; font-style: normal; text-align: right; }
+.publish-price-table b { text-align: right; }
+.publish-price-table i { color: #0a8a4a; font-style: normal; font-weight: 800; text-align: right; }
+.publish-price-table .head b, .publish-price-table .head i { color: #8b95a1; font-weight: 700; }
+.publish-channel-list { display: grid; gap: 8px; }
+.publish-channel { overflow: hidden; background: #fff; border: 1px solid #e5e8eb; border-radius: 14px; }
+.publish-channel:has(input:checked) { border-color: #3182f6; box-shadow: inset 0 0 0 1px #3182f6; }
+.publish-channel.disabled { background: #fafbfc; }
+.publish-form .publish-channel-head { margin: 0; padding: 12px; display: flex !important; align-items: center; gap: 10px; min-height: 0; background: transparent; border: 0; border-radius: 0; cursor: pointer; }
+.publish-form .publish-channel-head input { width: 20px; height: 20px; margin: 0; accent-color: #3182f6; flex: 0 0 20px; }
+.publish-form .publish-channel-head > span:last-child { display: grid; gap: 2px; min-width: 0; }
+.publish-form .publish-channel-head b { font-size: 15px; }
+.publish-form .publish-channel-head small { color: #6b7684; font-size: 12.5px; }
+.publish-required { padding: 0 12px 8px; }
+.publish-missing { padding: 0 12px 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; color: #b35c00; font-size: 13px; }
+.publish-missing .text-button { font-size: 13px; font-weight: 800; }
+.onsale-listing-meta { display: grid; gap: 4px; padding: 8px 10px; background: #f9fafb; border-radius: 10px; font-size: 13px; color: #6b7684; }
+.onsale-listing-meta b { color: #191f28; }
+/* 상품 꾸미기: 검색 태그 */
+.tag-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tag-chip { height: 34px; padding: 0 8px 0 12px; display: inline-flex; align-items: center; gap: 4px; color: #1b64da; background: #eaf2ff; border: 0; border-radius: 99px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.tag-chip i { font-style: normal; font-size: 15px; color: #6b7684; }
+.tag-empty { color: #8b95a1; font-size: 13px; }
+.tag-input-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.tag-input-row input { height: 44px; padding: 0 12px; font-size: 16px; border: 1px solid #d1d6db; border-radius: 12px; }
+.tag-input-row button { min-height: 44px; }
+.tag-suggest { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tag-suggest span { color: #6b7684; font-size: 13px; font-weight: 700; }
+.tag-suggest button { height: 30px; padding: 0 10px; color: #4e5968; background: #f2f4f6; border: 0; border-radius: 99px; font-size: 13px; font-weight: 700; cursor: pointer; }
+@media (max-width: 720px) {
+  .publish-form .req { grid-template-columns: 22px 72px minmax(0, 1fr); }
+  .publish-price-table > div { grid-template-columns: minmax(0, 1fr) 64px 72px 38px; gap: 6px; padding: 8px 10px; font-size: 13px; }
+}
+.publish-form .publish-channel-head > span:last-child { grid-template-columns: 1fr !important; flex: 1 1 auto; }
+.publish-form .publish-channel-head > span:last-child > * { grid-column: 1 !important; }
+@media (max-width: 720px) {
+  .api-safe-notice.full { flex-direction: column; align-items: flex-start; gap: 6px; }
+}

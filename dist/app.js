@@ -370,8 +370,8 @@ const initialState = {
   ],
   channelConnections: {
     seller: [
-      { id: "smartstore", name: "네이버 스마트스토어", mark: "N", color: "#03c75a", status: "connected", storeName: "두고 셀러샵", lastSync: "방금 전", trackingAutomation: false, syncInterval: 10, lastTrackingPush: "8분 전" },
-      { id: "coupang", name: "쿠팡", mark: "C", color: "#e83b35", status: "connected", storeName: "두고", lastSync: "12분 전", trackingAutomation: false, syncInterval: 10, lastTrackingPush: "12분 전" },
+      { id: "smartstore", name: "네이버 스마트스토어", mark: "N", color: "#03c75a", status: "connected", storeName: "두고 셀러샵", lastSync: "방금 전", trackingAutomation: false, syncInterval: 10, lastTrackingPush: "8분 전", api: { sellerId: "doogo_store", apiKeyMasked: "••••••••7F2A", secretMasked: "••••••••91C0", connectedAt: "09.03" }, shippingPolicies: channelPolicyPresets("smartstore"), defaultPolicyId: "NS-DLV-1001", policySyncedAt: "9. 23. 오전 9:00" },
+      { id: "coupang", name: "쿠팡", mark: "C", color: "#e83b35", status: "connected", storeName: "두고", lastSync: "12분 전", trackingAutomation: false, syncInterval: 10, lastTrackingPush: "12분 전", api: { sellerId: "A00012345", apiKeyMasked: "••••••••3B8D", secretMasked: "••••••••E61F", connectedAt: "09.03" }, shippingPolicies: channelPolicyPresets("coupang"), defaultPolicyId: "CP-SHIP-5501", policySyncedAt: "9. 23. 오전 9:00" },
       { id: "kakao", name: "카카오 쇼핑", mark: "K", color: "#f6c600", status: "pending", storeName: "연결 확인중", lastSync: "-", trackingAutomation: false, syncInterval: 10, lastTrackingPush: "-" },
       { id: "cafe24", name: "CAFE24", mark: "24", color: "#3159d9", status: "disconnected", storeName: "미연결", lastSync: "-", trackingAutomation: false, syncInterval: 10, lastTrackingPush: "-" }
     ]
@@ -542,6 +542,11 @@ function loadState() {
       (merged.orders || []).forEach(order => { Object.entries(order.channelTrackingStatuses || {}).forEach(([channelId, status]) => { if (status === "자동화 꺼짐" || status === "10분 자동전송 대기") order.channelTrackingStatuses[channelId] = "전송 대기"; else if (status === "자동전송 완료 · 데모") order.channelTrackingStatuses[channelId] = "전송 완료 · 자동"; }); });
     }
     merged.automationVersion = 1;
+    (merged.channelConnections.seller || []).forEach(channel => {
+      if (channel.status !== "connected") return;
+      if (!channel.api) channel.api = { sellerId: channel.id === "coupang" ? "A00012345" : "doogo_store", apiKeyMasked: "••••••••7F2A", secretMasked: "••••••••91C0", connectedAt: "이전 연동" };
+      if (!Array.isArray(channel.shippingPolicies) || !channel.shippingPolicies.length) { channel.shippingPolicies = channelPolicyPresets(channel.id); channel.defaultPolicyId = channel.shippingPolicies[0]?.id || ""; channel.policySyncedAt = channel.policySyncedAt || "이전 연동"; }
+    });
     merged.products.forEach(syncProductOptionTotals);
     merged.orders = mergeById(saved.orders, base.orders).filter(order => !isPreV10 || order.id !== "DO-260908-041").map((order, index) => {
       const sourceProduct = merged.products.find(product => product.id === order.productId);
@@ -1836,7 +1841,7 @@ function channelIntegrationTemplate() {
     ${sellerAutomationSettingsCard()}
     <section class="tracking-automation-hero"><div><span>AUTOMATED DROPSHIPPING</span><h3>송장 자동전송 ${automationCount}개 쇼핑몰 사용중</h3><p>보낼 송장 ${pendingTotal}건 · 쇼핑몰마다 자동 전송을 따로 켜고 끌 수 있어요.</p></div><div class="automation-flow"><span><b>1</b>공급사 송장 입력</span><i>→</i><span><b>2</b>내 주문에 바로 표시</span><i>→</i><span><b>3</b>쇼핑몰 전송 (버튼·자동)</span></div></section>
     <div class="api-safe-notice"><b>데모 안전 모드</b><span>현재 화면은 자동화 상태와 전송 대기열만 브라우저에 저장하며 실제 쇼핑몰 API에는 전송하지 않습니다.</span></div>
-    <div class="channel-connect-grid">${channels.map(channel => { const pending = currentSellerOrders().filter(order => isTrackingPending(order.channelTrackingStatuses?.[channel.id])).length; const automationEnabled = channel.status === "connected" && channel.trackingAutomation; return `<article class="panel channel-connect-card ${automationEnabled ? "automation-on" : ""}"><div class="channel-card-head">${channelMark(channel.id)}<div><h3>${escapeHtml(channel.name)}</h3><p>${escapeHtml(channel.storeName)}</p></div>${statusChip(channel.status === "connected" ? "연동중" : channel.status === "pending" ? "확인중" : "미연동")}</div><div class="automation-setting"><span><b>송장 자동전송</b><small>${channel.status === "connected" ? "10분 간격 · 공급사 송장 자동 반영" : "채널 연동 후 사용할 수 있습니다."}</small></span><button type="button" class="automation-switch ${automationEnabled ? "on" : ""}" data-action="toggle-channel-automation" data-id="${channel.id}" ${channel.status === "connected" ? "" : "disabled"} aria-pressed="${automationEnabled}"><i></i>${automationEnabled ? "켜짐" : "꺼짐"}</button></div><dl><div><dt>주문 수집</dt><dd>${channel.status === "connected" ? "자동" : "대기"}</dd></div><div><dt>송장 대기열</dt><dd>${pending}건</dd></div><div><dt>최근 송장 전송</dt><dd>${escapeHtml(channel.lastTrackingPush || "-")}</dd></div></dl><button class="${channel.status === "connected" ? "secondary-button" : "primary-button"}" data-action="connect-channel" data-id="${channel.id}">${channel.status === "connected" ? "연동 설정" : "연동 시작"}</button></article>`; }).join("")}</div>
+    <div class="channel-connect-grid">${channels.map(channel => { const pending = currentSellerOrders().filter(order => isTrackingPending(order.channelTrackingStatuses?.[channel.id])).length; const automationEnabled = channel.status === "connected" && channel.trackingAutomation; return `<article class="panel channel-connect-card ${automationEnabled ? "automation-on" : ""}"><div class="channel-card-head">${channelMark(channel.id)}<div><h3>${escapeHtml(channel.name)}</h3><p>${escapeHtml(channel.storeName)}</p></div>${statusChip(channel.status === "connected" ? "연동중" : channel.status === "pending" ? "확인중" : "미연동")}</div><div class="automation-setting"><span><b>송장 자동전송</b><small>${channel.status === "connected" ? "켜 두면 공급사 송장을 10분마다 자동 전송" : "채널 연동 후 사용할 수 있습니다."}</small></span><button type="button" class="automation-switch ${automationEnabled ? "on" : ""}" data-action="toggle-channel-automation" data-id="${channel.id}" ${channel.status === "connected" ? "" : "disabled"} aria-pressed="${automationEnabled}"><i></i>${automationEnabled ? "켜짐" : "꺼짐"}</button></div>${channel.status === "connected" ? `<button type="button" class="channel-policy-summary" data-action="connect-channel" data-id="${channel.id}"><span>배송 정책 ${channelShippingPolicies(channel).length}개 불러옴</span><b>기본 · ${escapeHtml(channelDefaultPolicy(channel)?.name || "불러오기 필요")}</b><small>${escapeHtml(policyFeeText(channelDefaultPolicy(channel)))}</small></button>` : ""}<dl><div><dt>주문 수집</dt><dd>${channel.status === "connected" ? "자동" : "대기"}</dd></div><div><dt>송장 대기열</dt><dd>${pending}건</dd></div><div><dt>최근 송장 전송</dt><dd>${escapeHtml(channel.lastTrackingPush || "-")}</dd></div></dl><button class="${channel.status === "connected" ? "secondary-button" : "primary-button"}" data-action="connect-channel" data-id="${channel.id}">${channel.status === "connected" ? "연동 정보·배송 정책" : "API 키로 연동하기"}</button></article>`; }).join("")}</div>
     <form id="dropshippingEmailForm" class="panel dropshipping-email-card"><div class="dropshipping-email-head"><div><span>EMAIL AUTOMATION</span><h3>드랍쉬핑 이메일 알림</h3><p>API 자동화에서 놓치기 쉬운 주문·송장·환불·가격 변동을 원하는 이메일로 받아보세요.</p></div><label class="email-master-switch"><input type="checkbox" name="emailEnabled" ${notice.emailEnabled ? "checked" : ""}><i></i><span>${notice.emailEnabled ? "ON" : "OFF"}</span></label></div><div class="email-recipient-row"><label><span>수신 이메일</span><input name="emailAddress" type="email" value="${escapeHtml(notice.emailAddress || currentAccount.email || "")}" placeholder="ops@example.com" required></label><small>주문 운영 담당자 메일을 입력해 주세요.</small></div><fieldset><legend>수신할 알림 선택</legend><label><input type="checkbox" name="events" value="orderNotice" ${notice.orderNotice ? "checked" : ""}><span><b>신규 주문</b><small>채널 주문 수집·공급사 자동배정</small></span></label><label><input type="checkbox" name="events" value="trackingNotice" ${notice.trackingNotice ? "checked" : ""}><span><b>송장 등록</b><small>공급사 송장 발급·채널 전송</small></span></label><label><input type="checkbox" name="events" value="refundNotice" ${notice.refundNotice ? "checked" : ""}><span><b>취소·환불</b><small>반품 완료·예치금 환불</small></span></label><label><input type="checkbox" name="events" value="priceNotice" ${notice.priceNotice ? "checked" : ""}><span><b>가격 변경</b><small>공급가 변동·마진 위험</small></span></label><label><input type="checkbox" name="events" value="deliveryDelayNotice" ${notice.deliveryDelayNotice ? "checked" : ""}><span><b>배송 지연</b><small>송장 미등록·집하 지연</small></span></label><label><input type="checkbox" name="events" value="stockNotice" ${notice.stockNotice ? "checked" : ""}><span><b>재고 부족</b><small>품절 임박·판매중지 권고</small></span></label></fieldset><div class="email-form-actions"><span>설정은 쇼핑몰 API 자동화와 함께 적용됩니다.</span><button class="primary-button" type="submit">이메일 알림 저장</button></div></form>
     <div class="notification-service-layout"><section class="panel notification-service-card"><div class="notification-service-head"><span class="talk-symbol">TALK</span><div><span>PAID ADD-ON</span><h3>실시간 카카오 알림톡</h3><p>신규 주문은 공급사에게, 송장 등록은 위탁셀러에게 알림톡·이메일로 안내합니다.</p></div><span class="chip blue">${notice.status === "active" ? "이용중" : "미가입"}</span></div><div class="notification-price"><b>${money(notice.monthlyFee)}</b><span>/ 월 · ${notice.monthlyLimit}건 포함</span><em>${notice.used}건 사용</em></div><div class="notification-options"><button class="${notice.orderNotice ? "on" : ""}" data-action="toggle-notice-setting" data-setting="orderNotice"><i></i><span><b>신규 주문 알림</b><small>공급사 카카오톡·이메일</small></span></button><button class="${notice.trackingNotice ? "on" : ""}" data-action="toggle-notice-setting" data-setting="trackingNotice"><i></i><span><b>송장 등록 알림</b><small>위탁셀러 카카오톡·이메일</small></span></button></div><button class="primary-button" data-action="manage-alert-plan">유료 알림 서비스 관리</button></section><section class="panel notification-history"><div class="panel-head"><div><h3>최근 알림 미리보기</h3><p>실제 발송 전 메시지와 수신 대상을 확인합니다.</p></div><button class="text-button" data-action="open-notifications">전체보기</button></div>${events.length ? events.map(item => `<div class="notification-event"><span class="notification-type ${item.type}">${notificationTypeLabel(item.type)}</span><div><b>${escapeHtml(item.title)}</b><small>${escapeHtml(item.detail)} · ${item.channels.join("+")}</small></div><em>${item.createdAt}</em></div>`).join("") : `<div class="empty">최근 알림이 없습니다.</div>`}</section></div>`;
 }
@@ -1988,6 +1993,7 @@ function onSaleChannelBlock(item, channel, product) {
   return `<div class="onsale-channel">
     <div class="onsale-channel-head">${channelMark(channel.id)}<span><b>${escapeHtml(channel.name)}</b><small>${escapeHtml(detail.title)}</small></span><span class="onsale-channel-status"><em class="channel-sale-status live">판매중</em>${channelSyncBadge(item, channel, status)}</span></div>
     ${priceTable}
+    <div class="onsale-listing-meta"><span>배송 정책 <b>${escapeHtml(detail.shippingPolicy?.name || channelDefaultPolicy(channel)?.name || "-")}</b> ${escapeHtml(policyFeeText(detail.shippingPolicy || channelDefaultPolicy(channel)))}</span><span>카테고리 <b>${escapeHtml(detail.category || channelCategoryFor(item, channel.id, product).path)}</b></span><span class="publish-tags">${(detail.tags || itemTags(item, product)).slice(0, 6).map(tag => `<em>#${escapeHtml(tag)}</em>`).join("")}</span></div>
     <div class="channel-sync-actions"><button type="button" class="channel-sync-btn push" data-action="push-channel-listing" data-id="${item.id}" data-channel="${channel.id}">최신 내용 전송</button><button type="button" class="channel-sync-btn pull" data-action="sync-channel-listing" data-id="${item.id}" data-channel="${channel.id}">쇼핑몰 가격 가져오기</button><button type="button" class="channel-sync-btn stop" data-action="open-stop-channel" data-id="${item.id}" data-channel="${channel.id}">판매중지</button></div>
   </div>`;
 }
@@ -2000,14 +2006,19 @@ function sellerItemCategoryText(item, product = productOf(item?.productId)) {
   return [item?.sellerCategoryGroup || product?.categoryGroup, item?.sellerCategory || product?.category, item?.sellerCategorySub || product?.categorySub, item?.sellerCategoryDetail || product?.categoryDetail].filter(Boolean).join(" > ");
 }
 /* 쇼핑몰에 올라가는 내용(상품명·가격·카테고리·옵션)을 채널별로 저장한다. */
-function channelListingSnapshot(item, channelId, product = productOf(item?.productId)) {
+function channelListingSnapshot(item, channelId, product = productOf(item?.productId), extra = {}) {
   const rows = sellerOptionRows(item, product).filter(row => row.enabled);
   const previous = item.channelDetails?.[channelId] || {};
+  const channel = sellerChannels(item.sellerLoginId).find(entry => entry.id === channelId);
+  const mapped = channelCategoryFor(item, channelId, product);
   return {
     ...previous,
     title: sellerProductTitle(item, product),
     salePrice: rows.length ? Math.min(...rows.map(row => row.salePrice)) : Number(item.salePrice || product?.recommended || 0),
-    category: sellerItemCategoryText(item, product) || previous.category || "",
+    category: mapped.path || previous.category || "",
+    categoryCode: mapped.code,
+    tags: itemTags(item, product),
+    shippingPolicy: extra.shippingPolicy || previous.shippingPolicy || channelDefaultPolicy(channel) || null,
     options: rows.map(row => ({ optionId: row.id, name: row.name, salePrice: row.salePrice, code: channelOptionCode(item, channelId, row.index) })),
     thumbnail: item.customThumbnail ? "내 사진" : "공급사 사진",
     publishedAt: "방금 전"
@@ -2716,6 +2727,19 @@ function studioBlocksMarkup(product) {
     <div class="studio-block-body">${block.type === "image" ? studioBlockImage(block, product) : `<textarea data-block-text="${index}" rows="4" maxlength="800" placeholder="상품 설명을 적어 주세요. 예) 새벽에 딴 감귤을 당일 발송해요.">${escapeHtml(block.text || "")}</textarea>`}</div>
   </article>`).join("");
 }
+function studioTagChips() {
+  const tags = studioDraft?.tags || [];
+  return tags.length ? tags.map(tag => `<button type="button" class="tag-chip" data-action="studio-remove-tag" data-tag="${escapeHtml(tag)}" aria-label="${escapeHtml(tag)} 태그 삭제">#${escapeHtml(tag)} <i aria-hidden="true">×</i></button>`).join("") : `<span class="tag-empty">태그가 없어요. 아래에서 추가해 주세요.</span>`;
+}
+function addStudioTag(value) {
+  if (!studioDraft) return;
+  const tag = String(value || "").replace(/^#/, "").replace(/[^0-9A-Za-z가-힣]/g, "").slice(0, 20);
+  if (!tag) return;
+  if (studioDraft.tags.includes(tag)) return showToast("이미 있는 태그예요.");
+  if (studioDraft.tags.length >= 10) return showToast("태그는 최대 10개까지 넣을 수 있어요.");
+  studioDraft.tags.push(tag);
+  const el = document.getElementById("studioTags"); if (el) el.innerHTML = studioTagChips();
+}
 function rerenderStudioBlocks() {
   const item = state.sellerProducts.find(entry => entry.id === studioDraft?.itemId);
   const el = document.getElementById("studioBlocks");
@@ -2736,14 +2760,14 @@ function editSellerProductModal(sellerProductId) {
   const source = item && productOf(item.productId);
   if (!item || !source) return;
   const stage = sellerItemStage(item);
-  studioDraft = { itemId: item.id, thumbnail: item.customThumbnail || "", blocks: JSON.parse(JSON.stringify(item.detailBlocks?.length ? item.detailBlocks : defaultDetailBlocks(source, item))), detailTouched: false };
+  studioDraft = { itemId: item.id, tags: [...itemTags(item, source)], thumbnail: item.customThumbnail || "", blocks: JSON.parse(JSON.stringify(item.detailBlocks?.length ? item.detailBlocks : defaultDetailBlocks(source, item))), detailTouched: false };
   const title = sellerProductTitle(item, source);
   const categoryPath = [item.sellerCategoryGroup || source.categoryGroup || "", item.sellerCategory || source.category || "", item.sellerCategorySub || source.categorySub || "", item.sellerCategoryDetail || source.categoryDetail || ""];
   const live = liveChannelIds(item);
   const stageText = { ready: "승인 완료 · 내 상품으로 꾸미는 중", master: "마스터 상품 · 전송 대기", live: `판매중 · ${live.map(id => channelMeta(id).name).join(", ")}` }[stage] || "내 상품";
   openModal(`<div class="studio">
     <header class="studio-head"><button type="button" class="studio-close" data-close-modal aria-label="닫기">✕</button><div><b>${stage === "ready" ? "상품 꾸미기" : "상품 수정"}</b><small>${escapeHtml(stageText)}</small></div><button type="submit" form="studioForm" class="studio-save-top" value="save">저장</button></header>
-    <nav class="studio-tabs" aria-label="꾸미기 항목"><button type="button" data-studio-jump="studio-photo">사진</button><button type="button" data-studio-jump="studio-title">상품명</button><button type="button" data-studio-jump="studio-price">${hasOptions(source) ? "옵션·가격" : "판매가"}</button><button type="button" data-studio-jump="studio-detail">상세페이지</button><button type="button" data-studio-jump="studio-category">카테고리</button></nav>
+    <nav class="studio-tabs" aria-label="꾸미기 항목"><button type="button" data-studio-jump="studio-photo">사진</button><button type="button" data-studio-jump="studio-title">상품명</button><button type="button" data-studio-jump="studio-price">${hasOptions(source) ? "옵션·가격" : "판매가"}</button><button type="button" data-studio-jump="studio-detail">상세페이지</button><button type="button" data-studio-jump="studio-category">카테고리</button><button type="button" data-studio-jump="studio-tags">태그</button></nav>
     <form id="studioForm" class="studio-form" data-id="${item.id}">
       <section id="studio-photo" class="studio-section"><h3><i>1</i> 대표 사진</h3><p>쇼핑몰 목록에서 가장 먼저 보이는 사진이에요.</p>
         <div class="studio-photo-row"><div id="studioThumbPreview" class="studio-thumb">${studioThumbMarkup(item, source)}</div>
@@ -2765,7 +2789,12 @@ function editSellerProductModal(sellerProductId) {
       <section id="studio-category" class="studio-section"><h3><i>5</i> 카테고리 <small>네이버쇼핑 기준</small></h3><p>쇼핑몰에 등록될 카테고리예요. 공급사가 정한 카테고리로 미리 채워 두었어요.</p>
         <div class="category-select-pair category-select-quad">${categorySelectTag("sellerCategoryGroup", 1, categoryPath)}${categorySelectTag("sellerCategory", 2, categoryPath)}${categorySelectTag("sellerCategorySub", 3, categoryPath)}${categorySelectTag("sellerCategoryDetail", 4, categoryPath)}</div>
       </section>
-      <section class="studio-section studio-info"><h3>배송 정보 <small>공급사 기준 · 자동 적용</small></h3>
+      <section id="studio-tags" class="studio-section"><h3><i>6</i> 검색 태그 <small>네이버 태그 · 최대 10개</small></h3><p>손님이 검색할 단어를 넣으면 쇼핑몰 검색에 더 잘 걸려요.</p>
+        <div id="studioTags" class="tag-chips">${studioTagChips()}</div>
+        <div class="tag-input-row"><input id="studioTagInput" placeholder="예: 제주감귤" maxlength="20" autocomplete="off" enterkeyhint="done"><button type="button" class="secondary-button" data-action="studio-add-tag">추가</button></div>
+        <div class="tag-suggest"><span>추천</span>${suggestedTags(item, source).map(tag => `<button type="button" data-action="studio-suggest-tag" data-tag="${escapeHtml(tag)}">+ ${escapeHtml(tag)}</button>`).join("")}</div>
+      </section>
+      <section class="studio-section studio-info"><h3>출고 정보 <small>공급사 기준</small></h3><p>배송비·반품비는 쇼핑몰(스마트스토어·쿠팡)에서 불러온 배송 정책으로 등록돼요. ‘상품 전송’ 때 쇼핑몰마다 골라요.</p>
         <dl><div><dt>배송</dt><dd>${source.shippingType === "overseas" ? `해외직구 · ${escapeHtml(source.deliveryDays || "7~14일")}` : `국내배송 · ${escapeHtml(source.deliveryDays || "1~3일")}`}</dd></div><div><dt>배송비</dt><dd>${escapeHtml(source.shippingPolicy || "무료배송")}</dd></div><div><dt>택배사</dt><dd>${escapeHtml(source.carrier || "공급사 지정")}</dd></div><div><dt>원산지</dt><dd>${escapeHtml(source.origin || source.originCountry || "대한민국")}</dd></div>${source.shippingType === "overseas" ? `<div><dt>통관</dt><dd>개인통관고유부호 필요</dd></div>` : ""}</dl>
       </section>
     </form>
@@ -2947,19 +2976,42 @@ function manageProductChannelsModal(sellerProductId) {
   if (!item) return;
   const product = productOf(item.productId);
   const channels = sellerChannels();
-  const connectedIds = channels.filter(channel => channel.status === "connected").map(channel => channel.id);
   const live = liveChannelIds(item);
-  const selected = live.length ? live : connectedIds;
   const rows = sellerOptionRows(item, product).filter(row => row.enabled);
+  const tags = itemTags(item, product);
+  const title = sellerProductTitle(item, product);
+  const priceRows = rows.length
+    ? rows.map(row => `<div><span>${escapeHtml(row.name)}</span><em>${money(row.supply)}</em><b>${money(row.salePrice)}</b><i>${margin(row.supply, row.salePrice)}%</i></div>`).join("")
+    : `<div><span>기본</span><em>${money(product?.supply || 0)}</em><b>${money(item.salePrice || product?.recommended || 0)}</b><i>${margin(product?.supply || 0, item.salePrice || product?.recommended || 0)}%</i></div>`;
+  const channelCard = channel => {
+    const connected = channel.status === "connected";
+    const policies = channelShippingPolicies(channel);
+    const current = item.channelDetails?.[channel.id]?.shippingPolicy?.id || channelDefaultPolicy(channel)?.id || "";
+    const mapped = channelCategoryFor(item, channel.id, product);
+    const ready = connected && policies.length;
+    const checked = ready && (live.length ? live.includes(channel.id) : true);
+    return `<article class="publish-channel ${ready ? "" : "disabled"}">
+      <label class="publish-channel-head"><input type="checkbox" name="channels" value="${channel.id}" ${checked ? "checked" : ""} ${ready ? "" : "disabled"}>${channelMark(channel.id)}<span><b>${escapeHtml(channel.name)}</b><small>${connected ? `${escapeHtml(channel.storeName)}${live.includes(channel.id) ? " · 판매중 (다시 보내면 최신 내용으로 수정)" : ""}` : channel.status === "pending" ? "연동 확인 중" : "미연동"}</small></span></label>
+      ${ready ? `<div class="publish-required">
+        <div class="req ok"><i>✓</i><span>카테고리</span><b>${escapeHtml(mapped.path)}<small>${escapeHtml(mapped.matched)} · 코드 ${escapeHtml(mapped.code)}</small></b></div>
+        <label class="req ok"><i>✓</i><span>배송 정책</span><select name="policy__${channel.id}" required>${policies.map(policy => `<option value="${escapeHtml(policy.id)}" ${policy.id === current ? "selected" : ""}>${escapeHtml(policy.name)} (${escapeHtml(policyFeeText(policy))})</option>`).join("")}</select></label>
+      </div>` : `<div class="publish-missing"><span>${connected ? `${escapeHtml(channel.name)}에서 배송 정책을 먼저 불러와야 해요.` : `API 키로 연동하면 배송 정책을 불러와 바로 올릴 수 있어요.`}</span><button type="button" class="text-button" data-action="connect-channel" data-id="${channel.id}">${connected ? "배송 정책 불러오기" : "연동하기"} →</button></div>`}
+    </article>`;
+  };
   openModal(`<div class="publish-sheet">
-    <div class="publish-head">${sellerItemThumb(item, product, "publish-photo")}<div><span>ONE CLICK · 상품 전송</span><h2>${escapeHtml(sellerProductTitle(item, product))}</h2><p>체크한 쇼핑몰에 한 번에 등록돼요. 주문이 들어오면 공급사 상품에 자동으로 연결됩니다.</p></div></div>
-    <form id="productChannelsForm" class="channel-check-list" data-id="${item.id}">
-      <div class="publish-section-title"><b>어디에 올릴까요?</b><small>${connectedIds.length}개 쇼핑몰 연동됨</small></div>
-      ${channels.map(channel => `<label class="${channel.status !== "connected" ? "disabled-channel" : ""}"><input type="checkbox" name="channels" value="${channel.id}" ${selected.includes(channel.id) && channel.status === "connected" ? "checked" : ""} ${channel.status !== "connected" ? "disabled" : ""}><span>${channelMark(channel.id)}<b>${escapeHtml(channel.name)}</b><small>${channel.status === "connected" ? `${escapeHtml(channel.storeName)} · ${live.includes(channel.id) ? "판매중 · 다시 보내면 최신 내용으로 바뀌어요" : "바로 등록 가능"}` : channel.status === "pending" ? "연동 확인 중 · 승인 후 등록 가능" : "미연동 · ‘쇼핑몰 연동’에서 먼저 연결하세요"}</small></span></label>`).join("")}
-      <div class="publish-preview"><div class="publish-section-title"><b>이렇게 올라가요</b><small>${escapeHtml(sellerItemCategoryText(item, product))}</small></div>
-        ${rows.length ? `<div class="publish-options"><div class="publish-options-head"><span>${escapeHtml(product?.optionTitle || "옵션")} ${rows.length}개</span><span>판매가</span></div>${rows.map(row => `<div><span>${escapeHtml(row.name)}</span><b>${money(row.salePrice)}</b></div>`).join("")}</div><small class="publish-note">공급사 옵션과 똑같은 구성으로 등록되고, 옵션별 주문이 공급사에 그대로 전달돼요.</small>` : `<div class="publish-options single"><div><span>판매가</span><b>${money(item.salePrice || product?.recommended || 0)}</b></div></div>`}
-        <ul class="publish-checks"><li>상품명 · ${escapeHtml(sellerProductTitle(item, product))}</li><li>대표 사진 · ${item.customThumbnail ? "내가 올린 사진" : "공급사 사진"}${item.thumbBadge ? ` + ‘${escapeHtml(item.thumbBadge)}’ 문구` : ""}</li><li>상세페이지 · ${item.detailEdited ? "내가 꾸민 상세페이지" : "공급사 상세페이지"}</li></ul>
+    <div class="publish-head">${sellerItemThumb(item, product, "publish-photo")}<div><span>ONE CLICK · 상품 전송</span><h2>${escapeHtml(title)}</h2><p>체크한 쇼핑몰에 필수 정보를 채워 한 번에 등록해요. 주문이 들어오면 공급사 상품에 자동으로 연결됩니다.</p></div></div>
+    <form id="productChannelsForm" class="channel-check-list publish-form" data-id="${item.id}">
+      <div class="publish-section-title"><b>공통 등록 정보</b><small>필수값 확인</small></div>
+      <div class="publish-common">
+        <div class="req ok"><i>✓</i><span>상품명</span><b>${escapeHtml(title)} <small>${title.length}자</small></b></div>
+        <div class="req ok"><i>✓</i><span>대표 이미지</span><b>${item.customThumbnail ? "내가 올린 사진" : "공급사 사진"}${item.thumbBadge ? ` + ‘${escapeHtml(item.thumbBadge)}’` : ""}</b></div>
+        <div class="req ok"><i>✓</i><span>상세페이지</span><b>${item.detailEdited ? "내가 꾸민 상세페이지" : "공급사 상세페이지"}</b></div>
+        <div class="req ${tags.length ? "ok" : "warn"}"><i>${tags.length ? "✓" : "!"}</i><span>검색 태그</span><b class="publish-tags">${tags.map(tag => `<em>#${escapeHtml(tag)}</em>`).join("") || "없음"}${Array.isArray(item.searchTags) && item.searchTags.length ? "" : `<small>자동 추천 태그 · ‘상품 수정’에서 바꿀 수 있어요</small>`}</b></div>
       </div>
+      <div class="publish-section-title"><b>판매가 (공급가 + 내 마진)</b><small>이 가격으로 쇼핑몰에 올라가요</small></div>
+      <div class="publish-price-table"><div class="head"><span>${rows.length ? escapeHtml(product?.optionTitle || "옵션") : "상품"}</span><em>공급가</em><b>판매가</b><i>마진</i></div>${priceRows}</div>
+      <div class="publish-section-title"><b>어디에 올릴까요?</b><small>쇼핑몰마다 배송 정책을 골라요</small></div>
+      <div class="publish-channel-list">${channels.map(channelCard).join("")}</div>
       <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>취소</button><button class="primary-button" type="submit">체크한 쇼핑몰에 전송</button></div>
     </form></div>`);
   document.querySelector("#modal .modal").classList.add("pick-sheet-modal");
@@ -3098,10 +3150,86 @@ function doogoMoneyBankModal() {
   openModal(`<div class="doogo-money-head"><span>WITHDRAWAL ACCOUNT</span><h2>두고머니 출금 계좌</h2><p>환불금을 받을 본인 또는 사업자 명의 계좌를 등록합니다.</p></div><form id="doogoMoneyBankForm" class="form-grid"><div class="form-field"><label>은행</label><select name="bankName"><option ${bank.bankName === "국민은행" ? "selected" : ""}>국민은행</option><option ${bank.bankName === "신한은행" ? "selected" : ""}>신한은행</option><option ${bank.bankName === "우리은행" ? "selected" : ""}>우리은행</option><option ${bank.bankName === "하나은행" ? "selected" : ""}>하나은행</option><option ${bank.bankName === "농협은행" ? "selected" : ""}>농협은행</option><option ${bank.bankName === "카카오뱅크" ? "selected" : ""}>카카오뱅크</option></select></div><div class="form-field"><label>예금주</label><input name="holder" value="${escapeHtml(bank.holder || currentAccount?.representative || "위탁셀러")}" required></div><div class="form-field full"><label>계좌번호</label><input name="accountNumber" inputmode="numeric" value="${escapeHtml(bank.accountNumber || "")}" placeholder="숫자만 입력" pattern="[0-9]{10,16}" required></div><label class="consumer-refund-confirm full"><input type="checkbox" name="ownershipConfirmed" required><span><b>본인 또는 사업자 명의 계좌임을 확인했습니다.</b><small>실운영에서는 1원 인증 또는 오픈뱅킹 계좌 실명 확인 절차가 필요합니다.</small></span></label><div class="modal-actions full"><button class="secondary-button" data-action="open-doogo-money">취소</button><button class="primary-button" type="submit">계좌 확인·등록</button></div></form>`);
 }
 
+/* ===== 쇼핑몰 API 연동 =====
+   스마트스토어·쿠팡·카카오·CAFE24에서 발급한 API 키를 넣으면, 그 쇼핑몰에서 미리 만들어 둔 배송 정책(배송비·반품비·출고지·택배사)과
+   카테고리 체계를 불러온다. 배송 정책은 두고에서 만들지 않고 쇼핑몰에서 만든 것을 그대로 가져다 쓴다. (데모: 실제 API 호출 없음) */
+function channelApiFields(channelId) {
+  return ({
+    smartstore: [["sellerId", "스마트스토어 판매자 ID", "예: doogo_store"], ["apiKey", "애플리케이션 ID (Client ID)", "커머스API센터에서 발급"], ["secretKey", "애플리케이션 시크릿 (Client Secret)", "커머스API센터에서 발급"]],
+    coupang: [["sellerId", "업체 코드 (Vendor ID)", "예: A00012345"], ["apiKey", "Access Key", "쿠팡 Wing > 판매자 정보 > 추가판매정보"], ["secretKey", "Secret Key", "쿠팡 Wing에서 발급"]],
+    kakao: [["sellerId", "카카오쇼핑 판매자 ID", "예: doogo_kakao"], ["apiKey", "API 키", "카카오 쇼핑 판매자센터에서 발급"], ["secretKey", "시크릿 키", "카카오 쇼핑 판매자센터에서 발급"]],
+    cafe24: [["sellerId", "쇼핑몰 ID (Mall ID)", "예: doogoshop"], ["apiKey", "Client ID", "CAFE24 개발자센터 앱 등록"], ["secretKey", "Client Secret", "CAFE24 개발자센터 앱 등록"]]
+  })[channelId] || [["sellerId", "판매자 ID", ""], ["apiKey", "API 키", ""], ["secretKey", "시크릿 키", ""]];
+}
+/* 쇼핑몰에서 불러오는 배송 정책 (데모 데이터: 실제로는 각 쇼핑몰 API가 돌려주는 목록) */
+function channelPolicyPresets(channelId) {
+  const base = { returnFee: 3000, exchangeFee: 6000, jejuFee: 3000, carrier: "CJ대한통운", address: "경기도 광주시 도척면 두고물류센터" };
+  return ({
+    smartstore: [
+      { ...base, id: "NS-DLV-1001", name: "기본 무료배송", fee: 0, freeOver: 0, dispatch: "결제 후 1일 이내 출고" },
+      { ...base, id: "NS-DLV-1002", name: "조건부 무료배송 (3만원 이상)", fee: 3000, freeOver: 30000, dispatch: "결제 후 1일 이내 출고" },
+      { ...base, id: "NS-DLV-1003", name: "신선식품 냉장 당일발송", fee: 4000, freeOver: 50000, returnFee: 5000, exchangeFee: 10000, carrier: "한진택배", dispatch: "오후 2시 이전 결제 시 당일 출고" }
+    ],
+    coupang: [
+      { ...base, id: "CP-SHIP-5501", name: "판매자배송 무료 (출고지: 광주)", fee: 0, freeOver: 0, dispatch: "주문 후 1일 이내 출고" },
+      { ...base, id: "CP-SHIP-5502", name: "신선 냉장 유료배송", fee: 3500, freeOver: 40000, returnFee: 5000, exchangeFee: 10000, carrier: "한진택배", dispatch: "주문 후 당일 출고" }
+    ],
+    kakao: [{ ...base, id: "KK-DLV-301", name: "카카오 기본배송 무료", fee: 0, freeOver: 0, dispatch: "결제 후 2일 이내 출고" }],
+    cafe24: [{ ...base, id: "C24-SHIP-01", name: "자사몰 기본배송 (5만원 이상 무료)", fee: 3000, freeOver: 50000, dispatch: "결제 후 1일 이내 출고" }]
+  })[channelId] || [];
+}
+function policyFeeText(policy) {
+  if (!policy) return "-";
+  if (!Number(policy.fee)) return "무료배송";
+  return `${money(policy.fee)}${Number(policy.freeOver) ? ` · ${money(policy.freeOver)} 이상 무료` : ""}`;
+}
+function channelShippingPolicies(channel) { return Array.isArray(channel?.shippingPolicies) ? channel.shippingPolicies : []; }
+function channelDefaultPolicy(channel) { const list = channelShippingPolicies(channel); return list.find(policy => policy.id === channel.defaultPolicyId) || list[0] || null; }
+function maskSecret(value) { const text = String(value || ""); return text.length <= 4 ? "••••" : `${"•".repeat(Math.min(8, text.length - 4))}${text.slice(-4)}`; }
+function stableCode(text, prefix, length = 8) { let hash = 7; for (const char of String(text)) hash = (hash * 31 + char.charCodeAt(0)) % 99991997; return `${prefix}${String(hash).padStart(length, "0").slice(-length)}`; }
+/* 두고(네이버쇼핑 기준) 카테고리를 각 쇼핑몰 카테고리로 자동 매칭 */
+function channelCategoryFor(item, channelId, product = productOf(item?.productId)) {
+  const path = [item?.sellerCategoryGroup || product?.categoryGroup, item?.sellerCategory || product?.category, item?.sellerCategorySub || product?.categorySub, item?.sellerCategoryDetail || product?.categoryDetail].filter(Boolean);
+  if (channelId === "coupang") {
+    const mid = { "농산물": "신선식품", "수산물": "수산/건어물", "축산물": "정육/계란", "건강식품": "건강식품", "김치": "김치/반찬", "반찬": "김치/반찬", "가공식품": "가공/즉석식품" }[path[1]] || path[1];
+    const coupangPath = ["식품", mid, path[2], path[3]].filter(Boolean);
+    return { path: coupangPath.join(" > "), code: stableCode(coupangPath.join(">"), "", 5), matched: "자동 매칭" };
+  }
+  return { path: path.join(" > "), code: stableCode(path.join(">"), channelId === "smartstore" ? "50" : "", channelId === "smartstore" ? 6 : 5), matched: channelId === "smartstore" ? "네이버 카테고리 그대로" : "자동 매칭" };
+}
+/* 네이버 검색 태그 자동 추천 (상품명·카테고리·원산지 기반) */
+function suggestedTags(item, product = productOf(item?.productId)) {
+  const words = [product?.categoryDetail, product?.categorySub, product?.origin?.replace(/특별자치도|광역시|특별시|도$/g, ""), productBrand(product), ...String(sellerProductTitle(item, product)).replace(/[\[\]()]/g, " ").split(/\s+/)];
+  const extra = product?.shippingType === "overseas" ? ["해외직구", "정품"] : ["산지직송", "당일발송"];
+  return [...new Set([...words, ...extra].map(word => String(word || "").replace(/[^0-9A-Za-z가-힣/]/g, "").replace(/\//g, "")).filter(word => word.length >= 2 && !/^\d+(kg|g)?$/i.test(word)))].slice(0, 8);
+}
+function itemTags(item, product) { return Array.isArray(item?.searchTags) && item.searchTags.length ? item.searchTags : suggestedTags(item, product); }
 function channelConnectModal(channelId) {
   const channel = sellerChannels().find(item => item.id === channelId);
   if (!channel) return;
-  openModal(`<div class="channel-modal-head">${channelMark(channel.id)}<div><h2>${escapeHtml(channel.name)} 연동 설정</h2><p>두고와 동기화할 범위를 선택합니다.</p></div></div><form id="channelConnectForm" class="form-grid" data-id="${channel.id}"><div class="form-field full"><label>쇼핑몰명</label><input name="storeName" value="${escapeHtml(channel.storeName === "미연결" || channel.storeName === "연결 확인중" ? "두고 셀러샵" : channel.storeName)}" required></div><div class="form-field"><label>API ID <small>데모 값</small></label><input name="apiId" value="DEMO-${channel.id.toUpperCase()}" required></div><div class="form-field"><label>Secret Key <small>저장 안 함</small></label><input name="secret" type="password" value="demo-secret" required></div><label class="auto-issue-check full"><input type="checkbox" name="orders" checked><span><b>신규 주문 자동 수집</b><small>실제 연결 전 판매채널별 승인과 검증이 필요합니다.</small></span></label><label class="auto-issue-check full"><input type="checkbox" name="tracking" checked><span><b>송장번호 자동 반영</b><small>공급사 출고 완료 후 채널 주문에 반영합니다.</small></span></label><div class="api-safe-notice full"><b>안전 모드</b><span>입력값은 서버나 외부 채널로 보내지 않으며 화면 상태만 저장합니다.</span></div><div class="modal-actions full"><button class="secondary-button" data-close-modal>취소</button><button class="primary-button" type="submit">테스트 연결</button></div></form>`);
+  if (channel.status === "connected" && channel.api) return channelDetailModal(channelId);
+  openModal(`<div class="channel-modal-head">${channelMark(channel.id)}<div><h2>${escapeHtml(channel.name)} API 연동</h2><p>${escapeHtml(channel.name)}에서 발급받은 API 키를 넣으면 배송 정책·카테고리를 불러와요.</p></div></div>
+    <form id="channelConnectForm" class="form-grid channel-api-form" data-id="${channel.id}">
+      <div class="form-field full"><label>내 쇼핑몰 이름</label><input name="storeName" value="${escapeHtml(["미연결", "연결 확인중"].includes(channel.storeName) ? "두고 셀러샵" : channel.storeName)}" required></div>
+      ${channelApiFields(channel.id).map(([name, label, hint]) => `<div class="form-field full"><label>${escapeHtml(label)} *</label><input name="${name}" ${name === "secretKey" ? 'type="password" autocomplete="off"' : 'autocomplete="off"'} placeholder="${escapeHtml(hint)}" required></div>`).join("")}
+      <div class="channel-api-steps full"><b>연동하면 자동으로 가져와요</b><span>① ${escapeHtml(channel.name)}에 등록한 <em>배송 정책</em> (배송비·반품비·출고지·택배사)</span><span>② 카테고리 체계 → 두고(네이버쇼핑 기준) 카테고리와 자동 매칭</span><span>③ 신규 주문 수집 · 송장 전송 권한</span></div>
+      <div class="api-safe-notice full"><b>비밀번호는 받지 않아요</b><span>쇼핑몰 공식 API는 발급받은 API 키로만 연결돼요. 시크릿 키는 가려서(끝 4자리만) 저장하고, 데모에서는 외부로 보내지 않아요.</span></div>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button class="primary-button" type="submit">연동하고 배송 정책 불러오기</button></div>
+    </form>`);
+}
+function channelDetailModal(channelId) {
+  const channel = sellerChannels().find(item => item.id === channelId);
+  if (!channel) return;
+  const policies = channelShippingPolicies(channel);
+  const defaultPolicy = channelDefaultPolicy(channel);
+  openModal(`<div class="channel-modal-head">${channelMark(channel.id)}<div><h2>${escapeHtml(channel.name)} 연동 정보</h2><p>${escapeHtml(channel.storeName)} · 연동됨 · 배송 정책 ${policies.length}개</p></div></div>
+    <dl class="channel-api-info"><div><dt>판매자 ID</dt><dd>${escapeHtml(channel.api?.sellerId || "-")}</dd></div><div><dt>API 키</dt><dd>${escapeHtml(channel.api?.apiKeyMasked || "-")}</dd></div><div><dt>시크릿 키</dt><dd>${escapeHtml(channel.api?.secretMasked || "••••")}</dd></div><div><dt>배송 정책 불러온 시각</dt><dd>${escapeHtml(channel.policySyncedAt || "-")}</dd></div></dl>
+    <form id="channelPolicyForm" data-id="${channel.id}">
+      <div class="publish-section-title"><b>${escapeHtml(channel.name)}에서 불러온 배송 정책</b><small>기본으로 쓸 정책을 골라 주세요</small></div>
+      <div class="policy-list">${policies.length ? policies.map(policy => `<label class="policy-card"><input type="radio" name="defaultPolicyId" value="${escapeHtml(policy.id)}" ${defaultPolicy?.id === policy.id ? "checked" : ""}><span><b>${escapeHtml(policy.name)}</b><small>${escapeHtml(policyFeeText(policy))} · ${escapeHtml(policy.carrier)} · ${escapeHtml(policy.dispatch)}</small><em>반품 ${money(policy.returnFee)} · 교환 ${money(policy.exchangeFee)} · 제주/도서 +${money(policy.jejuFee)} · 정책번호 ${escapeHtml(policy.id)}</em></span></label>`).join("") : `<div class="empty">불러온 배송 정책이 없어요. ${escapeHtml(channel.name)} 판매자센터에서 배송 정책을 먼저 만든 뒤 다시 불러오세요.</div>`}</div>
+      <div class="api-safe-notice"><b>배송 정책은 ${escapeHtml(channel.name)}에서 관리해요</b><span>정책을 바꾸거나 추가하려면 ${escapeHtml(channel.name)} 판매자센터에서 수정한 뒤 ‘다시 불러오기’를 눌러 주세요.</span></div>
+      <div class="modal-actions channel-detail-actions"><button type="button" class="text-button danger-text" data-action="disconnect-channel" data-id="${channel.id}">연동 해제</button><button type="button" class="secondary-button" data-action="refresh-channel-policies" data-id="${channel.id}">⟳ 배송 정책 다시 불러오기</button><button type="submit" class="primary-button">기본 정책 저장</button></div>
+    </form>`);
 }
 
 function billingSettingsModal() {
@@ -3857,6 +3985,9 @@ document.addEventListener("click", event => {
     target.scrollIntoView({ behavior: "smooth", block: "nearest" });
     return;
   }
+  if (action === "studio-add-tag") { const input = document.getElementById("studioTagInput"); addStudioTag(input?.value); if (input) { input.value = ""; input.focus(); } return; }
+  if (action === "studio-suggest-tag") { addStudioTag(target.dataset.tag); return; }
+  if (action === "studio-remove-tag") { if (studioDraft) { studioDraft.tags = studioDraft.tags.filter(tag => tag !== target.dataset.tag); const el = document.getElementById("studioTags"); if (el) el.innerHTML = studioTagChips(); } return; }
   if (action === "studio-reset-thumb") { if (studioDraft) { studioDraft.thumbnail = ""; refreshStudioThumb(); showToast("공급사 사진으로 되돌렸어요."); } return; }
   if (action === "studio-add-text") { if (studioDraft) { studioDraft.blocks.push({ type: "text", text: "" }); studioDraft.detailTouched = true; rerenderStudioBlocks(); document.querySelector(`[data-block-text="${studioDraft.blocks.length - 1}"]`)?.focus(); } return; }
   if (action === "studio-block-move") {
@@ -3873,6 +4004,25 @@ document.addEventListener("click", event => {
     const product = productOf(item.productId);
     studioDraft.blocks = defaultDetailBlocks(product, { imageIndex: product?.imageIndex, detailSnapshot: product?.detail });
     studioDraft.detailTouched = false; studioDraft.detailReset = true; rerenderStudioBlocks(); showToast("공급사 원본 상세페이지로 되돌렸어요."); return;
+  }
+  if (action === "refresh-channel-policies") {
+    const channel = sellerChannels().find(item => item.id === id);
+    if (!channel) return;
+    channel.shippingPolicies = channelPolicyPresets(channel.id);
+    if (!channel.shippingPolicies.some(policy => policy.id === channel.defaultPolicyId)) channel.defaultPolicyId = channel.shippingPolicies[0]?.id || "";
+    channel.policySyncedAt = new Date().toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
+    saveState(); channelDetailModal(channel.id); render(); updateAccountUI();
+    showToast(`${channel.name}에서 배송 정책 ${channel.shippingPolicies.length}개를 다시 불러왔어요.`);
+    return;
+  }
+  if (action === "disconnect-channel") {
+    const channel = sellerChannels().find(item => item.id === id);
+    if (!channel) return;
+    if (!window.confirm(`${channel.name} 연동을 해제할까요? 주문 수집과 송장 전송이 멈춰요.`)) return;
+    channel.status = "disconnected"; channel.storeName = "미연결"; channel.trackingAutomation = false; delete channel.api; channel.shippingPolicies = []; channel.defaultPolicyId = "";
+    audit("쇼핑몰 연동 해제", `${channel.name} 연동을 해제했습니다.`, "done", "channel");
+    saveState(); closeModal(); render(); updateAccountUI(); showToast(`${channel.name} 연동을 해제했어요.`);
+    return;
   }
   if (action === "tab-go") { closeModal(); closeMobileSidebar(); activeMenuIndex = Number(target.dataset.index || 0); chatMobileView = "list"; editMode = false; render(); updateAccountUI(); window.scrollTo({ top: 0 }); return; }
   if (action === "go-menu") { closeModal(); activeMenuIndex = menuIndexOf(target.dataset.menu || "홈"); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
@@ -4533,6 +4683,7 @@ if (window.visualViewport) {
   syncTalkViewport();
 }
 document.addEventListener("keydown", event => {
+  if (event.target.id === "studioTagInput" && event.key === "Enter" && !event.isComposing && event.keyCode !== 229) { event.preventDefault(); addStudioTag(event.target.value); event.target.value = ""; return; }
   if (event.target.id !== "talkInput" || event.key !== "Enter" || event.shiftKey) return;
   if (event.isComposing || event.keyCode === 229) return;
   // 휴대폰은 카카오톡처럼 Enter = 줄바꿈, 보내기는 노란 버튼. PC는 Enter = 보내기, Shift+Enter = 줄바꿈
@@ -4772,6 +4923,7 @@ document.addEventListener("submit", event => {
     item.sellerCategorySub = String(data.sellerCategorySub || source.categorySub || "");
     item.sellerCategoryDetail = String(data.sellerCategoryDetail || source.categoryDetail || "");
     item.pricesEdited = true;
+    if (studioDraft?.itemId === item.id) item.searchTags = [...studioDraft.tags];
     const live = liveChannelIds(item);
     if (live.length) { item.channelSyncStatus = item.channelSyncStatus || {}; live.forEach(channelId => { item.channelSyncStatus[channelId] = "edited"; }); }
     if (intent === "register") { item.masterRegistered = true; item.masterRegisteredAt = "방금 전"; }
@@ -4993,8 +5145,11 @@ document.addEventListener("submit", event => {
     item.masterRegistered = true;
     item.channelDetails = item.channelDetails || {};
     item.channelSyncStatus = item.channelSyncStatus || {};
+    const missingPolicy = channels.find(channelId => !channelShippingPolicies(sellerChannels().find(entry => entry.id === channelId)).some(policy => policy.id === data[`policy__${channelId}`]));
+    if (missingPolicy) return showToast(`${channelMeta(missingPolicy).name} 배송 정책을 골라 주세요.`);
+    if (!Array.isArray(item.searchTags) || !item.searchTags.length) item.searchTags = suggestedTags(item, productOf(item.productId));
     sellerChannels().forEach(channel => { item.channelStatuses[channel.id] = channels.includes(channel.id) ? "판매중" : channel.status === "connected" ? "판매중지/미노출" : channel.status === "pending" ? "연동 대기" : "미연동"; });
-    channels.forEach(channelId => { item.channelDetails[channelId] = channelListingSnapshot(item, channelId); item.channelSyncStatus[channelId] = "synced"; });
+    channels.forEach(channelId => { const channel = sellerChannels().find(entry => entry.id === channelId); const shippingPolicy = channelShippingPolicies(channel).find(policy => policy.id === data[`policy__${channelId}`]) || null; item.channelDetails[channelId] = channelListingSnapshot(item, channelId, productOf(item.productId), { shippingPolicy }); item.channelSyncStatus[channelId] = "synced"; });
     const optionCount = sellerOptionRows(item).filter(row => row.enabled).length;
     audit("쇼핑몰 상품 자동등록", `${item.id} · ${channels.map(id => channelMeta(id).name).join(", ")}에 상품명·판매가·카테고리·콘텐츠${optionCount ? `·옵션 ${optionCount}개` : ""} 등록 결과를 반영했습니다.`, "done", "channel");
     saveState(); closeModal(); activeMenuIndex = 11; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); showToast(`${channels.length}개 쇼핑몰에 상품을 전송했어요${sellerOptionRows(item).filter(row => row.enabled).length ? ` (옵션 ${sellerOptionRows(item).filter(row => row.enabled).length}개 포함)` : ""}.`);
@@ -5139,14 +5294,29 @@ document.addEventListener("submit", event => {
   if (form.id === "channelConnectForm") {
     const channel = sellerChannels().find(item => item.id === form.dataset.id);
     if (!channel) return showToast("연동할 쇼핑몰 정보를 찾지 못했습니다.");
+    const sellerId = String(data.sellerId || "").trim(), apiKey = String(data.apiKey || "").trim(), secretKey = String(data.secretKey || "").trim();
+    if (!sellerId || apiKey.length < 4 || secretKey.length < 4) return showToast("판매자 ID·API 키·시크릿 키를 정확히 입력해 주세요.");
     channel.status = "connected";
-    channel.storeName = data.storeName;
+    channel.storeName = String(data.storeName || "").trim() || channel.storeName;
     channel.lastSync = "방금 전";
-    channel.trackingAutomation = Boolean(data.tracking);
     channel.syncInterval = 10;
+    channel.api = { sellerId, apiKeyMasked: maskSecret(apiKey), secretMasked: maskSecret(secretKey), connectedAt: "방금 전" };
+    channel.shippingPolicies = channelPolicyPresets(channel.id);
+    channel.defaultPolicyId = channel.shippingPolicies[0]?.id || "";
+    channel.policySyncedAt = new Date().toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
     currentSellerProducts().forEach(item => { item.channelStatuses = item.channelStatuses || {}; if (!item.channelStatuses[channel.id] || item.channelStatuses[channel.id] === "미연동") item.channelStatuses[channel.id] = "판매중지/미노출"; });
-    audit("쇼핑몰 테스트 연동", `${channel.name} · ${data.storeName} 연결 상태를 데모로 저장했습니다. 실제 API 전송 없음.`, "done", "channel");
-    saveState(); closeModal(); render(); showToast(`${channel.name} 테스트 연결을 완료했습니다.`);
+    audit("쇼핑몰 API 연동", `${channel.name} · ${channel.storeName} · 배송 정책 ${channel.shippingPolicies.length}개와 카테고리를 불러왔습니다. (데모: 실제 API 호출 없음)`, "done", "channel");
+    saveState(); render(); updateAccountUI(); channelDetailModal(channel.id);
+    showToast(`${channel.name} 연동 완료! 배송 정책 ${channel.shippingPolicies.length}개를 불러왔어요.`);
+    return;
+  }
+  if (form.id === "channelPolicyForm") {
+    const channel = sellerChannels().find(item => item.id === form.dataset.id);
+    if (!channel) return;
+    channel.defaultPolicyId = String(data.defaultPolicyId || channel.defaultPolicyId || "");
+    audit("쇼핑몰 기본 배송 정책 변경", `${channel.name} · ${channelDefaultPolicy(channel)?.name || "-"}`, "done", "channel");
+    saveState(); closeModal(); render(); updateAccountUI(); showToast(`${channel.name} 기본 배송 정책을 ‘${channelDefaultPolicy(channel)?.name || "-"}’(으)로 정했어요.`);
+    return;
   }
   if (form.id === "dropshippingEmailForm") {
     const notice = notificationService();
