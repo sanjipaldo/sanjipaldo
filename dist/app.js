@@ -1417,7 +1417,7 @@ function marketCategoryNavigator() {
   const depth = selected.filter(Boolean).length;
   const topCount = name => base.filter(product => productMatchesCategory(product, [name])).length;
   const rail = `<div class="cat-rail ${depth ? "collapsed" : ""}" aria-label="네이버쇼핑 대분류">
-    <button type="button" class="cat-rail-item ${depth === 0 ? "active" : ""}" data-action="category-crumb" data-level="0"><span class="cat-rail-icon" aria-hidden="true">▦</span><b>전체</b><em>${base.length}</em></button>${Object.keys(naverCategoryTree).map(name => { const count = topCount(name); return `<button type="button" class="cat-rail-item ${selected[0] === name ? "active" : ""} ${count ? "" : "empty"}" data-action="category-chip" data-level="1" data-value="${escapeHtml(name)}"><span class="cat-rail-icon" aria-hidden="true">${NAVER_CATEGORY_ICONS[name] || "•"}</span><b>${escapeHtml(name)}</b><em>${count}</em></button>`; }).join("")}</div>`;
+    <button type="button" class="cat-rail-item ${depth === 0 ? "active" : ""}" data-action="category-crumb" data-level="0"><span class="cat-rail-icon" aria-hidden="true">🛍️</span><b>전체</b><em>${base.length}</em></button>${Object.keys(naverCategoryTree).map(name => { const count = topCount(name); return `<button type="button" class="cat-rail-item ${selected[0] === name ? "active" : ""} ${count ? "" : "empty"}" data-action="category-chip" data-level="1" data-value="${escapeHtml(name)}"><span class="cat-rail-icon" aria-hidden="true">${NAVER_CATEGORY_ICONS[name] || "•"}</span><b>${escapeHtml(name)}</b><em>${count}</em></button>`; }).join("")}</div>`;
   let sub = "";
   if (depth >= 1) {
     const chipLevel = Math.min(depth + 1, 4);
@@ -1566,11 +1566,11 @@ function memberDirectoryTable(role) {
   </tbody></table></div>`;
 }
 
-function accountProfileTemplate() {
+function accountProfileTemplate(extra = "") {
   const account = currentAccount;
   const company = activeRole === "supplier" ? (account.supplierCompany || account.company) : account.company;
   const editButton = `<button class="primary-button" data-action="account-tab" data-tab="business">사업자 정보 수정</button>`;
-  return `${sectionHero("내 사업자 정보", "승인된 계정과 사업자 정보를 확인하고 변경할 수 있습니다.", editButton)}<div class="panel profile-panel"><div class="member-detail-grid"><div><span>상호명</span><b>${escapeHtml(company)}</b></div><div><span>대표자명</span><b>${escapeHtml(account.representative)}</b></div><div><span>사업자등록번호</span><b>${escapeHtml(account.businessNo)}</b></div><div><span>현재 모드</span><b>${escapeHtml(roleLabel())}${accountRoles().length > 1 ? " · 복수 역할" : ""}</b></div><div><span>연락처</span><b>${escapeHtml(account.contact)}</b></div><div><span>이메일</span><b>${escapeHtml(account.email)}</b></div></div><div class="profile-actions"><button class="secondary-button" data-action="account-tab" data-tab="business">정보 수정</button>${account.role === "seller" ? `<button class="role-profile-switch" data-account-action="role-switch">⇄ 사용자 전환 및 공급사 권한 관리</button>` : ""}</div></div>${activeRole === "supplier" ? goodflowIntegrationTemplate() : ""}`;
+  return `${sectionHero("내 사업자 정보", "승인된 계정과 사업자 정보를 확인하고 변경할 수 있습니다.", editButton)}<div class="panel profile-panel"><div class="member-detail-grid"><div><span>상호명</span><b>${escapeHtml(company)}</b></div><div><span>대표자명</span><b>${escapeHtml(account.representative)}</b></div><div><span>사업자등록번호</span><b>${escapeHtml(account.businessNo)}</b></div><div><span>현재 모드</span><b>${escapeHtml(roleLabel())}${accountRoles().length > 1 ? " · 복수 역할" : ""}</b></div><div><span>연락처</span><b>${escapeHtml(account.contact)}</b></div><div><span>이메일</span><b>${escapeHtml(account.email)}</b></div></div>${account.role === "seller" ? `<div class="profile-actions"><button class="role-profile-switch" data-account-action="role-switch">⇄ 사용자 전환 및 공급사 권한 관리</button></div>` : ""}</div>${extra}${activeRole === "supplier" ? goodflowIntegrationTemplate() : ""}`;
 }
 
 function sellerAutomationSettingsCard() {
@@ -2237,7 +2237,7 @@ function renderSupplierSection(index) {
   if (index === 5) return shippingSettingsTemplate();
   if (index === 6) return `${sectionHero("가격 관리", "공급가 변경 시 상품을 가져간 위탁셀러에게 빨간색 알림이 생성됩니다.")}<div class="panel"><div class="panel-head"><div><h3>상품별 공급가</h3><p>가격 버튼을 눌러 변경 알림 흐름을 확인하세요.</p></div></div>${supplierProductsTable()}</div>`;
   if (index === 7) return supplierSettlementTemplate();
-  return `${supplierSettingsCard()}${accountProfileTemplate()}`;
+  return accountProfileTemplate(supplierSettingsCard());
 }
 /* 공급사 설정: 상품 자동 승인 (켜 두면 위탁셀러가 PICK하자마자 바로 가져가 판매) */
 function supplierSettingsCard() {
@@ -2480,7 +2480,7 @@ function renderSupplier() {
   const products = currentSupplierProducts();
   const orders = currentSupplierOrders();
   const newOrders = orders.filter(o => ["신규주문", "발주완료"].includes(o.status));
-  const readyOrders = orders.filter(o => o.status === "배송준비중");
+  const readyOrders = orders.filter(o => o.status === "배송준비중" && !o.tracking);
   document.getElementById("supplierView").innerHTML = `
     <div class="hero-row">
       <div class="hero-copy"><h2>상품부터 출고까지, 한 흐름으로 처리하세요</h2><p>상품을 등록하고 계정 전용 택배 설정으로 송장을 자동 발급하면 셀러 화면에 즉시 반영됩니다.</p></div>
@@ -2497,12 +2497,14 @@ function renderSupplier() {
     ${supplierPerformanceTemplate()}
     <div class="panel">
       <div class="panel-head"><div><h3>주문 · 출고 관리</h3><p>신규주문 확인 후 배송준비중에서 송장을 출력합니다.</p></div><span class="chip orange">${newOrders.length + readyOrders.length}건 처리 필요</span></div>
-      ${ordersTable("supplier")}
+      ${ordersTable("supplier", "", supplierDashboardOrders(orders))}
+      ${orders.length > 5 ? `<div class="panel-more"><button type="button" class="text-button" data-action="open-supplier-orders">주문 ${orders.length}건 전체 보기 →</button></div>` : ""}
     </div>
     <div class="content-grid equal" style="margin-top:16px">
       <div class="panel">
         <div class="panel-head"><div><h3>내 등록 상품</h3><p>공급가 변경 시 셀러에게 알림이 생성됩니다.</p></div></div>
-        <div class="product-list">${products.map(productRowSupplier).join("")}</div>
+        <div class="product-list">${products.slice(0, 5).map(productRowSupplier).join("")}</div>
+        ${products.length > 5 ? `<div class="panel-more"><button type="button" class="text-button" data-action="open-supplier-products">상품 ${products.length}개 전체 보기 →</button></div>` : ""}
       </div>
       <div class="panel">
         <div class="panel-head"><div><h3>출고 흐름</h3><p>한 번의 처리로 상태를 연결합니다.</p></div></div>
@@ -2515,6 +2517,11 @@ function renderSupplier() {
     </div>`;
 }
 
+/* 대시보드는 처리할 주문 먼저, 최대 5건만 보여 준다. */
+function supplierDashboardOrders(orders) {
+  const rank = { "주문확인필요": 0, "신규주문": 1, "발주완료": 1, "배송준비중": 2, "배송중": 3, "배송완료": 4 };
+  return [...orders].sort((a, b) => (rank[a.status] ?? 5) - (rank[b.status] ?? 5)).slice(0, 5);
+}
 function productRowSupplier(p) {
   return `<div class="product-row">
     ${productPhoto(p, "product-thumb")}
