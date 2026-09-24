@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=30" />
+  <link rel="stylesheet" href="styles.css?v=31" />
 </head>
 <body>
   <section id="loginView" class="login-screen seller-login-screen">
@@ -51,12 +51,14 @@
           <p id="loginError" class="login-error" role="alert"></p>
           <button type="submit" class="login-submit">로그인</button>
         </form>
+        <div class="login-or"><span>또는</span></div>
+        <button type="button" class="kakao-login-button" data-kakao-start="login"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.2C6.6 3.2 2.3 6.6 2.3 10.8c0 2.7 1.8 5.1 4.5 6.4l-1 3.6c-.1.4.3.7.6.5l4.3-2.8c.4 0 .9.1 1.3.1 5.4 0 9.7-3.4 9.7-7.6S17.4 3.2 12 3.2Z"/></svg><span>카카오로 1초 로그인 · 가입</span></button>
         <div class="demo-accounts">
           <div><button data-demo-login="seller">데모 계정으로 체험하기 <b>seller / seller</b></button></div>
         </div>
         <div class="login-footer-links">
           <div class="login-signup-card"><span>아직 계정이 없으신가요?</span><button id="openSignup" type="button">무료로 시작하기 →</button></div>
-          <button type="button" class="login-textlink" data-find-account>아이디·비밀번호 찾기</button>
+          <div class="login-textlinks"><button type="button" class="login-textlink" data-find-account>아이디·비밀번호 찾기</button><button type="button" class="login-textlink" data-staff-join>직원 초대 코드로 시작하기</button></div>
         </div>
         <button id="mobilePartnerCenterLink" class="mobile-partner-link" type="button"><span>P</span> 공급사·관리자는 파트너센터로 →</button>
       </div>
@@ -135,6 +137,7 @@
         <form id="signupForm" class="signup-form" autocomplete="off">
           <input id="signupRole" type="hidden" name="role" value="seller">
           <section class="signup-step-panel active" data-signup-step="1">
+            <div id="signupKakaoBlock" class="signup-kakao-block"><button type="button" class="kakao-login-button" data-kakao-start="signup"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.2C6.6 3.2 2.3 6.6 2.3 10.8c0 2.7 1.8 5.1 4.5 6.4l-1 3.6c-.1.4.3.7.6.5l4.3-2.8c.4 0 .9.1 1.3.1 5.4 0 9.7-3.4 9.7-7.6S17.4 3.2 12 3.2Z"/></svg><span>카카오로 1초 가입하기</span></button><small>카카오로 가입해도 사업자 정보는 꼭 입력해야 이용할 수 있어요.</small><div class="login-or"><span>또는 이메일로 가입</span></div></div>
             <div class="signup-section-copy"><h3>계정 정보를 입력해 주세요</h3><p>가입 후 이메일 주소를 로그인 아이디로 사용합니다.</p></div>
             <div class="signup-fields single">
               <div class="signup-field full"><label>이메일 <em>필수</em></label><input name="email" type="email" inputmode="email" autocomplete="email" placeholder="business@example.com" required></div>
@@ -179,6 +182,9 @@
       </div>
     </div>
   </section>
+
+  <section id="kakaoProfileView" class="signup-screen kakao-profile-screen" hidden></section>
+  <div id="kakaoSheet" class="kakao-sheet" hidden></div>
 
   <div id="appView" class="app-shell" data-sidebar-open="false" hidden>
     <button id="mobileSidebarBackdrop" class="mobile-sidebar-backdrop" type="button" aria-label="메뉴 닫기" hidden></button>
@@ -259,6 +265,6 @@
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=30"></script>
+  <script src="app.js?v=31"></script>
 </body>
 </html>

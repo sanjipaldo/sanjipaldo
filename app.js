@@ -320,6 +320,11 @@ const initialState = {
     { id: "MB-1004", loginId: "market88", password: "market88", role: "seller", roleLabel: "위탁셀러", name: "마켓88", company: "마켓88", representative: "이셀러", businessNo: "456-78-90123", contact: "010-4567-8901", email: "market88@example.com", status: "pending", appliedAt: "오늘 11:05", approvedAt: "", businessFile: "마켓88_사업자등록증.pdf" },
     { id: "MB-1005", loginId: "brandlab", password: "brandlab", role: "seller", roles: ["seller"], roleLabel: "위탁셀러", name: "브랜드랩", company: "브랜드랩 스토어", representative: "김브랜드", businessNo: "567-89-01234", contact: "010-5678-9012", email: "brandlab@example.com", status: "approved", appliedAt: "2026.08.18", approvedAt: "2026.08.18", businessFile: "브랜드랩_사업자등록증.pdf" }
   ],
+  /* 위탁셀러 직원 계정: 사장님(대표 계정)이 초대하고 권한·정지·퇴사를 관리한다. */
+  staff: [
+    { id: "ST-2001", ownerLoginId: "seller", name: "박직원", email: "staff@doogo.kr", password: "staff1234", title: "주문·CS 담당", permissions: { products: false, orders: true, money: false, channels: false }, status: "active", invitedAt: "2026.09.02", joinedAt: "2026.09.02", lastLoginAt: "2026.09.23 18:10", inviteCode: "" },
+    { id: "ST-2002", ownerLoginId: "seller", name: "이알바", email: "part@doogo.kr", password: "", title: "상품 등록 담당", permissions: { products: true, orders: false, money: false, channels: false }, status: "invited", invitedAt: "2026.09.23", joinedAt: "", lastLoginAt: "", inviteCode: "DG7K2Q" }
+  ],
   supplierApplications: [
     { id: "SA-1001", sellerLoginId: "brandlab", company: "브랜드랩 푸드", businessNo: "567-89-01234", category: "건강식품·브랜드 상품", website: "brandlab.example", introduction: "자체 기획 건강식품을 위탁셀러에게 공급하고 싶습니다.", businessFile: "브랜드랩_사업자등록증.pdf", status: "pending", appliedAt: "오늘 10:40", reviewedAt: "", rejectionReason: "", attempt: 1 }
   ],
@@ -732,7 +737,7 @@ function pushNotification(recipientLoginId, audienceRole, type, title, detail, c
   state.notificationEvents.unshift({ id: `NT-${Date.now()}-${Math.random().toString(36).slice(2,5)}`, recipientLoginId, audienceRole, type, channels, title, detail, createdAt: "방금 전", read: false, delivery: "데모 대기" });
 }
 function audit(title, detail, stateName = "done", type = "change") {
-  state.logs.unshift({ id: Date.now() + Math.random(), type, title, detail, actor: currentAccount?.name || "시스템", time: "방금 전", state: stateName });
+  state.logs.unshift({ id: Date.now() + Math.random(), type, title, detail, actor: currentAccount?.staff ? `${currentAccount.staff.name} (직원)` : currentAccount?.name || "시스템", time: "방금 전", state: stateName });
 }
 function getAccount(id) {
   const normalized = String(id || "").trim().toLowerCase();
@@ -1135,19 +1140,20 @@ function mobileTabbarItems() {
 }
 function renderMobileTabbar() {
   const app = document.getElementById("appView");
+  const tabItems = () => mobileTabbarItems().filter(item => activeRole !== "seller" || staffCanMenu(item.index));
   if (!app) return;
   let bar = document.getElementById("mobileTabbar");
   if (!bar) { bar = document.createElement("nav"); bar.id = "mobileTabbar"; bar.className = "mobile-tabbar"; bar.setAttribute("aria-label", "빠른 이동"); app.appendChild(bar); }
   if (!currentAccount) { bar.innerHTML = ""; return; }
-  bar.innerHTML = mobileTabbarItems().map(item => { const active = item.match.includes(activeMenuIndex); return `<button type="button" class="${active ? "active" : ""}" data-action="tab-go" data-index="${item.index}" ${active ? 'aria-current="page"' : ""}><span class="tabbar-icon">${menuIcon(item.icon)}${item.badge ? `<b>${item.badge > 99 ? "99+" : item.badge}</b>` : ""}</span><span>${escapeHtml(item.label)}</span></button>`; }).join("");
+  bar.innerHTML = tabItems().map(item => { const active = item.match.includes(activeMenuIndex); return `<button type="button" class="${active ? "active" : ""}" data-action="tab-go" data-index="${item.index}" ${active ? 'aria-current="page"' : ""}><span class="tabbar-icon">${menuIcon(item.icon)}${item.badge ? `<b>${item.badge > 99 ? "99+" : item.badge}</b>` : ""}</span><span>${escapeHtml(item.label)}</span></button>`; }).join("");
 }
 function updateAccountUI() {
   if (!currentAccount) return;
   renderMobileTabbar();
   const accountNameText = activeRole === "supplier" ? workspaceCompany("supplier") : activeRole === "seller" ? (currentAccount.company || currentAccount.name) : currentAccount.name;
-  document.getElementById("accountName").textContent = accountNameText;
-  document.getElementById("accountRole").textContent = `${roleLabel()} 모드`;
-  document.getElementById("accountAvatar").textContent = String(accountNameText || "?").trim().charAt(0);
+  document.getElementById("accountName").textContent = currentAccount.staff ? currentAccount.staff.name : accountNameText;
+  document.getElementById("accountRole").textContent = currentAccount.staff ? `직원 · ${accountNameText}` : `${roleLabel()} 모드`;
+  document.getElementById("accountAvatar").textContent = String((currentAccount.staff ? currentAccount.staff.name : accountNameText) || "?").trim().charAt(0);
   const dropdownName = document.getElementById("dropdownAccountName");
   if (dropdownName) dropdownName.textContent = activeRole === "supplier" ? (currentAccount.supplierCompany || currentAccount.company || currentAccount.name) : (currentAccount.company || currentAccount.name);
   const subscriptionAction = document.querySelector('[data-account-action="subscription"]');
@@ -1155,7 +1161,7 @@ function updateAccountUI() {
   const dropdownRole = document.querySelector("#accountDropdown > div small");
   if (dropdownRole) dropdownRole.textContent = `${roleLabel()} 모드 · ${accountRoles().length > 1 ? "복수 역할 계정" : "전용 계정"}`;
   const switchButton = document.getElementById("workspaceSwitchButton");
-  switchButton.hidden = currentAccount.role !== "seller";
+  switchButton.hidden = currentAccount.role !== "seller" || Boolean(currentAccount.staff);
   document.getElementById("workspaceSwitchLabel").textContent = "사용자 전환";
   document.getElementById("sidebarRoleIcon").innerHTML = roleIconMarkup(activeRole);
   document.getElementById("sidebarRoleName").textContent = roleLabel();
@@ -1173,7 +1179,9 @@ function updateAccountUI() {
   const rejectedPickCount = activeRole === "seller" ? currentSellerProducts().filter(item => item.approvalStatus === "승인거절").length : 0;
   const readyCount = activeRole === "seller" ? sellerReadyProducts().length : 0;
   document.getElementById("workspaceMenu").innerHTML = roleMenuGroups[activeRole].map(group => {
-    const buttons = group.indexes.map(index => {
+    const indexes = group.indexes.filter(index => activeRole !== "seller" || staffCanMenu(index));
+    if (!indexes.length) return "";
+    const buttons = indexes.map(index => {
       const item = roleMenus[activeRole][index];
       const badgeValue = activeRole === "seller" ? ({ 7: alertCount, 15: mappingCount, 2: rejectedPickCount, 17: readyCount })[index] || 0 : activeRole === "supplier" ? ({ 3: shippingCount, 1: pickRequestCount })[index] || 0 : index === 1 ? pendingCount : 0;
       const badge = badgeValue > 0;
@@ -1227,10 +1235,11 @@ function setPartnerLoginRole(role) {
   document.getElementById("partnerLoginError").textContent = "";
 }
 
-function showApp(accountId) {
+function showApp(accountId, staff = null) {
   const account = getAccount(accountId);
   if (!account || account.status !== "approved") return showLogin();
   currentAccount = { roles: [account.role], ...account, id: account.loginId || accountId };
+  if (staff) currentAccount.staff = { id: staff.id, name: staff.name, email: staff.email, title: staff.title, permissions: { ...staff.permissions } };
   activeRole = currentAccount.role;
   activeMenuIndex = 0;
   sellerCategory = "전체보기";
@@ -1250,7 +1259,7 @@ function showApp(accountId) {
   refundMonth = "2026-09";
   refundSearch = "";
   refundTypeFilter = "all";
-  sessionStorage.setItem(AUTH_KEY, currentAccount.loginId || accountId);
+  sessionStorage.setItem(AUTH_KEY, staff ? `staff:${staff.email}` : (currentAccount.loginId || accountId));
   document.getElementById("loginView").hidden = true;
   document.getElementById("partnerLoginView").hidden = true;
   document.getElementById("signupView").hidden = true;
@@ -1270,7 +1279,9 @@ function initAuth() {
   document.getElementById("loginId").value = rememberedId;
   document.getElementById("rememberId").checked = Boolean(rememberedId);
   const sessionId = (sessionStorage.getItem(AUTH_KEY) || "").toLowerCase();
-  if (getAccount(sessionId)?.status === "approved") showApp(sessionId);
+  const sessionStaff = sessionId.startsWith("staff:") ? staffByEmail(sessionId.slice(6)) : null;
+  if (sessionStaff?.status === "active" && getAccount(sessionStaff.ownerLoginId)?.status === "approved") showApp(sessionStaff.ownerLoginId, sessionStaff);
+  else if (getAccount(sessionId)?.status === "approved") showApp(sessionId);
   else showLogin();
 }
 
@@ -1586,6 +1597,7 @@ function sellerAccountProfileTemplate() {
     </section>
     <div class="seller-profile-layout">
       <section class="panel seller-business-card"><div class="profile-section-head"><div><span>BUSINESS INFORMATION</span><h3>사업자 기본 정보</h3><p>주문·정산·세금계산서에 사용되는 계정 정보입니다.</p></div><button class="secondary-button" data-action="account-tab" data-tab="business">정보 수정</button></div><div class="profile-detail-grid"><div><span>상호명</span><b>${escapeHtml(account.company)}</b></div><div><span>대표자명</span><b>${escapeHtml(account.representative)}</b></div><div><span>사업자등록번호</span><b>${escapeHtml(account.businessNo)}</b></div><div><span>연락처</span><b>${escapeHtml(account.contact)}</b></div><div class="wide"><span>이메일</span><b>${escapeHtml(account.email)}</b></div><div><span>계정 권한</span><b>${accountRoles().length > 1 ? "위탁셀러 · 공급사" : "위탁셀러"}</b></div><div><span>업태 · 종목</span><b>${escapeHtml(account.businessType || "미입력")} · ${escapeHtml(account.businessItem || "미입력")}</b></div><div class="wide"><span>사업장 주소</span><b>${escapeHtml(account.businessAddress || "미입력")}</b></div><div><span>세금계산서 이메일</span><b>${escapeHtml(account.taxInvoiceEmail || account.email)}</b></div><div><span>공급사 노출 전화번호</span><b>${escapeHtml(account.supplierVisiblePhone || "미입력")}</b></div><div class="wide"><span>정산·환불 계좌</span><b>${account.bankName ? `${escapeHtml(account.bankName)} ${escapeHtml(account.bankAccountNumber || "")} (${escapeHtml(account.bankAccountHolder || account.representative)})` : account.bankbookFile ? `통장 사본 ${escapeHtml(account.bankbookFile)}` : "미입력"}</b></div><div class="wide"><span>로그인 방식</span><b>${account.kakaoId ? `<span class="kakao-badge">카카오</span> ${escapeHtml(account.kakaoId)} · 카카오로 1초 로그인` : "이메일 · 비밀번호"}</b></div></div></section>
+      ${account.staff ? staffSelfCard() : sellerStaffCard()}
       ${sellerAutomationSettingsCard()}
       <section class="panel seller-service-card"><div class="profile-section-head"><div><span>QUICK SETTINGS</span><h3>서비스 및 권한 관리</h3><p>자주 사용하는 설정으로 바로 이동합니다.</p></div></div><div class="profile-link-list"><button class="profile-link-button" data-action="open-seller-channels"><span>↗</span><b>쇼핑몰 연동</b><small>네이버·쿠팡·카카오·CAFE24</small><em>관리</em></button><button class="profile-link-button" data-action="open-seller-subscription"><span>₩</span><b>정기구독</b><small>${money(subscription.monthlyFee)} · 다음 결제 ${escapeHtml(subscription.nextBilling)}</small><em>관리</em></button>${supplierButton}</div></section>
     </div>`;
@@ -2271,6 +2283,10 @@ function dashboardWidgetPickerModal() {
 }
 
 function renderSeller() {
+  if (activeRole === "seller" && !staffCanMenu(activeMenuIndex)) {
+    document.getElementById("sellerView").innerHTML = staffNoPermissionTemplate(activeMenuIndex);
+    return;
+  }
   if (activeRole === "seller" && activeMenuIndex > 0) {
     document.getElementById("sellerView").innerHTML = renderSellerSection(activeMenuIndex);
     return;
@@ -2301,7 +2317,7 @@ function renderSeller() {
     { count: masterReady.length, tone: "blue", title: "쇼핑몰에 아직 안 올린 상품", hint: "‘상품 전송’ 한 번이면 옵션까지 등록돼요", button: "전송하기", action: "go-seller-menu", index: 14 },
     { count: alerts.length, tone: "orange", title: "공급가가 바뀐 상품", hint: "판매가를 확인해 주세요", button: "확인하기", action: "go-seller-menu", index: 7 },
     { count: refundsOpen, tone: "purple", title: "처리 중인 취소·반품", hint: "공급사와 진행 상황을 확인하세요", button: "보기", action: "go-seller-menu", index: 5 }
-  ].filter(item => item.count > 0);
+  ].filter(item => item.count > 0 && staffCanTodo(item));
   const todoAttrs = item => `data-action="${item.action}"${item.index !== undefined ? ` data-index="${item.index}"` : ""}${item.stage ? ` data-stage="${item.stage}"` : ""}`;
   const flowStep = (step, index, label, count, caption, tone) => `<button type="button" class="home-flow-step tone-${tone}" data-action="go-seller-menu" data-index="${index}"><i>${step}</i><b>${label}</b><strong>${count}</strong><small>${caption}</small></button>`;
   const orderStep = (stage, label, count, caption, tone) => `<button type="button" class="home-order-step tone-${tone}" ${stage === "mapping-payment" ? `data-action="${mappingRequired.length ? "go-seller-menu" : "open-order-payment-stage"}" data-index="15"` : `data-action="dashboard-order-stage" data-stage="${stage}"`}><b>${label}</b><strong>${count}<em>건</em></strong><small>${caption}</small></button>`;
@@ -3708,6 +3724,7 @@ document.addEventListener("click", event => {
     accountDropdown.hidden = true;
     document.getElementById("accountMenuButton").setAttribute("aria-expanded", "false");
     const action = accountAction.dataset.accountAction;
+    if (currentAccount?.staff && action !== "logout" && action !== "subscription") { activeMenuIndex = 10; render(); updateAccountUI(); return showToast("직원 계정은 ‘내 정보’에서 내 권한과 비밀번호를 관리해요."); }
     if (action === "role-switch") { userSwitchModal(); return; }
     if (action === "subscription" && activeRole === "seller") { activeMenuIndex = 9; render(); updateAccountUI(); return; }
     return accountSettingsModal(action);
@@ -3731,6 +3748,12 @@ document.addEventListener("click", event => {
   const target = event.target.closest("[data-action]");
   if (!target) return;
   const { action, id } = target.dataset;
+  if (currentAccount?.staff && activeRole === "seller") {
+    if (STAFF_OWNER_ONLY_ACTIONS.includes(action)) return showToast("사장님(대표 계정)만 할 수 있는 작업이에요.");
+    const needed = STAFF_ACTION_PERMISSIONS[action];
+    if (needed && !currentAccount.staff.permissions?.[needed]) return showToast(`‘${staffPermissionDefs().find(def => def.key === needed)?.label}’ 권한이 없어요. 사장님께 권한을 요청해 주세요.`);
+  }
+  if (handleStaffAction(action, id, target)) return;
   if (action === "category-search-pick") {
     const path = [target.dataset.group, target.dataset.mid, target.dataset.sub, target.dataset.detail];
     const form = target.closest("form");
@@ -4488,6 +4511,21 @@ document.getElementById("loginForm").addEventListener("submit", event => {
   const id = document.getElementById("loginId").value.trim().toLowerCase();
   const password = document.getElementById("loginPassword").value.trim();
   const account = getAccount(id);
+  const staff = !account ? staffByEmail(id) : null;
+  if (staff) {
+    if (staff.status === "invited") { document.getElementById("loginError").textContent = "아직 가입을 마치지 않은 직원 계정이에요. ‘직원 초대 코드로 시작하기’에서 비밀번호를 만들어 주세요."; return; }
+    if (staff.status === "left") { document.getElementById("loginError").textContent = "퇴사 처리된 직원 계정이라 로그인할 수 없어요."; return; }
+    if (!staff.password || staff.password !== password) { document.getElementById("loginError").textContent = "아이디 또는 비밀번호를 다시 확인해 주세요."; return; }
+    if (staff.status === "suspended") { document.getElementById("loginError").textContent = "사장님이 접속을 잠시 막아 두었어요. 대표 계정에 문의해 주세요."; return; }
+    const owner = getAccount(staff.ownerLoginId);
+    if (!owner || owner.status !== "approved") { document.getElementById("loginError").textContent = "소속 위탁셀러 계정을 지금 이용할 수 없어요."; return; }
+    staff.lastLoginAt = new Date().toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    saveState();
+    if (document.getElementById("rememberId").checked) localStorage.setItem(REMEMBER_KEY, id); else localStorage.removeItem(REMEMBER_KEY);
+    showApp(owner.loginId, staff);
+    showToast(`${staff.name}님, ${owner.company || owner.name} 직원 계정으로 로그인했어요.`);
+    return;
+  }
   if (account?.kakaoId && !account.password) {
     document.getElementById("loginError").textContent = "카카오로 가입한 계정이에요. 아래 ‘카카오로 1초 로그인’을 눌러 주세요.";
     return;
@@ -4931,6 +4969,7 @@ document.addEventListener("focusout", event => {
 document.addEventListener("submit", event => {
   event.preventDefault();
   const form = event.target, data = Object.fromEntries(new FormData(form));
+  if (handleStaffForm(form, data)) return;
   if (form.id === "findAccountIdForm") {
     const role = data.role === "supplier" ? "supplier" : "seller";
     const email = String(data.email || "").trim().toLowerCase();
@@ -5705,10 +5744,229 @@ document.addEventListener("submit", event => {
 });
 document.addEventListener("keydown", event => { if (event.key === "Escape" && !document.getElementById("kakaoSheet").hidden) closeKakaoSheet(); });
 
+/* ===== 직원 계정 (초대 · 권한 · 정지 · 퇴사) =====
+   사장님(대표 계정)이 이메일로 초대하면 초대 코드가 만들어지고, 직원이 그 코드로 자기 비밀번호를 정해 가입한다.
+   직원은 사장님 계정의 데이터를 함께 쓰되, 허락받은 메뉴만 보인다. */
+function staffPermissionDefs() {
+  return [
+    { key: "products", label: "상품", desc: "소싱·PICK·마스터 상품·쇼핑몰 전송", menus: [1, 16, 2, 17, 14, 11, 15, 7] },
+    { key: "orders", label: "주문·배송", desc: "주문 결제·송장 전송·취소반품·공급사 문의", menus: [4, 5, 3] },
+    { key: "money", label: "두고머니·매출", desc: "충전·결제·매출 달력·정기구독", menus: [12, 6, 9] },
+    { key: "channels", label: "쇼핑몰 연동", desc: "API 키·배송 정책·자동화 설정", menus: [8] }
+  ];
+}
+const STAFF_OWNER_ONLY_ACTIONS = ["account-tab", "open-user-switch", "switch-workspace", "open-supplier-application", "disconnect-channel", "staff-invite", "staff-edit", "staff-suspend", "staff-leave", "staff-reset-password", "staff-cancel-invite", "staff-remove", "staff-show-invite"];
+const STAFF_ACTION_PERMISSIONS = {
+  "push-all-tracking": "orders", "push-tracking": "orders", "run-tracking-sync": "orders", "collect-orders": "orders", "pay-order": "orders", "open-order-payment-stage": "orders", "dispatch-supplier-order": "orders", "single-order": "orders", "map-order": "orders", "request-refund": "orders", "demo-forward-tracking": "orders",
+  "manage-product-channels": "products", "sync-all-channels": "products", "sync-channel-listing": "products", "push-channel-listing": "products", "edit-seller-product": "products", "register-master-product": "products", "simulate-order": "products", "open-stop-channel": "products", "delete-pick": "products", "rerequest-pick": "products",
+  "open-doogo-money": "money", "open-doogo-money-history": "money", "edit-doogo-money-bank": "money", "toggle-subscription": "money", "billing-settings": "money",
+  "connect-channel": "channels", "refresh-channel-policies": "channels", "toggle-channel-automation": "channels", "toggle-auto-tracking": "channels", "toggle-auto-collect": "channels"
+};
+function staffByEmail(email) { const key = String(email || "").trim().toLowerCase(); return (state.staff || []).find(member => member.email.toLowerCase() === key && member.status !== "removed"); }
+function ownerStaff(loginId = currentAccount?.loginId) { return (state.staff || []).filter(member => member.ownerLoginId === loginId); }
+function staffCanTodo(item) {
+  if (!currentAccount?.staff) return true;
+  const needed = item.action === "dashboard-order-stage" ? "orders" : STAFF_ACTION_PERMISSIONS[item.action];
+  if (needed && !currentAccount.staff.permissions?.[needed]) return false;
+  return item.index === undefined || staffCanMenu(item.index);
+}
+function staffCanMenu(index) {
+  const staff = currentAccount?.staff;
+  if (!staff || [0, 10, 13].includes(Number(index))) return true;
+  const def = staffPermissionDefs().find(item => item.menus.includes(Number(index)));
+  return def ? Boolean(staff.permissions?.[def.key]) : true;
+}
+function staffStatusChip(status) {
+  const meta = { active: ["활동 중", "green"], invited: ["가입 대기", "orange"], suspended: ["접속 정지", "red"], left: ["퇴사", ""] }[status] || [status, ""];
+  return `<span class="chip ${meta[1]}">${meta[0]}</span>`;
+}
+function staffPermissionChips(permissions = {}) {
+  const on = staffPermissionDefs().filter(def => permissions[def.key]);
+  return on.length ? on.map(def => `<span class="staff-perm">${escapeHtml(def.label)}</span>`).join("") : `<span class="staff-perm off">홈·공지만</span>`;
+}
+function staffInviteLink(staff) { return `${location.origin}${location.pathname}?invite=${staff.inviteCode}`; }
+function newInviteCode() { const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let code = ""; do { code = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join(""); } while ((state.staff || []).some(member => member.inviteCode === code)); return code; }
+function staffNoPermissionTemplate(index) {
+  const def = staffPermissionDefs().find(item => item.menus.includes(Number(index)));
+  return `<section class="panel staff-locked"><span class="staff-locked-icon">🔒</span><h2>이 메뉴는 권한이 없어요</h2><p>‘${escapeHtml(roleMenus.seller[index] || "")}’은(는) <b>${escapeHtml(def?.label || "")}</b> 권한이 있어야 볼 수 있어요.<br>사장님(대표 계정)께 권한을 요청해 주세요.</p><button type="button" class="primary-button" data-action="open-dashboard">홈으로</button></section>`;
+}
+function sellerStaffCard() {
+  const members = ownerStaff().filter(member => member.status !== "removed");
+  const count = status => members.filter(member => member.status === status).length;
+  const order = { active: 0, invited: 1, suspended: 2, left: 3 };
+  const rows = [...members].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9)).map(member => {
+    const actions = member.status === "active" ? `<button type="button" class="secondary-button" data-action="staff-edit" data-id="${member.id}">권한 변경</button><button type="button" class="secondary-button" data-action="staff-suspend" data-id="${member.id}">접속 정지</button><button type="button" class="text-button" data-action="staff-reset-password" data-id="${member.id}">비밀번호 초기화</button><button type="button" class="text-button danger-text" data-action="staff-leave" data-id="${member.id}">퇴사 처리</button>`
+      : member.status === "suspended" ? `<button type="button" class="primary-button" data-action="staff-suspend" data-id="${member.id}">정지 해제</button><button type="button" class="secondary-button" data-action="staff-edit" data-id="${member.id}">권한 변경</button><button type="button" class="text-button danger-text" data-action="staff-leave" data-id="${member.id}">퇴사 처리</button>`
+      : member.status === "invited" ? `<button type="button" class="primary-button" data-action="staff-show-invite" data-id="${member.id}">초대 코드 보기</button><button type="button" class="secondary-button" data-action="staff-edit" data-id="${member.id}">권한 변경</button><button type="button" class="text-button danger-text" data-action="staff-cancel-invite" data-id="${member.id}">초대 취소</button>`
+      : `<span class="staff-left-note">${escapeHtml(member.leftAt || "")} 퇴사 · 작업 기록은 남아요</span><button type="button" class="text-button danger-text" data-action="staff-remove" data-id="${member.id}">목록에서 삭제</button>`;
+    return `<article class="staff-row status-${member.status}"><span class="staff-avatar">${escapeHtml(member.name.slice(0, 1))}</span><div class="staff-info"><b>${escapeHtml(member.name)} ${staffStatusChip(member.status)}</b><small>${escapeHtml(member.email)}${member.title ? ` · ${escapeHtml(member.title)}` : ""}</small><div class="staff-perms">${staffPermissionChips(member.permissions)}</div><small class="staff-meta">${member.status === "invited" ? `초대 ${escapeHtml(member.invitedAt)} · 코드 ${escapeHtml(member.inviteCode)}` : `최근 접속 ${escapeHtml(member.lastLoginAt || "-")}`}</small></div><div class="staff-actions">${actions}</div></article>`;
+  }).join("");
+  return `<section class="panel seller-staff-card" id="sellerStaffCard"><div class="profile-section-head"><div><span>TEAM</span><h3>직원 관리</h3><p>직원을 초대하면 각자 이메일·비밀번호로 로그인해요. 메뉴 권한과 접속을 사장님이 관리합니다.</p></div><button type="button" class="primary-button" data-action="staff-invite">＋ 직원 초대</button></div>
+    <div class="staff-summary"><span>활동 중 <b>${count("active")}</b></span><span>가입 대기 <b>${count("invited")}</b></span><span>접속 정지 <b>${count("suspended")}</b></span><span>퇴사 <b>${count("left")}</b></span></div>
+    <div class="staff-list">${rows || `<div class="empty">아직 초대한 직원이 없어요. ‘직원 초대’로 함께 일할 사람을 추가해 보세요.</div>`}</div></section>`;
+}
+function staffSelfCard() {
+  const staff = currentAccount.staff;
+  return `<section class="panel seller-staff-card staff-self"><div class="profile-section-head"><div><span>MY STAFF ACCOUNT</span><h3>${escapeHtml(staff.name)}님은 직원 계정이에요</h3><p>${escapeHtml(currentAccount.company || currentAccount.name)}의 직원으로 로그인했어요. 권한은 사장님이 바꿀 수 있어요.</p></div><button type="button" class="secondary-button" data-action="staff-change-password">비밀번호 변경</button></div>
+    <div class="staff-self-grid"><div><span>로그인 이메일</span><b>${escapeHtml(staff.email)}</b></div><div><span>담당 업무</span><b>${escapeHtml(staff.title || "-")}</b></div><div class="wide"><span>사용 가능한 메뉴</span><div class="staff-perms">${staffPermissionChips(staff.permissions)}</div></div></div></section>`;
+}
+function staffPermissionFields(permissions = { products: true, orders: true }) {
+  return `<div class="staff-perm-options">${staffPermissionDefs().map(def => `<label class="staff-perm-option"><input type="checkbox" name="perm_${def.key}" ${permissions[def.key] ? "checked" : ""}><span><b>${escapeHtml(def.label)}</b><small>${escapeHtml(def.desc)}</small></span></label>`).join("")}</div><p class="staff-perm-note">홈·공지사항·내 정보는 모든 직원이 볼 수 있어요. 직원 관리·사업자 정보 수정·연동 해제는 사장님만 할 수 있어요.</p>`;
+}
+function staffInviteModal() {
+  openModal(`<div class="staff-modal-head"><span>INVITE STAFF</span><h2>직원 초대하기</h2><p>초대하면 코드가 만들어져요. 직원이 코드로 들어와 <b>본인 비밀번호</b>를 정하면 가입이 끝나요.</p></div>
+    <form id="staffInviteForm" class="staff-form">
+      <label class="form-field"><span>이름</span><input name="name" required maxlength="20" placeholder="예: 김직원"></label>
+      <label class="form-field"><span>로그인 이메일</span><input name="email" type="email" required placeholder="staff@example.com"></label>
+      <label class="form-field full"><span>담당 업무 <small>선택</small></span><input name="title" maxlength="20" placeholder="예: 주문·CS 담당"></label>
+      <div class="form-field full"><span>사용할 수 있는 메뉴</span>${staffPermissionFields()}</div>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">초대 코드 만들기</button></div>
+    </form>`);
+}
+function staffInviteResultModal(staff, reset = false) {
+  openModal(`<div class="staff-modal-head"><span>${reset ? "PASSWORD RESET" : "INVITE READY"}</span><h2>${escapeHtml(staff.name)}님께 초대 코드를 보내 주세요</h2><p>${reset ? "기존 비밀번호는 사용할 수 없어요. 새 코드로 비밀번호를 다시 정하면 돼요." : "카카오톡·문자로 아래 코드나 링크를 전달해 주세요."}</p></div>
+    <div class="staff-invite-code"><small>초대 코드</small><b>${escapeHtml(staff.inviteCode)}</b><span>${escapeHtml(staff.email)}</span></div>
+    <div class="staff-invite-link"><input readonly value="${escapeHtml(staffInviteLink(staff))}" aria-label="초대 링크"><button type="button" class="secondary-button" data-action="staff-copy-invite" data-id="${staff.id}">링크 복사</button></div>
+    <ol class="staff-invite-steps"><li>직원이 링크를 열거나 로그인 화면의 <b>‘직원 초대 코드로 시작하기’</b>를 눌러요.</li><li>초대 코드와 이메일을 넣고 본인 비밀번호를 정해요.</li><li>이후에는 이메일·비밀번호로 로그인해요.</li></ol>
+    <div class="modal-actions"><button type="button" class="primary-button" data-close-modal>확인</button></div>`);
+}
+function staffEditModal(staff) {
+  openModal(`<div class="staff-modal-head"><span>PERMISSION</span><h2>${escapeHtml(staff.name)}님 권한 변경</h2><p>${escapeHtml(staff.email)} · ${staffStatusChip(staff.status)}</p></div>
+    <form id="staffPermissionForm" class="staff-form" data-id="${staff.id}">
+      <label class="form-field full"><span>담당 업무</span><input name="title" maxlength="20" value="${escapeHtml(staff.title || "")}" placeholder="예: 상품 등록 담당"></label>
+      <div class="form-field full"><span>사용할 수 있는 메뉴</span>${staffPermissionFields(staff.permissions)}</div>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">권한 저장</button></div>
+    </form>`);
+}
+function staffPasswordModal() {
+  openModal(`<div class="staff-modal-head"><span>MY ACCOUNT</span><h2>비밀번호 변경</h2><p>직원 계정 비밀번호는 본인만 바꿀 수 있어요.</p></div>
+    <form id="staffPasswordForm" class="staff-form">
+      <label class="form-field full"><span>현재 비밀번호</span><input name="current" type="password" required autocomplete="current-password"></label>
+      <label class="form-field full"><span>새 비밀번호</span><input name="next" type="password" minlength="8" required autocomplete="new-password" placeholder="8자 이상"></label>
+      <label class="form-field full"><span>새 비밀번호 확인</span><input name="confirm" type="password" minlength="8" required autocomplete="new-password"></label>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">변경하기</button></div>
+    </form>`);
+}
+function readStaffPermissions(data) { return Object.fromEntries(staffPermissionDefs().map(def => [def.key, Boolean(data[`perm_${def.key}`])])); }
+function refreshStaffView() { saveState(); render(); updateAccountUI(); }
+function handleStaffAction(action, id, target) {
+  if (!action || !action.startsWith("staff-")) return false;
+  const staff = (state.staff || []).find(member => member.id === id && member.ownerLoginId === currentAccount?.loginId);
+  if (action === "staff-invite") { staffInviteModal(); return true; }
+  if (action === "staff-change-password") { if (currentAccount?.staff) staffPasswordModal(); return true; }
+  if (action === "staff-copy-invite") {
+    if (!staff) return true;
+    const link = staffInviteLink(staff);
+    Promise.resolve(navigator.clipboard?.writeText(link)).then(() => showToast("초대 링크를 복사했어요."), () => showToast(`초대 링크: ${link}`));
+    return true;
+  }
+  if (!staff) return true;
+  if (action === "staff-show-invite") { staffInviteResultModal(staff); return true; }
+  if (action === "staff-edit") { staffEditModal(staff); return true; }
+  if (action === "staff-suspend") {
+    const suspend = staff.status === "active";
+    if (suspend && !window.confirm(`${staff.name}님의 접속을 정지할까요?\n정지하면 바로 로그인할 수 없고, 해제하면 다시 쓸 수 있어요.`)) return true;
+    staff.status = suspend ? "suspended" : "active";
+    audit(suspend ? "직원 접속 정지" : "직원 접속 정지 해제", `${staff.name} (${staff.email})`, "done", "member");
+    refreshStaffView(); showToast(suspend ? `${staff.name}님의 접속을 정지했어요.` : `${staff.name}님이 다시 접속할 수 있어요.`); return true;
+  }
+  if (action === "staff-leave") {
+    if (!window.confirm(`${staff.name}님을 퇴사 처리할까요?\n더 이상 로그인할 수 없고 되돌릴 수 없어요. 작업 기록은 남아요.`)) return true;
+    Object.assign(staff, { status: "left", password: "", inviteCode: "", leftAt: new Date().toLocaleDateString("ko-KR") });
+    audit("직원 퇴사 처리", `${staff.name} (${staff.email}) · 로그인 권한을 회수했습니다.`, "done", "member");
+    refreshStaffView(); showToast(`${staff.name}님을 퇴사 처리했어요.`); return true;
+  }
+  if (action === "staff-reset-password") {
+    if (!window.confirm(`${staff.name}님 비밀번호를 초기화할까요?\n새 초대 코드로 비밀번호를 다시 정해야 로그인할 수 있어요.`)) return true;
+    Object.assign(staff, { status: "invited", password: "", inviteCode: newInviteCode(), invitedAt: new Date().toLocaleDateString("ko-KR") });
+    audit("직원 비밀번호 초기화", `${staff.name} (${staff.email}) · 새 초대 코드 발급`, "done", "member");
+    refreshStaffView(); staffInviteResultModal(staff, true); return true;
+  }
+  if (action === "staff-cancel-invite" || action === "staff-remove") {
+    if (!window.confirm(action === "staff-cancel-invite" ? `${staff.name}님 초대를 취소할까요?` : `${staff.name}님을 목록에서 삭제할까요?`)) return true;
+    state.staff = state.staff.filter(member => member.id !== staff.id);
+    audit(action === "staff-cancel-invite" ? "직원 초대 취소" : "퇴사 직원 삭제", `${staff.name} (${staff.email})`, "done", "member");
+    refreshStaffView(); showToast(action === "staff-cancel-invite" ? "초대를 취소했어요." : "목록에서 삭제했어요."); return true;
+  }
+  return true;
+}
+function handleStaffForm(form, data) {
+  if (form.id === "staffInviteForm") {
+    const email = String(data.email || "").trim().toLowerCase();
+    const name = String(data.name || "").trim();
+    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast("이름과 이메일을 확인해 주세요."); return true; }
+    if (getAccount(email) || (state.staff || []).some(member => member.email.toLowerCase() === email && member.status !== "left")) { showToast("이미 사용 중인 이메일이에요."); return true; }
+    const permissions = readStaffPermissions(data);
+    state.staff = (state.staff || []).filter(member => !(member.email.toLowerCase() === email && member.status === "left"));
+    const staff = { id: `ST-${Date.now()}`, ownerLoginId: currentAccount.loginId, name, email, password: "", title: String(data.title || "").trim(), permissions, status: "invited", invitedAt: new Date().toLocaleDateString("ko-KR"), joinedAt: "", lastLoginAt: "", inviteCode: newInviteCode() };
+    state.staff.push(staff);
+    audit("직원 초대", `${name} (${email}) · 권한: ${staffPermissionDefs().filter(def => permissions[def.key]).map(def => def.label).join(", ") || "홈·공지"}`, "done", "member");
+    refreshStaffView(); staffInviteResultModal(staff); return true;
+  }
+  if (form.id === "staffPermissionForm") {
+    const staff = (state.staff || []).find(member => member.id === form.dataset.id && member.ownerLoginId === currentAccount.loginId);
+    if (!staff) return true;
+    staff.permissions = readStaffPermissions(data);
+    staff.title = String(data.title || "").trim();
+    audit("직원 권한 변경", `${staff.name} · ${staffPermissionDefs().filter(def => staff.permissions[def.key]).map(def => def.label).join(", ") || "홈·공지만"}`, "done", "member");
+    closeModal(); refreshStaffView(); showToast(`${staff.name}님 권한을 저장했어요. 다음 로그인부터 적용돼요.`); return true;
+  }
+  if (form.id === "staffPasswordForm") {
+    const staff = (state.staff || []).find(member => member.id === currentAccount?.staff?.id);
+    if (!staff) return true;
+    if (staff.password !== data.current) { showToast("현재 비밀번호가 맞지 않아요."); return true; }
+    if (String(data.next || "").length < 8 || data.next !== data.confirm) { showToast("새 비밀번호(8자 이상)를 두 번 똑같이 입력해 주세요."); return true; }
+    staff.password = data.next; saveState(); closeModal(); showToast("비밀번호를 바꿨어요."); return true;
+  }
+  return false;
+}
+/* 로그인 화면: 직원 초대 코드로 가입 */
+function openStaffJoinSheet(code = "") {
+  const sheet = document.getElementById("kakaoSheet");
+  sheet.innerHTML = `<div class="kakao-sheet-backdrop" data-kakao-close></div><div class="kakao-sheet-card staff-join-card" role="dialog" aria-modal="true" aria-labelledby="staffJoinTitle">
+    <div class="kakao-sheet-top"><span class="staff-join-logo">👥</span><b id="staffJoinTitle">직원 초대 코드로 시작하기</b><button type="button" class="kakao-sheet-x" data-kakao-close aria-label="닫기">×</button></div>
+    <form id="staffJoinForm" class="kakao-consent">
+      <p class="staff-join-copy">사장님께 받은 초대 코드와 이메일을 넣고, 앞으로 쓸 비밀번호를 정해 주세요.</p>
+      <label>초대 코드<input name="code" required maxlength="6" value="${escapeHtml(code)}" placeholder="예: DG7K2Q" autocapitalize="characters" style="text-transform:uppercase"></label>
+      <label>초대받은 이메일<input name="email" type="email" required autocomplete="username" placeholder="staff@example.com"></label>
+      <label>비밀번호<input name="password" type="password" minlength="8" required autocomplete="new-password" placeholder="8자 이상"></label>
+      <label>비밀번호 확인<input name="confirm" type="password" minlength="8" required autocomplete="new-password"></label>
+      <p class="kakao-consent-error" data-kakao-error></p>
+      <button type="submit" class="login-submit">가입하고 로그인</button>
+    </form></div>`;
+  sheet.hidden = false;
+  document.body.classList.add("kakao-sheet-open");
+  setTimeout(() => sheet.querySelector(code ? "input[name=email]" : "input[name=code]")?.focus(), 30);
+}
+document.addEventListener("click", event => { if (event.target.closest("[data-staff-join]")) { event.preventDefault(); openStaffJoinSheet(); } });
+document.addEventListener("submit", event => {
+  if (event.target.id !== "staffJoinForm") return;
+  event.preventDefault();
+  const form = event.target; const data = Object.fromEntries(new FormData(form));
+  const error = form.querySelector("[data-kakao-error]");
+  const code = String(data.code || "").trim().toUpperCase();
+  const email = String(data.email || "").trim().toLowerCase();
+  const staff = (state.staff || []).find(member => member.inviteCode === code && member.status === "invited");
+  if (!staff) { error.textContent = "초대 코드를 확인해 주세요. 취소됐거나 이미 쓴 코드일 수 있어요."; return; }
+  if (staff.email.toLowerCase() !== email) { error.textContent = "초대받은 이메일과 달라요."; return; }
+  if (String(data.password || "").length < 8) { error.textContent = "비밀번호는 8자 이상으로 정해 주세요."; return; }
+  if (data.password !== data.confirm) { error.textContent = "비밀번호 확인이 달라요."; return; }
+  const owner = getAccount(staff.ownerLoginId);
+  if (!owner || owner.status !== "approved") { error.textContent = "소속 위탁셀러 계정을 지금 이용할 수 없어요."; return; }
+  Object.assign(staff, { password: data.password, status: "active", inviteCode: "", joinedAt: new Date().toLocaleDateString("ko-KR"), lastLoginAt: new Date().toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) });
+  state.logs.unshift({ id: Date.now(), type: "member", title: "직원 가입 완료", detail: `${staff.name} (${staff.email}) · ${owner.company || owner.name}`, actor: `${staff.name} (직원)`, time: "방금 전", state: "done" });
+  saveState();
+  closeKakaoSheet();
+  showApp(owner.loginId, staff);
+  showToast(`환영해요, ${staff.name}님! ${owner.company || owner.name} 직원으로 가입했어요.`);
+});
+
 const requestedPortal = new URLSearchParams(window.location.search).get("portal");
 initAuth();
 if (requestedPortal === "partner") showPartnerLogin("supplier");
 if (requestedPortal === "master") showPartnerLogin("master");
+const requestedInvite = new URLSearchParams(window.location.search).get("invite");
+if (requestedInvite && !currentAccount) openStaffJoinSheet(requestedInvite.toUpperCase());
 startTyping("sellerTypingText", ["좋은 공급상품을 소싱받아,\n원클릭으로 바로 판매를 시작해보세요.", "주문부터 송장 전송까지,\n드랍쉬핑을 자동화하세요.", "브랜드와 셀러가 만나는 곳,\n두고입니다."]);
 startTyping("partnerTypingText", ["내 브랜드 상품을 등록하고,\n새로운 셀러를 만나세요.", "상품과 주문을 한곳에서,\n운영은 더 정확하게.", "공급과 판매가 연결되는 곳,\n두고입니다."]);
 /* 송장 자동 전송 스케줄러: 30초마다 전송 시각(10분 단위)이 된 송장이 있는지 확인한다. */

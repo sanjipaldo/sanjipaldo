@@ -320,6 +320,11 @@ const initialState = {
     { id: "MB-1004", loginId: "market88", password: "market88", role: "seller", roleLabel: "위탁셀러", name: "마켓88", company: "마켓88", representative: "이셀러", businessNo: "456-78-90123", contact: "010-4567-8901", email: "market88@example.com", status: "pending", appliedAt: "오늘 11:05", approvedAt: "", businessFile: "마켓88_사업자등록증.pdf" },
     { id: "MB-1005", loginId: "brandlab", password: "brandlab", role: "seller", roles: ["seller"], roleLabel: "위탁셀러", name: "브랜드랩", company: "브랜드랩 스토어", representative: "김브랜드", businessNo: "567-89-01234", contact: "010-5678-9012", email: "brandlab@example.com", status: "approved", appliedAt: "2026.08.18", approvedAt: "2026.08.18", businessFile: "브랜드랩_사업자등록증.pdf" }
   ],
+  /* 위탁셀러 직원 계정: 사장님(대표 계정)이 초대하고 권한·정지·퇴사를 관리한다. */
+  staff: [
+    { id: "ST-2001", ownerLoginId: "seller", name: "박직원", email: "staff@doogo.kr", password: "staff1234", title: "주문·CS 담당", permissions: { products: false, orders: true, money: false, channels: false }, status: "active", invitedAt: "2026.09.02", joinedAt: "2026.09.02", lastLoginAt: "2026.09.23 18:10", inviteCode: "" },
+    { id: "ST-2002", ownerLoginId: "seller", name: "이알바", email: "part@doogo.kr", password: "", title: "상품 등록 담당", permissions: { products: true, orders: false, money: false, channels: false }, status: "invited", invitedAt: "2026.09.23", joinedAt: "", lastLoginAt: "", inviteCode: "DG7K2Q" }
+  ],
   supplierApplications: [
     { id: "SA-1001", sellerLoginId: "brandlab", company: "브랜드랩 푸드", businessNo: "567-89-01234", category: "건강식품·브랜드 상품", website: "brandlab.example", introduction: "자체 기획 건강식품을 위탁셀러에게 공급하고 싶습니다.", businessFile: "브랜드랩_사업자등록증.pdf", status: "pending", appliedAt: "오늘 10:40", reviewedAt: "", rejectionReason: "", attempt: 1 }
   ],
@@ -732,7 +737,7 @@ function pushNotification(recipientLoginId, audienceRole, type, title, detail, c
   state.notificationEvents.unshift({ id: `NT-${Date.now()}-${Math.random().toString(36).slice(2,5)}`, recipientLoginId, audienceRole, type, channels, title, detail, createdAt: "방금 전", read: false, delivery: "데모 대기" });
 }
 function audit(title, detail, stateName = "done", type = "change") {
-  state.logs.unshift({ id: Date.now() + Math.random(), type, title, detail, actor: currentAccount?.name || "시스템", time: "방금 전", state: stateName });
+  state.logs.unshift({ id: Date.now() + Math.random(), type, title, detail, actor: currentAccount?.staff ? `${currentAccount.staff.name} (직원)` : currentAccount?.name || "시스템", time: "방금 전", state: stateName });
 }
 function getAccount(id) {
   const normalized = String(id || "").trim().toLowerCase();
@@ -818,7 +823,7 @@ function stopChannelListingModal(sellerProductId, channelId) {
    ‘송장 자동 쇼핑몰 전송’을 켜 두면 기다리지 않고 바로 보낸다. */
 const TRACKING_PENDING_STATUSES = ["전송 대기", "자동화 꺼짐", "10분 자동전송 대기"];
 function isTrackingPending(status) { return TRACKING_PENDING_STATUSES.includes(status); }
-function trackingStatusLabel(status) { return ({ "자동전송 완료 · 데모": "전송 완료 · 자동", "자동화 꺼짐": "전송 대기", "10분 자동전송 대기": "전송 대기" })[status] || status; }
+function trackingStatusLabel(status) { return ({ "자동전송 완료 · 데모": "전송 완료 · 자동", "자동화 꺼짐": "전송 대기", "10분 자동전송 대기": "자동 전송 예정" })[status] || status; }
 function orderNeedsTrackingPush(order) { return Boolean(order?.tracking) && Object.values(order.channelTrackingStatuses || {}).some(isTrackingPending); }
 function sellerTrackingPushOrders() { return currentSellerOrders().filter(orderNeedsTrackingPush); }
 function autoTrackingPushEnabled(loginId = currentAccount?.loginId || "seller") {
@@ -835,12 +840,61 @@ function queueTrackingSync(order) {
   const channel = sellerChannels(order.sellerLoginId).find(item => item.id === channelId);
   if (!channel || channel.status !== "connected") order.channelTrackingStatuses[channelId] = "연동 필요";
   else if (channel.trackingAutomation) {
-    order.channelTrackingStatuses[channelId] = "전송 완료 · 자동";
-    order.trackingPushedAt = "방금 전";
-    channel.lastTrackingPush = "방금 전";
-    pushNotification(order.sellerLoginId, "seller", "tracking", `${channel.name}에 송장을 자동으로 보냈어요`, `${order.id} · ${order.carrier} ${order.tracking}`, ["내부 알림"]);
+    /* 자동 전송을 켜 두면 바로 보내지 않고 10분 단위 전송 시각(예: 12:40)에 모아서 보낸다. */
+    order.channelTrackingStatuses[channelId] = "10분 자동전송 대기";
+    if (!(Number(order.trackingAutoDueAt || 0) > Date.now())) order.trackingAutoDueAt = nextTrackingSlot();
   } else order.channelTrackingStatuses[channelId] = "전송 대기";
   order.channelTrackingSyncedAt = "방금 전";
+}
+/* 10분 단위 송장 자동 전송 시각: 12:31에 들어온 송장은 12:40에 보낸다. */
+function nextTrackingSlot(from = Date.now()) { const step = 10 * 60 * 1000; return Math.floor(from / step) * step + step; }
+function trackingSlotLabel(ts) { return ts ? new Date(ts).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : "-"; }
+function orderWaitsAutoTracking(order) { return Boolean(order?.tracking) && Object.values(order.channelTrackingStatuses || {}).includes("10분 자동전송 대기"); }
+function sellerAutoTrackingQueue(loginId = currentAccount?.loginId || "seller") {
+  const orders = (state.orders || []).filter(order => order.sellerLoginId === loginId && orderWaitsAutoTracking(order));
+  const dueAt = orders.length ? Math.min(...orders.map(order => Number(order.trackingAutoDueAt || 0) || nextTrackingSlot())) : 0;
+  return { orders, count: orders.length, dueAt };
+}
+function orderAutoTrackingHint(order) {
+  if (!orderWaitsAutoTracking(order)) return "";
+  return `<small class="auto-tracking-hint">⏱ ${escapeHtml(trackingSlotLabel(order.trackingAutoDueAt))} 자동 전송 예정</small>`;
+}
+/* 서버 스케줄러 역할(데모): 전송 시각이 지난 송장을 쇼핑몰로 보낸다. 자동 전송을 끈 쇼핑몰은 ‘전송 대기’로 돌려놓는다. */
+function processDueTrackingPushes(now = Date.now()) {
+  const sentBySeller = {};
+  (state.orders || []).forEach(order => {
+    if (!order.tracking) return;
+    Object.entries(order.channelTrackingStatuses || {}).forEach(([channelId, status]) => {
+      if (status !== "10분 자동전송 대기") return;
+      const channel = sellerChannels(order.sellerLoginId).find(item => item.id === channelId);
+      if (!channel || channel.status !== "connected" || !channel.trackingAutomation) { order.channelTrackingStatuses[channelId] = "전송 대기"; return; }
+      if (Number(order.trackingAutoDueAt || 0) > now) return;
+      const sentAt = trackingSlotLabel(now);
+      order.channelTrackingStatuses[channelId] = "전송 완료 · 자동";
+      order.trackingPushedAt = `${sentAt} 자동 전송`;
+      order.channelTrackingSyncedAt = `${sentAt} 자동 전송`;
+      channel.lastTrackingPush = `${sentAt} · 자동`;
+      const bucket = sentBySeller[order.sellerLoginId] = sentBySeller[order.sellerLoginId] || { orders: new Set(), channels: new Set() };
+      bucket.orders.add(order.id); bucket.channels.add(channel.name);
+    });
+  });
+  let total = 0;
+  Object.entries(sentBySeller).forEach(([loginId, bucket]) => {
+    total += bucket.orders.size;
+    pushNotification(loginId, "seller", "tracking", `송장 ${bucket.orders.size}건을 쇼핑몰에 자동으로 보냈어요`, `${[...bucket.channels].join(", ")} · 10분 자동 전송`, ["내부 알림"]);
+    state.logs.unshift({ id: Date.now() + Math.random(), type: "tracking", title: "송장 10분 자동 전송", detail: `${bucket.orders.size}건 · ${[...bucket.channels].join(", ")}에 송장번호를 보냈습니다. (데모: 실제 쇼핑몰 API 호출 없음)`, actor: "두고 자동화", time: "방금 전", state: "done" });
+  });
+  return total;
+}
+function runTrackingScheduler() {
+  if (typeof state === "undefined" || !state) return;
+  const sent = processDueTrackingPushes();
+  if (!sent) return;
+  saveState();
+  if (!currentAccount) return;
+  const typing = document.activeElement?.matches?.("input, textarea, select");
+  if (!typing) { render(); updateAccountUI(); }
+  if (activeRole === "seller") { const mine = sent; showToast(`⏱ 10분 자동 전송: 송장 ${mine}건을 쇼핑몰에 보냈어요.`); }
 }
 function pushOrderTracking(order, mode = "manual") {
   const sentTo = [];
@@ -1022,7 +1076,8 @@ function memberStatusChip(status) {
     pending: ["승인 대기", "orange"],
     approved: ["승인 완료", "blue"],
     rejected: ["반려", "red"],
-    suspended: ["이용 정지", "red"]
+    suspended: ["이용 정지", "red"],
+    "profile-incomplete": ["정보 입력 중", ""]
   }[status] || [status, ""];
   return `<span class="chip ${meta[1]}">${meta[0]}</span>`;
 }
@@ -1085,19 +1140,20 @@ function mobileTabbarItems() {
 }
 function renderMobileTabbar() {
   const app = document.getElementById("appView");
+  const tabItems = () => mobileTabbarItems().filter(item => activeRole !== "seller" || staffCanMenu(item.index));
   if (!app) return;
   let bar = document.getElementById("mobileTabbar");
   if (!bar) { bar = document.createElement("nav"); bar.id = "mobileTabbar"; bar.className = "mobile-tabbar"; bar.setAttribute("aria-label", "빠른 이동"); app.appendChild(bar); }
   if (!currentAccount) { bar.innerHTML = ""; return; }
-  bar.innerHTML = mobileTabbarItems().map(item => { const active = item.match.includes(activeMenuIndex); return `<button type="button" class="${active ? "active" : ""}" data-action="tab-go" data-index="${item.index}" ${active ? 'aria-current="page"' : ""}><span class="tabbar-icon">${menuIcon(item.icon)}${item.badge ? `<b>${item.badge > 99 ? "99+" : item.badge}</b>` : ""}</span><span>${escapeHtml(item.label)}</span></button>`; }).join("");
+  bar.innerHTML = tabItems().map(item => { const active = item.match.includes(activeMenuIndex); return `<button type="button" class="${active ? "active" : ""}" data-action="tab-go" data-index="${item.index}" ${active ? 'aria-current="page"' : ""}><span class="tabbar-icon">${menuIcon(item.icon)}${item.badge ? `<b>${item.badge > 99 ? "99+" : item.badge}</b>` : ""}</span><span>${escapeHtml(item.label)}</span></button>`; }).join("");
 }
 function updateAccountUI() {
   if (!currentAccount) return;
   renderMobileTabbar();
   const accountNameText = activeRole === "supplier" ? workspaceCompany("supplier") : activeRole === "seller" ? (currentAccount.company || currentAccount.name) : currentAccount.name;
-  document.getElementById("accountName").textContent = accountNameText;
-  document.getElementById("accountRole").textContent = `${roleLabel()} 모드`;
-  document.getElementById("accountAvatar").textContent = String(accountNameText || "?").trim().charAt(0);
+  document.getElementById("accountName").textContent = currentAccount.staff ? currentAccount.staff.name : accountNameText;
+  document.getElementById("accountRole").textContent = currentAccount.staff ? `직원 · ${accountNameText}` : `${roleLabel()} 모드`;
+  document.getElementById("accountAvatar").textContent = String((currentAccount.staff ? currentAccount.staff.name : accountNameText) || "?").trim().charAt(0);
   const dropdownName = document.getElementById("dropdownAccountName");
   if (dropdownName) dropdownName.textContent = activeRole === "supplier" ? (currentAccount.supplierCompany || currentAccount.company || currentAccount.name) : (currentAccount.company || currentAccount.name);
   const subscriptionAction = document.querySelector('[data-account-action="subscription"]');
@@ -1105,7 +1161,7 @@ function updateAccountUI() {
   const dropdownRole = document.querySelector("#accountDropdown > div small");
   if (dropdownRole) dropdownRole.textContent = `${roleLabel()} 모드 · ${accountRoles().length > 1 ? "복수 역할 계정" : "전용 계정"}`;
   const switchButton = document.getElementById("workspaceSwitchButton");
-  switchButton.hidden = currentAccount.role !== "seller";
+  switchButton.hidden = currentAccount.role !== "seller" || Boolean(currentAccount.staff);
   document.getElementById("workspaceSwitchLabel").textContent = "사용자 전환";
   document.getElementById("sidebarRoleIcon").innerHTML = roleIconMarkup(activeRole);
   document.getElementById("sidebarRoleName").textContent = roleLabel();
@@ -1123,7 +1179,9 @@ function updateAccountUI() {
   const rejectedPickCount = activeRole === "seller" ? currentSellerProducts().filter(item => item.approvalStatus === "승인거절").length : 0;
   const readyCount = activeRole === "seller" ? sellerReadyProducts().length : 0;
   document.getElementById("workspaceMenu").innerHTML = roleMenuGroups[activeRole].map(group => {
-    const buttons = group.indexes.map(index => {
+    const indexes = group.indexes.filter(index => activeRole !== "seller" || staffCanMenu(index));
+    if (!indexes.length) return "";
+    const buttons = indexes.map(index => {
       const item = roleMenus[activeRole][index];
       const badgeValue = activeRole === "seller" ? ({ 7: alertCount, 15: mappingCount, 2: rejectedPickCount, 17: readyCount })[index] || 0 : activeRole === "supplier" ? ({ 3: shippingCount, 1: pickRequestCount })[index] || 0 : index === 1 ? pendingCount : 0;
       const badge = badgeValue > 0;
@@ -1140,6 +1198,7 @@ function showLogin() {
   currentAccount = null;
   document.getElementById("appView").hidden = true;
   document.getElementById("signupView").hidden = true;
+  document.getElementById("kakaoProfileView").hidden = true;
   document.getElementById("partnerLoginView").hidden = true;
   document.getElementById("loginView").hidden = false;
   document.getElementById("loginPassword").value = "";
@@ -1151,6 +1210,7 @@ function showPartnerLogin(role = "supplier") {
   currentAccount = null;
   document.getElementById("appView").hidden = true;
   document.getElementById("signupView").hidden = true;
+  document.getElementById("kakaoProfileView").hidden = true;
   document.getElementById("loginView").hidden = true;
   document.getElementById("partnerLoginView").hidden = false;
   setPartnerLoginRole(role);
@@ -1175,10 +1235,11 @@ function setPartnerLoginRole(role) {
   document.getElementById("partnerLoginError").textContent = "";
 }
 
-function showApp(accountId) {
+function showApp(accountId, staff = null) {
   const account = getAccount(accountId);
   if (!account || account.status !== "approved") return showLogin();
   currentAccount = { roles: [account.role], ...account, id: account.loginId || accountId };
+  if (staff) currentAccount.staff = { id: staff.id, name: staff.name, email: staff.email, title: staff.title, permissions: { ...staff.permissions } };
   activeRole = currentAccount.role;
   activeMenuIndex = 0;
   sellerCategory = "전체보기";
@@ -1198,10 +1259,11 @@ function showApp(accountId) {
   refundMonth = "2026-09";
   refundSearch = "";
   refundTypeFilter = "all";
-  sessionStorage.setItem(AUTH_KEY, currentAccount.loginId || accountId);
+  sessionStorage.setItem(AUTH_KEY, staff ? `staff:${staff.email}` : (currentAccount.loginId || accountId));
   document.getElementById("loginView").hidden = true;
   document.getElementById("partnerLoginView").hidden = true;
   document.getElementById("signupView").hidden = true;
+  document.getElementById("kakaoProfileView").hidden = true;
   document.getElementById("appView").hidden = false;
   closeMobileSidebar();
   render();
@@ -1217,7 +1279,9 @@ function initAuth() {
   document.getElementById("loginId").value = rememberedId;
   document.getElementById("rememberId").checked = Boolean(rememberedId);
   const sessionId = (sessionStorage.getItem(AUTH_KEY) || "").toLowerCase();
-  if (getAccount(sessionId)?.status === "approved") showApp(sessionId);
+  const sessionStaff = sessionId.startsWith("staff:") ? staffByEmail(sessionId.slice(6)) : null;
+  if (sessionStaff?.status === "active" && getAccount(sessionStaff.ownerLoginId)?.status === "approved") showApp(sessionStaff.ownerLoginId, sessionStaff);
+  else if (getAccount(sessionId)?.status === "approved") showApp(sessionId);
   else showLogin();
 }
 
@@ -1228,6 +1292,8 @@ function showSignup(role = "seller", returnTarget = "seller") {
   document.getElementById("partnerLoginView").hidden = true;
   document.getElementById("appView").hidden = true;
   document.getElementById("signupView").hidden = false;
+  document.getElementById("kakaoProfileView").hidden = true;
+  document.getElementById("signupKakaoBlock").hidden = normalizedRole !== "seller";
   document.getElementById("signupFormWrap").hidden = false;
   document.getElementById("signupComplete").hidden = true;
   document.getElementById("signupForm").reset();
@@ -1511,7 +1577,7 @@ function sellerAutomationSettingsCard() {
   return `<section class="panel seller-automation-card"><div class="profile-section-head"><div><span>AUTOMATION</span><h3>자동화 설정</h3><p>켜 두면 주문 수집과 송장 전송을 두고가 대신 해 드려요.</p></div></div>
     <div class="automation-setting-list">
       <div class="automation-setting-row"><span><b>주문 자동 수집</b><small>쿠팡·스마트스토어에 들어온 주문을 5분마다 자동으로 가져와요.</small></span><button type="button" class="automation-switch ${settings.autoCollectOrders ? "on" : ""}" data-action="toggle-auto-collect" aria-pressed="${settings.autoCollectOrders}"><i></i>${settings.autoCollectOrders ? "켜짐" : "꺼짐"}</button></div>
-      <div class="automation-setting-row"><span><b>송장 자동 쇼핑몰 전송</b><small>공급사가 송장을 넣으면 주문이 들어온 쇼핑몰로 바로 보내요. 끄면 ‘쇼핑몰 전송’ 버튼으로 직접 보내요.</small></span><button type="button" class="automation-switch ${autoPush ? "on" : ""}" data-action="toggle-auto-tracking" aria-pressed="${autoPush}"><i></i>${autoPush ? "켜짐" : "꺼짐"}</button></div>
+      <div class="automation-setting-row"><span><b>송장 자동 쇼핑몰 전송</b><small>공급사가 넣은 송장을 10분마다 모아서 주문이 들어온 쇼핑몰로 자동 전송해요. 끄면 ‘쇼핑몰 전송’ 버튼으로 직접 보내요.</small></span><button type="button" class="automation-switch ${autoPush ? "on" : ""}" data-action="toggle-auto-tracking" aria-pressed="${autoPush}"><i></i>${autoPush ? "켜짐" : "꺼짐"}</button></div>
     </div></section>`;
 }
 function sellerAccountProfileTemplate() {
@@ -1530,7 +1596,8 @@ function sellerAccountProfileTemplate() {
       <div class="profile-glance"><div><span>판매 상품</span><strong>${currentSellerProducts().length}개</strong></div><div><span>연결 공급사</span><strong>${currentSellerConnections().length}곳</strong></div><div><span>연동 채널</span><strong>${connectedChannels}개</strong></div><div><span>이용 플랜</span><strong>${escapeHtml(subscription.plan)}</strong></div></div>
     </section>
     <div class="seller-profile-layout">
-      <section class="panel seller-business-card"><div class="profile-section-head"><div><span>BUSINESS INFORMATION</span><h3>사업자 기본 정보</h3><p>주문·정산·세금계산서에 사용되는 계정 정보입니다.</p></div><button class="secondary-button" data-action="account-tab" data-tab="business">정보 수정</button></div><div class="profile-detail-grid"><div><span>상호명</span><b>${escapeHtml(account.company)}</b></div><div><span>대표자명</span><b>${escapeHtml(account.representative)}</b></div><div><span>사업자등록번호</span><b>${escapeHtml(account.businessNo)}</b></div><div><span>연락처</span><b>${escapeHtml(account.contact)}</b></div><div class="wide"><span>이메일</span><b>${escapeHtml(account.email)}</b></div><div><span>계정 권한</span><b>${accountRoles().length > 1 ? "위탁셀러 · 공급사" : "위탁셀러"}</b></div><div><span>업태 · 종목</span><b>${escapeHtml(account.businessType || "미입력")} · ${escapeHtml(account.businessItem || "미입력")}</b></div><div class="wide"><span>사업장 주소</span><b>${escapeHtml(account.businessAddress || "미입력")}</b></div><div><span>세금계산서 이메일</span><b>${escapeHtml(account.taxInvoiceEmail || account.email)}</b></div><div><span>공급사 노출 전화번호</span><b>${escapeHtml(account.supplierVisiblePhone || "미입력")}</b></div><div class="wide"><span>정산 계좌</span><b>${account.bankName ? `${escapeHtml(account.bankName)} ${escapeHtml(account.bankAccountNumber || "")} (${escapeHtml(account.bankAccountHolder || account.representative)})` : "미입력"}</b></div></div></section>
+      <section class="panel seller-business-card"><div class="profile-section-head"><div><span>BUSINESS INFORMATION</span><h3>사업자 기본 정보</h3><p>주문·정산·세금계산서에 사용되는 계정 정보입니다.</p></div><button class="secondary-button" data-action="account-tab" data-tab="business">정보 수정</button></div><div class="profile-detail-grid"><div><span>상호명</span><b>${escapeHtml(account.company)}</b></div><div><span>대표자명</span><b>${escapeHtml(account.representative)}</b></div><div><span>사업자등록번호</span><b>${escapeHtml(account.businessNo)}</b></div><div><span>연락처</span><b>${escapeHtml(account.contact)}</b></div><div class="wide"><span>이메일</span><b>${escapeHtml(account.email)}</b></div><div><span>계정 권한</span><b>${accountRoles().length > 1 ? "위탁셀러 · 공급사" : "위탁셀러"}</b></div><div><span>업태 · 종목</span><b>${escapeHtml(account.businessType || "미입력")} · ${escapeHtml(account.businessItem || "미입력")}</b></div><div class="wide"><span>사업장 주소</span><b>${escapeHtml(account.businessAddress || "미입력")}</b></div><div><span>세금계산서 이메일</span><b>${escapeHtml(account.taxInvoiceEmail || account.email)}</b></div><div><span>공급사 노출 전화번호</span><b>${escapeHtml(account.supplierVisiblePhone || "미입력")}</b></div><div class="wide"><span>정산·환불 계좌</span><b>${account.bankName ? `${escapeHtml(account.bankName)} ${escapeHtml(account.bankAccountNumber || "")} (${escapeHtml(account.bankAccountHolder || account.representative)})` : account.bankbookFile ? `통장 사본 ${escapeHtml(account.bankbookFile)}` : "미입력"}</b></div><div class="wide"><span>로그인 방식</span><b>${account.kakaoId ? `<span class="kakao-badge">카카오</span> ${escapeHtml(account.kakaoId)} · 카카오로 1초 로그인` : "이메일 · 비밀번호"}</b></div></div></section>
+      ${account.staff ? staffSelfCard() : sellerStaffCard()}
       ${sellerAutomationSettingsCard()}
       <section class="panel seller-service-card"><div class="profile-section-head"><div><span>QUICK SETTINGS</span><h3>서비스 및 권한 관리</h3><p>자주 사용하는 설정으로 바로 이동합니다.</p></div></div><div class="profile-link-list"><button class="profile-link-button" data-action="open-seller-channels"><span>↗</span><b>쇼핑몰 연동</b><small>네이버·쿠팡·카카오·CAFE24</small><em>관리</em></button><button class="profile-link-button" data-action="open-seller-subscription"><span>₩</span><b>정기구독</b><small>${money(subscription.monthlyFee)} · 다음 결제 ${escapeHtml(subscription.nextBilling)}</small><em>관리</em></button>${supplierButton}</div></section>
     </div>`;
@@ -1754,6 +1821,14 @@ function refundTemplate(role) {
 const sellerOrderStages = [
   ["overview", "주문 등록 현황"], ["all", "전체 주문 리스트"], ["mapping", "매핑 필요"], ["payment", "결제 대기"], ["received", "주문접수"], ["ordered", "발주완료"], ["preparing", "배송준비중"], ["needs-check", "주문확인필요"], ["tracking-push", "송장 전송 대기"], ["shipping", "배송중"], ["delivered", "배송완료"]
 ];
+/* 주문 단계 메뉴를 ‘누가 처리하는 단계인지’로 묶어 색으로 구분한다. 위탁셀러(파랑) → 공급사(주황) → 위탁셀러(파랑) → 택배(초록) */
+const SELLER_ORDER_STAGE_GROUPS = [
+  { tone: "neutral", who: "", title: "", stages: ["overview", "all"] },
+  { tone: "seller", who: "위탁셀러", title: "매핑 · 결제", stages: ["mapping", "payment", "received"] },
+  { tone: "supplier", who: "공급사", title: "확인 · 포장 · 송장", stages: ["ordered", "preparing", "needs-check"] },
+  { tone: "seller", who: "위탁셀러", title: "송장 쇼핑몰 전송", stages: ["tracking-push"] },
+  { tone: "ship", who: "택배사", title: "배송 진행", stages: ["shipping", "delivered"] }
+];
 function sellerOrderSubset(stage = sellerOrderStage) {
   const orders = currentSellerOrders();
   if (["all", "overview"].includes(stage)) return orders;
@@ -1773,12 +1848,13 @@ function sellerOrderManagementTemplate() {
   const automation = sellerAutomationSettings();
   const pendingTracking = sellerTrackingPushOrders();
   const autoPush = autoTrackingPushEnabled();
+  const autoQueue = sellerAutoTrackingQueue();
   const collectCard = `<section class="order-automation-bar panel">
     <div class="order-auto-item"><span class="order-auto-icon">⟳</span><div><b>쇼핑몰 주문 수집</b><small>마지막 수집 ${escapeHtml(automation.lastCollectedAt || "-")} · 자동 수집 ${automation.autoCollectOrders ? "켜짐 (5분마다)" : "꺼짐"}</small></div><button type="button" class="automation-switch ${automation.autoCollectOrders ? "on" : ""}" data-action="toggle-auto-collect" aria-pressed="${automation.autoCollectOrders}" aria-label="주문 자동 수집"><i></i>${automation.autoCollectOrders ? "자동" : "수동"}</button><button type="button" class="primary-button" data-action="collect-orders">지금 주문 가져오기</button></div>
-    <div class="order-auto-item"><span class="order-auto-icon">🚚</span><div><b>송장 쇼핑몰 전송</b><small>${autoPush ? "공급사 송장이 들어오면 바로 쇼핑몰로 보내요" : pendingTracking.length ? `보낼 송장 ${pendingTracking.length}건이 기다리고 있어요` : "송장이 들어오면 ‘쇼핑몰 전송’ 버튼으로 보내요"}</small></div><button type="button" class="automation-switch ${autoPush ? "on" : ""}" data-action="toggle-auto-tracking" aria-pressed="${autoPush}" aria-label="송장 자동 쇼핑몰 전송"><i></i>${autoPush ? "자동" : "수동"}</button><button type="button" class="${pendingTracking.length ? "primary-button" : "secondary-button"}" data-action="push-all-tracking" ${pendingTracking.length ? "" : "disabled"}>${pendingTracking.length ? `송장 ${pendingTracking.length}건 쇼핑몰 전송` : "보낼 송장 없음"}</button></div>
+    <div class="order-auto-item"><span class="order-auto-icon">🚚</span><div><b>송장 쇼핑몰 전송</b><small>${autoQueue.count ? `⏱ 다음 자동 전송 ${escapeHtml(trackingSlotLabel(autoQueue.dueAt))} · ${autoQueue.count}건 대기` : autoPush ? "공급사 송장을 10분마다 모아서 쇼핑몰로 자동 전송해요" : pendingTracking.length ? `보낼 송장 ${pendingTracking.length}건이 기다리고 있어요` : "송장이 들어오면 ‘쇼핑몰 전송’ 버튼으로 보내요"}</small></div><button type="button" class="automation-switch ${autoPush ? "on" : ""}" data-action="toggle-auto-tracking" aria-pressed="${autoPush}" aria-label="송장 자동 쇼핑몰 전송"><i></i>${autoPush ? "자동" : "수동"}</button><button type="button" class="${pendingTracking.length ? "primary-button" : "secondary-button"}" data-action="push-all-tracking" ${pendingTracking.length ? "" : "disabled"}>${pendingTracking.length ? `${autoQueue.count ? "지금 바로 " : "송장 "}${pendingTracking.length}건 전송` : "보낼 송장 없음"}</button>${autoQueue.count ? `<button type="button" class="text-button demo-forward" data-action="demo-forward-tracking">데모: 10분 지난 것처럼</button>` : ""}</div>
   </section>`;
   return `${sectionHero("주문 관리", "쇼핑몰 주문을 가져와 결제하면 공급사가 출고하고, 받은 송장을 쇼핑몰로 보냅니다.", `<button class="secondary-button" data-action="single-order">주문 직접 입력</button>`)}${collectCard}
-    <div class="order-workspace"><details class="order-stage-menu panel" open><summary><span>${menuIcon("order")}</span><b>주문 관리</b><small>단계별 메뉴 열기</small><i>⌄</i></summary><nav>${sellerOrderStages.map(([key,label]) => { const count = sellerOrderStageCount(key); const urgent = key === "needs-check" && count > 0; return `<button class="${sellerOrderStage === key ? "active" : ""}" type="button" data-action="filter-order-stage" data-stage="${key}"><span>${label}</span><b class="stage-count ${count > 0 ? (urgent ? "urgent" : "has-count") : "zero"}">${count}</b></button>`; }).join("")}</nav></details><section class="order-stage-content">
+    <div class="order-workspace"><details class="order-stage-menu panel" open><summary><span>${menuIcon("order")}</span><b>주문 관리</b><small>단계별 메뉴 열기</small><i>⌄</i></summary><nav class="stage-grouped">${SELLER_ORDER_STAGE_GROUPS.map(group => `<div class="stage-group tone-${group.tone}">${group.title ? `<p class="stage-group-head"><em>${group.who}</em><span>${group.title}</span></p>` : ""}<div class="stage-group-items">${group.stages.map(key => { const label = sellerOrderStages.find(item => item[0] === key)?.[1] || key; const count = sellerOrderStageCount(key); const urgent = key === "needs-check" && count > 0; return `<button class="${sellerOrderStage === key ? "active" : ""}" type="button" data-action="filter-order-stage" data-stage="${key}"><span>${label}</span><b class="stage-count ${count > 0 ? (urgent ? "urgent" : "has-count") : "zero"}">${count}</b></button>`; }).join("")}</div></div>`).join("")}</nav></details><section class="order-stage-content">
       <div class="order-search-panel panel"><label><span>⌕</span><input id="sellerOrderSearch" value="${escapeHtml(sellerOrderSearch)}" placeholder="주문번호, 고객명, 외부 상품명, 상품코드 검색"></label><div><span>전체 ${orders.length}건</span><span>매핑 ${sellerMappingRequiredOrders().length}건</span><span>결제 ${sellerPaymentRequiredOrders().length}건</span></div></div>
       ${sellerOrderStage === "overview" ? overview : ""}
       <div class="panel"><div class="panel-head"><div><h3>${activeLabel}</h3><p>행을 열어 주소·배송메시지·개인통관부호·송장 상태까지 확인할 수 있습니다.</p></div><button class="secondary-button" data-action="clear-order-search">검색 초기화</button></div><div id="sellerOrderResults">${ordersTable("seller", sellerOrderSearch, filteredOrders)}</div></div>
@@ -1837,9 +1913,9 @@ function channelIntegrationTemplate() {
   const events = visibleNotifications().slice(0,4);
   const automationCount = channels.filter(channel => channel.status === "connected" && channel.trackingAutomation).length;
   const pendingTotal = sellerTrackingPushOrders().length;
-  return `${sectionHero("쇼핑몰 연동 · 드랍쉬핑 자동화", "공급사가 발급한 송장을 내 주문에 바로 받고, 주문이 들어온 쇼핑몰로 보냅니다. 자동 전송을 켜면 기다리지 않고 바로 보내요.", `<button class="secondary-button" data-action="run-tracking-sync">대기 송장 지금 보내기</button>`)}
+  return `${sectionHero("쇼핑몰 연동 · 드랍쉬핑 자동화", "공급사가 발급한 송장을 내 주문에 바로 받고, 주문이 들어온 쇼핑몰로 보냅니다. 자동 전송을 켜면 10분마다 알아서 보내요.", `<button class="secondary-button" data-action="run-tracking-sync">대기 송장 지금 보내기</button>`)}
     ${sellerAutomationSettingsCard()}
-    <section class="tracking-automation-hero"><div><span>AUTOMATED DROPSHIPPING</span><h3>송장 자동전송 ${automationCount}개 쇼핑몰 사용중</h3><p>보낼 송장 ${pendingTotal}건 · 쇼핑몰마다 자동 전송을 따로 켜고 끌 수 있어요.</p></div><div class="automation-flow"><span><b>1</b>공급사 송장 입력</span><i>→</i><span><b>2</b>내 주문에 바로 표시</span><i>→</i><span><b>3</b>쇼핑몰 전송 (버튼·자동)</span></div></section>
+    <section class="tracking-automation-hero"><div><span>AUTOMATED DROPSHIPPING</span><h3>송장 자동전송 ${automationCount}개 쇼핑몰 사용중</h3><p>보낼 송장 ${pendingTotal}건 · 쇼핑몰마다 자동 전송을 따로 켜고 끌 수 있어요.</p></div><div class="automation-flow"><span><b>1</b>공급사 송장 입력</span><i>→</i><span><b>2</b>내 주문에 바로 표시</span><i>→</i><span><b>3</b>쇼핑몰 전송 (버튼·10분 자동)</span></div></section>
     <div class="api-safe-notice"><b>데모 안전 모드</b><span>현재 화면은 자동화 상태와 전송 대기열만 브라우저에 저장하며 실제 쇼핑몰 API에는 전송하지 않습니다.</span></div>
     <div class="channel-connect-grid">${channels.map(channel => { const pending = currentSellerOrders().filter(order => isTrackingPending(order.channelTrackingStatuses?.[channel.id])).length; const automationEnabled = channel.status === "connected" && channel.trackingAutomation; return `<article class="panel channel-connect-card ${automationEnabled ? "automation-on" : ""}"><div class="channel-card-head">${channelMark(channel.id)}<div><h3>${escapeHtml(channel.name)}</h3><p>${escapeHtml(channel.storeName)}</p></div>${statusChip(channel.status === "connected" ? "연동중" : channel.status === "pending" ? "확인중" : "미연동")}</div><div class="automation-setting"><span><b>송장 자동전송</b><small>${channel.status === "connected" ? "켜 두면 공급사 송장을 10분마다 자동 전송" : "채널 연동 후 사용할 수 있습니다."}</small></span><button type="button" class="automation-switch ${automationEnabled ? "on" : ""}" data-action="toggle-channel-automation" data-id="${channel.id}" ${channel.status === "connected" ? "" : "disabled"} aria-pressed="${automationEnabled}"><i></i>${automationEnabled ? "켜짐" : "꺼짐"}</button></div>${channel.status === "connected" ? `<button type="button" class="channel-policy-summary" data-action="connect-channel" data-id="${channel.id}"><span>배송 정책 ${channelShippingPolicies(channel).length}개 불러옴</span><b>기본 · ${escapeHtml(channelDefaultPolicy(channel)?.name || "불러오기 필요")}</b><small>${escapeHtml(policyFeeText(channelDefaultPolicy(channel)))}</small></button>` : ""}<dl><div><dt>주문 수집</dt><dd>${channel.status === "connected" ? "자동" : "대기"}</dd></div><div><dt>송장 대기열</dt><dd>${pending}건</dd></div><div><dt>최근 송장 전송</dt><dd>${escapeHtml(channel.lastTrackingPush || "-")}</dd></div></dl><button class="${channel.status === "connected" ? "secondary-button" : "primary-button"}" data-action="connect-channel" data-id="${channel.id}">${channel.status === "connected" ? "연동 정보·배송 정책" : "API 키로 연동하기"}</button></article>`; }).join("")}</div>
     <form id="dropshippingEmailForm" class="panel dropshipping-email-card"><div class="dropshipping-email-head"><div><span>EMAIL AUTOMATION</span><h3>드랍쉬핑 이메일 알림</h3><p>API 자동화에서 놓치기 쉬운 주문·송장·환불·가격 변동을 원하는 이메일로 받아보세요.</p></div><label class="email-master-switch"><input type="checkbox" name="emailEnabled" ${notice.emailEnabled ? "checked" : ""}><i></i><span>${notice.emailEnabled ? "ON" : "OFF"}</span></label></div><div class="email-recipient-row"><label><span>수신 이메일</span><input name="emailAddress" type="email" value="${escapeHtml(notice.emailAddress || currentAccount.email || "")}" placeholder="ops@example.com" required></label><small>주문 운영 담당자 메일을 입력해 주세요.</small></div><fieldset><legend>수신할 알림 선택</legend><label><input type="checkbox" name="events" value="orderNotice" ${notice.orderNotice ? "checked" : ""}><span><b>신규 주문</b><small>채널 주문 수집·공급사 자동배정</small></span></label><label><input type="checkbox" name="events" value="trackingNotice" ${notice.trackingNotice ? "checked" : ""}><span><b>송장 등록</b><small>공급사 송장 발급·채널 전송</small></span></label><label><input type="checkbox" name="events" value="refundNotice" ${notice.refundNotice ? "checked" : ""}><span><b>취소·환불</b><small>반품 완료·예치금 환불</small></span></label><label><input type="checkbox" name="events" value="priceNotice" ${notice.priceNotice ? "checked" : ""}><span><b>가격 변경</b><small>공급가 변동·마진 위험</small></span></label><label><input type="checkbox" name="events" value="deliveryDelayNotice" ${notice.deliveryDelayNotice ? "checked" : ""}><span><b>배송 지연</b><small>송장 미등록·집하 지연</small></span></label><label><input type="checkbox" name="events" value="stockNotice" ${notice.stockNotice ? "checked" : ""}><span><b>재고 부족</b><small>품절 임박·판매중지 권고</small></span></label></fieldset><div class="email-form-actions"><span>설정은 쇼핑몰 API 자동화와 함께 적용됩니다.</span><button class="primary-button" type="submit">이메일 알림 저장</button></div></form>
@@ -2207,6 +2283,10 @@ function dashboardWidgetPickerModal() {
 }
 
 function renderSeller() {
+  if (activeRole === "seller" && !staffCanMenu(activeMenuIndex)) {
+    document.getElementById("sellerView").innerHTML = staffNoPermissionTemplate(activeMenuIndex);
+    return;
+  }
   if (activeRole === "seller" && activeMenuIndex > 0) {
     document.getElementById("sellerView").innerHTML = renderSellerSection(activeMenuIndex);
     return;
@@ -2237,7 +2317,7 @@ function renderSeller() {
     { count: masterReady.length, tone: "blue", title: "쇼핑몰에 아직 안 올린 상품", hint: "‘상품 전송’ 한 번이면 옵션까지 등록돼요", button: "전송하기", action: "go-seller-menu", index: 14 },
     { count: alerts.length, tone: "orange", title: "공급가가 바뀐 상품", hint: "판매가를 확인해 주세요", button: "확인하기", action: "go-seller-menu", index: 7 },
     { count: refundsOpen, tone: "purple", title: "처리 중인 취소·반품", hint: "공급사와 진행 상황을 확인하세요", button: "보기", action: "go-seller-menu", index: 5 }
-  ].filter(item => item.count > 0);
+  ].filter(item => item.count > 0 && staffCanTodo(item));
   const todoAttrs = item => `data-action="${item.action}"${item.index !== undefined ? ` data-index="${item.index}"` : ""}${item.stage ? ` data-stage="${item.stage}"` : ""}`;
   const flowStep = (step, index, label, count, caption, tone) => `<button type="button" class="home-flow-step tone-${tone}" data-action="go-seller-menu" data-index="${index}"><i>${step}</i><b>${label}</b><strong>${count}</strong><small>${caption}</small></button>`;
   const orderStep = (stage, label, count, caption, tone) => `<button type="button" class="home-order-step tone-${tone}" ${stage === "mapping-payment" ? `data-action="${mappingRequired.length ? "go-seller-menu" : "open-order-payment-stage"}" data-index="15"` : `data-action="dashboard-order-stage" data-stage="${stage}"`}><b>${label}</b><strong>${count}<em>건</em></strong><small>${caption}</small></button>`;
@@ -2441,7 +2521,7 @@ function orderActionsMarkup(order, role) {
     return `<span class="mapping-status payment">공급사 발주 대기</span><button class="small-button approve" data-action="dispatch-supplier-order" data-id="${order.id}">공급사 발주</button><button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${!hasRefund ? `<button class="text-button refund-link" data-action="request-refund" data-id="${order.id}">취소·환불</button>` : ""}`;
   }
   const supplierActions = ["신규주문", "발주완료"].includes(order.status) ? `<button class="small-button approve" data-action="prepare-shipment" data-id="${order.id}">주문 확인·포장</button>` : order.status === "주문확인필요" ? `<div class="row-actions"><button class="small-button approve" data-action="confirm-channel-order" data-id="${order.id}">채널 확인 완료</button><button class="text-button refund-link" data-action="cancel-channel-order" data-id="${order.id}">채널 취소 처리</button></div>` : order.status === "배송준비중" && !order.tracking ? `<div class="row-actions"><button class="small-button approve" data-action="auto-tracking" data-id="${order.id}">자동송장출력</button><button class="text-button" data-action="tracking" data-id="${order.id}">직접 입력</button></div>` : order.status === "배송중" ? `<div class="shipment-inline-actions"><button class="text-button label-reprint" data-action="show-label" data-id="${order.id}">송장 보기</button><button class="text-button" data-action="complete-shipping" data-id="${order.id}">배송완료</button>${order.provisionalTracking ? `<button class="text-button refund-link" data-action="cancel-shipment" data-id="${order.id}">집하 전 취소</button>` : ""}</div>` : order.tracking ? `<button class="text-button label-reprint" data-action="show-label" data-id="${order.id}">송장 보기</button>` : "";
-  return `${role === "supplier" ? `${order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong>${order.provisionalTracking ? `<small>가송장</small>` : ""}</span>` : ""}${supplierActions}` : order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong></span>${orderNeedsTrackingPush(order) ? `<button class="small-button approve push-tracking-button" data-action="push-tracking" data-id="${order.id}">쇼핑몰 전송</button>` : Object.values(order.channelTrackingStatuses || {}).some(status => String(trackingStatusLabel(status)).startsWith("전송 완료")) ? `<span class="tracking-sent-chip">쇼핑몰 전송 완료</span>` : ""}` : `<span class="waiting-text ${order.status === "주문확인필요" ? "waiting-alert" : ""}">${order.status === "발주완료" ? "공급사 주문 확인 대기" : order.status === "주문확인필요" ? "채널 주문 상태 확인 필요" : "공급사 처리 대기"}</span>`}<button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${role === "seller" && !hasRefund ? `<button class="text-button refund-link" data-action="request-refund" data-id="${order.id}">취소·환불</button>` : ""}`;
+  return `${role === "supplier" ? `${order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong>${order.provisionalTracking ? `<small>가송장</small>` : ""}</span>` : ""}${supplierActions}` : order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong></span>${orderNeedsTrackingPush(order) ? `${orderAutoTrackingHint(order)}<button class="small-button approve push-tracking-button" data-action="push-tracking" data-id="${order.id}">${orderWaitsAutoTracking(order) ? "지금 전송" : "쇼핑몰 전송"}</button>` : Object.values(order.channelTrackingStatuses || {}).some(status => String(trackingStatusLabel(status)).startsWith("전송 완료")) ? `<span class="tracking-sent-chip">쇼핑몰 전송 완료</span>` : ""}` : `<span class="waiting-text ${order.status === "주문확인필요" ? "waiting-alert" : ""}">${order.status === "발주완료" ? "공급사 주문 확인 대기" : order.status === "주문확인필요" ? "채널 주문 상태 확인 필요" : "공급사 처리 대기"}</span>`}<button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${role === "seller" && !hasRefund ? `<button class="text-button refund-link" data-action="request-refund" data-id="${order.id}">취소·환불</button>` : ""}`;
 }
 
 function mobileOrderCards(orders, role) {
@@ -2480,10 +2560,11 @@ function ordersTable(role, query = "", sourceOverride = null) {
 }
 
 function membersTable() {
-  const members = [...state.members].filter(member => member.role !== "master").sort((a, b) => ({ pending: 0, rejected: 1, approved: 2 }[a.status] ?? 3) - ({ pending: 0, rejected: 1, approved: 2 }[b.status] ?? 3));
+  const order = { pending: 0, "profile-incomplete": 1, rejected: 2, approved: 3 };
+  const members = [...state.members].filter(member => member.role !== "master").sort((a, b) => (order[a.status] ?? 4) - (order[b.status] ?? 4));
   return `<div class="table-wrap"><table class="member-table"><thead><tr><th>신청자</th><th>가입 유형</th><th>사업자 정보</th><th>신청일</th><th>상태</th><th>처리</th></tr></thead><tbody>
     ${members.map(member => `<tr>
-      <td><strong>${escapeHtml(member.company)}</strong><br><small>${escapeHtml(member.representative)} · ${escapeHtml(member.loginId)}</small></td>
+      <td><strong>${escapeHtml(member.company || member.kakaoNickname || member.loginId)}</strong>${member.kakaoId ? ` <span class="kakao-badge">카카오</span>` : ""}<br><small>${escapeHtml(member.representative || "사업자 정보 입력 전")} · ${escapeHtml(member.loginId)}</small></td>
       <td><span class="member-role ${member.role}">${member.roleLabel}</span></td>
       <td>${escapeHtml(member.businessNo)}<br><small>${escapeHtml(member.contact)}</small></td>
       <td>${escapeHtml(member.appliedAt)}</td>
@@ -3058,7 +3139,7 @@ function orderDetailModal(orderId) {
     })() : ""}
     <section class="order-detail-section"><h3>상품 매핑·결제·발주</h3><div class="mapping-detail-grid"><div><span>외부몰 상품명</span><b>${escapeHtml(order.externalProductName || orderSellerTitle(order))}</b></div><div><span>공급사 원본코드</span><b>${mapped ? escapeHtml(order.mappedProductId || order.productId) : "매핑 전"}</b></div><div><span>공급가 결제</span><b>${paid ? `결제 완료 · ${escapeHtml(order.paymentMethod === "deposit" ? "두고머니" : order.paymentMethod === "card" ? "신용카드 데모" : "기존 주문")}` : "결제 대기"}</b></div><div><span>공급사 발주</span><b>${order.supplierLoginId ? `${escapeHtml(order.supplierOrderId || "발주번호 생성")} · ${escapeHtml(order.forwardedAt || "전달 완료")}` : paid ? "위탁셀러 발주 대기" : "결제 후 발주 가능"}</b></div></div></section>
     <details class="order-detail-section order-recipient-details"><summary><h3>수취인·배송 정보</h3><i>⌄</i></summary><div class="member-detail-grid"><div><span>성함</span><b>${escapeHtml(order.recipientName || order.customer)}</b></div><div><span>연락처</span><b>${escapeHtml(order.phone || "-")}</b></div><div class="full"><span>주소</span><b>(${escapeHtml(order.postalCode || "-")}) ${escapeHtml(order.address || "-")} ${escapeHtml(order.addressDetail || "")}</b></div><div class="full"><span>배송 메시지</span><b>${escapeHtml(order.deliveryMessage || "없음")}</b></div>${order.shippingType === "overseas" ? `<div class="full customs-field ${isValidCustomsCode(order.personalCustomsCode) ? "" : "missing"}"><span>개인통관고유부호</span><b>${escapeHtml(order.personalCustomsCode || "미입력 · 결제할 때 입력해 주세요")}</b></div>` : ""}</div></details>
-    <section class="order-detail-section"><h3>송장·판매채널 전송</h3><div class="tracking-summary"><span>${order.tracking ? "송장 반영 완료" : order.status === "배송준비중" ? "공급사 송장 입력 대기" : order.supplierLoginId ? "공급사 주문 확인 대기" : "공급사 발주 전"}</span><b>${order.tracking ? `${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)}` : "아직 송장번호가 없습니다."}</b></div>${trackingStatuses.length ? `<div class="tracking-channel-statuses">${trackingStatuses.map(([channelId,status]) => `<div>${channelMark(channelId,true)}<span>${escapeHtml(channelMeta(channelId).name)}</span><b class="${isTrackingPending(status) ? "pending" : ""}">${escapeHtml(trackingStatusLabel(status))}</b></div>`).join("")}</div>${activeRole === "seller" && orderNeedsTrackingPush(order) ? `<button type="button" class="primary-button tracking-push-cta" data-action="push-tracking" data-id="${order.id}">쇼핑몰에 송장 보내기</button>` : ""}` : `<div class="channel-sync-empty">송장이 입력되면 주문이 들어온 쇼핑몰로 보낼 준비가 됩니다.</div>`}</section>
+    <section class="order-detail-section"><h3>송장·판매채널 전송</h3><div class="tracking-summary"><span>${order.tracking ? "송장 반영 완료" : order.status === "배송준비중" ? "공급사 송장 입력 대기" : order.supplierLoginId ? "공급사 주문 확인 대기" : "공급사 발주 전"}</span><b>${order.tracking ? `${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)}` : "아직 송장번호가 없습니다."}</b></div>${trackingStatuses.length ? `<div class="tracking-channel-statuses">${trackingStatuses.map(([channelId,status]) => `<div>${channelMark(channelId,true)}<span>${escapeHtml(channelMeta(channelId).name)}</span><b class="${isTrackingPending(status) ? "pending" : ""}">${escapeHtml(trackingStatusLabel(status))}${status === "10분 자동전송 대기" ? ` · ${escapeHtml(trackingSlotLabel(order.trackingAutoDueAt))}` : ""}</b></div>`).join("")}</div>${activeRole === "seller" && orderNeedsTrackingPush(order) ? `<button type="button" class="primary-button tracking-push-cta" data-action="push-tracking" data-id="${order.id}">${orderWaitsAutoTracking(order) ? `기다리지 않고 지금 보내기` : "쇼핑몰에 송장 보내기"}</button>` : ""}` : `<div class="channel-sync-empty">송장이 입력되면 주문이 들어온 쇼핑몰로 보낼 준비가 됩니다.</div>`}</section>
     <div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button>${activeRole === "seller" ? sellerPrimary : activeRole === "supplier" ? supplierPrimary : ""}${activeRole === "seller" && !refund && !["배송완료", "환불완료"].includes(order.status) ? `<button class="refund-button" data-action="request-refund" data-id="${order.id}">취소·환불 요청</button>` : ""}</div>`);
   document.querySelector("#modal .modal").classList.add("order-detail-modal");
 }
@@ -3570,7 +3651,9 @@ function memberDetailModal(id) {
       <div><span>연락처</span><b>${escapeHtml(member.contact)}</b></div><div><span>이메일</span><b>${escapeHtml(member.email)}</b></div>
       <div><span>추천인 코드</span><b>${escapeHtml(member.referralCode || "기존 회원")}</b></div><div><span>마케팅 수신</span><b>${member.marketingConsent ? "동의" : "미동의"}</b></div>
       ${roles.length > 1 ? `<div><span>공급사 상호</span><b>${escapeHtml(member.supplierCompany || member.company)}</b></div><div><span>사용 가능 모드</span><b>위탁셀러 ↔ 공급사</b></div>` : ""}
-      <div class="full"><span>사업자등록증</span><b>${escapeHtml(member.businessFile || "첨부 없음")}</b></div>
+      <div><span>가입 방식</span><b>${member.kakaoId ? `카카오 1초 가입 (${escapeHtml(member.kakaoNickname || "")})` : "이메일 가입"}</b></div><div><span>세금계산서 이메일</span><b>${escapeHtml(member.taxInvoiceEmail || member.email || "-")}</b></div>
+      <div class="full"><span>사업자등록증 사본</span><b>${escapeHtml(member.businessFile || "첨부 없음")}</b></div>
+      <div class="full"><span>환불 계좌</span><b>${member.bankName ? `${escapeHtml(member.bankName)} ${escapeHtml(member.bankAccountNumber || "")} (${escapeHtml(member.bankAccountHolder || "")})` : "직접 입력 없음"}${member.bankbookFile ? ` · 통장 사본 ${escapeHtml(member.bankbookFile)}` : ""}</b></div>
       <div class="full"><span>신청일</span><b>${escapeHtml(member.appliedAt)}</b></div>
       ${member.rejectReason ? `<div class="full reject-box"><span>반려 사유</span><b>${escapeHtml(member.rejectReason)}</b></div>` : ""}
     </div>
@@ -3641,6 +3724,7 @@ document.addEventListener("click", event => {
     accountDropdown.hidden = true;
     document.getElementById("accountMenuButton").setAttribute("aria-expanded", "false");
     const action = accountAction.dataset.accountAction;
+    if (currentAccount?.staff && action !== "logout" && action !== "subscription") { activeMenuIndex = 10; render(); updateAccountUI(); return showToast("직원 계정은 ‘내 정보’에서 내 권한과 비밀번호를 관리해요."); }
     if (action === "role-switch") { userSwitchModal(); return; }
     if (action === "subscription" && activeRole === "seller") { activeMenuIndex = 9; render(); updateAccountUI(); return; }
     return accountSettingsModal(action);
@@ -3664,6 +3748,12 @@ document.addEventListener("click", event => {
   const target = event.target.closest("[data-action]");
   if (!target) return;
   const { action, id } = target.dataset;
+  if (currentAccount?.staff && activeRole === "seller") {
+    if (STAFF_OWNER_ONLY_ACTIONS.includes(action)) return showToast("사장님(대표 계정)만 할 수 있는 작업이에요.");
+    const needed = STAFF_ACTION_PERMISSIONS[action];
+    if (needed && !currentAccount.staff.permissions?.[needed]) return showToast(`‘${staffPermissionDefs().find(def => def.key === needed)?.label}’ 권한이 없어요. 사장님께 권한을 요청해 주세요.`);
+  }
+  if (handleStaffAction(action, id, target)) return;
   if (action === "category-search-pick") {
     const path = [target.dataset.group, target.dataset.mid, target.dataset.sub, target.dataset.detail];
     const form = target.closest("form");
@@ -4252,7 +4342,7 @@ document.addEventListener("click", event => {
     channel.trackingAutomation = !channel.trackingAutomation;
     currentSellerOrders().filter(order => order.tracking).forEach(queueTrackingSync);
     audit("쇼핑몰 송장 자동화 변경", `${channel.name} · 송장 자동전송을 ${channel.trackingAutomation ? "켰습니다" : "껐습니다"}.`, "done", "channel");
-    saveState(); render(); updateAccountUI(); showToast(`${channel.name} 송장 자동전송을 ${channel.trackingAutomation ? "켰습니다" : "껐습니다"}.`); return;
+    saveState(); render(); updateAccountUI(); showToast(channel.trackingAutomation ? `${channel.name} 송장 자동전송을 켰어요. 10분마다 모아서 보내요.` : `${channel.name} 송장 자동전송을 껐어요.`); return;
   }
   if (action === "run-tracking-sync") {
     runSellerTrackingSync(true); render(); updateAccountUI(); return;
@@ -4267,6 +4357,13 @@ document.addEventListener("click", event => {
     showToast(`${sentTo.join(", ")}에 송장을 보냈어요.`);
     return;
   }
+  if (action === "demo-forward-tracking") {
+    sellerAutoTrackingQueue().orders.forEach(order => { order.trackingAutoDueAt = Date.now() - 1000; });
+    const sent = processDueTrackingPushes();
+    saveState(); render(); updateAccountUI();
+    showToast(sent ? `⏱ 10분 자동 전송: 송장 ${sent}건을 쇼핑몰에 보냈어요.` : "자동 전송을 기다리는 송장이 없어요.");
+    return;
+  }
   if (action === "push-all-tracking") {
     const result = pushAllPendingTracking("manual");
     saveState(); render(); updateAccountUI();
@@ -4278,10 +4375,11 @@ document.addEventListener("click", event => {
     const connected = sellerChannels().filter(channel => channel.status === "connected");
     if (!connected.length) return showToast("먼저 ‘쇼핑몰 연동’에서 쇼핑몰을 연결해 주세요.");
     connected.forEach(channel => { channel.trackingAutomation = enable; });
-    const flushed = enable ? pushAllPendingTracking("auto") : { count: 0 };
+    currentSellerOrders().filter(order => order.tracking).forEach(order => queueTrackingSync(order));
+    const queue = sellerAutoTrackingQueue();
     audit("송장 자동 쇼핑몰 전송 설정", `송장 자동 쇼핑몰 전송을 ${enable ? "켰습니다" : "껐습니다"}.`, "done", "channel");
     saveState(); render(); updateAccountUI();
-    showToast(enable ? `송장 자동 전송을 켰어요.${flushed.count ? ` 기다리던 송장 ${flushed.count}건도 바로 보냈어요.` : ""}` : "송장 자동 전송을 껐어요. 이제 ‘쇼핑몰 전송’ 버튼으로 보내요.");
+    showToast(enable ? `송장 자동 전송을 켰어요. 10분마다 모아서 보내요.${queue.count ? ` 기다리던 ${queue.count}건은 ${trackingSlotLabel(queue.dueAt)}에 보내요.` : ""}` : "송장 자동 전송을 껐어요. 이제 ‘쇼핑몰 전송’ 버튼으로 보내요.");
     return;
   }
   if (action === "toggle-auto-collect") {
@@ -4413,6 +4511,25 @@ document.getElementById("loginForm").addEventListener("submit", event => {
   const id = document.getElementById("loginId").value.trim().toLowerCase();
   const password = document.getElementById("loginPassword").value.trim();
   const account = getAccount(id);
+  const staff = !account ? staffByEmail(id) : null;
+  if (staff) {
+    if (staff.status === "invited") { document.getElementById("loginError").textContent = "아직 가입을 마치지 않은 직원 계정이에요. ‘직원 초대 코드로 시작하기’에서 비밀번호를 만들어 주세요."; return; }
+    if (staff.status === "left") { document.getElementById("loginError").textContent = "퇴사 처리된 직원 계정이라 로그인할 수 없어요."; return; }
+    if (!staff.password || staff.password !== password) { document.getElementById("loginError").textContent = "아이디 또는 비밀번호를 다시 확인해 주세요."; return; }
+    if (staff.status === "suspended") { document.getElementById("loginError").textContent = "사장님이 접속을 잠시 막아 두었어요. 대표 계정에 문의해 주세요."; return; }
+    const owner = getAccount(staff.ownerLoginId);
+    if (!owner || owner.status !== "approved") { document.getElementById("loginError").textContent = "소속 위탁셀러 계정을 지금 이용할 수 없어요."; return; }
+    staff.lastLoginAt = new Date().toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    saveState();
+    if (document.getElementById("rememberId").checked) localStorage.setItem(REMEMBER_KEY, id); else localStorage.removeItem(REMEMBER_KEY);
+    showApp(owner.loginId, staff);
+    showToast(`${staff.name}님, ${owner.company || owner.name} 직원 계정으로 로그인했어요.`);
+    return;
+  }
+  if (account?.kakaoId && !account.password) {
+    document.getElementById("loginError").textContent = "카카오로 가입한 계정이에요. 아래 ‘카카오로 1초 로그인’을 눌러 주세요.";
+    return;
+  }
   if (!account || String(account.password) !== password) {
     document.getElementById("loginError").textContent = "아이디 또는 비밀번호를 다시 확인해 주세요.";
     document.getElementById("loginPassword").focus();
@@ -4424,6 +4541,10 @@ document.getElementById("loginForm").addEventListener("submit", event => {
   }
   if (account.status === "pending") {
     document.getElementById("loginError").textContent = "마스터 승인 대기 중인 계정입니다.";
+    return;
+  }
+  if (account.status === "profile-incomplete") {
+    document.getElementById("loginError").textContent = "사업자 정보 입력이 끝나지 않았어요. ‘카카오로 1초 로그인’을 눌러 이어서 입력해 주세요.";
     return;
   }
   if (account.status === "rejected") {
@@ -4848,6 +4969,7 @@ document.addEventListener("focusout", event => {
 document.addEventListener("submit", event => {
   event.preventDefault();
   const form = event.target, data = Object.fromEntries(new FormData(form));
+  if (handleStaffForm(form, data)) return;
   if (form.id === "findAccountIdForm") {
     const role = data.role === "supplier" ? "supplier" : "seller";
     const email = String(data.email || "").trim().toLowerCase();
@@ -5440,10 +5562,413 @@ function startTyping(elementId, messages) {
   tick();
 }
 
+/* ===== 카카오 1초 가입·로그인 (데모) =====
+   카카오 동의만으로 계정을 만들고, 사업자 정보(사업자등록증 사본·세금계산서 이메일·환불 계좌)를 모두 제출해야 승인 요청이 된다.
+   마스터 승인 후에는 카카오 버튼 한 번으로 로그인한다. 실제 카카오 API는 호출하지 않는다. */
+const KAKAO_SESSION_KEY = "doogo-kakao-demo-session";
+const KAKAO_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.2C6.6 3.2 2.3 6.6 2.3 10.8c0 2.7 1.8 5.1 4.5 6.4l-1 3.6c-.1.4.3.7.6.5l4.3-2.8c.4 0 .9.1 1.3.1 5.4 0 9.7-3.4 9.7-7.6S17.4 3.2 12 3.2Z"/></svg>`;
+const REFUND_BANKS = ["국민은행", "신한은행", "우리은행", "하나은행", "농협은행", "기업은행", "카카오뱅크", "토스뱅크", "케이뱅크", "새마을금고", "우체국"];
+function kakaoSession() { try { return JSON.parse(localStorage.getItem(KAKAO_SESSION_KEY) || "null"); } catch { return null; } }
+function kakaoMemberOf(kakaoId) { const key = String(kakaoId || "").toLowerCase(); return state.members.find(member => String(member.kakaoId || "").toLowerCase() === key); }
+function openKakaoSheet() {
+  const session = kakaoSession();
+  const sheet = document.getElementById("kakaoSheet");
+  sheet.innerHTML = `<div class="kakao-sheet-backdrop" data-kakao-close></div><div class="kakao-sheet-card" role="dialog" aria-modal="true" aria-labelledby="kakaoSheetTitle">
+    <div class="kakao-sheet-top"><span class="kakao-sheet-logo">${KAKAO_ICON}</span><b>kakao</b><button type="button" class="kakao-sheet-x" data-kakao-close aria-label="닫기">×</button></div>
+    ${session ? `<div class="kakao-quick" data-kakao-quick><p>이 기기에서 사용한 카카오계정</p><button type="button" class="kakao-quick-account" data-kakao-continue><span class="kakao-avatar">${escapeHtml(String(session.nickname || "K").slice(0, 1))}</span><span><b>${escapeHtml(session.nickname)}</b><small>${escapeHtml(session.email)}</small></span><i>계속하기</i></button><button type="button" class="text-button" data-kakao-other>다른 카카오계정으로</button></div>` : ""}
+    <form id="kakaoConsentForm" class="kakao-consent" ${session ? "hidden" : ""}>
+      <h3 id="kakaoSheetTitle"><b>두고</b>에서 카카오계정 정보를 요청해요</h3>
+      <label>카카오계정 (이메일)<input name="email" type="email" required autocomplete="email" placeholder="kakao@example.com"></label>
+      <label>닉네임<input name="nickname" required maxlength="20" placeholder="예: 두고사장님"></label>
+      <div class="kakao-consent-list">
+        <label class="all"><input type="checkbox" data-kakao-all><b>전체 동의하기</b></label>
+        <label><input type="checkbox" name="agreeEmail" required><span>[필수] 카카오계정(이메일)</span></label>
+        <label><input type="checkbox" name="agreeProfile" required><span>[필수] 프로필 정보(닉네임)</span></label>
+        <label><input type="checkbox" name="agreeChannel"><span>[선택] 두고 카카오톡 채널 추가</span></label>
+      </div>
+      <p class="kakao-consent-error" data-kakao-error></p>
+      <button type="submit" class="kakao-submit">동의하고 계속하기</button>
+      <p class="kakao-demo-note">데모 화면이에요. 실제 카카오 API는 호출하지 않고 이 브라우저에만 저장돼요.</p>
+    </form></div>`;
+  sheet.hidden = false;
+  document.body.classList.add("kakao-sheet-open");
+  setTimeout(() => (sheet.querySelector("[data-kakao-continue]") || sheet.querySelector("#kakaoConsentForm input[name=email]"))?.focus(), 30);
+}
+function closeKakaoSheet() {
+  const sheet = document.getElementById("kakaoSheet");
+  sheet.hidden = true; sheet.innerHTML = "";
+  document.body.classList.remove("kakao-sheet-open");
+}
+function continueWithKakao(profile) {
+  const email = String(profile.email || "").trim().toLowerCase();
+  const nickname = String(profile.nickname || "").trim() || email.split("@")[0];
+  try { localStorage.setItem(KAKAO_SESSION_KEY, JSON.stringify({ email, nickname })); } catch {}
+  closeKakaoSheet();
+  let member = kakaoMemberOf(email);
+  if (!member) {
+    const existing = getAccount(email);
+    if (existing && state.members.includes(existing)) {
+      /* 같은 이메일로 가입한 계정이 있으면 카카오를 연결한다. */
+      existing.kakaoId = email; existing.kakaoNickname = nickname;
+      member = existing;
+      audit("카카오 계정 연결", `${existing.company || email} 계정에 카카오 로그인을 연결했습니다.`, "done", "member");
+    } else {
+      member = { id: nextMemberId(), loginId: email, password: "", role: "seller", roles: ["seller"], roleLabel: "위탁셀러", name: nickname, company: "", representative: "", businessNo: "", contact: "", email, referralCode: "", marketingConsent: false, status: "profile-incomplete", appliedAt: "방금 전", approvedAt: "", businessFile: "", rejectReason: "", kakaoId: email, kakaoNickname: nickname, signupMethod: "kakao" };
+      state.members.push(member);
+      state.logs.unshift({ id: Date.now(), type: "member", title: "카카오 1초 가입", detail: `${nickname} (${email}) · 사업자 정보 입력 전`, actor: nickname, time: "방금 전", state: "pending" });
+    }
+    saveState();
+  }
+  if (member.role !== "seller") { showLogin(); document.getElementById("loginError").textContent = "카카오 로그인은 위탁셀러 계정에서만 쓸 수 있어요."; return; }
+  if (member.status === "approved") { showApp(member.loginId); showToast(`카카오로 로그인했어요. 반가워요, ${member.kakaoNickname || member.name}님!`); return; }
+  if (member.status === "pending") { showLogin(); document.getElementById("loginError").textContent = "사업자 정보 제출 완료! 마스터 승인을 기다리고 있어요. 승인되면 카카오로 바로 로그인돼요."; return; }
+  if (["profile-incomplete", "rejected"].includes(member.status)) return showKakaoProfile(member);
+  showLogin(); document.getElementById("loginError").textContent = "현재 이용할 수 없는 계정입니다.";
+}
+function showKakaoProfile(member) {
+  ["loginView", "partnerLoginView", "signupView", "appView"].forEach(id => { document.getElementById(id).hidden = true; });
+  const view = document.getElementById("kakaoProfileView");
+  const rejected = member.status === "rejected";
+  const bankMode = member.bankbookFile && !member.bankName ? "file" : "account";
+  view.dataset.memberId = member.id;
+  view.innerHTML = `<div class="signup-visual kakao-visual">
+      <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고"><span class="brand-mark"><img src="assets/doogomarket-symbol.png" alt=""></span><span class="brand-word"><b>두고</b><small>DOOGO</small></span></div>
+      <div class="login-message"><span>KAKAO 1초 가입</span><h1>카카오 가입 완료!<br>사업자 정보만 남았어요.</h1><p>아래 정보를 모두 입력하면 마스터 승인 후<br>카카오 버튼 한 번으로 로그인할 수 있어요.</p></div>
+      <div class="signup-visual-points"><span>✓ 사업자등록증 사본</span><span>✓ 세금계산서 받을 이메일</span><span>✓ 환불 받을 계좌 (계좌번호 또는 통장 사본)</span></div>
+      <div class="login-visual-footer"><span>DOOGO SELLER</span><span>안전한 데모 환경</span></div>
+    </div>
+    <div class="signup-panel"><div class="signup-card kakao-profile-card">
+      <button type="button" class="signup-back" data-kakao-profile-back>← 로그인으로</button>
+      <div data-kakao-profile-form>
+      <div class="signup-heading"><span>BUSINESS INFORMATION</span><h2>사업자 정보를 완성해 주세요</h2><p>모두 입력해야 두고를 이용할 수 있어요.</p></div>
+      <div class="kakao-linked-chip"><span class="kakao-sheet-logo">${KAKAO_ICON}</span><span><b>${escapeHtml(member.kakaoNickname || member.name)}</b> · ${escapeHtml(member.kakaoId)}</span><em>카카오 연결됨</em></div>
+      ${rejected ? `<div class="signup-guide danger"><b>반려된 신청이에요</b><span>${escapeHtml(member.rejectReason || "사업자 정보를 다시 확인해 주세요.")} 수정 후 다시 제출해 주세요.</span></div>` : ""}
+      <form id="kakaoProfileForm" class="signup-form kakao-profile-form" novalidate>
+        <section class="kakao-profile-section"><h3><i>1</i>사업자 정보</h3><div class="signup-fields">
+          <div class="signup-field"><label>상호명 <em>필수</em></label><input name="company" value="${escapeHtml(member.company)}" placeholder="예: 두고셀러"></div>
+          <div class="signup-field"><label>대표자명 <em>필수</em></label><input name="representative" value="${escapeHtml(member.representative)}" placeholder="예: 홍길동"></div>
+          <div class="signup-field"><label>사업자등록번호 <em>필수</em></label><input name="businessNo" inputmode="numeric" value="${escapeHtml(member.businessNo)}" placeholder="000-00-00000"></div>
+          <div class="signup-field"><label>연락처 <em>필수</em></label><input name="contact" inputmode="tel" value="${escapeHtml(member.contact)}" placeholder="010-0000-0000"></div>
+          <div class="signup-field full"><label>사업자등록증 사본 <em>필수</em>${member.businessFile ? ` <small>제출됨: ${escapeHtml(member.businessFile)}</small>` : ""}</label><input name="businessFile" type="file" accept=".jpg,.jpeg,.png,.pdf"></div>
+        </div></section>
+        <section class="kakao-profile-section"><h3><i>2</i>세금계산서 받을 이메일</h3><div class="signup-fields single">
+          <div class="signup-field full"><label>세금계산서 이메일 <em>필수</em></label><input name="taxInvoiceEmail" type="email" value="${escapeHtml(member.taxInvoiceEmail || member.email)}" placeholder="tax@example.com"></div>
+        </div></section>
+        <section class="kakao-profile-section"><h3><i>3</i>환불 받을 계좌</h3>
+          <div class="refund-mode-toggle" role="radiogroup"><label><input type="radio" name="refundMode" value="account" ${bankMode === "account" ? "checked" : ""}><span>계좌번호 입력</span></label><label><input type="radio" name="refundMode" value="file" ${bankMode === "file" ? "checked" : ""}><span>통장 사본 첨부</span></label></div>
+          <div class="signup-fields" data-refund-mode="account" ${bankMode === "account" ? "" : "hidden"}>
+            <div class="signup-field"><label>은행 <em>필수</em></label><select name="bankName"><option value="">은행 선택</option>${REFUND_BANKS.map(bank => `<option ${member.bankName === bank ? "selected" : ""}>${bank}</option>`).join("")}</select></div>
+            <div class="signup-field"><label>예금주 <em>필수</em></label><input name="bankAccountHolder" value="${escapeHtml(member.bankAccountHolder || "")}" placeholder="예: 홍길동"></div>
+            <div class="signup-field full"><label>계좌번호 <em>필수</em></label><input name="bankAccountNumber" inputmode="numeric" value="${escapeHtml(member.bankAccountNumber || "")}" placeholder="- 없이 숫자만"></div>
+          </div>
+          <div class="signup-fields single" data-refund-mode="file" ${bankMode === "file" ? "" : "hidden"}>
+            <div class="signup-field full"><label>통장 사본 <em>필수</em>${member.bankbookFile ? ` <small>제출됨: ${escapeHtml(member.bankbookFile)}</small>` : ""}</label><input name="bankbookFile" type="file" accept=".jpg,.jpeg,.png,.pdf"></div>
+          </div>
+        </section>
+        <section class="kakao-profile-section"><h3><i>4</i>추천인 코드 · 약관</h3>
+          <div class="signup-field full referral-field"><label>추천인 코드 <em>필수</em></label><input name="referralCode" value="${escapeHtml(member.referralCode || "")}" autocomplete="off" placeholder="추천인 코드 입력 (예: MOON2026)"></div>
+          <label class="signup-agreement"><input name="terms" type="checkbox"><span><b>(필수) 서비스 이용약관 및 개인정보 처리방침에 동의합니다.</b></span></label>
+          <label class="signup-agreement"><input name="marketingConsent" type="checkbox" ${member.marketingConsent ? "checked" : ""}><span><b>(선택) 마케팅 정보 수신에 동의합니다.</b></span></label>
+        </section>
+        <div class="prototype-warning">프로토타입 검증용 화면입니다. 실제 개인정보·사업자등록증·통장 사본은 올리지 마세요. (파일명만 저장)</div>
+        <p class="signup-step-error" data-kakao-profile-error></p>
+        <button class="login-submit kakao-profile-submit" type="submit">사업자 정보 제출하고 승인 요청</button>
+      </form>
+      </div>
+      <div class="signup-complete" data-kakao-profile-done hidden><span class="complete-icon">✓</span><h2>제출이 완료되었어요</h2><p>마스터가 사업자 정보를 확인하면 승인돼요.<br>승인 후에는 <b>카카오로 1초 로그인</b>으로 바로 들어올 수 있어요.</p>
+        <div class="complete-flow"><span class="done">카카오 가입</span><i></i><span class="done">사업자 정보 제출</span><i></i><span>마스터 승인</span></div>
+        <button type="button" class="login-submit" data-kakao-profile-back>로그인 화면으로</button></div>
+    </div></div>`;
+  view.hidden = false;
+  window.scrollTo({ top: 0 });
+}
+function submitKakaoProfile(form) {
+  const member = state.members.find(item => item.id === document.getElementById("kakaoProfileView").dataset.memberId);
+  const error = form.closest(".kakao-profile-card").querySelector("[data-kakao-profile-error]");
+  if (!member) return;
+  const data = Object.fromEntries(new FormData(form));
+  const businessFile = form.elements.businessFile.files?.[0]?.name || member.businessFile || "";
+  const bankbookFile = form.elements.bankbookFile.files?.[0]?.name || member.bankbookFile || "";
+  const fail = (message, name) => { error.textContent = message; const field = form.elements[name]; if (field) { field.focus?.(); field.closest(".signup-field")?.classList.add("has-error"); } return false; };
+  form.querySelectorAll(".has-error").forEach(item => item.classList.remove("has-error"));
+  for (const [name, label] of [["company", "상호명"], ["representative", "대표자명"], ["businessNo", "사업자등록번호"], ["contact", "연락처"]]) if (!String(data[name] || "").trim()) return fail(`${label}을(를) 입력해 주세요.`, name);
+  if (String(data.businessNo).replace(/\D/g, "").length !== 10) return fail("사업자등록번호 10자리를 확인해 주세요.", "businessNo");
+  if (!businessFile) return fail("사업자등록증 사본을 첨부해 주세요.", "businessFile");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(data.taxInvoiceEmail || ""))) return fail("세금계산서 받을 이메일을 확인해 주세요.", "taxInvoiceEmail");
+  if (data.refundMode === "file") { if (!bankbookFile) return fail("통장 사본을 첨부해 주세요.", "bankbookFile"); }
+  else {
+    if (!data.bankName) return fail("환불 받을 은행을 골라 주세요.", "bankName");
+    if (!String(data.bankAccountHolder || "").trim()) return fail("예금주를 입력해 주세요.", "bankAccountHolder");
+    if (String(data.bankAccountNumber || "").replace(/\D/g, "").length < 8) return fail("계좌번호를 확인해 주세요.", "bankAccountNumber");
+  }
+  if (!String(data.referralCode || "").trim()) return fail("추천인 코드를 입력해 주세요.", "referralCode");
+  if (!data.terms) return fail("필수 약관에 동의해 주세요.", "terms");
+  Object.assign(member, {
+    company: data.company.trim(), name: data.company.trim(), representative: data.representative.trim(), businessNo: data.businessNo.trim(), contact: data.contact.trim(),
+    businessFile, taxInvoiceEmail: data.taxInvoiceEmail.trim(), referralCode: data.referralCode.trim().toUpperCase(), marketingConsent: Boolean(data.marketingConsent),
+    bankName: data.refundMode === "file" ? "" : data.bankName, bankAccountHolder: data.refundMode === "file" ? "" : data.bankAccountHolder.trim(), bankAccountNumber: data.refundMode === "file" ? "" : data.bankAccountNumber.replace(/[^\d-]/g, ""),
+    bankbookFile: data.refundMode === "file" ? bankbookFile : "", status: "pending", appliedAt: "방금 전", rejectReason: "", profileCompletedAt: new Date().toISOString()
+  });
+  state.logs.unshift({ id: Date.now(), type: "member", title: "신규 사업자 가입 신청 (카카오)", detail: `${member.company} · 사업자등록증·세금계산서 이메일·환불 계좌 제출 완료 · 승인 요청`, actor: member.kakaoNickname || member.company, time: "방금 전", state: "pending" });
+  saveState();
+  error.textContent = "";
+  const card = form.closest(".kakao-profile-card");
+  card.querySelector("[data-kakao-profile-form]").hidden = true;
+  card.querySelector("[data-kakao-profile-done]").hidden = false;
+  window.scrollTo({ top: 0 });
+  return true;
+}
+document.addEventListener("click", event => {
+  if (event.target.closest("[data-kakao-start]")) { event.preventDefault(); return openKakaoSheet(); }
+  if (event.target.closest("[data-kakao-close]")) return closeKakaoSheet();
+  if (event.target.closest("[data-kakao-continue]")) { const session = kakaoSession(); if (session) continueWithKakao(session); return; }
+  if (event.target.closest("[data-kakao-other]")) { const sheet = document.getElementById("kakaoSheet"); sheet.querySelector("[data-kakao-quick]").hidden = true; sheet.querySelector("#kakaoConsentForm").hidden = false; sheet.querySelector("#kakaoConsentForm input[name=email]").focus(); return; }
+  if (event.target.closest("[data-kakao-profile-back]")) { showLogin(); return; }
+});
+document.addEventListener("change", event => {
+  if (event.target.matches("[data-kakao-all]")) { event.target.closest("form").querySelectorAll(".kakao-consent-list input[type=checkbox]").forEach(input => { input.checked = event.target.checked; }); return; }
+  if (event.target.closest("#kakaoConsentForm .kakao-consent-list")) { const form = event.target.closest("form"); const boxes = [...form.querySelectorAll(".kakao-consent-list input[name]")]; form.querySelector("[data-kakao-all]").checked = boxes.every(box => box.checked); return; }
+  if (event.target.matches("#kakaoProfileForm input[name=refundMode]")) { const form = event.target.closest("form"); form.querySelectorAll("[data-refund-mode]").forEach(group => { group.hidden = group.dataset.refundMode !== event.target.value; }); }
+});
+document.addEventListener("submit", event => {
+  if (event.target.id === "kakaoConsentForm") {
+    event.preventDefault();
+    const form = event.target; const data = Object.fromEntries(new FormData(form));
+    const error = form.querySelector("[data-kakao-error]");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(data.email || "").trim())) { error.textContent = "카카오계정 이메일을 확인해 주세요."; return; }
+    if (!String(data.nickname || "").trim()) { error.textContent = "닉네임을 입력해 주세요."; return; }
+    if (!data.agreeEmail || !data.agreeProfile) { error.textContent = "필수 항목에 동의해 주세요."; return; }
+    continueWithKakao({ email: data.email, nickname: data.nickname });
+  }
+  if (event.target.id === "kakaoProfileForm") { event.preventDefault(); submitKakaoProfile(event.target); }
+});
+document.addEventListener("keydown", event => { if (event.key === "Escape" && !document.getElementById("kakaoSheet").hidden) closeKakaoSheet(); });
+
+/* ===== 직원 계정 (초대 · 권한 · 정지 · 퇴사) =====
+   사장님(대표 계정)이 이메일로 초대하면 초대 코드가 만들어지고, 직원이 그 코드로 자기 비밀번호를 정해 가입한다.
+   직원은 사장님 계정의 데이터를 함께 쓰되, 허락받은 메뉴만 보인다. */
+function staffPermissionDefs() {
+  return [
+    { key: "products", label: "상품", desc: "소싱·PICK·마스터 상품·쇼핑몰 전송", menus: [1, 16, 2, 17, 14, 11, 15, 7] },
+    { key: "orders", label: "주문·배송", desc: "주문 결제·송장 전송·취소반품·공급사 문의", menus: [4, 5, 3] },
+    { key: "money", label: "두고머니·매출", desc: "충전·결제·매출 달력·정기구독", menus: [12, 6, 9] },
+    { key: "channels", label: "쇼핑몰 연동", desc: "API 키·배송 정책·자동화 설정", menus: [8] }
+  ];
+}
+const STAFF_OWNER_ONLY_ACTIONS = ["account-tab", "open-user-switch", "switch-workspace", "open-supplier-application", "disconnect-channel", "staff-invite", "staff-edit", "staff-suspend", "staff-leave", "staff-reset-password", "staff-cancel-invite", "staff-remove", "staff-show-invite"];
+const STAFF_ACTION_PERMISSIONS = {
+  "push-all-tracking": "orders", "push-tracking": "orders", "run-tracking-sync": "orders", "collect-orders": "orders", "pay-order": "orders", "open-order-payment-stage": "orders", "dispatch-supplier-order": "orders", "single-order": "orders", "map-order": "orders", "request-refund": "orders", "demo-forward-tracking": "orders",
+  "manage-product-channels": "products", "sync-all-channels": "products", "sync-channel-listing": "products", "push-channel-listing": "products", "edit-seller-product": "products", "register-master-product": "products", "simulate-order": "products", "open-stop-channel": "products", "delete-pick": "products", "rerequest-pick": "products",
+  "open-doogo-money": "money", "open-doogo-money-history": "money", "edit-doogo-money-bank": "money", "toggle-subscription": "money", "billing-settings": "money",
+  "connect-channel": "channels", "refresh-channel-policies": "channels", "toggle-channel-automation": "channels", "toggle-auto-tracking": "channels", "toggle-auto-collect": "channels"
+};
+function staffByEmail(email) { const key = String(email || "").trim().toLowerCase(); return (state.staff || []).find(member => member.email.toLowerCase() === key && member.status !== "removed"); }
+function ownerStaff(loginId = currentAccount?.loginId) { return (state.staff || []).filter(member => member.ownerLoginId === loginId); }
+function staffCanTodo(item) {
+  if (!currentAccount?.staff) return true;
+  const needed = item.action === "dashboard-order-stage" ? "orders" : STAFF_ACTION_PERMISSIONS[item.action];
+  if (needed && !currentAccount.staff.permissions?.[needed]) return false;
+  return item.index === undefined || staffCanMenu(item.index);
+}
+function staffCanMenu(index) {
+  const staff = currentAccount?.staff;
+  if (!staff || [0, 10, 13].includes(Number(index))) return true;
+  const def = staffPermissionDefs().find(item => item.menus.includes(Number(index)));
+  return def ? Boolean(staff.permissions?.[def.key]) : true;
+}
+function staffStatusChip(status) {
+  const meta = { active: ["활동 중", "green"], invited: ["가입 대기", "orange"], suspended: ["접속 정지", "red"], left: ["퇴사", ""] }[status] || [status, ""];
+  return `<span class="chip ${meta[1]}">${meta[0]}</span>`;
+}
+function staffPermissionChips(permissions = {}) {
+  const on = staffPermissionDefs().filter(def => permissions[def.key]);
+  return on.length ? on.map(def => `<span class="staff-perm">${escapeHtml(def.label)}</span>`).join("") : `<span class="staff-perm off">홈·공지만</span>`;
+}
+function staffInviteLink(staff) { return `${location.origin}${location.pathname}?invite=${staff.inviteCode}`; }
+function newInviteCode() { const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let code = ""; do { code = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join(""); } while ((state.staff || []).some(member => member.inviteCode === code)); return code; }
+function staffNoPermissionTemplate(index) {
+  const def = staffPermissionDefs().find(item => item.menus.includes(Number(index)));
+  return `<section class="panel staff-locked"><span class="staff-locked-icon">🔒</span><h2>이 메뉴는 권한이 없어요</h2><p>‘${escapeHtml(roleMenus.seller[index] || "")}’은(는) <b>${escapeHtml(def?.label || "")}</b> 권한이 있어야 볼 수 있어요.<br>사장님(대표 계정)께 권한을 요청해 주세요.</p><button type="button" class="primary-button" data-action="open-dashboard">홈으로</button></section>`;
+}
+function sellerStaffCard() {
+  const members = ownerStaff().filter(member => member.status !== "removed");
+  const count = status => members.filter(member => member.status === status).length;
+  const order = { active: 0, invited: 1, suspended: 2, left: 3 };
+  const rows = [...members].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9)).map(member => {
+    const actions = member.status === "active" ? `<button type="button" class="secondary-button" data-action="staff-edit" data-id="${member.id}">권한 변경</button><button type="button" class="secondary-button" data-action="staff-suspend" data-id="${member.id}">접속 정지</button><button type="button" class="text-button" data-action="staff-reset-password" data-id="${member.id}">비밀번호 초기화</button><button type="button" class="text-button danger-text" data-action="staff-leave" data-id="${member.id}">퇴사 처리</button>`
+      : member.status === "suspended" ? `<button type="button" class="primary-button" data-action="staff-suspend" data-id="${member.id}">정지 해제</button><button type="button" class="secondary-button" data-action="staff-edit" data-id="${member.id}">권한 변경</button><button type="button" class="text-button danger-text" data-action="staff-leave" data-id="${member.id}">퇴사 처리</button>`
+      : member.status === "invited" ? `<button type="button" class="primary-button" data-action="staff-show-invite" data-id="${member.id}">초대 코드 보기</button><button type="button" class="secondary-button" data-action="staff-edit" data-id="${member.id}">권한 변경</button><button type="button" class="text-button danger-text" data-action="staff-cancel-invite" data-id="${member.id}">초대 취소</button>`
+      : `<span class="staff-left-note">${escapeHtml(member.leftAt || "")} 퇴사 · 작업 기록은 남아요</span><button type="button" class="text-button danger-text" data-action="staff-remove" data-id="${member.id}">목록에서 삭제</button>`;
+    return `<article class="staff-row status-${member.status}"><span class="staff-avatar">${escapeHtml(member.name.slice(0, 1))}</span><div class="staff-info"><b>${escapeHtml(member.name)} ${staffStatusChip(member.status)}</b><small>${escapeHtml(member.email)}${member.title ? ` · ${escapeHtml(member.title)}` : ""}</small><div class="staff-perms">${staffPermissionChips(member.permissions)}</div><small class="staff-meta">${member.status === "invited" ? `초대 ${escapeHtml(member.invitedAt)} · 코드 ${escapeHtml(member.inviteCode)}` : `최근 접속 ${escapeHtml(member.lastLoginAt || "-")}`}</small></div><div class="staff-actions">${actions}</div></article>`;
+  }).join("");
+  return `<section class="panel seller-staff-card" id="sellerStaffCard"><div class="profile-section-head"><div><span>TEAM</span><h3>직원 관리</h3><p>직원을 초대하면 각자 이메일·비밀번호로 로그인해요. 메뉴 권한과 접속을 사장님이 관리합니다.</p></div><button type="button" class="primary-button" data-action="staff-invite">＋ 직원 초대</button></div>
+    <div class="staff-summary"><span>활동 중 <b>${count("active")}</b></span><span>가입 대기 <b>${count("invited")}</b></span><span>접속 정지 <b>${count("suspended")}</b></span><span>퇴사 <b>${count("left")}</b></span></div>
+    <div class="staff-list">${rows || `<div class="empty">아직 초대한 직원이 없어요. ‘직원 초대’로 함께 일할 사람을 추가해 보세요.</div>`}</div></section>`;
+}
+function staffSelfCard() {
+  const staff = currentAccount.staff;
+  return `<section class="panel seller-staff-card staff-self"><div class="profile-section-head"><div><span>MY STAFF ACCOUNT</span><h3>${escapeHtml(staff.name)}님은 직원 계정이에요</h3><p>${escapeHtml(currentAccount.company || currentAccount.name)}의 직원으로 로그인했어요. 권한은 사장님이 바꿀 수 있어요.</p></div><button type="button" class="secondary-button" data-action="staff-change-password">비밀번호 변경</button></div>
+    <div class="staff-self-grid"><div><span>로그인 이메일</span><b>${escapeHtml(staff.email)}</b></div><div><span>담당 업무</span><b>${escapeHtml(staff.title || "-")}</b></div><div class="wide"><span>사용 가능한 메뉴</span><div class="staff-perms">${staffPermissionChips(staff.permissions)}</div></div></div></section>`;
+}
+function staffPermissionFields(permissions = { products: true, orders: true }) {
+  return `<div class="staff-perm-options">${staffPermissionDefs().map(def => `<label class="staff-perm-option"><input type="checkbox" name="perm_${def.key}" ${permissions[def.key] ? "checked" : ""}><span><b>${escapeHtml(def.label)}</b><small>${escapeHtml(def.desc)}</small></span></label>`).join("")}</div><p class="staff-perm-note">홈·공지사항·내 정보는 모든 직원이 볼 수 있어요. 직원 관리·사업자 정보 수정·연동 해제는 사장님만 할 수 있어요.</p>`;
+}
+function staffInviteModal() {
+  openModal(`<div class="staff-modal-head"><span>INVITE STAFF</span><h2>직원 초대하기</h2><p>초대하면 코드가 만들어져요. 직원이 코드로 들어와 <b>본인 비밀번호</b>를 정하면 가입이 끝나요.</p></div>
+    <form id="staffInviteForm" class="staff-form">
+      <label class="form-field"><span>이름</span><input name="name" required maxlength="20" placeholder="예: 김직원"></label>
+      <label class="form-field"><span>로그인 이메일</span><input name="email" type="email" required placeholder="staff@example.com"></label>
+      <label class="form-field full"><span>담당 업무 <small>선택</small></span><input name="title" maxlength="20" placeholder="예: 주문·CS 담당"></label>
+      <div class="form-field full"><span>사용할 수 있는 메뉴</span>${staffPermissionFields()}</div>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">초대 코드 만들기</button></div>
+    </form>`);
+}
+function staffInviteResultModal(staff, reset = false) {
+  openModal(`<div class="staff-modal-head"><span>${reset ? "PASSWORD RESET" : "INVITE READY"}</span><h2>${escapeHtml(staff.name)}님께 초대 코드를 보내 주세요</h2><p>${reset ? "기존 비밀번호는 사용할 수 없어요. 새 코드로 비밀번호를 다시 정하면 돼요." : "카카오톡·문자로 아래 코드나 링크를 전달해 주세요."}</p></div>
+    <div class="staff-invite-code"><small>초대 코드</small><b>${escapeHtml(staff.inviteCode)}</b><span>${escapeHtml(staff.email)}</span></div>
+    <div class="staff-invite-link"><input readonly value="${escapeHtml(staffInviteLink(staff))}" aria-label="초대 링크"><button type="button" class="secondary-button" data-action="staff-copy-invite" data-id="${staff.id}">링크 복사</button></div>
+    <ol class="staff-invite-steps"><li>직원이 링크를 열거나 로그인 화면의 <b>‘직원 초대 코드로 시작하기’</b>를 눌러요.</li><li>초대 코드와 이메일을 넣고 본인 비밀번호를 정해요.</li><li>이후에는 이메일·비밀번호로 로그인해요.</li></ol>
+    <div class="modal-actions"><button type="button" class="primary-button" data-close-modal>확인</button></div>`);
+}
+function staffEditModal(staff) {
+  openModal(`<div class="staff-modal-head"><span>PERMISSION</span><h2>${escapeHtml(staff.name)}님 권한 변경</h2><p>${escapeHtml(staff.email)} · ${staffStatusChip(staff.status)}</p></div>
+    <form id="staffPermissionForm" class="staff-form" data-id="${staff.id}">
+      <label class="form-field full"><span>담당 업무</span><input name="title" maxlength="20" value="${escapeHtml(staff.title || "")}" placeholder="예: 상품 등록 담당"></label>
+      <div class="form-field full"><span>사용할 수 있는 메뉴</span>${staffPermissionFields(staff.permissions)}</div>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">권한 저장</button></div>
+    </form>`);
+}
+function staffPasswordModal() {
+  openModal(`<div class="staff-modal-head"><span>MY ACCOUNT</span><h2>비밀번호 변경</h2><p>직원 계정 비밀번호는 본인만 바꿀 수 있어요.</p></div>
+    <form id="staffPasswordForm" class="staff-form">
+      <label class="form-field full"><span>현재 비밀번호</span><input name="current" type="password" required autocomplete="current-password"></label>
+      <label class="form-field full"><span>새 비밀번호</span><input name="next" type="password" minlength="8" required autocomplete="new-password" placeholder="8자 이상"></label>
+      <label class="form-field full"><span>새 비밀번호 확인</span><input name="confirm" type="password" minlength="8" required autocomplete="new-password"></label>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">변경하기</button></div>
+    </form>`);
+}
+function readStaffPermissions(data) { return Object.fromEntries(staffPermissionDefs().map(def => [def.key, Boolean(data[`perm_${def.key}`])])); }
+function refreshStaffView() { saveState(); render(); updateAccountUI(); }
+function handleStaffAction(action, id, target) {
+  if (!action || !action.startsWith("staff-")) return false;
+  const staff = (state.staff || []).find(member => member.id === id && member.ownerLoginId === currentAccount?.loginId);
+  if (action === "staff-invite") { staffInviteModal(); return true; }
+  if (action === "staff-change-password") { if (currentAccount?.staff) staffPasswordModal(); return true; }
+  if (action === "staff-copy-invite") {
+    if (!staff) return true;
+    const link = staffInviteLink(staff);
+    Promise.resolve(navigator.clipboard?.writeText(link)).then(() => showToast("초대 링크를 복사했어요."), () => showToast(`초대 링크: ${link}`));
+    return true;
+  }
+  if (!staff) return true;
+  if (action === "staff-show-invite") { staffInviteResultModal(staff); return true; }
+  if (action === "staff-edit") { staffEditModal(staff); return true; }
+  if (action === "staff-suspend") {
+    const suspend = staff.status === "active";
+    if (suspend && !window.confirm(`${staff.name}님의 접속을 정지할까요?\n정지하면 바로 로그인할 수 없고, 해제하면 다시 쓸 수 있어요.`)) return true;
+    staff.status = suspend ? "suspended" : "active";
+    audit(suspend ? "직원 접속 정지" : "직원 접속 정지 해제", `${staff.name} (${staff.email})`, "done", "member");
+    refreshStaffView(); showToast(suspend ? `${staff.name}님의 접속을 정지했어요.` : `${staff.name}님이 다시 접속할 수 있어요.`); return true;
+  }
+  if (action === "staff-leave") {
+    if (!window.confirm(`${staff.name}님을 퇴사 처리할까요?\n더 이상 로그인할 수 없고 되돌릴 수 없어요. 작업 기록은 남아요.`)) return true;
+    Object.assign(staff, { status: "left", password: "", inviteCode: "", leftAt: new Date().toLocaleDateString("ko-KR") });
+    audit("직원 퇴사 처리", `${staff.name} (${staff.email}) · 로그인 권한을 회수했습니다.`, "done", "member");
+    refreshStaffView(); showToast(`${staff.name}님을 퇴사 처리했어요.`); return true;
+  }
+  if (action === "staff-reset-password") {
+    if (!window.confirm(`${staff.name}님 비밀번호를 초기화할까요?\n새 초대 코드로 비밀번호를 다시 정해야 로그인할 수 있어요.`)) return true;
+    Object.assign(staff, { status: "invited", password: "", inviteCode: newInviteCode(), invitedAt: new Date().toLocaleDateString("ko-KR") });
+    audit("직원 비밀번호 초기화", `${staff.name} (${staff.email}) · 새 초대 코드 발급`, "done", "member");
+    refreshStaffView(); staffInviteResultModal(staff, true); return true;
+  }
+  if (action === "staff-cancel-invite" || action === "staff-remove") {
+    if (!window.confirm(action === "staff-cancel-invite" ? `${staff.name}님 초대를 취소할까요?` : `${staff.name}님을 목록에서 삭제할까요?`)) return true;
+    state.staff = state.staff.filter(member => member.id !== staff.id);
+    audit(action === "staff-cancel-invite" ? "직원 초대 취소" : "퇴사 직원 삭제", `${staff.name} (${staff.email})`, "done", "member");
+    refreshStaffView(); showToast(action === "staff-cancel-invite" ? "초대를 취소했어요." : "목록에서 삭제했어요."); return true;
+  }
+  return true;
+}
+function handleStaffForm(form, data) {
+  if (form.id === "staffInviteForm") {
+    const email = String(data.email || "").trim().toLowerCase();
+    const name = String(data.name || "").trim();
+    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast("이름과 이메일을 확인해 주세요."); return true; }
+    if (getAccount(email) || (state.staff || []).some(member => member.email.toLowerCase() === email && member.status !== "left")) { showToast("이미 사용 중인 이메일이에요."); return true; }
+    const permissions = readStaffPermissions(data);
+    state.staff = (state.staff || []).filter(member => !(member.email.toLowerCase() === email && member.status === "left"));
+    const staff = { id: `ST-${Date.now()}`, ownerLoginId: currentAccount.loginId, name, email, password: "", title: String(data.title || "").trim(), permissions, status: "invited", invitedAt: new Date().toLocaleDateString("ko-KR"), joinedAt: "", lastLoginAt: "", inviteCode: newInviteCode() };
+    state.staff.push(staff);
+    audit("직원 초대", `${name} (${email}) · 권한: ${staffPermissionDefs().filter(def => permissions[def.key]).map(def => def.label).join(", ") || "홈·공지"}`, "done", "member");
+    refreshStaffView(); staffInviteResultModal(staff); return true;
+  }
+  if (form.id === "staffPermissionForm") {
+    const staff = (state.staff || []).find(member => member.id === form.dataset.id && member.ownerLoginId === currentAccount.loginId);
+    if (!staff) return true;
+    staff.permissions = readStaffPermissions(data);
+    staff.title = String(data.title || "").trim();
+    audit("직원 권한 변경", `${staff.name} · ${staffPermissionDefs().filter(def => staff.permissions[def.key]).map(def => def.label).join(", ") || "홈·공지만"}`, "done", "member");
+    closeModal(); refreshStaffView(); showToast(`${staff.name}님 권한을 저장했어요. 다음 로그인부터 적용돼요.`); return true;
+  }
+  if (form.id === "staffPasswordForm") {
+    const staff = (state.staff || []).find(member => member.id === currentAccount?.staff?.id);
+    if (!staff) return true;
+    if (staff.password !== data.current) { showToast("현재 비밀번호가 맞지 않아요."); return true; }
+    if (String(data.next || "").length < 8 || data.next !== data.confirm) { showToast("새 비밀번호(8자 이상)를 두 번 똑같이 입력해 주세요."); return true; }
+    staff.password = data.next; saveState(); closeModal(); showToast("비밀번호를 바꿨어요."); return true;
+  }
+  return false;
+}
+/* 로그인 화면: 직원 초대 코드로 가입 */
+function openStaffJoinSheet(code = "") {
+  const sheet = document.getElementById("kakaoSheet");
+  sheet.innerHTML = `<div class="kakao-sheet-backdrop" data-kakao-close></div><div class="kakao-sheet-card staff-join-card" role="dialog" aria-modal="true" aria-labelledby="staffJoinTitle">
+    <div class="kakao-sheet-top"><span class="staff-join-logo">👥</span><b id="staffJoinTitle">직원 초대 코드로 시작하기</b><button type="button" class="kakao-sheet-x" data-kakao-close aria-label="닫기">×</button></div>
+    <form id="staffJoinForm" class="kakao-consent">
+      <p class="staff-join-copy">사장님께 받은 초대 코드와 이메일을 넣고, 앞으로 쓸 비밀번호를 정해 주세요.</p>
+      <label>초대 코드<input name="code" required maxlength="6" value="${escapeHtml(code)}" placeholder="예: DG7K2Q" autocapitalize="characters" style="text-transform:uppercase"></label>
+      <label>초대받은 이메일<input name="email" type="email" required autocomplete="username" placeholder="staff@example.com"></label>
+      <label>비밀번호<input name="password" type="password" minlength="8" required autocomplete="new-password" placeholder="8자 이상"></label>
+      <label>비밀번호 확인<input name="confirm" type="password" minlength="8" required autocomplete="new-password"></label>
+      <p class="kakao-consent-error" data-kakao-error></p>
+      <button type="submit" class="login-submit">가입하고 로그인</button>
+    </form></div>`;
+  sheet.hidden = false;
+  document.body.classList.add("kakao-sheet-open");
+  setTimeout(() => sheet.querySelector(code ? "input[name=email]" : "input[name=code]")?.focus(), 30);
+}
+document.addEventListener("click", event => { if (event.target.closest("[data-staff-join]")) { event.preventDefault(); openStaffJoinSheet(); } });
+document.addEventListener("submit", event => {
+  if (event.target.id !== "staffJoinForm") return;
+  event.preventDefault();
+  const form = event.target; const data = Object.fromEntries(new FormData(form));
+  const error = form.querySelector("[data-kakao-error]");
+  const code = String(data.code || "").trim().toUpperCase();
+  const email = String(data.email || "").trim().toLowerCase();
+  const staff = (state.staff || []).find(member => member.inviteCode === code && member.status === "invited");
+  if (!staff) { error.textContent = "초대 코드를 확인해 주세요. 취소됐거나 이미 쓴 코드일 수 있어요."; return; }
+  if (staff.email.toLowerCase() !== email) { error.textContent = "초대받은 이메일과 달라요."; return; }
+  if (String(data.password || "").length < 8) { error.textContent = "비밀번호는 8자 이상으로 정해 주세요."; return; }
+  if (data.password !== data.confirm) { error.textContent = "비밀번호 확인이 달라요."; return; }
+  const owner = getAccount(staff.ownerLoginId);
+  if (!owner || owner.status !== "approved") { error.textContent = "소속 위탁셀러 계정을 지금 이용할 수 없어요."; return; }
+  Object.assign(staff, { password: data.password, status: "active", inviteCode: "", joinedAt: new Date().toLocaleDateString("ko-KR"), lastLoginAt: new Date().toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) });
+  state.logs.unshift({ id: Date.now(), type: "member", title: "직원 가입 완료", detail: `${staff.name} (${staff.email}) · ${owner.company || owner.name}`, actor: `${staff.name} (직원)`, time: "방금 전", state: "done" });
+  saveState();
+  closeKakaoSheet();
+  showApp(owner.loginId, staff);
+  showToast(`환영해요, ${staff.name}님! ${owner.company || owner.name} 직원으로 가입했어요.`);
+});
+
 const requestedPortal = new URLSearchParams(window.location.search).get("portal");
 initAuth();
 if (requestedPortal === "partner") showPartnerLogin("supplier");
 if (requestedPortal === "master") showPartnerLogin("master");
+const requestedInvite = new URLSearchParams(window.location.search).get("invite");
+if (requestedInvite && !currentAccount) openStaffJoinSheet(requestedInvite.toUpperCase());
 startTyping("sellerTypingText", ["좋은 공급상품을 소싱받아,\n원클릭으로 바로 판매를 시작해보세요.", "주문부터 송장 전송까지,\n드랍쉬핑을 자동화하세요.", "브랜드와 셀러가 만나는 곳,\n두고입니다."]);
 startTyping("partnerTypingText", ["내 브랜드 상품을 등록하고,\n새로운 셀러를 만나세요.", "상품과 주문을 한곳에서,\n운영은 더 정확하게.", "공급과 판매가 연결되는 곳,\n두고입니다."]);
-window.setInterval(() => runSellerTrackingSync(false), 10 * 60 * 1000);
+/* 송장 자동 전송 스케줄러: 30초마다 전송 시각(10분 단위)이 된 송장이 있는지 확인한다. */
+window.setInterval(() => { if (!document.hidden) runTrackingScheduler(); }, 30 * 1000);
+window.setTimeout(runTrackingScheduler, 2500);
