@@ -8,7 +8,7 @@ const accounts = {
 };
 const roleMenus = {
   master: ["대시보드", "회원 승인", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리"],
-  supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "배송 · 송장 설정", "가격 관리", "정산 내역", "내 정보", "PICK 요청", "판매 현황", "매출 달력", "공지사항"],
+  supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "굿스플로 · 택배", "가격 관리", "정산 내역", "내 정보", "PICK 요청", "판매 현황", "매출 달력", "공지사항"],
   seller: ["홈", "상품 소싱", "승인 대기", "공급사 문의", "주문 관리", "취소·반품", "매출 달력", "가격 변경 알림", "쇼핑몰 연동", "정기구독", "내 정보", "판매중 상품", "예치금", "공지사항", "마스터 상품", "상품 매핑", "브랜드 소싱", "승인 완료"]
 };
 const roleMenuGroups = {
@@ -19,9 +19,9 @@ const roleMenuGroups = {
   ],
   supplier: [
     { label: "홈", indexes: [0] },
-    { label: "상품 (순서대로)", indexes: [1, 9, 6] },
-    { label: "주문 · 배송", indexes: [3, 4, 5] },
-    { label: "판매 · 정산", indexes: [10, 11, 7] },
+    { label: "순서대로 하기", indexes: [1, 9, 3, 7] },
+    { label: "매출 보기", indexes: [11, 10] },
+    { label: "택배 · 문제 처리", indexes: [5, 4] },
     { label: "소통 · 설정", indexes: [2, 12, 8] }
   ],
   seller: [
@@ -401,7 +401,11 @@ const initialState = {
     sup: { carrier: "한진택배", sender: "산지팔도 물류센터", contractCode: "HJD-29014", labelFormat: "A4 2분할", autoIssue: true }
   },
   goodflowConnections: {
-    sup: { status: "connected", merchantId: "SANDI-DEMO", carrier: "한진택배", lastSync: "오늘 08:30", autoTracking: true }
+    sup: { status: "connected", accountId: "sandi_goods", merchantId: "SANDI-DEMO", carriers: ["한진택배", "CJ대한통운", "롯데택배"], carrier: "한진택배", connectedAt: "2026.09.01", lastSync: "오늘 08:30", autoTracking: true, credit: 28400, feePerLabel: 100, creditLog: [
+      { id: "GF-0922-1", type: "송장 출력", amount: -800, balance: 28400, reference: "송장 8건", at: "09.22 17:40" },
+      { id: "GF-0915-1", type: "송장 출력", amount: -800, balance: 29200, reference: "송장 8건", at: "09.15 16:10" },
+      { id: "GF-0901-1", type: "크레딧 충전", amount: 30000, balance: 30000, reference: "굿스플로 무통장 입금", at: "09.01 10:20" }
+    ] }
   },
   refunds: [
     { id: "RF-260908-01", orderId: "DO-260907-028", sellerLoginId: "seller", supplierLoginId: "sup", type: "반품", reason: "상품 일부 파손", detail: "포장 개봉 시 사과 1개가 눌려 있었습니다.", consumerRefundAmount: 29900, amount: 21800, status: "공급사 입고확인 대기", responsibility: "공급사 귀책", consumerRefunded: true, consumerRefundedAt: "오늘 13:08", returnCarrier: "한진택배", returnTracking: "507891234567", returnRequestedAt: "오늘 13:20", returnDeliveredAt: "오늘 16:35", supplierReceived: false, depositCredited: false, supplierSettlementOffset: false, requestedAt: "오늘 13:10" },
@@ -598,6 +602,18 @@ function loadState() {
       if (!merged.supplierSalesLedger) merged.supplierSalesLedger = JSON.parse(JSON.stringify(base.supplierSalesLedger || []));
     }
     merged.supplierFlowVersion = 1;
+    /* 굿스플로 연동: 아이디 연동·택배사 계약·크레딧(예치금) 필드를 채운다 */
+    if (Number(saved.goodsflowVersion || 0) < 1) {
+      Object.entries(merged.goodflowConnections || {}).forEach(([loginId, conn]) => {
+        const seed = base.goodflowConnections?.[loginId];
+        if (seed) Object.keys(seed).forEach(key => { if (conn[key] === undefined) conn[key] = JSON.parse(JSON.stringify(seed[key])); });
+        if (conn.credit === undefined) conn.credit = 0;
+        if (!conn.feePerLabel) conn.feePerLabel = 100;
+        if (!conn.carriers) conn.carriers = [conn.carrier || "한진택배"];
+        if (!conn.creditLog) conn.creditLog = [];
+      });
+    }
+    merged.goodsflowVersion = 1;
     /* 두고머니 → 예치금 이름 변경: 저장된 내역 문구도 바꾼다. */
     Object.values(merged.deposits || {}).forEach(wallet => (wallet.transactions || []).forEach(item => { ["type", "reference"].forEach(key => { if (typeof item[key] === "string") item[key] = item[key].replace(/두고머니/g, "예치금"); }); }));
     (merged.channelConnections.seller || []).forEach(channel => {
@@ -733,7 +749,21 @@ function memberByLogin(id) { return state.members.find(member => member.loginId 
 function supplierName(loginId) { const member = memberByLogin(loginId); return member?.supplierCompany || member?.company || loginId; }
 function workspaceCompany(role = activeRole) { return role === "supplier" ? (currentAccount?.supplierCompany || currentAccount?.company || "공급사") : (currentAccount?.company || currentAccount?.name || "계정"); }
 function supplierProfile() { return state.shippingProfiles[currentAccount?.loginId || "sup"] || { carrier: "한진택배", sender: "공급사 출고지", contractCode: "미설정", labelFormat: "A4 2분할", autoIssue: true }; }
-function goodflowProfile() { return state.goodflowConnections?.[currentAccount?.loginId || "sup"] || { status: "disconnected", merchantId: "", carrier: supplierProfile().carrier, lastSync: "-", autoTracking: true }; }
+function goodflowProfile(loginId = currentAccount?.loginId || "sup") { return state.goodflowConnections?.[loginId] || { status: "disconnected", accountId: "", merchantId: "", carriers: [], carrier: supplierProfile().carrier, lastSync: "-", autoTracking: true, credit: 0, feePerLabel: 100, creditLog: [] }; }
+/* 굿스플로 연동: 공급사가 굿스플로에 충전한 크레딧에서 송장 1건마다 발급 단가만큼 빠진다 */
+const GOODSFLOW_CARRIERS = ["한진택배", "CJ대한통운", "롯데택배", "우체국택배", "로젠택배"];
+function goodsflowFee(conn) { return Number(conn?.feePerLabel || 100); }
+function goodsflowConnected(loginId) { return state.goodflowConnections?.[loginId]?.status === "connected"; }
+function goodsflowCapacity(conn) { return Math.floor(Number(conn?.credit || 0) / goodsflowFee(conn)); }
+function goodsflowStamp() { const now = new Date(); const pad = n => String(n).padStart(2, "0"); return `${pad(now.getMonth() + 1)}.${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`; }
+function goodsflowDeduct(loginId, orderId) {
+  const conn = state.goodflowConnections[loginId];
+  const fee = goodsflowFee(conn);
+  conn.credit = Number(conn.credit || 0) - fee;
+  conn.creditLog = conn.creditLog || [];
+  conn.creditLog.unshift({ id: `GF-${Date.now()}-${orderId}`, type: "송장 출력", amount: -fee, balance: conn.credit, reference: orderId, at: goodsflowStamp() });
+  if (conn.creditLog.length > 80) conn.creditLog.length = 80;
+}
 function accountRoles(account = currentAccount) { return account?.roles?.length ? account.roles : [account?.role].filter(Boolean); }
 function roleLabel(role = activeRole) { return ({ seller: "위탁셀러", supplier: "공급사", master: "마스터" })[role] || role; }
 function latestSupplierApplication(loginId = currentAccount?.loginId) {
@@ -1809,6 +1839,66 @@ function masterConnectionsTemplate() {
   return `${sectionHero("거래처 연결 관리", "공급사와 위탁셀러의 연결 상태, 공유 상품과 주문 흐름을 통합 조회합니다.")}<div class="stats-grid"><div class="stat-card"><span class="label">활성 연결</span><strong>${state.connections.filter(item => item.status === "connected").length}</strong><small>상품·주문 공유 중</small></div><div class="stat-card"><span class="label">활성 초대코드</span><strong>${state.connectionInvites.filter(item => item.status === "active").length}</strong><small>공급사 발급</small></div><div class="stat-card"><span class="label">운영 메모</span><strong>${state.connectionMessages.length}</strong><small>양쪽 계정 공유</small></div></div><div class="panel"><div class="panel-head"><div><h3>전체 연결 관계</h3><p>연결된 공급사·셀러와 데이터 범위를 확인합니다.</p></div></div><div class="table-wrap"><table><thead><tr><th>연결번호</th><th>공급사</th><th>위탁셀러</th><th>공유 상품</th><th>연결 주문</th><th>상태</th><th>연결일</th></tr></thead><tbody>${state.connections.map(connection => `<tr><td class="order-id">${connection.id}</td><td><strong>${escapeHtml(memberByLogin(connection.supplierLoginId)?.company || connection.supplierLoginId)}</strong></td><td><strong>${escapeHtml(memberByLogin(connection.sellerLoginId)?.company || connection.sellerLoginId)}</strong></td><td>${state.products.filter(product => product.supplierLoginId === connection.supplierLoginId).length}개</td><td>${state.orders.filter(order => order.supplierLoginId === connection.supplierLoginId && order.sellerLoginId === connection.sellerLoginId).length}건</td><td><span class="live-dot">연결됨</span></td><td>${connection.createdAt}</td></tr>`).join("")}</tbody></table></div></div>`;
 }
 
+function goodsflowPageTemplate() {
+  const conn = goodflowProfile();
+  const connected = conn.status === "connected";
+  const profile = supplierProfile();
+  const fee = goodsflowFee(conn);
+  const capacity = goodsflowCapacity(conn);
+  const waiting = currentSupplierOrders().filter(order => order.status === "배송준비중" && !order.tracking).length;
+  const low = connected && capacity < 20;
+  const guide = `<ol class="gf-guide"><li class="${connected ? "done" : "now"}"><i>1</i><b>굿스플로 가입</b><small>굿스플로 홈페이지에서 가입하고 한진·CJ·롯데 등 택배 계약을 연결해요.</small><a href="https://www.goodsflow.com" target="_blank" rel="noopener">굿스플로 가입하러 가기 ↗</a></li><li class="${connected ? "done" : "now"}"><i>2</i><b>아이디·비밀번호 입력</b><small>아래 칸에 굿스플로 아이디와 비밀번호를 넣으면 자동으로 연동돼요.</small></li><li class="${connected && !low ? "done" : connected ? "now" : ""}"><i>3</i><b>크레딧 충전</b><small>송장 1건 출력할 때마다 굿스플로 크레딧이 ${money(fee)}씩 빠져요.</small></li><li><i>4</i><b>송장 자동 출력</b><small>주문 · 출고 관리에서 ‘송장 자동 출력’을 누르면 끝이에요.</small></li></ol>`;
+  if (!connected) {
+    return `${sectionHero("굿스플로 · 택배", "굿스플로 아이디만 연결하면 주문이 들어올 때 송장이 자동으로 출력되고, 두고에 바로 올라가요.")}
+      <section class="panel gf-connect"><div class="gf-logo">GOODSFLOW</div><h3>굿스플로 계정 연동</h3><p>굿스플로에 가입한 아이디와 비밀번호를 넣어 주세요. 연동되면 계약된 택배사와 크레딧 잔액을 자동으로 불러와요.</p>
+        <form id="goodsflowConnectForm" class="gf-form" autocomplete="off">
+          <label class="form-field"><span>굿스플로 아이디</span><input name="gfId" required maxlength="40" placeholder="예) sandi_goods" autocomplete="off"></label>
+          <label class="form-field"><span>굿스플로 비밀번호</span><input name="gfPw" type="password" required minlength="4" maxlength="64" placeholder="비밀번호" autocomplete="new-password"></label>
+          <label class="gf-agree"><input type="checkbox" name="agree" required><span>두고가 내 굿스플로 계정으로 송장을 발급하고 크레딧을 사용하는 것에 동의해요.</span></label>
+          <button type="submit" class="primary-button">굿스플로 연동하기</button>
+          <small class="gf-safe">🔒 비밀번호는 두고에 저장되지 않아요. 연동할 때 한 번만 확인하고, 이후에는 굿스플로가 발급한 연동 키로만 송장을 출력해요.</small>
+        </form></section>
+      <section class="panel gf-panel gf-panel-after"><h3 class="gf-guide-title">이렇게 진행돼요</h3>${guide}</section>`;
+  }
+  const carriers = conn.carriers?.length ? conn.carriers : [conn.carrier];
+  const log = (conn.creditLog || []).slice(0, 8);
+  return `${sectionHero("굿스플로 · 택배", "굿스플로와 연동돼 있어요. 주문 · 출고 관리에서 ‘송장 자동 출력’을 누르면 송장이 나오고 바로 배송중으로 바뀌어요.", `<button type="button" class="secondary-button" data-action="supplier-go-menu" data-index="3">주문 · 출고 관리로 →</button>`)}
+    <div class="gf-top">
+      <section class="gf-status"><span class="gf-live">● 연동중</span><b>굿스플로 ${escapeHtml(conn.accountId || conn.merchantId || "연동 계정")}</b><small>연동일 ${escapeHtml(conn.connectedAt || "-")} · 마지막 동기화 ${escapeHtml(conn.lastSync || "-")}</small><div><button type="button" class="gf-ghost" data-action="goodsflow-sync">잔액·계약 새로고침</button><button type="button" class="gf-ghost" data-action="goodsflow-disconnect">연동 해제</button></div></section>
+      <section class="gf-credit ${low ? "low" : ""}"><span>굿스플로 크레딧</span><strong>${money(conn.credit || 0)}</strong><small>송장 약 <b>${capacity.toLocaleString()}건</b> 출력 가능 · 1건당 ${money(fee)}</small>${low ? `<em>⚠ 크레딧이 얼마 남지 않았어요. 충전해 주세요.</em>` : ""}${waiting ? `<em class="gf-wait">지금 송장 기다리는 주문 ${waiting}건 → ${money(waiting * fee)} 필요</em>` : ""}<button type="button" class="primary-button" data-action="goodsflow-charge">크레딧 충전하기</button></section>
+    </div>
+    <section class="panel gf-panel">${guide}</section>
+    <div class="gf-grid">
+      <section class="panel gf-carriers"><div class="panel-head"><div><h3>연결된 택배사</h3><p>굿스플로에 계약된 택배사예요. 송장을 뽑을 기본 택배사를 골라 주세요.</p></div></div>
+        <form id="goodsflowCarrierForm" class="gf-carrier-list">${GOODSFLOW_CARRIERS.map(name => { const on = carriers.includes(name); return `<label class="${on ? "" : "off"}"><input type="radio" name="carrier" value="${name}" ${conn.carrier === name ? "checked" : ""} ${on ? "" : "disabled"}><span><b>${name}</b><small>${on ? (conn.carrier === name ? "기본 택배사" : "계약됨") : "굿스플로 계약 없음"}</small></span></label>`; }).join("")}
+          <button type="submit" class="secondary-button">기본 택배사 저장</button></form></section>
+      <section class="panel gf-log"><div class="panel-head"><div><h3>크레딧 사용 내역</h3><p>충전하면 늘고, 송장 1건 출력할 때마다 ${money(fee)}씩 줄어요.</p></div></div>
+        <div class="gf-log-list">${log.length ? log.map(row => `<div><span><b>${escapeHtml(row.type)}</b><small>${escapeHtml(row.at)} · ${escapeHtml(row.reference || "")}</small></span><strong class="${row.amount < 0 ? "minus" : "plus"}">${row.amount < 0 ? "-" : "+"}${money(Math.abs(row.amount))}</strong><em>잔액 ${money(row.balance)}</em></div>`).join("") : `<div class="empty">아직 사용 내역이 없어요.</div>`}</div></section>
+    </div>
+    <section class="panel gf-profile"><div class="panel-head"><div><h3>송장 출력 설정</h3><p>송장에 찍히는 보내는 분 이름과 용지를 정해요.</p></div></div>
+      <form id="shippingProfileForm" class="shipping-profile-form"><input type="hidden" name="carrier" value="${escapeHtml(conn.carrier || profile.carrier)}"><input type="hidden" name="contractCode" value="${escapeHtml(profile.contractCode || conn.merchantId || "")}"><div class="form-field"><label>보내는 분(출고지명)</label><input name="sender" value="${escapeHtml(profile.sender)}" required></div><div class="form-field"><label>송장 용지</label><select name="labelFormat">${["A4 2분할", "A4 4분할", "감열 100×150"].map(format => `<option ${profile.labelFormat === format ? "selected" : ""}>${format}</option>`).join("")}</select></div><label class="auto-issue-check"><input type="checkbox" name="autoIssue" ${profile.autoIssue ? "checked" : ""}><span><b>송장 자동 출력 사용</b><small>배송준비중 주문에서 한 번에 출력 → 두고·셀러 화면에 바로 반영</small></span></label><button class="primary-button" type="submit">설정 저장</button></form></section>
+    <p class="gf-note">프로토타입이라 실제 굿스플로 서버에는 연결하지 않아요. 실제 서비스에서는 굿스플로 공식 연동(API 키) 방식으로 붙이고, 크레딧 충전은 굿스플로에 직접 입금돼요.</p>`;
+}
+function goodsflowChargeModal() {
+  const conn = goodflowProfile();
+  openModal(`<div class="gf-modal-head"><span class="gf-logo">GOODSFLOW</span><h2>굿스플로 크레딧 충전</h2><p>충전한 돈은 두고가 아니라 <b>굿스플로</b>에 들어가요. 송장 1건 출력할 때마다 ${money(goodsflowFee(conn))}씩 빠져요.</p></div>
+    <form id="goodsflowChargeForm" class="gf-charge-form"><div class="gf-amounts">${[10000, 30000, 50000, 100000].map((amount, index) => `<label><input type="radio" name="amount" value="${amount}" ${index === 1 ? "checked" : ""}><span><b>${money(amount)}</b><small>송장 ${Math.floor(amount / goodsflowFee(conn)).toLocaleString()}건</small></span></label>`).join("")}</div>
+      <div class="gf-now">현재 잔액 <b>${money(conn.credit || 0)}</b></div>
+      <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button><button type="submit" class="primary-button">굿스플로에서 충전하기</button></div>
+      <small class="gf-safe">데모에서는 누르면 바로 충전돼요. 실제로는 굿스플로 충전 화면(무통장·카드)으로 이동해요.</small></form>`);
+}
+function goodsflowShortModal(count) {
+  const conn = goodflowProfile();
+  const fee = goodsflowFee(conn), capacity = goodsflowCapacity(conn);
+  openModal(`<div class="gf-modal-head"><span class="gf-logo">GOODSFLOW</span><h2>크레딧이 부족해요</h2><p>송장 ${count}건을 출력하려면 <b>${money(count * fee)}</b>이 필요한데, 굿스플로 잔액은 <b>${money(conn.credit || 0)}</b>이에요.</p></div>
+    <div class="modal-actions gf-short-actions">${capacity > 0 ? `<button type="button" class="secondary-button" data-action="goodsflow-issue-partial">가능한 ${capacity}건만 출력</button>` : ""}<button type="button" class="primary-button" data-action="goodsflow-charge">크레딧 충전하기</button></div>`);
+}
+function goodsflowGuard(count, loginId = currentAccount?.loginId) {
+  if (!goodsflowConnected(loginId)) { showToast("먼저 굿스플로 · 택배 메뉴에서 굿스플로 아이디를 연동해 주세요."); activeMenuIndex = menuIndexOf("굿스플로 · 택배", "supplier"); render(); updateAccountUI(); return false; }
+  if (goodsflowCapacity(state.goodflowConnections[loginId]) < count) { goodsflowShortModal(count); return false; }
+  return true;
+}
+
 function shippingSettingsTemplate() {
   const profile = supplierProfile();
   return `${sectionHero("배송 · 송장 설정", "공급사 계정의 택배 계약과 굿스플로 연결을 저장하면 배송준비중 주문에서 송장을 자동 발급할 수 있습니다.")}${goodflowIntegrationTemplate()}<div class="shipping-settings"><div class="panel shipping-profile-card"><div class="panel-head"><div><h3>내 택배 계약 프로필</h3><p>송장 자동발급 시 기본값으로 사용됩니다.</p></div><span class="chip blue">계정 전용</span></div><form id="shippingProfileForm" class="shipping-profile-form"><div class="form-field"><label>기본 택배사</label><select name="carrier"><option ${profile.carrier === "한진택배" ? "selected" : ""}>한진택배</option><option ${profile.carrier === "CJ대한통운" ? "selected" : ""}>CJ대한통운</option><option ${profile.carrier === "롯데택배" ? "selected" : ""}>롯데택배</option></select></div><div class="form-field"><label>출고지명</label><input name="sender" value="${escapeHtml(profile.sender)}" required></div><div class="form-field"><label>택배 계약코드</label><input name="contractCode" value="${escapeHtml(profile.contractCode)}" required></div><div class="form-field"><label>송장 용지</label><select name="labelFormat"><option ${profile.labelFormat === "A4 2분할" ? "selected" : ""}>A4 2분할</option><option ${profile.labelFormat === "A4 4분할" ? "selected" : ""}>A4 4분할</option><option ${profile.labelFormat === "감열 100×150" ? "selected" : ""}>감열 100×150</option></select></div><label class="auto-issue-check"><input type="checkbox" name="autoIssue" ${profile.autoIssue ? "checked" : ""}><span><b>송장번호 자동 생성</b><small>배송준비중 주문에서 번호 발급·라벨 출력·셀러 반영</small></span></label><button class="primary-button" type="submit">배송 설정 저장</button></form></div><div class="panel label-preview"><div class="panel-head"><div><h3>송장 미리보기</h3><p>${escapeHtml(profile.labelFormat)}</p></div></div><div class="shipping-label-mini"><span>${escapeHtml(profile.carrier)}</span><b>DO-260909-044</b><strong>5057 2048 3911</strong><small>보내는 분 · ${escapeHtml(profile.sender)}<br>받는 분 · 최마누카</small><i></i><em>|||| ||| |||| | |||||</em></div><p>실제 택배사 API는 연결하지 않고 화면에서 자동발급 흐름만 검증합니다.</p></div></div>`;
@@ -2320,7 +2410,7 @@ function renderSupplierSection(index) {
   if (index === 2) return supplierConnectionTemplate();
   if (index === 3) return supplierOrderManagementTemplate();
   if (index === 4) return refundTemplate("supplier");
-  if (index === 5) return shippingSettingsTemplate();
+  if (index === 5) return goodsflowPageTemplate();
   if (index === 6) return `${sectionHero("가격 관리", "공급가 변경 시 상품을 가져간 위탁셀러에게 빨간색 알림이 생성됩니다.")}<div class="panel"><div class="panel-head"><div><h3>상품별 공급가</h3><p>가격 버튼을 눌러 변경 알림 흐름을 확인하세요.</p></div></div>${supplierProductsTable()}</div>`;
   if (index === 7) return supplierSettlementTemplate();
   if (index === 9) return supplierPickRequestsTemplate();
@@ -2544,9 +2634,10 @@ function supplierOrderManagementTemplate() {
   const checkCount = allOrders.filter(order => order.status === "주문확인필요").length;
   const bulkStep = (no, title, count, caption, button, attrs) => `<div class="sup-bulk-step ${count ? "has" : ""}"><i>${no}</i><div><b>${title}</b><strong>${count}<em>건</em></strong><small>${caption}</small></div>${button ? `<button type="button" class="${count ? "primary-button" : "secondary-button"}" ${attrs} ${count ? "" : "disabled"}>${button}</button>` : ""}</div>`;
   return `${sectionHero("주문 · 출고 관리", "위탁셀러가 결제한 주문이 자동으로 들어와요. 한 번에 확인하고, 한 번에 송장을 발급하세요.", `<button type="button" class="secondary-button" data-action="supplier-orders-csv" data-status="${supplierOrderStatus}">⬇ 발주서 엑셀(CSV)</button>`)}
-    <section class="panel sup-bulk"><div class="sup-bulk-head"><div><span>ONE-CLICK FULFILLMENT</span><h3>주문 한 번에 처리하기</h3><p>① 확인·포장 → ② 송장 발급(셀러 화면·쇼핑몰에 자동 반영) → ③ 배송완료 → 정산</p></div>${checkCount ? `<button type="button" class="sup-alert" data-action="filter-supplier-orders" data-status="주문확인필요">⚠ 채널 확인 필요 ${checkCount}건</button>` : ""}</div>
-      <div class="sup-bulk-steps">${bulkStep(1, "신규 주문", newCount, "위탁셀러 결제 완료", "전체 확인·포장", 'data-action="supplier-bulk-confirm"')}${bulkStep(2, "포장·송장 대기", readyCount, "송장 발급 전", "송장 일괄 발급", 'data-action="auto-issue-all"')}${bulkStep(3, "배송중", shippingCount, "셀러 쇼핑몰 자동 전송", "배송완료 반영", 'data-action="supplier-bulk-deliver"')}${bulkStep(4, "배송완료", allOrders.filter(order => order.status === "배송완료").length, "월말 정산 예정", "", "")}</div>
+    <section class="panel sup-bulk"><div class="sup-bulk-head"><div><span>ONE-CLICK FULFILLMENT</span><h3>주문 한 번에 처리하기</h3><p>① 확인·포장 → ② 송장 자동 출력(굿스플로 → 두고·셀러 화면에 바로 반영) → ③ 배송완료 → 정산</p></div>${checkCount ? `<button type="button" class="sup-alert" data-action="filter-supplier-orders" data-status="주문확인필요">⚠ 채널 확인 필요 ${checkCount}건</button>` : ""}</div>
+      <div class="sup-bulk-steps">${bulkStep(1, "신규 주문", newCount, "위탁셀러 결제 완료", "전체 확인·포장", 'data-action="supplier-bulk-confirm"')}${bulkStep(2, "포장·송장 대기", readyCount, `굿스플로 · 1건 ${money(goodsflowFee(goodflowProfile()))}`, "송장 자동 출력", 'data-action="auto-issue-all"')}${bulkStep(3, "배송중", shippingCount, "셀러 쇼핑몰 자동 전송", "배송완료 반영", 'data-action="supplier-bulk-deliver"')}${bulkStep(4, "배송완료", allOrders.filter(order => order.status === "배송완료").length, "월말 정산 예정", "", "")}</div>
     </section>
+    ${(() => { const conn = goodflowProfile(); return conn.status === "connected" ? `<button type="button" class="gf-strip ${goodsflowCapacity(conn) < 20 ? "low" : ""}" data-action="goodflow-settings"><b>굿스플로 연동중</b><span>${escapeHtml(conn.carrier || "")} · 크레딧 ${money(conn.credit || 0)} (송장 약 ${goodsflowCapacity(conn).toLocaleString()}건)</span><em>충전 · 설정 →</em></button>` : `<button type="button" class="gf-strip off" data-action="goodflow-settings"><b>굿스플로 미연동</b><span>아이디만 연결하면 송장이 자동으로 출력돼요</span><em>연동하기 →</em></button>`; })()}
     <div class="supplier-order-flow panel">${statuses.map((status, index) => `<button type="button" class="${supplierOrderStatus === status ? "active" : ""}" data-action="filter-supplier-orders" data-status="${status}"><span>0${index + 1}</span><b>${status}</b><strong>${allOrders.filter(order => order.status === status).length}</strong></button>`).join("")}</div>
     <div class="panel"><div class="panel-head"><div><h3>배정 주문</h3><p>송장 출력은 배송준비중 주문에서만 가능하며, 발급 즉시 배송중으로 이동합니다.</p></div><div class="order-filter-tabs"><button class="${supplierOrderStatus === "all" ? "active" : ""}" data-action="filter-supplier-orders" data-status="all">전체 ${allOrders.length}</button>${statuses.map(status => `<button class="${supplierOrderStatus === status ? "active" : ""}" data-action="filter-supplier-orders" data-status="${status}">${status}</button>`).join("")}</div></div>${ordersTable("supplier", "", filtered)}</div>`;
 }
@@ -2717,7 +2808,9 @@ function renderSupplier() {
   const monthSummary = supplierMonthSummary(supplierMonthRows("2026-09"));
   const todo = [
     { count: newOrders.length, tone: "red", title: "새로 들어온 주문", hint: "위탁셀러가 결제한 주문이에요. 한 번에 확인·포장하세요", button: "한 번에 확인", attrs: 'data-action="supplier-bulk-confirm"' },
-    { count: readyOrders.length, tone: "orange", title: "송장 발급을 기다리는 주문", hint: "발급하면 셀러 화면과 쇼핑몰에 자동으로 들어가요", button: "송장 일괄 발급", attrs: 'data-action="auto-issue-all"' },
+    { count: readyOrders.length, tone: "orange", title: "송장 출력을 기다리는 주문", hint: "굿스플로로 한 번에 출력하면 셀러 화면에 바로 들어가요", button: "송장 자동 출력", attrs: 'data-action="auto-issue-all"' },
+    { count: goodsflowConnected(currentAccount.loginId) ? 0 : 1, tone: "red", title: "굿스플로 연동이 필요해요", hint: "아이디·비밀번호만 넣으면 송장이 자동으로 출력돼요", button: "연동하기", attrs: 'data-action="goodflow-settings"' },
+    { count: goodsflowConnected(currentAccount.loginId) && goodsflowCapacity(goodflowProfile()) < 20 ? goodsflowCapacity(goodflowProfile()) || 1 : 0, tone: "orange", title: "굿스플로 크레딧이 부족해요", hint: `잔액 ${money(goodflowProfile().credit || 0)} · 송장 약 ${goodsflowCapacity(goodflowProfile())}건 출력 가능`, button: "충전하기", attrs: 'data-action="goodsflow-charge"' },
     { count: pickCount, tone: "purple", title: "PICK 승인 요청", hint: "위탁셀러가 내 상품을 팔고 싶어해요", button: "확인하기", attrs: 'data-action="supplier-go-menu" data-index="9"' },
     { count: checkOrders.length, tone: "red", title: "쇼핑몰 확인이 필요한 주문", hint: "취소 여부를 확인해 주세요", button: "확인하기", attrs: 'data-action="open-supplier-orders" data-status="주문확인필요"' },
     { count: refundWait.length, tone: "orange", title: "처리 중인 취소·반품", hint: "반품 입고를 확인해 주세요", button: "보기", attrs: 'data-action="supplier-go-menu" data-index="4"' },
@@ -3882,11 +3975,14 @@ function autoIssueTracking(orderId, showResult = true) {
   if (!order || order.tracking) return;
   if (order.status !== "배송준비중") return showToast("주문 확인 후 배송준비중 상태에서 송장을 출력해 주세요.");
   const goodflow = state.goodflowConnections?.[order.supplierLoginId];
-  if (!goodflow || goodflow.status !== "connected") return showToast("내 정보에서 굿스플로 택배 연동을 먼저 설정해 주세요.");
+  if (showResult && !goodsflowGuard(1, order.supplierLoginId)) return;
+  if (!goodflow || goodflow.status !== "connected" || goodsflowCapacity(goodflow) < 1) return;
   const profile = state.shippingProfiles[order.supplierLoginId] || supplierProfile();
   const suffix = `${Date.now()}${order.id.replace(/\D/g, "")}`.slice(-10);
-  order.carrier = profile.carrier;
+  order.carrier = goodflow.carrier || profile.carrier;
   order.tracking = `50${suffix}`;
+  order.labelSource = "goodsflow";
+  goodsflowDeduct(order.supplierLoginId, order.id);
   order.status = "배송중";
   order.provisionalTracking = true;
   order.shippedAt = "방금 전";
@@ -3898,10 +3994,15 @@ function autoIssueTracking(orderId, showResult = true) {
   if (showResult) shipmentLabelModal(order.id);
 }
 
-function autoIssueAllTracking() {
-  const waiting = currentSupplierOrders().filter(order => order.status === "배송준비중" && !order.tracking);
-  if (!waiting.length) return showToast("자동발급할 배송준비중 주문이 없습니다.");
+function autoIssueAllTracking(limit = Infinity) {
+  let waiting = currentSupplierOrders().filter(order => order.status === "배송준비중" && !order.tracking);
+  if (!waiting.length) return showToast("송장을 출력할 배송준비중 주문이 없어요.");
+  if (limit === Infinity && !goodsflowGuard(waiting.length)) return;
+  waiting = waiting.slice(0, limit);
+  if (!waiting.length) return;
   waiting.forEach(order => autoIssueTracking(order.id, false));
+  audit("굿스플로 송장 자동 출력", `${waiting.length}건 · 크레딧 ${money(waiting.length * goodsflowFee(goodflowProfile()))} 차감 · 두고·셀러 화면에 송장 반영 후 배송중으로 변경`, "done", "tracking");
+  saveState();
   shipmentLabelModal(waiting[0].id, waiting.length);
 }
 
@@ -4408,14 +4509,24 @@ document.addEventListener("click", event => {
     return;
   }
   if (action === "open-notification-item") { openNotificationItem(id); return; }
-  if (action === "goodflow-settings") { goodflowSettingsModal(); return; }
+  if (action === "goodflow-settings") { closeModal(); activeMenuIndex = menuIndexOf("굿스플로 · 택배", "supplier"); render(); updateAccountUI(); window.scrollTo(0, 0); return; }
+  if (action === "goodsflow-charge") { goodsflowChargeModal(); return; }
+  if (action === "goodsflow-issue-partial") { closeModal(); autoIssueAllTracking(goodsflowCapacity(goodflowProfile())); render(); updateAccountUI(); return; }
+  if (action === "goodsflow-sync") { const conn = state.goodflowConnections[currentAccount.loginId]; if (conn) { conn.lastSync = `오늘 ${goodsflowStamp().slice(6)}`; saveState(); render(); updateAccountUI(); showToast("굿스플로에서 잔액과 택배 계약을 다시 불러왔어요."); } return; }
+  if (action === "goodsflow-disconnect") {
+    if (!window.confirm("굿스플로 연동을 해제할까요? 해제하면 송장 자동 출력을 쓸 수 없어요.")) return;
+    const conn = state.goodflowConnections[currentAccount.loginId];
+    if (conn) { conn.status = "disconnected"; conn.lastSync = "-"; }
+    audit("굿스플로 연동 해제", `${workspaceCompany("supplier")} 공급사가 굿스플로 연동을 해제했습니다.`, "done", "tracking");
+    saveState(); render(); updateAccountUI(); showToast("굿스플로 연동을 해제했어요."); return;
+  }
   if (action === "filter-supplier-orders") { supplierOrderStatus = target.dataset.status || "all"; render(); updateAccountUI(); return; }
   if (action === "settlement-tab") { supplierSettlementTab = target.dataset.tab || "scheduled"; render(); updateAccountUI(); return; }
   if (action === "supplier-go-menu") { closeModal(); activeMenuIndex = Number(target.dataset.index || 0); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (action === "supplier-bulk-confirm") {
     const count = supplierBulkConfirm();
     saveState(); render(); updateAccountUI();
-    showToast(count ? `신규 주문 ${count}건을 한 번에 확인했어요. 포장 후 ‘송장 일괄 발급’을 눌러 주세요.` : "확인할 신규 주문이 없어요.");
+    showToast(count ? `신규 주문 ${count}건을 한 번에 확인했어요. 포장 후 ‘송장 자동 출력’을 눌러 주세요.` : "확인할 신규 주문이 없어요.");
     return;
   }
   if (action === "supplier-bulk-deliver") {
@@ -5821,8 +5932,45 @@ document.addEventListener("submit", event => {
     audit("판매채널 판매중지", `${item.id} · ${channel?.name || channelId} 채널을 '${reason}' 상태로 변경했습니다.`, "done", "channel");
     saveState(); closeModal(); render(); updateAccountUI(); showToast(`${channel?.name || "채널"}을(를) '${reason}' 상태로 변경했습니다.`);
   }
+  if (form.id === "goodsflowConnectForm") {
+    const gfId = String(data.gfId || "").trim();
+    if (!gfId || String(data.gfPw || "").length < 4) return showToast("굿스플로 아이디와 비밀번호를 확인해 주세요.");
+    const button = form.querySelector("button[type=submit]");
+    button.disabled = true; button.textContent = "굿스플로에 연결하는 중…";
+    form.querySelector("[name=gfPw]").value = "";
+    const loginId = currentAccount.loginId;
+    setTimeout(() => {
+      const prev = state.goodflowConnections[loginId] || {};
+      const carriers = ["한진택배", "CJ대한통운", "롯데택배"];
+      state.goodflowConnections[loginId] = { ...prev, status: "connected", accountId: gfId, merchantId: prev.merchantId || `GF-${gfId.toUpperCase().slice(0, 8)}`, carriers, carrier: carriers.includes(prev.carrier) ? prev.carrier : carriers[0], connectedAt: `2026.${goodsflowStamp().slice(0, 5)}`, lastSync: "방금 전", autoTracking: true, credit: prev.credit ?? 10000, feePerLabel: prev.feePerLabel || 100, creditLog: prev.creditLog?.length ? prev.creditLog : [{ id: `GF-${Date.now()}`, type: "연동 시 잔액 확인", amount: 10000, balance: 10000, reference: "굿스플로 기존 잔액", at: goodsflowStamp() }] };
+      const profile = state.shippingProfiles[loginId] || supplierProfile();
+      state.shippingProfiles[loginId] = { ...profile, carrier: state.goodflowConnections[loginId].carrier };
+      audit("굿스플로 계정 연동", `${workspaceCompany("supplier")} · 굿스플로 ${gfId} 연동 · 택배 계약 ${carriers.join("·")} 불러옴 (비밀번호는 저장하지 않음)`, "done", "tracking");
+      saveState(); render(); updateAccountUI(); showToast("굿스플로와 연동됐어요! 한진·CJ·롯데 택배 계약과 크레딧 잔액을 불러왔어요.");
+    }, 900);
+    return;
+  }
+  if (form.id === "goodsflowChargeForm") {
+    const amount = Number(data.amount || 0);
+    const conn = state.goodflowConnections[currentAccount.loginId];
+    if (!conn || !amount) return;
+    conn.credit = Number(conn.credit || 0) + amount;
+    conn.creditLog = conn.creditLog || [];
+    conn.creditLog.unshift({ id: `GF-${Date.now()}`, type: "크레딧 충전", amount, balance: conn.credit, reference: "굿스플로 충전", at: goodsflowStamp() });
+    audit("굿스플로 크레딧 충전", `${workspaceCompany("supplier")} · ${money(amount)} 충전 · 잔액 ${money(conn.credit)}`, "done", "tracking");
+    saveState(); closeModal(); render(); updateAccountUI(); showToast(`굿스플로 크레딧 ${money(amount)}을 충전했어요. 송장 약 ${goodsflowCapacity(conn).toLocaleString()}건을 출력할 수 있어요.`);
+    return;
+  }
+  if (form.id === "goodsflowCarrierForm") {
+    const conn = state.goodflowConnections[currentAccount.loginId];
+    if (!conn || !data.carrier) return;
+    conn.carrier = data.carrier;
+    state.shippingProfiles[currentAccount.loginId] = { ...supplierProfile(), carrier: data.carrier };
+    saveState(); render(); updateAccountUI(); showToast(`기본 택배사를 ${data.carrier}(으)로 바꿨어요.`);
+    return;
+  }
   if (form.id === "shippingProfileForm") {
-    state.shippingProfiles[currentAccount.loginId] = { carrier: data.carrier, sender: data.sender, contractCode: data.contractCode, labelFormat: data.labelFormat, autoIssue: Boolean(data.autoIssue) };
+    state.shippingProfiles[currentAccount.loginId] = { carrier: data.carrier || supplierProfile().carrier, sender: data.sender, contractCode: data.contractCode || supplierProfile().contractCode, labelFormat: data.labelFormat, autoIssue: Boolean(data.autoIssue) };
     audit("공급사 송장 설정 저장", `${workspaceCompany("supplier")} · ${data.carrier} · ${data.labelFormat} 계정 전용 설정을 저장했습니다.`, "done", "tracking");
     saveState(); render(); updateAccountUI(); showToast("내 계정의 배송·송장 설정을 저장했습니다.");
   }
