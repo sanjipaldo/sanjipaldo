@@ -273,6 +273,17 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 .admin-table th { color: var(--w-body); background: var(--w-soft-2); font-weight: 600; }
 .catalog-pagination.admin-product-pagination { background: var(--w-soft-2); }
 .admin-inline-options { display: none; }
+/* 소싱 요청 관리: 상태 탭·게시판 */
+.request-status-tabs { gap: 4px; padding: 4px; border-radius: 999px; background: var(--w-soft-2); }
+.request-status-tabs button { min-height: 40px; padding: 0 16px; border-radius: 999px; color: var(--w-body); font-size: 14px; font-weight: 600; box-shadow: none !important; }
+.request-status-tabs button.active { color: var(--w-canvas); background: var(--w-ink); }
+.request-status-tabs small { font-size: 12px; font-variant-numeric: tabular-nums; }
+.request-board-table th { color: var(--w-body); background: var(--w-soft-2); font-size: 13px; font-weight: 600; }
+.request-board-table td { color: var(--w-ink); font-size: 14px; }
+.request-board-table .request-product strong { color: var(--w-ink); font-size: 16px; }
+.request-board-table .request-number { font-size: 12px; }
+.request-status { padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+
 /* 관리자 공통: 카드 사이 간격, 윤곽 버튼 */
 .admin-card + .admin-card { margin-top: 16px; }
 .admin-page-heading .outline-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 0 18px; border: 1px solid var(--w-ink); border-radius: 999px; color: var(--w-ink); background: var(--w-canvas); font-size: 14px; font-weight: 600; white-space: nowrap; }
@@ -308,6 +319,19 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
   .status-pill { font-size: 14px !important; }
   .product-select-cell label, .product-select-cell span { font-size: 15px !important; }
   .admin-option-detail-row { display: none !important; }
+  /* 소싱 요청 관리(모바일): 탭 4개 한 줄, 카드 글씨 확대 */
+  .request-status-tabs { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 4px !important; border-radius: 999px; }
+  .request-status-tabs button { grid-column: auto !important; min-height: 44px; padding: 0 4px; font-size: 14px; white-space: nowrap; }
+  .request-status-tabs small { margin-left: 3px; }
+  .request-board-table tbody tr { border-color: var(--w-line) !important; border-radius: var(--w-radius-lg) !important; box-shadow: none !important; }
+  .request-board-table tbody td { padding: 12px 14px !important; font-size: 16px !important; }
+  .request-board-table tbody td::before { font-size: 13px !important; font-weight: 700 !important; color: var(--w-body) !important; }
+  .request-board-table tbody td:nth-child(3) { background: var(--w-soft-2) !important; }
+  .request-board-table .request-product strong { font-size: 18px !important; }
+  .request-board-table .request-product small { max-width: none; font-size: 14px; white-space: normal; }
+  .request-board-table .request-number { font-size: 14px !important; }
+  .request-status { font-size: 14px !important; }
+  .request-board-table tbody td:last-child button, .request-board-table tbody td:last-child a { min-height: 48px; font-size: 16px !important; font-weight: 600; border-radius: 999px !important; }
   .sourcing-modal-head { padding: 22px 68px 4px 20px; }
   .sourcing-modal-head h2 { font-size: 23px; }
   .sourcing-form { padding: 16px 20px 0 !important; }
