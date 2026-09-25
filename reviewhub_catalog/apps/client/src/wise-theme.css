@@ -237,6 +237,13 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 .admin-table th { color: var(--w-body); background: var(--w-soft-2); font-weight: 600; }
 .catalog-pagination.admin-product-pagination { background: var(--w-soft-2); }
 .admin-inline-options { display: none; }
+
+/* 노출순서: 손잡이로 끌어서 이동 */
+.display-order-handle { display: inline-grid !important; place-items: center; width: 44px; min-width: 44px; height: 44px; padding: 0 !important; border: 1px dashed var(--w-line) !important; border-radius: var(--w-radius-md) !important; color: var(--w-body) !important; background: var(--w-soft-2) !important; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.display-order-handle:active { cursor: grabbing; color: var(--w-ink) !important; border-color: var(--w-ink) !important; }
+.display-order-list article.dragging { opacity: .55; border-style: dashed !important; }
+.display-order-list article.drag-over { border-color: var(--w-ink) !important; background: var(--w-primary-pale) !important; box-shadow: inset 0 3px 0 var(--w-primary) !important; }
+.display-order-drag-hint { color: var(--w-positive-deep) !important; }
 .admin-option-sold-out { color: var(--w-negative); }
 
 /* ---------- 모바일(카드형 단가표) ---------- */
@@ -258,6 +265,13 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
   .status-pill { font-size: 14px !important; }
   .product-select-cell label, .product-select-cell span { font-size: 15px !important; }
   .admin-option-detail-row { display: none !important; }
+  /* 모바일 상품 카드: 선택 체크를 카드 오른쪽 위 알약 버튼으로 */
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) { position: relative; }
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > .product-select-cell { position: absolute; top: 12px; right: 12px; z-index: 2; display: block; min-height: 0; padding: 0 !important; border: 0 !important; background: transparent !important; }
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > .product-select-cell .product-select-control { gap: 7px; min-height: 38px; padding: 0 14px 0 11px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-ink); background: var(--w-canvas); font-size: 14px !important; font-weight: 600; }
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > .product-select-cell .product-select-control:has(input:checked) { border-color: var(--w-ink); background: var(--w-primary-pale); }
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > .product-select-cell input { width: 20px; height: 20px; margin: 0; accent-color: var(--w-ink); }
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > .admin-product-primary { padding-top: 60px !important; }
   .admin-inline-options { display: block; margin-top: 12px; }
   .admin-inline-options .admin-option-panel { padding: 12px; border-radius: var(--w-radius-lg); background: var(--w-soft-2); }
   .admin-option-list strong, .admin-option-list b, .admin-option-list em { font-size: 16px !important; }

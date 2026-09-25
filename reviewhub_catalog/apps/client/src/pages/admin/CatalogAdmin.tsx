@@ -1,4 +1,4 @@
-import { FormEvent, Fragment, type Dispatch, type DragEvent, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, Fragment, type Dispatch, type PointerEvent as ReactPointerEvent, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
   ArrowDown,
@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronsLeft,
+  GripVertical,
   ChevronsRight,
   ChevronRight,
   CircleHelp,
@@ -621,6 +622,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const [sortPage, setSortPage] = useState(1);
   const [sortSaving, setSortSaving] = useState(false);
   const [draggedSortProductId, setDraggedSortProductId] = useState<string | null>(null);
+  const sortDragRef = useRef<string | null>(null);
   const [dragOverSortProductId, setDragOverSortProductId] = useState<string | null>(null);
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkPreview, setBulkPreview] = useState<BulkWorkbookPreview | null>(null);
@@ -786,23 +788,45 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       if (sourceIndex < 0 || targetIndex < 0) return current;
       const next = [...current];
       const [dragged] = next.splice(sourceIndex, 1);
-      const adjustedTargetIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
-      next.splice(adjustedTargetIndex, 0, dragged);
+      // 끌어다 놓은 상품이 대상 상품의 자리를 차지합니다(아래로 옮기면 대상 뒤, 위로 옮기면 대상 앞).
+      next.splice(targetIndex, 0, dragged);
       return next;
     });
   };
 
-  const handleSortDragStart = (event: DragEvent<HTMLElement>, productId: string) => {
+  // 손잡이(⋮⋮)를 눌러 끄는 방식: 마우스·터치 모두 동작하도록 포인터 이벤트를 사용합니다(모바일은 HTML 드래그앤드롭 미지원).
+  const findSortTargetId = (x: number, y: number) =>
+    (document.elementFromPoint(x, y)?.closest("[data-sort-id]") as HTMLElement | null)?.dataset.sortId ?? null;
+
+  const handleSortPointerDown = (event: ReactPointerEvent<HTMLElement>, productId: string) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    sortDragRef.current = productId;
     setDraggedSortProductId(productId);
     setDragOverSortProductId(null);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", productId);
   };
 
-  const handleSortDrop = (event: DragEvent<HTMLElement>, targetId: string) => {
-    event.preventDefault();
-    const draggedId = draggedSortProductId || event.dataTransfer.getData("text/plain");
-    if (draggedId) moveSortProductBefore(draggedId, targetId);
+  const handleSortPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    const draggedId = sortDragRef.current;
+    if (!draggedId) return;
+    const targetId = findSortTargetId(event.clientX, event.clientY);
+    setDragOverSortProductId(targetId && targetId !== draggedId ? targetId : null);
+    const list = event.currentTarget.closest(".display-order-list");
+    if (list) {
+      const rect = list.getBoundingClientRect();
+      if (event.clientY < rect.top + 48) list.scrollTop -= 14;
+      else if (event.clientY > rect.bottom - 48) list.scrollTop += 14;
+    }
+  };
+
+  const handleSortPointerEnd = (event: ReactPointerEvent<HTMLElement>, cancelled = false) => {
+    const draggedId = sortDragRef.current;
+    sortDragRef.current = null;
+    if (draggedId && !cancelled) {
+      const targetId = findSortTargetId(event.clientX, event.clientY);
+      if (targetId) moveSortProductBefore(draggedId, targetId);
+    }
     setDraggedSortProductId(null);
     setDragOverSortProductId(null);
   };
@@ -1138,24 +1162,22 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
                 return (
                   <article
                     key={product.id}
+                    data-sort-id={product.id}
                     className={`${draggedSortProductId === product.id ? "dragging" : ""}${dragOverSortProductId === product.id ? " drag-over" : ""}`.trim()}
-                    draggable
-                    onDragStart={(event) => handleSortDragStart(event, product.id)}
-                    onDragOver={(event) => {
-                      event.preventDefault();
-                      event.dataTransfer.dropEffect = "move";
-                      setDragOverSortProductId(product.id);
-                    }}
-                    onDrop={(event) => handleSortDrop(event, product.id)}
-                    onDragEnd={() => {
-                      setDraggedSortProductId(null);
-                      setDragOverSortProductId(null);
-                    }}
                   >
                     <strong className="display-order-rank">{globalIndex + 1}</strong>
                     {product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={19} /></span>}
-                    <div className="display-order-product"><strong>{product.name}</strong><small>{product.productCode || product.id} · {category?.name || "카테고리 미지정"}</small><small className="display-order-drag-hint">드래그하여 순서 변경</small></div>
+                    <div className="display-order-product"><strong>{product.name}</strong><small>{product.productCode || product.id} · {category?.name || "카테고리 미지정"}</small><small className="display-order-drag-hint">⋮⋮ 손잡이를 끌어 순서 변경</small></div>
                     <div className="display-order-controls">
+                      <button
+                        type="button"
+                        className="display-order-handle"
+                        aria-label={`${product.name} 끌어서 순서 변경`}
+                        onPointerDown={(event) => handleSortPointerDown(event, product.id)}
+                        onPointerMove={handleSortPointerMove}
+                        onPointerUp={(event) => handleSortPointerEnd(event)}
+                        onPointerCancel={(event) => handleSortPointerEnd(event, true)}
+                      ><GripVertical size={18} /></button>
                       <button type="button" onClick={() => moveSortProduct(product.id, "top")} disabled={globalIndex === 0}>맨 위</button>
                       <button type="button" onClick={() => moveSortProduct(product.id, "up")} disabled={visibleIndex === 0} aria-label={`${product.name} 위로 이동`}><ArrowUp size={16} /></button>
                       <button type="button" onClick={() => moveSortProduct(product.id, "down")} disabled={visibleIndex === sortFilteredProducts.length - 1} aria-label={`${product.name} 아래로 이동`}><ArrowDown size={16} /></button>
