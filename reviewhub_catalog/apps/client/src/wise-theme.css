@@ -284,6 +284,60 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 .request-board-table .request-number { font-size: 12px; }
 .request-status { padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; }
 
+/* 관리자 공통 톤 통일(가격변동 이력·통계·상품 변경완료 등) */
+.admin-page-heading > div > span { color: var(--w-positive-deep) !important; }
+.admin-page-heading h1 { color: var(--w-ink) !important; font-weight: 800 !important; }
+.admin-page-heading p { color: var(--w-body) !important; }
+.card-heading h2 { color: var(--w-ink); }
+.card-heading p { color: var(--w-body) !important; }
+.card-heading > svg { color: var(--w-positive-deep); }
+.admin-shell .search-field { min-height: 48px; height: 48px; border: 1px solid var(--w-line); border-radius: var(--w-radius-md); background: var(--w-canvas); }
+.admin-shell .search-field:focus-within { border-color: var(--w-ink); }
+.admin-shell .search-field input { font-size: 15px; }
+.admin-shell select, .history-filter-toolbar select, .admin-month-filter { height: 48px; padding: 0 14px; border: 1px solid var(--w-line) !important; border-radius: var(--w-radius-md) !important; color: var(--w-ink) !important; background-color: var(--w-canvas); font-size: 15px; }
+.admin-shell select:focus { border-color: var(--w-ink) !important; outline: 0; }
+.history-filter-toolbar > span, .history-filter-toolbar label { color: var(--w-body) !important; font-size: 14px !important; font-weight: 600 !important; }
+/* 강조 카드: 초록 그라데이션 대신 연초록 면 + 잉크 글씨 */
+.admin-stat-card.featured, .admin-home-stat.featured, .sales-kpi-grid article:first-child { border-color: transparent !important; color: var(--w-ink) !important; background: var(--w-primary-pale) !important; box-shadow: none !important; }
+.admin-stat-card.featured span, .admin-stat-card.featured small, .admin-stat-card.featured svg, .admin-home-stat.featured span, .admin-home-stat.featured small, .sales-kpi-grid article:first-child span { color: var(--w-positive-deep) !important; }
+.admin-stat-card.featured strong, .admin-home-stat.featured strong, .sales-kpi-grid article:first-child strong { color: var(--w-ink) !important; }
+.admin-stat-card, .admin-home-stat { border-color: transparent !important; box-shadow: none !important; }
+.admin-stat-card.selected { box-shadow: inset 0 0 0 2px var(--w-ink) !important; }
+/* 통계 */
+.source-status { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 0 !important; border-radius: 999px !important; color: var(--w-warning-content) !important; background: var(--w-warning-pale) !important; font-size: 13px !important; font-weight: 700 !important; }
+.source-status.connected { color: var(--w-positive-deep) !important; background: var(--w-primary-pale) !important; }
+.sales-kpi-grid article { border: 0 !important; border-radius: var(--w-radius-xl) !important; background: var(--w-canvas); box-shadow: none !important; padding: 20px 22px; }
+.sales-kpi-grid span { color: var(--w-body) !important; font-size: 14px; font-weight: 600; }
+.sales-kpi-grid strong { color: var(--w-ink); font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.sales-calendar-heading h2 { color: var(--w-ink); font-size: 20px; font-weight: 800; }
+.sales-calendar-heading button { width: 44px; height: 44px; border: 1px solid var(--w-line); border-radius: 999px; }
+.sales-calendar-heading button:hover { border-color: var(--w-ink); }
+.sales-weekdays span { color: var(--w-body); font-weight: 700; }
+.sales-calendar { border-radius: var(--w-radius-lg); overflow: hidden; }
+.sales-calendar article { border-color: #edf0eb !important; background: var(--w-canvas); }
+.sales-calendar article.blank { background: var(--w-soft-2) !important; }
+.sales-calendar article b { color: var(--w-ink); font-size: 15px; }
+.sales-calendar article strong { color: var(--w-positive-deep); font-size: 13px; }
+.sales-calendar article small { color: var(--w-mute); font-size: 11px; }
+.supplier-sales h2 { color: var(--w-ink); }
+.sales-empty strong { color: var(--w-ink); font-size: 16px; }
+.sales-empty p { color: var(--w-body); font-size: 14px; }
+/* 가격변동 이력 */
+.history-group-card { border: 1px solid var(--w-line) !important; border-radius: var(--w-radius-lg) !important; box-shadow: none !important; }
+.history-group-card.open { border-color: var(--w-ink) !important; }
+.history-group-heading { background: var(--w-canvas) !important; }
+.history-group-heading:hover { background: var(--w-soft-2) !important; }
+.history-group-heading strong { color: var(--w-ink); font-size: 17px; }
+.history-group-heading small { color: var(--w-body); font-size: 14px; }
+.history-group-image, .history-product-image { border-radius: var(--w-radius-md) !important; }
+/* 상품 변경완료·발주오라 */
+.sync-safe-badge { padding: 8px 14px; border: 0 !important; color: var(--w-positive-deep) !important; background: var(--w-primary-pale) !important; font-size: 13px !important; font-weight: 700 !important; }
+.sync-explainer-card h2 { font-size: 20px; }
+.transmission-success-count { color: var(--w-positive-deep) !important; }
+.status-pill { border-radius: 999px !important; font-weight: 700; }
+.status-pill.active { color: var(--w-positive-deep); background: var(--w-primary-pale); }
+.sync-status { color: var(--w-body) !important; font-size: 13px !important; }
+
 /* 관리자 공통: 카드 사이 간격, 윤곽 버튼 */
 .admin-card + .admin-card { margin-top: 16px; }
 .admin-page-heading .outline-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 0 18px; border: 1px solid var(--w-ink); border-radius: 999px; color: var(--w-ink); background: var(--w-canvas); font-size: 14px; font-weight: 600; white-space: nowrap; }
@@ -319,6 +373,18 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
   .status-pill { font-size: 14px !important; }
   .product-select-cell label, .product-select-cell span { font-size: 15px !important; }
   .admin-option-detail-row { display: none !important; }
+  .admin-shell select, .admin-shell .search-field input { font-size: 16px !important; }
+  .history-filter-toolbar { gap: 10px !important; }
+  .history-filter-toolbar label { display: flex; align-items: center; gap: 10px; }
+  .history-filter-toolbar label select { flex: 1; }
+  .sales-kpi-grid { gap: 10px !important; }
+  .sync-explainer-card .card-heading { flex-wrap: wrap; }
+  .sync-explainer-card .sync-safe-badge { order: 3; margin-left: 0; }
+  .sales-kpi-grid article { padding: 16px 18px; }
+  .sales-kpi-grid strong { font-size: 24px; }
+  .sales-calendar article { min-height: 78px !important; padding: 7px !important; }
+  .sales-calendar article b { font-size: 14px; }
+  .sales-calendar article small { font-size: 10px; line-height: 1.35; }
   /* 소싱 요청 관리(모바일): 탭 4개 한 줄, 카드 글씨 확대 */
   .request-status-tabs { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 4px !important; border-radius: 999px; }
   .request-status-tabs button { grid-column: auto !important; min-height: 44px; padding: 0 4px; font-size: 14px; white-space: nowrap; }
