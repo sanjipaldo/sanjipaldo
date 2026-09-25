@@ -756,6 +756,15 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     setSortOpen(true);
   };
 
+  // 진열순서 전용 화면: 처음 열 때와 저장 후 최신 상품 순서로 다시 불러옵니다.
+  const [sortNeedsInit, setSortNeedsInit] = useState(sortOnly);
+  useEffect(() => {
+    if (!sortOnly || !sortNeedsInit || data.products.length === 0) return;
+    openSortManager();
+    setSortNeedsInit(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortOnly, sortNeedsInit, data.products]);
+
   const moveSortProduct = (productId: string, direction: "up" | "down" | "top") => {
     setSortItems((current) => {
       const sourceIndex = current.findIndex((product) => product.id === productId);
@@ -813,10 +822,14 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     const targetId = findSortTargetId(event.clientX, event.clientY);
     setDragOverSortProductId(targetId && targetId !== draggedId ? targetId : null);
     const list = event.currentTarget.closest(".display-order-list");
-    if (list) {
+    if (list && list.scrollHeight > list.clientHeight) {
       const rect = list.getBoundingClientRect();
       if (event.clientY < rect.top + 48) list.scrollTop -= 14;
       else if (event.clientY > rect.bottom - 48) list.scrollTop += 14;
+    } else if (event.clientY < 120) {
+      window.scrollBy(0, -14);
+    } else if (event.clientY > window.innerHeight - 90) {
+      window.scrollBy(0, 14);
     }
   };
 
@@ -851,6 +864,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       toast.success(`${items.length}개 상품의 노출순서를 저장했습니다.`);
       setSortOpen(false);
       await refresh();
+      if (sortOnly) setSortNeedsInit(true);
     } finally {
       setSortSaving(false);
     }
@@ -1044,6 +1058,70 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     }
   };
 
+  // 노출순서 편집 본문: 상품 리스트의 팝업과 "상품 진열순서 설정" 전용 화면에서 함께 사용합니다.
+  const sortEditorBody = (
+    <>
+  <div className="display-order-toolbar">
+    <div className="search-field"><Search size={17} /><input value={sortQuery} onChange={(event) => setSortQuery(event.target.value)} placeholder="상품명·상품코드 검색" /></div>
+    <select value={sortCategory} onChange={(event) => setSortCategory(event.target.value)} aria-label="노출순서 카테고리 필터"><option value="all">전체 카테고리</option>{data.categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select>
+    <select value={sortPageSize} onChange={(event) => setSortPageSize(Number(event.target.value))} aria-label="노출순서 페이지당 상품 수"><option value={10}>10개씩 보기</option><option value={20}>20개씩 보기</option><option value={30}>30개씩 보기</option></select>
+  </div>
+  <div className="display-order-list">
+    {sortPagedProducts.map((product) => {
+      const globalIndex = sortItems.findIndex((item) => item.id === product.id);
+      const visibleIndex = sortFilteredProducts.findIndex((item) => item.id === product.id);
+      const category = data.categories.find((item) => item.id === product.categoryId);
+      return (
+        <article
+          key={product.id}
+          data-sort-id={product.id}
+          className={`${draggedSortProductId === product.id ? "dragging" : ""}${dragOverSortProductId === product.id ? " drag-over" : ""}`.trim()}
+        >
+          <strong className="display-order-rank">{globalIndex + 1}</strong>
+          {product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={19} /></span>}
+          <div className="display-order-product"><strong>{product.name}</strong><small>{product.productCode || product.id} · {category?.name || "카테고리 미지정"}</small><small className="display-order-drag-hint">⋮⋮ 손잡이를 끌어 순서 변경</small></div>
+          <div className="display-order-controls">
+            <button
+              type="button"
+              className="display-order-handle"
+              aria-label={`${product.name} 끌어서 순서 변경`}
+              onPointerDown={(event) => handleSortPointerDown(event, product.id)}
+              onPointerMove={handleSortPointerMove}
+              onPointerUp={(event) => handleSortPointerEnd(event)}
+              onPointerCancel={(event) => handleSortPointerEnd(event, true)}
+            ><GripVertical size={18} /></button>
+            <button type="button" onClick={() => moveSortProduct(product.id, "top")} disabled={globalIndex === 0}>맨 위</button>
+            <button type="button" onClick={() => moveSortProduct(product.id, "up")} disabled={visibleIndex === 0} aria-label={`${product.name} 위로 이동`}><ArrowUp size={16} /></button>
+            <button type="button" onClick={() => moveSortProduct(product.id, "down")} disabled={visibleIndex === sortFilteredProducts.length - 1} aria-label={`${product.name} 아래로 이동`}><ArrowDown size={16} /></button>
+          </div>
+        </article>
+      );
+    })}
+    {sortPagedProducts.length === 0 && <div className="empty-state"><Search size={25} /><strong>조건에 맞는 상품이 없습니다.</strong></div>}
+  </div>
+  <div className="catalog-pagination admin-product-pagination display-order-pagination">
+    <span>{sortFilteredProducts.length === 0 ? "0개" : `${(sortCurrentPage - 1) * sortPageSize + 1}–${Math.min(sortCurrentPage * sortPageSize, sortFilteredProducts.length)}개`} <small>/ 총 {sortFilteredProducts.length}개</small></span>
+    <nav aria-label="노출순서 상품 페이지">
+      <button type="button" onClick={() => setSortPage((value) => Math.max(1, value - 1))} disabled={sortCurrentPage === 1} aria-label="이전 페이지"><ChevronLeft size={15} /></button>
+      {sortPageNumbers.map((value, index) => <Fragment key={value}>{index > 0 && sortPageNumbers[index - 1] !== value - 1 ? <span>…</span> : null}<button type="button" className={value === sortCurrentPage ? "active" : ""} onClick={() => setSortPage(value)}>{value}</button></Fragment>)}
+      <button type="button" onClick={() => setSortPage((value) => Math.min(sortPageCount, value + 1))} disabled={sortCurrentPage === sortPageCount} aria-label="다음 페이지"><ChevronRight size={15} /></button>
+    </nav>
+  </div>
+    </>
+  );
+
+  if (sortOnly) {
+    return (
+      <>
+        <div className="admin-page-heading"><div><span>DISPLAY ORDER</span><h1>상품 진열순서 설정</h1><p>⋮⋮ 손잡이를 끌거나 맨 위·↑·↓ 버튼으로 순서를 바꾼 뒤 저장하세요. 전체 단가표와 각 카테고리에 같은 순서로 적용됩니다.</p></div></div>
+        <section className="admin-card display-order-page">
+          {sortEditorBody}
+          <div className="editor-footer"><button type="button" onClick={() => setSortNeedsInit(true)} disabled={sortSaving}>변경 취소</button><button className="primary-action" type="button" onClick={() => void saveDisplayOrder()} disabled={sortSaving}><Save size={16} /> {sortSaving ? "저장 중…" : "노출순서 저장"}</button></div>
+        </section>
+      </>
+    );
+  }
+
   return (
     <>
       <div className="admin-page-heading"><div><span>PRODUCT MANAGEMENT</span><h1>{sortOnly ? "상품 진열순서 설정" : "상품 리스트"}</h1><p>{sortOnly ? "전체·카테고리에서 공통으로 적용되는 노출 순서를 설정합니다." : "상품은 간결하게 노출하고 사이즈별 옵션과 가격은 한 화면에서 관리합니다."}</p></div><div className="admin-heading-actions">{!sortOnly && <><button className="display-order-action" type="button" onClick={openSortManager}><ArrowUp size={17} /> 노출순서 관리</button><button className="primary-action" onClick={() => startEdit()}><PackagePlus size={17} /> 신규 상품 등록</button></>}</div></div>
@@ -1142,59 +1220,14 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
           </nav>
         </div>
       </section>
-      {sortOpen && (
+      {sortOpen && !sortOnly && (
         <div className="editor-overlay" role="presentation" onMouseDown={() => setSortOpen(false)}>
           <section className="display-order-modal" role="dialog" aria-modal="true" aria-labelledby="display-order-title" onMouseDown={(event) => event.stopPropagation()}>
             <div className="editor-header">
               <div><span>DISPLAY ORDER</span><h2 id="display-order-title">상품 노출순서 관리</h2><p>저장한 순서는 전체 단가표와 각 카테고리 목록에 동일하게 적용됩니다.</p></div>
               <button type="button" onClick={() => setSortOpen(false)} aria-label="노출순서 관리 닫기"><X size={21} /></button>
             </div>
-            <div className="display-order-toolbar">
-              <div className="search-field"><Search size={17} /><input value={sortQuery} onChange={(event) => setSortQuery(event.target.value)} placeholder="상품명·상품코드 검색" /></div>
-              <select value={sortCategory} onChange={(event) => setSortCategory(event.target.value)} aria-label="노출순서 카테고리 필터"><option value="all">전체 카테고리</option>{data.categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select>
-              <select value={sortPageSize} onChange={(event) => setSortPageSize(Number(event.target.value))} aria-label="노출순서 페이지당 상품 수"><option value={10}>10개씩 보기</option><option value={20}>20개씩 보기</option><option value={30}>30개씩 보기</option></select>
-            </div>
-            <div className="display-order-list">
-              {sortPagedProducts.map((product) => {
-                const globalIndex = sortItems.findIndex((item) => item.id === product.id);
-                const visibleIndex = sortFilteredProducts.findIndex((item) => item.id === product.id);
-                const category = data.categories.find((item) => item.id === product.categoryId);
-                return (
-                  <article
-                    key={product.id}
-                    data-sort-id={product.id}
-                    className={`${draggedSortProductId === product.id ? "dragging" : ""}${dragOverSortProductId === product.id ? " drag-over" : ""}`.trim()}
-                  >
-                    <strong className="display-order-rank">{globalIndex + 1}</strong>
-                    {product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={19} /></span>}
-                    <div className="display-order-product"><strong>{product.name}</strong><small>{product.productCode || product.id} · {category?.name || "카테고리 미지정"}</small><small className="display-order-drag-hint">⋮⋮ 손잡이를 끌어 순서 변경</small></div>
-                    <div className="display-order-controls">
-                      <button
-                        type="button"
-                        className="display-order-handle"
-                        aria-label={`${product.name} 끌어서 순서 변경`}
-                        onPointerDown={(event) => handleSortPointerDown(event, product.id)}
-                        onPointerMove={handleSortPointerMove}
-                        onPointerUp={(event) => handleSortPointerEnd(event)}
-                        onPointerCancel={(event) => handleSortPointerEnd(event, true)}
-                      ><GripVertical size={18} /></button>
-                      <button type="button" onClick={() => moveSortProduct(product.id, "top")} disabled={globalIndex === 0}>맨 위</button>
-                      <button type="button" onClick={() => moveSortProduct(product.id, "up")} disabled={visibleIndex === 0} aria-label={`${product.name} 위로 이동`}><ArrowUp size={16} /></button>
-                      <button type="button" onClick={() => moveSortProduct(product.id, "down")} disabled={visibleIndex === sortFilteredProducts.length - 1} aria-label={`${product.name} 아래로 이동`}><ArrowDown size={16} /></button>
-                    </div>
-                  </article>
-                );
-              })}
-              {sortPagedProducts.length === 0 && <div className="empty-state"><Search size={25} /><strong>조건에 맞는 상품이 없습니다.</strong></div>}
-            </div>
-            <div className="catalog-pagination admin-product-pagination display-order-pagination">
-              <span>{sortFilteredProducts.length === 0 ? "0개" : `${(sortCurrentPage - 1) * sortPageSize + 1}–${Math.min(sortCurrentPage * sortPageSize, sortFilteredProducts.length)}개`} <small>/ 총 {sortFilteredProducts.length}개</small></span>
-              <nav aria-label="노출순서 상품 페이지">
-                <button type="button" onClick={() => setSortPage((value) => Math.max(1, value - 1))} disabled={sortCurrentPage === 1} aria-label="이전 페이지"><ChevronLeft size={15} /></button>
-                {sortPageNumbers.map((value, index) => <Fragment key={value}>{index > 0 && sortPageNumbers[index - 1] !== value - 1 ? <span>…</span> : null}<button type="button" className={value === sortCurrentPage ? "active" : ""} onClick={() => setSortPage(value)}>{value}</button></Fragment>)}
-                <button type="button" onClick={() => setSortPage((value) => Math.min(sortPageCount, value + 1))} disabled={sortCurrentPage === sortPageCount} aria-label="다음 페이지"><ChevronRight size={15} /></button>
-              </nav>
-            </div>
+            {sortEditorBody}
             <div className="editor-footer"><button type="button" onClick={() => setSortOpen(false)}>취소</button><button className="primary-action" type="button" onClick={() => void saveDisplayOrder()} disabled={sortSaving}><Save size={16} /> {sortSaving ? "저장 중…" : "노출순서 저장"}</button></div>
           </section>
         </div>
@@ -2017,11 +2050,11 @@ function ChangeQueueAdmin({ mode }: { mode: "changes" | "transmissions" }) {
       <section className="admin-card sync-explainer-card"><div className="card-heading"><ShieldCheck size={19} /><div><h2>{overview?.writeIntegration.account ? `${overview.writeIntegration.account} 계정` : "연결된 발주오라 계정 없음"}</h2><p>{overview?.writeIntegration.reason || "연동 상태를 확인하고 있습니다."}</p></div><span className={`sync-safe-badge ${overview?.writeIntegration.status === "connected" ? "connected" : ""}`}>{overview?.writeIntegration.status === "connected" ? "실시간 연동중" : "추가 인증 필요"}</span></div></section>
       <section className="admin-card">
         <div className="card-heading"><History size={19} /><div><h2>실행 이력</h2><p>영문 상태 대신 실제 전송 결과를 한국어로 표시합니다.</p></div></div>
-        {loading ? <div className="admin-loading inline"><div className="spinner" /></div> : runs.length === 0 ? <div className="empty-admin">전송 실행 내역이 없습니다.</div> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>실행 시각</th><th>방향</th><th>트리거</th><th>전체</th><th>성공</th><th>실패/충돌</th><th>상태</th></tr></thead><tbody>{runs.map((run) => { const successCount = Math.max(0, run.total - run.failedCount - run.conflictCount); return <tr key={run.id}><td>{formatDateTime(run.startedAt)}</td><td>{run.direction === "push" ? "두고푸드 → 발주오라" : "발주오라 → 두고푸드"}</td><td>{run.trigger}</td><td>{run.total.toLocaleString("ko-KR")}</td><td><strong className="transmission-success-count">{successCount.toLocaleString("ko-KR")} / {run.total.toLocaleString("ko-KR")} 성공</strong></td><td>{run.failedCount > 0 || run.conflictCount > 0 ? <button type="button" className="transmission-failure-summary" onClick={() => setSelectedFailureSummary(run)}>{run.failedCount + run.conflictCount}건 상세 보기</button> : "0건"}</td><td><span className={`status-pill ${run.status === "completed" ? "active" : run.status === "failed" ? "danger" : "pending"}`}>{syncStatusLabel(run.status)}</span></td></tr>; })}</tbody></table></div>}
+        {loading ? <div className="admin-loading inline"><div className="spinner" /></div> : runs.length === 0 ? <div className="empty-admin">전송 실행 내역이 없습니다.</div> : <div className="admin-table-wrap"><table className="admin-table stackable-table"><thead><tr><th>실행 시각</th><th>방향</th><th>트리거</th><th>전체</th><th>성공</th><th>실패/충돌</th><th>상태</th></tr></thead><tbody>{runs.map((run) => { const successCount = Math.max(0, run.total - run.failedCount - run.conflictCount); return <tr key={run.id}><td data-label="실행 시각">{formatDateTime(run.startedAt)}</td><td data-label="방향">{run.direction === "push" ? "두고푸드 → 발주오라" : "발주오라 → 두고푸드"}</td><td data-label="트리거">{run.trigger}</td><td data-label="전체">{run.total.toLocaleString("ko-KR")}</td><td data-label="성공"><strong className="transmission-success-count">{successCount.toLocaleString("ko-KR")} / {run.total.toLocaleString("ko-KR")} 성공</strong></td><td data-label="실패/충돌">{run.failedCount > 0 || run.conflictCount > 0 ? <button type="button" className="transmission-failure-summary" onClick={() => setSelectedFailureSummary(run)}>{run.failedCount + run.conflictCount}건 상세 보기</button> : "0건"}</td><td data-label="상태"><span className={`status-pill ${run.status === "completed" ? "active" : run.status === "failed" ? "danger" : "pending"}`}>{syncStatusLabel(run.status)}</span></td></tr>; })}</tbody></table></div>}
       </section>
       <section className="admin-card">
         <div className="card-heading"><ClipboardList size={19} /><div><h2>상품별 전송 상태</h2><p>전송실패 행을 누르면 상세 사유를 확인할 수 있습니다.</p></div></div>
-        {items.length === 0 ? <div className="empty-admin">상품 전송 내역이 없습니다.</div> : <div className="admin-table-wrap"><table className="admin-table transmission-item-table"><thead><tr><th>기록 시각</th><th>상품</th><th>작업</th><th>상태</th><th>처리 시각</th></tr></thead><tbody>{items.map((item) => <tr className={item.status === "failed" ? "failure-row" : ""} key={item.id} onClick={() => { if (item.status === "failed") setSelectedFailure(item); }}><td>{formatDateTime(item.createdAt)}</td><td><strong>{item.productName || item.productId}</strong></td><td>{syncActionLabels[item.action] || item.action}</td><td><span className={`status-pill ${item.status === "succeeded" ? "active" : item.status === "failed" ? "danger" : "pending"}`}>{syncStatusLabel(item.status)}</span></td><td>{item.processedAt ? formatDateTime(item.processedAt) : "-"}</td></tr>)}</tbody></table></div>}
+        {items.length === 0 ? <div className="empty-admin">상품 전송 내역이 없습니다.</div> : <div className="admin-table-wrap"><table className="admin-table transmission-item-table stackable-table"><thead><tr><th>기록 시각</th><th>상품</th><th>작업</th><th>상태</th><th>처리 시각</th></tr></thead><tbody>{items.map((item) => <tr className={item.status === "failed" ? "failure-row" : ""} key={item.id} onClick={() => { if (item.status === "failed") setSelectedFailure(item); }}><td data-label="기록 시각">{formatDateTime(item.createdAt)}</td><td data-label="상품"><strong>{item.productName || item.productId}</strong></td><td data-label="작업">{syncActionLabels[item.action] || item.action}</td><td data-label="상태"><span className={`status-pill ${item.status === "succeeded" ? "active" : item.status === "failed" ? "danger" : "pending"}`}>{syncStatusLabel(item.status)}</span></td><td data-label="처리 시각">{item.processedAt ? formatDateTime(item.processedAt) : "-"}</td></tr>)}</tbody></table></div>}
       </section>
       {selectedFailure && <div className="editor-overlay" role="presentation" onMouseDown={() => setSelectedFailure(null)}><section className="sync-failure-modal" role="dialog" aria-modal="true" aria-labelledby="sync-failure-title" onMouseDown={(event) => event.stopPropagation()}><div className="editor-header"><div><span>TRANSMISSION FAILED</span><h2 id="sync-failure-title">전송실패 사유</h2></div><button type="button" onClick={() => setSelectedFailure(null)} aria-label="닫기"><X size={21} /></button></div><strong>{selectedFailure.productName || selectedFailure.productId}</strong><p>{selectedFailure.lastError || "발주오라에서 상세 실패 사유를 반환하지 않았습니다."}</p><button className="primary-action" type="button" onClick={() => setSelectedFailure(null)}>확인</button></section></div>}
       {selectedFailureSummary && <div className="editor-overlay" role="presentation" onMouseDown={() => setSelectedFailureSummary(null)}><section className="sync-failure-modal transmission-summary-modal" role="dialog" aria-modal="true" aria-labelledby="transmission-summary-title" onMouseDown={(event) => event.stopPropagation()}><div className="editor-header"><div><span>TRANSMISSION SUMMARY</span><h2 id="transmission-summary-title">실패 건 상세</h2></div><button type="button" onClick={() => setSelectedFailureSummary(null)} aria-label="닫기"><X size={21} /></button></div><p className="transmission-summary-copy">{Math.max(0, selectedFailureSummary.total - selectedFailureSummary.failedCount - selectedFailureSummary.conflictCount)} / {selectedFailureSummary.total}건 성공 · {selectedFailureSummary.failedCount + selectedFailureSummary.conflictCount}건 실패·충돌</p><div className="transmission-failure-list">{items.filter((item) => item.status === "failed").slice(0, 20).map((item) => <article key={item.id}><div><strong>{item.productName || item.productId}</strong><small>{syncActionLabels[item.action] || item.action}</small></div><p>{item.lastError || "상세 실패 사유가 반환되지 않았습니다."}</p><Link className="outline-button" to="/admin/products" onClick={() => setSelectedFailureSummary(null)}>상품 수정</Link></article>)}{items.filter((item) => item.status === "failed").length === 0 && <div className="empty-admin">실패 상세가 아직 동기화되지 않았습니다.</div>}</div><button className="primary-action" type="button" onClick={() => setSelectedFailureSummary(null)}>확인</button></section></div>}

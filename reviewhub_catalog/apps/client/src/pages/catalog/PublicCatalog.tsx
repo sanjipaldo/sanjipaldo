@@ -566,6 +566,41 @@ function ImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: 
   );
 }
 
+// 소싱 요청 입력 항목(팝업·소싱 페이지 공용). 서버로 보내는 필드 이름은 기존과 같습니다.
+function SourcingFormFields({ compact = false }: { compact?: boolean }) {
+  return (
+    <>
+      <fieldset className="sourcing-group">
+        <legend><span>1</span> 찾는 상품</legend>
+        <label><span className="field-label">찾는 상품명 <em aria-hidden="true">필수</em></span><input name="productName" required placeholder="예: 제주 감귤 선물세트 5kg" /></label>
+        <div className="form-two">
+          <label><span className="field-label">희망 공급가</span><input name="desiredPrice" placeholder="예: 20,000원 이하" /></label>
+          <label><span className="field-label">참고 URL</span><input name="referenceUrl" type="url" inputMode="url" placeholder="https://" /></label>
+        </div>
+        <label><span className="field-label">상세 요청</span><textarea name="details" rows={compact ? 3 : 5} placeholder="규격·수량·포장·희망 출고일·판매 채널 등을 적어 주시면 더 빨리 찾아드려요." /></label>
+      </fieldset>
+      <fieldset className="sourcing-group">
+        <legend><span>2</span> 연락받을 정보</legend>
+        <div className="form-two">
+          <label><span className="field-label">요청자명 <em aria-hidden="true">필수</em></span><input name="requesterName" required placeholder="상호 또는 이름" autoComplete="name" /></label>
+          <label><span className="field-label">연락처 <em aria-hidden="true">필수</em></span><input name="contact" required placeholder="휴대폰 또는 이메일" autoComplete="tel" /></label>
+        </div>
+        <small className="sourcing-privacy">입력한 연락처는 소싱 결과 안내에만 사용됩니다.</small>
+      </fieldset>
+    </>
+  );
+}
+
+function SourcingSteps() {
+  return (
+    <ol className="sourcing-steps" aria-label="진행 순서">
+      <li><b>1</b> 요청 접수</li>
+      <li><b>2</b> MD 검토</li>
+      <li><b>3</b> 연락 안내</li>
+    </ol>
+  );
+}
+
 function SourcingModal({ onClose }: { onClose: () => void }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -600,17 +635,28 @@ function SourcingModal({ onClose }: { onClose: () => void }) {
     <div className="public-modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="public-modal sourcing-modal" role="dialog" aria-modal="true" aria-labelledby="sourcing-modal-title" onMouseDown={(event) => event.stopPropagation()}>
         <button type="button" className="public-modal-close" onClick={onClose} aria-label="소싱 요청 닫기"><X size={20} /></button>
-        <span className="modal-icon"><PackageSearch size={22} /></span>
-        <span className="section-kicker">PRODUCT REQUEST</span>
-        <h2 id="sourcing-modal-title">소싱해주세요!</h2>
-        {submitted ? <div className="modal-submitted"><strong>요청이 접수되었습니다.</strong><p>마스터 관리자가 확인 후 입력하신 연락처로 안내드립니다.</p><button className="modal-confirm" onClick={onClose}>닫기</button></div> : (
+        <header className="sourcing-modal-head">
+          <span className="modal-icon"><PackageSearch size={22} /></span>
+          <div>
+            <span className="section-kicker">PRODUCT REQUEST</span>
+            <h2 id="sourcing-modal-title">소싱해주세요!</h2>
+            <p>찾는 상품을 알려주시면 두고푸드 MD가 공급처를 찾아 연락드립니다.</p>
+          </div>
+        </header>
+        {submitted ? (
+          <div className="modal-submitted sourcing-done">
+            <span className="sourcing-done-icon"><Send size={24} /></span>
+            <strong>요청이 접수되었습니다.</strong>
+            <p>MD가 검토 후 입력하신 연락처로 안내드립니다. 보통 영업일 기준 1~2일 안에 연락드려요.</p>
+            <button className="modal-confirm" onClick={onClose}>닫기</button>
+          </div>
+        ) : (
           <form className="sourcing-form sourcing-modal-form" onSubmit={submit}>
-            <label>찾는 상품명<input name="productName" required placeholder="예: 제주 감귤 선물세트" /></label>
-            <label>희망 공급가<input name="desiredPrice" placeholder="예: 20,000원 이하" /></label>
-            <label>참고 URL<input name="referenceUrl" type="url" inputMode="url" placeholder="https:// 상품 페이지 또는 참고 링크" /></label>
-            <div className="form-two"><label>요청자명<input name="requesterName" required /></label><label>연락처<input name="contact" required placeholder="휴대폰 또는 이메일" /></label></div>
-            <label>상세 요청<textarea name="details" rows={4} placeholder="규격, 수량, 포장, 희망 출고일 등을 적어 주세요." /></label>
-            <button type="submit" disabled={submitting}>{submitting ? "접수 중…" : "소싱 요청 보내기"} <Send size={16} /></button>
+            <SourcingSteps />
+            <SourcingFormFields compact />
+            <div className="sourcing-submit-bar">
+              <button type="submit" disabled={submitting}>{submitting ? "접수 중…" : "소싱 요청 보내기"} <Send size={16} /></button>
+            </div>
           </form>
         )}
       </section>
@@ -1441,12 +1487,11 @@ export function SourcingPage() {
           <section className="submitted-card"><div><Send size={28} /></div><h2>요청이 접수되었습니다.</h2><p>마스터 관리자가 확인 후 입력하신 연락처로 안내드립니다.</p><Link to="/">상품 목록으로 돌아가기</Link></section>
         ) : (
           <form className="sourcing-form" onSubmit={submit}>
-            <label>찾는 상품명<input name="productName" required placeholder="예: 제주 감귤 선물세트" /></label>
-            <label>희망 공급가<input name="desiredPrice" placeholder="예: 20,000원 이하" /></label>
-            <label>참고 URL<input name="referenceUrl" type="url" placeholder="https://..." /></label>
-            <div className="form-two"><label>요청자명<input name="requesterName" required /></label><label>연락처<input name="contact" required placeholder="휴대폰 또는 이메일" /></label></div>
-            <label>상세 요청<textarea name="details" rows={6} placeholder="규격, 수량, 포장, 희망 출고일 등을 적어 주세요." /></label>
-            <button type="submit" disabled={submitting}>{submitting ? "접수 중…" : "소싱 요청 보내기"} <Send size={16} /></button>
+            <SourcingSteps />
+            <SourcingFormFields />
+            <div className="sourcing-submit-bar">
+              <button type="submit" disabled={submitting}>{submitting ? "접수 중…" : "소싱 요청 보내기"} <Send size={16} /></button>
+            </div>
           </form>
         )}
       </main>
