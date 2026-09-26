@@ -227,7 +227,8 @@ export async function getCatalogOperationsOverview(forwardedIp?: string | null) 
     getWeather(),
     getLocationWeather(forwardedIp),
     getHolidayStatus(now),
-    getMonthlyCatalogStats()
+    // DB 집계가 실패해도 날씨·운영 상태는 보여야 하므로 통계만 0으로 대체합니다.
+    getMonthlyCatalogStats().catch(() => ({ newProducts: 0, soldOutChanges: 0, activityChanges: 0 }))
   ]);
   return {
     generatedAt: now.toISOString(),
