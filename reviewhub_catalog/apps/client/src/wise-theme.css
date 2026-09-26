@@ -759,3 +759,15 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .bulk-selection-bar .bulk-quick-actions .bulk-season-quick { grid-column: 1 / -1; justify-content: center; }
   .bulk-month-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* 일괄 변경 창: 내용만 스크롤, 저장·취소 버튼은 항상 창 하단에 고정 (PC·모바일) */
+.bulk-edit-panel { display: flex; flex-direction: column; max-height: min(90vh, 900px); overflow: hidden; padding: 0; }
+.bulk-edit-panel > .editor-header { flex: 0 0 auto; margin: 0; padding: 24px 28px 16px; border-bottom: 1px solid var(--w-line); }
+.bulk-edit-panel > .bulk-edit-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 16px 28px; }
+.bulk-edit-panel > .editor-footer { flex: 0 0 auto; margin: 0; padding: 14px 28px; border-top: 1px solid var(--w-line); background: var(--w-canvas); box-shadow: 0 -8px 24px rgba(14, 15, 12, .06); }
+@media (max-width: 720px) {
+  .bulk-edit-panel { max-height: 100dvh; }
+  .bulk-edit-panel > .editor-header { padding: 16px 16px 12px; }
+  .bulk-edit-panel > .bulk-edit-body { padding: 12px 12px 20px; }
+  .bulk-edit-panel > .editor-footer { padding: 12px 16px max(12px, env(safe-area-inset-bottom)); }
+}
