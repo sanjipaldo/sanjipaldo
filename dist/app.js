@@ -512,6 +512,7 @@ let activeChatConnectionId = "";
 let chatRoomFilter = "all";
 let chatMobileView = "list";
 let chatRoomSearch = "";
+let chatSearchOpen = false;
 
 function cloneInitial() { return JSON.parse(JSON.stringify(initialState)); }
 function loadState() {
@@ -2269,7 +2270,7 @@ function talkPartnerReadIndex(messages, connection, perspective) {
 }
 function talkMessageRows(messages, active, perspective, otherName) {
   const partnerReadIndex = talkPartnerReadIndex(messages, active, perspective);
-  const mark = perspective === "seller" ? "공" : "셀";
+  const mark = escapeHtml(String(otherName || "").trim().charAt(0) || (perspective === "seller" ? "공" : "셀"));
   return messages.map((message, index) => {
     const mine = message.senderLoginId === currentAccount.loginId;
     const prev = messages[index - 1];
@@ -2281,10 +2282,46 @@ function talkMessageRows(messages, active, perspective, otherName) {
     const unreadByPartner = mine && message.sentAt && index > partnerReadIndex;
     const time = showTime || unreadByPartner ? `<span class="talk-meta">${unreadByPartner ? `<b class="talk-read" aria-label="상대방이 아직 읽지 않음">1</b>` : ""}${showTime ? `<span class="talk-time">${escapeHtml(talkTimeLabel(message))}</span>` : ""}</span>` : "";
     return `<div class="talk-row ${mine ? "mine" : "theirs"} ${continued ? "continued" : ""}">
-      ${mine ? "" : continued ? `<span class="talk-avatar-gap"></span>` : `<span class="talk-avatar small" aria-hidden="true">${mark}</span>`}
+      ${mine ? "" : continued ? `<span class="talk-avatar-gap"></span>` : `<span class="talk-avatar small" aria-hidden="true" style="--avatar-tone:${talkAvatarTone(otherName)}">${mark}</span>`}
       <div class="talk-body">${!mine && !continued ? `<b class="talk-name">${escapeHtml(otherName)}</b>` : ""}<div class="talk-line">${mine ? time : ""}<div class="talk-bubble ${message.image && !message.text ? "photo-only" : ""}">${text}${attachments}</div>${mine ? "" : time}</div></div>
     </div>`;
   }).join("");
+}
+/* 두고톡 목록 아이콘 (카카오톡 채팅 탭처럼 얇은 선 아이콘) */
+function talkIcon(name) {
+  const paths = {
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+    "new-chat": '<path d="M12 4.5c-4.7 0-8.5 3-8.5 6.8 0 2.4 1.5 4.5 3.8 5.7L6.5 20l3.9-2.1c.5.1 1 .1 1.6.1 4.7 0 8.5-3 8.5-6.7"/><path d="M18 3v6M15 6h6"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l2-1.6-2-3.4-2.4.9a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.4A7.6 7.6 0 0 0 7 6.4l-2.4-.9-2 3.4 2 1.6a7.7 7.7 0 0 0 0 3l-2 1.6 2 3.4 2.4-.9a7.6 7.6 0 0 0 2.6 1.5l.4 2.4h4l.4-2.4a7.6 7.6 0 0 0 2.6-1.5l2.4.9 2-3.4Z"/>',
+    pin: '<path d="M9 3h6l-1 6 3 3v2h-4.2L12 21l-.8-7H7v-2l3-3Z"/>'
+  };
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[name] || ""}</svg>`;
+}
+function talkAvatarTone(name) {
+  const tones = ["#7fa7d9", "#8fc4a3", "#e7a07c", "#b59be0", "#e6b85c", "#7cc3cf"];
+  const code = [...String(name || "")].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return tones[code % tones.length];
+}
+/* 목록 맨 아래: 카카오톡 채널처럼 두고마켓 공지를 한 줄로 */
+function talkNoticeRow(perspective) {
+  const notice = (state.notices || [])[0];
+  if (!notice) return "";
+  const role = perspective === "seller" ? "seller" : "supplier";
+  const index = menuIndexOf("공지사항", role);
+  if (index < 0) return "";
+  return `<button type="button" class="talk-room-item talk-channel-row" data-action="tab-go" data-index="${index}"><span class="talk-avatar channel">d</span><span class="talk-room-text"><b><span>두고마켓 알림</span><i class="talk-channel-badge">채널</i></b><small>${escapeHtml(notice.title || "새 공지가 있어요")}</small></span><span class="talk-room-side"><em>${escapeHtml(notice.date || "")}</em></span></button>`;
+}
+function connectSupplierModal(perspective = "seller") {
+  if (perspective !== "seller") {
+    const invite = state.connectionInvites.find(item => item.supplierLoginId === currentAccount.loginId && item.status === "active");
+    openModal(`<div class="talk-connect-modal"><span class="talk-connect-plus big">＋</span><h2>위탁셀러 연결 코드</h2><p>이 코드를 위탁셀러에게 보내 주세요. 연결되면 두고톡 대화방이 바로 생겨요.</p><div class="talk-invite-code">${escapeHtml(invite?.code || "미발급")}</div><div class="modal-actions"><button type="button" class="secondary-button" data-action="generate-invite">새 코드 만들기</button><button type="button" class="primary-button" data-action="copy-invite" data-code="${escapeHtml(invite?.code || "")}">코드 복사</button></div></div>`);
+    document.querySelector("#modal .modal")?.classList.add("talk-connect-sheet");
+    return;
+  }
+  openModal(`<div class="talk-connect-modal"><span class="talk-connect-plus big">＋</span><h2>새 공급사 연결</h2><p>공급사에게 받은 연결 코드를 넣어 주세요. 주문이 여러 건이어도 공급사마다 대화방은 하나예요.</p>
+    <form id="connectSupplierForm" class="talk-connect-form"><input name="code" placeholder="예: SANDI-84H3" autocomplete="off" autocapitalize="characters" required><button class="primary-button" type="submit">연결하기</button></form></div>`);
+  document.querySelector("#modal .modal")?.classList.add("talk-connect-sheet");
+  setTimeout(() => document.querySelector('#connectSupplierForm [name="code"]')?.focus(), 50);
 }
 function partnerMessengerTemplate(connections, perspective) {
   if (!connections.length) return `<div class="panel empty connection-empty">연결된 거래처가 생기면 두고톡으로 상품·출고 메시지를 주고받을 수 있습니다.</div>`;
@@ -2309,19 +2346,20 @@ function partnerMessengerTemplate(connections, perspective) {
   const otherName = perspective === "seller" ? supplierName(active.supplierLoginId) : (seller?.company || active.sellerLoginId);
   const messages = talkRoomMessages(active);
   const favorite = Boolean(state.chatFavorites?.[active.id]);
-  const mark = perspective === "seller" ? "공" : "셀";
+  const mark = escapeHtml(String(otherName || "").trim().charAt(0) || (perspective === "seller" ? "공" : "셀"));
   const activeIsOpen = chatMobileView === "room" || window.innerWidth > 720;
   if (activeIsOpen) { markTalkRead(active); roomRows.forEach(room => { if (room.connection.id === active.id) room.unread = 0; }); }
   const totalUnread = roomRows.reduce((sum, room) => sum + room.unread, 0);
   return `<div id="supplierInquiryPanel" class="talk-shell panel ${chatMobileView === "room" ? "show-room" : "show-list"}">
     <aside class="talk-list">
-      <div class="talk-list-head"><b>두고톡</b>${totalUnread ? `<span class="talk-total-unread">${totalUnread > 99 ? "99+" : totalUnread}</span>` : ""}</div>
-      <label class="talk-search"><span>⌕</span><input id="chatRoomSearch" value="${escapeHtml(chatRoomSearch)}" placeholder="거래처·메시지 검색" autocomplete="off"></label>
-      <div class="talk-tabs">${[["all","전체"],["unread","안읽음"],["trading","거래중"],["favorite","즐겨찾기"]].map(([key,label]) => `<button type="button" class="${chatRoomFilter === key ? "active" : ""}" data-action="chat-filter" data-filter="${key}">${label}</button>`).join("")}</div>
-      <div class="talk-room-list">${visibleRooms.length ? visibleRooms.map(room => `<button class="talk-room-item ${room.connection.id === active.id ? "active" : ""}" type="button" data-action="select-chat-room" data-id="${room.connection.id}"><span class="talk-avatar">${mark}</span><span class="talk-room-text"><b>${escapeHtml(room.name)}${room.favorite ? ` <i class="talk-star">★</i>` : ""}</b><small>${escapeHtml(room.last?.image && !room.last?.text ? "사진" : (room.last?.text || "새 대화를 시작하세요"))}</small></span><span class="talk-room-side"><em>${escapeHtml(room.last ? talkTimeLabel(room.last) : "")}</em>${room.unread && !(room.connection.id === active.id && (chatMobileView === "room" || window.innerWidth > 720)) ? `<i class="talk-unread">${room.unread}</i>` : ""}</span></button>`).join("") : `<div class="talk-empty">조건에 맞는 대화가 없습니다.</div>`}</div>
+      <div class="talk-list-head"><b>두고톡</b>${totalUnread ? `<span class="talk-total-unread">${totalUnread > 99 ? "99+" : totalUnread}</span>` : ""}<div class="talk-head-icons"><button type="button" class="${chatSearchOpen || chatRoomSearch ? "on" : ""}" data-action="chat-search-toggle" aria-label="대화 검색">${talkIcon("search")}</button><button type="button" data-action="open-connect-supplier" data-perspective="${perspective}" aria-label="${perspective === "seller" ? "새 공급사 연결" : "연결 코드 보기"}">${talkIcon("new-chat")}</button><button type="button" data-action="open-chat-settings" aria-label="두고톡 설정">${talkIcon("settings")}</button></div></div>
+      <label class="talk-search ${chatSearchOpen || chatRoomSearch ? "" : "collapsed"}"><span>${talkIcon("search")}</span><input id="chatRoomSearch" value="${escapeHtml(chatRoomSearch)}" placeholder="거래처·메시지 검색" autocomplete="off"></label>
+      <div class="talk-tabs">${[["all","전체"],["unread","안읽음"],["trading","거래중"],["favorite","즐겨찾기"]].map(([key,label]) => `<button type="button" class="${chatRoomFilter === key ? "active" : ""}" data-action="chat-filter" data-filter="${key}">${label}${key === "unread" && totalUnread ? `<i>${totalUnread > 99 ? "99+" : totalUnread}</i>` : ""}</button>`).join("")}</div>
+      ${query ? "" : `<button type="button" class="talk-connect-banner" data-action="open-connect-supplier" data-perspective="${perspective}"><span class="talk-connect-plus">＋</span><span><b>${perspective === "seller" ? "새 공급사 연결" : "위탁셀러 연결 코드"}</b><small>${perspective === "seller" ? "공급사에게 받은 코드로 바로 대화를 시작해요" : "코드를 보내면 위탁셀러와 바로 대화할 수 있어요"}</small></span><em>›</em></button>`}
+      <div class="talk-room-list">${visibleRooms.length ? visibleRooms.map(room => `<button class="talk-room-item ${room.connection.id === active.id ? "active" : ""}" type="button" data-action="select-chat-room" data-id="${room.connection.id}"><span class="talk-avatar" style="--avatar-tone:${talkAvatarTone(room.name)}">${escapeHtml(String(room.name || mark).trim().charAt(0) || mark)}</span><span class="talk-room-text"><b><span>${escapeHtml(room.name)}</span>${room.favorite ? `<i class="talk-pin" aria-label="즐겨찾기">${talkIcon("pin")}</i>` : ""}</b><small>${escapeHtml(room.last?.image && !room.last?.text ? "사진" : (room.last?.text || "새 대화를 시작하세요"))}</small></span><span class="talk-room-side"><em>${escapeHtml(room.last ? talkTimeLabel(room.last) : "")}</em>${room.unread && !(room.connection.id === active.id && (chatMobileView === "room" || window.innerWidth > 720)) ? `<i class="talk-unread">${room.unread}</i>` : ""}</span></button>`).join("") : `<div class="talk-empty">조건에 맞는 대화가 없습니다.</div>`}${!query && chatRoomFilter === "all" ? talkNoticeRow(perspective) : ""}</div>
     </aside>
     <section class="talk-room">
-      <header class="talk-room-head"><button type="button" class="talk-back" data-action="chat-back" aria-label="대화 목록으로">‹</button><span class="talk-avatar">${mark}</span><div class="talk-room-title"><b>${escapeHtml(otherName)}</b><small><i></i>거래중 · 평균 응답 1시간 이내</small></div><div class="talk-head-actions"><button type="button" class="${favorite ? "on" : ""}" data-action="toggle-chat-favorite" data-id="${active.id}" aria-pressed="${favorite}" aria-label="즐겨찾기">${favorite ? "★" : "☆"}</button><button type="button" data-action="chat-partner-info" data-id="${active.id}" data-perspective="${perspective}" aria-label="거래처 정보">ⓘ</button></div></header>
+      <header class="talk-room-head"><button type="button" class="talk-back" data-action="chat-back" aria-label="대화 목록으로">‹</button><span class="talk-avatar" style="--avatar-tone:${talkAvatarTone(otherName)}">${mark}</span><div class="talk-room-title"><b>${escapeHtml(otherName)}</b><small><i></i>거래중 · 평균 응답 1시간 이내</small></div><div class="talk-head-actions"><button type="button" class="${favorite ? "on" : ""}" data-action="toggle-chat-favorite" data-id="${active.id}" aria-pressed="${favorite}" aria-label="즐겨찾기">${favorite ? "★" : "☆"}</button><button type="button" data-action="chat-partner-info" data-id="${active.id}" data-perspective="${perspective}" aria-label="거래처 정보">ⓘ</button></div></header>
       <div class="talk-thread rich-thread" id="talkThread"><div class="talk-date"><span>${escapeHtml(new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" }))}</span></div>${messages.length ? talkMessageRows(messages, active, perspective, otherName) : `<div class="talk-empty-room">첫 메시지를 보내 대화를 시작해 보세요.</div>`}</div>
       <form id="connectionMessageForm" class="talk-compose"><input type="hidden" name="supplierLoginId" value="${active.supplierLoginId}"><input type="hidden" name="sellerLoginId" value="${active.sellerLoginId}"><input type="file" id="talkImageInput" accept="image/*" hidden><button type="button" class="talk-plus" data-action="chat-attach" aria-label="사진 보내기">＋</button><textarea id="talkInput" name="text" rows="1" maxlength="500" placeholder="메시지 입력" autocomplete="off"></textarea><button type="submit" class="talk-send" aria-label="보내기" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-6 16-3-7-7-1Z"/></svg></button></form>
     </section>
@@ -2335,7 +2373,7 @@ function talkPartnerProfile(active, perspective) {
   const otherName = perspective === "seller" ? supplierName(active.supplierLoginId) : (seller?.company || active.sellerLoginId);
   const products = state.products.filter(product => product.supplierLoginId === active.supplierLoginId);
   const orders = state.orders.filter(order => order.supplierLoginId === active.supplierLoginId && order.sellerLoginId === active.sellerLoginId);
-  return `<span class="talk-avatar large">${perspective === "seller" ? "공" : "셀"}</span><h3>${escapeHtml(otherName)}</h3><p>${escapeHtml(other?.representative || "담당자")} · ${perspective === "seller" ? "공급사" : "위탁셀러"}</p>
+  return `<span class="talk-avatar large" style="--avatar-tone:${talkAvatarTone(otherName)}">${escapeHtml(String(otherName || "").trim().charAt(0) || "공")}</span><h3>${escapeHtml(otherName)}</h3><p>${escapeHtml(other?.representative || "담당자")} · ${perspective === "seller" ? "공급사" : "위탁셀러"}</p>
     <div class="talk-profile-kpis"><span><small>거래 상품</small><b>${new Set(orders.map(order => order.productId)).size}개</b></span><span><small>누적 주문</small><b>${orders.length}건</b></span><span><small>공급 상품</small><b>${products.length}개</b></span><span><small>평균 응답</small><b>1시간</b></span></div>
     <dl class="talk-profile-info"><div><dt>연락처</dt><dd>${escapeHtml(other?.contact || "-")}</dd></div><div><dt>이메일</dt><dd>${escapeHtml(other?.email || "-")}</dd></div></dl>
     <label class="partner-note"><span>거래처 메모 (나만 보기)</span><textarea id="partnerNoteInput" rows="3" placeholder="내부 메모를 남겨주세요.">${escapeHtml(state.partnerNotes?.[active.id] || "")}</textarea></label><button type="button" class="secondary-button" data-action="save-chat-note" data-id="${active.id}">메모 저장</button>
@@ -2344,10 +2382,7 @@ function talkPartnerProfile(active, perspective) {
 
 function sellerConnectionTemplate() {
   const connections = currentSellerConnections();
-  const pcNotice = notificationService().pcNotice;
-  return `<div class="talk-page ${chatMobileView === "room" ? "show-room" : ""}">${partnerMessengerTemplate(connections, "seller")}
-    <div class="pc-notice-bar pc-notice-below ${pcNotice ? "on" : ""}"><span>🔔</span><div><b>PC 알림으로 새 메시지를 바로 확인하세요</b><small>거래처가 답변하면 브라우저 알림으로 안내합니다.</small></div><button class="notification-permission" data-action="toggle-pc-notifications">${pcNotice ? "PC 알림 켜짐" : "PC 알림 받기"}</button><button class="text-button" data-action="open-chat-settings">알림 설정</button></div>
-    <div class="connection-utility panel connection-utility-bottom"><div><span class="connection-avatar">＋</span><p><b>새 공급사 연결</b><small>공급사가 발급한 코드를 등록합니다. 주문이 여러 건 생성되어도 거래처별 채팅방은 하나만 유지됩니다.</small></p></div><form id="connectSupplierForm" class="connection-code-form"><input name="code" placeholder="예: SANDI-84H3" required><button class="primary-button" type="submit">연결하기</button></form></div></div>`;
+  return `<div class="talk-page ${chatMobileView === "room" ? "show-room" : ""}">${connections.length ? partnerMessengerTemplate(connections, "seller") : `<div class="panel empty connection-empty"><b>아직 연결된 공급사가 없어요</b><span>공급사에게 받은 코드로 연결하면 두고톡으로 대화할 수 있어요.</span><button type="button" class="primary-button" data-action="open-connect-supplier" data-perspective="seller">＋ 새 공급사 연결</button></div>`}</div>`;
 }
 
 function supplierConnectionTemplate() {
@@ -5407,6 +5442,8 @@ document.addEventListener("click", event => {
   if (action === "toggle-alert-plan") { const notice = notificationService(); notice.status = notice.status === "active" ? "paused" : "active"; audit("알림톡 부가서비스 변경", `${notice.plan} 상태를 ${notice.status === "active" ? "이용중" : "일시정지"}으로 변경했습니다.`, "done", "subscription"); saveState(); closeModal(); render(); updateAccountUI(); showToast(`알림톡 부가서비스를 ${notice.status === "active" ? "활성화" : "일시정지"}했습니다.`); return; }
   if (action === "toggle-notice-setting") { const notice = notificationService(); const setting = target.dataset.setting; if (["orderNotice","trackingNotice"].includes(setting)) notice[setting] = !notice[setting]; audit("알림톡 수신 설정 변경", `${setting} 알림을 ${notice[setting] ? "켰습니다" : "껐습니다"}.`, "done", "notification"); saveState(); render(); updateAccountUI(); showToast("알림 수신 설정을 저장했습니다."); return; }
   if (action === "toggle-pc-notifications") { const notice = notificationService(); notice.pcNotice = !notice.pcNotice; audit("두고톡 PC 알림 설정", `새 메시지 PC 알림을 ${notice.pcNotice ? "켰습니다" : "껐습니다"}.`, "done", "notification"); saveState(); render(); updateAccountUI(); showToast(`PC 알림을 ${notice.pcNotice ? "켰습니다" : "껐습니다"}.`); return; }
+  if (action === "chat-search-toggle") { chatSearchOpen = !(chatSearchOpen || chatRoomSearch); if (!chatSearchOpen) chatRoomSearch = ""; render(); updateAccountUI(); if (chatSearchOpen) document.getElementById("chatRoomSearch")?.focus(); return; }
+  if (action === "open-connect-supplier") { connectSupplierModal(target.dataset.perspective || (activeRole === "seller" ? "seller" : "supplier")); return; }
   if (action === "open-chat-settings") { const notice = notificationService(); openModal(`<h2>두고톡 알림 설정</h2><p>거래처 메시지를 어떤 방식으로 확인할지 선택합니다.</p><div class="chat-setting-list"><button data-action="toggle-pc-notifications"><span><b>PC 브라우저 알림</b><small>새 메시지와 공급사 답변</small></span><em>${notice.pcNotice ? "켜짐" : "꺼짐"}</em></button><button data-action="toggle-notice-setting" data-setting="trackingNotice"><span><b>송장 등록 알림</b><small>두고톡·상단 알림함</small></span><em>${notice.trackingNotice ? "켜짐" : "꺼짐"}</em></button></div><div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button></div>`); return; }
   if (action === "single-order") { externalOrderModal(); return; }
   if (action === "open-address-popup") { openAddressPopup(); return; }
@@ -6670,7 +6707,7 @@ document.addEventListener("submit", event => {
     if (exists) return showToast("이미 연결된 공급사입니다.");
     state.connections.push({ id: `CN-${Date.now()}`, supplierLoginId: invite.supplierLoginId, sellerLoginId: currentAccount.loginId, status: "connected", createdAt: "방금 전" });
     audit("공급사·셀러 거래처 연결", `${currentAccount.company} 위탁셀러가 ${memberByLogin(invite.supplierLoginId)?.company || invite.supplierLoginId} 공급사와 연결되었습니다.`, "done", "connection");
-    saveState(); render(); updateAccountUI(); showToast("공급사와 연결되어 상품이 열렸습니다.");
+    saveState(); closeModal(); render(); updateAccountUI(); showToast("공급사와 연결됐어요. 두고톡 대화방이 생겼어요.");
   }
   if (form.id === "noticeForm") {
     const id = form.dataset.id;
