@@ -8070,3 +8070,85 @@ body[data-role="supplier"] .signup-draft-note { color: #111; background: #f2f2f2
 body[data-role="supplier"] .signup-file.has-file, body[data-role="supplier"] .signup-verify-result.ok, body[data-role="supplier"] .signup-inline-btn.done { color: #111; background: #f2f2f2; border-color: #cfcfcf; }
 body[data-role="supplier"] .signup-inline-btn { background: #111; }
 .signup-docs-form > .login-submit { width: 100%; }
+
+/* =====================================================================
+   요금제: 무료 / 쇼핑몰 자동화 9,900원 / 카카오톡 알림 2,900원
+   ===================================================================== */
+.plan-summary { margin-bottom: 14px; padding: 18px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 32px; background: #f5f8ff; border: 1px solid #dce7fb; border-radius: 18px; }
+.plan-summary > div { display: grid; gap: 2px; }
+.plan-summary span { color: #6b7684; font-size: 13px; font-weight: 700; }
+.plan-summary strong { font-size: 26px; letter-spacing: -.02em; color: #191f28; }
+.plan-summary small { color: #6b7684; font-size: 13px; }
+.plan-summary .secondary-button { margin-left: auto; }
+.plan-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.plan-card { position: relative; padding: 22px; display: grid; gap: 10px; align-content: start; background: #fff; border: 1.5px solid #e5e8eb; border-radius: 20px; }
+.plan-card.current { border-color: #3182f6; box-shadow: 0 10px 28px rgba(49,130,246,.12); }
+.plan-card header { display: flex; align-items: center; gap: 8px; }
+.plan-card header b { font-size: 18px; }
+.plan-card header em { padding: 3px 10px; color: #fff; background: #3182f6; border-radius: 99px; font-style: normal; font-size: 12px; font-weight: 800; }
+.plan-card header em.rec { background: #f04452; }
+.plan-card > strong { font-size: 30px; letter-spacing: -.02em; }
+.plan-card > strong small { font-size: 15px; color: #6b7684; font-weight: 600; }
+.plan-card > p { margin: 0; color: #4e5968; font-size: 14.5px; }
+.plan-card ul { margin: 4px 0 8px; padding: 0; list-style: none; display: grid; gap: 7px; }
+.plan-card li { position: relative; padding-left: 22px; font-size: 14.5px; color: #333d4b; }
+.plan-card li::before { content: "✓"; position: absolute; left: 0; color: #3182f6; font-weight: 800; }
+.plan-card button { justify-self: stretch; min-height: 48px; }
+.plan-card.pro { background: linear-gradient(180deg, #f5f9ff 0%, #fff 60%); }
+.addon-card { margin-top: 14px; padding: 20px; display: grid; gap: 14px; }
+.addon-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.addon-head > div { flex: 1; min-width: 200px; display: grid; gap: 3px; }
+.addon-head b { font-size: 17px; }
+.addon-head b em { margin-left: 4px; padding: 2px 8px; color: #8d6114; background: #fff5da; border-radius: 99px; font-style: normal; font-size: 12px; }
+.addon-head small { color: #6b7684; font-size: 13.5px; }
+.addon-head > strong { font-size: 22px; }
+.addon-head > strong small { font-size: 13px; color: #6b7684; }
+.addon-schedule { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 12px 14px; background: #f9fafb; border-radius: 12px; font-size: 14px; font-weight: 700; color: #333d4b; }
+.addon-schedule label { display: inline-flex; align-items: center; gap: 8px; }
+.addon-schedule select { height: 38px; padding: 0 10px; border: 1px solid #d1d6db; border-radius: 10px; font: inherit; font-size: 14px; background: #fff; }
+.addon-state { margin-left: auto; color: #8b95a1; font-size: 13px; }
+.addon-state.on { color: #0f7a4d; }
+.kakao-preview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.kakao-preview-grid > div { padding: 14px; display: grid; gap: 10px; align-content: start; background: #b2c7d9; border-radius: 16px; }
+.kakao-preview-grid h4 { margin: 0; color: #fff; font-size: 14px; text-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.kakao-preview-grid .text-button { justify-self: start; color: #fff !important; font-weight: 700; text-decoration: underline; }
+.kakao-preview-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.kp-avatar { width: 34px; height: 34px; display: grid; place-items: center; color: #fff; background: #111; border-radius: 12px; font-weight: 800; }
+.kakao-preview-head b { font-size: 13.5px; color: #1d1d1d; }
+.kakao-preview-head small { margin-left: auto; color: #4b5563; font-size: 12px; }
+.kakao-preview-bubble { margin-left: 42px; overflow: hidden; background: #fff; border-radius: 4px 16px 16px 16px; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+.kp-top { padding: 8px 12px; color: #3c1e1e; background: #fee500; font-size: 12.5px; font-weight: 800; }
+.kakao-preview-bubble > b { display: block; padding: 12px 12px 4px; font-size: 15px; }
+.kakao-preview-bubble > p { margin: 0; padding: 4px 12px 12px; color: #333; font-size: 13.5px; line-height: 1.65; }
+.kp-btn { display: block; margin: 0 12px 12px; padding: 10px; text-align: center; color: #111; background: #f2f3f5; border-radius: 8px; font-size: 13.5px; font-weight: 700; }
+.plan-note { display: block; color: #8b95a1; font-size: 12.5px; line-height: 1.5; }
+.plan-upsell { display: grid; gap: 12px; }
+.plan-upsell-badge { justify-self: start; padding: 4px 12px; color: #fff; background: #3182f6; border-radius: 99px; font-size: 12.5px; font-weight: 800; }
+.plan-upsell h2 { margin: 0; font-size: 22px; line-height: 1.4; }
+.plan-upsell > p { margin: 0; color: #4e5968; line-height: 1.6; }
+.plan-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.plan-compare > div { padding: 16px; display: grid; gap: 4px; align-content: start; border: 1.5px solid #e5e8eb; border-radius: 16px; }
+.plan-compare > div.pick { border-color: #3182f6; background: #f5f9ff; }
+.plan-compare b { font-size: 15px; }
+.plan-compare strong { font-size: 22px; }
+.plan-compare strong small { font-size: 13px; color: #6b7684; }
+.plan-compare ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13.5px; color: #333d4b; }
+.plan-compare li.no { color: #b0b8c1; }
+.plan-free-banner, .plan-lock-banner { margin-bottom: 14px; padding: 16px 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: #fffaf0; border: 1px solid #f5dfae; border-radius: 16px; }
+.plan-free-banner > div, .plan-lock-banner > div { flex: 1; min-width: 220px; display: grid; gap: 4px; }
+.plan-free-banner b, .plan-lock-banner b { font-size: 15.5px; color: #191f28; }
+.plan-free-banner span, .plan-lock-banner small { color: #6b5a2e; font-size: 13.5px; line-height: 1.55; }
+.plan-lock-banner > span { font-size: 24px; }
+.manual-order-list { margin: 12px 0; display: grid; gap: 8px; max-height: 56vh; overflow-y: auto; }
+.manual-order-list > button { padding: 10px 12px; display: flex; align-items: center; gap: 12px; text-align: left; background: #fff; border: 1.5px solid #e5e8eb; border-radius: 14px; font: inherit; cursor: pointer; }
+.manual-order-list > button:hover { border-color: #3182f6; background: #f5f9ff; }
+.manual-order-list > button span { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.manual-order-list > button b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.manual-order-list > button small { color: #6b7684; font-size: 13px; }
+.manual-order-list > button em { font-style: normal; color: #3182f6; font-weight: 800; font-size: 14px; }
+@media (max-width: 720px) {
+  .plan-cards, .kakao-preview-grid, .plan-compare { grid-template-columns: 1fr; }
+  .plan-summary .secondary-button { margin-left: 0; width: 100%; }
+  .addon-head > button { width: 100%; }
+  .addon-state { margin-left: 0; }
+}
