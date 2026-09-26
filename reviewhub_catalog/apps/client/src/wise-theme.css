@@ -478,3 +478,16 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 @media (max-width: 760px) {
   .excel-preview-summary { grid-template-columns: 1fr 1fr; }
 }
+
+/* 상품 편집: 이미지 미리보기 썸네일 */
+.product-image-preview { display: flex; align-items: center; gap: 14px; margin-top: 10px; padding: 10px; border: 1px solid #d8e8e0; border-radius: 16px; background: #f7faf6; }
+.product-image-preview img, .product-image-broken { width: 120px; height: 120px; flex: none; border-radius: 12px; object-fit: cover; background: #fff; border: 1px solid #e3ebe6; }
+.product-image-broken { display: flex; align-items: center; justify-content: center; padding: 8px; text-align: center; color: #b42318; font-size: 11px; line-height: 1.4; background: #fff5f4; border-color: #f3c7c1; }
+.product-image-preview-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.product-image-preview-meta b { font-size: 13px; color: #0e0f0c; }
+.product-image-preview.failed .product-image-preview-meta b { color: #b42318; }
+.product-image-preview-meta button { height: 30px; padding: 0 12px; border: 1px solid #d5ddd8; border-radius: 999px; background: #fff; color: #454745; font-size: 12px; font-weight: 600; }
+.product-image-empty { display: block; margin-top: 8px; color: #7d8b86; font-size: 12px; font-weight: 400; }
+@media (max-width: 760px) {
+  .product-image-preview img, .product-image-broken { width: 96px; height: 96px; }
+}

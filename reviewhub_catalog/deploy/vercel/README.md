@@ -25,6 +25,12 @@ Vercel 프로젝트의 **Root Directory는 `reviewhub_catalog`** 입니다.
 - 운영 배포 빌드마다 `migrate-db.mjs`가 새 마이그레이션만 적용합니다.
 - admin 비밀번호를 바꿀 때만 `ADMIN_PASSWORD`를 잠시 넣고 배포한 뒤 바로 지웁니다(남겨 두면 배포마다 다시 설정됨).
 
+## 이미지 저장소(Vercel Blob)
+
+Skywork 파일 게이트웨이 대신 Vercel Blob 공개 저장소(`doogofood-images`)를 씁니다.
+- 서버 번들에서 `apps/server/services/s3_storage.ts`를 `blob-storage.ts`로 바꿔 끼웁니다.
+- 필요한 변수는 `BLOB_READ_WRITE_TOKEN` 하나이며, 저장소를 프로젝트에 연결하면 자동으로 들어옵니다.
+
 ## CLI 배포
 
 ```bash

@@ -124,9 +124,22 @@ function parseGuide(value?: string): GuideContent {
   }
 }
 
+// 상품 편집 화면의 이미지 미리보기: 불러오지 못하면(잘못된 주소 등) 바로 알려 줍니다.
+function ProductImagePreview({ url, onClear }: { url: string; onClear: () => void }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [url]);
+  return (
+    <span className={`product-image-preview ${failed ? "failed" : ""}`}>
+      {failed ? <span className="product-image-broken">이미지를 불러올 수 없습니다.<br />주소를 확인하거나 다시 업로드해 주세요.</span> : <img src={url} alt="상품 이미지 미리보기" onError={() => setFailed(true)} />}
+      <span className="product-image-preview-meta"><b>{failed ? "미리보기 실패" : "미리보기"}</b><button type="button" onClick={onClear}>이미지 지우기</button></span>
+    </span>
+  );
+}
+
 async function readData<T>(response: Response): Promise<T> {
-  const payload = (await response.json()) as { ok: boolean; data: T };
-  if (!response.ok || !payload.ok) throw new Error("데이터 처리에 실패했습니다.");
+  const payload = (await response.json().catch(() => ({ ok: false }))) as { ok: boolean; data: T; error?: { message?: string } };
+  // 서버가 알려 준 실패 이유(예: 어떤 입력값이 잘못됐는지)를 그대로 보여 줍니다.
+  if (!response.ok || !payload.ok) throw new Error(payload.error?.message || "데이터 처리에 실패했습니다.");
   return payload.data;
 }
 
@@ -1248,7 +1261,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
           <label>판매 시작월<select value={editing.isAlwaysOnSale ? "always" : editing.saleStartMonth ?? ""} onChange={(event) => event.target.value === "always" ? setEditing({ ...editing, isAlwaysOnSale: true, saleStartMonth: null, saleEndMonth: null }) : setEditing({ ...editing, isAlwaysOnSale: false, saleStartMonth: event.target.value ? Number(event.target.value) : null })}><option value="">미설정</option><option value="always">상시 판매</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((month) => <option key={month} value={month}>{month}월</option>)}</select><small>상시 판매를 선택하면 종료월은 사용할 수 없습니다.</small></label>
           <label>판매 종료월<select value={editing.saleEndMonth ?? ""} disabled={editing.isAlwaysOnSale} onChange={(event) => setEditing({ ...editing, saleEndMonth: event.target.value ? Number(event.target.value) : null })}><option value="">{editing.isAlwaysOnSale ? "상시 판매 (선택 불가)" : "미설정"}</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((month) => <option key={month} value={month}>{month}월</option>)}</select></label>
         </>}
-        <label className="full">상품 이미지<input value={editing.imageUrl} onChange={(event) => setEditing({ ...editing, imageUrl: event.target.value })} placeholder="https://... 또는 아래 업로드" /><span className="image-upload-row"><button type="button" onClick={() => imageInputRef.current?.click()} disabled={imageBusy}><Upload size={14} /> {imageBusy ? "업로드 중…" : "JPEG/PNG 업로드"}</button><input ref={imageInputRef} type="file" accept="image/jpeg,image/png" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProductImage(file); }} />{editing.imageUrl && <img src={editing.imageUrl} alt="업로드 미리보기" />}</span></label>
+        <label className="full">상품 이미지<input value={editing.imageUrl} onChange={(event) => setEditing({ ...editing, imageUrl: event.target.value })} placeholder="https://... 또는 아래 업로드" /><span className="image-upload-row"><button type="button" onClick={() => imageInputRef.current?.click()} disabled={imageBusy}><Upload size={14} /> {imageBusy ? "업로드 중…" : "JPEG/PNG 업로드"}</button><input ref={imageInputRef} type="file" accept="image/jpeg,image/png" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProductImage(file); }} /></span>{editing.imageUrl ? <ProductImagePreview url={editing.imageUrl} onClear={() => setEditing({ ...editing, imageUrl: "" })} /> : <small className="product-image-empty">이미지를 올리거나 주소를 넣으면 여기에서 미리 볼 수 있습니다.</small>}</label>
         <label>매입처<select value={editing.supplierName} onChange={(event) => setEditing({ ...editing, supplierName: event.target.value })}><option value="">미지정</option>{editing.supplierName && !suppliers.some((supplier) => supplier.name === editing.supplierName) && <option value={editing.supplierName}>{editing.supplierName} (기존 입력)</option>}{suppliers.filter((supplier) => supplier.isActive).map((supplier) => <option value={supplier.name} key={supplier.id}>{supplier.name}</option>)}</select><small>공급처 메뉴에서 등록한 매입처를 선택할 수 있습니다.</small></label>
         <label>원산지<input value={editing.origin} onChange={(event) => setEditing({ ...editing, origin: event.target.value })} /></label>
         <label>배송 정책<select value={editing.shippingPolicyId ?? ""} onChange={(event) => {

@@ -67,7 +67,7 @@ const ProductOptionSchema = z.object({
 const ProductSchema = z.object({
   productCode: z.string().trim().max(80).nullable().optional(),
   name: z.string().trim().min(1).max(200),
-  imageUrl: z.string().trim().max(1200).nullable().optional(),
+  imageUrl: z.string().trim().max(2048).nullable().optional(),
   origin: z.string().trim().max(100).nullable().optional(),
   supplierName: z.string().trim().max(160).nullable().optional(),
   costPrice: z.coerce.number().int().nonnegative(),
@@ -96,6 +96,26 @@ const ProductSchema = z.object({
     : (value.saleStartMonth == null) === (value.saleEndMonth == null),
   { message: "판매 시작월과 종료월을 함께 설정해 주세요.", path: ["saleEndMonth"] }
 );
+
+const PRODUCT_FIELD_LABELS: Record<string, string> = {
+  productCode: "상품코드", name: "상품명", imageUrl: "상품 이미지 주소", origin: "원산지", supplierName: "매입처",
+  costPrice: "원가", aPrice: "A단가", generalPrice: "일반공급가", salePrice: "판매가", salePriceMode: "판매가 방식",
+  saleStartMonth: "판매 시작월", saleEndMonth: "판매 종료월", shippingFee: "배송비", releaseInfo: "출고 안내",
+  notes: "상품 간략설명", optionsInfo: "옵션 안내", packaging: "포장", courier: "택배사", shippingType: "배송유형",
+  shippingPolicyId: "배송 정책", categoryId: "카테고리", options: "옵션", sortOrder: "옵션 순서"
+};
+
+// 상품 입력 검증 실패 시 어느 항목이 문제인지 알려 줍니다.
+function productInputMessage(error: z.ZodError) {
+  const issue = error.issues[0];
+  if (!issue) return "상품 입력값을 확인해 주세요.";
+  if (issue.path.includes("saleEndMonth") && issue.code === "custom") return issue.message;
+  const optionIndex = issue.path[0] === "options" && typeof issue.path[1] === "number" ? issue.path[1] + 1 : null;
+  const field = String(issue.path[optionIndex ? 2 : 0] ?? "");
+  const label = optionIndex && field === "name" ? "옵션명" : PRODUCT_FIELD_LABELS[field] ?? field;
+  const detail = issue.code === "too_big" ? "길이·값이 너무 큽니다" : issue.code === "too_small" ? "값이 비어 있거나 너무 작습니다" : "형식이 올바르지 않습니다";
+  return `${optionIndex ? `${optionIndex}번째 옵션의 ` : ""}${label} 입력값을 확인해 주세요 (${detail}).`;
+}
 
 const CategorySchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -473,13 +493,13 @@ catalogRouter.put("/admin/products/display-order", adminRoute, async (c) => {
 
 catalogRouter.post("/admin/products", adminRoute, async (c) => {
   const parsed = ProductSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "상품 입력값을 확인해 주세요."), 400);
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", productInputMessage(parsed.error)), 400);
   return c.json(apiSuccess({ product: await createProduct(parsed.data) }), 201);
 });
 
 catalogRouter.put("/admin/products/:id", adminRoute, async (c) => {
   const parsed = ProductSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "상품 입력값을 확인해 주세요."), 400);
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", productInputMessage(parsed.error)), 400);
   try {
     const user = c.var.currentUser;
     return c.json(apiSuccess({ product: await updateProduct(c.req.param("id"), parsed.data, user.username || user.email) }));
