@@ -8814,3 +8814,47 @@ body[data-role="supplier"] .pg-kicker { color: #111; }
 .refund-return-to b { font-size: 13px; color: #6b7684; }
 .refund-return-to span { font-size: 14.5px; font-weight: 700; color: #191f28; }
 .refund-return-to small { color: #6b7684; font-size: 12.5px; }
+
+/* =====================================================================
+   v50: 공급사 = Miro 방식 (흰 캔버스 + 검정 알약 버튼 + 캐너리 옐로 포인트)
+   노랑은 '공급사'를 알려 주는 자리(역할 카드·선택 메뉴·프로필·태그·강조 카드)에만 쓰고
+   버튼·탭은 검정 알약 그대로. 노랑 위 글씨는 늘 검정, 연노랑 위 글씨는 진한 올리브.
+   ===================================================================== */
+body[data-role="supplier"] {
+  --sup-yellow: #ffd02f; --sup-yellow-deep: #f2bd00; --sup-yellow-light: #fff6d1; --sup-yellow-soft: #fffbea; --sup-yellow-dark: #5c4a00;
+}
+/* 사이드바: 역할 카드는 노랑, 선택 메뉴는 연노랑 + 노랑 아이콘 */
+body[data-role="supplier"] .workspace-switcher-entry { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; box-shadow: 0 8px 20px rgba(242,189,0,.28) !important; }
+body[data-role="supplier"] .workspace-switcher-entry b, body[data-role="supplier"] .workspace-switcher-entry strong, body[data-role="supplier"] .workspace-switcher-entry span:not(.role-icon) { color: #111 !important; }
+body[data-role="supplier"] .workspace-switcher-entry small { color: rgba(17,17,17,.66) !important; }
+body[data-role="supplier"] .workspace-switcher-entry .role-icon { color: var(--sup-yellow) !important; background: #111 !important; }
+body[data-role="supplier"] .workspace-switcher-entry svg { color: inherit; }
+body[data-role="supplier"] .workspace-menu button.active { color: #111 !important; background: var(--sup-yellow-light) !important; box-shadow: inset 4px 0 0 var(--sup-yellow) !important; font-weight: 800; }
+body[data-role="supplier"] .workspace-menu button.active .menu-icon { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; }
+body[data-role="supplier"] .workspace-menu button.active .menu-step { color: #fff !important; background: #111 !important; border-color: #111 !important; }
+body[data-role="supplier"] .workspace-menu button:hover:not(.active) { background: var(--sup-yellow-soft) !important; }
+body[data-role="supplier"] .menu-badge { color: #111 !important; background: var(--sup-yellow) !important; }
+/* 상단: 프로필은 노랑 원, '공급사 업무 메뉴'는 노랑 태그 */
+body[data-role="supplier"] .avatar-button, body[data-role="supplier"] #accountAvatar { color: #111 !important; background: var(--sup-yellow) !important; }
+body[data-role="supplier"] #pageContext { display: inline-block; padding: 2px 10px; color: var(--sup-yellow-dark) !important; background: var(--sup-yellow-light); border-radius: 99px; font-weight: 800; letter-spacing: .02em; }
+/* 태그·칩: 연노랑 바탕 + 진한 올리브 글씨 */
+body[data-role="supplier"] .chip.orange, body[data-role="supplier"] .chip.yellow { color: var(--sup-yellow-dark) !important; background: var(--sup-yellow-light) !important; }
+body[data-role="supplier"] .stl-kicker, body[data-role="supplier"] .pg-kicker { display: inline-block; justify-self: start; padding: 2px 10px; color: var(--sup-yellow-dark) !important; background: var(--sup-yellow-light); border-radius: 99px; }
+/* 강조: 오늘 할 일 숫자는 노랑 형광펜, 다음 정산 카드·정산 금액은 노랑 포인트 */
+body[data-role="supplier"] .home-greeting h2 em { color: #111 !important; text-decoration: none !important; background: linear-gradient(transparent 58%, var(--sup-yellow) 58%); padding: 0 2px; }
+body[data-role="supplier"] .stl-mini { background: var(--sup-yellow-soft); border-color: #f6e39a; box-shadow: inset 5px 0 0 var(--sup-yellow); }
+body[data-role="supplier"] .stl-next { box-shadow: inset 0 5px 0 var(--sup-yellow); }
+body[data-role="supplier"] .stl-sum .total { background: var(--sup-yellow-soft); }
+body[data-role="supplier"] .stl-method button.active, body[data-role="supplier"] .pg-range button.active { box-shadow: inset 0 -3px 0 var(--sup-yellow), 0 1px 4px rgba(0,0,0,.1); }
+/* 하단 탭: 선택 탭은 노랑 알약 */
+body[data-role="supplier"] .mobile-tabbar button.active .tabbar-icon { color: #111 !important; background: var(--sup-yellow) !important; }
+/* 포커스: 검정 테두리 + 노랑 빛 */
+body[data-role="supplier"] input:focus, body[data-role="supplier"] select:focus, body[data-role="supplier"] textarea:focus { border-color: #111 !important; box-shadow: 0 0 0 3px rgba(255,208,47,.45) !important; }
+/* 두고톡 목록: 선택 대화 연노랑, 새 공급사/연결 코드 + 버튼은 노랑 */
+body[data-role="supplier"] .talk-room-item.active { background: var(--sup-yellow-soft) !important; }
+body[data-role="supplier"] .talk-connect-plus.big { color: #111 !important; background: var(--sup-yellow) !important; }
+/* 모바일 메뉴의 예전 검정 규칙(.app-shell[data-role] … !important)보다 우선하도록 한 번 더 */
+body[data-role="supplier"] #appView .workspace-menu button.active { color: #111 !important; background: var(--sup-yellow-light) !important; box-shadow: inset 4px 0 0 var(--sup-yellow) !important; }
+body[data-role="supplier"] #appView .workspace-menu button.active .menu-icon { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; }
+body[data-role="supplier"] #appView .workspace-menu button.active .menu-step { color: #fff !important; background: #111 !important; border-color: #111 !important; }
+body[data-role="supplier"] #appView .workspace-switcher-entry { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; }
