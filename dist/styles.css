@@ -7931,3 +7931,80 @@ body[data-role="supplier"] .login-panel-brand-logo img { filter: grayscale(1) br
 .gf-connect { margin-top: 0; }
 .gf-panel-after { margin-top: 12px; }
 .gf-guide-title { margin: 0 0 12px; font-size: 16px; }
+
+/* =====================================================================
+   택배사 검색 선택 (네이버 스마트스토어 택배사 목록)
+   ===================================================================== */
+.carrier-picker { position: relative; display: grid; gap: 8px; }
+.carrier-input-wrap { position: relative; }
+.carrier-picker .carrier-input { width: 100%; height: 48px; padding: 0 40px 0 14px; font-size: 15.5px; background: #fff; border: 1.5px solid #d9d9d9; border-radius: 12px; }
+.carrier-picker .carrier-input:focus { outline: none; border-color: #111; box-shadow: 0 0 0 3px rgba(0,0,0,.08); }
+.carrier-caret { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #8a8a8a; font-size: 18px; pointer-events: none; }
+.carrier-results { position: absolute; left: 0; right: 0; top: 52px; z-index: 40; max-height: 300px; overflow-y: auto; padding: 6px; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 16px 36px rgba(0,0,0,.14); }
+.carrier-results[hidden] { display: none; }
+.carrier-results p { margin: 4px 8px 6px; color: #8a8a8a; font-size: 12.5px; font-weight: 700; }
+.carrier-results p.none { color: #c0362c; font-weight: 600; line-height: 1.5; }
+.carrier-results button { width: 100%; min-height: 44px; padding: 0 12px; display: flex; align-items: center; text-align: left; color: #111; background: transparent; border: 0; border-radius: 9px; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.carrier-results button:hover, .carrier-results button.focus { background: #f2f2f2; }
+.carrier-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.carrier-quick button { min-height: 32px; padding: 0 12px; color: #444; background: #f5f5f5; border: 1px solid #e6e6e6; border-radius: 99px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.carrier-quick button.active { color: #fff; background: #111; border-color: #111; }
+.carrier-picker > small { color: #8a8a8a; font-size: 12.5px; }
+
+/* =====================================================================
+   해외배송: 개인통관고유부호 받기
+   ===================================================================== */
+.customs-policy[hidden] { display: none !important; }
+.customs-toggle { display: flex !important; gap: 12px; align-items: flex-start; padding: 14px 16px; background: #fff8e6; border: 1.5px solid #f1c75b; border-radius: 14px; cursor: pointer; }
+.customs-toggle input { width: 22px; height: 22px; flex: 0 0 22px; margin-top: 1px; accent-color: #111; }
+.customs-toggle span { display: grid; gap: 4px; }
+.customs-toggle b { font-size: 15.5px; color: #111; }
+.customs-toggle small { color: #5b4a1c; font-size: 13.5px; line-height: 1.55; font-weight: 500; }
+.customs-toggle em { font-style: normal; font-weight: 800; color: #111; }
+
+/* =====================================================================
+   상품 상세페이지 에디터
+   ===================================================================== */
+.detail-editor { display: grid; gap: 10px; padding: 12px; background: #fafafa; border: 1.5px solid #e4e4e4; border-radius: 16px; }
+.de-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.de-toolbar > button, .de-add-image { min-height: 42px; padding: 0 16px; display: inline-flex; align-items: center; gap: 6px; color: #111; background: #fff; border: 1.5px solid #d6d6d6; border-radius: 99px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.de-add-image { color: #fff; background: #111; border-color: #111; }
+.de-add-image input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.de-toolbar > button.active { color: #fff; background: #111; border-color: #111; }
+.de-toolbar > span { margin-left: auto; color: #6b6b6b; font-size: 13px; font-weight: 600; }
+.de-drop { border-radius: 12px; transition: background .15s ease, outline-color .15s ease; outline: 2px dashed transparent; outline-offset: 2px; }
+.de-drop.dragging { background: #f0f0f0; outline-color: #111; }
+.de-blocks { display: grid; gap: 10px; }
+.de-empty { padding: 34px 16px; display: grid; gap: 6px; place-items: center; text-align: center; background: #fff; border: 2px dashed #d0d0d0; border-radius: 12px; }
+.de-empty b { font-size: 15.5px; }
+.de-empty span { color: #6b6b6b; font-size: 13.5px; line-height: 1.5; }
+.de-block { padding: 10px; display: grid; gap: 8px; background: #fff; border: 1px solid #e4e4e4; border-radius: 12px; }
+.de-block-tools { display: flex; align-items: center; gap: 6px; }
+.de-block-tools > span { width: 24px; height: 24px; display: grid; place-items: center; color: #fff; background: #111; border-radius: 50%; font-size: 12px; font-weight: 800; }
+.de-block-tools > b { margin-right: auto; font-size: 13.5px; }
+.de-block-tools button { width: 34px; height: 34px; color: #111; background: #f4f4f4; border: 1px solid #e4e4e4; border-radius: 9px; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
+.de-block-tools button:disabled { opacity: .35; cursor: not-allowed; }
+.de-block-tools .de-del { color: #c0362c; }
+.de-block.image img { width: 100%; max-height: 320px; object-fit: contain; object-position: top; background: #f6f6f6; border-radius: 8px; }
+.de-block.image small { color: #8a8a8a; font-size: 12px; }
+.de-text-style { display: flex; gap: 6px; }
+.de-text-style button { min-height: 30px; padding: 0 12px; color: #555; background: #f4f4f4; border: 1px solid #e4e4e4; border-radius: 99px; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.de-text-style button.active { color: #fff; background: #111; border-color: #111; }
+.de-block.text textarea { width: 100%; padding: 10px 12px; font: inherit; font-size: 15px; line-height: 1.6; background: #fff; border: 1px solid #dcdcdc; border-radius: 10px; resize: vertical; }
+.de-block.text textarea.style-title { font-size: 20px; font-weight: 800; }
+.de-block.text textarea.style-point { font-weight: 700; background: #fff8e6; }
+.de-preview { display: grid; place-items: center; padding: 12px; background: #ececec; border-radius: 12px; }
+.de-preview[hidden] { display: none; }
+.de-phone, .supplier-detail-page { width: min(390px, 100%); max-height: 640px; overflow-y: auto; background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.12); }
+.de-phone img, .supplier-detail-page img { display: block; width: 100%; height: auto; }
+.de-phone p, .supplier-detail-page p { margin: 0; padding: 14px 18px; font-size: 15px; line-height: 1.7; color: #222; text-align: center; }
+.de-phone p.style-title, .supplier-detail-page p.style-title { font-size: 21px; font-weight: 800; color: #111; }
+.de-phone p.style-point, .supplier-detail-page p.style-point { font-weight: 700; background: #fff8e6; }
+.supplier-detail-page { width: 100%; max-width: 860px; max-height: none; margin: 0 auto 18px; overflow: visible; box-shadow: none; border: 1px solid #e8ecf0; }
+.supplier-detail-badge { display: block; padding: 10px 14px; color: #fff; background: #111; font-size: 12.5px; font-weight: 700; border-radius: 16px 16px 0 0; }
+@media (max-width: 720px) {
+  .de-toolbar > span { flex-basis: 100%; margin-left: 0; }
+  .de-toolbar > button, .de-add-image { flex: 1 1 auto; justify-content: center; }
+}
+.detail-editor .de-add-image, body[data-role="supplier"] .detail-editor .de-add-image { color: #fff !important; background: #111 !important; border-color: #111 !important; margin: 0; font-size: 14px !important; font-weight: 700 !important; }
+.detail-editor-field > label small, .form-field label small { font-weight: 500; color: #8a8a8a; }

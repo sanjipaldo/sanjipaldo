@@ -241,7 +241,8 @@ function migrateCategoryPath(item, keys) {
   if (!item[groupKey] && (next[midKey] || item[midKey])) next[groupKey] = "식품";
   return next;
 }
-function productNeedsCustoms(product) { return product?.shippingType === "overseas"; }
+/* 해외직구 상품이면서 공급사가 '개인통관고유부호 받기'를 켜 둔 상품만 주문 시 부호를 필수로 받는다 (기본: 받기) */
+function productNeedsCustoms(product) { return product?.shippingType === "overseas" && product?.requireCustomsCode !== false; }
 function normalizeCustomsCode(value) { return String(value || "").trim().toUpperCase().replace(/[^P0-9]/g, ""); }
 function isValidCustomsCode(value) { return /^P\d{12}$/.test(normalizeCustomsCode(value)); }
 function customsInputMarkup(value = "", required = true, hidden = false) {
@@ -3093,7 +3094,7 @@ function productDetailModal(id) {
       <div class="detail-cta-row"><button type="button" class="secondary-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button><button type="button" class="primary-button" data-action="${pickAction}" data-id="${p.id}">${pickLabel}</button></div>
     </div></div>
     <div class="detail-tabs" role="tablist"><button type="button" class="active" data-action="product-detail-tab" data-target="product">상품 상세정보</button><button type="button" data-action="product-detail-tab" data-target="shipping">배송·반품 안내</button><button type="button" data-action="product-detail-tab" data-target="supplier">공급사 정보</button></div>
-    <section class="detail-tab-panel active" data-detail-panel="product"><div class="long-detail"><div class="long-detail-title"><span>FRESH SELECTED</span><h2>${escapeHtml(p.name)}</h2><p>두고가 확인한 공급사 원본 정보로 만든 샘플 상세페이지입니다.</p></div><div class="long-detail-image">${productPhoto(p,"long-detail-photo")}<div><span>${overseas ? "OVERSEAS DIRECT" : "FARM TO TABLE"}</span><h3>${escapeHtml(p.origin)}에서<br>꼼꼼하게 선별했습니다</h3><p>${escapeHtml(p.detail)}</p></div></div><div class="detail-feature-grid"><div><b>01</b><span>선별 품질</span><p>출고 전 상품 상태와 포장 기준을 확인합니다.</p></div><div><b>02</b><span>${overseas ? "안전한 통관" : "빠른 산지출고"}</span><p>${overseas ? "개인통관부호를 주문별로 확인합니다." : "발주 마감 전 주문은 빠르게 출고합니다."}</p></div><div><b>03</b><span>판매 콘텐츠 제공</span><p>정사각형 썸네일과 상세설명을 함께 복사합니다.</p></div></div><div class="detail-info-board"><h3>상품 고시정보</h3><dl><div><dt>상품명</dt><dd>${escapeHtml(p.name)}</dd></div><div><dt>원산지</dt><dd>${escapeHtml(p.origin)}</dd></div><div><dt>공급사</dt><dd>${escapeHtml(p.supplier)}</dd></div><div><dt>보관방법</dt><dd>${escapeHtml(p.shelfLife || "상품별 표시사항 참조")}</dd></div><div><dt>배송</dt><dd>${overseas ? `해외직구 ${escapeHtml(p.deliveryDays)}` : `국내택배 ${escapeHtml(p.deliveryDays)}`}</dd></div><div><dt>반품</dt><dd>두고에서 요청 후 공급사 확인</dd></div></dl></div></div></section>
+    <section class="detail-tab-panel active" data-detail-panel="product"><div class="long-detail">${Array.isArray(p.detailBlocks) && p.detailBlocks.some(block => block.type === "image") ? `<div class="supplier-detail-page"><span class="supplier-detail-badge">공급사 상세페이지 · 쇼핑몰 전송 시 그대로 복사</span>${detailPreviewMarkup(p.detailBlocks)}</div>` : ""}<div class="long-detail-title"><span>FRESH SELECTED</span><h2>${escapeHtml(p.name)}</h2><p>두고가 확인한 공급사 원본 정보로 만든 샘플 상세페이지입니다.</p></div><div class="long-detail-image">${productPhoto(p,"long-detail-photo")}<div><span>${overseas ? "OVERSEAS DIRECT" : "FARM TO TABLE"}</span><h3>${escapeHtml(p.origin)}에서<br>꼼꼼하게 선별했습니다</h3><p>${escapeHtml(p.detail)}</p></div></div><div class="detail-feature-grid"><div><b>01</b><span>선별 품질</span><p>출고 전 상품 상태와 포장 기준을 확인합니다.</p></div><div><b>02</b><span>${overseas ? "안전한 통관" : "빠른 산지출고"}</span><p>${overseas ? "개인통관부호를 주문별로 확인합니다." : "발주 마감 전 주문은 빠르게 출고합니다."}</p></div><div><b>03</b><span>판매 콘텐츠 제공</span><p>정사각형 썸네일과 상세설명을 함께 복사합니다.</p></div></div><div class="detail-info-board"><h3>상품 고시정보</h3><dl><div><dt>상품명</dt><dd>${escapeHtml(p.name)}</dd></div><div><dt>원산지</dt><dd>${escapeHtml(p.origin)}</dd></div><div><dt>공급사</dt><dd>${escapeHtml(p.supplier)}</dd></div><div><dt>보관방법</dt><dd>${escapeHtml(p.shelfLife || "상품별 표시사항 참조")}</dd></div><div><dt>배송</dt><dd>${overseas ? `해외직구 ${escapeHtml(p.deliveryDays)}` : `국내택배 ${escapeHtml(p.deliveryDays)}`}</dd></div><div><dt>반품</dt><dd>두고에서 요청 후 공급사 확인</dd></div></dl></div></div></section>
     <section class="detail-tab-panel" data-detail-panel="shipping" hidden><div class="detail-policy-grid"><article><span>배송</span><h3>${overseas ? "해외직구 배송" : "공급사 직배송"}</h3><p>${escapeHtml(p.deliveryDays || "1~3일")} 내 배송을 원칙으로 하며, 발주마감 ${escapeHtml(p.cutoff || "10:00")} 이전 결제 주문부터 순차 출고됩니다.</p></article><article><span>반품</span><h3>반품·교환 접수</h3><p>셀러의 취소·환불 메뉴에서 주문과 사유를 선택하면 공급사 확인 후 회수 또는 환불 절차가 진행됩니다.</p></article><article><span>주의</span><h3>${overseas ? "통관정보 확인" : "신선식품 확인"}</h3><p>${overseas ? "수취인의 개인통관부호가 일치하지 않으면 배송이 지연될 수 있습니다." : "신선식품은 단순 변심보다 파손·품질 이슈를 우선 확인합니다."}</p></article></div></section>
     <section class="detail-tab-panel" data-detail-panel="supplier" hidden><div class="detail-supplier-board"><span class="connection-avatar large">공</span><div><span>SUPPLIER PARTNER</span><h3>${escapeHtml(p.supplier)}</h3><p>${escapeHtml(supplier?.representative || "공급사 담당자")} · 승인 공급사</p></div><dl><div><dt>연락처</dt><dd>${escapeHtml(supplier?.contact || "-")}</dd></div><div><dt>이메일</dt><dd>${escapeHtml(supplier?.email || "-")}</dd></div><div><dt>상담시간</dt><dd>평일 09:00~18:00</dd></div><div><dt>공급상품</dt><dd>${state.products.filter(product => product.supplierLoginId === p.supplierLoginId).length}개</dd></div></dl><button class="primary-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">두고톡으로 문의하기</button></div></section>
     <div class="sticky-detail-actions"><span><b>${money(p.supply)}</b> 공급가 · 재고 ${p.stock}개</span><div><button class="secondary-button" data-close-modal>닫기</button><button class="primary-button" data-action="${pickAction}" data-id="${p.id}">${pickLabel}</button></div></div>
@@ -3947,8 +3948,8 @@ function trackingModal(orderId) {
   const order = state.orders.find(o => o.id === orderId), p = productOf(order.productId);
   openModal(`<h2>송장 출력 · 출고 처리</h2><p>${order.id} · ${p.name}<br>처리하면 두고의 셀러와 마스터 화면에 즉시 반영됩니다.</p>
     <form id="trackingForm" class="form-grid" data-id="${order.id}">
-      <div class="form-field"><label>택배사</label><select name="carrier"><option>한진택배</option><option>CJ대한통운</option><option>롯데택배</option></select></div>
-      <div class="form-field"><label>송장번호</label><input name="tracking" value="5057${String(Date.now()).slice(-8)}" required></div>
+      <div class="form-field full"><label>택배사</label>${carrierPicker("carrier", goodflowProfile(order.supplierLoginId).carrier || supplierProfile().carrier || "한진택배")}</div>
+      <div class="form-field full"><label>송장번호</label><input name="tracking" value="5057${String(Date.now()).slice(-8)}" required></div>
       <div class="calc-box"><span>셀러 · 마스터 화면</span><strong>즉시 반영</strong></div>
       <div class="calc-box" style="background:#fff5da;color:#8d6114"><span>판매채널 API</span><strong>반영 대기 · 실제 전송 없음</strong></div>
       <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">송장 출력 및 반영</button></div>
@@ -4046,6 +4047,140 @@ function readSupplierOptions(form) {
   options.forEach(option => { if (!option.id) option.id = `O${next++}`; if (!option.recommended) option.recommended = option.supply; });
   return { options, optionTitle: String(formData.get("optionTitle") || "옵션").trim() || "옵션" };
 }
+/* 네이버 스마트스토어 발송처리에서 고를 수 있는 주요 택배사 (국내 → 해외 순) */
+const CARRIERS = [
+  { name: "CJ대한통운", alias: "cj 대한통운 씨제이" }, { name: "한진택배", alias: "hanjin 한진" }, { name: "롯데택배", alias: "lotte 롯데글로벌로지스 롯데" }, { name: "우체국택배", alias: "우체국 epost 우편" }, { name: "로젠택배", alias: "logen 로젠" },
+  { name: "경동택배", alias: "kd 경동" }, { name: "대신택배", alias: "daesin 대신" }, { name: "일양로지스", alias: "ilyang 일양" }, { name: "합동택배", alias: "hapdong 합동" }, { name: "건영택배", alias: "건영" },
+  { name: "천일택배", alias: "천일" }, { name: "한덱스", alias: "handex" }, { name: "호남택배", alias: "호남" }, { name: "CU 편의점택배", alias: "cu 씨유 편의점 cvsnet" }, { name: "GS Postbox 택배", alias: "gs 편의점 포스트박스" },
+  { name: "농협택배", alias: "nh 농협" }, { name: "홈픽", alias: "homepick" }, { name: "우리택배", alias: "우리" }, { name: "세방택배", alias: "세방" }, { name: "SLX택배", alias: "slx" },
+  { name: "용마로지스", alias: "용마" }, { name: "성원글로벌카고", alias: "성원" }, { name: "팀프레시", alias: "teamfresh 새벽배송" }, { name: "컬리넥스트마일", alias: "kurly 컬리" }, { name: "오늘의픽업", alias: "today pickup" },
+  { name: "애니트랙", alias: "anytrack" }, { name: "굿투럭", alias: "goodtoluck" }, { name: "직접배송(업체 자체 배송)", alias: "직접 자체 퀵" },
+  { name: "EMS (우체국 국제특송)", alias: "ems 우체국 국제" }, { name: "DHL", alias: "dhl 디에이치엘" }, { name: "FedEx", alias: "fedex 페덱스" }, { name: "UPS", alias: "ups 유피에스" }, { name: "TNT Express", alias: "tnt" },
+  { name: "USPS", alias: "usps 미국우체국" }, { name: "CJ대한통운 국제특송", alias: "cj 국제" }, { name: "롯데 국제특송", alias: "롯데 국제" }, { name: "한진 국제특송", alias: "한진 국제" }, { name: "판토스", alias: "pantos" },
+  { name: "SF Express (순풍)", alias: "sf 순풍 순펑" }, { name: "Qxpress (큐익스프레스)", alias: "qxpress 큐익스프레스" }, { name: "Cainiao (차이냐오)", alias: "cainiao 차이냐오 알리" }, { name: "ACI Express", alias: "aci" }
+];
+const POPULAR_CARRIERS = ["CJ대한통운", "한진택배", "롯데택배", "우체국택배", "로젠택배"];
+const HANGUL_INITIALS = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+function hangulInitials(text) { return [...String(text)].map(ch => { const code = ch.charCodeAt(0) - 0xac00; return code >= 0 && code < 11172 ? HANGUL_INITIALS[Math.floor(code / 588)] : ch; }).join(""); }
+function searchCarriers(query) {
+  const q = String(query || "").trim().toLowerCase().replace(/\s+/g, "");
+  if (!q) return CARRIERS.filter(item => POPULAR_CARRIERS.includes(item.name));
+  const onlyInitials = /^[ㄱ-ㅎ]+$/.test(q);
+  return CARRIERS.map(item => {
+    const hay = `${item.name} ${item.alias}`.toLowerCase().replace(/\s+/g, "");
+    const name = item.name.toLowerCase().replace(/\s+/g, "");
+    const score = name.startsWith(q) ? 0 : hay.includes(q) ? 1 : onlyInitials && hangulInitials(item.name).replace(/\s+/g, "").includes(q) ? 2 : -1;
+    return { item, score };
+  }).filter(row => row.score >= 0).sort((a, b) => a.score - b.score).map(row => row.item).slice(0, 8);
+}
+function isKnownCarrier(name) { return CARRIERS.some(item => item.name === name); }
+function carrierPicker(name, value = "한진택배", note = "") {
+  const current = isKnownCarrier(value) ? value : "한진택배";
+  return `<div class="carrier-picker" data-carrier-picker><div class="carrier-input-wrap"><input type="text" class="carrier-input" data-carrier-input value="${escapeHtml(current)}" placeholder="택배사 이름 입력 (예: 한진, cj, ㄹㅈ)" autocomplete="off" aria-label="택배사 검색"><span class="carrier-caret">⌕</span></div><input type="hidden" name="${name}" value="${escapeHtml(current)}" data-carrier-value><div class="carrier-results" data-carrier-results hidden></div><div class="carrier-quick">${POPULAR_CARRIERS.map(carrier => `<button type="button" class="${carrier === current ? "active" : ""}" data-carrier-pick="${escapeHtml(carrier)}">${escapeHtml(carrier)}</button>`).join("")}</div>${note ? `<small>${note}</small>` : ""}</div>`;
+}
+function renderCarrierResults(picker, query) {
+  const box = picker.querySelector("[data-carrier-results]");
+  const list = searchCarriers(query);
+  box.innerHTML = list.length ? `${String(query || "").trim() ? "" : `<p>자주 쓰는 택배사</p>`}${list.map((item, index) => `<button type="button" class="${index === 0 ? "focus" : ""}" data-carrier-pick="${escapeHtml(item.name)}">${escapeHtml(item.name)}</button>`).join("")}` : `<p class="none">‘${escapeHtml(query)}’ 택배사를 찾지 못했어요. 이름을 다시 확인해 주세요.</p>`;
+  box.hidden = false;
+}
+function pickCarrier(picker, name) {
+  picker.querySelector("[data-carrier-input]").value = name;
+  picker.querySelector("[data-carrier-value]").value = name;
+  picker.querySelector("[data-carrier-results]").hidden = true;
+  picker.querySelectorAll(".carrier-quick button").forEach(button => button.classList.toggle("active", button.dataset.carrierPick === name));
+}
+
+/* 상품 상세페이지 에디터: 상세 이미지(여러 장)와 글 블록을 순서대로 쌓는다 */
+let detailDraft = [];
+const DETAIL_MAX_BLOCKS = 20;
+function detailBlocksOf(product) {
+  if (Array.isArray(product?.detailBlocks) && product.detailBlocks.length) return product.detailBlocks;
+  return [{ type: "text", style: "body", text: product?.detail || "센터배송 · 전 채널 판매 가능 · 상세페이지 제공" }];
+}
+function detailBlockMarkup(block, index, total) {
+  const tools = `<div class="de-block-tools"><span>${index + 1}</span><b>${block.type === "image" ? "이미지" : "글"}</b><button type="button" data-detail-move="${index}" data-dir="-1" ${index === 0 ? "disabled" : ""} aria-label="위로">↑</button><button type="button" data-detail-move="${index}" data-dir="1" ${index === total - 1 ? "disabled" : ""} aria-label="아래로">↓</button><button type="button" class="de-del" data-detail-remove="${index}" aria-label="삭제">✕</button></div>`;
+  if (block.type === "image") return `<div class="de-block image">${tools}<img src="${block.src}" alt="상세 이미지 ${index + 1}"><small>${escapeHtml(block.name || "상세 이미지")} · ${block.width || ""}×${block.height || ""}</small></div>`;
+  return `<div class="de-block text">${tools}<div class="de-text-style">${[["title", "제목"], ["body", "본문"], ["point", "강조"]].map(([key, label]) => `<button type="button" class="${(block.style || "body") === key ? "active" : ""}" data-detail-style="${index}" data-style="${key}">${label}</button>`).join("")}</div><textarea rows="${block.style === "title" ? 2 : 4}" maxlength="1000" data-detail-text="${index}" class="style-${block.style || "body"}" placeholder="설명을 입력하세요">${escapeHtml(block.text || "")}</textarea></div>`;
+}
+function detailPreviewMarkup(blocks) {
+  return blocks.map(block => block.type === "image" ? `<img src="${block.src}" alt="">` : `<p class="style-${block.style || "body"}">${escapeHtml(block.text || "").replace(/\n/g, "<br>")}</p>`).join("") || `<p class="style-body">아직 내용이 없어요.</p>`;
+}
+function renderDetailEditor() {
+  const root = document.querySelector("[data-detail-editor]");
+  if (!root) return;
+  const list = root.querySelector("[data-detail-blocks]");
+  list.innerHTML = detailDraft.length ? detailDraft.map((block, index) => detailBlockMarkup(block, index, detailDraft.length)).join("") : `<div class="de-empty"><b>상세페이지 이미지를 올려 주세요</b><span>여기로 이미지를 끌어다 놓거나 ‘이미지 추가’를 눌러요. 여러 장을 한 번에 올릴 수 있어요.</span></div>`;
+  root.querySelector("[data-detail-count]").textContent = `이미지 ${detailDraft.filter(block => block.type === "image").length}장 · 글 ${detailDraft.filter(block => block.type === "text").length}개`;
+  const preview = root.querySelector("[data-detail-preview-pane]");
+  if (!preview.hidden) preview.innerHTML = `<div class="de-phone">${detailPreviewMarkup(detailDraft)}</div>`;
+}
+function readDetailImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!/^image\//.test(file.type)) return reject(new Error("이미지 파일만 올릴 수 있어요."));
+    if (file.size > 15 * 1024 * 1024) return reject(new Error(`${file.name}: 15MB 이하 이미지만 올릴 수 있어요.`));
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("이미지를 읽지 못했어요."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("이미지를 열지 못했어요."));
+      img.onload = () => {
+        /* 상세페이지 폭(860px) 기준으로 줄이고, 아주 긴 이미지는 2,000px 높이씩 나눠 블록으로 만든다 */
+        const width = Math.min(860, img.naturalWidth || 860);
+        const scale = width / (img.naturalWidth || width);
+        const fullHeight = Math.round((img.naturalHeight || width) * scale);
+        const pieces = [];
+        const slice = 2000;
+        for (let top = 0; top < fullHeight; top += slice) {
+          const height = Math.min(slice, fullHeight - top);
+          const canvas = document.createElement("canvas");
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, -top, width, fullHeight);
+          pieces.push({ type: "image", src: canvas.toDataURL("image/jpeg", 0.78), width, height, name: fullHeight > slice ? `${file.name} (${pieces.length + 1})` : file.name });
+        }
+        resolve(pieces);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function addDetailImages(files) {
+  const list = [...(files || [])];
+  if (!list.length) return;
+  for (const file of list) {
+    if (detailDraft.length >= DETAIL_MAX_BLOCKS) { showToast(`상세 블록은 ${DETAIL_MAX_BLOCKS}개까지 넣을 수 있어요.`); break; }
+    try { const pieces = await readDetailImage(file); detailDraft.push(...pieces.slice(0, DETAIL_MAX_BLOCKS - detailDraft.length)); }
+    catch (error) { showToast(error.message); }
+    renderDetailEditor();
+  }
+}
+function detailEditorMarkup(product) {
+  detailDraft = JSON.parse(JSON.stringify(detailBlocksOf(product)));
+  return `<div class="form-field full detail-editor-field"><label>상품 상세페이지 * <small>대부분 상세페이지 이미지로 올려요. 여러 장 올리고 ↑↓로 순서를 바꿀 수 있어요.</small></label>
+    <div class="detail-editor" data-detail-editor>
+      <div class="de-toolbar"><label class="de-add-image"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple data-detail-image-input>＋ 이미지 추가</label><button type="button" data-detail-add-text>＋ 글 추가</button><button type="button" class="de-preview-btn" data-detail-preview>미리보기</button><span data-detail-count></span></div>
+      <div class="de-drop" data-detail-drop><div class="de-blocks" data-detail-blocks></div></div>
+      <div class="de-preview" data-detail-preview-pane hidden></div>
+    </div>
+    <small>여기 올린 상세페이지가 위탁셀러의 상품 화면과 쇼핑몰 전송용 상세에 그대로 복사돼요. 긴 이미지는 자동으로 나눠 올라가요.</small></div>`;
+}
+
+function productDetailReady(form) {
+  const hasContent = detailDraft.some(block => block.type === "image" || String(block.text || "").trim());
+  if (!hasContent) { form.querySelector("[data-detail-editor]")?.scrollIntoView({ behavior: "smooth", block: "center" }); showToast("상품 상세페이지에 이미지나 설명을 1개 이상 넣어 주세요."); return false; }
+  const carrier = form.querySelector("[data-carrier-value]")?.value;
+  if (carrier !== undefined && !isKnownCarrier(carrier)) { showToast("택배사를 목록에서 골라 주세요."); return false; }
+  return true;
+}
+function productDetailAndShipping(data) {
+  const blocks = detailDraft.map(block => block.type === "image" ? { type: "image", src: block.src, width: block.width, height: block.height, name: block.name } : { type: "text", style: block.style || "body", text: String(block.text || "").trim() }).filter(block => block.type === "image" || block.text);
+  const firstText = blocks.find(block => block.type === "text")?.text;
+  return { detailBlocks: blocks, detail: firstText || `상세페이지 이미지 ${blocks.filter(block => block.type === "image").length}장`, carrier: data.carrier || "한진택배", shippingType: data.shippingType || "domestic", requireCustomsCode: data.shippingType === "overseas" ? data.requireCustomsCode === "on" : false };
+}
+
 function productEditorModal(product = null) {
   const isEdit = Boolean(product);
   const value = (key, fallback = "") => escapeHtml(product?.[key] ?? fallback);
@@ -4064,17 +4199,19 @@ function productEditorModal(product = null) {
         <div class="form-field"><label>발주 마감시간 *</label><input name="cutoff" type="time" value="${value("cutoff","10:00")}" required></div>
         <div class="form-field span-2"><label>발주 상품명</label><input name="orderName" value="${value("orderName")}" placeholder="비워두면 상품명과 동일"></div>
         <div class="form-field"><label>발주 단위</label><input name="orderUnit" type="number" value="${value("orderUnit",1)}" min="1"></div>
-        <div class="form-field"><label>배송 유형 *</label><select name="shippingType"><option value="domestic" ${selected("shippingType","domestic","domestic")}>국내배송</option><option value="overseas" ${selected("shippingType","overseas")}>해외직구</option></select></div>
+        <div class="form-field"><label>배송 유형 *</label><select name="shippingType" data-shipping-type><option value="domestic" ${selected("shippingType","domestic","domestic")}>국내배송</option><option value="overseas" ${selected("shippingType","overseas")}>해외배송(해외직구)</option></select></div>
+        <div class="form-field full customs-policy" data-customs-policy ${product?.shippingType === "overseas" ? "" : "hidden"}><label class="customs-toggle"><input type="checkbox" name="requireCustomsCode" ${product?.requireCustomsCode === false ? "" : "checked"}><span><b>개인통관고유부호 받기</b><small>체크하면 위탁셀러가 이 상품을 주문할 때 <em>개인통관고유부호를 꼭 입력</em>해야 주문이 들어와요. 해외배송은 통관에 필요해서 켜 두는 걸 권장해요.</small></span></label></div>
       </div></section>
       <section class="editor-section"><div class="editor-section-title"><span>02</span><div><h3>매입·판매 가격</h3><p>공급사 매입처와 셀러 공급가격을 구분합니다.</p></div></div><div class="purchase-strip"><div><span>기본 매입처</span><b>${escapeHtml(workspaceCompany("supplier"))}</b></div><div><span>매입 원가</span><input name="purchasePrice" type="number" value="${value("purchasePrice", product?.supply || 15900)}" min="100" required></div><div><span>매입 배송정책</span><input name="purchaseShipping" value="${value("purchaseShipping","공급사 직배송")}" required></div><div><span>부자재비</span><input name="surcharge" type="number" value="${value("surcharge",0)}" min="0"></div></div><div class="editor-grid cols-4 price-editor-grid">
         <div class="form-field"><label>공급가 *</label><input name="supply" type="number" value="${value("supply",15900)}" min="100" required></div><div class="form-field"><label>권장 판매가 *</label><input name="recommended" type="number" value="${value("recommended",22900)}" min="100" required></div><div class="form-field"><label>소비자가</label><input name="retailPrice" type="number" value="${value("retailPrice",29900)}" min="0"></div><div class="form-field"><label>판매 배송정책 *</label><select name="shippingPolicy"><option ${selected("shippingPolicy","무료배송","무료배송")}>무료배송</option><option ${selected("shippingPolicy","조건부 무료")}>조건부 무료</option><option ${selected("shippingPolicy","유료배송 3,000원")}>유료배송 3,000원</option></select></div>
       </div><div class="balju-partner-table"><div class="balju-table-title"><b>매출처/그룹 개별공급가 설정</b><span>연결 거래처별 노출 및 공급가</span></div><div class="balju-table-row heading"><span>타입</span><span>거래처명</span><span>공급가</span><span>판매 배송정책</span><span>노출</span></div><div class="balju-table-row"><span>기본</span><b>연결된 위탁셀러 전체</b><strong>${money(product?.supply || 15900)}</strong><span>${escapeHtml(product?.shippingPolicy || "무료배송")}</span><em>노출</em></div></div></section>
       ${supplierOptionEditor(product)}
-      <section class="editor-section"><div class="editor-section-title"><span>03</span><div><h3>상품 이미지·매출처 안내사항</h3><p>대표 이미지를 선택하고 셀러에게 복사될 상품정보를 입력합니다.</p></div></div><div class="image-picker">${Array.from({length:8},(_,index)=>`<label><input type="radio" name="imageIndex" value="${index}" ${(product?.imageIndex ?? 0) === index ? "checked" : ""}><span>${productPhoto({name:`AI 상품 이미지 ${index+1}`,imageIndex:index},"picker-photo")}<b>이미지 ${index+1}</b></span></label>`).join("")}</div><div class="editor-grid"><div class="form-field full balju-file-field"><label>상품 이미지 파일</label><input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp"><small>JPG·PNG·WEBP, 10MB 이하. 파일을 선택하지 않으면 위 대표 이미지가 사용됩니다.</small></div><div class="form-field"><label>원산지</label><input name="origin" value="${value("origin","대한민국")}" placeholder="예: 제주특별자치도"></div><div class="form-field"><label>원산 국가</label><select name="originCountry"><option ${selected("originCountry","대한민국","대한민국")}>대한민국</option><option ${selected("originCountry","중국")}>중국</option><option ${selected("originCountry","뉴질랜드")}>뉴질랜드</option><option ${selected("originCountry","호주")}>호주</option></select></div><div class="form-field"><label>예상 배송기간</label><input name="deliveryDays" value="${value("deliveryDays","1~3일")}"></div><div class="form-field"><label>제조·수확일</label><input name="manufactureDate" value="${value("manufactureDate")}" placeholder="예: 주문일 기준 2일 이내"></div><div class="form-field"><label>소비기한·보관법</label><input name="shelfLife" value="${value("shelfLife","수령 후 냉장·냉동 보관")}"></div><div class="form-field full"><label>상품 간략설명</label><input name="summary" value="${value("summary")}" maxlength="100" placeholder="상품 목록에 표시할 100자 이내 설명"></div><div class="form-field full"><label>상품 상세설명 *</label><textarea name="detail" rows="8" maxlength="1000" required>${value("detail","센터배송 · 전 채널 판매 가능 · 상세페이지 제공")}</textarea><small>이 내용과 선택한 상품 이미지가 위탁셀러의 PICK 상품에 함께 복사됩니다.</small></div></div></section>
-      <section class="editor-section"><div class="editor-section-title"><span>04</span><div><h3>배송·재고·노출</h3><p>물류정보와 연결 셀러 노출 범위를 설정합니다.</p></div></div><div class="editor-grid cols-4"><div class="form-field"><label>택배사</label><select name="carrier"><option ${selected("carrier","한진택배","한진택배")}>한진택배</option><option ${selected("carrier","CJ대한통운")}>CJ대한통운</option><option ${selected("carrier","롯데택배")}>롯데택배</option></select></div><div class="form-field"><label>창고</label><input name="warehouse" value="${value("warehouse","공급사 직배송")}"></div><div class="form-field"><label>초기 재고 *</label><input name="stock" type="number" value="${value("stock",100)}" min="0" required></div><div class="form-field"><label>단위</label><div class="unit-input"><input name="weight" type="number" value="${value("weight",1)}" min="0" step="0.1"><select name="unit"><option ${selected("unit","KG","KG")}>KG</option><option ${selected("unit","EA")}>EA</option><option ${selected("unit","BOX")}>BOX</option></select></div></div><div class="form-field"><label>관리코드</label><input name="managementCode" value="${value("managementCode")}" placeholder="최대 50자"></div><div class="form-field"><label>바코드</label><input name="barcode" value="${value("barcode")}" placeholder="영문·숫자 입력"></div><div class="form-field span-2"><label>상품 노출 범위</label><select name="visibility"><option value="연결 셀러" ${selected("visibility","연결 셀러","연결 셀러")}>연결 셀러 전체</option><option value="선택 셀러" ${selected("visibility","선택 셀러")}>선택 셀러만</option><option value="비노출" ${selected("visibility","비노출")}>비노출</option></select></div></div><div class="connected-visibility"><span>연결 거래처</span>${connected.length ? connected.map(connection=>`<b>✓ ${escapeHtml(memberByLogin(connection.sellerLoginId)?.company || connection.sellerLoginId)}</b>`).join("") : `<small>연결된 셀러가 없습니다.</small>`}</div></section>
+      <section class="editor-section"><div class="editor-section-title"><span>03</span><div><h3>상품 이미지·매출처 안내사항</h3><p>대표 이미지를 선택하고 셀러에게 복사될 상품정보를 입력합니다.</p></div></div><div class="image-picker">${Array.from({length:8},(_,index)=>`<label><input type="radio" name="imageIndex" value="${index}" ${(product?.imageIndex ?? 0) === index ? "checked" : ""}><span>${productPhoto({name:`AI 상품 이미지 ${index+1}`,imageIndex:index},"picker-photo")}<b>이미지 ${index+1}</b></span></label>`).join("")}</div><div class="editor-grid"><div class="form-field full balju-file-field"><label>상품 이미지 파일</label><input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp"><small>JPG·PNG·WEBP, 10MB 이하. 파일을 선택하지 않으면 위 대표 이미지가 사용됩니다.</small></div><div class="form-field"><label>원산지</label><input name="origin" value="${value("origin","대한민국")}" placeholder="예: 제주특별자치도"></div><div class="form-field"><label>원산 국가</label><select name="originCountry"><option ${selected("originCountry","대한민국","대한민국")}>대한민국</option><option ${selected("originCountry","중국")}>중국</option><option ${selected("originCountry","뉴질랜드")}>뉴질랜드</option><option ${selected("originCountry","호주")}>호주</option></select></div><div class="form-field"><label>예상 배송기간</label><input name="deliveryDays" value="${value("deliveryDays","1~3일")}"></div><div class="form-field"><label>제조·수확일</label><input name="manufactureDate" value="${value("manufactureDate")}" placeholder="예: 주문일 기준 2일 이내"></div><div class="form-field"><label>소비기한·보관법</label><input name="shelfLife" value="${value("shelfLife","수령 후 냉장·냉동 보관")}"></div><div class="form-field full"><label>상품 간략설명</label><input name="summary" value="${value("summary")}" maxlength="100" placeholder="상품 목록에 표시할 100자 이내 설명"></div>${detailEditorMarkup(product)}</div></section>
+      <section class="editor-section"><div class="editor-section-title"><span>04</span><div><h3>배송·재고·노출</h3><p>물류정보와 연결 셀러 노출 범위를 설정합니다.</p></div></div><div class="editor-grid cols-4"><div class="form-field span-2"><label>택배사 <small>네이버 스마트스토어 택배사 목록</small></label>${carrierPicker("carrier", product?.carrier || supplierProfile().carrier || "한진택배")}</div><div class="form-field"><label>창고</label><input name="warehouse" value="${value("warehouse","공급사 직배송")}"></div><div class="form-field"><label>초기 재고 *</label><input name="stock" type="number" value="${value("stock",100)}" min="0" required></div><div class="form-field"><label>단위</label><div class="unit-input"><input name="weight" type="number" value="${value("weight",1)}" min="0" step="0.1"><select name="unit"><option ${selected("unit","KG","KG")}>KG</option><option ${selected("unit","EA")}>EA</option><option ${selected("unit","BOX")}>BOX</option></select></div></div><div class="form-field"><label>관리코드</label><input name="managementCode" value="${value("managementCode")}" placeholder="최대 50자"></div><div class="form-field"><label>바코드</label><input name="barcode" value="${value("barcode")}" placeholder="영문·숫자 입력"></div><div class="form-field span-2"><label>상품 노출 범위</label><select name="visibility"><option value="연결 셀러" ${selected("visibility","연결 셀러","연결 셀러")}>연결 셀러 전체</option><option value="선택 셀러" ${selected("visibility","선택 셀러")}>선택 셀러만</option><option value="비노출" ${selected("visibility","비노출")}>비노출</option></select></div></div><div class="connected-visibility"><span>연결 거래처</span>${connected.length ? connected.map(connection=>`<b>✓ ${escapeHtml(memberByLogin(connection.sellerLoginId)?.company || connection.sellerLoginId)}</b>`).join("") : `<small>연결된 셀러가 없습니다.</small>`}</div></section>
       <div class="editor-sticky-actions"><span>필수항목을 확인한 뒤 저장해 주세요.</span><div><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">${isEdit ? "수정 내용 저장" : "상품 등록·셀러 노출"}</button></div></div>
     </form>`);
   document.querySelector("#modal .modal").classList.add("product-editor-modal");
+  renderDetailEditor();
 }
 
 function adjustStockModal(id) {
@@ -4093,7 +4230,7 @@ function simulateOrderModal(sellerProductId) {
   const sellerProduct = state.sellerProducts.find(item => item.id === sellerProductId);
   const product = sellerProduct && productOf(sellerProduct.productId);
   if (!sellerProduct || !product) return;
-  const overseas = product.shippingType === "overseas";
+  const overseas = productNeedsCustoms(product);
   openModal(`<h2>단건 주문 접수</h2><p><span class="sample-order-badge">[샘플주문]</span> ${overseas ? `<b>해외직구 상품</b>으로 개인통관고유부호가 필요합니다.` : `원본 상품코드 <b>${escapeHtml(product.id)}</b>로 매핑한 뒤 공급가 결제를 진행합니다.`}</p>
     <form id="simulateOrderForm" class="form-grid order-form" data-id="${sellerProduct.id}">
       <div class="form-field full"><label>내 판매 상품</label><input value="${escapeHtml(sellerProductTitle(sellerProduct, product))} · 원본 ${escapeHtml(product.id)}" disabled></div>
@@ -5997,12 +6134,14 @@ document.addEventListener("submit", event => {
     audit("가송장 출고 취소", `${order.id} · ${order.cancelledCarrier} ${order.cancelledTracking} · ${data.reason} · 외부 택배 API 미호출`, "blocked", "tracking");
     saveState(); closeModal(); render(); updateAccountUI(); showToast("가송장을 취소하고 셀러 화면에 반영했습니다.");
   }
+  if ((form.id === "productForm" || form.id === "editProductForm") && !productDetailReady(form)) return;
   if (form.id === "productForm") {
     const optionData = readSupplierOptions(form);
     if (optionData.message) { form.querySelector("[data-option-editor]")?.scrollIntoView({ behavior: "smooth", block: "center" }); return showToast(optionData.message); }
     const id = `DF-${4000 + state.products.length * 17}`;
     state.products.unshift({ id, emoji: "📦", imageIndex: Number(data.imageIndex), name: data.name, supplier: workspaceCompany("supplier"), supplierLoginId: currentAccount.loginId, supply: Number(data.supply), recommended: Number(data.recommended), retailPrice: Number(data.retailPrice || 0), purchasePrice: Number(data.purchasePrice), purchaseShipping: data.purchaseShipping, surcharge: Number(data.surcharge || 0), soldOut: data.soldOut, exposure: data.exposure, stock: Number(data.stock), categoryGroup: data.categoryGroup, category: data.category, categorySub: data.categorySub, categoryDetail: data.categoryDetail, status: data.status, tax: data.tax, cutoff: data.cutoff, orderName: data.orderName || data.name, orderUnit: Number(data.orderUnit || 1), shippingPolicy: data.shippingPolicy, carrier: data.carrier, warehouse: data.warehouse, weight: Number(data.weight || 0), unit: data.unit, managementCode: data.managementCode || id, barcode: data.barcode || "", origin: data.origin, originCountry: data.originCountry, deliveryDays: data.deliveryDays, shippingType: data.shippingType, customsRequired: data.shippingType === "overseas", manufactureDate: data.manufactureDate, shelfLife: data.shelfLife, summary: data.summary || "", detail: data.detail, visibility: data.visibility, imported: false });
     if (optionData.options.length) { state.products[0].options = optionData.options; state.products[0].optionTitle = optionData.optionTitle; syncProductOptionTotals(state.products[0]); }
+    Object.assign(state.products[0], productDetailAndShipping(data));
     audit("공급 상품 등록", `${id} · ${data.name} · AI 썸네일·상세페이지 포함 · 연결 셀러 마켓에 공개되었습니다.`, "done", "product");
     saveState(); closeModal(); render(); showToast("상품이 등록되어 셀러 마켓에 반영됐습니다.");
   }
@@ -6015,6 +6154,7 @@ document.addEventListener("submit", event => {
     Object.assign(product, { imageIndex: Number(data.imageIndex), name: data.name, supply: Number(data.supply), recommended: Number(data.recommended), retailPrice: Number(data.retailPrice || 0), purchasePrice: Number(data.purchasePrice), purchaseShipping: data.purchaseShipping, surcharge: Number(data.surcharge || 0), soldOut: data.soldOut, exposure: data.exposure, stock: Number(data.stock), categoryGroup: data.categoryGroup, category: data.category, categorySub: data.categorySub, categoryDetail: data.categoryDetail, status: data.status, tax: data.tax, cutoff: data.cutoff, orderName: data.orderName || data.name, orderUnit: Number(data.orderUnit || 1), shippingPolicy: data.shippingPolicy, carrier: data.carrier, warehouse: data.warehouse, weight: Number(data.weight || 0), unit: data.unit, managementCode: data.managementCode || product.id, barcode: data.barcode || "", origin: data.origin, originCountry: data.originCountry, deliveryDays: data.deliveryDays, shippingType: data.shippingType, customsRequired: data.shippingType === "overseas", manufactureDate: data.manufactureDate, shelfLife: data.shelfLife, summary: data.summary || "", detail: data.detail, visibility: data.visibility });
     if (optionData.options.length) { product.options = optionData.options; product.optionTitle = optionData.optionTitle; syncProductOptionTotals(product); }
     else { product.options = []; delete product.optionTitle; }
+    Object.assign(product, productDetailAndShipping(data));
     if (oldSupply !== product.supply) {
       const recipients = [...new Set(state.sellerProducts.filter(item => item.productId === product.id).map(item => item.sellerLoginId))];
       recipients.forEach((recipient,index)=>state.priceAlerts.unshift({ id:`PA-${Date.now()}-${index}`, productId:product.id, recipients:[recipient], oldPrice:oldSupply, newPrice:product.supply, status:"확인필요", createdAt:"방금 전" }));
@@ -6672,6 +6812,90 @@ document.addEventListener("click", event => {
   finder.querySelectorAll("[data-cat-mode]").forEach(button => button.classList.toggle("active", button === tab));
   finder.querySelectorAll("[data-cat-pane]").forEach(pane => { pane.hidden = pane.dataset.catPane !== tab.dataset.catMode; });
 });
+
+/* 택배사 검색 선택 + 상세페이지 에디터 이벤트 */
+document.addEventListener("focusin", event => {
+  const input = event.target.closest?.("[data-carrier-input]");
+  if (input) { input.select(); renderCarrierResults(input.closest("[data-carrier-picker]"), ""); }
+});
+document.addEventListener("input", event => {
+  const input = event.target.closest?.("[data-carrier-input]");
+  if (input) { renderCarrierResults(input.closest("[data-carrier-picker]"), input.value); return; }
+  const text = event.target.closest?.("[data-detail-text]");
+  if (text && detailDraft[Number(text.dataset.detailText)]) detailDraft[Number(text.dataset.detailText)].text = text.value;
+});
+document.addEventListener("keydown", event => {
+  const input = event.target.closest?.("[data-carrier-input]");
+  if (!input) return;
+  const picker = input.closest("[data-carrier-picker]");
+  const buttons = [...picker.querySelectorAll("[data-carrier-results] button")];
+  const current = buttons.findIndex(button => button.classList.contains("focus"));
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    if (!buttons.length) return;
+    const next = (current + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
+    buttons.forEach((button, index) => button.classList.toggle("focus", index === next));
+  } else if (event.key === "Enter") {
+    event.preventDefault();
+    const target = buttons[current >= 0 ? current : 0];
+    if (target) pickCarrier(picker, target.dataset.carrierPick);
+  } else if (event.key === "Escape") {
+    picker.querySelector("[data-carrier-results]").hidden = true;
+  }
+});
+document.addEventListener("focusout", event => {
+  const input = event.target.closest?.("[data-carrier-input]");
+  if (!input) return;
+  const picker = input.closest("[data-carrier-picker]");
+  setTimeout(() => {
+    if (picker.contains(document.activeElement)) return;
+    const typed = input.value.trim();
+    const exact = CARRIERS.find(item => item.name === typed) || (searchCarriers(typed).length === 1 && typed ? searchCarriers(typed)[0] : null);
+    if (exact) pickCarrier(picker, exact.name); else input.value = picker.querySelector("[data-carrier-value]").value;
+    picker.querySelector("[data-carrier-results]").hidden = true;
+  }, 150);
+});
+document.addEventListener("mousedown", event => { if (event.target.closest?.("[data-carrier-results] button")) event.preventDefault(); });
+document.addEventListener("click", event => {
+  const pick = event.target.closest?.("[data-carrier-pick]");
+  if (pick) { pickCarrier(pick.closest("[data-carrier-picker]"), pick.dataset.carrierPick); return; }
+  if (event.target.closest?.("[data-detail-add-text]")) {
+    if (detailDraft.length >= DETAIL_MAX_BLOCKS) return showToast(`상세 블록은 ${DETAIL_MAX_BLOCKS}개까지 넣을 수 있어요.`);
+    detailDraft.push({ type: "text", style: "body", text: "" }); renderDetailEditor();
+    const areas = document.querySelectorAll("[data-detail-text]"); areas[areas.length - 1]?.focus();
+    return;
+  }
+  const move = event.target.closest?.("[data-detail-move]");
+  if (move) { const index = Number(move.dataset.detailMove), next = index + Number(move.dataset.dir); if (detailDraft[next]) { [detailDraft[index], detailDraft[next]] = [detailDraft[next], detailDraft[index]]; renderDetailEditor(); } return; }
+  const remove = event.target.closest?.("[data-detail-remove]");
+  if (remove) { detailDraft.splice(Number(remove.dataset.detailRemove), 1); renderDetailEditor(); return; }
+  const style = event.target.closest?.("[data-detail-style]");
+  if (style) { const block = detailDraft[Number(style.dataset.detailStyle)]; if (block) { block.style = style.dataset.style; renderDetailEditor(); } return; }
+  const preview = event.target.closest?.("[data-detail-preview]");
+  if (preview) {
+    const pane = document.querySelector("[data-detail-preview-pane]");
+    pane.hidden = !pane.hidden;
+    preview.classList.toggle("active", !pane.hidden);
+    preview.textContent = pane.hidden ? "미리보기" : "미리보기 닫기";
+    renderDetailEditor();
+  }
+});
+document.addEventListener("change", event => {
+  const files = event.target.closest?.("[data-detail-image-input]");
+  if (files) { addDetailImages(files.files).then(() => { files.value = ""; }); return; }
+  const shipping = event.target.closest?.("[data-shipping-type]");
+  if (shipping) {
+    const policy = shipping.form?.querySelector("[data-customs-policy]");
+    if (policy) { policy.hidden = shipping.value !== "overseas"; if (shipping.value === "overseas") policy.querySelector("input").checked = true; }
+  }
+});
+["dragover", "dragleave", "drop"].forEach(type => document.addEventListener(type, event => {
+  const drop = event.target.closest?.("[data-detail-drop]");
+  if (!drop) return;
+  event.preventDefault();
+  drop.classList.toggle("dragging", type === "dragover");
+  if (type === "drop") addDetailImages(event.dataTransfer?.files);
+}));
 
 const requestedPortal = new URLSearchParams(window.location.search).get("portal");
 initAuth();
