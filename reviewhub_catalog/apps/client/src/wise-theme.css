@@ -549,19 +549,17 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 /* 노출순서 번호: 네 자리 이상도 배지 안에 들어가도록 폭 자동 */
 .display-order-number { width: auto; min-width: 34px; padding: 0 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* 푸터 색상: 브랜드 연두 톤(연한 라임 배경 + 짙은 초록 글씨, 상담 버튼은 라임 그대로) */
-.public-footer { color: var(--w-ink-deep); background: var(--w-primary-pale); }
-.public-footer::before { background: var(--w-ink-deep); }
-.public-footer .footer-brand-block strong { color: var(--w-ink-deep); }
-.public-footer .footer-brand-block span,
-.public-footer .footer-business-info { color: #3d5a2a; }
-.footer-compact-row .footer-link-groups,
-.public-footer .footer-bottom { border-color: rgba(22, 51, 0, .14); }
-.footer-compact-row .footer-link-groups h3 { color: var(--w-positive-deep); }
-.footer-compact-row .footer-link-groups h3::before { background: var(--w-ink-deep); }
-.footer-compact-row .footer-link-groups a, .footer-compact-row .footer-link-groups button { color: var(--w-ink-deep); }
-.footer-compact-row .footer-link-groups a svg { color: #5f7a4c; }
-.public-footer .footer-business-info b { color: rgba(22, 51, 0, .25); }
-.public-footer .footer-bottom small { color: #5f7a4c; }
-.public-footer .footer-cta { box-shadow: inset 0 0 0 1px rgba(22, 51, 0, .18); }
-.public-footer .footer-cta:hover { background: var(--w-primary-neutral); }
+/* 흰 배경 통일(공개·관리자): 페이지 배경은 흰색, 카드는 옅은 테두리 + 부드러운 그림자로 구분 */
+:root { --w-card-border: #e4e8e1; --w-card-shadow: 0 1px 2px rgba(14, 15, 12, .04), 0 8px 24px rgba(14, 15, 12, .06); }
+body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
+.operations-card, .catalog-hero, .catalog-panel,
+.history-page-panel, .sold-out-issue-board, .guide-section-card, .guide-highlight-card, .faq-list, .content-page .panel,
+.sourcing-page .sourcing-form, .submitted-card, .price-change-card,
+.admin-card, .admin-home-stat, .admin-stat-card, .admin-home-hero, .sales-kpi-grid article {
+  border: 1px solid var(--w-card-border) !important;
+  box-shadow: var(--w-card-shadow) !important;
+}
+.admin-stat-card.selected { border-color: var(--w-ink) !important; box-shadow: inset 0 0 0 1px var(--w-ink), var(--w-card-shadow) !important; }
+.admin-topbar { border-bottom: 1px solid var(--w-line); }
+/* 푸터: 흰색 + 위쪽 구분선, 라임 포인트는 상단 선·CTA만 */
+.public-footer { background: var(--w-canvas); border-top: 1px solid var(--w-line) !important; border-radius: 0; box-shadow: none; }
