@@ -2366,6 +2366,13 @@ function partnerMessengerTemplate(connections, perspective) {
     <aside class="talk-profile">${talkPartnerProfile(active, perspective)}</aside>
   </div>`;
 }
+/* 공급사가 보는 거래처 정보: 이 셀러가 파는 내 상품과 판매 실적 (예전 '판매 현황' 표를 대화방 정보로 옮김) */
+function talkPartnerSalesBlock(active) {
+  const items = state.sellerProducts.filter(item => item.sellerLoginId === active.sellerLoginId && productOf(item.productId)?.supplierLoginId === active.supplierLoginId);
+  const orders = state.orders.filter(order => order.supplierLoginId === active.supplierLoginId && order.sellerLoginId === active.sellerLoginId);
+  const sales = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+  return `<div class="talk-partner-sales"><div class="talk-partner-sales-head"><span>이 셀러가 파는 내 상품</span><b>${items.length}개 · 판매액 ${money(sales)}</b></div>${items.slice(0, 5).map(item => { const product = productOf(item.productId); const live = (item.channels || []); return `<div class="talk-partner-item">${productPhoto(product, "table-photo")}<span><b>${escapeHtml(product?.name || item.productId)}</b><small>${live.length ? live.map(id => channelMeta(id).name).join(" · ") : escapeHtml(item.approvalStatus || "")}</small></span><em>${money(Number(item.salePrice || product?.recommended || 0))}</em></div>`; }).join("") || `<div class="empty">아직 가져간 상품이 없어요.</div>`}${items.length > 5 ? `<small class="talk-partner-more">외 ${items.length - 5}개 · 판매 현황에서 전체 보기</small>` : ""}</div>`;
+}
 function talkPartnerProfile(active, perspective) {
   const supplier = memberByLogin(active.supplierLoginId);
   const seller = memberByLogin(active.sellerLoginId);
@@ -2373,9 +2380,10 @@ function talkPartnerProfile(active, perspective) {
   const otherName = perspective === "seller" ? supplierName(active.supplierLoginId) : (seller?.company || active.sellerLoginId);
   const products = state.products.filter(product => product.supplierLoginId === active.supplierLoginId);
   const orders = state.orders.filter(order => order.supplierLoginId === active.supplierLoginId && order.sellerLoginId === active.sellerLoginId);
-  return `<span class="talk-avatar large" style="--avatar-tone:${talkAvatarTone(otherName)}">${escapeHtml(String(otherName || "").trim().charAt(0) || "공")}</span><h3>${escapeHtml(otherName)}</h3><p>${escapeHtml(other?.representative || "담당자")} · ${perspective === "seller" ? "공급사" : "위탁셀러"}</p>
+  return `<span class="talk-avatar large" style="--avatar-tone:${talkAvatarTone(otherName)}">${escapeHtml(String(otherName || "").trim().charAt(0) || "공")}</span><h3>${escapeHtml(otherName)}</h3><p>${escapeHtml([...new Set([other?.representative || "담당자", perspective === "seller" ? "공급사" : "위탁셀러"])].join(" · "))}</p>
     <div class="talk-profile-kpis"><span><small>거래 상품</small><b>${new Set(orders.map(order => order.productId)).size}개</b></span><span><small>누적 주문</small><b>${orders.length}건</b></span><span><small>공급 상품</small><b>${products.length}개</b></span><span><small>평균 응답</small><b>1시간</b></span></div>
     <dl class="talk-profile-info"><div><dt>연락처</dt><dd>${escapeHtml(other?.contact || "-")}</dd></div><div><dt>이메일</dt><dd>${escapeHtml(other?.email || "-")}</dd></div></dl>
+    ${perspective === "supplier" ? talkPartnerSalesBlock(active) : ""}
     <label class="partner-note"><span>거래처 메모 (나만 보기)</span><textarea id="partnerNoteInput" rows="3" placeholder="내부 메모를 남겨주세요.">${escapeHtml(state.partnerNotes?.[active.id] || "")}</textarea></label><button type="button" class="secondary-button" data-action="save-chat-note" data-id="${active.id}">메모 저장</button>
     ${perspective === "seller" ? `<div class="talk-profile-products"><span>최근 공급상품</span>${products.slice(0, 3).map(product => `<button type="button" data-action="product-detail" data-id="${product.id}">${productPhoto(product, "table-photo")}<b>${escapeHtml(product.name)}</b></button>`).join("")}</div>` : ""}`;
 }
@@ -2387,20 +2395,7 @@ function sellerConnectionTemplate() {
 
 function supplierConnectionTemplate() {
   const connections = currentSupplierConnections();
-  const invite = state.connectionInvites.find(item => item.supplierLoginId === currentAccount.loginId && item.status === "active");
-  return `${sectionHero("거래처 연결", "연결 코드를 셀러에게 전달하고 주문·상품·출고 대화를 두고톡에서 관리합니다.", `<button class="secondary-button" data-action="generate-invite">연결 코드 새로 만들기</button>`)}
-    <div class="invite-code-box panel"><span>현재 연결 코드</span><strong>${escapeHtml(invite?.code || "미발급")}</strong><button class="text-button" data-action="copy-invite" data-code="${escapeHtml(invite?.code || "")}">코드 복사</button><small>승인된 위탁셀러만 연결할 수 있습니다.</small></div>${supplierPartnerSalesTemplate(connections)}${partnerMessengerTemplate(connections, "supplier")}`;
-}
-
-function supplierPartnerSalesTemplate(connections) {
-  if (!connections.length) return "";
-  const connection = connections[0];
-  const seller = memberByLogin(connection.sellerLoginId);
-  const sellerItems = state.sellerProducts.filter(item => item.sellerLoginId === connection.sellerLoginId && productOf(item.productId)?.supplierLoginId === currentAccount.loginId);
-  const orders = state.orders.filter(order => order.supplierLoginId === currentAccount.loginId && order.sellerLoginId === connection.sellerLoginId);
-  const totalQty = orders.reduce((sum, order) => sum + Number(order.qty || 0), 0);
-  const totalSales = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
-  return `<section class="panel partner-sales-panel"><div class="panel-head"><div><h3>${escapeHtml(seller?.company || connection.sellerLoginId)} 판매 현황</h3><p>이 거래처가 가져간 내 상품과 주문·판매 실적입니다.</p></div><span class="chip blue">실시간 샘플</span></div><div class="partner-sales-kpis"><div><span>판매 중인 내 상품</span><strong>${sellerItems.length}개</strong></div><div><span>누적 주문</span><strong>${orders.length}건</strong></div><div><span>누적 판매수량</span><strong>${totalQty}개</strong></div><div><span>소비자 판매액</span><strong>${money(totalSales)}</strong></div></div><div class="table-wrap"><table><thead><tr><th>상품</th><th>판매 채널</th><th>주문</th><th>판매 수량</th><th>판매액</th></tr></thead><tbody>${sellerItems.length ? sellerItems.map(item => { const product = productOf(item.productId); const productOrders = orders.filter(order => order.productId === item.productId); return `<tr><td><div class="table-product">${productPhoto(product,"table-photo")}<span><strong>${escapeHtml(product?.name || "상품")}</strong><small>${escapeHtml(item.id)}</small></span></div></td><td>${escapeHtml((item.channels || []).map(id => channelMeta(id).name).join(", ") || item.channel)}</td><td>${productOrders.length}건</td><td>${productOrders.reduce((sum,order)=>sum+order.qty,0)}개</td><td><strong>${money(productOrders.reduce((sum,order)=>sum+order.amount,0))}</strong></td></tr>`; }).join("") : `<tr><td colspan="5"><div class="empty">이 거래처가 아직 가져간 상품이 없습니다.</div></td></tr>`}</tbody></table></div></section>`;
+  return `<div class="talk-page ${chatMobileView === "room" ? "show-room" : ""}">${connections.length ? partnerMessengerTemplate(connections, "supplier") : `<div class="panel empty connection-empty"><b>아직 연결된 위탁셀러가 없어요</b><span>연결 코드를 위탁셀러에게 보내면 두고톡 대화방이 바로 생겨요.</span><button type="button" class="primary-button" data-action="open-connect-supplier" data-perspective="supplier">연결 코드 보기</button></div>`}</div>`;
 }
 
 function masterConnectionsTemplate() {
@@ -6258,7 +6253,7 @@ document.addEventListener("click", event => {
   if (action === "copy-invite") {
     const code = target.dataset.code;
     if (navigator.clipboard?.writeText && code) navigator.clipboard.writeText(code).catch(() => {});
-    showToast(`${code || "연결 코드"}를 복사했습니다.`);
+    showToast(code ? `연결 코드 ${code} 를 복사했어요.` : "연결 코드를 복사했어요.");
   }
   if (action === "register-product") registerProductModal();
   if (action === "edit-product") editProductModal(id);
