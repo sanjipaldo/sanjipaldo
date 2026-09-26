@@ -532,3 +532,36 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 @media (min-width: 721px) and (max-width: 1050px) {
   .public-footer { padding-bottom: 104px; }
 }
+
+/* 관리자 상품 리스트(PC·태블릿): 관리(수정/삭제) 열을 오른쪽에 고정해 가로 스크롤 없이 항상 보이게 */
+@media (min-width: 721px) {
+  .product-admin-table th:nth-child(3) { width: 74px; }
+  .product-admin-table th:last-child,
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > td:last-child {
+    position: sticky; right: 0; z-index: 2; width: 150px;
+    box-shadow: -10px 0 14px -10px rgba(14, 15, 12, .18);
+  }
+  .product-admin-table th:last-child { background: var(--w-soft-2); text-align: center; }
+  .product-admin-table tbody > tr:not(.admin-option-detail-row) > td:last-child { background: var(--w-canvas); }
+  .product-admin-table .product-row-actions { flex-wrap: nowrap; justify-content: center; gap: 6px; }
+  .product-admin-table .product-row-actions button { height: 34px; padding: 0 10px; font-size: 12px; white-space: nowrap; }
+}
+/* 노출순서 번호: 네 자리 이상도 배지 안에 들어가도록 폭 자동 */
+.display-order-number { width: auto; min-width: 34px; padding: 0 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* 푸터 색상: 브랜드 연두 톤(연한 라임 배경 + 짙은 초록 글씨, 상담 버튼은 라임 그대로) */
+.public-footer { color: var(--w-ink-deep); background: var(--w-primary-pale); }
+.public-footer::before { background: var(--w-ink-deep); }
+.public-footer .footer-brand-block strong { color: var(--w-ink-deep); }
+.public-footer .footer-brand-block span,
+.public-footer .footer-business-info { color: #3d5a2a; }
+.footer-compact-row .footer-link-groups,
+.public-footer .footer-bottom { border-color: rgba(22, 51, 0, .14); }
+.footer-compact-row .footer-link-groups h3 { color: var(--w-positive-deep); }
+.footer-compact-row .footer-link-groups h3::before { background: var(--w-ink-deep); }
+.footer-compact-row .footer-link-groups a, .footer-compact-row .footer-link-groups button { color: var(--w-ink-deep); }
+.footer-compact-row .footer-link-groups a svg { color: #5f7a4c; }
+.public-footer .footer-business-info b { color: rgba(22, 51, 0, .25); }
+.public-footer .footer-bottom small { color: #5f7a4c; }
+.public-footer .footer-cta { box-shadow: inset 0 0 0 1px rgba(22, 51, 0, .18); }
+.public-footer .footer-cta:hover { background: var(--w-primary-neutral); }
