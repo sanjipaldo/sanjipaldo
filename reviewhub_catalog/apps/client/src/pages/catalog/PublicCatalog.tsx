@@ -37,7 +37,9 @@ import {
   Truck,
   WalletCards,
   X,
-  MoonStar
+  MoonStar,
+  Handshake,
+  Mail
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -424,6 +426,12 @@ function PageFrame({ children }: { children: ReactNode }) {
     window.addEventListener("doogo:sourcing-open", open);
     return () => window.removeEventListener("doogo:sourcing-open", open);
   }, []);
+  const [partnerOpen, setPartnerOpen] = useState(false);
+  useEffect(() => {
+    const open = () => setPartnerOpen(true);
+    window.addEventListener("doogo:partner-open", open);
+    return () => window.removeEventListener("doogo:partner-open", open);
+  }, []);
   return (
     <div className="public-app">
       <BrandHeader />
@@ -450,6 +458,7 @@ function PageFrame({ children }: { children: ReactNode }) {
             <h3>고객 지원</h3>
             <a href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer">1:1 상담 <ExternalLink size={13} /></a>
             <button type="button" onClick={() => setSourcingOpen(true)}>소싱 요청</button>
+            <button type="button" onClick={() => setPartnerOpen(true)}>입점 신청</button>
             <Link to="/admin">관리자센터</Link>
           </div>
         </nav>
@@ -464,6 +473,7 @@ function PageFrame({ children }: { children: ReactNode }) {
         </div>
       </footer>
       {sourcingOpen && <SourcingModal onClose={() => setSourcingOpen(false)} />}
+      {partnerOpen && <PartnerModal onClose={() => setPartnerOpen(false)} />}
     </div>
   );
 }
@@ -656,6 +666,109 @@ function SourcingModal({ onClose }: { onClose: () => void }) {
             <SourcingFormFields compact />
             <div className="sourcing-submit-bar">
               <button type="submit" disabled={submitting}>{submitting ? "접수 중…" : "소싱 요청 보내기"} <Send size={16} /></button>
+            </div>
+          </form>
+        )}
+      </section>
+    </div>
+  );
+}
+
+// 홈 입점 안내 배너: 농가·수산·브랜드사 입점 신청 창을 엽니다.
+function PartnerBanner() {
+  return (
+    <section className="partner-banner" aria-label="입점 신청 안내">
+      <span className="partner-banner-icon"><Handshake size={24} /></span>
+      <div className="partner-banner-copy">
+        <span className="section-kicker">PARTNER WITH DOOGO FOOD</span>
+        <strong>좋은 상품을 가진 농가·수산·브랜드사를 찾습니다</strong>
+        <p>두고푸드 위탁셀러 채널로 판로를 넓혀 보세요. 신청서를 남기면 담당 MD가 검토 후 연락드립니다.</p>
+      </div>
+      <button type="button" className="partner-banner-cta" onClick={() => window.dispatchEvent(new CustomEvent("doogo:partner-open"))}>입점 신청하기 <ChevronRight size={18} /></button>
+    </section>
+  );
+}
+
+const PARTNER_TYPES = ["농가", "수산", "축산", "가공식품", "브랜드사", "기타"] as const;
+
+// 입점 신청서(소싱 요청과 같은 관리자 게시판에 "입점"으로 쌓이고, 입력한 이메일로 접수 안내 메일이 발송됩니다).
+function PartnerModal({ onClose }: { onClose: () => void }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState<{ email: string; mailed: boolean } | null>(null);
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitting(true);
+    try {
+      const form = new FormData(event.currentTarget);
+      const body = { ...Object.fromEntries(form.entries()), agreePrivacy: form.get("agreePrivacy") === "on" };
+      const response = await apiFetch("/catalog/partner", {
+        method: "POST",
+        auth: false,
+        silent: true,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; data?: { request?: { emailStatus?: string | null } }; error?: { message?: string } } | null;
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error?.message || "입점 신청을 저장하지 못했습니다.");
+      setSubmitted({ email: String(form.get("email") || ""), mailed: payload.data?.request?.emailStatus === "sent" });
+      toast.success("입점 신청이 접수되었습니다.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "입점 신청에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  return (
+    <div className="public-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="public-modal sourcing-modal partner-modal" role="dialog" aria-modal="true" aria-labelledby="partner-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+        <button type="button" className="public-modal-close" onClick={onClose} aria-label="입점 신청 닫기"><X size={20} /></button>
+        <header className="sourcing-modal-head">
+          <span className="modal-icon"><Handshake size={22} /></span>
+          <div>
+            <span className="section-kicker">PARTNER APPLICATION</span>
+            <h2 id="partner-modal-title">입점 신청</h2>
+            <p>농가·수산·축산·가공식품·브랜드사 누구나 신청할 수 있습니다. 담당 MD가 검토 후 연락드립니다.</p>
+          </div>
+        </header>
+        {submitted ? (
+          <div className="modal-submitted sourcing-done">
+            <span className="sourcing-done-icon"><Mail size={24} /></span>
+            <strong>입점 신청이 접수되었습니다.</strong>
+            <p>{submitted.mailed ? <>접수 안내 메일을 <b>{submitted.email}</b>(으)로 보내드렸습니다. </> : null}담당 MD가 검토 후 영업일 기준 2~3일 안에 연락드립니다.</p>
+            <button className="modal-confirm" onClick={onClose}>닫기</button>
+          </div>
+        ) : (
+          <form className="sourcing-form sourcing-modal-form" onSubmit={submit}>
+            <ol className="sourcing-steps" aria-label="진행 순서"><li><b>1</b> 신청서 접수</li><li><b>2</b> MD 검토</li><li><b>3</b> 입점 상담</li></ol>
+            <fieldset className="sourcing-group">
+              <legend><span>1</span> 업체 정보</legend>
+              <div className="form-two">
+                <label><span className="field-label">업체명(상호) <em aria-hidden="true">필수</em></span><input name="companyName" required maxLength={120} placeholder="예: 영동 햇살농원" autoComplete="organization" /></label>
+                <label><span className="field-label">업종 <em aria-hidden="true">필수</em></span><select name="businessType" required defaultValue=""><option value="" disabled>선택해 주세요</option>{PARTNER_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
+              </div>
+              <label><span className="field-label">주요 상품 <em aria-hidden="true">필수</em></span><input name="productName" required maxLength={200} placeholder="예: 영동 곶감 반건시, 샤인머스캣 2kg" /></label>
+              <label><span className="field-label">홈페이지·스토어 주소</span><input name="referenceUrl" type="url" inputMode="url" placeholder="https://" /></label>
+              <label><span className="field-label">업체·상품 소개</span><textarea name="details" rows={3} maxLength={3000} placeholder="생산 규모, 월 공급 가능 물량, 인증(GAP·HACCP 등), 희망 공급가 등을 적어 주세요." /></label>
+            </fieldset>
+            <fieldset className="sourcing-group">
+              <legend><span>2</span> 담당자 연락처</legend>
+              <div className="form-two">
+                <label><span className="field-label">담당자명 <em aria-hidden="true">필수</em></span><input name="requesterName" required maxLength={80} autoComplete="name" /></label>
+                <label><span className="field-label">휴대폰 번호 <em aria-hidden="true">필수</em></span><input name="contact" required inputMode="tel" maxLength={40} placeholder="010-0000-0000" autoComplete="tel" /></label>
+              </div>
+              <label><span className="field-label">이메일 <em aria-hidden="true">필수</em></span><input name="email" type="email" required maxLength={160} placeholder="접수 안내 메일을 받을 주소" autoComplete="email" /></label>
+              <input className="partner-honeypot" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+              <label className="partner-agree"><input type="checkbox" name="agreePrivacy" required /> <span>입점 상담을 위해 업체명·담당자명·연락처·이메일을 수집·이용하는 데 동의합니다. (상담 완료 후 1년 보관)</span></label>
+            </fieldset>
+            <div className="sourcing-submit-bar">
+              <button type="submit" disabled={submitting}>{submitting ? "접수 중…" : "입점 신청 보내기"} <Send size={16} /></button>
             </div>
           </form>
         )}
@@ -1116,6 +1229,7 @@ export function CatalogHome() {
     <PageFrame>
       <main className="catalog-main">
         <OperationsBoard operations={operations} clock={clock} />
+        <PartnerBanner />
         <section className="catalog-hero">
           <div>
             <span className="hero-eyebrow"><Sparkles size={14} /> 판매자를 위한 실시간 상품 정보</span>

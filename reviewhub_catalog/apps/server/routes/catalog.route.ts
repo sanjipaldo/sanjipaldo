@@ -9,6 +9,7 @@ import {
   createProduct,
   createProductGroup,
   createShippingPolicy,
+  createPartnerRequest,
   createSourcingRequest,
   createSupplier,
   getAdminCatalog,
@@ -144,6 +145,20 @@ const SourcingSchema = z.object({
   details: z.string().trim().max(3000).nullable().optional()
 });
 
+const PartnerSchema = z.object({
+  companyName: z.string().trim().min(1).max(120),
+  businessType: z.enum(["농가", "수산", "축산", "가공식품", "브랜드사", "기타"]),
+  productName: z.string().trim().min(1).max(200),
+  requesterName: z.string().trim().min(1).max(80),
+  contact: z.string().trim().min(8).max(40),
+  email: z.string().trim().email().max(160),
+  referenceUrl: z.union([z.literal(""), z.string().url()]).nullable().optional(),
+  details: z.string().trim().max(3000).nullable().optional(),
+  agreePrivacy: z.literal(true),
+  // 봇 차단용 숨은 칸: 사람이 입력하면 비어 있어야 합니다.
+  website: z.string().max(0).optional()
+});
+
 const SettingSchema = z.object({
   key: z.enum(["guide", "guide_sections", "sourcing_intro"]),
   value: z.string().trim().min(1).max(30000)
@@ -216,6 +231,18 @@ catalogRouter.post("/sourcing", publicRoute, async (c) => {
   const parsed = SourcingSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "필수 입력값을 확인해 주세요."), 400);
   return c.json(apiSuccess({ request: await createSourcingRequest(parsed.data) }), 201);
+});
+
+catalogRouter.post("/partner", publicRoute, async (c) => {
+  const parsed = PartnerSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    const field = String(parsed.error.issues[0]?.path[0] ?? "");
+    const message = field === "email" ? "이메일 주소를 확인해 주세요." : field === "agreePrivacy" ? "개인정보 수집·이용에 동의해 주세요." : field === "contact" ? "연락처를 확인해 주세요." : "필수 입력값을 확인해 주세요.";
+    return c.json(apiFailure("INVALID_INPUT", message), 400);
+  }
+  const { agreePrivacy: _agree, website: _website, ...input } = parsed.data;
+  const request = await createPartnerRequest({ ...input, referenceUrl: input.referenceUrl || null });
+  return c.json(apiSuccess({ request: { id: request.id, emailStatus: request.emailStatus } }), 201);
 });
 
 catalogRouter.get("/admin", adminRoute, async (c) => c.json(apiSuccess(await getAdminCatalog())));

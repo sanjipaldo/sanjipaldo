@@ -344,10 +344,18 @@ export const sourcingRequests = sqliteTable(
     contact: text("contact").notNull(),
     details: text("details"),
     status: text("status", { enum: ["received", "reviewing", "completed"] }).notNull().default("received"),
+    // sourcing = 소싱해주세요 요청, partner = 농가·수산·브랜드사 입점 신청
+    requestType: text("requestType", { enum: ["sourcing", "partner"] }).notNull().default("sourcing"),
+    companyName: text("companyName"),
+    email: text("email"),
+    businessType: text("businessType"),
+    // 입점 신청 자동 안내 메일: sent | failed | skipped
+    emailStatus: text("emailStatus"),
+    emailSentAt: text("emailSentAt"),
     createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
   },
-  (table) => [index("idx_sourcing_requests_status").on(table.status)]
+  (table) => [index("idx_sourcing_requests_status").on(table.status), index("idx_sourcing_requests_type").on(table.requestType, table.createdAt)]
 );
 
 export const contentSettings = sqliteTable("content_settings", {

@@ -31,6 +31,18 @@ Skywork 파일 게이트웨이 대신 Vercel Blob 공개 저장소(`doogofood-im
 - 서버 번들에서 `apps/server/services/s3_storage.ts`를 `blob-storage.ts`로 바꿔 끼웁니다.
 - 필요한 변수는 `BLOB_READ_WRITE_TOKEN` 하나이며, 저장소를 프로젝트에 연결하면 자동으로 들어옵니다.
 
+## 입점 신청 자동 안내 메일(Resend)
+
+입점 신청이 들어오면 신청자 이메일로 접수 안내 메일을 보냅니다. 아래 변수가 없으면 메일만 건너뛰고(관리자에 "메일 미발송") 신청은 정상 저장됩니다.
+
+| 이름 | 값 |
+|---|---|
+| `RESEND_API_KEY` | Resend 대시보드 → API Keys에서 발급 |
+| `MAIL_FROM` | 보내는 사람, 예: `두고푸드 <md@doogofood.site>` (Resend에서 doogofood.site 도메인 인증 필요) |
+| `MAIL_NOTIFY_TO` | (선택) 새 입점 신청 알림을 받을 MD 이메일 |
+
+같은 이메일로 10분 안에 다시 신청하면 메일은 다시 보내지 않습니다(자동 메일 남용 방지).
+
 ## CLI 배포
 
 ```bash

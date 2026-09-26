@@ -630,3 +630,47 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .bulk-selection-bar button { flex: 1; justify-content: center; min-height: 46px; font-size: 15px; }
   .bulk-edit-row { grid-template-columns: 1fr; gap: 10px; }
 }
+
+/* 홈 입점 신청 배너 */
+.partner-banner { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 20px; margin: 16px 0; padding: 22px 26px; border: 1px solid var(--w-card-border); border-radius: var(--w-radius-xl); background: linear-gradient(100deg, var(--w-primary-pale) 0%, #f4fbee 45%, var(--w-canvas) 100%); box-shadow: var(--w-card-shadow); }
+.partner-banner-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; color: var(--w-ink-deep); background: var(--w-primary); }
+.partner-banner-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.partner-banner-copy .section-kicker { color: var(--w-positive-deep); font-size: 12px; font-weight: 800; letter-spacing: .12em; }
+.partner-banner-copy strong { color: var(--w-ink); font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
+.partner-banner-copy p { margin: 0; color: var(--w-body); font-size: 15px; line-height: 1.6; }
+.partner-banner-cta { display: inline-flex; align-items: center; gap: 6px; min-height: 50px; padding: 0 24px; border: 0; border-radius: 999px; color: var(--w-canvas); background: var(--w-ink); font-size: 16px; font-weight: 700; white-space: nowrap; }
+.partner-banner-cta:hover { background: var(--w-ink-deep); }
+.partner-banner-cta:focus-visible { outline: 3px solid var(--w-primary); outline-offset: 3px; }
+@media (max-width: 720px) {
+  .partner-banner { grid-template-columns: auto minmax(0, 1fr); gap: 14px; margin: 12px 0; padding: 18px; }
+  .partner-banner-icon { width: 46px; height: 46px; border-radius: 14px; }
+  .partner-banner-copy strong { font-size: 17px; }
+  .partner-banner-copy p { font-size: 14px; }
+  .partner-banner-cta { grid-column: 1 / -1; justify-content: center; width: 100%; }
+}
+/* 입점 신청서 */
+.partner-modal select { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--w-line); border-radius: var(--w-radius-md); background: var(--w-canvas); color: var(--w-ink); font-size: 16px; }
+.partner-honeypot { position: absolute !important; left: -9999px !important; width: 1px !important; height: 1px !important; opacity: 0 !important; }
+.partner-agree { display: flex !important; flex-direction: row !important; align-items: flex-start; gap: 10px !important; margin-top: 4px; color: var(--w-body) !important; font-size: 13px !important; font-weight: 400 !important; line-height: 1.5; }
+.partner-agree input { flex: none; width: 18px !important; height: 18px !important; margin-top: 1px; accent-color: var(--w-ink); }
+/* 관리자: 소싱/입점 탭 */
+.request-kind-tabs { display: inline-flex; gap: 6px; margin: 0 0 16px; padding: 5px; border: 1px solid var(--w-card-border); border-radius: 999px; background: var(--w-canvas); box-shadow: var(--w-card-shadow); }
+.request-kind-tabs button { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px; color: var(--w-body); background: transparent; font-size: 15px; font-weight: 700; }
+.request-kind-tabs button small { padding: 1px 8px; border-radius: 999px; background: var(--w-soft-2); color: var(--w-body); font-size: 12px; }
+.request-kind-tabs button.active { color: var(--w-ink); background: var(--w-primary); }
+.request-kind-tabs button.active small { background: rgba(255, 255, 255, .7); color: var(--w-ink); }
+.request-type-chip { display: inline-flex; padding: 3px 10px; border-radius: 999px; color: var(--w-ink-deep); background: var(--w-primary-pale); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.request-email { display: flex; flex-direction: column; gap: 3px; }
+.request-email a { color: var(--w-ink); font-size: 13px; word-break: break-all; }
+.mail-status { color: var(--w-mute); font-size: 11px; }
+.mail-status.sent { color: var(--w-positive-deep); }
+.mail-status.failed { color: var(--w-negative); }
+@media (max-width: 720px) {
+  .request-kind-tabs { display: flex; width: 100%; }
+  .request-kind-tabs button { flex: 1; justify-content: center; padding: 0 10px; }
+}
+.partner-agree span { font-weight: 400; color: var(--w-body); }
+@media (min-width: 721px) {
+  .request-board-table th:last-child, .request-board-table td:last-child { position: sticky; right: 0; z-index: 1; background: var(--w-canvas); box-shadow: -10px 0 14px -10px rgba(14, 15, 12, .18); }
+  .request-board-table th:last-child { background: var(--w-soft-2); }
+}

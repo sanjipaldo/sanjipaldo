@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { DatabaseError, getDb } from "../_core/db";
+import { sendPartnerReceivedMail } from "./partner-mail";
 import {
   catalogActivityLogs,
   categories,
@@ -1277,6 +1278,38 @@ export async function createSourcingRequest(input: {
 }) {
   const rows = await getDb().insert(sourcingRequests).values(input).returning();
   return rows[0];
+}
+
+// 입점 신청(농가·수산·브랜드사): 소싱 요청과 같은 테이블에 requestType="partner"로 저장하고 접수 안내 메일을 보냅니다.
+export async function createPartnerRequest(input: {
+  companyName: string;
+  businessType: string;
+  productName: string;
+  requesterName: string;
+  contact: string;
+  email: string;
+  referenceUrl?: string | null;
+  details?: string | null;
+}) {
+  const db = getDb();
+  const email = input.email.trim().toLowerCase();
+  // 같은 이메일로 10분 안에 다시 신청하면 메일은 다시 보내지 않습니다(자동 메일 남용 방지).
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const recent = await db
+    .select({ id: sourcingRequests.id })
+    .from(sourcingRequests)
+    .where(and(eq(sourcingRequests.requestType, "partner"), eq(sourcingRequests.email, email), sql`${sourcingRequests.createdAt} >= ${tenMinutesAgo}`))
+    .limit(1);
+  const rows = await db.insert(sourcingRequests).values({ ...input, email, requestType: "partner", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }).returning();
+  const request = rows[0];
+  if (!request) throw new DatabaseError("DATABASE_QUERY_FAILED", "입점 신청을 저장하지 못했습니다.", 502);
+  const emailStatus = recent.length > 0 ? "skipped" : await sendPartnerReceivedMail({ ...input, email });
+  const updated = await db
+    .update(sourcingRequests)
+    .set({ emailStatus, emailSentAt: emailStatus === "sent" ? new Date().toISOString() : null })
+    .where(eq(sourcingRequests.id, request.id))
+    .returning();
+  return updated[0] ?? request;
 }
 
 export async function updateSourcingStatus(id: string, status: "received" | "reviewing" | "completed") {

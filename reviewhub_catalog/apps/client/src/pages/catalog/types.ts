@@ -206,6 +206,12 @@ export type SourcingRequest = {
   contact: string;
   details: string | null;
   status: "received" | "reviewing" | "completed";
+  requestType?: "sourcing" | "partner";
+  companyName?: string | null;
+  email?: string | null;
+  businessType?: string | null;
+  emailStatus?: "sent" | "failed" | "skipped" | null;
+  emailSentAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };

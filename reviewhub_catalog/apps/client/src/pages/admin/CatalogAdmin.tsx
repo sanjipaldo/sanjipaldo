@@ -401,7 +401,7 @@ const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes
   { section: "sales", label: "통계", icon: CalendarDays },
   { section: "notices", label: "공지·필독", icon: Bell },
   { section: "history", label: "가격변동 이력", icon: History },
-  { section: "sourcing", label: "소싱 요청", icon: ClipboardList },
+  { section: "sourcing", label: "입점·소싱 요청", icon: ClipboardList },
   { section: "sync", label: "발주오라 연동", icon: TrendingUp, group: "openapi" }
 ];
 
@@ -691,7 +691,7 @@ function AdminHome({ data }: { data: AdminHomeData | null }) {
       </div>
       <div className="admin-home-grid">
         <section className="admin-card admin-home-panel">
-          <div className="card-heading"><ClipboardList size={19} /><div><h2>소싱 요청</h2><p>새로 들어온 요청과 처리 현황입니다.</p></div><Link to="/admin/sourcing">전체 보기 <ChevronRight size={14} /></Link></div>
+          <div className="card-heading"><ClipboardList size={19} /><div><h2>입점·소싱 요청</h2><p>새로 들어온 소싱 요청과 입점 신청 처리 현황입니다.</p></div><Link to="/admin/sourcing">전체 보기 <ChevronRight size={14} /></Link></div>
           <div className="admin-home-request-stats">
             <Link to="/admin/sourcing?status=received"><span>접수</span><strong>{overview.sourcingCounts.received}</strong></Link>
             <Link to="/admin/sourcing?status=reviewing"><span>검토중</span><strong>{overview.sourcingCounts.reviewing}</strong></Link>
@@ -1969,6 +1969,7 @@ type HistoryAdminGroup = {
 function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () => Promise<void> }) {
   const [sourcingData, setSourcingData] = useState<AdminCatalogData>(data);
   const [sourcingLoading, setSourcingLoading] = useState(data.sourcingRequests.length === 0);
+  const [kind, setKind] = useState<"sourcing" | "partner">("sourcing");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | SourcingRequest["status"]>("all");
   const [selectedRequest, setSelectedRequest] = useState<SourcingRequest | null>(null);
@@ -1989,27 +1990,36 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
     value === "received" ? "접수" : value === "reviewing" ? "검토중" : "완료"
   );
 
-  const filtered = useMemo(() => sourcingData.sourcingRequests.filter((request) => {
+  const typeOf = (request: SourcingRequest) => request.requestType ?? "sourcing";
+  const kindRequests = useMemo(() => sourcingData.sourcingRequests.filter((request) => typeOf(request) === kind), [sourcingData.sourcingRequests, kind]);
+  const requestNumber = useMemo(() => new Map(kindRequests.map((request, index) => [request.id, `${kind === "partner" ? "PT" : "SR"}-${String(kindRequests.length - index).padStart(4, "0")}`])), [kindRequests, kind]);
+  const filtered = useMemo(() => kindRequests.filter((request) => {
     const keyword = query.trim().toLowerCase();
-    const matchesQuery = !keyword || `${request.productName} ${request.requesterName} ${request.contact} ${request.desiredPrice || ""} ${request.details || ""}`.toLowerCase().includes(keyword);
+    const matchesQuery = !keyword || `${request.productName} ${request.requesterName} ${request.contact} ${request.desiredPrice || ""} ${request.details || ""} ${request.companyName || ""} ${request.email || ""} ${request.businessType || ""}`.toLowerCase().includes(keyword);
     return matchesQuery && (status === "all" || request.status === status);
-  }), [sourcingData.sourcingRequests, query, status]);
+  }), [kindRequests, query, status]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const pagedRequests = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   useEffect(() => {
     setPage(1);
-  }, [query, status, pageSize]);
+  }, [query, status, pageSize, kind]);
   useEffect(() => {
     if (page > pageCount) setPage(pageCount);
   }, [page, pageCount]);
 
   const counts = {
-    all: sourcingData.sourcingRequests.length,
-    received: sourcingData.sourcingRequests.filter((request) => request.status === "received").length,
-    reviewing: sourcingData.sourcingRequests.filter((request) => request.status === "reviewing").length,
-    completed: sourcingData.sourcingRequests.filter((request) => request.status === "completed").length
+    all: kindRequests.length,
+    received: kindRequests.filter((request) => request.status === "received").length,
+    reviewing: kindRequests.filter((request) => request.status === "reviewing").length,
+    completed: kindRequests.filter((request) => request.status === "completed").length
   };
+  const kindCounts = {
+    sourcing: sourcingData.sourcingRequests.filter((request) => typeOf(request) === "sourcing").length,
+    partner: sourcingData.sourcingRequests.filter((request) => typeOf(request) === "partner").length
+  };
+  const mailLabel = (value: SourcingRequest["emailStatus"]) => value === "sent" ? "안내 메일 발송" : value === "failed" ? "메일 발송 실패" : value === "skipped" ? "메일 미발송" : "-";
+  const isPartner = kind === "partner";
 
   const update = async (request: SourcingRequest, status: SourcingRequest["status"]) => {
     const response = await apiFetch(`/catalog/admin/sourcing/${request.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
@@ -2020,7 +2030,11 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
   };
   return (
     <>
-      <div className="admin-page-heading"><div><span>SOURCING REQUEST</span><h1>소싱 요청</h1><p>접수된 요청을 게시판에서 찾고, 상세 팝업에서 처리 상태를 관리합니다.</p></div></div>
+      <div className="admin-page-heading"><div><span>PARTNER & SOURCING</span><h1>입점·소싱 요청</h1><p>소싱 요청과 입점 신청을 탭으로 나눠 확인하고, 상세 팝업에서 처리 상태를 관리합니다.</p></div></div>
+      <div className="request-kind-tabs" role="tablist" aria-label="요청 종류">
+        <button type="button" role="tab" aria-selected={kind === "sourcing"} className={kind === "sourcing" ? "active" : ""} onClick={() => { setKind("sourcing"); setStatus("all"); }}><PackagePlus size={17} /> 소싱 요청 <small>{kindCounts.sourcing}</small></button>
+        <button type="button" role="tab" aria-selected={kind === "partner"} className={kind === "partner" ? "active" : ""} onClick={() => { setKind("partner"); setStatus("all"); }}><Store size={17} /> 입점 신청 <small>{kindCounts.partner}</small></button>
+      </div>
       <section className="admin-card request-board-card">
         <div className="request-board-toolbar">
           <div className="request-status-tabs" aria-label="소싱 요청 상태 필터">
@@ -2035,25 +2049,35 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
               </button>
             ))}
           </div>
-          <div className="request-board-controls"><div className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·요청자·연락처 검색" /></div><label className="page-size-select">페이지당 <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} aria-label="소싱 요청 페이지당 표시 수"><option value={5}>5개</option><option value={10}>10개</option><option value={20}>20개</option></select></label></div>
+          <div className="request-board-controls"><div className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isPartner ? "업체명·상품·담당자·이메일 검색" : "상품명·요청자·연락처 검색"} /></div><label className="page-size-select">페이지당 <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} aria-label="소싱 요청 페이지당 표시 수"><option value={5}>5개</option><option value={10}>10개</option><option value={20}>20개</option></select></label></div>
         </div>
-        {sourcingLoading ? <div className="admin-loading inline compact"><div className="spinner" /><span>소싱 요청을 불러오는 중…</span></div> : sourcingData.sourcingRequests.length === 0 ? (
-          <div className="empty-admin"><ClipboardList size={28} /><strong>접수된 소싱 요청이 없습니다.</strong></div>
+        {sourcingLoading ? <div className="admin-loading inline compact"><div className="spinner" /><span>소싱 요청을 불러오는 중…</span></div> : kindRequests.length === 0 ? (
+          <div className="empty-admin"><ClipboardList size={28} /><strong>{isPartner ? "접수된 입점 신청이 없습니다." : "접수된 소싱 요청이 없습니다."}</strong></div>
         ) : filtered.length === 0 ? (
           <div className="empty-admin"><Search size={28} /><strong>검색 조건에 맞는 요청이 없습니다.</strong></div>
         ) : (
           <div className="request-board-scroll">
             <table className="request-board-table">
-              <thead><tr><th>접수번호</th><th>상태</th><th>요청 상품·내용</th><th>요청자</th><th>핸드폰 번호</th><th>희망가</th><th>접수일</th><th>관리</th></tr></thead>
+              {isPartner
+                ? <thead><tr><th>접수번호</th><th>상태</th><th>업체·주요 상품</th><th>업종</th><th>담당자</th><th>핸드폰 번호</th><th>이메일</th><th>접수일</th><th>관리</th></tr></thead>
+                : <thead><tr><th>접수번호</th><th>상태</th><th>요청 상품·내용</th><th>요청자</th><th>핸드폰 번호</th><th>희망가</th><th>접수일</th><th>관리</th></tr></thead>}
               <tbody>
                 {pagedRequests.map((request, index) => (
                   <tr key={request.id} tabIndex={0} onClick={() => setSelectedRequest(request)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setSelectedRequest(request); }}>
-                    <td data-label="접수번호"><span className="request-number">SR-{String(sourcingData.sourcingRequests.length - index).padStart(4, "0")}</span></td>
+                    <td data-label="접수번호"><span className="request-number">{requestNumber.get(request.id)}</span></td>
                     <td data-label="상태"><span className={`request-status ${request.status}`}>{statusLabel(request.status)}</span></td>
-                    <td data-label="요청 상품"><div className="request-product"><strong>{request.productName}</strong><small>{request.details || "상세 요청 없음"}</small></div></td>
-                    <td data-label="요청자"><strong>{request.requesterName}</strong></td>
-                    <td data-label="핸드폰 번호"><a className="request-contact" href={`tel:${request.contact.replace(/[^0-9+]/g, "")}`}>{request.contact}</a></td>
-                    <td data-label="희망가">{request.desiredPrice || "-"}</td>
+                    {isPartner ? <>
+                      <td data-label="업체·주요 상품"><div className="request-product"><strong>{request.companyName || "-"}</strong><small>{request.productName}</small></div></td>
+                      <td data-label="업종"><span className="request-type-chip">{request.businessType || "-"}</span></td>
+                      <td data-label="담당자"><strong>{request.requesterName}</strong></td>
+                      <td data-label="핸드폰 번호"><a className="request-contact" href={`tel:${request.contact.replace(/[^0-9+]/g, "")}`} onClick={(event) => event.stopPropagation()}>{request.contact}</a></td>
+                      <td data-label="이메일"><div className="request-email"><a href={`mailto:${request.email ?? ""}`} onClick={(event) => event.stopPropagation()}>{request.email || "-"}</a><small className={`mail-status ${request.emailStatus ?? ""}`}>{mailLabel(request.emailStatus)}</small></div></td>
+                    </> : <>
+                      <td data-label="요청 상품"><div className="request-product"><strong>{request.productName}</strong><small>{request.details || "상세 요청 없음"}</small></div></td>
+                      <td data-label="요청자"><strong>{request.requesterName}</strong></td>
+                      <td data-label="핸드폰 번호"><a className="request-contact" href={`tel:${request.contact.replace(/[^0-9+]/g, "")}`}>{request.contact}</a></td>
+                      <td data-label="희망가">{request.desiredPrice || "-"}</td>
+                    </>}
                     <td data-label="접수일">{request.createdAt.slice(0, 10)}</td>
                     <td data-label="관리"><button className="request-board-action" onClick={(event) => { event.stopPropagation(); setSelectedRequest(request); }}>상세보기 <ChevronRight size={14} /></button></td>
                   </tr>
@@ -2068,18 +2092,28 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
         <div className="editor-overlay" role="presentation" onMouseDown={() => setSelectedRequest(null)}>
           <section className="request-detail-modal" role="dialog" aria-modal="true" aria-labelledby="sourcing-detail-title" onMouseDown={(event) => event.stopPropagation()}>
             <div className="editor-header">
-              <div><span>SOURCING REQUEST DETAIL</span><h2 id="sourcing-detail-title">{selectedRequest.productName}</h2></div>
+              <div><span>{typeOf(selectedRequest) === "partner" ? "PARTNER APPLICATION DETAIL" : "SOURCING REQUEST DETAIL"}</span><h2 id="sourcing-detail-title">{typeOf(selectedRequest) === "partner" ? selectedRequest.companyName || selectedRequest.productName : selectedRequest.productName}</h2></div>
               <button type="button" onClick={() => setSelectedRequest(null)} aria-label="소싱 요청 상세 닫기"><X size={21} /></button>
             </div>
             <dl className="request-detail-grid">
               <div><dt>현재 상태</dt><dd><span className={`request-status ${selectedRequest.status}`}>{statusLabel(selectedRequest.status)}</span></dd></div>
               <div><dt>접수일시</dt><dd>{selectedRequest.createdAt.slice(0, 16).replace("T", " ")}</dd></div>
-              <div><dt>요청자</dt><dd>{selectedRequest.requesterName}</dd></div>
-              <div><dt>연락처</dt><dd>{selectedRequest.contact}</dd></div>
-              <div><dt>희망 공급가</dt><dd>{selectedRequest.desiredPrice || "-"}</dd></div>
-              <div><dt>참고 URL</dt><dd>{selectedRequest.referenceUrl ? <a href={selectedRequest.referenceUrl} target="_blank" rel="noreferrer">참고 링크 열기</a> : "-"}</dd></div>
+              {typeOf(selectedRequest) === "partner" ? <>
+                <div><dt>업종</dt><dd>{selectedRequest.businessType || "-"}</dd></div>
+                <div><dt>주요 상품</dt><dd>{selectedRequest.productName}</dd></div>
+                <div><dt>담당자</dt><dd>{selectedRequest.requesterName}</dd></div>
+                <div><dt>연락처</dt><dd><a href={`tel:${selectedRequest.contact.replace(/[^0-9+]/g, "")}`}>{selectedRequest.contact}</a></dd></div>
+                <div><dt>이메일</dt><dd>{selectedRequest.email ? <a href={`mailto:${selectedRequest.email}`}>{selectedRequest.email}</a> : "-"}</dd></div>
+                <div><dt>자동 안내 메일</dt><dd>{mailLabel(selectedRequest.emailStatus)}{selectedRequest.emailSentAt ? ` · ${selectedRequest.emailSentAt.slice(0, 16).replace("T", " ")}` : ""}</dd></div>
+                <div><dt>홈페이지·스토어</dt><dd>{selectedRequest.referenceUrl ? <a href={selectedRequest.referenceUrl} target="_blank" rel="noreferrer">링크 열기</a> : "-"}</dd></div>
+              </> : <>
+                <div><dt>요청자</dt><dd>{selectedRequest.requesterName}</dd></div>
+                <div><dt>연락처</dt><dd>{selectedRequest.contact}</dd></div>
+                <div><dt>희망 공급가</dt><dd>{selectedRequest.desiredPrice || "-"}</dd></div>
+                <div><dt>참고 URL</dt><dd>{selectedRequest.referenceUrl ? <a href={selectedRequest.referenceUrl} target="_blank" rel="noreferrer">참고 링크 열기</a> : "-"}</dd></div>
+              </>}
             </dl>
-            <p className="request-detail-note">{selectedRequest.details || "상세 요청이 입력되지 않았습니다."}</p>
+            <p className="request-detail-note">{selectedRequest.details || (typeOf(selectedRequest) === "partner" ? "업체·상품 소개가 입력되지 않았습니다." : "상세 요청이 입력되지 않았습니다.")}</p>
             <div className="request-detail-actions">
               {([
                 ["received", "접수"],
