@@ -43,6 +43,7 @@ import {
 } from "../services/catalog";
 import {
   applyBulkProductWorkbook,
+  bulkUpdateProducts,
   buildBulkProductWorkbook,
   buildProductListWorkbook,
   previewBulkProductWorkbook
@@ -89,7 +90,8 @@ const ProductSchema = z.object({
   categoryId: z.string().trim().min(1),
   isVisible: z.boolean().optional(),
   isSoldOut: z.boolean().optional(),
-  options: z.array(ProductOptionSchema).max(200).optional()
+  // 옵션 기능은 사용하지 않습니다(발주오라 일반상품처럼 규격마다 상품을 따로 등록).
+  options: z.array(ProductOptionSchema).max(0, "옵션 대신 규격마다 상품을 따로 등록해 주세요.").optional()
 }).refine(
   (value) => value.isAlwaysOnSale
     ? value.saleStartMonth == null && value.saleEndMonth == null
@@ -495,6 +497,36 @@ catalogRouter.post("/admin/products", adminRoute, async (c) => {
   const parsed = ProductSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", productInputMessage(parsed.error)), 400);
   return c.json(apiSuccess({ product: await createProduct(parsed.data) }), 201);
+});
+
+const BulkUpdateSchema = z.object({
+  ids: z.array(z.string().trim().min(1)).min(1).max(500),
+  changes: z.object({
+    isVisible: z.boolean().optional(),
+    isSoldOut: z.boolean().optional(),
+    categoryId: z.string().trim().min(1).optional(),
+    shippingPolicyId: z.string().trim().min(1).nullable().optional(),
+    courier: z.string().trim().max(100).nullable().optional(),
+    supplierName: z.string().trim().max(160).nullable().optional(),
+    notes: z.string().trim().max(3000).nullable().optional(),
+    imageUrl: z.string().trim().max(2048).nullable().optional(),
+    season: z.object({
+      isAlwaysOnSale: z.boolean(),
+      saleStartMonth: z.coerce.number().int().min(1).max(12).nullable(),
+      saleEndMonth: z.coerce.number().int().min(1).max(12).nullable()
+    }).refine((value) => value.isAlwaysOnSale || (value.saleStartMonth != null && value.saleEndMonth != null), { message: "판매 시작월과 종료월을 함께 선택해 주세요." }).optional()
+  }).refine((value) => Object.keys(value).length > 0, { message: "변경할 항목을 하나 이상 선택해 주세요." })
+});
+
+catalogRouter.post("/admin/products/bulk-update", adminRoute, async (c) => {
+  const parsed = BulkUpdateSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", parsed.error.issues[0]?.message || "일괄 변경 입력값을 확인해 주세요."), 400);
+  try {
+    const user = c.var.currentUser;
+    return c.json(apiSuccess(await bulkUpdateProducts([...new Set(parsed.data.ids)], parsed.data.changes, user.username || user.email)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
 });
 
 catalogRouter.put("/admin/products/:id", adminRoute, async (c) => {

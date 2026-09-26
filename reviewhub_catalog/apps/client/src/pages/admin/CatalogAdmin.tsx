@@ -136,6 +136,106 @@ function ProductImagePreview({ url, onClear }: { url: string; onClear: () => voi
   );
 }
 
+type BulkField = "isVisible" | "isSoldOut" | "categoryId" | "shippingPolicyId" | "courier" | "supplierName" | "season" | "imageUrl" | "notes";
+
+// 선택한 상품 일괄 변경(발주오라 "상품 일괄 변경"과 같은 방식: 체크한 항목만 바뀝니다).
+function BulkEditModal({ ids, categories, shippingPolicies, suppliers, onClose, onDone }: { ids: string[]; categories: Category[]; shippingPolicies: ShippingPolicy[]; suppliers: Supplier[]; onClose: () => void; onDone: () => void }) {
+  const [enabled, setEnabled] = useState<Record<BulkField, boolean>>({ isVisible: false, isSoldOut: false, categoryId: false, shippingPolicyId: false, courier: false, supplierName: false, season: false, imageUrl: false, notes: false });
+  const [isVisible, setIsVisible] = useState(true);
+  const [isSoldOut, setIsSoldOut] = useState(false);
+  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+  const [shippingPolicyId, setShippingPolicyId] = useState("");
+  const [courier, setCourier] = useState("");
+  const [supplierName, setSupplierName] = useState("");
+  const [alwaysOnSale, setAlwaysOnSale] = useState(false);
+  const [startMonth, setStartMonth] = useState(1);
+  const [endMonth, setEndMonth] = useState(12);
+  const [imageUrl, setImageUrl] = useState("");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const imageRef = useRef<HTMLInputElement>(null);
+  const toggle = (field: BulkField) => setEnabled((current) => ({ ...current, [field]: !current[field] }));
+  const selectedCount = Object.values(enabled).filter(Boolean).length;
+
+  const upload = async (file: File) => {
+    if (!["image/jpeg", "image/png"].includes(file.type) || file.size >= 5 * 1024 * 1024) {
+      toast.error("상품 이미지는 5MB 미만 JPEG 또는 PNG만 올릴 수 있습니다.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      const payload = await readData<{ file: { downloadUrl: string } }>(await apiFetch("/catalog/admin/products/image-upload", { method: "POST", body: form }));
+      setImageUrl(payload.file.downloadUrl);
+      setEnabled((current) => ({ ...current, imageUrl: true }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "이미지 업로드에 실패했습니다.");
+    } finally {
+      setUploading(false);
+      if (imageRef.current) imageRef.current.value = "";
+    }
+  };
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (selectedCount === 0 || busy) return;
+    const changes: Record<string, unknown> = {};
+    if (enabled.isVisible) changes.isVisible = isVisible;
+    if (enabled.isSoldOut) changes.isSoldOut = isSoldOut;
+    if (enabled.categoryId) changes.categoryId = categoryId;
+    if (enabled.shippingPolicyId) changes.shippingPolicyId = shippingPolicyId || null;
+    if (enabled.courier) changes.courier = courier.trim() || null;
+    if (enabled.supplierName) changes.supplierName = supplierName || null;
+    if (enabled.season) changes.season = { isAlwaysOnSale: alwaysOnSale, saleStartMonth: alwaysOnSale ? null : startMonth, saleEndMonth: alwaysOnSale ? null : endMonth };
+    if (enabled.imageUrl) changes.imageUrl = imageUrl.trim() || null;
+    if (enabled.notes) changes.notes = notes.trim() || null;
+    if (!window.confirm(`선택한 ${ids.length.toLocaleString("ko-KR")}개 상품의 ${selectedCount}개 항목을 변경할까요?`)) return;
+    setBusy(true);
+    try {
+      // 서버 시간 제한을 넘지 않도록 100개씩 나눠 저장합니다.
+      for (let index = 0; index < ids.length; index += 100) {
+        await readData(await apiFetch("/catalog/admin/products/bulk-update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: ids.slice(index, index + 100), changes }) }));
+      }
+      toast.success(`${ids.length.toLocaleString("ko-KR")}개 상품을 일괄 변경했습니다.`);
+      onDone();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "일괄 변경에 실패했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const row = (field: BulkField, label: string, control: React.ReactNode) => (
+    <div className={`bulk-edit-row ${enabled[field] ? "on" : ""}`}>
+      <label className="bulk-edit-check"><input type="checkbox" checked={enabled[field]} onChange={() => toggle(field)} /> {label}</label>
+      <fieldset disabled={!enabled[field]}>{control}</fieldset>
+    </div>
+  );
+  const months = Array.from({ length: 12 }, (_, index) => index + 1);
+
+  return (
+    <div className="editor-overlay" role="presentation">
+      <form className="editor-panel bulk-edit-panel" onSubmit={submit}>
+        <div className="editor-header"><div><span>BULK EDIT</span><h2>상품 일괄 변경</h2><p className="bulk-edit-sub">선택한 상품 {ids.length.toLocaleString("ko-KR")}개 · 체크한 항목만 바뀝니다.</p></div><button type="button" onClick={onClose} aria-label="닫기"><X size={20} /></button></div>
+        <div className="bulk-edit-body">
+          {row("isVisible", "노출설정", <div className="bulk-edit-choices"><label><input type="radio" checked={isVisible} onChange={() => setIsVisible(true)} /> 노출</label><label><input type="radio" checked={!isVisible} onChange={() => setIsVisible(false)} /> 미노출</label></div>)}
+          {row("isSoldOut", "품절여부", <div className="bulk-edit-choices"><label><input type="radio" checked={!isSoldOut} onChange={() => setIsSoldOut(false)} /> 판매중</label><label><input type="radio" checked={isSoldOut} onChange={() => setIsSoldOut(true)} /> 품절</label></div>)}
+          {row("categoryId", "카테고리", <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>{categories.map((category) => <option key={category.id} value={category.id}>{category.shippingType === "overseas" ? "[해외] " : ""}{category.name}</option>)}</select>)}
+          {row("shippingPolicyId", "배송정책", <select value={shippingPolicyId} onChange={(event) => setShippingPolicyId(event.target.value)}><option value="">정책 연결 해제(직접 입력)</option>{shippingPolicies.map((policy) => <option key={policy.id} value={policy.id}>{policy.shippingType === "overseas" ? "[해외] " : ""}{policy.name}</option>)}</select>)}
+          {row("courier", "택배사", <input value={courier} onChange={(event) => setCourier(event.target.value)} placeholder="비우면 택배사 삭제" />)}
+          {row("supplierName", "매입처", <select value={supplierName} onChange={(event) => setSupplierName(event.target.value)}><option value="">미지정</option>{suppliers.filter((supplier) => supplier.isActive).map((supplier) => <option key={supplier.id} value={supplier.name}>{supplier.name}</option>)}</select>)}
+          {row("season", "판매기간(제철)", <div className="bulk-edit-season"><label className="bulk-edit-inline"><input type="checkbox" checked={alwaysOnSale} onChange={(event) => setAlwaysOnSale(event.target.checked)} /> 연중 판매</label><select value={startMonth} disabled={alwaysOnSale} onChange={(event) => setStartMonth(Number(event.target.value))} aria-label="판매 시작월">{months.map((value) => <option key={value} value={value}>{value}월</option>)}</select><span>~</span><select value={endMonth} disabled={alwaysOnSale} onChange={(event) => setEndMonth(Number(event.target.value))} aria-label="판매 종료월">{months.map((value) => <option key={value} value={value}>{value}월</option>)}</select><small>제철 카테고리(농산·수산 등) 상품에만 적용됩니다.</small></div>)}
+          {row("imageUrl", "상품 이미지", <div className="bulk-edit-image"><input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://... 또는 업로드 (비우면 이미지 삭제)" /><button type="button" onClick={() => imageRef.current?.click()} disabled={uploading}><Upload size={14} /> {uploading ? "업로드 중…" : "JPEG/PNG 업로드"}</button><input ref={imageRef} type="file" accept="image/jpeg,image/png" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }} />{imageUrl && <img src={imageUrl} alt="일괄 변경 이미지 미리보기" />}</div>)}
+          {row("notes", "상품 간략설명", <textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="비우면 설명 삭제" />)}
+        </div>
+        <div className="editor-footer"><button type="button" onClick={onClose}>취소</button><button className="primary-action" type="submit" disabled={busy || selectedCount === 0}><Save size={16} /> {busy ? "변경 중…" : selectedCount === 0 ? "변경할 항목을 체크하세요" : `${selectedCount}개 항목 변경하기`}</button></div>
+      </form>
+    </div>
+  );
+}
+
 async function readData<T>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => ({ ok: false }))) as { ok: boolean; data: T; error?: { message?: string } };
   // 서버가 알려 준 실패 이유(예: 어떤 입력값이 잘못됐는지)를 그대로 보여 줍니다.
@@ -625,6 +725,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(() => new Set());
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [editing, setEditing] = useState<ProductDraft | null>(null);
   const [sortOpen, setSortOpen] = useState(false);
@@ -1166,11 +1267,12 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
           <select value={shippingFilter} onChange={(event) => { setShippingFilter(event.target.value as "all" | ShippingType); setCategoryFilter("all"); }}><option value="all">전체 배송</option><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select>
           <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="all">전체 카테고리</option>{visibleCategories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select>
           <select className="admin-month-filter" value={month} onChange={(event) => setMonth(event.target.value)}><option value="all">전체 판매월</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((value) => <option key={value} value={String(value)}>{value}월 상품</option>)}</select>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "visible" | "soldout")}><option value="all">전체 상태</option><option value="visible">노출 상품</option><option value="soldout">품절 상품·옵션</option></select>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "visible" | "soldout")}><option value="all">전체 상태</option><option value="visible">노출 상품</option><option value="soldout">품절 상품</option></select>
           <label className="page-size-select">페이지당 <select aria-label="페이지당 상품 수" value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}><option value={10}>10개씩 보기</option><option value={20}>20개씩 보기</option><option value={30}>30개씩 보기</option></select></label>
           <button type="button" className="filter-reset" onClick={() => { setQuery(""); setShippingFilter("all"); setCategoryFilter("all"); setMonth("all"); setStatusFilter("all"); }}>초기화</button>
           <span>총 {(data.isPartial ? data.catalogTotals?.productCount ?? products.length : products.length).toLocaleString("ko-KR")}개{hydrating ? " · 전체 목록 준비 중" : ""}</span>
         </div>
+        {selectedProductIds.size > 0 && <div className="bulk-selection-bar" role="region" aria-label="선택한 상품 일괄 작업"><strong>{selectedProductIds.size.toLocaleString("ko-KR")}개 선택됨</strong><div><button type="button" className="primary-action" onClick={() => setBulkEditOpen(true)}><Pencil size={15} /> 일괄 변경</button><button type="button" onClick={() => setSelectedProductIds(new Set())}>선택 해제</button></div></div>}
         <div className="admin-table-wrap product-admin-table-wrap" id="admin-product-list"><table className="admin-table product-admin-table"><thead><tr><th className="product-select-column"><label className="product-select-control"><input type="checkbox" ref={(element) => { if (element) element.indeterminate = selectedOnCurrentPage > 0 && !allCurrentPageSelected; }} checked={allCurrentPageSelected} onChange={toggleCurrentPageSelection} aria-label="현재 페이지 상품 전체 선택" /><span>선택</span></label></th><th>상품정보</th><th>노출순서</th><th>배송/카테고리</th><th>판매기간</th><th>매입처</th><th>원가</th><th>A단가</th><th>일반공급가</th><th>판매가</th><th>마진율</th><th>상태</th><th>관리</th></tr></thead><tbody>
           {pagedProducts.map((product) => {
             const options = product.options ?? [];
@@ -1199,7 +1301,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
               <Fragment key={product.id}>
                 <tr className={expanded ? "expanded" : ""}>
                   <td className="product-select-cell" data-label="선택"><label className="product-select-control"><input type="checkbox" checked={selectedProductIds.has(product.id)} onChange={() => toggleProductSelection(product.id)} aria-label={`${product.name} 선택`} /><span>선택</span></label></td>
-                  <td className="admin-product-primary"><div className="admin-product-cell">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={20} /></span>}<div className="admin-product-copy"><strong>{product.name}</strong><small>{product.productCode || product.id} · {product.origin || "-"} · 옵션 {options.length}개</small>{options.length > 0 && <button type="button" className="admin-option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? "옵션 접기" : `옵션 ${options.length}개 보기`} <ChevronRight size={14} /></button>}</div></div>{optionPanel && <div className="admin-inline-options">{optionPanel}</div>}</td>
+                  <td className="admin-product-primary"><div className="admin-product-cell">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={20} /></span>}<div className="admin-product-copy"><strong>{product.name}</strong><small>{product.productCode || product.id} · {product.origin || "-"}</small>{options.length > 0 && <button type="button" className="admin-option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? "옵션 접기" : `옵션 ${options.length}개 보기`} <ChevronRight size={14} /></button>}</div></div>{optionPanel && <div className="admin-inline-options">{optionPanel}</div>}</td>
                   <td data-label="노출순서"><strong className="display-order-number">{productOrderMap.get(product.id) ?? "-"}</strong></td>
                   <td data-label="배송·카테고리"><strong>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</strong><small>{category?.name || "-"}</small></td>
                   <td data-label="판매기간"><strong>{isSeasonalCategory(category) ? product.isAlwaysOnSale ? "상시 판매" : `${product.saleStartMonth || "-"}월 ~ ${product.saleEndMonth || "-"}월` : "상시"}</strong><small>{isSeasonalCategory(category) ? product.isAlwaysOnSale ? "연중 판매" : "월별 제철상품" : "기간 적용 제외"}</small></td>
@@ -1277,30 +1379,13 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <label>배송비<input value={editing.shippingFee} onChange={(event) => setEditing({ ...editing, shippingFee: event.target.value })} /></label>
         <label>출고 안내<input value={editing.releaseInfo} onChange={(event) => setEditing({ ...editing, releaseInfo: event.target.value })} /></label>
         <label>택배사<input value={editing.courier} onChange={(event) => setEditing({ ...editing, courier: event.target.value })} /></label>
-        <label>옵션/중량<input value={editing.optionsInfo} onChange={(event) => setEditing({ ...editing, optionsInfo: event.target.value })} /></label>
+        <label>규격/중량<input value={editing.optionsInfo} onChange={(event) => setEditing({ ...editing, optionsInfo: event.target.value })} /></label>
         <label>포장방법<input value={editing.packaging} onChange={(event) => setEditing({ ...editing, packaging: event.target.value })} /></label>
         <label className="full">참고사항<textarea rows={4} value={editing.notes} onChange={(event) => setEditing({ ...editing, notes: event.target.value })} /></label>
-        <section className="full option-editor">
-          <div className="option-editor-heading"><div><span>SIZE / OPTION</span><h3>상품 옵션</h3><p>옵션마다 원가·A단가·일반공급가와 자율/지정 판매가를 관리합니다.</p></div><button type="button" onClick={() => setEditing({ ...editing, options: [...editing.options, { id: crypto.randomUUID(), name: "", costPrice: editing.costPrice, aPrice: editing.aPrice, generalPrice: editing.generalPrice, salePrice: editing.salePrice, salePriceMode: editingHealthProduct ? "fixed" : editing.salePriceMode, isSoldOut: false, sortOrder: (editing.options.length + 1) * 10 }] })}><Plus size={15} /> 옵션 추가</button></div>
-          <div className="option-editor-list">
-            {editing.options.length === 0 ? <div className="option-editor-empty">옵션이 없으면 상품 기본 A단가와 일반공급가가 표시됩니다.</div> : editing.options.map((option, index) => (
-              <div className="option-editor-row" key={option.id}>
-                <span className="option-number">{index + 1}</span>
-                <label>옵션명<input value={option.name} onChange={(event) => setEditing({ ...editing, options: editing.options.map((item) => item.id === option.id ? { ...item, name: event.target.value } : item) })} placeholder="예: 5kg 중과" required /></label>
-                <label>원가<input type="number" min="0" value={option.costPrice ?? 0} onChange={(event) => setEditing({ ...editing, options: editing.options.map((item) => item.id === option.id ? { ...item, costPrice: Number(event.target.value) } : item) })} required /></label>
-                <label>A단가<input type="number" min="0" value={option.aPrice} onChange={(event) => setEditing({ ...editing, options: editing.options.map((item) => item.id === option.id ? { ...item, aPrice: Number(event.target.value) } : item) })} required /></label>
-                <label>일반공급가<input type="number" min="0" value={option.generalPrice} onChange={(event) => setEditing({ ...editing, options: editing.options.map((item) => item.id === option.id ? { ...item, generalPrice: Number(event.target.value) } : item) })} required /></label>
-                <label>판매가<select value={editingHealthProduct ? "fixed" : option.salePriceMode} disabled={editingHealthProduct} onChange={(event) => setEditing({ ...editing, options: editing.options.map((item) => item.id === option.id ? { ...item, salePriceMode: event.target.value as "autonomous" | "fixed" } : item) })}><option value="autonomous">자율</option><option value="fixed">지정</option></select></label>
-                <label>지정가<input type="number" min="0" value={option.salePrice ?? ""} disabled={(editingHealthProduct ? "fixed" : option.salePriceMode) !== "fixed"} onChange={(event) => setEditing({ ...editing, options: editing.options.map((item) => item.id === option.id ? { ...item, salePrice: event.target.value ? Number(event.target.value) : null } : item) })} /></label>
-                <label className="option-soldout"><input type="checkbox" checked={option.isSoldOut} onChange={(event) => setEditing({ ...editing, options: editing.options.map((item) => item.id === option.id ? { ...item, isSoldOut: event.target.checked } : item) })} /> 품절</label>
-                <button className="remove-option" type="button" onClick={() => setEditing({ ...editing, options: editing.options.filter((item) => item.id !== option.id) })} aria-label={`${option.name || `${index + 1}번 옵션`} 삭제`}><Trash2 size={15} /></button>
-              </div>
-            ))}
-          </div>
-        </section>
         <label className="check-label"><input type="checkbox" checked={editing.isVisible} onChange={(event) => setEditing({ ...editing, isVisible: event.target.checked })} /> 공개 노출</label>
         <label className="check-label"><input type="checkbox" checked={editing.isSoldOut} onChange={(event) => setEditing({ ...editing, isSoldOut: event.target.checked })} /> 품절/준비중 표시 (노출 유지)</label>
       </div><div className="editor-footer"><button type="button" onClick={() => setEditing(null)} disabled={saving}>취소</button><button className="primary-action" type="submit" disabled={saving}><Save size={16} /> {saving ? "빠르게 저장 중…" : "저장하기"}</button></div></form></div>}
+      {bulkEditOpen && <BulkEditModal ids={Array.from(selectedProductIds)} categories={data.categories} shippingPolicies={shippingPolicies} suppliers={suppliers} onClose={() => setBulkEditOpen(false)} onDone={() => { setBulkEditOpen(false); setSelectedProductIds(new Set()); void refresh(true); }} />}
       {bulkPreview && <div className="editor-overlay"><section className="excel-preview-panel"><div className="editor-header"><div><span>EXCEL PREVIEW</span><h2>상품 일괄변경 미리보기</h2></div><button type="button" onClick={() => { setBulkPreview(null); setBulkFile(null); }} aria-label="닫기"><X size={21} /></button></div>
         <div className="excel-preview-summary"><article><span>읽은 행</span><strong>{bulkPreview.totalRows}</strong></article><article><span>매칭 행</span><strong>{bulkPreview.matchedRows}</strong></article><article><span>변경 상품</span><strong>{bulkPreview.affectedProducts}</strong></article><article><span>변경 항목</span><strong>{bulkPreview.changes.length}</strong></article>{bulkPreview.newProducts ? <article><span>신규 상품</span><strong>{bulkPreview.newProducts}</strong></article> : null}</div>
         {bulkPreview.errors.length > 0 && <div className="excel-error-list"><strong>수정이 필요한 행</strong>{bulkPreview.errors.map((error) => <p key={`${error.row}-${error.message}`}>{error.row}행 · {error.message}</p>)}</div>}

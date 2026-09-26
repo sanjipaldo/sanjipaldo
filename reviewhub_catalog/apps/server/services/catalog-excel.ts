@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { DatabaseError } from "../_core/db";
-import { createCategory, createProduct, getAdminCatalog, type ProductInput, updateProduct } from "./catalog";
+import { createCategory, createProduct, getAdminCatalog, getShippingPolicies, type ProductInput, updateProduct } from "./catalog";
 
 const LIST_HEADERS = [
   "등록일", "노출여부", "품절여부", "상품코드", "관리코드", "상품명", "발주상품명",
@@ -660,4 +660,66 @@ export async function applyBulkProductWorkbook(bytes: Uint8Array, changedBy: str
     appliedProducts: affected.size + newProducts.length,
     appliedChanges: preview.changes.length
   };
+}
+
+// 상품 리스트에서 선택한 상품을 한 번에 바꿉니다(발주오라 "상품 일괄 변경"과 같은 방식: 체크한 항목만 반영).
+// 각 상품은 기존 상품 저장(updateProduct)으로 저장되어 가격 이력·발주오라 변경 대기열이 그대로 남습니다.
+export type BulkProductChanges = {
+  isVisible?: boolean;
+  isSoldOut?: boolean;
+  categoryId?: string;
+  shippingPolicyId?: string | null;
+  courier?: string | null;
+  supplierName?: string | null;
+  notes?: string | null;
+  imageUrl?: string | null;
+  season?: { isAlwaysOnSale: boolean; saleStartMonth: number | null; saleEndMonth: number | null };
+};
+
+export async function bulkUpdateProducts(ids: string[], changes: BulkProductChanges, changedBy: string) {
+  const data = await getAdminCatalog();
+  const byId = new Map(data.products.map((product) => [product.id, product]));
+  const missing = ids.filter((id) => !byId.has(id));
+  if (missing.length > 0) throw new DatabaseError("DATABASE_QUERY_FAILED", `선택한 상품 ${missing.length}개를 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.`, 404);
+  const category = changes.categoryId ? data.categories.find((item) => item.id === changes.categoryId) : undefined;
+  if (changes.categoryId && !category) throw new DatabaseError("DATABASE_QUERY_FAILED", "선택한 카테고리를 찾을 수 없습니다.", 400);
+  const policy = changes.shippingPolicyId
+    ? (await getShippingPolicies()).policies.find((item) => item.id === changes.shippingPolicyId)
+    : undefined;
+  if (changes.shippingPolicyId && !policy) throw new DatabaseError("DATABASE_QUERY_FAILED", "선택한 배송 정책을 찾을 수 없습니다.", 400);
+
+  // 1단계: 모든 상품에 변경을 적용해 보고 검사 → 하나라도 문제가 있으면 아무것도 저장하지 않습니다.
+  const drafts: ProductDraft[] = [];
+  for (const id of ids) {
+    const source = byId.get(id)!;
+    const product: ProductDraft = { ...source, options: source.options.map((option) => ({ ...option })) };
+    if (changes.isVisible !== undefined) product.isVisible = changes.isVisible;
+    if (changes.isSoldOut !== undefined) product.isSoldOut = changes.isSoldOut;
+    if (category) {
+      product.categoryId = category.id;
+      if (product.shippingType !== category.shippingType) {
+        product.shippingType = category.shippingType;
+        product.shippingPolicyId = null;
+      }
+    }
+    if (changes.shippingPolicyId !== undefined) {
+      if (policy && policy.shippingType !== product.shippingType) {
+        throw new DatabaseError("DATABASE_QUERY_FAILED", `'${product.name}'의 배송유형과 선택한 배송 정책의 배송유형이 다릅니다.`, 400);
+      }
+      product.shippingPolicyId = changes.shippingPolicyId;
+    }
+    if (changes.courier !== undefined) product.courier = changes.courier;
+    if (changes.supplierName !== undefined) product.supplierName = changes.supplierName;
+    if (changes.notes !== undefined) product.notes = changes.notes;
+    if (changes.imageUrl !== undefined) product.imageUrl = changes.imageUrl;
+    if (changes.season) {
+      product.isAlwaysOnSale = changes.season.isAlwaysOnSale;
+      product.saleStartMonth = changes.season.isAlwaysOnSale ? null : changes.season.saleStartMonth;
+      product.saleEndMonth = changes.season.isAlwaysOnSale ? null : changes.season.saleEndMonth;
+    }
+    drafts.push(product);
+  }
+  // 2단계: 저장
+  for (const product of drafts) await updateProduct(product.id, asProductInput(product), changedBy);
+  return { updated: drafts.length };
 }

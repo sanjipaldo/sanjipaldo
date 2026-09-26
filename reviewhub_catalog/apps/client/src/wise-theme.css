@@ -597,3 +597,36 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .login-form-panel { padding: 24px 16px 40px; }
   .login-card { padding: 30px 22px; }
 }
+
+/* 상품 일괄 변경: 선택 바 + 변경 창 */
+.bulk-selection-bar { position: sticky; top: 8px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; padding: 10px 12px 10px 18px; border: 1px solid var(--w-ink); border-radius: 999px; background: var(--w-canvas); box-shadow: var(--w-card-shadow); }
+.bulk-selection-bar strong { color: var(--w-ink); font-size: 15px; }
+.bulk-selection-bar > div { display: flex; gap: 8px; }
+.bulk-selection-bar button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border: 1px solid var(--w-line); border-radius: 999px; background: var(--w-canvas); color: var(--w-ink); font-size: 14px; font-weight: 600; }
+.bulk-selection-bar .primary-action { border-color: transparent; }
+.bulk-edit-panel { width: min(720px, 100%); }
+.bulk-edit-sub { margin: 6px 0 0; color: var(--w-body); font-size: 14px; }
+.bulk-edit-body { display: flex; flex-direction: column; gap: 8px; padding: 4px 0 8px; }
+.bulk-edit-row { display: grid; grid-template-columns: 160px minmax(0, 1fr); align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid var(--w-card-border); border-radius: var(--w-radius-md); background: var(--w-canvas); }
+.bulk-edit-row.on { border-color: var(--w-ink); box-shadow: 0 0 0 2px rgba(159, 232, 112, .45); }
+.bulk-edit-check { display: inline-flex !important; flex-direction: row !important; align-items: center; gap: 8px !important; color: var(--w-ink) !important; font-size: 14px !important; font-weight: 700 !important; cursor: pointer; }
+.bulk-edit-check input { width: 18px; height: 18px; accent-color: var(--w-ink); }
+.bulk-edit-row fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.bulk-edit-row fieldset:disabled { opacity: .45; }
+.bulk-edit-row select, .bulk-edit-row input:not([type=checkbox]):not([type=radio]), .bulk-edit-row textarea { width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid var(--w-line); border-radius: var(--w-radius-sm); background: var(--w-canvas); color: var(--w-ink); font-size: 14px; }
+.bulk-edit-row textarea { padding: 10px 12px; }
+.bulk-edit-choices { display: flex; gap: 18px; }
+.bulk-edit-choices label, .bulk-edit-inline { display: inline-flex !important; flex-direction: row !important; align-items: center; gap: 6px !important; color: var(--w-ink) !important; font-size: 14px !important; font-weight: 500 !important; }
+.bulk-edit-season { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bulk-edit-season select { width: auto !important; min-width: 88px; }
+.bulk-edit-season small { flex-basis: 100%; color: var(--w-mute); font-size: 12px; }
+.bulk-edit-image { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bulk-edit-image input { flex: 1 1 260px; }
+.bulk-edit-image button { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 0 12px; border: 1px solid var(--w-line); border-radius: 999px; background: var(--w-canvas); font-size: 13px; font-weight: 600; }
+.bulk-edit-image img { width: 64px; height: 64px; border-radius: var(--w-radius-sm); object-fit: cover; border: 1px solid var(--w-card-border); }
+@media (max-width: 720px) {
+  .bulk-selection-bar { top: auto; bottom: 12px; position: sticky; border-radius: var(--w-radius-lg); flex-wrap: wrap; }
+  .bulk-selection-bar > div { width: 100%; }
+  .bulk-selection-bar button { flex: 1; justify-content: center; min-height: 46px; font-size: 15px; }
+  .bulk-edit-row { grid-template-columns: 1fr; gap: 10px; }
+}
