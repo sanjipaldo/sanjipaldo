@@ -1,6 +1,6 @@
 # Vercel 배포
 
-화면(apps/client)은 정적 파일로, 서버(apps/server의 Hono 앱 전체)는 `api/[[...route]].mjs` 서버리스 함수 하나로 배포합니다.
+화면(apps/client)은 정적 파일로, 서버(apps/server의 Hono 앱 전체)는 `api/index.mjs` 서버리스 함수 하나로(`vercel.json`에서 `/api/*` 전체를 이 함수로 rewrite) 배포합니다.
 Vercel 프로젝트의 **Root Directory는 `reviewhub_catalog`** 입니다.
 
 - `vercel.json`: 설치·빌드 명령, `/api/*` 외 경로는 `index.html`(SPA)
@@ -34,4 +34,4 @@ vercel link          # 또는 VERCEL_TOKEN으로 --token 사용
 vercel deploy --prod
 ```
 
-로컬 확인: `node deploy/vercel/build.mjs` 후 `/api/*`를 `api/[[...route]].mjs`로, 나머지를 `apps/client/dist`로 보내면 됩니다.
+로컬 확인: `node deploy/vercel/build.mjs` 후 `/api/*`를 `api/index.mjs`로, 나머지를 `apps/client/dist`로 보내면 됩니다.
