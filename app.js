@@ -9,7 +9,7 @@ const accounts = {
 const roleMenus = {
   master: ["대시보드", "회원 관리", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리"],
   supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "굿스플로 · 택배", "가격 관리", "정산 내역", "내 정보", "PICK 요청", "판매 현황", "매출 달력", "공지사항"],
-  seller: ["홈", "상품 소싱", "승인 대기", "공급사 문의", "주문 관리", "취소·반품", "매출 달력", "가격 변경 알림", "쇼핑몰 연동", "요금제", "내 정보", "판매중 상품", "예치금", "공지사항", "마스터 상품", "상품 매핑", "브랜드 소싱", "승인 완료"]
+  seller: ["홈", "상품 소싱", "승인 대기", "공급사 문의", "주문 관리", "취소·반품", "매출 달력", "가격 변경 알림", "쇼핑몰 연동", "요금제", "내 정보", "판매중 상품", "예치금", "공지사항", "마스터 상품", "상품 매핑", "브랜드 소싱", "승인 완료", "장바구니", "샘플 주문 내역"]
 };
 const roleMenuGroups = {
   master: [
@@ -29,6 +29,7 @@ const roleMenuGroups = {
     { label: "상품 찾기", indexes: [1, 16] },
     { label: "내 상품 (순서대로)", indexes: [2, 17, 14, 11, 15, 7] },
     { label: "주문 · 배송", indexes: [4, 5, 3] },
+    { label: "샘플 구매", indexes: [18, 19] },
     { label: "돈 관리", indexes: [12, 6, 9] },
     { label: "설정", indexes: [8, 13, 10] }
   ]
@@ -40,7 +41,7 @@ function menuIndexOf(label, role = activeRole) { const index = (roleMenus[role] 
 const menuIcons = {
   master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log", "notice"],
   supplier: ["home", "product", "message", "order", "refund", "printer", "price", "settlement", "settings", "approval", "onsale", "calendar", "notice"],
-  seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice", "approval", "mapping", "brand", "ready"]
+  seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice", "approval", "mapping", "brand", "ready", "cart", "box"]
 };
 
 const DEFAULT_DASHBOARD_LAYOUT = ["today", "product-flow", "order-flow", "money", "notices"];
@@ -736,7 +737,7 @@ function approvePickRequest(item, auto = false) {
   pushNotification(item.sellerLoginId, "seller", "approval", "PICK 상품이 승인되었습니다", `${product?.name || item.productId} · ‘승인 완료’에서 상품명·사진을 꾸미고 마스터 상품으로 등록하세요.`);
   audit("PICK 상품 승인", `${item.id} · ${product?.supplier || "공급사"}${auto ? " 자동 승인" : " 승인"} · 승인 완료로 이동`, "done", "product");
 }
-function currentSellerOrders() { return state.orders.filter(order => order.sellerLoginId === (currentAccount?.loginId || "seller")); }
+function currentSellerOrders() { return state.orders.filter(order => order.sellerLoginId === (currentAccount?.loginId || "seller") && order.orderType !== "sample"); }
 function currentSupplierOrders() { return state.orders.filter(order => order.supplierLoginId === (currentAccount?.loginId || "sup") && order.paymentStatus !== "pending"); }
 function orderMappingStatus(order) { return order?.mappingStatus || (order?.productId ? "mapped" : "unmapped"); }
 function orderPaymentStatus(order) { return order?.paymentStatus || "paid"; }
@@ -874,6 +875,179 @@ function channelAsset(id) {
     cafe24: { slot: "channel.cafe24", src: "assets/channel-cafe24.png", alt: "CAFE24" }
   }[id] || null;
 }
+
+/* ===== 샘플 구매 (장바구니 · 결제 · 샘플 주문 내역) =====
+   위탁셀러는 PICK 여부와 상관없이 누구나 공급가로 샘플을 사 볼 수 있다.
+   결제하면 드랍쉬핑 주문과 똑같이 공급사로 바로 발주되고(주문 종류: 샘플), 받는 곳은 셀러 본인이다.
+   샘플 주문은 쇼핑몰 주문 관리·매출에는 섞이지 않고 '샘플 주문 내역'에서 따로 관리한다. */
+let sampleView = "cart";
+let sampleCheckoutItems = [];
+let sampleLastGroupId = "";
+let sampleOrderFilter = "all";
+function sampleCart(loginId = currentAccount?.loginId) {
+  state.sampleCarts = state.sampleCarts || {};
+  if (!state.sampleCarts[loginId]) state.sampleCarts[loginId] = [];
+  return state.sampleCarts[loginId];
+}
+function sampleCartCount() { return currentAccount && activeRole === "seller" ? sampleCart().reduce((sum, row) => sum + Number(row.qty || 1), 0) : 0; }
+function sampleLine(row) {
+  const product = productOf(row.productId);
+  if (!product) return null;
+  const option = row.optionId ? productOptionOf(product, row.optionId) : null;
+  const unit = Number(option ? option.supply : product.supply);
+  const qty = Math.max(1, Number(row.qty || 1));
+  const shipping = /3,000|3000/.test(String(product.shippingPolicy || "")) ? 3000 : 0;
+  const stock = Number(option ? option.stock : product.stock);
+  return { ...row, product, option, unit, qty, shipping, stock, subtotal: unit * qty, total: unit * qty + shipping };
+}
+function sampleTotals(lines) {
+  const goods = lines.reduce((sum, line) => sum + line.subtotal, 0);
+  const shipping = lines.reduce((sum, line) => sum + line.shipping, 0);
+  return { goods, shipping, total: goods + shipping, count: lines.reduce((sum, line) => sum + line.qty, 0) };
+}
+function sampleBuyBoxMarkup(p) {
+  const options = hasOptions(p) ? productOptions(p).filter(option => option.enabled !== false) : [];
+  return `<div class="sample-buy-box" data-sample-box="${p.id}"><div class="sample-buy-head"><b>샘플로 먼저 받아보기</b><small>PICK 안 해도 누구나 공급가로 살 수 있어요 · 공급사가 바로 보내 드려요</small></div>
+    <div class="sample-buy-row">${options.length ? `<select data-sample-option>${options.map(option => `<option value="${escapeHtml(option.id)}" ${Number(option.stock || 0) <= 0 ? "disabled" : ""}>${escapeHtml(option.name)} · ${money(option.supply)}${Number(option.stock || 0) <= 0 ? " (품절)" : ""}</option>`).join("")}</select>` : `<span class="sample-buy-price">${money(p.supply)}</span>`}<div class="qty-stepper sample-qty"><button type="button" data-sample-step="-1" aria-label="수량 줄이기">−</button><input type="number" min="1" value="1" data-sample-qty aria-label="수량"><button type="button" data-sample-step="1" aria-label="수량 늘리기">+</button></div></div>
+    <div class="sample-buy-actions"><button type="button" class="secondary-button" data-action="sample-add-cart" data-id="${p.id}">🛒 장바구니 담기</button><button type="button" class="primary-button" data-action="sample-buy-now" data-id="${p.id}">샘플 바로 구매</button></div></div>`;
+}
+function readSampleBox(productId) {
+  const box = document.querySelector(`[data-sample-box="${productId}"]`);
+  return { optionId: box?.querySelector("[data-sample-option]")?.value || "", qty: Math.max(1, Number(box?.querySelector("[data-sample-qty]")?.value || 1)) };
+}
+function addToSampleCart(productId, optionId = "", qty = 1) {
+  const product = productOf(productId);
+  if (!product) return false;
+  if (hasOptions(product) && !optionId) optionId = productOptions(product).find(option => Number(option.stock || 0) > 0)?.id || "";
+  const cart = sampleCart();
+  const existing = cart.find(row => row.productId === productId && (row.optionId || "") === (optionId || ""));
+  if (existing) existing.qty = Number(existing.qty || 1) + qty;
+  else cart.push({ id: `CT-${Date.now()}-${cart.length}`, productId, optionId, qty, checked: true, addedAt: new Date().toISOString() });
+  saveState();
+  return true;
+}
+function sampleCartPageTemplate() {
+  if (sampleView === "checkout") return sampleCheckoutTemplate();
+  if (sampleView === "done") return sampleDoneTemplate();
+  const lines = sampleCart().map(sampleLine).filter(Boolean);
+  const checked = lines.filter(line => line.checked !== false);
+  const totals = sampleTotals(checked);
+  return `${sectionHero("장바구니", "샘플로 받아볼 상품을 모아서 한 번에 주문해요. 공급가로 사고, 공급사가 바로 보내 드려요.", `<button type="button" class="secondary-button" data-action="go-seller-menu" data-index="1">상품 더 담기</button>`)}
+    ${lines.length ? `<div class="sample-layout"><section class="panel sample-cart-list"><header><label><input type="checkbox" data-cart-check-all ${checked.length === lines.length ? "checked" : ""}> 전체 선택 (${checked.length}/${lines.length})</label><button type="button" class="text-button" data-action="sample-cart-remove-checked">선택 삭제</button></header>
+      ${lines.map(line => `<article class="sample-cart-row ${line.stock < line.qty ? "short" : ""}"><input type="checkbox" data-cart-check="${line.id}" ${line.checked !== false ? "checked" : ""} aria-label="선택">${productPhoto(line.product, "table-photo")}<div class="sample-cart-info"><small>${escapeHtml(line.product.supplier)} · ${escapeHtml(line.product.id)}</small><b>${escapeHtml(line.product.name)}</b>${line.option ? `<span class="sample-opt">옵션: ${escapeHtml(line.option.name)}</span>` : ""}<em>${line.shipping ? `배송비 ${money(line.shipping)}` : "무료배송"}${productNeedsCustoms(line.product) ? " · 개인통관부호 필요" : ""}${line.stock < line.qty ? ` · 재고 ${line.stock}개뿐이에요` : ""}</em></div><div class="qty-stepper sample-qty"><button type="button" data-action="sample-cart-qty" data-id="${line.id}" data-step="-1" aria-label="수량 줄이기">−</button><input type="number" value="${line.qty}" readonly aria-label="수량"><button type="button" data-action="sample-cart-qty" data-id="${line.id}" data-step="1" aria-label="수량 늘리기">+</button></div><strong>${money(line.subtotal)}</strong><button type="button" class="sample-remove" data-action="sample-cart-remove" data-id="${line.id}" aria-label="삭제">✕</button></article>`).join("")}
+      </section>${sampleSummaryMarkup(totals, `<button type="button" class="primary-button" data-action="sample-checkout" ${checked.length ? "" : "disabled"}>${checked.length ? `${totals.count}개 주문하기` : "상품을 선택해 주세요"}</button>`)}</div>`
+    : `<section class="panel sample-empty"><span>🛒</span><b>장바구니가 비어 있어요</b><p>상품 소싱에서 마음에 드는 상품을 열고 ‘장바구니 담기’를 눌러 보세요.<br>PICK하지 않아도 샘플로 사 볼 수 있어요.</p><button type="button" class="primary-button" data-action="go-seller-menu" data-index="1">상품 보러 가기</button></section>`}`;
+}
+function sampleSummaryMarkup(totals, action = "") {
+  return `<aside class="panel sample-summary"><h3>결제 예정 금액</h3><dl><div><dt>상품 금액 (공급가)</dt><dd>${money(totals.goods)}</dd></div><div><dt>배송비</dt><dd>${totals.shipping ? money(totals.shipping) : "무료"}</dd></div><div class="total"><dt>합계</dt><dd>${money(totals.total)}</dd></div></dl>${action}<small>샘플은 공급가로 사요. 결제하면 공급사로 바로 주문이 넘어가요.</small></aside>`;
+}
+function sampleCheckoutTemplate() {
+  const lines = sampleCheckoutItems.map(sampleLine).filter(Boolean);
+  if (!lines.length) { sampleView = "cart"; return sampleCartPageTemplate(); }
+  const totals = sampleTotals(lines);
+  const member = memberByLogin(currentAccount.loginId) || currentAccount;
+  const saved = (state.sampleAddresses || {})[currentAccount.loginId] || {};
+  const deposit = sellerDeposit();
+  const needsCustoms = lines.some(line => productNeedsCustoms(line.product));
+  return `${sectionHero("주문 · 결제", "받으실 곳을 확인하고 결제하면 공급사로 바로 주문이 넘어가요.", `<button type="button" class="secondary-button" data-action="sample-back-cart">← 장바구니로</button>`)}
+    <form id="sampleCheckoutForm" class="sample-layout" novalidate><div class="sample-checkout-main">
+      <section class="panel sample-section"><h3>1. 받으실 곳 <small>샘플은 사장님께 직접 배송돼요</small></h3><div class="form-grid">
+        <div class="form-field"><label>받는 분 *</label><input name="recipientName" value="${escapeHtml(saved.recipientName || member.representative || member.company || "")}" required></div>
+        <div class="form-field"><label>연락처 *</label><input name="phone" inputmode="tel" value="${escapeHtml(saved.phone || member.contact || "")}" placeholder="010-0000-0000" required></div>
+        <div class="form-field"><label>우편번호 *</label><div class="postcode-row"><input name="postalCode" value="${escapeHtml(saved.postalCode || "")}" required><button type="button" data-action="open-address-popup">주소 검색</button></div></div>
+        <div class="form-field full"><label>주소 *</label><input name="address" value="${escapeHtml(saved.address || "")}" placeholder="주소 검색을 눌러 주세요" required></div>
+        <div class="form-field full"><label>상세주소</label><input name="addressDetail" value="${escapeHtml(saved.addressDetail || "")}" placeholder="동·호수"></div>
+        <div class="form-field full"><label>배송 메시지</label><select name="deliveryMessage">${["문 앞에 놓아주세요.", "부재 시 경비실에 맡겨주세요.", "배송 전 연락 부탁드려요.", "택배함에 넣어주세요."].map(text => `<option ${saved.deliveryMessage === text ? "selected" : ""}>${text}</option>`).join("")}</select></div>
+        ${needsCustoms ? customsInputMarkup(saved.personalCustomsCode || "", true) : ""}
+        <label class="sample-save-address"><input type="checkbox" name="saveAddress" checked> 다음에도 이 주소로 받기</label>
+      </div></section>
+      <section class="panel sample-section"><h3>2. 주문 상품 ${totals.count}개</h3>${lines.map(line => `<div class="sample-check-line">${productPhoto(line.product, "table-photo")}<span><b>${escapeHtml(line.product.name)}</b><small>${line.option ? `${escapeHtml(line.option.name)} · ` : ""}${line.qty}개 · ${escapeHtml(line.product.supplier)} 발송</small></span><strong>${money(line.subtotal)}</strong></div>`).join("")}</section>
+      <section class="panel sample-section"><h3>3. 결제 수단</h3><div class="sample-pay-methods">
+        <label class="${deposit.balance < totals.total ? "short" : ""}"><input type="radio" name="paymentMethod" value="deposit" ${deposit.balance >= totals.total ? "checked" : ""}><span><b>예치금으로 결제</b><small>잔액 ${money(deposit.balance)}${deposit.balance < totals.total ? ` · ${money(totals.total - deposit.balance)} 부족해요` : ""}</small></span></label>
+        <label><input type="radio" name="paymentMethod" value="card" ${deposit.balance < totals.total ? "checked" : ""}><span><b>신용카드</b><small>데모 결제 (실제 승인 없음)</small></span></label></div>
+        <label class="sample-agree"><input type="checkbox" name="agree" required> 주문 상품·금액을 확인했고 결제에 동의해요 (필수)</label></section>
+    </div>${sampleSummaryMarkup(totals, `<button type="submit" class="primary-button">${money(totals.total)} 결제하기</button>`)}</form>`;
+}
+function sampleDoneTemplate() {
+  const orders = state.orders.filter(order => order.sampleGroupId === sampleLastGroupId);
+  const total = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+  return `${sectionHero("주문 완료", "공급사에 주문이 전달됐어요. 배송 상황은 ‘샘플 주문 내역’에서 볼 수 있어요.")}
+    <section class="panel sample-done"><span class="complete-icon">✓</span><h2>샘플 주문이 완료됐어요</h2><p>주문번호 <b>${escapeHtml(sampleLastGroupId)}</b> · ${orders.length}개 상품 · 결제 ${money(total)}</p>
+      <ol class="sample-flow"><li class="done">결제 완료</li><li>공급사 확인·포장</li><li>배송중</li><li>배송 완료</li></ol>
+      <div class="modal-actions"><button type="button" class="secondary-button" data-action="go-seller-menu" data-index="1">쇼핑 계속하기</button><button type="button" class="primary-button" data-action="go-seller-menu" data-index="19">주문 내역 보기</button></div></section>`;
+}
+const SAMPLE_STAGE = { "발주완료": [1, "결제 완료", "공급사가 확인하기 전이에요"], "신규주문": [1, "결제 완료", "공급사가 확인하기 전이에요"], "배송준비중": [2, "상품 준비중", "공급사가 포장하고 있어요"], "주문확인필요": [2, "확인 중", "공급사가 주문을 확인하고 있어요"], "배송중": [3, "배송중", "택배로 가고 있어요"], "배송완료": [4, "배송 완료", "받으셨나요? 상품을 확인해 보세요"], "취소완료": [0, "주문 취소", "결제 금액을 돌려드렸어요"] };
+function sampleOrders(loginId = currentAccount?.loginId) { return state.orders.filter(order => order.sellerLoginId === loginId && order.orderType === "sample"); }
+function sampleOrdersTemplate() {
+  const all = sampleOrders();
+  const count = key => all.filter(order => (SAMPLE_STAGE[order.status] || [1])[0] === key).length;
+  const filtered = sampleOrderFilter === "all" ? all : all.filter(order => String((SAMPLE_STAGE[order.status] || [1])[0]) === sampleOrderFilter);
+  const groups = [...new Set(filtered.map(order => order.sampleGroupId))].map(id => ({ id, orders: filtered.filter(order => order.sampleGroupId === id) }));
+  return `${sectionHero("샘플 주문 내역", "샘플로 주문한 상품이 지금 어디쯤 오고 있는지 확인해요.", `<button type="button" class="secondary-button" data-action="go-seller-menu" data-index="18">🛒 장바구니 (${sampleCartCount()})</button>`)}
+    <div class="sample-stage-tabs">${[["all", "전체", all.length], ["1", "결제 완료", count(1)], ["2", "상품 준비중", count(2)], ["3", "배송중", count(3)], ["4", "배송 완료", count(4)], ["0", "취소", count(0)]].map(([key, label, n]) => `<button type="button" class="${sampleOrderFilter === key ? "active" : ""}" data-action="sample-order-filter" data-filter="${key}"><b>${n}</b><span>${label}</span></button>`).join("")}</div>
+    ${groups.length ? groups.map(group => { const first = group.orders[0]; const total = group.orders.reduce((sum, order) => sum + Number(order.amount || 0), 0); return `<section class="panel sample-order-group"><header><div><b>${escapeHtml(group.id)}</b><small>${escapeHtml(first.createdAt || first.orderDate || "")} · ${first.paymentMethod === "card" ? "신용카드" : "예치금"} ${money(total)}</small></div><button type="button" class="text-button" data-action="sample-reorder" data-id="${escapeHtml(group.id)}">다시 담기</button></header>
+      ${group.orders.map(order => { const product = productOf(order.productId); const [step, label, hint] = SAMPLE_STAGE[order.status] || [1, order.status, ""]; return `<article class="sample-order-row ${step === 0 ? "canceled" : ""}">${productPhoto(product, "table-photo")}<div class="sample-order-info"><span class="sample-status s${step}">${label}</span><b>${escapeHtml(product?.name || "상품")}</b><small>${order.optionName ? `${escapeHtml(order.optionName)} · ` : ""}${order.qty}개 · ${money(order.amount)} · ${escapeHtml(product?.supplier || order.assignedSupplier || "")}</small><em>${escapeHtml(hint)}${order.tracking ? ` · ${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)}` : ""}</em>${step > 0 ? `<ol class="sample-progress">${["결제", "준비", "배송중", "도착"].map((name, index) => `<li class="${index + 1 <= step ? "on" : ""}">${name}</li>`).join("")}</ol>` : ""}</div><div class="sample-order-actions">${order.tracking ? `<button type="button" class="primary-button" data-action="sample-track" data-id="${order.id}">배송 조회</button>` : ""}${["발주완료", "신규주문"].includes(order.status) ? `<button type="button" class="secondary-button" data-action="sample-cancel" data-id="${order.id}">주문 취소</button>` : ""}<button type="button" class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button><button type="button" class="text-button" data-action="supplier-contact" data-id="${escapeHtml(product?.supplierLoginId || "")}" data-product-id="${escapeHtml(order.productId)}">공급사 문의</button></div></article>`; }).join("")}</section>`; }).join("")
+    : `<section class="panel sample-empty"><span>📦</span><b>${all.length ? "이 단계의 주문이 없어요" : "아직 샘플 주문이 없어요"}</b><p>상품 소싱에서 상품을 열고 ‘샘플 바로 구매’를 눌러 보세요.</p><button type="button" class="primary-button" data-action="go-seller-menu" data-index="1">상품 보러 가기</button></section>`}`;
+}
+function sampleTrackModal(orderId) {
+  const order = state.orders.find(item => item.id === orderId);
+  if (!order) return;
+  const product = productOf(order.productId);
+  const step = (SAMPLE_STAGE[order.status] || [1])[0];
+  const rows = [["결제 완료 · 공급사 전달", order.createdAt || order.orderDate, step >= 1], ["공급사 확인 · 포장", order.confirmedAt || "", step >= 2], [`${order.carrier || "택배사"} 집화 · 배송 출발`, order.shippedAt || "", step >= 3], ["배송 완료", order.deliveredAt || "", step >= 4]];
+  openModal(`<div class="sample-track"><h2>배송 조회</h2><p>${escapeHtml(product?.name || "상품")} · ${order.qty}개</p><div class="sample-track-number"><span>${escapeHtml(order.carrier || "-")}</span><b>${escapeHtml(order.tracking || "송장 발급 전")}</b><button type="button" class="text-button" data-action="copy-tracking" data-tracking="${escapeHtml(order.tracking || "")}">복사</button></div>
+    <ol class="sample-track-steps">${rows.map(([label, time, on]) => `<li class="${on ? "on" : ""}"><i></i><span><b>${escapeHtml(label)}</b><small>${on ? escapeHtml(time || "완료") : "대기 중"}</small></span></li>`).join("")}</ol>
+    <small class="plan-note">데모라 택배사 실시간 위치는 불러오지 않아요. 실제 서비스에서는 택배사 조회 API로 위치를 보여 드려요.</small>
+    <div class="modal-actions"><button type="button" class="primary-button" data-close-modal>확인</button></div></div>`);
+}
+function placeSampleOrder(form, data) {
+  const lines = sampleCheckoutItems.map(sampleLine).filter(Boolean);
+  if (!lines.length) return showToast("주문할 상품이 없어요.");
+  for (const [name, label] of [["recipientName", "받는 분 이름을"], ["phone", "연락처를"], ["postalCode", "우편번호를"], ["address", "주소를"]]) if (!String(data[name] || "").trim()) { form.elements[name]?.focus(); return showToast(`${label} 넣어 주세요.`); }
+  const needsCustoms = lines.some(line => productNeedsCustoms(line.product));
+  const customs = normalizeCustomsCode(data.personalCustomsCode);
+  if (needsCustoms && !isValidCustomsCode(customs)) return showToast("해외배송 상품이 있어요. 개인통관고유부호(P+숫자 12자리)를 넣어 주세요.");
+  if (!data.agree) return showToast("결제 동의에 체크해 주세요.");
+  const short = lines.find(line => line.stock < line.qty);
+  if (short) return showToast(`‘${short.product.name}’ 재고가 ${short.stock}개뿐이에요. 수량을 줄여 주세요.`);
+  const totals = sampleTotals(lines);
+  const method = data.paymentMethod === "card" ? "card" : "deposit";
+  const deposit = sellerDeposit();
+  if (method === "deposit" && deposit.balance < totals.total) return showToast("예치금이 부족해요. 예치금을 충전하거나 신용카드를 골라 주세요.");
+  const now = new Date();
+  const ymd = `${String(now.getFullYear()).slice(2)}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+  const groupId = `SO-${ymd}-${String(Date.now()).slice(-5)}`;
+  const stamp = `${now.getMonth() + 1}.${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  lines.forEach((line, index) => {
+    if (line.option) { line.option.stock = Number(line.option.stock || 0) - line.qty; syncProductOptionTotals(line.product); } else line.product.stock -= line.qty;
+    const order = { id: `DO-${ymd}-S${String(Date.now()).slice(-4)}${index}`, orderType: "sample", sampleGroupId: groupId, sellerLoginId: currentAccount.loginId, supplierLoginId: line.product.supplierLoginId, assignedSupplier: line.product.supplier,
+      productId: line.product.id, mappedProductId: line.product.id, mappingStatus: "mapped", externalProductName: line.product.name, externalProductCode: "SAMPLE", ...(line.option ? { optionId: line.option.id, optionName: line.option.name } : {}),
+      paymentStatus: "paid", paymentMethod: method, supplyTotal: line.subtotal, forwardedAt: "방금 전", supplierOrderId: `PO-${String(Date.now()).slice(-7)}${index}`,
+      customer: data.recipientName.trim(), recipientName: data.recipientName.trim(), phone: data.phone.trim(), postalCode: data.postalCode.trim(), address: data.address.trim(), addressDetail: String(data.addressDetail || "").trim(), deliveryMessage: data.deliveryMessage || "",
+      shippingType: line.product.shippingType || "domestic", personalCustomsCode: productNeedsCustoms(line.product) ? customs : "", qty: line.qty, amount: line.total, channel: "[샘플주문]", status: "발주완료", tracking: "", carrier: line.product.carrier || "한진택배", channelTrackingStatuses: {},
+      orderDate: now.toISOString().slice(0, 10), createdAt: `${stamp} 결제`, settlementStatus: "scheduled" };
+    state.orders.unshift(order);
+    pushNotification(line.product.supplierLoginId, "supplier", "order", "샘플 주문이 도착했습니다", `${order.id} · ${line.product.name}${line.option ? ` [${line.option.name}]` : ""} ${line.qty}개 · 셀러 직접 수령`);
+  });
+  if (method === "deposit") { deposit.balance -= totals.total; deposit.transactions.unshift({ id: `DP-${Date.now()}`, type: "샘플 구매 결제", amount: -totals.total, reference: groupId, createdAt: depositStamp() }); }
+  if (data.saveAddress) { state.sampleAddresses = state.sampleAddresses || {}; state.sampleAddresses[currentAccount.loginId] = { recipientName: data.recipientName.trim(), phone: data.phone.trim(), postalCode: data.postalCode.trim(), address: data.address.trim(), addressDetail: String(data.addressDetail || "").trim(), deliveryMessage: data.deliveryMessage, personalCustomsCode: customs }; }
+  const cart = sampleCart();
+  sampleCheckoutItems.forEach(item => { const index = cart.findIndex(row => row.id === item.id); if (index >= 0) cart.splice(index, 1); });
+  audit("샘플 주문 결제", `${groupId} · ${lines.length}개 상품 · ${money(totals.total)} · ${method === "card" ? "신용카드" : "예치금"} → 공급사 발주`, "done", "order");
+  sampleLastGroupId = groupId; sampleCheckoutItems = []; sampleView = "done";
+  saveState(); activeMenuIndex = 18; render(); updateAccountUI(); window.scrollTo(0, 0);
+  showToast("결제 완료! 공급사에 샘플 주문을 전달했어요.");
+}
+document.addEventListener("click", event => {
+  const step = event.target.closest?.("[data-sample-step]");
+  if (step) { const input = step.closest(".sample-qty").querySelector("[data-sample-qty]"); input.value = Math.max(1, Number(input.value || 1) + Number(step.dataset.sampleStep)); }
+});
+document.addEventListener("change", event => {
+  const check = event.target.closest?.("[data-cart-check]");
+  if (check) { const row = sampleCart().find(item => item.id === check.dataset.cartCheck); if (row) row.checked = check.checked; saveState(); render(); return; }
+  if (event.target.matches?.("[data-cart-check-all]")) { sampleCart().forEach(row => { row.checked = event.target.checked; }); saveState(); render(); }
+});
+
 function sellerChannels(loginId = currentAccount?.loginId || "seller") {
   if (state.channelConnections[loginId]) return state.channelConnections[loginId];
   /* 새로 가입한 셀러는 연동 전 상태의 쇼핑몰 목록으로 시작한다 (데모 셀러의 연동 정보를 빌려 쓰지 않음) */
@@ -920,13 +1094,13 @@ function memberDocsModal() {
 }
 /* ===== 카카오톡 알림: 아침 브리핑 · 18시 마감 리포트 ===== */
 function sellerDaySales(loginId, dateKey) {
-  const orders = state.orders.filter(order => order.sellerLoginId === loginId && order.orderDate === dateKey && !["취소완료", "환불완료"].includes(order.status));
+  const orders = state.orders.filter(order => order.sellerLoginId === loginId && order.orderType !== "sample" && order.orderDate === dateKey && !["취소완료", "환불완료"].includes(order.status));
   return { amount: orders.reduce((sum, order) => sum + Number(order.amount || 0), 0), count: orders.length, orders };
 }
 function dateKeyOffset(days = 0) { const date = new Date(); date.setDate(date.getDate() + days); return date.toISOString().slice(0, 10); }
 function morningBriefMessage(loginId = currentAccount?.loginId) {
   const member = memberByLogin(loginId) || currentAccount;
-  const mine = state.orders.filter(order => order.sellerLoginId === loginId);
+  const mine = state.orders.filter(order => order.sellerLoginId === loginId && order.orderType !== "sample");
   const newOrders = mine.filter(order => order.status === "신규주문").length;
   const payWait = mine.filter(order => orderMappingStatus(order) === "mapped" && orderPaymentStatus(order) === "pending").length;
   const mapWait = mine.filter(order => orderMappingStatus(order) !== "mapped").length;
@@ -942,7 +1116,7 @@ function eveningReportMessage(loginId = currentAccount?.loginId) {
   const member = memberByLogin(loginId) || currentAccount;
   const today = sellerDaySales(loginId, dateKeyOffset(0));
   const yesterday = sellerDaySales(loginId, dateKeyOffset(-1));
-  const mine = state.orders.filter(order => order.sellerLoginId === loginId);
+  const mine = state.orders.filter(order => order.sellerLoginId === loginId && order.orderType !== "sample");
   const paidToday = today.orders.filter(order => orderPaymentStatus(order) !== "pending").length;
   const shipped = today.orders.filter(order => ["배송중", "배송완료"].includes(order.status)).length;
   const leftover = mine.filter(order => orderPaymentStatus(order) === "pending" || order.status === "주문확인필요").length;
@@ -1196,6 +1370,8 @@ function menuIcon(name) {
     notice: '<path d="M3 11v2a2 2 0 0 0 2 2h1l3 4v-4h2l7-4V7l-7-4H9L6 7H5a2 2 0 0 0-2 2Z"/><path d="M13 15.5V19a2 2 0 0 0 4 0v-2"/>',
     mapping: '<path d="M8 7h5a4 4 0 0 1 0 8h-1"/><path d="m10 4-3 3 3 3"/><path d="M16 17h-5a4 4 0 0 1 0-8h1"/><path d="m14 20 3-3-3-3"/>',
     brand: '<path d="M4 4h7l9 9-7 7-9-9V4Z"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m11 15 4-4"/>',
+    cart: '<path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6"/><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/>',
+    box: '<path d="M3 8 12 3l9 5-9 5-9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="m7.5 5.5 9 5"/>',
     ready: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/>'
   };
   return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name] || paths.product}</svg>`;
@@ -1328,6 +1504,14 @@ function updateAccountUI() {
   if (!currentAccount) return;
   renderMobileTabbar();
   document.body.dataset.role = activeRole;
+  const cartButton = document.getElementById("cartButton");
+  if (cartButton) {
+    cartButton.hidden = activeRole !== "seller" || !staffCanMenu(18);
+    const count = sampleCartCount();
+    const badge = document.getElementById("cartCount");
+    badge.hidden = !count; badge.textContent = count > 99 ? "99+" : String(count);
+    cartButton.classList.toggle("active", activeMenuIndex === 18);
+  }
   const depositPill = document.getElementById("depositPill");
   if (depositPill) {
     const showPill = activeRole === "seller" && staffCanMenu(menuIndexOf("예치금", "seller"));
@@ -2499,6 +2683,8 @@ function renderSellerSection(index) {
   if (index === 15) return sellerProductMappingTemplate();
   if (index === 16) return sellerBrandSourcingTemplate();
   if (index === 17) return sellerReadyProductsTemplate();
+  if (index === 18) return sampleCartPageTemplate();
+  if (index === 19) return sampleOrdersTemplate();
   if (index === 3) return sellerConnectionTemplate();
   if (index === 4) return sellerOrderManagementTemplate();
   if (index === 5) return refundTemplate("seller");
@@ -3022,7 +3208,7 @@ function ordersTable(role, query = "", sourceOverride = null) {
     ${orders.length ? orders.map(o => {
       const p = orderSourceProduct(o);
       const displayName = role === "supplier" ? p?.name : orderSellerTitle(o);
-      return `<tr class="order-click-row ${orderMappingStatus(o) !== "mapped" ? "mapping-required-row" : ""}" data-action="order-detail" data-id="${o.id}" tabindex="0" aria-label="${escapeHtml(o.id)} 주문 상세 보기"><td class="order-id"><button data-action="order-detail" data-id="${o.id}">${o.id}</button><br><small>${escapeHtml(o.createdAt)}</small></td><td><button class="order-product-link" data-action="order-detail" data-id="${o.id}"><strong>${escapeHtml(displayName || "매핑 전 외부 상품")}</strong>${orderOptionTag(o)}<small>${channelMark(channelIdFromName(o.channel),true)} ${escapeHtml(o.channel)} · ${orderMappingStatus(o) === "mapped" ? `원본 ${escapeHtml(o.mappedProductId || o.productId)}` : `외부코드 ${escapeHtml(o.externalProductCode || "-")}`}</small></button></td>${role === "supplier" ? `<td><strong>${escapeHtml(orderSellerLabel(o))}</strong><br><small>${escapeHtml(o.channel || "쇼핑몰")} 판매</small></td>` : `<td><strong>${escapeHtml(orderMappingStatus(o) === "mapped" ? (o.assignedSupplier || p?.supplier || "미배정") : "매핑 필요")}</strong><br><small>${orderSupplierProgressLabel(o)}</small></td>`}<td>${escapeHtml(o.recipientName || o.customer)}<br><small>${escapeHtml(o.phone || "-")}</small></td><td>${o.qty}개 · ${money(o.amount)}</td><td>${statusChip(o.status)}</td><td><div class="order-cell-actions">${orderActionsMarkup(o, role)}</div></td></tr>`;
+      return `<tr class="order-click-row ${orderMappingStatus(o) !== "mapped" ? "mapping-required-row" : ""}" data-action="order-detail" data-id="${o.id}" tabindex="0" aria-label="${escapeHtml(o.id)} 주문 상세 보기"><td class="order-id"><button data-action="order-detail" data-id="${o.id}">${o.id}</button><br><small>${escapeHtml(o.createdAt)}</small></td><td><button class="order-product-link" data-action="order-detail" data-id="${o.id}"><strong>${escapeHtml(displayName || "매핑 전 외부 상품")}</strong>${orderOptionTag(o)}<small>${channelMark(channelIdFromName(o.channel),true)} ${escapeHtml(o.channel)} · ${orderMappingStatus(o) === "mapped" ? `원본 ${escapeHtml(o.mappedProductId || o.productId)}` : `외부코드 ${escapeHtml(o.externalProductCode || "-")}`}</small></button></td>${role === "supplier" ? `<td><strong>${escapeHtml(orderSellerLabel(o))}</strong><br><small>${o.orderType === "sample" ? "샘플 구매 · 셀러 직접 수령" : `${escapeHtml(o.channel || "쇼핑몰")} 판매`}</small></td>` : `<td><strong>${escapeHtml(orderMappingStatus(o) === "mapped" ? (o.assignedSupplier || p?.supplier || "미배정") : "매핑 필요")}</strong><br><small>${orderSupplierProgressLabel(o)}</small></td>`}<td>${escapeHtml(o.recipientName || o.customer)}<br><small>${escapeHtml(o.phone || "-")}</small></td><td>${o.qty}개 · ${money(o.amount)}</td><td>${statusChip(o.status)}</td><td><div class="order-cell-actions">${orderActionsMarkup(o, role)}</div></td></tr>`;
     }).join("") : `<tr><td colspan="7"><div class="empty">표시할 주문이 없습니다.</div></td></tr>`}
   </tbody></table></div>${mobileOrderCards(orders, role)}`;
 }
@@ -3206,13 +3392,14 @@ function productDetailModal(id) {
       ${hasOptions(p) ? `<div class="detail-options"><div class="detail-options-head"><b>${escapeHtml(p.optionTitle || "옵션")} ${productOptions(p).length}개</b><small>PICK하면 옵션 그대로 내 쇼핑몰에 등록돼요</small></div><table><thead><tr><th>옵션</th><th>공급가</th><th>권장가</th><th>재고</th></tr></thead><tbody>${productOptions(p).map(option => `<tr><td>${escapeHtml(option.name)}</td><td>${money(option.supply)}</td><td>${money(option.recommended || option.supply)}</td><td class="${Number(option.stock) < 30 ? "stock-low" : ""}">${Number(option.stock || 0)}개</td></tr>`).join("")}</tbody></table></div>` : ""}
       <dl class="detail-specs"><div><dt>현재 재고</dt><dd class="${p.stock < 50 ? "stock-low" : ""}">${p.stock}개</dd></div><div><dt>배송기간</dt><dd>${escapeHtml(p.deliveryDays || "1~3일")}</dd></div><div><dt>배송정책</dt><dd>${escapeHtml(p.shippingPolicy || "무료배송")}</dd></div><div><dt>원산지</dt><dd>${escapeHtml(p.origin || "대한민국")}</dd></div><div><dt>발주마감</dt><dd>${escapeHtml(p.cutoff || "10:00")}</dd></div><div><dt>통관정보</dt><dd>${overseas ? "개인통관부호 필수" : "해당 없음"}</dd></div></dl>
       <div class="supplier-mini-card"><span class="connection-avatar">공</span><div><b>${escapeHtml(p.supplier)}</b><small>${escapeHtml(supplier?.representative || "공급사 담당자")} · 평일 09:00~18:00</small></div><button data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">바로 문의</button></div>
+      ${sampleBuyBoxMarkup(p)}
       <div class="detail-cta-row"><button type="button" class="secondary-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button><button type="button" class="primary-button" data-action="${pickAction}" data-id="${p.id}">${pickLabel}</button></div>
     </div></div>
     <div class="detail-tabs" role="tablist"><button type="button" class="active" data-action="product-detail-tab" data-target="product">상품 상세정보</button><button type="button" data-action="product-detail-tab" data-target="shipping">배송·반품 안내</button><button type="button" data-action="product-detail-tab" data-target="supplier">공급사 정보</button></div>
     <section class="detail-tab-panel active" data-detail-panel="product"><div class="long-detail">${Array.isArray(p.detailBlocks) && p.detailBlocks.some(block => block.type === "image") ? `<div class="supplier-detail-page"><span class="supplier-detail-badge">공급사 상세페이지 · 쇼핑몰 전송 시 그대로 복사</span>${detailPreviewMarkup(p.detailBlocks)}</div>` : ""}<div class="long-detail-title"><span>FRESH SELECTED</span><h2>${escapeHtml(p.name)}</h2><p>두고가 확인한 공급사 원본 정보로 만든 샘플 상세페이지입니다.</p></div><div class="long-detail-image">${productPhoto(p,"long-detail-photo")}<div><span>${overseas ? "OVERSEAS DIRECT" : "FARM TO TABLE"}</span><h3>${escapeHtml(p.origin)}에서<br>꼼꼼하게 선별했습니다</h3><p>${escapeHtml(p.detail)}</p></div></div><div class="detail-feature-grid"><div><b>01</b><span>선별 품질</span><p>출고 전 상품 상태와 포장 기준을 확인합니다.</p></div><div><b>02</b><span>${overseas ? "안전한 통관" : "빠른 산지출고"}</span><p>${overseas ? "개인통관부호를 주문별로 확인합니다." : "발주 마감 전 주문은 빠르게 출고합니다."}</p></div><div><b>03</b><span>판매 콘텐츠 제공</span><p>정사각형 썸네일과 상세설명을 함께 복사합니다.</p></div></div><div class="detail-info-board"><h3>상품 고시정보</h3><dl><div><dt>상품명</dt><dd>${escapeHtml(p.name)}</dd></div><div><dt>원산지</dt><dd>${escapeHtml(p.origin)}</dd></div><div><dt>공급사</dt><dd>${escapeHtml(p.supplier)}</dd></div><div><dt>보관방법</dt><dd>${escapeHtml(p.shelfLife || "상품별 표시사항 참조")}</dd></div><div><dt>배송</dt><dd>${overseas ? `해외직구 ${escapeHtml(p.deliveryDays)}` : `국내택배 ${escapeHtml(p.deliveryDays)}`}</dd></div><div><dt>반품</dt><dd>두고에서 요청 후 공급사 확인</dd></div></dl></div></div></section>
     <section class="detail-tab-panel" data-detail-panel="shipping" hidden><div class="detail-policy-grid"><article><span>배송</span><h3>${overseas ? "해외직구 배송" : "공급사 직배송"}</h3><p>${escapeHtml(p.deliveryDays || "1~3일")} 내 배송을 원칙으로 하며, 발주마감 ${escapeHtml(p.cutoff || "10:00")} 이전 결제 주문부터 순차 출고됩니다.</p></article><article><span>반품</span><h3>반품·교환 접수</h3><p>셀러의 취소·환불 메뉴에서 주문과 사유를 선택하면 공급사 확인 후 회수 또는 환불 절차가 진행됩니다.</p></article><article><span>주의</span><h3>${overseas ? "통관정보 확인" : "신선식품 확인"}</h3><p>${overseas ? "수취인의 개인통관부호가 일치하지 않으면 배송이 지연될 수 있습니다." : "신선식품은 단순 변심보다 파손·품질 이슈를 우선 확인합니다."}</p></article></div></section>
     <section class="detail-tab-panel" data-detail-panel="supplier" hidden><div class="detail-supplier-board"><span class="connection-avatar large">공</span><div><span>SUPPLIER PARTNER</span><h3>${escapeHtml(p.supplier)}</h3><p>${escapeHtml(supplier?.representative || "공급사 담당자")} · 승인 공급사</p></div><dl><div><dt>연락처</dt><dd>${escapeHtml(supplier?.contact || "-")}</dd></div><div><dt>이메일</dt><dd>${escapeHtml(supplier?.email || "-")}</dd></div><div><dt>상담시간</dt><dd>평일 09:00~18:00</dd></div><div><dt>공급상품</dt><dd>${state.products.filter(product => product.supplierLoginId === p.supplierLoginId).length}개</dd></div></dl><button class="primary-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">두고톡으로 문의하기</button></div></section>
-    <div class="sticky-detail-actions"><span><b>${money(p.supply)}</b> 공급가 · 재고 ${p.stock}개</span><div><button class="secondary-button" data-close-modal>닫기</button><button class="primary-button" data-action="${pickAction}" data-id="${p.id}">${pickLabel}</button></div></div>
+    <div class="sticky-detail-actions"><span><b>${money(p.supply)}</b> 공급가 · 재고 ${p.stock}개</span><div><button class="secondary-button" data-close-modal>닫기</button><button class="secondary-button sample-sticky-cart" data-action="sample-add-cart" data-id="${p.id}">🛒 샘플 담기</button><button class="primary-button" data-action="${pickAction}" data-id="${p.id}">${pickLabel}</button></div></div>
   </div>`);
   document.querySelector("#modal .modal").classList.add("product-detail-modal");
 }
@@ -4526,6 +4713,7 @@ document.addEventListener("click", event => {
     if (currentAccount?.staff && action !== "logout" && action !== "subscription") { activeMenuIndex = 10; render(); updateAccountUI(); return showToast("직원 계정은 ‘내 정보’에서 내 권한과 비밀번호를 관리해요."); }
     if (action === "role-switch") { userSwitchModal(); return; }
     if (action === "subscription" && activeRole === "seller") { activeMenuIndex = 9; render(); updateAccountUI(); return; }
+    if (action === "sample-orders" && activeRole === "seller") { activeMenuIndex = 19; render(); updateAccountUI(); window.scrollTo(0, 0); return; }
     return accountSettingsModal(action);
   }
   if (accountDropdown && !event.target.closest(".account-menu-wrap")) { accountDropdown.hidden = true; document.getElementById("accountMenuButton").setAttribute("aria-expanded", "false"); }
@@ -4587,6 +4775,30 @@ document.addEventListener("click", event => {
     saveState(); updateAccountUI(); return showToast(`[데모] 카카오톡을 보냈어요 · ${message.title}. 알림함에서도 볼 수 있어요.`);
   }
   if (action === "open-manual-order") { manualOrderPickerModal(); return; }
+  if (action === "sample-add-cart") { const pick = readSampleBox(id); if (addToSampleCart(id, pick.optionId, pick.qty)) { updateAccountUI(); showToast(`장바구니에 담았어요 (${sampleCartCount()}개). 상단 🛒에서 주문할 수 있어요.`); } return; }
+  if (action === "sample-buy-now") { const pick = readSampleBox(id); const product = productOf(id); const optionId = pick.optionId || (hasOptions(product) ? productOptions(product).find(option => Number(option.stock || 0) > 0)?.id || "" : ""); sampleCheckoutItems = [{ id: `BN-${Date.now()}`, productId: id, optionId, qty: pick.qty }]; sampleView = "checkout"; closeModal(); activeMenuIndex = 18; render(); updateAccountUI(); window.scrollTo(0, 0); return; }
+  if (action === "open-cart") { sampleView = "cart"; activeMenuIndex = 18; render(); updateAccountUI(); window.scrollTo(0, 0); return; }
+  if (action === "sample-cart-qty") { const row = sampleCart().find(item => item.id === id); if (row) { row.qty = Math.max(1, Number(row.qty || 1) + Number(target.dataset.step)); saveState(); render(); updateAccountUI(); } return; }
+  if (action === "sample-cart-remove") { const cart = sampleCart(); const index = cart.findIndex(item => item.id === id); if (index >= 0) cart.splice(index, 1); saveState(); render(); updateAccountUI(); return; }
+  if (action === "sample-cart-remove-checked") { const cart = sampleCart(); for (let i = cart.length - 1; i >= 0; i -= 1) if (cart[i].checked !== false) cart.splice(i, 1); saveState(); render(); updateAccountUI(); return; }
+  if (action === "sample-checkout") { sampleCheckoutItems = sampleCart().filter(row => row.checked !== false).map(row => ({ ...row })); if (!sampleCheckoutItems.length) return showToast("주문할 상품을 선택해 주세요."); sampleView = "checkout"; render(); window.scrollTo(0, 0); return; }
+  if (action === "sample-back-cart") { sampleView = "cart"; render(); return; }
+  if (action === "sample-order-filter") { sampleOrderFilter = target.dataset.filter; render(); return; }
+  if (action === "sample-track") { sampleTrackModal(id); return; }
+  if (action === "copy-tracking") { navigator.clipboard?.writeText(target.dataset.tracking || "").catch(() => {}); showToast("송장번호를 복사했어요."); return; }
+  if (action === "sample-reorder") { sampleOrders().filter(order => order.sampleGroupId === id).forEach(order => addToSampleCart(order.productId, order.optionId || "", Number(order.qty || 1))); sampleView = "cart"; activeMenuIndex = 18; render(); updateAccountUI(); return showToast("같은 상품을 장바구니에 다시 담았어요."); }
+  if (action === "sample-cancel") {
+    const order = state.orders.find(item => item.id === id && item.orderType === "sample");
+    if (!order || !["발주완료", "신규주문"].includes(order.status)) return showToast("공급사가 이미 준비를 시작해 취소할 수 없어요. 공급사에 문의해 주세요.");
+    if (!window.confirm("이 샘플 주문을 취소할까요? 결제 금액은 바로 돌려드려요.")) return;
+    order.status = "취소완료"; order.canceledAt = "방금 전"; order.settlementStatus = "excluded";
+    const product = productOf(order.productId); const option = order.optionId ? productOptionOf(product, order.optionId) : null;
+    if (option) { option.stock = Number(option.stock || 0) + Number(order.qty || 1); syncProductOptionTotals(product); } else if (product) product.stock += Number(order.qty || 1);
+    if (order.paymentMethod !== "card") { const deposit = sellerDeposit(); deposit.balance += Number(order.amount || 0); deposit.transactions.unshift({ id: `DP-${Date.now()}`, type: "샘플 주문 취소 환불", amount: Number(order.amount || 0), reference: order.id, createdAt: depositStamp() }); }
+    pushNotification(order.supplierLoginId, "supplier", "order", "샘플 주문이 취소됐어요", `${order.id} · 출고하지 않아도 돼요`);
+    audit("샘플 주문 취소", `${order.id} · ${money(order.amount)} 환불`, "done", "order");
+    saveState(); render(); updateAccountUI(); return showToast(order.paymentMethod === "card" ? "주문을 취소했어요. 카드 결제는 취소 처리돼요." : "주문을 취소하고 예치금으로 돌려드렸어요.");
+  }
   if (action === "open-docs-modal") { memberDocsModal(); return; }
   if (handleStaffAction(action, id, target)) return;
   if (action === "category-search-pick") {
@@ -4892,7 +5104,7 @@ document.addEventListener("click", event => {
   if (action === "single-order") { externalOrderModal(); return; }
   if (action === "open-address-popup") { openAddressPopup(); return; }
   if (action === "close-address-popup") { closeAddressPopup(); return; }
-  if (action === "select-address") { const form = document.querySelector("#modal form"); if (form) { form.elements.postalCode.value = target.dataset.postal; form.elements.address.value = target.dataset.address; closeAddressPopup(); form.elements.addressDetail.focus(); } return; }
+  if (action === "select-address") { const form = (!document.getElementById("modal").hidden && document.querySelector("#modal form")) || document.getElementById("sampleCheckoutForm"); if (form) { form.elements.postalCode.value = target.dataset.postal; form.elements.address.value = target.dataset.address; closeAddressPopup(); form.elements.addressDetail.focus(); } return; }
   if (action === "qty-step") {
     const input = target.parentElement.querySelector('input[name="qty"]');
     if (!input) return;
@@ -6465,6 +6677,7 @@ document.addEventListener("submit", event => {
     audit("사업자 가입 반려", `${member.company} 가입 신청을 반려했습니다. 사유: ${data.reason}`, "blocked", "member");
     saveState(); closeModal(); render(); updateAccountUI(); showToast(`${member.company}의 가입을 반려했습니다.`);
   }
+  if (form.id === "sampleCheckoutForm") { placeSampleOrder(form, data); return; }
   if (form.id === "memberDocsForm") {
     const member = memberByLogin(currentAccount.loginId);
     const businessFile = signupFileName(form.elements.businessFile) || member.businessFile;
@@ -6722,7 +6935,7 @@ document.addEventListener("submit", event => {
 function staffPermissionDefs() {
   return [
     { key: "products", label: "상품", desc: "소싱·PICK·마스터 상품·쇼핑몰 전송", menus: [1, 16, 2, 17, 14, 11, 15, 7] },
-    { key: "orders", label: "주문·배송", desc: "주문 결제·송장 전송·취소반품·공급사 문의", menus: [4, 5, 3] },
+    { key: "orders", label: "주문·배송", desc: "주문 결제·송장 전송·취소반품·공급사 문의·샘플 구매", menus: [4, 5, 3, 18, 19] },
     { key: "money", label: "예치금·매출", desc: "충전·결제·매출 달력·정기구독", menus: [12, 6, 9] },
     { key: "channels", label: "쇼핑몰 연동", desc: "API 키·배송 정책·자동화 설정", menus: [8] }
   ];
