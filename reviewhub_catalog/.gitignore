@@ -114,3 +114,7 @@ uploaded_files/
 /.preview-build-data/
 /.artifact-build/
 /artifact/node_modules/
+
+# --- Vercel ---
+/.vercel/
+/.vercel-server/
