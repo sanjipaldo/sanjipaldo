@@ -1,0 +1,15 @@
+{
+  "name": "doogo-channel-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "두고마켓 ↔ 쿠팡·스마트스토어 상품 연동 서버 (API 키 보관·서명·상품 등록/판매중지/삭제)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "bcryptjs": "^2.4.3"
+  }
+}
