@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+preview
+.preview-build*
+.artifact-build
+artifact
+.vercel-server
+apps/client/dist
+apps/server/dist
+.env
+.env.*

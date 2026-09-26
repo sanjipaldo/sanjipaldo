@@ -118,3 +118,5 @@ uploaded_files/
 # --- Vercel ---
 /.vercel/
 /.vercel-server/
+.vercel
+.env*
