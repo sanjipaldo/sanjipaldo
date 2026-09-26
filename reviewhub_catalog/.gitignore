@@ -120,3 +120,4 @@ uploaded_files/
 /.vercel-server/
 .vercel
 .env*
+/shots/
