@@ -672,6 +672,7 @@ export type BulkProductChanges = {
   courier?: string | null;
   supplierName?: string | null;
   notes?: string | null;
+  packaging?: string | null;
   imageUrl?: string | null;
   season?: { isAlwaysOnSale: boolean; saleStartMonth: number | null; saleEndMonth: number | null };
 };
@@ -711,6 +712,7 @@ export async function bulkUpdateProducts(ids: string[], changes: BulkProductChan
     if (changes.courier !== undefined) product.courier = changes.courier;
     if (changes.supplierName !== undefined) product.supplierName = changes.supplierName;
     if (changes.notes !== undefined) product.notes = changes.notes;
+    if (changes.packaging !== undefined) product.packaging = changes.packaging;
     if (changes.imageUrl !== undefined) product.imageUrl = changes.imageUrl;
     if (changes.season) {
       product.isAlwaysOnSale = changes.season.isAlwaysOnSale;

@@ -536,6 +536,7 @@ const BulkUpdateSchema = z.object({
     courier: z.string().trim().max(100).nullable().optional(),
     supplierName: z.string().trim().max(160).nullable().optional(),
     notes: z.string().trim().max(3000).nullable().optional(),
+    packaging: z.string().trim().max(500).nullable().optional(),
     imageUrl: z.string().trim().max(2048).nullable().optional(),
     season: z.object({
       isAlwaysOnSale: z.boolean(),

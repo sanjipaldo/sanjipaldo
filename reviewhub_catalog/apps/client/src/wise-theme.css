@@ -743,3 +743,19 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   @keyframes bulk-bar-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
   .admin-content:has(.bulk-selection-bar) { padding-bottom: 210px; }
 }
+
+/* 일괄 변경: 제철 월 달력 */
+.bulk-season-picker { display: flex; flex-direction: column; gap: 10px; }
+.bulk-month-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.bulk-month-grid button { min-height: 40px; border: 1px solid var(--w-line); border-radius: 12px; background: var(--w-canvas); color: var(--w-ink); font-size: 14px; font-weight: 600; }
+.bulk-month-grid button.in { border-color: transparent; background: var(--w-primary-pale); color: var(--w-ink-deep); }
+.bulk-month-grid button.start, .bulk-month-grid button.end { border-color: var(--w-ink-deep); background: var(--w-primary); color: var(--w-ink); }
+.bulk-month-grid.disabled { opacity: .4; }
+.bulk-season-summary { margin: 0; color: var(--w-body); font-size: 13px; }
+.bulk-season-summary b { color: var(--w-ink); font-size: 15px; }
+.bulk-season-warning { color: var(--w-warning-content); background: var(--w-warning-pale); padding: 6px 10px; border-radius: 8px; font-size: 12px; }
+.bulk-quick-actions .bulk-season-quick { display: inline-flex; align-items: center; gap: 5px; border-color: var(--w-ink-deep); background: var(--w-primary-pale); color: var(--w-ink-deep); }
+@media (max-width: 720px) {
+  .bulk-selection-bar .bulk-quick-actions .bulk-season-quick { grid-column: 1 / -1; justify-content: center; }
+  .bulk-month-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
