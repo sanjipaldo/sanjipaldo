@@ -8275,3 +8275,66 @@ body[data-role="supplier"] .signup-inline-btn { background: #111; }
   .sample-order-actions { grid-column: 1 / -1; grid-template-columns: repeat(2, 1fr); justify-items: stretch; }
   .sample-buy-actions { grid-template-columns: 1fr; }
 }
+
+/* =====================================================================
+   결제 대기 주문 일괄 결제
+   ===================================================================== */
+.bulk-pay-bar { margin-bottom: 12px; padding: 16px 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: linear-gradient(90deg, #fff8ec, #fff); border: 1.5px solid #f5c26b; }
+.bulk-pay-bar > div { flex: 1; min-width: 200px; display: grid; gap: 2px; }
+.bulk-pay-bar span { color: #b45309; font-size: 13px; font-weight: 800; }
+.bulk-pay-bar b { font-size: 18px; color: #191f28; }
+.bulk-pay-bar small { color: #6b7684; font-size: 13.5px; }
+.bulk-pay-bar .primary-button { min-height: 48px; padding: 0 22px; font-size: 15.5px; }
+.bulk-pay-modal { width: min(720px, calc(100vw - 24px)) !important; }
+.bulk-pay-head span { color: #3182f6; font-size: 12.5px; font-weight: 800; letter-spacing: .1em; }
+.bulk-pay-head h2 { margin: 4px 0; }
+.bulk-pay-head p { margin: 0 0 12px; color: #4e5968; }
+.bulk-pay-form { display: grid; gap: 12px; }
+.bulk-pay-all { display: flex; gap: 8px; align-items: center; font-size: 14.5px; font-weight: 700; }
+.bulk-pay-all input, .bulk-pay-row input { width: 20px; height: 20px; flex: 0 0 20px; }
+.bulk-pay-groups { display: grid; gap: 10px; max-height: 46vh; overflow-y: auto; padding-right: 2px; }
+.bulk-pay-group { border: 1px solid #e5e8eb; border-radius: 14px; overflow: hidden; }
+.bulk-pay-group > header { padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; background: #f5f9ff; border-bottom: 1px solid #e5e8eb; }
+.bulk-pay-group > header b { font-size: 15px; }
+.bulk-pay-group > header span { color: #1b64da; font-weight: 800; }
+.bulk-pay-row { padding: 10px 14px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 10px; align-items: center; border-bottom: 1px solid #f2f4f6; cursor: pointer; }
+.bulk-pay-row:last-child { border-bottom: 0; }
+.bulk-pay-row.blocked { background: #fff8f7; cursor: not-allowed; }
+.bulk-pay-info { display: grid; gap: 2px; min-width: 0; }
+.bulk-pay-info b { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bulk-pay-info small { display: flex; align-items: center; gap: 4px; color: #6b7684; font-size: 12.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.bulk-pay-info em { color: #c0362c; font-style: normal; font-size: 12.5px; font-weight: 700; }
+.bulk-pay-qty { color: #6b7684; font-size: 13px; white-space: nowrap; }
+.bulk-pay-row > strong { min-width: 76px; text-align: right; font-size: 15px; }
+.bulk-pay-summary { padding: 14px 16px; display: grid; grid-template-columns: auto auto 1fr; gap: 16px; align-items: end; background: #191f28; color: #fff; border-radius: 14px; }
+.bulk-pay-summary span { display: block; color: #b0b8c1; font-size: 12.5px; }
+.bulk-pay-summary b { font-size: 17px; }
+.bulk-pay-summary .total { text-align: right; }
+.bulk-pay-summary strong { font-size: 26px; letter-spacing: -.02em; }
+.bulk-pay-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bulk-pay-methods label { padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start; border: 1.5px solid #e5e8eb; border-radius: 12px; cursor: pointer; }
+.bulk-pay-methods label:has(input:checked) { border-color: #3182f6; background: #f5f9ff; }
+.bulk-pay-methods span { display: grid; gap: 2px; }
+.bulk-pay-methods small { color: #6b7684; font-size: 12.5px; }
+.bulk-pay-short { margin: 0; padding: 10px 12px; color: #c0362c; background: #fdeeec; border-radius: 10px; font-size: 13.5px; }
+.bulk-pay-short[hidden] { display: none; }
+.bulk-pay-form [data-bulk-submit] { min-height: 50px; font-size: 15.5px; }
+.bulk-pay-form [data-bulk-submit]:disabled { opacity: .5; cursor: not-allowed; }
+.bulk-pay-done { display: grid; gap: 10px; place-items: center; text-align: center; }
+.bulk-pay-done h2, .bulk-pay-done p { margin: 0; }
+.bulk-pay-result { width: 100%; display: grid; gap: 8px; }
+.bulk-pay-result > div { padding: 12px 14px; display: flex; gap: 10px; align-items: center; background: #f9fafb; border-radius: 12px; text-align: left; }
+.bulk-pay-result b { flex: 1; }
+.bulk-pay-result em { color: #0f7a4d; font-style: normal; font-size: 12.5px; font-weight: 800; }
+@media (max-width: 720px) {
+  .bulk-pay-bar .primary-button { width: 100%; }
+  .bulk-pay-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .bulk-pay-qty { grid-column: 2; }
+  .bulk-pay-row > strong { grid-column: 3; grid-row: 1; }
+  .bulk-pay-summary { grid-template-columns: 1fr 1fr; }
+  .bulk-pay-summary .total { grid-column: 1 / -1; text-align: left; }
+  .bulk-pay-methods { grid-template-columns: 1fr; }
+}
+.bulk-pay-groups { max-height: min(34vh, 320px); }
+@media (max-width: 720px) { .bulk-pay-groups { max-height: 32vh; } }
+@media (max-width: 720px) { .bulk-pay-methods { grid-template-columns: 1fr 1fr; } .bulk-pay-methods label { padding: 10px; } }

@@ -1048,6 +1048,123 @@ document.addEventListener("change", event => {
   if (event.target.matches?.("[data-cart-check-all]")) { sampleCart().forEach(row => { row.checked = event.target.checked; }); saveState(); render(); }
 });
 
+
+/* ===== 공급가 결제 → 공급사 자동 발주 (한 건 / 일괄 공통) ===== */
+function orderPaymentCheck(order) {
+  const product = orderSourceProduct(order);
+  if (!order || !product || orderMappingStatus(order) !== "mapped") return { ok: false, reason: "mapping", message: "상품 매핑 정보를 다시 확인해 주세요." };
+  if (orderPaymentStatus(order) !== "pending") return { ok: false, reason: "paid", message: "이미 결제되어 공급사에 전달된 주문입니다." };
+  const option = orderOption(order, product);
+  const stock = option ? Number(option.stock || 0) : Number(product.stock || 0);
+  if (stock < Number(order.qty || 1)) return { ok: false, reason: "stock", message: option ? `‘${option.name}’ 옵션 재고가 부족해요 (남은 재고 ${stock}개)` : `공급사 재고가 부족해요 (남은 재고 ${stock}개)`, product };
+  if (productNeedsCustoms(product) && !isValidCustomsCode(order.personalCustomsCode)) return { ok: false, reason: "customs", message: "개인통관고유부호가 없어요 · 한 건씩 결제에서 입력해 주세요", product };
+  return { ok: true, product, option, supplyTotal: orderUnitSupply(order, product) * Number(order.qty || 1) };
+}
+function payOrderToSupplier(order, paymentMethod = "deposit", { skipDeposit = false } = {}) {
+  const check = orderPaymentCheck(order);
+  if (!check.ok) return check;
+  const { product, option, supplyTotal } = check;
+  if (paymentMethod === "deposit" && !skipDeposit) {
+    const deposit = sellerDeposit(order.sellerLoginId);
+    if (deposit.balance < supplyTotal) return { ok: false, reason: "deposit", message: "예치금이 부족해요. 예치금을 충전하거나 신용카드 결제를 골라 주세요." };
+    deposit.balance -= supplyTotal;
+    deposit.transactions.unshift({ id: `DP-${Date.now()}-${order.id}`, type: "주문 공급가 결제", amount: -supplyTotal, reference: order.id, createdAt: depositStamp() });
+  }
+  if (option) { option.stock = Number(option.stock || 0) - Number(order.qty || 1); syncProductOptionTotals(product); }
+  else product.stock -= Number(order.qty || 1);
+  if (productNeedsCustoms(product)) order.shippingType = "overseas";
+  Object.assign(order, { supplierLoginId: product.supplierLoginId, assignedSupplier: product.supplier, paymentStatus: "paid", paymentMethod, supplyTotal, forwardedAt: "방금 전", status: "발주완료", supplierOrderId: order.supplierOrderId || `PO-${String(Date.now()).slice(-6)}${Math.floor(Math.random() * 90 + 10)}`, settlementStatus: "scheduled" });
+  pushNotification(product.supplierLoginId, "supplier", "order", "신규 발주가 도착했습니다", `${order.id} · ${product.id} ${product.name}${order.optionName ? ` [${order.optionName}]` : ""} ${order.qty}개`);
+  audit("공급가 결제·공급사 자동 발주", `${order.id} · ${product.id} · ${money(supplyTotal)} · ${paymentMethod === "deposit" ? "예치금" : "신용카드 데모"} 결제 · ${product.supplier} 공급사에 바로 전달`, "done", "order");
+  return { ok: true, product, supplyTotal };
+}
+/* 결제 대기 주문을 공급사별로 묶어 한 번에 결제한다 */
+function bulkPaymentGroups(orders) {
+  const groups = new Map();
+  orders.forEach(order => {
+    const check = orderPaymentCheck(order);
+    const product = check.product || orderSourceProduct(order);
+    const key = product?.supplierLoginId || "unknown";
+    if (!groups.has(key)) groups.set(key, { supplierLoginId: key, supplier: product?.supplier || "공급사", rows: [] });
+    groups.get(key).rows.push({ order, product, check, amount: check.ok ? check.supplyTotal : orderUnitSupply(order, product) * Number(order.qty || 1) });
+  });
+  return [...groups.values()];
+}
+function bulkPayBarMarkup() {
+  const waiting = sellerPaymentRequiredOrders();
+  if (!waiting.length) return "";
+  const groups = bulkPaymentGroups(waiting);
+  const payable = groups.flatMap(group => group.rows).filter(row => row.check.ok);
+  const total = payable.reduce((sum, row) => sum + row.amount, 0);
+  return `<section class="bulk-pay-bar panel"><div><span>결제 대기</span><b>${waiting.length}건 · 공급사 ${groups.length}곳</b><small>한 번에 결제하면 ${money(total)}${payable.length < waiting.length ? ` (${waiting.length - payable.length}건은 확인 필요)` : ""}</small></div><button type="button" class="primary-button" data-action="bulk-pay-orders">한 번에 결제하기</button></section>`;
+}
+function bulkPaymentModal() {
+  const waiting = sellerPaymentRequiredOrders();
+  if (!waiting.length) return showToast("결제를 기다리는 주문이 없어요.");
+  const groups = bulkPaymentGroups(waiting);
+  const deposit = sellerDeposit();
+  openModal(`<div class="bulk-pay-head"><span>BULK PAYMENT</span><h2>결제 대기 주문 한 번에 결제</h2><p>공급사별로 묶어 보여 드려요. 결제하면 모든 주문이 각 공급사로 바로 전달돼요.</p></div>
+    <form id="bulkPaymentForm" class="bulk-pay-form" novalidate>
+      <label class="bulk-pay-all"><input type="checkbox" data-bulk-all checked> 결제 가능한 주문 전체 선택</label>
+      <div class="bulk-pay-groups">${groups.map(group => `<section class="bulk-pay-group" data-bulk-group><header><b>${escapeHtml(group.supplier)}</b><span data-group-sum>0원</span></header>
+        ${group.rows.map(row => `<label class="bulk-pay-row ${row.check.ok ? "" : "blocked"}"><input type="checkbox" name="orderIds" value="${row.order.id}" data-amount="${row.amount}" data-supplier="${escapeHtml(group.supplierLoginId)}" ${row.check.ok ? "checked" : "disabled"}><span class="bulk-pay-info"><b>${escapeHtml(row.product?.name || row.order.externalProductName || "상품")}</b><small>${channelMark(channelIdFromName(row.order.channel), true)} ${escapeHtml(row.order.channel)} · ${escapeHtml(row.order.id)}${row.order.optionName ? ` · ${escapeHtml(row.order.optionName)}` : ""}</small>${row.check.ok ? "" : `<em>${escapeHtml(row.check.message)}</em>`}</span><span class="bulk-pay-qty">${row.order.qty}개 × ${money(orderUnitSupply(row.order, row.product))}</span><strong>${money(row.amount)}</strong></label>`).join("")}</section>`).join("")}</div>
+      <div class="bulk-pay-summary"><div><span>선택한 주문</span><b data-bulk-count>0건</b></div><div><span>공급사</span><b data-bulk-suppliers>0곳</b></div><div class="total"><span>오늘 결제할 금액</span><strong data-bulk-total>0원</strong></div></div>
+      <div class="bulk-pay-methods"><label><input type="radio" name="paymentMethod" value="deposit" checked><span><b>예치금</b><small data-bulk-deposit="${deposit.balance}">잔액 ${money(deposit.balance)}</small></span></label><label><input type="radio" name="paymentMethod" value="card"><span><b>신용카드</b><small>데모 결제</small></span></label></div>
+      <p class="bulk-pay-short" data-bulk-short hidden></p>
+      <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button" data-bulk-submit>결제하고 공급사에 전달</button></div>
+    </form>`);
+  document.querySelector("#modal .modal").classList.add("bulk-pay-modal");
+  updateBulkPaySummary();
+}
+function updateBulkPaySummary() {
+  const form = document.getElementById("bulkPaymentForm");
+  if (!form) return;
+  const checked = [...form.querySelectorAll('input[name="orderIds"]:checked')];
+  const total = checked.reduce((sum, input) => sum + Number(input.dataset.amount || 0), 0);
+  form.querySelector("[data-bulk-count]").textContent = `${checked.length}건`;
+  form.querySelector("[data-bulk-suppliers]").textContent = `${new Set(checked.map(input => input.dataset.supplier)).size}곳`;
+  form.querySelector("[data-bulk-total]").textContent = money(total);
+  form.querySelectorAll("[data-bulk-group]").forEach(group => { group.querySelector("[data-group-sum]").textContent = money([...group.querySelectorAll('input[name="orderIds"]:checked')].reduce((sum, input) => sum + Number(input.dataset.amount || 0), 0)); });
+  const method = form.querySelector('input[name="paymentMethod"]:checked')?.value;
+  const balance = Number(form.querySelector("[data-bulk-deposit]").dataset.bulkDeposit || 0);
+  const short = form.querySelector("[data-bulk-short]");
+  const lacking = method === "deposit" && total > balance;
+  short.hidden = !lacking;
+  short.innerHTML = lacking ? `예치금이 <b>${money(total - balance)}</b> 부족해요. <button type="button" class="text-button" data-action="deposit-view" data-view="charge">예치금 충전하기</button> 또는 신용카드를 골라 주세요.` : "";
+  const submit = form.querySelector("[data-bulk-submit]");
+  submit.disabled = !checked.length || lacking;
+  submit.textContent = checked.length ? `${money(total)} 결제하고 공급사에 전달` : "결제할 주문을 선택해 주세요";
+  const all = form.querySelector("[data-bulk-all]");
+  const enabled = [...form.querySelectorAll('input[name="orderIds"]:not(:disabled)')];
+  all.checked = enabled.length > 0 && enabled.every(input => input.checked);
+}
+function submitBulkPayment(form) {
+  const ids = [...form.querySelectorAll('input[name="orderIds"]:checked')].map(input => input.value);
+  if (!ids.length) return showToast("결제할 주문을 선택해 주세요.");
+  const method = form.querySelector('input[name="paymentMethod"]:checked')?.value || "deposit";
+  const orders = ids.map(id => state.orders.find(order => order.id === id)).filter(Boolean);
+  const checks = orders.map(order => ({ order, check: orderPaymentCheck(order) })).filter(row => row.check.ok);
+  const total = checks.reduce((sum, row) => sum + row.check.supplyTotal, 0);
+  const deposit = sellerDeposit();
+  if (method === "deposit" && deposit.balance < total) return showToast("예치금이 부족해요. 충전하거나 신용카드를 골라 주세요.");
+  const bulkId = `BP-${String(Date.now()).slice(-8)}`;
+  const done = [];
+  checks.forEach(({ order }) => { const result = payOrderToSupplier(order, method, { skipDeposit: method === "deposit" }); if (result.ok) done.push({ order, product: result.product, amount: result.supplyTotal }); });
+  const paid = done.reduce((sum, row) => sum + row.amount, 0);
+  if (method === "deposit" && paid) { deposit.balance -= paid; deposit.transactions.unshift({ id: `DP-${Date.now()}`, type: `주문 공급가 일괄 결제 (${done.length}건)`, amount: -paid, reference: bulkId, createdAt: depositStamp() }); }
+  const bySupplier = [...done.reduce((map, row) => { const key = row.product.supplier; map.set(key, (map.get(key) || { count: 0, amount: 0 })); map.get(key).count += 1; map.get(key).amount += row.amount; return map; }, new Map())];
+  audit("공급가 일괄 결제", `${bulkId} · ${done.length}건 · ${money(paid)} · ${method === "deposit" ? "예치금" : "신용카드 데모"} · 공급사 ${bySupplier.length}곳에 자동 전달`, "done", "order");
+  saveState(); sellerOrderStage = "ordered"; render(); updateAccountUI();
+  openModal(`<div class="bulk-pay-done"><span class="complete-icon">✓</span><h2>${done.length}건 결제 완료</h2><p>${money(paid)}을 ${method === "deposit" ? "예치금" : "신용카드"}로 결제했고, 주문을 공급사에 바로 전달했어요.</p><div class="bulk-pay-result">${bySupplier.map(([name, info]) => `<div><b>${escapeHtml(name)}</b><span>${info.count}건 · ${money(info.amount)}</span><em>발주 전달 완료</em></div>`).join("")}</div>${done.length < ids.length ? `<p class="bulk-pay-short">${ids.length - done.length}건은 재고나 정보가 바뀌어 결제하지 않았어요.</p>` : ""}<div class="modal-actions"><button type="button" class="primary-button" data-close-modal>확인</button></div></div>`);
+  showToast(`${done.length}건 ${money(paid)} 결제 완료! 공급사 ${bySupplier.length}곳에 주문을 전달했어요.`);
+}
+document.addEventListener("change", event => {
+  const form = event.target.closest?.("#bulkPaymentForm");
+  if (!form) return;
+  if (event.target.matches("[data-bulk-all]")) form.querySelectorAll('input[name="orderIds"]:not(:disabled)').forEach(input => { input.checked = event.target.checked; });
+  updateBulkPaySummary();
+});
+
 function sellerChannels(loginId = currentAccount?.loginId || "seller") {
   if (state.channelConnections[loginId]) return state.channelConnections[loginId];
   /* 새로 가입한 셀러는 연동 전 상태의 쇼핑몰 목록으로 시작한다 (데모 셀러의 연동 정보를 빌려 쓰지 않음) */
@@ -2304,6 +2421,7 @@ function sellerOrderManagementTemplate() {
   return `${sectionHero("주문 관리", sellerAutomationActive() ? "쇼핑몰 주문을 가져와 결제하면 공급사가 출고하고, 받은 송장을 쇼핑몰로 보냅니다." : "받은 주문을 직접 넣고 결제하면 공급사가 출고해요. 송장은 여기서 확인할 수 있어요.", `<button class="primary-button" data-action="open-manual-order">+ 수기 주문 넣기</button>${sellerAutomationActive() ? `<button class="secondary-button" data-action="single-order">주문 직접 입력</button>` : ""}`)}${sellerAutomationActive() ? collectCard : freeBanner}
     <div class="order-workspace"><details class="order-stage-menu panel" open><summary><span>${menuIcon("order")}</span><b>주문 관리</b><small>단계별 메뉴 열기</small><i>⌄</i></summary><nav class="stage-grouped">${SELLER_ORDER_STAGE_GROUPS.map(group => `<div class="stage-group tone-${group.tone}">${group.title ? `<p class="stage-group-head"><em>${group.who}</em><span>${group.title}</span></p>` : ""}<div class="stage-group-items">${group.stages.map(key => { const label = sellerOrderStages.find(item => item[0] === key)?.[1] || key; const count = sellerOrderStageCount(key); const urgent = key === "needs-check" && count > 0; return `<button class="${sellerOrderStage === key ? "active" : ""}" type="button" data-action="filter-order-stage" data-stage="${key}"><span>${label}</span><b class="stage-count ${count > 0 ? (urgent ? "urgent" : "has-count") : "zero"}">${count}</b></button>`; }).join("")}</div></div>`).join("")}</nav></details><section class="order-stage-content">
       <div class="order-search-panel panel"><label><span>⌕</span><input id="sellerOrderSearch" value="${escapeHtml(sellerOrderSearch)}" placeholder="주문번호, 고객명, 외부 상품명, 상품코드 검색"></label><div><span>전체 ${orders.length}건</span><span>매핑 ${sellerMappingRequiredOrders().length}건</span><span>결제 ${sellerPaymentRequiredOrders().length}건</span></div></div>
+      ${bulkPayBarMarkup()}
       ${sellerOrderStage === "overview" ? overview : ""}
       <div class="panel"><div class="panel-head"><div><h3>${activeLabel}</h3><p>행을 열어 주소·배송메시지·개인통관부호·송장 상태까지 확인할 수 있습니다.</p></div><button class="secondary-button" data-action="clear-order-search">검색 초기화</button></div><div id="sellerOrderResults">${ordersTable("seller", sellerOrderSearch, filteredOrders)}</div></div>
     </section></div>`;
@@ -2808,7 +2926,7 @@ function renderSeller() {
     { count: memberDocsMissing() ? 1 : 0, tone: "orange", title: "정산 계좌·서류 등록", hint: "지금도 다 쓸 수 있어요. 정산·환불 받으려면 등록해 주세요", button: "등록하기", action: "open-docs-modal" },
     { count: sellerTrackingPushOrders().length, tone: "green", title: "쇼핑몰에 보낼 송장", hint: "버튼 한 번이면 주문한 쇼핑몰로 송장이 들어가요", button: "송장 보내기", action: "push-all-tracking" },
     { count: mappingRequired.length, tone: "red", title: "두고 상품 연결이 필요한 주문", hint: "어떤 상품으로 보낼지 골라 주세요", button: "연결하기", action: "go-seller-menu", index: 15 },
-    { count: paymentRequired.length, tone: "orange", title: "결제를 기다리는 주문", hint: "결제하면 공급사로 바로 전달됩니다", button: "결제하기", action: "open-order-payment-stage" },
+    { count: paymentRequired.length, tone: "orange", title: "결제를 기다리는 주문", hint: "공급사별로 묶어 한 번에 결제하면 바로 전달돼요", button: "한 번에 결제", action: "bulk-pay-orders" },
     { count: needsCheck, tone: "red", title: "쇼핑몰 확인이 필요한 주문", hint: "취소 여부를 확인해 주세요", button: "확인하기", action: "dashboard-order-stage", stage: "needs-check" },
     { count: rejectedPicks.length, tone: "red", title: "공급사가 거절한 PICK 상품", hint: "사유를 확인하고 다시 요청할 수 있어요", button: "확인하기", action: "go-seller-menu", index: 2 },
     { count: readyItems.length, tone: "purple", title: "승인 완료된 내 상품", hint: "상품명·사진을 꾸미고 마스터 상품으로 등록하세요", button: "꾸미기", action: "go-seller-menu", index: 17 },
@@ -4775,6 +4893,7 @@ document.addEventListener("click", event => {
     saveState(); updateAccountUI(); return showToast(`[데모] 카카오톡을 보냈어요 · ${message.title}. 알림함에서도 볼 수 있어요.`);
   }
   if (action === "open-manual-order") { manualOrderPickerModal(); return; }
+  if (action === "bulk-pay-orders") { bulkPaymentModal(); return; }
   if (action === "sample-add-cart") { const pick = readSampleBox(id); if (addToSampleCart(id, pick.optionId, pick.qty)) { updateAccountUI(); showToast(`장바구니에 담았어요 (${sampleCartCount()}개). 상단 🛒에서 주문할 수 있어요.`); } return; }
   if (action === "sample-buy-now") { const pick = readSampleBox(id); const product = productOf(id); const optionId = pick.optionId || (hasOptions(product) ? productOptions(product).find(option => Number(option.stock || 0) > 0)?.id || "" : ""); sampleCheckoutItems = [{ id: `BN-${Date.now()}`, productId: id, optionId, qty: pick.qty }]; sampleView = "checkout"; closeModal(); activeMenuIndex = 18; render(); updateAccountUI(); window.scrollTo(0, 0); return; }
   if (action === "open-cart") { sampleView = "cart"; activeMenuIndex = 18; render(); updateAccountUI(); window.scrollTo(0, 0); return; }
@@ -6323,29 +6442,9 @@ document.addEventListener("submit", event => {
       order.personalCustomsCode = customsCode;
       order.shippingType = "overseas";
     }
-    const option = orderOption(order, product);
-    const supplyTotal = orderUnitSupply(order, product) * Number(order.qty || 1);
     const paymentMethod = String(data.paymentMethod || "deposit");
-    if ((option ? Number(option.stock || 0) : product.stock) < Number(order.qty || 1)) return showToast(option ? `‘${option.name}’ 옵션 재고가 부족해 결제할 수 없어요.` : "공급사 재고가 부족해 결제할 수 없습니다.");
-    if (paymentMethod === "deposit") {
-      const deposit = sellerDeposit(order.sellerLoginId);
-      if (deposit.balance < supplyTotal) return showToast("예치금이 부족해요. 예치금을 충전하거나 신용카드 결제를 골라 주세요.");
-      deposit.balance -= supplyTotal;
-      deposit.transactions.unshift({ id: `DP-${Date.now()}`, type: "주문 공급가 결제", amount: -supplyTotal, reference: order.id, createdAt: depositStamp() });
-    }
-    if (option) { option.stock = Number(option.stock || 0) - Number(order.qty || 1); syncProductOptionTotals(product); }
-    else product.stock -= Number(order.qty || 1);
-    order.supplierLoginId = product.supplierLoginId;
-    order.assignedSupplier = product.supplier;
-    order.paymentStatus = "paid";
-    order.paymentMethod = paymentMethod;
-    order.supplyTotal = supplyTotal;
-    order.forwardedAt = "방금 전";
-    order.status = "발주완료";
-    order.supplierOrderId = order.supplierOrderId || `PO-${String(Date.now()).slice(-8)}`;
-    order.settlementStatus = "scheduled";
-    pushNotification(product.supplierLoginId, "supplier", "order", "신규 발주가 도착했습니다", `${order.id} · ${product.id} ${product.name}${order.optionName ? ` [${order.optionName}]` : ""} ${order.qty}개`);
-    audit("공급가 결제·공급사 자동 발주", `${order.id} · ${product.id} · ${money(supplyTotal)} · ${paymentMethod === "deposit" ? "예치금" : "신용카드 데모"} 결제 · ${product.supplier} 공급사에 바로 전달`, "done", "order");
+    const result = payOrderToSupplier(order, paymentMethod);
+    if (!result.ok) return showToast(result.message);
     saveState(); closeModal(); sellerOrderStage = "ordered"; render(); updateAccountUI(); showToast(`결제 완료! ${product.supplier} 공급사에 주문을 바로 전달했어요.`);
   }
   if (form.id === "connectSupplierForm") {
@@ -6678,6 +6777,7 @@ document.addEventListener("submit", event => {
     saveState(); closeModal(); render(); updateAccountUI(); showToast(`${member.company}의 가입을 반려했습니다.`);
   }
   if (form.id === "sampleCheckoutForm") { placeSampleOrder(form, data); return; }
+  if (form.id === "bulkPaymentForm") { submitBulkPayment(form); return; }
   if (form.id === "memberDocsForm") {
     const member = memberByLogin(currentAccount.loginId);
     const businessFile = signupFileName(form.elements.businessFile) || member.businessFile;
@@ -6942,7 +7042,7 @@ function staffPermissionDefs() {
 }
 const STAFF_OWNER_ONLY_ACTIONS = ["account-tab", "open-user-switch", "switch-workspace", "open-supplier-application", "disconnect-channel", "staff-invite", "staff-edit", "staff-suspend", "staff-leave", "staff-reset-password", "staff-cancel-invite", "staff-remove", "staff-show-invite"];
 const STAFF_ACTION_PERMISSIONS = {
-  "push-all-tracking": "orders", "push-tracking": "orders", "run-tracking-sync": "orders", "collect-orders": "orders", "pay-order": "orders", "open-order-payment-stage": "orders", "dispatch-supplier-order": "orders", "single-order": "orders", "map-order": "orders", "request-refund": "orders", "demo-forward-tracking": "orders",
+  "push-all-tracking": "orders", "push-tracking": "orders", "run-tracking-sync": "orders", "collect-orders": "orders", "pay-order": "orders", "open-order-payment-stage": "orders", "bulk-pay-orders": "orders", "dispatch-supplier-order": "orders", "single-order": "orders", "map-order": "orders", "request-refund": "orders", "demo-forward-tracking": "orders",
   "manage-product-channels": "products", "sync-all-channels": "products", "sync-channel-listing": "products", "push-channel-listing": "products", "edit-seller-product": "products", "register-master-product": "products", "simulate-order": "products", "open-stop-channel": "products", "delete-pick": "products", "rerequest-pick": "products",
   "open-doogo-money": "money", "deposit-view": "money", "deposit-confirm-demo": "money", "deposit-cancel-charge": "money", "deposit-filter": "money", "open-doogo-money-history": "money", "edit-doogo-money-bank": "money", "toggle-subscription": "money", "billing-settings": "money",
   "connect-channel": "channels", "refresh-channel-policies": "channels", "toggle-channel-automation": "channels", "toggle-auto-tracking": "channels", "toggle-auto-collect": "channels"
