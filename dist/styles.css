@@ -8008,3 +8008,65 @@ body[data-role="supplier"] .login-panel-brand-logo img { filter: grayscale(1) br
 }
 .detail-editor .de-add-image, body[data-role="supplier"] .detail-editor .de-add-image { color: #fff !important; background: #111 !important; border-color: #111 !important; margin: 0; font-size: 14px !important; font-weight: 700 !important; }
 .detail-editor-field > label small, .form-field label small { font-weight: 500; color: #8a8a8a; }
+
+/* =====================================================================
+   사업자 회원가입 4단계 (카카오 간편가입 제거 후)
+   ===================================================================== */
+.signup-steps.four { grid-template-columns: 1fr 22px 1fr 22px 1fr 22px 1fr !important; }
+.signup-steps.four button span { white-space: nowrap; }
+.signup-inline { display: flex; gap: 8px; }
+.signup-inline input { flex: 1; min-width: 0; }
+.signup-inline-btn { flex: 0 0 auto; min-width: 112px; padding: 0 14px; color: #fff; background: #111827; border: 0; border-radius: 12px; font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer; }
+.signup-inline-btn.done { color: #0f7a4d; background: #e7f7ef; }
+.signup-field [data-phone-status] { display: block; margin-top: 6px; color: #4e5968; font-size: 13.5px; }
+.signup-verify-btn { width: 100%; min-height: 50px; color: #1b64da; background: #eef4ff; border: 1.5px solid #c8dafc; border-radius: 12px; font: inherit; font-size: 15.5px; font-weight: 800; cursor: pointer; }
+.signup-verify-btn:disabled { opacity: .7; cursor: progress; }
+.signup-verify-result { margin-top: 8px; padding: 12px 14px; display: grid; gap: 2px; border-radius: 12px; }
+.signup-verify-result[hidden] { display: none; }
+.signup-verify-result.ok { color: #0f7a4d; background: #e7f7ef; }
+.signup-verify-result.fail { color: #c0362c; background: #fdeeec; }
+.signup-verify-result b { font-size: 15px; }
+.signup-verify-result span { font-size: 13.5px; }
+.signup-file { position: relative; display: flex !important; align-items: center; min-height: 56px; padding: 0 16px; color: #4e5968; background: #f9fafb; border: 1.5px dashed #c9d3dd; border-radius: 12px; font-size: 15px !important; font-weight: 600; cursor: pointer; }
+.signup-file input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.signup-file.has-file { color: #0f7a4d; background: #e7f7ef; border-style: solid; border-color: #9fdcbf; }
+.signup-later { margin-top: 14px; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; background: #f5f7fa; border: 1px solid #e5e8eb; border-radius: 14px; cursor: pointer; }
+.signup-later input { width: 20px; height: 20px; flex: 0 0 20px; margin-top: 2px; }
+.signup-later span { display: grid; gap: 4px; }
+.signup-later b { font-size: 15px; color: #191f28; }
+.signup-later small { color: #6b7684; font-size: 13.5px; line-height: 1.55; }
+.signup-form.docs-later [data-signup-step="3"] .signup-fields { opacity: .45; }
+.signup-form.docs-later [data-doc-required] { display: none; }
+.signup-draft-note { margin: -18px 0 16px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #1b64da; background: #eef4ff; border-radius: 12px; font-size: 14px; font-weight: 600; }
+.signup-draft-note[hidden] { display: none; }
+.signup-draft-note button { color: #4e5968; background: none; border: 0; font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; }
+.signup-agreement.all { background: #f5f7fa; border-radius: 12px; }
+.complete-icon.warn { color: #fff; background: #e0483f; }
+.signup-status-list { margin: 18px 0; padding: 0; list-style: none; display: grid; gap: 8px; text-align: left; }
+.signup-status-list li { padding: 12px 14px; display: flex; align-items: center; gap: 12px; background: #f9fafb; border: 1px solid #eef0f3; border-radius: 14px; }
+.signup-status-list li > i { width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; color: #8b95a1; background: #fff; border: 1.5px solid #d1d6db; border-radius: 50%; font-style: normal; font-weight: 800; }
+.signup-status-list li.done > i { color: #fff; background: #21b77a; border-color: #21b77a; }
+.signup-status-list li.now { background: #fff; border-color: #3182f6; }
+.signup-status-list li.now > i { color: #3182f6; border-color: #3182f6; }
+.signup-status-list span { display: grid; gap: 2px; min-width: 0; }
+.signup-status-list b { font-size: 15.5px; color: #191f28; }
+.signup-status-list small { color: #6b7684; font-size: 13px; overflow-wrap: anywhere; }
+.signup-docs-form { margin: 6px 0 14px; display: grid; gap: 12px; text-align: left; }
+.signup-docs-form .signup-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.signup-docs-form .signup-field.full { grid-column: 1 / -1; }
+.signup-docs-form [data-docs-error] { min-height: 0; }
+body[data-role="supplier"] .signup-verify-btn { color: #111; background: #f4f4f4; border-color: #d6d6d6; }
+@media (max-width: 720px) {
+  .signup-steps.four { grid-template-columns: 1fr 10px 1fr 10px 1fr 10px 1fr !important; }
+  .signup-steps.four button span { font-size: 12.5px; }
+  .signup-inline-btn { min-width: 96px; font-size: 13.5px; }
+  .signup-docs-form .signup-fields { grid-template-columns: 1fr; }
+  .signup-draft-note { margin-top: -10px; flex-wrap: wrap; }
+}
+body[data-role="supplier"] .signup-status-list li.done > i { background: #111; border-color: #111; }
+body[data-role="supplier"] .signup-status-list li.now { border-color: #111; }
+body[data-role="supplier"] .signup-status-list li.now > i { color: #111; border-color: #111; }
+body[data-role="supplier"] .signup-draft-note { color: #111; background: #f2f2f2; }
+body[data-role="supplier"] .signup-file.has-file, body[data-role="supplier"] .signup-verify-result.ok, body[data-role="supplier"] .signup-inline-btn.done { color: #111; background: #f2f2f2; border-color: #cfcfcf; }
+body[data-role="supplier"] .signup-inline-btn { background: #111; }
+.signup-docs-form > .login-submit { width: 100%; }
