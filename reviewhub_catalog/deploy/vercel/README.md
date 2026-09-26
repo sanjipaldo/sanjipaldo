@@ -18,6 +18,13 @@ Vercel 프로젝트의 **Root Directory는 `reviewhub_catalog`** 입니다.
 | `BETTER_AUTH_URL` | `https://<배포 도메인>/api/auth` |
 | `ALLOWED_ORIGINS` | `https://<배포 도메인>` |
 
+## Turso 연동(Vercel 마켓플레이스)
+
+`vercel integration add tursocloud/database`로 연결하면 `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`이 들어옵니다.
+- 서버는 `env-map.ts`에서 이를 `SKYBASE_DB_*`로 옮겨 씁니다(위 표의 DB 변수는 따로 넣지 않아도 됨).
+- 운영 배포 빌드마다 `migrate-db.mjs`가 새 마이그레이션만 적용합니다.
+- admin 비밀번호를 바꿀 때만 `ADMIN_PASSWORD`를 잠시 넣고 배포한 뒤 바로 지웁니다(남겨 두면 배포마다 다시 설정됨).
+
 ## CLI 배포
 
 ```bash
