@@ -721,3 +721,25 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .bulk-selection-bar .bulk-main-actions { display: grid; grid-template-columns: 1.2fr 1fr; }
   .bulk-selection-bar .bulk-main-actions button { padding: 0 8px; font-size: 14px; }
 }
+
+/* 선택 바: 상품을 선택하면 화면 아래에 떠서 스크롤해도 따라옵니다 */
+.bulk-selection-bar {
+  position: fixed; top: auto; bottom: 20px; left: calc(50% + 120px); z-index: 45;
+  width: min(1100px, calc(100% - 300px)); margin: 0; transform: translateX(-50%);
+  border-color: var(--w-ink); box-shadow: 0 12px 40px rgba(14, 15, 12, .18), 0 2px 6px rgba(14, 15, 12, .08);
+  animation: bulk-bar-in .18s ease-out;
+}
+@keyframes bulk-bar-in { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.admin-content:has(.bulk-selection-bar) { padding-bottom: 130px; }
+@media (max-width: 1050px) {
+  .bulk-selection-bar { left: 50%; width: calc(100% - 32px); }
+}
+@media (max-width: 720px) {
+  .bulk-selection-bar {
+    left: 0; right: 0; bottom: 0; width: 100%; transform: none;
+    gap: 10px; padding: 14px 16px max(14px, env(safe-area-inset-bottom));
+    border-width: 1px 0 0; border-radius: 20px 20px 0 0;
+  }
+  @keyframes bulk-bar-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  .admin-content:has(.bulk-selection-bar) { padding-bottom: 210px; }
+}
