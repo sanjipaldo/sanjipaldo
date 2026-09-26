@@ -112,7 +112,14 @@ Skywork에서는 검증 성공 후 Website 배포와 Artifact 발행을 별도�
 5. 검증: `pnpm lint`, `pnpm test`, `pnpm --filter client build`, `SERVER_BUILD_TARGET=web pnpm --filter server build`
    - 빌드로 생성된 `apps/server/dist/`는 커밋하지 않습니다(배포 흐름에서 생성).
 
-## 8. 작업 완료 보고 형식
+## 8. 수정·배포 순서 (사용자 지정)
+
+1. 수정은 먼저 로컬(작업 컨테이너)에서만 하고 lint·test·build와 로컬 실행으로 확인합니다. 브랜치에 커밋·푸시까지만 합니다.
+2. 사용자가 화면으로 확인해야 하면 Vercel **미리보기 배포**(`vercel deploy`, `--prod` 없음)를 만들어 그 주소를 전달합니다. 운영 사이트(doogofood.site)는 바뀌지 않습니다.
+3. 사용자가 "배포해줘"처럼 운영 배포를 명시적으로 요청할 때만 `vercel deploy --prod`를 실행합니다.
+4. 운영 배포 후 서버 로그(`vercel logs`)로 주요 API 응답을 확인하고 보고합니다.
+
+## 9. 작업 완료 보고 형식
 
 완료 보고에는 아래를 반드시 포함합니다.
 
