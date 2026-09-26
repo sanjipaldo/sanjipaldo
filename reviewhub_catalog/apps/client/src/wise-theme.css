@@ -674,3 +674,26 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .request-board-table th:last-child, .request-board-table td:last-child { position: sticky; right: 0; z-index: 1; background: var(--w-canvas); box-shadow: -10px 0 14px -10px rgba(14, 15, 12, .18); }
   .request-board-table th:last-child { background: var(--w-soft-2); }
 }
+
+/* 관리자 본문 폭: 넓은 화면에서는 가로를 더 써서 상품 표(마진율·수정/삭제)가 스크롤 없이 한 화면에 보이게 */
+@media (min-width: 1051px) {
+  .admin-content { width: min(1760px, calc(100% - 48px)); }
+  .product-admin-table { width: 100%; }
+}
+@media (min-width: 1051px) {
+  .product-admin-table { min-width: 1210px; }
+  .product-admin-table th:first-child { width: 50px; }
+  .product-admin-table th:nth-child(2) { width: 212px; }
+  .product-admin-table th:nth-child(3) { width: 68px; }
+  .product-admin-table th:nth-child(4) { width: 100px; }
+  .product-admin-table th:nth-child(5) { width: 92px; }
+  .product-admin-table th:nth-child(6) { width: 84px; }
+  .product-admin-table th:nth-child(7),
+  .product-admin-table th:nth-child(8),
+  .product-admin-table th:nth-child(9),
+  .product-admin-table th:nth-child(10) { width: 92px; }
+  .product-admin-table th:nth-child(11) { width: 64px; }
+  .product-admin-table th:nth-child(12) { width: 76px; }
+  .product-admin-table th:last-child { width: 132px; }
+  .product-admin-table .product-row-actions button { padding: 0 8px; }
+}
