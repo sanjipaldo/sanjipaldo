@@ -771,3 +771,74 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .bulk-edit-panel > .bulk-edit-body { padding: 12px 12px 20px; }
   .bulk-edit-panel > .editor-footer { padding: 12px 16px max(12px, env(safe-area-inset-bottom)); }
 }
+
+/* 발주오라 연동 */
+.bj-status-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 16px; }
+.bj-status-card.ok { border-color: var(--w-positive) !important; background: linear-gradient(100deg, var(--w-primary-pale), var(--w-canvas) 70%); }
+.bj-status-card.error { border-color: var(--w-negative) !important; }
+.bj-status-main h2 { margin: 12px 0 6px; color: var(--w-ink); font-size: 22px; font-weight: 800; }
+.bj-status-main p { margin: 0; color: var(--w-body); font-size: 14px; line-height: 1.6; }
+.bj-status-pill { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; background: var(--w-soft-2); color: var(--w-body); }
+.bj-status-pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--w-mute); }
+.bj-status-pill.ok { background: var(--w-primary-pale); color: var(--w-positive-deep); }
+.bj-status-pill.ok i { background: var(--w-positive); box-shadow: 0 0 0 4px rgba(46, 173, 75, .18); }
+.bj-status-pill.wait { background: var(--w-warning-pale); color: var(--w-warning-content); }
+.bj-status-pill.wait i { background: #e0a800; }
+.bj-status-pill.error { background: var(--w-negative-row); color: var(--w-negative-deep); }
+.bj-status-pill.error i { background: var(--w-negative); }
+.bj-steps { display: flex; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.bj-steps li { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 8px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-body); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.bj-steps b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--w-soft-2); color: var(--w-body); font-size: 12px; }
+.bj-steps li.done { border-color: var(--w-positive); color: var(--w-positive-deep); }
+.bj-steps li.done b { background: var(--w-positive); color: #fff; }
+.bj-flow-card { margin-bottom: 16px; }
+.bj-flow { display: grid; grid-template-columns: 200px minmax(0, 1fr) 200px; align-items: center; gap: 16px; }
+.bj-node { display: flex; flex-direction: column; gap: 4px; padding: 18px; border: 1px solid var(--w-card-border); border-radius: var(--w-radius-lg); background: var(--w-soft-2); text-align: center; }
+.bj-node strong { color: var(--w-ink); font-size: 15px; }
+.bj-node small { color: var(--w-mute); font-size: 12px; word-break: break-all; }
+.bj-lanes { display: flex; flex-direction: column; gap: 10px; }
+.bj-lane { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px; border: 1px dashed var(--w-line); border-radius: var(--w-radius-md); }
+.bj-lane.on { border-style: solid; border-color: var(--w-positive); background: var(--w-primary-pale); }
+.bj-lane b { display: block; color: var(--w-ink); font-size: 14px; }
+.bj-lane small { color: var(--w-body); font-size: 12px; line-height: 1.5; }
+.bj-switch { position: relative; flex: none; width: 46px; height: 26px; }
+.bj-switch input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.bj-switch span { position: absolute; inset: 0; border-radius: 999px; background: var(--w-line); transition: background .15s; pointer-events: none; }
+.bj-switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); transition: transform .15s; }
+.bj-switch input:checked + span { background: var(--w-positive); }
+.bj-switch input:checked + span::after { transform: translateX(20px); }
+.bj-switch input:disabled { cursor: not-allowed; }
+.bj-switch input:disabled + span { opacity: .45; }
+.bj-flow-note { margin: 12px 0 0; color: var(--w-mute); font-size: 13px; }
+.bj-form-card { margin-bottom: 16px; }
+.bj-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; margin-top: 14px; }
+.bj-form label { display: flex; flex-direction: column; gap: 6px; color: var(--w-ink); font-size: 14px; font-weight: 700; }
+.bj-form input { height: 48px; padding: 0 14px; border: 1px solid var(--w-line); border-radius: var(--w-radius-md); background: var(--w-canvas); font-size: 15px; font-weight: 400; }
+.bj-form input:focus { outline: 0; border-color: var(--w-ink); box-shadow: 0 0 0 3px rgba(159, 232, 112, .45); }
+.bj-form small { color: var(--w-mute); font-size: 12px; font-weight: 400; }
+.bj-full { grid-column: 1 / -1; }
+.bj-verify-result { grid-column: 1 / -1; margin: 0; padding: 10px 14px; border-radius: var(--w-radius-md); font-size: 14px; }
+.bj-verify-result.ok { background: var(--w-primary-pale); color: var(--w-positive-deep); }
+.bj-verify-result.warn { background: var(--w-warning-pale); color: var(--w-warning-content); }
+.bj-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.bj-actions button { min-height: 46px; padding: 0 22px; border-radius: 999px; font-size: 15px; font-weight: 700; }
+.bj-disconnect { margin-left: auto; border: 1px solid var(--w-negative); color: var(--w-negative); background: var(--w-canvas); }
+.sync-summary-date { font-size: 20px !important; }
+@media (max-width: 1050px) {
+  .bj-status-card { flex-direction: column; align-items: flex-start; }
+  .bj-flow { grid-template-columns: 1fr; }
+  .bj-steps { flex-wrap: wrap; }
+}
+@media (max-width: 720px) {
+  .bj-form { grid-template-columns: 1fr; }
+  .bj-actions button { flex: 1; }
+  .bj-disconnect { margin-left: 0; flex-basis: 100%; }
+  .bj-status-main h2 { font-size: 19px; }
+}
+.bj-more { display: flex; margin: 14px auto 0; min-height: 44px; padding: 0 20px; border-radius: 999px; }
+.bj-actions button { white-space: nowrap; }
+.bj-actions button[type=submit] { border: 1px solid var(--w-ink); color: var(--w-ink); background: var(--w-canvas); }
+@media (max-width: 720px) {
+  .bj-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .bj-actions .bj-disconnect { grid-column: 1 / -1; }
+}

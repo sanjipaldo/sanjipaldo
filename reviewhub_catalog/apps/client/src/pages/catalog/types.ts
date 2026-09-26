@@ -278,6 +278,20 @@ export type CatalogSyncOverview = {
     reason: string;
     safeMode: boolean;
   };
+  connection: BaljuoraConnection;
+};
+
+export type BaljuoraConnection = {
+  mallId: string | null;
+  username: string | null;
+  apiBaseUrl: string | null;
+  apiKeyRegistered: boolean;
+  apiKeyLast4: string | null;
+  status: "not_configured" | "key_registered" | "connected" | "failed";
+  lastVerifiedAt: string | null;
+  lastError: string | null;
+  autoPush: boolean;
+  autoPull: boolean;
 };
 
 export type CatalogSyncRun = {

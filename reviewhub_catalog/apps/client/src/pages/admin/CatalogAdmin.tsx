@@ -41,7 +41,7 @@ import {
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { authClient, clearAuthToken } from "@/lib/auth";
-import type { AdminCatalogData, AdminHomeData, AdminOverview, Category, CatalogSyncOutboxItem, CatalogSyncOverview, CatalogSyncRun, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, SalesOverview, ShippingPolicy, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
+import type { AdminCatalogData, AdminHomeData, AdminOverview, BaljuoraConnection, Category, CatalogSyncOutboxItem, CatalogSyncOverview, CatalogSyncRun, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, SalesOverview, ShippingPolicy, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
 type AdminSection = "home" | "products" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "changes" | "transmissions" | "sales" | "notices" | "history" | "sourcing" | "sync";
 type ProductOptionDraft = Pick<ProductOption, "id" | "name" | "costPrice" | "aPrice" | "generalPrice" | "salePrice" | "salePriceMode" | "isSoldOut" | "sortOrder">;
@@ -2337,9 +2337,21 @@ function CatalogSyncAdmin() {
   const [runs, setRuns] = useState<CatalogSyncRun[]>([]);
   const [outbox, setOutbox] = useState<CatalogSyncOutboxItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [merchantUsername, setMerchantUsername] = useState("");
-  const [merchantPassword, setMerchantPassword] = useState("");
+  const [mallId, setMallId] = useState("");
+  const [username, setUsername] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [apiBaseUrl, setApiBaseUrl] = useState("");
+  const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [outboxLimit, setOutboxLimit] = useState(10);
+
+  const applyConnection = (connection: BaljuoraConnection) => {
+    setOverview((current) => current ? { ...current, connection } : current);
+    setMallId(connection.mallId ?? "");
+    setUsername(connection.username ?? "");
+    setApiBaseUrl(connection.apiBaseUrl ?? "");
+  };
 
   const refresh = async () => {
     setLoading(true);
@@ -2349,6 +2361,9 @@ function CatalogSyncAdmin() {
       setOverview(payload.overview);
       setRuns(payload.runs);
       setOutbox(payload.outbox);
+      setMallId(payload.overview.connection?.mallId ?? "");
+      setUsername(payload.overview.connection?.username ?? "");
+      setApiBaseUrl(payload.overview.connection?.apiBaseUrl ?? "");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "연동 상태를 불러오지 못했습니다.");
     } finally {
@@ -2360,26 +2375,59 @@ function CatalogSyncAdmin() {
     void refresh();
   }, []);
 
-  const verifyConnection = async (event: FormEvent<HTMLFormElement>) => {
+  const connection = overview?.connection;
+  const status = connection?.status ?? "not_configured";
+
+  const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setSaving(true);
+    setVerifyMessage(null);
+    try {
+      const body: Record<string, string | null> = { mallId: mallId || null, username: username || null, apiBaseUrl: apiBaseUrl || null };
+      if (apiKey.trim()) body.apiKey = apiKey.trim();
+      const payload = await readData<{ connection: BaljuoraConnection }>(await apiFetch("/catalog/admin/sync/connection", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
+      applyConnection(payload.connection);
+      setApiKey("");
+      toast.success(payload.connection.apiKeyRegistered ? "연결 정보를 저장했습니다. '연결 확인'을 눌러 주세요." : "연결 정보를 저장했습니다.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "연결 정보를 저장하지 못했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const verify = async () => {
     setVerifying(true);
     try {
-      const response = await apiFetch("/catalog/admin/sync/connection/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: merchantUsername, password: merchantPassword }),
-        silent: true
-      });
-      const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
-      if (!response.ok) {
-        toast.error(payload?.error?.message || "발주오라 연결을 검증하지 못했습니다.");
-        return;
-      }
-      toast.success("발주오라 계정 연결을 확인했습니다.");
-      await refresh();
+      const payload = await readData<{ ok: boolean; message: string; connection: BaljuoraConnection }>(await apiFetch("/catalog/admin/sync/connection/verify", { method: "POST" }));
+      applyConnection(payload.connection);
+      setVerifyMessage({ ok: payload.ok, text: payload.message });
+      if (payload.ok) toast.success("발주오라와 연결되었습니다.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "연결을 확인하지 못했습니다.");
     } finally {
-      setMerchantPassword("");
       setVerifying(false);
+    }
+  };
+
+  const disconnect = async () => {
+    if (!window.confirm("발주오라 연결을 해지할까요? 저장된 API 키가 삭제되고 자동 동기화가 꺼집니다.")) return;
+    try {
+      const payload = await readData<{ connection: BaljuoraConnection }>(await apiFetch("/catalog/admin/sync/connection", { method: "DELETE" }));
+      applyConnection(payload.connection);
+      setVerifyMessage(null);
+      toast.success("발주오라 연결을 해지했습니다.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "연결을 해지하지 못했습니다.");
+    }
+  };
+
+  const toggleAuto = async (key: "autoPush" | "autoPull", value: boolean) => {
+    try {
+      const payload = await readData<{ connection: BaljuoraConnection }>(await apiFetch("/catalog/admin/sync/auto", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [key]: value }) }));
+      applyConnection(payload.connection);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "자동 동기화 설정을 바꾸지 못했습니다.");
     }
   };
 
@@ -2387,40 +2435,85 @@ function CatalogSyncAdmin() {
     return <div className="admin-loading inline"><div className="spinner" /><span>발주오라 연동 상태 확인 중…</span></div>;
   }
 
+  const statusInfo = {
+    not_configured: { label: "미연결", tone: "idle", text: "발주오라 몰 ID와 API 키를 등록하면 연결을 확인할 수 있습니다." },
+    key_registered: { label: "연결 확인 대기", tone: "wait", text: connection?.lastError || "API 키가 등록되었습니다. '연결 확인'을 눌러 발주오라 응답을 확인해 주세요." },
+    connected: { label: "연결됨", tone: "ok", text: `발주오라 API 응답 확인 완료${connection?.lastVerifiedAt ? ` · ${connection.lastVerifiedAt.slice(0, 16).replace("T", " ")}` : ""}` },
+    failed: { label: "연결 오류", tone: "error", text: connection?.lastError || "발주오라 API 연결에 실패했습니다." }
+  }[status];
+  const steps = [
+    { label: "발주오라 계정", done: Boolean(connection?.mallId) },
+    { label: "API 키 등록", done: Boolean(connection?.apiKeyRegistered) },
+    { label: "연결 확인", done: status === "connected" }
+  ];
+  const connected = status === "connected";
+
   return (
     <>
       <div className="admin-page-heading">
-        <div><span>INTEGRATION CONTROL</span><h1>발주오라 연동</h1><p>두고푸드를 원본으로 관리하고, 발주오라 반영 대기 건을 안전하게 추적합니다.</p></div>
+        <div><span>INTEGRATION</span><h1>발주오라 연동</h1><p>발주오라 도매몰과 두고푸드 데이터센터를 오픈 API로 양방향 연결합니다.</p></div>
         <button className="outline-button" type="button" onClick={() => void refresh()}><History size={15} /> 새로고침</button>
       </div>
-      <section className="sync-summary-grid">
-        <article className="admin-card sync-summary-card"><span>초기 이관</span><strong>{overview?.initialImport.imported.toLocaleString("ko-KR")}<small> / {overview?.initialImport.total.toLocaleString("ko-KR")}건</small></strong><em>{overview?.initialImport.status === "completed" ? "완료" : overview?.initialImport.status}</em></article>
-        <article className="admin-card sync-summary-card"><span>연결된 상품</span><strong>{overview?.linkedProducts.toLocaleString("ko-KR")}<small>건</small></strong><em>외부 상품 ID 매칭</em></article>
-        <article className="admin-card sync-summary-card"><span>반영 대기</span><strong>{overview?.outbox.blocked.toLocaleString("ko-KR")}<small>건</small></strong><em>안전모드 보류</em></article>
-        <article className="admin-card sync-summary-card"><span>연결 계정</span><strong>{overview?.writeIntegration.account ? `두고푸드 · ${overview.writeIntegration.account}` : "미연결"}</strong><em>{overview?.writeIntegration.status === "connected" ? "실시간 연동중" : "추가 인증 필요"}</em></article>
+
+      <section className={`admin-card bj-status-card ${statusInfo.tone}`}>
+        <div className="bj-status-main">
+          <span className={`bj-status-pill ${statusInfo.tone}`}><i />{statusInfo.label}</span>
+          <h2>{connected ? `발주오라 · ${connection?.mallId ?? ""} 와 연결되어 있습니다` : "발주오라 도매몰 연결"}</h2>
+          <p>{statusInfo.text}</p>
+        </div>
+        <ol className="bj-steps" aria-label="연결 단계">
+          {steps.map((step, index) => <li key={step.label} className={step.done ? "done" : ""}><b>{step.done ? "✓" : index + 1}</b>{step.label}</li>)}
+        </ol>
       </section>
-      <section className="admin-card connection-manager-card">
-        <div className="card-heading"><ShieldCheck size={19} /><div><h2>발주오라 도매몰 계정 연결</h2><p>현재 연결 계정: <strong className="connection-account-inline">{overview?.writeIntegration.account || "미연결"}</strong> · 실제 인증 성공 후에만 전송대기 항목이 전송가능으로 바뀝니다. 입력한 비밀번호는 저장하지 않습니다.</p></div><span className={`connection-state ${overview?.writeIntegration.status === "connected" ? "connected" : ""}`}>{overview?.writeIntegration.status === "connected" ? "실시간 연동중" : overview?.writeIntegration.status === "error" ? "연결 끊김" : "연결 해지"}</span></div>
-        <form className="connection-form" onSubmit={verifyConnection}>
-          <label>마스터 아이디<input value={merchantUsername} onChange={(event) => setMerchantUsername(event.target.value)} autoComplete="username" placeholder="발주오라 도매몰 마스터 아이디" required /></label>
-          <label>마스터 비밀번호<input value={merchantPassword} onChange={(event) => setMerchantPassword(event.target.value)} type="password" autoComplete="current-password" placeholder="검증할 때만 사용" required /></label>
-          <button className="primary-action" type="submit" disabled={verifying}>{verifying ? "인증 확인 중…" : overview?.writeIntegration.status === "connected" ? "다른 계정 연결" : "연결 확인"}</button>
-          <button className="outline-button" type="button" disabled={overview?.writeIntegration.status !== "connected"}>연동 해지</button>
+
+      <section className="admin-card bj-flow-card">
+        <div className="bj-flow">
+          <div className="bj-node"><strong>두고푸드 데이터센터</strong><small>doogofood.site · 상품 원본</small></div>
+          <div className="bj-lanes">
+            <div className={`bj-lane ${connection?.autoPush ? "on" : ""}`}>
+              <div><b>데이터센터 → 발주오라</b><small>상품 등록·가격·품절·노출 변경을 발주오라로 보냅니다. 대기 {(overview?.outbox.blocked ?? 0) + (overview?.outbox.pending ?? 0)}건</small></div>
+              <label className="bj-switch"><input type="checkbox" checked={Boolean(connection?.autoPush)} disabled={!connected} onChange={(event) => void toggleAuto("autoPush", event.target.checked)} /><span /></label>
+            </div>
+            <div className={`bj-lane ${connection?.autoPull ? "on" : ""}`}>
+              <div><b>발주오라 → 데이터센터</b><small>발주오라 신규 상품·가격 변경을 가져옵니다. 연결 전에는 상품 리스트의 엑셀 업로드로 반영하세요.</small></div>
+              <label className="bj-switch"><input type="checkbox" checked={Boolean(connection?.autoPull)} disabled={!connected} onChange={(event) => void toggleAuto("autoPull", event.target.checked)} /><span /></label>
+            </div>
+          </div>
+          <div className="bj-node"><strong>발주오라 도매몰</strong><small>{connection?.mallId ? `console.baljuora.com/${connection.mallId}` : "몰 ID 미등록"}</small></div>
+        </div>
+        {!connected && <p className="bj-flow-note">자동 동기화 스위치는 발주오라 API 연결이 확인된 뒤에 켤 수 있습니다. 발주오라 오픈 API 사양이 공개되면 전송·가져오기 작업을 이어서 연결합니다.</p>}
+      </section>
+
+      <section className="admin-card bj-form-card">
+        <div className="card-heading"><ShieldCheck size={19} /><div><h2>연결 정보</h2><p>발주오라에서 발급받은 API 키로 연결합니다. 비밀번호는 입력받지 않으며, API 키는 암호화해 저장하고 끝 4자리만 표시합니다.</p></div></div>
+        <form className="bj-form" onSubmit={save}>
+          <label>발주오라 몰 ID<input value={mallId} onChange={(event) => setMallId(event.target.value)} placeholder="예: doogobiz24" autoComplete="off" /><small>관리자 주소 console.baljuora.com/<b>몰 ID</b>/…</small></label>
+          <label>마스터 아이디 (선택)<input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="발주오라 마스터 아이디" autoComplete="off" /><small>표시용으로만 저장합니다.</small></label>
+          <label className="bj-full">API 키<input value={apiKey} onChange={(event) => setApiKey(event.target.value)} type="password" autoComplete="new-password" placeholder={connection?.apiKeyRegistered ? `등록됨 ••••${connection.apiKeyLast4 ?? ""} · 바꿀 때만 입력` : "발주오라에서 받은 API 키"} /><small>{connection?.apiKeyRegistered ? "새 키를 입력하고 저장하면 기존 키를 대체합니다." : "발주오라 오픈 API 발급 후 입력해 주세요."}</small></label>
+          <label className="bj-full">API 주소 (발주오라 안내값)<input value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} inputMode="url" placeholder="예: https://api.baljuora.com/v1" autoComplete="off" /><small>https://…baljuora.com 주소만 등록할 수 있습니다. 아직 모르면 비워 두세요.</small></label>
+          {verifyMessage && <p className={`bj-verify-result ${verifyMessage.ok ? "ok" : "warn"}`}>{verifyMessage.text}</p>}
+          <div className="bj-actions">
+            <button className="outline-button" type="submit" disabled={saving}>{saving ? "저장 중…" : "저장"}</button>
+            <button className="primary-action" type="button" onClick={() => void verify()} disabled={verifying || !connection?.apiKeyRegistered}>{verifying ? "확인 중…" : "연결 확인"}</button>
+            {connection?.apiKeyRegistered && <button className="bj-disconnect" type="button" onClick={() => void disconnect()}>연결 해지</button>}
+          </div>
         </form>
-        <p className="connection-security-note">현재 발주오라는 로그인 시 Cloudflare 사람 인증을 요구합니다. 공식 API 키·OAuth·서버용 토큰이 확인되지 않으면 계정 비밀번호만으로 연결 완료 처리하지 않습니다.</p>
       </section>
-      <section className="admin-card sync-explainer-card">
-        <div className="card-heading"><ShieldCheck size={19} /><div><h2>안전한 양방향 연결 상태</h2><p>{overview?.writeIntegration.reason}</p></div><span className={`sync-safe-badge ${overview?.writeIntegration.status === "connected" ? "connected" : ""}`}>{overview?.writeIntegration.status === "connected" ? "실시간 연동중" : "추가 인증 필요"}</span></div>
-        <div className="sync-flow"><span>두고푸드 관리자</span><ChevronRight size={16} /><span>동기화 대기열</span><ChevronRight size={16} /><span>발주오라</span></div>
-        <p className="sync-note">상품 등록·가격 수정은 이력과 함께 대기열에 기록됩니다. 발주오라 운영사의 공식 쓰기 API와 서버 전용 인증이 승인되면 대기열을 재처리할 수 있습니다. 현재는 기존 발주오라 데이터를 수정하지 않습니다.</p>
+
+      <section className="sync-summary-grid">
+        <article className="admin-card sync-summary-card"><span>연결된 상품</span><strong>{overview?.linkedProducts.toLocaleString("ko-KR")}<small>건</small></strong><em>발주오라 상품코드 매칭</em></article>
+        <article className="admin-card sync-summary-card"><span>전송 대기</span><strong>{((overview?.outbox.blocked ?? 0) + (overview?.outbox.pending ?? 0)).toLocaleString("ko-KR")}<small>건</small></strong><em>{connected ? "자동 전송 준비" : "연결 후 전송"}</em></article>
+        <article className="admin-card sync-summary-card"><span>전송 실패</span><strong>{overview?.outbox.failed.toLocaleString("ko-KR")}<small>건</small></strong><em>재시도 필요</em></article>
+        <article className="admin-card sync-summary-card"><span>마지막 연결 확인</span><strong className="sync-summary-date">{connection?.lastVerifiedAt ? connection.lastVerifiedAt.slice(0, 10) : "-"}</strong><em>{statusInfo.label}</em></article>
       </section>
       <section className="admin-card">
         <div className="card-heading"><History size={19} /><div><h2>동기화 실행 이력</h2><p>초기 읽기 이관과 향후 반영 실행을 확인합니다.</p></div></div>
         {runs.length === 0 ? <div className="empty-admin">아직 실행 이력이 없습니다.</div> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>실행 시각</th><th>방향</th><th>트리거</th><th>전체</th><th>생성</th><th>수정</th><th>실패/충돌</th><th>상태</th></tr></thead><tbody>{runs.map((run) => <tr key={run.id}><td>{formatDateTime(run.startedAt)}</td><td>{run.direction === "pull" ? "발주오라 → 두고푸드" : "두고푸드 → 발주오라"}</td><td>{run.trigger}</td><td>{run.total.toLocaleString("ko-KR")}</td><td>{run.createdCount.toLocaleString("ko-KR")}</td><td>{run.updatedCount.toLocaleString("ko-KR")}</td><td>{run.failedCount} / {run.conflictCount}</td><td><span className={`status-pill ${run.status === "completed" ? "active" : run.status === "failed" ? "danger" : "pending"}`}>{syncStatusLabel(run.status)}</span></td></tr>)}</tbody></table></div>}
       </section>
       <section className="admin-card">
-        <div className="card-heading"><ClipboardList size={19} /><div><h2>발주오라 반영 대기열</h2><p>변경은 기록되지만, 공식 쓰기 계약 전까지 외부에는 전송하지 않습니다.</p></div></div>
-        {outbox.length === 0 ? <div className="empty-admin">대기 중인 변경이 없습니다.</div> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>기록 시각</th><th>상품</th><th>작업</th><th>상태</th><th>사유</th></tr></thead><tbody>{outbox.map((item) => <tr key={item.id}><td>{formatDateTime(item.createdAt)}</td><td>{item.productName || item.productId}</td><td>{syncActionLabels[item.action] || item.action}</td><td><span className={`status-pill ${item.status === "succeeded" ? "active" : item.status === "failed" ? "danger" : "pending"}`}>{syncStatusLabel(item.status)}</span></td><td>{item.lastError || "-"}</td></tr>)}</tbody></table></div>}
+        <div className="card-heading"><ClipboardList size={19} /><div><h2>발주오라 반영 대기열</h2><p>상품 변경이 기록된 목록입니다. 발주오라 연결이 확인되고 자동 전송을 켜면 순서대로 반영됩니다.</p></div></div>
+        {outbox.length === 0 ? <div className="empty-admin">대기 중인 변경이 없습니다.</div> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>기록 시각</th><th>상품</th><th>작업</th><th>상태</th><th>사유</th></tr></thead><tbody>{outbox.slice(0, outboxLimit).map((item) => <tr key={item.id}><td>{formatDateTime(item.createdAt)}</td><td>{item.productName || item.productId}</td><td>{syncActionLabels[item.action] || item.action}</td><td><span className={`status-pill ${item.status === "succeeded" ? "active" : item.status === "failed" ? "danger" : "pending"}`}>{syncStatusLabel(item.status)}</span></td><td>{item.lastError || "-"}</td></tr>)}</tbody></table></div>}
+        {outbox.length > outboxLimit && <button type="button" className="outline-button bj-more" onClick={() => setOutboxLimit((value) => value + 20)}>더 보기 ({(outbox.length - outboxLimit).toLocaleString("ko-KR")}건 남음)</button>}
       </section>
     </>
   );

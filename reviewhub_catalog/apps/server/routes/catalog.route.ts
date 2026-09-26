@@ -51,7 +51,7 @@ import {
 } from "../services/catalog-excel";
 import { getCatalogOperationsOverview } from "../services/catalog-operations";
 import { getSalesOverview } from "../services/catalog-sales";
-import { getCatalogSyncOverview, listSyncOutbox, listSyncRuns } from "../services/catalog-sync";
+import { disconnectConnection, getCatalogSyncOverview, listSyncOutbox, listSyncRuns, saveConnection, setAutoSync, verifyConnection } from "../services/catalog-sync";
 import { StorageError, storagePut } from "../services/s3_storage";
 
 const ProductOptionSchema = z.object({
@@ -382,18 +382,40 @@ catalogRouter.post("/admin/sync/transmit/:id", adminRoute, async (c) => {
   ), 409);
 });
 
-catalogRouter.post("/admin/sync/connection/verify", adminRoute, async (c) => {
+catalogRouter.put("/admin/sync/connection", adminRoute, async (c) => {
   const parsed = z.object({
-    username: z.string().trim().min(1).max(120),
-    password: z.string().min(1).max(300)
+    mallId: z.string().trim().max(80).nullable().optional(),
+    username: z.string().trim().max(120).nullable().optional(),
+    apiKey: z.string().trim().min(8).max(500).nullable().optional(),
+    apiBaseUrl: z.string().trim().max(300).nullable().optional()
   }).safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) {
-    return c.json(apiFailure("INVALID_INPUT", "발주오라 마스터 아이디와 비밀번호를 입력해 주세요."), 400);
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "연결 정보를 확인해 주세요. (API 키는 8자 이상)"), 400);
+  try {
+    return c.json(apiSuccess({ connection: await saveConnection(parsed.data) }));
+  } catch (error) {
+    return errorResponse(c, error);
   }
-  return c.json(apiFailure(
-    "BALJUORA_INTERACTIVE_VERIFICATION_REQUIRED",
-    "발주오라 로그인은 Cloudflare 사람 인증값이 함께 필요합니다. 입력한 비밀번호는 저장하지 않았으며, 공식 API 키·OAuth·서버용 토큰이 발급되기 전에는 실시간 연동으로 표시하지 않습니다."
-  ), 409);
+});
+
+catalogRouter.post("/admin/sync/connection/verify", adminRoute, async (c) => {
+  try {
+    const result = await verifyConnection();
+    return c.json(apiSuccess(result));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+catalogRouter.delete("/admin/sync/connection", adminRoute, async (c) => c.json(apiSuccess({ connection: await disconnectConnection() })));
+
+catalogRouter.put("/admin/sync/auto", adminRoute, async (c) => {
+  const parsed = z.object({ autoPush: z.boolean().optional(), autoPull: z.boolean().optional() }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "자동 동기화 설정을 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess({ connection: await setAutoSync(parsed.data) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
 });
 
 catalogRouter.get("/admin/sales", adminRoute, async (c) => {

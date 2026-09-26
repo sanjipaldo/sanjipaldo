@@ -466,5 +466,21 @@ export type PriceHistory = typeof priceHistories.$inferSelect;
 export type CatalogActivityLog = typeof catalogActivityLogs.$inferSelect;
 export type SourcingRequest = typeof sourcingRequests.$inferSelect;
 export type ExternalProductLink = typeof externalProductLinks.$inferSelect;
+// 발주오라 오픈 API 연결 설정(provider당 1행). 비밀번호는 저장하지 않고, API 키는 암호문만 보관합니다.
+export const integrationConnections = sqliteTable("integration_connections", {
+  provider: text("provider").primaryKey(),
+  mallId: text("mallId"),
+  username: text("username"),
+  apiBaseUrl: text("apiBaseUrl"),
+  apiKeyCipher: text("apiKeyCipher"),
+  apiKeyLast4: text("apiKeyLast4"),
+  status: text("status", { enum: ["not_configured", "key_registered", "connected", "failed"] }).notNull().default("not_configured"),
+  lastVerifiedAt: text("lastVerifiedAt"),
+  lastError: text("lastError"),
+  autoPush: integer("autoPush", { mode: "boolean" }).notNull().default(false),
+  autoPull: integer("autoPull", { mode: "boolean" }).notNull().default(false),
+  updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+});
+
 export type ProductSyncOutbox = typeof productSyncOutbox.$inferSelect;
 export type SyncRun = typeof syncRuns.$inferSelect;
