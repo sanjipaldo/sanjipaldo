@@ -472,3 +472,9 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 @media (min-width: 721px) and (max-width: 1050px) {
   .public-footer { padding-bottom: 104px; }
 }
+
+/* 엑셀 미리보기 요약: 신규 상품 칸이 추가돼도 한 줄에 맞춤 */
+.excel-preview-summary { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+@media (max-width: 760px) {
+  .excel-preview-summary { grid-template-columns: 1fr 1fr; }
+}
