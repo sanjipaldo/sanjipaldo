@@ -827,6 +827,37 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       return next;
     });
   };
+  // 검색·필터 결과 전체 선택/해제(페이지와 관계없이). 예: "곶감" 검색 → 13개 한 번에 선택
+  const filteredProductIds = useMemo(() => products.map((product) => product.id), [products]);
+  const allFilteredSelected = filteredProductIds.length > 0 && filteredProductIds.every((id) => selectedProductIds.has(id));
+  const toggleAllFiltered = () => {
+    setSelectedProductIds((current) => {
+      const next = new Set(current);
+      if (allFilteredSelected) filteredProductIds.forEach((id) => next.delete(id));
+      else filteredProductIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+  const [quickBusy, setQuickBusy] = useState(false);
+  // 선택 바의 빠른 변경(품절/판매중/노출/숨김): 확인 한 번으로 바로 적용
+  const quickBulkUpdate = async (changes: { isSoldOut?: boolean; isVisible?: boolean }, label: string) => {
+    const ids = Array.from(selectedProductIds);
+    if (ids.length === 0 || quickBusy) return;
+    if (!window.confirm(`선택한 ${ids.length.toLocaleString("ko-KR")}개 상품을 '${label}'(으)로 변경할까요?`)) return;
+    setQuickBusy(true);
+    try {
+      for (let index = 0; index < ids.length; index += 100) {
+        await readData(await apiFetch("/catalog/admin/products/bulk-update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: ids.slice(index, index + 100), changes }) }));
+      }
+      toast.success(`${ids.length.toLocaleString("ko-KR")}개 상품을 '${label}'(으)로 변경했습니다.`);
+      setSelectedProductIds(new Set());
+      void refresh(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "일괄 변경에 실패했습니다.");
+    } finally {
+      setQuickBusy(false);
+    }
+  };
   const toggleCurrentPageSelection = () => {
     setSelectedProductIds((current) => {
       const next = new Set(current);
@@ -1272,7 +1303,19 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
           <button type="button" className="filter-reset" onClick={() => { setQuery(""); setShippingFilter("all"); setCategoryFilter("all"); setMonth("all"); setStatusFilter("all"); }}>초기화</button>
           <span>총 {(data.isPartial ? data.catalogTotals?.productCount ?? products.length : products.length).toLocaleString("ko-KR")}개{hydrating ? " · 전체 목록 준비 중" : ""}</span>
         </div>
-        {selectedProductIds.size > 0 && <div className="bulk-selection-bar" role="region" aria-label="선택한 상품 일괄 작업"><strong>{selectedProductIds.size.toLocaleString("ko-KR")}개 선택됨</strong><div><button type="button" className="primary-action" onClick={() => setBulkEditOpen(true)}><Pencil size={15} /> 일괄 변경</button><button type="button" onClick={() => setSelectedProductIds(new Set())}>선택 해제</button></div></div>}
+        <div className="bulk-select-row">
+          <label className="bulk-select-all"><input type="checkbox" checked={allFilteredSelected} ref={(element) => { if (element) element.indeterminate = !allFilteredSelected && filteredProductIds.some((id) => selectedProductIds.has(id)); }} onChange={toggleAllFiltered} disabled={filteredProductIds.length === 0} /> 검색 결과 전체 선택 <b>{filteredProductIds.length.toLocaleString("ko-KR")}개</b></label>
+        </div>
+        {selectedProductIds.size > 0 && <div className="bulk-selection-bar" role="region" aria-label="선택한 상품 일괄 작업">
+          <strong>{selectedProductIds.size.toLocaleString("ko-KR")}개 선택됨</strong>
+          <div className="bulk-quick-actions" aria-label="빠른 변경">
+            <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isSoldOut: true }, "품절")}>품절</button>
+            <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isSoldOut: false }, "판매중")}>판매중</button>
+            <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isVisible: true }, "노출")}>노출</button>
+            <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isVisible: false }, "숨김")}>숨김</button>
+          </div>
+          <div className="bulk-main-actions"><button type="button" className="primary-action" onClick={() => setBulkEditOpen(true)} disabled={quickBusy}><Pencil size={15} /> 상세 일괄 변경</button><button type="button" onClick={() => setSelectedProductIds(new Set())} disabled={quickBusy}>선택 해제</button></div>
+        </div>}
         <div className="admin-table-wrap product-admin-table-wrap" id="admin-product-list"><table className="admin-table product-admin-table"><thead><tr><th className="product-select-column"><label className="product-select-control"><input type="checkbox" ref={(element) => { if (element) element.indeterminate = selectedOnCurrentPage > 0 && !allCurrentPageSelected; }} checked={allCurrentPageSelected} onChange={toggleCurrentPageSelection} aria-label="현재 페이지 상품 전체 선택" /><span>선택</span></label></th><th>상품정보</th><th>노출순서</th><th>배송/카테고리</th><th>판매기간</th><th>매입처</th><th>원가</th><th>A단가</th><th>일반공급가</th><th>판매가</th><th>마진율</th><th>상태</th><th>관리</th></tr></thead><tbody>
           {pagedProducts.map((product) => {
             const options = product.options ?? [];

@@ -697,3 +697,27 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .product-admin-table th:last-child { width: 132px; }
   .product-admin-table .product-row-actions button { padding: 0 8px; }
 }
+
+/* 검색 결과 전체 선택 + 빠른 일괄 변경 */
+.bulk-select-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 10px; }
+.bulk-select-all { display: inline-flex !important; flex-direction: row !important; align-items: center; gap: 10px !important; min-height: 44px; padding: 0 18px 0 14px; border: 1px solid var(--w-line); border-radius: 999px; background: var(--w-canvas); color: var(--w-ink) !important; font-size: 14px !important; font-weight: 600 !important; cursor: pointer; }
+.bulk-select-all input { width: 20px; height: 20px; accent-color: var(--w-ink); }
+.bulk-select-all b { color: var(--w-positive-deep); }
+.bulk-select-count { color: var(--w-body); font-size: 14px; font-weight: 600; }
+.bulk-selection-bar { flex-wrap: wrap; }
+.bulk-selection-bar .bulk-quick-actions, .bulk-selection-bar .bulk-main-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.bulk-quick-actions button { min-width: 64px; justify-content: center; }
+.bulk-quick-actions button:hover:not(:disabled) { border-color: var(--w-ink); }
+.bulk-selection-bar button:disabled { opacity: .5; }
+@media (max-width: 720px) {
+  .bulk-select-row { flex-wrap: wrap; }
+  .bulk-select-all { width: 100%; min-height: 50px; font-size: 16px !important; }
+  .bulk-selection-bar .bulk-quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
+  .bulk-selection-bar .bulk-quick-actions button { min-width: 0; min-height: 44px; padding: 0; }
+  .bulk-selection-bar .bulk-main-actions { width: 100%; }
+}
+.bulk-main-actions button { white-space: nowrap; }
+@media (max-width: 720px) {
+  .bulk-selection-bar .bulk-main-actions { display: grid; grid-template-columns: 1.2fr 1fr; }
+  .bulk-selection-bar .bulk-main-actions button { padding: 0 8px; font-size: 14px; }
+}
