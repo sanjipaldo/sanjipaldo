@@ -7,7 +7,7 @@ const accounts = {
   seller: { password: "seller", role: "seller", roles: ["seller"], name: "위탁셀러 데모", roleLabel: "위탁셀러" }
 };
 const roleMenus = {
-  master: ["대시보드", "회원 관리", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리"],
+  master: ["대시보드", "회원 관리", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리", "정산 관리"],
   supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "굿스플로 · 택배", "가격 관리", "정산 내역", "내 정보", "PICK 요청", "판매 현황", "매출 달력", "공지사항"],
   seller: ["홈", "상품 소싱", "승인 대기", "공급사 문의", "주문 관리", "취소·반품", "매출 달력", "가격 변경 알림", "쇼핑몰 연동", "요금제", "내 정보", "판매중 상품", "예치금", "공지사항", "마스터 상품", "상품 매핑", "브랜드 소싱", "승인 완료", "장바구니", "샘플 주문 내역"]
 };
@@ -15,7 +15,7 @@ const roleMenuGroups = {
   master: [
     { label: "홈", indexes: [0] },
     { label: "회원 · 권한", indexes: [1, 2, 3, 4] },
-    { label: "통합 운영", indexes: [5, 6, 7, 8, 9] }
+    { label: "통합 운영", indexes: [5, 6, 7, 10, 8, 9] }
   ],
   supplier: [
     { label: "홈", indexes: [0] },
@@ -39,7 +39,7 @@ const menuSteps = { seller: { 1: 1, 16: 1, 2: 2, 17: 3, 14: 4, 11: 5 }, supplier
 /* 메뉴 이름으로 인덱스를 찾는다 (메뉴 순서가 바뀌어도 이동 버튼이 깨지지 않게) */
 function menuIndexOf(label, role = activeRole) { const index = (roleMenus[role] || []).indexOf(label); return index >= 0 ? index : 0; }
 const menuIcons = {
-  master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log", "notice"],
+  master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log", "notice", "settlement"],
   supplier: ["home", "product", "message", "order", "refund", "printer", "price", "settlement", "settings", "approval", "onsale", "calendar", "notice"],
   seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice", "approval", "mapping", "brand", "ready", "cart", "box"]
 };
@@ -381,6 +381,8 @@ const initialState = {
   orders: [
     { id: "DO-260909-044", sellerLoginId: "seller", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-2088", customer: "최마누카", recipientName: "최마누카", phone: "010-7721-4408", postalCode: "06028", address: "서울특별시 강남구 압구정로 28", addressDetail: "502호", deliveryMessage: "통관 완료 후 연락주세요.", shippingType: "overseas", personalCustomsCode: "P260909044001", qty: 1, amount: 49800, channel: "카카오 쇼핑", status: "주문확인필요", tracking: "", carrier: "한진택배", orderDate: "2026-09-09", createdAt: "오늘 10:18", settlementStatus: "scheduled" },
     { id: "DO-260907-031", sellerLoginId: "seller", supplierLoginId: "", assignedSupplier: "산지팔도", productId: "DF-1024", mappedProductId: "DF-1024", mappingStatus: "mapped", paymentStatus: "paid", paymentMethod: "deposit", supplyTotal: 43600, forwardedAt: "", customer: "김두고", recipientName: "김두고", phone: "010-8291-4402", postalCode: "06236", address: "서울특별시 강남구 테헤란로 152", addressDetail: "두고빌딩 7층", deliveryMessage: "문 앞에 놓아주세요.", shippingType: "domestic", personalCustomsCode: "", qty: 2, amount: 59800, channel: "네이버 스마트스토어", status: "주문접수", tracking: "", carrier: "한진택배", orderDate: "2026-09-07", createdAt: "오늘 09:31", settlementStatus: "scheduled" },
+    { id: "DO-260916-061", sellerLoginId: "market88", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-1024", mappedProductId: "DF-1024", mappingStatus: "mapped", paymentStatus: "paid", paymentMethod: "deposit", supplyTotal: 37800, supplierOrderId: "PO-16091601", forwardedAt: "09.16 10:20", customer: "오세린", recipientName: "오세린", phone: "010-4471-2290", postalCode: "04524", address: "서울특별시 중구 세종대로 110", addressDetail: "3층", deliveryMessage: "경비실에 맡겨 주세요.", shippingType: "domestic", personalCustomsCode: "", qty: 2, amount: 59800, channel: "쿠팡", status: "배송완료", tracking: "500916061204", carrier: "한진택배", orderDate: "2026-09-16", createdAt: "09.16 10:20", settlementStatus: "scheduled" },
+    { id: "DO-260918-072", sellerLoginId: "seller", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-3142", mappedProductId: "DF-3142", mappingStatus: "mapped", paymentStatus: "paid", paymentMethod: "deposit", supplyTotal: 12400, supplierOrderId: "PO-18091801", forwardedAt: "09.18 14:05", customer: "문하늘", recipientName: "문하늘", phone: "010-8812-3345", postalCode: "48058", address: "부산광역시 해운대구 센텀중앙로 79", addressDetail: "", deliveryMessage: "", shippingType: "domestic", personalCustomsCode: "", qty: 1, amount: 18900, channel: "네이버 스마트스토어", status: "배송완료", tracking: "500918072431", carrier: "한진택배", orderDate: "2026-09-18", createdAt: "09.18 14:05", settlementStatus: "scheduled" },
     { id: "DO-260924-101", sellerLoginId: "market88", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-2088", mappedProductId: "DF-2088", mappingStatus: "mapped", paymentStatus: "paid", paymentMethod: "deposit", supplyTotal: 69800, supplierOrderId: "PO-24092401", forwardedAt: "오늘 09:12", customer: "한지민", recipientName: "한지민", phone: "010-2231-7781", postalCode: "06236", address: "서울특별시 강남구 테헤란로 152", addressDetail: "8층", deliveryMessage: "문 앞에 놓아주세요.", shippingType: "domestic", personalCustomsCode: "", qty: 2, amount: 99600, channel: "네이버 스마트스토어", status: "발주완료", orderDate: "2026-09-24", createdAt: "오늘 09:12", settlementStatus: "scheduled" },
     { id: "DO-260924-102", sellerLoginId: "brandlab", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-3142", mappedProductId: "DF-3142", mappingStatus: "mapped", paymentStatus: "paid", paymentMethod: "deposit", supplyTotal: 12400, supplierOrderId: "PO-24092402", forwardedAt: "오늘 09:40", customer: "오세훈", recipientName: "오세훈", phone: "010-5520-1943", postalCode: "34126", address: "대전광역시 유성구 대학로 99", addressDetail: "201동 1102호", deliveryMessage: "", shippingType: "domestic", personalCustomsCode: "", qty: 1, amount: 18900, channel: "쿠팡", status: "발주완료", orderDate: "2026-09-24", createdAt: "오늘 09:40", settlementStatus: "scheduled" },
     { id: "DO-260924-103", sellerLoginId: "market88", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-1024", mappedProductId: "DF-1024", mappingStatus: "mapped", paymentStatus: "paid", paymentMethod: "deposit", supplyTotal: 43600, supplierOrderId: "PO-24092403", forwardedAt: "오늘 10:05", customer: "배수정", recipientName: "배수정", phone: "010-8812-3350", postalCode: "61452", address: "광주광역시 동구 금남로 245", addressDetail: "", deliveryMessage: "부재 시 경비실", shippingType: "domestic", personalCustomsCode: "", qty: 2, amount: 59800, channel: "카카오 쇼핑", status: "발주완료", orderDate: "2026-09-24", createdAt: "오늘 10:05", settlementStatus: "scheduled" },
@@ -399,6 +401,10 @@ const initialState = {
     { id: "MSG-1002", supplierLoginId: "sup", sellerLoginId: "seller", senderLoginId: "seller", text: "추석 선물 포장 옵션도 상세페이지에 반영하겠습니다.", createdAt: "오늘 09:18" },
     { id: "MSG-1003", supplierLoginId: "sup", sellerLoginId: "seller", senderLoginId: "sup", text: "네, 상품 이미지와 출고 공지를 오늘 안에 업데이트하겠습니다.", createdAt: "오늘 09:26" }
   ],
+  /* 공급사 출고지·반품지 (위탁 판매라 고객 반품은 공급사로 간다. 쿠팡·스마트스토어 상품 등록에도 반품지가 필요) */
+  supplierAddresses: {
+    sup: { shipFrom: { zipCode: "37337", address: "경상북도 의성군 의성읍 중앙길 12", detail: "산지팔도 물류센터" }, returnTo: { zipCode: "37337", address: "경상북도 의성군 의성읍 중앙길 12", detail: "산지팔도 물류센터 반품실" }, phone: "010-1234-5678", sameAsShip: true, updatedAt: "2026-09-01" }
+  },
   shippingProfiles: {
     sup: { carrier: "한진택배", sender: "산지팔도 물류센터", contractCode: "HJD-29014", labelFormat: "A4 2분할", autoIssue: true }
   },
@@ -501,7 +507,6 @@ let refundTypeFilter = "all";
 let salesMetric = "sales";
 let supplierOrderStatus = "all";
 let supplierSettlementMonth = "2026-09";
-let supplierSettlementTab = "scheduled";
 let expandedSellerProductId = null;
 let expandedNoticeId = null;
 let editMode = false;
@@ -1165,6 +1170,9 @@ function submitBulkPayment(form) {
   showToast(`${done.length}건 ${money(paid)} 결제 완료! 공급사 ${bySupplier.length}곳에 주문을 전달했어요.`);
 }
 document.addEventListener("change", event => {
+  if (event.target.matches?.('#supplierAddressForm [name="sameAsShip"]')) document.querySelector("#supplierAddressForm .supplier-return-fields")?.classList.toggle("hidden-fields", event.target.checked);
+});
+document.addEventListener("change", event => {
   const form = event.target.closest?.("#bulkPaymentForm");
   if (!form) return;
   if (event.target.matches("[data-bulk-all]")) form.querySelectorAll('input[name="orderIds"]:not(:disabled)').forEach(input => { input.checked = event.target.checked; });
@@ -1675,7 +1683,10 @@ function memberStatusChip(status) {
   return `<span class="chip ${meta[1]}">${meta[0]}</span>`;
 }
 
+/* 두고톡 → 공지로 갔다면, 공지 화면에서 ‘두고톡으로 돌아가기’와 휴대폰 뒤로가기로 다시 두고톡에 온다 */
+let noticeReturn = null;
 function render() {
+  if (noticeReturn && (activeMenuIndex !== noticeReturn.noticeIndex || activeRole !== noticeReturn.role)) noticeReturn = null;
   renderSeller();
   renderSupplier();
   renderMaster();
@@ -2309,7 +2320,7 @@ function talkNoticeRow(perspective) {
   const role = perspective === "seller" ? "seller" : "supplier";
   const index = menuIndexOf("공지사항", role);
   if (index < 0) return "";
-  return `<button type="button" class="talk-room-item talk-channel-row" data-action="tab-go" data-index="${index}"><span class="talk-avatar channel">d</span><span class="talk-room-text"><b><span>두고마켓 알림</span><i class="talk-channel-badge">채널</i></b><small>${escapeHtml(notice.title || "새 공지가 있어요")}</small></span><span class="talk-room-side"><em>${escapeHtml(notice.date || "")}</em></span></button>`;
+  return `<button type="button" class="talk-room-item talk-channel-row" data-action="open-talk-notice" data-index="${index}"><span class="talk-avatar channel">d</span><span class="talk-room-text"><b><span>두고마켓 알림</span><i class="talk-channel-badge">채널</i></b><small>${escapeHtml(notice.title || "새 공지가 있어요")}</small></span><span class="talk-room-side"><em>${escapeHtml(notice.date || "")}</em></span></button>`;
 }
 function connectSupplierModal(perspective = "seller") {
   if (perspective !== "seller") {
@@ -3045,9 +3056,23 @@ function renderSupplierSection(index) {
   if (index === 10) return supplierSalesStatusTemplate();
   if (index === 11) return supplierCalendarTemplate();
   if (index === 12) return sellerNoticesTemplate();
-  return accountProfileTemplate(supplierSettingsCard());
+  return accountProfileTemplate(supplierSettingsCard() + supplierAddressCard());
 }
 /* 공급사 설정: 상품 자동 승인 (켜 두면 위탁셀러가 PICK하자마자 바로 가져가 판매) */
+function supplierAddressBook(loginId) { return state.supplierAddresses?.[loginId] || null; }
+function addressLine(addr) { return addr ? `(${addr.zipCode}) ${addr.address}${addr.detail ? ` ${addr.detail}` : ""}` : "미등록"; }
+function supplierAddressCard() {
+  const book = supplierAddressBook(currentAccount.loginId) || {};
+  const field = (prefix, label, addr = {}) => `<div class="form-field"><label>${label} 우편번호</label><input name="${prefix}Zip" inputmode="numeric" maxlength="5" value="${escapeHtml(addr.zipCode || "")}" placeholder="12345"></div><div class="form-field full"><label>${label} 주소 *</label><input name="${prefix}Address" value="${escapeHtml(addr.address || "")}" placeholder="도로명 주소"></div><div class="form-field full"><label>${label} 상세 주소</label><input name="${prefix}Detail" value="${escapeHtml(addr.detail || "")}" placeholder="동·호수, 물류센터 이름"></div>`;
+  return `<section class="panel supplier-address-card"><div class="profile-section-head"><div><span>SHIPPING · RETURN</span><h3>출고지 · 반품지</h3><p>고객 반품은 공급사로 와요. 위탁셀러가 쿠팡·스마트스토어에 상품을 올릴 때 이 반품지가 자동으로 들어가고, 셀러가 반품을 요청하면 이 주소를 안내해요.</p></div></div>
+    <form id="supplierAddressForm" class="form-grid">
+      ${field("ship", "출고지", book.shipFrom)}
+      <label class="channel-agree full"><input type="checkbox" name="sameAsShip" ${book.sameAsShip !== false ? "checked" : ""}><span>반품지도 출고지와 같아요</span></label>
+      <div class="supplier-return-fields full ${book.sameAsShip !== false ? "hidden-fields" : ""}"><div class="form-grid">${field("ret", "반품지", book.returnTo)}</div></div>
+      <div class="form-field full"><label>A/S·반품 문의 전화 *</label><input name="phone" inputmode="tel" value="${escapeHtml(book.phone || memberByLogin(currentAccount.loginId)?.contact || "")}" placeholder="010-0000-0000"></div>
+      <div class="modal-actions full"><button type="submit" class="primary-button">출고지·반품지 저장</button></div>
+    </form></section>`;
+}
 function supplierSettingsCard() {
   const auto = supplierAutoApprove(currentAccount?.loginId || "sup");
   return `<section class="panel seller-automation-card supplier-settings-card"><div class="profile-section-head"><div><span>SETTINGS</span><h3>상품 승인 설정</h3><p>위탁셀러가 내 상품을 PICK했을 때 어떻게 처리할지 정해요.</p></div></div>
@@ -3083,6 +3108,7 @@ function renderMasterSection(index) {
   if (index === 6) return `${sectionHero("전체 주문 관리", "주문 접수부터 공급사 자동 배정, 송장 반영까지 한 화면에서 확인합니다.")}<div class="panel"><div class="panel-head"><div><h3>통합 주문 목록</h3><p>셀러와 공급사 사이의 처리 상태를 모니터링합니다.</p></div><span class="chip orange">처리 필요 ${state.orders.filter(order => ["신규주문","주문접수","발주완료","배송준비중"].includes(order.status)).length}건</span></div>${ordersTable("master")}</div>`;
   if (index === 7) return refundTemplate("master");
   if (index === 9) return masterNoticesAdminTemplate();
+  if (index === 10) return masterSettlementTemplate();
   return `${sectionHero("연동·변경 로그", "모든 주요 변경과 오류를 시간순으로 저장하고 확인합니다.")}${logsTemplate()}`;
 }
 
@@ -3554,23 +3580,214 @@ function supplierOrdersCsv(status) {
   } catch { return -1; }
 }
 
+/* ===== 공급사 주간 정산 =====
+   · 매주 월요일, 지난주 월~일에 들어온(결제된) 주문을 정산한다. 기준은 주문일.
+   · 정산액 = 공급가 − 두고 수수료 7%.
+   · 환불 완료·주문 취소 → 정산에서 제외. 환불 요청 처리 중·쇼핑몰 확인 필요·두고 확인 보류 → 보류(사유 표시).
+     보류가 풀리면 그다음 정산에 ‘보류 해제분’으로 들어가고, 이미 정산한 주문이 나중에 환불되면 다음 정산에서 차감한다.
+   · 받는 곳: 정산 계좌 입금 또는 공급사 예치금 적립(원할 때 출금 신청). */
+const DOOGO_FEE_RATE = 0.07;
+const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
+function ymd(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
+function parseYmd(text) { const [y, m, d] = String(text || "").slice(0, 10).split("-").map(Number); return y ? new Date(y, (m || 1) - 1, d || 1) : null; }
+function weekStartOf(date) { const d = new Date(date.getFullYear(), date.getMonth(), date.getDate()); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
+function addDays(date, days) { const d = new Date(date); d.setDate(d.getDate() + days); return d; }
+function shortDay(date) { return `${date.getMonth() + 1}/${date.getDate()}(${DAY_NAMES[date.getDay()]})`; }
+function longDay(date) { return `${date.getMonth() + 1}월 ${date.getDate()}일(${DAY_NAMES[date.getDay()]})`; }
+function weekMeta(start) { const end = addDays(start, 6), pay = addDays(start, 7); return { weekId: ymd(start), start, end, pay, period: `${shortDay(start)} ~ ${shortDay(end)}`, payLabel: longDay(pay) }; }
+function orderSupplyAmount(order) { const product = orderSourceProduct(order); return Number(order.supplyTotal || (product ? orderUnitSupply(order, product) * Number(order.qty || 1) : 0) || 0); }
+function settlementFee(amount) { return Math.round(amount * DOOGO_FEE_RATE); }
+function settlementAccount(loginId) { return state.settlementAccounts?.[loginId] || null; }
+function supplierWallet(loginId) { state.supplierWallets = state.supplierWallets || {}; if (!state.supplierWallets[loginId]) state.supplierWallets[loginId] = { balance: 0, transactions: [] }; return state.supplierWallets[loginId]; }
+function supplierSettleOrders(loginId) { return state.orders.filter(order => order.supplierLoginId === loginId && orderPaymentStatus(order) !== "pending" && parseYmd(order.orderDate)); }
+/* 주문 하나가 정산에서 어떤 상태인지 — 공급사가 금액이 왜 다른지 바로 알 수 있게 사유와 해결 방법까지 */
+function settlementOrderState(order) {
+  const refund = state.refunds.find(item => item.orderId === order.id);
+  const manual = state.settlementHolds?.[order.id];
+  if (["취소완료", "출고취소"].includes(order.status) || (order.settlementStatus === "excluded" && !refund)) return { state: "excluded", reason: "주문 취소", detail: "주문이 취소돼 공급가가 셀러에게 돌아갔어요." };
+  if (refund && refund.status === "환불완료") return { state: "excluded", reason: `환불 완료 (${refund.id})`, detail: `${refund.type || "환불"} · ${refund.reason || ""}` };
+  if (refund) return { state: "hold", kind: "auto", reason: `${refund.type || "취소·환불"} 요청 처리 중 (${refund.id})`, detail: refund.reason || "", fix: "취소·환불 메뉴에서 처리를 마치면 다음 정산에 들어가요." };
+  if (manual && !manual.released) return { state: "hold", kind: "manual", reason: `두고 확인 보류: ${manual.reason}`, detail: manual.memo || "", fix: "두고 운영팀이 확인하면 풀어 드려요. 두고톡으로 문의할 수 있어요." };
+  if (order.status === "주문확인필요") return { state: "hold", kind: "auto", reason: "쇼핑몰 주문 확인 필요", detail: "쇼핑몰에서 취소됐는지 확인 중이에요.", fix: "셀러가 쇼핑몰 주문을 확인하면 자동으로 풀려요." };
+  if (order.settlementStatus === "hold") return { state: "hold", kind: "auto", reason: order.settlementHoldReason || "출고 문제 확인 중", detail: "", fix: "문제가 해결되면 다음 정산에 들어가요." };
+  return { state: "include" };
+}
+function settlementLine(order, kind = "order") {
+  const amount = orderSupplyAmount(order), fee = settlementFee(amount);
+  const product = orderSourceProduct(order);
+  const sign = kind === "deduct" ? -1 : 1;
+  return { orderId: order.id, date: order.orderDate, product: product?.name || order.externalProductName || "-", seller: memberByLogin(order.sellerLoginId)?.company || order.sellerLoginId, qty: Number(order.qty || 1), amount: sign * amount, fee: sign * fee, net: sign * (amount - fee), kind };
+}
+/* 주차 정산서 계산: 그 주 주문 + 이전 보류 해제분 − 정산 후 환불된 주문 */
+function computeSettlement(loginId, meta, { markSettled = false, recordId = "" } = {}) {
+  const lines = [], holds = [], excluded = [];
+  supplierSettleOrders(loginId).forEach(order => {
+    const date = parseYmd(order.orderDate);
+    if (date > meta.end) return;
+    const st = settlementOrderState(order);
+    if (order.settledIn) {
+      if (st.state === "excluded" && !order.refundDeductedIn && order.settledIn !== recordId) { lines.push({ ...settlementLine(order, "deduct"), note: `정산 후 ${st.reason}` }); if (markSettled) order.refundDeductedIn = recordId; }
+      return;
+    }
+    const inWeek = date >= meta.start;
+    if (st.state === "excluded") { if (inWeek) excluded.push({ ...settlementLine(order), reason: st.reason, detail: st.detail }); return; }
+    if (st.state === "hold") { holds.push({ ...settlementLine(order), reason: st.reason, detail: st.detail, fix: st.fix, holdKind: st.kind }); return; }
+    lines.push({ ...settlementLine(order, inWeek ? "order" : "carry"), note: inWeek ? "" : "보류 해제분" });
+    if (markSettled) order.settledIn = recordId;
+  });
+  const sum = key => lines.reduce((total, line) => total + line[key], 0);
+  const gross = lines.filter(line => line.kind !== "deduct").reduce((total, line) => total + line.amount, 0);
+  const deduct = -lines.filter(line => line.kind === "deduct").reduce((total, line) => total + line.net, 0);
+  return { lines, holds, excluded, gross, fee: sum("fee"), deduct, net: sum("net"), holdAmount: holds.reduce((total, hold) => total + hold.net, 0) };
+}
+function settlementSuppliers() { return [...new Set(state.orders.filter(order => order.supplierLoginId).map(order => order.supplierLoginId))]; }
+/* 마감된 주를 정산서로 만든다. 가장 최근 주는 ‘지급 대기’(월요일 두고가 지급), 그 전 주는 지급 완료로 본다(데모). */
+function ensureSettlementWeeks() {
+  state.settlementWeeks = state.settlementWeeks || [];
+  const thisWeek = weekStartOf(new Date());
+  const lastClosed = addDays(thisWeek, -7);
+  let changed = false;
+  settlementSuppliers().forEach(loginId => {
+    const dates = supplierSettleOrders(loginId).map(order => parseYmd(order.orderDate)).filter(Boolean);
+    if (!dates.length) return;
+    for (let start = weekStartOf(new Date(Math.min(...dates))); start <= lastClosed; start = addDays(start, 7)) {
+      const meta = weekMeta(start);
+      const id = `ST-${meta.weekId}-${loginId}`;
+      if (state.settlementWeeks.some(week => week.id === id)) continue;
+      const result = computeSettlement(loginId, meta, { markSettled: true, recordId: id });
+      if (!result.lines.length) continue; // 지급할 주문이 없으면(보류만 있으면) 명세서를 만들지 않고, 보류는 ‘보류 중’에 계속 보인다
+      const recent = ymd(start) === ymd(lastClosed);
+      const record = { id, supplierLoginId: loginId, weekId: meta.weekId, period: meta.period, payDate: ymd(meta.pay), payLabel: meta.payLabel, lines: result.lines, holds: result.holds, excluded: result.excluded, gross: result.gross, fee: result.fee, deduct: result.deduct, net: result.net, holdAmount: result.holdAmount, status: recent ? "지급 대기" : "지급 완료", createdAt: ymd(meta.pay) };
+      state.settlementWeeks.push(record);
+      if (!recent) paySettlementRecord(record, { silent: true, when: ymd(meta.pay) });
+      changed = true;
+    }
+  });
+  if (changed) saveState();
+}
+function paySettlementRecord(record, { silent = false, when = ymd(new Date()) } = {}) {
+  const account = settlementAccount(record.supplierLoginId);
+  const toDeposit = !account || account.method === "deposit";
+  record.status = "지급 완료";
+  record.paidAt = when;
+  record.method = toDeposit ? "예치금 적립" : `${account.bankName} •••• ${String(account.accountNumber).slice(-4)}`;
+  if (toDeposit && record.net > 0) { const wallet = supplierWallet(record.supplierLoginId); wallet.balance += record.net; wallet.transactions.unshift({ id: `SW-${record.id}`, type: "정산 적립", amount: record.net, at: when, ref: record.period }); }
+  state.accountingLedger = state.accountingLedger || [];
+  state.accountingLedger.unshift({ id: `LG-${record.id}`, date: when, supplierLoginId: record.supplierLoginId, type: toDeposit ? "정산 → 예치금 적립" : "정산 계좌 지급", period: record.period, gross: record.gross, fee: record.fee, deduct: record.deduct, net: record.net, method: record.method, ref: record.id });
+  if (!silent) pushNotification(record.supplierLoginId, "supplier", "settlement", `${record.payLabel} 정산 ${money(record.net)} 지급 완료`, `${record.period} 주문 · ${record.method}${record.holds.length ? ` · 보류 ${record.holds.length}건은 다음 정산에서 다시 확인해요` : ""}`, ["내부 알림"]);
+}
+function upcomingSettlement(loginId) { const meta = weekMeta(weekStartOf(new Date())); return { meta, ...computeSettlement(loginId, meta) }; }
+function allHolds(loginId) { return upcomingSettlement(loginId).holds; }
+function maskAccount(account) { return account ? `${account.bankName} •••• ${String(account.accountNumber).slice(-4)} · ${account.holder}` : "미등록"; }
+function settlementLinesTable(lines, { holdable = false } = {}) {
+  if (!lines.length) return `<div class="empty">해당 주문이 없어요.</div>`;
+  return `<div class="stl-lines">${lines.map(line => `<div class="stl-line ${line.kind}"><span><b>${escapeHtml(line.orderId)}</b><small>${escapeHtml(line.date || "")} · ${escapeHtml(line.product)} ×${line.qty} · ${escapeHtml(line.seller)}</small>${line.note ? `<em class="stl-note">${escapeHtml(line.note)}</em>` : ""}${line.reason ? `<em class="stl-note hold">${escapeHtml(line.reason)}</em>` : ""}${line.fix ? `<small class="stl-fix">→ ${escapeHtml(line.fix)}</small>` : ""}</span><span class="stl-nums"><small>공급가 ${money(line.amount)} · 수수료 ${money(line.fee)}</small><strong>${money(line.net)}</strong>${holdable ? `<button type="button" class="text-button" data-action="master-hold-order" data-id="${escapeHtml(line.orderId)}">보류 지정</button>` : ""}</span></div>`).join("")}</div>`;
+}
+function settlementStatementModal(recordId) {
+  ensureSettlementWeeks();
+  const record = state.settlementWeeks.find(week => week.id === recordId);
+  if (!record) return;
+  const name = supplierName(record.supplierLoginId);
+  openModal(`<div class="stl-statement"><span class="stl-kicker">정산 명세서 · ${escapeHtml(record.status)}</span><h2>${escapeHtml(record.payLabel)} 정산</h2><p>${escapeHtml(name)} · ${escapeHtml(record.period)} 주문${record.method ? ` · ${escapeHtml(record.method)}` : ""}</p>
+    ${settlementSumBox(record)}
+    <h4>정산 주문 ${record.lines.length}건</h4>${settlementLinesTable(record.lines)}
+    ${record.holds.length ? `<h4>이번에 보류된 주문 ${record.holds.length}건</h4>${settlementLinesTable(record.holds)}` : ""}
+    ${record.excluded?.length ? `<h4>제외된 주문 ${record.excluded.length}건</h4>${settlementLinesTable(record.excluded)}` : ""}
+    <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button></div></div>`);
+  document.querySelector("#modal .modal")?.classList.add("stl-modal");
+}
+function settlementSumBox(result) {
+  return `<dl class="stl-sum"><div><dt>판매 공급가</dt><dd>${money(result.gross)}</dd></div><div><dt>두고 수수료 7%</dt><dd>−${money(result.lines.filter(line => line.kind !== "deduct").reduce((total, line) => total + line.fee, 0))}</dd></div>${result.deduct ? `<div><dt>정산 후 환불 차감</dt><dd>−${money(result.deduct)}</dd></div>` : ""}${result.holdAmount ? `<div class="hold"><dt>보류 (다음 정산으로)</dt><dd>${money(result.holdAmount)}</dd></div>` : ""}<div class="total"><dt>지급 ${result.status === "지급 완료" ? "금액" : "예정"}</dt><dd>${money(result.net)}</dd></div></dl>`;
+}
+let supplierSettlementTab = "scheduled";
 function supplierSettlementTemplate() {
-  const supplierOrders = currentSupplierOrders();
-  const months = [...new Set(["2026-09", "2026-08", ...supplierOrders.map(order => String(order.orderDate || "").slice(0, 7)).filter(Boolean)])].sort().reverse();
-  if (!months.includes(supplierSettlementMonth)) supplierSettlementMonth = months[0] || "2026-09";
-  const monthOrders = supplierOrders.filter(order => String(order.orderDate || "").startsWith(supplierSettlementMonth));
-  const refundFor = order => state.refunds.find(refund => refund.orderId === order.id && refund.status === "환불완료" && refund.supplierSettlementOffset);
-  const gross = monthOrders.reduce((sum, order) => sum + orderUnitSupply(order) * order.qty, 0);
-  const offset = monthOrders.filter(refundFor).reduce((sum, order) => sum + orderUnitSupply(order) * order.qty, 0);
-  const fee = platformFee(Math.max(0, gross - offset));
-  const payable = Math.max(0, gross - offset - fee);
-  const scheduled = monthOrders.filter(order => order.settlementStatus !== "completed" && !refundFor(order));
-  const completed = monthOrders.filter(order => order.settlementStatus === "completed" && !refundFor(order));
-  const rows = supplierSettlementTab === "completed" ? completed : scheduled;
-  const monthLabel = `${Number(supplierSettlementMonth.slice(5, 7))}월`;
-  return `${sectionHero("정산 내역", "월별 공급 매출과 두고 중개 수수료 7%, 환불 정산 제외 내역을 확인합니다.", `<label class="settlement-month-picker"><span>정산 월</span><select id="supplierSettlementMonthSelect">${months.map(month => `<option value="${month}" ${month === supplierSettlementMonth ? "selected" : ""}>${month.replace("-", ".")}</option>`).join("")}</select></label>`)}
-    <div class="settlement-hero five"><div><span>${monthLabel} 지급 예정액</span><strong>${money(payable)}</strong><small>월말 마감 · 샘플 계산</small></div><div><span>공급 매출</span><b>${money(gross)}</b></div><div class="negative"><span>환불 정산 제외</span><b>-${money(offset)}</b></div><div class="negative"><span>두고 수수료 7%</span><b>-${money(fee)}</b></div><div><span>정산 완료</span><b>${completed.length}건</b></div></div>
-    <div class="panel settlement-panel"><div class="settlement-tabs"><button class="${supplierSettlementTab === "scheduled" ? "active" : ""}" data-action="settlement-tab" data-tab="scheduled"><span>정산 예정</span><b>${scheduled.length}건</b></button><button class="${supplierSettlementTab === "completed" ? "active" : ""}" data-action="settlement-tab" data-tab="completed"><span>정산 완료</span><b>${completed.length}건</b></button></div><div class="panel-head"><div><h3>${supplierSettlementTab === "completed" ? "지급 완료 내역" : "지급 예정 내역"}</h3><p>환불 완료 주문은 목록과 지급액에서 제외되며 변경 이력에 남습니다.</p></div><span class="chip ${supplierSettlementTab === "completed" ? "blue" : "orange"}">${rows.length}건</span></div><div class="table-wrap"><table><thead><tr><th>주문번호</th><th>상품</th><th>배송 상태</th><th>공급 매출</th><th>수수료 7%</th><th>${supplierSettlementTab === "completed" ? "지급 완료액" : "지급 예정액"}</th></tr></thead><tbody>${rows.map(order => { const product = productOf(order.productId); const base = (product?.supply || 0) * order.qty; const rowFee = platformFee(base); return `<tr><td class="order-id">${order.id}<br><small>${escapeHtml(order.settledAt || order.orderDate || "-")}</small></td><td>${escapeHtml(product?.name || "상품")}</td><td>${statusChip(order.status)}</td><td>${money(base)}</td><td>-${money(rowFee)}</td><td><strong>${money(base - rowFee)}</strong></td></tr>`; }).join("") || `<tr><td colspan="6"><div class="empty">선택한 월의 ${supplierSettlementTab === "completed" ? "정산 완료" : "정산 예정"} 주문이 없습니다.</div></td></tr>`}</tbody></table></div></div>`;
+  const loginId = currentAccount.loginId;
+  ensureSettlementWeeks();
+  const up = upcomingSettlement(loginId);
+  const account = settlementAccount(loginId);
+  const wallet = supplierWallet(loginId);
+  const weeks = (state.settlementWeeks || []).filter(week => week.supplierLoginId === loginId).sort((a, b) => b.weekId.localeCompare(a.weekId));
+  const waiting = weeks.filter(week => week.status === "지급 대기");
+  const withdrawals = (state.supplierWithdrawals || []).filter(item => item.supplierLoginId === loginId);
+  const today = new Date(); const daysLeft = Math.max(0, Math.round((up.meta.pay - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000));
+  return `${sectionHero("정산", "매주 월요일, 지난주 월~일에 들어온 주문을 정산해요. 공급가에서 두고 수수료 7%를 뺀 금액을 보내 드려요.")}
+    ${!account ? `<section class="stl-alert"><b>정산 계좌가 없어요</b><span>계좌를 등록하기 전까지 정산금은 두고 예치금으로 쌓여요. 예치금은 계좌 등록 후 언제든 출금할 수 있어요.</span><button type="button" class="primary-button" data-action="open-settlement-account">정산 계좌 등록</button></section>` : ""}
+    <div class="stl-top">
+      <section class="panel stl-next"><span class="stl-kicker">다음 정산 · ${daysLeft ? `D-${daysLeft}` : "오늘"}</span><h3>${escapeHtml(up.meta.payLabel)}</h3><p>${escapeHtml(up.meta.period)} 주문${up.lines.some(line => line.kind === "carry") ? " + 보류 해제분" : ""}</p><strong class="stl-amount">${money(up.net)}</strong>${settlementSumBox(up)}
+        <button type="button" class="secondary-button" data-action="supplier-upcoming-detail">주문 ${up.lines.length}건 자세히 보기</button></section>
+      <section class="panel stl-account"><span class="stl-kicker">받는 곳</span>${account ? `<b>${escapeHtml(maskAccount(account))}</b><small>${account.verified ? "✓ 두고 확인 완료" : "두고가 계좌를 확인하고 있어요"}</small>` : `<b>계좌 미등록</b><small>지금은 예치금으로 받아요</small>`}
+        <div class="stl-method" role="group" aria-label="받는 방법"><button type="button" class="${account && account.method !== "deposit" ? "active" : ""}" data-action="settlement-method" data-method="bank" ${account ? "" : "disabled"}>계좌로 받기</button><button type="button" class="${!account || account.method === "deposit" ? "active" : ""}" data-action="settlement-method" data-method="deposit">예치금으로 받기</button></div>
+        <button type="button" class="text-button" data-action="open-settlement-account">${account ? "계좌 변경" : "계좌 등록"} →</button>
+        <div class="stl-wallet"><span>공급사 예치금</span><strong>${money(wallet.balance)}</strong><button type="button" class="secondary-button" data-action="open-supplier-withdraw" ${wallet.balance >= 1000 ? "" : "disabled"}>출금 신청</button></div>
+        ${withdrawals.slice(0, 3).map(item => `<div class="stl-wd"><span>${escapeHtml(item.requestedAt)} 출금 ${money(item.amount)}</span><em class="${item.status === "완료" ? "ok" : item.status === "반려" ? "no" : ""}">${escapeHtml(item.status)}</em></div>`).join("")}</section>
+    </div>
+    ${up.holds.length ? `<section class="panel stl-holds"><div class="panel-head"><div><h3>보류 중인 주문 ${up.holds.length}건 · ${money(up.holdAmount)}</h3><p>아래 사유가 풀리면 다음 정산에 ‘보류 해제분’으로 들어가요. 금액이 예상보다 적다면 여기를 확인해 주세요.</p></div></div>${settlementLinesTable(up.holds)}</section>` : ""}
+    <section class="panel stl-history"><div class="panel-head"><div><h3>주차별 정산 내역</h3><p>명세서를 누르면 주문별 공급가·수수료·보류·제외 내역을 볼 수 있어요.</p></div>${waiting.length ? `<span class="chip">지급 대기 ${waiting.length}</span>` : ""}</div>
+      ${weeks.length ? `<div class="stl-weeks">${weeks.map(week => `<button type="button" class="stl-week" data-action="settlement-statement" data-id="${week.id}"><span><b>${escapeHtml(week.payLabel)}</b><small>${escapeHtml(week.period)} · 주문 ${week.lines.length}건${week.holds.length ? ` · 보류 ${week.holds.length}` : ""}</small></span><span class="stl-week-amt"><strong>${money(week.net)}</strong><em class="${week.status === "지급 완료" ? "ok" : "wait"}">${escapeHtml(week.status)}</em></span></button>`).join("")}</div>` : `<div class="empty">아직 마감된 정산이 없어요.</div>`}</section>
+    <section class="stl-rules"><b>정산 규칙</b><ul><li>매주 <b>월요일</b>에 지난주 <b>월~일</b> 주문(결제 기준)을 정산해요.</li><li>정산액 = 공급가 − 두고 수수료 <b>7%</b></li><li>환불 완료·취소된 주문은 빠지고, 환불 요청 중·쇼핑몰 확인 필요 주문은 <b>보류</b>돼요. 보류가 풀리면 다음 정산에 들어가요.</li><li>정산 후 환불된 주문은 다음 정산에서 차감해요.</li></ul></section>`;
+}
+function settlementAccountModal() {
+  const loginId = currentAccount.loginId;
+  const account = settlementAccount(loginId) || {};
+  const member = memberByLogin(loginId) || {};
+  openModal(`<h2>정산 계좌 ${account.accountNumber ? "변경" : "등록"}</h2><p>정산금을 받을 사업자 계좌예요. 예금주는 사업자등록증의 상호 또는 대표자와 같아야 해요.</p>
+    <form id="settlementAccountForm" class="form-grid">
+      <div class="form-field"><label>은행 *</label><select name="bankName" required><option value="">은행 선택</option>${REFUND_BANKS.map(bank => `<option ${(account.bankName || member.bankName) === bank ? "selected" : ""}>${bank}</option>`).join("")}</select></div>
+      <div class="form-field"><label>예금주 *</label><input name="holder" required maxlength="30" value="${escapeHtml(account.holder || member.company || "")}" placeholder="사업자 상호 또는 대표자"></div>
+      <div class="form-field full"><label>계좌번호 *</label><input name="accountNumber" required inputmode="numeric" autocomplete="off" value="${escapeHtml(account.accountNumber || member.bankAccountNumber || "")}" placeholder="- 없이 숫자만"></div>
+      <label class="channel-agree full"><input type="checkbox" name="confirm" required><span>사업자 명의 계좌가 맞고, 정산금이 이 계좌로 들어가는 것에 동의해요.</span></label>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">저장</button></div>
+    </form>`);
+}
+function supplierWithdrawModal() {
+  const loginId = currentAccount.loginId;
+  const account = settlementAccount(loginId);
+  const wallet = supplierWallet(loginId);
+  if (!account) { showToast("출금하려면 정산 계좌를 먼저 등록해 주세요."); return settlementAccountModal(); }
+  openModal(`<h2>예치금 출금 신청</h2><p>${escapeHtml(maskAccount(account))} 로 보내 드려요. 두고가 확인하면 보통 1영업일 안에 입금돼요.</p>
+    <form id="supplierWithdrawForm" class="form-grid"><div class="form-field full"><label>출금할 금액 (출금 가능 ${money(wallet.balance)})</label><input name="amount" type="number" min="1000" max="${wallet.balance}" step="100" value="${wallet.balance}" required></div>
+    <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">출금 신청</button></div></form>`);
+}
+/* 마스터 정산 관리: 지급·보류·출금·계좌·장부를 한곳에서 */
+function masterSettlementTemplate() {
+  ensureSettlementWeeks();
+  const suppliers = settlementSuppliers();
+  const ups = suppliers.map(loginId => ({ loginId, name: supplierName(loginId), ...upcomingSettlement(loginId) }));
+  const waiting = (state.settlementWeeks || []).filter(week => week.status === "지급 대기");
+  const holds = ups.flatMap(up => up.holds.map(hold => ({ ...hold, loginId: up.loginId, name: up.name })));
+  const withdrawals = (state.supplierWithdrawals || []).filter(item => item.status === "요청");
+  const ledger = state.accountingLedger || [];
+  const month = ymd(new Date()).slice(0, 7);
+  const monthFee = ledger.filter(row => row.date?.slice(0, 7) === month).reduce((sum, row) => sum + Number(row.fee || 0), 0);
+  const accounts = suppliers.map(loginId => ({ loginId, name: supplierName(loginId), account: settlementAccount(loginId) }));
+  return `${sectionHero("정산 관리", "공급사 주간 정산(지난주 월~일 → 이번 주 월요일)을 지급하고, 보류·출금·계좌와 정산 장부를 관리해요.", `<button type="button" class="secondary-button" data-action="export-ledger">정산 장부 CSV</button>`)}
+    <div class="stl-kpis"><div><span>지급 대기</span><strong>${money(waiting.reduce((sum, week) => sum + week.net, 0))}</strong><small>${waiting.length}건</small></div><div><span>이번 주 정산 예정</span><strong>${money(ups.reduce((sum, up) => sum + up.net, 0))}</strong><small>${escapeHtml(ups[0]?.meta.payLabel || "")} 지급</small></div><div class="hold"><span>보류 중</span><strong>${money(holds.reduce((sum, hold) => sum + hold.net, 0))}</strong><small>${holds.length}건</small></div><div><span>이번 달 두고 수수료</span><strong>${money(monthFee)}</strong><small>지급 완료 기준</small></div></div>
+    <section class="panel"><div class="panel-head"><div><h3>지급 대기</h3><p>월요일에 지급할 정산이에요. 계좌가 없는 공급사는 예치금으로 적립돼요.</p></div></div>
+      ${waiting.length ? `<div class="stl-table">${waiting.map(week => { const account = settlementAccount(week.supplierLoginId); return `<div class="stl-row"><span><b>${escapeHtml(supplierName(week.supplierLoginId))}</b><small>${escapeHtml(week.period)} · 주문 ${week.lines.length}건${week.holds.length ? ` · 보류 ${week.holds.length}` : ""}</small></span><span><small>받는 곳</small><b>${account && account.method !== "deposit" ? escapeHtml(maskAccount(account)) : "예치금 적립"}</b></span><span class="stl-row-amt"><strong>${money(week.net)}</strong><small>공급가 ${money(week.gross)} · 수수료 ${money(week.lines.filter(l => l.kind !== "deduct").reduce((t, l) => t + l.fee, 0))}</small></span><span class="stl-row-actions"><button type="button" class="text-button" data-action="settlement-statement" data-id="${week.id}">명세서</button><button type="button" class="primary-button" data-action="master-pay-settlement" data-id="${week.id}">지급 완료 처리</button></span></div>`; }).join("")}</div>` : `<div class="empty">지급 대기 중인 정산이 없어요.</div>`}</section>
+    <section class="panel"><div class="panel-head"><div><h3>이번 주 정산 예정 (${escapeHtml(ups[0]?.meta.period || "")})</h3><p>문제가 있는 주문은 ‘보류 지정’으로 이번 정산에서 뺄 수 있어요. 공급사 화면에 사유가 그대로 보여요.</p></div></div>
+      ${ups.map(up => `<details class="stl-up"><summary><b>${escapeHtml(up.name)}</b><span>주문 ${up.lines.length}건 · 보류 ${up.holds.length}건</span><strong>${money(up.net)}</strong></summary>${settlementLinesTable(up.lines.filter(line => line.kind !== "deduct"), { holdable: true })}</details>`).join("") || `<div class="empty">정산 예정 주문이 없어요.</div>`}</section>
+    <section class="panel"><div class="panel-head"><div><h3>보류 관리</h3><p>자동 보류(환불 처리 중·쇼핑몰 확인 필요)는 원인이 해결되면 풀려요. 두고가 지정한 보류는 여기서 풀 수 있어요.</p></div></div>
+      ${holds.length ? `<div class="stl-table">${holds.map(hold => `<div class="stl-row"><span><b>${escapeHtml(hold.orderId)} · ${escapeHtml(hold.name)}</b><small>${escapeHtml(hold.product)} · ${escapeHtml(hold.date || "")}</small></span><span><small>${hold.holdKind === "manual" ? "두고 지정" : "자동"}</small><b>${escapeHtml(hold.reason)}</b></span><span class="stl-row-amt"><strong>${money(hold.net)}</strong></span><span class="stl-row-actions">${hold.holdKind === "manual" ? `<button type="button" class="secondary-button" data-action="master-release-hold" data-id="${escapeHtml(hold.orderId)}">보류 해제</button>` : `<small>원인 해결 시 자동 해제</small>`}</span></div>`).join("")}</div>` : `<div class="empty">보류 중인 주문이 없어요.</div>`}</section>
+    <section class="panel"><div class="panel-head"><div><h3>예치금 출금 요청</h3><p>공급사가 예치금을 계좌로 출금해 달라고 요청한 목록이에요.</p></div></div>
+      ${withdrawals.length ? `<div class="stl-table">${withdrawals.map(item => `<div class="stl-row"><span><b>${escapeHtml(supplierName(item.supplierLoginId))}</b><small>${escapeHtml(item.requestedAt)} 요청</small></span><span><small>보낼 계좌</small><b>${escapeHtml(item.account)}</b></span><span class="stl-row-amt"><strong>${money(item.amount)}</strong></span><span class="stl-row-actions"><button type="button" class="text-button danger-text" data-action="master-withdraw" data-id="${item.id}" data-result="reject">반려</button><button type="button" class="primary-button" data-action="master-withdraw" data-id="${item.id}" data-result="approve">이체 완료</button></span></div>`).join("")}</div>` : `<div class="empty">출금 요청이 없어요.</div>`}</section>
+    <section class="panel"><div class="panel-head"><div><h3>공급사 정산 계좌</h3><p>공급사가 등록한 계좌예요. 사업자 명의와 예금주를 확인한 뒤 ‘확인 완료’를 눌러 주세요.</p></div></div>
+      <div class="stl-table">${accounts.map(row => `<div class="stl-row"><span><b>${escapeHtml(row.name)}</b><small>${escapeHtml(row.loginId)}</small></span><span><small>계좌</small><b>${escapeHtml(maskAccount(row.account))}</b></span><span><small>받는 방법</small><b>${row.account ? (row.account.method === "deposit" ? "예치금" : "계좌") : "예치금 (미등록)"}</b></span><span class="stl-row-actions">${row.account ? (row.account.verified ? `<em class="stl-ok">✓ 확인 완료</em>` : `<button type="button" class="secondary-button" data-action="master-verify-account" data-id="${row.loginId}">확인 완료</button>`) : `<small>공급사 등록 전</small>`}</span></div>`).join("")}</div></section>
+    <section class="panel"><div class="panel-head"><div><h3>정산 장부</h3><p>지급·적립·출금이 날짜순으로 기록돼요. CSV로 받아 회계 프로그램에 올릴 수 있어요.</p></div><button type="button" class="secondary-button" data-action="export-ledger">CSV 받기</button></div>
+      ${ledger.length ? `<div class="table-wrap"><table class="stl-ledger"><thead><tr><th>일자</th><th>구분</th><th>공급사</th><th>기간</th><th>판매 공급가</th><th>두고 수수료</th><th>환불 차감</th><th>지급·출금</th><th>받는 곳</th></tr></thead><tbody>${ledger.slice(0, 30).map(row => `<tr><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.type)}</td><td>${escapeHtml(supplierName(row.supplierLoginId))}</td><td>${escapeHtml(row.period || "-")}</td><td>${row.gross ? money(row.gross) : "-"}</td><td>${row.fee ? money(row.fee) : "-"}</td><td>${row.deduct ? money(row.deduct) : "-"}</td><td><b>${money(row.net)}</b></td><td>${escapeHtml(row.method || "-")}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">아직 기록이 없어요.</div>`}</section>`;
+}
+function exportLedgerCsv() {
+  const rows = state.accountingLedger || [];
+  const header = ["일자", "구분", "공급사", "공급사ID", "정산기간", "판매 공급가", "두고 수수료(7%)", "환불 차감", "지급·출금액", "받는 곳", "참조"];
+  const csv = "﻿" + [header, ...rows.map(row => [row.date, row.type, supplierName(row.supplierLoginId), row.supplierLoginId, row.period || "", row.gross || 0, row.fee || 0, row.deduct || 0, row.net, row.method || "", row.ref || ""])].map(row => row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+  try { const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); link.download = `두고_정산장부_${ymd(new Date())}.csv`; document.body.appendChild(link); link.click(); link.remove(); return rows.length; } catch { return -1; }
+}
+function masterHoldModal(orderId) {
+  const order = state.orders.find(item => item.id === orderId);
+  if (!order) return;
+  openModal(`<h2>정산 보류 지정</h2><p>${escapeHtml(order.id)} · ${escapeHtml(supplierName(order.supplierLoginId))} · ${money(orderSupplyAmount(order))}<br>공급사 정산 화면에 아래 사유가 그대로 보여요.</p>
+    <form id="settlementHoldForm" class="form-grid" data-id="${escapeHtml(order.id)}"><div class="form-field full"><label>보류 사유 *</label><select name="reason">${["고객 클레임 확인 중", "배송 지연·분실 확인 중", "상품 품질 문제 확인 중", "셀러 결제 확인 중", "기타"].map(reason => `<option>${reason}</option>`).join("")}</select></div>
+    <div class="form-field full"><label>공급사에게 보일 설명</label><input name="memo" maxlength="80" placeholder="예: 고객이 파손 사진을 보내 확인 중이에요."></div>
+    <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">보류 지정</button></div></form>`);
 }
 
 function renderSupplier() {
@@ -3590,7 +3807,10 @@ function renderSupplier() {
   const todo = [
     { count: newOrders.length, tone: "red", title: "새로 들어온 주문", hint: "위탁셀러가 결제한 주문이에요. 한 번에 확인·포장하세요", button: "한 번에 확인", attrs: 'data-action="supplier-bulk-confirm"' },
     { count: readyOrders.length, tone: "orange", title: "송장 출력을 기다리는 주문", hint: "굿스플로로 한 번에 출력하면 셀러 화면에 바로 들어가요", button: "송장 자동 출력", attrs: 'data-action="auto-issue-all"' },
-    { count: memberDocsMissing() ? 1 : 0, tone: "orange", title: "정산 계좌·서류 등록", hint: "정산 대금을 받으려면 계좌와 서류를 등록해 주세요", button: "등록하기", attrs: 'data-action="open-docs-modal"' },
+    { count: supplierAddressBook(currentAccount.loginId) ? 0 : 1, tone: "red", title: "출고지·반품지 등록", hint: "고객 반품이 돌아올 주소예요. 셀러의 쿠팡·스마트스토어 등록에도 필요해요", button: "등록하기", attrs: 'data-action="supplier-go-menu" data-index="8"' },
+    { count: settlementAccount(currentAccount.loginId) ? 0 : 1, tone: "orange", title: "정산 계좌 등록", hint: "등록 전 정산금은 예치금으로 쌓여요. 계좌를 등록하면 매주 월요일 바로 입금돼요", button: "등록하기", attrs: 'data-action="open-settlement-account"' },
+    { count: memberDocsMissing() ? 1 : 0, tone: "orange", title: "사업자 서류 등록", hint: "사업자등록증·통장 사본을 올려 주세요", button: "등록하기", attrs: 'data-action="open-docs-modal"' },
+    { count: allHolds(currentAccount.loginId).length, tone: "red", title: "정산 보류 중인 주문", hint: "사유를 확인하면 다음 정산에 들어가요", button: "사유 보기", attrs: 'data-action="supplier-go-menu" data-index="7"' },
     { count: goodsflowConnected(currentAccount.loginId) ? 0 : 1, tone: "red", title: "굿스플로 연동이 필요해요", hint: "아이디·비밀번호만 넣으면 송장이 자동으로 출력돼요", button: "연동하기", attrs: 'data-action="goodflow-settings"' },
     { count: goodsflowConnected(currentAccount.loginId) && goodsflowCapacity(goodflowProfile()) < 20 ? goodsflowCapacity(goodflowProfile()) || 1 : 0, tone: "orange", title: "굿스플로 크레딧이 부족해요", hint: `잔액 ${money(goodflowProfile().credit || 0)} · 송장 약 ${goodsflowCapacity(goodflowProfile())}건 출력 가능`, button: "충전하기", attrs: 'data-action="goodsflow-charge"' },
     { count: pickCount, tone: "purple", title: "PICK 승인 요청", hint: "위탁셀러가 내 상품을 팔고 싶어해요", button: "확인하기", attrs: 'data-action="supplier-go-menu" data-index="9"' },
@@ -3602,7 +3822,10 @@ function renderSupplier() {
   const myIds = new Set(products.map(product => product.id));
   const sellerItems = state.sellerProducts.filter(item => myIds.has(item.productId) && item.approvalStatus === "승인완료");
   const sellerStats = [...new Set(sellerItems.map(item => item.sellerLoginId))].map(id => { const rows = supplierLedgerRows().filter(row => row.sellerLoginId === id); return { id, name: memberByLogin(id)?.company || id, items: sellerItems.filter(item => item.sellerLoginId === id).length, live: sellerItems.filter(item => item.sellerLoginId === id && liveChannelIds(item).length).length, qty: rows.reduce((s, r) => s + r.qty, 0), supply: rows.reduce((s, r) => s + r.supply, 0) }; }).sort((a, b) => b.supply - a.supply);
+  ensureSettlementWeeks();
+  const nextStl = upcomingSettlement(currentAccount.loginId);
   document.getElementById("supplierView").innerHTML = `
+    <button type="button" class="stl-mini" data-action="supplier-go-menu" data-index="7"><span><small>다음 정산 · ${escapeHtml(nextStl.meta.payLabel)}</small><b>${money(nextStl.net)}</b></span><span class="stl-mini-meta">${escapeHtml(nextStl.meta.period)} 주문 ${nextStl.lines.length}건${nextStl.holds.length ? ` · <em>보류 ${nextStl.holds.length}건</em>` : ""}</span><i>정산 보기 →</i></button>
     <section class="home-today sup-today">
       <div class="home-greeting"><span>오늘 할 일</span><h2>${todo.length ? `오늘 처리할 일이 <em>${todo.length}가지</em> 있어요` : "오늘 처리할 일을 모두 마쳤어요"}</h2><p>버튼 한 번이면 해당 일을 바로 처리하거나 화면으로 이동해요.</p></div>
       ${todo.length ? `<div class="home-todo-list">${todo.map(item => `<button type="button" class="home-todo tone-${item.tone}" ${item.attrs}><strong>${item.count}</strong><span><b>${item.title}</b><small>${item.hint}</small></span><em>${item.button} →</em></button>`).join("")}</div>` : `<div class="home-todo-done"><b>✓ 모두 처리했어요</b><span>위탁셀러 주문이 들어오면 여기에 바로 알려 드릴게요.</span></div>`}
@@ -4155,10 +4378,17 @@ function orderPaymentModal(orderId) {
 
 function sellerNoticesTemplate() {
   const list = state.notices || [];
-  return `${sectionHero("공지사항", "두고 운영에 꼭 필요한 업데이트와 안내예요. 누르면 크게 열려요.")}<div class="panel notice-board">${list.length ? list.map((n, index) => `<article class="notice-item ${youtubeVideoId(n.videoUrl) ? "has-video" : ""}">
+  return `${noticeReturn ? `<button type="button" class="back-to-talk" data-action="notice-back"><span aria-hidden="true">‹</span> 두고톡으로 돌아가기</button>` : ""}${sectionHero("공지사항", "두고 운영에 꼭 필요한 업데이트와 안내예요. 누르면 크게 열려요.")}<div class="panel notice-board">${list.length ? list.map((n, index) => `<article class="notice-item ${youtubeVideoId(n.videoUrl) ? "has-video" : ""}">
       <button type="button" class="notice-row" data-action="open-notice-detail" data-id="${n.id}"><span class="notice-row-title">${index === 0 ? `<em class="notice-new">NEW</em>` : ""}${youtubeVideoId(n.videoUrl) ? `<em class="notice-video-badge">▶ 영상</em>` : ""}<b>${escapeHtml(n.title)}</b></span><span>${escapeHtml(n.date)}<i class="notice-row-chevron">›</i></span></button>
     </article>`).join("") : `<div class="empty">등록된 공지사항이 없습니다.</div>`}</div>`;
 }
+function returnFromNotice() {
+  if (!noticeReturn) return;
+  const talkIndex = noticeReturn.talkIndex;
+  noticeReturn = null;
+  closeModal(); activeMenuIndex = talkIndex; chatMobileView = "list"; render(); updateAccountUI(); window.scrollTo({ top: 0 });
+}
+window.addEventListener("popstate", () => { if (noticeReturn) returnFromNotice(); });
 function renderNoticeModal() {
   const list = state.notices || [];
   if (!list.length) return closeModal();
@@ -4307,7 +4537,8 @@ function refundRequestModal(orderId) {
   const product = productOf(order?.mappedProductId || order?.productId);
   if (!order) return;
   const supplyRefundAmount = orderUnitSupply(order, product) * Number(order.qty || 1);
-  openModal(`<div class="refund-request-head"><span>SELLER REFUND REQUEST</span><h2>취소 · 환불 요청</h2><p>${order.id} · ${escapeHtml(product?.name || "상품")}</p></div><form id="refundRequestForm" class="form-grid" data-id="${order.id}"><div class="form-field"><label>요청 유형</label><select name="type"><option>반품</option><option>주문 취소</option><option>교환</option></select></div><div class="form-field"><label>소비자 환불액</label><input name="consumerRefundAmount" type="number" value="${order.amount}" readonly><small>판매채널에서 소비자에게 돌려준 주문 금액</small></div><div class="form-field full money-refund-field"><label>예치금 환급 예정액</label><input name="amount" type="number" value="${supplyRefundAmount}" readonly><small>공급가 ${money(orderUnitSupply(order, product))}${order.optionName ? ` (${escapeHtml(order.optionName)})` : ""} × ${order.qty || 1}개 기준이며, 공급사 확정 후 충전됩니다.</small></div><div class="form-field full"><label>사유</label><select name="reason"><option>상품 파손</option><option>오배송</option><option>단순 변심</option><option>배송 지연</option></select></div><div class="form-field full"><label>상세 내용</label><textarea name="detail" rows="4" placeholder="상품 상태와 소비자 요청 내용을 구체적으로 입력해 주세요." required>소비자 환불 처리를 완료했습니다. 상품 상태 확인이 필요합니다.</textarea></div><label class="consumer-refund-confirm full"><input type="checkbox" name="consumerRefunded" required><span><b>판매채널에서 소비자 환불을 완료했습니다.</b><small>소비자 결제 환불은 판매채널에서 먼저 처리하고, 두고에서는 공급대금만 예치금으로 복구합니다.</small></span></label><div class="refund-rule-preview full"><div><b>반품 회수 건</b><span>택배 도착 → 공급사 입고 확인 → 예치금 자동 충전</span></div><div><b>회수하지 않는 건</b><span>공급사 승인 → 예치금 자동 충전</span></div></div><div class="api-safe-notice full"><b>정산 안전장치</b><span>위탁셀러가 임의로 환불완료 처리할 수 없으며, 확정 시 공급사 정산도 자동으로 0원 처리됩니다.</span></div><div class="modal-actions full"><button class="secondary-button" data-close-modal>취소</button><button class="refund-button" type="submit">공급사 확인 요청</button></div></form>`);
+  const returnBook = supplierAddressBook(product?.supplierLoginId);
+  openModal(`<div class="refund-request-head"><span>SELLER REFUND REQUEST</span><h2>취소 · 환불 요청</h2><p>${order.id} · ${escapeHtml(product?.name || "상품")}</p></div>${returnBook ? `<div class="refund-return-to"><b>반품 보낼 곳 (공급사)</b><span>${escapeHtml(addressLine(returnBook.returnTo))}</span><small>${escapeHtml(supplierName(product.supplierLoginId))} · 문의 ${escapeHtml(returnBook.phone)} · 고객에게 이 주소로 보내 달라고 안내해 주세요.</small></div>` : ""}<form id="refundRequestForm" class="form-grid" data-id="${order.id}"><div class="form-field"><label>요청 유형</label><select name="type"><option>반품</option><option>주문 취소</option><option>교환</option></select></div><div class="form-field"><label>소비자 환불액</label><input name="consumerRefundAmount" type="number" value="${order.amount}" readonly><small>판매채널에서 소비자에게 돌려준 주문 금액</small></div><div class="form-field full money-refund-field"><label>예치금 환급 예정액</label><input name="amount" type="number" value="${supplyRefundAmount}" readonly><small>공급가 ${money(orderUnitSupply(order, product))}${order.optionName ? ` (${escapeHtml(order.optionName)})` : ""} × ${order.qty || 1}개 기준이며, 공급사 확정 후 충전됩니다.</small></div><div class="form-field full"><label>사유</label><select name="reason"><option>상품 파손</option><option>오배송</option><option>단순 변심</option><option>배송 지연</option></select></div><div class="form-field full"><label>상세 내용</label><textarea name="detail" rows="4" placeholder="상품 상태와 소비자 요청 내용을 구체적으로 입력해 주세요." required>소비자 환불 처리를 완료했습니다. 상품 상태 확인이 필요합니다.</textarea></div><label class="consumer-refund-confirm full"><input type="checkbox" name="consumerRefunded" required><span><b>판매채널에서 소비자 환불을 완료했습니다.</b><small>소비자 결제 환불은 판매채널에서 먼저 처리하고, 두고에서는 공급대금만 예치금으로 복구합니다.</small></span></label><div class="refund-rule-preview full"><div><b>반품 회수 건</b><span>택배 도착 → 공급사 입고 확인 → 예치금 자동 충전</span></div><div><b>회수하지 않는 건</b><span>공급사 승인 → 예치금 자동 충전</span></div></div><div class="api-safe-notice full"><b>정산 안전장치</b><span>위탁셀러가 임의로 환불완료 처리할 수 없으며, 확정 시 공급사 정산도 자동으로 0원 처리됩니다.</span></div><div class="modal-actions full"><button class="secondary-button" data-close-modal>취소</button><button class="refund-button" type="submit">공급사 확인 요청</button></div></form>`);
 }
 
 function refundProgressIndex(refund) {
@@ -4516,8 +4747,8 @@ function doogoListingFor(item, channelId) {
     options: rows.map(row => ({ optionId: row.id, name: row.name, salePrice: row.salePrice, stock: Number(row.stock ?? product?.stock ?? 0) })),
     category: channelId === "coupang" ? { coupang: detail.categoryCode || "" } : { smartstore: detail.categoryCode || "" },
     shipping: { carrier: policy.carrier || product?.carrier || "한진택배", feeType: !Number(policy.fee) ? "FREE" : Number(policy.freeOver) ? "CONDITIONAL_FREE" : "PAID", fee: Number(policy.fee || 0), freeOver: Number(policy.freeOver || 0), returnFee: Number(policy.returnFee || 0), exchangeFee: Number(policy.exchangeFee || 0), dispatchDays: 1, coupangOutboundCode: policy.outboundCode || policy.id || "", coupangReturnCenterCode: policy.returnCenterCode || policy.id || "", naverShippingAddressId: policy.shippingAddressId || policy.id || "", naverReturnAddressId: policy.returnAddressId || policy.id || "" },
-    returnAddress: { zipCode: policy.zipCode || "", address: policy.address || "", addressDetail: "", phone: supplier?.contact || "" },
-    asPhone: supplier?.contact || "", origin: product?.originCountry || "국산", overseas: product?.shippingType === "overseas", pccNeeded: productNeedsCustoms(product), taxType: "TAX", notice: { type: "FOOD", fields: {} }
+    returnAddress: (() => { const book = supplierAddressBook(product?.supplierLoginId); return book ? { zipCode: book.returnTo.zipCode, address: book.returnTo.address, addressDetail: book.returnTo.detail, phone: book.phone } : { zipCode: policy.zipCode || "", address: policy.address || "", addressDetail: "", phone: supplier?.contact || "" }; })(),
+    asPhone: supplierAddressBook(product?.supplierLoginId)?.phone || supplier?.contact || "", origin: product?.originCountry || "국산", overseas: product?.shippingType === "overseas", pccNeeded: productNeedsCustoms(product), taxType: "TAX", notice: { type: "FOOD", fields: {} }
   };
 }
 async function channelServerCall(method, path, body) {
@@ -5743,6 +5974,18 @@ document.addEventListener("click", event => {
   if (action === "toggle-alert-plan") { const notice = notificationService(); notice.status = notice.status === "active" ? "paused" : "active"; audit("알림톡 부가서비스 변경", `${notice.plan} 상태를 ${notice.status === "active" ? "이용중" : "일시정지"}으로 변경했습니다.`, "done", "subscription"); saveState(); closeModal(); render(); updateAccountUI(); showToast(`알림톡 부가서비스를 ${notice.status === "active" ? "활성화" : "일시정지"}했습니다.`); return; }
   if (action === "toggle-notice-setting") { const notice = notificationService(); const setting = target.dataset.setting; if (["orderNotice","trackingNotice"].includes(setting)) notice[setting] = !notice[setting]; audit("알림톡 수신 설정 변경", `${setting} 알림을 ${notice[setting] ? "켰습니다" : "껐습니다"}.`, "done", "notification"); saveState(); render(); updateAccountUI(); showToast("알림 수신 설정을 저장했습니다."); return; }
   if (action === "toggle-pc-notifications") { const notice = notificationService(); notice.pcNotice = !notice.pcNotice; audit("두고톡 PC 알림 설정", `새 메시지 PC 알림을 ${notice.pcNotice ? "켰습니다" : "껐습니다"}.`, "done", "notification"); saveState(); render(); updateAccountUI(); showToast(`PC 알림을 ${notice.pcNotice ? "켰습니다" : "껐습니다"}.`); return; }
+  if (action === "open-talk-notice") {
+    const noticeIndex = Number(target.dataset.index || 0);
+    noticeReturn = { role: activeRole, talkIndex: activeMenuIndex, noticeIndex };
+    try { history.pushState({ doogoNotice: true }, ""); noticeReturn.pushed = true; } catch { /* 히스토리를 못 쓰는 환경 */ }
+    closeModal(); chatMobileView = "list"; activeMenuIndex = noticeIndex; render(); updateAccountUI(); window.scrollTo({ top: 0 });
+    noticeModalIndex = 0; renderNoticeModal();
+    return;
+  }
+  if (action === "notice-back") {
+    if (noticeReturn?.pushed) { history.back(); return; }
+    returnFromNotice(); return;
+  }
   if (action === "chat-search-toggle") { chatSearchOpen = !(chatSearchOpen || chatRoomSearch); if (!chatSearchOpen) chatRoomSearch = ""; render(); updateAccountUI(); if (chatSearchOpen) document.getElementById("chatRoomSearch")?.focus(); return; }
   if (action === "open-connect-supplier") { connectSupplierModal(target.dataset.perspective || (activeRole === "seller" ? "seller" : "supplier")); return; }
   if (action === "open-chat-settings") { const notice = notificationService(); openModal(`<h2>두고톡 알림 설정</h2><p>거래처 메시지를 어떤 방식으로 확인할지 선택합니다.</p><div class="chat-setting-list"><button data-action="toggle-pc-notifications"><span><b>PC 브라우저 알림</b><small>새 메시지와 공급사 답변</small></span><em>${notice.pcNotice ? "켜짐" : "꺼짐"}</em></button><button data-action="toggle-notice-setting" data-setting="trackingNotice"><span><b>송장 등록 알림</b><small>두고톡·상단 알림함</small></span><em>${notice.trackingNotice ? "켜짐" : "꺼짐"}</em></button></div><div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button></div>`); return; }
@@ -6037,6 +6280,58 @@ document.addEventListener("click", event => {
     return;
   }
   if (action === "open-stop-channel") { stopChannelListingModal(id, target.dataset.channel); return; }
+  if (action === "open-settlement-account") { settlementAccountModal(); return; }
+  if (action === "open-supplier-withdraw") { supplierWithdrawModal(); return; }
+  if (action === "settlement-statement") { settlementStatementModal(id); return; }
+  if (action === "supplier-upcoming-detail") {
+    const up = upcomingSettlement(currentAccount.loginId);
+    openModal(`<div class="stl-statement"><span class="stl-kicker">정산 예정</span><h2>${escapeHtml(up.meta.payLabel)} 정산 예정</h2><p>${escapeHtml(up.meta.period)} 주문 · 일요일 밤 마감 후 금액이 확정돼요.</p>${settlementSumBox(up)}<h4>정산 들어갈 주문 ${up.lines.length}건</h4>${settlementLinesTable(up.lines)}${up.holds.length ? `<h4>보류 ${up.holds.length}건</h4>${settlementLinesTable(up.holds)}` : ""}<div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button></div></div>`);
+    document.querySelector("#modal .modal")?.classList.add("stl-modal");
+    return;
+  }
+  if (action === "settlement-method") {
+    const account = settlementAccount(currentAccount.loginId);
+    if (target.dataset.method === "bank" && !account) return settlementAccountModal();
+    if (account) { account.method = target.dataset.method === "deposit" ? "deposit" : "bank"; saveState(); render(); updateAccountUI(); showToast(account.method === "deposit" ? "정산금을 예치금으로 받아요. 원할 때 출금할 수 있어요." : "정산금을 등록한 계좌로 받아요."); }
+    return;
+  }
+  if (action === "master-pay-settlement") {
+    const record = (state.settlementWeeks || []).find(week => week.id === id);
+    if (!record || record.status === "지급 완료") return;
+    paySettlementRecord(record);
+    audit("공급사 정산 지급", `${supplierName(record.supplierLoginId)} · ${record.period} · ${money(record.net)} · ${record.method}`, "done", "money");
+    saveState(); render(); updateAccountUI(); return showToast(`${supplierName(record.supplierLoginId)} ${money(record.net)} 지급 완료 · ${record.method}`);
+  }
+  if (action === "master-hold-order") { masterHoldModal(id); return; }
+  if (action === "master-release-hold") {
+    const hold = state.settlementHolds?.[id];
+    if (!hold) return;
+    hold.released = true; hold.releasedAt = ymd(new Date());
+    const order = state.orders.find(item => item.id === id);
+    if (order) pushNotification(order.supplierLoginId, "supplier", "settlement", "정산 보류가 풀렸어요", `${order.id} · ${money(orderSupplyAmount(order))} · 다음 정산에 포함돼요.`, ["내부 알림"]);
+    audit("정산 보류 해제", `${id} · ${hold.reason}`, "done", "money");
+    saveState(); render(); updateAccountUI(); return showToast("보류를 풀었어요. 다음 정산에 들어가요.");
+  }
+  if (action === "master-withdraw") {
+    const item = (state.supplierWithdrawals || []).find(entry => entry.id === id);
+    if (!item || item.status !== "요청") return;
+    const approve = target.dataset.result === "approve";
+    item.status = approve ? "완료" : "반려"; item.doneAt = ymd(new Date());
+    const wallet = supplierWallet(item.supplierLoginId);
+    if (!approve) { wallet.balance += item.amount; wallet.transactions.unshift({ id: `SW-${item.id}-R`, type: "출금 반려 (복원)", amount: item.amount, at: item.doneAt }); }
+    else { state.accountingLedger = state.accountingLedger || []; state.accountingLedger.unshift({ id: `LG-${item.id}`, date: item.doneAt, supplierLoginId: item.supplierLoginId, type: "예치금 출금", period: "", gross: 0, fee: 0, deduct: 0, net: item.amount, method: item.account, ref: item.id }); }
+    pushNotification(item.supplierLoginId, "supplier", "settlement", approve ? `예치금 ${money(item.amount)} 출금 완료` : "예치금 출금이 반려됐어요", approve ? item.account : "계좌 정보를 확인해 주세요. 금액은 예치금으로 돌아갔어요.", ["내부 알림"]);
+    audit(approve ? "공급사 예치금 출금 이체" : "공급사 예치금 출금 반려", `${supplierName(item.supplierLoginId)} · ${money(item.amount)}`, "done", "money");
+    saveState(); render(); updateAccountUI(); return showToast(approve ? "이체 완료로 처리했어요." : "출금을 반려했어요. 금액은 예치금으로 돌아갔어요.");
+  }
+  if (action === "master-verify-account") {
+    const account = settlementAccount(id);
+    if (!account) return;
+    account.verified = true; account.verifiedAt = ymd(new Date());
+    pushNotification(id, "supplier", "settlement", "정산 계좌 확인 완료", maskAccount(account), ["내부 알림"]);
+    saveState(); render(); updateAccountUI(); return showToast("계좌 확인을 마쳤어요.");
+  }
+  if (action === "export-ledger") { const count = exportLedgerCsv(); return showToast(count >= 0 ? `정산 장부 ${count}줄을 CSV로 받았어요.` : "이 브라우저에서는 파일을 받을 수 없어요."); }
   if (action === "price-graph-product") { priceGraphProductId = id; render(); updateAccountUI(); document.querySelector(".price-graph")?.scrollIntoView({ block: "nearest" }); return; }
   if (action === "price-graph-range") { priceGraphDays = Number(target.dataset.days) || 60; render(); updateAccountUI(); return; }
   if (action === "master-status-filter") { masterStatusFilter = target.dataset.filter || "all"; render(); updateAccountUI(); return; }
@@ -7286,6 +7581,52 @@ document.addEventListener("submit", event => {
     pushNotification(refund.sellerLoginId, "seller", "refund", "공급사가 환불 협의를 요청했습니다", `${refund.orderId} · 두고톡에서 내용을 확인해 주세요.`);
     audit("환불 협의 요청", `${refund.id} · 거래처별 두고톡에 ${refund.orderId} 협의 내용을 기록했습니다.`, "pending", "refund");
     saveState(); closeModal(); render(); updateAccountUI(); showToast("기존 거래처 두고톡에 협의 요청을 보냈습니다.");
+  }
+  if (form.id === "supplierAddressForm") {
+    const pick = prefix => ({ zipCode: String(data[`${prefix}Zip`] || "").replace(/\D/g, "").slice(0, 5), address: String(data[`${prefix}Address`] || "").trim(), detail: String(data[`${prefix}Detail`] || "").trim() });
+    const shipFrom = pick("ship");
+    const same = Boolean(data.sameAsShip);
+    const returnTo = same ? { ...shipFrom } : pick("ret");
+    if (shipFrom.address.length < 5 || shipFrom.zipCode.length !== 5) return showToast("출고지 우편번호(5자리)와 주소를 입력해 주세요.");
+    if (returnTo.address.length < 5 || returnTo.zipCode.length !== 5) return showToast("반품지 우편번호(5자리)와 주소를 입력해 주세요.");
+    if (String(data.phone || "").replace(/\D/g, "").length < 9) return showToast("A/S·반품 문의 전화번호를 확인해 주세요.");
+    state.supplierAddresses = state.supplierAddresses || {};
+    state.supplierAddresses[currentAccount.loginId] = { shipFrom, returnTo, phone: formatPhone(String(data.phone)), sameAsShip: same, updatedAt: ymd(new Date()) };
+    audit("공급사 출고지·반품지 저장", `${supplierName(currentAccount.loginId)} · 반품지 ${addressLine(returnTo)}`, "done", "product");
+    saveState(); render(); updateAccountUI(); return showToast("출고지·반품지를 저장했어요. 셀러의 쇼핑몰 등록과 반품 안내에 바로 쓰여요.");
+  }
+  if (form.id === "settlementAccountForm") {
+    const accountNumber = String(data.accountNumber || "").replace(/\D/g, "");
+    if (!data.bankName) return showToast("은행을 골라 주세요.");
+    if (accountNumber.length < 10 || accountNumber.length > 14) return showToast("계좌번호를 확인해 주세요. (숫자 10~14자리)");
+    if (String(data.holder || "").trim().length < 2) return showToast("예금주를 입력해 주세요.");
+    state.settlementAccounts = state.settlementAccounts || {};
+    const prev = state.settlementAccounts[currentAccount.loginId] || {};
+    state.settlementAccounts[currentAccount.loginId] = { bankName: data.bankName, accountNumber, holder: String(data.holder).trim(), method: prev.method || "bank", verified: false, registeredAt: ymd(new Date()) };
+    audit("공급사 정산 계좌 등록", `${supplierName(currentAccount.loginId)} · ${data.bankName} •••• ${accountNumber.slice(-4)}`, "pending", "money");
+    saveState(); closeModal(); render(); updateAccountUI(); return showToast("정산 계좌를 저장했어요. 두고가 예금주를 확인하면 알려 드려요.");
+  }
+  if (form.id === "supplierWithdrawForm") {
+    const wallet = supplierWallet(currentAccount.loginId);
+    const account = settlementAccount(currentAccount.loginId);
+    const amount = Math.floor(Number(data.amount || 0));
+    if (!account) return showToast("정산 계좌를 먼저 등록해 주세요.");
+    if (amount < 1000 || amount > wallet.balance) return showToast("출금 가능 금액 안에서 1,000원 이상 입력해 주세요.");
+    wallet.balance -= amount;
+    const item = { id: `SWD-${String(Date.now()).slice(-9)}`, supplierLoginId: currentAccount.loginId, amount, account: maskAccount(account), status: "요청", requestedAt: ymd(new Date()) };
+    state.supplierWithdrawals = [item, ...(state.supplierWithdrawals || [])];
+    wallet.transactions.unshift({ id: `SW-${item.id}`, type: "출금 신청", amount: -amount, at: item.requestedAt });
+    audit("공급사 예치금 출금 신청", `${supplierName(currentAccount.loginId)} · ${money(amount)}`, "pending", "money");
+    saveState(); closeModal(); render(); updateAccountUI(); return showToast(`${money(amount)} 출금을 신청했어요. 두고가 확인 후 이체해요.`);
+  }
+  if (form.id === "settlementHoldForm") {
+    const order = state.orders.find(item => item.id === form.dataset.id);
+    if (!order) return closeModal();
+    state.settlementHolds = state.settlementHolds || {};
+    state.settlementHolds[order.id] = { reason: data.reason, memo: String(data.memo || "").trim(), at: ymd(new Date()), by: "두고 운영팀" };
+    pushNotification(order.supplierLoginId, "supplier", "settlement", "정산 보류 안내", `${order.id} · ${data.reason}${data.memo ? ` · ${data.memo}` : ""}`, ["내부 알림"]);
+    audit("정산 보류 지정", `${order.id} · ${supplierName(order.supplierLoginId)} · ${data.reason}`, "pending", "money");
+    saveState(); closeModal(); render(); updateAccountUI(); return showToast("보류로 지정했어요. 공급사 정산 화면에 사유가 보여요.");
   }
   if (form.id === "channelConnectForm") {
     const channel = sellerChannels().find(item => item.id === form.dataset.id);
