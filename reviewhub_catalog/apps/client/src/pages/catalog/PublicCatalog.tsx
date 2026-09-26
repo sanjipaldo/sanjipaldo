@@ -429,13 +429,11 @@ function PageFrame({ children }: { children: ReactNode }) {
       <BrandHeader />
       {children}
       <footer className="public-footer">
-        <div className="footer-top">
+        <div className="footer-top footer-compact-row">
           <div className="footer-brand-block">
             <BrandLogo />
             <div><strong>두고푸드 데이터 센터</strong><span>위탁셀러를 위한 실시간 상품/단가 정보센터</span></div>
           </div>
-          <a className="footer-cta" href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer"><MessageCircle size={17} /> 1:1 상담하기</a>
-        </div>
         <nav className="footer-link-groups" aria-label="푸터 바로가기">
           <div>
             <h3>상품 정보</h3>
@@ -455,6 +453,8 @@ function PageFrame({ children }: { children: ReactNode }) {
             <Link to="/admin">관리자센터</Link>
           </div>
         </nav>
+          <a className="footer-cta" href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer"><MessageCircle size={17} /> 1:1 상담하기</a>
+        </div>
         <div className="footer-bottom">
           <div className="footer-business-info">
             <p><span>(주) 두고홀딩스</span> <b>|</b> <span>대표: 문원오</span> <b>|</b> <span>사업자등록번호: 726-87-03167</span> <b>|</b> <span>통신판매업신고: 제 2024-세종아름 0878호</span></p>
