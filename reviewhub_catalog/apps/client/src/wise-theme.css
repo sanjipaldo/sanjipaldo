@@ -563,3 +563,37 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .admin-topbar { border-bottom: 1px solid var(--w-line); }
 /* 푸터: 흰색 + 위쪽 구분선, 라임 포인트는 상단 선·CTA만 */
 .public-footer { background: var(--w-canvas); border-top: 1px solid var(--w-line) !important; border-radius: 0; box-shadow: none; }
+
+/* 관리자 로그인: 공개 사이트와 같은 Wise 톤(흰 배경·짙은 글씨·라임 강조·알약 버튼) */
+.admin-login-page { grid-template-columns: 1.05fr .95fr; background: var(--w-canvas); font-family: var(--w-font); }
+.login-brand-panel { padding: 48px 56px; color: var(--w-ink); background: var(--w-canvas); border-right: 1px solid var(--w-line); }
+.login-brand-panel .doogo-logo { width: 148px; height: auto; }
+.login-kicker { color: var(--w-positive-deep); font-size: 13px; font-weight: 800; letter-spacing: .14em; }
+.login-brand-panel h1 { margin: 18px 0; color: var(--w-ink); font-size: clamp(40px, 4.6vw, 64px); font-weight: 800; line-height: 1.12; letter-spacing: -.04em; }
+.login-brand-panel p { color: var(--w-body); font-size: 17px; line-height: 1.7; }
+.login-brand-footer small { color: var(--w-mute); font-size: 13px; }
+.login-landing-actions { gap: 10px; }
+.login-landing-actions button, .login-landing-actions a { min-height: 44px; padding: 0 18px; border: 1px solid var(--w-ink); border-radius: 999px; color: var(--w-ink); background: var(--w-canvas); font-size: 14px; font-weight: 600; }
+.login-landing-actions button:hover, .login-landing-actions a:hover { background: var(--w-soft-2); }
+.login-form-panel { padding: 40px; background: var(--w-soft-2); }
+.login-card { width: min(440px, 100%); padding: 40px 36px; border: 1px solid var(--w-card-border); border-radius: var(--w-radius-xl); background: var(--w-canvas); box-shadow: var(--w-card-shadow); }
+.login-icon { width: 52px; height: 52px; border-radius: 16px; color: var(--w-ink-deep); background: var(--w-primary-pale); }
+.login-card h2 { margin: 20px 0 6px; color: var(--w-ink); font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+.login-card > p { color: var(--w-body); font-size: 15px; }
+.login-card label { gap: 8px; color: var(--w-ink); font-size: 14px; font-weight: 700; }
+.login-card input { height: 52px !important; padding: 0 16px !important; border: 1px solid var(--w-line) !important; border-radius: var(--w-radius-md) !important; font-size: 16px !important; }
+.login-card input:focus { border-color: var(--w-ink) !important; box-shadow: 0 0 0 3px rgba(159, 232, 112, .45) !important; }
+.login-card > button { height: 54px; margin-top: 26px; border-radius: 999px; color: var(--w-ink); background: var(--w-primary); font-size: 16px; font-weight: 700; box-shadow: none; }
+.login-card > button:hover:not(:disabled) { background: var(--w-primary-active); }
+.login-card > button:disabled { opacity: .6; }
+@media (max-width: 1050px) {
+  .admin-login-page { grid-template-columns: 1fr; }
+  .login-brand-panel { min-height: 0; gap: 22px; padding: 28px 20px 26px; border-right: 0; border-bottom: 1px solid var(--w-line); }
+  .login-brand-panel .doogo-logo { width: 116px; }
+  .login-brand-panel h1 { margin: 12px 0; font-size: 34px; }
+  .login-brand-panel p { font-size: 15px; }
+  .login-landing-actions { width: 100%; flex-direction: row; }
+  .login-landing-actions button, .login-landing-actions a { flex: 1; min-height: 44px; padding: 0 10px; font-size: 13px; white-space: nowrap; }
+  .login-form-panel { padding: 24px 16px 40px; }
+  .login-card { padding: 30px 22px; }
+}

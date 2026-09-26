@@ -400,8 +400,8 @@ function BrandHeader() {
       </Link>
       <nav className="public-nav" aria-label="주요 메뉴">
         <NavLink to="/" end>단가표</NavLink>
-        <NavLink to="/guide">공지사항</NavLink>
         <NavLink to="/notices">가격변동</NavLink>
+        <NavLink to="/guide">공지사항</NavLink>
         <button className="sourcing-nav-button" type="button" onClick={() => window.dispatchEvent(new CustomEvent("doogo:sourcing-open"))}><PackageSearch size={14} /> 소싱해주세요!</button>
         <a href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer"><MessageCircle size={14} /> 1:1 상담</a>
       </nav>

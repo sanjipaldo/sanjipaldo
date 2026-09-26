@@ -151,7 +151,7 @@ const StatusSchema = z.object({ status: z.enum(["received", "reviewing", "comple
 const ProductDisplayOrderSchema = z.object({
   items: z.array(z.object({
     id: z.string().trim().min(1),
-    displayOrder: z.coerce.number().int().min(0).max(100000000)
+    displayOrder: z.coerce.number().int().min(-100000000).max(100000000)
   })).min(1).max(5000)
 });
 const ProductGroupSchema = z.object({
@@ -159,14 +159,14 @@ const ProductGroupSchema = z.object({
   imageUrl: z.string().trim().max(1200).nullable().optional(),
   categoryId: z.string().trim().min(1).nullable().optional(),
   description: z.string().trim().max(2000).nullable().optional(),
-  displayOrder: z.coerce.number().int().min(0).max(100000000).optional(),
+  displayOrder: z.coerce.number().int().min(-100000000).max(100000000).optional(),
   isVisible: z.boolean().optional(),
   productIds: z.array(z.string().trim().min(1)).max(5000).optional()
 });
 const ProductGroupDisplayOrderSchema = z.object({
   items: z.array(z.object({
     id: z.string().trim().min(1),
-    displayOrder: z.coerce.number().int().min(0).max(100000000)
+    displayOrder: z.coerce.number().int().min(-100000000).max(100000000)
   })).min(1).max(5000)
 });
 const SupplierSchema = z.object({

@@ -265,8 +265,8 @@ export function AdminLoginPage() {
   return (
     <main className="admin-login-page">
       <section className="login-brand-panel">
-        <Link to="/" className="public-brand light"><DoogoLogo light /></Link>
-        <div><span className="login-kicker">MASTER CONSOLE</span><h1>상품과 가격 변동을<br />한 곳에서 관리하세요.</h1><p>상품 등록부터 카테고리, 공지, 소싱 요청과 가격 이력까지 연결된 운영 공간입니다.</p></div>
+        <Link to="/" className="public-brand"><DoogoLogo /></Link>
+        <div><span className="login-kicker">MASTER CONSOLE</span><h1>상품과 가격 변동을<br /><mark className="hero-highlight">한 곳에서</mark> 관리하세요.</h1><p>상품 등록부터 카테고리, 공지, 소싱 요청과 가격 이력까지 연결된 운영 공간입니다.</p></div>
         <div className="login-brand-footer">
           <small>© 2026 DOOGO FOOD</small>
           <div className="login-landing-actions">

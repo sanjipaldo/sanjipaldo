@@ -62,6 +62,12 @@ export async function notifyApiError(response: Response, fallbackMessage = "Requ
     : { message: fallbackMessage };
   const error = normalizeApiError(parsedBody);
 
+  // 로그인 만료·미로그인은 영어 코드 대신 한국어 안내 한 번만 보여 줍니다.
+  if (response.status === 401) {
+    toast.error("로그인이 필요합니다. 관리자 계정으로 다시 로그인해 주세요.", { id: "auth-required" });
+    return;
+  }
+
   toast.error(error.message, {
     description: error.code
   });

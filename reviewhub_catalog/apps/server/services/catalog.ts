@@ -751,11 +751,12 @@ export async function createProduct(input: ProductInput) {
   if (selectedShippingPolicy && selectedShippingPolicy.shippingType !== input.shippingType) {
     throw new DatabaseError("DATABASE_QUERY_FAILED", "배송 정책과 상품 배송유형이 일치하지 않습니다.", 400);
   }
-  const maximumOrderRows = await db
-    .select({ value: sql<number>`coalesce(max(${products.displayOrder}), 0)` })
+  // 새로 등록한 상품이 목록 맨 위에 오도록 현재 가장 앞 순서보다 앞에 둡니다(진열순서 관리에서 다시 옮길 수 있음).
+  const minimumOrderRows = await db
+    .select({ value: sql<number>`coalesce(min(${products.displayOrder}), 0)` })
     .from(products)
     .where(sql`${products.deletedAt} IS NULL`);
-  const displayOrder = Number(maximumOrderRows[0]?.value ?? 0) + 10;
+  const displayOrder = Number(minimumOrderRows[0]?.value ?? 0) - 10;
   const productInput = { ...input };
   delete productInput.options;
   const id = crypto.randomUUID();
