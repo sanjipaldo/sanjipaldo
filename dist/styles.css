@@ -8816,96 +8816,96 @@ body[data-role="supplier"] .pg-kicker { color: #111; }
 .refund-return-to small { color: #6b7684; font-size: 12.5px; }
 
 /* =====================================================================
-   v50: 공급사 = Miro 방식 (흰 캔버스 + 검정 알약 버튼 + 캐너리 옐로 포인트)
-   노랑은 '공급사'를 알려 주는 자리(역할 카드·선택 메뉴·프로필·태그·강조 카드)에만 쓰고
-   버튼·탭은 검정 알약 그대로. 노랑 위 글씨는 늘 검정, 연노랑 위 글씨는 진한 올리브.
+   v52: 공급사 = Airbnb 방식 (위탁셀러 블루 ↔ 공급사 레드)
+   흰 캔버스 + 잉크(#222) 글씨 + 라우쉬 레드(#ff385c) 한 가지 포인트.
+   레드 면 위 글씨는 흰색, 연한 레드 면 위 글씨는 진한 레드(#d1063a).
+   버튼 8px 모서리, 그림자는 한 단계만, 입력 포커스는 잉크 테두리(빛 번짐 없음).
+   예전 규칙(.app-shell[data-role] … !important)보다 앞서도록 #appView / #modal 로 좁힌다.
    ===================================================================== */
 body[data-role="supplier"] {
-  --sup-yellow: #ffd02f; --sup-yellow-deep: #f2bd00; --sup-yellow-light: #fff6d1; --sup-yellow-soft: #fffbea; --sup-yellow-dark: #5c4a00;
+  --sup-ink: #222222; --sup-ink-2: #3f3f3f; --sup-mute: #6a6a6a; --sup-line: #dddddd; --sup-soft: #f7f7f7; --sup-soft-2: #f7f7f7;
+  --rausch: #ff385c; --rausch-active: #e00b41; --rausch-deep: #d1063a; --rausch-disabled: #ffd1da; --rausch-tint: #fff0f3; --rausch-soft: #fff8f9;
+  --abnb-shadow: rgba(0,0,0,.02) 0 0 0 1px, rgba(0,0,0,.04) 0 2px 6px 0, rgba(0,0,0,.1) 0 4px 8px 0;
 }
-/* 사이드바: 역할 카드는 노랑, 선택 메뉴는 연노랑 + 노랑 아이콘 */
-body[data-role="supplier"] .workspace-switcher-entry { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; box-shadow: 0 8px 20px rgba(242,189,0,.28) !important; }
-body[data-role="supplier"] .workspace-switcher-entry b, body[data-role="supplier"] .workspace-switcher-entry strong, body[data-role="supplier"] .workspace-switcher-entry span:not(.role-icon) { color: #111 !important; }
-body[data-role="supplier"] .workspace-switcher-entry small { color: rgba(17,17,17,.66) !important; }
-body[data-role="supplier"] .workspace-switcher-entry .role-icon { color: var(--sup-yellow) !important; background: #111 !important; }
-body[data-role="supplier"] .workspace-switcher-entry svg { color: inherit; }
-body[data-role="supplier"] .workspace-menu button.active { color: #111 !important; background: var(--sup-yellow-light) !important; box-shadow: inset 4px 0 0 var(--sup-yellow) !important; font-weight: 800; }
-body[data-role="supplier"] .workspace-menu button.active .menu-icon { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; }
-body[data-role="supplier"] .workspace-menu button.active .menu-step { color: #fff !important; background: #111 !important; border-color: #111 !important; }
-body[data-role="supplier"] .workspace-menu button:hover:not(.active) { background: var(--sup-yellow-soft) !important; }
-body[data-role="supplier"] .menu-badge { color: #111 !important; background: var(--sup-yellow) !important; }
-/* 상단: 프로필은 노랑 원, '공급사 업무 메뉴'는 노랑 태그 */
-body[data-role="supplier"] .avatar-button, body[data-role="supplier"] #accountAvatar { color: #111 !important; background: var(--sup-yellow) !important; }
-body[data-role="supplier"] #pageContext { display: inline-block; padding: 2px 10px; color: var(--sup-yellow-dark) !important; background: var(--sup-yellow-light); border-radius: 99px; font-weight: 800; letter-spacing: .02em; }
-/* 태그·칩: 연노랑 바탕 + 진한 올리브 글씨 */
-body[data-role="supplier"] .chip.orange, body[data-role="supplier"] .chip.yellow { color: var(--sup-yellow-dark) !important; background: var(--sup-yellow-light) !important; }
-body[data-role="supplier"] .stl-kicker, body[data-role="supplier"] .pg-kicker { display: inline-block; justify-self: start; padding: 2px 10px; color: var(--sup-yellow-dark) !important; background: var(--sup-yellow-light); border-radius: 99px; }
-/* 강조: 오늘 할 일 숫자는 노랑 형광펜, 다음 정산 카드·정산 금액은 노랑 포인트 */
-body[data-role="supplier"] .home-greeting h2 em { color: #111 !important; text-decoration: none !important; background: linear-gradient(transparent 58%, var(--sup-yellow) 58%); padding: 0 2px; }
-body[data-role="supplier"] .stl-mini { background: var(--sup-yellow-soft); border-color: #f6e39a; box-shadow: inset 5px 0 0 var(--sup-yellow); }
-body[data-role="supplier"] .stl-next { box-shadow: inset 0 5px 0 var(--sup-yellow); }
-body[data-role="supplier"] .stl-sum .total { background: var(--sup-yellow-soft); }
-body[data-role="supplier"] .stl-method button.active, body[data-role="supplier"] .pg-range button.active { box-shadow: inset 0 -3px 0 var(--sup-yellow), 0 1px 4px rgba(0,0,0,.1); }
-/* 하단 탭: 선택 탭은 노랑 알약 */
-body[data-role="supplier"] .mobile-tabbar button.active .tabbar-icon { color: #111 !important; background: var(--sup-yellow) !important; }
-/* 포커스: 검정 테두리 + 노랑 빛 */
-body[data-role="supplier"] input:focus, body[data-role="supplier"] select:focus, body[data-role="supplier"] textarea:focus { border-color: #111 !important; box-shadow: 0 0 0 3px rgba(255,208,47,.45) !important; }
-/* 두고톡 목록: 선택 대화 연노랑, 새 공급사/연결 코드 + 버튼은 노랑 */
-body[data-role="supplier"] .talk-room-item.active { background: var(--sup-yellow-soft) !important; }
-body[data-role="supplier"] .talk-connect-plus.big { color: #111 !important; background: var(--sup-yellow) !important; }
-/* 모바일 메뉴의 예전 검정 규칙(.app-shell[data-role] … !important)보다 우선하도록 한 번 더 */
-body[data-role="supplier"] #appView .workspace-menu button.active { color: #111 !important; background: var(--sup-yellow-light) !important; box-shadow: inset 4px 0 0 var(--sup-yellow) !important; }
-body[data-role="supplier"] #appView .workspace-menu button.active .menu-icon { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; }
-body[data-role="supplier"] #appView .workspace-menu button.active .menu-step { color: #fff !important; background: #111 !important; border-color: #111 !important; }
-body[data-role="supplier"] #appView .workspace-switcher-entry { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; }
-
-/* =====================================================================
-   v51: 공급사 = Miro 노랑 우선. 검정 면(버튼·선택 탭·강조 카드·달력)을 노랑으로 바꾸고
-   검정은 글씨·얇은 선에만 남긴다. 노랑 위 글씨는 늘 검정(#111).
-   예전 규칙(.app-shell[data-role] … !important)보다 앞서도록 #appView / #modal 로 한 번 더 좁힌다.
-   ===================================================================== */
-body[data-role="supplier"] { --sup-yellow-mid: #ffe58a; --sup-amber: #f2b200; }
-/* 버튼: Miro button-yellow (노랑 알약 + 검정 글씨), 그림자 없이 평평하게 */
-body[data-role="supplier"] :is(#appView, #modal) :is(.primary-button, .small-button.approve, .login-submit) { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; box-shadow: none !important; }
-body[data-role="supplier"] :is(#appView, #modal) :is(.primary-button, .small-button.approve):hover:not(:disabled) { background: var(--sup-yellow-deep) !important; border-color: var(--sup-yellow-deep) !important; }
-body[data-role="supplier"] :is(#appView, #modal) :is(.primary-button, .small-button.approve):disabled { color: #9a9a9a !important; background: #f1f1f1 !important; border-color: #f1f1f1 !important; }
+/* 사이드바: 역할 카드는 레드, 선택 메뉴는 연한 레드 + 레드 아이콘 */
+body[data-role="supplier"] :is(#appView, #modal) .workspace-switcher-entry { color: #fff !important; background: var(--rausch) !important; border-color: var(--rausch) !important; box-shadow: var(--abnb-shadow) !important; }
+body[data-role="supplier"] :is(#appView, #modal) .workspace-switcher-entry :is(b, strong, span:not(.role-icon), svg) { color: #fff !important; }
+body[data-role="supplier"] :is(#appView, #modal) .workspace-switcher-entry small { color: rgba(255,255,255,.85) !important; }
+body[data-role="supplier"] :is(#appView, #modal) .workspace-switcher-entry .role-icon { color: var(--rausch) !important; background: #fff !important; }
+body[data-role="supplier"] :is(#appView, #modal) .workspace-switcher-entry .role-icon svg { color: var(--rausch) !important; }
+body[data-role="supplier"] :is(#appView, #modal) .workspace-menu button.active { color: var(--sup-ink) !important; background: var(--rausch-tint) !important; box-shadow: inset 3px 0 0 var(--rausch) !important; font-weight: 700; }
+body[data-role="supplier"] :is(#appView, #modal) .workspace-menu button.active .menu-icon { color: #fff !important; background: var(--rausch) !important; border-color: var(--rausch) !important; }
+body[data-role="supplier"] :is(#appView, #modal) .workspace-menu button:hover:not(.active) { background: var(--sup-soft) !important; }
+body[data-role="supplier"] :is(#appView, #modal) .workspace-menu .menu-step { color: var(--rausch-deep) !important; background: var(--rausch-tint) !important; border-color: var(--rausch-tint) !important; }
+body[data-role="supplier"] :is(#appView, #modal) .workspace-menu button.active .menu-step { color: #fff !important; background: var(--rausch) !important; border-color: var(--rausch) !important; }
+body[data-role="supplier"] .menu-badge { color: #fff !important; background: var(--rausch) !important; }
+/* 상단: 프로필은 레드 원, '공급사 업무 메뉴'는 연한 레드 태그 */
+body[data-role="supplier"] .avatar-button, body[data-role="supplier"] #accountAvatar { color: #fff !important; background: var(--rausch) !important; border-color: var(--rausch) !important; }
+body[data-role="supplier"] #pageContext { display: inline-block; padding: 2px 10px; color: var(--rausch-deep) !important; background: var(--rausch-tint); border-radius: 99px; font-weight: 700; }
+/* 버튼: 라우쉬 채움 + 흰 글씨, 8px 모서리, 그림자 없음 */
+body[data-role="supplier"] :is(#appView, #modal) :is(.primary-button, .small-button.approve) { color: #fff !important; background: var(--rausch) !important; border-color: var(--rausch) !important; box-shadow: none !important; border-radius: 8px !important; font-weight: 600; }
 body[data-role="supplier"] :is(#appView, #modal) :is(.primary-button, .small-button.approve) :is(svg, span, b) { color: inherit !important; }
-/* 선택 탭·필터: 노랑 알약 */
+body[data-role="supplier"] :is(#appView, #modal) :is(.primary-button, .small-button.approve):is(:hover, :active):not(:disabled) { background: var(--rausch-active) !important; border-color: var(--rausch-active) !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.primary-button, .small-button.approve):disabled { color: #fff !important; background: var(--rausch-disabled) !important; border-color: var(--rausch-disabled) !important; cursor: not-allowed; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.secondary-button, .small-button:not(.approve):not(.reject)) { color: var(--sup-ink) !important; background: #fff !important; border: 1px solid #c1c1c1 !important; border-radius: 8px !important; box-shadow: none !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.secondary-button, .small-button:not(.approve):not(.reject)):hover { border-color: var(--sup-ink) !important; }
+/* 선택 탭·필터: 연한 레드 알약 + 진한 레드 글씨 */
 body[data-role="supplier"] :is(#appView, #modal) :is(.order-filter-tabs, .settlement-tabs, .talk-tabs, .metric-toggle, .refund-type-tabs, .filter-tabs, .pick-status-tabs, .cat-mode, .deposit-filter, .onsale-pagination, .stl-tabs, .sup-tabs, .segmented) button.active,
-body[data-role="supplier"] :is(#appView, #modal) :is(.category-chip.active, .filter-chip.active, .supplier-order-flow button.active) { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; box-shadow: none !important; }
-body[data-role="supplier"] #appView .supplier-order-flow button.active span { color: #111 !important; background: #fff !important; }
-body[data-role="supplier"] #appView .order-stage-menu nav button b.stage-count.has-count { color: #111 !important; background: var(--sup-yellow) !important; box-shadow: none !important; }
-body[data-role="supplier"] #appView .order-stage-menu nav button.active { box-shadow: inset 0 -3px 0 var(--sup-yellow) !important; }
-/* 사이드바 단계 번호·역할 아이콘 */
-body[data-role="supplier"] #appView .workspace-menu .menu-step { color: var(--sup-yellow-dark) !important; background: var(--sup-yellow-light) !important; border-color: var(--sup-yellow-light) !important; }
-body[data-role="supplier"] #appView .workspace-menu button.active .menu-step { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; }
-body[data-role="supplier"] #appView .workspace-switcher-entry .role-icon { color: #111 !important; background: #fff !important; }
-/* 강조 카드: 검정 → 노랑 */
-body[data-role="supplier"] :is(#appView, #modal) :is(.scal-kpis > div.primary, .gf-status, .sales-kpi.primary, .settlement-hero, .supplier-performance, .balance-summary-head, .opening-balance, .refund-summary-card.primary, .deposit-balance-card, .invite-code-box, .billing-card, .home-order-step.tone-red) { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; box-shadow: none !important; }
-body[data-role="supplier"] :is(#appView, #modal) :is(.scal-kpis > div.primary, .gf-status, .sales-kpi.primary, .settlement-hero, .supplier-performance, .balance-summary-head, .opening-balance, .refund-summary-card.primary, .deposit-balance-card, .invite-code-box, .billing-card, .home-order-step.tone-red) :is(b, strong, h2, h3, h4, p, em, i, .gf-live) { color: #111 !important; }
-body[data-role="supplier"] :is(#appView, #modal) :is(.scal-kpis > div.primary, .gf-status, .sales-kpi.primary, .settlement-hero, .supplier-performance, .balance-summary-head, .opening-balance, .refund-summary-card.primary, .deposit-balance-card, .invite-code-box, .billing-card, .home-order-step.tone-red) :is(span, small, label) { color: rgba(17,17,17,.68) !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.category-chip.active, .filter-chip.active, .supplier-order-flow button.active) { color: var(--rausch-deep) !important; background: var(--rausch-tint) !important; border-color: var(--rausch) !important; box-shadow: inset 0 0 0 1px var(--rausch) !important; font-weight: 700; }
+body[data-role="supplier"] :is(#appView, #modal) .supplier-order-flow button.active span { color: #fff !important; background: var(--rausch) !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.stage-count.has-count, .order-stage-menu nav button b.stage-count.has-count) { color: #fff !important; background: var(--rausch) !important; box-shadow: none !important; }
+body[data-role="supplier"] :is(#appView, #modal) .order-stage-menu nav button.active { box-shadow: inset 0 -2px 0 var(--sup-ink) !important; }
+/* 태그·칩 */
+body[data-role="supplier"] :is(.chip.orange, .chip.yellow) { color: var(--rausch-deep) !important; background: var(--rausch-tint) !important; }
+body[data-role="supplier"] :is(.stl-kicker, .pg-kicker) { display: inline-block; justify-self: start; padding: 2px 10px; color: var(--rausch-deep) !important; background: var(--rausch-tint); border-radius: 99px; }
+/* 강조 카드: 화면마다 한 번 나오는 '라우쉬 모먼트' */
+body[data-role="supplier"] :is(#appView, #modal) :is(.scal-kpis > div.primary, .gf-status, .sales-kpi.primary, .settlement-hero, .supplier-performance, .balance-summary-head, .opening-balance, .refund-summary-card.primary, .deposit-balance-card, .invite-code-box, .billing-card, .home-order-step.tone-red) { color: #fff !important; background: var(--rausch) !important; border-color: var(--rausch) !important; box-shadow: none !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.scal-kpis > div.primary, .gf-status, .sales-kpi.primary, .settlement-hero, .supplier-performance, .balance-summary-head, .opening-balance, .refund-summary-card.primary, .deposit-balance-card, .invite-code-box, .billing-card, .home-order-step.tone-red) :is(b, strong, h2, h3, h4, p, em, i, .gf-live) { color: #fff !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.scal-kpis > div.primary, .gf-status, .sales-kpi.primary, .settlement-hero, .supplier-performance, .balance-summary-head, .opening-balance, .refund-summary-card.primary, .deposit-balance-card, .invite-code-box, .billing-card, .home-order-step.tone-red) :is(span, small, label) { color: rgba(255,255,255,.86) !important; }
 /* 작은 표시: 숫자 배지·단계 점·상태 칩·스위치·아바타 */
-body[data-role="supplier"] :is(#appView, #modal) :is(.home-todo em, .sup-chip.dark, .sup-stage.stage-live, .talk-avatar.channel, .refund-step.done > b, .refund-step.active > b) { color: #111 !important; background: var(--sup-yellow) !important; }
-body[data-role="supplier"] :is(#appView, #modal) :is(.sup-bulk-step i, .gf-steps .done i, .refund-timeline .done i, .refund-timeline .active i, .order-status-timeline > div.done i, .order-status-timeline > div.active i) { color: #111 !important; background: var(--sup-yellow) !important; box-shadow: 0 0 0 1px var(--sup-yellow-deep) !important; }
-body[data-role="supplier"] :is(#appView, #modal) .automation-switch.on { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; }
-body[data-role="supplier"] :is(#appView, #modal) .scal-rank-row i em { background: var(--sup-amber); }
-/* 매출 달력: 연노랑 → 진노랑 한 가지 색 단계 (글씨는 모두 검정) */
-body[data-role="supplier"] .scal-day.level-1 { color: #111; background: var(--sup-yellow-soft); border-color: #f6e8b0; }
-body[data-role="supplier"] .scal-day.level-2 { color: #111; background: var(--sup-yellow-mid); border-color: var(--sup-yellow-mid); }
-body[data-role="supplier"] .scal-day.level-3 { color: #111; background: var(--sup-yellow); border-color: var(--sup-yellow); }
-body[data-role="supplier"] .scal-day.level-4 { color: #111; background: var(--sup-amber); border-color: var(--sup-amber); }
-body[data-role="supplier"] .scal-day:not(:disabled):hover { border-color: #111; box-shadow: 0 6px 16px rgba(242,178,0,.25); }
-body[data-role="supplier"] .scal-legend i.level-1 { background: var(--sup-yellow-soft); border-color: #f6e8b0; }
-body[data-role="supplier"] .scal-legend i.level-2 { background: var(--sup-yellow-mid); border-color: var(--sup-yellow-mid); }
-body[data-role="supplier"] .scal-legend i.level-3 { background: var(--sup-yellow); border-color: var(--sup-yellow); }
-body[data-role="supplier"] .scal-legend i.level-4 { background: var(--sup-amber); border-color: var(--sup-amber); }
-body[data-role="supplier"] .scal-metric { background: var(--sup-yellow-soft); }
-body[data-role="supplier"] #appView :is(.sup-seller-mini i, .gf-guide .done i) { color: #111 !important; background: var(--sup-yellow) !important; }
-body[data-role="supplier"] #appView .talk-room-title small i { background: var(--sup-amber) !important; }
-body[data-role="supplier"] #appView .home-todo:not(.tone-red) { border-left-color: var(--sup-yellow) !important; }
-body[data-role="supplier"] #appView .sup-bulk-step.has { background: var(--sup-yellow-soft); border-color: var(--sup-yellow); box-shadow: none; }
-body[data-role="supplier"] #appView .gf-strip:not(.low) { background: var(--sup-yellow-soft); border-color: var(--sup-yellow); }
-body[data-role="supplier"] .scal-day.today { border-color: var(--sup-amber); box-shadow: inset 0 0 0 2px var(--sup-amber); }
-body[data-role="supplier"] #appView .gf-credit { border: 1.5px solid var(--sup-yellow); }
-body[data-role="supplier"] #appView .gf-carrier-list label:has(input:checked) { border-color: var(--sup-yellow); background: var(--sup-yellow-soft); }
-body[data-role="supplier"] #appView .pg-products button.active { border-color: var(--sup-yellow); box-shadow: inset 0 0 0 1px var(--sup-yellow); background: var(--sup-yellow-soft); }
+body[data-role="supplier"] :is(#appView, #modal) :is(.home-todo em, .sup-chip.dark, .sup-stage.stage-live, .talk-avatar.channel, .refund-step.done > b, .refund-step.active > b, .sup-seller-mini i, .gf-guide .done i) { color: #fff !important; background: var(--rausch) !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.sup-bulk-step i, .gf-steps .done i, .refund-timeline .done i, .refund-timeline .active i, .order-status-timeline > div.done i, .order-status-timeline > div.active i) { color: #fff !important; background: var(--rausch) !important; box-shadow: 0 0 0 1px var(--rausch) !important; }
+body[data-role="supplier"] :is(#appView, #modal) .automation-switch.on { color: #fff !important; background: var(--rausch) !important; border-color: var(--rausch) !important; }
+body[data-role="supplier"] :is(#appView, #modal) .scal-rank-row i em { background: var(--rausch); }
+body[data-role="supplier"] :is(#appView, #modal) .talk-room-title small i { background: var(--rausch) !important; }
+/* 홈: 인사말 숫자는 레드 글씨, 할 일 카드 왼쪽 선은 레드 */
+body[data-role="supplier"] .home-greeting h2 em { color: var(--rausch) !important; text-decoration: none !important; background: none !important; padding: 0; }
+body[data-role="supplier"] :is(#appView, #modal) .home-todo { border-left-color: var(--rausch) !important; }
+body[data-role="supplier"] :is(#appView, #modal) .home-todo.tone-red strong { color: var(--rausch-deep) !important; }
+/* 정산 카드 */
+body[data-role="supplier"] .stl-mini { background: var(--rausch-soft); border-color: var(--rausch-disabled); box-shadow: inset 4px 0 0 var(--rausch); }
+body[data-role="supplier"] .stl-next { box-shadow: inset 0 4px 0 var(--rausch); }
+body[data-role="supplier"] .stl-sum .total { background: var(--rausch-soft); }
+body[data-role="supplier"] :is(.stl-method, .pg-range) button.active { box-shadow: inset 0 -2px 0 var(--rausch), 0 1px 4px rgba(0,0,0,.1); }
+/* 주문·굿스플로: 굵은 검정 테두리 → 연한 레드 */
+body[data-role="supplier"] #appView .sup-bulk-step.has { background: var(--rausch-soft); border-color: var(--rausch-disabled); box-shadow: none; }
+body[data-role="supplier"] #appView .gf-strip:not(.low) { background: var(--rausch-soft); border-color: var(--rausch-disabled); }
+body[data-role="supplier"] #appView .gf-credit { border: 1px solid var(--sup-line); }
+body[data-role="supplier"] #appView .gf-carrier-list label:has(input:checked) { border-color: var(--rausch); background: var(--rausch-soft); }
+body[data-role="supplier"] #appView .pg-products button.active { border-color: var(--rausch); box-shadow: inset 0 0 0 1px var(--rausch); background: var(--rausch-soft); }
+/* 두고톡 */
+body[data-role="supplier"] .talk-room-item.active { background: var(--rausch-soft) !important; }
+body[data-role="supplier"] .talk-connect-plus.big { color: #fff !important; background: var(--rausch) !important; }
+/* 매출 달력: 연한 레드 → 진한 레드 한 가지 색 단계. 가장 진한 칸만 흰 글씨 */
+body[data-role="supplier"] .scal-day.level-1 { color: var(--sup-ink); background: var(--rausch-tint); border-color: #ffe0e7; }
+body[data-role="supplier"] .scal-day.level-2 { color: var(--sup-ink); background: #ffc9d4; border-color: #ffc9d4; }
+body[data-role="supplier"] .scal-day.level-3 { color: var(--sup-ink); background: #ff8aa1; border-color: #ff8aa1; }
+body[data-role="supplier"] .scal-day.level-4 { color: #fff; background: var(--rausch-active); border-color: var(--rausch-active); }
+body[data-role="supplier"] .scal-day:not(:disabled):hover { border-color: var(--sup-ink); box-shadow: var(--abnb-shadow); }
+body[data-role="supplier"] .scal-day.today { border-color: var(--sup-ink); box-shadow: inset 0 0 0 1px var(--sup-ink); }
+body[data-role="supplier"] .scal-legend i.level-1 { background: var(--rausch-tint); border-color: #ffe0e7; }
+body[data-role="supplier"] .scal-legend i.level-2 { background: #ffc9d4; border-color: #ffc9d4; }
+body[data-role="supplier"] .scal-legend i.level-3 { background: #ff8aa1; border-color: #ff8aa1; }
+body[data-role="supplier"] .scal-legend i.level-4 { background: var(--rausch-active); border-color: var(--rausch-active); }
+body[data-role="supplier"] .scal-metric { background: var(--sup-soft); }
+/* 모바일 하단 탭: 선택 탭은 레드 아이콘·글씨 (Airbnb 앱처럼 바탕 없이) */
+body[data-role="supplier"] .mobile-tabbar button.active { color: var(--rausch-deep) !important; }
+body[data-role="supplier"] .mobile-tabbar button.active .tabbar-icon { color: var(--rausch) !important; background: transparent !important; }
+/* 입력: 포커스 시 잉크 테두리 2px 느낌, 빛 번짐 없음 */
+body[data-role="supplier"] :is(input, select, textarea):focus { border-color: var(--sup-ink) !important; box-shadow: 0 0 0 1px var(--sup-ink) !important; }
+body[data-role="supplier"] :is(input[type="checkbox"], input[type="radio"]) { accent-color: var(--rausch); }
+/* 오늘 할 일: 급한 일(레드 톤)만 라우쉬, 나머지는 흰 바탕 + 잉크 테두리 버튼 (Airbnb처럼 레드는 아껴 쓴다) */
+body[data-role="supplier"] :is(#appView, #modal) .home-todo em { border-radius: 8px !important; }
+body[data-role="supplier"] :is(#appView, #modal) .home-todo:not(.tone-red) { border-left-color: var(--sup-line) !important; }
+body[data-role="supplier"] :is(#appView, #modal) .home-todo:not(.tone-red) em { color: var(--sup-ink) !important; background: #fff !important; box-shadow: inset 0 0 0 1px var(--sup-ink); }
+body[data-role="supplier"] :is(#appView, #modal) .home-todo:hover { box-shadow: var(--abnb-shadow) !important; }
