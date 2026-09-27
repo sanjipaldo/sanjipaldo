@@ -9529,3 +9529,12 @@ body[data-role="supplier"] .xf-start { background: #f5f5f5; }
   .xo-card-actions { width: 100%; }
   .xo-card-actions button { flex: 1 1 calc(50% - 6px); }
 }
+
+/* 상단 제목: 휴대폰에서 한 줄로 */
+.greet-hi-m { display: none; }
+@media (max-width: 720px) {
+  #pageTitle { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 100%; }
+  .topbar-heading { min-width: 0; }
+  #pageTitle .greet-hi { display: none; }
+  .greet-hi-m { display: inline; font-weight: 700; color: #333d4b; }
+}

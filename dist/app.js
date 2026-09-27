@@ -1717,12 +1717,14 @@ function render() {
   const defaultTitle = activeMenuIndex === 0 ? baseTitle : roleMenus[activeRole][activeMenuIndex];
   const isDashboard = activeMenuIndex === 0;
   document.getElementById("pageContext").textContent = `${roleLabel()} ${isDashboard ? "대시보드" : "업무 메뉴"}`;
-  document.getElementById("pageTitle").textContent = isDashboard
-    ? `안녕하세요 ${accountGreetingName()}님! 👋`
-    : (activeRole === "seller" ? contentText(`seller.page.${activeMenuIndex}`, defaultTitle) : defaultTitle);
-  document.getElementById("pageSubtitle").textContent = isDashboard
-    ? "오늘도 두고와 함께 쇼핑몰 성장을 만들어 가세요!"
-    : `${roleLabel()} 업무를 한 화면에서 확인하고 처리하세요.`;
+  /* 휴대폰에서는 제목을 한 줄로: ‘안녕하세요’는 아래 줄로 내리고 이름만 크게 */
+  const titleEl = document.getElementById("pageTitle");
+  if (isDashboard) titleEl.innerHTML = `<span class="greet-hi">안녕하세요 </span>${escapeHtml(accountGreetingName())}님! <span class="greet-wave" aria-hidden="true">👋</span>`;
+  else titleEl.textContent = activeRole === "seller" ? contentText(`seller.page.${activeMenuIndex}`, defaultTitle) : defaultTitle;
+  titleEl.title = titleEl.textContent;
+  const subtitleEl = document.getElementById("pageSubtitle");
+  if (isDashboard) subtitleEl.innerHTML = `<span class="greet-hi-m">안녕하세요! </span>오늘도 두고와 함께 쇼핑몰 성장을 만들어 가세요!`;
+  else subtitleEl.textContent = `${roleLabel()} 업무를 한 화면에서 확인하고 처리하세요.`;
   const demoNotice = document.getElementById("demoNotice");
   if (demoNotice) demoNotice.hidden = activeRole === "seller" && (editMode || [3, 6].includes(activeMenuIndex));
   document.getElementById("appView").dataset.editMode = String(editMode && activeRole === "seller" && activeMenuIndex === 0);
