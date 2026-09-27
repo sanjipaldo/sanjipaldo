@@ -3514,9 +3514,9 @@ function supplierOrderManagementTemplate() {
   const shippingCount = allOrders.filter(order => order.status === "배송중").length;
   const checkCount = allOrders.filter(order => order.status === "주문확인필요").length;
   const bulkStep = (no, title, count, caption, button, attrs) => `<div class="sup-bulk-step ${count ? "has" : ""}"><i>${no}</i><div><b>${title}</b><strong>${count}<em>건</em></strong><small>${caption}</small></div>${button ? `<button type="button" class="${count ? "primary-button" : "secondary-button"}" ${attrs} ${count ? "" : "disabled"}>${button}</button>` : ""}</div>`;
-  return `${sectionHero("주문 · 출고 관리", "위탁셀러가 결제한 주문이 자동으로 들어와요. 한 번에 확인하고, 한 번에 송장을 발급하세요.", `<button type="button" class="secondary-button" data-action="supplier-orders-csv" data-status="${supplierOrderStatus}">⬇ 발주서 엑셀(CSV)</button>`)}
+  return `${sectionHero("주문 · 출고 관리", "위탁셀러가 결제한 주문이 자동으로 들어와요. 한 번에 확인하고, 한 번에 송장을 발급하세요.", `<div class="hero-actions"><button type="button" class="secondary-button" data-action="supplier-orders-csv" data-status="${supplierOrderStatus}">⬇ 발주서 엑셀(CSV)</button><button type="button" class="primary-button" data-action="tracking-upload">⬆ 송장 엑셀 업로드</button></div>`)}
     <section class="panel sup-bulk"><div class="sup-bulk-head"><div><span>ONE-CLICK FULFILLMENT</span><h3>주문 한 번에 처리하기</h3><p>① 확인·포장 → ② 송장 자동 출력(굿스플로 → 두고·셀러 화면에 바로 반영) → ③ 배송완료 → 정산</p></div>${checkCount ? `<button type="button" class="sup-alert" data-action="filter-supplier-orders" data-status="주문확인필요">⚠ 채널 확인 필요 ${checkCount}건</button>` : ""}</div>
-      <div class="sup-bulk-steps">${bulkStep(1, "신규 주문", newCount, "위탁셀러 결제 완료", "전체 확인·포장", 'data-action="supplier-bulk-confirm"')}${bulkStep(2, "포장·송장 대기", readyCount, `굿스플로 · 1건 ${money(goodsflowFee(goodflowProfile()))}`, "송장 자동 출력", 'data-action="auto-issue-all"')}${bulkStep(3, "배송중", shippingCount, "셀러 쇼핑몰 자동 전송", "배송완료 반영", 'data-action="supplier-bulk-deliver"')}${bulkStep(4, "배송완료", allOrders.filter(order => order.status === "배송완료").length, "월말 정산 예정", "", "")}</div>
+      <div class="sup-bulk-steps">${bulkStep(1, "신규 주문", newCount, "위탁셀러 결제 완료", "전체 확인·포장", 'data-action="supplier-bulk-confirm"')}${bulkStep(2, "포장·송장 대기", readyCount, `굿스플로 · 1건 ${money(goodsflowFee(goodflowProfile()))} · <button type="button" class="sup-bulk-alt" data-action="tracking-upload">직접 뽑은 송장은 엑셀로 올리기 →</button>`, "송장 자동 출력", 'data-action="auto-issue-all"')}${bulkStep(3, "배송중", shippingCount, "셀러 쇼핑몰 자동 전송", "배송완료 반영", 'data-action="supplier-bulk-deliver"')}${bulkStep(4, "배송완료", allOrders.filter(order => order.status === "배송완료").length, "월말 정산 예정", "", "")}</div>
     </section>
     ${(() => { const conn = goodflowProfile(); return conn.status === "connected" ? `<button type="button" class="gf-strip ${goodsflowCapacity(conn) < 20 ? "low" : ""}" data-action="goodflow-settings"><b>굿스플로 연동중</b><span>${escapeHtml(conn.carrier || "")} · 크레딧 ${money(conn.credit || 0)} (송장 약 ${goodsflowCapacity(conn).toLocaleString()}건)</span><em>충전 · 설정 →</em></button>` : `<button type="button" class="gf-strip off" data-action="goodflow-settings"><b>굿스플로 미연동</b><span>아이디만 연결하면 송장이 자동으로 출력돼요</span><em>연동하기 →</em></button>`; })()}
     <div class="supplier-order-flow panel">${statuses.map((status, index) => `<button type="button" class="${supplierOrderStatus === status ? "active" : ""}" data-action="filter-supplier-orders" data-status="${status}"><span>0${index + 1}</span><b>${status}</b><strong>${allOrders.filter(order => order.status === status).length}</strong></button>`).join("")}</div>
@@ -3892,6 +3892,274 @@ function supplierOrdersCsv(status, ids = null) {
     return orders.length;
   } catch { return -1; }
 }
+/* ===== 송장 엑셀 일괄 등록 =====
+   수동으로 송장을 넣는 공급사용. 배송준비중 주문이 채워진 엑셀 양식을 받아 택배사·송장번호만 채워 올리면 한 번에 등록된다.
+   엑셀(.xlsx)은 외부 라이브러리 없이 직접 읽고 쓴다 (xlsx = zip 안의 XML). CSV도 받는다. */
+const CRC32_TABLE = (() => { const table = new Uint32Array(256); for (let n = 0; n < 256; n += 1) { let c = n; for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; table[n] = c >>> 0; } return table; })();
+function crc32(bytes) { let c = 0xffffffff; for (let i = 0; i < bytes.length; i += 1) c = CRC32_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+/* 압축 없는(stored) zip 만들기 */
+function zipStore(files) {
+  const enc = new TextEncoder();
+  const parts = []; const central = []; let offset = 0;
+  files.forEach(file => {
+    const name = enc.encode(file.name); const data = typeof file.data === "string" ? enc.encode(file.data) : file.data; const crc = crc32(data);
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint16(6, 0x0800, true); local.setUint16(8, 0, true); local.setUint16(10, 0, true); local.setUint16(12, 0x21, true);
+    local.setUint32(14, crc, true); local.setUint32(18, data.length, true); local.setUint32(22, data.length, true); local.setUint16(26, name.length, true); local.setUint16(28, 0, true);
+    parts.push(new Uint8Array(local.buffer), name, data);
+    const head = new DataView(new ArrayBuffer(46));
+    head.setUint32(0, 0x02014b50, true); head.setUint16(4, 20, true); head.setUint16(6, 20, true); head.setUint16(8, 0x0800, true); head.setUint16(10, 0, true); head.setUint16(12, 0, true); head.setUint16(14, 0x21, true);
+    head.setUint32(16, crc, true); head.setUint32(20, data.length, true); head.setUint32(24, data.length, true); head.setUint16(28, name.length, true); head.setUint32(42, offset, true);
+    central.push(new Uint8Array(head.buffer), name);
+    offset += 30 + name.length + data.length;
+  });
+  const centralSize = central.reduce((sum, part) => sum + part.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, centralSize, true); end.setUint32(16, offset, true);
+  const all = [...parts, ...central, new Uint8Array(end.buffer)];
+  const out = new Uint8Array(all.reduce((sum, part) => sum + part.length, 0)); let at = 0; all.forEach(part => { out.set(part, at); at += part.length; });
+  return out;
+}
+/* zip 읽기: 이름 → 풀린 바이트 (deflate는 브라우저 DecompressionStream) */
+async function unzipFiles(buffer) {
+  const bytes = new Uint8Array(buffer); const view = new DataView(buffer);
+  let end = -1; for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 66000); i -= 1) if (view.getUint32(i, true) === 0x06054b50) { end = i; break; }
+  if (end < 0) throw new Error("엑셀 파일을 읽지 못했어요. 파일이 손상됐거나 엑셀(.xlsx) 파일이 아니에요.");
+  const count = view.getUint16(end + 10, true); let at = view.getUint32(end + 16, true);
+  const dec = new TextDecoder(); const out = new Map();
+  for (let n = 0; n < count; n += 1) {
+    if (view.getUint32(at, true) !== 0x02014b50) break;
+    const method = view.getUint16(at + 10, true), size = view.getUint32(at + 20, true), nameLen = view.getUint16(at + 28, true), extraLen = view.getUint16(at + 30, true), commentLen = view.getUint16(at + 32, true), localAt = view.getUint32(at + 42, true);
+    const name = dec.decode(bytes.subarray(at + 46, at + 46 + nameLen));
+    const dataAt = localAt + 30 + view.getUint16(localAt + 26, true) + view.getUint16(localAt + 28, true);
+    out.set(name, { method, raw: bytes.subarray(dataAt, dataAt + size) });
+    at += 46 + nameLen + extraLen + commentLen;
+  }
+  const read = async name => {
+    const entry = out.get(name) || out.get(name.replace(/^\//, "")); if (!entry) return null;
+    if (entry.method === 0) return dec.decode(entry.raw);
+    if (entry.method !== 8 || typeof DecompressionStream === "undefined") throw new Error("이 브라우저에서는 엑셀을 읽을 수 없어요. CSV로 저장해서 올려 주세요.");
+    const stream = new Blob([entry.raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return new Response(stream).text();
+  };
+  return { names: [...out.keys()], read };
+}
+function xmlText(value) { return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ""); }
+function xlsxColName(index) { let name = ""; index += 1; while (index) { const rem = (index - 1) % 26; name = String.fromCharCode(65 + rem) + name; index = Math.floor((index - 1) / 26); } return name; }
+function xlsxColIndex(ref) { const letters = String(ref).match(/^[A-Z]+/i)?.[0].toUpperCase() || "A"; return [...letters].reduce((sum, ch) => sum * 26 + ch.charCodeAt(0) - 64, 0) - 1; }
+/* 엑셀 만들기: sheets = [{ name, rows, widths, textCols, validations: [{ sqref, formula }], headerRows }] */
+function xlsxBuild(sheets) {
+  const sheetXml = sheet => {
+    const cols = (sheet.widths || []).map((width, index) => `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"${(sheet.textCols || []).includes(index) ? ` style="2"` : ""}/>`).join("");
+    const rows = sheet.rows.map((row, r) => `<row r="${r + 1}">${row.map((value, c) => { const ref = `${xlsxColName(c)}${r + 1}`; const style = r < (sheet.headerRows ?? 1) ? 1 : (sheet.textCols || []).includes(c) ? 2 : 0; return value === "" || value == null ? (style === 2 ? `<c r="${ref}" s="2"/>` : "") : `<c r="${ref}" t="inlineStr"${style ? ` s="${style}"` : ""}><is><t xml:space="preserve">${xmlText(value)}</t></is></c>`; }).join("")}</row>`).join("");
+    const dv = (sheet.validations || []).length ? `<dataValidations count="${sheet.validations.length}">${sheet.validations.map(v => `<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="택배사" error="목록에 있는 택배사를 골라 주세요" sqref="${v.sqref}"><formula1>${xmlText(v.formula)}</formula1></dataValidation>`).join("")}</dataValidations>` : "";
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>${cols ? `<cols>${cols}</cols>` : ""}<sheetData>${rows}</sheetData>${dv}</worksheet>`;
+  };
+  const files = [
+    { name: "[Content_Types].xml", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>` },
+    { name: "_rels/.rels", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+    { name: "xl/workbook.xml", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((sheet, i) => `<sheet name="${xmlText(sheet.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets></workbook>` },
+    { name: "xl/_rels/workbook.xml.rels", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("")}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+    { name: "xl/styles.xml", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><name val="맑은 고딕"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/></patternFill></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="3"><xf/><xf fontId="1" fillId="2" applyFont="1" applyFill="1"/><xf numFmtId="49" applyNumberFormat="1"/></cellXfs></styleSheet>` },
+    ...sheets.map((sheet, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(sheet) }))
+  ];
+  return zipStore(files);
+}
+/* 엑셀 읽기: 첫 번째 시트(또는 이름에 ‘송장’이 들어간 시트)를 글자 표로 */
+async function xlsxReadRows(buffer) {
+  const zip = await unzipFiles(buffer);
+  const parse = text => new DOMParser().parseFromString(text, "application/xml");
+  const byTag = (node, tag) => [...node.getElementsByTagNameNS("*", tag)];
+  const workbook = parse(await zip.read("xl/workbook.xml") || "");
+  const sheetsInfo = byTag(workbook, "sheet").map(sheet => ({ name: sheet.getAttribute("name") || "", rid: sheet.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") || sheet.getAttribute("r:id") }));
+  if (!sheetsInfo.length) throw new Error("엑셀 안에서 시트를 찾지 못했어요.");
+  const pick = sheetsInfo.find(sheet => /송장|주문/.test(sheet.name)) || sheetsInfo[0];
+  const rels = parse(await zip.read("xl/_rels/workbook.xml.rels") || "");
+  let target = byTag(rels, "Relationship").find(rel => rel.getAttribute("Id") === pick.rid)?.getAttribute("Target") || "worksheets/sheet1.xml";
+  target = target.startsWith("/") ? target.slice(1) : `xl/${target.replace(/^\.\//, "")}`;
+  const sharedText = await zip.read("xl/sharedStrings.xml");
+  const shared = sharedText ? byTag(parse(sharedText), "si").map(si => byTag(si, "t").map(t => t.textContent).join("")) : [];
+  const sheetText = await zip.read(target);
+  if (!sheetText) throw new Error("엑셀 시트를 읽지 못했어요.");
+  const rows = [];
+  byTag(parse(sheetText), "row").forEach(rowEl => {
+    const r = Number(rowEl.getAttribute("r") || rows.length + 1) - 1; const row = [];
+    byTag(rowEl, "c").forEach((cell, index) => {
+      const col = cell.getAttribute("r") ? xlsxColIndex(cell.getAttribute("r")) : index;
+      const type = cell.getAttribute("t"); const v = byTag(cell, "v")[0]?.textContent ?? "";
+      row[col] = type === "s" ? (shared[Number(v)] ?? "") : type === "inlineStr" ? byTag(cell, "t").map(t => t.textContent).join("") : type === "b" ? (v === "1" ? "TRUE" : "FALSE") : v;
+    });
+    rows[r] = Array.from(row, value => value ?? "");
+  });
+  return Array.from(rows, row => row || []).filter(row => row.some(value => String(value).trim()));
+}
+async function readSheetFile(file) {
+  const buffer = await file.arrayBuffer();
+  const head = new Uint8Array(buffer.slice(0, 4));
+  if (head[0] === 0x50 && head[1] === 0x4b) return xlsxReadRows(buffer);
+  if (head[0] === 0xd0 && head[1] === 0xcf) throw new Error("예전 엑셀(.xls) 형식이에요. 엑셀에서 ‘다른 이름으로 저장 → Excel 통합 문서(.xlsx)’ 또는 CSV로 저장해 올려 주세요.");
+  let text = new TextDecoder("utf-8").decode(buffer);
+  if ((text.match(/\uFFFD/g) || []).length > 2) { try { text = new TextDecoder("euc-kr").decode(buffer); } catch (error) { /* 그대로 */ } }
+  return parseCsv(text);
+}
+function downloadBytes(bytes, filename, type) {
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([bytes], { type }));
+  link.download = filename; document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+}
+
+/* 택배사 이름 맞추기: 정확한 이름 → 네이버 코드 → 별칭 → 포함 */
+function resolveCarrierName(input) {
+  const norm = value => String(value || "").toLowerCase().replace(/\(주\)|주식회사|㈜|[\s()·.\-_/]/g, "");
+  const q = norm(input); if (!q) return null;
+  const exact = CARRIERS.find(item => norm(item.name) === q) || CARRIERS.find(item => item.naver && item.naver.toLowerCase() === q);
+  if (exact) return exact.name;
+  const aliasHit = CARRIERS.find(item => String(item.alias || "").toLowerCase().split(/\s+/).map(norm).filter(Boolean).includes(q));
+  if (aliasHit) return aliasHit.name;
+  const loose = q.replace(/택배$/, "");
+  const partial = CARRIERS.find(item => norm(item.name).replace(/택배/, "").startsWith(loose) && loose.length >= 2) || CARRIERS.find(item => loose.length >= 2 && norm(item.name).includes(loose));
+  return partial ? partial.name : null;
+}
+function normalizeTracking(value) {
+  const raw = String(value ?? "").trim();
+  if (/^\d+(\.\d+)?e\+?\d+$/i.test(raw)) return { error: "엑셀이 숫자를 줄여 저장했어요 (예: 4.5E+11). 송장번호 칸을 ‘텍스트’로 바꿔 다시 입력해 주세요." };
+  const clean = raw.replace(/\.0+$/, "").replace(/[\s-]/g, "");
+  if (!clean) return { empty: true };
+  if (!/^[A-Za-z0-9]{8,20}$/.test(clean)) return { error: "송장번호는 숫자·영문 8~20자리예요." };
+  return { value: clean.toUpperCase() };
+}
+let trackingUploadDraft = null;
+/* 양식: 송장을 기다리는 주문 (체크한 주문이 있으면 그 주문만) + 택배사 목록 시트(드롭다운) */
+function trackingTemplateOrders() {
+  const waiting = currentSupplierOrders().filter(order => ["배송준비중", "발주완료", "신규주문"].includes(order.status) && !order.tracking);
+  const picked = waiting.filter(order => supplierOrderPicks.has(order.id));
+  return picked.length ? picked : waiting.filter(order => order.status === "배송준비중").length ? waiting.filter(order => order.status === "배송준비중") : waiting;
+}
+function downloadTrackingTemplate(format = "xlsx") {
+  const orders = trackingTemplateOrders();
+  const defaultCarrier = goodflowProfile().carrier || supplierProfile().carrier || "한진택배";
+  const header = ["주문번호", "주문일", "상품명", "옵션", "수량", "수취인", "연락처", "주소", "택배사", "송장번호"];
+  const rows = orders.map(order => { const product = orderSourceProduct(order); return [order.id, order.orderDate || "", product?.name || order.externalProductName || "", order.optionName || "", String(order.qty || 1), order.recipientName || order.customer || "", order.phone || "", [order.address, order.addressDetail].filter(Boolean).join(" "), defaultCarrier, ""]; });
+  const stamp = new Date().toISOString().slice(0, 10);
+  if (format === "csv") {
+    const csv = "﻿" + [header, ...rows].map(row => row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    downloadBytes(new TextEncoder().encode(csv), `두고_송장등록양식_${stamp}.csv`, "text/csv;charset=utf-8");
+    return orders.length;
+  }
+  const carrierRows = [["택배사 (스마트스토어 기준)", "구분", "네이버 코드"], ...CARRIERS.map(item => [item.name, item.group || "", item.naver || "CH1 (기타)"])];
+  const bytes = xlsxBuild([
+    { name: "송장 입력", rows: [header, ...(rows.length ? rows : [["", "", "", "", "", "", "", "", defaultCarrier, ""]])], widths: [18, 11, 30, 14, 6, 10, 15, 36, 18, 20], textCols: [0, 9], validations: [{ sqref: `I2:I${Math.max(rows.length + 200, 300)}`, formula: `'택배사 목록'!$A$2:$A$${CARRIERS.length + 1}` }] },
+    { name: "택배사 목록", rows: carrierRows, widths: [26, 14, 16] },
+    { name: "사용 방법", headerRows: 1, rows: [["송장 엑셀 등록 방법"], ["1. ‘송장 입력’ 시트의 택배사 칸에서 택배사를 고르고(목록 선택), 송장번호 칸에 번호를 넣어요."], ["2. 주문번호·택배사·송장번호 세 칸만 있으면 돼요. 나머지 칸은 참고용이에요."], ["3. 송장번호가 비어 있는 줄은 건너뛰어요. 저장한 파일을 두고 ‘송장 엑셀 업로드’에 올려 주세요."], ["4. 송장번호 칸은 텍스트 형식이라 긴 번호도 그대로 들어가요 (4.5E+11처럼 바뀌지 않아요)."]], widths: [90] }
+  ]);
+  downloadBytes(bytes, `두고_송장등록양식_${stamp}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  return orders.length;
+}
+function validateTrackingRows(rows) {
+  const headerAt = rows.slice(0, 6).findIndex(row => row.some(cell => /주문\s*번호|order\s*(id|no)/i.test(String(cell))));
+  if (headerAt < 0) return { error: "첫 줄(제목 줄)에 ‘주문번호’, ‘택배사’, ‘송장번호’ 칸이 있어야 해요. 두고 양식을 받아서 채워 주세요." };
+  const header = rows[headerAt].map(cell => String(cell).replace(/\s+/g, ""));
+  const col = test => header.findIndex(cell => test.test(cell));
+  const ci = { order: col(/주문번호|order/i), carrier: col(/택배사|택배|carrier|courier/i), tracking: col(/송장|운송장|tracking|invoice/i) };
+  if (ci.tracking < 0) return { error: "‘송장번호’ 칸을 찾지 못했어요. 제목 줄에 ‘송장번호’라고 적어 주세요." };
+  const mine = new Map(currentSupplierOrders().map(order => [order.id.toUpperCase(), order]));
+  const defaultCarrier = goodflowProfile().carrier || supplierProfile().carrier || "한진택배";
+  const seen = new Set(); const seenTracking = new Map(); let skipped = 0;
+  const items = rows.slice(headerAt + 1).map((row, index) => {
+    const line = headerAt + index + 2;
+    const orderId = String(row[ci.order] ?? "").trim().toUpperCase();
+    const tracking = normalizeTracking(row[ci.tracking]);
+    const carrierText = ci.carrier >= 0 ? String(row[ci.carrier] ?? "").trim() : "";
+    if (!orderId && tracking.empty) return null;
+    if (tracking.empty) { skipped += 1; return null; }
+    const item = { line, orderId, carrierText, tracking: tracking.value || String(row[ci.tracking] ?? ""), errors: [], notes: [], action: "" };
+    const order = mine.get(orderId);
+    if (!orderId) item.errors.push("주문번호가 비었어요");
+    else if (!order) item.errors.push("내 주문에 없는 주문번호예요");
+    else if (seen.has(orderId)) item.errors.push("같은 주문번호가 위에 또 있어요");
+    if (tracking.error) item.errors.push(tracking.error);
+    const carrier = carrierText ? resolveCarrierName(carrierText) : defaultCarrier;
+    if (!carrier) item.errors.push(`‘${carrierText}’ 택배사를 찾지 못했어요 (택배사 목록 시트에서 골라 주세요)`);
+    else { item.carrier = carrier; if (!carrierText) item.notes.push(`택배사 칸이 비어 기본 택배사(${carrier})로 넣어요`); else if (carrier !== carrierText) item.notes.push(`‘${carrierText}’ → ${carrier}`); }
+    if (order && !item.errors.length) {
+      item.order = order;
+      if (["배송준비중"].includes(order.status) && !order.tracking) item.action = "new";
+      else if (["신규주문", "발주완료"].includes(order.status)) { item.action = "new"; item.notes.push("확인·포장도 같이 처리해요"); }
+      else if (order.status === "배송중" && order.tracking) item.action = order.tracking === item.tracking && order.carrier === item.carrier ? "same" : "update";
+      else item.errors.push(`${order.status} 주문은 송장을 넣을 수 없어요`);
+    }
+    if (orderId) seen.add(orderId);
+    if (item.tracking && !item.errors.length) { if (seenTracking.has(item.tracking)) item.notes.push(`${seenTracking.get(item.tracking)}번째 줄과 같은 송장번호예요 (합포장이면 괜찮아요)`); else seenTracking.set(item.tracking, line); }
+    return item;
+  }).filter(Boolean);
+  return { items, skipped };
+}
+function applyTrackingToOrder(order, carrier, tracking, { update = false } = {}) {
+  if (["신규주문", "발주완료"].includes(order.status)) { order.status = "배송준비중"; order.confirmedAt = "방금 전"; }
+  const before = order.tracking;
+  order.carrier = carrier; order.tracking = tracking; order.provisionalTracking = false;
+  if (update) { const channelId = channelIdFromName(order.channel); if (order.channelTrackingStatuses?.[channelId]) delete order.channelTrackingStatuses[channelId]; order.trackingEditedAt = "방금 전"; }
+  else { order.status = "배송중"; order.shippedAt = "방금 전"; }
+  queueTrackingSync(order);
+  const notice = state.notificationServices[order.sellerLoginId] || state.notificationServices.seller;
+  if (notice?.status === "active" && notice.trackingNotice) { pushNotification(order.sellerLoginId, "seller", "tracking", update ? "송장번호가 수정되었습니다" : "송장번호가 등록되었습니다", `${order.id} · ${carrier} ${tracking}${update && before ? ` (이전 ${before})` : ""}`); notice.used += 1; }
+}
+function trackingUploadModal() {
+  const waiting = trackingTemplateOrders();
+  const picked = waiting.some(order => supplierOrderPicks.has(order.id));
+  trackingUploadDraft = null;
+  openModal(`<div class="bulk-head"><span>TRACKING UPLOAD</span><h2>송장 엑셀 일괄 등록</h2><p>직접 송장을 뽑는 경우, 엑셀에 송장번호만 채워 올리면 한 번에 등록돼요. 택배사는 스마트스토어 택배사 목록(${CARRIERS.length}곳) 기준이에요.</p></div>
+    <ol class="bulk-steps trk-steps">
+      <li><b>1</b><span>양식 받기 <small>${picked ? `체크한 주문 ${waiting.length}건` : `송장 대기 주문 ${waiting.length}건`}이 채워진 엑셀 · 택배사는 목록에서 골라요</small></span><div class="trk-dl"><button type="button" class="secondary-button" data-action="trk-template" data-format="xlsx">엑셀 양식</button><button type="button" class="text-button" data-action="trk-template" data-format="csv">CSV</button></div></li>
+      <li><b>2</b><span>채운 파일 올리기 <small>.xlsx · .csv (주문번호·택배사·송장번호 칸)</small></span><button type="button" class="secondary-button" data-action="trk-pick-file">파일 선택</button><input type="file" id="trackingFile" class="rde-file-input" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" tabindex="-1" aria-hidden="true"></li>
+    </ol>
+    <div id="trackingPreview" class="bulk-preview"><div class="empty">파일을 올리면 줄마다 주문·택배사·송장번호를 확인해 드려요.</div></div>
+    <label class="trk-overwrite"><input type="checkbox" id="trackingOverwrite"> 이미 송장이 있는 주문(배송중)도 새 번호로 바꾸기</label>
+    <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button><button type="button" class="primary-button" data-action="trk-apply" disabled>등록할 송장 없음</button></div>`);
+  document.querySelector("#modal .modal")?.classList.add("bulk-modal", "trk-modal");
+}
+function renderTrackingPreview() {
+  const box = document.getElementById("trackingPreview"); const button = document.querySelector('[data-action="trk-apply"]'); if (!box || !button) return;
+  const draft = trackingUploadDraft;
+  if (!draft) return;
+  if (draft.error) { box.innerHTML = `<div class="bulk-error">${escapeHtml(draft.error)}</div>`; button.disabled = true; button.textContent = "등록할 송장 없음"; return; }
+  const overwrite = document.getElementById("trackingOverwrite")?.checked;
+  const count = kind => draft.items.filter(item => !item.errors.length && item.action === kind).length;
+  const bad = draft.items.filter(item => item.errors.length).length;
+  const ready = count("new") + (overwrite ? count("update") : 0);
+  const label = item => item.errors.length ? ["bad", "!", "오류"] : item.action === "new" ? ["good", "✓", "등록"] : item.action === "update" ? [overwrite ? "good" : "warn", "↻", overwrite ? "수정" : "건너뜀"] : ["warn", "=", "같음"];
+  box.innerHTML = `<p class="bulk-summary"><b>${draft.items.length}줄</b> · 새로 등록 <b>${count("new")}</b> · 송장 바꾸기 <b>${count("update")}</b>${count("same") ? ` · 이미 같은 송장 ${count("same")}` : ""}${bad ? ` · <em>오류 ${bad}</em>` : ""}${draft.skipped ? ` · 송장 빈칸 ${draft.skipped}줄 건너뜀` : ""}</p>
+    <div class="bulk-rows trk-rows">${draft.items.map(item => { const [tone, icon, word] = label(item); return `<div class="bulk-row ${tone === "bad" ? "bad" : tone === "warn" ? "warn" : "good"}"><i>${icon}</i><span><b>${escapeHtml(item.orderId || `${item.line}번째 줄`)} <em class="trk-word">${word}</em></b><small>${item.line}번째 줄 · ${escapeHtml(item.carrier || item.carrierText || "-")} ${escapeHtml(item.tracking || "")}${item.order ? ` · ${escapeHtml(item.order.recipientName || item.order.customer || "")}` : ""}</small>${[...item.errors, ...item.notes].map(text => `<small class="${item.errors.includes(text) ? "err" : "note"}">${escapeHtml(text)}</small>`).join("")}</span></div>`; }).join("")}</div>`;
+  button.disabled = !ready; button.textContent = ready ? `송장 ${ready}건 등록` : "등록할 송장 없음";
+}
+async function handleTrackingFile(file) {
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { trackingUploadDraft = { error: "5MB 이하 파일만 올릴 수 있어요." }; return renderTrackingPreview(); }
+  try { const rows = await readSheetFile(file); trackingUploadDraft = rows.length ? validateTrackingRows(rows) : { error: "파일에 내용이 없어요." }; }
+  catch (error) { trackingUploadDraft = { error: error.message || "파일을 읽지 못했어요." }; }
+  if (trackingUploadDraft && !trackingUploadDraft.error) trackingUploadDraft.fileName = file.name;
+  renderTrackingPreview();
+}
+function applyTrackingUpload() {
+  const draft = trackingUploadDraft; if (!draft?.items) return;
+  const overwrite = document.getElementById("trackingOverwrite")?.checked;
+  const targets = draft.items.filter(item => !item.errors.length && (item.action === "new" || (overwrite && item.action === "update")));
+  if (!targets.length) return showToast("등록할 송장이 없어요.");
+  let added = 0, changed = 0;
+  targets.forEach(item => { const order = state.orders.find(entry => entry.id === item.order.id); if (!order) return; const update = item.action === "update"; applyTrackingToOrder(order, item.carrier, item.tracking, { update }); supplierOrderPicks.delete(order.id); if (update) changed += 1; else added += 1; });
+  audit("송장 엑셀 일괄 등록", `${draft.fileName || "파일"} · 새로 ${added}건${changed ? ` · 수정 ${changed}건` : ""} · 위탁셀러 주문에 즉시 반영, 쇼핑몰 전송 대기(자동 전송 설정 시 바로 전송)`, "pending", "tracking");
+  trackingUploadDraft = null;
+  saveState(); closeModal(); render(); updateAccountUI();
+  showToast(`송장 ${added + changed}건을 등록했어요${changed ? ` (수정 ${changed}건)` : ""}. 배송중으로 바뀌고 셀러 화면에 바로 보여요.`);
+}
+document.addEventListener("change", event => {
+  if (event.target.id === "trackingFile") { const file = event.target.files?.[0]; event.target.value = ""; handleTrackingFile(file); }
+  if (event.target.id === "trackingOverwrite") renderTrackingPreview();
+});
+/* 파일을 창 위로 끌어다 놓아도 된다 */
+document.addEventListener("dragover", event => { if (event.target.closest?.(".trk-modal")) event.preventDefault(); });
+document.addEventListener("drop", event => { if (!event.target.closest?.(".trk-modal")) return; event.preventDefault(); handleTrackingFile(event.dataTransfer?.files?.[0]); });
 
 /* ===== 공급사 주간 정산 =====
    · 매주 월요일, 지난주 월~일에 들어온(결제된) 주문을 정산한다. 기준은 주문일.
@@ -7021,6 +7289,10 @@ document.addEventListener("click", event => {
   if (action === "filter-supplier-orders") { supplierOrderStatus = target.dataset.status || "all"; render(); updateAccountUI(); return; }
   if (action === "settlement-tab") { supplierSettlementTab = target.dataset.tab || "scheduled"; render(); updateAccountUI(); return; }
   if (action === "supplier-go-menu") { closeModal(); activeMenuIndex = Number(target.dataset.index || 0); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (action === "tracking-upload") { trackingUploadModal(); return; }
+  if (action === "trk-template") { const count = downloadTrackingTemplate(target.dataset.format || "xlsx"); showToast(count ? `송장 대기 주문 ${count}건이 담긴 양식을 내려받았어요. 송장번호만 채워 올려 주세요.` : "송장 대기 주문이 없어 빈 양식을 내려받았어요."); return; }
+  if (action === "trk-pick-file") { document.getElementById("trackingFile")?.click(); return; }
+  if (action === "trk-apply") { applyTrackingUpload(); return; }
   if (action === "order-pick-bulk") {
     const op = target.dataset.op;
     const allOrders = currentSupplierOrders();
@@ -8611,9 +8883,10 @@ document.addEventListener("submit", event => {
   if (form.id === "trackingForm") {
     const order = state.orders.find(o => o.id === form.dataset.id);
     if (!order || order.status !== "배송준비중") return showToast("배송준비중 주문에서만 송장을 입력할 수 있습니다.");
-    order.carrier = data.carrier; order.tracking = data.tracking; order.status = "배송중"; order.provisionalTracking = false; order.shippedAt = "방금 전"; queueTrackingSync(order);
-    const notice = state.notificationServices[order.sellerLoginId] || state.notificationServices.seller;
-    if (notice?.status === "active" && notice.trackingNotice) { pushNotification(order.sellerLoginId, "seller", "tracking", "송장번호가 등록되었습니다", `${order.id} · ${data.carrier} ${data.tracking}`); notice.used += 1; }
+    const trackingValue = normalizeTracking(data.tracking);
+    if (trackingValue.error || trackingValue.empty) return showToast(trackingValue.error || "송장번호를 입력해 주세요.");
+    data.tracking = trackingValue.value;
+    applyTrackingToOrder(order, data.carrier, data.tracking);
     audit("송장 정보 반영", `${order.id} · ${data.carrier} ${data.tracking} · 두고 위탁셀러 주문에 즉시 반영, 쇼핑몰 전송 대기(자동 전송 설정 시 바로 전송)`, "pending", "tracking");
     saveState(); closeModal(); render(); showToast("송장이 출력되고 역할별 화면에 반영됐습니다.");
   }
