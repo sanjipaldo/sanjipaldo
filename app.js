@@ -4220,8 +4220,8 @@ function setRole(role) {
 }
 function showToast(message) {
   const toast = document.getElementById("toast");
-  toast.textContent = message; toast.classList.add("show");
-  clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.classList.remove("show"), 2500);
+  toast.textContent = message; toast.classList.add("show"); toast.classList.remove("has-action");
+  clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.classList.remove("show", "has-action"), 2500);
 }
 function sendTalkMessage({ supplierLoginId, sellerLoginId, text = "", image = "" }) {
   state.connectionMessages.push({ id: `MSG-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, supplierLoginId, sellerLoginId, senderLoginId: currentAccount.loginId, text, image, createdAt: "방금 전", sentAt: new Date().toISOString() });
@@ -4323,7 +4323,7 @@ function productDetailModal(id) {
       <div class="detail-cta-row"><button type="button" class="secondary-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button><button type="button" class="primary-button" data-action="${pickAction}" data-id="${p.id}">${pickLabel}</button></div>
     </div></div>
     <div class="detail-tabs" role="tablist"><button type="button" class="active" data-action="product-detail-tab" data-target="product">상품 상세정보</button><button type="button" data-action="product-detail-tab" data-target="shipping">배송·반품 안내</button><button type="button" data-action="product-detail-tab" data-target="supplier">공급사 정보</button></div>
-    <section class="detail-tab-panel active" data-detail-panel="product"><div class="long-detail">${Array.isArray(p.detailBlocks) && p.detailBlocks.some(block => block.type === "image") ? `<div class="supplier-detail-page"><span class="supplier-detail-badge">공급사 상세페이지 · 쇼핑몰 전송 시 그대로 복사</span>${detailPreviewMarkup(p.detailBlocks)}</div>` : ""}<div class="long-detail-title"><span>FRESH SELECTED</span><h2>${escapeHtml(p.name)}</h2><p>두고가 확인한 공급사 원본 정보로 만든 샘플 상세페이지입니다.</p></div><div class="long-detail-image">${productPhoto(p,"long-detail-photo")}<div><span>${overseas ? "OVERSEAS DIRECT" : "FARM TO TABLE"}</span><h3>${escapeHtml(p.origin)}에서<br>꼼꼼하게 선별했습니다</h3><p>${escapeHtml(p.detail)}</p></div></div><div class="detail-feature-grid"><div><b>01</b><span>선별 품질</span><p>출고 전 상품 상태와 포장 기준을 확인합니다.</p></div><div><b>02</b><span>${overseas ? "안전한 통관" : "빠른 산지출고"}</span><p>${overseas ? "개인통관부호를 주문별로 확인합니다." : "발주 마감 전 주문은 빠르게 출고합니다."}</p></div><div><b>03</b><span>판매 콘텐츠 제공</span><p>정사각형 썸네일과 상세설명을 함께 복사합니다.</p></div></div><div class="detail-info-board"><h3>상품 고시정보</h3><dl><div><dt>상품명</dt><dd>${escapeHtml(p.name)}</dd></div><div><dt>원산지</dt><dd>${escapeHtml(p.origin)}</dd></div><div><dt>공급사</dt><dd>${escapeHtml(p.supplier)}</dd></div><div><dt>보관방법</dt><dd>${escapeHtml(p.shelfLife || "상품별 표시사항 참조")}</dd></div><div><dt>배송</dt><dd>${overseas ? `해외직구 ${escapeHtml(p.deliveryDays)}` : `국내택배 ${escapeHtml(p.deliveryDays)}`}</dd></div><div><dt>반품</dt><dd>두고에서 요청 후 공급사 확인</dd></div></dl></div></div></section>
+    <section class="detail-tab-panel active" data-detail-panel="product"><div class="long-detail">${Array.isArray(p.detailBlocks) && p.detailBlocks.length && detailBlocksHasContent(p.detailBlocks) ? `<div class="supplier-detail-page"><span class="supplier-detail-badge">공급사 상세페이지 · 쇼핑몰 전송 시 그대로 복사</span>${detailPreviewMarkup(p.detailBlocks, p)}</div>` : ""}<div class="long-detail-title"><span>FRESH SELECTED</span><h2>${escapeHtml(p.name)}</h2><p>두고가 확인한 공급사 원본 정보로 만든 샘플 상세페이지입니다.</p></div><div class="long-detail-image">${productPhoto(p,"long-detail-photo")}<div><span>${overseas ? "OVERSEAS DIRECT" : "FARM TO TABLE"}</span><h3>${escapeHtml(p.origin)}에서<br>꼼꼼하게 선별했습니다</h3><p>${escapeHtml(p.detail)}</p></div></div><div class="detail-feature-grid"><div><b>01</b><span>선별 품질</span><p>출고 전 상품 상태와 포장 기준을 확인합니다.</p></div><div><b>02</b><span>${overseas ? "안전한 통관" : "빠른 산지출고"}</span><p>${overseas ? "개인통관부호를 주문별로 확인합니다." : "발주 마감 전 주문은 빠르게 출고합니다."}</p></div><div><b>03</b><span>판매 콘텐츠 제공</span><p>정사각형 썸네일과 상세설명을 함께 복사합니다.</p></div></div><div class="detail-info-board"><h3>상품 고시정보</h3><dl><div><dt>상품명</dt><dd>${escapeHtml(p.name)}</dd></div><div><dt>원산지</dt><dd>${escapeHtml(p.origin)}</dd></div><div><dt>공급사</dt><dd>${escapeHtml(p.supplier)}</dd></div><div><dt>보관방법</dt><dd>${escapeHtml(p.shelfLife || "상품별 표시사항 참조")}</dd></div><div><dt>배송</dt><dd>${overseas ? `해외직구 ${escapeHtml(p.deliveryDays)}` : `국내택배 ${escapeHtml(p.deliveryDays)}`}</dd></div><div><dt>반품</dt><dd>두고에서 요청 후 공급사 확인</dd></div></dl></div></div></section>
     <section class="detail-tab-panel" data-detail-panel="shipping" hidden><div class="detail-policy-grid"><article><span>배송</span><h3>${overseas ? "해외직구 배송" : "공급사 직배송"}</h3><p>${escapeHtml(p.deliveryDays || "1~3일")} 내 배송을 원칙으로 하며, 발주마감 ${escapeHtml(p.cutoff || "10:00")} 이전 결제 주문부터 순차 출고됩니다.</p></article><article><span>반품</span><h3>반품·교환 접수</h3><p>셀러의 취소·환불 메뉴에서 주문과 사유를 선택하면 공급사 확인 후 회수 또는 환불 절차가 진행됩니다.</p></article><article><span>주의</span><h3>${overseas ? "통관정보 확인" : "신선식품 확인"}</h3><p>${overseas ? "수취인의 개인통관부호가 일치하지 않으면 배송이 지연될 수 있습니다." : "신선식품은 단순 변심보다 파손·품질 이슈를 우선 확인합니다."}</p></article></div></section>
     <section class="detail-tab-panel" data-detail-panel="supplier" hidden><div class="detail-supplier-board"><span class="connection-avatar large">공</span><div><span>SUPPLIER PARTNER</span><h3>${escapeHtml(p.supplier)}</h3><p>${escapeHtml(supplier?.representative || "공급사 담당자")} · 승인 공급사</p></div><dl><div><dt>연락처</dt><dd>${escapeHtml(supplier?.contact || "-")}</dd></div><div><dt>이메일</dt><dd>${escapeHtml(supplier?.email || "-")}</dd></div><div><dt>상담시간</dt><dd>평일 09:00~18:00</dd></div><div><dt>공급상품</dt><dd>${state.products.filter(product => product.supplierLoginId === p.supplierLoginId).length}개</dd></div></dl><button class="primary-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">두고톡으로 문의하기</button></div></section>
     <div class="sticky-detail-actions"><span><b>${money(p.supply)}</b> 공급가 · 재고 ${p.stock}개</span><div><button class="secondary-button" data-close-modal>닫기</button><button class="secondary-button sample-sticky-cart" data-action="sample-add-cart" data-id="${p.id}">🛒 샘플 담기</button><button class="primary-button" data-action="${pickAction}" data-id="${p.id}">${pickLabel}</button></div></div>
@@ -4391,6 +4391,7 @@ const THUMB_BADGES = ["", "무료배송", "산지직송", "당일출고", "선�
 const TITLE_WORDS = ["산지직송", "당일발송", "무료배송", "선물용", "국내산"];
 let studioDraft = null;
 function defaultDetailBlocks(product, item) {
+  if (Array.isArray(product?.detailBlocks) && product.detailBlocks.length && detailBlocksHasContent(product.detailBlocks)) return JSON.parse(JSON.stringify(product.detailBlocks));
   return [{ type: "image", src: "", imageIndex: Number(item?.imageIndex ?? product?.imageIndex ?? 0) }, { type: "text", text: item?.detailSnapshot || product?.detail || "" }];
 }
 function studioBlockImage(block, product) {
@@ -4440,6 +4441,7 @@ function editSellerProductModal(sellerProductId) {
   const stage = sellerItemStage(item);
   studioDraft = { itemId: item.id, channelCategories: JSON.parse(JSON.stringify(item.channelCategories || {})), tags: [...itemTags(item, source)], thumbnail: item.customThumbnail || "", blocks: JSON.parse(JSON.stringify(item.detailBlocks?.length ? item.detailBlocks : defaultDetailBlocks(source, item))), detailTouched: false };
   setTimeout(refreshStudioCategory, 0);
+  setTimeout(() => rdeRender("studio"), 0);
   const title = sellerProductTitle(item, source);
   const categoryPath = [item.sellerCategoryGroup || source.categoryGroup || "", item.sellerCategory || source.category || "", item.sellerCategorySub || source.categorySub || "", item.sellerCategoryDetail || source.categoryDetail || ""];
   const live = liveChannelIds(item);
@@ -4461,9 +4463,8 @@ function editSellerProductModal(sellerProductId) {
       <section id="studio-price" class="studio-section"><h3><i>3</i> ${hasOptions(source) ? "옵션·판매가" : "판매가"}</h3><p>${hasOptions(source) ? `공급사 옵션 ${productOptions(source).length}개가 그대로 쇼핑몰에 올라가요. 팔지 않을 옵션은 체크를 빼세요.` : "공급가보다 높게 정해 주세요."}</p>
         ${hasOptions(source) ? optionPriceRows(source, item) : singlePriceRow(source, item.salePrice || source.recommended)}
       </section>
-      <section id="studio-detail" class="studio-section"><h3><i>4</i> 상세페이지</h3><p>사진과 글을 블록처럼 쌓아요. ↑↓로 순서를 바꿀 수 있어요.</p>
-        <div id="studioBlocks" class="studio-blocks">${studioBlocksMarkup(source)}</div>
-        <div class="studio-block-add"><button type="button" data-action="studio-add-text">＋ 글 추가</button><label class="studio-upload"><input type="file" id="studioBlockImageInput" accept="image/*" hidden>＋ 사진 추가</label><button type="button" class="studio-ghost" data-action="studio-reset-detail">공급사 원본으로</button></div>
+      <section id="studio-detail" class="studio-section"><h3><i>4</i> 상세페이지</h3><p>사진 여러 장·글 서식·표·동영상을 쌓거나 HTML로 올려요. 새 블록은 지금 누른 블록 아래에 들어가요.</p>
+        ${detailEditorMarkupFor("studio", studioDraft.blocks, { product: source, onChange: () => { if (studioDraft) { studioDraft.detailTouched = true; studioDraft.detailReset = false; } }, onReset: () => { if (studioDraft) { studioDraft.detailTouched = false; studioDraft.detailReset = true; } }, resetBlocks: () => defaultDetailBlocks(source, { imageIndex: source.imageIndex, detailSnapshot: source.detail }) })}
       </section>
       ${studioCategorySection(item, source, categoryPath)}
       <section id="studio-tags" class="studio-section"><h3><i>6</i> 검색 태그 <small>네이버 태그 · 최대 10개</small></h3><p>손님이 검색할 단어를 넣으면 쇼핑몰 검색에 더 잘 걸려요.</p>
@@ -4964,7 +4965,7 @@ function doogoListingFor(item, channelId) {
   return {
     listingId: item.id, title: detail.title || sellerProductTitle(item, product), brand: product?.brand || product?.supplier || "", supplierName: product?.supplier || "", productCode: product?.id || "",
     salePrice: Number(detail.salePrice || item.salePrice || product?.recommended || 0), originalPrice: Number(product?.recommended || 0), stock: Number(product?.stock || 0), images,
-    detailHtml: `<p>${escapeHtml(detail.title || product?.name || "")}</p>`, tags: detail.tags || itemTags(item, product),
+    detailHtml: detailBlocksToHtml(item.detailBlocks?.length ? item.detailBlocks : defaultDetailBlocks(product, item), product), tags: detail.tags || itemTags(item, product),
     options: rows.map(row => ({ optionId: row.id, name: row.name, salePrice: row.salePrice, stock: Number(row.stock ?? product?.stock ?? 0) })),
     category: channelId === "coupang" ? { coupang: detail.categoryCode || "" } : { smartstore: detail.categoryCode || "" },
     shipping: { carrier: policy.carrier || product?.carrier || "한진택배", feeType: !Number(policy.fee) ? "FREE" : Number(policy.freeOver) ? "CONDITIONAL_FREE" : "PAID", fee: Number(policy.fee || 0), freeOver: Number(policy.freeOver || 0), returnFee: Number(policy.returnFee || 0), exchangeFee: Number(policy.exchangeFee || 0), dispatchDays: 1, coupangOutboundCode: policy.outboundCode || policy.id || "", coupangReturnCenterCode: policy.returnCenterCode || policy.id || "", naverShippingAddressId: policy.shippingAddressId || policy.id || "", naverReturnAddressId: policy.returnAddressId || policy.id || "" },
@@ -5471,30 +5472,12 @@ function pickCarrier(picker, name) {
   picker.querySelectorAll(".carrier-quick button").forEach(button => button.classList.toggle("active", button.dataset.carrierPick === name));
 }
 
-/* 상품 상세페이지 에디터: 상세 이미지(여러 장)와 글 블록을 순서대로 쌓는다 */
-let detailDraft = [];
-const DETAIL_MAX_BLOCKS = 20;
+/* 상품 상세페이지: 공급사 상품 등록·수정 화면의 에디터 (공통 에디터 key "product") */
 function detailBlocksOf(product) {
   if (Array.isArray(product?.detailBlocks) && product.detailBlocks.length) return product.detailBlocks;
   return [{ type: "text", style: "body", text: product?.detail || "센터배송 · 전 채널 판매 가능 · 상세페이지 제공" }];
 }
-function detailBlockMarkup(block, index, total) {
-  const tools = `<div class="de-block-tools"><span>${index + 1}</span><b>${block.type === "image" ? "이미지" : "글"}</b><button type="button" data-detail-move="${index}" data-dir="-1" ${index === 0 ? "disabled" : ""} aria-label="위로">↑</button><button type="button" data-detail-move="${index}" data-dir="1" ${index === total - 1 ? "disabled" : ""} aria-label="아래로">↓</button><button type="button" class="de-del" data-detail-remove="${index}" aria-label="삭제">✕</button></div>`;
-  if (block.type === "image") return `<div class="de-block image">${tools}<img src="${block.src}" alt="상세 이미지 ${index + 1}"><small>${escapeHtml(block.name || "상세 이미지")} · ${block.width || ""}×${block.height || ""}</small></div>`;
-  return `<div class="de-block text">${tools}<div class="de-text-style">${[["title", "제목"], ["body", "본문"], ["point", "강조"]].map(([key, label]) => `<button type="button" class="${(block.style || "body") === key ? "active" : ""}" data-detail-style="${index}" data-style="${key}">${label}</button>`).join("")}</div><textarea rows="${block.style === "title" ? 2 : 4}" maxlength="1000" data-detail-text="${index}" class="style-${block.style || "body"}" placeholder="설명을 입력하세요">${escapeHtml(block.text || "")}</textarea></div>`;
-}
-function detailPreviewMarkup(blocks) {
-  return blocks.map(block => block.type === "image" ? `<img src="${block.src}" alt="">` : `<p class="style-${block.style || "body"}">${escapeHtml(block.text || "").replace(/\n/g, "<br>")}</p>`).join("") || `<p class="style-body">아직 내용이 없어요.</p>`;
-}
-function renderDetailEditor() {
-  const root = document.querySelector("[data-detail-editor]");
-  if (!root) return;
-  const list = root.querySelector("[data-detail-blocks]");
-  list.innerHTML = detailDraft.length ? detailDraft.map((block, index) => detailBlockMarkup(block, index, detailDraft.length)).join("") : `<div class="de-empty"><b>상세페이지 이미지를 올려 주세요</b><span>여기로 이미지를 끌어다 놓거나 ‘이미지 추가’를 눌러요. 여러 장을 한 번에 올릴 수 있어요.</span></div>`;
-  root.querySelector("[data-detail-count]").textContent = `이미지 ${detailDraft.filter(block => block.type === "image").length}장 · 글 ${detailDraft.filter(block => block.type === "text").length}개`;
-  const preview = root.querySelector("[data-detail-preview-pane]");
-  if (!preview.hidden) preview.innerHTML = `<div class="de-phone">${detailPreviewMarkup(detailDraft)}</div>`;
-}
+function detailPreviewMarkup(blocks, product) { return `<div class="rde-doc">${detailBlocksToHtml(blocks, product, "view")}</div>`; }
 function readDetailImage(file) {
   return new Promise((resolve, reject) => {
     if (!/^image\//.test(file.type)) return reject(new Error("이미지 파일만 올릴 수 있어요."));
@@ -5527,38 +5510,442 @@ function readDetailImage(file) {
     reader.readAsDataURL(file);
   });
 }
-async function addDetailImages(files) {
-  const list = [...(files || [])];
-  if (!list.length) return;
-  for (const file of list) {
-    if (detailDraft.length >= DETAIL_MAX_BLOCKS) { showToast(`상세 블록은 ${DETAIL_MAX_BLOCKS}개까지 넣을 수 있어요.`); break; }
-    try { const pieces = await readDetailImage(file); detailDraft.push(...pieces.slice(0, DETAIL_MAX_BLOCKS - detailDraft.length)); }
-    catch (error) { showToast(error.message); }
-    renderDetailEditor();
-  }
-}
 function detailEditorMarkup(product) {
-  detailDraft = JSON.parse(JSON.stringify(detailBlocksOf(product)));
-  return `<div class="form-field full detail-editor-field"><label>상품 상세페이지 * <small>대부분 상세페이지 이미지로 올려요. 여러 장 올리고 ↑↓로 순서를 바꿀 수 있어요.</small></label>
-    <div class="detail-editor" data-detail-editor>
-      <div class="de-toolbar"><label class="de-add-image"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple data-detail-image-input>＋ 이미지 추가</label><button type="button" data-detail-add-text>＋ 글 추가</button><button type="button" class="de-preview-btn" data-detail-preview>미리보기</button><span data-detail-count></span></div>
-      <div class="de-drop" data-detail-drop><div class="de-blocks" data-detail-blocks></div></div>
-      <div class="de-preview" data-detail-preview-pane hidden></div>
-    </div>
-    <small>여기 올린 상세페이지가 위탁셀러의 상품 화면과 쇼핑몰 전송용 상세에 그대로 복사돼요. 긴 이미지는 자동으로 나눠 올라가요.</small></div>`;
+  return `<div class="form-field full detail-editor-field"><label>상품 상세페이지 * <small>스마트스토어처럼 사진·글·표·동영상을 쌓거나, HTML 코드·파일로 바로 올릴 수 있어요.</small></label>
+    ${detailEditorMarkupFor("product", detailBlocksOf(product), { product })}
+    <small>여기 만든 상세페이지가 위탁셀러의 상품 화면과 쇼핑몰 전송용 상세(HTML)에 그대로 복사돼요. 긴 사진은 자동으로 나눠 올라가요.</small></div>`;
+}
+/* ===== 상세페이지 에디터 (스마트스토어·카페24 방식) =====
+   블록(컴포넌트)을 위에서 아래로 쌓는다: 글(서식) · 사진(여러 장) · 구분선 · 인용구 · 동영상 · 표 · HTML.
+   'HTML 코드'로 전체를 직접 고치거나, .html 파일을 올려 그대로 가져올 수 있다.
+   다른 사람이 쓴 HTML을 셀러·공급사 화면에 보여 주므로, 저장·표시 전에 항상 sanitizeDetailHtml()로 걸러낸다. */
+const RDE_MAX_BLOCKS = 60;
+const rdeDrafts = {};   // 에디터 key → 블록 배열
+const rdeOptions = {};  // 에디터 key → { product, onChange, resetBlocks }
+let rdeActive = { key: "", index: -1 };
+const RDE_COLORS = ["#171717", "#4d4d4d", "#8f8f8f", "#d92d20", "#ea580c", "#ca8a04", "#15803d", "#0070f3", "#7c3aed", "#db2777"];
+const RDE_MARKS = ["#fff3a3", "#ffe4e6", "#dcfce7", "#dbeafe", "#f3e8ff", "#f2f2f2"];
+const RDE_TAGS = new Set("p,h1,h2,h3,h4,h5,h6,strong,b,em,i,u,s,strike,del,ins,span,div,br,hr,ul,ol,li,blockquote,a,img,table,thead,tbody,tfoot,tr,th,td,caption,colgroup,col,figure,figcaption,font,center,section,article,header,footer,small,sup,sub,mark,iframe,pre,code,dl,dt,dd".split(","));
+const RDE_DROP = new Set(["script", "style", "link", "meta", "object", "embed", "form", "input", "button", "textarea", "select", "option", "noscript", "template", "svg", "math", "frame", "frameset", "base", "title", "head", "video", "audio", "canvas", "applet"]);
+const RDE_STYLE_PROPS = /^(color|background|background-color|font-size|font-weight|font-style|text-align|text-decoration|text-decoration-line|line-height|letter-spacing|margin|margin-(top|bottom|left|right)|padding|padding-(top|bottom|left|right)|border|border-(top|bottom|left|right)|border-(width|style|color|collapse|spacing|radius)|width|max-width|min-width|height|vertical-align|display|text-indent|white-space|word-break|font-family|aspect-ratio|list-style-type|opacity)$/;
+function rdeSafeUrl(url, kind) {
+  const value = String(url || "").trim();
+  if (kind === "img") return /^https?:\/\//i.test(value) || /^\/\//.test(value) || /^data:image\/(png|jpe?g|gif|webp);base64,[a-z0-9+/=\s]+$/i.test(value) || /^assets\/[\w./-]+$/.test(value) ? value : "";
+  if (kind === "frame") return /^https:\/\/(www\.)?(youtube\.com|youtube-nocookie\.com)\/embed\/[\w-]{6,}/i.test(value) || /^https:\/\/player\.vimeo\.com\/video\/\d+/i.test(value) ? value : "";
+  return /^(https?:\/\/|mailto:|tel:|#)/i.test(value) ? value : "";
+}
+function rdeSafeStyle(style) {
+  return String(style || "").split(";").map(part => part.trim()).filter(Boolean).filter(decl => {
+    const at = decl.indexOf(":"); if (at < 1) return false;
+    const prop = decl.slice(0, at).trim().toLowerCase(), value = decl.slice(at + 1).trim().toLowerCase();
+    if (!RDE_STYLE_PROPS.test(prop)) return false;
+    if (/url\s*\(|expression|javascript:|@import|behavior|-moz-binding|\\/.test(value)) return false;
+    if (prop === "display" && !/^(block|inline|inline-block|none|table|table-row|table-cell|list-item)$/.test(value)) return false;
+    return true;
+  }).join("; ");
+}
+function sanitizeDetailHtml(html) {
+  const doc = new DOMParser().parseFromString(String(html || ""), "text/html");
+  const clean = parent => {
+    [...parent.childNodes].forEach(node => {
+      if (node.nodeType === 8) { node.remove(); return; }
+      if (node.nodeType !== 1) return;
+      const tag = node.tagName.toLowerCase();
+      if (RDE_DROP.has(tag)) { node.remove(); return; }
+      if (!RDE_TAGS.has(tag)) { clean(node); node.replaceWith(...node.childNodes); return; }
+      const keep = {};
+      [...node.attributes].forEach(attr => {
+        const name = attr.name.toLowerCase(), value = attr.value;
+        if (name === "style") { const safe = rdeSafeStyle(value); if (safe) keep.style = safe; }
+        else if (["align", "title", "colspan", "rowspan", "width", "height", "border", "cellpadding", "cellspacing", "span", "start", "type"].includes(name)) { if (/^[\w%#.\- ]{0,40}$/.test(value)) keep[name] = value; }
+        else if (tag === "a" && name === "href") { const safe = rdeSafeUrl(value, "link"); if (safe) keep.href = safe; }
+        else if (tag === "img" && name === "src") { const safe = rdeSafeUrl(value, "img"); if (safe) keep.src = safe; }
+        else if (tag === "img" && name === "alt") keep.alt = value.slice(0, 200);
+        else if (tag === "iframe" && name === "src") { const safe = rdeSafeUrl(value, "frame"); if (safe) keep.src = safe; }
+        else if (tag === "font" && ["color", "size"].includes(name) && /^[#\w]{1,20}$/.test(value)) keep[name] = value;
+      });
+      [...node.attributes].forEach(attr => node.removeAttribute(attr.name));
+      Object.entries(keep).forEach(([name, value]) => node.setAttribute(name, value));
+      if (tag === "img" && !node.getAttribute("src")) { node.remove(); return; }
+      if (tag === "iframe") { if (!node.getAttribute("src")) { node.remove(); return; } node.setAttribute("allowfullscreen", ""); node.setAttribute("loading", "lazy"); node.setAttribute("referrerpolicy", "strict-origin-when-cross-origin"); node.textContent = ""; return; }
+      if (tag === "a") { node.setAttribute("target", "_blank"); node.setAttribute("rel", "noopener noreferrer nofollow"); }
+      clean(node);
+    });
+  };
+  clean(doc.body);
+  return doc.body.innerHTML.trim();
+}
+function rdePlainText(html) { const doc = new DOMParser().parseFromString(String(html || ""), "text/html"); return (doc.body.textContent || "").replace(/\s+/g, " ").trim(); }
+function rdeEsc(text) { return escapeHtml(String(text || "")); }
+function productImageSrc(product, imageIndex) { return `assets/product-${String(Number(imageIndex ?? product?.imageIndex ?? 0) % 8).padStart(2, "0")}.jpg`; }
+function youtubeId(url) { const match = String(url || "").match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/); return match ? match[1] : ""; }
+
+/* 예전 블록(글=text+style, 사진)도 그대로 열리게 바꿔 준다 */
+function rdeNormalizeBlocks(blocks) {
+  return (blocks || []).map(block => {
+    if (!block || typeof block !== "object") return null;
+    if (block.type === "text" && typeof block.html !== "string") {
+      const text = String(block.text || "");
+      const body = rdeEsc(text).replace(/\n/g, "<br>");
+      const html = block.style === "title" ? `<h3>${body}</h3>` : block.style === "point" ? `<p><strong>${body}</strong></p>` : `<p>${body}</p>`;
+      return { type: "text", html: text.trim() ? html : "" };
+    }
+    if (block.type === "image") return { type: "image", src: block.src || "", imageIndex: block.imageIndex, width: block.width, height: block.height, name: block.name, alt: block.alt || "", size: block.size || 100, link: block.link || "" };
+    if (["text", "quote", "html"].includes(block.type)) return { type: block.type, html: String(block.html || "") };
+    if (block.type === "divider") return { type: "divider", style: block.style || "line" };
+    if (block.type === "video") return { type: "video", url: String(block.url || "") };
+    return null;
+  }).filter(Boolean);
+}
+/* 한 블록 → 쇼핑몰에 보낼 HTML */
+function rdeBlockHtml(block, product, mode = "export") {
+  if (block.type === "text") return sanitizeDetailHtml(block.html);
+  if (block.type === "html") return sanitizeDetailHtml(block.html);
+  if (block.type === "quote") { const inner = sanitizeDetailHtml(block.html); return inner ? `<blockquote style="margin: 24px 0; padding: 18px 22px; border-left: 4px solid #171717; background: #f7f7f7; font-size: 17px; line-height: 1.7">${inner}</blockquote>` : ""; }
+  if (block.type === "divider") return block.style === "space" ? `<div style="height: 48px"></div>` : `<hr style="border: 0; border-top: ${block.style === "dots" ? "2px dotted #c7c7c7" : "1px solid #e5e5e5"}; margin: 36px 0">`;
+  if (block.type === "video" && mode === "view") { const id = youtubeId(block.url); return id ? `<a class="rde-video-card" href="https://youtu.be/${id}" target="_blank" rel="noopener noreferrer"><span>▶</span><b>유튜브 동영상</b><small>youtu.be/${id} · 쇼핑몰에서는 영상이 바로 재생돼요</small></a>` : ""; }
+  if (block.type === "video") { const id = youtubeId(block.url); return id ? `<div style="margin: 24px 0"><iframe src="https://www.youtube.com/embed/${id}" style="width: 100%; aspect-ratio: 16/9; border: 0" allowfullscreen></iframe></div>` : ""; }
+  if (block.type === "image") {
+    const src = rdeSafeUrl(block.src, "img") || (block.imageIndex !== undefined || !block.src ? productImageSrc(product, block.imageIndex) : "");
+    if (!src) return "";
+    const size = [100, 75, 50].includes(Number(block.size)) ? Number(block.size) : 100;
+    const img = `<img src="${rdeEsc(src)}" alt="${rdeEsc(block.alt || block.name || "상세 이미지")}" style="display: block; width: ${size}%; max-width: 100%; margin: 0 auto">`;
+    const link = rdeSafeUrl(block.link, "link");
+    return `<div style="margin: 0; text-align: center">${link ? `<a href="${rdeEsc(link)}" target="_blank" rel="noopener noreferrer nofollow">${img}</a>` : img}</div>`;
+  }
+  return "";
+}
+function detailBlocksToHtml(blocks, product, mode = "export") {
+  const body = rdeNormalizeBlocks(blocks).map(block => rdeBlockHtml(block, product, mode)).filter(Boolean).join("\n");
+  return `<div style="max-width: 860px; margin: 0 auto; color: #222; font-size: 16px; line-height: 1.75; word-break: keep-all">\n${body}\n</div>`;
+}
+function detailBlocksText(blocks) { return rdeNormalizeBlocks(blocks).filter(block => ["text", "quote", "html"].includes(block.type)).map(block => rdePlainText(block.html)).filter(Boolean).join("\n"); }
+function detailBlocksHasContent(blocks) { return rdeNormalizeBlocks(blocks).some(block => block.type === "image" || block.type === "divider" && false || (block.type === "video" && youtubeId(block.url)) || (["text", "quote", "html"].includes(block.type) && (rdePlainText(block.html) || /<(img|table|iframe)/i.test(block.html)))); }
+/* HTML → 블록: 맨 위 요소를 보고 사진·구분선·인용구·동영상은 따로, 나머지 글은 한 글 블록으로 묶는다 */
+function rdeHtmlToBlocks(html) {
+  const doc = new DOMParser().parseFromString(sanitizeDetailHtml(html), "text/html");
+  let root = doc.body;
+  while (root.children.length === 1 && !root.textContent.trim().replace(root.children[0].textContent.trim(), "") && ["DIV", "SECTION", "ARTICLE", "CENTER"].includes(root.children[0].tagName) && root.children[0].children.length > 1) root = root.children[0];
+  const blocks = [];
+  let buffer = "";
+  const flush = () => { if (buffer.trim()) blocks.push({ type: "text", html: buffer.trim() }); buffer = ""; };
+  const onlyImage = el => { const imgs = el.tagName === "IMG" ? [el] : [...el.querySelectorAll("img")]; return imgs.length === 1 && !el.textContent.trim() && !el.querySelector("table,iframe") ? imgs[0] : null; };
+  [...root.childNodes].forEach(node => {
+    if (node.nodeType === 3) { if (node.textContent.trim()) buffer += `<p>${rdeEsc(node.textContent.trim())}</p>`; return; }
+    if (node.nodeType !== 1) return;
+    const tag = node.tagName;
+    const img = onlyImage(node);
+    if (img) { flush(); const link = img.closest("a")?.getAttribute("href") || ""; const width = parseInt(img.style.width || img.getAttribute("width") || "", 10); blocks.push({ type: "image", src: img.getAttribute("src"), alt: img.getAttribute("alt") || "", size: width && String(img.style.width || "").includes("%") && [75, 50].includes(width) ? width : 100, link }); return; }
+    if (tag === "HR") { flush(); blocks.push({ type: "divider", style: /dotted/.test(node.getAttribute("style") || "") ? "dots" : "line" }); return; }
+    if (tag === "BLOCKQUOTE") { flush(); blocks.push({ type: "quote", html: node.innerHTML }); return; }
+    const frame = tag === "IFRAME" ? node : (!node.textContent.trim() && node.querySelectorAll("iframe").length === 1 && !node.querySelector("img") ? node.querySelector("iframe") : null);
+    if (frame) { flush(); const id = youtubeId(frame.getAttribute("src")); if (id) blocks.push({ type: "video", url: `https://youtu.be/${id}` }); else blocks.push({ type: "html", html: node.outerHTML }); return; }
+    if (tag === "DIV" && !node.textContent.trim() && !node.querySelector("img,table,iframe") && /height/.test(node.getAttribute("style") || "")) { flush(); blocks.push({ type: "divider", style: "space" }); return; }
+    buffer += node.outerHTML;
+  });
+  flush();
+  return blocks;
 }
 
+/* ---------- 템플릿 (자주 쓰는 구성) ---------- */
+function rdeTemplates(product) {
+  const p = product || {};
+  const cell = (label, value) => `<tr><th style="padding: 10px 14px; width: 32%; text-align: left; background: #f7f7f7; border: 1px solid #e5e5e5">${label}</th><td style="padding: 10px 14px; border: 1px solid #e5e5e5">${rdeEsc(value || "상세 이미지 참조")}</td></tr>`;
+  return {
+    intro: { label: "인트로 제목", blocks: [{ type: "text", html: `<h2 style="text-align: center">${rdeEsc(p.name || "상품명을 적어 주세요")}</h2><p style="text-align: center; color: #6b6b6b">한 줄로 상품의 가장 큰 장점을 적어 주세요.</p>` }] },
+    points: { label: "구매 포인트 3가지", blocks: [{ type: "text", html: `<h3>이 상품을 골라야 하는 이유</h3><ol><li><strong>첫 번째 장점</strong> — 설명을 적어 주세요.</li><li><strong>두 번째 장점</strong> — 설명을 적어 주세요.</li><li><strong>세 번째 장점</strong> — 설명을 적어 주세요.</li></ol>` }] },
+    info: { label: "상품 정보 표", blocks: [{ type: "text", html: `<h3>상품 정보</h3><table style="width: 100%; border-collapse: collapse; font-size: 15px"><tbody>${cell("상품명", p.name)}${cell("원산지", [p.origin, p.originCountry].filter(Boolean).join(" · "))}${cell("중량·용량", p.weight ? `${p.weight}${p.unit || ""}` : "")}${cell("제조·수확일", p.manufactureDate)}${cell("소비기한·보관법", p.shelfLife)}${cell("배송", `${p.carrier || "택배"} · ${p.deliveryDays || "1~3일"} 이내 출고`)}</tbody></table>` }] },
+    shipping: { label: "배송·교환·반품 안내", blocks: [{ type: "divider", style: "line" }, { type: "text", html: `<h3>배송 · 교환 · 반품 안내</h3><ul><li>평일 ${rdeEsc(p.cutoff || "10:00")}까지 결제하면 당일 출고해요. (주말·공휴일 제외)</li><li>신선식품은 단순 변심으로 인한 교환·반품이 어려워요.</li><li>상품이 파손되었거나 잘못 왔다면 받은 날로부터 7일 안에 사진과 함께 문의해 주세요.</li></ul>` }] },
+    notice: { label: "강조 안내 박스", blocks: [{ type: "text", html: `<div style="padding: 16px 18px; border: 1px solid #171717; border-radius: 12px"><p><strong>꼭 확인해 주세요</strong></p><p>주문 전에 알아야 할 내용을 적어 주세요.</p></div>` }] },
+    table: { label: "빈 표 (3×3)", blocks: [{ type: "text", html: `<table style="width: 100%; border-collapse: collapse"><tbody>${[0, 1, 2].map(r => `<tr>${[0, 1, 2].map(c => `<${r === 0 ? "th" : "td"} style="padding: 10px; border: 1px solid #e5e5e5${r === 0 ? "; background: #f7f7f7" : ""}">${r === 0 ? `항목 ${c + 1}` : "&nbsp;"}</${r === 0 ? "th" : "td"}>`).join("")}</tr>`).join("")}</tbody></table>` }] }
+  };
+}
+
+/* ---------- 화면 ---------- */
+function rdeBlockLabel(block) { return { text: "글", image: "사진", divider: "구분선", quote: "인용구", video: "동영상", html: "HTML" }[block.type] || "블록"; }
+function rdeFormatBar(index) {
+  const b = (cmd, label, title, extra = "") => `<button type="button" data-rde-cmd="${cmd}" ${extra} title="${title}" aria-label="${title}">${label}</button>`;
+  return `<div class="rde-format" role="toolbar" aria-label="글 서식">
+    <select data-rde-block aria-label="문단"><option value="p">본문</option><option value="h2">큰 제목</option><option value="h3">제목</option><option value="h4">소제목</option></select>
+    <select data-rde-size aria-label="글자 크기"><option value="">크기</option><option value="2">작게</option><option value="3">보통</option><option value="4">조금 크게</option><option value="5">크게</option><option value="6">아주 크게</option></select>
+    ${b("bold", "<b>B</b>", "굵게")}${b("italic", "<i>I</i>", "기울임")}${b("underline", "<u>U</u>", "밑줄")}${b("strikeThrough", "<s>S</s>", "취소선")}
+    <span class="rde-pop"><button type="button" data-rde-toggle="color" title="글자 색" aria-label="글자 색"><span class="rde-a">A</span></button><span class="rde-palette" data-rde-palette="color" hidden>${RDE_COLORS.map(color => `<button type="button" data-rde-cmd="foreColor" data-value="${color}" style="background:${color}" aria-label="글자 색 ${color}"></button>`).join("")}</span></span>
+    <span class="rde-pop"><button type="button" data-rde-toggle="mark" title="형광펜" aria-label="형광펜">🖍</button><span class="rde-palette" data-rde-palette="mark" hidden>${RDE_MARKS.map(color => `<button type="button" data-rde-cmd="hiliteColor" data-value="${color}" style="background:${color}" aria-label="형광펜 ${color}"></button>`).join("")}<button type="button" data-rde-cmd="hiliteColor" data-value="transparent" class="none" aria-label="형광펜 지우기">✕</button></span></span>
+    ${b("justifyLeft", "⇤", "왼쪽 정렬")}${b("justifyCenter", "↔", "가운데 정렬")}${b("justifyRight", "⇥", "오른쪽 정렬")}
+    ${b("insertUnorderedList", "•", "글머리 기호")}${b("insertOrderedList", "1.", "번호 목록")}
+    <span class="rde-pop"><button type="button" data-rde-toggle="link" title="링크" aria-label="링크">🔗</button><span class="rde-palette rde-link-box" data-rde-palette="link" hidden><input type="url" data-rde-link-input placeholder="https://" aria-label="링크 주소"><button type="button" data-rde-cmd="createLink">넣기</button><button type="button" data-rde-cmd="unlink">빼기</button></span></span>
+    ${b("removeFormat", "⌫", "서식 지우기")}${b("undo", "↶", "되돌리기")}${b("redo", "↷", "다시 하기")}
+  </div>`;
+}
+function rdeBlockMarkup(key, block, index, total) {
+  const tools = `<header class="rde-block-head"><span class="rde-kind"><i>${index + 1}</i>${rdeBlockLabel(block)}</span><div class="rde-block-tools"><button type="button" data-rde-move="-1" ${index === 0 ? "disabled" : ""} aria-label="위로">↑</button><button type="button" data-rde-move="1" ${index === total - 1 ? "disabled" : ""} aria-label="아래로">↓</button><button type="button" data-rde-dup aria-label="복제">⧉</button><button type="button" data-rde-remove class="danger" aria-label="삭제">✕</button></div></header>`;
+  const product = rdeOptions[key]?.product;
+  let body = "";
+  if (block.type === "text") body = `${rdeFormatBar(index)}<div class="rde-rich rde-doc" contenteditable="true" data-rde-rich data-placeholder="내용을 입력하세요. 붙여 넣은 글의 서식도 유지돼요.">${sanitizeDetailHtml(block.html)}</div>`;
+  else if (block.type === "quote") body = `${rdeFormatBar(index)}<blockquote class="rde-rich rde-quote" contenteditable="true" data-rde-rich data-placeholder="강조하고 싶은 문장을 적어 주세요.">${sanitizeDetailHtml(block.html)}</blockquote>`;
+  else if (block.type === "image") {
+    const src = rdeSafeUrl(block.src, "img") || productImageSrc(product, block.imageIndex);
+    body = `<figure class="rde-figure"><img src="${rdeEsc(src)}" alt="${rdeEsc(block.alt || "")}" style="width:${[100, 75, 50].includes(Number(block.size)) ? block.size : 100}%"></figure>
+      <div class="rde-image-opts"><div class="rde-seg" role="group" aria-label="사진 크기">${[100, 75, 50].map(size => `<button type="button" class="${Number(block.size || 100) === size ? "active" : ""}" data-rde-size-set="${size}">${size === 100 ? "꽉 차게" : `${size}%`}</button>`).join("")}</div>
+      <input type="text" data-rde-field="alt" value="${rdeEsc(block.alt || "")}" placeholder="사진 설명 (검색·접근성용, 선택)" maxlength="120" aria-label="사진 설명"><input type="url" data-rde-field="link" value="${rdeEsc(block.link || "")}" placeholder="누르면 이동할 주소 (선택)" aria-label="사진 링크"></div>
+      ${block.width ? `<small class="rde-meta">${rdeEsc(block.name || "사진")} · ${block.width}×${block.height || ""}</small>` : ""}`;
+  }
+  else if (block.type === "divider") body = `<div class="rde-divider-preview">${rdeBlockHtml(block)}</div><div class="rde-seg" role="group" aria-label="구분선 모양">${[["line", "실선"], ["dots", "점선"], ["space", "여백만"]].map(([value, label]) => `<button type="button" class="${(block.style || "line") === value ? "active" : ""}" data-rde-divider="${value}">${label}</button>`).join("")}</div>`;
+  else if (block.type === "video") { const id = youtubeId(block.url); body = `<input type="url" data-rde-field="url" value="${rdeEsc(block.url || "")}" placeholder="유튜브 주소를 붙여 넣으세요 (https://youtu.be/…)" aria-label="유튜브 주소">${id ? rdeBlockHtml(block, product, "view") : `<p class="rde-hint">유튜브 영상만 넣을 수 있어요. 주소를 넣으면 미리보기가 보여요.</p>`}`; }
+  else if (block.type === "html") body = `<textarea class="rde-code-input" data-rde-field="html" spellcheck="false" placeholder="<p>HTML을 직접 입력하세요</p>" aria-label="HTML 코드">${rdeEsc(block.html || "")}</textarea><div class="rde-html-preview rde-doc">${sanitizeDetailHtml(block.html) || `<p class="rde-hint">HTML을 입력하면 여기 미리 보여요. script·이벤트 속성은 자동으로 빠져요.</p>`}</div>`;
+  return `<article class="rde-block rde-${block.type}${rdeActive.key === key && rdeActive.index === index ? " active" : ""}" data-rde-index="${index}">${tools}<div class="rde-block-body">${body}</div></article>`;
+}
+function detailEditorMarkupFor(key, blocks, options = {}) {
+  rdeDrafts[key] = rdeNormalizeBlocks(JSON.parse(JSON.stringify(blocks || [])));
+  rdeOptions[key] = options;
+  rdeActive = { key, index: -1 };
+  const templates = rdeTemplates(options.product);
+  return `<div class="rde" data-rde="${key}">
+    <div class="rde-insert" role="toolbar" aria-label="넣기">
+      <label class="rde-add primary"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple data-rde-image-input aria-label="사진 여러 장 올리기">📷 사진</label>
+      <button type="button" class="rde-add" data-rde-add="text">✎ 글</button>
+      <button type="button" class="rde-add" data-rde-add="divider">― 구분선</button>
+      <button type="button" class="rde-add" data-rde-add="quote">❝ 인용구</button>
+      <button type="button" class="rde-add" data-rde-add="video">▶ 동영상</button>
+      <button type="button" class="rde-add" data-rde-template="table">▦ 표</button>
+      <span class="rde-pop"><button type="button" class="rde-add" data-rde-toggle="templates">☰ 템플릿</button><span class="rde-menu" data-rde-palette="templates" hidden>${Object.entries(templates).filter(([id]) => id !== "table").map(([id, tpl]) => `<button type="button" data-rde-template="${id}">${tpl.label}</button>`).join("")}</span></span>
+      <button type="button" class="rde-add" data-rde-add="html">&lt;/&gt; HTML 블록</button>
+    </div>
+    <div class="rde-drop" data-rde-drop><div class="rde-blocks" data-rde-blocks></div></div>
+    <div class="rde-foot"><span data-rde-count></span><div><button type="button" data-rde-code-open>&lt;/&gt; HTML 코드</button><label class="rde-file"><input type="file" accept=".html,.htm,text/html,text/plain" data-rde-html-file>⇪ HTML 파일</label>${options.resetBlocks ? `<button type="button" data-rde-reset>공급사 원본으로</button>` : ""}<button type="button" class="strong" data-rde-preview>미리보기</button></div></div>
+    <div class="rde-code" data-rde-code hidden><p><b>HTML 코드</b> 전체 상세페이지를 코드로 고칠 수 있어요. 사진은 <code>doogo-image://번호</code>로 줄여 보여요. script·이벤트 속성·외부 CSS는 저장할 때 빠져요.</p><textarea spellcheck="false" data-rde-code-text aria-label="상세페이지 HTML 코드"></textarea><div class="rde-code-actions"><button type="button" data-rde-code-cancel>닫기</button><button type="button" class="strong" data-rde-code-apply>코드 적용</button></div></div>
+  </div>`;
+}
+function rdeRoot(key) { return document.querySelector(`.rde[data-rde="${key}"]`); }
+function rdeKeyOf(element) { return element?.closest?.(".rde[data-rde]")?.dataset.rde || ""; }
+function rdeChanged(key) { rdeOptions[key]?.onChange?.(); }
+function rdeRender(key, focusIndex = -1) {
+  const root = rdeRoot(key); if (!root) return;
+  const blocks = rdeDrafts[key] || [];
+  const list = root.querySelector("[data-rde-blocks]");
+  list.innerHTML = blocks.length ? blocks.map((block, index) => rdeBlockMarkup(key, block, index, blocks.length)).join("") : `<div class="rde-empty"><b>상세페이지를 만들어 보세요</b><span>위의 📷 사진으로 여러 장을 한 번에 올리거나, 사진을 여기로 끌어다 놓으세요. 템플릿으로 시작해도 좋아요.</span></div>`;
+  const images = blocks.filter(block => block.type === "image").length;
+  const texts = blocks.filter(block => ["text", "quote", "html"].includes(block.type)).length;
+  const bytes = blocks.reduce((sum, block) => sum + String(block.src || "").length * 0.75 + String(block.html || "").length, 0);
+  root.querySelector("[data-rde-count]").innerHTML = `사진 ${images} · 글 ${texts} · 블록 ${blocks.length}/${RDE_MAX_BLOCKS}${bytes > 2.5e6 ? ` · <em>용량이 커요 (${(bytes / 1e6).toFixed(1)}MB)</em>` : ""}`;
+  if (focusIndex >= 0) {
+    const card = list.querySelector(`[data-rde-index="${focusIndex}"]`);
+    if (card) {
+      if (typeof scrollInEditor === "function") scrollInEditor(card, 60); else card.scrollIntoView({ block: "center" });
+      card.classList.add("rde-flash"); setTimeout(() => card.classList.remove("rde-flash"), 900);
+      const editable = card.querySelector("[data-rde-rich], [data-rde-field], .rde-code-input");
+      if (editable) { editable.focus({ preventScroll: true }); if (editable.isContentEditable) rdePlaceCaretEnd(editable); }
+    }
+  }
+}
+function rdePlaceCaretEnd(el) { const range = document.createRange(); range.selectNodeContents(el); range.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range); }
+function rdeInsert(key, newBlocks) {
+  const blocks = rdeDrafts[key]; if (!blocks) return;
+  const room = RDE_MAX_BLOCKS - blocks.length;
+  if (room <= 0) return showToast(`상세페이지 블록은 ${RDE_MAX_BLOCKS}개까지 넣을 수 있어요.`);
+  const list = newBlocks.slice(0, room);
+  const at = rdeActive.key === key && rdeActive.index >= 0 && rdeActive.index < blocks.length ? rdeActive.index + 1 : blocks.length;
+  blocks.splice(at, 0, ...list);
+  rdeActive = { key, index: at + list.length - 1 };
+  rdeChanged(key); rdeRender(key, at);
+  if (newBlocks.length > room) showToast(`블록이 너무 많아 ${newBlocks.length - room}개는 넣지 못했어요.`);
+}
+function rdeSyncRich(el) {
+  const key = rdeKeyOf(el); const card = el.closest("[data-rde-index]"); if (!key || !card) return;
+  const block = rdeDrafts[key]?.[Number(card.dataset.rdeIndex)];
+  if (block) { block.html = el.innerHTML; rdeChanged(key); }
+}
+async function rdeAddImages(key, files) {
+  const list = [...(files || [])].filter(file => file && /^image\//.test(file.type));
+  if (!list.length) return showToast("사진 파일(jpg·png·webp·gif)을 골라 주세요.");
+  showToast(`사진 ${list.length}장을 올리는 중이에요…`);
+  const pieces = [];
+  for (const file of list) {
+    try { (await readDetailImage(file)).forEach(piece => pieces.push({ type: "image", src: piece.src, width: piece.width, height: piece.height, name: piece.name, alt: "", size: 100 })); }
+    catch (error) { showToast(error.message); }
+  }
+  if (pieces.length) { rdeInsert(key, pieces); showToast(`사진 ${list.length}장을 넣었어요.${pieces.length > list.length ? " 긴 사진은 나눠서 넣었어요." : ""}`); }
+}
+function rdeReadHtmlFile(file) {
+  return file.arrayBuffer().then(buffer => {
+    let text = new TextDecoder("utf-8").decode(buffer);
+    if ((text.match(/�/g) || []).length > 3 || /charset=["']?(euc-kr|ks_c_5601)/i.test(text)) { try { text = new TextDecoder("euc-kr").decode(buffer); } catch (error) { /* 브라우저가 euc-kr을 모르면 utf-8 그대로 */ } }
+    return text;
+  });
+}
+function rdeImportHtml(key, html, sourceLabel) {
+  const doc = new DOMParser().parseFromString(String(html || ""), "text/html");
+  const lostImages = [...doc.querySelectorAll("img")].filter(img => !rdeSafeUrl(img.getAttribute("src"), "img")).length;
+  const blocks = rdeHtmlToBlocks(html);
+  if (!blocks.length) return showToast("가져올 내용이 없어요. HTML 안에 글이나 사진이 있는지 확인해 주세요.");
+  const current = rdeDrafts[key] || [];
+  const empty = !detailBlocksHasContent(current);
+  if (empty) { rdeDrafts[key] = blocks; rdeActive = { key, index: blocks.length - 1 }; rdeChanged(key); rdeRender(key, 0); }
+  else rdeInsert(key, blocks);
+  const images = blocks.filter(block => block.type === "image").length;
+  showToast(`${sourceLabel}에서 블록 ${blocks.length}개(사진 ${images}장)를 가져왔어요.${lostImages ? ` 컴퓨터 안 경로로 된 사진 ${lostImages}장은 보이지 않아 뺐어요. 사진은 https:// 주소이거나 직접 올려 주세요.` : ""}`);
+}
+/* HTML 코드 보기: 긴 사진 데이터는 doogo-image://번호 로 줄여서 보여 주고, 적용할 때 되돌린다 */
+function rdeOpenCode(key) {
+  const root = rdeRoot(key); if (!root) return;
+  const images = [];
+  const html = rdeNormalizeBlocks(rdeDrafts[key]).map(block => rdeBlockHtml(block, rdeOptions[key]?.product)).filter(Boolean).join("\n\n")
+    .replace(/src="(data:image\/[^"]+)"/g, (match, data) => { images.push(data); return `src="doogo-image://${images.length}"`; });
+  root._rdeImages = images;
+  const panel = root.querySelector("[data-rde-code]");
+  panel.hidden = false;
+  const area = panel.querySelector("[data-rde-code-text]");
+  area.value = html;
+  if (typeof scrollInEditor === "function") scrollInEditor(panel, 20);
+  area.focus({ preventScroll: true });
+}
+function rdeApplyCode(key) {
+  const root = rdeRoot(key); if (!root) return;
+  const images = root._rdeImages || [];
+  const text = root.querySelector("[data-rde-code-text]").value.replace(/doogo-image:\/\/(\d+)/g, (match, n) => images[Number(n) - 1] || "");
+  const blocks = rdeHtmlToBlocks(text);
+  rdeDrafts[key] = blocks.slice(0, RDE_MAX_BLOCKS);
+  rdeActive = { key, index: -1 };
+  root.querySelector("[data-rde-code]").hidden = true;
+  rdeChanged(key); rdeRender(key, 0);
+  showToast(`HTML 코드를 적용했어요. 블록 ${rdeDrafts[key].length}개로 나눴어요.`);
+}
+function rdeOpenPreview(key) {
+  document.getElementById("rdePreview")?.remove();
+  const html = detailBlocksToHtml(rdeDrafts[key], rdeOptions[key]?.product, "view");
+  const layer = document.createElement("div");
+  layer.id = "rdePreview"; layer.className = "rde-preview-layer"; layer.dataset.device = innerWidth < 720 ? "mobile" : "mobile";
+  layer.innerHTML = `<div class="rde-preview-shell" role="dialog" aria-modal="true" aria-label="상세페이지 미리보기"><header><b>미리보기</b><div class="rde-seg"><button type="button" class="active" data-rde-device="mobile">휴대폰</button><button type="button" data-rde-device="pc">PC</button></div><button type="button" data-rde-preview-close aria-label="닫기">✕</button></header><div class="rde-preview-scroll"><div class="rde-preview-page rde-doc">${html}</div></div><footer>쇼핑몰에 이렇게 보여요. 스마트스토어·쿠팡은 가로 860px 기준이에요.</footer></div>`;
+  document.body.appendChild(layer);
+}
+function rdeBlocks(key) { return rdeNormalizeBlocks(rdeDrafts[key]).map(block => ["text", "quote", "html"].includes(block.type) ? { ...block, html: sanitizeDetailHtml(block.html) } : block).filter(block => block.type !== "video" || youtubeId(block.url)).filter(block => !["text", "quote"].includes(block.type) || rdePlainText(block.html) || /<(img|table|iframe|hr)/i.test(block.html)); }
+function rdeExec(root, command, value) {
+  const card = root.querySelector(".rde-block.active") || (rdeActive.key === root.dataset.rde ? root.querySelector(`[data-rde-index="${rdeActive.index}"]`) : null);
+  const rich = card?.querySelector("[data-rde-rich]");
+  if (!rich) return showToast("서식을 바꿀 글 블록을 먼저 눌러 주세요.");
+  if (!rich.contains(getSelection().anchorNode)) { rich.focus(); if (root._rdeRange) { const sel = getSelection(); sel.removeAllRanges(); sel.addRange(root._rdeRange); } else rdePlaceCaretEnd(rich); }
+  try { document.execCommand("styleWithCSS", false, true); } catch (error) { /* 무시 */ }
+  if (command === "createLink") {
+    const input = card.querySelector("[data-rde-link-input]"); const url = rdeSafeUrl(input?.value, "link");
+    if (!url) return showToast("https:// 로 시작하는 주소를 넣어 주세요.");
+    if (getSelection().isCollapsed) document.execCommand("insertHTML", false, `<a href="${rdeEsc(url)}" target="_blank" rel="noopener noreferrer nofollow">${rdeEsc(url)}</a>`);
+    else document.execCommand("createLink", false, url);
+    input.value = "";
+  } else if (command === "formatBlock") document.execCommand("formatBlock", false, `<${value}>`);
+  else document.execCommand(command, false, value ?? null);
+  card.querySelectorAll("[data-rde-palette]").forEach(pal => { pal.hidden = true; });
+  rdeSyncRich(rich);
+}
+
+/* ---------- 이벤트 ---------- */
+document.addEventListener("mousedown", event => { if (event.target.closest?.("[data-rde-cmd], [data-rde-toggle]") && !event.target.closest("[data-rde-link-input]")) event.preventDefault(); });
+document.addEventListener("selectionchange", () => {
+  const sel = getSelection(); if (!sel.rangeCount) return;
+  const rich = sel.anchorNode?.parentElement?.closest?.("[data-rde-rich]") || (sel.anchorNode?.nodeType === 1 ? sel.anchorNode.closest?.("[data-rde-rich]") : null);
+  if (rich) { const root = rich.closest(".rde"); if (root) root._rdeRange = sel.getRangeAt(0).cloneRange(); }
+});
+document.addEventListener("focusin", event => {
+  const card = event.target.closest?.(".rde [data-rde-index]"); if (!card) return;
+  const key = rdeKeyOf(card); const index = Number(card.dataset.rdeIndex);
+  if (rdeActive.key === key && rdeActive.index === index) return;
+  rdeActive = { key, index };
+  card.closest("[data-rde-blocks]").querySelectorAll(".rde-block.active").forEach(el => el.classList.remove("active"));
+  card.classList.add("active");
+});
+document.addEventListener("input", event => {
+  const rich = event.target.closest?.("[data-rde-rich]");
+  if (rich) { rdeSyncRich(rich); return; }
+  const field = event.target.closest?.("[data-rde-field]");
+  if (!field) return;
+  const key = rdeKeyOf(field); const card = field.closest("[data-rde-index]"); const block = rdeDrafts[key]?.[Number(card?.dataset.rdeIndex)];
+  if (!block) return;
+  block[field.dataset.rdeField] = field.value; rdeChanged(key);
+  if (field.dataset.rdeField === "html") { const preview = card.querySelector(".rde-html-preview"); if (preview) preview.innerHTML = sanitizeDetailHtml(field.value) || `<p class="rde-hint">HTML을 입력하면 여기 미리 보여요.</p>`; }
+});
+document.addEventListener("change", event => {
+  const video = event.target.closest?.('[data-rde-field="url"]');
+  if (video) { const key = rdeKeyOf(video); const index = Number(video.closest("[data-rde-index]").dataset.rdeIndex); if (video.value && !youtubeId(video.value)) showToast("유튜브 주소가 아니에요. youtu.be 또는 youtube.com 주소를 넣어 주세요."); rdeRender(key); rdeActive = { key, index }; return; }
+  const images = event.target.closest?.("[data-rde-image-input]");
+  if (images) { const key = rdeKeyOf(images); const files = [...images.files]; images.value = ""; rdeAddImages(key, files); return; }
+  const htmlFile = event.target.closest?.("[data-rde-html-file]");
+  if (htmlFile) { const key = rdeKeyOf(htmlFile); const file = htmlFile.files?.[0]; htmlFile.value = ""; if (!file) return; if (file.size > 3 * 1024 * 1024) return showToast("HTML 파일은 3MB 이하만 올릴 수 있어요."); rdeReadHtmlFile(file).then(text => rdeImportHtml(key, text, file.name)).catch(() => showToast("HTML 파일을 읽지 못했어요.")); return; }
+  const block = event.target.closest?.("[data-rde-block]");
+  if (block) { rdeExec(block.closest(".rde"), "formatBlock", block.value); block.value = "p"; return; }
+  const size = event.target.closest?.("[data-rde-size]");
+  if (size && size.value) { rdeExec(size.closest(".rde"), "fontSize", size.value); size.value = ""; }
+});
+document.addEventListener("paste", event => {
+  const rich = event.target.closest?.("[data-rde-rich]");
+  if (!rich) return;
+  const data = event.clipboardData; if (!data) return;
+  const files = [...(data.files || [])].filter(file => /^image\//.test(file.type));
+  if (files.length) { event.preventDefault(); rdeAddImages(rdeKeyOf(rich), files); return; }
+  const html = data.getData("text/html");
+  event.preventDefault();
+  if (html) document.execCommand("insertHTML", false, sanitizeDetailHtml(html.replace(/<!--(StartFragment|EndFragment)-->/g, "")).replace(/\sclass="[^"]*"/g, ""));
+  else document.execCommand("insertText", false, data.getData("text/plain"));
+  rdeSyncRich(rich);
+});
+["dragover", "dragleave", "drop"].forEach(type => document.addEventListener(type, event => {
+  const drop = event.target.closest?.("[data-rde-drop]");
+  if (!drop || !event.dataTransfer?.types?.includes("Files")) return;
+  event.preventDefault();
+  drop.classList.toggle("dragging", type === "dragover");
+  if (type === "drop") rdeAddImages(rdeKeyOf(drop), event.dataTransfer.files);
+}));
+document.addEventListener("click", event => {
+  const t = event.target;
+  const device = t.closest?.("[data-rde-device]");
+  if (device) { const layer = device.closest(".rde-preview-layer"); layer.dataset.device = device.dataset.rdeDevice; layer.querySelectorAll("[data-rde-device]").forEach(b => b.classList.toggle("active", b === device)); return; }
+  if (t.closest?.("[data-rde-preview-close]") || t.classList?.contains("rde-preview-layer")) { document.getElementById("rdePreview")?.remove(); return; }
+  const root = t.closest?.(".rde[data-rde]"); if (!root) return;
+  const key = root.dataset.rde; const blocks = rdeDrafts[key]; if (!blocks) return;
+  const card = t.closest("[data-rde-index]"); const index = card ? Number(card.dataset.rdeIndex) : -1;
+  const toggle = t.closest("[data-rde-toggle]");
+  if (toggle) { const pal = toggle.parentElement.querySelector(`[data-rde-palette="${toggle.dataset.rdeToggle}"]`); root.querySelectorAll("[data-rde-palette]").forEach(el => { if (el !== pal) el.hidden = true; }); if (pal) { pal.hidden = !pal.hidden; pal.querySelector("input")?.focus(); } return; }
+  const cmd = t.closest("[data-rde-cmd]");
+  if (cmd) { rdeExec(root, cmd.dataset.rdeCmd, cmd.dataset.value); return; }
+  const add = t.closest("[data-rde-add]");
+  if (add) { const type = add.dataset.rdeAdd; rdeInsert(key, [type === "text" ? { type: "text", html: "" } : type === "divider" ? { type: "divider", style: "line" } : type === "quote" ? { type: "quote", html: "" } : type === "video" ? { type: "video", url: "" } : { type: "html", html: "" }]); return; }
+  const tpl = t.closest("[data-rde-template]");
+  if (tpl) { const template = rdeTemplates(rdeOptions[key]?.product)[tpl.dataset.rdeTemplate]; root.querySelectorAll("[data-rde-palette]").forEach(el => { el.hidden = true; }); if (template) rdeInsert(key, JSON.parse(JSON.stringify(template.blocks))); return; }
+  if (t.closest("[data-rde-move]") && card) { const next = index + Number(t.closest("[data-rde-move]").dataset.rdeMove); if (blocks[next]) { [blocks[index], blocks[next]] = [blocks[next], blocks[index]]; rdeActive = { key, index: next }; rdeChanged(key); rdeRender(key, next); } return; }
+  if (t.closest("[data-rde-dup]") && card) { if (blocks.length >= RDE_MAX_BLOCKS) return showToast(`블록은 ${RDE_MAX_BLOCKS}개까지예요.`); blocks.splice(index + 1, 0, JSON.parse(JSON.stringify(blocks[index]))); rdeActive = { key, index: index + 1 }; rdeChanged(key); rdeRender(key, index + 1); return; }
+  if (t.closest("[data-rde-remove]") && card) { const removed = blocks.splice(index, 1)[0]; rdeActive = { key, index: Math.min(index, blocks.length - 1) }; rdeChanged(key); rdeRender(key); root._rdeUndo = { index, block: removed }; showToastAction(`${rdeBlockLabel(removed)} 블록을 지웠어요.`, "되돌리기", () => { blocks.splice(root._rdeUndo.index, 0, root._rdeUndo.block); rdeChanged(key); rdeRender(key, root._rdeUndo.index); }); return; }
+  const sizeSet = t.closest("[data-rde-size-set]");
+  if (sizeSet && card) { blocks[index].size = Number(sizeSet.dataset.rdeSizeSet); rdeChanged(key); rdeRender(key); return; }
+  const divider = t.closest("[data-rde-divider]");
+  if (divider && card) { blocks[index].style = divider.dataset.rdeDivider; rdeChanged(key); rdeRender(key); return; }
+  if (t.closest("[data-rde-code-open]")) { rdeOpenCode(key); return; }
+  if (t.closest("[data-rde-code-cancel]")) { root.querySelector("[data-rde-code]").hidden = true; return; }
+  if (t.closest("[data-rde-code-apply]")) { rdeApplyCode(key); return; }
+  if (t.closest("[data-rde-preview]")) { rdeOpenPreview(key); return; }
+  if (t.closest("[data-rde-reset]")) { const reset = rdeOptions[key]?.resetBlocks?.(); if (reset) { rdeDrafts[key] = rdeNormalizeBlocks(reset); rdeActive = { key, index: -1 }; rdeOptions[key]?.onReset?.(); rdeRender(key, 0); showToast("공급사 원본 상세페이지로 되돌렸어요."); } return; }
+});
+document.addEventListener("keydown", event => { if (event.key === "Escape" && document.getElementById("rdePreview")) { event.stopPropagation(); document.getElementById("rdePreview").remove(); } }, true);
+/* 되돌리기 버튼이 있는 알림 */
+function showToastAction(message, label, onClick) {
+  showToast(message);
+  const toast = document.getElementById("toast"); if (!toast) return;
+  const button = document.createElement("button"); button.type = "button"; button.className = "toast-action"; button.textContent = label;
+  button.addEventListener("click", () => { onClick(); button.remove(); showToast("되돌렸어요."); }, { once: true });
+  toast.appendChild(button); toast.classList.add("has-action");
+  clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.classList.remove("show", "has-action"), 5000);
+}
+
+
 function productDetailReady(form) {
-  const hasContent = detailDraft.some(block => block.type === "image" || String(block.text || "").trim());
-  if (!hasContent) { form.querySelector("[data-detail-editor]")?.scrollIntoView({ behavior: "smooth", block: "center" }); showToast("상품 상세페이지에 이미지나 설명을 1개 이상 넣어 주세요."); return false; }
+  const hasContent = detailBlocksHasContent(rdeDrafts.product);
+  if (!hasContent) { form.querySelector(".rde")?.scrollIntoView({ behavior: "smooth", block: "center" }); showToast("상품 상세페이지에 이미지나 설명을 1개 이상 넣어 주세요."); return false; }
   const carrier = form.querySelector("[data-carrier-value]")?.value;
   if (carrier !== undefined && !isKnownCarrier(carrier)) { showToast("택배사를 목록에서 골라 주세요."); return false; }
   return true;
 }
 function productDetailAndShipping(data) {
-  const blocks = detailDraft.map(block => block.type === "image" ? { type: "image", src: block.src, width: block.width, height: block.height, name: block.name } : { type: "text", style: block.style || "body", text: String(block.text || "").trim() }).filter(block => block.type === "image" || block.text);
-  const firstText = blocks.find(block => block.type === "text")?.text;
-  return { detailBlocks: blocks, detail: firstText || `상세페이지 이미지 ${blocks.filter(block => block.type === "image").length}장`, carrier: data.carrier || "한진택배", shippingType: data.shippingType || "domestic", requireCustomsCode: data.shippingType === "overseas" ? data.requireCustomsCode === "on" : false };
+  const blocks = rdeBlocks("product");
+  const text = detailBlocksText(blocks);
+  const owner = { name: data.name, imageIndex: Number(data.imageIndex || 0) };
+  return { detailBlocks: blocks, detailHtml: detailBlocksToHtml(blocks, owner), detail: text ? text.slice(0, 200) : `상세페이지 이미지 ${blocks.filter(block => block.type === "image").length}장`, carrier: data.carrier || "한진택배", shippingType: data.shippingType || "domestic", requireCustomsCode: data.shippingType === "overseas" ? data.requireCustomsCode === "on" : false };
 }
 
 function productEditorModal(product = null) {
@@ -5591,7 +5978,7 @@ function productEditorModal(product = null) {
       <div class="editor-sticky-actions"><span>필수항목을 확인한 뒤 저장해 주세요.</span><div><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">${isEdit ? "수정 내용 저장" : "상품 등록·셀러 노출"}</button></div></div>
     </form>`);
   document.querySelector("#modal .modal").classList.add("product-editor-modal");
-  renderDetailEditor();
+  rdeRender("product");
 }
 
 function adjustStockModal(id) {
@@ -7393,11 +7780,12 @@ document.addEventListener("submit", event => {
     item.thumbBadge = String(data.thumbBadge || "");
     item.customThumbnail = studioDraft?.itemId === item.id ? (studioDraft.thumbnail || "") : (item.customThumbnail || "");
     if (studioDraft?.itemId === item.id) {
-      const blocks = studioDraft.blocks.filter(block => block.type === "image" || String(block.text || "").trim());
+      const blocks = rdeBlocks("studio");
       item.detailBlocks = blocks;
+      item.detailHtml = detailBlocksToHtml(blocks, source);
       if (studioDraft.detailTouched) item.detailEdited = true;
       if (studioDraft.detailReset && !studioDraft.detailTouched) item.detailEdited = false;
-      const text = blocks.filter(block => block.type === "text").map(block => block.text.trim()).join("\n");
+      const text = detailBlocksText(blocks);
       item.detailOverride = text; item.detailSnapshot = text || source.detail;
     }
     item.sellerCategoryGroup = String(data.sellerCategoryGroup || source.categoryGroup || "");
@@ -8496,10 +8884,12 @@ function editorScroller(element) {
   return document.scrollingElement;
 }
 function editorStickyOffset(scroller) {
-  const head = scroller.querySelector?.(".product-editor-head");
-  if (!head) return 12;
-  const position = getComputedStyle(head).position;
-  return position === "sticky" || position === "fixed" ? head.getBoundingClientRect().height + 12 : 12;
+  /* 스크롤 영역 위에 붙어 있는 머리(상품 등록 머리, 상품 꾸미기 머리·탭)만큼 비켜서 보여 준다 */
+  const heads = [...(scroller.querySelectorAll?.(".product-editor-head, .studio-head, .studio-tabs") || [])].filter(head => ["sticky", "fixed"].includes(getComputedStyle(head).position));
+  if (!heads.length) return 12;
+  const top = Math.max(...heads.map(head => head.getBoundingClientRect().bottom));
+  const base = scroller === document.scrollingElement ? 0 : scroller.getBoundingClientRect().top;
+  return Math.max(12, top - base + 12);
 }
 /* 단계 ↔ 구역: '판매 옵션' 구역은 2단계(매입·가격)에 속한다 */
 const EDITOR_STEP_TITLES = [["상품 기본정보"], ["매입", "판매 옵션"], ["상품 이미지"], ["배송"]];
@@ -8532,7 +8922,6 @@ document.addEventListener("scroll", event => {
   sections.forEach(section => { const step = editorStepOf(section); if (step >= 0 && section.getBoundingClientRect().top <= line) current = step; });
   setEditorStep(modal, current);
 }, true);
-function flashDetailBlock(block) { if (!block) return; block.classList.add("de-flash"); setTimeout(() => block.classList.remove("de-flash"), 900); }
 document.addEventListener("click", event => {
   const jump = event.target.closest?.("[data-editor-jump]");
   if (jump) { event.preventDefault(); jumpEditorSection(jump); }
@@ -8546,8 +8935,6 @@ document.addEventListener("focusin", event => {
 document.addEventListener("input", event => {
   const input = event.target.closest?.("[data-carrier-input]");
   if (input) { renderCarrierResults(input.closest("[data-carrier-picker]"), input.value); return; }
-  const text = event.target.closest?.("[data-detail-text]");
-  if (text && detailDraft[Number(text.dataset.detailText)]) detailDraft[Number(text.dataset.detailText)].text = text.value;
 });
 document.addEventListener("keydown", event => {
   const input = event.target.closest?.("[data-carrier-input]");
@@ -8584,48 +8971,18 @@ document.addEventListener("mousedown", event => { if (event.target.closest?.("[d
 document.addEventListener("click", event => {
   const pick = event.target.closest?.("[data-carrier-pick]");
   if (pick) { pickCarrier(pick.closest("[data-carrier-picker]"), pick.dataset.carrierPick); return; }
-  if (event.target.closest?.("[data-detail-add-text]")) {
-    if (detailDraft.length >= DETAIL_MAX_BLOCKS) return showToast(`상세 블록은 ${DETAIL_MAX_BLOCKS}개까지 넣을 수 있어요.`);
-    detailDraft.push({ type: "text", style: "body", text: "" }); renderDetailEditor();
-    const areas = document.querySelectorAll("[data-detail-text]"); const last = areas[areas.length - 1];
-    /* 새 글 칸은 목록 맨 아래에 생겨서 화면 밖일 수 있다 → 보이게 스크롤한 뒤 입력 커서를 넣는다 */
-    if (last) { scrollInEditor(last.closest(".de-block"), 60); last.focus({ preventScroll: true }); flashDetailBlock(last.closest(".de-block")); }
-    return;
-  }
-  const move = event.target.closest?.("[data-detail-move]");
-  if (move) { const index = Number(move.dataset.detailMove), next = index + Number(move.dataset.dir); if (detailDraft[next]) { [detailDraft[index], detailDraft[next]] = [detailDraft[next], detailDraft[index]]; renderDetailEditor(); } return; }
-  const remove = event.target.closest?.("[data-detail-remove]");
-  if (remove) { detailDraft.splice(Number(remove.dataset.detailRemove), 1); renderDetailEditor(); return; }
-  const style = event.target.closest?.("[data-detail-style]");
-  if (style) { const block = detailDraft[Number(style.dataset.detailStyle)]; if (block) { block.style = style.dataset.style; renderDetailEditor(); } return; }
-  const preview = event.target.closest?.("[data-detail-preview]");
-  if (preview) {
-    const pane = document.querySelector("[data-detail-preview-pane]");
-    pane.hidden = !pane.hidden;
-    preview.classList.toggle("active", !pane.hidden);
-    preview.textContent = pane.hidden ? "미리보기" : "미리보기 닫기";
-    renderDetailEditor();
-    if (!pane.hidden) scrollInEditor(pane);
-  }
+
 });
 document.addEventListener("change", event => {
   const kakaoTime = event.target.closest?.("[data-kakao-time]");
   if (kakaoTime) { const notice = notificationService(); notice[kakaoTime.dataset.kakaoTime] = kakaoTime.value; saveState(); render(); updateAccountUI(); showToast(`${kakaoTime.dataset.kakaoTime === "morningTime" ? "아침 브리핑" : "마감 리포트"}을 ${kakaoTime.value}에 보내 드릴게요.`); return; }
-  const files = event.target.closest?.("[data-detail-image-input]");
-  if (files) { addDetailImages(files.files).then(() => { files.value = ""; const blocks = document.querySelectorAll("[data-detail-blocks] .de-block"); const last = blocks[blocks.length - 1]; if (last) scrollInEditor(last, 60); flashDetailBlock(last); }); return; }
   const shipping = event.target.closest?.("[data-shipping-type]");
   if (shipping) {
     const policy = shipping.form?.querySelector("[data-customs-policy]");
     if (policy) { policy.hidden = shipping.value !== "overseas"; if (shipping.value === "overseas") policy.querySelector("input").checked = true; }
   }
 });
-["dragover", "dragleave", "drop"].forEach(type => document.addEventListener(type, event => {
-  const drop = event.target.closest?.("[data-detail-drop]");
-  if (!drop) return;
-  event.preventDefault();
-  drop.classList.toggle("dragging", type === "dragover");
-  if (type === "drop") addDetailImages(event.dataTransfer?.files);
-}));
+
 
 const requestedPortal = new URLSearchParams(window.location.search).get("portal");
 initAuth();
