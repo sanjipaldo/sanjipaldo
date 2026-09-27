@@ -5566,7 +5566,7 @@ function productEditorModal(product = null) {
   const value = (key, fallback = "") => escapeHtml(product?.[key] ?? fallback);
   const selected = (key, option, fallback = "") => (product?.[key] ?? fallback) === option ? "selected" : "";
   const connected = currentSupplierConnections();
-  openModal(`<div class="product-editor-head balju-product-head"><div><span>DOOGO · SINGLE PRODUCT</span><h2>${isEdit ? "상품 정보 수정" : "상품 등록"}</h2><p>${isEdit ? `${product.id} · 모든 수정 내용은 마스터 변경 이력에 저장됩니다.` : "매입·가격·배송·노출 정보를 한 번에 입력합니다."}</p></div><div class="editor-progress"><b>1 기본정보</b><b>2 매입·가격</b><b>3 이미지·안내</b><b>4 배송·노출</b></div></div>
+  openModal(`<div class="product-editor-head balju-product-head"><div><span>DOOGO · SINGLE PRODUCT</span><h2>${isEdit ? "상품 정보 수정" : "상품 등록"}</h2><p>${isEdit ? `${product.id} · 모든 수정 내용은 마스터 변경 이력에 저장됩니다.` : "매입·가격·배송·노출 정보를 한 번에 입력합니다."}</p></div><div class="editor-progress" role="tablist" aria-label="입력 단계">${["기본정보", "매입·가격", "이미지·안내", "배송·노출"].map((label, index) => `<button type="button" role="tab" class="${index === 0 ? "active" : ""}" data-editor-jump="${index}" aria-selected="${index === 0}">${index + 1} ${label}</button>`).join("")}</div></div>
     <form id="${isEdit ? "editProductForm" : "productForm"}" class="product-editor-form balju-product-form" ${isEdit ? `data-id="${product.id}"` : ""}>
       <section class="editor-section"><div class="editor-section-title"><span>01</span><div><h3>상품 기본정보</h3><p>상품 상태와 발주 기준을 설정합니다.</p></div></div><div class="editor-grid cols-4">
         <div class="form-field full category-cascade-field"><label>카테고리 * <small>네이버쇼핑 기준 대분류·중분류·소분류·세분류</small></label><div class="category-search-box"><input type="text" class="category-search-input" data-category-search placeholder="예: 프로폴리스, 노트북, 캠핑용품 검색" autocomplete="off"><div class="category-search-results" data-category-search-results hidden></div></div><div class="category-cascade-row">${(() => { const path = [product?.categoryGroup || "식품", product?.category || "", product?.categorySub || "", product?.categoryDetail || ""]; return `${categorySelectTag("categoryGroup", 1, path, "required")}${categorySelectTag("category", 2, path, "required")}${categorySelectTag("categorySub", 3, path, "required")}${categorySelectTag("categoryDetail", 4, path, "required")}`; })()}</div></div>
@@ -8487,6 +8487,57 @@ document.addEventListener("click", event => {
   finder.querySelectorAll("[data-cat-pane]").forEach(pane => { pane.hidden = pane.dataset.catPane !== tab.dataset.catMode; });
 });
 
+/* 상품 등록·수정 창: 1~4 단계 버튼을 누르면 그 구역으로 이동, 스크롤하면 지금 보는 단계를 표시 */
+function editorScroller(element) {
+  for (let node = element?.parentElement; node && node !== document.body; node = node.parentElement) {
+    const style = getComputedStyle(node);
+    if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 2) return node;
+  }
+  return document.scrollingElement;
+}
+function editorStickyOffset(scroller) {
+  const head = scroller.querySelector?.(".product-editor-head");
+  if (!head) return 12;
+  const position = getComputedStyle(head).position;
+  return position === "sticky" || position === "fixed" ? head.getBoundingClientRect().height + 12 : 12;
+}
+/* 단계 ↔ 구역: '판매 옵션' 구역은 2단계(매입·가격)에 속한다 */
+const EDITOR_STEP_TITLES = [["상품 기본정보"], ["매입", "판매 옵션"], ["상품 이미지"], ["배송"]];
+function editorStepOf(section) { const title = section.querySelector("h3")?.textContent || ""; const step = EDITOR_STEP_TITLES.findIndex(keys => keys.some(key => title.startsWith(key))); return step; }
+function scrollInEditor(element, gap = 12) {
+  const scroller = editorScroller(element);
+  const top = element.getBoundingClientRect().top - (scroller === document.scrollingElement ? 0 : scroller.getBoundingClientRect().top) + scroller.scrollTop - editorStickyOffset(scroller) - gap + 12;
+  scroller.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+}
+function setEditorStep(modal, index) {
+  modal.querySelectorAll("[data-editor-jump]").forEach(button => { const on = Number(button.dataset.editorJump) === index; button.classList.toggle("active", on); button.setAttribute("aria-selected", String(on)); });
+}
+function jumpEditorSection(button) {
+  const modal = button.closest(".modal");
+  const index = Number(button.dataset.editorJump);
+  const section = [...(modal?.querySelectorAll(".editor-section") || [])].find(item => editorStepOf(item) === index);
+  if (!section) return;
+  scrollInEditor(section);
+  setEditorStep(modal, index);
+  modal.dataset.stepLock = String(Date.now());
+}
+document.addEventListener("scroll", event => {
+  const scroller = event.target === document ? document.scrollingElement : event.target;
+  const modal = scroller?.closest?.(".modal") || scroller?.querySelector?.(".modal");
+  if (!modal || !modal.querySelector("[data-editor-jump]")) return;
+  if (Date.now() - Number(modal.dataset.stepLock || 0) < 700) return;
+  const sections = [...modal.querySelectorAll(".editor-section")];
+  const line = (scroller === document.scrollingElement ? 0 : scroller.getBoundingClientRect().top) + editorStickyOffset(scroller) + 40;
+  let current = 0;
+  sections.forEach(section => { const step = editorStepOf(section); if (step >= 0 && section.getBoundingClientRect().top <= line) current = step; });
+  setEditorStep(modal, current);
+}, true);
+function flashDetailBlock(block) { if (!block) return; block.classList.add("de-flash"); setTimeout(() => block.classList.remove("de-flash"), 900); }
+document.addEventListener("click", event => {
+  const jump = event.target.closest?.("[data-editor-jump]");
+  if (jump) { event.preventDefault(); jumpEditorSection(jump); }
+});
+
 /* 택배사 검색 선택 + 상세페이지 에디터 이벤트 */
 document.addEventListener("focusin", event => {
   const input = event.target.closest?.("[data-carrier-input]");
@@ -8536,7 +8587,9 @@ document.addEventListener("click", event => {
   if (event.target.closest?.("[data-detail-add-text]")) {
     if (detailDraft.length >= DETAIL_MAX_BLOCKS) return showToast(`상세 블록은 ${DETAIL_MAX_BLOCKS}개까지 넣을 수 있어요.`);
     detailDraft.push({ type: "text", style: "body", text: "" }); renderDetailEditor();
-    const areas = document.querySelectorAll("[data-detail-text]"); areas[areas.length - 1]?.focus();
+    const areas = document.querySelectorAll("[data-detail-text]"); const last = areas[areas.length - 1];
+    /* 새 글 칸은 목록 맨 아래에 생겨서 화면 밖일 수 있다 → 보이게 스크롤한 뒤 입력 커서를 넣는다 */
+    if (last) { scrollInEditor(last.closest(".de-block"), 60); last.focus({ preventScroll: true }); flashDetailBlock(last.closest(".de-block")); }
     return;
   }
   const move = event.target.closest?.("[data-detail-move]");
@@ -8552,13 +8605,14 @@ document.addEventListener("click", event => {
     preview.classList.toggle("active", !pane.hidden);
     preview.textContent = pane.hidden ? "미리보기" : "미리보기 닫기";
     renderDetailEditor();
+    if (!pane.hidden) scrollInEditor(pane);
   }
 });
 document.addEventListener("change", event => {
   const kakaoTime = event.target.closest?.("[data-kakao-time]");
   if (kakaoTime) { const notice = notificationService(); notice[kakaoTime.dataset.kakaoTime] = kakaoTime.value; saveState(); render(); updateAccountUI(); showToast(`${kakaoTime.dataset.kakaoTime === "morningTime" ? "아침 브리핑" : "마감 리포트"}을 ${kakaoTime.value}에 보내 드릴게요.`); return; }
   const files = event.target.closest?.("[data-detail-image-input]");
-  if (files) { addDetailImages(files.files).then(() => { files.value = ""; }); return; }
+  if (files) { addDetailImages(files.files).then(() => { files.value = ""; const blocks = document.querySelectorAll("[data-detail-blocks] .de-block"); const last = blocks[blocks.length - 1]; if (last) scrollInEditor(last, 60); flashDetailBlock(last); }); return; }
   const shipping = event.target.closest?.("[data-shipping-type]");
   if (shipping) {
     const policy = shipping.form?.querySelector("[data-customs-policy]");

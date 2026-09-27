@@ -9007,3 +9007,18 @@ body[data-role="supplier"] :is(input[type="checkbox"], input[type="radio"]) { ac
 .sup-launch-list li.done small { display: none; }
 .sup-launch-list li.done > i { width: 20px; height: 20px; margin-left: 3px; font-size: 11px; }
 @media (min-width: 721px) { .sup-launch-list { grid-template-columns: 1fr 1fr; } .sup-launch-list li:not(.done) { grid-column: 1 / -1; } }
+/* 상품 등록·수정: 1~4 단계는 누르면 이동하는 버튼 */
+.editor-progress button { padding: 7px 9px; color: #728096; background: #f1f4f8; border: 0; border-radius: 7px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: background .15s ease, color .15s ease; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.editor-progress button:hover { color: #334155; background: #e7ecf3; }
+.editor-progress button.active { color: #fff; background: #3182f6; }
+.balju-product-head .editor-progress button { font-size: 16px; }
+@media (max-width: 720px) { .editor-progress button { min-height: 44px; } }
+body[data-role="supplier"] .editor-progress button { color: #4d4d4d; background: #f2f2f2; border-radius: 6px; }
+body[data-role="supplier"] .editor-progress button:hover { color: #171717; background: #ebebeb; }
+body[data-role="supplier"] .editor-progress button.active { color: #fff; background: #171717; }
+/* 이미지 추가: 투명한 파일 입력이 버튼 전체를 덮어 휴대폰에서도 바로 사진 선택이 열리게 */
+.detail-editor .de-add-image { position: relative; overflow: hidden; cursor: pointer; }
+.detail-editor .de-add-image input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: auto; cursor: pointer; font-size: 100px; }
+.de-toolbar > button, .detail-editor .de-add-image { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.de-block.de-flash { animation: deFlash .9s ease; }
+@keyframes deFlash { 0% { box-shadow: 0 0 0 0 rgba(23,23,23,.35); } 40% { box-shadow: 0 0 0 4px rgba(23,23,23,.18); } 100% { box-shadow: 0 0 0 0 rgba(23,23,23,0); } }
