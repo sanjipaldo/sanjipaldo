@@ -1673,8 +1673,26 @@ function dashboardKpiCard({ action, icon, label, value, description, tone = "blu
     <b>${escapeHtml(label)}</b>
   </button>`;
 }
+/* 휴대폰 윗줄(안녕하세요 👋 + 배지)이 좁으면 배지를 숨겨 아이콘과 겹치지 않게 */
+function fitGreetingLine() {
+  const line = document.getElementById("pageContext"); const badge = line?.querySelector(".greet-badge-m");
+  if (!badge) return;
+  badge.hidden = false;
+  if (getComputedStyle(badge).display === "none") return;
+  const heading = line.closest(".topbar-heading");
+  if (line.scrollWidth > line.clientWidth + 1 || (heading && badge.getBoundingClientRect().right > heading.getBoundingClientRect().right + 1)) badge.hidden = true;
+}
+window.addEventListener("resize", () => requestAnimationFrame(fitGreetingLine));
+/* 인사말 옆 작은 배지: 위탁셀러는 요금제, 공급사는 판매 준비 단계(다 끝나면 ‘공급 파트너’) */
+function greetingBadge(where = "d") {
+  if (activeRole === "seller" && !currentAccount?.staff) { const tier = planTier(); return `<button type="button" class="greet-badge greet-badge-${where} tier-${tier.id}" data-action="greet-plan" title="요금제 보기">${escapeHtml(tier.name)}${where === "m" ? "" : " 요금제"}</button>`; }
+  if (activeRole === "supplier") { const steps = supplierLaunchSteps(); const done = steps.filter(step => step.done).length; return done < steps.length ? `<button type="button" class="greet-badge greet-badge-${where} sup-ready" data-action="greet-launch" title="판매 시작 준비로 이동">${where === "m" ? "준비" : "판매 준비"} ${done}/${steps.length}</button>` : `<span class="greet-badge greet-badge-${where} sup-partner">✓ 공급 파트너</span>`; }
+  return "";
+}
+/* 대시보드 인사말은 상호명으로 (위탁셀러: 상호명, 공급사: 공급사 상호명) */
 function accountGreetingName() {
   if (!currentAccount) return "고객";
+  if (activeRole === "seller" || activeRole === "supplier") { const company = String(workspaceCompany(activeRole) || "").trim(); if (company && company !== "공급사" && company !== "계정") return company; }
   const representative = String(currentAccount.representative || "").trim();
   if (representative && !["위탁셀러", "공급사 담당자", "담당자"].includes(representative)) return representative;
   return currentAccount.name || currentAccount.company || roleLabel();
@@ -1719,14 +1737,16 @@ function render() {
   /* 대시보드 인사말: 윗줄 ‘안녕하세요 👋’, 큰 제목 ‘{이름}님!’ (회색 안내 줄 없이) — PC·휴대폰 공통 */
   document.querySelector(".topbar-heading")?.classList.toggle("is-greeting", isDashboard);
   const contextEl = document.getElementById("pageContext");
-  if (isDashboard) contextEl.innerHTML = `안녕하세요 <span class="greet-wave" aria-hidden="true">👋</span>`;
+  if (isDashboard) { const now = new Date(); const days = "일월화수목금토"; contextEl.innerHTML = `<span class="greet-hello">안녕하세요 <span class="greet-wave" aria-hidden="true">👋</span></span><span class="greet-date"><span class="greet-date-long">${now.getMonth() + 1}월 ${now.getDate()}일 ${days[now.getDay()]}요일</span></span></span>${greetingBadge("m")}`; }
   else contextEl.textContent = `${roleLabel()} 업무 메뉴`;
   const titleEl = document.getElementById("pageTitle");
-  titleEl.textContent = isDashboard ? `${accountGreetingName()}님!` : (activeRole === "seller" ? contentText(`seller.page.${activeMenuIndex}`, defaultTitle) : defaultTitle);
-  titleEl.title = titleEl.textContent;
+  if (isDashboard) titleEl.innerHTML = `<span class="greet-name">${escapeHtml(accountGreetingName())}님!</span>${greetingBadge("d")}`;
+  else titleEl.textContent = activeRole === "seller" ? contentText(`seller.page.${activeMenuIndex}`, defaultTitle) : defaultTitle;
+  titleEl.title = isDashboard ? `${accountGreetingName()}님!` : titleEl.textContent;
   const subtitleEl = document.getElementById("pageSubtitle");
   subtitleEl.textContent = isDashboard ? "" : `${roleLabel()} 업무를 한 화면에서 확인하고 처리하세요.`;
   subtitleEl.hidden = isDashboard;
+  if (isDashboard) requestAnimationFrame(fitGreetingLine);
   const demoNotice = document.getElementById("demoNotice");
   if (demoNotice) demoNotice.hidden = activeRole === "seller" && (editMode || [3, 6].includes(activeMenuIndex));
   document.getElementById("appView").dataset.editMode = String(editMode && activeRole === "seller" && activeMenuIndex === 0);
@@ -7671,6 +7691,8 @@ document.addEventListener("click", event => {
   if (action === "filter-supplier-orders") { supplierOrderStatus = target.dataset.status || "all"; render(); updateAccountUI(); return; }
   if (action === "settlement-tab") { supplierSettlementTab = target.dataset.tab || "scheduled"; render(); updateAccountUI(); return; }
   if (action === "supplier-go-menu") { closeModal(); activeMenuIndex = Number(target.dataset.index || 0); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (action === "greet-plan") { activeMenuIndex = menuIndexOf("요금제", "seller"); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (action === "greet-launch") { document.querySelector(".sup-launch")?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
   if (action === "tracking-upload") { trackingUploadModal(); return; }
   if (action?.startsWith("xf-") && xfHandleAction(action, target)) return;
   if (action === "trk-format-manage") { excelFormatModal("tracking", trackingFormatId, "tracking-upload"); return; }
