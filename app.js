@@ -5769,7 +5769,7 @@ async function rdeAddImages(key, files) {
 function rdeReadHtmlFile(file) {
   return file.arrayBuffer().then(buffer => {
     let text = new TextDecoder("utf-8").decode(buffer);
-    if ((text.match(/�/g) || []).length > 3 || /charset=["']?(euc-kr|ks_c_5601)/i.test(text)) { try { text = new TextDecoder("euc-kr").decode(buffer); } catch (error) { /* 브라우저가 euc-kr을 모르면 utf-8 그대로 */ } }
+    if ((text.match(/\uFFFD/g) || []).length > 3 || /charset=["']?(euc-kr|ks_c_5601)/i.test(text)) { try { text = new TextDecoder("euc-kr").decode(buffer); } catch (error) { /* 브라우저가 euc-kr을 모르면 utf-8 그대로 */ } }
     return text;
   });
 }
