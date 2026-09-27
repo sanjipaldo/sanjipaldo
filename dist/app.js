@@ -8,8 +8,8 @@ const accounts = {
 };
 const roleMenus = {
   master: ["대시보드", "회원 관리", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리", "정산 관리"],
-  supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "굿스플로 · 택배", "가격 관리", "정산 내역", "내 정보", "PICK 요청", "판매 현황", "매출 달력", "공지사항"],
-  seller: ["홈", "상품 소싱", "승인 대기", "공급사 문의", "주문 관리", "취소·반품", "매출 달력", "가격 변경 알림", "쇼핑몰 연동", "요금제", "내 정보", "판매중 상품", "예치금", "공지사항", "마스터 상품", "상품 매핑", "브랜드 소싱", "승인 완료", "장바구니", "샘플 주문 내역"]
+  supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "굿스플로 · 택배", "가격 관리", "정산 내역", "내 정보", "PICK 요청", "판매 현황", "매출 달력", "공지사항", "배송 정책"],
+  seller: ["홈", "상품 소싱", "승인 대기", "공급사 문의", "주문 관리", "취소·반품", "매출 달력", "가격 변경 알림", "쇼핑몰 연동", "요금제", "내 정보", "판매중 상품", "예치금", "공지사항", "마스터 상품", "상품 매핑", "브랜드 소싱", "승인 완료", "장바구니", "샘플 주문 내역", "배송 정책"]
 };
 const roleMenuGroups = {
   master: [
@@ -21,7 +21,7 @@ const roleMenuGroups = {
     { label: "홈", indexes: [0] },
     { label: "순서대로 하기", indexes: [1, 9, 3, 7] },
     { label: "매출 보기", indexes: [11, 10] },
-    { label: "택배 · 문제 처리", indexes: [5, 4] },
+    { label: "택배 · 문제 처리", indexes: [5, 13, 4] },
     { label: "소통 · 설정", indexes: [2, 12, 8] }
   ],
   seller: [
@@ -31,7 +31,7 @@ const roleMenuGroups = {
     { label: "주문 · 배송", indexes: [4, 5, 3] },
     { label: "샘플 구매", indexes: [18, 19] },
     { label: "돈 관리", indexes: [12, 6, 9] },
-    { label: "설정", indexes: [8, 13, 10] }
+    { label: "설정", indexes: [8, 20, 13, 10] }
   ]
 };
 /* 상품 등록 흐름(소싱 → 승인 대기 → 승인 완료 → 마스터 상품 → 판매중)을 사이드바에 번호로 보여준다. */
@@ -40,8 +40,8 @@ const menuSteps = { seller: { 1: 1, 16: 1, 2: 2, 17: 3, 14: 4, 11: 5 }, supplier
 function menuIndexOf(label, role = activeRole) { const index = (roleMenus[role] || []).indexOf(label); return index >= 0 ? index : 0; }
 const menuIcons = {
   master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log", "notice", "settlement"],
-  supplier: ["home", "product", "message", "order", "refund", "printer", "price", "settlement", "settings", "approval", "onsale", "calendar", "notice"],
-  seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice", "approval", "mapping", "brand", "ready", "cart", "box"]
+  supplier: ["home", "product", "message", "order", "refund", "printer", "price", "settlement", "settings", "approval", "onsale", "calendar", "notice", "truck"],
+  seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice", "approval", "mapping", "brand", "ready", "cart", "box", "truck"]
 };
 
 const DEFAULT_DASHBOARD_LAYOUT = ["today", "product-flow", "order-flow", "money", "notices"];
@@ -921,7 +921,7 @@ function sampleLine(row) {
   const option = row.optionId ? productOptionOf(product, row.optionId) : null;
   const unit = Number(option ? option.supply : product.supply);
   const qty = Math.max(1, Number(row.qty || 1));
-  const shipping = calcShipping(productShippingFee(product), { qty, amount: unit * qty }).total;
+  const shipping = calcShipping(productShippingFee(product), { qty, amount: unit * qty, weightKg: productWeightKg(product) }).total;
   const stock = Number(option ? option.stock : product.stock);
   return { ...row, product, option, unit, qty, shipping, stock, subtotal: unit * qty, total: unit * qty + shipping };
 }
@@ -1633,6 +1633,7 @@ function menuIcon(name) {
     mapping: '<path d="M8 7h5a4 4 0 0 1 0 8h-1"/><path d="m10 4-3 3 3 3"/><path d="M16 17h-5a4 4 0 0 1 0-8h1"/><path d="m14 20 3-3-3-3"/>',
     brand: '<path d="M4 4h7l9 9-7 7-9-9V4Z"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m11 15 4-4"/>',
     cart: '<path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6"/><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/>',
+    truck: '<path d="M3 6h11v10H3zM14 9h4l3 3v4h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
     box: '<path d="M3 8 12 3l9 5-9 5-9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="m7.5 5.5 9 5"/>',
     ready: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/>'
   };
@@ -2771,7 +2772,7 @@ function productStageTabs(activeLabel) {
   return `<nav class="stage-tabs" aria-label="내 상품 단계">${tabs.map(([label, count], index) => `<button type="button" class="${label === activeLabel ? "active" : ""}" data-action="go-menu" data-menu="${label}" ${label === activeLabel ? 'aria-current="page"' : ""}><i>${index + 2}</i><span>${label.replace(" 상품", "")}</span><b>${label === "마스터 상품" ? waiting : count}</b>${label === "마스터 상품" ? `<small>전송 대기</small>` : label === "판매중 상품" ? `<small>쇼핑몰 판매</small>` : ""}</button>`).join("")}</nav>`;
 }
 function sellerItemPhoto(item, product = productOf(item?.productId), className = "") {
-  if (item?.customThumbnail) return `<img class="product-photo ${className}" src="${escapeHtml(item.customThumbnail)}" alt="${escapeHtml(sellerProductTitle(item, product))}">`;
+  if (item?.customThumbnail && imgSrc(item.customThumbnail)) return `<img class="product-photo ${className}" src="${escapeHtml(imgSrc(item.customThumbnail))}" alt="${escapeHtml(sellerProductTitle(item, product))}">`;
   return productPhoto({ ...product, imageIndex: item?.imageIndex ?? product?.imageIndex }, className);
 }
 function sellerItemThumb(item, product = productOf(item?.productId), className = "") {
@@ -3042,6 +3043,7 @@ function renderSellerSection(index) {
   if (index === 17) return sellerReadyProductsTemplate();
   if (index === 18) return sampleCartPageTemplate();
   if (index === 19) return sampleOrdersTemplate();
+  if (index === 20) return shippingPoliciesTemplate("seller");
   if (index === 3) return sellerConnectionTemplate();
   if (index === 4) return sellerOrderManagementTemplate();
   if (index === 5) return refundTemplate("seller");
@@ -3275,6 +3277,7 @@ function renderSupplierSection(index) {
   if (index === 10) return supplierSalesStatusTemplate();
   if (index === 11) return supplierCalendarTemplate();
   if (index === 12) return sellerNoticesTemplate();
+  if (index === 13) return shippingPoliciesTemplate("supplier");
   return accountProfileTemplate(supplierSettingsCard() + supplierAddressCard() + supplierAlertsCard());
 }
 /* 공급사 설정: 상품 자동 승인 (켜 두면 위탁셀러가 PICK하자마자 바로 가져가 판매) */
@@ -4323,7 +4326,7 @@ function productDetailModal(id) {
       <div class="detail-cta-row"><button type="button" class="secondary-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">공급사 문의</button><button type="button" class="primary-button" data-action="${pickAction}" data-id="${p.id}">${pickLabel}</button></div>
     </div></div>
     <div class="detail-tabs" role="tablist"><button type="button" class="active" data-action="product-detail-tab" data-target="product">상품 상세정보</button><button type="button" data-action="product-detail-tab" data-target="shipping">배송·반품 안내</button><button type="button" data-action="product-detail-tab" data-target="supplier">공급사 정보</button></div>
-    <section class="detail-tab-panel active" data-detail-panel="product"><div class="long-detail">${Array.isArray(p.detailBlocks) && p.detailBlocks.length && detailBlocksHasContent(p.detailBlocks) ? `<div class="supplier-detail-page"><span class="supplier-detail-badge">공급사 상세페이지 · 쇼핑몰 전송 시 그대로 복사</span>${detailPreviewMarkup(p.detailBlocks, p)}</div>` : ""}<div class="long-detail-title"><span>FRESH SELECTED</span><h2>${escapeHtml(p.name)}</h2><p>두고가 확인한 공급사 원본 정보로 만든 샘플 상세페이지입니다.</p></div><div class="long-detail-image">${productPhoto(p,"long-detail-photo")}<div><span>${overseas ? "OVERSEAS DIRECT" : "FARM TO TABLE"}</span><h3>${escapeHtml(p.origin)}에서<br>꼼꼼하게 선별했습니다</h3><p>${escapeHtml(p.detail)}</p></div></div><div class="detail-feature-grid"><div><b>01</b><span>선별 품질</span><p>출고 전 상품 상태와 포장 기준을 확인합니다.</p></div><div><b>02</b><span>${overseas ? "안전한 통관" : "빠른 산지출고"}</span><p>${overseas ? "개인통관부호를 주문별로 확인합니다." : "발주 마감 전 주문은 빠르게 출고합니다."}</p></div><div><b>03</b><span>판매 콘텐츠 제공</span><p>정사각형 썸네일과 상세설명을 함께 복사합니다.</p></div></div><div class="detail-info-board"><h3>상품 고시정보</h3><dl><div><dt>상품명</dt><dd>${escapeHtml(p.name)}</dd></div><div><dt>원산지</dt><dd>${escapeHtml(p.origin)}</dd></div><div><dt>공급사</dt><dd>${escapeHtml(p.supplier)}</dd></div><div><dt>보관방법</dt><dd>${escapeHtml(p.shelfLife || "상품별 표시사항 참조")}</dd></div><div><dt>배송</dt><dd>${overseas ? `해외직구 ${escapeHtml(p.deliveryDays)}` : `국내택배 ${escapeHtml(p.deliveryDays)}`}</dd></div><div><dt>반품</dt><dd>두고에서 요청 후 공급사 확인</dd></div></dl></div></div></section>
+    <section class="detail-tab-panel active" data-detail-panel="product"><div class="long-detail">${productHasCustomDetail(p) && detailDocHasContent(productDetailDoc(p)) ? `<div class="supplier-detail-page"><span class="supplier-detail-badge">공급사 상세페이지 · 쇼핑몰 전송 시 그대로 복사</span>${detailPreviewMarkup(p)}</div>` : ""}<div class="long-detail-title"><span>FRESH SELECTED</span><h2>${escapeHtml(p.name)}</h2><p>두고가 확인한 공급사 원본 정보로 만든 샘플 상세페이지입니다.</p></div><div class="long-detail-image">${productPhoto(p,"long-detail-photo")}<div><span>${overseas ? "OVERSEAS DIRECT" : "FARM TO TABLE"}</span><h3>${escapeHtml(p.origin)}에서<br>꼼꼼하게 선별했습니다</h3><p>${escapeHtml(p.detail)}</p></div></div><div class="detail-feature-grid"><div><b>01</b><span>선별 품질</span><p>출고 전 상품 상태와 포장 기준을 확인합니다.</p></div><div><b>02</b><span>${overseas ? "안전한 통관" : "빠른 산지출고"}</span><p>${overseas ? "개인통관부호를 주문별로 확인합니다." : "발주 마감 전 주문은 빠르게 출고합니다."}</p></div><div><b>03</b><span>판매 콘텐츠 제공</span><p>정사각형 썸네일과 상세설명을 함께 복사합니다.</p></div></div><div class="detail-info-board"><h3>상품 고시정보</h3><dl><div><dt>상품명</dt><dd>${escapeHtml(p.name)}</dd></div><div><dt>원산지</dt><dd>${escapeHtml(p.origin)}</dd></div><div><dt>공급사</dt><dd>${escapeHtml(p.supplier)}</dd></div><div><dt>보관방법</dt><dd>${escapeHtml(p.shelfLife || "상품별 표시사항 참조")}</dd></div><div><dt>배송</dt><dd>${overseas ? `해외직구 ${escapeHtml(p.deliveryDays)}` : `국내택배 ${escapeHtml(p.deliveryDays)}`}</dd></div><div><dt>반품</dt><dd>두고에서 요청 후 공급사 확인</dd></div></dl></div></div></section>
     <section class="detail-tab-panel" data-detail-panel="shipping" hidden><div class="detail-policy-grid"><article><span>배송</span><h3>${overseas ? "해외직구 배송" : "공급사 직배송"}</h3><p>${escapeHtml(p.deliveryDays || "1~3일")} 내 배송을 원칙으로 하며, 발주마감 ${escapeHtml(p.cutoff || "10:00")} 이전 결제 주문부터 순차 출고됩니다.</p></article><article><span>반품</span><h3>반품·교환 접수</h3><p>셀러의 취소·환불 메뉴에서 주문과 사유를 선택하면 공급사 확인 후 회수 또는 환불 절차가 진행됩니다.</p></article><article><span>주의</span><h3>${overseas ? "통관정보 확인" : "신선식품 확인"}</h3><p>${overseas ? "수취인의 개인통관부호가 일치하지 않으면 배송이 지연될 수 있습니다." : "신선식품은 단순 변심보다 파손·품질 이슈를 우선 확인합니다."}</p></article></div></section>
     <section class="detail-tab-panel" data-detail-panel="supplier" hidden><div class="detail-supplier-board"><span class="connection-avatar large">공</span><div><span>SUPPLIER PARTNER</span><h3>${escapeHtml(p.supplier)}</h3><p>${escapeHtml(supplier?.representative || "공급사 담당자")} · 승인 공급사</p></div><dl><div><dt>연락처</dt><dd>${escapeHtml(supplier?.contact || "-")}</dd></div><div><dt>이메일</dt><dd>${escapeHtml(supplier?.email || "-")}</dd></div><div><dt>상담시간</dt><dd>평일 09:00~18:00</dd></div><div><dt>공급상품</dt><dd>${state.products.filter(product => product.supplierLoginId === p.supplierLoginId).length}개</dd></div></dl><button class="primary-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">두고톡으로 문의하기</button></div></section>
     <div class="sticky-detail-actions"><span><b>${money(p.supply)}</b> 공급가 · 재고 ${p.stock}개</span><div><button class="secondary-button" data-close-modal>닫기</button><button class="secondary-button sample-sticky-cart" data-action="sample-add-cart" data-id="${p.id}">🛒 샘플 담기</button><button class="primary-button" data-action="${pickAction}" data-id="${p.id}">${pickLabel}</button></div></div>
@@ -4390,22 +4393,6 @@ function updatePriceMargin(input) {
 const THUMB_BADGES = ["", "무료배송", "산지직송", "당일출고", "선물추천", "특가"];
 const TITLE_WORDS = ["산지직송", "당일발송", "무료배송", "선물용", "국내산"];
 let studioDraft = null;
-function defaultDetailBlocks(product, item) {
-  if (Array.isArray(product?.detailBlocks) && product.detailBlocks.length && detailBlocksHasContent(product.detailBlocks)) return JSON.parse(JSON.stringify(product.detailBlocks));
-  return [{ type: "image", src: "", imageIndex: Number(item?.imageIndex ?? product?.imageIndex ?? 0) }, { type: "text", text: item?.detailSnapshot || product?.detail || "" }];
-}
-function studioBlockImage(block, product) {
-  if (block.src) return `<img src="${escapeHtml(block.src)}" alt="상세 사진">`;
-  return productPhoto({ ...product, imageIndex: block.imageIndex ?? product?.imageIndex }, "studio-block-photo");
-}
-function studioBlocksMarkup(product) {
-  const blocks = studioDraft?.blocks || [];
-  if (!blocks.length) return `<div class="studio-blocks-empty">아직 내용이 없어요. 아래 버튼으로 글이나 사진을 추가하세요.</div>`;
-  return blocks.map((block, index) => `<article class="studio-block ${block.type}">
-    <div class="studio-block-tools"><span>${block.type === "image" ? "사진" : "글"} ${index + 1}</span><div><button type="button" data-action="studio-block-move" data-index="${index}" data-dir="-1" ${index === 0 ? "disabled" : ""} aria-label="위로 올리기">↑</button><button type="button" data-action="studio-block-move" data-index="${index}" data-dir="1" ${index === blocks.length - 1 ? "disabled" : ""} aria-label="아래로 내리기">↓</button><button type="button" class="danger" data-action="studio-block-remove" data-index="${index}" aria-label="블록 삭제">삭제</button></div></div>
-    <div class="studio-block-body">${block.type === "image" ? studioBlockImage(block, product) : `<textarea data-block-text="${index}" rows="4" maxlength="800" placeholder="상품 설명을 적어 주세요. 예) 새벽에 딴 감귤을 당일 발송해요.">${escapeHtml(block.text || "")}</textarea>`}</div>
-  </article>`).join("");
-}
 function studioTagChips() {
   const tags = studioDraft?.tags || [];
   return tags.length ? tags.map(tag => `<button type="button" class="tag-chip" data-action="studio-remove-tag" data-tag="${escapeHtml(tag)}" aria-label="${escapeHtml(tag)} 태그 삭제">#${escapeHtml(tag)} <i aria-hidden="true">×</i></button>`).join("") : `<span class="tag-empty">태그가 없어요. 아래에서 추가해 주세요.</span>`;
@@ -4419,14 +4406,9 @@ function addStudioTag(value) {
   studioDraft.tags.push(tag);
   const el = document.getElementById("studioTags"); if (el) el.innerHTML = studioTagChips();
 }
-function rerenderStudioBlocks() {
-  const item = state.sellerProducts.find(entry => entry.id === studioDraft?.itemId);
-  const el = document.getElementById("studioBlocks");
-  if (el && item) el.innerHTML = studioBlocksMarkup(productOf(item.productId));
-}
 function studioThumbMarkup(item, product) {
   const badge = document.querySelector('#studioForm input[name="thumbBadge"]:checked')?.value ?? item.thumbBadge ?? "";
-  const image = studioDraft?.thumbnail ? `<img class="product-photo studio-thumb-photo" src="${escapeHtml(studioDraft.thumbnail)}" alt="대표 사진">` : productPhoto({ ...product, imageIndex: item.imageIndex ?? product?.imageIndex }, "studio-thumb-photo");
+  const image = studioDraft?.thumbnail && imgSrc(studioDraft.thumbnail) ? `<img class="product-photo studio-thumb-photo" src="${escapeHtml(imgSrc(studioDraft.thumbnail))}" alt="대표 사진">` : productPhoto({ ...product, imageIndex: item.imageIndex ?? product?.imageIndex }, "studio-thumb-photo");
   return `${image}${badge ? `<em class="thumb-badge">${escapeHtml(badge)}</em>` : ""}`;
 }
 function refreshStudioThumb() {
@@ -4434,12 +4416,23 @@ function refreshStudioThumb() {
   const el = document.getElementById("studioThumbPreview");
   if (el && item) el.innerHTML = studioThumbMarkup(item, productOf(item.productId));
 }
+const STUDIO_EXTRA_MAX = 9;
+function studioGalleryMarkup() {
+  const images = studioDraft?.images || [];
+  return `${images.map((ref, index) => `<figure class="studio-gallery-tile"><img src="${escapeHtml(imgSrc(ref))}" alt="추가 이미지 ${index + 1}"><figcaption><button type="button" data-action="studio-gallery-main" data-index="${index}">대표로</button><button type="button" data-action="studio-gallery-del" data-index="${index}" aria-label="사진 빼기">×</button></figcaption><em>${index + 1}</em></figure>`).join("")}${images.length < STUDIO_EXTRA_MAX ? `<button type="button" class="studio-gallery-add" data-action="studio-gallery-add"><b>+</b><span>사진 추가</span><small>${images.length}/${STUDIO_EXTRA_MAX}</small></button>` : ""}`;
+}
+function refreshStudioGallery() { const el = document.getElementById("studioGallery"); if (el) el.innerHTML = studioGalleryMarkup(); }
+/* 사진·상세페이지를 바꿔도 주문은 마스터 코드(SP) ↔ 공급사 상품 코드(DF)로 연결된다 */
+function studioCodeLink(item, source) {
+  const channels = ["smartstore", "coupang"].map(id => `${channelMeta(id).name} ${channelProductCode(item, id)}`).join(" · ");
+  return `<div class="studio-code-link"><div class="studio-code-pair"><span><small>내 마스터 코드</small><b>${escapeHtml(item.id)}</b></span><i aria-hidden="true">⇄</i><span><small>공급사 상품</small><b>${escapeHtml(source.id)}</b></span></div><p>사진·상품명·상세페이지는 내 마음대로 바꿔도 돼요. 쇼핑몰 주문은 이 코드로 공급사 상품에 자동 연결돼요.<small>${escapeHtml(channels)}</small></p></div>`;
+}
 function editSellerProductModal(sellerProductId) {
   const item = state.sellerProducts.find(product => product.id === sellerProductId);
   const source = item && productOf(item.productId);
   if (!item || !source) return;
   const stage = sellerItemStage(item);
-  studioDraft = { itemId: item.id, channelCategories: JSON.parse(JSON.stringify(item.channelCategories || {})), tags: [...itemTags(item, source)], thumbnail: item.customThumbnail || "", blocks: JSON.parse(JSON.stringify(item.detailBlocks?.length ? item.detailBlocks : defaultDetailBlocks(source, item))), detailTouched: false };
+  studioDraft = { itemId: item.id, channelCategories: JSON.parse(JSON.stringify(item.channelCategories || {})), tags: [...itemTags(item, source)], thumbnail: item.customThumbnail || "", images: [...(item.images || [])], doc: itemDetailDoc(item, source), detailTouched: false };
   setTimeout(refreshStudioCategory, 0);
   setTimeout(() => rdeRender("studio"), 0);
   const title = sellerProductTitle(item, source);
@@ -4448,11 +4441,13 @@ function editSellerProductModal(sellerProductId) {
   const stageText = { ready: "승인 완료 · 내 상품으로 꾸미는 중", master: "마스터 상품 · 전송 대기", live: `판매중 · ${live.map(id => channelMeta(id).name).join(", ")}` }[stage] || "내 상품";
   openModal(`<div class="studio">
     <header class="studio-head"><button type="button" class="studio-close" data-close-modal aria-label="닫기">✕</button><div><b>${stage === "ready" ? "상품 꾸미기" : "상품 수정"}</b><small>${escapeHtml(stageText)}</small></div><button type="submit" form="studioForm" class="studio-save-top" value="save">저장</button></header>
-    <nav class="studio-tabs" aria-label="꾸미기 항목"><button type="button" data-studio-jump="studio-photo">사진</button><button type="button" data-studio-jump="studio-title">상품명</button><button type="button" data-studio-jump="studio-price">${hasOptions(source) ? "옵션·가격" : "판매가"}</button><button type="button" data-studio-jump="studio-detail">상세페이지</button><button type="button" data-studio-jump="studio-category">카테고리</button><button type="button" data-studio-jump="studio-tags">태그</button></nav>
+    <nav class="studio-tabs" aria-label="꾸미기 항목"><button type="button" data-studio-jump="studio-photo">사진</button><button type="button" data-studio-jump="studio-title">상품명</button><button type="button" data-studio-jump="studio-price">${hasOptions(source) ? "옵션·가격" : "판매가"}</button><button type="button" data-studio-jump="studio-detail">상세페이지</button><button type="button" data-studio-jump="studio-ship">배송비</button><button type="button" data-studio-jump="studio-category">카테고리</button><button type="button" data-studio-jump="studio-tags">태그</button></nav>
     <form id="studioForm" class="studio-form" data-id="${item.id}">
+      ${studioCodeLink(item, source)}
       <section id="studio-photo" class="studio-section"><h3><i>1</i> 대표 사진</h3><p>쇼핑몰 목록에서 가장 먼저 보이는 사진이에요.</p>
         <div class="studio-photo-row"><div id="studioThumbPreview" class="studio-thumb">${studioThumbMarkup(item, source)}</div>
           <div class="studio-photo-actions"><label class="studio-upload primary"><input type="file" id="studioThumbInput" accept="image/*" hidden>📷 내 사진 올리기</label><button type="button" class="studio-ghost" data-action="studio-reset-thumb">공급사 사진 쓰기</button><small>휴대폰 사진은 자동으로 알맞게 줄여요.</small></div></div>
+        <div class="studio-gallery"><div class="studio-gallery-head"><b>추가 이미지</b><small>최대 ${STUDIO_EXTRA_MAX}장 · 쇼핑몰 상품 사진 넘기기에 나와요</small></div><div id="studioGallery" class="studio-gallery-grid">${studioGalleryMarkup()}</div><input type="file" id="studioGalleryInput" class="rde-file-input" accept="image/*" multiple tabindex="-1" aria-hidden="true"></div>
         <div class="studio-badges" role="radiogroup" aria-label="사진 위 문구">${THUMB_BADGES.map(badge => `<label><input type="radio" name="thumbBadge" value="${escapeHtml(badge)}" ${(item.thumbBadge || "") === badge ? "checked" : ""}><span>${badge ? escapeHtml(badge) : "문구 없음"}</span></label>`).join("")}</div>
       </section>
       <section id="studio-title" class="studio-section"><h3><i>2</i> 상품명</h3><p>‘지역 + 상품 + 중량’처럼 쓰면 검색에 잘 걸려요.</p>
@@ -4463,17 +4458,20 @@ function editSellerProductModal(sellerProductId) {
       <section id="studio-price" class="studio-section"><h3><i>3</i> ${hasOptions(source) ? "옵션·판매가" : "판매가"}</h3><p>${hasOptions(source) ? `공급사 옵션 ${productOptions(source).length}개가 그대로 쇼핑몰에 올라가요. 팔지 않을 옵션은 체크를 빼세요.` : "공급가보다 높게 정해 주세요."}</p>
         ${hasOptions(source) ? optionPriceRows(source, item) : singlePriceRow(source, item.salePrice || source.recommended)}
       </section>
-      <section id="studio-detail" class="studio-section"><h3><i>4</i> 상세페이지</h3><p>사진 여러 장·글 서식·표·동영상을 쌓거나 HTML로 올려요. 새 블록은 지금 누른 블록 아래에 들어가요.</p>
-        ${detailEditorMarkupFor("studio", studioDraft.blocks, { product: source, onChange: () => { if (studioDraft) { studioDraft.detailTouched = true; studioDraft.detailReset = false; } }, onReset: () => { if (studioDraft) { studioDraft.detailTouched = false; studioDraft.detailReset = true; } }, resetBlocks: () => defaultDetailBlocks(source, { imageIndex: source.imageIndex, detailSnapshot: source.detail }) })}
+      <section id="studio-detail" class="studio-section"><h3><i>4</i> 상세페이지</h3><p>한 화면에서 글을 쓰고, 커서 자리에 사진·표·동영상을 넣어요. 사진을 누르면 크기·순서를 바꿀 수 있어요.</p>
+        ${detailEditorMarkupFor("studio", studioDraft.doc, { product: source, onChange: () => { if (studioDraft) { studioDraft.detailTouched = true; studioDraft.detailReset = false; } }, onReset: () => { if (studioDraft) { studioDraft.detailTouched = false; studioDraft.detailReset = true; } }, resetDoc: () => sellerDefaultDoc(source, { imageIndex: source.imageIndex }) })}
+      </section>
+      <section id="studio-ship" class="studio-section"><h3><i>5</i> 배송비 <small>내 배송 정책</small></h3><p>쇼핑몰에 올릴 때 들어가는 배송비예요. ‘배송 정책’ 메뉴에서 만든 정책을 골라요.</p>
+        ${shippingPolicyPicker({ role: "seller", loginId: item.sellerLoginId, selectedId: item.shippingPolicyId || "supplier", allowSupplier: true, supplierLabel: `공급사: ${shippingFeeLabel(productShippingFee(source))}` })}
       </section>
       ${studioCategorySection(item, source, categoryPath)}
-      <section id="studio-tags" class="studio-section"><h3><i>6</i> 검색 태그 <small>네이버 태그 · 최대 10개</small></h3><p>손님이 검색할 단어를 넣으면 쇼핑몰 검색에 더 잘 걸려요.</p>
+      <section id="studio-tags" class="studio-section"><h3><i>7</i> 검색 태그 <small>네이버 태그 · 최대 10개</small></h3><p>손님이 검색할 단어를 넣으면 쇼핑몰 검색에 더 잘 걸려요.</p>
         <div id="studioTags" class="tag-chips">${studioTagChips()}</div>
         <div class="tag-input-row"><input id="studioTagInput" placeholder="예: 제주감귤" maxlength="20" autocomplete="off" enterkeyhint="done"><button type="button" class="secondary-button" data-action="studio-add-tag">추가</button></div>
         <div class="tag-suggest"><span>추천</span>${suggestedTags(item, source).map(tag => `<button type="button" data-action="studio-suggest-tag" data-tag="${escapeHtml(tag)}">+ ${escapeHtml(tag)}</button>`).join("")}</div>
       </section>
-      <section class="studio-section studio-info"><h3>출고 정보 <small>공급사 기준</small></h3><p>배송비·반품비는 쇼핑몰(스마트스토어·쿠팡)에서 불러온 배송 정책으로 등록돼요. ‘상품 전송’ 때 쇼핑몰마다 골라요.</p>
-        <dl><div><dt>배송</dt><dd>${source.shippingType === "overseas" ? `해외직구 · ${escapeHtml(source.deliveryDays || "7~14일")}` : `국내배송 · ${escapeHtml(source.deliveryDays || "1~3일")}`}</dd></div><div><dt>배송비</dt><dd>${escapeHtml(source.shippingPolicy || "무료배송")}</dd></div><div><dt>택배사</dt><dd>${escapeHtml(source.carrier || "공급사 지정")}</dd></div><div><dt>원산지</dt><dd>${escapeHtml(source.origin || source.originCountry || "대한민국")}</dd></div>${source.shippingType === "overseas" ? `<div><dt>통관</dt><dd>개인통관고유부호 필요</dd></div>` : ""}</dl>
+      <section class="studio-section studio-info"><h3>출고 정보 <small>공급사 기준</small></h3><p>배송비는 위 ‘배송비’에서 고른 정책으로 쇼핑몰에 올라가요. 출고는 공급사가 해요.</p>
+        <dl><div><dt>배송</dt><dd>${source.shippingType === "overseas" ? `해외직구 · ${escapeHtml(source.deliveryDays || "7~14일")}` : `국내배송 · ${escapeHtml(source.deliveryDays || "1~3일")}`}</dd></div><div><dt>공급사 배송비</dt><dd>${escapeHtml(shippingFeeLabel(productShippingFee(source)))}</dd></div><div><dt>택배사</dt><dd>${escapeHtml(source.carrier || "공급사 지정")}</dd></div><div><dt>원산지</dt><dd>${escapeHtml(source.origin || source.originCountry || "대한민국")}</dd></div>${source.shippingType === "overseas" ? `<div><dt>통관</dt><dd>개인통관고유부호 필요</dd></div>` : ""}</dl>
       </section>
     </form>
     <footer class="studio-foot">${stage === "ready"
@@ -4951,6 +4949,13 @@ function ensureChannelListing(item, channelId) {
 function logChannelApi(entry) {
   state.channelApiLog = [{ id: `API-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, at: channelApiNow(), ...entry }, ...(state.channelApiLog || [])].slice(0, 120);
 }
+/* 셀러가 올린 대표·추가 사진이 있으면 그걸 쓰고, 없으면 공급사 사진. 브라우저에 있는 사진(data URL)은 서버가 네이버 이미지 서버로 올린다 */
+function sellerListingImages(item, product) {
+  const supplierPhoto = absoluteAssetUrl(`assets/product-${String(Number(item.imageIndex ?? product?.imageIndex ?? 0) % 8).padStart(2, "0")}.jpg`);
+  const own = [item.customThumbnail, ...(item.images || [])].map(imgSrc).filter(src => /^(https?:|data:image\/)/.test(src));
+  const list = item.customThumbnail && own.length ? own : [supplierPhoto, ...own];
+  return [...new Set(list)].slice(0, 10);
+}
 function absoluteAssetUrl(path) { try { return new URL(path, location.href).href; } catch { return path; } }
 /* 두고 리스팅: 쇼핑몰과 상관없는 한 가지 모양으로 서버에 보내면, 서버가 쿠팡·네이버 규격으로 바꾼다 */
 function doogoListingFor(item, channelId) {
@@ -4961,14 +4966,14 @@ function doogoListingFor(item, channelId) {
   const policy = { ...(channelPolicyPresets(channelId).find(preset => preset.id === chosen.id) || channelPolicyPresets(channelId)[0] || {}), ...chosen };
   const rows = sellerOptionRows(item, product).filter(row => row.enabled);
   const supplier = memberByLogin(product?.supplierLoginId);
-  const images = [item.customThumbnail && /^https?:/.test(item.customThumbnail) ? item.customThumbnail : "", absoluteAssetUrl(`assets/product-${String(Number(item.imageIndex ?? product?.imageIndex ?? 0) % 8).padStart(2, "0")}.jpg`)].filter(Boolean);
+  const images = sellerListingImages(item, product);
   return {
     listingId: item.id, title: detail.title || sellerProductTitle(item, product), brand: product?.brand || product?.supplier || "", supplierName: product?.supplier || "", productCode: product?.id || "",
     salePrice: Number(detail.salePrice || item.salePrice || product?.recommended || 0), originalPrice: Number(product?.recommended || 0), stock: Number(product?.stock || 0), images,
-    detailHtml: detailBlocksToHtml(item.detailBlocks?.length ? item.detailBlocks : defaultDetailBlocks(product, item), product), tags: detail.tags || itemTags(item, product),
+    detailHtml: detailDocHtml(itemDetailDoc(item, product), "export"), tags: detail.tags || itemTags(item, product),
     options: rows.map(row => ({ optionId: row.id, name: row.name, salePrice: row.salePrice, stock: Number(row.stock ?? product?.stock ?? 0) })),
     category: channelId === "coupang" ? { coupang: detail.categoryCode || "" } : { smartstore: detail.categoryCode || "" },
-    shipping: (() => { const sf = productShippingFee(product); const cp = coupangDelivery(sf); return { carrier: product?.carrier || policy.carrier || "한진택배", feeType: cp.deliveryChargeType === "NOT_FREE" || cp.deliveryChargeType === "CHARGE_RECEIVED" ? "PAID" : cp.deliveryChargeType, fee: cp.deliveryCharge, freeOver: cp.freeShipOverAmount, returnFee: Number(sf.returnFee || policy.returnFee || 0), exchangeFee: Number(sf.exchangeFee || policy.exchangeFee || 0), dispatchDays: sf.attribute === "PRE_ORDER" ? Number(sf.makeDays || 3) : 1, naverDeliveryFee: naverDeliveryFee(sf), naverDeliveryAttribute: sf.attribute, bundle: sf.bundle, directDelivery: sf.method === "DIRECT", coupangDelivery: cp, coupangOutboundCode: policy.outboundCode || policy.id || "", coupangReturnCenterCode: policy.returnCenterCode || policy.id || "", naverShippingAddressId: policy.shippingAddressId || policy.id || "", naverReturnAddressId: policy.returnAddressId || policy.id || "" };})(),
+    shipping: (() => { const sf = itemShippingFee(item, product); const kg = productWeightKg(product); const cp = coupangDelivery(sf, kg); return { naverCarrierCode: naverCarrierCode(product?.carrier || policy.carrier || "한진택배"), carrier: product?.carrier || policy.carrier || "한진택배", feeType: cp.deliveryChargeType === "NOT_FREE" || cp.deliveryChargeType === "CHARGE_RECEIVED" ? "PAID" : cp.deliveryChargeType, fee: cp.deliveryCharge, freeOver: cp.freeShipOverAmount, returnFee: Number(sf.returnFee || policy.returnFee || 0), exchangeFee: Number(sf.exchangeFee || policy.exchangeFee || 0), dispatchDays: sf.attribute === "PRE_ORDER" ? Number(sf.makeDays || 3) : 1, naverDeliveryFee: naverDeliveryFee(sf, kg), naverDeliveryAttribute: sf.attribute, bundle: sf.bundle, directDelivery: sf.method === "DIRECT", coupangDelivery: cp, coupangOutboundCode: policy.outboundCode || policy.id || "", coupangReturnCenterCode: policy.returnCenterCode || policy.id || "", naverShippingAddressId: policy.shippingAddressId || policy.id || "", naverReturnAddressId: policy.returnAddressId || policy.id || "" };})(),
     returnAddress: (() => { const book = supplierAddressBook(product?.supplierLoginId); return book ? { zipCode: book.returnTo.zipCode, address: book.returnTo.address, addressDetail: book.returnTo.detail, phone: book.phone } : { zipCode: policy.zipCode || "", address: policy.address || "", addressDetail: "", phone: supplier?.contact || "" }; })(),
     asPhone: supplierAddressBook(product?.supplierLoginId)?.phone || supplier?.contact || "", origin: product?.originCountry || "국산", overseas: product?.shippingType === "overseas", pccNeeded: productNeedsCustoms(product), taxType: "TAX", notice: { type: "FOOD", fields: {} }
   };
@@ -5174,7 +5179,7 @@ function refreshStudioCategory() {
 }
 function studioCategorySection(item, source, categoryPath) {
   const suggestions = searchCategories(studioSuggestionQuery(item, source), "smartstore", 3);
-  return `<section id="studio-category" class="studio-section"><h3><i>5</i> 카테고리 <small>연동 쇼핑몰 동시 세팅</small></h3><p>카테고리를 한 번 고르면 연동된 쇼핑몰(네이버·쿠팡 등)에 맞는 카테고리가 같이 세팅돼요.</p>
+  return `<section id="studio-category" class="studio-section"><h3><i>6</i> 카테고리 <small>연동 쇼핑몰 동시 세팅</small></h3><p>카테고리를 한 번 고르면 연동된 쇼핑몰(네이버·쿠팡 등)에 맞는 카테고리가 같이 세팅돼요.</p>
     <div class="cat-finder">
       <div class="cat-mode-tabs" role="tablist"><button type="button" class="active" data-cat-mode="search">카테고리명 검색</button><button type="button" data-cat-mode="select">카테고리명 선택</button></div>
       <div class="cat-pane" data-cat-pane="search">
@@ -5429,17 +5434,22 @@ function readSupplierOptions(form) {
   return { options, optionTitle: String(formData.get("optionTitle") || "옵션").trim() || "옵션" };
 }
 /* 네이버 스마트스토어 발송처리에서 고를 수 있는 주요 택배사 (국내 → 해외 순) */
+/* 스마트스토어 상품 등록 ‘택배사’ 목록 기준. naver = 커머스API deliveryCompany 코드 (확인된 것만, 나머지는 ‘기타 택배(CH1)’로 보냄) */
+const CARRIER_GROUPS = ["국내 택배", "편의점 택배", "신선·새벽배송", "해외 특송", "직접 배송·기타"];
 const CARRIERS = [
-  { name: "CJ대한통운", alias: "cj 대한통운 씨제이" }, { name: "한진택배", alias: "hanjin 한진" }, { name: "롯데택배", alias: "lotte 롯데글로벌로지스 롯데" }, { name: "우체국택배", alias: "우체국 epost 우편" }, { name: "로젠택배", alias: "logen 로젠" },
-  { name: "경동택배", alias: "kd 경동" }, { name: "대신택배", alias: "daesin 대신" }, { name: "일양로지스", alias: "ilyang 일양" }, { name: "합동택배", alias: "hapdong 합동" }, { name: "건영택배", alias: "건영" },
-  { name: "천일택배", alias: "천일" }, { name: "한덱스", alias: "handex" }, { name: "호남택배", alias: "호남" }, { name: "CU 편의점택배", alias: "cu 씨유 편의점 cvsnet" }, { name: "GS Postbox 택배", alias: "gs 편의점 포스트박스" },
-  { name: "농협택배", alias: "nh 농협" }, { name: "홈픽", alias: "homepick" }, { name: "우리택배", alias: "우리" }, { name: "세방택배", alias: "세방" }, { name: "SLX택배", alias: "slx" },
-  { name: "용마로지스", alias: "용마" }, { name: "성원글로벌카고", alias: "성원" }, { name: "팀프레시", alias: "teamfresh 새벽배송" }, { name: "컬리넥스트마일", alias: "kurly 컬리" }, { name: "오늘의픽업", alias: "today pickup" },
-  { name: "애니트랙", alias: "anytrack" }, { name: "굿투럭", alias: "goodtoluck" }, { name: "직접배송(업체 자체 배송)", alias: "직접 자체 퀵" },
-  { name: "EMS (우체국 국제특송)", alias: "ems 우체국 국제" }, { name: "DHL", alias: "dhl 디에이치엘" }, { name: "FedEx", alias: "fedex 페덱스" }, { name: "UPS", alias: "ups 유피에스" }, { name: "TNT Express", alias: "tnt" },
-  { name: "USPS", alias: "usps 미국우체국" }, { name: "CJ대한통운 국제특송", alias: "cj 국제" }, { name: "롯데 국제특송", alias: "롯데 국제" }, { name: "한진 국제특송", alias: "한진 국제" }, { name: "판토스", alias: "pantos" },
-  { name: "SF Express (순풍)", alias: "sf 순풍 순펑" }, { name: "Qxpress (큐익스프레스)", alias: "qxpress 큐익스프레스" }, { name: "Cainiao (차이냐오)", alias: "cainiao 차이냐오 알리" }, { name: "ACI Express", alias: "aci" }
+  { name: "CJ대한통운", alias: "cj 대한통운 씨제이", group: "국내 택배", naver: "CJGLS" }, { name: "한진택배", alias: "hanjin 한진", group: "국내 택배", naver: "HANJIN" }, { name: "롯데택배", alias: "lotte 롯데글로벌로지스 롯데 현대택배", group: "국내 택배", naver: "HYUNDAI" }, { name: "우체국택배", alias: "우체국 epost 우편 등기 소포", group: "국내 택배", naver: "EPOST" }, { name: "로젠택배", alias: "logen 로젠", group: "국내 택배", naver: "KGB" },
+  { name: "경동택배", alias: "kd 경동 화물", group: "국내 택배", naver: "KDEXP" }, { name: "대신택배", alias: "daesin 대신 화물", group: "국내 택배", naver: "DAESIN" }, { name: "일양로지스", alias: "ilyang 일양", group: "국내 택배", naver: "ILYANG" }, { name: "합동택배", alias: "hapdong 합동", group: "국내 택배" }, { name: "건영택배", alias: "건영", group: "국내 택배" },
+  { name: "천일택배", alias: "천일", group: "국내 택배", naver: "CHUNIL" }, { name: "한덱스", alias: "handex", group: "국내 택배" }, { name: "호남택배", alias: "호남", group: "국내 택배" }, { name: "농협택배", alias: "nh 농협", group: "국내 택배" }, { name: "홈픽", alias: "homepick", group: "국내 택배" },
+  { name: "우리택배", alias: "우리", group: "국내 택배" }, { name: "세방택배", alias: "세방", group: "국내 택배" }, { name: "SLX택배", alias: "slx", group: "국내 택배" }, { name: "용마로지스", alias: "용마", group: "국내 택배" }, { name: "성원글로벌카고", alias: "성원", group: "국내 택배" },
+  { name: "애니트랙", alias: "anytrack", group: "국내 택배" }, { name: "굿투럭", alias: "goodtoluck", group: "국내 택배" },
+  { name: "GS Postbox 택배", alias: "gs 편의점 포스트박스 cvsnet", group: "편의점 택배", naver: "CVSNET" }, { name: "CU 편의점택배", alias: "cu 씨유 편의점", group: "편의점 택배" },
+  { name: "팀프레시", alias: "teamfresh 새벽배송", group: "신선·새벽배송" }, { name: "컬리넥스트마일", alias: "kurly 컬리", group: "신선·새벽배송" }, { name: "오늘의픽업", alias: "today pickup", group: "신선·새벽배송" },
+  { name: "EMS (우체국 국제특송)", alias: "ems 우체국 국제", group: "해외 특송" }, { name: "DHL", alias: "dhl 디에이치엘", group: "해외 특송" }, { name: "FedEx", alias: "fedex 페덱스", group: "해외 특송" }, { name: "UPS", alias: "ups 유피에스", group: "해외 특송" }, { name: "TNT Express", alias: "tnt", group: "해외 특송" },
+  { name: "USPS", alias: "usps 미국우체국", group: "해외 특송" }, { name: "CJ대한통운 국제특송", alias: "cj 국제", group: "해외 특송" }, { name: "롯데 국제특송", alias: "롯데 국제", group: "해외 특송" }, { name: "한진 국제특송", alias: "한진 국제", group: "해외 특송" }, { name: "판토스", alias: "pantos", group: "해외 특송" },
+  { name: "SF Express (순풍)", alias: "sf 순풍 순펑", group: "해외 특송" }, { name: "Qxpress (큐익스프레스)", alias: "qxpress 큐익스프레스", group: "해외 특송" }, { name: "Cainiao (차이냐오)", alias: "cainiao 차이냐오 알리", group: "해외 특송" }, { name: "ACI Express", alias: "aci", group: "해외 특송" },
+  { name: "직접배송(업체 자체 배송)", alias: "직접 자체 퀵 화물", group: "직접 배송·기타", naver: "DIRECT_DELIVERY" }, { name: "기타 택배", alias: "기타 etc", group: "직접 배송·기타", naver: "CH1" }
 ];
+function naverCarrierCode(name) { const item = CARRIERS.find(entry => entry.name === name); return item?.naver || "CH1"; }
 const POPULAR_CARRIERS = ["CJ대한통운", "한진택배", "롯데택배", "우체국택배", "로젠택배"];
 const HANGUL_INITIALS = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
 function hangulInitials(text) { return [...String(text)].map(ch => { const code = ch.charCodeAt(0) - 0xac00; return code >= 0 && code < 11172 ? HANGUL_INITIALS[Math.floor(code / 588)] : ch; }).join(""); }
@@ -5457,12 +5467,18 @@ function searchCarriers(query) {
 function isKnownCarrier(name) { return CARRIERS.some(item => item.name === name); }
 function carrierPicker(name, value = "한진택배", note = "") {
   const current = isKnownCarrier(value) ? value : "한진택배";
-  return `<div class="carrier-picker" data-carrier-picker><div class="carrier-input-wrap"><input type="text" class="carrier-input" data-carrier-input value="${escapeHtml(current)}" placeholder="택배사 이름 입력 (예: 한진, cj, ㄹㅈ)" autocomplete="off" aria-label="택배사 검색"><span class="carrier-caret">⌕</span></div><input type="hidden" name="${name}" value="${escapeHtml(current)}" data-carrier-value><div class="carrier-results" data-carrier-results hidden></div><div class="carrier-quick">${POPULAR_CARRIERS.map(carrier => `<button type="button" class="${carrier === current ? "active" : ""}" data-carrier-pick="${escapeHtml(carrier)}">${escapeHtml(carrier)}</button>`).join("")}</div>${note ? `<small>${note}</small>` : ""}</div>`;
+  return `<div class="carrier-picker" data-carrier-picker><div class="carrier-input-wrap"><input type="text" class="carrier-input" data-carrier-input value="${escapeHtml(current)}" placeholder="택배사 이름 입력 (예: 한진, cj, ㄹㅈ)" autocomplete="off" aria-label="택배사 검색"><button type="button" class="carrier-all" data-carrier-all aria-label="택배사 전체 목록 보기">전체 ▾</button></div><input type="hidden" name="${name}" value="${escapeHtml(current)}" data-carrier-value><div class="carrier-results" data-carrier-results hidden></div><div class="carrier-quick">${POPULAR_CARRIERS.map(carrier => `<button type="button" class="${carrier === current ? "active" : ""}" data-carrier-pick="${escapeHtml(carrier)}">${escapeHtml(carrier)}</button>`).join("")}</div>${note ? `<small>${note}</small>` : ""}</div>`;
 }
 function renderCarrierResults(picker, query) {
   const box = picker.querySelector("[data-carrier-results]");
   const list = searchCarriers(query);
-  box.innerHTML = list.length ? `${String(query || "").trim() ? "" : `<p>자주 쓰는 택배사</p>`}${list.map((item, index) => `<button type="button" class="${index === 0 ? "focus" : ""}" data-carrier-pick="${escapeHtml(item.name)}">${escapeHtml(item.name)}</button>`).join("")}` : `<p class="none">‘${escapeHtml(query)}’ 택배사를 찾지 못했어요. 이름을 다시 확인해 주세요.</p>`;
+  const row = (item, focus) => `<button type="button" class="${focus ? "focus" : ""}" data-carrier-pick="${escapeHtml(item.name)}"><span>${escapeHtml(item.name)}</span>${item.naver ? `<code>${escapeHtml(item.naver)}</code>` : ""}</button>`;
+  if (!String(query || "").trim()) {
+    const popular = CARRIERS.filter(item => POPULAR_CARRIERS.includes(item.name));
+    box.innerHTML = `<p>자주 쓰는 택배사</p>${popular.map((item, index) => row(item, index === 0)).join("")}${CARRIER_GROUPS.map(group => `<p>${group}</p>${CARRIERS.filter(item => item.group === group && !POPULAR_CARRIERS.includes(item.name)).map(item => row(item, false)).join("")}`).join("")}<p class="carrier-total">전체 ${CARRIERS.length}곳 · 스마트스토어 택배사 목록 기준</p>`;
+    box.hidden = false; return;
+  }
+  box.innerHTML = list.length ? `${list.map((item, index) => row(item, index === 0)).join("")}` : `<p class="none">‘${escapeHtml(query)}’ 택배사를 찾지 못했어요. 이름을 다시 확인해 주세요.</p>`;
   box.hidden = false;
 }
 function pickCarrier(picker, name) {
@@ -5473,11 +5489,7 @@ function pickCarrier(picker, name) {
 }
 
 /* 상품 상세페이지: 공급사 상품 등록·수정 화면의 에디터 (공통 에디터 key "product") */
-function detailBlocksOf(product) {
-  if (Array.isArray(product?.detailBlocks) && product.detailBlocks.length) return product.detailBlocks;
-  return [{ type: "text", style: "body", text: product?.detail || "센터배송 · 전 채널 판매 가능 · 상세페이지 제공" }];
-}
-function detailPreviewMarkup(blocks, product) { return `<div class="rde-doc">${detailBlocksToHtml(blocks, product, "view")}</div>`; }
+function detailPreviewMarkup(product) { return `<div class="rde-doc">${detailDocHtml(productDetailDoc(product), "view")}</div>`; }
 function readDetailImage(file) {
   return new Promise((resolve, reject) => {
     if (!/^image\//.test(file.type)) return reject(new Error("이미지 파일만 올릴 수 있어요."));
@@ -5511,26 +5523,83 @@ function readDetailImage(file) {
   });
 }
 function detailEditorMarkup(product) {
-  return `<div class="form-field full detail-editor-field"><label>상품 상세페이지 * <small>스마트스토어처럼 사진·글·표·동영상을 쌓거나, HTML 코드·파일로 바로 올릴 수 있어요.</small></label>
-    ${detailEditorMarkupFor("product", detailBlocksOf(product), { product })}
+  return `<div class="form-field full detail-editor-field"><label>상품 상세페이지 * <small>스마트스토어 에디터처럼 한 화면에서 글을 쓰고 커서 자리에 사진·표·동영상을 넣어요. HTML 코드·파일도 돼요.</small></label>
+    ${detailEditorMarkupFor("product", productDetailDoc(product), { product })}
     <small>여기 만든 상세페이지가 위탁셀러의 상품 화면과 쇼핑몰 전송용 상세(HTML)에 그대로 복사돼요. 긴 사진은 자동으로 나눠 올라가요.</small></div>`;
 }
-/* ===== 상세페이지 에디터 (스마트스토어·카페24 방식) =====
-   블록(컴포넌트)을 위에서 아래로 쌓는다: 글(서식) · 사진(여러 장) · 구분선 · 인용구 · 동영상 · 표 · HTML.
-   'HTML 코드'로 전체를 직접 고치거나, .html 파일을 올려 그대로 가져올 수 있다.
+/* ===== 상세페이지 에디터 (스마트스토어 스마트에디터·카페24처럼 하나의 문서) =====
+   글·사진·표·구분선·인용구·동영상을 한 화면에서 섞어 쓴다. 사진은 커서 자리에 들어가고, 사진을 누르면 크기·링크·설명·순서·삭제.
+   'HTML 코드'로 전체를 직접 고치거나 .html 파일을 올려 그대로 가져올 수 있다.
+   사진은 브라우저 사진 저장소(IndexedDB)에 따로 보관하고 문서에는 idb:img-… 이름만 남겨 저장 공간이 넘치지 않게 한다.
    다른 사람이 쓴 HTML을 셀러·공급사 화면에 보여 주므로, 저장·표시 전에 항상 sanitizeDetailHtml()로 걸러낸다. */
-const RDE_MAX_BLOCKS = 60;
-const rdeDrafts = {};   // 에디터 key → 블록 배열
-const rdeOptions = {};  // 에디터 key → { product, onChange, resetBlocks }
-let rdeActive = { key: "", index: -1 };
+const rdeDrafts = {};   // 에디터 key → 문서 HTML
+const rdeOptions = {};  // 에디터 key → { product, onChange, onReset, resetDoc }
 const RDE_COLORS = ["#171717", "#4d4d4d", "#8f8f8f", "#d92d20", "#ea580c", "#ca8a04", "#15803d", "#0070f3", "#7c3aed", "#db2777"];
 const RDE_MARKS = ["#fff3a3", "#ffe4e6", "#dcfce7", "#dbeafe", "#f3e8ff", "#f2f2f2"];
 const RDE_TAGS = new Set("p,h1,h2,h3,h4,h5,h6,strong,b,em,i,u,s,strike,del,ins,span,div,br,hr,ul,ol,li,blockquote,a,img,table,thead,tbody,tfoot,tr,th,td,caption,colgroup,col,figure,figcaption,font,center,section,article,header,footer,small,sup,sub,mark,iframe,pre,code,dl,dt,dd".split(","));
 const RDE_DROP = new Set(["script", "style", "link", "meta", "object", "embed", "form", "input", "button", "textarea", "select", "option", "noscript", "template", "svg", "math", "frame", "frameset", "base", "title", "head", "video", "audio", "canvas", "applet"]);
 const RDE_STYLE_PROPS = /^(color|background|background-color|font-size|font-weight|font-style|text-align|text-decoration|text-decoration-line|line-height|letter-spacing|margin|margin-(top|bottom|left|right)|padding|padding-(top|bottom|left|right)|border|border-(top|bottom|left|right)|border-(width|style|color|collapse|spacing|radius)|width|max-width|min-width|height|vertical-align|display|text-indent|white-space|word-break|font-family|aspect-ratio|list-style-type|opacity)$/;
+
+/* ---------- 사진 저장소 (IndexedDB) ---------- */
+const IMG_DB_NAME = "doogo-images-v1";
+const imgCache = new Map();
+let imgDbPromise = null;
+function imgDb() {
+  if (imgDbPromise) return imgDbPromise;
+  imgDbPromise = new Promise(resolve => {
+    try {
+      const req = indexedDB.open(IMG_DB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore("images");
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+      req.onblocked = () => resolve(null);
+    } catch (error) { resolve(null); }
+  });
+  return imgDbPromise;
+}
+async function storeImage(dataUrl) {
+  const key = `idb:img-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  imgCache.set(key, dataUrl);
+  const db = await imgDb();
+  if (!db) { imgCache.delete(key); return dataUrl; } // 저장소를 못 쓰면 문서 안에 그대로 넣는다
+  try {
+    await new Promise((resolve, reject) => { const tx = db.transaction("images", "readwrite"); tx.objectStore("images").put(dataUrl, key); tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error); });
+    return key;
+  } catch (error) { imgCache.delete(key); return dataUrl; }
+}
+async function loadImageCache() {
+  const db = await imgDb(); if (!db) return;
+  await new Promise(resolve => {
+    try {
+      const req = db.transaction("images", "readonly").objectStore("images").openCursor();
+      req.onsuccess = () => { const cursor = req.result; if (cursor) { imgCache.set(cursor.key, cursor.value); cursor.continue(); } else resolve(); };
+      req.onerror = () => resolve();
+    } catch (error) { resolve(); }
+  });
+}
+function imgSrc(src) { const value = String(src || ""); return value.startsWith("idb:") ? (imgCache.get(value) || "") : value; }
+function resolveImgRefs(html) { return String(html || "").replace(/idb:img-[a-z0-9]+/g, key => imgCache.get(key) || ""); }
+/* 예전에 문서·상품 안에 직접 넣어 둔 사진을 사진 저장소로 옮겨 브라우저 저장 공간을 비운다 */
+async function migrateInlineImages() {
+  if (!(await imgDb())) return;
+  let moved = 0;
+  const moveSrc = async value => { if (/^data:image\//.test(String(value || "")) && String(value).length > 2000) { const key = await storeImage(value); if (key !== value) { moved += 1; return key; } } return value; };
+  const moveDoc = async html => { let out = String(html || ""); const found = out.match(/data:image\/[a-z]+;base64,[A-Za-z0-9+/=]+/g) || []; for (const data of found) { const key = await moveSrc(data); if (key !== data) out = out.split(data).join(key); } return out; };
+  const moveBlocks = async blocks => { if (!Array.isArray(blocks)) return; for (const block of blocks) if (block?.type === "image" && block.src) block.src = await moveSrc(block.src); };
+  for (const entity of [...(state.products || []), ...(state.sellerProducts || [])]) {
+    if (entity.detailDoc) entity.detailDoc = await moveDoc(entity.detailDoc);
+    await moveBlocks(entity.detailBlocks);
+    if (entity.customThumbnail) entity.customThumbnail = await moveSrc(entity.customThumbnail);
+    if (Array.isArray(entity.images)) for (let i = 0; i < entity.images.length; i += 1) entity.images[i] = await moveSrc(entity.images[i]);
+    if (entity.detailHtml && /data:image/.test(entity.detailHtml)) { delete entity.detailHtml; moved += 1; }
+  }
+  if (moved) saveState();
+}
+
+/* ---------- 안전한 HTML ---------- */
 function rdeSafeUrl(url, kind) {
   const value = String(url || "").trim();
-  if (kind === "img") return /^https?:\/\//i.test(value) || /^\/\//.test(value) || /^data:image\/(png|jpe?g|gif|webp);base64,[a-z0-9+/=\s]+$/i.test(value) || /^assets\/[\w./-]+$/.test(value) ? value : "";
+  if (kind === "img") return /^https?:\/\//i.test(value) || /^\/\//.test(value) || /^data:image\/(png|jpe?g|gif|webp);base64,[a-z0-9+/=\s]+$/i.test(value) || /^assets\/[\w./-]+$/.test(value) || /^idb:img-[a-z0-9]+$/.test(value) ? value : "";
   if (kind === "frame") return /^https:\/\/(www\.)?(youtube\.com|youtube-nocookie\.com)\/embed\/[\w-]{6,}/i.test(value) || /^https:\/\/player\.vimeo\.com\/video\/\d+/i.test(value) ? value : "";
   return /^(https?:\/\/|mailto:|tel:|#)/i.test(value) ? value : "";
 }
@@ -5579,94 +5648,83 @@ function rdePlainText(html) { const doc = new DOMParser().parseFromString(String
 function rdeEsc(text) { return escapeHtml(String(text || "")); }
 function productImageSrc(product, imageIndex) { return `assets/product-${String(Number(imageIndex ?? product?.imageIndex ?? 0) % 8).padStart(2, "0")}.jpg`; }
 function youtubeId(url) { const match = String(url || "").match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/); return match ? match[1] : ""; }
+const RDE_IMG_STYLE = "display: block; width: 100%; max-width: 100%; margin: 0 auto";
+function rdeVideoCard(id, editable = false) { return `<div class="rde-video-card"${editable ? ` contenteditable="false" data-youtube="${id}"` : ""}><span>▶</span><b>유튜브 동영상</b><small>youtu.be/${id} · 쇼핑몰에서는 영상이 바로 재생돼요</small></div>`; }
 
-/* 예전 블록(글=text+style, 사진)도 그대로 열리게 바꿔 준다 */
+/* ---------- 예전 블록 → 문서 ---------- */
 function rdeNormalizeBlocks(blocks) {
   return (blocks || []).map(block => {
     if (!block || typeof block !== "object") return null;
     if (block.type === "text" && typeof block.html !== "string") {
-      const text = String(block.text || "");
-      const body = rdeEsc(text).replace(/\n/g, "<br>");
-      const html = block.style === "title" ? `<h3>${body}</h3>` : block.style === "point" ? `<p><strong>${body}</strong></p>` : `<p>${body}</p>`;
-      return { type: "text", html: text.trim() ? html : "" };
+      const text = String(block.text || ""); const body = rdeEsc(text).replace(/\n/g, "<br>");
+      return { type: "text", html: text.trim() ? (block.style === "title" ? `<h3>${body}</h3>` : block.style === "point" ? `<p><strong>${body}</strong></p>` : `<p>${body}</p>`) : "" };
     }
-    if (block.type === "image") return { type: "image", src: block.src || "", imageIndex: block.imageIndex, width: block.width, height: block.height, name: block.name, alt: block.alt || "", size: block.size || 100, link: block.link || "" };
+    if (block.type === "image") return { type: "image", src: block.src || "", imageIndex: block.imageIndex, alt: block.alt || "", size: block.size || 100, link: block.link || "" };
     if (["text", "quote", "html"].includes(block.type)) return { type: block.type, html: String(block.html || "") };
     if (block.type === "divider") return { type: "divider", style: block.style || "line" };
     if (block.type === "video") return { type: "video", url: String(block.url || "") };
     return null;
   }).filter(Boolean);
 }
-/* 한 블록 → 쇼핑몰에 보낼 HTML */
-function rdeBlockHtml(block, product, mode = "export") {
-  if (block.type === "text") return sanitizeDetailHtml(block.html);
-  if (block.type === "html") return sanitizeDetailHtml(block.html);
-  if (block.type === "quote") { const inner = sanitizeDetailHtml(block.html); return inner ? `<blockquote style="margin: 24px 0; padding: 18px 22px; border-left: 4px solid #171717; background: #f7f7f7; font-size: 17px; line-height: 1.7">${inner}</blockquote>` : ""; }
-  if (block.type === "divider") return block.style === "space" ? `<div style="height: 48px"></div>` : `<hr style="border: 0; border-top: ${block.style === "dots" ? "2px dotted #c7c7c7" : "1px solid #e5e5e5"}; margin: 36px 0">`;
-  if (block.type === "video" && mode === "view") { const id = youtubeId(block.url); return id ? `<a class="rde-video-card" href="https://youtu.be/${id}" target="_blank" rel="noopener noreferrer"><span>▶</span><b>유튜브 동영상</b><small>youtu.be/${id} · 쇼핑몰에서는 영상이 바로 재생돼요</small></a>` : ""; }
-  if (block.type === "video") { const id = youtubeId(block.url); return id ? `<div style="margin: 24px 0"><iframe src="https://www.youtube.com/embed/${id}" style="width: 100%; aspect-ratio: 16/9; border: 0" allowfullscreen></iframe></div>` : ""; }
-  if (block.type === "image") {
-    const src = rdeSafeUrl(block.src, "img") || (block.imageIndex !== undefined || !block.src ? productImageSrc(product, block.imageIndex) : "");
-    if (!src) return "";
-    const size = [100, 75, 50].includes(Number(block.size)) ? Number(block.size) : 100;
-    const img = `<img src="${rdeEsc(src)}" alt="${rdeEsc(block.alt || block.name || "상세 이미지")}" style="display: block; width: ${size}%; max-width: 100%; margin: 0 auto">`;
-    const link = rdeSafeUrl(block.link, "link");
-    return `<div style="margin: 0; text-align: center">${link ? `<a href="${rdeEsc(link)}" target="_blank" rel="noopener noreferrer nofollow">${img}</a>` : img}</div>`;
-  }
-  return "";
+function blocksToDoc(blocks, product) {
+  return rdeNormalizeBlocks(blocks).map(block => {
+    if (["text", "html"].includes(block.type)) return block.html;
+    if (block.type === "quote") return block.html ? `<blockquote style="margin: 24px 0; padding: 18px 22px; border-left: 4px solid #171717; background: #f7f7f7">${block.html}</blockquote>` : "";
+    if (block.type === "divider") return block.style === "space" ? `<p><br></p><p><br></p>` : `<hr style="border: 0; border-top: ${block.style === "dots" ? "2px dotted #c7c7c7" : "1px solid #e5e5e5"}; margin: 36px 0">`;
+    if (block.type === "video") { const id = youtubeId(block.url); return id ? `<iframe src="https://www.youtube.com/embed/${id}" style="width: 100%; aspect-ratio: 16/9; border: 0"></iframe>` : ""; }
+    if (block.type === "image") { const src = rdeSafeUrl(block.src, "img") || productImageSrc(product, block.imageIndex); const size = [100, 75, 50].includes(Number(block.size)) ? Number(block.size) : 100; const img = `<img src="${rdeEsc(src)}" alt="${rdeEsc(block.alt)}" style="display: block; width: ${size}%; max-width: 100%; margin: 0 auto">`; const link = rdeSafeUrl(block.link, "link"); return `<p>${link ? `<a href="${rdeEsc(link)}">${img}</a>` : img}</p>`; }
+    return "";
+  }).filter(Boolean).join("\n");
 }
-function detailBlocksToHtml(blocks, product, mode = "export") {
-  const body = rdeNormalizeBlocks(blocks).map(block => rdeBlockHtml(block, product, mode)).filter(Boolean).join("\n");
-  return `<div style="max-width: 860px; margin: 0 auto; color: #222; font-size: 16px; line-height: 1.75; word-break: keep-all">\n${body}\n</div>`;
+/* 상품·마스터 상품의 상세 문서 */
+function productDetailDoc(product) {
+  if (product?.detailDoc) return product.detailDoc;
+  if (Array.isArray(product?.detailBlocks) && product.detailBlocks.length) return blocksToDoc(product.detailBlocks, product);
+  return `<p>${rdeEsc(product?.detail || "센터배송 · 전 채널 판매 가능 · 상세페이지 제공")}</p>`;
 }
-function detailBlocksText(blocks) { return rdeNormalizeBlocks(blocks).filter(block => ["text", "quote", "html"].includes(block.type)).map(block => rdePlainText(block.html)).filter(Boolean).join("\n"); }
-function detailBlocksHasContent(blocks) { return rdeNormalizeBlocks(blocks).some(block => block.type === "image" || block.type === "divider" && false || (block.type === "video" && youtubeId(block.url)) || (["text", "quote", "html"].includes(block.type) && (rdePlainText(block.html) || /<(img|table|iframe)/i.test(block.html)))); }
-/* HTML → 블록: 맨 위 요소를 보고 사진·구분선·인용구·동영상은 따로, 나머지 글은 한 글 블록으로 묶는다 */
-function rdeHtmlToBlocks(html) {
-  const doc = new DOMParser().parseFromString(sanitizeDetailHtml(html), "text/html");
-  let root = doc.body;
-  while (root.children.length === 1 && !root.textContent.trim().replace(root.children[0].textContent.trim(), "") && ["DIV", "SECTION", "ARTICLE", "CENTER"].includes(root.children[0].tagName) && root.children[0].children.length > 1) root = root.children[0];
-  const blocks = [];
-  let buffer = "";
-  const flush = () => { if (buffer.trim()) blocks.push({ type: "text", html: buffer.trim() }); buffer = ""; };
-  const onlyImage = el => { const imgs = el.tagName === "IMG" ? [el] : [...el.querySelectorAll("img")]; return imgs.length === 1 && !el.textContent.trim() && !el.querySelector("table,iframe") ? imgs[0] : null; };
-  [...root.childNodes].forEach(node => {
-    if (node.nodeType === 3) { if (node.textContent.trim()) buffer += `<p>${rdeEsc(node.textContent.trim())}</p>`; return; }
-    if (node.nodeType !== 1) return;
-    const tag = node.tagName;
-    const img = onlyImage(node);
-    if (img) { flush(); const link = img.closest("a")?.getAttribute("href") || ""; const width = parseInt(img.style.width || img.getAttribute("width") || "", 10); blocks.push({ type: "image", src: img.getAttribute("src"), alt: img.getAttribute("alt") || "", size: width && String(img.style.width || "").includes("%") && [75, 50].includes(width) ? width : 100, link }); return; }
-    if (tag === "HR") { flush(); blocks.push({ type: "divider", style: /dotted/.test(node.getAttribute("style") || "") ? "dots" : "line" }); return; }
-    if (tag === "BLOCKQUOTE") { flush(); blocks.push({ type: "quote", html: node.innerHTML }); return; }
-    const frame = tag === "IFRAME" ? node : (!node.textContent.trim() && node.querySelectorAll("iframe").length === 1 && !node.querySelector("img") ? node.querySelector("iframe") : null);
-    if (frame) { flush(); const id = youtubeId(frame.getAttribute("src")); if (id) blocks.push({ type: "video", url: `https://youtu.be/${id}` }); else blocks.push({ type: "html", html: node.outerHTML }); return; }
-    if (tag === "DIV" && !node.textContent.trim() && !node.querySelector("img,table,iframe") && /height/.test(node.getAttribute("style") || "")) { flush(); blocks.push({ type: "divider", style: "space" }); return; }
-    buffer += node.outerHTML;
-  });
-  flush();
-  return blocks;
+function productHasCustomDetail(product) { return Boolean(product?.detailDoc || (Array.isArray(product?.detailBlocks) && product.detailBlocks.length)); }
+function sellerDefaultDoc(product, item) {
+  if (productHasCustomDetail(product)) return productDetailDoc(product);
+  return `<p><img src="${productImageSrc(product, item?.imageIndex ?? product?.imageIndex)}" alt="${rdeEsc(product?.name || "상품")}" style="${RDE_IMG_STYLE}"></p><p>${rdeEsc(item?.detailSnapshot || product?.detail || "")}</p>`;
 }
+function itemDetailDoc(item, product) {
+  if (item?.detailDoc) return item.detailDoc;
+  if (Array.isArray(item?.detailBlocks) && item.detailBlocks.length) return blocksToDoc(item.detailBlocks, product);
+  return sellerDefaultDoc(product, item);
+}
+/* 문서 → 쇼핑몰 전송용(export) / 화면 표시용(view) HTML. 사진 저장소 이름은 실제 사진으로 바꾼다 */
+function detailDocHtml(doc, mode = "export") {
+  let html = resolveImgRefs(sanitizeDetailHtml(doc));
+  if (mode === "view") html = html.replace(/<iframe[^>]*src="https:\/\/www\.youtube(?:-nocookie)?\.com\/embed\/([\w-]{11})[^"]*"[^>]*><\/iframe>/g, (match, id) => rdeVideoCard(id));
+  return `<div style="max-width: 860px; margin: 0 auto; color: #222; font-size: 16px; line-height: 1.75; word-break: keep-all">\n${html}\n</div>`;
+}
+function detailDocText(doc) { return rdePlainText(sanitizeDetailHtml(doc)); }
+function detailDocHasContent(doc) { const clean = sanitizeDetailHtml(doc); return Boolean(rdePlainText(clean) || /<(img|table|iframe|hr)/i.test(clean)); }
+function detailDocImageCount(doc) { return (String(doc || "").match(/<img\b/gi) || []).length; }
+/* 예전 코드 호환 (블록 → HTML) */
+function detailBlocksToHtml(blocks, product, mode = "export") { return detailDocHtml(blocksToDoc(blocks, product), mode); }
 
-/* ---------- 템플릿 (자주 쓰는 구성) ---------- */
+/* ---------- 템플릿 ---------- */
 function rdeTemplates(product) {
   const p = product || {};
   const cell = (label, value) => `<tr><th style="padding: 10px 14px; width: 32%; text-align: left; background: #f7f7f7; border: 1px solid #e5e5e5">${label}</th><td style="padding: 10px 14px; border: 1px solid #e5e5e5">${rdeEsc(value || "상세 이미지 참조")}</td></tr>`;
   return {
-    intro: { label: "인트로 제목", blocks: [{ type: "text", html: `<h2 style="text-align: center">${rdeEsc(p.name || "상품명을 적어 주세요")}</h2><p style="text-align: center; color: #6b6b6b">한 줄로 상품의 가장 큰 장점을 적어 주세요.</p>` }] },
-    points: { label: "구매 포인트 3가지", blocks: [{ type: "text", html: `<h3>이 상품을 골라야 하는 이유</h3><ol><li><strong>첫 번째 장점</strong> — 설명을 적어 주세요.</li><li><strong>두 번째 장점</strong> — 설명을 적어 주세요.</li><li><strong>세 번째 장점</strong> — 설명을 적어 주세요.</li></ol>` }] },
-    info: { label: "상품 정보 표", blocks: [{ type: "text", html: `<h3>상품 정보</h3><table style="width: 100%; border-collapse: collapse; font-size: 15px"><tbody>${cell("상품명", p.name)}${cell("원산지", [p.origin, p.originCountry].filter(Boolean).join(" · "))}${cell("중량·용량", p.weight ? `${p.weight}${p.unit || ""}` : "")}${cell("제조·수확일", p.manufactureDate)}${cell("소비기한·보관법", p.shelfLife)}${cell("배송", `${p.carrier || "택배"} · ${p.deliveryDays || "1~3일"} 이내 출고`)}</tbody></table>` }] },
-    shipping: { label: "배송·교환·반품 안내", blocks: [{ type: "divider", style: "line" }, { type: "text", html: `<h3>배송 · 교환 · 반품 안내</h3><ul><li>평일 ${rdeEsc(p.cutoff || "10:00")}까지 결제하면 당일 출고해요. (주말·공휴일 제외)</li><li>신선식품은 단순 변심으로 인한 교환·반품이 어려워요.</li><li>상품이 파손되었거나 잘못 왔다면 받은 날로부터 7일 안에 사진과 함께 문의해 주세요.</li></ul>` }] },
-    notice: { label: "강조 안내 박스", blocks: [{ type: "text", html: `<div style="padding: 16px 18px; border: 1px solid #171717; border-radius: 12px"><p><strong>꼭 확인해 주세요</strong></p><p>주문 전에 알아야 할 내용을 적어 주세요.</p></div>` }] },
-    table: { label: "빈 표 (3×3)", blocks: [{ type: "text", html: `<table style="width: 100%; border-collapse: collapse"><tbody>${[0, 1, 2].map(r => `<tr>${[0, 1, 2].map(c => `<${r === 0 ? "th" : "td"} style="padding: 10px; border: 1px solid #e5e5e5${r === 0 ? "; background: #f7f7f7" : ""}">${r === 0 ? `항목 ${c + 1}` : "&nbsp;"}</${r === 0 ? "th" : "td"}>`).join("")}</tr>`).join("")}</tbody></table>` }] }
+    intro: { label: "인트로 제목", html: `<h2 style="text-align: center">${rdeEsc(p.name || "상품명을 적어 주세요")}</h2><p style="text-align: center; color: #6b6b6b">한 줄로 상품의 가장 큰 장점을 적어 주세요.</p>` },
+    points: { label: "구매 포인트 3가지", html: `<h3>이 상품을 골라야 하는 이유</h3><ol><li><strong>첫 번째 장점</strong> — 설명을 적어 주세요.</li><li><strong>두 번째 장점</strong> — 설명을 적어 주세요.</li><li><strong>세 번째 장점</strong> — 설명을 적어 주세요.</li></ol>` },
+    info: { label: "상품 정보 표", html: `<h3>상품 정보</h3><table style="width: 100%; border-collapse: collapse; font-size: 15px"><tbody>${cell("상품명", p.name)}${cell("원산지", [p.origin, p.originCountry].filter(Boolean).join(" · "))}${cell("중량·용량", p.weight ? `${p.weight}${p.unit || ""}` : "")}${cell("제조·수확일", p.manufactureDate)}${cell("소비기한·보관법", p.shelfLife)}${cell("배송", `${p.carrier || "택배"} · ${p.deliveryDays || "1~3일"} 이내 출고`)}</tbody></table>` },
+    shipping: { label: "배송·교환·반품 안내", html: `<hr style="border: 0; border-top: 1px solid #e5e5e5; margin: 36px 0"><h3>배송 · 교환 · 반품 안내</h3><ul><li>평일 ${rdeEsc(p.cutoff || "10:00")}까지 결제하면 당일 출고해요. (주말·공휴일 제외)</li><li>신선식품은 단순 변심으로 인한 교환·반품이 어려워요.</li><li>상품이 파손되었거나 잘못 왔다면 받은 날로부터 7일 안에 사진과 함께 문의해 주세요.</li></ul>` },
+    notice: { label: "강조 안내 박스", html: `<div style="padding: 16px 18px; border: 1px solid #171717; border-radius: 12px"><p><strong>꼭 확인해 주세요</strong></p><p>주문 전에 알아야 할 내용을 적어 주세요.</p></div>` },
+    table: { label: "표 (3×3)", html: `<table style="width: 100%; border-collapse: collapse"><tbody>${[0, 1, 2].map(r => `<tr>${[0, 1, 2].map(c => `<${r === 0 ? "th" : "td"} style="padding: 10px; border: 1px solid #e5e5e5${r === 0 ? "; background: #f7f7f7" : ""}">${r === 0 ? `항목 ${c + 1}` : "&nbsp;"}</${r === 0 ? "th" : "td"}>`).join("")}</tr>`).join("")}</tbody></table><p><br></p>` },
+    divider: { label: "구분선", html: `<hr style="border: 0; border-top: 1px solid #e5e5e5; margin: 36px 0"><p><br></p>` },
+    quote: { label: "인용구", html: `<blockquote style="margin: 24px 0; padding: 18px 22px; border-left: 4px solid #171717; background: #f7f7f7"><p>강조하고 싶은 문장을 적어 주세요.</p></blockquote><p><br></p>` }
   };
 }
 
-/* ---------- 화면 ---------- */
-function rdeBlockLabel(block) { return { text: "글", image: "사진", divider: "구분선", quote: "인용구", video: "동영상", html: "HTML" }[block.type] || "블록"; }
-function rdeFormatBar(index) {
+/* ---------- 에디터 화면 ---------- */
+function rdeFormatBar() {
   const b = (cmd, label, title, extra = "") => `<button type="button" data-rde-cmd="${cmd}" ${extra} title="${title}" aria-label="${title}">${label}</button>`;
   return `<div class="rde-format" role="toolbar" aria-label="글 서식">
-    <select data-rde-block aria-label="문단"><option value="p">본문</option><option value="h2">큰 제목</option><option value="h3">제목</option><option value="h4">소제목</option></select>
+    <select data-rde-block aria-label="문단"><option value="p">본문</option><option value="h2">큰 제목</option><option value="h3">제목</option><option value="h4">소제목</option><option value="blockquote">인용</option></select>
     <select data-rde-size aria-label="글자 크기"><option value="">크기</option><option value="2">작게</option><option value="3">보통</option><option value="4">조금 크게</option><option value="5">크게</option><option value="6">아주 크게</option></select>
     ${b("bold", "<b>B</b>", "굵게")}${b("italic", "<i>I</i>", "기울임")}${b("underline", "<u>U</u>", "밑줄")}${b("strikeThrough", "<s>S</s>", "취소선")}
     <span class="rde-pop"><button type="button" data-rde-toggle="color" title="글자 색" aria-label="글자 색"><span class="rde-a">A</span></button><span class="rde-palette" data-rde-palette="color" hidden>${RDE_COLORS.map(color => `<button type="button" data-rde-cmd="foreColor" data-value="${color}" style="background:${color}" aria-label="글자 색 ${color}"></button>`).join("")}</span></span>
@@ -5677,276 +5735,304 @@ function rdeFormatBar(index) {
     ${b("removeFormat", "⌫", "서식 지우기")}${b("undo", "↶", "되돌리기")}${b("redo", "↷", "다시 하기")}
   </div>`;
 }
-function rdeBlockMarkup(key, block, index, total) {
-  const tools = `<header class="rde-block-head"><span class="rde-kind"><i>${index + 1}</i>${rdeBlockLabel(block)}</span><div class="rde-block-tools"><button type="button" data-rde-move="-1" ${index === 0 ? "disabled" : ""} aria-label="위로">↑</button><button type="button" data-rde-move="1" ${index === total - 1 ? "disabled" : ""} aria-label="아래로">↓</button><button type="button" data-rde-dup aria-label="복제">⧉</button><button type="button" data-rde-remove class="danger" aria-label="삭제">✕</button></div></header>`;
-  const product = rdeOptions[key]?.product;
-  let body = "";
-  if (block.type === "text") body = `${rdeFormatBar(index)}<div class="rde-rich rde-doc" contenteditable="true" data-rde-rich data-placeholder="내용을 입력하세요. 붙여 넣은 글의 서식도 유지돼요.">${sanitizeDetailHtml(block.html)}</div>`;
-  else if (block.type === "quote") body = `${rdeFormatBar(index)}<blockquote class="rde-rich rde-quote" contenteditable="true" data-rde-rich data-placeholder="강조하고 싶은 문장을 적어 주세요.">${sanitizeDetailHtml(block.html)}</blockquote>`;
-  else if (block.type === "image") {
-    const src = rdeSafeUrl(block.src, "img") || productImageSrc(product, block.imageIndex);
-    body = `<figure class="rde-figure"><img src="${rdeEsc(src)}" alt="${rdeEsc(block.alt || "")}" style="width:${[100, 75, 50].includes(Number(block.size)) ? block.size : 100}%"></figure>
-      <div class="rde-image-opts"><div class="rde-seg" role="group" aria-label="사진 크기">${[100, 75, 50].map(size => `<button type="button" class="${Number(block.size || 100) === size ? "active" : ""}" data-rde-size-set="${size}">${size === 100 ? "꽉 차게" : `${size}%`}</button>`).join("")}</div>
-      <input type="text" data-rde-field="alt" value="${rdeEsc(block.alt || "")}" placeholder="사진 설명 (검색·접근성용, 선택)" maxlength="120" aria-label="사진 설명"><input type="url" data-rde-field="link" value="${rdeEsc(block.link || "")}" placeholder="누르면 이동할 주소 (선택)" aria-label="사진 링크"></div>
-      ${block.width ? `<small class="rde-meta">${rdeEsc(block.name || "사진")} · ${block.width}×${block.height || ""}</small>` : ""}`;
-  }
-  else if (block.type === "divider") body = `<div class="rde-divider-preview">${rdeBlockHtml(block)}</div><div class="rde-seg" role="group" aria-label="구분선 모양">${[["line", "실선"], ["dots", "점선"], ["space", "여백만"]].map(([value, label]) => `<button type="button" class="${(block.style || "line") === value ? "active" : ""}" data-rde-divider="${value}">${label}</button>`).join("")}</div>`;
-  else if (block.type === "video") { const id = youtubeId(block.url); body = `<input type="url" data-rde-field="url" value="${rdeEsc(block.url || "")}" placeholder="유튜브 주소를 붙여 넣으세요 (https://youtu.be/…)" aria-label="유튜브 주소">${id ? rdeBlockHtml(block, product, "view") : `<p class="rde-hint">유튜브 영상만 넣을 수 있어요. 주소를 넣으면 미리보기가 보여요.</p>`}`; }
-  else if (block.type === "html") body = `<textarea class="rde-code-input" data-rde-field="html" spellcheck="false" placeholder="<p>HTML을 직접 입력하세요</p>" aria-label="HTML 코드">${rdeEsc(block.html || "")}</textarea><div class="rde-html-preview rde-doc">${sanitizeDetailHtml(block.html) || `<p class="rde-hint">HTML을 입력하면 여기 미리 보여요. script·이벤트 속성은 자동으로 빠져요.</p>`}</div>`;
-  return `<article class="rde-block rde-${block.type}${rdeActive.key === key && rdeActive.index === index ? " active" : ""}" data-rde-index="${index}">${tools}<div class="rde-block-body">${body}</div></article>`;
-}
-function detailEditorMarkupFor(key, blocks, options = {}) {
-  rdeDrafts[key] = rdeNormalizeBlocks(JSON.parse(JSON.stringify(blocks || [])));
+function detailEditorMarkupFor(key, doc, options = {}) {
+  rdeDrafts[key] = String(doc || "");
   rdeOptions[key] = options;
-  rdeActive = { key, index: -1 };
   const templates = rdeTemplates(options.product);
   return `<div class="rde" data-rde="${key}">
-    <div class="rde-insert" role="toolbar" aria-label="넣기">
-      <button type="button" class="rde-add primary" data-rde-pick="image">📷 사진 올리기</button>
-      <button type="button" class="rde-add" data-rde-toggle="imgurl">🔗 사진 주소</button>
-      <button type="button" class="rde-add" data-rde-add="text">✎ 글</button>
-      <button type="button" class="rde-add" data-rde-add="divider">― 구분선</button>
-      <button type="button" class="rde-add" data-rde-add="quote">❝ 인용구</button>
-      <button type="button" class="rde-add" data-rde-add="video">▶ 동영상</button>
-      <button type="button" class="rde-add" data-rde-template="table">▦ 표</button>
-      <span class="rde-pop"><button type="button" class="rde-add" data-rde-toggle="templates">☰ 템플릿</button><span class="rde-menu" data-rde-palette="templates" hidden>${Object.entries(templates).filter(([id]) => id !== "table").map(([id, tpl]) => `<button type="button" data-rde-template="${id}">${tpl.label}</button>`).join("")}</span></span>
-      <button type="button" class="rde-add" data-rde-add="html">&lt;/&gt; HTML 블록</button>
+    <div class="rde-toolbar">
+      <div class="rde-insert" role="toolbar" aria-label="넣기">
+        <button type="button" class="rde-add primary" data-rde-pick="image">📷 사진</button>
+        <button type="button" class="rde-add" data-rde-toggle="imgurl">🔗 사진 주소</button>
+        <button type="button" class="rde-add" data-rde-toggle="video">▶ 동영상</button>
+        <button type="button" class="rde-add" data-rde-template="table">▦ 표</button>
+        <button type="button" class="rde-add" data-rde-template="divider">― 구분선</button>
+        <button type="button" class="rde-add" data-rde-template="quote">❝ 인용구</button>
+        <span class="rde-pop"><button type="button" class="rde-add" data-rde-toggle="templates">☰ 템플릿</button><span class="rde-menu" data-rde-palette="templates" hidden>${Object.entries(templates).filter(([id]) => !["table", "divider", "quote"].includes(id)).map(([id, tpl]) => `<button type="button" data-rde-template="${id}">${tpl.label}</button>`).join("")}</span></span>
+      </div>
+      ${rdeFormatBar()}
+      <div class="rde-url" data-rde-palette="imgurl" hidden><input type="url" data-rde-url-input placeholder="https:// 로 시작하는 사진 주소 (여러 개는 줄바꿈)" aria-label="사진 주소"><button type="button" data-rde-url-add>넣기</button></div>
+      <div class="rde-url" data-rde-palette="video" hidden><input type="url" data-rde-video-input placeholder="유튜브 주소 (https://youtu.be/…)" aria-label="유튜브 주소"><button type="button" data-rde-video-add>넣기</button></div>
     </div>
-    <div class="rde-url" data-rde-palette="imgurl" hidden><input type="url" data-rde-url-input placeholder="https:// 로 시작하는 사진 주소 (여러 개는 줄바꿈)" aria-label="사진 주소"><button type="button" data-rde-url-add>넣기</button></div>
+    <div class="rde-surface rde-doc" contenteditable="true" data-rde-surface spellcheck="false" data-placeholder="여기에 상세페이지를 써 주세요. 📷 사진을 누르거나 사진을 끌어다 놓으면 커서 자리에 들어가요."></div>
+    <div class="rde-imgbar" data-rde-imgbar hidden>
+      <div class="rde-seg" role="group" aria-label="사진 크기"><button type="button" data-rde-imgsize="100">꽉 차게</button><button type="button" data-rde-imgsize="75">75%</button><button type="button" data-rde-imgsize="50">50%</button></div>
+      <button type="button" data-rde-imgmove="-1" aria-label="사진 위로">↑</button><button type="button" data-rde-imgmove="1" aria-label="사진 아래로">↓</button>
+      <input type="text" data-rde-imgalt placeholder="사진 설명" maxlength="120" aria-label="사진 설명"><input type="url" data-rde-imglink placeholder="누르면 이동할 주소" aria-label="사진 링크">
+      <button type="button" class="danger" data-rde-imgdel>삭제</button>
+    </div>
     <input type="file" class="rde-file-input" accept="image/*" multiple data-rde-image-input tabindex="-1" aria-hidden="true">
     <input type="file" class="rde-file-input" accept=".html,.htm,text/html,text/plain" data-rde-html-file tabindex="-1" aria-hidden="true">
-    <div class="rde-drop" data-rde-drop><div class="rde-blocks" data-rde-blocks></div></div>
-    <div class="rde-foot"><span data-rde-count></span><div><button type="button" data-rde-code-open>&lt;/&gt; HTML 코드</button><button type="button" data-rde-pick="html">⇪ HTML 파일</button>${options.resetBlocks ? `<button type="button" data-rde-reset>공급사 원본으로</button>` : ""}<button type="button" class="strong" data-rde-preview>미리보기</button></div></div>
-    <div class="rde-code" data-rde-code hidden><p><b>HTML 코드</b> 전체 상세페이지를 코드로 고칠 수 있어요. 사진은 <code>doogo-image://번호</code>로 줄여 보여요. script·이벤트 속성·외부 CSS는 저장할 때 빠져요.</p><textarea spellcheck="false" data-rde-code-text aria-label="상세페이지 HTML 코드"></textarea><div class="rde-code-actions"><button type="button" data-rde-code-cancel>닫기</button><button type="button" class="strong" data-rde-code-apply>코드 적용</button></div></div>
+    <div class="rde-foot"><span data-rde-count></span><div><button type="button" data-rde-code-open>&lt;/&gt; HTML 코드</button><button type="button" data-rde-pick="html">⇪ HTML 파일</button>${options.resetDoc ? `<button type="button" data-rde-reset>공급사 원본으로</button>` : ""}<button type="button" class="strong" data-rde-preview>미리보기</button></div></div>
+    <div class="rde-code" data-rde-code hidden><p><b>HTML 코드</b> 상세페이지 전체를 코드로 고칠 수 있어요. 올린 사진은 <code>idb:img-…</code> 이름으로 보여요. script·이벤트 속성·외부 CSS는 저장할 때 빠져요.</p><textarea spellcheck="false" data-rde-code-text aria-label="상세페이지 HTML 코드"></textarea><div class="rde-code-actions"><button type="button" data-rde-code-cancel>닫기</button><button type="button" class="strong" data-rde-code-apply>코드 적용</button></div></div>
   </div>`;
 }
 function rdeRoot(key) { return document.querySelector(`.rde[data-rde="${key}"]`); }
 function rdeKeyOf(element) { return element?.closest?.(".rde[data-rde]")?.dataset.rde || ""; }
-function rdeChanged(key) { rdeOptions[key]?.onChange?.(); }
-function rdeRender(key, focusIndex = -1) {
+function rdeSurfaceOf(key) { return rdeRoot(key)?.querySelector("[data-rde-surface]"); }
+/* 저장된 문서 → 편집 화면 (사진 저장소 이름은 실제 사진으로, 유튜브는 카드로) */
+function docForEditor(doc) {
+  let html = sanitizeDetailHtml(doc);
+  html = html.replace(/<img([^>]*?)src="(idb:img-[a-z0-9]+)"/g, (match, pre, key) => `<img${pre}src="${imgCache.get(key) || ""}" data-idb="${key}"`);
+  html = html.replace(/<iframe[^>]*src="https:\/\/www\.youtube(?:-nocookie)?\.com\/embed\/([\w-]{11})[^"]*"[^>]*><\/iframe>/g, (match, id) => rdeVideoCard(id, true));
+  return html || "<p><br></p>";
+}
+/* 편집 화면 → 저장할 문서 */
+function serializeSurface(surface) {
+  /* 화면 밖(불활성) 문서로 복사해야 idb: 주소를 넣어도 브라우저가 사진을 불러오려 하지 않는다 */
+  const inert = document.implementation.createHTMLDocument("");
+  const clone = inert.importNode(surface, true);
+  clone.querySelectorAll("img[data-idb]").forEach(img => { img.setAttribute("src", img.dataset.idb); img.removeAttribute("data-idb"); });
+  clone.querySelectorAll("[data-youtube]").forEach(card => { const frame = inert.createElement("iframe"); frame.setAttribute("src", `https://www.youtube.com/embed/${card.dataset.youtube}`); frame.setAttribute("style", "width: 100%; aspect-ratio: 16/9; border: 0"); card.replaceWith(frame); });
+  return sanitizeDetailHtml(clone.innerHTML);
+}
+function rdeUpdateCount(key) {
   const root = rdeRoot(key); if (!root) return;
-  const blocks = rdeDrafts[key] || [];
-  const list = root.querySelector("[data-rde-blocks]");
-  list.innerHTML = blocks.length ? blocks.map((block, index) => rdeBlockMarkup(key, block, index, blocks.length)).join("") : `<div class="rde-empty"><b>상세페이지를 만들어 보세요</b><span>위의 📷 사진으로 여러 장을 한 번에 올리거나, 사진을 여기로 끌어다 놓으세요. 템플릿으로 시작해도 좋아요.</span></div>`;
-  const images = blocks.filter(block => block.type === "image").length;
-  const texts = blocks.filter(block => ["text", "quote", "html"].includes(block.type)).length;
-  const bytes = blocks.reduce((sum, block) => sum + String(block.src || "").length * 0.75 + String(block.html || "").length, 0);
-  root.querySelector("[data-rde-count]").innerHTML = `사진 ${images} · 글 ${texts} · 블록 ${blocks.length}/${RDE_MAX_BLOCKS}${bytes > 2.5e6 ? ` · <em>용량이 커요 (${(bytes / 1e6).toFixed(1)}MB)</em>` : ""}`;
-  if (focusIndex >= 0) {
-    const card = list.querySelector(`[data-rde-index="${focusIndex}"]`);
-    if (card) {
-      if (typeof scrollInEditor === "function") scrollInEditor(card, 60); else card.scrollIntoView({ block: "center" });
-      card.classList.add("rde-flash"); setTimeout(() => card.classList.remove("rde-flash"), 900);
-      const editable = card.querySelector("[data-rde-rich], [data-rde-field], .rde-code-input");
-      if (editable) { editable.focus({ preventScroll: true }); if (editable.isContentEditable) rdePlaceCaretEnd(editable); }
-    }
-  }
+  const surface = root.querySelector("[data-rde-surface]");
+  const images = surface.querySelectorAll("img").length;
+  const chars = (surface.textContent || "").replace(/\s+/g, "").length;
+  const inline = [...surface.querySelectorAll("img:not([data-idb])")].reduce((sum, img) => sum + (String(img.getAttribute("src") || "").startsWith("data:") ? img.getAttribute("src").length * 0.75 : 0), 0);
+  root.querySelector("[data-rde-count]").innerHTML = `사진 ${images}장 · 글자 ${chars.toLocaleString()}자${inline > 1.5e6 ? ` · <em>사진 용량이 커요 (${(inline / 1e6).toFixed(1)}MB)</em>` : ""}`;
+  surface.classList.toggle("is-empty", !chars && !images && !surface.querySelector("table,hr,[data-youtube]"));
 }
+function rdeRender(key) {
+  const root = rdeRoot(key); if (!root) return;
+  root.querySelector("[data-rde-surface]").innerHTML = docForEditor(rdeDrafts[key]);
+  rdeHideImgbar(root);
+  rdeUpdateCount(key);
+  /* 편집 도구가 스크롤할 때 위에 붙어 있게 (위에 붙은 머리가 있으면 그 아래) */
+  if (typeof editorScroller === "function") { const scroller = editorScroller(root); root.style.setProperty("--rde-sticky", `${Math.max(0, editorStickyOffset(scroller) - 12)}px`); }
+}
+function rdeSync(key) {
+  const surface = rdeSurfaceOf(key); if (!surface) return;
+  rdeDrafts[key] = serializeSurface(surface);
+  rdeUpdateCount(key);
+  rdeOptions[key]?.onChange?.();
+}
+function rdeGetDoc(key) { const surface = rdeSurfaceOf(key); return surface ? serializeSurface(surface) : sanitizeDetailHtml(rdeDrafts[key]); }
 function rdePlaceCaretEnd(el) { const range = document.createRange(); range.selectNodeContents(el); range.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range); }
-function rdeInsert(key, newBlocks) {
-  const blocks = rdeDrafts[key]; if (!blocks) return;
-  const room = RDE_MAX_BLOCKS - blocks.length;
-  if (room <= 0) return showToast(`상세페이지 블록은 ${RDE_MAX_BLOCKS}개까지 넣을 수 있어요.`);
-  const list = newBlocks.slice(0, room);
-  const at = rdeActive.key === key && rdeActive.index >= 0 && rdeActive.index < blocks.length ? rdeActive.index + 1 : blocks.length;
-  blocks.splice(at, 0, ...list);
-  rdeActive = { key, index: at + list.length - 1 };
-  rdeChanged(key); rdeRender(key, at);
-  if (newBlocks.length > room) showToast(`블록이 너무 많아 ${newBlocks.length - room}개는 넣지 못했어요.`);
+function rdeRestoreRange(root) {
+  const surface = root.querySelector("[data-rde-surface]");
+  const sel = getSelection();
+  if (sel.rangeCount && surface.contains(sel.getRangeAt(0).startContainer)) return;
+  surface.focus({ preventScroll: true });
+  if (root._rdeRange && surface.contains(root._rdeRange.startContainer)) { sel.removeAllRanges(); sel.addRange(root._rdeRange); }
+  else rdePlaceCaretEnd(surface);
 }
-function rdeSyncRich(el) {
-  const key = rdeKeyOf(el); const card = el.closest("[data-rde-index]"); if (!key || !card) return;
-  const block = rdeDrafts[key]?.[Number(card.dataset.rdeIndex)];
-  if (block) { block.html = el.innerHTML; rdeChanged(key); }
+/* 커서 자리에 HTML을 넣고, 넣은 곳으로 화면을 옮긴다 */
+function rdeInsertHtml(key, html) {
+  const root = rdeRoot(key); if (!root) return;
+  rdeRestoreRange(root);
+  const marked = `<span data-rde-mark></span>${html}`;
+  document.execCommand("insertHTML", false, marked);
+  const mark = root.querySelector("[data-rde-mark]");
+  if (mark) {
+    const target = mark.nextElementSibling || mark.parentElement;
+    mark.remove();
+    if (target && typeof scrollInEditor === "function") scrollInEditor(target, 80);
+    if (target?.classList) { target.classList.add("rde-flash"); setTimeout(() => target.classList.remove("rde-flash"), 900); }
+  }
+  rdeSync(key);
 }
 async function rdeAddImages(key, files) {
   const list = [...(files || [])].filter(file => file && /^image\//.test(file.type));
   if (!list.length) return showToast("사진 파일(jpg·png·webp·gif)을 골라 주세요.");
   showToast(`사진 ${list.length}장을 올리는 중이에요…`);
-  const pieces = [];
+  const parts = [];
   for (const file of list) {
-    try { (await readDetailImage(file)).forEach(piece => pieces.push({ type: "image", src: piece.src, width: piece.width, height: piece.height, name: piece.name, alt: "", size: 100 })); }
+    try { for (const piece of await readDetailImage(file)) { const ref = await storeImage(piece.src); parts.push(`<p><img src="${piece.src}"${ref.startsWith("idb:") ? ` data-idb="${ref}"` : ""} alt="" style="${RDE_IMG_STYLE}"></p>`); } }
     catch (error) { showToast(error.message); }
   }
-  if (pieces.length) { rdeInsert(key, pieces); showToast(`사진 ${list.length}장을 넣었어요.${pieces.length > list.length ? " 긴 사진은 나눠서 넣었어요." : ""}`); }
+  if (parts.length) { rdeInsertHtml(key, `${parts.join("")}<p><br></p>`); showToast(`사진 ${list.length}장을 넣었어요.${parts.length > list.length ? " 긴 사진은 나눠서 넣었어요." : ""} 사진을 누르면 크기·순서를 바꿀 수 있어요.`); }
 }
 function rdeReadHtmlFile(file) {
   return file.arrayBuffer().then(buffer => {
     let text = new TextDecoder("utf-8").decode(buffer);
-    if ((text.match(/\uFFFD/g) || []).length > 3 || /charset=["']?(euc-kr|ks_c_5601)/i.test(text)) { try { text = new TextDecoder("euc-kr").decode(buffer); } catch (error) { /* 브라우저가 euc-kr을 모르면 utf-8 그대로 */ } }
+    if ((text.match(/\uFFFD/g) || []).length > 3 || /charset=["']?(euc-kr|ks_c_5601)/i.test(text)) { try { text = new TextDecoder("euc-kr").decode(buffer); } catch (error) { /* euc-kr을 모르면 utf-8 그대로 */ } }
     return text;
   });
 }
 function rdeImportHtml(key, html, sourceLabel) {
-  const doc = new DOMParser().parseFromString(String(html || ""), "text/html");
-  const lostImages = [...doc.querySelectorAll("img")].filter(img => !rdeSafeUrl(img.getAttribute("src"), "img")).length;
-  const blocks = rdeHtmlToBlocks(html);
-  if (!blocks.length) return showToast("가져올 내용이 없어요. HTML 안에 글이나 사진이 있는지 확인해 주세요.");
-  const current = rdeDrafts[key] || [];
-  const empty = !detailBlocksHasContent(current);
-  if (empty) { rdeDrafts[key] = blocks; rdeActive = { key, index: blocks.length - 1 }; rdeChanged(key); rdeRender(key, 0); }
-  else rdeInsert(key, blocks);
-  const images = blocks.filter(block => block.type === "image").length;
-  showToast(`${sourceLabel}에서 블록 ${blocks.length}개(사진 ${images}장)를 가져왔어요.${lostImages ? ` 컴퓨터 안 경로로 된 사진 ${lostImages}장은 보이지 않아 뺐어요. 사진은 https:// 주소이거나 직접 올려 주세요.` : ""}`);
+  const parsed = new DOMParser().parseFromString(String(html || ""), "text/html");
+  const lostImages = [...parsed.querySelectorAll("img")].filter(img => !rdeSafeUrl(img.getAttribute("src"), "img")).length;
+  const clean = sanitizeDetailHtml(parsed.body ? parsed.body.innerHTML : html);
+  if (!detailDocHasContent(clean)) return showToast("가져올 내용이 없어요. HTML 안에 글이나 사진이 있는지 확인해 주세요.");
+  const surface = rdeSurfaceOf(key);
+  if (surface && !detailDocHasContent(serializeSurface(surface))) { rdeDrafts[key] = clean; rdeRender(key); rdeOptions[key]?.onChange?.(); }
+  else rdeInsertHtml(key, docForEditor(clean));
+  const images = (clean.match(/<img\b/gi) || []).length;
+  showToast(`${sourceLabel}에서 가져왔어요 (사진 ${images}장).${lostImages ? ` 컴퓨터 안 경로로 된 사진 ${lostImages}장은 보이지 않아 뺐어요. 사진은 https:// 주소이거나 직접 올려 주세요.` : ""}`);
 }
-/* HTML 코드 보기: 긴 사진 데이터는 doogo-image://번호 로 줄여서 보여 주고, 적용할 때 되돌린다 */
 function rdeOpenCode(key) {
   const root = rdeRoot(key); if (!root) return;
-  const images = [];
-  const html = rdeNormalizeBlocks(rdeDrafts[key]).map(block => rdeBlockHtml(block, rdeOptions[key]?.product)).filter(Boolean).join("\n\n")
-    .replace(/src="(data:image\/[^"]+)"/g, (match, data) => { images.push(data); return `src="doogo-image://${images.length}"`; });
-  root._rdeImages = images;
   const panel = root.querySelector("[data-rde-code]");
   panel.hidden = false;
   const area = panel.querySelector("[data-rde-code-text]");
-  area.value = html;
+  area.value = rdeGetDoc(key).replace(/></g, ">\n<");
   if (typeof scrollInEditor === "function") scrollInEditor(panel, 20);
   area.focus({ preventScroll: true });
 }
 function rdeApplyCode(key) {
   const root = rdeRoot(key); if (!root) return;
-  const images = root._rdeImages || [];
-  const text = root.querySelector("[data-rde-code-text]").value.replace(/doogo-image:\/\/(\d+)/g, (match, n) => images[Number(n) - 1] || "");
-  const blocks = rdeHtmlToBlocks(text);
-  rdeDrafts[key] = blocks.slice(0, RDE_MAX_BLOCKS);
-  rdeActive = { key, index: -1 };
+  rdeDrafts[key] = sanitizeDetailHtml(root.querySelector("[data-rde-code-text]").value);
   root.querySelector("[data-rde-code]").hidden = true;
-  rdeChanged(key); rdeRender(key, 0);
-  showToast(`HTML 코드를 적용했어요. 블록 ${rdeDrafts[key].length}개로 나눴어요.`);
+  rdeRender(key); rdeOptions[key]?.onChange?.();
+  showToast("HTML 코드를 적용했어요.");
 }
 function rdeOpenPreview(key) {
   document.getElementById("rdePreview")?.remove();
-  const html = detailBlocksToHtml(rdeDrafts[key], rdeOptions[key]?.product, "view");
   const layer = document.createElement("div");
-  layer.id = "rdePreview"; layer.className = "rde-preview-layer"; layer.dataset.device = innerWidth < 720 ? "mobile" : "mobile";
-  layer.innerHTML = `<div class="rde-preview-shell" role="dialog" aria-modal="true" aria-label="상세페이지 미리보기"><header><b>미리보기</b><div class="rde-seg"><button type="button" class="active" data-rde-device="mobile">휴대폰</button><button type="button" data-rde-device="pc">PC</button></div><button type="button" data-rde-preview-close aria-label="닫기">✕</button></header><div class="rde-preview-scroll"><div class="rde-preview-page rde-doc">${html}</div></div><footer>쇼핑몰에 이렇게 보여요. 스마트스토어·쿠팡은 가로 860px 기준이에요.</footer></div>`;
+  layer.id = "rdePreview"; layer.className = "rde-preview-layer"; layer.dataset.device = "mobile";
+  layer.innerHTML = `<div class="rde-preview-shell" role="dialog" aria-modal="true" aria-label="상세페이지 미리보기"><header><b>미리보기</b><div class="rde-seg"><button type="button" class="active" data-rde-device="mobile">휴대폰</button><button type="button" data-rde-device="pc">PC</button></div><button type="button" data-rde-preview-close aria-label="닫기">✕</button></header><div class="rde-preview-scroll"><div class="rde-preview-page rde-doc">${detailDocHtml(rdeGetDoc(key), "view")}</div></div><footer>쇼핑몰에 이렇게 보여요. 스마트스토어·쿠팡은 가로 860px 기준이에요.</footer></div>`;
   document.body.appendChild(layer);
 }
-function rdeBlocks(key) { return rdeNormalizeBlocks(rdeDrafts[key]).map(block => ["text", "quote", "html"].includes(block.type) ? { ...block, html: sanitizeDetailHtml(block.html) } : block).filter(block => block.type !== "video" || youtubeId(block.url)).filter(block => !["text", "quote"].includes(block.type) || rdePlainText(block.html) || /<(img|table|iframe|hr)/i.test(block.html)); }
 function rdeExec(root, command, value) {
-  const card = root.querySelector(".rde-block.active") || (rdeActive.key === root.dataset.rde ? root.querySelector(`[data-rde-index="${rdeActive.index}"]`) : null);
-  const rich = card?.querySelector("[data-rde-rich]");
-  if (!rich) return showToast("서식을 바꿀 글 블록을 먼저 눌러 주세요.");
-  if (!rich.contains(getSelection().anchorNode)) { rich.focus(); if (root._rdeRange) { const sel = getSelection(); sel.removeAllRanges(); sel.addRange(root._rdeRange); } else rdePlaceCaretEnd(rich); }
+  rdeRestoreRange(root);
   try { document.execCommand("styleWithCSS", false, true); } catch (error) { /* 무시 */ }
   if (command === "createLink") {
-    const input = card.querySelector("[data-rde-link-input]"); const url = rdeSafeUrl(input?.value, "link");
+    const input = root.querySelector("[data-rde-link-input]"); const url = rdeSafeUrl(input?.value, "link");
     if (!url) return showToast("https:// 로 시작하는 주소를 넣어 주세요.");
     if (getSelection().isCollapsed) document.execCommand("insertHTML", false, `<a href="${rdeEsc(url)}" target="_blank" rel="noopener noreferrer nofollow">${rdeEsc(url)}</a>`);
     else document.execCommand("createLink", false, url);
     input.value = "";
   } else if (command === "formatBlock") document.execCommand("formatBlock", false, `<${value}>`);
   else document.execCommand(command, false, value ?? null);
-  card.querySelectorAll("[data-rde-palette]").forEach(pal => { pal.hidden = true; });
-  rdeSyncRich(rich);
+  root.querySelectorAll("[data-rde-palette]").forEach(pal => { if (!pal.classList.contains("rde-url")) pal.hidden = true; });
+  rdeSync(root.dataset.rde);
 }
+/* 사진 선택 도구 */
+function rdeSelectedImg(root) { return root.querySelector("[data-rde-surface] img.rde-img-selected"); }
+function rdeHideImgbar(root) { root.querySelectorAll("img.rde-img-selected").forEach(img => img.classList.remove("rde-img-selected")); const bar = root.querySelector("[data-rde-imgbar]"); if (bar) bar.hidden = true; }
+function rdeShowImgbar(root, img) {
+  rdeHideImgbar(root);
+  img.classList.add("rde-img-selected");
+  const bar = root.querySelector("[data-rde-imgbar]");
+  bar.hidden = false;
+  const top = img.getBoundingClientRect().top - root.getBoundingClientRect().top + 8;
+  bar.style.top = `${Math.max(0, top)}px`;
+  const width = Number(String(img.style.width || "100").replace("%", "")) || 100;
+  bar.querySelectorAll("[data-rde-imgsize]").forEach(button => button.classList.toggle("active", Number(button.dataset.rdeImgsize) === width));
+  bar.querySelector("[data-rde-imgalt]").value = img.getAttribute("alt") || "";
+  bar.querySelector("[data-rde-imglink]").value = img.closest("a")?.getAttribute("href") || "";
+}
+function rdeTopBlock(surface, node) { let el = node; while (el && el.parentElement !== surface) el = el.parentElement; return el; }
 
 /* ---------- 이벤트 ---------- */
-document.addEventListener("mousedown", event => { if (event.target.closest?.("[data-rde-cmd], [data-rde-toggle]") && !event.target.closest("[data-rde-link-input]")) event.preventDefault(); });
+document.addEventListener("mousedown", event => { if (event.target.closest?.(".rde [data-rde-cmd], .rde [data-rde-toggle], .rde [data-rde-template], .rde [data-rde-pick]") && !event.target.closest("[data-rde-link-input]")) event.preventDefault(); });
 document.addEventListener("selectionchange", () => {
   const sel = getSelection(); if (!sel.rangeCount) return;
-  const rich = sel.anchorNode?.parentElement?.closest?.("[data-rde-rich]") || (sel.anchorNode?.nodeType === 1 ? sel.anchorNode.closest?.("[data-rde-rich]") : null);
-  if (rich) { const root = rich.closest(".rde"); if (root) root._rdeRange = sel.getRangeAt(0).cloneRange(); }
-});
-document.addEventListener("focusin", event => {
-  const card = event.target.closest?.(".rde [data-rde-index]"); if (!card) return;
-  const key = rdeKeyOf(card); const index = Number(card.dataset.rdeIndex);
-  if (rdeActive.key === key && rdeActive.index === index) return;
-  rdeActive = { key, index };
-  card.closest("[data-rde-blocks]").querySelectorAll(".rde-block.active").forEach(el => el.classList.remove("active"));
-  card.classList.add("active");
+  const node = sel.anchorNode; const el = node?.nodeType === 1 ? node : node?.parentElement;
+  const surface = el?.closest?.("[data-rde-surface]");
+  if (surface) surface.closest(".rde")._rdeRange = sel.getRangeAt(0).cloneRange();
 });
 document.addEventListener("input", event => {
-  const rich = event.target.closest?.("[data-rde-rich]");
-  if (rich) { rdeSyncRich(rich); return; }
-  const field = event.target.closest?.("[data-rde-field]");
-  if (!field) return;
-  const key = rdeKeyOf(field); const card = field.closest("[data-rde-index]"); const block = rdeDrafts[key]?.[Number(card?.dataset.rdeIndex)];
-  if (!block) return;
-  block[field.dataset.rdeField] = field.value; rdeChanged(key);
-  if (field.dataset.rdeField === "html") { const preview = card.querySelector(".rde-html-preview"); if (preview) preview.innerHTML = sanitizeDetailHtml(field.value) || `<p class="rde-hint">HTML을 입력하면 여기 미리 보여요.</p>`; }
+  const surface = event.target.closest?.("[data-rde-surface]");
+  if (surface) { rdeSync(rdeKeyOf(surface)); return; }
+  const alt = event.target.closest?.("[data-rde-imgalt]");
+  if (alt) { const root = alt.closest(".rde"); const img = rdeSelectedImg(root); if (img) { img.setAttribute("alt", alt.value); rdeSync(root.dataset.rde); } }
 });
 document.addEventListener("change", event => {
-  const video = event.target.closest?.('[data-rde-field="url"]');
-  if (video) { const key = rdeKeyOf(video); const index = Number(video.closest("[data-rde-index]").dataset.rdeIndex); if (video.value && !youtubeId(video.value)) showToast("유튜브 주소가 아니에요. youtu.be 또는 youtube.com 주소를 넣어 주세요."); rdeRender(key); rdeActive = { key, index }; return; }
   const images = event.target.closest?.("[data-rde-image-input]");
   if (images) { const key = rdeKeyOf(images); const files = [...images.files]; images.value = ""; rdeAddImages(key, files); return; }
   const htmlFile = event.target.closest?.("[data-rde-html-file]");
   if (htmlFile) { const key = rdeKeyOf(htmlFile); const file = htmlFile.files?.[0]; htmlFile.value = ""; if (!file) return; if (file.size > 3 * 1024 * 1024) return showToast("HTML 파일은 3MB 이하만 올릴 수 있어요."); rdeReadHtmlFile(file).then(text => rdeImportHtml(key, text, file.name)).catch(() => showToast("HTML 파일을 읽지 못했어요.")); return; }
-  const block = event.target.closest?.("[data-rde-block]");
+  const link = event.target.closest?.("[data-rde-imglink]");
+  if (link) {
+    const root = link.closest(".rde"); const img = rdeSelectedImg(root); if (!img) return;
+    const url = rdeSafeUrl(link.value, "link"); const anchor = img.closest("a");
+    if (!link.value.trim()) { if (anchor) anchor.replaceWith(img); }
+    else if (!url) { showToast("https:// 로 시작하는 주소를 넣어 주세요."); return; }
+    else if (anchor) anchor.setAttribute("href", url);
+    else { const a = document.createElement("a"); a.setAttribute("href", url); img.replaceWith(a); a.appendChild(img); }
+    rdeSync(root.dataset.rde); return;
+  }
+  const block = event.target.closest?.(".rde [data-rde-block]");
   if (block) { rdeExec(block.closest(".rde"), "formatBlock", block.value); block.value = "p"; return; }
-  const size = event.target.closest?.("[data-rde-size]");
+  const size = event.target.closest?.(".rde [data-rde-size]");
   if (size && size.value) { rdeExec(size.closest(".rde"), "fontSize", size.value); size.value = ""; }
 });
 document.addEventListener("paste", event => {
-  const rich = event.target.closest?.("[data-rde-rich]");
-  if (!rich) return;
+  const surface = event.target.closest?.("[data-rde-surface]");
+  if (!surface) return;
   const data = event.clipboardData; if (!data) return;
+  const key = rdeKeyOf(surface);
   const files = [...(data.files || [])].filter(file => /^image\//.test(file.type));
-  if (files.length) { event.preventDefault(); rdeAddImages(rdeKeyOf(rich), files); return; }
-  const html = data.getData("text/html");
   event.preventDefault();
-  if (html) document.execCommand("insertHTML", false, sanitizeDetailHtml(html.replace(/<!--(StartFragment|EndFragment)-->/g, "")).replace(/\sclass="[^"]*"/g, ""));
+  if (files.length) { rdeAddImages(key, files); return; }
+  const html = data.getData("text/html");
+  if (html) document.execCommand("insertHTML", false, docForEditor(sanitizeDetailHtml(html.replace(/<!--(StartFragment|EndFragment)-->/g, ""))));
   else document.execCommand("insertText", false, data.getData("text/plain"));
-  rdeSyncRich(rich);
+  rdeSync(key);
 });
 ["dragover", "dragleave", "drop"].forEach(type => document.addEventListener(type, event => {
-  const drop = event.target.closest?.("[data-rde-drop]");
-  if (!drop || !event.dataTransfer?.types?.includes("Files")) return;
+  const surface = event.target.closest?.("[data-rde-surface]");
+  if (!surface || !event.dataTransfer?.types?.includes("Files")) return;
   event.preventDefault();
-  drop.classList.toggle("dragging", type === "dragover");
-  if (type === "drop") rdeAddImages(rdeKeyOf(drop), event.dataTransfer.files);
+  surface.classList.toggle("dragging", type === "dragover");
+  if (type !== "drop") return;
+  const root = surface.closest(".rde");
+  const range = document.caretRangeFromPoint?.(event.clientX, event.clientY);
+  if (range && surface.contains(range.startContainer)) root._rdeRange = range;
+  rdeAddImages(root.dataset.rde, event.dataTransfer.files);
 }));
+document.addEventListener("keydown", event => {
+  if (event.key !== "Enter" || event.isComposing) return;
+  const url = event.target.closest?.("[data-rde-url-input]"); const video = event.target.closest?.("[data-rde-video-input]"); const link = event.target.closest?.("[data-rde-link-input]"); const imgLink = event.target.closest?.("[data-rde-imglink], [data-rde-imgalt]");
+  if (url) { event.preventDefault(); url.closest(".rde").querySelector("[data-rde-url-add]")?.click(); }
+  else if (video) { event.preventDefault(); video.closest(".rde").querySelector("[data-rde-video-add]")?.click(); }
+  else if (link) { event.preventDefault(); link.parentElement.querySelector('[data-rde-cmd="createLink"]')?.click(); }
+  else if (imgLink) { event.preventDefault(); imgLink.dispatchEvent(new Event("change", { bubbles: true })); }
+  else if (event.target.closest?.("[data-sf-editor] input")) event.preventDefault();
+});
+document.addEventListener("keydown", event => { if (event.key === "Escape" && document.getElementById("rdePreview")) { event.stopPropagation(); document.getElementById("rdePreview").remove(); } }, true);
 document.addEventListener("click", event => {
   const t = event.target;
   const device = t.closest?.("[data-rde-device]");
   if (device) { const layer = device.closest(".rde-preview-layer"); layer.dataset.device = device.dataset.rdeDevice; layer.querySelectorAll("[data-rde-device]").forEach(b => b.classList.toggle("active", b === device)); return; }
   if (t.closest?.("[data-rde-preview-close]") || t.classList?.contains("rde-preview-layer")) { document.getElementById("rdePreview")?.remove(); return; }
   const root = t.closest?.(".rde[data-rde]"); if (!root) return;
-  const key = root.dataset.rde; const blocks = rdeDrafts[key]; if (!blocks) return;
-  const card = t.closest("[data-rde-index]"); const index = card ? Number(card.dataset.rdeIndex) : -1;
-  /* 파일 고르기: 버튼이 숨겨 둔 파일 입력을 직접 연다 (휴대폰 인앱 브라우저에서도 확실하게) */
+  const key = root.dataset.rde;
+  const surface = root.querySelector("[data-rde-surface]");
+  /* 문서 안 사진을 누르면 사진 도구 */
+  if (t.tagName === "IMG" && surface.contains(t)) { event.preventDefault(); rdeShowImgbar(root, t); /* 커서를 사진 바로 뒤(에디터 안)에 둬서 이어서 글을 쓸 수 있게 */ try { const range = document.createRange(); range.setStartAfter(t); range.collapse(true); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range); surface.focus({ preventScroll: true }); } catch (error) { /* 무시 */ } return; }
+  if (surface.contains(t)) { rdeHideImgbar(root); return; }
+  const img = rdeSelectedImg(root);
+  const sizeBtn = t.closest("[data-rde-imgsize]");
+  if (sizeBtn && img) { img.style.width = `${sizeBtn.dataset.rdeImgsize}%`; img.style.display = "block"; img.style.margin = "0 auto"; img.style.maxWidth = "100%"; rdeShowImgbar(root, img); rdeSync(key); return; }
+  const moveBtn = t.closest("[data-rde-imgmove]");
+  if (moveBtn && img) { const blockEl = rdeTopBlock(surface, img); const dir = Number(moveBtn.dataset.rdeImgmove); const sibling = dir < 0 ? blockEl?.previousElementSibling : blockEl?.nextElementSibling; if (blockEl && sibling) { if (dir < 0) sibling.before(blockEl); else sibling.after(blockEl); if (typeof scrollInEditor === "function") scrollInEditor(img, 80); setTimeout(() => rdeShowImgbar(root, img), 250); rdeSync(key); } return; }
+  if (t.closest("[data-rde-imgdel]") && img) { const blockEl = rdeTopBlock(surface, img); const holder = img.closest("a") || img; holder.remove(); if (blockEl && blockEl !== holder && !blockEl.textContent.trim() && !blockEl.querySelector("img,table,iframe,hr")) blockEl.remove(); rdeHideImgbar(root); rdeSync(key); showToast("사진을 지웠어요. ↶ 되돌리기로 살릴 수 있어요."); return; }
   const pick = t.closest("[data-rde-pick]");
   if (pick) { const input = root.querySelector(pick.dataset.rdePick === "html" ? "[data-rde-html-file]" : "[data-rde-image-input]"); if (input) { input.value = ""; input.click(); } return; }
+  const toggle = t.closest("[data-rde-toggle]");
+  if (toggle) { const name = toggle.dataset.rdeToggle; const pal = toggle.parentElement.querySelector(`[data-rde-palette="${name}"]`) || root.querySelector(`.rde-url[data-rde-palette="${name}"]`); root.querySelectorAll("[data-rde-palette]").forEach(el => { if (el !== pal) el.hidden = true; }); if (pal) { pal.hidden = !pal.hidden; if (!pal.hidden) pal.querySelector("input")?.focus(); } return; }
+  const cmd = t.closest("[data-rde-cmd]");
+  if (cmd) { rdeExec(root, cmd.dataset.rdeCmd, cmd.dataset.value); return; }
+  const tpl = t.closest("[data-rde-template]");
+  if (tpl) { const template = rdeTemplates(rdeOptions[key]?.product)[tpl.dataset.rdeTemplate]; root.querySelectorAll(".rde-menu[data-rde-palette]").forEach(el => { el.hidden = true; }); if (template) rdeInsertHtml(key, template.html); return; }
   if (t.closest("[data-rde-url-add]")) {
     const box = root.querySelector("[data-rde-url-input]");
     const urls = String(box.value || "").split(/\s+/).map(url => url.trim()).filter(Boolean);
     const good = urls.filter(url => /^https:\/\//i.test(url) && rdeSafeUrl(url, "img"));
     if (!good.length) return showToast("https:// 로 시작하는 사진 주소를 넣어 주세요.");
-    box.value = ""; root.querySelector('[data-rde-palette="imgurl"]').hidden = true;
-    rdeInsert(key, good.map(url => ({ type: "image", src: url, alt: "", size: 100 })));
+    box.value = ""; box.closest("[data-rde-palette]").hidden = true;
+    rdeInsertHtml(key, `${good.map(url => `<p><img src="${rdeEsc(url)}" alt="" style="${RDE_IMG_STYLE}"></p>`).join("")}<p><br></p>`);
     showToast(`사진 ${good.length}장을 주소로 넣었어요.${urls.length > good.length ? ` ${urls.length - good.length}개는 https 주소가 아니라 뺐어요.` : ""}`);
     return;
   }
-  const toggle = t.closest("[data-rde-toggle]");
-  if (toggle) { const pal = toggle.parentElement.querySelector(`[data-rde-palette="${toggle.dataset.rdeToggle}"]`) || root.querySelector(`.rde-url[data-rde-palette="${toggle.dataset.rdeToggle}"]`); root.querySelectorAll("[data-rde-palette]").forEach(el => { if (el !== pal) el.hidden = true; }); if (pal) { pal.hidden = !pal.hidden; pal.querySelector("input")?.focus(); } return; }
-  const cmd = t.closest("[data-rde-cmd]");
-  if (cmd) { rdeExec(root, cmd.dataset.rdeCmd, cmd.dataset.value); return; }
-  const add = t.closest("[data-rde-add]");
-  if (add) { const type = add.dataset.rdeAdd; rdeInsert(key, [type === "text" ? { type: "text", html: "" } : type === "divider" ? { type: "divider", style: "line" } : type === "quote" ? { type: "quote", html: "" } : type === "video" ? { type: "video", url: "" } : { type: "html", html: "" }]); return; }
-  const tpl = t.closest("[data-rde-template]");
-  if (tpl) { const template = rdeTemplates(rdeOptions[key]?.product)[tpl.dataset.rdeTemplate]; root.querySelectorAll("[data-rde-palette]").forEach(el => { el.hidden = true; }); if (template) rdeInsert(key, JSON.parse(JSON.stringify(template.blocks))); return; }
-  if (t.closest("[data-rde-move]") && card) { const next = index + Number(t.closest("[data-rde-move]").dataset.rdeMove); if (blocks[next]) { [blocks[index], blocks[next]] = [blocks[next], blocks[index]]; rdeActive = { key, index: next }; rdeChanged(key); rdeRender(key, next); } return; }
-  if (t.closest("[data-rde-dup]") && card) { if (blocks.length >= RDE_MAX_BLOCKS) return showToast(`블록은 ${RDE_MAX_BLOCKS}개까지예요.`); blocks.splice(index + 1, 0, JSON.parse(JSON.stringify(blocks[index]))); rdeActive = { key, index: index + 1 }; rdeChanged(key); rdeRender(key, index + 1); return; }
-  if (t.closest("[data-rde-remove]") && card) { const removed = blocks.splice(index, 1)[0]; rdeActive = { key, index: Math.min(index, blocks.length - 1) }; rdeChanged(key); rdeRender(key); root._rdeUndo = { index, block: removed }; showToastAction(`${rdeBlockLabel(removed)} 블록을 지웠어요.`, "되돌리기", () => { blocks.splice(root._rdeUndo.index, 0, root._rdeUndo.block); rdeChanged(key); rdeRender(key, root._rdeUndo.index); }); return; }
-  const sizeSet = t.closest("[data-rde-size-set]");
-  if (sizeSet && card) { blocks[index].size = Number(sizeSet.dataset.rdeSizeSet); rdeChanged(key); rdeRender(key); return; }
-  const divider = t.closest("[data-rde-divider]");
-  if (divider && card) { blocks[index].style = divider.dataset.rdeDivider; rdeChanged(key); rdeRender(key); return; }
+  if (t.closest("[data-rde-video-add]")) {
+    const box = root.querySelector("[data-rde-video-input]"); const id = youtubeId(box.value);
+    if (!id) return showToast("유튜브 주소를 넣어 주세요. (youtu.be 또는 youtube.com)");
+    box.value = ""; box.closest("[data-rde-palette]").hidden = true;
+    rdeInsertHtml(key, `${rdeVideoCard(id, true)}<p><br></p>`);
+    return;
+  }
   if (t.closest("[data-rde-code-open]")) { rdeOpenCode(key); return; }
   if (t.closest("[data-rde-code-cancel]")) { root.querySelector("[data-rde-code]").hidden = true; return; }
   if (t.closest("[data-rde-code-apply]")) { rdeApplyCode(key); return; }
   if (t.closest("[data-rde-preview]")) { rdeOpenPreview(key); return; }
-  if (t.closest("[data-rde-reset]")) { const reset = rdeOptions[key]?.resetBlocks?.(); if (reset) { rdeDrafts[key] = rdeNormalizeBlocks(reset); rdeActive = { key, index: -1 }; rdeOptions[key]?.onReset?.(); rdeRender(key, 0); showToast("공급사 원본 상세페이지로 되돌렸어요."); } return; }
+  if (t.closest("[data-rde-reset]")) { const reset = rdeOptions[key]?.resetDoc?.(); if (reset !== undefined) { rdeDrafts[key] = reset; rdeRender(key); rdeOptions[key]?.onReset?.(); showToast("공급사 원본 상세페이지로 되돌렸어요."); } return; }
 });
-document.addEventListener("keydown", event => {
-  if (event.key !== "Enter" || event.isComposing) return;
-  const url = event.target.closest?.("[data-rde-url-input]"); const link = event.target.closest?.("[data-rde-link-input]");
-  if (url) { event.preventDefault(); url.closest(".rde").querySelector("[data-rde-url-add]")?.click(); }
-  else if (link) { event.preventDefault(); link.parentElement.querySelector('[data-rde-cmd="createLink"]')?.click(); }
-  else if (event.target.closest?.("[data-sf-editor] input")) event.preventDefault();
-});
-document.addEventListener("keydown", event => { if (event.key === "Escape" && document.getElementById("rdePreview")) { event.stopPropagation(); document.getElementById("rdePreview").remove(); } }, true);
 /* 되돌리기 버튼이 있는 알림 */
 function showToastAction(message, label, onClick) {
   showToast(message);
@@ -5959,173 +6045,233 @@ function showToastAction(message, label, onClick) {
 
 
 function productDetailReady(form) {
-  const hasContent = detailBlocksHasContent(rdeDrafts.product);
+  const hasContent = detailDocHasContent(rdeGetDoc("product"));
   if (!hasContent) { form.querySelector(".rde")?.scrollIntoView({ behavior: "smooth", block: "center" }); showToast("상품 상세페이지에 이미지나 설명을 1개 이상 넣어 주세요."); return false; }
-  if (form.querySelector("[data-sf-editor]")) {
-    const { errors } = readShippingFee(Object.fromEntries(new FormData(form)));
-    if (errors.length) { const editor = form.querySelector("[data-sf-editor]"); if (typeof scrollInEditor === "function") scrollInEditor(editor, 20); showToast(`배송비 정책: ${errors[0]}`); return false; }
+  const shipSelect = form.querySelector("[data-ship-select]");
+  if (shipSelect) {
+    const policy = shippingPolicyById(shipSelect.value);
+    const weight = Number(String(form.querySelector('[name="shipWeight"]')?.value || "").replace(/[^\d.]/g, "") || 0);
+    if (policy && normalizeShipFee(policy.fee).type === "WEIGHT_TIER" && !(weight > 0)) { const field = form.querySelector('[name="shipWeight"]'); if (typeof scrollInEditor === "function") scrollInEditor(field, 40); field?.focus({ preventScroll: true }); showToast("무게 구간 배송 정책이에요. 배송 무게(kg)를 입력해 주세요."); return false; }
   }
+
   const carrier = form.querySelector("[data-carrier-value]")?.value;
   if (carrier !== undefined && !isKnownCarrier(carrier)) { showToast("택배사를 목록에서 골라 주세요."); return false; }
   return true;
 }
 function productDetailAndShipping(data) {
-  const blocks = rdeBlocks("product");
-  const text = detailBlocksText(blocks);
-  const owner = { name: data.name, imageIndex: Number(data.imageIndex || 0) };
-  const shippingFee = data.sf_type ? readShippingFee(data).fee : null;
-  return { ...(shippingFee ? { shippingFee, shippingPolicy: shippingFeeLabel(shippingFee) } : {}), detailBlocks: blocks, detailHtml: detailBlocksToHtml(blocks, owner), detail: text ? text.slice(0, 200) : `상세페이지 이미지 ${blocks.filter(block => block.type === "image").length}장`, carrier: data.carrier || "한진택배", shippingType: data.shippingType || "domestic", requireCustomsCode: data.shippingType === "overseas" ? data.requireCustomsCode === "on" : false };
+  const doc = rdeGetDoc("product");
+  const text = detailDocText(doc);
+  const shipPolicy = data.shippingPolicyId ? shippingPolicyById(data.shippingPolicyId) : null;
+  return { ...(shipPolicy ? { shippingPolicyId: shipPolicy.id, shippingPolicy: `${shipPolicy.name} · ${shippingFeeLabel(shipPolicy.fee)}`, shippingFee: null } : {}), shipWeight: Number(String(data.shipWeight || "").replace(/[^\d.]/g, "") || 0), detailDoc: doc, detailBlocks: null, detailHtml: undefined, detail: text ? text.slice(0, 200) : `상세페이지 이미지 ${detailDocImageCount(doc)}장`, carrier: data.carrier || "한진택배", shippingType: data.shippingType || "domestic", requireCustomsCode: data.shippingType === "overseas" ? data.requireCustomsCode === "on" : false };
 }
 
-/* ===== 배송비 정책 (스마트스토어 상품 등록 '배송' 기준) =====
-   배송비 종류: 무료 · 조건부 무료 · 유료 · 수량별(N개마다 반복) · 구간별(2·3구간) + 두고 전용 무게별(스마트스토어에는 구간별로 바꿔 보냄)
-   결제 방식(선결제·착불), 제주/도서산간 추가 배송비, 묶음배송, 반품·교환 배송비, 배송 속성(일반·오늘출발·주문 후 제작)까지 한 번에 정한다.
-   네이버 커머스API deliveryInfo(deliveryFee·claimDeliveryInfo) 필드와 1:1로 맞춘다. */
+/* ===== 배송 정책 (스마트스토어 상품 등록 '배송' 기준) =====
+   공급사·위탁셀러가 각자 '배송 정책' 메뉴에서 정책을 여러 개 만들어 두고, 상품마다 불러와 지정한다.
+   - 공급사 정책: 위탁셀러가 공급가와 함께 내는 배송비 (샘플 주문·발주 결제)
+   - 위탁셀러 정책: 스마트스토어·쿠팡에 올릴 때 들어가는 배송비
+   배송비 종류: 무료 · 조건부 무료 · 유료 · 수량별(N개마다 반복) · 수량 구간(1개/2개/3개 이상…) · 무게 구간(0.1kg 단위)
+   결제 방식, 제주/도서산간, 묶음배송, 반품·교환비, 배송 속성까지. 네이버 커머스API deliveryInfo와 맞춘다. */
 const SHIP_FEE_TYPES = [
   ["FREE", "무료", "배송비 없이 보내요"],
   ["CONDITIONAL_FREE", "조건부 무료", "일정 금액 이상 사면 무료"],
   ["PAID", "유료", "주문마다 같은 배송비"],
-  ["UNIT_QUANTITY_PAID", "수량별", "N개마다 배송비를 한 번씩 더"],
-  ["RANGE_QUANTITY_PAID", "구간별", "수량 구간마다 다른 배송비"],
-  ["WEIGHT_PAID", "무게별", "총 무게(kg) 구간마다 다른 배송비"]
+  ["UNIT_QUANTITY_PAID", "수량별 반복", "N개마다 배송비를 한 번씩 더"],
+  ["QUANTITY_TIER", "수량 구간", "1개·2개·3개 이상… 구간별 배송비"],
+  ["WEIGHT_TIER", "무게 구간", "0.1kg 단위 총 무게 구간별 배송비"]
 ];
 const SHIP_PAY_TYPES = [["PREPAID", "선결제"], ["COLLECT", "착불"], ["COLLECT_OR_PREPAID", "선결제·착불 선택"]];
 const SHIP_ATTRS = [["NORMAL", "일반 배송"], ["TODAY", "오늘출발"], ["PRE_ORDER", "주문 확인 후 제작"]];
+const SHIP_MAX_TIERS = 20;
 function defaultShippingFee(product = {}) {
   const legacy = String(product.shippingPolicy || "");
   const type = /조건부/.test(legacy) ? "CONDITIONAL_FREE" : /3,000|3000|유료/.test(legacy) ? "PAID" : "FREE";
-  const weight = Number(product.weight || 0) > 0 && /kg/i.test(product.unit || "kg") ? Number(product.weight) : 1;
   return {
     method: "PARCEL", attribute: "NORMAL", makeDays: 3, bundle: true,
     type, baseFee: 3000, freeOver: 30000, repeatQuantity: 2,
-    rangeTiers: 2, rangeUpTo: 3, rangeFee2: 6000, rangeUpTo2: 6, rangeFee3: 9000,
-    unitWeight: weight, weightTiers: [{ upto: 5, fee: 3000 }, { upto: 10, fee: 5000 }, { upto: 20, fee: 8000 }],
+    qtyTiers: [{ from: 1, fee: 3000 }, { from: 2, fee: 4000 }, { from: 4, fee: 6000 }],
+    weightTiers: [{ upto: 0.5, fee: 3000 }, { upto: 1, fee: 3500 }, { upto: 3, fee: 4000 }, { upto: 5, fee: 5000 }, { upto: 10, fee: 7000 }], overPerKg: 0,
     payType: "PREPAID", areaUse: false, areaType: "AREA_3", jejuFee: 3000, islandFee: 5000,
     returnFee: 3000, exchangeFee: 6000
   };
 }
-function productShippingFee(product) { return { ...defaultShippingFee(product || {}), ...((product && product.shippingFee) || {}) }; }
-/* 배송비 계산: qty=수량, amount=상품 금액 합계, region=normal|jeju|island */
-function calcShipping(fee, { qty = 1, amount = 0, region = "normal" } = {}) {
+/* 예전(v57) 구간별·무게별 저장값을 새 모양으로 */
+function normalizeShipFee(fee) {
+  const f = { ...defaultShippingFee(), ...(fee || {}) };
+  if (f.type === "RANGE_QUANTITY_PAID") { f.type = "QUANTITY_TIER"; f.qtyTiers = [{ from: 1, fee: Number(f.baseFee || 0) }, { from: Number(f.rangeUpTo || 1) + 1, fee: Number(f.rangeFee2 || 0) }, ...(Number(f.rangeTiers) === 3 ? [{ from: Number(f.rangeUpTo2 || 2) + 1, fee: Number(f.rangeFee3 || 0) }] : [])]; }
+  if (f.type === "WEIGHT_PAID") f.type = "WEIGHT_TIER";
+  f.qtyTiers = (f.qtyTiers || []).map(t => ({ from: Math.max(1, Math.round(Number(t.from) || 1)), fee: Number(t.fee) || 0 })).sort((a, b) => a.from - b.from);
+  if (!f.qtyTiers.length || f.qtyTiers[0].from !== 1) f.qtyTiers.unshift({ from: 1, fee: Number(f.baseFee || 0) });
+  f.weightTiers = (f.weightTiers || []).map(t => ({ upto: Math.round(Number(t.upto) * 100) / 100, fee: Number(t.fee) || 0 })).filter(t => t.upto > 0).sort((a, b) => a.upto - b.upto);
+  return f;
+}
+/* ---------- 정책 목록 ---------- */
+function shippingPoliciesOf(loginId, role) {
+  state.shippingPolicies = state.shippingPolicies || [];
+  let list = state.shippingPolicies.filter(policy => policy.ownerLoginId === loginId && policy.role === role);
+  if (!list.length && loginId) {
+    const stamp = Date.now().toString(36);
+    const seeds = role === "supplier"
+      ? [{ name: "기본 무료배송", fee: { type: "FREE" } }, { name: "3만원 이상 무료 (미만 3,000원)", fee: { type: "CONDITIONAL_FREE", baseFee: 3000, freeOver: 30000 } }, { name: "무게별 택배 (0.5kg~10kg)", fee: { type: "WEIGHT_TIER" } }]
+      : [{ name: "무료배송", fee: { type: "FREE" } }, { name: "3만원 이상 무료 (미만 3,000원)", fee: { type: "CONDITIONAL_FREE", baseFee: 3000, freeOver: 30000 } }];
+    seeds.forEach((seed, index) => state.shippingPolicies.push({ id: `SHP-${role === "supplier" ? "S" : "M"}-${stamp}-${index}`, ownerLoginId: loginId, role, name: seed.name, isDefault: index === 0, fee: normalizeShipFee(seed.fee), createdAt: ymd(new Date()) }));
+    list = state.shippingPolicies.filter(policy => policy.ownerLoginId === loginId && policy.role === role);
+  }
+  return list;
+}
+function shippingPolicyById(id) { return (state.shippingPolicies || []).find(policy => policy.id === id) || null; }
+function defaultShippingPolicy(loginId, role) { const list = shippingPoliciesOf(loginId, role); return list.find(policy => policy.isDefault) || list[0] || null; }
+function productWeightKg(product) {
+  const ship = Number(product?.shipWeight || 0); if (ship > 0) return ship;
+  const unit = String(product?.unit || "KG").toUpperCase(); const weight = Number(product?.weight || 0);
+  return unit === "KG" ? weight : unit === "G" ? weight / 1000 : 0;
+}
+/* 공급사 상품의 배송비 (공급사 정책) */
+function productShippingPolicy(product) { return shippingPolicyById(product?.shippingPolicyId) || null; }
+function productShippingFee(product) {
+  const policy = productShippingPolicy(product);
+  if (policy) return normalizeShipFee(policy.fee);
+  if (product?.shippingFee) return normalizeShipFee(product.shippingFee);
+  if (product?.shippingPolicy) return normalizeShipFee(defaultShippingFee(product));
+  const fallback = product?.supplierLoginId ? defaultShippingPolicy(product.supplierLoginId, "supplier") : null;
+  return normalizeShipFee(fallback ? fallback.fee : defaultShippingFee(product || {}));
+}
+/* 위탁셀러 마스터 상품의 배송비 (셀러 정책, 없으면 공급사 정책) */
+function itemShippingPolicy(item) {
+  if (item?.shippingPolicyId === "supplier") return null;
+  return shippingPolicyById(item?.shippingPolicyId) || defaultShippingPolicy(item?.sellerLoginId, "seller");
+}
+function itemShippingFee(item, product) { const policy = itemShippingPolicy(item); return policy ? normalizeShipFee(policy.fee) : productShippingFee(product); }
+/* ---------- 계산 ---------- */
+function calcShipping(feeIn, { qty = 1, amount = 0, region = "normal", weightKg = 0 } = {}) {
+  const fee = normalizeShipFee(feeIn);
   const n = Math.max(1, Number(qty || 1));
-  let base = 0;
+  let base = 0, note = "";
   if (fee.type === "CONDITIONAL_FREE") base = Number(amount) >= Number(fee.freeOver || 0) ? 0 : Number(fee.baseFee || 0);
   else if (fee.type === "PAID") base = Number(fee.baseFee || 0);
   else if (fee.type === "UNIT_QUANTITY_PAID") base = Number(fee.baseFee || 0) * Math.ceil(n / Math.max(1, Number(fee.repeatQuantity || 1)));
-  else if (fee.type === "RANGE_QUANTITY_PAID") base = n <= Number(fee.rangeUpTo) ? Number(fee.baseFee || 0) : (Number(fee.rangeTiers) === 3 && n > Number(fee.rangeUpTo2)) ? Number(fee.rangeFee3 || 0) : Number(fee.rangeFee2 || 0);
-  else if (fee.type === "WEIGHT_PAID") {
-    const kg = n * Number(fee.unitWeight || 0);
-    const tiers = (fee.weightTiers || []).filter(tier => Number(tier.upto) > 0).sort((a, b) => a.upto - b.upto);
-    base = Number((tiers.find(tier => kg <= Number(tier.upto)) || tiers[tiers.length - 1] || { fee: 0 }).fee || 0);
+  else if (fee.type === "QUANTITY_TIER") base = Number(([...fee.qtyTiers].reverse().find(tier => n >= tier.from) || fee.qtyTiers[0] || { fee: 0 }).fee);
+  else if (fee.type === "WEIGHT_TIER") {
+    const total = Math.round(n * Number(weightKg || 0) * 1000) / 1000;
+    const tiers = fee.weightTiers;
+    const hit = tiers.find(tier => total <= tier.upto + 1e-9);
+    if (hit) base = Number(hit.fee);
+    else if (tiers.length) { const last = tiers[tiers.length - 1]; base = Number(last.fee) + Math.ceil(total - last.upto - 1e-9) * Number(fee.overPerKg || 0); }
+    note = `총 ${total}kg`;
+    if (!weightKg) note = "상품 무게가 없어요";
   }
-  /* 지역별 추가 배송비는 무료배송이어도 항상 붙는다 (스마트스토어 규칙). 수량별·구간별은 부과 횟수만큼 곱한다. */
   const times = fee.type === "UNIT_QUANTITY_PAID" ? Math.ceil(n / Math.max(1, Number(fee.repeatQuantity || 1))) : 1;
   const areaFee = !fee.areaUse || region === "normal" ? 0 : (region === "jeju" || fee.areaType === "AREA_2" ? Number(fee.jejuFee || 0) : Number(fee.islandFee || 0)) * times;
-  return { base, area: areaFee, total: base + areaFee, collect: fee.payType === "COLLECT" };
+  return { base, area: areaFee, total: base + areaFee, collect: fee.payType === "COLLECT", note };
 }
-function shippingFeeLabel(fee) {
-  const f = fee || defaultShippingFee();
+function shippingFeeLabel(feeIn) {
+  const f = normalizeShipFee(feeIn);
   const won = value => money(Number(value || 0));
   let text = "무료배송";
   if (f.type === "CONDITIONAL_FREE") text = `${won(f.freeOver)} 이상 무료 (미만 ${won(f.baseFee)})`;
   else if (f.type === "PAID") text = `유료배송 ${won(f.baseFee)}`;
-  else if (f.type === "UNIT_QUANTITY_PAID") text = `수량별 ${f.repeatQuantity}개마다 ${won(f.baseFee)}`;
-  else if (f.type === "RANGE_QUANTITY_PAID") text = `구간별 ${f.rangeUpTo}개까지 ${won(f.baseFee)} · ${Number(f.rangeTiers) === 3 ? `${f.rangeUpTo2}개까지 ${won(f.rangeFee2)} · 그 이상 ${won(f.rangeFee3)}` : `초과 ${won(f.rangeFee2)}`}`;
-  else if (f.type === "WEIGHT_PAID") text = `무게별 ${(f.weightTiers || []).filter(t => Number(t.upto) > 0).map(t => `${t.upto}kg까지 ${won(t.fee)}`).join(" · ")}`;
+  else if (f.type === "UNIT_QUANTITY_PAID") text = `${f.repeatQuantity}개마다 ${won(f.baseFee)}`;
+  else if (f.type === "QUANTITY_TIER") text = `수량 구간 ${f.qtyTiers.map((t, i) => `${t.from}개${i < f.qtyTiers.length - 1 && f.qtyTiers[i + 1].from - t.from > 1 ? "~" : i === f.qtyTiers.length - 1 ? " 이상" : ""} ${won(t.fee)}`).join(" · ")}`;
+  else if (f.type === "WEIGHT_TIER") text = `무게 구간 ${f.weightTiers.slice(0, 3).map(t => `${t.upto}kg까지 ${won(t.fee)}`).join(" · ")}${f.weightTiers.length > 3 ? ` 외 ${f.weightTiers.length - 3}구간` : ""}`;
   if (f.payType === "COLLECT") text += " · 착불";
   else if (f.payType === "COLLECT_OR_PREPAID" && f.type !== "FREE") text += " · 선결제/착불";
   if (f.areaUse) text += ` · 제주 +${won(f.jejuFee)}${f.areaType === "AREA_3" ? ` / 도서산간 +${won(f.islandFee)}` : ""}`;
   return text;
 }
-/* 무게별 → 수량 구간 (한 개 무게로 나눠 스마트스토어 구간별 3구간으로) */
-function weightToRange(fee) {
-  const unit = Number(fee.unitWeight || 0);
-  const tiers = (fee.weightTiers || []).filter(tier => Number(tier.upto) > 0).sort((a, b) => a.upto - b.upto).slice(0, 3);
-  if (!unit || !tiers.length) return null;
-  const qty = tiers.map(tier => Math.floor(Number(tier.upto) / unit));
-  return { rangeTiers: tiers.length >= 3 ? 3 : 2, rangeUpTo: qty[0], baseFee: Number(tiers[0].fee), rangeUpTo2: qty[1] || qty[0], rangeFee2: Number((tiers[1] || tiers[0]).fee), rangeFee3: Number((tiers[2] || tiers[1] || tiers[0]).fee) };
+/* 수량 1~60개의 배송비를 계산해, 값이 바뀌는 지점만 남긴 수량 구간 (무게 구간을 스마트스토어 구간별로 보낼 때) */
+function feeToQtyTiers(fee, weightKg) {
+  const tiers = [];
+  for (let n = 1; n <= 60; n += 1) { const value = calcShipping({ ...fee, areaUse: false }, { qty: n, weightKg }).base; if (!tiers.length || tiers[tiers.length - 1].fee !== value) tiers.push({ from: n, fee: value }); }
+  return tiers;
 }
-/* 네이버 커머스API deliveryInfo.deliveryFee 로 변환
-   구간별: secondBaseQuantity/thirdBaseQuantity = 그 구간이 시작되는 수량, 추가 배송비 = 구간 배송비 − 기본 배송비 (운영 전 커머스API 문서와 한 번 더 대조) */
-function naverDeliveryFee(fee) {
-  let f = fee;
-  if (f.type === "WEIGHT_PAID") { const range = weightToRange(f); f = range ? { ...f, ...range, type: "RANGE_QUANTITY_PAID" } : { ...f, type: "PAID" }; }
-  const out = { deliveryFeeType: f.type, baseFee: f.type === "FREE" ? 0 : Number(f.baseFee || 0), deliveryFeePayType: f.type === "FREE" ? "FREE" : f.payType };
-  if (f.type === "CONDITIONAL_FREE") out.freeConditionalAmount = Number(f.freeOver || 0);
-  if (f.type === "UNIT_QUANTITY_PAID") out.repeatQuantity = Number(f.repeatQuantity || 1);
-  if (f.type === "RANGE_QUANTITY_PAID") {
-    out.secondBaseQuantity = Number(f.rangeUpTo) + 1; out.secondExtraFee = Math.max(0, Number(f.rangeFee2 || 0) - Number(f.baseFee || 0));
-    if (Number(f.rangeTiers) === 3) { out.thirdBaseQuantity = Number(f.rangeUpTo2) + 1; out.thirdExtraFee = Math.max(0, Number(f.rangeFee3 || 0) - Number(f.baseFee || 0)); }
+/* 네이버 커머스API deliveryInfo.deliveryFee (구간별은 3구간까지: 2·3구간 시작 수량과 기본 배송비에 더하는 추가 배송비) */
+function naverDeliveryFee(feeIn, weightKg = 0) {
+  const f = normalizeShipFee(feeIn);
+  const out = { deliveryFeePayType: f.type === "FREE" ? "FREE" : f.payType };
+  let tiers = null;
+  if (f.type === "QUANTITY_TIER") tiers = f.qtyTiers;
+  if (f.type === "WEIGHT_TIER") tiers = feeToQtyTiers(f, weightKg);
+  if (tiers) {
+    if (tiers.length === 1) { out.deliveryFeeType = tiers[0].fee ? "PAID" : "FREE"; out.baseFee = tiers[0].fee; }
+    else {
+      out.deliveryFeeType = "RANGE_QUANTITY_PAID"; out.baseFee = tiers[0].fee;
+      out.secondBaseQuantity = tiers[1].from; out.secondExtraFee = Math.max(0, tiers[1].fee - tiers[0].fee);
+      if (tiers[2]) { out.thirdBaseQuantity = tiers[2].from; out.thirdExtraFee = Math.max(0, tiers[2].fee - tiers[0].fee); }
+    }
+  } else {
+    out.deliveryFeeType = f.type; out.baseFee = f.type === "FREE" ? 0 : Number(f.baseFee || 0);
+    if (f.type === "CONDITIONAL_FREE") out.freeConditionalAmount = Number(f.freeOver || 0);
+    if (f.type === "UNIT_QUANTITY_PAID") out.repeatQuantity = Number(f.repeatQuantity || 1);
   }
   if (f.areaUse) out.deliveryFeeByArea = { deliveryAreaType: f.areaType, area2extraFee: Number(f.jejuFee || 0), ...(f.areaType === "AREA_3" ? { area3extraFee: Number(f.islandFee || 0) } : {}) };
   return out;
 }
-/* 쿠팡은 무료·유료·조건부 무료·착불만 있다 → 수량별·구간별·무게별은 기본 배송비(유료)로 보낸다 */
-function coupangDelivery(fee) {
-  const limited = ["UNIT_QUANTITY_PAID", "RANGE_QUANTITY_PAID", "WEIGHT_PAID"].includes(fee.type);
-  const base = fee.type === "WEIGHT_PAID" ? Number(((fee.weightTiers || [])[0] || {}).fee || 0) : Number(fee.baseFee || 0);
-  const type = fee.type === "FREE" ? "FREE" : fee.payType === "COLLECT" ? "CHARGE_RECEIVED" : fee.type === "CONDITIONAL_FREE" ? "CONDITIONAL_FREE" : "NOT_FREE";
-  return { deliveryChargeType: type, deliveryCharge: type === "FREE" ? 0 : base, freeShipOverAmount: type === "CONDITIONAL_FREE" ? Number(fee.freeOver || 0) : 0, deliveryChargeOnReturn: Number(fee.returnFee || 0), returnCharge: Number(fee.returnFee || 0), remoteAreaDeliverable: fee.areaUse ? "Y" : "N", unionDeliveryType: fee.bundle ? "UNION_DELIVERY" : "NOT_UNION_DELIVERY", note: limited ? "쿠팡은 수량·구간·무게별 배송비가 없어 기본 배송비로 올라가요." : "" };
+function naverTierWarning(feeIn, weightKg = 0) {
+  const f = normalizeShipFee(feeIn);
+  const tiers = f.type === "QUANTITY_TIER" ? f.qtyTiers : f.type === "WEIGHT_TIER" ? feeToQtyTiers(f, weightKg) : null;
+  if (tiers && tiers.some((tier, i) => i > 0 && tier.fee < tiers[i - 1].fee)) return "스마트스토어 구간 배송비는 수량이 늘수록 같거나 커야 해요. 줄어드는 구간은 앞 구간 요금으로 올라가요 (많이 사면 무료는 ‘조건부 무료’로 만드세요).";
+  return tiers && tiers.length > 3 ? `스마트스토어는 수량 구간을 3개까지만 받아서 ${tiers[2].from}개 이상은 ${money(tiers[2].fee)}으로 올라가요.` : "";
 }
+function coupangDelivery(feeIn, weightKg = 0) {
+  const fee = normalizeShipFee(feeIn);
+  const limited = ["UNIT_QUANTITY_PAID", "QUANTITY_TIER", "WEIGHT_TIER"].includes(fee.type);
+  const base = limited ? calcShipping({ ...fee, areaUse: false }, { qty: 1, weightKg }).base : Number(fee.baseFee || 0);
+  const type = fee.type === "FREE" || (limited && !base) ? "FREE" : fee.payType === "COLLECT" ? "CHARGE_RECEIVED" : fee.type === "CONDITIONAL_FREE" ? "CONDITIONAL_FREE" : "NOT_FREE";
+  return { deliveryChargeType: type, deliveryCharge: type === "FREE" ? 0 : base, freeShipOverAmount: type === "CONDITIONAL_FREE" ? Number(fee.freeOver || 0) : 0, deliveryChargeOnReturn: Number(fee.returnFee || 0), returnCharge: Number(fee.returnFee || 0), remoteAreaDeliverable: fee.areaUse ? "Y" : "N", unionDeliveryType: fee.bundle ? "UNION_DELIVERY" : "NOT_UNION_DELIVERY", note: limited ? "쿠팡은 수량·무게 구간 배송비가 없어 1개 기준 배송비로 올라가요." : "" };
+}
+/* ---------- 정책 편집기 ---------- */
 function readShippingFee(data) {
   const num = key => Number(String(data[key] ?? "").replace(/[^\d.]/g, "") || 0);
+  const rows = prefix => Object.keys(data).filter(key => key.startsWith(prefix)).map(key => Number(key.slice(prefix.length))).sort((a, b) => a - b);
+  const qtyTiers = rows("sf_qfrom_").map(i => ({ from: Math.round(num(`sf_qfrom_${i}`)), fee: num(`sf_qfee_${i}`) })).filter(t => t.from > 0);
+  const weightTiers = rows("sf_wupto_").map(i => ({ upto: Math.round(num(`sf_wupto_${i}`) * 100) / 100, fee: num(`sf_wfee_${i}`) })).filter(t => t.upto > 0);
   const fee = {
     method: data.sf_method || "PARCEL", attribute: data.sf_attribute || "NORMAL", makeDays: num("sf_makeDays") || 3, bundle: data.sf_bundle !== "no",
     type: data.sf_type || "FREE", baseFee: num("sf_baseFee"), freeOver: num("sf_freeOver"), repeatQuantity: num("sf_repeatQuantity"),
-    rangeTiers: Number(data.sf_rangeTiers || 2), rangeUpTo: num("sf_rangeUpTo"), rangeFee2: num("sf_rangeFee2"), rangeUpTo2: num("sf_rangeUpTo2"), rangeFee3: num("sf_rangeFee3"),
-    unitWeight: num("sf_unitWeight"), weightTiers: [1, 2, 3].map(i => ({ upto: num(`sf_w${i}`), fee: num(`sf_wf${i}`) })).filter(tier => tier.upto > 0),
+    qtyTiers, weightTiers, overPerKg: num("sf_overPerKg"),
     payType: data.sf_payType || "PREPAID", areaUse: data.sf_areaUse === "on", areaType: data.sf_areaType || "AREA_3", jejuFee: num("sf_jejuFee"), islandFee: num("sf_islandFee"),
     returnFee: num("sf_returnFee"), exchangeFee: num("sf_exchangeFee")
   };
   const errors = [];
-  if (fee.type !== "FREE" && fee.type !== "WEIGHT_PAID" && fee.baseFee <= 0) errors.push("기본 배송비를 입력해 주세요.");
+  if (["CONDITIONAL_FREE", "PAID", "UNIT_QUANTITY_PAID"].includes(fee.type) && fee.baseFee <= 0) errors.push("기본 배송비를 입력해 주세요.");
   if (fee.type === "CONDITIONAL_FREE" && fee.freeOver <= 0) errors.push("무료가 되는 금액을 입력해 주세요.");
   if (fee.type === "UNIT_QUANTITY_PAID" && fee.repeatQuantity < 1) errors.push("몇 개마다 배송비를 붙일지 입력해 주세요.");
-  if (fee.type === "RANGE_QUANTITY_PAID") {
-    if (fee.rangeUpTo < 1) errors.push("1구간 수량을 입력해 주세요.");
-    if (fee.rangeFee2 <= 0) errors.push("2구간 배송비를 입력해 주세요.");
-    if (fee.rangeTiers === 3 && (fee.rangeUpTo2 <= fee.rangeUpTo || fee.rangeFee3 <= 0)) errors.push("3구간은 2구간보다 큰 수량과 배송비를 입력해 주세요.");
+  if (fee.type === "QUANTITY_TIER") {
+    if (qtyTiers.length < 2) errors.push("수량 구간을 2개 이상 만들어 주세요.");
+    if (qtyTiers.some((t, i) => i && t.from <= qtyTiers[i - 1].from)) errors.push("수량 구간은 1개, 2개, 3개…처럼 점점 커지게 입력해 주세요.");
   }
-  if (fee.type === "WEIGHT_PAID") {
-    if (fee.unitWeight <= 0) errors.push("상품 1개 무게(kg)를 입력해 주세요.");
-    if (!fee.weightTiers.length) errors.push("무게 구간을 1개 이상 입력해 주세요.");
-    if (fee.weightTiers.some((tier, i) => i && tier.upto <= fee.weightTiers[i - 1].upto)) errors.push("무게 구간은 점점 커지게 입력해 주세요.");
-    if (fee.unitWeight > 0 && fee.weightTiers.length && fee.unitWeight > fee.weightTiers[0].upto) errors.push("상품 1개가 첫 무게 구간보다 무거워요.");
+  if (fee.type === "WEIGHT_TIER") {
+    if (!weightTiers.length) errors.push("무게 구간을 1개 이상 입력해 주세요.");
+    if (weightTiers.some((t, i) => i && t.upto <= weightTiers[i - 1].upto)) errors.push("무게 구간은 0.1kg, 0.2kg…처럼 점점 커지게 입력해 주세요.");
   }
   if (fee.areaUse && fee.jejuFee <= 0) errors.push("제주 추가 배송비를 입력해 주세요.");
   if (fee.returnFee <= 0 || fee.exchangeFee <= 0) errors.push("반품·교환 배송비를 입력해 주세요. (스마트스토어 필수)");
-  return { fee, errors };
+  return { fee: normalizeShipFee(fee), errors };
 }
-function shippingPolicyEditor(product) {
-  const f = productShippingFee(product);
+function sfQtyRow(tier, index, first) { return `<div class="sf-tier-row" data-sf-row="q"><span class="sf-tier-no">${index + 1}</span>${first ? `<b class="sf-tier-fixed">1개</b><input type="hidden" name="sf_qfrom_${index}" value="1">` : `<label class="sf-num"><input name="sf_qfrom_${index}" inputmode="numeric" value="${escapeHtml(String(tier.from ?? ""))}" data-sf><em>개 이상</em></label>`}<label class="sf-num"><input name="sf_qfee_${index}" inputmode="numeric" value="${escapeHtml(String(tier.fee ?? ""))}" data-sf><em>원</em></label>${first ? "" : `<button type="button" class="sf-row-del" data-sf-del aria-label="구간 삭제">×</button>`}</div>`; }
+function sfWeightRow(tier, index) { return `<div class="sf-tier-row" data-sf-row="w"><span class="sf-tier-no">${index + 1}</span><label class="sf-num"><em>총</em><input name="sf_wupto_${index}" inputmode="decimal" value="${escapeHtml(String(tier.upto ?? ""))}" data-sf><em>kg까지</em></label><label class="sf-num"><input name="sf_wfee_${index}" inputmode="numeric" value="${escapeHtml(String(tier.fee ?? ""))}" data-sf><em>원</em></label><button type="button" class="sf-row-del" data-sf-del aria-label="구간 삭제">×</button></div>`; }
+function shippingPolicyEditor(feeIn, { calcWeight = 1 } = {}) {
+  const f = normalizeShipFee(feeIn);
   const radio = (name, value, label, current) => `<label class="sf-chip"><input type="radio" name="${name}" value="${value}" ${String(current) === String(value) ? "checked" : ""} data-sf> <span>${label}</span></label>`;
-  const money_ = (name, value, label, suffix = "원") => `<label class="sf-num"><span>${label}</span><input name="${name}" inputmode="numeric" value="${escapeHtml(String(value ?? ""))}" data-sf><em>${suffix}</em></label>`;
-  const tiers = [0, 1, 2].map(i => f.weightTiers[i] || { upto: "", fee: "" });
-  return `<div class="sf" data-sf-editor data-type="${f.type}" data-range="${f.rangeTiers}">
-    <div class="sf-row"><b class="sf-label">배송 방법</b><div class="sf-chips">${radio("sf_method", "PARCEL", "택배·소포·등기", f.method)}${radio("sf_method", "DIRECT", "직접배송(화물)", f.method)}</div></div>
-    <div class="sf-row"><b class="sf-label">배송 속성</b><div class="sf-chips">${SHIP_ATTRS.map(([v, l]) => radio("sf_attribute", v, l, f.attribute)).join("")}</div>
-      <p class="sf-hint" data-sf-show="attr-TODAY">발주 마감시간까지 결제된 주문은 오늘 출발해요. (1단계의 ‘발주 마감시간’을 써요)</p>
-      <div class="sf-inline" data-sf-show="attr-PRE_ORDER">${money_("sf_makeDays", f.makeDays, "결제 후 발송까지", "일")}</div></div>
-    <div class="sf-row"><b class="sf-label">묶음배송</b><div class="sf-chips">${radio("sf_bundle", "yes", "가능 (같이 사면 배송비 한 번)", f.bundle ? "yes" : "no")}${radio("sf_bundle", "no", "불가 (상품마다 따로)", f.bundle ? "yes" : "no")}</div></div>
+  const num = (name, value, label, suffix = "원") => `<label class="sf-num"><span>${label}</span><input name="${name}" inputmode="decimal" value="${escapeHtml(String(value ?? ""))}" data-sf><em>${suffix}</em></label>`;
+  return `<div class="sf" data-sf-editor>
     <div class="sf-row"><b class="sf-label">배송비 종류 <i>*</i></b><div class="sf-types">${SHIP_FEE_TYPES.map(([v, l, d]) => `<label class="sf-type"><input type="radio" name="sf_type" value="${v}" ${f.type === v ? "checked" : ""} data-sf><span><b>${l}</b><small>${d}</small></span></label>`).join("")}</div>
-      <div class="sf-panel" data-sf-show="type-CONDITIONAL_FREE type-PAID type-UNIT_QUANTITY_PAID type-RANGE_QUANTITY_PAID">${money_("sf_baseFee", f.baseFee, "기본 배송비")}</div>
-      <div class="sf-panel" data-sf-show="type-CONDITIONAL_FREE">${money_("sf_freeOver", f.freeOver, "상품 금액이 이만큼 이상이면 무료")}</div>
-      <div class="sf-panel" data-sf-show="type-UNIT_QUANTITY_PAID">${money_("sf_repeatQuantity", f.repeatQuantity, "기본 배송비를 몇 개마다 반복할까요", "개마다")}<p class="sf-hint">예) 2개마다 3,000원 → 1~2개 3,000원, 3~4개 6,000원</p></div>
-      <div class="sf-panel" data-sf-show="type-RANGE_QUANTITY_PAID"><div class="sf-chips">${radio("sf_rangeTiers", 2, "2구간", f.rangeTiers)}${radio("sf_rangeTiers", 3, "3구간", f.rangeTiers)}</div>
-        <div class="sf-tiers"><div><span>1구간</span>1개 ~ ${money_("sf_rangeUpTo", f.rangeUpTo, "", "개")}<em>기본 배송비</em></div>
-        <div><span>2구간</span><b data-sf-from2>${Number(f.rangeUpTo) + 1}</b>개 ~ <span data-sf-show="range-3">${money_("sf_rangeUpTo2", f.rangeUpTo2, "", "개")}</span><span data-sf-show="range-2">그 이상</span>${money_("sf_rangeFee2", f.rangeFee2, "", "원")}</div>
-        <div data-sf-show="range-3"><span>3구간</span><b data-sf-from3>${Number(f.rangeUpTo2) + 1}</b>개 이상 ${money_("sf_rangeFee3", f.rangeFee3, "", "원")}</div></div>
-        <p class="sf-hint">구간 배송비는 그 구간의 <b>전체 배송비</b>로 적어요. 스마트스토어에는 ‘추가 배송비’로 나눠 보내요.</p></div>
-      <div class="sf-panel" data-sf-show="type-WEIGHT_PAID">${money_("sf_unitWeight", f.unitWeight, "상품 1개 무게", "kg")}
-        <div class="sf-tiers">${tiers.map((tier, i) => `<div><span>${i + 1}구간</span>총 ${money_(`sf_w${i + 1}`, tier.upto, "", "kg까지")}${money_(`sf_wf${i + 1}`, tier.fee, "", "원")}</div>`).join("")}</div>
-        <p class="sf-hint">스마트스토어에는 무게별 배송비가 없어서, 1개 무게로 나눠 <b>구간별(수량) 배송비</b>로 바꿔 보내요. <span data-sf-weight-map></span></p></div>
+      <div class="sf-panel" data-sf-show="type-CONDITIONAL_FREE type-PAID type-UNIT_QUANTITY_PAID">${num("sf_baseFee", f.baseFee, "기본 배송비")}</div>
+      <div class="sf-panel" data-sf-show="type-CONDITIONAL_FREE">${num("sf_freeOver", f.freeOver, "상품 금액이 이만큼 이상이면 무료")}</div>
+      <div class="sf-panel" data-sf-show="type-UNIT_QUANTITY_PAID">${num("sf_repeatQuantity", f.repeatQuantity, "기본 배송비를 몇 개마다 더할까요", "개마다")}<p class="sf-hint">예) 2개마다 3,000원 → 1~2개 3,000원, 3~4개 6,000원</p></div>
+      <div class="sf-panel" data-sf-show="type-QUANTITY_TIER"><p class="sf-hint">주문 수량에 따라 배송비를 정해요. 예) 1개 3,000원 · 2개 이상 4,000원 · 4개 이상 6,000원</p><div class="sf-tier-list" data-sf-list="q">${f.qtyTiers.map((tier, i) => sfQtyRow(tier, i, i === 0)).join("")}</div><button type="button" class="sf-row-add" data-sf-add="q">+ 수량 구간 추가</button></div>
+      <div class="sf-panel" data-sf-show="type-WEIGHT_TIER"><p class="sf-hint">주문한 상품의 <b>총 무게(상품 무게 × 수량)</b>로 배송비를 정해요. 0.1kg 단위로 입력할 수 있어요. 상품 무게는 상품 등록의 ‘배송 무게’에 넣어요.</p><div class="sf-tier-list" data-sf-list="w">${f.weightTiers.map((tier, i) => sfWeightRow(tier, i)).join("")}</div><button type="button" class="sf-row-add" data-sf-add="w">+ 무게 구간 추가</button>${num("sf_overPerKg", f.overPerKg || 0, "마지막 구간을 넘으면 1kg마다 추가", "원 (0이면 마지막 요금)")}</div>
       <p class="sf-hint" data-sf-show="type-FREE">고객은 배송비 없이 받아요. 제주·도서산간 추가 배송비는 따로 받을 수 있어요.</p></div>
     <div class="sf-row" data-sf-hide="type-FREE"><b class="sf-label">결제 방식</b><div class="sf-chips">${SHIP_PAY_TYPES.map(([v, l]) => radio("sf_payType", v, l, f.payType)).join("")}</div></div>
     <div class="sf-row"><label class="sf-toggle"><input type="checkbox" name="sf_areaUse" ${f.areaUse ? "checked" : ""} data-sf> <b>제주·도서산간 추가 배송비</b> <small>무료배송이어도 항상 붙어요</small></label>
       <div class="sf-panel" data-sf-show="area-on"><div class="sf-chips">${radio("sf_areaType", "AREA_2", "제주·도서산간 같게 (2권역)", f.areaType)}${radio("sf_areaType", "AREA_3", "제주 / 그 외 도서산간 따로 (3권역)", f.areaType)}</div>
-        <div class="sf-inline">${money_("sf_jejuFee", f.jejuFee, "제주(·도서산간)")}<span data-sf-show="areatype-AREA_3">${money_("sf_islandFee", f.islandFee, "제주 외 도서산간")}</span></div></div></div>
-    <div class="sf-row"><b class="sf-label">반품·교환 <i>*</i></b><div class="sf-inline">${money_("sf_returnFee", f.returnFee, "반품 배송비(편도)")}${money_("sf_exchangeFee", f.exchangeFee, "교환 배송비(왕복)")}</div></div>
-    <div class="sf-calc"><div class="sf-calc-in"><b>배송비 계산해 보기</b><label>수량 <input type="text" inputmode="numeric" value="1" data-sf-calc="qty"></label><label>상품 금액 <input type="text" inputmode="numeric" value="${Number(product?.recommended || 20000)}" data-sf-calc="amount"></label><select data-sf-calc="region" aria-label="지역"><option value="normal">일반 지역</option><option value="jeju">제주</option><option value="island">제주 외 도서산간</option></select></div><p data-sf-result></p><p class="sf-channel" data-sf-channel></p></div>
+        <div class="sf-inline">${num("sf_jejuFee", f.jejuFee, "제주(·도서산간)")}<span data-sf-show="areatype-AREA_3">${num("sf_islandFee", f.islandFee, "제주 외 도서산간")}</span></div></div></div>
+    <div class="sf-row"><b class="sf-label">반품·교환 <i>*</i></b><div class="sf-inline">${num("sf_returnFee", f.returnFee, "반품 배송비(편도)")}${num("sf_exchangeFee", f.exchangeFee, "교환 배송비(왕복)")}</div></div>
+    <div class="sf-row"><b class="sf-label">배송 방법</b><div class="sf-chips">${radio("sf_method", "PARCEL", "택배·소포·등기", f.method)}${radio("sf_method", "DIRECT", "직접배송(화물)", f.method)}</div></div>
+    <div class="sf-row"><b class="sf-label">배송 속성</b><div class="sf-chips">${SHIP_ATTRS.map(([v, l]) => radio("sf_attribute", v, l, f.attribute)).join("")}</div>
+      <p class="sf-hint" data-sf-show="attr-TODAY">상품의 ‘발주 마감시간’까지 결제된 주문은 오늘 출발해요.</p>
+      <div class="sf-inline" data-sf-show="attr-PRE_ORDER">${num("sf_makeDays", f.makeDays, "결제 후 발송까지", "일")}</div></div>
+    <div class="sf-row"><b class="sf-label">묶음배송</b><div class="sf-chips">${radio("sf_bundle", "yes", "가능 (같이 사면 배송비 한 번)", f.bundle ? "yes" : "no")}${radio("sf_bundle", "no", "불가 (상품마다 따로)", f.bundle ? "yes" : "no")}</div></div>
+    <div class="sf-calc"><div class="sf-calc-in"><b>배송비 계산해 보기</b><label>수량 <input type="text" inputmode="numeric" value="1" data-sf-calc="qty"></label><label>상품 금액 <input type="text" inputmode="numeric" value="20000" data-sf-calc="amount"></label><label data-sf-show="type-WEIGHT_TIER">상품 1개 무게 <input type="text" inputmode="decimal" value="${escapeHtml(String(calcWeight || 1))}" data-sf-calc="weight"> kg</label><select data-sf-calc="region" aria-label="지역"><option value="normal">일반 지역</option><option value="jeju">제주</option><option value="island">제주 외 도서산간</option></select></div><p data-sf-result></p><p class="sf-channel" data-sf-channel></p></div>
   </div>`;
 }
 function refreshShippingEditor(root) {
@@ -6133,25 +6279,90 @@ function refreshShippingEditor(root) {
   const form = root.closest("form");
   const data = Object.fromEntries(new FormData(form));
   const { fee, errors } = readShippingFee(data);
-  const flags = new Set([`type-${fee.type}`, `range-${fee.rangeTiers}`, `attr-${fee.attribute}`, fee.areaUse ? "area-on" : "area-off", `areatype-${fee.areaType}`]);
+  const flags = new Set([`type-${fee.type}`, `attr-${fee.attribute}`, fee.areaUse ? "area-on" : "area-off", `areatype-${fee.areaType}`]);
   root.querySelectorAll("[data-sf-show]").forEach(el => { el.hidden = !el.dataset.sfShow.split(" ").some(flag => flags.has(flag)); });
   root.querySelectorAll("[data-sf-hide]").forEach(el => { el.hidden = el.dataset.sfHide.split(" ").some(flag => flags.has(flag)); });
   root.querySelectorAll(".sf-type").forEach(el => el.classList.toggle("active", el.querySelector("input").checked));
   root.querySelectorAll(".sf-chip").forEach(el => el.classList.toggle("active", el.querySelector("input").checked));
-  const from2 = root.querySelector("[data-sf-from2]"); if (from2) from2.textContent = String((fee.rangeUpTo || 0) + 1);
-  const from3 = root.querySelector("[data-sf-from3]"); if (from3) from3.textContent = String((fee.rangeUpTo2 || 0) + 1);
-  const map = root.querySelector("[data-sf-weight-map]");
-  if (map) { const range = fee.type === "WEIGHT_PAID" ? weightToRange(fee) : null; map.textContent = range ? `→ 1~${range.rangeUpTo}개 ${money(range.baseFee)}, ${range.rangeUpTo + 1}~${range.rangeUpTo2}개 ${money(range.rangeFee2)}${range.rangeTiers === 3 ? `, ${range.rangeUpTo2 + 1}개 이상 ${money(range.rangeFee3)}` : ""}` : ""; }
-  const qty = Math.max(1, Number(String(root.querySelector('[data-sf-calc="qty"]').value).replace(/[^\d]/g, "") || 1));
-  const amount = Number(String(root.querySelector('[data-sf-calc="amount"]').value).replace(/[^\d]/g, "") || 0) * qty;
+  const clean = value => Number(String(value || "").replace(/[^\d.]/g, "") || 0);
+  const qty = Math.max(1, Math.round(clean(root.querySelector('[data-sf-calc="qty"]').value) || 1));
+  const amount = clean(root.querySelector('[data-sf-calc="amount"]').value) * qty;
+  const weightKg = clean(root.querySelector('[data-sf-calc="weight"]').value);
   const region = root.querySelector('[data-sf-calc="region"]').value;
-  const result = calcShipping(fee, { qty, amount, region });
-  root.querySelector("[data-sf-result]").innerHTML = errors.length ? `<em>${escapeHtml(errors[0])}</em>` : `${qty}개 · 상품 ${money(amount)} → 배송비 <b>${money(result.total)}</b>${result.area ? ` (기본 ${money(result.base)} + 지역 ${money(result.area)})` : ""}${result.collect ? " · 착불(받을 때 결제)" : ""}`;
-  const cp = coupangDelivery(fee);
-  root.querySelector("[data-sf-channel]").textContent = `스마트스토어: 그대로 전송${fee.type === "WEIGHT_PAID" ? " (구간별로 변환)" : ""} · 쿠팡: ${cp.note || "그대로 전송"}${fee.areaUse ? " 쿠팡 도서산간 비용은 쿠팡 출고지 설정을 따라요." : ""}`;
+  const result = calcShipping(fee, { qty, amount, region, weightKg });
+  root.querySelector("[data-sf-result]").innerHTML = errors.length ? `<em>${escapeHtml(errors[0])}</em>` : `${qty}개 · 상품 ${money(amount)}${fee.type === "WEIGHT_TIER" ? ` · ${escapeHtml(result.note)}` : ""} → 배송비 <b>${money(result.total)}</b>${result.area ? ` (기본 ${money(result.base)} + 지역 ${money(result.area)})` : ""}${result.collect ? " · 착불(받을 때 결제)" : ""}`;
+  const warn = naverTierWarning(fee, weightKg);
+  root.querySelector("[data-sf-channel]").textContent = `스마트스토어: ${warn || (fee.type === "WEIGHT_TIER" ? "상품 무게로 나눠 ‘구간별(수량)’ 배송비로 보내요" : "그대로 보내요")} · 쿠팡: ${coupangDelivery(fee, weightKg).note || "그대로 보내요"}`;
 }
 document.addEventListener("input", event => { const editor = event.target.closest?.("[data-sf-editor]"); if (editor) refreshShippingEditor(editor); });
 document.addEventListener("change", event => { const editor = event.target.closest?.("[data-sf-editor]"); if (editor) refreshShippingEditor(editor); });
+document.addEventListener("click", event => {
+  const add = event.target.closest?.("[data-sf-add]");
+  if (add) {
+    const editor = add.closest("[data-sf-editor]"); const list = editor.querySelector(`[data-sf-list="${add.dataset.sfAdd}"]`);
+    const rows = list.querySelectorAll("[data-sf-row]");
+    if (rows.length >= SHIP_MAX_TIERS) return showToast(`구간은 ${SHIP_MAX_TIERS}개까지 만들 수 있어요.`);
+    const next = Math.max(-1, ...[...list.querySelectorAll("input[name]")].map(input => Number(input.name.split("_").pop()))) + 1;
+    const data = Object.fromEntries(new FormData(editor.closest("form")));
+    const { fee } = readShippingFee(data);
+    if (add.dataset.sfAdd === "q") { const last = fee.qtyTiers[fee.qtyTiers.length - 1] || { from: 1, fee: 3000 }; list.insertAdjacentHTML("beforeend", sfQtyRow({ from: last.from + 1, fee: last.fee + 1000 }, next, false)); }
+    else { const last = fee.weightTiers[fee.weightTiers.length - 1] || { upto: 0, fee: 3000 }; list.insertAdjacentHTML("beforeend", sfWeightRow({ upto: Math.round((last.upto + (last.upto < 1 ? 0.1 : 1)) * 100) / 100, fee: last.fee + 500 }, next)); }
+    list.querySelectorAll(".sf-tier-no").forEach((el, i) => { el.textContent = String(i + 1); });
+    list.lastElementChild.querySelector("input:not([type=hidden])")?.focus();
+    refreshShippingEditor(editor); return;
+  }
+  const del = event.target.closest?.("[data-sf-del]");
+  if (del) { const editor = del.closest("[data-sf-editor]"); const list = del.closest("[data-sf-list]"); if (list.querySelectorAll("[data-sf-row]").length <= 1) return showToast("구간은 1개 이상 있어야 해요."); del.closest("[data-sf-row]").remove(); list.querySelectorAll(".sf-tier-no").forEach((el, i) => { el.textContent = String(i + 1); }); refreshShippingEditor(editor); }
+});
+/* ---------- 배송 정책 메뉴 ---------- */
+function shippingPolicyUsage(policy) {
+  if (policy.role === "supplier") return state.products.filter(product => product.supplierLoginId === policy.ownerLoginId && (product.shippingPolicyId === policy.id || (!product.shippingPolicyId && !product.shippingFee && !product.shippingPolicy && policy.isDefault))).length;
+  return state.sellerProducts.filter(item => item.sellerLoginId === policy.ownerLoginId && (item.shippingPolicyId === policy.id || (!item.shippingPolicyId && policy.isDefault))).length;
+}
+function shippingPoliciesTemplate(role) {
+  const loginId = currentAccount.loginId;
+  const list = shippingPoliciesOf(loginId, role);
+  const intro = role === "supplier" ? "위탁셀러가 공급가와 함께 내는 배송비예요. 정책을 만들어 두고 상품 등록할 때 불러와요." : "스마트스토어·쿠팡에 올릴 때 들어가는 배송비예요. 정책을 만들어 두고 상품 꾸미기에서 상품마다 골라요.";
+  return `${sectionHero("배송 정책", intro, `<button type="button" class="primary-button" data-action="shipping-policy-new">+ 새 배송 정책</button>`)}
+    <div class="ship-policy-list">${list.map(policy => `<article class="panel ship-policy-card">
+      <div class="ship-policy-head"><div><h3>${escapeHtml(policy.name)} ${policy.isDefault ? `<em class="ship-default">기본</em>` : ""}</h3><p>${escapeHtml(shippingFeeLabel(policy.fee))}</p></div><span class="ship-usage">${role === "supplier" ? "상품" : "마스터 상품"} ${shippingPolicyUsage(policy)}개</span></div>
+      <div class="ship-policy-meta"><span>반품 ${money(policy.fee.returnFee)} · 교환 ${money(policy.fee.exchangeFee)}</span><span>${policy.fee.bundle ? "묶음배송 가능" : "묶음배송 불가"}</span><span>${SHIP_ATTRS.find(([v]) => v === policy.fee.attribute)?.[1] || "일반 배송"}</span></div>
+      <div class="ship-policy-actions"><button type="button" class="secondary-button" data-action="shipping-policy-edit" data-id="${policy.id}">수정</button><button type="button" class="secondary-button" data-action="shipping-policy-copy" data-id="${policy.id}">복제</button>${policy.isDefault ? "" : `<button type="button" class="secondary-button" data-action="shipping-policy-default" data-id="${policy.id}">기본으로</button><button type="button" class="text-button danger" data-action="shipping-policy-delete" data-id="${policy.id}">삭제</button>`}</div>
+    </article>`).join("")}</div>
+    <p class="ship-policy-note">‘기본’ 정책은 배송 정책을 따로 고르지 않은 상품에 쓰여요. ${role === "supplier" ? "무게 구간 정책은 상품의 ‘배송 무게’로 계산해요." : "마스터 상품에서 ‘공급사 배송 정책 그대로’를 고를 수도 있어요."}</p>`;
+}
+function shippingPolicyModal(policyId, role, copy = false) {
+  const source = policyId ? shippingPolicyById(policyId) : null;
+  const name = source ? (copy ? `${source.name} (복사)` : source.name) : "";
+  openModal(`<div class="ship-policy-modal-head"><span>SHIPPING POLICY</span><h2>${source && !copy ? "배송 정책 수정" : "새 배송 정책"}</h2><p>스마트스토어 상품 등록의 ‘배송’ 항목과 같아요.</p></div>
+    <form id="shippingPolicyForm" data-id="${source && !copy ? source.id : ""}" data-role="${role}">
+      <div class="form-field"><label>정책 이름 *</label><input name="policyName" required maxlength="40" value="${escapeHtml(name)}" placeholder="예) 신선식품 무게별 택배"></div>
+      <label class="check-row"><input type="checkbox" name="policyDefault" ${source?.isDefault && !copy ? "checked" : ""}> <span>기본 정책으로 쓰기 (정책을 고르지 않은 상품에 적용)</span></label>
+      ${shippingPolicyEditor(source ? source.fee : { type: "FREE" })}
+      <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button><button class="primary-button">저장</button></div>
+    </form>`);
+  document.querySelector("#modal .modal")?.classList.add("ship-policy-modal");
+  refreshShippingEditor(document.querySelector("#modal [data-sf-editor]"));
+}
+/* 상품 등록(공급사)·상품 꾸미기(셀러)에서 정책을 불러오는 칸 */
+function shippingPolicyPicker({ role, loginId, selectedId, allowSupplier = false, supplierLabel = "" }) {
+  const list = shippingPoliciesOf(loginId, role);
+  const current = selectedId === "supplier" ? "supplier" : (list.find(policy => policy.id === selectedId) || list.find(policy => policy.isDefault) || list[0] || {}).id || "";
+  const label = id => id === "supplier" ? supplierLabel : shippingFeeLabel((list.find(policy => policy.id === id) || {}).fee);
+  return `<div class="ship-picker" data-ship-picker>
+    <select name="shippingPolicyId" data-ship-select data-supplier-label="${escapeHtml(supplierLabel)}">${allowSupplier ? `<option value="supplier" ${current === "supplier" ? "selected" : ""}>공급사 배송 정책 그대로</option>` : ""}${list.map(policy => `<option value="${policy.id}" ${policy.id === current ? "selected" : ""}>${escapeHtml(policy.name)}${policy.isDefault ? " (기본)" : ""}</option>`).join("")}</select>
+    <p class="ship-picker-summary" data-ship-summary>${escapeHtml(label(current))}</p>
+    <button type="button" class="text-button" data-action="goto-shipping-policies" data-role="${role}">배송 정책 관리 → <small>(지금 창은 닫혀요)</small></button>
+  </div>`;
+}
+document.addEventListener("change", event => {
+  const select = event.target.closest?.("[data-ship-select]"); if (!select) return;
+  const policy = shippingPolicyById(select.value);
+  const summary = select.closest("[data-ship-picker]").querySelector("[data-ship-summary]");
+  summary.textContent = policy ? shippingFeeLabel(policy.fee) : select.dataset.supplierLabel || "공급사가 정한 배송비를 그대로 써요.";
+  const jump = document.querySelector("#modal .sf-jump span"); if (jump && policy) jump.textContent = `${policy.name} · ${shippingFeeLabel(policy.fee)}`;
+  const weightNote = document.querySelector("#modal [data-ship-weight-note]"); if (weightNote) weightNote.hidden = !(policy && normalizeShipFee(policy.fee).type === "WEIGHT_TIER");
+});
 
 function productEditorModal(product = null) {
   const isEdit = Boolean(product);
@@ -6175,15 +6386,14 @@ function productEditorModal(product = null) {
         <div class="form-field full customs-policy" data-customs-policy ${product?.shippingType === "overseas" ? "" : "hidden"}><label class="customs-toggle"><input type="checkbox" name="requireCustomsCode" ${product?.requireCustomsCode === false ? "" : "checked"}><span><b>개인통관고유부호 받기</b><small>체크하면 위탁셀러가 이 상품을 주문할 때 <em>개인통관고유부호를 꼭 입력</em>해야 주문이 들어와요. 해외배송은 통관에 필요해서 켜 두는 걸 권장해요.</small></span></label></div>
       </div></section>
       <section class="editor-section"><div class="editor-section-title"><span>02</span><div><h3>매입·판매 가격</h3><p>공급사 매입처와 셀러 공급가격을 구분합니다.</p></div></div><div class="purchase-strip"><div><span>기본 매입처</span><b>${escapeHtml(workspaceCompany("supplier"))}</b></div><div><span>매입 원가</span><input name="purchasePrice" type="number" value="${value("purchasePrice", product?.supply || 15900)}" min="100" required></div><div><span>매입 배송정책</span><input name="purchaseShipping" value="${value("purchaseShipping","공급사 직배송")}" required></div><div><span>부자재비</span><input name="surcharge" type="number" value="${value("surcharge",0)}" min="0"></div></div><div class="editor-grid cols-4 price-editor-grid">
-        <div class="form-field"><label>공급가 *</label><input name="supply" type="number" value="${value("supply",15900)}" min="100" required></div><div class="form-field"><label>권장 판매가 *</label><input name="recommended" type="number" value="${value("recommended",22900)}" min="100" required></div><div class="form-field"><label>소비자가</label><input name="retailPrice" type="number" value="${value("retailPrice",29900)}" min="0"></div><div class="form-field"><label>배송비 정책 *</label><button type="button" class="sf-jump" data-editor-jump="3"><span>${escapeHtml(shippingFeeLabel(productShippingFee(product)))}</span><b>4단계에서 설정 →</b></button></div>
+        <div class="form-field"><label>공급가 *</label><input name="supply" type="number" value="${value("supply",15900)}" min="100" required></div><div class="form-field"><label>권장 판매가 *</label><input name="recommended" type="number" value="${value("recommended",22900)}" min="100" required></div><div class="form-field"><label>소비자가</label><input name="retailPrice" type="number" value="${value("retailPrice",29900)}" min="0"></div><div class="form-field"><label>배송비 정책 *</label><button type="button" class="sf-jump" data-editor-jump="3"><span>${escapeHtml((() => { const pol = productShippingPolicy(product) || defaultShippingPolicy(product?.supplierLoginId || currentAccount.loginId, "supplier"); return pol ? `${pol.name} · ${shippingFeeLabel(pol.fee)}` : shippingFeeLabel(productShippingFee(product)); })())}</span><b>4단계에서 고르기 →</b></button></div>
       </div><div class="balju-partner-table"><div class="balju-table-title"><b>매출처/그룹 개별공급가 설정</b><span>연결 거래처별 노출 및 공급가</span></div><div class="balju-table-row heading"><span>타입</span><span>거래처명</span><span>공급가</span><span>판매 배송정책</span><span>노출</span></div><div class="balju-table-row"><span>기본</span><b>연결된 위탁셀러 전체</b><strong>${money(product?.supply || 15900)}</strong><span>${escapeHtml(product?.shippingPolicy || "무료배송")}</span><em>노출</em></div></div></section>
       ${supplierOptionEditor(product)}
       <section class="editor-section"><div class="editor-section-title"><span>03</span><div><h3>상품 이미지·매출처 안내사항</h3><p>대표 이미지를 선택하고 셀러에게 복사될 상품정보를 입력합니다.</p></div></div><div class="image-picker">${Array.from({length:8},(_,index)=>`<label><input type="radio" name="imageIndex" value="${index}" ${(product?.imageIndex ?? 0) === index ? "checked" : ""}><span>${productPhoto({name:`AI 상품 이미지 ${index+1}`,imageIndex:index},"picker-photo")}<b>이미지 ${index+1}</b></span></label>`).join("")}</div><div class="editor-grid"><div class="form-field full balju-file-field"><label>상품 이미지 파일</label><input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp"><small>JPG·PNG·WEBP, 10MB 이하. 파일을 선택하지 않으면 위 대표 이미지가 사용됩니다.</small></div><div class="form-field"><label>원산지</label><input name="origin" value="${value("origin","대한민국")}" placeholder="예: 제주특별자치도"></div><div class="form-field"><label>원산 국가</label><select name="originCountry"><option ${selected("originCountry","대한민국","대한민국")}>대한민국</option><option ${selected("originCountry","중국")}>중국</option><option ${selected("originCountry","뉴질랜드")}>뉴질랜드</option><option ${selected("originCountry","호주")}>호주</option></select></div><div class="form-field"><label>예상 배송기간</label><input name="deliveryDays" value="${value("deliveryDays","1~3일")}"></div><div class="form-field"><label>제조·수확일</label><input name="manufactureDate" value="${value("manufactureDate")}" placeholder="예: 주문일 기준 2일 이내"></div><div class="form-field"><label>소비기한·보관법</label><input name="shelfLife" value="${value("shelfLife","수령 후 냉장·냉동 보관")}"></div><div class="form-field full"><label>상품 간략설명</label><input name="summary" value="${value("summary")}" maxlength="100" placeholder="상품 목록에 표시할 100자 이내 설명"></div>${detailEditorMarkup(product)}</div></section>
-      <section class="editor-section"><div class="editor-section-title"><span>04</span><div><h3>배송·재고·노출</h3><p>배송비 정책(스마트스토어 기준)·택배사·재고·노출 범위를 설정합니다.</p></div></div><div class="editor-grid cols-4"><div class="form-field full sf-field"><label>배송비 정책 <small>스마트스토어 상품 등록 ‘배송’과 같은 항목이에요. 셀러가 쇼핑몰에 올릴 때 그대로 들어가요.</small></label>${shippingPolicyEditor(product)}</div><div class="form-field span-2"><label>택배사 <small>네이버 스마트스토어 택배사 목록</small></label>${carrierPicker("carrier", product?.carrier || supplierProfile().carrier || "한진택배")}</div><div class="form-field"><label>창고</label><input name="warehouse" value="${value("warehouse","공급사 직배송")}"></div><div class="form-field"><label>초기 재고 *</label><input name="stock" type="number" value="${value("stock",100)}" min="0" required></div><div class="form-field"><label>단위</label><div class="unit-input"><input name="weight" type="number" value="${value("weight",1)}" min="0" step="0.1"><select name="unit"><option ${selected("unit","KG","KG")}>KG</option><option ${selected("unit","EA")}>EA</option><option ${selected("unit","BOX")}>BOX</option></select></div></div><div class="form-field"><label>관리코드</label><input name="managementCode" value="${value("managementCode")}" placeholder="최대 50자"></div><div class="form-field"><label>바코드</label><input name="barcode" value="${value("barcode")}" placeholder="영문·숫자 입력"></div><div class="form-field span-2"><label>상품 노출 범위</label><select name="visibility"><option value="연결 셀러" ${selected("visibility","연결 셀러","연결 셀러")}>연결 셀러 전체</option><option value="선택 셀러" ${selected("visibility","선택 셀러")}>선택 셀러만</option><option value="비노출" ${selected("visibility","비노출")}>비노출</option></select></div></div><div class="connected-visibility"><span>연결 거래처</span>${connected.length ? connected.map(connection=>`<b>✓ ${escapeHtml(memberByLogin(connection.sellerLoginId)?.company || connection.sellerLoginId)}</b>`).join("") : `<small>연결된 셀러가 없습니다.</small>`}</div></section>
+      <section class="editor-section"><div class="editor-section-title"><span>04</span><div><h3>배송·재고·노출</h3><p>배송 정책 불러오기·택배사·재고·노출 범위를 설정합니다.</p></div></div><div class="editor-grid cols-4"><div class="form-field full sf-field"><label>배송 정책 * <small>‘배송 정책’ 메뉴에서 만든 정책을 불러와요 (스마트스토어 배송 항목과 같아요)</small></label>${shippingPolicyPicker({ role: "supplier", loginId: product?.supplierLoginId || currentAccount.loginId, selectedId: product?.shippingPolicyId })}</div><div class="form-field"><label>배송 무게 (kg) <small>포장 포함 1개 무게</small></label><input name="shipWeight" inputmode="decimal" value="${escapeHtml(String(product?.shipWeight ?? (String(product?.unit || "KG").toUpperCase() === "KG" && product?.weight ? product.weight : "")))}" placeholder="예) 0.3"><small class="ship-weight-note" data-ship-weight-note ${normalizeShipFee((productShippingPolicy(product) || defaultShippingPolicy(product?.supplierLoginId || currentAccount.loginId, "supplier") || {}).fee).type === "WEIGHT_TIER" ? "" : "hidden"}>무게 구간 정책이라 배송 무게가 꼭 필요해요.</small></div><div class="form-field span-2"><label>택배사 <small>네이버 스마트스토어 택배사 목록</small></label>${carrierPicker("carrier", product?.carrier || supplierProfile().carrier || "한진택배")}</div><div class="form-field"><label>창고</label><input name="warehouse" value="${value("warehouse","공급사 직배송")}"></div><div class="form-field"><label>초기 재고 *</label><input name="stock" type="number" value="${value("stock",100)}" min="0" required></div><div class="form-field"><label>단위</label><div class="unit-input"><input name="weight" type="number" value="${value("weight",1)}" min="0" step="0.1"><select name="unit"><option ${selected("unit","KG","KG")}>KG</option><option ${selected("unit","EA")}>EA</option><option ${selected("unit","BOX")}>BOX</option></select></div></div><div class="form-field"><label>관리코드</label><input name="managementCode" value="${value("managementCode")}" placeholder="최대 50자"></div><div class="form-field"><label>바코드</label><input name="barcode" value="${value("barcode")}" placeholder="영문·숫자 입력"></div><div class="form-field span-2"><label>상품 노출 범위</label><select name="visibility"><option value="연결 셀러" ${selected("visibility","연결 셀러","연결 셀러")}>연결 셀러 전체</option><option value="선택 셀러" ${selected("visibility","선택 셀러")}>선택 셀러만</option><option value="비노출" ${selected("visibility","비노출")}>비노출</option></select></div></div><div class="connected-visibility"><span>연결 거래처</span>${connected.length ? connected.map(connection=>`<b>✓ ${escapeHtml(memberByLogin(connection.sellerLoginId)?.company || connection.sellerLoginId)}</b>`).join("") : `<small>연결된 셀러가 없습니다.</small>`}</div></section>
       <div class="editor-sticky-actions"><span>필수항목을 확인한 뒤 저장해 주세요.</span><div><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">${isEdit ? "수정 내용 저장" : "상품 등록·셀러 노출"}</button></div></div>
     </form>`);
   document.querySelector("#modal .modal").classList.add("product-editor-modal");
-  refreshShippingEditor(document.querySelector("#modal [data-sf-editor]"));
   rdeRender("product");
 }
 
@@ -6912,23 +7122,10 @@ document.addEventListener("click", event => {
   if (action === "studio-add-tag") { const input = document.getElementById("studioTagInput"); addStudioTag(input?.value); if (input) { input.value = ""; input.focus(); } return; }
   if (action === "studio-suggest-tag") { addStudioTag(target.dataset.tag); return; }
   if (action === "studio-remove-tag") { if (studioDraft) { studioDraft.tags = studioDraft.tags.filter(tag => tag !== target.dataset.tag); const el = document.getElementById("studioTags"); if (el) el.innerHTML = studioTagChips(); } return; }
+  if (action === "studio-gallery-add") { document.getElementById("studioGalleryInput")?.click(); return; }
+  if (action === "studio-gallery-del") { if (studioDraft) { studioDraft.images.splice(Number(target.dataset.index), 1); refreshStudioGallery(); } return; }
+  if (action === "studio-gallery-main") { if (studioDraft) { const index = Number(target.dataset.index); const [ref] = studioDraft.images.splice(index, 1); if (studioDraft.thumbnail) studioDraft.images.splice(index, 0, studioDraft.thumbnail); studioDraft.thumbnail = ref; refreshStudioThumb(); refreshStudioGallery(); showToast("대표 사진으로 바꿨어요. 저장하면 적용돼요."); } return; }
   if (action === "studio-reset-thumb") { if (studioDraft) { studioDraft.thumbnail = ""; refreshStudioThumb(); showToast("공급사 사진으로 되돌렸어요."); } return; }
-  if (action === "studio-add-text") { if (studioDraft) { studioDraft.blocks.push({ type: "text", text: "" }); studioDraft.detailTouched = true; rerenderStudioBlocks(); document.querySelector(`[data-block-text="${studioDraft.blocks.length - 1}"]`)?.focus(); } return; }
-  if (action === "studio-block-move") {
-    if (!studioDraft) return;
-    const index = Number(target.dataset.index), next = index + Number(target.dataset.dir);
-    if (next < 0 || next >= studioDraft.blocks.length) return;
-    [studioDraft.blocks[index], studioDraft.blocks[next]] = [studioDraft.blocks[next], studioDraft.blocks[index]];
-    studioDraft.detailTouched = true; rerenderStudioBlocks(); return;
-  }
-  if (action === "studio-block-remove") { if (studioDraft) { studioDraft.blocks.splice(Number(target.dataset.index), 1); studioDraft.detailTouched = true; rerenderStudioBlocks(); } return; }
-  if (action === "studio-reset-detail") {
-    const item = state.sellerProducts.find(entry => entry.id === studioDraft?.itemId);
-    if (!item) return;
-    const product = productOf(item.productId);
-    studioDraft.blocks = defaultDetailBlocks(product, { imageIndex: product?.imageIndex, detailSnapshot: product?.detail });
-    studioDraft.detailTouched = false; studioDraft.detailReset = true; rerenderStudioBlocks(); showToast("공급사 원본 상세페이지로 되돌렸어요."); return;
-  }
   if (action === "refresh-channel-policies") {
     const channel = sellerChannels().find(item => item.id === id);
     if (!channel) return;
@@ -7226,6 +7423,12 @@ document.addEventListener("click", event => {
     return;
   }
   if (action === "clear-refund-filter") { refundMonth = "2026-09"; refundSearch = ""; refundTypeFilter = "all"; render(); updateAccountUI(); return; }
+  if (action === "shipping-policy-new") { shippingPolicyModal(null, activeRole === "supplier" ? "supplier" : "seller"); return; }
+  if (action === "shipping-policy-edit") { shippingPolicyModal(target.dataset.id, shippingPolicyById(target.dataset.id)?.role || activeRole); return; }
+  if (action === "shipping-policy-copy") { shippingPolicyModal(target.dataset.id, shippingPolicyById(target.dataset.id)?.role || activeRole, true); return; }
+  if (action === "shipping-policy-default") { const policy = shippingPolicyById(target.dataset.id); if (!policy) return; state.shippingPolicies.forEach(item => { if (item.ownerLoginId === policy.ownerLoginId && item.role === policy.role) item.isDefault = item.id === policy.id; }); saveState(); render(); updateAccountUI(); showToast(`‘${policy.name}’을 기본 배송 정책으로 정했어요.`); return; }
+  if (action === "shipping-policy-delete") { const policy = shippingPolicyById(target.dataset.id); if (!policy || policy.isDefault) return; const used = shippingPolicyUsage(policy); state.shippingPolicies = state.shippingPolicies.filter(item => item.id !== policy.id); state.products.forEach(product => { if (product.shippingPolicyId === policy.id) delete product.shippingPolicyId; }); state.sellerProducts.forEach(item => { if (item.shippingPolicyId === policy.id) delete item.shippingPolicyId; }); audit("배송 정책 삭제", `${policy.name}${used ? ` · 쓰던 상품 ${used}개는 기본 정책으로` : ""}`, "done", "product"); saveState(); render(); updateAccountUI(); showToast(`배송 정책을 지웠어요.${used ? ` 쓰던 상품 ${used}개는 기본 정책을 따라요.` : ""}`); return; }
+  if (action === "goto-shipping-policies") { closeModal(); activeMenuIndex = menuIndexOf("배송 정책", target.dataset.role === "supplier" ? "supplier" : "seller"); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (action === "open-supplier-terms") { supplierTermsModal(); return; }
   if (action === "open-supplier-alerts") { supplierAlertsModal(); return; }
   if (action === "bulk-upload") { bulkUploadModal(); return; }
@@ -7600,9 +7803,20 @@ document.addEventListener("change", event => {
     event.target.value = "";
     if (!file || !studioDraft) return;
     if (!file.type.startsWith("image/")) { showToast("사진 파일만 올릴 수 있어요."); return; }
-    shrinkImageFile(file, forBlock ? 900 : 700, .8).then(image => {
-      if (forBlock) { studioDraft.blocks.push({ type: "image", src: image }); studioDraft.detailTouched = true; rerenderStudioBlocks(); showToast("상세페이지에 사진을 추가했어요."); }
-      else { studioDraft.thumbnail = image; refreshStudioThumb(); showToast("대표 사진을 바꿨어요. 저장하면 적용돼요."); }
+    shrinkImageFile(file, forBlock ? 900 : 1000, .82).then(storeImage).then(image => {
+      studioDraft.thumbnail = image; refreshStudioThumb(); showToast("대표 사진을 바꿨어요. 저장하면 적용돼요.");
+    }).catch(() => showToast("사진을 불러오지 못했어요. 다른 사진을 골라 주세요."));
+    return;
+  }
+  if (event.target.id === "studioGalleryInput") {
+    const files = [...(event.target.files || [])].filter(file => file.type.startsWith("image/"));
+    event.target.value = "";
+    if (!files.length || !studioDraft) return;
+    const room = STUDIO_EXTRA_MAX - studioDraft.images.length;
+    if (room <= 0) { showToast(`추가 이미지는 ${STUDIO_EXTRA_MAX}장까지예요.`); return; }
+    Promise.all(files.slice(0, room).map(file => shrinkImageFile(file, 1000, .82).then(storeImage))).then(refs => {
+      studioDraft.images.push(...refs); refreshStudioGallery();
+      showToast(`사진 ${refs.length}장을 넣었어요.${files.length > room ? ` (${STUDIO_EXTRA_MAX}장까지만 넣었어요)` : ""} 저장하면 적용돼요.`);
     }).catch(() => showToast("사진을 불러오지 못했어요. 다른 사진을 골라 주세요."));
     return;
   }
@@ -7756,7 +7970,6 @@ document.addEventListener("input", event => {
   if (event.target.id === "talkInput") { syncTalkComposer(event.target); return; }
   if (event.target.dataset?.marginTarget !== undefined) { updatePriceMargin(event.target); return; }
   if (event.target.id === "studioTitle") { const counter = document.getElementById("studioTitleCount"); if (counter) counter.textContent = `${event.target.value.length}/50`; return; }
-  if (event.target.dataset?.blockText !== undefined) { if (studioDraft?.blocks[Number(event.target.dataset.blockText)]) { studioDraft.blocks[Number(event.target.dataset.blockText)].text = event.target.value; studioDraft.detailTouched = true; } return; }
   if (event.target.id === "addressPopupInput") { renderAddressPopupResults(event.target.value); return; }
   if (event.target.dataset && event.target.dataset.brandSearchInput !== undefined) { filterBrandBanners(); return; }
   if (event.target.dataset && event.target.dataset.mappingSearch !== undefined) {
@@ -7985,13 +8198,14 @@ document.addEventListener("submit", event => {
     item.customTitle = title;
     item.thumbBadge = String(data.thumbBadge || "");
     item.customThumbnail = studioDraft?.itemId === item.id ? (studioDraft.thumbnail || "") : (item.customThumbnail || "");
+    if (studioDraft?.itemId === item.id) item.images = [...(studioDraft.images || [])].slice(0, STUDIO_EXTRA_MAX);
+    if (data.shippingPolicyId) item.shippingPolicyId = String(data.shippingPolicyId);
     if (studioDraft?.itemId === item.id) {
-      const blocks = rdeBlocks("studio");
-      item.detailBlocks = blocks;
-      item.detailHtml = detailBlocksToHtml(blocks, source);
+      const doc = rdeGetDoc("studio");
+      item.detailDoc = doc; item.detailBlocks = null; delete item.detailHtml;
       if (studioDraft.detailTouched) item.detailEdited = true;
       if (studioDraft.detailReset && !studioDraft.detailTouched) item.detailEdited = false;
-      const text = detailBlocksText(blocks);
+      const text = detailDocText(doc);
       item.detailOverride = text; item.detailSnapshot = text || source.detail;
     }
     item.sellerCategoryGroup = String(data.sellerCategoryGroup || source.categoryGroup || "");
@@ -8329,6 +8543,22 @@ document.addEventListener("submit", event => {
     }
     audit("상품 정보 수정", `${product.id} · ${before} → ${product.name} / ${product.category} / ${money(product.supply)} / ${money(product.recommended)} / ${product.status}`, oldSupply !== product.supply ? "pending" : "done", "product");
     saveState(); closeModal(); render(); showToast("상품 정보를 수정했습니다.");
+  }
+  if (form.id === "shippingPolicyForm") {
+    const { fee, errors } = readShippingFee(data);
+    if (errors.length) { const editor = form.querySelector("[data-sf-editor]"); refreshShippingEditor(editor); return showToast(errors[0]); }
+    const name = String(data.policyName || "").trim(); if (!name) return showToast("정책 이름을 입력해 주세요.");
+    const role = form.dataset.role === "supplier" ? "supplier" : "seller";
+    const loginId = currentAccount.loginId;
+    shippingPoliciesOf(loginId, role);
+    let policy = form.dataset.id ? shippingPolicyById(form.dataset.id) : null;
+    if (policy) Object.assign(policy, { name, fee, updatedAt: ymd(new Date()) });
+    else { policy = { id: `SHP-${role === "supplier" ? "S" : "M"}-${Date.now().toString(36)}`, ownerLoginId: loginId, role, name, isDefault: false, fee, createdAt: ymd(new Date()) }; state.shippingPolicies.push(policy); }
+    if (data.policyDefault) state.shippingPolicies.forEach(item => { if (item.ownerLoginId === loginId && item.role === role) item.isDefault = item.id === policy.id; });
+    if (role === "supplier") state.products.filter(product => product.shippingPolicyId === policy.id).forEach(product => { product.shippingPolicy = `${policy.name} · ${shippingFeeLabel(policy.fee)}`; });
+    audit("배송 정책 저장", `${name} · ${shippingFeeLabel(fee)}`, "done", "product");
+    saveState(); closeModal(); render(); updateAccountUI(); showToast(`배송 정책 ‘${name}’을 저장했어요.`);
+    return;
   }
   if (form.id === "supplierTermsForm") {
     if (!data.terms || !data.settlement || !data.privacy) return showToast("필수 항목 3개에 모두 동의해 주세요.");
@@ -9173,7 +9403,8 @@ document.addEventListener("focusout", event => {
     picker.querySelector("[data-carrier-results]").hidden = true;
   }, 150);
 });
-document.addEventListener("mousedown", event => { if (event.target.closest?.("[data-carrier-results] button")) event.preventDefault(); });
+document.addEventListener("mousedown", event => { if (event.target.closest?.("[data-carrier-results] button, [data-carrier-all]")) event.preventDefault(); });
+document.addEventListener("click", event => { const all = event.target.closest?.("[data-carrier-all]"); if (!all) return; const picker = all.closest("[data-carrier-picker]"); const box = picker.querySelector("[data-carrier-results]"); if (!box.hidden && !picker.querySelector("[data-carrier-input]").value.trim()) { box.hidden = true; return; } picker.querySelector("[data-carrier-input]").focus(); renderCarrierResults(picker, ""); });
 document.addEventListener("click", event => {
   const pick = event.target.closest?.("[data-carrier-pick]");
   if (pick) { pickCarrier(pick.closest("[data-carrier-picker]"), pick.dataset.carrierPick); return; }
@@ -9192,6 +9423,11 @@ document.addEventListener("change", event => {
 
 const requestedPortal = new URLSearchParams(window.location.search).get("portal");
 initAuth();
+/* 사진 저장소(IndexedDB)를 읽고, 예전에 상품 안에 직접 넣어 둔 사진을 옮긴 뒤 화면을 다시 그린다 */
+loadImageCache().then(() => {
+  if (imgCache.size && currentAccount && document.getElementById("modal")?.hidden !== false) { render(); updateAccountUI(); }
+  return migrateInlineImages();
+}).catch(error => console.warn("image store", error));
 if (requestedPortal === "partner") showPartnerLogin("supplier");
 if (requestedPortal === "master") showPartnerLogin("master");
 const requestedInvite = new URLSearchParams(window.location.search).get("invite");

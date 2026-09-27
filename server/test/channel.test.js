@@ -84,6 +84,14 @@ test("매퍼: 공급사 배송비 정책(구간별·도서산간·착불)을 네
   assert.equal(coupang.deliveryChargeOnReturn, 3500);
 });
 
+test("매퍼: 셀러 사진(data URL)은 쿠팡에서 건너뛰고, 네이버 택배사 코드는 그대로 보낸다", () => {
+  const body = toCoupangProduct({ ...listing, images: ["data:image/jpeg;base64,AAAA", "https://img/a.jpg"] }, { vendorId: "A1", vendorUserId: "w" });
+  assert.deepEqual(body.items[0].images.map(image => image.vendorPath), ["https://img/a.jpg"]);
+  assert.throws(() => toCoupangProduct({ ...listing, images: ["data:image/jpeg;base64,AAAA"] }, { vendorId: "A1", vendorUserId: "w" }), /https/);
+  const naver = toNaverProduct({ ...listing, shipping: { ...listing.shipping, carrier: "천일택배", naverCarrierCode: "CHUNIL" } }, { imageUrls: ["https://n/a.jpg"] });
+  assert.equal(naver.originProduct.deliveryInfo.deliveryCompany, "CHUNIL");
+});
+
 test("키 보관소: 암호화 저장하고 가린 값만 돌려준다", () => {
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "doogo-")), "c.json");
   const store = createCredentialStore({ file, key: crypto.randomBytes(32) });

@@ -34,7 +34,10 @@ function toCoupangProduct(listing, { vendorId, vendorUserId, now = new Date() })
   requireFields(listing, ["title", "salePrice", "images.0", "category.coupang", "shipping.coupangOutboundCode", "shipping.coupangReturnCenterCode", "returnAddress.zipCode", "returnAddress.address"]);
   const ship = listing.shipping;
   const units = listing.options?.length ? listing.options : [{ optionId: listing.productCode, name: listing.title, salePrice: listing.salePrice, stock: listing.stock }];
-  const images = listing.images.map((url, index) => ({ imageOrder: index, imageType: index === 0 ? "REPRESENTATION" : "DETAIL", vendorPath: url }));
+  /* 쿠팡은 인터넷 주소(https) 이미지만 받는다. 셀러가 브라우저에서 올린 사진(data URL)은 건너뛴다 */
+  const hosted = listing.images.filter(url => /^https?:\/\//.test(String(url)));
+  if (!hosted.length) throw new Error("쿠팡은 인터넷 주소(https)로 된 이미지가 필요해요. 대표 사진을 이미지 호스팅에 올린 뒤 다시 보내 주세요.");
+  const images = hosted.slice(0, 10).map((url, index) => ({ imageOrder: index, imageType: index === 0 ? "REPRESENTATION" : "DETAIL", vendorPath: url }));
   return {
     displayCategoryCode: Number(listing.category.coupang),
     sellerProductName: listing.title,
@@ -118,7 +121,7 @@ function toNaverProduct(listing, { imageUrls }) {
         deliveryType: ship.directDelivery ? "DIRECT" : "DELIVERY",
         deliveryAttributeType: ship.naverDeliveryAttribute || "NORMAL",
         ...(ship.naverDeliveryAttribute === "PRE_ORDER" ? { customProductAfterOrderYn: true } : {}),
-        deliveryCompany: NAVER_CARRIERS[ship.carrier] || "HANJIN",
+        deliveryCompany: ship.naverCarrierCode || NAVER_CARRIERS[ship.carrier] || "CH1",
         deliveryBundleGroupUsable: ship.bundle !== false,
         deliveryFee: ship.naverDeliveryFee || { deliveryFeeType: ship.feeType || "FREE", baseFee: ship.feeType === "FREE" ? 0 : Number(ship.fee || 0), ...(ship.feeType === "CONDITIONAL_FREE" ? { freeConditionalAmount: Number(ship.freeOver || 0) } : {}), deliveryFeePayType: "PREPAID" },
         claimDeliveryInfo: { returnDeliveryFee: Number(ship.returnFee || 0), exchangeDeliveryFee: Number(ship.exchangeFee || ship.returnFee || 0), shippingAddressId: Number(ship.naverShippingAddressId), returnAddressId: Number(ship.naverReturnAddressId) }

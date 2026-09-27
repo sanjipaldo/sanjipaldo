@@ -9221,3 +9221,139 @@ body[data-role="supplier"] .sf { --sf-ink: #171717; --sf-line: #ebebeb; backgrou
 .sf .sf-chip span, .sf .sf-type span, .sf .sf-num span { color: inherit; }
 .sf .sf-num, .sf .sf-toggle { display: inline-flex; }
 .sf .sf-toggle { display: flex; }
+
+/* ===== 상세 에디터 v2: 하나의 문서 (툴바는 위에 붙고, 글·사진은 한 화면에) ===== */
+.rde { gap: 0; padding: 0; overflow: visible; }
+.rde-toolbar { position: sticky; top: var(--rde-sticky, 0px); z-index: 6; display: grid; gap: 6px; padding: 10px; background: var(--rde-soft); border-bottom: 1px solid var(--rde-line); border-radius: 16px 16px 0 0; }
+.rde-toolbar .rde-format { display: flex; }
+.rde-toolbar .rde-insert { flex-wrap: wrap; }
+.rde-surface { min-height: 320px; max-height: none; padding: 20px 22px 28px; background: #fff; outline: none; font-size: 16px; line-height: 1.75; overflow-wrap: anywhere; cursor: text; }
+.rde-surface.is-empty::before { content: attr(data-placeholder); display: block; color: #a1a1a1; pointer-events: none; }
+.rde-surface.is-empty > p:first-child:last-child { margin-top: -1.75em; }
+.rde-surface:focus { box-shadow: inset 0 0 0 2px var(--rde-ink); }
+.rde-surface.dragging { box-shadow: inset 0 0 0 2px var(--rde-accent); background: #f8fbff; }
+.rde-surface img { max-width: 100%; height: auto; cursor: pointer; border-radius: 2px; }
+.rde-surface img.rde-img-selected { outline: 3px solid var(--rde-accent); outline-offset: 2px; }
+.rde-surface table { width: 100%; }
+.rde-surface td, .rde-surface th { min-width: 40px; }
+.rde-surface blockquote { margin: 16px 0; padding: 14px 18px; border-left: 4px solid var(--rde-ink); background: #f7f7f7; }
+.rde-surface .rde-video-card { cursor: default; user-select: none; }
+.rde-surface .rde-flash, .rde-surface p.rde-flash { animation: deFlash .9s ease; }
+.rde-imgbar { position: absolute; left: 8px; right: 8px; z-index: 7; padding: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--rde-line); border-radius: 12px; box-shadow: 0 0 0 1px rgba(0,0,0,.04), 0 8px 24px -6px rgba(0,0,0,.22); }
+.rde-imgbar[hidden] { display: none; }
+.rde-imgbar > button { height: 34px; min-width: 34px; padding: 0 10px; color: var(--rde-ink); background: #fff; border: 1px solid var(--rde-line); border-radius: 8px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.rde-imgbar > button.danger { color: #d92d20; }
+.rde-imgbar input { flex: 1 1 140px; min-width: 0; height: 34px; padding: 0 10px; border: 1px solid var(--rde-line); border-radius: 8px; font: inherit; font-size: 13.5px; }
+.rde-foot { padding: 10px 12px; background: var(--rde-soft); border-top: 1px solid var(--rde-line); border-radius: 0 0 16px 16px; }
+.rde-code { margin: 10px; }
+.rde > .rde-file-input { display: block; }
+@media (max-width: 720px) {
+  .rde-toolbar { padding: 8px; }
+  .rde-toolbar .rde-insert { flex-wrap: nowrap; overflow-x: auto; margin: 0; padding: 0 0 2px; }
+  .rde-surface { min-height: 260px; padding: 16px 14px 24px; }
+  .rde-imgbar { left: 4px; right: 4px; }
+  .rde-imgbar input { flex-basis: 100%; }
+}
+
+/* ===== 배송 정책 메뉴 · 정책 불러오기 ===== */
+.sf-tier-list { display: grid; gap: 6px; }
+.sf-tier-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 8px; background: #fafbfc; border: 1px solid var(--sf-line); border-radius: 10px; }
+.sf-tier-no { flex: 0 0 auto; min-width: 26px; height: 26px; display: inline-grid; place-items: center; color: #fff; background: var(--sf-ink); border-radius: 99px; font-size: 12px; font-weight: 700; }
+.sf-tier-fixed { min-width: 84px; font-size: 14px; color: #191f28; }
+.sf .sf-tier-row .sf-num { width: auto; }
+.sf .sf-tier-row .sf-num input { width: 92px; flex: 0 0 auto; }
+.sf-row-del { margin-left: auto; width: 32px; height: 32px; color: #6b7684; background: #fff; border: 1px solid var(--sf-line); border-radius: 8px; font-size: 18px; line-height: 1; cursor: pointer; }
+.sf-row-del:hover { color: #d92d20; border-color: #f1b8b3; }
+.sf-row-add { justify-self: start; height: 36px; padding: 0 14px; color: var(--sf-ink); background: #fff; border: 1px dashed #b0b8c1; border-radius: 8px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.ship-policy-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.ship-policy-card { display: grid; gap: 12px; padding: 18px; }
+.ship-policy-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.ship-policy-head h3 { margin: 0 0 4px; font-size: 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ship-policy-head p { margin: 0; color: #4e5968; font-size: 13.5px; line-height: 1.5; }
+.ship-default { padding: 2px 8px; color: #fff; background: #191f28; border-radius: 99px; font-size: 11.5px; font-style: normal; font-weight: 700; }
+body[data-role="seller"] .ship-default { background: #3182f6; }
+.ship-usage { flex: 0 0 auto; padding: 4px 10px; color: #4e5968; background: #f2f4f6; border-radius: 99px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.ship-policy-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.ship-policy-meta span { padding: 3px 8px; color: #6b7684; background: #f9fafb; border: 1px solid #eef0f2; border-radius: 6px; font-size: 12.5px; }
+.ship-policy-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ship-policy-actions .secondary-button { min-height: 36px; padding: 0 12px; font-size: 13.5px; }
+.ship-policy-actions .danger { color: #d92d20; }
+.ship-policy-note { margin: 14px 2px 0; color: #6b7684; font-size: 13px; line-height: 1.6; }
+.ship-policy-modal-head { margin-bottom: 14px; }
+.ship-policy-modal-head span { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: #8b95a1; }
+.ship-policy-modal-head h2 { margin: 4px 0; font-size: 22px; }
+.ship-policy-modal-head p { margin: 0; color: #6b7684; font-size: 13.5px; }
+#shippingPolicyForm { display: grid; gap: 12px; }
+#shippingPolicyForm .check-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.ship-picker { display: grid; gap: 6px; }
+.ship-picker select { width: 100%; height: 44px; }
+.ship-picker-summary { margin: 0; padding: 10px 12px; color: #333d4b; background: #f9fafb; border: 1px solid #eef0f2; border-radius: 10px; font-size: 13.5px; line-height: 1.5; }
+.ship-picker .text-button { justify-self: start; font-size: 13px; }
+.ship-picker .text-button small { color: #8b95a1; font-weight: 500; }
+.ship-weight-note { margin: 4px 0 0; color: #b25e09; font-size: 12.5px; }
+.ship-weight-note[hidden] { display: none; }
+@media (max-width: 720px) {
+  .ship-policy-list { grid-template-columns: 1fr; }
+  .ship-policy-card { padding: 14px; }
+  .sf .sf-tier-row .sf-num input { width: 76px; }
+  .sf-tier-fixed { min-width: 64px; }
+}
+
+/* ===== 상품 꾸미기: 추가 이미지 · 마스터 코드 연결 ===== */
+.studio-gallery { display: grid; gap: 8px; margin-top: 14px; }
+.studio-gallery-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.studio-gallery-head b { font-size: 15px; }
+.studio-gallery-head small { color: #8b95a1; font-size: 12.5px; }
+.studio-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.studio-gallery-tile { position: relative; margin: 0; aspect-ratio: 1; overflow: hidden; background: #f2f4f6; border: 1px solid #e5e8eb; border-radius: 12px; }
+.studio-gallery-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.studio-gallery-tile em { position: absolute; top: 6px; left: 6px; min-width: 20px; height: 20px; padding: 0 6px; display: grid; place-items: center; color: #fff; background: rgba(25, 31, 40, .72); border-radius: 99px; font-size: 11px; font-style: normal; font-weight: 700; }
+.studio-gallery-tile figcaption { position: absolute; inset: auto 0 0 0; display: flex; justify-content: space-between; gap: 4px; padding: 6px; background: linear-gradient(transparent, rgba(0, 0, 0, .55)); }
+.studio-gallery-tile figcaption button { height: 28px; padding: 0 8px; color: #191f28; background: rgba(255, 255, 255, .94); border: 0; border-radius: 7px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.studio-gallery-tile figcaption button[data-action="studio-gallery-del"] { width: 28px; padding: 0; font-size: 16px; }
+.studio-gallery-add { aspect-ratio: 1; display: grid; place-content: center; justify-items: center; gap: 2px; color: #4e5968; background: #fff; border: 1.5px dashed #b0b8c1; border-radius: 12px; font: inherit; cursor: pointer; }
+.studio-gallery-add b { font-size: 26px; line-height: 1; color: #3182f6; }
+.studio-gallery-add span { font-size: 13px; font-weight: 700; }
+.studio-gallery-add small { font-size: 11.5px; color: #8b95a1; }
+.studio-code-link { display: grid; gap: 8px; margin: 0 0 4px; padding: 14px 16px; background: #f4f8ff; border: 1px solid #d6e6ff; border-radius: 14px; }
+.studio-code-pair { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.studio-code-pair span { display: grid; gap: 1px; padding: 6px 12px; background: #fff; border: 1px solid #d6e6ff; border-radius: 10px; }
+.studio-code-pair small { color: #6b7684; font-size: 11.5px; }
+.studio-code-pair b { font-size: 15px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -.01em; }
+.studio-code-pair i { font-style: normal; font-size: 18px; color: #3182f6; font-weight: 700; }
+.studio-code-link p { margin: 0; display: grid; gap: 2px; color: #333d4b; font-size: 13.5px; line-height: 1.55; }
+.studio-code-link p small { color: #6b7684; font-size: 12px; }
+#studio-ship .ship-picker { margin-top: 6px; }
+@media (max-width: 720px) {
+  .studio-gallery-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .studio-code-link { padding: 12px; }
+}
+#shippingPolicyForm { grid-template-columns: minmax(0, 1fr); }
+#shippingPolicyForm > *, .sf > *, .sf-panel > * { min-width: 0; }
+.sf .sf-toggle { flex-wrap: wrap; }
+.ship-policy-actions .text-button.danger, body[data-role="supplier"] .ship-policy-actions .text-button.danger { color: #d92d20; font-weight: 600; }
+@media (max-width: 720px) {
+  .sf .sf-num em { white-space: normal; }
+  .sf-panel > .sf-num { flex-wrap: wrap; }
+  .sf-panel > .sf-num > span { flex: 1 0 100%; }
+}
+@media (max-width: 720px) {
+  .sf-tier-row { flex-wrap: nowrap; gap: 4px; padding: 6px; }
+  .sf .sf-tier-row .sf-num { gap: 3px; flex: 0 1 auto; }
+  .sf .sf-tier-row .sf-num input { width: 58px; height: 36px; padding: 0 6px; font-size: 14px; }
+  .sf .sf-tier-row .sf-num em { font-size: 12.5px; white-space: nowrap; }
+  .sf-tier-fixed { min-width: 0; flex: 0 0 auto; margin-right: 4px; }
+  .sf-row-del { width: 30px; height: 30px; flex: 0 0 auto; }
+}
+
+/* 택배사: 스마트스토어처럼 전체 목록 */
+.carrier-all { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); height: 34px; padding: 0 10px; color: #333; background: #f2f2f2; border: 0; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.carrier-input-wrap .carrier-input { padding-right: 78px; }
+.carrier-results { max-height: 360px; }
+.carrier-results p { position: sticky; top: -6px; z-index: 1; margin: 0 -6px; padding: 8px 14px 6px; background: #fff; }
+.carrier-results button { justify-content: space-between; gap: 8px; }
+.carrier-results button code { flex: 0 0 auto; padding: 2px 6px; color: #6b6b6b; background: #f5f5f5; border-radius: 5px; font-size: 11px; font-weight: 600; }
+.carrier-results p.carrier-total { position: static; color: #9a9a9a; font-weight: 500; font-size: 12px; border-top: 1px solid #eee; margin-top: 4px; }
+.ship-picker select { padding: 0 40px 0 14px; color: #191f28; background-color: #fff; border: 1px solid #d1d6db; border-radius: 12px; font: inherit; font-size: 15px; font-weight: 600; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236b7684' stroke-width='1.8'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
+.ship-picker select:focus { outline: none; border-color: #3182f6; box-shadow: 0 0 0 3px rgba(49, 130, 246, .15); }
+body[data-role="supplier"] .ship-picker select:focus { border-color: #171717; box-shadow: 0 0 0 3px rgba(0, 0, 0, .08); }
