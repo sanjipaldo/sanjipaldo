@@ -78,6 +78,16 @@
 - 옵션 기능은 사용하지 않습니다. 발주오라 일반상품처럼 규격(중량·과수)마다 상품을 1개씩 등록하며, 상품코드로 발주오라 엑셀과 1:1로 맞춥니다(migration 019에서 기존 옵션을 독립 상품으로 분리).
 - 새로 등록한 상품은 진열순서 맨 앞에 배치됩니다. 여러 상품의 공통 값은 상품 리스트의 "일괄 변경"으로 바꿉니다.
 
+## 6-1. 데이터 보관과 백업
+
+- 운영 DB: Vercel Marketplace로 만든 Turso(LibSQL) `doogofood-db`, 지역 iad1(미국 동부). Vercel 함수도 iad1에서 실행되며, DB와 함수는 같은 지역에 둡니다(함수만 옮기면 DB 왕복이 길어져 오히려 느려짐).
+- 상품 이미지: Vercel Blob `doogofood-images`(공개, `BLOB_READ_WRITE_TOKEN`).
+- DB 백업: Vercel Blob `doogofood-backups`(비공개, `BACKUP_READ_WRITE_TOKEN`)의 `db-backups/`에 저장합니다.
+  - 자동: `vercel.json` crons가 매일 18:00 UTC(03:00 KST)에 `GET /api/backup/cron`을 호출합니다(`CRON_SECRET` 필요, 운영 배포에서만 실행). 최근 30개만 보관합니다.
+  - 관리자 > DB 백업: 목록·내려받기, "지금 백업 저장", "지금 내려받기"(저장소 없이 바로 파일 생성).
+  - 형식: gzip JSON(`doogofood-db-backup` v1, 표별 columns/rows). 로그인 계정·세션(user, session, account, verification)과 `integration_connections`(발주오라 API 키)는 제외합니다.
+  - 서버 코드는 `services/backup_storage.ts`(기본: 저장소 없음)를 쓰고, Vercel 빌드에서 `deploy/vercel/backup-storage.ts`로 바꿔 끼웁니다.
+
 ## 7. 개발 및 검증
 
 의존성 설치:

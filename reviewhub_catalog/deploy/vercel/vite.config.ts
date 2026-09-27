@@ -9,6 +9,7 @@ const serverRequire = createRequire(path.join(root, "apps/server/package.json"))
 const honoNodeVercel = serverRequire.resolve("@hono/node-server/vercel").replace(/vercel\.js$/, "vercel.mjs");
 
 const blobStorage = path.join(__dirname, "blob-storage.ts");
+const backupStorage = path.join(__dirname, "backup-storage.ts");
 
 export default defineConfig({
   root: path.join(root, "apps/server"),
@@ -18,7 +19,10 @@ export default defineConfig({
       name: "doogo-vercel-blob-storage",
       enforce: "pre",
       resolveId(source) {
-        return /(^|\/)s3_storage(\.ts)?$/.test(source) ? blobStorage : null;
+        if (/(^|\/)s3_storage(\.ts)?$/.test(source)) return blobStorage;
+        // DB 백업 저장소도 비공개 Vercel Blob 모듈로 바꿔 끼웁니다.
+        if (/(^|\/)backup_storage(\.ts)?$/.test(source)) return backupStorage;
+        return null;
       }
     }
   ],

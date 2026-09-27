@@ -35,6 +35,7 @@ const App = () => (
           <Route path="/admin/history" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="history" /></AdminGuard>} />
           <Route path="/admin/sourcing" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sourcing" /></AdminGuard>} />
           <Route path="/admin/sync" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sync" /></AdminGuard>} />
+          <Route path="/admin/backup" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="backup" /></AdminGuard>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

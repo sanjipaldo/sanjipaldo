@@ -36,6 +36,7 @@ import {
   WalletCards,
   X,
   LayoutDashboard,
+  DatabaseBackup,
   ListOrdered
 } from "lucide-react";
 import { toast } from "sonner";
@@ -43,7 +44,7 @@ import { apiFetch } from "@/lib/api";
 import { authClient, clearAuthToken } from "@/lib/auth";
 import type { AdminCatalogData, AdminHomeData, AdminOverview, BaljuoraConnection, Category, CatalogSyncOutboxItem, CatalogSyncOverview, CatalogSyncRun, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, SalesOverview, ShippingPolicy, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
-type AdminSection = "home" | "products" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "changes" | "transmissions" | "sales" | "notices" | "history" | "sourcing" | "sync";
+type AdminSection = "home" | "products" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "changes" | "transmissions" | "sales" | "notices" | "history" | "sourcing" | "sync" | "backup";
 type ProductOptionDraft = Pick<ProductOption, "id" | "name" | "costPrice" | "aPrice" | "generalPrice" | "salePrice" | "salePriceMode" | "isSoldOut" | "sortOrder">;
 type BulkWorkbookPreview = {
   totalRows: number;
@@ -429,6 +430,7 @@ const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes
   { section: "notices", label: "공지·필독", icon: Bell },
   { section: "history", label: "가격변동 이력", icon: History },
   { section: "sourcing", label: "입점·소싱 요청", icon: ClipboardList },
+  { section: "backup", label: "DB 백업", icon: DatabaseBackup },
   { section: "sync", label: "발주오라 연동", icon: TrendingUp, group: "openapi" }
 ];
 
@@ -510,7 +512,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
     // Bundles load only their group payload on demand. Fetching the complete
     // 2,347-product catalog here made the bundle list wait for data it never
     // renders.
-    const childOwnsData = new Set<AdminSection>(["bundles", "shippingPolicies", "suppliers", "sales", "changes", "transmissions", "sync"]);
+    const childOwnsData = new Set<AdminSection>(["bundles", "shippingPolicies", "suppliers", "sales", "changes", "transmissions", "sync", "backup"]);
     if (childOwnsData.has(section)) {
       if (!silent) setLoading(false);
       return;
@@ -650,6 +652,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               {section === "history" && <HistoryAdmin data={data} />}
               {section === "sourcing" && <SourcingAdmin data={data} refresh={refresh} />}
               {section === "sync" && <CatalogSyncAdmin />}
+              {section === "backup" && <BackupAdmin />}
             </>
           )}
         </div>
@@ -2329,6 +2332,100 @@ function SalesAdmin() {
       </section>
       <aside className="admin-card supplier-sales"><h2>매입처별 매출 순위</h2>{loading ? <div className="spinner" /> : data?.suppliers.length ? data.suppliers.map((supplier, index) => <article key={supplier.supplierName}><div className="supplier-sales-heading"><b className={`supplier-rank rank-${Math.min(index + 1, 3)}`}>{index + 1}순위</b><strong>{supplier.supplierName}</strong></div><span>총 매출 {formatPrice(supplier.revenue)}</span><small>순수익 {formatPrice(supplier.profit)} · 판매 {supplier.orderCount.toLocaleString("ko-KR")}건</small></article>) : <div className="sales-empty"><CalendarDays size={28} /><strong>연결된 매출 데이터가 없습니다.</strong><p>발주오라 주문·매출 원본이 연결되면 날짜와 매입처별 실적이 자동 집계됩니다.</p></div>}</aside>
     </div>
+  </>;
+}
+
+type BackupFileItem = { pathname: string; size: number; uploadedAt: string };
+type BackupOverview = { storageConfigured: boolean; keepDays: number; files: BackupFileItem[] };
+
+function formatBytes(value: number) {
+  if (value < 1024) return `${value}B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)}KB`;
+  return `${(value / 1024 / 1024).toFixed(1)}MB`;
+}
+
+async function saveResponseFile(response: Response, fallbackName: string) {
+  const disposition = response.headers.get("Content-Disposition") || "";
+  const name = /filename="([^"]+)"/.exec(disposition)?.[1] || fallbackName;
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = name;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function BackupAdmin() {
+  const [overview, setOverview] = useState<BackupOverview | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<"" | "run" | "export" | string>("");
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      setOverview(await readData<BackupOverview>(await apiFetch("/backup/admin")));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "백업 목록을 불러오지 못했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void load(); }, []);
+
+  const runNow = async () => {
+    setBusy("run");
+    try {
+      const result = await readData<{ file: BackupFileItem; tables: Record<string, number> }>(await apiFetch("/backup/admin/run", { method: "POST" }));
+      toast.success(`백업을 저장했습니다. (상품 ${(result.tables.products ?? 0).toLocaleString("ko-KR")}건 포함)`);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "백업을 저장하지 못했습니다.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const exportNow = async () => {
+    setBusy("export");
+    try {
+      const response = await apiFetch("/backup/admin/export");
+      if (!response.ok) { await readData(response); return; }
+      await saveResponseFile(response, "doogofood-db-backup.json.gz");
+      toast.success("현재 DB 백업 파일을 내려받았습니다.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "백업 파일을 만들지 못했습니다.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const download = async (file: BackupFileItem) => {
+    setBusy(file.pathname);
+    try {
+      const response = await apiFetch(`/backup/admin/download?path=${encodeURIComponent(file.pathname)}`);
+      if (!response.ok) { await readData(response); return; }
+      await saveResponseFile(response, file.pathname.split("/").pop() || "backup.json.gz");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "백업 파일을 내려받지 못했습니다.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const files = overview?.files ?? [];
+  const latest = files[0];
+
+  return <><div className="admin-page-heading"><div><span>DATABASE BACKUP</span><h1>DB 백업</h1><p>상품·카테고리·가격변동·공지·입점/소싱 요청 등 운영 데이터를 매일 새벽 3시(한국시간)에 자동으로 백업합니다.</p></div><div className="backup-heading-actions"><button type="button" onClick={() => void exportNow()} disabled={busy !== ""}><Download size={16} /> {busy === "export" ? "만드는 중…" : "지금 내려받기"}</button>{overview?.storageConfigured && <button className="primary-action" type="button" onClick={() => void runNow()} disabled={busy !== ""}><DatabaseBackup size={16} /> {busy === "run" ? "백업 중…" : "지금 백업 저장"}</button>}</div></div>
+    <section className="admin-card backup-card">
+      <div className="backup-summary">
+        <div><span>자동 백업</span><strong>{overview?.storageConfigured ? "매일 03:00" : "저장소 미연결"}</strong><small>{overview?.storageConfigured ? `최근 ${overview.keepDays}개 보관 · 비공개 저장소` : "지금 내려받기만 사용할 수 있습니다."}</small></div>
+        <div><span>마지막 백업</span><strong>{latest ? formatDateTime(latest.uploadedAt) : "-"}</strong><small>{latest ? formatBytes(latest.size) : "아직 저장된 백업이 없습니다."}</small></div>
+        <div><span>보관 중</span><strong>{files.length}개</strong><small>로그인 계정·API 키는 백업에서 제외</small></div>
+      </div>
+      {loading ? <div className="admin-loading inline"><div className="spinner" /><span>백업 목록을 불러오는 중…</span></div> : files.length === 0 ? <div className="empty-state"><DatabaseBackup size={28} /><strong>저장된 백업이 없습니다.</strong><span>{overview?.storageConfigured ? "매일 새벽 자동으로 쌓이며, \"지금 백업 저장\"으로 바로 만들 수도 있습니다." : "\"지금 내려받기\"로 현재 데이터를 파일로 받아 보관해 주세요."}</span></div> : <div className="admin-table-wrap"><table className="admin-table backup-table"><thead><tr><th>백업 파일</th><th>저장 시각</th><th>크기</th><th>관리</th></tr></thead><tbody>{files.map((file) => <tr key={file.pathname}><td><strong>{file.pathname.split("/").pop()}</strong></td><td>{formatDateTime(file.uploadedAt)}</td><td>{formatBytes(file.size)}</td><td><div className="row-actions"><button type="button" onClick={() => void download(file)} disabled={busy !== ""}><Download size={14} /> {busy === file.pathname ? "받는 중…" : "내려받기"}</button></div></td></tr>)}</tbody></table></div>}
+      <p className="backup-note">백업 파일(.json.gz)은 복원용 원본 데이터입니다. 복원이 필요하면 해당 파일을 전달해 주세요. 원가 등 비공개 정보가 들어 있으니 외부에 공유하지 마세요.</p>
+    </section>
   </>;
 }
 

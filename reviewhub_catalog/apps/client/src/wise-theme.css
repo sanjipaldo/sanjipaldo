@@ -842,3 +842,23 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .bj-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .bj-actions .bj-disconnect { grid-column: 1 / -1; }
 }
+
+/* DB 백업 (관리자) */
+.backup-heading-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.backup-heading-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 16px; border: 1px solid var(--w-card-border); border-radius: 999px; background: #fff; color: var(--w-ink); font-weight: 700; cursor: pointer; }
+.backup-heading-actions button.primary-action { border-color: var(--w-primary); background: var(--w-primary); color: var(--w-ink-deep); }
+.backup-heading-actions button:disabled { opacity: .55; cursor: default; }
+.backup-card { padding: 20px; }
+.backup-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.backup-summary > div { display: grid; gap: 4px; padding: 16px; border: 1px solid var(--w-card-border); border-radius: 14px; background: #fff; }
+.backup-summary span { color: #64748b; font-size: 12px; font-weight: 700; }
+.backup-summary strong { color: var(--w-ink); font-size: 18px; font-weight: 800; }
+.backup-summary small { color: #64748b; font-size: 12px; }
+.backup-table td strong { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; word-break: break-all; }
+.backup-note { margin: 16px 0 0; color: #64748b; font-size: 12px; line-height: 1.6; }
+@media (max-width: 720px) {
+  .backup-heading-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .backup-heading-actions button:only-child { grid-column: 1 / -1; }
+  .backup-summary { grid-template-columns: 1fr; }
+  .backup-card { padding: 14px; }
+}

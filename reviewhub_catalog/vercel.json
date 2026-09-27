@@ -13,5 +13,11 @@
       "source": "/((?!api/|assets/).*)",
       "destination": "/index.html"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/backup/cron",
+      "schedule": "0 18 * * *"
+    }
   ]
 }
