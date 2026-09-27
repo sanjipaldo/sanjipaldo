@@ -8916,3 +8916,94 @@ body[data-role="supplier"] .mobile-tabbar button.active .tabbar-icon { color: va
 /* 입력: 헤어라인, 포커스 시 잉크 테두리 + 옅은 회색 링 */
 body[data-role="supplier"] :is(input, select, textarea):focus { border-color: var(--sup-ink) !important; box-shadow: 0 0 0 3px rgba(0,0,0,.08) !important; }
 body[data-role="supplier"] :is(input[type="checkbox"], input[type="radio"]) { accent-color: var(--sup-ink); }
+/* 재고 부족 필터 · 처리 중 환불 배너 (대시보드 숫자와 같은 기준으로 보여 주기) */
+.sup-stock-filter { display: inline-flex; gap: 2px; padding: 3px; background: #f2f2f2; border-radius: 10px; }
+.sup-stock-filter button { padding: 7px 12px; border: 0; border-radius: 8px; background: transparent; color: #6b6b6b; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.sup-stock-filter button b { margin-left: 4px; }
+.sup-stock-filter button.active { color: #171717; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 2px 2px rgba(0,0,0,.04), 0 8px 16px -4px rgba(0,0,0,.08); }
+.stock-low-note { display: block; margin-top: 2px; color: #d92d20; font-size: 11.5px; font-weight: 600; }
+.refund-open-banner { margin: 0 0 12px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #fff; border: 1px solid #ebebeb; border-radius: 12px; }
+.refund-open-banner span { display: grid; gap: 2px; }
+.refund-open-banner b { font-size: 14.5px; }
+.refund-open-banner small { color: #6b6b6b; font-size: 12.5px; }
+.refund-open-banner.quiet { padding: 8px 14px; }
+@media (max-width: 720px) { .refund-open-banner { flex-direction: column; align-items: stretch; } .panel-head .sup-stock-filter { margin-top: 8px; } }
+/* 공급사 MVP: 판매 시작 준비 · 약관 · 알림 · 엑셀 대량 등록 · 수수료 세금계산서 */
+.hero-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.sup-launch { margin-bottom: 16px; padding: 20px 22px; }
+.sup-launch-head { display: grid; gap: 12px; }
+.sup-launch-head span { color: #8f8f8f; font: 500 12px/1.3 "Geist Mono", ui-monospace, monospace; letter-spacing: 0; }
+.sup-launch-head h3 { margin: 4px 0 2px; font-size: 20px; }
+.sup-launch-head h3 b { margin-left: 6px; color: #8f8f8f; font-weight: 600; }
+.sup-launch-head p { margin: 0; color: #6b6b6b; font-size: 14px; }
+.sup-launch-bar { height: 6px; background: #f2f2f2; border-radius: 99px; overflow: hidden; }
+.sup-launch-bar i { display: block; height: 100%; background: #171717; border-radius: 99px; transition: width .3s ease; }
+.sup-launch-list { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.sup-launch-list li { padding: 10px 12px; display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 12px; align-items: center; border: 1px solid #ebebeb; border-radius: 10px; }
+.sup-launch-list li > i { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: #f2f2f2; color: #4d4d4d; font-style: normal; font-size: 12.5px; font-weight: 700; }
+.sup-launch-list li.done > i { background: #171717; color: #fff; }
+.sup-launch-list li.done b { color: #8f8f8f; font-weight: 500; text-decoration: line-through; }
+.sup-launch-list li.next { border-color: #171717; }
+.sup-launch-list li span { display: grid; gap: 1px; min-width: 0; }
+.sup-launch-list li b { font-size: 14.5px; }
+.sup-launch-list li small { color: #8f8f8f; font-size: 12.5px; }
+.sup-launch-list li button { white-space: nowrap; padding: 8px 14px; font-size: 13.5px; }
+.sup-terms-head span, .bulk-head span { color: #8f8f8f; font: 500 12px/1.3 "Geist Mono", ui-monospace, monospace; }
+.sup-terms-head h2, .bulk-head h2 { margin: 6px 0 4px; }
+.sup-terms-body { margin: 14px 0; max-height: 300px; overflow: auto; padding: 4px 14px; border: 1px solid #ebebeb; border-radius: 12px; background: #fafafa; }
+.sup-terms-body h4 { margin: 12px 0 4px; font-size: 14.5px; }
+.sup-terms-body p { margin: 0 0 8px; color: #4d4d4d; font-size: 13.5px; line-height: 1.6; }
+.sup-terms-form, .sup-alert-form { display: grid; gap: 10px; }
+.check-row { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+.check-row input { margin-top: 3px; width: 18px; height: 18px; flex: 0 0 auto; }
+.check-row span { display: grid; gap: 1px; }
+.check-row small { color: #8f8f8f; font-size: 12.5px; }
+.sup-terms-agreed, .sup-alert-note, .sup-invoice-note { margin: 0; color: #6b6b6b; font-size: 12.5px; }
+.sup-alert-events { margin: 0; padding: 12px 14px; display: grid; gap: 10px; border: 1px solid #ebebeb; border-radius: 12px; }
+.sup-alert-events legend { padding: 0 6px; color: #4d4d4d; font-size: 13px; font-weight: 600; }
+.sup-alert-card { margin-top: 16px; }
+.sup-alert-summary { padding: 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid #ebebeb; }
+.sup-alert-summary div { display: grid; gap: 2px; }
+.sup-alert-summary span { color: #6b6b6b; font-size: 13px; }
+.bulk-modal { max-width: 720px !important; }
+.bulk-head p code { padding: 1px 5px; background: #f2f2f2; border-radius: 4px; font-size: 12px; }
+.bulk-steps { margin: 14px 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.bulk-steps li { padding: 12px 14px; display: grid; grid-template-columns: 26px 1fr auto; gap: 12px; align-items: center; border: 1px solid #ebebeb; border-radius: 12px; }
+.bulk-steps li > b { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: #171717; color: #fff; font-size: 12.5px; }
+.bulk-file { cursor: pointer; display: inline-flex; align-items: center; }
+.bulk-preview { min-height: 80px; }
+.bulk-summary { margin: 0 0 8px; font-size: 14px; }
+.bulk-summary em { color: #d92d20; font-style: normal; font-weight: 600; }
+.bulk-error { padding: 12px 14px; color: #b42318; background: #fef3f2; border-radius: 10px; font-size: 14px; }
+.bulk-rows { max-height: 260px; overflow: auto; display: grid; gap: 6px; }
+.bulk-row { padding: 9px 12px; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid #ebebeb; border-radius: 10px; }
+.bulk-row i { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; font-style: normal; font-size: 12px; font-weight: 800; color: #fff; background: #171717; }
+.bulk-row.bad { border-color: #fecdca; background: #fffbfa; }
+.bulk-row.bad i { background: #d92d20; }
+.bulk-row span { display: grid; min-width: 0; }
+.bulk-row small { color: #6b6b6b; font-size: 12.5px; }
+.bulk-row.bad small { color: #b42318; }
+.bulk-row em { color: #8f8f8f; font-style: normal; font-size: 12px; }
+.sup-invoice { margin-top: 16px; }
+.sup-invoice-list { display: grid; }
+.sup-invoice-row { padding: 12px 18px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; border-top: 1px solid #ebebeb; }
+.sup-invoice-row span { display: grid; gap: 2px; }
+.sup-invoice-row small { color: #8f8f8f; font-size: 12.5px; }
+.sup-invoice-row em { padding: 3px 9px; border-radius: 99px; font-style: normal; font-size: 12px; font-weight: 600; color: #4d4d4d; background: #f2f2f2; }
+.sup-invoice-row em.done { color: #fff; background: #171717; }
+.sup-invoice-note { padding: 10px 18px 16px; }
+@media (max-width: 720px) {
+  .sup-launch { padding: 16px; }
+  .sup-launch-list li { grid-template-columns: 26px minmax(0, 1fr); }
+  .sup-launch-list li button { grid-column: 1 / -1; width: 100%; }
+  .bulk-steps li { grid-template-columns: 26px 1fr; }
+  .bulk-steps li > button, .bulk-steps li > label { grid-column: 1 / -1; justify-content: center; }
+  .sup-invoice-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .sup-invoice-row em { grid-column: 1 / -1; justify-self: start; }
+  .hero-actions { width: 100%; } .hero-actions > * { flex: 1; }
+}
+.sup-terms-form .check-row span { display: block; }
+.sup-launch-list li.done { padding: 6px 12px; border-color: transparent; background: #fafafa; }
+.sup-launch-list li.done small { display: none; }
+.sup-launch-list li.done > i { width: 20px; height: 20px; margin-left: 3px; font-size: 11px; }
+@media (min-width: 721px) { .sup-launch-list { grid-template-columns: 1fr 1fr; } .sup-launch-list li:not(.done) { grid-column: 1 / -1; } }

@@ -256,6 +256,7 @@ function productCategoryPath(product) { return [product?.categoryGroup || "식�
    공급사 상품에 options 배열이 있으면 옵션 상품이다. 위탁셀러는 옵션별 판매가(optionPrices)와 판매 여부(optionEnabled)를 정하고,
    쇼핑몰에 전송하면 같은 옵션 구성이 채널 상품에 그대로 올라간다. 주문에는 optionId/optionName이 붙어 공급사 출고까지 이어진다. */
 function productOptions(product) { return Array.isArray(product?.options) ? product.options.filter(option => option && String(option.name || "").trim()) : []; }
+function shortProductName(name) { const clean = String(name || "").replace(/^\[[^\]]*\]\s*/, ""); return clean.length > 9 ? `${clean.slice(0, 9)}…` : clean; }
 function hasOptions(product) { return productOptions(product).length > 0; }
 function productOptionOf(product, optionId) { return productOptions(product).find(option => option.id === optionId) || null; }
 function optionSupplyPrice(product, optionId) { const option = productOptionOf(product, optionId); return Number(option ? option.supply : product?.supply || 0); }
@@ -504,6 +505,18 @@ let sellerOrderStage = "all";
 let refundMonth = "2026-09";
 let refundSearch = "";
 let refundTypeFilter = "all";
+let refundOpenOnly = false;       // 공급사 대시보드 '처리 중인 취소·반품'에서 들어오면 처리 중만 보여 준다
+let supplierLowStockOnly = false; // 공급사 대시보드 '재고 50개 미만'에서 들어오면 부족 상품만 보여 준다
+/* 재고 부족 기준은 한 곳에서: 판매 단위(옵션이 있으면 옵션, 없으면 상품) 재고가 50개 미만 */
+const LOW_STOCK_LIMIT = 50;
+function lowStockUnits(product) {
+  if (hasOptions(product)) return productOptions(product).filter(option => Number(option.stock || 0) < LOW_STOCK_LIMIT).map(option => ({ name: option.name, stock: Number(option.stock || 0) }));
+  return Number(product.stock || 0) < LOW_STOCK_LIMIT ? [{ name: "", stock: Number(product.stock || 0) }] : [];
+}
+function supplierLowStockProducts(products = currentSupplierProducts()) { return products.filter(product => product.status !== "판매중지" && lowStockUnits(product).length); }
+/* 환불이 끝난 상태: 이 상태가 아니면 '처리 중'으로 센다 (대시보드·취소환불 화면 같은 기준) */
+const REFUND_DONE = ["환불완료", "취소완료", "교환완료", "거절", "요청 철회"];
+function refundIsOpen(item) { return !REFUND_DONE.includes(item.status); }
 let salesMetric = "sales";
 let supplierOrderStatus = "all";
 let supplierSettlementMonth = "2026-09";
@@ -843,6 +856,7 @@ function openMobileSidebar() {
   document.getElementById("mobileSidebarClose").focus();
 }
 function pushNotification(recipientLoginId, audienceRole, type, title, detail, channels = ["카카오 알림톡", "이메일"]) {
+  if (audienceRole === "supplier" && typeof supplierAlertChannels === "function") channels = supplierAlertChannels(recipientLoginId, type, channels);
   state.notificationEvents.unshift({ id: `NT-${Date.now()}-${Math.random().toString(36).slice(2,5)}`, recipientLoginId, audienceRole, type, channels, title, detail, createdAt: "방금 전", read: false, delivery: "데모 대기" });
 }
 function audit(title, detail, stateName = "done", type = "change") {
@@ -1880,6 +1894,8 @@ function showApp(accountId, staff = null) {
   refundMonth = "2026-09";
   refundSearch = "";
   refundTypeFilter = "all";
+  refundOpenOnly = false;
+  supplierLowStockOnly = false;
   sessionStorage.setItem(AUTH_KEY, staff ? `staff:${staff.email}` : (currentAccount.loginId || accountId));
   document.getElementById("loginView").hidden = true;
   document.getElementById("partnerLoginView").hidden = true;
@@ -2165,9 +2181,9 @@ function sellerProductsTable() {
 }
 
 function supplierProductsTable() {
-  const products = currentSupplierProducts();
+  const products = supplierLowStockOnly ? supplierLowStockProducts() : currentSupplierProducts();
   return `<div class="table-wrap"><table><thead><tr><th>상품</th><th>카테고리</th><th>공급가</th><th>권장 판매가</th><th>재고</th><th>셀러 선택</th><th>상태</th><th>관리</th></tr></thead><tbody>
-    ${products.length ? products.map(product => `<tr><td><div class="table-product">${productPhoto(product, "table-photo")}<span><strong>${escapeHtml(product.name)}</strong><small>${product.id}${hasOptions(product) ? ` · <b class="option-pill">옵션 ${productOptions(product).length}개</b>` : ""}</small></span></div></td><td>${escapeHtml(product.category)}</td><td><strong>${productPriceLabel(product)}</strong></td><td>${productPriceLabel(product, "recommended")}</td><td><b class="${product.stock < 50 ? "stock-low" : ""}">${product.stock}개</b></td><td>${state.sellerProducts.filter(item => item.productId === product.id).length}곳</td><td>${statusChip(product.status)}</td><td><div class="row-actions"><button class="small-button" data-action="edit-product" data-id="${product.id}">수정</button><button class="small-button" data-action="adjust-stock" data-id="${product.id}">재고</button><button class="small-button reject" data-action="change-price" data-id="${product.id}">가격</button></div></td></tr>`).join("") : `<tr><td colspan="8"><div class="empty">등록된 상품이 없습니다.</div></td></tr>`}
+    ${products.length ? products.map(product => `<tr><td><div class="table-product">${productPhoto(product, "table-photo")}<span><strong>${escapeHtml(product.name)}</strong><small>${product.id}${hasOptions(product) ? ` · <b class="option-pill">옵션 ${productOptions(product).length}개</b>` : ""}</small></span></div></td><td>${escapeHtml(product.category)}</td><td><strong>${productPriceLabel(product)}</strong></td><td>${productPriceLabel(product, "recommended")}</td><td><b class="${lowStockUnits(product).length ? "stock-low" : ""}">${product.stock}개</b>${hasOptions(product) && lowStockUnits(product).length ? `<small class="stock-low-note">옵션 ${lowStockUnits(product).length}개 부족</small>` : ""}</td><td>${state.sellerProducts.filter(item => item.productId === product.id).length}곳</td><td>${statusChip(product.status)}</td><td><div class="row-actions"><button class="small-button" data-action="edit-product" data-id="${product.id}">수정</button><button class="small-button" data-action="adjust-stock" data-id="${product.id}">재고</button><button class="small-button reject" data-action="change-price" data-id="${product.id}">가격</button></div></td></tr>`).join("") : `<tr><td colspan="8"><div class="empty">등록된 상품이 없습니다.</div></td></tr>`}
   </tbody></table></div>${supplierProductCards(products)}`;
 }
 /* 휴대폰: 공급사 상품을 카드로 (표는 PC에서만) */
@@ -2175,14 +2191,14 @@ function supplierProductCards(products) {
   if (!products.length) return `<div class="supplier-product-cards"><div class="empty">등록된 상품이 없습니다.</div></div>`;
   return `<div class="supplier-product-cards">${products.map(product => `<article class="supplier-product-card">
     <div class="supplier-product-card-top">${productPhoto(product, "supplier-card-photo")}<div><small>${escapeHtml(product.id)} · ${escapeHtml(product.category || "")}</small><strong>${escapeHtml(product.name)}</strong><span>${statusChip(product.status)}${hasOptions(product) ? `<b class="option-pill">옵션 ${productOptions(product).length}개</b>` : ""}</span></div></div>
-    <dl><div><dt>공급가</dt><dd>${productPriceLabel(product)}</dd></div><div><dt>재고</dt><dd class="${product.stock < 50 ? "stock-low" : ""}">${Number(product.stock || 0)}개</dd></div><div><dt>가져간 셀러</dt><dd>${state.sellerProducts.filter(item => item.productId === product.id).length}곳</dd></div></dl>
-    ${hasOptions(product) ? `<div class="supplier-card-options">${productOptions(product).map(option => `<span>${escapeHtml(option.name)} <b>${money(option.supply)}</b> <em class="${Number(option.stock) < 30 ? "stock-low" : ""}">재고 ${Number(option.stock || 0)}</em></span>`).join("")}</div>` : ""}
+    <dl><div><dt>공급가</dt><dd>${productPriceLabel(product)}</dd></div><div><dt>재고</dt><dd class="${lowStockUnits(product).length ? "stock-low" : ""}">${Number(product.stock || 0)}개${hasOptions(product) && lowStockUnits(product).length ? `<small class="stock-low-note">옵션 ${lowStockUnits(product).length}개 부족</small>` : ""}</dd></div><div><dt>가져간 셀러</dt><dd>${state.sellerProducts.filter(item => item.productId === product.id).length}곳</dd></div></dl>
+    ${hasOptions(product) ? `<div class="supplier-card-options">${productOptions(product).map(option => `<span>${escapeHtml(option.name)} <b>${money(option.supply)}</b> <em class="${Number(option.stock || 0) < LOW_STOCK_LIMIT ? "stock-low" : ""}">재고 ${Number(option.stock || 0)}</em></span>`).join("")}</div>` : ""}
     <div class="supplier-card-actions"><button type="button" class="secondary-button" data-action="edit-product" data-id="${product.id}">수정</button><button type="button" class="secondary-button" data-action="adjust-stock" data-id="${product.id}">재고</button><button type="button" class="secondary-button" data-action="change-price" data-id="${product.id}">가격</button></div>
   </article>`).join("")}</div>`;
 }
 
 function masterProductsTable() {
-  return `<div class="table-wrap"><table><thead><tr><th>상품</th><th>공급사</th><th>카테고리</th><th>공급가</th><th>재고</th><th>선택 셀러</th><th>상태</th><th>최근 관리</th></tr></thead><tbody>${state.products.map(product => `<tr><td><div class="table-product">${productPhoto(product, "table-photo")}<span><strong>${escapeHtml(product.name)}</strong><small>${product.id}</small></span></div></td><td>${escapeHtml(product.supplier)}</td><td>${escapeHtml(product.category)}</td><td>${money(product.supply)}</td><td><b class="${product.stock < 50 ? "stock-low" : ""}">${product.stock}개</b></td><td>${state.sellerProducts.filter(item => item.productId === product.id).length}곳</td><td>${statusChip(product.status)}</td><td><button class="text-button" data-action="product-history" data-id="${product.id}">변경 이력</button></td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="table-wrap"><table><thead><tr><th>상품</th><th>공급사</th><th>카테고리</th><th>공급가</th><th>재고</th><th>선택 셀러</th><th>상태</th><th>최근 관리</th></tr></thead><tbody>${state.products.map(product => `<tr><td><div class="table-product">${productPhoto(product, "table-photo")}<span><strong>${escapeHtml(product.name)}</strong><small>${product.id}</small></span></div></td><td>${escapeHtml(product.supplier)}</td><td>${escapeHtml(product.category)}</td><td>${money(product.supply)}</td><td><b class="${lowStockUnits(product).length ? "stock-low" : ""}">${product.stock}개</b>${hasOptions(product) && lowStockUnits(product).length ? `<small class="stock-low-note">옵션 ${lowStockUnits(product).length}개 부족</small>` : ""}</td><td>${state.sellerProducts.filter(item => item.productId === product.id).length}곳</td><td>${statusChip(product.status)}</td><td><button class="text-button" data-action="product-history" data-id="${product.id}">변경 이력</button></td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function masterPlanUsagePanel() {
@@ -2495,7 +2511,8 @@ function filteredRefunds(role, { ignoreType = false } = {}) {
     const monthMatch = refundMonth === "all" || String(order?.orderDate || "").startsWith(refundMonth);
     const typeMatch = ignoreType || refundTypeFilter === "all" || item.type === refundTypeFilter;
     const searchMatch = !query || [item.id, item.orderId, item.type, item.reason, product?.name, order?.customer, order?.recipientName, order?.phone].some(value => String(value || "").toLowerCase().includes(query));
-    return monthMatch && typeMatch && searchMatch;
+    const openMatch = !refundOpenOnly || refundIsOpen(item);
+    return monthMatch && typeMatch && searchMatch && openMatch;
   });
 }
 function refundTypeCounts(role) {
@@ -2546,6 +2563,7 @@ function refundTemplate(role) {
   return `${sectionHero("취소 · 환불 관리", "소비자 환불, 반품 회수, 공급사 입고 확인, 예치금 충전까지 하나의 상태로 연결합니다.", role === "seller" ? `<button class="primary-button" data-action="open-doogo-money">예치금 관리</button>` : "")}${summary}
     <div class="refund-policy-callout panel"><span>안전한 환불 기준</span><b>${policyMessage}</b><small>위탁셀러는 환불을 요청하고, 환불 확정 권한은 공급사의 입고 확인 또는 회수 없음 승인에만 부여됩니다.</small></div>
     <div class="refund-flow refund-flow-five panel"><div class="refund-step done"><b>1</b><span>소비자 환불<small>판매채널에서 처리</small></span></div><i></i><div class="refund-step done"><b>2</b><span>셀러 요청<small>증빙·사유 접수</small></span></div><i></i><div class="refund-step active"><b>3</b><span>공급사 판단<small>회수·미회수·협의</small></span></div><i></i><div class="refund-step"><b>4</b><span>입고 확인<small>택배 도착·실물 확인</small></span></div><i></i><div class="refund-step"><b>5</b><span>자동 정산<small>예치금 충전·지급 0원</small></span></div></div>
+    ${refundOpenOnly ? `<div class="refund-open-banner"><span><b>처리 중인 요청만 보고 있어요 · ${items.length}건</b><small>환불완료·취소완료된 요청은 숨겼어요. 대시보드 숫자와 같은 기준이에요.</small></span><button type="button" class="secondary-button" data-action="refund-open-only" data-on="0">전체 보기</button></div>` : role !== "master" ? `<div class="refund-open-banner quiet"><span><small>처리 중 ${allItems.filter(refundIsOpen).length}건 · 완료 ${allItems.length - allItems.filter(refundIsOpen).length}건</small></span><button type="button" class="text-button" data-action="refund-open-only" data-on="1">처리 중만 보기</button></div>` : ""}
     <div class="refund-type-tabs panel" role="tablist" aria-label="취소·반품·교환 구분">
       <button type="button" class="${refundTypeFilter === "all" ? "active" : ""}" data-action="refund-type-filter" data-type="all"><span>전체</span><b>${typeCounts.all}</b></button>
       <button type="button" class="${refundTypeFilter === "주문 취소" ? "active" : ""}" data-action="refund-type-filter" data-type="주문 취소"><span>취소</span><b>${typeCounts["주문 취소"]}</b></button>
@@ -2553,7 +2571,7 @@ function refundTemplate(role) {
       <button type="button" class="${refundTypeFilter === "교환" ? "active" : ""}" data-action="refund-type-filter" data-type="교환"><span>교환</span><b>${typeCounts["교환"]}</b></button>
     </div>
     <div class="refund-filter-panel panel"><label><span>월별 조회</span><select id="refundMonthSelect"><option value="all" ${refundMonth === "all" ? "selected" : ""}>전체 기간</option><option value="2026-09" ${refundMonth === "2026-09" ? "selected" : ""}>2026년 9월</option><option value="2026-08" ${refundMonth === "2026-08" ? "selected" : ""}>2026년 8월</option></select></label><label class="refund-search"><span>빠른 검색</span><input id="refundSearch" value="${escapeHtml(refundSearch)}" placeholder="주문번호·상품·주문자명·연락처"></label><button class="secondary-button" data-action="clear-refund-filter">검색 초기화</button><em id="refundResultCount">${items.length}건</em></div>
-    <div class="panel"><div class="panel-head"><div><h3>${role === "master" ? "전체 환불 요청" : "환불 요청 목록"}</h3><p>소비자 환불액과 공급대금 예치금을 분리해 처리 상태를 관리합니다.</p></div><span class="chip orange">${allItems.filter(item => item.status !== "환불완료").length}건 처리중</span></div><div class="table-wrap refund-desktop-table"><table><thead><tr><th>요청번호</th><th>주문/상품</th><th>주문자</th><th>유형·사유</th><th>예치금</th><th>예치금/정산</th><th>상태</th><th>처리</th></tr></thead><tbody id="refundResults" data-role="${role}">${refundRows(role, items)}</tbody></table></div>${refundMobileCards(role, items)}</div>`;
+    <div class="panel"><div class="panel-head"><div><h3>${role === "master" ? "전체 환불 요청" : "환불 요청 목록"}</h3><p>소비자 환불액과 공급대금 예치금을 분리해 처리 상태를 관리합니다.</p></div><span class="chip orange">${allItems.filter(refundIsOpen).length}건 처리중</span></div><div class="table-wrap refund-desktop-table"><table><thead><tr><th>요청번호</th><th>주문/상품</th><th>주문자</th><th>유형·사유</th><th>예치금</th><th>예치금/정산</th><th>상태</th><th>처리</th></tr></thead><tbody id="refundResults" data-role="${role}">${refundRows(role, items)}</tbody></table></div>${refundMobileCards(role, items)}</div>`;
 }
 
 const sellerOrderStages = [
@@ -3044,8 +3062,209 @@ function supplierPickApprovalPanel() {
   </section>`;
 }
 
+/* ===== 공급사 MVP 런칭 묶음 =====
+   1) 판매 시작 준비 체크리스트  2) 공급사 이용약관·정산 정책 동의  3) 새 주문 알림(카카오 알림톡) 설정
+   4) 엑셀(CSV) 대량 상품 등록  5) 수수료 세금계산서 내역 */
+const SUPPLIER_TERMS_VERSION = "2026.09";
+function supplierTerms(loginId = currentAccount?.loginId) { return state.supplierTerms?.[loginId] || null; }
+function supplierTermsAgreed(loginId = currentAccount?.loginId) { return supplierTerms(loginId)?.version === SUPPLIER_TERMS_VERSION; }
+function supplierAlerts(loginId = currentAccount?.loginId) { return state.supplierAlerts?.[loginId] || null; }
+const SUPPLIER_ALERT_EVENTS = [["order", "새 주문이 들어왔을 때", "위탁셀러가 결제하면 바로"], ["cutoff", "발주 마감 1시간 전", "아직 확인 안 한 주문이 있을 때"], ["refund", "취소·반품 요청", "회수 여부를 정해야 할 때"], ["approval", "PICK 승인 요청", "셀러가 내 상품을 팔고 싶을 때"], ["settlement", "정산 지급·보류", "매주 월요일 지급 결과"], ["stock", "재고 50개 미만", "품절 전에 한 번"]];
+function supplierLaunchSteps(loginId = currentAccount?.loginId) {
+  const products = state.products.filter(product => product.supplierLoginId === loginId);
+  return [
+    { key: "terms", done: supplierTermsAgreed(loginId), title: "공급사 이용약관·정산 정책 동의", hint: "수수료 7% · 매주 월요일 정산 · 반품 책임 기준", button: "읽고 동의하기", attrs: 'data-action="open-supplier-terms"' },
+    { key: "docs", done: !memberDocsMissing(loginId), title: "사업자 서류 등록", hint: "사업자등록증·통장 사본", button: "등록하기", attrs: 'data-action="open-docs-modal"' },
+    { key: "address", done: Boolean(supplierAddressBook(loginId)), title: "출고지·반품지 등록", hint: "셀러의 쿠팡·스마트스토어 등록에 들어가요", button: "등록하기", attrs: `data-action="supplier-go-menu" data-index="${menuIndexOf("내 정보", "supplier")}"` },
+    { key: "account", done: Boolean(settlementAccount(loginId)), title: "정산 계좌 등록", hint: "매주 월요일 이 계좌로 입금돼요", button: "등록하기", attrs: 'data-action="open-settlement-account"' },
+    { key: "goodsflow", done: goodsflowConnected(loginId), title: "굿스플로 연동", hint: "송장이 자동으로 출력돼요", button: "연동하기", attrs: 'data-action="goodflow-settings"' },
+    { key: "product", done: products.some(product => product.status === "판매중"), title: "첫 상품 등록", hint: "한 개씩 또는 엑셀로 한 번에", button: "상품 등록", attrs: 'data-action="register-product"' },
+    { key: "alerts", done: Boolean(supplierAlerts(loginId)?.phone), title: "새 주문 알림 받기", hint: "카카오 알림톡으로 새 주문·마감을 알려 드려요", button: "설정하기", attrs: 'data-action="open-supplier-alerts"' }
+  ];
+}
+function supplierLaunchCard() {
+  const steps = supplierLaunchSteps();
+  const done = steps.filter(step => step.done).length;
+  if (done === steps.length) return "";
+  const next = steps.find(step => !step.done);
+  return `<section class="panel sup-launch"><div class="sup-launch-head"><div><span>GET STARTED</span><h3>판매 시작 준비 <b>${done}/${steps.length}</b></h3><p>모두 마치면 위탁셀러 주문을 바로 받고, 정산도 자동으로 들어와요.</p></div><div class="sup-launch-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${steps.length}" aria-valuenow="${done}"><i style="width:${Math.round(done / steps.length * 100)}%"></i></div></div>
+    <ol class="sup-launch-list">${steps.map(step => `<li class="${step.done ? "done" : ""} ${step === next ? "next" : ""}"><i>${step.done ? "✓" : steps.indexOf(step) + 1}</i><span><b>${step.title}</b><small>${step.done ? "완료" : step.hint}</small></span>${step.done ? "" : `<button type="button" class="${step === next ? "primary-button" : "secondary-button"}" ${step.attrs}>${step.button}</button>`}</li>`).join("")}</ol></section>`;
+}
+function supplierTermsModal() {
+  const agreed = supplierTerms();
+  const section = (title, body) => `<section><h4>${title}</h4><p>${body}</p></section>`;
+  openModal(`<div class="sup-terms-head"><span>SUPPLIER AGREEMENT · v${SUPPLIER_TERMS_VERSION}</span><h2>공급사 이용약관 · 정산 정책</h2><p>두고에서 위탁셀러에게 상품을 공급할 때 지키는 약속이에요. 핵심만 먼저 보여 드려요.</p></div>
+    <div class="sup-terms-body">
+      ${section("1. 공급 방식", "위탁셀러가 두고 예치금으로 공급가를 결제하면 주문이 공급사로 들어와요. 공급사는 발주 마감 시간 안에 확인하고, 약속한 배송기간 안에 고객에게 직접 출고해요.")}
+      ${section("2. 수수료", "두고 이용 수수료는 공급가의 7%예요. 정산할 때 자동으로 빼고 입금해요. 가입비·월 이용료는 없어요.")}
+      ${section("3. 정산 주기", "월요일~일요일에 결제된 주문을 모아 다음 주 월요일에 정산 계좌로 입금해요. 배송이 끝나지 않았거나 취소·반품이 진행 중인 주문은 사유와 함께 보류하고, 해결되면 다음 정산에 넣어요.")}
+      ${section("4. 가격·재고", "공급가를 바꾸면 상품을 가져간 위탁셀러에게 바로 알림이 가요. 재고가 0이 되면 셀러 쇼핑몰도 자동으로 품절 처리돼요. 이미 결제된 주문은 결제 당시 공급가로 정산해요.")}
+      ${section("5. 취소·반품", "상품 하자·오배송은 공급사가 왕복 배송비를 부담해요. 단순 변심 반품비는 고객 부담이며, 반품 상품이 도착해 ‘반품 입고 확인’을 누르면 셀러 환불과 정산 차감이 함께 확정돼요.")}
+      ${section("6. 개인정보", "주문자 이름·연락처·주소는 배송 목적으로만 쓰고, 배송 완료 후 3개월이 지나면 가려져요. 다른 목적으로 쓰거나 외부에 넘기면 안 돼요.")}
+      ${section("7. 판매 금지 상품", "위조품, 허가 없는 건강기능식품·의약품, 유통기한이 지난 식품, 법으로 판매가 금지된 상품은 등록할 수 없어요. 확인되면 판매가 중지되고 정산이 보류될 수 있어요.")}
+    </div>
+    <form id="supplierTermsForm" class="sup-terms-form">
+      <label class="check-row"><input type="checkbox" name="terms" ${agreed ? "checked" : ""} required> <span><b>[필수]</b> 공급사 이용약관에 동의해요</span></label>
+      <label class="check-row"><input type="checkbox" name="settlement" ${agreed ? "checked" : ""} required> <span><b>[필수]</b> 수수료 7%·주간 정산·보류 정책에 동의해요</span></label>
+      <label class="check-row"><input type="checkbox" name="privacy" ${agreed ? "checked" : ""} required> <span><b>[필수]</b> 주문자 개인정보 처리 위탁에 동의해요</span></label>
+      <label class="check-row"><input type="checkbox" name="marketing" ${agreed?.marketing ? "checked" : ""}> <span>[선택] 두고 판매 팁·프로모션 소식 받기</span></label>
+      ${agreed ? `<p class="sup-terms-agreed">${escapeHtml(agreed.agreedAt)}에 동의했어요 (v${escapeHtml(agreed.version)})</p>` : ""}
+      <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button><button class="primary-button">${agreed ? "다시 저장" : "모두 동의하고 시작하기"}</button></div>
+    </form>`);
+}
+function supplierAlertsModal() {
+  const saved = supplierAlerts() || {};
+  const events = saved.events || Object.fromEntries(SUPPLIER_ALERT_EVENTS.map(([key]) => [key, true]));
+  openModal(`<h2>새 주문 알림 받기</h2><p>공급사는 대시보드를 늘 보고 있지 않으니, 중요한 일은 카카오 알림톡으로 알려 드려요.</p>
+    <form id="supplierAlertForm" class="sup-alert-form">
+      <div class="form-field"><label>알림 받을 휴대폰 번호 *</label><input name="phone" inputmode="tel" required placeholder="010-0000-0000" value="${escapeHtml(saved.phone || "")}"></div>
+      <div class="form-field"><label>함께 받을 사람 (선택)</label><input name="phone2" inputmode="tel" placeholder="출고 담당자 번호" value="${escapeHtml(saved.phone2 || "")}"></div>
+      <fieldset class="sup-alert-events"><legend>받을 알림</legend>${SUPPLIER_ALERT_EVENTS.map(([key, label, hint]) => `<label class="check-row"><input type="checkbox" name="ev_${key}" ${events[key] ? "checked" : ""}> <span><b>${label}</b><small>${hint}</small></span></label>`).join("")}</fieldset>
+      <div class="form-field"><label>조용한 시간</label><select name="quiet"><option value="none" ${saved.quiet === "none" ? "selected" : ""}>밤에도 받기</option><option value="22-08" ${!saved.quiet || saved.quiet === "22-08" ? "selected" : ""}>밤 10시 ~ 아침 8시는 모아서 아침에</option></select></div>
+      <p class="sup-alert-note">알림톡은 두고 카카오 채널에서 보내요. 실제 발송은 운영 서버 연결 후 시작되고, 지금은 알림 기록에 ‘카카오 알림톡’으로 남아요.</p>
+      <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button><button class="primary-button">저장</button></div>
+    </form>`);
+}
+function supplierAlertsCard() {
+  const saved = supplierAlerts();
+  const on = saved ? SUPPLIER_ALERT_EVENTS.filter(([key]) => saved.events?.[key]).map(([, label]) => label) : [];
+  const terms = supplierTerms();
+  return `<section class="panel sup-alert-card"><div class="profile-section-head"><div><span>NOTIFICATIONS · AGREEMENT</span><h3>알림 · 약관</h3><p>새 주문을 놓치지 않도록 카카오 알림톡을 켜 두세요.</p></div></div>
+    <div class="sup-alert-summary"><div><b>카카오 알림톡</b><span>${saved?.phone ? `${escapeHtml(saved.phone)} · ${on.length}개 알림 켜짐` : "아직 설정하지 않았어요"}</span></div><button type="button" class="secondary-button" data-action="open-supplier-alerts">${saved?.phone ? "변경" : "설정하기"}</button></div>
+    <div class="sup-alert-summary"><div><b>공급사 이용약관 · 정산 정책</b><span>${terms ? `v${escapeHtml(terms.version)} · ${escapeHtml(terms.agreedAt)} 동의` : "동의 전"}</span></div><button type="button" class="secondary-button" data-action="open-supplier-terms">${terms ? "다시 보기" : "읽고 동의하기"}</button></div></section>`;
+}
+/* 알림 채널: 공급사가 설정한 알림톡 번호·이벤트를 따른다 */
+function supplierAlertChannels(loginId, type, fallback) {
+  const saved = supplierAlerts(loginId);
+  if (!saved) return fallback;
+  const key = type === "order" ? "order" : type === "refund" ? "refund" : type === "approval" ? "approval" : type === "settlement" ? "settlement" : type;
+  const kakao = saved.phone && saved.events?.[key] !== false;
+  return [kakao ? `카카오 알림톡 ${String(saved.phone).replace(/(\d{3})-?\d{3,4}-?(\d{4})/, "$1-****-$2")}` : null, "운영센터"].filter(Boolean);
+}
+
+/* 엑셀(CSV) 대량 상품 등록 — 엑셀에서 'CSV UTF-8'로 저장해 올리면 된다 */
+const BULK_COLUMNS = ["상품명", "1차 카테고리", "2차 카테고리", "3차 카테고리", "공급가", "권장 판매가", "소비자가", "재고", "원산지", "배송비", "발주 마감시간", "예상 배송기간", "옵션명", "옵션(이름:공급가:권장가:재고|…)", "상품 설명"];
+const BULK_SAMPLE = [
+  ["경북 부사 사과 5kg", "식품", "농산물", "과일", "26800", "36900", "42000", "120", "경상북도", "무료배송", "10:00", "1~2일", "", "", "당도 선별 가정용 사과"],
+  ["제주 한라봉 선물세트", "식품", "농산물", "과일", "", "", "", "", "제주특별자치도", "무료배송", "11:00", "1~2일", "중량", "2kg:18900:26900:60|3kg:25900:35900:40", "설 선물 추천"]
+];
+let bulkDraft = [];
+function csvEscape(value) { const text = String(value ?? ""); return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text; }
+function parseCsv(text) {
+  const rows = []; let row = [], cell = "", quoted = false;
+  const src = String(text || "").replace(/^﻿/, "");
+  for (let i = 0; i < src.length; i += 1) {
+    const ch = src[i];
+    if (quoted) { if (ch === '"' && src[i + 1] === '"') { cell += '"'; i += 1; } else if (ch === '"') quoted = false; else cell += ch; continue; }
+    if (ch === '"') quoted = true;
+    else if (ch === "," || ch === "\t") { row.push(cell); cell = ""; }
+    else if (ch === "\n" || ch === "\r") { if (ch === "\r" && src[i + 1] === "\n") i += 1; row.push(cell); rows.push(row); row = []; cell = ""; }
+    else cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(cells => cells.some(value => String(value).trim()));
+}
+function bulkValidate(rows) {
+  const header = rows[0] || [];
+  const col = name => header.findIndex(value => String(value).trim().startsWith(name));
+  const idx = { name: col("상품명"), g: col("1차"), c: col("2차"), s: col("3차"), supply: col("공급가"), rec: col("권장"), retail: col("소비자가"), stock: col("재고"), origin: col("원산지"), ship: col("배송비"), cutoff: col("발주"), days: col("예상"), optTitle: col("옵션명"), opts: col("옵션("), summary: col("상품 설명") };
+  if (idx.name < 0 || idx.supply < 0) return { error: "첫 줄에 양식의 제목(상품명, 공급가 …)이 있어야 해요. 양식을 내려받아 그대로 채워 주세요." };
+  const existing = new Set(currentSupplierProducts().map(product => product.name.trim()));
+  const items = rows.slice(1).map((cells, index) => {
+    const get = key => idx[key] >= 0 ? String(cells[idx[key]] || "").trim() : "";
+    const num = key => Number(get(key).replace(/[^\d.-]/g, "") || 0);
+    const errors = [];
+    const options = get("opts") ? get("opts").split("|").map(part => part.split(":").map(value => value.trim())).map(([name, supply, recommended, stock], i) => ({ id: `O${i + 1}`, name, supply: Number(supply || 0), recommended: Number(recommended || 0), stock: Number(stock || 0) })) : [];
+    const item = { row: index + 2, name: get("name"), categoryGroup: get("g") || "식품", category: get("c"), categorySub: get("s"), supply: num("supply"), recommended: num("rec"), retailPrice: num("retail"), stock: num("stock"), origin: get("origin"), shippingPolicy: get("ship") || "무료배송", cutoff: get("cutoff") || "10:00", deliveryDays: get("days") || "1~2일", optionTitle: get("optTitle") || "옵션", options, summary: get("summary") };
+    if (!item.name) errors.push("상품명 없음");
+    else if (existing.has(item.name)) errors.push("같은 이름 상품이 이미 있어요");
+    if (!item.category) errors.push("2차 카테고리 없음");
+    if (options.length) {
+      options.forEach(option => { if (!option.name) errors.push("옵션 이름 없음"); if (!option.supply || !option.recommended) errors.push(`${option.name || "옵션"} 가격 없음`); else if (option.recommended <= option.supply) errors.push(`${option.name} 권장가가 공급가보다 낮아요`); });
+    } else {
+      if (!item.supply) errors.push("공급가 없음");
+      if (!item.recommended) errors.push("권장 판매가 없음");
+      else if (item.supply && item.recommended <= item.supply) errors.push("권장가가 공급가보다 낮아요");
+      if (!(item.stock >= 0)) errors.push("재고는 숫자로");
+    }
+    if (!/^\d{1,2}:\d{2}$/.test(item.cutoff)) errors.push("발주 마감은 10:00 형식");
+    return { ...item, errors: [...new Set(errors)] };
+  });
+  return { items };
+}
+function bulkUploadModal() {
+  bulkDraft = [];
+  openModal(`<div class="bulk-head"><span>BULK UPLOAD</span><h2>엑셀로 상품 한 번에 등록</h2><p>양식을 내려받아 엑셀에서 채운 뒤, <b>CSV UTF-8</b>로 저장해 올려 주세요. 옵션은 <code>2kg:18900:26900:60|3kg:…</code>처럼 적어요.</p></div>
+    <ol class="bulk-steps"><li><b>1</b><span>양식 내려받기</span><button type="button" class="secondary-button" data-action="bulk-template">양식(CSV) 받기</button></li>
+      <li><b>2</b><span>채운 파일 올리기</span><label class="secondary-button bulk-file">파일 선택<input type="file" id="bulkFile" accept=".csv,text/csv,text/plain" hidden></label></li></ol>
+    <div id="bulkPreview" class="bulk-preview"><div class="empty">파일을 올리면 여기서 줄마다 확인해 드려요. 사진·상세페이지는 등록 후 상품 수정에서 넣을 수 있어요.</div></div>
+    <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button><button type="button" class="primary-button" data-action="bulk-register" disabled>등록할 상품 없음</button></div>`);
+  document.querySelector("#modal .modal")?.classList.add("bulk-modal");
+  document.getElementById("bulkFile")?.addEventListener("change", event => {
+    const file = event.target.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => renderBulkPreview(String(reader.result || ""));
+    reader.readAsText(file, "utf-8");
+  });
+}
+function renderBulkPreview(text) {
+  const result = bulkValidate(parseCsv(text));
+  const box = document.getElementById("bulkPreview");
+  const button = document.querySelector('[data-action="bulk-register"]');
+  if (!box || !button) return;
+  if (result.error) { bulkDraft = []; box.innerHTML = `<div class="bulk-error">${escapeHtml(result.error)}</div>`; button.disabled = true; button.textContent = "등록할 상품 없음"; return; }
+  bulkDraft = result.items;
+  const ok = bulkDraft.filter(item => !item.errors.length);
+  box.innerHTML = `<p class="bulk-summary"><b>${bulkDraft.length}줄</b> 중 <b>${ok.length}개</b> 등록 가능${bulkDraft.length - ok.length ? ` · <em>${bulkDraft.length - ok.length}줄 고쳐야 해요</em>` : ""}</p>
+    <div class="bulk-rows">${bulkDraft.map(item => `<div class="bulk-row ${item.errors.length ? "bad" : "good"}"><i>${item.errors.length ? "!" : "✓"}</i><span><b>${escapeHtml(item.name || `${item.row}번째 줄`)}</b><small>${item.errors.length ? escapeHtml(item.errors.join(" · ")) : `${escapeHtml(item.category)} · ${item.options.length ? `옵션 ${item.options.length}개` : `공급가 ${money(item.supply)} · 재고 ${item.stock}개`}`}</small></span><em>${item.row}행</em></div>`).join("")}</div>`;
+  button.disabled = !ok.length;
+  button.textContent = ok.length ? `${ok.length}개 상품 등록` : "등록할 상품 없음";
+}
+function registerBulkProducts() {
+  const ok = bulkDraft.filter(item => !item.errors.length);
+  if (!ok.length) return;
+  ok.forEach((item, index) => {
+    const id = `DF-${5000 + state.products.length * 17 + index}`;
+    const product = { id, emoji: "📦", imageIndex: (state.products.length + index) % 8, name: item.name, brand: workspaceCompany("supplier"), supplier: workspaceCompany("supplier"), supplierLoginId: currentAccount.loginId, supply: item.supply, recommended: item.recommended, retailPrice: item.retailPrice, purchasePrice: 0, surcharge: 0, soldOut: "판매중", exposure: "노출", stock: item.stock, categoryGroup: item.categoryGroup, category: item.category, categorySub: item.categorySub, categoryDetail: "", status: "판매중", tax: "면세", cutoff: item.cutoff, orderName: item.name, orderUnit: 1, shippingPolicy: item.shippingPolicy, carrier: goodflowProfile()?.carrier || "한진택배", warehouse: "기본 창고", weight: 0, unit: "kg", managementCode: id, barcode: "", origin: item.origin, originCountry: "대한민국", deliveryDays: item.deliveryDays, shippingType: "domestic", customsRequired: false, summary: item.summary, detail: item.summary || "엑셀 대량 등록 상품 · 상세페이지를 추가해 주세요", visibility: "전체 공개", imported: false, bulkUploaded: true };
+    if (item.options.length) { product.options = item.options; product.optionTitle = item.optionTitle; syncProductOptionTotals(product); }
+    state.products.unshift(product);
+  });
+  audit("엑셀 대량 상품 등록", `${ok.length}개 상품 · ${ok.map(item => item.name).slice(0, 3).join(", ")}${ok.length > 3 ? " 외" : ""}`, "done", "product");
+  saveState(); closeModal(); supplierLowStockOnly = false; render(); updateAccountUI();
+  showToast(`${ok.length}개 상품을 등록했어요. 사진과 상세페이지는 ‘수정’에서 넣어 주세요.`);
+}
+function downloadBulkTemplate() {
+  const csv = "﻿" + [BULK_COLUMNS, ...BULK_SAMPLE].map(row => row.map(csvEscape).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = Object.assign(document.createElement("a"), { href: url, download: "두고_상품_대량등록_양식.csv" });
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast("양식을 내려받았어요. 예시 2줄을 지우고 채워 주세요.");
+}
+
+/* 수수료 세금계산서: 두고가 공급사에 받는 7% 수수료를 월 단위로 발행 (부가세 포함 금액을 공급가액·세액으로 나눔) */
+function supplierFeeInvoices(loginId = currentAccount?.loginId) {
+  const rows = supplierLedgerRows(loginId || "sup");
+  const byMonth = {};
+  rows.forEach(row => { const month = String(row.date || "").slice(0, 7); if (!month) return; byMonth[month] = (byMonth[month] || 0) + platformFee(row.supply); });
+  return Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0])).map(([month, fee]) => {
+    const [y, m] = month.split("-").map(Number);
+    const issueDate = `${m === 12 ? y + 1 : y}.${String(m === 12 ? 1 : m + 1).padStart(2, "0")}.10`;
+    const supplyAmount = Math.round(fee / 1.1);
+    const closed = month < "2026-09";
+    return { month, label: `${y}년 ${m}월`, fee, supplyAmount, vat: fee - supplyAmount, issueDate, status: closed ? "발행 완료" : "발행 예정" };
+  });
+}
+function supplierInvoicePanel() {
+  const invoices = supplierFeeInvoices();
+  const member = memberByLogin(currentAccount.loginId);
+  return `<section class="panel sup-invoice"><div class="panel-head"><div><h3>수수료 세금계산서</h3><p>두고 수수료(7%)는 매달 10일에 전자세금계산서로 발행돼 ${escapeHtml(member?.email || "가입 이메일")}로 보내 드려요.</p></div></div>
+    ${invoices.length ? `<div class="sup-invoice-list">${invoices.map(inv => `<div class="sup-invoice-row"><span><b>${inv.label} 이용 수수료</b><small>공급가액 ${money(inv.supplyAmount)} · 세액 ${money(inv.vat)} · 발행일 ${inv.issueDate}</small></span><strong>${money(inv.fee)}</strong><em class="${inv.status === "발행 완료" ? "done" : ""}">${inv.status}</em></div>`).join("")}</div>` : `<div class="empty">아직 수수료 내역이 없어요.</div>`}
+    <p class="sup-invoice-note">위탁셀러에게 파는 상품 대금(공급가)의 매출 증빙은 두고가 월별 거래 내역을 셀러별로 정리해 드려요. 정산 내역의 ‘거래명세서’에서 확인할 수 있어요.</p></section>`;
+}
+
 function renderSupplierSection(index) {
-  if (index === 1) return `${sectionHero("상품 관리", "상품 등록·수정·재고·판매 상태를 한 화면에서 관리합니다.", `<button class="primary-button" data-action="register-product">+ 새 상품 등록</button>`)}${supplierPickRequests().length ? `<div class="mapping-callout supplier-pick-callout"><div><b>PICK 승인 요청 ${supplierPickRequests().length}건이 기다리고 있어요.</b><span>승인하면 위탁셀러가 상품을 꾸며 쇼핑몰에 올릴 수 있어요.</span></div><button type="button" class="primary-button" data-action="supplier-go-menu" data-index="9">요청 확인하기 →</button></div>` : ""}<div class="panel"><div class="panel-head"><div><h3>내 등록 상품</h3><p>재고 50개 미만은 빨간색으로 표시됩니다.</p></div><span class="chip">${currentSupplierProducts().length}개 상품</span></div>${supplierProductsTable()}</div>`;
+  if (index === 1) return `${sectionHero("상품 관리", "상품 등록·수정·재고·판매 상태를 한 화면에서 관리합니다.", `<div class="hero-actions"><button type="button" class="secondary-button" data-action="bulk-upload">엑셀로 대량 등록</button><button class="primary-button" data-action="register-product">+ 새 상품 등록</button></div>`)}${supplierPickRequests().length ? `<div class="mapping-callout supplier-pick-callout"><div><b>PICK 승인 요청 ${supplierPickRequests().length}건이 기다리고 있어요.</b><span>승인하면 위탁셀러가 상품을 꾸며 쇼핑몰에 올릴 수 있어요.</span></div><button type="button" class="primary-button" data-action="supplier-go-menu" data-index="9">요청 확인하기 →</button></div>` : ""}<div class="panel"><div class="panel-head"><div><h3>내 등록 상품</h3><p>판매 단위(옵션 포함) 재고가 50개 미만이면 빨간색으로 표시돼요.</p></div><div class="sup-stock-filter"><button type="button" class="${supplierLowStockOnly ? "" : "active"}" data-action="supplier-stock-filter" data-low="0">전체 <b>${currentSupplierProducts().length}</b></button><button type="button" class="${supplierLowStockOnly ? "active" : ""}" data-action="supplier-stock-filter" data-low="1">재고 부족 <b>${supplierLowStockProducts().length}</b></button></div></div>${supplierProductsTable()}</div>`;
   if (index === 2) return supplierConnectionTemplate();
   if (index === 3) return supplierOrderManagementTemplate();
   if (index === 4) return refundTemplate("supplier");
@@ -3056,7 +3275,7 @@ function renderSupplierSection(index) {
   if (index === 10) return supplierSalesStatusTemplate();
   if (index === 11) return supplierCalendarTemplate();
   if (index === 12) return sellerNoticesTemplate();
-  return accountProfileTemplate(supplierSettingsCard() + supplierAddressCard());
+  return accountProfileTemplate(supplierSettingsCard() + supplierAddressCard() + supplierAlertsCard());
 }
 /* 공급사 설정: 상품 자동 승인 (켜 두면 위탁셀러가 PICK하자마자 바로 가져가 판매) */
 function supplierAddressBook(loginId) { return state.supplierAddresses?.[loginId] || null; }
@@ -3724,6 +3943,7 @@ function supplierSettlementTemplate() {
     ${up.holds.length ? `<section class="panel stl-holds"><div class="panel-head"><div><h3>보류 중인 주문 ${up.holds.length}건 · ${money(up.holdAmount)}</h3><p>아래 사유가 풀리면 다음 정산에 ‘보류 해제분’으로 들어가요. 금액이 예상보다 적다면 여기를 확인해 주세요.</p></div></div>${settlementLinesTable(up.holds)}</section>` : ""}
     <section class="panel stl-history"><div class="panel-head"><div><h3>주차별 정산 내역</h3><p>명세서를 누르면 주문별 공급가·수수료·보류·제외 내역을 볼 수 있어요.</p></div>${waiting.length ? `<span class="chip">지급 대기 ${waiting.length}</span>` : ""}</div>
       ${weeks.length ? `<div class="stl-weeks">${weeks.map(week => `<button type="button" class="stl-week" data-action="settlement-statement" data-id="${week.id}"><span><b>${escapeHtml(week.payLabel)}</b><small>${escapeHtml(week.period)} · 주문 ${week.lines.length}건${week.holds.length ? ` · 보류 ${week.holds.length}` : ""}</small></span><span class="stl-week-amt"><strong>${money(week.net)}</strong><em class="${week.status === "지급 완료" ? "ok" : "wait"}">${escapeHtml(week.status)}</em></span></button>`).join("")}</div>` : `<div class="empty">아직 마감된 정산이 없어요.</div>`}</section>
+    ${supplierInvoicePanel()}
     <section class="stl-rules"><b>정산 규칙</b><ul><li>매주 <b>월요일</b>에 지난주 <b>월~일</b> 주문(결제 기준)을 정산해요.</li><li>정산액 = 공급가 − 두고 수수료 <b>7%</b></li><li>환불 완료·취소된 주문은 빠지고, 환불 요청 중·쇼핑몰 확인 필요 주문은 <b>보류</b>돼요. 보류가 풀리면 다음 정산에 들어가요.</li><li>정산 후 환불된 주문은 다음 정산에서 차감해요.</li></ul></section>`;
 }
 function settlementAccountModal() {
@@ -3801,22 +4021,23 @@ function renderSupplier() {
   const readyOrders = orders.filter(o => o.status === "배송준비중" && !o.tracking);
   const pickCount = supplierPickRequests().length;
   const checkOrders = orders.filter(o => o.status === "주문확인필요");
-  const refundWait = state.refunds.filter(refund => refund.supplierLoginId === currentAccount.loginId && !["환불완료", "취소완료"].includes(refund.status));
-  const lowStock = products.filter(product => Number(product.stock) < 50);
+  const refundWait = state.refunds.filter(refund => refund.supplierLoginId === currentAccount.loginId && refundIsOpen(refund));
+  const refundReceipt = refundWait.filter(refund => refund.status === "공급사 입고확인 대기").length;
+  const refundDecide = refundWait.filter(refund => ["공급사 검토중", "협의 필요"].includes(refund.status)).length;
+  const refundOther = refundWait.length - refundDecide - refundReceipt;
+  const refundHint = [refundDecide ? `회수 여부 결정 ${refundDecide}건` : "", refundReceipt ? `반품 입고 확인 ${refundReceipt}건` : "", refundOther ? `회수·진행 중 ${refundOther}건` : ""].filter(Boolean).join(" · ");
+  const lowStock = supplierLowStockProducts(products);
+  const lowStockHint = lowStock.slice(0, 2).map(product => { const units = lowStockUnits(product); return units[0].name ? `${shortProductName(product.name)} 옵션 ${units.length}개` : `${shortProductName(product.name)} ${units[0].stock}개`; }).join(" · ") + (lowStock.length > 2 ? ` 외 ${lowStock.length - 2}개` : "");
   const monthSummary = supplierMonthSummary(supplierMonthRows("2026-09"));
   const todo = [
     { count: newOrders.length, tone: "red", title: "새로 들어온 주문", hint: "위탁셀러가 결제한 주문이에요. 한 번에 확인·포장하세요", button: "한 번에 확인", attrs: 'data-action="supplier-bulk-confirm"' },
     { count: readyOrders.length, tone: "orange", title: "송장 출력을 기다리는 주문", hint: "굿스플로로 한 번에 출력하면 셀러 화면에 바로 들어가요", button: "송장 자동 출력", attrs: 'data-action="auto-issue-all"' },
-    { count: supplierAddressBook(currentAccount.loginId) ? 0 : 1, tone: "red", title: "출고지·반품지 등록", hint: "고객 반품이 돌아올 주소예요. 셀러의 쿠팡·스마트스토어 등록에도 필요해요", button: "등록하기", attrs: 'data-action="supplier-go-menu" data-index="8"' },
-    { count: settlementAccount(currentAccount.loginId) ? 0 : 1, tone: "orange", title: "정산 계좌 등록", hint: "등록 전 정산금은 예치금으로 쌓여요. 계좌를 등록하면 매주 월요일 바로 입금돼요", button: "등록하기", attrs: 'data-action="open-settlement-account"' },
-    { count: memberDocsMissing() ? 1 : 0, tone: "orange", title: "사업자 서류 등록", hint: "사업자등록증·통장 사본을 올려 주세요", button: "등록하기", attrs: 'data-action="open-docs-modal"' },
     { count: allHolds(currentAccount.loginId).length, tone: "red", title: "정산 보류 중인 주문", hint: "사유를 확인하면 다음 정산에 들어가요", button: "사유 보기", attrs: 'data-action="supplier-go-menu" data-index="7"' },
-    { count: goodsflowConnected(currentAccount.loginId) ? 0 : 1, tone: "red", title: "굿스플로 연동이 필요해요", hint: "아이디·비밀번호만 넣으면 송장이 자동으로 출력돼요", button: "연동하기", attrs: 'data-action="goodflow-settings"' },
     { count: goodsflowConnected(currentAccount.loginId) && goodsflowCapacity(goodflowProfile()) < 20 ? goodsflowCapacity(goodflowProfile()) || 1 : 0, tone: "orange", title: "굿스플로 크레딧이 부족해요", hint: `잔액 ${money(goodflowProfile().credit || 0)} · 송장 약 ${goodsflowCapacity(goodflowProfile())}건 출력 가능`, button: "충전하기", attrs: 'data-action="goodsflow-charge"' },
     { count: pickCount, tone: "purple", title: "PICK 승인 요청", hint: "위탁셀러가 내 상품을 팔고 싶어해요", button: "확인하기", attrs: 'data-action="supplier-go-menu" data-index="9"' },
     { count: checkOrders.length, tone: "red", title: "쇼핑몰 확인이 필요한 주문", hint: "취소 여부를 확인해 주세요", button: "확인하기", attrs: 'data-action="open-supplier-orders" data-status="주문확인필요"' },
-    { count: refundWait.length, tone: "orange", title: "처리 중인 취소·반품", hint: "반품 입고를 확인해 주세요", button: "보기", attrs: 'data-action="supplier-go-menu" data-index="4"' },
-    { count: lowStock.length, tone: "purple", title: "재고 50개 미만 상품", hint: "품절 전에 재고를 채워 주세요", button: "재고 보기", attrs: 'data-action="supplier-go-menu" data-index="1"' }
+    { count: refundWait.length, tone: refundDecide || refundReceipt ? "red" : "orange", title: "처리 중인 취소·반품", hint: refundHint || "진행 상황을 확인해 주세요", button: "보기", attrs: 'data-action="supplier-open-refunds"' },
+    { count: lowStock.length, tone: "purple", title: "재고 50개 미만 상품", hint: `${lowStockHint} (옵션 재고 포함)`, button: "재고 보기", attrs: 'data-action="supplier-open-lowstock"' }
   ].filter(item => item.count > 0);
   const step = (index, label, count, caption, tone, attrs) => `<button type="button" class="home-order-step tone-${tone}" ${attrs}><b>${label}</b><strong>${count}<em>건</em></strong><small>${caption}</small></button>`;
   const myIds = new Set(products.map(product => product.id));
@@ -3824,7 +4045,7 @@ function renderSupplier() {
   const sellerStats = [...new Set(sellerItems.map(item => item.sellerLoginId))].map(id => { const rows = supplierLedgerRows().filter(row => row.sellerLoginId === id); return { id, name: memberByLogin(id)?.company || id, items: sellerItems.filter(item => item.sellerLoginId === id).length, live: sellerItems.filter(item => item.sellerLoginId === id && liveChannelIds(item).length).length, qty: rows.reduce((s, r) => s + r.qty, 0), supply: rows.reduce((s, r) => s + r.supply, 0) }; }).sort((a, b) => b.supply - a.supply);
   ensureSettlementWeeks();
   const nextStl = upcomingSettlement(currentAccount.loginId);
-  document.getElementById("supplierView").innerHTML = `
+  document.getElementById("supplierView").innerHTML = `${supplierLaunchCard()}
     <button type="button" class="stl-mini" data-action="supplier-go-menu" data-index="7"><span><small>다음 정산 · ${escapeHtml(nextStl.meta.payLabel)}</small><b>${money(nextStl.net)}</b></span><span class="stl-mini-meta">${escapeHtml(nextStl.meta.period)} 주문 ${nextStl.lines.length}건${nextStl.holds.length ? ` · <em>보류 ${nextStl.holds.length}건</em>` : ""}</span><i>정산 보기 →</i></button>
     <section class="home-today sup-today">
       <div class="home-greeting"><span>오늘 할 일</span><h2>${todo.length ? `오늘 처리할 일이 <em>${todo.length}가지</em> 있어요` : "오늘 처리할 일을 모두 마쳤어요"}</h2><p>버튼 한 번이면 해당 일을 바로 처리하거나 화면으로 이동해요.</p></div>
@@ -6412,6 +6633,15 @@ document.addEventListener("click", event => {
     return;
   }
   if (action === "clear-refund-filter") { refundMonth = "2026-09"; refundSearch = ""; refundTypeFilter = "all"; render(); updateAccountUI(); return; }
+  if (action === "open-supplier-terms") { supplierTermsModal(); return; }
+  if (action === "open-supplier-alerts") { supplierAlertsModal(); return; }
+  if (action === "bulk-upload") { bulkUploadModal(); return; }
+  if (action === "bulk-template") { downloadBulkTemplate(); return; }
+  if (action === "bulk-register") { registerBulkProducts(); return; }
+  if (action === "supplier-open-refunds") { closeModal(); activeMenuIndex = menuIndexOf("취소 · 환불", "supplier"); refundMonth = "all"; refundSearch = ""; refundTypeFilter = "all"; refundOpenOnly = true; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (action === "refund-open-only") { refundOpenOnly = target.dataset.on === "1"; render(); updateAccountUI(); return; }
+  if (action === "supplier-open-lowstock") { closeModal(); activeMenuIndex = menuIndexOf("상품 관리", "supplier"); supplierLowStockOnly = true; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (action === "supplier-stock-filter") { supplierLowStockOnly = target.dataset.low === "1"; render(); updateAccountUI(); return; }
   if (action === "refund-type-filter") { refundTypeFilter = target.dataset.type || "all"; render(); updateAccountUI(); return; }
   if (action === "sales-metric") { salesMetric = target.dataset.metric || "sales"; render(); updateAccountUI(); }
   if (action === "calendar-month") { showToast("현재 프로토타입은 2026년 9월 샘플 데이터를 표시합니다."); return; }
@@ -7505,6 +7735,24 @@ document.addEventListener("submit", event => {
     }
     audit("상품 정보 수정", `${product.id} · ${before} → ${product.name} / ${product.category} / ${money(product.supply)} / ${money(product.recommended)} / ${product.status}`, oldSupply !== product.supply ? "pending" : "done", "product");
     saveState(); closeModal(); render(); showToast("상품 정보를 수정했습니다.");
+  }
+  if (form.id === "supplierTermsForm") {
+    if (!data.terms || !data.settlement || !data.privacy) return showToast("필수 항목 3개에 모두 동의해 주세요.");
+    state.supplierTerms = state.supplierTerms || {};
+    state.supplierTerms[currentAccount.loginId] = { version: SUPPLIER_TERMS_VERSION, agreedAt: ymd(new Date()), marketing: Boolean(data.marketing), by: currentAccount.staff ? currentAccount.staff.name : currentAccount.name };
+    audit("공급사 이용약관 동의", `v${SUPPLIER_TERMS_VERSION} · 이용약관·정산 정책·개인정보 처리 위탁${data.marketing ? " · 마케팅 수신" : ""}`, "done", "account");
+    saveState(); closeModal(); render(); updateAccountUI(); showToast("약관에 동의했어요. 이제 주문을 받을 수 있어요.");
+    return;
+  }
+  if (form.id === "supplierAlertForm") {
+    const phone = formatPhone(String(data.phone || ""));
+    if (!/^01\d-\d{3,4}-\d{4}$/.test(phone)) return showToast("휴대폰 번호를 010-0000-0000 형식으로 입력해 주세요.");
+    const phone2 = data.phone2 ? formatPhone(String(data.phone2)) : "";
+    state.supplierAlerts = state.supplierAlerts || {};
+    state.supplierAlerts[currentAccount.loginId] = { phone, phone2, quiet: data.quiet || "22-08", events: Object.fromEntries(SUPPLIER_ALERT_EVENTS.map(([key]) => [key, Boolean(data[`ev_${key}`])])), updatedAt: ymd(new Date()) };
+    audit("공급사 알림톡 설정", `${phone}${phone2 ? ` · ${phone2}` : ""} · ${SUPPLIER_ALERT_EVENTS.filter(([key]) => data[`ev_${key}`]).map(([, label]) => label).join(", ")}`, "done", "account");
+    saveState(); closeModal(); render(); updateAccountUI(); showToast("알림을 저장했어요. 새 주문이 들어오면 카카오 알림톡으로 알려 드려요.");
+    return;
   }
   if (form.id === "stockForm") {
     const product = productOf(form.dataset.id), oldStock = product.stock, nextStock = Number(data.stock);
