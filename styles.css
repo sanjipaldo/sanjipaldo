@@ -8858,3 +8858,54 @@ body[data-role="supplier"] #appView .workspace-menu button.active { color: #111 
 body[data-role="supplier"] #appView .workspace-menu button.active .menu-icon { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; }
 body[data-role="supplier"] #appView .workspace-menu button.active .menu-step { color: #fff !important; background: #111 !important; border-color: #111 !important; }
 body[data-role="supplier"] #appView .workspace-switcher-entry { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; }
+
+/* =====================================================================
+   v51: 공급사 = Miro 노랑 우선. 검정 면(버튼·선택 탭·강조 카드·달력)을 노랑으로 바꾸고
+   검정은 글씨·얇은 선에만 남긴다. 노랑 위 글씨는 늘 검정(#111).
+   예전 규칙(.app-shell[data-role] … !important)보다 앞서도록 #appView / #modal 로 한 번 더 좁힌다.
+   ===================================================================== */
+body[data-role="supplier"] { --sup-yellow-mid: #ffe58a; --sup-amber: #f2b200; }
+/* 버튼: Miro button-yellow (노랑 알약 + 검정 글씨), 그림자 없이 평평하게 */
+body[data-role="supplier"] :is(#appView, #modal) :is(.primary-button, .small-button.approve, .login-submit) { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; box-shadow: none !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.primary-button, .small-button.approve):hover:not(:disabled) { background: var(--sup-yellow-deep) !important; border-color: var(--sup-yellow-deep) !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.primary-button, .small-button.approve):disabled { color: #9a9a9a !important; background: #f1f1f1 !important; border-color: #f1f1f1 !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.primary-button, .small-button.approve) :is(svg, span, b) { color: inherit !important; }
+/* 선택 탭·필터: 노랑 알약 */
+body[data-role="supplier"] :is(#appView, #modal) :is(.order-filter-tabs, .settlement-tabs, .talk-tabs, .metric-toggle, .refund-type-tabs, .filter-tabs, .pick-status-tabs, .cat-mode, .deposit-filter, .onsale-pagination, .stl-tabs, .sup-tabs, .segmented) button.active,
+body[data-role="supplier"] :is(#appView, #modal) :is(.category-chip.active, .filter-chip.active, .supplier-order-flow button.active) { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; box-shadow: none !important; }
+body[data-role="supplier"] #appView .supplier-order-flow button.active span { color: #111 !important; background: #fff !important; }
+body[data-role="supplier"] #appView .order-stage-menu nav button b.stage-count.has-count { color: #111 !important; background: var(--sup-yellow) !important; box-shadow: none !important; }
+body[data-role="supplier"] #appView .order-stage-menu nav button.active { box-shadow: inset 0 -3px 0 var(--sup-yellow) !important; }
+/* 사이드바 단계 번호·역할 아이콘 */
+body[data-role="supplier"] #appView .workspace-menu .menu-step { color: var(--sup-yellow-dark) !important; background: var(--sup-yellow-light) !important; border-color: var(--sup-yellow-light) !important; }
+body[data-role="supplier"] #appView .workspace-menu button.active .menu-step { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; }
+body[data-role="supplier"] #appView .workspace-switcher-entry .role-icon { color: #111 !important; background: #fff !important; }
+/* 강조 카드: 검정 → 노랑 */
+body[data-role="supplier"] :is(#appView, #modal) :is(.scal-kpis > div.primary, .gf-status, .sales-kpi.primary, .settlement-hero, .supplier-performance, .balance-summary-head, .opening-balance, .refund-summary-card.primary, .deposit-balance-card, .invite-code-box, .billing-card, .home-order-step.tone-red) { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; box-shadow: none !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.scal-kpis > div.primary, .gf-status, .sales-kpi.primary, .settlement-hero, .supplier-performance, .balance-summary-head, .opening-balance, .refund-summary-card.primary, .deposit-balance-card, .invite-code-box, .billing-card, .home-order-step.tone-red) :is(b, strong, h2, h3, h4, p, em, i, .gf-live) { color: #111 !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.scal-kpis > div.primary, .gf-status, .sales-kpi.primary, .settlement-hero, .supplier-performance, .balance-summary-head, .opening-balance, .refund-summary-card.primary, .deposit-balance-card, .invite-code-box, .billing-card, .home-order-step.tone-red) :is(span, small, label) { color: rgba(17,17,17,.68) !important; }
+/* 작은 표시: 숫자 배지·단계 점·상태 칩·스위치·아바타 */
+body[data-role="supplier"] :is(#appView, #modal) :is(.home-todo em, .sup-chip.dark, .sup-stage.stage-live, .talk-avatar.channel, .refund-step.done > b, .refund-step.active > b) { color: #111 !important; background: var(--sup-yellow) !important; }
+body[data-role="supplier"] :is(#appView, #modal) :is(.sup-bulk-step i, .gf-steps .done i, .refund-timeline .done i, .refund-timeline .active i, .order-status-timeline > div.done i, .order-status-timeline > div.active i) { color: #111 !important; background: var(--sup-yellow) !important; box-shadow: 0 0 0 1px var(--sup-yellow-deep) !important; }
+body[data-role="supplier"] :is(#appView, #modal) .automation-switch.on { color: #111 !important; background: var(--sup-yellow) !important; border-color: var(--sup-yellow) !important; }
+body[data-role="supplier"] :is(#appView, #modal) .scal-rank-row i em { background: var(--sup-amber); }
+/* 매출 달력: 연노랑 → 진노랑 한 가지 색 단계 (글씨는 모두 검정) */
+body[data-role="supplier"] .scal-day.level-1 { color: #111; background: var(--sup-yellow-soft); border-color: #f6e8b0; }
+body[data-role="supplier"] .scal-day.level-2 { color: #111; background: var(--sup-yellow-mid); border-color: var(--sup-yellow-mid); }
+body[data-role="supplier"] .scal-day.level-3 { color: #111; background: var(--sup-yellow); border-color: var(--sup-yellow); }
+body[data-role="supplier"] .scal-day.level-4 { color: #111; background: var(--sup-amber); border-color: var(--sup-amber); }
+body[data-role="supplier"] .scal-day:not(:disabled):hover { border-color: #111; box-shadow: 0 6px 16px rgba(242,178,0,.25); }
+body[data-role="supplier"] .scal-legend i.level-1 { background: var(--sup-yellow-soft); border-color: #f6e8b0; }
+body[data-role="supplier"] .scal-legend i.level-2 { background: var(--sup-yellow-mid); border-color: var(--sup-yellow-mid); }
+body[data-role="supplier"] .scal-legend i.level-3 { background: var(--sup-yellow); border-color: var(--sup-yellow); }
+body[data-role="supplier"] .scal-legend i.level-4 { background: var(--sup-amber); border-color: var(--sup-amber); }
+body[data-role="supplier"] .scal-metric { background: var(--sup-yellow-soft); }
+body[data-role="supplier"] #appView :is(.sup-seller-mini i, .gf-guide .done i) { color: #111 !important; background: var(--sup-yellow) !important; }
+body[data-role="supplier"] #appView .talk-room-title small i { background: var(--sup-amber) !important; }
+body[data-role="supplier"] #appView .home-todo:not(.tone-red) { border-left-color: var(--sup-yellow) !important; }
+body[data-role="supplier"] #appView .sup-bulk-step.has { background: var(--sup-yellow-soft); border-color: var(--sup-yellow); box-shadow: none; }
+body[data-role="supplier"] #appView .gf-strip:not(.low) { background: var(--sup-yellow-soft); border-color: var(--sup-yellow); }
+body[data-role="supplier"] .scal-day.today { border-color: var(--sup-amber); box-shadow: inset 0 0 0 2px var(--sup-amber); }
+body[data-role="supplier"] #appView .gf-credit { border: 1.5px solid var(--sup-yellow); }
+body[data-role="supplier"] #appView .gf-carrier-list label:has(input:checked) { border-color: var(--sup-yellow); background: var(--sup-yellow-soft); }
+body[data-role="supplier"] #appView .pg-products button.active { border-color: var(--sup-yellow); box-shadow: inset 0 0 0 1px var(--sup-yellow); background: var(--sup-yellow-soft); }
