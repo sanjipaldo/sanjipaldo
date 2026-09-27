@@ -885,6 +885,7 @@ function priceFromMargin(cost, marginRate) {
 function channelIdFromName(name) {
   const value = String(name || "").toLowerCase();
   if (value.includes("샘플주문")) return "sample";
+  if (value.includes("(엑셀)")) return "excel";
   if (value.includes("쿠팡")) return "coupang";
   if (value.includes("카카오")) return "kakao";
   if (value.includes("카페") || value.includes("cafe")) return "cafe24";
@@ -892,6 +893,7 @@ function channelIdFromName(name) {
 }
 function channelMeta(id) {
   if (id === "sample") return { id: "sample", name: "샘플주문", mark: "S", color: "#111827", status: "internal" };
+  if (id === "excel") return { id: "excel", name: "엑셀 주문", mark: "X", color: "#107c41", status: "internal" };
   return (state.channelConnections?.seller || initialState.channelConnections.seller).find(item => item.id === id) || { id, name: id, mark: "S", color: "#1761e8", status: "disconnected" };
 }
 function channelAsset(id) {
@@ -1385,6 +1387,7 @@ function queueTrackingSync(order) {
   const channelId = channelIdFromName(order.channel);
   order.channelTrackingStatuses = order.channelTrackingStatuses || {};
   if (channelId === "sample") { order.channelTrackingStatuses.sample = "샘플 주문 · 전송 필요 없음"; return; }
+  if (order.importSource === "excel") { order.channelTrackingStatuses = { excel: "엑셀 내려받기 대기" }; delete order.trackingExportedAt; order.channelTrackingSyncedAt = "방금 전"; return; }
   const current = order.channelTrackingStatuses[channelId];
   if (current && !isTrackingPending(current) && current !== "연동 필요") return;
   const channel = sellerChannels(order.sellerLoginId).find(item => item.id === channelId);
@@ -2627,7 +2630,7 @@ function sellerOrderManagementTemplate() {
     <div class="order-auto-item"><span class="order-auto-icon">🚚</span><div><b>송장 쇼핑몰 전송</b><small>${autoQueue.count ? `⏱ 다음 자동 전송 ${escapeHtml(trackingSlotLabel(autoQueue.dueAt))} · ${autoQueue.count}건 대기` : autoPush ? "공급사 송장을 10분마다 모아서 쇼핑몰로 자동 전송해요" : pendingTracking.length ? `보낼 송장 ${pendingTracking.length}건이 기다리고 있어요` : "송장이 들어오면 ‘쇼핑몰 전송’ 버튼으로 보내요"}</small></div><button type="button" class="automation-switch ${autoPush ? "on" : ""}" data-action="toggle-auto-tracking" aria-pressed="${autoPush}" aria-label="송장 자동 쇼핑몰 전송"><i></i>${autoPush ? "자동" : "수동"}</button><button type="button" class="${pendingTracking.length ? "primary-button" : "secondary-button"}" data-action="push-all-tracking" ${pendingTracking.length ? "" : "disabled"}>${pendingTracking.length ? `${autoQueue.count ? "지금 바로 " : "송장 "}${pendingTracking.length}건 전송` : "보낼 송장 없음"}</button>${autoQueue.count ? `<button type="button" class="text-button demo-forward" data-action="demo-forward-tracking">데모: 10분 지난 것처럼</button>` : ""}</div>
   </section>`;
   const freeBanner = `<section class="plan-free-banner"><div><b>무료 요금제 · 수기 주문</b><span>받은 주문을 ‘수기 주문 넣기’로 넣으면 공급사로 바로 전달돼요. 쇼핑몰 주문을 자동으로 가져오려면 스타트 요금제(월 ${money(PLAN_AUTO_FEE)})부터 쓸 수 있어요.</span></div><button type="button" class="secondary-button" data-action="go-seller-menu" data-index="9">요금제 보기</button></section>`;
-  return `${sectionHero("주문 관리", sellerAutomationActive() ? "쇼핑몰 주문을 가져와 결제하면 공급사가 출고하고, 받은 송장을 쇼핑몰로 보냅니다." : "받은 주문을 직접 넣고 결제하면 공급사가 출고해요. 송장은 여기서 확인할 수 있어요.", `<button class="primary-button collect-main-button" data-action="collect-orders"><span aria-hidden="true">⟳</span> 주문 수집하기</button><button class="secondary-button" data-action="open-manual-order">+ 수기 주문 넣기</button>`)}${sellerAutomationActive() ? collectCard : freeBanner}
+  return `${sectionHero("주문 관리", sellerAutomationActive() ? "쇼핑몰 주문을 가져와 결제하면 공급사가 출고하고, 받은 송장을 쇼핑몰로 보냅니다." : "받은 주문을 직접 넣고 결제하면 공급사가 출고해요. 송장은 여기서 확인할 수 있어요.", `<button class="primary-button collect-main-button" data-action="collect-orders"><span aria-hidden="true">⟳</span> 주문 수집하기</button><button class="secondary-button" data-action="open-manual-order">+ 수기 주문 넣기</button><button class="secondary-button" data-action="excel-orders">⬆ 엑셀 대량 주문</button>`)}${sellerAutomationActive() ? collectCard : freeBanner}${excelOrderCard()}
     <div class="order-workspace"><details class="order-stage-menu panel" open><summary><span>${menuIcon("order")}</span><b>주문 관리</b><small>단계별 메뉴 열기</small><i>⌄</i></summary><nav class="stage-grouped">${SELLER_ORDER_STAGE_GROUPS.map(group => `<div class="stage-group tone-${group.tone}">${group.title ? `<p class="stage-group-head"><em>${group.who}</em><span>${group.title}</span></p>` : ""}<div class="stage-group-items">${group.stages.map(key => { const label = sellerOrderStages.find(item => item[0] === key)?.[1] || key; const count = sellerOrderStageCount(key); const urgent = key === "needs-check" && count > 0; return `<button class="${sellerOrderStage === key ? "active" : ""}" type="button" data-action="filter-order-stage" data-stage="${key}"><span>${label}</span><b class="stage-count ${count > 0 ? (urgent ? "urgent" : "has-count") : "zero"}">${count}</b></button>`; }).join("")}</div></div>`).join("")}</nav></details><section class="order-stage-content">
       <div class="order-search-panel panel"><label><span>⌕</span><input id="sellerOrderSearch" value="${escapeHtml(sellerOrderSearch)}" placeholder="주문번호, 고객명, 외부 상품명, 상품코드 검색"></label><div><span>전체 ${orders.length}건</span><span>매핑 ${sellerMappingRequiredOrders().length}건</span><span>결제 ${sellerPaymentRequiredOrders().length}건</span></div></div>
       ${bulkPayBarMarkup()}
@@ -3991,7 +3994,7 @@ async function xlsxReadRows(buffer) {
     });
     rows[r] = Array.from(row, value => value ?? "");
   });
-  return Array.from(rows, row => row || []).filter(row => row.some(value => String(value).trim()));
+  return Array.from(rows, row => row || []);
 }
 async function readSheetFile(file) {
   const buffer = await file.arrayBuffer();
@@ -4030,6 +4033,8 @@ function normalizeTracking(value) {
   return { value: clean.toUpperCase() };
 }
 let trackingUploadDraft = null;
+let trackingFormatId = "";
+let trackingLastRows = null;
 /* 양식: 송장을 기다리는 주문 (체크한 주문이 있으면 그 주문만) + 택배사 목록 시트(드롭다운) */
 function trackingTemplateOrders() {
   const waiting = currentSupplierOrders().filter(order => ["배송준비중", "발주완료", "신규주문"].includes(order.status) && !order.tracking);
@@ -4057,34 +4062,38 @@ function downloadTrackingTemplate(format = "xlsx") {
   return orders.length;
 }
 function validateTrackingRows(rows) {
-  const headerAt = rows.slice(0, 6).findIndex(row => row.some(cell => /주문\s*번호|order\s*(id|no)/i.test(String(cell))));
-  if (headerAt < 0) return { error: "첫 줄(제목 줄)에 ‘주문번호’, ‘택배사’, ‘송장번호’ 칸이 있어야 해요. 두고 양식을 받아서 채워 주세요." };
-  const header = rows[headerAt].map(cell => String(cell).replace(/\s+/g, ""));
-  const col = test => header.findIndex(cell => test.test(cell));
-  const ci = { order: col(/주문번호|order/i), carrier: col(/택배사|택배|carrier|courier/i), tracking: col(/송장|운송장|tracking|invoice/i) };
-  if (ci.tracking < 0) return { error: "‘송장번호’ 칸을 찾지 못했어요. 제목 줄에 ‘송장번호’라고 적어 주세요." };
-  const mine = new Map(currentSupplierOrders().map(order => [order.id.toUpperCase(), order]));
+  const format = trackingFormatId ? xfFormatById(trackingFormatId) : null;
+  const parsed = xfRowsToRecords("tracking", rows, format);
+  if (parsed.error) return { error: format ? parsed.error : "제목 줄에 ‘주문번호’(또는 수취인·연락처)와 ‘송장번호’ 칸이 있어야 해요. 쓰시는 엑셀이라면 ‘양식 관리’에서 열 순서를 맞춰 주세요." };
+  const cols = parsed.columns;
+  if (!cols.includes("tracking")) return { error: "‘송장번호’ 칸을 찾지 못했어요. 양식의 열 순서를 확인해 주세요." };
+  if (!cols.includes("orderId") && !(cols.includes("recipientName") && cols.includes("recipientPhone"))) return { error: "주문을 찾을 칸이 없어요. ‘주문번호’ 또는 ‘수취인 명 + 연락처’ 칸이 필요해요." };
+  const all = currentSupplierOrders();
+  const mine = new Map(all.map(order => [order.id.toUpperCase(), order]));
+  const digits = value => String(value || "").replace(/\D/g, "");
+  const findByRecipient = (name, phone) => { const hits = all.filter(order => ["신규주문", "발주완료", "배송준비중", "배송중"].includes(order.status) && xfNorm(order.recipientName || order.customer) === xfNorm(name) && digits(order.phone) && digits(order.phone) === digits(phone)); const open = hits.filter(order => !order.tracking); return open.length === 1 ? { order: open[0] } : hits.length === 1 ? { order: hits[0] } : hits.length > 1 ? { many: hits.length } : {}; };
   const defaultCarrier = goodflowProfile().carrier || supplierProfile().carrier || "한진택배";
   const seen = new Set(); const seenTracking = new Map(); let skipped = 0;
-  const items = rows.slice(headerAt + 1).map((row, index) => {
-    const line = headerAt + index + 2;
-    const orderId = String(row[ci.order] ?? "").trim().toUpperCase();
-    const tracking = normalizeTracking(row[ci.tracking]);
-    const carrierText = ci.carrier >= 0 ? String(row[ci.carrier] ?? "").trim() : "";
-    if (!orderId && tracking.empty) return null;
+  const items = parsed.records.map(record => {
+    const v = record.values; const line = record.line;
+    let orderId = String(v.orderId || "").trim().toUpperCase();
+    const tracking = normalizeTracking(v.tracking);
+    const carrierText = String(v.carrier || "").trim();
+    if (!orderId && !v.recipientName && tracking.empty) return null;
     if (tracking.empty) { skipped += 1; return null; }
-    const item = { line, orderId, carrierText, tracking: tracking.value || String(row[ci.tracking] ?? ""), errors: [], notes: [], action: "" };
-    const order = mine.get(orderId);
-    if (!orderId) item.errors.push("주문번호가 비었어요");
+    const item = { line, orderId, carrierText, tracking: tracking.value || String(v.tracking || ""), errors: [], notes: [], action: "" };
+    let order = orderId ? mine.get(orderId) : null;
+    if (!orderId && v.recipientName) { const found = findByRecipient(v.recipientName, v.recipientPhone); if (found.order) { order = found.order; orderId = order.id; item.orderId = orderId; item.notes.push(`수취인 ${v.recipientName}·연락처로 주문을 찾았어요`); } else if (found.many) item.errors.push(`${v.recipientName} 님 주문이 ${found.many}건이라 고를 수 없어요 (주문번호 칸을 넣어 주세요)`); else item.errors.push(`${v.recipientName} 님(연락처 일치) 주문을 찾지 못했어요`); }
+    else if (!orderId) item.errors.push("주문번호가 비었어요");
     else if (!order) item.errors.push("내 주문에 없는 주문번호예요");
-    else if (seen.has(orderId)) item.errors.push("같은 주문번호가 위에 또 있어요");
+    if (orderId && seen.has(orderId)) item.errors.push("같은 주문이 위에 또 있어요");
     if (tracking.error) item.errors.push(tracking.error);
     const carrier = carrierText ? resolveCarrierName(carrierText) : defaultCarrier;
     if (!carrier) item.errors.push(`‘${carrierText}’ 택배사를 찾지 못했어요 (택배사 목록 시트에서 골라 주세요)`);
     else { item.carrier = carrier; if (!carrierText) item.notes.push(`택배사 칸이 비어 기본 택배사(${carrier})로 넣어요`); else if (carrier !== carrierText) item.notes.push(`‘${carrierText}’ → ${carrier}`); }
     if (order && !item.errors.length) {
       item.order = order;
-      if (["배송준비중"].includes(order.status) && !order.tracking) item.action = "new";
+      if (order.status === "배송준비중" && !order.tracking) item.action = "new";
       else if (["신규주문", "발주완료"].includes(order.status)) { item.action = "new"; item.notes.push("확인·포장도 같이 처리해요"); }
       else if (order.status === "배송중" && order.tracking) item.action = order.tracking === item.tracking && order.carrier === item.carrier ? "same" : "update";
       else item.errors.push(`${order.status} 주문은 송장을 넣을 수 없어요`);
@@ -4106,6 +4115,7 @@ function applyTrackingToOrder(order, carrier, tracking, { update = false } = {})
   if (notice?.status === "active" && notice.trackingNotice) { pushNotification(order.sellerLoginId, "seller", "tracking", update ? "송장번호가 수정되었습니다" : "송장번호가 등록되었습니다", `${order.id} · ${carrier} ${tracking}${update && before ? ` (이전 ${before})` : ""}`); notice.used += 1; }
 }
 function trackingUploadModal() {
+  trackingLastRows = null;
   const waiting = trackingTemplateOrders();
   const picked = waiting.some(order => supplierOrderPicks.has(order.id));
   trackingUploadDraft = null;
@@ -4114,6 +4124,7 @@ function trackingUploadModal() {
       <li><b>1</b><span>양식 받기 <small>${picked ? `체크한 주문 ${waiting.length}건` : `송장 대기 주문 ${waiting.length}건`}이 채워진 엑셀 · 택배사는 목록에서 골라요</small></span><div class="trk-dl"><button type="button" class="secondary-button" data-action="trk-template" data-format="xlsx">엑셀 양식</button><button type="button" class="text-button" data-action="trk-template" data-format="csv">CSV</button></div></li>
       <li><b>2</b><span>채운 파일 올리기 <small>.xlsx · .csv (주문번호·택배사·송장번호 칸)</small></span><button type="button" class="secondary-button" data-action="trk-pick-file">파일 선택</button><input type="file" id="trackingFile" class="rde-file-input" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" tabindex="-1" aria-hidden="true"></li>
     </ol>
+    ${(() => { const formats = xfFormatsOf(currentAccount.loginId, "tracking"); if (trackingFormatId && !formats.some(format => format.id === trackingFormatId)) trackingFormatId = ""; return `<div class="xf-pick"><label><span>엑셀 양식</span><select data-trk-format><option value="">자동 인식 (제목 줄을 읽어 맞춤)</option>${formats.map(format => `<option value="${format.id}" ${format.id === trackingFormatId ? "selected" : ""}>${escapeHtml(format.name)}</option>`).join("")}</select></label><button type="button" class="secondary-button" data-action="trk-format-manage">양식 관리</button></div><p class="xf-pick-note">쓰시는 송장 엑셀이 따로 있으면 ‘양식 관리’에서 열 순서를 한 번 맞춰 두세요. 주문번호가 없으면 수취인 이름·연락처로 주문을 찾아요.</p>`; })()}
     <div id="trackingPreview" class="bulk-preview"><div class="empty">파일을 올리면 줄마다 주문·택배사·송장번호를 확인해 드려요.</div></div>
     <label class="trk-overwrite"><input type="checkbox" id="trackingOverwrite"> 이미 송장이 있는 주문(배송중)도 새 번호로 바꾸기</label>
     <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button><button type="button" class="primary-button" data-action="trk-apply" disabled>등록할 송장 없음</button></div>`);
@@ -4136,7 +4147,7 @@ function renderTrackingPreview() {
 async function handleTrackingFile(file) {
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) { trackingUploadDraft = { error: "5MB 이하 파일만 올릴 수 있어요." }; return renderTrackingPreview(); }
-  try { const rows = await readSheetFile(file); trackingUploadDraft = rows.length ? validateTrackingRows(rows) : { error: "파일에 내용이 없어요." }; }
+  try { const rows = await readSheetFile(file); trackingLastRows = { rows, name: file.name }; trackingUploadDraft = rows.some(row => row.some(cell => String(cell ?? "").trim())) ? validateTrackingRows(rows) : { error: "파일에 내용이 없어요." }; }
   catch (error) { trackingUploadDraft = { error: error.message || "파일을 읽지 못했어요." }; }
   if (trackingUploadDraft && !trackingUploadDraft.error) trackingUploadDraft.fileName = file.name;
   renderTrackingPreview();
@@ -4156,10 +4167,377 @@ function applyTrackingUpload() {
 document.addEventListener("change", event => {
   if (event.target.id === "trackingFile") { const file = event.target.files?.[0]; event.target.value = ""; handleTrackingFile(file); }
   if (event.target.id === "trackingOverwrite") renderTrackingPreview();
+  if (event.target.matches?.("[data-trk-format]")) { trackingFormatId = event.target.value; if (trackingLastRows) { trackingUploadDraft = validateTrackingRows(trackingLastRows.rows); if (!trackingUploadDraft.error) trackingUploadDraft.fileName = trackingLastRows.name; renderTrackingPreview(); } }
 });
 /* 파일을 창 위로 끌어다 놓아도 된다 */
 document.addEventListener("dragover", event => { if (event.target.closest?.(".trk-modal")) event.preventDefault(); });
 document.addEventListener("drop", event => { if (!event.target.closest?.(".trk-modal")) return; event.preventDefault(); handleTrackingFile(event.dataTransfer?.files?.[0]); });
+/* ===== 엑셀 양식(열 맞춤) =====
+   사업자마다 쓰는 엑셀의 열 순서가 달라서, “A열 = 수령자명, B열 = 연락처 …”처럼 한 번 맞춰 두면
+   다음부터는 그 엑셀을 그대로 올려도 두고 형태로 바뀐다. 공급사 송장 업로드·위탁셀러 대량 주문이 같이 쓴다. */
+const XF_FIELDS = {
+  order: [
+    { key: "channelOrderNo", label: "매출처 주문번호", kw: [/주문\s*번호|order\s*(no|id)/i] },
+    { key: "ordererName", label: "주문자 명", kw: [/^(주문자|구매자)\s*(명|이름)?$/] },
+    { key: "ordererPhone", label: "주문자 연락처", kw: [/(주문자|구매자).*(연락처|전화|휴대)/] },
+    { key: "recipientName", label: "수령자 명", required: true, kw: [/^(수령|수취|받는)\s*(인|자|분|사람)?\s*(명|이름|성명)?$/, /^(수령|수취)(인|자)/] },
+    { key: "recipientPhone", label: "수령자 연락처", required: true, kw: [/(수령|수취|받는).*(연락처|전화|휴대)/, /^(연락처|전화번호|휴대폰|휴대전화)\s*1?$/] },
+    { key: "recipientPhone2", label: "수령자 추가 연락처", kw: [/(연락처|전화|휴대폰?)\s*2|추가\s*연락처|보조\s*연락처|기타\s*연락처/] },
+    { key: "postalCode", label: "우편번호", kw: [/우편|zip/i] },
+    { key: "address", label: "주소", required: true, kw: [/^(수령|수취|받는|배송)?\s*(인|자|지)?\s*(기본)?\s*주소$|^배송지$|통합\s*주소|전체\s*주소/] },
+    { key: "addressDetail", label: "상세주소", kw: [/상세\s*주소|나머지\s*주소/] },
+    { key: "deliveryMessage", label: "배송메모", kw: [/배송\s*(메모|메세지|메시지|요청)|요청\s*사항/] },
+    { key: "productName", label: "상품명", required: true, kw: [/상품\s*명|품\s*명|상품\s*이름|^상품$/] },
+    { key: "optionName", label: "옵션 명", kw: [/옵션/] },
+    { key: "qty", label: "수량", required: true, kw: [/수량|개수|qty/i] },
+    { key: "amount", label: "결제 금액", kw: [/결제\s*금액|판매\s*(가|금액)|주문\s*금액|상품\s*금액|^금액$/] },
+    { key: "productCode", label: "상품코드", kw: [/상품\s*(코드|번호)|관리\s*코드|판매자\s*코드|sku/i] },
+    { key: "customsCode", label: "개인통관고유부호", kw: [/통관/] },
+    { key: "carrier", label: "택배사", kw: [/택배|배송\s*업체|carrier/i] },
+    { key: "tracking", label: "송장번호", kw: [/송장|운송장|tracking|invoice/i] }
+  ],
+  tracking: [
+    { key: "orderId", label: "두고 주문번호", kw: [/두고|주문\s*번호|order/i] },
+    { key: "recipientName", label: "수취인 명", kw: [/^(수령|수취|받는)\s*(인|자|분|사람)?\s*(명|이름|성명)?$/] },
+    { key: "recipientPhone", label: "수취인 연락처", kw: [/(수령|수취|받는).*(연락처|전화|휴대)|^(연락처|전화번호|휴대폰)$/] },
+    { key: "carrier", label: "택배사", kw: [/택배|carrier|courier/i] },
+    { key: "tracking", label: "송장번호", required: true, kw: [/송장|운송장|tracking|invoice/i] }
+  ]
+};
+/* 제목 줄 자동 인식 순서: 더 구체적인 이름부터 */
+const XF_DETECT = {
+  order: ["customsCode", "tracking", "carrier", "channelOrderNo", "addressDetail", "postalCode", "recipientPhone2", "ordererPhone", "recipientPhone", "ordererName", "recipientName", "deliveryMessage", "productCode", "optionName", "productName", "qty", "amount", "address"],
+  tracking: ["tracking", "carrier", "orderId", "recipientPhone", "recipientName"]
+};
+const XF_BLANK = "blank";
+function xfField(kind, key) { return key === XF_BLANK ? { key, label: "공란 (읽지 않음)" } : (XF_FIELDS[kind] || []).find(field => field.key === key) || { key, label: key }; }
+function xfDefaultColumns(kind) {
+  return kind === "order"
+    ? ["channelOrderNo", "ordererName", "ordererPhone", "recipientName", "recipientPhone", "recipientPhone2", "postalCode", "address", "addressDetail", "deliveryMessage", "productName", "optionName", "qty", "amount", "productCode", "customsCode", "carrier", "tracking"]
+    : ["orderId", XF_BLANK, XF_BLANK, XF_BLANK, XF_BLANK, "recipientName", "recipientPhone", XF_BLANK, "carrier", "tracking"]; /* 두고 송장 양식과 같은 순서 */
+}
+function xfFormatsOf(loginId, kind) {
+  state.excelFormats = state.excelFormats || [];
+  let list = state.excelFormats.filter(format => format.ownerLoginId === loginId && format.kind === kind);
+  if (!list.length) {
+    const format = { id: `XF-${kind[0].toUpperCase()}-${Date.now().toString(36)}`, ownerLoginId: loginId, kind, name: "두고 기본 양식", channelName: kind === "order" ? "기타 쇼핑몰" : "", startRow: 2, columns: xfDefaultColumns(kind), builtIn: true };
+    state.excelFormats.push(format); list = [format];
+  }
+  return list;
+}
+function xfFormatById(id) { return (state.excelFormats || []).find(format => format.id === id) || null; }
+function xfNorm(text) { return String(text ?? "").replace(/\s+/g, " ").trim(); }
+function xfDetectKey(kind, header, used) {
+  const text = xfNorm(header).replace(/[()[\]*:]/g, " ").trim();
+  if (!text) return XF_BLANK;
+  for (const key of XF_DETECT[kind]) { if (used.has(key)) continue; const field = xfField(kind, key); if (field.kw?.some(re => re.test(text))) return key; }
+  return XF_BLANK;
+}
+function xfDetectColumns(kind, headerRow) { const used = new Set(); return headerRow.map(header => { const key = xfDetectKey(kind, header, used); if (key !== XF_BLANK) used.add(key); return key; }); }
+function xfDetectHeaderRow(kind, rows) {
+  let best = -1, bestScore = 1;
+  rows.slice(0, 12).forEach((row, index) => { const score = xfDetectColumns(kind, row || []).filter(key => key !== XF_BLANK).length; if (score > bestScore) { best = index; bestScore = score; } });
+  return best;
+}
+/* 엑셀 행 → 항목 이름으로 된 레코드 (format이 없으면 제목 줄을 읽어 자동으로 맞춘다) */
+function xfRowsToRecords(kind, rows, format = null) {
+  let columns, start;
+  if (format) { columns = format.columns; start = Math.max(1, Number(format.startRow) || 2) - 1; }
+  else {
+    const headerAt = xfDetectHeaderRow(kind, rows);
+    if (headerAt < 0) return { error: "제목 줄을 알아보지 못했어요. ‘양식 관리’에서 이 엑셀의 열 순서를 한 번 맞춰 주세요." };
+    columns = xfDetectColumns(kind, rows[headerAt]); start = headerAt + 1;
+  }
+  const records = [];
+  rows.slice(start).forEach((row, index) => {
+    if (!row || !row.some(cell => String(cell ?? "").trim())) return;
+    const values = {}; columns.forEach((key, col) => { if (key && key !== XF_BLANK && values[key] === undefined) values[key] = String(row[col] ?? "").trim(); });
+    records.push({ line: start + index + 1, values });
+  });
+  return { records, columns };
+}
+
+/* ---------- 양식 관리 화면 ---------- */
+let xfDraft = null;
+let xfReturn = null;
+function excelFormatModal(kind, formatId = "", returnTo = null) {
+  const loginId = currentAccount.loginId;
+  const list = xfFormatsOf(loginId, kind);
+  if (returnTo) xfReturn = returnTo;
+  const source = formatId === "__new" ? null : (xfFormatById(formatId) || list[0]);
+  xfDraft = source ? { ...source, columns: [...source.columns], sampleHeaders: null } : { id: "", ownerLoginId: loginId, kind, name: `새 양식 ${list.length + 1}`, channelName: kind === "order" ? "" : "", startRow: 2, columns: [], sampleHeaders: null, isNew: true };
+  openModal(`<div class="xf-head"><span>EXCEL FORMAT</span><h2>${kind === "order" ? "주문 엑셀 양식 관리" : "송장 엑셀 양식 관리"}</h2><p>쓰시는 엑셀의 열 순서(A, B, C…)대로 항목을 맞춰 두면, 다음부터 그 엑셀을 그대로 올려도 두고 형태로 바뀌어요. 한 번만 맞춰 두면 돼요.</p></div>
+    <div class="xf-top"><label class="xf-field"><span>양식 선택</span><select data-xf-select>${list.map(format => `<option value="${format.id}" ${xfDraft.id === format.id ? "selected" : ""}>${escapeHtml(format.name)}</option>`).join("")}<option value="__new" ${xfDraft.isNew ? "selected" : ""}>＋ 새 양식 만들기</option></select></label>
+      <label class="xf-field"><span>양식 이름</span><input data-xf-name maxlength="30" value="${escapeHtml(xfDraft.name)}"></label>
+      ${kind === "order" ? `<label class="xf-field"><span>판매처(쇼핑몰) 이름</span><input data-xf-channel maxlength="20" value="${escapeHtml(xfDraft.channelName || "")}" placeholder="예: 11번가, 지마켓, 자사몰"></label>` : ""}</div>
+    <div class="xf-auto"><button type="button" class="secondary-button" data-action="xf-sample">📄 쓰시는 엑셀로 자동 맞추기</button><small>${kind === "order" ? "쇼핑몰에서 내려받은 주문 엑셀" : "쓰시는 송장 엑셀"}을 올리면 제목 줄을 읽어 열을 알아서 맞춰요. 틀린 칸만 고치면 돼요.</small><input type="file" id="xfSampleFile" class="rde-file-input" accept=".xlsx,.csv" tabindex="-1" aria-hidden="true"></div>
+    <div id="xfBody">${xfBodyMarkup()}</div>
+    <div class="xf-start"><label><span>데이터 시작 행</span><input type="number" min="1" max="50" data-xf-start value="${Number(xfDraft.startRow) || 2}" inputmode="numeric"></label><small>실제 주문이 시작되는 줄 번호예요. 제목 줄이 1줄이면 2.</small></div>
+    <div class="modal-actions xf-actions">${!xfDraft.isNew && !xfDraft.builtIn ? `<button type="button" class="text-button danger" data-action="xf-delete">양식 삭제</button>` : ""}<button type="button" class="secondary-button" data-action="xf-reset">초기화</button><button type="button" class="secondary-button" data-action="xf-exit">나가기</button><button type="button" class="primary-button" data-action="xf-save">양식 저장</button></div>`);
+  document.querySelector("#modal .modal")?.classList.add("xf-modal");
+}
+function xfBodyMarkup() {
+  const d = xfDraft; const kind = d.kind;
+  const used = new Set(d.columns.filter(key => key !== XF_BLANK));
+  const pool = XF_FIELDS[kind].filter(field => !used.has(field.key));
+  const missing = xfMissing(d);
+  return `<div class="xf-section"><h4>기초 항목 <small>눌러서 오른쪽 끝 열로 추가</small></h4><div class="xf-pool">${pool.length ? pool.map(field => `<button type="button" class="${field.required ? "req" : ""}" data-action="xf-add" data-key="${field.key}">＋ ${escapeHtml(field.label)}${field.required ? " *" : ""}</button>`).join("") : `<small>모든 항목을 넣었어요.</small>`}<button type="button" class="blank" data-action="xf-add" data-key="${XF_BLANK}">＋ 공란</button></div></div>
+    <div class="xf-section"><h4>설정 항목 <small>엑셀 열 순서 · 쓰지 않는 열은 ‘공란’</small></h4>
+      <ol class="xf-cols">${d.columns.length ? d.columns.map((key, index) => { const field = xfField(kind, key); return `<li class="${key === XF_BLANK ? "is-blank" : ""} ${field.required ? "is-req" : ""}"><b>${xlsxColName(index)}</b><span><em>${escapeHtml(field.label)}</em>${d.sampleHeaders?.[index] ? `<small>엑셀: ${escapeHtml(d.sampleHeaders[index])}</small>` : ""}</span><select data-xf-col="${index}" aria-label="${xlsxColName(index)}열 항목"><option value="${XF_BLANK}" ${key === XF_BLANK ? "selected" : ""}>공란</option>${XF_FIELDS[kind].map(option => `<option value="${option.key}" ${option.key === key ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}</select><div class="xf-move"><button type="button" data-action="xf-up" data-index="${index}" aria-label="위로" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" data-action="xf-down" data-index="${index}" aria-label="아래로" ${index === d.columns.length - 1 ? "disabled" : ""}>↓</button><button type="button" data-action="xf-del" data-index="${index}" aria-label="빼기">✕</button></div></li>`; }).join("") : `<li class="xf-empty">위 기초 항목을 눌러 열을 추가하거나, 쓰시는 엑셀로 자동 맞추기를 눌러 주세요.</li>`}</ol>
+      ${missing.length ? `<p class="xf-missing">꼭 필요한 항목이 빠졌어요: ${missing.map(escapeHtml).join(", ")}</p>` : `<p class="xf-ok">✓ 필요한 항목이 모두 들어 있어요 (${d.columns.filter(key => key !== XF_BLANK).length}개 열 사용)</p>`}</div>`;
+}
+function xfMissing(d) {
+  const has = key => d.columns.includes(key);
+  const missing = XF_FIELDS[d.kind].filter(field => field.required && !has(field.key)).map(field => field.label);
+  if (d.kind === "tracking" && !has("orderId") && !(has("recipientName") && has("recipientPhone"))) missing.push("두고 주문번호 (또는 수취인 명 + 수취인 연락처)");
+  return missing;
+}
+function xfRerender() { const body = document.getElementById("xfBody"); if (body) body.innerHTML = xfBodyMarkup(); }
+function xfBack(savedId = "") {
+  const back = xfReturn; xfReturn = null; const kind = xfDraft?.kind; xfDraft = null;
+  if (back === "tracking-upload") { if (savedId) trackingFormatId = savedId; trackingUploadModal(); }
+  else if (back === "excel-orders") { if (savedId) excelOrderFormatId = savedId; excelOrderModal(); }
+  else if (back === "excel-export") { if (savedId) excelExportFormatId = savedId; excelTrackingExportModal(); }
+  else closeModal();
+  return kind;
+}
+async function xfApplySample(file) {
+  if (!file || !xfDraft) return;
+  try {
+    const rows = await readSheetFile(file);
+    const headerAt = xfDetectHeaderRow(xfDraft.kind, rows);
+    const header = headerAt >= 0 ? rows[headerAt] : (rows.find(row => row.some(cell => String(cell).trim())) || []);
+    xfDraft.columns = xfDetectColumns(xfDraft.kind, header);
+    while (xfDraft.columns.length && xfDraft.columns[xfDraft.columns.length - 1] === XF_BLANK) xfDraft.columns.pop();
+    xfDraft.sampleHeaders = header.map(cell => xfNorm(cell));
+    xfDraft.startRow = (headerAt >= 0 ? headerAt : 0) + 2;
+    if (xfDraft.isNew && /^새 양식/.test(xfDraft.name)) xfDraft.name = file.name.replace(/\.(xlsx|csv)$/i, "").slice(0, 30);
+    const startInput = document.querySelector("[data-xf-start]"); if (startInput) startInput.value = xfDraft.startRow;
+    const nameInput = document.querySelector("[data-xf-name]"); if (nameInput) nameInput.value = xfDraft.name;
+    xfRerender();
+    const hits = xfDraft.columns.filter(key => key !== XF_BLANK).length;
+    showToast(hits ? `${xfDraft.columns.length}개 열 중 ${hits}개를 알아서 맞췄어요. 틀린 칸만 고쳐 주세요.` : "제목 줄을 알아보지 못했어요. 열마다 항목을 골라 주세요.");
+  } catch (error) { showToast(error.message || "파일을 읽지 못했어요."); }
+}
+function xfSave() {
+  const d = xfDraft; if (!d) return;
+  d.name = String(document.querySelector("[data-xf-name]")?.value || d.name).trim().slice(0, 30);
+  if (!d.name) return showToast("양식 이름을 넣어 주세요.");
+  if (d.kind === "order") d.channelName = String(document.querySelector("[data-xf-channel]")?.value || "").trim().slice(0, 20);
+  d.startRow = Math.min(50, Math.max(1, Number(document.querySelector("[data-xf-start]")?.value) || 2));
+  const missing = xfMissing(d);
+  if (missing.length) return showToast(`꼭 필요한 항목을 넣어 주세요: ${missing[0]}`);
+  const clean = { id: d.id || `XF-${d.kind[0].toUpperCase()}-${Date.now().toString(36)}`, ownerLoginId: d.ownerLoginId, kind: d.kind, name: d.name, channelName: d.channelName || "", startRow: d.startRow, columns: [...d.columns], builtIn: Boolean(d.builtIn), updatedAt: new Date().toLocaleDateString("ko-KR") };
+  state.excelFormats = (state.excelFormats || []).filter(format => format.id !== clean.id);
+  state.excelFormats.push(clean);
+  audit("엑셀 양식 저장", `${clean.kind === "order" ? "주문" : "송장"} 양식 ‘${clean.name}’ · ${clean.columns.length}개 열 · ${clean.startRow}행부터`, "done", clean.kind === "order" ? "order" : "tracking");
+  saveState(); showToast(`‘${clean.name}’ 양식을 저장했어요.`);
+  xfBack(clean.id);
+}
+document.addEventListener("change", event => {
+  if (!xfDraft) return;
+  if (event.target.matches?.("[data-xf-select]")) { const value = event.target.value; const kind = xfDraft.kind; const keep = xfReturn; excelFormatModal(kind, value); xfReturn = keep; return; }
+  if (event.target.matches?.("[data-xf-col]")) { xfDraft.columns[Number(event.target.dataset.xfCol)] = event.target.value; xfRerender(); return; }
+  if (event.target.id === "xfSampleFile") { const file = event.target.files?.[0]; event.target.value = ""; xfApplySample(file); }
+});
+document.addEventListener("input", event => {
+  if (!xfDraft) return;
+  if (event.target.matches?.("[data-xf-name]")) xfDraft.name = event.target.value;
+  if (event.target.matches?.("[data-xf-channel]")) xfDraft.channelName = event.target.value;
+  if (event.target.matches?.("[data-xf-start]")) xfDraft.startRow = Number(event.target.value) || 2;
+});
+function xfHandleAction(action, target) {
+  if (!xfDraft && action !== "xf-open") return false;
+  const d = xfDraft; const index = Number(target.dataset.index);
+  if (action === "xf-add") { d.columns.push(target.dataset.key); if (d.sampleHeaders) d.sampleHeaders.push(""); xfRerender(); document.querySelector(".xf-cols li:last-child")?.scrollIntoView({ block: "nearest" }); return true; }
+  if (action === "xf-up" && index > 0) { [d.columns[index - 1], d.columns[index]] = [d.columns[index], d.columns[index - 1]]; xfRerender(); return true; }
+  if (action === "xf-down" && index < d.columns.length - 1) { [d.columns[index + 1], d.columns[index]] = [d.columns[index], d.columns[index + 1]]; xfRerender(); return true; }
+  if (action === "xf-del") { d.columns.splice(index, 1); d.sampleHeaders?.splice(index, 1); xfRerender(); return true; }
+  if (action === "xf-sample") { document.getElementById("xfSampleFile")?.click(); return true; }
+  if (action === "xf-reset") { d.columns = d.builtIn || d.isNew ? xfDefaultColumns(d.kind) : [...(xfFormatById(d.id)?.columns || xfDefaultColumns(d.kind))]; d.sampleHeaders = null; xfRerender(); showToast("처음 상태로 되돌렸어요. 저장해야 반영돼요."); return true; }
+  if (action === "xf-save") { xfSave(); return true; }
+  if (action === "xf-exit") { xfBack(); return true; }
+  if (action === "xf-delete") { if (!window.confirm(`‘${d.name}’ 양식을 지울까요?`)) return true; state.excelFormats = (state.excelFormats || []).filter(format => format.id !== d.id); saveState(); showToast("양식을 지웠어요."); xfBack(); return true; }
+  return false;
+}
+/* 양식대로 빈 엑셀(제목 줄) 내려받기 */
+function downloadFormatTemplate(format) {
+  const header = format.columns.map(key => key === XF_BLANK ? "" : xfField(format.kind, key).label);
+  const rows = [...Array.from({ length: Math.max(0, (Number(format.startRow) || 2) - 2) }, () => []), header];
+  const carrierCol = format.columns.indexOf("carrier");
+  const trackingCol = format.columns.indexOf("tracking");
+  const sheets = [{ name: format.kind === "order" ? "주문 입력" : "송장 입력", rows, widths: format.columns.map(key => key === "address" ? 36 : key === "productName" ? 28 : 16), textCols: [trackingCol, format.columns.indexOf("recipientPhone"), format.columns.indexOf("channelOrderNo"), format.columns.indexOf("orderId")].filter(index => index >= 0), headerRows: rows.length, validations: carrierCol >= 0 ? [{ sqref: `${xlsxColName(carrierCol)}${rows.length + 1}:${xlsxColName(carrierCol)}${rows.length + 500}`, formula: `'택배사 목록'!$A$2:$A$${CARRIERS.length + 1}` }] : [] }];
+  if (carrierCol >= 0) sheets.push({ name: "택배사 목록", rows: [["택배사 (스마트스토어 기준)", "구분", "네이버 코드"], ...CARRIERS.map(item => [item.name, item.group || "", item.naver || "CH1 (기타)"])], widths: [26, 14, 16] });
+  downloadBytes(xlsxBuild(sheets), `두고_${format.name}_양식.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+}
+/* ===== 위탁셀러 엑셀 대량 주문 (무료 · 무제한) =====
+   다른 쇼핑몰(11번가·지마켓·자사몰 등) 주문 엑셀을 내 양식대로 올리면 두고 주문이 되고,
+   결제 → 공급사 출고 → 송장이 나오면 같은 양식으로 송장 엑셀을 내려받아 쇼핑몰에 올린다.
+   쇼핑몰 API를 부르지 않으므로 요금제 사용량(주문 수집)에 세지 않는다. */
+let excelOrderFormatId = "";
+let excelOrderDraft = null;
+let excelExportFormatId = "";
+function xoSyntheticCode(name, option) { return `XL-${stringSeed(`${xfNorm(name)}|${xfNorm(option)}`).toString(36).toUpperCase()}`; }
+function xoFormatSummary(format) { return format.columns.map((key, index) => key === XF_BLANK ? null : `${xlsxColName(index)} ${xfField("order", key).label}`).filter(Boolean).slice(0, 6).join(" · ") + (format.columns.filter(key => key !== XF_BLANK).length > 6 ? " …" : ""); }
+function excelOrderModal() {
+  const formats = xfFormatsOf(currentAccount.loginId, "order");
+  if (!formats.some(format => format.id === excelOrderFormatId)) excelOrderFormatId = formats[0].id;
+  const format = xfFormatById(excelOrderFormatId);
+  excelOrderDraft = null;
+  openModal(`<div class="bulk-head"><span>EXCEL ORDERS</span><h2>엑셀 대량 주문 등록 <em class="free-badge">무료 · 무제한</em></h2><p>스마트스토어·쿠팡 말고 다른 쇼핑몰(11번가·지마켓·자사몰 등) 주문도 엑셀로 한 번에 넣어요. 쇼핑몰 API를 쓰지 않아서 무료 요금제에서도 건수 제한이 없어요.</p></div>
+    <div class="xf-pick"><label><span>엑셀 양식</span><select data-xo-format>${formats.map(item => `<option value="${item.id}" ${item.id === format.id ? "selected" : ""}>${escapeHtml(item.name)}${item.channelName ? ` · ${escapeHtml(item.channelName)}` : ""}</option>`).join("")}</select></label><button type="button" class="secondary-button" data-action="xo-format-manage">양식 관리</button><button type="button" class="text-button" data-action="xo-template">빈 양식 받기</button></div>
+    <p class="xf-pick-note">판매처 <b>${escapeHtml(format.channelName || "기타 쇼핑몰")}</b> · ${escapeHtml(format.startRow)}행부터 · ${escapeHtml(xoFormatSummary(format))}</p>
+    <button type="button" class="xo-drop" data-action="xo-pick-file"><span aria-hidden="true">⬆</span><b>파일을 눌러 고르거나 여기로 끌어다 놓기</b><small>여러 개 파일을 한 번에 올릴 수 있어요 · .xlsx · .csv</small></button><input type="file" id="excelOrderFile" class="rde-file-input" accept=".xlsx,.csv" multiple tabindex="-1" aria-hidden="true">
+    <div id="excelOrderPreview" class="bulk-preview"><div class="empty">올리면 줄마다 수령자·상품·수량을 확인하고, 이미 연결해 둔 두고 상품은 자동으로 이어 드려요.</div></div>
+    <ol class="xo-flow"><li><b>1</b>엑셀로 주문 등록</li><li><b>2</b>두고 상품 연결 · 결제</li><li><b>3</b>공급사 출고 · 송장</li><li><b>4</b>송장 엑셀 받아 쇼핑몰에 올리기</li></ol>
+    <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button><button type="button" class="primary-button" data-action="xo-apply" disabled>등록할 주문 없음</button></div>`);
+  document.querySelector("#modal .modal")?.classList.add("bulk-modal", "xo-modal");
+}
+async function handleExcelOrderFiles(files) {
+  const list = [...(files || [])].filter(Boolean);
+  if (!list.length) return;
+  const format = xfFormatById(excelOrderFormatId);
+  const mine = currentSellerOrders();
+  const seenKeys = new Set();
+  const items = []; const errors = [];
+  for (const file of list) {
+    try {
+      if (file.size > 10 * 1024 * 1024) { errors.push(`${file.name}: 10MB 이하 파일만 올릴 수 있어요.`); continue; }
+      const rows = await readSheetFile(file);
+      const parsed = xfRowsToRecords("order", rows, format);
+      if (parsed.error) { errors.push(`${file.name}: ${parsed.error}`); continue; }
+      parsed.records.forEach(record => {
+        const v = record.values; const item = { file: file.name, line: record.line, v, errors: [], notes: [] };
+        ["recipientName", "recipientPhone", "address", "productName"].forEach(key => { if (!v[key]) item.errors.push(`${xfField("order", key).label} 칸이 비었어요`); });
+        const qty = Number(String(v.qty || "").replace(/[^\d.]/g, ""));
+        item.qty = Number.isInteger(qty) && qty > 0 ? qty : 0;
+        if (!item.qty) item.errors.push("수량이 1 이상의 숫자가 아니에요");
+        item.amount = Number(String(v.amount || "").replace(/[^\d.]/g, "")) || 0;
+        item.code = v.productCode || xoSyntheticCode(v.productName, v.optionName);
+        const resolved = v.productName ? resolveMappingForCode(item.code) : null;
+        item.resolved = resolved;
+        if (resolved && productNeedsCustoms(resolved.product) && !isValidCustomsCode(normalizeCustomsCode(v.customsCode))) item.errors.push("해외직구 상품이라 개인통관고유부호(P+숫자 12자리)가 필요해요");
+        const key = `${v.channelOrderNo || ""}|${xfNorm(v.productName)}|${xfNorm(v.optionName)}|${xfNorm(v.recipientName)}`;
+        if (v.channelOrderNo && mine.some(order => order.importSource === "excel" && order.channelOrderNo === v.channelOrderNo && xfNorm(order.externalProductName).startsWith(xfNorm(v.productName)))) { item.dup = true; item.notes.push("이미 등록한 주문이라 건너뛰어요"); }
+        else if (seenKeys.has(key)) { item.dup = true; item.notes.push("같은 주문이 위에 또 있어 건너뛰어요"); }
+        seenKeys.add(key);
+        items.push(item);
+      });
+    } catch (error) { errors.push(`${file.name}: ${error.message || "파일을 읽지 못했어요."}`); }
+  }
+  excelOrderDraft = { items, errors, files: list.map(file => file.name) };
+  renderExcelOrderPreview();
+}
+function renderExcelOrderPreview() {
+  const box = document.getElementById("excelOrderPreview"); const button = document.querySelector('[data-action="xo-apply"]'); const draft = excelOrderDraft;
+  if (!box || !button || !draft) return;
+  const ok = draft.items.filter(item => !item.errors.length && !item.dup);
+  const mapped = ok.filter(item => item.resolved).length;
+  const bad = draft.items.filter(item => item.errors.length).length;
+  const dup = draft.items.filter(item => item.dup && !item.errors.length).length;
+  box.innerHTML = `${draft.errors.map(text => `<div class="bulk-error">${escapeHtml(text)}</div>`).join("")}
+    ${draft.items.length ? `<p class="bulk-summary"><b>${draft.items.length}건</b> (${draft.files.length}개 파일) · 등록 <b>${ok.length}</b> · 두고 상품 자동 연결 <b>${mapped}</b> · 연결 필요 <b>${ok.length - mapped}</b>${dup ? ` · 중복 ${dup}` : ""}${bad ? ` · <em>오류 ${bad}</em>` : ""}</p>
+    <div class="bulk-rows xo-rows">${draft.items.slice(0, 200).map(item => { const tone = item.errors.length ? "bad" : item.dup ? "warn" : "good"; const word = item.errors.length ? "오류" : item.dup ? "건너뜀" : item.resolved ? "자동 연결" : "연결 필요"; return `<div class="bulk-row ${tone}"><i>${item.errors.length ? "!" : item.dup ? "=" : "✓"}</i><span><b>${escapeHtml(item.v.recipientName || "-")} · ${escapeHtml(item.v.productName || "-")}${item.v.optionName ? ` / ${escapeHtml(item.v.optionName)}` : ""} ×${item.qty || "?"} <em class="trk-word ${item.resolved && !item.errors.length && !item.dup ? "" : "plain"}">${word}</em></b><small>${escapeHtml(item.file)} ${item.line}행${item.v.channelOrderNo ? ` · 주문번호 ${escapeHtml(item.v.channelOrderNo)}` : ""}${item.resolved ? ` → ${escapeHtml(item.resolved.product.name)}${item.resolved.option ? ` (${escapeHtml(item.resolved.option.name)})` : ""}` : ""}</small>${[...item.errors, ...item.notes].map(text => `<small class="${item.errors.includes(text) ? "err" : "note"}">${escapeHtml(text)}</small>`).join("")}</span></div>`; }).join("")}${draft.items.length > 200 ? `<small class="xo-more">외 ${draft.items.length - 200}건 (등록은 모두 돼요)</small>` : ""}</div>` : draft.errors.length ? "" : `<div class="bulk-error">읽을 주문이 없어요. 양식의 ‘데이터 시작 행’을 확인해 주세요.</div>`}`;
+  button.disabled = !ok.length; button.textContent = ok.length ? `주문 ${ok.length}건 등록` : "등록할 주문 없음";
+}
+function applyExcelOrders() {
+  const draft = excelOrderDraft; if (!draft) return;
+  const format = xfFormatById(excelOrderFormatId);
+  const channelName = format?.channelName || "기타 쇼핑몰";
+  const ok = draft.items.filter(item => !item.errors.length && !item.dup);
+  if (!ok.length) return showToast("등록할 주문이 없어요.");
+  const today = new Date().toISOString().slice(0, 10);
+  const base = Date.now();
+  ok.forEach((item, index) => {
+    const v = item.v; const mapped = item.resolved?.product || null; const option = item.resolved?.option || null;
+    const customsCode = normalizeCustomsCode(v.customsCode);
+    state.orders.unshift({
+      id: `DO-${String(base + index).slice(-9)}`,
+      sellerLoginId: currentAccount.loginId, supplierLoginId: "",
+      assignedSupplier: mapped?.supplier || "", productId: mapped?.id || "", mappedProductId: mapped?.id || "",
+      externalProductName: v.optionName ? `${v.productName} / ${v.optionName}` : v.productName, externalOptionName: v.optionName || "", externalProductCode: item.code,
+      mappingStatus: mapped ? "mapped" : "unmapped", mappingType: item.resolved?.type || "",
+      ...(option ? { optionId: option.id, optionName: option.name } : {}),
+      paymentStatus: "pending", paymentMethod: "",
+      supplyTotal: mapped ? Number(option ? option.supply : mapped.supply) * item.qty : 0,
+      forwardedAt: "", customer: v.ordererName || v.recipientName, ordererPhone: v.ordererPhone || "", recipientName: v.recipientName, phone: v.recipientPhone, phone2: v.recipientPhone2 || "",
+      postalCode: v.postalCode || "", address: v.address, addressDetail: v.addressDetail || "", deliveryMessage: v.deliveryMessage || "",
+      shippingType: mapped?.shippingType || "domestic",
+      personalCustomsCode: customsCode && isValidCustomsCode(customsCode) ? customsCode : "",
+      qty: item.qty, amount: item.amount, channel: `${channelName} (엑셀)`, channelOrderNo: v.channelOrderNo || "",
+      importSource: "excel", excelFormatId: format?.id || "", importedAt: today,
+      status: "신규주문", tracking: "", carrier: mapped?.carrier || "", channelTrackingStatuses: {},
+      orderDate: today, createdAt: "방금 전", settlementStatus: "pending-payment"
+    });
+  });
+  const mappedCount = ok.filter(item => item.resolved).length;
+  audit("엑셀 대량 주문 등록", `${channelName} · ${ok.length}건 (${draft.files.join(", ")}) · 두고 상품 자동 연결 ${mappedCount}건 · 요금제 사용량 차감 없음`, "done", "order");
+  excelOrderDraft = null;
+  saveState(); closeModal();
+  activeMenuIndex = menuIndexOf("주문 관리", "seller"); sellerOrderStage = mappedCount < ok.length ? "mapping" : "payment";
+  render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" });
+  showToast(`주문 ${ok.length}건을 등록했어요.${mappedCount < ok.length ? ` ${ok.length - mappedCount}건은 두고 상품을 한 번만 연결해 주세요 (다음부터 자동).` : " 결제하면 공급사로 바로 전달돼요."}`);
+}
+/* 송장 엑셀 내려받기: 같은 양식으로 택배사·송장번호를 채워서 */
+function xoOrderValue(order, key) {
+  const product = orderSourceProduct(order);
+  return ({ channelOrderNo: order.channelOrderNo || order.id, ordererName: order.customer || "", ordererPhone: order.ordererPhone || "", recipientName: order.recipientName || order.customer || "", recipientPhone: order.phone || "", recipientPhone2: order.phone2 || "", postalCode: order.postalCode || "", address: order.address || "", addressDetail: order.addressDetail || "", deliveryMessage: order.deliveryMessage || "", productName: order.importSource === "excel" ? String(order.externalProductName || "").split(" / ")[0] : (product?.name || order.externalProductName || ""), optionName: order.externalOptionName || order.optionName || "", qty: String(order.qty || 1), amount: order.amount ? String(order.amount) : "", productCode: /^XL-/.test(order.externalProductCode || "") ? "" : (order.externalProductCode || ""), customsCode: order.personalCustomsCode || "", carrier: order.carrier || "", tracking: order.tracking || "" })[key] ?? "";
+}
+function excelExportCandidates(format, scope, onlyChannel) {
+  return currentSellerOrders().filter(order => order.tracking && ["배송중", "배송완료"].includes(order.status))
+    .filter(order => scope === "all" || !order.trackingExportedAt)
+    .filter(order => !onlyChannel || !format?.channelName || String(order.channel || "").startsWith(format.channelName));
+}
+function excelTrackingExportModal() {
+  const formats = xfFormatsOf(currentAccount.loginId, "order");
+  if (!formats.some(format => format.id === excelExportFormatId)) excelExportFormatId = (formats.find(format => format.id === excelOrderFormatId) || formats[0]).id;
+  const format = xfFormatById(excelExportFormatId);
+  const hasTrackingCols = format.columns.includes("tracking");
+  const fresh = excelExportCandidates(format, "new", true).length, all = excelExportCandidates(format, "all", true).length, freshAny = excelExportCandidates(format, "new", false).length;
+  openModal(`<div class="bulk-head"><span>TRACKING EXPORT</span><h2>송장 엑셀 내려받기 <em class="free-badge">무료 · 무제한</em></h2><p>공급사가 넣은 송장을 쇼핑몰에 올릴 엑셀로 내려받아요. 주문을 올릴 때 쓴 양식 그대로 택배사·송장번호가 채워져요.</p></div>
+    <div class="xf-pick"><label><span>엑셀 양식</span><select data-xe-format>${formats.map(item => `<option value="${item.id}" ${item.id === format.id ? "selected" : ""}>${escapeHtml(item.name)}${item.channelName ? ` · ${escapeHtml(item.channelName)}` : ""}</option>`).join("")}</select></label><button type="button" class="secondary-button" data-action="xe-format-manage">양식 관리</button></div>
+    ${hasTrackingCols ? "" : `<p class="xf-pick-note xe-append">이 양식에는 송장 칸이 없어서, 맨 끝 열에 <b>택배사 · 송장번호</b>를 붙여서 내려받아요. 원하는 위치가 있으면 ‘양식 관리’에서 열을 추가해 주세요.</p>`}
+    <fieldset class="xe-scope"><legend>어떤 주문을 받을까요?</legend>
+      <label><input type="radio" name="xeScope" value="new" checked> <span><b>새로 나온 송장만</b><small>아직 내려받지 않은 송장 ${fresh}건</small></span></label>
+      <label><input type="radio" name="xeScope" value="all"> <span><b>송장 나온 주문 전체</b><small>${all}건 (이미 받은 것도 포함)</small></span></label>
+      ${format.channelName ? `<label class="xe-only"><input type="checkbox" name="xeOnly" checked> <span>‘${escapeHtml(format.channelName)}’ 주문만 ${freshAny !== fresh ? `<small>(끄면 다른 판매처 새 송장 ${freshAny}건 포함)</small>` : ""}</span></label>` : ""}
+    </fieldset>
+    <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button><button type="button" class="primary-button" data-action="xe-download">엑셀 내려받기</button></div>`);
+  document.querySelector("#modal .modal")?.classList.add("bulk-modal", "xo-modal");
+}
+function downloadTrackingExport() {
+  const format = xfFormatById(excelExportFormatId); if (!format) return;
+  const scope = document.querySelector('input[name="xeScope"]:checked')?.value || "new";
+  const only = document.querySelector('input[name="xeOnly"]') ? document.querySelector('input[name="xeOnly"]').checked : false;
+  const orders = excelExportCandidates(format, scope, only);
+  if (!orders.length) return showToast(scope === "new" ? "새로 나온 송장이 없어요. ‘송장 나온 주문 전체’로 받아 보세요." : "송장이 나온 주문이 없어요.");
+  const columns = [...format.columns];
+  if (!columns.includes("carrier")) columns.push("carrier");
+  if (!columns.includes("tracking")) columns.push("tracking");
+  const header = columns.map(key => key === XF_BLANK ? "" : xfField("order", key).label);
+  const pad = Array.from({ length: Math.max(0, (Number(format.startRow) || 2) - 2) }, () => []);
+  const rows = [...pad, header, ...orders.map(order => columns.map(key => key === XF_BLANK ? "" : xoOrderValue(order, key)))];
+  const textCols = ["tracking", "recipientPhone", "recipientPhone2", "ordererPhone", "channelOrderNo", "postalCode", "productCode"].map(key => columns.indexOf(key)).filter(index => index >= 0);
+  downloadBytes(xlsxBuild([{ name: "송장", rows, widths: columns.map(key => key === "address" ? 36 : key === "productName" ? 28 : 16), textCols, headerRows: pad.length + 1 }]), `두고_송장_${format.channelName || format.name}_${new Date().toISOString().slice(0, 10)}_${orders.length}건.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  const stamp = new Date().toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  orders.forEach(order => { order.trackingExportedAt = stamp; if (order.importSource === "excel") { order.channelTrackingStatuses = order.channelTrackingStatuses || {}; order.channelTrackingStatuses.excel = "엑셀로 내려받음"; } });
+  audit("송장 엑셀 내려받기", `${format.name} · ${orders.length}건 · 쇼핑몰에 직접 올리는 용도 (API 호출 없음)`, "done", "tracking");
+  saveState(); closeModal(); render(); updateAccountUI();
+  showToast(`송장 ${orders.length}건을 엑셀로 내려받았어요. 쇼핑몰의 ‘송장 일괄 등록’에 올려 주세요.`);
+}
+function excelOrderPendingExport(loginId = currentAccount?.loginId) { return state.orders.filter(order => order.sellerLoginId === loginId && order.importSource === "excel" && order.tracking && !order.trackingExportedAt).length; }
+function excelOrderCard() {
+  const waiting = excelOrderPendingExport();
+  const count = state.orders.filter(order => order.sellerLoginId === currentAccount?.loginId && order.importSource === "excel").length;
+  return `<section class="xo-card panel"><div class="xo-card-text"><b>📄 엑셀 주문 <em class="free-badge">무료 · 무제한</em></b><small>다른 쇼핑몰 주문도 엑셀로 한 번에 넣고, 송장도 엑셀로 받아 쇼핑몰에 올려요.${count ? ` 지금까지 ${count}건` : ""}</small></div><div class="xo-card-actions"><button type="button" class="secondary-button" data-action="excel-orders">⬆ 엑셀 대량 주문</button><button type="button" class="${waiting ? "primary-button" : "secondary-button"}" data-action="excel-tracking-export">⬇ 송장 엑셀 받기${waiting ? ` <em>${waiting}</em>` : ""}</button></div></section>`;
+}
+document.addEventListener("change", event => {
+  if (event.target.matches?.("[data-xo-format]")) { excelOrderFormatId = event.target.value; excelOrderModal(); return; }
+  if (event.target.matches?.("[data-xe-format]")) { excelExportFormatId = event.target.value; excelTrackingExportModal(); return; }
+  if (event.target.id === "excelOrderFile") { const files = [...(event.target.files || [])]; event.target.value = ""; handleExcelOrderFiles(files); }
+});
+document.addEventListener("dragover", event => { if (event.target.closest?.(".xo-modal")) event.preventDefault(); });
+document.addEventListener("drop", event => { if (!event.target.closest?.(".xo-modal") || !document.getElementById("excelOrderFile")) return; event.preventDefault(); handleExcelOrderFiles(event.dataTransfer?.files); });
 
 /* ===== 공급사 주간 정산 =====
    · 매주 월요일, 지난주 월~일에 들어온(결제된) 주문을 정산한다. 기준은 주문일.
@@ -7290,6 +7668,16 @@ document.addEventListener("click", event => {
   if (action === "settlement-tab") { supplierSettlementTab = target.dataset.tab || "scheduled"; render(); updateAccountUI(); return; }
   if (action === "supplier-go-menu") { closeModal(); activeMenuIndex = Number(target.dataset.index || 0); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (action === "tracking-upload") { trackingUploadModal(); return; }
+  if (action?.startsWith("xf-") && xfHandleAction(action, target)) return;
+  if (action === "trk-format-manage") { excelFormatModal("tracking", trackingFormatId, "tracking-upload"); return; }
+  if (action === "excel-orders") { excelOrderModal(); return; }
+  if (action === "excel-tracking-export") { excelTrackingExportModal(); return; }
+  if (action === "xo-format-manage") { excelFormatModal("order", excelOrderFormatId, "excel-orders"); return; }
+  if (action === "xe-format-manage") { excelFormatModal("order", excelExportFormatId, "excel-export"); return; }
+  if (action === "xo-template") { const format = xfFormatById(excelOrderFormatId); if (format) { downloadFormatTemplate(format); showToast(`‘${format.name}’ 양식을 내려받았어요.`); } return; }
+  if (action === "xo-pick-file") { document.getElementById("excelOrderFile")?.click(); return; }
+  if (action === "xo-apply") { applyExcelOrders(); return; }
+  if (action === "xe-download") { downloadTrackingExport(); return; }
   if (action === "trk-template") { const count = downloadTrackingTemplate(target.dataset.format || "xlsx"); showToast(count ? `송장 대기 주문 ${count}건이 담긴 양식을 내려받았어요. 송장번호만 채워 올려 주세요.` : "송장 대기 주문이 없어 빈 양식을 내려받았어요."); return; }
   if (action === "trk-pick-file") { document.getElementById("trackingFile")?.click(); return; }
   if (action === "trk-apply") { applyTrackingUpload(); return; }
