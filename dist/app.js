@@ -519,6 +519,8 @@ const REFUND_DONE = ["환불완료", "취소완료", "교환완료", "거절", "
 function refundIsOpen(item) { return !REFUND_DONE.includes(item.status); }
 let salesMetric = "sales";
 let supplierOrderStatus = "all";
+/* 공급사 주문·출고: 체크한 주문 (단계 탭을 옮겨도 화면에 보이는 주문만 처리) */
+const supplierOrderPicks = new Set();
 let supplierSettlementMonth = "2026-09";
 let expandedSellerProductId = null;
 let expandedNoticeId = null;
@@ -3505,6 +3507,8 @@ function supplierOrderManagementTemplate() {
   const allOrders = currentSupplierOrders();
   const statuses = ["발주완료", "배송준비중", "주문확인필요", "배송중", "배송완료"];
   const filtered = supplierOrderStatus === "all" ? allOrders : allOrders.filter(order => order.status === supplierOrderStatus);
+  const visibleIds = new Set(filtered.map(order => order.id));
+  [...supplierOrderPicks].forEach(id => { if (!visibleIds.has(id)) supplierOrderPicks.delete(id); });
   const readyCount = allOrders.filter(order => order.status === "배송준비중" && !order.tracking).length;
   const newCount = allOrders.filter(order => ["신규주문", "발주완료"].includes(order.status)).length;
   const shippingCount = allOrders.filter(order => order.status === "배송중").length;
@@ -3516,13 +3520,51 @@ function supplierOrderManagementTemplate() {
     </section>
     ${(() => { const conn = goodflowProfile(); return conn.status === "connected" ? `<button type="button" class="gf-strip ${goodsflowCapacity(conn) < 20 ? "low" : ""}" data-action="goodflow-settings"><b>굿스플로 연동중</b><span>${escapeHtml(conn.carrier || "")} · 크레딧 ${money(conn.credit || 0)} (송장 약 ${goodsflowCapacity(conn).toLocaleString()}건)</span><em>충전 · 설정 →</em></button>` : `<button type="button" class="gf-strip off" data-action="goodflow-settings"><b>굿스플로 미연동</b><span>아이디만 연결하면 송장이 자동으로 출력돼요</span><em>연동하기 →</em></button>`; })()}
     <div class="supplier-order-flow panel">${statuses.map((status, index) => `<button type="button" class="${supplierOrderStatus === status ? "active" : ""}" data-action="filter-supplier-orders" data-status="${status}"><span>0${index + 1}</span><b>${status}</b><strong>${allOrders.filter(order => order.status === status).length}</strong></button>`).join("")}</div>
-    <div class="panel"><div class="panel-head"><div><h3>배정 주문</h3><p>송장 출력은 배송준비중 주문에서만 가능하며, 발급 즉시 배송중으로 이동합니다.</p></div><div class="order-filter-tabs"><button class="${supplierOrderStatus === "all" ? "active" : ""}" data-action="filter-supplier-orders" data-status="all">전체 ${allOrders.length}</button>${statuses.map(status => `<button class="${supplierOrderStatus === status ? "active" : ""}" data-action="filter-supplier-orders" data-status="${status}">${status}</button>`).join("")}</div></div>${ordersTable("supplier", "", filtered)}</div>`;
+    <div class="panel"><div class="panel-head"><div><h3>배정 주문</h3><p>송장 출력은 배송준비중 주문에서만 가능하며, 발급 즉시 배송중으로 이동합니다.</p></div><div class="order-filter-tabs"><button class="${supplierOrderStatus === "all" ? "active" : ""}" data-action="filter-supplier-orders" data-status="all">전체 ${allOrders.length}</button>${statuses.map(status => `<button class="${supplierOrderStatus === status ? "active" : ""}" data-action="filter-supplier-orders" data-status="${status}">${status}</button>`).join("")}</div></div><div class="order-pick-bar" data-order-pick-bar>${supplierPickBarMarkup(filtered)}</div>${ordersTable("supplier", "", filtered, { pick: true })}</div>`;
 }
+/* 체크한 주문 일괄 처리 바: 단계마다 할 수 있는 일만 켜진다 */
+function supplierPickGroups(orders) {
+  const picked = orders.filter(order => supplierOrderPicks.has(order.id));
+  return {
+    picked,
+    confirm: picked.filter(order => ["신규주문", "발주완료"].includes(order.status)),
+    issue: picked.filter(order => order.status === "배송준비중" && !order.tracking),
+    channel: picked.filter(order => order.status === "주문확인필요"),
+    deliver: picked.filter(order => order.status === "배송중")
+  };
+}
+function supplierPickBarMarkup(orders) {
+  const g = supplierPickGroups(orders);
+  const all = orders.length && g.picked.length === orders.length;
+  const btn = (op, label, list, primary = true) => `<button type="button" class="${list.length && primary ? "primary-button" : "secondary-button"}" data-action="order-pick-bulk" data-op="${op}" ${list.length ? "" : "disabled"}>${label}${list.length ? ` <em>${list.length}</em>` : ""}</button>`;
+  return `<label class="order-pick-all"><input type="checkbox" data-order-pick-all ${all ? "checked" : ""} ${orders.length ? "" : "disabled"}><span>전체 선택</span></label>
+    <b class="order-pick-count">${g.picked.length ? `${g.picked.length}건 선택` : `주문을 체크하면 한 번에 처리해요`}</b>
+    <div class="order-pick-actions">${btn("confirm", "확인·포장", g.confirm)}${btn("issue", "송장 자동 출력", g.issue)}${btn("channel", "채널 확인 완료", g.channel)}${btn("deliver", "배송완료 반영", g.deliver)}${btn("csv", "발주서 CSV", g.picked, false)}${g.picked.length ? `<button type="button" class="text-button" data-action="order-pick-bulk" data-op="clear">선택 해제</button>` : ""}</div>`;
+}
+function refreshOrderPickUi() {
+  const bar = document.querySelector("[data-order-pick-bar]"); if (!bar) return;
+  const allOrders = currentSupplierOrders();
+  const filtered = supplierOrderStatus === "all" ? allOrders : allOrders.filter(order => order.status === supplierOrderStatus);
+  bar.innerHTML = supplierPickBarMarkup(filtered);
+  document.querySelectorAll("[data-order-pick]").forEach(input => { input.checked = supplierOrderPicks.has(input.value); input.closest("tr, .mobile-order-card")?.classList.toggle("picked", input.checked); });
+  const allOn = filtered.length > 0 && filtered.every(order => supplierOrderPicks.has(order.id));
+  document.querySelectorAll("[data-order-pick-all]").forEach(input => { input.checked = allOn; input.indeterminate = !allOn && filtered.some(order => supplierOrderPicks.has(order.id)); });
+}
+document.addEventListener("change", event => {
+  const one = event.target.closest?.("[data-order-pick]");
+  if (one) { if (one.checked) supplierOrderPicks.add(one.value); else supplierOrderPicks.delete(one.value); refreshOrderPickUi(); return; }
+  const all = event.target.closest?.("[data-order-pick-all]");
+  if (all) {
+    const allOrders = currentSupplierOrders();
+    const filtered = supplierOrderStatus === "all" ? allOrders : allOrders.filter(order => order.status === supplierOrderStatus);
+    filtered.forEach(order => { if (all.checked) supplierOrderPicks.add(order.id); else supplierOrderPicks.delete(order.id); });
+    refreshOrderPickUi();
+  }
+});
 
 /* ===== 공급사 대시보드 (위탁셀러 화면 구조를 따라, 흑백 테마) ===== */
 let supplierCalMonth = "2026-09";
 let supplierCalMetric = "supply";
-let supplierSalesProduct = "all";
 function supplierGoMenuMarkup(index, label, extra = "") { return `data-action="supplier-go-menu" data-index="${index}"${extra}`; }
 /* 공급사 매출 기록: 데모 판매 기록 + 실제 결제 완료 주문 (환불 완료 제외) */
 function supplierLedgerRows(supplierLoginId = currentAccount?.loginId || "sup") {
@@ -3604,6 +3646,8 @@ function supplierPickRequestsTemplate() {
 let priceGraphProductId = "";
 let priceGraphDays = 60;
 let priceGraphData = null;
+let salesSellerPage = 1;
+let salesSellerPageSize = 5;
 const PRICE_GRAPH_COLORS = { max: "#008300", avg: "#2a78d6", min: "#e34948" };
 const MARKET_SELLER_NAMES = ["건강한하루", "푸드플랜", "산들마켓", "오늘의식탁", "바른먹거리", "제철상회", "홈앤쿡", "데일리팜", "소담상점", "그린테이블"];
 function seededRandom(seed) { let value = (seed >>> 0) || 1; return () => { value = (Math.imul(value, 1664525) + 1013904223) >>> 0; return value / 4294967296; }; }
@@ -3680,6 +3724,65 @@ function priceGraphSvg(model) {
     <rect class="pg-hit" x="0" y="0" width="${W}" height="${H}" fill="transparent"/>
   </svg>`;
 }
+/* 판매 현황 셀러 표: 두고에서 PICK한 셀러(진행 단계·누적 판매) + 쇼핑몰 판매가를 한 줄로. 낮은 가격순 + 페이지 */
+function salesSellerRows(product, model) {
+  const recommended = model.recommended;
+  const ledger = supplierLedgerRows();
+  const real = state.sellerProducts.filter(item => item.productId === product.id).map(item => {
+    const seller = memberByLogin(item.sellerLoginId);
+    const live = liveChannelIds(item);
+    const prices = live.map(id => Number(item.channelDetails?.[id]?.salePrice || item.salePrice || recommended));
+    const price = prices.length ? Math.min(...prices) : Number(item.salePrice || recommended);
+    const sold = ledger.filter(row => row.productId === product.id && row.sellerLoginId === item.sellerLoginId);
+    return { key: item.id, name: seller?.company || (item.sellerLoginId === "seller" ? "두고 셀러샵" : item.sellerLoginId), loginId: item.sellerLoginId, real: true, stage: sellerItemStage(item), channels: live, price, priceLabel: sellerItemPriceLabel(item, product), marginLabel: sellerItemMarginLabel(item, product), qty: sold.reduce((sum, row) => sum + row.qty, 0), supply: sold.reduce((sum, row) => sum + row.supply, 0), sub: `${item.copiedAt || ""} PICK` };
+  });
+  const demo = model.listings.filter(listing => !listing.real).map((listing, index) => ({ key: `mk-${index}`, name: listing.seller, loginId: "", real: false, stage: "live", channels: [listing.channelId], price: listing.price, priceLabel: money(listing.price), marginLabel: `${margin(product.supply, listing.price)}%`, qty: null, supply: 0, sub: `예시 데이터 · ${listing.changedDaysAgo >= 89 ? "가격 변동 없음" : `${listing.changedDaysAgo}일 전 변경`}` }));
+  return [...real, ...demo].map(row => ({ ...row, gap: Math.round((row.price - recommended) / recommended * 100) })).sort((a, b) => (a.stage === "live" ? 0 : 1) - (b.stage === "live" ? 0 : 1) || a.price - b.price);
+}
+function salesSellerTableMarkup(product, model) {
+  const rows = salesSellerRows(product, model);
+  const pages = Math.max(1, Math.ceil(rows.length / salesSellerPageSize));
+  salesSellerPage = Math.min(Math.max(1, salesSellerPage), pages);
+  const start = (salesSellerPage - 1) * salesSellerPageSize;
+  const shown = rows.slice(start, start + salesSellerPageSize);
+  const stageChip = stage => `<em class="sup-stage stage-${stage}">${escapeHtml(PICK_STAGE_LABELS[stage] || "판매중")}</em>`;
+  const pageNums = (() => { const list = []; const from = Math.max(1, Math.min(salesSellerPage - 2, pages - 4)); for (let n = from; n <= Math.min(pages, from + 4); n += 1) list.push(n); return list; })();
+  return `<div class="sales-sellers" id="salesSellers">
+    <div class="sales-sellers-head"><h4>셀러별 판매 현황 <small>${rows.length}곳 · 판매중 먼저, 낮은 가격순</small></h4>
+      <div class="sales-size" role="group" aria-label="한 번에 보기">${[5, 10, 20].map(size => `<button type="button" class="${salesSellerPageSize === size ? "active" : ""}" data-action="sales-seller-size" data-size="${size}" aria-pressed="${salesSellerPageSize === size}">${size}개 보기</button>`).join("")}</div></div>
+    <div class="sales-table" role="table" aria-label="${escapeHtml(product.name)} 셀러별 판매 현황">
+      <div class="sales-row head" role="row"><span>위탁셀러</span><span>진행 단계</span><span>판매 쇼핑몰</span><span>판매가 · 권장가 대비</span><span>마진</span><span>누적 판매</span><span>1:1 대화</span></div>
+      ${shown.length ? shown.map(row => `<div class="sales-row ${row.gap < -20 ? "low" : ""}" role="row">
+        <span class="sales-seller"><b>${escapeHtml(row.name)}</b><small>${escapeHtml(row.sub)}</small></span>
+        <span data-label="진행">${stageChip(row.stage)}</span>
+        <span class="sup-channels" data-label="쇼핑몰">${row.channels.length ? row.channels.map(id => channelMark(id, true)).join("") : `<small>아직 전송 전</small>`}</span>
+        <span class="sales-price" data-label="판매가"><b>${escapeHtml(row.priceLabel)}</b><em class="${row.gap < -20 ? "low" : row.gap > 0 ? "high" : ""}">${row.gap > 0 ? "+" : ""}${row.gap}%</em></span>
+        <span data-label="마진"><b>${escapeHtml(row.marginLabel)}</b></span>
+        <span data-label="누적">${row.qty === null ? `<small>-</small>` : `<b>${row.qty}개</b><small>${money(row.supply)}</small>`}</span>
+        <span class="sales-talk"><button type="button" class="talk-chip" data-action="sales-talk" data-login="${escapeHtml(row.loginId)}" data-name="${escapeHtml(row.name)}" data-product="${escapeHtml(product.id)}" aria-label="${escapeHtml(row.name)}에게 두고톡 보내기">💬 두고톡</button></span>
+      </div>`).join("") : `<div class="empty">아직 이 상품을 파는 셀러가 없어요.</div>`}
+    </div>
+    ${pages > 1 ? `<nav class="sales-pager" aria-label="셀러 목록 페이지"><button type="button" data-action="sales-seller-page" data-page="${salesSellerPage - 1}" ${salesSellerPage === 1 ? "disabled" : ""} aria-label="이전 페이지">‹</button>${pageNums.map(n => `<button type="button" class="${n === salesSellerPage ? "active" : ""}" data-action="sales-seller-page" data-page="${n}" aria-current="${n === salesSellerPage ? "page" : "false"}">${n}</button>`).join("")}<button type="button" data-action="sales-seller-page" data-page="${salesSellerPage + 1}" ${salesSellerPage === pages ? "disabled" : ""} aria-label="다음 페이지">›</button><small>${start + 1}–${Math.min(rows.length, start + salesSellerPageSize)} / ${rows.length}곳</small></nav>` : ""}
+  </div>`;
+}
+/* 판매 현황의 셀러에게 1:1 두고톡: 거래처 연결이 없으면 만들고 대화방을 연다 */
+function openSalesTalk({ loginId, name, productId }) {
+  const supplierLoginId = currentAccount.loginId;
+  let sellerLoginId = loginId;
+  if (!sellerLoginId) {
+    sellerLoginId = `mk-${stringSeed(name).toString(36)}`;
+    if (!memberByLogin(sellerLoginId)) state.members.push({ id: `MB-${sellerLoginId}`, loginId: sellerLoginId, password: "", role: "seller", roleLabel: "위탁셀러", name, company: name, representative: "", businessNo: "", contact: "", email: "", status: "approved", appliedAt: "", approvedAt: "", demoMarket: true });
+  }
+  let connection = state.connections.find(c => c.supplierLoginId === supplierLoginId && c.sellerLoginId === sellerLoginId);
+  if (!connection) { connection = { id: `CN-${Date.now().toString(36)}`, supplierLoginId, sellerLoginId, status: "connected", createdAt: new Date().toLocaleDateString("ko-KR"), viaSales: true }; state.connections.push(connection); }
+  else if (connection.status !== "connected") connection.status = "connected";
+  saveState();
+  const product = productOf(productId);
+  activeMenuIndex = menuIndexOf("거래처 연결", "supplier"); activeChatConnectionId = connection.id; chatMobileView = "room";
+  render(); updateAccountUI(); window.scrollTo({ top: 0 }); scrollChatThreadToBottom();
+  const input = document.getElementById("talkInput");
+  if (input && !input.value.trim() && product) { input.value = `안녕하세요, ${workspaceCompany("supplier")}입니다. ${product.name} 판매 관련해서 연락드려요. 권장 소비자가는 ${money(product.recommended || 0)}이에요.`; input.dispatchEvent(new Event("input", { bubbles: true })); if (window.innerWidth > 720) input.focus(); }
+}
 function supplierPriceGraphTemplate(products) {
   if (!products.length) return "";
   const product = products.find(entry => entry.id === priceGraphProductId) || products[0];
@@ -3705,10 +3808,10 @@ function supplierPriceGraphTemplate(products) {
     <div class="pg-legend" aria-hidden="true"><span><i style="background:${PRICE_GRAPH_COLORS.max}"></i>▲ 최고가</span><span><i class="dash" style="border-color:${PRICE_GRAPH_COLORS.avg}"></i>평균가</span><span><i style="background:${PRICE_GRAPH_COLORS.min}"></i>▼ 최저가</span><span><i class="rec"></i>권장 소비자가</span></div>
     <div class="pg-chart">${priceGraphSvg(model)}<div class="pg-tip" role="status" aria-live="polite" hidden></div></div>
     <dl class="pg-stats"><div class="max"><dt>▲ 최고가</dt><dd>${money(model.allMax)}</dd></div><div class="avg"><dt>— 평균가</dt><dd>${money(model.avg)}</dd></div><div class="min"><dt>▼ 최저가</dt><dd>${money(model.allMin)}</dd></div></dl>
-    <div class="pg-lower">
-      <div class="pg-sellers"><h4>셀러별 지금 판매가 <small>${model.listings.length}곳 · 낮은 가격순</small></h4>${model.listings.map(listing => { const gap = Math.round((listing.price - model.recommended) / model.recommended * 100); return `<div class="pg-seller-row">${channelMark(listing.channelId, true)}<span><b>${escapeHtml(listing.seller)}</b><small>${listing.real ? "두고 연동" : "예시 데이터"} · ${listing.changedDaysAgo >= 89 ? "가격 변동 없음" : `${listing.changedDaysAgo}일 전 변경`}</small></span><strong>${money(listing.price)}</strong><em class="${gap < -20 ? "low" : gap > 0 ? "high" : ""}">${gap > 0 ? "+" : ""}${gap}%</em></div>`; }).join("")}</div>
+    ${salesSellerTableMarkup(product, model)}
+    <div class="pg-lower merged">
       <div class="pg-dist"><h4>가격대 분포 <small>지금 기준</small></h4>${dist.map(bucket => `<div class="pg-dist-row"><span>${Math.round(bucket.from / 1000).toLocaleString("ko-KR")}~${Math.round(bucket.to / 1000).toLocaleString("ko-KR")}천원</span><i><em style="width:${Math.round(bucket.count / distMax * 100)}%"></em></i><b>${bucket.count}곳</b></div>`).join("")}
-        <p class="pg-note">권장 소비자가보다 20% 넘게 싸게 파는 셀러는 빨간색으로 보여요. 두고톡으로 가격 정책을 안내할 수 있어요.</p></div>
+        <p class="pg-note">권장 소비자가보다 20% 넘게 싸게 파는 셀러는 빨간색으로 보여요. 셀러마다 ‘두고톡’으로 가격 정책을 바로 안내할 수 있어요.</p></div>
     </div>
     <details class="pg-table"><summary>표로 보기 (주 단위)</summary><table><thead><tr><th>날짜</th><th>최고가</th><th>평균가</th><th>최저가</th><th>셀러</th></tr></thead><tbody>${weekly.map(point => `<tr><td>${point.date}</td><td>${money(point.max)}</td><td>${money(point.avg)}</td><td>${money(point.min)}</td><td>${point.count}곳</td></tr>`).join("")}</tbody></table></details>
     <small class="pg-foot">데모: 두고 셀러샵 외 셀러 판매가는 예시 데이터예요. 실제 서비스에서는 두고가 쇼핑몰에 등록·동기화한 판매가 기록으로 그려요.</small>
@@ -3759,44 +3862,32 @@ function supplierSalesStatusTemplate() {
   const sellers = new Set(approved.map(item => item.sellerLoginId));
   const channelCount = liveItems.reduce((sum, item) => sum + liveChannelIds(item).length, 0);
   const monthRows = supplierMonthRows("2026-09");
-  const shown = supplierSalesProduct === "all" ? products : products.filter(product => product.id === supplierSalesProduct);
-  const stageChip = item => { const stage = sellerItemStage(item); return `<em class="sup-stage stage-${stage}">${escapeHtml(PICK_STAGE_LABELS[stage])}</em>`; };
-  const cards = shown.map(product => {
-    const list = items.filter(item => item.productId === product.id);
-    const rows = monthRows.filter(row => row.productId === product.id);
-    const qty = rows.reduce((sum, row) => sum + row.qty, 0);
-    return `<article class="panel sup-sales-card"><header>${productPhoto(product, "sale-photo")}<div><b>${escapeHtml(product.name)}</b><small>${escapeHtml(product.id)} · 공급가 ${productPriceLabel(product)} · 재고 ${product.stock}개</small></div><dl><div><dt>판매 셀러</dt><dd>${new Set(list.filter(item => item.approvalStatus === "승인완료").map(item => item.sellerLoginId)).size}곳</dd></div><div><dt>9월 판매</dt><dd>${qty}개</dd></div></dl></header>
-      ${list.length ? `<div class="sup-seller-table"><div class="sup-seller-row head"><span>위탁셀러</span><span>진행 단계</span><span>판매 쇼핑몰</span><span>셀러 판매가 · 마진</span><span>누적 판매</span><span></span></div>${list.map(item => { const seller = memberByLogin(item.sellerLoginId); const live = liveChannelIds(item); const sold = supplierLedgerRows().filter(row => row.productId === product.id && row.sellerLoginId === item.sellerLoginId); const connection = state.connections.find(c => c.supplierLoginId === product.supplierLoginId && c.sellerLoginId === item.sellerLoginId && c.status === "connected"); return `<div class="sup-seller-row"><span class="sup-seller-name"><b>${escapeHtml(seller?.company || item.sellerLoginId)}</b><small>${escapeHtml(item.copiedAt || "")} PICK</small></span><span>${stageChip(item)}</span><span class="sup-channels">${live.length ? live.map(id => channelMark(id, true)).join("") : `<small>아직 전송 전</small>`}</span><span><b>${sellerItemPriceLabel(item, product)}</b><small>마진 ${sellerItemMarginLabel(item, product)}</small></span><span><b>${sold.reduce((s, r) => s + r.qty, 0)}개</b><small>${money(sold.reduce((s, r) => s + r.supply, 0))}</small></span><span>${connection ? `<button type="button" class="text-button" data-action="supplier-chat-seller" data-id="${connection.id}">두고톡 →</button>` : ""}</span></div>`; }).join("")}</div>` : `<div class="empty">아직 이 상품을 PICK한 셀러가 없어요.</div>`}
-    </article>`;
-  }).join("");
   return `${sectionHero("판매 현황", "내 상품을 어떤 위탁셀러가 어느 쇼핑몰에서 얼마에 팔고 있는지 한눈에 봐요.")}
     <div class="scal-kpis"><div class="primary"><span>판매 셀러</span><strong>${sellers.size}곳</strong><small>승인한 위탁셀러</small></div><div><span>쇼핑몰 판매중</span><strong>${liveItems.length}건</strong><small>등록 채널 ${channelCount}개</small></div><div><span>9월 판매 수량</span><strong>${monthRows.reduce((s, r) => s + r.qty, 0)}개</strong><small>결제 완료 기준</small></div><div><span>승인 대기</span><strong>${items.filter(item => item.approvalStatus === "승인대기").length}건</strong><small>PICK 요청</small></div></div>
-    ${supplierPriceGraphTemplate(products)}
-    <div class="sup-sales-filter"><label><span>상품</span><select id="supplierSalesProductSelect"><option value="all">전체 상품 (${products.length})</option>${products.map(product => `<option value="${product.id}" ${supplierSalesProduct === product.id ? "selected" : ""}>${escapeHtml(product.name)}</option>`).join("")}</select></label></div>
-    <div class="sup-sales-list">${cards}</div>`;
+    ${supplierPriceGraphTemplate(products)}`;
 }
 /* 주문 일괄 처리: 위탁셀러가 결제한 주문을 한 번에 확인하고, 송장을 한 번에 발급한다 */
-function supplierBulkConfirm() {
-  const targets = currentSupplierOrders().filter(order => ["신규주문", "발주완료"].includes(order.status));
+function supplierBulkConfirm(ids = null) {
+  const targets = currentSupplierOrders().filter(order => ["신규주문", "발주완료"].includes(order.status) && (!ids || ids.has(order.id)));
   targets.forEach(order => { order.status = "배송준비중"; order.confirmedAt = "방금 전"; pushNotification(order.sellerLoginId, "seller", "order", "공급사가 주문을 확인했어요", `${order.id} · 포장 후 송장이 곧 등록돼요.`, ["내부 알림"]); });
   if (targets.length) audit("신규 주문 일괄 확인·포장", `${targets.length}건 · 배송준비중으로 변경 (위탁셀러 화면에 즉시 반영)`, "done", "order");
   return targets.length;
 }
-function supplierBulkDeliver() {
-  const targets = currentSupplierOrders().filter(order => order.status === "배송중");
+function supplierBulkDeliver(ids = null) {
+  const targets = currentSupplierOrders().filter(order => order.status === "배송중" && (!ids || ids.has(order.id)));
   targets.forEach(order => { order.status = "배송완료"; order.deliveredAt = "방금 전"; order.provisionalTracking = false; pushNotification(order.sellerLoginId, "seller", "shipment", "배송이 완료되었습니다", `${order.id} · ${order.carrier} ${order.tracking}`, ["내부 알림"]); });
   if (targets.length) audit("배송완료 일괄 반영", `${targets.length}건 · 택배사 배송완료 반영 (데모)`, "done", "shipment");
   return targets.length;
 }
-function supplierOrdersCsv(status) {
-  const orders = currentSupplierOrders().filter(order => status === "all" || order.status === status);
+function supplierOrdersCsv(status, ids = null) {
+  const orders = currentSupplierOrders().filter(order => (status === "all" || order.status === status) && (!ids || ids.has(order.id)));
   const header = ["주문번호", "주문일", "상태", "위탁셀러", "판매채널", "상품코드", "상품명", "옵션", "수량", "공급가 합계", "수취인", "연락처", "우편번호", "주소", "상세주소", "배송메시지", "개인통관고유부호", "택배사", "송장번호"];
   const rows = orders.map(order => { const product = orderSourceProduct(order); return [order.id, order.orderDate, order.status, memberByLogin(order.sellerLoginId)?.company || order.sellerLoginId, order.channel, product?.id || "", product?.name || "", order.optionName || "", order.qty, orderUnitSupply(order) * Number(order.qty || 1), order.recipientName || order.customer, order.phone, order.postalCode, order.address, order.addressDetail, order.deliveryMessage, order.personalCustomsCode || "", order.carrier || "", order.tracking || ""]; });
   const csv = "﻿" + [header, ...rows].map(row => row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
   try {
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    link.download = `두고_발주서_${status === "all" ? "전체" : status}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `두고_발주서_${ids ? `선택${orders.length}건` : status === "all" ? "전체" : status}_${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link); link.click(); link.remove();
     return orders.length;
   } catch { return -1; }
@@ -4108,12 +4199,12 @@ function orderSellerLabel(order) {
   const seller = memberByLogin(order.sellerLoginId || "seller");
   return seller?.company || order.sellerLoginId || "위탁셀러";
 }
-function mobileOrderCards(orders, role) {
+function mobileOrderCards(orders, role, pick = false) {
   if (!orders.length) return `<div class="mobile-order-list"><div class="empty">표시할 주문이 없습니다.</div></div>`;
   return `<div class="mobile-order-list">${orders.map(order => {
     const product = orderSourceProduct(order);
     const displayName = role === "supplier" ? product?.name : orderSellerTitle(order);
-    return `<article class="mobile-order-card ${orderNeedsMapping(order) ? "mapping-required" : ""}"><header><button data-action="order-detail" data-id="${order.id}">${escapeHtml(order.id)}</button>${statusChip(order.status)}</header><small class="mobile-order-time">${escapeHtml(order.createdAt)}</small><div class="mobile-card-product">${productPhoto(product,"table-photo")}<span><small>${channelMark(channelIdFromName(order.channel),true)} ${escapeHtml(order.channel)} · ${order.shippingType === "overseas" ? "해외직구" : "국내배송"}</small><strong>${escapeHtml(displayName || "매핑 전 외부 상품")}</strong>${orderOptionTag(order)}<em>${orderMappingStatus(order) === "mapped" ? `${escapeHtml(order.mappedProductId || order.productId)} · ${escapeHtml(order.assignedSupplier || product?.supplier || "미배정")}` : `외부코드 ${escapeHtml(order.externalProductCode || "-")} · 공급사 미배정`}</em></span></div><dl><div><dt>수취인</dt><dd>${escapeHtml(order.recipientName || order.customer)}<small>${escapeHtml(order.phone || "-")}</small></dd></div><div><dt>수량</dt><dd>${order.qty}개</dd></div><div><dt>주문금액</dt><dd>${money(order.amount)}</dd></div></dl><footer class="order-cell-actions">${orderActionsMarkup(order, role)}</footer></article>`;
+    return `<article class="mobile-order-card ${orderNeedsMapping(order) ? "mapping-required" : ""} ${pick && supplierOrderPicks.has(order.id) ? "picked" : ""}"><header>${pick ? `<label class="order-pick"><input type="checkbox" data-order-pick value="${escapeHtml(order.id)}" ${supplierOrderPicks.has(order.id) ? "checked" : ""} aria-label="${escapeHtml(order.id)} 선택"></label>` : ""}<button data-action="order-detail" data-id="${order.id}">${escapeHtml(order.id)}</button>${statusChip(order.status)}</header><small class="mobile-order-time">${escapeHtml(order.createdAt)}</small><div class="mobile-card-product">${productPhoto(product,"table-photo")}<span><small>${channelMark(channelIdFromName(order.channel),true)} ${escapeHtml(order.channel)} · ${order.shippingType === "overseas" ? "해외직구" : "국내배송"}</small><strong>${escapeHtml(displayName || "매핑 전 외부 상품")}</strong>${orderOptionTag(order)}<em>${orderMappingStatus(order) === "mapped" ? `${escapeHtml(order.mappedProductId || order.productId)} · ${escapeHtml(order.assignedSupplier || product?.supplier || "미배정")}` : `외부코드 ${escapeHtml(order.externalProductCode || "-")} · 공급사 미배정`}</em></span></div><dl><div><dt>수취인</dt><dd>${escapeHtml(order.recipientName || order.customer)}<small>${escapeHtml(order.phone || "-")}</small></dd></div><div><dt>수량</dt><dd>${order.qty}개</dd></div><div><dt>주문금액</dt><dd>${money(order.amount)}</dd></div></dl><footer class="order-cell-actions">${orderActionsMarkup(order, role)}</footer></article>`;
   }).join("")}</div>`;
 }
 
@@ -4130,17 +4221,18 @@ function orderStatusHelpIcon() {
   return `<span class="status-help"><button type="button" class="status-help-trigger" aria-label="주문 상태 흐름 안내">?</button></span>`;
 }
 
-function ordersTable(role, query = "", sourceOverride = null) {
+function ordersTable(role, query = "", sourceOverride = null, { pick = false } = {}) {
   const source = sourceOverride || (role === "seller" ? currentSellerOrders() : role === "supplier" ? currentSupplierOrders() : state.orders);
   const normalized = String(query || "").trim().toLowerCase();
   const orders = source.filter(order => { const product = orderSourceProduct(order); return !normalized || [order.id, order.customer, order.recipientName, order.phone, order.channel, order.tracking, order.externalProductName, order.externalProductCode, order.mappedProductId, product?.name].some(value => String(value || "").toLowerCase().includes(normalized)); });
-  return `<div class="table-wrap order-desktop-table"><table><thead><tr><th>주문번호</th><th>상품</th><th>${role === "supplier" ? "판매 셀러" : "배정 공급사"}</th><th>수취인</th><th>수량/금액</th><th>상태${orderStatusHelpIcon()}</th><th>송장·관리</th></tr></thead><tbody>
+  const pickAll = pick && orders.length && orders.every(order => supplierOrderPicks.has(order.id));
+  return `<div class="table-wrap order-desktop-table ${pick ? "has-pick" : ""}"><table><thead><tr>${pick ? `<th class="pick-col"><label class="order-pick" title="전체 선택"><input type="checkbox" data-order-pick-all ${pickAll ? "checked" : ""} aria-label="보이는 주문 전체 선택"></label></th>` : ""}<th>주문번호</th><th>상품</th><th>${role === "supplier" ? "판매 셀러" : "배정 공급사"}</th><th>수취인</th><th>수량/금액</th><th>상태${orderStatusHelpIcon()}</th><th>송장·관리</th></tr></thead><tbody>
     ${orders.length ? orders.map(o => {
       const p = orderSourceProduct(o);
       const displayName = role === "supplier" ? p?.name : orderSellerTitle(o);
-      return `<tr class="order-click-row ${orderMappingStatus(o) !== "mapped" ? "mapping-required-row" : ""}" data-action="order-detail" data-id="${o.id}" tabindex="0" aria-label="${escapeHtml(o.id)} 주문 상세 보기"><td class="order-id"><button data-action="order-detail" data-id="${o.id}">${o.id}</button><br><small>${escapeHtml(o.createdAt)}</small></td><td><button class="order-product-link" data-action="order-detail" data-id="${o.id}"><strong>${escapeHtml(displayName || "매핑 전 외부 상품")}</strong>${orderOptionTag(o)}<small>${channelMark(channelIdFromName(o.channel),true)} ${escapeHtml(o.channel)} · ${orderMappingStatus(o) === "mapped" ? `원본 ${escapeHtml(o.mappedProductId || o.productId)}` : `외부코드 ${escapeHtml(o.externalProductCode || "-")}`}</small></button></td>${role === "supplier" ? `<td><strong>${escapeHtml(orderSellerLabel(o))}</strong><br><small>${o.orderType === "sample" ? "샘플 구매 · 셀러 직접 수령" : `${escapeHtml(o.channel || "쇼핑몰")} 판매`}</small></td>` : `<td><strong>${escapeHtml(orderMappingStatus(o) === "mapped" ? (o.assignedSupplier || p?.supplier || "미배정") : "매핑 필요")}</strong><br><small>${orderSupplierProgressLabel(o)}</small></td>`}<td>${escapeHtml(o.recipientName || o.customer)}<br><small>${escapeHtml(o.phone || "-")}</small></td><td>${o.qty}개 · ${money(o.amount)}</td><td>${statusChip(o.status)}</td><td><div class="order-cell-actions">${orderActionsMarkup(o, role)}</div></td></tr>`;
-    }).join("") : `<tr><td colspan="7"><div class="empty">표시할 주문이 없습니다.</div></td></tr>`}
-  </tbody></table></div>${mobileOrderCards(orders, role)}`;
+      return `<tr class="order-click-row ${orderMappingStatus(o) !== "mapped" ? "mapping-required-row" : ""} ${pick && supplierOrderPicks.has(o.id) ? "picked" : ""}" data-action="order-detail" data-id="${o.id}" tabindex="0" aria-label="${escapeHtml(o.id)} 주문 상세 보기">${pick ? `<td class="pick-col"><label class="order-pick"><input type="checkbox" data-order-pick value="${escapeHtml(o.id)}" ${supplierOrderPicks.has(o.id) ? "checked" : ""} aria-label="${escapeHtml(o.id)} 선택"></label></td>` : ""}<td class="order-id"><button data-action="order-detail" data-id="${o.id}">${o.id}</button><br><small>${escapeHtml(o.createdAt)}</small></td><td><button class="order-product-link" data-action="order-detail" data-id="${o.id}"><strong>${escapeHtml(displayName || "매핑 전 외부 상품")}</strong>${orderOptionTag(o)}<small>${channelMark(channelIdFromName(o.channel),true)} ${escapeHtml(o.channel)} · ${orderMappingStatus(o) === "mapped" ? `원본 ${escapeHtml(o.mappedProductId || o.productId)}` : `외부코드 ${escapeHtml(o.externalProductCode || "-")}`}</small></button></td>${role === "supplier" ? `<td><strong>${escapeHtml(orderSellerLabel(o))}</strong><br><small>${o.orderType === "sample" ? "샘플 구매 · 셀러 직접 수령" : `${escapeHtml(o.channel || "쇼핑몰")} 판매`}</small></td>` : `<td><strong>${escapeHtml(orderMappingStatus(o) === "mapped" ? (o.assignedSupplier || p?.supplier || "미배정") : "매핑 필요")}</strong><br><small>${orderSupplierProgressLabel(o)}</small></td>`}<td>${escapeHtml(o.recipientName || o.customer)}<br><small>${escapeHtml(o.phone || "-")}</small></td><td>${o.qty}개 · ${money(o.amount)}</td><td>${statusChip(o.status)}</td><td><div class="order-cell-actions">${orderActionsMarkup(o, role)}</div></td></tr>`;
+    }).join("") : `<tr><td colspan="${pick ? 8 : 7}"><div class="empty">표시할 주문이 없습니다.</div></td></tr>`}
+  </tbody></table></div>${mobileOrderCards(orders, role, pick)}`;
 }
 
 function membersTable() {
@@ -5381,8 +5473,8 @@ function autoIssueTracking(orderId, showResult = true) {
   if (showResult) shipmentLabelModal(order.id);
 }
 
-function autoIssueAllTracking(limit = Infinity) {
-  let waiting = currentSupplierOrders().filter(order => order.status === "배송준비중" && !order.tracking);
+function autoIssueAllTracking(limit = Infinity, ids = null) {
+  let waiting = currentSupplierOrders().filter(order => order.status === "배송준비중" && !order.tracking && (!ids || ids.has(order.id)));
   if (!waiting.length) return showToast("송장을 출력할 배송준비중 주문이 없어요.");
   if (limit === Infinity && !goodsflowGuard(waiting.length)) return;
   waiting = waiting.slice(0, limit);
@@ -6613,6 +6705,7 @@ document.addEventListener("click", event => {
   const jump = event.target.closest("[data-jump]")?.dataset.jump;
   if (jump) { closeModal(); return setRole(jump); }
   if (!event.target.closest(".category-search-box")) document.querySelectorAll("[data-category-search-results]").forEach(el => { el.hidden = true; });
+  if (event.target.closest?.(".order-pick")) return; /* 주문 체크칸은 행 클릭(주문 상세)과 따로 */
   const target = event.target.closest("[data-action]");
   if (!target) return;
   const { action, id } = target.dataset;
@@ -6928,6 +7021,21 @@ document.addEventListener("click", event => {
   if (action === "filter-supplier-orders") { supplierOrderStatus = target.dataset.status || "all"; render(); updateAccountUI(); return; }
   if (action === "settlement-tab") { supplierSettlementTab = target.dataset.tab || "scheduled"; render(); updateAccountUI(); return; }
   if (action === "supplier-go-menu") { closeModal(); activeMenuIndex = Number(target.dataset.index || 0); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (action === "order-pick-bulk") {
+    const op = target.dataset.op;
+    const allOrders = currentSupplierOrders();
+    const filtered = supplierOrderStatus === "all" ? allOrders : allOrders.filter(order => order.status === supplierOrderStatus);
+    const g = supplierPickGroups(filtered);
+    const ids = list => new Set(list.map(order => order.id));
+    const done = list => list.forEach(order => supplierOrderPicks.delete(order.id));
+    if (op === "clear") { supplierOrderPicks.clear(); refreshOrderPickUi(); return; }
+    if (op === "csv") { const count = supplierOrdersCsv("all", ids(g.picked)); return showToast(count > 0 ? `선택한 ${count}건 발주서를 내려받았어요.` : "내려받을 주문이 없어요."); }
+    if (op === "confirm") { const count = supplierBulkConfirm(ids(g.confirm)); done(g.confirm); saveState(); render(); updateAccountUI(); return showToast(count ? `선택한 ${count}건을 확인했어요. 포장 후 송장을 출력해 주세요.` : "확인할 주문이 없어요."); }
+    if (op === "issue") { if (!g.issue.length) return; const list = g.issue; autoIssueAllTracking(Infinity, ids(list)); if (list.every(order => order.tracking)) done(list); render(); updateAccountUI(); return; }
+    if (op === "channel") { g.channel.forEach(order => { order.status = "배송준비중"; }); if (g.channel.length) audit("채널 주문 일괄 재확인", `${g.channel.length}건 · 판매채널 확인 후 배송준비중으로 변경`, "done", "order"); done(g.channel); saveState(); render(); updateAccountUI(); return showToast(`${g.channel.length}건을 채널 확인 완료로 처리했어요. 송장을 출력해 주세요.`); }
+    if (op === "deliver") { if (!window.confirm(`선택한 배송중 주문 ${g.deliver.length}건을 배송완료로 반영할까요?`)) return; const count = supplierBulkDeliver(ids(g.deliver)); done(g.deliver); saveState(); render(); updateAccountUI(); return showToast(`${count}건을 배송완료로 반영했어요. 정산 예정에 포함돼요.`); }
+    return;
+  }
   if (action === "supplier-bulk-confirm") {
     const count = supplierBulkConfirm();
     saveState(); render(); updateAccountUI();
@@ -7343,7 +7451,10 @@ document.addEventListener("click", event => {
     saveState(); render(); updateAccountUI(); return showToast("계좌 확인을 마쳤어요.");
   }
   if (action === "export-ledger") { const count = exportLedgerCsv(); return showToast(count >= 0 ? `정산 장부 ${count}줄을 CSV로 받았어요.` : "이 브라우저에서는 파일을 받을 수 없어요."); }
-  if (action === "price-graph-product") { priceGraphProductId = id; render(); updateAccountUI(); document.querySelector(".price-graph")?.scrollIntoView({ block: "nearest" }); return; }
+  if (action === "sales-seller-page") { salesSellerPage = Number(target.dataset.page) || 1; render(); updateAccountUI(); document.getElementById("salesSellers")?.scrollIntoView({ block: "nearest" }); return; }
+  if (action === "sales-seller-size") { salesSellerPageSize = Number(target.dataset.size) || 5; salesSellerPage = 1; render(); updateAccountUI(); document.getElementById("salesSellers")?.scrollIntoView({ block: "nearest" }); return; }
+  if (action === "sales-talk") { openSalesTalk({ loginId: target.dataset.login || "", name: target.dataset.name || "", productId: target.dataset.product || "" }); return; }
+  if (action === "price-graph-product") { salesSellerPage = 1; priceGraphProductId = id; render(); updateAccountUI(); document.querySelector(".price-graph")?.scrollIntoView({ block: "nearest" }); return; }
   if (action === "price-graph-range") { priceGraphDays = Number(target.dataset.days) || 60; render(); updateAccountUI(); return; }
   if (action === "master-status-filter") { masterStatusFilter = target.dataset.filter || "all"; render(); updateAccountUI(); return; }
   if (action === "reconnect-channel") { channelConnectModal(id, { force: true }); return; }
@@ -7878,7 +7989,6 @@ document.addEventListener("change", event => {
   if (event.target.id === "onSalePageSizeSelect") { onSalePageSize = Number(event.target.value) || 10; onSalePage = 1; render(); updateAccountUI(); }
   if (event.target.id === "marketCountrySelect") { sellerCountry = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "marketSortSelect") { sellerCatalogSort = event.target.value; render(); updateAccountUI(); }
-  if (event.target.id === "supplierSalesProductSelect") { supplierSalesProduct = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "refundMonthSelect") { refundMonth = event.target.value; render(); updateAccountUI(); }
 });
 

@@ -9357,3 +9357,81 @@ body[data-role="seller"] .ship-default { background: #3182f6; }
 .ship-picker select { padding: 0 40px 0 14px; color: #191f28; background-color: #fff; border: 1px solid #d1d6db; border-radius: 12px; font: inherit; font-size: 15px; font-weight: 600; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236b7684' stroke-width='1.8'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
 .ship-picker select:focus { outline: none; border-color: #3182f6; box-shadow: 0 0 0 3px rgba(49, 130, 246, .15); }
 body[data-role="supplier"] .ship-picker select:focus { border-color: #171717; box-shadow: 0 0 0 3px rgba(0, 0, 0, .08); }
+
+/* ===== 공급사 주문: 체크 · 전체 선택 · 선택 일괄 처리 ===== */
+.order-pick { display: inline-grid; place-items: center; width: 36px; height: 36px; margin: -6px; border-radius: 8px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.order-pick:hover { background: rgba(0, 0, 0, .05); }
+.order-pick input, .order-pick-all input { width: 18px; height: 18px; margin: 0; accent-color: #191f28; cursor: pointer; }
+body[data-role="supplier"] .order-pick input, body[data-role="supplier"] .order-pick-all input { accent-color: #171717; }
+.order-desktop-table th.pick-col, .order-desktop-table td.pick-col { width: 44px; min-width: 44px; padding-left: 14px; padding-right: 0; }
+.order-desktop-table.has-pick td:last-child { min-width: 180px; }
+.order-click-row.picked td { background: #f5f7fa; }
+body[data-role="supplier"] .order-click-row.picked td { background: #f5f5f5; }
+.order-pick-bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 10px; padding: 10px 14px; background: #fff; border: 1px solid #e5e8eb; border-radius: 12px; }
+.order-pick-all { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.order-pick-count { font-size: 14px; color: #4e5968; font-weight: 600; }
+.order-pick-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.order-pick-actions button { min-height: 36px; padding: 0 12px; font-size: 13.5px; white-space: nowrap; }
+.order-pick-actions button em { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 4px; padding: 0 5px; font-style: normal; font-size: 12px; background: rgba(255, 255, 255, .22); border-radius: 99px; }
+.order-pick-actions .secondary-button em { background: #eef0f2; }
+.order-pick-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.mobile-order-card header .order-pick { margin: -6px 2px -6px -8px; }
+.mobile-order-card.picked { border-color: #191f28; box-shadow: inset 0 0 0 1px #191f28; }
+body[data-role="supplier"] .mobile-order-card.picked { border-color: #171717; box-shadow: inset 0 0 0 1px #171717; }
+@media (max-width: 720px) {
+  .order-pick-bar { position: static; padding: 10px; }
+  .order-pick-actions { margin-left: 0; width: 100%; }
+  .order-pick-actions button { flex: 1 1 calc(50% - 6px); }
+  .order-pick-count { font-size: 13px; }
+}
+
+/* ===== 판매 현황: 셀러별 판매 현황 (그래프 아래 하나로) ===== */
+.sales-sellers { display: grid; gap: 10px; margin: 18px 0 14px; }
+.sales-sellers-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.sales-sellers-head h4 { margin: 0; font-size: 16px; }
+.sales-sellers-head h4 small { margin-left: 4px; color: #8b95a1; font-size: 12.5px; font-weight: 600; }
+.sales-size { display: inline-flex; padding: 3px; background: #f2f4f6; border-radius: 10px; }
+.sales-size button { height: 32px; padding: 0 12px; color: #6b7684; background: transparent; border: 0; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.sales-size button.active { color: #191f28; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .1); }
+.sales-table { border: 1px solid #eef0f2; border-radius: 14px; overflow: hidden; }
+.sales-row { display: grid; grid-template-columns: minmax(150px, 1.5fr) 96px minmax(84px, .8fr) minmax(130px, 1.1fr) 70px minmax(90px, .8fr) 104px; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid #f0f2f4; font-size: 14px; }
+.sales-row:first-child { border-top: 0; }
+.sales-row.head { padding-top: 10px; padding-bottom: 10px; color: #8b95a1; background: #f9fafb; font-size: 12.5px; font-weight: 700; }
+.sales-row > span { display: grid; gap: 2px; min-width: 0; }
+.sales-row b { font-size: 14.5px; }
+.sales-row small { color: #8b95a1; font-size: 12px; }
+.sales-seller b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sales-row .sup-channels { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.sales-price { grid-auto-flow: column; justify-content: start; align-items: center; gap: 8px !important; }
+.sales-price em { padding: 2px 8px; font-style: normal; font-size: 12px; font-weight: 800; color: #4e5968; background: #f2f4f6; border-radius: 99px; }
+.sales-price em.low { color: #d92d20; background: #fdecea; }
+.sales-price em.high { color: #067647; background: #e8f5ee; }
+.sales-row.low { background: #fffafa; }
+.talk-chip { justify-self: start; height: 34px; padding: 0 12px; color: #191f28; background: #fee500; border: 0; border-radius: 99px; font: inherit; font-size: 13px; font-weight: 800; white-space: nowrap; cursor: pointer; }
+.talk-chip:hover { filter: brightness(.96); }
+.sales-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; }
+.sales-pager button { min-width: 36px; height: 36px; padding: 0 8px; color: #4e5968; background: #fff; border: 1px solid #e5e8eb; border-radius: 9px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.sales-pager button.active { color: #fff; background: #191f28; border-color: #191f28; }
+body[data-role="supplier"] .sales-pager button.active { background: #171717; border-color: #171717; }
+.sales-pager button:disabled { opacity: .35; cursor: not-allowed; }
+.sales-pager small { margin-left: 8px; color: #8b95a1; font-size: 12.5px; }
+.pg-lower.merged { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 960px) {
+  .sales-row.head { display: none; }
+  .sales-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "seller talk" "stage stage" "price price" "meta meta"; gap: 8px 10px; padding: 14px; }
+  .sales-row { display: flex; flex-wrap: wrap; }
+  .sales-row > .sales-seller { flex: 1 1 calc(100% - 120px); }
+  .sales-row > .sales-talk { flex: 0 0 auto; order: 2; }
+  .sales-row > span[data-label] { order: 3; flex: 0 1 auto; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #f9fafb; border-radius: 8px; }
+  .sales-row > span[data-label]::before { content: attr(data-label); color: #8b95a1; font-size: 11.5px; font-weight: 700; }
+  .sales-row > span[data-label] small { font-size: 11.5px; }
+  .sales-price { grid-auto-flow: unset; }
+}
+@media (max-width: 960px) {
+  .sales-row { gap: 6px 14px; padding: 12px 14px; }
+  .sales-row > span[data-label] { padding: 0; background: none; gap: 5px; }
+  .sales-row > span[data-label="진행"]::before, .sales-row > span[data-label="쇼핑몰"]::before { content: none; }
+  .sales-row > .sales-seller { flex-basis: calc(100% - 110px); }
+  .talk-chip { height: 32px; padding: 0 11px; font-size: 12.5px; }
+  .sales-row b { font-size: 14px; }
+}
