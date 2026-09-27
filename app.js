@@ -1716,15 +1716,17 @@ function render() {
   const baseTitle = ({ seller: "위탁셀러 워크스페이스", supplier: "공급사 워크스페이스", master: "마스터 운영센터" })[activeRole];
   const defaultTitle = activeMenuIndex === 0 ? baseTitle : roleMenus[activeRole][activeMenuIndex];
   const isDashboard = activeMenuIndex === 0;
-  document.getElementById("pageContext").textContent = `${roleLabel()} ${isDashboard ? "대시보드" : "업무 메뉴"}`;
-  /* 휴대폰에서는 제목을 한 줄로: ‘안녕하세요’는 아래 줄로 내리고 이름만 크게 */
+  /* 대시보드 인사말: 윗줄 ‘안녕하세요 👋’, 큰 제목 ‘{이름}님!’ (회색 안내 줄 없이) — PC·휴대폰 공통 */
+  document.querySelector(".topbar-heading")?.classList.toggle("is-greeting", isDashboard);
+  const contextEl = document.getElementById("pageContext");
+  if (isDashboard) contextEl.innerHTML = `안녕하세요 <span class="greet-wave" aria-hidden="true">👋</span>`;
+  else contextEl.textContent = `${roleLabel()} 업무 메뉴`;
   const titleEl = document.getElementById("pageTitle");
-  if (isDashboard) titleEl.innerHTML = `<span class="greet-hi">안녕하세요 </span>${escapeHtml(accountGreetingName())}님! <span class="greet-wave" aria-hidden="true">👋</span>`;
-  else titleEl.textContent = activeRole === "seller" ? contentText(`seller.page.${activeMenuIndex}`, defaultTitle) : defaultTitle;
+  titleEl.textContent = isDashboard ? `${accountGreetingName()}님!` : (activeRole === "seller" ? contentText(`seller.page.${activeMenuIndex}`, defaultTitle) : defaultTitle);
   titleEl.title = titleEl.textContent;
   const subtitleEl = document.getElementById("pageSubtitle");
-  if (isDashboard) subtitleEl.innerHTML = `<span class="greet-hi-m">안녕하세요! </span>오늘도 두고와 함께 쇼핑몰 성장을 만들어 가세요!`;
-  else subtitleEl.textContent = `${roleLabel()} 업무를 한 화면에서 확인하고 처리하세요.`;
+  subtitleEl.textContent = isDashboard ? "" : `${roleLabel()} 업무를 한 화면에서 확인하고 처리하세요.`;
+  subtitleEl.hidden = isDashboard;
   const demoNotice = document.getElementById("demoNotice");
   if (demoNotice) demoNotice.hidden = activeRole === "seller" && (editMode || [3, 6].includes(activeMenuIndex));
   document.getElementById("appView").dataset.editMode = String(editMode && activeRole === "seller" && activeMenuIndex === 0);

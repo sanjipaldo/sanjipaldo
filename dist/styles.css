@@ -9530,11 +9530,31 @@ body[data-role="supplier"] .xf-start { background: #f5f5f5; }
   .xo-card-actions button { flex: 1 1 calc(50% - 6px); }
 }
 
-/* 상단 제목: 휴대폰에서 한 줄로 */
-.greet-hi-m { display: none; }
+/* 상단 제목: 대시보드 인사말 (안녕하세요 👋 / {이름}님!) · 제목은 항상 한 줄 */
+#pageTitle { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.topbar-heading { min-width: 0; }
+.topbar-heading.is-greeting #pageContext, body[data-role="supplier"] .topbar-heading.is-greeting #pageContext { margin: 0 0 2px !important; font-family: inherit !important; font-size: 17px !important; font-weight: 700 !important; letter-spacing: -.01em !important; text-transform: none !important; color: #333d4b !important; }
+.topbar-heading.is-greeting #pageContext .greet-wave { display: inline-block; transform-origin: 70% 70%; animation: greet-wave 1.6s ease-in-out 1; }
+@keyframes greet-wave { 0%, 60%, 100% { transform: rotate(0); } 15%, 45% { transform: rotate(14deg); } 30% { transform: rotate(-8deg); } }
+@media (prefers-reduced-motion: reduce) { .topbar-heading.is-greeting #pageContext .greet-wave { animation: none; } }
+.topbar-heading.is-greeting .topbar-subtitle, .topbar-subtitle[hidden] { display: none !important; }
 @media (max-width: 720px) {
-  #pageTitle { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 100%; }
-  .topbar-heading { min-width: 0; }
-  #pageTitle .greet-hi { display: none; }
-  .greet-hi-m { display: inline; font-weight: 700; color: #333d4b; }
+  .topbar-heading.is-greeting #pageContext, body[data-role="supplier"] .topbar-heading.is-greeting #pageContext { font-size: 15px !important; }
+}
+#pageContext { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+/* 태블릿·작은 노트북(721~1279px): 상단 바가 화면 밖으로 밀리지 않게 검색창은 아랫줄로 */
+@media (min-width: 721px) and (max-width: 1279px) {
+  .topbar { grid-template-columns: minmax(0, 1fr) auto !important; row-gap: 12px !important; }
+  .topbar .quick-search { grid-column: 1 / -1; grid-row: 2; width: 100%; max-width: none !important; }
+  .top-actions { gap: 8px; min-width: 0; }
+  #guideButton { display: none; }
+}
+@media (min-width: 721px) and (max-width: 1099px) {
+  .account-menu-button > span:not(.avatar-button), .account-menu-button > i { display: none !important; }
+  .account-menu-button { padding-right: 4px !important; }
+}
+@media (min-width: 721px) and (max-width: 919px) {
+  #depositPill .deposit-pill-label { display: none; }
+  #depositPill { padding-inline: 12px !important; }
+  #pageTitle { font-size: 22px !important; }
 }
