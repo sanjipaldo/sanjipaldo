@@ -66,6 +66,24 @@ test("매퍼: 네이버 본문은 옵션가를 기본가와의 차액으로 넣�
   assert.equal(body.smartstoreChannelProduct.channelProductDisplayStatusType, "ON");
 });
 
+test("매퍼: 공급사 배송비 정책(구간별·도서산간·착불)을 네이버·쿠팡 규격으로 보낸다", () => {
+  const shipping = { ...listing.shipping, naverDeliveryAttribute: "TODAY", bundle: false,
+    naverDeliveryFee: { deliveryFeeType: "RANGE_QUANTITY_PAID", baseFee: 3000, secondBaseQuantity: 4, secondExtraFee: 3000, deliveryFeePayType: "COLLECT_OR_PREPAID", deliveryFeeByArea: { deliveryAreaType: "AREA_3", area2extraFee: 3000, area3extraFee: 5000 } },
+    coupangDelivery: { deliveryChargeType: "NOT_FREE", deliveryCharge: 3000, freeShipOverAmount: 0, deliveryChargeOnReturn: 3500, returnCharge: 3500, remoteAreaDeliverable: "Y", unionDeliveryType: "NOT_UNION_DELIVERY" } };
+  const naver = toNaverProduct({ ...listing, shipping }, { imageUrls: ["https://shop-phinf.pstatic.net/a.jpg"] }).originProduct.deliveryInfo;
+  assert.equal(naver.deliveryAttributeType, "TODAY");
+  assert.equal(naver.deliveryBundleGroupUsable, false);
+  assert.equal(naver.deliveryFee.deliveryFeeType, "RANGE_QUANTITY_PAID");
+  assert.equal(naver.deliveryFee.secondBaseQuantity, 4);
+  assert.equal(naver.deliveryFee.deliveryFeeByArea.area3extraFee, 5000);
+  const coupang = toCoupangProduct({ ...listing, shipping, images: ["https://img/a.jpg"] }, { vendorId: "A1", vendorUserId: "w" });
+  assert.equal(coupang.deliveryChargeType, "NOT_FREE");
+  assert.equal(coupang.deliveryCharge, 3000);
+  assert.equal(coupang.remoteAreaDeliverable, "Y");
+  assert.equal(coupang.unionDeliveryType, "NOT_UNION_DELIVERY");
+  assert.equal(coupang.deliveryChargeOnReturn, 3500);
+});
+
 test("키 보관소: 암호화 저장하고 가린 값만 돌려준다", () => {
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "doogo-")), "c.json");
   const store = createCredentialStore({ file, key: crypto.randomBytes(32) });

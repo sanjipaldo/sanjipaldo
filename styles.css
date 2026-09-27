@@ -9155,3 +9155,69 @@ body[data-role="supplier"] .rde { --rde-accent: #171717; --rde-ink: #171717; --r
 .rde, .rde > *, .rde-drop, .rde-blocks > *, .rde-block-body > *, .rde-foot > * { min-width: 0; max-width: 100%; }
 .studio-section .rde, .detail-editor-field .rde { width: 100%; box-sizing: border-box; }
 .rde-format select { flex: 0 0 auto; width: auto !important; max-width: 110px; }
+/* 상세 에디터: 사진 버튼은 줄어들지 않게, 파일 입력은 숨겨 두고 버튼이 연다 */
+.rde-add { flex: 0 0 auto; }
+.rde-file-input { position: absolute !important; width: 1px !important; height: 1px !important; opacity: 0; overflow: hidden; clip: rect(0 0 0 0); pointer-events: none; }
+.rde { position: relative; }
+.rde-url { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; padding: 8px; background: #fff; border: 1px solid var(--rde-line); border-radius: 10px; }
+.rde-url[hidden] { display: none; }
+.rde-url input { min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--rde-line); border-radius: 8px; font: inherit; font-size: 14px; }
+.rde-url button { height: 40px; padding: 0 16px; color: #fff; background: var(--rde-ink); border: 0; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+
+/* 배송비 정책 (스마트스토어 기준) */
+.sf-field > label small { font-weight: 500; }
+.sf { --sf-ink: #191f28; --sf-line: #e5e8eb; display: grid; gap: 14px; padding: 14px; background: #fafbfc; border: 1px solid var(--sf-line); border-radius: 14px; }
+body[data-role="supplier"] .sf { --sf-ink: #171717; --sf-line: #ebebeb; background: #fafafa; }
+.sf-row { display: grid; gap: 8px; }
+.sf-row[hidden], .sf [hidden] { display: none !important; }
+.sf-label { font-size: 14px; color: #333d4b; }
+.sf-label i { color: #d92d20; font-style: normal; }
+.sf-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sf-chip { position: relative; display: inline-flex; align-items: center; padding: 8px 12px; background: #fff; border: 1px solid var(--sf-line); border-radius: 8px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.sf-chip input, .sf-type input { position: absolute; opacity: 0; pointer-events: none; }
+.sf-chip.active { color: #fff; background: var(--sf-ink); border-color: var(--sf-ink); }
+.sf-types { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.sf-type { position: relative; padding: 10px 12px; background: #fff; border: 1px solid var(--sf-line); border-radius: 10px; cursor: pointer; }
+.sf-type span { display: grid; gap: 2px; }
+.sf-type b { font-size: 14.5px; }
+.sf-type small { color: #8b95a1; font-size: 12px; }
+.sf-type.active { border-color: var(--sf-ink); box-shadow: inset 0 0 0 1px var(--sf-ink); }
+.sf-panel { display: grid; gap: 8px; padding: 12px; background: #fff; border: 1px solid var(--sf-line); border-radius: 10px; }
+.sf-num { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: #4e5968; }
+.sf-num span:empty { display: none; }
+.sf-num input { width: 110px; height: 38px; padding: 0 10px; text-align: right; border: 1px solid var(--sf-line); border-radius: 8px; font: inherit; font-size: 15px; font-weight: 600; background: #fff; }
+.sf-num em { font-style: normal; color: #6b7684; white-space: nowrap; }
+.sf-inline { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.sf-tiers { display: grid; gap: 6px; }
+.sf-tiers > div { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13.5px; color: #4e5968; }
+.sf-tiers > div > span:first-child { min-width: 44px; padding: 3px 8px; text-align: center; color: #fff; background: var(--sf-ink); border-radius: 99px; font-size: 12px; font-weight: 700; }
+.sf-tiers .sf-num input { width: 84px; }
+.sf-tiers em { font-style: normal; color: #8b95a1; }
+.sf-hint { margin: 0; color: #6b7684; font-size: 12.5px; line-height: 1.5; }
+.sf-toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.sf-toggle input { width: 18px; height: 18px; }
+.sf-toggle small { color: #8b95a1; font-size: 12.5px; }
+.sf-calc { display: grid; gap: 6px; padding: 12px; background: #fff; border: 1px dashed #c9cfd6; border-radius: 10px; }
+.sf-calc-in { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 13.5px; }
+.sf-calc-in input { width: 90px; height: 34px; padding: 0 8px; border: 1px solid var(--sf-line); border-radius: 8px; font: inherit; }
+.sf-calc-in select { height: 34px; border: 1px solid var(--sf-line); border-radius: 8px; font: inherit; font-size: 13px; width: auto !important; }
+.sf-calc p { margin: 0; font-size: 14px; }
+.sf-calc p b { font-size: 16px; }
+.sf-calc p em { color: #d92d20; font-style: normal; }
+.sf-calc .sf-channel { color: #6b7684; font-size: 12.5px; }
+.sf-jump { width: 100%; min-height: 44px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; color: #191f28; background: #fff; border: 1px solid #d1d6db; border-radius: 10px; font: inherit; font-size: 14px; cursor: pointer; }
+.sf-jump b { flex: 0 0 auto; font-size: 13px; color: #4e5968; }
+.sf-jump span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 720px) {
+  .sf { padding: 10px; }
+  .sf-types { grid-template-columns: 1fr 1fr; }
+  .sf-num { width: 100%; justify-content: space-between; }
+  .sf-num input { flex: 1; width: auto; max-width: 160px; }
+  .sf-tiers > div .sf-num { width: auto; }
+  .sf-tiers .sf-num input { width: 76px; flex: 0 0 auto; }
+}
+.sf .sf-chip, .sf .sf-type, .sf .sf-toggle { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; margin: 0; }
+.sf .sf-chip.active, .sf .sf-chip.active span { color: #fff !important; }
+.sf .sf-chip span, .sf .sf-type span, .sf .sf-num span { color: inherit; }
+.sf .sf-num, .sf .sf-toggle { display: inline-flex; }
+.sf .sf-toggle { display: flex; }

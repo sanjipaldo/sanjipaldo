@@ -921,7 +921,7 @@ function sampleLine(row) {
   const option = row.optionId ? productOptionOf(product, row.optionId) : null;
   const unit = Number(option ? option.supply : product.supply);
   const qty = Math.max(1, Number(row.qty || 1));
-  const shipping = /3,000|3000/.test(String(product.shippingPolicy || "")) ? 3000 : 0;
+  const shipping = calcShipping(productShippingFee(product), { qty, amount: unit * qty }).total;
   const stock = Number(option ? option.stock : product.stock);
   return { ...row, product, option, unit, qty, shipping, stock, subtotal: unit * qty, total: unit * qty + shipping };
 }
@@ -4968,7 +4968,7 @@ function doogoListingFor(item, channelId) {
     detailHtml: detailBlocksToHtml(item.detailBlocks?.length ? item.detailBlocks : defaultDetailBlocks(product, item), product), tags: detail.tags || itemTags(item, product),
     options: rows.map(row => ({ optionId: row.id, name: row.name, salePrice: row.salePrice, stock: Number(row.stock ?? product?.stock ?? 0) })),
     category: channelId === "coupang" ? { coupang: detail.categoryCode || "" } : { smartstore: detail.categoryCode || "" },
-    shipping: { carrier: policy.carrier || product?.carrier || "한진택배", feeType: !Number(policy.fee) ? "FREE" : Number(policy.freeOver) ? "CONDITIONAL_FREE" : "PAID", fee: Number(policy.fee || 0), freeOver: Number(policy.freeOver || 0), returnFee: Number(policy.returnFee || 0), exchangeFee: Number(policy.exchangeFee || 0), dispatchDays: 1, coupangOutboundCode: policy.outboundCode || policy.id || "", coupangReturnCenterCode: policy.returnCenterCode || policy.id || "", naverShippingAddressId: policy.shippingAddressId || policy.id || "", naverReturnAddressId: policy.returnAddressId || policy.id || "" },
+    shipping: (() => { const sf = productShippingFee(product); const cp = coupangDelivery(sf); return { carrier: product?.carrier || policy.carrier || "한진택배", feeType: cp.deliveryChargeType === "NOT_FREE" || cp.deliveryChargeType === "CHARGE_RECEIVED" ? "PAID" : cp.deliveryChargeType, fee: cp.deliveryCharge, freeOver: cp.freeShipOverAmount, returnFee: Number(sf.returnFee || policy.returnFee || 0), exchangeFee: Number(sf.exchangeFee || policy.exchangeFee || 0), dispatchDays: sf.attribute === "PRE_ORDER" ? Number(sf.makeDays || 3) : 1, naverDeliveryFee: naverDeliveryFee(sf), naverDeliveryAttribute: sf.attribute, bundle: sf.bundle, directDelivery: sf.method === "DIRECT", coupangDelivery: cp, coupangOutboundCode: policy.outboundCode || policy.id || "", coupangReturnCenterCode: policy.returnCenterCode || policy.id || "", naverShippingAddressId: policy.shippingAddressId || policy.id || "", naverReturnAddressId: policy.returnAddressId || policy.id || "" };})(),
     returnAddress: (() => { const book = supplierAddressBook(product?.supplierLoginId); return book ? { zipCode: book.returnTo.zipCode, address: book.returnTo.address, addressDetail: book.returnTo.detail, phone: book.phone } : { zipCode: policy.zipCode || "", address: policy.address || "", addressDetail: "", phone: supplier?.contact || "" }; })(),
     asPhone: supplierAddressBook(product?.supplierLoginId)?.phone || supplier?.contact || "", origin: product?.originCountry || "국산", overseas: product?.shippingType === "overseas", pccNeeded: productNeedsCustoms(product), taxType: "TAX", notice: { type: "FOOD", fields: {} }
   };
@@ -5702,7 +5702,8 @@ function detailEditorMarkupFor(key, blocks, options = {}) {
   const templates = rdeTemplates(options.product);
   return `<div class="rde" data-rde="${key}">
     <div class="rde-insert" role="toolbar" aria-label="넣기">
-      <label class="rde-add primary"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple data-rde-image-input aria-label="사진 여러 장 올리기">📷 사진</label>
+      <button type="button" class="rde-add primary" data-rde-pick="image">📷 사진 올리기</button>
+      <button type="button" class="rde-add" data-rde-toggle="imgurl">🔗 사진 주소</button>
       <button type="button" class="rde-add" data-rde-add="text">✎ 글</button>
       <button type="button" class="rde-add" data-rde-add="divider">― 구분선</button>
       <button type="button" class="rde-add" data-rde-add="quote">❝ 인용구</button>
@@ -5711,8 +5712,11 @@ function detailEditorMarkupFor(key, blocks, options = {}) {
       <span class="rde-pop"><button type="button" class="rde-add" data-rde-toggle="templates">☰ 템플릿</button><span class="rde-menu" data-rde-palette="templates" hidden>${Object.entries(templates).filter(([id]) => id !== "table").map(([id, tpl]) => `<button type="button" data-rde-template="${id}">${tpl.label}</button>`).join("")}</span></span>
       <button type="button" class="rde-add" data-rde-add="html">&lt;/&gt; HTML 블록</button>
     </div>
+    <div class="rde-url" data-rde-palette="imgurl" hidden><input type="url" data-rde-url-input placeholder="https:// 로 시작하는 사진 주소 (여러 개는 줄바꿈)" aria-label="사진 주소"><button type="button" data-rde-url-add>넣기</button></div>
+    <input type="file" class="rde-file-input" accept="image/*" multiple data-rde-image-input tabindex="-1" aria-hidden="true">
+    <input type="file" class="rde-file-input" accept=".html,.htm,text/html,text/plain" data-rde-html-file tabindex="-1" aria-hidden="true">
     <div class="rde-drop" data-rde-drop><div class="rde-blocks" data-rde-blocks></div></div>
-    <div class="rde-foot"><span data-rde-count></span><div><button type="button" data-rde-code-open>&lt;/&gt; HTML 코드</button><label class="rde-file"><input type="file" accept=".html,.htm,text/html,text/plain" data-rde-html-file>⇪ HTML 파일</label>${options.resetBlocks ? `<button type="button" data-rde-reset>공급사 원본으로</button>` : ""}<button type="button" class="strong" data-rde-preview>미리보기</button></div></div>
+    <div class="rde-foot"><span data-rde-count></span><div><button type="button" data-rde-code-open>&lt;/&gt; HTML 코드</button><button type="button" data-rde-pick="html">⇪ HTML 파일</button>${options.resetBlocks ? `<button type="button" data-rde-reset>공급사 원본으로</button>` : ""}<button type="button" class="strong" data-rde-preview>미리보기</button></div></div>
     <div class="rde-code" data-rde-code hidden><p><b>HTML 코드</b> 전체 상세페이지를 코드로 고칠 수 있어요. 사진은 <code>doogo-image://번호</code>로 줄여 보여요. script·이벤트 속성·외부 CSS는 저장할 때 빠져요.</p><textarea spellcheck="false" data-rde-code-text aria-label="상세페이지 HTML 코드"></textarea><div class="rde-code-actions"><button type="button" data-rde-code-cancel>닫기</button><button type="button" class="strong" data-rde-code-apply>코드 적용</button></div></div>
   </div>`;
 }
@@ -5901,8 +5905,21 @@ document.addEventListener("click", event => {
   const root = t.closest?.(".rde[data-rde]"); if (!root) return;
   const key = root.dataset.rde; const blocks = rdeDrafts[key]; if (!blocks) return;
   const card = t.closest("[data-rde-index]"); const index = card ? Number(card.dataset.rdeIndex) : -1;
+  /* 파일 고르기: 버튼이 숨겨 둔 파일 입력을 직접 연다 (휴대폰 인앱 브라우저에서도 확실하게) */
+  const pick = t.closest("[data-rde-pick]");
+  if (pick) { const input = root.querySelector(pick.dataset.rdePick === "html" ? "[data-rde-html-file]" : "[data-rde-image-input]"); if (input) { input.value = ""; input.click(); } return; }
+  if (t.closest("[data-rde-url-add]")) {
+    const box = root.querySelector("[data-rde-url-input]");
+    const urls = String(box.value || "").split(/\s+/).map(url => url.trim()).filter(Boolean);
+    const good = urls.filter(url => /^https:\/\//i.test(url) && rdeSafeUrl(url, "img"));
+    if (!good.length) return showToast("https:// 로 시작하는 사진 주소를 넣어 주세요.");
+    box.value = ""; root.querySelector('[data-rde-palette="imgurl"]').hidden = true;
+    rdeInsert(key, good.map(url => ({ type: "image", src: url, alt: "", size: 100 })));
+    showToast(`사진 ${good.length}장을 주소로 넣었어요.${urls.length > good.length ? ` ${urls.length - good.length}개는 https 주소가 아니라 뺐어요.` : ""}`);
+    return;
+  }
   const toggle = t.closest("[data-rde-toggle]");
-  if (toggle) { const pal = toggle.parentElement.querySelector(`[data-rde-palette="${toggle.dataset.rdeToggle}"]`); root.querySelectorAll("[data-rde-palette]").forEach(el => { if (el !== pal) el.hidden = true; }); if (pal) { pal.hidden = !pal.hidden; pal.querySelector("input")?.focus(); } return; }
+  if (toggle) { const pal = toggle.parentElement.querySelector(`[data-rde-palette="${toggle.dataset.rdeToggle}"]`) || root.querySelector(`.rde-url[data-rde-palette="${toggle.dataset.rdeToggle}"]`); root.querySelectorAll("[data-rde-palette]").forEach(el => { if (el !== pal) el.hidden = true; }); if (pal) { pal.hidden = !pal.hidden; pal.querySelector("input")?.focus(); } return; }
   const cmd = t.closest("[data-rde-cmd]");
   if (cmd) { rdeExec(root, cmd.dataset.rdeCmd, cmd.dataset.value); return; }
   const add = t.closest("[data-rde-add]");
@@ -5922,6 +5939,13 @@ document.addEventListener("click", event => {
   if (t.closest("[data-rde-preview]")) { rdeOpenPreview(key); return; }
   if (t.closest("[data-rde-reset]")) { const reset = rdeOptions[key]?.resetBlocks?.(); if (reset) { rdeDrafts[key] = rdeNormalizeBlocks(reset); rdeActive = { key, index: -1 }; rdeOptions[key]?.onReset?.(); rdeRender(key, 0); showToast("공급사 원본 상세페이지로 되돌렸어요."); } return; }
 });
+document.addEventListener("keydown", event => {
+  if (event.key !== "Enter" || event.isComposing) return;
+  const url = event.target.closest?.("[data-rde-url-input]"); const link = event.target.closest?.("[data-rde-link-input]");
+  if (url) { event.preventDefault(); url.closest(".rde").querySelector("[data-rde-url-add]")?.click(); }
+  else if (link) { event.preventDefault(); link.parentElement.querySelector('[data-rde-cmd="createLink"]')?.click(); }
+  else if (event.target.closest?.("[data-sf-editor] input")) event.preventDefault();
+});
 document.addEventListener("keydown", event => { if (event.key === "Escape" && document.getElementById("rdePreview")) { event.stopPropagation(); document.getElementById("rdePreview").remove(); } }, true);
 /* 되돌리기 버튼이 있는 알림 */
 function showToastAction(message, label, onClick) {
@@ -5937,6 +5961,10 @@ function showToastAction(message, label, onClick) {
 function productDetailReady(form) {
   const hasContent = detailBlocksHasContent(rdeDrafts.product);
   if (!hasContent) { form.querySelector(".rde")?.scrollIntoView({ behavior: "smooth", block: "center" }); showToast("상품 상세페이지에 이미지나 설명을 1개 이상 넣어 주세요."); return false; }
+  if (form.querySelector("[data-sf-editor]")) {
+    const { errors } = readShippingFee(Object.fromEntries(new FormData(form)));
+    if (errors.length) { const editor = form.querySelector("[data-sf-editor]"); if (typeof scrollInEditor === "function") scrollInEditor(editor, 20); showToast(`배송비 정책: ${errors[0]}`); return false; }
+  }
   const carrier = form.querySelector("[data-carrier-value]")?.value;
   if (carrier !== undefined && !isKnownCarrier(carrier)) { showToast("택배사를 목록에서 골라 주세요."); return false; }
   return true;
@@ -5945,8 +5973,185 @@ function productDetailAndShipping(data) {
   const blocks = rdeBlocks("product");
   const text = detailBlocksText(blocks);
   const owner = { name: data.name, imageIndex: Number(data.imageIndex || 0) };
-  return { detailBlocks: blocks, detailHtml: detailBlocksToHtml(blocks, owner), detail: text ? text.slice(0, 200) : `상세페이지 이미지 ${blocks.filter(block => block.type === "image").length}장`, carrier: data.carrier || "한진택배", shippingType: data.shippingType || "domestic", requireCustomsCode: data.shippingType === "overseas" ? data.requireCustomsCode === "on" : false };
+  const shippingFee = data.sf_type ? readShippingFee(data).fee : null;
+  return { ...(shippingFee ? { shippingFee, shippingPolicy: shippingFeeLabel(shippingFee) } : {}), detailBlocks: blocks, detailHtml: detailBlocksToHtml(blocks, owner), detail: text ? text.slice(0, 200) : `상세페이지 이미지 ${blocks.filter(block => block.type === "image").length}장`, carrier: data.carrier || "한진택배", shippingType: data.shippingType || "domestic", requireCustomsCode: data.shippingType === "overseas" ? data.requireCustomsCode === "on" : false };
 }
+
+/* ===== 배송비 정책 (스마트스토어 상품 등록 '배송' 기준) =====
+   배송비 종류: 무료 · 조건부 무료 · 유료 · 수량별(N개마다 반복) · 구간별(2·3구간) + 두고 전용 무게별(스마트스토어에는 구간별로 바꿔 보냄)
+   결제 방식(선결제·착불), 제주/도서산간 추가 배송비, 묶음배송, 반품·교환 배송비, 배송 속성(일반·오늘출발·주문 후 제작)까지 한 번에 정한다.
+   네이버 커머스API deliveryInfo(deliveryFee·claimDeliveryInfo) 필드와 1:1로 맞춘다. */
+const SHIP_FEE_TYPES = [
+  ["FREE", "무료", "배송비 없이 보내요"],
+  ["CONDITIONAL_FREE", "조건부 무료", "일정 금액 이상 사면 무료"],
+  ["PAID", "유료", "주문마다 같은 배송비"],
+  ["UNIT_QUANTITY_PAID", "수량별", "N개마다 배송비를 한 번씩 더"],
+  ["RANGE_QUANTITY_PAID", "구간별", "수량 구간마다 다른 배송비"],
+  ["WEIGHT_PAID", "무게별", "총 무게(kg) 구간마다 다른 배송비"]
+];
+const SHIP_PAY_TYPES = [["PREPAID", "선결제"], ["COLLECT", "착불"], ["COLLECT_OR_PREPAID", "선결제·착불 선택"]];
+const SHIP_ATTRS = [["NORMAL", "일반 배송"], ["TODAY", "오늘출발"], ["PRE_ORDER", "주문 확인 후 제작"]];
+function defaultShippingFee(product = {}) {
+  const legacy = String(product.shippingPolicy || "");
+  const type = /조건부/.test(legacy) ? "CONDITIONAL_FREE" : /3,000|3000|유료/.test(legacy) ? "PAID" : "FREE";
+  const weight = Number(product.weight || 0) > 0 && /kg/i.test(product.unit || "kg") ? Number(product.weight) : 1;
+  return {
+    method: "PARCEL", attribute: "NORMAL", makeDays: 3, bundle: true,
+    type, baseFee: 3000, freeOver: 30000, repeatQuantity: 2,
+    rangeTiers: 2, rangeUpTo: 3, rangeFee2: 6000, rangeUpTo2: 6, rangeFee3: 9000,
+    unitWeight: weight, weightTiers: [{ upto: 5, fee: 3000 }, { upto: 10, fee: 5000 }, { upto: 20, fee: 8000 }],
+    payType: "PREPAID", areaUse: false, areaType: "AREA_3", jejuFee: 3000, islandFee: 5000,
+    returnFee: 3000, exchangeFee: 6000
+  };
+}
+function productShippingFee(product) { return { ...defaultShippingFee(product || {}), ...((product && product.shippingFee) || {}) }; }
+/* 배송비 계산: qty=수량, amount=상품 금액 합계, region=normal|jeju|island */
+function calcShipping(fee, { qty = 1, amount = 0, region = "normal" } = {}) {
+  const n = Math.max(1, Number(qty || 1));
+  let base = 0;
+  if (fee.type === "CONDITIONAL_FREE") base = Number(amount) >= Number(fee.freeOver || 0) ? 0 : Number(fee.baseFee || 0);
+  else if (fee.type === "PAID") base = Number(fee.baseFee || 0);
+  else if (fee.type === "UNIT_QUANTITY_PAID") base = Number(fee.baseFee || 0) * Math.ceil(n / Math.max(1, Number(fee.repeatQuantity || 1)));
+  else if (fee.type === "RANGE_QUANTITY_PAID") base = n <= Number(fee.rangeUpTo) ? Number(fee.baseFee || 0) : (Number(fee.rangeTiers) === 3 && n > Number(fee.rangeUpTo2)) ? Number(fee.rangeFee3 || 0) : Number(fee.rangeFee2 || 0);
+  else if (fee.type === "WEIGHT_PAID") {
+    const kg = n * Number(fee.unitWeight || 0);
+    const tiers = (fee.weightTiers || []).filter(tier => Number(tier.upto) > 0).sort((a, b) => a.upto - b.upto);
+    base = Number((tiers.find(tier => kg <= Number(tier.upto)) || tiers[tiers.length - 1] || { fee: 0 }).fee || 0);
+  }
+  /* 지역별 추가 배송비는 무료배송이어도 항상 붙는다 (스마트스토어 규칙). 수량별·구간별은 부과 횟수만큼 곱한다. */
+  const times = fee.type === "UNIT_QUANTITY_PAID" ? Math.ceil(n / Math.max(1, Number(fee.repeatQuantity || 1))) : 1;
+  const areaFee = !fee.areaUse || region === "normal" ? 0 : (region === "jeju" || fee.areaType === "AREA_2" ? Number(fee.jejuFee || 0) : Number(fee.islandFee || 0)) * times;
+  return { base, area: areaFee, total: base + areaFee, collect: fee.payType === "COLLECT" };
+}
+function shippingFeeLabel(fee) {
+  const f = fee || defaultShippingFee();
+  const won = value => money(Number(value || 0));
+  let text = "무료배송";
+  if (f.type === "CONDITIONAL_FREE") text = `${won(f.freeOver)} 이상 무료 (미만 ${won(f.baseFee)})`;
+  else if (f.type === "PAID") text = `유료배송 ${won(f.baseFee)}`;
+  else if (f.type === "UNIT_QUANTITY_PAID") text = `수량별 ${f.repeatQuantity}개마다 ${won(f.baseFee)}`;
+  else if (f.type === "RANGE_QUANTITY_PAID") text = `구간별 ${f.rangeUpTo}개까지 ${won(f.baseFee)} · ${Number(f.rangeTiers) === 3 ? `${f.rangeUpTo2}개까지 ${won(f.rangeFee2)} · 그 이상 ${won(f.rangeFee3)}` : `초과 ${won(f.rangeFee2)}`}`;
+  else if (f.type === "WEIGHT_PAID") text = `무게별 ${(f.weightTiers || []).filter(t => Number(t.upto) > 0).map(t => `${t.upto}kg까지 ${won(t.fee)}`).join(" · ")}`;
+  if (f.payType === "COLLECT") text += " · 착불";
+  else if (f.payType === "COLLECT_OR_PREPAID" && f.type !== "FREE") text += " · 선결제/착불";
+  if (f.areaUse) text += ` · 제주 +${won(f.jejuFee)}${f.areaType === "AREA_3" ? ` / 도서산간 +${won(f.islandFee)}` : ""}`;
+  return text;
+}
+/* 무게별 → 수량 구간 (한 개 무게로 나눠 스마트스토어 구간별 3구간으로) */
+function weightToRange(fee) {
+  const unit = Number(fee.unitWeight || 0);
+  const tiers = (fee.weightTiers || []).filter(tier => Number(tier.upto) > 0).sort((a, b) => a.upto - b.upto).slice(0, 3);
+  if (!unit || !tiers.length) return null;
+  const qty = tiers.map(tier => Math.floor(Number(tier.upto) / unit));
+  return { rangeTiers: tiers.length >= 3 ? 3 : 2, rangeUpTo: qty[0], baseFee: Number(tiers[0].fee), rangeUpTo2: qty[1] || qty[0], rangeFee2: Number((tiers[1] || tiers[0]).fee), rangeFee3: Number((tiers[2] || tiers[1] || tiers[0]).fee) };
+}
+/* 네이버 커머스API deliveryInfo.deliveryFee 로 변환
+   구간별: secondBaseQuantity/thirdBaseQuantity = 그 구간이 시작되는 수량, 추가 배송비 = 구간 배송비 − 기본 배송비 (운영 전 커머스API 문서와 한 번 더 대조) */
+function naverDeliveryFee(fee) {
+  let f = fee;
+  if (f.type === "WEIGHT_PAID") { const range = weightToRange(f); f = range ? { ...f, ...range, type: "RANGE_QUANTITY_PAID" } : { ...f, type: "PAID" }; }
+  const out = { deliveryFeeType: f.type, baseFee: f.type === "FREE" ? 0 : Number(f.baseFee || 0), deliveryFeePayType: f.type === "FREE" ? "FREE" : f.payType };
+  if (f.type === "CONDITIONAL_FREE") out.freeConditionalAmount = Number(f.freeOver || 0);
+  if (f.type === "UNIT_QUANTITY_PAID") out.repeatQuantity = Number(f.repeatQuantity || 1);
+  if (f.type === "RANGE_QUANTITY_PAID") {
+    out.secondBaseQuantity = Number(f.rangeUpTo) + 1; out.secondExtraFee = Math.max(0, Number(f.rangeFee2 || 0) - Number(f.baseFee || 0));
+    if (Number(f.rangeTiers) === 3) { out.thirdBaseQuantity = Number(f.rangeUpTo2) + 1; out.thirdExtraFee = Math.max(0, Number(f.rangeFee3 || 0) - Number(f.baseFee || 0)); }
+  }
+  if (f.areaUse) out.deliveryFeeByArea = { deliveryAreaType: f.areaType, area2extraFee: Number(f.jejuFee || 0), ...(f.areaType === "AREA_3" ? { area3extraFee: Number(f.islandFee || 0) } : {}) };
+  return out;
+}
+/* 쿠팡은 무료·유료·조건부 무료·착불만 있다 → 수량별·구간별·무게별은 기본 배송비(유료)로 보낸다 */
+function coupangDelivery(fee) {
+  const limited = ["UNIT_QUANTITY_PAID", "RANGE_QUANTITY_PAID", "WEIGHT_PAID"].includes(fee.type);
+  const base = fee.type === "WEIGHT_PAID" ? Number(((fee.weightTiers || [])[0] || {}).fee || 0) : Number(fee.baseFee || 0);
+  const type = fee.type === "FREE" ? "FREE" : fee.payType === "COLLECT" ? "CHARGE_RECEIVED" : fee.type === "CONDITIONAL_FREE" ? "CONDITIONAL_FREE" : "NOT_FREE";
+  return { deliveryChargeType: type, deliveryCharge: type === "FREE" ? 0 : base, freeShipOverAmount: type === "CONDITIONAL_FREE" ? Number(fee.freeOver || 0) : 0, deliveryChargeOnReturn: Number(fee.returnFee || 0), returnCharge: Number(fee.returnFee || 0), remoteAreaDeliverable: fee.areaUse ? "Y" : "N", unionDeliveryType: fee.bundle ? "UNION_DELIVERY" : "NOT_UNION_DELIVERY", note: limited ? "쿠팡은 수량·구간·무게별 배송비가 없어 기본 배송비로 올라가요." : "" };
+}
+function readShippingFee(data) {
+  const num = key => Number(String(data[key] ?? "").replace(/[^\d.]/g, "") || 0);
+  const fee = {
+    method: data.sf_method || "PARCEL", attribute: data.sf_attribute || "NORMAL", makeDays: num("sf_makeDays") || 3, bundle: data.sf_bundle !== "no",
+    type: data.sf_type || "FREE", baseFee: num("sf_baseFee"), freeOver: num("sf_freeOver"), repeatQuantity: num("sf_repeatQuantity"),
+    rangeTiers: Number(data.sf_rangeTiers || 2), rangeUpTo: num("sf_rangeUpTo"), rangeFee2: num("sf_rangeFee2"), rangeUpTo2: num("sf_rangeUpTo2"), rangeFee3: num("sf_rangeFee3"),
+    unitWeight: num("sf_unitWeight"), weightTiers: [1, 2, 3].map(i => ({ upto: num(`sf_w${i}`), fee: num(`sf_wf${i}`) })).filter(tier => tier.upto > 0),
+    payType: data.sf_payType || "PREPAID", areaUse: data.sf_areaUse === "on", areaType: data.sf_areaType || "AREA_3", jejuFee: num("sf_jejuFee"), islandFee: num("sf_islandFee"),
+    returnFee: num("sf_returnFee"), exchangeFee: num("sf_exchangeFee")
+  };
+  const errors = [];
+  if (fee.type !== "FREE" && fee.type !== "WEIGHT_PAID" && fee.baseFee <= 0) errors.push("기본 배송비를 입력해 주세요.");
+  if (fee.type === "CONDITIONAL_FREE" && fee.freeOver <= 0) errors.push("무료가 되는 금액을 입력해 주세요.");
+  if (fee.type === "UNIT_QUANTITY_PAID" && fee.repeatQuantity < 1) errors.push("몇 개마다 배송비를 붙일지 입력해 주세요.");
+  if (fee.type === "RANGE_QUANTITY_PAID") {
+    if (fee.rangeUpTo < 1) errors.push("1구간 수량을 입력해 주세요.");
+    if (fee.rangeFee2 <= 0) errors.push("2구간 배송비를 입력해 주세요.");
+    if (fee.rangeTiers === 3 && (fee.rangeUpTo2 <= fee.rangeUpTo || fee.rangeFee3 <= 0)) errors.push("3구간은 2구간보다 큰 수량과 배송비를 입력해 주세요.");
+  }
+  if (fee.type === "WEIGHT_PAID") {
+    if (fee.unitWeight <= 0) errors.push("상품 1개 무게(kg)를 입력해 주세요.");
+    if (!fee.weightTiers.length) errors.push("무게 구간을 1개 이상 입력해 주세요.");
+    if (fee.weightTiers.some((tier, i) => i && tier.upto <= fee.weightTiers[i - 1].upto)) errors.push("무게 구간은 점점 커지게 입력해 주세요.");
+    if (fee.unitWeight > 0 && fee.weightTiers.length && fee.unitWeight > fee.weightTiers[0].upto) errors.push("상품 1개가 첫 무게 구간보다 무거워요.");
+  }
+  if (fee.areaUse && fee.jejuFee <= 0) errors.push("제주 추가 배송비를 입력해 주세요.");
+  if (fee.returnFee <= 0 || fee.exchangeFee <= 0) errors.push("반품·교환 배송비를 입력해 주세요. (스마트스토어 필수)");
+  return { fee, errors };
+}
+function shippingPolicyEditor(product) {
+  const f = productShippingFee(product);
+  const radio = (name, value, label, current) => `<label class="sf-chip"><input type="radio" name="${name}" value="${value}" ${String(current) === String(value) ? "checked" : ""} data-sf> <span>${label}</span></label>`;
+  const money_ = (name, value, label, suffix = "원") => `<label class="sf-num"><span>${label}</span><input name="${name}" inputmode="numeric" value="${escapeHtml(String(value ?? ""))}" data-sf><em>${suffix}</em></label>`;
+  const tiers = [0, 1, 2].map(i => f.weightTiers[i] || { upto: "", fee: "" });
+  return `<div class="sf" data-sf-editor data-type="${f.type}" data-range="${f.rangeTiers}">
+    <div class="sf-row"><b class="sf-label">배송 방법</b><div class="sf-chips">${radio("sf_method", "PARCEL", "택배·소포·등기", f.method)}${radio("sf_method", "DIRECT", "직접배송(화물)", f.method)}</div></div>
+    <div class="sf-row"><b class="sf-label">배송 속성</b><div class="sf-chips">${SHIP_ATTRS.map(([v, l]) => radio("sf_attribute", v, l, f.attribute)).join("")}</div>
+      <p class="sf-hint" data-sf-show="attr-TODAY">발주 마감시간까지 결제된 주문은 오늘 출발해요. (1단계의 ‘발주 마감시간’을 써요)</p>
+      <div class="sf-inline" data-sf-show="attr-PRE_ORDER">${money_("sf_makeDays", f.makeDays, "결제 후 발송까지", "일")}</div></div>
+    <div class="sf-row"><b class="sf-label">묶음배송</b><div class="sf-chips">${radio("sf_bundle", "yes", "가능 (같이 사면 배송비 한 번)", f.bundle ? "yes" : "no")}${radio("sf_bundle", "no", "불가 (상품마다 따로)", f.bundle ? "yes" : "no")}</div></div>
+    <div class="sf-row"><b class="sf-label">배송비 종류 <i>*</i></b><div class="sf-types">${SHIP_FEE_TYPES.map(([v, l, d]) => `<label class="sf-type"><input type="radio" name="sf_type" value="${v}" ${f.type === v ? "checked" : ""} data-sf><span><b>${l}</b><small>${d}</small></span></label>`).join("")}</div>
+      <div class="sf-panel" data-sf-show="type-CONDITIONAL_FREE type-PAID type-UNIT_QUANTITY_PAID type-RANGE_QUANTITY_PAID">${money_("sf_baseFee", f.baseFee, "기본 배송비")}</div>
+      <div class="sf-panel" data-sf-show="type-CONDITIONAL_FREE">${money_("sf_freeOver", f.freeOver, "상품 금액이 이만큼 이상이면 무료")}</div>
+      <div class="sf-panel" data-sf-show="type-UNIT_QUANTITY_PAID">${money_("sf_repeatQuantity", f.repeatQuantity, "기본 배송비를 몇 개마다 반복할까요", "개마다")}<p class="sf-hint">예) 2개마다 3,000원 → 1~2개 3,000원, 3~4개 6,000원</p></div>
+      <div class="sf-panel" data-sf-show="type-RANGE_QUANTITY_PAID"><div class="sf-chips">${radio("sf_rangeTiers", 2, "2구간", f.rangeTiers)}${radio("sf_rangeTiers", 3, "3구간", f.rangeTiers)}</div>
+        <div class="sf-tiers"><div><span>1구간</span>1개 ~ ${money_("sf_rangeUpTo", f.rangeUpTo, "", "개")}<em>기본 배송비</em></div>
+        <div><span>2구간</span><b data-sf-from2>${Number(f.rangeUpTo) + 1}</b>개 ~ <span data-sf-show="range-3">${money_("sf_rangeUpTo2", f.rangeUpTo2, "", "개")}</span><span data-sf-show="range-2">그 이상</span>${money_("sf_rangeFee2", f.rangeFee2, "", "원")}</div>
+        <div data-sf-show="range-3"><span>3구간</span><b data-sf-from3>${Number(f.rangeUpTo2) + 1}</b>개 이상 ${money_("sf_rangeFee3", f.rangeFee3, "", "원")}</div></div>
+        <p class="sf-hint">구간 배송비는 그 구간의 <b>전체 배송비</b>로 적어요. 스마트스토어에는 ‘추가 배송비’로 나눠 보내요.</p></div>
+      <div class="sf-panel" data-sf-show="type-WEIGHT_PAID">${money_("sf_unitWeight", f.unitWeight, "상품 1개 무게", "kg")}
+        <div class="sf-tiers">${tiers.map((tier, i) => `<div><span>${i + 1}구간</span>총 ${money_(`sf_w${i + 1}`, tier.upto, "", "kg까지")}${money_(`sf_wf${i + 1}`, tier.fee, "", "원")}</div>`).join("")}</div>
+        <p class="sf-hint">스마트스토어에는 무게별 배송비가 없어서, 1개 무게로 나눠 <b>구간별(수량) 배송비</b>로 바꿔 보내요. <span data-sf-weight-map></span></p></div>
+      <p class="sf-hint" data-sf-show="type-FREE">고객은 배송비 없이 받아요. 제주·도서산간 추가 배송비는 따로 받을 수 있어요.</p></div>
+    <div class="sf-row" data-sf-hide="type-FREE"><b class="sf-label">결제 방식</b><div class="sf-chips">${SHIP_PAY_TYPES.map(([v, l]) => radio("sf_payType", v, l, f.payType)).join("")}</div></div>
+    <div class="sf-row"><label class="sf-toggle"><input type="checkbox" name="sf_areaUse" ${f.areaUse ? "checked" : ""} data-sf> <b>제주·도서산간 추가 배송비</b> <small>무료배송이어도 항상 붙어요</small></label>
+      <div class="sf-panel" data-sf-show="area-on"><div class="sf-chips">${radio("sf_areaType", "AREA_2", "제주·도서산간 같게 (2권역)", f.areaType)}${radio("sf_areaType", "AREA_3", "제주 / 그 외 도서산간 따로 (3권역)", f.areaType)}</div>
+        <div class="sf-inline">${money_("sf_jejuFee", f.jejuFee, "제주(·도서산간)")}<span data-sf-show="areatype-AREA_3">${money_("sf_islandFee", f.islandFee, "제주 외 도서산간")}</span></div></div></div>
+    <div class="sf-row"><b class="sf-label">반품·교환 <i>*</i></b><div class="sf-inline">${money_("sf_returnFee", f.returnFee, "반품 배송비(편도)")}${money_("sf_exchangeFee", f.exchangeFee, "교환 배송비(왕복)")}</div></div>
+    <div class="sf-calc"><div class="sf-calc-in"><b>배송비 계산해 보기</b><label>수량 <input type="text" inputmode="numeric" value="1" data-sf-calc="qty"></label><label>상품 금액 <input type="text" inputmode="numeric" value="${Number(product?.recommended || 20000)}" data-sf-calc="amount"></label><select data-sf-calc="region" aria-label="지역"><option value="normal">일반 지역</option><option value="jeju">제주</option><option value="island">제주 외 도서산간</option></select></div><p data-sf-result></p><p class="sf-channel" data-sf-channel></p></div>
+  </div>`;
+}
+function refreshShippingEditor(root) {
+  if (!root) return;
+  const form = root.closest("form");
+  const data = Object.fromEntries(new FormData(form));
+  const { fee, errors } = readShippingFee(data);
+  const flags = new Set([`type-${fee.type}`, `range-${fee.rangeTiers}`, `attr-${fee.attribute}`, fee.areaUse ? "area-on" : "area-off", `areatype-${fee.areaType}`]);
+  root.querySelectorAll("[data-sf-show]").forEach(el => { el.hidden = !el.dataset.sfShow.split(" ").some(flag => flags.has(flag)); });
+  root.querySelectorAll("[data-sf-hide]").forEach(el => { el.hidden = el.dataset.sfHide.split(" ").some(flag => flags.has(flag)); });
+  root.querySelectorAll(".sf-type").forEach(el => el.classList.toggle("active", el.querySelector("input").checked));
+  root.querySelectorAll(".sf-chip").forEach(el => el.classList.toggle("active", el.querySelector("input").checked));
+  const from2 = root.querySelector("[data-sf-from2]"); if (from2) from2.textContent = String((fee.rangeUpTo || 0) + 1);
+  const from3 = root.querySelector("[data-sf-from3]"); if (from3) from3.textContent = String((fee.rangeUpTo2 || 0) + 1);
+  const map = root.querySelector("[data-sf-weight-map]");
+  if (map) { const range = fee.type === "WEIGHT_PAID" ? weightToRange(fee) : null; map.textContent = range ? `→ 1~${range.rangeUpTo}개 ${money(range.baseFee)}, ${range.rangeUpTo + 1}~${range.rangeUpTo2}개 ${money(range.rangeFee2)}${range.rangeTiers === 3 ? `, ${range.rangeUpTo2 + 1}개 이상 ${money(range.rangeFee3)}` : ""}` : ""; }
+  const qty = Math.max(1, Number(String(root.querySelector('[data-sf-calc="qty"]').value).replace(/[^\d]/g, "") || 1));
+  const amount = Number(String(root.querySelector('[data-sf-calc="amount"]').value).replace(/[^\d]/g, "") || 0) * qty;
+  const region = root.querySelector('[data-sf-calc="region"]').value;
+  const result = calcShipping(fee, { qty, amount, region });
+  root.querySelector("[data-sf-result]").innerHTML = errors.length ? `<em>${escapeHtml(errors[0])}</em>` : `${qty}개 · 상품 ${money(amount)} → 배송비 <b>${money(result.total)}</b>${result.area ? ` (기본 ${money(result.base)} + 지역 ${money(result.area)})` : ""}${result.collect ? " · 착불(받을 때 결제)" : ""}`;
+  const cp = coupangDelivery(fee);
+  root.querySelector("[data-sf-channel]").textContent = `스마트스토어: 그대로 전송${fee.type === "WEIGHT_PAID" ? " (구간별로 변환)" : ""} · 쿠팡: ${cp.note || "그대로 전송"}${fee.areaUse ? " 쿠팡 도서산간 비용은 쿠팡 출고지 설정을 따라요." : ""}`;
+}
+document.addEventListener("input", event => { const editor = event.target.closest?.("[data-sf-editor]"); if (editor) refreshShippingEditor(editor); });
+document.addEventListener("change", event => { const editor = event.target.closest?.("[data-sf-editor]"); if (editor) refreshShippingEditor(editor); });
 
 function productEditorModal(product = null) {
   const isEdit = Boolean(product);
@@ -5970,14 +6175,15 @@ function productEditorModal(product = null) {
         <div class="form-field full customs-policy" data-customs-policy ${product?.shippingType === "overseas" ? "" : "hidden"}><label class="customs-toggle"><input type="checkbox" name="requireCustomsCode" ${product?.requireCustomsCode === false ? "" : "checked"}><span><b>개인통관고유부호 받기</b><small>체크하면 위탁셀러가 이 상품을 주문할 때 <em>개인통관고유부호를 꼭 입력</em>해야 주문이 들어와요. 해외배송은 통관에 필요해서 켜 두는 걸 권장해요.</small></span></label></div>
       </div></section>
       <section class="editor-section"><div class="editor-section-title"><span>02</span><div><h3>매입·판매 가격</h3><p>공급사 매입처와 셀러 공급가격을 구분합니다.</p></div></div><div class="purchase-strip"><div><span>기본 매입처</span><b>${escapeHtml(workspaceCompany("supplier"))}</b></div><div><span>매입 원가</span><input name="purchasePrice" type="number" value="${value("purchasePrice", product?.supply || 15900)}" min="100" required></div><div><span>매입 배송정책</span><input name="purchaseShipping" value="${value("purchaseShipping","공급사 직배송")}" required></div><div><span>부자재비</span><input name="surcharge" type="number" value="${value("surcharge",0)}" min="0"></div></div><div class="editor-grid cols-4 price-editor-grid">
-        <div class="form-field"><label>공급가 *</label><input name="supply" type="number" value="${value("supply",15900)}" min="100" required></div><div class="form-field"><label>권장 판매가 *</label><input name="recommended" type="number" value="${value("recommended",22900)}" min="100" required></div><div class="form-field"><label>소비자가</label><input name="retailPrice" type="number" value="${value("retailPrice",29900)}" min="0"></div><div class="form-field"><label>판매 배송정책 *</label><select name="shippingPolicy"><option ${selected("shippingPolicy","무료배송","무료배송")}>무료배송</option><option ${selected("shippingPolicy","조건부 무료")}>조건부 무료</option><option ${selected("shippingPolicy","유료배송 3,000원")}>유료배송 3,000원</option></select></div>
+        <div class="form-field"><label>공급가 *</label><input name="supply" type="number" value="${value("supply",15900)}" min="100" required></div><div class="form-field"><label>권장 판매가 *</label><input name="recommended" type="number" value="${value("recommended",22900)}" min="100" required></div><div class="form-field"><label>소비자가</label><input name="retailPrice" type="number" value="${value("retailPrice",29900)}" min="0"></div><div class="form-field"><label>배송비 정책 *</label><button type="button" class="sf-jump" data-editor-jump="3"><span>${escapeHtml(shippingFeeLabel(productShippingFee(product)))}</span><b>4단계에서 설정 →</b></button></div>
       </div><div class="balju-partner-table"><div class="balju-table-title"><b>매출처/그룹 개별공급가 설정</b><span>연결 거래처별 노출 및 공급가</span></div><div class="balju-table-row heading"><span>타입</span><span>거래처명</span><span>공급가</span><span>판매 배송정책</span><span>노출</span></div><div class="balju-table-row"><span>기본</span><b>연결된 위탁셀러 전체</b><strong>${money(product?.supply || 15900)}</strong><span>${escapeHtml(product?.shippingPolicy || "무료배송")}</span><em>노출</em></div></div></section>
       ${supplierOptionEditor(product)}
       <section class="editor-section"><div class="editor-section-title"><span>03</span><div><h3>상품 이미지·매출처 안내사항</h3><p>대표 이미지를 선택하고 셀러에게 복사될 상품정보를 입력합니다.</p></div></div><div class="image-picker">${Array.from({length:8},(_,index)=>`<label><input type="radio" name="imageIndex" value="${index}" ${(product?.imageIndex ?? 0) === index ? "checked" : ""}><span>${productPhoto({name:`AI 상품 이미지 ${index+1}`,imageIndex:index},"picker-photo")}<b>이미지 ${index+1}</b></span></label>`).join("")}</div><div class="editor-grid"><div class="form-field full balju-file-field"><label>상품 이미지 파일</label><input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp"><small>JPG·PNG·WEBP, 10MB 이하. 파일을 선택하지 않으면 위 대표 이미지가 사용됩니다.</small></div><div class="form-field"><label>원산지</label><input name="origin" value="${value("origin","대한민국")}" placeholder="예: 제주특별자치도"></div><div class="form-field"><label>원산 국가</label><select name="originCountry"><option ${selected("originCountry","대한민국","대한민국")}>대한민국</option><option ${selected("originCountry","중국")}>중국</option><option ${selected("originCountry","뉴질랜드")}>뉴질랜드</option><option ${selected("originCountry","호주")}>호주</option></select></div><div class="form-field"><label>예상 배송기간</label><input name="deliveryDays" value="${value("deliveryDays","1~3일")}"></div><div class="form-field"><label>제조·수확일</label><input name="manufactureDate" value="${value("manufactureDate")}" placeholder="예: 주문일 기준 2일 이내"></div><div class="form-field"><label>소비기한·보관법</label><input name="shelfLife" value="${value("shelfLife","수령 후 냉장·냉동 보관")}"></div><div class="form-field full"><label>상품 간략설명</label><input name="summary" value="${value("summary")}" maxlength="100" placeholder="상품 목록에 표시할 100자 이내 설명"></div>${detailEditorMarkup(product)}</div></section>
-      <section class="editor-section"><div class="editor-section-title"><span>04</span><div><h3>배송·재고·노출</h3><p>물류정보와 연결 셀러 노출 범위를 설정합니다.</p></div></div><div class="editor-grid cols-4"><div class="form-field span-2"><label>택배사 <small>네이버 스마트스토어 택배사 목록</small></label>${carrierPicker("carrier", product?.carrier || supplierProfile().carrier || "한진택배")}</div><div class="form-field"><label>창고</label><input name="warehouse" value="${value("warehouse","공급사 직배송")}"></div><div class="form-field"><label>초기 재고 *</label><input name="stock" type="number" value="${value("stock",100)}" min="0" required></div><div class="form-field"><label>단위</label><div class="unit-input"><input name="weight" type="number" value="${value("weight",1)}" min="0" step="0.1"><select name="unit"><option ${selected("unit","KG","KG")}>KG</option><option ${selected("unit","EA")}>EA</option><option ${selected("unit","BOX")}>BOX</option></select></div></div><div class="form-field"><label>관리코드</label><input name="managementCode" value="${value("managementCode")}" placeholder="최대 50자"></div><div class="form-field"><label>바코드</label><input name="barcode" value="${value("barcode")}" placeholder="영문·숫자 입력"></div><div class="form-field span-2"><label>상품 노출 범위</label><select name="visibility"><option value="연결 셀러" ${selected("visibility","연결 셀러","연결 셀러")}>연결 셀러 전체</option><option value="선택 셀러" ${selected("visibility","선택 셀러")}>선택 셀러만</option><option value="비노출" ${selected("visibility","비노출")}>비노출</option></select></div></div><div class="connected-visibility"><span>연결 거래처</span>${connected.length ? connected.map(connection=>`<b>✓ ${escapeHtml(memberByLogin(connection.sellerLoginId)?.company || connection.sellerLoginId)}</b>`).join("") : `<small>연결된 셀러가 없습니다.</small>`}</div></section>
+      <section class="editor-section"><div class="editor-section-title"><span>04</span><div><h3>배송·재고·노출</h3><p>배송비 정책(스마트스토어 기준)·택배사·재고·노출 범위를 설정합니다.</p></div></div><div class="editor-grid cols-4"><div class="form-field full sf-field"><label>배송비 정책 <small>스마트스토어 상품 등록 ‘배송’과 같은 항목이에요. 셀러가 쇼핑몰에 올릴 때 그대로 들어가요.</small></label>${shippingPolicyEditor(product)}</div><div class="form-field span-2"><label>택배사 <small>네이버 스마트스토어 택배사 목록</small></label>${carrierPicker("carrier", product?.carrier || supplierProfile().carrier || "한진택배")}</div><div class="form-field"><label>창고</label><input name="warehouse" value="${value("warehouse","공급사 직배송")}"></div><div class="form-field"><label>초기 재고 *</label><input name="stock" type="number" value="${value("stock",100)}" min="0" required></div><div class="form-field"><label>단위</label><div class="unit-input"><input name="weight" type="number" value="${value("weight",1)}" min="0" step="0.1"><select name="unit"><option ${selected("unit","KG","KG")}>KG</option><option ${selected("unit","EA")}>EA</option><option ${selected("unit","BOX")}>BOX</option></select></div></div><div class="form-field"><label>관리코드</label><input name="managementCode" value="${value("managementCode")}" placeholder="최대 50자"></div><div class="form-field"><label>바코드</label><input name="barcode" value="${value("barcode")}" placeholder="영문·숫자 입력"></div><div class="form-field span-2"><label>상품 노출 범위</label><select name="visibility"><option value="연결 셀러" ${selected("visibility","연결 셀러","연결 셀러")}>연결 셀러 전체</option><option value="선택 셀러" ${selected("visibility","선택 셀러")}>선택 셀러만</option><option value="비노출" ${selected("visibility","비노출")}>비노출</option></select></div></div><div class="connected-visibility"><span>연결 거래처</span>${connected.length ? connected.map(connection=>`<b>✓ ${escapeHtml(memberByLogin(connection.sellerLoginId)?.company || connection.sellerLoginId)}</b>`).join("") : `<small>연결된 셀러가 없습니다.</small>`}</div></section>
       <div class="editor-sticky-actions"><span>필수항목을 확인한 뒤 저장해 주세요.</span><div><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">${isEdit ? "수정 내용 저장" : "상품 등록·셀러 노출"}</button></div></div>
     </form>`);
   document.querySelector("#modal .modal").classList.add("product-editor-modal");
+  refreshShippingEditor(document.querySelector("#modal [data-sf-editor]"));
   rdeRender("product");
 }
 
@@ -8900,7 +9106,7 @@ function scrollInEditor(element, gap = 12) {
   scroller.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
 }
 function setEditorStep(modal, index) {
-  modal.querySelectorAll("[data-editor-jump]").forEach(button => { const on = Number(button.dataset.editorJump) === index; button.classList.toggle("active", on); button.setAttribute("aria-selected", String(on)); });
+  modal.querySelectorAll(".editor-progress [data-editor-jump]").forEach(button => { const on = Number(button.dataset.editorJump) === index; button.classList.toggle("active", on); button.setAttribute("aria-selected", String(on)); });
 }
 function jumpEditorSection(button) {
   const modal = button.closest(".modal");
