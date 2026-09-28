@@ -90,10 +90,43 @@ export type ShippingPolicyInput = {
   fee?: number;
   feeLabel?: string;
   freeShippingThreshold?: number | null;
+  feeType?: "free" | "paid" | "conditional";
+  jejuExtraFee?: number;
+  islandExtraFee?: number;
+  returnFee?: number | null;
+  exchangeFee?: number | null;
   description?: string | null;
   isActive?: boolean;
   sortOrder?: number;
 };
+
+// 배송비 유형에 맞게 배송비·무료배송 기준금액을 정리합니다(무료면 배송비 0, 조건부가 아니면 기준금액 없음).
+function shippingPolicyValues(input: ShippingPolicyInput) {
+  const feeType = input.feeType ?? ((input.fee ?? 0) === 0 ? "free" : input.freeShippingThreshold ? "conditional" : "paid");
+  const fee = feeType === "free" ? 0 : input.fee ?? 0;
+  const freeShippingThreshold = feeType === "conditional" ? input.freeShippingThreshold ?? null : null;
+  const autoLabel = feeType === "free"
+    ? "무료배송"
+    : feeType === "conditional" && freeShippingThreshold
+      ? `${fee.toLocaleString("ko-KR")}원 (${freeShippingThreshold.toLocaleString("ko-KR")}원 이상 무료)`
+      : `${fee.toLocaleString("ko-KR")}원`;
+  return {
+    name: input.name,
+    shippingType: input.shippingType,
+    courier: input.courier || null,
+    feeType,
+    fee,
+    feeLabel: input.feeLabel || autoLabel,
+    freeShippingThreshold,
+    jejuExtraFee: input.jejuExtraFee ?? 0,
+    islandExtraFee: input.islandExtraFee ?? 0,
+    returnFee: input.returnFee ?? null,
+    exchangeFee: input.exchangeFee ?? null,
+    description: input.description || null,
+    isActive: input.isActive ?? true,
+    sortOrder: input.sortOrder ?? 0
+  };
+}
 
 export type SupplierInput = {
   name: string;
@@ -149,13 +182,15 @@ async function normalizeSaleFields(input: ProductInput) {
   if (!category[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "카테고리를 찾을 수 없습니다.", 400);
   const categoryName = plainCategoryName(category[0].name);
   const healthProduct = categoryName.includes("건강식품");
+  // 제철 월은 모든 카테고리에 저장합니다(미분류·기타 카테고리 상품도 제철 월을 지정하면 그대로 반영).
+  // 제철 카테고리(농산·수산·축산·선물세트·식품)만 "상시 판매" 선택값을 따로 기억합니다.
   const seasonalProduct = seasonalCategoryNames.has(categoryName);
-  const isAlwaysOnSale = seasonalProduct && Boolean(input.isAlwaysOnSale);
+  const isAlwaysOnSale = Boolean(input.isAlwaysOnSale) && (seasonalProduct || !input.saleStartMonth || !input.saleEndMonth);
   return {
     salePrice: input.salePrice ?? null,
     salePriceMode: healthProduct ? "fixed" as const : input.salePriceMode ?? "autonomous" as const,
-    saleStartMonth: seasonalProduct && !isAlwaysOnSale ? input.saleStartMonth ?? null : null,
-    saleEndMonth: seasonalProduct && !isAlwaysOnSale ? input.saleEndMonth ?? null : null,
+    saleStartMonth: !isAlwaysOnSale ? input.saleStartMonth ?? null : null,
+    saleEndMonth: !isAlwaysOnSale ? input.saleEndMonth ?? null : null,
     isAlwaysOnSale,
     options: (input.options ?? []).map((option) => ({
       ...option,
@@ -617,15 +652,7 @@ export async function createShippingPolicy(input: ShippingPolicyInput) {
   const now = new Date().toISOString();
   const rows = await getDb().insert(shippingPolicies).values({
     id: crypto.randomUUID(),
-    name: input.name,
-    shippingType: input.shippingType,
-    courier: input.courier || null,
-    fee: input.fee ?? 0,
-    feeLabel: input.feeLabel || "무료배송",
-    freeShippingThreshold: input.freeShippingThreshold ?? null,
-    description: input.description || null,
-    isActive: input.isActive ?? true,
-    sortOrder: input.sortOrder ?? 0,
+    ...shippingPolicyValues(input),
     createdAt: now,
     updatedAt: now
   }).returning();
@@ -634,15 +661,7 @@ export async function createShippingPolicy(input: ShippingPolicyInput) {
 
 export async function updateShippingPolicy(id: string, input: ShippingPolicyInput) {
   const rows = await getDb().update(shippingPolicies).set({
-    name: input.name,
-    shippingType: input.shippingType,
-    courier: input.courier || null,
-    fee: input.fee ?? 0,
-    feeLabel: input.feeLabel || "무료배송",
-    freeShippingThreshold: input.freeShippingThreshold ?? null,
-    description: input.description || null,
-    isActive: input.isActive ?? true,
-    sortOrder: input.sortOrder ?? 0,
+    ...shippingPolicyValues(input),
     updatedAt: new Date().toISOString()
   }).where(eq(shippingPolicies.id, id)).returning();
   if (!rows[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "배송 정책을 찾을 수 없습니다.", 404);

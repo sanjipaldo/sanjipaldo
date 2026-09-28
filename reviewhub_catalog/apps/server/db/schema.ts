@@ -138,6 +138,12 @@ export const shippingPolicies = sqliteTable(
     fee: integer("fee").notNull().default(0),
     feeLabel: text("feeLabel").notNull().default("무료배송"),
     freeShippingThreshold: integer("freeShippingThreshold"),
+    // 배송비 유형: free 무료 · paid 유료 · conditional 조건부 무료(freeShippingThreshold 이상 무료)
+    feeType: text("feeType", { enum: ["free", "paid", "conditional"] }).notNull().default("free"),
+    jejuExtraFee: integer("jejuExtraFee").notNull().default(0),
+    islandExtraFee: integer("islandExtraFee").notNull().default(0),
+    returnFee: integer("returnFee"),
+    exchangeFee: integer("exchangeFee"),
     description: text("description"),
     isActive: integer("isActive", { mode: "boolean" }).notNull().default(true),
     sortOrder: integer("sortOrder").notNull().default(0),

@@ -862,3 +862,17 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .backup-summary { grid-template-columns: 1fr; }
   .backup-card { padding: 14px; }
 }
+
+/* 페이지당 보기 개수 직접 입력 (공개·관리자 공통) */
+.page-size-input { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.page-size-input input { width: 72px; min-height: 36px; padding: 0 10px; border: 1px solid var(--w-card-border, #dfe3dc); border-radius: 999px; background: #fff; color: var(--w-ink, #0e0f0c); font-weight: 800; text-align: center; }
+.page-size-input input:focus { outline: 2px solid var(--w-primary, #9fe870); outline-offset: 1px; }
+@media (max-width: 720px) {
+  .page-size-input { justify-content: flex-start; }
+  .page-size-input input { width: 84px; }
+}
+
+/* 배송 정책: 제주·도서산간 구역 */
+.policy-section-title { margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--w-card-border, #e6e8e3); color: var(--w-ink, #0e0f0c); font-size: 13px; font-weight: 800; }
+.policy-card .policy-region-line { color: var(--w-ink-deep, #163300); font-weight: 700; }
+.shipping-policy-editor .editor-grid { max-height: min(70vh, 640px); overflow-y: auto; }

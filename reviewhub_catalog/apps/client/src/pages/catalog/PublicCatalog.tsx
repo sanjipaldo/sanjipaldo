@@ -44,6 +44,7 @@ import {
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import type { CatalogData, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ShippingType, SoldOutIssue } from "./types";
+import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 
 
 const fallbackGuideContent: GuideContent = {
@@ -345,6 +346,11 @@ function isSeasonalCategory(categoryName?: string) {
   return seasonalCategories.has(plainCategoryName(categoryName));
 }
 
+// 제철 적용 여부: 제철 카테고리이거나, 카테고리와 상관없이 상품에 제철 월이 지정된 경우
+function seasonApplies(product: Pick<Product, "isAlwaysOnSale" | "saleStartMonth" | "saleEndMonth">, categoryName?: string) {
+  return isSeasonalCategory(categoryName) || Boolean(!product.isAlwaysOnSale && product.saleStartMonth && product.saleEndMonth);
+}
+
 function isMonthInSeason(month: number, startMonth: number | null, endMonth: number | null) {
   if (!startMonth || !endMonth) return true;
   if (startMonth <= endMonth) return month >= startMonth && month <= endMonth;
@@ -352,7 +358,7 @@ function isMonthInSeason(month: number, startMonth: number | null, endMonth: num
 }
 
 function seasonLabel(product: Product, categoryName?: string) {
-  if (!isSeasonalCategory(categoryName)) return "상시 판매";
+  if (!seasonApplies(product, categoryName)) return "상시 판매";
   if (product.isAlwaysOnSale) return "상시 판매";
   if (!product.saleStartMonth || !product.saleEndMonth) return "판매기간 미설정";
   if (product.saleStartMonth === product.saleEndMonth) return `${product.saleStartMonth}월 판매`;
@@ -860,6 +866,8 @@ function PriceChangeBoard({
 }) {
   const [page, setPage] = useState(1);
   const [displayPageSize, setDisplayPageSize] = useState(pageSize);
+  // 첫 화면은 미리 만든(prerender) 화면과 같게 그리고, 브라우저에 저장된 보기 개수는 그 뒤에 적용합니다.
+  useEffect(() => { setDisplayPageSize(readStoredPageSize("public-price-changes", pageSize, 200)); }, [pageSize]);
   const [direction, setDirection] = useState<"all" | "increase" | "decrease">("all");
   const groupedHistories = useMemo(() => groupPriceHistories(histories), [histories]);
   const filteredHistories = useMemo(() => groupedHistories.filter((history) => {
@@ -894,7 +902,7 @@ function PriceChangeBoard({
           <ArrowDownRight size={15} /> 인하 <small>{decreaseCount}</small>
         </button>
       </div>
-      <label className="page-size-select">페이지당 <select value={displayPageSize} onChange={(event) => { setDisplayPageSize(Number(event.target.value)); setPage(1); }} aria-label="가격변동 페이지당 표시 수"><option value={5}>5개</option><option value={10}>10개</option><option value={20}>20개</option></select></label>
+      <PageSizeInput value={displayPageSize} onChange={(value) => { setDisplayPageSize(value); setPage(1); }} label="가격변동 페이지당 표시 수" suffix="개" max={200} storageKey="public-price-changes" />
       </div>
       {visible.length > 0 ? (
         <div className="price-change-list">
@@ -1092,7 +1100,8 @@ export function CatalogHome() {
   const [shippingType, setShippingType] = useState<"all" | ShippingType>("all");
   const [categoryId, setCategoryId] = useState("all");
   const [saleMonth, setSaleMonth] = useState<number | "all">("all");
-  const [catalogPageSize, setCatalogPageSize] = useState<5 | 10 | 20>(5);
+  const [catalogPageSize, setCatalogPageSize] = useState(5);
+  useEffect(() => { setCatalogPageSize(readStoredPageSize("public-catalog", 5, 200)); }, []);
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
@@ -1153,7 +1162,7 @@ export function CatalogHome() {
     return (shippingType === "all" || product.shippingType === shippingType)
       && (categoryId === "all" || product.categoryId === categoryId)
       && (saleMonth === "all" || (
-        isSeasonalCategory(category)
+        seasonApplies(product, category)
         && (product.isAlwaysOnSale || isMonthInSeason(saleMonth, product.saleStartMonth, product.saleEndMonth))
       ))
       && (!normalized || `${product.name} ${product.origin ?? ""} ${category}`.toLowerCase().includes(normalized));
@@ -1206,7 +1215,7 @@ export function CatalogHome() {
     if (!highlightMonth) return { total: 0, byCategory: [] as Array<{ name: string; count: number }>, keywords: [] as Array<{ keyword: string; count: number }> };
     const inSeason = data.products.filter((product) => {
       const category = data.categories.find((item) => item.id === product.categoryId);
-      if (!isSeasonalCategory(category?.name) || product.isAlwaysOnSale) return false;
+      if (!seasonApplies(product, category?.name) || product.isAlwaysOnSale) return false;
       if (!product.saleStartMonth || !product.saleEndMonth) return false;
       return isMonthInSeason(highlightMonth, product.saleStartMonth, product.saleEndMonth);
     });
@@ -1247,11 +1256,7 @@ export function CatalogHome() {
             <div><span className="section-kicker">PRODUCT LIST</span><h2>상품 단가표</h2><p>상품 이미지를 누르면 크게 확인할 수 있습니다.</p></div>
             <div className="catalog-table-tools">
               <span className="result-count">총 {filteredProducts.length}개 상품</span>
-              <label className="page-size-control">페이지당
-                <select value={catalogPageSize} onChange={(event) => setCatalogPageSize(Number(event.target.value) as 5 | 10 | 20)} aria-label="페이지당 상품 수">
-                  <option value={5}>5개</option><option value={10}>10개</option><option value={20}>20개</option>
-                </select>
-              </label>
+              <PageSizeInput value={catalogPageSize} onChange={setCatalogPageSize} label="페이지당 상품 수" suffix="개" max={200} presets={[5, 10, 20, 30, 50, 100]} storageKey="public-catalog" className="page-size-control" />
             </div>
           </div>
           <div className="filter-toolbar">
@@ -1328,7 +1333,7 @@ export function CatalogHome() {
                   const soldOutNow = Boolean(product.isSoldOut || allOptionsSoldOut);
                   const seasonConfigured = Boolean(product.saleStartMonth && product.saleEndMonth);
                   const availableNow = !product.isSoldOut && !allOptionsSoldOut && (
-                    !isSeasonalCategory(category?.name)
+                    !seasonApplies(product, category?.name)
                     || product.isAlwaysOnSale
                     || (seasonConfigured && isMonthInSeason(currentMonth, product.saleStartMonth, product.saleEndMonth))
                   );

@@ -40,6 +40,7 @@ import {
   ListOrdered
 } from "lucide-react";
 import { toast } from "sonner";
+import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 import { apiFetch } from "@/lib/api";
 import { authClient, clearAuthToken } from "@/lib/auth";
 import type { AdminCatalogData, AdminHomeData, AdminOverview, BaljuoraConnection, Category, CatalogSyncOutboxItem, CatalogSyncOverview, CatalogSyncRun, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, SalesOverview, ShippingPolicy, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
@@ -140,7 +141,7 @@ function ProductImagePreview({ url, onClear }: { url: string; onClear: () => voi
 type BulkField = "isVisible" | "isSoldOut" | "categoryId" | "shippingPolicyId" | "courier" | "supplierName" | "season" | "imageUrl" | "notes" | "packaging";
 
 // 선택한 상품 일괄 변경(발주오라 "상품 일괄 변경"과 같은 방식: 체크한 항목만 바뀝니다).
-function BulkEditModal({ ids, categories, shippingPolicies, suppliers, nonSeasonalCount = 0, preset, onClose, onDone }: { ids: string[]; categories: Category[]; shippingPolicies: ShippingPolicy[]; suppliers: Supplier[]; nonSeasonalCount?: number; preset?: "seasonInfo"; onClose: () => void; onDone: () => void }) {
+function BulkEditModal({ ids, categories, shippingPolicies, suppliers, preset, onClose, onDone }: { ids: string[]; categories: Category[]; shippingPolicies: ShippingPolicy[]; suppliers: Supplier[]; preset?: "seasonInfo"; onClose: () => void; onDone: () => void }) {
   const [enabled, setEnabled] = useState<Record<BulkField, boolean>>({ isVisible: false, isSoldOut: false, categoryId: false, shippingPolicyId: false, courier: false, supplierName: false, season: preset === "seasonInfo", imageUrl: false, notes: preset === "seasonInfo", packaging: false });
   const [isVisible, setIsVisible] = useState(true);
   const [isSoldOut, setIsSoldOut] = useState(false);
@@ -238,7 +239,6 @@ function BulkEditModal({ ids, categories, shippingPolicies, suppliers, nonSeason
         {months.map((month) => <button type="button" key={month} disabled={alwaysOnSale} className={`${inRange(month) ? "in" : ""} ${month === startMonth ? "start" : ""} ${month === endMonth ? "end" : ""}`} onClick={() => pickMonth(month)} aria-pressed={inRange(month)}>{month}월</button>)}
       </div>
       <p className="bulk-season-summary">{alwaysOnSale ? "연중 판매로 표시됩니다." : <><b>{startMonth}월 ~ {endMonth}월</b> ({rangeLength}개월) · {pickingEnd ? "끝나는 달을 눌러 주세요." : "시작 달부터 다시 누르면 새로 고릅니다."}</>}</p>
-      {nonSeasonalCount > 0 && <small className="bulk-season-warning">선택한 상품 중 {nonSeasonalCount}개는 제철 적용 카테고리(농산·수산·축산·선물세트·식품)가 아니어서 판매기간이 바뀌지 않습니다.</small>}
     </div>
   );
 
@@ -477,6 +477,11 @@ function isHealthCategory(category?: Category) {
 
 function isSeasonalCategory(category?: Category) {
   return Boolean(category && seasonalCategoryNames.has(plainCategoryName(category.name)));
+}
+
+// 제철 적용 여부: 제철 카테고리이거나, 카테고리와 상관없이 상품에 제철 월이 지정된 경우
+function seasonApplies(product: Pick<Product, "isAlwaysOnSale" | "saleStartMonth" | "saleEndMonth">, category?: Category) {
+  return isSeasonalCategory(category) || Boolean(!product.isAlwaysOnSale && product.saleStartMonth && product.saleEndMonth);
 }
 
 export function CatalogAdmin({ section }: { section: AdminSection }) {
@@ -752,7 +757,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const [shippingFilter, setShippingFilter] = useState<"all" | ShippingType>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "visible" | "soldout">("all");
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(() => readStoredPageSize("admin-products", 10));
   const [page, setPage] = useState(1);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(() => new Set());
   const [bulkEditOpen, setBulkEditOpen] = useState<false | "all" | "seasonInfo">(false);
@@ -764,7 +769,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const [sortPositionValues, setSortPositionValues] = useState<number[]>([]);
   const [sortQuery, setSortQuery] = useState("");
   const [sortCategory, setSortCategory] = useState("all");
-  const [sortPageSize, setSortPageSize] = useState(10);
+  const [sortPageSize, setSortPageSize] = useState(() => readStoredPageSize("admin-sort", 10));
   const [sortPage, setSortPage] = useState(1);
   const [sortSaving, setSortSaving] = useState(false);
   const [draggedSortProductId, setDraggedSortProductId] = useState<string | null>(null);
@@ -812,7 +817,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       const matchesQuery = !normalized || `${product.name} ${product.productCode || ""}`.toLowerCase().includes(normalized);
       const matchesShipping = shippingFilter === "all" || product.shippingType === shippingFilter;
       const matchesCategory = categoryFilter === "all" || product.categoryId === categoryFilter;
-      const matchesMonth = month === "all" || !isSeasonalCategory(category) || product.isAlwaysOnSale || (product.saleStartMonth !== null && product.saleEndMonth !== null && (product.saleStartMonth <= product.saleEndMonth ? Number(month) >= product.saleStartMonth && Number(month) <= product.saleEndMonth : Number(month) >= product.saleStartMonth || Number(month) <= product.saleEndMonth));
+      const matchesMonth = month === "all" || !seasonApplies(product, category) || product.isAlwaysOnSale || (product.saleStartMonth !== null && product.saleEndMonth !== null && (product.saleStartMonth <= product.saleEndMonth ? Number(month) >= product.saleStartMonth && Number(month) <= product.saleEndMonth : Number(month) >= product.saleStartMonth || Number(month) <= product.saleEndMonth));
       const matchesStatus = statusFilter === "all"
         || (statusFilter === "visible" && product.isVisible)
         || (statusFilter === "soldout" && (product.isSoldOut || product.options?.some((option) => option.isSoldOut)));
@@ -1088,7 +1093,6 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
 
   const editingCategory = editing ? data.categories.find((category) => category.id === editing.categoryId) : undefined;
   const editingHealthProduct = isHealthCategory(editingCategory);
-  const editingSeasonalProduct = isSeasonalCategory(editingCategory);
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1241,7 +1245,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   <div className="display-order-toolbar">
     <div className="search-field"><Search size={17} /><input value={sortQuery} onChange={(event) => setSortQuery(event.target.value)} placeholder="상품명·상품코드 검색" /></div>
     <select value={sortCategory} onChange={(event) => setSortCategory(event.target.value)} aria-label="노출순서 카테고리 필터"><option value="all">전체 카테고리</option>{data.categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select>
-    <select value={sortPageSize} onChange={(event) => setSortPageSize(Number(event.target.value))} aria-label="노출순서 페이지당 상품 수"><option value={10}>10개씩 보기</option><option value={20}>20개씩 보기</option><option value={30}>30개씩 보기</option></select>
+    <PageSizeInput value={sortPageSize} onChange={setSortPageSize} label="노출순서 페이지당 상품 수" prefix="" suffix="개씩 보기" storageKey="admin-sort" />
   </div>
   <div className="display-order-list">
     {sortPagedProducts.map((product) => {
@@ -1329,7 +1333,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
           <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="all">전체 카테고리</option>{visibleCategories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select>
           <select className="admin-month-filter" value={month} onChange={(event) => setMonth(event.target.value)}><option value="all">전체 판매월</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((value) => <option key={value} value={String(value)}>{value}월 상품</option>)}</select>
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "visible" | "soldout")}><option value="all">전체 상태</option><option value="visible">노출 상품</option><option value="soldout">품절 상품</option></select>
-          <label className="page-size-select">페이지당 <select aria-label="페이지당 상품 수" value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}><option value={10}>10개씩 보기</option><option value={20}>20개씩 보기</option><option value={30}>30개씩 보기</option></select></label>
+          <PageSizeInput value={pageSize} onChange={setPageSize} label="페이지당 상품 수" suffix="개씩 보기" storageKey="admin-products" />
           <button type="button" className="filter-reset" onClick={() => { setQuery(""); setShippingFilter("all"); setCategoryFilter("all"); setMonth("all"); setStatusFilter("all"); }}>초기화</button>
           <span>총 {(data.isPartial ? data.catalogTotals?.productCount ?? products.length : products.length).toLocaleString("ko-KR")}개{hydrating ? " · 전체 목록 준비 중" : ""}</span>
         </div>
@@ -1378,7 +1382,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
                   <td className="admin-product-primary"><div className="admin-product-cell">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={20} /></span>}<div className="admin-product-copy"><strong>{product.name}</strong><small>{product.productCode || product.id} · {product.origin || "-"}</small>{options.length > 0 && <button type="button" className="admin-option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? "옵션 접기" : `옵션 ${options.length}개 보기`} <ChevronRight size={14} /></button>}</div></div>{optionPanel && <div className="admin-inline-options">{optionPanel}</div>}</td>
                   <td data-label="노출순서"><strong className="display-order-number">{productOrderMap.get(product.id) ?? "-"}</strong></td>
                   <td data-label="배송·카테고리"><strong>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</strong><small>{category?.name || "-"}</small></td>
-                  <td data-label="판매기간"><strong>{isSeasonalCategory(category) ? product.isAlwaysOnSale ? "상시 판매" : `${product.saleStartMonth || "-"}월 ~ ${product.saleEndMonth || "-"}월` : "상시"}</strong><small>{isSeasonalCategory(category) ? product.isAlwaysOnSale ? "연중 판매" : "월별 제철상품" : "기간 적용 제외"}</small></td>
+                  <td data-label="판매기간"><strong>{seasonApplies(product, category) ? product.isAlwaysOnSale ? "상시 판매" : `${product.saleStartMonth || "-"}월 ~ ${product.saleEndMonth || "-"}월` : "상시"}</strong><small>{seasonApplies(product, category) ? product.isAlwaysOnSale ? "연중 판매" : "월별 제철상품" : "제철 월 미지정"}</small></td>
                   <td data-label="매입처"><strong>{product.supplierName || "미지정"}</strong></td>
                   <td data-label="원가"><b className="cost-price">{formatPrice(costPrice)}</b></td>
                   <td data-label="A단가"><b className="admin-a-price">{formatPrice(minimumAPrice)}</b><small>{options.length > 0 ? "옵션 최저 A단가" : "기본 A단가"}</small></td>
@@ -1426,17 +1430,15 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       {editing && <div className="editor-overlay"><form className="editor-panel" onSubmit={save}><div className="editor-header"><div><span>PRODUCT EDITOR</span><h2>{editing.id ? "상품 수정" : "신규 상품 등록"}</h2></div><button type="button" onClick={() => setEditing(null)} disabled={saving} aria-label="닫기"><X size={21} /></button></div><div className="editor-grid">
         <label>상품코드<input value={editing.productCode} onChange={(event) => setEditing({ ...editing, productCode: event.target.value })} placeholder="미입력 시 자동 생성" /></label>
         <label className="full">상품명<input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} required /></label>
-        <label>배송유형<select value={editing.shippingType} onChange={(event) => { const shippingType = event.target.value as ShippingType; const category = data.categories.find((item) => item.shippingType === shippingType); const health = isHealthCategory(category); const seasonal = isSeasonalCategory(category); setEditing({ ...editing, shippingType, categoryId: category?.id || "", shippingPolicyId: null, salePriceMode: health ? "fixed" : editing.salePriceMode, saleStartMonth: seasonal ? editing.saleStartMonth : null, saleEndMonth: seasonal ? editing.saleEndMonth : null, isAlwaysOnSale: seasonal ? editing.isAlwaysOnSale : false, options: editing.options.map((option) => ({ ...option, salePriceMode: health ? "fixed" : option.salePriceMode })) }); }}><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select></label>
-        <label>카테고리<select value={editing.categoryId} onChange={(event) => { const category = data.categories.find((item) => item.id === event.target.value); const health = isHealthCategory(category); const seasonal = isSeasonalCategory(category); setEditing({ ...editing, categoryId: event.target.value, salePriceMode: health ? "fixed" : editing.salePriceMode, saleStartMonth: seasonal ? editing.saleStartMonth : null, saleEndMonth: seasonal ? editing.saleEndMonth : null, isAlwaysOnSale: seasonal ? editing.isAlwaysOnSale : false, options: editing.options.map((option) => ({ ...option, salePriceMode: health ? "fixed" : option.salePriceMode })) }); }} required>{data.categories.filter((item) => item.shippingType === editing.shippingType).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label>배송유형<select value={editing.shippingType} onChange={(event) => { const shippingType = event.target.value as ShippingType; const category = data.categories.find((item) => item.shippingType === shippingType); const health = isHealthCategory(category); setEditing({ ...editing, shippingType, categoryId: category?.id || "", shippingPolicyId: null, salePriceMode: health ? "fixed" : editing.salePriceMode, options: editing.options.map((option) => ({ ...option, salePriceMode: health ? "fixed" : option.salePriceMode })) }); }}><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select></label>
+        <label>카테고리<select value={editing.categoryId} onChange={(event) => { const category = data.categories.find((item) => item.id === event.target.value); const health = isHealthCategory(category); setEditing({ ...editing, categoryId: event.target.value, salePriceMode: health ? "fixed" : editing.salePriceMode, options: editing.options.map((option) => ({ ...option, salePriceMode: health ? "fixed" : option.salePriceMode })) }); }} required>{data.categories.filter((item) => item.shippingType === editing.shippingType).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label>원가<input type="number" min="0" value={editing.costPrice} onChange={(event) => setEditing({ ...editing, costPrice: Number(event.target.value) })} required /><small>원가 기준 A단가 마진율이 자동 계산됩니다.</small></label>
         <label>A단가<input type="number" min="0" value={editing.aPrice} onChange={(event) => setEditing({ ...editing, aPrice: Number(event.target.value) })} required /><strong className="margin-rate editor-margin">{marginRate(editing.aPrice, editing.costPrice)?.toFixed(1) ?? "-"}% 마진</strong></label>
         <label>일반공급가<input type="number" min="0" value={editing.generalPrice} onChange={(event) => setEditing({ ...editing, generalPrice: Number(event.target.value) })} required /></label>
         <label>판매가 정책<select value={editingHealthProduct ? "fixed" : editing.salePriceMode} disabled={editingHealthProduct} onChange={(event) => setEditing({ ...editing, salePriceMode: event.target.value as "autonomous" | "fixed" })}><option value="autonomous">자율 판매가</option><option value="fixed">지정 판매가</option></select><small>{editingHealthProduct ? "건강식품은 지정 판매가만 사용할 수 있습니다." : "판매자가 자유롭게 정하거나 지정가를 안내할 수 있습니다."}</small></label>
         <label>지정 판매가<input type="number" min="0" value={editing.salePrice ?? ""} disabled={(editingHealthProduct ? "fixed" : editing.salePriceMode) !== "fixed"} onChange={(event) => setEditing({ ...editing, salePrice: event.target.value ? Number(event.target.value) : null })} placeholder="지정 판매가 입력" /></label>
-        {editingSeasonalProduct && <>
           <label>판매 시작월<select value={editing.isAlwaysOnSale ? "always" : editing.saleStartMonth ?? ""} onChange={(event) => event.target.value === "always" ? setEditing({ ...editing, isAlwaysOnSale: true, saleStartMonth: null, saleEndMonth: null }) : setEditing({ ...editing, isAlwaysOnSale: false, saleStartMonth: event.target.value ? Number(event.target.value) : null })}><option value="">미설정</option><option value="always">상시 판매</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((month) => <option key={month} value={month}>{month}월</option>)}</select><small>상시 판매를 선택하면 종료월은 사용할 수 없습니다.</small></label>
           <label>판매 종료월<select value={editing.saleEndMonth ?? ""} disabled={editing.isAlwaysOnSale} onChange={(event) => setEditing({ ...editing, saleEndMonth: event.target.value ? Number(event.target.value) : null })}><option value="">{editing.isAlwaysOnSale ? "상시 판매 (선택 불가)" : "미설정"}</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((month) => <option key={month} value={month}>{month}월</option>)}</select></label>
-        </>}
         <label className="full">상품 이미지<input value={editing.imageUrl} onChange={(event) => setEditing({ ...editing, imageUrl: event.target.value })} placeholder="https://... 또는 아래 업로드" /><span className="image-upload-row"><button type="button" onClick={() => imageInputRef.current?.click()} disabled={imageBusy}><Upload size={14} /> {imageBusy ? "업로드 중…" : "JPEG/PNG 업로드"}</button><input ref={imageInputRef} type="file" accept="image/jpeg,image/png" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProductImage(file); }} /></span>{editing.imageUrl ? <ProductImagePreview url={editing.imageUrl} onClear={() => setEditing({ ...editing, imageUrl: "" })} /> : <small className="product-image-empty">이미지를 올리거나 주소를 넣으면 여기에서 미리 볼 수 있습니다.</small>}</label>
         <label>매입처<select value={editing.supplierName} onChange={(event) => setEditing({ ...editing, supplierName: event.target.value })}><option value="">미지정</option>{editing.supplierName && !suppliers.some((supplier) => supplier.name === editing.supplierName) && <option value={editing.supplierName}>{editing.supplierName} (기존 입력)</option>}{suppliers.filter((supplier) => supplier.isActive).map((supplier) => <option value={supplier.name} key={supplier.id}>{supplier.name}</option>)}</select><small>공급처 메뉴에서 등록한 매입처를 선택할 수 있습니다.</small></label>
         <label>원산지<input value={editing.origin} onChange={(event) => setEditing({ ...editing, origin: event.target.value })} /></label>
@@ -1459,7 +1461,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <label className="check-label"><input type="checkbox" checked={editing.isVisible} onChange={(event) => setEditing({ ...editing, isVisible: event.target.checked })} /> 공개 노출</label>
         <label className="check-label"><input type="checkbox" checked={editing.isSoldOut} onChange={(event) => setEditing({ ...editing, isSoldOut: event.target.checked })} /> 품절/준비중 표시 (노출 유지)</label>
       </div><div className="editor-footer"><button type="button" onClick={() => setEditing(null)} disabled={saving}>취소</button><button className="primary-action" type="submit" disabled={saving}><Save size={16} /> {saving ? "빠르게 저장 중…" : "저장하기"}</button></div></form></div>}
-      {bulkEditOpen && <BulkEditModal ids={Array.from(selectedProductIds)} categories={data.categories} shippingPolicies={shippingPolicies} suppliers={suppliers} preset={bulkEditOpen === "seasonInfo" ? "seasonInfo" : undefined} nonSeasonalCount={data.products.filter((product) => selectedProductIds.has(product.id) && !isSeasonalCategory(data.categories.find((category) => category.id === product.categoryId))).length} onClose={() => setBulkEditOpen(false)} onDone={() => { setBulkEditOpen(false); setSelectedProductIds(new Set()); void refresh(true); }} />}
+      {bulkEditOpen && <BulkEditModal ids={Array.from(selectedProductIds)} categories={data.categories} shippingPolicies={shippingPolicies} suppliers={suppliers} preset={bulkEditOpen === "seasonInfo" ? "seasonInfo" : undefined} onClose={() => setBulkEditOpen(false)} onDone={() => { setBulkEditOpen(false); setSelectedProductIds(new Set()); void refresh(true); }} />}
       {bulkPreview && <div className="editor-overlay"><section className="excel-preview-panel"><div className="editor-header"><div><span>EXCEL PREVIEW</span><h2>상품 일괄변경 미리보기</h2></div><button type="button" onClick={() => { setBulkPreview(null); setBulkFile(null); }} aria-label="닫기"><X size={21} /></button></div>
         <div className="excel-preview-summary"><article><span>읽은 행</span><strong>{bulkPreview.totalRows}</strong></article><article><span>매칭 행</span><strong>{bulkPreview.matchedRows}</strong></article><article><span>변경 상품</span><strong>{bulkPreview.affectedProducts}</strong></article><article><span>변경 항목</span><strong>{bulkPreview.changes.length}</strong></article>{bulkPreview.newProducts ? <article><span>신규 상품</span><strong>{bulkPreview.newProducts}</strong></article> : null}</div>
         {bulkPreview.errors.length > 0 && <div className="excel-error-list"><strong>수정이 필요한 행</strong>{bulkPreview.errors.map((error) => <p key={`${error.row}-${error.message}`}>{error.row}행 · {error.message}</p>)}</div>}
@@ -1660,30 +1662,87 @@ function ShippingPoliciesAdmin() {
   const [name, setName] = useState("");
   const [shippingType, setShippingType] = useState<ShippingType>("domestic");
   const [courier, setCourier] = useState("");
-  const [feeLabel, setFeeLabel] = useState("무료배송");
+  const [feeType, setFeeType] = useState<ShippingPolicy["feeType"]>("free");
   const [fee, setFee] = useState("0");
+  const [threshold, setThreshold] = useState("");
+  const [jejuExtraFee, setJejuExtraFee] = useState("0");
+  const [islandExtraFee, setIslandExtraFee] = useState("0");
+  const [returnFee, setReturnFee] = useState("");
+  const [exchangeFee, setExchangeFee] = useState("");
+  const [feeLabel, setFeeLabel] = useState("");
   const [description, setDescription] = useState("");
   const load = async () => {
     const response = await apiFetch("/catalog/admin/shipping-policies");
     if (response.ok) setPolicies((await readData<{ policies: ShippingPolicy[] }>(response)).policies);
   };
   useEffect(() => { void load(); }, []);
+  const close = () => { setEditing(null); setFormOpen(false); setName(""); };
   const open = (policy?: ShippingPolicy) => {
     setFormOpen(true);
-    setEditing(policy ?? null); setName(policy?.name ?? ""); setShippingType(policy?.shippingType ?? "domestic"); setCourier(policy?.courier ?? ""); setFeeLabel(policy?.feeLabel ?? "무료배송"); setFee(String(policy?.fee ?? 0)); setDescription(policy?.description ?? "");
+    setEditing(policy ?? null);
+    setName(policy?.name ?? "");
+    setShippingType(policy?.shippingType ?? "domestic");
+    setCourier(policy?.courier ?? "");
+    setFeeType(policy?.feeType ?? "free");
+    setFee(String(policy?.fee ?? 0));
+    setThreshold(policy?.freeShippingThreshold ? String(policy.freeShippingThreshold) : "");
+    setJejuExtraFee(String(policy?.jejuExtraFee ?? 0));
+    setIslandExtraFee(String(policy?.islandExtraFee ?? 0));
+    setReturnFee(policy?.returnFee != null ? String(policy.returnFee) : "");
+    setExchangeFee(policy?.exchangeFee != null ? String(policy.exchangeFee) : "");
+    setFeeLabel(policy?.feeLabel ?? "");
+    setDescription(policy?.description ?? "");
   };
+  const won = (value: string) => Math.max(0, Math.floor(Number(value.replace(/[^0-9]/g, "")) || 0));
+  const optionalWon = (value: string) => value.trim() === "" ? null : won(value);
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const response = await apiFetch(editing ? `/catalog/admin/shipping-policies/${editing.id}` : "/catalog/admin/shipping-policies", { method: editing ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, shippingType, courier: courier || null, fee: Number(fee) || 0, feeLabel, description: description || null, isActive: true }) });
+    if (feeType === "conditional" && !won(threshold)) { toast.error("조건부 무료는 무료배송 기준 금액을 입력해 주세요."); return; }
+    const payload = {
+      name,
+      shippingType,
+      courier: courier || null,
+      feeType,
+      fee: feeType === "free" ? 0 : won(fee),
+      freeShippingThreshold: feeType === "conditional" ? won(threshold) : null,
+      jejuExtraFee: won(jejuExtraFee),
+      islandExtraFee: won(islandExtraFee),
+      returnFee: optionalWon(returnFee),
+      exchangeFee: optionalWon(exchangeFee),
+      feeLabel: feeLabel.trim() || undefined,
+      description: description || null,
+      isActive: true
+    };
+    const response = await apiFetch(editing ? `/catalog/admin/shipping-policies/${editing.id}` : "/catalog/admin/shipping-policies", { method: editing ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     if (!response.ok) return;
-    toast.success("배송 정책을 저장했습니다."); setEditing(null); setFormOpen(false); setName(""); await load();
+    toast.success("배송 정책을 저장했습니다."); close(); await load();
   };
   const remove = async (policy: ShippingPolicy) => {
     const response = await apiFetch(`/catalog/admin/shipping-policies/${policy.id}`, { method: "DELETE" });
     if (response.ok) { toast.success("배송 정책을 삭제했습니다."); await load(); }
   };
-  const editorOpen = formOpen;
-  return <><div className="admin-page-heading"><div><span>SHIPPING POLICY</span><h1>배송 정책</h1><p>상품 등록 시 선택할 배송비·택배사 정책을 관리합니다.</p></div><button className="primary-action" type="button" onClick={() => open()}><Plus size={16} /> 정책 등록</button></div><div className="policy-grid">{policies.map((policy) => <article className="policy-card" key={policy.id}><div><span className={`delivery-badge ${policy.shippingType}`}>{policy.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><h2>{policy.name}</h2><strong>{policy.feeLabel}</strong><small>{policy.courier || "택배사 지정"} · {policy.description || "설명 없음"}</small></div><div className="bundle-card-actions"><button type="button" onClick={() => open(policy)}><Pencil size={14} /> 수정</button><button type="button" onClick={() => void remove(policy)}><Trash2 size={14} /> 삭제</button></div></article>)}</div>{editorOpen && <div className="editor-overlay"><form className="editor-panel" onSubmit={save}><div className="editor-header"><div><span>SHIPPING POLICY</span><h2>{editing ? "배송 정책 수정" : "배송 정책 등록"}</h2></div><button type="button" onClick={() => { setEditing(null); setFormOpen(false); setName(""); }} aria-label="닫기"><X size={20} /></button></div><div className="editor-grid"><label>정책명<input value={name} onChange={(event) => setName(event.target.value)} required /></label><label>배송유형<select value={shippingType} onChange={(event) => setShippingType(event.target.value as ShippingType)}><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select></label><label>택배사<input value={courier} onChange={(event) => setCourier(event.target.value)} /></label><label>배송비<input value={fee} onChange={(event) => setFee(event.target.value)} inputMode="numeric" /></label><label>표시 문구<input value={feeLabel} onChange={(event) => setFeeLabel(event.target.value)} /></label><label className="full">설명<textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} /></label></div><div className="editor-actions"><button type="submit" className="primary-action">저장</button></div></form></div>}</>;
+  const feeTypeLabel = { free: "무료", paid: "유료", conditional: "조건부 무료" } as const;
+  const regionLine = (policy: ShippingPolicy) => `제주 ${policy.jejuExtraFee ? `+${formatPrice(policy.jejuExtraFee)}` : "추가 없음"} · 도서산간 ${policy.islandExtraFee ? `+${formatPrice(policy.islandExtraFee)}` : "추가 없음"}`;
+  return <><div className="admin-page-heading"><div><span>SHIPPING POLICY</span><h1>배송 정책</h1><p>상품 등록 시 선택할 배송비·택배사·제주/도서산간 추가배송비 정책을 관리합니다.</p></div><button className="primary-action" type="button" onClick={() => open()}><Plus size={16} /> 정책 등록</button></div>
+    <div className="policy-grid">{policies.map((policy) => <article className="policy-card" key={policy.id}><div><span className={`delivery-badge ${policy.shippingType}`}>{policy.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><h2>{policy.name}</h2><strong>{policy.feeLabel}</strong><small className="policy-region-line">{feeTypeLabel[policy.feeType ?? "free"]} · {regionLine(policy)}</small>{(policy.returnFee != null || policy.exchangeFee != null) && <small>반품 {policy.returnFee != null ? formatPrice(policy.returnFee) : "-"} · 교환 {policy.exchangeFee != null ? formatPrice(policy.exchangeFee) : "-"}</small>}<small>{policy.courier || "택배사 지정"} · {policy.description || "설명 없음"}</small></div><div className="bundle-card-actions"><button type="button" onClick={() => open(policy)}><Pencil size={14} /> 수정</button><button type="button" onClick={() => void remove(policy)}><Trash2 size={14} /> 삭제</button></div></article>)}</div>
+    {formOpen && <div className="editor-overlay"><form className="editor-panel shipping-policy-editor" onSubmit={save}><div className="editor-header"><div><span>SHIPPING POLICY</span><h2>{editing ? "배송 정책 수정" : "배송 정책 등록"}</h2></div><button type="button" onClick={close} aria-label="닫기"><X size={20} /></button></div>
+      <div className="editor-grid">
+        <label>정책명<input value={name} onChange={(event) => setName(event.target.value)} required /></label>
+        <label>배송유형<select value={shippingType} onChange={(event) => setShippingType(event.target.value as ShippingType)}><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select></label>
+        <label>택배사<input value={courier} onChange={(event) => setCourier(event.target.value)} placeholder="예: CJ대한통운 (비우면 택배사 지정)" /></label>
+        <label>배송비 유형<select value={feeType} onChange={(event) => setFeeType(event.target.value as ShippingPolicy["feeType"])}><option value="free">무료</option><option value="paid">유료</option><option value="conditional">조건부 무료</option></select></label>
+        <label>기본 배송비(원)<input value={feeType === "free" ? "0" : fee} disabled={feeType === "free"} onChange={(event) => setFee(event.target.value)} inputMode="numeric" /></label>
+        <label>무료배송 기준 금액(원)<input value={feeType === "conditional" ? threshold : ""} disabled={feeType !== "conditional"} onChange={(event) => setThreshold(event.target.value)} inputMode="numeric" placeholder={feeType === "conditional" ? "예: 50000 (이상 구매 시 무료)" : "조건부 무료일 때 입력"} /></label>
+        <div className="full policy-section-title">제주·도서산간 추가배송비</div>
+        <label>제주 추가배송비(원)<input value={jejuExtraFee} onChange={(event) => setJejuExtraFee(event.target.value)} inputMode="numeric" placeholder="0 = 추가 없음" /></label>
+        <label>도서산간 추가배송비(원)<input value={islandExtraFee} onChange={(event) => setIslandExtraFee(event.target.value)} inputMode="numeric" placeholder="0 = 추가 없음" /></label>
+        <div className="full policy-section-title">반품·교환</div>
+        <label>반품 배송비(편도, 원)<input value={returnFee} onChange={(event) => setReturnFee(event.target.value)} inputMode="numeric" placeholder="비우면 미표시" /></label>
+        <label>교환 배송비(왕복, 원)<input value={exchangeFee} onChange={(event) => setExchangeFee(event.target.value)} inputMode="numeric" placeholder="비우면 미표시" /></label>
+        <label>표시 문구<input value={feeLabel} onChange={(event) => setFeeLabel(event.target.value)} placeholder="비우면 배송비로 자동 작성" /></label>
+        <label className="full">설명<textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} /></label>
+      </div>
+      <div className="editor-actions"><button type="submit" className="primary-action">저장</button></div></form></div>}</>;
 }
 
 function SuppliersAdmin() {
@@ -1904,7 +1963,7 @@ function HistoryAdmin({ data }: { data: AdminCatalogData }) {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [month, setMonth] = useState("all");
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(() => readStoredPageSize("admin-history", 5));
   const [page, setPage] = useState(1);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
@@ -2009,7 +2068,7 @@ function HistoryAdmin({ data }: { data: AdminCatalogData }) {
       <div className="admin-page-heading"><div><span>AUDIT LOG</span><h1>가격변동 이력</h1><p>한 번의 저장에서 여러 가격이 바뀌어도 상품·옵션별로 한 건으로 묶어 표시합니다.</p></div></div>
       <section className="admin-card">
         {historyLoading ? <div className="admin-loading inline compact"><div className="spinner" /><span>가격변동 이력을 불러오는 중…</span></div> : <>
-          <div className="history-filter-toolbar"><div className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·옵션명 검색" /></div><select value={month} onChange={(event) => setMonth(event.target.value)}><option value="all">전체 월</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((value) => <option key={value} value={String(value)}>{value}월</option>)}</select><label className="page-size-select">페이지당 <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} aria-label="가격변동 이력 페이지당 표시 수"><option value={5}>5개</option><option value={10}>10개</option><option value={20}>20개</option></select></label><span>{filtered.length}건</span></div>
+          <div className="history-filter-toolbar"><div className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·옵션명 검색" /></div><select value={month} onChange={(event) => setMonth(event.target.value)}><option value="all">전체 월</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((value) => <option key={value} value={String(value)}>{value}월</option>)}</select><PageSizeInput value={pageSize} onChange={setPageSize} label="가격변동 이력 페이지당 표시 수" suffix="개" storageKey="admin-history" /><span>{filtered.length}건</span></div>
           <div className="history-group-list">
             {historySections.map((section) => {
               const expanded = expandedGroups[section.id] ?? false;
@@ -2047,7 +2106,7 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | SourcingRequest["status"]>("all");
   const [selectedRequest, setSelectedRequest] = useState<SourcingRequest | null>(null);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(() => readStoredPageSize("admin-requests", 5));
   const [page, setPage] = useState(1);
   const loadSourcing = async () => {
     setSourcingLoading(true);
@@ -2123,7 +2182,7 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
               </button>
             ))}
           </div>
-          <div className="request-board-controls"><div className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isPartner ? "업체명·상품·담당자·이메일 검색" : "상품명·요청자·연락처 검색"} /></div><label className="page-size-select">페이지당 <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} aria-label="소싱 요청 페이지당 표시 수"><option value={5}>5개</option><option value={10}>10개</option><option value={20}>20개</option></select></label></div>
+          <div className="request-board-controls"><div className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isPartner ? "업체명·상품·담당자·이메일 검색" : "상품명·요청자·연락처 검색"} /></div><PageSizeInput value={pageSize} onChange={setPageSize} label="입점·소싱 요청 페이지당 표시 수" suffix="개" storageKey="admin-requests" /></div>
         </div>
         {sourcingLoading ? <div className="admin-loading inline compact"><div className="spinner" /><span>소싱 요청을 불러오는 중…</span></div> : kindRequests.length === 0 ? (
           <div className="empty-admin"><ClipboardList size={28} /><strong>{isPartner ? "접수된 입점 신청이 없습니다." : "접수된 소싱 요청이 없습니다."}</strong></div>
