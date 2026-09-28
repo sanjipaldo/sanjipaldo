@@ -720,7 +720,7 @@ function AdminHome({ data }: { data: AdminHomeData | null }) {
       </section>
       <div className="admin-home-stat-grid">
         <Link className="admin-home-stat featured" to="/admin/products"><span>전체 상품</span><strong>{overview.productCount.toLocaleString("ko-KR")}</strong><small>노출 {overview.visibleProductCount.toLocaleString("ko-KR")}개</small></Link>
-        <Link className="admin-home-stat" to="/admin/products"><span>공급중 상품</span><strong>{Math.max(0, overview.visibleProductCount - overview.soldOutProductCount).toLocaleString("ko-KR")}</strong><small>현재 공개 공급 상품</small></Link>
+        <Link className="admin-home-stat" to="/admin/products"><span>판매중 상품</span><strong>{Math.max(0, overview.visibleProductCount - overview.soldOutProductCount).toLocaleString("ko-KR")}</strong><small>현재 공개 공급 상품</small></Link>
         <Link className="admin-home-stat" to="/admin/products"><span>품절 상품</span><strong>{overview.soldOutProductCount.toLocaleString("ko-KR")}</strong><small>관리자에서 품절 처리한 상품</small></Link>
         <Link className="admin-home-stat" to="/admin/history"><span>가격변동 로그</span><strong>{overview.priceHistoryCount.toLocaleString("ko-KR")}</strong><small>전체 누적 이력</small></Link>
       </div>
@@ -1455,7 +1455,6 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <label>배송비<input value={editing.shippingFee} onChange={(event) => setEditing({ ...editing, shippingFee: event.target.value })} /></label>
         <label>출고 안내<input value={editing.releaseInfo} onChange={(event) => setEditing({ ...editing, releaseInfo: event.target.value })} /></label>
         <label>택배사<input value={editing.courier} onChange={(event) => setEditing({ ...editing, courier: event.target.value })} /></label>
-        <label>규격/중량<input value={editing.optionsInfo} onChange={(event) => setEditing({ ...editing, optionsInfo: event.target.value })} /></label>
         <label>포장방법<input value={editing.packaging} onChange={(event) => setEditing({ ...editing, packaging: event.target.value })} /></label>
         <label className="full">참고사항<textarea rows={4} value={editing.notes} onChange={(event) => setEditing({ ...editing, notes: event.target.value })} /></label>
         <label className="check-label"><input type="checkbox" checked={editing.isVisible} onChange={(event) => setEditing({ ...editing, isVisible: event.target.checked })} /> 공개 노출</label>

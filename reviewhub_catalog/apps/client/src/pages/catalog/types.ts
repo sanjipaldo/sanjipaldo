@@ -221,8 +221,12 @@ export type SourcingRequest = {
   updatedAt: string;
 };
 
+// 공개 단가표에 내려오는 배송 정책(관리용 필드 제외)
+export type PublicShippingPolicy = Omit<ShippingPolicy, "isActive" | "sortOrder" | "createdAt" | "updatedAt">;
+
 export type CatalogData = {
   categories: Category[];
+  shippingPolicies?: PublicShippingPolicy[];
   products: Product[];
   notices: Notice[];
   priceHistory: PriceHistory[];

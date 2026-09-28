@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
-import type { CatalogData, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ShippingType, SoldOutIssue } from "./types";
+import type { CatalogData, GuideContent, Notice, OperationsOverview, PriceHistory, Product, PublicShippingPolicy, ShippingType, SoldOutIssue } from "./types";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 
 
@@ -559,6 +559,54 @@ function NoticeModal({ notice, onClose }: { notice: Notice; onClose: () => void 
         <p className="notice-modal-content">{notice.content}</p>
         {notice.imageUrl && <img className="notice-modal-image" src={notice.imageUrl} alt={`${notice.title} 안내 이미지`} />}
         <button className="modal-confirm" onClick={onClose}>확인했습니다</button>
+      </section>
+    </div>
+  );
+}
+
+// 배송비 한 줄 요약(단가표 칸에 표시)
+function shippingFeeSummary(product: Product, policy?: PublicShippingPolicy) {
+  // 정책이 없는 상품은 입력된 배송비 문구의 첫 부분만 짧게 보여 주고, 전체 문구는 ? 팝업에서 보여 줍니다.
+  if (!policy) return (product.shippingFee || "문의").split("·")[0].trim() || "문의";
+  if (policy.feeType === "free") return "무료";
+  if (policy.feeType === "conditional" && policy.freeShippingThreshold) return `${formatPrice(policy.fee)} · 조건부 무료`;
+  return formatPrice(policy.fee);
+}
+
+// 배송비 ? 버튼 팝업: 배송비 유형, 무료 조건, 제주·도서산간 추가배송비, 반품·교환 배송비
+function ShippingInfoModal({ product, policy, onClose }: { product: Product; policy?: PublicShippingPolicy; onClose: () => void }) {
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+  const extra = (value: number) => value > 0 ? `+${formatPrice(value)}` : "추가 없음";
+  const rows: Array<[string, string]> = policy ? [
+    ["배송비", policy.feeType === "free" ? "무료배송" : `유료 ${formatPrice(policy.fee)}`],
+    ...(policy.feeType === "conditional" && policy.freeShippingThreshold ? [["무료배송 조건", `${formatPrice(policy.freeShippingThreshold)} 이상 주문 시 무료`] as [string, string]] : []),
+    ...(policy.feeType === "free" ? [["무료배송 조건", "조건 없이 무료"] as [string, string]] : []),
+    ["제주 추가배송비", extra(policy.jejuExtraFee)],
+    ["도서산간 추가배송비", extra(policy.islandExtraFee)],
+    ...(policy.returnFee != null ? [["반품 배송비(편도)", formatPrice(policy.returnFee)] as [string, string]] : []),
+    ...(policy.exchangeFee != null ? [["교환 배송비(왕복)", formatPrice(policy.exchangeFee)] as [string, string]] : []),
+    ["택배사", policy.courier || product.courier || "택배사 지정"]
+  ] : [
+    ["배송비", product.shippingFee || "문의"],
+    ["택배사", product.courier || "택배사 지정"]
+  ];
+  return (
+    <div className="public-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="shipping-info-modal" role="dialog" aria-modal="true" aria-labelledby="shipping-info-title" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="public-modal-close" onClick={onClose} aria-label="배송비 안내 닫기"><X size={20} /></button>
+        <span className="section-kicker">SHIPPING</span>
+        <h2 id="shipping-info-title">배송비 안내</h2>
+        <p className="shipping-info-product">{product.name}</p>
+        {policy && <strong className="shipping-info-policy">{policy.name} · {policy.feeLabel}</strong>}
+        <dl className="shipping-info-list">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+        {policy?.description && <p className="shipping-info-note">{policy.description}</p>}
+        {!policy && <p className="shipping-info-note">이 상품은 상세 배송 정책이 아직 연결되지 않았습니다. 제주·도서산간 배송비는 1:1 상담으로 문의해 주세요.</p>}
       </section>
     </div>
   );
@@ -1105,6 +1153,8 @@ export function CatalogHome() {
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
+  const [shippingInfo, setShippingInfo] = useState<{ product: Product; policy?: PublicShippingPolicy } | null>(null);
+  const policyById = useMemo(() => new Map((data.shippingPolicies ?? []).map((policy) => [policy.id, policy])), [data.shippingPolicies]);
 
   useEffect(() => {
     let active = true;
@@ -1281,7 +1331,7 @@ export function CatalogHome() {
                 <button key={month} className={saleMonth === month ? "active" : month === currentMonth ? "current" : ""} onClick={() => setSaleMonth(month)}>{month}월</button>
               ))}
             </div>
-            <small>농산·수산·축산·선물세트·식품만 월별 판매기간에 따라 검색됩니다.</small>
+            <small>월을 고르면 그 달에 판매하는 제철 상품만 보입니다. 제철 월이 없는 상시 판매 상품은 '전체'에서 확인하세요.</small>
             <strong className="season-prep-message"><span>SEASON TIP</span> 미리미리 제철 시즌이 되기 전에, 판매 상품을 준비해보세요!</strong>
             {highlightMonth > 0 && (
               <div className="season-highlight" aria-live="polite">
@@ -1302,8 +1352,8 @@ export function CatalogHome() {
             )}
           </div>
           <div className="order-legend" aria-label="주문 가능 여부 안내">
-            <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 행 · 지금 주문 가능</span>
-            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 빨간색 행 · 품절 또는 상품준비중(주문 불가)</span>
+            <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 행 · 판매중(지금 주문 가능)</span>
+            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 빨간색 행 · 품절 또는 시즌 종료(주문 불가)</span>
           </div>
           <div className="catalog-table-wrap">
             <table className="catalog-table">
@@ -1337,15 +1387,16 @@ export function CatalogHome() {
                     || product.isAlwaysOnSale
                     || (seasonConfigured && isMonthInSeason(currentMonth, product.saleStartMonth, product.saleEndMonth))
                   );
-                  const supplyLabel = soldOutNow ? "품절" : availableNow ? "" : "상품준비중";
+                  const supplyLabel = soldOutNow ? "품절" : availableNow ? "판매중" : "시즌 종료";
+                  const policy = product.shippingPolicyId ? policyById.get(product.shippingPolicyId) : undefined;
                   return (
                     <Fragment key={product.id}>
                       <tr className={`${expanded ? "expanded " : ""}${soldOutNow ? "sold-out order-unavailable" : availableNow ? "supply-active" : "season-waiting order-unavailable"}`.trim()}>
                         <td className="catalog-product-cell">
-                          <div className="product-cell"><button type="button" className="product-image-button" onClick={() => { const src = productImageSrc(product); if (src) setImagePreview({ src, alt: product.name }); }} aria-label={`${product.name} 이미지 크게 보기`}><ProductThumb product={product} /></button><div><span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><strong>{product.name}</strong>{product.origin && <small>{product.origin}</small>}{!availableNow || soldOutNow ? <em className={soldOutNow ? "supply-sold-out" : "supply-season-waiting"}>{supplyLabel}</em> : null}{options.length > 0 && <button className="option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />} 옵션 {options.length}개 {expanded ? "접기" : "보기"}</button>}</div></div>
+                          <div className="product-cell"><button type="button" className="product-image-button" onClick={() => { const src = productImageSrc(product); if (src) setImagePreview({ src, alt: product.name }); }} aria-label={`${product.name} 이미지 크게 보기`}><ProductThumb product={product} /></button><div><span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><strong>{product.name}</strong>{product.origin && <small>{product.origin}</small>}<em className={soldOutNow ? "supply-sold-out" : availableNow ? "supply-on-sale" : "supply-season-waiting"}>{supplyLabel}</em>{options.length > 0 && <button className="option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />} 옵션 {options.length}개 {expanded ? "접기" : "보기"}</button>}</div></div>
                           {expanded && options.length > 0 && <div className="mobile-inline-options"><PublicOptionList product={product} /></div>}
                         </td>
-                        <td data-label="카테고리·판매기간"><div className="mobile-cell-value"><strong>{category?.name ?? "-"}</strong><small>{product.optionsInfo || (sortedOptions[0]?.name ?? "-")}</small><span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, category?.name)}</span></div></td>
+                        <td data-label="카테고리·판매기간"><div className="mobile-cell-value"><strong>{category?.name ?? "-"}</strong><button type="button" className="shipping-fee-button" onClick={() => setShippingInfo({ product, policy })} aria-label={`${product.name} 배송비 안내 보기`}><Truck size={12} /> 배송비 <b>{shippingFeeSummary(product, policy)}</b><CircleHelp size={13} /></button><span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, category?.name)}</span></div></td>
                         <td data-label="A단가"><div className="mobile-cell-value"><b className="price a-price">{formatPrice(minimumAPrice)}</b><small>{options.length > 1 ? "옵션 최저 A단가" : "A회원 공급가"}</small></div></td>
                         <td data-label="일반공급가"><div className="mobile-cell-value"><b className="price">{formatPrice(minimumGeneralPrice)}</b><small>{options.length > 1 ? "옵션 최저 일반공급가" : "일반 판매자"}</small></div></td>
                         <td data-label="판매가"><div className="mobile-cell-value"><b className={`price sale-price ${product.salePriceMode}`}>{salePolicy.main}</b><small>{salePolicy.sub}</small></div></td>
@@ -1433,6 +1484,7 @@ export function CatalogHome() {
         </section>
       </main>
       {imagePreview && <ImageModal src={imagePreview.src} alt={imagePreview.alt} onClose={() => setImagePreview(null)} />}
+      {shippingInfo && <ShippingInfoModal product={shippingInfo.product} policy={shippingInfo.policy} onClose={() => setShippingInfo(null)} />}
     </PageFrame>
   );
 }

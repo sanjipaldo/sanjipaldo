@@ -251,10 +251,29 @@ export function isPublicPriceHistoryDate(changedAt: string, now = Date.now()) {
     && value <= now + (5 * 60 * 1000);
 }
 
+// 공개 단가표의 "배송비 ?" 안내에 쓰는 배송 정책(사용 중인 정책만, 운영용 정렬값 제외)
+function publicShippingPolicyRows() {
+  return getDb().select({
+    id: shippingPolicies.id,
+    name: shippingPolicies.name,
+    shippingType: shippingPolicies.shippingType,
+    courier: shippingPolicies.courier,
+    feeType: shippingPolicies.feeType,
+    fee: shippingPolicies.fee,
+    feeLabel: shippingPolicies.feeLabel,
+    freeShippingThreshold: shippingPolicies.freeShippingThreshold,
+    jejuExtraFee: shippingPolicies.jejuExtraFee,
+    islandExtraFee: shippingPolicies.islandExtraFee,
+    returnFee: shippingPolicies.returnFee,
+    exchangeFee: shippingPolicies.exchangeFee,
+    description: shippingPolicies.description
+  }).from(shippingPolicies).where(eq(shippingPolicies.isActive, true)).orderBy(asc(shippingPolicies.sortOrder), asc(shippingPolicies.name));
+}
+
 export async function getPublicCatalog() {
   const db = getDb();
   const soldOutSince = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)).toISOString();
-  const [categoryRows, productRows, optionRows, noticeRows, historyRows, soldOutRows, settingsRows, totalProductRows] = await Promise.all([
+  const [categoryRows, productRows, optionRows, noticeRows, historyRows, soldOutRows, settingsRows, totalProductRows, policyRows] = await Promise.all([
     db.select().from(categories).where(eq(categories.isActive, true)).orderBy(asc(categories.shippingType), asc(categories.sortOrder)),
     db.select().from(products).where(and(eq(products.isVisible, true), sql`${products.deletedAt} IS NULL`)).orderBy(asc(products.displayOrder), desc(products.updatedAt)),
     db.select().from(productOptions).orderBy(asc(productOptions.productId), asc(productOptions.sortOrder)),
@@ -265,7 +284,8 @@ export async function getPublicCatalog() {
       .orderBy(desc(catalogActivityLogs.createdAt))
       .limit(500),
     db.select().from(contentSettings),
-    db.select({ count: sql<number>`count(*)` }).from(products).where(sql`${products.deletedAt} IS NULL`)
+    db.select({ count: sql<number>`count(*)` }).from(products).where(sql`${products.deletedAt} IS NULL`),
+    publicShippingPolicyRows()
   ]);
 
   const recentHistory = historyRows.filter((history) => history.field !== "costPrice" && isPublicPriceHistoryDate(history.changedAt));
@@ -286,6 +306,7 @@ export async function getPublicCatalog() {
 
   return {
     categories: categoryRows,
+    shippingPolicies: policyRows,
     products: publicProducts,
     notices: noticeRows,
     priceHistory: enrichPriceHistory(recentHistory, productRows),
@@ -301,7 +322,7 @@ export async function getPublicCatalog() {
 export async function getPublicCatalogInitial() {
   const db = getDb();
   const soldOutSince = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)).toISOString();
-  const [categoryRows, productRows, noticeRows, historyRows, soldOutRows, settingsRows, totalProductRows] = await Promise.all([
+  const [categoryRows, productRows, noticeRows, historyRows, soldOutRows, settingsRows, totalProductRows, policyRows] = await Promise.all([
     db.select().from(categories).where(eq(categories.isActive, true)).orderBy(asc(categories.shippingType), asc(categories.sortOrder)),
     db.select().from(products)
       .where(and(eq(products.isVisible, true), sql`${products.deletedAt} IS NULL`))
@@ -314,7 +335,8 @@ export async function getPublicCatalogInitial() {
       .orderBy(desc(catalogActivityLogs.createdAt))
       .limit(30),
     db.select().from(contentSettings),
-    db.select({ count: sql<number>`count(*)` }).from(products).where(sql`${products.deletedAt} IS NULL`)
+    db.select({ count: sql<number>`count(*)` }).from(products).where(sql`${products.deletedAt} IS NULL`),
+    publicShippingPolicyRows()
   ]);
   const visibleProductIds = productRows.map((product) => product.id);
   const optionRows = visibleProductIds.length > 0
@@ -336,6 +358,7 @@ export async function getPublicCatalogInitial() {
     }));
   return {
     categories: categoryRows,
+    shippingPolicies: policyRows,
     products: publicProductView(productRows, optionRows),
     notices: noticeRows,
     priceHistory: enrichPriceHistory(recentHistory, productRows),
