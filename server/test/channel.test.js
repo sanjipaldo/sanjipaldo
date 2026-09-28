@@ -92,6 +92,19 @@ test("매퍼: 셀러 사진(data URL)은 쿠팡에서 건너뛰고, 네이버 �
   assert.equal(naver.originProduct.deliveryInfo.deliveryCompany, "CHUNIL");
 });
 
+test("매퍼: 조합형 옵션(사이즈×색상)은 네이버 기준 2개·쿠팡 속성 2개로, 의류는 의류 고시로 보낸다", () => {
+  const combo = { ...listing, optionGroups: ["사이즈", "색상"], options: [{ optionId: "O1", name: "S / 블랙", values: ["S", "블랙"], salePrice: 12900, stock: 5 }, { optionId: "O2", name: "M / 스카이블루", values: ["M", "스카이블루"], salePrice: 13900, stock: 3 }], notice: { type: "WEAR", fields: { material: "면 100%", color: "블랙, 블루", size: "S, M" } } };
+  const naver = toNaverProduct({ ...combo, salePrice: 12900 }, { imageUrls: ["https://n/a.jpg"] }).originProduct;
+  assert.deepEqual(naver.detailAttribute.optionInfo.optionCombinationGroupNames, { optionGroupName1: "사이즈", optionGroupName2: "색상" });
+  assert.equal(naver.detailAttribute.optionInfo.optionCombinations[1].optionName2, "스카이블루");
+  assert.equal(naver.detailAttribute.optionInfo.optionCombinations[1].price, 1000);
+  assert.equal(naver.detailAttribute.productInfoProvidedNotice.productInfoProvidedNoticeType, "WEAR");
+  assert.equal(naver.detailAttribute.productInfoProvidedNotice.wear.material, "면 100%");
+  const coupang = toCoupangProduct({ ...combo, images: ["https://img/a.jpg"] }, { vendorId: "A1", vendorUserId: "w" });
+  assert.deepEqual(coupang.items[1].attributes, [{ attributeTypeName: "사이즈", attributeValueName: "M" }, { attributeTypeName: "색상", attributeValueName: "스카이블루" }]);
+  assert.equal(coupang.items[0].notices[0].noticeCategoryName, "의류");
+});
+
 test("키 보관소: 암호화 저장하고 가린 값만 돌려준다", () => {
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "doogo-")), "c.json");
   const store = createCredentialStore({ file, key: crypto.randomBytes(32) });
@@ -166,6 +179,31 @@ test("서버 전체 흐름: 연결 → 원클릭 등록 → 품절 → 삭제 (�
     assert.equal(y1.body.status, "동기화 완료");
     const put = upstream.calls.find(entry => entry.method === "PUT" && entry.path === "/external/v2/products/origin-products/9001");
     assert.equal(JSON.parse(put.body.toString()).originProduct.salePrice, 31900);
+
+    // 주문 수집 → 송장 전송 (직접 배송 주문도 같은 길)
+    const o1 = await call("POST", "/api/orders/coupang/collect", { sellerLoginId: "seller" });
+    assert.equal(o1.status, 200, JSON.stringify(o1.body));
+    assert.equal(o1.body.orders.length, 2);
+    assert.equal(o1.body.orders[0].sellerCode, "SP-1001:O1");
+    assert.equal(o1.body.orders[1].refs.vendorItemId, "8801");
+    assert.equal(o1.body.orders[0].postalCode, "06253");
+    const o2 = await call("POST", "/api/orders/smartstore/collect", { sellerLoginId: "seller" });
+    assert.equal(o2.body.orders.length, 2);
+    assert.equal(o2.body.orders[1].refs.productOrderId, "2026092855502");
+    const t1 = await call("POST", "/api/orders/coupang/dispatch", { sellerLoginId: "seller", items: [{ refs: o1.body.orders[1].refs, carrier: "롯데택배", tracking: "123412341234" }] });
+    assert.equal(t1.status, 200, JSON.stringify(t1.body));
+    assert.deepEqual(t1.body.results.map(row => row.ok), [true]);
+    assert.ok(upstream.calls.some(entry => entry.method === "PUT" && entry.path.endsWith("/ordersheets/acknowledgement")));
+    const invoice = JSON.parse(upstream.calls.find(entry => entry.path.endsWith("/orders/invoices")).body.toString()).orderSheetInvoiceApplyDtos[0];
+    assert.equal(invoice.deliveryCompanyCode, "HYUNDAI");
+    assert.equal(invoice.vendorItemId, 8801);
+    const t2 = await call("POST", "/api/orders/smartstore/dispatch", { sellerLoginId: "seller", items: [{ refs: { productOrderId: "2026092855501" }, carrier: "CJ대한통운", naverCode: "CJGLS", tracking: "555566667777" }, { refs: { productOrderId: "2026092855502" }, carrier: "CJ대한통운", naverCode: "CJGLS", tracking: "BAD" }] });
+    assert.deepEqual(t2.body.results.map(row => row.ok), [true, false]);
+    const dispatched = JSON.parse(upstream.calls.find(entry => entry.path.endsWith("/product-orders/dispatch")).body.toString()).dispatchProductOrders[0];
+    assert.equal(dispatched.deliveryCompanyCode, "CJGLS");
+    assert.equal(dispatched.deliveryMethod, "DELIVERY");
+    const t3 = await call("POST", "/api/orders/coupang/dispatch", { sellerLoginId: "seller", items: [{ refs: o1.body.orders[0].refs, carrier: "한진택배", tracking: "" }] });
+    assert.equal(t3.status, 400);
 
     const bad = await call("POST", "/api/channels/coupang/connect", { sellerLoginId: "seller", credentials: { vendorId: "A1", accessKey: "WRONG", secretKey: "x", vendorUserId: "w" } });
     assert.equal(bad.status, 502);

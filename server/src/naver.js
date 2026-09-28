@@ -71,7 +71,12 @@ function createNaverClient({ clientId, clientSecret, accountId }, { baseUrl = pr
     getProduct: originProductNo => call("GET", `/v2/products/origin-products/${originProductNo}`),
     updateProduct: (originProductNo, payload) => call("PUT", `/v2/products/origin-products/${originProductNo}`, { body: payload }),
     changeStatus: (originProductNo, statusType, stockQuantity) => call("PUT", `/v1/products/origin-products/${originProductNo}/change-status`, { body: { statusType, ...(stockQuantity === undefined ? {} : { stockQuantity }) } }),
-    deleteProduct: originProductNo => call("DELETE", `/v2/products/origin-products/${originProductNo}`)
+    deleteProduct: originProductNo => call("DELETE", `/v2/products/origin-products/${originProductNo}`),
+    /* 주문: 결제완료로 바뀐 상품주문 목록 → 상세 조회 → 발주확인 → 발송처리(송장) */
+    lastChangedOrders: (fromIso, type = "PAYED") => call("GET", `/v1/pay-order/seller/product-orders/last-changed-statuses?lastChangedFrom=${encodeURIComponent(fromIso)}&lastChangedType=${type}`),
+    queryOrders: productOrderIds => call("POST", "/v1/pay-order/seller/product-orders/query", { body: { productOrderIds } }),
+    confirmOrders: productOrderIds => call("POST", "/v1/pay-order/seller/product-orders/confirm", { body: { productOrderIds } }),
+    dispatch: dispatchProductOrders => call("POST", "/v1/pay-order/seller/product-orders/dispatch", { body: { dispatchProductOrders } })
   };
 }
 

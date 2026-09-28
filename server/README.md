@@ -56,7 +56,7 @@ npm start            # 기본 포트 8787
 
 앱을 서버에 연결하려면 앱 페이지에서 `window.DOOGO_API_BASE`와 `window.DOOGO_API_TOKEN`을 설정합니다.
 테스트할 때는 브라우저 localStorage에 `doogo-api-base`, `doogo-api-token`을 넣어도 됩니다.
-설정이 없으면 앱은 **데모 모드**로 같은 요청을 기록만 합니다.
+설정이 없으면 앱은 쇼핑몰로 요청을 보내지 않습니다. (claude.ai 미리보기·내 컴퓨터에서는 흐름 확인용으로 기록만 하고, 실제 도메인에서는 ‘연동 서버 연결 필요’로 안내합니다.)
 
 ## API
 
@@ -68,6 +68,9 @@ npm start            # 기본 포트 8787
 | POST | `/api/listings/:channel/:externalId/status` | `{ sellerLoginId, action: stop\|hide\|soldout\|resume, stock, vendorItemIds }` |
 | POST | `/api/listings/:channel/:externalId/sync` | `{ sellerLoginId, listing, vendorItemMap }` 가격·재고 동기화 |
 | DELETE | `/api/listings/:channel/:externalId` | `{ sellerLoginId, vendorItemIds }` 삭제 (쿠팡은 판매중지로 대체될 수 있음) |
+| POST | `/api/orders/:channel/collect` | `{ sellerLoginId, since }` 결제완료 새 주문 가져오기 (스마트스토어: 변경 상품주문 조회 → 상세 조회 / 쿠팡: 발주서 ACCEPT 조회) |
+| POST | `/api/orders/:channel/confirm` | `{ sellerLoginId, items: [{ refs }] }` 주문 확인 (스마트스토어 발주확인 / 쿠팡 상품준비중) |
+| POST | `/api/orders/:channel/dispatch` | `{ sellerLoginId, items: [{ refs, carrier, naverCode, tracking, update }] }` 송장 전송 (스마트스토어 발송처리 / 쿠팡 송장 업로드·수정). 주문마다 성공·실패 사유를 돌려줌 |
 
 `channel`은 `coupang` 또는 `smartstore`. 쇼핑몰 쪽 오류는 `502`와 함께 `upstreamStatus`, `detail`로 돌려줍니다.
 
@@ -84,6 +87,8 @@ npm test
 - 쇼핑몰별 요청 본문
 - 키 암호화
 - 연결 → 등록 → 품절 → 판매중지 → 삭제 → 가격 동기화 전체 흐름
+- 주문 수집 → 송장 전송(쿠팡 상품준비중 처리 포함, 실패 사유 전달)
+- 조합형 옵션(사이즈×색상) → 네이버 옵션 기준 2개·쿠팡 속성 2개, 의류 상품정보고시
 
 실제 쇼핑몰 호출 검증은 두고 등록(위 1·2번)과 실제 키가 있어야 할 수 있습니다.
 요청 필드는 공개 문서를 기준으로 맞췄으니, 운영 전에 각 개발자센터 최신 문서와 한 번 더 대조하세요.

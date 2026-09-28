@@ -9582,3 +9582,163 @@ button.greet-badge:hover { filter: brightness(.95); }
 }
 .topbar-heading.is-greeting #pageContext .greet-badge-m[hidden] { display: none !important; }
 @media (max-width: 720px) { .topbar-heading.is-greeting #pageContext { overflow: hidden; } .greet-hello { flex: 0 0 auto; white-space: nowrap; } }
+
+/* ===== 조합형 옵션 (사이즈 × 색상) ===== */
+.opt-mode { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.opt-mode label { min-width: 0; padding: 12px; display: flex; gap: 10px; align-items: flex-start; border: 1.5px solid #e5e8eb; border-radius: 12px; background: #fff; cursor: pointer; }
+.opt-mode label:has(input:checked) { border-color: #3182f6; background: #f4f8ff; }
+.opt-mode input { width: 18px; height: 18px; margin: 2px 0 0; flex: 0 0 18px; accent-color: #3182f6; }
+.opt-mode span { display: grid; gap: 2px; min-width: 0; }
+.opt-mode b { font-size: 14px; color: #191f28; }
+.opt-mode small { font-size: 12px; color: #6b7684; line-height: 1.4; }
+.option-editor.mode-single .opt-combo-panel { display: none; }
+.option-editor.mode-combo .option-title-field, .option-editor.mode-combo .option-add { display: none; }
+.opt-combo-panel { display: grid; gap: 10px; padding: 12px; border-radius: 12px; background: #f7f9fc; border: 1px solid #e3e8ef; }
+.opt-group-rows { display: grid; gap: 8px; }
+.opt-group-row { display: grid; grid-template-columns: minmax(0, 140px) minmax(0, 1fr) 40px; gap: 8px; align-items: end; }
+.opt-group-row label { min-width: 0; display: grid; gap: 4px; }
+.opt-group-row label span { color: #6b7684; font-size: 12px; font-weight: 700; }
+.opt-group-row input, .opt-bulk input { width: 100%; height: 40px; padding: 0 10px; border: 1px solid #d1d6db; border-radius: 9px; font-size: 14px; background: #fff; }
+.opt-presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.opt-presets > span { font-size: 12px; font-weight: 700; color: #6b7684; margin-right: 2px; }
+.opt-chip { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid #d1d6db; background: #fff; font-size: 13px; color: #333d4b; cursor: pointer; }
+.opt-chip:hover { border-color: #3182f6; color: #1b64da; }
+.opt-bulk { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; }
+.opt-bulk > b { font-size: 13px; color: #333d4b; align-self: center; }
+.opt-bulk label { min-width: 0; display: grid; gap: 4px; }
+.opt-bulk label span { color: #6b7684; font-size: 12px; font-weight: 700; }
+.opt-combo-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.opt-combo-actions small { color: #4e5968; font-size: 13px; font-weight: 700; }
+.option-editor-row.is-combo input[name="optionName"] { background: #f2f4f6; color: #191f28; font-weight: 700; border-color: #e5e8eb; }
+@media (max-width: 720px) {
+  .opt-mode { grid-template-columns: minmax(0, 1fr); }
+  .opt-group-row { grid-template-columns: minmax(0, 1fr) 40px; }
+  .opt-group-row label:first-child { grid-column: 1 / 3; }
+  .opt-group-row label.grow { grid-column: 1; }
+  .opt-bulk { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .opt-bulk > b { grid-column: 1 / -1; }
+  .opt-combo-actions > button { flex: 1 1 140px; }
+}
+body[data-role="supplier"] .opt-mode label:has(input:checked) { border-color: #111; background: #fafafa; }
+body[data-role="supplier"] .opt-mode input { accent-color: #111; }
+body[data-role="supplier"] .opt-combo-panel { background: #fafafa; border-color: #e9e9e9; }
+body[data-role="supplier"] .opt-chip:hover { border-color: #111; color: #111; }
+
+/* 셀러: 조합형 옵션 값별 켜기/끄기 + 쇼핑몰 표시 이름 */
+.pick-axis-bar { display: grid; gap: 8px; margin: 4px 0 10px; padding: 12px; border-radius: 12px; background: #f7f9fc; border: 1px solid #e5e8eb; }
+.pick-axis-bar > p { margin: 0; font-size: 12px; color: #6b7684; }
+.pick-axis { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px; align-items: center; }
+.pick-axis > span { font-size: 13px; font-weight: 700; color: #333d4b; }
+.pick-axis > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.pick-axis-chip { min-width: 48px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1.5px solid #d1d6db; background: #fff; color: #8b95a1; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: line-through; }
+.pick-axis-chip.on { border-color: #3182f6; background: #e8f3ff; color: #1b64da; text-decoration: none; }
+.pick-soldout { display: inline-block; margin-left: 4px; padding: 1px 6px; border-radius: 6px; background: #fff0f0; color: #e5484d; font-size: 11px; font-style: normal; font-weight: 700; vertical-align: middle; }
+.pick-rename { margin-top: 12px; border: 1px solid #e5e8eb; border-radius: 12px; background: #fff; }
+.pick-rename summary { padding: 12px 14px; font-size: 14px; font-weight: 700; color: #333d4b; cursor: pointer; }
+.pick-rename summary small { margin-left: 4px; color: #8b95a1; font-weight: 500; }
+.pick-rename > p { margin: 0 14px 10px; font-size: 12px; color: #6b7684; line-height: 1.5; }
+.pick-rename-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; padding: 0 14px 14px; }
+.pick-rename-group > b { grid-column: 1 / -1; font-size: 13px; color: #191f28; }
+.pick-rename-group label { display: grid; gap: 4px; min-width: 0; }
+.pick-rename-group label span { font-size: 12px; color: #6b7684; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-rename-group input { width: 100%; height: 38px; padding: 0 10px; border: 1px solid #d1d6db; border-radius: 9px; font-size: 14px; }
+.opt-matrix-wrap { margin: 6px 0 12px; overflow-x: auto; }
+.opt-matrix { width: 100%; border-collapse: collapse; font-size: 13px; }
+.opt-matrix th, .opt-matrix td { padding: 8px 6px; text-align: center; border: 1px solid #e5e8eb; white-space: nowrap; }
+.opt-matrix thead th { background: #f2f4f6; color: #4e5968; font-weight: 700; }
+.opt-matrix tbody th { background: #f9fafb; color: #191f28; font-weight: 700; }
+.opt-matrix td.low { color: #d97706; font-weight: 700; }
+.opt-matrix td.out { color: #e5484d; background: #fff5f5; font-weight: 700; }
+.opt-matrix-wrap small { display: block; margin-top: 4px; font-size: 12px; color: #8b95a1; }
+
+/* 주소 검색 (카카오 우편번호 서비스 + 직접 입력) */
+.address-popup { width: min(520px, 100%); max-height: 90vh; }
+.address-popup-status { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: #f2f6fb; color: #4e5968; font-size: 13px; line-height: 1.5; }
+.address-embed { height: min(480px, 64vh); border: 1px solid #e5e8eb; border-radius: 12px; overflow: hidden; }
+.address-embed[hidden], .address-fallback[hidden] { display: none; }
+.address-results-label { display: block; margin: 2px 0 6px; font-size: 12px; font-weight: 700; color: #6b7684; }
+.address-use-typed { border-style: dashed !important; }
+.address-manual { margin-top: 14px; padding: 14px; display: grid; gap: 10px; border-radius: 12px; background: #f7f9fc; border: 1px solid #e5e8eb; }
+.address-manual > b { font-size: 14px; color: #191f28; }
+.address-manual-row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px; }
+.address-manual-row label { display: grid; gap: 4px; min-width: 0; }
+.address-manual-row label span { font-size: 12px; font-weight: 700; color: #6b7684; }
+.address-manual-row input { width: 100%; height: 42px; padding: 0 10px; border: 1px solid #d1d6db; border-radius: 9px; font-size: 14px; background: #fff; }
+.address-manual-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.address-manual-actions a { font-size: 12.5px; color: #1b64da; font-weight: 700; }
+@media (max-width: 520px) {
+  .address-popup-backdrop { padding: 0; align-items: end; }
+  .address-popup { width: 100%; max-height: 92vh; border-radius: 18px 18px 0 0; }
+  .address-manual-row { grid-template-columns: minmax(0, 1fr); }
+  .address-manual-actions .primary-button { width: 100%; }
+}
+
+/* ===== 직접 배송 (두고 외 상품) ===== */
+.self-panel { display: grid; gap: 14px; }
+.self-panel-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.self-panel-head h3 { margin: 0 0 4px; font-size: 18px; }
+.self-panel-head p { margin: 0; color: #4e5968; font-size: 14px; line-height: 1.55; }
+.self-panel-head p b { color: #1b64da; }
+.self-panel-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.self-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.self-steps button { min-width: 0; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 12px; text-align: left; border: 1.5px solid #e5e8eb; border-radius: 12px; background: #fff; cursor: pointer; }
+.self-steps button i { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #f2f4f6; color: #4e5968; font-style: normal; font-weight: 800; font-size: 13px; }
+.self-steps button span { display: grid; gap: 2px; min-width: 0; }
+.self-steps button b { font-size: 14px; color: #191f28; }
+.self-steps button small { font-size: 11.5px; color: #8b95a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.self-steps button strong { font-size: 20px; color: #191f28; }
+.self-steps button.active { border-color: #3182f6; background: #f4f8ff; }
+.self-steps button.active i { background: #3182f6; color: #fff; }
+.self-empty { display: grid; gap: 4px; text-align: center; }
+.self-empty span { font-size: 13px; color: #6b7684; }
+.self-tracking-line { display: block; flex-basis: 100%; font-size: 12px; color: #4e5968; }
+.self-tracking-line em { color: #e5484d; font-style: normal; font-weight: 700; }
+.self-tracking-head span { display: block; color: #3182f6; font-size: 12px; font-weight: 800; letter-spacing: .02em; }
+.self-tracking-head h2 { margin: 4px 0; font-size: 20px; }
+.self-tracking-head p { margin: 0 0 12px; color: #6b7684; font-size: 13px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.self-recipient { display: grid; gap: 3px; margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; background: #f7f9fc; border: 1px solid #e5e8eb; font-size: 14px; }
+.self-recipient span { color: #333d4b; }
+.self-recipient small { color: #6b7684; font-size: 12.5px; }
+.self-tracking-form, .self-bulk-form { display: grid; gap: 12px; }
+.self-tracking-form input[name="tracking"] { font-size: 17px; letter-spacing: .04em; }
+.self-send-now { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 12px; border: 1px solid #cfe0fb; background: #f4f8ff; cursor: pointer; }
+.self-send-now input { width: 20px; height: 20px; margin: 2px 0 0; flex: 0 0 20px; accent-color: #3182f6; }
+.self-send-now span { display: grid; gap: 2px; }
+.self-send-now b { font-size: 14px; color: #191f28; }
+.self-send-now small { font-size: 12px; color: #6b7684; }
+.self-send-note { margin: 0; padding: 10px 12px; border-radius: 10px; background: #fff8e6; color: #7a5a00; font-size: 13px; line-height: 1.5; }
+.self-bulk-rows { display: grid; gap: 8px; max-height: 46vh; overflow-y: auto; padding-right: 2px; }
+.self-bulk-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 200px); gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid #e5e8eb; border-radius: 12px; background: #fff; }
+.self-bulk-row span { display: grid; gap: 2px; min-width: 0; }
+.self-bulk-row b { font-size: 14px; }
+.self-bulk-row small { font-size: 12px; color: #6b7684; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.self-bulk-row input { width: 100%; height: 42px; padding: 0 10px; border: 1px solid #d1d6db; border-radius: 9px; font-size: 15px; }
+.danger-text { color: #e5484d; }
+@media (max-width: 900px) { .self-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 720px) {
+  .self-panel-actions { width: 100%; }
+  .self-panel-actions > button { flex: 1 1 140px; }
+  .self-steps button { grid-template-columns: 24px minmax(0, 1fr) auto; padding: 10px; }
+  .self-steps button small { display: none; }
+  .self-bulk-row { grid-template-columns: minmax(0, 1fr); }
+}
+.order-desktop-table td .self-tracking-line { max-width: 190px; word-break: break-all; }
+.order-desktop-table td .mapping-status.self, .order-desktop-table td .mapping-status.payment { width: auto; max-width: 190px; white-space: normal; }
+/* 주문 표: 단계 메뉴가 옆에 있는 PC 화면에서도 가로 스크롤 없이 보이도록 칸 여백을 줄이고 줄바꿈 허용 */
+@media (min-width: 1100px) {
+  .order-workspace .order-desktop-table th, .order-workspace .order-desktop-table td { padding-left: 10px; padding-right: 10px; }
+  .order-workspace .order-desktop-table td { white-space: normal; word-break: keep-all; }
+  .order-workspace .order-desktop-table td:last-child { min-width: 150px; }
+  .order-workspace .order-desktop-table td .row-actions, .order-workspace .order-desktop-table td:last-child { overflow-wrap: anywhere; }
+}
+label.pay-off, .pay-off { opacity: .55; cursor: not-allowed; }
+.pay-off input { cursor: not-allowed; }
+.pick-wait-note { font-size: 12.5px; color: #6b7684; align-self: center; }
+.withdrawal-wait { font-style: normal; font-size: 12px; color: #6b7684; }
+/* 상품 상세: 옵션 표가 칸을 밀어 좁은 화면에서 가로로 넘치던 문제 */
+@media (max-width: 1099px) { .product-detail-page .product-detail { grid-template-columns: minmax(0, 1fr); } }
+.product-detail-page .product-detail > *, .product-detail-copy { min-width: 0; }
+.detail-options { overflow-x: auto; }
+.detail-options table { width: 100%; }
+.sample-buy, .sample-buy-head, .sample-buy-row { min-width: 0; max-width: 100%; }
+.sample-buy-row select { min-width: 0; width: 100%; max-width: 100%; text-overflow: ellipsis; }

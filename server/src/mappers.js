@@ -17,7 +17,8 @@
      returnAddress: { zipCode, address, addressDetail, phone }, asPhone, origin, taxType, adultOnly, overseas, pccNeeded,
      notice: { type: "FOOD"|"ETC", fields: {…} } } */
 
-const COUPANG_CARRIERS = { "한진택배": "HANJIN", "CJ대한통운": "CJGLS", "롯데택배": "LOTTE", "우체국택배": "EPOST", "로젠택배": "KGB", "경동택배": "KDEXP" };
+/* 쿠팡 택배사 코드 (롯데택배는 옛 현대택배 코드 HYUNDAI를 그대로 쓴다) */
+const COUPANG_CARRIERS = { "한진택배": "HANJIN", "CJ대한통운": "CJGLS", "롯데택배": "HYUNDAI", "우체국택배": "EPOST", "로젠택배": "KGB", "경동택배": "KDEXP", "대신택배": "DAESIN", "일양로지스": "ILYANG", "천일택배": "CHUNIL", "합동택배": "HDEXP", "GS Postbox 택배": "CVSNET", "CU 편의점택배": "CUPARCEL", "직접배송(업체 자체 배송)": "DIRECT" };
 const NAVER_CARRIERS = { "한진택배": "HANJIN", "CJ대한통운": "CJGLS", "롯데택배": "HYUNDAI", "우체국택배": "EPOST", "로젠택배": "KGB", "경동택배": "KDEXP" };
 
 function requireFields(listing, fields) {
@@ -86,14 +87,26 @@ function toCoupangProduct(listing, { vendorId, vendorUserId, now = new Date() })
       searchTags: (listing.tags || []).slice(0, 20),
       images,
       notices: coupangNotices(listing),
-      attributes: listing.options?.length ? [{ attributeTypeName: "옵션", attributeValueName: unit.name }] : [],
+      attributes: coupangAttributes(listing, unit),
       contents: [{ contentsType: "HTML", contentDetails: [{ content: listing.detailHtml || `<p>${listing.title}</p>`, detailType: "TEXT" }] }]
     }))
   };
 }
 
+/* 조합형 옵션(사이즈 × 색상)은 기준마다 속성 하나씩, 단독형은 '옵션' 하나로 보낸다 */
+function coupangAttributes(listing, unit) {
+  if (!listing.options?.length) return [];
+  const groups = listing.optionGroups || [];
+  if (groups.length && Array.isArray(unit.values) && unit.values.length === groups.length) return groups.map((name, index) => ({ attributeTypeName: name, attributeValueName: unit.values[index] }));
+  return [{ attributeTypeName: "옵션", attributeValueName: unit.name }];
+}
+
 function coupangNotices(listing) {
   const fields = listing.notice?.fields || {};
+  if (listing.notice?.type === "WEAR") {
+    const wear = { "제품 소재": fields.material, "색상": fields.color, "치수": fields.size, "제조자(수입자)": fields.manufacturer || listing.supplierName, "제조국": listing.origin, "세탁방법 및 취급시 주의사항": fields.caution, "제조연월": "상세페이지 참조", "품질보증기준": "관련 법 및 소비자분쟁해결기준에 따름", "A/S 책임자와 전화번호": listing.asPhone };
+    return Object.entries(wear).map(([name, content]) => ({ noticeCategoryName: "의류", noticeCategoryDetailName: name, content: content || "상세페이지 참조" }));
+  }
   const category = listing.notice?.type === "FOOD" ? "농수산물" : "기타 재화";
   const names = listing.notice?.type === "FOOD"
     ? ["품목 또는 명칭", "포장단위별 내용물의 용량(중량), 수량, 크기", "생산자, 수입품의 경우 수입자를 함께 표기", "농수산물의 원산지 표시 등에 관한 법률에 따른 원산지", "제조연월일(포장일 또는 생산연도), 유통기한 또는 품질유지기한", "소비자상담 관련 전화번호"]
@@ -136,8 +149,8 @@ function toNaverProduct(listing, { imageUrls }) {
         seoInfo: { sellerTags: (listing.tags || []).slice(0, 10).map(text => ({ text })) },
         ...(options.length ? { optionInfo: {
           optionCombinationSortType: "CREATE",
-          optionCombinationGroupNames: { optionGroupName1: "옵션" },
-          optionCombinations: options.map(option => ({ optionName1: option.name, stockQuantity: Number(option.stock || 0), price: Number(option.salePrice) - base, sellerManagerCode: `${listing.listingId}:${option.optionId}`, usable: true }))
+          optionCombinationGroupNames: naverGroupNames(listing),
+          optionCombinations: options.map(option => ({ ...naverOptionNames(listing, option), stockQuantity: Number(option.stock || 0), price: Number(option.salePrice) - base, sellerManagerCode: `${listing.listingId}:${option.optionId}`, usable: true }))
         } } : {})
       }
     },
@@ -145,10 +158,29 @@ function toNaverProduct(listing, { imageUrls }) {
   };
 }
 
+/* 스마트스토어 조합형 옵션: 기준 3개까지 (optionGroupName1~3 / optionName1~3) */
+function naverComboGroups(listing) {
+  const groups = (listing.optionGroups || []).slice(0, 3);
+  return groups.length && (listing.options || []).every(option => Array.isArray(option.values) && option.values.length === groups.length) ? groups : [];
+}
+function naverGroupNames(listing) {
+  const groups = naverComboGroups(listing);
+  if (!groups.length) return { optionGroupName1: "옵션" };
+  return Object.fromEntries(groups.map((name, index) => [`optionGroupName${index + 1}`, name]));
+}
+function naverOptionNames(listing, option) {
+  const groups = naverComboGroups(listing);
+  if (!groups.length) return { optionName1: option.name };
+  return Object.fromEntries(groups.map((name, index) => [`optionName${index + 1}`, option.values[index]]));
+}
+
 function naverNotice(listing) {
   const f = listing.notice?.fields || {};
   if (listing.notice?.type === "FOOD") {
     return { productInfoProvidedNoticeType: "FOOD", food: { productName: listing.title, weight: f.weight || "상세페이지 참조", amount: f.amount || "상세페이지 참조", size: f.size || "상세페이지 참조", producer: listing.supplierName || "상세페이지 참조", location: listing.origin || "상세페이지 참조", packDate: "상세페이지 참조", expirationDate: "상세페이지 참조", customerServicePhoneNumber: listing.asPhone || "상세페이지 참조" } };
+  }
+  if (listing.notice?.type === "WEAR") {
+    return { productInfoProvidedNoticeType: "WEAR", wear: { returnCostReason: "상세페이지 참조", noRefundReason: "상세페이지 참조", qualityAssuranceStandard: "관련 법 및 소비자분쟁해결기준에 따름", compensationProcedure: "상세페이지 참조", troubleShootingContents: "상세페이지 참조", material: f.material || "상세페이지 참조", color: f.color || "상세페이지 참조", size: f.size || "상세페이지 참조", manufacturer: f.manufacturer || listing.supplierName || "상세페이지 참조", caution: f.caution || "상세페이지 참조", packDateText: "상세페이지 참조", warrantyPolicy: "관련 법 및 소비자분쟁해결기준에 따름", afterServiceDirector: listing.asPhone || "상세페이지 참조" } };
   }
   return { productInfoProvidedNoticeType: "ETC", etc: { returnCostReason: "상세페이지 참조", noRefundReason: "상세페이지 참조", qualityAssuranceStandard: "상세페이지 참조", compensationProcedure: "상세페이지 참조", troubleShootingContents: "상세페이지 참조", itemName: listing.title, modelName: listing.productCode || "상세페이지 참조", manufacturer: listing.supplierName || "상세페이지 참조", customerServicePhoneNumber: listing.asPhone || "상세페이지 참조" } };
 }

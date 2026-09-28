@@ -11,6 +11,7 @@ const crypto = require("node:crypto");
 const DEFAULT_BASE = "https://api-gateway.coupang.com";
 const SELLER_PRODUCTS = "/v2/providers/seller_api/apis/api/v1/marketplace/seller-products";
 const VENDOR_ITEMS = "/v2/providers/seller_api/apis/api/v1/marketplace/vendor-items";
+const ORDERS_BASE = vendorId => `/v2/providers/openapi/apis/api/v4/vendors/${vendorId}`;
 
 function signedDate(date = new Date()) {
   const pad = n => String(n).padStart(2, "0");
@@ -60,7 +61,12 @@ function createCoupangClient(credentials, { baseUrl = process.env.COUPANG_API_BA
     stopItem: vendorItemId => call("PUT", `${VENDOR_ITEMS}/${vendorItemId}/sales/stop`),
     resumeItem: vendorItemId => call("PUT", `${VENDOR_ITEMS}/${vendorItemId}/sales/resume`),
     updatePrice: (vendorItemId, price) => call("PUT", `${VENDOR_ITEMS}/${vendorItemId}/prices/${Math.round(price)}`, { query: "forceSalePriceUpdate=true" }),
-    updateQuantity: (vendorItemId, quantity) => call("PUT", `${VENDOR_ITEMS}/${vendorItemId}/quantities/${Math.max(0, Math.round(quantity))}`)
+    updateQuantity: (vendorItemId, quantity) => call("PUT", `${VENDOR_ITEMS}/${vendorItemId}/quantities/${Math.max(0, Math.round(quantity))}`),
+    /* 주문: 결제완료(ACCEPT) 발주서 조회 → 상품준비중 처리(acknowledgement) → 송장 업로드(invoices) */
+    listOrderSheets: ({ from, to, status = "ACCEPT", nextToken = "" }) => call("GET", `${ORDERS_BASE(vendorId)}/ordersheets`, { query: `createdAtFrom=${from}&createdAtTo=${to}&status=${status}&maxPerPage=50${nextToken ? `&nextToken=${encodeURIComponent(nextToken)}` : ""}` }),
+    acknowledge: shipmentBoxIds => call("PUT", `${ORDERS_BASE(vendorId)}/ordersheets/acknowledgement`, { body: { vendorId, shipmentBoxIds: shipmentBoxIds.map(Number) } }),
+    uploadInvoices: dtos => call("POST", `${ORDERS_BASE(vendorId)}/orders/invoices`, { body: { vendorId, orderSheetInvoiceApplyDtos: dtos } }),
+    updateInvoices: dtos => call("POST", `${ORDERS_BASE(vendorId)}/orders/updateInvoices`, { body: { vendorId, orderSheetInvoiceApplyDtos: dtos } })
   };
 }
 

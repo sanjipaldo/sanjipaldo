@@ -9,10 +9,14 @@
    POST   /api/listings/:channel/:externalId/status { sellerLoginId, action, stock, vendorItemIds }  판매중지·품절·재개
    POST   /api/listings/:channel/:externalId/sync   { sellerLoginId, listing, vendorItemMap }        가격·재고 동기화
    DELETE /api/listings/:channel/:externalId        { sellerLoginId, vendorItemIds }     삭제(쿠팡은 판매중지로 대체될 수 있음)
+   POST   /api/orders/:channel/collect              { sellerLoginId, since }             새 주문(결제완료) 가져오기
+   POST   /api/orders/:channel/confirm              { sellerLoginId, items:[{refs}] }    주문 확인(발주확인·상품준비중)
+   POST   /api/orders/:channel/dispatch             { sellerLoginId, items:[{refs, carrier, naverCode, tracking, update}] }  송장 전송
    GET    /api/health */
 const http = require("node:http");
 const { createCredentialStore } = require("./store");
 const listings = require("./listings");
+const orders = require("./orders");
 
 const CHANNELS = ["coupang", "smartstore"];
 const REQUIRED = { coupang: ["vendorId", "accessKey", "secretKey", "vendorUserId"], smartstore: ["accountId"] };
@@ -71,6 +75,20 @@ function createApp({ store = createCredentialStore(), token = process.env.DOOGO_
         if (req.method === "DELETE" && !verb) return send(res, 200, await listings.removeListing(channel, creds, { externalId, vendorItemIds: body.vendorItemIds || [] }, clientOptions), origin);
         if (req.method === "POST" && verb === "status") return send(res, 200, await listings.setListingStatus(channel, creds, { externalId, action: body.action, stock: body.stock, vendorItemIds: body.vendorItemIds || [] }, clientOptions), origin);
         if (req.method === "POST" && verb === "sync") return send(res, 200, await listings.syncPriceStock(channel, creds, { externalId, listing: body.listing || {}, vendorItemMap: body.vendorItemMap || {} }, clientOptions), origin);
+      }
+      if (parts[1] === "orders" && req.method === "POST") {
+        const [, , channel, verb] = parts;
+        if (!CHANNELS.includes(channel)) return send(res, 400, { error: "지원하지 않는 쇼핑몰이에요." }, origin);
+        const creds = store.get(seller, channel);
+        if (!creds) return send(res, 409, { error: "이 쇼핑몰이 아직 연결되지 않았어요. 쇼핑몰 연동에서 먼저 연결해 주세요." }, origin);
+        const items = Array.isArray(body.items) ? body.items.slice(0, 500) : [];
+        if (verb === "collect") return send(res, 200, await orders.collectOrders(channel, creds, { since: body.since }, clientOptions), origin);
+        if (verb === "confirm") return send(res, 200, await orders.confirmOrders(channel, creds, { items }, clientOptions), origin);
+        if (verb === "dispatch") {
+          const bad = items.find(item => !String(item.tracking || "").trim() && item.naverCode !== "DIRECT_DELIVERY");
+          if (bad) return send(res, 400, { error: "송장번호가 비어 있는 주문이 있어요." }, origin);
+          return send(res, 200, await orders.dispatchTracking(channel, creds, { items }, clientOptions), origin);
+        }
       }
       return send(res, 404, { error: "경로를 찾지 못했어요." }, origin);
     } catch (error) {
