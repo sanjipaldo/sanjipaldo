@@ -9742,3 +9742,4 @@ label.pay-off, .pay-off { opacity: .55; cursor: not-allowed; }
 .detail-options table { width: 100%; }
 .sample-buy, .sample-buy-head, .sample-buy-row { min-width: 0; max-width: 100%; }
 .sample-buy-row select { min-width: 0; width: 100%; max-width: 100%; text-overflow: ellipsis; }
+.pg-empty { margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; background: #f6f6f6; color: #555; font-size: 13px; }

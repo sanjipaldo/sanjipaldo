@@ -3870,7 +3870,8 @@ function priceGraphModel(product, days) {
   const today = new Date();
   const points = Array.from({ length: days }, (_, index) => {
     const offset = 90 - days + index;
-    const prices = listings.map(listing => listing.history[offset]).filter(Boolean);
+    const found = listings.map(listing => listing.history[offset]).filter(Boolean);
+    const prices = found.length ? found : [recommended];
     const date = new Date(today); date.setDate(today.getDate() - (days - 1 - index));
     return { date: `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`, max: Math.max(...prices), min: Math.min(...prices), avg: roundPrice(prices.reduce((sum, price) => sum + price, 0) / prices.length), count: prices.length };
   });
@@ -3986,7 +3987,7 @@ function supplierPriceGraphTemplate(products) {
     <div class="pg-products" role="tablist" aria-label="상품 선택">${products.map(entry => `<button type="button" role="tab" class="${entry.id === product.id ? "active" : ""}" data-action="price-graph-product" data-id="${entry.id}" aria-selected="${entry.id === product.id}">${productPhoto(entry, "pg-thumb")}<span>${escapeHtml(entry.name)}</span></button>`).join("")}</div>
     <div class="pg-summary"><div class="pg-now"><small>지금 평균 판매가</small><strong>${money(model.current.avg)}</strong><em class="${pct < 0 ? "down" : "up"}">권장가 대비 ${pct > 0 ? "+" : ""}${pct}% (${diff > 0 ? "+" : ""}${diff.toLocaleString("ko-KR")}원)</em></div><div class="pg-now-meta"><span>판매 셀러 <b>${model.current.count}곳</b></span><span>권장 소비자가 <b>${money(model.recommended)}</b></span><span>공급가 <b>${productPriceLabel(product)}</b></span></div></div>
     <div class="pg-legend" aria-hidden="true"><span><i style="background:${PRICE_GRAPH_COLORS.max}"></i>▲ 최고가</span><span><i class="dash" style="border-color:${PRICE_GRAPH_COLORS.avg}"></i>평균가</span><span><i style="background:${PRICE_GRAPH_COLORS.min}"></i>▼ 최저가</span><span><i class="rec"></i>권장 소비자가</span></div>
-    <div class="pg-chart">${priceGraphSvg(model)}<div class="pg-tip" role="status" aria-live="polite" hidden></div></div>
+    ${model.listings.length ? "" : `<p class="pg-empty">아직 두고로 이 상품을 쇼핑몰에 올린 셀러가 없어요. 셀러가 올리면 판매가가 여기에 그려져요. (지금은 권장 판매가 기준선만 보여요)</p>`}<div class="pg-chart">${priceGraphSvg(model)}<div class="pg-tip" role="status" aria-live="polite" hidden></div></div>
     <dl class="pg-stats"><div class="max"><dt>▲ 최고가</dt><dd>${money(model.allMax)}</dd></div><div class="avg"><dt>— 평균가</dt><dd>${money(model.avg)}</dd></div><div class="min"><dt>▼ 최저가</dt><dd>${money(model.allMin)}</dd></div></dl>
     ${salesSellerTableMarkup(product, model)}
     <div class="pg-lower merged">
