@@ -201,7 +201,7 @@ function BulkEditModal({ ids, categories, shippingPolicies, suppliers, preset, o
     try {
       // 서버 시간 제한을 넘지 않도록 100개씩 나눠 저장합니다.
       for (let index = 0; index < ids.length; index += 100) {
-        await readData(await apiFetch("/catalog/admin/products/bulk-update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: ids.slice(index, index + 100), changes }) }));
+        await readData(await apiFetch("/catalog/admin/products/bulk-update", { method: "POST", silent: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: ids.slice(index, index + 100), changes }) }));
       }
       toast.success(`${ids.length.toLocaleString("ko-KR")}개 상품을 일괄 변경했습니다.`);
       onDone();
@@ -882,7 +882,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     setQuickBusy(true);
     try {
       for (let index = 0; index < ids.length; index += 100) {
-        await readData(await apiFetch("/catalog/admin/products/bulk-update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: ids.slice(index, index + 100), changes }) }));
+        await readData(await apiFetch("/catalog/admin/products/bulk-update", { method: "POST", silent: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: ids.slice(index, index + 100), changes }) }));
       }
       toast.success(`${ids.length.toLocaleString("ko-KR")}개 상품을 '${label}'(으)로 변경했습니다.`);
       setSelectedProductIds(new Set());
