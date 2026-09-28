@@ -7,15 +7,17 @@ const accounts = {
   seller: { password: "seller", role: "seller", roles: ["seller"], name: "두고 셀러", roleLabel: "위탁셀러" }
 };
 const roleMenus = {
-  master: ["대시보드", "회원 관리", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리", "정산 관리"],
+  master: ["대시보드", "회원 관리", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리", "정산 관리", "매출 · 통계", "구독 · 결제", "두고톡 상담", "매출 보고"],
   supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "굿스플로 · 택배", "가격 관리", "정산 내역", "내 정보", "PICK 요청", "판매 현황", "매출 달력", "공지사항", "배송 정책"],
   seller: ["홈", "상품 소싱", "승인 대기", "공급사 문의", "주문 관리", "취소·반품", "매출 달력", "가격 변경 알림", "쇼핑몰 연동", "요금제", "내 정보", "판매중 상품", "예치금", "공지사항", "마스터 상품", "상품 매핑", "브랜드 소싱", "승인 완료", "장바구니", "샘플 주문 내역", "배송 정책"]
 };
 const roleMenuGroups = {
   master: [
     { label: "홈", indexes: [0] },
+    { label: "돈 · 통계", indexes: [11, 10, 12, 14] },
+    { label: "고객 응대 (CS)", indexes: [13, 7, 9] },
     { label: "회원 · 권한", indexes: [1, 2, 3, 4] },
-    { label: "통합 운영", indexes: [5, 6, 7, 10, 8, 9] }
+    { label: "상품 · 주문", indexes: [5, 6, 8] }
   ],
   supplier: [
     { label: "홈", indexes: [0] },
@@ -39,7 +41,7 @@ const menuSteps = { seller: { 1: 1, 16: 1, 2: 2, 17: 3, 14: 4, 11: 5 }, supplier
 /* 메뉴 이름으로 인덱스를 찾는다 (메뉴 순서가 바뀌어도 이동 버튼이 깨지지 않게) */
 function menuIndexOf(label, role = activeRole) { const index = (roleMenus[role] || []).indexOf(label); return index >= 0 ? index : 0; }
 const menuIcons = {
-  master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log", "notice", "settlement"],
+  master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log", "notice", "settlement", "chart", "card", "message", "report"],
   supplier: ["home", "product", "message", "order", "refund", "printer", "price", "settlement", "settings", "approval", "onsale", "calendar", "notice", "truck"],
   seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice", "approval", "mapping", "brand", "ready", "cart", "box", "truck"]
 };
@@ -318,8 +320,43 @@ function sellerItemOptionSummary(item, product = productOf(item?.productId)) {
   return `옵션 ${enabled}/${rows.length}개 판매`;
 }
 
+/* 매출·통계 화면이 비어 보이지 않도록 넣어 둔 지난 판매 기록 (8~9월, 배송완료).
+   실제 운영에서는 서버 데이터베이스의 주문이 그대로 들어온다. */
+function seedSalesHistory() {
+  const picks = [["DF-4117", 45900, 69000], ["DF-1024", 21800, 29900], ["DF-4110", 38900, 52900], ["DF-4102", 17900, 25900], ["DF-2088", 34900, 49800], ["DF-4201", 19900, 29900], ["DF-4115", 32900, 45900], ["DF-4118", 21900, 32900], ["DF-3268", 27800, 38900], ["DF-4112", 29900, 41900], ["DF-4119", 16900, 24900], ["DF-3142", 12400, 18900], ["DF-4106", 15900, 22900], ["DF-4202", 24900, 36900], ["DF-4116", 39900, 55900], ["DF-4113", 17900, 24900], ["DF-3357", 24500, 34900], ["DF-4108", 8900, 13900]];
+  const sellers = ["market88", "brandlab", "market88", "brandlab", "seller", "market88", "brandlab", "market88"];
+  const channels = ["쿠팡", "네이버 스마트스토어", "쿠팡", "카카오 쇼핑", "네이버 스마트스토어"];
+  const names = ["김하늘", "이도윤", "박서준", "최지우", "정민재", "강수아", "윤태오", "한예린", "오승우", "서지안", "임채원", "신도현", "배유나", "조하람"];
+  const addrs = [["06236", "서울특별시 강남구 테헤란로 152"], ["04524", "서울특별시 중구 세종대로 110"], ["48058", "부산광역시 해운대구 센텀중앙로 79"], ["34126", "대전광역시 유성구 대학로 99"], ["61452", "광주광역시 동구 금남로 245"], ["13494", "경기도 성남시 분당구 판교역로 166"]];
+  let seed = 11;
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const orders = [];
+  [["08", 31, 0.9], ["09", 27, 1.35]].forEach(([month, days, boost]) => {
+    for (let day = 1; day <= days; day++) {
+      const count = Math.max(1, Math.round((0.6 + rnd() * 1.8) * boost));
+      for (let k = 0; k < count; k++) {
+        const [productId, supply, rec] = picks[Math.floor(Math.pow(rnd(), 1.7) * picks.length)];
+        const qty = 1 + Math.floor(rnd() * rnd() * 4);
+        const dd = String(day).padStart(2, "0");
+        const name = names[Math.floor(rnd() * names.length)];
+        const [postalCode, address] = addrs[Math.floor(rnd() * addrs.length)];
+        const overseas = productId.startsWith("DF-42") || productId === "DF-2088";
+        const no = String(300 + orders.length);
+        orders.push({ id: `DO-26${month}${dd}-${no}`, sellerLoginId: sellers[Math.floor(rnd() * sellers.length)], supplierLoginId: "sup", assignedSupplier: "산지팔도", productId, mappedProductId: productId, mappingStatus: "mapped", paymentStatus: "paid", paymentMethod: "deposit", supplyTotal: supply * qty, supplierOrderId: `PO-${month}${dd}${no}`, customer: name, recipientName: name, phone: `010-${String(2000 + Math.floor(rnd() * 7000))}-${String(1000 + Math.floor(rnd() * 8999))}`, postalCode, address, addressDetail: "", deliveryMessage: "", shippingType: overseas ? "overseas" : "domestic", personalCustomsCode: overseas ? `P2609${no}0001` : "", qty, amount: Math.round(rec * (1 + rnd() * 0.08) / 100) * 100 * qty, channel: channels[Math.floor(rnd() * channels.length)], status: "배송완료", tracking: `5${month}${dd}${no}${String(Math.floor(rnd() * 900) + 100)}`, carrier: "한진택배", orderDate: `2026-${month}-${dd}`, createdAt: `${month}.${dd} ${String(9 + Math.floor(rnd() * 9)).padStart(2, "0")}:${String(Math.floor(rnd() * 60)).padStart(2, "0")}`, settlementStatus: "scheduled", seedHistory: true });
+      }
+    }
+  });
+  /* 공급사 귀책 환불 2건 (정산 전에 환불 → 정산 제외) */
+  [orders.find(order => order.orderDate === "2026-09-12"), orders.find(order => order.orderDate === "2026-09-19")].filter(Boolean).forEach(order => { order.status = "환불완료"; order.settlementStatus = "excluded"; });
+  return orders;
+}
+function seedHistoryRefunds(orders) {
+  return orders.filter(order => order.seedHistory && order.status === "환불완료").map((order, index) => ({ id: `RF-${order.orderDate.slice(2).replace(/-/g, "")}-H${index + 1}`, orderId: order.id, sellerLoginId: order.sellerLoginId, supplierLoginId: "sup", type: index ? "주문 취소" : "반품", reason: index ? "출고 지연으로 고객 취소" : "배송 중 파손", detail: index ? "공급사 출고가 늦어 소비자가 취소했어요." : "스티로폼 박스가 깨져 도착했어요.", consumerRefundAmount: order.amount, amount: order.supplyTotal, status: "환불완료", responsibility: "공급사 귀책", consumerRefunded: true, consumerRefundedAt: `${order.orderDate.slice(5).replace("-", ".")} 18:20`, supplierReceived: true, depositCredited: true, supplierSettlementOffset: true, noPickup: Boolean(index), requestedAt: `${order.orderDate.slice(5).replace("-", ".")} 18:30`, completedAt: `${order.orderDate.slice(5).replace("-", ".")} 20:10` }));
+}
+const SEED_HISTORY_ORDERS = seedSalesHistory();
 const initialState = {
   schemaVersion: 22,
+  statsVersion: 1,
   contentOverrides: {},
   notices: [
     { id: "notice-1", title: "상품 썸네일·상세페이지 복사 기능 안내", detail: "공급사 상품을 PICK하면 썸네일과 상세페이지가 그대로 복사돼요.\n‘상품 꾸미기’에서 상품명·사진·상세페이지를 내 스타일로 바꾼 뒤, 마스터 상품에서 ‘상품 전송’ 한 번이면 연동된 쇼핑몰에 바로 올라갑니다.\n아래 영상으로 전체 흐름을 확인해 보세요.", date: "오늘", cta: "마스터 상품 바로가기", action: "open-my-products", videoUrl: "https://www.youtube.com/watch?v=ILuBxYqHFbo" },
@@ -432,6 +469,7 @@ const initialState = {
     { id: "DO-260907-028", sellerLoginId: "seller", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-1024", customer: "이푸드", recipientName: "이푸드", phone: "010-3567-9088", postalCode: "48058", address: "부산광역시 해운대구 센텀중앙로 90", addressDetail: "1203호", deliveryMessage: "경비실에 맡겨주세요.", shippingType: "domestic", personalCustomsCode: "", qty: 1, amount: 29900, channel: "쿠팡", status: "배송중", tracking: "456823901155", carrier: "CJ대한통운", provisionalTracking: true, channelTrackingStatuses: { coupang: "전송완료" }, orderDate: "2026-09-06", createdAt: "오늘 08:42", settlementStatus: "scheduled" },
     { id: "DO-260905-022", sellerLoginId: "seller", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-1024", customer: "박환불", recipientName: "박환불", phone: "010-4521-0022", postalCode: "04524", address: "서울특별시 중구 세종대로 110", addressDetail: "샘플동 301호", deliveryMessage: "출고 전 취소 요청", shippingType: "domestic", personalCustomsCode: "", qty: 2, amount: 59800, channel: "[샘플주문]", status: "환불완료", tracking: "", carrier: "한진택배", orderDate: "2026-09-05", createdAt: "09.05 15:34", settlementStatus: "excluded" },
     { id: "DO-260831-014", sellerLoginId: "seller", supplierLoginId: "sup", assignedSupplier: "산지팔도", productId: "DF-1024", customer: "정완료", recipientName: "정완료", phone: "010-9000-8314", postalCode: "30128", address: "세종특별자치시 한누리대로 2130", addressDetail: "101동 804호", deliveryMessage: "문 앞 배송", shippingType: "domestic", personalCustomsCode: "", qty: 3, amount: 89700, channel: "네이버 스마트스토어", status: "배송완료", tracking: "501234567890", carrier: "한진택배", orderDate: "2026-08-31", createdAt: "08.31 09:14", settlementStatus: "completed", settledAt: "2026.09.05" }
+    ,...SEED_HISTORY_ORDERS
   ],
   connections: [
     { id: "CN-1001", supplierLoginId: "sup", sellerLoginId: "seller", status: "connected", createdAt: "2026.09.03" }
@@ -460,7 +498,8 @@ const initialState = {
   },
   refunds: [
     { id: "RF-260908-01", orderId: "DO-260907-028", sellerLoginId: "seller", supplierLoginId: "sup", type: "반품", reason: "상품 일부 파손", detail: "포장 개봉 시 사과 1개가 눌려 있었습니다.", consumerRefundAmount: 29900, amount: 21800, status: "공급사 입고확인 대기", responsibility: "공급사 귀책", consumerRefunded: true, consumerRefundedAt: "오늘 13:08", returnCarrier: "한진택배", returnTracking: "507891234567", returnRequestedAt: "오늘 13:20", returnDeliveredAt: "오늘 16:35", supplierReceived: false, depositCredited: false, supplierSettlementOffset: false, requestedAt: "오늘 13:10" },
-    { id: "RF-260905-02", orderId: "DO-260905-022", sellerLoginId: "seller", supplierLoginId: "sup", type: "주문 취소", reason: "출고 전 고객 요청", detail: "출고 전 취소가 확인되어 예치금 환불이 완료되었습니다.", consumerRefundAmount: 59800, amount: 43600, status: "환불완료", responsibility: "공급사 승인 · 회수 없음", consumerRefunded: true, consumerRefundedAt: "09.05 15:38", noPickup: true, supplierReceived: true, depositCredited: true, supplierSettlementOffset: true, requestedAt: "09.05 15:40", completedAt: "09.05 16:02" }
+    { id: "RF-260905-02", orderId: "DO-260905-022", sellerLoginId: "seller", supplierLoginId: "sup", type: "주문 취소", reason: "출고 전 고객 요청", detail: "출고 전 취소가 확인되어 예치금 환불이 완료되었습니다.", consumerRefundAmount: 59800, amount: 43600, status: "환불완료", responsibility: "공급사 승인 · 회수 없음", consumerRefunded: true, consumerRefundedAt: "09.05 15:38", noPickup: true, supplierReceived: true, depositCredited: true, supplierSettlementOffset: true, requestedAt: "09.05 15:40", completedAt: "09.05 16:02" },
+    ...seedHistoryRefunds(SEED_HISTORY_ORDERS)
   ],
   channelConnections: {
     seller: [
@@ -471,8 +510,29 @@ const initialState = {
     ]
   },
   subscriptions: {
-    seller: { tier: "start", plan: "스타트", monthlyFee: 9900, status: "active", startedAt: "2026.08.08", nextBilling: "2026.10.08", method: "국민카드 •••• 1234", autoRenew: true }
+    seller: { tier: "start", plan: "스타트", monthlyFee: 9900, status: "active", startedAt: "2026.08.08", nextBilling: "2026.10.08", method: "국민카드 •••• 1234", autoRenew: true },
+    market88: { tier: "growth", plan: "그로스", monthlyFee: 29900, status: "active", startedAt: "2026.07.15", nextBilling: "2026.10.15", method: "신한카드 •••• 5521", autoRenew: true },
+    brandlab: { tier: "pro", plan: "프로", monthlyFee: 99000, status: "active", startedAt: "2026.08.20", nextBilling: "2026.10.20", method: "현대카드 •••• 0087", autoRenew: true }
   },
+  /* 구독 결제·환불 장부 (카드 결제 = PG 승인번호 paymentKey 보관 → 해지 시 이 결제를 부분 취소) */
+  billing: [
+    { id: "BL-0920-BRAND", loginId: "brandlab", kind: "payment", date: "2026-09-20", item: "프로 요금제 9월", amount: 99000, method: "현대카드 •••• 0087", status: "결제 완료", paymentKey: "" },
+    { id: "BL-0915-M88", loginId: "market88", kind: "payment", date: "2026-09-15", item: "그로스 요금제 9월", amount: 29900, method: "신한카드 •••• 5521", status: "결제 완료", paymentKey: "" },
+    { id: "BL-0908-SELLER", loginId: "seller", kind: "payment", date: "2026-09-08", item: "스타트 요금제 9월", amount: 9900, method: "국민카드 •••• 1234", status: "결제 완료", paymentKey: "" },
+    { id: "BL-0908-SELLER-K", loginId: "seller", kind: "payment", date: "2026-09-08", item: "카카오톡 알림 9월", amount: 2900, method: "국민카드 •••• 1234", status: "결제 완료", paymentKey: "" },
+    { id: "BL-0820-BRAND", loginId: "brandlab", kind: "payment", date: "2026-08-20", item: "프로 요금제 첫 결제", amount: 99000, method: "현대카드 •••• 0087", status: "결제 완료", paymentKey: "" },
+    { id: "BL-0815-M88", loginId: "market88", kind: "payment", date: "2026-08-15", item: "그로스 요금제 8월", amount: 29900, method: "신한카드 •••• 5521", status: "결제 완료", paymentKey: "" },
+    { id: "BL-0808-SELLER", loginId: "seller", kind: "payment", date: "2026-08-08", item: "스타트 요금제 첫 결제", amount: 9900, method: "국민카드 •••• 1234", status: "결제 완료", paymentKey: "" },
+    { id: "BL-0808-SELLER-K", loginId: "seller", kind: "payment", date: "2026-08-08", item: "카카오톡 알림 8월", amount: 2900, method: "국민카드 •••• 1234", status: "결제 완료", paymentKey: "" }
+  ],
+  /* 두고톡 본사 상담 (위탁셀러·공급사 ↔ 마스터) */
+  supportMessages: [
+    { id: "SUP-1001", partnerLoginId: "market88", partnerRole: "seller", senderLoginId: "market88", text: "쿠팡에서 고객이 반품했는데 예치금은 언제 들어오나요?", createdAt: "09.27 14:02", sentAt: "2026-09-27T05:02:00.000Z", readByMaster: false, readByPartner: true },
+    { id: "SUP-1002", partnerLoginId: "sup", partnerRole: "supplier", senderLoginId: "sup", text: "이번 주 정산 금액이 지난주보다 적은데 보류된 주문이 있는지 확인 부탁드려요.", createdAt: "09.27 16:40", sentAt: "2026-09-27T07:40:00.000Z", readByMaster: false, readByPartner: true },
+    { id: "SUP-1003", partnerLoginId: "seller", partnerRole: "seller", senderLoginId: "seller", text: "요금제를 그로스로 올리면 이번 달 차액만 결제되나요?", createdAt: "09.26 11:15", sentAt: "2026-09-26T02:15:00.000Z", readByMaster: true, readByPartner: true },
+    { id: "SUP-1004", partnerLoginId: "seller", partnerRole: "seller", senderLoginId: "admin", text: "네, 올리는 날부터 다음 결제일까지 차액만 일할 계산돼요.", createdAt: "09.26 11:32", sentAt: "2026-09-26T02:32:00.000Z", readByMaster: true, readByPartner: true }
+  ],
+  dailyReport: { auto: true, kakao: true, email: true, time: "08:00", phones: ["010-0000-0000"], emails: ["admin@doogo.kr"], lastSentDate: "", history: [] },
   notificationServices: {
     seller: { plan: "카카오톡 알림", monthlyFee: 2900, morningTime: "09:00", eveningTime: "18:00", briefOn: true, reportOn: true, status: "active", kakao: true, email: true, emailAddress: "seller@example.com", emailEnabled: true, pcNotice: false, orderNotice: true, trackingNotice: true, refundNotice: true, priceNotice: true, deliveryDelayNotice: false, stockNotice: true, monthlyLimit: 500, used: 23 }
   },
@@ -605,6 +665,14 @@ function loadState() {
       Object.assign(product, migrateCategoryPath(product, ["categoryGroup", "category", "categorySub", "categoryDetail"]));
     });
     merged.categoryVersion = 2;
+    /* v67 매출·통계: 지난 판매 기록을 더하고, 이미 정산서가 만들어진 주의 기록은 정산된 것으로 둔다 */
+    if (Number(saved.statsVersion || 0) < 1) {
+      const weeks = new Set((saved.settlementWeeks || []).map(week => week.id));
+      const history = base.orders.filter(order => order.seedHistory && !(saved.orders || []).some(item => item.id === order.id)).map(order => { const id = `ST-${ymd(weekStartOf(parseYmd(order.orderDate)))}-${order.supplierLoginId}`; return weeks.has(id) ? { ...order, settledIn: id } : order; });
+      merged.orders = [...(saved.orders || base.orders.filter(order => !order.seedHistory)), ...history];
+      merged.refunds = mergeById(saved.refunds, base.refunds.filter(refund => /-H\d$/.test(refund.id)));
+    }
+    merged.statsVersion = 1;
     merged.channelConnections.seller = (merged.channelConnections.seller || base.channelConnections.seller).map(channel => {
       const seed = base.channelConnections.seller.find(item => item.id === channel.id) || {};
       return { trackingAutomation: false, syncInterval: 10, lastTrackingPush: "-", ...seed, ...channel };
@@ -1761,7 +1829,9 @@ function menuIcon(name) {
     cart: '<path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6"/><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/>',
     truck: '<path d="M3 6h11v10H3zM14 9h4l3 3v4h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
     box: '<path d="M3 8 12 3l9 5-9 5-9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="m7.5 5.5 9 5"/>',
-    ready: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/>'
+    ready: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/>',
+    chart: '<path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6M20 16V6"/>',
+    report: '<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M8 12h8M8 16h5"/><path d="m16 18 1.5 1.5L21 16"/>'
   };
   return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name] || paths.product}</svg>`;
 }
@@ -1837,6 +1907,7 @@ function memberStatusChip(status) {
     approved: ["승인 완료", "blue"],
     rejected: ["반려", "red"],
     suspended: ["이용 정지", "red"],
+    banned: ["영구 정지", "red"],
     "profile-incomplete": ["정보 입력 중", ""]
   }[status] || [status, ""];
   return `<span class="chip ${meta[1]}">${meta[0]}</span>`;
@@ -1900,11 +1971,11 @@ function mobileTabbarItems() {
     ];
   }
   return [
-    { label: "대시보드", icon: "home", index: 0, match: [0] },
-    { label: "회원 승인", icon: "approval", index: 1, match: [1, 2, 3, 4], badge: pendingApprovalCount() },
-    { label: "상품", icon: "product", index: 5, match: [5] },
-    { label: "주문", icon: "order", index: 6, match: [6, 7] },
-    { label: "로그", icon: "log", index: 8, match: [8, 9] }
+    { label: "홈", icon: "home", index: 0, match: [0] },
+    { label: "매출", icon: "chart", index: 11, match: [11, 10, 12, 14] },
+    { label: "상담", icon: "message", index: 13, match: [13, 7, 9], badge: supportThreads().reduce((sum, thread) => sum + thread.unread, 0) },
+    { label: "회원", icon: "approval", index: 1, match: [1, 2, 3, 4], badge: pendingApprovalCount() },
+    { label: "상품·주문", icon: "product", index: 5, match: [5, 6, 8] }
   ];
 }
 function renderMobileTabbar() {
@@ -2058,8 +2129,9 @@ function showApp(accountId, staff = null) {
   window.scrollTo({ top: 0 });
   clearTimeout(showApp.collectTimer);
   if (activeRole === "seller") showApp.collectTimer = setTimeout(maybeAutoCollectOrders, 1500);
+  if (activeRole === "master") setTimeout(maybeAutoDailyReport, 2500);
 }
-setInterval(() => { if (!document.hidden) maybeAutoCollectOrders(); }, 60 * 1000);
+setInterval(() => { if (!document.hidden) { maybeAutoCollectOrders(); maybeAutoDailyReport(); } }, 60 * 1000);
 
 function initAuth() {
   const rememberedId = localStorage.getItem(REMEMBER_KEY) || "";
@@ -2172,6 +2244,7 @@ function catalogBaseProducts() {
   const connectedSuppliers = new Set(currentSellerConnections().map(connection => connection.supplierLoginId));
   const query = sellerProductSearch.trim().toLowerCase();
   return state.products.filter(product => {
+    if (supplierBlocked(product.supplierLoginId)) return false;
     const matchesText = !query || [product.id, product.name, product.supplier, productBrand(product), product.origin, product.originCountry, ...productCategoryPath(product), ...productOptions(product).map(option => option.name)].some(value => String(value || "").toLowerCase().includes(query));
     const matchesShipping = sellerShippingFilter === "all" || (sellerShippingFilter === "overseas" ? product.shippingType === "overseas" : product.shippingType !== "overseas");
     const matchesCountry = sellerCountry === "전체 국가" || (product.originCountry || "대한민국") === sellerCountry;
@@ -2267,7 +2340,7 @@ const BRAND_TAGLINES = { "청송골 과수원": "해발 500m 청송 산지에서
 function brandProfiles() {
   const connected = new Set(currentSellerConnections().map(connection => connection.supplierLoginId));
   const map = new Map();
-  state.products.filter(product => product.status === "판매중" && product.visibility !== "비노출" && connected.has(product.supplierLoginId)).forEach(product => {
+  state.products.filter(product => product.status === "판매중" && product.visibility !== "비노출" && connected.has(product.supplierLoginId) && !supplierBlocked(product.supplierLoginId)).forEach(product => {
     const name = productBrand(product);
     if (!map.has(name)) map.set(name, { name, supplier: product.supplier, supplierLoginId: product.supplierLoginId, products: [], categories: new Set(), countries: new Set() });
     const brand = map.get(name);
@@ -2350,9 +2423,29 @@ function supplierProductCards(products) {
   </article>`).join("")}</div>`;
 }
 
+let masterProductQuery = "";
 function masterProductsTable() {
-  return `<div class="table-wrap"><table><thead><tr><th>상품</th><th>공급사</th><th>카테고리</th><th>공급가</th><th>재고</th><th>선택 셀러</th><th>상태</th><th>최근 관리</th></tr></thead><tbody>${state.products.map(product => `<tr><td><div class="table-product">${productPhoto(product, "table-photo")}<span><strong>${escapeHtml(product.name)}</strong><small>${product.id}</small></span></div></td><td>${escapeHtml(product.supplier)}</td><td>${escapeHtml(product.category)}</td><td>${money(product.supply)}</td><td><b class="${lowStockUnits(product).length ? "stock-low" : ""}">${product.stock}개</b>${hasOptions(product) && lowStockUnits(product).length ? `<small class="stock-low-note">옵션 ${lowStockUnits(product).length}개 부족</small>` : ""}</td><td>${state.sellerProducts.filter(item => item.productId === product.id).length}곳</td><td>${statusChip(product.status)}</td><td><button class="text-button" data-action="product-history" data-id="${product.id}">변경 이력</button></td></tr>`).join("")}</tbody></table></div>`;
+  const query = masterProductQuery.trim().toLowerCase();
+  const products = state.products;
+  const raw = product => [product.id, product.name, supplierName(product.supplierLoginId), productBrand(product), product.category].join(" ").toLowerCase();
+  const q = product => escapeHtml(raw(product));
+  const hide = product => (query && !raw(product).includes(query) ? " hidden" : "");
+  const picks = product => state.sellerProducts.filter(item => item.productId === product.id).length;
+  const actions = product => `<button type="button" class="primary-button" data-action="master-edit-product" data-id="${product.id}">수정</button><button type="button" class="secondary-button" data-action="product-history" data-id="${product.id}">변경 이력</button>`;
+  return `<label class="m-search"><span aria-hidden="true">⌕</span><input id="masterProductSearch" type="search" value="${escapeHtml(masterProductQuery)}" placeholder="상품명·상품코드·브랜드·공급사로 찾기" autocomplete="off"></label>
+  <div class="table-wrap md-desktop"><table><thead><tr><th>상품</th><th>공급사 · 브랜드</th><th>카테고리</th><th>공급가</th><th>재고</th><th>선택 셀러</th><th>상태</th><th>관리</th></tr></thead><tbody>${products.map(product => `<tr data-q="${q(product)}"${hide(product)}><td><div class="table-product">${productPhoto(product, "table-photo")}<span><strong>${escapeHtml(product.name)}</strong><small>${product.id}</small></span></div></td><td>${escapeHtml(supplierName(product.supplierLoginId))}<br><small>${escapeHtml(productBrand(product))}</small></td><td>${escapeHtml(product.category)}</td><td>${money(product.supply)}</td><td><b class="${lowStockUnits(product).length ? "stock-low" : ""}">${product.stock}개</b></td><td>${picks(product)}곳</td><td>${statusChip(product.status)}</td><td><div class="row-actions">${actions(product)}</div></td></tr>`).join("") || ""}</tbody></table></div><div class="empty m-search-empty" hidden>찾는 상품이 없어요.</div>
+  <div class="m-cards">${products.map(product => `<article class="m-card product" data-q="${q(product)}"${hide(product)}><div class="m-card-prod">${productPhoto(product, "m-card-photo")}<span><b>${escapeHtml(product.name)}</b><small>${product.id} · ${escapeHtml(productBrand(product))}</small><small>${escapeHtml(supplierName(product.supplierLoginId))} · ${escapeHtml(product.category || "")}</small></span></div>
+    <dl class="four"><div><dt>공급가</dt><dd>${money(product.supply)}</dd></div><div><dt>판매가</dt><dd>${money(product.recommended)}</dd></div><div><dt>재고</dt><dd class="${lowStockUnits(product).length ? "stock-low" : ""}">${product.stock}개</dd></div><div><dt>상태</dt><dd>${statusChip(product.status)}</dd></div></dl>
+    <div class="m-card-actions">${actions(product)}<small>셀러 ${picks(product)}곳 판매</small></div></article>`).join("")}</div>`;
 }
+document.addEventListener("input", event => {
+  if (event.target.id !== "masterProductSearch") return;
+  masterProductQuery = event.target.value;
+  const query = masterProductQuery.trim().toLowerCase();
+  let shown = 0;
+  document.querySelectorAll("#masterView [data-q]").forEach(row => { const match = !query || row.dataset.q.includes(query); row.hidden = !match; if (match && row.tagName === "ARTICLE") shown += 1; });
+  const empty = document.querySelector(".m-search-empty"); if (empty) empty.hidden = shown > 0;
+});
 
 function masterPlanUsagePanel() {
   const sellers = [...new Set(["seller", ...state.members.filter(member => (member.roles || [member.role]).includes("seller")).map(member => member.loginId)])];
@@ -2366,9 +2459,24 @@ function masterPlanUsagePanel() {
 }
 function memberDirectoryTable(role) {
   const members = state.members.filter(member => (member.roles || [member.role]).includes(role));
-  return `<div class="table-wrap"><table><thead><tr><th>사업자</th><th>대표자</th><th>사업자등록번호</th><th>연락처</th><th>상품/주문</th><th>가입 상태</th><th>관리</th></tr></thead><tbody>
-    ${members.length ? members.map(member => { const volume = role === "supplier" ? `${state.products.filter(product => product.supplierLoginId === member.loginId).length}개 상품` : `${state.orders.filter(order => order.sellerLoginId === member.loginId).length}건 주문`; const company = role === "supplier" ? (member.supplierCompany || member.company) : member.company; return `<tr><td><strong>${escapeHtml(company)}</strong>${(member.roles||[]).length>1 ? ` <span class="dual-role-badge">복수역할</span>` : ""}<br><small>${escapeHtml(member.loginId)}</small></td><td>${escapeHtml(member.representative)}</td><td>${escapeHtml(member.businessNo)}</td><td>${escapeHtml(member.contact)}</td><td>${volume}</td><td>${memberStatusChip(member.status)}</td><td><div class="row-actions"><button class="text-button" data-action="member-detail" data-id="${member.id}">상세</button>${member.status === "approved" ? `<button class="small-button reject" data-action="toggle-member" data-id="${member.id}">이용 정지</button>` : member.status === "suspended" ? `<button class="small-button approve" data-action="toggle-member" data-id="${member.id}">재활성</button>` : ""}</div></td></tr>`; }).join("") : `<tr><td colspan="7"><div class="empty">해당 회원이 없습니다.</div></td></tr>`}
-  </tbody></table></div>`;
+  const info = member => {
+    const orders = state.orders.filter(order => role === "supplier" ? orderSupplierId(order) === member.loginId : order.sellerLoginId === member.loginId);
+    const month = usageMonthKey();
+    const monthSales = orders.filter(order => String(order.orderDate).startsWith(month) && orderPaymentStatus(order) !== "pending" && settlementOrderState(order).state !== "excluded");
+    const amount = monthSales.reduce((sum, order) => sum + (role === "supplier" ? orderSupplyAmount(order) : Number(order.amount || 0)), 0);
+    const volume = role === "supplier" ? `상품 ${state.products.filter(product => product.supplierLoginId === member.loginId).length}개 · 주문 ${orders.length}건` : `주문 ${orders.length}건 · ${planTier(member.loginId).name}`;
+    const company = role === "supplier" ? (member.supplierCompany || member.company) : member.company;
+    const sanctioned = ["suspended", "banned"].includes(member.status);
+    const actions = `<button type="button" class="secondary-button" data-action="member-detail" data-id="${member.id}">상세</button><button type="button" class="secondary-button" data-action="support-open-thread" data-login="${escapeHtml(member.loginId)}" data-role="${role}">두고톡</button>${member.status === "approved" || sanctioned ? `<button type="button" class="${sanctioned ? "primary-button" : "secondary-button danger"}" data-action="member-sanction" data-id="${member.id}">${sanctioned ? "정지 관리" : "정지"}</button>` : ""}`;
+    return { company, volume, amount, actions, sanctioned };
+  };
+  if (!members.length) return `<div class="empty">해당 회원이 없습니다.</div>`;
+  return `<div class="table-wrap md-desktop"><table><thead><tr><th>사업자</th><th>대표자</th><th>사업자등록번호</th><th>연락처</th><th>상품/주문</th><th>이번 달 ${role === "supplier" ? "거래액" : "판매액"}</th><th>상태</th><th>관리</th></tr></thead><tbody>
+    ${members.map(member => { const row = info(member); return `<tr><td><strong>${escapeHtml(row.company)}</strong>${(member.roles || []).length > 1 ? ` <span class="dual-role-badge">복수역할</span>` : ""}<br><small>${escapeHtml(member.loginId)}</small></td><td>${escapeHtml(member.representative)}</td><td>${escapeHtml(member.businessNo)}</td><td>${escapeHtml(member.contact)}</td><td>${row.volume}</td><td><b>${money(row.amount)}</b></td><td>${memberStatusChip(member.status)}${member.suspendedUntil ? `<br><small>${escapeHtml(member.suspendedUntil)}까지</small>` : ""}</td><td><div class="row-actions">${row.actions}</div></td></tr>`; }).join("")}
+  </tbody></table></div>
+  <div class="m-cards">${members.map(member => { const row = info(member); return `<article class="m-card ${row.sanctioned ? "sanctioned" : ""}"><div class="m-card-head"><span><b>${escapeHtml(row.company)}</b><small>${escapeHtml(member.representative || "")} · ${escapeHtml(member.loginId)}</small></span>${memberStatusChip(member.status)}</div>
+    <dl><div><dt>이번 달 ${role === "supplier" ? "거래액" : "판매액"}</dt><dd>${money(row.amount)}</dd></div><div><dt>${role === "supplier" ? "상품·주문" : "주문·요금제"}</dt><dd>${row.volume}</dd></div><div><dt>연락처</dt><dd>${escapeHtml(member.contact || "-")}</dd></div><div><dt>사업자번호</dt><dd>${escapeHtml(member.businessNo || "-")}</dd></div>${row.sanctioned ? `<div class="wide"><dt>정지 사유</dt><dd>${escapeHtml(member.sanctionReason || "")}${member.suspendedUntil ? ` · ${escapeHtml(member.suspendedUntil)}까지` : ""}</dd></div>` : ""}</dl>
+    <div class="m-card-actions">${row.actions}</div></article>`; }).join("")}</div>`;
 }
 
 function accountProfileTemplate(extra = "") {
@@ -2570,12 +2678,12 @@ function talkPartnerProfile(active, perspective) {
 
 function sellerConnectionTemplate() {
   const connections = currentSellerConnections();
-  return `<div class="talk-page ${chatMobileView === "room" ? "show-room" : ""}">${connections.length ? partnerMessengerTemplate(connections, "seller") : `<div class="panel empty connection-empty"><b>아직 연결된 공급사가 없어요</b><span>공급사에게 받은 코드로 연결하면 두고톡으로 대화할 수 있어요.</span><button type="button" class="primary-button" data-action="open-connect-supplier" data-perspective="seller">＋ 새 공급사 연결</button></div>`}</div>`;
+  return `<div class="talk-page ${chatMobileView === "room" ? "show-room" : ""}">${supportEntryCard()}${connections.length ? partnerMessengerTemplate(connections, "seller") : `<div class="panel empty connection-empty"><b>아직 연결된 공급사가 없어요</b><span>공급사에게 받은 코드로 연결하면 두고톡으로 대화할 수 있어요.</span><button type="button" class="primary-button" data-action="open-connect-supplier" data-perspective="seller">＋ 새 공급사 연결</button></div>`}</div>`;
 }
 
 function supplierConnectionTemplate() {
   const connections = currentSupplierConnections();
-  return `<div class="talk-page ${chatMobileView === "room" ? "show-room" : ""}">${connections.length ? partnerMessengerTemplate(connections, "supplier") : `<div class="panel empty connection-empty"><b>아직 연결된 위탁셀러가 없어요</b><span>연결 코드를 위탁셀러에게 보내면 두고톡 대화방이 바로 생겨요.</span><button type="button" class="primary-button" data-action="open-connect-supplier" data-perspective="supplier">연결 코드 보기</button></div>`}</div>`;
+  return `<div class="talk-page ${chatMobileView === "room" ? "show-room" : ""}">${supportEntryCard()}${connections.length ? partnerMessengerTemplate(connections, "supplier") : `<div class="panel empty connection-empty"><b>아직 연결된 위탁셀러가 없어요</b><span>연결 코드를 위탁셀러에게 보내면 두고톡 대화방이 바로 생겨요.</span><button type="button" class="primary-button" data-action="open-connect-supplier" data-perspective="supplier">연결 코드 보기</button></div>`}</div>`;
 }
 
 function masterConnectionsTemplate() {
@@ -2713,7 +2821,7 @@ function refundTemplate(role) {
   const awaitingReceipt = allItems.filter(item => item.status === "공급사 입고확인 대기").length;
   const summary = role === "seller" ? `<div class="refund-summary-grid"><div class="refund-summary-card primary"><span>사용 가능 예치금</span><strong>${money(deposit.balance)}</strong><small>상품 결제 또는 계좌 출금 가능</small></div><div class="refund-summary-card"><span>환불 처리중</span><strong>${money(deposit.pending)}</strong><small>입고 확인 전에는 충전 보류</small></div><div class="refund-summary-card"><span>출금 처리중</span><strong>${money(deposit.withdrawalPending)}</strong><small>은행 이체 결과 대기</small></div><div class="refund-summary-card"><span>누적 환불 충전</span><strong>${money(deposit.totalRefunded)}</strong><small>${deposit.transactions.filter(item => item.type === "환불 충전").length}건 환불</small></div></div>` : role === "supplier" ? `<div class="refund-summary-grid"><div class="refund-summary-card primary dark"><span>환불 완료 주문 지급액</span><strong>0원</strong><small>입고 확인 즉시 정산 대상 제외</small></div><div class="refund-summary-card"><span>이번 달 정산 제외</span><strong>-${money(offset)}</strong><small>${completed.length}건 환불 확정</small></div><div class="refund-summary-card"><span>입고 확인 대기</span><strong>${awaitingReceipt}건</strong><small>실물 확인 후 완료 처리</small></div><div class="refund-summary-card"><span>전체 처리 대기</span><strong>${allItems.filter(item => item.status !== "환불완료").length}건</strong><small>농수산물은 회수 없이 승인 가능</small></div></div>` : `<div class="refund-summary-grid"><div class="refund-summary-card primary dark"><span>예치금 지급 완료</span><strong>${money(completed.reduce((sum,item)=>sum+item.amount,0))}</strong><small>${completed.length}건</small></div><div class="refund-summary-card"><span>공급사 정산 제외</span><strong>${money(offset)}</strong><small>정산지급대행 자동 조정</small></div><div class="refund-summary-card"><span>입고 확인 대기</span><strong>${awaitingReceipt}건</strong><small>공급사 확정 필요</small></div><div class="refund-summary-card"><span>전체 처리중</span><strong>${allItems.filter(item=>item.status!=="환불완료").length}건</strong><small>통합 모니터링</small></div></div>`;
   const policyMessage = role === "seller" ? "판매채널에서 소비자 환불을 먼저 완료한 뒤 요청하세요. 반품 상품이 공급사에 입고되면 공급대금이 예치금으로 자동 충전됩니다." : role === "supplier" ? "반품 실물을 받은 뒤 ‘반품 입고 확인’을 눌러야 셀러 예치금 충전과 내 정산 제외가 동시에 확정됩니다." : "입고 확인 또는 회수 없음 승인을 기준으로 예치금 충전과 공급사 정산 제외가 한 번에 처리됩니다.";
-  return `${sectionHero("취소 · 환불 관리", "소비자 환불, 반품 회수, 공급사 입고 확인, 예치금 충전까지 하나의 상태로 연결합니다.", role === "seller" ? `<button class="primary-button" data-action="open-doogo-money">예치금 관리</button>` : "")}${summary}
+  return `${sectionHero("취소 · 환불 관리", "소비자 환불, 반품 회수, 공급사 입고 확인, 예치금 충전까지 하나의 상태로 연결합니다.", role === "seller" ? `<button class="primary-button" data-action="open-doogo-money">예치금 관리</button>` : "")}${role === "master" ? refundSettlementPanel() : summary}
     <div class="refund-policy-callout panel"><span>안전한 환불 기준</span><b>${policyMessage}</b><small>위탁셀러는 환불을 요청하고, 환불 확정 권한은 공급사의 입고 확인 또는 회수 없음 승인에만 부여됩니다.</small></div>
     <div class="refund-flow refund-flow-five panel"><div class="refund-step done"><b>1</b><span>소비자 환불<small>판매채널에서 처리</small></span></div><i></i><div class="refund-step done"><b>2</b><span>셀러 요청<small>증빙·사유 접수</small></span></div><i></i><div class="refund-step active"><b>3</b><span>공급사 판단<small>회수·미회수·협의</small></span></div><i></i><div class="refund-step"><b>4</b><span>입고 확인<small>택배 도착·실물 확인</small></span></div><i></i><div class="refund-step"><b>5</b><span>자동 정산<small>예치금 충전·지급 0원</small></span></div></div>
     ${refundOpenOnly ? `<div class="refund-open-banner"><span><b>처리 중인 요청만 보고 있어요 · ${items.length}건</b><small>환불완료·취소완료된 요청은 숨겼어요. 대시보드 숫자와 같은 기준이에요.</small></span><button type="button" class="secondary-button" data-action="refund-open-only" data-on="0">전체 보기</button></div>` : role !== "master" ? `<div class="refund-open-banner quiet"><span><small>처리 중 ${allItems.filter(refundIsOpen).length}건 · 완료 ${allItems.length - allItems.filter(refundIsOpen).length}건</small></span><button type="button" class="text-button" data-action="refund-open-only" data-on="1">처리 중만 보기</button></div>` : ""}
@@ -3506,11 +3614,15 @@ function renderMasterSection(index) {
   if (index === 2) return `${sectionHero("공급사 관리", "공급사 사업자 정보와 상품·주문 현황, 이용 상태를 전체 조회합니다.")}<div class="panel"><div class="panel-head"><div><h3>전체 공급사</h3><p>상세정보 확인과 계정 이용 정지가 가능합니다. 복수 역할 계정도 함께 표시됩니다.</p></div><span class="chip">${state.members.filter(member => (member.roles || [member.role]).includes("supplier")).length}곳</span></div>${memberDirectoryTable("supplier")}</div>`;
   if (index === 3) return `${sectionHero("위탁셀러 관리", "위탁셀러 사업자 정보와 판매상품·주문 현황을 전체 조회합니다.")}<div class="panel"><div class="panel-head"><div><h3>전체 위탁셀러</h3><p>회원별 활동 상태와 주문 수를 확인합니다.</p></div><span class="chip">${state.members.filter(member => member.role === "seller").length}곳</span></div>${memberDirectoryTable("seller")}</div>${masterPlanUsagePanel()}`;
   if (index === 4) return masterConnectionsTemplate();
-  if (index === 5) return `${sectionHero("전체 상품 관리", "모든 공급사의 상품·공급가·재고·셀러 선택 현황을 조회합니다.")}<div class="panel"><div class="panel-head"><div><h3>통합 상품 목록</h3><p>변경 이력으로 공급사의 작업 기록을 추적합니다.</p></div><span class="chip">${state.products.length}개</span></div>${masterProductsTable()}</div>`;
-  if (index === 6) return `${sectionHero("전체 주문 관리", "주문 접수부터 공급사 자동 배정, 송장 반영까지 한 화면에서 확인합니다.")}<div class="panel"><div class="panel-head"><div><h3>통합 주문 목록</h3><p>셀러와 공급사 사이의 처리 상태를 모니터링합니다.</p></div><span class="chip orange">처리 필요 ${state.orders.filter(order => ["신규주문","주문접수","발주완료","배송준비중"].includes(order.status)).length}건</span></div>${ordersTable("master")}</div>`;
+  if (index === 5) return `${sectionHero("전체 상품 관리", "모든 공급사의 상품·공급가·재고·셀러 선택 현황을 조회합니다.")}<div class="panel"><div class="panel-head"><div><h3>통합 상품 목록</h3><p>잘못 등록된 상품은 마스터가 바로 수정할 수 있어요. 수정하면 공급사에게 알림이 가고 변경 이력에 남아요.</p></div><span class="chip">${state.products.length}개</span></div>${masterProductsTable()}</div>`;
+  if (index === 6) return masterOrdersTemplate();
   if (index === 7) return refundTemplate("master");
   if (index === 9) return masterNoticesAdminTemplate();
   if (index === 10) return masterSettlementTemplate();
+  if (index === 11) return masterStatsTemplate();
+  if (index === 12) return masterSubscriptionsTemplate();
+  if (index === 13) return masterSupportTemplate();
+  if (index === 14) return masterReportTemplate();
   return `${sectionHero("연동·변경 로그", "모든 주요 변경과 오류를 시간순으로 저장하고 확인합니다.")}${logsTemplate()}`;
 }
 
@@ -4824,7 +4936,32 @@ function ensureSettlementWeeks() {
   });
   if (changed) saveState();
 }
+/* 지급 직전에 다시 확인: 명세서를 만든 뒤 환불·취소된 주문은 빼고, 환불 처리 중인 주문은 보류로 돌린다.
+   두고가 환불 주문 대금을 공급사에 내주고 나중에 못 받는 일을 막는다. */
+function refreshRecordBeforePay(record) {
+  const dropped = [], held = [];
+  record.lines = record.lines.filter(line => {
+    if (line.kind === "deduct") return true;
+    const order = state.orders.find(item => item.id === line.orderId);
+    if (!order) return true;
+    const st = settlementOrderState(order);
+    if (st.state === "include") return true;
+    if (order.settledIn === record.id) delete order.settledIn;
+    if (st.state === "excluded") { dropped.push({ ...line, reason: `지급 전 ${st.reason}` }); record.excluded = [...(record.excluded || []), { ...line, reason: `지급 전 ${st.reason}`, detail: st.detail }]; }
+    else { held.push(line); record.holds = [...(record.holds || []), { ...line, reason: st.reason, detail: st.detail, fix: st.fix, holdKind: st.kind }]; }
+    return false;
+  });
+  if (!dropped.length && !held.length) return { dropped, held };
+  const sum = key => record.lines.reduce((total, line) => total + line[key], 0);
+  record.gross = record.lines.filter(line => line.kind !== "deduct").reduce((total, line) => total + line.amount, 0);
+  record.fee = sum("fee"); record.net = sum("net");
+  record.holdAmount = (record.holds || []).reduce((total, hold) => total + hold.net, 0);
+  record.adjustedBeforePay = [...(record.adjustedBeforePay || []), ...dropped.map(line => line.orderId), ...held.map(line => line.orderId)];
+  audit("정산 지급 전 자동 조정", `${supplierName(record.supplierLoginId)} · ${record.period} · 환불 제외 ${dropped.length}건 · 보류 ${held.length}건`, "done", "money");
+  return { dropped, held };
+}
 function paySettlementRecord(record, { silent = false, when = ymd(new Date()) } = {}) {
+  if (!silent) refreshRecordBeforePay(record);
   const account = settlementAccount(record.supplierLoginId);
   const toDeposit = !account || account.method === "deposit";
   record.status = "지급 완료";
@@ -4934,7 +5071,7 @@ function masterSettlementTemplate() {
   return `${sectionHero("정산 관리", "공급사 주간 정산(지난주 월~일 → 이번 주 월요일)을 지급하고, 보류·출금·계좌와 정산 장부를 관리해요.", `<button type="button" class="secondary-button" data-action="export-ledger">정산 장부 CSV</button>`)}
     <div class="stl-kpis"><div><span>지급 대기</span><strong>${money(waiting.reduce((sum, week) => sum + week.net, 0))}</strong><small>${waiting.length}건</small></div><div><span>이번 주 정산 예정</span><strong>${money(ups.reduce((sum, up) => sum + up.net, 0))}</strong><small>${escapeHtml(ups[0]?.meta.payLabel || "")} 지급</small></div><div class="hold"><span>보류 중</span><strong>${money(holds.reduce((sum, hold) => sum + hold.net, 0))}</strong><small>${holds.length}건</small></div><div><span>이번 달 두고 수수료</span><strong>${money(monthFee)}</strong><small>지급 완료 기준</small></div></div>
     <section class="panel"><div class="panel-head"><div><h3>지급 대기</h3><p>월요일에 지급할 정산이에요. 계좌가 없는 공급사는 예치금으로 적립돼요.</p></div></div>
-      ${waiting.length ? `<div class="stl-table">${waiting.map(week => { const account = settlementAccount(week.supplierLoginId); return `<div class="stl-row"><span><b>${escapeHtml(supplierName(week.supplierLoginId))}</b><small>${escapeHtml(week.period)} · 주문 ${week.lines.length}건${week.holds.length ? ` · 보류 ${week.holds.length}` : ""}</small></span><span><small>받는 곳</small><b>${account && account.method !== "deposit" ? escapeHtml(maskAccount(account)) : "예치금 적립"}</b></span><span class="stl-row-amt"><strong>${money(week.net)}</strong><small>공급가 ${money(week.gross)} · 수수료 ${money(week.lines.filter(l => l.kind !== "deduct").reduce((t, l) => t + l.fee, 0))}</small></span><span class="stl-row-actions"><button type="button" class="text-button" data-action="settlement-statement" data-id="${week.id}">명세서</button><button type="button" class="primary-button" data-action="master-pay-settlement" data-id="${week.id}">지급 완료 처리</button></span></div>`; }).join("")}</div>` : `<div class="empty">지급 대기 중인 정산이 없어요.</div>`}</section>
+      ${waiting.length ? `<div class="stl-table">${waiting.map(week => { const account = settlementAccount(week.supplierLoginId); return `<div class="stl-row"><span><b>${escapeHtml(supplierName(week.supplierLoginId))}</b><small>${escapeHtml(week.period)} · 주문 ${week.lines.length}건${week.holds.length ? ` · 보류 ${week.holds.length}` : ""}</small>${(() => { const refunded = week.lines.filter(line => line.kind !== "deduct" && settlementOrderState(state.orders.find(order => order.id === line.orderId) || {}).state !== "include").length; return refunded ? `<em class="stl-note hold">지급 전 환불·처리 중 ${refunded}건 → 지급할 때 자동으로 빠져요</em>` : ""; })()}</span><span><small>받는 곳</small><b>${account && account.method !== "deposit" ? escapeHtml(maskAccount(account)) : "예치금 적립"}</b></span><span class="stl-row-amt"><strong>${money(week.net)}</strong><small>공급가 ${money(week.gross)} · 수수료 ${money(week.lines.filter(l => l.kind !== "deduct").reduce((t, l) => t + l.fee, 0))}</small></span><span class="stl-row-actions"><button type="button" class="text-button" data-action="settlement-statement" data-id="${week.id}">명세서</button><button type="button" class="primary-button" data-action="master-pay-settlement" data-id="${week.id}">지급 완료 처리</button></span></div>`; }).join("")}</div>` : `<div class="empty">지급 대기 중인 정산이 없어요.</div>`}</section>
     <section class="panel"><div class="panel-head"><div><h3>이번 주 정산 예정 (${escapeHtml(ups[0]?.meta.period || "")})</h3><p>문제가 있는 주문은 ‘보류 지정’으로 이번 정산에서 뺄 수 있어요. 공급사 화면에 사유가 그대로 보여요.</p></div></div>
       ${ups.map(up => `<details class="stl-up"><summary><b>${escapeHtml(up.name)}</b><span>주문 ${up.lines.length}건 · 보류 ${up.holds.length}건</span><strong>${money(up.net)}</strong></summary>${settlementLinesTable(up.lines.filter(line => line.kind !== "deduct"), { holdable: true })}</details>`).join("") || `<div class="empty">정산 예정 주문이 없어요.</div>`}</section>
     <section class="panel"><div class="panel-head"><div><h3>보류 관리</h3><p>자동 보류(환불 처리 중·쇼핑몰 확인 필요)는 원인이 해결되면 풀려요. 두고가 지정한 보류는 여기서 풀 수 있어요.</p></div></div>
@@ -4946,6 +5083,555 @@ function masterSettlementTemplate() {
       <div class="stl-table">${accounts.map(row => `<div class="stl-row"><span><b>${escapeHtml(row.name)}</b><small>${escapeHtml(row.loginId)}</small></span><span><small>계좌</small><b>${escapeHtml(maskAccount(row.account))}</b></span><span><small>받는 방법</small><b>${row.account ? (row.account.method === "deposit" ? "예치금" : "계좌") : "예치금 (미등록)"}</b></span><span class="stl-row-actions">${row.account ? (row.account.verified ? `<em class="stl-ok">✓ 확인 완료</em>` : `<button type="button" class="secondary-button" data-action="master-verify-account" data-id="${row.loginId}">확인 완료</button>`) : `<small>공급사 등록 전</small>`}</span></div>`).join("")}</div></section>
     <section class="panel"><div class="panel-head"><div><h3>정산 장부</h3><p>지급·적립·출금이 날짜순으로 기록돼요. CSV로 받아 회계 프로그램에 올릴 수 있어요.</p></div><button type="button" class="secondary-button" data-action="export-ledger">CSV 받기</button></div>
       ${ledger.length ? `<div class="table-wrap"><table class="stl-ledger"><thead><tr><th>일자</th><th>구분</th><th>공급사</th><th>기간</th><th>판매 공급가</th><th>두고 수수료</th><th>환불 차감</th><th>지급·출금</th><th>받는 곳</th></tr></thead><tbody>${ledger.slice(0, 30).map(row => `<tr><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.type)}</td><td>${escapeHtml(supplierName(row.supplierLoginId))}</td><td>${escapeHtml(row.period || "-")}</td><td>${row.gross ? money(row.gross) : "-"}</td><td>${row.fee ? money(row.fee) : "-"}</td><td>${row.deduct ? money(row.deduct) : "-"}</td><td><b>${money(row.net)}</b></td><td>${escapeHtml(row.method || "-")}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">아직 기록이 없어요.</div>`}</section>`;
+}
+
+/* ===== 마스터: 매출·통계 · 구독 결제 · 두고톡 상담 · 이용 정지 · 일일 매출 보고 =====
+   두고 상품 주문 1건의 돈 흐름
+     소비자 → 쇼핑몰 → 위탁셀러 : 판매가 (셀러 매출)
+     위탁셀러 → 두고           : 공급가 (예치금·카드 결제) = 공급사 거래액
+     두고 → 공급사             : 공급가 − 7% (주간 정산)   → 남는 7%가 두고 수수료
+   환불이 나면 셀러는 공급가를 예치금으로 돌려받는다. 그래서 공급사 정산에서 그 주문을 빼고(지급 전),
+   이미 지급했으면 다음 정산에서 차감한다. 수수료도 0원이 되어 두고가 공급사에게 돈을 먼저 내주고 못 받는 일이 없다. */
+let masterStatsMonth = "";
+let masterSellerRank = "sales";
+let masterSupportTab = "seller";
+let masterSupportActive = "";
+let masterSubsFilter = "active";
+let supportChatOpen = false;
+function csvText(rows) { return "\ufeff" + rows.map(row => row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n"); }
+/* 정지·영구 정지된 공급사 상품은 상품 소싱·브랜드관에서 숨긴다 */
+function supplierBlocked(loginId) { const member = memberByLogin(loginId); return Boolean(member && ["suspended", "banned"].includes(member.status)); }
+let masterOrderFilter = "all";
+const MASTER_ORDER_FILTERS = [["all", "전체", () => true], ["todo", "처리 필요", order => ["신규주문", "주문접수", "발주완료", "배송준비중", "주문확인필요"].includes(order.status)], ["shipping", "배송중", order => order.status === "배송중"], ["done", "배송완료", order => order.status === "배송완료"], ["refund", "취소·환불", order => ["환불완료", "취소완료", "출고취소"].includes(order.status) || state.refunds.some(item => item.orderId === order.id)]];
+function masterOrdersTemplate() {
+  const filter = MASTER_ORDER_FILTERS.find(item => item[0] === masterOrderFilter) || MASTER_ORDER_FILTERS[0];
+  const list = state.orders.filter(filter[2]);
+  return `${sectionHero("전체 주문 관리", "주문 접수부터 공급사 배정, 송장 반영까지 한 화면에서 확인해요. 누르면 주문 상세가 열려요.")}
+    <div class="ms-months" role="tablist">${MASTER_ORDER_FILTERS.map(([key, label, test]) => `<button type="button" class="${key === filter[0] ? "active" : ""}" data-action="ms-order-filter" data-filter="${key}">${label} ${state.orders.filter(test).length}</button>`).join("")}</div>
+    <div class="panel"><div class="panel-head"><div><h3>${filter[1]} 주문 ${list.length}건</h3><p>최근 주문부터 보여요.</p></div></div>${ordersTable("master", "", list)}</div>`;
+}
+function orderSupplierId(order) { return order.supplierLoginId || orderSourceProduct(order)?.supplierLoginId || ""; }
+function doogoSalesOrders() { return state.orders.filter(order => orderMappingStatus(order) !== "self" && orderSupplierId(order) && orderPaymentStatus(order) !== "pending" && parseYmd(order.orderDate)); }
+function monthLabel(key) { const [y, m] = String(key).split("-"); return `${y}년 ${Number(m)}월`; }
+function shiftMonth(key, delta) { const [y, m] = key.split("-").map(Number); const d = new Date(y, m - 1 + delta, 1); return usageMonthKey(d); }
+function statsMonths() {
+  const keys = new Set([usageMonthKey(), ...doogoSalesOrders().map(order => order.orderDate.slice(0, 7)), ...(state.billing || []).map(row => String(row.date).slice(0, 7))]);
+  return [...keys].filter(key => /^\d{4}-\d{2}$/.test(key)).sort().reverse();
+}
+function activeStatsMonth() {
+  if (masterStatsMonth) return masterStatsMonth;
+  const now = usageMonthKey();
+  return doogoSalesOrders().some(order => order.orderDate.startsWith(now)) ? now : (statsMonths().find(key => doogoSalesOrders().some(order => order.orderDate.startsWith(key))) || now);
+}
+/* 주문 한 건이 두고 매출에 어떻게 잡히는지 */
+function orderMoney(order) {
+  const supply = orderSupplyAmount(order);
+  const st = settlementOrderState(order);
+  const refunded = st.state === "excluded";
+  const fee = refunded ? 0 : settlementFee(supply);
+  return { supply, sales: Number(order.amount || 0), fee, refunded, hold: st.state === "hold", payout: refunded ? 0 : supply - fee };
+}
+function billingIn(from, to) { return (state.billing || []).filter(row => row.date >= from && row.date <= to); }
+function subscriptionRevenue(from, to) {
+  const rows = billingIn(from, to);
+  const paid = rows.filter(row => row.kind === "payment" && row.status === "결제 완료").reduce((sum, row) => sum + row.amount, 0);
+  const refunded = rows.filter(row => row.kind === "refund" && row.status === "환불 완료").reduce((sum, row) => sum + row.amount, 0);
+  return { paid, refunded, net: paid - refunded };
+}
+/* 기간 통계: from·to는 YYYY-MM-DD */
+function masterStats(from, to) {
+  const orders = doogoSalesOrders().filter(order => order.orderDate >= from && order.orderDate <= to);
+  const rows = orders.map(order => ({ order, ...orderMoney(order) }));
+  const valid = rows.filter(row => !row.refunded);
+  const refunds = rows.filter(row => row.refunded);
+  const sum = (list, key) => list.reduce((total, row) => total + row[key], 0);
+  const subs = subscriptionRevenue(from, to);
+  const fee = sum(valid, "fee");
+  const group = (keyOf, labelOf) => {
+    const map = new Map();
+    valid.forEach(row => {
+      const key = keyOf(row.order); if (!key) return;
+      const entry = map.get(key) || { key, label: labelOf(row.order), supply: 0, sales: 0, fee: 0, orders: 0, qty: 0 };
+      entry.supply += row.supply; entry.sales += row.sales; entry.fee += row.fee; entry.orders += 1; entry.qty += Number(row.order.qty || 1);
+      map.set(key, entry);
+    });
+    return [...map.values()];
+  };
+  const products = group(order => orderSourceProduct(order)?.id || order.productId, order => orderSourceProduct(order)?.name || order.externalProductName || order.productId).sort((a, b) => b.supply - a.supply);
+  const brands = group(order => productBrand(orderSourceProduct(order)), order => productBrand(orderSourceProduct(order))).map(entry => ({ ...entry, supplier: supplierName(orderSupplierId(valid.find(row => productBrand(orderSourceProduct(row.order)) === entry.key)?.order || {})) })).sort((a, b) => b.supply - a.supply);
+  const suppliers = group(orderSupplierId, order => supplierName(orderSupplierId(order))).sort((a, b) => b.supply - a.supply);
+  const sellers = group(order => order.sellerLoginId, order => memberByLogin(order.sellerLoginId)?.company || order.sellerLoginId);
+  return {
+    from, to, orders: valid.length, qty: valid.reduce((total, row) => total + Number(row.order.qty || 1), 0),
+    supply: sum(valid, "supply"), sales: sum(valid, "sales"), fee, payout: sum(valid, "payout"),
+    refundCount: refunds.length, refundSupply: sum(refunds, "supply"), refundSales: sum(refunds, "sales"), holdCount: rows.filter(row => row.hold).length,
+    subs, profit: fee + subs.net, products, brands, suppliers, sellers, rows
+  };
+}
+function monthRange(key) { const [y, m] = key.split("-").map(Number); return { from: `${key}-01`, to: ymd(new Date(y, m, 0)) }; }
+function dayStats(date) { const key = ymd(date); return masterStats(key, key); }
+function pctChange(now, before) { if (!before) return now ? "새로 발생" : "변화 없음"; const pct = Math.round((now - before) / before * 100); return `${pct >= 0 ? "▲" : "▼"} ${Math.abs(pct)}%`; }
+function statTile(label, value, sub = "", tone = "", attrs = "") { return `<${attrs ? "button type=\"button\"" : "div"} class="ms-tile ${tone}" ${attrs}><span>${label}</span><strong>${value}</strong>${sub ? `<small>${sub}</small>` : ""}</${attrs ? "button" : "div"}>`; }
+function rankBars(list, { value = "supply", unit = money, limit = 5, sub = () => "", empty = "아직 판매가 없어요." } = {}) {
+  const top = list.slice(0, limit);
+  if (!top.length) return `<div class="empty">${empty}</div>`;
+  const max = Math.max(...top.map(item => item[value]), 1);
+  return `<ol class="ms-rank">${top.map((item, index) => `<li><i class="r${index + 1}">${index + 1}</i><div><b>${escapeHtml(item.label)}</b><small>${sub(item)}</small><span class="ms-bar"><em style="width:${Math.max(4, Math.round(item[value] / max * 100))}%"></em></span></div><strong>${unit(item[value])}</strong></li>`).join("")}</ol>`;
+}
+function dailyChart(key) {
+  const [y, m] = key.split("-").map(Number);
+  const days = new Date(y, m, 0).getDate();
+  const today = ymd(new Date());
+  const series = Array.from({ length: days }, (_, index) => { const date = `${key}-${String(index + 1).padStart(2, "0")}`; const s = masterStats(date, date); return { date, day: index + 1, supply: s.supply, fee: s.fee, orders: s.orders, future: date > today }; });
+  const max = Math.max(...series.map(item => item.supply), 1);
+  const best = series.reduce((a, b) => (b.supply > a.supply ? b : a), series[0]);
+  return `<div class="ms-chart" role="img" aria-label="${monthLabel(key)} 일별 공급사 거래액">
+    <div class="ms-chart-bars">${series.map(item => `<button type="button" class="${item.future ? "future" : ""} ${item.date === best.date && best.supply ? "best" : ""}" data-action="ms-day" data-date="${item.date}" title="${item.day}일 · 거래액 ${money(item.supply)} · 수수료 ${money(item.fee)} · 주문 ${item.orders}건"><em style="height:${item.supply ? Math.max(3, Math.round(item.supply / max * 100)) : 0}%"></em></button>`).join("")}</div>
+    <div class="ms-chart-axis"><span>1일</span><span>${Math.ceil(days / 2)}일</span><span>${days}일</span></div>
+    <p class="ms-chart-note" id="msDayNote">${best.supply ? `가장 많이 판 날: <b>${Number(best.date.slice(8))}일</b> · 거래액 ${money(best.supply)} · 수수료 ${money(best.fee)}` : "이 달에는 아직 거래가 없어요."} <small>막대를 누르면 그날 숫자를 보여 줘요.</small></p>
+  </div>`;
+}
+function masterStatsTemplate() {
+  const key = activeStatsMonth();
+  const { from, to } = monthRange(key);
+  const now = masterStats(from, to);
+  const prevRange = monthRange(shiftMonth(key, -1));
+  const prev = masterStats(prevRange.from, prevRange.to);
+  const months = statsMonths();
+  const sellerList = [...now.sellers].sort((a, b) => masterSellerRank === "orders" ? b.orders - a.orders || b.sales - a.sales : b.sales - a.sales);
+  return `${sectionHero("매출 · 통계", "두고가 버는 돈(공급사 수수료 7% + 위탁셀러 구독료)과 잘 팔리는 상품·브랜드·셀러를 한눈에 봐요.", `<button type="button" class="secondary-button" data-action="ms-export">통계 CSV</button>`)}
+    <div class="ms-months" role="tablist" aria-label="월 선택">${months.map(month => `<button type="button" class="${month === key ? "active" : ""}" data-action="ms-month" data-month="${month}">${monthLabel(month)}</button>`).join("")}</div>
+    <section class="ms-hero"><span>${monthLabel(key)} 두고 순이익</span><strong>${money(now.profit)}</strong><small>지난달보다 ${pctChange(now.profit, prev.profit)}</small>
+      <dl><div><dt>공급사 수수료 7%</dt><dd>${money(now.fee)}</dd></div><div><dt>구독 매출</dt><dd>${money(now.subs.net)}</dd></div>${now.subs.refunded ? `<div><dt>구독 환불</dt><dd>−${money(now.subs.refunded)}</dd></div>` : ""}</dl>
+      <p>순이익 = 공급사 수수료 + 구독 매출 − 구독 환불 · 카드 수수료·서버비 등 운영비는 빼기 전 금액이에요.</p></section>
+    <div class="ms-tiles">
+      ${statTile("공급사 총매출 (거래액)", money(now.supply), `${now.orders}건 · ${now.qty}개`, "", `data-action="open-master-section" data-index="${menuIndexOf("주문 관리", "master")}"`)}
+      ${statTile("위탁셀러 판매액", money(now.sales), "쇼핑몰 소비자 결제 기준")}
+      ${statTile("공급사에 줄 정산금", money(now.payout), "거래액 − 수수료 7%", "", `data-action="open-master-section" data-index="${menuIndexOf("정산 관리", "master")}"`)}
+      ${statTile("환불로 정산 제외", money(now.refundSupply), `${now.refundCount}건 · 공급사에 안 줘요`, now.refundCount ? "warn" : "", `data-action="open-master-section" data-index="${menuIndexOf("취소 · 환불", "master")}"`)}
+    </div>
+    <section class="panel"><div class="panel-head"><div><h3>일별 거래액</h3><p>${monthLabel(key)} 공급사 거래액(공급가 합계)이에요.</p></div></div>${dailyChart(key)}</section>
+    <div class="ms-grid">
+      <section class="panel"><div class="panel-head"><div><h3>많이 팔린 상품 TOP 10</h3><p>거래액 기준 · 환불 주문 제외</p></div></div>${rankBars(now.products, { limit: 10, sub: item => `${item.qty}개 · ${item.orders}건 · 수수료 ${money(item.fee)}` })}</section>
+      <section class="panel"><div class="panel-head"><div><h3>브랜드 순위</h3><p>이번 달 가장 많이 판 브랜드(공급사)</p></div></div>${rankBars(now.brands, { limit: 10, sub: item => `${escapeHtml(item.supplier)} · ${item.orders}건 · 수수료 ${money(item.fee)}` })}</section>
+      <section class="panel"><div class="panel-head"><div><h3>위탁셀러 순위</h3><p>${masterSellerRank === "orders" ? "주문을 가장 많이 넣은 셀러" : "매출(쇼핑몰 판매액)이 가장 높은 셀러"}</p></div><div class="ms-seg" role="tablist"><button type="button" class="${masterSellerRank === "sales" ? "active" : ""}" data-action="ms-seller-rank" data-rank="sales">매출순</button><button type="button" class="${masterSellerRank === "orders" ? "active" : ""}" data-action="ms-seller-rank" data-rank="orders">주문순</button></div></div>
+        ${rankBars(sellerList, { limit: 10, value: masterSellerRank === "orders" ? "orders" : "sales", unit: masterSellerRank === "orders" ? (n => `${n}건`) : money, sub: item => masterSellerRank === "orders" ? `판매액 ${money(item.sales)} · 공급가 ${money(item.supply)}` : `주문 ${item.orders}건 · 공급가 ${money(item.supply)}` })}</section>
+      <section class="panel"><div class="panel-head"><div><h3>공급사별 거래액</h3><p>공급사가 받을 정산금의 기준이에요.</p></div></div>${rankBars(now.suppliers, { limit: 10, sub: item => `${item.orders}건 · 수수료 ${money(item.fee)} · 정산 ${money(item.supply - item.fee)}` })}</section>
+    </div>
+    ${masterSubsSummary(from, to)}`;
+}
+function masterSubsSummary(from, to) {
+  const subs = subscriptionRevenue(from, to);
+  const active = Object.entries(state.subscriptions || {}).filter(([, sub]) => sub.status === "active" && sub.tier !== "free");
+  const mrr = active.reduce((sum, [loginId]) => sum + planMonthlyTotal(loginId), 0);
+  return `<section class="panel"><div class="panel-head"><div><h3>구독 매출</h3><p>위탁셀러 요금제·카카오톡 알림 결제와 환불이에요.</p></div><button type="button" class="text-button" data-action="open-master-section" data-index="${menuIndexOf("구독 · 결제", "master")}">구독 관리 →</button></div>
+    <div class="ms-tiles three">${statTile("매달 들어올 구독료", money(mrr), `유료 구독 ${active.length}곳`)}${statTile("이 기간 결제", money(subs.paid))}${statTile("이 기간 환불", money(subs.refunded), "", subs.refunded ? "warn" : "")}</div></section>`;
+}
+function exportMasterStatsCsv() {
+  const key = activeStatsMonth();
+  const { from, to } = monthRange(key);
+  const stats = masterStats(from, to);
+  const rows = [["구분", "항목", "주문", "수량", "거래액(공급가)", "판매액", "두고 수수료"]];
+  rows.push(["합계", monthLabel(key), stats.orders, stats.qty, stats.supply, stats.sales, stats.fee]);
+  stats.products.forEach(item => rows.push(["상품", item.label, item.orders, item.qty, item.supply, item.sales, item.fee]));
+  stats.brands.forEach(item => rows.push(["브랜드", item.label, item.orders, item.qty, item.supply, item.sales, item.fee]));
+  stats.sellers.forEach(item => rows.push(["위탁셀러", item.label, item.orders, item.qty, item.supply, item.sales, item.fee]));
+  stats.suppliers.forEach(item => rows.push(["공급사", item.label, item.orders, item.qty, item.supply, item.sales, item.fee]));
+  rows.push(["구독", "결제", "", "", stats.subs.paid, "", ""], ["구독", "환불", "", "", -stats.subs.refunded, "", ""], ["순이익", "수수료+구독", "", "", stats.profit, "", ""]);
+  downloadCsv(csvText(rows), `두고_매출통계_${key}.csv`);
+}
+
+/* ----- 마스터 대시보드 ----- */
+function masterTodoItems() {
+  ensureSettlementWeeks();
+  const unanswered = supportThreads().filter(thread => thread.unread).length;
+  const refundQueue = (state.billing || []).filter(row => row.kind === "refund" && row.status === "환불 대기").length;
+  const waitingPay = (state.settlementWeeks || []).filter(week => week.status === "지급 대기").length;
+  const openRefunds = state.refunds.filter(refundIsOpen).length;
+  const receivables = supplierReceivables().length;
+  const charges = Object.values(state.deposits || {}).reduce((sum, wallet) => sum + (wallet.charges || []).filter(charge => charge.status === "입금 대기").length, 0);
+  const idx = label => menuIndexOf(label, "master");
+  return [
+    { count: unanswered, tone: "purple", title: "답하지 않은 두고톡 상담", hint: "위탁셀러·공급사가 본사에 보낸 문의예요", action: "open-master-section", index: idx("두고톡 상담") },
+    { count: refundQueue, tone: "red", title: "구독 해지 · 카드 환불 대기", hint: "해지한 셀러에게 남은 기간만큼 돌려줘요", action: "open-master-section", index: idx("구독 · 결제") },
+    { count: waitingPay, tone: "orange", title: "공급사 정산 지급 대기", hint: "지급 전에 환불된 주문은 자동으로 빠져요", action: "open-master-section", index: idx("정산 관리") },
+    { count: receivables, tone: "red", title: "공급사에게 받을 돈 (환불 차감 부족)", hint: "이미 정산한 주문이 환불됐는데 다음 정산이 모자라요", action: "open-master-section", index: idx("취소 · 환불") },
+    { count: openRefunds, tone: "orange", title: "처리 중인 취소·환불", hint: "끝날 때까지 공급사 정산은 보류돼요", action: "open-master-section", index: idx("취소 · 환불") },
+    { count: charges, tone: "blue", title: "예치금 입금 확인", hint: "셀러 무통장 입금을 확인해 주세요", action: "open-master-section", index: idx("정산 관리") },
+    { count: pendingApprovalCount(), tone: "blue", title: "가입 · 공급사 권한 심사", hint: "새 사업자와 공급사 전환 요청", action: "open-master-section", index: 1 }
+  ].filter(item => item.count > 0);
+}
+function masterDashboardTemplate() {
+  const today = new Date();
+  const t = dayStats(today), y = dayStats(addDays(today, -1));
+  const key = usageMonthKey(today);
+  const month = masterStats(`${key}-01`, ymd(today));
+  const statsKey = activeStatsMonth();
+  const rank = month.orders ? month : masterStats(monthRange(statsKey).from, monthRange(statsKey).to);
+  const rankLabel = month.orders ? "이번 달" : monthLabel(statsKey);
+  const todo = masterTodoItems();
+  const idx = label => menuIndexOf(label, "master");
+  const recent = [...state.orders].sort((a, b) => String(b.orderDate).localeCompare(String(a.orderDate))).slice(0, 5);
+  return `<section class="ms-hero dash"><span>이번 달 두고 순이익 · ${today.getMonth() + 1}월 1일~${today.getDate()}일</span><strong>${money(month.profit)}</strong>
+      <dl><div><dt>수수료 7%</dt><dd>${money(month.fee)}</dd></div><div><dt>구독 매출</dt><dd>${money(month.subs.net)}</dd></div><div><dt>공급사 거래액</dt><dd>${money(month.supply)}</dd></div></dl>
+      <button type="button" class="ms-hero-link" data-action="open-master-section" data-index="${idx("매출 · 통계")}">매출·통계 자세히 →</button></section>
+    <div class="ms-tiles">
+      ${statTile("오늘 거래액", money(t.supply), `주문 ${t.orders}건 · 어제 ${money(y.supply)}`)}
+      ${statTile("오늘 두고 수수료", money(t.fee), `어제 ${money(y.fee)}`)}
+      ${statTile("환불로 정산 제외", money(month.refundSupply), `이번 달 ${month.refundCount}건`, month.refundCount ? "warn" : "", `data-action="open-master-section" data-index="${idx("취소 · 환불")}"`)}
+      ${statTile("활동 회원", `${state.members.filter(member => member.status === "approved" && member.role !== "master").length}곳`, `공급사 ${state.members.filter(member => (member.roles || [member.role]).includes("supplier") && member.status === "approved").length} · 셀러 ${state.members.filter(member => member.role === "seller" && member.status === "approved").length}`, "", `data-action="open-master-section" data-index="1"`)}
+    </div>
+    <section class="panel ms-todo"><div class="panel-head"><div><h3>${todo.length ? `오늘 처리할 일 ${todo.length}가지` : "처리할 일이 없어요"}</h3><p>누르면 바로 그 화면으로 가요.</p></div></div>
+      ${todo.length ? `<div class="ms-todo-list">${todo.map(item => `<button type="button" class="ms-todo-row tone-${item.tone}" data-action="${item.action}" data-index="${item.index}"><strong>${item.count}</strong><span><b>${item.title}</b><small>${item.hint}</small></span><i aria-hidden="true">›</i></button>`).join("")}</div>` : `<div class="empty">상담·환불·정산 모두 처리했어요.</div>`}</section>
+    <div class="ms-grid">
+      <section class="panel"><div class="panel-head"><div><h3>${rankLabel} 많이 팔린 상품</h3></div><button type="button" class="text-button" data-action="open-master-section" data-index="${idx("매출 · 통계")}">전체 →</button></div>${rankBars(rank.products, { limit: 3, sub: item => `${item.qty}개 · ${item.orders}건` })}</section>
+      <section class="panel"><div class="panel-head"><div><h3>${rankLabel} 브랜드 순위</h3></div><button type="button" class="text-button" data-action="open-master-section" data-index="${idx("매출 · 통계")}">전체 →</button></div>${rankBars(rank.brands, { limit: 3, sub: item => `${escapeHtml(item.supplier)} · ${item.orders}건` })}</section>
+      <section class="panel"><div class="panel-head"><div><h3>${rankLabel} 매출 높은 셀러</h3></div><button type="button" class="text-button" data-action="open-master-section" data-index="${idx("매출 · 통계")}">전체 →</button></div>${rankBars([...rank.sellers].sort((a, b) => b.sales - a.sales), { limit: 3, value: "sales", sub: item => `주문 ${item.orders}건` })}</section>
+    </div>
+    <section class="panel"><div class="panel-head"><div><h3>최근 주문</h3><p>셀러 → 공급사 흐름과 상태</p></div><button type="button" class="text-button" data-action="open-master-section" data-index="${idx("주문 관리")}">전체 →</button></div>
+      <div class="ms-list">${recent.map(order => { const product = orderSourceProduct(order); return `<button type="button" class="ms-row" data-action="order-detail" data-id="${order.id}"><span><b>${escapeHtml(product?.name || order.externalProductName || order.productId)}</b><small>${escapeHtml(order.id)} · ${escapeHtml(memberByLogin(order.sellerLoginId)?.company || order.sellerLoginId)} → ${escapeHtml(supplierName(orderSupplierId(order)) || "직접 배송")}</small></span><span class="ms-row-end">${statusChip(order.status)}<strong>${money(order.amount)}</strong></span></button>`; }).join("")}</div></section>`;
+}
+
+/* ----- 구독 · 결제 (카드 결제·해지 환불) ----- */
+function billingSeq() { return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`.toUpperCase(); }
+function parseDot(text) { const [y, m, d] = String(text || "").split(/[.\-]/).map(Number); return y && m ? new Date(y, m - 1, d || 1) : null; }
+/* 남은 기간만큼 돌려줄 금액 (10원 단위 버림) */
+function prorateRefund(loginId, when = new Date()) {
+  const sub = state.subscriptions?.[loginId];
+  if (!sub || sub.status !== "active" || !sub.monthlyFee) return { amount: 0, remaining: 0, period: 0, paid: 0 };
+  const next = parseDot(sub.nextBilling);
+  if (!next) return { amount: 0, remaining: 0, period: 0, paid: sub.monthlyFee };
+  const start = new Date(next.getFullYear(), next.getMonth() - 1, next.getDate());
+  const day = new Date(when.getFullYear(), when.getMonth(), when.getDate());
+  const period = Math.max(1, Math.round((next - start) / 86400000));
+  const remaining = Math.max(0, Math.min(period, Math.round((next - day) / 86400000)));
+  const lastPaid = (state.billing || []).find(row => row.loginId === loginId && row.kind === "payment" && row.item?.includes("요금제") && row.status === "결제 완료");
+  const paid = lastPaid ? lastPaid.amount : sub.monthlyFee;
+  return { amount: Math.floor(paid * remaining / period / 10) * 10, remaining, period, paid, from: ymd(start), to: ymd(addDays(next, -1)), payment: lastPaid };
+}
+function addBilling(row) { state.billing = state.billing || []; const entry = { id: `BL-${billingSeq()}`, date: ymd(new Date()), status: "결제 완료", method: "", ...row }; state.billing.unshift(entry); return entry; }
+/* 카드 환불: 결제대행(PG) 서버가 연결돼 있으면 바로 카드 취소를 요청하고, 아니면 마스터 ‘환불 대기’ 목록에 올린다. */
+async function runCardRefund(refund) {
+  if (!(CARD_PAYMENT_READY && CHANNEL_SERVER)) return false;
+  try {
+    await channelServerCall("POST", "/api/billing/refund", { paymentKey: refund.paymentKey || "", cancelAmount: refund.amount, cancelReason: refund.reason || "구독 해지 일할 환불", refundId: refund.id });
+    refund.status = "환불 완료"; refund.doneAt = ymd(new Date()); refund.via = "카드 자동 취소";
+    return true;
+  } catch (error) { refund.status = "환불 대기"; refund.error = error.message; return false; }
+}
+function cancelSubscription(loginId, { refundMode = "prorate", reason = "", by = "seller" } = {}) {
+  const sub = state.subscriptions?.[loginId];
+  if (!sub) return null;
+  const tier = planTierById(sub.tier);
+  const pro = prorateRefund(loginId);
+  const amount = refundMode === "full" ? pro.paid : refundMode === "none" ? 0 : pro.amount;
+  Object.assign(sub, { status: "canceled", tier: "free", plan: "무료", monthlyFee: 0, autoRenew: false, canceledAt: billingDateLabel(new Date()), cancelReason: reason, cancelBy: by });
+  (state.channelConnections[loginId] || []).forEach(channel => { channel.trackingAutomation = false; });
+  const company = memberByLogin(loginId)?.company || loginId;
+  let refund = null;
+  if (amount > 0) {
+    refund = addBilling({ loginId, kind: "refund", item: `${tier.name} 요금제 해지 환불 (남은 ${pro.remaining}일 / ${pro.period}일)`, amount, method: sub.method || "카드", status: "환불 대기", reason: reason || "구독 해지", paymentKey: pro.payment?.paymentKey || "", paymentId: pro.payment?.id || "", requestedBy: by });
+  }
+  sub.history = [{ date: billingDateLabel(new Date()), item: `${tier.name} 해지${amount ? ` · ${money(amount)} 카드 환불` : ""}`, amount: -amount }, ...(sub.history || [])];
+  audit("구독 해지", `${company} · ${tier.name} 해지${amount ? ` · 일할 환불 ${money(amount)}` : " · 환불 없음"}${by === "master" ? " (마스터 처리)" : ""}`, "done", "money");
+  pushNotification("admin", "master", "billing", `${company} 구독 해지${amount ? ` · 환불 ${money(amount)}` : ""}`, reason || `${tier.name} 요금제 해지`, ["내부 알림"]);
+  if (by === "master") pushNotification(loginId, "seller", "billing", `${tier.name} 요금제가 해지됐어요`, amount ? `남은 ${pro.remaining}일치 ${money(amount)}을 결제한 카드로 돌려 드려요.` : "환불할 금액이 없어요.");
+  return refund;
+}
+function completeBillingRefund(refund, via = "마스터 확인") {
+  refund.status = "환불 완료"; refund.doneAt = ymd(new Date()); refund.via = via;
+  pushNotification(refund.loginId, "seller", "billing", `구독 환불 ${money(refund.amount)} 완료`, `${refund.method || "카드"}로 돌려 드렸어요. 카드사에 따라 3~7영업일 뒤에 보여요.`);
+  audit("구독 환불 완료", `${memberByLogin(refund.loginId)?.company || refund.loginId} · ${money(refund.amount)} · ${via}`, "done", "money");
+}
+function sellerCancelModal() {
+  const loginId = currentAccount.loginId;
+  const tier = planTier();
+  const pro = prorateRefund(loginId);
+  openModal(`<div class="sub-cancel"><h2>${escapeHtml(tier.name)} 요금제 해지</h2><p>해지하면 바로 무료 요금제로 바뀌고, 주문 자동 수집·송장 자동 전송이 멈춰요. 수기 주문은 계속 쓸 수 있어요.</p>
+    <dl class="sub-cancel-box"><div><dt>이번 달 결제</dt><dd>${money(pro.paid)}</dd></div><div><dt>이용 기간</dt><dd>${escapeHtml(pro.from || "-")} ~ ${escapeHtml(pro.to || "-")}</dd></div><div><dt>남은 기간</dt><dd>${pro.remaining}일 / ${pro.period}일</dd></div><div class="total"><dt>돌려받을 금액</dt><dd>${money(pro.amount)}</dd></div></dl>
+    <small class="sub-cancel-note">${pro.amount ? `남은 기간만큼 일할 계산해 결제한 카드(${escapeHtml(state.subscriptions[loginId]?.method || "카드")})로 자동으로 돌려 드려요. 카드사에 따라 3~7영업일 걸려요.` : "돌려받을 금액이 없어요."}</small>
+    <form id="subCancelForm" class="form-grid"><div class="form-field full"><label>해지 이유 (선택)</label><select name="reason"><option>가격이 부담돼요</option><option>쇼핑몰 연동이 필요 없어요</option><option>다른 서비스를 써요</option><option>잠시 쉬어요</option><option>기타</option></select></div>
+    <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>계속 쓸게요</button><button type="submit" class="primary-button danger">해지하고 ${pro.amount ? `${money(pro.amount)} 환불받기` : "무료로 바꾸기"}</button></div></form></div>`);
+}
+function masterCancelSubModal(loginId) {
+  const sub = state.subscriptions?.[loginId]; if (!sub) return;
+  const pro = prorateRefund(loginId);
+  const company = memberByLogin(loginId)?.company || loginId;
+  openModal(`<div class="sub-cancel"><h2>${escapeHtml(company)} 구독 해지</h2><p>${escapeHtml(sub.plan)} · 월 ${money(sub.monthlyFee)} · 다음 결제 ${escapeHtml(sub.nextBilling || "-")}</p>
+    <form id="masterSubCancelForm" data-login="${escapeHtml(loginId)}" class="form-grid">
+      <div class="form-field full"><label>환불 방법</label><div class="sub-refund-options">
+        <label><input type="radio" name="refundMode" value="prorate" checked><span><b>남은 기간 일할 환불</b><small>${pro.remaining}일 / ${pro.period}일 · ${money(pro.amount)}</small></span></label>
+        <label><input type="radio" name="refundMode" value="full"><span><b>이번 달 전액 환불</b><small>${money(pro.paid)} · 결제 오류·서비스 장애 등</small></span></label>
+        <label><input type="radio" name="refundMode" value="none"><span><b>환불 없이 해지</b><small>다음 결제일에 끝나요</small></span></label></div></div>
+      <div class="form-field full"><label>사유 *</label><input name="reason" required maxlength="80" placeholder="예: 고객 요청(두고톡 상담)"></div>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>닫기</button><button type="submit" class="primary-button danger">해지 처리</button></div></form></div>`);
+}
+function masterSubscriptionsTemplate() {
+  const rows = Object.entries(state.subscriptions || {}).map(([loginId, sub]) => ({ loginId, sub, member: memberByLogin(loginId), tier: planTierById(sub.status === "active" ? sub.tier : "free"), kakao: kakaoAlertActive(loginId) && !planTierById(sub.tier).kakao }));
+  const active = rows.filter(row => row.sub.status === "active" && row.tier.id !== "free");
+  const mrr = active.reduce((sum, row) => sum + planMonthlyTotal(row.loginId), 0);
+  const month = usageMonthKey();
+  const monthSubs = subscriptionRevenue(`${month}-01`, `${month}-31`);
+  const queue = (state.billing || []).filter(row => row.kind === "refund" && row.status === "환불 대기");
+  const tiers = PLAN_TIERS.map(tier => ({ tier, count: tier.id === "free" ? state.members.filter(member => member.role === "seller" && !["rejected", "banned"].includes(member.status) && !active.some(row => row.loginId === member.loginId)).length : active.filter(row => row.tier.id === tier.id).length }));
+  const list = masterSubsFilter === "active" ? active : rows.filter(row => row.sub.status !== "active" || row.tier.id === "free");
+  const ledger = (state.billing || []).slice(0, 30);
+  return `${sectionHero("구독 · 결제", "위탁셀러 요금제 결제와 해지·환불을 관리해요. 셀러가 해지하면 남은 기간만큼 일할 계산해 카드로 돌려줘요.", `<button type="button" class="secondary-button" data-action="billing-export">결제 내역 CSV</button>`)}
+    <div class="ms-tiles">${statTile("매달 들어올 구독료", money(mrr), `유료 ${active.length}곳`)}${statTile("이번 달 결제", money(monthSubs.paid))}${statTile("이번 달 환불", money(monthSubs.refunded), "", monthSubs.refunded ? "warn" : "")}${statTile("환불 대기", `${queue.length}건`, money(queue.reduce((sum, row) => sum + row.amount, 0)), queue.length ? "warn" : "")}</div>
+    <section class="panel"><div class="panel-head"><div><h3>요금제별 셀러</h3></div></div><div class="sub-tier-bars">${tiers.map(({ tier, count }) => `<div><span>${escapeHtml(tier.name)}<small>${tier.fee ? `월 ${money(tier.fee)}` : "무료"}</small></span><b>${Math.max(0, count)}곳</b></div>`).join("")}</div></section>
+    <section class="panel"><div class="panel-head"><div><h3>카드 환불 대기 ${queue.length}건</h3><p>${CARD_PAYMENT_READY && CHANNEL_SERVER ? "결제대행(PG)이 연결돼 있어 해지하면 자동으로 카드 취소돼요. 실패한 건만 여기에 남아요." : "결제대행(PG) 연결 전이라 PG 관리자 화면에서 카드 취소를 한 뒤 ‘환불 완료’를 눌러 주세요. PG가 연결되면 해지 즉시 자동으로 카드 취소돼요."}</p></div></div>
+      ${queue.length ? `<div class="ms-list">${queue.map(row => `<div class="ms-row static"><span><b>${escapeHtml(memberByLogin(row.loginId)?.company || row.loginId)} · ${money(row.amount)}</b><small>${escapeHtml(row.date)} · ${escapeHtml(row.item)} · ${escapeHtml(row.method || "카드")}${row.error ? ` · 자동 취소 실패: ${escapeHtml(row.error)}` : ""}</small></span><span class="ms-row-end"><button type="button" class="primary-button" data-action="billing-refund-done" data-id="${row.id}">${CARD_PAYMENT_READY && CHANNEL_SERVER ? "다시 카드 취소" : "환불 완료"}</button></span></div>`).join("")}</div>` : `<div class="empty">기다리는 환불이 없어요.</div>`}</section>
+    <section class="panel"><div class="panel-head"><div><h3>구독 셀러</h3></div><div class="ms-seg"><button type="button" class="${masterSubsFilter === "active" ? "active" : ""}" data-action="ms-subs-filter" data-filter="active">이용 중 ${active.length}</button><button type="button" class="${masterSubsFilter === "ended" ? "active" : ""}" data-action="ms-subs-filter" data-filter="ended">해지·무료 ${rows.length - active.length}</button></div></div>
+      ${list.length ? `<div class="ms-cards">${list.map(row => `<article class="ms-card"><div class="ms-card-head"><b>${escapeHtml(row.member?.company || row.loginId)}</b>${statusChip(row.sub.status === "active" && row.tier.id !== "free" ? row.tier.name : row.sub.status === "canceled" ? "해지" : "무료")}</div>
+        <dl><div><dt>월 요금</dt><dd>${money(planMonthlyTotal(row.loginId))}${row.kakao ? " (알림 포함)" : ""}</dd></div><div><dt>다음 결제</dt><dd>${escapeHtml(row.sub.status === "active" ? row.sub.nextBilling || "-" : "-")}</dd></div><div><dt>결제 수단</dt><dd>${escapeHtml(row.sub.method || "-")}</dd></div><div><dt>시작일</dt><dd>${escapeHtml(row.sub.startedAt || "-")}</dd></div>${row.sub.canceledAt ? `<div class="wide"><dt>해지</dt><dd>${escapeHtml(row.sub.canceledAt)} · ${escapeHtml(row.sub.cancelReason || "")}</dd></div>` : ""}</dl>
+        <div class="ms-card-actions"><button type="button" class="secondary-button" data-action="support-open-thread" data-login="${escapeHtml(row.loginId)}" data-role="seller">두고톡</button>${row.sub.status === "active" && row.tier.id !== "free" ? `<button type="button" class="secondary-button danger" data-action="master-cancel-sub" data-login="${escapeHtml(row.loginId)}">해지·환불</button>` : ""}</div></article>`).join("")}</div>` : `<div class="empty">해당하는 셀러가 없어요.</div>`}</section>
+    <section class="panel"><div class="panel-head"><div><h3>결제 · 환불 내역</h3><p>최근 30건</p></div></div>
+      ${ledger.length ? `<div class="ms-list">${ledger.map(row => `<div class="ms-row static"><span><b>${escapeHtml(memberByLogin(row.loginId)?.company || row.loginId)}</b><small>${escapeHtml(row.date)} · ${escapeHtml(row.item)}${row.via ? ` · ${escapeHtml(row.via)}` : ""}</small></span><span class="ms-row-end"><em class="bl-status ${row.kind === "refund" ? "refund" : ""} ${row.status === "환불 대기" ? "wait" : ""}">${escapeHtml(row.status)}</em><strong class="${row.kind === "refund" ? "minus" : ""}">${row.kind === "refund" ? "−" : ""}${money(row.amount)}</strong></span></div>`).join("")}</div>` : `<div class="empty">결제 내역이 없어요.</div>`}</section>`;
+}
+function exportBillingCsv() {
+  const rows = [["일자", "회원", "구분", "내용", "금액", "상태", "결제수단", "처리"]];
+  (state.billing || []).forEach(row => rows.push([row.date, memberByLogin(row.loginId)?.company || row.loginId, row.kind === "refund" ? "환불" : "결제", row.item, row.kind === "refund" ? -row.amount : row.amount, row.status, row.method || "", row.via || ""]));
+  downloadCsv(csvText(rows), `두고_구독결제_${ymd(new Date())}.csv`);
+}
+
+/* ----- 두고톡 본사 상담: 위탁셀러·공급사 ↔ 마스터 ----- */
+function supportMessagesOf(loginId) { return (state.supportMessages || []).filter(message => message.partnerLoginId === loginId); }
+function supportThreads(role = "") {
+  const map = new Map();
+  (state.supportMessages || []).forEach(message => {
+    if (role && message.partnerRole !== role) return;
+    const thread = map.get(message.partnerLoginId) || { loginId: message.partnerLoginId, role: message.partnerRole, messages: [], unread: 0 };
+    thread.messages.push(message);
+    if (message.senderLoginId === message.partnerLoginId && !message.readByMaster) thread.unread += 1;
+    map.set(message.partnerLoginId, thread);
+  });
+  return [...map.values()].map(thread => ({ ...thread, last: thread.messages.at(-1), member: memberByLogin(thread.loginId) })).sort((a, b) => String(b.last?.sentAt || "").localeCompare(String(a.last?.sentAt || "")));
+}
+function supportUnreadForPartner(loginId = currentAccount?.loginId) { return supportMessagesOf(loginId).filter(message => message.senderLoginId !== loginId && !message.readByPartner).length; }
+function nowStamp() { return new Date().toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }); }
+function sendSupportMessage(partnerLoginId, partnerRole, text, fromMaster) {
+  state.supportMessages = state.supportMessages || [];
+  state.supportMessages.push({ id: `SUP-${billingSeq()}`, partnerLoginId, partnerRole, senderLoginId: fromMaster ? "admin" : partnerLoginId, text, createdAt: nowStamp(), sentAt: new Date().toISOString(), readByMaster: fromMaster, readByPartner: !fromMaster });
+  const company = memberByLogin(partnerLoginId)?.[partnerRole === "supplier" ? "supplierCompany" : "company"] || memberByLogin(partnerLoginId)?.company || partnerLoginId;
+  if (fromMaster) pushNotification(partnerLoginId, partnerRole, "system", "두고 본사 답변", text.slice(0, 60));
+  else pushNotification("admin", "master", "system", `두고톡 상담 · ${company}`, text.slice(0, 60), ["내부 알림"]);
+  saveState();
+}
+function supportBubbles(messages, myLoginId) {
+  if (!messages.length) return `<div class="sup-empty">궁금한 점을 남겨 주세요. 두고 본사 운영팀이 답해 드려요.<br><small>평일 10:00~18:00 · 보통 1시간 안에 답해요</small></div>`;
+  return messages.map(message => { const mine = message.senderLoginId === myLoginId; return `<div class="sup-msg ${mine ? "mine" : ""}">${mine ? "" : `<i>${message.senderLoginId === "admin" ? "두고" : escapeHtml((memberByLogin(message.senderLoginId)?.company || "").charAt(0) || "셀")}</i>`}<div><p>${escapeHtml(message.text)}</p><small>${escapeHtml(message.createdAt || "")}</small></div></div>`; }).join("");
+}
+/* 위탁셀러·공급사 화면: 두고 본사 1:1 상담 창 */
+function supportChatModal() {
+  const loginId = currentAccount.loginId;
+  const role = activeRole === "supplier" ? "supplier" : "seller";
+  supportMessagesOf(loginId).forEach(message => { if (message.senderLoginId !== loginId) message.readByPartner = true; });
+  saveState(); updateAccountUI();
+  supportChatOpen = true;
+  openModal(`<div class="sup-chat"><div class="sup-chat-head"><span class="sup-avatar">두고</span><div><b>두고 본사 상담</b><small>정산·환불·요금제·계정 문의를 본사 운영팀과 바로 나눠요</small></div></div>
+    <div class="sup-thread" id="supportThread">${supportBubbles(supportMessagesOf(loginId), loginId)}</div>
+    <form id="supportForm" class="sup-input" data-role="${role}"><input name="text" id="supportInput" autocomplete="off" maxlength="500" placeholder="메시지를 입력하세요" required><button type="submit" class="primary-button">보내기</button></form></div>`);
+  document.querySelector("#modal .modal")?.classList.add("sup-modal");
+  const thread = document.getElementById("supportThread"); if (thread) thread.scrollTop = thread.scrollHeight;
+}
+function supportEntryCard() {
+  const unread = currentAccount ? supportUnreadForPartner() : 0;
+  return `<button type="button" class="sup-entry" data-action="open-support-chat"><span class="sup-avatar">두고</span><span><b>두고 본사 1:1 상담</b><small>정산·환불·요금제·계정 문의</small></span>${unread ? `<em>${unread}</em>` : `<i>상담하기 →</i>`}</button>`;
+}
+function masterSupportTemplate() {
+  const tabs = [["seller", "위탁셀러"], ["supplier", "공급사"]];
+  const threads = supportThreads(masterSupportTab);
+  const active = threads.find(thread => thread.loginId === masterSupportActive) || (window.innerWidth > 900 ? threads[0] : null);
+  if (active) { active.messages.forEach(message => { if (message.senderLoginId === active.loginId) message.readByMaster = true; }); active.unread = 0; saveState(); }
+  const tabCount = role => supportThreads(role).reduce((sum, thread) => sum + thread.unread, 0);
+  const orders = active ? state.orders.filter(order => active.role === "supplier" ? orderSupplierId(order) === active.loginId : order.sellerLoginId === active.loginId).sort((a, b) => String(b.orderDate).localeCompare(String(a.orderDate))) : [];
+  const refunds = active ? state.refunds.filter(item => active.role === "supplier" ? item.supplierLoginId === active.loginId : item.sellerLoginId === active.loginId) : [];
+  const member = active?.member;
+  return `<div class="sup-page ${active ? "has-active" : ""}">${sectionHero("두고톡 상담", "위탁셀러와 공급사가 본사에 보낸 1:1 상담이에요. 탭으로 나눠 보고, 주문·환불 내역을 옆에서 같이 확인하며 답해요.")}
+    <div class="ms-seg big" role="tablist">${tabs.map(([role, label]) => `<button type="button" class="${masterSupportTab === role ? "active" : ""}" data-action="support-tab" data-tab="${role}">${label}${tabCount(role) ? ` <em>${tabCount(role)}</em>` : ""}</button>`).join("")}</div>
+    <div class="sup-desk ${active ? "has-active" : ""}">
+      <aside class="panel sup-threads">${threads.length ? threads.map(thread => `<button type="button" class="${thread.loginId === active?.loginId ? "active" : ""}" data-action="support-open-thread" data-login="${escapeHtml(thread.loginId)}" data-role="${thread.role}"><span class="sup-avatar small">${escapeHtml((thread.member?.company || thread.loginId).charAt(0))}</span><span><b>${escapeHtml(thread.role === "supplier" ? supplierName(thread.loginId) : thread.member?.company || thread.loginId)}</b><small>${escapeHtml(thread.last?.senderLoginId === "admin" ? "나: " : "")}${escapeHtml(String(thread.last?.text || "").slice(0, 40))}</small></span><span class="sup-meta"><small>${escapeHtml(thread.last?.createdAt || "")}</small>${thread.unread ? `<em>${thread.unread}</em>` : ""}</span></button>`).join("") : `<div class="empty">${masterSupportTab === "supplier" ? "공급사" : "위탁셀러"} 상담이 아직 없어요.</div>`}</aside>
+      ${active ? `<section class="panel sup-room"><div class="sup-room-head"><button type="button" class="sup-back" data-action="support-back" aria-label="목록으로">←</button><div><b>${escapeHtml(active.role === "supplier" ? supplierName(active.loginId) : member?.company || active.loginId)}</b><small>${active.role === "supplier" ? "공급사" : "위탁셀러"} · ${escapeHtml(member?.representative || "")} · ${escapeHtml(member?.contact || "")} ${member ? memberStatusChip(member.status) : ""}</small></div></div>
+        <div class="sup-thread" id="masterSupportThread">${supportBubbles(active.messages, "admin")}</div>
+        <form id="masterSupportForm" class="sup-input" data-login="${escapeHtml(active.loginId)}" data-role="${active.role}"><input name="text" id="masterSupportInput" autocomplete="off" maxlength="500" placeholder="답변을 입력하세요" required><button type="submit" class="primary-button">보내기</button></form>
+        <div class="sup-quick">${["확인 후 바로 처리해 드릴게요.", "정산은 매주 월요일에 지급돼요.", "환불은 공급사 입고 확인 뒤 예치금으로 들어가요.", "해지 환불은 카드사에 따라 3~7영업일 걸려요."].map(text => `<button type="button" data-action="support-quick" data-text="${escapeHtml(text)}">${escapeHtml(text)}</button>`).join("")}</div>
+        <details class="sup-context" open><summary>최근 주문 ${orders.length}건 · 환불 ${refunds.length}건</summary>
+          <div class="ms-list">${orders.slice(0, 5).map(order => `<button type="button" class="ms-row" data-action="order-detail" data-id="${order.id}"><span><b>${escapeHtml(orderSourceProduct(order)?.name || order.productId)}</b><small>${escapeHtml(order.id)} · ${escapeHtml(order.orderDate || "")}</small></span><span class="ms-row-end">${statusChip(order.status)}<strong>${money(order.amount)}</strong></span></button>`).join("") || `<div class="empty">주문이 없어요.</div>`}
+          ${refunds.slice(0, 3).map(item => `<div class="ms-row static"><span><b>${escapeHtml(item.type || "환불")} · ${escapeHtml(item.orderId)}</b><small>${escapeHtml(item.reason || "")}</small></span><span class="ms-row-end">${statusChip(item.status)}<strong>${money(item.amount)}</strong></span></div>`).join("")}</div>
+          ${member ? `<div class="sup-actions"><button type="button" class="secondary-button" data-action="member-detail" data-id="${member.id}">회원 정보</button>${active.role === "seller" && state.subscriptions?.[active.loginId]?.status === "active" && state.subscriptions[active.loginId].tier !== "free" ? `<button type="button" class="secondary-button" data-action="master-cancel-sub" data-login="${escapeHtml(active.loginId)}">구독 해지·환불</button>` : ""}<button type="button" class="secondary-button danger" data-action="member-sanction" data-id="${member.id}">이용 정지</button></div>` : ""}</details>
+      </section>` : `<section class="panel sup-room placeholder"><div class="empty">왼쪽에서 상담을 골라 주세요.</div></section>`}
+    </div></div>`;
+}
+
+/* ----- 이용 정지 · 영구 정지 ----- */
+const SANCTION_OPTIONS = [["7", "7일 정지"], ["30", "30일 정지"], ["banned", "영구 정지"]];
+function memberSanctionActive(member) {
+  if (!member) return false;
+  if (member.status === "banned") return true;
+  if (member.status !== "suspended") return false;
+  if (member.suspendedUntil && member.suspendedUntil < ymd(new Date())) { member.status = "approved"; member.suspendedUntil = ""; saveState(); return false; }
+  return true;
+}
+function sanctionMessage(member) {
+  if (member.status === "banned") return `영구 정지된 계정이에요. 사유: ${member.sanctionReason || "운영 정책 위반"}. 문의: 두고 고객센터`;
+  return `이용이 정지된 계정이에요${member.suspendedUntil ? ` (${member.suspendedUntil}까지)` : ""}. 사유: ${member.sanctionReason || "운영 정책 위반"}`;
+}
+function memberSanctionModal(id) {
+  const member = state.members.find(item => item.id === id); if (!member) return;
+  const active = memberSanctionActive(member);
+  const role = (member.roles || [member.role]).includes("supplier") ? "supplier" : "seller";
+  openModal(`<div class="sanction"><h2>${escapeHtml(member.company)} ${active ? "정지 관리" : "이용 정지"}</h2><p>${role === "supplier" ? "공급사를 정지하면 로그인이 막히고, 이 공급사 상품은 상품 소싱에서 숨겨져 새 PICK·주문을 받을 수 없어요. 이미 들어온 주문과 정산은 그대로 처리돼요." : "위탁셀러를 정지하면 로그인이 막히고 새 주문·결제를 할 수 없어요. 예치금과 이미 결제한 주문은 그대로 처리돼요."}</p>
+    ${active ? `<div class="sanction-now"><b>${member.status === "banned" ? "영구 정지 중" : `정지 중${member.suspendedUntil ? ` · ${escapeHtml(member.suspendedUntil)}까지` : ""}`}</b><small>${escapeHtml(member.sanctionReason || "")}</small></div>` : ""}
+    <form id="sanctionForm" data-id="${member.id}" class="form-grid">${active ? "" : `<div class="form-field full"><label>정지 기간</label><div class="sanction-options">${SANCTION_OPTIONS.map(([value, label], index) => `<label><input type="radio" name="period" value="${value}" ${index === 0 ? "checked" : ""}><span>${label}</span></label>`).join("")}</div></div>
+      <div class="form-field full"><label>사유 * (회원에게 보여요)</label><input name="reason" required maxlength="80" placeholder="예: 허위 송장 반복 입력, 고객 개인정보 무단 사용"></div>`}
+      ${(member.sanctionHistory || []).length ? `<div class="form-field full"><label>정지 이력</label><ul class="sanction-history">${member.sanctionHistory.slice(0, 5).map(item => `<li><b>${escapeHtml(item.date)}</b> ${escapeHtml(item.label)} · ${escapeHtml(item.reason || "")}</li>`).join("")}</ul></div>` : ""}
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>닫기</button>${active ? `<button type="button" class="primary-button" data-action="member-unsanction" data-id="${member.id}">정지 해제</button>` : `<button type="submit" class="primary-button danger">정지하기</button>`}</div></form></div>`);
+}
+function applySanction(member, period, reason) {
+  const banned = period === "banned";
+  member.status = banned ? "banned" : "suspended";
+  member.suspendedUntil = banned ? "" : ymd(addDays(new Date(), Number(period)));
+  member.sanctionReason = reason;
+  const label = banned ? "영구 정지" : `${period}일 정지`;
+  member.sanctionHistory = [{ date: ymd(new Date()), label, reason }, ...(member.sanctionHistory || [])];
+  audit(`회원 ${label}`, `${member.company} · ${member.roleLabel || ""} · ${reason}`, "blocked", "member");
+  pushNotification(member.loginId, member.role === "supplier" ? "supplier" : "seller", "system", `계정 ${label}`, reason);
+}
+
+/* ----- 환불 → 정산 반영 (마스터가 공급사에게 환불 주문 대금을 내주지 않게) ----- */
+function refundSettlementImpact(refund) {
+  const order = state.orders.find(item => item.id === refund.orderId);
+  const supply = order ? orderSupplyAmount(order) : Number(refund.amount || 0);
+  const fee = settlementFee(supply);
+  if (!order) return { kind: "unknown", label: "주문 없음", supply, fee, payout: supply - fee };
+  const record = order.settledIn ? (state.settlementWeeks || []).find(week => week.id === order.settledIn) : null;
+  if (refund.status !== "환불완료") return { kind: "hold", label: order.settledIn ? "이미 정산됨 · 환불 끝나면 차감" : "정산 보류 중", detail: "환불이 끝날 때까지 공급사 정산에 넣지 않아요.", supply, fee, payout: supply - fee, record };
+  if (!order.settledIn) return { kind: "excluded", label: "정산에서 뺌 (지급 안 함)", detail: "공급사에 한 번도 지급하지 않아 두고 손실이 없어요.", supply, fee, payout: supply - fee };
+  if (order.refundDeductedIn) return { kind: "deducted", label: `차감 완료 · ${order.refundDeductedIn.startsWith("WALLET") ? "예치금 상계" : "다음 정산"}`, detail: "이미 지급한 금액을 돌려받았어요.", supply, fee, payout: supply - fee, record };
+  return { kind: "deduct", label: "다음 정산에서 차감 예정", detail: `${record?.payLabel || "지난"} 정산 때 이미 지급해서, 이번 주 정산에서 빼요.`, supply, fee, payout: supply - fee, record };
+}
+/* 다음 정산에서 빼야 할 금액이 이번 주 정산보다 크면(공급사 정산금이 마이너스) 공급사에게 받을 돈 */
+function supplierReceivables() {
+  return settlementSuppliers().map(loginId => { const up = upcomingSettlement(loginId); return { loginId, name: supplierName(loginId), owed: up.net < 0 ? -up.net : 0, deduct: up.deduct, wallet: supplierWallet(loginId).balance }; }).filter(row => row.owed > 0);
+}
+function refundSettlementPanel() {
+  const rows = state.refunds.map(refund => ({ refund, impact: refundSettlementImpact(refund) }));
+  const by = kind => rows.filter(row => row.impact.kind === kind);
+  const total = list => list.reduce((sum, row) => sum + row.impact.payout, 0);
+  const excluded = by("excluded"), deduct = by("deduct"), deducted = by("deducted"), hold = by("hold");
+  const receivables = supplierReceivables();
+  const sellerBack = state.refunds.filter(item => item.status === "환불완료").reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  return `<section class="panel rs-panel"><div class="panel-head"><div><h3>환불 → 공급사 정산 반영</h3><p>환불된 주문은 공급사 정산에서 빼요. 이미 지급한 주문은 다음 정산에서 차감하고, 모자라면 공급사 예치금에서 상계해요. 두고가 공급사에게 환불 주문 대금을 내주는 일이 없게 해요.</p></div></div>
+    <div class="ms-tiles">${statTile("셀러 예치금으로 돌려준 돈", money(sellerBack), `환불 완료 ${state.refunds.filter(item => item.status === "환불완료").length}건`)}${statTile("정산에서 뺀 금액", money(total(excluded)), `${excluded.length}건 · 지급 안 함`)}${statTile("다음 정산 차감 예정", money(total(deduct)), `${deduct.length}건 · 차감 완료 ${deducted.length}건`, deduct.length ? "warn" : "")}${statTile("환불 처리 중 (정산 보류)", money(total(hold)), `${hold.length}건`)}</div>
+    ${receivables.length ? `<div class="rs-owed">${receivables.map(row => `<div><span><b>${escapeHtml(row.name)}에게 받을 돈 ${money(row.owed)}</b><small>이번 주 정산보다 환불 차감이 커요 · 공급사 예치금 ${money(row.wallet)}</small></span><button type="button" class="primary-button" data-action="offset-receivable" data-id="${escapeHtml(row.loginId)}" ${row.wallet > 0 ? "" : "disabled"}>예치금에서 상계</button></div>`).join("")}</div>` : ""}
+    <div class="ms-list">${rows.length ? rows.map(({ refund, impact }) => `<div class="ms-row static rs-row ${impact.kind}"><span><b>${escapeHtml(refund.orderId)} · ${escapeHtml(refund.type || "환불")}</b><small>${escapeHtml(memberByLogin(refund.sellerLoginId)?.company || refund.sellerLoginId)} → ${escapeHtml(supplierName(refund.supplierLoginId))} · ${escapeHtml(refund.responsibility || "")}</small><em>${escapeHtml(impact.label)}</em></span><span class="ms-row-end"><small>공급사 정산 ${money(impact.payout)}</small><strong>셀러 환불 ${money(refund.amount)}</strong></span></div>`).join("") : `<div class="empty">환불 내역이 없어요.</div>`}</div>
+    <p class="rs-rule">공급사 귀책 환불: 소비자 환불 → 셀러는 공급가를 예치금으로 돌려받음 → 공급사 정산에서 그 주문 제외(수수료 7%도 0원). 지급 대기 명세서에 들어 있던 주문이 지급 전에 환불되면 지급할 때 자동으로 빠져요.</p></section>`;
+}
+function offsetReceivable(loginId) {
+  const up = upcomingSettlement(loginId);
+  if (up.net >= 0) return showToast("받을 돈이 없어요.");
+  const wallet = supplierWallet(loginId);
+  const owed = -up.net;
+  const take = Math.min(owed, wallet.balance);
+  if (take <= 0) return showToast("공급사 예치금이 없어요. 두고톡으로 입금을 요청해 주세요.");
+  wallet.balance -= take;
+  const ref = `WALLET-${ymd(new Date())}`;
+  let covered = 0;
+  up.lines.filter(line => line.kind === "deduct").forEach(line => { if (covered + (-line.net) <= take) { covered += -line.net; const order = state.orders.find(item => item.id === line.orderId); if (order) order.refundDeductedIn = ref; } });
+  wallet.transactions.unshift({ id: `SW-OFF-${Date.now()}`, type: "환불 차감 상계", amount: -take, at: ymd(new Date()), ref: "정산 후 환불" });
+  state.accountingLedger = state.accountingLedger || [];
+  state.accountingLedger.unshift({ id: `LG-OFF-${Date.now()}`, date: ymd(new Date()), supplierLoginId: loginId, type: "환불 차감 · 예치금 상계", period: up.meta.period, gross: 0, fee: 0, deduct: take, net: -take, method: "공급사 예치금", ref });
+  pushNotification(loginId, "supplier", "settlement", `환불 차감 ${money(take)}을 예치금에서 뺐어요`, "이미 정산한 주문이 환불돼 다음 정산보다 차감 금액이 컸어요.", ["내부 알림"]);
+  audit("환불 차감 상계", `${supplierName(loginId)} · 예치금 ${money(take)}`, "done", "money");
+  saveState(); render(); updateAccountUI(); showToast(`${supplierName(loginId)} 예치금에서 ${money(take)}을 상계했어요.`);
+}
+
+/* ----- 일일 매출 보고 (카카오톡·이메일) ----- */
+function dailyReportSettings() {
+  state.dailyReport = state.dailyReport || { kakao: true, email: true, time: "08:00", phones: ["010-0000-0000"], emails: ["admin@doogo.kr"], lastSentDate: "", history: [] };
+  return state.dailyReport;
+}
+function dailyReportData(date = addDays(new Date(), -1)) {
+  const day = dayStats(date);
+  const key = usageMonthKey(date);
+  const month = masterStats(`${key}-01`, ymd(date));
+  const prev = dayStats(addDays(date, -1));
+  const newMembers = state.members.filter(member => String(member.joinedAt || member.approvedAt || "").replace(/\./g, "-").startsWith(ymd(date))).length;
+  const top = day.products[0];
+  const topBrand = month.brands[0];
+  const topSeller = [...month.sellers].sort((a, b) => b.sales - a.sales)[0];
+  const d = `${date.getMonth() + 1}월 ${date.getDate()}일(${DAY_NAMES[date.getDay()]})`;
+  const lines = [
+    `[두고] ${d} 매출 보고`,
+    ``,
+    `■ 어제 두고 순이익 ${money(day.profit)}`,
+    `· 공급사 거래액 ${money(day.supply)} (${day.orders}건, 전날 대비 ${pctChange(day.supply, prev.supply)})`,
+    `· 두고 수수료 7% ${money(day.fee)}`,
+    `· 구독 매출 ${money(day.subs.net)}`,
+    `· 환불(정산 제외) ${day.refundCount}건 ${money(day.refundSupply)}`,
+    ``,
+    `■ ${date.getMonth() + 1}월 누적 (1일~${date.getDate()}일)`,
+    `· 순이익 ${money(month.profit)} · 거래액 ${money(month.supply)}`,
+    `· 수수료 ${money(month.fee)} · 구독 ${money(month.subs.net)}`,
+    top ? `· 어제 1위 상품: ${top.label} (${top.qty}개)` : `· 어제 판매된 상품이 없어요`,
+    topBrand ? `· 이번 달 1위 브랜드: ${topBrand.label} ${money(topBrand.supply)}` : "",
+    topSeller ? `· 이번 달 1위 셀러: ${topSeller.label} ${money(topSeller.sales)}` : "",
+    newMembers ? `· 어제 새 회원 ${newMembers}곳` : ""
+  ].filter((line, index, list) => line !== "" || (list[index - 1] !== "" && index < list.length - 1));
+  return { title: `[두고] ${d} 매출 보고`, date: ymd(date), text: lines.join("\n"), day, month };
+}
+async function sendDailyReport({ auto = false } = {}) {
+  const settings = dailyReportSettings();
+  const report = dailyReportData();
+  const channels = [settings.kakao && settings.phones.length ? "카카오톡" : "", settings.email && settings.emails.length ? "이메일" : ""].filter(Boolean);
+  if (!channels.length) { if (!auto) showToast("받을 카카오톡 번호나 이메일을 먼저 넣어 주세요."); return; }
+  let status = "보내기 대기 (연동 서버 연결 필요)";
+  if (CHANNEL_SERVER) {
+    try {
+      const res = await channelServerCall("POST", "/api/reports/daily", { title: report.title, text: report.text, kakao: settings.kakao ? settings.phones : [], email: settings.email ? settings.emails : [] });
+      status = res?.results ? res.results.map(item => `${item.channel} ${item.ok ? "성공" : `실패(${item.error || ""})`}`).join(" · ") : "보냄";
+    } catch (error) { status = `실패: ${error.message}`; }
+  }
+  settings.lastSentDate = ymd(new Date());
+  settings.history = [{ at: nowStamp(), date: report.date, channels: channels.join("·"), status, auto }, ...(settings.history || [])].slice(0, 20);
+  pushNotification("admin", "master", "report", report.title, report.text.split("\n").slice(2, 5).join(" "), channels);
+  audit("일일 매출 보고", `${report.date} · ${channels.join("·")} · ${status}`, status.startsWith("실패") ? "blocked" : "done", "money");
+  saveState(); updateAccountUI();
+  if (activeRole === "master" && activeMenuIndex === menuIndexOf("매출 보고", "master")) render();
+  if (!auto) showToast(CHANNEL_SERVER ? `매출 보고를 보냈어요 · ${status}` : "매출 보고를 알림함에 넣었어요. 카카오톡·이메일은 연동 서버를 연결하면 나가요.");
+}
+/* 마스터 화면이 열려 있으면 정한 시간이 지난 뒤 하루 한 번 보낸다 (서버가 연결되면 서버 예약 발송이 맡는다) */
+function maybeAutoDailyReport() {
+  if (activeRole !== "master" || !currentAccount) return;
+  const settings = dailyReportSettings();
+  if (!settings.auto) return;
+  const now = new Date();
+  const [h, m] = String(settings.time || "08:00").split(":").map(Number);
+  if (settings.lastSentDate === ymd(now) || now.getHours() * 60 + now.getMinutes() < h * 60 + m) return;
+  sendDailyReport({ auto: true });
+}
+function masterReportTemplate() {
+  const settings = dailyReportSettings();
+  const report = dailyReportData();
+  const times = ["07:00", "08:00", "09:00", "10:00", "12:00", "18:00", "21:00"];
+  return `${sectionHero("매출 보고", "매일 정한 시간에 어제 매출·수수료·구독·환불과 이번 달 누적을 카카오톡과 이메일로 받아요.", `<button type="button" class="primary-button" data-action="report-send-now">지금 보내기</button>`)}
+    <div class="rp-layout">
+      <section class="panel"><div class="panel-head"><div><h3>받는 방법</h3><p>번호·이메일은 여러 개 넣을 수 있어요 (쉼표로 구분).</p></div></div>
+        <form id="reportSettingsForm" class="form-grid">
+          <label class="rp-switch full"><input type="checkbox" name="auto" ${settings.auto ? "checked" : ""}><span><b>매일 자동으로 보내기</b><small>켜면 매일 아래 시간에 어제 매출을 보내요.</small></span></label>
+          <div class="form-field"><label>보낼 시간</label><select name="time">${times.map(time => `<option ${settings.time === time ? "selected" : ""}>${time}</option>`).join("")}</select></div>
+          <label class="rp-switch"><input type="checkbox" name="kakao" ${settings.kakao ? "checked" : ""}><span><b>카카오톡 (알림톡)</b></span></label>
+          <div class="form-field full"><label>카카오톡 받을 번호</label><input name="phones" inputmode="tel" value="${escapeHtml(settings.phones.join(", "))}" placeholder="010-1234-5678, 010-2345-6789"></div>
+          <label class="rp-switch"><input type="checkbox" name="email" ${settings.email ? "checked" : ""}><span><b>이메일</b></span></label>
+          <div class="form-field full"><label>받을 이메일</label><input name="emails" inputmode="email" value="${escapeHtml(settings.emails.join(", "))}" placeholder="ceo@doogo.kr"></div>
+          <div class="modal-actions full"><button type="submit" class="primary-button">저장</button></div>
+        </form>
+        <p class="rp-note">${CHANNEL_SERVER ? "연동 서버가 연결돼 있어요. 카카오톡은 알림톡 발신 프로필(솔라피), 이메일은 발송 키(Resend)가 서버에 있어야 나가요." : "지금은 연동 서버가 연결되지 않아 두고 알림함에만 들어가요. 서버를 연결하고 알림톡 발신 프로필·이메일 발송 키를 넣으면 카카오톡·이메일로 나가요."} 자동 발송은 지금은 마스터 화면이 열려 있을 때 정한 시간 이후 한 번 보내고, 서버에 매출 데이터베이스가 붙으면 서버가 매일 알아서 보내요.</p></section>
+      <section class="panel"><div class="panel-head"><div><h3>미리 보기</h3><p>${escapeHtml(report.date)} 기준</p></div></div>
+        <div class="rp-kakao"><div class="rp-kakao-head"><span>두고</span><b>알림톡</b></div><pre>${escapeHtml(report.text)}</pre></div></section>
+    </div>
+    <section class="panel"><div class="panel-head"><div><h3>보낸 기록</h3></div></div>
+      ${(settings.history || []).length ? `<div class="ms-list">${settings.history.map(item => `<div class="ms-row static"><span><b>${escapeHtml(item.date)} 보고 · ${escapeHtml(item.channels)}</b><small>${escapeHtml(item.at)} · ${item.auto ? "자동" : "직접 보냄"}</small></span><span class="ms-row-end"><em class="bl-status ${String(item.status).startsWith("실패") ? "refund" : String(item.status).includes("대기") ? "wait" : ""}">${escapeHtml(item.status)}</em></span></div>`).join("")}</div>` : `<div class="empty">아직 보낸 기록이 없어요.</div>`}</section>`;
 }
 function exportLedgerCsv() {
   const rows = state.accountingLedger || [];
@@ -5192,7 +5878,12 @@ function orderStatusHelpIcon() {
 function ordersTable(role, query = "", sourceOverride = null, { pick = false } = {}) {
   const source = sourceOverride || (role === "seller" ? currentSellerOrders() : role === "supplier" ? currentSupplierOrders() : state.orders);
   const normalized = String(query || "").trim().toLowerCase();
-  const orders = source.filter(order => { const product = orderSourceProduct(order); return !normalized || [order.id, order.customer, order.recipientName, order.phone, order.channel, order.tracking, order.externalProductName, order.externalProductCode, order.mappedProductId, product?.name].some(value => String(value || "").toLowerCase().includes(normalized)); });
+  const matched = source.filter(order => { const product = orderSourceProduct(order); return !normalized || [order.id, order.customer, order.recipientName, order.phone, order.channel, order.tracking, order.externalProductName, order.externalProductCode, order.mappedProductId, product?.name].some(value => String(value || "").toLowerCase().includes(normalized)); });
+  /* 주문이 많아도 화면이 끝없이 길어지지 않게 최근 주문부터 30건씩 보여 준다 */
+  const limit = orderListLimits[role] || ORDER_PAGE_SIZE;
+  const sorted = matched.map((order, index) => ({ order, index })).sort((a, b) => String(b.order.orderDate || "9999").localeCompare(String(a.order.orderDate || "9999")) || a.index - b.index).map(item => item.order);
+  const orders = sorted.slice(0, limit);
+  const more = sorted.length > limit ? `<button type="button" class="secondary-button orders-more" data-action="orders-more" data-key="${role}">더 보기 · ${orders.length}/${sorted.length}건</button>` : "";
   const pickAll = pick && orders.length && orders.every(order => supplierOrderPicks.has(order.id));
   return `<div class="table-wrap order-desktop-table ${pick ? "has-pick" : ""}"><table><thead><tr>${pick ? `<th class="pick-col"><label class="order-pick" title="전체 선택"><input type="checkbox" data-order-pick-all ${pickAll ? "checked" : ""} aria-label="보이는 주문 전체 선택"></label></th>` : ""}<th>주문번호</th><th>상품</th><th>${role === "supplier" ? "판매 셀러" : "배정 공급사"}</th><th>수취인</th><th>수량/금액</th><th>상태${orderStatusHelpIcon()}</th><th>송장·관리</th></tr></thead><tbody>
     ${orders.length ? orders.map(o => {
@@ -5200,8 +5891,10 @@ function ordersTable(role, query = "", sourceOverride = null, { pick = false } =
       const displayName = role === "supplier" ? p?.name : orderSellerTitle(o);
       return `<tr class="order-click-row ${orderMappingStatus(o) === "unmapped" ? "mapping-required-row" : ""} ${pick && supplierOrderPicks.has(o.id) ? "picked" : ""}" data-action="order-detail" data-id="${o.id}" tabindex="0" aria-label="${escapeHtml(o.id)} 주문 상세 보기">${pick ? `<td class="pick-col"><label class="order-pick"><input type="checkbox" data-order-pick value="${escapeHtml(o.id)}" ${supplierOrderPicks.has(o.id) ? "checked" : ""} aria-label="${escapeHtml(o.id)} 선택"></label></td>` : ""}<td class="order-id"><button data-action="order-detail" data-id="${o.id}">${o.id}</button><br><small>${escapeHtml(o.createdAt)}</small></td><td><button class="order-product-link" data-action="order-detail" data-id="${o.id}"><strong>${escapeHtml(displayName || "매핑 전 외부 상품")}</strong>${orderOptionTag(o)}<small>${channelMark(channelIdFromName(o.channel),true)} ${escapeHtml(o.channel)} · ${orderMappingStatus(o) === "mapped" ? `원본 ${escapeHtml(o.mappedProductId || o.productId)}` : `외부코드 ${escapeHtml(o.externalProductCode || "-")}`}</small></button></td>${role === "supplier" ? `<td><strong>${escapeHtml(orderSellerLabel(o))}</strong><br><small>${o.orderType === "sample" ? "샘플 구매 · 셀러 직접 수령" : `${escapeHtml(o.channel || "쇼핑몰")} 판매`}</small></td>` : `<td><strong>${escapeHtml(orderMappingStatus(o) === "mapped" ? (o.assignedSupplier || p?.supplier || "미배정") : orderMappingStatus(o) === "self" ? "직접 배송" : "매핑 필요")}</strong><br><small>${orderSupplierProgressLabel(o)}</small></td>`}<td>${escapeHtml(o.recipientName || o.customer)}<br><small>${escapeHtml(o.phone || "-")}</small></td><td>${o.qty}개 · ${money(o.amount)}</td><td>${statusChip(o.status)}</td><td><div class="order-cell-actions">${orderActionsMarkup(o, role)}</div></td></tr>`;
     }).join("") : `<tr><td colspan="${pick ? 8 : 7}"><div class="empty">표시할 주문이 없습니다.</div></td></tr>`}
-  </tbody></table></div>${mobileOrderCards(orders, role, pick)}`;
+  </tbody></table></div>${mobileOrderCards(orders, role, pick)}${more}`;
 }
+const ORDER_PAGE_SIZE = 30;
+let orderListLimits = {};
 
 function membersTable() {
   const order = { pending: 0, "profile-incomplete": 1, rejected: 2, approved: 3 };
@@ -5232,49 +5925,19 @@ function supplierApplicationDetailModal(id) {
 }
 
 function renderMaster() {
-  if (activeRole === "master" && activeMenuIndex > 0) {
-    document.getElementById("masterView").innerHTML = renderMasterSection(activeMenuIndex);
-    return;
-  }
-  const pendingAlerts = state.priceAlerts.filter(a => a.status === "확인필요").length;
-  const shipped = state.orders.filter(o => o.status === "배송중").length;
-  const pendingMembers = pendingApprovalCount();
-  const suppliers = state.members.filter(member => (member.roles || [member.role]).includes("supplier") && member.status === "approved").length;
-  const sellers = state.members.filter(member => member.role === "seller" && member.status === "approved").length;
-  document.getElementById("masterView").innerHTML = `
-    <div class="hero-row">
-      <div class="hero-copy"><h2>거래 흐름을 한눈에 보고, 예외만 관리하세요</h2><p>상품·주문·송장·가격 변경과 OMS 전달 상태를 통합 모니터링합니다.</p></div>
-      <span class="chip orange">외부 연동 잠금</span>
-    </div>
-    <div class="dashboard-kpi-grid role-dashboard-kpis">
-      ${dashboardKpiCard({ action:"open-master-section", icon:"new", label:"가입·권한 승인", value:`${pendingMembers}건`, description:"심사가 필요한 신청", tone:"yellow", attributes:'data-index="1"' })}
-      ${dashboardKpiCard({ action:"open-master-section", icon:"ordered", label:"활성 공급사", value:`${suppliers}곳`, description:"승인된 공급 파트너", tone:"blue", attributes:'data-index="2"' })}
-      ${dashboardKpiCard({ action:"open-master-section", icon:"received", label:"활성 위탁셀러", value:`${sellers}곳`, description:"승인된 판매 파트너", tone:"purple", attributes:'data-index="3"' })}
-      ${dashboardKpiCard({ action:"open-master-section", icon:"shipping", label:"전체 주문", value:`${state.orders.length}건`, description:`배송중 ${shipped}건`, tone:"green", attributes:'data-index="6"' })}
-      ${dashboardKpiCard({ action:"open-master-section", icon:"preparing", label:"상품 변경 확인", value:`${pendingAlerts}건`, description:"가격 알림 상품 관리", tone:"orange", attributes:'data-index="5"' })}
-    </div>
-    <div class="panel approval-panel">
-      <div class="panel-head"><div><h3>사업자 가입 승인 관리</h3><p>신청 사업자 정보를 검토한 뒤 역할별 서비스 접근을 승인합니다.</p></div><span class="chip ${pendingMembers ? "red" : ""}">${pendingMembers}건 승인 대기</span></div>
-      ${membersTable()}
-    </div>
-    <div class="panel">
-      <div class="panel-head"><div><h3>두고 데이터 흐름</h3><p>상품·주문·송장·환불을 역할별로 연결하고 판매채널 연동은 안전 모드로 관리합니다.</p></div><button class="text-button" data-action="show-boundary">전체 흐름 보기</button></div>
-      <div class="flow-strip">
-        <div class="flow-step active"><b>공급사</b><small>상품 등록 · 주문 확인<br>송장 출력</small></div><div class="flow-arrow">→</div>
-        <div class="flow-step active"><b>두고</b><small>셀러 매칭 · 가격 알림<br>상태 통합</small></div><div class="flow-arrow">↔</div>
-        <div class="flow-step"><b>판매채널 API</b><small>주문 수집 · 송장 반영<br><b style="color:#ad6a00;margin-top:5px">${CHANNEL_SERVER ? "연동 서버 연결됨" : "연동 서버 연결 전"}</b></small></div>
-      </div>
-    </div>
-    <div class="content-grid" style="margin-top:16px">
-      <div class="panel">
-        <div class="panel-head"><div><h3>전체 주문 모니터링</h3><p>역할별 상태가 동일하게 유지되는지 확인합니다.</p></div></div>
-        ${ordersTable("master")}
-      </div>
-      <div class="panel">
-        <div class="panel-head"><div><h3>운영 · 연동 로그</h3><p>외부로 나갈 이벤트까지 기록합니다.</p></div></div>
-        <div class="activity-list">${state.logs.map(log => `<div class="activity-item"><strong><span class="timeline-dot ${log.state}"></span>${log.title}</strong><p>${log.detail}<br>${log.time}</p></div>`).join("")}</div>
-      </div>
-    </div>`;
+  const view = document.getElementById("masterView");
+  view.innerHTML = activeRole === "master" && activeMenuIndex > 0 ? renderMasterSection(activeMenuIndex) : masterDashboardTemplate();
+  labelTableCells(view);
+}
+/* 휴대폰에서는 표를 옆으로 밀지 않고 카드처럼 쌓아 보이게: 칸마다 제목을 붙여 둔다 */
+function labelTableCells(root) {
+  root.querySelectorAll(".table-wrap:not(.md-desktop) table").forEach(table => {
+    const heads = [...table.querySelectorAll("thead th")].map(th => th.textContent.trim());
+    if (!heads.length) return;
+    table.classList.add("m-stack");
+    table.closest(".table-wrap").classList.add("m-stack-wrap");
+    table.querySelectorAll("tbody tr").forEach(tr => [...tr.children].forEach((td, index) => { if (heads[index] && !td.dataset.label && !td.hasAttribute("colspan")) td.dataset.label = heads[index]; }));
+  });
 }
 
 function setRole(role) {
@@ -7938,6 +8601,8 @@ document.addEventListener("click", event => {
     const prev = state.subscriptions[loginId] || {};
     const fresh = current.id === "free";
     state.subscriptions[loginId] = { ...prev, tier: next.id, plan: next.name, monthlyFee: next.fee, status: "active", startedAt: fresh ? billingDateLabel(new Date()) : prev.startedAt, nextBilling: fresh ? nextMonthLabel() : (prev.nextBilling || nextMonthLabel()), method: prev.method || "결제수단 미등록", autoRenew: true, history: [{ date: billingDateLabel(new Date()), item: fresh ? `${next.name} 첫 결제` : `${current.name} → ${next.name} ${upgrade ? "올림 (차액 일할 계산)" : "변경 (다음 결제일부터)"}`, amount: fresh ? next.fee : upgrade ? next.fee - current.fee : 0 }, ...(prev.history || [])] };
+    const charge = fresh ? next.fee : upgrade ? next.fee - current.fee : 0;
+    if (charge > 0) addBilling({ loginId, kind: "payment", item: fresh ? `${next.name} 요금제 첫 결제` : `${current.name} → ${next.name} 요금제 차액`, amount: charge, method: state.subscriptions[loginId].method, status: "결제 완료" });
     if (next.kakao) { const notice = notificationService(); if (notice.status !== "active") Object.assign(notice, { status: "active", plan: "카카오톡 알림", morningTime: notice.morningTime || "09:00", eveningTime: notice.eveningTime || "18:00" }); }
     audit(fresh ? "요금제 구독 시작" : "요금제 변경", `${workspaceCompany("seller")} · ${fresh ? "" : `${current.name} → `}${next.name} 월 ${money(next.fee)}`, "done", "money");
     saveState(); closeModal();
@@ -7946,15 +8611,7 @@ document.addEventListener("click", event => {
     const kakaoNote = current.kakao && !next.kakao && kakaoAlertActive() ? ` · 카카오톡 알림은 월 ${money(PLAN_KAKAO_FEE)} 부가서비스로 이어져요 (요금제 화면에서 끌 수 있어요)` : next.kakao ? " · 카카오톡 알림 포함" : "";
     return showToast(fresh ? `${next.name} 요금제를 시작했어요! 이제 쇼핑몰을 연결해 보세요.` : `${next.name} 요금제로 ${upgrade ? "올렸어요" : "바꿨어요"}. 쇼핑몰 ${next.malls}개 · 다른 상품 주문 월 ${limitText(next.externalOrders)}${kakaoNote}`);
   }
-  if (action === "plan-cancel") {
-    const current = planTier();
-    if (!window.confirm(`${current.name} 요금제를 해지하고 무료로 바꿀까요? 주문 자동 수집과 송장 자동 전송이 멈춰요.`)) return;
-    const sub = state.subscriptions[currentAccount.loginId];
-    if (sub) { sub.status = "canceled"; sub.tier = "free"; sub.plan = "무료"; sub.monthlyFee = 0; }
-    sellerChannels().forEach(channel => { channel.trackingAutomation = false; });
-    audit("요금제 해지", `${workspaceCompany("seller")} · ${current.name} 해지 → 무료`, "done", "money");
-    saveState(); render(); updateAccountUI(); return showToast("무료 요금제로 바꿨어요. 수기 주문은 계속 쓸 수 있어요.");
-  }
+  if (action === "plan-cancel") { sellerCancelModal(); return; }
   if (action === "kakao-addon-toggle") {
     const notice = notificationService();
     const included = planTier().kakao;
@@ -8295,6 +8952,42 @@ document.addEventListener("click", event => {
   if (action === "open-supplier-connections") { activeMenuIndex = 2; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); return; }
   if (action === "open-supplier-orders") { supplierOrderStatus = target.dataset.status || "all"; activeMenuIndex = 3; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); return; }
   if (action === "open-master-section") { activeMenuIndex = Number(target.dataset.index || 0); render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); return; }
+  if (action === "orders-more") { orderListLimits[target.dataset.key] = (orderListLimits[target.dataset.key] || ORDER_PAGE_SIZE) + ORDER_PAGE_SIZE; const y = window.scrollY; render(); window.scrollTo(0, y); return; }
+  if (action === "ms-order-filter") { masterOrderFilter = target.dataset.filter; orderListLimits.master = ORDER_PAGE_SIZE; render(); return; }
+  if (action === "ms-month") { masterStatsMonth = target.dataset.month; render(); return; }
+  if (action === "ms-seller-rank") { masterSellerRank = target.dataset.rank; render(); return; }
+  if (action === "ms-export") { exportMasterStatsCsv(); return; }
+  if (action === "ms-day") { const s = dayStats(parseYmd(target.dataset.date)); const note = document.getElementById("msDayNote"); if (note) note.innerHTML = `<b>${Number(target.dataset.date.slice(8))}일</b> · 거래액 ${money(s.supply)} · 수수료 ${money(s.fee)} · 주문 ${s.orders}건${s.refundCount ? ` · 환불 ${s.refundCount}건` : ""}`; document.querySelectorAll(".ms-chart-bars button").forEach(button => button.classList.toggle("picked", button === target)); return; }
+  if (action === "ms-subs-filter") { masterSubsFilter = target.dataset.filter; render(); return; }
+  if (action === "billing-export") { exportBillingCsv(); return; }
+  if (action === "billing-refund-done") {
+    const refund = (state.billing || []).find(row => row.id === id); if (!refund) return;
+    if (CARD_PAYMENT_READY && CHANNEL_SERVER) { runCardRefund(refund).then(ok => { if (ok) completeBillingRefund(refund, "카드 자동 취소"); saveState(); render(); updateAccountUI(); showToast(ok ? `${money(refund.amount)} 카드 취소를 마쳤어요.` : `카드 취소 실패: ${refund.error || ""}`); }); return; }
+    if (!window.confirm(`PG 관리자 화면에서 ${money(refund.amount)} 카드 취소를 마쳤나요? 확인을 누르면 셀러에게 환불 완료 알림이 가요.`)) return;
+    completeBillingRefund(refund); saveState(); render(); updateAccountUI(); return showToast("환불 완료로 바꾸고 셀러에게 알렸어요.");
+  }
+  if (action === "master-cancel-sub") { masterCancelSubModal(target.dataset.login); return; }
+  if (action === "support-tab") { masterSupportTab = target.dataset.tab; masterSupportActive = ""; render(); return; }
+  if (action === "support-open-thread") {
+    const login = target.dataset.login; const role = target.dataset.role === "supplier" ? "supplier" : "seller";
+    closeModal(); masterSupportTab = role; masterSupportActive = login; activeMenuIndex = menuIndexOf("두고톡 상담", "master"); render(); updateAccountUI();
+    const thread = document.getElementById("masterSupportThread"); if (thread) thread.scrollTop = thread.scrollHeight;
+    if (window.innerWidth <= 900) window.scrollTo(0, 0);
+    return;
+  }
+  if (action === "support-back") { masterSupportActive = ""; render(); window.scrollTo(0, 0); return; }
+  if (action === "support-quick") { const input = document.getElementById("masterSupportInput"); if (input) { input.value = target.dataset.text; input.focus(); } return; }
+  if (action === "open-support-chat") { supportChatModal(); return; }
+  if (action === "member-sanction") { memberSanctionModal(id); return; }
+  if (action === "member-unsanction") {
+    const member = state.members.find(item => item.id === id); if (!member) return;
+    member.status = "approved"; member.suspendedUntil = ""; member.sanctionHistory = [{ date: ymd(new Date()), label: "정지 해제", reason: "" }, ...(member.sanctionHistory || [])];
+    audit("회원 정지 해제", `${member.company}`, "done", "member"); pushNotification(member.loginId, member.role === "supplier" ? "supplier" : "seller", "system", "계정 정지가 풀렸어요", "다시 두고를 이용할 수 있어요.");
+    saveState(); closeModal(); render(); updateAccountUI(); return showToast(`${member.company} 정지를 풀었어요.`);
+  }
+  if (action === "offset-receivable") { offsetReceivable(id); return; }
+  if (action === "report-send-now") { sendDailyReport(); return; }
+  if (action === "master-edit-product") { editProductModal(id); return; }
   if (action === "prepare-shipment") {
     const order = state.orders.find(item => item.id === id);
     if (order && ["신규주문", "발주완료"].includes(order.status)) { order.status = "배송준비중"; order.confirmedAt = "방금 전"; audit("공급사 주문 확인·포장 시작", `${order.id} · 배송준비중으로 변경했습니다.`, "pending", "order"); saveState(); closeModal(); render(); updateAccountUI(); showToast("주문을 확인하고 배송준비중으로 이동했습니다."); }
@@ -9088,6 +9781,7 @@ document.getElementById("loginForm").addEventListener("submit", event => {
     signupReturnTarget = "seller";
     return showSignupStatus(account);
   }
+  if (memberSanctionActive(account)) { document.getElementById("loginError").textContent = sanctionMessage(account); return; }
   if (account.status !== "approved") {
     document.getElementById("loginError").textContent = "현재 이용할 수 없는 계정입니다.";
     return;
@@ -9112,6 +9806,7 @@ document.getElementById("partnerLoginForm").addEventListener("submit", event => 
   }
   if (["pending", "profile-incomplete"].includes(account.status)) { account.status = "approved"; account.approvedAt = "가입 즉시 이용"; account.docsPending = !(account.businessFile && (account.bankbookFile || account.bankAccountNumber)); saveState(); }
   if (account.status === "rejected") { document.getElementById("partnerLoginError").textContent = ""; signupReturnTarget = "partner"; return showSignupStatus(account); }
+  if (memberSanctionActive(account)) return void (document.getElementById("partnerLoginError").textContent = sanctionMessage(account));
   if (account.status !== "approved") return void (document.getElementById("partnerLoginError").textContent = "현재 이용할 수 없는 계정입니다.");
   if (document.getElementById("rememberPartnerId").checked) localStorage.setItem(REMEMBER_KEY, id);
   showApp(id);
@@ -9971,8 +10666,10 @@ document.addEventListener("submit", event => {
       const recipients = [...new Set(state.sellerProducts.filter(item => item.productId === product.id).map(item => item.sellerLoginId))];
       recipients.forEach((recipient,index)=>state.priceAlerts.unshift({ id:`PA-${Date.now()}-${index}`, productId:product.id, recipients:[recipient], oldPrice:oldSupply, newPrice:product.supply, status:"확인필요", createdAt:"방금 전" }));
     }
-    audit("상품 정보 수정", `${product.id} · ${before} → ${product.name} / ${product.category} / ${money(product.supply)} / ${money(product.recommended)} / ${product.status}`, oldSupply !== product.supply ? "pending" : "done", "product");
-    saveState(); closeModal(); render(); showToast("상품 정보를 수정했습니다.");
+    const byMaster = activeRole === "master";
+    audit(byMaster ? "마스터 상품 수정" : "상품 정보 수정", `${product.id} · ${before} → ${product.name} / ${product.category} / ${money(product.supply)} / ${money(product.recommended)} / ${product.status}`, oldSupply !== product.supply ? "pending" : "done", "product");
+    if (byMaster) { product.history = [{ at: nowStamp(), by: "두고 마스터", before }, ...(product.history || [])].slice(0, 20); pushNotification(product.supplierLoginId, "supplier", "product", "두고 본사가 상품 정보를 고쳤어요", `${product.id} ${product.name} · 변경 이력에서 확인할 수 있어요.`); }
+    saveState(); closeModal(); render(); showToast(byMaster ? "상품을 수정했어요. 공급사에게 알림을 보냈어요." : "상품 정보를 수정했습니다.");
   }
   if (form.id === "shippingPolicyForm") {
     const { fee, errors } = readShippingFee(data);
@@ -10092,6 +10789,52 @@ document.addEventListener("submit", event => {
     state.supplierAddresses[currentAccount.loginId] = { shipFrom, returnTo, phone: formatPhone(String(data.phone)), sameAsShip: same, updatedAt: ymd(new Date()) };
     audit("공급사 출고지·반품지 저장", `${supplierName(currentAccount.loginId)} · 반품지 ${addressLine(returnTo)}`, "done", "product");
     saveState(); render(); updateAccountUI(); return showToast("출고지·반품지를 저장했어요. 셀러의 쇼핑몰 등록과 반품 안내에 바로 쓰여요.");
+  }
+  if (form.id === "subCancelForm") {
+    const loginId = currentAccount.loginId;
+    const tierName = planTier().name;
+    const refund = cancelSubscription(loginId, { reason: data.reason, by: "seller" });
+    closeModal(); render(); updateAccountUI();
+    if (refund) runCardRefund(refund).then(ok => { if (ok) completeBillingRefund(refund, "카드 자동 취소"); saveState(); render(); updateAccountUI(); });
+    saveState();
+    return showToast(refund ? `${tierName} 요금제를 해지했어요. ${money(refund.amount)}을 결제한 카드로 돌려 드려요.` : "무료 요금제로 바꿨어요. 수기 주문은 계속 쓸 수 있어요.");
+  }
+  if (form.id === "masterSubCancelForm") {
+    const loginId = form.dataset.login;
+    const reason = String(data.reason || "").trim(); if (!reason) return showToast("사유를 적어 주세요.");
+    const refund = cancelSubscription(loginId, { refundMode: data.refundMode, reason, by: "master" });
+    saveState(); closeModal(); render(); updateAccountUI();
+    if (refund && CARD_PAYMENT_READY && CHANNEL_SERVER) runCardRefund(refund).then(ok => { if (ok) completeBillingRefund(refund, "카드 자동 취소"); saveState(); render(); updateAccountUI(); });
+    return showToast(refund ? `해지했어요. 환불 ${money(refund.amount)}이 ‘카드 환불 대기’에 올라갔어요.` : "환불 없이 해지했어요.");
+  }
+  if (form.id === "supportForm" || form.id === "masterSupportForm") {
+    const text = String(data.text || "").trim(); if (!text) return;
+    const master = form.id === "masterSupportForm";
+    if (master) sendSupportMessage(form.dataset.login, form.dataset.role, text, true);
+    else sendSupportMessage(currentAccount.loginId, form.dataset.role, text, false);
+    const threadId = master ? "masterSupportThread" : "supportThread";
+    if (master) { render(); updateAccountUI(); }
+    else { const thread = document.getElementById(threadId); if (thread) thread.innerHTML = supportBubbles(supportMessagesOf(currentAccount.loginId), currentAccount.loginId); updateAccountUI(); }
+    const thread = document.getElementById(threadId); if (thread) thread.scrollTop = thread.scrollHeight;
+    const input = document.getElementById(master ? "masterSupportInput" : "supportInput"); if (input) { input.value = ""; input.focus({ preventScroll: true }); }
+    return;
+  }
+  if (form.id === "sanctionForm") {
+    const member = state.members.find(item => item.id === form.dataset.id); if (!member) return;
+    const reason = String(data.reason || "").trim(); if (!reason) return showToast("사유를 적어 주세요.");
+    if (data.period === "banned" && !window.confirm(`${member.company} 계정을 영구 정지할까요? 로그인과 새 거래가 모두 막혀요.`)) return;
+    applySanction(member, data.period, reason);
+    saveState(); closeModal(); render(); updateAccountUI(); return showToast(`${member.company} 계정을 ${data.period === "banned" ? "영구 정지" : `${data.period}일 정지`}했어요.`);
+  }
+  if (form.id === "reportSettingsForm") {
+    const settings = dailyReportSettings();
+    const split = value => String(value || "").split(/[,\n]/).map(item => item.trim()).filter(Boolean);
+    const phones = split(data.phones).map(formatPhone), emails = split(data.emails);
+    if (phones.some(phone => phone.replace(/\D/g, "").length < 10)) return showToast("카카오톡 받을 번호를 확인해 주세요.");
+    if (emails.some(email => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) return showToast("이메일 주소를 확인해 주세요.");
+    Object.assign(settings, { auto: Boolean(data.auto), time: data.time || "08:00", kakao: Boolean(data.kakao), email: Boolean(data.email), phones, emails });
+    audit("매출 보고 설정", `${settings.auto ? `매일 ${settings.time}` : "자동 발송 끔"} · 카카오톡 ${phones.length}명 · 이메일 ${emails.length}명`, "done", "money");
+    saveState(); render(); return showToast("매출 보고 설정을 저장했어요.");
   }
   if (form.id === "settlementAccountForm") {
     const accountNumber = String(data.accountNumber || "").replace(/\D/g, "");

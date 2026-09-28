@@ -12,16 +12,19 @@
    POST   /api/orders/:channel/collect              { sellerLoginId, since }             새 주문(결제완료) 가져오기
    POST   /api/orders/:channel/confirm              { sellerLoginId, items:[{refs}] }    주문 확인(발주확인·상품준비중)
    POST   /api/orders/:channel/dispatch             { sellerLoginId, items:[{refs, carrier, naverCode, tracking, update}] }  송장 전송
+   POST   /api/billing/refund                       { paymentKey, cancelAmount, cancelReason, refundId }  구독 해지 카드 부분 취소 (토스페이먼츠)
+   POST   /api/reports/daily                        { title, text, kakao:[번호], email:[주소] }          일일 매출 보고 (알림톡·이메일)
    GET    /api/health */
 const http = require("node:http");
 const { createCredentialStore } = require("./store");
 const listings = require("./listings");
 const orders = require("./orders");
+const ops = require("./ops");
 
 const CHANNELS = ["coupang", "smartstore"];
 const REQUIRED = { coupang: ["vendorId", "accessKey", "secretKey", "vendorUserId"], smartstore: ["accountId"] };
 
-function createApp({ store = createCredentialStore(), token = process.env.DOOGO_SERVER_TOKEN, allowedOrigins = (process.env.DOOGO_ALLOWED_ORIGINS || "").split(",").filter(Boolean), clientOptions = {} } = {}) {
+function createApp({ store = createCredentialStore(), token = process.env.DOOGO_SERVER_TOKEN, allowedOrigins = (process.env.DOOGO_ALLOWED_ORIGINS || "").split(",").filter(Boolean), clientOptions = {}, opsOptions = {} } = {}) {
   if (!token) throw new Error("DOOGO_SERVER_TOKEN 환경변수가 필요해요.");
 
   async function readJson(req) {
@@ -44,9 +47,11 @@ function createApp({ store = createCredentialStore(), token = process.env.DOOGO_
     const url = new URL(req.url, "http://localhost");
     const parts = url.pathname.split("/").filter(Boolean);
     try {
-      if (url.pathname === "/api/health") return send(res, 200, { ok: true, channels: CHANNELS, naverApp: Boolean(process.env.NAVER_CLIENT_ID) }, origin);
+      if (url.pathname === "/api/health") return send(res, 200, { ok: true, channels: CHANNELS, naverApp: Boolean(process.env.NAVER_CLIENT_ID), pg: Boolean(process.env.TOSS_SECRET_KEY), kakaoReport: Boolean(process.env.SOLAPI_PFID), emailReport: Boolean(process.env.RESEND_API_KEY) }, origin);
       if (req.headers.authorization !== `Bearer ${token}`) return send(res, 401, { error: "인증이 필요해요." }, origin);
       const body = req.method === "GET" ? {} : await readJson(req);
+      if (req.method === "POST" && url.pathname === "/api/billing/refund") return send(res, 200, await ops.refundPayment(body, opsOptions), origin);
+      if (req.method === "POST" && url.pathname === "/api/reports/daily") return send(res, 200, await ops.sendDailyReport({ title: body.title, text: body.text, kakao: Array.isArray(body.kakao) ? body.kakao : [], email: Array.isArray(body.email) ? body.email : [] }, opsOptions), origin);
       const seller = String(body.sellerLoginId || "");
       if (!seller) return send(res, 400, { error: "sellerLoginId가 필요해요." }, origin);
 

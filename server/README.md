@@ -92,3 +92,15 @@ npm test
 
 실제 쇼핑몰 호출 검증은 두고 등록(위 1·2번)과 실제 키가 있어야 할 수 있습니다.
 요청 필드는 공개 문서를 기준으로 맞췄으니, 운영 전에 각 개발자센터 최신 문서와 한 번 더 대조하세요.
+
+## 본사 운영: 구독 카드 환불 · 일일 매출 보고 (v67)
+
+| 경로 | 하는 일 | 필요한 환경변수 |
+|---|---|---|
+| `POST /api/billing/refund` `{ paymentKey, cancelAmount, cancelReason, refundId }` | 위탁셀러가 요금제를 해지하면 남은 기간만큼 **카드 부분 취소** (토스페이먼츠 `POST /v1/payments/{paymentKey}/cancel`, `refundId`를 멱등 키로 사용) | `TOSS_SECRET_KEY` |
+| `POST /api/reports/daily` `{ title, text, kakao:[번호], email:[주소] }` | 마스터 일일 매출 보고를 **카카오 알림톡 + 이메일**로 발송. 채널마다 성공/실패를 따로 돌려줌 | 알림톡: `SOLAPI_API_KEY`, `SOLAPI_API_SECRET`, `SOLAPI_PFID`(카카오 채널 발신 프로필), `SOLAPI_SENDER`(발신번호), `SOLAPI_TEMPLATE_ID`(승인된 템플릿) · 이메일: `RESEND_API_KEY`, `REPORT_FROM_EMAIL` |
+
+- 알림톡은 **카카오가 승인한 템플릿**으로만 보낼 수 있습니다. 템플릿 본문은 `#{제목}` 과 `#{본문}` 두 변수를 쓰도록 등록해 주세요.
+  (`SOLAPI_TEMPLATE_ID`가 없으면 같은 내용을 문자(LMS)로 보냅니다.)
+- 카드 환불은 결제할 때 받은 `paymentKey`가 있어야 합니다. 앱은 결제대행(PG)이 연결되면(`window.DOOGO_PG_READY = true`) 해지 즉시 이 경로를 불러 자동 취소하고, 연결 전에는 마스터 ‘구독 · 결제 → 카드 환불 대기’에 올려 PG 관리자 화면에서 취소하도록 안내합니다.
+- 지금 매출 보고의 **숫자는 브라우저가 계산해서** 서버로 보냅니다. 주문 데이터가 서버 데이터베이스로 옮겨지면, 서버가 매일 정한 시각에 직접 계산해 보내도록(예: 매일 08:00 크론) 바꾸면 됩니다. 그 전까지는 마스터 화면이 열려 있을 때 정한 시각 이후 하루 한 번 보냅니다.
