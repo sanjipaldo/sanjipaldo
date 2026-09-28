@@ -2015,7 +2015,7 @@ function setPartnerLoginRole(role) {
   const roleSwitch = document.getElementById("partnerRoleSwitch");
   roleSwitch.dataset.partnerRole = isSupplier ? "master" : "supplier";
   roleSwitch.textContent = isSupplier ? "관리자 로그인" : "공급사 로그인";
-  document.getElementById("partnerDemoAccounts").innerHTML = "";
+  document.getElementById("partnerDemoAccounts").innerHTML = `<div><button type="button" data-partner-demo="${partnerLoginRole}">데모 계정으로 체험하기 <b>${isSupplier ? "공급사" : "마스터"}</b></button></div>`;
   document.getElementById("partnerLoginId").value = "";
   document.getElementById("partnerLoginPassword").value = "";
   document.getElementById("partnerLoginError").textContent = "";
@@ -7905,7 +7905,7 @@ document.addEventListener("click", event => {
     document.getElementById("partnerLoginId").value = id;
     document.getElementById("partnerLoginPassword").value = id;
     document.getElementById("partnerLoginError").textContent = "";
-    return document.getElementById("partnerLoginPassword").focus();
+    return document.getElementById("partnerLoginForm").requestSubmit();
   }
   if (event.target.closest("[data-close-modal]")) return closeModal();
   const jump = event.target.closest("[data-jump]")?.dataset.jump;
@@ -9180,7 +9180,7 @@ document.querySelectorAll("[data-demo-login]").forEach(button => button.addEvent
   document.getElementById("loginId").value = id;
   document.getElementById("loginPassword").value = id;
   document.getElementById("loginError").textContent = "";
-  document.getElementById("loginPassword").focus();
+  document.getElementById("loginForm").requestSubmit();
 }));
 
 document.getElementById("workspaceMenu").addEventListener("click", event => {

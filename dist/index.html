@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Geist:wght@100..900&family=Geist+Mono:wght@400..700&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=65" />
+  <link rel="stylesheet" href="styles.css?v=66" />
 </head>
 <body>
   <section id="loginView" class="login-screen seller-login-screen">
@@ -51,6 +51,9 @@
           <p id="loginError" class="login-error" role="alert"></p>
           <button type="submit" class="login-submit">로그인</button>
         </form>
+        <div class="demo-accounts">
+          <div><button type="button" data-demo-login="seller">데모 계정으로 체험하기 <b>위탁셀러</b></button></div>
+        </div>
         <div class="login-footer-links">
           <div class="login-signup-card"><span>아직 계정이 없으신가요?</span><button id="openSignup" type="button">무료로 시작하기 →</button></div>
           <div class="login-textlinks"><button type="button" class="login-textlink" data-find-account>아이디·비밀번호 찾기</button><button type="button" class="login-textlink" data-staff-join>직원 초대 코드로 시작하기</button></div>
@@ -97,7 +100,9 @@
           <p id="partnerLoginError" class="login-error" role="alert"></p>
           <button type="submit" class="login-submit">로그인</button>
         </form>
-        <div id="partnerDemoAccounts" class="demo-accounts" hidden></div>
+        <div id="partnerDemoAccounts" class="demo-accounts">
+          <div><button type="button" data-partner-demo="supplier">데모 계정으로 체험하기 <b>공급사</b></button></div>
+        </div>
         <div class="login-footer-links">
           <div id="supplierSignupPrompt" class="login-signup-card"><span>공급사 계정이 없으신가요?</span><button id="openSupplierSignup" type="button">입점 신청하기 →</button></div>
           <div class="login-textlink-row"><button type="button" id="partnerFindAccount" class="login-textlink" data-find-account>아이디·비밀번호 찾기</button><i aria-hidden="true">·</i><button type="button" id="partnerRoleSwitch" class="login-textlink" data-partner-role="master">관리자 로그인</button></div>
@@ -289,6 +294,6 @@
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=65"></script>
+  <script src="app.js?v=66"></script>
 </body>
 </html>
