@@ -1661,7 +1661,9 @@ function ShippingPoliciesAdmin() {
   const [name, setName] = useState("");
   const [shippingType, setShippingType] = useState<ShippingType>("domestic");
   const [courier, setCourier] = useState("");
-  const [feeType, setFeeType] = useState<ShippingPolicy["feeType"]>("free");
+  const [paid, setPaid] = useState(false);
+  const [feeBasis, setFeeBasis] = useState<ShippingPolicy["feeBasis"]>("order");
+  const [conditional, setConditional] = useState(false);
   const [fee, setFee] = useState("0");
   const [threshold, setThreshold] = useState("");
   const [jejuExtraFee, setJejuExtraFee] = useState("0");
@@ -1682,26 +1684,32 @@ function ShippingPoliciesAdmin() {
     setName(policy?.name ?? "");
     setShippingType(policy?.shippingType ?? "domestic");
     setCourier(policy?.courier ?? "");
-    setFeeType(policy?.feeType ?? "free");
+    setPaid(Boolean(policy && policy.feeType !== "free"));
+    setFeeBasis(policy?.feeBasis ?? "order");
+    setConditional(policy?.feeType === "conditional");
     setFee(String(policy?.fee ?? 0));
     setThreshold(policy?.freeShippingThreshold ? String(policy.freeShippingThreshold) : "");
     setJejuExtraFee(String(policy?.jejuExtraFee ?? 0));
     setIslandExtraFee(String(policy?.islandExtraFee ?? 0));
     setReturnFee(policy?.returnFee != null ? String(policy.returnFee) : "");
     setExchangeFee(policy?.exchangeFee != null ? String(policy.exchangeFee) : "");
-    setFeeLabel(policy?.feeLabel ?? "");
+    // 표시 문구는 비워 두면 저장할 때 무료/유료·금액으로 새로 만들어집니다(예전 문구가 남지 않도록).
+    setFeeLabel("");
     setDescription(policy?.description ?? "");
   };
   const won = (value: string) => Math.max(0, Math.floor(Number(value.replace(/[^0-9]/g, "")) || 0));
   const optionalWon = (value: string) => value.trim() === "" ? null : won(value);
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const feeType: ShippingPolicy["feeType"] = !paid ? "free" : conditional ? "conditional" : "paid";
+    if (paid && !won(fee)) { toast.error("유료 배송은 기본 배송비를 입력해 주세요."); return; }
     if (feeType === "conditional" && !won(threshold)) { toast.error("조건부 무료는 무료배송 기준 금액을 입력해 주세요."); return; }
     const payload = {
       name,
       shippingType,
       courier: courier || null,
       feeType,
+      feeBasis: paid ? feeBasis : "order",
       fee: feeType === "free" ? 0 : won(fee),
       freeShippingThreshold: feeType === "conditional" ? won(threshold) : null,
       jejuExtraFee: won(jejuExtraFee),
@@ -1720,25 +1728,34 @@ function ShippingPoliciesAdmin() {
     const response = await apiFetch(`/catalog/admin/shipping-policies/${policy.id}`, { method: "DELETE" });
     if (response.ok) { toast.success("배송 정책을 삭제했습니다."); await load(); }
   };
-  const feeTypeLabel = { free: "무료", paid: "유료", conditional: "조건부 무료" } as const;
+  const basisText = { order: "주문당 고정", quantity: "수량별", weight: "kg당" } as const;
+  const feeHeadline = (policy: ShippingPolicy) => policy.feeType === "free" ? "배송비 무료" : `배송비 유료 (${formatPrice(policy.fee)} · ${basisText[policy.feeBasis ?? "order"]})${policy.feeType === "conditional" && policy.freeShippingThreshold ? ` · ${formatPrice(policy.freeShippingThreshold)} 이상 무료` : ""}`;
   const regionLine = (policy: ShippingPolicy) => `제주 ${policy.jejuExtraFee ? `+${formatPrice(policy.jejuExtraFee)}` : "추가 없음"} · 도서산간 ${policy.islandExtraFee ? `+${formatPrice(policy.islandExtraFee)}` : "추가 없음"}`;
   return <><div className="admin-page-heading"><div><span>SHIPPING POLICY</span><h1>배송 정책</h1><p>상품 등록 시 선택할 배송비·택배사·제주/도서산간 추가배송비 정책을 관리합니다.</p></div><button className="primary-action" type="button" onClick={() => open()}><Plus size={16} /> 정책 등록</button></div>
-    <div className="policy-grid">{policies.map((policy) => <article className="policy-card" key={policy.id}><div><span className={`delivery-badge ${policy.shippingType}`}>{policy.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><h2>{policy.name}</h2><strong>{policy.feeLabel}</strong><small className="policy-region-line">{feeTypeLabel[policy.feeType ?? "free"]} · {regionLine(policy)}</small>{(policy.returnFee != null || policy.exchangeFee != null) && <small>반품 {policy.returnFee != null ? formatPrice(policy.returnFee) : "-"} · 교환 {policy.exchangeFee != null ? formatPrice(policy.exchangeFee) : "-"}</small>}<small>{policy.courier || "택배사 지정"} · {policy.description || "설명 없음"}</small></div><div className="bundle-card-actions"><button type="button" onClick={() => open(policy)}><Pencil size={14} /> 수정</button><button type="button" onClick={() => void remove(policy)}><Trash2 size={14} /> 삭제</button></div></article>)}</div>
+    <div className="policy-grid">{policies.map((policy) => <article className="policy-card" key={policy.id}><div><span className={`delivery-badge ${policy.shippingType}`}>{policy.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><h2>{policy.name}</h2><strong>{policy.feeLabel}</strong><small className="policy-region-line">{feeHeadline(policy)}</small><small>{regionLine(policy)}</small>{(policy.returnFee != null || policy.exchangeFee != null) && <small>반품 {policy.returnFee != null ? formatPrice(policy.returnFee) : "-"} · 교환 {policy.exchangeFee != null ? formatPrice(policy.exchangeFee) : "-"}</small>}<small>{policy.courier || "택배사 지정"} · {policy.description || "설명 없음"}</small></div><div className="bundle-card-actions"><button type="button" onClick={() => open(policy)}><Pencil size={14} /> 수정</button><button type="button" onClick={() => void remove(policy)}><Trash2 size={14} /> 삭제</button></div></article>)}</div>
     {formOpen && <div className="editor-overlay"><form className="editor-panel shipping-policy-editor" onSubmit={save}><div className="editor-header"><div><span>SHIPPING POLICY</span><h2>{editing ? "배송 정책 수정" : "배송 정책 등록"}</h2></div><button type="button" onClick={close} aria-label="닫기"><X size={20} /></button></div>
       <div className="editor-grid">
         <label>정책명<input value={name} onChange={(event) => setName(event.target.value)} required /></label>
         <label>배송유형<select value={shippingType} onChange={(event) => setShippingType(event.target.value as ShippingType)}><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select></label>
         <label>택배사<input value={courier} onChange={(event) => setCourier(event.target.value)} placeholder="예: CJ대한통운 (비우면 택배사 지정)" /></label>
-        <label>배송비 유형<select value={feeType} onChange={(event) => setFeeType(event.target.value as ShippingPolicy["feeType"])}><option value="free">무료</option><option value="paid">유료</option><option value="conditional">조건부 무료</option></select></label>
-        <label>기본 배송비(원)<input value={feeType === "free" ? "0" : fee} disabled={feeType === "free"} onChange={(event) => setFee(event.target.value)} inputMode="numeric" /></label>
-        <label>무료배송 기준 금액(원)<input value={feeType === "conditional" ? threshold : ""} disabled={feeType !== "conditional"} onChange={(event) => setThreshold(event.target.value)} inputMode="numeric" placeholder={feeType === "conditional" ? "예: 50000 (이상 구매 시 무료)" : "조건부 무료일 때 입력"} /></label>
+        <div className="full policy-fee-choice" role="radiogroup" aria-label="배송비">
+          <span>배송비</span>
+          <label><input type="radio" checked={!paid} onChange={() => setPaid(false)} /> 배송비 무료</label>
+          <label><input type="radio" checked={paid} onChange={() => setPaid(true)} /> 배송비 유료</label>
+        </div>
+        {paid && <>
+          <label>부과 방식<select value={feeBasis} onChange={(event) => setFeeBasis(event.target.value as ShippingPolicy["feeBasis"])}><option value="order">주문당 고정</option><option value="quantity">수량별</option><option value="weight">무게별(kg당)</option></select></label>
+          <label>기본 배송비(원)<input value={fee} onChange={(event) => setFee(event.target.value)} inputMode="numeric" placeholder="예: 3500" /></label>
+          <label className="policy-inline-check"><input type="checkbox" checked={conditional} onChange={(event) => setConditional(event.target.checked)} /> 일정 금액 이상 주문 시 무료</label>
+          <label>무료배송 기준 금액(원)<input value={conditional ? threshold : ""} disabled={!conditional} onChange={(event) => setThreshold(event.target.value)} inputMode="numeric" placeholder={conditional ? "예: 50000" : "체크하면 입력"} /></label>
+        </>}
         <div className="full policy-section-title">제주·도서산간 추가배송비</div>
         <label>제주 추가배송비(원)<input value={jejuExtraFee} onChange={(event) => setJejuExtraFee(event.target.value)} inputMode="numeric" placeholder="0 = 추가 없음" /></label>
         <label>도서산간 추가배송비(원)<input value={islandExtraFee} onChange={(event) => setIslandExtraFee(event.target.value)} inputMode="numeric" placeholder="0 = 추가 없음" /></label>
         <div className="full policy-section-title">반품·교환</div>
         <label>반품 배송비(편도, 원)<input value={returnFee} onChange={(event) => setReturnFee(event.target.value)} inputMode="numeric" placeholder="비우면 미표시" /></label>
         <label>교환 배송비(왕복, 원)<input value={exchangeFee} onChange={(event) => setExchangeFee(event.target.value)} inputMode="numeric" placeholder="비우면 미표시" /></label>
-        <label>표시 문구<input value={feeLabel} onChange={(event) => setFeeLabel(event.target.value)} placeholder="비우면 배송비로 자동 작성" /></label>
+        <label>표시 문구(관리용)<input value={feeLabel} onChange={(event) => setFeeLabel(event.target.value)} placeholder={editing?.feeLabel ? `현재: ${editing.feeLabel} (비우면 자동 작성)` : "비우면 배송비로 자동 작성"} /></label>
         <label className="full">설명<textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} /></label>
       </div>
       <div className="editor-actions"><button type="submit" className="primary-action">저장</button></div></form></div>}</>;

@@ -18,6 +18,7 @@ export type ShippingPolicy = {
   feeLabel: string;
   freeShippingThreshold: number | null;
   feeType: "free" | "paid" | "conditional";
+  feeBasis: "order" | "quantity" | "weight";
   jejuExtraFee: number;
   islandExtraFee: number;
   returnFee: number | null;

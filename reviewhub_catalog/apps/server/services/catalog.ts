@@ -91,6 +91,7 @@ export type ShippingPolicyInput = {
   feeLabel?: string;
   freeShippingThreshold?: number | null;
   feeType?: "free" | "paid" | "conditional";
+  feeBasis?: "order" | "quantity" | "weight";
   jejuExtraFee?: number;
   islandExtraFee?: number;
   returnFee?: number | null;
@@ -105,16 +106,17 @@ function shippingPolicyValues(input: ShippingPolicyInput) {
   const feeType = input.feeType ?? ((input.fee ?? 0) === 0 ? "free" : input.freeShippingThreshold ? "conditional" : "paid");
   const fee = feeType === "free" ? 0 : input.fee ?? 0;
   const freeShippingThreshold = feeType === "conditional" ? input.freeShippingThreshold ?? null : null;
+  const feeBasis = feeType === "free" ? "order" : input.feeBasis ?? "order";
+  const basisLabel = feeBasis === "quantity" ? "수량별" : feeBasis === "weight" ? "kg당" : "";
   const autoLabel = feeType === "free"
     ? "무료배송"
-    : feeType === "conditional" && freeShippingThreshold
-      ? `${fee.toLocaleString("ko-KR")}원 (${freeShippingThreshold.toLocaleString("ko-KR")}원 이상 무료)`
-      : `${fee.toLocaleString("ko-KR")}원`;
+    : `유료 ${fee.toLocaleString("ko-KR")}원${basisLabel ? ` (${basisLabel})` : ""}${feeType === "conditional" && freeShippingThreshold ? ` · ${freeShippingThreshold.toLocaleString("ko-KR")}원 이상 무료` : ""}`;
   return {
     name: input.name,
     shippingType: input.shippingType,
     courier: input.courier || null,
     feeType,
+    feeBasis,
     fee,
     feeLabel: input.feeLabel || autoLabel,
     freeShippingThreshold,
@@ -259,6 +261,7 @@ function publicShippingPolicyRows() {
     shippingType: shippingPolicies.shippingType,
     courier: shippingPolicies.courier,
     feeType: shippingPolicies.feeType,
+    feeBasis: shippingPolicies.feeBasis,
     fee: shippingPolicies.fee,
     feeLabel: shippingPolicies.feeLabel,
     freeShippingThreshold: shippingPolicies.freeShippingThreshold,

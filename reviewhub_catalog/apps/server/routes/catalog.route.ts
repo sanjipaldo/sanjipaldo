@@ -204,6 +204,7 @@ const ShippingPolicySchema = z.object({
   feeLabel: z.string().trim().max(120).optional(),
   freeShippingThreshold: z.coerce.number().int().nonnegative().nullable().optional(),
   feeType: z.enum(["free", "paid", "conditional"]).optional(),
+  feeBasis: z.enum(["order", "quantity", "weight"]).optional(),
   jejuExtraFee: z.coerce.number().int().nonnegative().max(1_000_000).optional(),
   islandExtraFee: z.coerce.number().int().nonnegative().max(1_000_000).optional(),
   returnFee: z.coerce.number().int().nonnegative().max(1_000_000).nullable().optional(),

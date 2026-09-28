@@ -564,16 +564,28 @@ function NoticeModal({ notice, onClose }: { notice: Notice; onClose: () => void 
   );
 }
 
-// 배송비 한 줄 요약(단가표 칸에 표시)
-function shippingFeeSummary(product: Product, policy?: PublicShippingPolicy) {
-  // 정책이 없는 상품은 입력된 배송비 문구의 첫 부분만 짧게 보여 주고, 전체 문구는 ? 팝업에서 보여 줍니다.
-  if (!policy) return (product.shippingFee || "문의").split("·")[0].trim() || "문의";
-  if (policy.feeType === "free") return "무료";
-  if (policy.feeType === "conditional" && policy.freeShippingThreshold) return `${formatPrice(policy.fee)} · 조건부 무료`;
-  return formatPrice(policy.fee);
+// 배송비 한 줄 요약: 판매자가 가장 먼저 보는 "무료 / 유료(금액)"만 짧게 보여 줍니다.
+// - 배송 정책이 연결된 상품: 정책의 무료/유료와 기본 배송비
+// - 정책이 없는 상품: 상품에 입력된 배송비 문구에서 무료·유료·금액을 읽어 냅니다(판단이 어려우면 "확인").
+type ShippingSummary = { kind: "free" | "paid" | "unknown"; text: string };
+
+function shippingFeeSummary(product: Product, policy?: PublicShippingPolicy): ShippingSummary {
+  if (policy) {
+    if (policy.feeType === "free") return { kind: "free", text: "무료" };
+    return { kind: "paid", text: policy.fee > 0 ? `유료 (${formatPrice(policy.fee)})` : "유료" };
+  }
+  const raw = (product.shippingFee || "").trim();
+  if (!raw) return { kind: "unknown", text: "확인" };
+  if (/무료/.test(raw) && !/유료/.test(raw)) return { kind: "free", text: "무료" };
+  const amount = raw.replace(/,/g, "").match(/(\d{3,7})\s*원/);
+  if (amount) return { kind: "paid", text: `유료 (${formatPrice(Number(amount[1]))})` };
+  if (/유료|수량별|무게별|kg|착불|부과|별도/i.test(raw)) return { kind: "paid", text: "유료" };
+  return { kind: "unknown", text: "확인" };
 }
 
-// 배송비 ? 버튼 팝업: 배송비 유형, 무료 조건, 제주·도서산간 추가배송비, 반품·교환 배송비
+const feeBasisLabel = { order: "주문당 고정", quantity: "수량별 부과", weight: "무게별 부과(kg당)" } as const;
+
+// 배송비 ? 버튼 팝업: 무료/유료, 유료 방식, 무료 조건, 제주·도서산간 추가배송비, 반품·교환 배송비
 function ShippingInfoModal({ product, policy, onClose }: { product: Product; policy?: PublicShippingPolicy; onClose: () => void }) {
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -582,20 +594,24 @@ function ShippingInfoModal({ product, policy, onClose }: { product: Product; pol
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
+  const summary = shippingFeeSummary(product, policy);
   const extra = (value: number) => value > 0 ? `+${formatPrice(value)}` : "추가 없음";
-  const rows: Array<[string, string]> = policy ? [
-    ["배송비", policy.feeType === "free" ? "무료배송" : `유료 ${formatPrice(policy.fee)}`],
-    ...(policy.feeType === "conditional" && policy.freeShippingThreshold ? [["무료배송 조건", `${formatPrice(policy.freeShippingThreshold)} 이상 주문 시 무료`] as [string, string]] : []),
-    ...(policy.feeType === "free" ? [["무료배송 조건", "조건 없이 무료"] as [string, string]] : []),
-    ["제주 추가배송비", extra(policy.jejuExtraFee)],
-    ["도서산간 추가배송비", extra(policy.islandExtraFee)],
-    ...(policy.returnFee != null ? [["반품 배송비(편도)", formatPrice(policy.returnFee)] as [string, string]] : []),
-    ...(policy.exchangeFee != null ? [["교환 배송비(왕복)", formatPrice(policy.exchangeFee)] as [string, string]] : []),
-    ["택배사", policy.courier || product.courier || "택배사 지정"]
-  ] : [
-    ["배송비", product.shippingFee || "문의"],
-    ["택배사", product.courier || "택배사 지정"]
-  ];
+  const rows: Array<[string, string]> = [];
+  if (policy) {
+    const free = policy.feeType === "free";
+    rows.push(["배송비", free ? "무료배송" : `유료 ${formatPrice(policy.fee)}`]);
+    if (!free) rows.push(["부과 방식", feeBasisLabel[policy.feeBasis ?? "order"]]);
+    if (policy.feeType === "conditional" && policy.freeShippingThreshold) rows.push(["무료배송 조건", `${formatPrice(policy.freeShippingThreshold)} 이상 주문 시 무료`]);
+    rows.push(["제주 추가배송비", extra(policy.jejuExtraFee)]);
+    rows.push(["도서산간 추가배송비", extra(policy.islandExtraFee)]);
+    if (policy.returnFee != null) rows.push(["반품 배송비(편도)", formatPrice(policy.returnFee)]);
+    if (policy.exchangeFee != null) rows.push(["교환 배송비(왕복)", formatPrice(policy.exchangeFee)]);
+    rows.push(["택배사", policy.courier || product.courier || "택배사 지정"]);
+  } else {
+    rows.push(["배송비", summary.kind === "free" ? "무료배송" : summary.kind === "paid" ? summary.text.replace(/[()]/g, "") : "확인 필요"]);
+    if (product.shippingFee) rows.push(["배송비 안내", product.shippingFee]);
+    rows.push(["택배사", product.courier || "택배사 지정"]);
+  }
   return (
     <div className="public-modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="shipping-info-modal" role="dialog" aria-modal="true" aria-labelledby="shipping-info-title" onMouseDown={(event) => event.stopPropagation()}>
@@ -603,10 +619,10 @@ function ShippingInfoModal({ product, policy, onClose }: { product: Product; pol
         <span className="section-kicker">SHIPPING</span>
         <h2 id="shipping-info-title">배송비 안내</h2>
         <p className="shipping-info-product">{product.name}</p>
-        {policy && <strong className="shipping-info-policy">{policy.name} · {policy.feeLabel}</strong>}
+        <strong className={`shipping-info-headline ${summary.kind}`}>배송비 {summary.text}</strong>
         <dl className="shipping-info-list">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
         {policy?.description && <p className="shipping-info-note">{policy.description}</p>}
-        {!policy && <p className="shipping-info-note">이 상품은 상세 배송 정책이 아직 연결되지 않았습니다. 제주·도서산간 배송비는 1:1 상담으로 문의해 주세요.</p>}
+        {!policy && <p className="shipping-info-note">제주·도서산간 추가배송비는 상품별로 다를 수 있습니다. 1:1 상담으로 문의해 주세요.</p>}
       </section>
     </div>
   );
@@ -1389,6 +1405,7 @@ export function CatalogHome() {
                   );
                   const supplyLabel = soldOutNow ? "품절" : availableNow ? "판매중" : "시즌 종료";
                   const policy = product.shippingPolicyId ? policyById.get(product.shippingPolicyId) : undefined;
+                  const shippingSummary = shippingFeeSummary(product, policy);
                   return (
                     <Fragment key={product.id}>
                       <tr className={`${expanded ? "expanded " : ""}${soldOutNow ? "sold-out order-unavailable" : availableNow ? "supply-active" : "season-waiting order-unavailable"}`.trim()}>
@@ -1396,7 +1413,7 @@ export function CatalogHome() {
                           <div className="product-cell"><button type="button" className="product-image-button" onClick={() => { const src = productImageSrc(product); if (src) setImagePreview({ src, alt: product.name }); }} aria-label={`${product.name} 이미지 크게 보기`}><ProductThumb product={product} /></button><div><span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><strong>{product.name}</strong>{product.origin && <small>{product.origin}</small>}<em className={soldOutNow ? "supply-sold-out" : availableNow ? "supply-on-sale" : "supply-season-waiting"}>{supplyLabel}</em>{options.length > 0 && <button className="option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />} 옵션 {options.length}개 {expanded ? "접기" : "보기"}</button>}</div></div>
                           {expanded && options.length > 0 && <div className="mobile-inline-options"><PublicOptionList product={product} /></div>}
                         </td>
-                        <td data-label="카테고리·판매기간"><div className="mobile-cell-value"><strong>{category?.name ?? "-"}</strong><button type="button" className="shipping-fee-button" onClick={() => setShippingInfo({ product, policy })} aria-label={`${product.name} 배송비 안내 보기`}><Truck size={12} /> 배송비 <b>{shippingFeeSummary(product, policy)}</b><CircleHelp size={13} /></button><span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, category?.name)}</span></div></td>
+                        <td data-label="카테고리·판매기간"><div className="mobile-cell-value"><strong>{category?.name ?? "-"}</strong><button type="button" className={`shipping-fee-button ${shippingSummary.kind}`} onClick={() => setShippingInfo({ product, policy })} aria-label={`${product.name} 배송비 안내 보기`}><span className="shipping-fee-text">배송비 <b>{shippingSummary.text}</b></span><CircleHelp size={14} aria-hidden="true" /></button><span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, category?.name)}</span></div></td>
                         <td data-label="A단가"><div className="mobile-cell-value"><b className="price a-price">{formatPrice(minimumAPrice)}</b><small>{options.length > 1 ? "옵션 최저 A단가" : "A회원 공급가"}</small></div></td>
                         <td data-label="일반공급가"><div className="mobile-cell-value"><b className="price">{formatPrice(minimumGeneralPrice)}</b><small>{options.length > 1 ? "옵션 최저 일반공급가" : "일반 판매자"}</small></div></td>
                         <td data-label="판매가"><div className="mobile-cell-value"><b className={`price sale-price ${product.salePriceMode}`}>{salePolicy.main}</b><small>{salePolicy.sub}</small></div></td>

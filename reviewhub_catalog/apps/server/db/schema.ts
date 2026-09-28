@@ -140,6 +140,8 @@ export const shippingPolicies = sqliteTable(
     freeShippingThreshold: integer("freeShippingThreshold"),
     // 배송비 유형: free 무료 · paid 유료 · conditional 조건부 무료(freeShippingThreshold 이상 무료)
     feeType: text("feeType", { enum: ["free", "paid", "conditional"] }).notNull().default("free"),
+    // 유료 배송비 부과 방식: order 주문당 고정 · quantity 수량별 · weight 무게별(kg당)
+    feeBasis: text("feeBasis", { enum: ["order", "quantity", "weight"] }).notNull().default("order"),
     jejuExtraFee: integer("jejuExtraFee").notNull().default(0),
     islandExtraFee: integer("islandExtraFee").notNull().default(0),
     returnFee: integer("returnFee"),
