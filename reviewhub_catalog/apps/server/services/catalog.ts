@@ -270,7 +270,9 @@ function publicShippingPolicyRows() {
     returnFee: shippingPolicies.returnFee,
     exchangeFee: shippingPolicies.exchangeFee,
     description: shippingPolicies.description
-  }).from(shippingPolicies).where(eq(shippingPolicies.isActive, true)).orderBy(asc(shippingPolicies.sortOrder), asc(shippingPolicies.name));
+  }).from(shippingPolicies).where(eq(shippingPolicies.isActive, true)).orderBy(asc(shippingPolicies.sortOrder), asc(shippingPolicies.name))
+    // 배송 정책을 못 읽어도(예: 새 칸이 아직 DB에 없을 때) 단가표는 보여야 하므로 빈 목록으로 대신합니다.
+    .catch(() => []);
 }
 
 export async function getPublicCatalog() {
