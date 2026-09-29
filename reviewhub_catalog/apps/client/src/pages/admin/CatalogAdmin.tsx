@@ -306,6 +306,16 @@ function marginRate(aPrice: number | undefined, costPrice: number | undefined) {
   return Math.max(0, ((aPrice - costPrice) / aPrice) * 100);
 }
 
+// 1개 판매 시 마진 금액(A단가 − 원가). 원가·A단가가 없으면 계산하지 않습니다.
+function marginAmount(aPrice: number | undefined, costPrice: number | undefined) {
+  if (!aPrice || aPrice <= 0 || !costPrice || costPrice < 0) return null;
+  return aPrice - costPrice;
+}
+
+function formatSignedPrice(value: number) {
+  return `${value < 0 ? "-" : ""}${Math.abs(value).toLocaleString("ko-KR")}원`;
+}
+
 function effectiveAPrice(aPrice: number | null | undefined, generalPrice: number) {
   return typeof aPrice === "number" && aPrice > 0 ? aPrice : generalPrice;
 }
@@ -1358,7 +1368,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
           </div>
           <div className="bulk-main-actions"><button type="button" className="primary-action" onClick={() => setBulkEditOpen("all")} disabled={quickBusy}><Pencil size={15} /> 상세 일괄 변경</button><button type="button" onClick={() => setSelectedProductIds(new Set())} disabled={quickBusy}>선택 해제</button></div>
         </div>}
-        <div className="admin-table-wrap product-admin-table-wrap" id="admin-product-list"><table className="admin-table product-admin-table"><thead><tr><th className="product-select-column"><label className="product-select-control"><input type="checkbox" ref={(element) => { if (element) element.indeterminate = selectedOnCurrentPage > 0 && !allCurrentPageSelected; }} checked={allCurrentPageSelected} onChange={toggleCurrentPageSelection} aria-label="현재 페이지 상품 전체 선택" /><span>선택</span></label></th><th>상품정보</th><th>노출순서</th><th>배송/카테고리</th><th>판매기간</th><th>매입처</th><th>원가</th><th>A단가</th><th>일반공급가</th><th>판매가</th><th>마진율</th><th>상태</th><th>관리</th></tr></thead><tbody>
+        <div className="admin-table-wrap product-admin-table-wrap" id="admin-product-list"><table className="admin-table product-admin-table"><thead><tr><th className="product-select-column"><label className="product-select-control"><input type="checkbox" ref={(element) => { if (element) element.indeterminate = selectedOnCurrentPage > 0 && !allCurrentPageSelected; }} checked={allCurrentPageSelected} onChange={toggleCurrentPageSelection} aria-label="현재 페이지 상품 전체 선택" /><span>선택</span></label></th><th>상품정보</th><th>노출순서</th><th>배송/카테고리</th><th>판매기간</th><th>매입처</th><th>원가</th><th>A단가</th><th>일반공급가</th><th>판매가</th><th>마진(1개)</th><th>상태</th><th>관리</th></tr></thead><tbody>
           {pagedProducts.map((product) => {
             const options = product.options ?? [];
             const representativeOption = options.length > 0
@@ -1369,6 +1379,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             const category = data.categories.find((item) => item.id === product.categoryId);
             const costPrice = representativeOption?.costPrice ?? product.costPrice ?? 0;
             const margin = marginRate(minimumAPrice, costPrice);
+            const marginWon = marginAmount(minimumAPrice, costPrice);
             const expanded = expandedProductId === product.id;
             // 옵션 단가 패널: PC는 표 아래 펼침 행, 모바일은 옵션 버튼 바로 아래에 같은 내용을 보여줍니다.
             const optionPanel = expanded && options.length > 0 ? (
@@ -1395,7 +1406,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
                   <td data-label="A단가"><b className="admin-a-price">{formatPrice(minimumAPrice)}</b><small>{options.length > 0 ? "옵션 최저 A단가" : "기본 A단가"}</small></td>
                   <td data-label="일반공급가"><b className="admin-general-price">{formatPrice(minimumGeneralPrice)}</b><small>{options.length > 0 ? "옵션 최저가" : "기본가"}</small></td>
                   <td data-label="판매가"><b className="admin-sale-price">{product.salePriceMode === "fixed" ? product.salePrice === null ? "미설정" : formatPrice(product.salePrice) : "자율"}</b><small>{product.salePriceMode === "fixed" ? "지정 판매가" : "판매자 자율"}</small></td>
-                  <td data-label="마진율">{margin !== null ? <strong className="margin-rate prominent">{Math.round(margin)}%</strong> : <small>계산 대기</small>}</td>
+                  <td data-label="마진(1개)">{margin !== null && marginWon !== null ? <div className="margin-cell"><strong className="margin-rate prominent">{Math.round(margin)}%</strong><span className={`margin-amount ${marginWon < 0 ? "negative" : ""}`}>개당 {formatSignedPrice(marginWon)}</span></div> : <small>계산 대기</small>}</td>
                   <td data-label="상태"><span className={`status-pill ${product.isVisible ? "active" : ""}`}>{product.isVisible ? "노출" : "숨김"}</span><span className={`status-pill ${product.isSoldOut ? "danger" : ""}`}>{product.isSoldOut ? "품절" : "판매중"}</span></td>
                   <td data-label="관리"><div className="row-actions product-row-actions"><button type="button" onClick={() => startEdit(product)}><Pencil size={15} /> 수정</button><button type="button" className="danger" onClick={() => void remove(product)} aria-label={`${product.name} 삭제`}><Trash2 size={15} /> 삭제</button></div></td>
                 </tr>
@@ -1440,7 +1451,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <label>배송유형<select value={editing.shippingType} onChange={(event) => { const shippingType = event.target.value as ShippingType; const category = data.categories.find((item) => item.shippingType === shippingType); const health = isHealthCategory(category); setEditing({ ...editing, shippingType, categoryId: category?.id || "", shippingPolicyId: null, salePriceMode: health ? "fixed" : editing.salePriceMode, options: editing.options.map((option) => ({ ...option, salePriceMode: health ? "fixed" : option.salePriceMode })) }); }}><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select></label>
         <label>카테고리<select value={editing.categoryId} onChange={(event) => { const category = data.categories.find((item) => item.id === event.target.value); const health = isHealthCategory(category); setEditing({ ...editing, categoryId: event.target.value, salePriceMode: health ? "fixed" : editing.salePriceMode, options: editing.options.map((option) => ({ ...option, salePriceMode: health ? "fixed" : option.salePriceMode })) }); }} required>{data.categories.filter((item) => item.shippingType === editing.shippingType).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label>원가<input type="number" min="0" value={editing.costPrice} onChange={(event) => setEditing({ ...editing, costPrice: Number(event.target.value) })} required /><small>원가 기준 A단가 마진율이 자동 계산됩니다.</small></label>
-        <label>A단가<input type="number" min="0" value={editing.aPrice} onChange={(event) => setEditing({ ...editing, aPrice: Number(event.target.value) })} required /><strong className="margin-rate editor-margin">{marginRate(editing.aPrice, editing.costPrice)?.toFixed(1) ?? "-"}% 마진</strong></label>
+        <label>A단가<input type="number" min="0" value={editing.aPrice} onChange={(event) => setEditing({ ...editing, aPrice: Number(event.target.value) })} required /><strong className="margin-rate editor-margin">{marginRate(editing.aPrice, editing.costPrice)?.toFixed(1) ?? "-"}% 마진{marginAmount(editing.aPrice, editing.costPrice) !== null ? ` · 개당 ${formatSignedPrice(marginAmount(editing.aPrice, editing.costPrice)!)}` : ""}</strong></label>
         <label>일반공급가<input type="number" min="0" value={editing.generalPrice} onChange={(event) => setEditing({ ...editing, generalPrice: Number(event.target.value) })} required /></label>
         <label>판매가 정책<select value={editingHealthProduct ? "fixed" : editing.salePriceMode} disabled={editingHealthProduct} onChange={(event) => setEditing({ ...editing, salePriceMode: event.target.value as "autonomous" | "fixed" })}><option value="autonomous">자율 판매가</option><option value="fixed">지정 판매가</option></select><small>{editingHealthProduct ? "건강식품은 지정 판매가만 사용할 수 있습니다." : "판매자가 자유롭게 정하거나 지정가를 안내할 수 있습니다."}</small></label>
         <label>지정 판매가<input type="number" min="0" value={editing.salePrice ?? ""} disabled={(editingHealthProduct ? "fixed" : editing.salePriceMode) !== "fixed"} onChange={(event) => setEditing({ ...editing, salePrice: event.target.value ? Number(event.target.value) : null })} placeholder="지정 판매가 입력" /></label>
