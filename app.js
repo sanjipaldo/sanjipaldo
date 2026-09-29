@@ -2262,7 +2262,7 @@ function catalogBaseProducts() {
     const matchesText = !query || [product.id, product.name, product.supplier, productBrand(product), product.origin, product.originCountry, ...productCategoryPath(product), ...productOptions(product).map(option => option.name)].some(value => String(value || "").toLowerCase().includes(query));
     const matchesShipping = sellerShippingFilter === "all" || (sellerShippingFilter === "overseas" ? product.shippingType === "overseas" : product.shippingType !== "overseas");
     const matchesCountry = sellerCountry === "전체 국가" || (product.originCountry || "대한민국") === sellerCountry;
-    return isCatalogVisible(product) && connectedSuppliers.has(product.supplierLoginId) && matchesText && matchesShipping && matchesCountry;
+    return isCatalogVisible(product) && connectedSuppliers.has(product.supplierLoginId) && productVisibleToSeller(product, currentAccount?.loginId) && matchesText && matchesShipping && matchesCountry;
   });
 }
 function isCatalogVisible(product) { return product.status === "판매중" && product.soldOut !== "품절" && product.exposure !== "미노출" && product.visibility !== "비노출"; }
@@ -2284,8 +2284,22 @@ function sellerCatalogProducts() {
 /* 두고 기본 상품 이미지 (assets/product-00 ~ 34.jpg). 공급사가 사진을 올리지 않으면 이 중 하나를 대표 이미지로 쓴다. */
 const PRODUCT_IMAGE_COUNT = 35;
 function productAssetSrc(index) { const n = ((Math.round(Number(index) || 0) % PRODUCT_IMAGE_COUNT) + PRODUCT_IMAGE_COUNT) % PRODUCT_IMAGE_COUNT; return `assets/product-${String(n).padStart(2, "0")}.jpg`; }
+/* 공급사가 직접 올린 사진(product.photos, 첫 장이 대표)이 있으면 그 사진, 없으면 두고 기본 이미지 */
+const PRODUCT_PHOTO_MAX = 10;
+function productOwnPhotos(product) { return (product?.photos || []).map(imgSrc).filter(Boolean); }
+function productMainSrc(product) { return productOwnPhotos(product)[0] || productAssetSrc(product?.imageIndex); }
 function productPhoto(product, className = "") {
-  return `<img class="product-photo ${className}" src="${productAssetSrc(product?.imageIndex)}" alt="${escapeHtml(product?.name || "상품 이미지")}">`;
+  return `<img class="product-photo ${className}" src="${escapeHtml(productMainSrc(product))}" alt="${escapeHtml(product?.name || "상품 이미지")}">`;
+}
+/* 상품 노출 범위: '선택 셀러만'이면 공급사가 체크한 셀러에게만 상품 소싱·브랜드관에 보인다 */
+function productVisibleToSeller(product, sellerLoginId) {
+  if (product?.visibility === "비노출") return false;
+  if (product?.visibility === "선택 셀러") return (product.visibleSellers || []).includes(sellerLoginId);
+  return true;
+}
+function productSupplierConnections(product) {
+  const supplierLoginId = product?.supplierLoginId || currentAccount?.loginId;
+  return state.connections.filter(connection => connection.supplierLoginId === supplierLoginId && connection.status === "connected");
 }
 
 /* 네이버쇼핑 대분류 아이콘 (쇼핑 앱의 카테고리 메뉴처럼 한눈에 고를 수 있게) */
@@ -2354,7 +2368,7 @@ const BRAND_TAGLINES = { "청송골 과수원": "해발 500m 청송 산지에서
 function brandProfiles() {
   const connected = new Set(currentSellerConnections().map(connection => connection.supplierLoginId));
   const map = new Map();
-  state.products.filter(product => product.status === "판매중" && product.visibility !== "비노출" && connected.has(product.supplierLoginId) && !supplierBlocked(product.supplierLoginId)).forEach(product => {
+  state.products.filter(product => product.status === "판매중" && productVisibleToSeller(product, currentAccount?.loginId) && connected.has(product.supplierLoginId) && !supplierBlocked(product.supplierLoginId)).forEach(product => {
     const name = productBrand(product);
     if (!map.has(name)) map.set(name, { name, supplier: product.supplier, supplierLoginId: product.supplierLoginId, products: [], categories: new Set(), countries: new Set() });
     const brand = map.get(name);
@@ -6826,9 +6840,10 @@ function logChannelApi(entry) {
 }
 /* 셀러가 올린 대표·추가 사진이 있으면 그걸 쓰고, 없으면 공급사 사진. 브라우저에 있는 사진(data URL)은 서버가 네이버 이미지 서버로 올린다 */
 function sellerListingImages(item, product) {
-  const supplierPhoto = absoluteAssetUrl(productAssetSrc(item.imageIndex ?? product?.imageIndex));
+  const supplierOwn = item.imageIndex == null || item.imageIndex === product?.imageIndex ? productOwnPhotos(product).filter(src => /^(https?:|data:image\/)/.test(src)) : [];
+  const supplierPhotos = supplierOwn.length ? supplierOwn : [absoluteAssetUrl(productAssetSrc(item.imageIndex ?? product?.imageIndex))];
   const own = [item.customThumbnail, ...(item.images || [])].map(imgSrc).filter(src => /^(https?:|data:image\/)/.test(src));
-  const list = item.customThumbnail && own.length ? own : [supplierPhoto, ...own];
+  const list = item.customThumbnail && own.length ? own : [...supplierPhotos, ...own];
   return [...new Set(list)].slice(0, 10);
 }
 function absoluteAssetUrl(path) { try { return new URL(path, location.href).href; } catch { return path; } }
@@ -6851,7 +6866,7 @@ function doogoListingFor(item, channelId) {
     category: channelId === "coupang" ? { coupang: detail.categoryCode || "" } : { smartstore: detail.categoryCode || "" },
     shipping: (() => { const sf = itemShippingFee(item, product); const kg = productWeightKg(product); const cp = coupangDelivery(sf, kg); return { naverCarrierCode: naverCarrierCode(product?.carrier || policy.carrier || "한진택배"), carrier: product?.carrier || policy.carrier || "한진택배", feeType: cp.deliveryChargeType === "NOT_FREE" || cp.deliveryChargeType === "CHARGE_RECEIVED" ? "PAID" : cp.deliveryChargeType, fee: cp.deliveryCharge, freeOver: cp.freeShipOverAmount, returnFee: Number(sf.returnFee || policy.returnFee || 0), exchangeFee: Number(sf.exchangeFee || policy.exchangeFee || 0), dispatchDays: sf.attribute === "PRE_ORDER" ? Number(sf.makeDays || 3) : 1, naverDeliveryFee: naverDeliveryFee(sf, kg), naverDeliveryAttribute: sf.attribute, bundle: sf.bundle, directDelivery: sf.method === "DIRECT", coupangDelivery: cp, coupangOutboundCode: policy.outboundCode || policy.id || "", coupangReturnCenterCode: policy.returnCenterCode || policy.id || "", naverShippingAddressId: policy.shippingAddressId || policy.id || "", naverReturnAddressId: policy.returnAddressId || policy.id || "" };})(),
     returnAddress: (() => { const book = supplierAddressBook(product?.supplierLoginId); return book ? { zipCode: book.returnTo.zipCode, address: book.returnTo.address, addressDetail: book.returnTo.detail, phone: book.phone } : { zipCode: policy.zipCode || "", address: policy.address || "", addressDetail: "", phone: supplier?.contact || "" }; })(),
-    asPhone: supplierAddressBook(product?.supplierLoginId)?.phone || supplier?.contact || "", origin: product?.originCountry || "국산", overseas: product?.shippingType === "overseas", pccNeeded: productNeedsCustoms(product), taxType: product?.tax === "면세" ? "FREE" : "TAX", notice: productNoticeFor(product)
+    asPhone: supplierAddressBook(product?.supplierLoginId)?.phone || supplier?.contact || "", origin: product?.originCountry || "국산", overseas: product?.shippingType === "overseas", pccNeeded: productNeedsCustoms(product), taxType: ["면세", "비과세"].includes(product?.tax) ? "FREE" : "TAX", notice: productNoticeFor(product)
   };
 }
 /* 상품정보제공고시 종류: 식품 / 의류 / 기타. 의류는 소재·색상·사이즈를 옵션에서 채운다. */
@@ -7565,7 +7580,7 @@ function readDetailImage(file) {
   });
 }
 function detailEditorMarkup(product) {
-  return `<div class="form-field full detail-editor-field"><label>상품 상세페이지 * <small>스마트스토어 에디터처럼 한 화면에서 글을 쓰고 커서 자리에 사진·표·동영상을 넣어요. HTML 코드·파일도 돼요.</small></label>
+  return `<div class="form-field full detail-editor-field"><label>상품 상세페이지 * ${typeof fieldHelp === "function" ? fieldHelp("detail") : ""} <small>스마트스토어 에디터처럼 한 화면에서 글을 쓰고 커서 자리에 사진·표·동영상을 넣어요. HTML 코드·파일도 돼요.</small></label>
     ${detailEditorMarkupFor("product", productDetailDoc(product), { product })}
     <small>여기 만든 상세페이지가 위탁셀러의 상품 화면과 쇼핑몰 전송용 상세(HTML)에 그대로 복사돼요. 긴 사진은 자동으로 나눠 올라가요.</small></div>`;
 }
@@ -7688,7 +7703,7 @@ function sanitizeDetailHtml(html) {
 }
 function rdePlainText(html) { const doc = new DOMParser().parseFromString(String(html || ""), "text/html"); return (doc.body.textContent || "").replace(/\s+/g, " ").trim(); }
 function rdeEsc(text) { return escapeHtml(String(text || "")); }
-function productImageSrc(product, imageIndex) { return productAssetSrc(imageIndex ?? product?.imageIndex); }
+function productImageSrc(product, imageIndex) { return imageIndex != null ? productAssetSrc(imageIndex) : productMainSrc(product); }
 function youtubeId(url) { const match = String(url || "").match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/); return match ? match[1] : ""; }
 const RDE_IMG_STYLE = "display: block; width: 100%; max-width: 100%; margin: 0 auto";
 function rdeVideoCard(id, editable = false) { return `<div class="rde-video-card"${editable ? ` contenteditable="false" data-youtube="${id}"` : ""}><span>▶</span><b>유튜브 동영상</b><small>youtu.be/${id} · 쇼핑몰에서는 영상이 바로 재생돼요</small></div>`; }
@@ -7727,7 +7742,7 @@ function productDetailDoc(product) {
 function productHasCustomDetail(product) { return Boolean(product?.detailDoc || (Array.isArray(product?.detailBlocks) && product.detailBlocks.length)); }
 function sellerDefaultDoc(product, item) {
   if (productHasCustomDetail(product)) return productDetailDoc(product);
-  return `<p><img src="${productImageSrc(product, item?.imageIndex ?? product?.imageIndex)}" alt="${rdeEsc(product?.name || "상품")}" style="${RDE_IMG_STYLE}"></p><p>${rdeEsc(item?.detailSnapshot || product?.detail || "")}</p>`;
+  return `<p><img src="${productImageSrc(product, item?.imageIndex === product?.imageIndex ? undefined : item?.imageIndex)}" alt="${rdeEsc(product?.name || "상품")}" style="${RDE_IMG_STYLE}"></p><p>${rdeEsc(item?.detailSnapshot || product?.detail || "")}</p>`;
 }
 function itemDetailDoc(item, product) {
   if (item?.detailDoc) return item.detailDoc;
@@ -7845,6 +7860,20 @@ function rdeRender(key) {
   /* 편집 도구가 스크롤할 때 위에 붙어 있게 (위에 붙은 머리가 있으면 그 아래) */
   if (typeof editorScroller === "function") { const scroller = editorScroller(root); root.style.setProperty("--rde-sticky", `${Math.max(0, editorStickyOffset(scroller) - 12)}px`); }
 }
+/* 팝업을 연 직후에는 머리 높이를 아직 잴 수 없어 도구 막대가 머리(상품 정보 수정 제목)를 덮는 일이 있었다.
+   실제로 스크롤할 때 그 스크롤 영역 기준으로 다시 잰다. */
+let rdeStickyFrame = 0;
+document.addEventListener("scroll", event => {
+  const scroller = event.target;
+  if (!(scroller instanceof Element) || rdeStickyFrame) return;
+  rdeStickyFrame = requestAnimationFrame(() => {
+    rdeStickyFrame = 0;
+    const editors = scroller.querySelectorAll(".rde[data-rde]");
+    if (!editors.length || typeof editorStickyOffset !== "function") return;
+    const offset = `${Math.max(0, editorStickyOffset(scroller) - 12)}px`;
+    editors.forEach(root => { if (root.style.getPropertyValue("--rde-sticky") !== offset) root.style.setProperty("--rde-sticky", offset); });
+  });
+}, true);
 function rdeSync(key) {
   const surface = rdeSurfaceOf(key); if (!surface) return;
   rdeDrafts[key] = serializeSurface(surface);
@@ -8026,12 +8055,11 @@ document.addEventListener("keydown", event => {
   else if (imgLink) { event.preventDefault(); imgLink.dispatchEvent(new Event("change", { bubbles: true })); }
   else if (event.target.closest?.("[data-sf-editor] input")) event.preventDefault();
 });
-document.addEventListener("keydown", event => { if (event.key === "Escape" && document.getElementById("rdePreview")) { event.stopPropagation(); document.getElementById("rdePreview").remove(); } }, true);
 document.addEventListener("click", event => {
   const t = event.target;
   const device = t.closest?.("[data-rde-device]");
   if (device) { const layer = device.closest(".rde-preview-layer"); layer.dataset.device = device.dataset.rdeDevice; layer.querySelectorAll("[data-rde-device]").forEach(b => b.classList.toggle("active", b === device)); return; }
-  if (t.closest?.("[data-rde-preview-close]") || t.classList?.contains("rde-preview-layer")) { document.getElementById("rdePreview")?.remove(); return; }
+  if (t.closest?.("[data-rde-preview-close]")) { document.getElementById("rdePreview")?.remove(); return; }
   const root = t.closest?.(".rde[data-rde]"); if (!root) return;
   const key = root.dataset.rde;
   const surface = root.querySelector("[data-rde-surface]");
@@ -8406,33 +8434,129 @@ document.addEventListener("change", event => {
   const weightNote = document.querySelector("#modal [data-ship-weight-note]"); if (weightNote) weightNote.hidden = !(policy && normalizeShipFee(policy.fee).type === "WEIGHT_TIER");
 });
 
+/* 입력칸 옆 ? 도움말: 누르면(휴대폰) 또는 마우스를 올리면(PC) 무엇을 넣는지 짧게 알려 준다 */
+const FIELD_HELP = {
+  category: "네이버쇼핑 카테고리예요. 셀러가 쇼핑몰에 올릴 때 이 카테고리로 등록돼요. 위 검색칸에 상품 이름(예: 사과, 홍삼)을 치면 맞는 카테고리를 바로 찾아 줘요.",
+  status: "‘판매중’이면 셀러가 상품 소싱에서 보고 PICK할 수 있어요. ‘판매중지’로 바꾸면 새 PICK과 주문이 막혀요.",
+  tax: "과세: 부가세 10%가 붙는 일반 상품(가공식품·건강식품·공산품).\n면세: 가공하지 않은 농·축·수산물처럼 부가세가 없는 상품(생과일·생선·쌀 등).\n비과세: 법으로 세금 대상이 아닌 상품(드물어요).\n쇼핑몰에 등록할 때 그대로 전달되니 정확히 골라 주세요.",
+  code: "등록하면 두고가 자동으로 붙이는 번호예요. 셀러 주문이 이 번호로 공급사 상품과 연결돼요. 바꿀 수 없어요.",
+  soldOut: "‘품절’로 바꾸면 셀러 화면에 품절로 보이고 새 주문이 막혀요. 재고가 다시 들어오면 ‘판매가능’으로 돌려 주세요.",
+  exposure: "‘미노출’이면 셀러의 상품 소싱 목록에서 숨겨요. 이미 PICK해서 팔고 있는 셀러에게는 영향이 없어요.",
+  name: "셀러와 쇼핑몰에 보이는 상품 이름이에요. 산지·품종·용량·수량을 넣으면 잘 팔려요.\n예: 제주 레드키위 2kg (20~25과)",
+  cutoff: "이 시간까지 들어온 주문은 그날 출고하는 기준 시간이에요. 셀러에게 ‘오늘 출고 마감’으로 안내돼요.",
+  orderName: "발주서와 포장 작업에 찍히는 이름이에요. 창고에서 알아보기 쉬운 짧은 이름으로 적어요. 비우면 상품명과 같아요.\n예: 붉은대게 2kg 자숙",
+  orderUnit: "한 번 출고할 때 묶어 보내는 기본 수량이에요. 낱개로 보내면 1, 2개씩 묶어 보내면 2처럼 적어요. 발주서에 함께 표시돼요.",
+  shippingType: "국내배송: 국내 창고·산지에서 보내는 상품이에요.\n해외배송(해외직구): 해외에서 고객에게 바로 가는 상품이라 주문할 때 개인통관고유부호가 필요해요.",
+  purchasePrice: "공급사가 이 상품을 들여오는 원가예요. 셀러에게는 보이지 않고, 내 마진을 계산할 때만 써요.",
+  purchaseShipping: "매입할 때의 배송 방식 메모예요. 예: 공급사 직배송, 산지 직송",
+  surcharge: "박스·아이스팩 같은 포장 부자재비예요. 셀러에게는 보이지 않아요.",
+  supply: "셀러가 주문 1개마다 두고에 내는 가격이에요. 정산은 이 금액에서 두고 수수료 7%를 뺀 금액으로 받아요.",
+  recommended: "셀러에게 권하는 쇼핑몰 판매가예요. 셀러가 가격을 정할 때 기준이 되고, ‘판매 현황’ 가격 그래프에 비교선으로 나와요.",
+  retailPrice: "할인 전 정가예요. 쇼핑몰에 ‘정가 → 판매가’처럼 보여 줄 때 써요. 없으면 0으로 두세요.",
+  shipFee: "배송비는 4단계 ‘배송·재고·노출’의 배송 정책에서 골라요. 누르면 그 자리로 이동해요.",
+  photos: "첫 번째 사진이 대표 사진이에요(상품 목록·쇼핑몰 썸네일).\n정사각형 1000×1000px 이상, 흰 배경 사진을 권장해요. 최대 10장까지 올릴 수 있고, 사진 위 ×를 누르면 빠져요. 사진을 안 올리면 두고 기본 이미지가 쓰여요.",
+  origin: "원산지 표시예요. 쇼핑몰 상품정보고시에 들어가요. 예: 경상북도 청송",
+  originCountry: "생산한 나라예요. 셀러 상품 소싱의 ‘국가’ 필터에 쓰여요.",
+  deliveryDays: "주문 후 고객이 받기까지 걸리는 기간이에요. 예: 1~3일",
+  manufactureDate: "제조일이나 수확일 안내예요. 신선식품은 ‘주문일 기준 2일 이내 수확’처럼 적어요.",
+  shelfLife: "소비기한과 보관 방법이에요. 쇼핑몰 상품정보고시에 들어가요. 예: 수령 후 냉장 보관, 3일 이내 섭취",
+  summary: "상품 목록에 한 줄로 보이는 짧은 설명이에요(100자 이내). 예: 새벽 수확 설향 딸기",
+  detail: "쇼핑몰 상세페이지에 들어갈 내용이에요. 글·사진·표를 넣으면 셀러가 PICK할 때 그대로 복사해서 쇼핑몰에 올려요. 사진은 가로 860px 이상을 권장하고, 긴 사진은 자동으로 나눠 올라가요.",
+  shipPolicy: "배송비 규칙이에요. ‘배송 정책’ 메뉴에서 만든 정책(무료·조건부 무료·유료·수량별 등) 중에서 골라요.",
+  shipWeight: "포장까지 포함한 1개 무게(kg)예요. 무게별 배송비 정책을 쓸 때 꼭 넣어야 해요.",
+  carrier: "주로 보내는 택배사예요. 송장을 입력할 때 기본으로 골라져 있어요. 목록에 없으면 직접 입력할 수 있어요.",
+  warehouse: "출고하는 창고나 산지 이름이에요. 창고가 여러 곳이면 구분용으로 적어요.",
+  stock: "지금 보낼 수 있는 수량이에요. 0이 되면 셀러 화면에 품절로 보여요. 옵션을 쓰면 옵션 재고를 합친 값이 자동으로 들어가요.",
+  unit: "상품 1개의 용량과 단위예요. 예: 2 KG, 1 EA, 1 BOX",
+  managementCode: "공급사 안에서 쓰는 자체 품번이에요. 발주서에 같이 찍혀요. 비우면 상품코드를 써요.",
+  barcode: "상품 바코드 번호(EAN 등)가 있으면 적어요. 없으면 비워 두세요.",
+  visibility: "이 상품을 어떤 셀러가 볼 수 있는지 정해요.\n연결 셀러 전체: 나와 연결된 모든 셀러에게 보여요.\n선택 셀러만: 아래에서 체크한 셀러에게만 보여요.\n비노출: 어떤 셀러에게도 안 보여요.\n이미 PICK해서 팔고 있는 셀러의 판매는 그대로 유지돼요."
+};
+function fieldHelp(key) {
+  const text = FIELD_HELP[key]; if (!text) return "";
+  return `<button type="button" class="fh" data-fh="${key}" aria-label="도움말 보기" aria-expanded="false">?</button>`;
+}
+function hideFieldHelp() {
+  const pop = document.getElementById("fhPop"); if (pop) pop.hidden = true;
+  document.querySelectorAll(".fh[aria-expanded='true']").forEach(button => button.setAttribute("aria-expanded", "false"));
+}
+function showFieldHelp(button, pinned = false) {
+  const text = FIELD_HELP[button.dataset.fh]; if (!text) return;
+  let pop = document.getElementById("fhPop");
+  if (!pop) { pop = document.createElement("div"); pop.id = "fhPop"; pop.className = "fh-pop"; pop.setAttribute("role", "tooltip"); document.body.appendChild(pop); }
+  hideFieldHelp();
+  pop.textContent = text; pop.hidden = false; pop.dataset.pinned = pinned ? "1" : "";
+  button.setAttribute("aria-expanded", "true");
+  const rect = button.getBoundingClientRect(), width = Math.min(300, window.innerWidth - 24);
+  pop.style.width = `${width}px`;
+  const left = Math.max(12, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 12));
+  const below = rect.bottom + 8, height = pop.offsetHeight;
+  pop.style.left = `${left}px`;
+  pop.style.top = `${below + height > window.innerHeight - 12 ? Math.max(12, rect.top - height - 8) : below}px`;
+}
+document.addEventListener("click", event => {
+  const button = event.target.closest?.("[data-fh]");
+  if (button) { event.preventDefault(); event.stopPropagation(); const pop = document.getElementById("fhPop"); if (pop && !pop.hidden && button.getAttribute("aria-expanded") === "true" && pop.dataset.pinned) hideFieldHelp(); else showFieldHelp(button, true); return; }
+  if (!event.target.closest?.("#fhPop")) hideFieldHelp();
+}, true);
+document.addEventListener("mouseover", event => { const button = event.target.closest?.("[data-fh]"); if (button && window.matchMedia("(hover: hover)").matches && document.getElementById("fhPop")?.dataset.pinned !== "1") showFieldHelp(button); });
+document.addEventListener("mouseout", event => { const button = event.target.closest?.("[data-fh]"); const pop = document.getElementById("fhPop"); if (button && pop && pop.dataset.pinned !== "1") hideFieldHelp(); });
+document.addEventListener("scroll", () => { const pop = document.getElementById("fhPop"); if (pop && !pop.hidden) hideFieldHelp(); }, true);
+
+/* 상품 사진 관리: 올린 사진마다 ×(빼기)·대표로. 사진이 없으면 두고 기본 이미지를 대표로 쓴다 */
+let productPhotoDraft = [];
+function productPhotoTiles(presetIndex = Number(document.querySelector("#modal [name=imageIndex]:checked")?.value ?? 0)) {
+  const tiles = productPhotoDraft.map((ref, index) => `<figure class="pe-photo ${index === 0 ? "main" : ""}"><img src="${escapeHtml(imgSrc(ref))}" alt="상품 사진 ${index + 1}"><button type="button" class="pe-photo-x" data-action="pe-photo-del" data-index="${index}" aria-label="이 사진 빼기">×</button>${index === 0 ? `<em>대표</em>` : `<button type="button" class="pe-photo-main" data-action="pe-photo-main" data-index="${index}">대표로</button>`}</figure>`).join("");
+  const preset = productPhotoDraft.length ? "" : `<figure class="pe-photo main preset"><img src="${productAssetSrc(presetIndex)}" alt="두고 기본 이미지"><em>대표 · 기본 이미지</em><button type="button" class="pe-photo-main" data-action="pe-library-open">바꾸기</button></figure>`;
+  const add = productPhotoDraft.length < PRODUCT_PHOTO_MAX ? `<button type="button" class="pe-photo-add" data-action="pe-photo-add"><b>+</b><span>사진 올리기</span><small>${productPhotoDraft.length}/${PRODUCT_PHOTO_MAX}</small></button>` : "";
+  return `${preset}${tiles}${add}`;
+}
+function refreshProductPhotos() { const box = document.getElementById("pePhotos"); if (box) box.innerHTML = productPhotoTiles(); }
+function productPhotoManager(product) {
+  productPhotoDraft = [...(product?.photos || [])];
+  const presetIndex = product?.imageIndex ?? 0;
+  return `<div class="form-field full pe-photos-field"><label>상품 사진 ${fieldHelp("photos")} <small>첫 번째가 대표 사진 · 최대 ${PRODUCT_PHOTO_MAX}장 · ×를 누르면 빠져요</small></label>
+    <div id="pePhotos" class="pe-photos">${productPhotoTiles(presetIndex)}</div>
+    <input type="file" id="pePhotoInput" class="rde-file-input" accept="image/png,image/jpeg,image/webp" multiple tabindex="-1" aria-hidden="true">
+    <details class="pe-library" data-pe-library><summary>두고 기본 이미지에서 고르기 <small>사진을 올리지 않았을 때 대표로 쓰여요</small></summary><div class="image-picker">${Array.from({ length: PRODUCT_IMAGE_COUNT }, (_, index) => `<label><input type="radio" name="imageIndex" value="${index}" ${presetIndex === index ? "checked" : ""}><span>${productPhoto({ name: `두고 기본 이미지 ${index + 1}`, imageIndex: index }, "picker-photo")}<b>${index + 1}</b></span></label>`).join("")}</div></details></div>`;
+}
+function productVisibilityValue(product) { return ["선택 셀러", "비노출"].includes(product?.visibility) ? product.visibility : "연결 셀러"; }
+/* 상품 노출 범위 '선택 셀러만': 연결된 셀러를 체크해서 고른다 */
+function visibleSellersMarkup(product, visibility) {
+  const connections = productSupplierConnections(product);
+  const chosen = new Set(product?.visibleSellers || []);
+  const nameOf = id => memberByLogin(id)?.company || id;
+  if (!connections.length) return `<span>연결 거래처</span><small>아직 연결된 셀러가 없어요. ‘거래처 연결’에서 연결 코드를 보내면 여기에 나와요.</small>`;
+  if (visibility === "선택 셀러") return `<span>보여 줄 셀러 고르기 <em>${connections.length}곳 중 체크한 셀러에게만 보여요</em></span><div class="vis-seller-list">${connections.map(connection => `<label class="vis-seller"><input type="checkbox" name="visibleSellers" value="${escapeHtml(connection.sellerLoginId)}" ${chosen.has(connection.sellerLoginId) ? "checked" : ""}><b>${escapeHtml(nameOf(connection.sellerLoginId))}</b></label>`).join("")}</div>`;
+  if (visibility === "비노출") return `<span>연결 거래처</span><small>비노출이라 어떤 셀러에게도 보이지 않아요.</small>`;
+  return `<span>연결 거래처</span>${connections.map(connection => `<b>✓ ${escapeHtml(nameOf(connection.sellerLoginId))}</b>`).join("")}`;
+}
 function productEditorModal(product = null) {
   const isEdit = Boolean(product);
   const value = (key, fallback = "") => escapeHtml(product?.[key] ?? fallback);
   const selected = (key, option, fallback = "") => (product?.[key] ?? fallback) === option ? "selected" : "";
-  const connected = currentSupplierConnections();
   openModal(`<div class="product-editor-head balju-product-head"><div><span>DOOGO · SINGLE PRODUCT</span><h2>${isEdit ? "상품 정보 수정" : "상품 등록"}</h2><p>${isEdit ? `${product.id} · 모든 수정 내용은 마스터 변경 이력에 저장됩니다.` : "매입·가격·배송·노출 정보를 한 번에 입력합니다."}</p></div><div class="editor-progress" role="tablist" aria-label="입력 단계">${["기본정보", "매입·가격", "이미지·안내", "배송·노출"].map((label, index) => `<button type="button" role="tab" class="${index === 0 ? "active" : ""}" data-editor-jump="${index}" aria-selected="${index === 0}">${index + 1} ${label}</button>`).join("")}</div></div>
     <form id="${isEdit ? "editProductForm" : "productForm"}" class="product-editor-form balju-product-form" ${isEdit ? `data-id="${product.id}"` : ""}>
       <section class="editor-section"><div class="editor-section-title"><span>01</span><div><h3>상품 기본정보</h3><p>상품 상태와 발주 기준을 설정합니다.</p></div></div><div class="editor-grid cols-4">
-        <div class="form-field full category-cascade-field"><label>카테고리 * <small>네이버쇼핑 기준 대분류·중분류·소분류·세분류</small></label><div class="category-search-box"><input type="text" class="category-search-input" data-category-search placeholder="예: 프로폴리스, 노트북, 캠핑용품 검색" autocomplete="off"><div class="category-search-results" data-category-search-results hidden></div></div><div class="category-cascade-row">${(() => { const path = [product?.categoryGroup || "식품", product?.category || "", product?.categorySub || "", product?.categoryDetail || ""]; return `${categorySelectTag("categoryGroup", 1, path, "required")}${categorySelectTag("category", 2, path, "required")}${categorySelectTag("categorySub", 3, path, "required")}${categorySelectTag("categoryDetail", 4, path, "required")}`; })()}</div></div>
-        <div class="form-field"><label>판매 상태 *</label><select name="status"><option ${selected("status","판매중","판매중")}>판매중</option><option ${selected("status","판매중지")}>판매중지</option></select></div>
-        <div class="form-field"><label>과세 여부 *</label><select name="tax"><option ${selected("tax","과세","과세")}>과세</option><option ${selected("tax","비과세")}>비과세</option></select></div>
-        <div class="form-field span-2"><label>상품코드</label><input value="${value("id", "등록 시 자동 생성")}" disabled></div>
-        <div class="form-field"><label>품절 여부 *</label><select name="soldOut"><option value="판매가능" ${selected("soldOut","판매가능","판매가능")}>판매가능</option><option value="품절" ${selected("soldOut","품절")}>품절</option></select></div>
-        <div class="form-field"><label>노출 여부 *</label><select name="exposure"><option value="노출" ${selected("exposure","노출","노출")}>노출</option><option value="미노출" ${selected("exposure","미노출")}>미노출</option></select></div>
-        <div class="form-field span-3"><label>상품명 *</label><input name="name" value="${value("name")}" placeholder="예: 제주 레드키위 2kg" required></div>
-        <div class="form-field"><label>발주 마감시간 *</label><input name="cutoff" type="time" value="${value("cutoff","10:00")}" required></div>
-        <div class="form-field span-2"><label>발주 상품명</label><input name="orderName" value="${value("orderName")}" placeholder="비워두면 상품명과 동일"></div>
-        <div class="form-field"><label>발주 단위</label><input name="orderUnit" type="number" value="${value("orderUnit",1)}" min="1"></div>
-        <div class="form-field"><label>배송 유형 *</label><select name="shippingType" data-shipping-type><option value="domestic" ${selected("shippingType","domestic","domestic")}>국내배송</option><option value="overseas" ${selected("shippingType","overseas")}>해외배송(해외직구)</option></select></div>
+        <div class="form-field full category-cascade-field"><label>카테고리 * ${fieldHelp("category")} <small>네이버쇼핑 기준 대분류·중분류·소분류·세분류</small></label><div class="category-search-box"><input type="text" class="category-search-input" data-category-search placeholder="예: 프로폴리스, 노트북, 캠핑용품 검색" autocomplete="off"><div class="category-search-results" data-category-search-results hidden></div></div><div class="category-cascade-row">${(() => { const path = [product?.categoryGroup || "식품", product?.category || "", product?.categorySub || "", product?.categoryDetail || ""]; return `${categorySelectTag("categoryGroup", 1, path, "required")}${categorySelectTag("category", 2, path, "required")}${categorySelectTag("categorySub", 3, path, "required")}${categorySelectTag("categoryDetail", 4, path, "required")}`; })()}</div></div>
+        <div class="form-field"><label>판매 상태 * ${fieldHelp("status")}</label><select name="status"><option ${selected("status","판매중","판매중")}>판매중</option><option ${selected("status","판매중지")}>판매중지</option></select></div>
+        <div class="form-field"><label>과세 여부 * ${fieldHelp("tax")}</label><select name="tax">${["과세", "면세", "비과세"].map(option => `<option ${selected("tax", option, "과세")}>${option}</option>`).join("")}</select></div>
+        <div class="form-field span-2"><label>상품코드 ${fieldHelp("code")}</label><input value="${value("id", "등록 시 자동 생성")}" disabled></div>
+        <div class="form-field"><label>품절 여부 * ${fieldHelp("soldOut")}</label><select name="soldOut"><option value="판매가능" ${selected("soldOut","판매가능","판매가능")}>판매가능</option><option value="품절" ${selected("soldOut","품절")}>품절</option></select></div>
+        <div class="form-field"><label>노출 여부 * ${fieldHelp("exposure")}</label><select name="exposure"><option value="노출" ${selected("exposure","노출","노출")}>노출</option><option value="미노출" ${selected("exposure","미노출")}>미노출</option></select></div>
+        <div class="form-field span-3"><label>상품명 * ${fieldHelp("name")}</label><input name="name" value="${value("name")}" placeholder="예: 제주 레드키위 2kg" required></div>
+        <div class="form-field"><label>발주 마감시간 * ${fieldHelp("cutoff")}</label><input name="cutoff" type="time" value="${value("cutoff","10:00")}" required></div>
+        <div class="form-field span-2"><label>발주 상품명 ${fieldHelp("orderName")}</label><input name="orderName" value="${value("orderName")}" placeholder="비워두면 상품명과 동일"></div>
+        <div class="form-field"><label>발주 단위 ${fieldHelp("orderUnit")}</label><input name="orderUnit" type="number" value="${value("orderUnit",1)}" min="1"></div>
+        <div class="form-field"><label>배송 유형 * ${fieldHelp("shippingType")}</label><select name="shippingType" data-shipping-type><option value="domestic" ${selected("shippingType","domestic","domestic")}>국내배송</option><option value="overseas" ${selected("shippingType","overseas")}>해외배송(해외직구)</option></select></div>
         <div class="form-field full customs-policy" data-customs-policy ${product?.shippingType === "overseas" ? "" : "hidden"}><label class="customs-toggle"><input type="checkbox" name="requireCustomsCode" ${product?.requireCustomsCode === false ? "" : "checked"}><span><b>개인통관고유부호 받기</b><small>체크하면 위탁셀러가 이 상품을 주문할 때 <em>개인통관고유부호를 꼭 입력</em>해야 주문이 들어와요. 해외배송은 통관에 필요해서 켜 두는 걸 권장해요.</small></span></label></div>
       </div></section>
-      <section class="editor-section"><div class="editor-section-title"><span>02</span><div><h3>매입·판매 가격</h3><p>공급사 매입처와 셀러 공급가격을 구분합니다.</p></div></div><div class="purchase-strip"><div><span>기본 매입처</span><b>${escapeHtml(workspaceCompany("supplier"))}</b></div><div><span>매입 원가</span><input name="purchasePrice" type="number" value="${value("purchasePrice", product?.supply || 15900)}" min="100" required></div><div><span>매입 배송정책</span><input name="purchaseShipping" value="${value("purchaseShipping","공급사 직배송")}" required></div><div><span>부자재비</span><input name="surcharge" type="number" value="${value("surcharge",0)}" min="0"></div></div><div class="editor-grid cols-4 price-editor-grid">
-        <div class="form-field"><label>공급가 *</label><input name="supply" type="number" value="${value("supply",15900)}" min="100" required></div><div class="form-field"><label>권장 판매가 *</label><input name="recommended" type="number" value="${value("recommended",22900)}" min="100" required></div><div class="form-field"><label>소비자가</label><input name="retailPrice" type="number" value="${value("retailPrice",29900)}" min="0"></div><div class="form-field"><label>배송비 정책 *</label><button type="button" class="sf-jump" data-editor-jump="3"><span>${escapeHtml((() => { const pol = productShippingPolicy(product) || defaultShippingPolicy(product?.supplierLoginId || currentAccount.loginId, "supplier"); return pol ? `${pol.name} · ${shippingFeeLabel(pol.fee)}` : shippingFeeLabel(productShippingFee(product)); })())}</span><b>4단계에서 고르기 →</b></button></div>
+      <section class="editor-section"><div class="editor-section-title"><span>02</span><div><h3>매입·판매 가격</h3><p>공급사 매입처와 셀러 공급가격을 구분합니다.</p></div></div><div class="purchase-strip"><div><span>기본 매입처</span><b>${escapeHtml(product ? (memberByLogin(product.supplierLoginId)?.company || product.supplier) : workspaceCompany("supplier"))}</b></div><div><span>매입 원가 ${fieldHelp("purchasePrice")}</span><input name="purchasePrice" type="number" value="${value("purchasePrice", product?.supply || 15900)}" min="100" required></div><div><span>매입 배송정책 ${fieldHelp("purchaseShipping")}</span><input name="purchaseShipping" value="${value("purchaseShipping","공급사 직배송")}" required></div><div><span>부자재비 ${fieldHelp("surcharge")}</span><input name="surcharge" type="number" value="${value("surcharge",0)}" min="0"></div></div><div class="editor-grid cols-4 price-editor-grid">
+        <div class="form-field"><label>공급가 * ${fieldHelp("supply")}</label><input name="supply" type="number" value="${value("supply",15900)}" min="100" required></div><div class="form-field"><label>권장 판매가 * ${fieldHelp("recommended")}</label><input name="recommended" type="number" value="${value("recommended",22900)}" min="100" required></div><div class="form-field"><label>소비자가 ${fieldHelp("retailPrice")}</label><input name="retailPrice" type="number" value="${value("retailPrice",29900)}" min="0"></div><div class="form-field"><label>배송비 정책 * ${fieldHelp("shipFee")}</label><button type="button" class="sf-jump" data-editor-jump="3"><span>${escapeHtml((() => { const pol = productShippingPolicy(product) || defaultShippingPolicy(product?.supplierLoginId || currentAccount.loginId, "supplier"); return pol ? `${pol.name} · ${shippingFeeLabel(pol.fee)}` : shippingFeeLabel(productShippingFee(product)); })())}</span><b>4단계에서 고르기 →</b></button></div>
       </div><div class="balju-partner-table"><div class="balju-table-title"><b>매출처/그룹 개별공급가 설정</b><span>연결 거래처별 노출 및 공급가</span></div><div class="balju-table-row heading"><span>타입</span><span>거래처명</span><span>공급가</span><span>판매 배송정책</span><span>노출</span></div><div class="balju-table-row"><span>기본</span><b>연결된 위탁셀러 전체</b><strong>${money(product?.supply || 15900)}</strong><span>${escapeHtml(product?.shippingPolicy || "무료배송")}</span><em>노출</em></div></div></section>
       ${supplierOptionEditor(product)}
-      <section class="editor-section"><div class="editor-section-title"><span>03</span><div><h3>상품 이미지·매출처 안내사항</h3><p>대표 이미지를 선택하고 셀러에게 복사될 상품정보를 입력합니다.</p></div></div><div class="image-picker">${Array.from({length:PRODUCT_IMAGE_COUNT},(_,index)=>`<label><input type="radio" name="imageIndex" value="${index}" ${(product?.imageIndex ?? 0) === index ? "checked" : ""}><span>${productPhoto({name:`AI 상품 이미지 ${index+1}`,imageIndex:index},"picker-photo")}<b>이미지 ${index+1}</b></span></label>`).join("")}</div><div class="editor-grid"><div class="form-field full balju-file-field"><label>상품 이미지 파일</label><input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp"><small>JPG·PNG·WEBP, 10MB 이하. 파일을 선택하지 않으면 위 대표 이미지가 사용됩니다.</small></div><div class="form-field"><label>원산지</label><input name="origin" value="${value("origin","대한민국")}" placeholder="예: 제주특별자치도"></div><div class="form-field"><label>원산 국가</label><select name="originCountry"><option ${selected("originCountry","대한민국","대한민국")}>대한민국</option><option ${selected("originCountry","중국")}>중국</option><option ${selected("originCountry","뉴질랜드")}>뉴질랜드</option><option ${selected("originCountry","호주")}>호주</option></select></div><div class="form-field"><label>예상 배송기간</label><input name="deliveryDays" value="${value("deliveryDays","1~3일")}"></div><div class="form-field"><label>제조·수확일</label><input name="manufactureDate" value="${value("manufactureDate")}" placeholder="예: 주문일 기준 2일 이내"></div><div class="form-field"><label>소비기한·보관법</label><input name="shelfLife" value="${value("shelfLife","수령 후 냉장·냉동 보관")}"></div><div class="form-field full"><label>상품 간략설명</label><input name="summary" value="${value("summary")}" maxlength="100" placeholder="상품 목록에 표시할 100자 이내 설명"></div>${detailEditorMarkup(product)}</div></section>
-      <section class="editor-section"><div class="editor-section-title"><span>04</span><div><h3>배송·재고·노출</h3><p>배송 정책 불러오기·택배사·재고·노출 범위를 설정합니다.</p></div></div><div class="editor-grid cols-4"><div class="form-field full sf-field"><label>배송 정책 * <small>‘배송 정책’ 메뉴에서 만든 정책을 불러와요 (스마트스토어 배송 항목과 같아요)</small></label>${shippingPolicyPicker({ role: "supplier", loginId: product?.supplierLoginId || currentAccount.loginId, selectedId: product?.shippingPolicyId })}</div><div class="form-field"><label>배송 무게 (kg) <small>포장 포함 1개 무게</small></label><input name="shipWeight" inputmode="decimal" value="${escapeHtml(String(product?.shipWeight ?? (String(product?.unit || "KG").toUpperCase() === "KG" && product?.weight ? product.weight : "")))}" placeholder="예) 0.3"><small class="ship-weight-note" data-ship-weight-note ${normalizeShipFee((productShippingPolicy(product) || defaultShippingPolicy(product?.supplierLoginId || currentAccount.loginId, "supplier") || {}).fee).type === "WEIGHT_TIER" ? "" : "hidden"}>무게 구간 정책이라 배송 무게가 꼭 필요해요.</small></div><div class="form-field span-2"><label>택배사 <small>네이버 스마트스토어 택배사 목록</small></label>${carrierPicker("carrier", product?.carrier || supplierProfile().carrier || "한진택배")}</div><div class="form-field"><label>창고</label><input name="warehouse" value="${value("warehouse","공급사 직배송")}"></div><div class="form-field"><label>초기 재고 *</label><input name="stock" type="number" value="${value("stock",100)}" min="0" required></div><div class="form-field"><label>단위</label><div class="unit-input"><input name="weight" type="number" value="${value("weight",1)}" min="0" step="0.1"><select name="unit"><option ${selected("unit","KG","KG")}>KG</option><option ${selected("unit","EA")}>EA</option><option ${selected("unit","BOX")}>BOX</option></select></div></div><div class="form-field"><label>관리코드</label><input name="managementCode" value="${value("managementCode")}" placeholder="최대 50자"></div><div class="form-field"><label>바코드</label><input name="barcode" value="${value("barcode")}" placeholder="영문·숫자 입력"></div><div class="form-field span-2"><label>상품 노출 범위</label><select name="visibility"><option value="연결 셀러" ${selected("visibility","연결 셀러","연결 셀러")}>연결 셀러 전체</option><option value="선택 셀러" ${selected("visibility","선택 셀러")}>선택 셀러만</option><option value="비노출" ${selected("visibility","비노출")}>비노출</option></select></div></div><div class="connected-visibility"><span>연결 거래처</span>${connected.length ? connected.map(connection=>`<b>✓ ${escapeHtml(memberByLogin(connection.sellerLoginId)?.company || connection.sellerLoginId)}</b>`).join("") : `<small>연결된 셀러가 없습니다.</small>`}</div></section>
+      <section class="editor-section"><div class="editor-section-title"><span>03</span><div><h3>상품 이미지·매출처 안내사항</h3><p>대표 이미지를 선택하고 셀러에게 복사될 상품정보를 입력합니다.</p></div></div><div class="editor-grid">${productPhotoManager(product)}<div class="form-field"><label>원산지 ${fieldHelp("origin")}</label><input name="origin" value="${value("origin","대한민국")}" placeholder="예: 제주특별자치도"></div><div class="form-field"><label>원산 국가 ${fieldHelp("originCountry")}</label><select name="originCountry">${[...new Set(["대한민국", "중국", "뉴질랜드", "호주", "미국", "일본", "베트남", "태국", "칠레", "캐나다", "독일", "프랑스", "이탈리아", "스페인", product?.originCountry].filter(Boolean))].map(country => `<option ${selected("originCountry", country, "대한민국")}>${escapeHtml(country)}</option>`).join("")}</select></div><div class="form-field"><label>예상 배송기간 ${fieldHelp("deliveryDays")}</label><input name="deliveryDays" value="${value("deliveryDays","1~3일")}"></div><div class="form-field"><label>제조·수확일 ${fieldHelp("manufactureDate")}</label><input name="manufactureDate" value="${value("manufactureDate")}" placeholder="예: 주문일 기준 2일 이내"></div><div class="form-field"><label>소비기한·보관법 ${fieldHelp("shelfLife")}</label><input name="shelfLife" value="${value("shelfLife","수령 후 냉장·냉동 보관")}"></div><div class="form-field full"><label>상품 간략설명 ${fieldHelp("summary")}</label><input name="summary" value="${value("summary")}" maxlength="100" placeholder="상품 목록에 표시할 100자 이내 설명"></div>${detailEditorMarkup(product)}</div></section>
+      <section class="editor-section"><div class="editor-section-title"><span>04</span><div><h3>배송·재고·노출</h3><p>배송 정책 불러오기·택배사·재고·노출 범위를 설정합니다.</p></div></div><div class="editor-grid cols-4"><div class="form-field full sf-field"><label>배송 정책 * ${fieldHelp("shipPolicy")} <small>‘배송 정책’ 메뉴에서 만든 정책을 불러와요 (스마트스토어 배송 항목과 같아요)</small></label>${shippingPolicyPicker({ role: "supplier", loginId: product?.supplierLoginId || currentAccount.loginId, selectedId: product?.shippingPolicyId })}</div><div class="form-field"><label>배송 무게 (kg) ${fieldHelp("shipWeight")} <small>포장 포함 1개 무게</small></label><input name="shipWeight" inputmode="decimal" value="${escapeHtml(String(product?.shipWeight ?? (String(product?.unit || "KG").toUpperCase() === "KG" && product?.weight ? product.weight : "")))}" placeholder="예) 0.3"><small class="ship-weight-note" data-ship-weight-note ${normalizeShipFee((productShippingPolicy(product) || defaultShippingPolicy(product?.supplierLoginId || currentAccount.loginId, "supplier") || {}).fee).type === "WEIGHT_TIER" ? "" : "hidden"}>무게 구간 정책이라 배송 무게가 꼭 필요해요.</small></div><div class="form-field span-2"><label>택배사 ${fieldHelp("carrier")} <small>네이버 스마트스토어 택배사 목록</small></label>${carrierPicker("carrier", product?.carrier || supplierProfile().carrier || "한진택배")}</div><div class="form-field"><label>창고 ${fieldHelp("warehouse")}</label><input name="warehouse" value="${value("warehouse","공급사 직배송")}"></div><div class="form-field"><label>${isEdit ? "재고" : "초기 재고"} * ${fieldHelp("stock")}</label><input name="stock" type="number" value="${value("stock",100)}" min="0" required></div><div class="form-field"><label>단위 ${fieldHelp("unit")}</label><div class="unit-input"><input name="weight" type="number" value="${value("weight",1)}" min="0" step="0.1"><select name="unit">${[...new Set(["KG", "EA", "BOX", String(product?.unit || "").toUpperCase()].filter(Boolean))].map(unit => `<option ${String(product?.unit || "KG").toUpperCase() === unit ? "selected" : ""}>${escapeHtml(unit)}</option>`).join("")}</select></div></div><div class="form-field"><label>관리코드 ${fieldHelp("managementCode")}</label><input name="managementCode" value="${value("managementCode")}" placeholder="최대 50자"></div><div class="form-field"><label>바코드 ${fieldHelp("barcode")}</label><input name="barcode" value="${value("barcode")}" placeholder="영문·숫자 입력"></div><div class="form-field span-2"><label>상품 노출 범위 ${fieldHelp("visibility")}</label><select name="visibility" data-visibility-select>${[["연결 셀러", "연결 셀러 전체"], ["선택 셀러", "선택 셀러만"], ["비노출", "비노출"]].map(([option, label]) => `<option value="${option}" ${productVisibilityValue(product) === option ? "selected" : ""}>${label}</option>`).join("")}</select></div></div><div class="connected-visibility" data-visible-sellers>${visibleSellersMarkup(product, productVisibilityValue(product))}</div></section>
       <div class="editor-sticky-actions"><span>필수항목을 확인한 뒤 저장해 주세요.</span><div><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">${isEdit ? "수정 내용 저장" : "상품 등록·셀러 노출"}</button></div></div>
     </form>`);
   document.querySelector("#modal .modal").classList.add("product-editor-modal");
@@ -9278,6 +9402,10 @@ document.addEventListener("click", event => {
   if (action === "studio-add-tag") { const input = document.getElementById("studioTagInput"); addStudioTag(input?.value); if (input) { input.value = ""; input.focus(); } return; }
   if (action === "studio-suggest-tag") { addStudioTag(target.dataset.tag); return; }
   if (action === "studio-remove-tag") { if (studioDraft) { studioDraft.tags = studioDraft.tags.filter(tag => tag !== target.dataset.tag); const el = document.getElementById("studioTags"); if (el) el.innerHTML = studioTagChips(); } return; }
+  if (action === "pe-photo-add") { document.getElementById("pePhotoInput")?.click(); return; }
+  if (action === "pe-photo-del") { productPhotoDraft.splice(Number(target.dataset.index), 1); refreshProductPhotos(); showToast(productPhotoDraft.length ? "사진을 뺐어요. 저장하면 적용돼요." : "사진을 모두 뺐어요. 저장하면 두고 기본 이미지가 대표로 쓰여요."); return; }
+  if (action === "pe-photo-main") { const [ref] = productPhotoDraft.splice(Number(target.dataset.index), 1); if (ref) productPhotoDraft.unshift(ref); refreshProductPhotos(); showToast("대표 사진으로 바꿨어요. 저장하면 적용돼요."); return; }
+  if (action === "pe-library-open") { const library = document.querySelector("#modal [data-pe-library]"); if (library) { library.open = true; library.scrollIntoView({ behavior: "smooth", block: "nearest" }); } return; }
   if (action === "studio-gallery-add") { document.getElementById("studioGalleryInput")?.click(); return; }
   if (action === "studio-gallery-del") { if (studioDraft) { studioDraft.images.splice(Number(target.dataset.index), 1); refreshStudioGallery(); } return; }
   if (action === "studio-gallery-main") { if (studioDraft) { const index = Number(target.dataset.index); const [ref] = studioDraft.images.splice(index, 1); if (studioDraft.thumbnail) studioDraft.images.splice(index, 0, studioDraft.thumbnail); studioDraft.thumbnail = ref; refreshStudioThumb(); refreshStudioGallery(); showToast("대표 사진으로 바꿨어요. 저장하면 적용돼요."); } return; }
@@ -10019,6 +10147,27 @@ document.addEventListener("change", event => {
     shrinkImageFile(file, forBlock ? 900 : 1000, .82).then(storeImage).then(image => {
       studioDraft.thumbnail = image; refreshStudioThumb(); showToast("대표 사진을 바꿨어요. 저장하면 적용돼요.");
     }).catch(() => showToast("사진을 불러오지 못했어요. 다른 사진을 골라 주세요."));
+    return;
+  }
+  if (event.target.id === "pePhotoInput") {
+    const files = [...(event.target.files || [])].filter(file => file.type.startsWith("image/"));
+    event.target.value = "";
+    if (!files.length) return;
+    const room = PRODUCT_PHOTO_MAX - productPhotoDraft.length;
+    if (room <= 0) { showToast(`상품 사진은 ${PRODUCT_PHOTO_MAX}장까지예요. 안 쓰는 사진을 ×로 빼고 올려 주세요.`); return; }
+    Promise.all(files.slice(0, room).map(file => shrinkImageFile(file, 1200, .85).then(storeImage))).then(refs => {
+      productPhotoDraft.push(...refs); refreshProductPhotos();
+      showToast(`사진 ${refs.length}장을 넣었어요.${files.length > room ? ` (${PRODUCT_PHOTO_MAX}장까지만 넣었어요)` : ""} 저장하면 적용돼요.`);
+    }).catch(() => showToast("사진을 불러오지 못했어요. 다른 사진을 골라 주세요."));
+    return;
+  }
+  if (event.target.name === "imageIndex" && event.target.closest("#editProductForm, #productForm")) { refreshProductPhotos(); return; }
+  if (event.target.matches?.("[data-visibility-select]")) {
+    const form = event.target.closest("form");
+    const box = form?.parentElement?.querySelector("[data-visible-sellers]") || document.querySelector("#modal [data-visible-sellers]");
+    const product = productOf(form?.dataset.id) || { supplierLoginId: currentAccount?.loginId };
+    const checked = [...(form?.querySelectorAll("[name=visibleSellers]:checked") || [])].map(input => input.value);
+    if (box) box.innerHTML = visibleSellersMarkup({ ...product, visibleSellers: checked.length ? checked : product.visibleSellers }, event.target.value);
     return;
   }
   if (event.target.id === "studioGalleryInput") {
@@ -10779,11 +10928,16 @@ document.addEventListener("submit", event => {
     saveState(); closeModal(); render(); updateAccountUI(); showToast("가송장을 취소하고 셀러 화면에 반영했습니다.");
   }
   if ((form.id === "productForm" || form.id === "editProductForm") && !productDetailReady(form)) return;
+  if (form.id === "productForm" || form.id === "editProductForm") {
+    data.visibleSellers = [...form.querySelectorAll("[name=visibleSellers]:checked")].map(input => input.value);
+    if (data.visibility === "선택 셀러" && !data.visibleSellers.length) { form.querySelector("[data-visible-sellers]")?.scrollIntoView({ behavior: "smooth", block: "center" }); return showToast("‘선택 셀러만’은 보여 줄 셀러를 1곳 이상 체크해 주세요."); }
+    data.photos = [...productPhotoDraft];
+  }
   if (form.id === "productForm") {
     const optionData = readSupplierOptions(form);
     if (optionData.message) { form.querySelector("[data-option-editor]")?.scrollIntoView({ behavior: "smooth", block: "center" }); return showToast(optionData.message); }
     const id = `DF-${4000 + state.products.length * 17}`;
-    state.products.unshift({ id, emoji: "📦", imageIndex: Number(data.imageIndex), name: data.name, supplier: workspaceCompany("supplier"), supplierLoginId: currentAccount.loginId, supply: Number(data.supply), recommended: Number(data.recommended), retailPrice: Number(data.retailPrice || 0), purchasePrice: Number(data.purchasePrice), purchaseShipping: data.purchaseShipping, surcharge: Number(data.surcharge || 0), soldOut: data.soldOut, exposure: data.exposure, stock: Number(data.stock), categoryGroup: data.categoryGroup, category: data.category, categorySub: data.categorySub, categoryDetail: data.categoryDetail, status: data.status, tax: data.tax, cutoff: data.cutoff, orderName: data.orderName || data.name, orderUnit: Number(data.orderUnit || 1), shippingPolicy: data.shippingPolicy, carrier: data.carrier, warehouse: data.warehouse, weight: Number(data.weight || 0), unit: data.unit, managementCode: data.managementCode || id, barcode: data.barcode || "", origin: data.origin, originCountry: data.originCountry, deliveryDays: data.deliveryDays, shippingType: data.shippingType, customsRequired: data.shippingType === "overseas", manufactureDate: data.manufactureDate, shelfLife: data.shelfLife, summary: data.summary || "", detail: data.detail, visibility: data.visibility, imported: false });
+    state.products.unshift({ id, emoji: "📦", imageIndex: Number(data.imageIndex), name: data.name, supplier: workspaceCompany("supplier"), supplierLoginId: currentAccount.loginId, supply: Number(data.supply), recommended: Number(data.recommended), retailPrice: Number(data.retailPrice || 0), purchasePrice: Number(data.purchasePrice), purchaseShipping: data.purchaseShipping, surcharge: Number(data.surcharge || 0), soldOut: data.soldOut, exposure: data.exposure, stock: Number(data.stock), categoryGroup: data.categoryGroup, category: data.category, categorySub: data.categorySub, categoryDetail: data.categoryDetail, status: data.status, tax: data.tax, cutoff: data.cutoff, orderName: data.orderName || data.name, orderUnit: Number(data.orderUnit || 1), shippingPolicy: data.shippingPolicy, carrier: data.carrier, warehouse: data.warehouse, weight: Number(data.weight || 0), unit: data.unit, managementCode: data.managementCode || id, barcode: data.barcode || "", origin: data.origin, originCountry: data.originCountry, deliveryDays: data.deliveryDays, shippingType: data.shippingType, customsRequired: data.shippingType === "overseas", manufactureDate: data.manufactureDate, shelfLife: data.shelfLife, summary: data.summary || "", detail: data.detail, visibility: data.visibility, visibleSellers: data.visibility === "선택 셀러" ? data.visibleSellers : [], photos: data.photos, imported: false });
     if (optionData.options.length) { state.products[0].options = optionData.options; state.products[0].optionTitle = optionData.optionTitle; if (optionData.optionGroups?.length) state.products[0].optionGroups = optionData.optionGroups; syncProductOptionTotals(state.products[0]); }
     Object.assign(state.products[0], productDetailAndShipping(data));
     audit("공급 상품 등록", `${id} · ${data.name} · AI 썸네일·상세페이지 포함 · 연결 셀러 마켓에 공개되었습니다.`, "done", "product");
@@ -10795,7 +10949,7 @@ document.addEventListener("submit", event => {
     const product = productOf(form.dataset.id);
     const before = `${product.name} / ${product.category} / ${money(product.supply)} / ${money(product.recommended)} / ${product.status}`;
     const oldSupply = product.supply;
-    Object.assign(product, { imageIndex: Number(data.imageIndex), name: data.name, supply: Number(data.supply), recommended: Number(data.recommended), retailPrice: Number(data.retailPrice || 0), purchasePrice: Number(data.purchasePrice), purchaseShipping: data.purchaseShipping, surcharge: Number(data.surcharge || 0), soldOut: data.soldOut, exposure: data.exposure, stock: Number(data.stock), categoryGroup: data.categoryGroup, category: data.category, categorySub: data.categorySub, categoryDetail: data.categoryDetail, status: data.status, tax: data.tax, cutoff: data.cutoff, orderName: data.orderName || data.name, orderUnit: Number(data.orderUnit || 1), shippingPolicy: data.shippingPolicy, carrier: data.carrier, warehouse: data.warehouse, weight: Number(data.weight || 0), unit: data.unit, managementCode: data.managementCode || product.id, barcode: data.barcode || "", origin: data.origin, originCountry: data.originCountry, deliveryDays: data.deliveryDays, shippingType: data.shippingType, customsRequired: data.shippingType === "overseas", manufactureDate: data.manufactureDate, shelfLife: data.shelfLife, summary: data.summary || "", detail: data.detail, visibility: data.visibility });
+    Object.assign(product, { imageIndex: Number(data.imageIndex), name: data.name, supply: Number(data.supply), recommended: Number(data.recommended), retailPrice: Number(data.retailPrice || 0), purchasePrice: Number(data.purchasePrice), purchaseShipping: data.purchaseShipping, surcharge: Number(data.surcharge || 0), soldOut: data.soldOut, exposure: data.exposure, stock: Number(data.stock), categoryGroup: data.categoryGroup, category: data.category, categorySub: data.categorySub, categoryDetail: data.categoryDetail, status: data.status, tax: data.tax, cutoff: data.cutoff, orderName: data.orderName || data.name, orderUnit: Number(data.orderUnit || 1), shippingPolicy: data.shippingPolicy, carrier: data.carrier, warehouse: data.warehouse, weight: Number(data.weight || 0), unit: data.unit, managementCode: data.managementCode || product.id, barcode: data.barcode || "", origin: data.origin, originCountry: data.originCountry, deliveryDays: data.deliveryDays, shippingType: data.shippingType, customsRequired: data.shippingType === "overseas", manufactureDate: data.manufactureDate, shelfLife: data.shelfLife, summary: data.summary || "", detail: data.detail, visibility: data.visibility, visibleSellers: data.visibility === "선택 셀러" ? data.visibleSellers : [], photos: data.photos });
     if (optionData.options.length) { product.options = optionData.options; product.optionTitle = optionData.optionTitle; if (optionData.optionGroups?.length) product.optionGroups = optionData.optionGroups; else delete product.optionGroups; syncProductOptionTotals(product); }
     else { product.options = []; delete product.optionTitle; delete product.optionGroups; }
     Object.assign(product, productDetailAndShipping(data));
@@ -11144,12 +11298,9 @@ document.getElementById("guideButton").addEventListener("click", guideModal);
 document.getElementById("dismissNotice")?.addEventListener("click", e => e.currentTarget.parentElement.remove());
 document.getElementById("resetDemo")?.addEventListener("click", () => { state = cloneInitial(); saveState(); activeRole = accountRoles().includes(activeRole) ? activeRole : (currentAccount?.role || "seller"); render(); updateAccountUI(); showToast("데이터를 처음 상태로 돌렸어요."); });
 document.getElementById("logoutButton").addEventListener("click", () => { const role = currentAccount?.role; sessionStorage.removeItem(AUTH_KEY); if (role === "supplier" || role === "master") showPartnerLogin(role); else showLogin(); });
-document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
-document.getElementById("addressPopup").addEventListener("click", e => { if (e.target.id === "addressPopup") closeAddressPopup(); });
+/* 팝업은 바깥(어두운 배경)을 누르거나 ESC를 눌러도 닫히지 않는다. 쓰던 내용이 날아가지 않도록 X·닫기·취소 버튼으로만 닫는다. */
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && document.getElementById("appView").dataset.sidebarOpen === "true") { closeMobileSidebar(true); return; }
-  if (e.key === "Escape" && !document.getElementById("addressPopup").hidden) { closeAddressPopup(); return; }
-  if (e.key === "Escape") closeModal();
   if ((e.key === "Enter" || e.key === " ") && e.target.matches(".market-product-card")) { e.preventDefault(); productDetailModal(e.target.dataset.id); }
   if ((e.key === "Enter" || e.key === " ") && e.target.matches(".order-click-row")) { e.preventDefault(); orderDetailModal(e.target.dataset.id); }
 });
@@ -11549,11 +11700,10 @@ function closeKakaoSheet() {
   document.body.classList.remove("kakao-sheet-open");
 }
 document.addEventListener("click", event => { if (event.target.closest?.("[data-kakao-close]")) closeKakaoSheet(); });
-document.addEventListener("keydown", event => { if (event.key === "Escape" && !document.getElementById("kakaoSheet").hidden) closeKakaoSheet(); });
 /* 로그인 화면: 직원 초대 코드로 가입 */
 function openStaffJoinSheet(code = "") {
   const sheet = document.getElementById("kakaoSheet");
-  sheet.innerHTML = `<div class="kakao-sheet-backdrop" data-kakao-close></div><div class="kakao-sheet-card staff-join-card" role="dialog" aria-modal="true" aria-labelledby="staffJoinTitle">
+  sheet.innerHTML = `<div class="kakao-sheet-backdrop"></div><div class="kakao-sheet-card staff-join-card" role="dialog" aria-modal="true" aria-labelledby="staffJoinTitle">
     <div class="kakao-sheet-top"><span class="staff-join-logo">👥</span><b id="staffJoinTitle">직원 초대 코드로 시작하기</b><button type="button" class="kakao-sheet-x" data-kakao-close aria-label="닫기">×</button></div>
     <form id="staffJoinForm" class="kakao-consent">
       <p class="staff-join-copy">사장님께 받은 초대 코드와 이메일을 넣고, 앞으로 쓸 비밀번호를 정해 주세요.</p>
