@@ -61,9 +61,12 @@ type BulkWorkbookPreview = {
   }>;
   errors: Array<{ row: number; message: string }>;
   warnings: string[];
-  format?: "bulk" | "baljuora";
+  format?: "bulk" | "baljuora" | "danga";
+  priceFields?: PriceField[];
   newProducts?: number;
 };
+
+type PriceField = "cost" | "a" | "general";
 
 const emptyData: AdminCatalogData = { categories: [], products: [], notices: [], priceHistory: [], recentSoldOutIssues: [], sourcingRequests: [], settings: {} };
 // Keep the last successful admin payload in memory while navigating between
@@ -777,6 +780,8 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const [dragOverSortProductId, setDragOverSortProductId] = useState<string | null>(null);
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkPreview, setBulkPreview] = useState<BulkWorkbookPreview | null>(null);
+  // 단가관리 엑셀: 반영할 가격 항목(매입원가·A급 단가·공급가)
+  const [priceFields, setPriceFields] = useState<PriceField[]>(["cost", "a", "general"]);
   const [excelBusy, setExcelBusy] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1204,11 +1209,12 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     }
   };
 
-  const previewWorkbook = async (file: File) => {
+  const previewWorkbook = async (file: File, fields: PriceField[] = priceFields) => {
     setExcelBusy(true);
     try {
       const form = new FormData();
       form.set("file", file);
+      form.set("priceFields", fields.join(","));
       const response = await apiFetch("/catalog/admin/products/import-preview", { method: "POST", body: form });
       const preview = await readData<BulkWorkbookPreview>(response);
       setBulkFile(file);
@@ -1228,6 +1234,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     try {
       const form = new FormData();
       form.set("file", bulkFile);
+      form.set("priceFields", priceFields.join(","));
       const response = await apiFetch("/catalog/admin/products/import-apply", { method: "POST", body: form });
       if (!response.ok) return;
       toast.success("엑셀 일괄변경을 적용하고 가격변동 이력을 기록했습니다.");
@@ -1316,7 +1323,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <div className="excel-sync-panel">
           <div>
             <span className="excel-icon"><FileSpreadsheet size={21} /></span>
-            <div><strong>발주오라형 엑셀 상품 관리</strong><small>발주오라 상품리스트 엑셀을 그대로 올리면 가격·품절·노출이 반영되고 신규 상품이 등록됩니다. 가격 변경은 가격변동 이력에 자동 기록됩니다.</small></div>
+            <div><strong>발주오라형 엑셀 상품 관리</strong><small>발주오라 상품리스트 엑셀을 그대로 올리면 가격·품절·노출이 반영되고 신규 상품이 등록됩니다. 가격 변경은 가격변동 이력에 자동 기록됩니다. 단가관리(danga-admin) "엑셀 일괄변경" 파일도 그대로 올리면 매입원가·A급 단가(황금농부 수강생)·공급가를 골라 한 번에 바꿉니다.</small></div>
           </div>
           <div className="excel-actions">
             <button type="button" className="selected-excel-action" onClick={() => void downloadSelectedWorkbook()} disabled={excelBusy || selectedProductIds.size === 0}><Download size={15} /> 선택 상품 {selectedProductIds.size > 0 ? `(${selectedProductIds.size})` : ""} 다운로드</button>
@@ -1463,6 +1470,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       {bulkEditOpen && <BulkEditModal ids={Array.from(selectedProductIds)} categories={data.categories} shippingPolicies={shippingPolicies} suppliers={suppliers} preset={bulkEditOpen === "seasonInfo" ? "seasonInfo" : undefined} onClose={() => setBulkEditOpen(false)} onDone={() => { setBulkEditOpen(false); setSelectedProductIds(new Set()); void refresh(true); }} />}
       {bulkPreview && <div className="editor-overlay"><section className="excel-preview-panel"><div className="editor-header"><div><span>EXCEL PREVIEW</span><h2>상품 일괄변경 미리보기</h2></div><button type="button" onClick={() => { setBulkPreview(null); setBulkFile(null); }} aria-label="닫기"><X size={21} /></button></div>
         <div className="excel-preview-summary"><article><span>읽은 행</span><strong>{bulkPreview.totalRows}</strong></article><article><span>매칭 행</span><strong>{bulkPreview.matchedRows}</strong></article><article><span>변경 상품</span><strong>{bulkPreview.affectedProducts}</strong></article><article><span>변경 항목</span><strong>{bulkPreview.changes.length}</strong></article>{bulkPreview.newProducts ? <article><span>신규 상품</span><strong>{bulkPreview.newProducts}</strong></article> : null}</div>
+        {bulkPreview.format === "danga" && <div className="excel-price-fields" role="group" aria-label="반영할 가격 항목"><strong>반영할 항목</strong>{([["cost", "매입원가"], ["a", "A급 단가 (황금농부 수강생)"], ["general", "공급가"]] as Array<[PriceField, string]>).map(([field, label]) => <label key={field}><input type="checkbox" checked={priceFields.includes(field)} disabled={excelBusy} onChange={(event) => { const next = event.target.checked ? [...priceFields, field] : priceFields.filter((item) => item !== field); setPriceFields(next); if (bulkFile) void previewWorkbook(bulkFile, next); }} /> {label}</label>)}</div>}
         {bulkPreview.errors.length > 0 && <div className="excel-error-list"><strong>수정이 필요한 행</strong>{bulkPreview.errors.map((error) => <p key={`${error.row}-${error.message}`}>{error.row}행 · {error.message}</p>)}</div>}
         <div className="excel-change-list">{bulkPreview.changes.length === 0 ? <p className="excel-empty">변경되는 값이 없습니다.</p> : bulkPreview.changes.slice(0, 100).map((change, index) => <div key={`${change.row}-${change.field}-${index}`}><span>{change.row}행</span><strong>{change.productName}{change.optionName ? <small>{change.optionName}</small> : null}</strong><em>{change.field}</em><del>{String(change.before ?? "-")}</del><ChevronRight size={14} /><b>{String(change.after ?? "-")}</b></div>)}</div>
         <div className="excel-warning-list">{bulkPreview.warnings.map((warning) => <p key={warning}>• {warning}</p>)}</div>

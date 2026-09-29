@@ -30,6 +30,11 @@ export type BulkWorkbookChange = {
   after: string | number | boolean | null;
 };
 
+// 단가관리 양식에서 고를 수 있는 항목: 매입원가(원가) · A급 단가(황금농부 수강생 그룹 공급가) · 공급가(일반공급가)
+export type PriceField = "cost" | "a" | "general";
+export const ALL_PRICE_FIELDS: PriceField[] = ["cost", "a", "general"];
+const A_PRICE_GROUP_KEYWORD = "황금농부";
+
 export type BulkWorkbookPreview = {
   totalRows: number;
   matchedRows: number;
@@ -38,7 +43,9 @@ export type BulkWorkbookPreview = {
   errors: Array<{ row: number; message: string }>;
   warnings: string[];
   // 발주오라 상품리스트 양식일 때만 채워집니다.
-  format?: "bulk" | "baljuora";
+  format?: "bulk" | "baljuora" | "danga";
+  // 단가관리 양식: 이번에 반영하도록 고른 항목
+  priceFields?: PriceField[];
   newProducts?: number;
 };
 
@@ -244,7 +251,12 @@ async function parseWorkbook(bytes: Uint8Array) {
     return { worksheet, format: "baljuora" as const, columns };
   }
   const headers = BULK_HEADERS.map((_, index) => cellText(headerRow.getCell(index + 1)));
-  if (headers.some((header, index) => header !== BULK_HEADERS[index])) {
+  const isBulkLayout = headers.every((header, index) => header === BULK_HEADERS[index]);
+  // 단가관리(danga-admin)·발주오라 "상품 엑셀 일괄변경" 다운로드 양식: 상품 행 + 매출처/그룹 행(그룹 공급가 = A급 단가)
+  if (!isBulkLayout && ["상품코드", "구분", "상품명", "매입원가", "공급가"].every((header) => columns.has(header))) {
+    return { worksheet, format: "danga" as const, columns };
+  }
+  if (!isBulkLayout) {
     throw new DatabaseError("DATABASE_QUERY_FAILED", "발주오라 상품리스트 엑셀 또는 데이터센터 일괄변경 양식을 올려 주세요.", 400);
   }
   return { worksheet, format: "bulk" as const, columns };
@@ -290,9 +302,10 @@ function asProductInput(product: ProductDraft): ProductInput {
   };
 }
 
-async function buildPreview(bytes: Uint8Array) {
+async function buildPreview(bytes: Uint8Array, priceFields: PriceField[] = ALL_PRICE_FIELDS) {
   const parsed = await parseWorkbook(bytes);
   if (parsed.format === "baljuora") return buildBaljuoraPreview(parsed.worksheet, parsed.columns);
+  if (parsed.format === "danga") return buildDangaPreview(parsed.worksheet, parsed.columns, priceFields);
   const { worksheet } = parsed;
   const data = await getAdminCatalog();
   const drafts = new Map<string, ProductDraft>(
@@ -626,12 +639,118 @@ async function buildBaljuoraPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
   return { preview, drafts, affected, newProducts };
 }
 
-export async function previewBulkProductWorkbook(bytes: Uint8Array) {
-  return (await buildPreview(bytes)).preview;
+// 단가관리(danga-admin) 엑셀: 상품코드로 기존 상품을 찾아 고른 가격 항목만 바꿉니다. 신규 등록·다른 값 변경은 하지 않습니다.
+// - 구분 "상품" 행: 매입원가 → 원가(비공개), 공급가 → 일반공급가
+// - 구분 "매출처/그룹" 행 중 상품명에 "황금농부"가 들어간 그룹: 공급가 → A급 단가
+async function buildDangaPreview(worksheet: ExcelJS.Worksheet, columns: Map<string, number>, priceFields: PriceField[]) {
+  const data = await getAdminCatalog();
+  const drafts = new Map<string, ProductDraft>(
+    data.products.map((product) => [product.id, { ...product, options: product.options.map((option) => ({ ...option })) }])
+  );
+  const productByCode = new Map(data.products.filter((product) => product.productCode).map((product) => [product.productCode!.trim(), product]));
+  const fields = new Set(priceFields);
+  const changes: BulkWorkbookChange[] = [];
+  const errors: BulkWorkbookPreview["errors"] = [];
+  const notices: string[] = [];
+  const affected = new Set<string>();
+  const seen = new Set<string>();
+  const missingCodes = new Set<string>();
+  const matchedCodes = new Set<string>();
+  let otherGroupRows = 0;
+  let totalRows = 0;
+
+  const text = (row: ExcelJS.Row, header: string) => {
+    const column = columns.get(header);
+    return column ? cellText(row.getCell(column)) : "";
+  };
+  const number = (row: ExcelJS.Row, rowNumber: number, header: string) => {
+    const column = columns.get(header);
+    return column ? cellNumber(row.getCell(column), rowNumber, header, errors) : null;
+  };
+  const record = (row: number, product: ProductDraft, field: BulkWorkbookChange["field"], before: number, after: number) => {
+    if (before === after) return;
+    changes.push({ row, productName: product.name, optionName: null, field, before, after });
+    affected.add(product.id);
+  };
+
+  for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber += 1) {
+    const row = worksheet.getRow(rowNumber);
+    const code = text(row, "상품코드");
+    const kind = text(row, "구분");
+    const name = text(row, "상품명");
+    if (!code && !name) continue;
+    totalRows += 1;
+    if (!code) {
+      errors.push({ row: rowNumber, message: "상품코드가 비어 있습니다." });
+      continue;
+    }
+    const isGroup = kind.startsWith("매출처") || kind.includes("그룹");
+    if (isGroup && !name.includes(A_PRICE_GROUP_KEYWORD)) {
+      otherGroupRows += 1;
+      continue;
+    }
+    const seenKey = `${isGroup ? "group" : "product"}:${code}`;
+    if (seen.has(seenKey)) {
+      errors.push({ row: rowNumber, message: `같은 상품코드(${code})의 ${isGroup ? "그룹" : "상품"} 행이 파일에 중복되어 있습니다.` });
+      continue;
+    }
+    seen.add(seenKey);
+    const baseProduct = productByCode.get(code);
+    if (!baseProduct) {
+      missingCodes.add(code);
+      continue;
+    }
+    const product = drafts.get(baseProduct.id)!;
+    matchedCodes.add(code);
+    const supplyPrice = number(row, rowNumber, "공급가");
+    if (isGroup) {
+      if (fields.has("a") && supplyPrice !== null) {
+        record(rowNumber, product, "A단가", product.aPrice, supplyPrice);
+        product.aPrice = supplyPrice;
+      }
+      continue;
+    }
+    const costPrice = number(row, rowNumber, "매입원가");
+    if (fields.has("cost") && costPrice !== null) {
+      record(rowNumber, product, "원가", product.costPrice, costPrice);
+      product.costPrice = costPrice;
+    }
+    if (fields.has("general") && supplyPrice !== null) {
+      record(rowNumber, product, "일반공급가", product.generalPrice, supplyPrice);
+      product.generalPrice = supplyPrice;
+    }
+    if (costPrice !== null && supplyPrice !== null && supplyPrice < costPrice) {
+      notices.push(`${rowNumber}행 ${name || code}: 공급가(${supplyPrice.toLocaleString("ko-KR")})가 매입원가(${costPrice.toLocaleString("ko-KR")})보다 낮습니다.`);
+    }
+  }
+
+  const fieldLabels = { cost: "매입원가 → 원가(비공개)", a: "황금농부 수강생 그룹 공급가 → A급 단가", general: "공급가 → 일반공급가" } as const;
+  const preview: BulkWorkbookPreview = {
+    totalRows,
+    matchedRows: matchedCodes.size,
+    affectedProducts: affected.size,
+    changes,
+    errors,
+    format: "danga",
+    priceFields: ALL_PRICE_FIELDS.filter((field) => fields.has(field)),
+    warnings: [
+      `단가관리 엑셀 양식으로 읽었습니다. 반영 항목: ${ALL_PRICE_FIELDS.filter((field) => fields.has(field)).map((field) => fieldLabels[field]).join(", ") || "없음"}. 가격 변경은 가격변동 이력에 기록됩니다.`,
+      "상품코드가 같은 기존 상품만 바뀝니다. 상품명·품절·노출·카테고리 등 다른 값과 신규 등록은 하지 않습니다. 빈 칸은 그대로 둡니다.",
+      ...(missingCodes.size > 0 ? [`데이터센터에 없는 상품코드 ${missingCodes.size.toLocaleString("ko-KR")}개는 건너뜁니다: ${[...missingCodes].slice(0, 10).join(", ")}${missingCodes.size > 10 ? " 외" : ""}`] : []),
+      ...(otherGroupRows > 0 ? [`'${A_PRICE_GROUP_KEYWORD}' 외 다른 그룹 행 ${otherGroupRows}개는 반영하지 않습니다.`] : []),
+      ...notices.slice(0, 20),
+      ...(notices.length > 20 ? [`그 외 공급가 확인 필요 ${notices.length - 20}건`] : [])
+    ]
+  };
+  return { preview, drafts, affected, newProducts: [] as NewProductDraft[] };
 }
 
-export async function applyBulkProductWorkbook(bytes: Uint8Array, changedBy: string) {
-  const { preview, drafts, affected, newProducts } = await buildPreview(bytes);
+export async function previewBulkProductWorkbook(bytes: Uint8Array, priceFields?: PriceField[]) {
+  return (await buildPreview(bytes, priceFields)).preview;
+}
+
+export async function applyBulkProductWorkbook(bytes: Uint8Array, changedBy: string, priceFields?: PriceField[]) {
+  const { preview, drafts, affected, newProducts } = await buildPreview(bytes, priceFields);
   if (preview.errors.length > 0) {
     throw new DatabaseError("DATABASE_QUERY_FAILED", "오류 행을 수정한 뒤 다시 업로드해 주세요.", 400);
   }

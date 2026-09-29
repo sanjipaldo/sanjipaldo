@@ -47,7 +47,9 @@ import {
   bulkUpdateProducts,
   buildBulkProductWorkbook,
   buildProductListWorkbook,
-  previewBulkProductWorkbook
+  previewBulkProductWorkbook,
+  ALL_PRICE_FIELDS,
+  type PriceField
 } from "../services/catalog-excel";
 import { getCatalogOperationsOverview } from "../services/catalog-operations";
 import { getSalesOverview } from "../services/catalog-sales";
@@ -463,6 +465,13 @@ catalogRouter.post("/admin/products/export-selected", adminRoute, async (c) => {
   });
 });
 
+// 단가관리 엑셀에서 반영할 가격 항목(쉼표 구분: cost,a,general). 없으면 세 항목 모두 반영합니다.
+function priceFieldsFrom(value: unknown): PriceField[] | undefined {
+  if (typeof value !== "string") return undefined;
+  const allowed = new Set<string>(ALL_PRICE_FIELDS);
+  return value.split(",").map((item) => item.trim()).filter((item): item is PriceField => allowed.has(item));
+}
+
 catalogRouter.post("/admin/products/import-preview", adminRoute, async (c) => {
   const form = await c.req.formData();
   const file = form.get("file");
@@ -472,7 +481,7 @@ catalogRouter.post("/admin/products/import-preview", adminRoute, async (c) => {
   if (file.size > 5 * 1024 * 1024) {
     return c.json(apiFailure("FILE_TOO_LARGE", "엑셀 파일은 5MB 이하만 업로드할 수 있습니다."), 400);
   }
-  const preview = await previewBulkProductWorkbook(new Uint8Array(await file.arrayBuffer()));
+  const preview = await previewBulkProductWorkbook(new Uint8Array(await file.arrayBuffer()), priceFieldsFrom(form.get("priceFields")));
   return c.json(apiSuccess(preview));
 });
 
@@ -489,7 +498,8 @@ catalogRouter.post("/admin/products/import-apply", adminRoute, async (c) => {
     const user = c.var.currentUser;
     const result = await applyBulkProductWorkbook(
       new Uint8Array(await file.arrayBuffer()),
-      user.username || user.email
+      user.username || user.email,
+      priceFieldsFrom(form.get("priceFields"))
     );
     return c.json(apiSuccess(result));
   } catch (error) {

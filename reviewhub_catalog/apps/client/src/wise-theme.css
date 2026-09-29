@@ -905,3 +905,9 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .policy-inline-check { align-self: end; min-height: 44px; }
 .policy-fee-choice label, .policy-inline-check { white-space: nowrap; width: auto !important; }
 .policy-fee-choice input[type=radio], .policy-inline-check input[type=checkbox] { flex: 0 0 auto; width: 18px !important; height: 18px !important; min-height: 0 !important; margin: 0; padding: 0 !important; accent-color: var(--w-ink, #0e0f0c); }
+
+/* 엑셀 미리보기: 단가관리 양식 반영 항목 선택 */
+.excel-price-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--w-card-border, #e6e8e3); border-radius: 14px; background: #fff; }
+.excel-price-fields strong { color: var(--w-ink, #0e0f0c); font-size: 13px; font-weight: 800; }
+.excel-price-fields label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.excel-price-fields input { width: 17px; height: 17px; accent-color: var(--w-ink, #0e0f0c); }
