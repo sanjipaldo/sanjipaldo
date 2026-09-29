@@ -564,10 +564,10 @@ function NoticeModal({ notice, onClose }: { notice: Notice; onClose: () => void 
   );
 }
 
-// 배송비 한 줄 요약: 판매자가 가장 먼저 보는 "무료 / 유료(금액)"만 짧게 보여 줍니다.
+// 배송비 한 줄 요약: "배송비 무료" 또는 "배송비 유료(금액)" 두 가지로만 보여 줍니다.
 // - 배송 정책이 연결된 상품: 정책의 무료/유료와 기본 배송비
-// - 정책이 없는 상품: 상품에 입력된 배송비 문구에서 무료·유료·금액을 읽어 냅니다(판단이 어려우면 "확인").
-type ShippingSummary = { kind: "free" | "paid" | "unknown"; text: string };
+// - 정책이 없는 상품: 배송비 문구에 "무료"가 있으면 무료, 그 밖에는 유료(문구에 금액이 있으면 함께 표시)
+type ShippingSummary = { kind: "free" | "paid"; text: string };
 
 function shippingFeeSummary(product: Product, policy?: PublicShippingPolicy): ShippingSummary {
   if (policy) {
@@ -575,12 +575,9 @@ function shippingFeeSummary(product: Product, policy?: PublicShippingPolicy): Sh
     return { kind: "paid", text: policy.fee > 0 ? `유료 (${formatPrice(policy.fee)})` : "유료" };
   }
   const raw = (product.shippingFee || "").trim();
-  if (!raw) return { kind: "unknown", text: "확인" };
   if (/무료/.test(raw) && !/유료/.test(raw)) return { kind: "free", text: "무료" };
   const amount = raw.replace(/,/g, "").match(/(\d{3,7})\s*원/);
-  if (amount) return { kind: "paid", text: `유료 (${formatPrice(Number(amount[1]))})` };
-  if (/유료|수량별|무게별|kg|착불|부과|별도/i.test(raw)) return { kind: "paid", text: "유료" };
-  return { kind: "unknown", text: "확인" };
+  return { kind: "paid", text: amount ? `유료 (${formatPrice(Number(amount[1]))})` : "유료" };
 }
 
 const feeBasisLabel = { order: "주문당 고정", quantity: "수량별 부과", weight: "무게별 부과(kg당)" } as const;
@@ -608,7 +605,7 @@ function ShippingInfoModal({ product, policy, onClose }: { product: Product; pol
     if (policy.exchangeFee != null) rows.push(["교환 배송비(왕복)", formatPrice(policy.exchangeFee)]);
     rows.push(["택배사", policy.courier || product.courier || "택배사 지정"]);
   } else {
-    rows.push(["배송비", summary.kind === "free" ? "무료배송" : summary.kind === "paid" ? summary.text.replace(/[()]/g, "") : "확인 필요"]);
+    rows.push(["배송비", summary.kind === "free" ? "무료배송" : summary.text.replace(/[()]/g, "")]);
     if (product.shippingFee) rows.push(["배송비 안내", product.shippingFee]);
     rows.push(["택배사", product.courier || "택배사 지정"]);
   }
