@@ -4107,7 +4107,7 @@ function openSalesTalk({ loginId, name, productId }) {
 function supplierPriceGraphTemplate(products) {
   if (!products.length) return "";
   /* 처음 열 때는 위탁셀러가 가장 많이 올린 상품을 먼저 보여 준다 (판매가 없는 상품이면 그래프가 비어 보이므로) */
-  const listed = entry => state.sellerProducts.filter(item => item.productId === entry.id && item.approvalStatus !== "승인거절").length;
+  const listed = entry => marketListingsFor(entry, 90).listings.length;
   const product = products.find(entry => entry.id === priceGraphProductId) || [...products].sort((a, b) => listed(b) - listed(a))[0];
   priceGraphProductId = product.id;
   const model = priceGraphModel(product, priceGraphDays);

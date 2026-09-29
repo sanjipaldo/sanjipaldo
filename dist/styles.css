@@ -10263,3 +10263,5 @@ body[data-role="supplier"] .sanction-options input[type="radio"] { accent-color:
 body[data-role="supplier"] .rp-switch { border-color: #e2e2e2; }
 body[data-role="supplier"] .rp-switch input { accent-color: #111; }
 body[data-role="supplier"] .rp-switch small { color: #6b6b6b; }
+/* 카드형 표: 선택 체크박스가 다음 칸(주문번호)에 가려져 눌리지 않던 문제 */
+.app-shell table.m-stack td.pick-col { z-index: 2; }
