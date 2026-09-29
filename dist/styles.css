@@ -10089,3 +10089,35 @@ body[data-role="master"] .refund-filter-panel em { color:#6d3fc9; }
 @media (max-width: 720px) {
   .panel > .ms-rank, .panel > .ms-todo-list, .panel > .ms-list, .panel > .ms-chart, .panel > .ms-cards, .panel > .ms-tiles, .panel > .sub-tier-bars, .panel > .m-cards, .panel > .m-search, .panel > .rs-owed, .panel > .rs-rule, .panel > .rp-kakao, .panel > #reportSettingsForm, .panel > .rp-note { margin:12px 12px 14px; }
 }
+
+/* v68 마스터(관리자) 로그인: 보라 테마 — 위탁셀러 파랑 · 공급사 검정 · 마스터 보라로 로그인부터 구분 */
+body[data-role="master"] .partner-login-screen .partner-visual { background: radial-gradient(620px circle at 88% -8%, rgba(190,160,255,.28), transparent 60%), radial-gradient(520px circle at 0% 100%, rgba(255,255,255,.08), transparent 60%), linear-gradient(155deg, #5b2fbf 0%, #4a2596 45%, #2c1266 100%); }
+body[data-role="master"] .partner-login-screen .partner-visual::before { background: radial-gradient(520px circle at 90% -6%, rgba(255,255,255,.12), transparent 58%); }
+body[data-role="master"] .partner-login-screen .login-orb-1 { background: radial-gradient(circle at 32% 28%, rgba(214,196,255,.34), rgba(214,196,255,.06) 46%, transparent 72%); box-shadow: 0 40px 70px rgba(30,8,80,.35); }
+body[data-role="master"] .partner-login-screen .login-orb-2 { background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.16), rgba(255,255,255,.03) 50%, transparent 75%); }
+body[data-role="master"] .partner-login-screen .partner-badge, body[data-role="master"] .partner-login-screen .partner-message > span { color: #fff; background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.24); }
+body[data-role="master"] .partner-login-screen .login-feature-list li i { color: #5a2fb3; background: #fff; box-shadow: 0 6px 14px rgba(30,8,80,.3); }
+body[data-role="master"] .partner-login-screen .login-message p { color: #e3d9ff; }
+body[data-role="master"] .partner-login-screen .partner-panel { background: linear-gradient(150deg, #f6f2ff 0%, #fff 55%, #efe8fd 100%); }
+body[data-role="master"] .partner-login-screen .partner-panel .login-box { border-color: #e4d9fb; box-shadow: 0 24px 70px rgba(74,37,150,.16); }
+body[data-role="master"] .partner-login-screen .login-box::before { background: linear-gradient(90deg, #6d3fc9, #a37ef0); }
+body[data-role="master"] .partner-login-screen .login-panel-brand-logo img { filter: hue-rotate(46deg) saturate(.95); }
+body[data-role="master"] .partner-login-screen .partner-heading > span, body[data-role="master"] .partner-login-screen .login-heading > span { color: #6d3fc9; }
+body[data-role="master"] .partner-login-screen .login-panel-tagline { color: #2c1a55; }
+body[data-role="master"] .partner-login-screen .login-field input { background: #faf8ff; border-color: #e6ddfa; }
+body[data-role="master"] .partner-login-screen .login-field input:focus { border-color: #6d3fc9; box-shadow: 0 0 0 4px rgba(109,63,201,.14); background: #fff; }
+body[data-role="master"] .partner-login-screen .password-label button { color: #6d3fc9; }
+body[data-role="master"] .partner-login-screen .login-options input { accent-color: #6d3fc9; }
+body[data-role="master"] .partner-login-screen .login-submit, body[data-role="master"] .partner-login-screen .login-submit:hover { color: #fff !important; background: linear-gradient(135deg, #7446d6, #5a2fb3) !important; border-color: #5a2fb3 !important; box-shadow: 0 12px 28px rgba(90,47,179,.3) !important; }
+body[data-role="master"] .partner-login-screen .login-submit:active { box-shadow: 0 6px 16px rgba(90,47,179,.3) !important; }
+body[data-role="master"] .partner-login-screen .demo-accounts { background: #f7f3ff; border-color: #ece4fd; }
+body[data-role="master"] .partner-login-screen .demo-accounts button { border-color: #e4d9fb; }
+body[data-role="master"] .partner-login-screen .demo-accounts button:hover { color: #5a2fb3; border-color: #b69cf0; box-shadow: 0 6px 16px rgba(109,63,201,.12); }
+body[data-role="master"] .partner-login-screen .demo-accounts b { color: #6d3fc9; }
+body[data-role="master"] .partner-login-screen .login-textlink:hover, body[data-role="master"] .partner-login-screen #partnerRoleSwitch { color: #5a2fb3; }
+body[data-role="master"] .partner-login-screen .mobile-partner-link { color: #4a2596; background: #f3eefe; }
+body[data-role="master"] .partner-login-screen .mobile-partner-link span { background: #6d3fc9; }
+body[data-role="master"] .partner-login-screen .partner-center-link { color: #fff; }
+@media (max-width: 720px) {
+  body[data-role="master"] .partner-login-screen .partner-panel { background: linear-gradient(180deg, #efe8fd, #fff 38%); }
+}

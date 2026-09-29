@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Geist:wght@100..900&family=Geist+Mono:wght@400..700&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=67" />
+  <link rel="stylesheet" href="styles.css?v=68" />
 </head>
 <body>
   <section id="loginView" class="login-screen seller-login-screen">
@@ -72,13 +72,13 @@
         <div class="login-visual-logo" aria-label="두고">
           <img src="assets/doogo-logo-horizontal.png" alt="두고">
         </div>
-        <div class="partner-badge">두고 파트너센터</div>
+        <div id="partnerBadge" class="partner-badge">두고 파트너센터</div>
       </div>
       <p class="login-visual-tagline">쇼핑몰의 쉬운 시작 · 두고</p>
       <div class="login-message partner-message">
-        <span>SUPPLIER · MASTER</span>
+        <span id="partnerMessageKicker">SUPPLIER CENTER</span>
         <h1 id="partnerTypingText" class="typing-headline" aria-live="polite"></h1>
-        <ul class="login-feature-list">
+        <ul id="partnerFeatureList" class="login-feature-list">
           <li><i>✓</i>상품·재고·공급가 실시간 관리</li>
           <li><i>✓</i>배송준비중 주문 송장 자동 발급</li>
           <li><i>✓</i>월별 정산 리포트와 수수료 내역 확인</li>
@@ -294,6 +294,6 @@
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=67"></script>
+  <script src="app.js?v=68"></script>
 </body>
 </html>

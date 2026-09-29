@@ -2079,7 +2079,16 @@ function showPartnerLogin(role = "supplier") {
 function setPartnerLoginRole(role) {
   partnerLoginRole = role === "master" ? "master" : "supplier";
   const isSupplier = partnerLoginRole === "supplier";
+  /* 로그인 화면부터 역할 색을 나눈다: 위탁셀러 파랑 · 공급사 검정 · 마스터 보라 */
+  document.body.dataset.role = partnerLoginRole;
+  document.getElementById("partnerLoginView").classList.toggle("is-master", !isSupplier);
+  document.getElementById("partnerBadge").textContent = isSupplier ? "두고 파트너센터" : "두고 마스터센터";
+  document.getElementById("partnerMessageKicker").textContent = isSupplier ? "SUPPLIER CENTER" : "MASTER CENTER";
+  document.getElementById("partnerFeatureList").innerHTML = (isSupplier
+    ? ["상품·재고·공급가 실시간 관리", "배송준비중 주문 송장 자동 발급", "월별 정산 리포트와 수수료 내역 확인"]
+    : ["매출·수수료 7%·구독 순이익을 한눈에", "두고톡 상담·환불·정산을 한곳에서", "공급사·위탁셀러 관리와 이용 정지"]).map(text => `<li><i>✓</i>${text}</li>`).join("");
   document.getElementById("partnerLoginKicker").textContent = isSupplier ? "PARTNER CENTER" : "MASTER CENTER";
+  document.getElementById("partnerTypingText")?.startTypingRefresh?.();
   document.getElementById("partnerLoginTitle").textContent = isSupplier ? "공급사 로그인" : "관리자 로그인";
   document.getElementById("partnerLoginDescription").textContent = isSupplier ? "상품·재고·주문·송장을 관리합니다." : "전체 회원·상품·주문·이력을 관리합니다.";
   document.getElementById("supplierSignupPrompt").hidden = !isSupplier;
@@ -11036,12 +11045,17 @@ document.getElementById("globalSearch").addEventListener("keydown", event => {
   showToast("일치하는 주문번호 또는 주문자를 찾지 못했습니다.");
 });
 
-function startTyping(elementId, messages) {
+/* messages는 배열이나, 화면 상태에 따라 배열을 돌려주는 함수(예: 공급사/마스터 로그인 문구). 목록이 바뀌면 처음부터 다시 친다. */
+function startTyping(elementId, source) {
   const element = document.getElementById(elementId);
   if (!element) return;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { element.textContent = messages[0]; return; }
-  let messageIndex = 0, characterIndex = 0, deleting = false;
+  const list = () => (typeof source === "function" ? source() : source);
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { element.textContent = list()[0]; element.startTypingRefresh = () => { element.textContent = list()[0]; }; return; }
+  let messageIndex = 0, characterIndex = 0, deleting = false, current = list();
+  element.startTypingRefresh = () => { element.textContent = ""; };
   const tick = () => {
+    if (list() !== current) { current = list(); messageIndex = 0; characterIndex = 0; deleting = false; }
+    const messages = current;
     const message = messages[messageIndex];
     characterIndex += deleting ? -1 : 1;
     element.textContent = message.slice(0, Math.max(0, characterIndex));
@@ -11603,7 +11617,9 @@ if (requestedPortal === "master") showPartnerLogin("master");
 const requestedInvite = new URLSearchParams(window.location.search).get("invite");
 if (requestedInvite && !currentAccount) openStaffJoinSheet(requestedInvite.toUpperCase());
 startTyping("sellerTypingText", ["좋은 공급상품을 소싱받아,\n원클릭으로 바로 판매를 시작해보세요.", "주문부터 송장 전송까지,\n드랍쉬핑을 자동화하세요.", "브랜드와 셀러가 만나는 곳,\n두고입니다."]);
-startTyping("partnerTypingText", ["내 브랜드 상품을 등록하고,\n새로운 셀러를 만나세요.", "상품과 주문을 한곳에서,\n운영은 더 정확하게.", "공급과 판매가 연결되는 곳,\n두고입니다."]);
+const SUPPLIER_TYPING = ["내 브랜드 상품을 등록하고,\n새로운 셀러를 만나세요.", "상품과 주문을 한곳에서,\n운영은 더 정확하게.", "공급과 판매가 연결되는 곳,\n두고입니다."];
+const MASTER_TYPING = ["두고의 모든 거래를\n한눈에 관리하세요.", "매출·정산·상담까지,\n휴대폰으로 딸깍.", "공급사와 셀러를 잇는\n두고 본사 센터입니다."];
+startTyping("partnerTypingText", () => (partnerLoginRole === "master" ? MASTER_TYPING : SUPPLIER_TYPING));
 /* 송장 자동 전송 스케줄러: 30초마다 전송 시각(10분 단위)이 된 송장이 있는지 확인한다. */
 window.setInterval(() => { if (!document.hidden) runTrackingScheduler(); }, 30 * 1000);
 window.setTimeout(runTrackingScheduler, 2500);
