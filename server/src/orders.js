@@ -97,7 +97,10 @@ async function dispatchTracking(channel, creds, { items = [], now = new Date() }
   for (const item of items) {
     const key = `${item.refs?.shipmentBoxId || ""}:${item.refs?.vendorItemId || ""}`;
     if (!item.refs?.shipmentBoxId || !item.refs?.vendorItemId) { results.push({ key, ok: false, error: "쿠팡 묶음배송번호·옵션ID가 없어요." }); continue; }
-    const dto = { shipmentBoxId: Number(item.refs.shipmentBoxId), orderId: Number(item.refs.orderId), vendorItemId: Number(item.refs.vendorItemId), deliveryCompanyCode: COUPANG_CARRIERS[item.carrier] || "HANJIN", invoiceNumber: String(item.tracking || ""), splitShipping: false, preSplitShipped: false, estimatedShippingDate: "" };
+    /* 쿠팡 택배사 코드가 없는 택배사(직접 입력한 택배사 등)를 다른 택배사로 바꿔 보내면 고객 배송조회가 틀어진다 → 보내지 않고 알린다 */
+    const deliveryCompanyCode = COUPANG_CARRIERS[item.carrier];
+    if (!deliveryCompanyCode) { results.push({ key, ok: false, error: `‘${item.carrier || "택배사 없음"}’ 택배사는 쿠팡 코드가 없어요. 쿠팡 Wing에서 송장을 직접 입력해 주세요.` }); continue; }
+    const dto = { shipmentBoxId: Number(item.refs.shipmentBoxId), orderId: Number(item.refs.orderId), vendorItemId: Number(item.refs.vendorItemId), deliveryCompanyCode, invoiceNumber: String(item.tracking || ""), splitShipping: false, preSplitShipped: false, estimatedShippingDate: "" };
     try {
       const res = item.update ? await client.updateInvoices([dto]) : await client.uploadInvoices([dto]);
       const fail = (res.data?.responseList || []).find(row => row.succeed === false);

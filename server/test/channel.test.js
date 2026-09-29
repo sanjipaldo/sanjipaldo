@@ -204,6 +204,13 @@ test("서버 전체 흐름: 연결 → 원클릭 등록 → 품절 → 삭제 (�
     assert.equal(dispatched.deliveryMethod, "DELIVERY");
     const t3 = await call("POST", "/api/orders/coupang/dispatch", { sellerLoginId: "seller", items: [{ refs: o1.body.orders[0].refs, carrier: "한진택배", tracking: "" }] });
     assert.equal(t3.status, 400);
+    /* 쿠팡 코드가 없는 택배사(직접 입력)는 다른 택배사로 바꿔 보내지 않고 실패로 알린다 */
+    const invoiceCalls = upstream.calls.filter(entry => entry.path.endsWith("/orders/invoices")).length;
+    const t4 = await call("POST", "/api/orders/coupang/dispatch", { sellerLoginId: "seller", items: [{ refs: o1.body.orders[1].refs, carrier: "동네퀵택배", tracking: "99887766" }] });
+    assert.equal(t4.status, 200);
+    assert.equal(t4.body.results[0].ok, false);
+    assert.match(t4.body.results[0].error, /쿠팡 코드가 없어요/);
+    assert.equal(upstream.calls.filter(entry => entry.path.endsWith("/orders/invoices")).length, invoiceCalls);
 
     const bad = await call("POST", "/api/channels/coupang/connect", { sellerLoginId: "seller", credentials: { vendorId: "A1", accessKey: "WRONG", secretKey: "x", vendorUserId: "w" } });
     assert.equal(bad.status, 502);
