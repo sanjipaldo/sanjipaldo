@@ -84,6 +84,10 @@
 - 목록의 "페이지당 보기 개수"는 선택 목록이 아니라 숫자 직접 입력입니다(`components/PageSizeInput.tsx`, 브라우저별로 마지막 값을 기억).
 - 배송 정책: 배송비 무료/유료, 유료 부과 방식(주문당 고정·수량별·kg당, migration 024), 기본 배송비, "일정 금액 이상 무료" 기준, 제주·도서산간 추가배송비, 반품·교환 배송비(migration 022). 표시 문구를 비우면 배송비로 자동 작성합니다.
 
+## 6-0. 검색엔진 등록
+
+- `apps/client/index.html`의 `naver-site-verification`, `google-site-verification` 메타 태그는 네이버 서치어드바이저·구글 서치 콘솔 소유 확인용입니다. 확인 후에도 지우지 않습니다.
+
 ## 6-1. 데이터 보관과 백업
 
 - 운영 DB: Vercel Marketplace로 만든 Turso(LibSQL) `doogofood-db`, 지역 iad1(미국 동부). Vercel 함수도 iad1에서 실행되며, DB와 함수는 같은 지역에 둡니다(함수만 옮기면 DB 왕복이 길어져 오히려 느려짐).
