@@ -28,6 +28,7 @@ import {
   getPublicNotices,
   removeCategory,
   removeProduct,
+  removeProducts,
   removeProductGroup,
   removeSupplier,
   removeShippingPolicy,
@@ -601,6 +602,18 @@ catalogRouter.put("/admin/products/:id", adminRoute, async (c) => {
   try {
     const user = c.var.currentUser;
     return c.json(apiSuccess({ product: await updateProduct(c.req.param("id"), parsed.data, user.username || user.email) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+const BulkDeleteSchema = z.object({ ids: z.array(z.string().trim().min(1)).min(1).max(500) });
+
+catalogRouter.post("/admin/products/bulk-delete", adminRoute, async (c) => {
+  const parsed = BulkDeleteSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "삭제할 상품을 1~500개 선택해 주세요."), 400);
+  try {
+    return c.json(apiSuccess(await removeProducts(parsed.data.ids)));
   } catch (error) {
     return errorResponse(c, error);
   }

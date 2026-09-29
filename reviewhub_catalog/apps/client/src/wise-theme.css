@@ -921,3 +921,10 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .margin-cell { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 8px; }
 }
 .product-admin-table .margin-amount { font-size: 11px; padding: 3px 7px; }
+
+/* 선택 바: 선택 삭제(빨간 테두리) */
+.bulk-selection-bar .bulk-main-actions button.bulk-delete { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #e3a1a4; color: #b3261e; background: #fff; }
+.bulk-selection-bar .bulk-main-actions button.bulk-delete:hover:not(:disabled) { border-color: #b3261e; background: #fff4f4; }
+@media (max-width: 720px) {
+  .bulk-selection-bar .bulk-main-actions { grid-template-columns: 1fr 1.3fr 1fr; }
+}

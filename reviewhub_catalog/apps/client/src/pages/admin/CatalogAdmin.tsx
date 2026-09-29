@@ -1172,6 +1172,28 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     await refresh();
   };
 
+  // 선택한 상품 일괄 삭제(개별 삭제와 같은 방식: 공개 단가표에서 사라지고 삭제 표시만 남음)
+  const bulkDelete = async () => {
+    const ids = Array.from(selectedProductIds);
+    if (ids.length === 0 || quickBusy) return;
+    const names = data.products.filter((product) => selectedProductIds.has(product.id)).slice(0, 5).map((product) => `· ${product.name}`).join("\n");
+    if (!window.confirm(`선택한 ${ids.length.toLocaleString("ko-KR")}개 상품을 삭제할까요?\n\n${names}${ids.length > 5 ? `\n외 ${(ids.length - 5).toLocaleString("ko-KR")}개` : ""}\n\n삭제한 상품은 공개 단가표와 상품 리스트에서 사라집니다.`)) return;
+    setQuickBusy(true);
+    try {
+      for (let index = 0; index < ids.length; index += 100) {
+        await readData(await apiFetch("/catalog/admin/products/bulk-delete", { method: "POST", silent: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: ids.slice(index, index + 100) }) }));
+      }
+      toast.success(`${ids.length.toLocaleString("ko-KR")}개 상품을 삭제했습니다.`);
+      setSelectedProductIds(new Set());
+      void refresh(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "상품을 삭제하지 못했습니다.");
+      void refresh(true);
+    } finally {
+      setQuickBusy(false);
+    }
+  };
+
   const downloadWorkbook = async (mode: "list" | "bulk") => {
     setExcelBusy(true);
     try {
@@ -1366,7 +1388,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isVisible: false }, "숨김")}>숨김</button>
             <button type="button" className="bulk-season-quick" disabled={quickBusy} onClick={() => setBulkEditOpen("seasonInfo")}><CalendarDays size={15} /> 제철 월·상품 안내</button>
           </div>
-          <div className="bulk-main-actions"><button type="button" className="primary-action" onClick={() => setBulkEditOpen("all")} disabled={quickBusy}><Pencil size={15} /> 상세 일괄 변경</button><button type="button" onClick={() => setSelectedProductIds(new Set())} disabled={quickBusy}>선택 해제</button></div>
+          <div className="bulk-main-actions"><button type="button" className="bulk-delete" onClick={() => void bulkDelete()} disabled={quickBusy}><Trash2 size={15} /> 선택 삭제</button><button type="button" className="primary-action" onClick={() => setBulkEditOpen("all")} disabled={quickBusy}><Pencil size={15} /> 상세 일괄 변경</button><button type="button" onClick={() => setSelectedProductIds(new Set())} disabled={quickBusy}>선택 해제</button></div>
         </div>}
         <div className="admin-table-wrap product-admin-table-wrap" id="admin-product-list"><table className="admin-table product-admin-table"><thead><tr><th className="product-select-column"><label className="product-select-control"><input type="checkbox" ref={(element) => { if (element) element.indeterminate = selectedOnCurrentPage > 0 && !allCurrentPageSelected; }} checked={allCurrentPageSelected} onChange={toggleCurrentPageSelection} aria-label="현재 페이지 상품 전체 선택" /><span>선택</span></label></th><th>상품정보</th><th>노출순서</th><th>배송/카테고리</th><th>판매기간</th><th>매입처</th><th>원가</th><th>A단가</th><th>일반공급가</th><th>판매가</th><th>마진(1개)</th><th>상태</th><th>관리</th></tr></thead><tbody>
           {pagedProducts.map((product) => {

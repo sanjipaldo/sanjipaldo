@@ -1174,6 +1174,18 @@ export async function removeProduct(id: string) {
   return rows[0];
 }
 
+// 여러 상품 삭제: 먼저 모두 있는지 확인한 뒤, 한 개씩 기존 삭제와 똑같이 처리합니다(숨김 + 삭제 표시, 발주오라 대기열 기록).
+export async function removeProducts(ids: string[]) {
+  const unique = [...new Set(ids)];
+  const found = await getDb().select({ id: products.id }).from(products)
+    .where(and(inArray(products.id, unique), sql`${products.deletedAt} IS NULL`));
+  if (found.length !== unique.length) {
+    throw new DatabaseError("DATABASE_QUERY_FAILED", `선택한 상품 ${unique.length - found.length}개를 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.`, 404);
+  }
+  for (const id of unique) await removeProduct(id);
+  return { deleted: unique.length };
+}
+
 export async function getSuppliers(includeInactive = false) {
   const query = getDb().select().from(suppliers);
   const rows = includeInactive
