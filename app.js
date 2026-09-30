@@ -2247,7 +2247,7 @@ function updateAccountUI() {
       const item = roleMenus[activeRole][index];
       const badgeValue = activeRole === "seller" ? ({ 7: alertCount, 15: mappingCount, 2: rejectedPickCount, 17: readyCount })[index] || 0 : activeRole === "supplier" ? ({ 3: shippingCount, 9: pickRequestCount })[index] || 0 : index === 1 ? pendingCount : 0;
       const badge = badgeValue > 0;
-      return `<button type="button" class="${index === activeMenuIndex ? "active" : ""}" data-menu-index="${index}"${index === activeMenuIndex ? ' aria-current="page"' : ""}><span class="menu-icon">${menuIcon(menuIcons[activeRole][index])}</span>${menuSteps[activeRole]?.[index] ? `<i class="menu-step">${menuSteps[activeRole][index]}</i>` : ""}<span class="menu-text">${escapeHtml(item)}</span>${badge ? `<b class="menu-badge">${badgeValue}</b>` : ""}</button>`;
+      return `<button type="button" class="${index === activeMenuIndex ? "active" : ""}" data-menu-index="${index}"${index === activeMenuIndex ? ' aria-current="page"' : ""}><span class="menu-icon mi-${menuIcons[activeRole][index]}">${menuIcon(menuIcons[activeRole][index])}</span>${menuSteps[activeRole]?.[index] ? `<i class="menu-step">${menuSteps[activeRole][index]}</i>` : ""}<span class="menu-text">${escapeHtml(item)}</span>${badge ? `<b class="menu-badge">${badgeValue}</b>` : ""}</button>`;
     }).join("");
     return `<section class="workspace-menu-group"><p>${escapeHtml(group.label)}</p>${buttons}</section>`;
   }).join("");
@@ -3079,11 +3079,11 @@ function refundTemplate(role) {
 }
 
 const sellerOrderStages = [
-  ["overview", "주문 등록 현황"], ["all", "전체 주문 리스트"], ["self", "직접 배송 (두고 외)"], ["mapping", "매핑 필요"], ["payment", "결제 대기"], ["received", "주문접수"], ["ordered", "발주완료"], ["preparing", "배송준비중"], ["needs-check", "주문확인필요"], ["tracking-push", "송장 전송 대기"], ["shipping", "배송중"], ["delivered", "배송완료"]
+  ["all", "전체 주문 리스트"], ["self", "직접 배송 (두고 외)"], ["mapping", "매핑 필요"], ["payment", "결제 대기"], ["received", "주문접수"], ["ordered", "발주완료"], ["preparing", "배송준비중"], ["needs-check", "주문확인필요"], ["tracking-push", "송장 전송 대기"], ["shipping", "배송중"], ["delivered", "배송완료"]
 ];
 /* 주문 단계 메뉴를 ‘누가 처리하는 단계인지’로 묶어 색으로 구분한다. 위탁셀러(파랑) → 공급사(주황) → 위탁셀러(파랑) → 택배(초록) */
 const SELLER_ORDER_STAGE_GROUPS = [
-  { tone: "neutral", who: "", title: "", stages: ["overview", "all", "self"] },
+  { tone: "neutral", who: "", title: "", stages: ["all", "self"] },
   { tone: "seller", who: "위탁셀러", title: "매핑 · 결제", stages: ["mapping", "payment", "received"] },
   { tone: "supplier", who: "공급사", title: "확인 · 포장 · 송장", stages: ["ordered", "preparing", "needs-check"] },
   { tone: "seller", who: "위탁셀러", title: "송장 전송", stages: ["tracking-push"] },
@@ -4095,8 +4095,8 @@ function renderSeller() {
   const orderStep = (stage, label, count, caption, tone) => `<button type="button" class="home-order-step tone-${tone}" ${stage === "mapping-payment" ? `data-action="${mappingRequired.length ? "go-seller-menu" : "open-order-payment-stage"}" data-index="15"` : `data-action="dashboard-order-stage" data-stage="${stage}"`}><b>${label}</b><strong>${count}<em>건</em></strong><small>${caption}</small></button>`;
   const widgets = {
     today: `<section class="home-today">
-      <div class="home-greeting"><span>오늘 할 일</span><h2>${todo.length ? `오늘 확인할 일이 <em>${todo.length}가지</em> 있어요` : "오늘 처리할 일을 모두 마쳤어요"}</h2><p>버튼을 누르면 바로 해당 화면으로 이동합니다.</p></div>${homeCollectMarkup()}
-      ${todo.length ? `<div class="home-todo-list">${todo.map(item => `<button type="button" class="home-todo tone-${item.tone}" ${todoAttrs(item)}><strong>${item.count}</strong><span><b>${item.title}</b><small>${item.hint}</small></span><em>${item.button} →</em></button>`).join("")}</div>` : `<div class="home-todo-done"><b>✓ 모두 처리했어요</b><span>새 주문이 들어오면 여기에 바로 알려 드릴게요.</span></div>`}
+      <div class="home-greeting"><span>오늘 할 일</span><h2>${todo.length ? `오늘 확인할 일이 <em>${todo.length}가지</em> 있어요` : "오늘 처리할 일을 모두 마쳤어요"}</h2><p>버튼을 누르면 바로 해당 화면으로 이동해요. <b>처리하면 목록에서 사라지고</b>, 새로 할 일이 생기면 다시 나타나요.</p></div>${homeCollectMarkup()}
+      ${todo.length ? `<div class="home-todo-list">${todo.map((item, index) => `<button type="button" class="home-todo tone-${item.tone}" ${todoAttrs(item)}><i class="todo-no" aria-label="${index + 1}번째 할 일">${index + 1}</i><span><b>${item.title}<strong class="todo-count">${item.count}<small>건</small></strong></b><small>${item.hint}</small></span><em>${item.button} →</em></button>`).join("")}</div>` : `<div class="home-todo-done"><b>✓ 모두 처리했어요</b><span>새 주문이 들어오면 여기에 바로 알려 드릴게요.</span></div>`}
     </section>`,
     "product-flow": `<section class="panel home-section"><div class="home-section-head"><div><h3>상품 등록 현황</h3><p>상품 소싱 → 승인 대기 → 승인 완료(꾸미기) → 마스터 상품 → 쇼핑몰 판매 순서로 진행돼요.</p></div></div>
       <div class="home-flow five">${flowStep(1, 1, "상품 소싱", "＋", "상품 찾아 PICK", "blue")}${flowStep(2, 2, "승인 대기", pendingPicks.length, "공급사 확인 중", "yellow")}${flowStep(3, 17, "승인 완료", readyItems.length, "내 상품 꾸미기", "purple")}${flowStep(4, 14, "마스터 상품", masterReady.length, "전송 전 상품", "orange")}${flowStep(5, 11, "판매중 상품", liveProducts.length, "쇼핑몰 판매 중", "green")}</div>
@@ -6105,7 +6105,7 @@ function renderSupplier() {
     <button type="button" class="stl-mini" data-action="supplier-go-menu" data-index="7"><span><small>다음 정산 · ${escapeHtml(nextStl.meta.payLabel)}</small><b>${money(nextStl.net)}</b></span><span class="stl-mini-meta">${escapeHtml(nextStl.meta.period)} 주문 ${nextStl.lines.length}건${nextStl.holds.length ? ` · <em>보류 ${nextStl.holds.length}건</em>` : ""}</span><i>정산 보기 →</i></button>
     <section class="home-today sup-today">
       <div class="home-greeting"><span>오늘 할 일</span><h2>${todo.length ? `오늘 처리할 일이 <em>${todo.length}가지</em> 있어요` : "오늘 처리할 일을 모두 마쳤어요"}</h2><p>버튼 한 번이면 해당 일을 바로 처리하거나 화면으로 이동해요.</p></div>
-      ${todo.length ? `<div class="home-todo-list">${todo.map(item => `<button type="button" class="home-todo tone-${item.tone}" ${item.attrs}><strong>${item.count}</strong><span><b>${item.title}</b><small>${item.hint}</small></span><em>${item.button} →</em></button>`).join("")}</div>` : `<div class="home-todo-done"><b>✓ 모두 처리했어요</b><span>위탁셀러 주문이 들어오면 여기에 바로 알려 드릴게요.</span></div>`}
+      ${todo.length ? `<div class="home-todo-list">${todo.map((item, index) => `<button type="button" class="home-todo tone-${item.tone}" ${item.attrs}><strong>${item.count}</strong><span><b>${item.title}</b><small>${item.hint}</small></span><em>${item.button} →</em></button>`).join("")}</div>` : `<div class="home-todo-done"><b>✓ 모두 처리했어요</b><span>위탁셀러 주문이 들어오면 여기에 바로 알려 드릴게요.</span></div>`}
     </section>
     <section class="panel home-section"><div class="home-section-head"><div><h3>주문 처리 현황</h3><p>위탁셀러 결제 → 확인·포장 → 송장 발급 → 배송완료 순서로 진행돼요.</p></div><button type="button" class="secondary-button" data-action="open-supplier-orders">주문 · 출고 관리 →</button></div>
       <div class="home-orders">${step(0, "신규 주문", newOrders.length, "확인·포장 전", "red", 'data-action="open-supplier-orders" data-status="발주완료"')}${step(1, "송장 대기", readyOrders.length, "포장 완료·송장 전", "orange", 'data-action="open-supplier-orders" data-status="배송준비중"')}${step(2, "배송중", orders.filter(o => o.status === "배송중").length, "셀러 쇼핑몰 전송", "blue", 'data-action="open-supplier-orders" data-status="배송중"')}${step(3, "배송완료", orders.filter(o => o.status === "배송완료").length, "정산 예정", "green", 'data-action="open-supplier-orders" data-status="배송완료"')}</div>
@@ -10811,7 +10811,7 @@ document.addEventListener("click", event => {
   }
   if (action === "order-stage-guide") return orderStageGuideModal();
   if (action === "order-talk") return openOrderTalk(id, target.dataset.q || "");
-  if (action === "filter-order-stage") { sellerOrderStage = target.dataset.stage || "all"; sellerOrderSearch = ""; render(); updateAccountUI(); return; }
+  if (action === "filter-order-stage") { sellerOrderStage = target.dataset.stage === "overview" ? "all" : (target.dataset.stage || "all"); sellerOrderSearch = ""; render(); updateAccountUI(); return; }
   if (action === "dashboard-order-stage") { activeMenuIndex = 4; sellerOrderStage = target.dataset.stage || "all"; sellerOrderSearch = ""; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (action === "open-refunds") { activeMenuIndex = 5; refundMonth = "all"; refundSearch = ""; refundTypeFilter = target.dataset.type || "all"; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (action === "apply-recommended-prices") { document.querySelectorAll("#reviewPriceForm .channel-new-price").forEach(input => { input.value = target.dataset.price || input.value; input.dispatchEvent(new Event("input", { bubbles:true })); }); showToast("모든 채널에 권장 판매가를 입력했습니다."); return; }
@@ -12412,7 +12412,16 @@ document.getElementById("globalSearch").addEventListener("keydown", event => {
   if (event.key !== "Enter") return;
   const query = event.currentTarget.value.trim().toLowerCase();
   if (!query) return;
-  const scopedOrders = activeRole === "seller" ? currentSellerOrders() : activeRole === "supplier" ? currentSupplierOrders() : state.orders;
+  if (activeRole === "seller") {
+    /* 위탁셀러: 팝업 대신 주문 관리 ‘전체 주문’에서 검색어로 걸러 보여 준다 */
+    const raw = event.currentTarget.value.trim();
+    const hits = currentSellerOrders().filter(order => { const product = orderSourceProduct(order); return [order.id, order.customer, order.recipientName, order.phone, order.channel, order.tracking, order.externalProductName, order.externalProductCode, order.channelOrderNo, product?.name].some(value => String(value || "").toLowerCase().includes(query)); });
+    closeModal(); activeMenuIndex = menuIndexOf("주문 관리", "seller"); sellerOrderStage = "all"; sellerOrderSearch = raw; orderListLimits = {};
+    render(); updateAccountUI();
+    document.getElementById("sellerOrderResults")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return showToast(hits.length ? `‘${raw}’ 주문 ${hits.length}건을 찾았어요.` : `‘${raw}’와 일치하는 주문이 없어요.`);
+  }
+  const scopedOrders = activeRole === "supplier" ? currentSupplierOrders() : state.orders;
   const order = scopedOrders.find(item => [item.id, item.customer, item.recipientName, item.phone].some(value => String(value || "").toLowerCase().includes(query)));
   if (order) {
     activeMenuIndex = activeRole === "master" ? 6 : activeRole === "supplier" ? 3 : 4;
