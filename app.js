@@ -1653,7 +1653,7 @@ function sellerChannelDetail(item, channel, product = productOf(item.productId))
 function channelSyncBadge(item, channel, status) {
   if (status !== "판매중") return "";
   const sync = item.channelSyncStatus?.[channel.id] || "synced";
-  if (sync === "edited") return `<em class="channel-sync-chip edited">수정완료 · 전송전</em>`;
+  if (sync !== "sending" && staleChannelIds(item).includes(channel.id)) return `<em class="channel-sync-chip edited">업데이트 필요</em>`;
   if (sync === "sending") return `<em class="channel-sync-chip sending">전송중…</em>`;
   return `<em class="channel-sync-chip synced">동기화 완료</em>`;
 }
@@ -3349,13 +3349,13 @@ function productCustomizeChecklist(item, product) {
 function myProductCard(item, stage) {
   const product = productOf(item.productId);
   const live = liveChannelIds(item);
-  const status = stage === "ready" ? `<span class="my-status ready">승인 완료 · ${escapeHtml(item.approvedAt || "")}</span>` : live.length ? `<span class="my-status live">● 판매중 · 전송 완료</span><span class="live-channel-icons">${live.map(id => channelMark(id, true)).join("")}</span>` : `<span class="my-status master">전송 대기</span>`;
+  const status = stage === "ready" ? `<span class="my-status ready">승인 완료 · ${escapeHtml(item.approvedAt || "")}</span>` : live.length ? `<span class="my-status live">● 판매중 · ${staleChannelIds(item).length ? "업데이트 필요" : "최신"}</span><span class="live-channel-icons">${live.map(id => channelMark(id, true)).join("")}</span>` : `<span class="my-status master">전송 대기</span>`;
   const unsentConnected = sellerChannels().filter(channel => channel.status === "connected" && !live.includes(channel.id)).length;
   const checklist = stage === "ready" ? `<div class="my-product-checklist" aria-label="꾸미기 진행">${productCustomizeChecklist(item, product).map(([label, done]) => `<span class="${done ? "done" : ""}">${done ? "✓" : "○"} ${label}</span>`).join("")}</div>` : "";
   const actions = stage === "ready"
     ? `<button type="button" class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">✎ 상품 꾸미기</button><button type="button" class="primary-button" data-action="register-master-product" data-id="${item.id}">마스터 상품 등록 →</button>`
     : live.length
-      ? `<button type="button" class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">✎ 수정</button>${unsentConnected ? `<button type="button" class="secondary-button" data-action="manage-product-channels" data-id="${item.id}">+ 쇼핑몰 추가</button>` : ""}<button type="button" class="primary-button live-go-button" data-action="go-menu" data-menu="판매중 상품">판매중 보기 →</button><button type="button" class="icon-text-button" data-action="delete-seller-product" data-id="${item.id}" aria-label="상품 삭제">삭제</button>`
+      ? `<button type="button" class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">✎ 수정</button>${staleChannelIds(item).length ? `<button type="button" class="primary-button update-now-button" data-action="sync-all-channels" data-id="${item.id}">⟳ 최신 업데이트</button>` : ""}${unsentConnected ? `<button type="button" class="secondary-button" data-action="manage-product-channels" data-id="${item.id}">+ 쇼핑몰 추가</button>` : ""}<button type="button" class="primary-button live-go-button" data-action="go-menu" data-menu="판매중 상품">판매중 보기 →</button><button type="button" class="icon-text-button" data-action="delete-seller-product" data-id="${item.id}" aria-label="상품 삭제">삭제</button>`
       : `<button type="button" class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">✎ 상품 수정</button><button type="button" class="primary-button send-product-button" data-action="manage-product-channels" data-id="${item.id}">상품 전송 →</button><button type="button" class="icon-text-button" data-action="delete-seller-product" data-id="${item.id}" aria-label="상품 삭제">삭제</button>`;
   return `<article class="my-product-card ${stage} ${stage === "master" ? (live.length ? "is-live" : "is-waiting") : ""} ${stage === "ready" && readyPicks.has(item.id) ? "picked" : ""}" data-item="${item.id}">
     ${stage === "ready" ? `<label class="my-pick-check" title="한 번에 등록할 상품 선택"><input type="checkbox" data-ready-pick value="${escapeHtml(item.id)}" ${readyPicks.has(item.id) ? "checked" : ""} aria-label="${escapeHtml(sellerProductTitle(item, product))} 선택"></label>` : ""}
@@ -3498,9 +3498,9 @@ function sellerOnSaleProductsTemplate() {
   const pageStart = (onSalePage - 1) * onSalePageSize;
   const paged = filtered.slice(pageStart, pageStart + onSalePageSize);
   const filtersActive = onSaleCategoryFilter !== "전체" || Boolean(onSaleDateFrom || onSaleDateTo);
-  const needsPush = liveItems.filter(item => liveChannelIds(item).some(channelId => item.channelSyncStatus?.[channelId] === "edited")).length;
+  const needsPush = liveItems.filter(item => staleChannelIds(item).length).length;
   return `${sectionHero("판매중 상품", "쇼핑몰에 올라가 실제로 판매 중인 상품이에요. 상품을 누르면 쇼핑몰별 옵션·가격·코드를 볼 수 있어요.")}${productStageTabs("판매중 상품")}
-    ${needsPush ? `<div class="mapping-callout"><div><b>고친 내용이 아직 쇼핑몰에 안 간 상품 ${needsPush}개</b><span>상품을 열고 ‘모든 쇼핑몰에 최신 내용 전송’을 눌러 주세요.</span></div></div>` : ""}
+    ${needsPush ? `<div class="mapping-callout"><div><b>마스터 상품이 바뀌어 쇼핑몰 업데이트가 필요한 상품 ${needsPush}개</b><span>상품마다 ‘최신 업데이트’를 누르면 올라가 있는 모든 쇼핑몰이 마스터 상품과 똑같이 바뀌어요.</span></div></div>` : ""}
     <div class="panel onsale-panel">
     <div class="onsale-top"><label class="onsale-search"><span aria-hidden="true">⌕</span><input id="onSaleSearchInput" value="${escapeHtml(onSaleSearch)}" placeholder="상품명·옵션·코드 검색" autocomplete="off"></label>
       <details class="onsale-more" ${filtersActive ? "open" : ""}><summary>필터${filtersActive ? ` <i aria-label="필터 적용됨"></i>` : ""}</summary>
@@ -3518,19 +3518,22 @@ function sellerOnSaleProductsTemplate() {
 function onSaleCard(item) {
   const product = productOf(item.productId);
   const live = liveChannelIds(item);
-  const edited = live.some(channelId => item.channelSyncStatus?.[channelId] === "edited");
+  const stale = staleChannelIds(item);
+  const sending = live.some(channelId => item.channelSyncStatus?.[channelId] === "sending");
+  const edited = stale.length > 0;
   const expanded = expandedSellerProductId === item.id;
-  return `<article class="onsale-card ${expanded ? "expanded" : ""}">
+  return `<article class="onsale-card ${expanded ? "expanded" : ""} ${edited ? "needs-update" : ""}">
     <button type="button" class="onsale-card-main" data-action="toggle-product-channels" data-id="${item.id}" aria-expanded="${expanded}">
       ${sellerItemThumb(item, product, "onsale-photo")}
       <span class="onsale-info"><small>${escapeHtml(item.id)} · ${escapeHtml(product?.supplier || "공급사")}</small><strong>${escapeHtml(sellerProductTitle(item, product))}</strong>
-        <span class="onsale-meta"><span class="live-channel-icons">${live.map(channelId => channelMark(channelId, true)).join("")}</span>${hasOptions(product) ? `<span class="option-pill">${escapeHtml(sellerItemOptionSummary(item, product))}</span>` : ""}${edited ? `<em class="channel-sync-chip edited">수정됨 · 전송 필요</em>` : ""}</span></span>
+        <span class="onsale-meta"><span class="live-channel-icons">${live.map(channelId => channelMark(channelId, true)).join("")}</span>${hasOptions(product) ? `<span class="option-pill">${escapeHtml(sellerItemOptionSummary(item, product))}</span>` : ""}${edited ? `<em class="channel-sync-chip edited">업데이트 필요 ${stale.length}곳</em>` : sending ? `<em class="channel-sync-chip sending">업데이트 중…</em>` : ""}</span></span>
       <span class="onsale-price"><b>${sellerItemPriceLabel(item, product)}</b><em>마진 ${sellerItemMarginLabel(item, product)}</em></span>
       <i class="onsale-chevron" aria-hidden="true">${expanded ? "−" : "+"}</i>
     </button>
+    <div class="onsale-quick">${edited ? `<span class="onsale-update-note">마스터 상품이 바뀌었어요 · ${stale.map(id => escapeHtml(channelMeta(id).name)).join(", ")}에 아직 예전 내용이 올라가 있어요</span>` : `<span class="onsale-update-note ok">✓ 모든 쇼핑몰이 마스터 상품과 같아요</span>`}<div class="onsale-quick-actions"><button type="button" class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">✎ 마스터 상품 수정</button>${edited ? `<button type="button" class="primary-button update-now-button" data-action="sync-all-channels" data-id="${item.id}">⟳ 최신 업데이트</button>` : ""}</div></div>
     ${expanded ? `<div class="onsale-detail">
       ${sellerChannels().map(channel => onSaleChannelBlock(item, channel, product)).join("")}
-      <div class="onsale-actions"><button type="button" class="primary-button" data-action="sync-all-channels" data-id="${item.id}">⟳ 모든 쇼핑몰에 최신 내용 전송</button><button type="button" class="secondary-button" data-action="edit-seller-product" data-id="${item.id}">✎ 상품 수정</button><button type="button" class="secondary-button" data-action="manage-product-channels" data-id="${item.id}">쇼핑몰 추가</button><button type="button" class="secondary-button" data-action="simulate-order" data-id="${item.id}">샘플 주문 넣기</button><button type="button" class="text-button danger-text" data-action="delete-seller-product" data-id="${item.id}">상품 삭제</button></div>
+      <div class="onsale-actions"><button type="button" class="secondary-button" data-action="manage-product-channels" data-id="${item.id}">쇼핑몰 추가</button><button type="button" class="secondary-button" data-action="simulate-order" data-id="${item.id}">샘플 주문 넣기</button><button type="button" class="text-button danger-text" data-action="delete-seller-product" data-id="${item.id}">상품 삭제</button></div>
     </div>` : ""}
   </article>`;
 }
@@ -3588,6 +3591,38 @@ function channelListingOptions(item, channelId, product = productOf(item?.produc
   return sellerOptionRows(item, product).filter(row => row.enabled).map(row => ({ optionId: row.id, name: row.name, salePrice: row.salePrice, code: channelOptionCode(item, channelId, row.index) }));
 }
 function liveChannelIds(item) { return sellerChannels().filter(channel => sellerProductChannelStatus(item, channel) === "판매중").map(channel => channel.id); }
+/* 마스터 상품 지문: 쇼핑몰에 올라가는 내용(상품명·가격·옵션·사진·상세·카테고리·태그·배송)을 한 줄로 요약.
+   쇼핑몰에 보낼 때 채널마다 이 값을 기억해 두고, 지금 값과 다르면 '최신 업데이트'가 필요한 상태다. */
+function textHash(text) { let h = 5381; const str = String(text || ""); for (let i = 0; i < str.length; i += 1) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+function masterFingerprint(item, product = productOf(item?.productId)) {
+  if (!item) return "";
+  const rows = sellerOptionRows(item, product).filter(row => row.enabled).map(row => `${row.id}:${row.name}:${row.salePrice}`);
+  return textHash([
+    sellerProductTitle(item, product), Number(item.salePrice || 0), rows.join(","),
+    textHash(item.customThumbnail || ""), item.thumbBadge || "", (item.images || []).map(src => textHash(src)).join(","),
+    textHash(JSON.stringify(item.detailDoc || item.detailOverride || "")),
+    sellerItemCategoryText(item, product), (item.searchTags || []).join(","), item.shippingPolicyId || ""
+  ].join("|"));
+}
+/* 판매중 채널 중 마스터 상품이 바뀌어 다시 보내야 하는 곳 */
+function staleChannelIds(item) {
+  const live = liveChannelIds(item);
+  if (!live.length) return [];
+  const now = masterFingerprint(item);
+  item.channelFp = item.channelFp || {};
+  return live.filter(channelId => {
+    if (item.channelSyncStatus?.[channelId] === "sending") return false;
+    if (item.channelSyncStatus?.[channelId] === "edited") return true;
+    if (!item.channelFp[channelId]) { item.channelFp[channelId] = now; return false; } /* 예전 데이터: 지금 내용을 기준으로 삼는다 */
+    return item.channelFp[channelId] !== now;
+  });
+}
+function markChannelSynced(item, channelId) {
+  item.channelFp = item.channelFp || {};
+  item.channelFp[channelId] = masterFingerprint(item);
+  item.channelSyncStatus = item.channelSyncStatus || {};
+  item.channelSyncStatus[channelId] = "synced";
+}
 /* 두고에서 '상품 전송'으로 쇼핑몰에 올린 상품은 쇼핑몰 상품코드가 곧 두고 상품이므로 매핑 없이 자동 연결된다. */
 function autoLinkedSellerProduct(code, sellerLoginId = currentAccount?.loginId || "seller") {
   if (!code) return null;
@@ -6547,6 +6582,52 @@ function accountRecoveryResult(title, detail) {
   openModal(`<div class="recovery-result"><span>✓</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(detail)}</p><button type="button" class="primary-button" data-close-modal>로그인으로 돌아가기</button></div>`);
 }
 
+/* 상품 상세 '배송·반품 안내': 공급사가 상품에 건 배송 정책 + 반품·교환 비용과 부담 주체 */
+function productShippingReturnMarkup(p) {
+  const overseas = p.shippingType === "overseas";
+  const policy = productShippingPolicy(p) || (p.supplierLoginId ? defaultShippingPolicy(p.supplierLoginId, "supplier") : null);
+  const f = productShippingFee(p);
+  const won = value => money(Number(value || 0));
+  const payText = f.type === "FREE" ? "배송비 없음 (고객 결제 0원)" : (SHIP_PAY_TYPES.find(([v]) => v === f.payType)?.[1] || "선결제");
+  const attr = SHIP_ATTRS.find(([v]) => v === f.attribute)?.[1] || "일반 배송";
+  const book = supplierAddressBook(p.supplierLoginId);
+  const returnTo = book ? (book.sameAsShip !== false ? book.shipFrom : book.returnTo) : null;
+  const fresh = /식품|농산|수산|축산|과일|채소|김치|정육|반찬/.test(`${p.category || ""} ${p.categorySub || ""} ${(productCategoryPath(p) || []).join(" ")}`);
+  const returnOne = Number(f.returnFee || 0), exchange = Number(f.exchangeFee || 0);
+  const freeShip = f.type === "FREE";
+  const feeRows = [];
+  if (f.type === "QUANTITY_TIER") f.qtyTiers.forEach((t, i) => feeRows.push([`${t.from}개${f.qtyTiers[i + 1] ? `~${f.qtyTiers[i + 1].from - 1}개` : " 이상"}`, won(t.fee)]));
+  else if (f.type === "WEIGHT_TIER") f.weightTiers.forEach(t => feeRows.push([`${t.upto}kg까지`, won(t.fee)]));
+  const rows = (list) => list.map(([k, v, note]) => `<div><dt>${k}</dt><dd>${v}${note ? `<small>${note}</small>` : ""}</dd></div>`).join("");
+  return `<div class="ship-info">
+    <article class="ship-info-card"><span class="ship-info-kicker">배송비 정책</span><h3>${escapeHtml(policy?.name || (overseas ? "해외직구 배송" : "공급사 기본 배송"))}</h3><p class="ship-info-lead">${escapeHtml(shippingFeeLabel(f))}</p>
+      <dl class="ship-info-rows">${rows([
+        ["배송 방법", `${overseas ? "해외직구 · " : ""}${f.method === "DIRECT" ? "직접 배송" : "택배"} · ${escapeHtml(attr)}`],
+        ["배송비", escapeHtml(shippingFeeLabel(f).split(" · ")[0])],
+        ...(f.type === "CONDITIONAL_FREE" ? [["무료 조건", `${won(f.freeOver)} 이상 구매 시 무료`, `미만이면 ${won(f.baseFee)}`]] : []),
+        ...(f.type === "UNIT_QUANTITY_PAID" ? [["수량별 부과", `${f.repeatQuantity}개마다 ${won(f.baseFee)}`]] : []),
+        ...feeRows,
+        ["결제 방식", payText],
+        ["제주·도서산간", f.areaUse ? `제주 +${won(f.jejuFee)}${f.areaType === "AREA_3" ? ` · 도서산간 +${won(f.islandFee)}` : ""}` : "추가 배송비 없음"],
+        ["묶음배송", f.bundle ? "같은 공급사 상품끼리 묶음배송 가능" : "묶음배송 불가 (상품마다 따로 발송)"],
+        ["배송 기간", `${escapeHtml(p.deliveryDays || "1~3일")} · 발주마감 ${escapeHtml(p.cutoff || "10:00")}`, `마감 전 결제한 주문부터 당일 순차 출고`],
+        ["택배사", escapeHtml(p.carrier || policy?.carrier || "CJ대한통운")]
+      ])}</dl></article>
+    <article class="ship-info-card"><span class="ship-info-kicker">반품·교환 비용</span><h3>누가, 얼마를 내나요?</h3>
+      <table class="ship-cost-table"><thead><tr><th>사유</th><th>반품 (환불)</th><th>교환</th></tr></thead><tbody>
+        <tr><td class="cause"><b>단순 변심·주문 실수</b><small>고객 부담</small></td><td data-label="반품 (환불)"><b>${won(freeShip ? returnOne * 2 : returnOne)}</b><small>${freeShip ? `무료배송 상품이라 처음 배송비까지 왕복 (${won(returnOne)} × 2)` : `반품 배송비 편도`}</small></td><td data-label="교환"><b>${won(exchange)}</b><small>왕복 배송비</small></td></tr>
+        <tr><td class="cause"><b>상품 불량·파손·오배송</b><small>공급사 부담</small></td><td data-label="반품 (환불)"><b>0원</b><small>고객 비용 없음 · 전액 환불</small></td><td data-label="교환"><b>0원</b><small>공급사가 새 상품으로 다시 보냄</small></td></tr>
+        ${f.areaUse ? `<tr><td class="cause"><b>제주·도서산간 추가</b><small>고객 사유일 때만</small></td><td colspan="2" data-label="추가 배송비">편도마다 제주 +${won(f.jejuFee)}${f.areaType === "AREA_3" ? ` · 도서산간 +${won(f.islandFee)}` : ""}</td></tr>` : ""}
+      </tbody></table>
+      <p class="ship-info-note">고객이 낸 반품 배송비는 환불 금액에서 빼고 돌려줘요. 불량·오배송은 사진을 받아 공급사가 확인하면 비용 없이 처리돼요.</p></article>
+    <article class="ship-info-card"><span class="ship-info-kicker">반품 절차</span><h3>반품·교환 접수</h3>
+      <ol class="ship-info-steps"><li><b>신청</b><span>상품을 받은 날부터 7일 안에 위탁셀러의 ‘취소·반품’에서 주문과 사유를 골라 요청해요.</span></li><li><b>회수</b><span>공급사가 확인하면 택배 기사가 회수해요. 받은 포장 그대로 보내 주세요.</span></li><li><b>환불</b><span>공급사가 반품 입고를 확인하면 위탁셀러 예치금으로 공급가가 환불돼요.</span></li></ol>
+      <dl class="ship-info-rows">${rows([["반품지", escapeHtml(returnTo ? addressLine(returnTo) : "공급사 반품지 (주문 확정 후 안내)")], ["A/S·문의", escapeHtml(book?.phone || memberByLogin(p.supplierLoginId)?.contact || "두고톡 공급사 문의")]])}</dl></article>
+    <article class="ship-info-card warn"><span class="ship-info-kicker">반품이 안 되는 경우</span><h3>${fresh ? "신선식품 반품 기준" : overseas ? "해외직구 반품 기준" : "반품 제한"}</h3>
+      <ul class="ship-info-list">${fresh ? `<li>신선식품은 받은 뒤 단순 변심으로는 반품할 수 없어요.</li><li>상하거나 파손된 경우 받은 날 사진과 함께 바로 알려 주세요 (24시간 이내).</li>` : ""}${overseas ? `<li>해외에서 출발한 뒤에는 취소가 어렵고, 반품 시 국제 배송비가 따로 들 수 있어요.</li><li>개인통관고유부호가 틀려 통관이 지연되면 반품 대상이 아니에요.</li>` : ""}<li>포장을 뜯거나 사용해 상품 가치가 떨어진 경우</li><li>받은 날부터 7일이 지난 경우 (불량은 안 날로부터 30일)</li></ul></article>
+  </div>`;
+}
+
 function productDetailModal(id) {
   const p = productOf(id);
   if (!p) return;
@@ -6571,7 +6652,7 @@ function productDetailModal(id) {
     </div></div>
     <div class="detail-tabs" role="tablist"><button type="button" class="active" data-action="product-detail-tab" data-target="product">상품 상세정보</button><button type="button" data-action="product-detail-tab" data-target="shipping">배송·반품 안내</button><button type="button" data-action="product-detail-tab" data-target="supplier">공급사 정보</button></div>
     <section class="detail-tab-panel active" data-detail-panel="product"><div class="long-detail">${productHasCustomDetail(p) && detailDocHasContent(productDetailDoc(p)) ? `<div class="supplier-detail-page"><span class="supplier-detail-badge">공급사 상세페이지 · 쇼핑몰 전송 시 그대로 복사</span>${detailPreviewMarkup(p)}</div>` : ""}<div class="long-detail-title"><span>FRESH SELECTED</span><h2>${escapeHtml(p.name)}</h2><p>두고가 확인한 공급사 원본 정보로 만든 샘플 상세페이지입니다.</p></div><div class="long-detail-image">${productPhoto(p,"long-detail-photo")}<div><span>${overseas ? "OVERSEAS DIRECT" : "FARM TO TABLE"}</span><h3>${escapeHtml(p.origin)}에서<br>꼼꼼하게 선별했습니다</h3><p>${escapeHtml(p.detail)}</p></div></div><div class="detail-feature-grid"><div><b>01</b><span>선별 품질</span><p>출고 전 상품 상태와 포장 기준을 확인합니다.</p></div><div><b>02</b><span>${overseas ? "안전한 통관" : "빠른 산지출고"}</span><p>${overseas ? "개인통관부호를 주문별로 확인합니다." : "발주 마감 전 주문은 빠르게 출고합니다."}</p></div><div><b>03</b><span>판매 콘텐츠 제공</span><p>정사각형 썸네일과 상세설명을 함께 복사합니다.</p></div></div><div class="detail-info-board"><h3>상품 고시정보</h3><dl><div><dt>상품명</dt><dd>${escapeHtml(p.name)}</dd></div><div><dt>원산지</dt><dd>${escapeHtml(p.origin)}</dd></div><div><dt>공급사</dt><dd>${escapeHtml(p.supplier)}</dd></div><div><dt>보관방법</dt><dd>${escapeHtml(p.shelfLife || "상품별 표시사항 참조")}</dd></div><div><dt>배송</dt><dd>${overseas ? `해외직구 ${escapeHtml(p.deliveryDays)}` : `국내택배 ${escapeHtml(p.deliveryDays)}`}</dd></div><div><dt>반품</dt><dd>두고에서 요청 후 공급사 확인</dd></div></dl></div></div></section>
-    <section class="detail-tab-panel" data-detail-panel="shipping" hidden><div class="detail-policy-grid"><article><span>배송</span><h3>${overseas ? "해외직구 배송" : "공급사 직배송"}</h3><p>${escapeHtml(p.deliveryDays || "1~3일")} 내 배송을 원칙으로 하며, 발주마감 ${escapeHtml(p.cutoff || "10:00")} 이전 결제 주문부터 순차 출고됩니다.</p></article><article><span>반품</span><h3>반품·교환 접수</h3><p>셀러의 취소·환불 메뉴에서 주문과 사유를 선택하면 공급사 확인 후 회수 또는 환불 절차가 진행됩니다.</p></article><article><span>주의</span><h3>${overseas ? "통관정보 확인" : "신선식품 확인"}</h3><p>${overseas ? "수취인의 개인통관부호가 일치하지 않으면 배송이 지연될 수 있습니다." : "신선식품은 단순 변심보다 파손·품질 이슈를 우선 확인합니다."}</p></article></div></section>
+    <section class="detail-tab-panel" data-detail-panel="shipping" hidden>${productShippingReturnMarkup(p)}</section>
     <section class="detail-tab-panel" data-detail-panel="supplier" hidden><div class="detail-supplier-board"><span class="connection-avatar large">공</span><div><span>SUPPLIER PARTNER</span><h3>${escapeHtml(p.supplier)}</h3><p>${escapeHtml(supplier?.representative || "공급사 담당자")} · 승인 공급사</p></div><dl><div><dt>연락처</dt><dd>${escapeHtml(supplier?.contact || "-")}</dd></div><div><dt>이메일</dt><dd>${escapeHtml(supplier?.email || "-")}</dd></div><div><dt>상담시간</dt><dd>평일 09:00~18:00</dd></div><div><dt>공급상품</dt><dd>${state.products.filter(product => product.supplierLoginId === p.supplierLoginId).length}개</dd></div></dl><button class="primary-button" data-action="supplier-contact" data-id="${p.supplierLoginId}" data-product-id="${p.id}">두고톡으로 문의하기</button></div></section>
     <div class="sticky-detail-actions"><span><b>${money(p.supply)}</b> 공급가 · 재고 ${p.stock}개</span><div><button class="secondary-button" data-close-modal>닫기</button><button class="secondary-button sample-sticky-cart" data-action="sample-add-cart" data-id="${p.id}">🛒 샘플 담기</button><button class="primary-button" data-action="${pickAction}" data-id="${p.id}">${pickLabel}</button></div></div>
   </div>`);
@@ -6772,7 +6853,7 @@ function editSellerProductModal(sellerProductId) {
     </form>
     <footer class="studio-foot">${stage === "ready"
       ? `<button type="submit" form="studioForm" class="secondary-button" value="save">임시 저장</button><button type="submit" form="studioForm" class="primary-button" value="register">마스터 상품 등록 →</button>`
-      : `<button type="button" class="secondary-button" data-close-modal>닫기</button><button type="submit" form="studioForm" class="primary-button" value="save">${live.length ? "저장 (쇼핑몰 반영 대기)" : "저장하기"}</button>`}</footer>
+      : `<button type="button" class="secondary-button" data-close-modal>닫기</button><button type="submit" form="studioForm" class="primary-button" value="save">${live.length ? "마스터 상품 저장" : "저장하기"}</button>`}</footer>
   </div>`);
   document.querySelector("#modal .modal").classList.add("studio-modal");
 }
@@ -10395,10 +10476,10 @@ document.addEventListener("click", event => {
       item.channelDetails = item.channelDetails || {};
       liveChannelIds.forEach(channelId => {
         item.channelDetails[channelId] = channelListingSnapshot(item, channelId);
-        item.channelSyncStatus[channelId] = "synced";
+        markChannelSynced(item, channelId);
       });
-      audit("전체 채널 상품 동기화", `${item.id} · 판매중 채널 ${liveChannelIds.length}곳에 최신 상품명·가격을 전송해 동기화를 완료했습니다.`, "done", "channel");
-      saveState(); render(); updateAccountUI(); showToast(`판매중 채널 ${liveChannelIds.length}곳을 모두 동기화했습니다.`);
+      audit("최신 업데이트", `${item.id} · 마스터 상품 내용(상품명·가격·옵션·사진·상세)을 판매중 쇼핑몰 ${liveChannelIds.length}곳에 똑같이 반영했습니다.`, "done", "channel");
+      saveState(); render(); updateAccountUI(); showToast(`쇼핑몰 ${liveChannelIds.length}곳을 마스터 상품과 똑같이 업데이트했어요.`);
     }, 700);
     return;
   }
@@ -10632,7 +10713,7 @@ document.addEventListener("click", event => {
     setTimeout(() => {
       item.channelDetails = item.channelDetails || {};
       item.channelDetails[channelId] = channelListingSnapshot(item, channelId);
-      item.channelSyncStatus[channelId] = "synced";
+      markChannelSynced(item, channelId);
       runChannelOp(item, channelId, "sync", { silent: true });
       audit("판매채널 상품 전송", `${item.id} · ${channel?.name || channelId}에 최신 상품명·가격을 전송해 동기화를 완료했습니다.`, "done", "channel");
       saveState(); render(); updateAccountUI(); showToast(`${channel?.name || "채널"}에 전송을 완료했습니다.`);
@@ -11669,7 +11750,7 @@ document.addEventListener("submit", event => {
     studioDraft = null;
     saveState(); closeModal();
     if (intent === "register") { activeMenuIndex = menuIndexOf("마스터 상품"); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); showToast("꾸민 상품을 마스터 상품에 등록했어요. ‘상품 전송’으로 쇼핑몰에 올려 보세요."); }
-    else { render(); updateAccountUI(); showToast(live.length ? "저장했어요. ‘판매중 상품’에서 전송하면 쇼핑몰에 반영돼요." : "저장했어요."); }
+    else { render(); updateAccountUI(); showToast(live.length ? `저장했어요. ‘최신 업데이트’를 누르면 쇼핑몰 ${live.length}곳이 똑같이 바뀌어요.` : "저장했어요."); }
     return;
   }
   if (form.id === "externalOrderForm") {
@@ -11863,7 +11944,7 @@ document.addEventListener("submit", event => {
     if (missingPolicy) return showToast(`${channelMeta(missingPolicy).name} 배송 정책을 골라 주세요.`);
     if (!Array.isArray(item.searchTags) || !item.searchTags.length) item.searchTags = suggestedTags(item, productOf(item.productId));
     sellerChannels().forEach(channel => { item.channelStatuses[channel.id] = channels.includes(channel.id) ? "판매중" : channel.status === "connected" ? "판매중지/미노출" : channel.status === "pending" ? "연동 대기" : "미연동"; });
-    channels.forEach(channelId => { const channel = sellerChannels().find(entry => entry.id === channelId); const shippingPolicy = channelShippingPolicies(channel).find(policy => policy.id === data[`policy__${channelId}`]) || null; item.channelDetails[channelId] = channelListingSnapshot(item, channelId, productOf(item.productId), { shippingPolicy }); item.channelSyncStatus[channelId] = "synced"; });
+    channels.forEach(channelId => { const channel = sellerChannels().find(entry => entry.id === channelId); const shippingPolicy = channelShippingPolicies(channel).find(policy => policy.id === data[`policy__${channelId}`]) || null; item.channelDetails[channelId] = channelListingSnapshot(item, channelId, productOf(item.productId), { shippingPolicy }); markChannelSynced(item, channelId); });
     const optionCount = sellerOptionRows(item).filter(row => row.enabled).length;
     if (newSends) { const usage = planUsage(); usage.productSends = Number(usage.productSends || 0) + newSends; checkUsageAlert("productSends"); }
     /* 쇼핑몰 API: 처음 올리는 곳은 등록, 판매중지했던 곳은 재개, 이미 판매중이면 최신 내용 동기화, 선택에서 뺀 곳은 판매중지 */
