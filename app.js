@@ -2141,7 +2141,7 @@ function render() {
   else titleEl.textContent = activeRole === "seller" ? contentText(`seller.page.${activeMenuIndex}`, defaultTitle) : defaultTitle;
   titleEl.title = isDashboard ? `${accountGreetingName()}님!` : titleEl.textContent;
   const subtitleEl = document.getElementById("pageSubtitle");
-  subtitleEl.textContent = isDashboard ? "" : `${roleLabel()} 업무를 한 화면에서 확인하고 처리하세요.`;
+  subtitleEl.textContent = ""; /* 화면마다 아래 제목 칸에 실제 설명이 있어 겹치는 안내 문구는 뺀다 */
   subtitleEl.hidden = isDashboard;
   if (isDashboard) requestAnimationFrame(fitGreetingLine);
   const demoNotice = document.getElementById("demoNotice");
@@ -2795,7 +2795,7 @@ function talkPartnerReadIndex(messages, connection, perspective) {
 }
 function talkMessageRows(messages, active, perspective, otherName) {
   const partnerReadIndex = talkPartnerReadIndex(messages, active, perspective);
-  const mark = escapeHtml(String(otherName || "").trim().charAt(0) || (perspective === "seller" ? "공" : "셀"));
+  const mark = escapeHtml(nameInitial(otherName) || (perspective === "seller" ? "공" : "셀"));
   return messages.map((message, index) => {
     const mine = message.senderLoginId === currentAccount.loginId;
     const prev = messages[index - 1];
@@ -2822,6 +2822,8 @@ function talkIcon(name) {
   };
   return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[name] || ""}</svg>`;
 }
+/* 아바타 첫 글자: (주)·㈜·주식회사 같은 앞머리와 괄호·기호는 건너뛴다 */
+function nameInitial(name) { const text = String(name || "").replace(/^\s*(\(주\)|㈜|주식회사|\(유\)|유한회사)\s*/, "").replace(/^[^0-9A-Za-z가-힣]+/, ""); return text.charAt(0); }
 function talkAvatarTone(name) {
   const tones = ["#7fa7d9", "#8fc4a3", "#e7a07c", "#b59be0", "#e6b85c", "#7cc3cf"];
   const code = [...String(name || "")].reduce((sum, char) => sum + char.charCodeAt(0), 0);
@@ -2871,7 +2873,7 @@ function partnerMessengerTemplate(connections, perspective) {
   const otherName = perspective === "seller" ? supplierName(active.supplierLoginId) : (seller?.company || active.sellerLoginId);
   const messages = talkRoomMessages(active);
   const favorite = Boolean(state.chatFavorites?.[active.id]);
-  const mark = escapeHtml(String(otherName || "").trim().charAt(0) || (perspective === "seller" ? "공" : "셀"));
+  const mark = escapeHtml(nameInitial(otherName) || (perspective === "seller" ? "공" : "셀"));
   const activeIsOpen = chatMobileView === "room" || window.innerWidth > 720;
   if (activeIsOpen) { markTalkRead(active); roomRows.forEach(room => { if (room.connection.id === active.id) room.unread = 0; }); }
   const totalUnread = roomRows.reduce((sum, room) => sum + room.unread, 0);
@@ -2881,7 +2883,7 @@ function partnerMessengerTemplate(connections, perspective) {
       <label class="talk-search ${chatSearchOpen || chatRoomSearch ? "" : "collapsed"}"><span>${talkIcon("search")}</span><input id="chatRoomSearch" value="${escapeHtml(chatRoomSearch)}" placeholder="거래처·메시지 검색" autocomplete="off"></label>
       <div class="talk-tabs">${[["all","전체"],["unread","안읽음"],["trading","거래중"],["favorite","즐겨찾기"]].map(([key,label]) => `<button type="button" class="${chatRoomFilter === key ? "active" : ""}" data-action="chat-filter" data-filter="${key}">${label}${key === "unread" && totalUnread ? `<i>${totalUnread > 99 ? "99+" : totalUnread}</i>` : ""}</button>`).join("")}</div>
       ${query ? "" : `<button type="button" class="talk-connect-banner" data-action="open-connect-supplier" data-perspective="${perspective}"><span class="talk-connect-plus">＋</span><span><b>${perspective === "seller" ? "새 공급사 연결" : "위탁셀러 연결 코드"}</b><small>${perspective === "seller" ? "공급사에게 받은 코드로 바로 대화를 시작해요" : "코드를 보내면 위탁셀러와 바로 대화할 수 있어요"}</small></span><em>›</em></button>`}
-      <div class="talk-room-list">${visibleRooms.length ? visibleRooms.map(room => `<button class="talk-room-item ${room.connection.id === active.id ? "active" : ""}" type="button" data-action="select-chat-room" data-id="${room.connection.id}"><span class="talk-avatar" style="--avatar-tone:${talkAvatarTone(room.name)}">${escapeHtml(String(room.name || mark).trim().charAt(0) || mark)}</span><span class="talk-room-text"><b><span>${escapeHtml(room.name)}</span>${room.favorite ? `<i class="talk-pin" aria-label="즐겨찾기">${talkIcon("pin")}</i>` : ""}</b><small>${escapeHtml(room.last?.image && !room.last?.text ? "사진" : (room.last?.text || "새 대화를 시작하세요"))}</small></span><span class="talk-room-side"><em>${escapeHtml(room.last ? talkTimeLabel(room.last) : "")}</em>${room.unread && !(room.connection.id === active.id && (chatMobileView === "room" || window.innerWidth > 720)) ? `<i class="talk-unread">${room.unread}</i>` : ""}</span></button>`).join("") : `<div class="talk-empty">조건에 맞는 대화가 없습니다.</div>`}${!query && chatRoomFilter === "all" ? talkNoticeRow(perspective) : ""}</div>
+      <div class="talk-room-list">${visibleRooms.length ? visibleRooms.map(room => `<button class="talk-room-item ${room.connection.id === active.id ? "active" : ""}" type="button" data-action="select-chat-room" data-id="${room.connection.id}"><span class="talk-avatar" style="--avatar-tone:${talkAvatarTone(room.name)}">${escapeHtml(nameInitial(room.name || mark) || mark)}</span><span class="talk-room-text"><b><span>${escapeHtml(room.name)}</span>${room.favorite ? `<i class="talk-pin" aria-label="즐겨찾기">${talkIcon("pin")}</i>` : ""}</b><small>${escapeHtml(room.last?.image && !room.last?.text ? "사진" : (room.last?.text || "새 대화를 시작하세요"))}</small></span><span class="talk-room-side"><em>${escapeHtml(room.last ? talkTimeLabel(room.last) : "")}</em>${room.unread && !(room.connection.id === active.id && (chatMobileView === "room" || window.innerWidth > 720)) ? `<i class="talk-unread">${room.unread}</i>` : ""}</span></button>`).join("") : `<div class="talk-empty">조건에 맞는 대화가 없습니다.</div>`}${!query && chatRoomFilter === "all" ? talkNoticeRow(perspective) : ""}</div>
     </aside>
     <section class="talk-room">
       <header class="talk-room-head"><button type="button" class="talk-back" data-action="chat-back" aria-label="대화 목록으로">‹</button><span class="talk-avatar" style="--avatar-tone:${talkAvatarTone(otherName)}">${mark}</span><div class="talk-room-title"><b>${escapeHtml(otherName)}</b><small><i></i>거래중 · 평균 응답 1시간 이내</small></div><div class="talk-head-actions"><button type="button" class="${favorite ? "on" : ""}" data-action="toggle-chat-favorite" data-id="${active.id}" aria-pressed="${favorite}" aria-label="즐겨찾기">${favorite ? "★" : "☆"}</button><button type="button" data-action="chat-partner-info" data-id="${active.id}" data-perspective="${perspective}" aria-label="거래처 정보">ⓘ</button></div></header>
@@ -2906,7 +2908,7 @@ function talkPartnerProfile(active, perspective) {
   const otherName = perspective === "seller" ? supplierName(active.supplierLoginId) : (seller?.company || active.sellerLoginId);
   const products = state.products.filter(product => product.supplierLoginId === active.supplierLoginId);
   const orders = state.orders.filter(order => order.supplierLoginId === active.supplierLoginId && order.sellerLoginId === active.sellerLoginId);
-  return `<span class="talk-avatar large" style="--avatar-tone:${talkAvatarTone(otherName)}">${escapeHtml(String(otherName || "").trim().charAt(0) || "공")}</span><h3>${escapeHtml(otherName)}</h3><p>${escapeHtml([...new Set([other?.representative || "담당자", perspective === "seller" ? "공급사" : "위탁셀러"])].join(" · "))}</p>
+  return `<span class="talk-avatar large" style="--avatar-tone:${talkAvatarTone(otherName)}">${escapeHtml(nameInitial(otherName) || "공")}</span><h3>${escapeHtml(otherName)}</h3><p>${escapeHtml([...new Set([other?.representative || "담당자", perspective === "seller" ? "공급사" : "위탁셀러"])].join(" · "))}</p>
     <div class="talk-profile-kpis"><span><small>거래 상품</small><b>${new Set(orders.map(order => order.productId)).size}개</b></span><span><small>누적 주문</small><b>${orders.length}건</b></span><span><small>공급 상품</small><b>${products.length}개</b></span><span><small>평균 응답</small><b>1시간</b></span></div>
     <dl class="talk-profile-info"><div><dt>연락처</dt><dd>${escapeHtml(other?.contact || "-")}</dd></div><div><dt>이메일</dt><dd>${escapeHtml(other?.email || "-")}</dd></div></dl>
     ${perspective === "supplier" ? talkPartnerSalesBlock(active) : ""}
@@ -3090,7 +3092,7 @@ const SELLER_ORDER_STAGE_GROUPS = [
   { tone: "ship", who: "택배사", title: "배송 진행", stages: ["shipping", "delivered"] }
 ];
 /* 주문 단계판: 왼쪽 세로 메뉴 대신 표 위에 가로로 (플레이오토 주문현황처럼) — 누가 처리하는 단계인지 색으로 묶는다 */
-const SELLER_ORDER_STAGE_SHORT = { overview: "등록 현황", all: "전체 주문", self: "직접 배송" };
+const SELLER_ORDER_STAGE_SHORT = { overview: "등록 현황", all: "전체 주문", self: "직접 배송", preparing: "배송준비", "needs-check": "확인 필요", "tracking-push": "송장 전송" };
 function sellerOrderFlowBoard() {
   const groups = SELLER_ORDER_STAGE_GROUPS.map(group => {
     const tiles = group.stages.map(key => {
@@ -3327,7 +3329,7 @@ function sellerLiveProducts() { return currentSellerProducts().filter(item => it
 function productStageTabs(activeLabel) {
   const tabs = [["승인 대기", sellerPendingProducts().length], ["승인 완료", sellerReadyProducts().length], ["마스터 상품", sellerMasterProducts().length], ["판매중 상품", sellerLiveProducts().length]];
   const waiting = sellerMasterProducts().filter(item => !liveChannelIds(item).length).length;
-  return `<nav class="stage-tabs" aria-label="내 상품 단계">${tabs.map(([label, count], index) => `<button type="button" class="${label === activeLabel ? "active" : ""}" data-action="go-menu" data-menu="${label}" ${label === activeLabel ? 'aria-current="page"' : ""}><i>${index + 2}</i><span>${label.replace(" 상품", "")}</span><b>${label === "마스터 상품" ? waiting : count}</b>${label === "마스터 상품" ? `<small>전송 대기</small>` : label === "판매중 상품" ? `<small>쇼핑몰 판매</small>` : ""}</button>`).join("")}</nav>`;
+  return `<nav class="stage-tabs" aria-label="내 상품 단계">${tabs.map(([label, count], index) => `<button type="button" class="${label === activeLabel ? "active" : ""}" data-action="go-menu" data-menu="${label}" ${label === activeLabel ? 'aria-current="page"' : ""}><i>${index + 2}</i><span>${label.replace(" 상품", "")}</span><b>${label === "마스터 상품" ? waiting : count}</b><small>${({ "승인 대기": "공급사 확인 중", "승인 완료": "꾸며서 등록", "마스터 상품": "전송 대기", "판매중 상품": "쇼핑몰 판매" })[label]}</small></button>`).join("")}</nav>`;
 }
 function sellerItemPhoto(item, product = productOf(item?.productId), className = "") {
   if (item?.customThumbnail && imgSrc(item.customThumbnail)) return `<img class="product-photo ${className}" src="${escapeHtml(imgSrc(item.customThumbnail))}" alt="${escapeHtml(sellerProductTitle(item, product))}">`;
@@ -3994,7 +3996,7 @@ function supplierSettingsCard() {
 }
 
 function logsTemplate() {
-  return `<div class="content-grid equal"><div class="panel"><div class="panel-head"><div><h3>전체 변경 이력</h3><p>회원·상품·가격·주문·송장 작업 기록</p></div><span class="chip">${state.logs.length}건</span></div><div class="activity-list log-scroll">${state.logs.map(log => `<div class="activity-item"><strong><span class="timeline-dot ${log.state}"></span>${escapeHtml(log.title)}</strong><p>${escapeHtml(log.detail)}<br><b>${escapeHtml(log.actor || "시스템")}</b> · ${escapeHtml(log.time)}</p></div>`).join("")}</div></div><div class="panel"><div class="panel-head"><div><h3>오류·연동 로그</h3><p>외부 연동 보류와 처리 오류</p></div><span class="chip red">${state.errors.length}건</span></div><div class="activity-list">${state.errors.map(error => `<div class="activity-item error-item"><strong><span class="timeline-dot blocked"></span>${escapeHtml(error.title)}</strong><p>${escapeHtml(error.source)} · ${escapeHtml(error.detail)}<br>${escapeHtml(error.time)}</p></div>`).join("")}</div></div></div>`;
+  return `<div class="content-grid equal"><div class="panel"><div class="panel-head"><div><h3>전체 변경 이력</h3><p>회원·상품·가격·주문·송장 작업 기록</p></div><span class="chip">${state.logs.length}건</span></div><div class="activity-list log-scroll">${state.logs.map(log => `<div class="activity-item"><strong><span class="timeline-dot ${log.state}"></span>${escapeHtml(log.title)}</strong><p>${escapeHtml(log.detail)}<br><b>${escapeHtml(log.actor || "시스템")}</b> · ${escapeHtml(log.time)}</p></div>`).join("")}</div></div><div class="panel"><div class="panel-head"><div><h3>오류·연동 로그</h3><p>외부 연동 보류와 처리 오류</p></div><span class="chip red">${state.errors.length}건</span></div><div class="activity-list">${state.errors.map(error => `<div class="activity-item error-item"><strong><span class="timeline-dot blocked"></span>${escapeHtml(error.title)}</strong><p>${escapeHtml(error.source)} · ${escapeHtml(error.detail)}<br>${escapeHtml(error.time)}</p></div>`).join("") || `<div class="empty">지금은 연동 오류가 없어요. 문제가 생기면 여기에 바로 보여요.</div>`}</div></div></div>`;
 }
 
 function masterNoticesAdminTemplate() {
@@ -4303,7 +4305,7 @@ function supplierCalendarTemplate() {
     const value = supplierCalMetric === "qty" ? qty : supplierCalMetric === "payable" ? supply - platformFee(supply) : supply;
     const level = value ? Math.max(1, Math.ceil((supplierCalMetric === "qty" ? qty : supply) / maxDay * 4)) : 0;
     const topProduct = supplierProductRanking(dayRows)[0];
-    cells.push(`<button type="button" class="scal-day level-${level} ${key === todayKey ? "today" : ""}" ${dayRows.length ? `data-action="supplier-cal-day" data-date="${key}"` : "disabled"}><span class="scal-date">${day}</span>${dayRows.length ? `<b>${supplierCalMetric === "qty" ? `${qty}개` : money(value)}</b><small>${escapeHtml(productOf(topProduct?.productId)?.name || "")}</small><em>${dayRows.length}건</em>` : ""}</button>`);
+    cells.push(`<button type="button" class="scal-day level-${level} ${key === todayKey ? "today" : ""}" ${dayRows.length ? `data-action="supplier-cal-day" data-date="${key}"` : "disabled"}><span class="scal-date">${day}</span>${dayRows.length ? `<b>${supplierCalMetric === "qty" ? `${qty}개` : `<span class="cal-full">${money(value)}</span><span class="cal-short">${value >= 10000 ? `${(Math.round(value / 1000) / 10).toLocaleString("ko-KR")}만` : money(value)}</span>`}</b><small>${escapeHtml(productOf(topProduct?.productId)?.name || "")}</small><em>${dayRows.length}건</em>` : ""}</button>`);
   }
   const monthLabel = `${year}년 ${month}월`;
   const maxRank = Math.max(1, ...ranking.map(row => row.supply));
@@ -4514,7 +4516,7 @@ function supplierPriceGraphTemplate(products) {
     <dl class="pg-stats"><div class="max"><dt>▲ 최고가</dt><dd>${money(model.allMax)}</dd></div><div class="avg"><dt>— 평균가</dt><dd>${money(model.avg)}</dd></div><div class="min"><dt>▼ 최저가</dt><dd>${money(model.allMin)}</dd></div></dl>
     ${salesSellerTableMarkup(product, model)}
     <div class="pg-lower merged">
-      <div class="pg-dist"><h4>가격대 분포 <small>지금 기준</small></h4>${dist.map(bucket => `<div class="pg-dist-row"><span>${Math.round(bucket.from / 1000).toLocaleString("ko-KR")}~${Math.round(bucket.to / 1000).toLocaleString("ko-KR")}천원</span><i><em style="width:${Math.round(bucket.count / distMax * 100)}%"></em></i><b>${bucket.count}곳</b></div>`).join("")}
+      <div class="pg-dist"><h4>가격대 분포 <small>지금 기준</small></h4>${dist.map(bucket => `<div class="pg-dist-row"><span>${bucket.to - bucket.from < 5000 ? `${(Math.round(bucket.from / 100) * 100).toLocaleString("ko-KR")}~${(Math.round(bucket.to / 100) * 100).toLocaleString("ko-KR")}원` : `${Math.round(bucket.from / 1000).toLocaleString("ko-KR")}~${Math.round(bucket.to / 1000).toLocaleString("ko-KR")}천원`}</span><i><em style="width:${Math.round(bucket.count / distMax * 100)}%"></em></i><b>${bucket.count}곳</b></div>`).join("")}
         <p class="pg-note">권장 소비자가보다 20% 넘게 싸게 파는 셀러는 빨간색으로 보여요. 셀러마다 ‘두고톡’으로 가격 정책을 바로 안내할 수 있어요.</p></div>
     </div>
     <details class="pg-table"><summary>표로 보기 (주 단위)</summary><table><thead><tr><th>날짜</th><th>최고가</th><th>평균가</th><th>최저가</th><th>셀러</th></tr></thead><tbody>${weekly.map(point => `<tr><td>${point.date}</td><td>${money(point.max)}</td><td>${money(point.avg)}</td><td>${money(point.min)}</td><td>${point.count}곳</td></tr>`).join("")}</tbody></table></details>
@@ -5835,7 +5837,7 @@ function sendSupportMessage(partnerLoginId, partnerRole, text, fromMaster) {
 }
 function supportBubbles(messages, myLoginId) {
   if (!messages.length) return `<div class="sup-empty">궁금한 점을 남겨 주세요. 두고 본사 운영팀이 답해 드려요.<br><small>평일 10:00~18:00 · 보통 1시간 안에 답해요</small></div>`;
-  return messages.map(message => { const mine = message.senderLoginId === myLoginId; return `<div class="sup-msg ${mine ? "mine" : ""}">${mine ? "" : `<i>${message.senderLoginId === "admin" ? "두고" : escapeHtml((memberByLogin(message.senderLoginId)?.company || "").charAt(0) || "셀")}</i>`}<div><p>${escapeHtml(message.text)}</p><small>${escapeHtml(message.createdAt || "")}</small></div></div>`; }).join("");
+  return messages.map(message => { const mine = message.senderLoginId === myLoginId; return `<div class="sup-msg ${mine ? "mine" : ""}">${mine ? "" : `<i>${message.senderLoginId === "admin" ? "두고" : escapeHtml(nameInitial(memberByLogin(message.senderLoginId)?.company) || "셀")}</i>`}<div><p>${escapeHtml(message.text)}</p><small>${escapeHtml(message.createdAt || "")}</small></div></div>`; }).join("");
 }
 /* 위탁셀러·공급사 화면: 두고 본사 1:1 상담 창 */
 function supportChatModal() {
@@ -5866,7 +5868,7 @@ function masterSupportTemplate() {
   return `<div class="sup-page ${active ? "has-active" : ""}">${sectionHero("두고톡 상담", "위탁셀러와 공급사가 본사에 보낸 1:1 상담이에요. 탭으로 나눠 보고, 주문·환불 내역을 옆에서 같이 확인하며 답해요.")}
     <div class="ms-seg big" role="tablist">${tabs.map(([role, label]) => `<button type="button" class="${masterSupportTab === role ? "active" : ""}" data-action="support-tab" data-tab="${role}">${label}${tabCount(role) ? ` <em>${tabCount(role)}</em>` : ""}</button>`).join("")}</div>
     <div class="sup-desk ${active ? "has-active" : ""}">
-      <aside class="panel sup-threads">${threads.length ? threads.map(thread => `<button type="button" class="${thread.loginId === active?.loginId ? "active" : ""}" data-action="support-open-thread" data-login="${escapeHtml(thread.loginId)}" data-role="${thread.role}"><span class="sup-avatar small">${escapeHtml((thread.member?.company || thread.loginId).charAt(0))}</span><span><b>${escapeHtml(thread.role === "supplier" ? supplierName(thread.loginId) : thread.member?.company || thread.loginId)}</b><small>${escapeHtml(thread.last?.senderLoginId === "admin" ? "나: " : "")}${escapeHtml(String(thread.last?.text || "").slice(0, 40))}</small></span><span class="sup-meta"><small>${escapeHtml(thread.last?.createdAt || "")}</small>${thread.unread ? `<em>${thread.unread}</em>` : ""}</span></button>`).join("") : `<div class="empty">${masterSupportTab === "supplier" ? "공급사" : "위탁셀러"} 상담이 아직 없어요.</div>`}</aside>
+      <aside class="panel sup-threads">${threads.length ? threads.map(thread => `<button type="button" class="${thread.loginId === active?.loginId ? "active" : ""}" data-action="support-open-thread" data-login="${escapeHtml(thread.loginId)}" data-role="${thread.role}"><span class="sup-avatar small">${escapeHtml(nameInitial(thread.member?.company || thread.loginId))}</span><span><b>${escapeHtml(thread.role === "supplier" ? supplierName(thread.loginId) : thread.member?.company || thread.loginId)}</b><small>${escapeHtml(thread.last?.senderLoginId === "admin" ? "나: " : "")}${escapeHtml(String(thread.last?.text || "").slice(0, 40))}</small></span><span class="sup-meta"><small>${escapeHtml(thread.last?.createdAt || "")}</small>${thread.unread ? `<em>${thread.unread}</em>` : ""}</span></button>`).join("") : `<div class="empty">${masterSupportTab === "supplier" ? "공급사" : "위탁셀러"} 상담이 아직 없어요.</div>`}</aside>
       ${active ? `<section class="panel sup-room"><div class="sup-room-head"><button type="button" class="sup-back" data-action="support-back" aria-label="목록으로">←</button><div><b>${escapeHtml(active.role === "supplier" ? supplierName(active.loginId) : member?.company || active.loginId)}</b><small>${active.role === "supplier" ? "공급사" : "위탁셀러"} · ${escapeHtml(member?.representative || "")} · ${escapeHtml(member?.contact || "")} ${member ? memberStatusChip(member.status) : ""}</small></div></div>
         <div class="sup-thread" id="masterSupportThread">${supportBubbles(active.messages, "admin")}</div>
         <form id="masterSupportForm" class="sup-input" data-login="${escapeHtml(active.loginId)}" data-role="${active.role}"><input name="text" id="masterSupportInput" autocomplete="off" maxlength="500" placeholder="답변을 입력하세요" required><button type="submit" class="primary-button">보내기</button></form>

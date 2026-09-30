@@ -11024,3 +11024,225 @@ body[data-role="supplier"] .collect-scope.v2 .cs-option.active { border-color: #
   .talk-body { max-width: min(74%, 680px); }
 }
 @media (min-width: 721px) { .talk-shell > .talk-profile { display: none !important; } }
+
+/* ===== v80: 여백 정리 — 글자가 칸 가장자리에 붙지 않게 ===== */
+@media (min-width: 721px) {
+  /* 패널 안 표: 첫 칸·끝 칸을 패널 제목과 같은 22px 안쪽으로 */
+  .panel table:not(.m-stack-active) th:first-child, .panel table:not(.m-stack-active) td:first-child { padding-left: 22px; }
+  .panel table:not(.m-stack-active) th:last-child, .panel table:not(.m-stack-active) td:last-child { padding-right: 22px; }
+  .panel table td.pick-col + td, .panel table th.pick-col + th { padding-left: 10px; }
+}
+/* 직접 배송 주문 처리 칸: 안쪽 여백 */
+.self-panel.panel { padding: 22px 24px; gap: 16px; }
+.self-panel .self-steps button { padding: 14px 16px; }
+/* 주문 진행 단계 칸: 글자가 두 줄로 꺾이지 않게 칸을 넉넉하게 */
+.ofb-group { flex: var(--n) 1 calc(var(--n) * 74px + 20px); max-width: calc(var(--n) * 150px + 20px); padding: 10px; }
+.ofb-tile { min-height: 78px; padding: 10px 6px; }
+.ofb-label { white-space: nowrap; font-size: 12.5px; }
+.ofb-label .ofb-help.fh { margin-left: 2px; }
+.ofb-group-head { margin: 2px 4px 9px; }
+/* 상품 카드 격자: 카드 사이·패널 가장자리 여백 넉넉하게 */
+@media (min-width: 721px) {
+  .product-card-grid { gap: 18px; padding: 20px 22px 24px; }
+  .topbar .quick-search { min-width: 220px; }
+}
+#pageSubtitle:empty { display: none; }
+/* 카드형 주문·환불 목록을 PC 폭에서 쓸 때도 카드 안쪽이 정돈되게 (모바일 규칙과 같은 모양, 글씨만 PC 크기) */
+@media (min-width: 721px) {
+  .mobile-order-card > header, .mobile-refund-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .mobile-order-card > header > button { padding: 0; color: #3182f6; background: transparent; border: 0; font-size: 16px; font-weight: 700; text-align: left; }
+  .mobile-refund-card > header > div { display: grid; gap: 3px; }
+  .mobile-refund-card > header b { color: #3182f6; font-size: 16px; }
+  .mobile-refund-card > header small, .mobile-order-time { color: #8592a1; font-size: 13px; }
+  .mobile-card-product { width: 100%; margin: 12px 0; padding: 12px; display: flex; align-items: center; gap: 12px; color: inherit; background: #f6f8fb; border: 0; border-radius: 12px; text-align: left; cursor: pointer; }
+  .mobile-card-product .table-photo { width: 52px; height: 52px; flex: 0 0 52px; }
+  .mobile-card-product > span { min-width: 0; display: grid; gap: 3px; }
+  .mobile-card-product strong { overflow: hidden; font-size: 15px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-card-product small, .mobile-card-product em { color: #718096; font-size: 13px; font-style: normal; line-height: 1.35; }
+  .mobile-order-card > dl, .mobile-refund-card > dl { margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; overflow: hidden; background: #e7edf4; border: 1px solid #e7edf4; border-radius: 12px; }
+  .mobile-order-card > dl > div, .mobile-refund-card > dl > div { min-height: 60px; padding: 10px 12px; display: grid; align-content: center; gap: 4px; background: #fff; }
+  .mobile-order-card dt, .mobile-refund-card dt { color: #7a8797; font-size: 12.5px; font-weight: 600; }
+  .mobile-order-card dd, .mobile-refund-card dd { margin: 0; color: #1c2a3d; font-size: 14px; font-weight: 700; line-height: 1.35; }
+  .mobile-order-card dd small, .mobile-refund-card dd small { margin-top: 2px; display: block; color: #7d8a99; font-size: 12.5px; font-weight: 600; }
+  .mobile-refund-card footer { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+  .refund-panel-cards, .panel > .mobile-refund-list { padding: 18px 22px 22px; }
+}
+/* 내 상품 단계 탭: 번호·이름·설명·숫자를 네 칸 모두 같은 자리에 */
+@media (min-width: 721px) {
+  .stage-tabs { padding: 7px; gap: 7px; }
+  .stage-tabs button { min-height: 60px; padding: 10px 14px; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "num label count" "num sub count"; row-gap: 1px; column-gap: 10px; text-align: left; }
+  .stage-tabs button i { grid-area: num; }
+  .stage-tabs button span { grid-area: label; }
+  .stage-tabs button b { grid-area: count; }
+  .stage-tabs button small { grid-area: sub; color: #8b95a1; font-size: 12px; font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+/* 마스터 상품: 필터 칩·카드 격자를 패널 제목과 같은 안쪽 선에 */
+@media (min-width: 721px) {
+  .panel > .master-status-filter { padding: 14px 22px 0; }
+  .panel > .my-product-list { padding: 16px 22px 22px !important; gap: 16px; }
+  .panel > .channel-rule-grid { padding: 0 22px; gap: 12px; }
+}
+
+/* 주문 목록 표: 주문번호·시각은 한 줄로 */
+.order-desktop-table td.order-id button, .order-desktop-table td.order-id small { white-space: nowrap; }
+@media (min-width: 721px) {
+  .order-desktop-table td:has(.self-inline-track) { min-width: 280px; }
+  .self-inline-track { grid-template-columns: 104px minmax(96px, 1fr) auto; max-width: 340px; }
+}
+/* 내 정보 · 가져올 주문: 설명이 한 글자씩 끊기지 않게 설명 위, 선택 버튼 아래로 */
+.automation-setting-row:has(.collect-scope) { flex-direction: column; align-items: stretch; gap: 10px; }
+.automation-setting-row:has(.collect-scope) .collect-scope { align-self: flex-start; }
+.refund-filter-panel > em { align-self: center; }
+.refund-filter-panel > em { align-self: end; line-height: 46px; white-space: nowrap; }
+.deposit-method label > span { display: grid; gap: 3px; }
+.deposit-method label > span > b, .deposit-method label > span > small { display: block; }
+/* 배송 정책 카드: 제목·설명이 좁게 꺾이지 않게 */
+.ship-policy-list { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+.ship-policy-card { padding: 20px 22px; gap: 14px; }
+.ship-policy-head > div { flex: 1 1 auto; min-width: 0; }
+.ship-policy-head h3 { word-break: keep-all; }
+@media (max-width: 720px) { .ship-policy-list { grid-template-columns: 1fr; } .ship-policy-card { padding: 16px 18px; } }
+.refund-filter-panel.panel { padding: 16px 22px; }
+/* PC·태블릿에서 표를 카드로 쌓을 때: 제목은 왼쪽 끝·값은 오른쪽 끝으로 벌어지지 않게, 칸마다 제목 위·값 아래로 가지런히 */
+@media (min-width: 721px) and (max-width: 1440px) {
+  .app-shell[data-role="supplier"] table.m-stack tr { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px 20px; padding: 16px 20px; margin-bottom: 12px; align-items: start; }
+  .app-shell[data-role="supplier"] table.m-stack td { padding: 0; text-align: left; }
+  .app-shell[data-role="supplier"] table.m-stack td::before { position: static; display: block; width: auto; margin: 0 0 5px; }
+  .app-shell[data-role="supplier"] table.m-stack td:first-child, .app-shell[data-role="supplier"] table.m-stack td.pick-col + td { grid-column: 1 / -1; margin: 0; padding: 0 40px 10px 0; }
+  .app-shell[data-role="supplier"] table.m-stack td:last-child:has(button) { grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid #f0f0f0; }
+  .app-shell[data-role="supplier"] table.m-stack td:last-child:has(button)::before { display: none; }
+  .app-shell[data-role="supplier"] table.m-stack td:last-child:has(button) > * { justify-content: flex-end; }
+  .app-shell[data-role="supplier"] table.m-stack .table-product { justify-content: flex-start; text-align: left; }
+  .app-shell[data-role="supplier"] .m-stack-wrap { padding: 14px 22px 4px; }
+}
+@media (min-width: 721px) and (max-width: 1280px) {
+  .app-shell[data-role="master"] table.m-stack tr { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px 20px; padding: 16px 20px; margin-bottom: 12px; align-items: start; }
+  .app-shell[data-role="master"] table.m-stack td { padding: 0; text-align: left; }
+  .app-shell[data-role="master"] table.m-stack td::before { position: static; display: block; width: auto; margin: 0 0 5px; }
+  .app-shell[data-role="master"] table.m-stack td:first-child { grid-column: 1 / -1; margin: 0; padding: 0 0 10px; }
+  .app-shell[data-role="master"] table.m-stack td:last-child:has(button) { grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid #f3effa; }
+  .app-shell[data-role="master"] table.m-stack td:last-child:has(button)::before { display: none; }
+  .app-shell[data-role="master"] table.m-stack .member-actions, .app-shell[data-role="master"] table.m-stack .row-actions { justify-content: flex-end; }
+  .app-shell[data-role="master"] .m-stack-wrap { padding: 14px 22px 4px; }
+}
+.sup-seller-mini { padding: 0 22px; }
+.sup-seller-mini > div { padding: 12px 0; }
+.sup-home-grid .home-money { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 720px) { .sup-seller-mini { padding: 0 16px; } }
+/* 공급사 주문 단계 5칸: 한 줄에 5개, 버튼끼리 붙지 않게 */
+@media (min-width: 1101px) { .supplier-order-flow { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); padding: 16px 22px; gap: 10px; } }
+@media (min-width: 721px) and (max-width: 1440px) {
+  .app-shell[data-role="supplier"] table.m-stack .order-cell-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 14px; }
+  .app-shell[data-role="supplier"] table.m-stack .order-cell-actions .tracking-inline { margin-right: auto; }
+}
+.order-cell-actions .text-button { padding-left: 4px; padding-right: 4px; }
+@media (min-width: 721px) { .panel > .order-pick-bar { margin: 0 22px 12px; padding: 12px 16px; } }
+.refund-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+@media (min-width: 721px) { .mobile-refund-card footer .refund-row-actions .text-button { padding: 6px 8px; } }
+@media (min-width: 721px) {
+  .gf-carrier-list, .gf-log-list { padding: 4px 22px 22px; }
+  .gf-profile .shipping-profile-form { padding: 16px 22px 22px; }
+  .gf-panel { padding: 16px 22px; }
+}
+/* 공급사 정산·내 정보: 목록·폼이 패널 가장자리에 붙지 않게 */
+.panel > .stl-lines, .panel > .stl-weeks { padding: 4px 22px 22px; gap: 8px; }
+.stl-line { padding: 14px 16px; }
+.stl-week { padding: 14px 18px; }
+.sup-invoice-row { padding: 14px 22px; }
+.panel > .sup-invoice-note { padding: 12px 22px 20px; }
+#supplierView .supplier-address-card, #supplierView .sup-alert-card { max-width: 960px; padding: 22px 24px; }
+#supplierView .supplier-address-card .profile-section-head, #supplierView .sup-alert-card .profile-section-head { padding: 0 0 6px; }
+@media (max-width: 720px) {
+  .panel > .stl-lines, .panel > .stl-weeks { padding: 4px 14px 16px; }
+  .sup-invoice-row { padding: 12px 16px; }
+  #supplierView .supplier-address-card, #supplierView .sup-alert-card { padding: 18px 16px; }
+}
+#supplierView .profile-panel { padding: 20px 24px; }
+.pg-dist-row { grid-template-columns: 136px minmax(0, 1fr) 40px; gap: 12px; }
+.pg-dist-row > span:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) { .pg-dist-row { grid-template-columns: 118px minmax(0, 1fr) 34px; gap: 8px; } }
+.mp-insights:has(> div:nth-child(3):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 720px) { .mp-insights:has(> div:nth-child(3):last-child) { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 721px) { .panel > .faq-admin-list { padding: 16px 22px 22px; } }
+/* 화면 안에서 위아래로 이어지는 칸끼리 딱 붙지 않게 최소 간격 */
+.role-view > * + * { margin-top: 16px; }
+@media (min-width: 721px) { .panel > .master-usage-kpis { padding: 4px 22px 16px; } }
+@media (max-width: 720px) { .panel > .master-usage-kpis { padding: 4px 14px 12px; } }
+
+/* 마스터 주문 관리(1281~1440px 카드형)도 칸을 가지런히 */
+@media (min-width: 1281px) and (max-width: 1440px) {
+  .app-shell[data-role="master"] .order-desktop-table table.m-stack tr { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px 20px; padding: 16px 20px; margin-bottom: 12px; align-items: start; }
+  .app-shell[data-role="master"] .order-desktop-table table.m-stack td { padding: 0; text-align: left; }
+  .app-shell[data-role="master"] .order-desktop-table table.m-stack td::before { position: static; display: block; width: auto; margin: 0 0 5px; }
+  .app-shell[data-role="master"] .order-desktop-table table.m-stack td:first-child { grid-column: 1 / -1; margin: 0; padding: 0 0 10px; }
+  .app-shell[data-role="master"] .order-desktop-table table.m-stack td:last-child:has(button) { grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid #f3effa; }
+  .app-shell[data-role="master"] .order-desktop-table table.m-stack td:last-child:has(button)::before { display: none; }
+  .app-shell[data-role="master"] .order-desktop-table table.m-stack .member-actions, .app-shell[data-role="master"] .order-desktop-table table.m-stack .row-actions { justify-content: flex-end; }
+  .app-shell[data-role="master"] .order-desktop-table.m-stack-wrap { padding: 14px 22px 4px; }
+}
+/* 마스터 정산: 목록 카드가 패널 테두리에 붙지 않게 */
+.panel > .stl-table { padding: 6px 22px 22px; gap: 8px; }
+.stl-row { padding: 14px 18px; }
+.panel > .stl-up { margin: 0 22px 8px; padding: 0 16px; }
+.panel > .stl-up:last-child { margin-bottom: 22px; }
+.panel > .panel-head + .stl-up { margin-top: 6px; }
+@media (max-width: 720px) {
+  .panel > .stl-table { padding: 4px 14px 16px; }
+  .panel > .stl-up { margin: 0 14px 8px; }
+  .panel > .stl-up:last-child { margin-bottom: 16px; }
+}
+/* 카드형 주문: 상품 칸은 두 칸 너비로 (긴 상품명이 좁게 꺾이지 않게) */
+@media (min-width: 721px) and (max-width: 1440px) {
+  .app-shell:is([data-role="supplier"], [data-role="master"]) table.m-stack td[data-label="상품"] { grid-column: span 2; }
+}
+@media (min-width: 721px) { .stats-grid:has(> :nth-child(3):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 720px) {
+  .panel > .master-status-filter { padding: 12px 14px 0; }
+  .panel > .my-product-list { padding: 12px 14px 16px !important; }
+  .ofb-group { max-width: none; flex: 1 1 100%; }
+}
+@media (max-width: 720px) { .refund-filter-panel.panel { padding: 14px 16px; } .refund-filter-panel .refund-search { grid-column: 1 / -1; } }
+@media (max-width: 720px) { .stl-row { grid-template-columns: minmax(0, 1fr); gap: 8px; } .stl-row > span:nth-child(2) { grid-row: auto; } .stl-row-amt { justify-items: start; text-align: left; } }
+.scal-day .cal-short { display: none; }
+@media (max-width: 720px) {
+  .scal-day .cal-full { display: none; }
+  .scal-day .cal-short { display: inline; }
+  .scal-day b { white-space: nowrap; overflow: hidden; }
+  .notice-admin-row { flex-wrap: wrap; }
+  .notice-admin-row > div:first-child { flex: 1 1 100%; min-width: 0; }
+  .notice-admin-row .row-actions { width: 100%; justify-content: flex-end; }
+}
+@media (min-width: 721px) {
+  .self-inline-track { grid-template-columns: 92px minmax(80px, 1fr) auto; max-width: 100%; gap: 6px; }
+  .self-inline-track :is(input, select, button) { min-width: 0; }
+}
+/* 태블릿(좁은 화면)에서 단계 탭이 네 칸에 눌려 글자가 세로로 쌓이지 않게: 두 칸씩 */
+@media (min-width: 721px) and (max-width: 1100px) { .stage-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* 화면 제목 줄: 설명이 버튼 옆에서 한 글자씩 꺾이지 않게 — 공간이 모자라면 버튼이 아래 줄로 */
+.hero-row { flex-wrap: wrap; }
+.hero-row > :first-child { flex: 1 1 380px; min-width: 0; }
+.hero-row button, .hero-row .primary-button, .hero-row .secondary-button { white-space: nowrap; }
+/* 태블릿(사이드바가 있는 좁은 화면): 인사말 이름이 잘리지 않게, 오늘 할 일은 한 줄에 하나씩 */
+@media (min-width: 721px) and (max-width: 1100px) {
+  .topbar-heading { flex: 1 1 auto; min-width: 0; }
+  .topbar-heading .greet-badge-d, .topbar-heading .greet-date { display: none; }
+  .home-todo-list { grid-template-columns: minmax(0, 1fr); }
+}
+/* 태블릿: 네 칸짜리 요약·단계가 좁은 폭에서 세로 글자로 눌리지 않게 두 칸으로 */
+@media (min-width: 721px) and (max-width: 1100px) {
+  .mp-insights, .mapping-steps.is-four, .mp-tabs, .stats-grid, .master-usage-kpis, .ms-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .refund-policy-callout { grid-template-columns: minmax(0, 1fr); }
+}
+/* 태블릿: 직원 목록·이메일 알림 줄이 좁아져 글자가 세로로 쌓이지 않게 아래로 내려 놓기 */
+.profile-section-head .primary-button { white-space: nowrap; flex: 0 0 auto; }
+@media (max-width: 1100px) {
+  .staff-row { grid-template-columns: 40px minmax(0, 1fr); }
+  .staff-row > :last-child:not(.staff-info) { grid-column: 1 / -1; justify-content: flex-end; }
+  .email-recipient-row { flex-wrap: wrap; grid-template-columns: minmax(0, 1fr) !important; }
+  .email-recipient-row > * { min-width: 0; }
+}
+@media (max-width: 1100px) { .staff-actions { grid-column: 1 / -1; justify-content: flex-end; max-width: none; } }
+.sw-filter { flex: 0 0 auto; } .sw-filter button { white-space: nowrap; }
+@media (max-width: 1100px) { .panel-head:has(> .sw-filter) { flex-wrap: wrap; } }
+/* 팝업 제목 줄의 상태 칩이 X(닫기) 버튼과 겹치지 않게 */
+#modal .modal > .modal-close + * > :first-child:is(.order-detail-head), #modal .order-detail-head, #modal [class$="-head"]:first-child { padding-right: 48px; }
