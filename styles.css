@@ -11220,7 +11220,7 @@ body[data-role="supplier"] .collect-scope.v2 .cs-option.active { border-color: #
 @media (min-width: 721px) and (max-width: 1100px) { .stage-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* 화면 제목 줄: 설명이 버튼 옆에서 한 글자씩 꺾이지 않게 — 공간이 모자라면 버튼이 아래 줄로 */
 .hero-row { flex-wrap: wrap; }
-.hero-row > :first-child { flex: 1 1 380px; min-width: 0; }
+@media (min-width: 721px) { .hero-row > :first-child { flex: 1 1 380px; min-width: 0; } }
 .hero-row button, .hero-row .primary-button, .hero-row .secondary-button { white-space: nowrap; }
 /* 태블릿(사이드바가 있는 좁은 화면): 인사말 이름이 잘리지 않게, 오늘 할 일은 한 줄에 하나씩 */
 @media (min-width: 721px) and (max-width: 1100px) {
@@ -11246,3 +11246,8 @@ body[data-role="supplier"] .collect-scope.v2 .cs-option.active { border-color: #
 @media (max-width: 1100px) { .panel-head:has(> .sw-filter) { flex-wrap: wrap; } }
 /* 팝업 제목 줄의 상태 칩이 X(닫기) 버튼과 겹치지 않게 */
 #modal .modal > .modal-close + * > :first-child:is(.order-detail-head), #modal .order-detail-head, #modal [class$="-head"]:first-child { padding-right: 48px; }
+
+/* 휴대폰: 세로로 쌓이는 줄에서는 기본 너비(flex-basis)가 높이로 바뀌어 빈 공간이 생기지 않게 */
+@media (max-width: 720px) {
+  .hero-row > *, .order-search-panel > *, .ofb-group, .notice-admin-row > div:first-child { flex-basis: auto !important; }
+}
