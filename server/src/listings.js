@@ -9,13 +9,17 @@
    │ 판매 재개     │ 상태 SALE + 재고              │ 판매 재개(sales/resume) + 재고                    │
    │ 삭제          │ 상품 삭제(DELETE)             │ 판매중지+재고 0 후 삭제 시도. 승인된 상품은 삭제가   │
    │              │                            │ 안 되므로 '판매중지'로 남긴다                       │
-   └──────────────┴────────────────────────────┴──────────────────────────────────────────────┘ */
+   └──────────────┴────────────────────────────┴──────────────────────────────────────────────┘
+   CAFE24(자사몰): 등록 = 이미지 업로드 → 상품 등록(진열·판매 T) → 품목별 추가금·재고 · 판매중지 = selling F · 품절 = 품목 재고 0
+                  판매 재개 = selling·display T + 재고 · 삭제 = 상품 삭제(DELETE, 자사몰이라 바로 지워진다) */
 const { createCoupangClient, vendorItemIdsOf } = require("./coupang");
 const { createNaverClient } = require("./naver");
-const { toCoupangProduct, toNaverProduct } = require("./mappers");
+const { createCafe24Client } = require("./cafe24");
+const { toCoupangProduct, toNaverProduct, toCafe24Product } = require("./mappers");
 
 function clientFor(channel, creds, options = {}) {
   if (channel === "coupang") return createCoupangClient(creds, options);
+  if (channel === "cafe24") return createCafe24Client(creds, options);
   if (channel === "smartstore") return createNaverClient({ clientId: process.env.NAVER_CLIENT_ID, clientSecret: process.env.NAVER_CLIENT_SECRET, ...creds }, options);
   throw new Error(`아직 지원하지 않는 쇼핑몰이에요: ${channel}`);
 }
@@ -32,6 +36,32 @@ async function registerListing(channel, creds, listing, options) {
     const res = await client.createProduct(toNaverProduct(listing, { imageUrls }));
     return { channel, externalId: String(res.originProductNo), channelProductNo: String(res.smartstoreChannelProductNo || ""), status: "판매중" };
   }
+  if (channel === "cafe24") {
+    /* 대표 이미지는 CAFE24 이미지 서버로 먼저 올린다 (인터넷 주소 이미지를 받아 base64로) */
+    let imagePath = "";
+    const first = (listing.images || []).find(url => /^https?:\/\//.test(String(url)));
+    if (first) {
+      try {
+        const res = await (options.fetchImpl || fetch)(first);
+        if (res.ok) imagePath = (await client.uploadImages([Buffer.from(await res.arrayBuffer()).toString("base64")])).images?.[0]?.path || "";
+      } catch { imagePath = ""; }
+    }
+    const res = await client.createProduct(toCafe24Product(listing, { imagePath }));
+    const productNo = String(res.product?.product_no || "");
+    let variants = [];
+    try { variants = (await client.listVariants(productNo)).variants || []; } catch { variants = []; }
+    const units = listing.options?.length ? listing.options : [{ optionId: listing.productCode, salePrice: listing.salePrice, stock: listing.stock }];
+    const variantMap = {};
+    for (const [index, unit] of units.entries()) {
+      const variant = variants[index];
+      if (!variant) continue;
+      variantMap[unit.optionId] = variant.variant_code;
+      const extra = Math.round(Number(unit.salePrice || listing.salePrice) - Number(listing.salePrice));
+      if (extra) await client.updateVariant(productNo, variant.variant_code, { additional_amount: String(extra) });
+      await client.updateInventory(productNo, variant.variant_code, Number(unit.stock ?? listing.stock ?? 0));
+    }
+    return { channel, externalId: productNo, variantMap, status: "판매중" };
+  }
   const res = await client.createProduct(toCoupangProduct(listing, { vendorId: creds.vendorId, vendorUserId: creds.vendorUserId }));
   const sellerProductId = String(res.data);
   let vendorItemIds = [];
@@ -46,8 +76,18 @@ async function coupangItems(client, externalId, known = []) {
   return ids;
 }
 
+async function cafe24VariantCodes(client, productNo) { return ((await client.listVariants(productNo)).variants || []).map(variant => variant.variant_code); }
+
 async function setListingStatus(channel, creds, { externalId, action, stock = 0, vendorItemIds = [] }, options) {
   const client = clientFor(channel, creds, options);
+  if (channel === "cafe24") {
+    if (action === "stop") await client.updateProduct(externalId, { selling: "F" });
+    else if (action === "hide") await client.updateProduct(externalId, { selling: "F", display: "F" });
+    else if (action === "soldout") { for (const code of await cafe24VariantCodes(client, externalId)) await client.updateInventory(externalId, code, 0); }
+    else if (action === "resume") { await client.updateProduct(externalId, { selling: "T", display: "T" }); for (const code of await cafe24VariantCodes(client, externalId)) await client.updateInventory(externalId, code, Math.max(1, Number(stock) || 1)); }
+    else throw new Error(`알 수 없는 동작: ${action}`);
+    return { channel, externalId, status: { stop: "판매중지", hide: "판매중지", soldout: "품절", resume: "판매중" }[action] };
+  }
   if (channel === "smartstore") {
     if (action === "stop" || action === "hide") await client.changeStatus(externalId, "SUSPENSION");
     else if (action === "soldout") await client.changeStatus(externalId, "OUTOFSTOCK", 0);
@@ -67,6 +107,10 @@ async function setListingStatus(channel, creds, { externalId, action, stock = 0,
 
 async function removeListing(channel, creds, { externalId, vendorItemIds = [] }, options) {
   const client = clientFor(channel, creds, options);
+  if (channel === "cafe24") {
+    await client.deleteProduct(externalId);
+    return { channel, externalId, status: "삭제됨", deleted: true };
+  }
   if (channel === "smartstore") {
     await client.deleteProduct(externalId);
     return { channel, externalId, status: "삭제됨", deleted: true };
@@ -85,6 +129,18 @@ async function removeListing(channel, creds, { externalId, vendorItemIds = [] },
 /* 가격·재고 동기화. 쿠팡은 옵션ID별, 스마트스토어는 원상품을 불러와 가격·재고만 바꿔 다시 저장한다. */
 async function syncPriceStock(channel, creds, { externalId, listing, vendorItemMap = {} }, options) {
   const client = clientFor(channel, creds, options);
+  if (channel === "cafe24") {
+    await client.updateProduct(externalId, { price: Math.round(Number(listing.salePrice)) });
+    const units = listing.options?.length ? listing.options : [{ optionId: listing.productCode, salePrice: listing.salePrice, stock: listing.stock }];
+    const codes = await cafe24VariantCodes(client, externalId);
+    for (const [index, unit] of units.entries()) {
+      const code = vendorItemMap[unit.optionId] || codes[index];
+      if (!code) continue;
+      await client.updateVariant(externalId, code, { additional_amount: String(Math.round(Number(unit.salePrice || listing.salePrice) - Number(listing.salePrice))) });
+      await client.updateInventory(externalId, code, Number(unit.stock || 0));
+    }
+    return { channel, externalId, status: "동기화 완료" };
+  }
   if (channel === "coupang") {
     const units = listing.options?.length ? listing.options : [{ optionId: listing.productCode, salePrice: listing.salePrice, stock: listing.stock }];
     for (const unit of units) {

@@ -19,6 +19,16 @@
 | 삭제 | **상품 삭제** (`DELETE /v2/products/origin-products/{번호}`) | 판매중지 + 재고 0 후 삭제 시도. **승인된 상품은 쿠팡이 삭제를 허용하지 않아** 판매중지로 남깁니다 |
 | 가격·재고 | 원상품 조회 후 수정(`PUT`) | 옵션마다 `prices/{가격}`, `quantities/{재고}` |
 
+**CAFE24(자사몰)** — Admin API `https://{mall_id}.cafe24api.com/api/v2/admin`
+
+| 두고 동작 | CAFE24 |
+|---|---|
+| 연결 | 셀러는 **쇼핑몰 ID만** 입력 → CAFE24 관리자에서 두고마켓 앱 **권한 동의**(OAuth) → 서버가 토큰을 받아 암호화 보관 (access 2시간·refresh 2주, 자동 갱신) |
+| 상품 전송 | 이미지 업로드(`POST /products/images`) → 상품 등록(`POST /products`, 진열·판매함) → 품목(variant)별 추가금·재고 |
+| 판매중지 / 품절 / 재개 | `selling=F` / 품목 재고 0 / `selling=T, display=T` + 재고 |
+| 삭제 | 상품 삭제(`DELETE /products/{번호}`) — 자사몰이라 바로 지워짐 |
+| 주문 수집 · 확인 · 송장 | 결제완료(N10) 주문 조회 → 상품준비중(N20) → `POST /orders/{주문번호}/shipments` (CAFE24 택배사 코드) |
+
 ## 운영 전에 두고가 해야 할 일
 
 1. **네이버 커머스API**: 두고를 **커머스솔루션** 또는 **API 대행사**로 등록합니다.
@@ -29,7 +39,9 @@
 2. **쿠팡 OPEN API**: 두고를 쿠팡 **OPEN API 연동업체**로 등록하고 서버 고정 IP를 등록합니다.
    셀러는 Wing > 판매자정보 > 추가판매정보 > OPEN API 키 발급에서 연동업체 '두고마켓'을 고르고
    **업체코드(vendorId) · Access Key · Secret Key · Wing 아이디**를 두고에 입력합니다.
-3. 카테고리 코드·출고지/반품지 코드는 각 쇼핑몰 API로 불러온 실제 값을 써야 합니다.
+3. **CAFE24**: CAFE24 개발자센터에 두고마켓 앱을 등록하고 `client_id`·`client_secret`·돌아올 주소(redirect URI)를 서버 환경변수로 넣습니다.
+   셀러의 CAFE24 비밀번호나 개인 앱 키는 받지 않습니다. 셀러가 앱 권한 동의를 하면 `/api/channels/cafe24/oauth/callback`으로 돌아와 연결됩니다.
+4. 카테고리 코드·출고지/반품지 코드는 각 쇼핑몰 API로 불러온 실제 값을 써야 합니다.
    (앱의 '배송 정책 불러오기' 단계에서 저장하는 값. 데모 값은 실제 등록에 쓸 수 없습니다.)
 
 ## 실행
@@ -51,7 +63,9 @@ npm start            # 기본 포트 8787
 | `DOOGO_SERVER_TOKEN` | 두고 앱 → 서버 호출 인증 토큰. **운영에서는 두고 로그인 세션 검증으로 바꿔야 합니다** |
 | `DOOGO_ALLOWED_ORIGINS` | 호출을 허용할 두고 앱 주소(쉼표 구분) |
 | `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | 두고가 네이버에 등록한 커머스API 애플리케이션 |
-| `COUPANG_API_BASE` / `NAVER_API_BASE` | 테스트용 주소 교체 (기본값은 실제 API 주소) |
+| `CAFE24_CLIENT_ID` / `CAFE24_CLIENT_SECRET` | 두고가 CAFE24 개발자센터에 등록한 앱 |
+| `CAFE24_REDIRECT_URI` | CAFE24 권한 동의 뒤 돌아올 주소 (예: `https://api.doogo.kr/api/channels/cafe24/oauth/callback`) |
+| `COUPANG_API_BASE` / `NAVER_API_BASE` / `CAFE24_API_BASE` | 테스트용 주소 교체 (기본값은 실제 API 주소) |
 | `DOOGO_CREDENTIAL_FILE` | 암호화된 키 파일 경로 (기본 `server/data/credentials.enc.json`) |
 
 앱을 서버에 연결하려면 앱 페이지에서 `window.DOOGO_API_BASE`와 `window.DOOGO_API_TOKEN`을 설정합니다.

@@ -185,4 +185,35 @@ function naverNotice(listing) {
   return { productInfoProvidedNoticeType: "ETC", etc: { returnCostReason: "상세페이지 참조", noRefundReason: "상세페이지 참조", qualityAssuranceStandard: "상세페이지 참조", compensationProcedure: "상세페이지 참조", troubleShootingContents: "상세페이지 참조", itemName: listing.title, modelName: listing.productCode || "상세페이지 참조", manufacturer: listing.supplierName || "상세페이지 참조", customerServicePhoneNumber: listing.asPhone || "상세페이지 참조" } };
 }
 
-module.exports = { toCoupangProduct, toNaverProduct, COUPANG_CARRIERS, NAVER_CARRIERS };
+/* CAFE24 상품 등록 본문 (POST /api/v2/admin/products 의 request)
+   옵션은 조합형(option_type T): 옵션 그룹이 있으면 그룹별 값, 없으면 ‘옵션’ 한 그룹으로 보낸다. 옵션별 추가금은 등록 뒤 품목(variant)에서 맞춘다. */
+function toCafe24Product(listing, { imagePath = "" } = {}) {
+  requireFields(listing, ["title", "salePrice"]);
+  const options = listing.options || [];
+  const groups = (listing.optionGroups || []).length && options.every(option => Array.isArray(option.values) && option.values.length === listing.optionGroups.length) ? listing.optionGroups : null;
+  const optionBody = !options.length ? {} : groups
+    ? { has_option: "T", option_type: "T", options: groups.map((name, index) => ({ name, value: [...new Set(options.map(option => option.values[index]))] })) }
+    : { has_option: "T", option_type: "T", options: [{ name: "옵션", value: options.map(option => option.name) }] };
+  const ship = listing.shipping || {};
+  return {
+    display: "T", selling: "T", product_condition: "N",
+    product_name: String(listing.title).slice(0, 250),
+    custom_product_code: String(listing.productCode || listing.listingId || "").slice(0, 40),
+    price: Math.round(Number(listing.salePrice)),
+    retail_price: Math.round(Number(listing.originalPrice || listing.salePrice)),
+    supply_price: 0,
+    brand_code: "B000000A",
+    description: listing.detailHtml || `<p>${listing.title}</p>`,
+    summary_description: String(listing.summary || "").slice(0, 255),
+    product_tag: (listing.tags || []).slice(0, 20),
+    ...(imagePath ? { image_upload_type: "A", detail_image: imagePath } : {}),
+    ...optionBody,
+    shipping_fee_by_product: ship.feeType ? "T" : "F",
+    ...(ship.feeType ? { shipping_fee_type: ship.feeType === "FREE" ? "T" : ship.feeType === "CONDITIONAL_FREE" ? "D" : "R", shipping_rates: ship.feeType === "CONDITIONAL_FREE" ? [{ shipping_rates_min: Number(ship.freeOver || 0), shipping_rates_max: 99999999, shipping_fee: 0 }] : undefined, shipping_fee: ship.feeType === "FREE" ? 0 : Number(ship.fee || 0) } : {}),
+    origin_place_value: listing.origin || undefined,
+    tax_type: listing.taxType === "면세" ? "B" : "A",
+    adult_certification: listing.adultOnly ? "T" : "F"
+  };
+}
+
+module.exports = { toCoupangProduct, toNaverProduct, toCafe24Product, COUPANG_CARRIERS, NAVER_CARRIERS };
