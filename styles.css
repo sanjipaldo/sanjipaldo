@@ -11011,40 +11011,6 @@ body[data-role="supplier"] .collect-scope.v2 .cs-option.active { border-color: #
   .dh-month { grid-template-columns: 84px minmax(0, 1fr) 104px; }
 }
 
-/* ===== v79: 위탁셀러 사이드바 컬러 아이콘 (평면형: 옅은 색 바탕 + 같은 색 선) ===== */
-.app-shell[data-role="seller"] .workspace-menu .menu-icon[class*="mi-"] {
-  color: var(--c2, #2563eb) !important;
-  background: color-mix(in srgb, var(--c2, #2563eb) 11%, #fff) !important;
-  border: 1px solid color-mix(in srgb, var(--c2, #2563eb) 24%, #fff) !important;
-  transition: background .15s ease;
-}
-.app-shell[data-role="seller"] .workspace-menu .menu-icon[class*="mi-"] svg { stroke: currentColor; stroke-width: 1.9; }
-.app-shell[data-role="seller"] .workspace-menu button:hover .menu-icon[class*="mi-"] { background: color-mix(in srgb, var(--c2, #2563eb) 18%, #fff) !important; }
-.app-shell[data-role="seller"] .workspace-menu button.active .menu-icon[class*="mi-"] { color: var(--c2, #2563eb) !important; background: #fff !important; border-color: #fff !important; }
-.menu-icon.mi-home { --c1: #6aa8ff; --c2: #2563eb; --cs: rgba(37,99,235,.35); }
-.menu-icon.mi-market { --c1: #ffc36b; --c2: #f97316; --cs: rgba(249,115,22,.35); }
-.menu-icon.mi-brand { --c1: #f9a8d4; --c2: #db2777; --cs: rgba(219,39,119,.32); }
-.menu-icon.mi-product { --c1: #b9a2ff; --c2: #7c3aed; --cs: rgba(124,58,237,.32); }
-.menu-icon.mi-ready { --c1: #d8a6ff; --c2: #9333ea; --cs: rgba(147,51,234,.32); }
-.menu-icon.mi-approval { --c1: #6ee7b7; --c2: #059669; --cs: rgba(5,150,105,.32); }
-.menu-icon.mi-onsale { --c1: #86efac; --c2: #16a34a; --cs: rgba(22,163,74,.32); }
-.menu-icon.mi-mapping { --c1: #5eead4; --c2: #0d9488; --cs: rgba(13,148,136,.32); }
-.menu-icon.mi-bell { --c1: #fcd34d; --c2: #e38a06; --cs: rgba(217,119,6,.35); }
-.menu-icon.mi-order { --c1: #a5b4fc; --c2: #4f46e5; --cs: rgba(79,70,229,.32); }
-.menu-icon.mi-refund { --c1: #fda4af; --c2: #e11d48; --cs: rgba(225,29,72,.32); }
-.menu-icon.mi-message { --c1: #7dd3fc; --c2: #0284c7; --cs: rgba(2,132,199,.32); }
-.menu-icon.mi-cart { --c1: #fdba74; --c2: #ea580c; --cs: rgba(234,88,12,.32); }
-.menu-icon.mi-box { --c1: #fcd57a; --c2: #b45309; --cs: rgba(180,83,9,.32); }
-.menu-icon.mi-calendar { --c1: #fb9fc7; --c2: #be185d; --cs: rgba(190,24,93,.3); }
-.menu-icon.mi-card { --c1: #c4b5fd; --c2: #6d28d9; --cs: rgba(109,40,217,.3); }
-.menu-icon.mi-settings { --c1: #b6c2d2; --c2: #475569; --cs: rgba(71,85,105,.3); }
-.menu-icon.mi-connection { --c1: #67e8f9; --c2: #0891b2; --cs: rgba(8,145,178,.32); }
-.menu-icon.mi-notice { --c1: #fde047; --c2: #ca8a04; --cs: rgba(202,138,4,.32); }
-.menu-icon.mi-settlement { --c1: #86efac; --c2: #15803d; --cs: rgba(21,128,61,.3); }
-.menu-icon.mi-truck { --c1: #5eead4; --c2: #0f766e; --cs: rgba(15,118,110,.3); }
-/* 역할 전환 칸 아이콘 */
-.app-shell[data-role="seller"] .role-icon { color: #2563eb !important; background: color-mix(in srgb, #2563eb 11%, #fff) !important; border: 1px solid color-mix(in srgb, #2563eb 24%, #fff); }
-
 /* ===== v79: 오늘 할 일 — 순서 번호 + 건수 ===== */
 .home-todo .todo-no { flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--tone, #3182f6); font-size: 16px; font-weight: 800; font-style: normal; box-shadow: 0 3px 8px rgba(0,0,0,.12); }
 .home-todo > span > b { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
