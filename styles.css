@@ -10659,3 +10659,156 @@ label.studio-gallery-add, label.pe-photo-add { cursor: pointer; }
 @media (max-width: 760px) {
   .mapping-pick-card > .mp-pick-body { flex: 1 1 0; min-width: 0; flex-basis: calc(100% - 70px); max-width: calc(100% - 64px); }
 }
+
+/* ===== v77 아이템 위너 · 상품 FAQ · 매핑 현황 ===== */
+.mp-insights { margin: 0 0 14px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.mp-insights.five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mp-insights > div { min-width: 0; padding: 12px 14px; display: grid; gap: 4px; background: #fff; border: 1px solid #e6ebf2; border-radius: 14px; }
+.mp-insights span { color: #6b7684; font-size: 13.5px; font-weight: 600; }
+.mp-insights b { color: #191f28; font-size: 20px; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.mp-insights .good b { color: #0f8a4a; }
+.mp-insights .warn { background: #fff8ec; border-color: #ffe0a8; }
+.mp-insights .warn b { color: #b25e00; }
+.mp-tab.tone-gray b { color: #4e5968; background: #f2f4f6; }
+.mp-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.mp-badge.winner { color: #7a4b00; background: linear-gradient(90deg, #ffe58a, #ffd24d); box-shadow: 0 1px 0 rgba(0,0,0,.05); }
+.mp-badge.spec { color: #0f6b58; background: #e3f7f1; }
+.mapping-pick-card.is-winner { border-color: #f4c542; }
+.mapping-pick-card.is-winner:has(input:checked) { border-color: #3182f6; }
+.mp-facts { color: #4e5968 !important; }
+.mp-prev { margin-top: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; background: #fffaf0; border: 1px solid #ffe7b0; border-radius: 12px; }
+.mp-prev span { flex: 1 1 200px; color: #7a4b00; font-size: 14px; font-weight: 700; }
+.mp-prev small { color: #9a6a2a; font-weight: 500; }
+.mp-prev input { width: 140px; min-height: 40px; padding: 0 10px; border: 1px solid #f0d49a; border-radius: 10px; font-size: 15px; background: #fff; }
+.mapping-pick-card .mp-vs { font-size: 12.5px; font-weight: 800; }
+.mapping-pick-card .mp-vs.down { color: #0f8a4a; }
+.mapping-pick-card .mp-vs.up { color: #e5484d; }
+.mapping-pick-card .mp-vs:empty { display: none; }
+.mp-follow, .mp-follow-toggle { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: #fffbea; border: 1px solid #f7e2a1; border-radius: 12px; cursor: pointer; }
+.mp-follow input, .mp-follow-toggle input { width: 20px; height: 20px; margin-top: 2px; flex: 0 0 auto; accent-color: #f0a500; }
+.mp-follow span, .mp-follow-toggle span { display: grid; gap: 3px; }
+.mp-follow b, .mp-follow-toggle b { color: #5c3d00; font-size: 14.5px; }
+.mp-follow small, .mp-follow-toggle small { color: #7a6030; font-size: 13px; line-height: 1.45; }
+.mp-faq-hint { margin: 0; color: #8a95a3; font-size: 13.5px; }
+.faq-box { display: grid; gap: 6px; padding: 12px; background: #f7f9fc; border: 1px solid #e6ebf2; border-radius: 14px; }
+.faq-box-head { display: grid; gap: 2px; margin-bottom: 2px; }
+.faq-box-head b { color: #191f28; font-size: 15px; }
+.faq-box-head small { color: #8a95a3; font-size: 12.5px; }
+.faq-item { background: #fff; border: 1px solid #e9edf3; border-radius: 10px; }
+.faq-item summary { padding: 10px 12px; color: #191f28; font-size: 14.5px; font-weight: 700; cursor: pointer; list-style: none; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::before { content: "Q. "; color: #3182f6; }
+.faq-item p { margin: 0; padding: 0 12px 12px; color: #4e5968; font-size: 14px; line-height: 1.55; }
+.faq-auto { margin-right: 6px; padding: 1px 6px; color: #6b7684; background: #f2f4f6; border-radius: 5px; font-size: 11.5px; font-style: normal; font-weight: 700; }
+.faq-ask { justify-self: start; padding: 8px 12px; color: #1b64da; background: #e8f1ff; border: 0; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.mp-winner-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 10px 12px; background: #f7f8fa; border-radius: 12px; font-size: 14px; }
+.mp-winner-line b { color: #191f28; }
+.mp-winner-line span { color: #6b7684; font-size: 13.5px; }
+.mp-winner-line.is-winner { background: #fffbe8; border: 1px solid #f7e2a1; }
+.mp-winner-line.can-win { background: #fff6e0; border: 1px solid #ffd27a; }
+.mp-winner-line .primary-button { margin-left: auto; min-height: 40px; padding: 0 14px; font-size: 14px; }
+.mp-saving { margin: 0; padding: 8px 12px; color: #0b5a4a; background: #e6f7f2; border-radius: 10px; font-size: 14px; }
+.mp-follow-toggle { padding: 10px 12px; }
+.sw-list { display: grid; gap: 8px; padding: 0 18px 18px; }
+.sw-row, .sw-seller, .mw-row, .mp-sale-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 14px; background: #fff; border: 1.5px solid #e6ebf2; border-radius: 14px; }
+.sw-row.win { border-color: #f4c542; background: #fffdf3; }
+.sw-seller.low { border-color: #ffc2c4; background: #fffafa; }
+.sw-main { flex: 1 1 220px; min-width: 0; display: grid; gap: 3px; }
+.sw-main b { color: #191f28; font-size: 15px; overflow-wrap: anywhere; }
+.sw-main small { color: #6b7684; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.sw-map { color: #1b64da !important; font-weight: 600; }
+.sw-kind { margin-left: 4px; padding: 1px 6px; color: #4e5968; background: #f2f4f6; border-radius: 5px; font-size: 11.5px; font-style: normal; }
+.sw-kind.follow { color: #7a4b00; background: #fff1bf; }
+.sw-price { flex: 0 0 auto; min-width: 96px; display: grid; gap: 2px; }
+.sw-price span { color: #8a95a3; font-size: 12.5px; }
+.sw-price strong { color: #191f28; font-size: 16px; }
+.sw-price small { color: #8a95a3; font-size: 12.5px; }
+.sw-rank { flex: 1 1 200px; display: grid; gap: 4px; justify-items: start; }
+.sw-rank small { color: #6b7684; font-size: 13px; }
+.sw-rank small b { color: #e5484d; }
+.sw-rank-no { padding: 2px 8px; color: #4e5968; background: #f2f4f6; border-radius: 6px; font-size: 12.5px; font-style: normal; font-weight: 800; }
+.sw-act { flex: 1 1 220px; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 10px; }
+.sw-low { color: #e5484d; font-size: 13.5px; font-style: normal; font-weight: 800; }
+.sw-act .primary-button, .sw-act .secondary-button { min-height: 40px; padding: 0 14px; font-size: 14px; }
+.sw-foot { padding: 0 18px 18px; }
+.sw-filter { display: inline-flex; gap: 4px; padding: 4px; background: #f2f4f6; border-radius: 12px; }
+.sw-filter button { min-height: 34px; padding: 0 12px; color: #4e5968; background: transparent; border: 0; border-radius: 9px; font-weight: 700; cursor: pointer; }
+.sw-filter button.active { color: #191f28; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.mw-tags { flex: 1 1 200px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.mw-tags small { color: #6b7684; font-size: 12.5px; }
+.winner-flag { position: absolute; z-index: 3; left: 8px; bottom: 44px; padding: 4px 8px; color: #6b4300; background: linear-gradient(90deg, #ffe58a, #ffd24d); border-radius: 8px; font-size: 12px; font-style: normal; font-weight: 800; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+.winner-compare { margin: 12px 0; padding: 12px; display: grid; gap: 8px; background: #fffdf3; border: 1px solid #f7e2a1; border-radius: 14px; }
+.winner-compare-head { display: grid; gap: 2px; }
+.winner-compare-head b { font-size: 15px; }
+.winner-compare-head small { color: #7a6030; font-size: 12.5px; }
+.winner-compare-group { display: grid; gap: 6px; }
+.winner-compare-group > span { color: #5c3d00; font-size: 13.5px; font-weight: 800; }
+.winner-compare-group button { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 2px 8px; padding: 8px 10px; text-align: left; background: #fff; border: 1px solid #eee3c0; border-radius: 10px; font: inherit; cursor: pointer; }
+.winner-compare-group button i { grid-row: span 2; font-style: normal; font-weight: 800; color: #6b7684; font-size: 13px; }
+.winner-compare-group button b { font-size: 14px; }
+.winner-compare-group button small { grid-column: 2; color: #8a95a3; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.winner-compare-group button strong { grid-row: 1 / span 2; grid-column: 3; font-size: 15px; }
+.winner-compare-group button em { grid-column: 2 / -1; justify-self: start; color: #1b64da; font-size: 11.5px; font-style: normal; font-weight: 800; }
+.winner-compare-group button.is-this { border-color: #3182f6; background: #f5f9ff; }
+.mp-sales-list { display: grid; gap: 8px; padding: 0 18px 18px; }
+.mp-sale-date { flex: 0 0 56px; display: grid; gap: 2px; }
+.mp-sale-date b { font-size: 15px; }
+.mp-sale-date small { color: #8a95a3; font-size: 12px; }
+.loss-text { color: #e5484d; }
+.pay-select-info .pay-select-map { color: #1b64da; font-weight: 600; }
+.xo-remember { margin: 0 0 8px; padding: 10px 12px; color: #0b5a4a; background: #e6f7f2; border-radius: 10px; font-size: 13.5px; line-height: 1.5; }
+.faq-admin-list { display: grid; gap: 8px; padding: 0 18px 18px; }
+.faq-admin-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #fff; border: 1.5px solid #e6ebf2; border-radius: 14px; }
+.faq-admin-row > div { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.faq-admin-row b { font-size: 15px; overflow-wrap: anywhere; }
+.faq-admin-row small { color: #6b7684; font-size: 13px; }
+.faq-admin-row em { color: #4e5968; font-size: 13px; font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.faq-edit-modal { width: min(640px, calc(100vw - 32px)); }
+.faq-edit-form { display: grid; gap: 10px; }
+.faq-edit-list { display: grid; gap: 8px; }
+.faq-edit-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; padding: 10px; background: #f7f9fc; border: 1px solid #e6ebf2; border-radius: 12px; }
+.faq-edit-row input, .faq-edit-row textarea { grid-column: 1; width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid #dfe5ec; border-radius: 10px; font: inherit; font-size: 14.5px; background: #fff; }
+.faq-edit-row button { grid-column: 2; grid-row: 1 / span 2; align-self: start; }
+.faq-auto-preview { padding: 10px 12px; background: #f7f8fa; border-radius: 12px; }
+.faq-auto-preview summary { font-weight: 700; cursor: pointer; }
+.faq-auto-preview p { margin: 8px 0 0; display: grid; gap: 2px; font-size: 13.5px; }
+.faq-auto-preview span { color: #6b7684; }
+/* 두고톡 FAQ 칩 · 자동 응답 */
+.talk-faq { padding: 8px 12px; background: #fbfcfe; border-top: 1px solid #e6ebf2; }
+.talk-faq-head { display: flex; align-items: center; gap: 8px; }
+.talk-faq-head button { flex: 0 0 auto; padding: 4px 2px; color: #191f28; background: none; border: 0; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.talk-faq-head button i { color: #8a95a3; font-style: normal; }
+.talk-faq-head select { flex: 1; min-width: 0; min-height: 34px; padding: 0 8px; border: 1px solid #dfe5ec; border-radius: 9px; background: #fff; font-size: 13.5px; }
+.talk-faq-chips { margin-top: 8px; display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.talk-faq-chips::-webkit-scrollbar { display: none; }
+.talk-faq-chips button { flex: 0 0 auto; padding: 7px 12px; color: #1b64da; background: #fff; border: 1px solid #cfe0ff; border-radius: 999px; font: inherit; font-size: 13.5px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.talk-faq-note { display: block; margin-top: 6px; color: #8a95a3; font-size: 12px; }
+.talk-auto-tag { display: block; margin-bottom: 4px; color: #1b64da; font-size: 12px; font-style: normal; font-weight: 800; }
+.talk-row.mine .talk-auto-tag { color: #6b4300; }
+.talk-auto-note { display: block; margin-top: 6px; color: #8a95a3; font-size: 12px; }
+label.talk-plus { display: grid; place-items: center; cursor: pointer; }
+@media (max-width: 760px) {
+  .mp-insights, .mp-insights.five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mp-insights b { font-size: 17px; }
+  .mp-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sw-list, .mp-sales-list, .faq-admin-list { padding: 0 12px 12px; }
+  .sw-act { justify-content: flex-start; }
+  .sw-act .primary-button, .sw-act .secondary-button { width: 100%; }
+  .mp-winner-line .primary-button { width: 100%; margin-left: 0; }
+  .mp-prev input { width: 100%; }
+  .faq-admin-row { flex-wrap: wrap; }
+  .faq-admin-row .secondary-button { width: 100%; }
+}
+.talk-faq { min-width: 0; max-width: 100%; overflow: hidden; box-sizing: border-box; }
+.talk-faq-head select { width: 0; max-width: 100%; text-overflow: ellipsis; }
+.talk-faq-note { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 720px) { .talk-faq { padding: 6px 10px; } .talk-faq-note { display: none; } .talk-faq-chips { margin-top: 6px; } }
+/* 매핑 완료 카드 아래 버튼: 크기 줄이고 가지런히 */
+.mp-done-actions button { min-height: 42px; padding: 0 14px; font-size: 14px; white-space: nowrap; border-radius: 12px; }
+@media (max-width: 760px) {
+  .mp-done-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mp-done-actions > button { width: 100%; flex: none; min-height: 44px; padding: 0 8px; }
+  .mp-done-actions > .text-button { grid-column: 1 / -1; justify-self: start; min-height: 32px; padding: 0 2px; }
+}
+.talk-faq-chips { flex-wrap: wrap; overflow-x: visible; }
+.talk-faq-chips button { max-width: 100%; white-space: normal; text-align: left; }
