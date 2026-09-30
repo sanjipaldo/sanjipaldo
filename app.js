@@ -359,7 +359,7 @@ const initialState = {
   statsVersion: 1,
   contentOverrides: {},
   notices: [
-    { id: "notice-1", title: "상품 썸네일·상세페이지 복사 기능 안내", detail: "공급사 상품을 PICK하면 썸네일과 상세페이지가 그대로 복사돼요.\n‘상품 꾸미기’에서 상품명·사진·상세페이지를 내 스타일로 바꾼 뒤, 마스터 상품에서 ‘상품 전송’ 한 번이면 연동된 쇼핑몰에 바로 올라갑니다.\n아래 영상으로 전체 흐름을 확인해 보세요.", date: "오늘", cta: "마스터 상품 바로가기", action: "open-my-products", videoUrl: "https://www.youtube.com/watch?v=ILuBxYqHFbo" },
+    { id: "notice-1", title: "상품 썸네일·상세페이지 복사 기능 안내", detail: "공급사 상품을 PICK하면 썸네일과 상세페이지가 그대로 복사돼요.\n‘상품 꾸미기’에서 상품명·사진·상세페이지를 내 스타일로 바꾼 뒤, 마스터 상품에서 ‘상품 전송’ 한 번이면 연동된 쇼핑몰에 바로 올라갑니다.\n아래 영상으로 전체 흐름을 확인해 보세요.", date: "오늘", cta: "마스터 상품 바로가기", action: "open-my-products", videoUrl: "https://www.youtube.com/watch?v=GH0R8VMeJ0s" },
     { id: "notice-2", title: "상품코드 기반 주문 매핑 기능 업데이트", detail: "외부몰 상품명을 바꿔도 DF-코드로 공급사 상품에 연결됩니다.", date: "오늘", cta: "주문 매핑 바로가기", action: "open-order-mapping" },
     { id: "notice-3", title: "거래처 연결 코드 이용 안내", detail: "승인된 공급사의 코드를 등록하면 매핑 가능한 상품이 열립니다.", date: "09.08", cta: "거래처 연결 바로가기", action: "open-connections" },
     { id: "notice-4", title: "송장 자동전송 설정 안내", detail: "공급사 송장이 등록되면 연결 쇼핑몰에 반영할 수 있습니다.", date: "09.07", cta: "쇼핑몰 연동 바로가기", action: "open-seller-channels" }
@@ -726,7 +726,12 @@ function loadState() {
         if (savedNotice.detail === "PICK 상품에서 판매정보를 수정하고 채널별로 등록할 수 있습니다.") Object.assign(savedNotice, { detail: seedNotice.detail, cta: seedNotice.cta });
       }
     }
-    merged.noticeVersion = 1;
+    /* 공지 1번 안내 영상 교체 (예전 영상 → 새 안내 영상) */
+    if (Number(saved.noticeVersion || 0) < 2) {
+      const savedNotice = (merged.notices || []).find(item => item.id === "notice-1");
+      if (savedNotice && (!savedNotice.videoUrl || /ILuBxYqHFbo/.test(savedNotice.videoUrl))) savedNotice.videoUrl = "https://www.youtube.com/watch?v=GH0R8VMeJ0s";
+    }
+    merged.noticeVersion = 2;
     /* 공급사 MVP: 일괄 처리를 바로 해볼 수 있도록 다른 위탁셀러의 신규 발주 데모 주문을 채운다 */
     if (Number(saved.supplierFlowVersion || 0) < 1) {
       base.orders.filter(order => order.id.startsWith("DO-260924-10")).forEach(order => { if (!(merged.orders || []).some(item => item.id === order.id)) merged.orders.unshift(JSON.parse(JSON.stringify(order))); });
@@ -2881,9 +2886,25 @@ const SELLER_ORDER_STAGE_GROUPS = [
   { tone: "neutral", who: "", title: "", stages: ["overview", "all", "self"] },
   { tone: "seller", who: "위탁셀러", title: "매핑 · 결제", stages: ["mapping", "payment", "received"] },
   { tone: "supplier", who: "공급사", title: "확인 · 포장 · 송장", stages: ["ordered", "preparing", "needs-check"] },
-  { tone: "seller", who: "위탁셀러", title: "송장 쇼핑몰 전송", stages: ["tracking-push"] },
+  { tone: "seller", who: "위탁셀러", title: "송장 전송", stages: ["tracking-push"] },
   { tone: "ship", who: "택배사", title: "배송 진행", stages: ["shipping", "delivered"] }
 ];
+/* 주문 단계판: 왼쪽 세로 메뉴 대신 표 위에 가로로 (플레이오토 주문현황처럼) — 누가 처리하는 단계인지 색으로 묶는다 */
+const SELLER_ORDER_STAGE_SHORT = { overview: "등록 현황", all: "전체 주문", self: "직접 배송" };
+function sellerOrderFlowBoard() {
+  const groups = SELLER_ORDER_STAGE_GROUPS.map(group => {
+    const tiles = group.stages.map(key => {
+      const full = sellerOrderStages.find(item => item[0] === key)?.[1] || key;
+      const label = SELLER_ORDER_STAGE_SHORT[key] || full;
+      const count = sellerOrderStageCount(key);
+      const tone = key === "needs-check" && count > 0 ? "urgent" : count > 0 ? "has-count" : "zero";
+      return `<button type="button" class="ofb-tile ${sellerOrderStage === key ? "active" : ""} ${tone}" data-action="filter-order-stage" data-stage="${key}" title="${escapeHtml(full)}" aria-pressed="${sellerOrderStage === key}"><span class="ofb-label">${escapeHtml(label)}</span><b class="ofb-count">${count}</b></button>`;
+    }).join("");
+    const head = group.title ? `<p class="ofb-group-head"><em>${group.who}</em><span>${group.title}</span></p>` : `<p class="ofb-group-head"><em>전체</em><span>주문 보기</span></p>`;
+    return `<div class="ofb-group tone-${group.tone}" style="--n:${group.stages.length}">${head}<div class="ofb-tiles">${tiles}</div></div>`;
+  });
+  return `<section class="order-flow-board panel" aria-label="주문 단계"><div class="ofb-head"><span>${menuIcon("order")}</span><b>주문 진행 단계</b><small>단계를 누르면 그 단계 주문만 아래에 보여요 · 위탁셀러(파랑) → 공급사(주황) → 위탁셀러(파랑) → 택배사(초록)</small></div><div class="ofb-groups">${groups.join('<i class="ofb-arrow" aria-hidden="true">›</i>')}</div></section>`;
+}
 function sellerOrderSubset(stage = sellerOrderStage) {
   const orders = currentSellerOrders();
   if (["all", "overview"].includes(stage)) return orders;
@@ -2924,7 +2945,7 @@ function sellerOrderManagementTemplate() {
   </section>`;
   const freeBanner = `<section class="plan-free-banner"><div><b>무료 요금제 · 수기 주문</b><span>받은 주문을 ‘수기 주문 넣기’로 넣으면 공급사로 바로 전달돼요. 쇼핑몰 주문을 자동으로 가져오려면 스타트 요금제(월 ${money(PLAN_AUTO_FEE)})부터 쓸 수 있어요.</span></div><button type="button" class="secondary-button" data-action="go-seller-menu" data-index="9">요금제 보기</button></section>`;
   return `${sectionHero("주문 관리", sellerAutomationActive() ? "쇼핑몰 주문을 가져와 결제하면 공급사가 출고하고, 받은 송장을 쇼핑몰로 보냅니다." : "받은 주문을 직접 넣고 결제하면 공급사가 출고해요. 송장은 여기서 확인할 수 있어요.", `<button class="primary-button collect-main-button" data-action="collect-orders"><span aria-hidden="true">⟳</span> 주문 수집하기</button><button class="secondary-button" data-action="open-manual-order">+ 수기 주문 넣기</button><button class="secondary-button" data-action="excel-orders">⬆ 엑셀 대량 주문</button>`)}${sellerAutomationActive() ? collectCard : freeBanner}${excelOrderCard()}
-    <div class="order-workspace"><details class="order-stage-menu panel" open><summary><span>${menuIcon("order")}</span><b>주문 관리</b><small>단계별 메뉴 열기</small><i>⌄</i></summary><nav class="stage-grouped">${SELLER_ORDER_STAGE_GROUPS.map(group => `<div class="stage-group tone-${group.tone}">${group.title ? `<p class="stage-group-head"><em>${group.who}</em><span>${group.title}</span></p>` : ""}<div class="stage-group-items">${group.stages.map(key => { const label = sellerOrderStages.find(item => item[0] === key)?.[1] || key; const count = sellerOrderStageCount(key); const urgent = key === "needs-check" && count > 0; return `<button class="${sellerOrderStage === key ? "active" : ""}" type="button" data-action="filter-order-stage" data-stage="${key}"><span>${label}</span><b class="stage-count ${count > 0 ? (urgent ? "urgent" : "has-count") : "zero"}">${count}</b></button>`; }).join("")}</div></div>`).join("")}</nav></details><section class="order-stage-content">
+    <div class="order-workspace is-flow">${sellerOrderFlowBoard()}<section class="order-stage-content">
       <div class="order-search-panel panel"><label><span>⌕</span><input id="sellerOrderSearch" value="${escapeHtml(sellerOrderSearch)}" placeholder="주문번호, 고객명, 외부 상품명, 상품코드 검색"></label><div><span>전체 ${orders.length}건</span><span>매핑 ${sellerMappingRequiredOrders().length}건</span><span>결제 ${sellerPaymentRequiredOrders().length}건</span></div></div>
       ${bulkPayBarMarkup()}
       ${sellerOrderStage === "overview" ? overview : ""}
@@ -6500,7 +6521,7 @@ function renderNoticeModal() {
   openModal(`<div class="notice-popup">
     <div class="notice-popup-head"><span>📢 DOOGO NOTICE · 중요 공지</span><b>${escapeHtml(n.date)}</b></div>
     <h2>${escapeHtml(n.title)}</h2>
-    ${videoId ? `<div class="notice-video"><iframe src="https://www.youtube-nocookie.com/embed/${videoId}?rel=0&playsinline=1" title="${escapeHtml(n.title)} 영상" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div><a class="notice-video-link" href="https://www.youtube.com/watch?v=${videoId}" target="_blank" rel="noopener">영상이 안 보이면 유튜브에서 보기 ↗</a>` : ""}
+    ${videoId ? noticeVideoMarkup(videoId, n.title) : ""}
     <div class="notice-body">${escapeHtml(n.detail).replace(/\n/g, "<br>")}</div>
     ${n.action ? `<button type="button" class="primary-button notice-cta" data-action="${escapeHtml(n.action)}">${escapeHtml(n.cta || "바로가기")} →</button>` : ""}
     <div class="notice-popup-nav">
@@ -6511,6 +6532,22 @@ function renderNoticeModal() {
     <div class="modal-actions"><button class="secondary-button" type="button" data-close-modal>닫기</button></div>
   </div>`);
   document.querySelector("#modal .modal").classList.add("notice-modal");
+}
+/* 공지 영상: 먼저 썸네일 + ▶ 를 보여 주고, 누르면 그 자리에서 재생한다.
+   외부 영상 삽입이 막힌 곳(미리보기 등)에서는 재생 대신 유튜브 새 창으로 연다. */
+let youtubeEmbedBlocked = (() => { try { return window.self !== window.top && /claudeusercontent|claude\.ai/.test(location.hostname + document.referrer); } catch { return true; } })();
+document.addEventListener("securitypolicyviolation", event => {
+  if (!/youtube|ytimg/.test(String(event.blockedURI || ""))) return;
+  youtubeEmbedBlocked = true;
+  document.querySelectorAll(".notice-video[data-video-id]").forEach(box => { if (box.querySelector("iframe")) box.outerHTML = noticeVideoMarkup(box.dataset.videoId, box.dataset.title || "", true); });
+});
+function noticeVideoMarkup(videoId, title = "", blocked = youtubeEmbedBlocked) {
+  const watch = `https://www.youtube.com/watch?v=${videoId}`;
+  const cover = `<img src="https://i.ytimg.com/vi/${videoId}/hqdefault.jpg" alt="" loading="lazy" onerror="this.remove()"><span class="notice-video-play" aria-hidden="true">▶</span><span class="notice-video-cap">${blocked ? "누르면 유튜브에서 영상이 열려요 ↗" : "눌러서 영상 보기"}</span>`;
+  const box = blocked
+    ? `<a class="notice-video is-cover" href="${watch}" target="_blank" rel="noopener" data-video-id="${videoId}" data-title="${escapeHtml(title)}" aria-label="${escapeHtml(title)} 영상 유튜브에서 보기">${cover}</a>`
+    : `<button type="button" class="notice-video is-cover" data-action="notice-video-play" data-video-id="${videoId}" data-title="${escapeHtml(title)}" aria-label="${escapeHtml(title)} 영상 재생">${cover}</button>`;
+  return `${box}<a class="notice-video-link" href="${watch}" target="_blank" rel="noopener">유튜브에서 크게 보기 ↗</a>`;
 }
 /* 유튜브 링크(watch·youtu.be·shorts·embed·live)에서 영상 ID만 뽑는다. */
 function youtubeVideoId(url) {
@@ -9469,6 +9506,12 @@ document.addEventListener("click", event => {
     state.notices = (state.notices || []).filter(n => n.id !== id);
     audit("공지사항 삭제", `${id} 공지사항을 삭제했습니다.`, "done", "product");
     saveState(); render(); updateAccountUI(); showToast("공지사항을 삭제했습니다."); return;
+  }
+  if (action === "notice-video-play") {
+    const id = target.dataset.videoId, title = target.dataset.title || "";
+    if (youtubeEmbedBlocked) { window.open(`https://www.youtube.com/watch?v=${id}`, "_blank", "noopener"); return; }
+    target.outerHTML = `<div class="notice-video" data-video-id="${id}" data-title="${escapeHtml(title)}"><iframe src="https://www.youtube.com/embed/${id}?rel=0&playsinline=1&autoplay=1" title="${escapeHtml(title)} 영상" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
+    return;
   }
   if (action === "notice-modal-nav") {
     const list = state.notices || [];
