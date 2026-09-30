@@ -10643,3 +10643,19 @@ label.studio-gallery-add, label.pe-photo-add { cursor: pointer; }
   .mp-need-actions { flex-direction: row; align-items: center; flex-wrap: wrap; }
   .mp-need-actions .primary-button { flex: 1 1 200px; }
 }
+
+/* v76 매핑 팝업 아래 버튼: 크기를 줄이고 한 줄로 가지런히 (휴대폰은 주 버튼 한 줄 + 보조 버튼 두 칸) */
+.mapping-pick-modal .modal-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.mapping-pick-modal .modal-actions button { min-height: 46px; padding: 0 18px; font-size: 15px; white-space: nowrap; border-radius: 12px; }
+.mapping-pick-modal .modal-actions .self-ship-button { margin-right: auto; padding: 0 6px; color: #6b7684; font-weight: 600; }
+.mapping-pick-modal .modal-actions .primary-button { padding: 0 22px; }
+@media (max-width: 760px) {
+  .mapping-pick-modal .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mapping-pick-modal .modal-actions .primary-button { grid-column: 1 / -1; order: -1; width: 100%; min-height: 50px; font-size: 16px; }
+  .mapping-pick-modal .modal-actions button { width: 100%; min-height: 44px; padding: 0 10px; font-size: 14.5px; }
+  .mapping-pick-modal .modal-actions .self-ship-button { margin: 0; border: 1px solid #e5e8eb; background: #fff; }
+  .mapping-pick-modal .modal-actions > :only-child, .mapping-pick-modal .modal-actions .secondary-button:nth-last-child(2):first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .mapping-pick-card > .mp-pick-body { flex: 1 1 0; min-width: 0; flex-basis: calc(100% - 70px); max-width: calc(100% - 64px); }
+}
