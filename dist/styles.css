@@ -11520,3 +11520,16 @@ body[data-role="master"] .topbar-home.active { background: #6d3fc9; border-color
   #sellerView .home-money > button small { display: none; }
   #sellerView .home-section-head p { display: none; }
 }
+/* v85: 좁은 화면에서 홈 버튼 때문에 화면 제목이 잘리지 않게 */
+@media (min-width: 721px) and (max-width: 1099px) {
+  .topbar-heading { column-gap: 10px; }
+  .topbar-home { width: 44px; height: 44px; border-radius: 12px; font-size: 10.5px; }
+  .topbar-home svg { width: 18px; height: 18px; }
+  #pageTitle { font-size: 22px; }
+}
+@media (max-width: 380px) {
+  .topbar { gap: 6px; }
+  .topbar-heading { column-gap: 6px; }
+  .topbar-home { width: 36px; height: 42px; }
+  .topbar-home span { display: none; }
+}
