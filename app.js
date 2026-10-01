@@ -32,7 +32,7 @@ const roleMenuGroups = {
     { label: "상품 찾기", indexes: [1, 16] },
     { label: "내 상품 (순서대로)", indexes: [2, 17, 14, 11, 7] },
     /* 주문도 내 상품처럼 하는 순서대로 ①~⑤ — 숫자 메뉴는 주문 관리의 해당 단계로 바로 열린다 */
-    { label: "주문 · 배송 (순서대로)", indexes: [{ stage: "all", label: "주문 수집", step: 1, icon: "order" }, 15, { stage: "payment", label: "결제하기", step: 3, icon: "card" }, { stage: "supplier", label: "공급사 출고", step: 4, icon: "supplier" }, { stage: "delivery", label: "송장 전송 · 배송", step: 5, icon: "truck" }, { stage: "self", label: "직접 배송", icon: "product" }, 5, 3] },
+    { label: "주문 · 배송 (순서대로)", indexes: [{ stage: "all", label: "주문 관리", step: 1, icon: "order" }, 15, { stage: "payment", label: "결제하기", step: 3, icon: "card" }, { stage: "supplier", label: "공급사 출고", step: 4, icon: "supplier" }, { stage: "delivery", label: "송장 전송 · 배송", step: 5, icon: "truck" }, { stage: "self", label: "직접 배송", icon: "product" }, 5, 3] },
     { label: "샘플 구매", indexes: [18, 19] },
     { label: "돈 관리", indexes: [12, 6, 9] },
     /* 상품 전송·결제·예치금 충전·반품·환불이 어떻게 처리됐는지 한곳에서 (실패하면 이유와 해결 방법까지) */
