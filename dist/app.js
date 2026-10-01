@@ -1013,10 +1013,12 @@ function approvePickRequest(item, auto = false) {
   audit("PICK 상품 승인", `${item.id} · ${product?.supplier || "공급사"}${auto ? " 자동 승인" : " 승인"} · 승인 완료로 이동`, "done", "product");
 }
 function currentSellerOrders() { return state.orders.filter(order => order.sellerLoginId === (currentAccount?.loginId || "seller") && order.orderType !== "sample"); }
-function currentSupplierOrders() { return state.orders.filter(order => order.supplierLoginId === (currentAccount?.loginId || "sup") && order.paymentStatus !== "pending"); }
+function currentSupplierOrders() { return state.orders.filter(order => order.supplierLoginId === (currentAccount?.loginId || "sup") && order.paymentStatus !== "pending" && order.paymentStatus !== "canceled"); }
 function orderMappingStatus(order) { return order?.mappingStatus || (order?.productId ? "mapped" : "unmapped"); }
 function orderPaymentStatus(order) { return order?.paymentStatus || "paid"; }
 function orderSupplierProgressLabel(order) {
+  if (order?.status === "주문취소") return "결제 전 취소";
+  if (order?.status === "출고취소") return order.cancelRefundAmount ? "출고 취소 · 예치금 환불" : "출고 취소";
   if (orderMappingStatus(order) === "self") return "사장님이 직접 발송";
   if (orderPaymentStatus(order) === "pending") return "공급사 전달 전";
   if (order.status === "배송준비중") return "공급사에게 주문전송";
@@ -1031,7 +1033,7 @@ function orderSellerTitle(order) {
   const item = state.sellerProducts.find(product => product.sellerLoginId === order?.sellerLoginId && product.productId === (order?.mappedProductId || order?.productId));
   return sellerProductTitle(item, orderSourceProduct(order));
 }
-function orderNeedsMapping(order) { return !["mapped", "self"].includes(orderMappingStatus(order)); }
+function orderNeedsMapping(order) { return !["mapped", "self", "canceled"].includes(orderMappingStatus(order)); }
 function sellerMappingRequiredOrders() { return currentSellerOrders().filter(orderNeedsMapping); }
 function sellerPaymentRequiredOrders() { return currentSellerOrders().filter(order => orderMappingStatus(order) === "mapped" && orderPaymentStatus(order) === "pending"); }
 function currentPriceAlerts() { const id = currentAccount?.loginId || "seller"; return state.priceAlerts.filter(alert => (alert.recipients || ["seller"]).includes(id)); }
@@ -1837,6 +1839,9 @@ function pushOrderTracking(order, mode = "manual") {
   const sentTo = [];
   Object.entries(order?.channelTrackingStatuses || {}).forEach(([channelId, status]) => {
     if (!isTrackingPending(status)) return;
+    /* 보내기 전에 쇼핑몰 연결이 끊겼으면 보내지 않고 ‘연동 필요’로 — 다시 연결하면 자동으로 전송 대기로 돌아온다 */
+    const linked = sellerChannels(order.sellerLoginId).find(item => item.id === channelId);
+    if (channelId !== "excel" && (!linked || linked.status !== "connected")) { order.channelTrackingStatuses[channelId] = "연동 필요"; return; }
     /* 쿠팡은 정해진 택배사 코드만 받는다. 직접 입력한 택배사는 다른 택배사로 바꿔 보내지 않고 셀러가 Wing에서 넣도록 알린다. */
     if (channelId === "coupang" && !COUPANG_CARRIER_NAMES.includes(order.carrier)) { order.channelTrackingStatuses[channelId] = "전송 실패"; order.trackingPushError = `‘${order.carrier}’ 택배사는 쿠팡 코드가 없어요. 쿠팡 Wing에서 송장을 직접 입력해 주세요.`; return; }
     if (CHANNEL_SERVER && channelApiSupported(channelId)) { dispatchTrackingLive(order, channelId, mode); sentTo.push(channelMeta(channelId).name); return; }
@@ -2162,7 +2167,7 @@ function editableText(key, fallback, className = "") {
   return `<span class="editable-copy ${className}" data-edit-key="${escapeHtml(key)}" contenteditable="${editMode ? "true" : "false"}" spellcheck="false">${escapeHtml(contentText(key, fallback))}</span>`;
 }
 function statusChip(status) {
-  const colors = { "신규주문": "gray", "주문접수": "sky", "발주완료": "orange", "배송준비중": "amber", "주문확인필요": "red", "배송중": "teal", "배송완료": "green", "직접배송": "purple", "출고취소": "red", "판매중": "green", "판매중지": "red", "확인필요": "red", "반영완료": "green", "공급사 확인중": "orange", "공급사 검토중": "orange", "협의 필요": "red", "회수 진행중": "blue", "반품 회수중": "blue", "공급사 입고확인 대기": "orange", "환불완료": "green", "예치금 충전완료": "green", "예치금 충전완료": "green", "반품접수": "red", "환불접수": "red", "연동중": "blue", "확인중": "orange", "미연동": "red" };
+  const colors = { "신규주문": "gray", "주문접수": "sky", "발주완료": "orange", "배송준비중": "amber", "주문확인필요": "red", "배송중": "teal", "배송완료": "green", "직접배송": "purple", "출고취소": "red", "주문취소": "red", "판매중": "green", "판매중지": "red", "확인필요": "red", "반영완료": "green", "공급사 확인중": "orange", "공급사 검토중": "orange", "협의 필요": "red", "회수 진행중": "blue", "반품 회수중": "blue", "공급사 입고확인 대기": "orange", "환불완료": "green", "예치금 충전완료": "green", "예치금 충전완료": "green", "반품접수": "red", "환불접수": "red", "연동중": "blue", "확인중": "orange", "미연동": "red" };
   return `<span class="chip ${colors[status] || ""}">${status}</span>`;
 }
 
@@ -6446,8 +6451,8 @@ function selfOrderActions(order, { inline = true } = {}) {
   const needsLink = Object.values(order.channelTrackingStatuses || {}).includes("연동 필요");
   const detail = `<button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>`;
   const entry = inline ? selfInlineTrackingForm(order) : `<button class="small-button approve" data-action="self-tracking" data-id="${order.id}">송장 입력</button>`;
-  if (step === "new") return `<span class="mapping-status self">직접 배송 · 주문 확인 전</span>${entry}${channelApiSupported(channelId) ? `<button class="text-button" data-action="self-confirm" data-id="${order.id}">주문 확인</button>` : ""}<button class="text-button" data-action="map-order" data-id="${order.id}">두고 상품으로 연결</button>${detail}`;
-  if (step === "confirmed") return `<span class="mapping-status self">직접 배송 · 포장 중</span>${entry}<button class="text-button" data-action="map-order" data-id="${order.id}">두고 상품으로 연결</button>${detail}`;
+  if (step === "new") return `<span class="mapping-status self">직접 배송 · 주문 확인 전</span>${entry}${channelApiSupported(channelId) ? `<button class="text-button" data-action="self-confirm" data-id="${order.id}">주문 확인</button>` : ""}<button class="text-button" data-action="map-order" data-id="${order.id}">두고 상품으로 연결</button>${detail}<button class="text-button refund-link" data-action="seller-cancel-order" data-id="${order.id}">주문 취소</button>`;
+  if (step === "confirmed") return `<span class="mapping-status self">직접 배송 · 포장 중</span>${entry}<button class="text-button" data-action="map-order" data-id="${order.id}">두고 상품으로 연결</button>${detail}<button class="text-button refund-link" data-action="seller-cancel-order" data-id="${order.id}">주문 취소</button>`;
   if (step === "ready" || step === "failed") return `<span class="mapping-status ${step === "failed" ? "unmapped" : "payment"}">${step === "failed" ? "송장 전송 실패" : "송장 전송 대기"}</span>${selfTrackingLine(order)}<button class="small-button approve" data-action="push-tracking" data-id="${order.id}">${step === "failed" ? "다시 전송" : "쇼핑몰로 송장 전송"}</button><button class="text-button" data-action="self-tracking" data-id="${order.id}">송장 수정</button>${detail}`;
   if (step === "sent") return `<span class="mapping-status ${needsLink ? "unmapped" : "self"}">${needsLink ? "쇼핑몰 연결 필요" : "쇼핑몰 전송 완료"}</span>${selfTrackingLine(order)}${needsLink ? `<button class="text-button" data-action="go-seller-menu" data-index="${menuIndexOf("쇼핑몰 연동", "seller")}">쇼핑몰 연결</button>` : ""}<button class="small-button" data-action="self-deliver" data-id="${order.id}">배송완료</button><button class="text-button" data-action="self-tracking" data-id="${order.id}">송장 수정</button>${detail}`;
   return `<span class="mapping-status self">배송완료</span>${selfTrackingLine(order)}${detail}`;
@@ -6698,12 +6703,15 @@ function trackingSentMarkup(order, { detail = false } = {}) {
 }
 function orderActionsMarkup(order, role) {
   const hasRefund = state.refunds.some(item => item.orderId === order.id);
+  const cancelBtn = role === "seller" && sellerCanCancelOrder(order) ? `<button class="text-button refund-link" data-action="seller-cancel-order" data-id="${order.id}">주문 취소</button>` : "";
+  /* 취소된 주문: 더 할 일이 없다는 것과 돌려받은 돈을 보여 준다 (‘공급사 처리 대기’처럼 기다리게 하지 않음) */
+  if (role === "seller" && ["주문취소", "출고취소"].includes(order.status)) return `<span class="mapping-status unmapped">${order.status === "주문취소" ? "주문 취소됨" : "출고 취소됨"}</span><small class="status-sub">${order.cancelRefundAmount ? `공급가 ${money(order.cancelRefundAmount)} 예치금으로 환불됨` : order.status === "주문취소" ? "공급사에 결제 전이라 낼 돈 없음" : escapeHtml(order.supplierCancelReason || order.shippingCancelReason || "")}</small><button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>`;
   if (role === "seller" && orderMappingStatus(order) === "self") return selfOrderActions(order);
   if (role === "seller" && orderMappingStatus(order) !== "mapped") {
-    return `<span class="mapping-status unmapped">상품 매핑 필요</span><button class="small-button approve" data-action="map-order" data-id="${order.id}">상품 매핑</button><button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>`;
+    return `<span class="mapping-status unmapped">상품 매핑 필요</span><button class="small-button approve" data-action="map-order" data-id="${order.id}">상품 매핑</button><button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${cancelBtn}`;
   }
   if (role === "seller" && orderPaymentStatus(order) === "pending") {
-    return `<span class="mapping-status payment">공급가 결제 대기</span><button class="small-button approve" data-action="pay-order" data-id="${order.id}">결제 후 전달</button><button class="text-button" data-action="map-order" data-id="${order.id}">매핑 변경</button><button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>`;
+    return `<span class="mapping-status payment">공급가 결제 대기</span><button class="small-button approve" data-action="pay-order" data-id="${order.id}">결제 후 전달</button><button class="text-button" data-action="map-order" data-id="${order.id}">매핑 변경</button><button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${cancelBtn}`;
   }
   if (role === "seller" && ["신규주문", "주문접수"].includes(order.status)) {
     return `<span class="mapping-status payment">공급사 발주 대기</span><button class="small-button approve" data-action="dispatch-supplier-order" data-id="${order.id}">공급사 발주</button><button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${!hasRefund ? `<button class="text-button refund-link" data-action="request-refund" data-id="${order.id}">취소·환불</button>` : ""}`;
@@ -8110,10 +8118,30 @@ function orderDetailModal(orderId) {
     <section class="order-detail-section"><h3>상품 매핑·결제·발주</h3><div class="mapping-detail-grid"><div><span>외부몰 상품명</span><b>${escapeHtml(order.externalProductName || orderSellerTitle(order))}</b></div><div><span>공급사 원본코드</span><b>${mapped ? escapeHtml(order.mappedProductId || order.productId) : "매핑 전"}</b></div><div><span>공급가 결제</span><b>${paid ? `결제 완료 · ${escapeHtml(order.paymentMethod === "deposit" ? "예치금" : order.paymentMethod === "card" ? "신용카드" : "기존 주문")}` : "결제 대기"}</b></div><div><span>공급사 발주</span><b>${order.supplierLoginId ? `${escapeHtml(order.supplierOrderId || "발주번호 생성")} · ${escapeHtml(order.forwardedAt || "전달 완료")}` : paid ? "위탁셀러 발주 대기" : "결제 후 발주 가능"}</b></div></div></section>
     <details class="order-detail-section order-recipient-details"><summary><h3>수취인·배송 정보</h3><i>⌄</i></summary><div class="member-detail-grid"><div><span>성함</span><b>${escapeHtml(order.recipientName || order.customer)}</b></div><div><span>연락처</span><b>${escapeHtml(order.phone || "-")}</b></div><div class="full"><span>주소</span><b>(${escapeHtml(order.postalCode || "-")}) ${escapeHtml(order.address || "-")} ${escapeHtml(order.addressDetail || "")}</b></div><div class="full"><span>배송 메시지</span><b>${escapeHtml(order.deliveryMessage || "없음")}</b></div>${order.shippingType === "overseas" ? `<div class="full customs-field ${isValidCustomsCode(order.personalCustomsCode) ? "" : "missing"}"><span>개인통관고유부호</span><b>${escapeHtml(order.personalCustomsCode || "미입력 · 결제할 때 입력해 주세요")}</b></div>` : ""}</div></details>
     <section class="order-detail-section"><h3>송장·판매채널 전송 ${activeRole === "seller" ? trackingSourceChip(order) : ""}</h3>${activeRole === "seller" && order.tracking ? trackingSentMarkup(order, { detail: true }) : ""}<div class="tracking-summary"><span>${order.tracking ? "송장 반영 완료" : order.status === "배송준비중" ? "공급사 송장 입력 대기" : order.supplierLoginId ? "공급사 주문 확인 대기" : "공급사 발주 전"}</span><b>${order.tracking ? `${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)}` : "아직 송장번호가 없습니다."}</b></div>${trackingStatuses.length ? `<div class="tracking-channel-statuses">${trackingStatuses.map(([channelId,status]) => `<div>${channelMark(channelId,true)}<span>${escapeHtml(channelMeta(channelId).name)}</span><b class="${isTrackingPending(status) ? "pending" : ""}">${escapeHtml(trackingStatusLabel(status))}${status === "10분 자동전송 대기" ? ` · ${escapeHtml(trackingSlotLabel(order.trackingAutoDueAt))}` : ""}</b></div>`).join("")}</div>${activeRole === "seller" && orderNeedsTrackingPush(order) ? `<button type="button" class="primary-button tracking-push-cta" data-action="push-tracking" data-id="${order.id}">${orderWaitsAutoTracking(order) ? `기다리지 않고 지금 보내기` : "쇼핑몰에 송장 보내기"}</button>` : ""}` : `<div class="channel-sync-empty">송장이 입력되면 주문이 들어온 쇼핑몰로 보낼 준비가 됩니다.</div>`}</section>
-    <div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button>${activeRole === "seller" ? sellerPrimary : activeRole === "supplier" ? supplierPrimary : ""}${activeRole === "seller" && !refund && !["배송완료", "환불완료"].includes(order.status) ? `<button class="refund-button" data-action="request-refund" data-id="${order.id}">취소·환불 요청</button>` : ""}</div>`);
+    <div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button>${activeRole === "seller" ? sellerPrimary : activeRole === "supplier" ? supplierPrimary : ""}${activeRole === "seller" ? sellerCanCancelOrder(order) ? `<button class="refund-button" data-action="seller-cancel-order" data-id="${order.id}">주문 취소</button>` : !refund && orderMappingStatus(order) === "mapped" && orderPaymentStatus(order) !== "pending" && !["배송완료", "환불완료", "주문취소", "출고취소"].includes(order.status) ? `<button class="refund-button" data-action="request-refund" data-id="${order.id}">취소·환불 요청</button>` : "" : ""}</div>`);
   document.querySelector("#modal .modal").classList.add("order-detail-modal");
 }
 
+/* 공급사에 결제하기 전 주문(매핑 필요·결제 대기·송장 넣기 전 직접 배송)은 고객이 쇼핑몰에서 취소하면 셀러가 바로 취소한다.
+   결제 후에는 공급사가 이미 받은 주문이라 ‘취소·환불 요청’ 흐름을 탄다. */
+function sellerCanCancelOrder(order) {
+  if (!order || ["주문취소", "출고취소", "배송완료"].includes(order.status) || order.tracking) return false;
+  const ms = orderMappingStatus(order);
+  if (ms === "self") return true;
+  if (ms === "canceled") return false;
+  return ms !== "mapped" || orderPaymentStatus(order) === "pending";
+}
+function sellerCancelOrderModal(orderId) {
+  const order = currentSellerOrders().find(item => item.id === orderId);
+  if (!order || !sellerCanCancelOrder(order)) return showToast("공급사에 결제하기 전 주문만 여기서 취소할 수 있어요. 결제한 주문은 ‘취소·환불’로 요청해 주세요.");
+  openModal(`<div class="refund-request-head"><span>주문 취소</span><h2>이 주문을 취소할까요?</h2><p>${escapeHtml(order.channel || "")} · ${escapeHtml(order.channelOrderNo || order.id)} · ${escapeHtml(order.externalProductName || orderSellerTitle(order))} · ${order.qty}개</p></div>
+    <form id="sellerCancelForm" class="form-grid" data-id="${order.id}">
+      <p class="full self-send-note">아직 공급사에 결제하지 않은 주문이라 <b>낼 돈도, 돌려받을 돈도 없어요.</b> 취소하면 할 일 목록에서 빠지고 매출에서도 빠져요.</p>
+      <div class="form-field full"><label>취소 이유</label><select name="reason"><option>고객이 쇼핑몰에서 주문 취소</option><option>품절·판매 불가</option><option>중복 주문</option><option>기타</option></select></div>
+      <p class="full self-send-note">쇼핑몰(${escapeHtml(order.channel || "판매채널")})에서도 고객 주문 취소가 끝났는지 꼭 확인해 주세요.</p>
+      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>닫기</button><button type="submit" class="primary-button danger">주문 취소하기</button></div>
+    </form>`);
+}
 function refundRequestModal(orderId) {
   const order = state.orders.find(item => item.id === orderId);
   const product = productOf(order?.mappedProductId || order?.productId);
@@ -8838,17 +8866,32 @@ function supplierCancelModal(orderId) {
       <label class="rp-switch full"><input type="checkbox" name="soldOut" checked><span><b>${option ? `이 옵션(${escapeHtml(option.name)}) 재고를 0으로` : "이 상품 재고를 0으로"}</b><small>품절이면 켜 두세요. 다른 셀러 주문도 더 들어오지 않아요.</small></span></label>
       <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>닫기</button><button type="submit" class="primary-button danger">출고 불가로 취소</button></div></form></div>`);
 }
+/* 결제까지 끝난 주문이 출고되지 못하고 취소됐을 때: 셀러가 낸 공급가+배송비를 예치금으로 돌려주고,
+   결제 때 빼 둔 재고를 되돌린다. 같은 주문은 한 번만 돌려준다(두 번 눌러도 이중 환불 없음). */
+function refundCancelledOrderToSeller(order, type, note, { restoreStock = true } = {}) {
+  if (!order || orderPaymentStatus(order) === "pending" || order.cancelRefundAmount !== undefined) return 0;
+  const amount = orderSupplyAmount(order) + Number(order.supplyShipping || 0);
+  if (amount > 0) {
+    const deposit = sellerDeposit(order.sellerLoginId);
+    deposit.balance += amount; deposit.totalRefunded = Number(deposit.totalRefunded || 0) + amount;
+    deposit.transactions.unshift({ id: `DP-${Date.now()}-${order.id}`, type, amount, reference: `${order.id}${note ? ` · ${note}` : ""}`, createdAt: depositStamp(), at: Date.now() });
+  }
+  const product = orderSourceProduct(order);
+  if (restoreStock && product) {
+    const option = orderOption(order, product);
+    if (option) { option.stock = Number(option.stock || 0) + Number(order.qty || 1); if (typeof syncProductOptionTotals === "function") syncProductOptionTotals(product); }
+    else product.stock = Number(product.stock || 0) + Number(order.qty || 1);
+  }
+  order.cancelRefundAmount = amount;
+  return amount;
+}
 function supplierCancelOrder(order, reason, memo, soldOut) {
-  const supply = orderSupplyAmount(order);
+  const supply = orderSupplyAmount(order) + Number(order.supplyShipping || 0);
   const product = orderSourceProduct(order);
   order.status = "출고취소"; order.settlementStatus = "excluded"; order.supplierCancelReason = reason; order.supplierCancelMemo = memo; order.cancelledAt = "방금 전";
   const refundId = `RF-${ymd(new Date()).slice(2).replace(/-/g, "")}-S${Date.now().toString(36).slice(-4).toUpperCase()}`;
   state.refunds.unshift({ id: refundId, orderId: order.id, sellerLoginId: order.sellerLoginId, supplierLoginId: orderSupplierId(order), type: "주문 취소", reason: `공급사 출고 불가 · ${reason}`, detail: memo || "", consumerRefundAmount: Number(order.amount || 0), amount: supply, status: "환불완료", responsibility: "공급사 사유 (출고 불가)", consumerRefunded: false, noPickup: true, supplierReceived: true, depositCredited: true, supplierSettlementOffset: true, requestedAt: "방금 전", completedAt: "방금 전" });
-  if (orderPaymentStatus(order) !== "pending" && supply > 0) {
-    const deposit = sellerDeposit(order.sellerLoginId);
-    deposit.balance += supply; deposit.totalRefunded = Number(deposit.totalRefunded || 0) + supply;
-    deposit.transactions.unshift({ id: `DP-${Date.now()}`, type: "출고 불가 환불", amount: supply, reference: `${order.id} · ${reason}`, createdAt: depositStamp(), at: Date.now() });
-  }
+  refundCancelledOrderToSeller(order, "출고 불가 환불", reason, { restoreStock: !soldOut });
   if (soldOut && product) {
     const option = orderOption(order, product);
     if (option) { option.stock = 0; if (typeof syncProductOptionTotals === "function") syncProductOptionTotals(product); } else product.stock = 0;
@@ -10875,7 +10918,7 @@ document.addEventListener("click", event => {
   }
   if (action === "cancel-channel-order") {
     const order = state.orders.find(item => item.id === id);
-    if (order?.status === "주문확인필요") { order.status = "출고취소"; order.shippingCancelReason = "판매채널 주문 취소·미확인"; order.shippingCancelMemo = "판매채널의 결제완료·신규주문 목록에서 해당 주문을 찾을 수 없어 송장을 발급하지 않고 취소 처리했습니다."; order.settlementStatus = "excluded"; audit("채널 주문 취소 처리", `${order.id} · 판매채널에서 주문을 확인할 수 없어 출고취소로 처리했습니다.`, "done", "order"); saveState(); closeModal(); render(); updateAccountUI(); showToast("주문을 출고취소로 처리했습니다."); }
+    if (order?.status === "주문확인필요") { order.status = "출고취소"; order.shippingCancelReason = "판매채널 주문 취소·미확인"; order.shippingCancelMemo = "판매채널의 결제완료·신규주문 목록에서 해당 주문을 찾을 수 없어 송장을 발급하지 않고 취소 처리했습니다."; order.settlementStatus = "excluded"; const back = refundCancelledOrderToSeller(order, "쇼핑몰 주문 취소 환불", "판매채널 주문 취소"); if (back) pushNotification(order.sellerLoginId, "seller", "shipment", "쇼핑몰에서 취소된 주문이에요", `${order.id} · 공급가 ${money(back)}을 예치금으로 돌려드렸어요.`); audit("채널 주문 취소 처리", `${order.id} · 판매채널에서 주문을 확인할 수 없어 출고취소로 처리했습니다.${back ? ` · 셀러 예치금 ${money(back)} 환불` : ""}`, "done", "order"); saveState(); closeModal(); render(); updateAccountUI(); showToast(back ? `주문을 출고취소로 처리하고 ${money(back)}을 예치금으로 돌려드렸어요.` : "주문을 출고취소로 처리했습니다."); }
     return;
   }
   if (action === "complete-shipping") {
@@ -11323,6 +11366,7 @@ document.addEventListener("click", event => {
   if (action === "focus-inquiry") document.getElementById("supplierInquiryPanel")?.scrollIntoView({ behavior: "smooth", block: "center" });
   if (action === "order-detail") orderDetailModal(id);
   if (action === "request-refund") refundRequestModal(id);
+  if (action === "seller-cancel-order") { closeModal(); sellerCancelOrderModal(id); return; }
   if (action === "refund-detail") refundDetailModal(id);
   if (action === "request-return-pickup") {
     const refund = state.refunds.find(item => item.id === id);
@@ -12648,7 +12692,8 @@ document.addEventListener("submit", event => {
     if (!order || order.status !== "배송중" || !order.provisionalTracking) return showToast("집하 전 자동발급 가송장만 취소할 수 있습니다.");
     order.cancelledTracking = order.tracking; order.cancelledCarrier = order.carrier; order.tracking = ""; order.status = "출고취소"; order.provisionalTracking = false; order.shippingCancelReason = data.reason; order.shippingCancelMemo = data.memo; order.settlementStatus = "excluded";
     Object.keys(order.channelTrackingStatuses || {}).forEach(channelId => { order.channelTrackingStatuses[channelId] = "전송 취소"; });
-    pushNotification(order.sellerLoginId, "seller", "shipment", "공급사가 가송장을 취소했습니다", `${order.id} · ${data.reason}`, ["내부 알림"]);
+    const back = refundCancelledOrderToSeller(order, "출고 취소 환불", data.reason);
+    pushNotification(order.sellerLoginId, "seller", "shipment", "공급사가 가송장을 취소했습니다", `${order.id} · ${data.reason}${back ? ` · 공급가 ${money(back)}은 예치금으로 돌려드렸어요` : ""}`, ["내부 알림"]);
     audit("가송장 출고 취소", `${order.id} · ${order.cancelledCarrier} ${order.cancelledTracking} · ${data.reason} · 외부 택배 API 미호출`, "blocked", "tracking");
     saveState(); closeModal(); render(); updateAccountUI(); showToast("가송장을 취소하고 셀러 화면에 반영했습니다.");
   }
@@ -12768,8 +12813,19 @@ document.addEventListener("submit", event => {
     audit("예치금 계좌 출금 신청", `${withdrawal.id} · ${money(amount)} · 사용 가능 잔액 즉시 차감, 은행 이체 결과 대기`, "pending", "money");
     saveState(); render(); updateAccountUI(); doogoMoneyModal(); showToast("출금을 신청했습니다. 사용 가능 예치금에서 즉시 차감했습니다.");
   }
+  if (form.id === "sellerCancelForm") {
+    const order = currentSellerOrders().find(item => item.id === form.dataset.id);
+    if (!order || !sellerCanCancelOrder(order)) { closeModal(); return showToast("이미 처리된 주문이에요."); }
+    Object.assign(order, { status: "주문취소", mappingStatus: "canceled", settlementStatus: "excluded", sellerCancelReason: String(data.reason || ""), cancelledAt: new Date().toLocaleString("ko-KR"), supplierLoginId: "" });
+    paymentPicks.delete(order.id);
+    audit("주문 취소 (결제 전)", `${order.id} · ${order.externalProductName || ""} · ${data.reason}`, "done", "order");
+    saveState(); closeModal(); render(); updateAccountUI();
+    return showToast("주문을 취소했어요. 할 일 목록과 매출에서 빠졌어요.");
+  }
   if (form.id === "refundRequestForm") {
     const order = state.orders.find(item => item.id === form.dataset.id);
+    if (order && ["주문취소", "출고취소"].includes(order.status)) { closeModal(); return showToast("이미 취소된 주문이에요. 공급가는 예치금으로 돌려드렸어요."); }
+    if (order && state.refunds.some(item => item.orderId === order.id && !["반려", "요청 취소", "취소됨"].includes(item.status))) { closeModal(); return showToast("이 주문은 이미 취소·환불 요청이 있어요. ‘취소·반품’ 메뉴에서 진행 상황을 확인해 주세요."); }
     if (!order || !data.consumerRefunded) return showToast("판매채널의 소비자 환불 완료 여부를 확인해 주세요.");
     const product = orderSourceProduct(order);
     if (!product || !order.supplierLoginId) return showToast("공급사 발주가 완료된 주문에서 환불을 요청해 주세요.");
@@ -12906,6 +12962,8 @@ document.addEventListener("submit", event => {
       channel.api = { sellerId: creds.vendorId?.toUpperCase() || creds.accountId || creds.mallId || creds.sellerId, ...(creds.mallId ? { mallId: creds.mallId } : {}), vendorUserId: creds.vendorUserId || "", apiKeyMasked: saved?.accessKey || maskSecret(creds.accessKey || creds.apiKey || ""), secretMasked: creds.secretKey ? (saved?.secretKey || maskSecret(creds.secretKey)) : "", connectedAt: "방금 전", mode: CHANNEL_SERVER && channelApiSupported(channel.id) ? "server" : "demo" };
       if (!wasConnected || !Array.isArray(channel.shippingPolicies) || !channel.shippingPolicies.length) { channel.shippingPolicies = channelPolicyPresets(channel.id); channel.defaultPolicyId = channel.shippingPolicies[0]?.id || ""; }
       channel.policySyncedAt = channelApiNow();
+      /* 연결 전에 넣어 둔 송장(‘연동 필요’)은 연결되는 순간 전송 대기로 다시 올린다 — ‘연결하면 송장이 자동으로 가요’ 약속 지키기 */
+      currentSellerOrders().filter(order => order.tracking && channelIdFromName(order.channel) === channel.id && order.channelTrackingStatuses?.[channel.id] === "연동 필요").forEach(order => queueTrackingSync(order));
       currentSellerProducts().forEach(item => { item.channelStatuses = item.channelStatuses || {}; if (!item.channelStatuses[channel.id] || item.channelStatuses[channel.id] === "미연동") item.channelStatuses[channel.id] = "판매중지/미노출"; });
       audit(wasConnected ? "쇼핑몰 API 키 변경" : "쇼핑몰 API 연동", `${channel.name} · ${channel.storeName} · ${channelApiSupported(channel.id) ? CHANNEL_RULES[channel.id].auth : "API 키"}${channel.api.mode === "demo" ? " · 연동 서버 미연결(기기에만 저장)" : ""}`, "done", "channel");
       saveState(); render(); updateAccountUI(); channelDetailModal(channel.id);
