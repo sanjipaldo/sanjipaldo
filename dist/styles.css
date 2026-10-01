@@ -11313,3 +11313,10 @@ body[data-role="supplier"] .ship-info-steps li::before { background: #111; }
   .onsale-quick { padding: 10px 14px 14px; }
   .onsale-quick-actions { width: 100%; } .onsale-quick-actions button { flex: 1 1 0; padding: 0 10px; }
 }
+/* 상품 상세 하단 버튼(휴대폰): PICK하기 · 샘플 담기를 위 줄에, 닫기는 아래 오른쪽 */
+@media (max-width: 720px) {
+  .sticky-detail-actions > .detail-sticky-buttons { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "pick cart" ". close"; gap: 8px; }
+  .detail-sticky-buttons .detail-pick-btn { grid-area: pick; }
+  .detail-sticky-buttons .sample-sticky-cart { grid-area: cart; }
+  .detail-sticky-buttons .detail-close-btn { grid-area: close; }
+}
