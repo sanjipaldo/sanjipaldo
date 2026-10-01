@@ -7,14 +7,14 @@ const accounts = {
   seller: { password: "seller", role: "seller", roles: ["seller"], name: "두고 셀러", roleLabel: "위탁셀러" }
 };
 const roleMenus = {
-  master: ["대시보드", "회원 관리", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리", "정산 관리", "매출 · 통계", "구독 · 결제", "두고톡 상담", "매출 보고", "아이템 위너 · 매핑"],
+  master: ["대시보드", "회원 관리", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리", "정산 관리", "매출 · 통계", "구독 · 결제", "두고톡 상담", "매출 보고", "아이템 위너 · 매핑", "예치금 관리"],
   supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "굿스플로 · 택배", "가격 관리", "정산 내역", "내 정보", "PICK 요청", "판매 현황", "매출 달력", "공지사항", "배송 정책", "매핑 · 위너 현황", "상품 FAQ"],
   seller: ["홈", "상품 소싱", "승인 대기", "공급사 문의", "주문 관리", "취소·반품", "매출 달력", "가격 변경 알림", "쇼핑몰 연동", "요금제", "내 정보", "판매중 상품", "예치금", "공지사항", "마스터 상품", "상품 매핑", "브랜드 소싱", "승인 완료", "장바구니", "샘플 주문 내역", "배송 정책"]
 };
 const roleMenuGroups = {
   master: [
     { label: "홈", indexes: [0] },
-    { label: "돈 · 통계", indexes: [11, 10, 12, 14] },
+    { label: "돈 · 통계", indexes: [11, 10, 16, 12, 14] },
     { label: "고객 응대 (CS)", indexes: [13, 7, 9] },
     { label: "회원 · 권한", indexes: [1, 2, 3, 4] },
     { label: "상품 · 주문", indexes: [15, 5, 6, 8] }
@@ -42,7 +42,7 @@ const menuSteps = { seller: { 1: 1, 16: 1, 2: 2, 17: 3, 14: 4, 11: 5 }, supplier
 /* 메뉴 이름으로 인덱스를 찾는다 (메뉴 순서가 바뀌어도 이동 버튼이 깨지지 않게) */
 function menuIndexOf(label, role = activeRole) { const index = (roleMenus[role] || []).indexOf(label); return index >= 0 ? index : 0; }
 const menuIcons = {
-  master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log", "notice", "settlement", "chart", "card", "message", "report", "mapping"],
+  master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log", "notice", "settlement", "chart", "card", "message", "report", "mapping", "settlement"],
   supplier: ["home", "product", "message", "order", "refund", "printer", "price", "settlement", "settings", "approval", "onsale", "calendar", "notice", "truck", "mapping", "message"],
   seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice", "approval", "mapping", "brand", "ready", "cart", "box", "truck"]
 };
@@ -713,7 +713,40 @@ function seedDepositHistory(target) {
   depositHistorySeed().charges.forEach(item => { if (!wallet.charges.some(charge => charge.id === item.id)) wallet.charges.push({ ...item }); });
   return target;
 }
-function cloneInitial() { return seedDepositHistory(applySupplierVariety(JSON.parse(JSON.stringify(initialState)))); }
+/* 다른 위탁셀러 예치금 (마스터 '예치금 관리'에서 전체 이용내역·입금 확인을 볼 수 있게) */
+function seedSellerWallets(target) {
+  target.deposits = target.deposits || {};
+  const seeds = {
+    market88: { depositor: "마켓88 이셀러", tx: [
+      { id: "DP-M88-0922", type: "주문 공급가 일괄 결제 (3건)", amount: -94800, reference: "BP-M88-0922", createdAt: "09.22 15:40", year: 2026, detail: "쿠팡 주문 3건 · 공급사 2곳에 자동 전달" },
+      { id: "DP-M88-0915", type: "무통장입금 충전", amount: 300000, reference: "CH-M88-0915 · 입금자 마켓88 이셀러", createdAt: "09.15 10:12", year: 2026 },
+      { id: "DP-M88-0910", type: "주문 공급가 일괄 결제 (5건)", amount: -186400, reference: "BP-M88-0910", createdAt: "09.10 13:05", year: 2026, detail: "스마트스토어 주문 5건 · 공급사 3곳에 자동 전달" },
+      { id: "DP-M88-0902", type: "신용카드 충전", amount: 500000, reference: "CH-M88-0902 · 현대카드 일시불", createdAt: "09.02 09:31", year: 2026, method: "card", cardCompany: "현대카드", approvalNo: "40902317" }
+    ], charges: [
+      { id: "CH-M88-0930", amount: 200000, depositor: "마켓88 이셀러", method: "bank", status: "입금 대기", requestedAt: "09.30 16:20", dueAt: "10월 3일" },
+      { id: "CH-M88-0915", amount: 300000, depositor: "마켓88 이셀러", method: "bank", status: "충전 완료", requestedAt: "09.15 09:48", dueAt: "9월 18일", completedAt: "09.15 10:12" },
+      { id: "CH-M88-0902", amount: 500000, depositor: "마켓88", method: "card", cardCompany: "현대카드", approvalNo: "40902317", status: "충전 완료", requestedAt: "09.02 09:31", completedAt: "09.02 09:31" }
+    ] },
+    brandlab: { depositor: "김브랜드", tx: [
+      { id: "DP-BL-0924", type: "반품 환불 충전", amount: 21800, reference: "RF-BL-0924 · 반품 입고 확인", createdAt: "09.24 17:02", year: 2026 },
+      { id: "DP-BL-0918", type: "주문 공급가 결제", amount: -72600, reference: "DO-260918-BL1", createdAt: "09.18 11:26", year: 2026, detail: "6년근 홍삼정 240g · 네이버 스마트스토어 주문 · 공급사 하라인" },
+      { id: "DP-BL-0905", type: "무통장입금 충전", amount: 200000, reference: "CH-BL-0905 · 입금자 김브랜드", createdAt: "09.05 14:44", year: 2026 }
+    ], charges: [
+      { id: "CH-BL-0930", amount: 150000, depositor: "김브랜드", method: "bank", status: "입금 대기", requestedAt: "09.30 18:40", dueAt: "10월 3일" },
+      { id: "CH-BL-0905", amount: 200000, depositor: "김브랜드", method: "bank", status: "충전 완료", requestedAt: "09.05 13:10", dueAt: "9월 8일", completedAt: "09.05 14:44" }
+    ] }
+  };
+  Object.entries(seeds).forEach(([loginId, seedWallet]) => {
+    const wallet = target.deposits[loginId] || (target.deposits[loginId] = { balance: 0, totalRefunded: 0, pending: 0, withdrawalPending: 0, bankAccount: null, withdrawals: [], transactions: [] });
+    wallet.transactions = wallet.transactions || []; wallet.charges = wallet.charges || []; wallet.withdrawals = wallet.withdrawals || [];
+    let added = 0;
+    seedWallet.tx.forEach(item => { if (!wallet.transactions.some(tx => tx.id === item.id)) { wallet.transactions.push({ ...item }); added += Number(item.amount); } });
+    seedWallet.charges.forEach(item => { if (!wallet.charges.some(ch => ch.id === item.id)) wallet.charges.push({ ...item }); });
+    wallet.balance = Number(wallet.balance || 0) + added;
+  });
+  return target;
+}
+function cloneInitial() { return seedSellerWallets(seedDepositHistory(applySupplierVariety(JSON.parse(JSON.stringify(initialState))))); }
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -837,6 +870,8 @@ function loadState() {
     }
     merged.cafe24Version = 1;
     merged.depositHistoryVersion = 1;
+    if (Number(saved.masterDepositVersion || 0) < 1) seedSellerWallets(merged);
+    merged.masterDepositVersion = 1;
     /* 굿스플로 연동: 아이디 연동·택배사 계약·크레딧(예치금) 필드를 채운다 */
     if (Number(saved.goodsflowVersion || 0) < 1) {
       Object.entries(merged.goodflowConnections || {}).forEach(([loginId, conn]) => {
@@ -1464,6 +1499,7 @@ document.addEventListener("change", event => {
 document.addEventListener("change", event => { const select = event.target.closest?.(".self-inline-track select"); if (select && select.value === "__more") { const id = select.closest("form").dataset.id; select.selectedIndex = 0; selfTrackingModal(id); } });
 document.addEventListener("change", event => {
   if (!event.target.matches?.('#mappingPickForm input[name="productId"]')) return;
+  updateMappingProfit();
   const box = document.querySelector("#mappingPickForm [data-mp-faq]");
   if (box) box.innerHTML = productFaqMarkup(productOf(event.target.dataset.productId), { limit: 4 });
 });
@@ -3674,7 +3710,7 @@ function unmappedExternalProducts() {
 function autoLinkedProductsForMapping() {
   return currentSellerProducts().filter(item => item.approvalStatus === "승인완료" && liveChannelIds(item).length);
 }
-function mappingNeedCard(group, candidates) {
+function mappingNeedCard(group, candidates, index = 0) {
   const orders = group.waitingOrders;
   const code = group.externalProductCode || "";
   const attrs = code ? `data-code="${escapeHtml(code)}"` : `data-order="${escapeHtml(group.id)}"`;
@@ -3684,9 +3720,9 @@ function mappingNeedCard(group, candidates) {
   const latest = orders[0];
   return `<article class="mp-need-card">
     <button type="button" class="mp-need-main" data-action="open-mapping-pick" ${attrs}>
-      <span class="mp-need-top">${channelMark(channelIdFromName(group.channel), true)}<small>${escapeHtml(group.channel || "쇼핑몰")}</small><em class="mp-count">주문 ${orders.length}건</em></span>
+      <span class="mp-need-top"><i class="mp-no">${index + 1}</i>${channelMark(channelIdFromName(group.channel), true)}<small>${escapeHtml(group.channel || "쇼핑몰")}</small></span>
       <b>${escapeHtml(group.externalProductName || "쇼핑몰 상품")}</b>
-      <small>쇼핑몰 코드 ${escapeHtml(code || "-")} · 총 ${qty}개${sale ? ` · 판매가 ${money(sale)}` : ""}${latest ? ` · ${escapeHtml(latest.recipientName || latest.customer || "")} 님 외` : ""}</small>
+      <small>쇼핑몰 코드 ${escapeHtml(code || "-")} · 주문 ${orders.length}건 · 총 ${qty}개${sale ? ` · 판매가 ${money(sale)}` : ""}${latest ? ` · ${escapeHtml(latest.recipientName || latest.customer || "")} 님 외` : ""}</small>
       ${similar.length ? `<span class="mp-need-hint">비슷한 두고 상품 <b>${similar.length}개</b> · 최저 공급가 <b>${money(similar[0].supply)}</b>${sale ? ` · 개당 마진 ${sale - similar[0].supply >= 0 ? "+" : "−"}${money(Math.abs(sale - similar[0].supply))}` : ""}</span>` : `<span class="mp-need-hint muted">눌러서 두고 상품을 검색해 연결하세요</span>`}
     </button>
     <div class="mp-need-actions"><button type="button" class="primary-button" data-action="open-mapping-pick" ${attrs}>두고 상품 고르기 →</button><button type="button" class="text-button self-ship-button" data-action="mark-self-fulfill" data-code="${escapeHtml(code)}" data-order="${escapeHtml(group.id)}">직접 배송할게요</button></div>
@@ -3746,7 +3782,7 @@ function sellerProductMappingTemplate() {
   const issues = manual.filter(mapping => mappingIssue(mapping)).length;
   let body = "";
   if (mappingTab === "needs") body = `<section class="panel mp-panel"><div class="panel-head"><div><h3>지금 들어온 주문 · 매핑이 필요해요</h3><p>누르면 ‘두고마켓 어떤 상품과 매핑하시겠습니까?’가 떠요. 고르면 주문이 결제 대기로 넘어가고, 결제하면 매핑이 확정돼 다음 주문부터 자동으로 연결돼요.</p></div><span class="chip ${pending.length ? "red" : ""}">${pending.length ? `${pending.length}개 상품 · ${waitingOrders}건` : "없음"}</span></div>
-      <div class="mp-need-list">${pending.length ? pending.map(group => mappingNeedCard(group, candidates)).join("") : `<div class="empty mapping-empty"><b>매핑이 필요한 주문이 없어요.</b><span>쇼핑몰에서 새 주문이 들어오면 여기 맨 위에 표시돼요.</span></div>`}</div></section>`;
+      <div class="mp-need-list">${pending.length ? pending.map((group, index) => mappingNeedCard(group, candidates, index)).join("") : `<div class="empty mapping-empty"><b>매핑이 필요한 주문이 없어요.</b><span>쇼핑몰에서 새 주문이 들어오면 여기 맨 위에 표시돼요.</span></div>`}</div></section>`;
   if (mappingTab === "done") body = `<section class="panel mp-panel"><div class="panel-head"><div><h3>매핑 완료 · 이 쇼핑몰 상품의 주문은 이 두고 상품으로 가요</h3><p>같은 상품을 더 싸게 주는 공급사가 있으면 ‘다른 상품으로 변경’으로 바꿔 마진을 높이세요. 결제 전 주문도 함께 바뀌고, 이미 결제한 주문은 그대로예요.</p></div><span class="chip">${manual.length}개</span></div>
       ${manual.length > 3 ? `<label class="mapping-picker-search mp-list-search"><span>⌕</span><input type="search" data-mapping-list-search placeholder="쇼핑몰 상품명·코드·공급사로 찾기"></label>` : ""}
       <div class="mp-done-list" data-mapping-done-list>${manual.length ? manual.map(mappingDoneCard).join("") : `<div class="empty mapping-empty"><b>아직 매핑한 상품이 없어요.</b><span>‘매핑 필요’에서 주문을 두고 상품과 연결하면 여기에 모여요.</span></div>`}</div>
@@ -4065,6 +4101,7 @@ function renderMasterSection(index) {
   if (index === 13) return masterSupportTemplate();
   if (index === 14) return masterReportTemplate();
   if (index === 15) return masterWinnerTemplate();
+  if (index === 16) return masterDepositTemplate();
   return `${sectionHero("연동·변경 로그", "모든 주요 변경과 오류를 시간순으로 저장하고 확인합니다.")}${logsTemplate()}`;
 }
 
@@ -5510,6 +5547,78 @@ function sellerMoneyQueuePanels() {
     <section class="panel"><div class="panel-head"><div><h3>위탁셀러 예치금 출금 · 이체</h3><p>셀러가 등록 계좌로 출금을 요청한 목록이에요. 이체한 뒤 결과를 눌러 주세요. 실패하면 금액이 셀러 예치금으로 돌아가요.</p></div><span class="chip">${withdrawals.length}건</span></div>
       ${withdrawals.length ? `<div class="stl-table">${withdrawals.map(item => `<div class="stl-row"><span><b>${escapeHtml(name(item.loginId))}</b><small>${escapeHtml(item.requestedAt || "")} 요청</small></span><span><small>보낼 계좌</small><b>${escapeHtml(item.bankName)} •••• ${escapeHtml(item.accountLast4)}</b></span><span><small>금액</small><b>${money(item.amount)}</b></span><span class="stl-actions"><button type="button" class="primary-button" data-action="seller-withdrawal-complete" data-seller="${escapeHtml(item.loginId)}" data-id="${escapeHtml(item.id)}">이체 완료</button><button type="button" class="text-button danger-text" data-action="seller-withdrawal-fail" data-seller="${escapeHtml(item.loginId)}" data-id="${escapeHtml(item.id)}">이체 실패</button></span></div>`).join("")}</div>` : `<div class="empty">처리할 출금 요청이 없어요.</div>`}</section>`;
 }
+/* 마스터 '예치금 관리': 위탁셀러 예치금 전체 이용내역 + 무통장 입금 확인(승인하면 셀러 예치금 충전) */
+let masterDepositFilter = { seller: "all", kind: "all", month: "all", q: "", page: 1, size: 20 };
+let masterDepositOpenRow = "";
+function sellerDepositWallets() { return Object.entries(state.deposits || {}).filter(([loginId]) => { const member = memberByLogin(loginId); return !member || member.role === "seller" || (member.roles || []).includes("seller"); }); }
+function allSellerDepositRows() {
+  return sellerDepositWallets()
+    .flatMap(([loginId, wallet]) => depositHistoryRows(wallet).map(row => ({ ...row, loginId, key: `${loginId}:${row.id}` })))
+    .sort((a, b) => (b.date?.getTime?.() || 0) - (a.date?.getTime?.() || 0));
+}
+function masterDepositKindOf(row) {
+  if (row.kind === "charge") return row.method === "card" || /신용카드/.test(row.type) ? "card" : "bank";
+  return row.kind;
+}
+const MASTER_DEPOSIT_KINDS = [["all", "전체"], ["card", "카드 충전"], ["bank", "무통장 충전"], ["use", "사용 (주문·샘플)"], ["refund", "환불 적립"], ["withdraw", "출금"]];
+function masterDepositTemplate() {
+  const name = loginId => memberByLogin(loginId)?.company || loginId;
+  const wallets = sellerDepositWallets();
+  const pending = wallets.flatMap(([loginId, wallet]) => (wallet.charges || []).filter(charge => charge.status === "입금 대기").map(charge => ({ ...charge, loginId })));
+  const rows = allSellerDepositRows();
+  const months = [...new Set(rows.map(row => row.month).filter(key => key && key !== "unknown"))].sort().reverse();
+  const latest = months[0];
+  const monthRows = rows.filter(row => row.month === latest);
+  const sum = list => list.reduce((total, row) => total + Number(row.amount || 0), 0);
+  const cardIn = sum(monthRows.filter(row => masterDepositKindOf(row) === "card")), bankIn = sum(monthRows.filter(row => masterDepositKindOf(row) === "bank"));
+  const used = -sum(monthRows.filter(row => row.kind === "use"));
+  const f = masterDepositFilter;
+  const q = f.q.trim().toLowerCase();
+  const filtered = rows.filter(row => (f.seller === "all" || row.loginId === f.seller) && (f.kind === "all" || masterDepositKindOf(row) === f.kind) && (f.month === "all" || row.month === f.month)
+    && (!q || [name(row.loginId), row.loginId, row.type, row.reference, row.detail, row.id].join(" ").toLowerCase().includes(q)));
+  const pages = Math.max(1, Math.ceil(filtered.length / f.size));
+  f.page = Math.min(Math.max(1, f.page), pages);
+  const paged = filtered.slice((f.page - 1) * f.size, f.page * f.size);
+  const totalBalance = wallets.reduce((total, [, wallet]) => total + Number(wallet.balance || 0), 0);
+  const kindChip = row => { const k = masterDepositKindOf(row); return `<em class="mdp-kind ${k}">${escapeHtml(({ card: "카드 충전", bank: "무통장 충전", use: "사용", refund: "환불 적립", withdraw: "출금" })[k] || "기타")}</em>`; };
+  const monthLabel = key => depositMonthLabel(key).replace(/^\d+년 /, "");
+  return `${sectionHero("예치금 관리", "위탁셀러가 카드·무통장으로 충전하고 주문에 쓴 예치금을 한곳에서 봐요. 무통장입금은 통장에 돈이 들어온 걸 확인하고 ‘입금 확인’을 누르면 바로 셀러 예치금이 충전돼요.")}
+    <div class="mdp-kpis">
+      <div><span>셀러 예치금 합계</span><b>${money(totalBalance)}</b><small>위탁셀러 ${wallets.length}곳</small></div>
+      <div class="${pending.length ? "warn" : ""}"><span>입금 확인 대기</span><b>${pending.length}건</b><small>${money(pending.reduce((t, c) => t + Number(c.amount || 0), 0))}</small></div>
+      <div><span>${latest ? monthLabel(latest) : "이번 달"} 충전</span><b>${money(cardIn + bankIn)}</b><small>카드 ${money(cardIn)} · 무통장 ${money(bankIn)}</small></div>
+      <div><span>${latest ? monthLabel(latest) : "이번 달"} 사용</span><b>${money(used)}</b><small>주문 공급가·샘플 결제</small></div>
+    </div>
+    <section class="panel mdp-pending"><div class="panel-head"><div><h3>무통장입금 확인 대기</h3><p>은행 앱에서 <b>입금자명</b>과 <b>금액</b>이 같은 입금이 있는지 확인한 뒤 눌러 주세요. 입금 계좌: ${escapeHtml(DEPOSIT_ACCOUNT.bank)} ${escapeHtml(DEPOSIT_ACCOUNT.number)} (${escapeHtml(DEPOSIT_ACCOUNT.holder)})</p></div><span class="chip">${pending.length}건</span></div>
+      ${pending.length ? `<div class="mdp-pending-list">${pending.map(charge => `<article class="mdp-pending-row">
+        <div class="mdp-who"><b>${escapeHtml(name(charge.loginId))}</b><small>${escapeHtml(charge.id)} · ${escapeHtml(charge.requestedAt || "")} 신청${charge.dueAt ? ` · ${escapeHtml(charge.dueAt)}까지 입금` : ""}</small></div>
+        <div class="mdp-field"><small>입금자명</small><b>${escapeHtml(charge.depositor || "-")}</b></div>
+        <div class="mdp-field"><small>충전 금액</small><b class="mdp-amt">${money(charge.amount)}</b></div>
+        <div class="mdp-field"><small>지금 잔액 → 확인 후</small><b>${money(state.deposits[charge.loginId]?.balance || 0)} → <span class="plus">${money(Number(state.deposits[charge.loginId]?.balance || 0) + Number(charge.amount || 0))}</span></b></div>
+        <div class="mdp-actions"><button type="button" class="secondary-button" data-action="deposit-reject" data-seller="${escapeHtml(charge.loginId)}" data-id="${escapeHtml(charge.id)}">입금 안 됨</button><button type="button" class="primary-button" data-action="deposit-confirm" data-seller="${escapeHtml(charge.loginId)}" data-id="${escapeHtml(charge.id)}">입금 확인 · 충전</button></div>
+      </article>`).join("")}</div>` : `<div class="empty">확인할 무통장입금이 없어요. 셀러가 충전 신청하면 여기에 바로 보여요.</div>`}
+    </section>
+    <section class="panel mdp-history"><div class="panel-head"><div><h3>전체 예치금 이용내역</h3><p>충전(카드·무통장)·주문 결제·환불 적립·출금이 모두 남아요. 줄을 누르면 자세한 내용이 보여요.</p></div><span class="chip">${filtered.length}건</span></div>
+      <div class="mdp-filters">
+        <label><span>위탁셀러</span><select id="mdpSeller"><option value="all">전체</option>${wallets.map(([loginId]) => `<option value="${escapeHtml(loginId)}" ${f.seller === loginId ? "selected" : ""}>${escapeHtml(name(loginId))}</option>`).join("")}</select></label>
+        <label><span>구분</span><select id="mdpKind">${MASTER_DEPOSIT_KINDS.map(([value, label]) => `<option value="${value}" ${f.kind === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+        <label><span>월</span><select id="mdpMonth"><option value="all">전체 기간</option>${months.map(key => `<option value="${key}" ${f.month === key ? "selected" : ""}>${escapeHtml(depositMonthLabel(key))}</option>`).join("")}</select></label>
+        <label class="mdp-search"><span>검색</span><input id="mdpSearch" value="${escapeHtml(f.q)}" placeholder="셀러·거래번호·주문번호·입금자" autocomplete="off"></label>
+        <label class="mdp-size"><span>보기</span><select id="mdpSize">${[10, 20, 30, 50].map(n => `<option value="${n}" ${f.size === n ? "selected" : ""}>${n}개</option>`).join("")}</select></label>
+      </div>
+      ${paged.length ? `<div class="mdp-list">${paged.map(row => { const open = masterDepositOpenRow === row.key; return `<div class="mdp-row ${open ? "open" : ""}"><button type="button" class="mdp-row-main" data-action="mdp-toggle-row" data-key="${escapeHtml(row.key)}" aria-expanded="${open}">
+          <span class="mdp-date">${escapeHtml(row.date ? `${row.date.getMonth() + 1}.${String(row.date.getDate()).padStart(2, "0")} ${String(row.date.getHours()).padStart(2, "0")}:${String(row.date.getMinutes()).padStart(2, "0")}` : row.createdAt || "")}</span>
+          <span class="mdp-seller">${escapeHtml(name(row.loginId))}</span>
+          <span class="mdp-what">${kindChip(row)}<b>${escapeHtml(row.type)}</b><small>${escapeHtml(row.detail || row.reference || "")}</small></span>
+          <span class="mdp-money ${Number(row.amount) < 0 ? "minus" : "plus"}">${Number(row.amount) > 0 ? "+" : ""}${money(row.amount)}</span>
+          <span class="mdp-after">잔액 ${money(row.balanceAfter)}</span></button>
+          ${open ? `<div class="mdp-row-detail">${depositTxDetail(row, state.deposits[row.loginId])}</div>` : ""}</div>`; }).join("")}</div>
+        ${pages > 1 ? `<div class="mdp-pager">${Array.from({ length: pages }, (_, i) => `<button type="button" class="${f.page === i + 1 ? "active" : ""}" data-action="mdp-page" data-page="${i + 1}">${i + 1}</button>`).join("")}</div>` : ""}`
+        : `<div class="empty">조건에 맞는 이용내역이 없어요.</div>`}
+    </section>
+    ${sellerMoneyQueuePanels().split("</section>").slice(1).join("</section>")}`;
+}
+
 function masterSettlementTemplate() {
   ensureSettlementWeeks();
   const suppliers = settlementSuppliers();
@@ -5529,7 +5638,7 @@ function masterSettlementTemplate() {
       ${ups.map(up => `<details class="stl-up"><summary><b>${escapeHtml(up.name)}</b><span>주문 ${up.lines.length}건 · 보류 ${up.holds.length}건</span><strong>${money(up.net)}</strong></summary>${settlementLinesTable(up.lines.filter(line => line.kind !== "deduct"), { holdable: true })}</details>`).join("") || `<div class="empty">정산 예정 주문이 없어요.</div>`}</section>
     <section class="panel"><div class="panel-head"><div><h3>보류 관리</h3><p>자동 보류(환불 처리 중·쇼핑몰 확인 필요)는 원인이 해결되면 풀려요. 두고가 지정한 보류는 여기서 풀 수 있어요.</p></div></div>
       ${holds.length ? `<div class="stl-table">${holds.map(hold => `<div class="stl-row"><span><b>${escapeHtml(hold.orderId)} · ${escapeHtml(hold.name)}</b><small>${escapeHtml(hold.product)} · ${escapeHtml(hold.date || "")}</small></span><span><small>${hold.holdKind === "manual" ? "두고 지정" : "자동"}</small><b>${escapeHtml(hold.reason)}</b></span><span class="stl-row-amt"><strong>${money(hold.net)}</strong></span><span class="stl-row-actions">${hold.holdKind === "manual" ? `<button type="button" class="secondary-button" data-action="master-release-hold" data-id="${escapeHtml(hold.orderId)}">보류 해제</button>` : `<small>원인 해결 시 자동 해제</small>`}</span></div>`).join("")}</div>` : `<div class="empty">보류 중인 주문이 없어요.</div>`}</section>
-    ${sellerMoneyQueuePanels()}
+    <section class="panel mdp-link"><div class="panel-head"><div><h3>위탁셀러 예치금 (충전·입금 확인·이용내역)</h3><p>‘예치금 관리’ 메뉴로 옮겼어요.</p></div><button type="button" class="secondary-button" data-action="open-master-section" data-index="${menuIndexOf("예치금 관리", "master")}">예치금 관리 →</button></div></section>
     <section class="panel"><div class="panel-head"><div><h3>예치금 출금 요청</h3><p>공급사가 예치금을 계좌로 출금해 달라고 요청한 목록이에요.</p></div></div>
       ${withdrawals.length ? `<div class="stl-table">${withdrawals.map(item => `<div class="stl-row"><span><b>${escapeHtml(supplierName(item.supplierLoginId))}</b><small>${escapeHtml(item.requestedAt)} 요청</small></span><span><small>보낼 계좌</small><b>${escapeHtml(item.account)}</b></span><span class="stl-row-amt"><strong>${money(item.amount)}</strong></span><span class="stl-row-actions"><button type="button" class="text-button danger-text" data-action="master-withdraw" data-id="${item.id}" data-result="reject">반려</button><button type="button" class="primary-button" data-action="master-withdraw" data-id="${item.id}" data-result="approve">이체 완료</button></span></div>`).join("")}</div>` : `<div class="empty">출금 요청이 없어요.</div>`}</section>
     <section class="panel"><div class="panel-head"><div><h3>공급사 정산 계좌</h3><p>공급사가 등록한 계좌예요. 사업자 명의와 예금주를 확인한 뒤 ‘확인 완료’를 눌러 주세요.</p></div></div>
@@ -5710,7 +5819,7 @@ function masterTodoItems() {
     { count: waitingPay, tone: "orange", title: "공급사 정산 지급 대기", hint: "지급 전에 환불된 주문은 자동으로 빠져요", action: "open-master-section", index: idx("정산 관리") },
     { count: receivables, tone: "red", title: "공급사에게 받을 돈 (환불 차감 부족)", hint: "이미 정산한 주문이 환불됐는데 다음 정산이 모자라요", action: "open-master-section", index: idx("취소 · 환불") },
     { count: openRefunds, tone: "orange", title: "처리 중인 취소·환불", hint: "끝날 때까지 공급사 정산은 보류돼요", action: "open-master-section", index: idx("취소 · 환불") },
-    { count: charges, tone: "blue", title: "예치금 입금 확인", hint: "셀러 무통장 입금을 확인해 주세요", action: "open-master-section", index: idx("정산 관리") },
+    { count: charges, tone: "blue", title: "예치금 입금 확인", hint: "셀러 무통장 입금을 확인해 주세요", action: "open-master-section", index: idx("예치금 관리") },
     { count: pendingApprovalCount(), tone: "blue", title: "가입 · 공급사 권한 심사", hint: "새 사업자와 공급사 전환 요청", action: "open-master-section", index: 1 }
   ].filter(item => item.count > 0);
 }
@@ -7300,10 +7409,13 @@ function mappingPickModal({ code = "", orderId = "", mappingId = "" } = {}) {
   const change = Boolean(mapping) || orderMappingStatus(order) === "mapped";
   const currentValue = mapping ? mappingValueOf(mapping.productId, mapping.optionId) : change ? mappingValueOf(order.mappedProductId || order.productId, order.optionId) : "";
   const affect = waiting.length + unpaid.length;
+  const totalQty = Math.max(1, [...waiting, ...unpaid].reduce((sum, item) => sum + Number(item.qty || 1), 0));
   openModal(`<div class="mapping-modal-head"><span>${change ? "매핑 변경" : "상품 매핑"}</span><h2>${change ? "어떤 두고마켓 상품으로 바꾸시겠습니까?" : "두고마켓 어떤 상품과 매핑하시겠습니까?"}</h2><p>${change ? "같은 상품을 더 싸게 공급하는 공급사로 바꾸면 그만큼 마진이 늘어나요." : "고른 상품의 공급사가 고객에게 바로 배송해요. 공급가가 낮을수록 마진이 커져요."}</p></div>
-    <div class="external-order-summary mp-source"><span>쇼핑몰에 들어온 주문 상품</span><b>${escapeHtml(name)}</b><small>${channel ? `${channelMark(channelIdFromName(channel), true)} ${escapeHtml(channel)} · ` : ""}쇼핑몰 코드 ${escapeHtml(code || sample.externalProductCode || "-")}${sale ? ` · 판매가 ${money(sale)}` : ""}</small>${affect ? `<em>${change ? `결제 전 주문 ${affect}건이 함께 바뀌어요` : `주문 ${affect}건 대기 중`}</em>` : ""}</div>
+    <div class="external-order-summary mp-source"><div class="mp-source-copy"><span>쇼핑몰에 들어온 주문 상품</span><b>${escapeHtml(name)}</b><small>${channel ? `${channelMark(channelIdFromName(channel), true)} ${escapeHtml(channel)} · ` : ""}쇼핑몰 코드 ${escapeHtml(code || sample.externalProductCode || "-")}</small>${affect ? `<em>${change ? `결제 전 주문 ${affect}건이 함께 바뀌어요` : `주문 ${affect}건 대기 중`}</em>` : ""}</div>
+      ${sale ? `<div class="mp-sale-block"><span>소비자에게 판 가격 <small>(개당)</small></span><strong>${money(sale)}</strong><small>${affect ? `주문 ${affect}건 · 총 ${totalQty}개 · 고객 결제 합계 <b>${money(sale * totalQty)}</b>` : "쇼핑몰 판매가 기준"}</small></div>` : ""}</div>
     <form id="mappingPickForm" class="form-grid" data-code="${escapeHtml(code)}" data-order="${escapeHtml(code ? "" : order?.id || "")}" data-mapping="${escapeHtml(mapping?.id || "")}" novalidate>
       ${mappingPickerMarkup({ externalName: name, sale, qty, currentValue, previousSupply: mapping?.previousSupply || 0 })}
+      <div class="mp-profit full" data-mp-profit data-sale="${sale || 0}" data-qty="${totalQty}" data-orders="${affect}"></div>
       ${code ? `<label class="mp-follow full"><input type="checkbox" name="followWinner" ${mapping?.followWinner ? "checked" : ""}><span><b>🏆 아이템 위너 자동 따라가기</b><small>같은 품목·중량을 더 싸게 주는 공급사가 생기거나 지금 공급사가 품절·판매중단되면, 다음 주문부터 가장 싼 공급사로 자동 연결해요.</small></span></label>` : ""}
       <div class="mp-faq full" data-mp-faq>${currentValue ? productFaqMarkup(productOf(String(currentValue).split("::")[0]), { limit: 4 }) : `<p class="mp-faq-hint">상품을 고르면 그 공급사에 자주 묻는 질문(재고·출고·배송)이 여기 보여요.</p>`}</div>
       <div class="mapping-flow-note full"><b>${change ? "바꾸면 이렇게 돼요" : "매핑하면 이렇게 돼요"}</b><span>${change ? `아직 결제하지 않은 주문${affect ? ` ${affect}건` : ""}은 새 상품으로 바뀌고, 이미 결제한 주문은 원래 공급사가 그대로 출고해요. 다음 주문부터는 새 상품으로 자동 연결돼요.` : `① 이 주문${affect > 1 ? ` ${affect}건` : ""}이 ‘결제 대기’로 넘어가요 → ② 결제하면 공급사에 바로 주문이 들어가고 매핑이 확정돼요 → ③ 같은 쇼핑몰 상품의 다음 주문은 자동으로 이 상품에 연결돼요.`}</span></div>
@@ -7311,6 +7423,26 @@ function mappingPickModal({ code = "", orderId = "", mappingId = "" } = {}) {
     </form>`);
   document.querySelector("#modal .modal")?.classList.add("mapping-pick-modal");
   updateMappingPrevCompare(document.querySelector("#mappingPickForm .mapping-picker-field"));
+  updateMappingProfit();
+}
+/* 고른 두고 상품으로 내가 버는 돈: 소비자 판매가 − 공급가 = 개당 순수익 × 이번 주문 수량 */
+function updateMappingProfit() {
+  const box = document.querySelector("#mappingPickForm [data-mp-profit]");
+  if (!box) return;
+  const sale = Number(box.dataset.sale || 0), qty = Number(box.dataset.qty || 1), orders = Number(box.dataset.orders || 0);
+  const checked = document.querySelector('#mappingPickForm input[name="productId"]:checked');
+  const card = checked?.closest(".mapping-pick-card");
+  if (!sale) { box.innerHTML = ""; box.hidden = true; return; }
+  box.hidden = false;
+  if (!card) { box.innerHTML = `<div class="mp-profit-empty"><b>💰 상품을 고르면 내가 버는 돈이 바로 계산돼요</b><span>소비자 판매가 ${money(sale)}에서 고른 상품의 공급가를 뺀 금액이 내 순수익이에요.</span></div>`; return; }
+  const supply = Number(card.dataset.supply || 0);
+  const unit = sale - supply, total = unit * qty, rate = sale ? Math.round(unit / sale * 100) : 0;
+  const title = card.querySelector("b")?.textContent?.trim() || "고른 상품";
+  const loss = unit < 0;
+  box.innerHTML = `<div class="mp-profit-card ${loss ? "loss" : ""}"><span class="mp-profit-kicker">이 상품으로 매핑하면</span><b class="mp-profit-pick">${escapeHtml(title)}</b>
+    <div class="mp-profit-eq"><span><small>소비자 판매가</small><b>${money(sale)}</b></span><i>−</i><span><small>공급가 (내가 내는 돈)</small><b>${money(supply)}</b></span><i>=</i><span class="result"><small>개당 순수익</small><b>${loss ? "−" : "+"}${money(Math.abs(unit))}</b><em>${rate}%</em></span></div>
+    <div class="mp-profit-total"><span>${orders ? `이번 주문 ${orders}건 · ${qty}개로` : `${qty}개 팔면`} 내가 버는 돈</span><strong>${loss ? "−" : ""}${money(Math.abs(total))}</strong></div>
+    <small class="mp-profit-note">${loss ? "공급가가 판매가보다 비싸서 팔수록 손해예요. 더 싼 상품을 고르거나 쇼핑몰 판매가를 올려 주세요." : "쇼핑몰 판매 수수료와 배송비 차이는 빼기 전 금액이에요."}</small></div>`;
 }
 function orderMappingModal(orderId) { mappingPickModal({ orderId }); }
 /* 주문 매핑 되돌리기 (결제 전 주문만) */
@@ -10129,6 +10261,20 @@ document.addEventListener("click", event => {
     charge.status = "신청 취소"; audit("예치금 충전 신청 취소", `${charge.id} · ${money(charge.amount)}`, "done", "money");
     saveState(); render(); updateAccountUI(); showToast("충전 신청을 취소했어요."); return;
   }
+  if (action === "deposit-reject") {
+    if (currentAccount?.role !== "master") return showToast("입금 확인은 두고 관리자만 할 수 있어요.");
+    const sellerId = target.dataset.seller;
+    const wallet = sellerDeposit(sellerId);
+    const charge = depositCharges(wallet).find(item => item.id === id);
+    if (!charge || charge.status !== "입금 대기") return;
+    if (!window.confirm(`${memberByLogin(sellerId)?.company || sellerId} · ${money(charge.amount)}\n통장에 입금이 확인되지 않았다고 처리할까요? 예치금은 충전되지 않아요.`)) return;
+    charge.status = "입금 확인 안 됨"; charge.rejectedAt = depositStamp(); charge.rejectedTs = Date.now();
+    pushNotification(sellerId, "seller", "money", "무통장입금이 확인되지 않았어요", `${money(charge.amount)} · 입금자 ${charge.depositor} — 입금자명·금액을 확인한 뒤 다시 신청해 주세요.`, ["내부 알림"]);
+    audit("예치금 입금 미확인", `${sellerId} · ${charge.id} · ${money(charge.amount)} · 입금 내역 없음 (${currentAccount.name || "관리자"})`, "blocked", "money");
+    saveState(); render(); updateAccountUI(); showToast("입금 미확인으로 처리했어요. 셀러에게 알림을 보냈어요."); return;
+  }
+  if (action === "mdp-toggle-row") { masterDepositOpenRow = masterDepositOpenRow === target.dataset.key ? "" : target.dataset.key; render(); updateAccountUI(); return; }
+  if (action === "mdp-page") { masterDepositFilter.page = Number(target.dataset.page) || 1; masterDepositOpenRow = ""; render(); updateAccountUI(); document.querySelector(".mdp-history")?.scrollIntoView({ block: "start" }); return; }
   if (action === "deposit-confirm") {
     if (currentAccount?.role !== "master") return showToast("입금 확인은 두고 관리자만 할 수 있어요.");
     const sellerId = target.dataset.seller;
@@ -10140,7 +10286,7 @@ document.addEventListener("click", event => {
     wallet.transactions.unshift({ id: `DP-${Date.now()}`, type: "무통장입금 충전", amount: Number(charge.amount), reference: `${charge.id} · 입금자 ${charge.depositor}`, createdAt: depositStamp(), at: Date.now() });
     pushNotification(sellerId, "seller", "money", "예치금 충전이 완료됐어요", `${money(charge.amount)} · 잔액 ${money(wallet.balance)}`, ["내부 알림"]);
     audit("예치금 충전 완료", `${sellerId} · ${charge.id} · ${money(charge.amount)} · 무통장입금 확인 (${currentAccount.name || "관리자"})`, "done", "money");
-    saveState(); render(); updateAccountUI(); showToast(`${sellerId} · ${money(charge.amount)} 충전 완료`); return;
+    saveState(); render(); updateAccountUI(); showToast(`${memberByLogin(sellerId)?.company || sellerId} 예치금에 ${money(charge.amount)} 충전했어요. (잔액 ${money(wallet.balance)})`); return;
   }
   if (action === "open-doogo-money-history") { doogoMoneyHistoryModal(); return; }
   if (action === "edit-doogo-money-bank") { doogoMoneyBankModal(); return; }
@@ -11390,13 +11536,19 @@ document.addEventListener("change", event => {
   if (event.target.id === "marketCountrySelect") { sellerCountry = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "marketSortSelect") { sellerCatalogSort = event.target.value; render(); updateAccountUI(); }
   if (event.target.id === "refundMonthSelect") { refundMonth = event.target.value; render(); updateAccountUI(); }
+  if (["mdpSeller", "mdpKind", "mdpMonth", "mdpSize"].includes(event.target.id)) {
+    const key = { mdpSeller: "seller", mdpKind: "kind", mdpMonth: "month", mdpSize: "size" }[event.target.id];
+    masterDepositFilter[key] = key === "size" ? Number(event.target.value) || 20 : event.target.value; masterDepositFilter.page = 1; masterDepositOpenRow = "";
+    render(); updateAccountUI();
+  }
 });
 
 /* 검색창: 한글 조합(IME) 중에는 다시 그리지 않고, 잠깐 멈추면 전체를 다시 그린 뒤 입력 위치를 되돌린다. */
 const LIVE_SEARCH_INPUTS = {
   chatRoomSearch: value => { chatRoomSearch = value; },
   sellerCatalogSearch: value => { sellerProductSearch = value; },
-  onSaleSearchInput: value => { onSaleSearch = value; onSalePage = 1; }
+  onSaleSearchInput: value => { onSaleSearch = value; onSalePage = 1; },
+  mdpSearch: value => { masterDepositFilter.q = value; masterDepositFilter.page = 1; }
 };
 let liveSearchTimer = null;
 function handleLiveSearchInput(event) {

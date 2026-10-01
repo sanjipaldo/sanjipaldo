@@ -11320,3 +11320,81 @@ body[data-role="supplier"] .ship-info-steps li::before { background: #111; }
   .detail-sticky-buttons .sample-sticky-cart { grid-area: cart; }
   .detail-sticky-buttons .detail-close-btn { grid-area: close; }
 }
+/* 마스터 예치금 관리 */
+.mdp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.mdp-kpis > div { padding: 16px 18px; display: grid; gap: 4px; background: #fff; border: 1px solid #ece8f6; border-radius: 14px; }
+.mdp-kpis span { color: #6b7684; font-size: 13px; font-weight: 600; }
+.mdp-kpis b { color: #191f28; font-size: 21px; letter-spacing: -.02em; }
+.mdp-kpis small { color: #8b95a1; font-size: 12.5px; }
+.mdp-kpis .warn { background: #fff8ec; border-color: #f6d9a6; } .mdp-kpis .warn b { color: #c2410c; }
+.mdp-pending-list { padding: 4px 22px 22px; display: grid; gap: 10px; }
+.mdp-pending-row { padding: 16px 18px; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, .9fr) minmax(0, .8fr) minmax(0, 1.3fr) auto; gap: 14px 18px; align-items: center; background: #fbfaff; border: 1px solid #e6dff6; border-radius: 14px; }
+.mdp-who b { display: block; font-size: 15.5px; color: #191f28; } .mdp-who small { display: block; margin-top: 3px; color: #8b95a1; font-size: 12.5px; }
+.mdp-field { display: grid; gap: 3px; } .mdp-field small { color: #8b95a1; font-size: 12px; } .mdp-field b { color: #191f28; font-size: 14.5px; }
+.mdp-field .mdp-amt { font-size: 17px; color: #6d3fc9; } .mdp-field .plus { color: #0f8a5f; }
+.mdp-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.mdp-actions button { min-height: 40px; padding: 0 14px; white-space: nowrap; }
+.mdp-filters { padding: 4px 22px 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 160px)) minmax(0, 1fr) 100px; gap: 10px; align-items: end; }
+.mdp-filters label { display: grid; gap: 5px; min-width: 0; } .mdp-filters label > span { color: #6b7684; font-size: 12.5px; font-weight: 700; }
+.mdp-filters select, .mdp-filters input { width: 100%; min-width: 0; height: 40px; padding: 0 10px; border: 1px solid #dfe3ea; border-radius: 10px; background: #fff; font: inherit; font-size: 14px; }
+.mdp-list { padding: 0 22px; }
+.mdp-row { border-top: 1px solid #f0eef6; } .mdp-row:first-child { border-top: 0; }
+.mdp-row-main { width: 100%; padding: 13px 4px; display: grid; grid-template-columns: 92px 120px minmax(0, 1fr) 120px 130px; gap: 12px; align-items: center; text-align: left; background: none; border: 0; font: inherit; cursor: pointer; }
+.mdp-row-main:hover { background: #faf8ff; }
+.mdp-date { color: #6b7684; font-size: 13px; font-variant-numeric: tabular-nums; }
+.mdp-seller { color: #191f28; font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdp-what { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; align-items: center; min-width: 0; }
+.mdp-what b { font-size: 14px; color: #191f28; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdp-what small { grid-column: 2; color: #8b95a1; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdp-kind { padding: 3px 8px; border-radius: 99px; font-size: 11.5px; font-style: normal; font-weight: 800; white-space: nowrap; }
+.mdp-kind.card { color: #6d3fc9; background: #f1ebff; } .mdp-kind.bank { color: #1b64da; background: #eaf2ff; }
+.mdp-kind.use { color: #4e5968; background: #f2f4f6; } .mdp-kind.refund { color: #0f8a5f; background: #e8f7ef; } .mdp-kind.withdraw { color: #b25e09; background: #fff4e5; }
+.mdp-money { text-align: right; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; } .mdp-money.plus { color: #0f8a5f; } .mdp-money.minus { color: #d92d20; }
+.mdp-after { text-align: right; color: #8b95a1; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.mdp-row-detail { padding: 4px 6px 16px; }
+.mdp-pager { padding: 14px 22px 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.mdp-pager button { min-width: 36px; height: 36px; border: 1px solid #e3e0ea; border-radius: 10px; background: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.mdp-pager button.active { color: #fff; background: #6d3fc9; border-color: #6d3fc9; }
+.mdp-history > .empty, .mdp-pending > .empty { margin: 4px 22px 22px; }
+@media (max-width: 1100px) {
+  .mdp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mdp-pending-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .mdp-pending-row .mdp-who, .mdp-pending-row .mdp-actions { grid-column: 1 / -1; }
+  .mdp-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); } .mdp-filters .mdp-search { grid-column: 1 / 3; }
+  .mdp-row-main { grid-template-columns: 80px minmax(0, 1fr) auto; } .mdp-row-main .mdp-seller { grid-column: 2; grid-row: 1; } .mdp-row-main .mdp-what { grid-column: 1 / 3; grid-row: 2; } .mdp-row-main .mdp-money { grid-column: 3; grid-row: 1; } .mdp-row-main .mdp-after { grid-column: 3; grid-row: 2; align-self: end; }
+}
+@media (max-width: 720px) {
+  .mdp-pending-list, .mdp-list { padding-left: 14px; padding-right: 14px; } .mdp-filters { padding: 4px 14px 12px; grid-template-columns: 1fr 1fr; } .mdp-filters .mdp-search { grid-column: 1 / -1; }
+  .mdp-pending-row { padding: 14px; } .mdp-actions button { flex: 1 1 0; }
+  .mdp-kpis b { font-size: 18px; }
+}
+.mp-no { flex: 0 0 auto; width: 26px; height: 26px; display: inline-grid; place-items: center; margin-right: 4px; color: #fff; background: #3182f6; border-radius: 50%; font-size: 13px; font-style: normal; font-weight: 800; }
+/* 매핑 팝업: 소비자 판매가 강조 + 고른 상품의 순수익 */
+.external-order-summary.mp-source { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 18px; align-items: center; }
+.mp-source-copy { display: grid; gap: 4px; min-width: 0; }
+.mp-sale-block { min-width: 180px; padding: 12px 16px; display: grid; gap: 2px; text-align: right; background: #fff; border: 1.5px solid #c9dcff; border-radius: 14px; box-shadow: 0 4px 12px rgba(49,130,246,.08); }
+.mp-sale-block > span { color: #1b64da; font-size: 12.5px; font-weight: 800; } .mp-sale-block > span small { color: #8b95a1; font-weight: 600; }
+.mp-sale-block strong { color: #191f28; font-size: 26px; letter-spacing: -.02em; line-height: 1.15; }
+.mp-sale-block > small { color: #6b7684; font-size: 12px; line-height: 1.45; } .mp-sale-block > small b { color: #191f28; }
+.mp-profit[hidden] { display: none; }
+.mp-profit-empty { padding: 14px 16px; display: grid; gap: 4px; background: #f6fbf8; border: 1px dashed #a7dcc0; border-radius: 14px; }
+.mp-profit-empty b { color: #0f8a5f; font-size: 14.5px; } .mp-profit-empty span { color: #4e5968; font-size: 13px; }
+.mp-profit-card { padding: 18px 20px; display: grid; gap: 12px; background: linear-gradient(135deg, #ecfbf3, #f7fdf9); border: 1.5px solid #8fd6ae; border-radius: 16px; }
+.mp-profit-card.loss { background: linear-gradient(135deg, #fff1f1, #fff8f8); border-color: #f3a7a7; }
+.mp-profit-kicker { color: #0f8a5f; font-size: 12.5px; font-weight: 800; } .mp-profit-card.loss .mp-profit-kicker { color: #d92d20; }
+.mp-profit-pick { margin-top: -8px; color: #191f28; font-size: 15px; }
+.mp-profit-eq { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1.1fr); align-items: center; gap: 8px; }
+.mp-profit-eq > span { padding: 10px 12px; display: grid; gap: 2px; background: #fff; border: 1px solid #e3efe8; border-radius: 12px; text-align: center; min-width: 0; }
+.mp-profit-eq > span small { color: #6b7684; font-size: 12px; } .mp-profit-eq > span b { color: #191f28; font-size: 16px; font-variant-numeric: tabular-nums; }
+.mp-profit-eq > i { color: #8b95a1; font-size: 18px; font-style: normal; font-weight: 800; }
+.mp-profit-eq .result { background: #0f8a5f; border-color: #0f8a5f; } .mp-profit-eq .result small, .mp-profit-eq .result em { color: rgba(255,255,255,.85); font-style: normal; font-size: 12px; font-weight: 700; } .mp-profit-eq .result b { color: #fff; font-size: 18px; }
+.mp-profit-card.loss .mp-profit-eq .result { background: #d92d20; border-color: #d92d20; }
+.mp-profit-total { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #fff; border-radius: 12px; }
+.mp-profit-total span { color: #333d4b; font-size: 14px; font-weight: 700; } .mp-profit-total strong { color: #0f8a5f; font-size: 24px; letter-spacing: -.02em; }
+.mp-profit-card.loss .mp-profit-total strong { color: #d92d20; }
+.mp-profit-note { color: #6b7684; font-size: 12.5px; }
+@media (max-width: 720px) {
+  .external-order-summary.mp-source { grid-template-columns: 1fr; } .mp-sale-block { text-align: left; min-width: 0; }
+  .mp-profit-card { padding: 14px; } .mp-profit-eq { grid-template-columns: 1fr auto 1fr; } .mp-profit-eq .result { grid-column: 1 / -1; } .mp-profit-eq > i:nth-of-type(2) { display: none; }
+  .mp-profit-total strong { font-size: 20px; }
+}
