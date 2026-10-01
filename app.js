@@ -2171,7 +2171,7 @@ function render() {
   document.querySelector(".topbar-heading")?.classList.toggle("is-greeting", isDashboard);
   const contextEl = document.getElementById("pageContext");
   if (isDashboard) { const now = new Date(); const days = "일월화수목금토"; contextEl.innerHTML = `<span class="greet-hello">안녕하세요 <span class="greet-wave" aria-hidden="true">👋</span></span><span class="greet-date"><span class="greet-date-long">${now.getMonth() + 1}월 ${now.getDate()}일 ${days[now.getDay()]}요일</span></span></span>${greetingBadge("m")}`; }
-  else contextEl.textContent = `${roleLabel()} 업무 메뉴`;
+  else contextEl.innerHTML = `${escapeHtml(roleLabel())}<span class="ctx-more"> 업무 메뉴</span>`;
   const titleEl = document.getElementById("pageTitle");
   if (isDashboard) titleEl.innerHTML = `<span class="greet-name">${escapeHtml(accountGreetingName())}님!</span>${greetingBadge("d")}`;
   else titleEl.textContent = activeRole === "seller" ? contentText(`seller.page.${activeMenuIndex}`, defaultTitle) : defaultTitle;
@@ -2189,7 +2189,7 @@ function render() {
 function mobileTabbarItems() {
   if (activeRole === "seller") {
     const readyCount = sellerReadyProducts().length;
-    const orderBadge = sellerMappingRequiredOrders().length + sellerPaymentRequiredOrders().length + sellerTrackingPushOrders().length;
+    const orderBadge = sellerMappingRequiredOrders().length + sellerPaymentRequiredOrders().length + sellerTrackingPushOrders().length + selfTodoCount();
     const talkUnread = currentSellerConnections().reduce((sum, connection) => sum + talkUnreadCount(connection), 0);
     const myIndex = readyCount ? menuIndexOf("승인 완료", "seller") : menuIndexOf("마스터 상품", "seller");
     return [
@@ -2231,6 +2231,8 @@ function renderMobileTabbar() {
 function updateAccountUI() {
   if (!currentAccount) return;
   renderMobileTabbar();
+  const homeButton = document.getElementById("homeButton");
+  if (homeButton) { const atHome = activeMenuIndex === 0; homeButton.classList.toggle("active", atHome); if (atHome) homeButton.setAttribute("aria-current", "page"); else homeButton.removeAttribute("aria-current"); }
   document.body.dataset.role = activeRole;
   const cartButton = document.getElementById("cartButton");
   if (cartButton) {
@@ -3121,7 +3123,8 @@ const sellerOrderStages = [
 ];
 /* 주문 단계 메뉴를 ‘누가 처리하는 단계인지’로 묶어 색으로 구분한다. 위탁셀러(파랑) → 공급사(주황) → 위탁셀러(파랑) → 택배(초록) */
 const SELLER_ORDER_STAGE_GROUPS = [
-  { tone: "neutral", who: "", title: "", stages: ["all", "self"] },
+  { tone: "neutral", who: "", title: "", stages: ["all"] },
+  { tone: "self", who: "사장님", title: "직접 배송", stages: ["self"] },
   { tone: "seller", who: "위탁셀러", title: "매핑 · 결제", stages: ["mapping", "payment", "received"] },
   { tone: "supplier", who: "공급사", title: "확인 · 포장 · 송장", stages: ["ordered", "preparing", "needs-check"] },
   { tone: "seller", who: "위탁셀러", title: "송장 전송", stages: ["tracking-push"] },
@@ -3137,12 +3140,15 @@ function sellerOrderFlowBoard() {
       const count = sellerOrderStageCount(key);
       const tone = key === "needs-check" && count > 0 ? "urgent" : count > 0 ? "has-count" : "zero";
       const help = FIELD_HELP[`stage-${key}`] ? `<span class="fh ofb-help" role="button" tabindex="0" data-fh="stage-${key}" aria-label="${escapeHtml(full)} 단계 설명" aria-expanded="false">?</span>` : "";
-      return `<button type="button" class="ofb-tile ${sellerOrderStage === key ? "active" : ""} ${tone}" data-action="filter-order-stage" data-stage="${key}" aria-pressed="${sellerOrderStage === key}"><span class="ofb-label">${escapeHtml(label)}${help}</span><b class="ofb-count">${count}</b></button>`;
+      const selfTodo = key === "self" ? selfTodoCount() : 0;
+      return `<button type="button" class="ofb-tile ${sellerOrderStage === key ? "active" : ""} ${key === "self" && selfTodo ? "urgent" : tone}" data-action="filter-order-stage" data-stage="${key}" aria-pressed="${sellerOrderStage === key}"><span class="ofb-label">${escapeHtml(label)}${help}</span><b class="ofb-count">${count}</b>${key === "self" ? `<small class="ofb-sub">${selfTodo ? `송장 넣을 주문 ${selfTodo}건` : "내가 포장·발송"}</small>` : ""}</button>`;
     }).join("");
     const head = group.title ? `<p class="ofb-group-head"><em>${group.who}</em><span>${group.title}</span></p>` : `<p class="ofb-group-head"><em>전체</em><span>주문 보기</span></p>`;
     return `<div class="ofb-group tone-${group.tone}" style="--n:${group.stages.length}">${head}<div class="ofb-tiles">${tiles}</div></div>`;
   });
-  return `<section class="order-flow-board panel" aria-label="주문 단계"><div class="ofb-head"><span>${menuIcon("order")}</span><b>주문 진행 단계</b><small>단계를 누르면 그 단계 주문만 아래에 보여요 · 칸마다 <b class="ofb-q">?</b>에 마우스를 올리면 뜻을 알려 줘요</small><button type="button" class="text-button ofb-guide-open" data-action="order-stage-guide">단계 설명 전체 보기</button></div><div class="ofb-groups">${groups.join('<i class="ofb-arrow" aria-hidden="true">›</i>')}</div></section>`;
+  /* 전체·직접 배송은 따로 보는 칸이라 화살표 없이, 두고 주문 흐름(매핑 → 공급사 → 송장 → 배송)만 화살표로 잇는다 */
+  const [allGroup, selfGroup, ...flowGroups] = groups;
+  return `<section class="order-flow-board panel" aria-label="주문 단계"><div class="ofb-head"><span>${menuIcon("order")}</span><b>주문 진행 단계</b><small>단계를 누르면 그 단계 주문만 아래에 보여요 · 칸마다 <b class="ofb-q">?</b>를 누르면 뜻을 알려 줘요</small><button type="button" class="text-button ofb-guide-open" data-action="order-stage-guide">단계 설명 전체 보기</button></div><div class="ofb-groups">${allGroup}${selfGroup}<i class="ofb-arrow ofb-break" aria-hidden="true"></i>${flowGroups.join('<i class="ofb-arrow" aria-hidden="true">›</i>')}</div></section>`;
 }
 function sellerOrderSubset(stage = sellerOrderStage) {
   const orders = currentSellerOrders();
@@ -3190,7 +3196,11 @@ function sellerOrderManagementTemplate() {
     <div class="order-auto-item"><span class="order-auto-icon">🚚</span><div><b>송장 쇼핑몰 전송</b><small>${autoQueue.count ? `⏱ 다음 자동 전송 ${escapeHtml(trackingSlotLabel(autoQueue.dueAt))} · ${autoQueue.count}건 대기` : autoPush ? "공급사 송장을 10분마다 모아서 쇼핑몰로 자동 전송해요" : pendingTracking.length ? `보낼 송장 ${pendingTracking.length}건이 기다리고 있어요` : "송장이 들어오면 ‘쇼핑몰 전송’ 버튼으로 보내요"}</small></div><button type="button" class="automation-switch ${autoPush ? "on" : ""}" data-action="toggle-auto-tracking" aria-pressed="${autoPush}" aria-label="송장 자동 쇼핑몰 전송"><i></i>${autoPush ? "자동" : "수동"}</button><button type="button" class="${pendingTracking.length ? "primary-button" : "secondary-button"}" data-action="push-all-tracking" ${pendingTracking.length ? "" : "disabled"}>${pendingTracking.length ? `${autoQueue.count ? "지금 바로 " : "송장 "}${pendingTracking.length}건 전송` : "보낼 송장 없음"}</button></div>
   </section>`;
   const freeBanner = `<section class="plan-free-banner"><div><b>무료 요금제 · 수기 주문</b><span>받은 주문을 ‘수기 주문 넣기’로 넣으면 공급사로 바로 전달돼요. 쇼핑몰 주문을 자동으로 가져오려면 스타트 요금제(월 ${money(PLAN_AUTO_FEE)})부터 쓸 수 있어요.</span></div><button type="button" class="secondary-button" data-action="go-seller-menu" data-index="9">요금제 보기</button></section>`;
-  return `${sectionHero("주문 관리", sellerAutomationActive() ? "쇼핑몰 주문을 가져와 결제하면 공급사가 출고하고, 받은 송장을 쇼핑몰로 보냅니다." : "받은 주문을 직접 넣고 결제하면 공급사가 출고해요. 송장은 여기서 확인할 수 있어요.", `<button class="primary-button collect-main-button" data-action="collect-orders"><span aria-hidden="true">⟳</span> 주문 수집하기</button><button class="secondary-button" data-action="open-manual-order">+ 수기 주문 넣기</button><button class="secondary-button" data-action="excel-orders">⬆ 엑셀 대량 주문</button>`)}${sellerAutomationActive() ? collectCard : freeBanner}${excelOrderCard()}
+  /* 자동 수집·송장 자동 전송·엑셀 주문 설정은 처음엔 접어 두고 한 줄 요약만 보여 준다 (초보자도 덜 복잡하게). 할 일(보낼 송장)은 접힌 상태에서도 바로 보이게 */
+  const settingsSummary = sellerAutomationActive() ? `<span class="os-chip ${automation.autoCollectOrders ? "on" : ""}">주문 수집 ${automation.autoCollectOrders ? "자동" : "수동"}</span><span class="os-chip ${autoPush ? "on" : ""}">송장 전송 ${autoPush ? "자동" : "수동"}</span><span class="os-chip">엑셀 주문</span>` : `<span class="os-chip">무료 요금제 · 수기 주문</span><span class="os-chip">엑셀 주문</span>`;
+  const settingsBox = `<details class="order-settings panel" ${orderSettingsOpen ? "open" : ""}><summary data-action="toggle-order-settings"><span class="os-title">⚙ 자동 처리 · 엑셀 설정</span><span class="os-chips">${settingsSummary}</span><i class="os-caret" aria-hidden="true"></i></summary><div class="order-settings-body">${sellerAutomationActive() ? collectCard : freeBanner}${excelOrderCard()}</div></details>`;
+  const pushStrip = pendingTracking.length ? `<div class="order-push-strip"><span>🚚 쇼핑몰에 보낼 송장 <b>${pendingTracking.length}건</b>${autoQueue.count ? ` · ⏱ ${escapeHtml(trackingSlotLabel(autoQueue.dueAt))} 자동 전송 예정` : ""}</span><button type="button" class="primary-button" data-action="push-all-tracking">지금 보내기</button></div>` : "";
+  return `${sectionHero("주문 관리", sellerAutomationActive() ? "쇼핑몰 주문을 가져와 결제하면 공급사가 출고하고, 받은 송장을 쇼핑몰로 보냅니다." : "받은 주문을 직접 넣고 결제하면 공급사가 출고해요. 송장은 여기서 확인할 수 있어요.", `<button class="primary-button collect-main-button" data-action="collect-orders"><span aria-hidden="true">⟳</span> 주문 수집하기</button><div class="order-add-row"><button class="secondary-button" data-action="open-manual-order">+ 수기 주문 넣기</button><button class="secondary-button" data-action="excel-orders">⬆ 엑셀 대량 주문</button></div>`)}${pushStrip}${settingsBox}
     <div class="order-workspace is-flow">${sellerOrderFlowBoard()}<section class="order-stage-content">
       <div class="order-search-panel panel"><label><span>⌕</span><input id="sellerOrderSearch" value="${escapeHtml(sellerOrderSearch)}" placeholder="주문번호, 고객명, 외부 상품명, 상품코드 검색"></label>${orderQuickFilters()}</div>
       ${bulkPayBarMarkup()}
@@ -4156,6 +4166,7 @@ function renderSeller() {
     { count: memberDocsMissing() ? 1 : 0, tone: "orange", title: "정산 계좌·서류 등록", hint: "지금도 다 쓸 수 있어요. 정산·환불 받으려면 등록해 주세요", button: "등록하기", action: "open-docs-modal" },
     { count: sellerTrackingPushOrders().length, tone: "green", title: "쇼핑몰에 보낼 송장", hint: "버튼 한 번이면 주문한 쇼핑몰로 송장이 들어가요", button: "송장 보내기", action: "push-all-tracking" },
     { count: mappingRequired.length, tone: "red", title: "두고 상품 연결이 필요한 주문", hint: "어떤 상품으로 보낼지 골라 주세요", button: "연결하기", action: "go-seller-menu", index: 15 },
+    { count: selfTodoCount(), tone: "purple", title: "사장님이 직접 보낼 주문", hint: "포장 후 송장번호만 넣으면 쇼핑몰로 보내 드려요", button: "송장 넣기", action: "go-self-orders" },
     { count: paymentRequired.length, tone: "orange", title: "결제를 기다리는 주문", hint: "공급사별로 묶어 한 번에 결제하면 바로 전달돼요", button: "한 번에 결제", action: "bulk-pay-orders" },
     { count: needsCheck, tone: "red", title: "쇼핑몰 확인이 필요한 주문", hint: "취소 여부를 확인해 주세요", button: "확인하기", action: "dashboard-order-stage", stage: "needs-check" },
     { count: rejectedPicks.length, tone: "red", title: "공급사가 거절한 PICK 상품", hint: "사유를 확인하고 다시 요청할 수 있어요", button: "확인하기", action: "go-seller-menu", index: 2 },
@@ -4274,27 +4285,35 @@ function supplierPerformanceTemplate() {
   const totalSettlement = seeded.reduce((sum,row)=>sum+row.settlement,0);
   const totalProfit = seeded.reduce((sum,row)=>sum+row.profit,0);
   const maxSales = Math.max(...seeded.map(row=>row.sales),1);
-  return `<section class="supplier-performance"><div class="supplier-performance-head"><div><span>2026년 9월 · BRAND PARTNER</span><h3>이번 달 판매 성과</h3><p>브랜드 공급 매출에서 두고 중개 수수료 7%를 차감한 정산·순수익 예상입니다.</p></div><button class="secondary-button" data-action="open-settlement">정산 상세 →</button></div><div class="supplier-metrics five"><div><span>소비자 매출</span><strong>${money(totalSales)}</strong><small>연결 셀러 판매 합계</small></div><div><span>공급 매출</span><strong>${money(totalGrossSettlement)}</strong><small>환불 주문 자동 제외</small></div><div><span>두고 수수료</span><strong>-${money(totalFee)}</strong><small>공급 매출의 7%</small></div><div><span>정산 예정</span><strong>${money(totalSettlement)}</strong><small>수수료 차감 후</small></div><div><span>예상 순수익</span><strong>${money(totalProfit)}</strong><small>${seeded.reduce((sum,row)=>sum+row.qty,0)}개 판매</small></div></div><div class="supplier-product-ranking"><div class="panel-head"><div><h3>잘 팔리는 상품 TOP</h3><p>매출이 높은 순서로 자동 정렬됩니다.</p></div><span class="chip blue">실시간 집계</span></div>${seeded.length ? seeded.slice(0,4).map((row,index)=>`<div class="supplier-rank-row"><b>${index+1}</b>${productPhoto(row.product,"sale-photo")}<span><strong>${escapeHtml(row.product.name)}</strong><small>${row.qty}개 판매 · 수수료 ${money(row.fee)} · 순수익 ${money(row.profit)}</small><i><em style="width:${Math.round(row.sales/maxSales*100)}%"></em></i></span><strong>${money(row.sales)}</strong></div>`).join("") : `<div class="empty">아직 집계할 판매상품이 없습니다.</div>`}</div></section>`;
+  return `<section class="supplier-performance"><div class="supplier-performance-head"><div><span>${monthLabel(usageMonthKey())} · BRAND PARTNER</span><h3>이번 달 판매 성과</h3><p>브랜드 공급 매출에서 두고 중개 수수료 7%를 차감한 정산·순수익 예상입니다.</p></div><button class="secondary-button" data-action="open-settlement">정산 상세 →</button></div><div class="supplier-metrics five"><div><span>소비자 매출</span><strong>${money(totalSales)}</strong><small>연결 셀러 판매 합계</small></div><div><span>공급 매출</span><strong>${money(totalGrossSettlement)}</strong><small>환불 주문 자동 제외</small></div><div><span>두고 수수료</span><strong>-${money(totalFee)}</strong><small>공급 매출의 7%</small></div><div><span>정산 예정</span><strong>${money(totalSettlement)}</strong><small>수수료 차감 후</small></div><div><span>예상 순수익</span><strong>${money(totalProfit)}</strong><small>${seeded.reduce((sum,row)=>sum+row.qty,0)}개 판매</small></div></div><div class="supplier-product-ranking"><div class="panel-head"><div><h3>잘 팔리는 상품 TOP</h3><p>매출이 높은 순서로 자동 정렬됩니다.</p></div><span class="chip blue">실시간 집계</span></div>${seeded.length ? seeded.slice(0,4).map((row,index)=>`<div class="supplier-rank-row"><b>${index+1}</b>${productPhoto(row.product,"sale-photo")}<span><strong>${escapeHtml(row.product.name)}</strong><small>${row.qty}개 판매 · 수수료 ${money(row.fee)} · 순수익 ${money(row.profit)}</small><i><em style="width:${Math.round(row.sales/maxSales*100)}%"></em></i></span><strong>${money(row.sales)}</strong></div>`).join("") : `<div class="empty">아직 집계할 판매상품이 없습니다.</div>`}</div></section>`;
 }
 
+/* 공급사 주문 목록 필터: 단계(상태) 또는 ‘출고 지연’(대시보드 숫자와 같은 기준) */
+function supplierFilteredOrders(allOrders = currentSupplierOrders(), status = supplierOrderStatus) {
+  if (status === "all") return allOrders;
+  if (status === "delayed") { const late = new Set(supplierDelayedOrders().map(order => order.id)); return allOrders.filter(order => late.has(order.id)); }
+  if (status === "발주완료") return allOrders.filter(order => ["신규주문", "발주완료"].includes(order.status));
+  return allOrders.filter(order => order.status === status);
+}
 function supplierOrderManagementTemplate() {
   const allOrders = currentSupplierOrders();
   const statuses = ["발주완료", "배송준비중", "주문확인필요", "배송중", "배송완료"];
-  const filtered = supplierOrderStatus === "all" ? allOrders : allOrders.filter(order => order.status === supplierOrderStatus);
+  const filtered = supplierFilteredOrders(allOrders);
   const visibleIds = new Set(filtered.map(order => order.id));
   [...supplierOrderPicks].forEach(id => { if (!visibleIds.has(id)) supplierOrderPicks.delete(id); });
   const readyCount = allOrders.filter(order => order.status === "배송준비중" && !order.tracking).length;
   const newCount = allOrders.filter(order => ["신규주문", "발주완료"].includes(order.status)).length;
   const shippingCount = allOrders.filter(order => order.status === "배송중").length;
   const checkCount = allOrders.filter(order => order.status === "주문확인필요").length;
+  const lateCount = supplierFilteredOrders(allOrders, "delayed").length;
   const bulkStep = (no, title, count, caption, button, attrs) => `<div class="sup-bulk-step ${count ? "has" : ""}"><i>${no}</i><div><b>${title}</b><strong>${count}<em>건</em></strong><small>${caption}</small></div>${button ? `<button type="button" class="${count ? "primary-button" : "secondary-button"}" ${attrs} ${count ? "" : "disabled"}>${button}</button>` : ""}</div>`;
   return `${sectionHero("주문 · 출고 관리", "위탁셀러가 결제한 주문이 자동으로 들어와요. 한 번에 확인하고, 한 번에 송장을 발급하세요.", `<div class="hero-actions"><button type="button" class="secondary-button" data-action="supplier-orders-csv" data-status="${supplierOrderStatus}">⬇ 발주서 엑셀(CSV)</button><button type="button" class="primary-button" data-action="tracking-upload">⬆ 송장 엑셀 업로드</button></div>`)}
-    <section class="panel sup-bulk"><div class="sup-bulk-head"><div><span>ONE-CLICK FULFILLMENT</span><h3>주문 한 번에 처리하기</h3><p>① 확인·포장 → ② ${goodsflowLive() ? "송장 자동 출력(굿스플로 → 두고·셀러 화면에 바로 반영)" : "송장 입력(두고·셀러 화면에 바로 반영)"} → ③ 배송완료 → 정산</p></div>${checkCount ? `<button type="button" class="sup-alert" data-action="filter-supplier-orders" data-status="주문확인필요">⚠ 채널 확인 필요 ${checkCount}건</button>` : ""}</div>
+    <section class="panel sup-bulk"><div class="sup-bulk-head"><div><span>ONE-CLICK FULFILLMENT</span><h3>주문 한 번에 처리하기</h3><p>① 확인·포장 → ② ${goodsflowLive() ? "송장 자동 출력(굿스플로 → 두고·셀러 화면에 바로 반영)" : "송장 입력(두고·셀러 화면에 바로 반영)"} → ③ 배송완료 → 정산</p></div><div class="sup-alerts">${lateCount ? `<button type="button" class="sup-alert ${supplierOrderStatus === "delayed" ? "active" : ""}" data-action="filter-supplier-orders" data-status="delayed">⏰ 출고 지연 ${lateCount}건</button>` : ""}${checkCount ? `<button type="button" class="sup-alert" data-action="filter-supplier-orders" data-status="주문확인필요">⚠ 채널 확인 필요 ${checkCount}건</button>` : ""}</div></div>
       <div class="sup-bulk-steps">${bulkStep(1, "신규 주문", newCount, "위탁셀러 결제 완료", "전체 확인·포장", 'data-action="supplier-bulk-confirm"')}${goodsflowLive() ? bulkStep(2, "포장·송장 대기", readyCount, `굿스플로 · 1건 ${money(goodsflowFee(goodflowProfile()))} · <button type="button" class="sup-bulk-alt" data-action="tracking-upload">직접 뽑은 송장은 엑셀로 올리기 →</button>`, "송장 자동 출력", 'data-action="auto-issue-all"') : bulkStep(2, "포장·송장 대기", readyCount, "주문마다 ‘송장 입력’ 또는 엑셀로 한 번에", "송장 엑셀 업로드", 'data-action="tracking-upload"')}${bulkStep(3, "배송중", shippingCount, "셀러 쇼핑몰 자동 전송", "배송완료 반영", 'data-action="supplier-bulk-deliver"')}${bulkStep(4, "배송완료", allOrders.filter(order => order.status === "배송완료").length, "월말 정산 예정", "", "")}</div>
     </section>
     ${(() => { const conn = goodflowProfile(); return conn.status === "connected" ? `<button type="button" class="gf-strip ${goodsflowCapacity(conn) < 20 ? "low" : ""}" data-action="goodflow-settings"><b>굿스플로 연동중</b><span>${escapeHtml(conn.carrier || "")} · 크레딧 ${money(conn.credit || 0)} (송장 약 ${goodsflowCapacity(conn).toLocaleString()}건)</span><em>충전 · 설정 →</em></button>` : (goodsflowLive() ? `<button type="button" class="gf-strip off" data-action="goodflow-settings"><b>굿스플로 미연동</b><span>아이디만 연결하면 송장이 자동으로 출력돼요</span><em>연동하기 →</em></button>` : `<button type="button" class="gf-strip off" data-action="tracking-upload"><b>굿스플로 자동 출력 준비 중</b><span>지금은 주문마다 ‘송장 입력’이나 엑셀 업로드로 넣어 주세요</span><em>엑셀 업로드 →</em></button>`); })()}
-    <div class="supplier-order-flow panel">${statuses.map((status, index) => `<button type="button" class="${supplierOrderStatus === status ? "active" : ""}" data-action="filter-supplier-orders" data-status="${status}"><span>0${index + 1}</span><b>${status}</b><strong>${allOrders.filter(order => order.status === status).length}</strong></button>`).join("")}</div>
-    <div class="panel"><div class="panel-head"><div><h3>배정 주문</h3><p>송장 출력은 배송준비중 주문에서만 가능하며, 발급 즉시 배송중으로 이동합니다.</p></div><div class="order-filter-tabs"><button class="${supplierOrderStatus === "all" ? "active" : ""}" data-action="filter-supplier-orders" data-status="all">전체 ${allOrders.length}</button>${statuses.map(status => `<button class="${supplierOrderStatus === status ? "active" : ""}" data-action="filter-supplier-orders" data-status="${status}">${status}</button>`).join("")}</div></div><div class="order-pick-bar" data-order-pick-bar>${supplierPickBarMarkup(filtered)}</div>${ordersTable("supplier", "", filtered, { pick: true })}</div>`;
+    <div class="supplier-order-flow panel">${statuses.map((status, index) => `<button type="button" class="${supplierOrderStatus === status ? "active" : ""}" data-action="filter-supplier-orders" data-status="${status}"><span>0${index + 1}</span><b>${status}</b><strong>${supplierFilteredOrders(allOrders, status).length}</strong></button>`).join("")}</div>
+    <div class="panel"><div class="panel-head"><div><h3>${supplierOrderStatus === "delayed" ? `출고가 늦어지는 주문 ${filtered.length}건` : supplierOrderStatus === "all" ? "배정 주문" : `${supplierOrderStatus} 주문 ${filtered.length}건`}</h3><p>${supplierOrderStatus === "delayed" ? `결제 후 ${SHIP_DELAY_DAYS}일이 지나도록 송장이 없는 주문이에요. 발주완료는 ‘확인·포장’ 후 송장을 넣어 주세요.` : "송장 출력은 배송준비중 주문에서만 가능하며, 발급 즉시 배송중으로 이동합니다."}</p></div><div class="order-filter-tabs"><button class="${supplierOrderStatus === "all" ? "active" : ""}" data-action="filter-supplier-orders" data-status="all">전체 ${allOrders.length}</button>${statuses.map(status => `<button class="${supplierOrderStatus === status ? "active" : ""}" data-action="filter-supplier-orders" data-status="${status}">${status}</button>`).join("")}</div></div><div class="order-pick-bar" data-order-pick-bar>${supplierPickBarMarkup(filtered)}</div>${ordersTable("supplier", "", filtered, { pick: true })}</div>`;
 }
 /* 체크한 주문 일괄 처리 바: 단계마다 할 수 있는 일만 켜진다 */
 function supplierPickGroups(orders) {
@@ -4318,7 +4337,7 @@ function supplierPickBarMarkup(orders) {
 function refreshOrderPickUi() {
   const bar = document.querySelector("[data-order-pick-bar]"); if (!bar) return;
   const allOrders = currentSupplierOrders();
-  const filtered = supplierOrderStatus === "all" ? allOrders : allOrders.filter(order => order.status === supplierOrderStatus);
+  const filtered = supplierFilteredOrders(allOrders);
   bar.innerHTML = supplierPickBarMarkup(filtered);
   document.querySelectorAll("[data-order-pick]").forEach(input => { input.checked = supplierOrderPicks.has(input.value); input.closest("tr, .mobile-order-card")?.classList.toggle("picked", input.checked); });
   const allOn = filtered.length > 0 && filtered.every(order => supplierOrderPicks.has(order.id));
@@ -4330,7 +4349,7 @@ document.addEventListener("change", event => {
   const all = event.target.closest?.("[data-order-pick-all]");
   if (all) {
     const allOrders = currentSupplierOrders();
-    const filtered = supplierOrderStatus === "all" ? allOrders : allOrders.filter(order => order.status === supplierOrderStatus);
+    const filtered = supplierFilteredOrders(allOrders);
     filtered.forEach(order => { if (all.checked) supplierOrderPicks.add(order.id); else supplierOrderPicks.delete(order.id); });
     refreshOrderPickUi();
   }
@@ -4641,7 +4660,7 @@ function supplierSalesStatusTemplate() {
   const channelCount = liveItems.reduce((sum, item) => sum + liveChannelIds(item).length, 0);
   const monthRows = supplierMonthRows(usageMonthKey());
   return `${sectionHero("판매 현황", "내 상품을 어떤 위탁셀러가 어느 쇼핑몰에서 얼마에 팔고 있는지 한눈에 봐요.")}
-    <div class="scal-kpis"><div class="primary"><span>판매 셀러</span><strong>${sellers.size}곳</strong><small>승인한 위탁셀러</small></div><div><span>쇼핑몰 판매중</span><strong>${liveItems.length}건</strong><small>등록 채널 ${channelCount}개</small></div><div><span>9월 판매 수량</span><strong>${monthRows.reduce((s, r) => s + r.qty, 0)}개</strong><small>결제 완료 기준</small></div><div><span>승인 대기</span><strong>${items.filter(item => item.approvalStatus === "승인대기").length}건</strong><small>PICK 요청</small></div></div>
+    <div class="scal-kpis"><div class="primary"><span>판매 셀러</span><strong>${sellers.size}곳</strong><small>승인한 위탁셀러</small></div><div><span>쇼핑몰 판매중</span><strong>${liveItems.length}건</strong><small>등록 채널 ${channelCount}개</small></div><div><span>${Number(usageMonthKey().split("-")[1])}월 판매 수량</span><strong>${monthRows.reduce((s, r) => s + r.qty, 0)}개</strong><small>결제 완료 기준</small></div><div><span>승인 대기</span><strong>${items.filter(item => item.approvalStatus === "승인대기").length}건</strong><small>PICK 요청</small></div></div>
     ${supplierPriceGraphTemplate(products)}`;
 }
 /* 주문 일괄 처리: 위탁셀러가 결제한 주문을 한 번에 확인하고, 송장을 한 번에 발급한다 */
@@ -4658,7 +4677,7 @@ function supplierBulkDeliver(ids = null) {
   return targets.length;
 }
 function supplierOrdersCsv(status, ids = null) {
-  const orders = currentSupplierOrders().filter(order => (status === "all" || order.status === status) && (!ids || ids.has(order.id)));
+  const orders = supplierFilteredOrders(currentSupplierOrders(), status).filter(order => !ids || ids.has(order.id));
   const header = ["주문번호", "주문일", "상태", "위탁셀러", "판매채널", "상품코드", "상품명", "옵션", "수량", "공급가 합계", "수취인", "연락처", "우편번호", "주소", "상세주소", "배송메시지", "개인통관고유부호", "택배사", "송장번호"];
   const rows = orders.map(order => { const product = orderSourceProduct(order); return [order.id, order.orderDate, order.status, memberByLogin(order.sellerLoginId)?.company || order.sellerLoginId, order.channel, product?.id || "", product?.name || "", order.optionName || "", order.qty, orderUnitSupply(order) * Number(order.qty || 1), order.recipientName || order.customer, order.phone, order.postalCode, order.address, order.addressDetail, order.deliveryMessage, order.personalCustomsCode || "", order.carrier || "", order.tracking || ""]; });
   const csv = "﻿" + [header, ...rows].map(row => row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
@@ -6232,7 +6251,7 @@ function renderSupplier() {
   const monthSummary = supplierMonthSummary(supplierMonthRows(usageMonthKey()));
   const todo = [
     { count: newOrders.length, tone: "red", title: "새로 들어온 주문", hint: "위탁셀러가 결제한 주문이에요. 한 번에 확인·포장하세요", button: "한 번에 확인", attrs: 'data-action="supplier-bulk-confirm"' },
-    { count: supplierDelayedOrders().length, tone: "red", title: "출고가 늦어지는 주문", hint: `결제 후 ${SHIP_DELAY_DAYS}일이 지나도록 송장이 없어요. 쇼핑몰 발송 기한을 넘기면 셀러가 페널티를 받아요`, button: "송장 넣기", attrs: 'data-action="open-supplier-orders" data-status="배송준비중"' },
+    { count: supplierDelayedOrders().length, tone: "red", title: "출고가 늦어지는 주문", hint: `결제 후 ${SHIP_DELAY_DAYS}일이 지나도록 송장이 없어요. 쇼핑몰 발송 기한을 넘기면 셀러가 페널티를 받아요`, button: "지연 주문 처리", attrs: 'data-action="open-supplier-orders" data-status="delayed"' },
     goodsflowLive() ? { count: readyOrders.length, tone: "orange", title: "송장 출력을 기다리는 주문", hint: "굿스플로로 한 번에 출력하면 셀러 화면에 바로 들어가요", button: "송장 자동 출력", attrs: 'data-action="auto-issue-all"' } : { count: readyOrders.length, tone: "orange", title: "송장 입력을 기다리는 주문", hint: "송장을 넣으면 셀러 화면에 바로 들어가요", button: "송장 엑셀 업로드", attrs: 'data-action="tracking-upload"' },
     { count: allHolds(currentAccount.loginId).length, tone: "red", title: "정산 보류 중인 주문", hint: "사유를 확인하면 다음 정산에 들어가요", button: "사유 보기", attrs: 'data-action="supplier-go-menu" data-index="7"' },
     { count: goodsflowConnected(currentAccount.loginId) && goodsflowCapacity(goodflowProfile()) < 20 ? goodsflowCapacity(goodflowProfile()) || 1 : 0, tone: "orange", title: "굿스플로 크레딧이 부족해요", hint: `잔액 ${money(goodflowProfile().credit || 0)} · 송장 약 ${goodsflowCapacity(goodflowProfile())}건 출력 가능`, button: "충전하기", attrs: 'data-action="goodsflow-charge"' },
@@ -6257,7 +6276,7 @@ function renderSupplier() {
       <div class="home-orders">${step(0, "신규 주문", newOrders.length, "확인·포장 전", "red", 'data-action="open-supplier-orders" data-status="발주완료"')}${step(1, "송장 대기", readyOrders.length, "포장 완료·송장 전", "orange", 'data-action="open-supplier-orders" data-status="배송준비중"')}${step(2, "배송중", orders.filter(o => o.status === "배송중").length, "셀러 쇼핑몰 전송", "blue", 'data-action="open-supplier-orders" data-status="배송중"')}${step(3, "배송완료", orders.filter(o => o.status === "배송완료").length, "정산 예정", "green", 'data-action="open-supplier-orders" data-status="배송완료"')}</div>
     </section>
     <div class="content-grid equal sup-home-grid">
-      <section class="panel home-section"><div class="home-section-head"><div><h3>9월 판매 · 정산</h3><p>위탁셀러 결제 기준 공급 매출이에요.</p></div><button type="button" class="secondary-button" data-action="supplier-go-menu" data-index="11">매출 달력 →</button></div>
+      <section class="panel home-section"><div class="home-section-head"><div><h3>${Number(usageMonthKey().split("-")[1])}월 판매 · 정산</h3><p>위탁셀러 결제 기준 공급 매출이에요.</p></div><button type="button" class="secondary-button" data-action="supplier-go-menu" data-index="11">매출 달력 →</button></div>
         <div class="home-money"><button type="button" data-action="supplier-go-menu" data-index="11"><span>공급 매출</span><strong>${money(monthSummary.supply)}</strong><small>판매 ${monthSummary.qty}개</small></button><button type="button" data-action="supplier-go-menu" data-index="7"><span>정산 예정</span><strong>${money(monthSummary.payable)}</strong><small>수수료 7% 차감</small></button></div>
       </section>
       <section class="panel home-section"><div class="home-section-head"><div><h3>내 상품을 파는 셀러</h3><p>누적 공급 매출 순이에요.</p></div><button type="button" class="secondary-button" data-action="supplier-go-menu" data-index="10">판매 현황 →</button></div>
@@ -6306,7 +6325,12 @@ const SELF_STEPS = [
   { id: "done", label: "배송완료", hint: "구매자 수령", match: step => step === "done" }
 ];
 let selfStepFilter = "todo";
+let orderSettingsOpen = false;
 function currentSelfOrders() { return currentSellerOrders().filter(order => orderMappingStatus(order) === "self"); }
+/* 직접 배송 중 사장님이 지금 할 일: 송장 입력 전 + 쇼핑몰 전송 대기/실패 */
+function selfTodoOrders() { return currentSelfOrders().filter(order => ["new", "confirmed", "ready", "failed"].includes(selfOrderStep(order))); }
+/* 송장을 아직 안 넣은 직접 배송 주문 수 (전송 대기는 ‘쇼핑몰에 보낼 송장’에서 따로 센다) */
+function selfTodoCount() { return selfTodoOrders().filter(order => !order.tracking).length; }
 function selfTrackingLine(order) {
   if (!order.tracking) return "";
   const statuses = Object.entries(order.channelTrackingStatuses || {});
@@ -6333,6 +6357,22 @@ function selfOrderActions(order, { inline = true } = {}) {
   if (step === "ready" || step === "failed") return `<span class="mapping-status ${step === "failed" ? "unmapped" : "payment"}">${step === "failed" ? "송장 전송 실패" : "송장 전송 대기"}</span>${selfTrackingLine(order)}<button class="small-button approve" data-action="push-tracking" data-id="${order.id}">${step === "failed" ? "다시 전송" : "쇼핑몰로 송장 전송"}</button><button class="text-button" data-action="self-tracking" data-id="${order.id}">송장 수정</button>${detail}`;
   if (step === "sent") return `<span class="mapping-status ${needsLink ? "unmapped" : "self"}">${needsLink ? "쇼핑몰 연결 필요" : "쇼핑몰 전송 완료"}</span>${selfTrackingLine(order)}${needsLink ? `<button class="text-button" data-action="go-seller-menu" data-index="${menuIndexOf("쇼핑몰 연동", "seller")}">쇼핑몰 연결</button>` : ""}<button class="small-button" data-action="self-deliver" data-id="${order.id}">배송완료</button><button class="text-button" data-action="self-tracking" data-id="${order.id}">송장 수정</button>${detail}`;
   return `<span class="mapping-status self">배송완료</span>${selfTrackingLine(order)}${detail}`;
+}
+/* ‘직접 배송할게요’를 누른 뒤: 주문이 어디로 갔는지, 이제 뭘 하면 되는지 한 번에 알려 준다 */
+function selfMovedGuideModal(orders) {
+  const name = orders[0]?.externalProductName || orderSellerTitle(orders[0]) || "주문";
+  const channel = orders[0]?.channel || "쇼핑몰";
+  openModal(`<div class="self-moved">
+    <span class="self-moved-badge">✓ 직접 배송으로 옮겼어요</span>
+    <h2>${escapeHtml(name)} <em>${orders.length}건</em></h2>
+    <p>이 주문은 이제 <b>주문 관리 → 직접 배송</b> 칸에 있어요. 같은 상품의 다음 주문도 자동으로 그 칸으로 가요.</p>
+    <ol class="self-moved-steps">
+      <li><i>1</i><span><b>포장해서 택배 보내기</b><small>받는 분 주소·연락처는 주문을 누르면 보여요. 포장 목록 엑셀도 받을 수 있어요.</small></span></li>
+      <li><i>2</i><span><b>송장번호 넣기</b><small>택배사를 고르고 송장번호만 적으면 돼요. 여러 건은 한 번에 넣을 수 있어요.</small></span></li>
+      <li><i>3</i><span><b>${escapeHtml(withRo(channel))} 송장 자동 전송</b><small>저장하면 쇼핑몰에 송장이 바로 들어가고 ‘배송중’으로 바뀌어요.</small></span></li>
+    </ol>
+    <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>나중에 할게요</button><button type="button" class="primary-button" data-action="go-self-orders">지금 송장 넣으러 가기 →</button></div>
+  </div>`);
 }
 function selfDeliveryPanel() {
   const orders = currentSelfOrders();
@@ -6456,7 +6496,10 @@ function mobileOrderCards(orders, role, pick = false) {
   return `<div class="mobile-order-list">${orders.map(order => {
     const product = orderSourceProduct(order);
     const displayName = role === "supplier" ? product?.name : orderSellerTitle(order);
-    return `<article class="mobile-order-card ${orderNeedsMapping(order) ? "mapping-required" : ""} ${pick && supplierOrderPicks.has(order.id) ? "picked" : ""}"><header>${pick ? `<label class="order-pick"><input type="checkbox" data-order-pick value="${escapeHtml(order.id)}" ${supplierOrderPicks.has(order.id) ? "checked" : ""} aria-label="${escapeHtml(order.id)} 선택"></label>` : ""}<button data-action="order-detail" data-id="${order.id}">${escapeHtml(order.id)}</button>${orderStatusChipFor(order, role)}</header><small class="mobile-order-time">${escapeHtml(order.createdAt)}</small><div class="mobile-card-product">${productPhoto(product,"table-photo")}<span><small>${channelMark(channelIdFromName(order.channel),true)} ${escapeHtml(order.channel)} · ${order.shippingType === "overseas" ? "해외직구" : "국내배송"}</small><strong>${escapeHtml(displayName || "매핑 전 외부 상품")}</strong>${orderOptionTag(order)}<em>${orderMappingStatus(order) === "mapped" ? `${escapeHtml(order.mappedProductId || order.productId)} · ${escapeHtml(order.assignedSupplier || product?.supplier || "미배정")}` : `외부코드 ${escapeHtml(order.externalProductCode || "-")} · 공급사 미배정`}</em></span></div><dl><div><dt>수취인</dt><dd>${escapeHtml(order.recipientName || order.customer)}<small>${escapeHtml(order.phone || "-")}</small></dd></div><div><dt>수량</dt><dd>${order.qty}개</dd></div><div><dt>주문금액</dt><dd>${money(order.amount)}</dd></div></dl><footer class="order-cell-actions">${orderActionsMarkup(order, role)}</footer></article>`;
+    /* 휴대폰 카드: 상품·상태 한 줄 + 받는 분·수량·금액 한 줄 + 버튼 (주소·연락처는 카드를 누르면 상세에서) */
+    const meta = `${escapeHtml(order.recipientName || order.customer || "-")} · ${order.qty}개 · <b>${money(order.amount)}</b>`;
+    const sub = orderMappingStatus(order) === "mapped" ? escapeHtml(order.assignedSupplier || product?.supplier || "미배정") : orderMappingStatus(order) === "self" ? "직접 배송" : "공급사 미배정";
+    return `<article class="mobile-order-card moc ${orderNeedsMapping(order) ? "mapping-required" : ""} ${pick && supplierOrderPicks.has(order.id) ? "picked" : ""}"><header>${pick ? `<label class="order-pick"><input type="checkbox" data-order-pick value="${escapeHtml(order.id)}" ${supplierOrderPicks.has(order.id) ? "checked" : ""} aria-label="${escapeHtml(order.id)} 선택"></label>` : ""}<button data-action="order-detail" data-id="${order.id}">${escapeHtml(order.id)}</button><span class="moc-status">${orderStatusChipFor(order, role)}</span></header><div class="mobile-card-product" data-action="order-detail" data-id="${order.id}">${productPhoto(product,"table-photo")}<span><small>${channelMark(channelIdFromName(order.channel),true)} ${escapeHtml(order.channel)} · ${escapeHtml(order.orderDate ? order.orderDate.slice(5).replace("-", ".") : order.createdAt || "")}</small><strong>${escapeHtml(displayName || "매핑 전 외부 상품")}</strong>${orderOptionTag(order)}<em>${role === "supplier" ? escapeHtml(orderSellerLabel(order)) : sub}</em></span></div><p class="moc-meta">${meta}</p><footer class="order-cell-actions">${orderActionsMarkup(order, role)}</footer></article>`;
   }).join("")}</div>`;
 }
 
@@ -6478,7 +6521,7 @@ function ordersTable(role, query = "", sourceOverride = null, { pick = false } =
   const normalized = String(query || "").trim().toLowerCase();
   const matched = source.filter(order => { const product = orderSourceProduct(order); return !normalized || [order.id, order.customer, order.recipientName, order.phone, order.channel, order.tracking, order.externalProductName, order.externalProductCode, order.mappedProductId, product?.name].some(value => String(value || "").toLowerCase().includes(normalized)); });
   /* 주문이 많아도 화면이 끝없이 길어지지 않게 최근 주문부터 30건씩 보여 준다 */
-  const limit = orderListLimits[role] || ORDER_PAGE_SIZE;
+  const limit = orderListLimits[role] || orderPageSize();
   const sorted = matched.map((order, index) => ({ order, index })).sort((a, b) => String(b.order.orderDate || "9999").localeCompare(String(a.order.orderDate || "9999")) || a.index - b.index).map(item => item.order);
   const orders = sorted.slice(0, limit);
   const more = sorted.length > limit ? `<button type="button" class="secondary-button orders-more" data-action="orders-more" data-key="${role}">더 보기 · ${orders.length}/${sorted.length}건</button>` : "";
@@ -6492,6 +6535,8 @@ function ordersTable(role, query = "", sourceOverride = null, { pick = false } =
   </tbody></table></div>${mobileOrderCards(orders, role, pick)}${more}`;
 }
 const ORDER_PAGE_SIZE = 30;
+/* 휴대폰은 한 번에 10건씩 (스크롤이 끝없이 길어지지 않게), PC는 30건씩 */
+function orderPageSize() { return window.matchMedia?.("(max-width: 720px)").matches ? 10 : ORDER_PAGE_SIZE; }
 let orderListLimits = {};
 
 function membersTable() {
@@ -10395,7 +10440,7 @@ document.addEventListener("click", event => {
   if (action === "order-pick-bulk") {
     const op = target.dataset.op;
     const allOrders = currentSupplierOrders();
-    const filtered = supplierOrderStatus === "all" ? allOrders : allOrders.filter(order => order.status === supplierOrderStatus);
+    const filtered = supplierFilteredOrders(allOrders);
     const g = supplierPickGroups(filtered);
     const ids = list => new Set(list.map(order => order.id));
     const done = list => list.forEach(order => supplierOrderPicks.delete(order.id));
@@ -10438,7 +10483,7 @@ document.addEventListener("click", event => {
   if (action === "open-supplier-connections") { activeMenuIndex = 2; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); return; }
   if (action === "open-supplier-orders") { supplierOrderStatus = target.dataset.status || "all"; activeMenuIndex = 3; render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); return; }
   if (action === "open-master-section") { activeMenuIndex = Number(target.dataset.index || 0); render(); updateAccountUI(); window.scrollTo({top:0,behavior:"smooth"}); return; }
-  if (action === "orders-more") { orderListLimits[target.dataset.key] = (orderListLimits[target.dataset.key] || ORDER_PAGE_SIZE) + ORDER_PAGE_SIZE; const y = window.scrollY; render(); window.scrollTo(0, y); return; }
+  if (action === "orders-more") { orderListLimits[target.dataset.key] = (orderListLimits[target.dataset.key] || orderPageSize()) + orderPageSize(); const y = window.scrollY; render(); window.scrollTo(0, y); return; }
   if (action === "ms-order-filter") { masterOrderFilter = target.dataset.filter; orderListLimits.master = ORDER_PAGE_SIZE; render(); return; }
   if (action === "ms-month") { masterStatsMonth = target.dataset.month; render(); return; }
   if (action === "ms-seller-rank") { masterSellerRank = target.dataset.rank; render(); return; }
@@ -11040,6 +11085,8 @@ document.addEventListener("click", event => {
   }
   if (action === "order-stage-guide") return orderStageGuideModal();
   if (action === "order-talk") return openOrderTalk(id, target.dataset.q || "");
+  if (action === "go-self-orders") { closeModal(); closeMobileSidebar(); activeMenuIndex = menuIndexOf("주문 관리", "seller"); sellerOrderStage = "self"; selfStepFilter = selfTodoOrders().some(order => ["ready", "failed"].includes(selfOrderStep(order))) && !selfTodoOrders().some(order => ["new", "confirmed"].includes(selfOrderStep(order))) ? "ready" : "todo"; sellerOrderSearch = ""; render(); updateAccountUI(); requestAnimationFrame(() => document.querySelector(".self-panel")?.scrollIntoView({ block: "start", behavior: "smooth" })); return; }
+  if (action === "toggle-order-settings") { orderSettingsOpen = !target.closest("details")?.open; return; }
   if (action === "filter-order-stage") { sellerOrderStage = target.dataset.stage === "overview" ? "all" : (target.dataset.stage || "all"); sellerOrderSearch = ""; render(); updateAccountUI(); return; }
   if (action === "dashboard-order-stage") { activeMenuIndex = 4; sellerOrderStage = target.dataset.stage || "all"; sellerOrderSearch = ""; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (action === "open-refunds") { activeMenuIndex = 5; refundMonth = "all"; refundSearch = ""; refundTypeFilter = target.dataset.type || "all"; render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
@@ -11168,7 +11215,7 @@ document.addEventListener("click", event => {
     if (code) settings.selfCodes = [...new Set([...(settings.selfCodes || []), code])];
     audit("직접 배송으로 옮김", `${orders[0].externalProductName} · ${orders.length}건 · 다음 주문부터 자동으로 직접 배송`, "done", "order");
     saveState(); closeModal(); render(); updateAccountUI();
-    return showToast(`${orders.length}건을 ‘직접 배송’으로 옮겼어요. 같은 상품의 다음 주문도 자동으로 옮겨져요.`);
+    return selfMovedGuideModal(orders);
   }
   if (action === "billing-settings") billingSettingsModal();
   if (action === "toggle-subscription") { const subscription = state.subscriptions[currentAccount.loginId] || state.subscriptions.seller; subscription.autoRenew = !subscription.autoRenew; audit("정기구독 자동 갱신 변경", `자동 갱신을 ${subscription.autoRenew ? "켰습니다" : "껐습니다"}.`, "done", "subscription"); saveState(); render(); showToast(`자동 갱신을 ${subscription.autoRenew ? "켰습니다" : "껐습니다"}.`); }
@@ -12868,7 +12915,7 @@ function staffPermissionDefs() {
 }
 const STAFF_OWNER_ONLY_ACTIONS = ["account-tab", "open-user-switch", "switch-workspace", "open-supplier-application", "disconnect-channel", "reconnect-channel", "plan-subscribe", "plan-cancel", "kakao-addon-toggle", "staff-invite", "staff-edit", "staff-suspend", "staff-leave", "staff-reset-password", "staff-cancel-invite", "staff-remove", "staff-show-invite"];
 const STAFF_ACTION_PERMISSIONS = {
-  "push-all-tracking": "orders", "push-tracking": "orders", "run-tracking-sync": "orders", "collect-orders": "orders", "mark-self-fulfill": "orders", "set-collect-scope": "orders", "pay-order": "orders", "open-order-payment-stage": "orders", "bulk-pay-orders": "orders", "pay-selected-orders": "orders", "dispatch-supplier-order": "orders", "single-order": "orders", "map-order": "orders", "request-refund": "orders", "demo-forward-tracking": "orders",
+  "push-all-tracking": "orders", "push-tracking": "orders", "run-tracking-sync": "orders", "collect-orders": "orders", "mark-self-fulfill": "orders", "go-self-orders": "orders", "set-collect-scope": "orders", "pay-order": "orders", "open-order-payment-stage": "orders", "bulk-pay-orders": "orders", "pay-selected-orders": "orders", "dispatch-supplier-order": "orders", "single-order": "orders", "map-order": "orders", "request-refund": "orders", "demo-forward-tracking": "orders",
   "manage-product-channels": "products", "delete-seller-product": "products", "confirm-delete-seller-product": "products", "sync-all-channels": "products", "sync-channel-listing": "products", "push-channel-listing": "products", "edit-seller-product": "products", "register-master-product": "products", "bulk-register-master": "products", "mapping-switch-winner": "orders", "mapping-toggle-follow": "orders", "open-mapping-pick": "orders", "unmap-product-mapping": "orders", "simulate-order": "products", "open-stop-channel": "products", "delete-pick": "products", "rerequest-pick": "products",
   "open-doogo-money": "money", "deposit-view": "money", "deposit-cancel-charge": "money", "deposit-filter": "money", "open-doogo-money-history": "money", "edit-doogo-money-bank": "money", "toggle-subscription": "money", "billing-settings": "money",
   "connect-channel": "channels", "refresh-channel-policies": "channels", "toggle-channel-automation": "channels", "toggle-auto-tracking": "channels", "toggle-auto-collect": "channels"

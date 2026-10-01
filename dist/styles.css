@@ -7775,6 +7775,7 @@ body[data-role="supplier"] .mapping-callout b { color: var(--sup-ink) !important
 .sup-bulk-head h3 { margin: 4px 0; font-size: 18px; }
 .sup-bulk-head p { margin: 0; color: #6b6b6b; font-size: 13.5px; }
 .sup-alert { padding: 8px 12px; color: #d92d20; background: #fff; border: 1px solid #f3b4af; border-radius: 10px; font-weight: 800; cursor: pointer; }
+.sup-alerts { display: flex; flex-wrap: wrap; gap: 8px; } .sup-alert.active { color: #fff; background: #d92d20; border-color: #d92d20; }
 .sup-bulk-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .sup-bulk-step { position: relative; padding: 14px; display: grid; gap: 10px; background: #fafafa; border: 1px solid #e8e8e8; border-radius: 14px; }
 .sup-bulk-step.has { background: #fff; border-color: #111; box-shadow: 0 6px 16px rgba(0,0,0,.06); }
@@ -11397,4 +11398,125 @@ body[data-role="supplier"] .ship-info-steps li::before { background: #111; }
   .external-order-summary.mp-source { grid-template-columns: 1fr; } .mp-sale-block { text-align: left; min-width: 0; }
   .mp-profit-card { padding: 14px; } .mp-profit-eq { grid-template-columns: 1fr auto 1fr; } .mp-profit-eq .result { grid-column: 1 / -1; } .mp-profit-eq > i:nth-of-type(2) { display: none; }
   .mp-profit-total strong { font-size: 20px; }
+}
+
+/* ===== v85: 상단 바 ‘홈’ 버튼 (위탁셀러·공급사·마스터 공통) — 누르면 첫 화면으로 ===== */
+.topbar-heading { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; align-items: center; }
+.topbar-heading > :not(.topbar-home) { grid-column: 2; }
+.topbar-home { grid-column: 1; grid-row: 1 / span 3; width: 52px; height: 52px; padding: 0; display: grid; place-items: center; align-content: center; gap: 1px; color: #333d4b; background: #fff; border: 1px solid #dfe3ea; border-radius: 14px; font: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+.topbar-home svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.topbar-home:hover { background: #f5f7fa; border-color: #c9d0da; }
+.topbar-home:focus-visible { outline: 3px solid rgba(49, 130, 246, .35); outline-offset: 2px; }
+.topbar-home.active { color: #fff; background: #3182f6; border-color: #3182f6; }
+body[data-role="supplier"] .topbar-home.active { background: #111; border-color: #111; }
+body[data-role="master"] .topbar-home.active { background: #6d3fc9; border-color: #6d3fc9; }
+@media (max-width: 720px) {
+  .topbar-heading { column-gap: 8px; }
+  .topbar-home { width: 42px; height: 42px; border-radius: 11px; font-size: 10.5px; }
+  .topbar-home svg { width: 18px; height: 18px; }
+}
+@media (max-width: 720px) { #pageContext .ctx-more { display: none; } }
+
+/* ===== v85: 주문 관리 단순화 (위탁셀러) ===== */
+/* 직접 배송: 두고 주문 흐름과 따로 보는 보라색 칸 */
+.ofb-group.tone-self { background: #f6f1ff; border-color: #e3d6fb; }
+.ofb-group.tone-self .ofb-group-head { color: #6d28d9; } .ofb-group.tone-self .ofb-group-head em { background: #7c3aed; }
+.ofb-group.tone-self .ofb-tile.has-count .ofb-count { color: #6d28d9; }
+.ofb-group.tone-self .ofb-tile.urgent .ofb-count { color: #e0483f; }
+.ofb-group.tone-self .ofb-tile.active { border-color: #7c3aed; box-shadow: 0 4px 12px rgba(124, 58, 237, .18); }
+.ofb-group.tone-self .ofb-tile.active .ofb-label { color: #6d28d9; }
+.ofb-tile .ofb-sub { display: block; margin-top: 2px; color: #8b95a1; font-size: 11.5px; font-weight: 700; line-height: 1.3; white-space: nowrap; }
+.ofb-tile.urgent .ofb-sub { color: #e0483f; }
+.ofb-arrow.ofb-break { display: none; }
+.ofb-group.tone-self { margin-right: 10px; }
+.self-panel { scroll-margin-top: 150px; }
+@media (max-width: 720px) { .ofb-group.tone-self { margin-right: 0; } }
+/* 설정 묶음: 접혀 있을 때 한 줄 요약 */
+.order-settings { margin-bottom: 16px; padding: 0; overflow: hidden; }
+.order-settings > summary { padding: 14px 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; cursor: pointer; list-style: none; }
+.order-settings > summary::-webkit-details-marker { display: none; }
+.order-settings .os-title { color: #191f28; font-size: 15px; font-weight: 800; }
+.order-settings .os-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 auto; }
+.order-settings .os-chip { padding: 4px 9px; color: #6b7684; background: #f2f4f6; border-radius: 99px; font-size: 12.5px; font-weight: 700; }
+.order-settings .os-chip.on { color: #1b64da; background: #e8f3ff; }
+.order-settings .os-caret { width: 10px; height: 10px; margin-left: auto; border-right: 2px solid #8b95a1; border-bottom: 2px solid #8b95a1; transform: rotate(45deg); transition: transform .15s; }
+.order-settings[open] .os-caret { transform: rotate(-135deg); }
+.order-settings-body { padding: 0 14px 14px; display: grid; gap: 12px; }
+.order-settings-body > .panel { margin: 0; box-shadow: none; }
+.order-push-strip { margin-bottom: 12px; padding: 12px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; color: #0b5d3a; background: #e8f7ef; border: 1px solid #bfe6cf; border-radius: 14px; font-weight: 700; }
+.order-push-strip b { color: #0f8a5f; }
+.order-push-strip .primary-button { min-height: 40px; background: #0f8a5f; border-color: #0f8a5f; }
+.order-add-row { display: contents; }
+/* 직접 배송으로 옮긴 뒤 안내 */
+.self-moved { display: grid; gap: 12px; }
+.self-moved-badge { justify-self: start; padding: 5px 11px; color: #6d28d9; background: #f1e9ff; border-radius: 99px; font-size: 13px; font-weight: 800; }
+.self-moved h2 { margin: 0; font-size: 21px; line-height: 1.35; } .self-moved h2 em { color: #7c3aed; font-style: normal; }
+.self-moved > p { margin: 0; color: #4e5968; font-size: 14.5px; line-height: 1.6; }
+.self-moved-steps { margin: 4px 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.self-moved-steps li { padding: 12px 14px; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; align-items: start; background: #faf8ff; border: 1px solid #ece4fb; border-radius: 12px; }
+.self-moved-steps i { width: 30px; height: 30px; display: grid; place-items: center; color: #fff; background: #7c3aed; border-radius: 50%; font-style: normal; font-weight: 800; }
+.self-moved-steps b { display: block; color: #191f28; font-size: 15px; } .self-moved-steps small { display: block; margin-top: 3px; color: #6b7684; font-size: 13px; line-height: 1.5; }
+.self-moved .modal-actions { margin-top: 4px; }
+
+@media (max-width: 720px) {
+  /* 주문 관리 맨 위: 큰 버튼 하나 + 작은 버튼 두 개 한 줄 */
+  .order-add-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+  .order-add-row > button { min-height: 44px; padding: 0 8px; font-size: 14px; }
+  .order-settings > summary { padding: 13px 14px; }
+  .order-settings .os-title { font-size: 14.5px; }
+  .order-settings-body { padding: 0 10px 10px; }
+  /* 단계판이 있으니 같은 내용의 빠른 필터 줄과 긴 안내문은 휴대폰에서 숨김 */
+  .order-search-panel .order-quick-filters { display: none; }
+  .order-flow-board .ofb-head small { display: none; }
+  .order-stage-content .panel-head p { display: none; }
+  .ofb-group.tone-self { grid-column: span 2; }
+  /* 주문 카드: 높이를 절반 이하로 */
+  .mobile-order-card.moc { padding: 13px 14px; border-radius: 14px; }
+  .mobile-order-card.moc > header { align-items: center; }
+  .mobile-order-card.moc > header > button { flex: 1 1 auto; min-width: 0; font-size: 14px; text-align: left; justify-content: flex-start; }
+  .mobile-order-card.moc .moc-status { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .mobile-order-card.moc .mobile-card-product { margin: 9px 0 0; padding: 0; gap: 10px; background: none; cursor: pointer; }
+  body[data-role="supplier"] .mobile-order-card.moc .mobile-card-product { background: none; }
+  .mobile-order-card.moc .mobile-card-product .table-photo { width: 48px; height: 48px; flex: 0 0 48px; border-radius: 10px; }
+  .mobile-order-card.moc .mobile-card-product strong { font-size: 15.5px; }
+  .mobile-order-card.moc .mobile-card-product small, .mobile-order-card.moc .mobile-card-product em { font-size: 12.5px; }
+  .mobile-order-card.moc .moc-meta { margin: 9px 0 0; padding: 8px 10px; color: #4e5968; background: #f6f8fb; border-radius: 10px; font-size: 14px; }
+  body[data-role="supplier"] .mobile-order-card.moc .moc-meta { background: #f6f6f6; }
+  .mobile-order-card.moc .moc-meta b { color: #191f28; }
+  .mobile-order-card.moc > footer { margin-top: 10px; padding-top: 10px; gap: 6px; }
+  .mobile-order-card.moc > footer > .text-button, .mobile-order-card.moc > footer > .small-button, .mobile-order-card.moc > footer > button { min-height: 40px; padding: 0 12px; font-size: 14px; }
+  .mobile-order-card.moc > footer > [data-action="order-detail"] { display: none; }
+  .mobile-order-card.moc > footer .mapping-status { font-size: 12px; }
+  .mobile-order-card.moc .self-inline-track { width: 100%; }
+}
+
+/* ===== v85: 위탁셀러 홈 (휴대폰) — 같은 내용, 절반 높이 ===== */
+@media (max-width: 720px) {
+  #sellerView .home-greeting p { display: none; }
+  #sellerView .home-greeting h2 { font-size: 21px; }
+  #sellerView .home-todo-list { gap: 8px; }
+  #sellerView .home-todo { min-height: 0; padding: 12px 12px 12px 10px; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 10px; text-align: left; }
+  #sellerView .home-todo .todo-no { width: 28px; height: 28px; font-size: 13.5px; }
+  #sellerView .home-todo > span { min-width: 0; display: grid; gap: 2px; }
+  #sellerView .home-todo > span > b { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 15px; line-height: 1.35; }
+  #sellerView .home-todo > span > small { font-size: 12.5px; line-height: 1.4; }
+  #sellerView .home-todo > em { width: auto; min-height: 34px; margin: 0; padding: 0 11px; display: inline-flex; align-items: center; justify-content: center; grid-column: auto; border-radius: 99px; font-size: 12.5px; white-space: nowrap; }
+  #sellerView .home-flow.five { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  #sellerView .home-flow.five .home-flow-step:last-child { grid-column: auto; }
+  #sellerView .home-flow.five .home-flow-step { min-height: 0; padding: 10px 4px; display: grid; justify-items: center; align-content: start; gap: 4px; text-align: center; }
+  #sellerView .home-flow.five .home-flow-step i { width: 20px; height: 20px; font-size: 11px; }
+  #sellerView .home-flow.five .home-flow-step b { font-size: 11.5px; line-height: 1.25; word-break: keep-all; }
+  #sellerView .home-flow.five .home-flow-step strong { font-size: 20px; }
+  #sellerView .home-flow.five .home-flow-step small { display: none; }
+  #sellerView .home-orders { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  #sellerView .home-orders .home-order-step { min-height: 0; padding: 10px 4px; display: grid; justify-items: center; gap: 4px; text-align: center; }
+  #sellerView .home-orders .home-order-step b { font-size: 11.5px; line-height: 1.25; word-break: keep-all; }
+  #sellerView .home-orders .home-order-step strong { font-size: 20px; } #sellerView .home-orders .home-order-step strong em { font-size: 11px; }
+  #sellerView .home-orders .home-order-step small { display: none; }
+  #sellerView .home-money { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  #sellerView .home-money > button { min-height: 0; padding: 11px 8px; gap: 4px; }
+  #sellerView .home-money > button span { font-size: 11.5px; }
+  #sellerView .home-money > button strong { font-size: 14.5px; letter-spacing: -.02em; }
+  #sellerView .home-money > button small { display: none; }
+  #sellerView .home-section-head p { display: none; }
 }
