@@ -2056,7 +2056,9 @@ function maybeAutoCollectOrders() {
     if (!result.created.length) { saveState(); return; }
     if (!CHANNEL_SERVER) settings.autoCollectCount += 1;
     saveState(); render(); updateAccountUI();
-    showToast(`쇼핑몰 새 주문 ${result.created.length}건을 자동으로 가져왔어요.`);
+    /* 사장님이 방금 한 일(송장 저장 등)의 안내를 덮지 않게, 화면에 다른 안내가 떠 있으면 끝난 뒤에 알린다 */
+    const wait = Math.max(0, Number(showToast.lastAt || 0) + 5200 - Date.now());
+    setTimeout(() => showToast(`쇼핑몰 새 주문 ${result.created.length}건을 자동으로 가져왔어요.`), wait);
   });
 }
 function channelMark(id, compact = false) {
@@ -3207,8 +3209,8 @@ function sellerOrderSubset(stage = sellerOrderStage) {
   if (stage === "tracking-push") return orders.filter(orderNeedsTrackingPush);
   /* 메뉴 ④ 공급사 출고: 결제를 마치고 공급사가 확인·포장·송장 발급 중인 주문 */
   if (stage === "supplier") return orders.filter(order => orderMappingStatus(order) === "mapped" && orderPaymentStatus(order) !== "pending" && ["신규주문", "주문접수", "발주완료", "배송준비중", "주문확인필요"].includes(order.status));
-  /* 메뉴 ⑤ 송장 전송 · 배송: 쇼핑몰로 보낼 송장 + 배송중 + 배송완료 (직접 배송 제외) */
-  if (stage === "delivery") return orders.filter(order => orderMappingStatus(order) !== "self" && (orderNeedsTrackingPush(order) || ["배송중", "배송완료"].includes(order.status)));
+  /* 메뉴 ⑤ 송장 전송 · 배송: 쇼핑몰로 보낼 송장 + 배송중 + 배송완료. 직접 입력 송장도 배송중이면 함께 (칩으로 구분) */
+  if (stage === "delivery") return orders.filter(order => orderNeedsTrackingPush(order) || ["배송중", "배송완료"].includes(order.status));
   const statuses = { waiting: ["주문대기"], received: ["신규주문", "주문접수"], preparing: ["배송준비중"], "needs-check": ["주문확인필요"], shipping: ["배송중"], delivered: ["배송완료"] }[stage] || [];
   return orders.filter(order => statuses.includes(order.status));
 }
@@ -3761,7 +3763,7 @@ function resolveMappingForCode(code) {
 function applyMappingToOrder(order, product, type, option = null) {
   order.mappedProductId = product.id;
   order.productId = product.id;
-  if (order.mappingStatus === "self" || order.status === "직접배송") { order.status = "신규주문"; const settings = sellerAutomationSettings(order.sellerLoginId); settings.selfCodes = (settings.selfCodes || []).filter(code => code !== order.externalProductCode); }
+  if (order.mappingStatus === "self" || order.status === "직접배송") { order.status = "신규주문"; order.fromSelfAt = new Date().toLocaleString("ko-KR"); delete order.selfConfirmedAt; delete order.trackingSource; const settings = sellerAutomationSettings(order.sellerLoginId); settings.selfCodes = (settings.selfCodes || []).filter(code => code !== order.externalProductCode); }
   order.mappingStatus = "mapped";
   order.orderSource = "doogo";
   order.mappingType = type;
@@ -4263,7 +4265,7 @@ function renderSeller() {
     money: `<section class="panel home-section"><div class="home-section-head"><div><h3>예치금·매출</h3><p>${new Date().getMonth() + 1}월 누적 기준이에요.</p></div></div>
       <div class="home-money"><button type="button" data-action="go-seller-menu" data-index="12"><span>사용 가능 예치금</span><strong>${money(deposit.balance)}</strong><small>주문 결제에 사용</small></button><button type="button" data-action="open-sales-calendar"><span>이번 달 매출</span><strong>${money(salesTotal)}</strong><small>매출 달력 보기</small></button><button type="button" data-action="open-sales-calendar"><span>예상 순수익</span><strong class="profit">${money(profitTotal)}</strong><small>공급가 차감 기준</small></button></div>
     </section>`,
-    notices: `<section class="panel home-section dashboard-notices"><div class="home-section-head"><div><h3>공지사항</h3></div><button class="text-button" data-action="open-notices">전체보기 →</button></div><div class="notice-list">${(state.notices || []).slice(0, 3).map(n => `<button data-action="open-notice-detail" data-id="${n.id}"><b>${youtubeVideoId(n.videoUrl) ? `<em class="notice-video-badge">▶ 영상</em> ` : ""}${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></button>`).join("")}</div></section>`
+    notices: `<section class="panel home-section dashboard-notices"><div class="home-section-head"><div><h3>공지사항</h3></div><button class="text-button" data-action="open-notices">전체보기 →</button></div><div class="notice-list">${(state.notices || []).slice(0, 3).map(n => `<button data-action="open-notice-detail" data-id="${n.id}"><b class="nl-title ${youtubeVideoId(n.videoUrl) ? "has-video" : ""}">${youtubeVideoId(n.videoUrl) ? `<em class="notice-video-badge">▶ 영상</em>` : ""}<span class="nl-text">${escapeHtml(n.title)}</span></b><span>${escapeHtml(n.date)}</span></button>`).join("")}</div></section>`
   };
   const layout = sellerDashboardLayout();
   document.getElementById("sellerView").innerHTML = `
@@ -4994,7 +4996,7 @@ function validateTrackingRows(rows) {
 function applyTrackingToOrder(order, carrier, tracking, { update = false } = {}) {
   if (["신규주문", "발주완료"].includes(order.status)) { order.status = "배송준비중"; order.confirmedAt = "방금 전"; }
   const before = order.tracking;
-  order.carrier = carrier; order.tracking = tracking; order.provisionalTracking = false;
+  order.carrier = carrier; order.tracking = tracking; order.provisionalTracking = false; order.trackingSource = "supplier";
   if (update) { const channelId = channelIdFromName(order.channel); if (order.channelTrackingStatuses?.[channelId]) delete order.channelTrackingStatuses[channelId]; order.trackingEditedAt = "방금 전"; }
   else { order.status = "배송중"; order.shippedAt = "방금 전"; }
   queueTrackingSync(order);
@@ -6359,7 +6361,7 @@ function renderSupplier() {
     <section class="panel home-section"><div class="home-section-head"><div><h3>최근 주문</h3><p>처리할 주문이 먼저 보여요.</p></div><button type="button" class="text-button" data-action="open-supplier-orders">전체 보기 →</button></div>
       ${ordersTable("supplier", "", supplierDashboardOrders(orders))}
     </section>
-    <section class="panel home-section dashboard-notices"><div class="home-section-head"><div><h3>공지사항</h3></div><button class="text-button" data-action="supplier-go-menu" data-index="12">전체보기 →</button></div><div class="notice-list">${(state.notices || []).slice(0, 3).map(n => `<button data-action="open-notice-detail" data-id="${n.id}"><b>${youtubeVideoId(n.videoUrl) ? `<em class="notice-video-badge">▶ 영상</em> ` : ""}${escapeHtml(n.title)}</b><span>${escapeHtml(n.date)}</span></button>`).join("")}</div></section>`;
+    <section class="panel home-section dashboard-notices"><div class="home-section-head"><div><h3>공지사항</h3></div><button class="text-button" data-action="supplier-go-menu" data-index="12">전체보기 →</button></div><div class="notice-list">${(state.notices || []).slice(0, 3).map(n => `<button data-action="open-notice-detail" data-id="${n.id}"><b class="nl-title ${youtubeVideoId(n.videoUrl) ? "has-video" : ""}">${youtubeVideoId(n.videoUrl) ? `<em class="notice-video-badge">▶ 영상</em>` : ""}<span class="nl-text">${escapeHtml(n.title)}</span></b><span>${escapeHtml(n.date)}</span></button>`).join("")}</div></section>`;
 }
 
 /* 대시보드는 처리할 주문 먼저, 최대 5건만 보여 준다. */
@@ -6398,17 +6400,36 @@ const SELF_STEPS = [
   { id: "done", label: "배송완료", hint: "구매자 수령", match: step => step === "done" }
 ];
 let selfStepFilter = "todo";
+/* 방금 송장을 넣어 옮겨 간 칸(배송중/전송 대기)을 잠깐 반짝여서 ‘넘어갔다’는 걸 눈으로 보이게 */
+let selfJustMoved = { to: "", at: 0 };
+function afterSelfTrackingSaved(orders, sentNames = []) {
+  const target = orders.every(order => selfOrderStep(order) === "sent") ? "sent" : "ready";
+  selfJustMoved = { to: target, at: Date.now() };
+  if (!selfTodoOrders().some(order => ["new", "confirmed"].includes(selfOrderStep(order)))) selfStepFilter = target;
+  saveState(); closeModal(); render(); updateAccountUI();
+  const where = target === "sent" ? "‘배송중’으로" : "‘쇼핑몰 전송 대기’로";
+  const count = orders.length > 1 ? ` ${orders.length}건` : "";
+  const message = sentNames.length ? `송장${count}을 저장하고 ${withRo(sentNames.join(", "))} ${CHANNEL_SERVER ? "보내는 중이에요" : "보냈어요"} → ${where} 옮겼어요.` : `송장${count}을 저장했어요 → ${where} 옮겼어요.`;
+  if (sellerOrderStage !== "self" || selfStepFilter === target) return showToast(message);
+  showToastAction(message, target === "sent" ? "배송중 보기" : "전송 대기 보기", () => { selfStepFilter = target; render(); updateAccountUI(); }, "");
+}
 let orderSettingsOpen = false;
 function currentSelfOrders() { return currentSellerOrders().filter(order => orderMappingStatus(order) === "self"); }
 /* 직접 배송 중 사장님이 지금 할 일: 송장 입력 전 + 쇼핑몰 전송 대기/실패 */
 function selfTodoOrders() { return currentSelfOrders().filter(order => ["new", "confirmed", "ready", "failed"].includes(selfOrderStep(order))); }
 /* 송장을 아직 안 넣은 직접 배송 주문 수 (전송 대기는 ‘쇼핑몰에 보낼 송장’에서 따로 센다) */
 function selfTodoCount() { return selfTodoOrders().filter(order => !order.tracking).length; }
+/* 송장이 어디서 왔는지: 공급사가 준 송장 vs 사장님이 직접 입력한 송장 (같은 ‘배송중’이어도 구분) */
+function orderTrackingSource(order) { return order?.trackingSource || (orderMappingStatus(order) === "self" ? "self" : "supplier"); }
+function trackingSourceChip(order) {
+  if (!order?.tracking) return "";
+  return orderTrackingSource(order) === "self" ? `<em class="track-src self" title="사장님이 직접 입력한 송장">✍ 직접 입력 송장</em>` : `<em class="track-src supplier" title="공급사가 발급한 송장">🏭 공급사 송장</em>`;
+}
 function selfTrackingLine(order) {
   if (!order.tracking) return "";
   const statuses = Object.entries(order.channelTrackingStatuses || {});
   const state = statuses.map(([channelId, status]) => `${channelMeta(channelId).name} ${status}`).join(" · ") || "쇼핑몰 전송 기록 없음";
-  return `<small class="self-tracking-line">${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)} · ${escapeHtml(state)}${order.trackingPushError ? ` · <em>${escapeHtml(order.trackingPushError)}</em>` : ""}</small>`;
+  return `<small class="self-tracking-line">${trackingSourceChip(order)}${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)} · ${escapeHtml(state)}${order.trackingPushError ? ` · <em>${escapeHtml(order.trackingPushError)}</em>` : ""}</small>`;
 }
 /* 직접 배송 주문은 목록 행 안에서 바로 택배사·송장번호를 넣는다 (팝업 없이) */
 function selfInlineTrackingForm(order) {
@@ -6426,7 +6447,7 @@ function selfOrderActions(order, { inline = true } = {}) {
   const detail = `<button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>`;
   const entry = inline ? selfInlineTrackingForm(order) : `<button class="small-button approve" data-action="self-tracking" data-id="${order.id}">송장 입력</button>`;
   if (step === "new") return `<span class="mapping-status self">직접 배송 · 주문 확인 전</span>${entry}${channelApiSupported(channelId) ? `<button class="text-button" data-action="self-confirm" data-id="${order.id}">주문 확인</button>` : ""}<button class="text-button" data-action="map-order" data-id="${order.id}">두고 상품으로 연결</button>${detail}`;
-  if (step === "confirmed") return `<span class="mapping-status self">직접 배송 · 포장 중</span>${entry}${detail}`;
+  if (step === "confirmed") return `<span class="mapping-status self">직접 배송 · 포장 중</span>${entry}<button class="text-button" data-action="map-order" data-id="${order.id}">두고 상품으로 연결</button>${detail}`;
   if (step === "ready" || step === "failed") return `<span class="mapping-status ${step === "failed" ? "unmapped" : "payment"}">${step === "failed" ? "송장 전송 실패" : "송장 전송 대기"}</span>${selfTrackingLine(order)}<button class="small-button approve" data-action="push-tracking" data-id="${order.id}">${step === "failed" ? "다시 전송" : "쇼핑몰로 송장 전송"}</button><button class="text-button" data-action="self-tracking" data-id="${order.id}">송장 수정</button>${detail}`;
   if (step === "sent") return `<span class="mapping-status ${needsLink ? "unmapped" : "self"}">${needsLink ? "쇼핑몰 연결 필요" : "쇼핑몰 전송 완료"}</span>${selfTrackingLine(order)}${needsLink ? `<button class="text-button" data-action="go-seller-menu" data-index="${menuIndexOf("쇼핑몰 연동", "seller")}">쇼핑몰 연결</button>` : ""}<button class="small-button" data-action="self-deliver" data-id="${order.id}">배송완료</button><button class="text-button" data-action="self-tracking" data-id="${order.id}">송장 수정</button>${detail}`;
   return `<span class="mapping-status self">배송완료</span>${selfTrackingLine(order)}${detail}`;
@@ -6586,7 +6607,7 @@ function selfDeliveryPanel() {
   return `<section class="self-panel panel">
     <div class="self-panel-head"><div><h3>직접 배송 주문 처리</h3><p>두고 공급사 상품이 아닌 주문이에요. 포장·발송은 사장님이 하고, <b>송장만 넣으면 쿠팡·스마트스토어로 보내 드려요.</b></p></div>
       <div class="self-panel-actions"><button type="button" class="secondary-button" data-action="self-packing-list" ${noTracking ? "" : "disabled"}>포장 목록 엑셀</button><button type="button" class="secondary-button" data-action="self-bulk-tracking" ${noTracking ? "" : "disabled"}>송장 한 번에 입력${noTracking ? ` (${noTracking})` : ""}</button><button type="button" class="primary-button" data-action="self-push-all" ${readyCount ? "" : "disabled"}>송장 전송${readyCount ? ` ${readyCount}건` : ""}</button></div></div>
-    <div class="self-steps" role="tablist">${SELF_STEPS.map((step, index) => `<button type="button" role="tab" class="${selfStepFilter === step.id ? "active" : ""}" data-action="self-step" data-step="${step.id}" aria-selected="${selfStepFilter === step.id}"><i>${index + 1}</i><span><b>${step.label}</b><small>${step.hint}</small></span><strong>${counts[step.id]}</strong></button>`).join("")}</div>
+    <div class="self-steps" role="tablist">${SELF_STEPS.map((step, index) => `<button type="button" role="tab" class="${selfStepFilter === step.id ? "active" : ""} ${selfJustMoved.to === step.id && Date.now() - selfJustMoved.at < 4000 ? "just-moved" : ""}" data-action="self-step" data-step="${step.id}" aria-selected="${selfStepFilter === step.id}"><i>${index + 1}</i><span><b>${step.label}</b><small>${step.hint}</small></span><strong>${counts[step.id]}</strong></button>`).join("")}</div>
     ${orders.length ? "" : `<div class="empty self-empty"><b>직접 배송 주문이 없어요.</b><span>‘매핑 필요’에서 두고 상품이 아닌 주문을 ‘직접 배송’으로 옮기면 여기로 와요. 같은 상품의 다음 주문도 자동으로 여기로 와요.</span></div>`}
   </section>`;
 }
@@ -6612,7 +6633,7 @@ function selfTrackingModal(orderId) {
 }
 function saveSelfTracking(order, carrier, tracking) {
   const changed = order.tracking && (order.tracking !== tracking || order.carrier !== carrier);
-  order.carrier = carrier; order.tracking = tracking;
+  order.carrier = carrier; order.tracking = tracking; order.trackingSource = "self";
   order.status = "배송중"; order.shippedAt = order.shippedAt || new Date().toLocaleString("ko-KR");
   if (changed) Object.keys(order.channelTrackingStatuses || {}).forEach(channelId => { if (order.channelTrackingStatuses[channelId] !== "연동 필요") order.channelTrackingStatuses[channelId] = "전송 대기"; });
   queueTrackingSync(order);
@@ -6657,7 +6678,7 @@ function selfOrderDetailModal(order) {
     <div class="order-status-timeline">${flow.map(([, label, sub], index) => `<div class="${index < rank ? "done" : index === rank ? (step === "failed" ? "alert" : "active") : ""}"><i>${index < rank ? "✓" : step === "failed" && index === rank ? "!" : index + 1}</i><span><b>${label}</b><small>${sub}</small></span></div>`).join("")}</div>
     <section class="order-detail-section"><h3>상품</h3><div class="mapping-detail-grid"><div><span>쇼핑몰 상품명</span><b>${escapeHtml(order.externalProductName || "-")}</b></div><div><span>수량 · 결제금액</span><b>${order.qty}개 · ${money(order.amount)}</b></div><div><span>상품코드</span><b>${escapeHtml(order.externalProductCode || "-")}</b></div><div><span>처리</span><b>직접 배송 (두고 외 상품)</b></div></div></section>
     <section class="order-detail-section"><h3>받는 분</h3><div class="member-detail-grid"><div><span>성함</span><b>${escapeHtml(order.recipientName || order.customer || "-")}</b></div><div><span>연락처</span><b>${escapeHtml(order.phone || "-")}</b></div><div class="full"><span>주소</span><b>(${escapeHtml(order.postalCode || "-")}) ${escapeHtml(order.address || "-")} ${escapeHtml(order.addressDetail || "")}</b></div><div class="full"><span>배송 메시지</span><b>${escapeHtml(order.deliveryMessage || "없음")}</b></div>${order.personalCustomsCode ? `<div class="full"><span>개인통관고유부호</span><b>${escapeHtml(order.personalCustomsCode)}</b></div>` : ""}</div></section>
-    <section class="order-detail-section"><h3>송장</h3>${order.tracking ? `<div class="mapping-detail-grid"><div><span>택배사</span><b>${escapeHtml(order.carrier)}</b></div><div><span>송장번호</span><b>${escapeHtml(order.tracking)}</b></div>${Object.entries(order.channelTrackingStatuses || {}).map(([id, status]) => `<div><span>${escapeHtml(channelMeta(id).name)} 전송</span><b>${escapeHtml(status)}</b></div>`).join("")}${order.trackingPushError ? `<div class="full"><span>실패 사유</span><b class="danger-text">${escapeHtml(order.trackingPushError)}</b></div>` : ""}</div>` : `<p class="self-send-note">아직 송장을 넣지 않았어요.</p>`}</section>
+    <section class="order-detail-section"><h3>송장 ${trackingSourceChip(order)}</h3>${order.tracking ? `<div class="mapping-detail-grid"><div><span>택배사</span><b>${escapeHtml(order.carrier)}</b></div><div><span>송장번호</span><b>${escapeHtml(order.tracking)}</b></div>${Object.entries(order.channelTrackingStatuses || {}).map(([id, status]) => `<div><span>${escapeHtml(channelMeta(id).name)} 전송</span><b>${escapeHtml(status)}</b></div>`).join("")}${order.trackingPushError ? `<div class="full"><span>실패 사유</span><b class="danger-text">${escapeHtml(order.trackingPushError)}</b></div>` : ""}</div>` : `<p class="self-send-note">아직 송장을 넣지 않았어요.</p>`}</section>
     <div class="modal-actions order-detail-actions"><button class="secondary-button" data-close-modal>닫기</button><div class="row-actions">${selfOrderActions(order, { inline: false }).replace(/<button class="text-button" data-action="order-detail"[^>]*>주문 상세<\/button>/, "")}</div></div>`);
   document.querySelector("#modal .modal")?.classList.add("order-detail-modal");
 }
@@ -6689,7 +6710,7 @@ function orderActionsMarkup(order, role) {
   }
   const supplierActions = ["신규주문", "발주완료"].includes(order.status) ? `<button class="small-button approve" data-action="prepare-shipment" data-id="${order.id}">주문 확인·포장</button>` : order.status === "주문확인필요" ? `<div class="row-actions"><button class="small-button approve" data-action="confirm-channel-order" data-id="${order.id}">채널 확인 완료</button><button class="text-button refund-link" data-action="cancel-channel-order" data-id="${order.id}">채널 취소 처리</button></div>` : order.status === "배송준비중" && !order.tracking ? `<div class="row-actions"><button class="small-button approve" data-action="auto-tracking" data-id="${order.id}">자동송장출력</button><button class="text-button" data-action="tracking" data-id="${order.id}">직접 입력</button><button class="text-button refund-link" data-action="supplier-cancel-order" data-id="${order.id}">출고 불가</button></div>` : order.status === "배송중" ? `<div class="shipment-inline-actions"><button class="text-button label-reprint" data-action="show-label" data-id="${order.id}">송장 보기</button><button class="text-button" data-action="edit-tracking" data-id="${order.id}">송장 수정</button><button class="text-button" data-action="complete-shipping" data-id="${order.id}">배송완료</button>${order.provisionalTracking ? `<button class="text-button refund-link" data-action="cancel-shipment" data-id="${order.id}">집하 전 취소</button>` : ""}</div>` : order.tracking ? `<button class="text-button label-reprint" data-action="show-label" data-id="${order.id}">송장 보기</button>` : "";
   const late = role === "supplier" && !order.tracking && ["신규주문", "발주완료", "배송준비중"].includes(order.status) && orderAgeDays(order) >= SHIP_DELAY_DAYS ? `<em class="ship-late">출고 지연 ${orderAgeDays(order)}일</em>` : "";
-  return `${late}${role === "supplier" ? `${order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong>${order.provisionalTracking ? `<small>가송장</small>` : ""}</span>` : ""}${supplierActions}` : order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong></span>${orderNeedsTrackingPush(order) ? `${orderAutoTrackingHint(order)}<button class="small-button approve push-tracking-button" data-action="push-tracking" data-id="${order.id}">${orderWaitsAutoTracking(order) ? "지금 전송" : "쇼핑몰 전송"}</button>` : trackingSentMarkup(order)}` : `<span class="waiting-text ${order.status === "주문확인필요" ? "waiting-alert" : ""}">${order.status === "발주완료" ? "공급사 주문 확인 대기" : order.status === "배송준비중" ? "공급사 포장·출고 준비 중" : order.status === "주문확인필요" ? "채널 주문 상태 확인 필요" : "공급사 처리 대기"}</span>`}<button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${role === "seller" && !hasRefund ? `<button class="text-button refund-link" data-action="request-refund" data-id="${order.id}">취소·환불</button>` : ""}`;
+  return `${late}${role === "supplier" ? `${order.tracking ? `<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong>${order.provisionalTracking ? `<small>가송장</small>` : ""}</span>` : ""}${supplierActions}` : order.tracking ? `${trackingSourceChip(order)}<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong></span>${orderNeedsTrackingPush(order) ? `${orderAutoTrackingHint(order)}<button class="small-button approve push-tracking-button" data-action="push-tracking" data-id="${order.id}">${orderWaitsAutoTracking(order) ? "지금 전송" : "쇼핑몰 전송"}</button>` : trackingSentMarkup(order)}` : `<span class="waiting-text ${order.status === "주문확인필요" ? "waiting-alert" : ""}">${order.status === "발주완료" ? "공급사 주문 확인 대기" : order.status === "배송준비중" ? "공급사 포장·출고 준비 중" : order.status === "주문확인필요" ? "채널 주문 상태 확인 필요" : "공급사 처리 대기"}</span>`}<button class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button>${role === "seller" && !hasRefund ? `<button class="text-button refund-link" data-action="request-refund" data-id="${order.id}">취소·환불</button>` : ""}`;
 }
 
 /* 셀러 주문 목록 상태 칸: 직접 배송은 보라색 ‘직접배송’ 칩 + 지금 단계, 나머지는 단계별 색 칩 */
@@ -6697,6 +6718,8 @@ function orderStatusChipFor(order, role) {
   if (role === "seller" && orderMappingStatus(order) === "self") {
     const step = selfOrderStep(order);
     const sub = { new: "송장 입력 전", confirmed: "송장 입력 전", ready: "송장 전송 대기", failed: "송장 전송 실패", sent: "배송중", done: "배송완료" }[step] || "";
+    /* 송장을 넣은 뒤에는 공급사 주문과 똑같이 ‘배송중/배송완료’로 보이고, 아래에 직접 입력 송장이라고 표시 */
+    if (order.tracking) return `${statusChip(order.status)}<small class="status-sub ${["ready", "failed"].includes(step) ? "push" : ""}">${["ready", "failed"].includes(step) ? sub : "직접 입력 송장"}</small>`;
     return `<span class="chip purple">직접배송</span>${sub ? `<small class="status-sub">${sub}</small>` : ""}`;
   }
   if (role === "seller" && orderNeedsTrackingPush(order)) return `${statusChip(order.status)}<small class="status-sub push">송장 전송 대기</small>`;
@@ -6803,6 +6826,7 @@ function setRole(role) {
   activeRole = role; activeMenuIndex = 0; chatMobileView = "list"; closeModal(); closeMobileSidebar(); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function showToast(message) {
+  showToast.lastAt = Date.now();
   const toast = document.getElementById("toast");
   toast.textContent = message; toast.classList.add("show"); toast.classList.remove("has-action");
   clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.classList.remove("show", "has-action"), 2500);
@@ -7395,6 +7419,8 @@ function mappingMarginText(sale, supply) {
   return `<em class="mp-margin ${margin >= 0 ? "plus" : "minus"}">개당 마진 ${margin >= 0 ? "+" : "−"}${money(Math.abs(margin))} (${Math.round(margin / sale * 100)}%)</em>`;
 }
 /* 결제 전이라 다른 상품으로 바꿔도 되는 주문 (두고에서 전송한 상품의 자동 연결 주문은 제외) */
+/* 직접 배송으로 옮겼지만 아직 송장을 안 넣은 주문: 두고 상품으로 연결하면 바로 결제 대기로 돌릴 수 있다 */
+function selfOrderMappable(order) { return orderMappingStatus(order) === "self" && !order.tracking && order.status !== "배송완료"; }
 function mappingRemappableOrder(order) { return orderMappingStatus(order) === "mapped" && orderPaymentStatus(order) === "pending" && order.mappingType !== "auto"; }
 function mappingValueOf(productId, optionId) { return optionId ? `${productId}::${optionId}` : productId; }
 /* ===== 아이템 위너 =====
@@ -7742,7 +7768,8 @@ function mappingPickModal({ code = "", orderId = "", mappingId = "" } = {}) {
   if (!order && !mapping && code && autoLinkedSellerProduct(code)) return showToast("두고에서 전송한 상품이라 이미 자동으로 연결되어 있어요.");
   if (!mappableDoogoProducts().length) return showToast("먼저 거래처 연결에서 공급사 코드를 등록해 주세요.");
   const orders = code ? mappingCodeOrders(code) : [order];
-  const waiting = orders.filter(item => orderMappingStatus(item) === "unmapped");
+  const selfWaiting = orders.filter(selfOrderMappable);
+  const waiting = [...orders.filter(item => orderMappingStatus(item) === "unmapped"), ...selfWaiting];
   const unpaid = orders.filter(mappingRemappableOrder);
   const sample = order || orders[0] || {};
   const name = mapping?.externalProductName || sample.externalProductName || orderSellerTitle(sample) || "쇼핑몰 상품";
@@ -7761,8 +7788,9 @@ function mappingPickModal({ code = "", orderId = "", mappingId = "" } = {}) {
       <div class="mp-profit full" data-mp-profit data-sale="${sale || 0}" data-qty="${totalQty}" data-orders="${affect}"></div>
       ${code ? `<label class="mp-follow full"><input type="checkbox" name="followWinner" ${mapping?.followWinner ? "checked" : ""}><span><b>🏆 아이템 위너 자동 따라가기</b><small>같은 품목·중량을 더 싸게 주는 공급사가 생기거나 지금 공급사가 품절·판매중단되면, 다음 주문부터 가장 싼 공급사로 자동 연결해요.</small></span></label>` : ""}
       <div class="mp-faq full" data-mp-faq>${currentValue ? productFaqMarkup(productOf(String(currentValue).split("::")[0]), { limit: 4 }) : `<p class="mp-faq-hint">상품을 고르면 그 공급사에 자주 묻는 질문(재고·출고·배송)이 여기 보여요.</p>`}</div>
+      ${selfWaiting.length && !change ? `<div class="mp-self-note full"><b>📦 직접 배송 주문${selfWaiting.length > 1 ? ` ${selfWaiting.length}건` : ""}을 두고 공급사가 대신 보내요</b><span>매핑하면 이 주문이 바로 <b>결제 창</b>으로 이어져요. 결제하면 공급사가 포장·발송하고 송장도 자동으로 들어와요. 같은 상품의 다음 주문도 두고로 자동 연결돼요.</span></div>` : ""}
       <div class="mapping-flow-note full"><b>${change ? "바꾸면 이렇게 돼요" : "매핑하면 이렇게 돼요"}</b><span>${change ? `아직 결제하지 않은 주문${affect ? ` ${affect}건` : ""}은 새 상품으로 바뀌고, 이미 결제한 주문은 원래 공급사가 그대로 출고해요. 다음 주문부터는 새 상품으로 자동 연결돼요.` : `① 이 주문${affect > 1 ? ` ${affect}건` : ""}이 ‘결제 대기’로 넘어가요 → ② 결제하면 공급사에 바로 주문이 들어가고 매핑이 확정돼요 → ③ 같은 쇼핑몰 상품의 다음 주문은 자동으로 이 상품에 연결돼요.`}</span></div>
-      <div class="modal-actions full">${!change && waiting.length ? `<button type="button" class="text-button self-ship-button" data-action="mark-self-fulfill" data-code="${escapeHtml(code)}" data-order="${escapeHtml(waiting[0].id)}">직접 배송할게요</button>` : ""}<button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">${change ? "이 상품으로 바꾸기" : "이 상품으로 매핑하기"}</button></div>
+      <div class="modal-actions full">${!change && waiting.length > selfWaiting.length ? `<button type="button" class="text-button self-ship-button" data-action="mark-self-fulfill" data-code="${escapeHtml(code)}" data-order="${escapeHtml(waiting.find(item => !selfWaiting.includes(item)).id)}">직접 배송할게요</button>` : ""}<button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">${change ? "이 상품으로 바꾸기" : selfWaiting.length ? "매핑하고 바로 결제하기" : "이 상품으로 매핑하기"}</button></div>
     </form>`);
   document.querySelector("#modal .modal")?.classList.add("mapping-pick-modal");
   updateMappingPrevCompare(document.querySelector("#mappingPickForm .mapping-picker-field"));
@@ -7834,7 +7862,7 @@ function saveProductMapping({ code = "", orderId = "", product, option = null, f
   if (!keepPrevious && previousSupply !== undefined) mapping.previousSupply = Number(previousSupply) > 0 ? Math.round(Number(previousSupply)) : (mapping.previousSupply || 0);
   const settings = sellerAutomationSettings();
   settings.selfCodes = (settings.selfCodes || []).filter(item => item !== code);
-  mappingCodeOrders(code).forEach(order => { if (orderMappingStatus(order) === "unmapped" || mappingRemappableOrder(order)) prepare(order); });
+  mappingCodeOrders(code).forEach(order => { if (orderMappingStatus(order) === "unmapped" || mappingRemappableOrder(order) || selfOrderMappable(order)) prepare(order); });
   return { ok: true, changed, change, mapping };
 }
 /* 결제되면 그 쇼핑몰 상품의 매핑을 ‘확정’한다 */
@@ -7888,7 +7916,7 @@ function orderPaymentModal(orderId) {
 function sellerNoticesTemplate() {
   const list = state.notices || [];
   return `${noticeReturn ? `<button type="button" class="back-to-talk" data-action="notice-back"><span aria-hidden="true">‹</span> 두고톡으로 돌아가기</button>` : ""}${sectionHero("공지사항", "두고 운영에 꼭 필요한 업데이트와 안내예요. 누르면 크게 열려요.")}<div class="panel notice-board">${list.length ? list.map((n, index) => `<article class="notice-item ${youtubeVideoId(n.videoUrl) ? "has-video" : ""}">
-      <button type="button" class="notice-row" data-action="open-notice-detail" data-id="${n.id}"><span class="notice-row-title">${index === 0 ? `<em class="notice-new">NEW</em>` : ""}${youtubeVideoId(n.videoUrl) ? `<em class="notice-video-badge">▶ 영상</em>` : ""}<b>${escapeHtml(n.title)}</b></span><span>${escapeHtml(n.date)}<i class="notice-row-chevron">›</i></span></button>
+      <button type="button" class="notice-row" data-action="open-notice-detail" data-id="${n.id}">${youtubeVideoId(n.videoUrl) ? `<span class="notice-row-title stacked"><span class="notice-row-badges">${index === 0 ? `<em class="notice-new">NEW</em>` : ""}<em class="notice-video-badge">▶ 영상</em></span><b>${escapeHtml(n.title)}</b></span>` : `<span class="notice-row-title">${index === 0 ? `<em class="notice-new">NEW</em>` : ""}<b>${escapeHtml(n.title)}</b></span>`}<span>${escapeHtml(n.date)}<i class="notice-row-chevron">›</i></span></button>
     </article>`).join("") : `<div class="empty">등록된 공지사항이 없습니다.</div>`}</div>`;
 }
 function returnFromNotice() {
@@ -8081,7 +8109,7 @@ function orderDetailModal(orderId) {
     })() : ""}
     <section class="order-detail-section"><h3>상품 매핑·결제·발주</h3><div class="mapping-detail-grid"><div><span>외부몰 상품명</span><b>${escapeHtml(order.externalProductName || orderSellerTitle(order))}</b></div><div><span>공급사 원본코드</span><b>${mapped ? escapeHtml(order.mappedProductId || order.productId) : "매핑 전"}</b></div><div><span>공급가 결제</span><b>${paid ? `결제 완료 · ${escapeHtml(order.paymentMethod === "deposit" ? "예치금" : order.paymentMethod === "card" ? "신용카드" : "기존 주문")}` : "결제 대기"}</b></div><div><span>공급사 발주</span><b>${order.supplierLoginId ? `${escapeHtml(order.supplierOrderId || "발주번호 생성")} · ${escapeHtml(order.forwardedAt || "전달 완료")}` : paid ? "위탁셀러 발주 대기" : "결제 후 발주 가능"}</b></div></div></section>
     <details class="order-detail-section order-recipient-details"><summary><h3>수취인·배송 정보</h3><i>⌄</i></summary><div class="member-detail-grid"><div><span>성함</span><b>${escapeHtml(order.recipientName || order.customer)}</b></div><div><span>연락처</span><b>${escapeHtml(order.phone || "-")}</b></div><div class="full"><span>주소</span><b>(${escapeHtml(order.postalCode || "-")}) ${escapeHtml(order.address || "-")} ${escapeHtml(order.addressDetail || "")}</b></div><div class="full"><span>배송 메시지</span><b>${escapeHtml(order.deliveryMessage || "없음")}</b></div>${order.shippingType === "overseas" ? `<div class="full customs-field ${isValidCustomsCode(order.personalCustomsCode) ? "" : "missing"}"><span>개인통관고유부호</span><b>${escapeHtml(order.personalCustomsCode || "미입력 · 결제할 때 입력해 주세요")}</b></div>` : ""}</div></details>
-    <section class="order-detail-section"><h3>송장·판매채널 전송</h3>${activeRole === "seller" && order.tracking ? trackingSentMarkup(order, { detail: true }) : ""}<div class="tracking-summary"><span>${order.tracking ? "송장 반영 완료" : order.status === "배송준비중" ? "공급사 송장 입력 대기" : order.supplierLoginId ? "공급사 주문 확인 대기" : "공급사 발주 전"}</span><b>${order.tracking ? `${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)}` : "아직 송장번호가 없습니다."}</b></div>${trackingStatuses.length ? `<div class="tracking-channel-statuses">${trackingStatuses.map(([channelId,status]) => `<div>${channelMark(channelId,true)}<span>${escapeHtml(channelMeta(channelId).name)}</span><b class="${isTrackingPending(status) ? "pending" : ""}">${escapeHtml(trackingStatusLabel(status))}${status === "10분 자동전송 대기" ? ` · ${escapeHtml(trackingSlotLabel(order.trackingAutoDueAt))}` : ""}</b></div>`).join("")}</div>${activeRole === "seller" && orderNeedsTrackingPush(order) ? `<button type="button" class="primary-button tracking-push-cta" data-action="push-tracking" data-id="${order.id}">${orderWaitsAutoTracking(order) ? `기다리지 않고 지금 보내기` : "쇼핑몰에 송장 보내기"}</button>` : ""}` : `<div class="channel-sync-empty">송장이 입력되면 주문이 들어온 쇼핑몰로 보낼 준비가 됩니다.</div>`}</section>
+    <section class="order-detail-section"><h3>송장·판매채널 전송 ${activeRole === "seller" ? trackingSourceChip(order) : ""}</h3>${activeRole === "seller" && order.tracking ? trackingSentMarkup(order, { detail: true }) : ""}<div class="tracking-summary"><span>${order.tracking ? "송장 반영 완료" : order.status === "배송준비중" ? "공급사 송장 입력 대기" : order.supplierLoginId ? "공급사 주문 확인 대기" : "공급사 발주 전"}</span><b>${order.tracking ? `${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)}` : "아직 송장번호가 없습니다."}</b></div>${trackingStatuses.length ? `<div class="tracking-channel-statuses">${trackingStatuses.map(([channelId,status]) => `<div>${channelMark(channelId,true)}<span>${escapeHtml(channelMeta(channelId).name)}</span><b class="${isTrackingPending(status) ? "pending" : ""}">${escapeHtml(trackingStatusLabel(status))}${status === "10분 자동전송 대기" ? ` · ${escapeHtml(trackingSlotLabel(order.trackingAutoDueAt))}` : ""}</b></div>`).join("")}</div>${activeRole === "seller" && orderNeedsTrackingPush(order) ? `<button type="button" class="primary-button tracking-push-cta" data-action="push-tracking" data-id="${order.id}">${orderWaitsAutoTracking(order) ? `기다리지 않고 지금 보내기` : "쇼핑몰에 송장 보내기"}</button>` : ""}` : `<div class="channel-sync-empty">송장이 입력되면 주문이 들어온 쇼핑몰로 보낼 준비가 됩니다.</div>`}</section>
     <div class="modal-actions"><button class="secondary-button" data-close-modal>닫기</button>${activeRole === "seller" ? sellerPrimary : activeRole === "supplier" ? supplierPrimary : ""}${activeRole === "seller" && !refund && !["배송완료", "환불완료"].includes(order.status) ? `<button class="refund-button" data-action="request-refund" data-id="${order.id}">취소·환불 요청</button>` : ""}</div>`);
   document.querySelector("#modal .modal").classList.add("order-detail-modal");
 }
@@ -9652,11 +9680,11 @@ document.addEventListener("click", event => {
   if (t.closest("[data-rde-reset]")) { const reset = rdeOptions[key]?.resetDoc?.(); if (reset !== undefined) { rdeDrafts[key] = reset; rdeRender(key); rdeOptions[key]?.onReset?.(); showToast("공급사 원본 상세페이지로 되돌렸어요."); } return; }
 });
 /* 되돌리기 버튼이 있는 알림 */
-function showToastAction(message, label, onClick) {
+function showToastAction(message, label, onClick, doneMessage = "되돌렸어요.") {
   showToast(message);
   const toast = document.getElementById("toast"); if (!toast) return;
   const button = document.createElement("button"); button.type = "button"; button.className = "toast-action"; button.textContent = label;
-  button.addEventListener("click", () => { onClick(); button.remove(); showToast("되돌렸어요."); }, { once: true });
+  button.addEventListener("click", () => { onClick(); button.remove(); if (doneMessage) showToast(doneMessage); else toast.classList.remove("show", "has-action"); }, { once: true });
   toast.appendChild(button); toast.classList.add("has-action");
   clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.classList.remove("show", "has-action"), 5000);
 }
@@ -12319,12 +12347,23 @@ document.addEventListener("submit", event => {
     const product = productOf(pickedProductId);
     const option = pickedOptionId ? productOptionOf(product, pickedOptionId) : null;
     if (!product || (pickedOptionId && !option)) return showToast("매핑할 두고 상품을 골라 주세요.");
+    const selfBefore = new Set(currentSellerOrders().filter(selfOrderMappable).map(order => order.id));
     const result = saveProductMapping({ code: form.dataset.code || "", orderId: form.dataset.order || "", product, option, followWinner: form.querySelector('[name="followWinner"]') ? form.querySelector('[name="followWinner"]').checked : undefined, previousSupply: data.previousSupply });
     if (!result.ok) return showToast(result.message);
     const label = `${product.name}${option ? ` · ${option.name}` : ""}`;
     const name = result.mapping?.externalProductName || result.changed[0]?.externalProductName || "쇼핑몰 상품";
     audit(result.change ? "상품 매핑 변경" : "상품 매핑", `${form.dataset.code || form.dataset.order} · ${name} → ${product.id} ${label} (${product.supplier})${result.changed.length ? ` · 결제 전 주문 ${result.changed.length}건 ${result.change ? "함께 변경" : "결제 대기로"}` : ""}`, "done", "product");
     saveState(); closeModal();
+    /* 직접 배송 주문을 두고 상품으로 연결했으면: 그 주문은 바로 결제 창으로 → 결제하면 원래 두고 위탁(드랍쉬핑) 흐름 그대로 */
+    const fromSelf = result.changed.filter(order => selfBefore.has(order.id));
+    if (fromSelf.length) {
+      audit("직접 배송 → 두고 공급사로 전환", `${fromSelf.map(order => order.id).join(", ")} · ${label} (${product.supplier}) · 결제 대기로`, "done", "order");
+      saveState();
+      openPaymentStage(result.changed.map(order => order.id));
+      const payable = fromSelf.filter(order => orderPaymentCheck(order).ok).map(order => order.id);
+      if (payable.length) { paymentConfirmModal(payable); return showToast(`두고 상품으로 연결했어요. 결제하면 ${product.supplier}에서 바로 보내요.`); }
+      return showToast(`두고 상품으로 연결했어요. 결제 대기에서 확인할 것을 채운 뒤 결제해 주세요.`);
+    }
     if (!result.change && result.changed.length) { openPaymentStage(result.changed.map(order => order.id)); return showToast(`매핑 완료! 주문 ${result.changed.length}건이 결제 대기로 넘어갔어요. 결제하면 ${product.supplier}에 바로 전달돼요.`); }
     if (activeMenuIndex === 15) mappingTab = "done";
     render(); updateAccountUI();
@@ -12545,8 +12584,7 @@ document.addEventListener("submit", event => {
     saveSelfTracking(order, carrier, tracking || "직접배송");
     const sent = canSend ? pushOrderTracking(order, "manual") : [];
     audit("직접 배송 송장 입력", `${order.id} · ${carrier} ${tracking}${sent.length ? ` → ${sent.join(", ")}` : ""}`, "done", "tracking");
-    saveState(); render(); updateAccountUI();
-    return showToast(sent.length ? `송장을 저장하고 ${withRo(sent.join(", "))} ${CHANNEL_SERVER ? "보내는 중이에요" : "보냈어요"}.` : "송장을 저장했어요.");
+    return afterSelfTrackingSaved([order], sent);
   }
   if (form.id === "selfTrackingForm") {
     const order = currentSelfOrders().find(item => item.id === form.dataset.id);
@@ -12559,8 +12597,7 @@ document.addEventListener("submit", event => {
     saveSelfTracking(order, carrier, tracking || "직접배송");
     const sent = data.sendNow ? pushOrderTracking(order, "manual") : [];
     audit("직접 배송 송장 입력", `${order.id} · ${carrier} ${tracking}${sent.length ? ` → ${sent.join(", ")}` : ""}`, "done", "tracking");
-    saveState(); closeModal(); render(); updateAccountUI();
-    return showToast(sent.length ? `송장을 저장하고 ${withRo(sent.join(", "))} ${CHANNEL_SERVER ? "보내는 중이에요" : "보냈어요"}.` : "송장을 저장했어요. ‘송장 전송’을 누르면 쇼핑몰로 보내요.");
+    return afterSelfTrackingSaved([order], sent);
   }
   if (form.id === "selfBulkTrackingForm") {
     const carrier = resolveCarrierName(data.carrier) || String(data.carrier || "").trim();
@@ -12579,8 +12616,7 @@ document.addEventListener("submit", event => {
     const names = new Set();
     entries.forEach(([order, tracking]) => { saveSelfTracking(order, carrier, tracking); if (data.sendNow) pushOrderTracking(order, "manual").forEach(name => names.add(name)); });
     audit("직접 배송 송장 일괄 입력", `${entries.length}건 · ${carrier}${names.size ? ` → ${[...names].join(", ")}` : ""}`, "done", "tracking");
-    saveState(); closeModal(); selfStepFilter = names.size ? "sent" : "ready"; render(); updateAccountUI();
-    return showToast(`송장 ${entries.length}건을 저장했어요.${names.size ? ` ${withRo([...names].join(", "))} ${CHANNEL_SERVER ? "보내는 중이에요" : "보냈어요"}.` : ""}`);
+    return afterSelfTrackingSaved(entries.map(([order]) => order), [...names]);
   }
   if (form.id === "trackingForm") {
     const order = state.orders.find(o => o.id === form.dataset.id);

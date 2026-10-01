@@ -11667,3 +11667,29 @@ details.channel-rule-box .channel-rule-grid { padding: 0 14px 14px; }
 .workspace-menu button.menu-self .menu-text { color: #6d28d9; }
 .address-online-row .ar-line { display: block; }
 .address-online-row .ar-line em { display: inline-block; vertical-align: 1px; }
+
+/* ===== v87 ===== */
+/* 공지 목록: 영상 공지는 첫 줄에 ‘▶ 영상’ 배지, 다음 줄에 제목 */
+.notice-list button .nl-title { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; flex: 1 1 auto; }
+.notice-list button .nl-title .nl-text { flex: none; max-width: 100%; color: inherit; font-size: inherit; font-weight: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notice-list button .nl-title .notice-video-badge { line-height: 1.3; }
+.notice-list button > span { align-self: center; }
+.notice-row-title.stacked { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.notice-row-title.stacked > .notice-row-badges { display: inline-flex; gap: 6px; overflow: visible; }
+.notice-row-title.stacked > b { width: 100%; }
+@media (max-width: 720px) { .notice-list button .nl-title .nl-text { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } }
+
+/* 송장 출처: 공급사 송장 vs 직접 입력 송장 */
+.track-src, .self-tracking-line .track-src { display: inline-flex; align-items: center; gap: 3px; margin-right: 6px; padding: 2px 8px; border-radius: 999px; font-style: normal; font-size: 11.5px; font-weight: 800; line-height: 1.5; white-space: nowrap; vertical-align: middle; }
+.track-src.self, .self-tracking-line .track-src.self { color: #8a4b00; background: #fff1dc; border: 1px solid #ffd59a; }
+.track-src.supplier, .self-tracking-line .track-src.supplier { color: #1b5fc1; background: #eaf2ff; border: 1px solid #c4dafc; }
+.order-detail-section h3 .track-src { margin-left: 6px; font-size: 12px; }
+
+/* 송장 저장 직후 옮겨 간 칸(배송중) 반짝임 */
+.self-steps button.just-moved { animation: self-just-moved 1.1s ease-in-out 3; border-color: #2fb36b; }
+@keyframes self-just-moved { 0%, 100% { box-shadow: 0 0 0 0 rgba(47,179,107,0); background: #fff; } 50% { box-shadow: 0 0 0 5px rgba(47,179,107,.22); background: #ecfbf2; } }
+@media (prefers-reduced-motion: reduce) { .self-steps button.just-moved { animation: none; background: #ecfbf2; } }
+
+/* 직접 배송 주문을 두고 상품으로 연결할 때 안내 */
+.mp-self-note { padding: 13px 16px; display: grid; gap: 4px; color: #6b3d00; background: #fff6e8; border: 1px solid #ffdcaa; border-radius: 12px; font-size: 14.5px; line-height: 1.55; }
+.mp-self-note > b { font-size: 15px; color: #5a3200; }
