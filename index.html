@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Geist:wght@100..900&family=Geist+Mono:wght@400..700&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=85" />
+  <link rel="stylesheet" href="styles.css?v=86" />
 </head>
 <body>
   <section id="loginView" class="login-screen seller-login-screen">
@@ -283,18 +283,24 @@
       <p id="addressPopupStatus" class="address-popup-status">주소 검색 서비스를 여는 중이에요…</p>
       <div id="addressPopupEmbed" class="address-embed" hidden></div>
       <div id="addressPopupFallback" class="address-fallback" hidden>
-        <label class="address-popup-search"><span>⌕</span><input id="addressPopupInput" placeholder="도로명·지번·건물명 (예: 강남대로 146길 28)" autocomplete="off"></label>
+        <label class="address-popup-search"><span>⌕</span><input id="addressPopupInput" type="search" enterkeyhint="search" placeholder="도로명·지번·건물명 (예: 강남대로146길 28)" autocomplete="off"></label>
+        <p class="address-hint">예) 도로명 + 건물번호 <b>강남대로146길 28</b> · 지번 <b>논현동 202-3</b> · 건물명 <b>두고빌딩</b></p>
         <div id="addressPopupResults" class="address-popup-results"></div>
-        <div class="address-manual">
-          <b>주소 직접 입력</b>
+        <details id="addressManualBox" class="address-manual">
+          <summary>찾는 주소가 없으면 직접 입력</summary>
           <div class="address-manual-row"><label><span>우편번호</span><input id="addressManualZip" inputmode="numeric" maxlength="5" placeholder="5자리"></label><label class="grow"><span>도로명 또는 지번 주소</span><input id="addressManualAddr" placeholder="예: 서울특별시 강남구 강남대로146길 28"></label></div>
           <div class="address-manual-actions"><a id="addressJusoLink" href="https://www.juso.go.kr/support/AddressMainSearch.do" target="_blank" rel="noopener">우편번호 모르면: 도로명주소 누리집에서 찾기 ↗</a><button type="button" class="primary-button" data-action="address-manual-apply">이 주소로 입력</button></div>
-        </div>
+        </details>
+      </div>
+      <div id="addressDetailStep" class="address-detail-step" hidden>
+        <div class="ads-picked"><em id="adsZip"></em><b id="adsRoad"></b><small id="adsJibun"></small></div>
+        <label class="ads-detail"><span>상세주소</span><input id="addressDetailInput" placeholder="동·호수, 층 등 (예: 101동 1203호)" autocomplete="off" enterkeyhint="done"></label>
+        <div class="ads-actions"><button type="button" class="secondary-button" data-action="address-back">다시 검색</button><button type="button" class="primary-button" data-action="address-detail-apply">이 주소로 입력</button></div>
       </div>
     </div>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=85"></script>
+  <script src="app.js?v=86"></script>
 </body>
 </html>

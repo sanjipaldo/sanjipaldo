@@ -15,6 +15,7 @@
    POST   /api/billing/refund                       { paymentKey, cancelAmount, cancelReason, refundId }  구독 해지 카드 부분 취소 (토스페이먼츠)
    POST   /api/reports/daily                        { title, text, kakao:[번호], email:[주소] }          일일 매출 보고 (알림톡·이메일)
    GET    /api/channels/cafe24/oauth/callback?code&state                              CAFE24 앱 설치(권한 동의) 뒤 돌아오는 곳 (토큰 받아 암호화 보관)
+   GET    /api/address/search?keyword&page                                       도로명주소 검색 (행안부 검색 API, 승인키는 서버에만)
    GET    /api/health */
 const http = require("node:http");
 const crypto = require("node:crypto");
@@ -23,6 +24,7 @@ const { createCredentialStore } = require("./store");
 const listings = require("./listings");
 const orders = require("./orders");
 const ops = require("./ops");
+const address = require("./address");
 
 const CHANNELS = ["coupang", "smartstore", "cafe24"];
 const REQUIRED = { coupang: ["vendorId", "accessKey", "secretKey", "vendorUserId"], smartstore: ["accountId"], cafe24: ["mallId"] };
@@ -72,7 +74,7 @@ function createApp({ store = createCredentialStore(), token = process.env.DOOGO_
     const url = new URL(req.url, "http://localhost");
     const parts = url.pathname.split("/").filter(Boolean);
     try {
-      if (url.pathname === "/api/health") return send(res, 200, { ok: true, channels: CHANNELS, naverApp: Boolean(process.env.NAVER_CLIENT_ID), pg: Boolean(process.env.TOSS_SECRET_KEY), kakaoReport: Boolean(process.env.SOLAPI_PFID), emailReport: Boolean(process.env.RESEND_API_KEY) }, origin);
+      if (url.pathname === "/api/health") return send(res, 200, { ok: true, channels: CHANNELS, naverApp: Boolean(process.env.NAVER_CLIENT_ID), pg: Boolean(process.env.TOSS_SECRET_KEY), address: Boolean(process.env.JUSO_CONFM_KEY), kakaoReport: Boolean(process.env.SOLAPI_PFID), emailReport: Boolean(process.env.RESEND_API_KEY) }, origin);
       if (req.method === "GET" && url.pathname === "/api/channels/cafe24/oauth/callback") {
         const state = readState(url.searchParams.get("state"), token);
         if (!state) return sendHtml(res, 400, "연결 요청이 만료됐거나 올바르지 않아요. 두고에서 다시 연결해 주세요.");
@@ -82,6 +84,7 @@ function createApp({ store = createCredentialStore(), token = process.env.DOOGO_
         return sendHtml(res, 200, `CAFE24(${state.mallId}) 연결 완료!`);
       }
       if (req.headers.authorization !== `Bearer ${token}`) return send(res, 401, { error: "인증이 필요해요." }, origin);
+      if (req.method === "GET" && url.pathname === "/api/address/search") return send(res, 200, await address.searchAddress({ keyword: url.searchParams.get("keyword"), page: url.searchParams.get("page") }, opsOptions.address || {}), origin);
       const body = req.method === "GET" ? {} : await readJson(req);
       if (req.method === "POST" && url.pathname === "/api/billing/refund") return send(res, 200, await ops.refundPayment(body, opsOptions), origin);
       if (req.method === "POST" && url.pathname === "/api/reports/daily") return send(res, 200, await ops.sendDailyReport({ title: body.title, text: body.text, kakao: Array.isArray(body.kakao) ? body.kakao : [], email: Array.isArray(body.email) ? body.email : [] }, opsOptions), origin);
@@ -142,7 +145,7 @@ function createApp({ store = createCredentialStore(), token = process.env.DOOGO_
       return send(res, 404, { error: "경로를 찾지 못했어요." }, origin);
     } catch (error) {
       const upstream = ["CoupangError", "NaverError", "Cafe24Error"].includes(error.name);
-      const status = upstream ? 502 : error instanceof SyntaxError ? 400 : error.status >= 400 && error.status < 500 ? error.status : 500;
+      const status = upstream ? 502 : error instanceof SyntaxError ? 400 : error.status >= 400 && error.status < 600 ? error.status : 500;
       return send(res, status, { error: error.message, upstreamStatus: upstream ? error.status : undefined, detail: upstream ? error.body : undefined }, origin);
     }
   });

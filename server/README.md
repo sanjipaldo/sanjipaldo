@@ -111,6 +111,7 @@ npm test
 
 | 경로 | 하는 일 | 필요한 환경변수 |
 |---|---|---|
+| `GET /api/address/search?keyword=강남대로146길 28` | 배송지 **주소 검색** (행정안전부 도로명주소 검색 API). 도로명·지번·건물명으로 찾아 우편번호·도로명·지번을 돌려줘요. 승인키는 서버에만 두고 브라우저에는 보내지 않아요. 앱에서는 카카오 우편번호 서비스를 못 쓰는 환경일 때 이 경로로 검색해요. | `JUSO_CONFM_KEY` (business.juso.go.kr 에서 무료 발급) |
 | `POST /api/billing/refund` `{ paymentKey, cancelAmount, cancelReason, refundId }` | 위탁셀러가 요금제를 해지하면 남은 기간만큼 **카드 부분 취소** (토스페이먼츠 `POST /v1/payments/{paymentKey}/cancel`, `refundId`를 멱등 키로 사용) | `TOSS_SECRET_KEY` |
 | `POST /api/reports/daily` `{ title, text, kakao:[번호], email:[주소] }` | 마스터 일일 매출 보고를 **카카오 알림톡 + 이메일**로 발송. 채널마다 성공/실패를 따로 돌려줌 | 알림톡: `SOLAPI_API_KEY`, `SOLAPI_API_SECRET`, `SOLAPI_PFID`(카카오 채널 발신 프로필), `SOLAPI_SENDER`(발신번호), `SOLAPI_TEMPLATE_ID`(승인된 템플릿) · 이메일: `RESEND_API_KEY`, `REPORT_FROM_EMAIL` |
 

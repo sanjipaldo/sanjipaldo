@@ -9,7 +9,7 @@ const accounts = {
 const roleMenus = {
   master: ["대시보드", "회원 관리", "공급사 관리", "위탁셀러 관리", "거래처 연결", "상품 관리", "주문 관리", "취소 · 환불", "운영 로그", "공지사항 관리", "정산 관리", "매출 · 통계", "구독 · 결제", "두고톡 상담", "매출 보고", "아이템 위너 · 매핑", "예치금 관리"],
   supplier: ["대시보드", "상품 관리", "거래처 연결", "주문 · 출고 관리", "취소 · 환불", "굿스플로 · 택배", "가격 관리", "정산 내역", "내 정보", "PICK 요청", "판매 현황", "매출 달력", "공지사항", "배송 정책", "매핑 · 위너 현황", "상품 FAQ"],
-  seller: ["홈", "상품 소싱", "승인 대기", "공급사 문의", "주문 관리", "취소·반품", "매출 달력", "가격 변경 알림", "쇼핑몰 연동", "요금제", "내 정보", "판매중 상품", "예치금", "공지사항", "마스터 상품", "상품 매핑", "브랜드 소싱", "승인 완료", "장바구니", "샘플 주문 내역", "배송 정책"]
+  seller: ["홈", "상품 소싱", "승인 대기", "공급사 문의", "주문 관리", "취소·반품", "매출 달력", "가격 변경 알림", "쇼핑몰 연동", "요금제", "내 정보", "판매중 상품", "예치금", "공지사항", "마스터 상품", "상품 매핑", "브랜드 소싱", "승인 완료", "장바구니", "샘플 주문 내역", "배송 정책", "처리 기록"]
 };
 const roleMenuGroups = {
   master: [
@@ -30,21 +30,24 @@ const roleMenuGroups = {
   seller: [
     { label: "홈", indexes: [0] },
     { label: "상품 찾기", indexes: [1, 16] },
-    { label: "내 상품 (순서대로)", indexes: [2, 17, 14, 11, 15, 7] },
-    { label: "주문 · 배송", indexes: [4, 5, 3] },
+    { label: "내 상품 (순서대로)", indexes: [2, 17, 14, 11, 7] },
+    /* 주문도 내 상품처럼 하는 순서대로 ①~⑤ — 숫자 메뉴는 주문 관리의 해당 단계로 바로 열린다 */
+    { label: "주문 · 배송 (순서대로)", indexes: [{ stage: "all", label: "주문 수집", step: 1, icon: "order" }, 15, { stage: "payment", label: "결제하기", step: 3, icon: "card" }, { stage: "supplier", label: "공급사 출고", step: 4, icon: "supplier" }, { stage: "delivery", label: "송장 전송 · 배송", step: 5, icon: "truck" }, { stage: "self", label: "직접 배송", icon: "product" }, 5, 3] },
     { label: "샘플 구매", indexes: [18, 19] },
     { label: "돈 관리", indexes: [12, 6, 9] },
+    /* 상품 전송·결제·예치금 충전·반품·환불이 어떻게 처리됐는지 한곳에서 (실패하면 이유와 해결 방법까지) */
+    { label: "처리 기록", indexes: [21] },
     { label: "설정", indexes: [8, 20, 13, 10] }
   ]
 };
 /* 상품 등록 흐름(소싱 → 승인 대기 → 승인 완료 → 마스터 상품 → 판매중)을 사이드바에 번호로 보여준다. */
-const menuSteps = { seller: { 1: 1, 16: 1, 2: 2, 17: 3, 14: 4, 11: 5 }, supplier: { 1: 1, 9: 2, 3: 3, 7: 4 } };
+const menuSteps = { seller: { 1: 1, 16: 1, 2: 2, 17: 3, 14: 4, 11: 5, 15: 2 }, supplier: { 1: 1, 9: 2, 3: 3, 7: 4 } };
 /* 메뉴 이름으로 인덱스를 찾는다 (메뉴 순서가 바뀌어도 이동 버튼이 깨지지 않게) */
 function menuIndexOf(label, role = activeRole) { const index = (roleMenus[role] || []).indexOf(label); return index >= 0 ? index : 0; }
 const menuIcons = {
   master: ["home", "approval", "supplier", "seller", "connection", "product", "order", "refund", "log", "notice", "settlement", "chart", "card", "message", "report", "mapping", "settlement"],
   supplier: ["home", "product", "message", "order", "refund", "printer", "price", "settlement", "settings", "approval", "onsale", "calendar", "notice", "truck", "mapping", "message"],
-  seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice", "approval", "mapping", "brand", "ready", "cart", "box", "truck"]
+  seller: ["home", "market", "product", "message", "order", "refund", "calendar", "bell", "connection", "card", "settings", "onsale", "settlement", "notice", "approval", "mapping", "brand", "ready", "cart", "box", "truck", "log"]
 };
 
 const DEFAULT_DASHBOARD_LAYOUT = ["today", "product-flow", "order-flow", "money", "notices"];
@@ -1349,26 +1352,43 @@ function orderPaymentCheck(order) {
   const stock = option ? Number(option.stock || 0) : Number(product.stock || 0);
   if (stock < Number(order.qty || 1)) return { ok: false, reason: "stock", message: option ? `‘${option.name}’ 옵션 재고가 부족해요 (남은 재고 ${stock}개)` : `공급사 재고가 부족해요 (남은 재고 ${stock}개)`, product };
   if (productNeedsCustoms(product) && !isValidCustomsCode(order.personalCustomsCode)) return { ok: false, reason: "customs", message: "개인통관고유부호가 없어요 · 한 건씩 결제에서 입력해 주세요", product };
-  return { ok: true, product, option, supplyTotal: orderUnitSupply(order, product) * Number(order.qty || 1) };
+  const supplyTotal = orderUnitSupply(order, product) * Number(order.qty || 1);
+  const ship = orderSupplyShipping(order, product, supplyTotal);
+  return { ok: true, product, option, supplyTotal, shipping: ship.fee, shipLabel: ship.label, payTotal: supplyTotal + ship.fee };
+}
+/* 받는 곳 지역: 제주 / 제주 외 도서산간 / 일반 (공급사 배송비 정책의 지역 추가 배송비 계산용) */
+function orderShipRegion(order) {
+  const address = String(order?.address || "");
+  if (/^\s*제주/.test(address)) return "jeju";
+  if (/울릉|백령|연평|대청|흑산|거문|추자|비금|도초|가거|홍도|덕적|자월|영흥/.test(address)) return "island";
+  return "normal";
+}
+/* 공급가 결제 때 함께 내는 배송비: 상품(공급사)의 배송비 정책으로 계산. 착불이면 0원(받는 분이 냄) */
+function orderSupplyShipping(order, product, supplyTotal) {
+  const fee = productShippingFee(product);
+  const result = calcShipping(fee, { qty: Number(order?.qty || 1), amount: supplyTotal, region: orderShipRegion(order), weightKg: productWeightKg(product) });
+  if (result.collect) return { fee: 0, label: "착불 (받는 분이 결제)" };
+  const parts = [result.base ? `기본 ${money(result.base)}` : "무료배송", result.area ? `${orderShipRegion(order) === "jeju" ? "제주" : "도서산간"} +${money(result.area)}` : ""].filter(Boolean);
+  return { fee: result.total, label: parts.join(" · ") };
 }
 function payOrderToSupplier(order, paymentMethod = "deposit", { skipDeposit = false } = {}) {
   const check = orderPaymentCheck(order);
   if (!check.ok) return check;
-  const { product, option, supplyTotal } = check;
+  const { product, option, supplyTotal, shipping, payTotal } = check;
   if (paymentMethod === "deposit" && !skipDeposit) {
     const deposit = sellerDeposit(order.sellerLoginId);
-    if (deposit.balance < supplyTotal) return { ok: false, reason: "deposit", message: "예치금이 부족해요. 예치금을 충전하거나 신용카드 결제를 골라 주세요." };
-    deposit.balance -= supplyTotal;
-    deposit.transactions.unshift({ id: `DP-${Date.now()}-${order.id}`, type: "주문 공급가 결제", amount: -supplyTotal, reference: order.id, createdAt: depositStamp(), at: Date.now() });
+    if (deposit.balance < payTotal) return { ok: false, reason: "deposit", message: "예치금이 부족해요. 예치금을 충전하거나 신용카드 결제를 골라 주세요." };
+    deposit.balance -= payTotal;
+    deposit.transactions.unshift({ id: `DP-${Date.now()}-${order.id}`, type: "주문 공급가 결제", amount: -payTotal, reference: order.id, createdAt: depositStamp(), at: Date.now() });
   }
   if (option) { option.stock = Number(option.stock || 0) - Number(order.qty || 1); syncProductOptionTotals(product); }
   else product.stock -= Number(order.qty || 1);
   if (productNeedsCustoms(product)) order.shippingType = "overseas";
-  Object.assign(order, { supplierLoginId: product.supplierLoginId, assignedSupplier: product.supplier, paymentStatus: "paid", paymentMethod, supplyTotal, forwardedAt: "방금 전", status: "발주완료", supplierOrderId: order.supplierOrderId || `PO-${String(Date.now()).slice(-6)}${Math.floor(Math.random() * 90 + 10)}`, settlementStatus: "scheduled" });
+  Object.assign(order, { supplierLoginId: product.supplierLoginId, assignedSupplier: product.supplier, paymentStatus: "paid", paymentMethod, supplyTotal, supplyShipping: shipping, forwardedAt: "방금 전", status: "발주완료", supplierOrderId: order.supplierOrderId || `PO-${String(Date.now()).slice(-6)}${Math.floor(Math.random() * 90 + 10)}`, settlementStatus: "scheduled" });
   confirmMappingOnPayment(order, product);
   pushNotification(product.supplierLoginId, "supplier", "order", "신규 발주가 도착했습니다", `${order.id} · ${product.id} ${product.name}${order.optionName ? ` [${order.optionName}]` : ""} ${order.qty}개`);
-  audit("공급가 결제·공급사 자동 발주", `${order.id} · ${product.id} · ${money(supplyTotal)} · ${paymentMethod === "deposit" ? "예치금" : "신용카드"} 결제 · ${product.supplier} 공급사에 바로 전달`, "done", "order");
-  return { ok: true, product, supplyTotal };
+  audit("공급가 결제·공급사 자동 발주", `${order.id} · ${product.id} · ${money(supplyTotal)}${shipping ? ` + 배송비 ${money(shipping)}` : ""} · ${paymentMethod === "deposit" ? "예치금" : "신용카드"} 결제 · ${product.supplier} 공급사에 바로 전달`, "done", "order");
+  return { ok: true, product, supplyTotal, shipping, payTotal };
 }
 /* 결제 대기 주문을 공급사별로 묶어 한 번에 결제한다 */
 function bulkPaymentGroups(orders) {
@@ -1378,7 +1398,7 @@ function bulkPaymentGroups(orders) {
     const product = check.product || orderSourceProduct(order);
     const key = product?.supplierLoginId || "unknown";
     if (!groups.has(key)) groups.set(key, { supplierLoginId: key, supplier: product?.supplier || "공급사", rows: [] });
-    groups.get(key).rows.push({ order, product, check, amount: check.ok ? check.supplyTotal : orderUnitSupply(order, product) * Number(order.qty || 1) });
+    groups.get(key).rows.push({ order, product, check, amount: check.ok ? check.payTotal : orderUnitSupply(order, product) * Number(order.qty || 1) });
   });
   return [...groups.values()];
 }
@@ -1455,16 +1475,19 @@ document.addEventListener("change", event => {
 function paymentConfirmModal(ids) {
   const rows = ids.map(id => state.orders.find(order => order.id === id)).filter(Boolean).map(order => ({ order, check: orderPaymentCheck(order) })).filter(row => row.check.ok);
   if (!rows.length) return showToast("결제할 주문을 체크해 주세요.");
-  const total = rows.reduce((sum, row) => sum + row.check.supplyTotal, 0);
+  const supplySum = rows.reduce((sum, row) => sum + row.check.supplyTotal, 0);
+  const shipSum = rows.reduce((sum, row) => sum + row.check.shipping, 0);
+  const total = supplySum + shipSum;
   const suppliers = new Set(rows.map(row => row.check.product.supplierLoginId));
   const deposit = sellerDeposit();
   openModal(`<div class="pay-confirm">
     <span class="pay-confirm-icon" aria-hidden="true">₩</span>
     <h2>${rows.length > 1 ? `이 상품 ${rows.length}건을 결제하시겠습니까?` : "이 상품을 결제하시겠습니까?"}</h2>
     <p>결제하면 공급사 ${suppliers.size}곳에 주문이 바로 전달되고, 전달된 주문은 여기서 취소할 수 없어요.</p>
-    <div class="pay-confirm-list">${rows.map(({ order, check }) => `<div><span><b>${escapeHtml(check.product.name)}</b>${order.optionName ? `<em class="order-option-tag">옵션 · ${escapeHtml(order.optionName)}</em>` : ""}<small>${escapeHtml(check.product.supplier)} · ${escapeHtml(order.id)} · ${order.qty}개</small></span><strong>${money(check.supplyTotal)}</strong></div>`).join("")}</div>
+    <div class="pay-confirm-list">${rows.map(({ order, check }) => `<div><span><b>${escapeHtml(check.product.name)}</b>${order.optionName ? `<em class="order-option-tag">옵션 · ${escapeHtml(order.optionName)}</em>` : ""}<small>${escapeHtml(check.product.supplier)} · ${escapeHtml(order.id)} · ${order.qty}개</small><small class="pay-ship-line">🚚 배송비 ${check.shipping ? money(check.shipping) : "0원"} <i>${escapeHtml(check.shipLabel)}</i></small></span><strong>${money(check.payTotal)}<small>공급가 ${money(check.supplyTotal)}</small></strong></div>`).join("")}</div>
     <form id="payConfirmForm" class="pay-confirm-form" data-ids="${escapeHtml(rows.map(row => row.order.id).join(","))}" data-total="${total}" novalidate>
       <div class="bulk-pay-methods"><label><input type="radio" name="paymentMethod" value="deposit" checked><span><b>예치금</b><small data-bulk-deposit="${deposit.balance}">잔액 ${money(deposit.balance)}</small></span></label><label class="${CARD_PAYMENT_READY ? "" : "pay-off"}"><input type="radio" name="paymentMethod" value="card" ${CARD_PAYMENT_READY ? "" : "disabled"}><span><b>신용카드</b><small>${CARD_PAYMENT_READY ? "카드로 바로 결제" : "PG 연결 후 사용"}</small></span></label></div>
+      <div class="pay-confirm-sum"><div><span>상품 공급가</span><b>${money(supplySum)}</b></div><div><span>배송비</span><b>${shipSum ? `+ ${money(shipSum)}` : "0원 (무료·착불)"}</b></div></div>
       <div class="pay-confirm-total"><span>결제 금액</span><strong>${money(total)}</strong></div>
       <p class="bulk-pay-short" data-bulk-short hidden></p>
       <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>아니요</button><button type="submit" class="primary-button" data-bulk-submit>네, 결제할게요</button></div>
@@ -1525,12 +1548,12 @@ function paySelectedOrders(ids, method = "deposit") {
   const orders = ids.map(id => state.orders.find(order => order.id === id && order.sellerLoginId === currentAccount?.loginId)).filter(Boolean);
   const checks = orders.map(order => ({ order, check: orderPaymentCheck(order) })).filter(row => row.check.ok);
   if (!checks.length) return showToast("결제할 수 있는 주문이 없어요. 재고나 매핑을 확인해 주세요.");
-  const total = checks.reduce((sum, row) => sum + row.check.supplyTotal, 0);
+  const total = checks.reduce((sum, row) => sum + row.check.payTotal, 0);
   const deposit = sellerDeposit();
   if (method === "deposit" && deposit.balance < total) return showToast("예치금이 부족해요. 충전하거나 신용카드를 골라 주세요.");
   const bulkId = `BP-${String(Date.now()).slice(-8)}`;
   const done = [];
-  checks.forEach(({ order }) => { const result = payOrderToSupplier(order, method, { skipDeposit: method === "deposit" }); if (result.ok) done.push({ order, product: result.product, amount: result.supplyTotal }); });
+  checks.forEach(({ order }) => { const result = payOrderToSupplier(order, method, { skipDeposit: method === "deposit" }); if (result.ok) done.push({ order, product: result.product, amount: result.payTotal }); });
   const paid = done.reduce((sum, row) => sum + row.amount, 0);
   if (method === "deposit" && paid) { deposit.balance -= paid; deposit.transactions.unshift({ id: `DP-${Date.now()}`, type: done.length > 1 ? `주문 공급가 일괄 결제 (${done.length}건)` : "주문 공급가 결제", amount: -paid, orders: done.map(row => row.order.id), reference: done.length > 1 ? bulkId : done[0].order.id, createdAt: depositStamp(), at: Date.now() }); }
   const bySupplier = [...done.reduce((map, row) => { const key = row.product.supplier; if (!map.has(key)) map.set(key, { count: 0, amount: 0 }); map.get(key).count += 1; map.get(key).amount += row.amount; return map; }, new Map())];
@@ -2279,9 +2302,14 @@ function updateAccountUI() {
   const rejectedPickCount = activeRole === "seller" ? currentSellerProducts().filter(item => item.approvalStatus === "승인거절").length : 0;
   const readyCount = activeRole === "seller" ? sellerReadyProducts().length : 0;
   document.getElementById("workspaceMenu").innerHTML = roleMenuGroups[activeRole].map(group => {
-    const indexes = group.indexes.filter(index => activeRole !== "seller" || staffCanMenu(index));
+    const indexes = group.indexes.filter(index => activeRole !== "seller" || staffCanMenu(typeof index === "object" ? 4 : index));
     if (!indexes.length) return "";
     const buttons = indexes.map(index => {
+      if (typeof index === "object") {
+        const active = activeMenuIndex === 4 && sellerMenuStageOf(sellerOrderStage) === index.stage;
+        const badgeValue = sellerOrderMenuBadge(index.stage);
+        return `<button type="button" class="${active ? "active" : ""} ${index.stage === "self" ? "menu-self" : ""}" data-menu-index="4" data-order-stage="${index.stage}"${active ? ' aria-current="page"' : ""}><span class="menu-icon mi-${index.icon}">${menuIcon(index.icon)}</span>${index.step ? `<i class="menu-step">${index.step}</i>` : ""}<span class="menu-text">${escapeHtml(index.label)}</span>${badgeValue > 0 ? `<b class="menu-badge">${badgeValue}</b>` : ""}</button>`;
+      }
       const item = roleMenus[activeRole][index];
       const badgeValue = activeRole === "seller" ? ({ 7: alertCount, 15: mappingCount, 2: rejectedPickCount, 17: readyCount })[index] || 0 : activeRole === "supplier" ? ({ 3: shippingCount, 9: pickRequestCount })[index] || 0 : index === 1 ? pendingCount : 0;
       const badge = badgeValue > 0;
@@ -2809,6 +2837,22 @@ function talkTimeLabel(message) {
   if (match) { const hour = Number(match[1]); return `${hour < 12 ? "오전" : "오후"} ${hour % 12 || 12}:${match[2]}`; }
   return String(message?.createdAt || "");
 }
+/* 메시지 시각(정렬용): 보낸 시각 → 메시지 번호의 시각 → ‘09.20 14:30’ 같은 표기 → 저장 순서 */
+function talkMessageTime(message) {
+  if (!message) return -1;
+  const sent = Date.parse(message.sentAt || "");
+  if (!Number.isNaN(sent)) return sent;
+  const fromId = String(message.id || "").match(/(\d{13})/);
+  if (fromId) return Number(fromId[1]);
+  const text = String(message.createdAt || "");
+  const md = text.match(/(\d{1,2})\.(\d{1,2})\s+(\d{1,2}):(\d{2})/);
+  const now = new Date();
+  if (md) return new Date(now.getFullYear(), Number(md[1]) - 1, Number(md[2]), Number(md[3]), Number(md[4])).getTime();
+  const hm = text.match(/(\d{1,2}):(\d{2})/);
+  if (hm) { const day = new Date(now); if (/어제/.test(text)) day.setDate(day.getDate() - 1); day.setHours(Number(hm[1]), Number(hm[2]), 0, 0); return day.getTime(); }
+  if (/방금/.test(text)) return now.getTime();
+  return state.connectionMessages.indexOf(message);
+}
 function talkRoomMessages(connection) {
   return state.connectionMessages.filter(message => message.supplierLoginId === connection.supplierLoginId && message.sellerLoginId === connection.sellerLoginId);
 }
@@ -2905,6 +2949,8 @@ function partnerMessengerTemplate(connections, perspective) {
     const filterMatch = chatRoomFilter === "all" || (chatRoomFilter === "unread" && room.unread) || (chatRoomFilter === "trading" && room.trading) || (chatRoomFilter === "favorite" && room.favorite);
     return queryMatch && filterMatch;
   });
+  /* 카카오톡처럼: 고정(즐겨찾기) 방 → 가장 최근에 메시지가 오간 방 순서. 대화가 없는 방은 맨 아래 */
+  visibleRooms.sort((a, b) => (b.favorite - a.favorite) || (talkMessageTime(b.last) - talkMessageTime(a.last)));
   const active = connections.find(connection => connection.id === activeChatConnectionId) || visibleRooms[0]?.connection || connections[0];
   activeChatConnectionId = active.id;
   const seller = memberByLogin(active.sellerLoginId);
@@ -2912,7 +2958,8 @@ function partnerMessengerTemplate(connections, perspective) {
   const messages = talkRoomMessages(active);
   const favorite = Boolean(state.chatFavorites?.[active.id]);
   const mark = escapeHtml(nameInitial(otherName) || (perspective === "seller" ? "공" : "셀"));
-  const activeIsOpen = chatMobileView === "room" || window.innerWidth > 720;
+  /* 방을 직접 열었을 때만 읽음 처리 (PC에서 목록만 본 상태로는 안 읽은 숫자가 그대로 남게) */
+  const activeIsOpen = chatMobileView === "room";
   if (activeIsOpen) { markTalkRead(active); roomRows.forEach(room => { if (room.connection.id === active.id) room.unread = 0; }); }
   const totalUnread = roomRows.reduce((sum, room) => sum + room.unread, 0);
   return `<div id="supplierInquiryPanel" class="talk-shell panel ${chatMobileView === "room" ? "show-room" : "show-list"}">
@@ -2921,7 +2968,7 @@ function partnerMessengerTemplate(connections, perspective) {
       <label class="talk-search ${chatSearchOpen || chatRoomSearch ? "" : "collapsed"}"><span>${talkIcon("search")}</span><input id="chatRoomSearch" value="${escapeHtml(chatRoomSearch)}" placeholder="거래처·메시지 검색" autocomplete="off"></label>
       <div class="talk-tabs">${[["all","전체"],["unread","안읽음"],["trading","거래중"],["favorite","즐겨찾기"]].map(([key,label]) => `<button type="button" class="${chatRoomFilter === key ? "active" : ""}" data-action="chat-filter" data-filter="${key}">${label}${key === "unread" && totalUnread ? `<i>${totalUnread > 99 ? "99+" : totalUnread}</i>` : ""}</button>`).join("")}</div>
       ${query ? "" : `<button type="button" class="talk-connect-banner" data-action="open-connect-supplier" data-perspective="${perspective}"><span class="talk-connect-plus">＋</span><span><b>${perspective === "seller" ? "새 공급사 연결" : "위탁셀러 연결 코드"}</b><small>${perspective === "seller" ? "공급사에게 받은 코드로 바로 대화를 시작해요" : "코드를 보내면 위탁셀러와 바로 대화할 수 있어요"}</small></span><em>›</em></button>`}
-      <div class="talk-room-list">${visibleRooms.length ? visibleRooms.map(room => `<button class="talk-room-item ${room.connection.id === active.id ? "active" : ""}" type="button" data-action="select-chat-room" data-id="${room.connection.id}"><span class="talk-avatar" style="--avatar-tone:${talkAvatarTone(room.name)}">${escapeHtml(nameInitial(room.name || mark) || mark)}</span><span class="talk-room-text"><b><span>${escapeHtml(room.name)}</span>${room.favorite ? `<i class="talk-pin" aria-label="즐겨찾기">${talkIcon("pin")}</i>` : ""}</b><small>${escapeHtml(room.last?.image && !room.last?.text ? "사진" : (room.last?.text || "새 대화를 시작하세요"))}</small></span><span class="talk-room-side"><em>${escapeHtml(room.last ? talkTimeLabel(room.last) : "")}</em>${room.unread && !(room.connection.id === active.id && (chatMobileView === "room" || window.innerWidth > 720)) ? `<i class="talk-unread">${room.unread}</i>` : ""}</span></button>`).join("") : `<div class="talk-empty">조건에 맞는 대화가 없습니다.</div>`}${!query && chatRoomFilter === "all" ? talkNoticeRow(perspective) : ""}</div>
+      <div class="talk-room-list">${visibleRooms.length ? visibleRooms.map(room => `<button class="talk-room-item ${room.connection.id === active.id ? "active" : ""}" type="button" data-action="select-chat-room" data-id="${room.connection.id}"><span class="talk-avatar" style="--avatar-tone:${talkAvatarTone(room.name)}">${escapeHtml(nameInitial(room.name || mark) || mark)}</span><span class="talk-room-text"><b><span>${escapeHtml(room.name)}</span>${room.favorite ? `<i class="talk-pin" aria-label="즐겨찾기">${talkIcon("pin")}</i>` : ""}</b><small>${escapeHtml(room.last?.image && !room.last?.text ? "사진" : (room.last?.text || "새 대화를 시작하세요"))}</small></span><span class="talk-room-side"><em>${escapeHtml(room.last ? talkTimeLabel(room.last) : "")}</em>${room.unread && !(room.connection.id === active.id && activeIsOpen) ? `<i class="talk-unread">${room.unread}</i>` : ""}</span></button>`).join("") : `<div class="talk-empty">조건에 맞는 대화가 없습니다.</div>`}${!query && chatRoomFilter === "all" ? talkNoticeRow(perspective) : ""}</div>
     </aside>
     <section class="talk-room">
       <header class="talk-room-head"><button type="button" class="talk-back" data-action="chat-back" aria-label="대화 목록으로">‹</button><span class="talk-avatar" style="--avatar-tone:${talkAvatarTone(otherName)}">${mark}</span><div class="talk-room-title"><b>${escapeHtml(otherName)}</b><small><i></i>거래중 · 평균 응답 1시간 이내</small></div><div class="talk-head-actions"><button type="button" class="${favorite ? "on" : ""}" data-action="toggle-chat-favorite" data-id="${active.id}" aria-pressed="${favorite}" aria-label="즐겨찾기">${favorite ? "★" : "☆"}</button><button type="button" data-action="chat-partner-info" data-id="${active.id}" data-perspective="${perspective}" aria-label="거래처 정보">ⓘ</button></div></header>
@@ -3102,7 +3149,7 @@ function refundTemplate(role) {
   const offset = completed.filter(item => item.supplierSettlementOffset).reduce((sum, item) => sum + item.amount, 0);
   const deposit = role === "seller" ? sellerDeposit() : null;
   const awaitingReceipt = allItems.filter(item => item.status === "공급사 입고확인 대기").length;
-  const summary = role === "seller" ? `<div class="refund-summary-grid"><div class="refund-summary-card primary"><span>사용 가능 예치금</span><strong>${money(deposit.balance)}</strong><small>상품 결제 또는 계좌 출금 가능</small></div><div class="refund-summary-card"><span>환불 처리중</span><strong>${money(deposit.pending)}</strong><small>입고 확인 전에는 충전 보류</small></div><div class="refund-summary-card"><span>출금 처리중</span><strong>${money(deposit.withdrawalPending)}</strong><small>은행 이체 결과 대기</small></div><div class="refund-summary-card"><span>누적 환불 충전</span><strong>${money(deposit.totalRefunded)}</strong><small>${deposit.transactions.filter(item => item.type === "환불 충전").length}건 환불</small></div></div>` : role === "supplier" ? `<div class="refund-summary-grid"><div class="refund-summary-card primary dark"><span>환불 완료 주문 지급액</span><strong>0원</strong><small>입고 확인 즉시 정산 대상 제외</small></div><div class="refund-summary-card"><span>이번 달 정산 제외</span><strong>-${money(offset)}</strong><small>${completed.length}건 환불 확정</small></div><div class="refund-summary-card"><span>입고 확인 대기</span><strong>${awaitingReceipt}건</strong><small>실물 확인 후 완료 처리</small></div><div class="refund-summary-card"><span>전체 처리 대기</span><strong>${allItems.filter(item => item.status !== "환불완료").length}건</strong><small>농수산물은 회수 없이 승인 가능</small></div></div>` : `<div class="refund-summary-grid"><div class="refund-summary-card primary dark"><span>예치금 지급 완료</span><strong>${money(completed.reduce((sum,item)=>sum+item.amount,0))}</strong><small>${completed.length}건</small></div><div class="refund-summary-card"><span>공급사 정산 제외</span><strong>${money(offset)}</strong><small>정산지급대행 자동 조정</small></div><div class="refund-summary-card"><span>입고 확인 대기</span><strong>${awaitingReceipt}건</strong><small>공급사 확정 필요</small></div><div class="refund-summary-card"><span>전체 처리중</span><strong>${allItems.filter(item=>item.status!=="환불완료").length}건</strong><small>통합 모니터링</small></div></div>`;
+  const summary = role === "seller" ? `<div class="refund-summary-grid"><button type="button" class="refund-summary-card primary" data-action="refund-kpi" data-kind="balance"><span>사용 가능 예치금</span><strong>${money(deposit.balance)}</strong><small>상품 결제 또는 계좌 출금 가능</small><i class="rsc-more">자세히 ›</i></button><button type="button" class="refund-summary-card" data-action="refund-kpi" data-kind="pending"><span>환불 처리중</span><strong>${money(deposit.pending)}</strong><small>입고 확인 전에는 충전 보류</small><i class="rsc-more">자세히 ›</i></button><button type="button" class="refund-summary-card" data-action="refund-kpi" data-kind="withdraw"><span>출금 처리중</span><strong>${money(deposit.withdrawalPending)}</strong><small>은행 이체 결과 대기</small><i class="rsc-more">자세히 ›</i></button><button type="button" class="refund-summary-card" data-action="refund-kpi" data-kind="refunded"><span>누적 환불 충전</span><strong>${money(deposit.totalRefunded)}</strong><small>${deposit.transactions.filter(item => item.type === "환불 충전").length}건 환불</small><i class="rsc-more">자세히 ›</i></button></div>` : role === "supplier" ? `<div class="refund-summary-grid"><div class="refund-summary-card primary dark"><span>환불 완료 주문 지급액</span><strong>0원</strong><small>입고 확인 즉시 정산 대상 제외</small></div><div class="refund-summary-card"><span>이번 달 정산 제외</span><strong>-${money(offset)}</strong><small>${completed.length}건 환불 확정</small></div><div class="refund-summary-card"><span>입고 확인 대기</span><strong>${awaitingReceipt}건</strong><small>실물 확인 후 완료 처리</small></div><div class="refund-summary-card"><span>전체 처리 대기</span><strong>${allItems.filter(item => item.status !== "환불완료").length}건</strong><small>농수산물은 회수 없이 승인 가능</small></div></div>` : `<div class="refund-summary-grid"><div class="refund-summary-card primary dark"><span>예치금 지급 완료</span><strong>${money(completed.reduce((sum,item)=>sum+item.amount,0))}</strong><small>${completed.length}건</small></div><div class="refund-summary-card"><span>공급사 정산 제외</span><strong>${money(offset)}</strong><small>정산지급대행 자동 조정</small></div><div class="refund-summary-card"><span>입고 확인 대기</span><strong>${awaitingReceipt}건</strong><small>공급사 확정 필요</small></div><div class="refund-summary-card"><span>전체 처리중</span><strong>${allItems.filter(item=>item.status!=="환불완료").length}건</strong><small>통합 모니터링</small></div></div>`;
   const policyMessage = role === "seller" ? "판매채널에서 소비자 환불을 먼저 완료한 뒤 요청하세요. 반품 상품이 공급사에 입고되면 공급대금이 예치금으로 자동 충전됩니다." : role === "supplier" ? "반품 실물을 받은 뒤 ‘반품 입고 확인’을 눌러야 셀러 예치금 충전과 내 정산 제외가 동시에 확정됩니다." : "입고 확인 또는 회수 없음 승인을 기준으로 예치금 충전과 공급사 정산 제외가 한 번에 처리됩니다.";
   return `${sectionHero("취소 · 환불 관리", "소비자 환불, 반품 회수, 공급사 입고 확인, 예치금 충전까지 하나의 상태로 연결합니다.", role === "seller" ? `<button class="primary-button" data-action="open-doogo-money">예치금 관리</button>` : "")}${role === "master" ? refundSettlementPanel() : summary}
     <div class="refund-policy-callout panel"><span>안전한 환불 기준</span><b>${policyMessage}</b><small>위탁셀러는 환불을 요청하고, 환불 확정 권한은 공급사의 입고 확인 또는 회수 없음 승인에만 부여됩니다.</small></div>
@@ -3119,7 +3166,7 @@ function refundTemplate(role) {
 }
 
 const sellerOrderStages = [
-  ["all", "전체 주문 리스트"], ["self", "직접 배송 (두고 외)"], ["mapping", "매핑 필요"], ["payment", "결제 대기"], ["received", "주문접수"], ["ordered", "발주완료"], ["preparing", "배송준비중"], ["needs-check", "주문확인필요"], ["tracking-push", "송장 전송 대기"], ["shipping", "배송중"], ["delivered", "배송완료"]
+  ["all", "전체 주문 리스트"], ["self", "직접 배송 (두고 외)"], ["supplier", "공급사 출고 중"], ["delivery", "송장 전송 · 배송"], ["mapping", "매핑 필요"], ["payment", "결제 대기"], ["received", "주문접수"], ["ordered", "발주완료"], ["preparing", "배송준비중"], ["needs-check", "주문확인필요"], ["tracking-push", "송장 전송 대기"], ["shipping", "배송중"], ["delivered", "배송완료"]
 ];
 /* 주문 단계 메뉴를 ‘누가 처리하는 단계인지’로 묶어 색으로 구분한다. 위탁셀러(파랑) → 공급사(주황) → 위탁셀러(파랑) → 택배(초록) */
 const SELLER_ORDER_STAGE_GROUPS = [
@@ -3158,10 +3205,29 @@ function sellerOrderSubset(stage = sellerOrderStage) {
   if (stage === "payment") return orders.filter(order => orderMappingStatus(order) === "mapped" && orderPaymentStatus(order) === "pending");
   if (stage === "ordered") return orders.filter(order => order.status === "발주완료");
   if (stage === "tracking-push") return orders.filter(orderNeedsTrackingPush);
+  /* 메뉴 ④ 공급사 출고: 결제를 마치고 공급사가 확인·포장·송장 발급 중인 주문 */
+  if (stage === "supplier") return orders.filter(order => orderMappingStatus(order) === "mapped" && orderPaymentStatus(order) !== "pending" && ["신규주문", "주문접수", "발주완료", "배송준비중", "주문확인필요"].includes(order.status));
+  /* 메뉴 ⑤ 송장 전송 · 배송: 쇼핑몰로 보낼 송장 + 배송중 + 배송완료 (직접 배송 제외) */
+  if (stage === "delivery") return orders.filter(order => orderMappingStatus(order) !== "self" && (orderNeedsTrackingPush(order) || ["배송중", "배송완료"].includes(order.status)));
   const statuses = { waiting: ["주문대기"], received: ["신규주문", "주문접수"], preparing: ["배송준비중"], "needs-check": ["주문확인필요"], shipping: ["배송중"], delivered: ["배송완료"] }[stage] || [];
   return orders.filter(order => statuses.includes(order.status));
 }
 function sellerOrderStageCount(stage) { return sellerOrderSubset(stage).length; }
+/* 사이드바 주문 ①~⑤ 메뉴: 지금 보고 있는 단계가 어느 메뉴에 속하는지 */
+function sellerMenuStageOf(stage) {
+  if (["all", "overview"].includes(stage)) return "all";
+  if (["supplier", "received", "ordered", "preparing", "needs-check", "waiting"].includes(stage)) return "supplier";
+  if (["delivery", "tracking-push", "shipping", "delivered"].includes(stage)) return "delivery";
+  return stage;
+}
+/* 메뉴 숫자는 ‘내가 지금 해야 할 일’만: 결제 대기, 쇼핑몰 확인 필요, 보낼 송장, 송장 넣을 직접 배송 */
+function sellerOrderMenuBadge(stage) {
+  if (stage === "payment") return sellerOrderStageCount("payment");
+  if (stage === "supplier") return sellerOrderStageCount("needs-check");
+  if (stage === "delivery") return sellerOrderStageCount("tracking-push");
+  if (stage === "self") return selfTodoCount();
+  return 0;
+}
 function collectStatusLine() {
   const settings = sellerAutomationSettings(), tier = planTier();
   if (tier.id === "free") return "무료 요금제는 ‘수기 주문 넣기’로 주문해요 · 스타트(월 9,900원)부터 자동 수집";
@@ -3297,9 +3363,11 @@ function channelIntegrationTemplate() {
     <section class="tracking-automation-hero"><div><span>AUTOMATED DROPSHIPPING</span><h3>송장 자동전송 ${automationCount}개 쇼핑몰 사용중</h3><p>보낼 송장 ${pendingTotal}건 · 쇼핑몰마다 자동 전송을 따로 켜고 끌 수 있어요.</p></div><div class="automation-flow"><span><b>1</b>공급사 송장 입력</span><i>→</i><span><b>2</b>내 주문에 바로 표시</span><i>→</i><span><b>3</b>쇼핑몰 전송 (버튼·10분 자동)</span></div></section>
     <div class="api-safe-notice ${CHANNEL_SERVER ? "live" : ""}"><b>${CHANNEL_SERVER ? "연동 서버 연결됨" : "연동 서버 연결 전"}</b><span>${CHANNEL_SERVER ? "두고 연동 서버를 거쳐 CAFE24·쿠팡·스마트스토어 API로 상품을 등록·수정·판매중지·삭제해요." : "CAFE24·쿠팡·스마트스토어로 보낼 요청을 똑같이 만들어 기록만 해요. 두고 연동 서버를 연결하면 실제로 등록돼요."}</span></div>
     <div class="channel-connect-grid">${channels.map(channel => { const pending = currentSellerOrders().filter(order => isTrackingPending(order.channelTrackingStatuses?.[channel.id])).length; const automationEnabled = channel.status === "connected" && channel.trackingAutomation; return `<article class="panel channel-connect-card ${automationEnabled ? "automation-on" : ""}"><div class="channel-card-head">${channelMark(channel.id)}<div><h3>${escapeHtml(channel.name)}</h3><p>${escapeHtml(channel.storeName)}</p></div>${statusChip(channel.status === "connected" ? "연동중" : channel.status === "pending" ? "확인중" : "미연동")}</div><div class="automation-setting"><span><b>송장 자동전송</b><small>${channel.status === "connected" ? "켜 두면 공급사 송장을 10분마다 자동 전송" : "채널 연동 후 사용할 수 있습니다."}</small></span><button type="button" class="automation-switch ${automationEnabled ? "on" : ""}" data-action="toggle-channel-automation" data-id="${channel.id}" ${channel.status === "connected" ? "" : "disabled"} aria-pressed="${automationEnabled}"><i></i>${automationEnabled ? "켜짐" : "꺼짐"}</button></div>${channel.status === "connected" ? `<button type="button" class="channel-policy-summary" data-action="connect-channel" data-id="${channel.id}"><span>배송 정책 ${channelShippingPolicies(channel).length}개 불러옴</span><b>기본 · ${escapeHtml(channelDefaultPolicy(channel)?.name || "불러오기 필요")}</b><small>${escapeHtml(policyFeeText(channelDefaultPolicy(channel)))}</small></button>` : ""}<dl><div><dt>주문 수집</dt><dd>${channel.status === "connected" ? "자동" : "대기"}</dd></div><div><dt>송장 대기열</dt><dd>${pending}건</dd></div><div><dt>최근 송장 전송</dt><dd>${escapeHtml(channel.lastTrackingPush || "-")}</dd></div></dl><button class="${channel.status === "connected" ? "secondary-button" : "primary-button"}" data-action="connect-channel" data-id="${channel.id}">${channel.status === "connected" ? "연동 정보 · API 키" : "API 키로 연동하기"}</button></article>`; }).join("")}</div>
-    <section class="panel api-log-panel"><div class="panel-head"><div><h3>상품 연동 기록</h3><p>상품 전송·판매중지·품절·삭제 때 쇼핑몰 API로 보낸 요청이에요. 쿠팡은 승인된 상품을 지울 수 없어 ‘삭제’가 판매중지로 처리돼요.</p></div></div>
+    <section class="panel api-log-panel"><div class="panel-head"><div><h3>상품 전송 기록</h3><p>최근 처리 결과예요. 실패하면 이유와 해결 방법을 ‘처리 기록’에서 볼 수 있어요.</p></div><button type="button" class="secondary-button" data-action="go-seller-menu" data-index="21">처리 기록 전체 보기 →</button></div>
+      <div class="act-list compact">${(() => { const recent = activityEvents().filter(event => event.cat === "product").slice(0, 4); return recent.length ? recent.map(activityRow).join("") : `<div class="empty">아직 기록이 없어요. 마스터 상품에서 ‘상품 전송’을 누르면 여기에 남아요.</div>`; })()}</div>
+      <details class="channel-rule-box"><summary>쇼핑몰마다 등록·판매중지·품절·삭제가 어떻게 처리되나요?</summary>
       <div class="channel-rule-grid">${Object.entries(CHANNEL_RULES).map(([id, rule]) => `<div>${channelMark(id, true)}<b>${escapeHtml(rule.name)}</b><dl><div><dt>등록</dt><dd>${escapeHtml(rule.register)}</dd></div><div><dt>판매중지</dt><dd>${escapeHtml(rule.stop)}</dd></div><div><dt>품절</dt><dd>${escapeHtml(rule.soldout)}</dd></div><div><dt>삭제</dt><dd>${escapeHtml(rule.remove)}</dd></div></dl></div>`).join("")}</div>
-      <div class="api-log-list">${(state.channelApiLog || []).filter(entry => entry.sellerLoginId === currentAccount.loginId).slice(0, 8).length ? channelApiLogRows((state.channelApiLog || []).filter(entry => entry.sellerLoginId === currentAccount.loginId).slice(0, 8)) : `<div class="empty">아직 기록이 없어요. 마스터 상품에서 ‘상품 전송’을 누르면 여기에 남아요.</div>`}</div></section>
+      </details></section>
     <form id="dropshippingEmailForm" class="panel dropshipping-email-card"><div class="dropshipping-email-head"><div><span>EMAIL AUTOMATION</span><h3>드랍쉬핑 이메일 알림</h3><p>API 자동화에서 놓치기 쉬운 주문·송장·환불·가격 변동을 원하는 이메일로 받아보세요.</p></div><label class="email-master-switch"><input type="checkbox" name="emailEnabled" ${notice.emailEnabled ? "checked" : ""}><i></i><span>${notice.emailEnabled ? "ON" : "OFF"}</span></label></div><div class="email-recipient-row"><label><span>수신 이메일</span><input name="emailAddress" type="email" value="${escapeHtml(notice.emailAddress || currentAccount.email || "")}" placeholder="ops@example.com" required></label><small>주문 운영 담당자 메일을 입력해 주세요.</small></div><fieldset><legend>수신할 알림 선택</legend><label><input type="checkbox" name="events" value="orderNotice" ${notice.orderNotice ? "checked" : ""}><span><b>신규 주문</b><small>채널 주문 수집·공급사 자동배정</small></span></label><label><input type="checkbox" name="events" value="trackingNotice" ${notice.trackingNotice ? "checked" : ""}><span><b>송장 등록</b><small>공급사 송장 발급·채널 전송</small></span></label><label><input type="checkbox" name="events" value="refundNotice" ${notice.refundNotice ? "checked" : ""}><span><b>취소·환불</b><small>반품 완료·예치금 환불</small></span></label><label><input type="checkbox" name="events" value="priceNotice" ${notice.priceNotice ? "checked" : ""}><span><b>가격 변경</b><small>공급가 변동·마진 위험</small></span></label><label><input type="checkbox" name="events" value="deliveryDelayNotice" ${notice.deliveryDelayNotice ? "checked" : ""}><span><b>배송 지연</b><small>송장 미등록·집하 지연</small></span></label><label><input type="checkbox" name="events" value="stockNotice" ${notice.stockNotice ? "checked" : ""}><span><b>재고 부족</b><small>품절 임박·판매중지 권고</small></span></label></fieldset><div class="email-form-actions"><span>설정은 쇼핑몰 API 자동화와 함께 적용됩니다.</span><button class="primary-button" type="submit">이메일 알림 저장</button></div></form>
     <div class="notification-service-layout"><section class="panel notification-service-card"><div class="notification-service-head"><span class="talk-symbol">TALK</span><div><span>PAID ADD-ON</span><h3>실시간 카카오 알림톡</h3><p>신규 주문은 공급사에게, 송장 등록은 위탁셀러에게 알림톡·이메일로 안내합니다.</p></div><span class="chip blue">${notice.status === "active" ? "이용중" : "미가입"}</span></div><div class="notification-price"><b>${money(notice.monthlyFee)}</b><span>/ 월 · ${notice.monthlyLimit}건 포함</span><em>${notice.used}건 사용</em></div><div class="notification-options"><button class="${notice.orderNotice ? "on" : ""}" data-action="toggle-notice-setting" data-setting="orderNotice"><i></i><span><b>신규 주문 알림</b><small>공급사 카카오톡·이메일</small></span></button><button class="${notice.trackingNotice ? "on" : ""}" data-action="toggle-notice-setting" data-setting="trackingNotice"><i></i><span><b>송장 등록 알림</b><small>위탁셀러 카카오톡·이메일</small></span></button></div><button class="primary-button" data-action="manage-alert-plan">유료 알림 서비스 관리</button></section><section class="panel notification-history"><div class="panel-head"><div><h3>최근 알림 미리보기</h3><p>실제 발송 전 메시지와 수신 대상을 확인합니다.</p></div><button type="button" class="text-button" data-action="notification-list">전체보기</button></div>${events.length ? events.map(item => `<div class="notification-event"><span class="notification-type ${item.type}">${notificationTypeLabel(item.type)}</span><div><b>${escapeHtml(item.title)}</b><small>${escapeHtml(item.detail)} · ${item.channels.join("+")}</small></div><em>${item.createdAt}</em></div>`).join("") : `<div class="empty">최근 알림이 없습니다.</div>`}</section></div>`;
 }
@@ -3820,6 +3888,7 @@ function renderSellerSection(index) {
   if (index === 18) return sampleCartPageTemplate();
   if (index === 19) return sampleOrdersTemplate();
   if (index === 20) return shippingPoliciesTemplate("seller");
+  if (index === 21) return activityLogTemplate();
   if (index === 3) return sellerConnectionTemplate();
   if (index === 4) return sellerOrderManagementTemplate();
   if (index === 5) return refundTemplate("seller");
@@ -4136,6 +4205,8 @@ function dashboardWidgetPickerModal() {
   openModal(`<div class="widget-picker-head"><span>DASHBOARD WIDGETS</span><h2>위젯 추가</h2><p>숨긴 위젯을 다시 대시보드에 추가할 수 있습니다.</p></div><div class="widget-picker-grid">${hidden.length ? hidden.map(id => `<button type="button" data-action="restore-dashboard-widget" data-id="${id}"><span>＋</span><b>${labels[id]}</b><small>대시보드 맨 아래에 추가</small></button>`).join("") : `<div class="empty">현재 모든 위젯이 표시되고 있습니다.</div>`}</div><div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button></div>`);
 }
 
+/* 홈 ‘오늘 할 일’ 색: 순서대로 보라 → 주황 → 연두 → 파랑 → … (바로 위아래 칸이 같은 색이 되지 않게) */
+const SELLER_TODO_TONES = ["purple", "orange", "lime", "blue", "red", "green", "yellow"];
 function renderSeller() {
   if (activeRole === "seller" && !staffCanMenu(activeMenuIndex)) {
     document.getElementById("sellerView").innerHTML = staffNoPermissionTemplate(activeMenuIndex);
@@ -4181,7 +4252,7 @@ function renderSeller() {
   const widgets = {
     today: `<section class="home-today">
       <div class="home-greeting"><span>오늘 할 일</span><h2>${todo.length ? `오늘 확인할 일이 <em>${todo.length}가지</em> 있어요` : "오늘 처리할 일을 모두 마쳤어요"}</h2><p>버튼을 누르면 바로 해당 화면으로 이동해요. <b>처리하면 목록에서 사라지고</b>, 새로 할 일이 생기면 다시 나타나요.</p></div>${homeCollectMarkup()}
-      ${todo.length ? `<div class="home-todo-list">${todo.map((item, index) => `<button type="button" class="home-todo tone-${item.tone}" ${todoAttrs(item)}><i class="todo-no" aria-label="${index + 1}번째 할 일">${index + 1}</i><span><b>${item.title}<strong class="todo-count">${item.count}<small>건</small></strong></b><small>${item.hint}</small></span><em>${item.button} →</em></button>`).join("")}</div>` : `<div class="home-todo-done"><b>✓ 모두 처리했어요</b><span>새 주문이 들어오면 여기에 바로 알려 드릴게요.</span></div>`}
+      ${todo.length ? `<div class="home-todo-list">${todo.map((item, index) => `<button type="button" class="home-todo tone-${SELLER_TODO_TONES[index % SELLER_TODO_TONES.length]}" ${todoAttrs(item)}><i class="todo-no" aria-label="${index + 1}번째 할 일">${index + 1}</i><span><b>${item.title}<strong class="todo-count">${item.count}<small>건</small></strong></b><small>${item.hint}</small></span><em>${item.button} →</em></button>`).join("")}</div>` : `<div class="home-todo-done"><b>✓ 모두 처리했어요</b><span>새 주문이 들어오면 여기에 바로 알려 드릴게요.</span></div>`}
     </section>`,
     "product-flow": `<section class="panel home-section"><div class="home-section-head"><div><h3>상품 등록 현황</h3><p>상품 소싱 → 승인 대기 → 승인 완료(꾸미기) → 마스터 상품 → 쇼핑몰 판매 순서로 진행돼요.</p></div></div>
       <div class="home-flow five">${flowStep(1, 1, "상품 소싱", "＋", "상품 찾아 PICK", "blue")}${flowStep(2, 2, "승인 대기", pendingPicks.length, "공급사 확인 중", "yellow")}${flowStep(3, 17, "승인 완료", readyItems.length, "내 상품 꾸미기", "purple")}${flowStep(4, 14, "마스터 상품", masterReady.length, "전송 전 상품", "orange")}${flowStep(5, 11, "판매중 상품", liveProducts.length, "쇼핑몰 판매 중", "green")}</div>
@@ -5393,7 +5464,9 @@ function settlementLine(order, kind = "order") {
   const amount = orderSupplyAmount(order), fee = settlementFee(amount);
   const product = orderSourceProduct(order);
   const sign = kind === "deduct" ? -1 : 1;
-  return { orderId: order.id, date: order.orderDate, product: product?.name || order.externalProductName || "-", seller: memberByLogin(order.sellerLoginId)?.company || order.sellerLoginId, qty: Number(order.qty || 1), amount: sign * amount, fee: sign * fee, net: sign * (amount - fee), kind };
+  /* 셀러가 함께 낸 배송비는 수수료 없이 공급사에 그대로 정산 */
+  const ship = Number(order.supplyShipping || 0);
+  return { orderId: order.id, date: order.orderDate, product: product?.name || order.externalProductName || "-", seller: memberByLogin(order.sellerLoginId)?.company || order.sellerLoginId, qty: Number(order.qty || 1), amount: sign * amount, fee: sign * fee, ship: sign * ship, net: sign * (amount - fee + ship), kind };
 }
 /* 주차 정산서 계산: 그 주 주문 + 이전 보류 해제분 − 정산 후 환불된 주문 */
 function computeSettlement(loginId, meta, { markSettled = false, recordId = "" } = {}) {
@@ -6359,6 +6432,137 @@ function selfOrderActions(order, { inline = true } = {}) {
   return `<span class="mapping-status self">배송완료</span>${selfTrackingLine(order)}${detail}`;
 }
 /* ‘직접 배송할게요’를 누른 뒤: 주문이 어디로 갔는지, 이제 뭘 하면 되는지 한 번에 알려 준다 */
+/* ===== 처리 기록 (위탁셀러) =====
+   쇼핑몰 상품 전송(성공·실패·승인 대기), 공급사 상품 결제, 예치금 충전, 반품·환불 요청/완료를 한 목록으로.
+   코드(API 주소) 대신 사람이 읽는 말로: 무엇이 → 어디에 → 어떻게 됐는지, 실패면 왜·어떻게 고치는지. 줄은 닫혀 있고 누르면 펼쳐진다. */
+const ACTIVITY_CATS = [["all", "전체"], ["product", "상품 전송"], ["payment", "공급사 결제"], ["charge", "예치금 충전"], ["return", "반품"], ["refund", "환불"]];
+let activityFilter = { cat: "all", failOnly: false, q: "", limit: 20 };
+let activityOpenId = "";
+function activityTime(value) {
+  if (typeof value === "number") return value;
+  const text = String(value || "");
+  const now = new Date();
+  const ko = text.match(/(\d{1,2})\.\s*(\d{1,2})\.\s*(오전|오후)\s*(\d{1,2}):(\d{2})/);
+  if (ko) { let h = Number(ko[4]) % 12; if (ko[3] === "오후") h += 12; return new Date(now.getFullYear(), Number(ko[1]) - 1, Number(ko[2]), h, Number(ko[5])).getTime(); }
+  const md = text.match(/(\d{1,2})\.(\d{1,2})\s+(\d{1,2}):(\d{2})/);
+  if (md) return new Date(now.getFullYear(), Number(md[1]) - 1, Number(md[2]), Number(md[3]), Number(md[4])).getTime();
+  const ymd = text.match(/(20\d{2})[.-](\d{1,2})[.-](\d{1,2})/);
+  if (ymd) return new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3])).getTime();
+  if (/방금/.test(text)) return now.getTime();
+  return 0;
+}
+/* 쇼핑몰이 돌려준 오류를 셀러가 알아들을 말 + 해결 방법으로 */
+function friendlyChannelError(message = "", channelId = "") {
+  const text = String(message);
+  const mall = channelMeta(channelId).name || "쇼핑몰";
+  if (/빠진 값|필수|required|missing/i.test(text)) return { reason: `${mall}에 꼭 넣어야 하는 정보가 비어 있어요. (${text.replace(/^.*?:\s*/, "")})`, fix: "마스터 상품에서 상품명·판매가·카테고리·배송 정책을 채운 뒤 다시 전송해 주세요." };
+  if (/카테고리|category/i.test(text)) return { reason: `${mall} 카테고리가 맞지 않아요.`, fix: "마스터 상품 → 쇼핑몰별 카테고리에서 다시 골라 주세요." };
+  if (/401|403|권한|인증|token|unauthor/i.test(text)) return { reason: `${mall} 연결(권한)이 끊겼거나 만료됐어요.`, fix: "쇼핑몰 연동 메뉴에서 그 쇼핑몰을 다시 연결해 주세요." };
+  if (/이미지|image/i.test(text)) return { reason: "대표 사진을 쇼핑몰에 올리지 못했어요.", fix: "사진을 1000×1000 이상 JPG/PNG로 바꿔 다시 전송해 주세요." };
+  if (/가격|price/i.test(text)) return { reason: "판매가가 쇼핑몰 기준에 맞지 않아요.", fix: "판매가를 10원 단위로, 공급가보다 높게 고쳐 주세요." };
+  if (/fetch|network|Failed|연동 서버|timeout/i.test(text)) return { reason: "두고 연동 서버에 연결하지 못했어요. (잠깐 끊김일 수 있어요)", fix: "잠시 뒤 다시 전송해 주세요. 계속되면 두고 고객센터로 알려 주세요." };
+  return { reason: text || "쇼핑몰이 이유 없이 거절했어요.", fix: "잠시 뒤 다시 전송해 주세요. 계속되면 두고 고객센터로 알려 주세요." };
+}
+function activityEvents() {
+  const loginId = currentAccount?.loginId;
+  const events = [];
+  (state.channelApiLog || []).filter(entry => entry.sellerLoginId === loginId).forEach(entry => {
+    const mall = channelMeta(entry.channelId).name || entry.channelId;
+    const approval = entry.ok && entry.op === "register" && entry.channelId === "coupang";
+    const state_ = !entry.ok ? "fail" : approval ? "wait" : "ok";
+    const err = !entry.ok ? friendlyChannelError(entry.note, entry.channelId) : null;
+    events.push({ id: entry.id, cat: "product", state: state_, time: activityTime(entry.at), when: entry.at, channelId: entry.channelId,
+      title: `${channelOpLabel(entry.op)} · ${entry.title || entry.itemId}`,
+      sub: `${mall}${entry.mode === "demo" ? " · 연동 서버 연결 전(기록만)" : ""}`,
+      result: !entry.ok ? "실패" : approval ? "쿠팡 승인 대기" : (entry.status || "완료"),
+      rows: [["상품", entry.title || entry.itemId], ["쇼핑몰", mall], ["처리", channelOpLabel(entry.op)], ["결과", !entry.ok ? "실패" : approval ? "등록 완료 · 쿠팡 승인 심사 중 (보통 1~2일)" : `${entry.status || "완료"} — ${mall}에 정상 반영됐어요`], ...(entry.externalId ? [["쇼핑몰 상품번호", entry.externalId]] : []), ...(entry.note && entry.ok ? [["참고", entry.note]] : [])],
+      err, action: entry.ok ? { label: "판매중 상품 보기", attrs: `data-action="go-seller-menu" data-index="11"` } : { label: "마스터 상품에서 다시 전송", attrs: `data-action="go-seller-menu" data-index="14"` } });
+  });
+  const wallet = sellerDeposit();
+  wallet.transactions.forEach((tx, index) => {
+    const kind = depositTxKind(tx);
+    if (kind === "use" && /공급가/.test(tx.type)) {
+      const ids = tx.orders || (tx.reference ? [tx.reference] : []);
+      const first = state.orders.find(order => order.id === ids[0]);
+      const name = orderSourceProduct(first)?.name || first?.externalProductName || "";
+      events.push({ id: tx.id || `tx-${index}`, cat: "payment", state: "ok", time: activityTime(tx.at || tx.createdAt), when: tx.createdAt, title: tx.type, sub: `${name ? `${name}${ids.length > 1 ? ` 외 ${ids.length - 1}건` : ""} · ` : ""}${money(Math.abs(tx.amount))}`, result: "결제·발주 완료", rows: [["결제 금액", money(Math.abs(tx.amount))], ["결제 수단", "예치금"], ["주문", ids.join(", ") || "-"], ["결과", "공급사에 주문이 바로 전달됐어요"]], action: { label: "공급사 출고 보기", attrs: `data-action="dashboard-order-stage" data-stage="supplier"` } });
+    }
+    if (kind === "charge") events.push({ id: tx.id || `tx-${index}`, cat: "charge", state: "ok", time: activityTime(tx.at || tx.createdAt), when: tx.createdAt, title: tx.type || "예치금 충전", sub: `+${money(tx.amount)}`, result: "충전 완료", rows: [["충전 금액", `+${money(tx.amount)}`], ["방법", /카드/.test(tx.type) ? "신용카드" : "무통장입금"], ["번호", tx.reference || tx.id || "-"]], action: { label: "예치금 내역", attrs: `data-action="deposit-view" data-view="history"` } });
+  });
+  (wallet.charges || []).filter(charge => charge.status !== "충전 완료").forEach(charge => {
+    const failed = /안 됨|취소/.test(charge.status);
+    events.push({ id: charge.id, cat: "charge", state: failed ? "fail" : "wait", time: activityTime(charge.requestedAt), when: charge.requestedAt, title: "무통장입금 충전 신청", sub: `${money(charge.amount)} · 입금자 ${charge.depositor || "-"}`, result: charge.status, rows: [["신청 금액", money(charge.amount)], ["입금자명", charge.depositor || "-"], ["입금 기한", charge.dueAt || "-"], ["상태", charge.status]], err: failed ? { reason: charge.status === "신청 취소" ? "충전 신청을 취소했어요." : "두고 통장에서 같은 입금자명·금액의 입금을 찾지 못했어요.", fix: "입금자명과 금액을 확인하고 다시 신청해 주세요. 이미 입금했다면 두고톡으로 알려 주세요." } : null, action: { label: "예치금 충전", attrs: `data-action="deposit-view" data-view="charge"` } });
+  });
+  state.refunds.filter(item => item.sellerLoginId === loginId).forEach(item => {
+    const isReturn = /반품|교환/.test(item.type || "");
+    const cat = isReturn ? "return" : "refund";
+    const order = state.orders.find(o => o.id === item.orderId);
+    const name = orderSourceProduct(order)?.name || order?.externalProductName || item.orderId;
+    const base = { cat, rows: [["상품", name], ["주문", item.orderId], ["사유", item.reason || "-"], ["환불 예정 금액", money(item.amount)], ["현재 상태", item.status]], action: { label: "취소·반품 보기", attrs: `data-action="go-seller-menu" data-index="5"` } };
+    events.push({ ...base, id: `${item.id}-req`, state: item.status === "환불완료" ? "ok" : /거절|불가/.test(item.status) ? "fail" : "wait", time: activityTime(item.requestedAt), when: item.requestedAt, title: `${isReturn ? "반품" : "환불"} 요청 · ${name}`, sub: `${item.type || ""} · ${money(item.amount)}`, result: item.status === "환불완료" ? "요청 처리됨" : item.status, err: /거절|불가/.test(item.status) ? { reason: item.rejectReason || "공급사가 요청을 받아들이지 않았어요.", fix: "취소·반품 화면에서 사유를 확인하고 두고톡으로 공급사와 협의해 주세요." } : null });
+    if (item.status === "환불완료") events.push({ ...base, id: `${item.id}-done`, state: "ok", time: activityTime(item.completedAt) || activityTime(item.requestedAt) + 1, when: item.completedAt || item.requestedAt, title: `${isReturn ? "반품" : "환불"} 완료 · ${name}`, sub: `예치금 +${money(item.amount)}`, result: "예치금 충전 완료" });
+  });
+  return events.map((event, index) => ({ ...event, order: index })).sort((a, b) => (b.time - a.time) || (a.order - b.order));
+}
+function activityRow(event) {
+  const open = activityOpenId === event.id;
+  const chip = { ok: ["ok", "성공"], fail: ["fail", "실패"], wait: ["wait", "진행 중"] }[event.state];
+  const icon = { product: "📦", payment: "💳", charge: "💰", return: "↩️", refund: "💸" }[event.cat] || "•";
+  return `<article class="act-row ${event.state} ${open ? "open" : ""}"><button type="button" class="act-main" data-action="activity-toggle" data-id="${escapeHtml(event.id)}" aria-expanded="${open}"><span class="act-icon" aria-hidden="true">${event.channelId ? channelMark(event.channelId, true) : icon}</span><span class="act-text"><b>${escapeHtml(event.title)}</b><small>${escapeHtml(event.sub || "")}</small></span><span class="act-side"><em class="act-chip ${chip[0]}">${chip[1]}</em><small>${escapeHtml(event.when || "")}</small></span><i class="act-caret" aria-hidden="true"></i></button>
+    ${open ? `<div class="act-body">${event.err ? `<div class="act-error"><b>왜 실패했나요?</b><p>${escapeHtml(event.err.reason)}</p><b>이렇게 해 보세요</b><p>${escapeHtml(event.err.fix)}</p></div>` : ""}<dl>${event.rows.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(String(v))}</dd></div>`).join("")}</dl>${event.action ? `<button type="button" class="secondary-button act-go" ${event.action.attrs}>${escapeHtml(event.action.label)} →</button>` : ""}</div>` : ""}
+  </article>`;
+}
+function activityLogTemplate() {
+  const all = activityEvents();
+  const q = activityFilter.q.trim().toLowerCase();
+  const list = all.filter(event => (activityFilter.cat === "all" || event.cat === activityFilter.cat) && (!activityFilter.failOnly || event.state === "fail") && (!q || `${event.title} ${event.sub} ${event.rows.map(r => r[1]).join(" ")}`.toLowerCase().includes(q)));
+  const fails = all.filter(event => event.state === "fail");
+  const shown = list.slice(0, activityFilter.limit);
+  return `${sectionHero("처리 기록", "상품 전송·공급사 결제·예치금 충전·반품·환불이 어떻게 처리됐는지 모두 남아요. 줄을 누르면 자세히 보여요.")}
+    ${fails.length ? `<button type="button" class="act-fail-banner ${activityFilter.failOnly ? "on" : ""}" data-action="activity-fail-only"><span>⚠</span><span><b>실패한 처리 ${fails.length}건</b><small>${activityFilter.failOnly ? "전체 기록 다시 보기" : "누르면 실패한 것만 모아서 보여요 · 이유와 해결 방법 포함"}</small></span><i>›</i></button>` : `<div class="act-ok-banner">✓ 실패한 처리 없이 모두 잘 처리됐어요.</div>`}
+    <section class="panel act-panel">
+      <div class="act-filters" role="group" aria-label="종류">${ACTIVITY_CATS.map(([key, label]) => { const count = key === "all" ? all.length : all.filter(event => event.cat === key).length; return `<button type="button" class="${activityFilter.cat === key ? "active" : ""}" data-action="activity-cat" data-cat="${key}">${label}<b>${count}</b></button>`; }).join("")}</div>
+      <label class="act-search"><span aria-hidden="true">⌕</span><input id="activitySearch" value="${escapeHtml(activityFilter.q)}" placeholder="상품명·주문번호·쇼핑몰 검색" autocomplete="off"></label>
+      <div id="activityList" class="act-list">${shown.length ? shown.map(activityRow).join("") : `<div class="empty">${activityFilter.failOnly ? "실패한 처리가 없어요." : "아직 기록이 없어요."}</div>`}</div>
+      ${list.length > shown.length ? `<button type="button" class="secondary-button act-more" data-action="activity-more">더 보기 · ${shown.length}/${list.length}건</button>` : ""}
+    </section>`;
+}
+/* 상품 전송이 실패하면: 토스트 대신 팝업으로 이유·해결 방법 + ‘처리 기록에서 보기’ (여러 쇼핑몰이 한꺼번에 실패하면 한 번에 모아서) */
+let channelFailQueue = [];
+let channelFailTimer = null;
+function queueChannelFailure(entry) {
+  channelFailQueue.push(entry);
+  clearTimeout(channelFailTimer);
+  channelFailTimer = setTimeout(() => {
+    const fails = channelFailQueue.splice(0);
+    if (!fails.length) return;
+    openModal(`<div class="send-fail-modal"><span class="send-fail-icon" aria-hidden="true">!</span><h2>상품 전송에 실패했어요</h2><p>${fails.length > 1 ? `쇼핑몰 ${fails.length}곳에 보내지 못했어요.` : "아래 쇼핑몰에 보내지 못했어요."} 이유와 해결 방법을 확인해 주세요.</p>
+      <ul class="send-fail-list">${fails.map(entry => { const err = friendlyChannelError(entry.note, entry.channelId); return `<li>${channelMark(entry.channelId, true)}<span><b>${escapeHtml(channelMeta(entry.channelId).name)} · ${escapeHtml(channelOpLabel(entry.op))}</b><small>${escapeHtml(entry.title || "")}</small><em>${escapeHtml(err.reason)}</em><i>${escapeHtml(err.fix)}</i></span></li>`; }).join("")}</ul>
+      <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button><button type="button" class="primary-button" data-action="open-activity-fails">처리 기록에서 보기 →</button></div></div>`);
+    document.querySelector("#modal .modal")?.classList.add("pay-confirm-modal");
+  }, 500);
+}
+/* 취소·반품 화면 위 4칸(예치금·환불 처리중·출금 처리중·누적 환불)을 누르면 무엇이 들어 있는지 팝업으로 보여 준다 */
+function refundKpiModal(kind) {
+  const wallet = sellerDeposit();
+  const loginId = currentAccount?.loginId;
+  const openRefunds = state.refunds.filter(item => item.sellerLoginId === loginId && refundIsOpen(item));
+  const doneRefunds = state.refunds.filter(item => item.sellerLoginId === loginId && item.status === "환불완료");
+  const refundCharges = wallet.transactions.filter(item => item.type === "환불 충전");
+  const pendingWithdrawals = (wallet.withdrawals || []).filter(item => !/완료|실패|취소/.test(item.status || ""));
+  const row = (title, sub, amount, chip = "") => `<li><span><b>${title}</b><small>${sub}</small></span><span class="rk-amt">${amount}${chip}</span></li>`;
+  const list = (items, empty) => items.length ? `<ul class="rk-list">${items.join("")}</ul>` : `<div class="empty rk-empty">${empty}</div>`;
+  const refundRow = item => { const order = state.orders.find(o => o.id === item.orderId); const name = orderSourceProduct(order)?.name || order?.externalProductName || item.orderId; return row(`${escapeHtml(item.type || "환불")} · ${escapeHtml(name)}`, `${escapeHtml(item.id)} · 주문 ${escapeHtml(item.orderId)} · ${escapeHtml(item.requestedAt || "")}`, money(item.amount), `<em class="rk-chip">${escapeHtml(item.status)}</em>`); };
+  const views = {
+    balance: { kicker: "사용 가능 예치금", amount: wallet.balance, lead: "지금 바로 공급가 결제에 쓰거나 계좌로 출금할 수 있는 돈이에요.", body: `<h4>최근 이용 내역</h4>${list(wallet.transactions.slice(0, 6).map(tx => row(escapeHtml(tx.type), `${escapeHtml(tx.reference || tx.id)} · ${escapeHtml(tx.createdAt || "")}`, `<b class="${Number(tx.amount) >= 0 ? "plus" : "minus"}">${Number(tx.amount) >= 0 ? "+" : ""}${money(tx.amount)}</b>`)), "아직 이용 내역이 없어요.")}`, actions: `<button type="button" class="secondary-button" data-action="deposit-view" data-view="history">전체 이용내역</button><button type="button" class="primary-button" data-action="deposit-view" data-view="charge">예치금 충전</button>` },
+    pending: { kicker: "환불 처리중", amount: wallet.pending, lead: "반품 상품이 공급사 창고에 들어와 확인되면 예치금으로 바로 충전돼요. 그 전까지는 이 금액이 ‘보류’ 상태예요.", body: `<ol class="rk-steps"><li>환불 요청</li><li>반품 회수</li><li>공급사 입고 확인</li><li>예치금 충전</li></ol><h4>진행 중인 요청 ${openRefunds.length}건</h4>${list(openRefunds.map(refundRow), "진행 중인 환불 요청이 없어요.")}`, actions: `<button type="button" class="primary-button" data-close-modal>목록에서 확인하기</button>` },
+    withdraw: { kicker: "출금 처리중", amount: wallet.withdrawalPending, lead: "출금을 신청하면 사용 가능 예치금에서 바로 빠지고, 은행 이체가 끝나면 ‘출금 완료’로 바뀌어요. 보통 1영업일 안에 들어가요.", body: `<h4>이체 중인 출금 ${pendingWithdrawals.length}건</h4>${list(pendingWithdrawals.map(item => row(`${escapeHtml(item.bankName || "계좌")} •••• ${escapeHtml(item.accountLast4 || "")}`, `${escapeHtml(item.id)} · ${escapeHtml(item.requestedAt || "")}`, money(item.amount), `<em class="rk-chip">${escapeHtml(item.status)}</em>`)), wallet.withdrawalPending ? "출금 신청 내역을 불러오는 중이에요. 예치금 화면에서 다시 확인해 주세요." : "이체 중인 출금이 없어요.")}`, actions: `<button type="button" class="primary-button" data-action="deposit-view" data-view="withdraw">출금 신청·내역</button>` },
+    refunded: { kicker: "누적 환불 충전", amount: wallet.totalRefunded, lead: "지금까지 반품·취소로 예치금에 다시 들어온 돈이에요.", body: `<h4>환불 충전 ${refundCharges.length}건</h4>${list(refundCharges.map(tx => row("환불 충전", `${escapeHtml(tx.reference || tx.id)} · ${escapeHtml(tx.createdAt || "")}`, `<b class="plus">+${money(tx.amount)}</b>`)), "아직 환불로 충전된 돈이 없어요.")}${doneRefunds.length ? `<h4>완료된 환불 요청 ${doneRefunds.length}건</h4>${list(doneRefunds.slice(0, 6).map(refundRow), "")}` : ""}`, actions: `<button type="button" class="primary-button" data-close-modal>확인</button>` }
+  };
+  const view = views[kind] || views.balance;
+  openModal(`<div class="refund-kpi-modal"><span class="rk-kicker">${view.kicker}</span><h2>${money(view.amount)}</h2><p class="rk-lead">${view.lead}</p>${view.body}<div class="modal-actions">${view.actions}</div></div>`);
+  document.querySelector("#modal .modal")?.classList.add("pay-confirm-modal");
+}
 function selfMovedGuideModal(orders) {
   const name = orders[0]?.externalProductName || orderSellerTitle(orders[0]) || "주문";
   const channel = orders[0]?.channel || "쇼핑몰";
@@ -6423,8 +6627,19 @@ function selfBulkTrackingModal() {
       <div class="form-field"><label>택배사 (모든 주문 같게)</label>${carrierPicker("carrier", settings.selfCarrier || "CJ대한통운")}</div>
       <div class="self-bulk-rows">${orders.map(order => `<label class="self-bulk-row"><span><b>${escapeHtml(order.recipientName || order.customer || "-")}</b><small>${escapeHtml(order.channel)} · ${escapeHtml(order.externalProductName || "")} · ${order.qty}개</small></span><input name="tracking__${escapeHtml(order.id)}" inputmode="numeric" autocomplete="off" placeholder="송장번호" maxlength="30"></label>`).join("")}</div>
       <label class="self-send-now"><input type="checkbox" name="sendNow" value="on" checked><span><b>저장하고 연결된 쇼핑몰로 바로 송장 전송</b><small>연결 안 된 쇼핑몰·엑셀 주문은 저장만 해요.</small></span></label>
+      <p class="form-inline-error" data-form-error role="alert" hidden></p>
       <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">송장 저장</button></div>
     </form>`);
+}
+/* 팝업 안 입력 오류는 토스트(팝업 뒤에 가려질 수 있음) 대신 저장 버튼 바로 위에 보여 준다 */
+function showFormError(form, message, focusName = "") {
+  const box = form.querySelector("[data-form-error]");
+  form.querySelectorAll(".input-error").forEach(input => input.classList.remove("input-error"));
+  const names = Array.isArray(focusName) ? focusName : focusName ? [focusName] : [];
+  names.forEach(name => form.elements[name]?.classList.add("input-error"));
+  if (box) { box.textContent = message; box.hidden = false; box.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+  else showToast(message);
+  if (names[0]) form.elements[names[0]]?.focus({ preventScroll: Boolean(box) });
 }
 function selfPackingListDownload() {
   const orders = currentSelfOrders().filter(order => !order.tracking && order.status !== "배송완료");
@@ -6594,6 +6809,7 @@ function showToast(message) {
 }
 function sendTalkMessage({ supplierLoginId, sellerLoginId, text = "", image = "" }) {
   state.connectionMessages.push({ id: `MSG-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, supplierLoginId, sellerLoginId, senderLoginId: currentAccount.loginId, text, image, createdAt: "방금 전", sentAt: new Date().toISOString() });
+  chatMobileView = "room";
   audit("두고톡 메시지 전송", `${memberByLogin(supplierLoginId)?.company || supplierLoginId} ↔ ${memberByLogin(sellerLoginId)?.company || sellerLoginId} 대화에 ${image ? "사진을" : "메시지를"} 보냈습니다.`, "done", "connection");
   const otherLoginId = currentAccount.loginId === supplierLoginId ? sellerLoginId : supplierLoginId;
   pushNotification(otherLoginId, otherLoginId === supplierLoginId ? "supplier" : "seller", "system", "두고톡 새 메시지", `${currentAccount.company || currentAccount.loginId}: ${image ? "사진" : text.slice(0, 40)}`);
@@ -6625,11 +6841,11 @@ function scrollChatThreadToBottom() {
 }
 function openModal(html) {
   const modal = document.querySelector("#modal .modal");
-  modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal", "notice-modal", "collect-result-modal");
+  modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal", "notice-modal", "collect-result-modal", "pay-confirm-modal");
   document.getElementById("modalContent").innerHTML = html;
   document.getElementById("modal").hidden = false;
 }
-function closeModal() { const modal = document.querySelector("#modal .modal"); document.getElementById("modal").hidden = true; modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal", "notice-modal", "collect-result-modal"); document.querySelectorAll("#modalContent iframe").forEach(frame => frame.remove()); }
+function closeModal() { const modal = document.querySelector("#modal .modal"); document.getElementById("modal").hidden = true; modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal", "notice-modal", "collect-result-modal", "pay-confirm-modal"); document.querySelectorAll("#modalContent iframe").forEach(frame => frame.remove()); }
 
 /* ===== 주소 검색 =====
    국내 쇼핑몰 표준인 카카오(다음) 우편번호 서비스를 화면 안에 띄운다 (무료·키 없음, 도로명·지번·건물명·우편번호 모두 검색).
@@ -6675,6 +6891,10 @@ function openAddressPopup(trigger = null) {
   const fallback = document.getElementById("addressPopupFallback");
   const status = document.getElementById("addressPopupStatus");
   popup.hidden = false; embed.hidden = true; fallback.hidden = true; status.hidden = false;
+  document.getElementById("addressDetailStep").hidden = true;
+  document.getElementById("addressManualBox").open = false;
+  addressPicked = null;
+  status.className = "address-popup-status";
   status.textContent = "주소 검색 서비스를 여는 중이에요…";
   document.getElementById("addressPopupInput").value = "";
   document.getElementById("addressManualZip").value = "";
@@ -6687,27 +6907,103 @@ function openAddressPopup(trigger = null) {
       oncomplete: data => {
         const road = data.userSelectedType === "J" ? data.jibunAddress || data.autoJibunAddress : data.roadAddress || data.autoRoadAddress;
         const extra = data.userSelectedType === "J" ? "" : [data.bname && /[동로가]$/.test(data.bname) ? data.bname : "", data.buildingName && data.apartment === "Y" ? data.buildingName : data.buildingName].filter(Boolean).join(", ");
-        applyAddress(data.zonecode, extra ? `${road} (${extra})` : road);
+        embed.hidden = true;
+        showAddressDetailStep({ zip: data.zonecode, road: extra ? `${road} (${extra})` : road, jibun: data.jibunAddress || data.autoJibunAddress || "" });
       }
     }).embed(embed, { q: typed.trim(), autoClose: false });
   }).catch(() => {
     if (popup.hidden) return;
-    status.hidden = false;
-    status.textContent = "주소 검색 서비스에 연결하지 못했어요. 쓰던 주소에서 고르거나 아래에 직접 입력해 주세요.";
+    /* 카카오 우편번호를 못 쓰는 환경: 행안부 도로명주소 검색(두고 서버 또는 승인키)으로 같은 화면에서 검색 */
+    const online = addressOnlineAvailable();
+    status.hidden = online;
+    status.classList.toggle("warn", !online);
+    status.textContent = online ? "" : "지금 이 화면(미리보기)에서는 외부 주소 검색 서비스 연결이 막혀 있어요. 쓰던 주소에서 고르거나 아래 ‘직접 입력’을 이용해 주세요. 실제 서비스 주소에서는 도로명·지번·건물명으로 바로 찾아져요.";
     fallback.hidden = false;
-    renderAddressPopupResults("");
-    requestAnimationFrame(() => document.getElementById("addressPopupInput").focus());
+    const input = document.getElementById("addressPopupInput");
+    input.value = typed.trim();
+    renderAddressPopupResults(input.value);
+    requestAnimationFrame(() => input.focus());
   });
 }
+/* ===== 도로명주소 검색 (카카오 우편번호를 못 쓸 때) =====
+   ① 두고 서버 /api/address/search (승인키는 서버에만) ② 승인키가 설정된 경우 행안부 검색 API(JSONP) 직접 호출 */
+let addressPicked = null;
+let addressSearchTimer = null;
+let addressSearchSeq = 0;
+function jusoKey() { try { return String(window.DOOGO_JUSO_KEY || localStorage.getItem("doogo-juso-key") || ""); } catch { return ""; } }
+function addressOnlineAvailable() { return Boolean(CHANNEL_SERVER || jusoKey()); }
+function jusoJsonp(keyword) {
+  return new Promise((resolve, reject) => {
+    const cb = `__doogoJuso${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    const script = document.createElement("script");
+    const timer = setTimeout(() => { cleanup(); reject(new Error("timeout")); }, 7000);
+    const cleanup = () => { clearTimeout(timer); delete window[cb]; script.remove(); };
+    window[cb] = data => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error("blocked")); };
+    script.src = `https://business.juso.go.kr/addrlink/addrLinkApiJsonp.do?${new URLSearchParams({ confmKey: jusoKey(), currentPage: "1", countPerPage: "10", keyword, resultType: "json", callback: cb })}`;
+    document.head.appendChild(script);
+  });
+}
+async function searchAddressOnline(keyword) {
+  if (CHANNEL_SERVER) {
+    const response = await fetch(`${CHANNEL_SERVER}/api/address/search?${new URLSearchParams({ keyword })}`, { headers: { Authorization: `Bearer ${CHANNEL_SERVER_TOKEN}` } });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `주소 검색 오류 (${response.status})`);
+    return data.items || [];
+  }
+  const data = await jusoJsonp(keyword);
+  const common = data?.results?.common || {};
+  if (common.errorCode && common.errorCode !== "0") throw new Error(common.errorMessage || "주소 검색에 실패했어요.");
+  return (data?.results?.juso || []).map(row => ({ zipCode: row.zipNo, roadAddress: row.roadAddr, jibunAddress: row.jibunAddr, building: row.bdNm }));
+}
+function addressResultButton(item) {
+  return `<button type="button" class="address-online-row" data-action="address-pick" data-postal="${escapeHtml(item.zipCode || "")}" data-address="${escapeHtml(item.roadAddress || "")}" data-jibun="${escapeHtml(item.jibunAddress || "")}"><b>${escapeHtml(item.zipCode || "-----")}</b><span><span class="ar-line"><em>도로명</em>${escapeHtml(item.roadAddress || "")}${item.building ? ` <i>${escapeHtml(item.building)}</i>` : ""}</span><small class="ar-line"><em>지번</em>${escapeHtml(item.jibunAddress || "-")}</small></span></button>`;
+}
+function runAddressOnlineSearch(query) {
+  const box = document.getElementById("addressOnlineResults");
+  clearTimeout(addressSearchTimer);
+  const q = normalizeKoreanAddress(query);
+  if (!box || !addressOnlineAvailable()) return;
+  if (q.length < 2) { box.innerHTML = ""; return; }
+  box.innerHTML = `<p class="address-searching">‘${escapeHtml(q)}’ 찾는 중…</p>`;
+  const seq = ++addressSearchSeq;
+  addressSearchTimer = setTimeout(async () => {
+    try {
+      const items = await searchAddressOnline(q);
+      if (seq !== addressSearchSeq) return;
+      box.innerHTML = items.length ? `<small class="address-results-label">검색 결과 ${items.length}건 · 눌러서 고르세요</small>${items.map(addressResultButton).join("")}` : `<div class="empty">‘${escapeHtml(q)}’로 찾은 주소가 없어요. 도로명과 건물번호(예: 강남대로146길 28)로 다시 찾아 보세요.</div>`;
+    } catch (error) {
+      if (seq !== addressSearchSeq) return;
+      box.innerHTML = `<div class="empty">주소 검색 서비스에 연결하지 못했어요 (${escapeHtml(error.message)}). 아래 ‘직접 입력’을 이용해 주세요.</div>`;
+    }
+  }, 280);
+}
+/* 주소를 고르면: 고른 주소를 보여 주고 상세주소(동·호수)를 바로 받는다 (스마트스토어 배송지 입력과 같은 흐름) */
+function showAddressDetailStep(picked) {
+  addressPicked = picked;
+  document.getElementById("addressPopupStatus").hidden = true;
+  document.getElementById("addressPopupEmbed").hidden = true;
+  document.getElementById("addressPopupFallback").hidden = true;
+  document.getElementById("addressDetailStep").hidden = false;
+  document.getElementById("adsZip").textContent = picked.zip || "";
+  document.getElementById("adsRoad").textContent = picked.road || "";
+  document.getElementById("adsJibun").textContent = picked.jibun ? `지번 ${picked.jibun}` : "";
+  const detailName = addressTarget?.detail || "addressDetail";
+  const current = addressTarget?.form?.elements?.[detailName]?.value || "";
+  const input = document.getElementById("addressDetailInput");
+  input.value = current;
+  requestAnimationFrame(() => input.focus());
+}
 function closeAddressPopup() { document.getElementById("addressPopup").hidden = true; const embed = document.getElementById("addressPopupEmbed"); if (embed) embed.innerHTML = ""; }
-function applyAddress(postal, address) {
+function applyAddress(postal, address, detail = null) {
   const form = addressTarget?.form;
   if (!form) { closeAddressPopup(); return showToast("주소를 넣을 입력칸을 찾지 못했어요."); }
   const set = (name, value) => { const input = form.elements?.[name]; if (input) { input.value = value; input.dispatchEvent(new Event("input", { bubbles: true })); } };
   set(addressTarget.zip, postal); set(addressTarget.addr, address);
+  if (detail !== null) set(addressTarget.detail, detail);
   closeAddressPopup();
-  form.elements?.[addressTarget.detail]?.focus();
-  showToast("주소를 넣었어요. 상세주소(동·호수)를 적어 주세요.");
+  if (detail === null || !detail.trim()) { form.elements?.[addressTarget.detail]?.focus(); showToast("주소를 넣었어요. 상세주소(동·호수)를 적어 주세요."); }
+  else showToast("배송지 주소를 넣었어요.");
 }
 function renderAddressPopupResults(query) {
   const results = document.getElementById("addressPopupResults");
@@ -6716,7 +7012,9 @@ function renderAddressPopupResults(query) {
   const key = value => value.replace(/\s/g, "").toLowerCase();
   const matches = knownAddresses().filter(item => !q || key(`${item.address}${item.postal}${item.note}`).includes(key(q))).slice(0, 8);
   const typed = q && looksLikeAddress(q) ? `<button type="button" class="address-use-typed" data-action="address-use-typed" data-address="${escapeHtml(q)}"><b>입력</b><span>‘${escapeHtml(q)}’ 그대로 쓰기<small>우편번호 5자리를 함께 적어 주세요</small></span></button>` : "";
-  results.innerHTML = `${matches.length ? `<small class="address-results-label">${q ? "쓰던 주소에서 찾았어요" : "최근에 쓴 주소"}</small>` : ""}${matches.map(item => `<button type="button" data-action="select-address" data-postal="${escapeHtml(item.postal)}" data-address="${escapeHtml(item.address)}"><b>${escapeHtml(item.postal || "-----")}</b><span>${escapeHtml(item.address)}<small>${escapeHtml(item.note)}</small></span></button>`).join("")}${typed}${!matches.length && !typed ? `<div class="empty">${q ? "쓰던 주소 중에는 없어요. 아래에 주소와 우편번호를 직접 입력해 주세요." : "아직 쓴 주소가 없어요. 아래에 직접 입력해 주세요."}</div>` : ""}`;
+  const online = addressOnlineAvailable();
+  results.innerHTML = `${online ? `<div id="addressOnlineResults" class="address-online-results"></div>` : ""}${matches.length ? `<small class="address-results-label">${q ? "쓰던 주소에서 찾았어요" : "최근에 쓴 주소"}</small>` : ""}${matches.map(item => `<button type="button" data-action="select-address" data-postal="${escapeHtml(item.postal)}" data-address="${escapeHtml(item.address)}"><b>${escapeHtml(item.postal || "-----")}</b><span>${escapeHtml(item.address)}<small>${escapeHtml(item.note)}</small></span></button>`).join("")}${typed}${!matches.length && !typed && !online ? `<div class="empty">${q ? "쓰던 주소 중에는 없어요. 아래 ‘직접 입력’에서 주소와 우편번호를 적어 주세요." : "아직 쓴 주소가 없어요. 아래 ‘직접 입력’을 눌러 적어 주세요."}</div>` : ""}`;
+  if (online) runAddressOnlineSearch(q);
   const link = document.getElementById("addressJusoLink");
   if (link) link.href = `https://www.juso.go.kr/support/AddressMainSearch.do?searchKeyword=${encodeURIComponent(q)}`;
 }
@@ -7569,18 +7867,22 @@ function orderPaymentModal(orderId) {
   const order = state.orders.find(item => item.id === orderId);
   const product = orderSourceProduct(order);
   if (!order || !product || orderMappingStatus(order) !== "mapped") return showToast("먼저 공급사 상품을 매핑해 주세요.");
-  const supplyTotal = orderUnitSupply(order, product) * Number(order.qty || 1);
+  const supplyOnly = orderUnitSupply(order, product) * Number(order.qty || 1);
+  const ship = orderSupplyShipping(order, product, supplyOnly);
+  const supplyTotal = supplyOnly + ship.fee;
   const deposit = sellerDeposit(order.sellerLoginId);
   openModal(`<div class="payment-modal-head"><span>SUPPLY PAYMENT</span><h2>이 상품을 결제하시겠습니까?</h2><p>결제가 완료되면 ${escapeHtml(product.supplier)} 공급사의 신규주문으로 즉시 전달됩니다.</p></div>
-    <div class="payment-order-card">${productPhoto(product,"order-detail-photo")}<div><small>${escapeHtml(product.id)} · 불변 상품코드</small><b>${escapeHtml(product.name)}</b>${orderOptionTag(order)}<span>${order.qty}개 · 공급가 합계 ${money(supplyTotal)}</span></div></div>
+    <div class="payment-order-card">${productPhoto(product,"order-detail-photo")}<div><small>${escapeHtml(product.id)} · 불변 상품코드</small><b>${escapeHtml(product.name)}</b>${orderOptionTag(order)}<span>${order.qty}개 · 공급가 합계 ${money(supplyOnly)}</span><span class="pay-ship-line">🚚 배송비 ${ship.fee ? money(ship.fee) : "0원"} <i>${escapeHtml(ship.label)}</i></span></div></div>
     <form id="orderPaymentForm" class="payment-method-form" data-id="${order.id}">
       <label class="payment-method-option"><input type="radio" name="paymentMethod" value="deposit" ${deposit.balance >= supplyTotal ? "checked" : ""}><span><b>예치금 결제</b><small>현재 잔액 ${money(deposit.balance)}${deposit.balance < supplyTotal ? ` · ${money(supplyTotal - deposit.balance)} 부족` : ` · 결제 후 ${money(deposit.balance - supplyTotal)}`}</small></span><strong>${deposit.balance >= supplyTotal ? "결제 가능" : "잔액 부족"}</strong></label>${deposit.balance < supplyTotal ? `<button type="button" class="text-button payment-charge-link" data-action="deposit-view" data-view="charge">예치금 충전하러 가기 →</button>` : ""}
       <label class="payment-method-option ${CARD_PAYMENT_READY ? "" : "pay-off"}"><input type="radio" name="paymentMethod" value="card" ${CARD_PAYMENT_READY && deposit.balance < supplyTotal ? "checked" : ""} ${CARD_PAYMENT_READY ? "" : "disabled"}><span><b>신용카드 결제</b><small>${CARD_PAYMENT_READY ? "예치금 없이 카드로 바로 결제" : "결제대행(PG) 연결 후 사용할 수 있어요"}</small></span><strong>카드</strong></label>
       ${productNeedsCustoms(product) ? `<div class="payment-customs"><b>해외직구 상품이라 개인통관고유부호가 필요해요.</b>${customsInputMarkup(order.personalCustomsCode || "")}</div>` : ""}
-      <div class="payment-total"><span>공급가 결제금액</span><strong>${money(supplyTotal)}</strong></div>
+      <div class="pay-confirm-sum"><div><span>상품 공급가</span><b>${money(supplyOnly)}</b></div><div><span>배송비</span><b>${ship.fee ? `+ ${money(ship.fee)}` : "0원 (무료·착불)"}</b></div></div>
+      <div class="payment-total"><span>결제 금액</span><strong>${money(supplyTotal)}</strong></div>
       <div class="api-safe-notice"><b>결제 안내</b><span>예치금으로 결제하면 공급사에 바로 주문이 전달돼요. 예치금이 부족하면 ‘예치금’ 메뉴에서 무통장으로 충전해 주세요.</span></div>
       <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">결제하고 공급사에 전달</button></div>
     </form>`);
+  document.querySelector("#modal .modal")?.classList.add("pay-confirm-modal");
 }
 
 function sellerNoticesTemplate() {
@@ -8164,7 +8466,7 @@ function runChannelOp(item, channelId, op, { stock, silent = false } = {}) {
   return request.then(result => { apply(result); saveState(); render(); updateAccountUI(); return result; }).catch(error => {
     logChannelApi({ ...base, request: channelApiRequestLine(channelId, op, listing || {}), status: "실패", note: error.message, ok: false });
     saveState(); render(); updateAccountUI();
-    if (!silent) showToast(`${channel?.name || "쇼핑몰"} ${channelOpLabel(op)} 실패: ${error.message}`);
+    if (!silent) queueChannelFailure({ ...base, note: error.message });
     return null;
   });
 }
@@ -10576,8 +10878,11 @@ document.addEventListener("click", event => {
   if (action === "single-order") { externalOrderModal(); return; }
   if (action === "open-address-popup") { openAddressPopup(target); return; }
   if (action === "close-address-popup") { closeAddressPopup(); return; }
-  if (action === "select-address") { if (!/^\d{5}$/.test(target.dataset.postal || "")) { document.getElementById("addressManualAddr").value = target.dataset.address; document.getElementById("addressManualZip").value = ""; document.getElementById("addressManualZip").focus(); return showToast("이 주소는 우편번호가 없어요. 5자리를 적어 주세요."); } applyAddress(target.dataset.postal, target.dataset.address); return; }
-  if (action === "address-use-typed") { document.getElementById("addressManualAddr").value = target.dataset.address; document.getElementById("addressManualZip").value = ""; document.getElementById("addressManualZip").focus(); return showToast("우편번호 5자리를 적고 ‘이 주소로 입력’을 눌러 주세요."); }
+  if (action === "address-pick") { showAddressDetailStep({ zip: target.dataset.postal, road: target.dataset.address, jibun: target.dataset.jibun || "" }); return; }
+  if (action === "address-back") { document.getElementById("addressDetailStep").hidden = true; if (window.daum?.Postcode && document.getElementById("addressPopupEmbed").childElementCount) { document.getElementById("addressPopupEmbed").hidden = false; } else { document.getElementById("addressPopupFallback").hidden = false; document.getElementById("addressPopupStatus").hidden = addressOnlineAvailable(); document.getElementById("addressPopupInput").focus(); } return; }
+  if (action === "address-detail-apply") { if (!addressPicked) return; if (!/^\d{5}$/.test(addressPicked.zip || "")) { document.getElementById("addressDetailStep").hidden = true; document.getElementById("addressPopupFallback").hidden = false; const box = document.getElementById("addressManualBox"); box.open = true; document.getElementById("addressManualAddr").value = addressPicked.road; document.getElementById("addressManualZip").focus(); return showToast("이 주소는 우편번호가 없어요. 5자리를 적어 주세요."); } applyAddress(addressPicked.zip, addressPicked.road, document.getElementById("addressDetailInput").value.trim()); return; }
+  if (action === "select-address") { if (/^\d{5}$/.test(target.dataset.postal || "")) { showAddressDetailStep({ zip: target.dataset.postal, road: target.dataset.address, jibun: "" }); return; } if (!/^\d{5}$/.test(target.dataset.postal || "")) { document.getElementById("addressManualBox").open = true; document.getElementById("addressManualAddr").value = target.dataset.address; document.getElementById("addressManualZip").value = ""; document.getElementById("addressManualZip").focus(); return showToast("이 주소는 우편번호가 없어요. 5자리를 적어 주세요."); } applyAddress(target.dataset.postal, target.dataset.address); return; }
+  if (action === "address-use-typed") { document.getElementById("addressManualBox").open = true; document.getElementById("addressManualAddr").value = target.dataset.address; document.getElementById("addressManualZip").value = ""; document.getElementById("addressManualZip").focus(); return showToast("우편번호 5자리를 적고 ‘이 주소로 입력’을 눌러 주세요."); }
   if (action === "address-manual-apply") {
     const zip = document.getElementById("addressManualZip").value.replace(/\D/g, "");
     const addr = normalizeKoreanAddress(document.getElementById("addressManualAddr").value);
@@ -11085,6 +11390,12 @@ document.addEventListener("click", event => {
   }
   if (action === "order-stage-guide") return orderStageGuideModal();
   if (action === "order-talk") return openOrderTalk(id, target.dataset.q || "");
+  if (action === "activity-toggle") { activityOpenId = activityOpenId === target.dataset.id ? "" : target.dataset.id; render(); return; }
+  if (action === "activity-cat") { activityFilter.cat = target.dataset.cat; activityFilter.limit = 20; activityOpenId = ""; render(); return; }
+  if (action === "activity-fail-only") { activityFilter.failOnly = !activityFilter.failOnly; activityFilter.limit = 20; render(); return; }
+  if (action === "activity-more") { activityFilter.limit += 20; render(); return; }
+  if (action === "open-activity-fails") { closeModal(); activityFilter = { cat: "product", failOnly: true, q: "", limit: 20 }; activityOpenId = activityEvents().find(event => event.state === "fail" && event.cat === "product")?.id || ""; activeMenuIndex = menuIndexOf("처리 기록", "seller"); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (action === "refund-kpi") { refundKpiModal(target.dataset.kind); return; }
   if (action === "go-self-orders") { closeModal(); closeMobileSidebar(); activeMenuIndex = menuIndexOf("주문 관리", "seller"); sellerOrderStage = "self"; selfStepFilter = selfTodoOrders().some(order => ["ready", "failed"].includes(selfOrderStep(order))) && !selfTodoOrders().some(order => ["new", "confirmed"].includes(selfOrderStep(order))) ? "ready" : "todo"; sellerOrderSearch = ""; render(); updateAccountUI(); requestAnimationFrame(() => document.querySelector(".self-panel")?.scrollIntoView({ block: "start", behavior: "smooth" })); return; }
   if (action === "toggle-order-settings") { orderSettingsOpen = !target.closest("details")?.open; return; }
   if (action === "filter-order-stage") { sellerOrderStage = target.dataset.stage === "overview" ? "all" : (target.dataset.stage || "all"); sellerOrderSearch = ""; render(); updateAccountUI(); return; }
@@ -11473,6 +11784,7 @@ document.getElementById("workspaceMenu").addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
   activeMenuIndex = Number(button.dataset.menuIndex);
+  if (button.dataset.orderStage) { sellerOrderStage = button.dataset.orderStage; sellerOrderSearch = ""; if (sellerOrderStage === "self") selfStepFilter = "todo"; }
   if (activeMenuIndex !== 0) editMode = false;
   chatMobileView = "list";
   closeMobileSidebar(); render(); updateAccountUI(); window.scrollTo({ top: 0, behavior: "smooth" }); scrollChatThreadToBottom();
@@ -11595,7 +11907,8 @@ const LIVE_SEARCH_INPUTS = {
   chatRoomSearch: value => { chatRoomSearch = value; },
   sellerCatalogSearch: value => { sellerProductSearch = value; },
   onSaleSearchInput: value => { onSaleSearch = value; onSalePage = 1; },
-  mdpSearch: value => { masterDepositFilter.q = value; masterDepositFilter.page = 1; }
+  mdpSearch: value => { masterDepositFilter.q = value; masterDepositFilter.page = 1; },
+  activitySearch: value => { activityFilter.q = value; activityFilter.limit = 20; }
 };
 let liveSearchTimer = null;
 function handleLiveSearchInput(event) {
@@ -12253,11 +12566,16 @@ document.addEventListener("submit", event => {
     const carrier = resolveCarrierName(data.carrier) || String(data.carrier || "").trim();
     if (!carrier) return showToast("택배사를 골라 주세요.");
     const entries = currentSelfOrders().filter(order => !order.tracking).map(order => [order, String(data[`tracking__${order.id}`] || "").replace(/[\s-]/g, "")]).filter(([, tracking]) => tracking);
-    if (!entries.length) return showToast("송장번호를 하나 이상 적어 주세요.");
+    if (!entries.length) return showFormError(form, "송장번호를 하나 이상 적어 주세요.", form.querySelector('input[name^="tracking__"]')?.name);
     const bad = entries.find(([, tracking]) => !/^[0-9A-Za-z]{8,30}$/.test(tracking));
-    if (bad) { form.elements[`tracking__${bad[0].id}`]?.focus(); return showToast(`${bad[0].recipientName || bad[0].id} 송장번호를 확인해 주세요. (숫자·영문 8~30자리)`); }
-    const dup = entries.find(([, tracking], index) => entries.findIndex(([, other]) => other === tracking) !== index);
-    if (dup) { form.elements[`tracking__${dup[0].id}`]?.focus(); return showToast("같은 송장번호가 두 번 들어갔어요."); }
+    if (bad) return showFormError(form, `${bad[0].recipientName || bad[0].id}님 송장번호를 확인해 주세요. (숫자·영문 8~30자리)`, `tracking__${bad[0].id}`);
+    /* 같은 송장번호가 여러 주문에: 한 상자로 같이 보낸 경우(합포장)도 있으니 막지 않고 한 번 확인한 뒤 저장 */
+    const dupGroups = entries.filter(([, tracking]) => entries.filter(([, other]) => other === tracking).length > 1);
+    const dupKey = dupGroups.map(([order, tracking]) => `${order.id}:${tracking}`).join("|");
+    if (dupGroups.length && form.dataset.dupOk !== dupKey) {
+      form.dataset.dupOk = dupKey;
+      return showFormError(form, `같은 송장번호가 ${dupGroups.length}건에 들어갔어요 (${dupGroups.map(([order]) => order.recipientName || order.id).join(", ")}). 한 상자로 같이 보냈다면 ‘송장 저장’을 한 번 더 눌러 주세요. 아니면 번호를 고쳐 주세요.`, dupGroups.map(([order]) => `tracking__${order.id}`));
+    }
     const names = new Set();
     entries.forEach(([order, tracking]) => { saveSelfTracking(order, carrier, tracking); if (data.sendNow) pushOrderTracking(order, "manual").forEach(name => names.add(name)); });
     audit("직접 배송 송장 일괄 입력", `${entries.length}건 · ${carrier}${names.size ? ` → ${[...names].join(", ")}` : ""}`, "done", "tracking");
@@ -13290,3 +13608,9 @@ startTyping("partnerTypingText", () => (partnerLoginRole === "master" ? MASTER_T
 /* 송장 자동 전송 스케줄러: 30초마다 전송 시각(10분 단위)이 된 송장이 있는지 확인한다. */
 window.setInterval(() => { if (!document.hidden) runTrackingScheduler(); }, 30 * 1000);
 window.setTimeout(runTrackingScheduler, 2500);
+/* 주소 팝업: 상세주소 칸에서 Enter = ‘이 주소로 입력’, 검색칸 Enter = 바로 검색 */
+document.addEventListener("keydown", event => {
+  if (event.key !== "Enter" || event.isComposing) return;
+  if (event.target.id === "addressDetailInput") { event.preventDefault(); document.querySelector('[data-action="address-detail-apply"]')?.click(); }
+  if (event.target.id === "addressPopupInput") { event.preventDefault(); clearTimeout(addressSearchTimer); renderAddressPopupResults(event.target.value); }
+});
