@@ -2187,6 +2187,7 @@ function memberStatusChip(status) {
 let noticeReturn = null;
 function render() {
   if (noticeReturn && (activeMenuIndex !== noticeReturn.noticeIndex || activeRole !== noticeReturn.role)) noticeReturn = null;
+  if (currentAccount && activeRole === "seller") reconcileSelfMappedOrders();
   renderSeller();
   renderSupplier();
   renderMaster();
@@ -7427,6 +7428,27 @@ function mappingMarginText(sale, supply) {
   return `<em class="mp-margin ${margin >= 0 ? "plus" : "minus"}">개당 마진 ${margin >= 0 ? "+" : "−"}${money(Math.abs(margin))} (${Math.round(margin / sale * 100)}%)</em>`;
 }
 /* 결제 전이라 다른 상품으로 바꿔도 되는 주문 (두고에서 전송한 상품의 자동 연결 주문은 제외) */
+/* ‘직접 배송’ 칸에는 사장님이 직접 보내는(송장을 직접 넣는) 주문만 둔다.
+   직접 배송으로 옮겼다가 그 쇼핑몰 상품을 두고 상품과 연결(매핑완료)했다면, 아직 송장을 안 넣은 주문은
+   두고 위탁 흐름(결제 대기 → 공급사 출고)으로 옮긴다. 예전 버전에서 매핑만 하고 남아 있던 주문도 여기서 정리된다. */
+function reconcileSelfMappedOrders() {
+  const mappings = new Map(currentProductMappings().filter(mapping => mapping.status === "매핑완료" && mapping.productId).map(mapping => [mapping.externalProductCode, mapping]));
+  if (!mappings.size) return 0;
+  let moved = 0;
+  currentSellerOrders().forEach(order => {
+    if (!selfOrderMappable(order) || !order.externalProductCode) return;
+    const mapping = mappings.get(order.externalProductCode);
+    const product = mapping && productOf(mapping.productId);
+    if (!product || product.status !== "판매중") return;
+    const option = mapping.optionId ? productOptionOf(product, mapping.optionId) : null;
+    if (hasOptions(product) && !option) return;
+    applyMappingToOrder(order, product, "manual", option);
+    Object.assign(order, { supplierLoginId: "", paymentStatus: "pending", settlementStatus: "pending-payment" });
+    moved += 1;
+  });
+  if (moved) { audit("직접 배송 → 두고 공급사 정리", `이미 두고 상품과 연결된 쇼핑몰 상품의 송장 전 직접 배송 주문 ${moved}건을 결제 대기로 옮겼어요.`, "done", "order"); saveState(); }
+  return moved;
+}
 /* 직접 배송으로 옮겼지만 아직 송장을 안 넣은 주문: 두고 상품으로 연결하면 바로 결제 대기로 돌릴 수 있다 */
 function selfOrderMappable(order) { return orderMappingStatus(order) === "self" && !order.tracking && order.status !== "배송완료"; }
 function mappingRemappableOrder(order) { return orderMappingStatus(order) === "mapped" && orderPaymentStatus(order) === "pending" && order.mappingType !== "auto"; }
