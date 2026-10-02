@@ -6338,7 +6338,7 @@ function renderSupplier() {
     { count: pickCount, tone: "purple", title: "PICK 승인 요청", hint: "위탁셀러가 내 상품을 팔고 싶어해요", button: "확인하기", attrs: 'data-action="supplier-go-menu" data-index="9"' },
     { count: checkOrders.length, tone: "red", title: "쇼핑몰 확인이 필요한 주문", hint: "취소 여부를 확인해 주세요", button: "확인하기", attrs: 'data-action="open-supplier-orders" data-status="주문확인필요"' },
     { count: refundWait.length, tone: refundDecide || refundReceipt ? "red" : "orange", title: "처리 중인 취소·반품", hint: refundHint || "진행 상황을 확인해 주세요", button: "보기", attrs: 'data-action="supplier-open-refunds"' },
-    { count: lowStock.length, tone: "purple", title: "재고 50개 미만 상품", hint: `${lowStockHint} (옵션 재고 포함)`, button: "재고 보기", attrs: 'data-action="supplier-open-lowstock"' }
+    { count: lowStock.length, tone: "purple", unit: "개", title: "재고 50개 미만 상품", hint: `${lowStockHint} (옵션 재고 포함)`, button: "재고 보기", attrs: 'data-action="supplier-open-lowstock"' }
   ].filter(item => item.count > 0);
   const step = (index, label, count, caption, tone, attrs) => `<button type="button" class="home-order-step tone-${tone}" ${attrs}><b>${label}</b><strong>${count}<em>건</em></strong><small>${caption}</small></button>`;
   const myIds = new Set(products.map(product => product.id));
@@ -6350,7 +6350,7 @@ function renderSupplier() {
     <button type="button" class="stl-mini" data-action="supplier-go-menu" data-index="7"><span><small>다음 정산 · ${escapeHtml(nextStl.meta.payLabel)}</small><b>${money(nextStl.net)}</b></span><span class="stl-mini-meta">${escapeHtml(nextStl.meta.period)} 주문 ${nextStl.lines.length}건${nextStl.holds.length ? ` · <em>보류 ${nextStl.holds.length}건</em>` : ""}</span><i>정산 보기 →</i></button>
     <section class="home-today sup-today">
       <div class="home-greeting"><span>오늘 할 일</span><h2>${todo.length ? `오늘 처리할 일이 <em>${todo.length}가지</em> 있어요` : "오늘 처리할 일을 모두 마쳤어요"}</h2><p>버튼 한 번이면 해당 일을 바로 처리하거나 화면으로 이동해요.</p></div>
-      ${todo.length ? `<div class="home-todo-list">${todo.map((item, index) => `<button type="button" class="home-todo tone-${item.tone}" ${item.attrs}><strong>${item.count}</strong><span><b>${item.title}</b><small>${item.hint}</small></span><em>${item.button} →</em></button>`).join("")}</div>` : `<div class="home-todo-done"><b>✓ 모두 처리했어요</b><span>위탁셀러 주문이 들어오면 여기에 바로 알려 드릴게요.</span></div>`}
+      ${todo.length ? `<div class="home-todo-list">${todo.map((item, index) => `<button type="button" class="home-todo sup-todo tone-${item.tone}" ${item.attrs}><i class="todo-no" aria-label="${index + 1}번째 할 일">${index + 1}</i><span><b>${item.title}<strong class="todo-count">${item.count}<small>${item.unit || "건"}</small></strong></b><small>${item.hint}</small></span><em>${item.button} →</em></button>`).join("")}</div>` : `<div class="home-todo-done"><b>✓ 모두 처리했어요</b><span>위탁셀러 주문이 들어오면 여기에 바로 알려 드릴게요.</span></div>`}
     </section>
     <section class="panel home-section"><div class="home-section-head"><div><h3>주문 처리 현황</h3><p>위탁셀러 결제 → 확인·포장 → 송장 발급 → 배송완료 순서로 진행돼요.</p></div><button type="button" class="secondary-button" data-action="open-supplier-orders">주문 · 출고 관리 →</button></div>
       <div class="home-orders">${step(0, "신규 주문", newOrders.length, "확인·포장 전", "red", 'data-action="open-supplier-orders" data-status="발주완료"')}${step(1, "송장 대기", readyOrders.length, "포장 완료·송장 전", "orange", 'data-action="open-supplier-orders" data-status="배송준비중"')}${step(2, "배송중", orders.filter(o => o.status === "배송중").length, "셀러 쇼핑몰 전송", "blue", 'data-action="open-supplier-orders" data-status="배송중"')}${step(3, "배송완료", orders.filter(o => o.status === "배송완료").length, "정산 예정", "green", 'data-action="open-supplier-orders" data-status="배송완료"')}</div>
@@ -7307,7 +7307,7 @@ function editSellerProductModal(sellerProductId) {
       ${studioCodeLink(item, source)}
       <section id="studio-photo" class="studio-section"><h3><i>1</i> 대표 사진</h3><p>쇼핑몰 목록에서 가장 먼저 보이는 사진이에요.</p>
         <div class="studio-photo-row"><div id="studioThumbPreview" class="studio-thumb">${studioThumbMarkup(item, source)}</div>
-          <div class="studio-photo-actions"><label class="studio-upload primary tap-file-host"><input type="file" id="studioThumbInput" class="tap-file" accept="image/*" aria-label="대표 사진 올리기">📷 내 사진 올리기</label><button type="button" class="studio-ghost" data-action="studio-reset-thumb">공급사 사진 쓰기</button><small>휴대폰 사진은 자동으로 알맞게 줄여요.</small></div></div>
+          <div class="studio-photo-actions"><label class="studio-upload primary tap-file-host"><input type="file" id="studioThumbInput" class="tap-file" accept="image/*" aria-label="대표 사진 올리기">📷 내 사진 올리기</label><button type="button" class="studio-ghost" data-action="studio-reset-thumb">공급사 사진 쓰기</button><small>휴대폰 사진은 자동으로 알맞게 줄여요.</small><details class="studio-url"><summary>사진 선택 창이 안 열리나요? 사진 주소로 넣기</summary><div class="studio-url-row"><input id="studioPhotoUrl" type="url" inputmode="url" placeholder="https://… (.jpg / .png 사진 주소)" autocomplete="off"><button type="button" class="secondary-button" data-action="studio-url-thumb">대표로</button><button type="button" class="secondary-button" data-action="studio-url-gallery">추가 이미지로</button></div></details></div></div>
         <div class="studio-gallery"><div class="studio-gallery-head"><b>추가 이미지</b><small>최대 ${STUDIO_EXTRA_MAX}장 · 쇼핑몰 상품 사진 넘기기에 나와요</small></div><div id="studioGallery" class="studio-gallery-grid">${studioGalleryMarkup()}</div></div>
         <div class="studio-badges" role="radiogroup" aria-label="사진 위 문구">${THUMB_BADGES.map(badge => `<label><input type="radio" name="thumbBadge" value="${escapeHtml(badge)}" ${(item.thumbBadge || "") === badge ? "checked" : ""}><span>${badge ? escapeHtml(badge) : "문구 없음"}</span></label>`).join("")}</div>
       </section>
@@ -9224,6 +9224,8 @@ let imgDbPromise = null;
 function imgDb() {
   if (imgDbPromise) return imgDbPromise;
   imgDbPromise = new Promise(resolve => {
+    /* 일부 앱 안 브라우저는 저장소 요청에 답이 없다 → 1.5초 기다린 뒤 저장소 없이 진행 (사진 올리기가 멈추지 않게) */
+    setTimeout(() => resolve(null), 1500);
     try {
       const req = indexedDB.open(IMG_DB_NAME, 1);
       req.onupgradeneeded = () => req.result.createObjectStore("images");
@@ -9240,7 +9242,7 @@ async function storeImage(dataUrl) {
   const db = await imgDb();
   if (!db) { imgCache.delete(key); return dataUrl; } // 저장소를 못 쓰면 문서 안에 그대로 넣는다
   try {
-    await new Promise((resolve, reject) => { const tx = db.transaction("images", "readwrite"); tx.objectStore("images").put(dataUrl, key); tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error); });
+    await new Promise((resolve, reject) => { const tx = db.transaction("images", "readwrite"); tx.objectStore("images").put(dataUrl, key); tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error); setTimeout(() => reject(new Error("timeout")), 2000); });
     return key;
   } catch (error) { imgCache.delete(key); return dataUrl; }
 }
@@ -11070,6 +11072,16 @@ document.addEventListener("click", event => {
   if (action === "pe-photo-del") { productPhotoDraft.splice(Number(target.dataset.index), 1); refreshProductPhotos(); showToast(productPhotoDraft.length ? "사진을 뺐어요. 저장하면 적용돼요." : "사진을 모두 뺐어요. 저장하면 두고 기본 이미지가 대표로 쓰여요."); return; }
   if (action === "pe-photo-main") { const [ref] = productPhotoDraft.splice(Number(target.dataset.index), 1); if (ref) productPhotoDraft.unshift(ref); refreshProductPhotos(); showToast("대표 사진으로 바꿨어요. 저장하면 적용돼요."); return; }
   if (action === "pe-library-open") { const library = document.querySelector("#modal [data-pe-library]"); if (library) { library.open = true; library.scrollIntoView({ behavior: "smooth", block: "nearest" }); } return; }
+  if (action === "studio-url-thumb" || action === "studio-url-gallery") {
+    const input = document.getElementById("studioPhotoUrl");
+    const url = rdeSafeUrl(input?.value, "img");
+    if (!studioDraft) return;
+    if (!url || !/^https?:\/\//i.test(url)) { input?.focus(); return showToast("https:// 로 시작하는 사진 주소를 넣어 주세요."); }
+    if (action === "studio-url-thumb") { studioDraft.thumbnail = url; refreshStudioThumb(); input.value = ""; return showToast("대표 사진을 바꿨어요. 저장하면 적용돼요."); }
+    if (studioDraft.images.length >= STUDIO_EXTRA_MAX) return showToast(`추가 이미지는 ${STUDIO_EXTRA_MAX}장까지예요.`);
+    studioDraft.images.push(url); refreshStudioGallery(); input.value = "";
+    return showToast("추가 이미지를 넣었어요. 저장하면 적용돼요.");
+  }
   if (action === "studio-gallery-add") { document.getElementById("studioGalleryInput")?.click(); return; }
   if (action === "studio-gallery-del") { if (studioDraft) { studioDraft.images.splice(Number(target.dataset.index), 1); refreshStudioGallery(); } return; }
   if (action === "studio-gallery-main") { if (studioDraft) { const index = Number(target.dataset.index); const [ref] = studioDraft.images.splice(index, 1); if (studioDraft.thumbnail) studioDraft.images.splice(index, 0, studioDraft.thumbnail); studioDraft.thumbnail = ref; refreshStudioThumb(); refreshStudioGallery(); showToast("대표 사진으로 바꿨어요. 저장하면 적용돼요."); } return; }
@@ -12009,27 +12021,27 @@ function syncTalkComposer(textarea = document.getElementById("talkInput")) {
 }
 // 사진은 긴 변 기준으로 줄여서(JPEG) 저장 — 휴대폰 원본 사진도 가볍게 전송
 function shrinkImageFile(file, maxSize = 720, quality = .78) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => {
-      const image = new Image();
-      image.onerror = reject;
-      image.onload = () => {
-        const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(image.width * scale));
-        canvas.height = Math.max(1, Math.round(image.height * scale));
-        const context = canvas.getContext("2d");
-        context.fillStyle = "#fff";
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
-      };
-      image.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
+  const draw = image => {
+    const scale = Math.min(1, maxSize / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+    canvas.height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#fff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", quality);
+  };
+  const loadFrom = src => new Promise((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = src; });
+  const readAsDataUrl = () => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = reject; reader.onload = () => resolve(reader.result); reader.readAsDataURL(file); });
+  /* 1) 파일 주소로 바로 그리기(큰 휴대폰 사진도 메모리를 덜 씀) → 2) 안 되면 데이터로 읽어서 → 3) 그래도 안 되면 3MB 이하 원본 그대로 */
+  let objectUrl = "";
+  try { objectUrl = URL.createObjectURL(file); } catch (error) { objectUrl = ""; }
+  const first = objectUrl ? loadFrom(objectUrl).then(draw).finally(() => URL.revokeObjectURL(objectUrl)) : Promise.reject(new Error("no-url"));
+  return first.catch(() => readAsDataUrl().then(dataUrl => loadFrom(dataUrl).then(draw).catch(error => {
+    if (/^data:image\/(png|jpe?g|gif|webp)/i.test(dataUrl) && file.size <= 3 * 1024 * 1024) return dataUrl;
+    throw error;
+  })));
 }
 // 모바일 키보드가 올라오면 보이는 영역(visualViewport)에 맞춰 대화방 높이를 줄여 입력창이 가려지지 않게 함
 let talkViewportHeight = 0;

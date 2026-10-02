@@ -11693,3 +11693,17 @@ details.channel-rule-box .channel-rule-grid { padding: 0 14px 14px; }
 /* 직접 배송 주문을 두고 상품으로 연결할 때 안내 */
 .mp-self-note { padding: 13px 16px; display: grid; gap: 4px; color: #6b3d00; background: #fff6e8; border: 1px solid #ffdcaa; border-radius: 12px; font-size: 14.5px; line-height: 1.55; }
 .mp-self-note > b { font-size: 15px; color: #5a3200; }
+
+/* ===== v89: 공급사 오늘 할 일 — 순서 번호(1·2·3…) + 건수 (셀러 화면과 같은 방식) ===== */
+body[data-role="supplier"] .home-todo.sup-todo .todo-no { color: #fff !important; background: var(--sup-ink, #111) !important; }
+body[data-role="supplier"] .home-todo.sup-todo .todo-count { color: #111 !important; background: #f1f1f1; font-size: 14px; }
+body[data-role="supplier"] .home-todo.sup-todo.tone-red .todo-count { color: #d92d20 !important; background: #fdecea; }
+body[data-role="supplier"] .home-todo.sup-todo .todo-count small { color: inherit; }
+@media (max-width: 720px) { body[data-role="supplier"] .home-todo.sup-todo .todo-no { width: 28px; height: 28px; font-size: 13.5px; } }
+/* 상품 꾸미기: 사진 선택 창이 안 열리는 앱 안 브라우저 대비 — 사진 주소로 넣기 */
+.studio-url { margin-top: 6px; font-size: 13px; }
+.studio-url summary { color: #4e5968; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; list-style: none; }
+.studio-url summary::-webkit-details-marker { display: none; }
+.studio-url-row { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.studio-url-row input { flex: 1 1 100%; min-width: 0; height: 40px; padding: 0 10px; border: 1px solid #dce3ec; border-radius: 10px; font-size: 14px; }
+.studio-url-row .secondary-button { flex: 1 1 0; min-height: 38px; font-size: 13.5px; }
