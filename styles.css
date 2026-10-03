@@ -11804,7 +11804,8 @@ body[data-role="supplier"] .home-todo.sup-todo .todo-count small { color: inheri
   .ofb2-no { width: 18px; height: 18px; font-size: 10.5px; }
   .ofb2 .ofb2-tile { min-height: 72px !important; padding: 6px 2px !important; }
   .ofb2 .ofb-label { font-size: 11.5px; }
-  .ofb2 .ofb-label .ofb-help { display: none; }
+  .ofb2 .ofb2-tile { position: relative; padding-top: 15px !important; }
+  .ofb2 .ofb-label .ofb-help.fh { position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; margin: 0; font-size: 9.5px; }
   .ofb2 .ofb-count { font-size: 19px; }
   .ofb2 .ofb-sub { font-size: 10px; }
 }
@@ -11824,8 +11825,8 @@ td .order-option-tag, .mobile-order-card .order-option-tag { display: inline-blo
 @media (min-width: 1281px) and (max-width: 1599px) { #guideButton { display: none; } .topbar { grid-template-columns: minmax(300px, 1fr) minmax(260px, 380px) auto; } }
 /* 1800px 미만 PC: 홈 인사말에서 요금제 배지를 윗줄(안녕하세요 옆)로 올리고 날짜 칩은 숨겨 상호명이 잘리지 않게 */
 @media (min-width: 721px) and (max-width: 1799px) {
-  .topbar-heading.is-greeting .greet-date, .topbar-heading.is-greeting .greet-badge-d { display: none !important; }
-  .topbar-heading.is-greeting .greet-badge-m:not([hidden]) { display: inline-flex !important; height: 22px; padding: 0 9px; font-size: 12px; }
+  body[data-role="seller"] .topbar-heading.is-greeting .greet-date, body[data-role="seller"] .topbar-heading.is-greeting .greet-badge-d { display: none !important; }
+  body[data-role="seller"] .topbar-heading.is-greeting .greet-badge-m:not([hidden]) { display: inline-flex !important; height: 22px; padding: 0 9px; font-size: 12px; }
 }
 @media (min-width: 1600px) { .topbar { grid-template-columns: minmax(300px, 1fr) minmax(320px, 480px) auto; } }
 .quick-search:focus-within { background: #ffffff; border-color: #3182f6; box-shadow: 0 0 0 3px rgba(49,130,246,.14); }
