@@ -329,3 +329,56 @@ textarea.a-input { min-height: 0; resize: vertical; line-height: 1.6; }
   .a-acting + .a-top { top: 0; position: relative; }
   .a-list li { flex-wrap: wrap; }
 }
+
+/* ===== v3: 로그인 (강사 = 블루 / 마스터 = 바이올렛) ===== */
+.a-login-brand { padding: 44px 48px 0; background: linear-gradient(160deg, #0f1d4d 0%, #0a1232 50%, #15113f 100%); }
+.a-login-violet .a-login-brand { background: linear-gradient(160deg, #22104a 0%, #120b2c 50%, #1b0f3f 100%); }
+.a-login-brand::after { display: none; }
+.a-login-brand > :not(.lx-art) { position: relative; z-index: 1; }
+.a-login-brand .a-logo b { font-size: 22px; font-weight: 900; letter-spacing: -0.03em; }
+.a-logo-sub { font-size: 11px; font-weight: 800; letter-spacing: .16em; color: #7fb4ff; }
+.a-login-violet .a-logo-sub { color: #c4a8ff; }
+.a-login-brand .a-logo em { background: transparent; border: 1px solid rgba(255, 255, 255, .35); color: #fff; }
+.a-login-brand .a-logo-mark { background: rgba(255, 255, 255, .14); color: #fff; }
+.a-login-hero { max-width: 520px; padding-bottom: 8px; }
+.a-eyebrow { margin: 0 0 18px; font-size: 12px; font-weight: 800; letter-spacing: .2em; color: #7fb4ff; opacity: 1; }
+.a-login-violet .a-eyebrow { color: #c4a8ff; }
+.a-login-hero h2 { font-size: clamp(34px, 4.2vw, 56px); font-weight: 800; line-height: 1.14; letter-spacing: -0.04em; color: #fff; }
+.a-login-hero p { margin: 18px 0 0; max-width: 440px; font-size: 15px; line-height: 1.75; color: #b9c3dc; }
+.a-login-violet .a-login-hero p { color: #c9bfe0; }
+.a-login-foot { border-top-color: rgba(255, 255, 255, .12); font-size: 12px; color: #8d97b5; }
+.a-login-panel { position: relative; }
+.a-login-topright { position: absolute; top: 20px; right: 24px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--m-charcoal); }
+.a-login-stack { width: 100%; max-width: 440px; display: grid; gap: 16px; }
+.a-login-card { max-width: none; padding: 36px 36px 28px; border: 1px solid var(--m-hairline-soft); border-radius: var(--m-r-xl); background: var(--m-canvas); box-shadow: 0 30px 60px -30px rgba(10, 30, 80, .3), 0 2px 6px rgba(10, 19, 23, .04); gap: 16px; }
+.a-login-card h1 { text-align: center; font-size: 28px; font-weight: 800; }
+.a-login-card > p.a-muted { margin: -10px 0 4px; }
+.a-center { text-align: center; }
+.a-login-label { margin: 0 0 -6px; text-align: center; font-size: 15px; font-weight: 900; letter-spacing: -0.02em; color: var(--m-primary); }
+.a-login-label span { font-size: 10px; font-weight: 800; letter-spacing: .18em; margin-left: 4px; }
+.a-login-violet .a-login-label { color: #6a3df0; }
+.a-input-icon { position: relative; }
+.a-input-icon > .icon { position: absolute; left: 12px; top: 50%; translate: 0 -50%; color: var(--m-stone); pointer-events: none; }
+.a-input-icon .a-input { padding-left: 38px; }
+.a-input-icon .a-input:focus { padding-left: 37px; }
+.a-eye { position: absolute; right: 6px; top: 50%; translate: 0 -50%; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: var(--m-stone); }
+.a-eye:hover { background: var(--m-surface); color: var(--m-ink); }
+.a-field-note { justify-self: end; font-size: 12px; font-weight: 700; color: var(--m-primary); }
+.a-login-violet .a-field-note { color: #6a3df0; }
+.a-login-help { margin: 0; text-align: center; font-size: 12px; font-weight: 600; color: var(--m-primary); }
+.a-login-violet .a-btn-primary { background: #6a3df0; }
+.a-login-violet .a-btn-primary:hover { background: #5226d6; }
+.a-login-violet .a-login-help { color: #6a3df0; }
+.a-login-violet .a-demo { background: #f0eaff; color: #4b25b8; }
+.a-login-alt { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; border: 1px solid var(--m-hairline-soft); border-radius: var(--m-r-xl); background: var(--m-canvas); font-size: 14px; font-weight: 700; color: var(--m-ink); text-decoration: none; box-shadow: 0 10px 24px -18px rgba(10, 30, 80, .45); }
+.a-login-alt:hover { border-color: var(--m-ink-deep); }
+@media (max-width: 1023px) {
+  .a-login-brand { padding: 24px 20px 0; min-height: 500px; }
+  .a-login-hero { padding-top: 110px; }
+  .a-login-topright { position: static; justify-content: flex-end; margin-bottom: 16px; }
+  .a-login-panel { flex-direction: column; }
+  .a-login-card { padding: 28px 20px 22px; }
+}
+.a-format { margin: 0; padding: 12px 14px; border-radius: var(--m-r-lg); background: var(--m-surface); font-size: 13px; line-height: 1.7; color: var(--m-charcoal); white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.a-q-shots { margin: 0 0 12px 48px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+@media (max-width: 720px) { .a-q-shots { margin-left: 0; } }

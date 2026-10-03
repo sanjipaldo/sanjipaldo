@@ -22,7 +22,6 @@
   let preview = false;
   let P = null;         // 내 진행 기록
   let draft = { missionId: null, files: [] };
-  let qnaTab = "faq";
   let calCursor = null, calSel = null;
   let loginPick = null; // 로그인 화면에서 고른 강사
   let botOpen = window.matchMedia("(max-width: 720px)").matches ? false : DB.store.get(KEY_BOT, true);
@@ -161,7 +160,6 @@
   const empty = (ic, text) => '<div class="empty">' + icon(ic) + "<div>" + text + "</div></div>";
 
   /* ---------------- 로그인 ---------------- */
-  let typingTimer = null;
   function loginInstructor() {
     const list = DB.activeInstructors();
     const id = loginPick || DB.session.instructorPick();
@@ -171,8 +169,10 @@
     const list = DB.activeInstructors();
     const ins = loginInstructor();
     const brandIns = ins || list[0];
-    const B = brandIns ? DB.content(brandIns.id).brand : { name: "두고 클래스", shortTitle: "온라인 강의", tagline: "", loginPhrases: ["오늘의 한 걸음"], loginHeadlineSuffix: "함께 시작해요." };
+    const B = brandIns ? DB.content(brandIns.id).brand : { name: "두고 클래스", loginEyebrow: "DOOGO CLASS", loginHeadline: "온라인 강의\n함께 시작해요", loginSub: "" };
     document.title = (ins ? B.name : "두고 클래스") + " · 로그인";
+    const lines = String(B.loginHeadline || B.courseTitle || "").split("\n");
+    const headline = lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? '<span class="accent">' + esc(l) + "</span>" : esc(l))).join("<br>");
     const picker = ins
       ? '<div class="ins-picked"><span class="ins-avatar">' + esc(ins.displayName.slice(0, 1)) + '</span><span class="ins-txt"><small>수강 중인 강의</small><b>' + esc(ins.displayName) + "</b><span>" + esc(DB.content(ins.id).brand.shortTitle) + "</span></span>" +
         '<button type="button" class="link-btn" data-action="change-instructor">변경</button></div>'
@@ -181,35 +181,36 @@
         '</div><span class="tiny">한 번 고르면 다음부터는 바로 로그인 화면이 열려요.</span></div>';
     root.innerHTML =
       '<main class="login">' +
-        '<section class="login-brand" aria-label="' + esc(B.name) + '">' +
-          '<span class="login-logo"><img src="assets/logo-mark.svg" alt=""><strong>' + esc(B.name) + "</strong></span>" +
+        '<section class="login-brand">' + window.loginArt("wise", ["message", "play", "book", "award"]) +
+          '<span class="login-logo"><img src="assets/logo-mark.svg" alt=""><strong>' + esc(B.name) + "</strong><em>수강생</em></span>" +
           '<div class="login-hero">' +
-            '<p class="login-eyebrow">' + icon("sprout", "sm") + esc(B.shortTitle) + "</p>" +
-            '<h2 class="login-headline"><span class="typing" id="typing"></span><span class="caret" aria-hidden="true"></span>' +
-              '<span class="rest">' + esc(B.loginHeadlineSuffix) + "</span></h2>" +
-            '<p class="login-sub">' + esc(B.tagline) + (B.tagline ? ". " : "") + "매주 과제를 하나씩 해내다 보면, 5주 뒤엔 내 이름의 스토어가 움직이고 있을 거예요.</p>" +
+            '<p class="login-eyebrow">' + esc(B.loginEyebrow || "DOOGO CLASS") + "</p>" +
+            '<h2 class="login-headline">' + headline + "</h2>" +
+            (B.loginSub ? '<p class="login-sub">' + esc(B.loginSub) + "</p>" : "") +
           "</div>" +
-          '<div class="login-foot">' +
-            '<a class="center-link" href="#/center"><span class="dot">T</span>강사센터 ' + icon("arrowRight", "sm") + "</a>" +
-            '<span class="login-copy">© 2026 ' + esc(B.name) + "</span>" +
-          "</div>" +
+          '<div class="login-foot"><span class="login-copy">© 2026 ' + esc(B.name) + '</span><span class="login-copy">수강생 전용 학습 공간</span></div>' +
         "</section>" +
         '<section class="login-panel">' +
-          '<div class="login-card">' +
-            "<h1>" + esc(ins ? B.name : "두고 클래스") + " 시작하기</h1>" +
-            '<p class="lead">수강 신청할 때 등록한 정보로 로그인하세요.</p>' +
-            '<form class="login-form" id="login-form" novalidate>' + picker +
-              (ins
-                ? '<div class="field"><label for="lg-name">이름</label><input class="input" id="lg-name" name="name" autocomplete="name" placeholder="예: 홍길동" required></div>' +
-                  '<div class="field"><label for="lg-phone">전화번호 뒷자리</label>' +
-                    '<div class="input-wrap"><input class="input" id="lg-phone" name="phone4" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리" required>' +
-                    '<button type="button" class="input-addon" data-action="toggle-pw" data-for="lg-phone">보기</button></div></div>' +
-                  '<div class="row-end"><button type="button" data-action="forgot">로그인 정보를 잊으셨나요?</button></div>' +
-                  '<p class="field-error" id="lg-error" role="alert"></p>' +
-                  '<button class="btn btn-primary btn-block" type="submit">로그인</button>'
-                : "") +
-            "</form>" +
-            (ins ? '<p class="login-note">휴대폰 번호 뒷자리 4자리가 비밀번호 대신 사용됩니다.<br>아직 수강 신청 전이신가요? <button type="button" class="note-link" data-action="signup">수강 신청하기</button></p>' +
+          '<div class="login-topright"><span>강사님이신가요?</span><a class="btn btn-dark btn-sm" href="#/center">강사센터</a></div>' +
+          '<div class="login-stack">' +
+            '<div class="login-card">' +
+              '<p class="login-label">DOOGO <span>CLASS</span></p>' +
+              "<h1>" + esc(ins ? B.name : "두고 클래스") + " 시작하기</h1>" +
+              '<p class="lead">수강 신청할 때 등록한 정보로 로그인하세요.</p>' +
+              '<form class="login-form" id="login-form" novalidate>' + picker +
+                (ins
+                  ? '<div class="field"><label for="lg-name">이름</label><div class="input-icon">' + icon("user", "sm") + '<input class="input" id="lg-name" name="name" autocomplete="name" placeholder="예: 홍길동" required></div></div>' +
+                    '<div class="field"><label for="lg-phone">전화번호 뒷자리</label>' +
+                      '<div class="input-icon input-wrap">' + icon("lock", "sm") + '<input class="input" id="lg-phone" name="phone4" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리" required>' +
+                      '<button type="button" class="input-addon" data-action="toggle-pw" data-for="lg-phone" aria-label="번호 보기">' + icon("eye", "sm") + "</button></div></div>" +
+                    '<div class="row-end"><button type="button" data-action="forgot">로그인 정보를 잊으셨나요?</button></div>' +
+                    '<p class="field-error" id="lg-error" role="alert"></p>' +
+                    '<button class="btn btn-primary btn-block" type="submit">로그인</button>' +
+                    '<p class="login-help">휴대폰 번호 뒷자리 4자리가 비밀번호 대신 사용됩니다.</p>'
+                  : "") +
+              "</form>" +
+            "</div>" +
+            (ins ? '<button type="button" class="login-alt" data-action="signup">' + icon("userPlus", "sm") + "아직 수강 신청 전이신가요? 수강 신청하기</button>" +
               (ins.id === "moon" ? '<div class="login-demo">체험 계정 · 이름 <b>이수진</b> / 뒷자리 <b>2186</b></div>' : "") : "") +
             '<nav class="login-legal" aria-label="약관">' +
               '<button type="button" data-action="legal" data-doc="terms">이용약관</button>' +
@@ -219,27 +220,6 @@
           "</div>" +
         "</section>" +
       "</main>";
-    startTyping(B.loginPhrases || []);
-  }
-
-  function startTyping(list) {
-    clearTimeout(typingTimer);
-    const el = document.getElementById("typing");
-    if (!el) return;
-    const phrases = (list.length ? list : [""]).map((p) => p + ",");
-    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = phrases[0]; return; }
-    let pi = 0, ci = 0, deleting = false;
-    const tick = () => {
-      if (!document.body.contains(el)) return;
-      const word = phrases[pi];
-      ci += deleting ? -1 : 1;
-      el.textContent = word.slice(0, ci);
-      let wait = deleting ? 45 : 110;
-      if (!deleting && ci >= word.length) { deleting = true; wait = 1800; }
-      else if (deleting && ci <= 0) { deleting = false; pi = (pi + 1) % phrases.length; wait = 350; }
-      typingTimer = setTimeout(tick, wait);
-    };
-    tick();
   }
 
   function doLogin(form) {
@@ -330,8 +310,8 @@
     }).join("");
     document.getElementById("sidebar").innerHTML =
       '<ul class="nav">' + items + "</ul>" +
-      '<div class="help-card"><strong>도움이 필요하신가요?</strong><p>궁금한 점은 Q&A의 자주 묻는 질문에서 먼저 확인하시고, 안 풀리면 요청사항 탭에서 문의해 주세요.</p>' +
-      '<a class="btn btn-tertiary btn-sm btn-block" href="#/qna?tab=request">문의 남기기</a></div>';
+      '<div class="help-card"><strong>도움이 필요하신가요?</strong><p>궁금한 점은 Q&A의 자주 묻는 질문에서 먼저 확인하시고, 화면이 이상하거나 기능이 안 되면 요청사항으로 알려 주세요.</p>' +
+      '<a class="btn btn-tertiary btn-sm btn-block" href="#/qna/requests/new">' + icon("bug", "sm") + "오류 신고하기</a></div>";
   }
 
   /* ---------------- 홈 ---------------- */
@@ -566,6 +546,22 @@
       reader.readAsDataURL(file);
     });
   }
+  function compressImage(file, max, cb) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const cv = document.createElement("canvas");
+        cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        cb(cv.toDataURL("image/jpeg", 0.72));
+      };
+      img.onerror = () => toast("사진을 읽지 못했어요. 다른 파일로 시도해 주세요.", "warn");
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
   function refreshThumbs() { const t = document.getElementById("thumbs"); if (t) t.innerHTML = draftThumbs(); }
   function submitMission(form) {
     const id = form.dataset.id;
@@ -638,33 +634,96 @@
   }
 
   /* ---------------- Q&A ---------------- */
+  // 자주 묻는 질문(분류·검색) + 요청사항(프로그램 오류·불편 신고 게시판, 모두 비공개, 사진 첨부)
+  let faqCat = "전체";
+  let reqDraft = [];
+  const qnaTabs = (on) => '<div class="utabs" role="tablist">' +
+    '<a role="tab" href="#/qna" class="' + (on === "faq" ? "on" : "") + '" aria-selected="' + (on === "faq") + '">자주 묻는 질문</a>' +
+    '<a role="tab" href="#/qna/requests" class="' + (on === "req" ? "on" : "") + '" aria-selected="' + (on === "req") + '">요청사항</a></div>';
   function pageQna(r) {
-    if (r.params.get("tab")) qnaTab = r.params.get("tab") === "request" ? "request" : "faq";
-    const tabs = '<div class="tabs" role="tablist"><button class="tab' + (qnaTab === "faq" ? " active" : "") + '" data-action="qna-tab" data-tab="faq" role="tab" aria-selected="' + (qnaTab === "faq") + '">자주 묻는 질문</button>' +
-      '<button class="tab' + (qnaTab === "request" ? " active" : "") + '" data-action="qna-tab" data-tab="request" role="tab" aria-selected="' + (qnaTab === "request") + '">요청사항</button></div>';
-    let body;
-    if (qnaTab === "faq") {
-      body = '<section class="card"><div class="search">' + icon("search") + '<input class="input" id="faq-search" type="search" placeholder="궁금한 내용을 검색해 보세요 (예: 통관, 마진, 로그인)" aria-label="자주 묻는 질문 검색"></div>' +
-        '<div id="faq-list">' + faqList("") + "</div></section>";
-    } else {
-      const qs = P.questions.slice().reverse();
-      body = '<section class="card"><h2 class="card-title">문의 남기기</h2><p class="tiny" style="margin:0 0 16px">' + esc(D.brand.instructor) + "과 운영진이 확인 후 답변드려요. 라이브 Q&A에서 함께 다루기도 합니다.</p>" +
-        '<form id="question-form" class="stack" novalidate><div class="field"><label for="q-title">제목</label><input class="input" id="q-title" name="title" maxlength="80" placeholder="예: 통신판매업 신고에서 막혔어요"></div>' +
-        '<div class="field"><label for="q-body">내용</label><textarea class="textarea" id="q-body" name="body" placeholder="어떤 단계에서, 어떤 화면이 나오는지 적어 주시면 더 빨리 도와드릴 수 있어요."></textarea></div>' +
-        '<div style="display:flex;justify-content:flex-end"><button class="btn btn-primary" type="submit">' + icon("send", "sm") + "문의 등록</button></div></form></section>" +
-        '<div class="section-head"><h2>내 문의 <span class="tiny">' + qs.length + "건</span></h2></div>" +
-        '<section class="card">' + (qs.length ? qs.map((q) =>
-          '<div class="qa-item"><div class="qa-head">' + (q.answer ? '<span class="badge badge-positive">답변 완료</span>' : '<span class="badge badge-warning">답변 대기</span>') + '<span class="qa-title">' + esc(q.title) + '</span><span class="lr-date" style="margin-left:auto">' + fmtStamp(q.at) + "</span></div>" +
-          '<div class="qa-body">' + esc(q.body) + "</div>" + (q.answer ? '<div class="qa-answer"><b>' + esc(D.brand.instructor) + "</b> · " + esc(q.answer) + "</div>" : "") + "</div>").join("")
-          : empty("message", "아직 남긴 문의가 없어요.")) + "</section>";
+    if (r.params.get("tab") === "request") { history.replaceState(null, "", "#/qna/requests"); r = route(); }
+    const sub = r.parts[1];
+    if (sub === "requests") {
+      const id = r.parts[2];
+      if (id === "new") return pageRequestNew();
+      if (id) return pageRequestDetail(id);
+      return pageRequests();
     }
-    return '<div class="page">' + pageHead("Q&A", "자주 묻는 질문에서 먼저 찾아보고, 해결이 안 되면 요청사항으로 문의해 주세요.") + tabs + body + "</div>";
+    const cats = ["전체"].concat(D.faqs.map((f) => f.category || "기타").filter((c, i, a) => a.indexOf(c) === i));
+    if (cats.indexOf(faqCat) === -1) faqCat = "전체";
+    return '<div class="page">' + pageHead("Q&A", "자주 묻는 질문을 확인하거나, 프로그램이 이상할 때 요청사항을 남겨 주세요.") + qnaTabs("faq") +
+      '<section class="card"><div class="search">' + icon("search") + '<input class="input" id="faq-search" type="search" placeholder="궁금한 내용을 검색해 보세요 (예: 통관, 마진, 로그인)" aria-label="자주 묻는 질문 검색"></div>' +
+        '<div class="faq-cats" role="tablist">' + cats.map((c) => '<button type="button" class="chip' + (c === faqCat ? " on" : "") + '" data-action="faq-cat" data-cat="' + esc(c) + '">' + esc(c) + ' <span>' + (c === "전체" ? D.faqs.length : D.faqs.filter((f) => (f.category || "기타") === c).length) + "</span></button>").join("") + "</div>" +
+        '<div id="faq-list">' + faqList("") + "</div></section>" +
+      '<p class="tiny" style="margin-top:12px">찾는 답이 없으면 ' + esc(D.brand.botName) + "에게 물어보거나 라이브 Q&A 시간에 질문해 주세요.</p></div>";
   }
   function faqList(q) {
     const t = q.trim().toLowerCase();
-    const list = D.faqs.filter((f) => !t || (f.q + f.a + (f.tags || []).join(" ")).toLowerCase().indexOf(t) !== -1);
-    if (!list.length) return '<div class="empty">' + icon("search") + '<div>검색 결과가 없어요.</div><button class="btn btn-tertiary btn-sm" style="margin-top:14px" data-action="qna-tab" data-tab="request">요청사항으로 문의하기</button></div>';
-    return list.map((f) => '<details class="faq"><summary><span class="q">Q</span><span>' + esc(f.q) + "</span>" + icon("chevDown", "sm chev") + '</summary><div class="a">' + esc(f.a) + "</div></details>").join("");
+    const list = D.faqs.filter((f) => (faqCat === "전체" || (f.category || "기타") === faqCat) && (!t || (f.q + f.a + (f.tags || []).join(" ")).toLowerCase().indexOf(t) !== -1));
+    if (!list.length) return '<div class="empty">' + icon("search") + '<div>검색 결과가 없어요.</div></div>';
+    return list.map((f) => '<details class="faq"><summary><span class="q">Q</span><span><small class="faq-cat">' + esc(f.category || "기타") + "</small>" + esc(f.q) + "</span>" + icon("chevDown", "sm chev") + '</summary><div class="a">' + esc(f.a) + "</div></details>").join("");
+  }
+  const myRequests = () => DB.requests(INS.id, preview ? me : null);
+  function pageRequests() {
+    const list = myRequests();
+    return '<div class="page">' + pageHead("Q&A", "프로그램 오류나 불편한 점을 남겨 주시면 강사님이 확인 후 해결해 드려요.") + qnaTabs("req") +
+      '<div class="req-bar"><span class="muted">총 <b>' + list.length + '</b>건의 요청사항</span><a class="btn btn-primary" href="#/qna/requests/new">' + icon("pen", "sm") + "문의하기</a></div>" +
+      '<div class="callout callout-ok req-note">' + icon("lock", "sm") + "<div>모든 요청사항은 <b>비공개</b>예요. 내용은 작성자와 강사님만 볼 수 있어요. 수업 내용 질문은 라이브 Q&A나 AI봇을 이용해 주세요.</div></div>" +
+      '<section class="card req-card">' + (list.length
+        ? '<table class="req-table"><thead><tr><th class="c-no">번호</th><th class="c-st">상태</th><th>제목</th><th class="c-au">작성자</th><th class="c-dt">작성일</th><th class="c-an">답변</th></tr></thead><tbody>' +
+          list.map((x) => {
+            const mine = x.s.id === me.id;
+            return '<tr class="' + (mine ? "mine" : "") + '" data-action="req-open" data-id="' + esc(x.q.id) + '" data-mine="' + (mine ? 1 : 0) + '" tabindex="0">' +
+              '<td class="c-no num">' + x.no + '</td><td class="c-st">' + (x.q.answer ? '<span class="badge badge-positive">답변완료</span>' : '<span class="badge badge-neutral">답변대기</span>') + "</td>" +
+              '<td class="c-title">' + (mine ? '<b>' + esc(x.q.title) + "</b>" + ((x.q.images || []).length ? icon("paperclip", "xs") : "") + '<span class="badge badge-ink mine-tag">내 글</span>' : '<span class="locked">' + icon("lock", "xs") + "(비공개)</span>") + (x.q.answer ? '<span class="re">RE</span>' : "") + "</td>" +
+              '<td class="c-au">' + esc(mine ? me.name : DB.maskName(x.s.name)) + '</td><td class="c-dt num">' + DB.date.toStr(new Date(x.q.at)) + '</td><td class="c-an num">' + (x.q.answer ? "1" : "—") + "</td></tr>";
+          }).join("") + "</tbody></table>"
+        : empty("message", "아직 요청사항이 없어요.")) + "</section></div>";
+  }
+  function pageRequestNew() {
+    return '<div class="page">' + pageHead("Q&A", "프로그램 오류나 불편한 점을 남겨 주시면 강사님이 확인 후 해결해 드려요.") + qnaTabs("req") +
+      '<a class="back-link" href="#/qna/requests">' + icon("arrowLeft", "sm") + "요청사항 목록</a>" +
+      '<section class="card"><h2 class="card-title">문의하기</h2><p class="tiny" style="margin:0 0 18px">어떤 화면에서 무엇을 눌렀을 때 어떤 문제가 생겼는지 적고, 스크린샷을 함께 올려 주시면 더 빨리 고칠 수 있어요.</p>' +
+        '<form id="request-form" class="stack" novalidate>' +
+          '<div class="field"><span class="field-label">분류</span><div class="req-cats">' + DB.REQUEST_CATEGORIES.map((c, i) => '<label class="chip-radio"><input type="radio" name="category" value="' + esc(c) + '"' + (i === 0 ? " checked" : "") + "><span>" + esc(c) + "</span></label>").join("") + "</div></div>" +
+          '<div class="field"><label for="q-title">제목</label><input class="input" id="q-title" name="title" maxlength="80" placeholder="예: 과제 사진을 올려도 제출 버튼이 안 눌려요"></div>' +
+          '<div class="field"><label for="q-body">내용</label><textarea class="textarea" id="q-body" name="body" rows="7" placeholder="1. 어느 화면에서 (예: 과제 제출하기 > 1주차 > 사업자등록증 발급)\n2. 무엇을 했을 때 (예: 사진을 고르고 제출 버튼을 눌렀을 때)\n3. 어떤 문제가 (예: 아무 반응이 없어요)\n4. 사용 기기 (예: 아이폰 사파리)"></textarea></div>' +
+          '<div class="field"><span class="field-label">스크린샷 첨부 <span class="tiny">(최대 3장)</span></span>' +
+            '<label class="dropzone small" id="req-drop"><input type="file" id="req-file" accept="image/*" multiple class="sr-only">' + icon("image") + "<strong>스크린샷을 끌어다 놓거나 눌러서 선택</strong><span class=\"tiny\">휴대폰은 화면을 캡처한 뒤 사진 앨범에서 고르면 돼요</span></label>" +
+            '<div class="thumbs" id="req-thumbs">' + reqThumbs() + "</div></div>" +
+          '<div class="callout callout-ok">' + icon("lock", "sm") + "<div>비공개로 등록돼요. 작성자와 강사님만 볼 수 있어요.</div></div>" +
+          '<div class="req-actions"><a class="btn btn-secondary" href="#/qna/requests">취소</a><button class="btn btn-primary" type="submit">' + icon("send", "sm") + "등록하기</button></div>" +
+        "</form></section></div>";
+  }
+  function reqThumbs() {
+    return reqDraft.map((f, i) => '<div class="thumb"><img src="' + f.data + '" alt="' + esc(f.name) + '"><button type="button" data-action="req-remove" data-i="' + i + '" aria-label="삭제">' + icon("x", "xs") + "</button></div>").join("");
+  }
+  function addReqFiles(files) {
+    Array.from(files || []).forEach((file) => {
+      if (reqDraft.length >= 3) { toast("스크린샷은 최대 3장까지 올릴 수 있어요.", "warn"); return; }
+      if (!/^image\//.test(file.type)) { toast("사진 파일만 올릴 수 있어요.", "warn"); return; }
+      compressImage(file, 1200, (data) => { if (reqDraft.length < 3) reqDraft.push({ name: file.name, data }); const t = document.getElementById("req-thumbs"); if (t) t.innerHTML = reqThumbs(); });
+    });
+  }
+  function pageRequestDetail(id) {
+    const x = myRequests().find((r) => r.q.id === id);
+    if (!x || x.s.id !== me.id) {
+      return '<div class="page">' + pageHead("Q&A", "") + qnaTabs("req") + '<section class="card empty">' + icon("lock") + '<p style="font-size:18px;font-weight:800;color:var(--ink);margin:0 0 6px">비공개 글이에요</p><p style="margin:0 0 18px">요청사항은 작성자와 강사님만 볼 수 있어요.</p><a class="btn btn-primary" href="#/qna/requests">목록으로</a></section></div>';
+    }
+    const q = x.q;
+    const d = new Date(q.at);
+    return '<div class="page">' + pageHead("Q&A", "요청사항 내용을 확인하고, 강사님 답변을 받아 보세요.") + qnaTabs("req") +
+      '<a class="back-link" href="#/qna/requests">' + icon("arrowLeft", "sm") + "요청사항 목록</a>" +
+      '<article class="card req-detail"><div class="req-detail-top">' + (q.answer ? '<span class="badge badge-positive">답변완료</span>' : '<span class="badge badge-neutral">답변대기</span>') + '<span class="badge badge-neutral">' + esc(q.category || "기타") + '</span><span class="badge badge-neutral">' + icon("lock", "xs") + "비공개</span><span class=\"req-no\">#" + x.no + "</span></div>" +
+        "<h2>" + esc(q.title) + '</h2><div class="meta">' + esc(me.name) + " · " + DB.date.toStr(d) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + "</div>" +
+        '<div class="body">' + esc(q.body) + "</div>" +
+        ((q.images || []).length ? '<div class="req-shots">' + q.images.map((im) => '<a href="' + im.data + '" target="_blank" rel="noopener"><img src="' + im.data + '" alt="' + esc(im.name) + '"></a>').join("") + "</div>" : "") +
+      "</article>" +
+      '<div class="section-head"><h2>강사 답변</h2></div>' +
+      (q.answer
+        ? '<section class="card req-answer"><div class="req-answer-top"><b>' + esc(D.brand.instructor) + " · 운영자</b><span>" + (q.answeredAt ? DB.date.toStr(new Date(q.answeredAt)) + " " + String(new Date(q.answeredAt).getHours()).padStart(2, "0") + ":" + String(new Date(q.answeredAt).getMinutes()).padStart(2, "0") : "") + '</span></div><div class="body">' + esc(q.answer) + "</div></section>"
+        : '<section class="card empty">' + icon("clock") + "<div>강사님이 확인하고 있어요. 답변이 달리면 여기에 바로 보여요.</div></section>") +
+      "</div>";
   }
 
   /* ---------------- 서류 준비 가이드 ---------------- */
@@ -745,7 +804,8 @@
     });
     cands.sort((a, b) => b.s - a.s);
     if (cands[0] && cands[0].s >= 0.9) return cands[0];
-    return { text: "그 부분은 제가 정확히 답하기 어려워요. 요청사항에 남겨 주시면 " + D.brand.instructor + "과 운영진이 직접 답변드릴게요.", links: [["요청사항 남기기", "#/qna?tab=request"], ["자주 묻는 질문", "#/qna"]] };
+    if (/(오류|버그|안\s*눌|안\s*돼|안\s*되|깨져|멈춰|에러|고장)/.test(t)) return { text: "프로그램이 이상하게 동작하나요? Q&A ‘요청사항’에 어떤 화면에서 무엇을 눌렀는지 적고 스크린샷을 올려 주시면 강사님이 확인 후 고쳐 드려요.", links: [["오류 신고하기", "#/qna/requests/new"]] };
+    return { text: "그 부분은 제가 정확히 답하기 어려워요. 자주 묻는 질문을 먼저 찾아보시고, 수업 내용은 라이브 Q&A 시간에 " + D.brand.instructor + "께 직접 물어봐 주세요.", links: [["자주 묻는 질문", "#/qna"], ["강의 일정", "#/schedule"]] };
   }
   function chatLog() {
     return [botGreeting()].concat(P.chat).map((m) =>
@@ -966,7 +1026,6 @@
       return;
     }
     if (r.parts[0] === "login") { history.replaceState(null, "", "#/home"); return render(); }
-    clearTimeout(typingTimer);
     if (!document.getElementById("app") || root.dataset.who !== me.id) { renderShell(); root.dataset.who = me.id; }
     document.getElementById("app").classList.remove("nav-open");
     renderSidebar(r);
@@ -1003,7 +1062,8 @@
         const inp = document.getElementById(a.dataset.for);
         const show = inp.type === "password";
         inp.type = show ? "text" : "password";
-        a.textContent = show ? "숨기기" : "보기";
+        a.innerHTML = icon(show ? "eyeOff" : "eye", "sm");
+        a.setAttribute("aria-label", show ? "번호 숨기기" : "번호 보기");
         break;
       }
       case "pick-instructor": loginPick = a.dataset.id; DB.session.setInstructorPick(loginPick); renderLogin(); { const n = document.getElementById("lg-name"); if (n) n.focus(); } break;
@@ -1035,7 +1095,12 @@
         render();
         break;
       }
-      case "qna-tab": qnaTab = a.dataset.tab; if (location.hash.indexOf("#/qna?") === 0) location.hash = "#/qna"; else render(); break;
+      case "faq-cat": faqCat = a.dataset.cat; render(); break;
+      case "req-open":
+        if (a.dataset.mine === "1") location.hash = "#/qna/requests/" + a.dataset.id;
+        else toast("비공개 글은 작성자와 강사님만 볼 수 있어요.", "warn");
+        break;
+      case "req-remove": reqDraft.splice(Number(a.dataset.i), 1); { const t = document.getElementById("req-thumbs"); if (t) t.innerHTML = reqThumbs(); } break;
       case "toggle-doc": { const s = a.dataset.id; if (P.docs[s]) delete P.docs[s]; else P.docs[s] = Date.now(); saveProgress(); render(); break; }
       case "chip": sendChat(a.dataset.q); break;
       case "ask-bot": botOpen = true; DB.store.set(KEY_BOT, true); renderBotFab(route()); sendChat(a.dataset.q); break;
@@ -1060,12 +1125,16 @@
     if (f.id === "login-form") { e.preventDefault(); if (f.name) doLogin(f); return; }
     if (f.id === "signup-form") { e.preventDefault(); doSignup(f); return; }
     if (f.id === "submit-form") { e.preventDefault(); submitMission(f); return; }
-    if (f.id === "question-form") {
+    if (f.id === "request-form") {
       e.preventDefault();
       const title = f.title.value.trim(), body = f.body.value.trim();
       if (!title || !body) { toast("제목과 내용을 모두 적어 주세요.", "warn"); return; }
-      P.questions.push({ id: DB.uid("q"), title, body, at: Date.now(), answer: "" });
-      saveProgress(); render(); toast("문의가 등록됐어요. 답변이 달리면 여기서 확인할 수 있어요.");
+      const q = { id: DB.uid("q"), category: f.category.value, title, body, images: reqDraft.slice(), at: Date.now(), answer: "", answeredAt: 0 };
+      P.questions.push(q);
+      if (!saveProgress()) { P.questions.pop(); return; }
+      reqDraft = [];
+      location.hash = "#/qna/requests/" + q.id;
+      toast("요청사항을 등록했어요. 강사님 답변이 달리면 여기서 확인할 수 있어요.");
       return;
     }
     if (f.hasAttribute("data-chat-form")) { e.preventDefault(); const v = f.q.value; f.q.value = ""; sendChat(v); f.q.focus(); }
@@ -1086,21 +1155,22 @@
   document.addEventListener("change", (e) => {
     if (!isActive()) return;
     if (e.target.id === "file-input") { addFiles(e.target.files); e.target.value = ""; }
+    if (e.target.id === "req-file") { addReqFiles(e.target.files); e.target.value = ""; }
   });
   ["dragover", "dragenter"].forEach((ev) => document.addEventListener(ev, (e) => {
-    const z = isActive() && e.target.closest && e.target.closest("#dropzone");
+    const z = isActive() && e.target.closest && e.target.closest("#dropzone, #req-drop");
     if (z) { e.preventDefault(); z.classList.add("drag"); }
   }));
   ["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => {
-    const z = isActive() && e.target.closest && e.target.closest("#dropzone");
+    const z = isActive() && e.target.closest && e.target.closest("#dropzone, #req-drop");
     if (!z) return;
     e.preventDefault();
     z.classList.remove("drag");
-    if (ev === "drop") addFiles(e.dataTransfer.files);
+    if (ev === "drop") { if (z.id === "req-drop") addReqFiles(e.dataTransfer.files); else addFiles(e.dataTransfer.files); }
   }));
   document.addEventListener("keydown", (e) => {
     if (!isActive()) return;
-    if (e.key === "Enter" && e.target.matches && e.target.matches(".video-ph[role=button]")) { e.target.click(); return; }
+    if (e.key === "Enter" && e.target.matches && e.target.matches(".video-ph[role=button], tr[data-action=req-open]")) { e.target.click(); return; }
     if (e.key !== "Escape") return;
     if (modalRoot.innerHTML) closeModal();
     const app = document.getElementById("app");

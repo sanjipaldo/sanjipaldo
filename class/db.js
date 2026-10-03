@@ -63,8 +63,9 @@
         tagline: "함께 성장하는 실전 클래스",
         botName: "24시 " + inst + " AI봇",
         youtubeChannel: "", freeCourseUrl: "", kakaoChannel: "",
-        loginPhrases: ["오늘의 한 걸음", "나만의 온라인 비즈니스"],
-        loginHeadlineSuffix: "함께 시작해요.",
+        loginEyebrow: "DOOGO CLASS",
+        loginHeadline: name + "\n함께 시작해요",
+        loginSub: "매주 과제를 하나씩 해내다 보면, 어느새 내 이름의 비즈니스가 움직이고 있을 거예요.",
         liveTime: "20:00"
       },
       weeks: [1, 2, 3, 4].map((w) => ({
@@ -82,9 +83,9 @@
         { id: "n1", pinned: true, date: todayStr(), title: "[필독] 수강 안내", body: "환영합니다! 매주 과제를 제출하고 자동검수 결과를 확인하세요.\n필수 과제를 모두 통과하면 수료증이 발급됩니다." }
       ],
       faqs: [
-        { id: "q1", q: "로그인이 안 돼요.", a: "수강 신청 때 적은 이름과 휴대폰 번호 뒷자리 4자리로 로그인합니다. 승인 전이라면 강사님 승인을 기다려 주세요.", tags: ["로그인", "비밀번호", "승인"] },
-        { id: "q2", q: "과제는 언제까지 내야 하나요?", a: "주차가 열리고 6일 뒤가 과제 마감일입니다. 마감이 지나도 제출은 가능하지만 수료 전까지 필수 과제를 모두 통과해야 합니다.", tags: ["과제", "마감", "기한"] },
-        { id: "q3", q: "라이브를 놓쳤어요.", a: "다시보기가 커리큘럼 메뉴에 올라갑니다.", tags: ["라이브", "다시보기"] }
+        { id: "q1", category: "수강 · 로그인", q: "로그인이 안 돼요.", a: "수강 신청 때 적은 이름과 휴대폰 번호 뒷자리 4자리로 로그인합니다. 승인 전이라면 강사님 승인을 기다려 주세요.", tags: ["로그인", "비밀번호", "승인"] },
+        { id: "q2", category: "과제 · 수료", q: "과제는 언제까지 내야 하나요?", a: "주차가 열리고 6일 뒤가 과제 마감일입니다. 마감이 지나도 제출은 가능하지만 수료 전까지 필수 과제를 모두 통과해야 합니다.", tags: ["과제", "마감", "기한"] },
+        { id: "q3", category: "라이브 · 강의", q: "라이브를 놓쳤어요.", a: "다시보기가 커리큘럼 메뉴에 올라갑니다.", tags: ["라이브", "다시보기"] }
       ],
       docsGuide: [],
       resources: { ebook: [], file: [], vod: [], senior: [] },
@@ -107,7 +108,7 @@
 
   function fromSeed() {
     const seed = clone(window.CLASS_SEED);
-    const data = { version: 2, instructors: seed.instructors, content: seed.content || {}, cohorts: seed.cohorts, students: seed.students };
+    const data = { version: 3, instructors: seed.instructors, content: seed.content || {}, cohorts: seed.cohorts, students: seed.students };
     data.instructors.forEach((ins) => {
       if (!data.content[ins.id]) data.content[ins.id] = template(Object.assign({ instructor: ins.displayName }, ins.brand || {}));
       delete ins.brand;
@@ -138,15 +139,35 @@
       (s.fix || []).forEach((mid) => {
         p.submissions[mid] = [{ at: base, text: "", link: "smartstore", files: [], result: { pass: false, reasons: ["http:// 또는 https:// 로 시작하는 올바른 링크를 입력해 주세요."], ok: [] } }];
       });
-      if (s.question) p.questions.push({ id: uid("q"), title: s.question.title, body: s.question.body, at: base, answer: s.question.answer || "", answeredAt: s.question.answer ? base + 7200000 : 0 });
+      if (s.question) {
+        const q = s.question, at = Date.now() - 86400000 * (q.daysAgo || 0) - 3600000 * 3;
+        p.questions.push({ id: uid("q"), category: q.category || "기타", title: q.title, body: q.body, images: [], at, answer: q.answer || "", answeredAt: q.answer ? at + 7200000 : 0 });
+      }
       store.set(KEY_PROGRESS + sid, p);
     });
     return data;
   }
 
+  // v2 → v3: 로그인 화면 문구(헤드라인·설명)와 FAQ 분류 추가
+  function migrate2to3() {
+    const seed = window.CLASS_SEED;
+    Object.keys(db.content).forEach((id) => {
+      const c = db.content[id], b = c.brand;
+      const sb = seed.content[id] && seed.content[id].brand;
+      const tb = template({ name: b.name, instructor: b.instructor }).brand;
+      ["loginEyebrow", "loginHeadline", "loginSub"].forEach((k) => { if (!b[k]) b[k] = (sb && sb[k]) || tb[k]; });
+      delete b.loginPhrases; delete b.loginHeadlineSuffix;
+      if (seed.content[id] && !(c.faqs || []).some((f) => f.category)) c.faqs = clone(seed.content[id].faqs);
+      (c.faqs || []).forEach((f) => { if (!f.category) f.category = "기타"; });
+    });
+    db.version = 3;
+    save();
+  }
+
   function load() {
     db = store.get(KEY_DB, null);
-    if (!db || db.version !== 2 || !Array.isArray(db.instructors)) {
+    if (db && db.version === 2 && Array.isArray(db.instructors)) migrate2to3();
+    if (!db || db.version !== 3 || !Array.isArray(db.instructors)) {
       db = fromSeed();
       save();
     }
@@ -254,6 +275,19 @@
     return { total: all.length, done, reqTotal: req.length, reqDone, pct: all.length ? Math.round((done / all.length) * 100) : 0 };
   }
 
+  /* ---------------- 요청사항 (오류·불편 신고) ---------------- */
+  const REQUEST_CATEGORIES = ["로그인 · 접속", "과제 제출", "영상 재생", "화면 깨짐", "기타"];
+  const maskName = (n) => { n = String(n || ""); return n ? n.slice(0, 1) + "OO" : "익명"; };
+  /** 강사 한 명의 전체 요청사항, 오래된 순으로 번호를 매기고 최신순으로 돌려준다 */
+  function requests(instId, extra) {
+    const list = [];
+    const add = (s) => progress(s.id).questions.forEach((q) => list.push({ s, q }));
+    studentsOf(instId).forEach(add);
+    if (extra) add(extra);
+    list.sort((a, b) => a.q.at - b.q.at).forEach((x, i) => { x.no = i + 1; });
+    return list.reverse();
+  }
+
   /* ---------------- 세션 ---------------- */
   const session = {
     student: () => store.get("moonclass:session", null),
@@ -270,6 +304,7 @@
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
     weekOpen, weekDeadline, cohortEnd, cohortStatus, STATUS_LABEL, currentWeek, currentCohort, nextCohortName,
     EVENT_TYPES, events, ruleText,
+    REQUEST_CATEGORIES, maskName, requests,
     emptyProgress, progress, saveProgress, lastSub, subState, stats,
     session,
     date: { DOW, todayStr, parseDate, addDays, diffDays, fmtMD, fmtFull, fmtKo, fmtStamp, toStr }

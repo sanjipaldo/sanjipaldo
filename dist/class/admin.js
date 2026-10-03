@@ -85,49 +85,48 @@
     });
     return out.sort((a, b) => b.sub.at - a.sub.at);
   }
-  function allQuestions(iid) {
-    const out = [];
-    DB.studentsOf(iid).forEach((s) => {
-      const p = DB.progress(s.id);
-      p.questions.forEach((q) => out.push({ s, p, q }));
-    });
-    return out.sort((a, b) => b.q.at - a.q.at);
-  }
   function counts(iid) {
     return {
       pending: DB.studentsOf(iid).filter((s) => s.status === "pending").length,
       review: allSubmissions(iid, "all").filter((x) => x.review === "pending").length,
-      questions: allQuestions(iid).filter((x) => !x.q.answer).length
+      questions: DB.requests(iid).filter((x) => !x.q.answer).length
     };
   }
 
   /* ---------------- 로그인 ---------------- */
   function renderLogin() {
-    document.title = "강사센터 · 로그인";
     const ins = loginTab === "instructor";
+    document.title = (ins ? "강사센터" : "마스터 관리자") + " · 로그인";
+    const L = ins
+      ? { theme: "blue", tag: "강사센터", eyebrow: "DOOGO INSTRUCTOR CENTER", h: "수강생 관리부터<br>커리큘럼까지 한 곳에서", sub: "기수별 수강생 승인, 과제 검수, 강의 영상과 일정 업로드를 간편하게 운영할 수 있습니다.", icons: ["users", "play", "calendar", "settings"], label: "INSTRUCTOR", title: "강사 로그인", lead: "강사 이름과 전화번호 뒷자리로 로그인하세요." }
+      : { theme: "violet", tag: "마스터", eyebrow: "DOOGO MASTER CONSOLE", h: "강사 플랫폼을<br>분양하고 관리하세요", sub: "새 강사 플랫폼 개설, 운영 중지, 강사센터 대신 접속과 전체 수강생 현황을 한 곳에서 봅니다.", icons: ["store", "layers", "users", "shieldCheck"], label: "MASTER", title: "마스터 로그인", lead: "운영자 전용 관리자 계정으로 로그인하세요." };
     root.innerHTML =
-      '<main class="adm a-login">' +
-        '<section class="a-login-brand">' +
-          '<span class="a-logo"><span class="a-logo-mark">' + icon("layers") + "</span><b>두고 클래스</b><em>파트너</em></span>" +
-          '<div class="a-login-hero"><p class="a-eyebrow">강사센터 · 마스터 관리자</p><h2>수강생 승인부터<br>커리큘럼까지,<br>한 곳에서.</h2>' +
-            '<ul class="a-login-points"><li>' + icon("users", "sm") + "기수별 수강생 승인 · 거절 · 탈퇴</li><li>" + icon("calendar", "sm") + "기수 시작일만 정하면 주차 일정 자동 계산</li><li>" + icon("pen", "sm") + "커리큘럼 · 영상 · 공지 · 자료를 직접 올리기</li></ul></div>" +
-          '<div class="a-login-foot"><a href="#/login" class="a-back-link">' + icon("arrowLeft", "sm") + "수강생 센터로</a><span>© 2026 두고 클래스</span></div>" +
+      '<main class="adm a-login a-login-' + L.theme + '">' +
+        '<section class="a-login-brand">' + window.loginArt(L.theme, L.icons) +
+          '<span class="a-logo"><span class="a-logo-mark">' + icon("layers") + "</span><b>DOOGO</b><span class=\"a-logo-sub\">CLASS</span><em>" + L.tag + "</em></span>" +
+          '<div class="a-login-hero"><p class="a-eyebrow">' + L.eyebrow + "</p><h2>" + L.h + "</h2><p>" + L.sub + "</p></div>" +
+          '<div class="a-login-foot"><span>© 2026 두고 클래스</span><span>Secure ' + (ins ? "instructor" : "admin") + " workspace</span></div>" +
         "</section>" +
-        '<section class="a-login-panel"><div class="a-login-card">' +
-          "<h1>파트너 로그인</h1><p class=\"a-muted\">강사님은 이름과 전화번호 뒷자리로, 운영자는 관리자 계정으로 로그인하세요.</p>" +
-          '<div class="a-seg" role="tablist">' +
-            '<button type="button" role="tab" aria-selected="' + ins + '" class="' + (ins ? "on" : "") + '" data-action="login-tab" data-tab="instructor">' + icon("user", "sm") + "강사</button>" +
-            '<button type="button" role="tab" aria-selected="' + !ins + '" class="' + (!ins ? "on" : "") + '" data-action="login-tab" data-tab="master">' + icon("shieldCheck", "sm") + "마스터 관리자</button>" +
+        '<section class="a-login-panel">' +
+          '<div class="a-login-topright"><span>수강생이신가요?</span><a class="a-btn a-btn-primary a-btn-sm" href="#/login" data-action="to-student">바로가기</a></div>' +
+          '<div class="a-login-stack"><div class="a-login-card">' +
+            '<p class="a-login-label">DOOGO <span>' + L.label + "</span></p>" +
+            "<h1>" + L.title + '</h1><p class="a-muted a-center">' + L.lead + "</p>" +
+            '<div class="a-seg" role="tablist">' +
+              '<button type="button" role="tab" aria-selected="' + ins + '" class="' + (ins ? "on" : "") + '" data-action="login-tab" data-tab="instructor">' + icon("user", "sm") + "강사</button>" +
+              '<button type="button" role="tab" aria-selected="' + !ins + '" class="' + (!ins ? "on" : "") + '" data-action="login-tab" data-tab="master">' + icon("shieldCheck", "sm") + "마스터 관리자</button>" +
+            "</div>" +
+            '<form id="a-login-form" class="a-form" novalidate>' +
+              '<div class="a-field"><label for="al-id">' + (ins ? "강사 이름" : "아이디") + '</label><div class="a-input-icon">' + icon("user", "sm") + '<input class="a-input" id="al-id" name="uid" autocomplete="' + (ins ? "name" : "username") + '" placeholder="' + (ins ? "예: 문원오" : "관리자 아이디") + '"></div></div>' +
+              '<div class="a-field"><label for="al-pw">' + (ins ? "전화번호 뒷자리" : "비밀번호") + '</label><div class="a-input-icon">' + icon("lock", "sm") + '<input class="a-input" id="al-pw" name="pw" type="password"' + (ins ? ' inputmode="numeric" maxlength="4" placeholder="숫자 4자리"' : ' autocomplete="current-password" placeholder="비밀번호"') + '>' +
+                '<button type="button" class="a-eye" data-action="toggle-pw" aria-label="보기">' + icon("eye", "sm") + "</button></div>" +
+                '<small class="a-field-note">' + (ins ? "휴대폰 번호 뒷자리 4자리" : "관리자 계정 전용") + "</small></div>" +
+              '<p class="a-error" id="al-error" role="alert"></p>' +
+              '<button class="a-btn a-btn-primary a-btn-lg a-btn-block" type="submit">로그인</button>' +
+              '<p class="a-login-help">' + (ins ? "마스터에서 등록한 강사 정보로 로그인해 주세요" : "관리자 전용 계정으로 로그인해 주세요") + "</p>" +
+            "</form>" +
           "</div>" +
-          '<form id="a-login-form" class="a-form" novalidate>' +
-            (ins
-              ? '<div class="a-field"><label for="al-id">강사 이름</label><input class="a-input" id="al-id" name="uid" autocomplete="name" placeholder="예: 문원오"></div>' +
-                '<div class="a-field"><label for="al-pw">전화번호 뒷자리</label><input class="a-input" id="al-pw" name="pw" type="password" inputmode="numeric" maxlength="4" placeholder="숫자 4자리"></div>'
-              : '<div class="a-field"><label for="al-id">아이디</label><input class="a-input" id="al-id" name="uid" autocomplete="username" placeholder="관리자 아이디"></div>' +
-                '<div class="a-field"><label for="al-pw">비밀번호</label><input class="a-input" id="al-pw" name="pw" type="password" autocomplete="current-password" placeholder="비밀번호"></div>') +
-            '<p class="a-error" id="al-error" role="alert"></p>' +
-            '<button class="a-btn a-btn-primary a-btn-lg a-btn-block" type="submit">' + (ins ? "강사센터 들어가기" : "마스터로 들어가기") + "</button>" +
-          "</form>" +
+          '<a class="a-login-alt" href="#/login" data-action="to-student">' + icon("home", "sm") + "수강생 센터 보기 " + icon("arrowUpRight", "xs") + "</a>" +
           '<div class="a-demo">' + (ins ? "체험 계정 · 이름 <b>문원오</b> / 뒷자리 <b>2186</b>" : "체험 계정 · <b>ADMIN</b> / <b>ADMIN</b> (대소문자 상관없음)") + "</div>" +
         "</div></section>" +
       "</main>";
@@ -159,7 +158,7 @@
         ["students", "수강생 관리", "users", n.pending],
         ["cohorts", "기수 관리", "layers"],
         ["reviews", "과제 검수", "checks", n.review],
-        ["questions", "문의 답변", "message", n.questions]
+        ["questions", "요청사항 답변", "bug", n.questions]
       ]],
       ["수강생 화면 콘텐츠", [
         ["brand", "기본 정보 · AI봇", "settings"],
@@ -226,7 +225,7 @@
         kpi("승인 대기", n.pending + "명", "새 수강 신청", "#/center/students?status=pending", n.pending ? "warn" : "") +
         kpi("진행 중 기수", co ? co.name : "-", co ? (DB.cohortStatus(co) === "running" ? wk + "주차 진행 중" : fmtMD(co.startDate) + " 시작") : "기수를 만들어 주세요", "#/center/cohorts") +
         kpi("수강생 평균 진행률", avg + "%", (co ? co.name + " · " : "") + rows.length + "명 기준", "#/center/students?status=approved") +
-        kpi("검수 대기 · 미답변", n.review + " · " + n.questions, "과제 검수 / 문의", "#/center/reviews", n.review + n.questions ? "info" : "") +
+        kpi("검수 대기 · 미답변", n.review + " · " + n.questions, "과제 검수 / 요청사항", "#/center/reviews", n.review + n.questions ? "info" : "") +
       "</div>" +
       (co ? '<section class="a-card"><div class="a-card-head"><h2>' + esc(co.name) + " 주차 일정</h2>" + pill(DB.STATUS_LABEL[DB.cohortStatus(co)], COHORT_CLS[DB.cohortStatus(co)]) + '<a class="a-link" href="#/center/cohorts">기수 관리 ' + icon("arrowRight", "xs") + "</a></div>" + weekStrip(co) + "</section>" : "") +
       '<div class="a-grid-2">' +
@@ -444,17 +443,18 @@
   /* ---------------- 강사: 문의 답변 ---------------- */
   function pageQuestions() {
     const iid = IID();
-    const list = allQuestions(iid);
+    const list = DB.requests(iid);
     const shown = list.filter((x) => ui.qFilter === "all" || (ui.qFilter === "open" ? !x.q.answer : !!x.q.answer));
-    const tabs = [["open", "미답변", list.filter((x) => !x.q.answer).length], ["done", "답변 완료", list.filter((x) => x.q.answer).length], ["all", "전체", list.length]].map((t) =>
+    const tabs = [["open", "답변 대기", list.filter((x) => !x.q.answer).length], ["done", "답변 완료", list.filter((x) => x.q.answer).length], ["all", "전체", list.length]].map((t) =>
       '<button type="button" class="a-tab' + (ui.qFilter === t[0] ? " on" : "") + '" data-action="q-tab" data-k="' + t[0] + '">' + t[1] + ' <span class="num">' + t[2] + "</span></button>").join("");
-    return head("문의 답변", "수강생이 Q&A ‘요청사항’에 남긴 문의예요. 답변하면 수강생 화면에 바로 보여요.") +
+    return head("요청사항 답변", "수강생이 Q&A ‘요청사항’에 남긴 프로그램 오류·불편 신고예요. 모두 비공개로, 작성자와 강사님만 봐요. 답변하면 수강생 화면에 바로 보여요.") +
       '<section class="a-card"><div class="a-toolbar"><div class="a-tabs">' + tabs + "</div></div>" +
         (shown.length ? '<div class="a-stack">' + shown.map((x) =>
-          '<article class="a-q"><div class="a-q-head"><span class="a-avatar">' + esc(x.s.name.slice(0, 1)) + "</span><div><b>" + esc(x.q.title) + "</b><small>" + esc(x.s.name) + " · " + esc(cohortName(x.s.cohortId)) + " · " + fmtStamp(x.q.at) + "</small></div>" + (x.q.answer ? pill("답변 완료", "ok") : pill("미답변", "warn")) + "</div>" +
+          '<article class="a-q"><div class="a-q-head"><span class="a-avatar">' + esc(x.s.name.slice(0, 1)) + "</span><div><b>#" + x.no + " " + esc(x.q.title) + "</b><small>" + esc(x.s.name) + " · " + esc(cohortName(x.s.cohortId)) + " · " + fmtStamp(x.q.at) + "</small></div>" + pill(x.q.category || "기타", "mute") + (x.q.answer ? pill("답변 완료", "ok") : pill("답변 대기", "warn")) + "</div>" +
           '<p class="a-q-body">' + esc(x.q.body) + "</p>" +
-          '<form class="a-q-form" data-sid="' + x.s.id + '" data-qid="' + x.q.id + '"><textarea class="a-input" name="answer" rows="2" placeholder="답변을 적어 주세요" aria-label="답변">' + esc(x.q.answer || "") + '</textarea><button class="a-btn a-btn-primary a-btn-sm" type="submit">' + (x.q.answer ? "답변 수정" : "답변 등록") + "</button></form></article>").join("") + "</div>"
-          : emptyBox("message", ui.qFilter === "open" ? "답변을 기다리는 문의가 없어요." : "문의가 없어요.")) +
+          ((x.q.images || []).length ? '<div class="a-shots a-q-shots">' + x.q.images.map((im) => '<a class="a-shot" href="' + im.data + '" target="_blank" rel="noopener"><img src="' + im.data + '" alt="' + esc(im.name) + '"></a>').join("") + "</div>" : "") +
+          '<form class="a-q-form" data-sid="' + x.s.id + '" data-qid="' + x.q.id + '"><textarea class="a-input" name="answer" rows="3" placeholder="예: 확인해 보니 ○○ 문제였어요. 지금 고쳤으니 새로고침 후 다시 해 주세요." aria-label="답변">' + esc(x.q.answer || "") + '</textarea><button class="a-btn a-btn-primary a-btn-sm" type="submit">' + (x.q.answer ? "답변 수정" : "답변 등록") + "</button></form></article>").join("") + "</div>"
+          : emptyBox("bug", ui.qFilter === "open" ? "답변을 기다리는 요청사항이 없어요." : "요청사항이 없어요.")) +
       "</section>";
   }
 
@@ -494,7 +494,7 @@
       ] },
     notice: { name: "공지", list: (c) => c.notices, idp: "n", init: () => ({ date: todayStr(), pinned: false }),
       fields: [F("title", "제목"), F("body", "내용", "textarea", { rows: 7 }), F("date", "게시일", "date"), F("pinned", "상단 고정 (필독)", "checkbox")] },
-    faq: { name: "질문", list: (c) => c.faqs, idp: "q", fields: [F("q", "질문"), F("a", "답변", "textarea", { rows: 4 }), F("tags", "AI봇 검색어 (쉼표로 구분)", "tags", { hint: "수강생이 이 단어로 물어보면 AI봇이 이 답변을 보여 줘요." })] },
+    faq: { name: "질문", list: (c) => c.faqs, idp: "q", init: () => ({ category: "기타" }), fields: [F("q", "질문"), F("category", "분류", "combo", { options: () => faqCats(), hint: "목록에서 고르거나 새 분류를 적으면 돼요." }), F("a", "답변", "textarea", { rows: 4 }), F("tags", "AI봇 검색어 (쉼표로 구분)", "tags", { hint: "수강생이 이 단어로 물어보면 AI봇이 이 답변을 보여 줘요." })] },
     doc: { name: "서류 단계", list: (c) => c.docsGuide, idp: "d",
       fields: [F("title", "단계 이름"), F("where", "어디서 (기관·사이트)"), F("url", "바로가기 주소", "url"), F("time", "소요 시간"), F("cost", "비용"), F("docs", "필요 서류 (한 줄에 하나)", "lines", { rows: 3 }), F("tips", "팁 (한 줄에 하나)", "lines", { rows: 3 })] },
     mv: { name: "동기부여 영상", list: (c) => c.motivation, idp: "mv", init: () => ({ date: todayStr() }),
@@ -502,6 +502,7 @@
   };
   ["ebook", "file"].forEach((k) => { COLL["res-" + k] = { name: "자료", list: (c) => c.resources[k], idp: k[0], fields: [F("title", "자료 이름"), F("meta", "형식 (예: 전자책 · 86쪽)"), F("desc", "한 줄 설명"), F("url", "열람·다운로드 주소 (구글 드라이브 등)", "url")] }; });
   ["vod", "senior"].forEach((k) => { COLL["res-" + k] = { name: "영상", list: (c) => c.resources[k], idp: k[0], fields: [F("title", "영상 제목"), F("meta", "형식 (예: VOD · 32분)"), F("desc", "한 줄 설명"), F("youtubeId", "유튜브 주소", "youtube")] }; });
+  const faqCats = () => C().faqs.map((f) => f.category || "기타").filter((c, i, a) => a.indexOf(c) === i);
   function weekOf(c, ctx) { return c.weeks.find((w) => String(w.no) === String(ctx)); }
 
   function fieldHtml(f, item) {
@@ -513,6 +514,7 @@
     let input;
     if (f.type === "textarea" || f.type === "lines") input = '<textarea class="a-input" id="' + id + '" name="' + f.key + '" rows="' + (f.rows || 3) + '">' + esc(f.type === "lines" ? (v || []).join("\n") : v) + "</textarea>";
     else if (f.type === "select") { const opts = typeof f.options === "function" ? f.options() : f.options; input = '<select class="a-input" id="' + id + '" name="' + f.key + '">' + opts.map((o) => '<option value="' + esc(o[0]) + '"' + (String(v) === String(o[0]) ? " selected" : "") + ">" + esc(o[1]) + "</option>").join("") + "</select>"; }
+    else if (f.type === "combo") { const opts = f.options(); input = '<input class="a-input" id="' + id + '" name="' + f.key + '" list="' + id + '-list" value="' + esc(v) + '"><datalist id="' + id + '-list">' + opts.map((o) => '<option value="' + esc(o) + '"></option>').join("") + "</datalist>"; }
     else if (f.type === "tags") input = '<input class="a-input" id="' + id + '" name="' + f.key + '" value="' + esc(Array.isArray(v) ? v.join(", ") : v) + '">';
     else if (f.type === "youtube") input = '<input class="a-input" id="' + id + '" name="' + f.key + '" value="' + esc(v ? "https://youtu.be/" + v : "") + '" placeholder="https://www.youtube.com/watch?v=… 또는 youtu.be/…">';
     else input = '<input class="a-input" id="' + id + '" name="' + f.key + '" type="' + ({ number: "number", date: "date", time: "time", url: "url" }[f.type] || "text") + '"' + (f.min ? ' min="' + f.min + '"' : "") + ' value="' + esc(v) + '">';
@@ -611,8 +613,9 @@
         f("courseTitle", "강의 이름", b.courseTitle, "수강생 화면 맨 위 제목") +
         '<div class="a-form-row">' + f("shortTitle", "짧은 강의 이름", b.shortTitle, "로그인 화면 배지") + f("tagline", "한 줄 소개", b.tagline) + "</div>" +
         '<h2 class="a-sub">로그인 화면</h2>' +
-        f("loginPhrases", "타이핑 문구 (한 줄에 하나)", (b.loginPhrases || []).join("\n"), "한 단어씩 바뀌며 타이핑돼요", "textarea") +
-        f("loginHeadlineSuffix", "헤드라인 마지막 문장", b.loginHeadlineSuffix) +
+        f("loginEyebrow", "헤드라인 위 작은 글씨", b.loginEyebrow, "영문 대문자로 적으면 잘 어울려요 (예: DOOGO CLASS)") +
+        f("loginHeadline", "헤드라인 (두 줄까지, 줄바꿈 가능)", b.loginHeadline, "마지막 줄은 초록색으로 강조돼요", "textarea") +
+        f("loginSub", "헤드라인 아래 설명", b.loginSub, "", "textarea") +
         '<div class="a-form-row">' + f("youtubeChannel", "유튜브 채널 주소", b.youtubeChannel, "", "url") + f("freeCourseUrl", "무료 강의 · 소개 페이지 주소", b.freeCourseUrl, "", "url") + "</div>" +
         '<h2 class="a-sub">강의 운영</h2><div class="a-form-row">' + f("liveTime", "주차 강의 오픈 시간", b.liveTime, "강의 일정의 ‘강의 오픈’ 옆에 표시", "time") + f("botName", "AI봇 이름", b.botName, "수강생 메뉴와 채팅창 이름") + "</div>" +
         f("quotes", "오늘의 한마디 (한 줄에 하나)", (C().quotes || []).join("\n"), "홈·동기부여 화면에 날마다 돌아가며 보여요", "textarea") +
@@ -621,8 +624,8 @@
   }
   function saveBrand(f) {
     const c = C(), b = c.brand;
-    ["name", "instructor", "courseTitle", "shortTitle", "tagline", "loginHeadlineSuffix", "youtubeChannel", "freeCourseUrl", "liveTime", "botName"].forEach((k) => { b[k] = f[k].value.trim(); });
-    b.loginPhrases = LINES(f.loginPhrases.value);
+    ["name", "instructor", "courseTitle", "shortTitle", "tagline", "loginEyebrow", "loginSub", "youtubeChannel", "freeCourseUrl", "liveTime", "botName"].forEach((k) => { b[k] = f[k].value.trim(); });
+    b.loginHeadline = f.loginHeadline.value.split("\n").map((x) => x.trim()).filter(Boolean).join("\n");
     c.quotes = LINES(f.quotes.value);
     if (!b.name) { toast("브랜드 이름을 입력해 주세요.", "warn"); return; }
     const ins = INS();
@@ -672,10 +675,41 @@
         '<div class="a-row-actions">' + btn(icon("pen", "sm") + "수정", "item-edit", "a-btn-ghost a-btn-sm", ' data-coll="notice" data-id="' + n.id + '"') + "</div></li>").join("") + "</ul>" : emptyBox("megaphone", "아직 공지가 없어요.")) + "</section>";
   }
   function pageFaq() {
-    return head("Q&A 자주 묻는 질문", "수강생 Q&A 메뉴에 보이고, AI봇도 이 답변을 바탕으로 대답해요.", addBtn("faq", "질문 추가")) +
-      '<section class="a-card">' + simpleList("faq", C().faqs, (f) => '<div class="a-item-main"><b>Q. ' + esc(f.q) + "</b><small>" + esc(f.a) + "</small></div>", "자주 묻는 질문이 없어요.") + "</section>" +
-      '<p class="a-hint">' + icon("sparkles", "xs") + " 수강생 개별 문의는 ‘문의 답변’ 메뉴에서 답해 주세요.</p>";
+    const c = C();
+    const cats = faqCats();
+    return head("Q&A 자주 묻는 질문", "수강생 Q&A 메뉴에 분류별로 보이고, AI봇도 이 답변을 바탕으로 대답해요.", btn(icon("clipboard", "sm") + "한꺼번에 붙여넣기", "faq-bulk", "a-btn-outline") + addBtn("faq", "질문 추가")) +
+      (c.faqs.length ? cats.map((cat) => {
+        const items = c.faqs.filter((f) => (f.category || "기타") === cat);
+        return '<section class="a-card"><div class="a-card-head"><h2>' + esc(cat) + '</h2><span class="a-muted">' + items.length + "개</span></div>" +
+          '<ul class="a-items">' + items.map((f) => { const i = c.faqs.indexOf(f); return '<li><div class="a-item-main"><b>Q. ' + esc(f.q) + "</b><small>" + esc(f.a) + "</small></div>" + rowTools("faq", f.id, "", i, c.faqs.length) + "</li>"; }).join("") + "</ul></section>";
+      }).join("") : '<section class="a-card">' + emptyBox("help", "자주 묻는 질문이 없어요.", btn(icon("clipboard", "sm") + "한꺼번에 붙여넣기", "faq-bulk", "a-btn-primary")) + "</section>") +
+      '<p class="a-hint">' + icon("bug", "xs") + " 수강생의 오류·불편 신고는 ‘요청사항 답변’ 메뉴에서 답해 주세요.</p>";
   }
+  // 붙여넣기 형식: [분류] 줄, Q. 질문 줄, A. 답변(여러 줄 가능)
+  function parseFaqText(text) {
+    const out = [];
+    let cat = "기타", cur = null, mode = null;
+    String(text || "").split(/\r?\n/).forEach((raw) => {
+      const line = raw.trim();
+      if (!line) { return; }
+      let m;
+      if ((m = line.match(/^(?:\[(.+)\]|#+\s*(.+))$/))) { cat = (m[1] || m[2]).trim(); return; }
+      if ((m = line.match(/^(?:Q|질문)\s*[.:)\]]?\s*(.+)$/i))) { cur = { category: cat, q: m[1].trim(), a: "", tags: [] }; out.push(cur); mode = "q"; return; }
+      if ((m = line.match(/^(?:A|답변?)\s*[.:)\]]?\s*(.*)$/i)) && cur) { cur.a = m[1].trim(); mode = "a"; return; }
+      if (cur && mode === "a") cur.a += (cur.a ? "\n" : "") + line;
+      else if (cur && mode === "q") cur.q += " " + line;
+    });
+    return out.filter((x) => x.q && x.a);
+  }
+  function faqBulkModal() {
+    openModal("자주 묻는 질문 한꺼번에 붙여넣기",
+      '<form id="faq-bulk-form" class="a-form" novalidate><p class="a-muted" style="margin:0">다른 곳의 FAQ를 복사해서 아래 형식으로 붙여 넣으면 한 번에 등록돼요. 분류 줄은 없어도 돼요.</p>' +
+      '<pre class="a-format">[수강 · 로그인]\nQ. 로그인이 안 돼요.\nA. 이름과 휴대폰 번호 뒷자리로 로그인합니다.\n\n[과제 · 수료]\nQ. 과제 마감은 언제인가요?\nA. 주차가 열리고 6일 뒤입니다.</pre>' +
+      '<div class="a-field"><label for="fb-text">붙여넣을 내용</label><textarea class="a-input" id="fb-text" name="text" rows="10" placeholder="Q. 질문&#10;A. 답변"></textarea><small class="a-muted" id="fb-count">0개 인식됨</small></div>' +
+      '<label class="a-check"><input type="checkbox" name="replace"><span>기존 질문을 모두 지우고 이걸로 바꾸기</span></label></form>',
+      btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="faq-bulk-form">등록</button>', "lg");
+  }
+
   function pageDocs() {
     return head("서류 준비 가이드", "판매 시작 전에 필요한 서류를 단계별로 안내해요. 순서는 화살표로 바꿀 수 있어요.", addBtn("doc", "단계 추가")) +
       '<section class="a-card">' + simpleList("doc", C().docsGuide, (g) => '<div class="a-item-main"><b>' + esc(g.title) + "</b><small>" + esc([g.where, g.time, g.cost].filter(Boolean).join(" · ")) + "</small></div>", "서류 단계가 없어요.") + "</section>";
@@ -810,6 +844,7 @@
     const d = a.dataset;
     switch (d.action) {
       case "login-tab": loginTab = d.tab; renderLogin(); break;
+      case "toggle-pw": { const inp = document.getElementById("al-pw"); const show = inp.type === "password"; inp.type = show ? "text" : "password"; a.innerHTML = icon(show ? "eyeOff" : "eye", "sm"); break; }
       case "logout": logout(); break;
       case "toggle-nav": document.getElementById("a-app").classList.toggle("nav-open"); break;
       case "modal-close": closeModal(); break;
@@ -848,6 +883,7 @@
       case "q-tab": ui.qFilter = d.k; render(); break;
       // 콘텐츠
       case "lib-tab": ui.libTab = d.k; render(); break;
+      case "faq-bulk": faqBulkModal(); break;
       case "item-add": editItem(d.coll, "", d.ctx); break;
       case "item-edit": editItem(d.coll, d.id, d.ctx); break;
       case "item-delete": deleteItem(d.coll, d.id, d.ctx); break;
@@ -873,6 +909,16 @@
   document.addEventListener("submit", (e) => {
     if (!isActive()) return;
     const f = e.target;
+    if (f.id === "faq-bulk-form") {
+      e.preventDefault();
+      const items = parseFaqText(f.text.value);
+      if (!items.length) { toast("Q. 와 A. 로 시작하는 줄을 찾지 못했어요. 형식을 확인해 주세요.", "warn"); return; }
+      const c = C();
+      if (f.replace.checked) c.faqs = [];
+      items.forEach((it) => c.faqs.push(Object.assign({ id: DB.uid("q") }, it)));
+      commit(items.length + "개 질문을 등록했어요.");
+      return;
+    }
     const forms = { "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns };
     if (forms[f.id]) { e.preventDefault(); forms[f.id](f); return; }
     if (f.classList.contains("a-q-form")) {
@@ -912,6 +958,7 @@
       clearTimeout(qTimer);
       qTimer = setTimeout(() => { render(); const el = document.getElementById("stu-q"); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 250);
     }
+    if (t.id === "fb-text") { const n = parseFaqText(t.value).length; const el = document.getElementById("fb-count"); if (el) el.textContent = n + "개 인식됨"; }
     if (t.id === "cf-start") { const p = document.getElementById("cf-preview"); if (p) p.innerHTML = weekPreview(t.value); }
     if (t.id === "al-pw" && loginTab === "instructor") t.value = t.value.replace(/\D/g, "").slice(0, 4);
     if (t.id === "sf-phone" || t.id === "if-phone") t.value = t.value.replace(/\D/g, "").slice(0, 4);
