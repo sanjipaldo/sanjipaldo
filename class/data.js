@@ -21,7 +21,8 @@ const MOON_CONTENT = {
     loginEyebrow: "DOOGO CLASS · 해외 건기식 브랜드",
     loginHeadline: "내 해외 건기식\n브랜드 만들기",
     loginSub: "나만의 해외 건강식품 만들기, 함께 성장하는 실전 클래스. 매주 과제를 하나씩 해내다 보면, 5주 뒤엔 내 이름의 브랜드의 사장님이 되어있으실거에요.",
-    liveTime: "20:00"
+    liveTime: "20:00",
+    theme: "lime"
   },
 
 
@@ -350,9 +351,10 @@ window.CLASS_SEED = {
   instructors: [
     { id: "moon", name: "문원오", phone4: "2186", displayName: "문대표", status: "active", createdAt: "2026-08-01" },
     { id: "logic", name: "황금농부", phone4: "1111", displayName: "로직메이커 황금농부", status: "active", createdAt: "2026-09-10",
-      brand: { name: "로직메이커 황금농부", courseTitle: "로직메이커 황금농부 실전 클래스" } },
+      brand: { name: "로직메이커 황금농부", courseTitle: "로직메이커 황금농부 실전 클래스", theme: "orange" } },
     { id: "choi", name: "초이", phone4: "2222", displayName: "초이", status: "active", createdAt: "2026-09-20",
-      brand: { name: "초이 클래스", courseTitle: "초이와 함께하는 실전 클래스" } }
+      brand: { name: "초이 클래스", courseTitle: "초이와 함께하는 실전 클래스", theme: "pink" },
+      menu: { items: [{ key: "home", on: true }, { key: "curriculum", on: true }, { key: "missions", on: true }, { key: "schedule", on: true }, { key: "notices", on: true }, { key: "qna", on: true }, { key: "docs", on: false }, { key: "bot", on: true }, { key: "library", on: true }, { key: "motivation", on: false }, { key: "certificate", on: true }], library: { ebook: true, file: true, vod: true, senior: false } } }
   ],
   content: { moon: MOON_CONTENT },
   cohorts: [
@@ -378,6 +380,10 @@ window.CLASS_SEED = {
     { id: "s12", instructorId: "moon", cohortId: "c1", name: "배준호", phone4: "8080", status: "approved", appliedAt: "2026-07-28" },
     { id: "s13", instructorId: "logic", cohortId: "lc1", name: "홍길동", phone4: "0000", status: "approved", appliedAt: "2026-10-01" },
     { id: "s14", instructorId: "choi", cohortId: "cc1", name: "김영수", phone4: "0000", status: "pending", appliedAt: "2026-10-02" }
+  ],
+  // 마스터가 모든 강사에게 보내는 공지 (강사센터 대시보드 맨 위에 보인다)
+  announcements: [
+    { id: "an1", date: "2026-10-02", pinned: true, title: "강사센터 업데이트: 과제 일괄 승인 · 영상 팝업 첨부 자료", body: "과제 검수에서 여러 과제를 한 번에 승인할 수 있고, 시니어 기초 가이드 영상에 교습지·엑셀을 첨부할 수 있어요." }
   ],
   // 강사센터 화면을 채우기 위한 예시 제출 기록 (첫 실행 때만 저장)
   sampleProgress: {

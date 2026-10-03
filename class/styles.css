@@ -18,6 +18,11 @@
   --canvas-softer: #f3f5f1;
   --ink: #0e0f0c;
   --ink-deep: #163300;
+  --theme-rgb: 159, 232, 112;
+  --login-bg-a: #18290f;
+  --login-bg-b: #0e150b;
+  --login-bg-c: #0a170e;
+  --login-sub: #b8c2b0;
   --body: #454745;
   --mute: #868685;
   --line: #dcdfd8;
@@ -341,7 +346,7 @@ a.mission:hover { border-color: var(--ink); }
 .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .video-ph {
   position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 24px;
-  background: radial-gradient(120% 90% at 85% 15%, #2a3d1c 0%, var(--ink) 60%); color: var(--canvas-soft); text-decoration: none;
+  background: radial-gradient(120% 90% at 85% 15%, rgba(var(--theme-rgb), .22) 0%, var(--ink) 60%); color: var(--canvas-soft); text-decoration: none;
 }
 .video-ph .vp-title { max-width: 80%; font-size: clamp(18px, 2.6vw, 28px); font-weight: 900; line-height: 1.25; letter-spacing: -0.03em; color: var(--primary); }
 .video-ph .vp-play { align-self: center; width: 72px; height: 72px; display: grid; place-items: center; border-radius: 50%; background: var(--primary); color: var(--ink); transition: transform .15s; }
@@ -715,21 +720,21 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 .lx-tile.t4 { left: 30%; bottom: 13%; width: 62px; height: 62px; border-radius: 50%; animation-delay: -6s; }
 .lx-tile.t4 .icon { width: 28px; height: 28px; }
 @keyframes lxfloat { 0%, 100% { translate: 0 0; } 50% { translate: 0 -12px; } }
-.lx-wise { --lx-glow: rgba(159, 232, 112, .22); --lx-beam-a: rgba(159, 232, 112, .30); --lx-beam-b: rgba(46, 173, 75, .08); --lx-tile-a: rgba(159, 232, 112, .34); --lx-tile-b: rgba(46, 120, 40, .16); --lx-tile-line: rgba(205, 255, 173, .32); --lx-icon: #cdffad; }
+.lx-wise { --lx-glow: rgba(var(--theme-rgb), .22); --lx-beam-a: rgba(var(--theme-rgb), .30); --lx-beam-b: rgba(var(--theme-rgb), .06); --lx-tile-a: rgba(var(--theme-rgb), .34); --lx-tile-b: rgba(var(--theme-rgb), .10); --lx-tile-line: rgba(var(--theme-rgb), .40); --lx-icon: var(--primary-active); }
 .lx-blue { --lx-glow: rgba(56, 140, 255, .32); --lx-beam-a: rgba(36, 120, 255, .42); --lx-beam-b: rgba(20, 50, 160, .10); --lx-tile-a: rgba(70, 140, 255, .50); --lx-tile-b: rgba(40, 60, 200, .22); --lx-tile-line: rgba(160, 200, 255, .35); --lx-icon: #cfe1ff; }
 .lx-violet { --lx-glow: rgba(160, 100, 255, .30); --lx-beam-a: rgba(140, 90, 255, .42); --lx-beam-b: rgba(70, 30, 170, .10); --lx-tile-a: rgba(150, 105, 255, .50); --lx-tile-b: rgba(80, 40, 190, .22); --lx-tile-line: rgba(210, 190, 255, .35); --lx-icon: #e6dbff; }
 
-.login-brand { background: linear-gradient(160deg, #18290f 0%, #0e150b 46%, #0a170e 100%); color: #e8ebe6; padding: 44px 48px 0; }
+.login-brand { background: linear-gradient(160deg, var(--login-bg-a) 0%, var(--login-bg-b) 46%, var(--login-bg-c) 100%); color: #e8ebe6; padding: 44px 48px 0; }
 .login-brand::after { display: none; }
 .login-brand > :not(.lx-art) { position: relative; z-index: 1; }
 .login-logo strong { color: #fff; font-size: 20px; }
 .login-logo img { width: 40px; height: 40px; }
-.login-logo em { font-style: normal; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: var(--r-pill); border: 1px solid rgba(205, 255, 173, .35); color: var(--primary-active); }
+.login-logo em { font-style: normal; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: var(--r-pill); border: 1px solid rgba(var(--theme-rgb), .45); color: var(--primary-active); }
 .login-hero { padding: 0 0 8px; max-width: 520px; }
 .login-eyebrow { display: block; margin: 0 0 18px; padding: 0; background: none; color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
 .login-headline { color: #fff; font-size: clamp(38px, 4.6vw, 64px); line-height: 1.08; letter-spacing: -0.05em; }
 .login-headline .accent { color: var(--primary); }
-.login-sub { color: #b8c2b0; font-size: 16px; line-height: 1.75; max-width: 470px; font-weight: 500; }
+.login-sub { color: var(--login-sub); font-size: 16px; line-height: 1.75; max-width: 470px; font-weight: 500; }
 .login-foot { margin-right: 0; border-top-color: rgba(232, 235, 230, .12); font-size: 12px; }
 .login-copy { color: #8a9584; opacity: 1; }
 .login-panel { position: relative; background: var(--canvas); }
@@ -783,7 +788,7 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 .req-table tr:last-child td { border-bottom: 0; }
 .req-table tbody tr { cursor: pointer; }
 .req-table tbody tr:hover td { background: var(--canvas-softer); }
-.req-table tr.mine td { background: rgba(226, 246, 213, .45); }
+.req-table tr.mine td { background: rgba(var(--theme-rgb), .14); }
 .req-table .c-no, .req-table .c-an { text-align: center; width: 60px; color: var(--body); }
 .req-table .c-st { width: 92px; }
 .req-table .c-au { width: 80px; color: var(--body); }
@@ -844,3 +849,14 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
   .att-list li { flex-wrap: wrap; }
   .att-list li .btn { flex: 1 0 100%; }
 }
+
+/* ===== v6: 강사별 색상 · 로고 마크 · 추가 메뉴 페이지 ===== */
+.logo-mark { display: block; flex: none; }
+.brand .logo-mark { width: 36px; height: 36px; }
+.login-logo .logo-mark { width: 40px; height: 40px; }
+.cert-mark.logo-mark { width: 64px; height: 64px; margin: 0 auto 16px; }
+.custom-page .body { font-size: 16px; line-height: 1.85; white-space: pre-line; }
+.custom-page .video { margin-bottom: 18px; }
+@media (max-width: 720px) { .brand .logo-mark { width: 32px; height: 32px; } }
+.login-label span { color: var(--ink-deep); opacity: .75; }
+.ins-txt small, .faq-cat { color: var(--ink-deep); }

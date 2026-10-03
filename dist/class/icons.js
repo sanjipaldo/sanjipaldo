@@ -48,6 +48,12 @@
     eyeOff: '<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>',
     paperclip: '<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
     bug: '<path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/>',
+    star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+    database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/>',
+    activity: '<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>',
+    sliders: '<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
+    minus: '<path d="M5 12h14"/>',
+    palette: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>',
     users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
     userPlus: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>',
     layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
@@ -69,5 +75,16 @@
   /** 로그인 화면 왼쪽 장식 — 사선 빛줄기 + 떠 있는 유리 아이콘 타일 (theme: wise | blue | violet) */
   window.loginArt = (theme, names) => '<div class="lx-art lx-' + theme + '" aria-hidden="true"><span class="lx-glow"></span><span class="lx-beam b1"></span><span class="lx-beam b2"></span>' +
     names.map((n, i) => '<span class="lx-tile t' + (i + 1) + '">' + window.icon(n) + "</span>").join("") + "</div>";
+  /** 강의 로고 마크 — 강사가 고른 색(--primary)으로 칠해진다 */
+  window.logoMark = (cls) => '<svg class="logo-mark ' + (cls || "") + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="#0e0f0c"/><rect x="9" y="15" width="46" height="34" rx="11" fill="var(--primary, #9fe870)"/><path d="M27 24.5v15a1.2 1.2 0 0 0 1.8 1l12.4-7.5a1.2 1.2 0 0 0 0-2L28.8 23.5a1.2 1.2 0 0 0-1.8 1Z" fill="#0e0f0c"/></svg>';
+  /** 수강생 화면 색상 적용 / 해제 (강사센터로 넘어가면 해제) */
+  window.applyStudentTheme = (t) => {
+    const r = document.documentElement.style;
+    if (!t) { ["--primary", "--primary-active", "--primary-pale", "--ink-deep", "--theme-rgb", "--login-bg-a", "--login-bg-b", "--login-bg-c", "--login-sub"].forEach((k) => r.removeProperty(k)); return; }
+    r.setProperty("--primary", t.primary); r.setProperty("--primary-active", t.active); r.setProperty("--primary-pale", t.pale);
+    r.setProperty("--ink-deep", t.deep); r.setProperty("--theme-rgb", t.rgb);
+    r.setProperty("--login-bg-a", t.bg[0]); r.setProperty("--login-bg-b", t.bg[1]); r.setProperty("--login-bg-c", t.bg[2]); r.setProperty("--login-sub", t.sub);
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", t.primary);
+  };
   window.icon = (name, cls) => '<svg class="icon ' + (cls || "") + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 })();

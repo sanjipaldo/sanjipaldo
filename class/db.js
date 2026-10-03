@@ -49,6 +49,53 @@
     return m ? m[1] : "";
   }
 
+  /* ---------------- 수강생 화면 색상 (강사별) ---------------- */
+  // 밝은 대표색 + 그 위에 올라가는 짙은 글자색. 로그인 왼쪽 패널 배경(bg)도 같은 계열로 맞춘다.
+  const THEMES = {
+    lime:   { label: "라임",   primary: "#9fe870", active: "#cdffad", pale: "#e2f6d5", deep: "#163300", rgb: "159,232,112", bg: ["#18290f", "#0e150b", "#0a170e"], sub: "#b8c2b0" },
+    orange: { label: "오렌지", primary: "#ffb45e", active: "#ffd3a3", pale: "#fff0de", deep: "#4a2300", rgb: "255,180,94",  bg: ["#2e1b0a", "#150d05", "#201208"], sub: "#d6c3ad" },
+    yellow: { label: "옐로",   primary: "#ffd84d", active: "#ffeaa0", pale: "#fff7d6", deep: "#3d2e00", rgb: "255,216,77",  bg: ["#2b240a", "#141005", "#1f1a08"], sub: "#d4caa8" },
+    coral:  { label: "코랄",   primary: "#ff8f7d", active: "#ffc4ba", pale: "#ffe8e3", deep: "#4a1008", rgb: "255,143,125", bg: ["#2d130f", "#150807", "#200d0a"], sub: "#d9bcb6" },
+    pink:   { label: "핑크",   primary: "#ff9ec8", active: "#ffcfe4", pale: "#ffeaf3", deep: "#4d0b2b", rgb: "255,158,200", bg: ["#2b1021", "#14080f", "#1f0c18"], sub: "#d9b9c8" },
+    violet: { label: "바이올렛", primary: "#c3a6ff", active: "#e0d2ff", pale: "#f1eaff", deep: "#2a1060", rgb: "195,166,255", bg: ["#1f1439", "#0f0a1c", "#170e2b"], sub: "#c6bcdc" },
+    sky:    { label: "스카이", primary: "#7cc6ff", active: "#b9e1ff", pale: "#e2f2ff", deep: "#062a4a", rgb: "124,198,255", bg: ["#0d2134", "#081018", "#0a1a2a"], sub: "#b3c4d4" },
+    mint:   { label: "민트",   primary: "#6fe3c8", active: "#b1f2e3", pale: "#dcf8f1", deep: "#003d31", rgb: "111,227,200", bg: ["#0c2621", "#06130f", "#0a1d18"], sub: "#acc9c1" }
+  };
+  const themeOf = (key) => THEMES[key] || THEMES.lime;
+
+  /* ---------------- 수강생 메뉴 구성 (마스터가 강사별로 켜고 끄고 이름을 바꾼다) ---------------- */
+  const STUDENT_MENUS = [
+    { key: "home", label: "홈", icon: "home", locked: true },
+    { key: "curriculum", label: "커리큘럼", icon: "book" },
+    { key: "missions", label: "과제 제출하기", icon: "checks" },
+    { key: "schedule", label: "강의 일정", icon: "calendar" },
+    { key: "notices", label: "공지사항", icon: "megaphone" },
+    { key: "qna", label: "Q&A", icon: "help" },
+    { key: "docs", label: "서류 준비 가이드", icon: "clipboard" },
+    { key: "bot", label: "AI봇", icon: "sparkles" },
+    { key: "library", label: "유료강의 자료실", icon: "library" },
+    { key: "motivation", label: "동기부여", icon: "flame" },
+    { key: "certificate", label: "수료증", icon: "award" }
+  ];
+  const LIB_MENUS = [
+    { key: "ebook", label: "전자책 · 가이드북" }, { key: "file", label: "자료 파일" },
+    { key: "vod", label: "이커머스 실전 VOD" }, { key: "senior", label: "시니어 기초 가이드" }
+  ];
+  const CUSTOM_ICONS = ["file", "video", "link", "book", "star", "image", "coins", "store", "users", "calendar", "sparkles", "award"];
+  function menuConfig(insId) {
+    const ins = instructor(insId);
+    if (!ins) return { items: [], library: {} };
+    const m = ins.menu = ins.menu || {};
+    m.items = Array.isArray(m.items) ? m.items : [];
+    STUDENT_MENUS.forEach((d) => { if (!m.items.some((x) => x.key === d.key)) m.items.push({ key: d.key, on: true }); });
+    m.items.forEach((x) => { if (x.key === "home") x.on = true; });
+    m.library = Object.assign({ ebook: true, file: true, vod: true, senior: true }, m.library || {});
+    return m;
+  }
+  const isCustom = (key) => /^cp_/.test(key);
+  const menuOn = (insId, key) => { const it = menuConfig(insId).items.find((x) => x.key === key); return !!(it && it.on); };
+  const libOn = (insId, key) => menuOn(insId, "library") && menuConfig(insId).library[key] !== false;
+
   /* ---------------- 새 강사용 기본 콘텐츠 ---------------- */
   function template(brand) {
     const name = brand.name || "새 강의";
@@ -66,7 +113,8 @@
         loginEyebrow: "DOOGO CLASS",
         loginHeadline: name + "\n함께 시작해요",
         loginSub: "매주 과제를 하나씩 해내다 보면, 어느새 내 이름의 비즈니스가 움직이고 있을 거예요.",
-        liveTime: "20:00"
+        liveTime: "20:00",
+        theme: brand.theme || "lime"
       },
       weeks: [1, 2, 3, 4].map((w) => ({
         no: w, title: w + "주차 주제를 적어 주세요", summary: "이번 주에 배우는 내용을 한 줄로 적어 주세요.",
@@ -102,15 +150,18 @@
     c.weeks.forEach((w, i) => { w.no = i + 1; w.lessons = w.lessons || []; w.missions = w.missions || []; });
     ["schedule", "notices", "faqs", "docsGuide", "motivation", "quotes"].forEach((k) => { c[k] = c[k] || []; });
     c.resources = Object.assign({ ebook: [], file: [], vod: [], senior: [] }, c.resources || {});
+    c.pages = c.pages || {};
+    if (!c.brand.theme) c.brand.theme = "lime";
     [c.schedule, c.notices, c.faqs, c.docsGuide, c.motivation].forEach((list) => list.forEach((it) => { if (!it.id) it.id = uid("x"); }));
     return c;
   }
 
   function fromSeed() {
     const seed = clone(window.CLASS_SEED);
-    const data = { version: 3, instructors: seed.instructors, content: seed.content || {}, cohorts: seed.cohorts, students: seed.students };
+    const data = { version: 3, instructors: seed.instructors, content: seed.content || {}, cohorts: seed.cohorts, students: seed.students, announcements: seed.announcements || [] };
     data.instructors.forEach((ins) => {
       if (!data.content[ins.id]) data.content[ins.id] = template(Object.assign({ instructor: ins.displayName }, ins.brand || {}));
+      if (ins.brand && ins.brand.theme) data.content[ins.id].brand.theme = ins.brand.theme;
       delete ins.brand;
       normalizeContent(data.content[ins.id]);
     });
@@ -172,6 +223,14 @@
       save();
     }
     Object.keys(db.content).forEach((id) => normalizeContent(db.content[id]));
+    // 강사 공지(마스터 → 강사), 강사별 화면 색상 기본값
+    if (!Array.isArray(db.announcements)) { db.announcements = clone(window.CLASS_SEED.announcements || []); save(); }
+    const seedIns = window.CLASS_SEED.instructors;
+    db.instructors.forEach((ins) => {
+      const c = db.content[ins.id], si = seedIns.find((x) => x.id === ins.id);
+      if (c && c.brand.theme === "lime" && !c.brand.themeSet && si && si.brand && si.brand.theme) { c.brand.theme = si.brand.theme; c.brand.themeSet = true; save(); }
+      if (!ins.menu && si && si.menu) { ins.menu = clone(si.menu); save(); }
+    });
     // 자료실 영상에 본문·첨부파일 필드가 생기기 전 데이터면 기본값을 채운다
     let filled = false;
     Object.keys(db.content).forEach((id) => {
@@ -327,6 +386,7 @@
     weekOpen, weekDeadline, cohortEnd, cohortStatus, STATUS_LABEL, currentWeek, currentCohort, nextCohortName,
     EVENT_TYPES, events, ruleText,
     REQUEST_CATEGORIES, maskName, requests,
+    THEMES, themeOf, STUDENT_MENUS, LIB_MENUS, CUSTOM_ICONS, menuConfig, menuOn, libOn, isCustom,
     emptyProgress, progress, saveProgress, lastSub, subState, stats,
     session,
     date: { DOW, todayStr, parseDate, addDays, diffDays, fmtMD, fmtFull, fmtKo, fmtStamp, toStr }

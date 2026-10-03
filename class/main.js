@@ -8,6 +8,7 @@
     const changed = next !== mode;
     mode = next;
     document.body.dataset.mode = next;
+    if (next === "admin") window.applyStudentTheme(null); else document.body.dataset.master = "";
     document.getElementById("modal-root").innerHTML = "";
     const app = next === "admin" ? window.AdminApp : window.StudentApp;
     if (changed) app.mount(); else app.render();

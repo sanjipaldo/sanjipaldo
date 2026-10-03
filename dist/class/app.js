@@ -98,7 +98,7 @@
     return { parts: parts.length ? parts : ["home"], params: new URLSearchParams(query || "") };
   }
 
-  const NAV = [
+  const NAV_DEFS = [
     { id: "home", label: "홈", icon: "home", href: "#/home" },
     { id: "curriculum", label: "커리큘럼", icon: "book", href: "#/curriculum" },
     { id: "missions", label: "과제 제출하기", icon: "checks", href: "#/missions",
@@ -109,7 +109,7 @@
     { id: "docs", label: "서류 준비 가이드", icon: "clipboard", href: "#/docs" },
     { id: "bot", label: () => D.brand.botName, icon: "sparkles", href: "#/bot" },
     { id: "library", label: "유료강의 자료실", icon: "library", href: "#/library",
-      children: () => LIB.map((c) => ({ id: c.id, label: c.label, href: "#/library/" + c.id })) },
+      children: () => libList().map((c) => ({ id: c.id, label: c.label, href: "#/library/" + c.id })) },
     { id: "motivation", label: "동기부여", icon: "flame", href: "#/motivation" },
     { id: "certificate", label: "수료증", icon: "award", href: "#/certificate" }
   ];
@@ -120,6 +120,20 @@
     { id: "senior", label: "시니어 기초 가이드", icon: "book", cls: "ri-4", desc: () => "처음 시작하시는 분들을 위한 친절한 기초 안내" }
   ];
   const navLabel = (n) => (typeof n.label === "function" ? n.label() : n.label);
+  // 마스터가 강사별로 정한 메뉴 구성(켜기·끄기·이름·순서·추가 메뉴)을 따른다
+  const on = (key) => DB.menuOn(INS.id, key);
+  const libList = () => LIB.filter((c) => DB.libOn(INS.id, c.id));
+  function NAV() {
+    return DB.menuConfig(INS.id).items.filter((x) => x.on).map((x) => {
+      if (DB.isCustom(x.key)) {
+        return x.type === "link"
+          ? { id: x.key, label: x.label || "링크", icon: x.icon || "link", href: x.url || "#", external: true }
+          : { id: "page", sub: x.key, label: x.label || "추가 메뉴", icon: x.icon || "file", href: "#/page/" + x.key };
+      }
+      const d = NAV_DEFS.find((n) => n.id === x.key);
+      return d ? Object.assign({}, d, x.label ? { label: x.label } : {}) : null;
+    }).filter(Boolean);
+  }
 
   /* ---------------- 공통 컴포넌트 ---------------- */
   // 유튜브: 썸네일 카드 → 누르면 재생. 내장 재생이 막힌 환경을 위해 "유튜브에서 보기" 링크도 항상 둔다.
@@ -171,6 +185,7 @@
     const brandIns = ins || list[0];
     const B = brandIns ? DB.content(brandIns.id).brand : { name: "두고 클래스", loginEyebrow: "DOOGO CLASS", loginHeadline: "온라인 강의\n함께 시작해요", loginSub: "" };
     document.title = (ins ? B.name : "두고 클래스") + " · 로그인";
+    window.applyStudentTheme(DB.themeOf(B.theme));
     const lines = String(B.loginHeadline || B.courseTitle || "").split("\n");
     const headline = lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? '<span class="accent">' + esc(l) + "</span>" : esc(l))).join("<br>");
     const picker = ins
@@ -182,7 +197,7 @@
     root.innerHTML =
       '<main class="login">' +
         '<section class="login-brand">' + window.loginArt("wise", ["message", "play", "book", "award"]) +
-          '<span class="login-logo"><img src="assets/logo-mark.svg" alt=""><strong>' + esc(B.name) + "</strong><em>수강생</em></span>" +
+          '<span class="login-logo">' + window.logoMark() + '<strong>' + esc(B.name) + "</strong><em>수강생</em></span>" +
           '<div class="login-hero">' +
             '<p class="login-eyebrow">' + esc(B.loginEyebrow || "DOOGO CLASS") + "</p>" +
             '<h2 class="login-headline">' + headline + "</h2>" +
@@ -278,7 +293,7 @@
           '<span class="preview-actions"><button type="button" class="link-btn preview-exit" data-action="exit-preview">로그인 화면 보기</button><a class="btn btn-primary btn-sm" href="#/center">' + icon("arrowLeft", "sm") + "강사센터로 돌아가기</a></span></div>" : "") +
         '<header class="topbar">' +
           '<button class="menu-toggle" type="button" data-action="toggle-nav" aria-label="메뉴 열기">' + icon("menu") + "</button>" +
-          '<a class="brand" href="#/home"><img src="assets/logo-mark.svg" alt=""><span class="brand-text"><small>' + esc(D.brand.name) + "</small><strong>" + esc(D.brand.courseTitle) + "</strong></span></a>" +
+          '<a class="brand" href="#/home">' + window.logoMark() + '<span class="sr-only">홈</span><span class="brand-text"><small>' + esc(D.brand.name) + "</small><strong>" + esc(D.brand.courseTitle) + "</strong></span></a>" +
           '<div class="topbar-right">' +
             '<span class="hello"><span class="sprout">' + icon("sprout", "sm") + "</span><b>" + esc(me.name) + '</b><span class="txt">' + (preview ? "님 (미리보기)" : "님 환영합니다") + "</span></span>" +
             '<span class="cohort-chip">' + esc(CO.name) + "</span>" +
@@ -296,7 +311,9 @@
 
   function renderSidebar(r) {
     const top = r.parts[0], sub = r.parts[1];
-    const items = NAV.map((n) => {
+    const items = NAV().map((n) => {
+      if (n.external) return '<li><a class="nav-item" href="' + esc(n.href) + '" target="_blank" rel="noopener">' + icon(n.icon) + "<span>" + esc(n.label) + "</span>" + icon("arrowUpRight", "sm chev") + "</a></li>";
+      if (n.id === "page") { const act = top === "page" && sub === n.sub; return '<li><a class="nav-item' + (act ? " active" : "") + '" href="' + n.href + '">' + icon(n.icon) + "<span>" + esc(n.label) + "</span></a></li>"; }
       const active = top === n.id;
       const kids = n.children ? n.children() : null;
       const exact = active && (!kids || !sub);
@@ -324,7 +341,7 @@
     const nextLive = evs.find((e) => e.type !== "deadline");
     const notices = D.notices.slice().sort((a, b) => (b.pinned - a.pinned) || b.date.localeCompare(a.date)).slice(0, 4);
     const quote = D.quotes.length ? D.quotes[parseDate(today).getDate() % D.quotes.length] : "";
-    const mv = D.motivation[0];
+    const mv = on("motivation") ? D.motivation[0] : null;
     const dday = nextLive ? daysUntil(nextLive.date) : null;
     const wk = DB.currentWeek(CO);
     return '<div class="page">' +
@@ -334,30 +351,30 @@
         '<a class="link-btn" href="#/motivation">지난 영상 보기 ' + icon("arrowRight", "sm") + "</a></div>" + video(mv) +
         '<p class="tiny" style="margin:12px 0 0">' + esc(mv.title) + "</p></section>" : "") +
 
-      '<div class="grid-3" style="margin-top:14px">' +
-        '<a class="card stat plain-link" href="#/missions"><span class="stat-label">전체 진행률</span><span class="stat-value">' + o.pct + "%</span>" + progressBar(o.pct, true) + "</a>" +
-        '<a class="card stat plain-link" href="#/certificate"><span class="stat-label">필수 과제 통과</span><span class="stat-value">' + o.reqDone + ' <small class="tiny">/ ' + o.reqTotal + '</small></span><span class="tiny">모두 통과하면 수료증 발급</span></a>' +
-        '<a class="card stat plain-link" href="#/schedule"><span class="stat-label">다음 일정</span><span class="stat-value">' + (nextLive ? (dday === 0 ? "오늘" : "D-" + dday) : "-") + '</span><span class="tiny">' + (nextLive ? esc(fmtMD(nextLive.date) + " " + DB.EVENT_TYPES[nextLive.type].label) : "예정된 일정 없음") + "</span></a>" +
-      "</div>" +
+      (on("missions") || on("schedule") ? '<div class="grid-3" style="margin-top:14px">' +
+        (on("missions") ? '<a class="card stat plain-link" href="#/missions"><span class="stat-label">전체 진행률</span><span class="stat-value">' + o.pct + "%</span>" + progressBar(o.pct, true) + "</a>" +
+        '<a class="card stat plain-link" href="#/certificate"><span class="stat-label">필수 과제 통과</span><span class="stat-value">' + o.reqDone + ' <small class="tiny">/ ' + o.reqTotal + '</small></span><span class="tiny">모두 통과하면 수료증 발급</span></a>' : "") +
+        (on("schedule") ? '<a class="card stat plain-link" href="#/schedule"><span class="stat-label">다음 일정</span><span class="stat-value">' + (nextLive ? (dday === 0 ? "오늘" : "D-" + dday) : "-") + '</span><span class="tiny">' + (nextLive ? esc(fmtMD(nextLive.date) + " " + DB.EVENT_TYPES[nextLive.type].label) : "예정된 일정 없음") + "</span></a>" : "") +
+      "</div>" : "") +
 
-      '<div class="section-head"><h2>이어서 할 과제</h2><a class="link-btn" href="#/missions">전체 과제 ' + icon("arrowRight", "sm") + "</a></div>" +
+      (on("missions") ? '<div class="section-head"><h2>이어서 할 과제</h2><a class="link-btn" href="#/missions">전체 과제 ' + icon("arrowRight", "sm") + "</a></div>" +
       (nm
         ? '<a class="card next-card plain-link" href="#/missions/' + nm.weekNo + "/" + nm.id + '"><span class="wk-icon">' + icon("checks") + "</span>" +
             '<div style="flex:1;min-width:0"><div class="tiny">' + nm.weekNo + "주차 · " + (nm.required ? "필수" : "선택") + " · 마감 " + fmtMD(DB.weekDeadline(CO, nm.weekNo)) + '</div><div class="m-title">' + esc(nm.title) + " " + stateBadge(nm.id) + '</div><div class="m-desc">' + esc(nm.desc) + "</div></div>" +
             '<span class="btn btn-primary btn-sm">열기 ' + icon("arrowRight", "sm") + "</span></a>"
-        : '<div class="card callout-ok callout">' + icon("check") + "<div>" + (D.weeks.length && !isOpen(D.weeks[0]) ? fmtMD(CO.startDate) + "에 1주차가 열려요. 조금만 기다려 주세요!" : "열린 주차의 과제를 모두 마쳤어요! 다음 주차가 열리면 바로 시작해 보세요.") + "</div></div>") +
+        : '<div class="card callout-ok callout">' + icon("check") + "<div>" + (D.weeks.length && !isOpen(D.weeks[0]) ? fmtMD(CO.startDate) + "에 1주차가 열려요. 조금만 기다려 주세요!" : "열린 주차의 과제를 모두 마쳤어요! 다음 주차가 열리면 바로 시작해 보세요.") + "</div></div>") : "") +
 
-      '<div class="grid-2" style="margin-top:14px">' +
-        '<section class="card"><div class="home-video-head"><h2>공지사항</h2><a class="link-btn" href="#/notices">더보기 ' + icon("arrowRight", "sm") + "</a></div>" +
+      (on("notices") || on("schedule") ? '<div class="grid-2" style="margin-top:14px">' +
+        (on("notices") ? '<section class="card"><div class="home-video-head"><h2>공지사항</h2><a class="link-btn" href="#/notices">더보기 ' + icon("arrowRight", "sm") + "</a></div>" +
           (notices.length ? notices.map((n) => '<a class="list-row" href="#/notices/' + n.id + '">' + (n.pinned ? '<span class="badge badge-ink">필독</span>' : "") + '<span class="lr-title">' + esc(n.title) + '</span><span class="lr-date">' + fmtMD(n.date) + "</span></a>").join("") : '<p class="muted" style="margin:0">아직 공지가 없어요.</p>') +
-        "</section>" +
-        '<section class="card"><div class="home-video-head"><h2>다가오는 일정</h2><a class="link-btn" href="#/schedule">전체 일정 ' + icon("arrowRight", "sm") + "</a></div>" +
+        "</section>" : "") +
+        (on("schedule") ? '<section class="card"><div class="home-video-head"><h2>다가오는 일정</h2><a class="link-btn" href="#/schedule">전체 일정 ' + icon("arrowRight", "sm") + "</a></div>" +
           (upcoming.length ? upcoming.map((e) => {
             const d = parseDate(e.date);
             return '<div class="list-row"><span class="date-pill' + (e.date === today ? " today" : "") + '"><small>' + (d.getMonth() + 1) + "월</small><b>" + d.getDate() + '</b></span><span class="lr-title"><i class="ev-dot ' + e.type + '"></i> ' + esc(e.title) + '</span><span class="lr-date">' + DOW[d.getDay()] + (e.time ? " " + esc(e.time) : "") + "</span></div>";
           }).join("") : '<p class="muted" style="margin:0">예정된 일정이 없습니다.</p>') +
-        "</section>" +
-      "</div>" +
+        "</section>" : "") +
+      "</div>" : "") +
     "</div>";
   }
 
@@ -840,7 +857,7 @@
   function renderBotFab(r) {
     const el = document.getElementById("bot-fab");
     if (!el) return;
-    if (r.parts[0] === "bot") { el.innerHTML = ""; return; }
+    if (r.parts[0] === "bot" || !on("bot")) { el.innerHTML = ""; return; }
     if (!botOpen) {
       el.innerHTML = '<button class="bot-launch" type="button" data-action="bot-open"><span class="msg-avatar">' + icon("sparkles", "sm") + "</span><span>" + esc(D.brand.botName) + "</span></button>";
       return;
@@ -858,11 +875,11 @@
     const warn = '<div class="callout callout-neg">' + icon("shield") + "<div>본 자료는 <b>유료 수강생 전용</b>입니다. 무단 다운로드·복사·캡처 배포 시 추적·법적 책임이 따릅니다.</div></div>";
     if (!cat) {
       return '<div class="page">' + pageHead("유료강의 자료실", "분류를 선택해서 자료를 확인하세요.") + warn +
-        '<div class="grid-2" style="margin-top:14px">' + LIB.map((c) =>
+        '<div class="grid-2" style="margin-top:14px">' + libList().map((c) =>
           '<a class="res-card" href="#/library/' + c.id + '"><div class="res-top"><span class="res-icon ' + c.cls + '">' + icon(c.icon) + '</span><div><div class="res-title">' + esc(c.label) + '</div><div class="tiny">자료 ' + D.resources[c.id].length + "개</div></div></div>" +
           '<div class="res-desc">' + esc(c.desc()) + '</div><div class="res-foot"><span class="link-btn">열기 ' + icon("arrowRight", "sm") + "</span></div></a>").join("") + "</div></div>";
     }
-    const c = LIB.find((x) => x.id === cat);
+    const c = libList().find((x) => x.id === cat);
     if (!c) return notFound();
     const items = D.resources[cat];
     const isVideo = cat === "vod" || cat === "senior";
@@ -931,7 +948,7 @@
     return '<div class="page">' + pageHead("수료증", "필수 과제 " + o.reqTotal + "개를 모두 통과하면 수료증이 발급됩니다.") +
       '<section class="card overall no-print"><div class="overall-top"><span>필수 과제 통과</span>' + pctText(pct) + "</div>" + progressBar(pct) + '<span class="tiny" style="color:var(--body)">' + o.reqTotal + "개 중 " + o.reqDone + "개 통과" + (unlocked ? " · 수료 조건을 모두 채웠어요!" : " · " + remaining.length + "개 남음") + "</span></section>" +
       '<div class="cert' + (unlocked ? "" : " locked") + '" style="margin-top:14px">' +
-        '<img class="cert-mark" src="assets/logo-mark.svg" alt="">' +
+        window.logoMark("cert-mark") +
         '<div class="cert-eyebrow">CERTIFICATE OF COMPLETION</div><h2>수 료 증</h2>' +
         '<div class="cert-name"><span>' + esc(me.name) + "</span></div>" +
         "<p>위 사람은 " + esc(D.brand.courseTitle) + " " + esc(CO.name) + " 과정의 필수 과제를 모두 성실히 수행하였기에 이 증서를 드립니다.</p>" +
@@ -947,6 +964,20 @@
               : '<div class="list-row" style="opacity:.6"><span class="badge badge-neutral">' + m.weekNo + '주차</span><span class="lr-title">' + esc(m.title) + '</span><span class="lr-date">' + icon("lock", "xs") + " " + fmtMD(openOf(w)) + "</span></div>";
           }).join("") + "</section>") +
       "</div>";
+  }
+
+  /* ---------------- 추가 메뉴 (마스터가 만든 자유 페이지) ---------------- */
+  function pageCustom(r) {
+    const item = DB.menuConfig(INS.id).items.find((x) => x.key === r.parts[1]);
+    if (!item) return notFound();
+    const pg = D.pages[item.key] || {};
+    const has = pg.body || DB.youtubeId(pg.youtubeId) || (pg.attachments || []).length;
+    return '<div class="page">' + pageHead(pg.title || item.label || "추가 메뉴", pg.summary || "") +
+      '<section class="card custom-page">' + (has
+        ? (DB.youtubeId(pg.youtubeId) ? video({ title: pg.title || item.label, youtubeId: pg.youtubeId }) : "") +
+          (pg.body ? '<div class="body">' + esc(pg.body) + "</div>" : "") + attachmentList(pg.attachments)
+        : empty(item.icon || "file", "내용을 준비하고 있어요.")) +
+      "</section></div>";
   }
 
   /* ---------------- 기타 ---------------- */
@@ -1043,17 +1074,22 @@
       return;
     }
     if (r.parts[0] === "login") { history.replaceState(null, "", "#/home"); return render(); }
+    window.applyStudentTheme(DB.themeOf(D.brand.theme));
+    // 꺼진 메뉴로 들어오면 홈으로
+    const top = r.parts[0];
+    const allowed = top === "home" || (top === "page" ? DB.menuConfig(INS.id).items.some((x) => x.key === r.parts[1] && x.on) : NAV_DEFS.some((n) => n.id === top) ? on(top) : true);
+    if (!allowed) { history.replaceState(null, "", "#/home"); return render(); }
     if (!document.getElementById("app") || root.dataset.who !== me.id) { renderShell(); root.dataset.who = me.id; }
     document.getElementById("app").classList.remove("nav-open");
     renderSidebar(r);
-    const pages = { home: pageHome, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, qna: pageQna, docs: pageDocs, bot: pageBot, library: pageLibrary, motivation: pageMotivation, certificate: pageCertificate };
+    const pages = { home: pageHome, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, qna: pageQna, docs: pageDocs, bot: pageBot, library: pageLibrary, motivation: pageMotivation, certificate: pageCertificate, page: pageCustom };
     const fn = pages[r.parts[0]] || notFound;
     const main = document.getElementById("main");
     const prevKey = main.dataset.key, key = location.hash;
     main.innerHTML = fn(r);
     main.dataset.key = key;
     if (prevKey !== key) window.scrollTo(0, 0);
-    const nav = NAV.find((n) => n.id === r.parts[0]);
+    const nav = NAV().find((n) => n.id === r.parts[0] && (n.id !== "page" || n.sub === r.parts[1]));
     document.title = (nav ? navLabel(nav) + " · " : "") + D.brand.name;
     renderBotFab(r);
     refreshChats();

@@ -21,7 +21,7 @@
   let S = null; // 관리자 세션 { role: "instructor"|"master", instructorId?, actingAs? }
   let loginTab = "instructor";
   let confirmFn = null;
-  const ui = { stuCohort: "all", stuStatus: "pending", stuQuery: "", picked: new Set(), revCohort: null, revWeek: "all", revFilter: "pending", revPicked: new Set(), qFilter: "open", libTab: "ebook", schedCohort: null, mIns: "all", mStatus: "all" };
+  const ui = { stuCohort: "all", stuStatus: "pending", stuQuery: "", picked: new Set(), revCohort: null, revWeek: "all", revFilter: "pending", revPicked: new Set(), qFilter: "open", libTab: "ebook", schedCohort: null, mIns: "all", mStatus: "all", mMenuIns: null, mRepIns: "all" };
 
   const STU = {
     pending: { label: "승인 대기", cls: "warn" },
@@ -151,29 +151,34 @@
 
   /* ---------------- 셸 ---------------- */
   function instructorNav() {
-    const n = counts(IID());
+    const iid = IID(), n = counts(iid), on = (k) => DB.menuOn(iid, k);
+    const content = [
+      ["brand", "기본 정보 · 색상 · AI봇", "settings", null],
+      ["curriculum", "커리큘럼", "book", "curriculum"],
+      ["missions", "과제", "clipboard", "missions"],
+      ["schedule", "강의 일정", "calendar", "schedule"],
+      ["notices", "공지사항", "megaphone", "notices"],
+      ["faq", "Q&A 자주 묻는 질문", "help", "qna"],
+      ["docs", "서류 준비 가이드", "file", "docs"],
+      ["library", "유료강의 자료실", "library", "library"],
+      ["motivation", "동기부여", "flame", "motivation"]
+    ].filter((x) => !x[3] || on(x[3])).map((x) => x.slice(0, 3));
+    if (customPages(iid).length) content.push(["pages", "추가 메뉴", "star"]);
     return [
       ["운영", [
         ["", "대시보드", "grid"],
         ["students", "수강생 관리", "users", n.pending],
-        ["cohorts", "기수 관리", "layers"],
-        ["reviews", "과제 검수", "checks", n.review],
-        ["questions", "요청사항 답변", "bug", n.questions]
-      ]],
-      ["수강생 화면 콘텐츠", [
-        ["brand", "기본 정보 · AI봇", "settings"],
-        ["curriculum", "커리큘럼", "book"],
-        ["missions", "과제", "clipboard"],
-        ["schedule", "강의 일정", "calendar"],
-        ["notices", "공지사항", "megaphone"],
-        ["faq", "Q&A 자주 묻는 질문", "help"],
-        ["docs", "서류 준비 가이드", "file"],
-        ["library", "유료강의 자료실", "library"],
-        ["motivation", "동기부여", "flame"]
-      ]]
+        ["cohorts", "기수 관리", "layers"]
+      ].concat(on("missions") ? [["reviews", "과제 검수", "checks", n.review]] : []).concat(on("qna") ? [["questions", "요청사항 답변", "bug", n.questions]] : [])],
+      ["수강생 화면 콘텐츠", content]
     ];
   }
-  const masterNav = () => [["마스터", [["master", "대시보드", "grid"], ["master/instructors", "강사 플랫폼 관리", "store"], ["master/students", "전체 수강생", "users"]]]];
+  const customPages = (iid) => DB.menuConfig(iid).items.filter((x) => DB.isCustom(x.key) && x.type !== "link");
+  const allRequests = () => DB.data.instructors.flatMap((ins) => DB.requests(ins.id).map((x) => Object.assign({ ins }, x))).sort((a, b) => b.q.at - a.q.at);
+  const masterNav = () => [
+    ["운영", [["master", "대시보드", "grid"], ["master/instructors", "강사 플랫폼 관리", "store"], ["master/menus", "메뉴 · 색상 설정", "sliders"], ["master/health", "플랫폼 현황", "activity"]]],
+    ["지원", [["master/students", "전체 수강생", "users"], ["master/reports", "오류 신고 모아보기", "bug", allRequests().filter((x) => !x.q.answer).length], ["master/notices", "강사 공지", "megaphone"], ["master/data", "데이터 관리", "database"]]]
+  ];
 
   function renderShell(r) {
     const master = S.role === "master" && !S.actingAs;
@@ -220,7 +225,9 @@
     const pend = DB.studentsOf(iid).filter((s) => s.status === "pending").slice(0, 5);
     const wk = co ? DB.currentWeek(co) : 0;
     const avg = rows.length ? Math.round(rows.reduce((a, r) => a + r.st.pct, 0) / rows.length) : 0;
+    const anns = (DB.data.announcements || []).slice().sort((a, b) => (b.pinned - a.pinned) || b.date.localeCompare(a.date)).slice(0, 2);
     return head(ins.name + " 강사님, 안녕하세요", esc(c.brand.courseTitle), btn(icon("userPlus", "sm") + "수강생 추가", "student-add", "a-btn-outline") + btn(icon("plus", "sm") + "새 기수", "cohort-add", "a-btn-primary")) +
+      (anns.length ? '<section class="a-ann">' + icon("megaphone", "sm") + '<div class="a-ann-list">' + anns.map((a) => '<details><summary><b>' + esc(a.title) + "</b><small>두고 클래스 운영팀 · " + fmtMD(a.date) + "</small></summary><p>" + esc(a.body) + "</p></details>").join("") + "</div></section>" : "") +
       '<div class="a-kpis">' +
         kpi("승인 대기", n.pending + "명", "새 수강 신청", "#/center/students?status=pending", n.pending ? "warn" : "") +
         kpi("진행 중 기수", co ? co.name : "-", co ? (DB.cohortStatus(co) === "running" ? wk + "주차 진행 중" : fmtMD(co.startDate) + " 시작") : "기수를 만들어 주세요", "#/center/cohorts") +
@@ -517,6 +524,8 @@
     faq: { name: "질문", list: (c) => c.faqs, idp: "q", init: () => ({ category: "기타" }), fields: [F("q", "질문"), F("category", "분류", "combo", { options: () => faqCats(), hint: "목록에서 고르거나 새 분류를 적으면 돼요." }), F("a", "답변", "textarea", { rows: 4 }), F("tags", "AI봇 검색어 (쉼표로 구분)", "tags", { hint: "수강생이 이 단어로 물어보면 AI봇이 이 답변을 보여 줘요." })] },
     doc: { name: "서류 단계", list: (c) => c.docsGuide, idp: "d",
       fields: [F("title", "단계 이름"), F("where", "어디서 (기관·사이트)"), F("url", "바로가기 주소", "url"), F("time", "소요 시간"), F("cost", "비용"), F("docs", "필요 서류 (한 줄에 하나)", "lines", { rows: 3 }), F("tips", "팁 (한 줄에 하나)", "lines", { rows: 3 })] },
+    ann: { name: "강사 공지", list: () => DB.data.announcements, idp: "an", init: () => ({ date: todayStr(), pinned: false }),
+      fields: [F("title", "제목"), F("body", "내용", "textarea", { rows: 6 }), F("date", "날짜", "date"), F("pinned", "맨 위에 고정", "checkbox")] },
     mv: { name: "동기부여 영상", list: (c) => c.motivation, idp: "mv", init: () => ({ date: todayStr() }),
       fields: [F("title", "영상 제목"), F("youtubeId", "유튜브 주소", "youtube"), F("minutes", "영상 길이 (예: 31:57)"), F("date", "올린 날", "date")] }
   };
@@ -653,14 +662,15 @@
   function pageBrand() {
     const b = C().brand;
     const f = (k, label, v, hint, type) => '<div class="a-field"><label for="bf-' + k + '">' + label + "</label>" + (type === "textarea" ? '<textarea class="a-input" id="bf-' + k + '" name="' + k + '" rows="3">' + esc(v) + "</textarea>" : '<input class="a-input" id="bf-' + k + '" name="' + k + '" value="' + esc(v) + '"' + (type ? ' type="' + type + '"' : "") + ">") + (hint ? '<small class="a-muted">' + hint + "</small>" : "") + "</div>";
-    return head("기본 정보 · AI봇", "수강생 화면의 상단 이름, 로그인 화면 문구, AI봇 이름을 정해요.") +
+    return head("기본 정보 · 색상 · AI봇", "수강생 화면의 색상, 상단 이름, 로그인 화면 문구, AI봇 이름을 정해요.") +
       '<form id="brand-form" class="a-card a-form">' +
+        '<h2 class="a-sub">수강생 화면 색상</h2><p class="a-muted" style="margin:-6px 0 0">수강생 로그인 화면과 학습 화면 전체가 이 색으로 바뀌어요. 강사센터는 늘 파란색이에요.</p>' + themePicker(b.theme) +
         '<h2 class="a-sub">브랜드</h2><div class="a-form-row">' + f("name", "브랜드 이름", b.name, "로그인 화면 왼쪽 위·상단 작은 글씨") + f("instructor", "강사 표시 이름", b.instructor, "공지·수료증 서명·AI봇 인사말에 쓰여요") + "</div>" +
         f("courseTitle", "강의 이름", b.courseTitle, "수강생 화면 맨 위 제목") +
         '<div class="a-form-row">' + f("shortTitle", "짧은 강의 이름", b.shortTitle, "로그인 화면 배지") + f("tagline", "한 줄 소개", b.tagline) + "</div>" +
         '<h2 class="a-sub">로그인 화면</h2>' +
         f("loginEyebrow", "헤드라인 위 작은 글씨", b.loginEyebrow, "영문 대문자로 적으면 잘 어울려요 (예: DOOGO CLASS)") +
-        f("loginHeadline", "헤드라인 (두 줄까지, 줄바꿈 가능)", b.loginHeadline, "마지막 줄은 초록색으로 강조돼요", "textarea") +
+        f("loginHeadline", "헤드라인 (두 줄까지, 줄바꿈 가능)", b.loginHeadline, "마지막 줄은 고른 색으로 강조돼요", "textarea") +
         f("loginSub", "헤드라인 아래 설명", b.loginSub, "", "textarea") +
         '<div class="a-form-row">' + f("youtubeChannel", "유튜브 채널 주소", b.youtubeChannel, "", "url") + f("freeCourseUrl", "무료 강의 · 소개 페이지 주소", b.freeCourseUrl, "", "url") + "</div>" +
         '<h2 class="a-sub">강의 운영</h2><div class="a-form-row">' + f("liveTime", "주차 강의 오픈 시간", b.liveTime, "강의 일정의 ‘강의 오픈’ 옆에 표시", "time") + f("botName", "AI봇 이름", b.botName, "수강생 메뉴와 채팅창 이름") + "</div>" +
@@ -671,6 +681,7 @@
   function saveBrand(f) {
     const c = C(), b = c.brand;
     ["name", "instructor", "courseTitle", "shortTitle", "tagline", "loginEyebrow", "loginSub", "youtubeChannel", "freeCourseUrl", "liveTime", "botName"].forEach((k) => { b[k] = f[k].value.trim(); });
+    if (f.theme) { b.theme = f.theme.value; b.themeSet = true; }
     b.loginHeadline = f.loginHeadline.value.split("\n").map((x) => x.trim()).filter(Boolean).join("\n");
     c.quotes = LINES(f.quotes.value);
     if (!b.name) { toast("브랜드 이름을 입력해 주세요.", "warn"); return; }
@@ -775,6 +786,211 @@
       '<section class="a-card">' + simpleList("mv", C().motivation, (it) => '<div class="a-item-main"><b>' + esc(it.title) + "</b><small>" + esc([it.minutes, it.date ? fmtMD(it.date) : ""].filter(Boolean).join(" · ")) + "</small></div>" + ytBadge(it), "동기부여 영상이 없어요.") + "</section>";
   }
 
+  /* ---------------- 수강생 화면 색상 고르기 ---------------- */
+  function themePicker(current, name) {
+    name = name || "theme";
+    return '<div class="a-swatches" role="radiogroup" aria-label="수강생 화면 색상">' + Object.keys(DB.THEMES).map((k) => {
+      const t = DB.THEMES[k];
+      return '<label class="a-swatch"><input type="radio" name="' + name + '" value="' + k + '"' + (k === (current || "lime") ? " checked" : "") + '><span class="sw" style="--sw:' + t.primary + ";--swd:" + t.deep + ";--swbg:" + t.bg[1] + '"><i></i></span><b>' + t.label + "</b></label>";
+    }).join("") + "</div>" + '<div id="theme-preview-' + name + '">' + themePreview(current) + "</div>";
+  }
+  function themePreview(k) {
+    const t = DB.themeOf(k);
+    return '<div class="a-theme-preview" style="--p:' + t.primary + ";--pa:" + t.active + ";--pd:" + t.deep + ";--pp:" + t.pale + ";--bg1:" + t.bg[0] + ";--bg2:" + t.bg[1] + '">' +
+      '<div class="tp-login"><span class="tp-eyebrow">로그인 화면</span><b>내 브랜드<br><em>만들기</em></b><span class="tp-tile">' + icon("play", "sm") + "</span></div>" +
+      '<div class="tp-app"><span class="tp-nav on">' + icon("home", "xs") + '홈</span><span class="tp-nav">' + icon("book", "xs") + '커리큘럼</span><span class="tp-bar"><i></i></span><span class="tp-btn">제출하고 검수받기</span></div></div>';
+  }
+
+  /* ---------------- 마스터: 메뉴 · 색상 설정 ---------------- */
+  function pageMasterMenus(r) {
+    const list = DB.data.instructors;
+    if (r.params.get("ins")) ui.mMenuIns = r.params.get("ins");
+    if (!ui.mMenuIns || !DB.instructor(ui.mMenuIns)) ui.mMenuIns = list[0] && list[0].id;
+    const ins = DB.instructor(ui.mMenuIns);
+    if (!ins) return head("메뉴 · 색상 설정", "") + '<section class="a-card">' + emptyBox("store", "강사 플랫폼을 먼저 만들어 주세요.") + "</section>";
+    const m = DB.menuConfig(ins.id), c = DB.content(ins.id);
+    const def = (key) => DB.STUDENT_MENUS.find((d) => d.key === key);
+    const nameOf = (x) => x.label || (def(x.key) ? (x.key === "bot" ? c.brand.botName : def(x.key).label) : "추가 메뉴");
+    const iconOf = (x) => (def(x.key) ? def(x.key).icon : x.icon || "file");
+    const onItems = m.items.filter((x) => x.on), offItems = m.items.filter((x) => !x.on);
+    const row = (x, i) => {
+      const d = def(x.key), custom = DB.isCustom(x.key);
+      return '<li class="a-menu-row"><span class="a-menu-move"><button class="a-icon-btn sm" data-action="menu-move" data-key="' + x.key + '" data-dir="-1" aria-label="위로"' + (i === 0 ? " disabled" : "") + ">" + icon("arrowUp", "sm") + '</button><button class="a-icon-btn sm" data-action="menu-move" data-key="' + x.key + '" data-dir="1" aria-label="아래로"' + (i === onItems.length - 1 ? " disabled" : "") + ">" + icon("arrowDown", "sm") + "</button></span>" +
+        '<span class="a-menu-ico">' + icon(iconOf(x), "sm") + "</span>" +
+        '<div class="a-menu-main"><input class="a-input a-sm a-menu-label" data-key="' + x.key + '" value="' + esc(x.label || "") + '" placeholder="' + esc(nameOf(Object.assign({}, x, { label: "" }))) + '" aria-label="메뉴 이름">' +
+          "<small>" + (custom ? (x.type === "link" ? "외부 링크 · " + esc(x.url || "") : "추가 메뉴 · 강사가 내용 작성") : "기본 메뉴" + (x.key === "home" ? " · 항상 보여요" : "")) + "</small>" +
+          (x.key === "library" ? '<div class="a-lib-chips">' + DB.LIB_MENUS.map((l) => '<button type="button" class="a-chip-toggle' + (m.library[l.key] !== false ? " on" : "") + '" data-action="lib-toggle" data-k="' + l.key + '">' + icon(m.library[l.key] !== false ? "check" : "plus", "xs") + esc(l.label) + "</button>").join("") + "</div>" : "") +
+        "</div>" +
+        (custom ? '<button class="a-icon-btn sm" data-action="menu-edit" data-key="' + x.key + '" aria-label="수정">' + icon("pen", "sm") + "</button>" : "") +
+        (x.key === "home" ? '<span class="a-pm locked" title="홈은 뺄 수 없어요">' + icon("lock", "sm") + "</span>" : '<button class="a-pm minus" data-action="menu-off" data-key="' + x.key + '" aria-label="' + esc(nameOf(x)) + ' 빼기">' + icon("minus", "sm") + "</button>") + "</li>";
+    };
+    return head("메뉴 · 색상 설정", "강사와 협의한 대로 수강생 화면의 메뉴를 더하고(＋) 빼고(−), 이름과 순서, 화면 색상을 정해요. 바꾸면 바로 저장돼요.") +
+      '<section class="a-card a-menu-top"><label class="a-label" for="m-menu-ins">강사 플랫폼</label><select class="a-input" id="m-menu-ins">' + list.map((x) => '<option value="' + x.id + '"' + (x.id === ins.id ? " selected" : "") + ">" + esc(x.displayName) + " · " + esc(x.name) + "</option>").join("") + "</select>" +
+        btn(icon("eye", "sm") + "수강생 화면 보기", "m-preview", "a-btn-outline a-btn-sm", ' data-id="' + ins.id + '"') + "</section>" +
+      '<div class="a-menu-grid">' +
+        '<div class="a-stack">' +
+          '<section class="a-card"><div class="a-card-head"><h2>수강생에게 보이는 메뉴</h2><span class="a-muted">' + onItems.length + "개</span></div>" +
+            '<ul class="a-menu-list">' + onItems.map(row).join("") + "</ul></section>" +
+          '<section class="a-card"><div class="a-card-head"><h2>더할 수 있는 메뉴</h2><span class="a-muted">' + offItems.length + "개</span></div>" +
+            (offItems.length ? '<ul class="a-menu-list off">' + offItems.map((x) => '<li class="a-menu-row"><span class="a-menu-ico">' + icon(iconOf(x), "sm") + '</span><div class="a-menu-main"><b>' + esc(nameOf(x)) + "</b><small>" + (DB.isCustom(x.key) ? "추가 메뉴" : "기본 메뉴") + "</small></div>" +
+              (DB.isCustom(x.key) ? '<button class="a-icon-btn sm" data-action="menu-delete" data-key="' + x.key + '" aria-label="삭제">' + icon("trash", "sm") + "</button>" : "") +
+              '<button class="a-pm plus" data-action="menu-on" data-key="' + x.key + '" aria-label="' + esc(nameOf(x)) + ' 더하기">' + icon("plus", "sm") + "</button></li>").join("") + "</ul>" : '<p class="a-muted a-pad">모든 기본 메뉴가 켜져 있어요.</p>') +
+            '<div class="a-card-foot">' + btn(icon("plus", "sm") + "새 메뉴 만들기 (페이지)", "menu-new", "a-btn-primary a-btn-sm", ' data-type="page"') + btn(icon("link", "sm") + "외부 링크 메뉴", "menu-new", "a-btn-ghost a-btn-sm", ' data-type="link"') + "</div>" +
+          "</section>" +
+        "</div>" +
+        '<div class="a-stack">' +
+          '<section class="a-card"><div class="a-card-head"><h2>수강생 화면 색상</h2></div><form id="m-theme-form">' + themePicker(c.brand.theme, "mtheme") + "</form></section>" +
+          '<section class="a-card"><div class="a-card-head"><h2>메뉴 미리보기</h2></div>' + sidebarPreview(ins.id) + "</section>" +
+          '<p class="a-hint">' + icon("alert", "xs") + " 메뉴를 빼도 강사가 올린 내용은 지워지지 않아요. 다시 더하면 그대로 돌아와요.</p>" +
+        "</div>" +
+      "</div>";
+  }
+  function sidebarPreview(iid) {
+    const m = DB.menuConfig(iid), c = DB.content(iid), t = DB.themeOf(c.brand.theme);
+    const def = (key) => DB.STUDENT_MENUS.find((d) => d.key === key);
+    return '<ul class="a-sidebar-preview" style="--p:' + t.pale + ";--pd:" + t.deep + '">' + m.items.filter((x) => x.on).map((x, i) => {
+      const d = def(x.key);
+      const name = x.label || (d ? (x.key === "bot" ? c.brand.botName : d.label) : "추가 메뉴");
+      return "<li" + (i === 0 ? ' class="on"' : "") + ">" + icon(d ? d.icon : x.icon || "file", "sm") + "<span>" + esc(name) + "</span>" + (x.type === "link" ? icon("arrowUpRight", "xs") : "") + "</li>";
+    }).join("") + "</ul>";
+  }
+  function menuItemForm(key, type) {
+    const m = DB.menuConfig(ui.mMenuIns);
+    const it = key ? m.items.find((x) => x.key === key) : { type: type || "page", icon: type === "link" ? "link" : "file", label: "" };
+    const isLink = it.type === "link";
+    openModal(key ? "메뉴 수정" : isLink ? "외부 링크 메뉴 만들기" : "새 메뉴 만들기",
+      '<form id="menu-item-form" class="a-form" data-key="' + (key || "") + '" data-type="' + it.type + '" novalidate>' +
+        (isLink ? "" : '<p class="a-muted" style="margin:0">강사센터 ‘추가 메뉴’에서 강사가 제목·본문·영상·첨부 자료를 채우는 자유 페이지예요. 예: 오프라인 모임 안내, 협력사 혜택, 추천 도구 모음</p>') +
+        '<div class="a-field"><label for="mi-label">메뉴 이름</label><input class="a-input" id="mi-label" name="label" value="' + esc(it.label || "") + '" placeholder="' + (isLink ? "예: 오픈채팅방" : "예: 오프라인 모임") + '"></div>' +
+        (isLink ? '<div class="a-field"><label for="mi-url">연결할 주소</label><input class="a-input" id="mi-url" name="url" type="url" value="' + esc(it.url || "") + '" placeholder="https://open.kakao.com/…"></div>' : "") +
+        '<div class="a-field"><span class="a-label">아이콘</span><div class="a-icon-pick">' + DB.CUSTOM_ICONS.map((ic) => '<label><input type="radio" name="icon" value="' + ic + '"' + (ic === (it.icon || "file") ? " checked" : "") + "><span>" + icon(ic, "sm") + "</span></label>").join("") + "</div></div>" +
+        '<p class="a-error" id="mi-error"></p></form>',
+      btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="menu-item-form">' + (key ? "저장" : "만들기") + "</button>", "md");
+  }
+  function saveMenuItem(f) {
+    const m = DB.menuConfig(ui.mMenuIns);
+    const label = f.label.value.trim(), err = document.getElementById("mi-error");
+    if (!label) { err.textContent = "메뉴 이름을 입력해 주세요."; return; }
+    const url = f.url ? f.url.value.trim() : "";
+    if (f.dataset.type === "link" && !/^https?:\/\//i.test(url)) { err.textContent = "http:// 또는 https:// 로 시작하는 주소를 넣어 주세요."; return; }
+    const ic = (f.querySelector("input[name=icon]:checked") || {}).value || "file";
+    if (f.dataset.key) Object.assign(m.items.find((x) => x.key === f.dataset.key), { label, url, icon: ic });
+    else m.items.push({ key: DB.uid("cp_"), type: f.dataset.type, label, url, icon: ic, on: true });
+    commit(f.dataset.key ? "메뉴를 저장했어요." : "‘" + label + "’ 메뉴를 더했어요.");
+  }
+
+  /* ---------------- 마스터: 플랫폼 현황 ---------------- */
+  function pageMasterHealth() {
+    const rows = DB.data.instructors.map((ins) => {
+      const co = DB.currentCohort(ins.id);
+      const st = co ? studentProgressRows(ins.id, (s) => s.cohortId === co.id && s.status === "approved") : [];
+      const avg = st.length ? Math.round(st.reduce((a, r) => a + r.st.pct, 0) / st.length) : 0;
+      const done = st.filter((r) => r.st.reqTotal && r.st.reqDone === r.st.reqTotal).length;
+      const subs = allSubmissions(ins.id, "all");
+      const pend = subs.filter((x) => x.review === "pending").length;
+      const reqs = DB.requests(ins.id).filter((x) => !x.q.answer).length;
+      const waiting = DB.studentsOf(ins.id).filter((s) => s.status === "pending").length;
+      const last = subs[0] ? subs[0].sub.at : 0;
+      const flags = [];
+      if (reqs) flags.push(pill("오류 신고 " + reqs, "bad"));
+      if (pend >= 10) flags.push(pill("검수 밀림 " + pend, "warn"));
+      if (waiting) flags.push(pill("승인 대기 " + waiting, "warn"));
+      if (!co) flags.push(pill("기수 없음", "mute"));
+      return { ins, co, st, avg, done, pend, reqs, last, flags };
+    });
+    const totalReq = rows.reduce((a, r) => a + r.reqs, 0);
+    return head("플랫폼 현황", "강사별로 수강생 진행률, 검수 밀림, 답변 안 된 오류 신고를 한눈에 보고 도움이 필요한 강사를 먼저 챙겨요.") +
+      '<div class="a-kpis">' +
+        kpi("운영 중 플랫폼", rows.filter((r) => r.ins.status === "active").length + "개", "전체 " + rows.length + "개", "#/center/master/instructors") +
+        kpi("진행 중 수강생", rows.reduce((a, r) => a + r.st.length, 0) + "명", "현재 기수 기준", "#/center/master/students") +
+        kpi("수료 조건 달성", rows.reduce((a, r) => a + r.done, 0) + "명", "필수 과제 모두 통과", "#/center/master/health") +
+        kpi("답변 안 된 오류 신고", totalReq + "건", "모든 플랫폼 합계", "#/center/master/reports", totalReq ? "warn" : "") +
+      "</div>" +
+      '<section class="a-card"><div class="a-card-head"><h2>강사별 현황</h2></div><div class="a-table-wrap"><table class="a-table"><thead><tr><th>강사</th><th>현재 기수</th><th>수강생</th><th>평균 진행률</th><th>수료 가능</th><th>검수 대기</th><th>최근 제출</th><th>살펴볼 점</th><th class="right"></th></tr></thead><tbody>' +
+        rows.map((r) => "<tr><td><b>" + esc(r.ins.displayName) + '</b><small class="a-memo">' + esc(r.ins.name) + "</small></td><td>" + (r.co ? esc(r.co.name) + ' <small class="a-memo">' + DB.STATUS_LABEL[DB.cohortStatus(r.co)] + "</small>" : "-") + '</td><td class="num">' + r.st.length + "명</td>" +
+          '<td><div class="a-bar"><span style="width:' + r.avg + '%"></span></div><small class="num">' + r.avg + '%</small></td><td class="num">' + r.done + '명</td><td class="num">' + r.pend + '건</td><td class="num">' + (r.last ? fmtStamp(r.last) : "-") + "</td>" +
+          "<td>" + (r.flags.length ? '<div class="a-flags">' + r.flags.join("") + "</div>" : pill("좋아요", "ok")) + '</td><td class="right"><div class="a-row-actions">' + btn("강사센터 접속", "ins-enter", "a-btn-primary a-btn-sm", ' data-id="' + r.ins.id + '"') + "</div></td></tr>").join("") +
+      "</tbody></table></div></section>";
+  }
+
+  /* ---------------- 마스터: 오류 신고 모아보기 ---------------- */
+  function pageMasterReports() {
+    const all = allRequests();
+    const list = all.filter((x) => ui.mRepIns === "all" || x.ins.id === ui.mRepIns);
+    const shown = list.filter((x) => ui.qFilter === "all" || (ui.qFilter === "open" ? !x.q.answer : !!x.q.answer));
+    const tabs = [["open", "답변 대기", list.filter((x) => !x.q.answer).length], ["done", "답변 완료", list.filter((x) => x.q.answer).length], ["all", "전체", list.length]].map((t) =>
+      '<button type="button" class="a-tab' + (ui.qFilter === t[0] ? " on" : "") + '" data-action="q-tab" data-k="' + t[0] + '">' + t[1] + ' <span class="num">' + t[2] + "</span></button>").join("");
+    return head("오류 신고 모아보기", "모든 강사 플랫폼에서 수강생이 남긴 프로그램 오류·불편 신고예요. 플랫폼 문제는 마스터가 직접 답하고 고칠 수 있어요. (강사도 자기 강사센터에서 볼 수 있어요)") +
+      '<section class="a-card"><div class="a-toolbar"><div class="a-tabs">' + tabs + '</div><div class="a-filters"><select class="a-input a-sm" id="m-rep-ins" aria-label="강사"><option value="all">전체 강사</option>' + DB.data.instructors.map((x) => '<option value="' + x.id + '"' + (ui.mRepIns === x.id ? " selected" : "") + ">" + esc(x.displayName) + "</option>").join("") + "</select></div></div>" +
+        requestCards(shown, true) + "</section>";
+  }
+  function requestCards(shown, showIns) {
+    if (!shown.length) return emptyBox("bug", ui.qFilter === "open" ? "답변을 기다리는 신고가 없어요." : "신고가 없어요.");
+    return '<div class="a-stack">' + shown.map((x) =>
+      '<article class="a-q"><div class="a-q-head"><span class="a-avatar">' + esc(x.s.name.slice(0, 1)) + "</span><div><b>#" + x.no + " " + esc(x.q.title) + "</b><small>" + (showIns ? esc(x.ins.displayName) + " · " : "") + esc(x.s.name) + " · " + esc(cohortName(x.s.cohortId)) + " · " + fmtStamp(x.q.at) + "</small></div>" + pill(x.q.category || "기타", "mute") + (x.q.answer ? pill("답변 완료", "ok") : pill("답변 대기", "warn")) + "</div>" +
+      '<p class="a-q-body">' + esc(x.q.body) + "</p>" +
+      ((x.q.images || []).length ? '<div class="a-shots a-q-shots">' + x.q.images.map((im) => '<a class="a-shot" href="' + im.data + '" target="_blank" rel="noopener"><img src="' + im.data + '" alt="' + esc(im.name) + '"></a>').join("") + "</div>" : "") +
+      '<form class="a-q-form" data-sid="' + x.s.id + '" data-qid="' + x.q.id + '"><textarea class="a-input" name="answer" rows="3" placeholder="예: 확인해 보니 ○○ 문제였어요. 지금 고쳤으니 새로고침 후 다시 해 주세요." aria-label="답변">' + esc(x.q.answer || "") + '</textarea><button class="a-btn a-btn-primary a-btn-sm" type="submit">' + (x.q.answer ? "답변 수정" : "답변 등록") + "</button></form></article>").join("") + "</div>";
+  }
+
+  /* ---------------- 마스터: 강사 공지 ---------------- */
+  function pageMasterNotices() {
+    const list = DB.data.announcements.slice().sort((a, b) => (b.pinned - a.pinned) || b.date.localeCompare(a.date));
+    return head("강사 공지", "모든 강사센터 대시보드 맨 위에 보여요. 기능 업데이트, 점검 안내, 운영 정책을 알릴 때 써요.", addBtn("ann", "공지 쓰기")) +
+      '<section class="a-card">' + (list.length ? '<ul class="a-items">' + list.map((n) => '<li><div class="a-item-main"><b>' + esc(n.title) + "</b><small>" + fmtFull(n.date) + " · " + esc((n.body || "").slice(0, 70)) + "</small></div>" + (n.pinned ? pill("고정", "dark") : "") +
+        '<div class="a-row-actions">' + btn(icon("pen", "sm") + "수정", "item-edit", "a-btn-ghost a-btn-sm", ' data-coll="ann" data-id="' + n.id + '"') + "</div></li>").join("") + "</ul>" : emptyBox("megaphone", "강사에게 보낸 공지가 없어요.")) + "</section>";
+  }
+
+  /* ---------------- 마스터: 데이터 관리 ---------------- */
+  function snapshot() {
+    const progress = {};
+    DB.store.keys().filter((k) => k.indexOf("moonclass:progress:") === 0).forEach((k) => { progress[k.slice(19)] = DB.store.get(k, {}); });
+    return { exportedAt: new Date().toISOString(), db: DB.data, progress };
+  }
+  function pageMasterData() {
+    const json = JSON.stringify(snapshot());
+    const kb = Math.round(new Blob([json]).size / 1024);
+    return head("데이터 관리", "지금은 서버 없이 이 브라우저에 저장돼요. 다른 컴퓨터로 옮기거나 혹시 모를 상황에 대비해 백업해 두세요.") +
+      '<div class="a-kpis">' + kpi("저장된 데이터", kb + "KB", "브라우저 저장 공간 약 5MB 중", "#/center/master/data", kb > 3500 ? "warn" : "") + kpi("강사 플랫폼", DB.data.instructors.length + "개", "콘텐츠 포함", "#/center/master/instructors") + kpi("수강생", DB.data.students.length + "명", "제출 기록 포함", "#/center/master/students") + kpi("강사 공지", DB.data.announcements.length + "건", "", "#/center/master/notices") + "</div>" +
+      '<section class="a-card"><div class="a-card-head"><h2>백업</h2><span class="a-muted">아래 내용을 복사해서 메모장 등에 보관하세요</span></div><textarea class="a-input a-mono" id="backup-out" rows="5" readonly>' + esc(json) + '</textarea><div class="a-card-foot">' + btn(icon("clipboard", "sm") + "백업 내용 복사", "backup-copy", "a-btn-primary a-btn-sm") + "</div></section>" +
+      '<section class="a-card"><div class="a-card-head"><h2>복원</h2><span class="a-muted">백업해 둔 내용을 붙여 넣으면 그 시점으로 돌아가요</span></div><textarea class="a-input a-mono" id="backup-in" rows="4" placeholder="{&quot;exportedAt&quot;: … }"></textarea><div class="a-card-foot">' + btn(icon("refresh", "sm") + "이 내용으로 복원", "backup-restore", "a-btn-outline a-btn-sm") + "</div></section>" +
+      '<section class="a-card"><div class="a-card-head"><h2>체험 데이터 처음으로</h2></div><p class="a-muted" style="margin:0 0 12px">모든 강사·수강생·제출 기록을 지우고 처음 체험 상태로 되돌려요. 되돌릴 수 없으니 먼저 백업하세요.</p>' + btn(icon("trash", "sm") + "처음 상태로 초기화", "data-reset", "a-btn-ghost a-btn-sm danger") + "</section>";
+  }
+
+  /* ---------------- 강사: 추가 메뉴 내용 ---------------- */
+  function pageCustomPages() {
+    const iid = IID(), c = C();
+    const items = customPages(iid);
+    return head("추가 메뉴", "마스터가 만들어 준 추가 메뉴의 내용을 채워요. 수강생 화면 왼쪽 메뉴에 그대로 보여요.") +
+      (items.length ? '<div class="a-stack">' + items.map((it) => {
+        const pg = c.pages[it.key] || {};
+        return '<section class="a-card"><div class="a-card-head"><span class="a-menu-ico">' + icon(it.icon || "file", "sm") + '</span><h2 class="a-grow">' + esc(it.label) + "</h2>" + (it.on ? pill("수강생에게 보임", "ok") : pill("꺼짐", "mute")) + btn(icon("pen", "sm") + "내용 수정", "page-edit", "a-btn-primary a-btn-sm", ' data-key="' + it.key + '"') + "</div>" +
+          '<p class="a-muted" style="margin:0">' + (pg.body ? esc(pg.body.slice(0, 120)) : "아직 내용이 없어요.") + "</p>" + ((pg.attachments || []).length ? '<p class="a-muted" style="margin:8px 0 0">' + icon("paperclip", "xs") + " 첨부 " + pg.attachments.length + "개</p>" : "") + "</section>";
+      }).join("") + "</div>" : '<section class="a-card">' + emptyBox("star", "추가 메뉴가 없어요. 필요하면 마스터에게 요청해 주세요.") + "</section>");
+  }
+  function pageForm(key) {
+    const it = customPages(IID()).find((x) => x.key === key);
+    const pg = C().pages[key] || {};
+    attDraft = DB.clone(pg.attachments || []);
+    openModal(it.label + " 내용",
+      '<form id="page-form" class="a-form" data-key="' + key + '" novalidate>' +
+        '<div class="a-field"><label for="pf-title">페이지 제목</label><input class="a-input" id="pf-title" name="title" value="' + esc(pg.title || it.label) + '"></div>' +
+        '<div class="a-field"><label for="pf-summary">한 줄 소개</label><input class="a-input" id="pf-summary" name="summary" value="' + esc(pg.summary || "") + '"></div>' +
+        '<div class="a-field"><label for="pf-yt">유튜브 주소 (선택)</label><input class="a-input" id="pf-yt" name="youtubeId" value="' + esc(pg.youtubeId ? "https://youtu.be/" + pg.youtubeId : "") + '"></div>' +
+        '<div class="a-field"><label for="pf-body">본문</label><textarea class="a-input" id="pf-body" name="body" rows="8">' + esc(pg.body || "") + "</textarea></div>" +
+        '<div class="a-field"><span class="a-label">첨부 자료</span><div id="att-editor">' + attEditorHtml() + "</div></div>" +
+        '<p class="a-error" id="pf-error"></p></form>',
+      btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="page-form">저장</button>', "lg");
+  }
+  function savePage(f) {
+    const yt = f.youtubeId.value.trim(), yid = DB.youtubeId(yt);
+    if (yt && !yid) { document.getElementById("pf-error").textContent = "유튜브 주소를 확인해 주세요."; return; }
+    const c = C();
+    c.pages[f.dataset.key] = { title: f.title.value.trim(), summary: f.summary.value.trim(), youtubeId: yid, body: f.body.value, attachments: attDraft.slice() };
+    if (!DB.save()) { toast("저장 공간이 부족해요. 큰 파일은 링크로 바꿔 주세요.", "warn"); DB.load(); return; }
+    commit("추가 메뉴 내용을 저장했어요.");
+  }
+
   /* ---------------- 마스터 ---------------- */
   function pageMasterHome() {
     const ins = DB.data.instructors;
@@ -798,7 +1014,7 @@
           return "<tr><td><b>" + esc(x.displayName) + '</b><small class="a-memo">' + fmtMD(x.createdAt || todayStr()) + " 개설</small></td><td>" + esc(x.name) + ' <span class="a-muted num">/ ' + esc(x.phone4) + "</span></td><td>" + esc(c ? c.brand.courseTitle : "-") + "</td>" +
             "<td>" + cos.length + "개" + (cur ? ' <small class="a-memo">' + esc(cur.name) + " " + DB.STATUS_LABEL[DB.cohortStatus(cur)] + "</small>" : "") + '</td><td class="num">' + ss.filter((s) => s.status === "approved").length + "명" + (ss.filter((s) => s.status === "pending").length ? ' <small class="a-memo">대기 ' + ss.filter((s) => s.status === "pending").length + "</small>" : "") + "</td>" +
             "<td>" + (x.status === "active" ? pill("운영 중", "ok") : pill("중지", "mute")) + '</td><td class="right"><div class="a-row-actions">' +
-            btn("강사센터 접속", "ins-enter", "a-btn-primary a-btn-sm", ' data-id="' + x.id + '"') + btn("수정", "ins-edit", "a-btn-ghost a-btn-sm", ' data-id="' + x.id + '"') + "</div></td></tr>";
+            btn("강사센터 접속", "ins-enter", "a-btn-primary a-btn-sm", ' data-id="' + x.id + '"') + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/center/master/menus?ins=' + x.id + '">' + icon("sliders", "sm") + "메뉴·색상</a>" + btn("수정", "ins-edit", "a-btn-ghost a-btn-sm", ' data-id="' + x.id + '"') + "</div></td></tr>";
         }).join("") + "</tbody></table></div>" : emptyBox("store", "강사 플랫폼이 없어요.")) + "</section>";
   }
   function pageMasterInstructors() {
@@ -826,7 +1042,8 @@
         '<div class="a-field"><label for="if-phone">전화번호 뒷자리 <small>(비밀번호)</small></label><input class="a-input" id="if-phone" name="phone4" inputmode="numeric" maxlength="4" value="' + esc(x.phone4) + '"></div></div>' +
         '<div class="a-field"><label for="if-display">수강생에게 보이는 이름</label><input class="a-input" id="if-display" name="displayName" value="' + esc(x.displayName) + '" placeholder="예: 로직메이커 황금농부"><small class="a-muted">수강생 로그인 화면의 강사 선택 목록에 보여요.</small></div>' +
         (isNew ? '<div class="a-field"><label for="if-course">강의 이름</label><input class="a-input" id="if-course" name="courseTitle" placeholder="예: 황금농부와 함께하는 스마트스토어 실전 클래스"></div>' +
-          '<div class="a-field"><label for="if-start">1기 1주차 시작일</label><input class="a-input" id="if-start" name="startDate" type="date" value="' + addDays(todayStr(), 14) + '"></div>'
+          '<div class="a-field"><label for="if-start">1기 1주차 시작일</label><input class="a-input" id="if-start" name="startDate" type="date" value="' + addDays(todayStr(), 14) + '"></div>' +
+          '<div class="a-field"><span class="a-label">수강생 화면 색상</span>' + themePicker("orange", "itheme") + "</div>"
           : '<div class="a-field"><label for="if-status">상태</label><select class="a-input" id="if-status" name="status"><option value="active"' + (x.status === "active" ? " selected" : "") + '>운영 중</option><option value="paused"' + (x.status !== "active" ? " selected" : "") + ">운영 중지 (강사·수강생 로그인 막기)</option></select></div>" +
             '<p class="a-muted">강의: ' + esc(c ? c.brand.courseTitle : "-") + "</p>") +
         '<p class="a-error" id="if-error"></p></form>',
@@ -842,14 +1059,16 @@
     if (id) { Object.assign(DB.instructor(id), { name, phone4, displayName, status: f.status.value }); commit("강사 정보를 저장했어요."); return; }
     const nid = DB.uid("i");
     DB.data.instructors.push({ id: nid, name, phone4, displayName, status: "active", createdAt: todayStr() });
-    DB.data.content[nid] = DB.normalizeContent(DB.template({ name: displayName, instructor: displayName, courseTitle: f.courseTitle.value.trim() || displayName + " 실전 클래스" }));
+    const th = (f.querySelector("input[name=itheme]:checked") || {}).value || "lime";
+    DB.data.content[nid] = DB.normalizeContent(DB.template({ name: displayName, instructor: displayName, courseTitle: f.courseTitle.value.trim() || displayName + " 실전 클래스", theme: th }));
+    DB.data.content[nid].brand.themeSet = true;
     DB.data.cohorts.push({ id: DB.uid("c"), instructorId: nid, name: "1기", startDate: f.startDate.value || addDays(todayStr(), 14), recruiting: true });
     commit(displayName + " 플랫폼을 만들었어요. 강사 로그인: " + name + " / " + phone4);
   }
 
   /* ---------------- 렌더 ---------------- */
-  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation };
-  const MPAGES = { "": pageMasterHome, instructors: pageMasterInstructors, students: pageMasterStudents };
+  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, pages: pageCustomPages };
+  const MPAGES = { "": pageMasterHome, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData };
   function render() {
     closeModal();
     const r = route();
@@ -857,6 +1076,7 @@
     if (S && S.role === "instructor" && !(DB.instructor(S.instructorId) || {}).status) S = null;
     if (S && S.actingAs && !DB.instructor(S.actingAs)) { S.actingAs = null; DB.session.setAdmin(S); }
     if (!S) {
+      document.body.dataset.master = loginTab === "master" ? "1" : "";
       if (r.parts[0] !== "login") history.replaceState(null, "", "#/center/login");
       renderLogin();
       return;
@@ -865,6 +1085,7 @@
     const master = S.role === "master" && !S.actingAs;
     if (master && r.parts[0] !== "master") { history.replaceState(null, "", "#/center/master"); return render(); }
     if (!master && r.parts[0] === "master") { history.replaceState(null, "", "#/center"); return render(); }
+    document.body.dataset.master = master ? "1" : "";
     renderShell(r);
     const main = document.getElementById("a-main");
     const fn = master ? (MPAGES[r.parts[1] || ""] || pageMasterHome) : (PAGES[r.parts[0] || ""] || pageDashboard);
@@ -903,7 +1124,7 @@
     if (a.disabled) return;
     const d = a.dataset;
     switch (d.action) {
-      case "login-tab": loginTab = d.tab; renderLogin(); break;
+      case "login-tab": loginTab = d.tab; document.body.dataset.master = loginTab === "master" ? "1" : ""; renderLogin(); break;
       case "toggle-pw": { const inp = document.getElementById("al-pw"); const show = inp.type === "password"; inp.type = show ? "text" : "password"; a.innerHTML = icon(show ? "eyeOff" : "eye", "sm"); break; }
       case "logout": logout(); break;
       case "toggle-nav": document.getElementById("a-app").classList.toggle("nav-open"); break;
@@ -961,6 +1182,67 @@
       // 콘텐츠
       case "lib-tab": ui.libTab = d.k; render(); break;
       case "faq-bulk": faqBulkModal(); break;
+      case "menu-off": case "menu-on": {
+        const m = DB.menuConfig(ui.mMenuIns), it = m.items.find((x) => x.key === d.key);
+        it.on = d.action === "menu-on";
+        // 다시 켠 메뉴는 보이는 메뉴의 맨 아래로
+        if (it.on) { m.items.splice(m.items.indexOf(it), 1); const lastOn = m.items.map((x) => x.on).lastIndexOf(true); m.items.splice(lastOn + 1, 0, it); }
+        DB.save(); render(); toast(it.on ? "메뉴를 더했어요." : "메뉴를 뺐어요.");
+        break;
+      }
+      case "menu-move": {
+        const m = DB.menuConfig(ui.mMenuIns), onList = m.items.filter((x) => x.on);
+        const i = onList.findIndex((x) => x.key === d.key), j = i + Number(d.dir);
+        if (j < 0 || j >= onList.length) break;
+        const a1 = m.items.indexOf(onList[i]), a2 = m.items.indexOf(onList[j]);
+        [m.items[a1], m.items[a2]] = [m.items[a2], m.items[a1]];
+        DB.save(); render();
+        break;
+      }
+      case "lib-toggle": { const m = DB.menuConfig(ui.mMenuIns); m.library[d.k] = m.library[d.k] === false; DB.save(); render(); break; }
+      case "menu-new": menuItemForm("", d.type); break;
+      case "menu-edit": menuItemForm(d.key); break;
+      case "menu-delete": {
+        const m = DB.menuConfig(ui.mMenuIns), it = m.items.find((x) => x.key === d.key);
+        confirmModal("메뉴 삭제", "‘" + esc(it.label) + "’ 메뉴를 완전히 삭제할까요?<br>강사가 작성한 내용도 함께 지워져요.", "삭제", true, () => {
+          m.items = m.items.filter((x) => x.key !== d.key);
+          const c = DB.content(ui.mMenuIns); if (c && c.pages) delete c.pages[d.key];
+          commit("메뉴를 삭제했어요.");
+        });
+        break;
+      }
+      case "m-preview": {
+        const co = DB.currentCohort(d.id);
+        if (!co) { toast("기수가 없어 미리볼 수 없어요.", "warn"); break; }
+        DB.session.setStudent({ preview: true, instructorId: d.id, cohortId: co.id, at: Date.now() });
+        location.hash = "#/home";
+        break;
+      }
+      case "page-edit": pageForm(d.key); break;
+      case "backup-copy": {
+        const ta = document.getElementById("backup-out");
+        const done = () => toast("백업 내용을 복사했어요.");
+        if (navigator.clipboard) navigator.clipboard.writeText(ta.value).then(done, () => { ta.select(); toast("내용을 선택했어요. 길게 눌러 복사해 주세요."); });
+        else { ta.select(); toast("내용을 선택했어요. 길게 눌러 복사해 주세요."); }
+        break;
+      }
+      case "backup-restore": {
+        let data;
+        try { data = JSON.parse(document.getElementById("backup-in").value); } catch (err) { toast("백업 내용을 읽지 못했어요. 처음부터 끝까지 그대로 붙여 넣어 주세요.", "warn"); break; }
+        if (!data || !data.db || !Array.isArray(data.db.instructors)) { toast("두고 클래스 백업 형식이 아니에요.", "warn"); break; }
+        confirmModal("백업으로 복원", "지금 데이터를 지우고 " + esc((data.exportedAt || "").slice(0, 16).replace("T", " ")) + " 백업으로 되돌릴까요?", "복원", true, () => {
+          DB.store.keys().filter((k) => k.indexOf("moonclass:progress:") === 0).forEach((k) => DB.store.remove(k));
+          Object.keys(data.progress || {}).forEach((sid) => DB.store.set("moonclass:progress:" + sid, data.progress[sid]));
+          DB.store.set("moonclass:db:v2", data.db);
+          DB.load(); closeModal(); render(); toast("백업으로 복원했어요.");
+        });
+        break;
+      }
+      case "data-reset":
+        confirmModal("처음 상태로 초기화", "모든 강사·수강생·제출 기록이 지워지고 체험 데이터로 돌아가요.<br>되돌릴 수 없어요.", "초기화", true, () => {
+          DB.reset(); S = { role: "master" }; DB.session.setAdmin(S); closeModal(); render(); toast("처음 상태로 되돌렸어요.");
+        });
+        break;
       case "item-add": editItem(d.coll, "", d.ctx); break;
       case "item-edit": editItem(d.coll, d.id, d.ctx); break;
       case "item-delete": deleteItem(d.coll, d.id, d.ctx); break;
@@ -996,7 +1278,7 @@
       commit(items.length + "개 질문을 등록했어요.");
       return;
     }
-    const forms = { "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns };
+    const forms = { "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage };
     if (forms[f.id]) { e.preventDefault(); forms[f.id](f); return; }
     if (f.classList.contains("a-q-form")) {
       e.preventDefault();
@@ -1017,6 +1299,11 @@
     else if (t.id === "rev-week") { ui.revWeek = t.value; ui.revPicked.clear(); render(); }
     else if (t.id === "sched-cohort") { ui.schedCohort = t.value; render(); }
     else if (t.id === "m-ins") { ui.mIns = t.value; render(); }
+    else if (t.id === "m-menu-ins") { ui.mMenuIns = t.value; if (location.hash.indexOf("?") > -1) location.hash = "#/center/master/menus"; else render(); }
+    else if (t.id === "m-rep-ins") { ui.mRepIns = t.value; render(); }
+    else if (t.classList.contains("a-menu-label")) { const it = DB.menuConfig(ui.mMenuIns).items.find((x) => x.key === t.dataset.key); it.label = t.value.trim(); DB.save(); render(); toast("메뉴 이름을 저장했어요."); }
+    else if (t.name === "mtheme") { const c = DB.content(ui.mMenuIns); c.brand.theme = t.value; c.brand.themeSet = true; DB.save(); render(); toast(DB.themeOf(t.value).label + " 색으로 바꿨어요."); }
+    else if (t.name === "theme" || t.name === "itheme") { const box = document.getElementById("theme-preview-" + t.name); if (box) box.innerHTML = themePreview(t.value); }
     else if (t.id === "m-status") { ui.mStatus = t.value; render(); }
     else if (t.classList.contains("rev-pick")) { if (t.checked) ui.revPicked.add(t.dataset.key); else ui.revPicked.delete(t.dataset.key); render(); }
     else if (t.id === "rev-all" || t.id === "rev-all-2") {
