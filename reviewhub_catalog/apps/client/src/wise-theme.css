@@ -928,3 +928,114 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 @media (max-width: 720px) {
   .bulk-selection-bar .bulk-main-actions { grid-template-columns: 1fr 1.3fr 1fr; }
 }
+
+/* 상품 변경전/변경완료: 툴바(보기 개수·건수) + 모바일 카드형 */
+.admin-toolbar-meta { display: inline-flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.card-heading .page-size-input { margin-left: auto; }
+@media (max-width: 720px) {
+  .admin-toolbar-meta { width: 100%; justify-content: space-between; }
+  .stackable-table tbody tr td.change-queue-product, .stackable-table tbody tr td.stack-wide { grid-column: 1 / -1; }
+  .supplier-table.stackable-table { min-width: 0; }
+  /* 공급처 카드: 순번 줄은 숨기고 매입처명을 카드 제목으로 */
+  .supplier-table.stackable-table tbody td:first-child { display: none; }
+  .supplier-table.stackable-table tbody td:nth-child(2) { border-top: 0 !important; background: var(--w-soft-2); }
+  /* 카드 제목 옆 "페이지당 N개"는 모바일에서 제목 아래 줄로 내려 설명 글이 좁아지지 않게 */
+  .card-heading:has(.page-size-input) { flex-wrap: wrap; }
+  .card-heading:has(.page-size-input) > div { flex: 1 1 calc(100% - 40px); min-width: 0; }
+  .card-heading .page-size-input { margin-left: 30px; }
+  .change-queue-table tbody tr td small { display: block; }
+}
+
+/* 최근 7일 품절 이슈: 단독이면 카드(안쪽 여백), 가격변동 패널 안이면 카드 속 카드가 되지 않게 위 구분선만 */
+.sold-out-issue-board { padding: 22px 24px !important; border-radius: 16px; }
+.history-page-panel .sold-out-issue-board { margin-top: 26px; padding: 24px 0 0 !important; border: 0 !important; border-top: 1px solid var(--w-line) !important; border-radius: 0 !important; box-shadow: none !important; }
+/* 가로 배치(그리드) 안의 카드는 위아래 간격(.admin-card + .admin-card)을 쓰지 않아 높이가 어긋나지 않게 */
+.admin-home-grid > .admin-card, .category-admin-grid > .admin-card, .sales-layout > .admin-card,
+.sync-summary-grid > .admin-card, .guide-editor-stack > .admin-card { margin-top: 0; }
+@media (max-width: 720px) {
+  .sold-out-issue-board { padding: 18px 16px !important; }
+  .history-page-panel .sold-out-issue-board { padding: 20px 0 0 !important; }
+}
+/* 가격변동 카드(모바일): 화살표만 한 줄에 남지 않게 "항목·이전가 ›" / "새 가격·변동액" 두 줄로 정리 */
+@media (max-width: 720px) {
+  .price-change-card { grid-template-columns: 64px minmax(0, 1fr); align-items: start; gap: 12px; padding: 14px; }
+  .price-change-card .product-thumb { width: 64px; height: 64px; }
+  .price-change-copy > strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; }
+  .price-change-copy > small { white-space: normal; }
+  .price-change-fields { gap: 10px; }
+  .price-change-field { display: grid; grid-template-columns: max-content max-content 1fr; align-items: center; gap: 4px 8px; }
+  .price-change-field > span { grid-column: 1; grid-row: 1; white-space: nowrap; }
+  .price-change-card .product-thumb-empty span { display: none; }
+  .price-change-field del { grid-column: 2; grid-row: 1; }
+  .price-change-field > svg { grid-column: 3; grid-row: 1; justify-self: start; }
+  .price-change-field b { grid-column: 1; grid-row: 2; white-space: nowrap; }
+  .price-change-field .change-difference { grid-column: 2 / span 2; grid-row: 2; justify-self: start; margin-left: 0; padding: 4px 9px; font-size: 13px; }
+}
+/* 모바일 단가표 카드: "배송비 유료 (3,500원)"이 두 줄로 쪼개지지 않게 한 줄 + 살짝 작은 글씨 */
+@media (max-width: 720px) {
+  .shipping-fee-button { padding: 5px 9px; font-size: 12px; }
+  .shipping-fee-button .shipping-fee-text { white-space: nowrap; }
+}
+/* 아주 작은 휴대폰(320px대): 가로 스크롤이 생기지 않게 페이지 버튼·상단 칩 축소 */
+@media (max-width: 359px) {
+  .catalog-pagination nav { gap: 4px; }
+  .catalog-pagination button, .catalog-pagination .catalog-page-step { min-width: 32px; height: 34px; padding: 0 6px; }
+  .admin-topbar .admin-chip { display: none !important; }
+}
+/* 관리자 홈 발주오라 연동: "연결 상품 / 전송 대기"를 붙어 있는 한 줄 대신 두 칸으로 */
+.admin-home-connection-meta { grid-template-columns: 1fr 1fr; gap: 10px; }
+.admin-home-connection-meta > div { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--w-card-border); border-radius: 12px; background: #fafbf9; }
+.admin-home-connection-meta > div b { font-size: 18px; }
+/* 모바일에서는 카드가 세로로 쌓이므로 최소 높이(빈 공간)를 없앱니다 */
+@media (max-width: 720px) {
+  .admin-home-panel { min-height: 0; }
+}
+/* 노트북 폭(1051~1699px): 마진(1개)·상태 칸이 가로 스크롤 뒤로 숨지 않게 칸 폭을 줄여 한 화면에 맞춤
+   - 체크박스 옆 "선택" 글자(세로로 쪼개짐)는 숨기고, 수정/삭제 버튼은 위아래로 쌓습니다. */
+@media (min-width: 1051px) and (max-width: 1699px) {
+  .product-admin-table { min-width: 1080px; }
+  .product-admin-table th, .product-admin-table td { padding-left: 8px; padding-right: 8px; }
+  .product-admin-table .product-select-control span { display: none; }
+  .product-admin-table th:first-child { width: 38px; }
+  .product-admin-table th:nth-child(2) { width: auto; }
+  .product-admin-table th:nth-child(3) { width: 58px; }
+  .product-admin-table th:nth-child(4) { width: 92px; }
+  .product-admin-table th:nth-child(5) { width: 80px; }
+  .product-admin-table th:nth-child(6) { width: 70px; }
+  .product-admin-table th:nth-child(7),
+  .product-admin-table th:nth-child(8),
+  .product-admin-table th:nth-child(9),
+  .product-admin-table th:nth-child(10) { width: 86px; }
+  .product-admin-table th:nth-child(11) { width: 100px; }
+  .product-admin-table th:nth-child(12) { width: 66px; }
+  .product-admin-table th:last-child { width: 80px; }
+  .product-admin-table td b.cost-price, .product-admin-table td b.admin-a-price, .product-admin-table td b.admin-general-price, .product-admin-table td b.admin-sale-price { font-size: 14px !important; white-space: nowrap; letter-spacing: -.02em; }
+  .product-admin-table td .margin-amount { white-space: nowrap; }
+  .product-admin-table .product-row-actions { flex-direction: column; gap: 5px; }
+  .product-admin-table .product-row-actions button { width: 100%; justify-content: center; height: 30px; }
+}
+/* 한글이 단어 중간에서 줄바꿈되지 않게(예: "무/료") — 너무 긴 코드·주소만 필요할 때 끊습니다. */
+.public-app, .admin-shell, .admin-login-page { word-break: keep-all; overflow-wrap: break-word; }
+/* 통계 달력: 둥근 모서리에 잘리던 오른쪽 칸 테두리 대신 바깥 테두리 + 안쪽 구분선 */
+.sales-calendar { border: 1px solid #edf0eb; }
+.sales-calendar article { border-width: 0 1px 1px 0 !important; border-style: solid !important; }
+.sales-calendar article:nth-child(7n) { border-right-width: 0 !important; }
+.sales-calendar article:nth-last-child(-n + 7) { border-bottom-width: 0 !important; }
+@media (max-width: 720px) {
+  .sales-calendar article { min-height: 58px !important; }
+  .sales-calendar .sales-day-empty { display: none; }
+}
+/* 입점·소싱 표: 노트북 폭에서 접수일이 잘리지 않게 표를 칸 안에 맞추고, 날짜·연락처는 한 줄 유지 */
+@media (min-width: 1051px) {
+  .request-board-table { min-width: 0; }
+  .request-board-table th, .request-board-table td { padding-left: 12px; padding-right: 12px; }
+  .request-board-table td { white-space: nowrap; }
+  .request-board-table td:nth-child(3) { width: 100%; max-width: 0; white-space: normal; }
+  .request-board-table .request-product { min-width: 160px; }
+  .request-board-table .request-product small { max-width: 100%; }
+}
+/* 배송 정책 수정(모바일): 저장 버튼이 화면 왼쪽 끝에 붙지 않게 다른 편집 창의 하단 바와 같은 여백 */
+@media (max-width: 720px) {
+  .editor-panel > .editor-actions { flex: 0 0 auto; margin: 0; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid #dfe8e3; background: #fff; box-shadow: 0 -8px 24px rgba(28,58,46,.08); }
+  .editor-panel > .editor-actions > button { flex: 1; min-height: 48px; }
+}
