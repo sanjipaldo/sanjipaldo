@@ -308,10 +308,15 @@ const MOON_CONTENT = {
       { id: "v4", title: "대량 발주와 단가 협상", meta: "VOD · 38분", desc: "월 매출이 커졌을 때 공급가 낮추는 법", youtubeId: "" }
     ],
     senior: [
-      { id: "g1", title: "처음 시작하는 분을 위한 컴퓨터 기초", meta: "기초 · 15분", desc: "파일 저장, 캡처, 업로드 방법", youtubeId: "" },
-      { id: "g2", title: "스마트폰으로 사진 찍고 올리기", meta: "기초 · 12분", desc: "과제 사진을 휴대폰으로 올리는 방법", youtubeId: "" },
-      { id: "g3", title: "홈택스 공동인증서 쉽게 만들기", meta: "기초 · 18분", desc: "간편인증과 공동인증서 차이", youtubeId: "" },
-      { id: "g4", title: "카카오톡으로 고객 응대하기", meta: "기초 · 14분", desc: "톡톡·카톡 채널 기본 사용법", youtubeId: "" }
+      { id: "g1", title: "처음 시작하는 분을 위한 컴퓨터 기초", meta: "기초 · 15분", desc: "파일 저장, 캡처, 업로드 방법", youtubeId: "",
+        body: "컴퓨터가 낯설어도 괜찮아요. 이 영상 하나로 과제 제출에 필요한 기본기를 익힐 수 있어요.\n\n1. 폴더 만들고 파일 저장하기\n2. 화면 캡처하기 (윈도우 Win+Shift+S / 맥 Cmd+Shift+4)\n3. 캡처한 사진을 과제에 올리기\n\n아래 체크리스트를 내려받아 하나씩 표시하면서 따라 해 보세요.",
+        attachments: [{"id": "a1", "name": "컴퓨터 기초 체크리스트.csv", "data": "data:text/csv;charset=utf-8,%EF%BB%BF%EC%88%9C%EC%84%9C%2C%ED%95%A0%20%EC%9D%BC%2C%ED%99%95%EC%9D%B8%0A1%2C%EB%B0%94%ED%83%95%ED%99%94%EB%A9%B4%EC%97%90%20%27%EB%91%90%EA%B3%A0%ED%81%B4%EB%9E%98%EC%8A%A4%27%20%ED%8F%B4%EB%8D%94%20%EB%A7%8C%EB%93%A4%EA%B8%B0%2C%0A2%2C%ED%99%94%EB%A9%B4%20%EC%BA%A1%EC%B2%98%ED%95%98%EA%B8%B0%20%28%EC%9C%88%EB%8F%84%EC%9A%B0%3A%20Win%2BShift%2BS%20/%20%EB%A7%A5%3A%20Cmd%2BShift%2B4%29%2C%0A3%2C%EC%BA%A1%EC%B2%98%ED%95%9C%20%EC%82%AC%EC%A7%84%EC%9D%84%20%ED%8F%B4%EB%8D%94%EC%97%90%20%EC%A0%80%EC%9E%A5%ED%95%98%EA%B8%B0%2C%0A4%2C%EA%B3%BC%EC%A0%9C%20%EC%A0%9C%EC%B6%9C%ED%95%98%EA%B8%B0%20%ED%99%94%EB%A9%B4%EC%97%90%EC%84%9C%20%EC%82%AC%EC%A7%84%20%EC%98%AC%EB%A6%AC%EA%B8%B0%2C%0A", "size": 242}] },
+      { id: "g2", title: "스마트폰으로 사진 찍고 올리기", meta: "기초 · 12분", desc: "과제 사진을 휴대폰으로 올리는 방법", youtubeId: "",
+        body: "서류 사진은 밝은 곳에서 위에서 수직으로 찍으면 글자가 잘 보여요.\n\n· 주민등록번호·계좌번호는 손가락이나 편집 기능으로 가리기\n· 과제 화면에서 ‘사진 또는 PDF 선택’ → 앨범에서 고르기", attachments: [] },
+      { id: "g3", title: "홈택스 공동인증서 쉽게 만들기", meta: "기초 · 18분", desc: "간편인증과 공동인증서 차이", youtubeId: "",
+        body: "사업자등록은 간편인증(카카오·네이버·PASS)으로도 할 수 있어요. 공동인증서가 필요한 경우와 만드는 방법을 차례로 알려 드려요.", attachments: [] },
+      { id: "g4", title: "카카오톡으로 고객 응대하기", meta: "기초 · 14분", desc: "톡톡·카톡 채널 기본 사용법", youtubeId: "",
+        body: "스마트스토어 톡톡과 카카오톡 채널로 고객 문의에 답하는 기본 방법이에요. 자주 쓰는 답변은 ‘빠른 답변’에 저장해 두세요.", attachments: [] }
     ]
   },
 

@@ -825,3 +825,22 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 }
 .lx-tile.t3 { right: 7%; top: auto; bottom: 17%; }
 .lx-tile.t4 { left: auto; right: 36%; bottom: 9%; }
+
+/* ===== v5: 자료실 영상 팝업 · 첨부 자료 ===== */
+.res-pop { display: grid; gap: 14px; white-space: normal; }
+.res-pop-meta { margin: 0; font-size: 14px; color: var(--mute); }
+.res-pop-body { font-size: 16px; line-height: 1.8; color: var(--ink); white-space: pre-line; }
+.att-box { padding: 16px; border-radius: var(--r-lg); background: var(--canvas-softer); }
+.att-box .side-label { margin-bottom: 8px; }
+.att-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.att-list li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-md); background: var(--canvas); }
+.att-ext { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px; background: var(--primary-pale); color: var(--positive-deep); font-size: 11px; font-weight: 800; }
+.att-name { flex: 1; min-width: 0; display: grid; font-size: 14px; font-weight: 700; color: var(--ink); overflow-wrap: anywhere; }
+.att-name small { font-size: 12px; font-weight: 500; color: var(--mute); }
+.att-count { align-self: flex-start; }
+@media (max-width: 720px) {
+  .modal-backdrop { align-items: end; padding: 0; }
+  .modal { max-width: none; border-radius: 24px 24px 0 0; max-height: 92dvh; padding: 22px 18px; }
+  .att-list li { flex-wrap: wrap; }
+  .att-list li .btn { flex: 1 0 100%; }
+}

@@ -21,7 +21,7 @@
   let S = null; // 관리자 세션 { role: "instructor"|"master", instructorId?, actingAs? }
   let loginTab = "instructor";
   let confirmFn = null;
-  const ui = { stuCohort: "all", stuStatus: "pending", stuQuery: "", picked: new Set(), revCohort: null, revWeek: "all", revFilter: "pending", qFilter: "open", libTab: "ebook", schedCohort: null, mIns: "all", mStatus: "all" };
+  const ui = { stuCohort: "all", stuStatus: "pending", stuQuery: "", picked: new Set(), revCohort: null, revWeek: "all", revFilter: "pending", revPicked: new Set(), qFilter: "open", libTab: "ebook", schedCohort: null, mIns: "all", mStatus: "all" };
 
   const STU = {
     pending: { label: "승인 대기", cls: "warn" },
@@ -253,7 +253,7 @@
   function progressTable(rows, c) {
     if (!rows.length) return emptyBox("users", "수강 중인 학생이 없어요.");
     rows.sort((a, b) => b.st.pct - a.st.pct);
-    return '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>이름</th>' + c.weeks.map((w) => "<th>" + w.no + "주차</th>").join("") + "<th>필수 통과</th><th>전체 진행률</th></tr></thead><tbody>" +
+    return '<div class="a-table-wrap"><table class="a-table a-prog-table"><thead><tr><th>이름</th>' + c.weeks.map((w) => "<th>" + w.no + "주차</th>").join("") + "<th>필수 통과</th><th>전체 진행률</th></tr></thead><tbody>" +
       rows.map((r) => "<tr class=\"clickable\" data-action=\"student-open\" data-id=\"" + r.s.id + "\"><td><b>" + esc(r.s.name) + "</b></td>" +
         c.weeks.map((w) => { const d = w.missions.filter((m) => DB.subState(r.p, m.id) === "done").length; return '<td class="num' + (d === w.missions.length && d ? " full" : "") + '">' + d + "/" + w.missions.length + "</td>"; }).join("") +
         '<td class="num">' + r.st.reqDone + "/" + r.st.reqTotal + '</td><td><div class="a-bar"><span style="width:' + r.st.pct + '%"></span></div><small class="num">' + r.st.pct + "%</small></td></tr>").join("") +
@@ -412,10 +412,30 @@
       '<section class="a-card"><div class="a-toolbar"><div class="a-tabs">' + tabs + "</div>" +
         '<div class="a-filters"><select class="a-input a-sm" id="rev-cohort" aria-label="기수"><option value="all">전체 기수</option>' + cos.map((co) => '<option value="' + co.id + '"' + (ui.revCohort === co.id ? " selected" : "") + ">" + esc(co.name) + "</option>").join("") + "</select>" +
         '<select class="a-input a-sm" id="rev-week" aria-label="주차"><option value="all">전체 주차</option>' + c.weeks.map((w) => '<option value="' + w.no + '"' + (ui.revWeek === String(w.no) ? " selected" : "") + ">" + w.no + "주차</option>").join("") + "</select></div></div>" +
-        (shown.length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>제출 시각</th><th>수강생</th><th>과제</th><th>제출</th><th>상태</th><th class="right"></th></tr></thead><tbody>' +
-          shown.map((x) => '<tr class="clickable" data-action="review-open" data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"><td class="num">' + fmtStamp(x.sub.at) + "</td><td><b>" + esc(x.s.name) + "</b><small class=\"a-memo\">" + esc(cohortName(x.s.cohortId)) + "</small></td><td>" + x.w.no + "주차 · " + esc(x.m.title) + (x.m.required ? "" : ' <small class="a-muted">선택</small>') + '</td><td class="num">' + x.count + "회</td><td>" + reviewPill(x) + '</td><td class="right">' + btn("열기", "review-open", "a-btn-ghost a-btn-sm", ' data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"') + "</td></tr>").join("") +
+        (shown.length ? bulkBar(shown) + '<div class="a-table-wrap"><table class="a-table a-rev-table"><thead><tr><th class="w-check"><input type="checkbox" id="rev-all" aria-label="모두 선택"' + (shown.every((x) => ui.revPicked.has(x.s.id + "|" + x.m.id)) ? " checked" : "") + '></th><th>제출 시각</th><th>수강생</th><th>과제</th><th>제출</th><th>상태</th><th class="right"></th></tr></thead><tbody>' +
+          shown.map((x) => { const key = x.s.id + "|" + x.m.id; return '<tr class="clickable" data-action="review-open" data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"><td class="w-check"><input type="checkbox" class="rev-pick" data-key="' + key + '"' + (ui.revPicked.has(key) ? " checked" : "") + ' aria-label="' + esc(x.s.name + " " + x.m.title) + ' 선택"></td><td class="num">' + fmtStamp(x.sub.at) + "</td><td><b>" + esc(x.s.name) + "</b><small class=\"a-memo\">" + esc(cohortName(x.s.cohortId)) + "</small></td><td>" + x.w.no + "주차 · " + esc(x.m.title) + (x.m.required ? "" : ' <small class="a-muted">선택</small>') + '</td><td class="num">' + x.count + "회</td><td>" + reviewPill(x) + '</td><td class="right">' + btn("열기", "review-open", "a-btn-ghost a-btn-sm", ' data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"') + "</td></tr>"; }).join("") +
           "</tbody></table></div>" : emptyBox("inbox", ui.revFilter === "pending" ? "검수할 제출물이 없어요." : "해당하는 제출물이 없어요.")) +
       "</section>";
+  }
+  function bulkBar(shown) {
+    const keys = shown.map((x) => x.s.id + "|" + x.m.id);
+    const n = keys.filter((k) => ui.revPicked.has(k)).length;
+    return '<div class="a-bulk a-rev-bulk"><label class="a-check"><input type="checkbox" id="rev-all-2"' + (n && n === keys.length ? " checked" : "") + '><span>전체 선택 (' + keys.length + ')</span></label><span class="a-muted">' + n + "개 선택</span>" +
+      btn(icon("alert", "sm") + "선택 보완 요청", "rev-bulk-fix", "a-btn-ghost a-btn-sm danger") + btn(icon("check", "sm") + "선택 승인", "rev-bulk-approve", "a-btn-primary a-btn-sm") + "</div>";
+  }
+  function bulkReview(status, comment) {
+    const keys = Array.from(ui.revPicked);
+    const bySid = {};
+    keys.forEach((k) => { const [sid, mid] = k.split("|"); (bySid[sid] = bySid[sid] || []).push(mid); });
+    let n = 0;
+    Object.keys(bySid).forEach((sid) => {
+      const p = DB.progress(sid);
+      bySid[sid].forEach((mid) => { const l = p.submissions[mid]; if (l && l.length) { l[l.length - 1].review = { status, comment: comment || "", at: Date.now() }; n++; } });
+      DB.saveProgress(sid, p);
+    });
+    ui.revPicked.clear();
+    closeModal(); render();
+    toast(n + "개를 " + (status === "approved" ? "승인했어요." : "보완 요청했어요."));
   }
   function reviewModal(sid, mid) {
     const s = DB.student(sid), p = DB.progress(sid), c = C();
@@ -501,7 +521,9 @@
       fields: [F("title", "영상 제목"), F("youtubeId", "유튜브 주소", "youtube"), F("minutes", "영상 길이 (예: 31:57)"), F("date", "올린 날", "date")] }
   };
   ["ebook", "file"].forEach((k) => { COLL["res-" + k] = { name: "자료", list: (c) => c.resources[k], idp: k[0], fields: [F("title", "자료 이름"), F("meta", "형식 (예: 전자책 · 86쪽)"), F("desc", "한 줄 설명"), F("url", "열람·다운로드 주소 (구글 드라이브 등)", "url")] }; });
-  ["vod", "senior"].forEach((k) => { COLL["res-" + k] = { name: "영상", list: (c) => c.resources[k], idp: k[0], fields: [F("title", "영상 제목"), F("meta", "형식 (예: VOD · 32분)"), F("desc", "한 줄 설명"), F("youtubeId", "유튜브 주소", "youtube")] }; });
+  ["vod", "senior"].forEach((k) => { COLL["res-" + k] = { name: "영상", list: (c) => c.resources[k], idp: k[0], init: () => ({ body: "", attachments: [] }),
+    fields: [F("title", "영상 제목 (팝업 제목)"), F("meta", "형식 (예: 기초 · 15분)"), F("desc", "한 줄 설명 (목록에 보여요)"), F("youtubeId", "유튜브 주소", "youtube"),
+      F("body", "본문 (팝업에 보이는 설명)", "textarea", { rows: 7 }), F("attachments", "첨부 자료 (교습지·엑셀·PDF 등)", "attachments")] }; });
   const faqCats = () => C().faqs.map((f) => f.category || "기타").filter((c, i, a) => a.indexOf(c) === i);
   function weekOf(c, ctx) { return c.weeks.find((w) => String(w.no) === String(ctx)); }
 
@@ -510,6 +532,7 @@
     let v = f.get ? f.get(item) : item[f.key];
     if (v == null) v = "";
     const show = f.showIf ? ' data-show-if="' + f.showIf + '"' : "";
+    if (f.type === "attachments") return '<div class="a-field"><span class="a-label">' + esc(f.label) + '</span><div id="att-editor">' + attEditorHtml() + "</div></div>";
     if (f.type === "checkbox") return '<label class="a-check"' + show + '><input type="checkbox" name="' + f.key + '" id="' + id + '"' + (v ? " checked" : "") + "><span>" + esc(f.label) + "</span></label>";
     let input;
     if (f.type === "textarea" || f.type === "lines") input = '<textarea class="a-input" id="' + id + '" name="' + f.key + '" rows="' + (f.rows || 3) + '">' + esc(f.type === "lines" ? (v || []).join("\n") : v) + "</textarea>";
@@ -520,11 +543,32 @@
     else input = '<input class="a-input" id="' + id + '" name="' + f.key + '" type="' + ({ number: "number", date: "date", time: "time", url: "url" }[f.type] || "text") + '"' + (f.min ? ' min="' + f.min + '"' : "") + ' value="' + esc(v) + '">';
     return '<div class="a-field"' + show + '><label for="' + id + '">' + esc(f.label) + "</label>" + input + (f.hint ? '<small class="a-muted">' + esc(f.hint) + "</small>" : "") + "</div>";
   }
+  // 첨부 자료 편집 (모달이 열려 있는 동안의 임시 목록)
+  let attDraft = [];
+  const MAX_FILE = 2 * 1024 * 1024;
+  const fsize = (n) => (!n ? "" : n < 1048576 ? Math.max(1, Math.round(n / 1024)) + "KB" : (n / 1048576).toFixed(1) + "MB");
+  function attEditorHtml() {
+    return (attDraft.length ? '<ul class="a-att-list">' + attDraft.map((f, i) => '<li><span class="a-att-ext">' + esc((f.name.split(".").pop() || "").toUpperCase().slice(0, 4)) + '</span><span class="a-att-name">' + esc(f.name) + "<small>" + (f.data ? "파일 · " + fsize(f.size) : "링크 · " + esc(f.url)) + '</small></span><button type="button" class="a-icon-btn sm" data-action="att-remove" data-i="' + i + '" aria-label="삭제">' + icon("trash", "sm") + "</button></li>").join("") + "</ul>" : '<p class="a-muted a-att-empty">아직 첨부한 자료가 없어요.</p>') +
+      '<div class="a-att-add"><label class="a-btn a-btn-ghost a-btn-sm">' + icon("paperclip", "sm") + '파일 올리기<input type="file" id="att-file" class="sr-only" multiple></label>' +
+      '<span class="a-muted">파일은 2MB까지 · 큰 파일은 링크로</span></div>' +
+      '<div class="a-att-link"><input class="a-input a-sm" id="att-link-name" placeholder="자료 이름 (예: 1주차 교습지.pdf)"><input class="a-input a-sm" id="att-link-url" type="url" placeholder="https://drive.google.com/…">' + btn(icon("link", "sm") + "링크 추가", "att-link-add", "a-btn-ghost a-btn-sm") + "</div>";
+  }
+  const refreshAtt = () => { const el = document.getElementById("att-editor"); if (el) el.innerHTML = attEditorHtml(); };
+  function addAttFiles(files) {
+    Array.from(files || []).forEach((file) => {
+      if (file.size > MAX_FILE) { toast(file.name + " 은(는) 2MB가 넘어요. 구글 드라이브 링크로 추가해 주세요.", "warn"); return; }
+      const r = new FileReader();
+      r.onload = () => { attDraft.push({ id: DB.uid("a"), name: file.name, data: r.result, size: file.size }); refreshAtt(); };
+      r.readAsDataURL(file);
+    });
+  }
+
   function editItem(coll, id, ctx) {
     const def = COLL[coll], c = C();
     const list = def.list(c, ctx);
     const item = id ? list.find((x) => (x.id || String(x.no)) === id) : Object.assign({}, def.init ? def.init() : {});
     if (!item) return;
+    attDraft = DB.clone(item.attachments || []);
     openModal((id ? def.name + " 수정" : def.name + " 추가"),
       '<form id="coll-form" class="a-form" data-coll="' + coll + '" data-id="' + esc(id || "") + '" data-ctx="' + esc(ctx || "") + '" novalidate>' + def.fields.map((f) => fieldHtml(f, item)).join("") + '<p class="a-error" id="coll-error"></p></form>',
       (id ? btn(icon("trash", "sm") + "삭제", "item-delete", "a-btn-ghost danger", ' data-coll="' + coll + '" data-id="' + esc(id) + '" data-ctx="' + esc(ctx || "") + '"') : "") + '<span class="a-spacer"></span>' + btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="coll-form">저장</button>', "md");
@@ -544,10 +588,11 @@
     const item = id ? list.find((x) => (x.id || String(x.no)) === id) : Object.assign({}, def.init ? def.init() : {});
     const err = document.getElementById("coll-error");
     for (const f of def.fields) {
-      const el = form[f.key];
+      const el = f.type === "attachments" ? true : form[f.key];
       if (!el) continue;
       let v;
       if (f.type === "checkbox") v = el.checked;
+      else if (f.type === "attachments") v = attDraft.slice();
       else if (f.type === "lines") v = LINES(el.value);
       else if (f.type === "tags") v = TAGS(el.value);
       else if (f.type === "number") v = el.value === "" ? "" : Number(el.value);
@@ -568,6 +613,7 @@
       list.push(item);
     }
     if (def.after) def.after(c);
+    if (!DB.save()) { if (!id) list.pop(); toast("저장 공간이 부족해요. 큰 파일은 지우고 링크로 바꿔 주세요.", "warn"); DB.load(); return; }
     commit(def.name + "을(를) 저장했어요.");
   }
   function deleteItem(coll, id, ctx) {
@@ -720,9 +766,9 @@
     const k = ui.libTab;
     const items = c.resources[k];
     const isVideo = k === "vod" || k === "senior";
-    return head("유료강의 자료실", "수강생 자료실 4개 분류에 자료와 영상을 올려요. 파일은 구글 드라이브 같은 공유 링크로 연결해요.", addBtn("res-" + k, isVideo ? "영상 추가" : "자료 추가")) +
+    return head("유료강의 자료실", "수강생 자료실 4개 분류에 자료와 영상을 올려요. 영상(VOD·시니어 기초 가이드)은 수강생이 누르면 팝업으로 열리고, 본문과 첨부 자료(교습지·엑셀 등)를 함께 보여 줘요.", addBtn("res-" + k, isVideo ? "영상 추가" : "자료 추가")) +
       '<section class="a-card"><div class="a-toolbar"><div class="a-tabs">' + tabs.map((t) => '<button type="button" class="a-tab' + (k === t[0] ? " on" : "") + '" data-action="lib-tab" data-k="' + t[0] + '">' + t[1] + ' <span class="num">' + c.resources[t[0]].length + "</span></button>").join("") + "</div></div>" +
-        simpleList("res-" + k, items, (it) => '<div class="a-item-main"><b>' + esc(it.title) + "</b><small>" + esc([it.meta, it.desc].filter(Boolean).join(" · ")) + "</small></div>" + (it.tool ? pill("계산기", "info") : isVideo ? ytBadge(it) : it.url ? pill("링크 연결됨", "ok") : pill("준비 중", "mute")), "아직 자료가 없어요.") + "</section>";
+        simpleList("res-" + k, items, (it) => '<div class="a-item-main"><b>' + esc(it.title) + "</b><small>" + esc([it.meta, it.desc].filter(Boolean).join(" · ")) + "</small></div>" + ((it.attachments || []).length ? pill("첨부 " + it.attachments.length, "info") : "") + (it.tool ? pill("계산기", "info") : isVideo ? ytBadge(it) : it.url ? pill("링크 연결됨", "ok") : pill("준비 중", "mute")), "아직 자료가 없어요.") + "</section>";
   }
   function pageMotivation() {
     return head("동기부여", "맨 위 영상이 수강생 홈의 ‘오늘의 동기부여’로 보여요. 한마디 문구는 기본 정보에서 고쳐요.", addBtn("mv", "영상 추가")) +
@@ -823,7 +869,21 @@
     const main = document.getElementById("a-main");
     const fn = master ? (MPAGES[r.parts[1] || ""] || pageMasterHome) : (PAGES[r.parts[0] || ""] || pageDashboard);
     main.innerHTML = '<div class="a-page">' + fn(r) + "</div>";
+    labelTables(main);
     document.title = (master ? "마스터" : "강사센터") + " · 두고 클래스";
+  }
+  // 모바일에서 표를 카드로 바꿀 때 쓰는 칸 이름(data-label)을 표 머리글에서 채운다
+  function labelTables(scope) {
+    scope.querySelectorAll(".a-table").forEach((tb) => {
+      const heads = Array.from(tb.querySelectorAll("thead th")).map((th) => th.textContent.trim());
+      tb.querySelectorAll("tbody tr").forEach((tr) => {
+        let mainSet = false;
+        Array.from(tr.children).forEach((td, i) => {
+          td.setAttribute("data-label", heads[i] || "");
+          if (!mainSet && !td.classList.contains("w-check")) { td.classList.add("cell-main"); mainSet = true; }
+        });
+      });
+    });
   }
   function mount() { root.innerHTML = ""; render(); window.scrollTo(0, 0); }
 
@@ -868,8 +928,25 @@
       case "cohort-edit": cohortForm(DB.cohort(d.id)); break;
       case "cohort-delete": { const co = DB.cohort(d.id); confirmModal("기수 삭제", esc(co.name) + "를 삭제할까요?", "삭제", true, () => { DB.data.cohorts = DB.data.cohorts.filter((x) => x.id !== d.id); commit("기수를 삭제했어요."); }); break; }
       // 검수 · 문의
-      case "rev-tab": ui.revFilter = d.k; render(); break;
-      case "review-open": e.stopPropagation(); reviewModal(d.sid, d.mid); break;
+      case "rev-tab": ui.revFilter = d.k; ui.revPicked.clear(); render(); break;
+      case "review-open": if (e.target.closest(".rev-pick, .w-check")) break; e.stopPropagation(); reviewModal(d.sid, d.mid); break;
+      case "rev-bulk-approve":
+        if (!ui.revPicked.size) { toast("승인할 과제를 선택해 주세요.", "warn"); break; }
+        { const n = ui.revPicked.size; confirmModal("선택 승인", n + "개 과제를 한 번에 승인할까요?<br>수강생 화면에 ‘강사 승인’으로 표시돼요.", "승인", false, () => bulkReview("approved")); }
+        break;
+      case "rev-bulk-fix":
+        if (!ui.revPicked.size) { toast("보완 요청할 과제를 선택해 주세요.", "warn"); break; }
+        openModal("선택 보완 요청 (" + ui.revPicked.size + "개)", '<div class="a-field"><label for="bulk-comment">수강생에게 남길 말</label><textarea class="a-input" id="bulk-comment" rows="3" placeholder="예: 화면 전체가 보이게 다시 캡처해 주세요."></textarea></div>', btn("취소", "modal-close") + btn("보완 요청", "rev-bulk-fix-ok", "a-btn-danger"));
+        break;
+      case "rev-bulk-fix-ok": { const c = document.getElementById("bulk-comment").value.trim(); if (!c) { toast("보완 요청 내용을 적어 주세요.", "warn"); break; } bulkReview("fix", c); break; }
+      case "att-remove": attDraft.splice(Number(d.i), 1); refreshAtt(); break;
+      case "att-link-add": {
+        const nm = document.getElementById("att-link-name").value.trim(), url = document.getElementById("att-link-url").value.trim();
+        if (!/^https?:\/\//i.test(url)) { toast("http:// 또는 https:// 로 시작하는 주소를 넣어 주세요.", "warn"); break; }
+        attDraft.push({ id: DB.uid("a"), name: nm || url.replace(/^https?:\/\//, "").slice(0, 40), url });
+        refreshAtt();
+        break;
+      }
       case "review-save": {
         const comment = (document.getElementById("rv-comment") || {}).value || "";
         if (d.status === "fix" && !comment.trim()) { toast("보완 요청 내용을 적어 주세요.", "warn"); document.getElementById("rv-comment").focus(); break; }
@@ -936,11 +1013,18 @@
     if (!isActive()) return;
     const t = e.target;
     if (t.id === "stu-cohort") { ui.stuCohort = t.value; ui.picked.clear(); if (location.hash.indexOf("?") > -1) location.hash = "#/center/students"; else render(); }
-    else if (t.id === "rev-cohort") { ui.revCohort = t.value; render(); }
-    else if (t.id === "rev-week") { ui.revWeek = t.value; render(); }
+    else if (t.id === "rev-cohort") { ui.revCohort = t.value; ui.revPicked.clear(); render(); }
+    else if (t.id === "rev-week") { ui.revWeek = t.value; ui.revPicked.clear(); render(); }
     else if (t.id === "sched-cohort") { ui.schedCohort = t.value; render(); }
     else if (t.id === "m-ins") { ui.mIns = t.value; render(); }
     else if (t.id === "m-status") { ui.mStatus = t.value; render(); }
+    else if (t.classList.contains("rev-pick")) { if (t.checked) ui.revPicked.add(t.dataset.key); else ui.revPicked.delete(t.dataset.key); render(); }
+    else if (t.id === "rev-all" || t.id === "rev-all-2") {
+      const keys = Array.from(document.querySelectorAll(".rev-pick")).map((x) => x.dataset.key);
+      keys.forEach((k) => (t.checked ? ui.revPicked.add(k) : ui.revPicked.delete(k)));
+      render();
+    }
+    else if (t.id === "att-file") { addAttFiles(t.files); t.value = ""; }
     else if (t.classList.contains("stu-pick")) { if (t.checked) ui.picked.add(t.dataset.id); else ui.picked.delete(t.dataset.id); render(); }
     else if (t.id === "stu-all") {
       const ids = Array.from(document.querySelectorAll(".stu-pick")).map((x) => x.dataset.id);

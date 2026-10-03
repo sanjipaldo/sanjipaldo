@@ -172,6 +172,21 @@
       save();
     }
     Object.keys(db.content).forEach((id) => normalizeContent(db.content[id]));
+    // 자료실 영상에 본문·첨부파일 필드가 생기기 전 데이터면 기본값을 채운다
+    let filled = false;
+    Object.keys(db.content).forEach((id) => {
+      const sc = window.CLASS_SEED.content[id];
+      ["vod", "senior"].forEach((k) => (db.content[id].resources[k] || []).forEach((it) => {
+        if (it.body === undefined) {
+          const seedIt = sc && (sc.resources[k] || []).find((x) => x.id === it.id);
+          it.body = (seedIt && seedIt.body) || "";
+          it.attachments = (seedIt && clone(seedIt.attachments || [])) || [];
+          filled = true;
+        }
+        if (!Array.isArray(it.attachments)) it.attachments = [];
+      }));
+    });
+    if (filled) save();
     // 잠깐 적용됐던 '두고캠퍼스' 문구가 저장된 브라우저는 원래 문구로 되돌린다
     let renamed = false;
     Object.keys(db.content).forEach((id) => {

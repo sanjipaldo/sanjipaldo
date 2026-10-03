@@ -871,7 +871,8 @@
     if (!items.length) body = '<section class="card">' + empty(c.icon, "자료를 준비하고 있어요.") + "</section>";
     else if (isVideo) {
       body = '<div class="mv-grid">' + items.map((it) =>
-        '<button type="button" class="mv-card" data-action="play" data-cat="' + cat + '" data-id="' + it.id + '">' + thumb(it) + '<span class="mv-title">' + esc(it.title) + '</span><span class="tiny">' + esc([it.meta, it.desc].filter(Boolean).join(" · ")) + "</span></button>").join("") + "</div>";
+        '<button type="button" class="mv-card" data-action="play" data-cat="' + cat + '" data-id="' + it.id + '">' + thumb(it) + '<span class="mv-title">' + esc(it.title) + '</span><span class="tiny">' + esc([it.meta, it.desc].filter(Boolean).join(" · ")) + "</span>" +
+        ((it.attachments || []).length ? '<span class="badge badge-positive att-count">' + icon("paperclip", "xs") + "첨부 " + it.attachments.length + "개</span>" : "") + "</button>").join("") + "</div>";
     } else {
       body = items.map((it) => {
         const action = it.tool === "calculator"
@@ -1007,12 +1008,28 @@
     DB.save();
     openModal("신청이 접수됐어요", name + "님, " + ins.displayName + " 강사님이 확인 후 승인해 드릴게요.\n승인되면 이름과 전화번호 뒷자리로 로그인할 수 있어요.", '<button class="btn btn-primary" data-action="modal-close">확인</button>');
   }
+  function fileSize(n) { return !n ? "" : n < 1024 ? n + "B" : n < 1048576 ? Math.round(n / 1024) + "KB" : (n / 1048576).toFixed(1) + "MB"; }
+  function attachmentList(list) {
+    if (!list || !list.length) return "";
+    return '<div class="att-box"><p class="side-label">첨부 자료 ' + list.length + '개</p><ul class="att-list">' + list.map((f) => {
+      const ext = (f.name.split(".").pop() || "").toUpperCase().slice(0, 4);
+      const href = f.data || f.url || "#";
+      const attrs = f.data ? ' download="' + esc(f.name) + '"' : ' target="_blank" rel="noopener"';
+      return '<li><span class="att-ext">' + esc(ext || "파일") + '</span><span class="att-name">' + esc(f.name) + (f.size ? '<small>' + fileSize(f.size) + "</small>" : f.url ? "<small>링크</small>" : "") + "</span>" +
+        '<a class="btn btn-tertiary btn-sm" href="' + esc(href) + '"' + attrs + ">" + icon(f.data ? "download" : "arrowUpRight", "sm") + (f.data ? "다운로드" : "열기") + "</a></li>";
+    }).join("") + "</ul></div>";
+  }
+  // 자료실 영상(VOD·시니어 기초 가이드)과 동기부여 영상: 팝업으로 영상 + 제목 + 본문 + 첨부 자료
   function playModal(cat, id) {
     const list = cat === "motivation" ? D.motivation : D.resources[cat];
     const it = list && list.find((x) => x.id === id);
     if (!it) return;
-    if (!DB.youtubeId(it.youtubeId) && cat !== "motivation") { toast("영상을 준비하고 있어요. 곧 올라갑니다!"); return; }
-    openModal(it.title, '<div style="white-space:normal">' + video(it) + "</div>", "", true);
+    openModal(it.title,
+      '<div class="res-pop">' + video(it) +
+        (it.meta || it.desc ? '<p class="res-pop-meta">' + esc([it.meta, it.desc].filter(Boolean).join(" · ")) + "</p>" : "") +
+        (it.body ? '<div class="res-pop-body">' + esc(it.body) + "</div>" : "") +
+        attachmentList(it.attachments) +
+      "</div>", '<button class="btn btn-primary" data-action="modal-close">닫기</button>', true);
   }
 
   /* ---------------- 렌더 ---------------- */
