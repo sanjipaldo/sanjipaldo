@@ -6874,11 +6874,11 @@ function scrollChatThreadToBottom() {
 }
 function openModal(html) {
   const modal = document.querySelector("#modal .modal");
-  modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal", "notice-modal", "collect-result-modal", "pay-confirm-modal");
+  modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal", "notice-modal", "collect-result-modal", "pay-confirm-modal", "manual-order-modal");
   document.getElementById("modalContent").innerHTML = html;
   document.getElementById("modal").hidden = false;
 }
-function closeModal() { const modal = document.querySelector("#modal .modal"); document.getElementById("modal").hidden = true; modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal", "notice-modal", "collect-result-modal", "pay-confirm-modal"); document.querySelectorAll("#modalContent iframe").forEach(frame => frame.remove()); }
+function closeModal() { const modal = document.querySelector("#modal .modal"); document.getElementById("modal").hidden = true; modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal", "notice-modal", "collect-result-modal", "pay-confirm-modal", "manual-order-modal"); document.querySelectorAll("#modalContent iframe").forEach(frame => frame.remove()); }
 
 /* ===== 주소 검색 =====
    국내 쇼핑몰 표준인 카카오(다음) 우편번호 서비스를 화면 안에 띄운다 (무료·키 없음, 도로명·지번·건물명·우편번호 모두 검색).
@@ -10240,12 +10240,51 @@ function adjustStockModal(id) {
 
 /* 수기(단건) 주문: 무료 요금제에서도 쓸 수 있다. 내 상품(승인 완료)을 골라 주문 정보를 직접 넣는다 */
 function manualOrderPickerModal() {
+  manualOrderFilter = { sup: "", q: "" };
   const items = currentSellerProducts().filter(item => item.approvalStatus === "승인완료").map(item => ({ item, product: productOf(item.productId) })).filter(row => row.product);
+  /* 거래처(공급사)별로 묶고, 상품마다 공급가(내가 결제할 돈)·판매가·마진을 같이 보여 준다.
+     옵션 상품은 공급가 범위 + ‘옵션별 공급가 보기’를 펼쳐 옵션을 바로 고르면 그 옵션으로 주문서가 열린다. */
+  const groups = new Map();
+  items.forEach(row => { const key = row.product.supplierLoginId || row.product.supplier; if (!groups.has(key)) groups.set(key, { name: row.product.supplier || "공급사", rows: [] }); groups.get(key).rows.push(row); });
+  const sorted = [...groups.entries()].sort((a, b) => b[1].rows.length - a[1].rows.length || a[1].name.localeCompare(b[1].name, "ko"));
+  const priceRange = values => { const list = values.filter(value => value > 0); if (!list.length) return "-"; const min = Math.min(...list), max = Math.max(...list); return min === max ? money(min) : `${money(min)}~${money(max)}`; };
+  const itemMarkup = ({ item, product }) => {
+    const title = sellerProductTitle(item, product);
+    const options = hasOptions(product) ? sellerOptionRows(item, product) : [];
+    const usable = options.filter(row => row.enabled && Number(row.stock || 0) > 0);
+    const supply = options.length ? priceRange(usable.map(row => Number(row.supply || 0))) : money(product.supply);
+    const sale = options.length ? priceRange(usable.map(row => Number(row.salePrice || 0))) : money(item.salePrice || product.recommended || 0);
+    const margin = options.length ? "" : Number(item.salePrice || 0) - Number(product.supply || 0);
+    const soldOut = options.length ? !usable.length : Number(product.stock || 0) <= 0;
+    const search = `${title} ${product.name} ${product.supplier} ${product.id} ${options.map(row => row.name).join(" ")}`.toLowerCase();
+    return `<article class="mo-item ${soldOut ? "sold-out" : ""}" data-mo-search="${escapeHtml(search)}">
+      <button type="button" class="mo-main" data-action="simulate-order" data-id="${item.id}" ${soldOut ? "disabled" : ""}>${productPhoto(product, "table-photo")}
+        <span class="mo-info"><b>${escapeHtml(title)}</b><small>${options.length ? `옵션 ${options.length}개 · ` : ""}${soldOut ? "<em class=\"mo-out\">품절</em>" : `재고 ${Number(product.stock || 0)}개`}${productNeedsCustoms(product) ? " · 개인통관부호 필요" : ""}</small></span>
+        <span class="mo-price"><small>공급가</small><strong>${supply}</strong><em>판매 ${sale}${margin !== "" ? ` · <i class="${margin < 0 ? "loss" : ""}">마진 ${margin < 0 ? "−" : "+"}${money(Math.abs(margin))}</i>` : ""}</em></span>
+      </button>
+      ${options.length ? `<details class="mo-opts"><summary>옵션별 공급가 보기 · ${options.length}개</summary><div class="mo-opt-list">${options.map(row => { const off = !row.enabled || Number(row.stock || 0) <= 0; const m = Number(row.salePrice || 0) - Number(row.supply || 0); return `<button type="button" class="mo-opt" data-action="simulate-order" data-id="${item.id}" data-option="${escapeHtml(row.id)}" ${off ? "disabled" : ""}><span class="mo-opt-name">${escapeHtml(row.name)}${!row.enabled ? " <em>판매 안 함</em>" : Number(row.stock || 0) <= 0 ? " <em>품절</em>" : ""}</span><span class="mo-opt-num"><b>공급가 ${money(row.supply)}</b><small>판매 ${money(row.salePrice)} · <i class="${m < 0 ? "loss" : ""}">마진 ${m < 0 ? "−" : "+"}${money(Math.abs(m))}</i> · 재고 ${Number(row.stock || 0)}</small></span><i class="mo-opt-go">${off ? "" : "선택"}</i></button>`; }).join("")}</div></details>` : ""}
+    </article>`;
+  };
   openModal(`<h2>수기 주문 넣기</h2><p>내 쇼핑몰이나 전화로 받은 주문을 직접 넣어요. 무료로 쓸 수 있어요.</p>
-    <div class="manual-order-list">${items.length ? items.map(({ item, product }) => `<button type="button" data-action="simulate-order" data-id="${item.id}">${productPhoto(product, "table-photo")}<span><b>${escapeHtml(sellerProductTitle(item, product))}</b><small>공급가 ${productPriceLabel(product)} · 재고 ${product.stock}개${productNeedsCustoms(product) ? " · 개인통관부호 필요" : ""}</small></span><em>선택 →</em></button>`).join("") : `<div class="empty">아직 승인 완료된 내 상품이 없어요. 상품 소싱에서 PICK해 주세요.</div>`}</div>
+    ${items.length ? `<div class="mo-tools"><input id="manualOrderSearch" type="search" placeholder="⌕ 상품명·공급사 검색" autocomplete="off" enterkeyhint="search"><div class="mo-sup-tabs" role="tablist"><button type="button" class="active" data-action="mo-filter" data-sup="">전체 <b>${items.length}</b></button>${sorted.map(([key, group]) => `<button type="button" data-action="mo-filter" data-sup="${escapeHtml(key)}">${escapeHtml(group.name)} <b>${group.rows.length}</b></button>`).join("")}</div></div>` : ""}
+    <div class="manual-order-list mo-list">${items.length ? sorted.map(([key, group]) => `<section class="mo-group" data-mo-sup="${escapeHtml(key)}"><header><b>🏭 ${escapeHtml(group.name)}</b><small>상품 ${group.rows.length}개</small></header>${group.rows.map(itemMarkup).join("")}</section>`).join("") + `<div class="empty mo-empty" hidden>찾는 상품이 없어요.</div>` : `<div class="empty">아직 승인 완료된 내 상품이 없어요. 상품 소싱에서 PICK해 주세요.</div>`}</div>
     <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button>${items.length ? "" : `<button type="button" class="primary-button" data-action="go-seller-menu" data-index="1">상품 소싱으로</button>`}</div>`);
+  document.querySelector("#modal .modal")?.classList.add("manual-order-modal");
 }
-function simulateOrderModal(sellerProductId) {
+let manualOrderFilter = { sup: "", q: "" };
+function applyManualOrderFilter() {
+  const list = document.querySelector("#modal .mo-list"); if (!list) return;
+  let shown = 0;
+  list.querySelectorAll(".mo-group").forEach(group => {
+    const supOk = !manualOrderFilter.sup || group.dataset.moSup === manualOrderFilter.sup;
+    let visible = 0;
+    group.querySelectorAll(".mo-item").forEach(item => { const ok = supOk && (!manualOrderFilter.q || item.dataset.moSearch.includes(manualOrderFilter.q)); item.hidden = !ok; if (ok) visible += 1; });
+    group.hidden = !visible; shown += visible;
+  });
+  const empty = list.querySelector(".mo-empty"); if (empty) empty.hidden = shown > 0;
+}
+document.addEventListener("input", event => { if (event.target.id === "manualOrderSearch") { manualOrderFilter.q = event.target.value.trim().toLowerCase(); applyManualOrderFilter(); } });
+function simulateOrderModal(sellerProductId, pickedOptionId = "") {
   const sellerProduct = state.sellerProducts.find(item => item.id === sellerProductId);
   const product = sellerProduct && productOf(sellerProduct.productId);
   if (!sellerProduct || !product) return;
@@ -10253,7 +10292,7 @@ function simulateOrderModal(sellerProductId) {
   openModal(`<h2>단건 주문 접수</h2><p><span class="sample-order-badge">[샘플주문]</span> ${overseas ? `<b>해외직구 상품</b>으로 개인통관고유부호가 필요합니다.` : `원본 상품코드 <b>${escapeHtml(product.id)}</b>로 매핑한 뒤 공급가 결제를 진행합니다.`}</p>
     <form id="simulateOrderForm" class="form-grid order-form" data-id="${sellerProduct.id}">
       <div class="form-field full"><label>내 판매 상품</label><input value="${escapeHtml(sellerProductTitle(sellerProduct, product))} · 원본 ${escapeHtml(product.id)}" disabled></div>
-      ${hasOptions(product) ? `<div class="form-field full"><label>주문 옵션 *</label><select name="optionId">${sellerOptionRows(sellerProduct, product).filter(row => row.enabled).map(row => `<option value="${escapeHtml(row.id)}">${escapeHtml(row.name)} · ${money(row.salePrice)} (재고 ${Number(row.stock || 0)}개)</option>`).join("")}</select></div>` : ""}
+      ${hasOptions(product) ? `<div class="form-field full"><label>주문 옵션 *</label><select name="optionId" data-mo-option>${sellerOptionRows(sellerProduct, product).filter(row => row.enabled).map(row => `<option value="${escapeHtml(row.id)}" data-supply="${Number(row.supply || 0)}" data-sale="${Number(row.salePrice || 0)}" ${row.id === pickedOptionId ? "selected" : ""} ${Number(row.stock || 0) <= 0 ? "disabled" : ""}>${escapeHtml(row.name)} · 공급가 ${money(row.supply)} · 판매 ${money(row.salePrice)} (재고 ${Number(row.stock || 0)}개)</option>`).join("")}</select></div>` : ""}
       <div class="form-field"><label>주문자명 *</label><input name="customer" value="" placeholder="주문한 분 이름" required></div>
       <div class="form-field"><label>수취인 성함 *</label><input name="recipientName" value="" placeholder="받는 분 이름" required></div>
       <div class="form-field"><label>연락처 *</label><input name="phone" value="" inputmode="tel" placeholder="010-0000-0000" required></div>
@@ -10264,10 +10303,26 @@ function simulateOrderModal(sellerProductId) {
       <div class="form-field full"><label>상세주소</label><input name="addressDetail" value="" placeholder="동·호수"></div>
       ${overseas ? `<div class="form-field full customs-input"><label>개인통관고유부호 *</label><input name="personalCustomsCode" value="" pattern="P[0-9]{12}" placeholder="P로 시작하는 13자리" required><small>해외직구 주문에만 공급사에 전달됩니다.</small></div>` : `<input type="hidden" name="personalCustomsCode" value="">`}
       <div class="form-field full"><label>배송 메시지</label><input name="deliveryMessage" value="" placeholder="예: 문 앞에 놓아 주세요"></div>
-      <div class="calc-box"><span>매핑 공급사</span><strong>${escapeHtml(product.supplier)}</strong></div><div class="calc-box"><span>판매 주문금액</span><strong>${money(sellerProduct.salePrice)}</strong></div>
+      <div class="calc-box"><span>매핑 공급사</span><strong>${escapeHtml(product.supplier)}</strong></div><div class="calc-box"><span>판매 주문금액</span><strong data-mo-sale-total>${money(sellerProduct.salePrice)}</strong></div>
+      <div class="calc-box mo-pay-box full" data-mo-calc data-supply="${Number(product.supply || 0)}" data-sale="${Number(sellerProduct.salePrice || 0)}"><span>결제할 공급가 <small>(배송비 별도)</small></span><strong data-mo-supply-total>${money(product.supply)}</strong><em data-mo-margin></em></div>
       <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">주문 접수 후 결제</button></div>
     </form>`);
+  updateManualOrderCalc();
 }
+/* 수기 주문서: 옵션·수량을 바꾸면 결제할 공급가와 내 마진을 바로 다시 계산 */
+function updateManualOrderCalc() {
+  const form = document.getElementById("simulateOrderForm"); if (!form) return;
+  const box = form.querySelector("[data-mo-calc]"); if (!box) return;
+  const opt = form.querySelector("[data-mo-option]")?.selectedOptions?.[0];
+  const supply = Number(opt?.dataset.supply ?? box.dataset.supply ?? 0), sale = Number(opt?.dataset.sale ?? box.dataset.sale ?? 0);
+  const qty = Math.max(1, Number(form.elements.qty?.value || 1));
+  const margin = (sale - supply) * qty;
+  form.querySelector("[data-mo-supply-total]").textContent = `${money(supply * qty)}${qty > 1 ? ` (${money(supply)} × ${qty})` : ""}`;
+  const saleEl = form.querySelector("[data-mo-sale-total]"); if (saleEl) saleEl.textContent = money(sale * qty);
+  const marginEl = form.querySelector("[data-mo-margin]"); if (marginEl) { marginEl.textContent = `내 마진 ${margin < 0 ? "−" : "+"}${money(Math.abs(margin))}`; marginEl.classList.toggle("loss", margin < 0); }
+}
+document.addEventListener("input", event => { if (event.target.closest?.("#simulateOrderForm") && ["qty", "optionId"].includes(event.target.name)) updateManualOrderCalc(); });
+document.addEventListener("change", event => { if (event.target.closest?.("#simulateOrderForm") && ["qty", "optionId"].includes(event.target.name)) updateManualOrderCalc(); });
 
 function productHistoryModal(id) {
   const product = productOf(id);
@@ -10991,6 +11046,7 @@ document.addEventListener("click", event => {
     const min = Number(input.min || 1), max = Number(input.max || Infinity);
     const next = Number(input.value || 1) + Number(target.dataset.step);
     input.value = Math.min(max, Math.max(min, next));
+    updateManualOrderCalc();
     return;
   }
   if (action === "chat-attach") { document.getElementById("talkImageInput")?.click(); return; }
@@ -11671,7 +11727,8 @@ document.addEventListener("click", event => {
   if (action === "register-product") registerProductModal();
   if (action === "edit-product") editProductModal(id);
   if (action === "adjust-stock") adjustStockModal(id);
-  if (action === "simulate-order") simulateOrderModal(id);
+  if (action === "simulate-order") simulateOrderModal(id, target.dataset.option || "");
+  if (action === "mo-filter") { manualOrderFilter.sup = target.dataset.sup || ""; target.parentElement.querySelectorAll("button").forEach(button => button.classList.toggle("active", button === target)); applyManualOrderFilter(); return; }
   if (action === "product-history") productHistoryModal(id);
   if (action === "change-price") changePriceModal(id);
   if (action === "review-price") reviewPriceModal(id);
