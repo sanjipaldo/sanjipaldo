@@ -172,6 +172,13 @@
       save();
     }
     Object.keys(db.content).forEach((id) => normalizeContent(db.content[id]));
+    // 잠깐 적용됐던 '두고캠퍼스' 문구가 저장된 브라우저는 원래 문구로 되돌린다
+    let renamed = false;
+    Object.keys(db.content).forEach((id) => {
+      const b = db.content[id].brand;
+      if (b.loginEyebrow && /^DOOGO CAMPUS/.test(b.loginEyebrow)) { b.loginEyebrow = b.loginEyebrow.replace(/^DOOGO CAMPUS/, "DOOGO CLASS"); renamed = true; }
+    });
+    if (renamed) save();
     return db;
   }
   function save() {
