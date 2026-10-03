@@ -2375,8 +2375,16 @@ function updateAccountUI() {
   const shippingCount = activeRole === "supplier" ? currentSupplierOrders().filter(order => ["신규주문", "배송준비중"].includes(order.status)).length : 0;
   const pickRequestCount = activeRole === "supplier" ? supplierPickRequests().length : 0;
   const mappingCount = activeRole === "seller" ? sellerMappingRequiredOrders().length : 0;
-  const rejectedPickCount = activeRole === "seller" ? currentSellerProducts().filter(item => item.approvalStatus === "승인거절").length : 0;
   const readyCount = activeRole === "seller" ? sellerReadyProducts().length : 0;
+  /* 내 상품 ②~⑤ 메뉴 숫자: 빨강 = 내가 처리할 일(꾸미기·전송·거절 확인), 주황 = 공급사 확인 기다리는 중, 회색 = 현재 개수(판매중) */
+  const stageCounts = { pending: 0, rejected: 0, ready: 0, master: 0, live: 0 };
+  if (activeRole === "seller") currentSellerProducts().forEach(item => { const stage = sellerItemStage(item); if (stage in stageCounts) stageCounts[stage] += 1; });
+  const sellerProductBadges = {
+    2: stageCounts.rejected ? { value: stageCounts.pending + stageCounts.rejected, tone: "todo", title: `승인 거절 ${stageCounts.rejected}개 확인 필요 · 공급사 확인 중 ${stageCounts.pending}개` } : { value: stageCounts.pending, tone: "wait", title: `공급사 확인 중 ${stageCounts.pending}개` },
+    17: { value: stageCounts.ready, tone: "todo", title: `꾸며서 마스터 상품으로 등록할 상품 ${stageCounts.ready}개` },
+    14: { value: stageCounts.master, tone: "todo", title: `쇼핑몰 전송을 기다리는 상품 ${stageCounts.master}개` },
+    11: { value: stageCounts.live, tone: "count", title: `쇼핑몰에서 판매중인 상품 ${stageCounts.live}개` }
+  };
   document.getElementById("workspaceMenu").innerHTML = roleMenuGroups[activeRole].map(group => {
     const indexes = group.indexes.filter(index => activeRole !== "seller" || staffCanMenu(typeof index === "object" ? 4 : index));
     if (!indexes.length) return "";
@@ -2387,9 +2395,12 @@ function updateAccountUI() {
         return `<button type="button" class="${active ? "active" : ""} ${index.stage === "self" ? "menu-self" : ""}" data-menu-index="4" data-order-stage="${index.stage}"${active ? ' aria-current="page"' : ""}><span class="menu-icon mi-${index.icon}">${menuIcon(index.icon)}</span>${index.step ? `<i class="menu-step">${index.step}</i>` : ""}<span class="menu-text">${escapeHtml(index.label)}</span>${badgeValue > 0 ? `<b class="menu-badge">${badgeValue}</b>` : ""}</button>`;
       }
       const item = roleMenus[activeRole][index];
-      const badgeValue = activeRole === "seller" ? ({ 7: alertCount, 15: mappingCount, 2: rejectedPickCount, 17: readyCount })[index] || 0 : activeRole === "supplier" ? ({ 3: shippingCount, 9: pickRequestCount })[index] || 0 : index === 1 ? pendingCount : 0;
+      const productBadge = activeRole === "seller" ? sellerProductBadges[index] : null;
+      const badgeValue = productBadge ? productBadge.value : activeRole === "seller" ? ({ 7: alertCount, 15: mappingCount })[index] || 0 : activeRole === "supplier" ? ({ 3: shippingCount, 9: pickRequestCount })[index] || 0 : index === 1 ? pendingCount : 0;
       const badge = badgeValue > 0;
-      return `<button type="button" class="${index === activeMenuIndex ? "active" : ""}" data-menu-index="${index}"${index === activeMenuIndex ? ' aria-current="page"' : ""}><span class="menu-icon mi-${menuIcons[activeRole][index]}">${menuIcon(menuIcons[activeRole][index])}</span>${menuSteps[activeRole]?.[index] ? `<i class="menu-step">${menuSteps[activeRole][index]}</i>` : ""}<span class="menu-text">${escapeHtml(item)}</span>${badge ? `<b class="menu-badge">${badgeValue}</b>` : ""}</button>`;
+      const badgeTone = productBadge ? ` tone-${productBadge.tone}` : "";
+      const badgeTitle = productBadge ? ` title="${escapeHtml(productBadge.title)}" aria-label="${escapeHtml(productBadge.title)}"` : "";
+      return `<button type="button" class="${index === activeMenuIndex ? "active" : ""}" data-menu-index="${index}"${index === activeMenuIndex ? ' aria-current="page"' : ""}><span class="menu-icon mi-${menuIcons[activeRole][index]}">${menuIcon(menuIcons[activeRole][index])}</span>${menuSteps[activeRole]?.[index] ? `<i class="menu-step">${menuSteps[activeRole][index]}</i>` : ""}<span class="menu-text">${escapeHtml(item)}</span>${badge ? `<b class="menu-badge${badgeTone}"${badgeTitle}>${badgeValue > 99 ? "99+" : badgeValue}</b>` : ""}</button>`;
     }).join("");
     return `<section class="workspace-menu-group"><p>${escapeHtml(group.label)}</p>${buttons}</section>`;
   }).join("");

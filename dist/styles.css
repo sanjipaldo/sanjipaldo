@@ -11865,3 +11865,12 @@ body[data-role="supplier"] .gs-item.active { box-shadow: inset 3px 0 0 #111111; 
 .plan-pay-card select { height: 44px; padding: 0 12px; border: 1px solid #dde4ed; border-radius: 11px; background: #fff; font: inherit; font-size: 15px; }
 .plan-pay-card small { color: #8b95a1; font-size: 12px; line-height: 1.5; }
 .plan-pay-form:has(input[name="payMethod"][value="card"]:checked) .plan-pay-card { display: grid; }
+
+/* ===== v94 사이드바 내 상품 ②~⑤ 숫자 배지: 빨강=내가 할 일 · 주황=공급사 확인 중 · 회색=현재 개수 ===== */
+.app-shell[data-role="seller"] .menu-badge { min-width: 22px; height: 22px; padding: 0 7px; display: inline-flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 800; line-height: 1; border-radius: 99px; }
+.app-shell[data-role="seller"] .menu-badge.tone-todo { color: #fff; background: #e54848; }
+.app-shell[data-role="seller"] .menu-badge.tone-wait { color: #fff; background: #f08a24; }
+.app-shell[data-role="seller"] .menu-badge.tone-count { color: #4e5968; background: #eef1f5; }
+.app-shell[data-role="seller"] .workspace-menu button.active .menu-badge.tone-count { color: #1b64da; background: #fff; }
+.app-shell[data-role="seller"] .workspace-menu button.active .menu-badge.tone-todo,
+.app-shell[data-role="seller"] .workspace-menu button.active .menu-badge.tone-wait { box-shadow: 0 0 0 2px #fff; }
