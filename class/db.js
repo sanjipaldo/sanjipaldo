@@ -1,4 +1,4 @@
-/* 두고캠퍼스 플랫폼 — 공용 데이터 계층
+/* 두고 클래스 플랫폼 — 공용 데이터 계층
  *
  * 수강생 센터(app.js)와 강사센터·마스터(admin.js)가 함께 쓴다.
  * 지금은 브라우저 localStorage 에 저장하고, 서버가 붙으면 이 파일의 load/save/progress 만
@@ -63,7 +63,7 @@
         tagline: "함께 성장하는 실전 클래스",
         botName: "24시 " + inst + " AI봇",
         youtubeChannel: "", freeCourseUrl: "", kakaoChannel: "",
-        loginEyebrow: "DOOGO CAMPUS",
+        loginEyebrow: "DOOGO CLASS",
         loginHeadline: name + "\n함께 시작해요",
         loginSub: "매주 과제를 하나씩 해내다 보면, 어느새 내 이름의 비즈니스가 움직이고 있을 거예요.",
         liveTime: "20:00"
@@ -164,16 +164,6 @@
     save();
   }
 
-  // 플랫폼 이름 변경(두고 클래스 → 두고캠퍼스) 반영
-  function renameCampus() {
-    let changed = false;
-    Object.keys(db.content).forEach((id) => {
-      const b = db.content[id].brand;
-      if (b.loginEyebrow && /^DOOGO CLASS/.test(b.loginEyebrow)) { b.loginEyebrow = b.loginEyebrow.replace(/^DOOGO CLASS/, "DOOGO CAMPUS"); changed = true; }
-    });
-    if (changed) save();
-  }
-
   function load() {
     db = store.get(KEY_DB, null);
     if (db && db.version === 2 && Array.isArray(db.instructors)) migrate2to3();
@@ -182,7 +172,6 @@
       save();
     }
     Object.keys(db.content).forEach((id) => normalizeContent(db.content[id]));
-    renameCampus();
     return db;
   }
   function save() {

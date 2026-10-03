@@ -1,4 +1,4 @@
-/* 두고캠퍼스 — 수강생 센터
+/* 두고 클래스 — 수강생 센터
  *
  *  - 데이터: db.js (DB) — 강사별 콘텐츠·기수·수강생, 수강생별 진행 기록
  *  - 라우팅: #/home, #/missions/1 … (강사센터는 #/center… 로 admin.js 가 맡는다)
@@ -169,8 +169,8 @@
     const list = DB.activeInstructors();
     const ins = loginInstructor();
     const brandIns = ins || list[0];
-    const B = brandIns ? DB.content(brandIns.id).brand : { name: "두고캠퍼스", loginEyebrow: "DOOGO CAMPUS", loginHeadline: "온라인 강의\n함께 시작해요", loginSub: "" };
-    document.title = (ins ? B.name + " · " : "") + "두고캠퍼스 로그인";
+    const B = brandIns ? DB.content(brandIns.id).brand : { name: "두고 클래스", loginEyebrow: "DOOGO CLASS", loginHeadline: "온라인 강의\n함께 시작해요", loginSub: "" };
+    document.title = (ins ? B.name : "두고 클래스") + " · 로그인";
     const lines = String(B.loginHeadline || B.courseTitle || "").split("\n");
     const headline = lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? '<span class="accent">' + esc(l) + "</span>" : esc(l))).join("<br>");
     const picker = ins
@@ -181,21 +181,21 @@
         '</div><span class="tiny">한 번 고르면 다음부터는 바로 로그인 화면이 열려요.</span></div>';
     root.innerHTML =
       '<main class="login">' +
-        '<section class="login-brand">' + window.loginArt("wise", ["pencil", "play", "book", "award"]) +
-          '<div class="login-logo">' + window.campusLogo("white") + '<span class="login-logo-div"></span><span class="login-course"><img src="assets/logo-mark.svg" alt=""><strong>' + esc(ins ? B.name : "수강생 센터") + "</strong><em>수강생</em></span></div>" +
+        '<section class="login-brand">' + window.loginArt("wise", ["message", "play", "book", "award"]) +
+          '<span class="login-logo"><img src="assets/logo-mark.svg" alt=""><strong>' + esc(B.name) + "</strong><em>수강생</em></span>" +
           '<div class="login-hero">' +
             '<p class="login-eyebrow">' + esc(B.loginEyebrow || "DOOGO CLASS") + "</p>" +
             '<h2 class="login-headline">' + headline + "</h2>" +
             (B.loginSub ? '<p class="login-sub">' + esc(B.loginSub) + "</p>" : "") +
           "</div>" +
-          '<div class="login-foot"><span class="login-copy">© 2026 DOOGO CAMPUS</span><span class="login-copy">두고캠퍼스가 제공하는 강의 플랫폼</span></div>' +
+          '<div class="login-foot"><span class="login-copy">© 2026 ' + esc(B.name) + '</span><span class="login-copy">수강생 전용 학습 공간</span></div>' +
         "</section>" +
         '<section class="login-panel">' +
           '<div class="login-topright"><span>강사님이신가요?</span><a class="btn btn-dark btn-sm" href="#/center">강사센터</a></div>' +
           '<div class="login-stack">' +
             '<div class="login-card">' +
-              '<p class="login-label">' + window.campusLogo("color", "card-logo") + '</p>' +
-              "<h1>" + esc(ins ? B.name : "수강생 센터") + " 시작하기</h1>" +
+              '<p class="login-label">DOOGO <span>CLASS</span></p>' +
+              "<h1>" + esc(ins ? B.name : "두고 클래스") + " 시작하기</h1>" +
               '<p class="lead">수강 신청할 때 등록한 정보로 로그인하세요.</p>' +
               '<form class="login-form" id="login-form" novalidate>' + picker +
                 (ins
@@ -278,7 +278,6 @@
           '<span class="preview-actions"><button type="button" class="link-btn preview-exit" data-action="exit-preview">로그인 화면 보기</button><a class="btn btn-primary btn-sm" href="#/center">' + icon("arrowLeft", "sm") + "강사센터로 돌아가기</a></span></div>" : "") +
         '<header class="topbar">' +
           '<button class="menu-toggle" type="button" data-action="toggle-nav" aria-label="메뉴 열기">' + icon("menu") + "</button>" +
-          '<a class="campus-home" href="#/home" aria-label="두고캠퍼스 홈">' + window.campusLogo("color", "hide-sm") + window.campusLogo("mark", "show-sm") + "</a><span class=\"top-div\"></span>" +
           '<a class="brand" href="#/home"><img src="assets/logo-mark.svg" alt=""><span class="brand-text"><small>' + esc(D.brand.name) + "</small><strong>" + esc(D.brand.courseTitle) + "</strong></span></a>" +
           '<div class="topbar-right">' +
             '<span class="hello"><span class="sprout">' + icon("sprout", "sm") + "</span><b>" + esc(me.name) + '</b><span class="txt">' + (preview ? "님 (미리보기)" : "님 환영합니다") + "</span></span>" +
@@ -312,8 +311,7 @@
     document.getElementById("sidebar").innerHTML =
       '<ul class="nav">' + items + "</ul>" +
       '<div class="help-card"><strong>도움이 필요하신가요?</strong><p>궁금한 점은 Q&A의 자주 묻는 질문에서 먼저 확인하시고, 화면이 이상하거나 기능이 안 되면 요청사항으로 알려 주세요.</p>' +
-      '<a class="btn btn-tertiary btn-sm btn-block" href="#/qna/requests/new">' + icon("bug", "sm") + "오류 신고하기</a></div>" +
-      '<p class="powered">' + window.campusLogo("mark") + "<span>두고캠퍼스가 제공하는 강의 플랫폼</span></p>";
+      '<a class="btn btn-tertiary btn-sm btn-block" href="#/qna/requests/new">' + icon("bug", "sm") + "오류 신고하기</a></div>";
   }
 
   /* ---------------- 홈 ---------------- */
@@ -1039,7 +1037,7 @@
     main.dataset.key = key;
     if (prevKey !== key) window.scrollTo(0, 0);
     const nav = NAV.find((n) => n.id === r.parts[0]);
-    document.title = (nav ? navLabel(nav) + " · " : "") + D.brand.name + " · 두고캠퍼스";
+    document.title = (nav ? navLabel(nav) + " · " : "") + D.brand.name;
     renderBotFab(r);
     refreshChats();
     if (document.getElementById("calc")) { updateCalc(); if (prevKey !== key) document.getElementById("calc").scrollIntoView({ block: "start" }); }

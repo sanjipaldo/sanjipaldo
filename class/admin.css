@@ -382,20 +382,3 @@ textarea.a-input { min-height: 0; resize: vertical; line-height: 1.6; }
 .a-format { margin: 0; padding: 12px 14px; border-radius: var(--m-r-lg); background: var(--m-surface); font-size: 13px; line-height: 1.7; color: var(--m-charcoal); white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .a-q-shots { margin: 0 0 12px 48px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 @media (max-width: 720px) { .a-q-shots { margin-left: 0; } }
-
-/* ===== v4: 두고캠퍼스 로고 ===== */
-.a-login-brand .a-logo { display: flex; align-items: center; gap: 12px; }
-.a-login-brand .a-logo .campus-logo { height: 40px; }
-.a-login-label { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: -4px; }
-.a-login-label .campus-logo { height: 28px; }
-.a-top .a-logo { gap: 12px; color: var(--m-ink-deep); }
-.a-top .campus-logo { height: 30px; }
-.a-top-div { width: 1px; height: 24px; background: var(--m-hairline); }
-.a-show-sm { display: none !important; }
-.a-powered { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0 12px; font-size: 12px; color: var(--m-stone); }
-.a-powered .campus-logo { height: 18px; }
-@media (max-width: 720px) {
-  .a-show-sm { display: block !important; }
-  .a-top .campus-logo.a-show-sm { height: 28px; }
-  .a-login-brand .a-logo .campus-logo { height: 32px; }
-}
