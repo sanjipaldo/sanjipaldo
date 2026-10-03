@@ -1,16 +1,12 @@
 /*
- * 두고보는 문대표 클래스 — 기본 플랫폼 데이터
+ * 두고보는 문대표 클래스 — 기본 데이터 (seed)
  *
- * 한 강사(테넌트)의 강의 플랫폼 전체 설정이다.
- * 지금은 이 파일이 원본이고, 다음 단계에서 강사센터가 같은 구조를 편집해
- * localStorage(이후 서버 DB)에 저장한다. 키 이름과 구조를 바꾸면 강사센터·마스터
- * 화면도 같이 바꿔야 한다.
+ * MOON_CONTENT : 문대표 강의 플랫폼의 수강생 화면 내용 (강사센터에서 모두 수정 가능)
+ * CLASS_SEED   : 강사·기수·수강생 등 플랫폼 전체 기본값
  *
- * 날짜는 모두 YYYY-MM-DD (한국 시간 기준).
- * youtubeId 가 비어 있으면 "영상 준비 중" 카드가 보이고, 채우면 바로 재생된다.
+ * 날짜는 YYYY-MM-DD (한국 시간). youtubeId 는 유튜브 주소나 11자리 ID.
  */
-window.CLASS_DATA = {
-  version: 1,
+const MOON_CONTENT = {
 
   brand: {
     name: "두고보는 문대표",
@@ -23,21 +19,15 @@ window.CLASS_DATA = {
     freeCourseUrl: "https://www.ivyclass.co.kr/free-courses/c8f31bf5-1781-43cb-a4cc-5e713016ba88",
     kakaoChannel: "",
     loginPhrases: ["마누카꿀", "초록입홍합", "프로폴리스", "뉴질랜드 건강식품", "나만의 온라인 브랜드"],
-    loginHeadlineSuffix: "두고 보면 팔립니다."
+    loginHeadlineSuffix: "두고 보면 팔립니다.",
+    liveTime: "20:00"
   },
 
-  cohort: { id: "c3", name: "3기", startDate: "2026-10-01", endDate: "2026-11-05" },
 
-  // 수강생 로그인: 이름 + 휴대폰 번호 뒷자리 4자리
-  students: [
-    { id: "s1", name: "이수진", phone4: "2186", cohortId: "c3" },
-    { id: "s2", name: "김민준", phone4: "1234", cohortId: "c3" },
-    { id: "s3", name: "박서연", phone4: "5678", cohortId: "c3" }
-  ],
 
   weeks: [
     {
-      no: 1, title: "사업 준비 · 판매자 세팅", openDate: "2026-10-01",
+      no: 1, title: "사업 준비 · 판매자 세팅",
       summary: "사업자등록부터 수입식품 구매대행업 등록, 판매 채널 가입까지 판매를 시작할 수 있는 몸을 만듭니다.",
       lessons: [
         { id: "l1-1", title: "OT · 뉴질랜드 건강식품, 왜 지금인가", minutes: 38, youtubeId: "", desc: "시장 규모, 수강 로드맵, 5주 동안 해야 할 일 한눈에 보기" },
@@ -88,7 +78,7 @@ window.CLASS_DATA = {
       ]
     },
     {
-      no: 2, title: "뉴질랜드 소싱 · 마진 설계", openDate: "2026-10-08",
+      no: 2, title: "뉴질랜드 소싱 · 마진 설계",
       summary: "무엇을, 어디서, 얼마에 가져와 얼마에 팔지 숫자로 정합니다.",
       lessons: [
         { id: "l2-1", title: "뉴질랜드 건강식품 Top 20 품목 분석", minutes: 46, youtubeId: "", desc: "마누카꿀·초록입홍합·프로폴리스·콜라겐·초유, 잘 팔리는 이유와 피해야 할 품목" },
@@ -123,7 +113,7 @@ window.CLASS_DATA = {
       ]
     },
     {
-      no: 3, title: "상품 등록 · 상세페이지", openDate: "2026-10-15",
+      no: 3, title: "상품 등록 · 상세페이지",
       summary: "검색에 걸리는 상품명과 믿음을 주는 상세페이지로 첫 상품을 올립니다.",
       lessons: [
         { id: "l3-1", title: "팔리는 상품명 키워드 공식", minutes: 37, youtubeId: "", desc: "검색량·경쟁도 보는 법과 상품명 50자 안에 담는 순서" },
@@ -166,7 +156,7 @@ window.CLASS_DATA = {
       ]
     },
     {
-      no: 4, title: "광고 · 첫 주문 만들기", openDate: "2026-10-22",
+      no: 4, title: "광고 · 첫 주문 만들기",
       summary: "적은 예산으로 광고를 켜고, 첫 주문과 첫 리뷰를 만듭니다.",
       lessons: [
         { id: "l4-1", title: "네이버 검색광고 하루 1만 원 세팅", minutes: 44, youtubeId: "", desc: "쇼핑검색광고 그룹 구성과 입찰가 정하는 법" },
@@ -193,7 +183,7 @@ window.CLASS_DATA = {
       ]
     },
     {
-      no: 5, title: "운영 · CS · 확장", openDate: "2026-10-29",
+      no: 5, title: "운영 · CS · 확장",
       summary: "주문이 늘어도 무너지지 않는 운영 루틴과 다음 단계 계획을 세웁니다.",
       lessons: [
         { id: "l5-1", title: "주문 처리 · 배송대행 · CS 루틴", minutes: 40, youtubeId: "", desc: "하루 30분 운영 루틴, 통관 지연·파손 CS 답변 템플릿" },
@@ -228,17 +218,18 @@ window.CLASS_DATA = {
     }
   ],
 
+  // 강의 오픈(주차 시작일)과 과제 마감(오픈 6일 뒤)은 기수 시작일로 자동 계산된다.
+  // 여기에는 강사가 추가하는 일정만 둔다.
+  //  scope "all"   : 모든 기수에 반복 — week 주차의 dow 요일 (0=일 … 6=토)
+  //  scope "cohort": 특정 기수 하루 — date
   schedule: [
-    { date: "2026-10-01", time: "20:00", title: "1주차 라이브 · OT와 사업 준비", type: "live", place: "줌 라이브" },
-    { date: "2026-10-06", time: "21:00", title: "1주차 Q&A 라이브", type: "qna", place: "줌 라이브" },
-    { date: "2026-10-08", time: "20:00", title: "2주차 라이브 · 뉴질랜드 소싱", type: "live", place: "줌 라이브" },
-    { date: "2026-10-13", time: "21:00", title: "2주차 Q&A 라이브", type: "qna", place: "줌 라이브" },
-    { date: "2026-10-15", time: "20:00", title: "3주차 라이브 · 상품 등록", type: "live", place: "줌 라이브" },
-    { date: "2026-10-20", time: "21:00", title: "3주차 Q&A · 상세페이지 첨삭", type: "qna", place: "줌 라이브" },
-    { date: "2026-10-22", time: "20:00", title: "4주차 라이브 · 광고와 첫 주문", type: "live", place: "줌 라이브" },
-    { date: "2026-10-27", time: "21:00", title: "4주차 Q&A 라이브", type: "qna", place: "줌 라이브" },
-    { date: "2026-10-29", time: "20:00", title: "5주차 라이브 · 운영과 확장", type: "live", place: "줌 라이브" },
-    { date: "2026-11-05", time: "20:00", title: "3기 수료식 · 성과 발표", type: "event", place: "줌 라이브" }
+    { id: "e1", type: "qna", title: "1주차 Q&A 라이브", time: "21:00", scope: "all", week: 1, dow: 2 },
+    { id: "e2", type: "qna", title: "2주차 Q&A 라이브", time: "21:00", scope: "all", week: 2, dow: 2 },
+    { id: "e3", type: "qna", title: "3주차 Q&A · 상세페이지 첨삭", time: "21:00", scope: "all", week: 3, dow: 2 },
+    { id: "e4", type: "qna", title: "4주차 Q&A 라이브", time: "21:00", scope: "all", week: 4, dow: 2 },
+    { id: "e5", type: "challenge", title: "첫 상품 등록 7일 챌린지 시작", time: "", scope: "all", week: 2, dow: 5 },
+    { id: "e6", type: "event", title: "수료식 · 성과 발표", time: "20:00", scope: "all", week: 6, dow: 4 },
+    { id: "e7", type: "notice", title: "수입식품 위생교육 신청 안내", time: "", scope: "cohort", cohortId: "c3", date: "2026-10-03" }
   ],
 
   notices: [
@@ -255,34 +246,34 @@ window.CLASS_DATA = {
   ],
 
   faqs: [
-    { q: "개인 사업자로 시작해도 되나요?", a: "네. 대부분 간이과세 개인사업자로 시작합니다. 연 매출이 기준을 넘으면 일반과세자로 자동 전환되니 처음부터 법인을 만들 필요는 없습니다.", tags: ["사업자", "간이", "법인", "개인"] },
-    { q: "직장인도 사업자등록을 할 수 있나요?", a: "법적으로 가능합니다. 다만 회사 취업규칙에 겸업 금지 조항이 있는지 먼저 확인하세요. 건강보험료는 사업소득이 생기면 추가로 나올 수 있습니다.", tags: ["직장인", "겸업", "건강보험"] },
-    { q: "수입식품 인터넷 구매대행업 등록은 꼭 해야 하나요?", a: "네. 해외 식품·건강식품을 구매대행으로 판매하려면 반드시 영업등록을 해야 합니다. 등록 전에 한국식품산업협회 수입식품 위생교육을 먼저 이수해야 합니다.", tags: ["구매대행업", "영업등록", "위생교육", "식약처"] },
-    { q: "통신판매업 신고에 필요한 구매안전서비스 이용확인증은 어디서 받나요?", a: "스마트스토어 판매자센터 → 판매자 정보 → 판매자 정보 메뉴에서 ‘구매안전서비스 이용확인증’을 내려받을 수 있습니다. 쿠팡 윙에서도 발급됩니다.", tags: ["통신판매업", "구매안전서비스", "확인증"] },
-    { q: "1회 직구 면세 한도는 얼마인가요?", a: "목록통관 기준 미국발은 200달러, 그 외 국가는 150달러가 일반적인 면세 기준입니다. 건강기능식품은 1인당 6병까지 자가사용 인정 기준이 있으니 고객 안내에 꼭 넣어 주세요. 기준은 바뀔 수 있으니 관세청 공지를 확인하세요.", tags: ["면세", "관세", "통관", "6병", "한도"] },
-    { q: "마진은 어느 정도 남겨야 하나요?", a: "광고비·반품·환율 변동까지 생각하면 판매가 기준 순이익 20~30%를 목표로 잡으세요. 자료실의 마진 계산기에 현지가·환율·배송대행비·수수료를 넣으면 바로 계산됩니다.", tags: ["마진", "이익", "계산", "가격"] },
-    { q: "상세페이지에 ‘면역력 강화’라고 써도 되나요?", a: "일반식품(꿀 등)에는 질병·기능성 표현을 쓸 수 없습니다. 건강기능식품도 식약처가 인정한 기능성 문구 그대로만 쓸 수 있어요. ‘치료’, ‘예방’, ‘완치’ 같은 표현은 절대 쓰지 마세요.", tags: ["광고", "표현", "상세페이지", "면역", "표시"] },
-    { q: "과제는 언제까지 내야 하나요?", a: "주차가 열린 뒤 언제든 제출할 수 있고, 수료식(11/5) 전까지 필수 과제를 모두 통과하면 수료증이 발급됩니다. 보완 필요가 나온 과제는 다시 제출하면 됩니다.", tags: ["과제", "마감", "기한", "제출"] },
-    { q: "자동검수에서 ‘보완 필요’가 나왔어요.", a: "결과 아래에 부족한 항목이 적혀 있습니다. 사진이 필요한 과제는 이미지를, 링크가 필요한 과제는 주소를, 글 과제는 안내된 분량과 핵심 단어를 채워 다시 제출해 주세요.", tags: ["자동검수", "보완", "반려", "다시"] },
-    { q: "라이브를 놓쳤어요. 다시 볼 수 있나요?", a: "라이브 다음 날까지 커리큘럼 메뉴에 다시보기가 올라갑니다. 강의 일정 메뉴에서 다음 라이브 시간도 확인할 수 있어요.", tags: ["라이브", "다시보기", "녹화", "놓침"] },
-    { q: "로그인이 안 돼요.", a: "수강 신청 때 적은 이름과 휴대폰 번호 뒷자리 4자리로 로그인합니다. 이름에 띄어쓰기가 들어가지 않았는지 확인해 주세요. 그래도 안 되면 강사에게 문의해 주세요.", tags: ["로그인", "비밀번호", "접속"] },
-    { q: "배송대행지는 어디를 써야 하나요?", a: "뉴질랜드 현지 배송대행지 중 식품 통관 경험이 많은 곳을 고르세요. 2주차 강의에서 비교표를 드립니다. 배송비는 무게 기준이라 꿀처럼 무거운 상품은 꼭 계산기에 넣어 보세요.", tags: ["배송대행", "배대지", "배송"] }
+    { id: "q1", q: "개인 사업자로 시작해도 되나요?", a: "네. 대부분 간이과세 개인사업자로 시작합니다. 연 매출이 기준을 넘으면 일반과세자로 자동 전환되니 처음부터 법인을 만들 필요는 없습니다.", tags: ["사업자", "간이", "법인", "개인"] },
+    { id: "q2", q: "직장인도 사업자등록을 할 수 있나요?", a: "법적으로 가능합니다. 다만 회사 취업규칙에 겸업 금지 조항이 있는지 먼저 확인하세요. 건강보험료는 사업소득이 생기면 추가로 나올 수 있습니다.", tags: ["직장인", "겸업", "건강보험"] },
+    { id: "q3", q: "수입식품 인터넷 구매대행업 등록은 꼭 해야 하나요?", a: "네. 해외 식품·건강식품을 구매대행으로 판매하려면 반드시 영업등록을 해야 합니다. 등록 전에 한국식품산업협회 수입식품 위생교육을 먼저 이수해야 합니다.", tags: ["구매대행업", "영업등록", "위생교육", "식약처"] },
+    { id: "q4", q: "통신판매업 신고에 필요한 구매안전서비스 이용확인증은 어디서 받나요?", a: "스마트스토어 판매자센터 → 판매자 정보 → 판매자 정보 메뉴에서 ‘구매안전서비스 이용확인증’을 내려받을 수 있습니다. 쿠팡 윙에서도 발급됩니다.", tags: ["통신판매업", "구매안전서비스", "확인증"] },
+    { id: "q5", q: "1회 직구 면세 한도는 얼마인가요?", a: "목록통관 기준 미국발은 200달러, 그 외 국가는 150달러가 일반적인 면세 기준입니다. 건강기능식품은 1인당 6병까지 자가사용 인정 기준이 있으니 고객 안내에 꼭 넣어 주세요. 기준은 바뀔 수 있으니 관세청 공지를 확인하세요.", tags: ["면세", "관세", "통관", "6병", "한도"] },
+    { id: "q6", q: "마진은 어느 정도 남겨야 하나요?", a: "광고비·반품·환율 변동까지 생각하면 판매가 기준 순이익 20~30%를 목표로 잡으세요. 자료실의 마진 계산기에 현지가·환율·배송대행비·수수료를 넣으면 바로 계산됩니다.", tags: ["마진", "이익", "계산", "가격"] },
+    { id: "q7", q: "상세페이지에 ‘면역력 강화’라고 써도 되나요?", a: "일반식품(꿀 등)에는 질병·기능성 표현을 쓸 수 없습니다. 건강기능식품도 식약처가 인정한 기능성 문구 그대로만 쓸 수 있어요. ‘치료’, ‘예방’, ‘완치’ 같은 표현은 절대 쓰지 마세요.", tags: ["광고", "표현", "상세페이지", "면역", "표시"] },
+    { id: "q8", q: "과제는 언제까지 내야 하나요?", a: "주차가 열린 뒤 언제든 제출할 수 있고, 수료식(11/5) 전까지 필수 과제를 모두 통과하면 수료증이 발급됩니다. 보완 필요가 나온 과제는 다시 제출하면 됩니다.", tags: ["과제", "마감", "기한", "제출"] },
+    { id: "q9", q: "자동검수에서 ‘보완 필요’가 나왔어요.", a: "결과 아래에 부족한 항목이 적혀 있습니다. 사진이 필요한 과제는 이미지를, 링크가 필요한 과제는 주소를, 글 과제는 안내된 분량과 핵심 단어를 채워 다시 제출해 주세요.", tags: ["자동검수", "보완", "반려", "다시"] },
+    { id: "q10", q: "라이브를 놓쳤어요. 다시 볼 수 있나요?", a: "라이브 다음 날까지 커리큘럼 메뉴에 다시보기가 올라갑니다. 강의 일정 메뉴에서 다음 라이브 시간도 확인할 수 있어요.", tags: ["라이브", "다시보기", "녹화", "놓침"] },
+    { id: "q11", q: "로그인이 안 돼요.", a: "수강 신청 때 적은 이름과 휴대폰 번호 뒷자리 4자리로 로그인합니다. 이름에 띄어쓰기가 들어가지 않았는지 확인해 주세요. 그래도 안 되면 강사에게 문의해 주세요.", tags: ["로그인", "비밀번호", "접속"] },
+    { id: "q12", q: "배송대행지는 어디를 써야 하나요?", a: "뉴질랜드 현지 배송대행지 중 식품 통관 경험이 많은 곳을 고르세요. 2주차 강의에서 비교표를 드립니다. 배송비는 무게 기준이라 꿀처럼 무거운 상품은 꼭 계산기에 넣어 보세요.", tags: ["배송대행", "배대지", "배송"] }
   ],
 
   docsGuide: [
-    { step: 1, title: "사업자등록", where: "홈택스", url: "https://www.hometax.go.kr", time: "즉시 ~ 3일", cost: "무료",
+    { id: "d1", title: "사업자등록", where: "홈택스", url: "https://www.hometax.go.kr", time: "즉시 ~ 3일", cost: "무료",
       docs: ["신분증", "임대차계약서 (자택이면 생략 가능)"],
       tips: ["업태 ‘도매 및 소매업’, 종목 ‘전자상거래 소매업’(525101)", "처음엔 간이과세자로 시작하는 경우가 많아요"] },
-    { step: 2, title: "통신판매업 신고", where: "정부24", url: "https://www.gov.kr", time: "1 ~ 3일", cost: "등록면허세 (지역별 상이)",
+    { id: "d2", title: "통신판매업 신고", where: "정부24", url: "https://www.gov.kr", time: "1 ~ 3일", cost: "등록면허세 (지역별 상이)",
       docs: ["사업자등록증", "구매안전서비스 이용확인증"],
       tips: ["구매안전서비스 이용확인증은 스마트스토어·쿠팡에서 발급", "신고증은 시·군·구청에서 수령 또는 온라인 발급"] },
-    { step: 3, title: "수입식품 위생교육", where: "한국식품산업협회", url: "https://www.kfia.or.kr", time: "온라인 약 8시간", cost: "교육비 별도",
+    { id: "d3", title: "수입식품 위생교육", where: "한국식품산업협회", url: "https://www.kfia.or.kr", time: "온라인 약 8시간", cost: "교육비 별도",
       docs: ["사업자 정보", "본인 인증"],
       tips: ["‘수입식품등 인터넷 구매대행업’ 신규 영업자 교육 선택", "수료증은 바로 출력 가능"] },
-    { step: 4, title: "수입식품등 인터넷 구매대행업 영업등록", where: "식품안전나라 · 관할 지방식약청", url: "https://www.foodsafetykorea.go.kr", time: "3 ~ 7일", cost: "수수료 소액",
+    { id: "d4", title: "수입식품등 인터넷 구매대행업 영업등록", where: "식품안전나라 · 관할 지방식약청", url: "https://www.foodsafetykorea.go.kr", time: "3 ~ 7일", cost: "수수료 소액",
       docs: ["사업자등록증", "위생교육 수료증", "신분증"],
       tips: ["영업등록증이 있어야 오픈마켓에서 구매대행 식품 판매 가능", "주소지 관할 지방식약청에서 처리"] },
-    { step: 5, title: "판매 채널 가입", where: "스마트스토어 · 쿠팡 윙", url: "https://sell.smartstore.naver.com", time: "1 ~ 3일", cost: "무료",
+    { id: "d5", title: "판매 채널 가입", where: "스마트스토어 · 쿠팡 윙", url: "https://sell.smartstore.naver.com", time: "1 ~ 3일", cost: "무료",
       docs: ["사업자등록증", "통신판매업 신고증", "정산 계좌 통장 사본"],
       tips: ["스토어 이름은 나중에 브랜드가 됩니다", "구매대행 카테고리 서류로 영업등록증 제출"] }
   ],
@@ -329,4 +320,56 @@ window.CLASS_DATA = {
     "첫 주문은 실력이 아니라 꾸준함이 만듭니다",
     "어제보다 한 개 더 올린 상품이 내일의 매출입니다"
   ]
+};
+
+/*
+ * 플랫폼 기본 데이터 (첫 실행 때 한 번 저장되고, 이후에는 강사센터·마스터에서 고친 값이 우선)
+ *
+ *  instructors : 플랫폼을 분양받은 강사. 강사센터 로그인 = 이름 + 전화번호 뒷자리
+ *  content     : 강사별 수강생 화면 내용 (위 MOON_CONTENT 와 같은 구조)
+ *  cohorts     : 기수. 1주차 시작일(startDate)만 정하면 주차 공개일·과제 마감일이 계산된다
+ *  students    : 수강생. status = pending(승인 대기) | approved(수강 중) | rejected(거절) | withdrawn(탈퇴)
+ */
+window.CLASS_SEED = {
+  version: 2,
+  instructors: [
+    { id: "moon", name: "문원오", phone4: "2186", displayName: "문대표", status: "active", createdAt: "2026-08-01" },
+    { id: "logic", name: "황금농부", phone4: "1111", displayName: "로직메이커 황금농부", status: "active", createdAt: "2026-09-10",
+      brand: { name: "로직메이커 황금농부", courseTitle: "로직메이커 황금농부 실전 클래스" } },
+    { id: "choi", name: "초이", phone4: "2222", displayName: "초이", status: "active", createdAt: "2026-09-20",
+      brand: { name: "초이 클래스", courseTitle: "초이와 함께하는 실전 클래스" } }
+  ],
+  content: { moon: MOON_CONTENT },
+  cohorts: [
+    { id: "c1", instructorId: "moon", name: "1기", startDate: "2026-08-06", recruiting: false },
+    { id: "c2", instructorId: "moon", name: "2기", startDate: "2026-09-03", recruiting: false },
+    { id: "c3", instructorId: "moon", name: "3기", startDate: "2026-10-01", recruiting: false },
+    { id: "c4", instructorId: "moon", name: "4기", startDate: "2026-11-05", recruiting: true },
+    { id: "lc1", instructorId: "logic", name: "1기", startDate: "2026-10-08", recruiting: true },
+    { id: "cc1", instructorId: "choi", name: "1기", startDate: "2026-10-15", recruiting: true }
+  ],
+  students: [
+    { id: "s1", instructorId: "moon", cohortId: "c3", name: "이수진", phone4: "2186", status: "approved", appliedAt: "2026-09-21" },
+    { id: "s2", instructorId: "moon", cohortId: "c3", name: "김민준", phone4: "1234", status: "approved", appliedAt: "2026-09-22" },
+    { id: "s3", instructorId: "moon", cohortId: "c3", name: "박서연", phone4: "5678", status: "approved", appliedAt: "2026-09-22" },
+    { id: "s4", instructorId: "moon", cohortId: "c3", name: "최영희", phone4: "3321", status: "approved", appliedAt: "2026-09-24" },
+    { id: "s5", instructorId: "moon", cohortId: "c3", name: "정하늘", phone4: "7788", status: "approved", appliedAt: "2026-09-25" },
+    { id: "s6", instructorId: "moon", cohortId: "c3", name: "오세훈", phone4: "4410", status: "rejected", appliedAt: "2026-09-26", memo: "결제 내역 확인 안 됨" },
+    { id: "s7", instructorId: "moon", cohortId: "c3", name: "강다은", phone4: "9021", status: "pending", appliedAt: "2026-10-02" },
+    { id: "s8", instructorId: "moon", cohortId: "c4", name: "윤도현", phone4: "6612", status: "pending", appliedAt: "2026-10-02" },
+    { id: "s9", instructorId: "moon", cohortId: "c4", name: "한지민", phone4: "1590", status: "pending", appliedAt: "2026-10-03" },
+    { id: "s10", instructorId: "moon", cohortId: "c2", name: "서지훈", phone4: "2468", status: "approved", appliedAt: "2026-08-25" },
+    { id: "s11", instructorId: "moon", cohortId: "c2", name: "임수빈", phone4: "1357", status: "withdrawn", appliedAt: "2026-08-26", memo: "개인 사정으로 탈퇴 요청" },
+    { id: "s12", instructorId: "moon", cohortId: "c1", name: "배준호", phone4: "8080", status: "approved", appliedAt: "2026-07-28" },
+    { id: "s13", instructorId: "logic", cohortId: "lc1", name: "홍길동", phone4: "0000", status: "approved", appliedAt: "2026-10-01" },
+    { id: "s14", instructorId: "choi", cohortId: "cc1", name: "김영수", phone4: "0000", status: "pending", appliedAt: "2026-10-02" }
+  ],
+  // 강사센터 화면을 채우기 위한 예시 제출 기록 (첫 실행 때만 저장)
+  sampleProgress: {
+    s2: { done: ["m1-1", "m1-2", "m1-3", "m1-5", "m1-8"], question: { title: "통신판매업 신고 때 구매안전서비스 확인증이 안 나와요", body: "스마트스토어 가입은 했는데 확인증 메뉴가 안 보입니다. 사업자 전환을 먼저 해야 하나요?" } },
+    s3: { done: ["m1-1", "m1-2", "m1-3", "m1-4", "m1-5", "m1-6", "m1-7", "m1-9"], question: { title: "위생교육은 몇 시간짜리를 들어야 하나요?", body: "신규 영업자 교육이 여러 개 보여서 헷갈립니다.", answer: "‘수입식품등 인터넷 구매대행업’ 신규 교육을 들으시면 됩니다. 서류 준비 가이드 3단계 참고해 주세요!" } },
+    s4: { done: ["m1-1"], fix: ["m1-5"] },
+    s5: { done: ["m1-1", "m1-2", "m1-8", "m1-9", "m1-10"] },
+    s10: { done: ["m1-1", "m1-2", "m1-3", "m1-4", "m1-5", "m1-6", "m1-7", "m2-1", "m2-2", "m2-3", "m2-4", "m3-1", "m3-2", "m3-3", "m3-4", "m3-5", "m3-6", "m4-1", "m4-2", "m4-3", "m4-4", "m5-1", "m5-2"] }
+  }
 };
