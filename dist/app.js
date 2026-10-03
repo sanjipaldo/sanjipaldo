@@ -32,7 +32,7 @@ const roleMenuGroups = {
     { label: "상품 찾기", indexes: [1, 16] },
     { label: "내 상품 (순서대로)", indexes: [2, 17, 14, 11, 7] },
     /* 주문도 내 상품처럼 하는 순서대로 ①~⑤ — 숫자 메뉴는 주문 관리의 해당 단계로 바로 열린다 */
-    { label: "주문 · 배송 (순서대로)", indexes: [{ stage: "all", label: "주문 관리", step: 1, icon: "order" }, 15, { stage: "payment", label: "결제하기", step: 3, icon: "card" }, { stage: "supplier", label: "공급사 출고", step: 4, icon: "supplier" }, { stage: "delivery", label: "송장 전송 · 배송", step: 5, icon: "truck" }, { stage: "self", label: "직접 배송", icon: "product" }, 5, 3] },
+    { label: "주문 · 배송 (순서대로)", indexes: [{ stage: "all", label: "주문 관리", step: 1, icon: "order" }, 15, { stage: "payment", label: "결제하기", step: 3, icon: "card" }, { stage: "supplier", label: "공급사 출고", step: 4, icon: "supplier" }, { stage: "delivery", label: "송장 받음 · 배송", step: 5, icon: "truck" }, { stage: "self", label: "직접 배송", icon: "product" }, 5, 3] },
     { label: "샘플 구매", indexes: [18, 19] },
     { label: "돈 관리", indexes: [12, 6, 9] },
     /* 상품 전송·결제·예치금 충전·반품·환불이 어떻게 처리됐는지 한곳에서 (실패하면 이유와 해결 방법까지) */
@@ -360,6 +360,51 @@ function seedHistoryRefunds(orders) {
 const SEED_HISTORY_ORDERS = seedSalesHistory();
 const VARIETY_SUPPLIERS = { santteul: "산뜰마을", horangi: "호랑이", neodo: "(주) 너도나도", nongga: "농가살리기", koreafarm: "대한민국농수산", jbyouth: "전북청년", thezine: "(주) 더자인", eden: "에덴동산", harain: "하라인" };
 const SUPPLIER_VARIETY = { "DF-3201": "santteul", "DF-4105": "santteul", "DF-4106": "horangi", "DF-4110": "horangi", "DF-3420": "nongga", "DF-4108": "nongga", "DF-3240": "koreafarm", "DF-3268": "koreafarm", "DF-4111": "koreafarm", "DF-4113": "koreafarm", "DF-3304": "jbyouth", "DF-4107": "jbyouth", "DF-4201": "thezine", "DF-4202": "thezine", "DF-4203": "thezine", "DF-3357": "eden", "DF-4103": "eden", "DF-4117": "harain", "DF-4118": "harain", "DF-4119": "harain", "DF-5101": "neodo", "DF-5102": "neodo", "DF-5103": "neodo", "DF-5104": "neodo", "DF-4115": "jbyouth", "DF-4102": "eden", "DF-4112": "santteul", "DF-4116": "neodo" };
+/* ===== 카테고리별 테스트 샘플 상품 (식품·패션의류 외 카테고리마다 3개씩) =====
+   사진은 카테고리 그림을 그린 SVG(색 배경 + 그림문자)로 넣어 둔다. 공급사가 실제 사진으로 바꾸면 그 사진이 쓰인다. */
+function sampleArt(emoji, c1, c2) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="600" height="600" fill="url(#g)"/><circle cx="300" cy="300" r="190" fill="#ffffff" fill-opacity=".55"/><text x="300" y="318" font-size="230" text-anchor="middle" dominant-baseline="middle">${emoji}</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+const CATEGORY_SAMPLE_SPECS = [
+  ["DF-6001", "neodo", "👜", "#f6d9c4", "#e9b48f", "모어데일리", "데일리 미니 크로스백", ["패션잡화", "여성가방", "숄더백", "크로스백"], 15900, 29900, 60, { name: "색상", values: ["블랙", "베이지", "브라운"] }],
+  ["DF-6002", "thezine", "👟", "#dfe7f5", "#a9bde6", "워크앤런", "베이직 캔버스 스니커즈", ["패션잡화", "신발", "스니커즈", "캔버스화"], 18900, 34900, 90, { name: "사이즈", values: ["230", "240", "250", "260", "270"] }],
+  ["DF-6003", "neodo", "👛", "#efe1d1", "#cfae8a", "레더랩", "소가죽 슬림 카드지갑", ["패션잡화", "패션소품", "지갑", "카드지갑"], 9900, 19900, 120],
+  ["DF-6011", "thezine", "🧴", "#e3f4ea", "#a8dbbb", "제주그린랩", "제주 녹차 수분 에센스 50ml", ["화장품/미용", "스킨케어", "토너/에센스", "에센스"], 11900, 22900, 150],
+  ["DF-6012", "thezine", "🧖", "#e6f1fb", "#a9cdee", "아쿠아데이", "히알루론 수분 시트팩 10매", ["화장품/미용", "스킨케어", "마스크팩", "시트팩"], 6900, 13900, 200],
+  ["DF-6013", "harain", "🧼", "#f1ecfb", "#c9b8ef", "헤어닥터", "약산성 두피케어 샴푸 500ml", ["화장품/미용", "헤어케어", "샴푸/린스", "두피케어샴푸"], 8900, 16900, 140],
+  ["DF-6021", "neodo", "🔋", "#e8eef3", "#a7b8c7", "차지업", "고속충전 보조배터리 10000mAh", ["디지털/가전", "휴대폰", "충전기/케이블", "보조배터리"], 12900, 24900, 110, { name: "색상", values: ["화이트", "블랙"] }],
+  ["DF-6022", "harain", "🍳", "#fbeee0", "#f0c49b", "쿡앤홈", "5.5L 대용량 에어프라이어", ["디지털/가전", "생활가전", "주방가전", "에어프라이어"], 42900, 69900, 40],
+  ["DF-6023", "neodo", "🖱️", "#eceff4", "#b4bfd0", "클릭원", "무소음 무선 마우스", ["디지털/가전", "PC", "PC액세서리", "마우스"], 6900, 14900, 180, { name: "색상", values: ["블랙", "그레이", "핑크"] }],
+  ["DF-6031", "thezine", "🛋️", "#f3efe7", "#d8ccb4", "린넨하우스", "린넨 쿠션 커버 45x45", ["가구/인테리어", "홈데코", "패브릭", "쿠션"], 5900, 12900, 160, { name: "색상", values: ["아이보리", "그레이", "올리브"] }],
+  ["DF-6032", "harain", "💡", "#fdf3d8", "#f3d27a", "우드라이트", "원목 LED 무드등", ["가구/인테리어", "조명", "무드등", "무드등"], 14900, 27900, 70],
+  ["DF-6033", "neodo", "🪑", "#e9edf2", "#aab6c6", "오피스핏", "메쉬 사무용 의자", ["가구/인테리어", "서재/사무가구", "의자", "사무용의자"], 49900, 89900, 25],
+  ["DF-6041", "eden", "🧻", "#eaf6f6", "#a9dcdc", "아가순", "순한 아기 물티슈 휴대용 20팩", ["출산/육아", "기저귀/물티슈", "물티슈", "휴대용"], 9900, 17900, 130],
+  ["DF-6042", "eden", "🍼", "#fdeef2", "#f3b9c8", "베베컵", "실리콘 아기 빨대컵", ["출산/육아", "수유/이유용품", "식기", "빨대컵"], 7900, 15900, 95, { name: "색상", values: ["민트", "핑크", "옐로"] }],
+  ["DF-6043", "eden", "🧸", "#fbf1e3", "#e9c799", "나무놀이", "원목 쌓기 블록 50pcs", ["출산/육아", "완구/교육", "완구", "블록"], 13900, 25900, 60],
+  ["DF-6051", "horangi", "🧘", "#e8f3ee", "#9fd1b8", "핏매트", "TPE 요가매트 8mm", ["스포츠/레저", "헬스/요가", "요가용품", "요가매트"], 11900, 23900, 85, { name: "색상", values: ["퍼플", "민트", "그레이"] }],
+  ["DF-6052", "horangi", "🏕️", "#eef1e4", "#bccb95", "캠프원", "경량 접이식 캠핑 체어", ["스포츠/레저", "캠핑/등산", "캠핑가구", "캠핑체어"], 19900, 36900, 50],
+  ["DF-6053", "horangi", "🏋️", "#eceaf3", "#b4add2", "아이언핏", "육각 아령 덤벨", ["스포츠/레저", "헬스/요가", "헬스용품", "덤벨"], 8900, 16900, 100, { name: "무게", values: ["2kg", "3kg", "5kg"] }],
+  ["DF-6061", "nongga", "🫙", "#eef4f8", "#b5cfe0", "클린키친", "유리 밀폐용기 5종 세트", ["생활/건강", "생활용품", "주방용품", "밀폐용기"], 14900, 27900, 75],
+  ["DF-6062", "nongga", "💆", "#f3eaf3", "#d5b3d6", "릴렉스핏", "미니 마사지건", ["생활/건강", "건강용품", "마사지기", "마사지건"], 24900, 45900, 45],
+  ["DF-6063", "nongga", "🐶", "#fbf3e6", "#e9cb98", "펫클린", "강아지 배변패드 100매", ["생활/건강", "반려동물용품", "위생용품", "배변패드"], 11900, 21900, 120],
+  ["DF-6071", "koreafarm", "🧵", "#fbeef0", "#eeb6c0", "손끝공방", "프랑스 자수 DIY 키트", ["여가/생활편의", "취미", "핸드메이드", "자수키트"], 8900, 17900, 80],
+  ["DF-6072", "koreafarm", "🚗", "#e7eff7", "#a6c0dc", "드라이브향", "차량용 송풍구 방향제", ["여가/생활편의", "자동차용품", "카액세서리", "방향제"], 4900, 10900, 220, { name: "향", values: ["코튼", "시트러스", "우드"] }],
+  ["DF-6073", "koreafarm", "📚", "#f5f0e4", "#dccb9c", "그림숲", "사계절 그림책 세트(5권)", ["여가/생활편의", "도서", "어린이도서", "그림책"], 21900, 35900, 40],
+  ["DF-6081", "santteul", "🌸", "#fbeaf2", "#efb1cf", "메종플레르", "[면세] 플로럴 오드퍼퓸 50ml", ["면세점", "향수/화장품", "향수", "여성향수"], 39900, 69900, 30],
+  ["DF-6082", "santteul", "🕶️", "#e8ebef", "#a3acb8", "선라인", "[면세] 편광 선글라스", ["면세점", "선글라스/시계", "선글라스", "편광선글라스"], 29900, 54900, 35],
+  ["DF-6083", "santteul", "💊", "#eef6e6", "#bcd99a", "헬시박스", "[면세] 비타민 선물세트", ["면세점", "건강식품", "영양제", "비타민세트"], 27900, 49900, 50]
+];
+const CATEGORY_SAMPLE_PRODUCTS = CATEGORY_SAMPLE_SPECS.map(([id, supplierLoginId, emoji, c1, c2, brand, name, path, supply, recommended, stock, optionGroup]) => {
+  const product = { id, brand, imageIndex: 0, emoji, name, supplier: VARIETY_SUPPLIERS[supplierLoginId] || "산지팔도", supplierLoginId, supply, recommended, stock, categoryGroup: path[0], category: path[1], categorySub: path[2], categoryDetail: path[3], status: "판매중", imported: false, origin: "대한민국", shippingType: "domestic", originCountry: "대한민국", deliveryDays: "1~2일", detail: `${name} · 테스트 샘플 상품 · 공급사 직배송`, photos: [sampleArt(emoji, c1, c2)], sample: true };
+  if (optionGroup) {
+    product.optionTitle = optionGroup.name;
+    product.optionGroups = [optionGroup];
+    product.options = buildComboOptions([optionGroup], (values, index) => ({ supply: supply + index * 500, recommended: recommended + index * 1000, stock: Math.max(5, Math.round(stock / optionGroup.values.length) - index * 3) }));
+    product.stock = product.options.reduce((sum, option) => sum + Number(option.stock || 0), 0);
+  }
+  return product;
+});
 const initialState = {
   schemaVersion: 22,
   statsVersion: 1,
@@ -467,7 +512,8 @@ const initialState = {
     { id: "DF-3268", brand: "제주 은빛수산", imageIndex: 5, emoji: "🐟", name: "제주 은갈치 실속세트", supplier: "산지팔도", supplierLoginId: "sup", supply: 27800, recommended: 38900, stock: 55, categoryGroup: "식품", category: "수산물", categorySub: "생선", categoryDetail: "갈치", status: "판매중", imported: false, origin: "제주특별자치도", detail: "제주 은갈치 선물 구성 · 냉동배송 · 상세페이지 제공" },
     { id: "DF-3304", brand: "어머니손맛 김치", imageIndex: 6, emoji: "🥬", name: "국산 3도씨 포기김치 3~10kg", legacyName: "국산 3도씨 포기김치 5kg", optionTitle: "중량", options: [{ id: "O1", name: "포기김치 3kg", supply: 12900, recommended: 18900, stock: 60 }, { id: "O2", name: "포기김치 5kg", supply: 19600, recommended: 28900, stock: 92 }, { id: "O3", name: "포기김치 10kg", supply: 36900, recommended: 52900, stock: 30 }], supplier: "산지팔도", supplierLoginId: "sup", supply: 12900, recommended: 18900, stock: 182, categoryGroup: "식품", category: "김치", categorySub: "배추김치", categoryDetail: "포기김치", status: "판매중", imported: false, origin: "대한민국", detail: "국산 원재료 포기김치 · 냉장배송 · 상세페이지 제공" },
     { id: "DF-3357", brand: "오지그린팜", imageIndex: 7, emoji: "🍇", name: "호주산 씨없는 청포도 1.5kg", supplier: "산지팔도", supplierLoginId: "sup", supply: 24500, recommended: 34900, stock: 64, categoryGroup: "식품", category: "농산물", categorySub: "과일", categoryDetail: "포도", status: "판매중", imported: false, origin: "호주 빅토리아", shippingType: "overseas", originCountry: "호주", deliveryDays: "6~10일", customsRequired: true, detail: "호주 산지 선별 청포도 · 해외직구 냉장 포장 · 개인통관부호 필요" },
-    { id: "DF-3420", brand: "운남 산채방", imageIndex: 2, emoji: "🍄", name: "중국 운남성 건표고 슬라이스 500g", supplier: "산지팔도", supplierLoginId: "sup", supply: 9900, recommended: 15900, stock: 106, categoryGroup: "식품", category: "농산물", categorySub: "버섯", categoryDetail: "건표고버섯", status: "판매중", imported: false, origin: "중국 운남성", shippingType: "overseas", originCountry: "중국", deliveryDays: "7~14일", customsRequired: true, detail: "운남성 건표고 선별 상품 · 해외직구 합배송 가능 · 개인통관부호 필요" }
+    { id: "DF-3420", brand: "운남 산채방", imageIndex: 2, emoji: "🍄", name: "중국 운남성 건표고 슬라이스 500g", supplier: "산지팔도", supplierLoginId: "sup", supply: 9900, recommended: 15900, stock: 106, categoryGroup: "식품", category: "농산물", categorySub: "버섯", categoryDetail: "건표고버섯", status: "판매중", imported: false, origin: "중국 운남성", shippingType: "overseas", originCountry: "중국", deliveryDays: "7~14일", customsRequired: true, detail: "운남성 건표고 선별 상품 · 해외직구 합배송 가능 · 개인통관부호 필요" },
+    ...CATEGORY_SAMPLE_PRODUCTS
   ],
   sellerProducts: [
     { id: "SP-1001", sellerLoginId: "seller", productId: "DF-1024", salePrice: 29900, approvalStatus: "승인완료", masterRegistered: true, channel: "네이버 스마트스토어", channels: ["smartstore", "coupang"], channelStatuses: { smartstore: "판매중", coupang: "판매중", kakao: "판매중지/미노출", cafe24: "미연동" }, channelDetails: { smartstore: { title: "산지직송 경북 프리미엄 사과 3kg", salePrice: 29900, category: "식품 > 농산물 > 사과", reviews: 128 }, coupang: { title: "고당도 경북 사과 실속형 3kg", salePrice: 30900, category: "식품 > 과일 > 사과", reviews: 42 }, kakao: { title: "선물용 경북 프리미엄 사과 3kg", salePrice: 31900, category: "푸드 > 신선식품 > 과일", reviews: 8 }, cafe24: { title: "경북 프리미엄 사과 3kg", salePrice: 29900, category: "농산물 > 과일", reviews: 0 } }, status: "판매중", copiedAt: "2026.09.07", imageIndex: 0, detailSnapshot: "정품 선별 사과 · 센터배송 · 상세페이지 제공", contentCopied: true },
@@ -1029,7 +1075,12 @@ function orderSupplierProgressLabel(order) {
 function orderSourceProduct(order) { return productOf(order?.mappedProductId || order?.productId); }
 function sellerProductTitle(item, product = productOf(item?.productId)) { return item?.customTitle || item?.sellerTitle || product?.name || "판매 상품"; }
 function orderSellerTitle(order) {
-  if (order?.externalProductName) return order.externalProductName;
+  /* 상품명과 옵션명은 두 줄로 따로 보여 준다: 쇼핑몰 상품명 끝에 옵션이 붙어 오면(… · 포기김치 10kg) 떼어 낸다 */
+  if (order?.externalProductName) {
+    const name = String(order.externalProductName), option = String(order.optionName || "").trim();
+    if (option) for (const sep of [" · ", " / ", " - ", ", ", " "]) if (name.endsWith(`${sep}${option}`) && name.length > option.length + sep.length) return name.slice(0, -(sep.length + option.length)).trim();
+    return name;
+  }
   const item = state.sellerProducts.find(product => product.sellerLoginId === order?.sellerLoginId && product.productId === (order?.mappedProductId || order?.productId));
   return sellerProductTitle(item, orderSourceProduct(order));
 }
@@ -3174,36 +3225,38 @@ function refundTemplate(role) {
 }
 
 const sellerOrderStages = [
-  ["all", "전체 주문 리스트"], ["self", "직접 배송 (두고 외)"], ["supplier", "공급사 출고 중"], ["delivery", "송장 전송 · 배송"], ["mapping", "매핑 필요"], ["payment", "결제 대기"], ["received", "주문접수"], ["ordered", "발주완료"], ["preparing", "배송준비중"], ["needs-check", "주문확인필요"], ["tracking-push", "송장 전송 대기"], ["shipping", "배송중"], ["delivered", "배송완료"]
+  ["all", "전체 주문 리스트"], ["self", "직접 배송 (두고 외)"], ["supplier", "공급사 출고 중"], ["delivery", "송장 받음 · 배송"], ["mapping", "매핑 필요"], ["payment", "결제 대기"], ["received", "주문접수"], ["ordered", "발주완료"], ["preparing", "배송준비중"], ["needs-check", "주문확인필요"], ["tracking-push", "송장 전달완료"], ["shipping", "배송중"], ["delivered", "배송완료"]
 ];
-/* 주문 단계 메뉴를 ‘누가 처리하는 단계인지’로 묶어 색으로 구분한다. 위탁셀러(파랑) → 공급사(주황) → 위탁셀러(파랑) → 택배(초록) */
+/* 주문 진행 단계판 — 왼쪽 메뉴 ①~⑤와 같은 번호·순서로 한 줄에.
+   ② 매핑 단계에서 ‘직접 배송’으로 갈라지고, ④ 공급사 출고(발주완료 → 배송준비중), ⑤ 송장·배송(공급사가 준 송장 → 배송중 → 배송완료)으로 이어진다. */
 const SELLER_ORDER_STAGE_GROUPS = [
-  { tone: "neutral", who: "", title: "", stages: ["all"] },
-  { tone: "self", who: "사장님", title: "직접 배송", stages: ["self"] },
-  { tone: "seller", who: "위탁셀러", title: "매핑 · 결제", stages: ["mapping", "payment", "received"] },
-  { tone: "supplier", who: "공급사", title: "확인 · 포장 · 송장", stages: ["ordered", "preparing", "needs-check"] },
-  { tone: "seller", who: "위탁셀러", title: "송장 전송", stages: ["tracking-push"] },
-  { tone: "ship", who: "택배사", title: "배송 진행", stages: ["shipping", "delivered"] }
+  { key: "all", no: 1, tone: "neutral", who: "", title: "전체", stages: ["all"] },
+  { key: "mapping", no: 2, tone: "seller", who: "위탁셀러", title: "상품 매핑", stages: ["mapping", "self"] },
+  { key: "payment", no: 3, tone: "seller", who: "위탁셀러", title: "결제하기", stages: ["payment"] },
+  { key: "supplier", no: 4, tone: "supplier", who: "공급사", title: "공급사 출고", stages: ["ordered", "preparing", "needs-check"], flow: ["ordered", "preparing"] },
+  { key: "delivery", no: 5, tone: "ship", who: "공급사→나→택배", title: "송장 받음 · 배송", stages: ["tracking-push", "shipping", "delivered"], flow: ["tracking-push", "shipping", "delivered"] }
 ];
-/* 주문 단계판: 왼쪽 세로 메뉴 대신 표 위에 가로로 (플레이오토 주문현황처럼) — 누가 처리하는 단계인지 색으로 묶는다 */
-const SELLER_ORDER_STAGE_SHORT = { overview: "등록 현황", all: "전체 주문", self: "직접 배송", preparing: "배송준비", "needs-check": "확인 필요", "tracking-push": "송장 전송" };
+const SELLER_ORDER_STAGE_SHORT = { overview: "등록 현황", all: "전체 주문", self: "직접 배송", mapping: "매핑 필요", payment: "결제 대기", ordered: "발주완료", preparing: "배송준비중", "needs-check": "확인 필요", "tracking-push": "송장 전달완료", shipping: "배송중", delivered: "배송완료" };
+const SELLER_ORDER_STAGE_SUB = { all: "모든 주문", mapping: "상품 고르기", self: "내가 발송", payment: "공급가 결제", ordered: "확인 전", preparing: "포장 중", "needs-check": "상태 확인", "tracking-push": "쇼핑몰 전송 전", shipping: "택배 이동", delivered: "고객 수령" };
 function sellerOrderFlowBoard() {
+  const activeMenu = sellerMenuStageOf(sellerOrderStage);
   const groups = SELLER_ORDER_STAGE_GROUPS.map(group => {
-    const tiles = group.stages.map(key => {
+    const tile = key => {
       const full = sellerOrderStages.find(item => item[0] === key)?.[1] || key;
       const label = SELLER_ORDER_STAGE_SHORT[key] || full;
       const count = sellerOrderStageCount(key);
-      const tone = key === "needs-check" && count > 0 ? "urgent" : count > 0 ? "has-count" : "zero";
-      const help = FIELD_HELP[`stage-${key}`] ? `<span class="fh ofb-help" role="button" tabindex="0" data-fh="stage-${key}" aria-label="${escapeHtml(full)} 단계 설명" aria-expanded="false">?</span>` : "";
       const selfTodo = key === "self" ? selfTodoCount() : 0;
-      return `<button type="button" class="ofb-tile ${sellerOrderStage === key ? "active" : ""} ${key === "self" && selfTodo ? "urgent" : tone}" data-action="filter-order-stage" data-stage="${key}" aria-pressed="${sellerOrderStage === key}"><span class="ofb-label">${escapeHtml(label)}${help}</span><b class="ofb-count">${count}</b>${key === "self" ? `<small class="ofb-sub">${selfTodo ? `송장 넣을 주문 ${selfTodo}건` : "내가 포장·발송"}</small>` : ""}</button>`;
-    }).join("");
-    const head = group.title ? `<p class="ofb-group-head"><em>${group.who}</em><span>${group.title}</span></p>` : `<p class="ofb-group-head"><em>전체</em><span>주문 보기</span></p>`;
-    return `<div class="ofb-group tone-${group.tone}" style="--n:${group.stages.length}">${head}<div class="ofb-tiles">${tiles}</div></div>`;
+      const tone = (key === "needs-check" && count > 0) || selfTodo ? "urgent" : count > 0 ? "has-count" : "zero";
+      const help = FIELD_HELP[`stage-${key}`] ? `<span class="fh ofb-help" role="button" tabindex="0" data-fh="stage-${key}" aria-label="${escapeHtml(full)} 단계 설명" aria-expanded="false">?</span>` : "";
+      const sub = key === "self" && selfTodo ? `송장 ${selfTodo}건 대기` : key === "tracking-push" && count ? "쇼핑몰로 보내기" : SELLER_ORDER_STAGE_SUB[key] || "";
+      return `<button type="button" class="ofb-tile ofb2-tile ${sellerOrderStage === key ? "active" : ""} ${tone}" data-action="filter-order-stage" data-stage="${key}" aria-pressed="${sellerOrderStage === key}"><span class="ofb-label">${escapeHtml(label)}${help}</span><b class="ofb-count">${count}</b><small class="ofb-sub">${escapeHtml(sub)}</small></button>`;
+    };
+    /* ④·⑤는 순서대로 흘러가는 단계라 칸 사이에 › 를 넣고, ‘확인 필요’처럼 따로 보는 칸은 뒤에 붙인다 */
+    const tiles = group.flow ? [group.flow.map(tile).join('<i class="ofb2-step" aria-hidden="true">›</i>'), ...group.stages.filter(key => !group.flow.includes(key)).map(tile)].join("") : group.stages.map(tile).join("");
+    const headStage = group.key === "all" ? "all" : group.key === "mapping" ? "mapping" : group.key;
+    return `<div class="ofb-group ofb2-group tone-${group.tone} ${activeMenu === group.key || (group.key === "mapping" && activeMenu === "self") ? "group-active" : ""}" style="--n:${group.stages.length}"><button type="button" class="ofb2-head" data-action="filter-order-stage" data-stage="${headStage}"><i class="ofb2-no">${group.no}</i><b>${escapeHtml(group.title)}</b>${group.who ? `<em>${escapeHtml(group.who)}</em>` : ""}</button><div class="ofb-tiles ofb2-tiles">${tiles}</div></div>`;
   });
-  /* 전체·직접 배송은 따로 보는 칸이라 화살표 없이, 두고 주문 흐름(매핑 → 공급사 → 송장 → 배송)만 화살표로 잇는다 */
-  const [allGroup, selfGroup, ...flowGroups] = groups;
-  return `<section class="order-flow-board panel" aria-label="주문 단계"><div class="ofb-head"><span>${menuIcon("order")}</span><b>주문 진행 단계</b><small>단계를 누르면 그 단계 주문만 아래에 보여요 · 칸마다 <b class="ofb-q">?</b>를 누르면 뜻을 알려 줘요</small><button type="button" class="text-button ofb-guide-open" data-action="order-stage-guide">단계 설명 전체 보기</button></div><div class="ofb-groups">${allGroup}${selfGroup}<i class="ofb-arrow ofb-break" aria-hidden="true"></i>${flowGroups.join('<i class="ofb-arrow" aria-hidden="true">›</i>')}</div></section>`;
+  return `<section class="order-flow-board ofb2 panel" aria-label="주문 단계"><div class="ofb-head"><span>${menuIcon("order")}</span><b>주문 진행 단계</b><small>왼쪽 메뉴 ①~⑤와 같은 순서예요 · 칸을 누르면 그 주문만 아래에 보여요</small><button type="button" class="text-button ofb-guide-open" data-action="order-stage-guide">단계 설명 전체 보기</button></div><div class="ofb2-row">${groups.join('<i class="ofb2-arrow" aria-hidden="true">›</i>')}</div></section>`;
 }
 function sellerOrderSubset(stage = sellerOrderStage) {
   const orders = currentSellerOrders();
@@ -10124,9 +10177,9 @@ const ORDER_STAGE_HELP = {
   payment: "공급사 상품과 연결은 끝났고, 공급가 결제만 남은 주문이에요.\n→ 결제하면 주문이 공급사에게 바로 전달돼요.",
   received: "결제를 마치고 공급사에게 보내기 직전인 주문이에요.\n→ ‘공급사 발주’를 누르면 공급사에게 전달돼요.",
   ordered: "공급사에게 주문이 전달됐고, 공급사가 아직 주문을 확인하지 않은 상태예요.\n→ 사장님이 할 일은 없어요. 공급사 확인을 기다려요.",
-  preparing: "공급사가 주문을 확인하고 상품을 포장·출고 준비하고 있다는 뜻이에요. 아직 송장번호는 나오지 않았어요.\n→ 사장님이 할 일은 없어요. 공급사가 송장을 넣으면 ‘송장 전송 대기’로 넘어와요.\n궁금하면 주문 상세에서 두고톡으로 공급사에게 바로 물어볼 수 있어요.",
+  preparing: "공급사가 주문을 확인하고 상품을 포장·출고 준비하고 있다는 뜻이에요. 아직 송장번호는 나오지 않았어요.\n→ 사장님이 할 일은 없어요. 공급사가 송장을 넣으면 ‘송장 전달완료’로 넘어와요.\n궁금하면 주문 상세에서 두고톡으로 공급사에게 바로 물어볼 수 있어요.",
   "needs-check": "쇼핑몰에서 주문이 취소됐거나 상태가 바뀌어서 다시 확인이 필요한 주문이에요.\n→ 공급사가 쇼핑몰 상태를 확인해 정상 출고 또는 출고 취소로 처리해요.",
-  "tracking-push": "공급사가 송장번호를 넣었지만, 아직 사장님 쇼핑몰(쿠팡·스마트스토어 등)에는 보내지 않은 상태예요.\n→ 사장님이 ‘쇼핑몰 전송’ 버튼을 눌러야 고객에게 송장이 보여요.\n‘송장 쇼핑몰 전송’을 자동으로 켜 두면 10분마다 알아서 보내 줘요.",
+  "tracking-push": "송장 전달완료: 공급사가 송장번호를 사장님께 넘겨 준 주문이에요. 아직 사장님 쇼핑몰(쿠팡·스마트스토어 등)에는 들어가지 않았어요.\n→ ‘쇼핑몰 전송’을 누르면 고객에게 송장이 보이고 ‘배송중’으로 넘어가요. 자동 전송을 켜 두면 10분마다 알아서 보내요.",
   shipping: "송장이 사장님 쇼핑몰로 전송 완료된 주문이에요. 이제 택배사가 배송하고 있어요.\n→ 더 신경 쓰지 않아도 돼요. 고객은 쇼핑몰에서 배송 조회를 할 수 있어요.",
   delivered: "고객이 상품을 받은 주문이에요. 주문 처리가 모두 끝났어요."
 };
@@ -13193,8 +13246,111 @@ window.addEventListener("resize", () => {
   else if (document.getElementById("appView").dataset.sidebarOpen !== "true") document.getElementById("appSidebar").inert = true;
 });
 
+/* ===== 상단 검색: 입력하는 대로 아래에 주문 미리보기 → 눈으로 맞는지 확인하고 누르면 주문 상세 =====
+   주문번호·쇼핑몰 주문번호·주문자·받는 분·전화번호(숫자만 맞아도)·송장번호·상품명·옵션으로 찾는다. ↑↓로 고르고 Enter로 연다. */
+let globalSearchState = { hits: [], index: -1, timer: 0 };
+function globalSearchScope() { return activeRole === "supplier" ? currentSupplierOrders() : activeRole === "master" ? state.orders : currentSellerOrders(); }
+function globalSearchOrders(raw) {
+  const q = String(raw || "").trim().toLowerCase();
+  if (!q) return [];
+  const digits = q.replace(/\D/g, "");
+  const scored = [];
+  globalSearchScope().forEach(order => {
+    const product = orderSourceProduct(order);
+    const id = String(order.id || "").toLowerCase(), channelNo = String(order.channelOrderNo || "").toLowerCase();
+    const textFields = [order.customer, order.recipientName, order.externalProductName, product?.name, order.optionName, order.channel, order.externalProductCode, order.tracking].map(value => String(value || "").toLowerCase());
+    const phone = String(order.phone || "").replace(/\D/g, "");
+    let score = 0;
+    if (id === q || channelNo === q) score = 100;
+    else if (id.includes(q) || channelNo.includes(q)) score = 80;
+    else if ([order.customer, order.recipientName].some(value => String(value || "").toLowerCase() === q)) score = 70;
+    else if (digits.length >= 3 && (phone.includes(digits) || String(order.tracking || "").includes(digits))) score = 60;
+    else if (textFields.some(value => value.includes(q))) score = 40;
+    if (score) scored.push({ order, score });
+  });
+  return scored.sort((a, b) => b.score - a.score || String(b.order.orderDate || "").localeCompare(String(a.order.orderDate || ""))).map(row => row.order);
+}
+function gsMark(text, raw) {
+  const value = String(text || ""), q = String(raw || "").trim();
+  if (!q) return escapeHtml(value);
+  const at = value.toLowerCase().indexOf(q.toLowerCase());
+  if (at < 0) return escapeHtml(value);
+  return `${escapeHtml(value.slice(0, at))}<mark>${escapeHtml(value.slice(at, at + q.length))}</mark>${escapeHtml(value.slice(at + q.length))}`;
+}
+function globalSearchPopup() {
+  let pop = document.getElementById("globalSearchPop");
+  if (!pop) {
+    const label = document.getElementById("globalSearch")?.closest(".quick-search");
+    if (!label) return null;
+    label.classList.add("gs-host");
+    pop = document.createElement("div"); pop.id = "globalSearchPop"; pop.className = "gs-pop"; pop.hidden = true; pop.setAttribute("role", "listbox");
+    label.after(pop);
+  }
+  return pop;
+}
+function renderGlobalSearch(raw) {
+  const pop = globalSearchPopup(); if (!pop) return;
+  const q = String(raw || "").trim();
+  if (!q) { pop.hidden = true; globalSearchState = { ...globalSearchState, hits: [], index: -1 }; return; }
+  const hits = globalSearchOrders(q);
+  globalSearchState.hits = hits.slice(0, 8); globalSearchState.index = hits.length ? 0 : -1; globalSearchState.q = q;
+  /* 검색창 바로 아래에 붙여 띄운다(상단바가 고정이라 fixed 위치로 계산). 화면이 좁으면 양옆 16px 안에서 맞춘다 */
+  const label = document.getElementById("globalSearch").closest(".quick-search").getBoundingClientRect();
+  const width = Math.min(window.innerWidth - 32, Math.max(440, Math.round(label.width)));
+  pop.style.top = `${Math.round(label.bottom + 6)}px`;
+  pop.style.left = `${Math.max(16, Math.min(Math.round(label.left), window.innerWidth - width - 16))}px`;
+  pop.style.width = `${width}px`;
+  pop.innerHTML = hits.length ? `<p class="gs-head">주문 ${hits.length}건 · 맞는 주문을 눌러 확인하세요</p>${globalSearchState.hits.map((order, index) => {
+    const product = orderSourceProduct(order);
+    const title = activeRole === "supplier" ? (product?.name || orderSellerTitle(order)) : orderSellerTitle(order);
+    const phoneTail = order.phone ? `· ${order.phone}` : "";
+    return `<button type="button" class="gs-item ${index === 0 ? "active" : ""}" role="option" data-gs-id="${escapeHtml(order.id)}" data-gs-index="${index}">
+      <span class="gs-line1"><b>${gsMark(order.id, q)}</b>${statusChip(order.status)}<small>${escapeHtml(order.orderDate || "")}</small></span>
+      <span class="gs-line2">${gsMark(title, q)}${order.optionName ? ` <em class="order-option-tag">옵션 · ${gsMark(order.optionName, q)}</em>` : ""}</span>
+      <span class="gs-line3">${gsMark(order.recipientName || order.customer || "-", q)} ${escapeHtml(phoneTail)} · ${escapeHtml(order.channel || "")} · ${Number(order.qty || 1)}개 · ${money(order.amount || 0)}${order.tracking ? ` · 송장 ${gsMark(order.tracking, q)}` : ""}</span>
+    </button>`; }).join("")}${hits.length > 8 ? `<button type="button" class="gs-more" data-gs-all="1">‘${escapeHtml(q)}’ 주문 ${hits.length}건 모두 목록에서 보기 →</button>` : ""}` : `<p class="gs-empty">‘${escapeHtml(q)}’와 맞는 주문이 없어요.<small>주문번호 · 주문자 · 받는 분 · 전화번호 · 송장번호 · 상품명으로 찾을 수 있어요.</small></p>`;
+  pop.hidden = false;
+}
+function closeGlobalSearch() { const pop = document.getElementById("globalSearchPop"); if (pop) pop.hidden = true; }
+function openGlobalSearchOrder(id) {
+  closeGlobalSearch();
+  const input = document.getElementById("globalSearch"); if (input) input.blur();
+  closeModal(); orderDetailModal(id);
+}
+function moveGlobalSearch(step) {
+  const items = [...document.querySelectorAll("#globalSearchPop .gs-item")]; if (!items.length) return;
+  globalSearchState.index = (globalSearchState.index + step + items.length) % items.length;
+  items.forEach((item, index) => item.classList.toggle("active", index === globalSearchState.index));
+  items[globalSearchState.index].scrollIntoView({ block: "nearest" });
+}
+document.getElementById("globalSearch").addEventListener("input", event => { clearTimeout(globalSearchState.timer); const value = event.currentTarget.value; globalSearchState.timer = setTimeout(() => renderGlobalSearch(value), 120); });
+document.getElementById("globalSearch").addEventListener("focus", event => { if (event.currentTarget.value.trim()) renderGlobalSearch(event.currentTarget.value); });
+document.addEventListener("mousedown", event => { if (!event.target.closest?.("#globalSearchPop, .gs-host")) closeGlobalSearch(); });
+window.addEventListener("resize", closeGlobalSearch);
+/* 화면을 굴리면 검색창을 따라 팝업 위치를 다시 맞춘다(검색창이 화면 밖으로 나가면 닫는다) */
+window.addEventListener("scroll", () => {
+  const pop = document.getElementById("globalSearchPop"); if (!pop || pop.hidden) return;
+  const label = document.getElementById("globalSearch").closest(".quick-search").getBoundingClientRect();
+  if (label.bottom < 0) return closeGlobalSearch();
+  pop.style.top = `${Math.round(label.bottom + 6)}px`;
+}, { passive: true });
+document.addEventListener("click", event => {
+  const item = event.target.closest?.("#globalSearchPop .gs-item");
+  if (item) { event.preventDefault(); openGlobalSearchOrder(item.dataset.gsId); return; }
+  if (event.target.closest?.("#globalSearchPop .gs-more")) { closeGlobalSearch(); const input = document.getElementById("globalSearch"); input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); }
+});
+document.getElementById("globalSearch").addEventListener("keydown", event => {
+  const popOpen = !document.getElementById("globalSearchPop")?.hidden;
+  if (popOpen && event.key === "ArrowDown") { event.preventDefault(); return moveGlobalSearch(1); }
+  if (popOpen && event.key === "ArrowUp") { event.preventDefault(); return moveGlobalSearch(-1); }
+  if (event.key === "Escape") { closeGlobalSearch(); return; }
+  /* 입력 직후(0.12초 안)에 Enter를 눌러도 지금 입력한 글자로 다시 찾아서 연다 */
+  if (event.key === "Enter" && event.isTrusted && event.currentTarget.value.trim() && globalSearchState.q !== event.currentTarget.value.trim()) { clearTimeout(globalSearchState.timer); renderGlobalSearch(event.currentTarget.value); }
+  if (event.key === "Enter" && !document.getElementById("globalSearchPop")?.hidden && event.isTrusted && globalSearchState.index >= 0 && globalSearchState.hits[globalSearchState.index]) { event.preventDefault(); event.stopImmediatePropagation(); openGlobalSearchOrder(globalSearchState.hits[globalSearchState.index].id); return; }
+});
 document.getElementById("globalSearch").addEventListener("keydown", event => {
   if (event.key !== "Enter") return;
+  closeGlobalSearch();
   const query = event.currentTarget.value.trim().toLowerCase();
   if (!query) return;
   if (activeRole === "seller") {
