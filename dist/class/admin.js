@@ -1,4 +1,4 @@
-/* 두고 클래스 — 강사센터 · 마스터 관리자
+/* 두고캠퍼스 — 강사센터 · 마스터 관리자
  *
  *  #/center/login            로그인 (탭: 강사 / 마스터)
  *  #/center                  강사 대시보드 (마스터는 #/center/master)
@@ -98,19 +98,19 @@
     const ins = loginTab === "instructor";
     document.title = (ins ? "강사센터" : "마스터 관리자") + " · 로그인";
     const L = ins
-      ? { theme: "blue", tag: "강사센터", eyebrow: "DOOGO INSTRUCTOR CENTER", h: "수강생 관리부터<br>커리큘럼까지 한 곳에서", sub: "기수별 수강생 승인, 과제 검수, 강의 영상과 일정 업로드를 간편하게 운영할 수 있습니다.", icons: ["users", "play", "calendar", "settings"], label: "INSTRUCTOR", title: "강사 로그인", lead: "강사 이름과 전화번호 뒷자리로 로그인하세요." }
-      : { theme: "violet", tag: "마스터", eyebrow: "DOOGO MASTER CONSOLE", h: "강사 플랫폼을<br>분양하고 관리하세요", sub: "새 강사 플랫폼 개설, 운영 중지, 강사센터 대신 접속과 전체 수강생 현황을 한 곳에서 봅니다.", icons: ["store", "layers", "users", "shieldCheck"], label: "MASTER", title: "마스터 로그인", lead: "운영자 전용 관리자 계정으로 로그인하세요." };
+      ? { theme: "blue", tag: "강사센터", eyebrow: "DOOGO CAMPUS · INSTRUCTOR CENTER", h: "수강생 관리부터<br>커리큘럼까지 한 곳에서", sub: "기수별 수강생 승인, 과제 검수, 강의 영상과 일정 업로드를 간편하게 운영할 수 있습니다.", icons: ["pencil", "play", "calendar", "settings"], label: "INSTRUCTOR", title: "강사 로그인", lead: "강사 이름과 전화번호 뒷자리로 로그인하세요." }
+      : { theme: "violet", tag: "마스터", eyebrow: "DOOGO CAMPUS · MASTER CONSOLE", h: "강사 플랫폼을<br>분양하고 관리하세요", sub: "새 강사 플랫폼 개설, 운영 중지, 강사센터 대신 접속과 전체 수강생 현황을 한 곳에서 봅니다.", icons: ["pencil", "layers", "users", "shieldCheck"], label: "MASTER", title: "마스터 로그인", lead: "운영자 전용 관리자 계정으로 로그인하세요." };
     root.innerHTML =
       '<main class="adm a-login a-login-' + L.theme + '">' +
         '<section class="a-login-brand">' + window.loginArt(L.theme, L.icons) +
-          '<span class="a-logo"><span class="a-logo-mark">' + icon("layers") + "</span><b>DOOGO</b><span class=\"a-logo-sub\">CLASS</span><em>" + L.tag + "</em></span>" +
+          '<div class="a-logo">' + window.campusLogo("white") + "<em>" + L.tag + "</em></div>" +
           '<div class="a-login-hero"><p class="a-eyebrow">' + L.eyebrow + "</p><h2>" + L.h + "</h2><p>" + L.sub + "</p></div>" +
-          '<div class="a-login-foot"><span>© 2026 두고 클래스</span><span>Secure ' + (ins ? "instructor" : "admin") + " workspace</span></div>" +
+          '<div class="a-login-foot"><span>© 2026 DOOGO CAMPUS · 두고캠퍼스</span><span>Secure ' + (ins ? "instructor" : "admin") + " workspace</span></div>" +
         "</section>" +
         '<section class="a-login-panel">' +
           '<div class="a-login-topright"><span>수강생이신가요?</span><a class="a-btn a-btn-primary a-btn-sm" href="#/login" data-action="to-student">바로가기</a></div>' +
           '<div class="a-login-stack"><div class="a-login-card">' +
-            '<p class="a-login-label">DOOGO <span>' + L.label + "</span></p>" +
+            '<p class="a-login-label">' + window.campusLogo("color", "card-logo") + "<span>" + L.label + "</span></p>" +
             "<h1>" + L.title + '</h1><p class="a-muted a-center">' + L.lead + "</p>" +
             '<div class="a-seg" role="tablist">' +
               '<button type="button" role="tab" aria-selected="' + ins + '" class="' + (ins ? "on" : "") + '" data-action="login-tab" data-tab="instructor">' + icon("user", "sm") + "강사</button>" +
@@ -187,7 +187,7 @@
         (S.role === "master" && S.actingAs ? '<div class="a-acting">' + icon("shieldCheck", "sm") + "<span>마스터 권한으로 <b>" + esc(ins.name) + "</b> 강사센터를 보고 있어요.</span>" + btn("마스터로 돌아가기", "stop-acting", "a-btn-light a-btn-sm") + "</div>" : "") +
         '<header class="a-top">' +
           '<button class="a-icon-btn a-menu" type="button" data-action="toggle-nav" aria-label="메뉴">' + icon("menu") + "</button>" +
-          '<a class="a-logo" href="#/center' + (master ? "/master" : "") + '"><span class="a-logo-mark">' + icon("layers") + "</span><b>" + (master ? "마스터 관리자" : "강사센터") + "</b>" + (ins ? '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>" : "") + "</a>" +
+          '<a class="a-logo" href="#/center' + (master ? "/master" : "") + '">' + window.campusLogo("color", "a-hide-sm") + window.campusLogo("mark", "a-show-sm") + '<span class="a-top-div"></span><b>' + (master ? "마스터 관리자" : "강사센터") + "</b>" + (ins ? '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>" : "") + "</a>" +
           '<div class="a-top-right">' +
             (ins ? '<span class="a-chip a-hide-sm">' + (co ? esc(co.name) + " · " + DB.STATUS_LABEL[DB.cohortStatus(co)] : "기수 없음") + "</span>" +
               btn(icon("eye", "sm") + '<span class="a-hide-sm">수강생 화면 보기</span>', "preview", "a-btn-outline a-btn-sm") : "") +
@@ -202,6 +202,7 @@
               return '<a class="a-nav' + (on ? " on" : "") + '" href="#/center' + (it[0] ? "/" + it[0] : "") + '"' + (on ? ' aria-current="page"' : "") + ">" + icon(it[2], "sm") + "<span>" + esc(it[1]) + "</span>" + (it[3] ? '<span class="a-count">' + it[3] + "</span>" : "") + "</a>";
             }).join("") + "</div>").join("") +
             (master ? "" : '<div class="a-side-card"><b>수강생 화면과 똑같은 메뉴</b><p>‘수강생 화면 콘텐츠’에서 고친 내용이 수강생 화면에 바로 반영돼요.</p>' + btn(icon("eye", "sm") + "수강생 화면 보기", "preview", "a-btn-primary a-btn-sm a-btn-block") + "</div>") +
+            '<p class="a-powered">' + window.campusLogo("mark") + "<span>두고캠퍼스 파트너 관리 도구</span></p>" +
             '<div class="a-side-foot"><a href="#/login" data-action="to-student">' + icon("arrowLeft", "xs") + "수강생 로그인 화면</a></div>" +
           "</aside>" +
           '<div class="a-scrim" data-action="toggle-nav"></div>' +
@@ -823,7 +824,7 @@
     const main = document.getElementById("a-main");
     const fn = master ? (MPAGES[r.parts[1] || ""] || pageMasterHome) : (PAGES[r.parts[0] || ""] || pageDashboard);
     main.innerHTML = '<div class="a-page">' + fn(r) + "</div>";
-    document.title = (master ? "마스터" : "강사센터") + " · 두고 클래스";
+    document.title = (master ? "마스터" : "강사센터") + " · 두고캠퍼스";
   }
   function mount() { root.innerHTML = ""; render(); window.scrollTo(0, 0); }
 

@@ -18,7 +18,7 @@ const MOON_CONTENT = {
     youtubeChannel: "https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C",
     freeCourseUrl: "https://www.ivyclass.co.kr/free-courses/c8f31bf5-1781-43cb-a4cc-5e713016ba88",
     kakaoChannel: "",
-    loginEyebrow: "DOOGO CLASS · 해외 건기식 브랜드",
+    loginEyebrow: "DOOGO CAMPUS · 해외 건기식 브랜드",
     loginHeadline: "내 해외 건기식\n브랜드 만들기",
     loginSub: "나만의 해외 건강식품 만들기, 함께 성장하는 실전 클래스. 매주 과제를 하나씩 해내다 보면, 5주 뒤엔 내 이름의 브랜드의 사장님이 되어있으실거에요.",
     liveTime: "20:00"

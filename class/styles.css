@@ -825,3 +825,38 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 }
 .lx-tile.t3 { right: 7%; top: auto; bottom: 17%; }
 .lx-tile.t4 { left: auto; right: 36%; bottom: 9%; }
+
+/* ===== v4: 두고캠퍼스 로고 ===== */
+.campus-logo { display: block; height: 34px; width: auto; max-width: none; flex: none; }
+.login-logo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.login-logo .campus-logo { height: 40px; }
+.login-logo-div { width: 1px; height: 26px; background: rgba(232, 235, 230, .22); }
+.login-course { display: inline-flex; align-items: center; gap: 8px; }
+.login-course img { width: 26px; height: 26px; }
+.login-course strong { font-size: 15px; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+.login-label { display: flex; align-items: center; justify-content: center; }
+.campus-logo.card-logo { height: 30px; }
+.campus-home { display: flex; align-items: center; flex: none; }
+.campus-home .campus-logo { height: 30px; }
+.top-div { width: 1px; height: 24px; background: var(--line); flex: none; }
+.show-sm { display: none; }
+.powered { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0 8px; font-size: 12px; color: var(--mute); }
+.powered .campus-logo { height: 18px; }
+@media (max-width: 720px) {
+  .hide-sm { display: none; }
+  .show-sm { display: block; }
+  .campus-home .campus-logo.show-sm { height: 28px; }
+  .login-logo .campus-logo { height: 32px; }
+  .login-logo-div { display: none; }
+  .login-course { flex-basis: 100%; }
+}
+.login-logo img.campus-logo { width: auto; height: 40px; }
+.campus-home .campus-logo.hide-sm { height: 32px; }
+@media (max-width: 720px) { .login-logo img.campus-logo { height: 32px; } }
+@media (max-width: 1023px) {
+  .lx-tile.t1 { top: 104px; right: 38%; left: auto; width: 72px; height: 64px; }
+  .lx-tile.t2 { top: 96px; right: 8%; width: 84px; height: 74px; }
+  .lx-tile .icon { width: 32px; height: 32px; }
+  .lx-tile.t2 .icon { width: 38px; height: 38px; }
+  .login-hero, .a-login-hero { padding-top: 150px; }
+}
