@@ -84,6 +84,7 @@
     const r = document.documentElement.style;
     THEME_VARS.concat(extraVars).forEach((k) => r.removeProperty(k));
     extraVars = [];
+    if (t && t.tone) document.documentElement.dataset.tone = t.tone; else delete document.documentElement.dataset.tone;
     if (!t) return;
     r.setProperty("--primary", t.primary); r.setProperty("--primary-active", t.active); r.setProperty("--primary-pale", t.pale);
     r.setProperty("--ink-deep", t.deep); r.setProperty("--theme-rgb", t.rgb);

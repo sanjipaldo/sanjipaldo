@@ -64,6 +64,12 @@
     binance: { label: "바이낸스", primary: "#fcd535", active: "#f0b90b", pale: "#fdf3c4", deep: "#181a20", onPrimary: "#181a20", accent: "#fcd535", accentActive: "#fcd535",
       rgb: "252,213,53", bg: ["#1e2329", "#0b0e11", "#0b0e11"], sub: "#929aa5",
       vars: { "--ink": "#181a20", "--body": "#474d57", "--mute": "#707a8a", "--line": "#eaecef", "--line-soft": "#f5f5f5", "--canvas-soft": "#eaecef", "--canvas-softer": "#fafafa" } },
+    clickhouse: { label: "클릭하우스", tone: "dark", primary: "#faff69", active: "#e6eb52", pale: "#2b2c14", deep: "#faff69", onPrimary: "#0a0a0a", accent: "#faff69", accentActive: "#faff69",
+      rgb: "250,255,105", bg: ["#161616", "#0a0a0a", "#0a0a0a"], sub: "#cccccc", swRing: "#0a0a0a",
+      vars: { "--canvas": "#1a1a1a", "--canvas-soft": "#0a0a0a", "--canvas-softer": "#242424", "--ink": "#ffffff", "--solid": "#242424", "--on-solid": "#e6e6e6",
+        "--body": "#cccccc", "--mute": "#888888", "--line": "#3a3a3a", "--line-soft": "#2a2a2a", "--positive": "#22c55e", "--positive-deep": "#4ade80",
+        "--warning-bg": "#2a2611", "--warning-content": "#f5e7a1", "--warning-deep": "#facc15", "--negative": "#ef4444", "--negative-pale": "#2a1515", "--negative-deep": "#f87171",
+        "--r-md": "8px", "--r-lg": "12px", "--r-xl": "12px" } },
     airtable: { label: "에어테이블", primary: "#181d26", active: "#0d1218", pale: "#f5e9d4", deep: "#181d26", onPrimary: "#ffffff", accent: "#fcab79", accentActive: "#f4d35e", swRing: "#fcab79",
       rgb: "170,45,0", bg: ["#2a1d17", "#181d26", "#0d1218"], sub: "#c9c4bc",
       vars: { "--ink": "#181d26", "--body": "#333840", "--line": "#dddddd", "--line-soft": "#ececec", "--canvas-soft": "#f2f0eb", "--canvas-softer": "#f8f7f4", "--positive-deep": "#0a2e0e", "--warning": "#f4d35e" } }
@@ -257,6 +263,13 @@
         window.CLASS_SEED.students.filter((st) => st.instructorId === "farmer" && !db.students.some((x) => x.id === st.id)).forEach((st) => db.students.push(clone(st)));
       }
       save();
+    }
+    // 문대표 수강생 화면을 라임(Wise)에서 클릭하우스(검정 + 일렉트릭 옐로)로 한 번 바꾼다
+    db.flags = db.flags || {};
+    if (!db.flags.moonClickhouse) {
+      const mc = db.content.moon;
+      if (mc && (mc.brand.theme || "lime") === "lime") mc.brand.theme = "clickhouse";
+      db.flags.moonClickhouse = true; save();
     }
     // 자료실 영상에 본문·첨부파일 필드가 생기기 전 데이터면 기본값을 채운다
     let filled = false;
