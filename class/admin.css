@@ -478,10 +478,10 @@ body[data-master="1"] .a-count { background: #6a3df0; }
 .tp-login b { font-size: 18px; line-height: 1.15; font-weight: 900; }
 .tp-login em { font-style: normal; color: var(--ac, var(--p)); }
 .tp-tile { position: absolute; right: 14px; top: 14px; width: 40px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: rgba(255, 255, 255, .12); color: var(--aa, var(--pa)); }
-.tp-app { display: grid; align-content: center; gap: 8px; padding: 14px; background: var(--app, #f3f5f1); }
-.tp-nav { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; color: var(--appt, #454745); }
+.tp-app { display: grid; align-content: center; gap: 8px; padding: 14px; background: #f3f5f1; }
+.tp-nav { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; color: #454745; }
 .tp-nav.on { background: var(--pp); color: var(--pd); }
-.tp-bar { height: 6px; border-radius: 9px; background: var(--appl, #e3e6e0); overflow: hidden; }
+.tp-bar { height: 6px; border-radius: 9px; background: #e3e6e0; overflow: hidden; }
 .tp-bar i { display: block; width: 62%; height: 100%; background: var(--p); }
 .tp-btn { padding: 8px 10px; border-radius: 99px; background: var(--p); color: var(--po, var(--pd)); font-size: 12px; font-weight: 800; text-align: center; }
 
