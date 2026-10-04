@@ -84,10 +84,8 @@
   window.loginArt = (theme, names) => '<div class="lx-art lx-' + theme + '" aria-hidden="true"><span class="lx-glow"></span><span class="lx-beam b1"></span><span class="lx-beam b2"></span>' +
     names.map((n, i) => '<span class="lx-tile t' + (i + 1) + '">' + window.icon(n) + "</span>").join("") + "</div>";
   /** 강의 로고 마크 — 강사가 고른 색(--primary)으로 칠해진다 */
-  // 수강생 화면 로고: 모든 강사 공통 — 빨간 유튜브형 아이콘 (살짝 입체감)
-  window.logoMark = (cls) => '<svg class="logo-mark ' + (cls || "") + '" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lm-red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff3b30"/><stop offset=".55" stop-color="#f50000"/><stop offset="1" stop-color="#d40000"/></linearGradient><linearGradient id="lm-white" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e9e9ee"/></linearGradient></defs>' +
-    '<rect width="64" height="64" rx="16" fill="url(#lm-red)"/><path d="M8 18c0-6 4-10 10-10h28c6 0 10 4 10 10v2H8z" fill="#fff" opacity=".16"/>' +
-    '<rect x="10" y="17" width="44" height="30" rx="9" fill="url(#lm-white)"/><path d="M27.5 24.6v14.8a1.1 1.1 0 0 0 1.7.9l11.9-7.4a1.1 1.1 0 0 0 0-1.8l-11.9-7.4a1.1 1.1 0 0 0-1.7.9Z" fill="#f50000"/></svg>';
+  // 로고: 검은 바탕 + 강사 색 화면 + 재생 버튼 — 화면 색은 강사마다 정한 색(--accent)을 따른다
+  window.logoMark = (cls) => '<svg class="logo-mark ' + (cls || "") + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="#0e0f0c"/><rect x="9" y="15" width="46" height="34" rx="11" fill="var(--logo-accent, var(--accent, #9fe870))"/><path d="M27 24.5v15a1.2 1.2 0 0 0 1.8 1l12.4-7.5a1.2 1.2 0 0 0 0-2L28.8 23.5a1.2 1.2 0 0 0-1.8 1Z" fill="#0e0f0c"/></svg>';
   /** 수강생 화면 색상 적용 / 해제 (강사센터로 넘어가면 해제) */
   const THEME_VARS = ["--primary", "--primary-active", "--primary-pale", "--ink-deep", "--on-primary", "--accent", "--accent-active", "--theme-rgb", "--login-bg-a", "--login-bg-b", "--login-bg-c", "--login-sub"];
   let extraVars = [];

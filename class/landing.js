@@ -149,7 +149,7 @@
     const c = Object.assign({}, DB.content(id), co ? { weeks: DB.weeksOf(co) } : {}), t = DB.themeOf(c.brand.theme);
     document.title = c.brand.courseTitle + " · " + c.brand.name;
     const tv = t.vars || {};
-    const vars = "--lp-p:" + t.primary + ";--lp-pa:" + t.active + ";--lp-on:" + (t.onPrimary || t.deep) + ";--lp-pd:" + t.deep + ";--lp-pale:" + t.pale + ";--lp-rgb:" + t.rgb + ";--lp-ac:" + (t.accent || t.primary) + ";--lp-soft:" + (tv["--canvas-soft"] || "#e8ebe6") + ";--lp-ink:" + (tv["--ink"] || "#0e0f0c");
+    const vars = "--logo-accent:" + (t.accent || t.primary) + ";--lp-p:" + t.primary + ";--lp-pa:" + t.active + ";--lp-on:" + (t.onPrimary || t.deep) + ";--lp-pd:" + t.deep + ";--lp-pale:" + t.pale + ";--lp-rgb:" + t.rgb + ";--lp-ac:" + (t.accent || t.primary) + ";--lp-soft:" + (tv["--canvas-soft"] || "#e8ebe6") + ";--lp-ink:" + (tv["--ink"] || "#0e0f0c");
     const sections = L.order.filter((k) => !L.off[k] && S[k]).map((k) => S[k](L, c, ins, co)).join("");
     const navs = [["lp-about", "강사 소개", !L.off.about && (L.about.body || L.about.photo)], ["lp-curriculum", "커리큘럼", !L.off.curriculum], ["lp-reviews", "후기", !L.off.reviews && (L.reviews.items || []).some((x) => x.text)], ["lp-pricing", "수강 안내", !L.off.pricing], ["lp-faq", "FAQ", !L.off.faq]].filter((x) => x[2]);
     const href = applyHref(L.hero.ctaUrl, id);
@@ -169,7 +169,7 @@
     document.title = "강의 둘러보기 · 두고 클래스";
     root.innerHTML = '<div class="lp"><header class="lp-nav"><div class="lp-wrap lp-nav-in"><span class="lp-brand">' + window.logoMark() + '<b>DOOGO CLASS</b></span><div class="lp-nav-r"><a class="lp-btn lp-btn-text" href="#/login">수강생 로그인</a></div></div></header>' +
       '<main class="lp-sec"><div class="lp-wrap"><p class="lp-kicker">CLASSES</p><h2>강의 둘러보기</h2><div class="lp-index">' +
-      list.map((x) => { const c = DB.content(x.id), t = DB.themeOf(c.brand.theme), co = recruiting(x.id); return '<a class="lp-index-card" href="#/p/' + x.id + '" style="--lp-p:' + t.primary + ";--lp-on:" + (t.onPrimary || t.deep) + '"><span class="lp-index-top">' + window.logoMark() + "<b>" + esc(x.displayName) + "</b></span><h3>" + esc(c.brand.courseTitle) + "</h3><p>" + esc(c.brand.tagline || "") + "</p>" + (co ? cohortBadge(co) : "") + "</a>"; }).join("") +
+      list.map((x) => { const c = DB.content(x.id), t = DB.themeOf(c.brand.theme), co = recruiting(x.id); return '<a class="lp-index-card" href="#/p/' + x.id + '" style="--logo-accent:' + (t.accent || t.primary) + ";--lp-p:" + t.primary + ";--lp-on:" + (t.onPrimary || t.deep) + '"><span class="lp-index-top">' + window.logoMark() + "<b>" + esc(x.displayName) + "</b></span><h3>" + esc(c.brand.courseTitle) + "</h3><p>" + esc(c.brand.tagline || "") + "</p>" + (co ? cohortBadge(co) : "") + "</a>"; }).join("") +
       "</div></div></main></div>";
   }
 
