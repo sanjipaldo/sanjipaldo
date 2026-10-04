@@ -258,6 +258,8 @@
       }
       save();
     }
+    // 없어진 색(잠깐 적용됐던 클릭하우스 등)이 저장돼 있으면 라임으로 되돌린다
+    Object.keys(db.content).forEach((id) => { const b = db.content[id].brand; if (b.theme && !THEMES[b.theme]) { b.theme = "lime"; save(); } });
     // 자료실 영상에 본문·첨부파일 필드가 생기기 전 데이터면 기본값을 채운다
     let filled = false;
     Object.keys(db.content).forEach((id) => {
