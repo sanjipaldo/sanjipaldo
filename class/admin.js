@@ -71,9 +71,25 @@
 
   function studentProgressRows(iid, filter) {
     return DB.studentsOf(iid).filter(filter || (() => true)).map((s) => {
-      const p = DB.progress(s.id);
-      return { s, p, st: DB.stats(p, iid, DB.cohort(s.cohortId)) };
+      const p = DB.progress(s.id), co = DB.cohort(s.cohortId);
+      return { s, p, st: DB.stats(p, iid, co), lv: DB.level(p, iid, co) };
     });
+  }
+  // 수강생 성장 단계 (과제 성취 기준): 씨앗 → 풀잎 → 가지 → 나무 → 숲
+  const levelOfStudent = (s) => DB.level(DB.progress(s.id), s.instructorId, DB.cohort(s.cohortId));
+  const lvBadge = (lv) => '<span class="a-lv lv-' + lv.cur.key + '" title="' + esc(lv.cur.name + " · " + (lv.idx + 1) + "/" + lv.steps.length + "단계" + (lv.next ? " · 다음까지 " + lv.needText : "")) + '">' + icon(lv.cur.icon, "xs") + esc(lv.cur.name) + "<small>" + (lv.idx + 1) + "/" + lv.steps.length + "</small></span>";
+  // 단계별 인원과 이름 (대시보드 · 마스터)
+  function levelBoard(rows, compact) {
+    if (!rows.length) return emptyBox("users", "수강 중인 학생이 없어요.");
+    const keys = {}; rows.forEach((r) => r.lv.steps.forEach((st) => { keys[st.key] = true; }));
+    const steps = DB.LEVEL_SET.filter((st) => keys[st.key]);
+    const max = Math.max(1, ...steps.map((st) => rows.filter((r) => r.lv.cur.key === st.key).length));
+    return '<div class="a-lvboard">' + steps.slice().reverse().map((st) => {
+      const who = rows.filter((r) => r.lv.cur.key === st.key).sort((a, b) => b.st.pct - a.st.pct);
+      return '<div class="a-lvrow"><span class="a-lv lv-' + st.key + '">' + icon(st.icon, "xs") + esc(st.name) + "</span>" +
+        '<div class="a-lvbar"><span style="width:' + Math.round(who.length / max * 100) + '%"></span></div><b class="num">' + who.length + "명</b>" +
+        (compact || !who.length ? "" : '<div class="a-lvwho">' + (who.length ? who.map((r) => '<button type="button" class="a-chip" data-action="student-open" data-id="' + r.s.id + '">' + esc(r.s.name) + " <small>" + r.st.pct + "%</small></button>").join("") : '<span class="a-muted">-</span>') + "</div>") + "</div>";
+    }).join("") + "</div>";
   }
   function allSubmissions(iid, cohortId) {
     const c = DB.content(iid);
@@ -252,6 +268,7 @@
           (subs.length ? '<ul class="a-list">' + subs.map((x) => '<li class="clickable" data-action="review-open" data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"><div class="a-who"><span class="a-avatar">' + esc(x.s.name.slice(0, 1)) + "</span><div><b>" + esc(x.s.name) + " · " + esc(x.m.title) + "</b><small>" + x.w.no + "주차 · " + fmtStamp(x.sub.at) + "</small></div></div>" + reviewPill(x) + "</li>").join("") + "</ul>"
             : emptyBox("inbox", "아직 제출된 과제가 없어요.")) + "</section>" +
       "</div>" +
+      (co ? '<section class="a-card"><div class="a-card-head"><h2>' + esc(co.name) + ' 성장 단계 현황</h2><span class="a-muted">과제를 해낼수록 단계가 올라가요 · 필수 과제를 모두 통과하면 숲</span></div>' + levelBoard(rows) + "</section>" : "") +
       (co ? '<section class="a-card"><div class="a-card-head"><h2>' + esc(co.name) + " 수강생 진행 현황</h2><span class=\"a-muted\">" + rows.length + "명</span></div>" + progressTable(rows, { weeks: DB.weeksOf(co) }) + "</section>" : "");
   }
   const kpi = (label, value, sub, href, tone) => '<a class="a-kpi ' + (tone || "") + '" href="' + href + '"><span>' + esc(label) + "</span><b>" + esc(value) + "</b><small>" + esc(sub) + "</small></a>";
@@ -267,9 +284,9 @@
   }
   function progressTable(rows, c) {
     if (!rows.length) return emptyBox("users", "수강 중인 학생이 없어요.");
-    rows.sort((a, b) => b.st.pct - a.st.pct);
-    return '<div class="a-table-wrap"><table class="a-table a-prog-table"><thead><tr><th>이름</th>' + c.weeks.map((w) => "<th>" + w.no + "주차</th>").join("") + "<th>필수 통과</th><th>전체 진행률</th></tr></thead><tbody>" +
-      rows.map((r) => "<tr class=\"clickable\" data-action=\"student-open\" data-id=\"" + r.s.id + "\"><td><b>" + esc(r.s.name) + "</b></td>" +
+    rows.sort((a, b) => (b.lv ? b.lv.idx : 0) - (a.lv ? a.lv.idx : 0) || b.st.pct - a.st.pct);
+    return '<div class="a-table-wrap"><table class="a-table a-prog-table"><thead><tr><th>이름</th><th>성장 단계</th>' + c.weeks.map((w) => "<th>" + w.no + "주차</th>").join("") + "<th>필수 통과</th><th>전체 진행률</th></tr></thead><tbody>" +
+      rows.map((r) => "<tr class=\"clickable\" data-action=\"student-open\" data-id=\"" + r.s.id + "\"><td><b>" + esc(r.s.name) + "</b></td><td>" + lvBadge(r.lv || levelOfStudent(r.s)) + "</td>" +
         c.weeks.map((w) => { const d = w.missions.filter((m) => DB.subState(r.p, m.id) === "done").length; return '<td class="num' + (d === w.missions.length && d ? " full" : "") + '">' + d + "/" + w.missions.length + "</td>"; }).join("") +
         '<td class="num">' + r.st.reqDone + "/" + r.st.reqTotal + '</td><td><div class="a-bar"><span style="width:' + r.st.pct + '%"></span></div><small class="num">' + r.st.pct + "%</small></td></tr>").join("") +
       "</tbody></table></div>";
@@ -303,11 +320,12 @@
           '<div class="a-search">' + icon("search", "sm") + '<input class="a-input a-sm" id="stu-q" type="search" placeholder="이름 · 뒷자리 검색" value="' + esc(ui.stuQuery) + '"></div></div></div>' +
         (ui.stuStatus === "pending" && pendingVisible.length ? '<div class="a-bulk"><label class="a-check"><input type="checkbox" id="stu-all"' + (pendingVisible.every((s) => ui.picked.has(s.id)) ? " checked" : "") + '><span>모두 선택</span></label><span class="a-muted">' + ui.picked.size + "명 선택</span>" +
           btn("선택 거절", "bulk-reject", "a-btn-ghost a-btn-sm") + btn("선택 승인", "bulk-approve", "a-btn-primary a-btn-sm") + "</div>" : "") +
-        (list.length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr>' + (ui.stuStatus === "pending" ? '<th class="w-check"></th>' : "") + "<th>이름</th><th>뒷자리</th><th>기수</th><th>신청일</th><th>상태</th><th>진행률</th><th class=\"right\">관리</th></tr></thead><tbody>" +
+        (list.length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr>' + (ui.stuStatus === "pending" ? '<th class="w-check"></th>' : "") + "<th>이름</th><th>뒷자리</th><th>기수</th><th>신청일</th><th>상태</th><th>성장 단계</th><th>진행률</th><th class=\"right\">관리</th></tr></thead><tbody>" +
           list.map((s) => {
             const st = s.status === "approved" ? DB.stats(DB.progress(s.id), iid, DB.cohort(s.cohortId)) : null;
             return '<tr><td' + (ui.stuStatus === "pending" ? ' class="w-check"><input type="checkbox" class="stu-pick" data-id="' + s.id + '"' + (ui.picked.has(s.id) ? " checked" : "") + ' aria-label="' + esc(s.name) + ' 선택"></td><td' : "") + '><button class="a-name" data-action="student-open" data-id="' + s.id + '">' + esc(s.name) + "</button>" + (s.memo ? '<small class="a-memo">' + esc(s.memo) + "</small>" : "") + "</td>" +
               '<td class="num">' + esc(s.phone4) + "</td><td>" + esc(cohortName(s.cohortId)) + '</td><td class="num">' + (s.appliedAt ? fmtMD(s.appliedAt) : "-") + "</td><td>" + pill(STU[s.status].label, STU[s.status].cls) + "</td>" +
+              "<td>" + (st ? lvBadge(levelOfStudent(s)) : '<span class="a-muted">-</span>') + "</td>" +
               "<td>" + (st ? '<div class="a-bar"><span style="width:' + st.pct + '%"></span></div><small class="num">' + st.pct + "% · 필수 " + st.reqDone + "/" + st.reqTotal + "</small>" : '<span class="a-muted">-</span>') + "</td>" +
               '<td class="right"><div class="a-row-actions">' + stuActions(s) + "</div></td></tr>";
           }).join("") + "</tbody></table></div>"
@@ -335,7 +353,8 @@
     let extra = "";
     if (!isNew && s.status === "approved") {
       const p = DB.progress(s.id), co0 = DB.cohort(s.cohortId), st = DB.stats(p, iid, co0), c = { weeks: co0 ? DB.weeksOf(co0) : C().weeks };
-      extra = '<div class="a-detail-stats"><div><span>전체 진행률</span><b>' + st.pct + "%</b></div><div><span>필수 통과</span><b>" + st.reqDone + "/" + st.reqTotal + "</b></div><div><span>문의</span><b>" + p.questions.length + "건</b></div></div>" +
+      const lv0 = DB.level(p, iid, co0);
+      extra = '<div class="a-detail-stats"><div><span>성장 단계</span><b>' + lvBadge(lv0) + "</b>" + (lv0.next ? "<small>다음 ‘" + esc(lv0.next.name) + "’까지 " + esc(lv0.needText) + "</small>" : "") + '</div><div><span>전체 진행률</span><b>' + st.pct + "%</b></div><div><span>필수 통과</span><b>" + st.reqDone + "/" + st.reqTotal + "</b></div><div><span>문의</span><b>" + p.questions.length + "건</b></div></div>" +
         '<div class="a-weekbars">' + c.weeks.map((w) => { const d = w.missions.filter((m) => DB.subState(p, m.id) === "done").length; return '<div><span>' + w.no + '주차</span><div class="a-bar"><span style="width:' + (w.missions.length ? Math.round(d / w.missions.length * 100) : 0) + '%"></span></div><small class="num">' + d + "/" + w.missions.length + "</small></div>"; }).join("") + "</div>";
     }
     openModal(isNew ? "수강생 추가" : s.name + " 수강생",
@@ -1375,7 +1394,19 @@
         kpi("전체 수강생", st.filter((s) => s.status === "approved").length + "명", "수강 중 기준", "#/center/master/students") +
         kpi("진행 중 기수", running + "개", "모든 강사 합계", "#/center/master/instructors") +
         kpi("승인 대기", st.filter((s) => s.status === "pending").length + "명", "강사 승인 전", "#/center/master/students", "warn") +
-      "</div>" + insTable();
+      "</div>" + masterLevels() + insTable();
+  }
+  // 강사별 성장 단계 분포 (수강 중인 학생 기준)
+  function masterLevels() {
+    const list = DB.data.instructors.map((x) => ({ x, rows: studentProgressRows(x.id, (s) => s.status === "approved" && !!DB.cohort(s.cohortId)) })).filter((o) => o.rows.length);
+    if (!list.length) return "";
+    return '<section class="a-card"><div class="a-card-head"><h2>강사별 성장 단계 현황</h2><span class="a-muted">수강 중인 학생 기준 · 과제를 해낼수록 단계가 올라가요</span></div><div class="a-lvmaster">' +
+      list.map((o) => {
+        const avg = Math.round(o.rows.reduce((a, r) => a + r.st.pct, 0) / o.rows.length);
+        const top = o.rows.slice().sort((a, b) => b.lv.idx - a.lv.idx || b.st.pct - a.st.pct).slice(0, 3);
+        return '<div class="a-lvm"><div class="a-lvm-head"><b>' + esc(o.x.displayName) + '</b><span class="a-muted">' + o.rows.length + "명 · 평균 진행률 " + avg + "%</span></div>" + levelBoard(o.rows, true) +
+          '<p class="a-lvm-top">잘하고 있는 학생: ' + top.map((r) => esc(r.s.name) + " (" + esc(r.lv.cur.name) + " · " + r.st.pct + "%)").join(", ") + "</p></div>";
+      }).join("") + "</div></section>";
   }
   function insTable() {
     const list = DB.data.instructors;
@@ -1401,8 +1432,9 @@
         '<select class="a-input a-sm" id="m-ins" aria-label="강사"><option value="all">전체 강사</option>' + ins.map((x) => '<option value="' + x.id + '"' + (ui.mIns === x.id ? " selected" : "") + ">" + esc(x.displayName) + "</option>").join("") + "</select>" +
         '<select class="a-input a-sm" id="m-status" aria-label="상태"><option value="all">전체 상태</option>' + Object.keys(STU).map((k) => '<option value="' + k + '"' + (ui.mStatus === k ? " selected" : "") + ">" + STU[k].label + "</option>").join("") + "</select>" +
       '</div><span class="a-muted">' + list.length + "명</span></div>" +
-      (list.length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>이름</th><th>강사</th><th>기수</th><th>신청일</th><th>상태</th></tr></thead><tbody>' +
-        list.map((s) => { const x = DB.instructor(s.instructorId); return "<tr><td><b>" + esc(s.name) + '</b> <span class="a-muted num">' + esc(s.phone4) + "</span></td><td>" + esc(x ? x.displayName : "-") + "</td><td>" + esc(cohortName(s.cohortId)) + '</td><td class="num">' + (s.appliedAt ? fmtMD(s.appliedAt) : "-") + "</td><td>" + pill(STU[s.status].label, STU[s.status].cls) + "</td></tr>"; }).join("") +
+      (list.length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>이름</th><th>강사</th><th>기수</th><th>신청일</th><th>상태</th><th>성장 단계</th><th>진행률</th></tr></thead><tbody>' +
+        list.map((s) => { const x = DB.instructor(s.instructorId); return "<tr><td><b>" + esc(s.name) + '</b> <span class="a-muted num">' + esc(s.phone4) + "</span></td><td>" + esc(x ? x.displayName : "-") + "</td><td>" + esc(cohortName(s.cohortId)) + '</td><td class="num">' + (s.appliedAt ? fmtMD(s.appliedAt) : "-") + "</td><td>" + pill(STU[s.status].label, STU[s.status].cls) + "</td>" +
+          (s.status === "approved" && DB.cohort(s.cohortId) ? (() => { const lv = levelOfStudent(s); return "<td>" + lvBadge(lv) + '</td><td><div class="a-bar"><span style="width:' + lv.pct + '%"></span></div><small class="num">' + lv.pct + "% · 필수 " + lv.stats.reqDone + "/" + lv.stats.reqTotal + "</small></td>"; })() : '<td><span class="a-muted">-</span></td><td><span class="a-muted">-</span></td>') + "</tr>"; }).join("") +
         "</tbody></table></div>" : emptyBox("users", "조건에 맞는 수강생이 없어요.")) + "</section>";
   }
   function insForm(x) {

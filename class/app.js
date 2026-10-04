@@ -374,50 +374,72 @@
           }).join("") + "</ul></section>"
       : "";
     return '<div class="page">' +
-      '<header class="page-head greet"><span class="greet-icon lv-' + lv.cur.key + '" title="성장 레벨 · ' + esc(lv.cur.name) + '">' + icon(lv.cur.icon, "lg") + '</span><div><h1>' + esc(me.name) + "님, 다시 만나서 반갑습니다</h1><p>" + esc(quote || (CO.name + " · " + (wk ? wk + "주차 진행 중" : fmtMD(CO.startDate) + " 시작"))) + "</p></div></header>" +
-      levelCard(lv) +
-
+      '<header class="page-head greet"><span class="greet-icon lv-' + lv.cur.key + '" title="성장 단계 · ' + esc(lv.cur.name) + '">' + icon(lv.cur.icon, "lg") + '</span><div><h1>' + esc(me.name) + "님, 다시 만나서 반갑습니다</h1><p>" + esc(quote || (CO.name + " · " + (wk ? wk + "주차 진행 중" : fmtMD(CO.startDate) + " 시작"))) + "</p></div></header>" +
       (todayLive ? '<section class="card live-today">' + icon("video") + '<div><b>오늘 ' + (todayLive.time ? esc(todayLive.time) + " " : "") + esc(todayLive.title) + '</b><span class="tiny">시간이 되면 아래 버튼으로 바로 들어오세요.</span></div>' + liveBtn(todayLive) + "</section>" : "") +
-      guideCard +
-      (mv ? '<section class="card"><div class="home-video-head"><h2>' + icon("flame") + "오늘의 동기부여</h2>" +
+      (mv ? '<section class="card home-mv"><div class="home-video-head"><h2>' + icon("flame") + "오늘의 동기부여</h2>" +
         '<a class="link-btn" href="#/motivation">지난 영상 보기 ' + icon("arrowRight", "sm") + "</a></div>" + video(mv) +
         '<p class="tiny" style="margin:12px 0 0">' + esc(mv.title) + "</p></section>" : "") +
-
-      (on("missions") || on("schedule") ? '<div class="grid-3" style="margin-top:14px">' +
-        (on("missions") ? '<a class="card stat plain-link" href="#/missions"><span class="stat-label">전체 진행률</span><span class="stat-value">' + o.pct + "%</span>" + progressBar(o.pct, true) + "</a>" +
-        '<a class="card stat plain-link" href="' + (on("certificate") ? "#/certificate" : "#/missions") + '"><span class="stat-label">필수 과제 통과</span><span class="stat-value">' + o.reqDone + ' <small class="tiny">/ ' + o.reqTotal + '</small></span><span class="tiny">모두 통과하면 수료증 발급</span></a>' : "") +
-        (on("schedule") ? '<a class="card stat plain-link" href="#/schedule"><span class="stat-label">다음 일정</span><span class="stat-value">' + (nextLive ? (dday === 0 ? "오늘" : "D-" + dday) : "-") + '</span><span class="tiny">' + (nextLive ? esc(fmtMD(nextLive.date) + " " + DB.EVENT_TYPES[nextLive.type].label) : "예정된 일정 없음") + "</span></a>" : "") +
-      "</div>" : "") +
-
+      (on("missions") ? levelCard(lv) : "") +
+      weekFocusCard() +
+      (on("missions") || on("schedule") ? '<div class="home-duo">' + (on("missions") ? progressCard() : "") + (on("schedule") ? upcomingCard(upcoming, today) : "") + "</div>" : "") +
+      guideCard +
       (on("missions") ? '<div class="section-head"><h2>이어서 할 과제</h2><a class="link-btn" href="#/missions">전체 과제 ' + icon("arrowRight", "sm") + "</a></div>" +
       (nm
         ? '<a class="card next-card plain-link" href="#/missions/' + nm.weekNo + "/" + nm.id + '"><span class="wk-icon">' + icon("checks") + "</span>" +
             '<div style="flex:1;min-width:0"><div class="tiny">' + nm.weekNo + "주차 · " + kindOf(nm).short + " · 마감 " + fmtMD(DB.weekDeadline(CO, nm.weekNo)) + '</div><div class="m-title">' + esc(nm.title) + " " + stateBadge(nm.id) + '</div><div class="m-desc">' + esc(nm.desc) + "</div></div>" +
             '<span class="btn btn-primary btn-sm">열기 ' + icon("arrowRight", "sm") + "</span></a>"
         : '<div class="card callout-ok callout">' + icon("check") + "<div>" + (D.weeks.length && !isOpen(D.weeks[0]) ? fmtMD(CO.startDate) + "에 1주차가 열려요. 조금만 기다려 주세요!" : "열린 주차의 과제를 모두 마쳤어요! 다음 주차가 열리면 바로 시작해 보세요.") + "</div></div>") : "") +
-
-      (on("notices") || on("schedule") ? '<div class="grid-2" style="margin-top:14px">' +
-        (on("notices") ? '<section class="card"><div class="home-video-head"><h2>공지사항</h2><a class="link-btn" href="#/notices">더보기 ' + icon("arrowRight", "sm") + "</a></div>" +
+      (on("notices") ? '<section class="card" style="margin-top:14px"><div class="home-video-head"><h2>공지사항</h2><a class="link-btn" href="#/notices">더보기 ' + icon("arrowRight", "sm") + "</a></div>" +
           (notices.length ? notices.map((n) => '<a class="list-row" href="#/notices/' + n.id + '">' + (n.pinned ? '<span class="badge badge-ink">필독</span>' : "") + '<span class="lr-title">' + esc(n.title) + "</span>" + newBadge(n) + '<span class="lr-date">' + fmtMD(n.date) + "</span></a>").join("") : '<p class="muted" style="margin:0">아직 공지가 없어요.</p>') +
         "</section>" : "") +
-        (on("schedule") ? '<section class="card"><div class="home-video-head"><h2>다가오는 일정</h2><a class="link-btn" href="#/schedule">전체 일정 ' + icon("arrowRight", "sm") + "</a></div>" +
-          (upcoming.length ? upcoming.map((e) => {
-            const d = parseDate(e.date);
-            return '<div class="list-row"><span class="date-pill' + (e.date === today ? " today" : "") + '"><small>' + (d.getMonth() + 1) + "월</small><b>" + d.getDate() + '</b></span><span class="lr-title"><i class="ev-dot ' + e.type + '"></i> ' + esc(e.title) + '</span><span class="lr-date">' + DOW[d.getDay()] + (e.time ? " " + esc(e.time) : "") + "</span></div>";
-          }).join("") : '<p class="muted" style="margin:0">예정된 일정이 없습니다.</p>') +
-        "</section>" : "") +
-      "</div>" : "") +
     "</div>";
+  }
+  // 이번 주(열린 주차) 또는 다음 주(아직 안 열린 주차) 한 장: 과제 공개일은 주차 시작일에 맞춰 자동으로 열린다
+  function weekFocusCard() {
+    if (!D.weeks.length) return "";
+    const t = todayStr();
+    const cur = D.weeks.find((w) => isOpen(w) && t <= deadlineOf(w));
+    const next = D.weeks.find((w) => !isOpen(w));
+    const card = (w, kind) => {
+      const st = weekStats(w), open = kind === "now";
+      return '<section class="card wf-card' + (open ? " now" : "") + '"><div class="wf-top"><span class="wf-tag">' + (open ? "이번 주" : "다음 주") + "</span>" +
+          (open ? '<span class="wf-state">' + icon("clock", "xs") + "마감 " + fmtMD(deadlineOf(w)) + "</span>" : '<span class="wf-state">' + icon("lock", "xs") + "잠김</span>") + "</div>" +
+        "<h3>" + w.no + "주차 · " + esc(w.title) + "</h3>" +
+        '<p class="wf-date">강의일 · ' + fmtMD(DB.classDate(CO, w.no)) + (w.subtitle ? " · " + esc(w.subtitle) : "") + "</p>" +
+        (open ? '<div class="wf-prog">' + progressBar(st.pct, true) + '<span class="tiny">' + kindCount(st) + " · " + st.done + "/" + st.total + " 완료</span></div>"
+          : '<div class="wf-lock">' + fmtMD(openOf(w)) + "부터 과제 제출이 공개됩니다." + (daysUntil(openOf(w)) > 0 ? " <b>D-" + daysUntil(openOf(w)) + "</b>" : "") + "</div>") +
+        '<a class="btn ' + (open ? "btn-primary" : "btn-secondary") + ' wf-btn" href="' + (open && on("missions") ? "#/missions/" + w.no : "#/curriculum") + '">' + (open && on("missions") ? w.no + "주차 과제 하러 가기" : "커리큘럼 미리 보기") + " " + icon("arrowRight", "sm") + "</a></section>";
+    };
+    const out = (cur ? card(cur, "now") : "") + (next ? card(next, "next") : "");
+    return out ? '<div class="wf-wrap' + (cur && next ? " two" : "") + '">' + out + "</div>" : "";
+  }
+  // 과제 전체 진행률: 필수 · 도전 · 마인드를 누르면 그 종류만 모아 본다
+  function progressCard() {
+    const s = overallStats(), ic = { required: "target", challenge: "sparkles", mind: "heart" };
+    return '<section class="card prog-card"><div class="home-video-head"><h2>과제 전체 진행률</h2><span class="tiny">' + s.done + " / " + s.total + "</span></div>" +
+      '<p class="tiny" style="margin:-6px 0 10px">필수 · 도전 · 마인드를 눌러 바로 확인하세요</p>' +
+      DB.MISSION_KINDS.filter((k) => s.kinds[k.key].total).map((k) => {
+        const x = s.kinds[k.key], pct = Math.round(x.done / x.total * 100);
+        return '<a class="prog-row ' + k.key + '" href="#/missions?kind=' + k.key + '"><span class="prog-ic">' + icon(ic[k.key] || "checks", "sm") + '</span><span class="prog-name">' + k.label + "</span>" +
+          '<span class="prog-num"><b>' + x.done + "</b> / " + x.total + "</span>" + icon("chevRight", "sm") + progressBar(pct, true) + "</a>";
+      }).join("") +
+      (s.reqTotal ? '<p class="tiny prog-foot">' + (s.reqDone === s.reqTotal ? "필수 과제를 모두 통과했어요! 수료증을 받아 보세요." : "필수 과제 " + (s.reqTotal - s.reqDone) + "개를 더 통과하면 수료증이 나와요.") + "</p>" : "") + "</section>";
+  }
+  function upcomingCard(upcoming, today) {
+    return '<section class="card"><div class="home-video-head"><h2>' + icon("calendar") + '다가오는 일정</h2><a class="link-btn" href="#/schedule">전체 일정 ' + icon("arrowRight", "sm") + "</a></div>" +
+      (upcoming.length ? upcoming.map((e) => {
+        const d = parseDate(e.date);
+        return '<div class="list-row"><span class="date-pill' + (e.date === today ? " today" : "") + '"><small>' + (d.getMonth() + 1) + "월</small><b>" + d.getDate() + '</b></span><span class="lr-title"><i class="ev-dot ' + e.type + '"></i> ' + esc(e.title) + '</span><span class="lr-date">' + DOW[d.getDay()] + (e.time ? " " + esc(e.time) : "") + "</span></div>";
+      }).join("") : '<p class="muted" style="margin:0">예정된 일정이 없습니다.</p>') + "</section>";
   }
 
   /* ---------------- 성장 레벨 ---------------- */
-  // 주차가 지날 때마다 씨앗 → 풀잎 → 가지 → 나무 → 숲 (4주 강의는 나무 없이 숲)
-  const LV = () => DB.level(CO);
+  // 과제를 해낼수록 씨앗 → 풀잎 → 가지 → 나무 → 숲 (필수 과제를 모두 통과하면 숲 · 4주 강의는 나무 없이 숲)
+  const LV = () => DB.level(P, INS.id, CO);
   function levelCard(lv) {
-    const left = lv.nextDate ? daysUntil(lv.nextDate) : null;
     return '<section class="card lv-card" aria-label="성장 레벨"><div class="lv-head"><span class="tiny">' + esc(me.name) + '님의 성장 단계</span><b>' + esc(lv.cur.name) + ' <small>' + (lv.idx + 1) + " / " + lv.steps.length + "단계</small></b></div>" +
       '<ol class="lv-path">' + lv.steps.map((st, i) => '<li class="' + (i < lv.idx ? "past" : i === lv.idx ? "now" : "") + '"><span class="lv-ic lv-' + st.key + '">' + icon(st.icon, "sm") + "</span><small>" + esc(st.name) + "</small></li>").join("") + "</ol>" +
-      '<p class="lv-foot">' + (lv.next ? "다음 단계 ‘" + esc(lv.next.name) + "’까지 " + (left > 0 ? "D-" + left : "곧") + " · 주차가 지날 때마다 한 단계씩 자라요" : "마지막 단계까지 왔어요. 끝까지 함께해 주셔서 고마워요!") + "</p></section>";
+      '<p class="lv-foot">' + (lv.next ? "다음 단계 ‘" + esc(lv.next.name) + "’까지 <b>" + esc(lv.needText) + "</b> 남았어요 · 과제를 해낼수록 한 단계씩 자라요" : "필수 과제를 모두 통과해 ‘" + esc(lv.cur.name) + "’이 되었어요. 정말 멋져요!") + "</p></section>";
   }
   // 지난번 접속 때보다 레벨이 올랐으면 한 번 축하
   function checkLevelUp() {
@@ -496,12 +518,35 @@
     const [, weekNo, missionId] = r.parts;
     if (missionId) return pageMissionDetail(weekNo, missionId);
     if (weekNo) return pageWeek(weekNo);
+    const kind = DB.MISSION_KINDS.find((k) => k.key === r.params.get("kind"));
+    if (kind) return pageMissionKind(kind);
     const o = overallStats();
     return '<div class="page">' + pageHead("과제 제출하기", "주차별 과제를 선택해서 제출하고, 자동검수 결과를 확인하세요.") +
       '<section class="card overall"><div class="overall-top"><span>전체 진행률</span>' + pctText(o.pct) + "</div>" + progressBar(o.pct) +
         '<span class="tiny" style="color:var(--body)">전체 ' + o.total + "개 중 " + o.done + "개 완료</span></section>" +
       '<div class="section-head"><h2>주차 선택</h2><span class="hint">주차를 눌러 과제를 확인하세요</span></div>' +
       '<div class="grid-2">' + D.weeks.map(weekCard).join("") + "</div></div>";
+  }
+  // 종류별 모아 보기 (홈 ‘과제 전체 진행률’에서 들어옴)
+  function pageMissionKind(k) {
+    const st = overallStats().kinds[k.key];
+    const tabs = '<div class="utabs" role="tablist">' + DB.MISSION_KINDS.map((x) => '<a role="tab" href="#/missions?kind=' + x.key + '" class="' + (x === k ? "on" : "") + '" aria-selected="' + (x === k) + '">' + x.label + "</a>").join("") + "</div>";
+    const groups = D.weeks.map((w) => {
+      const list = w.missions.filter((m) => DB.missionKind(m) === k.key);
+      if (!list.length) return "";
+      if (!isOpen(w)) return '<div class="section-head"><h2>' + w.no + "주차 · " + esc(w.title) + '</h2><span class="hint">' + icon("lock", "xs") + " " + fmtMD(openOf(w)) + " 공개 · " + list.length + "개</span></div>";
+      return '<div class="section-head"><h2>' + w.no + "주차 · " + esc(w.title) + '</h2><span class="hint">마감 ' + fmtMD(deadlineOf(w)) + "</span></div>" + list.map((m) => missionRow(w, m)).join("");
+    }).join("");
+    return '<div class="page">' + pageHead(k.label, k.hint + " · " + st.done + " / " + st.total + " 완료", crumb([["과제 제출하기", "#/missions"], [k.label]])) + tabs +
+      '<section class="card overall" style="margin-top:14px"><div class="overall-top"><span>' + k.label + " 진행률</span>" + pctText(st.total ? Math.round(st.done / st.total * 100) : 0) + "</div>" + progressBar(st.total ? Math.round(st.done / st.total * 100) : 0) + "</section>" +
+      (groups || '<section class="card" style="margin-top:14px">' + empty("checks", "이 종류의 과제가 아직 없어요.") + "</section>") + "</div>";
+  }
+  function missionRow(w, m) {
+    const s = missionState(m.id);
+    const typeLabel = { image: "사진 인증", link: "링크 제출", text: "글 작성" }[m.type] || "";
+    return '<a class="mission" href="#/missions/' + w.no + "/" + m.id + '"><span class="m-check ' + (s === "done" ? "done" : s === "fix" ? "fix" : "") + '">' +
+      (s === "done" ? icon("check", "sm") : s === "fix" ? "!" : icon(m.type === "image" ? "image" : m.type === "link" ? "link" : "pen", "sm")) + "</span>" +
+      '<div style="min-width:0"><div class="m-title">' + esc(m.title) + " " + stateBadge(m.id) + '</div><div class="m-desc">' + typeLabel + " · " + esc(m.desc) + "</div></div>" + icon("chevRight") + "</a>";
   }
   function weekCard(w) {
     const st = weekStats(w), open = isOpen(w);

@@ -1060,3 +1060,37 @@ body.lib-gated #main > .page { filter: blur(6px); pointer-events: none; user-sel
 .mv-tile-label em { font-style: normal; padding: 1px 8px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-primary); font-size: 11px; }
 @media (max-width: 900px) { .vod-grid, .mv-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .vod-grid { grid-template-columns: 1fr; } .mv-tiles { gap: 10px; } .mv-tile-label { font-size: 13px; padding: 8px 10px; } }
+
+/* ===== v8: 홈 — 이번 주/다음 주 카드 · 과제 전체 진행률 ===== */
+.home-mv { margin-top: 0; }
+.wf-wrap { display: grid; gap: 14px; margin-top: 14px; }
+.wf-wrap.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.wf-card { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.card + .wf-wrap, .wf-wrap + .home-duo { margin-top: 14px; }
+.wf-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wf-tag { font-size: 12px; font-weight: 800; color: var(--mute); }
+.wf-card.now .wf-tag { padding: 2px 10px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-primary); }
+.wf-state { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: var(--r-pill); background: var(--canvas-softer); font-size: 12px; font-weight: 700; color: var(--body); }
+.wf-card h3 { margin: 4px 0 0; font-size: 21px; font-weight: 900; letter-spacing: -0.03em; line-height: 1.3; color: var(--ink); }
+.wf-date { margin: 0; font-size: 14px; color: var(--body); }
+.wf-lock { margin-top: 8px; padding: 14px 16px; border-radius: var(--r-md); background: var(--canvas-softer); font-size: 14px; font-weight: 700; color: var(--body); }
+.wf-lock b { margin-left: 6px; color: var(--ink); }
+.wf-prog { display: grid; gap: 6px; margin-top: 10px; }
+.wf-btn { margin-top: 12px; width: 100%; justify-content: center; min-height: 48px; }
+.home-duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; align-items: start; }
+.home-duo > .card { margin: 0; }
+.prog-row { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 4px 10px; padding: 12px 10px; margin: 0 -10px; border-radius: var(--r-md); text-decoration: none; color: inherit; }
+.prog-row:hover { background: var(--canvas-softer); }
+.prog-row .progress { grid-column: 1 / -1; }
+.prog-ic { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--canvas-softer); color: var(--ink); }
+.prog-row.required .prog-ic { background: var(--ink); color: var(--accent); }
+.prog-row.challenge .prog-ic { background: var(--primary-pale); }
+.prog-row.mind .prog-ic { background: #ffe9d6; color: #b45309; }
+.prog-name { font-size: 15px; font-weight: 800; color: var(--ink); }
+.prog-num { font-size: 14px; color: var(--mute); }
+.prog-num b { color: var(--ink); font-size: 16px; }
+.prog-row > .icon:last-of-type { color: var(--mute); }
+.prog-foot { margin: 10px 0 0; }
+.lv-foot b { color: var(--ink); }
+@media (max-width: 900px) { .wf-wrap.two, .home-duo { grid-template-columns: minmax(0, 1fr); } }
+.home-duo > *, .wf-wrap > * { min-width: 0; }

@@ -570,17 +570,20 @@
   ];
   // 단계 수 = 주차 수 (최대 5). 마지막은 늘 ‘숲’ — 4주 강의면 나무를 건너뛰고 씨앗·풀잎·가지·숲
   const levelSteps = (weeks) => { const n = Math.max(1, Math.min(5, weeks || 5)); return LEVEL_SET.slice(0, n - 1).concat([LEVEL_SET[4]]); };
-  function levelIndex(wk, weeks, steps) {
-    if (weeks <= 5) return Math.max(0, Math.min(steps.length - 1, wk - 1));
-    return wk >= weeks ? steps.length - 1 : Math.min(steps.length - 2, Math.floor((wk - 1) * (steps.length - 1) / (weeks - 1)));
-  }
-  /** 기수 진행에 따른 수강생 레벨: 시작 전·1주차 씨앗 … 마지막 주차부터 숲 */
-  function level(co) {
-    const weeks = cohortWeeks(co), steps = levelSteps(weeks);
-    const wk = Math.max(1, currentWeek(co)), idx = levelIndex(wk, weeks, steps);
-    let nextDate = null;
-    for (let w = wk + 1; w <= weeks; w++) if (levelIndex(w, weeks, steps) > idx) { nextDate = weekOpen(co, w); break; }
-    return { steps, idx, cur: steps[idx], next: steps[idx + 1] || null, nextDate, weeks };
+  /** 과제 성취에 따른 수강생 레벨. 전체 과제 완료율로 한 단계씩 오르고, 필수 과제를 모두 통과(수료 조건)하면 마지막 ‘숲’
+   *  5단계: 씨앗 0% · 풀잎 25% · 가지 50% · 나무 75% · 숲 = 필수 전부 통과 */
+  function level(p, instId, co) {
+    const weeks = co ? cohortWeeks(co) : 5, steps = levelSteps(weeks), n = steps.length;
+    const s = stats(p, instId, co);
+    const reqAll = s.reqTotal > 0 && s.reqDone === s.reqTotal;
+    const ratio = s.total ? s.done / s.total : 0;
+    const idx = n === 1 || reqAll ? n - 1 : Math.min(n - 2, Math.floor(ratio * (n - 1) + 1e-9));
+    let need = 0, needText = "";
+    if (idx < n - 1) {
+      if (idx + 1 === n - 1) { need = s.reqTotal - s.reqDone; needText = "필수 과제 " + need + "개"; }
+      else { need = Math.max(1, Math.ceil((idx + 1) / (n - 1) * s.total - 1e-9) - s.done); needText = "과제 " + need + "개"; }
+    }
+    return { steps, idx, cur: steps[idx], next: steps[idx + 1] || null, need, needText, pct: s.pct, stats: s, weeks };
   }
   /** 강사센터 기본 기수: 진행 중 → 가장 가까운 모집 중 → 가장 최근 */
   function currentCohort(instId) {
@@ -650,7 +653,9 @@
     const req = all.filter((m) => m.required);
     const done = all.filter((m) => subState(p, m.id) === "done").length;
     const reqDone = req.filter((m) => subState(p, m.id) === "done").length;
-    return { total: all.length, done, reqTotal: req.length, reqDone, pct: all.length ? Math.round((done / all.length) * 100) : 0 };
+    const kinds = {};
+    MISSION_KINDS.forEach((k) => { const l = all.filter((m) => missionKind(m) === k.key); kinds[k.key] = { total: l.length, done: l.filter((m) => subState(p, m.id) === "done").length }; });
+    return { total: all.length, done, reqTotal: req.length, reqDone, kinds, pct: all.length ? Math.round((done / all.length) * 100) : 0 };
   }
 
   /* ---------------- 요청사항 (오류·불편 신고) ---------------- */
