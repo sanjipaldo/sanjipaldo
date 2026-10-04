@@ -579,3 +579,11 @@ body[data-master="1"] .a-count { background: #6a3df0; }
   .a-lp-sec > summary .a-pill { display: none; }
   .a-lp-body { padding: 14px; }
 }
+
+/* 커리큘럼 고르기 */
+.a-cur-bar { display: grid; gap: 10px; border: 1px solid var(--m-primary); background: var(--m-primary-soft); }
+.a-cur-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.a-cur-top select { flex: 1; min-width: 220px; max-width: 520px; background: #fff; }
+.a-cur-info { margin: 0; font-size: 13px; color: var(--m-charcoal); line-height: 1.6; }
+.a-cur-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; background: var(--m-surface, #f1f4f7); font-size: 12px; font-weight: 700; color: var(--m-charcoal); }
+@media (max-width: 720px) { .a-cur-top select { min-width: 0; width: 100%; max-width: none; } .a-cur-top .a-label { width: 100%; } }

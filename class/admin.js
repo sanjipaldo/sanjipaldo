@@ -40,6 +40,10 @@
   const IID = () => (S.role === "instructor" ? S.instructorId : S.actingAs);
   const INS = () => DB.instructor(IID());
   const C = () => DB.content(IID());
+  // 커리큘럼 편집 화면에서 지금 고른 커리큘럼 (기본: 기본 커리큘럼)
+  const CUR = () => { const cu = DB.curriculum(IID(), ui.curId); ui.curId = cu ? cu.id : "main"; return cu; };
+  const usedBy = (curId) => DB.cohortsOf(IID()).filter((co) => (co.curriculumId || "main") === curId);
+  const classText = (co) => (co.classDow !== undefined && co.classDow !== null && co.classDow !== "" ? "매주 " + DOW[Number(co.classDow)] + "요일" : "주차 시작일") + (co.classTime ? " " + co.classTime : "");
   const pill = (label, cls) => '<span class="a-pill ' + cls + '">' + esc(label) + "</span>";
   const btn = (label, action, cls, attrs) => '<button type="button" class="a-btn ' + (cls || "a-btn-ghost") + '" data-action="' + action + '"' + (attrs || "") + ">" + label + "</button>";
   const head = (title, sub, right) => '<header class="a-head"><div><h1>' + esc(title) + "</h1>" + (sub ? "<p>" + sub + "</p>" : "") + "</div>" + (right ? '<div class="a-head-actions">' + right + "</div>" : "") + "</header>";
@@ -68,15 +72,15 @@
   function studentProgressRows(iid, filter) {
     return DB.studentsOf(iid).filter(filter || (() => true)).map((s) => {
       const p = DB.progress(s.id);
-      return { s, p, st: DB.stats(p, iid) };
+      return { s, p, st: DB.stats(p, iid, DB.cohort(s.cohortId)) };
     });
   }
   function allSubmissions(iid, cohortId) {
     const c = DB.content(iid);
     const out = [];
     DB.studentsOf(iid).filter((s) => s.status === "approved" && (!cohortId || cohortId === "all" || s.cohortId === cohortId)).forEach((s) => {
-      const p = DB.progress(s.id);
-      c.weeks.forEach((w) => w.missions.forEach((m) => {
+      const p = DB.progress(s.id), co = DB.cohort(s.cohortId);
+      (co ? DB.weeksOf(co) : c.weeks).forEach((w) => w.missions.forEach((m) => {
         const list = p.submissions[m.id];
         if (!list || !list.length) return;
         const sub = list[list.length - 1];
@@ -247,12 +251,12 @@
           (subs.length ? '<ul class="a-list">' + subs.map((x) => '<li class="clickable" data-action="review-open" data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"><div class="a-who"><span class="a-avatar">' + esc(x.s.name.slice(0, 1)) + "</span><div><b>" + esc(x.s.name) + " · " + esc(x.m.title) + "</b><small>" + x.w.no + "주차 · " + fmtStamp(x.sub.at) + "</small></div></div>" + reviewPill(x) + "</li>").join("") + "</ul>"
             : emptyBox("inbox", "아직 제출된 과제가 없어요.")) + "</section>" +
       "</div>" +
-      (co ? '<section class="a-card"><div class="a-card-head"><h2>' + esc(co.name) + " 수강생 진행 현황</h2><span class=\"a-muted\">" + rows.length + "명</span></div>" + progressTable(rows, c) + "</section>" : "");
+      (co ? '<section class="a-card"><div class="a-card-head"><h2>' + esc(co.name) + " 수강생 진행 현황</h2><span class=\"a-muted\">" + rows.length + "명</span></div>" + progressTable(rows, { weeks: DB.weeksOf(co) }) + "</section>" : "");
   }
   const kpi = (label, value, sub, href, tone) => '<a class="a-kpi ' + (tone || "") + '" href="' + href + '"><span>' + esc(label) + "</span><b>" + esc(value) + "</b><small>" + esc(sub) + "</small></a>";
   const cohortName = (id) => { const c = DB.cohort(id); return c ? c.name : "기수 없음"; };
   function weekStrip(co) {
-    const c = DB.content(co.instructorId);
+    const c = { weeks: DB.weeksOf(co) };
     const t = todayStr();
     return '<div class="a-weeks">' + c.weeks.map((w) => {
       const open = DB.weekOpen(co, w.no), dl = DB.weekDeadline(co, w.no);
@@ -300,7 +304,7 @@
           btn("선택 거절", "bulk-reject", "a-btn-ghost a-btn-sm") + btn("선택 승인", "bulk-approve", "a-btn-primary a-btn-sm") + "</div>" : "") +
         (list.length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr>' + (ui.stuStatus === "pending" ? '<th class="w-check"></th>' : "") + "<th>이름</th><th>뒷자리</th><th>기수</th><th>신청일</th><th>상태</th><th>진행률</th><th class=\"right\">관리</th></tr></thead><tbody>" +
           list.map((s) => {
-            const st = s.status === "approved" ? DB.stats(DB.progress(s.id), iid) : null;
+            const st = s.status === "approved" ? DB.stats(DB.progress(s.id), iid, DB.cohort(s.cohortId)) : null;
             return '<tr><td' + (ui.stuStatus === "pending" ? ' class="w-check"><input type="checkbox" class="stu-pick" data-id="' + s.id + '"' + (ui.picked.has(s.id) ? " checked" : "") + ' aria-label="' + esc(s.name) + ' 선택"></td><td' : "") + '><button class="a-name" data-action="student-open" data-id="' + s.id + '">' + esc(s.name) + "</button>" + (s.memo ? '<small class="a-memo">' + esc(s.memo) + "</small>" : "") + "</td>" +
               '<td class="num">' + esc(s.phone4) + "</td><td>" + esc(cohortName(s.cohortId)) + '</td><td class="num">' + (s.appliedAt ? fmtMD(s.appliedAt) : "-") + "</td><td>" + pill(STU[s.status].label, STU[s.status].cls) + "</td>" +
               "<td>" + (st ? '<div class="a-bar"><span style="width:' + st.pct + '%"></span></div><small class="num">' + st.pct + "% · 필수 " + st.reqDone + "/" + st.reqTotal + "</small>" : '<span class="a-muted">-</span>') + "</td>" +
@@ -329,7 +333,7 @@
     s = s || { name: "", phone4: "", cohortId: (DB.currentCohort(iid) || {}).id, status: "approved", memo: "" };
     let extra = "";
     if (!isNew && s.status === "approved") {
-      const p = DB.progress(s.id), st = DB.stats(p, iid), c = C();
+      const p = DB.progress(s.id), co0 = DB.cohort(s.cohortId), st = DB.stats(p, iid, co0), c = { weeks: co0 ? DB.weeksOf(co0) : C().weeks };
       extra = '<div class="a-detail-stats"><div><span>전체 진행률</span><b>' + st.pct + "%</b></div><div><span>필수 통과</span><b>" + st.reqDone + "/" + st.reqTotal + "</b></div><div><span>문의</span><b>" + p.questions.length + "건</b></div></div>" +
         '<div class="a-weekbars">' + c.weeks.map((w) => { const d = w.missions.filter((m) => DB.subState(p, m.id) === "done").length; return '<div><span>' + w.no + '주차</span><div class="a-bar"><span style="width:' + (w.missions.length ? Math.round(d / w.missions.length * 100) : 0) + '%"></span></div><small class="num">' + d + "/" + w.missions.length + "</small></div>"; }).join("") + "</div>";
     }
@@ -371,6 +375,7 @@
         const ap = ss.filter((s) => s.status === "approved").length, pe = ss.filter((s) => s.status === "pending").length;
         return '<section class="a-card a-cohort"><div class="a-card-head"><h2>' + esc(co.name) + "</h2>" + pill(DB.STATUS_LABEL[st], COHORT_CLS[st]) + (co.recruiting && st !== "ended" ? pill("신청 받는 중", "info") : "") +
           '<span class="a-muted">' + fmtFull(co.startDate) + " ~ " + fmtFull(DB.cohortEnd(co)) + (st === "running" ? " · " + DB.currentWeek(co) + "주차" : "") + "</span>" +
+          '<span class="a-cur-chip">' + icon("book", "xs") + esc(DB.curriculumOf(co).name) + " · " + DB.cohortWeeks(co) + "주</span>" + '<span class="a-cur-chip">' + icon("calendar", "xs") + esc(classText(co)) + "</span>" +
           '<div class="a-row-actions">' + btn(icon("eye", "sm") + "미리보기", "preview", "a-btn-ghost a-btn-sm", ' data-cohort="' + co.id + '"') + btn("수정", "cohort-edit", "a-btn-ghost a-btn-sm", ' data-id="' + co.id + '"') + "</div></div>" +
           '<div class="a-cohort-stats"><a href="#/center/students?cohort=' + co.id + '&status=approved"><b class="num">' + ap + "</b><span>수강 중</span></a><a href=\"#/center/students?cohort=" + co.id + '&status=pending"><b class="num">' + pe + "</b><span>승인 대기</span></a><div><b class=\"num\">" + ss.length + "</b><span>전체 신청</span></div></div>" +
           weekStrip(co) + "</section>";
@@ -380,22 +385,66 @@
     const iid = IID();
     const isNew = !co;
     const last = DB.cohortsOf(iid).slice(-1)[0];
-    co = co || { name: DB.nextCohortName(iid), startDate: last ? addDays(DB.cohortEnd(last), 1 + ((4 - parseDate(addDays(DB.cohortEnd(last), 1)).getDay() + 7) % 7)) : todayStr(), recruiting: true };
+    co = co || { name: DB.nextCohortName(iid), classDow: last ? last.classDow : undefined, classTime: last ? last.classTime : undefined, startDate: last ? addDays(DB.cohortEnd(last), 1 + ((4 - parseDate(addDays(DB.cohortEnd(last), 1)).getDay() + 7) % 7)) : todayStr(), recruiting: true };
     const n = (DB.studentsOf(iid).filter((s) => s.cohortId === co.id)).length;
     openModal(isNew ? "새 기수 만들기" : co.name + " 수정",
       '<form id="cohort-form" class="a-form" data-id="' + (isNew ? "" : co.id) + '" novalidate>' +
         '<div class="a-form-row"><div class="a-field"><label for="cf-name">기수 이름</label><input class="a-input" id="cf-name" name="name" value="' + esc(co.name) + '"></div>' +
         '<div class="a-field"><label for="cf-start">1주차 시작일</label><input class="a-input" id="cf-start" name="startDate" type="date" value="' + esc(co.startDate) + '"></div></div>' +
+        '<div class="a-field"><label for="cf-cur">커리큘럼</label><select class="a-input" id="cf-cur" name="curriculumId">' + DB.curricula(iid).map((x) => '<option value="' + x.id + '"' + (x.id === (co.curriculumId || (isNew && last ? last.curriculumId || "main" : "main")) ? " selected" : "") + ">" + esc(x.name) + " · " + x.weeks.length + "주</option>").join("") + "</select>" +
+          '<small class="a-muted">커리큘럼은 ‘커리큘럼’ 메뉴에서 새로 만들 수 있어요. 진행 중인 기수의 커리큘럼을 바꾸면, 새 커리큘럼에 없는 과제 기록은 진행률에서 빠져요.</small></div>' +
+        '<div class="a-form-row"><div class="a-field"><label for="cf-dow">주차 강의 요일</label><select class="a-input" id="cf-dow" name="classDow"><option value="">주차 시작일에 맞춤</option>' + DOW.map((d, i) => '<option value="' + i + '"' + (String(co.classDow) === String(i) ? " selected" : "") + ">매주 " + d + "요일</option>").join("") + "</select></div>" +
+          '<div class="a-field"><label for="cf-time">강의 시간</label><input class="a-input" id="cf-time" name="classTime" type="time" value="' + esc(co.classTime || C().brand.liveTime || "") + '"></div></div>' +
+        '<div class="a-field"><label for="cf-url">강의 입장 링크 <small>(줌 등, 비우면 기본 정보의 링크)</small></label><input class="a-input" id="cf-url" name="classUrl" type="url" value="' + esc(co.classUrl || "") + '" placeholder="https://zoom.us/j/…"></div>' +
         '<label class="a-check"><input type="checkbox" name="recruiting"' + (co.recruiting ? " checked" : "") + "><span>수강생 로그인 화면에서 이 기수로 수강 신청 받기</span></label>" +
-        '<div class="a-field"><span class="a-label">주차 일정 미리보기</span><div id="cf-preview" class="a-preview-weeks">' + weekPreview(co.startDate) + "</div></div>" +
+        '<div class="a-field"><span class="a-label">주차 일정 미리보기</span><div id="cf-preview" class="a-preview-weeks">' + weekPreview(co.startDate, co.curriculumId || (isNew && last ? last.curriculumId : ""), co.classDow, co.classTime || C().brand.liveTime) + "</div></div>" +
         '<p class="a-error" id="cf-error"></p>' +
       "</form>",
       (isNew ? "" : btn("기수 삭제", "cohort-delete", "a-btn-ghost danger", ' data-id="' + co.id + '"' + (n ? ' disabled title="수강생이 있는 기수는 삭제할 수 없어요"' : ""))) + '<span class="a-spacer"></span>' + btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="cohort-form">' + (isNew ? "만들기" : "저장") + "</button>", "md");
   }
-  function weekPreview(start) {
+  function weekPreview(start, curId, dow, time) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(start || "")) return '<span class="a-muted">날짜를 고르면 주차 일정이 보여요.</span>';
-    const fake = { startDate: start, instructorId: IID() };
-    return C().weeks.map((w) => "<span><b>" + w.no + "주차</b> " + fmtMD(DB.weekOpen(fake, w.no)) + " 공개 · " + fmtMD(DB.weekDeadline(fake, w.no)) + " 마감</span>").join("");
+    const fake = { id: "_preview", startDate: start, instructorId: IID(), curriculumId: curId, classDow: dow, classTime: time };
+    const lect = DB.events(IID(), fake).filter((e) => e.type === "open");
+    return DB.weeksOf(fake).map((w, i) => "<span><b>" + w.no + "주차</b> " + (lect[i] ? "강의 " + fmtMD(lect[i].date) + (lect[i].time ? " " + esc(lect[i].time) : "") + " · " : "") + fmtMD(DB.weekDeadline(fake, w.no)) + " 과제 마감</span>").join("") +
+      '<span class="a-muted">총 ' + DB.weeksOf(fake).length + "주 · " + fmtMD(start) + " ~ " + fmtMD(DB.cohortEnd(fake)) + "</span>";
+  }
+  function refreshWeekPreview() {
+    const f = document.getElementById("cohort-form"), p = document.getElementById("cf-preview");
+    if (f && p) p.innerHTML = weekPreview(f.startDate.value, f.curriculumId.value, f.classDow.value, f.classTime.value);
+  }
+  function curForm(mode) {
+    const cur = CUR();
+    if (mode === "rename") {
+      openModal("커리큘럼 이름 바꾸기", '<form id="cur-form" class="a-form" data-mode="rename" novalidate><div class="a-field"><label for="cu-name">이름</label><input class="a-input" id="cu-name" name="name" value="' + esc(cur.name) + '"></div><p class="a-error" id="cu-error"></p></form>',
+        btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="cur-form">저장</button>', "md");
+      return;
+    }
+    openModal("새 커리큘럼 만들기",
+      '<form id="cur-form" class="a-form" data-mode="new" novalidate><p class="a-muted" style="margin:0">기수마다 다른 커리큘럼으로 수업할 때 써요. 만든 뒤 ‘기수 관리’에서 기수에 연결하면 그 기수 수강생에게 이 커리큘럼이 보여요.</p>' +
+        '<div class="a-field"><label for="cu-name">이름</label><input class="a-input" id="cu-name" name="name" placeholder="예: 4주 압축 과정 · 3기부터"></div>' +
+        '<div class="a-field"><span class="a-label">시작 방법</span><div class="a-radio-cards">' +
+          '<label><input type="radio" name="base" value="copy" checked><span><b>‘' + esc(cur.name) + '’ 복사해서 고치기 (추천)</b><small>' + cur.weeks.length + "주 · 강의 · 과제를 그대로 복사해요. 필요 없는 주차는 지우고, 바꿀 부분만 고치면 돼요.</small></span></label>" +
+          '<label><input type="radio" name="base" value="blank"><span><b>빈 커리큘럼</b><small>주차 틀만 만들어요. 강의와 과제는 직접 채워요.</small></span></label></div></div>' +
+        '<div class="a-field" data-show-blank hidden><label for="cu-weeks">주차 수</label><input class="a-input" id="cu-weeks" name="weeks" type="number" min="1" max="12" value="4"></div>' +
+        '<p class="a-error" id="cu-error"></p></form>',
+      btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="cur-form">만들기</button>', "md");
+  }
+  function saveCur(f) {
+    const c = C(), name = f.name.value.trim(), err = document.getElementById("cu-error");
+    if (!name) { err.textContent = "이름을 입력해 주세요."; return; }
+    if (f.dataset.mode === "rename") {
+      const cur = CUR();
+      if (cur.main) c.curriculumName = name; else c.curricula.find((x) => x.id === cur.id).name = name;
+      commit("이름을 바꿨어요."); return;
+    }
+    const blank = (f.querySelector("input[name=base]:checked") || {}).value === "blank";
+    const n = Math.max(1, Math.min(12, Number(f.weeks.value) || 4));
+    const weeks = blank ? Array.from({ length: n }, (_, i) => ({ no: i + 1, title: (i + 1) + "주차 주제를 적어 주세요", summary: "", lessons: [], missions: [] })) : DB.clone(CUR().weeks);
+    const id = DB.uid("cur");
+    c.curricula.push({ id, name, weeks });
+    ui.curId = id;
+    commit("‘" + name + "’ 커리큘럼을 만들었어요. 이제 바꿀 부분을 고쳐 주세요.");
   }
   function saveCohort(f) {
     const name = f.name.value.trim(), start = f.startDate.value;
@@ -403,8 +452,10 @@
     if (!name) { err.textContent = "기수 이름을 입력해 주세요."; return; }
     if (!start) { err.textContent = "1주차 시작일을 골라 주세요."; return; }
     const id = f.dataset.id;
-    if (id) Object.assign(DB.cohort(id), { name, startDate: start, recruiting: f.recruiting.checked });
-    else DB.data.cohorts.push({ id: DB.uid("c"), instructorId: IID(), name, startDate: start, recruiting: f.recruiting.checked });
+    const extra = { curriculumId: f.curriculumId.value === "main" ? undefined : f.curriculumId.value, classDow: f.classDow.value === "" ? undefined : Number(f.classDow.value), classTime: f.classTime.value || undefined, classUrl: f.classUrl.value.trim() || undefined };
+    if (extra.classUrl && !/^https?:\/\//i.test(extra.classUrl)) { err.textContent = "입장 링크는 http:// 또는 https:// 로 시작해야 해요."; return; }
+    if (id) Object.assign(DB.cohort(id), { name, startDate: start, recruiting: f.recruiting.checked }, extra);
+    else DB.data.cohorts.push(Object.assign({ id: DB.uid("c"), instructorId: IID(), name, startDate: start, recruiting: f.recruiting.checked }, extra));
     commit(id ? name + " 일정을 저장했어요." : name + "를 만들었어요.");
   }
 
@@ -422,7 +473,7 @@
     return head("과제 검수", "수강생 제출물은 자동검수 결과가 먼저 반영되고, 강사님이 승인하거나 보완을 요청하면 그 결과가 최종이 돼요.") +
       '<section class="a-card"><div class="a-toolbar"><div class="a-tabs">' + tabs + "</div>" +
         '<div class="a-filters"><select class="a-input a-sm" id="rev-cohort" aria-label="기수"><option value="all">전체 기수</option>' + cos.map((co) => '<option value="' + co.id + '"' + (ui.revCohort === co.id ? " selected" : "") + ">" + esc(co.name) + "</option>").join("") + "</select>" +
-        '<select class="a-input a-sm" id="rev-week" aria-label="주차"><option value="all">전체 주차</option>' + c.weeks.map((w) => '<option value="' + w.no + '"' + (ui.revWeek === String(w.no) ? " selected" : "") + ">" + w.no + "주차</option>").join("") + "</select></div></div>" +
+        '<select class="a-input a-sm" id="rev-week" aria-label="주차"><option value="all">전체 주차</option>' + Array.from({ length: Math.max(0, ...DB.curricula(iid).map((x) => x.weeks.length)) }, (_, i) => i + 1).map((no) => '<option value="' + no + '"' + (ui.revWeek === String(no) ? " selected" : "") + ">" + no + "주차</option>").join("") + "</select></div></div>" +
         (shown.length ? bulkBar(shown) + '<div class="a-table-wrap"><table class="a-table a-rev-table"><thead><tr><th class="w-check"><input type="checkbox" id="rev-all" aria-label="모두 선택"' + (shown.every((x) => ui.revPicked.has(x.s.id + "|" + x.m.id)) ? " checked" : "") + '></th><th>제출 시각</th><th>수강생</th><th>과제</th><th>제출</th><th>상태</th><th class="right"></th></tr></thead><tbody>' +
           shown.map((x) => { const key = x.s.id + "|" + x.m.id; return '<tr class="clickable" data-action="review-open" data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"><td class="w-check"><input type="checkbox" class="rev-pick" data-key="' + key + '"' + (ui.revPicked.has(key) ? " checked" : "") + ' aria-label="' + esc(x.s.name + " " + x.m.title) + ' 선택"></td><td class="num">' + fmtStamp(x.sub.at) + "</td><td><b>" + esc(x.s.name) + "</b><small class=\"a-memo\">" + esc(cohortName(x.s.cohortId)) + "</small></td><td>" + x.w.no + "주차 · " + esc(x.m.title) + (x.m.required ? "" : ' <small class="a-muted">선택</small>') + '</td><td class="num">' + x.count + "회</td><td>" + reviewPill(x) + '</td><td class="right">' + btn("열기", "review-open", "a-btn-ghost a-btn-sm", ' data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"') + "</td></tr>"; }).join("") +
           "</tbody></table></div>" : emptyBox("inbox", ui.revFilter === "pending" ? "검수할 제출물이 없어요." : "해당하는 제출물이 없어요.")) +
@@ -449,8 +500,9 @@
     toast(n + "개를 " + (status === "approved" ? "승인했어요." : "보완 요청했어요."));
   }
   function reviewModal(sid, mid) {
-    const s = DB.student(sid), p = DB.progress(sid), c = C();
+    const s = DB.student(sid), p = DB.progress(sid), sco = DB.cohort(s.cohortId), c = { weeks: sco ? DB.weeksOf(sco) : C().weeks };
     const w = c.weeks.find((x) => x.missions.some((m) => m.id === mid));
+    if (!w) return;
     const m = w.missions.find((x) => x.id === mid);
     const subs = p.submissions[mid] || [];
     const sub = subs[subs.length - 1];
@@ -494,8 +546,8 @@
   const TAGS = (v) => String(v || "").split(",").map((x) => x.trim()).filter(Boolean);
   const F = (key, label, type, opts) => Object.assign({ key, label, type: type || "text" }, opts || {});
   const COLL = {
-    week: { name: "주차", list: (c) => c.weeks, fields: [F("title", "주차 제목"), F("summary", "한 줄 소개", "textarea", { rows: 2 })],
-      init: () => ({ lessons: [], missions: [] }), after: (c) => c.weeks.forEach((w, i) => { w.no = i + 1; }) },
+    week: { name: "주차", list: () => CUR().weeks, fields: [F("title", "주차 제목"), F("summary", "한 줄 소개", "textarea", { rows: 2 })],
+      init: () => ({ lessons: [], missions: [] }), after: () => CUR().weeks.forEach((w, i) => { w.no = i + 1; }) },
     lesson: { name: "강의", list: (c, ctx) => weekOf(c, ctx).lessons, fields: [F("title", "강의 제목"), F("youtubeId", "유튜브 주소", "youtube"), F("minutes", "길이(분)", "number"), F("desc", "강의 설명", "textarea", { rows: 3 }), F("attachments", "강의 자료 (교재·PDF·엑셀 등, 영상 아래에 보여요)", "attachments")], idp: "l", init: () => ({ attachments: [] }) },
     mission: { name: "과제", list: (c, ctx) => weekOf(c, ctx).missions, idp: "m",
       init: () => ({ required: true, type: "image", steps: [], check: { image: true } }),
@@ -541,7 +593,7 @@
     fields: [F("title", "영상 제목 (팝업 제목)"), F("meta", "형식 (예: 기초 · 15분)"), F("desc", "한 줄 설명 (목록에 보여요)"), F("youtubeId", "유튜브 주소", "youtube"),
       F("body", "본문 (팝업에 보이는 설명)", "textarea", { rows: 7 }), F("attachments", "첨부 자료 (교습지·엑셀·PDF 등)", "attachments")] }; });
   const faqCats = () => C().faqs.map((f) => f.category || "기타").filter((c, i, a) => a.indexOf(c) === i);
-  function weekOf(c, ctx) { return c.weeks.find((w) => String(w.no) === String(ctx)); }
+  function weekOf(c, ctx) { return CUR().weeks.find((w) => String(w.no) === String(ctx)); }
 
   function fieldHtml(f, item) {
     const id = "cf-" + f.key;
@@ -704,10 +756,18 @@
     commit("기본 정보를 저장했어요.");
     if (ins) { /* 수강생 로그인 선택지 이름은 마스터가 관리 */ }
   }
+  function curBar() {
+    const iid = IID(), cur = CUR(), list = DB.curricula(iid), used = usedBy(cur.id);
+    return '<section class="a-card a-cur-bar"><div class="a-cur-top"><label class="a-label" for="cur-pick">편집할 커리큘럼</label>' +
+        '<select class="a-input" id="cur-pick">' + list.map((x) => '<option value="' + x.id + '"' + (x.id === cur.id ? " selected" : "") + ">" + esc(x.name) + " · " + x.weeks.length + "주" + (usedBy(x.id).length ? " · " + usedBy(x.id).map((co) => co.name).join(", ") : " · 쓰는 기수 없음") + "</option>").join("") + "</select>" +
+        '<div class="a-row-actions">' + btn(icon("plus", "sm") + "새 커리큘럼", "cur-new", "a-btn-primary a-btn-sm") + btn(icon("pen", "sm") + "이름", "cur-rename", "a-btn-ghost a-btn-sm") + (cur.main ? "" : btn(icon("trash", "sm") + "삭제", "cur-delete", "a-btn-ghost a-btn-sm danger")) + "</div></div>" +
+        '<p class="a-cur-info">' + icon("layers", "xs") + " <b>" + esc(cur.name) + "</b> · " + cur.weeks.length + "주 · 강의 " + cur.weeks.reduce((a, w) => a + w.lessons.length, 0) + "개 · 과제 " + cur.weeks.reduce((a, w) => a + w.missions.length, 0) + "개 · " +
+          (used.length ? "쓰는 기수: " + used.map((co) => esc(co.name) + " (" + esc(classText(co)) + ")").join(", ") : "아직 이 커리큘럼을 쓰는 기수가 없어요. ‘기수 관리’에서 기수마다 커리큘럼을 고를 수 있어요.") + "</p></section>";
+  }
   function pageCurriculum() {
-    const c = C();
-    const co = DB.currentCohort(IID());
-    return head("커리큘럼", "주차와 강의 영상을 올려요. 공개일은 기수 시작일에 맞춰 자동으로 정해져요" + (co ? " (" + esc(co.name) + " 기준 날짜 표시)" : "") + ".", addBtn("week", "주차 추가")) +
+    const c = { weeks: CUR().weeks };
+    const co = usedBy(CUR().id).find((x) => DB.cohortStatus(x) !== "ended") || usedBy(CUR().id).slice(-1)[0];
+    return head("커리큘럼", "커리큘럼을 여러 개 만들어 두고 기수마다 골라 쓸 수 있어요 (예: 1·2기 5주 과정, 3기부터 4주 과정). 주차를 더하거나 지우면 그 커리큘럼을 쓰는 기수의 기간·일정이 자동으로 바뀌어요" + (co ? " (" + esc(co.name) + " 기준 날짜 표시)" : "") + ".", addBtn("week", "주차 추가")) + curBar() +
       (c.weeks.length ? '<div class="a-stack">' + c.weeks.map((w, wi) =>
         '<section class="a-card"><div class="a-card-head"><span class="a-weekno">' + w.no + "주차</span><div class=\"a-grow\"><h2>" + esc(w.title) + '</h2><p class="a-muted">' + esc(w.summary || "") + (co ? " · " + fmtMD(DB.weekOpen(co, w.no)) + " 공개" : "") + "</p></div>" + rowTools("week", String(w.no), "", wi, c.weeks.length) + "</div>" +
           (w.lessons.length ? '<ul class="a-items">' + w.lessons.map((l, i) => '<li><div class="a-item-main"><b>' + esc(l.title) + "</b><small>" + (l.minutes ? l.minutes + "분 · " : "") + esc(l.desc || "") + "</small></div>" + ytBadge(l) + rowTools("lesson", l.id, w.no, i, w.lessons.length) + "</li>").join("") + "</ul>" : '<p class="a-muted a-pad">아직 강의가 없어요.</p>') +
@@ -715,11 +775,11 @@
         : '<section class="a-card">' + emptyBox("book", "주차를 추가해서 커리큘럼을 만들어 주세요.", addBtn("week", "주차 추가")) + "</section>");
   }
   function pageMissions() {
-    const c = C();
+    const c = { weeks: CUR().weeks };
     const total = c.weeks.reduce((a, w) => a + w.missions.length, 0);
     const req = c.weeks.reduce((a, w) => a + w.missions.filter((m) => m.required).length, 0);
     const typeL = { image: "사진", link: "링크", text: "글" };
-    return head("과제", "주차별 과제와 자동검수 기준을 정해요. 필수 과제 " + req + "개를 모두 통과하면 수료증이 발급돼요. (전체 " + total + "개)") +
+    return head("과제", "주차별 과제와 자동검수 기준을 정해요. 필수 과제 " + req + "개를 모두 통과하면 수료증이 발급돼요. (전체 " + total + "개)") + curBar() +
       (c.weeks.length ? '<div class="a-stack">' + c.weeks.map((w) =>
         '<section class="a-card"><div class="a-card-head"><span class="a-weekno">' + w.no + '주차</span><h2 class="a-grow">' + esc(w.title) + "</h2>" + addBtn("mission", "과제 추가", w.no, "a-btn-ghost a-btn-sm") + "</div>" +
           (w.missions.length ? '<ul class="a-items">' + w.missions.map((m, i) => '<li><div class="a-item-main"><b>' + esc(m.title) + "</b><small>" + esc(m.desc || "") + "</small></div>" + (m.required ? pill("필수", "dark") : pill("선택", "mute")) + pill(typeL[m.type] || m.type, "mute") + rowTools("mission", m.id, w.no, i, w.missions.length) + "</li>").join("") + "</ul>" : '<p class="a-muted a-pad">아직 과제가 없어요.</p>') +
@@ -1369,6 +1429,14 @@
       }
       case "lp-revert": ui.lp = null; render(); toast("저장된 내용으로 되돌렸어요."); break;
       case "lp-copy": { const el = document.getElementById("lp-url"); const done = () => toast("주소를 복사했어요."); if (navigator.clipboard) navigator.clipboard.writeText(el.value).then(done, () => { el.select(); toast("주소를 선택했어요. 길게 눌러 복사해 주세요."); }); else { el.select(); toast("주소를 선택했어요."); } break; }
+      case "cur-new": curForm("new"); break;
+      case "cur-rename": curForm("rename"); break;
+      case "cur-delete": {
+        const cur = CUR(), used = usedBy(cur.id);
+        if (used.length) { toast(used.map((x) => x.name).join(", ") + "가 쓰고 있어서 지울 수 없어요. 기수 관리에서 다른 커리큘럼으로 바꿔 주세요.", "warn"); break; }
+        confirmModal("커리큘럼 삭제", "‘" + esc(cur.name) + "’을(를) 삭제할까요?<br>이 커리큘럼의 주차·강의·과제가 모두 지워져요.", "삭제", true, () => { const c = C(); c.curricula = c.curricula.filter((x) => x.id !== cur.id); ui.curId = "main"; commit("커리큘럼을 삭제했어요."); });
+        break;
+      }
       case "item-add": editItem(d.coll, "", d.ctx); break;
       case "item-edit": editItem(d.coll, d.id, d.ctx); break;
       case "item-delete": deleteItem(d.coll, d.id, d.ctx); break;
@@ -1404,7 +1472,7 @@
       commit(items.length + "개 질문을 등록했어요.");
       return;
     }
-    const forms = { "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage };
+    const forms = { "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage };
     if (forms[f.id]) { e.preventDefault(); forms[f.id](f); return; }
     if (f.classList.contains("a-q-form")) {
       e.preventDefault();
@@ -1424,6 +1492,9 @@
     else if (t.id === "rev-cohort") { ui.revCohort = t.value; ui.revPicked.clear(); render(); }
     else if (t.id === "rev-week") { ui.revWeek = t.value; ui.revPicked.clear(); render(); }
     else if (t.id === "sched-cohort") { ui.schedCohort = t.value; render(); }
+    else if (t.id === "cur-pick") { ui.curId = t.value; render(); }
+    else if (t.id === "cf-cur" || t.id === "cf-dow") refreshWeekPreview();
+    else if (t.name === "base" && t.closest("#cur-form")) { const b = document.querySelector("[data-show-blank]"); if (b) b.hidden = t.value !== "blank"; }
     else if (t.id === "m-ins") { ui.mIns = t.value; render(); }
     else if (t.id === "m-menu-ins") { ui.mMenuIns = t.value; if (location.hash.indexOf("?") > -1) location.hash = "#/center/master/menus"; else render(); }
     else if (t.id === "m-rep-ins") { ui.mRepIns = t.value; render(); }
@@ -1470,7 +1541,7 @@
     if (t.dataset && t.dataset.lp) { lpSet(lpDraft(), t.dataset.lp, t.value); lpChanged(); return; }
     if (t.dataset && t.dataset.lpLines) { lpSet(lpDraft(), t.dataset.lpLines, LINES(t.value)); lpChanged(); return; }
     if (t.id === "fb-text") { const n = parseFaqText(t.value).length; const el = document.getElementById("fb-count"); if (el) el.textContent = n + "개 인식됨"; }
-    if (t.id === "cf-start") { const p = document.getElementById("cf-preview"); if (p) p.innerHTML = weekPreview(t.value); }
+    if (t.id === "cf-start" || t.id === "cf-time") refreshWeekPreview();
     if (t.id === "al-pw" && loginTab === "instructor") t.value = t.value.replace(/\D/g, "").slice(0, 4);
     if (t.id === "sf-phone" || t.id === "if-phone") t.value = t.value.replace(/\D/g, "").slice(0, 4);
     if (t.id === "al-id" || t.id === "al-pw") { const er = document.getElementById("al-error"); if (er) er.textContent = ""; }

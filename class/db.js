@@ -172,6 +172,7 @@
     ["ebook", "file", "vod", "senior"].forEach((k) => (c.resources[k] || []).forEach((it) => { it.youtubeId = ""; it.attachments = []; if (!it.tool) it.url = ""; }));
     c.notices.forEach((n) => { n.date = todayStr(); });
     c.pages = {};
+    c.curricula = []; delete c.curriculumName;
     delete c.landing;
     return normalizeContent(c);
   }
@@ -226,6 +227,8 @@
   function normalizeContent(c) {
     c.weeks = c.weeks || [];
     c.weeks.forEach((w, i) => { w.no = i + 1; w.lessons = w.lessons || []; w.missions = w.missions || []; });
+    c.curricula = Array.isArray(c.curricula) ? c.curricula : [];
+    c.curricula.forEach((cu) => { cu.weeks = cu.weeks || []; cu.weeks.forEach((w, i) => { w.no = i + 1; w.lessons = w.lessons || []; w.missions = w.missions || []; }); });
     ["schedule", "notices", "faqs", "docsGuide", "motivation", "quotes", "guide"].forEach((k) => { c[k] = c[k] || []; });
     c.resources = Object.assign({ ebook: [], file: [], vod: [], senior: [] }, c.resources || {});
     c.pages = c.pages || {};
@@ -335,6 +338,17 @@
       Object.keys(db.content).forEach((id) => { const c = db.content[id], sc = window.CLASS_SEED.content[id]; if (!c.guide.length) c.guide = clone(sc && sc.guide ? sc.guide : template({}).guide); if (c.brand.liveUrl === undefined) c.brand.liveUrl = ""; });
       db.flags.guideSeeded = true; save();
     }
+    // 기수별 커리큘럼·강의 요일 예시 (한 번만): 문대표 4기 = 4주 압축 과정 · 매주 토 12:00
+    if (!db.flags.curriculaSeeded) {
+      const mc = db.content.moon, sm = window.CLASS_SEED.content.moon;
+      if (mc && !(mc.curricula || []).length && sm && sm.curricula) { mc.curricula = clone(sm.curricula); if (!mc.curriculumName) mc.curriculumName = sm.curriculumName; }
+      window.CLASS_SEED.cohorts.forEach((sc) => {
+        const co = db.cohorts.find((x) => x.id === sc.id);
+        if (!co) return;
+        ["classDow", "classTime", "curriculumId"].forEach((k) => { if (co[k] === undefined && sc[k] !== undefined) co[k] = sc[k]; });
+      });
+      db.flags.curriculaSeeded = true; save();
+    }
     // 홍보 랜딩페이지 기본 문구 (한 번만)
     if (!db.flags.landingSeeded) {
       Object.keys(db.content).forEach((id) => { const sc = window.CLASS_SEED.content[id]; if (!db.content[id].landing && sc && sc.landing) db.content[id].landing = clone(sc.landing); });
@@ -385,10 +399,21 @@
   const student = (id) => db.students.find((x) => x.id === id) || null;
 
   /* ---------------- 기수 · 일정 계산 ---------------- */
+  /* ---------------- 커리큘럼 (강사마다 여러 개, 기수마다 하나를 골라 쓴다) ---------------- */
+  // 기본 커리큘럼은 content.weeks, 추가로 만든 커리큘럼은 content.curricula = [{ id, name, weeks }]
+  function curricula(instId) {
+    const c = content(instId);
+    if (!c) return [];
+    return [{ id: "main", name: c.curriculumName || "기본 커리큘럼", weeks: c.weeks, main: true }].concat(c.curricula || []);
+  }
+  const curriculum = (instId, curId) => { const list = curricula(instId); return list.find((x) => x.id === (curId || "main")) || list[0] || null; };
+  const curriculumOf = (co) => curriculum(co.instructorId, co.curriculumId);
+  const weeksOf = (co) => { const cu = co && curriculumOf(co); return cu ? cu.weeks : []; };
   const weekCount = (instId) => { const c = content(instId); return c ? c.weeks.length : 0; };
+  const cohortWeeks = (co) => weeksOf(co).length;
   const weekOpen = (co, no) => addDays(co.startDate, (no - 1) * 7);
   const weekDeadline = (co, no) => addDays(co.startDate, (no - 1) * 7 + 6);
-  const cohortEnd = (co) => addDays(co.startDate, Math.max(1, weekCount(co.instructorId)) * 7 - 1);
+  const cohortEnd = (co) => addDays(co.startDate, Math.max(1, cohortWeeks(co)) * 7 - 1);
   function cohortStatus(co) {
     const t = todayStr();
     if (t < co.startDate) return "upcoming";
@@ -399,7 +424,7 @@
   function currentWeek(co) {
     const d = diffDays(todayStr(), co.startDate);
     if (d < 0) return 0;
-    return Math.min(weekCount(co.instructorId), Math.floor(d / 7) + 1);
+    return Math.min(cohortWeeks(co), Math.floor(d / 7) + 1);
   }
   /* ---------------- 성장 레벨 (주차가 지날 때마다 한 단계씩) ---------------- */
   const LEVEL_SET = [
@@ -414,7 +439,7 @@
   }
   /** 기수 진행에 따른 수강생 레벨: 시작 전·1주차 씨앗 … 마지막 주차부터 숲 */
   function level(co) {
-    const weeks = weekCount(co.instructorId), steps = levelSteps(weeks);
+    const weeks = cohortWeeks(co), steps = levelSteps(weeks);
     const wk = Math.max(1, currentWeek(co)), idx = levelIndex(wk, weeks, steps);
     let nextDate = null;
     for (let w = wk + 1; w <= weeks; w++) if (levelIndex(w, weeks, steps) > idx) { nextDate = weekOpen(co, w); break; }
@@ -443,15 +468,20 @@
     const c = content(instId);
     if (!c || !co) return [];
     const out = [];
-    const time = c.brand.liveTime || "";
-    c.weeks.forEach((w) => {
-      out.push({ date: weekOpen(co, w.no), time, type: "open", week: w.no, title: w.no + "주차 강의 — " + w.title + (time ? " (" + time + ")" : ""), url: c.brand.liveUrl || "", auto: true });
+    // 주차 강의 날짜: 기수에 ‘매주 무슨 요일’을 정했으면 그 주의 그 요일, 아니면 주차 시작일
+    const time = co.classTime || c.brand.liveTime || "";
+    const url = co.classUrl || c.brand.liveUrl || "";
+    const hasDow = co.classDow !== undefined && co.classDow !== null && co.classDow !== "";
+    weeksOf(co).forEach((w) => {
+      const open = weekOpen(co, w.no);
+      const date = hasDow ? addDays(open, ((Number(co.classDow) - parseDate(open).getDay()) + 7) % 7) : open;
+      out.push({ date, time, type: "open", week: w.no, title: w.no + "주차 강의 — " + w.title + (time ? " (" + time + ")" : ""), url, auto: true });
       out.push({ date: weekDeadline(co, w.no), time: "", type: "deadline", week: w.no, title: w.no + "주차 과제 마감", auto: true });
     });
     c.schedule.forEach((e) => {
       let date = null;
       if (e.scope === "cohort") { if (e.cohortId === co.id) date = e.date; }
-      else {
+      else if ((Number(e.week) || 1) <= cohortWeeks(co)) {
         const open = weekOpen(co, Number(e.week) || 1);
         const d = parseDate(open).getDay();
         date = addDays(open, ((Number(e.dow) - d) + 7) % 7);
@@ -477,9 +507,11 @@
     if (s.review) return s.review.status === "approved" ? "done" : "fix";
     return s.result.pass ? "done" : "fix";
   }
-  function stats(p, instId) {
+  /** 진행률 — co(기수)를 주면 그 기수의 커리큘럼 기준 */
+  function stats(p, instId, co) {
     const c = content(instId);
-    const all = c ? c.weeks.flatMap((w) => w.missions) : [];
+    const weeks = co ? weeksOf(co) : c ? c.weeks : [];
+    const all = weeks.flatMap((w) => w.missions);
     const req = all.filter((m) => m.required);
     const done = all.filter((m) => subState(p, m.id) === "done").length;
     const reqDone = req.filter((m) => subState(p, m.id) === "done").length;
@@ -513,6 +545,7 @@
     load, save, reset, store, clone, uid, esc, youtubeId, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
+    curricula, curriculum, curriculumOf, weeksOf, cohortWeeks,
     weekOpen, weekDeadline, cohortEnd, cohortStatus, STATUS_LABEL, currentWeek, LEVEL_SET, levelSteps, level, currentCohort, nextCohortName,
     EVENT_TYPES, events, ruleText,
     REQUEST_CATEGORIES, maskName, requests,

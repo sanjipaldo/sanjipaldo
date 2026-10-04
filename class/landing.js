@@ -144,8 +144,9 @@
       root.innerHTML = '<main class="lp lp-empty"><div>' + window.logoMark() + "<h1>준비 중인 페이지예요</h1><p>곧 강의 소개가 올라와요.</p><a class=\"lp-btn lp-btn-ghost\" href=\"#/p\">다른 강의 보기</a></div></main>";
       return;
     }
-    const c = DB.content(id), t = DB.themeOf(c.brand.theme);
     const co = recruiting(id);
+    // 커리큘럼·숫자는 모집 중인 기수가 쓰는 커리큘럼 기준
+    const c = Object.assign({}, DB.content(id), co ? { weeks: DB.weeksOf(co) } : {}), t = DB.themeOf(c.brand.theme);
     document.title = c.brand.courseTitle + " · " + c.brand.name;
     const vars = "--lp-p:" + t.primary + ";--lp-pa:" + t.active + ";--lp-on:" + (t.onPrimary || t.deep) + ";--lp-pd:" + t.deep + ";--lp-pale:" + t.pale + ";--lp-rgb:" + t.rgb + ";--lp-ac:" + (t.accent || t.primary);
     const sections = L.order.filter((k) => !L.off[k] && S[k]).map((k) => S[k](L, c, ins, co)).join("");

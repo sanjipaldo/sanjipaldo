@@ -394,6 +394,15 @@ const MOON_CONTENT = {
  *  cohorts     : 기수. 1주차 시작일(startDate)만 정하면 주차 공개일·과제 마감일이 계산된다
  *  students    : 수강생. status = pending(승인 대기) | approved(수강 중) | rejected(거절) | withdrawn(탈퇴)
  */
+// 예시: 4기부터 쓰는 ‘4주 압축 과정’ — 1~3주차는 그대로, 4·5주차를 한 주로 합친다 (과제 id는 같게 유지)
+MOON_CONTENT.curriculumName = "5주 기본 과정";
+MOON_CONTENT.curricula = [(function () {
+  const w = JSON.parse(JSON.stringify(MOON_CONTENT.weeks));
+  const w4 = w[3], w5 = w[4];
+  const merged = { no: 4, title: "광고 · 첫 주문 · 운영", summary: "광고로 첫 주문을 만들고, CS와 재구매 관리까지 한 주에 끝내요.", lessons: w4.lessons.concat(w5.lessons), missions: w4.missions.concat(w5.missions) };
+  return { id: "cur-4w", name: "4주 압축 과정", weeks: w.slice(0, 3).concat([merged]) };
+})()];
+
 window.CLASS_SEED = {
   version: 3,
   instructors: [
@@ -408,10 +417,10 @@ window.CLASS_SEED = {
   ],
   content: { moon: MOON_CONTENT },
   cohorts: [
-    { id: "c1", instructorId: "moon", name: "1기", startDate: "2026-08-06", recruiting: false },
-    { id: "c2", instructorId: "moon", name: "2기", startDate: "2026-09-03", recruiting: false },
-    { id: "c3", instructorId: "moon", name: "3기", startDate: "2026-10-01", recruiting: false },
-    { id: "c4", instructorId: "moon", name: "4기", startDate: "2026-11-05", recruiting: true },
+    { id: "c1", instructorId: "moon", name: "1기", startDate: "2026-08-06", recruiting: false, classDow: 4, classTime: "20:00" },
+    { id: "c2", instructorId: "moon", name: "2기", startDate: "2026-09-03", recruiting: false, classDow: 4, classTime: "20:00" },
+    { id: "c3", instructorId: "moon", name: "3기", startDate: "2026-10-01", recruiting: false, classDow: 4, classTime: "20:00" },
+    { id: "c4", instructorId: "moon", name: "4기", startDate: "2026-11-05", recruiting: true, curriculumId: "cur-4w", classDow: 6, classTime: "12:00" },
     { id: "lc1", instructorId: "logic", name: "1기", startDate: "2026-10-08", recruiting: true },
     { id: "fc1", instructorId: "farmer", name: "1기", startDate: "2026-10-01", recruiting: true },
     { id: "cc1", instructorId: "choi", name: "1기", startDate: "2026-10-15", recruiting: true }

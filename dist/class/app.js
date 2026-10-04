@@ -51,7 +51,7 @@
     const done = w.missions.filter((m) => isDone(m.id)).length;
     return { req, opt: w.missions.length - req, done, total: w.missions.length, pct: w.missions.length ? Math.round((done / w.missions.length) * 100) : 0 };
   }
-  const overallStats = () => DB.stats(P, INS.id);
+  const overallStats = () => DB.stats(P, INS.id, CO);
   const nextMission = (w) => w.missions.find((m) => m.required && !isDone(m.id)) || w.missions.find((m) => !isDone(m.id));
   function nextMissionOverall() {
     for (const w of D.weeks) {
@@ -265,6 +265,8 @@
     toast(s.name + "님, 환영합니다!");
   }
 
+  // 강의 내용 중 커리큘럼(주차·강의·과제)만 내 기수가 고른 커리큘럼으로 바꿔 끼운다
+  const cohortContent = (insId, co) => Object.assign({}, DB.content(insId), { weeks: DB.weeksOf(co) });
   function startSession() {
     me = null; preview = false;
     const sess = DB.session.student();
@@ -273,15 +275,16 @@
       const ins = DB.instructor(sess.instructorId);
       const co = DB.cohort(sess.cohortId) || (ins && DB.currentCohort(ins.id));
       if (!ins || !co) return;
-      INS = ins; D = DB.content(ins.id); CO = co; preview = true;
+      INS = ins; CO = co; D = cohortContent(ins.id, co); preview = true;
       me = { id: "preview-" + ins.id, name: ins.displayName, instructorId: ins.id, cohortId: co.id };
     } else {
       const s = DB.student(sess.id);
       if (!s || s.status !== "approved") { DB.session.setStudent(null); return; }
       const ins = DB.instructor(s.instructorId);
       if (!ins || ins.status !== "active") return;
-      INS = ins; D = DB.content(ins.id); CO = DB.cohort(s.cohortId); me = s;
+      CO = DB.cohort(s.cohortId);
       if (!CO) { me = null; return; }
+      INS = ins; D = cohortContent(ins.id, CO); me = s;
     }
     P = DB.progress(me.id);
     checkLevelUp();
