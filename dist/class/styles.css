@@ -1094,3 +1094,62 @@ body.lib-gated #main > .page { filter: blur(6px); pointer-events: none; user-sel
 .lv-foot b { color: var(--ink); }
 @media (max-width: 900px) { .wf-wrap.two, .home-duo { grid-template-columns: minmax(0, 1fr); } }
 .home-duo > *, .wf-wrap > * { min-width: 0; }
+
+/* ===== v9: 시작 가이드 · 자주 찾는 페이지 · 주차 과제 카드 ===== */
+.guide-tip { margin: 10px 0 0; }
+.ev-acts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.ql-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.ql-card { position: relative; display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 20px; text-decoration: none; color: inherit; transition: transform .15s, box-shadow .15s; }
+.card + .ql-card { margin-top: 0; }
+.ql-card:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -18px rgba(14, 15, 12, .35); }
+.ql-ic { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: var(--primary-pale); color: var(--ink); margin-bottom: 8px; }
+.ql-ext { position: absolute; top: 18px; right: 18px; color: var(--mute); }
+.ql-card b { font-size: 17px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
+.ql-card span:not(.ql-ic):not(.ql-ext) { font-size: 13px; color: var(--body); line-height: 1.5; }
+.help-banner { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 18px 20px; text-decoration: none; color: inherit; border: 1.5px solid var(--primary); }
+.help-banner > span:nth-child(2) { flex: 1; display: grid; gap: 2px; }
+.help-banner b { font-size: 15px; color: var(--ink); }
+.hb-ic { flex: none; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; background: var(--accent); color: var(--on-primary); }
+.tpl-box { margin-top: 14px; }
+.tpl-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-md); background: var(--canvas-softer); text-decoration: none; color: inherit; }
+.tpl-row + .tpl-row { margin-top: 8px; }
+.tpl-row:hover { background: var(--primary-pale); }
+.tpl-ic { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: var(--accent); }
+.tpl-txt { display: grid; min-width: 0; }
+.tpl-txt b { font-size: 14px; color: var(--ink); }
+.tpl-txt small { font-size: 12px; color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ffilters { margin-top: 18px; }
+.ff-label { margin: 12px 0 8px; font-size: 13px; font-weight: 800; color: var(--body); }
+.fchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.fchip { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--canvas); font: inherit; font-size: 14px; font-weight: 700; color: var(--ink); cursor: pointer; }
+.fchip:hover { border-color: var(--ink); }
+.fchip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.fnum { min-width: 22px; padding: 1px 7px; border-radius: var(--r-pill); background: var(--canvas-softer); color: var(--body); font-size: 12px; text-align: center; }
+.fchip.on .fnum { background: rgba(255, 255, 255, .18); color: #fff; }
+.mcard { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; padding: 20px 22px; border-radius: var(--r-xl); background: var(--canvas); }
+.mcard + .mcard { margin-top: 10px; }
+.mcard-ic { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--canvas-softer); color: var(--ink); }
+.mcard.st-done .mcard-ic { background: var(--primary-pale); }
+.mcard-main { min-width: 0; padding-right: 90px; }
+.mcard-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; }
+.kbadge { padding: 2px 9px; border-radius: var(--r-pill); font-weight: 800; background: var(--canvas-softer); color: var(--ink); }
+.kbadge.required { background: var(--negative-pale); color: var(--negative-deep); }
+.kbadge.challenge { background: var(--primary-pale); color: var(--ink-deep); }
+.kbadge.mind { background: #ffe9d6; color: #b45309; }
+.mcard-d { display: inline-flex; align-items: center; gap: 3px; color: var(--body); font-weight: 700; }
+.mcard-due { font-weight: 700; color: var(--negative); }
+.mcard-due.late { text-decoration: underline; }
+.mcard h3 { margin: 6px 0 0; font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+.mcard h3 a { color: var(--ink); text-decoration: none; }
+.mcard h3 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.mcard-desc { margin: 6px 0 0; font-size: 14px; line-height: 1.6; color: var(--body); }
+.mcard-type { margin: 6px 0 0; font-size: 12px; color: var(--mute); }
+.mcard-tpl { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tpl-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: var(--r-pill); background: var(--primary-pale); color: var(--ink); font-size: 12px; font-weight: 800; text-decoration: none; }
+.tpl-btn:hover { background: var(--accent); }
+.mcard-state { position: absolute; top: 18px; right: 20px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: var(--r-pill); background: var(--canvas-softer); font-size: 12px; font-weight: 800; color: var(--body); }
+.mcard-state.done { background: var(--positive); color: #fff; }
+.mcard-state.fix { background: var(--warning-bg); color: var(--warning-deep); }
+.mcard-go { grid-column: 2; justify-self: end; margin-top: 10px; }
+@media (max-width: 900px) { .ql-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .mcard { padding: 18px; } .mcard-main { padding-right: 0; } .mcard-state { position: static; grid-column: 2; justify-self: start; margin-top: 8px; } .mcard-go { width: 100%; justify-content: center; grid-column: 1 / -1; } .ql-card { padding: 16px; } }

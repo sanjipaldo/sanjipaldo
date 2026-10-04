@@ -464,6 +464,13 @@ const MOON_CONTENT = {
   const KIND = { "m1-8": "mind", "m1-9": "challenge", "m1-10": "mind", "m2-5": "challenge", "m2-6": "challenge", "m3-7": "challenge", "m3-8": "challenge",
     "m5-3": "challenge", "m5-4": "challenge", "m5-5": "challenge", "m5-6": "mind" };
   W.forEach((w) => w.missions.forEach((m) => { m.kind = KIND[m.id] || (m.required ? "required" : "challenge"); }));
+  // 과제 양식: 엑셀에서 바로 열리는 CSV — 내려받아 채운 뒤 사진·글로 제출
+  const csv = (rows) => "data:text/csv;charset=utf-8," + encodeURIComponent("\uFEFF" + rows.map((r) => r.join(",")).join("\n"));
+  const T = (mid, id, name, rows) => { const m = W.flatMap((w) => w.missions).find((x) => x.id === mid); const data = csv(rows); m.templates = [{ id, name, data, size: data.length }]; };
+  T("m2-1", "t-m2-1", "2주차_시장조사_10개_양식.csv", [["번호", "품목", "브랜드", "용량", "현지가(NZD)", "국내 최저가(원)", "판매처", "메모"]].concat([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => [n, "", "", "", "", "", "", ""])));
+  T("m2-2", "t-m2-2", "2주차_공급처_3곳_비교_양식.csv", [["공급처", "상품가(NZD)", "배송비", "재고", "배송 기간", "장점", "단점"], ["공급처 1"], ["공급처 2"], ["공급처 3"], [], ["최종 선택", "", "", "", "", "이유:"]]);
+  T("m2-4", "t-m2-4", "2주차_마진_계산표_양식.csv", [["상품명", "현지가(NZD)", "환율", "배송대행비(원)", "판매가(원)", "수수료(%)", "광고비(%)", "순이익(원)", "마진율(%)"], ["상품 1"], ["상품 2"], ["상품 3"]]);
+  T("m3-1", "t-m3-1", "3주차_상품명_키워드_양식.csv", [["키워드", "월 검색량", "경쟁 상품 수", "경쟁도", "사용 여부"], ["대표 키워드 1"], ["대표 키워드 2"], ["대표 키워드 3"], ["대표 키워드 4"], ["대표 키워드 5"], [], ["완성 상품명(50자 이내)"]]);
   W[1].missions.push({ id: "m2-7", title: "나의 첫 매출 목표 적기", required: false, kind: "mind", type: "text",
     desc: "이번 달 안에 이루고 싶은 첫 매출 목표와 그 이유를 적어 주세요. 숫자로 적으면 마음이 더 단단해져요.",
     steps: ["목표 금액과 날짜", "그 돈으로 하고 싶은 일", "목표를 위해 매일 할 한 가지"], check: { minLength: 30 } });

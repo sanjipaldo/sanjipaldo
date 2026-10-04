@@ -304,6 +304,24 @@
     };
   }
 
+  // 홈 ‘자주 찾는 페이지’ — 강사가 따로 정하지 않았으면 기본 목록 (외부 링크는 주소가 있을 때만)
+  const QL_ICONS = ["megaphone", "help", "clipboard", "bug", "sparkles", "play", "message", "book", "calendar", "library", "flame", "award", "link", "store", "users", "video"];
+  function defaultQuickLinks(c) {
+    const b = c.brand || {};
+    return [
+      { id: "ql1", title: "공지사항", desc: "최신 공지와 일정 안내", url: "#/notices", icon: "megaphone" },
+      { id: "ql2", title: "자주 묻는 질문", desc: "수강 · 과제 · 수료 궁금증 모음", url: "#/qna", icon: "help" },
+      { id: "ql3", title: "서류 준비 가이드", desc: "1주차 서류 발급 단계별 안내", url: "#/docs", icon: "clipboard" },
+      { id: "ql4", title: "요청사항", desc: "오류 · 불편을 강사님께 바로 알리기", url: "#/qna/requests", icon: "bug" },
+      { id: "ql5", title: "24시 AI봇", desc: "과제 · 서류 · 일정 바로 물어보기", url: "#/bot", icon: "sparkles" },
+      { id: "ql6", title: (b.instructor || "강사") + " 유튜브", desc: "실전 노하우 영상 모음", url: b.youtubeChannel || "", icon: "play" },
+      { id: "ql7", title: "카카오톡 문의", desc: "1:1 상담 · 빠른 답변", url: b.kakaoChannel || "", icon: "message" }
+    ];
+  }
+  const quickLinksOf = (c) => (Array.isArray(c.quickLinks) ? c.quickLinks : defaultQuickLinks(c));
+  /** 엑셀에서 바로 열리는 CSV 양식 (data: 주소) */
+  const csvData = (rows) => "data:text/csv;charset=utf-8," + encodeURIComponent("\uFEFF" + rows.map((r) => r.map((v) => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v).join(",")).join("\n"));
+
   /* ---------------- 불러오기 · 저장 ---------------- */
   let db = null;
 
@@ -317,7 +335,7 @@
   function normalizeWeeks(weeks) {
     weeks.forEach((w, i) => {
       w.no = i + 1; w.lessons = w.lessons || []; w.missions = w.missions || []; w.topics = w.topics || [];
-      w.missions.forEach((m) => { m.kind = missionKind(m); m.required = m.kind === "required"; });
+      w.missions.forEach((m) => { m.kind = missionKind(m); m.required = m.kind === "required"; m.templates = m.templates || []; });
     });
   }
   function normalizeContent(c) {
@@ -473,6 +491,17 @@
         if (g && sg && /^스마트스토어 톡톡과 카카오톡 채널로 고객 문의에 답하는 기본 방법이에요/.test(g.body || "") && (g.body || "").length < 120) { g.body = sg.body; g.desc = sg.desc; }
       });
       db.flags.weekDetailSeeded = true; save();
+    }
+    // 과제 양식(엑셀) 예시 (한 번만): 시드에 양식이 있는 과제 id 에 비어 있으면 채운다
+    if (!db.flags.templatesSeeded) {
+      Object.keys(db.content).forEach((id) => {
+        const c = db.content[id], sc = window.CLASS_SEED.content[id];
+        if (!sc) return;
+        const seedT = {};
+        sc.weeks.concat(...(sc.curricula || []).map((cu) => cu.weeks)).forEach((w) => w.missions.forEach((m) => { if ((m.templates || []).length) seedT[m.id] = m.templates; }));
+        c.weeks.concat(...(c.curricula || []).map((cu) => cu.weeks)).forEach((w) => w.missions.forEach((m) => { if (!(m.templates || []).length && seedT[m.id]) m.templates = clone(seedT[m.id]); }));
+      });
+      db.flags.templatesSeeded = true; save();
     }
     // 무료강의 페이지 기본 문구 (한 번만, doogo.site 내용)
     if (!db.flags.freeSeeded2) {
@@ -682,7 +711,7 @@
   };
 
   window.DB = {
-    load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
+    load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
     curricula, curriculum, curriculumOf, weeksOf, cohortWeeks,
