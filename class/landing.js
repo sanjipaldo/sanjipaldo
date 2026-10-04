@@ -130,7 +130,7 @@
     const links = [[ct.kakao, "message", "카카오톡 문의"], [ct.youtube, "circlePlay", "유튜브"], [ct.instagram, "image", "인스타그램"], [ct.email ? "mailto:" + ct.email : "", "message", ct.email], [ct.phone ? "tel:" + ct.phone : "", "user", ct.phone]].filter((x) => x[0]);
     return '<footer class="lp-foot"><div class="lp-wrap"><div class="lp-foot-top"><span class="lp-brand">' + window.logoMark() + "<b>" + esc(c.brand.name) + "</b></span>" +
       (links.length ? '<div class="lp-foot-links">' + links.map((x) => '<a href="' + esc(x[0]) + '"' + linkAttrs(x[0]) + ">" + icon(x[1], "sm") + esc(x[2]) + "</a>").join("") + "</div>" : "") + "</div>" +
-      '<div class="lp-foot-bottom"><span>© 2026 ' + esc(ct.company || c.brand.name) + "</span>" + window.poweredBy("color") +
+      '<div class="lp-foot-bottom"><span>© 2026 ' + esc(ct.company || c.brand.name) + "</span>" + window.poweredBy("white") +
       '<span><a href="#/login?ins=' + esc(ins.id) + '">수강생 로그인</a> · <a href="#/center">강사센터</a></span></div></div></footer>';
   }
 
@@ -148,7 +148,8 @@
     // 커리큘럼·숫자는 모집 중인 기수가 쓰는 커리큘럼 기준
     const c = Object.assign({}, DB.content(id), co ? { weeks: DB.weeksOf(co) } : {}), t = DB.themeOf(c.brand.theme);
     document.title = c.brand.courseTitle + " · " + c.brand.name;
-    const vars = "--lp-p:" + t.primary + ";--lp-pa:" + t.active + ";--lp-on:" + (t.onPrimary || t.deep) + ";--lp-pd:" + t.deep + ";--lp-pale:" + t.pale + ";--lp-rgb:" + t.rgb + ";--lp-ac:" + (t.accent || t.primary);
+    const tv = t.vars || {};
+    const vars = "--lp-p:" + t.primary + ";--lp-pa:" + t.active + ";--lp-on:" + (t.onPrimary || t.deep) + ";--lp-pd:" + t.deep + ";--lp-pale:" + t.pale + ";--lp-rgb:" + t.rgb + ";--lp-ac:" + (t.accent || t.primary) + ";--lp-soft:" + (tv["--canvas-soft"] || "#e8ebe6") + ";--lp-ink:" + (tv["--ink"] || "#0e0f0c");
     const sections = L.order.filter((k) => !L.off[k] && S[k]).map((k) => S[k](L, c, ins, co)).join("");
     const navs = [["lp-about", "강사 소개", !L.off.about && (L.about.body || L.about.photo)], ["lp-curriculum", "커리큘럼", !L.off.curriculum], ["lp-reviews", "후기", !L.off.reviews && (L.reviews.items || []).some((x) => x.text)], ["lp-pricing", "수강 안내", !L.off.pricing], ["lp-faq", "FAQ", !L.off.faq]].filter((x) => x[2]);
     const href = applyHref(L.hero.ctaUrl, id);
@@ -292,14 +293,19 @@
     }
     const c = DB.content(id), h = F.hero, lines = String(h.title || "").split("\n").filter(Boolean);
     document.title = lines.join(" ") + " · " + h.instructor + " 무료강의";
-    root.innerHTML = '<div class="dg"><div class="landing-page"><div class="grid-background" aria-hidden="true"></div>' +
-      (!F.published ? '<div class="fc-draft">' + icon("eyeOff", "sm") + "비공개 상태예요. 강사센터 ‘무료강의 페이지’에서 공개로 바꾸면 누구나 볼 수 있어요.</div>" : "") +
-      '<main><header class="hero">' + (h.badge ? '<span class="top-badge"><i aria-hidden="true"></i>' + esc(h.badge) + "</span>" : "") +
+    // 강사 색으로 칠한다 (Wise 톤: 세이지 바탕 · 흰 카드 · 진한 잉크 · 강사 색 버튼)
+    const t = DB.themeOf(c.brand.theme), tv = t.vars || {};
+    const vars = "--p:" + t.primary + ";--pa:" + t.active + ";--on:" + (t.onPrimary || t.deep) + ";--pale:" + t.pale + ";--deep:" + t.deep + ";--ac:" + (t.accent || t.primary) + ";--rgb:" + t.rgb + ";--sage:" + (tv["--canvas-soft"] || "#e8ebe6") + ";--ink:" + (tv["--ink"] || "#0e0f0c");
+    const rest = F.order.filter((k) => k !== "countdown" && !F.off[k] && FC[k]).map((k) => FC[k](F, c)).join("");
+    root.innerHTML = '<div class="dg wz" style="' + vars + '"><div class="landing-page">' +
+      (!F.published ? '<div class="fc-draft">' + icon("eyeOff", "sm") + "비공개 상태예요. 강사센터 ‘무료강의 페이지’에서 ‘공개 중’으로 바꾸면 누구나 볼 수 있어요.</div>" : "") +
+      '<div class="wz-band"><main><header class="hero">' + (h.badge ? '<span class="top-badge"><i aria-hidden="true"></i>' + esc(h.badge) + "</span>" : "") +
         '<p class="instructor">강사 · <strong>' + esc(h.instructor) + "</strong></p><h1>" + lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? "<em>" + esc(l) + "</em>" : "<span>" + esc(l) + "</span>")).join("") + "</h1>" +
         (h.sub ? '<p class="hero-copy">' + nl(h.sub) + "</p>" : "") + (h.note ? '<small class="disclaimer">' + esc(h.note) + "</small>" : "") + "</header>" +
-        F.order.filter((k) => !F.off[k] && FC[k]).map((k) => FC[k](F, c)).join("") +
-      "</main>" +
-      '<footer><a href="#/center" aria-label="강사센터로 이동">© 2026 ' + esc(F.company || c.brand.name) + "</a></footer>" +
+        (!F.off.countdown ? FC.countdown(F, c) : "") + "</main></div>" +
+      "<main>" + rest + "</main>" +
+      // 맨 아래 상호를 누르면 강사센터의 무료강의 페이지 편집으로
+      '<footer><a href="#/center/free" aria-label="강사센터 무료강의 페이지 편집으로 이동">© 2026 ' + esc(F.company || c.brand.name) + "</a></footer>" +
       '<div class="fc-powered-row">' + window.poweredBy("white") + "</div>" +
       "</div></div>";
     clearInterval(tick); tick = setInterval(updateCountdown, 1000);

@@ -597,3 +597,54 @@ body[data-master="1"] .a-count { background: #6a3df0; }
 .a-login-label { display: flex; align-items: center; justify-content: center; gap: 6px; }
 .a-login-label .doogo-logo { height: 20px; }
 .a-side-foot { display: grid; gap: 12px; justify-items: start; }
+
+/* 공개 스위치 */
+.a-pub { display: flex; align-items: center; gap: 12px; }
+.a-pub b { display: block; font-size: 15px; color: var(--m-steel); }
+.a-pub b.on { color: #1f8a3b; }
+.a-pub small { font-size: 12px; color: var(--m-steel); }
+.a-switch-lg { width: 54px; height: 30px; }
+.a-switch-lg i { width: 24px; height: 24px; }
+.a-switch-lg.on i { left: 27px; }
+.a-switch.on.a-switch-lg { background: #2ead4b; }
+
+/* 무료강의 페이지 편집: doogo 관리자처럼 칸별 탭 */
+.a-fc-top { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px 24px; }
+.a-fc-top .a-lp-dirty { grid-column: 1 / -1; }
+.a-fc-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; align-items: start; }
+.a-fc-tabs { position: sticky; top: 80px; display: grid; gap: 6px; }
+.a-fc-tab { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--m-canvas, #fff); border: 1px solid var(--m-hairline-soft); text-align: left; cursor: pointer; }
+.a-fc-tab b { display: block; font-size: 14px; color: var(--m-ink, #1c2b33); }
+.a-fc-tab small { display: block; font-size: 12px; color: var(--m-steel); }
+.a-fc-tab.on { border: 2px solid var(--m-primary); padding: 9px 11px; background: var(--m-primary-soft); }
+.a-fc-tab.off small { color: #b86700; }
+.a-fc-ic { flex: none; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--m-surface, #f1f4f7); color: var(--m-primary-deep); }
+.a-fc-tab.on .a-fc-ic { background: var(--m-primary); color: #fff; }
+.a-fc-tab .a-count { font-style: normal; margin-left: 4px; }
+.a-fc-panel { display: grid; gap: 16px; }
+.a-fc-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--m-hairline-soft); }
+.a-fc-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .04em; color: var(--m-primary); }
+.a-fc-panel-head h2 { margin: 4px 0 0; font-size: 22px; }
+.a-fc-show { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--m-steel); }
+.a-fc-body { display: grid; gap: 14px; }
+.a-fc-cards { display: grid; gap: 12px; justify-items: start; }
+.a-fc-card { width: 100%; display: grid; gap: 10px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--m-hairline-soft); background: var(--m-surface, #f7f8fa); }
+.a-fc-card-head { display: flex; justify-content: space-between; align-items: center; }
+.a-fc-card-head b { font-size: 14px; }
+.a-seg-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.a-seg-pick label { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--m-hairline-soft); background: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+.a-seg-pick label:has(input:checked) { border: 2px solid var(--m-primary); padding: 6px 11px; }
+.a-seg-pick input { position: absolute; opacity: 0; pointer-events: none; }
+.a-swatch-dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .15); }
+.a-sw-blue { background: #0e0f0c; } .a-sw-cyan { background: var(--swp, #9fe870); } .a-sw-ice { background: var(--swpale, #e2f6d5); }
+.a-more { border-radius: 14px; border: 1px dashed var(--m-hairline-soft); }
+.a-more > summary { display: flex; align-items: center; gap: 6px; padding: 10px 14px; font-size: 13px; font-weight: 700; color: var(--m-steel); cursor: pointer; list-style: none; }
+.a-more > summary::-webkit-details-marker { display: none; }
+.a-more-body { display: grid; gap: 14px; padding: 4px 14px 16px; }
+@media (max-width: 900px) {
+  .a-fc-top { grid-template-columns: minmax(0, 1fr); }
+  .a-fc-layout { grid-template-columns: minmax(0, 1fr); }
+  .a-fc-tabs { position: static; display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+  .a-fc-tab { flex: none; }
+  .a-fc-tab small { display: none; }
+}

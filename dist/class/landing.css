@@ -329,3 +329,22 @@ body[data-mode="landing"] { background: #fff; }
   .fc-poster { padding: 56px 22px 26px; }
 }
 @media (max-width: 640px) { .fc-cover { aspect-ratio: 4 / 3; } .fc-cover-no { font-size: 96px; } }
+
+/* ---------- 강의 소개 페이지: Wise 톤 (세이지 바탕 · 흰 카드 24px · 강사 색 버튼 · 잉크 아래 띠) ---------- */
+.lp:not(.fc) { --lp-body: #454745; --lp-mute: #868685; --lp-line: rgba(14, 15, 12, .08); }
+.lp:not(.fc) .lp-btn { border-radius: 24px; font-weight: 700; }
+.lp:not(.fc) .lp-btn-lg { border-radius: 24px; }
+.lp:not(.fc) .lp-btn-ghost { border-color: var(--lp-ink); }
+.lp:not(.fc) .lp-hero { background: radial-gradient(70% 60% at 85% 10%, rgba(var(--lp-rgb), .22), transparent 70%), var(--lp-soft); }
+.lp:not(.fc) .lp-hero h1 { font-weight: 900; }
+.lp:not(.fc) .lp-mock, .lp:not(.fc) .lp-points article, .lp:not(.fc) .lp-reviews figure, .lp:not(.fc) .lp-price-card, .lp:not(.fc) .lp-weeks details, .lp:not(.fc) .lp-faq details { border-radius: 24px; border-color: transparent; }
+.lp:not(.fc) .lp-tint { background: var(--lp-soft); }
+.lp:not(.fc) .lp-price-card { border: 2px solid var(--lp-ink); }
+.lp:not(.fc) .lp-weeks details[open] { border-color: var(--lp-ink); }
+.lp:not(.fc) .lp-dark { background: var(--lp-ink); }
+.lp:not(.fc) .lp-forwho { background: var(--lp-ink); border-radius: 24px; }
+.lp:not(.fc) .lp-cta { border-radius: 40px 40px 0 0; }
+.lp:not(.fc) .lp-foot { background: var(--lp-ink); border-top: 0; color: var(--lp-soft); }
+.lp:not(.fc) .lp-foot .lp-brand, .lp:not(.fc) .lp-foot-bottom a { color: var(--lp-soft); }
+.lp:not(.fc) .lp-foot-links a { color: var(--lp-soft); border-color: rgba(255, 255, 255, .18); }
+.lp:not(.fc) .lp-foot .powered { color: #868685; }

@@ -201,3 +201,128 @@
   .dg .fc-about-txt h2,.dg .fc-faq .section-heading h2{font-size:26px}
   .dg .fc-faq,.dg .fc-apply{margin-top:72px}
 }
+
+/* ================= Wise 톤 (강사 색) — .dg.wz ================
+   세이지 바탕(--sage) · 흰 카드 24px · 진한 잉크(--ink) · 강사 색 버튼(--p / --on) · 어두운 띠 위 강조(--ac) */
+.dg.wz{background:var(--sage);color:var(--ink);font-family:Inter,Pretendard,"Pretendard Variable","Noto Sans KR",sans-serif}
+.dg.wz .landing-page{background:var(--sage)}
+.dg.wz .grid-background{display:none}
+.dg.wz h1,.dg.wz h2,.dg.wz h3{color:var(--ink)}
+/* 맨 위: 잉크 띠 */
+.dg.wz .wz-band{position:relative;z-index:1;background:var(--ink);color:#fff;border-radius:0 0 40px 40px;overflow:hidden}
+.dg.wz .wz-band:before{content:"";position:absolute;inset:-40% -10% auto;height:120%;background:radial-gradient(45% 50% at 50% 30%,rgba(var(--rgb),.22),transparent 70%);pointer-events:none}
+.dg.wz .wz-band main{padding:64px 0 72px}
+.dg.wz .top-badge{color:var(--ac);background:rgba(var(--rgb),.14);border:1px solid rgba(var(--rgb),.4);box-shadow:none}
+.dg.wz .top-badge i,.dg.wz .micro-badge i{background:currentColor;box-shadow:none}
+.dg.wz .instructor{color:#c9ccc6}
+.dg.wz .instructor strong{color:#fff}
+.dg.wz .hero h1{font-weight:900}
+.dg.wz .hero h1 span{color:#fff}
+.dg.wz .hero h1 em{background:none;-webkit-text-fill-color:var(--ac);color:var(--ac);text-shadow:none}
+.dg.wz .hero-copy{color:#d5d8d2}
+.dg.wz .disclaimer{color:#868685}
+.dg.wz .countdown-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:24px;box-shadow:none}
+.dg.wz .countdown-eyebrow{color:#c9ccc6}
+.dg.wz .countdown-eyebrow strong{color:var(--ac)}
+.dg.wz .countdown-unit{background:#fff;border:0;border-radius:16px;box-shadow:none}
+.dg.wz .countdown-unit strong{color:var(--ink);text-shadow:none;font-family:Inter,sans-serif;font-weight:900;letter-spacing:-.04em}
+.dg.wz .countdown-unit span{color:#868685}
+.dg.wz .countdown-colon{color:#868685}
+.dg.wz .event-date{color:#d5d8d2}
+.dg.wz .event-date span{background:var(--ac);box-shadow:none}
+/* 영상 */
+.dg.wz .youtube-heading>span,.dg.wz .section-heading>span,.dg.wz .upcoming-course-heading>span,.dg.wz .fc-kicker,.dg.wz .fc-faq .section-heading>span{color:var(--deep);font-family:Inter,sans-serif;font-weight:900}
+.dg.wz .youtube-heading h2,.dg.wz .section-heading h2,.dg.wz .upcoming-course-heading h2,.dg.wz .fc-faq .section-heading h2{color:var(--ink)}
+.dg.wz .youtube-heading p,.dg.wz .section-heading p,.dg.wz .upcoming-course-heading>p{color:#454745}
+.dg.wz .video-frame{border:0;border-radius:24px;background:var(--ink);box-shadow:0 24px 50px -30px rgba(14,15,12,.5)}
+.dg.wz .video-slide--active .video-frame{border:0;box-shadow:0 30px 60px -30px rgba(14,15,12,.55)}
+.dg.wz .video-slide--left,.dg.wz .video-slide--right{filter:saturate(.6);opacity:.55}
+.dg.wz .video-select-overlay{background:rgba(14,15,12,.18)}
+.dg.wz .video-select-overlay svg{background:#fff;color:var(--ink);border:0}
+.dg.wz .video-meta span{color:var(--deep);background:var(--pale);border:0}
+.dg.wz .video-meta strong{color:var(--ink)}
+.dg.wz .carousel-control{background:#fff;color:var(--ink);border:0;box-shadow:0 8px 20px -10px rgba(14,15,12,.4)}
+.dg.wz .carousel-control:hover{background:var(--p);color:var(--on)}
+.dg.wz .carousel-pagination button{background:#c5c9c2}
+.dg.wz .carousel-pagination button.is-active{background:var(--ink)}
+.dg.wz .fc-yt-out{color:#868685}
+/* 카드 공통 */
+.dg.wz .question-cta,.dg.wz .question-cta--compact,.dg.wz .gift-card,.dg.wz .fc-about,.dg.wz .upcoming-course-card,.dg.wz .fc-faq-list details{background:#fff;border:0;box-shadow:none}
+.dg.wz .question-cta,.dg.wz .gift-card,.dg.wz .fc-about,.dg.wz .upcoming-course-card{border-radius:24px}
+.dg.wz .question-cta:after{display:none}
+.dg.wz .question-cta h2{color:var(--ink)}
+.dg.wz .question-cta p{color:#454745}
+.dg.wz .question-cta small{color:#868685}
+.dg.wz .micro-badge{color:var(--deep);background:var(--pale);border:0;box-shadow:none}
+.dg.wz .micro-badge--kakao{color:#191600;background:#fee500}
+.dg.wz .primary-cta,.dg.wz .upcoming-course-cta{background:var(--p);color:var(--on);border:0;border-radius:24px;box-shadow:none;font-weight:700}
+.dg.wz .primary-cta:hover,.dg.wz .upcoming-course-cta:hover{background:var(--pa);color:var(--on);box-shadow:none;filter:none}
+.dg.wz .kakao-cta{border-radius:24px;box-shadow:none;background:#fee500;border:0;font-weight:700}
+/* 선물 전자책 */
+.dg.wz .gift-day{background:var(--ink);color:var(--ac);box-shadow:none;font-family:Inter,sans-serif}
+.dg.wz .gift-card.is-unlocked .gift-day{background:var(--p);color:var(--on);box-shadow:none}
+.dg.wz .gift-card.is-unlocked{box-shadow:0 0 0 2px var(--p)}
+.dg.wz .gift-cover{border:0;border-radius:18px}
+.dg.wz .gift-card--blue .gift-cover,.dg.wz .gift-card--blue.is-unlocked .gift-cover{background:var(--ink);color:#fff}
+.dg.wz .gift-card--cyan .gift-cover,.dg.wz .gift-card--cyan.is-unlocked .gift-cover{background:var(--p);color:var(--on)}
+.dg.wz .gift-card--ice .gift-cover,.dg.wz .gift-card--ice.is-unlocked .gift-cover{background:var(--pale);color:var(--ink)}
+.dg.wz .gift-cover-overlay,.dg.wz .gift-card.is-unlocked .gift-cover-overlay{background:linear-gradient(transparent 55%,rgba(0,0,0,.06))}
+.dg.wz .gift-card:not(.is-unlocked) .gift-cover{filter:grayscale(.75) contrast(.9)}
+.dg.wz .gift-cover-number{color:currentColor;opacity:.1}
+.dg.wz .gift-cover-top i{background:rgba(255,255,255,.18);border-color:currentColor;color:inherit}
+.dg.wz .gift-card--ice .gift-cover-top i,.dg.wz .gift-card--cyan .gift-cover-top i{background:rgba(255,255,255,.5)}
+.dg.wz .lock-state{color:inherit}
+.dg.wz .open-hint{color:inherit;opacity:.9}
+.dg.wz .gift-card--blue .open-hint{color:var(--ac);opacity:1}
+.dg.wz .gift-card h3{color:var(--ink)}
+.dg.wz .gift-card p{color:#454745}
+.dg.wz .gift-status{color:#868685}
+.dg.wz .gift-status.is-open,.dg.wz .gift-card--ice .gift-status.is-open,.dg.wz .gift-card--ice .open-hint{color:var(--deep)}
+.dg.wz .gift-timeline{border-top-color:rgba(14,15,12,.1)}
+.dg.wz .gift-timeline span{background:#fff;border:0;color:#454745}
+.dg.wz .gift-timeline strong{color:var(--ink);font-family:Inter,sans-serif;font-weight:900}
+/* 강사 소개 */
+.dg.wz .fc-about-photo img,.dg.wz .fc-about-photo span{border:0;background:var(--p);color:var(--on)}
+.dg.wz .fc-about-txt h2{color:var(--ink)}
+.dg.wz .fc-about-role{color:#868685}
+.dg.wz .fc-about-body{color:#454745}
+.dg.wz .fc-about li{color:var(--ink)}
+.dg.wz .fc-about li svg,.dg.wz .upcoming-course-content li svg{color:var(--deep)}
+/* 진행 예정 강의 */
+.dg.wz .upcoming-course-image{background:#fff}
+.dg.wz .upcoming-course-image:after{display:none}
+.dg.wz .upcoming-course-image>span{background:var(--ink);color:var(--ac);border:0}
+.dg.wz .upcoming-platform{background:var(--sage);border:0}
+.dg.wz .upcoming-platform>span{color:var(--deep)}
+.dg.wz .upcoming-platform>strong{color:var(--ink)}
+.dg.wz .upcoming-platform-logo{border:0}
+.dg.wz .upcoming-date{color:var(--deep)}
+.dg.wz .upcoming-instructor{color:#868685}
+.dg.wz .upcoming-instructor strong{color:var(--ink)}
+.dg.wz .upcoming-course-content h3{color:var(--ink)}
+.dg.wz .upcoming-description{color:#454745}
+.dg.wz .upcoming-course-content li{color:var(--ink)}
+.dg.wz .upcoming-course-content small{color:#868685}
+.dg.wz .fc-poster-auto{background:var(--pale);color:var(--ink)}
+.dg.wz .fc-poster-auto b{background:var(--p);color:var(--on)}
+/* FAQ */
+.dg.wz .fc-faq-list details[open]{box-shadow:0 0 0 2px var(--ink)}
+.dg.wz .fc-faq-list summary{color:var(--ink)}
+.dg.wz .fc-faq-list summary svg{color:#868685}
+.dg.wz .fc-faq-list p{color:#454745}
+/* 신청하기: 어두운 홍보 카드 (잉크 바탕 + 강사 색 글씨) */
+.dg.wz .fc-apply{background:var(--ink);border-radius:24px}
+.dg.wz .fc-apply .micro-badge{background:rgba(var(--rgb),.16);color:var(--ac)}
+.dg.wz .fc-apply h2{color:var(--ac)}
+.dg.wz .fc-apply p{color:#d5d8d2}
+.dg.wz .fc-apply small{color:#868685}
+.dg.wz .fc-apply .fc-incl li{color:#fff}
+.dg.wz .fc-apply .fc-incl li svg{color:var(--ac)}
+.dg.wz .fc-price s{color:#868685}
+.dg.wz .fc-price b{color:#fff}
+/* 아래 */
+.dg.wz footer{background:var(--ink);color:var(--sage);border-top:0}
+.dg.wz footer>a{color:var(--sage);text-decoration:underline;text-decoration-color:rgba(255,255,255,.25);text-underline-offset:4px}
+.dg.wz footer>a:hover{color:var(--ac)}
+.dg.wz .fc-powered-row{background:var(--ink)}
+@media (max-width:760px){.dg.wz .wz-band{border-radius:0 0 28px 28px}.dg.wz .wz-band main{padding:44px 0 52px}}
