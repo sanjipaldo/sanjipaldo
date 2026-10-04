@@ -507,7 +507,7 @@
         '<aside class="stack">' +
           '<div class="card"><p class="side-label">자동검수 기준</p><ul class="history">' + (checkCriteria(m).map((t) => "<li><span>" + esc(t) + "</span></li>").join("") || "<li><span>제출하면 바로 통과</span></li>") + "</ul></div>" +
           '<div class="card"><p class="side-label">제출 이력</p>' + history + "</div>" +
-          '<div class="card card-dark"><p style="margin:0 0 12px;font-weight:800;color:var(--primary)">막히셨나요?</p><p class="tiny" style="color:#b8bdb2;margin:0 0 14px">' + esc(D.brand.botName) + "에게 바로 물어보세요.</p>" +
+          '<div class="card card-dark"><p style="margin:0 0 12px;font-weight:800;color:var(--accent)">막히셨나요?</p><p class="tiny" style="color:#b8bdb2;margin:0 0 14px">' + esc(D.brand.botName) + "에게 바로 물어보세요.</p>" +
             '<button class="btn btn-primary btn-sm btn-block" data-action="ask-bot" data-q="' + esc(m.title + " 어떻게 해요?") + '">' + icon("sparkles", "sm") + "AI봇에게 물어보기</button></div>" +
         "</aside>" +
       "</div></div>";

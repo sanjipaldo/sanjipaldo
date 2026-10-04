@@ -474,16 +474,16 @@ body[data-master="1"] .a-count { background: #6a3df0; }
 .a-swatch input:focus-visible + .sw { outline: 3px solid var(--m-fb); outline-offset: 2px; }
 .a-theme-preview { display: grid; grid-template-columns: 1fr 1.3fr; gap: 0; margin-top: 12px; border-radius: var(--m-r-xl); overflow: hidden; border: 1px solid var(--m-hairline-soft); }
 .tp-login { position: relative; display: grid; align-content: end; gap: 4px; min-height: 150px; padding: 16px; background: linear-gradient(160deg, var(--bg1), var(--bg2)); color: #fff; }
-.tp-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: .14em; color: var(--p); }
+.tp-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: .14em; color: var(--ac, var(--p)); }
 .tp-login b { font-size: 18px; line-height: 1.15; font-weight: 900; }
-.tp-login em { font-style: normal; color: var(--p); }
-.tp-tile { position: absolute; right: 14px; top: 14px; width: 40px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: rgba(255, 255, 255, .12); color: var(--pa); }
+.tp-login em { font-style: normal; color: var(--ac, var(--p)); }
+.tp-tile { position: absolute; right: 14px; top: 14px; width: 40px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: rgba(255, 255, 255, .12); color: var(--aa, var(--pa)); }
 .tp-app { display: grid; align-content: center; gap: 8px; padding: 14px; background: #f3f5f1; }
 .tp-nav { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; color: #454745; }
 .tp-nav.on { background: var(--pp); color: var(--pd); }
 .tp-bar { height: 6px; border-radius: 9px; background: #e3e6e0; overflow: hidden; }
 .tp-bar i { display: block; width: 62%; height: 100%; background: var(--p); }
-.tp-btn { padding: 8px 10px; border-radius: 99px; background: var(--p); color: var(--pd); font-size: 12px; font-weight: 800; text-align: center; }
+.tp-btn { padding: 8px 10px; border-radius: 99px; background: var(--p); color: var(--po, var(--pd)); font-size: 12px; font-weight: 800; text-align: center; }
 
 /* 메뉴 구성 */
 .a-menu-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

@@ -350,8 +350,10 @@ window.CLASS_SEED = {
   version: 3,
   instructors: [
     { id: "moon", name: "문원오", phone4: "2186", displayName: "문대표", status: "active", createdAt: "2026-08-01" },
-    { id: "logic", name: "황금농부", phone4: "1111", displayName: "로직메이커 황금농부", status: "active", createdAt: "2026-09-10",
-      brand: { name: "로직메이커 황금농부", courseTitle: "로직메이커 황금농부 실전 클래스", theme: "orange" } },
+    { id: "logic", name: "로직메이커", phone4: "1111", displayName: "로직메이커", status: "active", createdAt: "2026-09-10",
+      brand: { name: "로직메이커", courseTitle: "로직메이커 실전 클래스", theme: "airtable" } },
+    { id: "farmer", name: "황금농부", phone4: "3333", displayName: "황금농부", status: "active", createdAt: "2026-09-12",
+      brand: { name: "황금농부", courseTitle: "황금농부 실전 클래스", theme: "binance" } },
     { id: "choi", name: "초이", phone4: "2222", displayName: "초이", status: "active", createdAt: "2026-09-20",
       brand: { name: "초이 클래스", courseTitle: "초이와 함께하는 실전 클래스", theme: "pink" },
       menu: { items: [{ key: "home", on: true }, { key: "curriculum", on: true }, { key: "missions", on: true }, { key: "schedule", on: true }, { key: "notices", on: true }, { key: "qna", on: true }, { key: "docs", on: false }, { key: "bot", on: true }, { key: "library", on: true }, { key: "motivation", on: false }, { key: "certificate", on: true }], library: { ebook: true, file: true, vod: true, senior: false } } }
@@ -363,6 +365,7 @@ window.CLASS_SEED = {
     { id: "c3", instructorId: "moon", name: "3기", startDate: "2026-10-01", recruiting: false },
     { id: "c4", instructorId: "moon", name: "4기", startDate: "2026-11-05", recruiting: true },
     { id: "lc1", instructorId: "logic", name: "1기", startDate: "2026-10-08", recruiting: true },
+    { id: "fc1", instructorId: "farmer", name: "1기", startDate: "2026-10-01", recruiting: true },
     { id: "cc1", instructorId: "choi", name: "1기", startDate: "2026-10-15", recruiting: true }
   ],
   students: [
@@ -379,7 +382,8 @@ window.CLASS_SEED = {
     { id: "s11", instructorId: "moon", cohortId: "c2", name: "임수빈", phone4: "1357", status: "withdrawn", appliedAt: "2026-08-26", memo: "개인 사정으로 탈퇴 요청" },
     { id: "s12", instructorId: "moon", cohortId: "c1", name: "배준호", phone4: "8080", status: "approved", appliedAt: "2026-07-28" },
     { id: "s13", instructorId: "logic", cohortId: "lc1", name: "홍길동", phone4: "0000", status: "approved", appliedAt: "2026-10-01" },
-    { id: "s14", instructorId: "choi", cohortId: "cc1", name: "김영수", phone4: "0000", status: "pending", appliedAt: "2026-10-02" }
+    { id: "s14", instructorId: "choi", cohortId: "cc1", name: "김영수", phone4: "0000", status: "pending", appliedAt: "2026-10-02" },
+    { id: "s15", instructorId: "farmer", cohortId: "fc1", name: "김농부", phone4: "0000", status: "approved", appliedAt: "2026-09-28" }
   ],
   // 마스터가 모든 강사에게 보내는 공지 (강사센터 대시보드 맨 위에 보인다)
   announcements: [

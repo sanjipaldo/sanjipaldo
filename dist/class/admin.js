@@ -791,12 +791,12 @@
     name = name || "theme";
     return '<div class="a-swatches" role="radiogroup" aria-label="수강생 화면 색상">' + Object.keys(DB.THEMES).map((k) => {
       const t = DB.THEMES[k];
-      return '<label class="a-swatch"><input type="radio" name="' + name + '" value="' + k + '"' + (k === (current || "lime") ? " checked" : "") + '><span class="sw" style="--sw:' + t.primary + ";--swd:" + t.deep + ";--swbg:" + t.bg[1] + '"><i></i></span><b>' + t.label + "</b></label>";
+      return '<label class="a-swatch"><input type="radio" name="' + name + '" value="' + k + '"' + (k === (current || "lime") ? " checked" : "") + '><span class="sw" style="--sw:' + t.primary + ";--swd:" + (t.onPrimary || t.deep) + ";--swbg:" + (t.swRing || t.bg[1]) + '"><i></i></span><b>' + t.label + "</b></label>";
     }).join("") + "</div>" + '<div id="theme-preview-' + name + '">' + themePreview(current) + "</div>";
   }
   function themePreview(k) {
     const t = DB.themeOf(k);
-    return '<div class="a-theme-preview" style="--p:' + t.primary + ";--pa:" + t.active + ";--pd:" + t.deep + ";--pp:" + t.pale + ";--bg1:" + t.bg[0] + ";--bg2:" + t.bg[1] + '">' +
+    return '<div class="a-theme-preview" style="--p:' + t.primary + ";--pa:" + t.active + ";--pd:" + t.deep + ";--po:" + (t.onPrimary || t.deep) + ";--ac:" + (t.accent || t.primary) + ";--aa:" + (t.accentActive || t.active) + ";--pp:" + t.pale + ";--bg1:" + t.bg[0] + ";--bg2:" + t.bg[1] + '">' +
       '<div class="tp-login"><span class="tp-eyebrow">로그인 화면</span><b>내 브랜드<br><em>만들기</em></b><span class="tp-tile">' + icon("play", "sm") + "</span></div>" +
       '<div class="tp-app"><span class="tp-nav on">' + icon("home", "xs") + '홈</span><span class="tp-nav">' + icon("book", "xs") + '커리큘럼</span><span class="tp-bar"><i></i></span><span class="tp-btn">제출하고 검수받기</span></div></div>';
   }
@@ -1040,7 +1040,7 @@
       '<form id="ins-form" class="a-form" data-id="' + (isNew ? "" : x.id) + '" novalidate>' +
         '<div class="a-form-row"><div class="a-field"><label for="if-name">강사 이름 <small>(강사센터 로그인)</small></label><input class="a-input" id="if-name" name="name" value="' + esc(x.name) + '"></div>' +
         '<div class="a-field"><label for="if-phone">전화번호 뒷자리 <small>(비밀번호)</small></label><input class="a-input" id="if-phone" name="phone4" inputmode="numeric" maxlength="4" value="' + esc(x.phone4) + '"></div></div>' +
-        '<div class="a-field"><label for="if-display">수강생에게 보이는 이름</label><input class="a-input" id="if-display" name="displayName" value="' + esc(x.displayName) + '" placeholder="예: 로직메이커 황금농부"><small class="a-muted">수강생 로그인 화면의 강사 선택 목록에 보여요.</small></div>' +
+        '<div class="a-field"><label for="if-display">수강생에게 보이는 이름</label><input class="a-input" id="if-display" name="displayName" value="' + esc(x.displayName) + '" placeholder="예: 황금농부"><small class="a-muted">수강생 로그인 화면의 강사 선택 목록에 보여요.</small></div>' +
         (isNew ? '<div class="a-field"><label for="if-course">강의 이름</label><input class="a-input" id="if-course" name="courseTitle" placeholder="예: 황금농부와 함께하는 스마트스토어 실전 클래스"></div>' +
           '<div class="a-field"><label for="if-start">1기 1주차 시작일</label><input class="a-input" id="if-start" name="startDate" type="date" value="' + addDays(todayStr(), 14) + '"></div>' +
           '<div class="a-field"><span class="a-label">수강생 화면 색상</span>' + themePicker("orange", "itheme") + "</div>"

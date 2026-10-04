@@ -50,7 +50,7 @@
   }
 
   /* ---------------- 수강생 화면 색상 (강사별) ---------------- */
-  // 밝은 대표색 + 그 위에 올라가는 짙은 글자색. 로그인 왼쪽 패널 배경(bg)도 같은 계열로 맞춘다.
+  // 대표색 + 그 위에 올라가는 글자색. 로그인 왼쪽 패널 배경(bg)도 같은 계열로 맞춘다.
   const THEMES = {
     lime:   { label: "라임",   primary: "#9fe870", active: "#cdffad", pale: "#e2f6d5", deep: "#163300", rgb: "159,232,112", bg: ["#18290f", "#0e150b", "#0a170e"], sub: "#b8c2b0" },
     orange: { label: "오렌지", primary: "#ffb45e", active: "#ffd3a3", pale: "#fff0de", deep: "#4a2300", rgb: "255,180,94",  bg: ["#2e1b0a", "#150d05", "#201208"], sub: "#d6c3ad" },
@@ -59,7 +59,14 @@
     pink:   { label: "핑크",   primary: "#ff9ec8", active: "#ffcfe4", pale: "#ffeaf3", deep: "#4d0b2b", rgb: "255,158,200", bg: ["#2b1021", "#14080f", "#1f0c18"], sub: "#d9b9c8" },
     violet: { label: "바이올렛", primary: "#c3a6ff", active: "#e0d2ff", pale: "#f1eaff", deep: "#2a1060", rgb: "195,166,255", bg: ["#1f1439", "#0f0a1c", "#170e2b"], sub: "#c6bcdc" },
     sky:    { label: "스카이", primary: "#7cc6ff", active: "#b9e1ff", pale: "#e2f2ff", deep: "#062a4a", rgb: "124,198,255", bg: ["#0d2134", "#081018", "#0a1a2a"], sub: "#b3c4d4" },
-    mint:   { label: "민트",   primary: "#6fe3c8", active: "#b1f2e3", pale: "#dcf8f1", deep: "#003d31", rgb: "111,227,200", bg: ["#0c2621", "#06130f", "#0a1d18"], sub: "#acc9c1" }
+    mint:   { label: "민트",   primary: "#6fe3c8", active: "#b1f2e3", pale: "#dcf8f1", deep: "#003d31", rgb: "111,227,200", bg: ["#0c2621", "#06130f", "#0a1d18"], sub: "#acc9c1" },
+    // 브랜드 디자인 세트 — 대표색 위 글자색(onPrimary), 어두운 바탕 위 강조색(accent)과 바탕 잉크·본문·구분선까지 바꾼다
+    binance: { label: "바이낸스", primary: "#fcd535", active: "#f0b90b", pale: "#fdf3c4", deep: "#181a20", onPrimary: "#181a20", accent: "#fcd535", accentActive: "#fcd535",
+      rgb: "252,213,53", bg: ["#1e2329", "#0b0e11", "#0b0e11"], sub: "#929aa5",
+      vars: { "--ink": "#181a20", "--body": "#474d57", "--mute": "#707a8a", "--line": "#eaecef", "--line-soft": "#f5f5f5", "--canvas-soft": "#eaecef", "--canvas-softer": "#fafafa" } },
+    airtable: { label: "에어테이블", primary: "#181d26", active: "#0d1218", pale: "#f5e9d4", deep: "#181d26", onPrimary: "#ffffff", accent: "#fcab79", accentActive: "#f4d35e", swRing: "#fcab79",
+      rgb: "170,45,0", bg: ["#2a1d17", "#181d26", "#0d1218"], sub: "#c9c4bc",
+      vars: { "--ink": "#181d26", "--body": "#333840", "--line": "#dddddd", "--line-soft": "#ececec", "--canvas-soft": "#f2f0eb", "--canvas-softer": "#f8f7f4", "--positive-deep": "#0a2e0e", "--warning": "#f4d35e" } }
   };
   const themeOf = (key) => THEMES[key] || THEMES.lime;
 
@@ -231,6 +238,26 @@
       if (c && c.brand.theme === "lime" && !c.brand.themeSet && si && si.brand && si.brand.theme) { c.brand.theme = si.brand.theme; c.brand.themeSet = true; save(); }
       if (!ins.menu && si && si.menu) { ins.menu = clone(si.menu); save(); }
     });
+    // '로직메이커 황금농부'로 붙어 있던 강사를 로직메이커 / 황금농부 두 강사로 나눈다
+    const logic = db.instructors.find((x) => x.id === "logic");
+    if (logic && logic.displayName === "로직메이커 황금농부") {
+      const lb = db.content.logic && db.content.logic.brand;
+      Object.assign(logic, { name: "로직메이커", displayName: "로직메이커" });
+      if (lb) {
+        ["name", "courseTitle", "loginHeadline", "botName"].forEach((k) => { if (lb[k]) lb[k] = lb[k].replace(/로직메이커 황금농부/g, "로직메이커"); });
+        if (lb.instructor === "로직메이커 황금농부") lb.instructor = "로직메이커";
+        lb.theme = "airtable"; lb.themeSet = true;
+      }
+      if (!db.instructors.some((x) => x.id === "farmer")) {
+        const sf = seedIns.find((x) => x.id === "farmer");
+        db.instructors.splice(db.instructors.indexOf(logic) + 1, 0, { id: "farmer", name: sf.name, phone4: sf.phone4, displayName: sf.displayName, status: "active", createdAt: sf.createdAt });
+        db.content.farmer = normalizeContent(template(Object.assign({ instructor: sf.displayName }, sf.brand)));
+        db.content.farmer.brand.theme = "binance"; db.content.farmer.brand.themeSet = true;
+        window.CLASS_SEED.cohorts.filter((c) => c.instructorId === "farmer" && !db.cohorts.some((x) => x.id === c.id)).forEach((c) => db.cohorts.push(clone(c)));
+        window.CLASS_SEED.students.filter((st) => st.instructorId === "farmer" && !db.students.some((x) => x.id === st.id)).forEach((st) => db.students.push(clone(st)));
+      }
+      save();
+    }
     // 자료실 영상에 본문·첨부파일 필드가 생기기 전 데이터면 기본값을 채운다
     let filled = false;
     Object.keys(db.content).forEach((id) => {

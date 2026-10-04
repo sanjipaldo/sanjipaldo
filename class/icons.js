@@ -76,14 +76,21 @@
   window.loginArt = (theme, names) => '<div class="lx-art lx-' + theme + '" aria-hidden="true"><span class="lx-glow"></span><span class="lx-beam b1"></span><span class="lx-beam b2"></span>' +
     names.map((n, i) => '<span class="lx-tile t' + (i + 1) + '">' + window.icon(n) + "</span>").join("") + "</div>";
   /** 강의 로고 마크 — 강사가 고른 색(--primary)으로 칠해진다 */
-  window.logoMark = (cls) => '<svg class="logo-mark ' + (cls || "") + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="#0e0f0c"/><rect x="9" y="15" width="46" height="34" rx="11" fill="var(--primary, #9fe870)"/><path d="M27 24.5v15a1.2 1.2 0 0 0 1.8 1l12.4-7.5a1.2 1.2 0 0 0 0-2L28.8 23.5a1.2 1.2 0 0 0-1.8 1Z" fill="#0e0f0c"/></svg>';
+  window.logoMark = (cls) => '<svg class="logo-mark ' + (cls || "") + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="#0e0f0c"/><rect x="9" y="15" width="46" height="34" rx="11" fill="var(--accent, #9fe870)"/><path d="M27 24.5v15a1.2 1.2 0 0 0 1.8 1l12.4-7.5a1.2 1.2 0 0 0 0-2L28.8 23.5a1.2 1.2 0 0 0-1.8 1Z" fill="#0e0f0c"/></svg>';
   /** 수강생 화면 색상 적용 / 해제 (강사센터로 넘어가면 해제) */
+  const THEME_VARS = ["--primary", "--primary-active", "--primary-pale", "--ink-deep", "--on-primary", "--accent", "--accent-active", "--theme-rgb", "--login-bg-a", "--login-bg-b", "--login-bg-c", "--login-sub"];
+  let extraVars = [];
   window.applyStudentTheme = (t) => {
     const r = document.documentElement.style;
-    if (!t) { ["--primary", "--primary-active", "--primary-pale", "--ink-deep", "--theme-rgb", "--login-bg-a", "--login-bg-b", "--login-bg-c", "--login-sub"].forEach((k) => r.removeProperty(k)); return; }
+    THEME_VARS.concat(extraVars).forEach((k) => r.removeProperty(k));
+    extraVars = [];
+    if (!t) return;
     r.setProperty("--primary", t.primary); r.setProperty("--primary-active", t.active); r.setProperty("--primary-pale", t.pale);
     r.setProperty("--ink-deep", t.deep); r.setProperty("--theme-rgb", t.rgb);
+    r.setProperty("--on-primary", t.onPrimary || t.deep);
+    r.setProperty("--accent", t.accent || t.primary); r.setProperty("--accent-active", t.accentActive || t.active);
     r.setProperty("--login-bg-a", t.bg[0]); r.setProperty("--login-bg-b", t.bg[1]); r.setProperty("--login-bg-c", t.bg[2]); r.setProperty("--login-sub", t.sub);
+    Object.keys(t.vars || {}).forEach((k) => { r.setProperty(k, t.vars[k]); extraVars.push(k); });
     const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", t.primary);
   };
   window.icon = (name, cls) => '<svg class="icon ' + (cls || "") + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
