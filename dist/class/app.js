@@ -24,7 +24,7 @@
   let draft = { missionId: null, files: [] };
   let calCursor = null, calSel = null;
   let loginPick = null; // 로그인 화면에서 고른 강사
-  let botOpen = window.matchMedia("(max-width: 720px)").matches ? false : DB.store.get(KEY_BOT, true);
+  let botOpen = window.matchMedia("(max-width: 720px)").matches ? false : DB.store.get(KEY_BOT, false);
   let botThinking = false;
 
   const isActive = () => document.body.dataset.mode === "student";
@@ -69,11 +69,12 @@
     const reasons = [], ok = [];
     const text = (sub.text || "").trim();
     const plain = text.replace(/\s+/g, "");
-    if (c.image) {
+    // 제출 방식에 없는 입력은 검사하지 않는다 (예: 링크 과제에 남은 사진 규칙)
+    if (c.image && m.type === "image") {
       if (!sub.files.length) reasons.push("인증 사진(또는 PDF)을 1개 이상 올려 주세요.");
       else ok.push("인증 파일 " + sub.files.length + "개 확인");
     }
-    if (c.link) {
+    if (c.link && m.type === "link") {
       const url = (sub.link || "").trim();
       if (!/^https?:\/\/[^\s.]+\.[^\s]+$/i.test(url)) reasons.push("http:// 또는 https:// 로 시작하는 올바른 링크를 입력해 주세요.");
       else if (c.linkHint && url.toLowerCase().indexOf(c.linkHint) === -1) reasons.push("‘" + c.linkHint + "’ 주소가 맞는지 확인해 주세요.");
@@ -353,7 +354,7 @@
 
       (on("missions") || on("schedule") ? '<div class="grid-3" style="margin-top:14px">' +
         (on("missions") ? '<a class="card stat plain-link" href="#/missions"><span class="stat-label">전체 진행률</span><span class="stat-value">' + o.pct + "%</span>" + progressBar(o.pct, true) + "</a>" +
-        '<a class="card stat plain-link" href="#/certificate"><span class="stat-label">필수 과제 통과</span><span class="stat-value">' + o.reqDone + ' <small class="tiny">/ ' + o.reqTotal + '</small></span><span class="tiny">모두 통과하면 수료증 발급</span></a>' : "") +
+        '<a class="card stat plain-link" href="' + (on("certificate") ? "#/certificate" : "#/missions") + '"><span class="stat-label">필수 과제 통과</span><span class="stat-value">' + o.reqDone + ' <small class="tiny">/ ' + o.reqTotal + '</small></span><span class="tiny">모두 통과하면 수료증 발급</span></a>' : "") +
         (on("schedule") ? '<a class="card stat plain-link" href="#/schedule"><span class="stat-label">다음 일정</span><span class="stat-value">' + (nextLive ? (dday === 0 ? "오늘" : "D-" + dday) : "-") + '</span><span class="tiny">' + (nextLive ? esc(fmtMD(nextLive.date) + " " + DB.EVENT_TYPES[nextLive.type].label) : "예정된 일정 없음") + "</span></a>" : "") +
       "</div>" : "") +
 
@@ -402,7 +403,7 @@
   function pageLesson(id) {
     const w = D.weeks.find((x) => x.lessons.some((l) => l.id === id));
     if (!w) return notFound();
-    if (!isOpen(w)) return lockedPage(w);
+    if (!isOpen(w)) return lockedPage(w, "curriculum");
     const all = D.weeks.flatMap((x) => x.lessons.map((l) => Object.assign({ w: x }, l)));
     const i = all.findIndex((l) => l.id === id);
     const l = all[i], prev = all[i - 1], next = all[i + 1];
@@ -489,6 +490,11 @@
     }
     form += '<button class="btn btn-primary" type="submit">' + icon("send", "sm") + (last ? "다시 제출하고 검수받기" : "제출하고 자동검수 받기") + "</button></form>";
 
+    const lastFiles = last && last.files && last.files.length
+      ? '<div class="card"><p class="side-label">마지막으로 낸 파일</p><div class="thumbs">' + last.files.map((f) => f.type === "pdf"
+          ? '<a class="thumb" ' + (f.data ? 'href="' + f.data + '" download="' + esc(f.name) + '"' : "") + '><div class="thumb-pdf">' + icon("file") + esc(f.name) + "</div></a>"
+          : '<a class="thumb" href="' + f.data + '" target="_blank" rel="noopener"><img src="' + f.data + '" alt="' + esc(f.name) + '"></a>').join("") + "</div></div>"
+      : "";
     const history = subs.length
       ? '<ul class="history">' + subs.slice().reverse().map((s, i) => "<li><span>" + (subs.length - i) + "차 제출 · " + fmtStamp(s.at) + "</span>" +
           (s.review ? (s.review.status === "approved" ? '<span class="badge badge-positive">강사 승인</span>' : '<span class="badge badge-warning">보완 요청</span>') : s.result.pass ? '<span class="badge badge-positive">통과</span>' : '<span class="badge badge-warning">보완</span>') + "</li>").join("") + "</ul>"
@@ -506,7 +512,7 @@
         "</section>" +
         '<aside class="stack">' +
           '<div class="card"><p class="side-label">자동검수 기준</p><ul class="history">' + (checkCriteria(m).map((t) => "<li><span>" + esc(t) + "</span></li>").join("") || "<li><span>제출하면 바로 통과</span></li>") + "</ul></div>" +
-          '<div class="card"><p class="side-label">제출 이력</p>' + history + "</div>" +
+          '<div class="card"><p class="side-label">제출 이력</p>' + history + "</div>" + lastFiles +
           '<div class="card card-dark"><p style="margin:0 0 12px;font-weight:800;color:var(--accent)">막히셨나요?</p><p class="tiny" style="color:#b8bdb2;margin:0 0 14px">' + esc(D.brand.botName) + "에게 바로 물어보세요.</p>" +
             '<button class="btn btn-primary btn-sm btn-block" data-action="ask-bot" data-q="' + esc(m.title + " 어떻게 해요?") + '">' + icon("sparkles", "sm") + "AI봇에게 물어보기</button></div>" +
         "</aside>" +
@@ -514,8 +520,8 @@
   }
   function checkCriteria(m) {
     const c = m.check || {}, out = [];
-    if (c.image) out.push("인증 사진·PDF 1개 이상");
-    if (c.link) out.push("올바른 링크 형식" + (c.linkHint ? " (" + c.linkHint + ")" : ""));
+    if (c.image && m.type === "image") out.push("인증 사진·PDF 1개 이상");
+    if (c.link && m.type === "link") out.push("올바른 링크 형식" + (c.linkHint ? " (" + c.linkHint + ")" : ""));
     if (c.minLength) out.push("공백 제외 " + c.minLength + "자 이상");
     (c.keywords || []).forEach((k) => out.push("‘" + k + "’ 포함"));
     return out;
@@ -543,7 +549,14 @@
   function addFiles(fileList) {
     Array.from(fileList || []).forEach((file) => {
       if (draft.files.length >= 3) { toast("파일은 최대 3개까지 올릴 수 있어요.", "warn"); return; }
-      if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) { draft.files.push({ type: "pdf", name: file.name }); refreshThumbs(); return; }
+      if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+        // 1MB 이하 PDF는 강사가 열어 볼 수 있게 내용까지 보관 (그보다 크면 파일 이름만)
+        if (file.size > 1048576) { draft.files.push({ type: "pdf", name: file.name }); refreshThumbs(); toast("1MB가 넘는 PDF는 이름만 올라가요. 사진으로 찍어 올리면 강사님이 바로 볼 수 있어요.", "warn"); return; }
+        const fr = new FileReader();
+        fr.onload = () => { if (draft.files.length < 3) draft.files.push({ type: "pdf", name: file.name, data: fr.result }); refreshThumbs(); };
+        fr.readAsDataURL(file);
+        return;
+      }
       if (!/^image\//.test(file.type)) { toast("사진 또는 PDF만 올릴 수 있어요.", "warn"); return; }
       const reader = new FileReader();
       reader.onload = () => {
@@ -802,7 +815,7 @@
       const o = overallStats();
       return { text: "필수 과제 " + o.reqTotal + "개를 모두 통과하면 수료증이 발급돼요. 지금 " + o.reqDone + "개 통과, " + (o.reqTotal - o.reqDone) + "개 남았어요.", links: [["수료증 보기", "#/certificate"]] };
     }
-    if (/(마진|계산기|순이익|판매가)/.test(t)) {
+    if (/(마진|계산기|순이익|판매가)/.test(t) && DB.libOn(INS.id, "file") && D.resources.file.some((x) => x.tool === "calculator")) {
       return { text: "자료실 ‘자료 파일’의 마진 계산기에 현지가·환율·배송비·수수료·광고비를 넣으면 순이익과 마진율이 바로 나와요. 판매가 기준 순이익 20~30%를 목표로 잡아 보세요.", links: [["마진 계산기 열기", "#/library/file?tool=calculator"]] };
     }
     const cands = [];
@@ -824,10 +837,16 @@
     if (/(오류|버그|안\s*눌|안\s*돼|안\s*되|깨져|멈춰|에러|고장)/.test(t)) return { text: "프로그램이 이상하게 동작하나요? Q&A ‘요청사항’에 어떤 화면에서 무엇을 눌렀는지 적고 스크린샷을 올려 주시면 강사님이 확인 후 고쳐 드려요.", links: [["오류 신고하기", "#/qna/requests/new"]] };
     return { text: "그 부분은 제가 정확히 답하기 어려워요. 자주 묻는 질문을 먼저 찾아보시고, 수업 내용은 라이브 Q&A 시간에 " + D.brand.instructor + "께 직접 물어봐 주세요.", links: [["자주 묻는 질문", "#/qna"], ["강의 일정", "#/schedule"]] };
   }
+  // 꺼진 메뉴로 가는 봇 답변 링크는 숨긴다
+  function linkOk(l) {
+    const top = String(l[1]).replace(/^#\/?/, "").split(/[/?]/)[0];
+    if (top === "library") { const cat = String(l[1]).split("/")[2]; return on("library") && (!cat || DB.libOn(INS.id, cat.split("?")[0])); }
+    return !top || top === "home" || !NAV_DEFS.some((n) => n.id === top) || on(top);
+  }
   function chatLog() {
     return [botGreeting()].concat(P.chat).map((m) =>
       '<div class="msg' + (m.from === "me" ? " me" : "") + '">' + (m.from === "me" ? "" : '<span class="msg-avatar">' + icon("sparkles", "sm") + "</span>") +
-      '<div class="msg-bubble">' + esc(m.text) + (m.links && m.links.length ? '<div class="msg-links">' + m.links.map((l) => '<a href="' + esc(l[1]) + '">' + esc(l[0]) + "</a>").join("") + "</div>" : "") + "</div></div>").join("") +
+      '<div class="msg-bubble">' + esc(m.text) + (m.links && m.links.filter(linkOk).length ? '<div class="msg-links">' + m.links.filter(linkOk).map((l) => '<a href="' + esc(l[1]) + '">' + esc(l[0]) + "</a>").join("") + "</div>" : "") + "</div></div>").join("") +
       (botThinking ? '<div class="msg"><span class="msg-avatar">' + icon("sparkles", "sm") + '</span><div class="msg-bubble"><span class="typing-dots"><i></i><i></i><i></i></span></div></div>' : "");
   }
   function sendChat(text) {
@@ -981,10 +1000,11 @@
   }
 
   /* ---------------- 기타 ---------------- */
-  function lockedPage(w) {
-    return '<div class="page">' + pageHead(w.no + "주차 · " + w.title, "", crumb([["과제 제출하기", "#/missions"], [w.no + "주차"]])) +
+  function lockedPage(w, from) {
+    const cur = from === "curriculum";
+    return '<div class="page">' + pageHead(w.no + "주차 · " + w.title, "", crumb([[cur ? "커리큘럼" : "과제 제출하기", cur ? "#/curriculum" : "#/missions"], [w.no + "주차"]])) +
       '<section class="card empty">' + icon("lock") + '<p style="font-size:18px;font-weight:800;color:var(--ink);margin:0 0 6px">' + fmtMD(openOf(w)) + '에 공개됩니다</p><p style="margin:0 0 20px">' + esc(w.summary) + "</p>" +
-      '<a class="btn btn-primary" href="#/missions">주차 목록으로</a></section></div>';
+      '<a class="btn btn-primary" href="' + (cur ? "#/curriculum" : "#/missions") + '">' + (cur ? "커리큘럼으로" : "주차 목록으로") + "</a></section></div>";
   }
   function notFound() {
     return '<div class="page"><section class="card empty">' + icon("alert") + '<p style="font-size:18px;font-weight:800;color:var(--ink)">페이지를 찾을 수 없어요</p><a class="btn btn-primary" href="#/home">홈으로</a></section></div>';
@@ -1129,7 +1149,7 @@
       case "modal-close": closeModal(); break;
       case "modal-close-bg": if (e.target === a) closeModal(); break;
       case "logout": logout(); break;
-      case "exit-preview": DB.session.setStudent(null); me = null; location.hash = "#/login"; break;
+      case "exit-preview": if (INS) { loginPick = INS.id; DB.session.setInstructorPick(INS.id); } DB.session.setStudent(null); me = null; location.hash = "#/login"; break;
       case "toggle-nav": document.getElementById("app").classList.toggle("nav-open"); break;
       case "toggle-watched": {
         const id = a.dataset.id;

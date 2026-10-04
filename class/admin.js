@@ -278,6 +278,7 @@
     if (r.params.get("status")) ui.stuStatus = r.params.get("status");
     if (r.params.get("cohort")) ui.stuCohort = r.params.get("cohort");
     const cos = DB.cohortsOf(iid);
+    if (ui.stuCohort !== "all" && !cos.some((x) => x.id === ui.stuCohort)) ui.stuCohort = "all";
     const all = DB.studentsOf(iid).filter((s) => ui.stuCohort === "all" || s.cohortId === ui.stuCohort);
     const q = ui.stuQuery.trim();
     const list = all.filter((s) => (ui.stuStatus === "all" || s.status === ui.stuStatus) && (!q || (s.name + s.phone4).indexOf(q) !== -1))
@@ -408,7 +409,7 @@
   function pageReviews() {
     const iid = IID(), c = C();
     const cos = DB.cohortsOf(iid);
-    if (!ui.revCohort) ui.revCohort = (DB.currentCohort(iid) || {}).id || "all";
+    if (!ui.revCohort || (ui.revCohort !== "all" && !cos.some((x) => x.id === ui.revCohort))) ui.revCohort = (DB.currentCohort(iid) || {}).id || "all";
     let list = allSubmissions(iid, ui.revCohort);
     if (ui.revWeek !== "all") list = list.filter((x) => String(x.w.no) === ui.revWeek);
     const cnt = (k) => list.filter((x) => k === "all" || x.review === k).length;
@@ -451,7 +452,7 @@
     const subs = p.submissions[mid] || [];
     const sub = subs[subs.length - 1];
     if (!sub) return;
-    const files = (sub.files || []).map((f) => f.type === "image" ? '<a class="a-shot" href="' + f.data + '" target="_blank" rel="noopener"><img src="' + f.data + '" alt="' + esc(f.name) + '"></a>' : '<span class="a-file">' + icon("file", "sm") + esc(f.name) + "</span>").join("");
+    const files = (sub.files || []).map((f) => f.type === "image" ? '<a class="a-shot" href="' + f.data + '" target="_blank" rel="noopener"><img src="' + f.data + '" alt="' + esc(f.name) + '"></a>' : f.data ? '<a class="a-file" href="' + f.data + '" download="' + esc(f.name) + '">' + icon("download", "sm") + esc(f.name) + "</a>" : '<span class="a-file" title="1MB가 넘어 이름만 올라온 파일">' + icon("file", "sm") + esc(f.name) + "</span>").join("");
     openModal(s.name + " · " + m.title,
       '<div class="a-review-meta">' + pill(w.no + "주차", "mute") + (m.required ? pill("필수", "dark") : pill("선택", "mute")) + "<span>" + subs.length + "번째 제출 · " + fmtStamp(sub.at) + "</span></div>" +
       '<div class="a-review-box">' +
@@ -526,7 +527,7 @@
       fields: [F("title", "단계 이름"), F("where", "어디서 (기관·사이트)"), F("url", "바로가기 주소", "url"), F("time", "소요 시간"), F("cost", "비용"), F("docs", "필요 서류 (한 줄에 하나)", "lines", { rows: 3 }), F("tips", "팁 (한 줄에 하나)", "lines", { rows: 3 })] },
     ann: { name: "강사 공지", list: () => DB.data.announcements, idp: "an", init: () => ({ date: todayStr(), pinned: false }),
       fields: [F("title", "제목"), F("body", "내용", "textarea", { rows: 6 }), F("date", "날짜", "date"), F("pinned", "맨 위에 고정", "checkbox")] },
-    mv: { name: "동기부여 영상", list: (c) => c.motivation, idp: "mv", init: () => ({ date: todayStr() }),
+    mv: { name: "동기부여 영상", prepend: true, list: (c) => c.motivation, idp: "mv", init: () => ({ date: todayStr() }),
       fields: [F("title", "영상 제목"), F("youtubeId", "유튜브 주소", "youtube"), F("minutes", "영상 길이 (예: 31:57)"), F("date", "올린 날", "date")] }
   };
   ["ebook", "file"].forEach((k) => { COLL["res-" + k] = { name: "자료", list: (c) => c.resources[k], idp: k[0], fields: [F("title", "자료 이름"), F("meta", "형식 (예: 전자책 · 86쪽)"), F("desc", "한 줄 설명"), F("url", "열람·다운로드 주소 (구글 드라이브 등)", "url")] }; });
@@ -611,6 +612,13 @@
     }
     const titleKey = def.fields[0].key;
     if (def.fields[0].type === "text" && !item[titleKey] && titleKey !== "type") { err.textContent = def.fields[0].label + "을(를) 입력해 주세요."; return; }
+    if (form.dataset.coll === "mission") {
+      // 제출 방식에 없는 입력을 자동검수가 요구하면 영영 통과할 수 없으니 맞춰 준다
+      const ck = item.check = item.check || {};
+      if (item.type !== "image") delete ck.image;
+      if (item.type !== "link") { delete ck.link; delete ck.linkHint; }
+      if (item.type === "link" && ck.linkHint) ck.link = true;
+    }
     if (form.dataset.coll === "event") {
       if (!item.title) { err.textContent = "일정 이름을 입력해 주세요."; return; }
       if (item.scope === "cohort" && (!item.cohortId || !item.date)) { err.textContent = "기수와 날짜를 골라 주세요."; return; }
@@ -619,10 +627,10 @@
     if (!id) {
       if (form.dataset.coll === "week") item.no = list.length + 1;
       else item.id = DB.uid(def.idp || "x");
-      list.push(item);
+      if (def.prepend) list.unshift(item); else list.push(item);
     }
     if (def.after) def.after(c);
-    if (!DB.save()) { if (!id) list.pop(); toast("저장 공간이 부족해요. 큰 파일은 지우고 링크로 바꿔 주세요.", "warn"); DB.load(); return; }
+    if (!DB.save()) { if (!id) list.splice(list.indexOf(item), 1); toast("저장 공간이 부족해요. 큰 파일은 지우고 링크로 바꿔 주세요.", "warn"); DB.load(); return; }
     commit(def.name + "을(를) 저장했어요.");
   }
   function deleteItem(coll, id, ctx) {
@@ -714,7 +722,7 @@
   function pageSchedule() {
     const iid = IID(), c = C();
     const cos = DB.cohortsOf(iid);
-    if (!ui.schedCohort || !DB.cohort(ui.schedCohort)) ui.schedCohort = (DB.currentCohort(iid) || {}).id;
+    if (!ui.schedCohort || !cos.some((x) => x.id === ui.schedCohort)) ui.schedCohort = (DB.currentCohort(iid) || {}).id;
     const co = DB.cohort(ui.schedCohort);
     const T = DB.EVENT_TYPES;
     const cls = { qna: "warn", notice: "mute", challenge: "ok", event: "dark", open: "info", deadline: "bad" };
@@ -782,7 +790,7 @@
         simpleList("res-" + k, items, (it) => '<div class="a-item-main"><b>' + esc(it.title) + "</b><small>" + esc([it.meta, it.desc].filter(Boolean).join(" · ")) + "</small></div>" + ((it.attachments || []).length ? pill("첨부 " + it.attachments.length, "info") : "") + (it.tool ? pill("계산기", "info") : isVideo ? ytBadge(it) : it.url ? pill("링크 연결됨", "ok") : pill("준비 중", "mute")), "아직 자료가 없어요.") + "</section>";
   }
   function pageMotivation() {
-    return head("동기부여", "맨 위 영상이 수강생 홈의 ‘오늘의 동기부여’로 보여요. 한마디 문구는 기본 정보에서 고쳐요.", addBtn("mv", "영상 추가")) +
+    return head("동기부여", "맨 위 영상이 수강생 홈의 ‘오늘의 동기부여’로 보여요. 새로 올린 영상은 맨 위에 들어가요. 한마디 문구는 기본 정보에서 고쳐요.", addBtn("mv", "영상 추가")) +
       '<section class="a-card">' + simpleList("mv", C().motivation, (it) => '<div class="a-item-main"><b>' + esc(it.title) + "</b><small>" + esc([it.minutes, it.date ? fmtMD(it.date) : ""].filter(Boolean).join(" · ")) + "</small></div>" + ytBadge(it), "동기부여 영상이 없어요.") + "</section>";
   }
 
@@ -1318,7 +1326,15 @@
       ids.forEach((id) => (t.checked ? ui.picked.add(id) : ui.picked.delete(id)));
       render();
     }
-    else if (t.closest && t.closest("#coll-form")) applyShowIf();
+    else if (t.closest && t.closest("#coll-form")) {
+      const form = t.closest("#coll-form");
+      if (form.dataset.coll === "mission" && t.name === "type") {
+        if (form.chkImage) form.chkImage.checked = t.value === "image";
+        if (form.chkLink) form.chkLink.checked = t.value === "link";
+        toast(t.value === "image" ? "자동검수를 ‘사진·PDF 1개 이상’으로 맞췄어요." : t.value === "link" ? "자동검수를 ‘올바른 링크’로 맞췄어요." : "글 작성 과제는 ‘최소 글자 수’를 정하면 좋아요.");
+      }
+      applyShowIf();
+    }
   });
   let qTimer = null;
   document.addEventListener("input", (e) => {
