@@ -38,6 +38,35 @@
   const fmtKo = (s) => { const d = parseDate(s); return (d.getMonth() + 1) + "월 " + d.getDate() + "일 (" + DOW[d.getDay()] + ")"; };
   const fmtStamp = (ts) => { const d = new Date(ts); return (d.getMonth() + 1) + "/" + d.getDate() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()); };
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  /** 본문 서식: 줄바꿈 그대로 + 간단한 표시만 지원 (강사가 외울 것 없이 쓰는 정도)
+   *   ## 소제목 · - 목록 (· • 도 됨) · 1. 번호 목록 · > 강조 상자 · --- 구분선 · **굵게** · 주소는 자동 링크
+   *   opts.token(n) 을 주면 [사진1] 같은 자리에 그 결과를 넣는다 (공지 사진) */
+  function rich(text, opts) {
+    opts = opts || {};
+    const inline = (t) => esc(t)
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/(https?:\/\/[^\s<]+[^\s<.,)!?’”])/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+    const out = [];
+    let para = [], list = null;
+    const flushP = () => { if (para.length) { out.push("<p>" + para.join("<br>") + "</p>"); para = []; } };
+    const flushL = () => { if (list) { out.push("<" + list.tag + ">" + list.items.map((x) => "<li>" + x + "</li>").join("") + "</" + list.tag + ">"); list = null; } };
+    const flush = () => { flushP(); flushL(); };
+    String(text || "").replace(/\r/g, "").split("\n").forEach((raw) => {
+      const line = raw.trim();
+      let m;
+      if (!line) { flush(); return; }
+      if (opts.token && (m = line.match(/^\[사진\s*(\d+)\]$/))) { flush(); out.push(opts.token(Number(m[1]))); return; }
+      if ((m = line.match(/^#{1,3}\s+(.+)$/))) { flush(); out.push("<h3>" + inline(m[1]) + "</h3>"); return; }
+      if (/^(-{3,}|—{2,}|_{3,})$/.test(line)) { flush(); out.push("<hr>"); return; }
+      if ((m = line.match(/^>\s?(.*)$/))) { flush(); out.push('<div class="rich-note">' + inline(m[1]) + "</div>"); return; }
+      if ((m = line.match(/^[-·•*]\s+(.+)$/))) { flushP(); if (!list || list.tag !== "ul") { flushL(); list = { tag: "ul", items: [] }; } list.items.push(inline(m[1])); return; }
+      if ((m = line.match(/^(\d{1,2})[.)]\s+(.+)$/))) { flushP(); if (!list || list.tag !== "ol") { flushL(); list = { tag: "ol", items: [] }; } list.items.push(inline(m[2])); return; }
+      flushL(); para.push(inline(line));
+    });
+    flush();
+    return '<div class="rich">' + out.join("") + "</div>";
+  }
   const uid = (p) => (p || "id") + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
   /** 유튜브 주소/ID → 11자리 ID (아니면 빈 문자열) */
@@ -265,16 +294,30 @@
   /* ---------------- 불러오기 · 저장 ---------------- */
   let db = null;
 
+  // 과제 종류: 필수(수료 조건) · 도전 · 마인드. required 는 kind 와 항상 같게 맞춘다
+  const MISSION_KINDS = [
+    { key: "required", label: "필수 과제", short: "필수", hint: "수료 조건" },
+    { key: "challenge", label: "도전 과제", short: "도전", hint: "하면 실력이 늘어요" },
+    { key: "mind", label: "마인드 과제", short: "마인드", hint: "생각과 다짐을 정리해요" }
+  ];
+  const missionKind = (m) => (MISSION_KINDS.some((k) => k.key === m.kind) ? m.kind : m.required ? "required" : "challenge");
+  function normalizeWeeks(weeks) {
+    weeks.forEach((w, i) => {
+      w.no = i + 1; w.lessons = w.lessons || []; w.missions = w.missions || []; w.topics = w.topics || [];
+      w.missions.forEach((m) => { m.kind = missionKind(m); m.required = m.kind === "required"; });
+    });
+  }
   function normalizeContent(c) {
     c.weeks = c.weeks || [];
-    c.weeks.forEach((w, i) => { w.no = i + 1; w.lessons = w.lessons || []; w.missions = w.missions || []; });
+    normalizeWeeks(c.weeks);
     c.curricula = Array.isArray(c.curricula) ? c.curricula : [];
-    c.curricula.forEach((cu) => { cu.weeks = cu.weeks || []; cu.weeks.forEach((w, i) => { w.no = i + 1; w.lessons = w.lessons || []; w.missions = w.missions || []; }); });
+    c.curricula.forEach((cu) => { cu.weeks = cu.weeks || []; normalizeWeeks(cu.weeks); });
     ["schedule", "notices", "faqs", "docsGuide", "motivation", "quotes", "guide"].forEach((k) => { c[k] = c[k] || []; });
     c.resources = Object.assign({ ebook: [], file: [], vod: [], senior: [] }, c.resources || {});
     c.pages = c.pages || {};
     if (!c.brand.theme) c.brand.theme = "lime";
     [c.schedule, c.notices, c.faqs, c.docsGuide, c.motivation, c.guide].forEach((list) => list.forEach((it) => { if (!it.id) it.id = uid("x"); }));
+    c.notices.forEach((n) => { n.images = n.images || []; });
     return c;
   }
 
@@ -390,6 +433,33 @@
       });
       db.flags.curriculaSeeded = true; save();
     }
+    // 커리큘럼 상세(부제·핵심 목표·강의 내용)와 과제 종류(필수·도전·마인드), 카카오톡 응대 가이드 본문 (한 번만)
+    if (!db.flags.weekDetailSeeded) {
+      Object.keys(db.content).forEach((id) => {
+        const c = db.content[id], sc = window.CLASS_SEED.content[id];
+        if (!sc) return;
+        const fill = (weeks, seedWeeks) => {
+          const have = {};
+          weeks.forEach((w) => w.missions.forEach((m) => { have[m.id] = true; }));
+          weeks.forEach((w, i) => {
+            const sw = seedWeeks[i];
+            if (!sw || sw.title !== w.title) return;
+            ["subtitle", "goal"].forEach((k) => { if (!w[k] && sw[k]) w[k] = sw[k]; });
+            if (!(w.topics || []).length && sw.topics) w.topics = clone(sw.topics);
+            sw.missions.forEach((sm) => {
+              const m = w.missions.find((x) => x.id === sm.id);
+              if (m) { m.kind = sm.kind; m.required = sm.kind === "required"; }
+              else if (!have[sm.id]) w.missions.push(clone(sm));
+            });
+          });
+        };
+        fill(c.weeks, sc.weeks);
+        (c.curricula || []).forEach((cu) => { const scu = (sc.curricula || []).find((x) => x.id === cu.id); if (scu) fill(cu.weeks, scu.weeks); });
+        const g = (c.resources.senior || []).find((x) => x.id === "g4"), sg = (sc.resources.senior || []).find((x) => x.id === "g4");
+        if (g && sg && /^스마트스토어 톡톡과 카카오톡 채널로 고객 문의에 답하는 기본 방법이에요/.test(g.body || "") && (g.body || "").length < 120) { g.body = sg.body; g.desc = sg.desc; }
+      });
+      db.flags.weekDetailSeeded = true; save();
+    }
     // 무료강의 페이지 기본 문구 (한 번만, doogo.site 내용)
     if (!db.flags.freeSeeded2) {
       // doogo.site 와 같은 화면으로 바꾸면서 기본 내용을 새로 넣는다 (한 번만)
@@ -460,6 +530,12 @@
   const cohortWeeks = (co) => weeksOf(co).length;
   const weekOpen = (co, no) => addDays(co.startDate, (no - 1) * 7);
   const weekDeadline = (co, no) => addDays(co.startDate, (no - 1) * 7 + 6);
+  // 주차 강의 날짜: 기수에 ‘매주 무슨 요일’을 정했으면 그 주의 그 요일, 아니면 주차 시작일
+  function classDate(co, no) {
+    const open = weekOpen(co, no);
+    const hasDow = co.classDow !== undefined && co.classDow !== null && co.classDow !== "";
+    return hasDow ? addDays(open, ((Number(co.classDow) - parseDate(open).getDay()) + 7) % 7) : open;
+  }
   const cohortEnd = (co) => addDays(co.startDate, Math.max(1, cohortWeeks(co)) * 7 - 1);
   function cohortStatus(co) {
     const t = todayStr();
@@ -518,10 +594,8 @@
     // 주차 강의 날짜: 기수에 ‘매주 무슨 요일’을 정했으면 그 주의 그 요일, 아니면 주차 시작일
     const time = co.classTime || c.brand.liveTime || "";
     const url = co.classUrl || c.brand.liveUrl || "";
-    const hasDow = co.classDow !== undefined && co.classDow !== null && co.classDow !== "";
     weeksOf(co).forEach((w) => {
-      const open = weekOpen(co, w.no);
-      const date = hasDow ? addDays(open, ((Number(co.classDow) - parseDate(open).getDay()) + 7) % 7) : open;
+      const date = classDate(co, w.no);
       out.push({ date, time, type: "open", week: w.no, title: w.no + "주차 강의 — " + w.title + (time ? " (" + time + ")" : ""), url, auto: true });
       out.push({ date: weekDeadline(co, w.no), time: "", type: "deadline", week: w.no, title: w.no + "주차 과제 마감", auto: true });
     });
@@ -589,7 +663,7 @@
   };
 
   window.DB = {
-    load, save, reset, store, clone, uid, esc, youtubeId, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
+    load, save, reset, store, clone, uid, esc, youtubeId, rich, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
     curricula, curriculum, curriculumOf, weeksOf, cohortWeeks,

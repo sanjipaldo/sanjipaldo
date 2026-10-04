@@ -235,7 +235,7 @@
     const avg = rows.length ? Math.round(rows.reduce((a, r) => a + r.st.pct, 0) / rows.length) : 0;
     const anns = (DB.data.announcements || []).slice().sort((a, b) => (b.pinned - a.pinned) || b.date.localeCompare(a.date)).slice(0, 2);
     return head(ins.name + " 강사님, 안녕하세요", esc(c.brand.courseTitle), btn(icon("userPlus", "sm") + "수강생 추가", "student-add", "a-btn-outline") + btn(icon("plus", "sm") + "새 기수", "cohort-add", "a-btn-primary")) +
-      (anns.length ? '<section class="a-ann">' + icon("megaphone", "sm") + '<div class="a-ann-list">' + anns.map((a) => '<details><summary><b>' + esc(a.title) + "</b><small>두고 클래스 운영팀 · " + fmtMD(a.date) + "</small></summary><p>" + esc(a.body) + "</p></details>").join("") + "</div></section>" : "") +
+      (anns.length ? '<section class="a-ann">' + icon("megaphone", "sm") + '<div class="a-ann-list">' + anns.map((a) => '<details><summary><b>' + esc(a.title) + "</b><small>두고 클래스 운영팀 · " + fmtMD(a.date) + "</small></summary>" + DB.rich(a.body) + "</details>").join("") + "</div></section>" : "") +
       '<div class="a-kpis">' +
         kpi("승인 대기", n.pending + "명", "새 수강 신청", "#/center/students?status=pending", n.pending ? "warn" : "") +
         kpi("진행 중 기수", co ? co.name : "-", co ? (DB.cohortStatus(co) === "running" ? wk + "주차 진행 중" : fmtMD(co.startDate) + " 시작") : "기수를 만들어 주세요", "#/center/cohorts") +
@@ -476,7 +476,7 @@
         '<div class="a-filters"><select class="a-input a-sm" id="rev-cohort" aria-label="기수"><option value="all">전체 기수</option>' + cos.map((co) => '<option value="' + co.id + '"' + (ui.revCohort === co.id ? " selected" : "") + ">" + esc(co.name) + "</option>").join("") + "</select>" +
         '<select class="a-input a-sm" id="rev-week" aria-label="주차"><option value="all">전체 주차</option>' + Array.from({ length: Math.max(0, ...DB.curricula(iid).map((x) => x.weeks.length)) }, (_, i) => i + 1).map((no) => '<option value="' + no + '"' + (ui.revWeek === String(no) ? " selected" : "") + ">" + no + "주차</option>").join("") + "</select></div></div>" +
         (shown.length ? bulkBar(shown) + '<div class="a-table-wrap"><table class="a-table a-rev-table"><thead><tr><th class="w-check"><input type="checkbox" id="rev-all" aria-label="모두 선택"' + (shown.every((x) => ui.revPicked.has(x.s.id + "|" + x.m.id)) ? " checked" : "") + '></th><th>제출 시각</th><th>수강생</th><th>과제</th><th>제출</th><th>상태</th><th class="right"></th></tr></thead><tbody>' +
-          shown.map((x) => { const key = x.s.id + "|" + x.m.id; return '<tr class="clickable" data-action="review-open" data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"><td class="w-check"><input type="checkbox" class="rev-pick" data-key="' + key + '"' + (ui.revPicked.has(key) ? " checked" : "") + ' aria-label="' + esc(x.s.name + " " + x.m.title) + ' 선택"></td><td class="num">' + fmtStamp(x.sub.at) + "</td><td><b>" + esc(x.s.name) + "</b><small class=\"a-memo\">" + esc(cohortName(x.s.cohortId)) + "</small></td><td>" + x.w.no + "주차 · " + esc(x.m.title) + (x.m.required ? "" : ' <small class="a-muted">선택</small>') + '</td><td class="num">' + x.count + "회</td><td>" + reviewPill(x) + '</td><td class="right">' + btn("열기", "review-open", "a-btn-ghost a-btn-sm", ' data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"') + "</td></tr>"; }).join("") +
+          shown.map((x) => { const key = x.s.id + "|" + x.m.id; return '<tr class="clickable" data-action="review-open" data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"><td class="w-check"><input type="checkbox" class="rev-pick" data-key="' + key + '"' + (ui.revPicked.has(key) ? " checked" : "") + ' aria-label="' + esc(x.s.name + " " + x.m.title) + ' 선택"></td><td class="num">' + fmtStamp(x.sub.at) + "</td><td><b>" + esc(x.s.name) + "</b><small class=\"a-memo\">" + esc(cohortName(x.s.cohortId)) + "</small></td><td>" + x.w.no + "주차 · " + esc(x.m.title) + (x.m.required ? "" : ' <small class="a-muted">' + DB.MISSION_KINDS.find((k) => k.key === DB.missionKind(x.m)).short + "</small>") + '</td><td class="num">' + x.count + "회</td><td>" + reviewPill(x) + '</td><td class="right">' + btn("열기", "review-open", "a-btn-ghost a-btn-sm", ' data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"') + "</td></tr>"; }).join("") +
           "</tbody></table></div>" : emptyBox("inbox", ui.revFilter === "pending" ? "검수할 제출물이 없어요." : "해당하는 제출물이 없어요.")) +
       "</section>";
   }
@@ -510,7 +510,7 @@
     if (!sub) return;
     const files = (sub.files || []).map((f) => f.type === "image" ? '<a class="a-shot" href="' + f.data + '" target="_blank" rel="noopener"><img src="' + f.data + '" alt="' + esc(f.name) + '"></a>' : f.data ? '<a class="a-file" href="' + f.data + '" download="' + esc(f.name) + '">' + icon("download", "sm") + esc(f.name) + "</a>" : '<span class="a-file" title="1MB가 넘어 이름만 올라온 파일">' + icon("file", "sm") + esc(f.name) + "</span>").join("");
     openModal(s.name + " · " + m.title,
-      '<div class="a-review-meta">' + pill(w.no + "주차", "mute") + (m.required ? pill("필수", "dark") : pill("선택", "mute")) + "<span>" + subs.length + "번째 제출 · " + fmtStamp(sub.at) + "</span></div>" +
+      '<div class="a-review-meta">' + pill(w.no + "주차", "mute") + kindPill(m) + "<span>" + subs.length + "번째 제출 · " + fmtStamp(sub.at) + "</span></div>" +
       '<div class="a-review-box">' +
         (files ? '<div class="a-shots">' + files + "</div>" : "") +
         (sub.link ? '<p><b>링크</b> <a href="' + esc(sub.link) + '" target="_blank" rel="noopener">' + esc(sub.link) + "</a></p>" : "") +
@@ -547,14 +547,18 @@
   const TAGS = (v) => String(v || "").split(",").map((x) => x.trim()).filter(Boolean);
   const F = (key, label, type, opts) => Object.assign({ key, label, type: type || "text" }, opts || {});
   const COLL = {
-    week: { name: "주차", list: () => CUR().weeks, fields: [F("title", "주차 제목"), F("summary", "한 줄 소개", "textarea", { rows: 2 })],
-      init: () => ({ lessons: [], missions: [] }), after: () => CUR().weeks.forEach((w, i) => { w.no = i + 1; }) },
-    lesson: { name: "강의", list: (c, ctx) => weekOf(c, ctx).lessons, fields: [F("title", "강의 제목"), F("youtubeId", "유튜브 주소", "youtube"), F("minutes", "길이(분)", "number"), F("desc", "강의 설명", "textarea", { rows: 3 }), F("attachments", "강의 자료 (교재·PDF·엑셀 등, 영상 아래에 보여요)", "attachments")], idp: "l", init: () => ({ attachments: [] }) },
+    week: { name: "주차", list: () => CUR().weeks, fields: [F("title", "주차 제목"), F("subtitle", "부제 (제목 아래 한 줄)", "text", { hint: "예: 판매를 시작할 수 있는 ‘몸’ 만들기" }),
+      F("goal", "핵심 목표", "textarea", { rows: 2, hint: "이번 주를 마치면 수강생이 어떤 상태가 되는지 한두 문장으로 적어요." }),
+      F("topics", "강의 내용 (한 줄에 하나)", "lines", { rows: 7, hint: "수강생 커리큘럼에 두 줄로 나눠 점 목록으로 보여요." }),
+      F("summary", "한 줄 소개 (과제 화면 위에 보여요)", "textarea", { rows: 2 })],
+      init: () => ({ lessons: [], missions: [], topics: [] }), after: () => CUR().weeks.forEach((w, i) => { w.no = i + 1; }) },
+    lesson: { name: "강의", list: (c, ctx) => weekOf(c, ctx).lessons, fields: [F("title", "강의 제목"), F("youtubeId", "유튜브 주소", "youtube"), F("minutes", "길이(분)", "number"), F("desc", "강의 설명", "textarea", { rows: 4, rich: true }), F("attachments", "강의 자료 (교재·PDF·엑셀 등, 영상 아래에 보여요)", "attachments")], idp: "l", init: () => ({ attachments: [] }) },
     mission: { name: "과제", list: (c, ctx) => weekOf(c, ctx).missions, idp: "m",
-      init: () => ({ required: true, type: "image", steps: [], check: { image: true } }),
+      init: () => ({ required: true, kind: "required", type: "image", steps: [], check: { image: true } }),
       fields: [
         F("title", "과제 제목"),
-        F("required", "필수 과제 (수료 조건에 들어가요)", "checkbox"),
+        F("kind", "과제 종류", "select", { options: DB.MISSION_KINDS.map((k) => [k.key, k.label + " · " + k.hint]), get: (m) => DB.missionKind(m), set: (m, v) => { m.kind = v; m.required = v === "required"; },
+          hint: "필수 과제를 모두 통과해야 수료증이 나와요. 도전 · 마인드 과제는 선택이에요." }),
         F("type", "제출 방식", "select", { options: [["image", "사진 · PDF 인증"], ["link", "링크 제출"], ["text", "글 작성"]] }),
         F("desc", "과제 설명", "textarea", { rows: 3 }),
         F("steps", "진행 방법 (한 줄에 하나)", "lines", { rows: 3 }),
@@ -578,22 +582,24 @@
         F("date", "날짜", "date", { showIf: "scope=cohort" })
       ] },
     notice: { name: "공지", list: (c) => c.notices, idp: "n", init: () => ({ date: todayStr(), pinned: false }),
-      fields: [F("title", "제목"), F("body", "내용", "textarea", { rows: 7 }), F("date", "게시일", "date"), F("pinned", "상단 고정 (필독)", "checkbox")] },
+      fields: [F("title", "제목"), F("body", "내용", "textarea", { rows: 9, rich: true, photos: true }), F("images", "사진 (여러 장 가능)", "images"),
+        F("youtubeId", "유튜브 영상 (선택)", "youtube", { hint: "넣으면 공지 맨 아래에 영상이 보여요." }), F("date", "게시일", "date"), F("pinned", "상단 고정 (필독)", "checkbox")] },
     faq: { name: "질문", list: (c) => c.faqs, idp: "q", init: () => ({ category: "기타" }), fields: [F("q", "질문"), F("category", "분류", "combo", { options: () => faqCats(), hint: "목록에서 고르거나 새 분류를 적으면 돼요." }), F("a", "답변", "textarea", { rows: 4 }), F("tags", "AI봇 검색어 (쉼표로 구분)", "tags", { hint: "수강생이 이 단어로 물어보면 AI봇이 이 답변을 보여 줘요." })] },
     doc: { name: "서류 단계", list: (c) => c.docsGuide, idp: "d",
       fields: [F("title", "단계 이름"), F("where", "어디서 (기관·사이트)"), F("url", "바로가기 주소", "url"), F("time", "소요 시간"), F("cost", "비용"), F("docs", "필요 서류 (한 줄에 하나)", "lines", { rows: 3 }), F("tips", "팁 (한 줄에 하나)", "lines", { rows: 3 })] },
     guide: { name: "시작 가이드 단계", list: (c) => c.guide, idp: "g",
       fields: [F("title", "할 일"), F("desc", "한 줄 설명"), F("url", "바로가기 (선택)", "text", { hint: "수강생 화면 주소(예: #/schedule, #/curriculum) 또는 https:// 로 시작하는 외부 주소" })] },
     ann: { name: "강사 공지", list: () => DB.data.announcements, idp: "an", init: () => ({ date: todayStr(), pinned: false }),
-      fields: [F("title", "제목"), F("body", "내용", "textarea", { rows: 6 }), F("date", "날짜", "date"), F("pinned", "맨 위에 고정", "checkbox")] },
+      fields: [F("title", "제목"), F("body", "내용", "textarea", { rows: 6, rich: true }), F("date", "날짜", "date"), F("pinned", "맨 위에 고정", "checkbox")] },
     mv: { name: "동기부여 영상", prepend: true, list: (c) => c.motivation, idp: "mv", init: () => ({ date: todayStr() }),
       fields: [F("title", "영상 제목"), F("youtubeId", "유튜브 주소", "youtube"), F("minutes", "영상 길이 (예: 31:57)"), F("date", "올린 날", "date")] }
   };
   ["ebook", "file"].forEach((k) => { COLL["res-" + k] = { name: "자료", list: (c) => c.resources[k], idp: k[0], fields: [F("title", "자료 이름"), F("meta", "형식 (예: 전자책 · 86쪽)"), F("desc", "한 줄 설명"), F("url", "열람·다운로드 주소 (구글 드라이브 등)", "url")] }; });
   ["vod", "senior"].forEach((k) => { COLL["res-" + k] = { name: "영상", list: (c) => c.resources[k], idp: k[0], init: () => ({ body: "", attachments: [] }),
     fields: [F("title", "영상 제목 (팝업 제목)"), F("meta", "형식 (예: 기초 · 15분)"), F("desc", "한 줄 설명 (목록에 보여요)"), F("youtubeId", "유튜브 주소", "youtube"),
-      F("body", "본문 (팝업에 보이는 설명)", "textarea", { rows: 7 }), F("attachments", "첨부 자료 (교습지·엑셀·PDF 등)", "attachments")] }; });
+      F("body", "본문 (팝업에 보이는 설명)", "textarea", { rows: 12, rich: true }), F("attachments", "첨부 자료 (교습지·엑셀·PDF 등)", "attachments")] }; });
   const faqCats = () => C().faqs.map((f) => f.category || "기타").filter((c, i, a) => a.indexOf(c) === i);
+  const kindPill = (m) => { const k = DB.missionKind(m); return pill(DB.MISSION_KINDS.find((x) => x.key === k).short, k === "required" ? "dark" : k === "mind" ? "warn" : "info"); };
   function weekOf(c, ctx) { return CUR().weeks.find((w) => String(w.no) === String(ctx)); }
 
   function fieldHtml(f, item) {
@@ -602,15 +608,77 @@
     if (v == null) v = "";
     const show = f.showIf ? ' data-show-if="' + f.showIf + '"' : "";
     if (f.type === "attachments") return '<div class="a-field"><span class="a-label">' + esc(f.label) + '</span><div id="att-editor">' + attEditorHtml() + "</div></div>";
+    if (f.type === "images") return '<div class="a-field"><span class="a-label">' + esc(f.label) + '</span><div id="img-editor">' + imgEditorHtml() + "</div></div>";
     if (f.type === "checkbox") return '<label class="a-check"' + show + '><input type="checkbox" name="' + f.key + '" id="' + id + '"' + (v ? " checked" : "") + "><span>" + esc(f.label) + "</span></label>";
     let input;
-    if (f.type === "textarea" || f.type === "lines") input = '<textarea class="a-input" id="' + id + '" name="' + f.key + '" rows="' + (f.rows || 3) + '">' + esc(f.type === "lines" ? (v || []).join("\n") : v) + "</textarea>";
+    if (f.type === "textarea" || f.type === "lines") input = (f.rich ? richBar(id, f.photos) : "") + '<textarea class="a-input' + (f.rich ? " a-rich-input" : "") + '" id="' + id + '" name="' + f.key + '" rows="' + (f.rows || 3) + '">' + esc(f.type === "lines" ? (v || []).join("\n") : v) + "</textarea>" + (f.rich ? '<small class="a-muted">## 소제목 · - 목록 · 1. 번호 · **굵게** · &gt; 강조 상자 · 주소는 자동으로 링크가 돼요.</small>' : "");
     else if (f.type === "select") { const opts = typeof f.options === "function" ? f.options() : f.options; input = '<select class="a-input" id="' + id + '" name="' + f.key + '">' + opts.map((o) => '<option value="' + esc(o[0]) + '"' + (String(v) === String(o[0]) ? " selected" : "") + ">" + esc(o[1]) + "</option>").join("") + "</select>"; }
     else if (f.type === "combo") { const opts = f.options(); input = '<input class="a-input" id="' + id + '" name="' + f.key + '" list="' + id + '-list" value="' + esc(v) + '"><datalist id="' + id + '-list">' + opts.map((o) => '<option value="' + esc(o) + '"></option>').join("") + "</datalist>"; }
     else if (f.type === "tags") input = '<input class="a-input" id="' + id + '" name="' + f.key + '" value="' + esc(Array.isArray(v) ? v.join(", ") : v) + '">';
     else if (f.type === "youtube") input = '<input class="a-input" id="' + id + '" name="' + f.key + '" value="' + esc(v ? "https://youtu.be/" + v : "") + '" placeholder="https://www.youtube.com/watch?v=… 또는 youtu.be/…">';
     else input = '<input class="a-input" id="' + id + '" name="' + f.key + '" type="' + ({ number: "number", date: "date", time: "time", url: "url" }[f.type] || "text") + '"' + (f.min ? ' min="' + f.min + '"' : "") + ' value="' + esc(v) + '">';
     return '<div class="a-field"' + show + '><label for="' + id + '">' + esc(f.label) + "</label>" + input + (f.hint ? '<small class="a-muted">' + esc(f.hint) + "</small>" : "") + "</div>";
+  }
+  // 본문 서식 버튼: 줄 앞에 표시를 넣거나 고른 글자를 굵게
+  const RICH_BTNS = [["h", "소제목"], ["ul", "• 목록"], ["ol", "1. 번호"], ["b", "굵게"], ["note", "강조 상자"], ["hr", "구분선"]];
+  const richBar = (id, photos) => '<div class="a-rich-bar" role="toolbar" aria-label="본문 서식">' + RICH_BTNS.map((b) => '<button type="button" class="a-rich-btn" data-action="rich-ins" data-k="' + b[0] + '" data-for="' + id + '">' + b[1] + "</button>").join("") +
+    (photos ? '<button type="button" class="a-rich-btn" data-action="rich-ins" data-k="img" data-for="' + id + '" title="올린 사진을 글 중간에 넣을 자리">' + icon("image", "xs") + "사진 자리</button>" : "") + "</div>";
+  function richInsert(id, k) {
+    const ta = document.getElementById(id);
+    if (!ta) return;
+    const v = ta.value, a = ta.selectionStart, b = ta.selectionEnd;
+    const ls = v.lastIndexOf("\n", a - 1) + 1;
+    let le = v.indexOf("\n", b); if (le < 0) le = v.length;
+    let nv, ca, cb;
+    if (k === "b") {
+      const sel = v.slice(a, b) || "굵게 쓸 글자";
+      nv = v.slice(0, a) + "**" + sel + "**" + v.slice(b); ca = a + 2; cb = ca + sel.length;
+    } else if (k === "hr" || k === "img") {
+      const n = k === "img" ? Math.max(1, (v.match(/\[사진\s*\d+\]/g) || []).length + 1) : 0;
+      const tok = k === "hr" ? "---" : "[사진" + n + "]";
+      const before = v.slice(0, le), pre = before && !before.endsWith("\n") ? "\n" : "";
+      nv = before + pre + tok + "\n" + v.slice(le).replace(/^\n/, ""); ca = cb = before.length + pre.length + tok.length + 1;
+      if (k === "img" && n > imgDraft.length) toast("사진 " + n + "번을 아래 ‘사진’에 올려 주세요. 올린 순서대로 1, 2, 3…이에요.");
+    } else {
+      const mark = { h: "## ", ul: "- ", ol: "", note: "> " }[k];
+      let i = 0;
+      const block = v.slice(ls, le).split("\n").map((line) => {
+        const bare = line.replace(/^(#{1,3}\s+|[-·•]\s+|\d{1,2}[.)]\s+|>\s?)/, "");
+        return (k === "ol" ? (++i) + ". " : mark) + bare;
+      }).join("\n");
+      nv = v.slice(0, ls) + block + v.slice(le); ca = ls; cb = ls + block.length;
+    }
+    ta.value = nv; ta.focus(); ta.setSelectionRange(ca, cb);
+  }
+  // 공지 사진 (모달이 열려 있는 동안의 임시 목록) — 긴 변 1280px JPEG 로 줄여서 저장
+  let imgDraft = [];
+  function imgEditorHtml() {
+    return (imgDraft.length ? '<ul class="a-img-list">' + imgDraft.map((im, i) => '<li><img src="' + esc(im.data || im.url) + '" alt=""><span class="a-img-no">사진' + (i + 1) + "</span>" +
+      '<span class="a-img-tools"><button type="button" class="a-icon-btn sm" data-action="img-move" data-i="' + i + '" data-dir="-1" aria-label="앞으로"' + (i === 0 ? " disabled" : "") + ">" + icon("chevLeft", "sm") + "</button>" +
+      '<button type="button" class="a-icon-btn sm" data-action="img-move" data-i="' + i + '" data-dir="1" aria-label="뒤로"' + (i === imgDraft.length - 1 ? " disabled" : "") + ">" + icon("chevRight", "sm") + "</button>" +
+      '<button type="button" class="a-icon-btn sm" data-action="img-remove" data-i="' + i + '" aria-label="사진 삭제">' + icon("trash", "sm") + "</button></span></li>").join("") + "</ul>" : "") +
+      '<div class="a-att-add"><label class="a-btn a-btn-ghost a-btn-sm">' + icon("image", "sm") + '사진 올리기<input type="file" id="img-file" class="sr-only" accept="image/*" multiple></label>' +
+      '<span class="a-muted">' + (imgDraft.length ? "본문에 [사진1] 처럼 적은 자리에 들어가고, 나머지는 글 아래에 순서대로 보여요." : "사진은 글 아래에 순서대로 보여요. 본문에 [사진1]을 적으면 그 자리에 들어가요.") + "</span></div>";
+  }
+  const refreshImg = () => { const el = document.getElementById("img-editor"); if (el) el.innerHTML = imgEditorHtml(); };
+  function addImgFiles(files) {
+    Array.from(files || []).filter((f) => /^image\//.test(f.type)).forEach((file) => {
+      const r = new FileReader();
+      r.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+          const cv = document.createElement("canvas");
+          cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+          const g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+          imgDraft.push({ id: DB.uid("im"), name: file.name, data: cv.toDataURL("image/jpeg", 0.82) });
+          refreshImg();
+        };
+        img.onerror = () => toast(file.name + " 은(는) 열 수 없는 사진이에요.", "warn");
+        img.src = r.result;
+      };
+      r.readAsDataURL(file);
+    });
   }
   // 첨부 자료 편집 (모달이 열려 있는 동안의 임시 목록)
   let attDraft = [];
@@ -638,6 +706,7 @@
     const item = id ? list.find((x) => (x.id || String(x.no)) === id) : Object.assign({}, def.init ? def.init() : {});
     if (!item) return;
     attDraft = DB.clone(item.attachments || []);
+    imgDraft = DB.clone(item.images || []);
     openModal((id ? def.name + " 수정" : def.name + " 추가"),
       '<form id="coll-form" class="a-form" data-coll="' + coll + '" data-id="' + esc(id || "") + '" data-ctx="' + esc(ctx || "") + '" novalidate>' + def.fields.map((f) => fieldHtml(f, item)).join("") + '<p class="a-error" id="coll-error"></p></form>',
       (id ? btn(icon("trash", "sm") + "삭제", "item-delete", "a-btn-ghost danger", ' data-coll="' + coll + '" data-id="' + esc(id) + '" data-ctx="' + esc(ctx || "") + '"') : "") + '<span class="a-spacer"></span>' + btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="coll-form">저장</button>', "md");
@@ -657,11 +726,12 @@
     const item = id ? list.find((x) => (x.id || String(x.no)) === id) : Object.assign({}, def.init ? def.init() : {});
     const err = document.getElementById("coll-error");
     for (const f of def.fields) {
-      const el = f.type === "attachments" ? true : form[f.key];
+      const el = f.type === "attachments" || f.type === "images" ? true : form[f.key];
       if (!el) continue;
       let v;
       if (f.type === "checkbox") v = el.checked;
       else if (f.type === "attachments") v = attDraft.slice();
+      else if (f.type === "images") v = imgDraft.slice();
       else if (f.type === "lines") v = LINES(el.value);
       else if (f.type === "tags") v = TAGS(el.value);
       else if (f.type === "number") v = el.value === "" ? "" : Number(el.value);
@@ -770,7 +840,9 @@
     const co = usedBy(CUR().id).find((x) => DB.cohortStatus(x) !== "ended") || usedBy(CUR().id).slice(-1)[0];
     return head("커리큘럼", "커리큘럼을 여러 개 만들어 두고 기수마다 골라 쓸 수 있어요 (예: 1·2기 5주 과정, 3기부터 4주 과정). 주차를 더하거나 지우면 그 커리큘럼을 쓰는 기수의 기간·일정이 자동으로 바뀌어요" + (co ? " (" + esc(co.name) + " 기준 날짜 표시)" : "") + ".", addBtn("week", "주차 추가")) + curBar() +
       (c.weeks.length ? '<div class="a-stack">' + c.weeks.map((w, wi) =>
-        '<section class="a-card"><div class="a-card-head"><span class="a-weekno">' + w.no + "주차</span><div class=\"a-grow\"><h2>" + esc(w.title) + '</h2><p class="a-muted">' + esc(w.summary || "") + (co ? " · " + fmtMD(DB.weekOpen(co, w.no)) + " 공개" : "") + "</p></div>" + rowTools("week", String(w.no), "", wi, c.weeks.length) + "</div>" +
+        '<section class="a-card"><div class="a-card-head"><span class="a-weekno">' + w.no + "주차</span><div class=\"a-grow\"><h2>" + esc(w.title) + '</h2><p class="a-muted">' + esc(w.subtitle || w.summary || "") + (co ? " · 강의일 " + fmtMD(DB.classDate(co, w.no)) : "") + "</p></div>" + rowTools("week", String(w.no), "", wi, c.weeks.length) + "</div>" +
+          (w.goal || (w.topics || []).length ? '<div class="a-cw-info">' + (w.goal ? "<p><b>핵심 목표</b>" + esc(w.goal) + "</p>" : "") + ((w.topics || []).length ? "<p><b>강의 내용 " + w.topics.length + "</b>" + esc(w.topics.join(" · ")) + "</p>" : "") + "</div>"
+            : '<p class="a-cw-empty">' + icon("alert", "xs") + " 핵심 목표와 강의 내용을 적으면 수강생 커리큘럼에 보여요. ‘수정’을 눌러 채워 주세요.</p>") +
           (w.lessons.length ? '<ul class="a-items">' + w.lessons.map((l, i) => '<li><div class="a-item-main"><b>' + esc(l.title) + "</b><small>" + (l.minutes ? l.minutes + "분 · " : "") + esc(l.desc || "") + "</small></div>" + ytBadge(l) + rowTools("lesson", l.id, w.no, i, w.lessons.length) + "</li>").join("") + "</ul>" : '<p class="a-muted a-pad">아직 강의가 없어요.</p>') +
           '<div class="a-card-foot">' + addBtn("lesson", "강의 추가", w.no, "a-btn-ghost a-btn-sm") + '<a class="a-link" href="#/center/missions">이 주차 과제 ' + w.missions.length + "개 " + icon("arrowRight", "xs") + "</a></div></section>").join("") + "</div>"
         : '<section class="a-card">' + emptyBox("book", "주차를 추가해서 커리큘럼을 만들어 주세요.", addBtn("week", "주차 추가")) + "</section>");
@@ -783,7 +855,7 @@
     return head("과제", "주차별 과제와 자동검수 기준을 정해요. 필수 과제 " + req + "개를 모두 통과하면 수료증이 발급돼요. (전체 " + total + "개)") + curBar() +
       (c.weeks.length ? '<div class="a-stack">' + c.weeks.map((w) =>
         '<section class="a-card"><div class="a-card-head"><span class="a-weekno">' + w.no + '주차</span><h2 class="a-grow">' + esc(w.title) + "</h2>" + addBtn("mission", "과제 추가", w.no, "a-btn-ghost a-btn-sm") + "</div>" +
-          (w.missions.length ? '<ul class="a-items">' + w.missions.map((m, i) => '<li><div class="a-item-main"><b>' + esc(m.title) + "</b><small>" + esc(m.desc || "") + "</small></div>" + (m.required ? pill("필수", "dark") : pill("선택", "mute")) + pill(typeL[m.type] || m.type, "mute") + rowTools("mission", m.id, w.no, i, w.missions.length) + "</li>").join("") + "</ul>" : '<p class="a-muted a-pad">아직 과제가 없어요.</p>') +
+          (w.missions.length ? '<ul class="a-items">' + w.missions.map((m, i) => '<li><div class="a-item-main"><b>' + esc(m.title) + "</b><small>" + esc(m.desc || "") + "</small></div>" + kindPill(m) + pill(typeL[m.type] || m.type, "mute") + rowTools("mission", m.id, w.no, i, w.missions.length) + "</li>").join("") + "</ul>" : '<p class="a-muted a-pad">아직 과제가 없어요.</p>') +
         "</section>").join("") + "</div>"
         : '<section class="a-card">' + emptyBox("clipboard", "커리큘럼에서 주차를 먼저 만들어 주세요.", '<a class="a-btn a-btn-primary" href="#/center/curriculum">커리큘럼으로</a>') + "</section>");
   }
@@ -804,7 +876,7 @@
   function pageNotices() {
     const list = C().notices.slice().sort((a, b) => (b.pinned - a.pinned) || b.date.localeCompare(a.date));
     return head("공지사항", "수강생 홈과 공지사항 메뉴에 보여요. ‘필독’으로 고정하면 맨 위에 떠요.", addBtn("notice", "공지 쓰기")) +
-      '<section class="a-card">' + (list.length ? '<ul class="a-items">' + list.map((n) => '<li><div class="a-item-main"><b>' + esc(n.title) + "</b><small>" + fmtFull(n.date) + " · " + esc((n.body || "").slice(0, 60)) + "</small></div>" + (n.pinned ? pill("필독", "dark") : "") +
+      '<section class="a-card">' + (list.length ? '<ul class="a-items">' + list.map((n) => '<li><div class="a-item-main"><b>' + esc(n.title) + "</b><small>" + fmtFull(n.date) + " · " + esc((n.body || "").slice(0, 60)) + "</small></div>" + ((n.images || []).length ? pill("사진 " + n.images.length, "info") : "") + (DB.youtubeId(n.youtubeId) ? pill("영상", "info") : "") + (n.pinned ? pill("필독", "dark") : "") +
         '<div class="a-row-actions">' + btn(icon("pen", "sm") + "수정", "item-edit", "a-btn-ghost a-btn-sm", ' data-coll="notice" data-id="' + n.id + '"') + "</div></li>").join("") + "</ul>" : emptyBox("megaphone", "아직 공지가 없어요.")) + "</section>";
   }
   function pageFaq() {
@@ -1261,7 +1333,7 @@
         '<div class="a-field"><label for="pf-title">페이지 제목</label><input class="a-input" id="pf-title" name="title" value="' + esc(pg.title || it.label) + '"></div>' +
         '<div class="a-field"><label for="pf-summary">한 줄 소개</label><input class="a-input" id="pf-summary" name="summary" value="' + esc(pg.summary || "") + '"></div>' +
         '<div class="a-field"><label for="pf-yt">유튜브 주소 (선택)</label><input class="a-input" id="pf-yt" name="youtubeId" value="' + esc(pg.youtubeId ? "https://youtu.be/" + pg.youtubeId : "") + '"></div>' +
-        '<div class="a-field"><label for="pf-body">본문</label><textarea class="a-input" id="pf-body" name="body" rows="8">' + esc(pg.body || "") + "</textarea></div>" +
+        '<div class="a-field"><label for="pf-body">본문</label>' + richBar("pf-body") + '<textarea class="a-input a-rich-input" id="pf-body" name="body" rows="10">' + esc(pg.body || "") + '</textarea><small class="a-muted">## 소제목 · - 목록 · 1. 번호 · **굵게** · &gt; 강조 상자 · 주소는 자동으로 링크가 돼요.</small></div>' +
         '<div class="a-field"><span class="a-label">첨부 자료</span><div id="att-editor">' + attEditorHtml() + "</div></div>" +
         '<p class="a-error" id="pf-error"></p></form>',
       btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="page-form">저장</button>', "lg");
@@ -1453,6 +1525,9 @@
         break;
       case "rev-bulk-fix-ok": { const c = document.getElementById("bulk-comment").value.trim(); if (!c) { toast("보완 요청 내용을 적어 주세요.", "warn"); break; } bulkReview("fix", c); break; }
       case "att-remove": attDraft.splice(Number(d.i), 1); refreshAtt(); break;
+      case "img-remove": imgDraft.splice(Number(d.i), 1); refreshImg(); break;
+      case "img-move": { const i = Number(d.i), j = i + Number(d.dir); if (j >= 0 && j < imgDraft.length) { [imgDraft[i], imgDraft[j]] = [imgDraft[j], imgDraft[i]]; refreshImg(); } break; }
+      case "rich-ins": richInsert(d.for, d.k); break;
       case "att-link-add": {
         const nm = document.getElementById("att-link-name").value.trim(), url = document.getElementById("att-link-url").value.trim();
         if (!/^https?:\/\//i.test(url)) { toast("http:// 또는 https:// 로 시작하는 주소를 넣어 주세요.", "warn"); break; }
@@ -1634,6 +1709,7 @@
       render();
     }
     else if (t.id === "att-file") { addAttFiles(t.files); t.value = ""; }
+    else if (t.id === "img-file") { addImgFiles(t.files); t.value = ""; }
     else if (t.dataset && t.dataset.lpImg) { const f = t.files && t.files[0]; const path = t.dataset.lpImg; t.value = ""; if (f) lpCompress(f, (data) => { lpSet(lpDraft(), path, data); ui.lpDirty = true; render(); }); }
     else if (t.dataset && t.dataset.lpRadio) { lpSet(lpDraft(), t.dataset.lpRadio, t.value); lpChanged(); }
     else if (t.dataset && t.dataset.lpCheck) { lpSet(lpDraft(), t.dataset.lpCheck, t.checked); lpChanged(); }

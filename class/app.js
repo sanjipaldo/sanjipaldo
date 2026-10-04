@@ -49,8 +49,11 @@
   function weekStats(w) {
     const req = w.missions.filter((m) => m.required).length;
     const done = w.missions.filter((m) => isDone(m.id)).length;
-    return { req, opt: w.missions.length - req, done, total: w.missions.length, pct: w.missions.length ? Math.round((done / w.missions.length) * 100) : 0 };
+    const challenge = w.missions.filter((m) => DB.missionKind(m) === "challenge").length;
+    return { req, challenge, mind: w.missions.length - req - challenge, opt: w.missions.length - req, done, total: w.missions.length, pct: w.missions.length ? Math.round((done / w.missions.length) * 100) : 0 };
   }
+  const kindOf = (m) => DB.MISSION_KINDS.find((k) => k.key === DB.missionKind(m));
+  const kindCount = (st) => "필수 " + st.req + (st.challenge ? " · 도전 " + st.challenge : "") + (st.mind ? " · 마인드 " + st.mind : "");
   const overallStats = () => DB.stats(P, INS.id, CO);
   const nextMission = (w) => w.missions.find((m) => m.required && !isDone(m.id)) || w.missions.find((m) => !isDone(m.id));
   function nextMissionOverall() {
@@ -388,7 +391,7 @@
       (on("missions") ? '<div class="section-head"><h2>이어서 할 과제</h2><a class="link-btn" href="#/missions">전체 과제 ' + icon("arrowRight", "sm") + "</a></div>" +
       (nm
         ? '<a class="card next-card plain-link" href="#/missions/' + nm.weekNo + "/" + nm.id + '"><span class="wk-icon">' + icon("checks") + "</span>" +
-            '<div style="flex:1;min-width:0"><div class="tiny">' + nm.weekNo + "주차 · " + (nm.required ? "필수" : "선택") + " · 마감 " + fmtMD(DB.weekDeadline(CO, nm.weekNo)) + '</div><div class="m-title">' + esc(nm.title) + " " + stateBadge(nm.id) + '</div><div class="m-desc">' + esc(nm.desc) + "</div></div>" +
+            '<div style="flex:1;min-width:0"><div class="tiny">' + nm.weekNo + "주차 · " + kindOf(nm).short + " · 마감 " + fmtMD(DB.weekDeadline(CO, nm.weekNo)) + '</div><div class="m-title">' + esc(nm.title) + " " + stateBadge(nm.id) + '</div><div class="m-desc">' + esc(nm.desc) + "</div></div>" +
             '<span class="btn btn-primary btn-sm">열기 ' + icon("arrowRight", "sm") + "</span></a>"
         : '<div class="card callout-ok callout">' + icon("check") + "<div>" + (D.weeks.length && !isOpen(D.weeks[0]) ? fmtMD(CO.startDate) + "에 1주차가 열려요. 조금만 기다려 주세요!" : "열린 주차의 과제를 모두 마쳤어요! 다음 주차가 열리면 바로 시작해 보세요.") + "</div></div>") : "") +
 
@@ -424,25 +427,45 @@
   }
 
   /* ---------------- 커리큘럼 ---------------- */
+  // 커리큘럼: 주차마다 강의일 · 핵심 목표 · 강의 내용 · 과제(필수 · 도전 · 마인드)를 한 장에. 강의 영상은 있으면 아래에 덧붙인다
   function pageCurriculum(r) {
     if (r.parts[1]) return pageLesson(r.parts[1]);
-    const allL = D.weeks.flatMap((w) => w.lessons);
-    const watched = allL.filter((l) => P.watched[l.id]).length;
-    const pct = allL.length ? Math.round((watched / allL.length) * 100) : 0;
-    return '<div class="page">' + pageHead("커리큘럼", "주차별 강의 영상을 보고, 다 본 강의는 시청 완료로 표시하세요.") +
-      '<div class="card overall"><div class="overall-top"><span>강의 시청</span>' + pctText(pct) + "</div>" + progressBar(pct) + '<span class="tiny">전체 ' + allL.length + "개 강의 중 " + watched + "개 시청 완료</span></div>" +
-      '<div style="margin-top:14px">' + (D.weeks.length ? D.weeks.map((w) => {
-        const open = isOpen(w);
-        return '<section class="card week-block">' +
-          '<div class="week-block-head"><span class="wk-icon">' + icon(open ? "book" : "lock") + "</span><div><h3>" + w.no + "주차 · " + esc(w.title) + "</h3><p>" + esc(w.summary) + "</p></div>" +
-            (open ? '<span class="badge badge-positive">공개</span>' : '<span class="badge badge-neutral">' + fmtMD(openOf(w)) + " 공개</span>") + "</div>" +
-          (w.lessons.length ? w.lessons.map((l) => {
-            const inner = thumb(l) + '<div><div class="lesson-title">' + esc(l.title) + '</div><div class="lesson-desc">' + esc(l.desc) + "</div></div>" +
-              (P.watched[l.id] ? '<span class="badge badge-positive">' + icon("check", "xs") + "시청 완료</span>" : '<span class="tiny">' + (l.minutes ? esc(l.minutes) + "분" : "") + "</span>");
-            return open ? '<a class="lesson" href="#/curriculum/' + l.id + '">' + inner + "</a>" : '<div class="lesson" aria-disabled="true" style="opacity:.55">' + inner + "</div>";
-          }).join("") : '<p class="tiny" style="padding:0 14px 14px">강의가 곧 올라와요.</p>') +
-        "</section>";
-      }).join("") : '<section class="card">' + empty("book", "커리큘럼을 준비하고 있어요.") + "</section>") + "</div></div>";
+    const cur = D.weeks.find((w) => isOpen(w) && todayStr() <= deadlineOf(w)) || D.weeks.filter(isOpen).slice(-1)[0];
+    return '<div class="page">' + pageHead("커리큘럼", "주차별 강의 내용과 과제를 한눈에 확인하세요.") +
+      (D.weeks.length ? '<div class="cw-list">' + D.weeks.map((w) => curWeekCard(w, cur === w)).join("") + "</div>"
+        : '<section class="card">' + empty("book", "커리큘럼을 준비하고 있어요.") + "</section>") + "</div>";
+  }
+  function curWeekCard(w, now) {
+    const open = isOpen(w), st = weekStats(w);
+    const lectureDay = DB.classDate(CO, w.no);
+    const head = '<div class="cw-head"><div class="cw-head-main">' +
+        '<p class="cw-date">' + icon("calendar", "xs") + "강의일 · " + fmtMD(lectureDay) + (now ? '<span class="cw-now">이번 주</span>' : "") + "</p>" +
+        "<h2>" + w.no + "주차 · " + esc(w.title) + "</h2>" + (w.subtitle || w.summary ? '<p class="cw-sub">' + esc(w.subtitle || w.summary) + "</p>" : "") + "</div>" +
+        (open && on("missions") && w.missions.length ? '<a class="btn btn-primary cw-go" href="#/missions/' + w.no + '">과제 보러 가기 ' + icon("arrowRight", "sm") + "</a>" : "") + "</div>";
+    if (!open) {
+      return '<section class="card cw cw-locked">' + head +
+        '<div class="cw-lock">' + icon("lock") + '<div><b>아직 열리지 않은 주차입니다</b><span>' + fmtMD(openOf(w)) + "부터 강의 내용이 공개됩니다</span></div></div></section>";
+    }
+    const mrow = (m) => {
+      const s = missionState(m.id);
+      const tag = on("missions") ? 'a href="#/missions/' + w.no + "/" + m.id + '"' : "a";
+      return "<li><" + tag + '><span class="cw-mk ' + (s === "done" ? "done" : s === "fix" ? "fix" : "") + '">' + (s === "done" ? icon("check", "xs") : s === "fix" ? "!" : "") + "</span><span>" + esc(m.title) + "</span></a></li>";
+    };
+    const groups = DB.MISSION_KINDS.map((k) => {
+      const list = w.missions.filter((m) => DB.missionKind(m) === k.key);
+      return list.length ? '<div class="cw-mgroup ' + k.key + '"><h4>' + k.label + " <span>" + list.length + "개</span></h4><ul>" + list.map(mrow).join("") + "</ul></div>" : "";
+    }).join("");
+    const watched = w.lessons.filter((l) => P.watched[l.id]).length;
+    return '<section class="card cw">' + head +
+      (w.goal ? '<div class="cw-goal"><span class="cw-goal-label">' + icon("target", "sm") + "핵심 목표</span><p>" + esc(w.goal) + "</p></div>" : "") +
+      ((w.topics || []).length ? '<div class="cw-sec"><h3>강의 내용</h3><ul class="cw-topics">' + w.topics.map((t) => "<li>" + esc(t) + "</li>").join("") + "</ul></div>" : "") +
+      (w.missions.length ? '<div class="cw-sec"><div class="cw-sec-head"><h3>과제</h3><span class="cw-period">' + icon("clock", "xs") + "과제 제출 기간 · " + fmtMD(openOf(w)) + " ~ " + fmtMD(deadlineOf(w)) + "</span>" +
+          '<span class="cw-progress">' + st.done + "/" + st.total + " 완료</span></div>" +
+        '<div class="cw-mgrid">' + groups + "</div></div>" : "") +
+      (w.lessons.length ? '<details class="cw-lessons"' + (watched < w.lessons.length ? " open" : "") + '><summary>' + icon("play", "sm") + "강의 영상 " + w.lessons.length + '개 <span class="tiny">' + watched + "개 시청 완료</span>" + icon("chevDown", "sm") + "</summary>" +
+        w.lessons.map((l) => '<a class="lesson" href="#/curriculum/' + l.id + '">' + thumb(l) + '<div><div class="lesson-title">' + esc(l.title) + '</div><div class="lesson-desc">' + esc(l.desc) + "</div></div>" +
+          (P.watched[l.id] ? '<span class="badge badge-positive">' + icon("check", "xs") + "시청 완료</span>" : '<span class="tiny">' + (l.minutes ? esc(l.minutes) + "분" : "") + "</span>") + "</a>").join("") + "</details>" : "") +
+      "</section>";
   }
   function pageLesson(id) {
     const w = D.weeks.find((x) => x.lessons.some((l) => l.id === id));
@@ -454,7 +477,7 @@
     const done = !!P.watched[id];
     return '<div class="page">' + pageHead(l.title, w.no + "주차 · " + w.title + (l.minutes ? " · " + l.minutes + "분" : ""), crumb([["커리큘럼", "#/curriculum"], [w.no + "주차", "#/curriculum"], [l.title]])) +
       '<section class="card">' + video(l) +
-        '<p style="margin:18px 0 0;font-size:16px;line-height:1.75">' + esc(l.desc) + "</p>" + attachmentList(l.attachments) +
+        (l.desc ? '<div class="lesson-body">' + DB.rich(l.desc) + "</div>" : "") + attachmentList(l.attachments) +
         '<div class="guide-actions" style="margin-top:20px">' +
           '<button class="btn ' + (done ? "btn-secondary" : "btn-primary") + '" data-action="toggle-watched" data-id="' + id + '">' + icon("check", "sm") + (done ? "시청 완료됨 · 취소" : "시청 완료로 표시") + "</button>" +
           (on("missions") ? '<a class="btn btn-tertiary" href="#/missions/' + w.no + '">' + w.no + "주차 과제 보기</a>" : "") +
@@ -482,7 +505,7 @@
   function weekCard(w) {
     const st = weekStats(w), open = isOpen(w);
     const nm = open ? nextMission(w) : null;
-    const top = '<div class="wk-top"><span class="wk-icon">' + icon("book") + '</span><div><div class="wk-title">' + w.no + '주차</div><div class="wk-meta">필수 ' + st.req + " · 선택 " + st.opt + " · " + st.done + "/" + st.total + " 완료</div></div>" + pctText(st.pct) + "</div>";
+    const top = '<div class="wk-top"><span class="wk-icon">' + icon("book") + '</span><div><div class="wk-title">' + w.no + '주차</div><div class="wk-meta">' + kindCount(st) + " · " + st.done + "/" + st.total + " 완료</div></div>" + pctText(st.pct) + "</div>";
     if (!open) return '<div class="week-card locked">' + top + progressBar(0, true) + '<div class="wk-foot"><span class="lock-msg">' + icon("lock", "sm") + fmtMD(openOf(w)) + "부터 과제 제출이 공개됩니다.</span></div></div>";
     return '<a class="week-card" href="#/missions/' + w.no + '">' + top + progressBar(st.pct, true) +
       '<div class="wk-foot"><span>' + (nm ? "<b>다음:</b> " + esc(nm.title) : "<b>모든 과제 완료!</b>") + '</span><span class="link-btn">열기 ' + icon("arrowRight", "sm") + "</span></div></a>";
@@ -499,13 +522,14 @@
         (s === "done" ? icon("check", "sm") : s === "fix" ? "!" : icon(m.type === "image" ? "image" : m.type === "link" ? "link" : "pen", "sm")) + "</span>" +
         '<div style="min-width:0"><div class="m-title">' + esc(m.title) + " " + stateBadge(m.id) + '</div><div class="m-desc">' + typeLabel + " · " + esc(m.desc) + "</div></div>" + icon("chevRight") + "</a>";
     };
-    const req = w.missions.filter((m) => m.required), opt = w.missions.filter((m) => !m.required);
     const late = todayStr() > deadlineOf(w);
     return '<div class="page">' + pageHead(w.no + "주차 · " + w.title, w.summary, crumb([["과제 제출하기", "#/missions"], [w.no + "주차"]])) +
       '<section class="card overall"><div class="overall-top"><span>' + w.no + "주차 진행률</span>" + pctText(st.pct) + "</div>" + progressBar(st.pct) +
-        '<span class="tiny" style="color:var(--body)">필수 ' + st.req + " · 선택 " + st.opt + " · " + st.total + "개 중 " + st.done + "개 완료 · " + fmtMD(openOf(w)) + " 공개 · <b" + (late ? ' style="color:var(--negative)"' : "") + ">" + fmtMD(deadlineOf(w)) + " 마감" + (late ? " (지남)" : "") + "</b></span></section>" +
-      (req.length ? '<div class="section-head"><h2>필수 과제 <span class="tiny">' + req.length + "개</span></h2></div>" + req.map(row).join("") : "") +
-      (opt.length ? '<div class="section-head"><h2>선택 과제 <span class="tiny">' + opt.length + '개</span></h2><span class="hint">하면 더 좋아요</span></div>' + opt.map(row).join("") : "") +
+        '<span class="tiny" style="color:var(--body)">' + kindCount(st) + " · " + st.total + "개 중 " + st.done + "개 완료 · " + fmtMD(openOf(w)) + " 공개 · <b" + (late ? ' style="color:var(--negative)"' : "") + ">" + fmtMD(deadlineOf(w)) + " 마감" + (late ? " (지남)" : "") + "</b></span></section>" +
+      DB.MISSION_KINDS.map((k) => {
+        const list = w.missions.filter((m) => DB.missionKind(m) === k.key);
+        return list.length ? '<div class="section-head"><h2>' + k.label + ' <span class="tiny">' + list.length + '개</span></h2><span class="hint">' + k.hint + "</span></div>" + list.map(row).join("") : "";
+      }).join("") +
       (!w.missions.length ? '<section class="card" style="margin-top:14px">' + empty("checks", "이번 주차 과제를 준비하고 있어요.") + "</section>" : "") +
       "</div>";
   }
@@ -549,7 +573,7 @@
     return '<div class="page">' + pageHead(m.title, "", crumb([["과제 제출하기", "#/missions"], [w.no + "주차", "#/missions/" + w.no], [m.title]])) +
       '<div class="detail-grid">' +
         '<section class="card">' +
-          '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">' + (m.required ? '<span class="badge badge-ink">필수</span>' : '<span class="badge badge-neutral">선택</span>') + '<span class="badge badge-neutral">' + typeLabel + "</span>" +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">' + (m.required ? '<span class="badge badge-ink">필수</span>' : '<span class="badge badge-neutral">' + kindOf(m).short + "</span>") + '<span class="badge badge-neutral">' + typeLabel + "</span>" +
             '<span class="badge ' + (late ? "badge-negative" : "badge-neutral") + '">' + fmtMD(deadlineOf(w)) + " 마감" + (late ? " 지남" : "") + "</span>" + stateBadge(id) + "</div>" +
           '<p style="margin:0 0 20px;font-size:16px;line-height:1.75">' + esc(m.desc) + "</p>" +
           ((m.steps || []).length ? '<p class="side-label">이렇게 하세요</p><ol class="steps">' + m.steps.map((s) => "<li>" + esc(s) + "</li>").join("") + "</ol>" : "") +
@@ -702,14 +726,24 @@
       if (!n) return notFound();
       if (isUnread(n)) { P.readNotices = P.readNotices || {}; P.readNotices[n.id] = Date.now(); saveProgress(); setTimeout(() => renderSidebar(route()), 0); }
       return '<div class="page">' + pageHead("공지사항", "", crumb([["공지사항", "#/notices"], ["상세"]])) +
-        '<article class="card article">' + (n.pinned ? '<span class="badge badge-ink" style="margin-bottom:10px">필독</span>' : "") + "<h2>" + esc(n.title) + '</h2><div class="meta">' + esc(D.brand.instructor) + " · " + fmtFull(n.date) + '</div><div class="body">' + esc(n.body) + "</div></article>" +
+        '<article class="card article">' + (n.pinned ? '<span class="badge badge-ink" style="margin-bottom:10px">필독</span>' : "") + "<h2>" + esc(n.title) + '</h2><div class="meta">' + esc(D.brand.instructor) + " · " + fmtFull(n.date) + "</div>" + noticeBody(n) + "</article>" +
         '<div style="margin-top:14px"><a class="btn btn-secondary" href="#/notices">' + icon("chevLeft", "sm") + "목록으로</a></div></div>";
     }
     return '<div class="page">' + pageHead("공지사항", D.brand.instructor + "이 전하는 안내와 소식입니다.") +
       '<section class="card">' + (list.length ? list.map((n) =>
         '<a class="notice-row" href="#/notices/' + n.id + '">' + (n.pinned ? '<span class="badge badge-ink">' + icon("pin", "xs") + "필독</span>" : '<span class="badge badge-neutral">공지</span>') +
-        '<span class="lr-title">' + esc(n.title) + "</span>" + newBadge(n) + '<span class="lr-date">' + fmtFull(n.date) + "</span></a>").join("") : empty("megaphone", "아직 공지가 없어요.")) + "</section>" +
+        '<span class="lr-title">' + esc(n.title) + "</span>" + ((n.images || []).length ? '<span class="n-ic" title="사진 ' + n.images.length + '장">' + icon("image", "xs") + "</span>" : "") + (DB.youtubeId(n.youtubeId) ? '<span class="n-ic" title="영상">' + icon("play", "xs") + "</span>" : "") + newBadge(n) + '<span class="lr-date">' + fmtFull(n.date) + "</span></a>").join("") : empty("megaphone", "아직 공지가 없어요.")) + "</section>" +
       (unreadNotices() ? '<div style="margin-top:12px;text-align:right"><button class="link-btn" data-action="read-all">모두 읽음으로 표시</button></div>' : "") + "</div>";
+  }
+
+  // 공지 본문: 글 → (본문에 [사진1] 자리가 있으면 그 자리에) 사진 → 유튜브 영상
+  function noticeBody(n) {
+    const imgs = n.images || [], used = {};
+    const fig = (im) => '<figure class="n-img"><img src="' + esc(im.data || im.url) + '" alt="' + esc(im.name || "") + '" loading="lazy"></figure>';
+    const body = DB.rich(n.body, { token: (i) => { const im = imgs[i - 1]; if (!im) return ""; used[i - 1] = true; return fig(im); } });
+    const rest = imgs.filter((_, i) => !used[i]);
+    const yid = DB.youtubeId(n.youtubeId);
+    return '<div class="body">' + body + (rest.length ? '<div class="n-imgs">' + rest.map(fig).join("") + "</div>" : "") + (yid ? '<div class="n-video">' + video({ title: n.title, youtubeId: yid }) + "</div>" : "") + "</div>";
   }
 
   /* ---------------- Q&A ---------------- */
@@ -1043,7 +1077,7 @@
     return '<div class="page">' + pageHead(pg.title || item.label || "추가 메뉴", pg.summary || "") +
       '<section class="card custom-page">' + (has
         ? (DB.youtubeId(pg.youtubeId) ? video({ title: pg.title || item.label, youtubeId: pg.youtubeId }) : "") +
-          (pg.body ? '<div class="body">' + esc(pg.body) + "</div>" : "") + attachmentList(pg.attachments)
+          (pg.body ? '<div class="body">' + DB.rich(pg.body) + "</div>" : "") + attachmentList(pg.attachments)
         : empty(item.icon || "file", "내용을 준비하고 있어요.")) +
       "</section></div>";
   }
@@ -1127,7 +1161,7 @@
     openModal(it.title,
       '<div class="res-pop">' + video(it) +
         (it.meta || it.desc ? '<p class="res-pop-meta">' + esc([it.meta, it.desc].filter(Boolean).join(" · ")) + "</p>" : "") +
-        (it.body ? '<div class="res-pop-body">' + esc(it.body) + "</div>" : "") +
+        (it.body ? '<div class="res-pop-body">' + DB.rich(it.body) + "</div>" : "") +
         attachmentList(it.attachments) +
       "</div>", '<button class="btn btn-primary" data-action="modal-close">닫기</button>', true);
   }
