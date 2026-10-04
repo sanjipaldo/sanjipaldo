@@ -202,130 +202,180 @@
   .dg .fc-faq,.dg .fc-apply{margin-top:72px}
 }
 
-/* ================= Wise 톤 (강사 색) — .dg.wz ================
-   세이지 바탕(--sage) · 흰 카드 24px · 진한 잉크(--ink) · 강사 색 버튼(--p / --on) · 어두운 띠 위 강조(--ac) */
-.dg.wz{background:var(--sage);color:var(--ink);font-family:Inter,Pretendard,"Pretendard Variable","Noto Sans KR",sans-serif}
-.dg.wz .landing-page{background:var(--sage)}
-.dg.wz .grid-background{display:none}
-.dg.wz h1,.dg.wz h2,.dg.wz h3{color:var(--ink)}
-/* 맨 위: 잉크 띠 */
-.dg.wz .wz-band{position:relative;z-index:1;background:var(--ink);color:#fff;border-radius:0 0 40px 40px;overflow:hidden}
-.dg.wz .wz-band:before{content:"";position:absolute;inset:-40% -10% auto;height:120%;background:radial-gradient(45% 50% at 50% 30%,rgba(var(--rgb),.22),transparent 70%);pointer-events:none}
-.dg.wz .wz-band main{padding:64px 0 72px}
-.dg.wz .top-badge{color:var(--ac);background:rgba(var(--rgb),.14);border:1px solid rgba(var(--rgb),.4);box-shadow:none}
-.dg.wz .top-badge i,.dg.wz .micro-badge i{background:currentColor;box-shadow:none}
-.dg.wz .instructor{color:#c9ccc6}
-.dg.wz .instructor strong{color:#fff}
-.dg.wz .hero h1{font-weight:900}
-.dg.wz .hero h1 span{color:#fff}
-.dg.wz .hero h1 em{background:none;-webkit-text-fill-color:var(--ac);color:var(--ac);text-shadow:none}
-.dg.wz .hero-copy{color:#d5d8d2}
-.dg.wz .disclaimer{color:#868685}
-.dg.wz .countdown-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:24px;box-shadow:none}
-.dg.wz .countdown-eyebrow{color:#c9ccc6}
-.dg.wz .countdown-eyebrow strong{color:var(--ac)}
-.dg.wz .countdown-unit{background:#fff;border:0;border-radius:16px;box-shadow:none}
-.dg.wz .countdown-unit strong{color:var(--ink);text-shadow:none;font-family:Inter,sans-serif;font-weight:900;letter-spacing:-.04em}
-.dg.wz .countdown-unit span{color:#868685}
-.dg.wz .countdown-colon{color:#868685}
-.dg.wz .event-date{color:#d5d8d2}
-.dg.wz .event-date span{background:var(--ac);box-shadow:none}
-/* 영상 */
-.dg.wz .youtube-heading>span,.dg.wz .section-heading>span,.dg.wz .upcoming-course-heading>span,.dg.wz .fc-kicker,.dg.wz .fc-faq .section-heading>span{color:var(--deep);font-family:Inter,sans-serif;font-weight:900}
-.dg.wz .youtube-heading h2,.dg.wz .section-heading h2,.dg.wz .upcoming-course-heading h2,.dg.wz .fc-faq .section-heading h2{color:var(--ink)}
-.dg.wz .youtube-heading p,.dg.wz .section-heading p,.dg.wz .upcoming-course-heading>p{color:#454745}
-.dg.wz .video-frame{border:0;border-radius:24px;background:var(--ink);box-shadow:0 24px 50px -30px rgba(14,15,12,.5)}
-.dg.wz .video-slide--active .video-frame{border:0;box-shadow:0 30px 60px -30px rgba(14,15,12,.55)}
-.dg.wz .video-slide--left,.dg.wz .video-slide--right{filter:saturate(.6);opacity:.55}
-.dg.wz .video-select-overlay{background:rgba(14,15,12,.18)}
-.dg.wz .video-select-overlay svg{background:#fff;color:var(--ink);border:0}
-.dg.wz .video-meta span{color:var(--deep);background:var(--pale);border:0}
-.dg.wz .video-meta strong{color:var(--ink)}
-.dg.wz .carousel-control{background:#fff;color:var(--ink);border:0;box-shadow:0 8px 20px -10px rgba(14,15,12,.4)}
-.dg.wz .carousel-control:hover{background:var(--p);color:var(--on)}
-.dg.wz .carousel-pagination button{background:#c5c9c2}
-.dg.wz .carousel-pagination button.is-active{background:var(--ink)}
-.dg.wz .fc-yt-out{color:#868685}
-/* 카드 공통 */
-.dg.wz .question-cta,.dg.wz .question-cta--compact,.dg.wz .gift-card,.dg.wz .fc-about,.dg.wz .upcoming-course-card,.dg.wz .fc-faq-list details{background:#fff;border:0;box-shadow:none}
-.dg.wz .question-cta,.dg.wz .gift-card,.dg.wz .fc-about,.dg.wz .upcoming-course-card{border-radius:24px}
-.dg.wz .question-cta:after{display:none}
-.dg.wz .question-cta h2{color:var(--ink)}
-.dg.wz .question-cta p{color:#454745}
-.dg.wz .question-cta small{color:#868685}
-.dg.wz .micro-badge{color:var(--deep);background:var(--pale);border:0;box-shadow:none}
-.dg.wz .micro-badge--kakao{color:#191600;background:#fee500}
-.dg.wz .primary-cta,.dg.wz .upcoming-course-cta{background:var(--p);color:var(--on);border:0;border-radius:24px;box-shadow:none;font-weight:700}
-.dg.wz .primary-cta:hover,.dg.wz .upcoming-course-cta:hover{background:var(--pa);color:var(--on);box-shadow:none;filter:none}
-.dg.wz .kakao-cta{border-radius:24px;box-shadow:none;background:#fee500;border:0;font-weight:700}
-/* 선물 전자책 */
-.dg.wz .gift-day{background:var(--ink);color:var(--ac);box-shadow:none;font-family:Inter,sans-serif}
-.dg.wz .gift-card.is-unlocked .gift-day{background:var(--p);color:var(--on);box-shadow:none}
-.dg.wz .gift-card.is-unlocked{box-shadow:0 0 0 2px var(--p)}
-.dg.wz .gift-cover{border:0;border-radius:18px}
-.dg.wz .gift-card--blue .gift-cover,.dg.wz .gift-card--blue.is-unlocked .gift-cover{background:var(--ink);color:#fff}
-.dg.wz .gift-card--cyan .gift-cover,.dg.wz .gift-card--cyan.is-unlocked .gift-cover{background:var(--p);color:var(--on)}
-.dg.wz .gift-card--ice .gift-cover,.dg.wz .gift-card--ice.is-unlocked .gift-cover{background:var(--pale);color:var(--ink)}
-.dg.wz .gift-cover-overlay,.dg.wz .gift-card.is-unlocked .gift-cover-overlay{background:linear-gradient(transparent 55%,rgba(0,0,0,.06))}
-.dg.wz .gift-card:not(.is-unlocked) .gift-cover{filter:grayscale(.75) contrast(.9)}
-.dg.wz .gift-cover-number{color:currentColor;opacity:.1}
-.dg.wz .gift-cover-top i{background:rgba(255,255,255,.18);border-color:currentColor;color:inherit}
-.dg.wz .gift-card--ice .gift-cover-top i,.dg.wz .gift-card--cyan .gift-cover-top i{background:rgba(255,255,255,.5)}
-.dg.wz .lock-state{color:inherit}
-.dg.wz .open-hint{color:inherit;opacity:.9}
-.dg.wz .gift-card--blue .open-hint{color:var(--ac);opacity:1}
-.dg.wz .gift-card h3{color:var(--ink)}
-.dg.wz .gift-card p{color:#454745}
-.dg.wz .gift-status{color:#868685}
-.dg.wz .gift-status.is-open,.dg.wz .gift-card--ice .gift-status.is-open,.dg.wz .gift-card--ice .open-hint{color:var(--deep)}
-.dg.wz .gift-timeline{border-top-color:rgba(14,15,12,.1)}
-.dg.wz .gift-timeline span{background:#fff;border:0;color:#454745}
-.dg.wz .gift-timeline strong{color:var(--ink);font-family:Inter,sans-serif;font-weight:900}
-/* 강사 소개 */
-.dg.wz .fc-about-photo img,.dg.wz .fc-about-photo span{border:0;background:var(--p);color:var(--on)}
-.dg.wz .fc-about-txt h2{color:var(--ink)}
-.dg.wz .fc-about-role{color:#868685}
-.dg.wz .fc-about-body{color:#454745}
-.dg.wz .fc-about li{color:var(--ink)}
-.dg.wz .fc-about li svg,.dg.wz .upcoming-course-content li svg{color:var(--deep)}
-/* 진행 예정 강의 */
-.dg.wz .upcoming-course-image{background:#fff}
-.dg.wz .upcoming-course-image:after{display:none}
-.dg.wz .upcoming-course-image>span{background:var(--ink);color:var(--ac);border:0}
-.dg.wz .upcoming-platform{background:var(--sage);border:0}
-.dg.wz .upcoming-platform>span{color:var(--deep)}
-.dg.wz .upcoming-platform>strong{color:var(--ink)}
-.dg.wz .upcoming-platform-logo{border:0}
-.dg.wz .upcoming-date{color:var(--deep)}
-.dg.wz .upcoming-instructor{color:#868685}
-.dg.wz .upcoming-instructor strong{color:var(--ink)}
-.dg.wz .upcoming-course-content h3{color:var(--ink)}
-.dg.wz .upcoming-description{color:#454745}
-.dg.wz .upcoming-course-content li{color:var(--ink)}
-.dg.wz .upcoming-course-content small{color:#868685}
-.dg.wz .fc-poster-auto{background:var(--pale);color:var(--ink)}
-.dg.wz .fc-poster-auto b{background:var(--p);color:var(--on)}
-/* FAQ */
-.dg.wz .fc-faq-list details[open]{box-shadow:0 0 0 2px var(--ink)}
-.dg.wz .fc-faq-list summary{color:var(--ink)}
-.dg.wz .fc-faq-list summary svg{color:#868685}
-.dg.wz .fc-faq-list p{color:#454745}
-/* 신청하기: 어두운 홍보 카드 (잉크 바탕 + 강사 색 글씨) */
-.dg.wz .fc-apply{background:var(--ink);border-radius:24px}
-.dg.wz .fc-apply .micro-badge{background:rgba(var(--rgb),.16);color:var(--ac)}
-.dg.wz .fc-apply h2{color:var(--ac)}
-.dg.wz .fc-apply p{color:#d5d8d2}
-.dg.wz .fc-apply small{color:#868685}
-.dg.wz .fc-apply .fc-incl li{color:#fff}
-.dg.wz .fc-apply .fc-incl li svg{color:var(--ac)}
-.dg.wz .fc-price s{color:#868685}
-.dg.wz .fc-price b{color:#fff}
-/* 아래 */
-.dg.wz footer{background:var(--ink);color:var(--sage);border-top:0}
-.dg.wz footer>a{color:var(--sage);text-decoration:underline;text-decoration-color:rgba(255,255,255,.25);text-underline-offset:4px}
-.dg.wz footer>a:hover{color:var(--ac)}
-.dg.wz .fc-powered-row{background:var(--ink)}
-@media (max-width:760px){.dg.wz .wz-band{border-radius:0 0 28px 28px}.dg.wz .wz-band main{padding:44px 0 52px}}
 /* 영상 넘김 점: 보이는 점은 그대로, 누르는 영역만 넓게 */
 .dg .carousel-pagination button { position: relative; }
 .dg .carousel-pagination button::after { content: ""; position: absolute; inset: -14px -8px; }
+
+/* ================= 올블랙 + 3D (강사 색 포인트) — .dg.bk =================
+   바탕은 모든 강사 공통 검정. 강사마다 다른 건 --p/--ac(강사 색) · 썸네일 · 문구 */
+.dg.bk{--bk:#000;--card:#0c0c0e;--card2:#141417;--line:rgba(255,255,255,.09);--txt:#f5f5f6;--sub:#b4b4bb;--mute:#7c7c85;background:var(--bk);color:var(--txt)}
+.dg.bk .landing-page{background:var(--bk)}
+.dg.bk .grid-background{display:none}
+.dg.bk h1,.dg.bk h2,.dg.bk h3{color:var(--txt)}
+/* --- 첫 화면: 왼쪽 글 · 오른쪽 3D 썸네일 --- */
+.dg.bk .bk-hero{position:relative;overflow:hidden;padding:88px 0 96px;isolation:isolate}
+.dg.bk .bk-glow{position:absolute;z-index:-1;inset:-30% -20% auto;height:110%;background:radial-gradient(38% 46% at 70% 42%,rgba(var(--rgb),.30),transparent 70%),radial-gradient(30% 36% at 18% 20%,rgba(var(--rgb),.12),transparent 70%);pointer-events:none}
+.dg.bk .bk-floor{position:absolute;z-index:-1;left:-30%;right:-30%;bottom:0;height:62%;background-image:linear-gradient(rgba(var(--rgb),.38) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--rgb),.38) 1px,transparent 1px);background-size:72px 72px;background-position:center bottom;transform:perspective(600px) rotateX(68deg);transform-origin:center bottom;-webkit-mask-image:radial-gradient(70% 100% at 50% 100%,#000 35%,transparent 100%);mask-image:radial-gradient(70% 100% at 50% 100%,#000 35%,transparent 100%);opacity:.7;pointer-events:none}
+.dg.bk .bk-hero-in{width:min(100% - 40px,1160px);margin:0 auto;display:grid;grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr);grid-template-areas:"txt art" "count art";column-gap:56px;row-gap:34px;align-items:center}
+.dg.bk .bk-hero-txt{grid-area:txt;text-align:left;align-self:end}
+.dg.bk .bk-hero-count{grid-area:count;align-self:start}
+.dg.bk .bk-art{grid-area:art}
+.dg.bk .top-badge{color:var(--ac);background:rgba(var(--rgb),.10);border:1px solid rgba(var(--rgb),.38);box-shadow:0 0 30px rgba(var(--rgb),.18),inset 0 1px rgba(255,255,255,.08)}
+.dg.bk .top-badge i,.dg.bk .micro-badge i{background:var(--ac);box-shadow:0 0 12px var(--ac)}
+.dg.bk .instructor{color:var(--sub);margin:22px 0 12px}
+.dg.bk .instructor strong{color:#fff}
+.dg.bk .hero h1{font-size:clamp(40px,4.6vw,64px);line-height:1.12}
+.dg.bk .hero h1 span{color:#fff;text-shadow:0 1px 0 #2a2a2e,0 2px 0 #1d1d20,0 3px 0 #141416,0 10px 24px rgba(0,0,0,.6)}
+.dg.bk .hero h1 em{background:none;-webkit-text-fill-color:var(--ac);color:var(--ac);text-shadow:0 1px 0 color-mix(in srgb,var(--ac) 60%,#000),0 2px 0 color-mix(in srgb,var(--ac) 45%,#000),0 3px 0 color-mix(in srgb,var(--ac) 30%,#000),0 0 42px rgba(var(--rgb),.45)}
+.dg.bk .hero-copy{color:var(--sub);margin-top:26px;font-size:17px;line-height:1.75;max-width:520px}
+.dg.bk .disclaimer{color:var(--mute)}
+/* 3D 썸네일 액자 + 떠다니는 타일 */
+.dg.bk .bk-art{position:relative;perspective:1400px;padding:30px 10px 40px}
+.dg.bk .bk-frame{position:relative;border-radius:22px;overflow:hidden;transform:rotateY(-14deg) rotateX(5deg) rotateZ(1deg);transform-style:preserve-3d;border:1px solid rgba(255,255,255,.14);background:#111;box-shadow:-30px 40px 80px rgba(0,0,0,.75),0 0 0 1px rgba(0,0,0,.6),0 0 70px rgba(var(--rgb),.22);transition:transform .6s cubic-bezier(.2,.7,.2,1);animation:bk-float 7s ease-in-out infinite}
+.dg.bk .bk-art:hover .bk-frame{transform:rotateY(-6deg) rotateX(2deg)}
+.dg.bk .bk-frame img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+.dg.bk .bk-frame .fc-poster-auto{aspect-ratio:16/9;padding:32px}
+.dg.bk .bk-shine{position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,0) 32%,rgba(255,255,255,0) 70%,rgba(255,255,255,.06) 100%);pointer-events:none}
+.dg.bk .bk-frame-shadow{position:absolute;left:12%;right:8%;bottom:6px;height:30px;border-radius:50%;background:rgba(var(--rgb),.35);filter:blur(28px);z-index:-1}
+.dg.bk .bk-tile{position:absolute;width:68px;height:68px;border-radius:20px;display:grid;place-items:center;color:var(--ac);background:linear-gradient(150deg,rgba(var(--rgb),.30),rgba(255,255,255,.04) 60%),#101012;border:1px solid rgba(255,255,255,.14);box-shadow:0 22px 40px rgba(0,0,0,.7),inset 0 1px rgba(255,255,255,.22),inset 0 -6px 12px rgba(0,0,0,.35);backdrop-filter:blur(8px)}
+.dg.bk .bk-tile svg{filter:drop-shadow(0 0 10px rgba(var(--rgb),.6))}
+.dg.bk .bk-tile.t1{top:0;right:-6px;transform:rotate(10deg);animation:bk-bob 6s ease-in-out infinite}
+.dg.bk .bk-tile.t2{bottom:8px;left:-14px;transform:rotate(-12deg);animation:bk-bob 7s ease-in-out infinite .8s}
+.dg.bk .bk-tile.t3{bottom:-6px;right:18%;width:54px;height:54px;border-radius:16px;transform:rotate(6deg);animation:bk-bob 5.5s ease-in-out infinite 1.6s}
+@keyframes bk-float{0%,100%{translate:0 0}50%{translate:0 -10px}}
+@keyframes bk-bob{0%,100%{translate:0 0}50%{translate:0 -12px}}
+@media (prefers-reduced-motion:reduce){.dg.bk .bk-frame,.dg.bk .bk-tile{animation:none}}
+/* 카운트다운: 3D 키캡 */
+.dg.bk .countdown-card{width:100%;margin:0;background:linear-gradient(180deg,#121215,#0a0a0c);border:1px solid var(--line);border-radius:24px;padding:22px 24px 20px;box-shadow:inset 0 1px rgba(255,255,255,.06),0 30px 60px -28px rgba(0,0,0,.9)}
+.dg.bk .countdown-eyebrow{color:var(--sub);margin-bottom:16px}
+.dg.bk .countdown-eyebrow strong{color:var(--ac)}
+.dg.bk .countdown-grid{gap:22px}
+.dg.bk .countdown-unit{min-height:84px;border-radius:16px;background:linear-gradient(180deg,#232327,#141417);border:1px solid rgba(255,255,255,.10);box-shadow:inset 0 1px rgba(255,255,255,.14),0 6px 0 #050506,0 7px 0 rgba(255,255,255,.05),0 18px 26px rgba(0,0,0,.65)}
+.dg.bk .countdown-unit strong{color:#fff;font-family:Inter,Pretendard,sans-serif;font-weight:900;letter-spacing:-.04em;text-shadow:0 0 22px rgba(var(--rgb),.55)}
+.dg.bk .countdown-unit span{color:var(--mute)}
+.dg.bk .countdown-colon{color:#3a3a40;right:-15px}
+.dg.bk .event-date{color:var(--sub);justify-content:flex-start}
+.dg.bk .event-date span{background:var(--ac);box-shadow:0 0 10px var(--ac)}
+/* --- 아래 칸 공통 --- */
+.dg.bk main{padding-top:24px}
+.dg.bk .youtube-heading>span,.dg.bk .section-heading>span,.dg.bk .upcoming-course-heading>span,.dg.bk .fc-faq .section-heading>span{color:var(--ac);font-family:Inter,sans-serif;font-weight:900}
+.dg.bk .youtube-heading h2,.dg.bk .section-heading h2,.dg.bk .upcoming-course-heading h2,.dg.bk .fc-faq .section-heading h2{color:#fff}
+.dg.bk .youtube-heading p,.dg.bk .section-heading p,.dg.bk .upcoming-course-heading>p{color:var(--sub)}
+/* 영상: 3D 커버플로우 */
+.dg.bk .video-frame{border:1px solid var(--line);border-radius:22px;background:#0b0b0d;box-shadow:0 30px 60px -24px rgba(0,0,0,.95)}
+.dg.bk .video-slide--active .video-frame{border-color:rgba(var(--rgb),.45);box-shadow:0 34px 70px -26px rgba(0,0,0,.95),0 0 60px rgba(var(--rgb),.22)}
+.dg.bk .video-slide--left,.dg.bk .video-slide--right{opacity:.45;filter:saturate(.5) brightness(.8)}
+.dg.bk .video-select-overlay{background:rgba(0,0,0,.25)}
+.dg.bk .video-select-overlay svg{background:var(--p);color:var(--on);border:0}
+.dg.bk .video-meta span{color:var(--ac);background:rgba(var(--rgb),.12);border:1px solid rgba(var(--rgb),.3)}
+.dg.bk .video-meta strong{color:#fff}
+.dg.bk .carousel-control{background:#17171a;color:#fff;border:1px solid var(--line);box-shadow:0 10px 24px rgba(0,0,0,.6),inset 0 1px rgba(255,255,255,.08)}
+.dg.bk .carousel-control:hover{background:var(--p);color:var(--on)}
+.dg.bk .carousel-pagination button{background:#3a3a40}
+.dg.bk .carousel-pagination button.is-active{background:var(--ac)}
+.dg.bk .fc-yt-out{color:var(--mute)}
+/* 카드: 검정 위에 살짝 떠 있는 판 */
+.dg.bk .question-cta,.dg.bk .question-cta--compact,.dg.bk .gift-card,.dg.bk .upcoming-course-card,.dg.bk .fc-faq-list details{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);box-shadow:inset 0 1px rgba(255,255,255,.06),0 34px 70px -34px rgba(0,0,0,.95)}
+.dg.bk .question-cta{border-radius:28px;background:radial-gradient(70% 90% at 50% 0%,rgba(var(--rgb),.16),transparent 70%),linear-gradient(180deg,var(--card2),var(--card))}
+.dg.bk .question-cta:after{background:rgba(var(--rgb),.35)}
+.dg.bk .question-cta h2{color:#fff}
+.dg.bk .question-cta p{color:var(--sub)}
+.dg.bk .question-cta small{color:var(--mute)}
+.dg.bk .micro-badge{color:var(--ac);background:rgba(var(--rgb),.10);border:1px solid rgba(var(--rgb),.35);box-shadow:none}
+.dg.bk .micro-badge--kakao{color:#191600;background:#fee500;border:0}
+.dg.bk .question-cta--compact{background:radial-gradient(70% 90% at 50% 0%,rgba(254,229,0,.12),transparent 70%),linear-gradient(180deg,var(--card2),var(--card));border-color:rgba(254,229,0,.22)}
+.dg.bk .question-cta--compact:after{background:rgba(254,229,0,.25)}
+/* 버튼: 아래로 두께가 있는 3D 버튼 */
+.dg.bk .primary-cta,.dg.bk .upcoming-course-cta{background:var(--p);color:var(--on);border:0;border-radius:18px;font-weight:900;box-shadow:inset 0 1px rgba(255,255,255,.45),0 6px 0 color-mix(in srgb,var(--p) 50%,#000),0 20px 34px -10px rgba(var(--rgb),.55);transition:transform .12s,box-shadow .12s}
+.dg.bk .primary-cta:hover,.dg.bk .upcoming-course-cta:hover{background:var(--pa);transform:translateY(-1px);filter:none;box-shadow:inset 0 1px rgba(255,255,255,.5),0 7px 0 color-mix(in srgb,var(--p) 50%,#000),0 24px 40px -10px rgba(var(--rgb),.6)}
+.dg.bk .primary-cta:active,.dg.bk .upcoming-course-cta:active{transform:translateY(5px);box-shadow:inset 0 1px rgba(255,255,255,.4),0 1px 0 color-mix(in srgb,var(--p) 50%,#000),0 8px 16px -8px rgba(var(--rgb),.5)}
+.dg.bk .kakao-cta{border-radius:18px;background:#fee500;border:0;box-shadow:inset 0 1px rgba(255,255,255,.6),0 6px 0 #9d8b00,0 20px 34px -12px rgba(254,229,0,.45)}
+.dg.bk .kakao-cta:active{transform:translateY(5px);box-shadow:0 1px 0 #9d8b00}
+/* 선물 전자책: 3D 책 */
+.dg.bk .gift-card{border-radius:24px;padding:18px 18px 20px}
+.dg.bk .gift-cover{border:0;border-radius:6px 16px 16px 6px;transform:perspective(1000px) rotateY(-16deg);transform-origin:left center;box-shadow:inset 7px 0 0 rgba(0,0,0,.28),inset 9px 0 0 rgba(255,255,255,.10),18px 18px 34px rgba(0,0,0,.7),4px 4px 0 #1f1f22,7px 7px 0 #0f0f11;transition:transform .45s cubic-bezier(.2,.7,.2,1)}
+.dg.bk .gift-card:hover .gift-cover,.dg.bk .gift-cover:focus-visible{transform:perspective(1000px) rotateY(-4deg) translateY(-4px)}
+.dg.bk .gift-card--blue .gift-cover,.dg.bk .gift-card--blue.is-unlocked .gift-cover{background:linear-gradient(150deg,#26262b,#0d0d10);color:#fff}
+.dg.bk .gift-card--cyan .gift-cover,.dg.bk .gift-card--cyan.is-unlocked .gift-cover{background:linear-gradient(150deg,var(--pa),var(--p));color:var(--on)}
+.dg.bk .gift-card--ice .gift-cover,.dg.bk .gift-card--ice.is-unlocked .gift-cover{background:linear-gradient(150deg,#f4f4f5,#c9c9cf);color:#111}
+.dg.bk .gift-cover-overlay,.dg.bk .gift-card.is-unlocked .gift-cover-overlay{background:linear-gradient(115deg,rgba(255,255,255,.18),transparent 35%,transparent 70%,rgba(0,0,0,.18))}
+.dg.bk .gift-card:not(.is-unlocked) .gift-cover{filter:grayscale(.55) brightness(.8)}
+.dg.bk .gift-cover-number{color:currentColor;opacity:.12}
+.dg.bk .gift-cover-top i{background:rgba(255,255,255,.14);border-color:currentColor;color:inherit}
+.dg.bk .lock-state,.dg.bk .open-hint{color:inherit}
+.dg.bk .gift-card--blue .open-hint{color:var(--ac)}
+.dg.bk .gift-day{background:#1b1b1f;color:var(--ac);border:1px solid var(--line);box-shadow:0 8px 18px rgba(0,0,0,.6)}
+.dg.bk .gift-card.is-unlocked{border-color:rgba(var(--rgb),.45);box-shadow:0 0 0 1px rgba(var(--rgb),.25),0 0 50px rgba(var(--rgb),.12),0 34px 70px -34px rgba(0,0,0,.95)}
+.dg.bk .gift-card.is-unlocked .gift-day{background:var(--p);color:var(--on);border:0}
+.dg.bk .gift-card h3{color:#fff}
+.dg.bk .gift-card p{color:var(--sub)}
+.dg.bk .gift-status{color:var(--mute)}
+.dg.bk .gift-status.is-open{color:var(--ac)}
+.dg.bk .gift-timeline{border-top-color:var(--line)}
+.dg.bk .gift-timeline span{background:#121215;border:1px solid var(--line);color:var(--sub)}
+.dg.bk .gift-timeline strong{color:var(--ac);font-family:Inter,sans-serif;font-weight:900}
+/* 진행 예정 강의 카드 */
+.dg.bk .upcoming-course-card{border-radius:28px;grid-template-columns:minmax(0,1.35fr) minmax(340px,.9fr);background:radial-gradient(60% 80% at 100% 0%,rgba(var(--rgb),.14),transparent 70%),linear-gradient(180deg,var(--card2),var(--card))}
+.dg.bk .upcoming-course-image{background:#0a0a0c;display:grid;place-items:center;padding:58px 18px 18px}
+.dg.bk .upcoming-course-image:after{display:none}
+.dg.bk .upcoming-course-image img{border-radius:18px;box-shadow:0 24px 50px -20px rgba(0,0,0,.9);height:auto}
+.dg.bk .upcoming-course-image>span{background:#000;color:var(--ac);border:1px solid rgba(var(--rgb),.4);top:16px;left:18px}
+.dg.bk .upcoming-course-content{padding:34px 32px 30px}
+.dg.bk .upcoming-platform{display:flex;align-items:center;flex-wrap:wrap;gap:10px;min-height:0;padding:0;margin-bottom:20px;background:none;border:0}
+.dg.bk .bk-live-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:rgba(var(--rgb),.12);border:1px solid rgba(var(--rgb),.35);color:var(--ac);font-size:12px;font-weight:900;letter-spacing:.02em}
+.dg.bk .bk-live-chip i{width:7px;height:7px;border-radius:50%;background:#ff3b30;box-shadow:0 0 8px #ff3b30;animation:bk-blink 1.4s ease-in-out infinite}
+@keyframes bk-blink{50%{opacity:.35}}
+.dg.bk .bk-plat-logo{display:inline-flex;align-items:center;height:40px;padding:6px 12px;border-radius:12px;background:#000;border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px rgba(255,255,255,.08)}
+.dg.bk .bk-plat-logo img{display:block;height:100%;width:auto;max-width:150px;object-fit:contain}
+.dg.bk .upcoming-platform>strong{color:#fff;font-size:14px}
+.dg.bk .upcoming-date{color:var(--ac);font-size:14px}
+.dg.bk .upcoming-instructor{color:var(--mute);font-size:14px}
+.dg.bk .upcoming-instructor strong{color:#fff}
+.dg.bk .upcoming-course-content h3{color:#fff;font-size:30px}
+.dg.bk .upcoming-description{color:var(--sub);font-size:15px}
+.dg.bk .upcoming-course-content li{color:#e4e4e7;font-size:14px}
+.dg.bk .upcoming-course-content li svg{color:var(--ac)}
+.dg.bk .upcoming-course-content>small{color:var(--mute);font-size:12px}
+.dg.bk .fc-poster-auto{background:radial-gradient(70% 80% at 85% 85%,rgba(var(--rgb),.35),transparent 70%),#141417;color:#fff}
+.dg.bk .fc-poster-auto b{background:var(--p);color:var(--on)}
+/* 자주 묻는 질문 */
+.dg.bk .fc-faq-list details{border-radius:18px}
+.dg.bk .fc-faq-list details[open]{border-color:rgba(var(--rgb),.45)}
+.dg.bk .fc-faq-list summary{color:#fff}
+.dg.bk .fc-faq-list summary svg{color:var(--ac)}
+.dg.bk .fc-faq-list p{color:var(--sub);font-size:15px}
+/* 아래 */
+.dg.bk footer{background:#000;border-top:1px solid var(--line);color:var(--sub)}
+.dg.bk footer>a{color:var(--sub)}
+.dg.bk footer>a:hover{color:var(--ac)}
+.dg.bk .fc-powered-row{background:#000}
+/* 반응형 */
+@media (max-width:1024px){
+  .dg.bk .bk-hero-in{column-gap:32px}
+  .dg.bk .upcoming-course-card{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:860px){
+  .dg.bk .bk-hero{padding:56px 0 64px}
+  .dg.bk .bk-hero-in{grid-template-columns:minmax(0,1fr);grid-template-areas:"txt" "art" "count";row-gap:26px;width:min(100% - 32px,560px)}
+  .dg.bk .bk-hero-txt{text-align:center;align-self:auto}
+  .dg.bk .hero-copy{margin-left:auto;margin-right:auto}
+  .dg.bk .event-date{justify-content:center}
+  .dg.bk .bk-art{padding:16px 18px 30px}
+  .dg.bk .bk-frame{transform:rotateY(-10deg) rotateX(4deg)}
+  .dg.bk .bk-tile{width:54px;height:54px;border-radius:16px}
+  .dg.bk .bk-tile.t1{right:0}
+  .dg.bk .bk-tile.t2{left:0}
+  .dg.bk .bk-tile.t3{width:44px;height:44px;border-radius:13px}
+  .dg.bk .bk-floor{height:60%;opacity:.45}
+}
+@media (max-width:430px){
+  .dg.bk .hero h1{font-size:clamp(30px,9.6vw,38px)}
+  .dg.bk .hero-copy{font-size:15px}
+  .dg.bk .countdown-card{padding:18px 14px 16px}
+  .dg.bk .countdown-grid{gap:10px}
+  .dg.bk .upcoming-course-content{padding:24px 18px 22px}
+  .dg.bk .upcoming-course-content h3{font-size:24px}
+  .dg.bk .gift-cover{transform:perspective(1000px) rotateY(-10deg);max-width:230px;margin:0 auto}
+  .dg.bk .gift-card{text-align:left}
+}
+.dg.bk footer>a{display:block;padding:10px 0}

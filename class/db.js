@@ -253,8 +253,8 @@
   /* ---------------- 무료강의 페이지 (doogo.site 형식: 카운트다운 · 사전 질문 · 선물 전자책 · 오픈채팅 · 강의 안내) ---------------- */
   const FREE_SECTIONS = [
     { key: "countdown", label: "강의 일정 · 카운트다운" }, { key: "videos", label: "YouTube 영상 (좌 · 가운데 · 우)" }, { key: "question", label: "질문 남기기 버튼" },
-    { key: "gifts", label: "선물 전자책 (공개일에 자동으로 열림)" }, { key: "kakao", label: "카카오톡 오픈채팅" }, { key: "about", label: "강사 소개" },
-    { key: "live", label: "진행 예정 강의 (썸네일 · 신청 링크)" }, { key: "faq", label: "자주 묻는 질문" }, { key: "apply", label: "신청하기" }
+    { key: "gifts", label: "선물 전자책 (공개일에 자동으로 열림)" }, { key: "kakao", label: "카카오톡 오픈채팅" },
+    { key: "live", label: "진행 예정 강의 (썸네일 · 신청 링크)" }, { key: "faq", label: "자주 묻는 질문" }
   ];
   function freeOf(insId) {
     const c = content(insId), ins = instructor(insId);

@@ -250,18 +250,11 @@
   };
   FC.kakao = (F) => { const k = F.kakao; if (!k.url) return ""; return '<section class="question-cta question-cta--compact"><span class="micro-badge micro-badge--kakao">' + esc(k.badge) + "</span><h2>" + esc(k.title) + "</h2>" + (k.desc ? "<p>" + nl(k.desc) + "</p>" : "") +
       '<a class="kakao-cta" href="' + esc(k.url) + '" target="_blank" rel="noreferrer">' + esc(k.label) + '<span aria-hidden="true">→</span></a>' + (k.note ? "<small>" + esc(k.note) + "</small>" : "") + "</section>"; };
-  FC.about = (F) => {
-    const a = F.about;
-    if (!a.body && !(a.career || []).length && !a.photo) return "";
-    return '<section class="fc-about" aria-label="강사 소개"><div class="fc-about-photo">' + (a.photo ? '<img src="' + esc(a.photo) + '" alt="' + esc(a.name) + '">' : '<span>' + esc((a.name || "강").slice(0, 1)) + "</span>") + "</div>" +
-      '<div class="fc-about-txt"><span class="fc-kicker">' + esc(a.title || "강사 소개") + "</span><h2>" + esc(a.name) + "</h2>" + (a.role ? '<p class="fc-about-role">' + esc(a.role) + "</p>" : "") + (a.body ? '<p class="fc-about-body">' + nl(a.body) + "</p>" : "") +
-        ((a.career || []).length ? "<ul>" + a.career.map((x) => "<li>" + SV(IC.check, 18) + esc(x) + "</li>").join("") + "</ul>" : "") + "</div></section>";
-  };
   FC.live = (F) => {
     const L = F.live, title = L.liveTitle || F.hero.title;
     return '<section class="upcoming-course" aria-labelledby="upcoming-course-title"><div class="upcoming-course-heading"><span>' + esc(L.kicker) + '</span><h2 id="upcoming-course-title">' + esc(L.title) + "</h2>" + (L.desc ? "<p>" + esc(L.desc) + "</p>" : "") + "</div>" +
       '<article class="upcoming-course-card"><div class="upcoming-course-image">' + (L.image ? '<img src="' + esc(L.image) + '" alt="' + esc(title.replace(/\n/g, " ")) + ' 대표 이미지">' : '<div class="fc-poster-auto"><b>' + esc(shortWhen(F.liveAt)) + " 무료강의</b><strong>" + esc(title).replace(/\n/g, "<br>") + "</strong><small>" + esc(F.hero.instructor) + "</small></div>") + (L.tag ? "<span>" + esc(L.tag) + "</span>" : "") + "</div>" +
-        '<div class="upcoming-course-content">' + (L.platform || L.platformLogo ? '<div class="upcoming-platform"><span>[강의 Live]</span>' + (L.platformLogo ? '<div class="upcoming-platform-logo"><img src="' + esc(L.platformLogo) + '" alt="' + esc(L.platform) + ' 로고"></div>' : "") + "<strong>" + esc(L.platform) + "</strong></div>" : "") +
+        '<div class="upcoming-course-content">' + (L.platform || L.platformLogo ? '<div class="upcoming-platform"><span class="bk-live-chip"><i aria-hidden="true"></i>LIVE 진행</span>' + (L.platformLogo ? '<span class="bk-plat-logo"><img src="' + esc(L.platformLogo) + '" alt="' + esc(L.platform || "강의 플랫폼") + '"></span>' : "<strong>" + esc(L.platform) + "</strong>") + "</div>" : "") +
           '<span class="upcoming-date">' + SV(IC.cal, 17) + esc(longWhen(F.liveAt)) + "</span>" +
           '<p class="upcoming-instructor">강사 <strong>' + esc(F.hero.instructor) + "</strong></p><h3>" + title.split("\n").map((x) => "<span>" + esc(x) + "<br></span>").join("") + "</h3>" +
           (L.summary ? '<p class="upcoming-description">' + esc(L.summary) + "</p>" : "") + ((L.points || []).length ? "<ul>" + L.points.map((x) => "<li>" + SV(IC.check, 17) + esc(x) + "</li>").join("") + "</ul>" : "") +
@@ -273,13 +266,6 @@
     if (!items.length) return "";
     return '<section class="fc-faq" aria-label="자주 묻는 질문"><div class="section-heading"><span>' + esc(q.kicker) + "</span><h2>" + esc(q.title) + "</h2></div>" +
       '<div class="fc-faq-list">' + items.map((x) => "<details><summary>" + esc(x.q) + SV(IC.chev, 18) + "</summary><p>" + nl(x.a) + "</p></details>").join("") + "</div></section>";
-  };
-  FC.apply = (F) => {
-    const A = F.apply, url = A.url || F.live.url;
-    return '<section class="question-cta fc-apply"><span class="micro-badge"><i aria-hidden="true"></i>' + esc(A.badge) + "</span><h2>" + esc(A.title) + "</h2>" + (A.desc ? "<p>" + nl(A.desc) + "</p>" : "") +
-      (A.price ? '<div class="fc-price">' + (A.original ? "<s>" + esc(A.original) + "</s>" : "") + "<b>" + esc(A.price) + "</b></div>" : "") +
-      ((A.includes || []).length ? '<ul class="fc-incl">' + A.includes.map((x) => "<li>" + SV(IC.check, 17) + esc(x) + "</li>").join("") + "</ul>" : "") +
-      '<a class="primary-cta" href="' + esc(url || "#") + '"' + (url ? ' target="_blank" rel="noreferrer"' : ' data-fc="nolink"') + ">" + esc(A.label) + SV(IC.ext, 18) + "</a>" + (A.note ? "<small>" + esc(A.note) + "</small>" : "") + "</section>";
   };
   function renderFree(id) {
     const ins = DB.instructor(id);
@@ -293,16 +279,23 @@
     }
     const c = DB.content(id), h = F.hero, lines = String(h.title || "").split("\n").filter(Boolean);
     document.title = lines.join(" ") + " · " + h.instructor + " 무료강의";
-    // 강사 색으로 칠한다 (Wise 톤: 세이지 바탕 · 흰 카드 · 진한 잉크 · 강사 색 버튼)
-    const t = DB.themeOf(c.brand.theme), tv = t.vars || {};
-    const vars = "--p:" + t.primary + ";--pa:" + t.active + ";--on:" + (t.onPrimary || t.deep) + ";--pale:" + t.pale + ";--deep:" + t.deep + ";--ac:" + (t.accent || t.primary) + ";--rgb:" + t.rgb + ";--sage:" + (tv["--canvas-soft"] || "#e8ebe6") + ";--ink:" + (tv["--ink"] || "#0e0f0c");
+    // 올블랙 바탕 + 강사 색 포인트. 강사마다 다른 건 색 · 썸네일 · 문구
+    const t = DB.themeOf(c.brand.theme);
+    const vars = "--p:" + t.primary + ";--pa:" + t.active + ";--on:" + (t.onPrimary || t.deep) + ";--pale:" + t.pale + ";--deep:" + t.deep + ";--ac:" + (t.accent || t.primary) + ";--rgb:" + t.rgb;
     const rest = F.order.filter((k) => k !== "countdown" && !F.off[k] && FC[k]).map((k) => FC[k](F, c)).join("");
-    root.innerHTML = '<div class="dg wz" style="' + vars + '"><div class="landing-page">' +
+    const L = F.live, thumb = L.image;
+    const art = '<div class="bk-art" aria-hidden="true"><div class="bk-frame">' +
+        (thumb ? '<img src="' + esc(thumb) + '" alt="">' : '<div class="fc-poster-auto"><b>' + esc(shortWhen(F.liveAt)) + " 무료강의</b><strong>" + esc(L.liveTitle || h.title).replace(/\n/g, "<br>") + "</strong><small>" + esc(h.instructor) + "</small></div>") +
+        '<span class="bk-shine"></span></div><span class="bk-frame-shadow"></span>' +
+        '<span class="bk-tile t1">' + SV(IC.play, 26) + '</span><span class="bk-tile t2">' + SV(IC.msg, 24) + '</span><span class="bk-tile t3">' + SV(IC.cal, 22) + "</span></div>";
+    root.innerHTML = '<div class="dg bk" style="' + vars + '"><div class="landing-page">' +
       (!F.published ? '<div class="fc-draft">' + icon("eyeOff", "sm") + "비공개 상태예요. 강사센터 ‘무료강의 페이지’에서 ‘공개 중’으로 바꾸면 누구나 볼 수 있어요.</div>" : "") +
-      '<div class="wz-band"><main><header class="hero">' + (h.badge ? '<span class="top-badge"><i aria-hidden="true"></i>' + esc(h.badge) + "</span>" : "") +
-        '<p class="instructor">강사 · <strong>' + esc(h.instructor) + "</strong></p><h1>" + lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? "<em>" + esc(l) + "</em>" : "<span>" + esc(l) + "</span>")).join("") + "</h1>" +
-        (h.sub ? '<p class="hero-copy">' + nl(h.sub) + "</p>" : "") + (h.note ? '<small class="disclaimer">' + esc(h.note) + "</small>" : "") + "</header>" +
-        (!F.off.countdown ? FC.countdown(F, c) : "") + "</main></div>" +
+      '<section class="bk-hero"><span class="bk-glow" aria-hidden="true"></span><span class="bk-floor" aria-hidden="true"></span><div class="bk-hero-in">' +
+        '<header class="hero bk-hero-txt">' + (h.badge ? '<span class="top-badge"><i aria-hidden="true"></i>' + esc(h.badge) + "</span>" : "") +
+          '<p class="instructor">강사 · <strong>' + esc(h.instructor) + "</strong></p><h1>" + lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? "<em>" + esc(l) + "</em>" : "<span>" + esc(l) + "</span>")).join("") + "</h1>" +
+          (h.sub ? '<p class="hero-copy">' + nl(h.sub) + "</p>" : "") + (h.note ? '<small class="disclaimer">' + esc(h.note) + "</small>" : "") + "</header>" +
+        art + (!F.off.countdown ? '<div class="bk-hero-count">' + FC.countdown(F, c) + "</div>" : "") +
+      "</div></section>" +
       "<main>" + rest + "</main>" +
       // 맨 아래 상호를 누르면 강사센터의 무료강의 페이지 편집으로
       '<footer><a href="#/center/free" aria-label="강사센터 무료강의 페이지 편집으로 이동">© 2026 ' + esc(F.company || c.brand.name) + "</a></footer>" +

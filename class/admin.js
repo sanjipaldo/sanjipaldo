@@ -1085,10 +1085,8 @@
     { id: "question", label: "질문 버튼", desc: "질문 남기기 링크", icon: "message", sec: "question" },
     { id: "gifts", label: "전자책", desc: "선물과 공개일", icon: "book", sec: "gifts" },
     { id: "kakao", label: "카카오톡", desc: "오픈채팅 링크", icon: "message", sec: "kakao" },
-    { id: "about", label: "강사 소개", desc: "사진 · 소개 글", icon: "user", sec: "about" },
     { id: "live", label: "진행 예정 강의", desc: "썸네일과 신청 정보", icon: "video", sec: "live" },
     { id: "faq", label: "자주 묻는 질문", desc: "질문과 답", icon: "help", sec: "faq" },
-    { id: "apply", label: "신청하기", desc: "마지막 신청 버튼", icon: "send", sec: "apply" },
     { id: "inbox", label: "받은 질문", desc: "페이지에서 남긴 질문", icon: "inbox" }
   ];
   const more = (inner) => '<details class="a-more"><summary>' + icon("pen", "xs") + "문구 바꾸기 (선택)</summary><div class=\"a-more-body\">" + inner + "</div></details>";
