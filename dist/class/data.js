@@ -18,6 +18,7 @@ const MOON_CONTENT = {
     youtubeChannel: "https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C",
     freeCourseUrl: "https://www.ivyclass.co.kr/free-courses/c8f31bf5-1781-43cb-a4cc-5e713016ba88",
     kakaoChannel: "",
+    liveUrl: "",
     loginEyebrow: "DOOGO CLASS · 해외 건기식 브랜드",
     loginHeadline: "내 해외 건기식\n브랜드 만들기",
     loginSub: "나만의 해외 건강식품 만들기, 함께 성장하는 실전 클래스. 매주 과제를 하나씩 해내다 보면, 5주 뒤엔 내 이름의 브랜드의 사장님이 되어있으실거에요.",
@@ -271,6 +272,13 @@ const MOON_CONTENT = {
     { id: "q20", category: "이용 안내", q: "화면이 이상하거나 버튼이 안 눌려요.", a: "Q&A의 ‘요청사항’ 탭에서 ‘문의하기’를 눌러 어떤 화면에서 무엇을 눌렀는지 적고 스크린샷을 함께 올려 주세요. 강사님이 확인 후 고쳐 드립니다.", tags: ["오류", "버그", "안 돼요", "고장", "요청사항"] }
   ],
 
+  // 처음 들어온 수강생이 홈에서 하나씩 체크하는 시작 가이드
+  guide: [
+    { id: "g-1", title: "강의 일정 확인하기", desc: "라이브 Q&A와 과제 마감일을 먼저 확인해 두세요.", url: "#/schedule" },
+    { id: "g-2", title: "[필독] 공지 읽기", desc: "수강 방법과 5주 일정이 정리돼 있어요.", url: "#/notices" },
+    { id: "g-3", title: "1주차 첫 강의 보기", desc: "다 본 강의는 ‘시청 완료’로 표시해 주세요.", url: "#/curriculum" },
+    { id: "g-4", title: "AI봇에게 궁금한 점 물어보기", desc: "과제·서류·일정을 24시간 답해 드려요.", url: "#/bot" }
+  ],
   docsGuide: [
     { id: "d1", title: "사업자등록", where: "홈택스", url: "https://www.hometax.go.kr", time: "즉시 ~ 3일", cost: "무료",
       docs: ["신분증", "임대차계약서 (자택이면 생략 가능)"],

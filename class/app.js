@@ -62,6 +62,12 @@
     return null;
   }
   const myEvents = () => DB.events(INS.id, CO);
+  // 안 읽은 공지 (읽으면 진행 기록에 남는다)
+  const isUnread = (n) => !(P.readNotices || {})[n.id];
+  const unreadNotices = () => D.notices.filter(isUnread).length;
+  const newBadge = (n) => (isUnread(n) ? '<span class="badge badge-new">NEW</span>' : "");
+  // 입장 링크: 외부 주소(줌·유튜브 라이브)는 새 창으로
+  const liveBtn = (e, small) => e.url ? '<a class="btn btn-primary' + (small ? " btn-sm" : "") + '" href="' + esc(e.url) + '"' + (/^https?:/i.test(e.url) ? ' target="_blank" rel="noopener"' : "") + ">" + icon("video", "sm") + "입장하기</a>" : "";
 
   // 자동검수: 과제별 규칙(check)으로 제출 즉시 판정. 강사가 검수하면 강사 결과가 우선한다.
   function autoCheck(m, sub) {
@@ -319,7 +325,7 @@
       const kids = n.children ? n.children() : null;
       const exact = active && (!kids || !sub);
       let html = '<li><a class="nav-item' + (exact ? " active" : active ? " parent-active open" : "") + '" href="' + n.href + '"' + (exact ? ' aria-current="page"' : "") + ">" +
-        icon(n.icon) + "<span>" + esc(navLabel(n)) + "</span>" + (kids ? icon("chevDown", "sm chev") : "") + "</a>";
+        icon(n.icon) + "<span>" + esc(navLabel(n)) + "</span>" + (n.id === "notices" && unreadNotices() ? '<span class="nav-count">' + unreadNotices() + "</span>" : "") + (kids ? icon("chevDown", "sm chev") : "") + "</a>";
       if (kids && active) {
         html += '<ul class="subnav">' + kids.map((k) =>
           '<li><a href="' + k.href + '" class="' + (sub === k.id ? "active" : "") + '">' + esc(k.label) + (k.locked ? '<span class="lock">' + icon("lock", "xs") + "</span>" : "") + "</a></li>").join("") + "</ul>";
@@ -329,7 +335,8 @@
     document.getElementById("sidebar").innerHTML =
       '<ul class="nav">' + items + "</ul>" +
       '<div class="help-card"><strong>도움이 필요하신가요?</strong><p>궁금한 점은 Q&A의 자주 묻는 질문에서 먼저 확인하시고, 화면이 이상하거나 기능이 안 되면 요청사항으로 알려 주세요.</p>' +
-      '<a class="btn btn-tertiary btn-sm btn-block" href="#/qna/requests/new">' + icon("bug", "sm") + "오류 신고하기</a></div>";
+      (D.brand.kakaoChannel ? '<a class="btn btn-primary btn-sm btn-block" href="' + esc(D.brand.kakaoChannel) + '" target="_blank" rel="noopener" style="margin-bottom:8px">' + icon("message", "sm") + "카카오톡 문의</a>" : "") +
+      (on("qna") ? '<a class="btn btn-tertiary btn-sm btn-block" href="#/qna/requests/new">' + icon("bug", "sm") + "오류 신고하기</a>" : "") + "</div>";
   }
 
   /* ---------------- 홈 ---------------- */
@@ -345,9 +352,22 @@
     const mv = on("motivation") ? D.motivation[0] : null;
     const dday = nextLive ? daysUntil(nextLive.date) : null;
     const wk = DB.currentWeek(CO);
+    const todayLive = evs.find((e) => e.date === today && e.url);
+    const G = D.guide || [], gDone = G.filter((g) => (P.guide || {})[g.id]).length;
+    const guideCard = G.length && gDone < G.length
+      ? '<section class="card start-guide"><div class="home-video-head"><h2>' + icon("sparkles") + "처음 오셨나요? 시작 가이드</h2><span class=\"tiny\">" + gDone + " / " + G.length + " 완료</span></div>" + progressBar(Math.round(gDone / G.length * 100), true) +
+          '<ul class="guide-list">' + G.map((g) => {
+            const ok = !!(P.guide || {})[g.id];
+            return '<li class="' + (ok ? "done" : "") + '"><button type="button" class="g-check" data-action="toggle-guide" data-id="' + esc(g.id) + '" aria-pressed="' + ok + '" aria-label="' + esc(g.title) + (ok ? " 완료 취소" : " 완료") + '">' + (ok ? icon("check", "sm") : "") + "</button>" +
+              '<div class="g-txt"><b>' + esc(g.title) + "</b>" + (g.desc ? "<span>" + esc(g.desc) + "</span>" : "") + "</div>" +
+              (g.url ? '<a class="link-btn" href="' + esc(g.url) + '"' + (/^https?:/i.test(g.url) ? ' target="_blank" rel="noopener"' : "") + ">바로가기 " + icon(/^https?:/i.test(g.url) ? "arrowUpRight" : "arrowRight", "sm") + "</a>" : "") + "</li>";
+          }).join("") + "</ul></section>"
+      : "";
     return '<div class="page">' +
       '<header class="page-head greet"><span class="greet-icon">' + icon("sprout", "lg") + '</span><div><h1>' + esc(me.name) + "님, 다시 만나서 반갑습니다</h1><p>" + esc(quote || (CO.name + " · " + (wk ? wk + "주차 진행 중" : fmtMD(CO.startDate) + " 시작"))) + "</p></div></header>" +
 
+      (todayLive ? '<section class="card live-today">' + icon("video") + '<div><b>오늘 ' + (todayLive.time ? esc(todayLive.time) + " " : "") + esc(todayLive.title) + '</b><span class="tiny">시간이 되면 아래 버튼으로 바로 들어오세요.</span></div>' + liveBtn(todayLive) + "</section>" : "") +
+      guideCard +
       (mv ? '<section class="card"><div class="home-video-head"><h2>' + icon("flame") + "오늘의 동기부여</h2>" +
         '<a class="link-btn" href="#/motivation">지난 영상 보기 ' + icon("arrowRight", "sm") + "</a></div>" + video(mv) +
         '<p class="tiny" style="margin:12px 0 0">' + esc(mv.title) + "</p></section>" : "") +
@@ -367,7 +387,7 @@
 
       (on("notices") || on("schedule") ? '<div class="grid-2" style="margin-top:14px">' +
         (on("notices") ? '<section class="card"><div class="home-video-head"><h2>공지사항</h2><a class="link-btn" href="#/notices">더보기 ' + icon("arrowRight", "sm") + "</a></div>" +
-          (notices.length ? notices.map((n) => '<a class="list-row" href="#/notices/' + n.id + '">' + (n.pinned ? '<span class="badge badge-ink">필독</span>' : "") + '<span class="lr-title">' + esc(n.title) + '</span><span class="lr-date">' + fmtMD(n.date) + "</span></a>").join("") : '<p class="muted" style="margin:0">아직 공지가 없어요.</p>') +
+          (notices.length ? notices.map((n) => '<a class="list-row" href="#/notices/' + n.id + '">' + (n.pinned ? '<span class="badge badge-ink">필독</span>' : "") + '<span class="lr-title">' + esc(n.title) + "</span>" + newBadge(n) + '<span class="lr-date">' + fmtMD(n.date) + "</span></a>").join("") : '<p class="muted" style="margin:0">아직 공지가 없어요.</p>') +
         "</section>" : "") +
         (on("schedule") ? '<section class="card"><div class="home-video-head"><h2>다가오는 일정</h2><a class="link-btn" href="#/schedule">전체 일정 ' + icon("arrowRight", "sm") + "</a></div>" +
           (upcoming.length ? upcoming.map((e) => {
@@ -410,11 +430,13 @@
     const done = !!P.watched[id];
     return '<div class="page">' + pageHead(l.title, w.no + "주차 · " + w.title + (l.minutes ? " · " + l.minutes + "분" : ""), crumb([["커리큘럼", "#/curriculum"], [w.no + "주차", "#/curriculum"], [l.title]])) +
       '<section class="card">' + video(l) +
-        '<p style="margin:18px 0 0;font-size:16px;line-height:1.75">' + esc(l.desc) + "</p>" +
+        '<p style="margin:18px 0 0;font-size:16px;line-height:1.75">' + esc(l.desc) + "</p>" + attachmentList(l.attachments) +
         '<div class="guide-actions" style="margin-top:20px">' +
           '<button class="btn ' + (done ? "btn-secondary" : "btn-primary") + '" data-action="toggle-watched" data-id="' + id + '">' + icon("check", "sm") + (done ? "시청 완료됨 · 취소" : "시청 완료로 표시") + "</button>" +
-          '<a class="btn btn-tertiary" href="#/missions/' + w.no + '">' + w.no + "주차 과제 보기</a>" +
+          (on("missions") ? '<a class="btn btn-tertiary" href="#/missions/' + w.no + '">' + w.no + "주차 과제 보기</a>" : "") +
         "</div></section>" +
+      '<section class="card" style="margin-top:14px"><div class="home-video-head"><h2>' + icon("pen") + '내 메모</h2><span class="tiny" id="note-state">' + ((P.notes || {})[id] ? "저장됨" : "적으면 자동으로 저장돼요") + "</span></div>" +
+        '<textarea class="textarea" id="lesson-note" data-id="' + esc(id) + '" rows="5" placeholder="강의를 보며 기억할 내용, 궁금한 점을 적어 두세요. 나만 볼 수 있어요.">' + esc((P.notes || {})[id] || "") + "</textarea></section>" +
       '<div class="grid-2" style="margin-top:14px">' +
         (prev && isOpen(prev.w) ? '<a class="card list-row" href="#/curriculum/' + prev.id + '">' + icon("chevLeft") + '<span class="lr-title"><span class="tiny">이전 강의</span><br>' + esc(prev.title) + "</span></a>" : "<div></div>") +
         (next && isOpen(next.w) ? '<a class="card list-row" href="#/curriculum/' + next.id + '" style="text-align:right"><span class="lr-title"><span class="tiny">다음 강의</span><br>' + esc(next.title) + "</span>" + icon("chevRight") + "</a>" : "<div></div>") +
@@ -642,7 +664,8 @@
       '<section class="card" style="margin-top:14px"><div class="home-video-head"><h2>' + fmtKo(calSel) + '</h2><span class="tiny">' + sel.length + "건</span></div>" +
         (sel.length ? '<div class="stack">' + sel.map((e) =>
           '<div class="ev-card"><i class="ev-dot ' + e.type + '"></i><div style="flex:1;min-width:0"><div class="tiny">' + T[e.type].label + (e.week ? " · " + e.week + "주차" : "") + (e.time && e.type !== "open" ? " · " + esc(e.time) : "") + '</div><div class="ev-title">' + esc(e.title) + "</div></div>" +
-          ((e.type === "open" || e.type === "deadline") && e.week && findWeek(e.week) ? '<a class="link-btn" href="#/missions/' + e.week + '">' + (e.type === "open" ? "과제 보기" : "제출하기") + " " + icon("arrowRight", "sm") + "</a>" : "") + "</div>").join("") + "</div>"
+          (e.url && e.date >= today ? liveBtn(e, true) : "") +
+          ((e.type === "open" || e.type === "deadline") && e.week && findWeek(e.week) && !(e.url && e.date >= today) ? '<a class="link-btn" href="#/missions/' + e.week + '">' + (e.type === "open" ? "과제 보기" : "제출하기") + " " + icon("arrowRight", "sm") + "</a>" : "") + "</div>").join("") + "</div>"
           : '<p class="muted" style="margin:0">이 날은 일정이 없어요.</p>') +
       "</section></div>";
   }
@@ -653,6 +676,7 @@
     if (r.parts[1]) {
       const n = D.notices.find((x) => x.id === r.parts[1]);
       if (!n) return notFound();
+      if (isUnread(n)) { P.readNotices = P.readNotices || {}; P.readNotices[n.id] = Date.now(); saveProgress(); setTimeout(() => renderSidebar(route()), 0); }
       return '<div class="page">' + pageHead("공지사항", "", crumb([["공지사항", "#/notices"], ["상세"]])) +
         '<article class="card article">' + (n.pinned ? '<span class="badge badge-ink" style="margin-bottom:10px">필독</span>' : "") + "<h2>" + esc(n.title) + '</h2><div class="meta">' + esc(D.brand.instructor) + " · " + fmtFull(n.date) + '</div><div class="body">' + esc(n.body) + "</div></article>" +
         '<div style="margin-top:14px"><a class="btn btn-secondary" href="#/notices">' + icon("chevLeft", "sm") + "목록으로</a></div></div>";
@@ -660,7 +684,8 @@
     return '<div class="page">' + pageHead("공지사항", D.brand.instructor + "이 전하는 안내와 소식입니다.") +
       '<section class="card">' + (list.length ? list.map((n) =>
         '<a class="notice-row" href="#/notices/' + n.id + '">' + (n.pinned ? '<span class="badge badge-ink">' + icon("pin", "xs") + "필독</span>" : '<span class="badge badge-neutral">공지</span>') +
-        '<span class="lr-title">' + esc(n.title) + '</span><span class="lr-date">' + fmtFull(n.date) + "</span></a>").join("") : empty("megaphone", "아직 공지가 없어요.")) + "</section></div>";
+        '<span class="lr-title">' + esc(n.title) + "</span>" + newBadge(n) + '<span class="lr-date">' + fmtFull(n.date) + "</span></a>").join("") : empty("megaphone", "아직 공지가 없어요.")) + "</section>" +
+      (unreadNotices() ? '<div style="margin-top:12px;text-align:right"><button class="link-btn" data-action="read-all">모두 읽음으로 표시</button></div>' : "") + "</div>";
   }
 
   /* ---------------- Q&A ---------------- */
@@ -1174,6 +1199,8 @@
         else toast("비공개 글은 작성자와 강사님만 볼 수 있어요.", "warn");
         break;
       case "req-remove": reqDraft.splice(Number(a.dataset.i), 1); { const t = document.getElementById("req-thumbs"); if (t) t.innerHTML = reqThumbs(); } break;
+      case "toggle-guide": { const g = a.dataset.id; P.guide = P.guide || {}; if (P.guide[g]) delete P.guide[g]; else P.guide[g] = Date.now(); saveProgress(); render(); if ((D.guide || []).every((x) => P.guide[x.id])) toast("시작 가이드를 모두 마쳤어요! 이제 1주차 과제를 시작해 보세요."); break; }
+      case "read-all": P.readNotices = P.readNotices || {}; D.notices.forEach((n) => { P.readNotices[n.id] = Date.now(); }); saveProgress(); render(); break;
       case "toggle-doc": { const s = a.dataset.id; if (P.docs[s]) delete P.docs[s]; else P.docs[s] = Date.now(); saveProgress(); render(); break; }
       case "chip": sendChat(a.dataset.q); break;
       case "ask-bot": botOpen = true; DB.store.set(KEY_BOT, true); renderBotFab(route()); sendChat(a.dataset.q); break;
@@ -1212,9 +1239,16 @@
     }
     if (f.hasAttribute("data-chat-form")) { e.preventDefault(); const v = f.q.value; f.q.value = ""; sendChat(v); f.q.focus(); }
   });
+  let noteTimer = null;
   document.addEventListener("input", (e) => {
     if (!isActive()) return;
     const t = e.target;
+    if (t.id === "lesson-note") {
+      clearTimeout(noteTimer);
+      const st = document.getElementById("note-state"); if (st) st.textContent = "저장 중…";
+      noteTimer = setTimeout(() => { P.notes = P.notes || {}; const v = t.value.trim(); if (v) P.notes[t.dataset.id] = t.value; else delete P.notes[t.dataset.id]; saveProgress(); const s2 = document.getElementById("note-state"); if (s2) s2.textContent = "저장됨"; }, 500);
+      return;
+    }
     if (t.id === "faq-search") { document.getElementById("faq-list").innerHTML = faqList(t.value); return; }
     if (t.hasAttribute && t.hasAttribute("data-calc")) { updateCalc(); return; }
     if (t.id === "sub-text" && t.dataset.min) {

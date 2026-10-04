@@ -533,3 +533,12 @@ body[data-master="1"] .a-count { background: #6a3df0; }
   .a-swatches { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .a-theme-preview { grid-template-columns: 1fr; }
 }
+
+/* 새 강사 플랫폼: 처음 내용 고르기 */
+.a-radio-cards { display: grid; gap: 8px; }
+.a-radio-cards label { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--m-hairline-soft); border-radius: var(--m-r-xl); cursor: pointer; }
+.a-radio-cards label:has(input:checked) { border: 2px solid var(--m-primary); padding: 11px 13px; background: var(--m-primary-soft); }
+.a-radio-cards input { margin-top: 3px; accent-color: var(--m-primary); }
+.a-radio-cards span { display: grid; gap: 2px; }
+.a-radio-cards b { font-size: 14px; }
+.a-radio-cards small { font-size: 12px; color: var(--m-steel); line-height: 1.5; }

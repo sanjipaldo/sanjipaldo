@@ -120,7 +120,7 @@
         loginEyebrow: "DOOGO CLASS",
         loginHeadline: name + "\n함께 시작해요",
         loginSub: "매주 과제를 하나씩 해내다 보면, 어느새 내 이름의 비즈니스가 움직이고 있을 거예요.",
-        liveTime: "20:00",
+        liveTime: "20:00", liveUrl: "",
         theme: brand.theme || "lime"
       },
       weeks: [1, 2, 3, 4].map((w) => ({
@@ -142,11 +142,43 @@
         { id: "q2", category: "과제 · 수료", q: "과제는 언제까지 내야 하나요?", a: "주차가 열리고 6일 뒤가 과제 마감일입니다. 마감이 지나도 제출은 가능하지만 수료 전까지 필수 과제를 모두 통과해야 합니다.", tags: ["과제", "마감", "기한"] },
         { id: "q3", category: "라이브 · 강의", q: "라이브를 놓쳤어요.", a: "다시보기가 커리큘럼 메뉴에 올라갑니다.", tags: ["라이브", "다시보기"] }
       ],
+      guide: [
+        { id: "g-1", title: "강의 일정 확인하기", desc: "라이브와 과제 마감일을 먼저 확인해 두세요.", url: "#/schedule" },
+        { id: "g-2", title: "[필독] 공지 읽기", desc: "수강 방법이 정리돼 있어요.", url: "#/notices" },
+        { id: "g-3", title: "1주차 첫 강의 보기", desc: "다 본 강의는 ‘시청 완료’로 표시해 주세요.", url: "#/curriculum" }
+      ],
       docsGuide: [],
       resources: { ebook: [], file: [], vod: [], senior: [] },
       motivation: [],
       quotes: ["오늘의 작은 실천이 더 큰 기회를 만듭니다"]
     };
+  }
+
+  /**
+   * 새 강사 플랫폼을 문대표 플랫폼 구성 그대로 시작한다 (메뉴·주차·과제·FAQ·서류 가이드·자료실 틀).
+   * 문대표 이름은 새 강사 이름으로 바꾸고, 문대표 개인 영상·첨부 파일은 비워 둔다.
+   */
+  function templateFromMoon(brand) {
+    const src = (db && db.content.moon) || (window.CLASS_SEED.content || {}).moon;
+    if (!src) return template(brand);
+    const inst = brand.instructor || "강사", name = brand.name || inst;
+    const c = JSON.parse(JSON.stringify(src).replace(/두고보는 문대표/g, name).replace(/문대표/g, inst));
+    const t = template(brand).brand;
+    Object.assign(c.brand, { name, instructor: inst, courseTitle: t.courseTitle, shortTitle: t.shortTitle, botName: t.botName,
+      loginEyebrow: "DOOGO CLASS", loginHeadline: t.loginHeadline, loginSub: t.loginSub, theme: t.theme, themeSet: true,
+      youtubeChannel: "", freeCourseUrl: "", kakaoChannel: "", liveUrl: "" });
+    c.weeks.forEach((w) => w.lessons.forEach((l) => { l.youtubeId = ""; l.attachments = []; }));
+    c.motivation = [];
+    ["ebook", "file", "vod", "senior"].forEach((k) => (c.resources[k] || []).forEach((it) => { it.youtubeId = ""; it.attachments = []; if (!it.tool) it.url = ""; }));
+    c.notices.forEach((n) => { n.date = todayStr(); });
+    c.pages = {};
+    delete c.landing;
+    return normalizeContent(c);
+  }
+  /** 문대표 메뉴 구성(켜고 끈 메뉴·이름·순서)을 복사 — 추가 메뉴는 빼고 */
+  function moonMenu() {
+    const m = menuConfig("moon");
+    return { items: m.items.filter((x) => !isCustom(x.key)).map((x) => Object.assign({}, x)), library: Object.assign({}, m.library) };
   }
 
   /* ---------------- 불러오기 · 저장 ---------------- */
@@ -155,11 +187,11 @@
   function normalizeContent(c) {
     c.weeks = c.weeks || [];
     c.weeks.forEach((w, i) => { w.no = i + 1; w.lessons = w.lessons || []; w.missions = w.missions || []; });
-    ["schedule", "notices", "faqs", "docsGuide", "motivation", "quotes"].forEach((k) => { c[k] = c[k] || []; });
+    ["schedule", "notices", "faqs", "docsGuide", "motivation", "quotes", "guide"].forEach((k) => { c[k] = c[k] || []; });
     c.resources = Object.assign({ ebook: [], file: [], vod: [], senior: [] }, c.resources || {});
     c.pages = c.pages || {};
     if (!c.brand.theme) c.brand.theme = "lime";
-    [c.schedule, c.notices, c.faqs, c.docsGuide, c.motivation].forEach((list) => list.forEach((it) => { if (!it.id) it.id = uid("x"); }));
+    [c.schedule, c.notices, c.faqs, c.docsGuide, c.motivation, c.guide].forEach((list) => list.forEach((it) => { if (!it.id) it.id = uid("x"); }));
     return c;
   }
 
@@ -258,6 +290,12 @@
       }
       save();
     }
+    // 시작 가이드가 생기기 전 데이터면 기본 단계를 넣는다 (한 번만)
+    db.flags = db.flags || {};
+    if (!db.flags.guideSeeded) {
+      Object.keys(db.content).forEach((id) => { const c = db.content[id], sc = window.CLASS_SEED.content[id]; if (!c.guide.length) c.guide = clone(sc && sc.guide ? sc.guide : template({}).guide); if (c.brand.liveUrl === undefined) c.brand.liveUrl = ""; });
+      db.flags.guideSeeded = true; save();
+    }
     // 없어진 색(잠깐 적용됐던 클릭하우스 등)이 저장돼 있으면 라임으로 되돌린다
     Object.keys(db.content).forEach((id) => { const b = db.content[id].brand; if (b.theme && !THEMES[b.theme]) { b.theme = "lime"; save(); } });
     // 자료실 영상에 본문·첨부파일 필드가 생기기 전 데이터면 기본값을 채운다
@@ -344,7 +382,7 @@
     const out = [];
     const time = c.brand.liveTime || "";
     c.weeks.forEach((w) => {
-      out.push({ date: weekOpen(co, w.no), time, type: "open", week: w.no, title: w.no + "주차 강의 — " + w.title + (time ? " (" + time + ")" : ""), auto: true });
+      out.push({ date: weekOpen(co, w.no), time, type: "open", week: w.no, title: w.no + "주차 강의 — " + w.title + (time ? " (" + time + ")" : ""), url: c.brand.liveUrl || "", auto: true });
       out.push({ date: weekDeadline(co, w.no), time: "", type: "deadline", week: w.no, title: w.no + "주차 과제 마감", auto: true });
     });
     c.schedule.forEach((e) => {
@@ -355,7 +393,7 @@
         const d = parseDate(open).getDay();
         date = addDays(open, ((Number(e.dow) - d) + 7) % 7);
       }
-      if (date) out.push({ date, time: e.time || "", type: e.type, week: e.scope === "cohort" ? null : Number(e.week), title: e.title, id: e.id });
+      if (date) out.push({ date, time: e.time || "", type: e.type, week: e.scope === "cohort" ? null : Number(e.week), title: e.title, url: e.url || "", id: e.id });
     });
     return out.sort((a, b) => (a.date + (a.time || "99")).localeCompare(b.date + (b.time || "99")));
   }
@@ -365,7 +403,7 @@
   }
 
   /* ---------------- 진행 기록 ---------------- */
-  function emptyProgress() { return { submissions: {}, watched: {}, docs: {}, questions: [], chat: [] }; }
+  function emptyProgress() { return { submissions: {}, watched: {}, docs: {}, questions: [], chat: [], notes: {}, readNotices: {}, guide: {} }; }
   const progress = (sid) => Object.assign(emptyProgress(), store.get(KEY_PROGRESS + sid, {}));
   const saveProgress = (sid, p) => store.set(KEY_PROGRESS + sid, p);
   const lastSub = (p, mid) => { const l = p.submissions[mid]; return l && l.length ? l[l.length - 1] : null; };
@@ -409,7 +447,7 @@
   };
 
   window.DB = {
-    load, save, reset, store, clone, uid, esc, youtubeId, template, normalizeContent,
+    load, save, reset, store, clone, uid, esc, youtubeId, template, templateFromMoon, moonMenu, normalizeContent,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
     weekOpen, weekDeadline, cohortEnd, cohortStatus, STATUS_LABEL, currentWeek, currentCohort, nextCohortName,

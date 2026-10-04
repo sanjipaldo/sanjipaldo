@@ -864,3 +864,30 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 @media (max-width: 720px) { .brand .logo-mark { width: 32px; height: 32px; } }
 .login-label span { color: var(--ink-deep); opacity: .75; }
 .ins-txt small, .faq-cat { color: var(--ink-deep); }
+
+/* ---------- 시작 가이드 · 오늘 라이브 · 새 공지 · 메모 ---------- */
+.badge-new { background: var(--negative); color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .04em; padding: 0 7px; line-height: 18px; flex: none; }
+.nav-count { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-pill); background: var(--negative); color: #fff; font-size: 11px; font-weight: 800; display: inline-grid; place-items: center; }
+.nav-item .nav-count + .chev { margin-left: 6px; }
+.start-guide { margin-bottom: 14px; border: 2px solid var(--primary); }
+.start-guide .progress { margin: 4px 0 6px; }
+.guide-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; }
+.guide-list li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line-soft); }
+.guide-list li:first-child { border-top: 0; }
+.g-check { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; background: var(--canvas); color: var(--on-primary); }
+.guide-list li.done .g-check { background: var(--primary); border-color: var(--primary); }
+.g-txt { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.g-txt b { font-size: 15px; }
+.g-txt span { font-size: 13px; color: var(--body); }
+.guide-list li.done .g-txt b { text-decoration: line-through; color: var(--mute); }
+.live-today { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; background: var(--solid); color: var(--on-solid); }
+.live-today > .icon { color: var(--accent); width: 28px; height: 28px; }
+.live-today > div { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.live-today .tiny { color: inherit; opacity: .75; }
+@media (max-width: 720px) {
+  .live-today { flex-wrap: wrap; }
+  .live-today .btn { width: 100%; }
+  .guide-list li { flex-wrap: wrap; }
+  .guide-list li .link-btn { margin-left: 40px; }
+}
+#lesson-note { min-height: 120px; }
