@@ -99,5 +99,12 @@
     Object.keys(t.vars || {}).forEach((k) => { r.setProperty(k, t.vars[k]); extraVars.push(k); });
     const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", t.primary);
   };
+  /** 운영사 doogo 로고 (color: 밝은 바탕, white: 어두운 바탕, mark / markWhite: 심볼만) */
+  window.doogoLogo = (variant, cls) => {
+    const f = { color: "doogo-color.png", white: "doogo-white.png", mark: "doogo-mark.png", markWhite: "doogo-mark-white.png" }[variant || "color"];
+    return '<img class="doogo-logo ' + (cls || "") + '" src="assets/brand/' + f + '" alt="doogo">';
+  };
+  /** ‘Powered by doogo’ 표시 */
+  window.poweredBy = (variant, cls) => '<span class="powered ' + (cls || "") + '"><span>Powered by</span>' + window.doogoLogo(variant || "color") + "</span>";
   window.icon = (name, cls) => '<svg class="icon ' + (cls || "") + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 })();

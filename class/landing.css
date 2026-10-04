@@ -220,3 +220,112 @@ body[data-mode="landing"] { background: #fff; }
   .lp-sticky small { font-size: 12px; color: var(--lp-mute); }
   .lp-sticky .lp-btn { flex: none; }
 }
+.lp .powered { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--lp-mute); }
+.lp .powered .doogo-logo { height: 16px; width: auto; }
+
+/* ================= 무료강의 페이지 (doogo.site 구성, 흰 배경 + 강사 색) ================= */
+.fc { background: radial-gradient(70% 40% at 50% 0%, rgba(var(--lp-rgb), .16), transparent 70%), #fff; min-height: 100dvh; }
+.fc-main { max-width: 1120px; margin: 0 auto; padding: 56px 20px 40px; display: grid; gap: 64px; justify-items: center; }
+.fc-pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px; border-radius: 999px; background: var(--lp-pale); color: var(--lp-pd); font-size: 13px; font-weight: 800; }
+.fc-pill-top { border: 1px solid rgba(var(--lp-rgb), .5); background: #fff; color: var(--lp-ink); }
+.fc-hero { text-align: center; display: grid; justify-items: center; gap: 0; max-width: 860px; }
+.fc-ins { margin: 18px 0 10px; font-size: 15px; color: var(--lp-body); }
+.fc-hero h1 { font-size: clamp(34px, 5.6vw, 64px); line-height: 1.15; font-weight: 900; letter-spacing: -0.05em; }
+.fc-sub { margin: 22px 0 0; font-size: 18px; color: var(--lp-body); line-height: 1.7; }
+.fc-disc { margin: 10px 0 0; font-size: 12px; color: var(--lp-mute); }
+/* 카운트다운 */
+.fc-count-wrap { width: 100%; display: flex; justify-content: center; margin-top: -24px; }
+.fc-count { width: 100%; max-width: 560px; padding: 24px; border-radius: 22px; background: #fff; border: 1px solid var(--lp-line); box-shadow: 0 30px 60px -40px rgba(17, 19, 18, .35); }
+.fc-count-label { margin: 0 0 14px; font-size: 14px; font-weight: 800; color: var(--lp-body); }
+.fc-count-label b { color: var(--lp-pd); letter-spacing: .08em; }
+.fc-units { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.fc-unit { flex: 1; display: grid; justify-items: center; gap: 4px; padding: 14px 0; border-radius: 14px; background: var(--lp-ink); color: #fff; }
+.fc-unit b { font-size: clamp(26px, 5vw, 38px); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.fc-unit small { font-size: 12px; color: #b9bdb9; font-weight: 700; }
+.fc-colon { font-size: 22px; font-weight: 900; color: var(--lp-mute); }
+.fc-count-foot { margin: 16px 0 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--lp-body); }
+/* 카드 */
+.fc-card { width: 100%; max-width: 640px; padding: 36px 32px; border-radius: 26px; background: #fff; border: 1px solid var(--lp-line); text-align: center; display: grid; justify-items: center; gap: 14px; }
+.fc-glow { border: 2px solid rgba(var(--lp-rgb), .7); box-shadow: 0 30px 80px -40px rgba(var(--lp-rgb), .9); }
+.fc-card h2 { font-size: clamp(22px, 3vw, 28px); line-height: 1.3; font-weight: 900; }
+.fc-card p { margin: 0; font-size: 16px; color: var(--lp-body); line-height: 1.7; }
+.fc-wide { width: 100%; max-width: 420px; margin-top: 8px; }
+.fc-note { font-size: 12px; color: var(--lp-mute); }
+.fc-kakao { background: #fffbe6; border-color: #f5e08a; }
+.fc-pill-kakao { background: #fee500; color: #191600; }
+.fc-kakao-btn { background: #fee500; color: #191600; }
+.fc-kakao-btn:hover { background: #ffd900; }
+/* 섹션 제목 */
+.fc-sec { width: 100%; display: grid; justify-items: center; }
+.fc-center { text-align: center; }
+.fc-h2 { font-size: clamp(26px, 3.6vw, 38px); font-weight: 900; text-align: center; letter-spacing: -0.04em; }
+.fc-lead { margin: 12px 0 0; text-align: center; font-size: 16px; color: var(--lp-body); line-height: 1.7; }
+/* 선물 전자책 */
+.fc-gifts { margin-top: 36px; width: 100%; max-width: 980px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.fc-gift { position: relative; padding: 14px 14px 20px; border-radius: 22px; background: #fff; border: 1px solid var(--lp-line); display: grid; gap: 10px; align-content: start; }
+.fc-gift.open { border-color: rgba(var(--lp-rgb), .8); }
+.fc-dday { position: absolute; top: -12px; left: 14px; z-index: 2; padding: 4px 12px; border-radius: 999px; background: var(--lp-ink); color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .04em; }
+.fc-gift.open .fc-dday { background: var(--lp-p); color: var(--lp-on); }
+.fc-cover-btn { display: block; padding: 0; border: 0; background: none; text-align: left; text-decoration: none; cursor: pointer; }
+.fc-cover { position: relative; overflow: hidden; aspect-ratio: 4 / 4.4; padding: 16px; border-radius: 16px; color: #fff; display: grid; align-content: space-between; }
+.fc-cover-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 13px; }
+.fc-cover-top small { padding: 3px 8px; border-radius: 999px; background: rgba(255, 255, 255, .22); font-size: 10px; font-weight: 800; white-space: nowrap; }
+.fc-cover strong { font-size: 20px; line-height: 1.3; font-weight: 900; position: relative; z-index: 1; margin-top: auto; }
+.fc-cover > small { font-size: 12px; opacity: .85; position: relative; z-index: 1; }
+.fc-cover-open { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; position: relative; z-index: 1; }
+.fc-cover-no { position: absolute; right: -6px; bottom: -28px; font-style: normal; font-size: 120px; font-weight: 900; letter-spacing: -0.06em; opacity: .16; line-height: 1; }
+.fc-c-blue { background: linear-gradient(150deg, #3b82f6, #1d4ed8); }
+.fc-c-teal { background: linear-gradient(150deg, #14b8a6, #0f766e); }
+.fc-c-gold { background: linear-gradient(150deg, #f5b942, #b7791f); }
+.fc-c-pink { background: linear-gradient(150deg, #f472b6, #be185d); }
+.fc-c-dark { background: linear-gradient(150deg, #3a3f3c, #111312); }
+.fc-c-accent { background: linear-gradient(150deg, var(--lp-p), var(--lp-pd)); color: #fff; }
+.fc-gift.locked .fc-cover { filter: grayscale(.55) brightness(.92); }
+.fc-gift h3 { margin: 6px 4px 0; font-size: 17px; font-weight: 900; }
+.fc-gift p { margin: 0 4px; font-size: 14px; color: var(--lp-body); line-height: 1.6; }
+.fc-gift-state { margin: 4px 4px 0; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; color: var(--lp-pd); }
+.fc-gift.locked .fc-gift-state { color: var(--lp-mute); }
+.fc-chips { margin-top: 24px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.fc-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--lp-line); font-size: 13px; color: var(--lp-body); font-weight: 600; }
+.fc-chip b { font-size: 12px; font-weight: 900; color: var(--lp-mute); }
+.fc-chip.on { border-color: rgba(var(--lp-rgb), .7); background: var(--lp-pale); }
+.fc-chip.on b { color: var(--lp-pd); }
+/* 영상 */
+.fc-videos { margin-top: 28px; width: 100%; max-width: 980px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.fc-video { display: grid; gap: 10px; color: var(--lp-ink); text-decoration: none; font-weight: 800; }
+.fc-thumb { position: relative; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; background: var(--lp-ink); display: grid; place-items: center; color: #fff; }
+.fc-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.fc-thumb .icon { position: relative; width: 52px; height: 52px; padding: 14px; border-radius: 50%; background: var(--lp-p); color: var(--lp-on); }
+/* 진행 예정 강의 */
+.fc-live { margin-top: 32px; width: 100%; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); border-radius: 26px; overflow: hidden; border: 1px solid var(--lp-line); background: #fff; box-shadow: 0 40px 80px -50px rgba(17, 19, 18, .4); }
+.fc-live-img { position: relative; background: var(--lp-soft); display: grid; }
+.fc-live-img > img { width: 100%; height: 100%; object-fit: cover; }
+.fc-live-tag { position: absolute; top: 16px; left: 16px; z-index: 1; padding: 6px 12px; border-radius: 999px; background: var(--lp-ink); color: #fff; font-size: 12px; font-weight: 800; }
+.fc-poster { padding: 64px 36px 36px; display: grid; align-content: center; gap: 16px; background: radial-gradient(60% 70% at 85% 80%, rgba(var(--lp-rgb), .55), transparent 70%), var(--lp-soft); }
+.fc-poster-date { justify-self: start; padding: 6px 14px; border-radius: 999px; background: var(--lp-p); color: var(--lp-on); font-size: 15px; font-weight: 900; }
+.fc-poster strong { font-size: clamp(28px, 3.6vw, 42px); line-height: 1.2; font-weight: 900; letter-spacing: -0.05em; }
+.fc-poster small { font-size: 15px; font-weight: 700; color: var(--lp-body); }
+.fc-live-info { padding: 32px; display: grid; gap: 12px; align-content: start; }
+.fc-live-plat { padding: 10px 14px; border-radius: 12px; background: var(--lp-soft); font-size: 13px; color: var(--lp-body); }
+.fc-live-plat b { color: var(--lp-ink); }
+.fc-live-when { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; color: var(--lp-pd); }
+.fc-live-info > small { font-size: 13px; color: var(--lp-mute); }
+.fc-live-info h3 { font-size: 26px; line-height: 1.3; font-weight: 900; letter-spacing: -0.04em; }
+.fc-live-info > p { margin: 0; font-size: 15px; color: var(--lp-body); line-height: 1.7; }
+.fc-live-info .fc-note { text-align: center; }
+.fc-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; max-width: 1120px; margin: 0 auto; padding: 28px 20px 40px; border-top: 1px solid var(--lp-line); font-size: 13px; color: var(--lp-mute); }
+.fc-modal { max-width: 520px; }
+.lp-empty-mark { width: 56px; height: auto; margin: 0 auto 18px; display: block; }
+@media (max-width: 900px) {
+  .fc-gifts { grid-template-columns: minmax(0, 1fr); max-width: 420px; }
+  .fc-live { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .fc-main { padding: 36px 16px 32px; gap: 48px; }
+  .fc-sub { font-size: 16px; }
+  .fc-count { padding: 18px; }
+  .fc-card { padding: 28px 20px; }
+  .fc-live-info { padding: 22px; }
+  .fc-poster { padding: 56px 22px 26px; }
+}
+@media (max-width: 640px) { .fc-cover { aspect-ratio: 4 / 3; } .fc-cover-no { font-size: 96px; } }

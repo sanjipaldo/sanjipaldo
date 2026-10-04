@@ -173,7 +173,7 @@
     c.notices.forEach((n) => { n.date = todayStr(); });
     c.pages = {};
     c.curricula = []; delete c.curriculumName;
-    delete c.landing;
+    delete c.landing; delete c.freeClass; delete c.freeQuestions;
     return normalizeContent(c);
   }
   /** 문대표 메뉴 구성(켜고 끈 메뉴·이름·순서)을 복사 — 추가 메뉴는 빼고 */
@@ -218,6 +218,36 @@
     out.off = Object.assign({}, L.off || {});
     out.order = (L.order || []).filter((k) => LANDING_SECTIONS.some((x) => x.key === k));
     LANDING_SECTIONS.forEach((x) => { if (out.order.indexOf(x.key) === -1) out.order.push(x.key); });
+    return out;
+  }
+
+  /* ---------------- 무료강의 페이지 (doogo.site 형식: 카운트다운 · 사전 질문 · 선물 전자책 · 오픈채팅 · 강의 안내) ---------------- */
+  const FREE_SECTIONS = [
+    { key: "countdown", label: "강의 시작 카운트다운" }, { key: "question", label: "사전 질문 남기기" }, { key: "gifts", label: "선물 전자책 (날짜별 공개)" },
+    { key: "videos", label: "미리 보는 영상" }, { key: "kakao", label: "카카오톡 오픈채팅" }, { key: "live", label: "진행 예정인 강의 (신청)" }
+  ];
+  function freeOf(insId) {
+    const c = content(insId), ins = instructor(insId);
+    if (!c || !ins) return null;
+    const b = c.brand, F = clone(c.freeClass || {});
+    const live = addDays(todayStr(), 14) + "T19:30";
+    const def = {
+      published: false,
+      order: FREE_SECTIONS.map((x) => x.key), off: { videos: true },
+      hero: { badge: "무료강의 신청자 전용 선물", instructor: b.instructor || ins.displayName, title: (b.loginHeadline || b.courseTitle || "").replace(/\n/g, "\n"), sub: "강의 시작 전, 신청자에게만 실전 자료를 순서대로 열어드립니다.", note: "본 강의는 교육 목적이며 결과는 실행 환경과 노력에 따라 달라질 수 있습니다." },
+      liveAt: live,
+      question: { badge: "강의 전 필수 · 1분 소요", title: (b.instructor || "강사") + "에게 직접 묻고 싶은 게 있으신가요?", desc: "강의 전에 궁금한 내용을 미리 정리해 보세요. 지금 남겨두시면 내 상황에 맞는 질문을 놓치지 않을 수 있어요.", label: "내 질문 남기러 가기", url: "", note: "질문을 남긴 뒤 무료강의 신청 페이지로 이동할 수 있어요" },
+      gifts: { kicker: "BEFORE THE CLASS", title: "강의 전, 선물 전자책", desc: "공개일이 되면 잠금이 자동으로 풀리고, 표지를 누르면 전자책이 열려요.", items: [] },
+      videos: { kicker: "PREVIEW", title: "강의 전에 미리 보면 좋은 영상", items: [] },
+      kakao: { badge: "💬 궁금한 점이 있으신가요?", title: "궁금한 점은 카카오톡 오픈채팅방에서 편하게 물어보세요", desc: "강의 전 궁금한 내용이나 미리 확인하고 싶은 부분이 있다면 자유롭게 남겨주세요.\n확인 후 하나씩 답변드리겠습니다.", label: "카카오톡 오픈채팅방 입장하기", url: b.kakaoChannel || "", note: "간단한 질문도 괜찮습니다 │ 편하게 참여해주세요" },
+      live: { kicker: "UPCOMING LIVE CLASS", title: "진행 예정인 강의", desc: "무료강의 신청을 완료하고, 실제 노하우를 라이브로 확인하세요.", tag: "무료 LIVE 강의", platform: "", image: "", summary: "", points: [], label: "무료강의 신청하기", url: "", note: "신청 페이지는 새 창에서 열립니다." },
+      company: ""
+    };
+    const out = Object.assign({}, def, F);
+    ["hero", "question", "gifts", "videos", "kakao", "live"].forEach((k) => { out[k] = Object.assign({}, def[k], F[k] || {}); });
+    out.off = Object.assign({}, F.off || def.off);
+    out.order = (F.order || []).filter((k) => FREE_SECTIONS.some((x) => x.key === k));
+    FREE_SECTIONS.forEach((x) => { if (out.order.indexOf(x.key) === -1) out.order.push(x.key); });
     return out;
   }
 
@@ -348,6 +378,11 @@
         ["classDow", "classTime", "curriculumId"].forEach((k) => { if (co[k] === undefined && sc[k] !== undefined) co[k] = sc[k]; });
       });
       db.flags.curriculaSeeded = true; save();
+    }
+    // 무료강의 페이지 기본 문구 (한 번만, doogo.site 내용)
+    if (!db.flags.freeSeeded) {
+      Object.keys(db.content).forEach((id) => { const sc = window.CLASS_SEED.content[id]; if (!db.content[id].freeClass && sc && sc.freeClass) db.content[id].freeClass = clone(sc.freeClass); });
+      db.flags.freeSeeded = true; save();
     }
     // 홍보 랜딩페이지 기본 문구 (한 번만)
     if (!db.flags.landingSeeded) {
@@ -542,7 +577,7 @@
   };
 
   window.DB = {
-    load, save, reset, store, clone, uid, esc, youtubeId, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf,
+    load, save, reset, store, clone, uid, esc, youtubeId, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
     curricula, curriculum, curriculumOf, weeksOf, cohortWeeks,

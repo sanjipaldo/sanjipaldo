@@ -107,14 +107,14 @@
     root.innerHTML =
       '<main class="adm a-login a-login-' + L.theme + '">' +
         '<section class="a-login-brand">' + window.loginArt(L.theme, L.icons) +
-          '<span class="a-logo"><span class="a-logo-mark">' + icon("layers") + "</span><b>DOOGO</b><span class=\"a-logo-sub\">CLASS</span><em>" + L.tag + "</em></span>" +
+          '<span class="a-logo a-logo-doogo">' + window.doogoLogo("white") + '<span class="a-logo-sub">CLASS</span><em>' + L.tag + "</em></span>" +
           '<div class="a-login-hero"><p class="a-eyebrow">' + L.eyebrow + "</p><h2>" + L.h + "</h2><p>" + L.sub + "</p></div>" +
-          '<div class="a-login-foot"><span>© 2026 두고 클래스</span><span>Secure ' + (ins ? "instructor" : "admin") + " workspace</span></div>" +
+          '<div class="a-login-foot"><span>© 2026 (주) 두고홀딩스 · doogo</span><span>Secure ' + (ins ? "instructor" : "admin") + " workspace</span></div>" +
         "</section>" +
         '<section class="a-login-panel">' +
           '<div class="a-login-topright"><span>수강생이신가요?</span><a class="a-btn a-btn-primary a-btn-sm" href="#/login" data-action="to-student">바로가기</a></div>' +
           '<div class="a-login-stack"><div class="a-login-card">' +
-            '<p class="a-login-label">DOOGO <span>' + L.label + "</span></p>" +
+            '<p class="a-login-label">' + window.doogoLogo("color") + "<span>" + L.label + "</span></p>" +
             "<h1>" + L.title + '</h1><p class="a-muted a-center">' + L.lead + "</p>" +
             '<div class="a-seg" role="tablist">' +
               '<button type="button" role="tab" aria-selected="' + ins + '" class="' + (ins ? "on" : "") + '" data-action="login-tab" data-tab="instructor">' + icon("user", "sm") + "강사</button>" +
@@ -177,7 +177,7 @@
         ["cohorts", "기수 관리", "layers"]
       ].concat(on("missions") ? [["reviews", "과제 검수", "checks", n.review]] : []).concat(on("qna") ? [["questions", "요청사항 답변", "bug", n.questions]] : [])],
       ["수강생 화면 콘텐츠", content],
-      ["홍보", [["landing", "홍보 랜딩페이지", "store"]]]
+      ["홍보", [["free", "무료강의 페이지", "video"], ["landing", "강의 소개 페이지", "store"]]]
     ];
   }
   const customPages = (iid) => DB.menuConfig(iid).items.filter((x) => DB.isCustom(x.key) && x.type !== "link");
@@ -199,7 +199,7 @@
         (S.role === "master" && S.actingAs ? '<div class="a-acting">' + icon("shieldCheck", "sm") + "<span>마스터 권한으로 <b>" + esc(ins.name) + "</b> 강사센터를 보고 있어요.</span>" + btn("마스터로 돌아가기", "stop-acting", "a-btn-light a-btn-sm") + "</div>" : "") +
         '<header class="a-top">' +
           '<button class="a-icon-btn a-menu" type="button" data-action="toggle-nav" aria-label="메뉴">' + icon("menu") + "</button>" +
-          '<a class="a-logo" href="#/center' + (master ? "/master" : "") + '"><span class="a-logo-mark">' + icon("layers") + "</span><b>" + (master ? "마스터 관리자" : "강사센터") + "</b>" + (ins ? '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>" : "") + "</a>" +
+          '<a class="a-logo" href="#/center' + (master ? "/master" : "") + '"><span class="a-logo-mark">' + window.doogoLogo("markWhite") + "</span><b>" + (master ? "마스터 관리자" : "강사센터") + "</b>" + (ins ? '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>" : "") + "</a>" +
           '<div class="a-top-right">' +
             (ins ? '<span class="a-chip a-hide-sm">' + (co ? esc(co.name) + " · " + DB.STATUS_LABEL[DB.cohortStatus(co)] : "기수 없음") + "</span>" +
               btn(icon("eye", "sm") + '<span class="a-hide-sm">수강생 화면 보기</span>', "preview", "a-btn-outline a-btn-sm") : "") +
@@ -214,7 +214,7 @@
               return '<a class="a-nav' + (on ? " on" : "") + '" href="#/center' + (it[0] ? "/" + it[0] : "") + '"' + (on ? ' aria-current="page"' : "") + ">" + icon(it[2], "sm") + "<span>" + esc(it[1]) + "</span>" + (it[3] ? '<span class="a-count">' + it[3] + "</span>" : "") + "</a>";
             }).join("") + "</div>").join("") +
             (master ? "" : '<div class="a-side-card"><b>수강생 화면과 똑같은 메뉴</b><p>‘수강생 화면 콘텐츠’에서 고친 내용이 수강생 화면에 바로 반영돼요.</p>' + btn(icon("eye", "sm") + "수강생 화면 보기", "preview", "a-btn-primary a-btn-sm a-btn-block") + "</div>") +
-            '<div class="a-side-foot"><a href="#/login" data-action="to-student">' + icon("arrowLeft", "xs") + "수강생 로그인 화면</a></div>" +
+            '<div class="a-side-foot"><a href="#/login" data-action="to-student">' + icon("arrowLeft", "xs") + "수강생 로그인 화면</a>" + window.poweredBy("color") + "</div>" +
           "</aside>" +
           '<div class="a-scrim" data-action="toggle-nav"></div>' +
           '<main class="a-main" id="a-main"></main>' +
@@ -874,8 +874,10 @@
   // 편집 중인 내용은 ui.lp 에 두고, ‘저장’을 눌러야 공개 페이지에 반영된다
   function lpGet(obj, path) { return path.split(".").reduce((o, k) => (o == null ? o : o[k]), obj); }
   function lpSet(obj, path, v) { const ks = path.split("."); const last = ks.pop(); const o = ks.reduce((a, k) => (a[k] = a[k] == null ? {} : a[k]), obj); o[last] = v; }
+  // ui.lpKind: "landing"(강의 소개) | "free"(무료강의 페이지) — 같은 편집 도구를 같이 쓴다
   function lpDraft() {
-    if (!ui.lp || ui.lpFor !== IID()) { ui.lp = DB.landingOf(IID()); ui.lpFor = IID(); ui.lpDirty = false; ui.lpOpen = ui.lpOpen || { hero: true }; }
+    const key = IID() + ":" + (ui.lpKind || "landing");
+    if (!ui.lp || ui.lpFor !== key) { ui.lp = ui.lpKind === "free" ? DB.freeOf(IID()) : DB.landingOf(IID()); ui.lpFor = key; ui.lpDirty = false; ui.lpOpen = ui.lpOpen || { hero: true }; }
     return ui.lp;
   }
   const LP_HINT = { stats: "비워 두면 커리큘럼 기준으로 자동 표시 (주차·강의·과제 수)", curriculum: "주차와 강의 목록은 ‘커리큘럼’ 메뉴 내용이 그대로 나와요.", faq: "비워 두면 ‘Q&A 자주 묻는 질문’ 앞의 6개가 나와요.", platform: "결제 후 열리는 이 학습 플랫폼의 기능을 소개해요. (기능 목록은 자동)", reviews: "후기가 없으면 이 칸은 보이지 않아요. ‘예시 표시’를 켜 두면 카드에 ‘예시 후기’ 표시가 붙어요." };
@@ -886,13 +888,17 @@
     if (type === "textarea") input = '<textarea class="a-input" id="' + id + '" data-lp="' + path + '" rows="3">' + esc(v || "") + "</textarea>";
     else if (type === "lines") input = '<textarea class="a-input" id="' + id + '" data-lp-lines="' + path + '" rows="4">' + esc((v || []).join("\n")) + "</textarea>";
     else if (type === "image") input = '<div class="a-lp-img">' + (v ? '<img src="' + esc(v) + '" alt="">' + btn(icon("trash", "sm") + "지우기", "lp-img-del", "a-btn-ghost a-btn-sm", ' data-path="' + path + '"') : '<span class="a-muted">아직 사진이 없어요.</span>') + '<label class="a-btn a-btn-ghost a-btn-sm">' + icon("image", "sm") + "사진 올리기<input type=\"file\" accept=\"image/*\" class=\"sr-only\" data-lp-img=\"" + path + '"></label></div>';
-    else input = '<input class="a-input" id="' + id + '" data-lp="' + path + '" value="' + esc(v || "") + '"' + (type === "url" ? ' type="url" placeholder="https://"' : "") + ">";
+    else input = '<input class="a-input" id="' + id + '" data-lp="' + path + '" value="' + esc(v || "") + '"' + (type === "url" ? ' type="url" placeholder="https://"' : type === "datetime" ? ' type="datetime-local"' : type === "date" ? ' type="date"' : "") + ">";
     return '<div class="a-field"><label' + (type === "image" ? "" : ' for="' + id + '"') + ">" + esc(label) + "</label>" + input + (hint ? '<small class="a-muted">' + esc(hint) + "</small>" : "") + "</div>";
   }
   function lpRows(path, cols, addLabel) {
     const list = lpGet(ui.lp, path) || [];
     return '<div class="a-lp-rows">' + list.map((row, i) => '<div class="a-lp-row">' +
-        cols.map((c) => c[2] === "check"
+        cols.map((c) => c[2] === "select"
+          ? '<select class="a-input a-sm" data-lp="' + path + "." + i + "." + c[0] + '" aria-label="' + esc(c[1]) + '">' + c[3].map((o) => '<option value="' + o[0] + '"' + ((row[c[0]] || c[3][0][0]) === o[0] ? " selected" : "") + ">" + esc(c[1]) + " · " + esc(o[1]) + "</option>").join("") + "</select>"
+          : c[2] === "date"
+          ? '<input class="a-input a-sm" type="date" data-lp="' + path + "." + i + "." + c[0] + '" value="' + esc(row[c[0]] || "") + '" aria-label="' + esc(c[1]) + '" title="' + esc(c[1]) + '">'
+          : c[2] === "check"
           ? '<label class="a-check"><input type="checkbox" data-lp-check="' + path + "." + i + "." + c[0] + '"' + (row[c[0]] ? " checked" : "") + "><span>" + esc(c[1]) + "</span></label>"
           : c[2] === "textarea"
             ? '<textarea class="a-input a-sm" data-lp="' + path + "." + i + "." + c[0] + '" rows="2" placeholder="' + esc(c[1]) + '" aria-label="' + esc(c[1]) + '">' + esc(row[c[0]] || "") + "</textarea>"
@@ -917,19 +923,54 @@
     }
     return "";
   }
-  function pageLanding() {
-    const L = lpDraft(), iid = IID();
-    const url = location.href.split("#")[0] + "#/p/" + iid;
-    const secs = L.order.map((k, i) => {
-      const def = DB.LANDING_SECTIONS.find((x) => x.key === k);
+  function lpSecCards(L, defs, bodyFn, hints) {
+    return L.order.map((k, i) => {
+      const def = defs.find((x) => x.key === k);
       const on = !L.off[k];
       return '<details class="a-card a-lp-sec' + (on ? "" : " off") + '" data-k="' + k + '"' + (ui.lpOpen[k] ? " open" : "") + "><summary>" +
         '<span class="a-lp-move"><button type="button" class="a-icon-btn sm" data-action="lp-move" data-k="' + k + '" data-dir="-1" aria-label="위로"' + (i === 0 ? " disabled" : "") + ">" + icon("arrowUp", "sm") + '</button><button type="button" class="a-icon-btn sm" data-action="lp-move" data-k="' + k + '" data-dir="1" aria-label="아래로"' + (i === L.order.length - 1 ? " disabled" : "") + ">" + icon("arrowDown", "sm") + "</button></span>" +
         "<b>" + esc(def.label) + "</b>" + (on ? pill("보임", "ok") : pill("숨김", "mute")) +
         '<button type="button" class="a-switch' + (on ? " on" : "") + '" data-action="lp-toggle" data-k="' + k + '" role="switch" aria-checked="' + on + '" aria-label="' + esc(def.label) + ' 보이기"><i></i></button>' + icon("chevDown", "sm a-lp-chev") + "</summary>" +
-        '<div class="a-lp-body">' + (LP_HINT[k] ? '<p class="a-hint" style="margin:0">' + icon("alert", "xs") + " " + esc(LP_HINT[k]) + "</p>" : "") + lpSectionBody(k) + "</div></details>";
+        '<div class="a-lp-body">' + (hints[k] ? '<p class="a-hint" style="margin:0">' + icon("alert", "xs") + " " + esc(hints[k]) + "</p>" : "") + bodyFn(k) + "</div></details>";
     }).join("");
-    return head("홍보 랜딩페이지", "강사님과 강의를 소개하는 공개 페이지예요. 결제 전 수강생이 보고, 신청 버튼을 누르면 수강 신청이나 결제 페이지로 이어져요. 배경은 흰색, 버튼과 강조는 수강생 화면 색상을 따라가요.",
+  }
+  const FREE_HINT = { countdown: "아래 ‘강의 날짜·시간’까지 남은 시간이 1초 단위로 줄어들어요.", question: "‘질문 받는 주소’를 비워 두면 이 페이지에서 바로 질문을 받아요. 받은 질문은 이 화면 맨 아래에 모여요. 질문을 남기면 ‘무료강의 신청’ 주소로 이어져요.", gifts: "선물마다 공개 날짜를 정하면 그날 자동으로 잠금이 풀려요. 전자책 주소(구글 드라이브 등)를 넣으면 표지를 눌러 열 수 있어요.", videos: "유튜브 주소를 넣은 영상만 보여요.", kakao: "오픈채팅 주소가 없으면 이 칸은 보이지 않아요.", live: "‘신청 주소’에 무료강의 신청 페이지(구글폼·아이비클래스 등)를 넣어 주세요. 사진이 없으면 날짜와 제목으로 포스터를 자동으로 만들어요." };
+  function freeSectionBody(k) {
+    switch (k) {
+      case "countdown": return lpField("liveAt", "강의 날짜 · 시간", "datetime");
+      case "question": return lpField("question.badge", "작은 배지") + lpField("question.title", "제목") + lpField("question.desc", "설명", "textarea") + '<div class="a-form-row">' + lpField("question.label", "버튼 글자") + lpField("question.url", "질문 받는 주소 (선택)", "url", "구글폼 등. 비우면 이 페이지에서 질문을 받아요") + "</div>" + lpField("question.note", "버튼 아래 안내");
+      case "gifts": return '<div class="a-form-row">' + lpField("gifts.kicker", "작은 영문 제목") + lpField("gifts.title", "제목") + "</div>" + lpField("gifts.desc", "설명", "textarea") +
+        lpRows("gifts.items", [["title", "전자책 제목"], ["openAt", "공개 날짜", "date"], ["color", "표지 색", "select", [["blue", "파랑"], ["teal", "청록"], ["gold", "골드"], ["pink", "핑크"], ["dark", "블랙"], ["accent", "강사 색"]]], ["url", "전자책 주소 (https://)"], ["desc", "소개", "textarea"]], "선물 추가");
+      case "videos": return '<div class="a-form-row">' + lpField("videos.kicker", "작은 영문 제목") + lpField("videos.title", "제목") + "</div>" + lpRows("videos.items", [["title", "영상 제목"], ["youtube", "유튜브 주소"]], "영상 추가");
+      case "kakao": return lpField("kakao.badge", "작은 배지") + lpField("kakao.title", "제목") + lpField("kakao.desc", "설명", "textarea") + '<div class="a-form-row">' + lpField("kakao.label", "버튼 글자") + lpField("kakao.url", "오픈채팅 주소", "url") + "</div>" + lpField("kakao.note", "버튼 아래 안내");
+      case "live": return '<div class="a-form-row">' + lpField("live.kicker", "작은 영문 제목") + lpField("live.title", "제목") + "</div>" + lpField("live.desc", "설명") +
+        '<div class="a-form-row">' + lpField("live.tag", "사진 위 배지") + lpField("live.platform", "강의 플랫폼 (예: 아이비클래스)") + "</div>" + lpField("live.summary", "강의 소개", "textarea") + lpField("live.points", "이런 걸 배워요 (한 줄에 하나)", "lines") +
+        '<div class="a-form-row">' + lpField("live.label", "신청 버튼 글자") + lpField("live.url", "무료강의 신청 주소", "url") + "</div>" + lpField("live.note", "버튼 아래 안내") + lpField("live.image", "강의 포스터 사진 (선택)", "image");
+    }
+    return "";
+  }
+  function pageFree() {
+    ui.lpKind = "free";
+    const F = lpDraft(), iid = IID(), c = C();
+    const url = location.href.split("#")[0] + "#/free/" + iid;
+    const qs = (c.freeQuestions || []).slice().reverse();
+    return head("무료강의 페이지", "무료강의를 신청한 분들이 강의 전에 보는 페이지예요. 강의 시작 카운트다운, 사전 질문, 날짜별로 열리는 선물 전자책, 오픈채팅, 신청 안내를 한 곳에서 보여 줘요. 무료강의 → 유료 결제 → 수강생 플랫폼으로 이어지는 첫 단계예요.",
+        '<a class="a-btn a-btn-outline" href="#/free/' + iid + '">' + icon("eye", "sm") + "페이지 보기</a>" + btn(icon("check", "sm") + "저장", "lp-save", "a-btn-primary")) +
+      '<section class="a-card a-lp-top"><label class="a-check"><input type="checkbox" id="lp-pub"' + (F.published ? " checked" : "") + '><span><b>공개하기</b> · 끄면 강사님과 마스터만 볼 수 있어요</span></label>' +
+        '<div class="a-lp-url"><input class="a-input a-sm a-mono" id="lp-url" value="' + esc(url) + '" readonly aria-label="페이지 주소">' + btn(icon("clipboard", "sm") + "주소 복사", "lp-copy", "a-btn-ghost a-btn-sm") + "</div>" +
+        (ui.lpDirty ? '<p class="a-lp-dirty">' + icon("alert", "xs") + " 저장하지 않은 변경이 있어요.</p>" : "") + "</section>" +
+      '<section class="a-card"><div class="a-card-head"><h2>맨 위 제목</h2></div><div class="a-lp-body" style="border:0;padding:0">' + lpField("hero.badge", "작은 배지") + lpField("hero.instructor", "강사 이름") + lpField("hero.title", "헤드라인 (줄바꿈 가능, 마지막 줄은 강조)", "textarea") + lpField("hero.sub", "설명", "textarea") + lpField("hero.note", "작은 안내 문구") + lpField("company", "맨 아래 상호 (© 표시)") + "</div></section>" +
+      '<div class="a-stack">' + lpSecCards(F, DB.FREE_SECTIONS, freeSectionBody, FREE_HINT) + "</div>" +
+      '<section class="a-card"><div class="a-card-head"><h2>받은 사전 질문</h2><span class="a-muted">' + qs.length + "개</span></div>" +
+        (qs.length ? '<ul class="a-items">' + qs.map((q) => '<li><div class="a-item-main"><b>' + esc(q.text) + "</b><small>" + esc(q.name || "이름 없음") + " · " + fmtStamp(q.at) + "</small></div>" + btn(icon("trash", "sm"), "fq-del", "a-btn-ghost a-btn-sm", ' data-id="' + q.id + '" aria-label="삭제"') + "</li>").join("") + "</ul>" : emptyBox("message", "아직 받은 질문이 없어요. (지금은 이 브라우저에서 남긴 질문만 보여요)")) + "</section>" +
+      '<div class="a-lp-savebar">' + (ui.lpDirty ? '<span class="a-muted">저장하지 않은 변경이 있어요</span>' : '<span class="a-muted">저장된 상태예요</span>') + btn("변경 취소", "lp-revert", "a-btn-ghost a-btn-sm") + btn(icon("check", "sm") + "저장", "lp-save", "a-btn-primary") + "</div>";
+  }
+  function pageLanding() {
+    ui.lpKind = "landing";
+    const L = lpDraft(), iid = IID();
+    const url = location.href.split("#")[0] + "#/p/" + iid;
+    const secs = lpSecCards(L, DB.LANDING_SECTIONS, lpSectionBody, LP_HINT);
+    return head("강의 소개 페이지", "강사님과 강의를 소개하는 공개 페이지예요. 결제 전 수강생이 보고, 신청 버튼을 누르면 수강 신청이나 결제 페이지로 이어져요. 배경은 흰색, 버튼과 강조는 수강생 화면 색상을 따라가요.",
         '<a class="a-btn a-btn-outline" href="#/p/' + iid + '">' + icon("eye", "sm") + "페이지 보기</a>" + btn(icon("check", "sm") + "저장", "lp-save", "a-btn-primary")) +
       '<section class="a-card a-lp-top"><label class="a-check"><input type="checkbox" id="lp-pub"' + (L.published ? " checked" : "") + '><span><b>공개하기</b> · 끄면 강사님과 마스터만 볼 수 있어요</span></label>' +
         '<div class="a-lp-url"><input class="a-input a-sm a-mono" id="lp-url" value="' + esc(url) + '" readonly aria-label="페이지 주소">' + btn(icon("clipboard", "sm") + "주소 복사", "lp-copy", "a-btn-ghost a-btn-sm") + "</div>" +
@@ -1178,7 +1219,7 @@
           return "<tr><td><b>" + esc(x.displayName) + '</b><small class="a-memo">' + fmtMD(x.createdAt || todayStr()) + " 개설</small></td><td>" + esc(x.name) + ' <span class="a-muted num">/ ' + esc(x.phone4) + "</span></td><td>" + esc(c ? c.brand.courseTitle : "-") + "</td>" +
             "<td>" + cos.length + "개" + (cur ? ' <small class="a-memo">' + esc(cur.name) + " " + DB.STATUS_LABEL[DB.cohortStatus(cur)] + "</small>" : "") + '</td><td class="num">' + ss.filter((s) => s.status === "approved").length + "명" + (ss.filter((s) => s.status === "pending").length ? ' <small class="a-memo">대기 ' + ss.filter((s) => s.status === "pending").length + "</small>" : "") + "</td>" +
             "<td>" + (x.status === "active" ? pill("운영 중", "ok") : pill("중지", "mute")) + '</td><td class="right"><div class="a-row-actions">' +
-            btn("강사센터 접속", "ins-enter", "a-btn-primary a-btn-sm", ' data-id="' + x.id + '"') + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/center/master/menus?ins=' + x.id + '">' + icon("sliders", "sm") + "메뉴·색상</a>" + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/p/' + x.id + '">' + icon("store", "sm") + "랜딩</a>" + btn("수정", "ins-edit", "a-btn-ghost a-btn-sm", ' data-id="' + x.id + '"') + "</div></td></tr>";
+            btn("강사센터 접속", "ins-enter", "a-btn-primary a-btn-sm", ' data-id="' + x.id + '"') + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/center/master/menus?ins=' + x.id + '">' + icon("sliders", "sm") + "메뉴·색상</a>" + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/free/' + x.id + '">' + icon("video", "sm") + "무료강의</a>" + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/p/' + x.id + '">' + icon("store", "sm") + "소개</a>" + btn("수정", "ins-edit", "a-btn-ghost a-btn-sm", ' data-id="' + x.id + '"') + "</div></td></tr>";
         }).join("") + "</tbody></table></div>" : emptyBox("store", "강사 플랫폼이 없어요.")) + "</section>";
   }
   function pageMasterInstructors() {
@@ -1237,7 +1278,7 @@
   }
 
   /* ---------------- 렌더 ---------------- */
-  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, pages: pageCustomPages };
+  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, pages: pageCustomPages };
   const MPAGES = { "": pageMasterHome, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData };
   function render() {
     closeModal();
@@ -1421,13 +1462,14 @@
       case "lp-img-del": lpSet(lpDraft(), d.path, ""); ui.lpDirty = true; render(); break;
       case "lp-faq-import": { const L = lpDraft(); L.faq.items = C().faqs.slice(0, 6).map((f) => ({ q: f.q, a: f.a })); ui.lpDirty = true; ui.lpOpen.faq = true; render(); toast("자주 묻는 질문 " + L.faq.items.length + "개를 가져왔어요. 저장을 눌러 주세요."); break; }
       case "lp-save": {
-        const c = C(), prev = c.landing;
-        c.landing = DB.clone(lpDraft());
-        if (!DB.save()) { c.landing = prev; toast("저장 공간이 부족해요. 사진 크기를 줄여 주세요.", "warn"); break; }
-        ui.lpDirty = false; render(); toast("랜딩페이지를 저장했어요. ‘페이지 보기’로 확인해 보세요.");
+        const c = C(), field = ui.lpKind === "free" ? "freeClass" : "landing", prev = c[field];
+        c[field] = DB.clone(lpDraft());
+        if (!DB.save()) { c[field] = prev; toast("저장 공간이 부족해요. 사진 크기를 줄여 주세요.", "warn"); break; }
+        ui.lpDirty = false; render(); toast((ui.lpKind === "free" ? "무료강의 페이지" : "강의 소개 페이지") + "를 저장했어요. ‘페이지 보기’로 확인해 보세요.");
         break;
       }
       case "lp-revert": ui.lp = null; render(); toast("저장된 내용으로 되돌렸어요."); break;
+      case "fq-del": { const c = C(); c.freeQuestions = (c.freeQuestions || []).filter((x) => x.id !== d.id); commit("질문을 지웠어요."); break; }
       case "lp-copy": { const el = document.getElementById("lp-url"); const done = () => toast("주소를 복사했어요."); if (navigator.clipboard) navigator.clipboard.writeText(el.value).then(done, () => { el.select(); toast("주소를 선택했어요. 길게 눌러 복사해 주세요."); }); else { el.select(); toast("주소를 선택했어요."); } break; }
       case "cur-new": curForm("new"); break;
       case "cur-rename": curForm("rename"); break;

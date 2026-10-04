@@ -587,3 +587,13 @@ body[data-master="1"] .a-count { background: #6a3df0; }
 .a-cur-info { margin: 0; font-size: 13px; color: var(--m-charcoal); line-height: 1.6; }
 .a-cur-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; background: var(--m-surface, #f1f4f7); font-size: 12px; font-weight: 700; color: var(--m-charcoal); }
 @media (max-width: 720px) { .a-cur-top select { min-width: 0; width: 100%; max-width: none; } .a-cur-top .a-label { width: 100%; } }
+
+/* 운영사 doogo 로고 */
+.adm .doogo-logo { display: inline-block; height: 18px; width: auto; vertical-align: middle; }
+.adm .powered { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--m-steel); }
+.adm .powered .doogo-logo { height: 15px; }
+.a-logo-doogo .doogo-logo { height: 26px; }
+.a-logo-mark .doogo-logo { height: 22px; }
+.a-login-label { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.a-login-label .doogo-logo { height: 20px; }
+.a-side-foot { display: grid; gap: 12px; justify-items: start; }

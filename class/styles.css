@@ -914,3 +914,12 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
   .lv-path::before { top: 18px; left: 19px; right: 19px; }
 }
 .lv-ic .icon { width: 22px; height: 22px; } @media (max-width: 720px) { .lv-ic .icon { width: 19px; height: 19px; } }
+
+/* ---------- 운영사 doogo 표시 ---------- */
+.doogo-logo { display: inline-block; height: 18px; width: auto; vertical-align: middle; }
+.powered { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: .02em; color: var(--mute); }
+.powered .doogo-logo { height: 15px; }
+.login-powered { color: #8a9584; }
+.login-label { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.login-label .doogo-logo { height: 20px; }
+.side-powered { padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--line); display: flex; justify-content: center; }

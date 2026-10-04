@@ -210,13 +210,13 @@
             '<h2 class="login-headline">' + headline + "</h2>" +
             (B.loginSub ? '<p class="login-sub">' + esc(B.loginSub) + "</p>" : "") +
           "</div>" +
-          '<div class="login-foot"><span class="login-copy">© 2026 ' + esc(B.name) + '</span><span class="login-copy">수강생 전용 학습 공간</span></div>' +
+          '<div class="login-foot"><span class="login-copy">© 2026 ' + esc(B.name) + "</span>" + window.poweredBy("white", "login-powered") + "</div>" +
         "</section>" +
         '<section class="login-panel">' +
           '<div class="login-topright"><span>강사님이신가요?</span><a class="btn btn-dark btn-sm" href="#/center">강사센터</a></div>' +
           '<div class="login-stack">' +
             '<div class="login-card">' +
-              '<p class="login-label">DOOGO <span>CLASS</span></p>' +
+              '<p class="login-label">' + window.doogoLogo("color") + "<span>CLASS</span></p>" +
               "<h1>" + esc(ins ? B.name : "두고 클래스") + " 시작하기</h1>" +
               '<p class="lead">수강 신청할 때 등록한 정보로 로그인하세요.</p>' +
               '<form class="login-form" id="login-form" novalidate>' + picker +
@@ -341,7 +341,7 @@
       '<ul class="nav">' + items + "</ul>" +
       '<div class="help-card"><strong>도움이 필요하신가요?</strong><p>궁금한 점은 Q&A의 자주 묻는 질문에서 먼저 확인하시고, 화면이 이상하거나 기능이 안 되면 요청사항으로 알려 주세요.</p>' +
       (D.brand.kakaoChannel ? '<a class="btn btn-primary btn-sm btn-block" href="' + esc(D.brand.kakaoChannel) + '" target="_blank" rel="noopener" style="margin-bottom:8px">' + icon("message", "sm") + "카카오톡 문의</a>" : "") +
-      (on("qna") ? '<a class="btn btn-tertiary btn-sm btn-block" href="#/qna/requests/new">' + icon("bug", "sm") + "오류 신고하기</a>" : "") + "</div>";
+      (on("qna") ? '<a class="btn btn-tertiary btn-sm btn-block" href="#/qna/requests/new">' + icon("bug", "sm") + "오류 신고하기</a>" : "") + '<div class="side-powered">' + window.poweredBy("color") + "</div></div>";
   }
 
   /* ---------------- 홈 ---------------- */

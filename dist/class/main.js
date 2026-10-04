@@ -5,7 +5,7 @@
   let mode = null;
   function go() {
     const h = location.hash;
-    const next = /^#\/center/.test(h) ? "admin" : /^#\/p(\/|\?|$)/.test(h) ? "landing" : "student";
+    const next = /^#\/center/.test(h) ? "admin" : /^#\/(p|free)(\/|\?|$)/.test(h) ? "landing" : "student";
     const changed = next !== mode;
     mode = next;
     document.body.dataset.mode = next;
