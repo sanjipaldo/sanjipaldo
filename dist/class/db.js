@@ -401,6 +401,25 @@
     if (d < 0) return 0;
     return Math.min(weekCount(co.instructorId), Math.floor(d / 7) + 1);
   }
+  /* ---------------- 성장 레벨 (주차가 지날 때마다 한 단계씩) ---------------- */
+  const LEVEL_SET = [
+    { key: "seed", name: "씨앗", icon: "lvSeed" }, { key: "leaf", name: "풀잎", icon: "lvLeaf" }, { key: "branch", name: "가지", icon: "lvBranch" },
+    { key: "tree", name: "나무", icon: "lvTree" }, { key: "forest", name: "숲", icon: "lvForest" }
+  ];
+  // 단계 수 = 주차 수 (최대 5). 마지막은 늘 ‘숲’ — 4주 강의면 나무를 건너뛰고 씨앗·풀잎·가지·숲
+  const levelSteps = (weeks) => { const n = Math.max(1, Math.min(5, weeks || 5)); return LEVEL_SET.slice(0, n - 1).concat([LEVEL_SET[4]]); };
+  function levelIndex(wk, weeks, steps) {
+    if (weeks <= 5) return Math.max(0, Math.min(steps.length - 1, wk - 1));
+    return wk >= weeks ? steps.length - 1 : Math.min(steps.length - 2, Math.floor((wk - 1) * (steps.length - 1) / (weeks - 1)));
+  }
+  /** 기수 진행에 따른 수강생 레벨: 시작 전·1주차 씨앗 … 마지막 주차부터 숲 */
+  function level(co) {
+    const weeks = weekCount(co.instructorId), steps = levelSteps(weeks);
+    const wk = Math.max(1, currentWeek(co)), idx = levelIndex(wk, weeks, steps);
+    let nextDate = null;
+    for (let w = wk + 1; w <= weeks; w++) if (levelIndex(w, weeks, steps) > idx) { nextDate = weekOpen(co, w); break; }
+    return { steps, idx, cur: steps[idx], next: steps[idx + 1] || null, nextDate, weeks };
+  }
   /** 강사센터 기본 기수: 진행 중 → 가장 가까운 모집 중 → 가장 최근 */
   function currentCohort(instId) {
     const list = cohortsOf(instId);
@@ -494,7 +513,7 @@
     load, save, reset, store, clone, uid, esc, youtubeId, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
-    weekOpen, weekDeadline, cohortEnd, cohortStatus, STATUS_LABEL, currentWeek, currentCohort, nextCohortName,
+    weekOpen, weekDeadline, cohortEnd, cohortStatus, STATUS_LABEL, currentWeek, LEVEL_SET, levelSteps, level, currentCohort, nextCohortName,
     EVENT_TYPES, events, ruleText,
     REQUEST_CATEGORIES, maskName, requests,
     THEMES, themeOf, STUDENT_MENUS, LIB_MENUS, CUSTOM_ICONS, menuConfig, menuOn, libOn, isCustom,

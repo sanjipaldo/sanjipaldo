@@ -284,6 +284,7 @@
       if (!CO) { me = null; return; }
     }
     P = DB.progress(me.id);
+    checkLevelUp();
     draft = { missionId: null, files: [] };
     calCursor = null; calSel = null;
   }
@@ -303,7 +304,7 @@
           '<button class="menu-toggle" type="button" data-action="toggle-nav" aria-label="메뉴 열기">' + icon("menu") + "</button>" +
           '<a class="brand" href="#/home">' + window.logoMark() + '<span class="sr-only">홈</span><span class="brand-text"><small>' + esc(D.brand.name) + "</small><strong>" + esc(D.brand.courseTitle) + "</strong></span></a>" +
           '<div class="topbar-right">' +
-            '<span class="hello"><span class="sprout">' + icon("sprout", "sm") + "</span><b>" + esc(me.name) + '</b><span class="txt">' + (preview ? "님 (미리보기)" : "님 환영합니다") + "</span></span>" +
+            '<span class="hello"><span class="sprout lv-' + LV().cur.key + '" title="성장 레벨 · ' + esc(LV().cur.name) + '">' + icon(LV().cur.icon, "sm") + "</span><b>" + esc(me.name) + '</b><span class="txt">' + (preview ? "님 (미리보기)" : "님 환영합니다") + "</span></span>" +
             '<span class="cohort-chip">' + esc(CO.name) + "</span>" +
             (preview ? "" : '<button class="logout" type="button" data-action="logout">' + icon("logout", "sm") + "<span>로그아웃</span></button>") +
           "</div>" +
@@ -353,6 +354,7 @@
     const mv = on("motivation") ? D.motivation[0] : null;
     const dday = nextLive ? daysUntil(nextLive.date) : null;
     const wk = DB.currentWeek(CO);
+    const lv = LV();
     const todayLive = evs.find((e) => e.date === today && e.url);
     const G = D.guide || [], gDone = G.filter((g) => (P.guide || {})[g.id]).length;
     const guideCard = G.length && gDone < G.length
@@ -365,7 +367,8 @@
           }).join("") + "</ul></section>"
       : "";
     return '<div class="page">' +
-      '<header class="page-head greet"><span class="greet-icon">' + icon("sprout", "lg") + '</span><div><h1>' + esc(me.name) + "님, 다시 만나서 반갑습니다</h1><p>" + esc(quote || (CO.name + " · " + (wk ? wk + "주차 진행 중" : fmtMD(CO.startDate) + " 시작"))) + "</p></div></header>" +
+      '<header class="page-head greet"><span class="greet-icon lv-' + lv.cur.key + '" title="성장 레벨 · ' + esc(lv.cur.name) + '">' + icon(lv.cur.icon, "lg") + '</span><div><h1>' + esc(me.name) + "님, 다시 만나서 반갑습니다</h1><p>" + esc(quote || (CO.name + " · " + (wk ? wk + "주차 진행 중" : fmtMD(CO.startDate) + " 시작"))) + "</p></div></header>" +
+      levelCard(lv) +
 
       (todayLive ? '<section class="card live-today">' + icon("video") + '<div><b>오늘 ' + (todayLive.time ? esc(todayLive.time) + " " : "") + esc(todayLive.title) + '</b><span class="tiny">시간이 되면 아래 버튼으로 바로 들어오세요.</span></div>' + liveBtn(todayLive) + "</section>" : "") +
       guideCard +
@@ -398,6 +401,23 @@
         "</section>" : "") +
       "</div>" : "") +
     "</div>";
+  }
+
+  /* ---------------- 성장 레벨 ---------------- */
+  // 주차가 지날 때마다 씨앗 → 풀잎 → 가지 → 나무 → 숲 (4주 강의는 나무 없이 숲)
+  const LV = () => DB.level(CO);
+  function levelCard(lv) {
+    const left = lv.nextDate ? daysUntil(lv.nextDate) : null;
+    return '<section class="card lv-card" aria-label="성장 레벨"><div class="lv-head"><span class="tiny">' + esc(me.name) + '님의 성장 단계</span><b>' + esc(lv.cur.name) + ' <small>' + (lv.idx + 1) + " / " + lv.steps.length + "단계</small></b></div>" +
+      '<ol class="lv-path">' + lv.steps.map((st, i) => '<li class="' + (i < lv.idx ? "past" : i === lv.idx ? "now" : "") + '"><span class="lv-ic lv-' + st.key + '">' + icon(st.icon, "sm") + "</span><small>" + esc(st.name) + "</small></li>").join("") + "</ol>" +
+      '<p class="lv-foot">' + (lv.next ? "다음 단계 ‘" + esc(lv.next.name) + "’까지 " + (left > 0 ? "D-" + left : "곧") + " · 주차가 지날 때마다 한 단계씩 자라요" : "마지막 단계까지 왔어요. 끝까지 함께해 주셔서 고마워요!") + "</p></section>";
+  }
+  // 지난번 접속 때보다 레벨이 올랐으면 한 번 축하
+  function checkLevelUp() {
+    const lv = LV();
+    if (P.level == null) { P.level = lv.idx; saveProgress(); return; }
+    if (lv.idx > P.level) { P.level = lv.idx; saveProgress(); setTimeout(() => toast("레벨업! 이제 ‘" + lv.cur.name + "’ 단계예요 🎉"), 400); }
+    else if (lv.idx !== P.level) { P.level = lv.idx; saveProgress(); }
   }
 
   /* ---------------- 커리큘럼 ---------------- */

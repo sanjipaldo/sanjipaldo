@@ -892,3 +892,25 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 }
 #lesson-note { min-height: 120px; }
 .login-intro { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--ink-deep); text-decoration: none; padding: 4px; }
+
+/* ---------- 성장 레벨 (씨앗 → 풀잎 → 가지 → 나무 → 숲) ---------- */
+.lv-card { margin-bottom: 14px; display: grid; gap: 14px; }
+.lv-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.lv-head b { font-size: 20px; font-weight: 900; letter-spacing: -0.03em; }
+.lv-head small { font-size: 13px; color: var(--mute); font-weight: 700; margin-left: 4px; }
+.lv-path { list-style: none; margin: 0; padding: 0; display: flex; justify-content: space-between; position: relative; }
+.lv-path::before { content: ""; position: absolute; left: 22px; right: 22px; top: 21px; height: 3px; border-radius: 3px; background: var(--line-soft); }
+.lv-path li { position: relative; display: grid; justify-items: center; gap: 6px; flex: 1; }
+.lv-path li small { font-size: 12px; font-weight: 700; color: var(--mute); }
+.lv-ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--canvas); border: 2px solid var(--line); color: var(--mute); position: relative; z-index: 1; }
+.lv-path li.past .lv-ic { background: var(--primary-pale); border-color: var(--primary); color: var(--ink-deep); }
+.lv-path li.now .lv-ic { background: var(--primary); border-color: var(--primary); color: var(--on-primary); transform: scale(1.12); box-shadow: 0 0 0 5px rgba(var(--theme-rgb), .25); animation: lvpulse 2.4s ease-in-out infinite; }
+.lv-path li.now small { color: var(--ink); font-weight: 900; }
+.lv-foot { margin: 0; font-size: 13px; color: var(--body); }
+@keyframes lvpulse { 0%, 100% { box-shadow: 0 0 0 5px rgba(var(--theme-rgb), .25); } 50% { box-shadow: 0 0 0 9px rgba(var(--theme-rgb), .12); } }
+.greet-icon.lv-forest, .hello .sprout.lv-forest { background: var(--primary); color: var(--on-primary); }
+@media (max-width: 720px) {
+  .lv-ic { width: 38px; height: 38px; }
+  .lv-path::before { top: 18px; left: 19px; right: 19px; }
+}
+.lv-ic .icon { width: 22px; height: 22px; } @media (max-width: 720px) { .lv-ic .icon { width: 19px; height: 19px; } }
