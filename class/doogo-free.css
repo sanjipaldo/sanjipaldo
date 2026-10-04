@@ -326,3 +326,6 @@
 .dg.wz footer>a:hover{color:var(--ac)}
 .dg.wz .fc-powered-row{background:var(--ink)}
 @media (max-width:760px){.dg.wz .wz-band{border-radius:0 0 28px 28px}.dg.wz .wz-band main{padding:44px 0 52px}}
+/* 영상 넘김 점: 보이는 점은 그대로, 누르는 영역만 넓게 */
+.dg .carousel-pagination button { position: relative; }
+.dg .carousel-pagination button::after { content: ""; position: absolute; inset: -14px -8px; }

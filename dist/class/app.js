@@ -291,6 +291,8 @@
       INS = ins; D = cohortContent(ins.id, CO); me = s;
     }
     P = DB.progress(me.id);
+    // 시작 가이드에 ‘완료’ 버튼이 생기면서, 테스트하며 눌러 둔 체크를 한 번만 비운다 (이후에는 ‘완료’를 누른 가이드는 다시 안 뜬다)
+    if (!preview && P.guideV !== 2) { P.guide = {}; P.guideClosed = {}; P.guideV = 2; saveProgress(); }
     checkLevelUp();
     draft = { missionId: null, files: [] };
     calCursor = null; calSel = null;
@@ -389,28 +391,34 @@
   // 시작 가이드: 1주차 항목은 처음 한 번(온보딩), ‘주차’를 정한 항목은 그 주차가 열리면 그 주차 체크리스트로 다시 뜬다.
   // 보이는 주차의 항목을 모두 체크하면 카드가 사라진다. ‘바로가기’를 누르면 자동으로 체크된다.
   function guideGroup() {
-    const G = D.guide || [];
+    const G = D.guide || [], closed = P.guideClosed || {};
     const wkOf = (g) => Math.max(1, Number(g.week) || 1);
     const visible = G.filter((g) => { const n = wkOf(g); if (n === 1) return true; const w = findWeek(n); return w ? isOpen(w) : false; });
-    const pending = visible.filter((g) => !(P.guide || {})[g.id]);
-    if (!pending.length) return null;
-    const wk = Math.min.apply(null, pending.map(wkOf));
-    return { wk, items: visible.filter((g) => wkOf(g) === wk) };
+    const weeks = visible.map(wkOf).filter((n, i, a) => a.indexOf(n) === i && !closed[n]).sort((a, b) => a - b);
+    if (!weeks.length) return null;
+    const items = visible.filter((g) => wkOf(g) === weeks[0]);
+    return { wk: weeks[0], items, allDone: items.every((g) => (P.guide || {})[g.id]) };
   }
+  // 모두 체크하면 ‘완료’ 버튼이 나오고, 누르면 그 가이드는 다시 뜨지 않는다
   function guideBlock() {
     const grp = guideGroup();
     if (!grp) return "";
     const done = grp.items.filter((g) => (P.guide || {})[g.id]).length;
-    return '<section class="card start-guide"><div class="home-video-head"><h2>' + icon("sparkles") + (grp.wk === 1 ? "처음 오셨나요? 시작 가이드" : grp.wk + "주차 시작 가이드") + '</h2><span class="tiny">' + done + " / " + grp.items.length + " 완료</span></div>" + progressBar(Math.round(done / grp.items.length * 100), true) +
+    const title = grp.wk === 1 ? "처음 오셨나요? 시작 가이드" : grp.wk + "주차 시작 가이드";
+    return '<section class="card start-guide' + (grp.allDone ? " all-done" : "") + '"><div class="home-video-head"><h2>' + icon("sparkles") + title + '</h2><span class="tiny">' + done + " / " + grp.items.length + " 완료</span></div>" + progressBar(Math.round(done / grp.items.length * 100), true) +
       '<ul class="guide-list">' + grp.items.map((g) => {
         const ok = !!(P.guide || {})[g.id], ext = /^https?:/i.test(g.url || "");
         return '<li class="' + (ok ? "done" : "") + '"><button type="button" class="g-check" data-action="toggle-guide" data-id="' + esc(g.id) + '" aria-pressed="' + ok + '" aria-label="' + esc(g.title) + (ok ? " 완료 취소" : " 완료") + '">' + (ok ? icon("check", "sm") : "") + "</button>" +
           '<div class="g-txt"><b>' + esc(g.title) + "</b>" + (g.desc ? "<span>" + esc(g.desc) + "</span>" : "") + "</div>" +
           (g.url ? '<a class="link-btn" data-guide="' + esc(g.id) + '" href="' + esc(g.url) + '"' + (ext ? ' target="_blank" rel="noopener"' : "") + ">바로가기 " + icon(ext ? "arrowUpRight" : "arrowRight", "sm") + "</a>" : "") + "</li>";
-      }).join("") + '</ul><p class="tiny guide-tip">모두 체크하면 이 안내는 자동으로 사라져요.</p></section>';
+      }).join("") + "</ul>" +
+      (grp.allDone
+        ? '<div class="guide-finish"><span>' + icon("check", "sm") + "모두 마쳤어요! ‘완료’를 누르면 이 안내는 다시 나오지 않아요.</span>" + '<button type="button" class="btn btn-primary" data-action="guide-close" data-wk="' + grp.wk + '">완료</button></div>'
+        : '<p class="tiny guide-tip">하나씩 체크하거나 ‘바로가기’를 눌러 보세요. 모두 마치면 ‘완료’ 버튼이 나와요.</p>') + "</section>";
   }
   function guideDoneCheck(before) {
-    if (before && !guideGroup()) toast((before.wk === 1 ? "시작 가이드" : before.wk + "주차 시작 가이드") + "를 모두 마쳤어요! 이제 과제를 시작해 보세요.");
+    const g = guideGroup();
+    if (before && !before.allDone && g && g.wk === before.wk && g.allDone) toast("모두 체크했어요! 아래 ‘완료’를 누르면 안내가 닫혀요.");
   }
   // 자주 찾는 페이지 (강사센터에서 정함)
   function quickLinks() {
@@ -1352,6 +1360,8 @@
     const fn = pages[r.parts[0]] || notFound;
     const main = document.getElementById("main");
     const prevKey = main.dataset.key, key = location.hash;
+    // 휴대폰에서는 화면을 옮기면 AI봇 창을 닫는다 (반쯤 가린 채로 따라다니지 않게)
+    if (prevKey !== key && window.matchMedia("(max-width: 720px)").matches) botOpen = false;
     main.innerHTML = fn(r) + (top === "library" ? watermark() : "");
     main.dataset.key = key;
     // 유료강의 자료실: 다른 메뉴에서 들어올 때마다 이용 안내 팝업
@@ -1426,6 +1436,7 @@
         else toast("비공개 글은 작성자와 강사님만 볼 수 있어요.", "warn");
         break;
       case "req-remove": reqDraft.splice(Number(a.dataset.i), 1); { const t = document.getElementById("req-thumbs"); if (t) t.innerHTML = reqThumbs(); } break;
+      case "guide-close": { P.guideClosed = P.guideClosed || {}; P.guideClosed[a.dataset.wk] = Date.now(); saveProgress(); render(); toast(Number(a.dataset.wk) === 1 ? "시작 가이드를 완료했어요! 이제 1주차 과제를 시작해 보세요." : a.dataset.wk + "주차 시작 가이드를 완료했어요!"); break; }
       case "toggle-guide": { const g = a.dataset.id, before = guideGroup(); P.guide = P.guide || {}; if (P.guide[g]) delete P.guide[g]; else P.guide[g] = Date.now(); saveProgress(); render(); guideDoneCheck(before); break; }
       case "read-all": P.readNotices = P.readNotices || {}; D.notices.forEach((n) => { P.readNotices[n.id] = Date.now(); }); saveProgress(); render(); break;
       case "toggle-doc": { const s = a.dataset.id; if (P.docs[s]) delete P.docs[s]; else P.docs[s] = Date.now(); saveProgress(); render(); break; }

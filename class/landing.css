@@ -348,3 +348,11 @@ body[data-mode="landing"] { background: #fff; }
 .lp:not(.fc) .lp-foot .lp-brand, .lp:not(.fc) .lp-foot-bottom a { color: var(--lp-soft); }
 .lp:not(.fc) .lp-foot-links a { color: var(--lp-soft); border-color: rgba(255, 255, 255, .18); }
 .lp:not(.fc) .lp-foot .powered { color: #868685; }
+
+/* ===== 모바일 터치 영역 ===== */
+@media (max-width: 720px) {
+  .lp-foot-bottom a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 4px; }
+  .lp-nav .lp-btn-text { min-height: 40px; display: inline-flex; align-items: center; }
+  .fc-yt-out { display: inline-flex; align-items: center; min-height: 36px; }
+  .fc-foot a { display: inline-flex; align-items: center; min-height: 36px; }
+}

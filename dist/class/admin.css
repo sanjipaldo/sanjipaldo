@@ -683,12 +683,34 @@ body[data-master="1"] .a-count { background: #6a3df0; }
 .a-lvbar span { display: block; height: 100%; border-radius: inherit; background: #9fe870; min-width: 2px; }
 .a-lvrow b { text-align: right; font-size: 13px; }
 .a-lvwho { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
-.a-chip { border: 1px solid #dcdfd8; background: #fff; border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-.a-chip small { color: #868685; font-weight: 600; }
-.a-chip:hover { background: #f3f5f1; }
+.a-lvchip { border: 1px solid #dcdfd8; background: #fff; border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.a-lvchip small { color: #868685; font-weight: 600; }
+.a-lvchip:hover { background: #f3f5f1; }
 .a-lvmaster { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
 .a-lvm { padding: 16px; border-radius: 14px; background: #fafbf9; border: 1px solid #ebede8; display: grid; gap: 12px; }
 .a-lvm-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .a-lvm-top { margin: 0; font-size: 12px; color: #454745; }
 .a-detail-stats small { display: block; font-size: 11px; color: #868685; margin-top: 4px; }
 .a-ql-swatch { width: 16px; height: 16px; border-radius: 5px; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); }
+
+/* ===== v10: 모바일 최적화 (아이폰 입력 확대 방지 · 터치 영역 · 카드 머리 줄바꿈) ===== */
+@media (max-width: 720px) {
+  .a-input, .a-input.a-sm, select.a-input { font-size: 16px; }
+  .a-check { min-height: 40px; }
+  .a-check input { width: 20px; height: 20px; }
+  .a-link { min-height: 36px; }
+  .a-lvchip { min-height: 32px; padding: 4px 12px; }
+  .a-name { min-height: 36px; padding: 6px 0; }
+  .a-icon-btn.sm { width: 36px; height: 36px; }
+  .a-switch { transform: scale(1.12); transform-origin: right center; }
+  .stu-pick, .rev-pick { width: 24px !important; height: 24px !important; }
+  .a-card-head > .a-grow, .a-card-head > div.a-grow { flex: 1 1 calc(100% - 64px); min-width: 0; }
+  .a-card-head > .a-row-actions { margin-left: auto; }
+  .a-q-head { flex-wrap: wrap; }
+  .a-q-head > div:not(.a-row-actions) { flex: 1 1 calc(100% - 52px); min-width: 0; }
+}
+@media (max-width: 720px) {
+  .a-menu-move .a-icon-btn.sm, .a-lp-move .a-icon-btn.sm { width: 36px; height: 30px; }
+  .a-side-foot a { min-height: 40px; display: inline-flex; align-items: center; }
+}
+@media (max-width: 720px) { .a-radio-cards input { width: 20px; height: 20px; flex: none; } }
