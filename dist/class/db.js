@@ -291,6 +291,19 @@
     return out;
   }
 
+  // 유료강의 자료실 이용 안내 팝업 (자료실에 들어올 때마다 뜬다). 비워 둔 칸은 기본 문구
+  function libNoticeOf(c) {
+    const n = c.libNotice || {};
+    const course = c.brand.courseTitle || c.brand.name || "";
+    return {
+      title: n.title || "유료강의 자료실 이용 안내",
+      intro: n.intro || "본 자료는 **" + course + " 유료 수강생** 전용 혜택입니다.",
+      items: n.items && n.items.length ? n.items : ["무단 **복사·캡처·다운로드·외부 공유**를 금지합니다.", "모든 페이지에는 **열람자 정보**(이름·기수·시각)가 표시되어, 유출 경로를 확인할 수 있습니다.", "무단 유출이 확인될 경우, 관련 법령에 따라 책임이 따를 수 있습니다."],
+      foot: n.foot !== undefined && n.foot !== "" ? n.foot : (c.brand.instructor || "강사") + "님의 소중한 노하우가 담긴 자료입니다. 본인 학습 용도로만 이용해 주세요.",
+      button: n.button || "확인했습니다"
+    };
+  }
+
   /* ---------------- 불러오기 · 저장 ---------------- */
   let db = null;
 
@@ -318,6 +331,7 @@
     if (!c.brand.theme) c.brand.theme = "lime";
     [c.schedule, c.notices, c.faqs, c.docsGuide, c.motivation, c.guide].forEach((list) => list.forEach((it) => { if (!it.id) it.id = uid("x"); }));
     c.notices.forEach((n) => { n.images = n.images || []; });
+    ["vod", "senior"].forEach((k) => c.resources[k].forEach((it) => { it.images = it.images || []; }));
     return c;
   }
 
@@ -663,7 +677,7 @@
   };
 
   window.DB = {
-    load, save, reset, store, clone, uid, esc, youtubeId, rich, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
+    load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
     curricula, curriculum, curriculumOf, weeksOf, cohortWeeks,

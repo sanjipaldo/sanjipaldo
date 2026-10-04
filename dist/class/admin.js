@@ -597,7 +597,8 @@
   ["ebook", "file"].forEach((k) => { COLL["res-" + k] = { name: "자료", list: (c) => c.resources[k], idp: k[0], fields: [F("title", "자료 이름"), F("meta", "형식 (예: 전자책 · 86쪽)"), F("desc", "한 줄 설명"), F("url", "열람·다운로드 주소 (구글 드라이브 등)", "url")] }; });
   ["vod", "senior"].forEach((k) => { COLL["res-" + k] = { name: "영상", list: (c) => c.resources[k], idp: k[0], init: () => ({ body: "", attachments: [] }),
     fields: [F("title", "영상 제목 (팝업 제목)"), F("meta", "형식 (예: 기초 · 15분)"), F("desc", "한 줄 설명 (목록에 보여요)"), F("youtubeId", "유튜브 주소", "youtube"),
-      F("body", "본문 (팝업에 보이는 설명)", "textarea", { rows: 12, rich: true }), F("attachments", "첨부 자료 (교습지·엑셀·PDF 등)", "attachments")] }; });
+      F("body", "본문 (게시판처럼 글을 쓰고, 사진은 [사진1] 자리에 들어가요)", "textarea", { rows: 14, rich: true, photos: true }), F("images", "사진 (여러 장 가능 · 첫 사진은 영상이 없을 때 썸네일)", "images"),
+      F("attachments", "첨부 자료 (교습지·엑셀·PDF 등)", "attachments")] }; });
   const faqCats = () => C().faqs.map((f) => f.category || "기타").filter((c, i, a) => a.indexOf(c) === i);
   const kindPill = (m) => { const k = DB.missionKind(m); return pill(DB.MISSION_KINDS.find((x) => x.key === k).short, k === "required" ? "dark" : k === "mind" ? "warn" : "info"); };
   function weekOf(c, ctx) { return CUR().weeks.find((w) => String(w.no) === String(ctx)); }
@@ -934,7 +935,10 @@
     const k = ui.libTab;
     const items = c.resources[k];
     const isVideo = k === "vod" || k === "senior";
-    return head("유료강의 자료실", "수강생 자료실 4개 분류에 자료와 영상을 올려요. 영상(VOD·시니어 기초 가이드)은 수강생이 누르면 팝업으로 열리고, 본문과 첨부 자료(교습지·엑셀 등)를 함께 보여 줘요.", addBtn("res-" + k, isVideo ? "영상 추가" : "자료 추가")) +
+    const ln = DB.libNoticeOf(c);
+    return head("유료강의 자료실", "수강생 자료실 4개 분류에 자료와 영상을 올려요. VOD · 시니어 기초 가이드는 게시판처럼 영상(선택) + 글 + 사진 + 첨부 자료를 한 페이지로 보여 줘요.", addBtn("res-" + k, isVideo ? "글 쓰기" : "자료 추가")) +
+      '<section class="a-card a-libnote"><div class="a-card-head"><span class="a-menu-ico">' + icon("shield", "sm") + '</span><div class="a-grow"><h2>자료실 이용 안내 팝업</h2><p class="a-muted">수강생이 자료실에 들어올 때마다 떠요. ‘' + esc(ln.button) + "’을 눌러야 자료가 보이고, 자료실 화면에는 열람자 이름 · 기수 · 시각이 옅게 표시돼요.</p></div>" +
+        btn(icon("pen", "sm") + "문구 수정", "libnote-edit", "a-btn-ghost a-btn-sm") + "</div></section>" +
       '<section class="a-card"><div class="a-toolbar"><div class="a-tabs">' + tabs.map((t) => '<button type="button" class="a-tab' + (k === t[0] ? " on" : "") + '" data-action="lib-tab" data-k="' + t[0] + '">' + t[1] + ' <span class="num">' + c.resources[t[0]].length + "</span></button>").join("") + "</div></div>" +
         simpleList("res-" + k, items, (it) => '<div class="a-item-main"><b>' + esc(it.title) + "</b><small>" + esc([it.meta, it.desc].filter(Boolean).join(" · ")) + "</small></div>" + ((it.attachments || []).length ? pill("첨부 " + it.attachments.length, "info") : "") + (it.tool ? pill("계산기", "info") : isVideo ? ytBadge(it) : it.url ? pill("링크 연결됨", "ok") : pill("준비 중", "mute")), "아직 자료가 없어요.") + "</section>";
   }
@@ -1338,6 +1342,19 @@
         '<p class="a-error" id="pf-error"></p></form>',
       btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="page-form">저장</button>', "lg");
   }
+  function libNoteForm() {
+    const c = C(), n = c.libNotice || {}, d = DB.libNoticeOf(Object.assign({}, c, { libNotice: {} }));
+    const fld = (id, label, val, ph, area, rows) => '<div class="a-field"><label for="' + id + '">' + label + "</label>" + (area ? '<textarea class="a-input" id="' + id + '" name="' + id + '" rows="' + (rows || 2) + '" placeholder="' + esc(ph) + '">' + esc(val) + "</textarea>" : '<input class="a-input" id="' + id + '" name="' + id + '" value="' + esc(val) + '" placeholder="' + esc(ph) + '">') + "</div>";
+    openModal("자료실 이용 안내 팝업",
+      '<form id="libnote-form" class="a-form" novalidate><p class="a-muted" style="margin:0">비워 두면 회색 기본 문구가 들어가요. **굵게** 를 쓸 수 있어요.</p>' +
+        fld("ln-title", "제목", n.title || "", d.title) + fld("ln-intro", "첫 문장", n.intro || "", d.intro, true, 2) +
+        fld("ln-items", "안내 항목 (한 줄에 하나)", (n.items || []).join("\n"), d.items.join("\n"), true, 4) + fld("ln-foot", "아래 작은 글", n.foot || "", d.foot, true, 2) + fld("ln-button", "버튼 글자", n.button || "", d.button) + "</form>",
+      btn("기본 문구로", "libnote-reset", "a-btn-ghost") + '<span class="a-spacer"></span>' + btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="libnote-form">저장</button>', "md");
+  }
+  function saveLibNote(f) {
+    C().libNotice = { title: f["ln-title"].value.trim(), intro: f["ln-intro"].value.trim(), items: LINES(f["ln-items"].value), foot: f["ln-foot"].value.trim(), button: f["ln-button"].value.trim() };
+    DB.save(); commit("자료실 안내 문구를 저장했어요.");
+  }
   function savePage(f) {
     const yt = f.youtubeId.value.trim(), yid = DB.youtubeId(yt);
     if (yt && !yid) { document.getElementById("pf-error").textContent = "유튜브 주소를 확인해 주세요."; return; }
@@ -1586,6 +1603,8 @@
         break;
       }
       case "page-edit": pageForm(d.key); break;
+      case "libnote-edit": libNoteForm(); break;
+      case "libnote-reset": delete C().libNotice; DB.save(); commit("기본 문구로 되돌렸어요."); break;
       case "backup-copy": {
         const ta = document.getElementById("backup-out");
         const done = () => toast("백업 내용을 복사했어요.");
@@ -1672,7 +1691,7 @@
       commit(items.length + "개 질문을 등록했어요.");
       return;
     }
-    const forms = { "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage };
+    const forms = { "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote };
     if (forms[f.id]) { e.preventDefault(); forms[f.id](f); return; }
     if (f.classList.contains("a-q-form")) {
       e.preventDefault();

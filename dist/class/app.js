@@ -26,6 +26,7 @@
   let loginPick = null; // 로그인 화면에서 고른 강사
   let botOpen = window.matchMedia("(max-width: 720px)").matches ? false : DB.store.get(KEY_BOT, false);
   let botThinking = false;
+  let lastTop = null;   // 바로 전 화면의 메뉴 (자료실 안내 팝업용)
 
   const isActive = () => document.body.dataset.mode === "student";
 
@@ -984,14 +985,18 @@
     const c = libList().find((x) => x.id === cat);
     if (!c) return notFound();
     const items = D.resources[cat];
+    if (r.parts[2]) return pageResDetail(c, r.parts[2]);
     const isVideo = cat === "vod" || cat === "senior";
     const showCalc = r.params.get("tool") === "calculator";
     let body;
     if (!items.length) body = '<section class="card">' + empty(c.icon, "자료를 준비하고 있어요.") + "</section>";
     else if (isVideo) {
-      body = '<div class="mv-grid">' + items.map((it) =>
-        '<button type="button" class="mv-card" data-action="play" data-cat="' + cat + '" data-id="' + it.id + '">' + thumb(it) + '<span class="mv-title">' + esc(it.title) + '</span><span class="tiny">' + esc([it.meta, it.desc].filter(Boolean).join(" · ")) + "</span>" +
-        ((it.attachments || []).length ? '<span class="badge badge-positive att-count">' + icon("paperclip", "xs") + "첨부 " + it.attachments.length + "개</span>" : "") + "</button>").join("") + "</div>";
+      body = '<div class="vod-grid">' + items.map((it, i) =>
+        '<a class="vod-card" href="#/library/' + cat + "/" + it.id + '">' + resThumb(it) +
+          '<span class="vod-info"><span class="vod-no">' + (cat === "senior" ? "가이드 " : "VOD ") + (i + 1) + '</span><span class="vod-title">' + esc(it.title) + "</span>" +
+          (it.desc ? '<span class="vod-desc">' + esc(it.desc) + "</span>" : "") +
+          '<span class="vod-meta">' + (it.meta ? "<span>" + esc(it.meta) + "</span>" : "") + ((it.images || []).length ? "<span>" + icon("image", "xs") + "사진 " + it.images.length + "</span>" : "") +
+          ((it.attachments || []).length ? "<span>" + icon("paperclip", "xs") + "첨부 " + it.attachments.length + "</span>" : "") + "</span></span></a>").join("") + "</div>";
     } else {
       body = items.map((it) => {
         const action = it.tool === "calculator"
@@ -1003,6 +1008,45 @@
     }
     return '<div class="page">' + pageHead(c.label, c.desc(), crumb([["유료강의 자료실", "#/library"], [c.label]])) + warn +
       (showCalc ? '<div style="margin-top:14px">' + calculator() + "</div>" : "") + '<div style="margin-top:14px">' + body + "</div></div>";
+  }
+  // 자료 썸네일: 유튜브 썸네일 → 첫 사진 → 기본 그림
+  function resThumb(it) {
+    const yid = DB.youtubeId(it.youtubeId), img = (it.images || [])[0];
+    const src = yid ? "https://i.ytimg.com/vi/" + yid + "/hqdefault.jpg" : img ? img.data || img.url : "";
+    return '<span class="vod-thumb">' + (src ? '<img src="' + esc(src) + '" alt="" loading="lazy">' : '<span class="vod-ph">' + esc(it.title) + "</span>") + (yid ? '<span class="vod-play">' + icon("play") + "</span>" : "") + "</span>";
+  }
+  // 시니어 기초 가이드 · VOD 상세: 게시판처럼 영상(선택) + 글 + 사진 + 첨부 자료
+  function pageResDetail(c, id) {
+    const list = D.resources[c.id], i = list.findIndex((x) => x.id === id), it = list[i];
+    if (!it) return notFound();
+    const imgs = it.images || [], used = {};
+    const fig = (im) => '<figure class="n-img"><img src="' + esc(im.data || im.url) + '" alt="' + esc(im.name || "") + '" loading="lazy"></figure>';
+    const body = it.body ? DB.rich(it.body, { token: (n) => { const im = imgs[n - 1]; if (!im) return ""; used[n - 1] = true; return fig(im); } }) : "";
+    const rest = imgs.filter((_, k) => !used[k]);
+    const prev = list[i - 1], next = list[i + 1];
+    const nav = (x, dir) => x ? '<a class="card list-row res-nav ' + dir + '" href="#/library/' + c.id + "/" + x.id + '">' + (dir === "prev" ? icon("chevLeft") : "") + '<span class="lr-title"><span class="tiny">' + (dir === "prev" ? "이전" : "다음") + "</span><br>" + esc(x.title) + "</span>" + (dir === "next" ? icon("chevRight") : "") + "</a>" : "<div></div>";
+    return '<div class="page">' + pageHead(it.title, [it.meta, it.desc].filter(Boolean).join(" · "), crumb([["유료강의 자료실", "#/library"], [c.label, "#/library/" + c.id], [it.title]])) +
+      '<article class="card res-article">' + (DB.youtubeId(it.youtubeId) ? video(it) : "") +
+        '<div class="body">' + body + (rest.length ? '<div class="n-imgs">' + rest.map(fig).join("") + "</div>" : "") + "</div>" +
+        attachmentList(it.attachments) +
+        (!body && !imgs.length && !DB.youtubeId(it.youtubeId) && !(it.attachments || []).length ? empty(c.icon, "내용을 준비하고 있어요.") : "") +
+      "</article>" +
+      '<div class="grid-2" style="margin-top:14px">' + nav(prev, "prev") + nav(next, "next") + "</div>" +
+      '<div style="margin-top:14px"><a class="btn btn-secondary" href="#/library/' + c.id + '">' + icon("chevLeft", "sm") + "목록으로</a></div></div>";
+  }
+  // 자료실 이용 안내 팝업 + 열람자 표시(워터마크)
+  function libNoticeModal() {
+    const n = DB.libNoticeOf(D);
+    modalRoot.innerHTML = '<div class="modal-backdrop lib-gate-back"><div class="modal lib-gate" role="dialog" aria-modal="true" aria-labelledby="lib-gate-title">' +
+      '<div class="lib-gate-head"><span class="lib-gate-ico">' + icon("shieldCheck") + '</span><h2 id="lib-gate-title">' + esc(n.title) + "</h2></div>" +
+      '<div class="lib-gate-body">' + DB.rich(n.intro) + DB.rich(n.items.map((x) => "- " + x).join("\n")) + (n.foot ? '<p class="lib-gate-foot">' + esc(n.foot) + "</p>" : "") +
+      '<button class="btn btn-primary lib-gate-ok" data-action="lib-gate-ok">' + esc(n.button) + "</button></div></div></div>";
+    document.body.classList.add("lib-gated");
+    setTimeout(() => { const b = modalRoot.querySelector(".lib-gate-ok"); if (b) b.focus(); }, 30);
+  }
+  function watermark() {
+    const label = (me.name || "") + " · " + (CO ? CO.name : "") + " · " + fmtStamp(Date.now());
+    return '<div class="lib-wm" aria-hidden="true"><div class="lib-wm-in">' + Array.from({ length: 40 }, () => "<span>" + esc(label) + "</span>").join("") + "</div></div>";
   }
   function calculator() {
     const f = (id, label, val, suffix) => '<div class="field"><label for="' + id + '">' + label + '</label><div class="input-wrap"><input class="input" id="' + id + '" data-calc type="number" inputmode="decimal" step="any" min="0" value="' + val + '"><span class="input-addon" style="pointer-events:none">' + suffix + "</span></div></div>";
@@ -1025,14 +1069,28 @@
   }
 
   /* ---------------- 동기부여 ---------------- */
+  // 위에 큰 플레이어, 아래 썸네일을 누르면 위에서 바로 재생
+  let mvSel = null, mvAuto = false;
+  function mvPlayer(it) {
+    const yid = DB.youtubeId(it.youtubeId);
+    if (yid && mvAuto) return '<div class="video mv-player" data-yid="' + esc(yid) + '"><iframe src="https://www.youtube-nocookie.com/embed/' + esc(yid) + '?autoplay=1&rel=0&playsinline=1" title="' + esc(it.title) + '" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>';
+    return '<div class="mv-player-wrap">' + video(it) + "</div>";
+  }
   function pageMotivation() {
     const quote = D.quotes.length ? D.quotes[parseDate(todayStr()).getDate() % D.quotes.length] : "";
-    const [first, ...rest] = D.motivation;
-    return '<div class="page">' + pageHead("동기부여", "지칠 때 꺼내 보는 영상과 한마디. 먼저 해낸 사람들의 이야기를 들어 보세요.") +
-      (quote ? '<div class="quote">“' + esc(quote) + "”<small>— " + esc(D.brand.instructor) + "</small></div>" : "") +
-      (first ? '<div class="section-head"><h2>오늘의 영상</h2>' + (D.brand.youtubeChannel ? '<a class="link-btn" href="' + esc(D.brand.youtubeChannel) + '" target="_blank" rel="noopener">유튜브 채널 ' + icon("arrowUpRight", "sm") + "</a>" : "") + "</div>" +
-        '<section class="card">' + video(first) + '<p style="margin:14px 0 0;font-weight:700">' + esc(first.title) + "</p></section>" : '<section class="card" style="margin-top:14px">' + empty("flame", "동기부여 영상을 준비하고 있어요.") + "</section>") +
-      (rest.length ? '<div class="section-head"><h2>지난 영상</h2></div><div class="mv-grid">' + rest.map((it) => '<button type="button" class="mv-card" data-action="play" data-cat="motivation" data-id="' + it.id + '">' + thumb(it) + '<span class="mv-title">' + esc(it.title) + '</span><span class="tiny">' + esc([it.minutes, it.date ? fmtMD(it.date) : ""].filter(Boolean).join(" · ")) + "</span></button>").join("") + "</div>" : "") + "</div>";
+    const list = D.motivation;
+    const cur = list.find((x) => x.id === mvSel) || list[0];
+    return '<div class="page mv-page">' + pageHead("동기부여", "매일 새로운 동기부여 영상이 올라옵니다.") +
+      (cur ? '<section class="mv-stage" id="mv-stage">' + mvPlayer(cur) + '<div class="mv-now"><b>' + esc(cur.title) + "</b>" + (cur.minutes || cur.date ? '<span class="tiny">' + esc([cur.minutes, cur.date ? fmtMD(cur.date) : ""].filter(Boolean).join(" · ")) + "</span>" : "") + "</div></section>" +
+        '<div class="section-head"><h2>오늘의 동기부여 영상</h2>' + (D.brand.youtubeChannel ? '<a class="link-btn" href="' + esc(D.brand.youtubeChannel) + '" target="_blank" rel="noopener">유튜브 채널 ' + icon("arrowUpRight", "sm") + "</a>" : "") + "</div>" +
+        '<div class="mv-tiles">' + list.map((it, i) => {
+          const yid = DB.youtubeId(it.youtubeId);
+          return '<button type="button" class="mv-tile' + (it === cur ? " on" : "") + '" data-action="mv-pick" data-id="' + esc(it.id) + '" aria-pressed="' + (it === cur) + '" title="' + esc(it.title) + '">' +
+            '<span class="mv-tile-img">' + (yid ? '<img src="https://i.ytimg.com/vi/' + esc(yid) + '/hqdefault.jpg" alt="" loading="lazy">' : '<span class="vod-ph">' + esc(it.title) + "</span>") + '<span class="mv-tile-play">' + icon("play") + "</span></span>" +
+            '<span class="mv-tile-label">영상 ' + (i + 1) + (it === cur ? '<em>재생 중</em>' : "") + "</span></button>";
+        }).join("") + "</div>"
+        : '<section class="card" style="margin-top:14px">' + empty("flame", "동기부여 영상을 준비하고 있어요.") + "</section>") +
+      (quote ? '<div class="quote" style="margin-top:20px">“' + esc(quote) + "”<small>— " + esc(D.brand.instructor) + "</small></div>" : "") + "</div>";
   }
 
   /* ---------------- 수료증 ---------------- */
@@ -1194,8 +1252,13 @@
     const fn = pages[r.parts[0]] || notFound;
     const main = document.getElementById("main");
     const prevKey = main.dataset.key, key = location.hash;
-    main.innerHTML = fn(r);
+    main.innerHTML = fn(r) + (top === "library" ? watermark() : "");
     main.dataset.key = key;
+    // 유료강의 자료실: 다른 메뉴에서 들어올 때마다 이용 안내 팝업
+    if (top === "library" && lastTop !== "library") libNoticeModal();
+    else document.body.classList.remove("lib-gated");
+    if (top !== "motivation") { mvAuto = false; mvSel = null; }
+    lastTop = top;
     if (prevKey !== key) window.scrollTo(0, 0);
     const nav = NAV().find((n) => n.id === r.parts[0] && (n.id !== "page" || n.sub === r.parts[1]));
     document.title = (nav ? navLabel(nav) + " · " : "") + D.brand.name;
@@ -1272,6 +1335,14 @@
       case "bot-close": botOpen = false; DB.store.set(KEY_BOT, false); renderBotFab(route()); break;
       case "not-ready": toast("자료를 준비하고 있어요. 올라오면 공지로 알려 드릴게요."); break;
       case "play": playModal(a.dataset.cat, a.dataset.id); break;
+      case "lib-gate-ok": document.body.classList.remove("lib-gated"); closeModal(); break;
+      case "mv-pick": {
+        mvSel = a.dataset.id; mvAuto = true;
+        document.getElementById("main").innerHTML = pageMotivation();
+        const st = document.getElementById("mv-stage");
+        if (st && st.getBoundingClientRect().top < 60) st.scrollIntoView({ behavior: "smooth", block: "start" });
+        break;
+      }
       case "video-play": {
         if (e.target.closest(".vp-ext")) return; // 외부 링크는 그대로 연다
         const box = a.closest(".video");
@@ -1342,13 +1413,14 @@
     if (!isActive()) return;
     if (e.key === "Enter" && e.target.matches && e.target.matches(".video-ph[role=button], tr[data-action=req-open]")) { e.target.click(); return; }
     if (e.key !== "Escape") return;
+    if (modalRoot.querySelector(".lib-gate")) return; // 자료실 안내는 ‘확인’을 눌러야 닫힌다
     if (modalRoot.innerHTML) closeModal();
     const app = document.getElementById("app");
     if (app) app.classList.remove("nav-open");
   });
 
   // 썸네일을 못 불러오면(네트워크 차단 등) 이미지를 지우고 기본 카드를 보여 준다
-  document.addEventListener("error", (e) => { const t = e.target; if (t && t.tagName === "IMG" && t.closest && t.closest(".lesson-thumb, .video")) t.remove(); }, true);
+  document.addEventListener("error", (e) => { const t = e.target; if (t && t.tagName === "IMG" && t.closest && t.closest(".lesson-thumb, .video, .vod-thumb, .mv-tile-img")) t.remove(); }, true);
 
   window.StudentApp = { render, mount };
 })();
