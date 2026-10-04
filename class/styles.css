@@ -891,3 +891,4 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
   .guide-list li .link-btn { margin-left: 40px; }
 }
 #lesson-note { min-height: 120px; }
+.login-intro { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--ink-deep); text-decoration: none; padding: 4px; }

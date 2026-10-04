@@ -181,6 +181,45 @@
     return { items: m.items.filter((x) => !isCustom(x.key)).map((x) => Object.assign({}, x)), library: Object.assign({}, m.library) };
   }
 
+  /* ---------------- 홍보 랜딩페이지 ---------------- */
+  const LANDING_SECTIONS = [
+    { key: "hero", label: "첫 화면 (헤드라인)" }, { key: "stats", label: "숫자로 보는 강의" }, { key: "about", label: "강사 소개" },
+    { key: "points", label: "배우는 것 · 추천 대상" }, { key: "curriculum", label: "커리큘럼" }, { key: "platform", label: "수강생 전용 플랫폼" },
+    { key: "reviews", label: "수강 후기" }, { key: "pricing", label: "수강 안내 · 가격" }, { key: "faq", label: "자주 묻는 질문" }, { key: "cta", label: "마지막 신청 안내" }
+  ];
+  /** 저장된 랜딩 내용 + 비어 있는 칸은 강의 정보로 채운 기본값 */
+  function landingOf(insId) {
+    const c = content(insId), ins = instructor(insId);
+    if (!c || !ins) return null;
+    const b = c.brand, L = clone(c.landing || {});
+    const def = {
+      published: true,
+      order: LANDING_SECTIONS.map((x) => x.key), off: {},
+      hero: { eyebrow: b.loginEyebrow || "DOOGO CLASS", title: b.loginHeadline || b.courseTitle, sub: b.loginSub || b.tagline || "", ctaLabel: "수강 신청하기", ctaUrl: "", image: "" },
+      stats: [],
+      about: { title: "강사 소개", name: b.instructor || ins.displayName, role: b.courseTitle, body: "", photo: "", career: [] },
+      points: { title: "이 강의에서 얻어 가는 것", items: [
+        { title: "매주 하나씩, 실습 과제", desc: "강의를 듣고 끝나는 게 아니라 매주 과제를 직접 해내며 결과를 만들어요." },
+        { title: "제출 즉시 자동 검수", desc: "과제를 올리면 바로 확인 결과가 나오고, 강사가 한 번 더 봐 드려요." },
+        { title: "라이브 Q&A", desc: "막히는 부분은 정해진 시간에 강사에게 직접 물어볼 수 있어요." },
+        { title: "수료증 발급", desc: "필수 과제를 모두 마치면 이름이 새겨진 수료증을 드려요." }
+      ], forWho: [] },
+      curriculum: { title: "커리큘럼", sub: "주차별로 강의를 듣고 과제를 해내면 끝까지 갈 수 있어요." },
+      platform: { title: "결제하면 바로 열리는 수강생 전용 학습 공간", sub: "강의 영상, 과제 제출, 일정, 자료실, 24시 AI봇까지 한 곳에서 이어서 공부해요." },
+      reviews: { title: "먼저 들은 수강생 이야기", items: [] },
+      pricing: { title: "수강 안내", price: "", original: "", period: "", includes: [], ctaLabel: "수강 신청하기", ctaUrl: "", note: "" },
+      faq: { title: "자주 묻는 질문", items: [] },
+      cta: { title: "지금 시작하면, 몇 주 뒤의 내가 달라져 있어요", sub: b.courseTitle, label: "수강 신청하기", url: "" },
+      contact: { kakao: b.kakaoChannel || "", youtube: b.youtubeChannel || "", instagram: "", email: "", phone: "", company: "" }
+    };
+    const out = Object.assign({}, def, L);
+    ["hero", "about", "points", "curriculum", "platform", "reviews", "pricing", "faq", "cta", "contact"].forEach((k) => { out[k] = Object.assign({}, def[k], L[k] || {}); });
+    out.off = Object.assign({}, L.off || {});
+    out.order = (L.order || []).filter((k) => LANDING_SECTIONS.some((x) => x.key === k));
+    LANDING_SECTIONS.forEach((x) => { if (out.order.indexOf(x.key) === -1) out.order.push(x.key); });
+    return out;
+  }
+
   /* ---------------- 불러오기 · 저장 ---------------- */
   let db = null;
 
@@ -295,6 +334,11 @@
     if (!db.flags.guideSeeded) {
       Object.keys(db.content).forEach((id) => { const c = db.content[id], sc = window.CLASS_SEED.content[id]; if (!c.guide.length) c.guide = clone(sc && sc.guide ? sc.guide : template({}).guide); if (c.brand.liveUrl === undefined) c.brand.liveUrl = ""; });
       db.flags.guideSeeded = true; save();
+    }
+    // 홍보 랜딩페이지 기본 문구 (한 번만)
+    if (!db.flags.landingSeeded) {
+      Object.keys(db.content).forEach((id) => { const sc = window.CLASS_SEED.content[id]; if (!db.content[id].landing && sc && sc.landing) db.content[id].landing = clone(sc.landing); });
+      db.flags.landingSeeded = true; save();
     }
     // 없어진 색(잠깐 적용됐던 클릭하우스 등)이 저장돼 있으면 라임으로 되돌린다
     Object.keys(db.content).forEach((id) => { const b = db.content[id].brand; if (b.theme && !THEMES[b.theme]) { b.theme = "lime"; save(); } });
@@ -447,7 +491,7 @@
   };
 
   window.DB = {
-    load, save, reset, store, clone, uid, esc, youtubeId, template, templateFromMoon, moonMenu, normalizeContent,
+    load, save, reset, store, clone, uid, esc, youtubeId, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
     weekOpen, weekDeadline, cohortEnd, cohortStatus, STATUS_LABEL, currentWeek, currentCohort, nextCohortName,

@@ -1,16 +1,17 @@
-/* 화면 전환: #/center… 는 강사센터·마스터(admin.js), 나머지는 수강생 센터(app.js) */
+/* 화면 전환: #/center… 는 강사센터·마스터(admin.js), #/p/… 는 강사 홍보 랜딩페이지(landing.js), 나머지는 수강생 센터(app.js) */
 (function () {
   "use strict";
   DB.load();
   let mode = null;
   function go() {
-    const next = /^#\/center/.test(location.hash) ? "admin" : "student";
+    const h = location.hash;
+    const next = /^#\/center/.test(h) ? "admin" : /^#\/p(\/|\?|$)/.test(h) ? "landing" : "student";
     const changed = next !== mode;
     mode = next;
     document.body.dataset.mode = next;
     if (next === "admin") window.applyStudentTheme(null); else document.body.dataset.master = "";
     document.getElementById("modal-root").innerHTML = "";
-    const app = next === "admin" ? window.AdminApp : window.StudentApp;
+    const app = next === "admin" ? window.AdminApp : next === "landing" ? window.LandingApp : window.StudentApp;
     if (changed) app.mount(); else app.render();
   }
   window.addEventListener("hashchange", go);

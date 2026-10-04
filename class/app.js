@@ -233,6 +233,7 @@
               "</form>" +
             "</div>" +
             (ins ? '<button type="button" class="login-alt" data-action="signup">' + icon("userPlus", "sm") + "아직 수강 신청 전이신가요? 수강 신청하기</button>" +
+              ((DB.landingOf(ins.id) || {}).published ? '<a class="login-intro" href="#/p/' + esc(ins.id) + '">' + icon("book", "sm") + "강의 소개 보기 " + icon("arrowRight", "xs") + "</a>" : "") +
               (ins.id === "moon" ? '<div class="login-demo">체험 계정 · 이름 <b>이수진</b> / 뒷자리 <b>2186</b></div>' : "") : "") +
             '<nav class="login-legal" aria-label="약관">' +
               '<button type="button" data-action="legal" data-doc="terms">이용약관</button>' +
@@ -1114,8 +1115,13 @@
     const r = route();
     if (!me) startSession();
     if (!me) {
-      if (r.parts[0] !== "login") history.replaceState(null, "", "#/login");
+      // 랜딩페이지에서 넘어온 경우: #/login?ins=강사&signup=1
+      const want = r.params.get("ins");
+      if (want && DB.activeInstructors().some((x) => x.id === want)) { loginPick = want; DB.session.setInstructorPick(want); }
+      const openSign = r.params.get("signup") === "1" && loginInstructor();
+      if (r.parts[0] !== "login" || want) history.replaceState(null, "", "#/login");
       renderLogin();
+      if (openSign) openSignup();
       return;
     }
     if (r.parts[0] === "login") { history.replaceState(null, "", "#/home"); return render(); }

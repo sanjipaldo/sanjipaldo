@@ -172,7 +172,8 @@
         ["students", "수강생 관리", "users", n.pending],
         ["cohorts", "기수 관리", "layers"]
       ].concat(on("missions") ? [["reviews", "과제 검수", "checks", n.review]] : []).concat(on("qna") ? [["questions", "요청사항 답변", "bug", n.questions]] : [])],
-      ["수강생 화면 콘텐츠", content]
+      ["수강생 화면 콘텐츠", content],
+      ["홍보", [["landing", "홍보 랜딩페이지", "store"]]]
     ];
   }
   const customPages = (iid) => DB.menuConfig(iid).items.filter((x) => DB.isCustom(x.key) && x.type !== "link");
@@ -809,6 +810,83 @@
       '<section class="a-card">' + simpleList("mv", C().motivation, (it) => '<div class="a-item-main"><b>' + esc(it.title) + "</b><small>" + esc([it.minutes, it.date ? fmtMD(it.date) : ""].filter(Boolean).join(" · ")) + "</small></div>" + ytBadge(it), "동기부여 영상이 없어요.") + "</section>";
   }
 
+  /* ---------------- 홍보 랜딩페이지 편집 ---------------- */
+  // 편집 중인 내용은 ui.lp 에 두고, ‘저장’을 눌러야 공개 페이지에 반영된다
+  function lpGet(obj, path) { return path.split(".").reduce((o, k) => (o == null ? o : o[k]), obj); }
+  function lpSet(obj, path, v) { const ks = path.split("."); const last = ks.pop(); const o = ks.reduce((a, k) => (a[k] = a[k] == null ? {} : a[k]), obj); o[last] = v; }
+  function lpDraft() {
+    if (!ui.lp || ui.lpFor !== IID()) { ui.lp = DB.landingOf(IID()); ui.lpFor = IID(); ui.lpDirty = false; ui.lpOpen = ui.lpOpen || { hero: true }; }
+    return ui.lp;
+  }
+  const LP_HINT = { stats: "비워 두면 커리큘럼 기준으로 자동 표시 (주차·강의·과제 수)", curriculum: "주차와 강의 목록은 ‘커리큘럼’ 메뉴 내용이 그대로 나와요.", faq: "비워 두면 ‘Q&A 자주 묻는 질문’ 앞의 6개가 나와요.", platform: "결제 후 열리는 이 학습 플랫폼의 기능을 소개해요. (기능 목록은 자동)", reviews: "후기가 없으면 이 칸은 보이지 않아요. ‘예시 표시’를 켜 두면 카드에 ‘예시 후기’ 표시가 붙어요." };
+  function lpField(path, label, type, hint) {
+    const v = lpGet(ui.lp, path);
+    const id = "lp-" + path.replace(/\./g, "-");
+    let input;
+    if (type === "textarea") input = '<textarea class="a-input" id="' + id + '" data-lp="' + path + '" rows="3">' + esc(v || "") + "</textarea>";
+    else if (type === "lines") input = '<textarea class="a-input" id="' + id + '" data-lp-lines="' + path + '" rows="4">' + esc((v || []).join("\n")) + "</textarea>";
+    else if (type === "image") input = '<div class="a-lp-img">' + (v ? '<img src="' + esc(v) + '" alt="">' + btn(icon("trash", "sm") + "지우기", "lp-img-del", "a-btn-ghost a-btn-sm", ' data-path="' + path + '"') : '<span class="a-muted">아직 사진이 없어요.</span>') + '<label class="a-btn a-btn-ghost a-btn-sm">' + icon("image", "sm") + "사진 올리기<input type=\"file\" accept=\"image/*\" class=\"sr-only\" data-lp-img=\"" + path + '"></label></div>';
+    else input = '<input class="a-input" id="' + id + '" data-lp="' + path + '" value="' + esc(v || "") + '"' + (type === "url" ? ' type="url" placeholder="https://"' : "") + ">";
+    return '<div class="a-field"><label' + (type === "image" ? "" : ' for="' + id + '"') + ">" + esc(label) + "</label>" + input + (hint ? '<small class="a-muted">' + esc(hint) + "</small>" : "") + "</div>";
+  }
+  function lpRows(path, cols, addLabel) {
+    const list = lpGet(ui.lp, path) || [];
+    return '<div class="a-lp-rows">' + list.map((row, i) => '<div class="a-lp-row">' +
+        cols.map((c) => c[2] === "check"
+          ? '<label class="a-check"><input type="checkbox" data-lp-check="' + path + "." + i + "." + c[0] + '"' + (row[c[0]] ? " checked" : "") + "><span>" + esc(c[1]) + "</span></label>"
+          : c[2] === "textarea"
+            ? '<textarea class="a-input a-sm" data-lp="' + path + "." + i + "." + c[0] + '" rows="2" placeholder="' + esc(c[1]) + '" aria-label="' + esc(c[1]) + '">' + esc(row[c[0]] || "") + "</textarea>"
+            : '<input class="a-input a-sm" data-lp="' + path + "." + i + "." + c[0] + '" value="' + esc(row[c[0]] || "") + '" placeholder="' + esc(c[1]) + '" aria-label="' + esc(c[1]) + '">').join("") +
+        '<div class="a-lp-row-tools"><button type="button" class="a-icon-btn sm" data-action="lp-row-move" data-path="' + path + '" data-i="' + i + '" data-dir="-1" aria-label="위로"' + (i === 0 ? " disabled" : "") + ">" + icon("arrowUp", "sm") + '</button><button type="button" class="a-icon-btn sm" data-action="lp-row-del" data-path="' + path + '" data-i="' + i + '" aria-label="삭제">' + icon("trash", "sm") + "</button></div></div>").join("") +
+      btn(icon("plus", "sm") + addLabel, "lp-row-add", "a-btn-ghost a-btn-sm", ' data-path="' + path + '" data-cols="' + cols.map((c) => c[0]).join(",") + '"') + "</div>";
+  }
+  function lpSectionBody(k) {
+    switch (k) {
+      case "hero": return lpField("hero.eyebrow", "헤드라인 위 작은 글씨") + lpField("hero.title", "헤드라인 (줄바꿈 가능, 마지막 줄은 강조)", "textarea") + lpField("hero.sub", "설명", "textarea") +
+        '<div class="a-form-row">' + lpField("hero.ctaLabel", "버튼 글자") + lpField("hero.ctaUrl", "버튼 연결 주소 (결제 페이지 등)", "url", "비워 두면 이 플랫폼의 ‘수강 신청’ 창이 열려요") + "</div>" + lpField("hero.image", "오른쪽 사진 (없으면 학습 화면 모형이 보여요)", "image");
+      case "stats": return lpRows("stats", [["value", "숫자 (예: 1,200명)"], ["label", "설명 (예: 누적 수강생)"]], "숫자 추가");
+      case "about": return '<div class="a-form-row">' + lpField("about.name", "이름") + lpField("about.role", "한 줄 소개") + "</div>" + lpField("about.body", "소개 글", "textarea") + lpField("about.career", "경력 · 이력 (한 줄에 하나)", "lines") + lpField("about.photo", "강사 사진", "image") + lpField("about.title", "작은 제목");
+      case "points": return lpField("points.title", "제목") + lpRows("points.items", [["title", "제목"], ["desc", "설명", "textarea"]], "항목 추가") + lpField("points.forWho", "이런 분께 추천해요 (한 줄에 하나)", "lines");
+      case "curriculum": return lpField("curriculum.title", "제목") + lpField("curriculum.sub", "설명");
+      case "platform": return lpField("platform.title", "제목") + lpField("platform.sub", "설명");
+      case "reviews": return lpField("reviews.title", "제목") + lpRows("reviews.items", [["name", "이름 (예: 김*진)"], ["meta", "기수 · 결과 (예: 2기 수료)"], ["text", "후기 내용", "textarea"], ["sample", "예시 표시", "check"]], "후기 추가");
+      case "pricing": return lpField("pricing.title", "제목") + '<div class="a-form-row">' + lpField("pricing.price", "가격 (예: 590,000원)", "", "비워 두면 강의 이름이 크게 보여요") + lpField("pricing.original", "원래 가격 (취소선)") + "</div>" + lpField("pricing.period", "진행 방식 (예: 5주 과정 + 다시보기)") +
+        lpField("pricing.includes", "포함 내용 (한 줄에 하나)", "lines") + '<div class="a-form-row">' + lpField("pricing.ctaLabel", "버튼 글자") + lpField("pricing.ctaUrl", "버튼 연결 주소", "url", "비워 두면 ‘수강 신청’ 창") + "</div>" + lpField("pricing.note", "버튼 아래 안내");
+      case "faq": return lpField("faq.title", "제목") + lpRows("faq.items", [["q", "질문"], ["a", "답변", "textarea"]], "질문 추가") + btn(icon("clipboard", "sm") + "Q&A 자주 묻는 질문에서 6개 가져오기", "lp-faq-import", "a-btn-ghost a-btn-sm");
+      case "cta": return lpField("cta.title", "제목") + lpField("cta.sub", "설명") + '<div class="a-form-row">' + lpField("cta.label", "버튼 글자") + lpField("cta.url", "버튼 연결 주소", "url", "비워 두면 ‘수강 신청’ 창") + "</div>";
+    }
+    return "";
+  }
+  function pageLanding() {
+    const L = lpDraft(), iid = IID();
+    const url = location.href.split("#")[0] + "#/p/" + iid;
+    const secs = L.order.map((k, i) => {
+      const def = DB.LANDING_SECTIONS.find((x) => x.key === k);
+      const on = !L.off[k];
+      return '<details class="a-card a-lp-sec' + (on ? "" : " off") + '" data-k="' + k + '"' + (ui.lpOpen[k] ? " open" : "") + "><summary>" +
+        '<span class="a-lp-move"><button type="button" class="a-icon-btn sm" data-action="lp-move" data-k="' + k + '" data-dir="-1" aria-label="위로"' + (i === 0 ? " disabled" : "") + ">" + icon("arrowUp", "sm") + '</button><button type="button" class="a-icon-btn sm" data-action="lp-move" data-k="' + k + '" data-dir="1" aria-label="아래로"' + (i === L.order.length - 1 ? " disabled" : "") + ">" + icon("arrowDown", "sm") + "</button></span>" +
+        "<b>" + esc(def.label) + "</b>" + (on ? pill("보임", "ok") : pill("숨김", "mute")) +
+        '<button type="button" class="a-switch' + (on ? " on" : "") + '" data-action="lp-toggle" data-k="' + k + '" role="switch" aria-checked="' + on + '" aria-label="' + esc(def.label) + ' 보이기"><i></i></button>' + icon("chevDown", "sm a-lp-chev") + "</summary>" +
+        '<div class="a-lp-body">' + (LP_HINT[k] ? '<p class="a-hint" style="margin:0">' + icon("alert", "xs") + " " + esc(LP_HINT[k]) + "</p>" : "") + lpSectionBody(k) + "</div></details>";
+    }).join("");
+    return head("홍보 랜딩페이지", "강사님과 강의를 소개하는 공개 페이지예요. 결제 전 수강생이 보고, 신청 버튼을 누르면 수강 신청이나 결제 페이지로 이어져요. 배경은 흰색, 버튼과 강조는 수강생 화면 색상을 따라가요.",
+        '<a class="a-btn a-btn-outline" href="#/p/' + iid + '">' + icon("eye", "sm") + "페이지 보기</a>" + btn(icon("check", "sm") + "저장", "lp-save", "a-btn-primary")) +
+      '<section class="a-card a-lp-top"><label class="a-check"><input type="checkbox" id="lp-pub"' + (L.published ? " checked" : "") + '><span><b>공개하기</b> · 끄면 강사님과 마스터만 볼 수 있어요</span></label>' +
+        '<div class="a-lp-url"><input class="a-input a-sm a-mono" id="lp-url" value="' + esc(url) + '" readonly aria-label="페이지 주소">' + btn(icon("clipboard", "sm") + "주소 복사", "lp-copy", "a-btn-ghost a-btn-sm") + "</div>" +
+        (ui.lpDirty ? '<p class="a-lp-dirty">' + icon("alert", "xs") + " 저장하지 않은 변경이 있어요.</p>" : "") + "</section>" +
+      '<div class="a-stack">' + secs + "</div>" +
+      '<section class="a-card"><div class="a-card-head"><h2>연락처 · 페이지 맨 아래</h2></div><div class="a-form-row">' + lpField("contact.kakao", "카카오톡 문의 주소", "url") + lpField("contact.instagram", "인스타그램 주소", "url") + "</div>" +
+        '<div class="a-form-row">' + lpField("contact.youtube", "유튜브 주소", "url") + lpField("contact.company", "상호 (맨 아래 © 표시)") + "</div>" +
+        '<div class="a-form-row">' + lpField("contact.email", "이메일") + lpField("contact.phone", "전화번호") + "</div></section>" +
+      '<div class="a-lp-savebar">' + (ui.lpDirty ? '<span class="a-muted">저장하지 않은 변경이 있어요</span>' : '<span class="a-muted">저장된 상태예요</span>') + btn("변경 취소", "lp-revert", "a-btn-ghost a-btn-sm") + btn(icon("check", "sm") + "저장", "lp-save", "a-btn-primary") + "</div>";
+  }
+  function lpCompress(file, cb) {
+    const r = new FileReader();
+    r.onload = () => { const img = new Image(); img.onload = () => { const sc = Math.min(1, 1400 / Math.max(img.width, img.height)); const cv = document.createElement("canvas"); cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc); cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height); cb(cv.toDataURL("image/jpeg", 0.8)); }; img.onerror = () => toast("사진을 읽지 못했어요.", "warn"); img.src = r.result; };
+    r.readAsDataURL(file);
+  }
+  const lpChanged = () => { if (!ui.lpDirty) { ui.lpDirty = true; const bar = document.querySelector(".a-lp-savebar .a-muted"); if (bar) bar.textContent = "저장하지 않은 변경이 있어요"; } };
+
   /* ---------------- 수강생 화면 색상 고르기 ---------------- */
   function themePicker(current, name) {
     name = name || "theme";
@@ -1040,7 +1118,7 @@
           return "<tr><td><b>" + esc(x.displayName) + '</b><small class="a-memo">' + fmtMD(x.createdAt || todayStr()) + " 개설</small></td><td>" + esc(x.name) + ' <span class="a-muted num">/ ' + esc(x.phone4) + "</span></td><td>" + esc(c ? c.brand.courseTitle : "-") + "</td>" +
             "<td>" + cos.length + "개" + (cur ? ' <small class="a-memo">' + esc(cur.name) + " " + DB.STATUS_LABEL[DB.cohortStatus(cur)] + "</small>" : "") + '</td><td class="num">' + ss.filter((s) => s.status === "approved").length + "명" + (ss.filter((s) => s.status === "pending").length ? ' <small class="a-memo">대기 ' + ss.filter((s) => s.status === "pending").length + "</small>" : "") + "</td>" +
             "<td>" + (x.status === "active" ? pill("운영 중", "ok") : pill("중지", "mute")) + '</td><td class="right"><div class="a-row-actions">' +
-            btn("강사센터 접속", "ins-enter", "a-btn-primary a-btn-sm", ' data-id="' + x.id + '"') + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/center/master/menus?ins=' + x.id + '">' + icon("sliders", "sm") + "메뉴·색상</a>" + btn("수정", "ins-edit", "a-btn-ghost a-btn-sm", ' data-id="' + x.id + '"') + "</div></td></tr>";
+            btn("강사센터 접속", "ins-enter", "a-btn-primary a-btn-sm", ' data-id="' + x.id + '"') + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/center/master/menus?ins=' + x.id + '">' + icon("sliders", "sm") + "메뉴·색상</a>" + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/p/' + x.id + '">' + icon("store", "sm") + "랜딩</a>" + btn("수정", "ins-edit", "a-btn-ghost a-btn-sm", ' data-id="' + x.id + '"') + "</div></td></tr>";
         }).join("") + "</tbody></table></div>" : emptyBox("store", "강사 플랫폼이 없어요.")) + "</section>";
   }
   function pageMasterInstructors() {
@@ -1099,7 +1177,7 @@
   }
 
   /* ---------------- 렌더 ---------------- */
-  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, pages: pageCustomPages };
+  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, pages: pageCustomPages };
   const MPAGES = { "": pageMasterHome, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData };
   function render() {
     closeModal();
@@ -1275,6 +1353,22 @@
           DB.reset(); S = { role: "master" }; DB.session.setAdmin(S); closeModal(); render(); toast("처음 상태로 되돌렸어요.");
         });
         break;
+      case "lp-toggle": e.preventDefault(); lpDraft(); ui.lp.off[d.k] = !ui.lp.off[d.k]; ui.lpDirty = true; render(); break;
+      case "lp-move": { e.preventDefault(); const L = lpDraft(), i = L.order.indexOf(d.k), j = i + Number(d.dir); if (j < 0 || j >= L.order.length) break; [L.order[i], L.order[j]] = [L.order[j], L.order[i]]; ui.lpDirty = true; render(); break; }
+      case "lp-row-add": { const L = lpDraft(); const list = lpGet(L, d.path) || []; const row = {}; d.cols.split(",").forEach((k) => { row[k] = ""; }); list.push(row); lpSet(L, d.path, list); ui.lpDirty = true; render(); break; }
+      case "lp-row-del": { const L = lpDraft(); lpGet(L, d.path).splice(Number(d.i), 1); ui.lpDirty = true; render(); break; }
+      case "lp-row-move": { const L = lpDraft(), list = lpGet(L, d.path), i = Number(d.i), j = i + Number(d.dir); if (j < 0) break; [list[i], list[j]] = [list[j], list[i]]; ui.lpDirty = true; render(); break; }
+      case "lp-img-del": lpSet(lpDraft(), d.path, ""); ui.lpDirty = true; render(); break;
+      case "lp-faq-import": { const L = lpDraft(); L.faq.items = C().faqs.slice(0, 6).map((f) => ({ q: f.q, a: f.a })); ui.lpDirty = true; ui.lpOpen.faq = true; render(); toast("자주 묻는 질문 " + L.faq.items.length + "개를 가져왔어요. 저장을 눌러 주세요."); break; }
+      case "lp-save": {
+        const c = C(), prev = c.landing;
+        c.landing = DB.clone(lpDraft());
+        if (!DB.save()) { c.landing = prev; toast("저장 공간이 부족해요. 사진 크기를 줄여 주세요.", "warn"); break; }
+        ui.lpDirty = false; render(); toast("랜딩페이지를 저장했어요. ‘페이지 보기’로 확인해 보세요.");
+        break;
+      }
+      case "lp-revert": ui.lp = null; render(); toast("저장된 내용으로 되돌렸어요."); break;
+      case "lp-copy": { const el = document.getElementById("lp-url"); const done = () => toast("주소를 복사했어요."); if (navigator.clipboard) navigator.clipboard.writeText(el.value).then(done, () => { el.select(); toast("주소를 선택했어요. 길게 눌러 복사해 주세요."); }); else { el.select(); toast("주소를 선택했어요."); } break; }
       case "item-add": editItem(d.coll, "", d.ctx); break;
       case "item-edit": editItem(d.coll, d.id, d.ctx); break;
       case "item-delete": deleteItem(d.coll, d.id, d.ctx); break;
@@ -1344,6 +1438,9 @@
       render();
     }
     else if (t.id === "att-file") { addAttFiles(t.files); t.value = ""; }
+    else if (t.dataset && t.dataset.lpImg) { const f = t.files && t.files[0]; const path = t.dataset.lpImg; t.value = ""; if (f) lpCompress(f, (data) => { lpSet(lpDraft(), path, data); ui.lpDirty = true; render(); }); }
+    else if (t.dataset && t.dataset.lpCheck) { lpSet(lpDraft(), t.dataset.lpCheck, t.checked); lpChanged(); }
+    else if (t.id === "lp-pub") { lpDraft().published = t.checked; ui.lpDirty = true; render(); }
     else if (t.classList.contains("stu-pick")) { if (t.checked) ui.picked.add(t.dataset.id); else ui.picked.delete(t.dataset.id); render(); }
     else if (t.id === "stu-all") {
       const ids = Array.from(document.querySelectorAll(".stu-pick")).map((x) => x.dataset.id);
@@ -1360,6 +1457,7 @@
       applyShowIf();
     }
   });
+  document.addEventListener("toggle", (e) => { const el = e.target; if (isActive() && el.classList && el.classList.contains("a-lp-sec") && ui.lpOpen) ui.lpOpen[el.dataset.k] = el.open; }, true);
   let qTimer = null;
   document.addEventListener("input", (e) => {
     if (!isActive()) return;
@@ -1369,6 +1467,8 @@
       clearTimeout(qTimer);
       qTimer = setTimeout(() => { render(); const el = document.getElementById("stu-q"); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 250);
     }
+    if (t.dataset && t.dataset.lp) { lpSet(lpDraft(), t.dataset.lp, t.value); lpChanged(); return; }
+    if (t.dataset && t.dataset.lpLines) { lpSet(lpDraft(), t.dataset.lpLines, LINES(t.value)); lpChanged(); return; }
     if (t.id === "fb-text") { const n = parseFaqText(t.value).length; const el = document.getElementById("fb-count"); if (el) el.textContent = n + "개 인식됨"; }
     if (t.id === "cf-start") { const p = document.getElementById("cf-preview"); if (p) p.innerHTML = weekPreview(t.value); }
     if (t.id === "al-pw" && loginTab === "instructor") t.value = t.value.replace(/\D/g, "").slice(0, 4);
