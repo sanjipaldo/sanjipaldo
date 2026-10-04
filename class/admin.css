@@ -650,5 +650,5 @@ body[data-master="1"] .a-count { background: #6a3df0; }
 }
 /* 로그인 카드 위 doogo 로고 2배 (강사 · 마스터) */
 .a-login-label { gap: 10px; margin-bottom: 14px; }
-.a-login-label .doogo-logo { height: 40px; }
-.a-login-label span { font-size: 15px; letter-spacing: .2em; }
+.a-login-label .doogo-logo { height: 30px; }
+.a-login-label span { font-size: 13px; letter-spacing: .2em; }
