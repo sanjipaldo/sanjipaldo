@@ -223,8 +223,9 @@
 
   /* ---------------- 무료강의 페이지 (doogo.site 형식: 카운트다운 · 사전 질문 · 선물 전자책 · 오픈채팅 · 강의 안내) ---------------- */
   const FREE_SECTIONS = [
-    { key: "countdown", label: "강의 시작 카운트다운" }, { key: "question", label: "사전 질문 남기기" }, { key: "gifts", label: "선물 전자책 (날짜별 공개)" },
-    { key: "videos", label: "미리 보는 영상" }, { key: "kakao", label: "카카오톡 오픈채팅" }, { key: "live", label: "진행 예정인 강의 (신청)" }
+    { key: "countdown", label: "강의 일정 · 카운트다운" }, { key: "videos", label: "YouTube 영상 (좌 · 가운데 · 우)" }, { key: "question", label: "질문 남기기 버튼" },
+    { key: "gifts", label: "선물 전자책 (공개일에 자동으로 열림)" }, { key: "kakao", label: "카카오톡 오픈채팅" }, { key: "about", label: "강사 소개" },
+    { key: "live", label: "진행 예정 강의 (썸네일 · 신청 링크)" }, { key: "faq", label: "자주 묻는 질문" }, { key: "apply", label: "신청하기" }
   ];
   function freeOf(insId) {
     const c = content(insId), ins = instructor(insId);
@@ -233,19 +234,29 @@
     const live = addDays(todayStr(), 14) + "T19:30";
     const def = {
       published: false,
-      order: FREE_SECTIONS.map((x) => x.key), off: { videos: true },
+      order: FREE_SECTIONS.map((x) => x.key), off: {},
       hero: { badge: "무료강의 신청자 전용 선물", instructor: b.instructor || ins.displayName, title: (b.loginHeadline || b.courseTitle || "").replace(/\n/g, "\n"), sub: "강의 시작 전, 신청자에게만 실전 자료를 순서대로 열어드립니다.", note: "본 강의는 교육 목적이며 결과는 실행 환경과 노력에 따라 달라질 수 있습니다." },
       liveAt: live,
       question: { badge: "강의 전 필수 · 1분 소요", title: (b.instructor || "강사") + "에게 직접 묻고 싶은 게 있으신가요?", desc: "강의 전에 궁금한 내용을 미리 정리해 보세요. 지금 남겨두시면 내 상황에 맞는 질문을 놓치지 않을 수 있어요.", label: "내 질문 남기러 가기", url: "", note: "질문을 남긴 뒤 무료강의 신청 페이지로 이동할 수 있어요" },
       gifts: { kicker: "BEFORE THE CLASS", title: "강의 전, 선물 전자책", desc: "공개일이 되면 잠금이 자동으로 풀리고, 표지를 누르면 전자책이 열려요.", items: [] },
-      videos: { kicker: "PREVIEW", title: "강의 전에 미리 보면 좋은 영상", items: [] },
+      videos: { kicker: "WATCH BEFORE THE CLASS", title: "강의 전에, " + (b.instructor || "강사") + "의 실전 이야기를 먼저 만나보세요", desc: "좌우 영상을 넘기면 다양한 인터뷰와 실제 운영 이야기를 볼 수 있어요.", items: [] },
+      about: { title: "강사 소개", name: b.instructor || ins.displayName, role: b.courseTitle, body: "", photo: "", career: [] },
+      faq: { kicker: "FAQ", title: "자주 묻는 질문", items: [
+        { q: "무료강의는 어디서 듣나요?", a: "‘진행 예정 강의’의 신청 버튼으로 신청하면, 강의 날짜에 맞춰 라이브 입장 안내를 보내 드려요." },
+        { q: "선물 전자책은 어떻게 받나요?", a: "이 페이지에서 공개일이 되면 잠금이 자동으로 풀려요. 표지를 누르면 전자책이 열려요." },
+        { q: "처음인데 들어도 될까요?", a: "네. 처음 시작하는 분도 따라올 수 있게 순서대로 설명해 드려요." },
+        { q: "궁금한 점은 어디에 물어보나요?", a: "‘질문 남기기’로 미리 남기시거나 카카오톡 오픈채팅방에서 편하게 물어보세요." }
+      ] },
+      apply: { badge: "지금 신청하면 선물이 열려요", title: "무료강의, 지금 신청하세요", desc: "신청한 분께만 강의 링크와 선물 전자책을 보내 드려요.", price: "", original: "", includes: [], label: "무료강의 신청하기", url: "", note: "비우면 ‘진행 예정 강의’의 신청 링크로 연결돼요." },
       kakao: { badge: "💬 궁금한 점이 있으신가요?", title: "궁금한 점은 카카오톡 오픈채팅방에서 편하게 물어보세요", desc: "강의 전 궁금한 내용이나 미리 확인하고 싶은 부분이 있다면 자유롭게 남겨주세요.\n확인 후 하나씩 답변드리겠습니다.", label: "카카오톡 오픈채팅방 입장하기", url: b.kakaoChannel || "", note: "간단한 질문도 괜찮습니다 │ 편하게 참여해주세요" },
-      live: { kicker: "UPCOMING LIVE CLASS", title: "진행 예정인 강의", desc: "무료강의 신청을 완료하고, 실제 노하우를 라이브로 확인하세요.", tag: "무료 LIVE 강의", platform: "", image: "", summary: "", points: [], label: "무료강의 신청하기", url: "", note: "신청 페이지는 새 창에서 열립니다." },
+      live: { kicker: "UPCOMING LIVE CLASS", title: "진행 예정인 강의", desc: "무료강의 신청을 완료하고, 실제 노하우를 라이브로 확인하세요.", tag: "무료 LIVE 강의", platform: "", platformLogo: "", image: "", liveTitle: "", summary: "", points: [], label: "무료강의 신청하기", url: "", note: "신청 페이지는 새 창에서 열립니다." },
       company: ""
     };
     const out = Object.assign({}, def, F);
-    ["hero", "question", "gifts", "videos", "kakao", "live"].forEach((k) => { out[k] = Object.assign({}, def[k], F[k] || {}); });
+    ["hero", "question", "gifts", "videos", "kakao", "about", "live", "faq", "apply"].forEach((k) => { out[k] = Object.assign({}, def[k], F[k] || {}); });
     out.off = Object.assign({}, F.off || def.off);
+    // 강사 소개는 ‘강의 소개 페이지’에 적어 둔 내용을 기본으로 가져온다
+    if (!F.about && c.landing && c.landing.about) out.about = Object.assign({}, def.about, c.landing.about);
     out.order = (F.order || []).filter((k) => FREE_SECTIONS.some((x) => x.key === k));
     FREE_SECTIONS.forEach((x) => { if (out.order.indexOf(x.key) === -1) out.order.push(x.key); });
     return out;
@@ -380,9 +391,10 @@
       db.flags.curriculaSeeded = true; save();
     }
     // 무료강의 페이지 기본 문구 (한 번만, doogo.site 내용)
-    if (!db.flags.freeSeeded) {
-      Object.keys(db.content).forEach((id) => { const sc = window.CLASS_SEED.content[id]; if (!db.content[id].freeClass && sc && sc.freeClass) db.content[id].freeClass = clone(sc.freeClass); });
-      db.flags.freeSeeded = true; save();
+    if (!db.flags.freeSeeded2) {
+      // doogo.site 와 같은 화면으로 바꾸면서 기본 내용을 새로 넣는다 (한 번만)
+      Object.keys(db.content).forEach((id) => { const sc = window.CLASS_SEED.content[id]; if (sc && sc.freeClass) db.content[id].freeClass = clone(sc.freeClass); });
+      db.flags.freeSeeded = db.flags.freeSeeded2 = true; save();
     }
     // 홍보 랜딩페이지 기본 문구 (한 번만)
     if (!db.flags.landingSeeded) {

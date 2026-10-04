@@ -172,90 +172,137 @@
       "</div></div></main></div>";
   }
 
-  /* ================= 무료강의 페이지 (#/free/<강사 id>) ================= */
+  /* ================= 무료강의 페이지 (#/free/<강사 id>) — doogo.site 와 같은 화면 ================= */
   const DOWK = ["일", "월", "화", "수", "목", "금", "토"];
+  const DOWL = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
   const pad = (n) => String(n).padStart(2, "0");
-  function liveText(iso) {
-    const d = new Date(iso); if (isNaN(d)) return "";
-    const h = d.getHours();
-    return (d.getMonth() + 1) + "월 " + d.getDate() + "일 (" + DOWK[d.getDay()] + ") " + (h < 12 ? "오전 " : "오후 ") + ((h % 12) || 12) + "시" + (d.getMinutes() ? " " + d.getMinutes() + "분" : "");
-  }
-  const dayDiff = (dateStr) => diffDays(dateStr, todayStr());
-  let tick = null;
+  const at = (v) => { if (!v) return NaN; const d = new Date(/T/.test(v) ? v : v + "T00:00"); return d.getTime(); };
+  const ampm = (d) => (d.getHours() < 12 ? "오전 " : "오후 ") + ((d.getHours() % 12) || 12) + "시";
+  const shortWhen = (v) => { const d = new Date(at(v)); return isNaN(d) ? "" : (d.getMonth() + 1) + "월 " + d.getDate() + " (" + DOWK[d.getDay()] + ") " + ampm(d) + " " + d.getMinutes() + "분"; };
+  const longWhen = (v) => { const d = new Date(at(v)); return isNaN(d) ? "" : d.getFullYear() + "년 " + (d.getMonth() + 1) + "월 " + d.getDate() + "일 " + DOWL[d.getDay()] + " " + ampm(d) + " " + pad(d.getMinutes()) + "분"; };
+  const lockWhen = (v) => { const d = new Date(at(v)); return isNaN(d) ? "공개일 확인 필요" : d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + (d.getHours() < 12 ? "오전" : "오후") + " " + ((d.getHours() % 12) || 12) + ":" + pad(d.getMinutes()); };
+  const dayLabel = (v, now) => { const n = Math.max(0, at(v) - now); return n <= 0 || Math.floor(n / 864e5) <= 0 ? "D-DAY" : "D-" + Math.floor(n / 864e5); };
+  const leftLabel = (v, now) => { const n = Math.max(0, at(v) - now); return n <= 0 ? "공개됨" : "공개까지 " + Math.floor(n / 864e5) + "일 " + Math.floor(n % 864e5 / 36e5) + "시간 남음"; };
+  const giftOpen = (g, now) => !!g.forceOpen || (g.openAt && now >= at(g.openAt));
+  const ACCENT = { blue: "blue", teal: "cyan", cyan: "cyan", gold: "ice", ice: "ice" };
+  const SV = (d, w) => '<svg viewBox="0 0 24 24" width="' + (w || 20) + '" height="' + (w || 20) + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + "</svg>";
+  const IC = {
+    msg: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>', lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+    unlock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>', down: '<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>',
+    cal: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/>',
+    check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>', ext: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>', play: '<polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/>', chev: '<path d="m6 9 6 6 6-6"/>'
+  };
+  const ytEmbed = (u) => { const y = DB.youtubeId(u); if (!y) return ""; const m = String(u).match(/[?&](?:t|start)=(\d+)/); return "https://www.youtube.com/embed/" + y + "?rel=0&playsinline=1" + (m ? "&start=" + m[1] : ""); };
+  let tick = null, vIdx = 1;
+  function countdownParts(v) { const n = Math.max(0, at(v) - Date.now()); return n <= 0 ? { d: 0, h: 0, m: 0, s: 0, expired: true } : { d: Math.floor(n / 864e5), h: Math.floor(n % 864e5 / 36e5), m: Math.floor(n % 36e5 / 6e4), s: Math.floor(n % 6e4 / 1e3), expired: false }; }
   function updateCountdown() {
     const box = document.getElementById("fc-count");
     if (!box || !isActive()) { clearInterval(tick); tick = null; return; }
-    const ms = new Date(box.dataset.at) - Date.now();
-    const set = (k, v) => { const el = box.querySelector('[data-u="' + k + '"]'); if (el) el.textContent = pad(v); };
-    const st = document.getElementById("fc-count-state");
-    if (ms <= 0) {
-      ["d", "h", "m", "s"].forEach((k) => set(k, 0));
-      if (st) st.textContent = ms > -3 * 3600000 ? "지금 강의가 진행 중이에요" : "강의가 끝났어요. 다음 강의를 기다려 주세요";
-      return;
-    }
-    set("d", Math.floor(ms / 86400000)); set("h", Math.floor(ms / 3600000) % 24); set("m", Math.floor(ms / 60000) % 60); set("s", Math.floor(ms / 1000) % 60);
+    const c = countdownParts(box.dataset.at);
+    [["d", c.d], ["h", c.h], ["m", c.m], ["s", c.s]].forEach((x) => { const el = box.querySelector('[data-u="' + x[0] + '"]'); if (el) el.textContent = pad(x[1]); });
+    const st = box.querySelector(".countdown-eyebrow strong"); if (st) st.textContent = c.expired ? "LIVE" : "D-" + Math.max(0, Math.ceil((at(box.dataset.at) - Date.now()) / 864e5));
+    // 날짜가 된 전자책은 새로고침 없이 바로 열린다
+    const now = Date.now();
+    document.querySelectorAll(".gift-card[data-open-at]").forEach((g) => { if (!g.classList.contains("is-unlocked") && now >= at(g.dataset.openAt)) renderFree(insIdFromHash()); });
   }
   const FC = {};
-  FC.countdown = (F) => '<section class="fc-count-wrap"><div class="fc-count" id="fc-count" data-at="' + esc(F.liveAt) + '"><p class="fc-count-label">강의 시작까지 <b>LIVE</b></p><div class="fc-units">' +
-      [["d", "일"], ["h", "시간"], ["m", "분"], ["s", "초"]].map((u, i) => (i ? '<span class="fc-colon">:</span>' : "") + '<div class="fc-unit"><b data-u="' + u[0] + '">00</b><small>' + u[1] + "</small></div>").join("") +
-      '</div><p class="fc-count-foot"><i class="lp-dot"></i><span id="fc-count-state">' + esc(liveText(F.liveAt)) + " 강의 시작</span></p></div></section>";
-  FC.question = (F) => { const q = F.question; return '<section class="fc-card fc-glow"><span class="fc-pill">' + esc(q.badge) + "</span><h2>" + esc(q.title) + "</h2>" + (q.desc ? "<p>" + nl(q.desc) + "</p>" : "") +
-      '<button type="button" class="lp-btn lp-btn-primary lp-btn-lg fc-wide" data-fc="question">' + icon("message", "sm") + esc(q.label) + "</button>" + (q.note ? '<small class="fc-note">' + esc(q.note) + "</small>" : "") + "</section>"; };
-  FC.gifts = (F) => {
-    const g = F.gifts, items = (g.items || []).filter((x) => x.title);
-    if (!items.length) return "";
-    return '<section class="fc-sec"><p class="lp-kicker fc-center">' + esc(g.kicker) + '</p><h2 class="fc-h2">' + esc(g.title) + "</h2>" + (g.desc ? '<p class="fc-lead">' + nl(g.desc) + "</p>" : "") +
-      '<div class="fc-gifts">' + items.map((x, i) => {
-        const left = x.openAt ? dayDiff(x.openAt) : 0, open = left <= 0;
-        const badge = open ? "공개" : "D-" + left;
-        const cover = '<div class="fc-cover fc-c-' + esc(x.color || "accent") + '"><span class="fc-cover-top"><b>' + (i + 1) + '번 선물</b><small>' + esc(F.hero.instructor) + " 무료강의 선물</small></span><strong>" + esc(x.title) + "</strong><small>전자책 · 강사 " + esc(F.hero.instructor) + '</small><span class="fc-cover-open">' + icon(open ? "book" : "lock", "sm") + (open ? "전자책 열기" : fmtMD(x.openAt) + " 공개") + '</span><i class="fc-cover-no">' + pad(i + 1) + "</i></div>";
-        const tag = open && x.url ? 'a href="' + esc(x.url) + '" target="_blank" rel="noopener"' : 'button type="button" data-fc="gift" data-open="' + (open ? 1 : 0) + '" data-date="' + esc(x.openAt || "") + '"';
-        return '<article class="fc-gift' + (open ? " open" : " locked") + '"><span class="fc-dday">' + badge + "</span><" + tag + ' class="fc-cover-btn">' + cover + "</" + tag.split(" ")[0] + ">" +
-          "<h3>" + esc(x.title) + "</h3>" + (x.desc ? "<p>" + nl(x.desc) + "</p>" : "") + '<span class="fc-gift-state">' + icon(open ? "download" : "lock", "xs") + (open ? (x.url ? "공개됨 · 표지를 눌러 열기" : "공개됨 · 곧 링크가 올라와요") : fmtFull(x.openAt) + " 자동 공개") + "</span></article>";
-      }).join("") + "</div>" +
-      '<div class="fc-chips">' + items.map((x, i) => '<span class="fc-chip' + (x.openAt && dayDiff(x.openAt) > 0 ? "" : " on") + '"><b>' + (x.openAt && dayDiff(x.openAt) > 0 ? "D-" + dayDiff(x.openAt) : "OPEN") + "</b>" + (i + 1) + "번째 선물 " + (x.openAt ? fmtMD(x.openAt) : "") + "</span>").join("") + "</div></section>";
+  FC.countdown = (F) => {
+    const c = countdownParts(F.liveAt);
+    return '<section class="countdown-card" id="fc-count" data-at="' + esc(F.liveAt) + '" aria-label="강의 시작 카운트다운"><p class="countdown-eyebrow">강의 시작까지 <strong>' + (c.expired ? "LIVE" : "D-" + Math.ceil((at(F.liveAt) - Date.now()) / 864e5)) + "</strong></p>" +
+      '<div class="countdown-grid">' + [["d", "일", c.d], ["h", "시간", c.h], ["m", "분", c.m], ["s", "초", c.s]].map((u, i) => '<div class="countdown-unit-wrap"><div class="countdown-unit"><strong data-u="' + u[0] + '">' + pad(u[2]) + "</strong><span>" + u[1] + "</span></div>" + (i < 3 ? '<span class="countdown-colon" aria-hidden="true">:</span>' : "") + "</div>").join("") + "</div>" +
+      '<p class="event-date"><span aria-hidden="true"></span>' + esc(shortWhen(F.liveAt)) + " 강의 시작</p></section>";
   };
   FC.videos = (F) => {
     const v = F.videos, items = (v.items || []).filter((x) => DB.youtubeId(x.youtube));
-    if (!items.length) return "";
-    return '<section class="fc-sec"><p class="lp-kicker fc-center">' + esc(v.kicker) + '</p><h2 class="fc-h2">' + esc(v.title) + '</h2><div class="fc-videos">' +
-      items.map((x) => { const y = DB.youtubeId(x.youtube); return '<a class="fc-video" href="https://www.youtube.com/watch?v=' + esc(y) + '" target="_blank" rel="noopener"><span class="fc-thumb"><img src="https://i.ytimg.com/vi/' + esc(y) + '/hqdefault.jpg" alt="" loading="lazy">' + icon("play") + "</span><b>" + esc(x.title || "영상") + "</b></a>"; }).join("") + "</div></section>";
+    if (!items.length || countdownParts(F.liveAt).expired) return "";
+    if (vIdx >= items.length) vIdx = items.length > 1 ? 1 : 0;
+    const left = (vIdx - 1 + items.length) % items.length;
+    return '<section class="youtube-showcase" aria-labelledby="youtube-showcase-title"><div class="youtube-heading"><span>' + esc(v.kicker) + '</span><h2 id="youtube-showcase-title">' + esc(v.title) + "</h2>" + (v.desc ? "<p>" + esc(v.desc) + "</p>" : "") + "</div>" +
+      '<div class="video-carousel"><button class="carousel-control carousel-control--previous" type="button" data-fc="v-prev" aria-label="이전 영상 보기">' + SV(IC.left, 24) + "</button>" +
+      '<div class="video-stage">' + items.map((x, i) => { const pos = i === vIdx ? "active" : i === left ? "left" : "right"; return '<article class="video-slide video-slide--' + pos + '"><div class="video-frame">' +
+          (pos === "active" ? '<iframe src="' + esc(ytEmbed(x.youtube)) + '" title="' + esc(x.title) + '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>' : '<img src="https://i.ytimg.com/vi/' + esc(DB.youtubeId(x.youtube)) + '/hqdefault.jpg" alt="" style="width:100%;height:100%;object-fit:cover;display:block">') +
+          (pos !== "active" ? '<button class="video-select-overlay" type="button" data-fc="v-go" data-i="' + i + '" aria-label="' + esc(x.title) + ' 영상 가운데로 가져오기">' + SV(IC.play, 22) + "</button>" : "") +
+          '</div><div class="video-meta"><span>' + esc(x.channel || "YouTube") + "</span><strong>" + esc(x.title) + "</strong></div></article>"; }).join("") + "</div>" +
+      '<button class="carousel-control carousel-control--next" type="button" data-fc="v-next" aria-label="다음 영상 보기">' + SV(IC.right, 24) + "</button></div>" +
+      '<div class="carousel-pagination" aria-label="영상 선택">' + items.map((x, i) => '<button type="button" class="' + (i === vIdx ? "is-active" : "") + '" data-fc="v-go" data-i="' + i + '" aria-label="' + (i + 1) + '번째 영상 보기"></button>').join("") + "</div>" +
+      '<a class="fc-yt-out" href="https://www.youtube.com/watch?v=' + esc(DB.youtubeId(items[vIdx].youtube)) + '" target="_blank" rel="noopener">재생이 안 되면 유튜브에서 보기 ↗</a></section>';
   };
-  FC.kakao = (F) => { const k = F.kakao; if (!k.url) return ""; return '<section class="fc-card fc-kakao"><span class="fc-pill fc-pill-kakao">' + esc(k.badge) + "</span><h2>" + esc(k.title) + "</h2>" + (k.desc ? "<p>" + nl(k.desc) + "</p>" : "") +
-      '<a class="lp-btn lp-btn-lg fc-wide fc-kakao-btn" href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.label) + icon("arrowRight", "sm") + "</a>" + (k.note ? '<small class="fc-note">' + esc(k.note) + "</small>" : "") + "</section>"; };
-  FC.live = (F, c) => {
-    const L = F.live;
-    const poster = L.image ? '<img src="' + esc(L.image) + '" alt="">' : '<div class="fc-poster"><span class="fc-poster-date">' + esc(liveText(F.liveAt)) + " 무료강의</span><strong>" + headline(F.hero.title) + "</strong><small>" + esc(c.brand.courseTitle) + " · " + esc(F.hero.instructor) + "</small></div>";
-    return '<section class="fc-sec"><p class="lp-kicker fc-center">' + esc(L.kicker) + '</p><h2 class="fc-h2">' + esc(L.title) + "</h2>" + (L.desc ? '<p class="fc-lead">' + nl(L.desc) + "</p>" : "") +
-      '<div class="fc-live"><div class="fc-live-img"><span class="fc-live-tag">' + esc(L.tag) + "</span>" + poster + "</div>" +
-      '<div class="fc-live-info">' + (L.platform ? '<span class="fc-live-plat">[강의 Live] <b>' + esc(L.platform) + "</b></span>" : "") +
-        '<p class="fc-live-when">' + icon("calendar", "sm") + esc(liveText(F.liveAt)) + "</p><small>강사 <b>" + esc(F.hero.instructor) + "</b></small><h3>" + headline(F.hero.title).replace(/<\/?span[^>]*>/g, "") + "</h3>" +
-        (L.summary ? "<p>" + nl(L.summary) + "</p>" : "") + ((L.points || []).length ? '<ul class="lp-incl">' + L.points.map((x) => "<li>" + icon("check", "sm") + esc(x) + "</li>").join("") + "</ul>" : "") +
-        '<a class="lp-btn lp-btn-primary lp-btn-lg lp-btn-block" href="' + esc(L.url || "#") + '"' + (L.url ? ' target="_blank" rel="noopener"' : ' data-fc="nolink"') + ">" + esc(L.label) + icon("arrowUpRight", "sm") + "</a>" + (L.note ? '<small class="fc-note">' + esc(L.note) + "</small>" : "") +
-      "</div></div></section>";
+  FC.question = (F) => { const q = F.question; return '<section class="question-cta"><span class="micro-badge"><i aria-hidden="true"></i>' + esc(q.badge) + "</span><h2>" + esc(q.title) + "</h2>" + (q.desc ? "<p>" + nl(q.desc) + "</p>" : "") +
+      (q.url ? '<a class="primary-cta" href="' + esc(q.url) + '" target="_blank" rel="noreferrer">' : '<a class="primary-cta" href="#" data-fc="question">') + SV(IC.msg) + esc(q.label) + "</a>" + (q.note ? "<small>" + esc(q.note) + "</small>" : "") + "</section>"; };
+  FC.gifts = (F) => {
+    const g = F.gifts, items = (g.items || []).filter((x) => x.title), now = Date.now();
+    if (!items.length) return "";
+    return '<section class="gift-section"><div class="section-heading"><span>' + esc(g.kicker) + "</span><h2>" + esc(g.title) + "</h2><p>" + items.map((x) => giftOpen(x, now) ? "D-DAY" : dayLabel(x.openAt, now)).join(" · ") + "에 한 권씩 순차 오픈됩니다.<br>" + esc(g.desc || "") + "</p></div>" +
+      '<div class="gift-grid">' + items.map((x, i) => {
+        const open = giftOpen(x, now), n = i + 1;
+        return '<article class="gift-card gift-card--' + (ACCENT[x.color] || "blue") + (open ? " is-unlocked" : "") + '"' + (open ? "" : ' data-open-at="' + esc(x.openAt || "") + '"') + '><span class="gift-day">' + (open ? "D-DAY" : dayLabel(x.openAt, now)) + "</span>" +
+          '<a class="gift-cover"' + (open && x.url ? ' href="' + esc(x.url) + '" target="_blank" rel="noreferrer"' : ' href="#" data-fc="gift" data-open="' + (open ? 1 : 0) + '" data-date="' + esc(x.openAt || "") + '"') + ' aria-label="' + esc(x.title) + (open ? " 전자책 열기" : " 공개 전") + '">' +
+            '<span class="gift-cover-overlay" aria-hidden="true"></span><span class="gift-cover-number" aria-hidden="true">' + pad(n) + "</span>" +
+            '<span class="gift-cover-top"><strong>' + n + "번 선물</strong><i>" + esc(F.hero.instructor) + " 무료강의 선물</i></span>" +
+            '<span class="gift-cover-bottom">' + (open ? "" : '<span class="lock-state">' + SV(IC.lock, 30) + esc(lockWhen(x.openAt)) + " 공개 예정</span>") + "<strong>" + esc(x.title) + "</strong><small>전자책 · 강사 " + esc(F.hero.instructor) + "</small>" +
+              (open ? '<span class="open-hint">' + SV(IC.unlock, 16) + "전자책 열기</span>" : "") + "</span></a>" +
+          "<h3>" + esc(x.title) + "</h3>" + (x.desc ? "<p>" + esc(x.desc) + "</p>" : "") +
+          '<span class="gift-status' + (open ? " is-open" : "") + '">' + SV(open ? IC.down : IC.lock, open ? 15 : 14) + (open ? "공개됨 · 표지를 눌러 열기" : esc(leftLabel(x.openAt, now))) + "</span></article>";
+      }).join("") + "</div>" +
+      '<div class="gift-timeline" aria-label="선물 공개 일정">' + items.map((x, i) => "<span><strong>" + (giftOpen(x, now) ? "D-DAY" : dayLabel(x.openAt, now)) + "</strong>" + (i + 1) + "번째 선물 오픈</span>").join("") + "</div></section>";
+  };
+  FC.kakao = (F) => { const k = F.kakao; if (!k.url) return ""; return '<section class="question-cta question-cta--compact"><span class="micro-badge micro-badge--kakao">' + esc(k.badge) + "</span><h2>" + esc(k.title) + "</h2>" + (k.desc ? "<p>" + nl(k.desc) + "</p>" : "") +
+      '<a class="kakao-cta" href="' + esc(k.url) + '" target="_blank" rel="noreferrer">' + esc(k.label) + '<span aria-hidden="true">→</span></a>' + (k.note ? "<small>" + esc(k.note) + "</small>" : "") + "</section>"; };
+  FC.about = (F) => {
+    const a = F.about;
+    if (!a.body && !(a.career || []).length && !a.photo) return "";
+    return '<section class="fc-about" aria-label="강사 소개"><div class="fc-about-photo">' + (a.photo ? '<img src="' + esc(a.photo) + '" alt="' + esc(a.name) + '">' : '<span>' + esc((a.name || "강").slice(0, 1)) + "</span>") + "</div>" +
+      '<div class="fc-about-txt"><span class="fc-kicker">' + esc(a.title || "강사 소개") + "</span><h2>" + esc(a.name) + "</h2>" + (a.role ? '<p class="fc-about-role">' + esc(a.role) + "</p>" : "") + (a.body ? '<p class="fc-about-body">' + nl(a.body) + "</p>" : "") +
+        ((a.career || []).length ? "<ul>" + a.career.map((x) => "<li>" + SV(IC.check, 18) + esc(x) + "</li>").join("") + "</ul>" : "") + "</div></section>";
+  };
+  FC.live = (F) => {
+    const L = F.live, title = L.liveTitle || F.hero.title;
+    return '<section class="upcoming-course" aria-labelledby="upcoming-course-title"><div class="upcoming-course-heading"><span>' + esc(L.kicker) + '</span><h2 id="upcoming-course-title">' + esc(L.title) + "</h2>" + (L.desc ? "<p>" + esc(L.desc) + "</p>" : "") + "</div>" +
+      '<article class="upcoming-course-card"><div class="upcoming-course-image">' + (L.image ? '<img src="' + esc(L.image) + '" alt="' + esc(title.replace(/\n/g, " ")) + ' 대표 이미지">' : '<div class="fc-poster-auto"><b>' + esc(shortWhen(F.liveAt)) + " 무료강의</b><strong>" + esc(title).replace(/\n/g, "<br>") + "</strong><small>" + esc(F.hero.instructor) + "</small></div>") + (L.tag ? "<span>" + esc(L.tag) + "</span>" : "") + "</div>" +
+        '<div class="upcoming-course-content">' + (L.platform || L.platformLogo ? '<div class="upcoming-platform"><span>[강의 Live]</span>' + (L.platformLogo ? '<div class="upcoming-platform-logo"><img src="' + esc(L.platformLogo) + '" alt="' + esc(L.platform) + ' 로고"></div>' : "") + "<strong>" + esc(L.platform) + "</strong></div>" : "") +
+          '<span class="upcoming-date">' + SV(IC.cal, 17) + esc(longWhen(F.liveAt)) + "</span>" +
+          '<p class="upcoming-instructor">강사 <strong>' + esc(F.hero.instructor) + "</strong></p><h3>" + title.split("\n").map((x) => "<span>" + esc(x) + "<br></span>").join("") + "</h3>" +
+          (L.summary ? '<p class="upcoming-description">' + esc(L.summary) + "</p>" : "") + ((L.points || []).length ? "<ul>" + L.points.map((x) => "<li>" + SV(IC.check, 17) + esc(x) + "</li>").join("") + "</ul>" : "") +
+          '<a class="upcoming-course-cta" href="' + esc(L.url || "#") + '"' + (L.url ? ' target="_blank" rel="noreferrer"' : ' data-fc="nolink"') + ">" + esc(L.label) + SV(IC.ext, 18) + "</a>" + (L.note ? "<small>" + esc(L.note) + "</small>" : "") +
+        "</div></article></section>";
+  };
+  FC.faq = (F, c) => {
+    const q = F.faq, items = (q.items || []).filter((x) => x.q);
+    if (!items.length) return "";
+    return '<section class="fc-faq" aria-label="자주 묻는 질문"><div class="section-heading"><span>' + esc(q.kicker) + "</span><h2>" + esc(q.title) + "</h2></div>" +
+      '<div class="fc-faq-list">' + items.map((x) => "<details><summary>" + esc(x.q) + SV(IC.chev, 18) + "</summary><p>" + nl(x.a) + "</p></details>").join("") + "</div></section>";
+  };
+  FC.apply = (F) => {
+    const A = F.apply, url = A.url || F.live.url;
+    return '<section class="question-cta fc-apply"><span class="micro-badge"><i aria-hidden="true"></i>' + esc(A.badge) + "</span><h2>" + esc(A.title) + "</h2>" + (A.desc ? "<p>" + nl(A.desc) + "</p>" : "") +
+      (A.price ? '<div class="fc-price">' + (A.original ? "<s>" + esc(A.original) + "</s>" : "") + "<b>" + esc(A.price) + "</b></div>" : "") +
+      ((A.includes || []).length ? '<ul class="fc-incl">' + A.includes.map((x) => "<li>" + SV(IC.check, 17) + esc(x) + "</li>").join("") + "</ul>" : "") +
+      '<a class="primary-cta" href="' + esc(url || "#") + '"' + (url ? ' target="_blank" rel="noreferrer"' : ' data-fc="nolink"') + ">" + esc(A.label) + SV(IC.ext, 18) + "</a>" + (A.note ? "<small>" + esc(A.note) + "</small>" : "") + "</section>";
   };
   function renderFree(id) {
     const ins = DB.instructor(id);
     const F = ins && ins.status === "active" ? DB.freeOf(id) : null;
     const adm = DB.session.admin();
-    const canSee = adm && (adm.role === "master" || adm.instructorId === id);
+    const canSee = adm && (adm.role === "master" || adm.instructorId === id || adm.actingAs === id);
     if (!F || (!F.published && !canSee)) {
       document.title = "두고 클래스";
       root.innerHTML = '<main class="lp lp-empty"><div>' + window.doogoLogo("mark", "lp-empty-mark") + "<h1>준비 중인 페이지예요</h1><p>곧 무료강의 안내가 올라와요.</p></div></main>";
       return;
     }
-    const c = DB.content(id), t = DB.themeOf(c.brand.theme);
-    document.title = F.hero.title.replace(/\n/g, " ") + " · " + F.hero.instructor + " 무료강의";
-    const vars = "--lp-p:" + t.primary + ";--lp-pa:" + t.active + ";--lp-on:" + (t.onPrimary || t.deep) + ";--lp-pd:" + t.deep + ";--lp-pale:" + t.pale + ";--lp-rgb:" + t.rgb + ";--lp-ac:" + (t.accent || t.primary);
-    const h = F.hero;
-    root.innerHTML = '<div class="lp fc" style="' + vars + '">' +
-      (!F.published ? '<div class="lp-draft">' + icon("eyeOff", "sm") + "비공개 상태예요. 강사센터 ‘무료강의 페이지’에서 공개로 바꾸면 누구나 볼 수 있어요.</div>" : "") +
-      '<main class="fc-main"><section class="fc-hero">' + (h.badge ? '<span class="fc-pill fc-pill-top"><i class="lp-dot"></i>' + esc(h.badge) + "</span>" : "") +
-        '<p class="fc-ins">강사 · <b>' + esc(h.instructor) + "</b></p><h1>" + headline(h.title) + "</h1>" + (h.sub ? '<p class="fc-sub">' + nl(h.sub) + "</p>" : "") + (h.note ? '<p class="fc-disc">' + esc(h.note) + "</p>" : "") + "</section>" +
+    const c = DB.content(id), h = F.hero, lines = String(h.title || "").split("\n").filter(Boolean);
+    document.title = lines.join(" ") + " · " + h.instructor + " 무료강의";
+    root.innerHTML = '<div class="dg"><div class="landing-page"><div class="grid-background" aria-hidden="true"></div>' +
+      (!F.published ? '<div class="fc-draft">' + icon("eyeOff", "sm") + "비공개 상태예요. 강사센터 ‘무료강의 페이지’에서 공개로 바꾸면 누구나 볼 수 있어요.</div>" : "") +
+      '<main><header class="hero">' + (h.badge ? '<span class="top-badge"><i aria-hidden="true"></i>' + esc(h.badge) + "</span>" : "") +
+        '<p class="instructor">강사 · <strong>' + esc(h.instructor) + "</strong></p><h1>" + lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? "<em>" + esc(l) + "</em>" : "<span>" + esc(l) + "</span>")).join("") + "</h1>" +
+        (h.sub ? '<p class="hero-copy">' + nl(h.sub) + "</p>" : "") + (h.note ? '<small class="disclaimer">' + esc(h.note) + "</small>" : "") + "</header>" +
         F.order.filter((k) => !F.off[k] && FC[k]).map((k) => FC[k](F, c)).join("") +
       "</main>" +
-      '<footer class="fc-foot"><span>© 2026 ' + esc(F.company || c.brand.name) + "</span>" + window.poweredBy("color") + "</footer></div>";
-    clearInterval(tick); updateCountdown(); tick = setInterval(updateCountdown, 1000);
+      '<footer><a href="#/center" aria-label="강사센터로 이동">© 2026 ' + esc(F.company || c.brand.name) + "</a></footer>" +
+      '<div class="fc-powered-row">' + window.poweredBy("white") + "</div>" +
+      "</div></div>";
+    clearInterval(tick); tick = setInterval(updateCountdown, 1000);
   }
   function questionModal(id) {
     const F = DB.freeOf(id), m = document.getElementById("modal-root");
@@ -278,10 +325,15 @@
     const f = e.target.closest("[data-fc]");
     if (f) {
       const k = f.dataset.fc, mr = document.getElementById("modal-root");
-      if (k === "question") { const F = DB.freeOf(insIdFromHash()); if (F.question.url) window.open(F.question.url, "_blank", "noopener"); else questionModal(insIdFromHash()); }
+      if (k === "question") { e.preventDefault(); questionModal(insIdFromHash()); }
       else if (k === "close" || (k === "close-bg" && e.target === f)) mr.innerHTML = "";
-      else if (k === "gift") fcToast(f.dataset.open === "1" ? "공개됐어요. 전자책 링크가 곧 올라와요." : fmtFull(f.dataset.date) + "에 자동으로 열려요. 조금만 기다려 주세요!");
+      else if (k === "gift") { e.preventDefault(); fcToast(f.dataset.open === "1" ? "공개됐어요. 전자책 링크가 곧 올라와요." : lockWhen(f.dataset.date) + "에 자동으로 열려요. 조금만 기다려 주세요!"); }
       else if (k === "nolink") { e.preventDefault(); fcToast("신청 페이지가 곧 열려요."); }
+      else if (k === "v-prev" || k === "v-next" || k === "v-go") {
+        const n = (DB.freeOf(insIdFromHash()).videos.items || []).filter((x) => DB.youtubeId(x.youtube)).length || 1;
+        vIdx = k === "v-go" ? Number(f.dataset.i) : (vIdx + (k === "v-next" ? 1 : -1) + n) % n;
+        const y = window.scrollY; renderFree(insIdFromHash()); window.scrollTo(0, y);
+      }
       return;
     }
     const a = e.target.closest("[data-lp-scroll]");

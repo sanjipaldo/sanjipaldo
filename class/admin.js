@@ -896,6 +896,8 @@
     return '<div class="a-lp-rows">' + list.map((row, i) => '<div class="a-lp-row">' +
         cols.map((c) => c[2] === "select"
           ? '<select class="a-input a-sm" data-lp="' + path + "." + i + "." + c[0] + '" aria-label="' + esc(c[1]) + '">' + c[3].map((o) => '<option value="' + o[0] + '"' + ((row[c[0]] || c[3][0][0]) === o[0] ? " selected" : "") + ">" + esc(c[1]) + " · " + esc(o[1]) + "</option>").join("") + "</select>"
+          : c[2] === "datetime"
+          ? '<input class="a-input a-sm" type="datetime-local" data-lp="' + path + "." + i + "." + c[0] + '" value="' + esc(row[c[0]] || "") + '" aria-label="' + esc(c[1]) + '" title="' + esc(c[1]) + '">'
           : c[2] === "date"
           ? '<input class="a-input a-sm" type="date" data-lp="' + path + "." + i + "." + c[0] + '" value="' + esc(row[c[0]] || "") + '" aria-label="' + esc(c[1]) + '" title="' + esc(c[1]) + '">'
           : c[2] === "check"
@@ -934,18 +936,34 @@
         '<div class="a-lp-body">' + (hints[k] ? '<p class="a-hint" style="margin:0">' + icon("alert", "xs") + " " + esc(hints[k]) + "</p>" : "") + bodyFn(k) + "</div></details>";
     }).join("");
   }
-  const FREE_HINT = { countdown: "아래 ‘강의 날짜·시간’까지 남은 시간이 1초 단위로 줄어들어요.", question: "‘질문 받는 주소’를 비워 두면 이 페이지에서 바로 질문을 받아요. 받은 질문은 이 화면 맨 아래에 모여요. 질문을 남기면 ‘무료강의 신청’ 주소로 이어져요.", gifts: "선물마다 공개 날짜를 정하면 그날 자동으로 잠금이 풀려요. 전자책 주소(구글 드라이브 등)를 넣으면 표지를 눌러 열 수 있어요.", videos: "유튜브 주소를 넣은 영상만 보여요.", kakao: "오픈채팅 주소가 없으면 이 칸은 보이지 않아요.", live: "‘신청 주소’에 무료강의 신청 페이지(구글폼·아이비클래스 등)를 넣어 주세요. 사진이 없으면 날짜와 제목으로 포스터를 자동으로 만들어요." };
+  const FREE_HINT = {
+    countdown: "강의 날짜·시간까지 남은 시간이 1초 단위로 줄어들어요. 시간이 지나면 ‘LIVE’로 바뀌어요.",
+    videos: "유튜브 주소를 넣은 영상만 보여요. 3개를 넣으면 doogo.site처럼 좌·가운데·우로 넘겨 볼 수 있어요. 강의가 시작되면 자동으로 숨겨져요.",
+    question: "‘질문 받는 주소’에 구글폼 같은 링크를 넣으면 버튼이 그 주소로 바로 열려요. 비워 두면 이 페이지에서 질문을 받아 아래 ‘받은 사전 질문’에 모아요.",
+    gifts: "선물마다 공개 날짜·시간을 정하면 그때 자동으로 잠금이 풀리고 표지를 누르면 전자책 주소가 열려요. ‘지금 공개’를 켜면 날짜와 상관없이 바로 열려요.",
+    kakao: "강사님 오픈채팅방 주소를 넣으면 노란 ‘입장하기’ 버튼이 생겨요. 주소가 없으면 이 칸은 보이지 않아요.",
+    about: "비워 두면 ‘강의 소개 페이지’의 강사 소개를 가져와요.",
+    live: "썸네일·플랫폼 로고·문구·신청 링크를 언제든 바꿀 수 있어요. 썸네일이 없으면 날짜와 제목으로 자동으로 만들어요. 썸네일은 가로 16:9 (예: 1920×1067)가 가장 잘 맞아요.",
+    faq: "무료강의를 신청하려는 분들이 궁금해할 질문을 적어요. 질문이 하나도 없으면 이 칸은 보이지 않아요.",
+    apply: "신청 링크를 비워 두면 ‘진행 예정 강의’의 신청 링크로 연결돼요."
+  };
   function freeSectionBody(k) {
     switch (k) {
       case "countdown": return lpField("liveAt", "강의 날짜 · 시간", "datetime");
-      case "question": return lpField("question.badge", "작은 배지") + lpField("question.title", "제목") + lpField("question.desc", "설명", "textarea") + '<div class="a-form-row">' + lpField("question.label", "버튼 글자") + lpField("question.url", "질문 받는 주소 (선택)", "url", "구글폼 등. 비우면 이 페이지에서 질문을 받아요") + "</div>" + lpField("question.note", "버튼 아래 안내");
-      case "gifts": return '<div class="a-form-row">' + lpField("gifts.kicker", "작은 영문 제목") + lpField("gifts.title", "제목") + "</div>" + lpField("gifts.desc", "설명", "textarea") +
-        lpRows("gifts.items", [["title", "전자책 제목"], ["openAt", "공개 날짜", "date"], ["color", "표지 색", "select", [["blue", "파랑"], ["teal", "청록"], ["gold", "골드"], ["pink", "핑크"], ["dark", "블랙"], ["accent", "강사 색"]]], ["url", "전자책 주소 (https://)"], ["desc", "소개", "textarea"]], "선물 추가");
-      case "videos": return '<div class="a-form-row">' + lpField("videos.kicker", "작은 영문 제목") + lpField("videos.title", "제목") + "</div>" + lpRows("videos.items", [["title", "영상 제목"], ["youtube", "유튜브 주소"]], "영상 추가");
-      case "kakao": return lpField("kakao.badge", "작은 배지") + lpField("kakao.title", "제목") + lpField("kakao.desc", "설명", "textarea") + '<div class="a-form-row">' + lpField("kakao.label", "버튼 글자") + lpField("kakao.url", "오픈채팅 주소", "url") + "</div>" + lpField("kakao.note", "버튼 아래 안내");
-      case "live": return '<div class="a-form-row">' + lpField("live.kicker", "작은 영문 제목") + lpField("live.title", "제목") + "</div>" + lpField("live.desc", "설명") +
-        '<div class="a-form-row">' + lpField("live.tag", "사진 위 배지") + lpField("live.platform", "강의 플랫폼 (예: 아이비클래스)") + "</div>" + lpField("live.summary", "강의 소개", "textarea") + lpField("live.points", "이런 걸 배워요 (한 줄에 하나)", "lines") +
-        '<div class="a-form-row">' + lpField("live.label", "신청 버튼 글자") + lpField("live.url", "무료강의 신청 주소", "url") + "</div>" + lpField("live.note", "버튼 아래 안내") + lpField("live.image", "강의 포스터 사진 (선택)", "image");
+      case "videos": return '<div class="a-form-row">' + lpField("videos.kicker", "작은 영문 제목") + lpField("videos.title", "제목") + "</div>" + lpField("videos.desc", "설명") +
+        lpRows("videos.items", [["title", "영상 제목"], ["channel", "채널명"], ["youtube", "유튜브 주소"]], "영상 추가");
+      case "question": return lpField("question.badge", "작은 배지") + lpField("question.title", "제목") + lpField("question.desc", "설명", "textarea") + '<div class="a-form-row">' + lpField("question.label", "버튼 글자") + lpField("question.url", "질문 받는 주소 (구글폼 등)", "url", "비우면 이 페이지에서 질문을 받아요") + "</div>" + lpField("question.note", "버튼 아래 안내");
+      case "gifts": return '<div class="a-form-row">' + lpField("gifts.kicker", "작은 영문 제목") + lpField("gifts.title", "제목") + "</div>" + lpField("gifts.desc", "설명 (두 번째 줄)") +
+        lpRows("gifts.items", [["title", "전자책 제목"], ["openAt", "공개 날짜 · 시간", "datetime"], ["color", "표지 색", "select", [["blue", "파랑"], ["cyan", "청록"], ["ice", "골드"]]], ["forceOpen", "지금 공개", "check"], ["url", "전자책 주소 (https://)"], ["desc", "소개", "textarea"]], "선물 추가");
+      case "kakao": return lpField("kakao.url", "카카오톡 오픈채팅 주소", "url", "강사님마다 자기 오픈채팅방 주소를 넣어요") + lpField("kakao.badge", "작은 배지") + lpField("kakao.title", "제목") + lpField("kakao.desc", "설명", "textarea") + '<div class="a-form-row">' + lpField("kakao.label", "버튼 글자") + lpField("kakao.note", "버튼 아래 안내") + "</div>";
+      case "about": return '<div class="a-form-row">' + lpField("about.name", "이름") + lpField("about.role", "한 줄 소개") + "</div>" + lpField("about.body", "소개 글", "textarea") + lpField("about.career", "경력 · 이력 (한 줄에 하나)", "lines") + lpField("about.photo", "강사 사진", "image") + lpField("about.title", "작은 제목");
+      case "live": return lpField("live.image", "썸네일 (가로 16:9)", "image") + '<div class="a-form-row">' + lpField("live.tag", "썸네일 위 배지") + lpField("live.platform", "강의 플랫폼 이름 (예: 아이비클래스)") + "</div>" + lpField("live.platformLogo", "플랫폼 로고", "image") +
+        lpField("live.liveTitle", "강의 제목 (줄바꿈 가능, 비우면 맨 위 헤드라인)", "textarea") + lpField("live.summary", "강의 소개", "textarea") + lpField("live.points", "이런 걸 배워요 (한 줄에 하나)", "lines") +
+        '<div class="a-form-row">' + lpField("live.label", "신청 버튼 글자") + lpField("live.url", "무료강의 신청 주소", "url") + "</div>" + lpField("live.note", "버튼 아래 안내") +
+        '<div class="a-form-row">' + lpField("live.kicker", "작은 영문 제목") + lpField("live.title", "칸 제목") + "</div>" + lpField("live.desc", "칸 설명");
+      case "faq": return '<div class="a-form-row">' + lpField("faq.kicker", "작은 영문 제목") + lpField("faq.title", "제목") + "</div>" + lpRows("faq.items", [["q", "질문"], ["a", "답변", "textarea"]], "질문 추가") + btn(icon("clipboard", "sm") + "Q&A 자주 묻는 질문에서 6개 가져오기", "lp-faq-import", "a-btn-ghost a-btn-sm");
+      case "apply": return lpField("apply.badge", "작은 배지") + lpField("apply.title", "제목") + lpField("apply.desc", "설명", "textarea") + '<div class="a-form-row">' + lpField("apply.price", "가격 (선택, 예: 무료)") + lpField("apply.original", "원래 가격 (취소선, 선택)") + "</div>" +
+        lpField("apply.includes", "신청하면 받는 것 (한 줄에 하나)", "lines") + '<div class="a-form-row">' + lpField("apply.label", "버튼 글자") + lpField("apply.url", "신청 주소", "url", "비우면 ‘진행 예정 강의’의 신청 주소") + "</div>" + lpField("apply.note", "버튼 아래 안내");
     }
     return "";
   }
@@ -954,7 +972,7 @@
     const F = lpDraft(), iid = IID(), c = C();
     const url = location.href.split("#")[0] + "#/free/" + iid;
     const qs = (c.freeQuestions || []).slice().reverse();
-    return head("무료강의 페이지", "무료강의를 신청한 분들이 강의 전에 보는 페이지예요. 강의 시작 카운트다운, 사전 질문, 날짜별로 열리는 선물 전자책, 오픈채팅, 신청 안내를 한 곳에서 보여 줘요. 무료강의 → 유료 결제 → 수강생 플랫폼으로 이어지는 첫 단계예요.",
+    return head("무료강의 페이지", "doogo.site와 같은 화면이에요. 강의 일정·카운트다운, YouTube 영상, 질문 링크, 날짜가 되면 열리는 선물 전자책, 카카오톡 오픈채팅, 강사 소개, 진행 예정 강의(썸네일·신청 링크), 자주 묻는 질문, 신청하기를 여기서 모두 바꿀 수 있어요.",
         '<a class="a-btn a-btn-outline" href="#/free/' + iid + '">' + icon("eye", "sm") + "페이지 보기</a>" + btn(icon("check", "sm") + "저장", "lp-save", "a-btn-primary")) +
       '<section class="a-card a-lp-top"><label class="a-check"><input type="checkbox" id="lp-pub"' + (F.published ? " checked" : "") + '><span><b>공개하기</b> · 끄면 강사님과 마스터만 볼 수 있어요</span></label>' +
         '<div class="a-lp-url"><input class="a-input a-sm a-mono" id="lp-url" value="' + esc(url) + '" readonly aria-label="페이지 주소">' + btn(icon("clipboard", "sm") + "주소 복사", "lp-copy", "a-btn-ghost a-btn-sm") + "</div>" +
@@ -1460,7 +1478,7 @@
       case "lp-row-del": { const L = lpDraft(); lpGet(L, d.path).splice(Number(d.i), 1); ui.lpDirty = true; render(); break; }
       case "lp-row-move": { const L = lpDraft(), list = lpGet(L, d.path), i = Number(d.i), j = i + Number(d.dir); if (j < 0) break; [list[i], list[j]] = [list[j], list[i]]; ui.lpDirty = true; render(); break; }
       case "lp-img-del": lpSet(lpDraft(), d.path, ""); ui.lpDirty = true; render(); break;
-      case "lp-faq-import": { const L = lpDraft(); L.faq.items = C().faqs.slice(0, 6).map((f) => ({ q: f.q, a: f.a })); ui.lpDirty = true; ui.lpOpen.faq = true; render(); toast("자주 묻는 질문 " + L.faq.items.length + "개를 가져왔어요. 저장을 눌러 주세요."); break; }
+      case "lp-faq-import": { const L = lpDraft(); L.faq = L.faq || {}; L.faq.items = C().faqs.slice(0, 6).map((f) => ({ q: f.q, a: f.a })); ui.lpDirty = true; ui.lpOpen.faq = true; render(); toast("자주 묻는 질문 " + L.faq.items.length + "개를 가져왔어요. 저장을 눌러 주세요."); break; }
       case "lp-save": {
         const c = C(), field = ui.lpKind === "free" ? "freeClass" : "landing", prev = c[field];
         c[field] = DB.clone(lpDraft());
