@@ -305,7 +305,8 @@
   }
 
   // 홈 ‘자주 찾는 페이지’ — 강사가 따로 정하지 않았으면 기본 목록 (외부 링크는 주소가 있을 때만)
-  const QL_ICONS = ["megaphone", "help", "clipboard", "bug", "sparkles", "play", "message", "book", "calendar", "library", "flame", "award", "link", "store", "users", "video"];
+  const QL_ICONS = ["megaphone", "help", "clipboard", "bug", "sparkles", "play", "message", "book", "calendar", "library", "flame", "award", "link", "store", "users", "video", "layers"];
+  // 윗줄 = 강의 플랫폼 안 메뉴(기본 색), 아랫줄 = 외부 링크(브랜드 색). color 를 주면 그 색 카드로 보인다
   function defaultQuickLinks(c) {
     const b = c.brand || {};
     return [
@@ -313,9 +314,10 @@
       { id: "ql2", title: "자주 묻는 질문", desc: "수강 · 과제 · 수료 궁금증 모음", url: "#/qna", icon: "help" },
       { id: "ql3", title: "서류 준비 가이드", desc: "1주차 서류 발급 단계별 안내", url: "#/docs", icon: "clipboard" },
       { id: "ql4", title: "요청사항", desc: "오류 · 불편을 강사님께 바로 알리기", url: "#/qna/requests", icon: "bug" },
-      { id: "ql5", title: "24시 AI봇", desc: "과제 · 서류 · 일정 바로 물어보기", url: "#/bot", icon: "sparkles" },
-      { id: "ql6", title: (b.instructor || "강사") + " 유튜브", desc: "실전 노하우 영상 모음", url: b.youtubeChannel || "", icon: "play" },
-      { id: "ql7", title: "카카오톡 문의", desc: "1:1 상담 · 빠른 답변", url: b.kakaoChannel || "", icon: "message" }
+      { id: "ql6", title: (b.instructor || "강사") + " 유튜브", desc: "실전 노하우 영상 모음", url: b.youtubeChannel || "", icon: "play", color: "#ff0000" },
+      { id: "ql8", title: "네이버 카페", desc: "두고마켓 회원 게시판 · 정보 나눔", url: "https://cafe.naver.com/doogomarket", icon: "users", color: "#03c75a" },
+      { id: "ql9", title: "두고커넥트", desc: "건강식품 제조 · OEM 파트너", url: "https://www.doogoconnect.com/", icon: "layers", color: "#0a5de2" },
+      { id: "ql10", title: "두고푸드", desc: "식품 도매몰 · 사업자 전용가", url: "https://www.doogofood.com/", icon: "store", color: "#f97316" }
     ];
   }
   const quickLinksOf = (c) => (Array.isArray(c.quickLinks) ? c.quickLinks : defaultQuickLinks(c));
@@ -502,6 +504,18 @@
         c.weeks.concat(...(c.curricula || []).map((cu) => cu.weeks)).forEach((w) => w.missions.forEach((m) => { if (!(m.templates || []).length && seedT[m.id]) m.templates = clone(seedT[m.id]); }));
       });
       db.flags.templatesSeeded = true; save();
+    }
+    // 자주 찾는 페이지 v2 (한 번만): AI봇 빼고 유튜브 · 네이버 카페 · 두고커넥트 · 두고푸드를 브랜드 색으로
+    if (!db.flags.quickLinksV2) {
+      Object.keys(db.content).forEach((id) => {
+        const c = db.content[id];
+        if (!Array.isArray(c.quickLinks)) return;
+        const defs = defaultQuickLinks(c);
+        c.quickLinks = c.quickLinks.filter((l) => !(l.id === "ql5" && l.url === "#/bot") && !(l.id === "ql7" && !l.url));
+        c.quickLinks.forEach((l) => { const d = defs.find((x) => x.id === l.id); if (d && d.color && !l.color) l.color = d.color; });
+        defs.filter((d) => d.color && !c.quickLinks.some((l) => l.id === d.id || (l.url && l.url === d.url))).forEach((d) => c.quickLinks.push(d));
+      });
+      db.flags.quickLinksV2 = true; save();
     }
     // 무료강의 페이지 기본 문구 (한 번만, doogo.site 내용)
     if (!db.flags.freeSeeded2) {

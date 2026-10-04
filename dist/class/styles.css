@@ -1153,3 +1153,11 @@ body.lib-gated #main > .page { filter: blur(6px); pointer-events: none; user-sel
 .mcard-go { grid-column: 2; justify-self: end; margin-top: 10px; }
 @media (max-width: 900px) { .ql-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .mcard { padding: 18px; } .mcard-main { padding-right: 0; } .mcard-state { position: static; grid-column: 2; justify-self: start; margin-top: 8px; } .mcard-go { width: 100%; justify-content: center; grid-column: 1 / -1; } .ql-card { padding: 16px; } }
+/* 자주 찾는 페이지: 아랫줄 외부 링크는 브랜드 색 카드 */
+.ql-outer { margin-top: 12px; }
+.ql-card.ql-color { background: var(--ql); color: #fff; }
+.ql-card.ql-color .ql-ic { background: rgba(255, 255, 255, .2); color: #fff; }
+.ql-card.ql-color b { color: #fff; }
+.ql-card.ql-color span:not(.ql-ic):not(.ql-ext) { color: rgba(255, 255, 255, .88); }
+.ql-card.ql-color .ql-ext { color: rgba(255, 255, 255, .85); }
+.ql-card.ql-color:hover { box-shadow: 0 16px 32px -16px var(--ql); }

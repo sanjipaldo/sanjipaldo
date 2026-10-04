@@ -416,11 +416,15 @@
   function quickLinks() {
     const list = DB.quickLinksOf(D).filter((l) => l.url && (/^https?:/i.test(l.url) || linkOk([l.title, l.url])));
     if (!list.length) return "";
-    return '<div class="section-head"><h2>자주 찾는 페이지</h2><span class="hint">바로 가기</span></div><div class="ql-grid">' + list.map((l) => {
-      const ext = /^https?:/i.test(l.url);
-      return '<a class="card ql-card" href="' + esc(l.url) + '"' + (ext ? ' target="_blank" rel="noopener"' : "") + '><span class="ql-ic">' + icon(l.icon || "link") + "</span>" + (ext ? '<span class="ql-ext">' + icon("arrowUpRight", "sm") + "</span>" : "") +
+    const card = (l) => {
+      const ext = /^https?:/i.test(l.url), col = /^#[0-9a-f]{6}$/i.test(l.color || "") ? l.color : "";
+      return '<a class="card ql-card' + (col ? " ql-color" : "") + '" href="' + esc(l.url) + '"' + (ext ? ' target="_blank" rel="noopener"' : "") + (col ? ' style="--ql:' + col + '"' : "") + '><span class="ql-ic">' + icon(l.icon || "link") + "</span>" + (ext ? '<span class="ql-ext">' + icon("arrowUpRight", "sm") + "</span>" : "") +
         "<b>" + esc(l.title) + "</b>" + (l.desc ? "<span>" + esc(l.desc) + "</span>" : "") + "</a>";
-    }).join("") + "</div>";
+    };
+    const inner = list.filter((l) => !/^https?:/i.test(l.url)), outer = list.filter((l) => /^https?:/i.test(l.url));
+    return '<div class="section-head"><h2>자주 찾는 페이지</h2><span class="hint">바로 가기</span></div>' +
+      (inner.length ? '<div class="ql-grid">' + inner.map(card).join("") + "</div>" : "") +
+      (outer.length ? '<div class="ql-grid ql-outer">' + outer.map(card).join("") + "</div>" : "");
   }
   // 이번 주(열린 주차) 또는 다음 주(아직 안 열린 주차) 한 장: 과제 공개일은 주차 시작일에 맞춰 자동으로 열린다
   function weekFocusCard() {

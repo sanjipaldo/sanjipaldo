@@ -612,7 +612,8 @@
         F("week", "보이는 주차", "number", { min: 1, hint: "비우거나 1이면 처음 들어왔을 때 한 번(온보딩). 2 이상이면 그 주차가 열릴 때 ‘N주차 시작 가이드’로 다시 떠요." })] },
     ql: { name: "자주 찾는 페이지", list: (c) => c.quickLinks || (c.quickLinks = DB.defaultQuickLinks(c)), idp: "ql", init: () => ({ icon: "link" }),
       fields: [F("title", "이름"), F("desc", "한 줄 설명"), F("url", "주소", "text", { hint: "수강생 화면(#/notices, #/qna, #/docs, #/qna/requests, #/bot, #/library …) 또는 https:// 외부 주소(유튜브·카페·카카오톡 등, 새 창으로 열려요)" }),
-        F("icon", "아이콘", "select", { options: () => DB.QL_ICONS.map((k) => [k, ({ megaphone: "확성기 (공지)", help: "물음표 (FAQ)", clipboard: "클립보드 (서류)", bug: "벌레 (오류 신고)", sparkles: "반짝이 (AI)", play: "재생 (유튜브)", message: "말풍선 (카톡)", book: "책", calendar: "달력", library: "자료실", flame: "불꽃 (동기부여)", award: "메달 (수료증)", link: "링크", store: "가게", users: "사람들 (카페)", video: "비디오 (라이브)" })[k] || k]) })] },
+        F("color", "카드 색 (외부 링크용 · 비우면 기본 색)", "text", { hint: "예: 유튜브 #ff0000 · 네이버 #03c75a · 두고 #0a5de2. # 뒤에 6자리 색 코드를 적어요." }),
+        F("icon", "아이콘", "select", { options: () => DB.QL_ICONS.map((k) => [k, ({ layers: "층층 (제조 · OEM)",  megaphone: "확성기 (공지)", help: "물음표 (FAQ)", clipboard: "클립보드 (서류)", bug: "벌레 (오류 신고)", sparkles: "반짝이 (AI)", play: "재생 (유튜브)", message: "말풍선 (카톡)", book: "책", calendar: "달력", library: "자료실", flame: "불꽃 (동기부여)", award: "메달 (수료증)", link: "링크", store: "가게", users: "사람들 (카페)", video: "비디오 (라이브)" })[k] || k]) })] },
     ann: { name: "강사 공지", list: () => DB.data.announcements, idp: "an", init: () => ({ date: todayStr(), pinned: false }),
       fields: [F("title", "제목"), F("body", "내용", "textarea", { rows: 6, rich: true }), F("date", "날짜", "date"), F("pinned", "맨 위에 고정", "checkbox")] },
     mv: { name: "동기부여 영상", prepend: true, list: (c) => c.motivation, idp: "mv", init: () => ({ date: todayStr() }),
@@ -947,8 +948,8 @@
       '<section class="a-card">' + simpleList("guide", C().guide, (g) => '<div class="a-item-main"><b>' + esc(g.title) + "</b><small>" + esc([g.desc, g.url].filter(Boolean).join(" · ")) + "</small></div>" + pill((Number(g.week) || 1) <= 1 ? "처음 한 번" : g.week + "주차", (Number(g.week) || 1) <= 1 ? "mute" : "info"), "단계가 없어요. 단계가 없으면 홈에 시작 가이드가 보이지 않아요.") + "</section>" +
       '<p class="a-hint">' + icon("alert", "xs") + " 예: 오픈채팅방 입장 → 공지 읽기 → 1주차 첫 강의 보기 → AI봇에게 질문해 보기 · 2주차: 2주차 라이브 다시보기 → 마진 계산기 써 보기</p>" +
       '<div class="a-card-head" style="margin-top:28px"><h2 class="a-grow">자주 찾는 페이지</h2>' + btn("기본 목록으로", "ql-reset", "a-btn-ghost a-btn-sm") + addBtn("ql", "페이지 추가") + "</div>" +
-      '<p class="a-muted" style="margin:0 0 12px">수강생 홈 맨 아래 공지사항 밑에 카드로 보여요. 꺼진 메뉴나 주소가 빈 카드는 수강생에게 보이지 않아요.</p>' +
-      '<section class="a-card">' + simpleList("ql", qls, (l) => '<div class="a-item-main"><b>' + icon(l.icon || "link", "xs") + " " + esc(l.title) + "</b><small>" + esc([l.desc, l.url || "주소 없음 (숨김)"].filter(Boolean).join(" · ")) + "</small></div>" + (/^https?:/i.test(l.url || "") ? pill("외부 링크", "info") : !l.url ? pill("숨김", "mute") : ""), "자주 찾는 페이지가 없어요.") + "</section>";
+      '<p class="a-muted" style="margin:0 0 12px">수강생 홈 공지사항 밑에 카드로 보여요. 플랫폼 안 메뉴는 윗줄(기본 색), https:// 외부 링크는 아랫줄(카드 색)로 나뉘어요. 꺼진 메뉴나 주소가 빈 카드는 보이지 않아요.</p>' +
+      '<section class="a-card">' + simpleList("ql", qls, (l) => '<div class="a-item-main"><b>' + icon(l.icon || "link", "xs") + " " + esc(l.title) + "</b><small>" + esc([l.desc, l.url || "주소 없음 (숨김)"].filter(Boolean).join(" · ")) + "</small></div>" + (l.color ? '<span class="a-ql-swatch" style="background:' + esc(l.color) + '"></span>' : "") + (/^https?:/i.test(l.url || "") ? pill("외부 링크 · 아랫줄", "info") : !l.url ? pill("숨김", "mute") : pill("플랫폼 · 윗줄", "mute")), "자주 찾는 페이지가 없어요.") + "</section>";
   }
   function pageMenus() {
     ui.mMenuIns = IID();
@@ -1646,7 +1647,7 @@
       }
       case "page-edit": pageForm(d.key); break;
       case "libnote-edit": libNoteForm(); break;
-      case "ql-reset": confirmModal("자주 찾는 페이지", "기본 목록(공지사항 · 자주 묻는 질문 · 서류 준비 가이드 · 요청사항 · AI봇 · 유튜브 · 카카오톡)으로 되돌릴까요?", "되돌리기", false, () => { delete C().quickLinks; commit("기본 목록으로 되돌렸어요."); }); break;
+      case "ql-reset": confirmModal("자주 찾는 페이지", "기본 목록(윗줄: 공지사항 · 자주 묻는 질문 · 서류 준비 가이드 · 요청사항 / 아랫줄: 유튜브 · 네이버 카페 · 두고커넥트 · 두고푸드)으로 되돌릴까요?", "되돌리기", false, () => { delete C().quickLinks; commit("기본 목록으로 되돌렸어요."); }); break;
       case "libnote-reset": delete C().libNotice; DB.save(); commit("기본 문구로 되돌렸어요."); break;
       case "backup-copy": {
         const ta = document.getElementById("backup-out");
