@@ -54,7 +54,7 @@ function makeEnv() {
   const props = {};
   const sent = [];
   const inserted = [];
-  const yt = { threads: [], subscribed: {}, quotaFailAfter: Infinity };
+  const yt = { threads: [], subscribed: {}, quotaFailAfter: Infinity, uploads: [], topLevel: [] };
   let mailQuota = 100;
   const ctx = {
     console,
@@ -67,7 +67,7 @@ function makeEnv() {
     CacheService: { getScriptCache: () => ({ get: () => null, put: () => {} }) },
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) },
     Logger: { log: () => {} },
-    Session: { getScriptTimeZone: () => 'Asia/Seoul' },
+    Session: { getScriptTimeZone: () => 'Asia/Seoul', getEffectiveUser: () => ({ getEmail: () => 'owner@test.com' }) },
     Utilities: { formatDate: (d, tz, f) => d.toISOString().slice(0, 10).replace(/-/g, '') },
     MailApp: {
       getRemainingDailyQuota: () => mailQuota,
@@ -75,7 +75,14 @@ function makeEnv() {
     },
     YouTube: {
       Channels: { list: () => ({ items: [{ id: 'UC_ME', snippet: { title: '두고TV' }, statistics: { subscriberCount: '1000' }, contentDetails: { relatedPlaylists: { uploads: 'UU_ME' } } }] }) },
+      PlaylistItems: {
+        list: () => ({ items: yt.uploads.map(v => ({ contentDetails: { videoId: v.id } })) }),
+      },
+      Videos: {
+        list: (part, p) => ({ items: yt.uploads.filter(v => p.id.split(',').includes(v.id)).map(v => Object.assign({ statistics: {} }, v)) }),
+      },
       CommentThreads: {
+        insert: (body) => { yt.topLevel.push(body.snippet); return {}; },
         list: (part, p) => {
           const start = p.pageToken ? Number(p.pageToken) : 0;
           const items = yt.threads.slice(start, start + 2); // 페이지 넘김 테스트용으로 2개씩
@@ -302,6 +309,78 @@ test('테스트모드 코드로도 메일 흐름을 끝까지 시험할 수 있�
   const code = rows(env, '답글기록')[0][8];
   env.run(`onFormSubmitHandler({ namedValues: { '이메일 주소': ['me@test.com'], '인증코드': ['${code}'] } })`);
   assert.strictEqual(env.sent.length, 1);
+});
+
+function upload(id, title, minsAgo, privacy = 'public') {
+  return { id, snippet: { title, publishedAt: new Date(Date.now() - minsAgo * 60000).toISOString() }, status: { privacyStatus: privacy } };
+}
+
+test('새 영상 자동화: 처음엔 기준만 잡고, 이후 공개된 새 영상에 캠페인 적용 + 안내 댓글 + 알림 메일', () => {
+  const env = makeEnv();
+  setupWithLink(env);
+  setSetting(env, '테스트모드', '아니오');
+  const camp = env.sheet('캠페인').data;
+  assert.strictEqual(camp[0][9], '새 영상 자동 적용');
+  assert.strictEqual(camp[1][9], true);
+  // 두 번째 캠페인: 특정 영상 전용 + 자동 적용 안 함
+  camp.push([true, 'B사', 'OLDVIDEO001', '비사', '포함', '{name} {form_code}', 'https://b.example/ref', '', '', false, 'B사 안내']);
+  // 후커블은 특정 영상 전용 + 자동 적용
+  camp[1][2] = 'https://youtu.be/L1X_BF5mha4';
+
+  env.yt.uploads = [upload('OLDVIDEO001', '예전 영상', 60 * 24)];
+  env.run('checkComments({})');                       // 처음: 기준 시점만 기록
+  assert.ok(env.props.JARVIS_SINCE);
+  assert.strictEqual(env.yt.topLevel.length, 0);
+
+  env.props.JARVIS_SINCE = String(Date.now() - 60 * 60000);  // 1시간 전에 켰다고 가정
+  env.yt.uploads = [
+    upload('NEWVIDEO001', '새 영상 🎉', 10),
+    upload('PRIVATE0001', '비공개 영상', 5, 'private'),
+    upload('OLDVIDEO001', '예전 영상', 60 * 24),
+  ];
+  const sum = env.run('checkComments({})');
+  assert.strictEqual(sum.newVideos.length, 1, JSON.stringify(sum));
+  assert.strictEqual(env.yt.topLevel.length, 1);
+  assert.strictEqual(env.yt.topLevel[0].videoId, 'NEWVIDEO001');
+  const ann = env.yt.topLevel[0].topLevelComment.snippet.textOriginal;
+  assert.ok(ann.includes('"후커블"') && ann.includes('후커블 전용'), ann);
+  assert.ok(!ann.includes('B사'));
+  assert.strictEqual(camp[1][2], 'https://youtu.be/L1X_BF5mha4, NEWVIDEO001');
+  assert.strictEqual(camp[2][2], 'OLDVIDEO001');
+  const notice = env.sent.find(m => m.to === 'owner@test.com');
+  assert.ok(notice && notice.subject.includes('새 영상 🎉'));
+  assert.strictEqual(rows(env, '새영상기록')[0][5], '안내 완료');
+
+  // 새 영상 댓글에도 바로 답글이 달림
+  env.yt.threads = [thread('n1', '후커블!', { videoId: 'NEWVIDEO001' })];
+  env.run('checkComments({})');
+  assert.deepStrictEqual(env.inserted.map(i => i.parentId), ['n1']);
+  assert.strictEqual(env.yt.topLevel.length, 1, '같은 새 영상에 안내 댓글을 두 번 달지 않음');
+  assert.ok(rows(env, '내영상').some(r => r[0] === 'NEWVIDEO001'));
+});
+
+test('새 영상 자동화: 테스트모드에서는 댓글·캠페인 목록을 바꾸지 않음, 끄면 동작 안 함', () => {
+  const env = makeEnv();
+  setupWithLink(env);
+  env.sheet('캠페인').data[1][2] = 'L1X_BF5mha4';
+  env.props.JARVIS_SINCE = String(Date.now() - 60 * 60000);
+  env.yt.uploads = [upload('NEWVIDEO001', '새 영상', 10)];
+  env.run('checkComments({})');
+  assert.strictEqual(env.yt.topLevel.length, 0);
+  assert.strictEqual(env.sheet('캠페인').data[1][2], 'L1X_BF5mha4');
+  assert.strictEqual(rows(env, '새영상기록')[0][5], '테스트');
+  env.run('checkComments({})');
+  assert.strictEqual(rows(env, '새영상기록').length, 1);
+
+  const env2 = makeEnv();
+  setupWithLink(env2);
+  setSetting(env2, '테스트모드', '아니오');
+  setSetting(env2, '새 영상 자동화', '아니오');
+  env2.props.JARVIS_SINCE = String(Date.now() - 60 * 60000);
+  env2.yt.uploads = [upload('NEWVIDEO001', '새 영상', 10)];
+  env2.run('checkComments({})');
+  assert.strictEqual(env2.yt.topLevel.length, 0);
+  assert.strictEqual(rows(env2, '새영상기록').length, 0);
 });
 
 let failed = 0;

@@ -1,8 +1,10 @@
 /**
  * ─────────────────────────────────────────────────────────────────
- *  유튜브 댓글 자동 답글 + 레퍼럴 링크 메일 자동 발송 봇 (Google Apps Script)
+ *  나만의 유튜브 채널 AI 자비스 (Google Apps Script)
+ *  유튜브 댓글 자동 답글 + 레퍼럴 링크 메일 자동 발송 + 새 영상 자동 적용
  * ─────────────────────────────────────────────────────────────────
  *  흐름
+ *   0) 새 영상이 올라오면 감지 → 캠페인 자동 적용 + 안내 댓글 + 알림 메일
  *   1) 내 채널 모든 영상의 새 댓글을 주기적으로 확인
  *   2) [캠페인] 시트의 키워드(예: 후커블)가 들어간 댓글에 대댓글 자동 작성
  *      → 대댓글에는 1회용 인증코드 + 신청 폼 링크가 들어갑니다
@@ -23,16 +25,21 @@ const SHEETS = {
   REPLIES: '답글기록',
   MAILS: '메일기록',
   VIDEOS: '내영상',
+  NEWVIDS: '새영상기록',
 };
 
-const CAMPAIGN_HEADERS = ['사용', '제휴사', '대상 영상', '키워드', '일치 방식', '답글 내용', '레퍼럴 링크', '메일 제목', '메일 내용'];
+const APP_NAME = '나만의 유튜브 채널 AI 자비스';
+
+const CAMPAIGN_HEADERS = ['사용', '제휴사', '대상 영상', '키워드', '일치 방식', '답글 내용', '레퍼럴 링크', '메일 제목', '메일 내용', '새 영상 자동 적용', '새 영상 안내 댓글'];
 const REPLY_HEADERS = ['시간', '제휴사', '영상ID', '댓글ID', '작성자', '작성자 채널ID', '댓글 내용', '보낸 답글', '인증코드', '상태', '코드 사용', '비고'];
 const MAIL_HEADERS = ['시간', '제휴사', '이메일', '인증코드', '유튜브 이름', '상태', '비고'];
 const VIDEO_HEADERS = ['영상ID', '제목', '게시일', '조회수', '좋아요', '댓글', '자동 답글', '링크'];
+const NEWVID_HEADERS = ['시간', '영상ID', '제목', '적용된 제휴사', '안내 댓글', '상태', '비고'];
 
 // 답글기록 / 메일기록 열 번호 (0부터)
 const R = { TIME: 0, CAMPAIGN: 1, VIDEO: 2, THREAD: 3, AUTHOR: 4, AUTHOR_ID: 5, TEXT: 6, REPLY: 7, CODE: 8, STATUS: 9, USED: 10, NOTE: 11 };
 const M = { TIME: 0, CAMPAIGN: 1, EMAIL: 2, CODE: 3, NAME: 4, STATUS: 5, NOTE: 6 };
+const NV = { TIME: 0, VIDEO: 1, TITLE: 2, APPLIED: 3, TEXT: 4, STATUS: 5, NOTE: 6 };
 
 // 답글 상태
 const ST = {
@@ -40,6 +47,15 @@ const ST = {
   TEST: '테스트',
   NOT_SUB: '미구독 답글',
   DUP: '중복(답글 안 함)',
+  FAIL: '실패',
+};
+
+// 새 영상 상태
+const NS = {
+  DONE: '안내 완료',
+  NO_TEXT: '적용 완료(안내 댓글 없음)',
+  TEST: '테스트',
+  WAIT: '할당량 대기',
   FAIL: '실패',
 };
 
@@ -69,6 +85,8 @@ const K = {
   NOT_SUB_REPLY: '미구독 답글',
   ONE_PER_PERSON: '같은 사람 한 번만',
   ONE_PER_EMAIL: '같은 이메일 한 번만',
+  NEW_VIDEO: '새 영상 자동화',
+  NOTIFY_EMAIL: '알림 받을 이메일',
   CHANNEL_ID: '내 채널 ID',
   CHANNEL_TITLE: '내 채널 이름',
 };
@@ -87,6 +105,8 @@ const SETTING_DEFS = [
   [K.NOT_SUB_REPLY, '{name}님 댓글 감사합니다! 채널 구독 후 다시 댓글 남겨주시면 {campaign} 혜택 링크를 보내드릴게요 🙏', '{name}, {campaign} 사용 가능'],
   [K.ONE_PER_PERSON, '예', '예 = 같은 유튜브 계정에는 제휴사별로 한 번만 답글 (두 번째 댓글부터는 기록만 남김)'],
   [K.ONE_PER_EMAIL, '예', '예 = 같은 이메일에는 제휴사별로 한 번만 레퍼럴 메일 발송'],
+  [K.NEW_VIDEO, '예', '예 = 새 영상을 올리면 자동 감지 → [캠페인]의 "새 영상 자동 적용" 줄에 추가 + 안내 댓글 작성 + 알림 메일'],
+  [K.NOTIFY_EMAIL, '', '새 영상 감지 알림을 받을 메일 (비우면 이 구글 계정). 알림을 끄려면 "끄기"'],
   [K.CHANNEL_ID, '', '자동 입력 (메뉴 > ② 내 채널 확인)'],
   [K.CHANNEL_TITLE, '', '자동 입력'],
 ];
@@ -113,6 +133,9 @@ const SAMPLE_CAMPAIGN = [
     '👉 {link}\n\n' +
     '앞으로도 좋은 영상으로 찾아뵐게요. 감사합니다!\n' +
     '- {channel} 드림',
+  true,
+  '📢 이 영상 댓글에 "{keyword}" 를 남겨주시면 {campaign} 전용 혜택 링크를 답글로 보내드려요!\n' +
+    '좋아요 · 구독은 큰 힘이 됩니다 🙏',
 ];
 
 const DASH_ROWS = [
@@ -123,6 +146,7 @@ const DASH_ROWS = [
   ['발송 안 된 접수 (오류·중복 등)', `=COUNTA('${SHEETS.MAILS}'!F2:F)-COUNTIF('${SHEETS.MAILS}'!F:F,"${MS.SENT}")`],
   ['남은 메일 발송 한도 (오늘)', ''],
   ['자동 실행', '꺼짐'],
+  ['마지막 새 영상', ''],
   ['마지막 댓글 확인', ''],
   ['마지막 실행 결과', ''],
 ];
@@ -140,13 +164,13 @@ const HANDLERS = ['checkComments', 'refreshVideos', 'onFormSubmitHandler'];
 
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('🤖 유튜브 자동화')
+    .createMenu('🤖 AI 자비스')
     .addItem('① 처음 설정 (시트 만들기)', 'setupSheets')
     .addItem('② 내 채널 확인', 'checkMyChannel')
     .addItem('③ 신청 구글폼 만들기', 'setupForm')
     .addItem('④ 자동 실행 켜기', 'installTriggers')
     .addSeparator()
-    .addItem('지금 댓글 확인하기', 'checkComments')
+    .addItem('지금 댓글 · 새 영상 확인하기', 'checkComments')
     .addItem('밀린 접수 · 실패 메일 다시 처리', 'processPendingResponses')
     .addItem('내 영상 목록 새로고침', 'refreshVideos')
     .addSeparator()
@@ -182,10 +206,11 @@ function setupSheets() {
   });
 
   const camp = ss.getSheetByName(SHEETS.CAMPAIGNS) || ss.insertSheet(SHEETS.CAMPAIGNS);
-  if (camp.getLastRow() === 0) {
-    camp.getRange(1, 1, 1, CAMPAIGN_HEADERS.length).setValues([CAMPAIGN_HEADERS]);
-    camp.getRange(2, 1, 1, SAMPLE_CAMPAIGN.length).setValues([SAMPLE_CAMPAIGN]);
-    styleHeader_(camp, CAMPAIGN_HEADERS.length);
+  const freshCampaign = camp.getLastRow() === 0;
+  if (freshCampaign) {
+    // 체크박스를 먼저 넣고 예시 줄을 써야 체크 상태가 유지됩니다 (insertCheckboxes 는 값을 false 로 초기화)
+    camp.getRange(1, 1, 1, 9).setValues([CAMPAIGN_HEADERS.slice(0, 9)]);
+    styleHeader_(camp, 9);
     camp.getRange('A2:A200').insertCheckboxes();
     camp.getRange('E2:E200').setDataValidation(
       SpreadsheetApp.newDataValidation().requireValueInList(['포함', '정확히'], true).build());
@@ -202,11 +227,14 @@ function setupSheets() {
     camp.getRange('G1').setNote('구독자 메일에만 들어가는 비밀 링크. 유튜브 댓글에는 절대 노출되지 않습니다.');
     camp.getRange('I1').setNote('{name} {email} {campaign} {link} {code} {channel} 사용 가능. {link}를 빼먹으면 맨 아래에 자동으로 붙습니다.');
   }
+  upgradeCampaignSheet_(camp);
+  if (freshCampaign) camp.getRange(2, 1, 1, SAMPLE_CAMPAIGN.length).setValues([SAMPLE_CAMPAIGN]);
 
   const replies = ensureLogSheet_(ss, SHEETS.REPLIES, REPLY_HEADERS);
   replies.getRange('I:I').setNumberFormat('@');
   ensureLogSheet_(ss, SHEETS.MAILS, MAIL_HEADERS).getRange('D:D').setNumberFormat('@');
   ensureLogSheet_(ss, SHEETS.VIDEOS, VIDEO_HEADERS);
+  ensureLogSheet_(ss, SHEETS.NEWVIDS, NEWVID_HEADERS);
 
   // 비어 있는 기본 시트 정리
   ['Sheet1', '시트1'].forEach(name => {
@@ -214,7 +242,21 @@ function setupSheets() {
     if (sh && sh.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(sh);
   });
 
-  alert_('처음 설정 완료!\n\n다음 순서:\n② 내 채널 확인 → [캠페인] 시트에 제휴사·레퍼럴 링크 입력 → ③ 신청 구글폼 만들기 → 테스트 → ④ 자동 실행 켜기');
+  alert_(`${APP_NAME} 처음 설정 완료!` + '\n\n다음 순서:\n② 내 채널 확인 → [캠페인] 시트에 제휴사·레퍼럴 링크 입력 → ③ 신청 구글폼 만들기 → 테스트 → ④ 자동 실행 켜기');
+}
+
+/** 예전 버전 [캠페인] 시트에 새 영상 칸(J, K)이 없으면 추가 */
+function upgradeCampaignSheet_(camp) {
+  const header = camp.getRange(1, 1, 1, CAMPAIGN_HEADERS.length).getValues()[0];
+  if (header[9] === CAMPAIGN_HEADERS[9]) return;
+  camp.getRange(1, 10, 1, 2).setValues([CAMPAIGN_HEADERS.slice(9)]);
+  camp.getRange(1, 10, 1, 2).setFontWeight('bold').setBackground('#fde7e9');
+  camp.getRange('J2:J200').insertCheckboxes();
+  camp.getRange('K2:K200').setWrap(true);
+  camp.setColumnWidth(10, 110);
+  camp.setColumnWidth(11, 360);
+  camp.getRange('J1').setNote('체크하면: [대상 영상]을 특정 영상으로 정해둔 캠페인도, 새 영상이 올라오면 그 영상을 자동으로 추가합니다. ([대상 영상]이 비어 있으면 원래 모든 영상에 적용)');
+  camp.getRange('K1').setNote('새 영상이 올라오면 내 채널 이름으로 이 댓글을 자동으로 남깁니다. 비우면 안 남김.\n{campaign} 제휴사, {keyword} 첫 번째 키워드, {title} 영상 제목, {channel} 채널 이름');
 }
 
 function ensureLogSheet_(ss, name, headers) {
@@ -343,7 +385,7 @@ function installTriggers() {
   const testNote = isYes_(st[K.TEST])
     ? '\n\n⚠️ 지금은 테스트모드입니다. 실제로 답글을 달려면 [설정] > 테스트모드를 "아니오"로 바꾸세요.'
     : '';
-  alert_(`자동 실행을 켰습니다.\n\n· ${every}분마다 새 댓글 확인 → 답글\n· 폼 접수 즉시 메일 발송\n· 매일 아침 영상 목록 새로고침\n\n이제 시트를 닫아도 구글 서버에서 계속 돌아갑니다.${testNote}`);
+  alert_(`자비스 자동 실행을 켰습니다.\n\n· ${every}분마다 새 영상 감지 → 캠페인 자동 적용 · 안내 댓글\n· ${every}분마다 새 댓글 확인 → 답글\n· 폼 접수 즉시 메일 발송\n· 매일 아침 영상 목록 새로고침\n\n이제 시트를 닫아도 구글 서버에서 계속 돌아갑니다.${testNote}`);
 }
 
 function removeTriggers() {
@@ -363,7 +405,16 @@ function removeOurTriggers_() {
 /** 시간 트리거와 메뉴에서 호출. 메뉴에서 누르면 결과를 팝업으로 보여줍니다. */
 function checkComments(e) {
   const summary = withLock_(() => {
+    let newVideos = [];
+    let newVideoError = '';
+    try {
+      newVideos = detectNewVideos_();
+    } catch (err) {
+      newVideoError = String(err.message || err);
+    }
     const sum = checkComments_();
+    sum.newVideos = newVideos;
+    sum.newVideoError = newVideoError;
     try {
       sum.mail = processPending_();
     } catch (err) {
@@ -410,7 +461,7 @@ function checkComments_() {
   const watermark = Number(props.getProperty(wmKey)) || 0;
   const since = watermark ? watermark - OVERLAP_MS : started - (Number(st[K.FIRST_HOURS]) || 168) * 3600 * 1000;
   let newest = watermark;
-  let budget = (Number(st[K.DAILY_LIMIT]) || 150) - todayReplies_();
+  let budget = replyBudget_(st);
   const onePerPerson = isYes_(st[K.ONE_PER_PERSON]);
   const checkSub = isYes_(st[K.CHECK_SUB]);
   const formUrl = String(st[K.FORM_URL] || '');
@@ -552,6 +603,10 @@ function quotaDayKey_() {
   return 'REPLIES_' + Utilities.formatDate(new Date(), 'America/Los_Angeles', 'yyyyMMdd');
 }
 
+function replyBudget_(st) {
+  return (Number(st[K.DAILY_LIMIT]) || 150) - todayReplies_();
+}
+
 function todayReplies_() {
   return Number(PropertiesService.getScriptProperties().getProperty(quotaDayKey_())) || 0;
 }
@@ -560,6 +615,140 @@ function bumpTodayReplies_() {
   const props = PropertiesService.getScriptProperties();
   const key = quotaDayKey_();
   props.setProperty(key, String((Number(props.getProperty(key)) || 0) + 1));
+}
+
+// ── 새 영상 감지 → 캠페인 자동 적용 ─────────────────────────────
+
+/**
+ * 업로드 목록의 최근 영상 중, 자비스를 켠 뒤 공개된 영상을 "새 영상"으로 처리합니다.
+ *  - [캠페인]에서 "새 영상 자동 적용"이 체크된 줄은 [대상 영상]에 새 영상 ID를 추가
+ *  - 새 영상에 적용되는 캠페인의 "새 영상 안내 댓글"을 모아 내 채널 이름으로 댓글 1개 작성
+ *  - 알림 메일 발송
+ * 예약 공개 영상도 실제로 공개된 뒤에 처리됩니다.
+ */
+function detectNewVideos_() {
+  const st = getSettings_();
+  if (!isYes_(st[K.NEW_VIDEO])) return [];
+  const props = PropertiesService.getScriptProperties();
+  const since = Number(props.getProperty('JARVIS_SINCE')) || 0;
+  if (!since) {
+    // 처음 켤 때는 기준 시점만 기록 (이미 올라간 영상은 새 영상으로 보지 않음)
+    props.setProperty('JARVIS_SINCE', String(Date.now()));
+    return [];
+  }
+
+  const me = myChannel_();
+  const items = YouTube.PlaylistItems.list('contentDetails', { playlistId: me.uploads, maxResults: 10 }).items || [];
+  const ids = items.map(it => it.contentDetails.videoId).filter(Boolean);
+  if (!ids.length) return [];
+
+  const testMode = isYes_(st[K.TEST]);
+  const logSh = sheet_(SHEETS.NEWVIDS);
+  const handled = new Set();
+  const fails = {};
+  readRows_(logSh, NEWVID_HEADERS.length).forEach(r => {
+    const s = r[NV.STATUS];
+    if (s === NS.DONE || s === NS.NO_TEXT || (testMode && s === NS.TEST)) handled.add(r[NV.VIDEO]);
+    if (s === NS.FAIL) fails[r[NV.VIDEO]] = (fails[r[NV.VIDEO]] || 0) + 1;
+  });
+
+  const videos = YouTube.Videos.list('snippet,status', { id: ids.join(','), maxResults: 50 }).items || [];
+  const results = [];
+  videos
+    .filter(v => v.status && v.status.privacyStatus === 'public')
+    .filter(v => new Date(v.snippet.publishedAt).getTime() >= since)
+    .filter(v => !handled.has(v.id) && (fails[v.id] || 0) < MAX_FAILS)
+    .sort((a, b) => new Date(a.snippet.publishedAt) - new Date(b.snippet.publishedAt))
+    .forEach(v => results.push(handleNewVideo_(v, st, me, testMode, logSh)));
+
+  if (results.some(r => r.status !== NS.WAIT && r.status !== NS.FAIL)) {
+    const last = results[results.length - 1];
+    setKeyValue_(SHEETS.DASH, '마지막 새 영상', `${last.title} (${last.status})`);
+    try { refreshVideos({ silent: true }); } catch (e) { /* 영상 목록 새로고침은 다음 날 다시 */ }
+  }
+  return results;
+}
+
+function handleNewVideo_(v, st, me, testMode, logSh) {
+  const title = v.snippet.title;
+  const campSh = sheet_(SHEETS.CAMPAIGNS);
+  const rows = campSh.getDataRange().getValues();
+  const applied = [];
+  const texts = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const name = String(r[1]).trim();
+    if (!name || !isYes_(r[0])) continue;
+    const targets = parseVideoIds_(r[2]);
+    if (targets.length && targets.indexOf(v.id) === -1) {
+      if (!isYes_(r[9])) continue;  // 특정 영상 전용 캠페인이고 자동 적용 안 함
+      if (!testMode) campSh.getRange(i + 1, 3).setValue(`${String(r[2]).trim()}, ${v.id}`);
+    }
+    applied.push(name);
+    const ann = String(r[10] || '').trim();
+    if (ann) {
+      const keyword = String(r[3]).split(/[,\n]/).map(k => k.trim()).filter(Boolean)[0] || '';
+      texts.push(render_(ann, { campaign: name, keyword, title, channel: me.title }));
+    }
+  }
+
+  const text = texts.join('\n\n');
+  let status;
+  let note = '';
+  if (!applied.length) {
+    status = NS.NO_TEXT;
+    note = '적용되는 캠페인 없음';
+  } else if (!text) {
+    status = NS.NO_TEXT;
+  } else if (testMode) {
+    status = NS.TEST;
+    note = '테스트모드 - 실제로 댓글을 달지 않음, 캠페인 목록도 바꾸지 않음';
+  } else if (replyBudget_(st) <= 0) {
+    status = NS.WAIT;
+    note = '하루 최대 답글 수 도달 → 다음에 다시 시도';
+  } else {
+    try {
+      YouTube.CommentThreads.insert({
+        snippet: { videoId: v.id, topLevelComment: { snippet: { textOriginal: text } } },
+      }, 'snippet');
+      bumpTodayReplies_();
+      status = NS.DONE;
+    } catch (err) {
+      status = /quota/i.test(String(err)) ? NS.WAIT : NS.FAIL;
+      note = String(err.message || err).slice(0, 300);
+    }
+  }
+
+  logSh.appendRow([new Date(), v.id, safeCell_(title), applied.join(', '), safeCell_(text), status, note]);
+  if (status !== NS.WAIT && status !== NS.FAIL) notifyNewVideo_(st, v, applied, text, status);
+  return { id: v.id, title, applied, status };
+}
+
+function notifyNewVideo_(st, v, applied, text, status) {
+  const setting = String(st[K.NOTIFY_EMAIL] || '').trim();
+  if (setting === '끄기') return;
+  try {
+    const to = setting || Session.getEffectiveUser().getEmail();
+    if (!to || MailApp.getRemainingDailyQuota() <= 0) return;
+    const url = `https://www.youtube.com/watch?v=${v.id}`;
+    const lines = [
+      `새 영상이 올라온 것을 자비스가 감지했습니다.`,
+      ``,
+      `🎬 ${v.snippet.title}`,
+      url,
+      ``,
+      `✅ 적용된 제휴사: ${applied.length ? applied.join(', ') : '없음 ([캠페인] 시트 확인)'}`,
+      `💬 안내 댓글: ${status === NS.DONE ? '작성 완료' : status === NS.TEST ? '테스트모드라 작성 안 함' : '없음'}`,
+    ];
+    if (text) lines.push('', text);
+    if (status === NS.DONE) lines.push('', '👉 유튜브 스튜디오 > 댓글에서 이 안내 댓글을 "고정"하면 더 많은 분들이 봅니다. (고정은 API로 할 수 없어 직접 눌러야 합니다)');
+    lines.push('', `이제 이 영상에 달리는 키워드 댓글에도 자동으로 답글이 달립니다.`, `- ${APP_NAME}`);
+    const body = lines.join('\n');
+    MailApp.sendEmail({ to, subject: `[자비스] 새 영상 감지: ${v.snippet.title}`, body, htmlBody: toHtml_(body), name: APP_NAME });
+  } catch (e) {
+    Logger.log('새 영상 알림 메일 실패: ' + e);
+  }
 }
 
 // ── 폼 접수 → 레퍼럴 메일 ───────────────────────────────────────
@@ -788,6 +977,9 @@ function getCampaigns_() {
     link: String(r[6]).trim(),
     subject: String(r[7] || ''),
     body: String(r[8] || ''),
+    autoNew: isYes_(r[9]),
+    announce: String(r[10] || ''),
+    firstKeyword: String(r[3]).split(/[,\n]/).map(k => k.trim()).filter(Boolean)[0] || '',
   })).filter(c => c.name);
 }
 
@@ -894,6 +1086,8 @@ function summaryText_(s) {
     s.failed ? `실패 ${s.failed}` : '',
   ].filter(Boolean);
   let text = parts.join(' · ');
+  if (s.newVideos && s.newVideos.length) text += `\n🎬 새 영상 ${s.newVideos.length}개 감지: ${s.newVideos.map(v => v.title).join(', ')}`;
+  if (s.newVideoError) text += `\n🎬 새 영상 확인 오류: ${s.newVideoError}`;
   if (s.stopReason) text += `\n⚠️ ${s.stopReason}`;
   if (s.mail) text += `\n📧 ${mailSummaryText_(s.mail)}`;
   if (s.mailError) text += `\n📧 메일 처리 오류: ${s.mailError}`;
