@@ -1,7 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "buildCommand": null,
   "installCommand": null,
-  "outputDirectory": "."
+  "buildCommand": "node scripts/db-build.js",
+  "outputDirectory": ".",
+  "functions": {
+    "api/*.js": {
+      "includeFiles": "{data.js,db.js}"
+    }
+  }
 }

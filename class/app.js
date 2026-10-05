@@ -240,7 +240,7 @@
             "</div>" +
             (ins ? '<button type="button" class="login-alt" data-action="signup">' + icon("userPlus", "sm") + "아직 수강 신청 전이신가요? 수강 신청하기</button>" +
               ((DB.landingOf(ins.id) || {}).published ? '<a class="login-intro" href="#/p/' + esc(ins.id) + '">' + icon("book", "sm") + "강의 소개 보기 " + icon("arrowRight", "xs") + "</a>" : "") +
-              (ins.id === "moon" ? '<div class="login-demo">체험 계정 · 이름 <b>이수진</b> / 뒷자리 <b>2186</b></div>' : "") : "") +
+              (ins.id === "moon" && !DB.remote.on ? '<div class="login-demo">체험 계정 · 이름 <b>이수진</b> / 뒷자리 <b>2186</b></div>' : "") : "") +
             '<nav class="login-legal" aria-label="약관">' +
               '<button type="button" data-action="legal" data-doc="terms">이용약관</button>' +
               '<button type="button" data-action="legal" data-doc="privacy">개인정보처리방침</button>' +
@@ -258,6 +258,7 @@
     const phone4 = form.phone4.value.trim();
     if (!name) { err.textContent = "이름을 입력해 주세요."; form.name.focus(); return; }
     if (!/^\d{4}$/.test(phone4)) { err.textContent = "전화번호 뒷자리 숫자 4자리를 입력해 주세요."; form.phone4.focus(); return; }
+    if (DB.remote.on) { serverLogin(ins, name, phone4, err, form); return; }
     const matches = DB.studentsOf(ins.id).filter((x) => x.name.replace(/\s+/g, "") === name && x.phone4 === phone4);
     const s = matches.find((x) => x.status === "approved") || matches[0];
     if (!s) { err.textContent = "등록된 수강생 정보와 일치하지 않아요. 이름과 뒷자리를 다시 확인해 주세요."; return; }
@@ -269,6 +270,29 @@
     startSession();
     location.hash = "#/home";
     toast(s.name + "님, 환영합니다!");
+  }
+
+  // 서버 모드: 이름·뒷자리는 서버에서만 확인한다 (다른 수강생 정보는 이 브라우저에 내려오지 않음)
+  const LOGIN_ERR = {
+    notfound: "등록된 수강생 정보와 일치하지 않아요. 이름과 뒷자리를 다시 확인해 주세요.",
+    rejected: "수강 신청이 승인되지 않았어요. 강사님께 문의해 주세요.",
+    withdrawn: "탈퇴 처리된 계정이에요. 다시 수강하려면 강사님께 문의해 주세요.",
+    locked: "여러 번 틀려서 잠시 로그인이 막혔어요. 15분 뒤에 다시 시도해 주세요.",
+    input: "이름과 전화번호 뒷자리 4자리를 확인해 주세요."
+  };
+  function serverLogin(ins, name, phone4, err, form) {
+    const btn = form.querySelector("button[type=submit]");
+    if (btn) btn.disabled = true;
+    DB.remote.login({ action: "student", iid: ins.id, name, phone4 }).then((r) => {
+      if (r.error) { err.textContent = r.error === "pending" ? "수강 신청이 접수됐어요. " + ins.displayName + " 강사님이 승인하면 로그인할 수 있어요." : LOGIN_ERR[r.error] || LOGIN_ERR.notfound; return; }
+      return DB.remote.refresh().then(() => {
+        DB.session.setInstructorPick(ins.id);
+        DB.session.setStudent({ id: r.sid, at: Date.now() });
+        startSession();
+        location.hash = "#/home";
+        toast(r.name + "님, 환영합니다!");
+      });
+    }).catch(() => { err.textContent = "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."; }).then(() => { if (btn) btn.disabled = false; });
   }
 
   // 강의 내용 중 커리큘럼(주차·강의·과제)만 내 기수가 고른 커리큘럼으로 바꿔 끼운다
@@ -303,7 +327,18 @@
     DB.session.setStudent(null);
     me = null; P = null;
     location.hash = "#/login";
+    // 서버 모드: 로그인 쿠키를 지우고 내 정보가 남지 않게 새로 불러온다
+    if (DB.remote.on) DB.remote.logout("student").catch(() => {}).then(() => location.reload());
   }
+  // 서버에서 다른 사람이 바꾼 내용(예: 코치 검수 · 답변)이 들어오면 내 계정과 기록을 새로 읽는다
+  DB.remote.listen((type) => {
+    if (type !== "change" || !me || preview) return;
+    const s = DB.student(me.id);
+    if (!s) return;
+    me = s; P = DB.progress(me.id);
+    if (INS) { const ins = DB.instructor(INS.id); if (ins) INS = ins; }
+    if (CO) { const co = DB.cohort(CO.id); if (co) { CO = co; D = cohortContent(INS.id, CO); } }
+  });
 
   /* ---------------- 앱 셸 ---------------- */
   /* ---------------- 한국 · 뉴질랜드 시간 ----------------
@@ -1429,11 +1464,21 @@
     const err = document.getElementById("su-error");
     if (!name) { err.textContent = "이름을 입력해 주세요."; return; }
     if (!/^\d{4}$/.test(phone4)) { err.textContent = "전화번호 뒷자리 숫자 4자리를 입력해 주세요."; return; }
+    if (DB.remote.on) { serverSignup(ins, f, name, phone4, err); return; }
     const dup = DB.studentsOf(ins.id).find((x) => x.name.replace(/\s+/g, "") === name.replace(/\s+/g, "") && x.phone4 === phone4 && (x.status === "pending" || x.status === "approved"));
     if (dup) { err.textContent = dup.status === "approved" ? "이미 승인된 수강생이에요. 바로 로그인해 주세요." : "이미 신청이 접수돼 있어요. 승인을 기다려 주세요."; return; }
     DB.data.students.push({ id: DB.uid("s"), instructorId: ins.id, cohortId: f.cohort.value, name, phone4, status: "pending", appliedAt: todayStr() });
     DB.save();
     openModal("신청이 접수됐어요", name + "님, " + ins.displayName + " 강사님이 확인 후 승인해 드릴게요.\n승인되면 이름과 전화번호 뒷자리로 로그인할 수 있어요.", '<button class="btn btn-primary" data-action="modal-close">확인</button>');
+  }
+  function serverSignup(ins, f, name, phone4, err) {
+    const MSG = { "dup-approved": "이미 승인된 수강생이에요. 바로 로그인해 주세요.", "dup-pending": "이미 신청이 접수돼 있어요. 승인을 기다려 주세요.", cohort: "이 기수는 지금 신청을 받지 않아요. 다른 기수를 골라 주세요.", locked: "신청이 너무 많아 잠시 막혔어요. 15분 뒤에 다시 시도해 주세요." };
+    const btn = f.querySelector("button[type=submit]");
+    if (btn) btn.disabled = true;
+    DB.remote.call("public", { action: "signup", iid: ins.id, cohortId: f.cohort.value, name, phone4 }).then((r) => {
+      if (r.error) { err.textContent = MSG[r.error] || "신청하지 못했어요. 입력 내용을 확인해 주세요."; return; }
+      openModal("신청이 접수됐어요", name + "님, " + ins.displayName + " 강사님이 확인 후 승인해 드릴게요.\n승인되면 이름과 전화번호 뒷자리로 로그인할 수 있어요.", '<button class="btn btn-primary" data-action="modal-close">확인</button>');
+    }).catch(() => { err.textContent = "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."; }).then(() => { if (btn) btn.disabled = false; });
   }
   function fileSize(n) { return !n ? "" : n < 1024 ? n + "B" : n < 1048576 ? Math.round(n / 1024) + "KB" : (n / 1048576).toFixed(1) + "MB"; }
   function attachmentList(list) {

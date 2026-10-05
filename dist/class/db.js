@@ -477,12 +477,25 @@
   }
 
   function load() {
+    if (R.on) return loadRemote();
     db = store.get(KEY_DB, null);
     if (db && db.version === 2 && Array.isArray(db.instructors)) migrate2to3();
     if (!db || db.version !== 3 || !Array.isArray(db.instructors)) {
       db = fromSeed();
       save();
     }
+    return loadFixups();
+  }
+  // 서버 모드: 받아 온 문서로 시작하고, 아래 정리(기본값 채우기)는 화면용으로만 적용한다 (저장은 하지 않음)
+  function loadRemote() {
+    if (R.fresh) { db = R.fresh; R.fresh = null; }
+    R.loading = true;
+    try { if (db && Array.isArray(db.instructors) && db.content) loadFixups(); }
+    finally { R.loading = false; }
+    resnapAll();
+    return db;
+  }
+  function loadFixups() {
     Object.keys(db.content).forEach((id) => normalizeContent(db.content[id]));
     // 강사 공지(마스터 → 강사), 강사별 화면 색상 기본값
     if (!Array.isArray(db.announcements)) { db.announcements = clone(window.CLASS_SEED.announcements || []); save(); }
@@ -658,10 +671,12 @@
     return db;
   }
   function save() {
+    if (R.on) { if (!R.loading) schedule(); return true; }
     if (!store.set(KEY_DB, db)) { console.warn("저장 공간이 부족합니다"); return false; }
     return true;
   }
   function reset() {
+    if (R.on) return call("admin", { action: "reset" }).then((j) => { if (j.error) throw new Error(j.error); return refresh(); });
     store.keys().filter((k) => k.indexOf("moonclass:") === 0).forEach((k) => store.remove(k));
     load();
   }
@@ -781,8 +796,20 @@
 
   /* ---------------- 진행 기록 ---------------- */
   function emptyProgress() { return { submissions: {}, watched: {}, docs: {}, questions: [], chat: [], notes: {}, readNotices: {}, guide: {} }; }
-  const progress = (sid) => Object.assign(emptyProgress(), store.get(KEY_PROGRESS + sid, {}));
-  const saveProgress = (sid, p) => store.set(KEY_PROGRESS + sid, p);
+  // 서버 모드에서도 미리보기(preview-…) 기록은 이 브라우저에만 둔다
+  const localSid = (sid) => /^preview-/.test(String(sid));
+  const progress = (sid) => Object.assign(emptyProgress(), R.on && !localSid(sid) ? clone(R.prog[sid] || {}) : store.get(KEY_PROGRESS + sid, {}));
+  const saveProgress = (sid, p) => {
+    if (R.on && !localSid(sid)) { R.prog[sid] = clone(p); schedule(); return true; }
+    return store.set(KEY_PROGRESS + sid, p);
+  };
+  /** 진행 기록 전체 { 학생ID: 기록 } (백업용) */
+  function allProgress() {
+    const out = {};
+    if (R.on) Object.keys(R.prog).forEach((sid) => { out[sid] = clone(R.prog[sid]); });
+    else store.keys().filter((k) => k.indexOf(KEY_PROGRESS) === 0).forEach((k) => { out[k.slice(KEY_PROGRESS.length)] = store.get(k, {}); });
+    return out;
+  }
   const lastSub = (p, mid) => { const l = p.submissions[mid]; return l && l.length ? l[l.length - 1] : null; };
   /** todo | done | fix — 강사 검수가 있으면 그 결과가 자동검수보다 우선 */
   function subState(p, mid) {
@@ -817,6 +844,249 @@
     return list.reverse();
   }
 
+  /* ---------------- 서버 연결 (Vercel 함수 + Turso 데이터베이스) ----------------
+   * /api 가 있으면 서버 모드: 데이터를 서버에서 받아 오고, 바뀐 부분만 서버에 저장한다.
+   * /api 가 없으면(로컬 정적 서버 · 미리보기) 예전처럼 이 브라우저(localStorage)에 저장한다.
+   * 서버에서는 문서 단위(강사 · 콘텐츠 · 기수 · 수강생 · 진행 기록)로 나눠 보관하고,
+   * 로그인한 사람이 볼 수 있는 문서만 내려온다. */
+  const R = { on: false, fresh: null, loading: false, me: { student: null, admin: null }, epoch: null, now: 0, ver: {}, snap: {}, prog: {}, timer: null, busy: false, again: false, fails: 0, polling: false, lastPoll: 0, listeners: [] };
+  const COLLS = ["instructors", "content", "cohorts", "students"];
+  const CONTENT_PERMS = ["brand", "guide", "curriculum", "missions", "schedule", "notices", "faq", "docs", "library", "motivation", "channels", "partners", "pages", "free", "landing"];
+  const isObj = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
+  const emit = (type, info) => R.listeners.forEach((fn) => { try { fn(type, info); } catch (e) { console.error(e); } });
+
+  async function call(name, payload, method) {
+    const opt = { method: method || "POST", credentials: "same-origin", cache: "no-store", headers: { "Content-Type": "application/json" } };
+    if (payload !== undefined) opt.body = JSON.stringify(payload);
+    const r = await fetch("api/" + name, opt);
+    const j = await r.json().catch(() => ({ error: "server" }));
+    if (r.status >= 500) throw new Error(j.message || j.error || "server " + r.status);
+    return j;
+  }
+  /** 서버가 있는지 확인하고 처음 데이터를 받는다. 서버가 없으면 false (이 브라우저 저장 모드) */
+  async function connect() {
+    let r;
+    try { r = await fetch("api/bootstrap", { credentials: "same-origin", cache: "no-store" }); } catch (e) { return false; }
+    if (r.status >= 500) throw new Error("server " + r.status);
+    let j = null;
+    try { j = await r.json(); } catch (e) { return false; }
+    if (!j || j.app !== "doogo-class" || j.mode !== "server") return false;
+    R.on = true;
+    take(j);
+    startPolling();
+    return true;
+  }
+  function take(j) {
+    R.me = j.me || { student: null, admin: null };
+    R.epoch = j.epoch || R.epoch;
+    R.now = j.now;
+    R.ver = {}; R.prog = {};
+    const d = { instructors: [], content: {}, cohorts: [], students: [] };
+    (j.docs || []).forEach((x) => { R.ver[x[0]] = x[2]; placeIn(d, x[0], x[1]); });
+    R.fresh = d;
+  }
+  /** 로그인 · 로그아웃 뒤에 볼 수 있는 데이터가 바뀌므로 처음부터 다시 받는다 */
+  async function refresh() {
+    await flush();
+    const j = await call("bootstrap", undefined, "GET");
+    if (j.error) throw new Error(j.error);
+    take(j);
+    return load();
+  }
+
+  /* 데이터 한 덩어리 ↔ 문서 */
+  function metaOf(d) { const m = {}; Object.keys(d).forEach((k) => { if (COLLS.indexOf(k) === -1) m[k] = d[k]; }); return m; }
+  function splitDb(d) {
+    const out = { meta: metaOf(d) };
+    d.instructors.forEach((i) => { out["ins:" + i.id] = i; });
+    Object.keys(d.content).forEach((iid) => { out["content:" + iid] = d.content[iid]; });
+    const byIns = {};
+    d.cohorts.forEach((c) => { (byIns[c.instructorId] = byIns[c.instructorId] || []).push(c); });
+    Object.keys(byIns).forEach((iid) => { out["cohorts:" + iid] = byIns[iid]; });
+    const sIns = {};
+    d.students.forEach((s) => { sIns[s.id] = s.instructorId; out["stu:" + s.instructorId + ":" + s.id] = s; });
+    Object.keys(R.prog).forEach((sid) => { if (sIns[sid]) out["prog:" + sIns[sid] + ":" + sid] = R.prog[sid]; });
+    return out;
+  }
+  function docOf(k) {
+    const p = k.split(":");
+    if (k === "meta") return metaOf(db);
+    if (p[0] === "ins") return db.instructors.find((x) => x.id === p[1]);
+    if (p[0] === "content") return db.content[p[1]];
+    if (p[0] === "cohorts") { const l = db.cohorts.filter((c) => c.instructorId === p[1]); return l.length ? l : undefined; }
+    if (p[0] === "stu") return db.students.find((x) => x.id === p[2] && x.instructorId === p[1]);
+    if (p[0] === "prog") return R.prog[p[2]];
+    return undefined;
+  }
+  const replaceIn = (t, src) => { Object.keys(t).forEach((k) => { delete t[k]; }); Object.assign(t, src); };
+  function placeIn(d, k, v) {
+    const p = k.split(":");
+    if (k === "meta") {
+      Object.keys(d).forEach((x) => { if (COLLS.indexOf(x) === -1) delete d[x]; });
+      if (v) Object.keys(v).forEach((x) => { if (COLLS.indexOf(x) === -1) d[x] = v[x]; });
+    } else if (p[0] === "ins" || p[0] === "stu") {
+      const list = p[0] === "ins" ? d.instructors : d.students, id = p[0] === "ins" ? p[1] : p[2];
+      const i = list.findIndex((x) => x.id === id);
+      if (v == null) { if (i >= 0) list.splice(i, 1); } else if (i >= 0) replaceIn(list[i], v); else list.push(v);
+    } else if (p[0] === "content") {
+      if (v == null) delete d.content[p[1]];
+      else { if (d.content[p[1]]) replaceIn(d.content[p[1]], v); else d.content[p[1]] = v; if (d.content[p[1]].brand) normalizeContent(d.content[p[1]]); }
+    } else if (p[0] === "cohorts") {
+      const at = d.cohorts.findIndex((c) => c.instructorId === p[1]);
+      const rest = d.cohorts.filter((c) => c.instructorId !== p[1]);
+      const add = v || [];
+      rest.splice(at < 0 ? rest.length : Math.min(at, rest.length), 0, ...add);
+      d.cohorts.length = 0; rest.forEach((c) => d.cohorts.push(c));
+    } else if (p[0] === "prog") {
+      if (v == null) delete R.prog[p[2]]; else R.prog[p[2]] = v;
+    }
+  }
+  const snapOf = (k) => { const v = docOf(k); return v === undefined ? undefined : JSON.stringify(v); };
+  function resnapAll() { R.snap = {}; if (!db) return; const all = splitDb(db); Object.keys(all).forEach((k) => { R.snap[k] = JSON.stringify(all[k]); }); }
+
+  /* 바뀐 부분 찾기: 객체는 키별로, 배열은 끝에 추가만 했으면 '추가', 길이가 같으면 칸별로, 아니면 통째로 */
+  function diff(a, b, path, ops) {
+    if (a === b) return;
+    if (isObj(a) && isObj(b)) {
+      Object.keys(a).forEach((k) => { if (!(k in b)) ops.push({ p: path.concat(k), d: 1 }); });
+      Object.keys(b).forEach((k) => { if (!(k in a)) ops.push({ p: path.concat(k), v: b[k] }); else diff(a[k], b[k], path.concat(k), ops); });
+      return;
+    }
+    if (Array.isArray(a) && Array.isArray(b)) {
+      if (b.length > a.length && a.every((x, i) => JSON.stringify(x) === JSON.stringify(b[i]))) { for (let i = a.length; i < b.length; i++) ops.push({ p: path.concat(i), v: b[i], a: 1 }); return; }
+      if (a.length === b.length) { for (let i = 0; i < a.length; i++) diff(a[i], b[i], path.concat(i), ops); return; }
+      ops.push({ p: path, v: b });
+      return;
+    }
+    if (JSON.stringify(a) !== JSON.stringify(b)) ops.push({ p: path, v: b });
+  }
+  function applyOps(doc, ops) {
+    ops.forEach((op) => {
+      if (!op.p.length) { doc = op.d ? null : op.v; return; }
+      if (doc === null || typeof doc !== "object") doc = typeof op.p[0] === "number" ? [] : {};
+      let cur = doc;
+      for (let i = 0; i < op.p.length - 1; i++) { const k = op.p[i]; if (cur[k] === null || typeof cur[k] !== "object") cur[k] = typeof op.p[i + 1] === "number" ? [] : {}; cur = cur[k]; }
+      const last = op.p[op.p.length - 1];
+      if (op.d) { if (Array.isArray(cur)) cur.splice(last, 1); else delete cur[last]; } else if (op.a && Array.isArray(cur)) cur.push(op.v); else cur[last] = op.v;
+    });
+    return doc;
+  }
+
+  /** 이 사람이 서버에 저장할 수 있는 문서인지 (서버도 똑같이 다시 확인한다) */
+  function canWrite(k) {
+    const a = R.me.admin, st = R.me.student, p = k.split(":");
+    if (a && a.role === "master") return true;
+    if (k === "meta") return false;
+    if (a && a.iid === p[1]) {
+      if (a.role === "instructor") return true;
+      const ins = db.instructors.find((x) => x.id === a.iid);
+      const co = ins && (ins.coaches || []).find((x) => x.id === a.cid);
+      const perms = (co && co.perms) || [];
+      const any = (l) => perms.some((x) => l.indexOf(x) !== -1);
+      if (p[0] === "ins") return any(["menus"]);
+      if (p[0] === "content") return any(CONTENT_PERMS);
+      if (p[0] === "cohorts") return any(["cohorts"]);
+      if (p[0] === "stu") return any(["students"]);
+      if (p[0] === "prog") return any(["reviews", "questions", "students"]);
+    }
+    return !!(st && p[0] === "prog" && p[1] === st.iid && p[2] === st.sid);
+  }
+
+  function schedule() { if (!R.on) return; clearTimeout(R.timer); R.timer = setTimeout(flush, 250); }
+  /** 바뀐 문서를 서버에 보낸다 */
+  async function flush() {
+    if (!R.on || !db) return;
+    clearTimeout(R.timer); R.timer = null;
+    if (R.busy) { R.again = true; return; }
+    const cur = splitDb(db), changes = [], sent = {};
+    Object.keys(cur).concat(Object.keys(R.snap).filter((k) => !(k in cur))).forEach((k) => {
+      const js = cur[k] === undefined ? undefined : JSON.stringify(cur[k]);
+      if (js === R.snap[k]) return;
+      // 고칠 권한이 없는 문서(예: 화면용 기본값 채우기)는 서버에 보내지 않고 그대로 둔다
+      if (!canWrite(k)) { if (js === undefined) delete R.snap[k]; else R.snap[k] = js; return; }
+      sent[k] = js;
+      const base = R.ver[k] || 0;
+      if (js === undefined) changes.push({ k, base, del: true });
+      else if (R.snap[k] === undefined) changes.push({ k, base, put: cur[k] });
+      else { const ops = []; diff(JSON.parse(R.snap[k]), cur[k], [], ops); changes.push({ k, base, ops }); }
+    });
+    if (!changes.length) return;
+    R.busy = true;
+    emit("saving", true);
+    try {
+      const j = await call("sync", { changes });
+      if (j.error) throw new Error(j.error);
+      if (j.me) R.me = j.me;
+      j.results.forEach((x) => {
+        if (x.error) {
+          if (x.error === "busy") { R.again = true; return; }
+          R.snap[x.k] = sent[x.k];
+          emit("error", x.error === "too-large" ? "사진이나 첨부가 너무 커서 저장하지 못했어요. 크기를 줄여 다시 올려 주세요." : "저장할 권한이 없는 내용이 있어 저장하지 못했어요.");
+          return;
+        }
+        R.ver[x.k] = x.ver;
+        if (x.doc === undefined) { if (sent[x.k] === undefined) delete R.snap[x.k]; else R.snap[x.k] = sent[x.k]; return; }
+        // 서버에서 합쳐진 결과(다른 사람 변경 · 사진 주소)를 받는다. 그 사이 또 고친 내용은 그 위에 다시 얹는다
+        const now = snapOf(x.k);
+        if (x.doc != null && now !== undefined && sent[x.k] !== undefined && now !== sent[x.k]) {
+          const ops = []; diff(JSON.parse(sent[x.k]), JSON.parse(now), [], ops);
+          placeIn(db, x.k, applyOps(clone(x.doc), ops));
+          R.snap[x.k] = JSON.stringify(x.doc);
+          R.again = true;
+        } else { placeIn(db, x.k, x.doc); R.snap[x.k] = snapOf(x.k); }
+        emit("change", [x.k]);
+      });
+      R.fails = 0;
+      emit("saving", false);
+    } catch (e) {
+      R.fails++;
+      emit("offline", e.message);
+      setTimeout(flush, Math.min(30000, 1500 * R.fails));
+    } finally {
+      R.busy = false;
+      if (R.again) { R.again = false; schedule(); }
+    }
+  }
+  /** 다른 기기 · 다른 사람이 바꾼 내용 받기 (30초마다, 그리고 이 창으로 돌아올 때) */
+  async function poll(force) {
+    if (!R.on || !db || R.polling || R.busy || R.timer) return;
+    if (!force && Date.now() - R.lastPoll < 5000) return;
+    R.polling = true;
+    try {
+      const j = await call("bootstrap?since=" + Math.max(0, R.now - 15000), undefined, "GET");
+      if (j.error) return;
+      if (j.epoch && R.epoch && j.epoch !== R.epoch) { emit("reset"); return; }
+      const meChanged = JSON.stringify(j.me) !== JSON.stringify(R.me);
+      R.me = j.me; R.now = j.now;
+      const changed = [];
+      (j.docs || []).forEach(([k, v, ver]) => {
+        if (ver <= (R.ver[k] || 0)) return;
+        // 내가 고치는 중인 문서는 건너뛴다 (저장할 때 서버에서 합쳐져 돌아온다)
+        if (canWrite(k) && snapOf(k) !== R.snap[k]) return;
+        placeIn(db, k, v);
+        R.ver[k] = ver;
+        R.snap[k] = snapOf(k);
+        changed.push(k);
+      });
+      if (changed.length || meChanged) emit("change", changed);
+    } catch (e) { /* 다음에 다시 */ } finally { R.polling = false; R.lastPoll = Date.now(); }
+  }
+  function startPolling() {
+    setInterval(() => poll(), 30000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+    window.addEventListener("focus", () => poll());
+    window.addEventListener("beforeunload", (e) => { if (R.timer || R.busy) { flush(); e.preventDefault(); e.returnValue = ""; } });
+  }
+  const remote = {
+    get on() { return R.on; },
+    get me() { return R.me; },
+    connect, refresh, flush, poll, call,
+    login: (payload) => call("auth", payload),
+    logout: (which) => flush().catch(() => {}).then(() => call("auth", { action: "logout", which })),
+    pending: () => !!(R.timer || R.busy),
+    listen: (fn) => { R.listeners.push(fn); }
+  };
+
   /* ---------------- 세션 ---------------- */
   const session = {
     student: () => store.get("moonclass:session", null),
@@ -836,8 +1106,8 @@
     EVENT_TYPES, events, ruleText,
     REQUEST_CATEGORIES, maskName, requests,
     THEMES, themeOf, STUDENT_MENUS, LIB_MENUS, CUSTOM_ICONS, menuConfig, menuOn, libOn, isCustom,
-    emptyProgress, progress, saveProgress, lastSub, subState, stats,
-    session,
+    emptyProgress, progress, saveProgress, allProgress, lastSub, subState, stats,
+    session, remote,
     date: { DOW, todayStr, parseDate, addDays, diffDays, fmtMD, fmtFull, fmtKo, fmtStamp, toStr }
   };
 })();

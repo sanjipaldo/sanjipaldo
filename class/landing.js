@@ -348,13 +348,25 @@
     e.preventDefault();
     const f = e.target, text = f.qtext.value.trim(), id = insIdFromHash();
     if (!text) { document.getElementById("fcq-err").textContent = "질문을 적어 주세요."; return; }
+    const F = DB.freeOf(id);
+    const done = () => {
+      document.getElementById("modal-root").innerHTML = "";
+      fcToast("질문을 남겼어요. 강의에서 꼭 다룰게요!");
+      if (F.live.url) setTimeout(() => window.open(F.live.url, "_blank", "noopener"), 600);
+    };
+    // 서버 모드: 로그인 없이 남기는 질문은 서버가 받아서 저장한다 (방문자는 콘텐츠를 직접 고칠 수 없음)
+    if (DB.remote.on) {
+      DB.remote.call("public", { action: "free-question", iid: id, name: f.qname.value.trim(), text }).then((r) => {
+        if (r.error) { document.getElementById("fcq-err").textContent = r.error === "locked" ? "질문이 너무 많아 잠시 막혔어요. 잠시 뒤 다시 남겨 주세요." : "질문을 남기지 못했어요. 잠시 후 다시 시도해 주세요."; return; }
+        done();
+        DB.remote.poll(true);
+      }).catch(() => { document.getElementById("fcq-err").textContent = "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."; });
+      return;
+    }
     const c = DB.content(id);
     (c.freeQuestions = c.freeQuestions || []).push({ id: DB.uid("fq"), name: f.qname.value.trim(), text, at: Date.now() });
     DB.save();
-    const F = DB.freeOf(id);
-    document.getElementById("modal-root").innerHTML = "";
-    fcToast("질문을 남겼어요. 강의에서 꼭 다룰게요!");
-    if (F.live.url) setTimeout(() => window.open(F.live.url, "_blank", "noopener"), 600);
+    done();
   });
 
   window.LandingApp = { render, mount };

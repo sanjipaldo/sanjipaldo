@@ -163,7 +163,7 @@
             "</form>" +
           "</div>" +
           '<a class="a-login-alt" href="#/login" data-action="to-student">' + icon("home", "sm") + "수강생 센터 보기 " + icon("arrowUpRight", "xs") + "</a>" +
-          '<div class="a-demo">' + (coachTab ? "체험 계정 · 이름 <b>김하나</b> / 뒷자리 <b>1004</b> (문대표 코치)" : ins ? "체험 계정 · 이름 <b>문원오</b> / 뒷자리 <b>2186</b>" : "체험 계정 · <b>ADMIN</b> / <b>ADMIN</b> (대소문자 상관없음)") + "</div>" +
+          (DB.remote.on ? "" : '<div class="a-demo">' + (coachTab ? "체험 계정 · 이름 <b>김하나</b> / 뒷자리 <b>1004</b> (문대표 코치)" : ins ? "체험 계정 · 이름 <b>문원오</b> / 뒷자리 <b>2186</b>" : "체험 계정 · <b>ADMIN</b> / <b>ADMIN</b> (대소문자 상관없음)") + "</div>") +
         "</div></section>" +
       "</main>";
   }
@@ -171,6 +171,7 @@
     const id = f.uid.value.trim(), pw = f.pw.value.trim();
     const err = document.getElementById("al-error");
     err.textContent = "";
+    if (DB.remote.on) { serverLogin(f, id, pw, err); return; }
     if (loginTab === "master") {
       if (id.toUpperCase() === "ADMIN" && pw.toUpperCase() === "ADMIN") { S = { role: "master" }; DB.session.setAdmin(S); DB.store.remove("moonclass:after-login"); location.hash = "#/center/master"; toast("마스터 관리자로 로그인했어요."); }
       else err.textContent = "아이디 또는 비밀번호가 맞지 않아요.";
@@ -200,7 +201,35 @@
     location.hash = next && /^#\/center\/(?!master)/.test(next) ? next : "#/center";
     toast(ins.name + " 강사님, 환영합니다!");
   }
-  function logout() { S = null; DB.session.setAdmin(null); location.hash = "#/center/login"; }
+  // 서버 모드: 이름·뒷자리·마스터 비밀번호는 서버에서만 확인한다
+  const LOGIN_ERR = {
+    "paused-platform": "운영이 중지된 플랫폼이에요. 마스터 관리자에게 문의해 주세요.",
+    "paused-coach": "사용이 중지된 코치 계정이에요. 강사님께 문의해 주세요.",
+    locked: "여러 번 틀려서 잠시 로그인이 막혔어요. 15분 뒤에 다시 시도해 주세요.",
+    "master-disabled": "마스터 비밀번호가 아직 설정되지 않았어요. Vercel 환경변수 MASTER_PASSWORD 를 설정해 주세요.",
+    input: "이름과 전화번호 뒷자리 4자리를 확인해 주세요."
+  };
+  function serverLogin(f, id, pw, err) {
+    const btn = f.querySelector("button[type=submit]");
+    if (btn) btn.disabled = true;
+    DB.remote.login({ action: "admin", tab: loginTab, id, pw }).then((r) => {
+      if (r.error) {
+        err.textContent = LOGIN_ERR[r.error] || (loginTab === "master" ? "아이디 또는 비밀번호가 맞지 않아요." : loginTab === "coach" ? "등록된 코치 정보와 일치하지 않아요. 이름과 뒷자리를 확인해 주세요." : "등록된 강사 정보와 일치하지 않아요. 이름과 뒷자리를 확인해 주세요. (코치는 ‘코치’ 탭)");
+        return;
+      }
+      return DB.remote.refresh().then(() => {
+        S = r.role === "master" ? { role: "master" } : r.role === "coach" ? { role: "coach", instructorId: r.iid, coachId: r.cid } : { role: "instructor", instructorId: r.iid };
+        DB.session.setAdmin(S);
+        const next = DB.store.get("moonclass:after-login", ""); DB.store.remove("moonclass:after-login");
+        location.hash = r.role === "master" ? "#/center/master" : r.role === "instructor" && next && /^#\/center\/(?!master)/.test(next) ? next : "#/center";
+        toast(r.role === "master" ? "마스터 관리자로 로그인했어요." : r.name + (r.role === "coach" ? " 코치님, 환영합니다!" : " 강사님, 환영합니다!"));
+      });
+    }).catch(() => { err.textContent = "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."; }).then(() => { if (btn) btn.disabled = false; });
+  }
+  function logout() {
+    S = null; DB.session.setAdmin(null); location.hash = "#/center/login";
+    if (DB.remote.on) DB.remote.logout("admin").catch(() => {}).then(() => location.reload());
+  }
 
   /* ---------------- 셸 ---------------- */
   function instructorNav() {
@@ -1495,15 +1524,13 @@
 
   /* ---------------- 마스터: 데이터 관리 ---------------- */
   function snapshot() {
-    const progress = {};
-    DB.store.keys().filter((k) => k.indexOf("moonclass:progress:") === 0).forEach((k) => { progress[k.slice(19)] = DB.store.get(k, {}); });
-    return { exportedAt: new Date().toISOString(), db: DB.data, progress };
+    return { exportedAt: new Date().toISOString(), db: DB.data, progress: DB.allProgress() };
   }
   function pageMasterData() {
     const json = JSON.stringify(snapshot());
     const kb = Math.round(new Blob([json]).size / 1024);
-    return head("데이터 관리", "지금은 서버 없이 이 브라우저에 저장돼요. 다른 컴퓨터로 옮기거나 혹시 모를 상황에 대비해 백업해 두세요.") +
-      '<div class="a-kpis">' + kpi("저장된 데이터", kb + "KB", "브라우저 저장 공간 약 5MB 중", "#/center/master/data", kb > 3500 ? "warn" : "") + kpi("강사 플랫폼", DB.data.instructors.length + "개", "콘텐츠 포함", "#/center/master/instructors") + kpi("수강생", DB.data.students.length + "명", "제출 기록 포함", "#/center/master/students") + kpi("강사 공지", DB.data.announcements.length + "건", "", "#/center/master/notices") + "</div>" +
+    return head("데이터 관리", DB.remote.on ? "데이터는 서버(Turso 데이터베이스)에 저장돼요. 어느 기기에서 로그인해도 같은 내용이 보여요. 혹시 모를 상황에 대비해 가끔 백업해 두세요." : "지금은 서버 없이 이 브라우저에 저장돼요. 다른 컴퓨터로 옮기거나 혹시 모를 상황에 대비해 백업해 두세요.") +
+      '<div class="a-kpis">' + kpi("저장된 데이터", kb + "KB", DB.remote.on ? "서버 데이터베이스 (사진은 따로 보관)" : "브라우저 저장 공간 약 5MB 중", "#/center/master/data", !DB.remote.on && kb > 3500 ? "warn" : "") + kpi("강사 플랫폼", DB.data.instructors.length + "개", "콘텐츠 포함", "#/center/master/instructors") + kpi("수강생", DB.data.students.length + "명", "제출 기록 포함", "#/center/master/students") + kpi("강사 공지", DB.data.announcements.length + "건", "", "#/center/master/notices") + "</div>" +
       '<section class="a-card"><div class="a-card-head"><h2>백업</h2><span class="a-muted">아래 내용을 복사해서 메모장 등에 보관하세요</span></div><textarea class="a-input a-mono" id="backup-out" rows="5" readonly>' + esc(json) + '</textarea><div class="a-card-foot">' + btn(icon("clipboard", "sm") + "백업 내용 복사", "backup-copy", "a-btn-primary a-btn-sm") + "</div></section>" +
       '<section class="a-card"><div class="a-card-head"><h2>복원</h2><span class="a-muted">백업해 둔 내용을 붙여 넣으면 그 시점으로 돌아가요</span></div><textarea class="a-input a-mono" id="backup-in" rows="4" placeholder="{&quot;exportedAt&quot;: … }"></textarea><div class="a-card-foot">' + btn(icon("refresh", "sm") + "이 내용으로 복원", "backup-restore", "a-btn-outline a-btn-sm") + "</div></section>" +
       '<section class="a-card"><div class="a-card-head"><h2>체험 데이터 처음으로</h2></div><p class="a-muted" style="margin:0 0 12px">모든 강사·수강생·제출 기록을 지우고 처음 체험 상태로 되돌려요. 되돌릴 수 없으니 먼저 백업하세요.</p>' + btn(icon("trash", "sm") + "처음 상태로 초기화", "data-reset", "a-btn-ghost a-btn-sm danger") + "</section>";
@@ -1835,6 +1862,13 @@
         try { data = JSON.parse(document.getElementById("backup-in").value); } catch (err) { toast("백업 내용을 읽지 못했어요. 처음부터 끝까지 그대로 붙여 넣어 주세요.", "warn"); break; }
         if (!data || !data.db || !Array.isArray(data.db.instructors)) { toast("두고 클래스 백업 형식이 아니에요.", "warn"); break; }
         confirmModal("백업으로 복원", "지금 데이터를 지우고 " + esc((data.exportedAt || "").slice(0, 16).replace("T", " ")) + " 백업으로 되돌릴까요?", "복원", true, () => {
+          if (DB.remote.on) {
+            DB.remote.call("admin", { action: "import", db: data.db, progress: data.progress || {} }).then((r) => {
+              if (r.error) { toast("복원하지 못했어요. 백업 내용을 확인해 주세요.", "warn"); return; }
+              location.reload();
+            }).catch(() => toast("서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"));
+            return;
+          }
           DB.store.keys().filter((k) => k.indexOf("moonclass:progress:") === 0).forEach((k) => DB.store.remove(k));
           Object.keys(data.progress || {}).forEach((sid) => DB.store.set("moonclass:progress:" + sid, data.progress[sid]));
           DB.store.set("moonclass:db:v2", data.db);
@@ -1844,6 +1878,7 @@
       }
       case "data-reset":
         confirmModal("처음 상태로 초기화", "모든 강사·수강생·제출 기록이 지워지고 체험 데이터로 돌아가요.<br>되돌릴 수 없어요.", "초기화", true, () => {
+          if (DB.remote.on) { closeModal(); toast("초기화하는 중이에요…"); DB.reset().then(() => location.reload(), () => toast("초기화하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn")); return; }
           DB.reset(); S = { role: "master" }; DB.session.setAdmin(S); closeModal(); render(); toast("처음 상태로 되돌렸어요.");
         });
         break;

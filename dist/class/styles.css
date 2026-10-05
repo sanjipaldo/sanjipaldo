@@ -1359,3 +1359,10 @@ body.lib-gated #main > .page { filter: blur(6px); pointer-events: none; user-sel
   .pt-notice { padding: 14px 16px; align-items: flex-start; }
   .pt-notice .bmark.md { width: 32px; height: 32px; }
 }
+
+/* ===== 서버 연결: 처음 불러오는 화면 ===== */
+.boot-wait { min-height: 60vh; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 24px; text-align: center; font-size: 15px; color: #5d6168; }
+.boot-spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(0, 0, 0, .1); border-top-color: #163300; animation: bootspin .8s linear infinite; }
+.boot-err b { font-size: 18px; color: #0e0f0c; }
+.boot-err button { margin-top: 6px; min-height: 44px; padding: 0 22px; border-radius: 999px; border: 0; background: #163300; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+@keyframes bootspin { to { transform: rotate(360deg); } }
