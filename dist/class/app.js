@@ -123,6 +123,7 @@
       children: () => libList().map((c) => ({ id: c.id, label: c.label, href: "#/library/" + c.id })) },
     { id: "motivation", label: "동기부여", icon: "flame", href: "#/motivation" },
     { id: "channels", label: "1:1 소통채널", icon: "headset", href: "#/channels" },
+    { id: "partners", label: "제휴채널", icon: "handshake", href: "#/partners" },
     { id: "certificate", label: "수료증", icon: "award", href: "#/certificate" }
   ];
   const LIB = [
@@ -1246,16 +1247,53 @@
     const card = (ch) => {
       const t = DB.channelType(ch.type), ok = !!(ch.url || "").trim(), info = !ok && !!(ch.note || "").trim();
       const look = DB.channelLook(ch), style = look.color ? ' style="--ch:' + look.color + ";--chi:" + look.ink + '"' : "";
+      const kakao = ch.type === "kakao" || ch.type === "openchat" || /kakao\.com/i.test(ch.url || "");
       const inner = '<span class="ch-bar" aria-hidden="true"></span>' + (ch.tag ? '<span class="ch-tag">' + esc(ch.tag) + "</span>" : "") +
-        '<div class="res-top"><span class="ch-icon"' + style + ">" + icon(look.icon) + '</span><div><div class="res-title">' + esc(ch.title || t.label) + '</div><div class="tiny">' + esc(t.label) + (ch.hours ? " · " + esc(ch.hours) : "") + "</div></div></div>" +
+        '<div class="res-top"><span class="ch-icon"' + style + ">" + icon(look.icon) + (kakao ? '<span class="ch-badge">' + window.brandMark("kakao") + "</span>" : "") + '</span><div><div class="res-title">' + esc(ch.title || t.label) + "</div>" +
+          '<div class="tiny ch-via">' + (kakao ? window.brandMark("kakao", "xs") + "<span><b>" + esc(t.label) + "</b>" + (ok ? "로 바로 연결돼요" : "") + "</span>" : esc(t.label)) + (ch.hours ? " · " + esc(ch.hours) : "") + "</div></div></div>" +
         (ch.desc ? '<div class="res-desc">' + esc(ch.desc) + "</div>" : "") +
-        '<div class="res-foot">' + (ok ? '<span class="ch-go"' + style + ">" + esc(ch.label || "상담하기") + icon("arrowUpRight", "sm") + "</span>"
+        '<div class="res-foot">' + (ok ? (kakao ? '<span class="ch-go kakao">' + window.brandMark("kakao", "sm") + esc(ch.label || "카카오톡으로 상담하기") + icon("arrowUpRight", "sm") + "</span>" : '<span class="ch-go"' + style + ">" + esc(ch.label || "상담하기") + icon("arrowUpRight", "sm") + "</span>")
           : info ? '<span class="ch-info">' + icon("lock", "sm") + "<span>" + esc(ch.note) + "</span></span>" : '<span class="tiny">링크를 준비하고 있어요</span>') + "</div>";
       return ok ? '<a class="res-card ch-card" href="' + esc(ch.url) + '" target="_blank" rel="noopener"' + style + ">" + inner + "</a>" : '<div class="res-card ch-card ' + (info ? "info" : "off") + '"' + (info ? "" : ' aria-disabled="true"') + style + ">" + inner + "</div>";
     };
     return '<div class="page">' + pageHead("1:1 소통채널", "궁금한 점이나 상담이 필요할 때, 아래 채널로 바로 문의하세요.") +
       (list.length ? '<div class="grid-2 ch-grid">' + list.map(card).join("") + "</div>" : '<section class="card">' + empty("headset", "상담 채널을 준비하고 있어요.") + "</section>") +
       '<p class="ch-note">' + icon("clock", "xs") + " 운영 시간 밖에는 답변이 늦을 수 있어요." + (on("qna") ? ' 화면 오류는 <a href="#/qna/requests/new">요청사항</a>으로 남겨 주시면 더 빨라요.' : "") + "</p></div>";
+  }
+
+  /* ---------------- 제휴채널 ---------------- */
+  // 두고그룹 회사 · 외부 제휴사를 탭(전체 · 두고그룹 · 제휴사)으로. featured(두고 N카페)는 맨 위 큰 카드 + 혜택 안내 띠
+  function pagePartners(r) {
+    const all = DB.partnersOf(D), G = DB.PARTNER_GROUPS;
+    const tab = G.some((g) => g.key === r.params.get("tab")) ? r.params.get("tab") : "all";
+    const feat = all.find((x) => x.featured && x.url);
+    const isCafe = (u) => /cafe\.naver\.com/i.test(u || "");
+    const card = (x) => {
+      const t = DB.channelLook(Object.assign({ type: "other" }, x)), col = t.color || "var(--ink)", ink = t.color ? DB.inkOn(t.color) : "#fff";
+      const style = ' style="--ch:' + col + ";--chi:" + ink + '"', ok = !!(x.url || "").trim(), cafe = isCafe(x.url);
+      const go = ok ? (cafe && x.featured ? '<span class="ch-go naver">' + window.brandMark("naver", "sm") + esc(x.label || "카페 바로가기") + icon("arrowUpRight", "sm") + "</span>" : '<span class="ch-go"' + style + ">" + esc(x.label || "바로가기") + icon("arrowUpRight", "sm") + "</span>") : '<span class="tiny">링크를 준비하고 있어요</span>';
+      const inner = '<span class="ch-bar" aria-hidden="true"></span>' + (x.tag ? '<span class="ch-tag">' + esc(x.tag) + "</span>" : "") +
+        '<div class="res-top"><span class="ch-icon"' + style + ">" + icon(t.icon) + (cafe ? '<span class="ch-badge">' + window.brandMark("naver") + "</span>" : "") + '</span><div><div class="res-title">' + esc(x.title) + "</div>" +
+          '<div class="tiny ch-via">' + (cafe ? window.brandMark("naver", "xs") + "<span><b>네이버 카페</b>" + (x.featured ? "" : " 글에서 혜택 확인") + "</span>" : esc((G.find((g) => g.key === x.group) || G[0]).label)) + "</div></div></div>" +
+        (x.desc ? '<div class="res-desc">' + esc(x.desc) + "</div>" : "") +
+        (x.featured && (x.points || []).length ? '<ul class="pt-points">' + x.points.map((p) => "<li>" + icon("check", "xs") + esc(p) + "</li>").join("") + "</ul>" : "") +
+        '<div class="res-foot">' + go + "</div>";
+      const cls = "res-card ch-card pt-card" + (x.featured ? " pt-feature" : "");
+      return ok ? '<a class="' + cls + '" href="' + esc(x.url) + '" target="_blank" rel="noopener"' + style + ">" + inner + "</a>" : '<div class="' + cls + ' off"' + style + ">" + inner + "</div>";
+    };
+    const count = (k) => all.filter((x) => k === "all" || x.group === k).length;
+    const tabs = '<div class="utabs pt-tabs" role="tablist">' + [["all", "전체보기"]].concat(G.map((g) => [g.key, g.label])).map((t) =>
+      '<a role="tab" href="#/partners' + (t[0] === "all" ? "" : "?tab=" + t[0]) + '" class="' + (tab === t[0] ? "on" : "") + '" aria-selected="' + (tab === t[0]) + '">' + t[1] + ' <span class="fnum">' + count(t[0]) + "</span></a>").join("") + "</div>";
+    const section = (g) => {
+      const list = all.filter((x) => x.group === g.key).sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+      if (!list.length) return "";
+      return '<section class="pt-sec"><div class="section-head"><h2>' + esc(g.label) + ' <span class="tiny">' + list.length + '곳</span></h2><span class="hint">' + esc(g.desc) + "</span></div>" +
+        '<div class="grid-2 ch-grid">' + list.map(card).join("") + "</div></section>";
+    };
+    return '<div class="page">' + pageHead("제휴채널", "두고그룹 서비스와 수강생 전용 제휴 혜택을 한곳에서 확인하고 바로 이동하세요.") +
+      (feat ? '<a class="pt-notice" href="' + esc(feat.url) + '" target="_blank" rel="noopener">' + window.brandMark(isCafe(feat.url) ? "naver" : "kakao", "md") + "<span><b>제휴 혜택 · 할인 코드는 모두 " + esc(feat.title) + "에서 안내해 드려요</b><small>" + esc(feat.tag || "") + (feat.tag ? " · " : "") + "카페에 가입하면 제휴사 할인 코드와 이용 방법을 바로 볼 수 있어요.</small></span>" + icon("arrowUpRight", "sm") + "</a>" : "") +
+      tabs + (all.length ? G.filter((g) => tab === "all" || tab === g.key).map(section).join("") || '<section class="card" style="margin-top:14px">' + empty("handshake", "이 분류에는 아직 등록된 곳이 없어요.") + "</section>"
+        : '<section class="card" style="margin-top:14px">' + empty("handshake", "제휴채널을 준비하고 있어요.") + "</section>") + "</div>";
   }
 
   /* ---------------- 수료증 ---------------- */
@@ -1445,7 +1483,7 @@
     if (!document.getElementById("app") || root.dataset.who !== me.id) { renderShell(); root.dataset.who = me.id; }
     document.getElementById("app").classList.remove("nav-open");
     renderSidebar(r);
-    const pages = { home: pageHome, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, qna: pageQna, docs: pageDocs, bot: pageBot, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, certificate: pageCertificate, page: pageCustom };
+    const pages = { home: pageHome, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, qna: pageQna, docs: pageDocs, bot: pageBot, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, partners: pagePartners, certificate: pageCertificate, page: pageCustom };
     const fn = pages[r.parts[0]] || notFound;
     const main = document.getElementById("main");
     const prevKey = main.dataset.key, key = location.hash;

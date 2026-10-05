@@ -185,7 +185,8 @@
       ["docs", "서류 준비 가이드", "file", "docs"],
       ["library", "유료강의 자료실", "library", "library"],
       ["motivation", "동기부여", "flame", "motivation"],
-      ["channels", "1:1 소통채널", "headset", "channels"]
+      ["channels", "1:1 소통채널", "headset", "channels"],
+      ["partners", "제휴채널", "handshake", "partners"]
     ].filter((x) => !x[3] || on(x[3])).map((x) => x.slice(0, 3));
     if (customPages(iid).length) content.push(["pages", "추가 메뉴", "star"]);
     return [
@@ -622,6 +623,17 @@
         F("hours", "운영 시간 (선택)", "text", { hint: "예: 평일 10:00 ~ 18:00" }),
         F("label", "버튼 글자", "text", { hint: "예: 카카오톡으로 상담하기" }),
         F("note", "링크가 없을 때 보일 안내 (선택)", "textarea", { rows: 2, hint: "개별 카톡방처럼 공개 링크가 없는 채널이면 주소는 비우고 여기에 안내를 적어요. 예: 입금이 확인되면 담당 팀이 링크를 보내 드려요." })] },
+    partner: { name: "제휴채널", list: (c) => c.partners || (c.partners = DB.defaultPartners(c)), idp: "pt", init: () => ({ group: "partner", label: "바로가기", icon: "handshake", color: "#0a5de2" }),
+      fields: [F("title", "이름 (카드 제목)", "text", { hint: "예: 두고 N카페, 코워크시티" }),
+        F("group", "분류 (수강생 화면의 탭)", "select", { options: () => DB.PARTNER_GROUPS.map((g) => [g.key, g.label + " — " + g.desc]) }),
+        F("featured", "맨 위에 크게 보이기 (제휴 혜택을 안내하는 대표 카페 등 · 하나만 켜 주세요)", "checkbox"),
+        F("tag", "작은 머리말 (선택)", "text", { hint: "예: 비상주 사무실, 해외송금" }),
+        F("desc", "설명", "textarea", { rows: 3 }),
+        F("points", "강조 항목 (크게 보일 때만 · 한 줄에 하나)", "lines", { rows: 3 }),
+        F("url", "연결 주소", "url", { hint: "누르면 새 창으로 열려요. 네이버 카페 주소면 카드에 네이버 표시가 붙어요." }),
+        F("label", "버튼 글자", "text", { hint: "예: 제휴 혜택 보기" }),
+        F("icon", "카드 아이콘", "select", { options: () => DB.PARTNER_ICONS }),
+        F("color", "카드 색", "select", { options: () => DB.CHANNEL_COLORS.concat([["#0d9488", "청록"], ["#4f46e5", "남색"]]) })] },
     ql: { name: "자주 찾는 페이지", list: (c) => c.quickLinks || (c.quickLinks = DB.defaultQuickLinks(c)), idp: "ql", init: () => ({ icon: "link" }),
       fields: [F("title", "이름"), F("desc", "한 줄 설명"), F("url", "주소", "text", { hint: "수강생 화면(#/notices, #/qna, #/docs, #/qna/requests, #/bot, #/library …) 또는 https:// 외부 주소(유튜브·카페·카카오톡 등, 새 창으로 열려요)" }),
         F("color", "아이콘 색 (외부 링크용 · 비우면 기본 색)", "text", { hint: "예: 유튜브 #ff0000 · 네이버 #03c75a · 두고 #0a5de2. # 뒤에 6자리 색 코드를 적어요." }),
@@ -794,6 +806,7 @@
       else if (u && item.type === "phone" && !/^tel:/i.test(u) && /^[\d\s+()-]+$/.test(u)) item.url = "tel:" + u.replace(/[^\d+]/g, "");
       else if (u && !/^(https?:|mailto:|tel:)/i.test(u)) item.url = "https://" + u.replace(/^\/+/, "");
     }
+    if (form.dataset.coll === "partner" && item.featured) list.forEach((x) => { if (x !== item) x.featured = false; });
     if (form.dataset.coll === "event") {
       if (!item.title) { err.textContent = "일정 이름을 입력해 주세요."; return; }
       if (item.scope === "cohort" && (!item.cohortId || !item.date)) { err.textContent = "기수와 날짜를 골라 주세요."; return; }
@@ -985,6 +998,13 @@
     return head("1:1 소통채널", "수강생 메뉴 ‘1:1 소통채널’에 카드로 보여요. 카카오톡 채널 · 채널톡 · 네이버 톡톡 · 이메일 · 전화 등 강사님이 실제로 쓰는 상담 창구를 넣어 두면, 수강생이 누르는 순간 그 채널로 연결돼요.", addBtn("channel", "채널 추가")) +
       '<section class="a-card">' + simpleList("channel", list, (ch) => { const t = DB.channelType(ch.type), lk = DB.channelLook(ch); return '<span class="a-ch-ic" style="background:' + (lk.color || "var(--m-primary)") + ";color:" + (lk.ink || "#fff") + '">' + icon(lk.icon, "sm") + '</span><div class="a-item-main"><b>' + esc(ch.title || t.label) + "</b><small>" + esc([ch.tag, t.label, ch.hours, ch.url || ((ch.note || "").trim() ? "링크 없이 안내 문구만 보여요" : "주소 없음 (수강생에게 ‘준비 중’으로 보여요)")].filter(Boolean).join(" · ")) + "</small></div>" + (ch.url ? pill("연결됨", "ok") : (ch.note || "").trim() ? pill("안내만 (링크 없음)", "info") : pill("준비 중", "mute")); }, "채널이 없어요. ‘채널 추가’로 상담 창구를 만들어 주세요.") + "</section>" +
       '<p class="a-hint">' + icon("alert", "xs") + " 순서는 화살표로 바꿀 수 있어요. 메뉴를 숨기려면 ‘메뉴 구성’에서 1:1 소통채널을 꺼 주세요.</p>";
+  }
+  function pagePartners() {
+    const c = C(), list = DB.partnersOf(c), G = DB.PARTNER_GROUPS;
+    return head("제휴채널", "수강생 메뉴 ‘제휴채널’에 탭(전체보기 · 두고그룹 · 제휴사)으로 보여요. ‘맨 위에 크게’를 켠 곳(예: 두고 N카페)은 가장 위에 큰 카드와 ‘제휴 혜택 · 할인 코드 안내’ 띠로 보여요.", addBtn("partner", "제휴처 추가")) +
+      '<section class="a-card">' + simpleList("partner", list, (x) => { const lk = DB.channelLook(Object.assign({ type: "other" }, x)); return '<span class="a-ch-ic" style="background:' + (lk.color || "var(--m-primary)") + ";color:" + DB.inkOn(lk.color) + '">' + icon(lk.icon, "sm") + '</span><div class="a-item-main"><b>' + esc(x.title) + "</b><small>" + esc([x.tag, x.url || "주소 없음 (‘준비 중’으로 보여요)"].filter(Boolean).join(" · ")) + "</small></div>" +
+        pill((G.find((g) => g.key === x.group) || G[0]).label, x.group === "doogo" ? "dark" : "info") + (x.featured ? pill("맨 위 크게", "ok") : ""); }, "제휴처가 없어요. ‘제휴처 추가’로 만들어 주세요.") + "</section>" +
+      '<p class="a-hint">' + icon("alert", "xs") + " 순서는 화살표로 바꿀 수 있어요. 메뉴를 숨기려면 ‘메뉴 구성’에서 제휴채널을 꺼 주세요. " + (Array.isArray(c.partners) || IID() === "moon" ? "" : "지금은 문대표 기본 구성(강사님 이름으로 바뀜)이 보이고 있어요. 하나라도 수정하면 강사님 것으로 저장돼요.") + "</p>";
   }
   function pageLibrary() {
     const c = C();
@@ -1514,7 +1534,7 @@
   }
 
   /* ---------------- 렌더 ---------------- */
-  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, pages: pageCustomPages };
+  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, partners: pagePartners, pages: pageCustomPages };
   const MPAGES = { "": pageMasterHome, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData };
   function render() {
     closeModal();

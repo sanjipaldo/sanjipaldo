@@ -499,6 +499,22 @@ MOON_CONTENT.channels = [
     desc: "국내 · 해외 건강식품 유통과 관련해 상담이 필요하실 때는 두고푸드 도매몰로 문의해 주세요.",
     url: "https://pf.kakao.com/_NyuVn", hours: "", label: "두고푸드 문의하기" }
 ];
+// 제휴채널 (강사센터 ‘제휴채널’에서 바꿀 수 있음). featured = 맨 위에 크게
+MOON_CONTENT.partners = [
+  { id: "pt-cafe", group: "doogo", featured: true, icon: "users", color: "#03c75a", tag: "문대표 수강생 전용", title: "두고 N카페",
+    desc: "문대표 수강생만 단독으로 이용할 수 있는 네이버 카페예요. 제휴사 할인 코드를 비롯한 모든 제휴 혜택은 이 카페에서 안내해 드려요.",
+    points: ["제휴사 할인 코드 · 혜택 안내", "수강생 전용 공지 · 자료", "수강생끼리 정보 나눔"], url: "https://cafe.naver.com/doogomarket", label: "두고 N카페 바로가기" },
+  { id: "pt-connect", group: "doogo", icon: "factory", color: "#0a5de2", tag: "제조 · OEM", title: "두고커넥트",
+    desc: "건강식품 제조 · OEM이 필요할 때, 제조 상담부터 진행까지 두고커넥트가 함께해요.", url: "https://www.doogoconnect.com/", label: "두고커넥트 바로가기" },
+  { id: "pt-food", group: "doogo", icon: "store", color: "#ea580c", tag: "식품 도매몰", title: "두고푸드",
+    desc: "국내 · 해외 건강식품을 사업자 도매가로 만나 보세요. 유통 관련 상담도 함께 받을 수 있어요.", url: "https://www.doogofood.com/", label: "두고푸드 바로가기" },
+  { id: "pt-cowork", group: "partner", icon: "building", color: "#0d9488", tag: "비상주 사무실", title: "코워크시티",
+    desc: "사업자등록에 필요한 사업장 주소를 비상주 사무실로 마련할 수 있어요. 수강생 제휴 혜택과 할인 코드는 카페 글에서 확인하세요.",
+    url: "https://cafe.naver.com/doogomarket?iframe_url_utf8=%2Fca-fe%2Fcafes%2F31581971%2Farticles%2F27%253FreferrerAllArticles%3Dfalse%2526menuid%3D64%2526boardtype%3DL%2526oldPath%3D%252FArticleRead.nhn%253FreferrerAllArticles%253Dfalse%2526menuid%253D64%2526boardtype%253DL%2526clubid%253D31581971%2526articleid%253D27", label: "제휴 혜택 보기" },
+  { id: "pt-utransfer", group: "partner", icon: "send", color: "#4f46e5", tag: "해외송금", title: "유트랜스퍼",
+    desc: "뉴질랜드 현지 공급처 결제처럼 해외로 송금할 때 수강생 제휴 혜택을 받을 수 있어요. 할인 코드와 이용 방법은 카페 글에서 확인하세요.",
+    url: "https://cafe.naver.com/f-e/cafes/31581971/articles/34?boardtype=L&menuid=64&referrerAllArticles=false", label: "제휴 혜택 보기" }
+];
 MOON_CONTENT.curriculumName = "5주 기본 과정";
 MOON_CONTENT.curricula = [(function () {
   const w = JSON.parse(JSON.stringify(MOON_CONTENT.weeks));

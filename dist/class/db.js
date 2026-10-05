@@ -112,6 +112,7 @@
     { key: "library", label: "유료강의 자료실", icon: "library" },
     { key: "motivation", label: "동기부여", icon: "flame" },
     { key: "channels", label: "1:1 소통채널", icon: "headset" },
+    { key: "partners", label: "제휴채널", icon: "handshake" },
     { key: "certificate", label: "수료증", icon: "award" }
   ];
   const LIB_MENUS = [
@@ -360,6 +361,15 @@
   const defaultChannels = () => [
     { id: "ch1", type: "kakao", title: "카카오톡 1:1 상담", desc: "수강 · 결제 · 개인 상황처럼 다른 사람에게 보이고 싶지 않은 내용은 1:1로 편하게 남겨 주세요.", url: "", hours: "평일 10:00 ~ 18:00", label: "카카오톡으로 상담하기" }
   ];
+  // 제휴채널: 두고그룹 회사 · 외부 제휴사 바로가기. 강사가 따로 정하지 않았으면 문대표 구성을 그 강사 이름으로 쓴다
+  const PARTNER_GROUPS = [{ key: "doogo", label: "두고그룹", desc: "두고그룹이 직접 운영하는 서비스예요." }, { key: "partner", label: "제휴사", desc: "수강생 전용 혜택을 주는 외부 제휴사예요. 할인 코드는 카페 글에서 확인하세요." }];
+  const PARTNER_ICONS = CHANNEL_ICONS.concat([["building", "건물 (사무실)"], ["send", "보내기 (송금)"], ["coins", "동전 (결제 · 금융)"], ["handshake", "악수 (제휴)"]]);
+  function defaultPartners(c) {
+    const src = (window.CLASS_SEED.content.moon || {}).partners || [];
+    const inst = (c && c.brand && c.brand.instructor) || "문대표";
+    return JSON.parse(JSON.stringify(src).replace(/문대표/g, inst));
+  }
+  const partnersOf = (c) => (Array.isArray(c.partners) ? c.partners : defaultPartners(c));
   const channelsOf = (c) => (Array.isArray(c.channels) ? c.channels : defaultChannels());
 
   /* ---------------- 불러오기 · 저장 ---------------- */
@@ -799,7 +809,7 @@
   };
 
   window.DB = {
-    load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, CHANNEL_TYPES, CHANNEL_ICONS, CHANNEL_COLORS, channelType, channelLook, defaultChannels, channelsOf, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
+    load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, CHANNEL_TYPES, CHANNEL_ICONS, CHANNEL_COLORS, channelType, channelLook, defaultChannels, channelsOf, PARTNER_GROUPS, PARTNER_ICONS, defaultPartners, partnersOf, inkOn, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
     curricula, curriculum, curriculumOf, weeksOf, cohortWeeks,

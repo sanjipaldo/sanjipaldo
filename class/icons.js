@@ -50,6 +50,8 @@
     factory: '<path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M17 18h1"/><path d="M12 18h1"/><path d="M7 18h1"/>',
     globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
     chatLock: '<path d="M19 15v-2a2 2 0 1 0-4 0v2"/><path d="M9 17H7l-4 4v-4a1 1 0 0 1-1-1V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3.5"/><rect x="13" y="15" width="8" height="5" rx="1"/>',
+    handshake: '<path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/>',
+    building: '<rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>',
     heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
     target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
     printer: '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
@@ -116,5 +118,10 @@
   };
   /** ‘Powered by doogo’ 표시 */
   window.poweredBy = (variant, cls) => '<span class="powered ' + (cls || "") + '"><span>Powered by</span>' + window.doogoLogo(variant || "color") + "</span>";
+  // 서비스 표시 (카카오톡 채널 · 네이버) — 연결되는 곳을 한눈에 알 수 있게
+  window.brandMark = (kind, cls) => kind === "naver"
+    ? '<svg class="bmark ' + (cls || "") + '" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#03c75a"/><path d="M29 27h15l13 20V27h15v46H57L44 53v20H29z" fill="#fff"/></svg>'
+    : '<svg class="bmark ' + (cls || "") + '" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#fee500"/><path d="M52 15c19.9 0 36 13.7 36 30.5S71.9 76 52 76c-3.4 0-6.7-.4-9.8-1.1L26 86l3.6-16.7C21 63.8 16 55.1 16 45.5 16 28.7 32.1 15 52 15z" fill="#231815"/>' +
+      '<text x="52" y="56.5" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="29" font-weight="800" fill="#fee500" letter-spacing="-1">Ch</text></svg>';
   window.icon = (name, cls) => '<svg class="icon ' + (cls || "") + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 })();
