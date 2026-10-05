@@ -1,19 +1,23 @@
 "use strict";
-/* 나만의 유튜브 채널 AI 자비스 — 웹 플랫폼 서버
+/* 자비스 AI (JARVIS AI) — 사업 자동화 플랫폼 서버. 첫 번째 모듈: 유튜브 채널 운영
    누구나 가입 → 유튜브 링크·키워드·레퍼럴 링크 입력 → 키워드 댓글에 자동 대댓글(인증코드 + 신청 폼)
    → 구독자가 폼에 이메일 제출 → 레퍼럴 링크 메일 자동 발송. 새 영상도 자동으로 따라간다.
 
-   GET  /login /signup            로그인 · 가입 (테스트 계정 admin / admin)
-   GET  /dashboard                요약 · 빠른 시작(유튜브 링크 넣기) · 캠페인 목록 · 최근 활동
-   GET  /campaigns/new  POST /campaigns            캠페인 만들기
-   GET  /campaigns/:id  POST /campaigns/:id        캠페인 기록 · 수정  (/toggle, /delete)
-   POST /run                      지금 댓글 확인하기
-   GET  /demo                     가상 유튜브 (구글 연결 없이 전체 흐름 시험)
-   GET  /emails                   보낸 메일
-   GET  /settings                 유튜브 연결 · 운영 모드 · 메일 발송 방식 · 비밀번호
+   GET  /login /signup                     로그인 · 가입 (테스트 계정 admin / admin)
+   GET  /hub                               자비스 AI 홈 — 자동화 모듈 목록
+   GET  /settings                          계정 · 메일 발송 방식 · 비밀번호 (모든 모듈 공통)
+   GET  /admin                             가입자 · 사용량 (관리자)
+
+   모듈 1 · 유튜브 채널 운영 (/youtube)
+   GET  /youtube                           요약 · 빠른 시작(유튜브 링크 넣기) · 캠페인 · 최근 활동
+   GET  /youtube/campaigns/new  POST /youtube/campaigns          캠페인 만들기
+   GET  /youtube/campaigns/:id  POST /youtube/campaigns/:id      기록 · 수정 (/toggle, /delete)
+   POST /youtube/run                       지금 댓글 확인하기
+   GET  /youtube/demo                      가상 유튜브 (구글 연결 없이 전체 흐름 시험)
+   GET  /youtube/emails                    보낸 메일
+   GET  /youtube/settings                  유튜브 연결 · 운영 모드 · 확인 주기 · 새 영상 자동화
    GET  /auth/google?kind=youtube|gmail  → /auth/google/callback   구글 계정 연결
-   GET  /admin                    가입자 · 사용량 (관리자)
-   GET  /f/:slug?c=코드  POST /f/:slug              구독자용 신청 폼 (공개)
+   GET  /f/:slug?c=코드  POST /f/:slug      구독자용 신청 폼 (공개)
    GET  /healthz */
 const http = require("node:http");
 const crypto = require("node:crypto");
@@ -241,9 +245,9 @@ function createApp(opts = {}) {
 
     const sess = getSession(req);
 
-    if (p === "/" ) return redirect(res, sess ? "/dashboard" : "/login");
+    if (p === "/") return redirect(res, sess ? "/hub" : "/login");
     if (p === "/login" || p === "/signup") {
-      if (sess) return redirect(res, "/dashboard");
+      if (sess) return redirect(res, "/hub");
       const mode = p.slice(1);
       if (mode === "signup" && !allowSignup) return redirect(res, "/login");
       if (method === "GET") return send(res, 200, V.authPage({ mode, allowSignup }));
@@ -254,7 +258,7 @@ function createApp(opts = {}) {
       if (mode === "login") {
         const user = data.users.find(u => u.username === username);
         if (!user || !verifyPassword(b.password, user.password)) return fail("아이디 또는 비밀번호가 맞지 않습니다.");
-        return startSession(res, user, "/dashboard");
+        return startSession(res, user, "/hub");
       }
       if (!/^[a-z0-9_.-]{3,30}$/.test(username)) return fail("아이디는 영문 소문자·숫자·_ . - 로 3~30자입니다.");
       if (data.users.some(u => u.username === username)) return fail("이미 있는 아이디입니다.");
@@ -263,7 +267,7 @@ function createApp(opts = {}) {
       const user = { id: db.id(), username, password: hashPassword(b.password), role: "user", createdAt: new Date().toISOString(), settings: defaultSettings(), state: {} };
       data.users.push(user);
       db.save();
-      return startSession(res, user, "/dashboard");
+      return startSession(res, user, "/hub");
     }
 
     if (!sess) return redirect(res, "/login");
@@ -276,6 +280,7 @@ function createApp(opts = {}) {
     }
     const providerKind = () => providerFor(user).kind;
     const page = (fn, extra) => send(res, 200, fn(Object.assign({ user, csrf, flash: takeFlash(sess), googleReady: google.configured, provider: providerKind() }, extra)));
+    const Y = "/youtube";
 
     if (p === "/logout" && method === "POST") {
       delete data.sessions[sess.token];
@@ -283,33 +288,38 @@ function createApp(opts = {}) {
       return redirect(res, "/login", { "set-cookie": sessionCookie("", 0) });
     }
 
-    if (p === "/dashboard") {
+    // ── 자비스 AI 홈 (모듈 목록) ──
+    if (p === "/hub") return page(V.hubPage, { youtube: dashboardData(user) });
+
+    // ── 모듈 1: 유튜브 채널 운영 ──
+    if (p === "/dashboard") return redirect(res, Y);
+    if (p === Y) {
       return page(V.dashboardPage, Object.assign(dashboardData(user), { formUrl: c => engine.formUrl(c) }));
     }
 
-    if (p === "/run" && method === "POST") {
+    if (p === `${Y}/run` && method === "POST") {
       const text = await runUser(user);
       flash(sess, text && text.startsWith("오류") ? "error" : "ok", text ? `확인 완료 — ${text}` : "이미 확인 중입니다. 잠시 뒤 다시 보세요.");
-      return redirect(res, body.back === "/demo" ? "/demo" : "/dashboard");
+      return redirect(res, body.back === "demo" ? `${Y}/demo` : Y);
     }
 
-    if (p === "/campaigns/new") {
+    if (p === `${Y}/campaigns/new`) {
       const blank = { name: "", active: true, target: "channel", videos: [], keywords: [], exact: false, replyTemplate: E.DEFAULT_REPLY, referralLink: "", mailSubject: E.DEFAULT_SUBJECT, mailBody: E.DEFAULT_BODY, announce: E.DEFAULT_ANNOUNCE, onePerPerson: true, onePerEmail: true };
       return page(V.campaignPage, { camp: blank, isNew: true });
     }
-    if (p === "/campaigns" && method === "POST") {
+    if (p === `${Y}/campaigns` && method === "POST") {
       const { c, error } = campaignFromBody(body);
       if (error) {
-        if (body.quick === "1") { flash(sess, "error", error); return redirect(res, "/dashboard"); }
+        if (body.quick === "1") { flash(sess, "error", error); return redirect(res, Y); }
         return page(V.campaignPage, { camp: c, isNew: true, flash: { type: "error", text: error } });
       }
       Object.assign(c, { id: db.id(), userId: user.id, slug: randomToken(6), createdAt: new Date().toISOString() });
       data.campaigns.push(c);
       db.save();
       flash(sess, "ok", `"${c.name}" 캠페인을 만들었습니다. ${user.settings.intervalMin}분마다 자동으로 댓글을 확인합니다.`);
-      return redirect(res, `/campaigns/${c.id}`);
+      return redirect(res, `${Y}/campaigns/${c.id}`);
     }
-    const cm = p.match(/^\/campaigns\/([\w]+)(\/toggle|\/delete)?$/);
+    const cm = p.match(/^\/youtube\/campaigns\/(\w+)(\/toggle|\/delete)?$/);
     if (cm) {
       const camp = data.campaigns.find(c => c.id === cm[1] && c.userId === user.id);
       if (!camp) return send(res, 404, "캠페인을 찾을 수 없습니다.", { "content-type": "text/plain; charset=utf-8" });
@@ -317,13 +327,13 @@ function createApp(opts = {}) {
         camp.active = !camp.active;
         db.save();
         flash(sess, "ok", camp.active ? "다시 켰습니다." : "멈췄습니다.");
-        return redirect(res, `/campaigns/${camp.id}`);
+        return redirect(res, `${Y}/campaigns/${camp.id}`);
       }
       if (method === "POST" && cm[2] === "/delete") {
         data.campaigns.splice(data.campaigns.indexOf(camp), 1);
         db.save();
         flash(sess, "ok", `"${camp.name}" 캠페인을 삭제했습니다.`);
-        return redirect(res, "/dashboard");
+        return redirect(res, Y);
       }
       const view = extra => {
         const videoTitles = Object.fromEntries(data.demoVideos.filter(v => v.userId === user.id).map(v => [v.id, v.title]));
@@ -339,18 +349,18 @@ function createApp(opts = {}) {
         Object.assign(camp, c);
         db.save();
         flash(sess, "ok", "저장했습니다. 다음 확인부터 바로 적용됩니다.");
-        return redirect(res, `/campaigns/${camp.id}`);
+        return redirect(res, `${Y}/campaigns/${camp.id}`);
       }
       return view();
     }
 
-    if (p === "/demo") {
+    if (p === `${Y}/demo`) {
       return page(V.demoPage, {
         videos: data.demoVideos.filter(v => v.userId === user.id).sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)),
         comments: data.demoComments.filter(c => c.userId === user.id),
       });
     }
-    if (p === "/demo/videos" && method === "POST") {
+    if (p === `${Y}/demo/videos` && method === "POST") {
       const title = String(body.title || "").trim().slice(0, 100) || "데모 영상";
       const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
       let vid = "";
@@ -358,24 +368,24 @@ function createApp(opts = {}) {
       data.demoVideos.push({ id: vid, userId: user.id, title, publishedAt: new Date().toISOString() });
       db.save();
       flash(sess, "ok", `가상 영상 "${title}"을 올렸습니다. 채널 전체 캠페인이 있으면 다음 확인 때 새 영상으로 감지됩니다.`);
-      return redirect(res, "/demo");
+      return redirect(res, `${Y}/demo`);
     }
-    if (p === "/demo/comments" && method === "POST") {
+    if (p === `${Y}/demo/comments` && method === "POST") {
       const video = data.demoVideos.find(v => v.id === body.videoId && v.userId === user.id);
       const text = String(body.text || "").trim().slice(0, 1000);
       if (video && text) {
         const author = String(body.author || "").trim().slice(0, 40) || "@구독자";
         data.demoComments.push({ id: db.id(), userId: user.id, videoId: video.id, text, author, authorChannelId: `FAN_${Buffer.from(author).toString("hex").slice(0, 20)}`, publishedAt: new Date().toISOString() });
         db.save();
-        flash(sess, "ok", "구독자 댓글을 달았습니다. \"자비스 지금 확인하기\"를 누르거나 자동 확인을 기다리세요.");
+        flash(sess, "ok", "구독자 댓글을 달았습니다. \"자비스 지금 확인\"을 누르거나 자동 확인을 기다리세요.");
       }
-      return redirect(res, "/demo");
+      return redirect(res, `${Y}/demo`);
     }
 
-    if (p === "/emails") return page(V.emailsPage, { emails: data.emails.filter(e => e.userId === user.id).slice(-200).reverse() });
+    if (p === `${Y}/emails`) return page(V.emailsPage, { emails: data.emails.filter(e => e.userId === user.id).slice(-200).reverse() });
 
-    if (p === "/settings" && method === "GET") return page(V.settingsPage);
-    if (p === "/settings" && method === "POST") {
+    if (p === `${Y}/settings` && method === "GET") return page(V.youtubeSettingsPage);
+    if (p === `${Y}/settings` && method === "POST") {
       const s = user.settings;
       s.mode = body.mode === "live" ? "live" : "demo";
       s.testMode = body.testMode === "on";
@@ -384,6 +394,16 @@ function createApp(opts = {}) {
       s.firstHours = Math.min(720, Math.max(1, Number(body.firstHours) || 168));
       s.newVideoAuto = body.newVideoAuto === "on";
       s.notifyEmail = E.isEmail(body.notifyEmail) ? body.notifyEmail.trim() : "";
+      db.save();
+      const warn = s.mode === "live" && !(user.youtube && google.configured) ? " 실제 유튜브 모드는 채널을 연결해야 동작합니다 (그 전까지는 데모로 동작)." : "";
+      flash(sess, warn ? "error" : "ok", `채널 설정을 저장했습니다.${warn}`);
+      return redirect(res, `${Y}/settings`);
+    }
+
+    // ── 계정 · 공통 설정 (모든 모듈이 같이 쓰는 메일 발송 등) ──
+    if (p === "/settings" && method === "GET") return page(V.accountPage);
+    if (p === "/settings" && method === "POST") {
+      const s = user.settings;
       s.mail = Object.assign({}, s.mail, {
         provider: ["outbox", "resend", "gmail"].includes(body.mailProvider) ? body.mailProvider : "outbox",
         senderName: String(body.senderName || "").trim().slice(0, 40),
@@ -392,8 +412,7 @@ function createApp(opts = {}) {
       });
       if (body.resendKey) s.mail.resendKey = cipher.encrypt(String(body.resendKey).trim());
       db.save();
-      const warn = s.mode === "live" && !(user.youtube && google.configured) ? " 실제 유튜브 모드는 채널을 연결해야 동작합니다 (그 전까지는 데모로 동작)." : "";
-      flash(sess, warn ? "error" : "ok", `설정을 저장했습니다.${warn}`);
+      flash(sess, "ok", "메일 발송 설정을 저장했습니다.");
       return redirect(res, "/settings");
     }
     if (p === "/settings/password" && method === "POST") {
@@ -407,10 +426,11 @@ function createApp(opts = {}) {
       return redirect(res, "/settings");
     }
 
-    // 구글 연결
+    // 구글 연결 (유튜브 채널 · Gmail 발송)
     if (p === "/auth/google" && method === "GET") {
-      if (!google.configured) { flash(sess, "error", "서버에 구글 연결 정보가 없습니다 (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)."); return redirect(res, "/settings"); }
       const kind = url.searchParams.get("kind") === "gmail" ? "gmail" : "youtube";
+      const back = kind === "gmail" ? "/settings" : `${Y}/settings`;
+      if (!google.configured) { flash(sess, "error", "서버에 구글 연결 정보가 없습니다 (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)."); return redirect(res, back); }
       sess.s.oauth = { state: randomToken(16), kind };
       db.save();
       return redirect(res, google.authUrl({ redirectUri: `${baseUrl()}/auth/google/callback`, state: sess.s.oauth.state, kind }));
@@ -418,8 +438,9 @@ function createApp(opts = {}) {
     if (p === "/auth/google/callback") {
       const o = sess.s.oauth;
       delete sess.s.oauth;
-      if (!o || url.searchParams.get("state") !== o.state) { flash(sess, "error", "구글 연결이 만료되었습니다. 다시 시도하세요."); return redirect(res, "/settings"); }
-      if (url.searchParams.get("error")) { flash(sess, "error", "구글 연결을 취소했습니다."); return redirect(res, "/settings"); }
+      const back = o && o.kind === "gmail" ? "/settings" : `${Y}/settings`;
+      if (!o || url.searchParams.get("state") !== o.state) { flash(sess, "error", "구글 연결이 만료되었습니다. 다시 시도하세요."); return redirect(res, back); }
+      if (url.searchParams.get("error")) { flash(sess, "error", "구글 연결을 취소했습니다."); return redirect(res, back); }
       try {
         const t = await google.exchangeCode({ code: url.searchParams.get("code"), redirectUri: `${baseUrl()}/auth/google/callback` });
         const old = (user.google && cipher.decrypt(user.google.tokens)) || {};
@@ -442,7 +463,7 @@ function createApp(opts = {}) {
       } catch (e) {
         flash(sess, "error", String(e.message || e));
       }
-      return redirect(res, "/settings");
+      return redirect(res, back);
     }
     if (p === "/auth/google/disconnect" && method === "POST") {
       delete user.google;
@@ -451,7 +472,7 @@ function createApp(opts = {}) {
       if (user.settings.mail.provider === "gmail") user.settings.mail.provider = "outbox";
       db.save();
       flash(sess, "ok", "구글 연결을 끊었습니다. 데모 모드로 바뀌었습니다.");
-      return redirect(res, "/settings");
+      return redirect(res, `${Y}/settings`);
     }
 
     if (p === "/admin" && user.role === "admin") {
