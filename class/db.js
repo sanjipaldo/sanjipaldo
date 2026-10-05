@@ -372,6 +372,20 @@
   const partnersOf = (c) => (Array.isArray(c.partners) ? c.partners : defaultPartners(c));
   const channelsOf = (c) => (Array.isArray(c.channels) ? c.channels : defaultChannels());
 
+  // 코치: 강사 밑에서 과제 검수 · 문의 답변 등을 맡는 계정 (강사센터에서 강사가 만든다)
+  const coachesOf = (insId) => { const ins = instructor(insId); return ins ? (ins.coaches = Array.isArray(ins.coaches) ? ins.coaches : []) : []; };
+  const coach = (insId, coachId) => coachesOf(insId).find((x) => x.id === coachId) || null;
+  /** 이름 + 뒷자리로 코치 찾기 (운영 중인 강사의 코치 · 중지 여부는 부르는 쪽에서 확인) */
+  function findCoachLogin(name, phone4) {
+    const nm = String(name || "").replace(/\s+/g, "");
+    for (const ins of db.instructors) {
+      if (ins.status !== "active") continue;
+      const c = (ins.coaches || []).find((x) => x.name.replace(/\s+/g, "") === nm && x.phone4 === phone4);
+      if (c) return { ins, coach: c };
+    }
+    return null;
+  }
+
   /* ---------------- 불러오기 · 저장 ---------------- */
   let db = null;
 
@@ -601,6 +615,11 @@
       }
       db.flags.channelsV3 = true; save();
     }
+    // 코치 예시 (한 번만): 시드에 코치가 있는 강사(문대표)에 코치가 없으면 넣는다
+    if (!db.flags.coachesSeeded) {
+      window.CLASS_SEED.instructors.forEach((si) => { const ins = db.instructors.find((x) => x.id === si.id); if (ins && si.coaches && !(ins.coaches || []).length) ins.coaches = clone(si.coaches); });
+      db.flags.coachesSeeded = true; save();
+    }
     // 무료강의 페이지 기본 문구 (한 번만, doogo.site 내용)
     if (!db.flags.freeSeeded2) {
       // doogo.site 와 같은 화면으로 바꾸면서 기본 내용을 새로 넣는다 (한 번만)
@@ -809,7 +828,7 @@
   };
 
   window.DB = {
-    load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, CHANNEL_TYPES, CHANNEL_ICONS, CHANNEL_COLORS, channelType, channelLook, defaultChannels, channelsOf, PARTNER_GROUPS, PARTNER_ICONS, defaultPartners, partnersOf, inkOn, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
+    load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, CHANNEL_TYPES, CHANNEL_ICONS, CHANNEL_COLORS, channelType, channelLook, defaultChannels, channelsOf, PARTNER_GROUPS, PARTNER_ICONS, defaultPartners, partnersOf, inkOn, coachesOf, coach, findCoachLogin, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
     curricula, curriculum, curriculumOf, weeksOf, cohortWeeks,

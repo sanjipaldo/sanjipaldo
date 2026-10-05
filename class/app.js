@@ -19,7 +19,7 @@
   let D = null;         // 강사 콘텐츠
   let CO = null;        // 내 기수
   let me = null;        // 로그인한 수강생 (미리보기면 가상 수강생)
-  let preview = false;
+  let preview = false, previewBy = "instructor";
   let P = null;         // 내 진행 기록
   let draft = { missionId: null, files: [] };
   let calCursor = null, calSel = null;
@@ -281,7 +281,7 @@
       const ins = DB.instructor(sess.instructorId);
       const co = DB.cohort(sess.cohortId) || (ins && DB.currentCohort(ins.id));
       if (!ins || !co) return;
-      INS = ins; CO = co; D = cohortContent(ins.id, co); preview = true;
+      INS = ins; CO = co; D = cohortContent(ins.id, co); preview = true; previewBy = sess.by || "instructor";
       me = { id: "preview-" + ins.id, name: ins.displayName, instructorId: ins.id, cohortId: co.id };
     } else {
       const s = DB.student(sess.id);
@@ -343,8 +343,8 @@
   function renderShell() {
     root.innerHTML =
       '<div class="app' + (preview ? " has-preview" : "") + '" id="app">' +
-        (preview ? '<div class="preview-bar"><span>' + icon("eye", "sm") + "<b>강사 미리보기</b> · " + esc(CO.name) + " 기준 수강생 화면이에요. 여기서 제출한 내용은 실제 수강생 기록에 섞이지 않아요.</span>" +
-          '<span class="preview-actions"><button type="button" class="link-btn preview-exit" data-action="exit-preview">로그인 화면 보기</button><a class="btn btn-primary btn-sm" href="#/center">' + icon("arrowLeft", "sm") + "강사센터로 돌아가기</a></span></div>" : "") +
+        (preview ? '<div class="preview-bar"><span>' + icon("eye", "sm") + "<b>" + (previewBy === "coach" ? "코치" : "강사") + " 미리보기</b> · " + esc(CO.name) + " 기준 수강생 화면이에요. 여기서 제출한 내용은 실제 수강생 기록에 섞이지 않아요.</span>" +
+          '<span class="preview-actions"><button type="button" class="link-btn preview-exit" data-action="exit-preview">로그인 화면 보기</button><a class="btn btn-primary btn-sm" href="#/center">' + icon("arrowLeft", "sm") + (previewBy === "coach" ? "코치센터로" : "강사센터로") + " 돌아가기</a></span></div>" : "") +
         '<header class="topbar">' +
           '<button class="menu-toggle" type="button" data-action="toggle-nav" aria-label="메뉴 열기">' + icon("menu") + "</button>" +
           '<a class="brand" href="#/home">' + window.logoMark() + '<span class="sr-only">홈</span><span class="brand-text"><small>' + esc(D.brand.name) + "</small><strong>" + esc(D.brand.courseTitle) + "</strong></span></a>" +

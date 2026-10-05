@@ -18,7 +18,7 @@
   const icon = window.icon;
   const isActive = () => document.body.dataset.mode === "admin";
 
-  let S = null; // 관리자 세션 { role: "instructor"|"master", instructorId?, actingAs? }
+  let S = null; // 관리자 세션 { role: "instructor"|"coach"|"master", instructorId?, coachId?, actingAs? }
   let loginTab = "instructor";
   let confirmFn = null;
   const ui = { stuCohort: "all", stuStatus: "pending", stuQuery: "", picked: new Set(), revCohort: null, revWeek: "all", revFilter: "pending", revPicked: new Set(), qFilter: "open", libTab: "ebook", schedCohort: null, mIns: "all", mStatus: "all", mMenuIns: null, mRepIns: "all" };
@@ -37,7 +37,20 @@
     const [path, query] = h.split("?");
     return { parts: path.split("/").filter(Boolean), params: new URLSearchParams(query || "") };
   }
-  const IID = () => (S.role === "instructor" ? S.instructorId : S.actingAs);
+  const IID = () => (S.role === "instructor" || S.role === "coach" ? S.instructorId : S.actingAs);
+  // 코치가 볼 수 있는 강사센터 메뉴 (강사가 ‘코치 관리’에서 고른다). 대시보드와 수강생 화면 미리보기는 늘 열려 있다
+  const COACH_PERMS = [
+    ["운영", [["students", "수강생 관리", "승인 · 기수 이동 · 탈퇴"], ["cohorts", "기수 관리", "기수 만들기 · 일정"], ["reviews", "과제 검수", "과제 피드백 · 승인 · 보완 요청"], ["questions", "요청사항 답변", "수강생 1:1 문의 · 오류 신고 답변"]]],
+    ["수강생 화면 콘텐츠", [["brand", "기본 정보 · 색상 · AI봇"], ["menus", "메뉴 구성"], ["guide", "시작 가이드 · 자주 찾는 페이지"], ["curriculum", "커리큘럼"], ["missions", "과제"], ["schedule", "강의 일정"], ["notices", "공지사항"], ["faq", "Q&A 자주 묻는 질문"], ["docs", "서류 준비 가이드"], ["library", "유료강의 자료실"], ["motivation", "동기부여"], ["channels", "1:1 소통채널"], ["partners", "제휴채널"], ["pages", "추가 메뉴"]]],
+    ["홍보", [["free", "무료강의 페이지"], ["landing", "강의 소개 페이지"]]]
+  ];
+  const COACH_DEFAULT = ["reviews", "questions"];
+  const isCoach = () => !!S && S.role === "coach";
+  const ME_COACH = () => (isCoach() ? DB.coach(S.instructorId, S.coachId) : null);
+  /** 지금 계정이 이 메뉴(강사센터 경로 첫 칸)를 볼 수 있는지 */
+  const can = (key) => { if (!isCoach()) return true; if (!key) return true; if (key === "coaches") return false; const c = ME_COACH(); return !!c && (c.perms || []).indexOf(key) !== -1; };
+  /** 검수 · 답변 기록에 남길 처리자 */
+  const actor = () => { if (isCoach()) { const c = ME_COACH(); return { by: (c ? c.name : "코치") + " 코치", byId: S.coachId, role: "coach" }; } const i = INS(); return { by: (i ? i.name : "") + " 강사", byId: IID(), role: S.role === "master" ? "master" : "instructor" }; };
   const INS = () => DB.instructor(IID());
   const C = () => DB.content(IID());
   // 커리큘럼 편집 화면에서 지금 고른 커리큘럼 (기본: 기본 커리큘럼)
@@ -115,9 +128,11 @@
 
   /* ---------------- 로그인 ---------------- */
   function renderLogin() {
-    const ins = loginTab === "instructor";
-    document.title = (ins ? "강사센터" : "마스터 관리자") + " · 로그인";
-    const L = ins
+    const coachTab = loginTab === "coach", ins = loginTab === "instructor" || coachTab;
+    document.title = (coachTab ? "코치센터" : ins ? "강사센터" : "마스터 관리자") + " · 로그인";
+    const L = coachTab
+      ? { theme: "teal", tag: "코치", eyebrow: "DOOGO COACH WORKSPACE", h: "과제 피드백과<br>1:1 문의를 한 곳에서", sub: "강사님이 맡긴 메뉴에서 수강생 과제를 검수하고, 문의에 답하고, 진행 상황을 챙길 수 있습니다.", icons: ["checks", "message", "users", "award"], label: "COACH", title: "코치 로그인", lead: "강사님이 등록해 준 이름과 전화번호 뒷자리로 로그인하세요." }
+      : ins
       ? { theme: "blue", tag: "강사센터", eyebrow: "DOOGO INSTRUCTOR CENTER", h: "수강생 관리부터<br>커리큘럼까지 한 곳에서", sub: "기수별 수강생 승인, 과제 검수, 강의 영상과 일정 업로드를 간편하게 운영할 수 있습니다.", icons: ["users", "play", "calendar", "settings"], label: "INSTRUCTOR", title: "강사 로그인", lead: "강사 이름과 전화번호 뒷자리로 로그인하세요." }
       : { theme: "violet", tag: "마스터", eyebrow: "DOOGO MASTER CONSOLE", h: "강사 플랫폼을<br>분양하고 관리하세요", sub: "새 강사 플랫폼 개설, 운영 중지, 강사센터 대신 접속과 전체 수강생 현황을 한 곳에서 봅니다.", icons: ["store", "layers", "users", "shieldCheck"], label: "MASTER", title: "마스터 로그인", lead: "운영자 전용 관리자 계정으로 로그인하세요." };
     root.innerHTML =
@@ -125,7 +140,7 @@
         '<section class="a-login-brand">' + window.loginArt(L.theme, L.icons) +
           '<span class="a-logo a-logo-doogo">' + window.doogoLogo("white") + '<span class="a-logo-sub">CLASS</span><em>' + L.tag + "</em></span>" +
           '<div class="a-login-hero"><p class="a-eyebrow">' + L.eyebrow + "</p><h2>" + L.h + "</h2><p>" + L.sub + "</p></div>" +
-          '<div class="a-login-foot"><span>© 2026 (주) 두고홀딩스 · doogo</span><span>Secure ' + (ins ? "instructor" : "admin") + " workspace</span></div>" +
+          '<div class="a-login-foot"><span>© 2026 (주) 두고홀딩스 · doogo</span><span>Secure ' + (coachTab ? "coach" : ins ? "instructor" : "admin") + " workspace</span></div>" +
         "</section>" +
         '<section class="a-login-panel">' +
           '<div class="a-login-topright"><span>수강생이신가요?</span><a class="a-btn a-btn-primary a-btn-sm" href="#/login" data-action="to-student">바로가기</a></div>' +
@@ -133,34 +148,51 @@
             '<p class="a-login-label">' + window.doogoLogo("color") + "<span>" + L.label + "</span></p>" +
             "<h1>" + L.title + '</h1><p class="a-muted a-center">' + L.lead + "</p>" +
             '<div class="a-seg" role="tablist">' +
-              '<button type="button" role="tab" aria-selected="' + ins + '" class="' + (ins ? "on" : "") + '" data-action="login-tab" data-tab="instructor">' + icon("user", "sm") + "강사</button>" +
+              '<button type="button" role="tab" aria-selected="' + (ins && !coachTab) + '" class="' + (ins && !coachTab ? "on" : "") + '" data-action="login-tab" data-tab="instructor">' + icon("user", "sm") + "강사</button>" +
+              '<button type="button" role="tab" aria-selected="' + coachTab + '" class="' + (coachTab ? "on" : "") + '" data-action="login-tab" data-tab="coach">' + icon("checks", "sm") + "코치</button>" +
               '<button type="button" role="tab" aria-selected="' + !ins + '" class="' + (!ins ? "on" : "") + '" data-action="login-tab" data-tab="master">' + icon("shieldCheck", "sm") + "마스터 관리자</button>" +
             "</div>" +
             '<form id="a-login-form" class="a-form" novalidate>' +
-              '<div class="a-field"><label for="al-id">' + (ins ? "강사 이름" : "아이디") + '</label><div class="a-input-icon">' + icon("user", "sm") + '<input class="a-input" id="al-id" name="uid" autocomplete="' + (ins ? "name" : "username") + '" placeholder="' + (ins ? "예: 문원오" : "관리자 아이디") + '"></div></div>' +
+              '<div class="a-field"><label for="al-id">' + (coachTab ? "코치 이름" : ins ? "강사 이름" : "아이디") + '</label><div class="a-input-icon">' + icon("user", "sm") + '<input class="a-input" id="al-id" name="uid" autocomplete="' + (ins ? "name" : "username") + '" placeholder="' + (coachTab ? "예: 김하나" : ins ? "예: 문원오" : "관리자 아이디") + '"></div></div>' +
               '<div class="a-field"><label for="al-pw">' + (ins ? "전화번호 뒷자리" : "비밀번호") + '</label><div class="a-input-icon">' + icon("lock", "sm") + '<input class="a-input" id="al-pw" name="pw" type="password"' + (ins ? ' inputmode="numeric" maxlength="4" placeholder="숫자 4자리"' : ' autocomplete="current-password" placeholder="비밀번호"') + '>' +
                 '<button type="button" class="a-eye" data-action="toggle-pw" aria-label="보기">' + icon("eye", "sm") + "</button></div>" +
                 '<small class="a-field-note">' + (ins ? "휴대폰 번호 뒷자리 4자리" : "관리자 계정 전용") + "</small></div>" +
               '<p class="a-error" id="al-error" role="alert"></p>' +
               '<button class="a-btn a-btn-primary a-btn-lg a-btn-block" type="submit">로그인</button>' +
-              '<p class="a-login-help">' + (ins ? "마스터에서 등록한 강사 정보로 로그인해 주세요" : "관리자 전용 계정으로 로그인해 주세요") + "</p>" +
+              '<p class="a-login-help">' + (coachTab ? "강사센터 ‘코치 관리’에 등록된 정보로 로그인해 주세요" : ins ? "마스터에서 등록한 강사 정보로 로그인해 주세요" : "관리자 전용 계정으로 로그인해 주세요") + "</p>" +
             "</form>" +
           "</div>" +
           '<a class="a-login-alt" href="#/login" data-action="to-student">' + icon("home", "sm") + "수강생 센터 보기 " + icon("arrowUpRight", "xs") + "</a>" +
-          '<div class="a-demo">' + (ins ? "체험 계정 · 이름 <b>문원오</b> / 뒷자리 <b>2186</b>" : "체험 계정 · <b>ADMIN</b> / <b>ADMIN</b> (대소문자 상관없음)") + "</div>" +
+          '<div class="a-demo">' + (coachTab ? "체험 계정 · 이름 <b>김하나</b> / 뒷자리 <b>1004</b> (문대표 코치)" : ins ? "체험 계정 · 이름 <b>문원오</b> / 뒷자리 <b>2186</b>" : "체험 계정 · <b>ADMIN</b> / <b>ADMIN</b> (대소문자 상관없음)") + "</div>" +
         "</div></section>" +
       "</main>";
   }
   function doLogin(f) {
     const id = f.uid.value.trim(), pw = f.pw.value.trim();
     const err = document.getElementById("al-error");
+    err.textContent = "";
     if (loginTab === "master") {
       if (id.toUpperCase() === "ADMIN" && pw.toUpperCase() === "ADMIN") { S = { role: "master" }; DB.session.setAdmin(S); DB.store.remove("moonclass:after-login"); location.hash = "#/center/master"; toast("마스터 관리자로 로그인했어요."); }
       else err.textContent = "아이디 또는 비밀번호가 맞지 않아요.";
       return;
     }
+    const coachLogin = () => {
+      const hit = DB.findCoachLogin(id, pw);
+      if (!hit) return false;
+      if (hit.coach.status !== "active") { err.textContent = "사용이 중지된 코치 계정이에요. 강사님께 문의해 주세요."; return true; }
+      S = { role: "coach", instructorId: hit.ins.id, coachId: hit.coach.id };
+      DB.session.setAdmin(S); DB.store.remove("moonclass:after-login");
+      hit.coach.lastLoginAt = Date.now(); DB.save();
+      location.hash = "#/center"; toast(hit.coach.name + " 코치님, 환영합니다!");
+      return true;
+    };
     const ins = DB.data.instructors.find((x) => x.name.replace(/\s+/g, "") === id.replace(/\s+/g, "") && x.phone4 === pw);
-    if (!ins) { err.textContent = "등록된 강사 정보와 일치하지 않아요. 이름과 뒷자리를 확인해 주세요."; return; }
+    // 코치 탭에서 강사 정보를 넣으면 강사로, 강사 탭에서 코치 정보를 넣으면 코치로 들어간다
+    if (loginTab === "coach") {
+      if (coachLogin()) return;
+      if (!ins) { err.textContent = "등록된 코치 정보와 일치하지 않아요. 이름과 뒷자리를 확인해 주세요."; return; }
+    }
+    if (!ins) { if (!coachLogin()) err.textContent = "등록된 강사 정보와 일치하지 않아요. 이름과 뒷자리를 확인해 주세요. (코치는 ‘코치’ 탭)"; return; }
     if (ins.status !== "active") { err.textContent = "운영이 중지된 플랫폼이에요. 마스터 관리자에게 문의해 주세요."; return; }
     S = { role: "instructor", instructorId: ins.id };
     DB.session.setAdmin(S);
@@ -189,15 +221,17 @@
       ["partners", "제휴채널", "handshake", "partners"]
     ].filter((x) => !x[3] || on(x[3])).map((x) => x.slice(0, 3));
     if (customPages(iid).length) content.push(["pages", "추가 메뉴", "star"]);
-    return [
+    const groups = [
       ["운영", [
         ["", "대시보드", "grid"],
         ["students", "수강생 관리", "users", n.pending],
         ["cohorts", "기수 관리", "layers"]
-      ].concat(on("missions") ? [["reviews", "과제 검수", "checks", n.review]] : []).concat(on("qna") ? [["questions", "요청사항 답변", "bug", n.questions]] : [])],
+      ].concat(on("missions") ? [["reviews", "과제 검수", "checks", n.review]] : []).concat(on("qna") ? [["questions", "요청사항 답변", "bug", n.questions]] : []).concat(isCoach() ? [] : [["coaches", "코치 관리", "shieldCheck", DB.coachesOf(iid).length || 0]])],
       ["수강생 화면 콘텐츠", content],
       ["홍보", [["free", "무료강의 페이지", "video"], ["landing", "강의 소개 페이지", "store"]]]
     ];
+    // 코치는 강사가 열어 준 메뉴만
+    return groups.map((g) => [g[0], g[1].filter((it) => can(it[0]))]).filter((g) => g[1].length);
   }
   const customPages = (iid) => DB.menuConfig(iid).items.filter((x) => DB.isCustom(x.key) && x.type !== "link");
   const allRequests = () => DB.data.instructors.flatMap((ins) => DB.requests(ins.id).map((x) => Object.assign({ ins }, x))).sort((a, b) => b.q.at - a.q.at);
@@ -218,11 +252,11 @@
         (S.role === "master" && S.actingAs ? '<div class="a-acting">' + icon("shieldCheck", "sm") + "<span>마스터 권한으로 <b>" + esc(ins.name) + "</b> 강사센터를 보고 있어요.</span>" + btn("마스터로 돌아가기", "stop-acting", "a-btn-light a-btn-sm") + "</div>" : "") +
         '<header class="a-top">' +
           '<button class="a-icon-btn a-menu" type="button" data-action="toggle-nav" aria-label="메뉴">' + icon("menu") + "</button>" +
-          '<a class="a-logo" href="#/center' + (master ? "/master" : "") + '"><span class="a-logo-mark">' + window.doogoLogo("markWhite") + "</span><b>" + (master ? "마스터 관리자" : "강사센터") + "</b>" + (ins ? '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>" : "") + "</a>" +
+          '<a class="a-logo" href="#/center' + (master ? "/master" : "") + '"><span class="a-logo-mark">' + window.doogoLogo("markWhite") + "</span><b>" + (master ? "마스터 관리자" : isCoach() ? "코치센터" : "강사센터") + "</b>" + (ins ? '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>" : "") + "</a>" +
           '<div class="a-top-right">' +
             (ins ? '<span class="a-chip a-hide-sm">' + (co ? esc(co.name) + " · " + DB.STATUS_LABEL[DB.cohortStatus(co)] : "기수 없음") + "</span>" +
               btn(icon("eye", "sm") + '<span class="a-hide-sm">수강생 화면 보기</span>', "preview", "a-btn-outline a-btn-sm") : "") +
-            '<span class="a-user a-hide-sm">' + icon(master ? "shieldCheck" : "user", "sm") + esc(master ? "ADMIN" : S.role === "master" ? "ADMIN" : ins.name + " 강사님") + "</span>" +
+            '<span class="a-user a-hide-sm">' + icon(master ? "shieldCheck" : "user", "sm") + esc(master ? "ADMIN" : S.role === "master" ? "ADMIN" : isCoach() ? ((ME_COACH() || {}).name || "") + " 코치님" : ins.name + " 강사님") + "</span>" +
             btn(icon("logout", "sm") + '<span class="a-hide-sm">로그아웃</span>', "logout", "a-btn-text a-btn-sm") +
           "</div>" +
         "</header>" +
@@ -242,7 +276,35 @@
   }
 
   /* ---------------- 강사: 대시보드 ---------------- */
+  // 코치 대시보드: 인사 + 맡은 메뉴의 할 일만
+  function coachDashboard() {
+    const iid = IID(), ins = INS(), c = C(), me = ME_COACH() || {};
+    const co = DB.currentCohort(iid), n = counts(iid), wk = co ? DB.currentWeek(co) : 0;
+    const subs = can("reviews") ? allSubmissions(iid, "all").filter((x) => x.review === "pending").slice(0, 6) : [];
+    const reqs = can("questions") ? DB.requests(iid).filter((x) => !x.q.answer).slice(0, 5) : [];
+    const pend = can("students") ? DB.studentsOf(iid).filter((s) => s.status === "pending").slice(0, 5) : [];
+    const myMenus = COACH_PERMS.flatMap((g) => g[1]).filter((x) => can(x[0]));
+    const kpis = [];
+    if (can("reviews")) kpis.push(kpi("검수 대기 과제", n.review + "개", "피드백 · 승인 · 보완 요청", "#/center/reviews", n.review ? "info" : ""));
+    if (can("questions")) kpis.push(kpi("답변 대기 문의", n.questions + "건", "요청사항 · 1:1 문의", "#/center/questions", n.questions ? "warn" : ""));
+    if (can("students")) kpis.push(kpi("승인 대기 수강생", n.pending + "명", "새 수강 신청", "#/center/students?status=pending", n.pending ? "warn" : ""));
+    kpis.push(kpi("진행 중 기수", co ? co.name : "-", co ? (DB.cohortStatus(co) === "running" ? wk + "주차 진행 중" : fmtMD(co.startDate) + " 시작") : "기수 없음", can("cohorts") ? "#/center/cohorts" : "#/center"));
+    return head(esc(me.name || "") + " 코치님, 안녕하세요", esc(ins.displayName) + " · " + esc(c.brand.courseTitle) + " 코치" + (me.memo ? " · " + esc(me.memo) : "")) +
+      '<div class="a-kpis">' + kpis.join("") + "</div>" +
+      '<section class="a-card a-coach-menus"><div class="a-card-head"><h2>' + icon("shieldCheck", "sm") + ' 내가 맡은 메뉴</h2><span class="a-muted">강사님이 열어 준 메뉴예요. 더 필요하면 강사님께 요청해 주세요.</span></div>' +
+        (myMenus.length ? '<div class="a-coach-chips">' + myMenus.map((x) => '<a class="a-coach-chip" href="#/center/' + x[0] + '">' + esc(x[1]) + icon("arrowRight", "xs") + "</a>").join("") + "</div>" : '<p class="a-muted" style="margin:0">아직 열린 메뉴가 없어요. 강사님께 요청해 주세요.</p>') + "</section>" +
+      (can("reviews") ? '<section class="a-card"><div class="a-card-head"><h2>검수를 기다리는 과제</h2><a class="a-link" href="#/center/reviews">과제 검수 ' + icon("arrowRight", "xs") + "</a></div>" +
+        (subs.length ? '<ul class="a-list">' + subs.map((x) => '<li class="clickable" data-action="review-open" data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"><div class="a-who"><span class="a-avatar">' + esc(x.s.name.slice(0, 1)) + "</span><div><b>" + esc(x.s.name) + " · " + esc(x.m.title) + "</b><small>" + esc(cohortName(x.s.cohortId)) + " · " + x.w.no + "주차 · " + fmtStamp(x.sub.at) + "</small></div></div>" + reviewPill(x) + "</li>").join("") + "</ul>"
+          : emptyBox("check", "검수를 기다리는 과제가 없어요.")) + "</section>" : "") +
+      (can("questions") ? '<section class="a-card"><div class="a-card-head"><h2>답변을 기다리는 문의</h2><a class="a-link" href="#/center/questions">요청사항 답변 ' + icon("arrowRight", "xs") + "</a></div>" +
+        (reqs.length ? '<ul class="a-list">' + reqs.map((x) => '<li><div class="a-who"><span class="a-avatar">' + esc(x.s.name.slice(0, 1)) + "</span><div><b>#" + x.no + " " + esc(x.q.title) + "</b><small>" + esc(x.s.name) + " · " + esc(cohortName(x.s.cohortId)) + " · " + fmtStamp(x.q.at) + "</small></div></div>" + pill(x.q.category || "기타", "mute") + "</li>").join("") + "</ul>"
+          : emptyBox("check", "답변을 기다리는 문의가 없어요.")) + "</section>" : "") +
+      (can("students") && pend.length ? '<section class="a-card"><div class="a-card-head"><h2>승인 대기</h2><a class="a-link" href="#/center/students?status=pending">전체 ' + icon("arrowRight", "xs") + "</a></div>" +
+        '<ul class="a-list">' + pend.map((s) => '<li><div class="a-who"><span class="a-avatar">' + esc(s.name.slice(0, 1)) + "</span><div><b>" + esc(s.name) + "</b><small>" + esc(cohortName(s.cohortId)) + " · 뒷자리 " + esc(s.phone4) + " · " + fmtMD(s.appliedAt) + " 신청</small></div></div>" +
+          '<div class="a-row-actions">' + btn("거절", "stu-reject", "a-btn-ghost a-btn-sm", ' data-id="' + s.id + '"') + btn("승인", "stu-approve", "a-btn-primary a-btn-sm", ' data-id="' + s.id + '"') + "</div></li>").join("") + "</ul></section>" : "");
+  }
   function pageDashboard() {
+    if (isCoach()) return coachDashboard();
     const iid = IID(), ins = INS(), c = C();
     const co = DB.currentCohort(iid);
     const n = counts(iid);
@@ -288,7 +350,7 @@
     if (!rows.length) return emptyBox("users", "수강 중인 학생이 없어요.");
     rows.sort((a, b) => (b.lv ? b.lv.idx : 0) - (a.lv ? a.lv.idx : 0) || b.st.pct - a.st.pct);
     return '<div class="a-table-wrap"><table class="a-table a-prog-table"><thead><tr><th>이름</th><th>성장 단계</th>' + c.weeks.map((w) => "<th>" + w.no + "주차</th>").join("") + "<th>필수 통과</th><th>전체 진행률</th></tr></thead><tbody>" +
-      rows.map((r) => "<tr class=\"clickable\" data-action=\"student-open\" data-id=\"" + r.s.id + "\"><td><b>" + esc(r.s.name) + "</b></td><td>" + lvBadge(r.lv || levelOfStudent(r.s)) + "</td>" +
+      rows.map((r) => "<tr class=\"clickable\" data-action=\"student-open\" data-id=\"" + r.s.id + "\"><td><b>" + esc(r.s.name) + "</b></td><td class=\"cell-lv\">" + lvBadge(r.lv || levelOfStudent(r.s)) + "</td>" +
         c.weeks.map((w) => { const d = w.missions.filter((m) => DB.subState(r.p, m.id) === "done").length; return '<td class="num' + (d === w.missions.length && d ? " full" : "") + '">' + d + "/" + w.missions.length + "</td>"; }).join("") +
         '<td class="num">' + r.st.reqDone + "/" + r.st.reqTotal + '</td><td><div class="a-bar"><span style="width:' + r.st.pct + '%"></span></div><small class="num">' + r.st.pct + "%</small></td></tr>").join("") +
       "</tbody></table></div>";
@@ -514,7 +576,7 @@
     let n = 0;
     Object.keys(bySid).forEach((sid) => {
       const p = DB.progress(sid);
-      bySid[sid].forEach((mid) => { const l = p.submissions[mid]; if (l && l.length) { l[l.length - 1].review = { status, comment: comment || "", at: Date.now() }; n++; } });
+      bySid[sid].forEach((mid) => { const l = p.submissions[mid]; if (l && l.length) { l[l.length - 1].review = Object.assign({ status, comment: comment || "", at: Date.now() }, actor()); n++; } });
       DB.saveProgress(sid, p);
     });
     ui.revPicked.clear();
@@ -540,7 +602,7 @@
       "</div>" +
       '<div class="a-auto ' + (sub.result.pass ? "ok" : "warn") + '"><b>' + icon(sub.result.pass ? "check" : "alert", "sm") + "자동검수 " + (sub.result.pass ? "통과" : "보완 필요") + "</b>" +
         (sub.result.pass ? (sub.result.ok.length ? "<span>" + esc(sub.result.ok.join(" · ")) + "</span>" : "") : "<span>" + esc(sub.result.reasons.join(" / ")) + "</span>") + "</div>" +
-      (sub.review ? '<p class="a-muted">현재 강사 검수: <b>' + (sub.review.status === "approved" ? "승인" : "보완 요청") + "</b> · " + fmtStamp(sub.review.at) + "</p>" : "") +
+      (sub.review ? '<p class="a-muted">현재 검수: <b>' + (sub.review.status === "approved" ? "승인" : "보완 요청") + "</b> · " + (sub.review.by ? '<span class="a-by">' + icon("user", "xs") + esc(sub.review.by) + "</span> · " : "") + fmtStamp(sub.review.at) + "</p>" : "") +
       '<div class="a-field"><label for="rv-comment">수강생에게 남길 말 <small>(보완 요청 시 꼭 적어 주세요)</small></label><textarea class="a-input" id="rv-comment" rows="3" placeholder="예: 사업자등록증 전체가 보이게 다시 찍어 주세요.">' + esc(sub.review ? sub.review.comment || "" : "") + "</textarea></div>",
       '<span class="a-spacer"></span>' + btn(icon("alert", "sm") + "보완 요청", "review-save", "a-btn-outline danger", ' data-sid="' + sid + '" data-mid="' + mid + '" data-status="fix"') + btn(icon("check", "sm") + "승인", "review-save", "a-btn-primary", ' data-sid="' + sid + '" data-mid="' + mid + '" data-status="approved"'), "lg");
   }
@@ -556,6 +618,7 @@
       '<section class="a-card"><div class="a-toolbar"><div class="a-tabs">' + tabs + "</div></div>" +
         (shown.length ? '<div class="a-stack">' + shown.map((x) =>
           '<article class="a-q"><div class="a-q-head"><span class="a-avatar">' + esc(x.s.name.slice(0, 1)) + "</span><div><b>#" + x.no + " " + esc(x.q.title) + "</b><small>" + esc(x.s.name) + " · " + esc(cohortName(x.s.cohortId)) + " · " + fmtStamp(x.q.at) + "</small></div>" + pill(x.q.category || "기타", "mute") + (x.q.answer ? pill("답변 완료", "ok") : pill("답변 대기", "warn")) + "</div>" +
+          (x.q.answer && (x.q.answeredBy || x.q.answeredAt) ? '<p class="a-q-by"><span class="a-by">' + icon("user", "xs") + esc(x.q.answeredBy || "강사") + "</span>" + (x.q.answeredAt ? " · " + fmtStamp(x.q.answeredAt) + " 답변" : " 답변") + "</p>" : "") +
           '<p class="a-q-body">' + esc(x.q.body) + "</p>" +
           ((x.q.images || []).length ? '<div class="a-shots a-q-shots">' + x.q.images.map((im) => '<a class="a-shot" href="' + im.data + '" target="_blank" rel="noopener"><img src="' + im.data + '" alt="' + esc(im.name) + '"></a>').join("") + "</div>" : "") +
           '<form class="a-q-form" data-sid="' + x.s.id + '" data-qid="' + x.q.id + '"><textarea class="a-input" name="answer" rows="3" placeholder="예: 확인해 보니 ○○ 문제였어요. 지금 고쳤으니 새로고침 후 다시 해 주세요." aria-label="답변">' + esc(x.q.answer || "") + '</textarea><button class="a-btn a-btn-primary a-btn-sm" type="submit">' + (x.q.answer ? "답변 수정" : "답변 등록") + "</button></form></article>").join("") + "</div>"
@@ -999,6 +1062,59 @@
       '<section class="a-card">' + simpleList("channel", list, (ch) => { const t = DB.channelType(ch.type), lk = DB.channelLook(ch); return '<span class="a-ch-ic" style="background:' + (lk.color || "var(--m-primary)") + ";color:" + (lk.ink || "#fff") + '">' + icon(lk.icon, "sm") + '</span><div class="a-item-main"><b>' + esc(ch.title || t.label) + "</b><small>" + esc([ch.tag, t.label, ch.hours, ch.url || ((ch.note || "").trim() ? "링크 없이 안내 문구만 보여요" : "주소 없음 (수강생에게 ‘준비 중’으로 보여요)")].filter(Boolean).join(" · ")) + "</small></div>" + (ch.url ? pill("연결됨", "ok") : (ch.note || "").trim() ? pill("안내만 (링크 없음)", "info") : pill("준비 중", "mute")); }, "채널이 없어요. ‘채널 추가’로 상담 창구를 만들어 주세요.") + "</section>" +
       '<p class="a-hint">' + icon("alert", "xs") + " 순서는 화살표로 바꿀 수 있어요. 메뉴를 숨기려면 ‘메뉴 구성’에서 1:1 소통채널을 꺼 주세요.</p>";
   }
+  /* ---------------- 코치 관리 (강사 전용) ---------------- */
+  function coachStats(iid, coachId) {
+    let rv = 0, an = 0;
+    DB.studentsOf(iid).forEach((st) => {
+      const p = DB.progress(st.id);
+      Object.keys(p.submissions || {}).forEach((mid) => (p.submissions[mid] || []).forEach((sb) => { if (sb.review && sb.review.byId === coachId) rv++; }));
+      (p.questions || []).forEach((q) => { if (q.answeredById === coachId) an++; });
+    });
+    return { rv, an };
+  }
+  const permLabel = (k) => { for (const g of COACH_PERMS) for (const x of g[1]) if (x[0] === k) return x[1]; return k; };
+  function pageCoaches() {
+    const iid = IID(), list = DB.coachesOf(iid);
+    return head("코치 관리", "코치는 강사센터 로그인 화면의 <b>‘코치’ 탭</b>에서 이름 + 전화번호 뒷자리로 로그인해요. 코치마다 볼 수 있는 메뉴를 정해 주면, 그 메뉴만 보이고 나머지는 들어갈 수 없어요.", btn(icon("userPlus", "sm") + "코치 추가", "coach-add", "a-btn-primary")) +
+      '<section class="a-card">' + (list.length ? '<ul class="a-items a-coach-list">' + list.map((x) => {
+        const st = coachStats(iid, x.id);
+        return '<li><span class="a-avatar a-coach-av">' + esc(x.name.slice(0, 1)) + '</span><div class="a-item-main"><b>' + esc(x.name) + ' 코치 <span class="a-muted num">· 뒷자리 ' + esc(x.phone4) + "</span></b>" +
+          "<small>" + esc([x.memo, "검수 " + st.rv + "건 · 답변 " + st.an + "건", x.lastLoginAt ? "최근 접속 " + fmtStamp(x.lastLoginAt) : "아직 접속 전"].filter(Boolean).join(" · ")) + "</small>" +
+          '<span class="a-coach-perms">' + ((x.perms || []).length ? x.perms.map((k) => '<span class="a-perm">' + esc(permLabel(k)) + "</span>").join("") : '<span class="a-muted">열린 메뉴 없음 (대시보드만)</span>') + "</span></div>" +
+          (x.status === "active" ? pill("사용 중", "ok") : pill("중지", "mute")) +
+          '<div class="a-row-actions">' + btn(icon("pen", "sm") + "수정", "coach-edit", "a-btn-ghost a-btn-sm", ' data-id="' + x.id + '"') + "</div></li>";
+      }).join("") + "</ul>" : emptyBox("shieldCheck", "아직 코치가 없어요. ‘코치 추가’로 과제 검수 · 문의 답변을 도와줄 코치 계정을 만들어 주세요.", btn(icon("userPlus", "sm") + "코치 추가", "coach-add", "a-btn-primary"))) + "</section>" +
+      '<p class="a-hint">' + icon("alert", "xs") + " 코치가 승인 · 보완 요청한 과제와 답변에는 처리한 코치 이름이 남아요. 코치 계정을 잠시 막으려면 ‘중지’로 바꾸면 돼요.</p>";
+  }
+  function coachForm(id) {
+    const iid = IID(), x = id ? DB.coach(iid, id) : { name: "", phone4: "", status: "active", perms: COACH_DEFAULT.slice(), memo: "" };
+    if (!x) return;
+    const has = (k) => (x.perms || []).indexOf(k) !== -1;
+    openModal(id ? x.name + " 코치 수정" : "코치 추가",
+      '<form id="coach-form" class="a-form" data-id="' + esc(id || "") + '" novalidate>' +
+        '<div class="a-form-row"><div class="a-field"><label for="cf-cname">코치 이름 <small>(로그인 이름)</small></label><input class="a-input" id="cf-cname" name="cname" value="' + esc(x.name) + '" placeholder="예: 김하나"></div>' +
+        '<div class="a-field"><label for="cf-cphone">전화번호 뒷자리 <small>(비밀번호)</small></label><input class="a-input" id="cf-cphone" name="cphone" inputmode="numeric" maxlength="4" value="' + esc(x.phone4) + '" placeholder="숫자 4자리"></div></div>' +
+        '<div class="a-form-row"><div class="a-field"><label for="cf-cmemo">담당 업무 메모 <small>(선택 · 코치 대시보드에 보여요)</small></label><input class="a-input" id="cf-cmemo" name="cmemo" value="' + esc(x.memo || "") + '" placeholder="예: 과제 검수 · 1:1 문의 담당"></div>' +
+        '<div class="a-field"><label for="cf-cstatus">상태</label><select class="a-input" id="cf-cstatus" name="cstatus"><option value="active"' + (x.status === "active" ? " selected" : "") + '>사용 중</option><option value="paused"' + (x.status !== "active" ? " selected" : "") + ">중지 (로그인 막기)</option></select></div></div>" +
+        '<div class="a-field"><span class="a-label">볼 수 있는 메뉴 <small>(대시보드 · 수강생 화면 보기는 늘 열려 있어요)</small></span>' +
+          '<div class="a-perm-presets">' + btn("과제 · 문의만", "coach-preset", "a-btn-ghost a-btn-sm", ' data-k="basic"') + btn("운영 전체", "coach-preset", "a-btn-ghost a-btn-sm", ' data-k="ops"') + btn("모두 선택", "coach-preset", "a-btn-ghost a-btn-sm", ' data-k="all"') + btn("모두 해제", "coach-preset", "a-btn-ghost a-btn-sm", ' data-k="none"') + "</div>" +
+          COACH_PERMS.map((g) => '<fieldset class="a-perm-group"><legend>' + esc(g[0]) + "</legend>" + g[1].map((p) => '<label class="a-check"><input type="checkbox" name="perm" value="' + p[0] + '"' + (has(p[0]) ? " checked" : "") + "><span>" + esc(p[1]) + (p[2] ? ' <small class="a-muted">' + esc(p[2]) + "</small>" : "") + "</span></label>").join("") + "</fieldset>").join("") +
+        '</div><p class="a-error" id="coach-error"></p></form>',
+      (id ? btn(icon("trash", "sm") + "삭제", "coach-delete", "a-btn-ghost danger", ' data-id="' + esc(id) + '"') : "") + '<span class="a-spacer"></span>' + btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="coach-form">저장</button>', "lg");
+  }
+  function saveCoach(f) {
+    const iid = IID(), list = DB.coachesOf(iid), id = f.dataset.id, err = document.getElementById("coach-error");
+    const name = f.cname.value.trim(), phone4 = f.cphone.value.trim();
+    if (!name) { err.textContent = "코치 이름을 입력해 주세요."; return; }
+    if (!/^\d{4}$/.test(phone4)) { err.textContent = "전화번호 뒷자리는 숫자 4자리로 입력해 주세요."; return; }
+    const same = (a, b) => a.replace(/\s+/g, "") === b.replace(/\s+/g, "");
+    if (DB.data.instructors.some((ins) => same(ins.name, name) && ins.phone4 === phone4) || DB.data.instructors.some((ins) => (ins.coaches || []).some((c) => c.id !== id && same(c.name, name) && c.phone4 === phone4))) { err.textContent = "같은 이름 + 뒷자리 계정이 이미 있어요. 뒷자리나 이름을 바꿔 주세요."; return; }
+    const perms = Array.from(f.querySelectorAll("input[name=perm]:checked")).map((x) => x.value);
+    const data = { name, phone4, memo: f.cmemo.value.trim(), status: f.cstatus.value, perms };
+    if (id) Object.assign(DB.coach(iid, id), data);
+    else list.push(Object.assign({ id: DB.uid("coach"), createdAt: todayStr() }, data));
+    commit(name + " 코치 계정을 저장했어요." + (id ? "" : " ‘코치’ 탭에서 이름 + 뒷자리로 로그인하면 돼요."));
+  }
   function pagePartners() {
     const c = C(), list = DB.partnersOf(c), G = DB.PARTNER_GROUPS;
     return head("제휴채널", "수강생 메뉴 ‘제휴채널’에 탭(전체보기 · 두고그룹 · 제휴사)으로 보여요. ‘맨 위에 크게’를 켠 곳(예: 두고 N카페)은 가장 위에 큰 카드와 ‘제휴 혜택 · 할인 코드 안내’ 띠로 보여요.", addBtn("partner", "제휴처 추가")) +
@@ -1363,6 +1479,7 @@
     if (!shown.length) return emptyBox("bug", ui.qFilter === "open" ? "답변을 기다리는 신고가 없어요." : "신고가 없어요.");
     return '<div class="a-stack">' + shown.map((x) =>
       '<article class="a-q"><div class="a-q-head"><span class="a-avatar">' + esc(x.s.name.slice(0, 1)) + "</span><div><b>#" + x.no + " " + esc(x.q.title) + "</b><small>" + (showIns ? esc(x.ins.displayName) + " · " : "") + esc(x.s.name) + " · " + esc(cohortName(x.s.cohortId)) + " · " + fmtStamp(x.q.at) + "</small></div>" + pill(x.q.category || "기타", "mute") + (x.q.answer ? pill("답변 완료", "ok") : pill("답변 대기", "warn")) + "</div>" +
+          (x.q.answer && (x.q.answeredBy || x.q.answeredAt) ? '<p class="a-q-by"><span class="a-by">' + icon("user", "xs") + esc(x.q.answeredBy || "강사") + "</span>" + (x.q.answeredAt ? " · " + fmtStamp(x.q.answeredAt) + " 답변" : " 답변") + "</p>" : "") +
       '<p class="a-q-body">' + esc(x.q.body) + "</p>" +
       ((x.q.images || []).length ? '<div class="a-shots a-q-shots">' + x.q.images.map((im) => '<a class="a-shot" href="' + im.data + '" target="_blank" rel="noopener"><img src="' + im.data + '" alt="' + esc(im.name) + '"></a>').join("") + "</div>" : "") +
       '<form class="a-q-form" data-sid="' + x.s.id + '" data-qid="' + x.q.id + '"><textarea class="a-input" name="answer" rows="3" placeholder="예: 확인해 보니 ○○ 문제였어요. 지금 고쳤으니 새로고침 후 다시 해 주세요." aria-label="답변">' + esc(x.q.answer || "") + '</textarea><button class="a-btn a-btn-primary a-btn-sm" type="submit">' + (x.q.answer ? "답변 수정" : "답변 등록") + "</button></form></article>").join("") + "</div>";
@@ -1534,13 +1651,14 @@
   }
 
   /* ---------------- 렌더 ---------------- */
-  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, partners: pagePartners, pages: pageCustomPages };
+  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, partners: pagePartners, coaches: pageCoaches, pages: pageCustomPages };
   const MPAGES = { "": pageMasterHome, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData };
   function render() {
     closeModal();
     const r = route();
     S = DB.session.admin();
     if (S && S.role === "instructor" && !(DB.instructor(S.instructorId) || {}).status) S = null;
+    if (S && S.role === "coach") { const ci = DB.instructor(S.instructorId), cc = DB.coach(S.instructorId, S.coachId); if (!ci || ci.status !== "active" || !cc || cc.status !== "active") { S = null; DB.session.setAdmin(null); } }
     if (S && S.actingAs && !DB.instructor(S.actingAs)) { S.actingAs = null; DB.session.setAdmin(S); }
     if (!S) {
       document.body.dataset.master = loginTab === "master" ? "1" : "";
@@ -1554,13 +1672,15 @@
     const master = S.role === "master" && !S.actingAs;
     if (master && r.parts[0] !== "master") { history.replaceState(null, "", "#/center/master"); return render(); }
     if (!master && r.parts[0] === "master") { history.replaceState(null, "", "#/center"); return render(); }
+    if (!master && !can(r.parts[0] || "")) { history.replaceState(null, "", "#/center"); toast("이 메뉴는 코치 계정에 열려 있지 않아요. 필요하면 강사님께 요청해 주세요.", "warn"); return render(); }
     document.body.dataset.master = master ? "1" : "";
+    document.body.dataset.coach = isCoach() ? "1" : "";
     renderShell(r);
     const main = document.getElementById("a-main");
     const fn = master ? (MPAGES[r.parts[1] || ""] || pageMasterHome) : (PAGES[r.parts[0] || ""] || pageDashboard);
     main.innerHTML = '<div class="a-page">' + fn(r) + "</div>";
     labelTables(main);
-    document.title = (master ? "마스터" : "강사센터") + " · 두고 클래스";
+    document.title = (master ? "마스터" : isCoach() ? "코치센터" : "강사센터") + " · 두고 클래스";
   }
   // 모바일에서 표를 카드로 바꿀 때 쓰는 칸 이름(data-label)을 표 머리글에서 채운다
   function labelTables(scope) {
@@ -1581,7 +1701,7 @@
     const iid = IID();
     const co = DB.cohort(cohortId) || DB.currentCohort(iid);
     if (!co) { toast("기수를 먼저 만들어 주세요.", "warn"); return; }
-    DB.session.setStudent({ preview: true, instructorId: iid, cohortId: co.id, at: Date.now() });
+    DB.session.setStudent({ preview: true, by: isCoach() ? "coach" : "instructor", instructorId: iid, cohortId: co.id, at: Date.now() });
     location.hash = "#/home";
   }
 
@@ -1644,7 +1764,7 @@
         const comment = (document.getElementById("rv-comment") || {}).value || "";
         if (d.status === "fix" && !comment.trim()) { toast("보완 요청 내용을 적어 주세요.", "warn"); document.getElementById("rv-comment").focus(); break; }
         const p = DB.progress(d.sid), list = p.submissions[d.mid];
-        list[list.length - 1].review = { status: d.status, comment: comment.trim(), at: Date.now() };
+        list[list.length - 1].review = Object.assign({ status: d.status, comment: comment.trim(), at: Date.now() }, actor());
         DB.saveProgress(d.sid, p);
         closeModal(); render();
         toast(d.status === "approved" ? "승인했어요." : "보완을 요청했어요.");
@@ -1692,6 +1812,15 @@
       }
       case "page-edit": pageForm(d.key); break;
       case "libnote-edit": libNoteForm(); break;
+      case "coach-add": coachForm(null); break;
+      case "coach-edit": coachForm(d.id); break;
+      case "coach-delete": { const iid = IID(), list = DB.coachesOf(iid), i = list.findIndex((x) => x.id === d.id); if (i < 0) break; const nm = list[i].name; confirmModal("코치 삭제", "‘" + esc(nm) + " 코치’ 계정을 삭제할까요?<br>지금까지 처리한 검수 · 답변 기록은 그대로 남아요.", "삭제", true, () => { list.splice(i, 1); commit("코치 계정을 삭제했어요."); }); break; }
+      case "coach-preset": {
+        const f = document.getElementById("coach-form"); if (!f) break;
+        const set = { basic: ["reviews", "questions"], ops: ["students", "cohorts", "reviews", "questions"], all: COACH_PERMS.flatMap((g) => g[1].map((x) => x[0])), none: [] }[d.k] || [];
+        f.querySelectorAll("input[name=perm]").forEach((x) => { x.checked = set.indexOf(x.value) !== -1; });
+        break;
+      }
       case "ql-reset": confirmModal("자주 찾는 페이지", "기본 목록(윗줄: 공지사항 · 자주 묻는 질문 · 서류 준비 가이드 · 요청사항 / 아랫줄: 유튜브 · 네이버 카페 · 두고커넥트 · 두고푸드)으로 되돌릴까요?", "되돌리기", false, () => { delete C().quickLinks; commit("기본 목록으로 되돌렸어요."); }); break;
       case "libnote-reset": delete C().libNotice; DB.save(); commit("기본 문구로 되돌렸어요."); break;
       case "backup-copy": {
@@ -1780,7 +1909,7 @@
       commit(items.length + "개 질문을 등록했어요.");
       return;
     }
-    const forms = { "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote };
+    const forms = { "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote, "coach-form": saveCoach };
     if (forms[f.id]) { e.preventDefault(); forms[f.id](f); return; }
     if (f.classList.contains("a-q-form")) {
       e.preventDefault();
@@ -1788,7 +1917,7 @@
       if (!ans) { toast("답변을 적어 주세요.", "warn"); return; }
       const p = DB.progress(f.dataset.sid);
       const q = p.questions.find((x) => x.id === f.dataset.qid);
-      q.answer = ans; q.answeredAt = Date.now();
+      q.answer = ans; q.answeredAt = Date.now(); const ac = actor(); q.answeredBy = ac.by; q.answeredById = ac.byId;
       DB.saveProgress(f.dataset.sid, p);
       render(); toast("답변을 등록했어요. 수강생 화면에 바로 보여요.");
     }

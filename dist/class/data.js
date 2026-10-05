@@ -529,7 +529,9 @@ MOON_CONTENT.curricula = [(function () {
 window.CLASS_SEED = {
   version: 3,
   instructors: [
-    { id: "moon", name: "문원오", phone4: "2186", displayName: "문대표", status: "active", createdAt: "2026-08-01" },
+    { id: "moon", name: "문원오", phone4: "2186", displayName: "문대표", status: "active", createdAt: "2026-08-01",
+      // 코치: 강사센터 ‘코치’ 탭으로 이름 + 뒷자리 로그인. perms = 볼 수 있는 강사센터 메뉴
+      coaches: [{ id: "coach1", name: "김하나", phone4: "1004", status: "active", perms: ["students", "reviews", "questions"], memo: "과제 검수 · 1:1 문의 담당", createdAt: "2026-09-20" }] },
     { id: "logic", name: "로직메이커", phone4: "1111", displayName: "로직메이커", status: "active", createdAt: "2026-09-10",
       brand: { name: "로직메이커", courseTitle: "로직메이커 실전 클래스", theme: "airtable" } },
     { id: "farmer", name: "황금농부", phone4: "3333", displayName: "황금농부", status: "active", createdAt: "2026-09-12",
