@@ -489,9 +489,12 @@ const MOON_CONTENT = {
 // 예시: 4기부터 쓰는 ‘4주 압축 과정’ — 1~3주차는 그대로, 4·5주차를 한 주로 합친다 (과제 id는 같게 유지)
 // 1:1 소통채널 (강사센터 ‘1:1 소통채널’에서 바꿀 수 있음)
 MOON_CONTENT.channels = [
-  { id: "ch1", type: "openchat", title: "문대표 오픈채팅방", desc: "수강생끼리 질문을 나누고, 문대표가 직접 답해 드려요. 닉네임으로 들어와도 괜찮아요.", url: "https://open.kakao.com/o/gF68BQDi", hours: "매일 · 문대표 확인 후 답변", label: "오픈채팅방 들어가기" },
-  { id: "ch2", type: "kakao", title: "카카오톡 1:1 상담", desc: "결제 · 환불 · 개인 사업 상황처럼 다른 수강생에게 보이고 싶지 않은 내용은 1:1로 남겨 주세요.", url: "", hours: "평일 10:00 ~ 18:00 (한국 시간)", label: "1:1 상담하기" },
-  { id: "ch3", type: "email", title: "이메일 문의", desc: "세금계산서 · 서류 요청처럼 파일을 주고받아야 할 때 메일로 보내 주세요.", url: "", hours: "영업일 기준 1~2일 안에 답변", label: "메일 보내기" }
+  { id: "ch-bio", type: "kakao", tag: "STEP 1 · 제조 상담", title: "두고바이오 · 뉴질랜드 제조공장",
+    desc: "디자인, 캡슐, 제형, 원가 등 제조와 관련된 모든 상담은 두고바이오 카카오톡 채널로 문의해 주세요.",
+    url: "https://pf.kakao.com/_xgxdxetn/chat", hours: "", label: "두고바이오 상담하기" },
+  { id: "ch-oem", type: "kakao", tag: "STEP 2 · 제조 입금 후", title: "제조 입금 후 · 개별 카톡방",
+    desc: "OEM 제조 입금이 확인되면, 그때부터는 두고바이오 채널 대신 개별 카톡방에서 제조 관련 내용을 언제든 편하게 물어보실 수 있어요.",
+    url: "", hours: "", label: "", note: "개별 방이라 공개 링크는 없어요. 제조 입금이 완료되면 두고바이오 팀이 링크를 직접 보내 드려요." }
 ];
 MOON_CONTENT.curriculumName = "5주 기본 과정";
 MOON_CONTENT.curricula = [(function () {

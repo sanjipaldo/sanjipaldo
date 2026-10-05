@@ -613,11 +613,13 @@
         F("week", "보이는 주차", "number", { min: 1, hint: "비우거나 1이면 처음 들어왔을 때 한 번(온보딩). 2 이상이면 그 주차가 열릴 때 ‘N주차 시작 가이드’로 다시 떠요." })] },
     channel: { name: "소통채널", list: (c) => c.channels || (c.channels = DB.defaultChannels()), idp: "ch", init: () => ({ type: "kakao", label: "상담하기" }),
       fields: [F("title", "채널 이름 (카드 제목)", "text", { hint: "예: 카카오톡 1:1 상담, 채널톡 실시간 상담" }),
+        F("tag", "작은 머리말 (선택)", "text", { hint: "카드 맨 위 작은 글씨. 예: STEP 1 · 제조 상담" }),
         F("type", "채널 종류", "select", { options: () => DB.CHANNEL_TYPES.map((t) => [t.key, t.label]), hint: "종류에 따라 카드 아이콘과 색이 정해져요." }),
         F("desc", "설명 (어떤 상담을 이 채널로 하면 되는지)", "textarea", { rows: 3 }),
         F("url", "연결 주소", "text", { hint: "https:// 링크 (카카오톡 채널 · 채널톡 · 톡톡 등). 이메일은 주소만, 전화는 번호만 적어도 돼요." }),
         F("hours", "운영 시간 (선택)", "text", { hint: "예: 평일 10:00 ~ 18:00" }),
-        F("label", "버튼 글자", "text", { hint: "예: 카카오톡으로 상담하기" })] },
+        F("label", "버튼 글자", "text", { hint: "예: 카카오톡으로 상담하기" }),
+        F("note", "링크가 없을 때 보일 안내 (선택)", "textarea", { rows: 2, hint: "개별 카톡방처럼 공개 링크가 없는 채널이면 주소는 비우고 여기에 안내를 적어요. 예: 입금이 확인되면 담당 팀이 링크를 보내 드려요." })] },
     ql: { name: "자주 찾는 페이지", list: (c) => c.quickLinks || (c.quickLinks = DB.defaultQuickLinks(c)), idp: "ql", init: () => ({ icon: "link" }),
       fields: [F("title", "이름"), F("desc", "한 줄 설명"), F("url", "주소", "text", { hint: "수강생 화면(#/notices, #/qna, #/docs, #/qna/requests, #/bot, #/library …) 또는 https:// 외부 주소(유튜브·카페·카카오톡 등, 새 창으로 열려요)" }),
         F("color", "아이콘 색 (외부 링크용 · 비우면 기본 색)", "text", { hint: "예: 유튜브 #ff0000 · 네이버 #03c75a · 두고 #0a5de2. # 뒤에 6자리 색 코드를 적어요." }),
@@ -979,7 +981,7 @@
   function pageChannels() {
     const list = DB.channelsOf(C());
     return head("1:1 소통채널", "수강생 메뉴 ‘1:1 소통채널’에 카드로 보여요. 카카오톡 채널 · 채널톡 · 네이버 톡톡 · 이메일 · 전화 등 강사님이 실제로 쓰는 상담 창구를 넣어 두면, 수강생이 누르는 순간 그 채널로 연결돼요.", addBtn("channel", "채널 추가")) +
-      '<section class="a-card">' + simpleList("channel", list, (ch) => { const t = DB.channelType(ch.type); return '<span class="a-ch-ic" style="background:' + (t.color || "var(--m-primary)") + ";color:" + (t.ink || "#fff") + '">' + icon(t.icon, "sm") + '</span><div class="a-item-main"><b>' + esc(ch.title || t.label) + "</b><small>" + esc([t.label, ch.hours, ch.url || "주소 없음 (수강생에게 ‘준비 중’으로 보여요)"].filter(Boolean).join(" · ")) + "</small></div>" + (ch.url ? pill("연결됨", "ok") : pill("준비 중", "mute")); }, "채널이 없어요. ‘채널 추가’로 상담 창구를 만들어 주세요.") + "</section>" +
+      '<section class="a-card">' + simpleList("channel", list, (ch) => { const t = DB.channelType(ch.type); return '<span class="a-ch-ic" style="background:' + (t.color || "var(--m-primary)") + ";color:" + (t.ink || "#fff") + '">' + icon(t.icon, "sm") + '</span><div class="a-item-main"><b>' + esc(ch.title || t.label) + "</b><small>" + esc([ch.tag, t.label, ch.hours, ch.url || ((ch.note || "").trim() ? "링크 없이 안내 문구만 보여요" : "주소 없음 (수강생에게 ‘준비 중’으로 보여요)")].filter(Boolean).join(" · ")) + "</small></div>" + (ch.url ? pill("연결됨", "ok") : (ch.note || "").trim() ? pill("안내만 (링크 없음)", "info") : pill("준비 중", "mute")); }, "채널이 없어요. ‘채널 추가’로 상담 창구를 만들어 주세요.") + "</section>" +
       '<p class="a-hint">' + icon("alert", "xs") + " 순서는 화살표로 바꿀 수 있어요. 메뉴를 숨기려면 ‘메뉴 구성’에서 1:1 소통채널을 꺼 주세요.</p>";
   }
   function pageLibrary() {

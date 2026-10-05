@@ -559,6 +559,13 @@
       if (s1) s1.demo = true;
       db.flags.demoSeeded = true; save();
     }
+    // 문대표 1:1 소통채널을 두고바이오(제조 상담) · 제조 입금 후 개별 카톡방으로 교체 (한 번만, 예전 예시를 그대로 둔 경우만)
+    if (!db.flags.channelsV2) {
+      const mc = db.content.moon, sc = window.CLASS_SEED.content.moon;
+      const OLD = ["문대표 오픈채팅방", "카카오톡 1:1 상담", "이메일 문의"];
+      if (mc && sc && Array.isArray(mc.channels) && mc.channels.every((ch) => OLD.indexOf(ch.title) !== -1)) mc.channels = clone(sc.channels);
+      db.flags.channelsV2 = true; save();
+    }
     // 무료강의 페이지 기본 문구 (한 번만, doogo.site 내용)
     if (!db.flags.freeSeeded2) {
       // doogo.site 와 같은 화면으로 바꾸면서 기본 내용을 새로 넣는다 (한 번만)
