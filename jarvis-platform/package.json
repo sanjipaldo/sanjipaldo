@@ -1,0 +1,12 @@
+{
+  "name": "jarvis-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "나만의 유튜브 채널 AI 자비스 — 키워드 댓글 자동 답글 · 신청 폼 · 레퍼럴 메일 자동 발송 플랫폼",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=18" }
+}
