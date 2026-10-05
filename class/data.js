@@ -489,12 +489,15 @@ const MOON_CONTENT = {
 // 예시: 4기부터 쓰는 ‘4주 압축 과정’ — 1~3주차는 그대로, 4·5주차를 한 주로 합친다 (과제 id는 같게 유지)
 // 1:1 소통채널 (강사센터 ‘1:1 소통채널’에서 바꿀 수 있음)
 MOON_CONTENT.channels = [
-  { id: "ch-bio", type: "kakao", tag: "STEP 1 · 제조 상담", title: "두고바이오 · 뉴질랜드 제조공장",
+  { id: "ch-bio", type: "kakao", icon: "factory", color: "#0a5de2", tag: "STEP 1 · 제조 상담", title: "두고바이오 · 뉴질랜드 제조공장",
     desc: "디자인, 캡슐, 제형, 원가 등 제조와 관련된 모든 상담은 두고바이오 카카오톡 채널로 문의해 주세요.",
     url: "https://pf.kakao.com/_xgxdxetn/chat", hours: "", label: "두고바이오 상담하기" },
-  { id: "ch-oem", type: "kakao", tag: "STEP 2 · 제조 입금 후", title: "제조 입금 후 · 개별 카톡방",
+  { id: "ch-oem", type: "kakao", icon: "chatLock", color: "#7c3aed", tag: "STEP 2 · 제조 입금 후", title: "제조 입금 후 · 개별 카톡방",
     desc: "OEM 제조 입금이 확인되면, 그때부터는 두고바이오 채널 대신 개별 카톡방에서 제조 관련 내용을 언제든 편하게 물어보실 수 있어요.",
-    url: "", hours: "", label: "", note: "개별 방이라 공개 링크는 없어요. 제조 입금이 완료되면 두고바이오 팀이 링크를 직접 보내 드려요." }
+    url: "", hours: "", label: "", note: "개별 방이라 공개 링크는 없어요. 제조 입금이 완료되면 두고바이오 팀이 링크를 직접 보내 드려요." },
+  { id: "ch-food", type: "kakao", icon: "globe", color: "#ea580c", tag: "글로벌 건강식품 도매몰", title: "두고푸드 · 식품 전문 도매몰",
+    desc: "국내 · 해외 건강식품 유통과 관련해 상담이 필요하실 때는 두고푸드 도매몰로 문의해 주세요.",
+    url: "https://pf.kakao.com/_NyuVn", hours: "", label: "두고푸드 문의하기" }
 ];
 MOON_CONTENT.curriculumName = "5주 기본 과정";
 MOON_CONTENT.curricula = [(function () {

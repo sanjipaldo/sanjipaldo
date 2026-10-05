@@ -1245,13 +1245,13 @@
     const list = DB.channelsOf(D);
     const card = (ch) => {
       const t = DB.channelType(ch.type), ok = !!(ch.url || "").trim(), info = !ok && !!(ch.note || "").trim();
-      const style = t.color ? ' style="--ch:' + t.color + ";--chi:" + t.ink + '"' : "";
-      const inner = (ch.tag ? '<span class="ch-tag">' + esc(ch.tag) + "</span>" : "") +
-        '<div class="res-top"><span class="ch-icon"' + style + ">" + icon(t.icon) + '</span><div><div class="res-title">' + esc(ch.title || t.label) + '</div><div class="tiny">' + esc(t.label) + (ch.hours ? " · " + esc(ch.hours) : "") + "</div></div></div>" +
+      const look = DB.channelLook(ch), style = look.color ? ' style="--ch:' + look.color + ";--chi:" + look.ink + '"' : "";
+      const inner = '<span class="ch-bar" aria-hidden="true"></span>' + (ch.tag ? '<span class="ch-tag">' + esc(ch.tag) + "</span>" : "") +
+        '<div class="res-top"><span class="ch-icon"' + style + ">" + icon(look.icon) + '</span><div><div class="res-title">' + esc(ch.title || t.label) + '</div><div class="tiny">' + esc(t.label) + (ch.hours ? " · " + esc(ch.hours) : "") + "</div></div></div>" +
         (ch.desc ? '<div class="res-desc">' + esc(ch.desc) + "</div>" : "") +
         '<div class="res-foot">' + (ok ? '<span class="ch-go"' + style + ">" + esc(ch.label || "상담하기") + icon("arrowUpRight", "sm") + "</span>"
           : info ? '<span class="ch-info">' + icon("lock", "sm") + "<span>" + esc(ch.note) + "</span></span>" : '<span class="tiny">링크를 준비하고 있어요</span>') + "</div>";
-      return ok ? '<a class="res-card ch-card" href="' + esc(ch.url) + '" target="_blank" rel="noopener">' + inner + "</a>" : '<div class="res-card ch-card ' + (info ? "info" : "off") + '"' + (info ? "" : ' aria-disabled="true"') + ">" + inner + "</div>";
+      return ok ? '<a class="res-card ch-card" href="' + esc(ch.url) + '" target="_blank" rel="noopener"' + style + ">" + inner + "</a>" : '<div class="res-card ch-card ' + (info ? "info" : "off") + '"' + (info ? "" : ' aria-disabled="true"') + style + ">" + inner + "</div>";
     };
     return '<div class="page">' + pageHead("1:1 소통채널", "궁금한 점이나 상담이 필요할 때, 아래 채널로 바로 문의하세요.") +
       (list.length ? '<div class="grid-2 ch-grid">' + list.map(card).join("") + "</div>" : '<section class="card">' + empty("headset", "상담 채널을 준비하고 있어요.") + "</section>") +

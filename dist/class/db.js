@@ -343,6 +343,19 @@
     { key: "phone", label: "전화 상담", icon: "phone", color: "#2ead4b", ink: "#ffffff" },
     { key: "other", label: "기타 링크", icon: "link", color: "", ink: "" }
   ];
+  // 카드마다 아이콘 · 색을 따로 고를 수 있다 (같은 카카오톡 채널이어도 구분되게)
+  const CHANNEL_ICONS = [["factory", "공장 (제조)"], ["chatLock", "잠긴 말풍선 (개별 방)"], ["globe", "지구 (해외 · 유통)"], ["store", "가게 (도매몰)"], ["message", "말풍선"], ["users", "사람들 (단체방)"], ["headset", "헤드셋 (상담)"], ["mail", "메일"], ["phone", "전화"], ["camera", "카메라"], ["link", "링크"]];
+  const CHANNEL_COLORS = [["#0a5de2", "파랑"], ["#7c3aed", "보라"], ["#ea580c", "주황"], ["#03c75a", "초록"], ["#e1306c", "분홍"], ["#0e0f0c", "검정"], ["#fee500", "카카오 노랑"], ["#5e4bff", "채널톡 보라"]];
+  function inkOn(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return "#ffffff";
+    const n = parseInt(m[1], 16), lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+    return lum > 0.62 ? "#191600" : "#ffffff";
+  }
+  /** 카드에 쓸 아이콘 · 색: 카드에 정한 값 → 없으면 채널 종류 기본값 */
+  function channelLook(ch) {
+    const t = channelType(ch.type), color = /^#[0-9a-f]{6}$/i.test(ch.color || "") ? ch.color : t.color;
+    return { icon: ch.icon || t.icon, color, ink: color ? (color === t.color && t.ink ? t.ink : inkOn(color)) : "" };
+  }
   const channelType = (k) => CHANNEL_TYPES.find((x) => x.key === k) || CHANNEL_TYPES[CHANNEL_TYPES.length - 1];
   const defaultChannels = () => [
     { id: "ch1", type: "kakao", title: "카카오톡 1:1 상담", desc: "수강 · 결제 · 개인 상황처럼 다른 사람에게 보이고 싶지 않은 내용은 1:1로 편하게 남겨 주세요.", url: "", hours: "평일 10:00 ~ 18:00", label: "카카오톡으로 상담하기" }
@@ -566,6 +579,18 @@
       if (mc && sc && Array.isArray(mc.channels) && mc.channels.every((ch) => OLD.indexOf(ch.title) !== -1)) mc.channels = clone(sc.channels);
       db.flags.channelsV2 = true; save();
     }
+    // 문대표 1:1 소통채널: 두고푸드(도매몰) 추가 + 카드마다 다른 아이콘 · 색 (한 번만)
+    if (!db.flags.channelsV3) {
+      const mc = db.content.moon, sc = window.CLASS_SEED.content.moon;
+      if (mc && sc && Array.isArray(mc.channels)) {
+        sc.channels.forEach((sch) => {
+          const cur = mc.channels.find((x) => x.id === sch.id);
+          if (cur) { if (!cur.icon) cur.icon = sch.icon; if (!cur.color) cur.color = sch.color; }
+          else if (sch.id === "ch-food" && mc.channels.some((x) => x.id === "ch-bio")) mc.channels.push(clone(sch));
+        });
+      }
+      db.flags.channelsV3 = true; save();
+    }
     // 무료강의 페이지 기본 문구 (한 번만, doogo.site 내용)
     if (!db.flags.freeSeeded2) {
       // doogo.site 와 같은 화면으로 바꾸면서 기본 내용을 새로 넣는다 (한 번만)
@@ -774,7 +799,7 @@
   };
 
   window.DB = {
-    load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, CHANNEL_TYPES, channelType, defaultChannels, channelsOf, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
+    load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, CHANNEL_TYPES, CHANNEL_ICONS, CHANNEL_COLORS, channelType, channelLook, defaultChannels, channelsOf, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
     curricula, curriculum, curriculumOf, weeksOf, cohortWeeks,
