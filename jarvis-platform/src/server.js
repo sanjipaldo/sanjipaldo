@@ -40,6 +40,24 @@ const defaultSettings = () => ({
   newVideoAuto: true, notifyEmail: "", mail: { provider: "outbox" },
 });
 
+/** 미리보기용 예시 데이터: 가상 영상 1개, 후커블 캠페인, 구독자 댓글 3개 (아직 답글 전) */
+function seedDemo(db, user) {
+  const data = db.data;
+  const now = Date.now();
+  const at = min => new Date(now - min * 60000).toISOString();
+  const video = { id: "jvDemo01abc", userId: user.id, title: "후커블로 숏폼 훅 만드는 법", publishedAt: at(120) };
+  data.demoVideos.push(video);
+  data.campaigns.push({
+    id: "demo01", userId: user.id, slug: "hookable", name: "후커블", active: true, target: "videos", videos: [video.id],
+    keywords: ["후커블", "hookable"], exact: false, replyTemplate: E.DEFAULT_REPLY, referralLink: "https://example.com/ref/HOOKABLE-DEMO",
+    mailSubject: E.DEFAULT_SUBJECT, mailBody: E.DEFAULT_BODY, announce: E.DEFAULT_ANNOUNCE, onePerPerson: true, onePerEmail: true, createdAt: at(100),
+  });
+  [["@minji_daily", "후커블 신청합니다!", 30], ["@tom_k", "영상 잘 봤어요 👍", 20], ["@sora", "HOOKABLE 주세요", 10]].forEach(([author, text, min]) => {
+    data.demoComments.push({ id: db.id(), userId: user.id, videoId: video.id, text, author, authorChannelId: `FAN_${Buffer.from(author).toString("hex").slice(0, 20)}`, publishedAt: at(min) });
+  });
+  db.save();
+}
+
 function createApp(opts = {}) {
   const env = opts.env || process.env;
   const db = createDb(opts.dataFile === undefined ? path.join(__dirname, "..", "data", "db.json") : opts.dataFile);
@@ -58,8 +76,9 @@ function createApp(opts = {}) {
 
   // 테스트 관리자 계정 (처음 실행할 때만)
   if (!data.users.length) {
-    data.users.push({ id: db.id(), username: "admin", password: hashPassword("admin"), role: "admin", defaultPassword: true, createdAt: new Date().toISOString(), settings: defaultSettings(), state: {} });
+    data.users.push({ id: "admin", username: "admin", password: hashPassword("admin"), role: "admin", defaultPassword: true, createdAt: new Date().toISOString(), settings: defaultSettings(), state: {} });
     db.save();
+    if (opts.seedDemo || env.SEED_DEMO === "1") seedDemo(db, data.users[0]);
   }
 
   // ── 사용자별 유튜브 제공자 ──
@@ -134,16 +153,26 @@ function createApp(opts = {}) {
     });
   }
 
+  // 로그인 토큰 = 사용자ID.만료시각.서명. 서버가 다시 켜져(서버리스) 세션 기록이 없어져도 서명이 맞으면 로그인을 이어간다
+  const sign = text => crypto.createHmac("sha256", String(env.APP_SECRET || data.meta.secret)).update(text).digest("base64url");
   function getSession(req) {
     const token = parseCookies(req).jsid;
-    const s = token && data.sessions[token];
-    if (!s || s.exp < Date.now()) return null;
+    if (!token) return null;
+    let s = data.sessions[token];
+    if (!s) {
+      const [uid, exp, sig, nonce] = token.split(".");
+      if (!uid || !sig || sign(`${uid}.${exp}.${nonce}`) !== sig || Number(exp) < Date.now()) return null;
+      s = data.sessions[token] = { userId: uid, csrf: sign(`${token}:csrf`).slice(0, 22), exp: Number(exp) };
+    }
+    if (s.exp < Date.now()) return null;
     const user = data.users.find(u => u.id === s.userId);
     return user ? { token, s, user } : null;
   }
   function startSession(res, user, to) {
-    const token = randomToken();
-    data.sessions[token] = { userId: user.id, csrf: randomToken(16), exp: Date.now() + SESSION_DAYS * 86400 * 1000 };
+    const exp = Date.now() + SESSION_DAYS * 86400 * 1000;
+    const nonce = randomToken(9);
+    const token = `${user.id}.${exp}.${sign(`${user.id}.${exp}.${nonce}`)}.${nonce}`;
+    data.sessions[token] = { userId: user.id, csrf: sign(`${token}:csrf`).slice(0, 22), exp };
     for (const [k, v] of Object.entries(data.sessions)) if (v.exp < Date.now()) delete data.sessions[k];
     db.save();
     redirect(res, to, { "set-cookie": sessionCookie(token, SESSION_DAYS * 86400) });
@@ -496,15 +525,14 @@ function createApp(opts = {}) {
     return send(res, 404, "페이지를 찾을 수 없습니다.", { "content-type": "text/plain; charset=utf-8" });
   }
 
-  const server = http.createServer((req, res) => {
-    handle(req, res).catch(e => {
-      console.error(e);
-      if (!res.headersSent) send(res, 500, "잠시 문제가 생겼습니다. 다시 시도해 주세요.", { "content-type": "text/plain; charset=utf-8" });
-    });
+  const requestHandler = (req, res) => handle(req, res).catch(e => {
+    console.error(e);
+    if (!res.headersSent) send(res, 500, "잠시 문제가 생겼습니다. 다시 시도해 주세요.", { "content-type": "text/plain; charset=utf-8" });
   });
+  const server = http.createServer(requestHandler);
 
   return {
-    server, db, engine, runUser, tick,
+    server, db, engine, runUser, tick, handler: requestHandler,
     listen(cb) { server.listen(port, () => { port = server.address().port; if (cb) cb(port); }); return server; },
     close() { clearInterval(timer); db.flush(); return new Promise(r => server.close(r)); },
   };
