@@ -22,6 +22,18 @@ python3 -m http.server 4321 --directory class
 
 배포용 사본은 `dist/class/`에 있습니다. `class/`를 고친 뒤에는 `rm -rf dist/class && cp -r class dist/class`로 맞춰 주세요.
 
+### 배포 (Vercel)
+
+`class/` 폴더가 Vercel 프로젝트 **doogo-class**에 연결돼 있습니다(빌드 없이 정적 파일 그대로 배포, 설정은 `vercel.json`, 배포에서 빼는 파일은 `.vercelignore`).
+
+```bash
+cd class
+vercel link --yes --project doogo-class   # 새 컴퓨터에서 처음 한 번 (.vercel/ 은 git에 올리지 않음)
+vercel deploy --prod                      # 운영 주소에 배포
+```
+
+운영 주소: https://doogo-class.vercel.app
+
 ### 체험 계정
 
 | 역할 | 로그인 |
