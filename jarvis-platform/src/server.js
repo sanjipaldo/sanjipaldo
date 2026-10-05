@@ -33,6 +33,7 @@ const V = require("./views");
 
 const SESSION_DAYS = 14;
 const STYLE = fs.readFileSync(path.join(__dirname, "..", "public", "style.css"));
+const FONT_DIR = path.join(__dirname, "..", "public", "fonts");
 
 const defaultSettings = () => ({
   mode: "demo", testMode: true, intervalMin: 10, dailyLimit: 150, firstHours: 168,
@@ -226,6 +227,13 @@ function createApp(opts = {}) {
     }
 
     if (p === "/static/style.css") return send(res, 200, STYLE, { "content-type": "text/css; charset=utf-8", "cache-control": "public, max-age=300" });
+    if (p.startsWith("/static/fonts/")) {
+      // 글꼴 파일 (Pretendard). fonts 폴더 밖은 열지 않는다
+      const file = path.normalize(path.join(FONT_DIR, decodeURIComponent(p.slice("/static/fonts/".length))));
+      if (!file.startsWith(FONT_DIR + path.sep) || !/\.(woff2|css)$/.test(file) || !fs.existsSync(file)) return send(res, 404, "", { "content-type": "text/plain" });
+      const type = file.endsWith(".css") ? "text/css; charset=utf-8" : "font/woff2";
+      return send(res, 200, fs.readFileSync(file), { "content-type": type, "cache-control": "public, max-age=31536000, immutable" });
+    }
     if (p === "/healthz") return send(res, 200, "ok", { "content-type": "text/plain" });
 
     // 구독자용 신청 폼 (로그인 불필요)

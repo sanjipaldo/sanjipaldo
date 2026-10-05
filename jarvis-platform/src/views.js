@@ -30,8 +30,7 @@ const ORB = `<span class="orb" aria-hidden="true"><svg viewBox="0 0 24 24"><path
 function head(title) {
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${h(title)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Noto+Sans+KR:wght@300;400;600;700;800&display=swap">
+<link rel="stylesheet" href="/static/fonts/pretendard/pretendard.css">
 <link rel="stylesheet" href="/static/style.css"></head>`;
 }
 
@@ -154,71 +153,84 @@ function hubPage(p) {
 }
 
 // ── 유튜브: 대시보드 ──
-function statusBadges({ user, provider, googleReady }) {
-  const mp = (user.settings.mail && user.settings.mail.provider) || "outbox";
-  const mailNames = { outbox: "메일 미리보기 (실제 발송 안 함)", resend: "메일 Resend 발송", gmail: "메일 Gmail 발송" };
-  return [
-    provider === "live" ? `<span class="pill on-dark">채널 연결됨 · ${h(user.youtube && user.youtube.title)}</span>` : '<span class="pill on-dark-soft">데모 모드 · 가상 유튜브</span>',
-    provider === "live" && user.settings.testMode ? '<span class="pill red">테스트모드</span>' : "",
-    `<span class="pill on-dark-soft">${mailNames[mp]}</span>`,
-    provider !== "live" && googleReady ? '<a class="pill on-dark-soft" href="/youtube/settings">실제 유튜브 연결 →</a>' : "",
-  ].join("");
-}
-
 function dashboardPage(p) {
-  const { user, csrf, stats, campaigns, recent, formUrl } = p;
-  const lastRun = user.state && user.state.lastRun ? `마지막 확인 ${fmtTime(user.state.lastRun.at)} · ${h(user.state.lastRun.text)}` : "아직 확인 전";
-  const runForm = `<form method="post" action="/youtube/run"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn on-dark">지금 댓글 확인</button></form>`;
+  const { user, csrf, stats, campaigns, recent, formUrl, provider, googleReady } = p;
+  const s = user.settings;
+  const mp = (s.mail && s.mail.provider) || "outbox";
+  const mailNames = { outbox: "미리보기 (실제 발송 안 함)", resend: "Resend 발송", gmail: "Gmail 발송" };
+  const live = provider === "live";
+  const last = user.state && user.state.lastRun;
+
+  const runForm = `<form method="post" action="/youtube/run"><input type="hidden" name="_csrf" value="${h(csrf)}"><button class="btn primary">지금 댓글 확인</button></form>`;
   const heroHtml = hero({
-    size: "xl",
+    size: "compact",
     eyebrow: "MODULE 01 · 유튜브 채널 운영",
-    title: "YOUTUBE<br>AUTOPILOT",
+    title: "YouTube Autopilot",
     sub: "키워드 댓글에 답하고, 신청을 받고, 레퍼럴 링크를 보냅니다.",
     aside: runForm,
-    below: `<div class="badges">${statusBadges(p)}</div>
-      <dl class="hero-stats">
-        <div><dt>오늘 답글</dt><dd>${stats.todayReplies}</dd><span>하루 한도 ${h(user.settings.dailyLimit)}</span></div>
-        <div><dt>전체 답글</dt><dd>${stats.replies}</dd><span>자동으로 단 대댓글</span></div>
-        <div><dt>신청 접수</dt><dd>${stats.submissions}</dd><span>신청 폼 제출</span></div>
-        <div><dt>레퍼럴 메일</dt><dd>${stats.sent}</dd><span>${stats.preview ? `미리보기 ${stats.preview}건 포함` : "발송 완료"}</span></div>
-      </dl>
-      <p class="hero-meta">${lastRun} · ${h(user.settings.intervalMin)}분마다 자동 확인</p>`,
+    below: `<p class="hero-status"><span class="dot${live ? " live" : ""}"></span>${live ? `${h(user.youtube && user.youtube.title)} 연결됨` : "데모 모드"}${live && s.testMode ? " · 테스트모드" : ""}<span class="sep"></span>${h(s.intervalMin)}분마다 자동 확인<span class="sep"></span>${last ? `마지막 확인 ${fmtTime(last.at)}` : "아직 확인 전"}</p>`,
   });
 
-  const campCards = campaigns.length ? campaigns.map(c => `
-    <article class="card">
-      <div class="card-top"><a href="/youtube/campaigns/${h(c.id)}" class="title-sm link-plain">${h(c.name)}</a>${c.active ? '<span class="pill ok">작동 중</span>' : '<span class="pill muted">멈춤</span>'}</div>
-      <p class="muted">${c.target === "channel" ? "내 채널 전체 영상 · 새 영상 자동 포함" : `영상 ${c.videos.length}개`} · 키워드 ${h(c.keywords.join(", "))} · ${c.exact ? "정확히" : "포함"}</p>
-      <dl class="mini-stats"><div><dt>답글</dt><dd>${c.stats.replies}</dd></div><div><dt>접수</dt><dd>${c.stats.subs}</dd></div><div><dt>메일</dt><dd>${c.stats.sent}</dd></div></dl>
-      <div class="copy-row"><code class="clip">${h(formUrl(c))}</code><button type="button" class="btn outline sm" data-copy="${h(formUrl(c))}">폼 링크 복사</button></div>
-    </article>`).join("") : `<div class="empty"><p class="title-sm">아직 캠페인이 없습니다</p><p class="muted">위에 유튜브 링크와 레퍼럴 링크를 넣으면 바로 시작합니다.</p></div>`;
+  const kpis = [
+    ["오늘 답글", stats.todayReplies, `하루 한도 ${h(s.dailyLimit)}개`],
+    ["전체 답글", stats.replies, "자동으로 단 대댓글"],
+    ["신청 접수", stats.submissions, "신청 폼 제출"],
+    ["레퍼럴 메일", stats.sent, stats.preview ? `미리보기 ${stats.preview}건 포함` : "보낸 메일"],
+  ].map(([k, v, note]) => `<div class="kpi"><dt>${k}</dt><dd>${v}</dd><span>${note}</span></div>`).join("");
+
+  const campRows = campaigns.length ? `<ul class="list">${campaigns.map(c => `
+    <li class="list-row">
+      <div class="list-main">
+        <div class="list-title"><a href="/youtube/campaigns/${h(c.id)}">${h(c.name)}</a>${c.active ? '<span class="pill ok">작동 중</span>' : '<span class="pill muted">멈춤</span>'}</div>
+        <p class="list-sub">${c.target === "channel" ? "내 채널 전체 영상" : `영상 ${c.videos.length}개`} · 키워드 ${h(c.keywords.join(", "))} · ${c.exact ? "정확히 일치" : "포함"}</p>
+      </div>
+      <dl class="list-stats"><div><dt>답글</dt><dd>${c.stats.replies}</dd></div><div><dt>접수</dt><dd>${c.stats.subs}</dd></div><div><dt>메일</dt><dd>${c.stats.sent}</dd></div></dl>
+      <div class="list-actions"><button type="button" class="btn outline sm" data-copy="${h(formUrl(c))}">폼 링크 복사</button><a class="btn outline sm" href="/youtube/campaigns/${h(c.id)}">열기</a></div>
+    </li>`).join("")}</ul>` : `<div class="empty"><p class="title-sm">아직 캠페인이 없습니다</p><p class="muted">오른쪽 빠른 시작에 유튜브 링크와 레퍼럴 링크를 넣으면 바로 시작합니다.</p></div>`;
 
   const recentRows = recent.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>시간</th><th>종류</th><th>내용</th><th>상태</th></tr></thead><tbody>${recent.map(r => `
-    <tr><td class="num">${fmtTime(r.at)}</td><td>${h(r.kind)}</td><td class="wrap">${h(r.text)}</td><td>${pill(r.status)}</td></tr>`).join("")}</tbody></table></div>` : '<div class="empty"><p class="muted">아직 기록이 없습니다.</p></div>';
+    <tr><td class="num">${fmtTime(r.at)}</td><td>${h(r.kind)}</td><td class="wrap">${h(r.text)}</td><td>${pill(r.status)}</td></tr>`).join("")}</tbody></table></div>` : '<div class="empty"><p class="muted">아직 기록이 없습니다. 댓글을 확인하면 여기에 쌓입니다.</p></div>';
+
+  const statusRows = [
+    ["유튜브", live ? `${h(user.youtube && user.youtube.title)}` : "데모 모드 (가상 유튜브)", live || !googleReady ? "" : '<a href="/youtube/settings">연결하기</a>'],
+    ["테스트모드", live ? (s.testMode ? "켜짐 — 답글 기록만" : "꺼짐") : "데모에서는 해당 없음", ""],
+    ["메일 발송", mailNames[mp], '<a href="/settings">바꾸기</a>'],
+    ["새 영상 자동화", s.newVideoAuto !== false ? "켜짐" : "꺼짐", '<a href="/youtube/settings">바꾸기</a>'],
+    ["마지막 결과", last ? h(last.text) : "아직 확인 전", ""],
+  ].map(([k, v, a]) => `<div class="kv"><dt>${k}</dt><dd>${v}${a ? ` <span class="kv-link">${a}</span>` : ""}</dd></div>`).join("");
 
   const body = `
-  <section class="quick">
-    <div class="quick-copy"><p class="eyebrow dark">QUICK START</p><h2 class="title-lg">유튜브 링크 넣고 바로 시작</h2>
-      <p class="muted">답글 문구와 메일 문구는 기본값으로 만들어지고, 만든 뒤 언제든 바꿀 수 있습니다.</p></div>
-    <form method="post" action="/youtube/campaigns" class="quick-form">
-      <input type="hidden" name="_csrf" value="${h(csrf)}"><input type="hidden" name="quick" value="1">
-      <label class="span2">유튜브 영상 링크 <small>여러 개면 쉼표로 · 비우면 내 채널 전체 (새 영상 자동 포함)</small>
-        <input name="videos" id="q-videos" placeholder="https://www.youtube.com/watch?v=L1X_BF5mha4"></label>
-      <label>제휴사 이름<input name="name" id="q-name" required placeholder="후커블"></label>
-      <label>반응할 댓글 키워드<input name="keywords" id="q-keywords" required placeholder="후커블"></label>
-      <label class="span2">보낼 레퍼럴 링크 <small>댓글에는 나가지 않고 메일로만 전달</small>
-        <input name="referralLink" id="q-link" type="url" required placeholder="https://..."></label>
-      <div class="span2"><button class="btn primary">자동화 시작</button></div>
-    </form>
-  </section>
-  <section class="stack">
-    <div class="section-head"><div><p class="eyebrow dark">CAMPAIGNS</p><h2 class="title-lg">내 캠페인</h2></div><a class="btn outline sm" href="/youtube/campaigns/new">자세히 만들기</a></div>
-    <div class="cards">${campCards}</div>
-  </section>
-  <section class="stack">
-    <div class="section-head"><div><p class="eyebrow dark">ACTIVITY</p><h2 class="title-lg">최근 활동</h2></div></div>
-    ${recentRows}
-  </section>`;
+  <dl class="kpis">${kpis}</dl>
+  <div class="dash">
+    <div class="dash-main">
+      <section class="block">
+        <div class="block-head"><h2 class="title-md">내 캠페인</h2><a class="btn outline sm" href="/youtube/campaigns/new">새 캠페인</a></div>
+        ${campRows}
+      </section>
+      <section class="block">
+        <div class="block-head"><h2 class="title-md">최근 활동</h2></div>
+        ${recentRows}
+      </section>
+    </div>
+    <aside class="dash-side">
+      <section class="side-card">
+        <h2 class="title-sm">빠른 시작</h2>
+        <p class="muted small">유튜브 링크와 레퍼럴 링크만 넣으면 바로 동작합니다. 문구는 나중에 바꿀 수 있어요.</p>
+        <form method="post" action="/youtube/campaigns" class="stack">
+          <input type="hidden" name="_csrf" value="${h(csrf)}"><input type="hidden" name="quick" value="1">
+          <label>유튜브 영상 링크 <small>비우면 내 채널 전체</small><input name="videos" id="q-videos" placeholder="https://youtu.be/..."></label>
+          <label>제휴사 이름<input name="name" id="q-name" required placeholder="후커블"></label>
+          <label>반응할 키워드<input name="keywords" id="q-keywords" required placeholder="후커블"></label>
+          <label>레퍼럴 링크 <small>메일로만 전달</small><input name="referralLink" id="q-link" type="url" required placeholder="https://..."></label>
+          <button class="btn primary block">자동화 시작</button>
+        </form>
+      </section>
+      <section class="side-card">
+        <h2 class="title-sm">운영 상태</h2>
+        <dl class="kvs">${statusRows}</dl>
+      </section>
+    </aside>
+  </div>`;
   return layout({ title: "유튜브 채널 운영", user, csrf, flash: p.flash, section: "youtube", tab: "dash", heroHtml, body });
 }
 
