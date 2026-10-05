@@ -866,7 +866,12 @@
   /** 서버가 있는지 확인하고 처음 데이터를 받는다. 서버가 없으면 false (이 브라우저 저장 모드) */
   async function connect() {
     let r;
-    try { r = await fetch("api/bootstrap", { credentials: "same-origin", cache: "no-store" }); } catch (e) { return false; }
+    // 서버가 없는 곳(정적 서버 · 미리보기)은 바로 404 나 오류가 난다. 응답이 너무 늦으면 연결 실패 화면을 보여 준다
+    const ctl = typeof AbortController === "function" ? new AbortController() : null;
+    const timer = ctl && setTimeout(() => ctl.abort(), 15000);
+    try { r = await fetch("api/bootstrap", { credentials: "same-origin", cache: "no-store", signal: ctl ? ctl.signal : undefined }); }
+    catch (e) { if (e && e.name === "AbortError") throw new Error("timeout"); return false; }
+    finally { if (timer) clearTimeout(timer); }
     if (r.status >= 500) throw new Error("server " + r.status);
     let j = null;
     try { j = await r.json(); } catch (e) { return false; }
