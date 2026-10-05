@@ -714,3 +714,4 @@ body[data-master="1"] .a-count { background: #6a3df0; }
   .a-side-foot a { min-height: 40px; display: inline-flex; align-items: center; }
 }
 @media (max-width: 720px) { .a-radio-cards input { width: 20px; height: 20px; flex: none; } }
+.a-ch-ic { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; }

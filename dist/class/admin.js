@@ -184,7 +184,8 @@
       ["faq", "Q&A 자주 묻는 질문", "help", "qna"],
       ["docs", "서류 준비 가이드", "file", "docs"],
       ["library", "유료강의 자료실", "library", "library"],
-      ["motivation", "동기부여", "flame", "motivation"]
+      ["motivation", "동기부여", "flame", "motivation"],
+      ["channels", "1:1 소통채널", "headset", "channels"]
     ].filter((x) => !x[3] || on(x[3])).map((x) => x.slice(0, 3));
     if (customPages(iid).length) content.push(["pages", "추가 메뉴", "star"]);
     return [
@@ -610,6 +611,13 @@
     guide: { name: "시작 가이드 단계", list: (c) => c.guide, idp: "g",
       fields: [F("title", "할 일"), F("desc", "한 줄 설명"), F("url", "바로가기 (선택)", "text", { hint: "수강생 화면 주소(예: #/schedule, #/curriculum) 또는 https:// 로 시작하는 외부 주소. 수강생이 ‘바로가기’를 누르면 자동으로 체크돼요." }),
         F("week", "보이는 주차", "number", { min: 1, hint: "비우거나 1이면 처음 들어왔을 때 한 번(온보딩). 2 이상이면 그 주차가 열릴 때 ‘N주차 시작 가이드’로 다시 떠요." })] },
+    channel: { name: "소통채널", list: (c) => c.channels || (c.channels = DB.defaultChannels()), idp: "ch", init: () => ({ type: "kakao", label: "상담하기" }),
+      fields: [F("title", "채널 이름 (카드 제목)", "text", { hint: "예: 카카오톡 1:1 상담, 채널톡 실시간 상담" }),
+        F("type", "채널 종류", "select", { options: () => DB.CHANNEL_TYPES.map((t) => [t.key, t.label]), hint: "종류에 따라 카드 아이콘과 색이 정해져요." }),
+        F("desc", "설명 (어떤 상담을 이 채널로 하면 되는지)", "textarea", { rows: 3 }),
+        F("url", "연결 주소", "text", { hint: "https:// 링크 (카카오톡 채널 · 채널톡 · 톡톡 등). 이메일은 주소만, 전화는 번호만 적어도 돼요." }),
+        F("hours", "운영 시간 (선택)", "text", { hint: "예: 평일 10:00 ~ 18:00" }),
+        F("label", "버튼 글자", "text", { hint: "예: 카카오톡으로 상담하기" })] },
     ql: { name: "자주 찾는 페이지", list: (c) => c.quickLinks || (c.quickLinks = DB.defaultQuickLinks(c)), idp: "ql", init: () => ({ icon: "link" }),
       fields: [F("title", "이름"), F("desc", "한 줄 설명"), F("url", "주소", "text", { hint: "수강생 화면(#/notices, #/qna, #/docs, #/qna/requests, #/bot, #/library …) 또는 https:// 외부 주소(유튜브·카페·카카오톡 등, 새 창으로 열려요)" }),
         F("color", "아이콘 색 (외부 링크용 · 비우면 기본 색)", "text", { hint: "예: 유튜브 #ff0000 · 네이버 #03c75a · 두고 #0a5de2. # 뒤에 6자리 색 코드를 적어요." }),
@@ -775,6 +783,13 @@
       if (item.type !== "link") { delete ck.link; delete ck.linkHint; }
       if (item.type === "link" && ck.linkHint) ck.link = true;
     }
+    if (form.dataset.coll === "channel") {
+      // 이메일 · 전화는 주소만 적어도 바로 열리게
+      const u = (item.url || "").trim();
+      if (u && item.type === "email" && !/^mailto:/i.test(u) && /@/.test(u)) item.url = "mailto:" + u;
+      else if (u && item.type === "phone" && !/^tel:/i.test(u) && /^[\d\s+()-]+$/.test(u)) item.url = "tel:" + u.replace(/[^\d+]/g, "");
+      else if (u && !/^(https?:|mailto:|tel:)/i.test(u)) item.url = "https://" + u.replace(/^\/+/, "");
+    }
     if (form.dataset.coll === "event") {
       if (!item.title) { err.textContent = "일정 이름을 입력해 주세요."; return; }
       if (item.scope === "cohort" && (!item.cohortId || !item.date)) { err.textContent = "기수와 날짜를 골라 주세요."; return; }
@@ -839,6 +854,7 @@
         '<div class="a-form-row">' + f("youtubeChannel", "유튜브 채널 주소", b.youtubeChannel, "", "url") + f("freeCourseUrl", "무료 강의 · 소개 페이지 주소", b.freeCourseUrl, "", "url") + "</div>" +
         '<h2 class="a-sub">강의 운영</h2><div class="a-form-row">' + f("liveTime", "주차 강의 오픈 시간", b.liveTime, "강의 일정의 ‘강의 오픈’ 옆에 표시", "time") + f("botName", "AI봇 이름", b.botName, "수강생 메뉴와 채팅창 이름") + "</div>" +
         '<div class="a-form-row">' + f("liveUrl", "주차 강의 입장 링크 (줌 등)", b.liveUrl || "", "넣으면 강의 오픈일에 수강생 홈·일정에 ‘입장하기’ 버튼이 생겨요", "url") + f("kakaoChannel", "카카오톡 문의 주소", b.kakaoChannel || "", "오픈채팅·채널 주소. 수강생 왼쪽 메뉴 아래에 ‘카카오톡 문의’ 버튼이 생겨요", "url") + "</div>" +
+        '<label class="a-check"><input type="checkbox" name="worldClock"' + (b.worldClock ? " checked" : "") + '><span>수강생 화면 위에 <b>한국 · 뉴질랜드 현재 시간</b> 보이기 <small class="a-muted">(뉴질랜드 서머타임 자동 반영)</small></span></label>' +
         f("quotes", "오늘의 한마디 (한 줄에 하나)", (C().quotes || []).join("\n"), "홈·동기부여 화면에 날마다 돌아가며 보여요", "textarea") +
         '<div class="a-form-foot"><button class="a-btn a-btn-primary" type="submit">저장</button></div>' +
       "</form>";
@@ -847,6 +863,7 @@
     const c = C(), b = c.brand;
     ["name", "instructor", "courseTitle", "shortTitle", "tagline", "loginEyebrow", "loginSub", "youtubeChannel", "freeCourseUrl", "liveTime", "botName", "liveUrl", "kakaoChannel"].forEach((k) => { b[k] = f[k].value.trim(); });
     if (f.theme) { b.theme = f.theme.value; b.themeSet = true; }
+    b.worldClock = !!(f.worldClock && f.worldClock.checked);
     b.loginHeadline = f.loginHeadline.value.split("\n").map((x) => x.trim()).filter(Boolean).join("\n");
     c.quotes = LINES(f.quotes.value);
     if (!b.name) { toast("브랜드 이름을 입력해 주세요.", "warn"); return; }
@@ -958,6 +975,12 @@
   function pageDocs() {
     return head("서류 준비 가이드", "판매 시작 전에 필요한 서류를 단계별로 안내해요. 순서는 화살표로 바꿀 수 있어요.", addBtn("doc", "단계 추가")) +
       '<section class="a-card">' + simpleList("doc", C().docsGuide, (g) => '<div class="a-item-main"><b>' + esc(g.title) + "</b><small>" + esc([g.where, g.time, g.cost].filter(Boolean).join(" · ")) + "</small></div>", "서류 단계가 없어요.") + "</section>";
+  }
+  function pageChannels() {
+    const list = DB.channelsOf(C());
+    return head("1:1 소통채널", "수강생 메뉴 ‘1:1 소통채널’에 카드로 보여요. 카카오톡 채널 · 채널톡 · 네이버 톡톡 · 이메일 · 전화 등 강사님이 실제로 쓰는 상담 창구를 넣어 두면, 수강생이 누르는 순간 그 채널로 연결돼요.", addBtn("channel", "채널 추가")) +
+      '<section class="a-card">' + simpleList("channel", list, (ch) => { const t = DB.channelType(ch.type); return '<span class="a-ch-ic" style="background:' + (t.color || "var(--m-primary)") + ";color:" + (t.ink || "#fff") + '">' + icon(t.icon, "sm") + '</span><div class="a-item-main"><b>' + esc(ch.title || t.label) + "</b><small>" + esc([t.label, ch.hours, ch.url || "주소 없음 (수강생에게 ‘준비 중’으로 보여요)"].filter(Boolean).join(" · ")) + "</small></div>" + (ch.url ? pill("연결됨", "ok") : pill("준비 중", "mute")); }, "채널이 없어요. ‘채널 추가’로 상담 창구를 만들어 주세요.") + "</section>" +
+      '<p class="a-hint">' + icon("alert", "xs") + " 순서는 화살표로 바꿀 수 있어요. 메뉴를 숨기려면 ‘메뉴 구성’에서 1:1 소통채널을 꺼 주세요.</p>";
   }
   function pageLibrary() {
     const c = C();
@@ -1487,7 +1510,7 @@
   }
 
   /* ---------------- 렌더 ---------------- */
-  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, pages: pageCustomPages };
+  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, pages: pageCustomPages };
   const MPAGES = { "": pageMasterHome, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData };
   function render() {
     closeModal();

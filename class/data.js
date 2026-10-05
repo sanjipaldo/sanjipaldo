@@ -18,6 +18,7 @@ const MOON_CONTENT = {
     youtubeChannel: "https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C",
     freeCourseUrl: "https://www.ivyclass.co.kr/free-courses/c8f31bf5-1781-43cb-a4cc-5e713016ba88",
     kakaoChannel: "",
+    worldClock: true,
     liveUrl: "",
     loginEyebrow: "DOOGO CLASS · 해외 건기식 브랜드",
     loginHeadline: "내 해외 건기식\n브랜드 만들기",
@@ -486,6 +487,12 @@ const MOON_CONTENT = {
 })();
 
 // 예시: 4기부터 쓰는 ‘4주 압축 과정’ — 1~3주차는 그대로, 4·5주차를 한 주로 합친다 (과제 id는 같게 유지)
+// 1:1 소통채널 (강사센터 ‘1:1 소통채널’에서 바꿀 수 있음)
+MOON_CONTENT.channels = [
+  { id: "ch1", type: "openchat", title: "문대표 오픈채팅방", desc: "수강생끼리 질문을 나누고, 문대표가 직접 답해 드려요. 닉네임으로 들어와도 괜찮아요.", url: "https://open.kakao.com/o/gF68BQDi", hours: "매일 · 문대표 확인 후 답변", label: "오픈채팅방 들어가기" },
+  { id: "ch2", type: "kakao", title: "카카오톡 1:1 상담", desc: "결제 · 환불 · 개인 사업 상황처럼 다른 수강생에게 보이고 싶지 않은 내용은 1:1로 남겨 주세요.", url: "", hours: "평일 10:00 ~ 18:00 (한국 시간)", label: "1:1 상담하기" },
+  { id: "ch3", type: "email", title: "이메일 문의", desc: "세금계산서 · 서류 요청처럼 파일을 주고받아야 할 때 메일로 보내 주세요.", url: "", hours: "영업일 기준 1~2일 안에 답변", label: "메일 보내기" }
+];
 MOON_CONTENT.curriculumName = "5주 기본 과정";
 MOON_CONTENT.curricula = [(function () {
   const w = JSON.parse(JSON.stringify(MOON_CONTENT.weeks));
@@ -520,7 +527,7 @@ window.CLASS_SEED = {
     { id: "cc1", instructorId: "choi", name: "1기", startDate: "2026-10-15", recruiting: true }
   ],
   students: [
-    { id: "s1", instructorId: "moon", cohortId: "c3", name: "이수진", phone4: "2186", status: "approved", appliedAt: "2026-09-21" },
+    { id: "s1", instructorId: "moon", cohortId: "c3", name: "이수진", phone4: "2186", status: "approved", appliedAt: "2026-09-21", demo: true },
     { id: "s2", instructorId: "moon", cohortId: "c3", name: "김민준", phone4: "1234", status: "approved", appliedAt: "2026-09-22" },
     { id: "s3", instructorId: "moon", cohortId: "c3", name: "박서연", phone4: "5678", status: "approved", appliedAt: "2026-09-22" },
     { id: "s4", instructorId: "moon", cohortId: "c3", name: "최영희", phone4: "3321", status: "approved", appliedAt: "2026-09-24" },

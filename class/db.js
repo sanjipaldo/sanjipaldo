@@ -111,6 +111,7 @@
     { key: "bot", label: "AI봇", icon: "sparkles" },
     { key: "library", label: "유료강의 자료실", icon: "library" },
     { key: "motivation", label: "동기부여", icon: "flame" },
+    { key: "channels", label: "1:1 소통채널", icon: "headset" },
     { key: "certificate", label: "수료증", icon: "award" }
   ];
   const LIB_MENUS = [
@@ -123,7 +124,13 @@
     if (!ins) return { items: [], library: {} };
     const m = ins.menu = ins.menu || {};
     m.items = Array.isArray(m.items) ? m.items : [];
-    STUDENT_MENUS.forEach((d) => { if (!m.items.some((x) => x.key === d.key)) m.items.push({ key: d.key, on: true }); });
+    // 새로 생긴 메뉴는 기본 순서상 바로 앞 메뉴 뒤에 끼워 넣는다 (예: 1:1 소통채널은 동기부여 아래)
+    STUDENT_MENUS.forEach((d, i) => {
+      if (m.items.some((x) => x.key === d.key)) return;
+      let at = m.items.length;
+      for (let j = i - 1; j >= 0; j--) { const k = m.items.findIndex((x) => x.key === STUDENT_MENUS[j].key); if (k !== -1) { at = k + 1; break; } }
+      m.items.splice(at, 0, { key: d.key, on: true });
+    });
     m.items.forEach((x) => { if (x.key === "home") x.on = true; });
     m.library = Object.assign({ ebook: true, file: true, vod: true, senior: true }, m.library || {});
     return m;
@@ -195,7 +202,8 @@
     const t = template(brand).brand;
     Object.assign(c.brand, { name, instructor: inst, courseTitle: t.courseTitle, shortTitle: t.shortTitle, botName: t.botName,
       loginEyebrow: "DOOGO CLASS", loginHeadline: t.loginHeadline, loginSub: t.loginSub, theme: t.theme, themeSet: true,
-      youtubeChannel: "", freeCourseUrl: "", kakaoChannel: "", liveUrl: "" });
+      youtubeChannel: "", freeCourseUrl: "", kakaoChannel: "", liveUrl: "", worldClock: false });
+    c.channels = defaultChannels();
     c.weeks.forEach((w) => w.lessons.forEach((l) => { l.youtubeId = ""; l.attachments = []; }));
     c.motivation = [];
     ["ebook", "file", "vod", "senior"].forEach((k) => (c.resources[k] || []).forEach((it) => { it.youtubeId = ""; it.attachments = []; if (!it.tool) it.url = ""; }));
@@ -323,6 +331,23 @@
   const quickLinksOf = (c) => (Array.isArray(c.quickLinks) ? c.quickLinks : defaultQuickLinks(c));
   /** 엑셀에서 바로 열리는 CSV 양식 (data: 주소) */
   const csvData = (rows) => "data:text/csv;charset=utf-8," + encodeURIComponent("\uFEFF" + rows.map((r) => r.map((v) => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v).join(",")).join("\n"));
+
+  // 1:1 소통채널: 강사마다 쓰는 상담 채널이 달라서 강사센터에서 직접 만든다
+  const CHANNEL_TYPES = [
+    { key: "kakao", label: "카카오톡 채널", icon: "message", color: "#fee500", ink: "#191600" },
+    { key: "openchat", label: "카카오톡 오픈채팅", icon: "users", color: "#fee500", ink: "#191600" },
+    { key: "channeltalk", label: "채널톡", icon: "headset", color: "#5e4bff", ink: "#ffffff" },
+    { key: "naver", label: "네이버 톡톡", icon: "message", color: "#03c75a", ink: "#ffffff" },
+    { key: "instagram", label: "인스타그램 DM", icon: "camera", color: "#e1306c", ink: "#ffffff" },
+    { key: "email", label: "이메일", icon: "mail", color: "#0e0f0c", ink: "#ffffff" },
+    { key: "phone", label: "전화 상담", icon: "phone", color: "#2ead4b", ink: "#ffffff" },
+    { key: "other", label: "기타 링크", icon: "link", color: "", ink: "" }
+  ];
+  const channelType = (k) => CHANNEL_TYPES.find((x) => x.key === k) || CHANNEL_TYPES[CHANNEL_TYPES.length - 1];
+  const defaultChannels = () => [
+    { id: "ch1", type: "kakao", title: "카카오톡 1:1 상담", desc: "수강 · 결제 · 개인 상황처럼 다른 사람에게 보이고 싶지 않은 내용은 1:1로 편하게 남겨 주세요.", url: "", hours: "평일 10:00 ~ 18:00", label: "카카오톡으로 상담하기" }
+  ];
+  const channelsOf = (c) => (Array.isArray(c.channels) ? c.channels : defaultChannels());
 
   /* ---------------- 불러오기 · 저장 ---------------- */
   let db = null;
@@ -516,6 +541,23 @@
         defs.filter((d) => d.color && !c.quickLinks.some((l) => l.id === d.id || (l.url && l.url === d.url))).forEach((d) => c.quickLinks.push(d));
       });
       db.flags.quickLinksV2 = true; save();
+    }
+    // 문대표는 뉴질랜드 건기식 강의라 한국 · 뉴질랜드 시간을 기본으로 켠다 (한 번만)
+    if (!db.flags.worldClockSeeded) {
+      const mb = db.content.moon && db.content.moon.brand;
+      if (mb && mb.worldClock === undefined) mb.worldClock = true;
+      db.flags.worldClockSeeded = true; save();
+    }
+    // 1:1 소통채널 예시 (한 번만): 시드에 채널이 있는 강사(문대표)만 채운다
+    if (!db.flags.channelsSeeded) {
+      Object.keys(db.content).forEach((id) => { const sc = window.CLASS_SEED.content[id]; if (sc && sc.channels && !Array.isArray(db.content[id].channels)) db.content[id].channels = clone(sc.channels); });
+      db.flags.channelsSeeded = true; save();
+    }
+    // 로그인 화면에 안내된 체험 계정(문대표 · 이수진 2186)은 잠긴 화면도 미리보기로 열어 볼 수 있게 표시 (한 번만)
+    if (!db.flags.demoSeeded) {
+      const s1 = db.students.find((x) => x.instructorId === "moon" && x.name === "이수진" && x.phone4 === "2186");
+      if (s1) s1.demo = true;
+      db.flags.demoSeeded = true; save();
     }
     // 무료강의 페이지 기본 문구 (한 번만, doogo.site 내용)
     if (!db.flags.freeSeeded2) {
@@ -725,7 +767,7 @@
   };
 
   window.DB = {
-    load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
+    load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, CHANNEL_TYPES, channelType, defaultChannels, channelsOf, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
     curricula, curriculum, curriculumOf, weeksOf, cohortWeeks,

@@ -122,6 +122,7 @@
     { id: "library", label: "유료강의 자료실", icon: "library", href: "#/library",
       children: () => libList().map((c) => ({ id: c.id, label: c.label, href: "#/library/" + c.id })) },
     { id: "motivation", label: "동기부여", icon: "flame", href: "#/motivation" },
+    { id: "channels", label: "1:1 소통채널", icon: "headset", href: "#/channels" },
     { id: "certificate", label: "수료증", icon: "award", href: "#/certificate" }
   ];
   const LIB = [
@@ -304,6 +305,23 @@
   }
 
   /* ---------------- 앱 셸 ---------------- */
+  /* ---------------- 한국 · 뉴질랜드 시간 ----------------
+   * 시간대 데이터(Intl)로 계산해서 뉴질랜드 서머타임(9월 마지막 일요일 ~ 4월 첫 일요일)이 자동으로 반영된다 */
+  const ZONES = [{ key: "kr", label: "한국", tz: "Asia/Seoul" }, { key: "nz", label: "뉴질랜드", tz: "Pacific/Auckland" }];
+  function zoneNow(tz, d) {
+    const p = {};
+    new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(d).forEach((x) => { p[x.type] = x.value; });
+    const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute);
+    return { hm: String(+p.hour % 24).padStart(2, "0") + ":" + p.minute, md: (+p.month) + "/" + (+p.day), dow: DOW[new Date(asUTC).getUTCDay()], offset: Math.round((asUTC - Math.floor(d.getTime() / 60000) * 60000) / 60000) };
+  }
+  function worldClockHtml() {
+    const d = new Date(), kr = zoneNow(ZONES[0].tz, d), nz = zoneNow(ZONES[1].tz, d);
+    const diff = Math.round((nz.offset - kr.offset) / 60), summer = nz.offset === 13 * 60;
+    const cell = (z, t, sub) => '<span class="wc-cell wc-' + z.key + '"><span class="wc-flag" aria-hidden="true">' + (z.key === "kr" ? "KR" : "NZ") + '</span><span class="wc-txt"><small>' + z.label + (t.md !== kr.md && z.key === "nz" ? " · " + t.md : "") + '</small><b>' + t.hm + "</b><em>(" + t.dow + ")</em></span>" + (sub ? '<span class="wc-sub">' + sub + "</span>" : "") + "</span>";
+    return cell(ZONES[0], kr, "") + '<span class="wc-gap" aria-hidden="true">+' + diff + "h</span>" + cell(ZONES[1], nz, summer ? "서머타임" : "표준시");
+  }
+  function tickWorldClock() { document.querySelectorAll(".wclock").forEach((el) => { el.innerHTML = worldClockHtml(); }); }
+  setInterval(() => { if (isActive() && document.querySelector(".wclock")) tickWorldClock(); }, 15000);
   function renderShell() {
     root.innerHTML =
       '<div class="app' + (preview ? " has-preview" : "") + '" id="app">' +
@@ -312,12 +330,14 @@
         '<header class="topbar">' +
           '<button class="menu-toggle" type="button" data-action="toggle-nav" aria-label="메뉴 열기">' + icon("menu") + "</button>" +
           '<a class="brand" href="#/home">' + window.logoMark() + '<span class="sr-only">홈</span><span class="brand-text"><small>' + esc(D.brand.name) + "</small><strong>" + esc(D.brand.courseTitle) + "</strong></span></a>" +
+          (D.brand.worldClock ? '<div class="wclock top" aria-label="한국 · 뉴질랜드 현재 시간">' + worldClockHtml() + "</div>" : "") +
           '<div class="topbar-right">' +
             '<span class="hello"><span class="sprout lv-' + LV().cur.key + '" title="성장 레벨 · ' + esc(LV().cur.name) + '">' + icon(LV().cur.icon, "sm") + "</span><b>" + esc(me.name) + '</b><span class="txt">' + (preview ? "님 (미리보기)" : "님 환영합니다") + "</span></span>" +
             '<span class="cohort-chip">' + esc(CO.name) + "</span>" +
             (preview ? "" : '<button class="logout" type="button" data-action="logout">' + icon("logout", "sm") + "<span>로그아웃</span></button>") +
           "</div>" +
         "</header>" +
+        (D.brand.worldClock ? '<div class="wclock strip" aria-label="한국 · 뉴질랜드 현재 시간">' + worldClockHtml() + "</div>" : "") +
         '<div class="shell">' +
           '<aside class="sidebar" id="sidebar" aria-label="주 메뉴"></aside>' +
           '<div class="scrim" data-action="toggle-nav"></div>' +
@@ -344,6 +364,7 @@
       return html + "</li>";
     }).join("");
     document.getElementById("sidebar").innerHTML =
+      (D.brand.worldClock ? '<div class="wclock side" aria-label="한국 · 뉴질랜드 현재 시간">' + worldClockHtml() + "</div>" : "") +
       '<ul class="nav">' + items + "</ul>" +
       '<div class="help-card"><strong>도움이 필요하신가요?</strong><p>궁금한 점은 Q&A의 자주 묻는 질문에서 먼저 확인하시고, 화면이 이상하거나 기능이 안 되면 요청사항으로 알려 주세요.</p>' +
       (D.brand.kakaoChannel ? '<a class="btn btn-primary btn-sm btn-block" href="' + esc(D.brand.kakaoChannel) + '" target="_blank" rel="noopener" style="margin-bottom:8px">' + icon("message", "sm") + "카카오톡 문의</a>" : "") +
@@ -1201,36 +1222,85 @@
       (quote ? '<div class="quote" style="margin-top:20px">“' + esc(quote) + "”<small>— " + esc(D.brand.instructor) + "</small></div>" : "") + "</div>";
   }
 
+  /* ---------------- 1:1 소통채널 ---------------- */
+  // 강사가 강사센터에서 만든 상담 채널(카카오톡 · 채널톡 · 네이버 톡톡 · 이메일 · 전화 …)로 바로 연결
+  function pageChannels() {
+    const list = DB.channelsOf(D);
+    const card = (ch) => {
+      const t = DB.channelType(ch.type), ok = !!(ch.url || "").trim();
+      const style = t.color ? ' style="--ch:' + t.color + ";--chi:" + t.ink + '"' : "";
+      const inner = '<div class="res-top"><span class="ch-icon"' + style + ">" + icon(t.icon) + '</span><div><div class="res-title">' + esc(ch.title || t.label) + '</div><div class="tiny">' + esc(t.label) + (ch.hours ? " · " + esc(ch.hours) : "") + "</div></div></div>" +
+        (ch.desc ? '<div class="res-desc">' + esc(ch.desc) + "</div>" : "") +
+        '<div class="res-foot">' + (ok ? '<span class="ch-go"' + style + ">" + esc(ch.label || "상담하기") + icon("arrowUpRight", "sm") + "</span>" : '<span class="tiny">링크를 준비하고 있어요</span>') + "</div>";
+      return ok ? '<a class="res-card ch-card" href="' + esc(ch.url) + '" target="_blank" rel="noopener">' + inner + "</a>" : '<div class="res-card ch-card off" aria-disabled="true">' + inner + "</div>";
+    };
+    return '<div class="page">' + pageHead("1:1 소통채널", "궁금한 점이나 상담이 필요할 때, 아래 채널로 " + D.brand.instructor + "님께 바로 문의하세요.") +
+      (list.length ? '<div class="grid-2 ch-grid">' + list.map(card).join("") + "</div>" : '<section class="card">' + empty("headset", "상담 채널을 준비하고 있어요.") + "</section>") +
+      '<p class="ch-note">' + icon("clock", "xs") + " 운영 시간 밖에는 답변이 늦을 수 있어요." + (on("qna") ? ' 화면 오류는 <a href="#/qna/requests/new">요청사항</a>으로 남겨 주시면 더 빨라요.' : "") + "</p></div>";
+  }
+
   /* ---------------- 수료증 ---------------- */
+  // 체험 계정 · 강사 미리보기는 잠긴 수료증을 ‘미리보기’로 열어 볼 수 있다
+  let certPreview = false;
+  function certSeal(name) {
+    const nm = esc(String(name || "").replace(/\s+/g, "").slice(0, 4));
+    return '<svg class="cert-seal" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="60" cy="60" r="45" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
+      '<text x="60" y="58" text-anchor="middle" font-size="' + (nm.length > 3 ? 21 : 26) + '" font-weight="900" fill="currentColor" font-family="Noto Serif KR, Nanum Myeongjo, serif">' + nm + '</text><text x="60" y="84" text-anchor="middle" font-size="15" font-weight="900" fill="currentColor" font-family="Noto Serif KR, Nanum Myeongjo, serif">之印</text></svg>';
+  }
+  function certRosette() {
+    return '<svg class="cert-rosette" viewBox="0 0 120 150" aria-hidden="true"><path d="M38 86 26 146l20-12 14 16 8-58zM82 86l12 60-20-12-14 16-8-58z" fill="var(--ink)"/>' +
+      '<circle cx="60" cy="60" r="50" fill="var(--accent)"/><circle cx="60" cy="60" r="50" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="3 4"/><circle cx="60" cy="60" r="38" fill="none" stroke="var(--ink)" stroke-width="1.5"/>' +
+      '<text x="60" y="56" text-anchor="middle" font-size="12" font-weight="900" letter-spacing="2" fill="var(--ink)">COMPLETE</text><text x="60" y="76" text-anchor="middle" font-size="18" font-weight="900" fill="var(--ink)">수 료</text></svg>';
+  }
+  function certNumber() {
+    const idx = DB.data.students.filter((x) => x.cohortId === CO.id).findIndex((x) => x.id === me.id) + 1;
+    return "DG-" + String(INS.id).toUpperCase().slice(0, 4) + "-" + (parseInt(CO.name, 10) || 0) + "-" + String(Math.max(1, idx)).padStart(4, "0");
+  }
   function pageCertificate() {
     const o = overallStats();
-    const unlocked = o.reqTotal > 0 && o.reqDone === o.reqTotal;
+    const earned = o.reqTotal > 0 && o.reqDone === o.reqTotal;
+    const canPreview = !earned && (preview || !!me.demo);
+    const showOpen = earned || (canPreview && certPreview);
     const remaining = allMissions().filter((m) => m.required && !isDone(m.id));
     let doneDate = todayStr();
-    if (unlocked) {
+    if (earned) {
       const ts = Math.max.apply(null, allMissions().filter((m) => m.required).map((m) => { const s = lastSub(m.id); return s ? s.at : 0; }));
       if (ts) doneDate = DB.date.toStr(new Date(ts));
     }
     const pct = o.reqTotal ? Math.round((o.reqDone / o.reqTotal) * 100) : 0;
     const canPrint = window.self === window.top;
+    const d = parseDate(doneDate), ko = d.getFullYear() + "년 " + (d.getMonth() + 1) + "월 " + d.getDate() + "일";
+    const cert = '<div class="cert-wrap"><article class="cert' + (showOpen ? "" : " locked") + (certPreview && !earned ? " is-preview" : "") + '" aria-label="수료증">' +
+        '<div class="cert-inner">' +
+          '<span class="cert-corner tl"></span><span class="cert-corner tr"></span><span class="cert-corner bl"></span><span class="cert-corner br"></span>' +
+          certRosette() +
+          '<header class="cert-head">' + window.logoMark("cert-mark") + '<span class="cert-brand">' + esc(D.brand.name) + "</span></header>" +
+          '<p class="cert-eyebrow">CERTIFICATE OF COMPLETION</p><h2 class="cert-title">수 료 증</h2>' +
+          '<p class="cert-no">제 ' + esc(certNumber()) + " 호</p>" +
+          '<div class="cert-name"><small>성 명</small><span>' + esc(me.name) + "</span></div>" +
+          '<p class="cert-body">위 사람은 <b>' + esc(D.brand.courseTitle) + "</b> " + esc(CO.name) + " 과정을 성실히 이수하고,<br>필수 과제 " + o.reqTotal + "개를 모두 통과하였기에 이 증서를 수여합니다.</p>" +
+          '<dl class="cert-meta"><div><dt>과정명</dt><dd>' + esc(D.brand.courseTitle) + "</dd></div><div><dt>교육 기간</dt><dd>" + fmtFull(CO.startDate) + " ~ " + fmtFull(DB.cohortEnd(CO)) + "</dd></div><div><dt>수료일</dt><dd>" + fmtFull(doneDate) + "</dd></div></dl>" +
+          '<footer class="cert-foot"><p class="cert-date">' + ko + '</p><div class="cert-sign"><span class="cert-org">' + esc(D.brand.name) + '</span><span class="cert-who">대표 강사 <b>' + esc(D.brand.instructor) + "</b></span>" + certSeal(D.brand.instructor) + "</div></footer>" +
+          '<p class="cert-powered">' + window.poweredBy("color") + "</p>" +
+        "</div>" +
+        (certPreview && !earned ? '<div class="cert-ribbon">미리보기</div>' : "") +
+        (showOpen ? "" : '<div class="cert-lock">' + icon("lock") + "<strong>필수 과제 " + remaining.length + '개가 남았어요</strong><span class="muted">모두 통과하면 이름이 새겨진 수료증이 열립니다.</span>' +
+          (canPreview ? '<button class="btn btn-primary" data-action="cert-preview">' + icon("eye", "sm") + (preview ? "강사 미리보기: 수료증 열어 보기" : "체험 계정: 수료증 열어 보기") + "</button>" : "") + "</div>") +
+      "</article></div>";
     return '<div class="page">' + pageHead("수료증", "필수 과제 " + o.reqTotal + "개를 모두 통과하면 수료증이 발급됩니다.") +
-      '<section class="card overall no-print"><div class="overall-top"><span>필수 과제 통과</span>' + pctText(pct) + "</div>" + progressBar(pct) + '<span class="tiny" style="color:var(--body)">' + o.reqTotal + "개 중 " + o.reqDone + "개 통과" + (unlocked ? " · 수료 조건을 모두 채웠어요!" : " · " + remaining.length + "개 남음") + "</span></section>" +
-      '<div class="cert' + (unlocked ? "" : " locked") + '" style="margin-top:14px">' +
-        window.logoMark("cert-mark") +
-        '<div class="cert-eyebrow">CERTIFICATE OF COMPLETION</div><h2>수 료 증</h2>' +
-        '<div class="cert-name"><span>' + esc(me.name) + "</span></div>" +
-        "<p>위 사람은 " + esc(D.brand.courseTitle) + " " + esc(CO.name) + " 과정의 필수 과제를 모두 성실히 수행하였기에 이 증서를 드립니다.</p>" +
-        '<div class="cert-foot"><span>과정 기간 ' + fmtFull(CO.startDate) + " ~ " + fmtFull(DB.cohortEnd(CO)) + "<br>발급일 " + fmtFull(doneDate) + '</span><span class="cert-sign">' + esc(D.brand.name) + "<strong>" + esc(D.brand.instructor) + "</strong></span></div>" +
-        (unlocked ? "" : '<div class="cert-lock">' + icon("lock") + "<strong>필수 과제 " + remaining.length + '개가 남았어요</strong><span class="muted">모두 통과하면 이름이 새겨진 수료증이 열립니다.</span></div>') +
-      "</div>" +
-      (unlocked
-        ? (canPrint ? '<div class="guide-actions no-print" style="justify-content:center;margin-top:16px"><button class="btn btn-primary" data-action="print">' + icon("printer", "sm") + "인쇄 · PDF로 저장</button></div>" : "")
-        : '<div class="section-head no-print"><h2>남은 필수 과제</h2></div><section class="card no-print">' + remaining.map((m) => {
+      '<section class="card overall no-print"><div class="overall-top"><span>필수 과제 통과</span>' + pctText(pct) + "</div>" + progressBar(pct) + '<span class="tiny" style="color:var(--body)">' + o.reqTotal + "개 중 " + o.reqDone + "개 통과" + (earned ? " · 수료 조건을 모두 채웠어요!" : " · " + remaining.length + "개 남음") + "</span></section>" +
+      cert +
+      (showOpen
+        ? '<div class="guide-actions no-print" style="justify-content:center;margin-top:16px">' + (canPrint ? '<button class="btn btn-primary" data-action="print">' + icon("printer", "sm") + "인쇄 · PDF로 저장</button>" : "") +
+            (certPreview && !earned ? '<button class="btn btn-secondary" data-action="cert-preview">' + icon("lock", "sm") + "미리보기 닫기</button>" : "") + "</div>" +
+            (certPreview && !earned ? '<p class="tiny no-print" style="text-align:center;margin:10px 0 0">체험용 미리보기예요. 실제 수강생은 필수 과제를 모두 통과해야 이 수료증이 열려요.</p>' : "")
+        : "") +
+      (!earned ? '<div class="section-head no-print"><h2>남은 필수 과제</h2></div><section class="card no-print">' + remaining.map((m) => {
             const w = findWeek(m.weekNo);
             return isOpen(w)
               ? '<a class="list-row" href="#/missions/' + m.weekNo + "/" + m.id + '"><span class="badge badge-neutral">' + m.weekNo + '주차</span><span class="lr-title">' + esc(m.title) + "</span>" + stateBadge(m.id) + "</a>"
               : '<div class="list-row" style="opacity:.6"><span class="badge badge-neutral">' + m.weekNo + '주차</span><span class="lr-title">' + esc(m.title) + '</span><span class="lr-date">' + icon("lock", "xs") + " " + fmtMD(openOf(w)) + "</span></div>";
-          }).join("") + "</section>") +
+          }).join("") + "</section>" : "") +
       "</div>";
   }
 
@@ -1356,7 +1426,7 @@
     if (!document.getElementById("app") || root.dataset.who !== me.id) { renderShell(); root.dataset.who = me.id; }
     document.getElementById("app").classList.remove("nav-open");
     renderSidebar(r);
-    const pages = { home: pageHome, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, qna: pageQna, docs: pageDocs, bot: pageBot, library: pageLibrary, motivation: pageMotivation, certificate: pageCertificate, page: pageCustom };
+    const pages = { home: pageHome, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, qna: pageQna, docs: pageDocs, bot: pageBot, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, certificate: pageCertificate, page: pageCustom };
     const fn = pages[r.parts[0]] || notFound;
     const main = document.getElementById("main");
     const prevKey = main.dataset.key, key = location.hash;
@@ -1368,6 +1438,7 @@
     if (top === "library" && lastTop !== "library") libNoticeModal();
     else document.body.classList.remove("lib-gated");
     if (top !== "motivation") { mvAuto = false; mvSel = null; }
+    if (top !== "certificate") certPreview = false;
     lastTop = top;
     if (prevKey !== key) window.scrollTo(0, 0);
     const nav = NAV().find((n) => n.id === r.parts[0] && (n.id !== "page" || n.sub === r.parts[1]));
@@ -1447,6 +1518,7 @@
       case "bot-close": botOpen = false; DB.store.set(KEY_BOT, false); renderBotFab(route()); break;
       case "not-ready": toast("자료를 준비하고 있어요. 올라오면 공지로 알려 드릴게요."); break;
       case "play": playModal(a.dataset.cat, a.dataset.id); break;
+      case "cert-preview": certPreview = !certPreview; document.getElementById("main").innerHTML = pageCertificate(); if (certPreview) { const c = document.querySelector(".cert-wrap"); if (c) c.scrollIntoView({ behavior: "smooth", block: "start" }); } break;
       case "wk-filter": wkFilter[a.dataset.grp] = a.dataset.k; { const y = window.scrollY; document.getElementById("main").innerHTML = pageWeek(route().parts[1]); window.scrollTo(0, y); } break;
       case "lib-gate-ok": document.body.classList.remove("lib-gated"); closeModal(); break;
       case "mv-pick": {
