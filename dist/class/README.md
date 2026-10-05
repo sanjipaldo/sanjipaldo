@@ -34,6 +34,8 @@ vercel deploy --prod                      # 운영 주소에 배포
 
 운영 주소: https://doogo-class.vercel.app
 
+GitHub 저장소 `sanjipaldo/sanjipaldo`가 이 프로젝트에 연결돼 있어 푸시하면 자동으로 배포됩니다(Vercel 프로젝트 루트 디렉터리 = `class`). `class/` 안이 바뀌지 않은 커밋은 배포를 건너뜁니다. 운영 주소에 바로 반영되는 브랜치는 Vercel 설정의 Production Branch이고, 나머지 브랜치는 미리보기 배포로 올라갑니다.
+
 ### 체험 계정
 
 | 역할 | 로그인 |
