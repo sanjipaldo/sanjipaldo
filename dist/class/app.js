@@ -314,10 +314,27 @@
     const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute);
     return { hm: String(+p.hour % 24).padStart(2, "0") + ":" + p.minute, md: (+p.month) + "/" + (+p.day), dow: DOW[new Date(asUTC).getUTCDay()], offset: Math.round((asUTC - Math.floor(d.getTime() / 60000) * 60000) / 60000) };
   }
+  // 동그란 국기 (SVG). 태극기는 태극 + 4괘, 뉴질랜드기는 유니언 잭 + 남십자성 4개
+  let flagSeq = 0;
+  function flagKR() {
+    const bars = (pat) => pat.map((b, i) => { const y = (i - 1) * 4.6 - 1.5; return b ? '<rect x="-8" y="' + y + '" width="16" height="3"/>' : '<rect x="-8" y="' + y + '" width="7" height="3"/><rect x="1" y="' + y + '" width="7" height="3"/>'; }).join("");
+    const tri = (x, y, a, pat) => '<g transform="translate(' + x + " " + y + ") rotate(" + a + ')">' + bars(pat) + "</g>";
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#fff"/>' +
+      '<g transform="rotate(33.69 50 50)"><path d="M28 50a22 22 0 0 1 44 0z" fill="#cd2e3a"/><path d="M28 50a22 22 0 0 0 44 0z" fill="#0047a0"/><circle cx="39" cy="50" r="11" fill="#cd2e3a"/><circle cx="61" cy="50" r="11" fill="#0047a0"/></g>' +
+      '<g fill="#000">' + tri(21.7, 31.1, -33.69, [1, 1, 1]) + tri(78.3, 31.1, 33.69, [0, 1, 0]) + tri(21.7, 68.9, 33.69, [1, 0, 1]) + tri(78.3, 68.9, -33.69, [0, 0, 0]) + "</g></svg>";
+  }
+  function flagNZ() {
+    const id = "fnz" + (++flagSeq);
+    const star = (cx, cy, r) => { const pts = []; for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * 0.4 : r, an = -Math.PI / 2 + i * Math.PI / 5; pts.push((cx + rr * Math.cos(an)).toFixed(1) + "," + (cy + rr * Math.sin(an)).toFixed(1)); } return '<polygon points="' + pts.join(" ") + '" fill="#c8102e" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/>'; };
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><defs><clipPath id="' + id + '"><rect width="50" height="50"/></clipPath></defs><rect width="100" height="100" fill="#012169"/>' +
+      '<g clip-path="url(#' + id + ')"><path d="M0 0L50 50M50 0L0 50" stroke="#fff" stroke-width="10"/><path d="M0 0L50 50M50 0L0 50" stroke="#c8102e" stroke-width="3.4"/>' +
+      '<path d="M25 0V50M0 25H50" stroke="#fff" stroke-width="16"/><path d="M25 0V50M0 25H50" stroke="#c8102e" stroke-width="9"/></g>' +
+      star(75, 24, 9.5) + star(62, 50, 9) + star(87, 46, 7.5) + star(74, 75, 11) + "</svg>";
+  }
   function worldClockHtml() {
     const d = new Date(), kr = zoneNow(ZONES[0].tz, d), nz = zoneNow(ZONES[1].tz, d);
     const diff = Math.round((nz.offset - kr.offset) / 60), summer = nz.offset === 13 * 60;
-    const cell = (z, t, sub) => '<span class="wc-cell wc-' + z.key + '"><span class="wc-flag" aria-hidden="true">' + (z.key === "kr" ? "KR" : "NZ") + '</span><span class="wc-txt"><small>' + z.label + (t.md !== kr.md && z.key === "nz" ? " · " + t.md : "") + '</small><b>' + t.hm + "</b><em>(" + t.dow + ")</em></span>" + (sub ? '<span class="wc-sub">' + sub + "</span>" : "") + "</span>";
+    const cell = (z, t, sub) => '<span class="wc-cell wc-' + z.key + '"><span class="wc-flag" title="' + z.label + '">' + (z.key === "kr" ? flagKR() : flagNZ()) + '</span><span class="wc-txt"><small>' + z.label + (t.md !== kr.md && z.key === "nz" ? " · " + t.md : "") + '</small><b>' + t.hm + "</b><em>(" + t.dow + ")</em></span>" + (sub ? '<span class="wc-sub">' + sub + "</span>" : "") + "</span>";
     return cell(ZONES[0], kr, "") + '<span class="wc-gap" aria-hidden="true">+' + diff + "h</span>" + cell(ZONES[1], nz, summer ? "서머타임" : "표준시");
   }
   function tickWorldClock() { document.querySelectorAll(".wclock").forEach((el) => { el.innerHTML = worldClockHtml(); }); }
