@@ -262,7 +262,7 @@
       (L.url ? '<a class="bk-plat-hero-logo" href="' + esc(L.url) + '" target="_blank" rel="noreferrer" aria-label="' + esc(L.platform || "강의 플랫폼") + ' 신청 페이지 열기">' : '<span class="bk-plat-hero-logo">') +
       '<img src="' + esc(L.platformLogo) + '" alt="' + esc(L.platform || "강의 플랫폼") + '">' + (L.url ? "</a>" : "</span>") + "</div>" : "";
     return '<section class="upcoming-course" aria-labelledby="upcoming-course-title">' + plat + '<div class="upcoming-course-heading"><span>' + esc(L.kicker) + '</span><h2 id="upcoming-course-title">' + esc(L.title) + "</h2>" + (L.desc ? "<p>" + esc(L.desc) + "</p>" : "") + "</div>" +
-      '<article class="upcoming-course-card"><div class="upcoming-course-image">' + (L.image ? '<img src="' + esc(L.image) + '" alt="' + esc(title.replace(/\n/g, " ")) + ' 대표 이미지">' : '<div class="fc-poster-auto"><b>' + esc(shortWhen(F.liveAt)) + " 무료강의</b><strong>" + esc(title).replace(/\n/g, "<br>") + "</strong><small>" + esc(F.hero.instructor) + "</small></div>") + (L.tag ? "<span>" + esc(L.tag) + "</span>" : "") + "</div>" +
+      '<article class="upcoming-course-card"><div class="upcoming-course-image">' + (L.image ? '<img src="' + esc(L.image) + '" alt="' + esc(title.replace(/\n/g, " ")) + ' 대표 이미지">' : '<div class="fc-poster-auto"><b>' + esc(shortWhen(F.liveAt)) + " 무료강의</b><strong>" + esc(title).replace(/\n/g, "<br>") + "</strong><small>강사 " + esc(F.hero.instructor) + "</small></div>") + (L.tag ? "<span>" + esc(L.tag) + "</span>" : "") + "</div>" +
         '<div class="upcoming-course-content">' + (L.platform || L.platformLogo ? '<div class="upcoming-platform"><span class="bk-live-chip"><i aria-hidden="true"></i>LIVE 진행</span>' + (L.platform ? "<strong>" + esc(L.platform) + (L.platformLogo ? "에서 진행" : "") + "</strong>" : "") + "</div>" : "") +
           '<span class="upcoming-date">' + SV(IC.cal, 17) + esc(longWhen(F.liveAt)) + "</span>" +
           '<p class="upcoming-instructor">강사 <strong>' + esc(F.hero.instructor) + "</strong></p><h3>" + title.split("\n").map((x) => "<span>" + esc(x) + "<br></span>").join("") + "</h3>" +
@@ -294,7 +294,7 @@
     const rest = F.order.filter((k) => k !== "countdown" && !F.off[k] && FC[k]).map((k) => FC[k](F, c)).join("");
     const L = F.live, thumb = L.image;
     const art = '<div class="bk-art" aria-hidden="true"><div class="bk-frame">' +
-        (thumb ? '<img src="' + esc(thumb) + '" alt="">' : '<div class="fc-poster-auto"><b>' + esc(shortWhen(F.liveAt)) + " 무료강의</b><strong>" + esc(L.liveTitle || h.title).replace(/\n/g, "<br>") + "</strong><small>" + esc(h.instructor) + "</small></div>") +
+        (thumb ? '<img src="' + esc(thumb) + '" alt="">' : '<div class="fc-poster-auto"><b>' + esc(shortWhen(F.liveAt)) + " 무료강의</b><strong>" + esc(L.liveTitle || h.title).replace(/\n/g, "<br>") + "</strong><small>강사 " + esc(h.instructor) + "</small></div>") +
         '<span class="bk-shine"></span></div><span class="bk-frame-shadow"></span>' +
         '<span class="bk-tile t1">' + SV(IC.play, 26) + '</span><span class="bk-tile t2">' + SV(IC.msg, 24) + '</span><span class="bk-tile t3">' + SV(IC.cal, 22) + "</span></div>";
     root.innerHTML = '<div class="dg bk" style="' + vars + '"><div class="landing-page">' +

@@ -265,10 +265,28 @@
     { key: "gifts", label: "선물 전자책 (공개일에 자동으로 열림)" }, { key: "kakao", label: "카카오톡 오픈채팅" },
     { key: "live", label: "진행 예정 강의 (썸네일 · 신청 링크)" }, { key: "faq", label: "자주 묻는 질문" }
   ];
+  /** 아직 무료강의 페이지를 만들지 않은 강사: 문대표 페이지와 같은 구성(선물 전자책 3권 · 질문 · 진행 예정 강의)으로 시작.
+   *  날짜는 오늘 기준으로 잡히고, 강사센터 ‘무료강의 페이지’에서 한 번 저장하면 그때부터 강사 것으로 고정된다 */
+  function freeStarter(c, ins) {
+    const inst = c.brand.instructor || ins.displayName;
+    const seed = (((window.CLASS_SEED.content || {}).moon || {}).freeClass || {}).gifts || {};
+    const color = (i, d) => ((seed.items || [])[i] || {}).color || d;
+    return {
+      published: true,
+      hero: { badge: "무료강의 신청자 전용 선물 제공", instructor: inst, sub: "강의 시작 전, 신청자에게만 실전 자료 3권을 순서대로 열어드립니다.", note: "본 강의는 교육 목적이며 결과는 실행 환경과 노력에 따라 달라질 수 있습니다." },
+      gifts: { kicker: "BEFORE THE CLASS", title: "강의 전, 선물 전자책 3권", desc: "공개일이 되면 잠금이 자동으로 풀리고, 표지를 누르면 전자책이 열려요.", items: [
+        { title: inst + "의 시작 가이드", desc: "강의 전에 알아 두면 좋은 기본 개념과 준비할 것을 정리했습니다.", openAt: todayStr() + "T09:00", forceOpen: true, url: "", color: color(0, "blue") },
+        { title: "[전자책] 실전 체크리스트", desc: "처음 시작할 때 놓치기 쉬운 단계를 순서대로 확인할 수 있게 정리했습니다.", openAt: addDays(todayStr(), 7) + "T19:30", url: "", color: color(1, "cyan") },
+        { title: "[전자책 & VOD] 핵심 요약편", desc: "무료강의에서 다룰 핵심 내용을 한 권으로 미리 만나 보세요.", openAt: addDays(todayStr(), 13) + "T19:30", url: "", color: color(2, "ice") }
+      ] },
+      live: { desc: "무료강의 신청을 완료하고, " + inst + "의 실전 노하우를 라이브로 확인하세요.", summary: "처음 시작하는 분도 따라올 수 있도록 실제 사례와 함께 순서대로 알려드립니다.",
+        points: ["처음 시작하는 분도 이해할 수 있는 전체 흐름", "실제 사례로 보는 실전 노하우", "강의가 끝나고 바로 실행할 수 있는 체크리스트"] }
+    };
+  }
   function freeOf(insId) {
     const c = content(insId), ins = instructor(insId);
     if (!c || !ins) return null;
-    const b = c.brand, F = clone(c.freeClass || {});
+    const b = c.brand, F = clone(c.freeClass || (insId !== "moon" ? freeStarter(c, ins) : {}));
     const live = addDays(todayStr(), 14) + "T19:30";
     const def = {
       published: false,

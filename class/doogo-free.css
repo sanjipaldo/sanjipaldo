@@ -500,3 +500,11 @@
 .dg.bk .bk-tile.t3{bottom:-26px}
 @media (max-width:860px){.dg.bk .bk-tile.t2,.dg.bk .bk-tile.t3{display:none}.dg.bk .bk-art{padding-bottom:18px}}
 @media (max-width:430px){.dg.bk .instructor{font-size:22px}}
+/* 썸네일 이미지가 없을 때 자동 포스터: 배너처럼 크게 */
+.dg.bk .fc-poster-auto{position:relative;overflow:hidden;background:radial-gradient(55% 80% at 90% 75%,rgba(var(--rgb),.55),transparent 70%),linear-gradient(135deg,#1c1c20,#0a0a0c)}
+.dg.bk .fc-poster-auto:after{content:"";position:absolute;right:-9%;bottom:-38%;width:58%;aspect-ratio:1;border-radius:50%;border:2px solid rgba(var(--rgb),.55);box-shadow:inset 0 0 90px rgba(var(--rgb),.35),0 0 60px rgba(var(--rgb),.25);pointer-events:none}
+.dg.bk .fc-poster-auto>*{position:relative;z-index:1}
+.dg.bk .bk-frame .fc-poster-auto{padding:7% 8%;gap:16px}
+.dg.bk .bk-frame .fc-poster-auto b{font-size:clamp(13px,1.3vw,18px);padding:7px 16px}
+.dg.bk .bk-frame .fc-poster-auto strong{font-size:clamp(30px,4.2vw,62px);line-height:1.12;letter-spacing:-.05em}
+.dg.bk .fc-poster-auto small{font-size:clamp(15px,1.4vw,20px);font-weight:850;color:var(--ac)}
