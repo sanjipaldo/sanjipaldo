@@ -256,9 +256,13 @@
       '<a class="kakao-cta" href="' + esc(k.url) + '" target="_blank" rel="noreferrer">' + esc(k.label) + '<span aria-hidden="true">→</span></a>' + (k.note ? "<small>" + esc(k.note) + "</small>" : "") + "</section>"; };
   FC.live = (F) => {
     const L = F.live, title = L.liveTitle || F.hero.title;
-    return '<section class="upcoming-course" aria-labelledby="upcoming-course-title"><div class="upcoming-course-heading"><span>' + esc(L.kicker) + '</span><h2 id="upcoming-course-title">' + esc(L.title) + "</h2>" + (L.desc ? "<p>" + esc(L.desc) + "</p>" : "") + "</div>" +
+    // 강의 플랫폼 로고(예: 아이비클래스)는 섹션 맨 위에 크게 — 누르면 신청 페이지로
+    const plat = L.platformLogo ? '<div class="bk-plat-hero"><span class="bk-plat-hero-tag"><i aria-hidden="true"></i>무료 LIVE 강의 진행 플랫폼</span>' +
+      (L.url ? '<a class="bk-plat-hero-logo" href="' + esc(L.url) + '" target="_blank" rel="noreferrer" aria-label="' + esc(L.platform || "강의 플랫폼") + ' 신청 페이지 열기">' : '<span class="bk-plat-hero-logo">') +
+      '<img src="' + esc(L.platformLogo) + '" alt="' + esc(L.platform || "강의 플랫폼") + '">' + (L.url ? "</a>" : "</span>") + "</div>" : "";
+    return '<section class="upcoming-course" aria-labelledby="upcoming-course-title">' + plat + '<div class="upcoming-course-heading"><span>' + esc(L.kicker) + '</span><h2 id="upcoming-course-title">' + esc(L.title) + "</h2>" + (L.desc ? "<p>" + esc(L.desc) + "</p>" : "") + "</div>" +
       '<article class="upcoming-course-card"><div class="upcoming-course-image">' + (L.image ? '<img src="' + esc(L.image) + '" alt="' + esc(title.replace(/\n/g, " ")) + ' 대표 이미지">' : '<div class="fc-poster-auto"><b>' + esc(shortWhen(F.liveAt)) + " 무료강의</b><strong>" + esc(title).replace(/\n/g, "<br>") + "</strong><small>" + esc(F.hero.instructor) + "</small></div>") + (L.tag ? "<span>" + esc(L.tag) + "</span>" : "") + "</div>" +
-        '<div class="upcoming-course-content">' + (L.platform || L.platformLogo ? '<div class="upcoming-platform"><span class="bk-live-chip"><i aria-hidden="true"></i>LIVE 진행</span>' + (L.platformLogo ? '<span class="bk-plat-logo"><img src="' + esc(L.platformLogo) + '" alt="' + esc(L.platform || "강의 플랫폼") + '"></span>' : "<strong>" + esc(L.platform) + "</strong>") + "</div>" : "") +
+        '<div class="upcoming-course-content">' + (L.platform || L.platformLogo ? '<div class="upcoming-platform"><span class="bk-live-chip"><i aria-hidden="true"></i>LIVE 진행</span>' + (L.platform ? "<strong>" + esc(L.platform) + (L.platformLogo ? "에서 진행" : "") + "</strong>" : "") + "</div>" : "") +
           '<span class="upcoming-date">' + SV(IC.cal, 17) + esc(longWhen(F.liveAt)) + "</span>" +
           '<p class="upcoming-instructor">강사 <strong>' + esc(F.hero.instructor) + "</strong></p><h3>" + title.split("\n").map((x) => "<span>" + esc(x) + "<br></span>").join("") + "</h3>" +
           (L.summary ? '<p class="upcoming-description">' + esc(L.summary) + "</p>" : "") + ((L.points || []).length ? "<ul>" + L.points.map((x) => "<li>" + SV(IC.check, 17) + esc(x) + "</li>").join("") + "</ul>" : "") +
