@@ -275,7 +275,7 @@
       order: FREE_SECTIONS.map((x) => x.key), off: {},
       hero: { badge: "무료강의 신청자 전용 선물", instructor: b.instructor || ins.displayName, title: (b.loginHeadline || b.courseTitle || "").replace(/\n/g, "\n"), sub: "강의 시작 전, 신청자에게만 실전 자료를 순서대로 열어드립니다.", note: "본 강의는 교육 목적이며 결과는 실행 환경과 노력에 따라 달라질 수 있습니다." },
       liveAt: live,
-      question: { badge: "강의 전 필수 · 1분 소요", title: (b.instructor || "강사") + "에게 직접 묻고 싶은 게 있으신가요?", desc: "강의 전에 궁금한 내용을 미리 정리해 보세요. 지금 남겨두시면 내 상황에 맞는 질문을 놓치지 않을 수 있어요.", label: "내 질문 남기러 가기", url: "", note: "질문을 남긴 뒤 무료강의 신청 페이지로 이동할 수 있어요" },
+      question: { badge: "강의 전 필수 · 1분 소요", title: (b.instructor || "강사") + "에게 직접 묻고 싶은 게 있으신가요?", desc: "강의 전에 궁금한 내용을 미리 정리해 보세요. 지금 남겨두시면 내 상황에 맞는 질문을 놓치지 않을 수 있어요.", promise: "지금 남겨 주시면 무료강의 때 그 질문을 토대로 최대한 답변해 드릴 수 있도록 하겠습니다.", label: "내 질문 남기러 가기", url: "", note: "질문을 남긴 뒤 무료강의 신청 페이지로 이동할 수 있어요" },
       gifts: { kicker: "BEFORE THE CLASS", title: "강의 전, 선물 전자책", desc: "공개일이 되면 잠금이 자동으로 풀리고, 표지를 누르면 전자책이 열려요.", items: [] },
       videos: { kicker: "WATCH BEFORE THE CLASS", title: "강의 전에, " + (b.instructor || "강사") + "의 실전 이야기를 먼저 만나보세요", desc: "좌우 영상을 넘기면 다양한 인터뷰와 실제 운영 이야기를 볼 수 있어요.", items: [] },
       about: { title: "강사 소개", name: b.instructor || ins.displayName, role: b.courseTitle, body: "", photo: "", career: [] },

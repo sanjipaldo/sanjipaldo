@@ -379,3 +379,69 @@
   .dg.bk .gift-card{text-align:left}
 }
 .dg.bk footer>a{display:block;padding:10px 0}
+/* ================= v14: 첫 화면 압도감 · 강의 날짜 강조 · 질문 약속 · 진짜 책 같은 전자책 ================= */
+/* 첫 화면: 썸네일 크게, 제목 크게 */
+.dg.bk .bk-hero-in{width:min(100% - 40px,1240px);grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);column-gap:48px}
+.dg.bk .hero h1{font-size:clamp(46px,5.3vw,76px);line-height:1.1}
+.dg.bk .bk-art{padding:24px 0 40px}
+.dg.bk .bk-frame{transform:rotateY(-10deg) rotateX(4deg) rotateZ(.5deg);border-radius:24px;box-shadow:0 50px 90px -30px rgba(0,0,0,.95),0 0 0 1px rgba(255,255,255,.06),0 0 90px rgba(var(--rgb),.22)}
+.dg.bk .bk-art:hover .bk-frame{transform:rotateY(-4deg) rotateX(2deg)}
+/* 카운트다운: D-day 와 강의 날짜·시간을 크게 */
+.dg.bk .countdown-eyebrow{display:flex;align-items:baseline;gap:10px;margin-bottom:18px;font-size:18px;font-weight:800;color:#e9e9ec}
+.dg.bk .countdown-eyebrow strong{font-family:Inter,Pretendard,sans-serif;font-size:34px;font-weight:900;letter-spacing:-.02em;line-height:1;text-shadow:0 0 24px rgba(var(--rgb),.55)}
+.dg.bk .event-date{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:6px 12px;margin:20px 0 0;padding:15px 18px;border-radius:16px;background:linear-gradient(180deg,rgba(var(--rgb),.14),rgba(var(--rgb),.06));border:1px solid rgba(var(--rgb),.38);box-shadow:inset 0 1px rgba(255,255,255,.08),0 0 30px rgba(var(--rgb),.12);color:#fff;font-size:21px;font-weight:850;letter-spacing:-.02em;line-height:1.35}
+.dg.bk .event-date .ed-dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--ac);box-shadow:0 0 12px var(--ac);animation:bk-blink 1.6s ease-in-out infinite}
+.dg.bk .event-date .ed-when{width:auto;height:auto;border-radius:0;background:none;box-shadow:none}
+.dg.bk .event-date .ed-when b{font-weight:900}
+.dg.bk .event-date .ed-time{color:var(--ac)}
+.dg.bk .event-date em{margin-left:auto;font-style:normal;font-size:14px;font-weight:800;color:var(--on);background:var(--p);padding:5px 11px;border-radius:999px;letter-spacing:0}
+/* 질문 남기기: 답변 약속 문구 */
+.dg.bk .q-promise{display:flex;align-items:flex-start;gap:10px;text-align:left;max-width:520px;margin:-6px auto 22px;padding:14px 16px;border-radius:16px;background:rgba(var(--rgb),.10);border:1px solid rgba(var(--rgb),.38);color:#fff;font-size:15px;font-weight:750;line-height:1.6}
+.dg.bk .q-promise svg{flex:none;color:var(--ac);margin-top:2px}
+/* 전자책: 앞표지 + 책등 + 종이 두께 + 가름끈 */
+.dg.bk .gift-book{position:relative;width:min(100%,260px);margin:4px auto 34px;perspective:1300px}
+.dg.bk .gift-book:after{content:"";position:absolute;left:4%;right:-10%;bottom:-20px;height:30px;background:radial-gradient(closest-side,rgba(0,0,0,.85),transparent);filter:blur(5px);z-index:-1}
+.dg.bk .gift-book-3d{position:relative;transform-style:preserve-3d;transform:rotateY(-26deg) rotateX(5deg);transition:transform .55s cubic-bezier(.2,.7,.2,1)}
+.dg.bk .gift-card:hover .gift-book-3d,.dg.bk .gift-book-3d:focus-within{transform:rotateY(-12deg) rotateX(3deg) translateY(-6px)}
+.dg.bk .gift-book .gift-cover,.dg.bk .gift-card:hover .gift-book .gift-cover{transform:none;max-width:none;margin:0;aspect-ratio:.72;border-radius:3px 12px 12px 3px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07),inset 0 -40px 60px -40px rgba(0,0,0,.35)}
+.dg.bk .gift-pages{position:absolute;top:5px;bottom:5px;left:calc(100% - 3px);width:30px;transform-origin:left center;transform:rotateY(90deg);border-radius:0 2px 2px 0;background:linear-gradient(90deg,rgba(0,0,0,.28),transparent 30%,transparent 75%,rgba(0,0,0,.18)),repeating-linear-gradient(90deg,#faf6ee 0 1.6px,#ddd5c6 1.6px 2.6px)}
+.dg.bk .gift-ribbon{position:absolute;right:26%;bottom:-26px;width:14px;height:40px;transform:translateZ(-4px);background:linear-gradient(90deg,color-mix(in srgb,var(--p) 70%,#000),var(--p) 45%,color-mix(in srgb,var(--p) 75%,#000));clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%)}
+.dg.bk .gift-spine{position:absolute;z-index:3;left:0;top:0;bottom:0;width:22px;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,.42),rgba(255,255,255,.20) 30%,rgba(0,0,0,.16) 55%,rgba(255,255,255,.07) 80%,transparent);border-right:1px solid rgba(0,0,0,.18)}
+.dg.bk .gift-book .gift-cover-top,.dg.bk .gift-book .gift-cover-bottom{left:32px;right:18px}
+.dg.bk .gift-book .gift-cover-top strong{display:inline-flex;align-items:baseline;gap:3px;font-family:Inter,Pretendard,sans-serif;font-size:20px;font-weight:900;letter-spacing:-.02em}
+.dg.bk .gift-book .gift-cover-top strong small{font-size:10px;font-weight:800;letter-spacing:.12em;opacity:.75}
+.dg.bk .gift-book .gift-cover-top i{font-size:10px;padding:5px 9px}
+.dg.bk .gift-rule{display:block;width:34px;height:3px;border-radius:2px;background:currentColor;opacity:.55;margin-bottom:12px}
+.dg.bk .gift-card--cyan .gift-rule,.dg.bk .gift-card--blue .gift-rule{background:var(--ac);opacity:1}
+.dg.bk .gift-card--cyan .gift-rule{background:currentColor}
+.dg.bk .gift-book .gift-cover-bottom>strong{font-family:"Noto Serif KR",Pretendard,serif;font-weight:900;font-size:22px;line-height:1.38;letter-spacing:-.03em;max-width:none}
+.dg.bk .gift-book .gift-cover-bottom>small{margin-top:10px;font-size:12px;font-weight:700;opacity:.8;color:inherit}
+.dg.bk .gift-book .gift-cover-number{font-family:"Noto Serif KR",Georgia,serif;font-size:clamp(120px,11vw,170px);opacity:.1;bottom:-34px;right:-8px}
+.dg.bk .gift-book .lock-state{margin-bottom:36px}
+.dg.bk .gift-card .gift-day{z-index:4}
+@media (prefers-reduced-motion:reduce){.dg.bk .gift-book-3d{transition:none}.dg.bk .event-date .ed-dot{animation:none}}
+@media (max-width:1024px){.dg.bk .bk-hero-in{column-gap:28px}.dg.bk .gift-card:last-child .gift-book{width:min(100%,250px)}}
+@media (max-width:860px){
+  .dg.bk .bk-hero-in{width:min(100% - 28px,600px);grid-template-columns:minmax(0,1fr)}
+  .dg.bk .hero h1{font-size:clamp(38px,11.4vw,58px);line-height:1.13}
+  .dg.bk .bk-art{margin:0 -10px;padding:22px 0 34px}
+  .dg.bk .bk-frame{transform:rotateY(-6deg) rotateX(3deg);border-radius:18px}
+  .dg.bk .bk-tile.t1{top:2px;right:-2px}
+  .dg.bk .bk-tile.t2{left:-2px;bottom:6px}
+  .dg.bk .event-date{justify-content:center;text-align:center}
+  .dg.bk .event-date em{margin-left:0}
+}
+@media (max-width:430px){
+  .dg.bk .hero h1{font-size:clamp(36px,11.2vw,46px)}
+  .dg.bk .bk-art{margin:0 -6px}
+  .dg.bk .countdown-eyebrow{justify-content:center;font-size:17px}
+  .dg.bk .countdown-eyebrow strong{font-size:31px}
+  .dg.bk .event-date{flex-direction:column;gap:8px;padding:14px 12px;font-size:20px}
+  .dg.bk .event-date .ed-dot{display:none}
+  .dg.bk .event-date .ed-when b{display:inline-block}
+  .dg.bk .q-promise{font-size:14px;margin-top:-4px}
+  .dg.bk .gift-book{width:min(100%,236px)}
+  .dg.bk .gift-book .gift-cover{aspect-ratio:.72}
+  .dg.bk .gift-book .gift-cover-bottom>strong{font-size:20px}
+}
+@media (max-width:360px){.dg.bk .event-date{font-size:18px}.dg.bk .gift-book{width:min(100%,214px)}}

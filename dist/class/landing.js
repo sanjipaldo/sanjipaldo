@@ -179,7 +179,8 @@
   const pad = (n) => String(n).padStart(2, "0");
   const at = (v) => { if (!v) return NaN; const d = new Date(/T/.test(v) ? v : v + "T00:00"); return d.getTime(); };
   const ampm = (d) => (d.getHours() < 12 ? "오전 " : "오후 ") + ((d.getHours() % 12) || 12) + "시";
-  const shortWhen = (v) => { const d = new Date(at(v)); return isNaN(d) ? "" : (d.getMonth() + 1) + "월 " + d.getDate() + " (" + DOWK[d.getDay()] + ") " + ampm(d) + " " + d.getMinutes() + "분"; };
+  const whenParts = (v) => { const d = new Date(at(v)); return isNaN(d) ? null : { day: (d.getMonth() + 1) + "월 " + d.getDate() + "일 (" + DOWK[d.getDay()] + ")", time: ampm(d) + (d.getMinutes() ? " " + d.getMinutes() + "분" : "") }; };
+  const shortWhen = (v) => { const w = whenParts(v); return w ? w.day + " " + w.time : ""; };
   const longWhen = (v) => { const d = new Date(at(v)); return isNaN(d) ? "" : d.getFullYear() + "년 " + (d.getMonth() + 1) + "월 " + d.getDate() + "일 " + DOWL[d.getDay()] + " " + ampm(d) + " " + pad(d.getMinutes()) + "분"; };
   const lockWhen = (v) => { const d = new Date(at(v)); return isNaN(d) ? "공개일 확인 필요" : d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + (d.getHours() < 12 ? "오전" : "오후") + " " + ((d.getHours() % 12) || 12) + ":" + pad(d.getMinutes()); };
   const dayLabel = (v, now) => { const n = Math.max(0, at(v) - now); return n <= 0 || Math.floor(n / 864e5) <= 0 ? "D-DAY" : "D-" + Math.floor(n / 864e5); };
@@ -210,9 +211,10 @@
   const FC = {};
   FC.countdown = (F) => {
     const c = countdownParts(F.liveAt);
-    return '<section class="countdown-card" id="fc-count" data-at="' + esc(F.liveAt) + '" aria-label="강의 시작 카운트다운"><p class="countdown-eyebrow">강의 시작까지 <strong>' + (c.expired ? "LIVE" : "D-" + Math.ceil((at(F.liveAt) - Date.now()) / 864e5)) + "</strong></p>" +
+    const w = whenParts(F.liveAt);
+    return '<section class="countdown-card" id="fc-count" data-at="' + esc(F.liveAt) + '" aria-label="강의 시작 카운트다운"><p class="countdown-eyebrow"><span>강의 시작까지</span><strong>' + (c.expired ? "LIVE" : "D-" + Math.ceil((at(F.liveAt) - Date.now()) / 864e5)) + "</strong></p>" +
       '<div class="countdown-grid">' + [["d", "일", c.d], ["h", "시간", c.h], ["m", "분", c.m], ["s", "초", c.s]].map((u, i) => '<div class="countdown-unit-wrap"><div class="countdown-unit"><strong data-u="' + u[0] + '">' + pad(u[2]) + "</strong><span>" + u[1] + "</span></div>" + (i < 3 ? '<span class="countdown-colon" aria-hidden="true">:</span>' : "") + "</div>").join("") + "</div>" +
-      '<p class="event-date"><span aria-hidden="true"></span>' + esc(shortWhen(F.liveAt)) + " 강의 시작</p></section>";
+      (w ? '<p class="event-date"><span class="ed-dot" aria-hidden="true"></span><span class="ed-when"><b>' + esc(w.day) + '</b> <b class="ed-time">' + esc(w.time) + "</b></span><em>강의 시작</em></p>" : "") + "</section>";
   };
   FC.videos = (F) => {
     const v = F.videos, items = (v.items || []).filter((x) => DB.youtubeId(x.youtube));
@@ -230,6 +232,7 @@
       '<a class="fc-yt-out" href="https://www.youtube.com/watch?v=' + esc(DB.youtubeId(items[vIdx].youtube)) + '" target="_blank" rel="noopener">재생이 안 되면 유튜브에서 보기 ↗</a></section>';
   };
   FC.question = (F) => { const q = F.question; return '<section class="question-cta"><span class="micro-badge"><i aria-hidden="true"></i>' + esc(q.badge) + "</span><h2>" + esc(q.title) + "</h2>" + (q.desc ? "<p>" + nl(q.desc) + "</p>" : "") +
+      (q.promise ? '<p class="q-promise">' + SV(IC.check, 18) + "<span>" + nl(q.promise) + "</span></p>" : "") +
       (q.url ? '<a class="primary-cta" href="' + esc(q.url) + '" target="_blank" rel="noreferrer">' : '<a class="primary-cta" href="#" data-fc="question">') + SV(IC.msg) + esc(q.label) + "</a>" + (q.note ? "<small>" + esc(q.note) + "</small>" : "") + "</section>"; };
   FC.gifts = (F) => {
     const g = F.gifts, items = (g.items || []).filter((x) => x.title), now = Date.now();
@@ -238,11 +241,12 @@
       '<div class="gift-grid">' + items.map((x, i) => {
         const open = giftOpen(x, now), n = i + 1;
         return '<article class="gift-card gift-card--' + (ACCENT[x.color] || "blue") + (open ? " is-unlocked" : "") + '"' + (open ? "" : ' data-open-at="' + esc(x.openAt || "") + '"') + '><span class="gift-day">' + (open ? "D-DAY" : dayLabel(x.openAt, now)) + "</span>" +
+          '<div class="gift-book"><div class="gift-book-3d"><span class="gift-pages" aria-hidden="true"></span><span class="gift-ribbon" aria-hidden="true"></span>' +
           '<a class="gift-cover"' + (open && x.url ? ' href="' + esc(x.url) + '" target="_blank" rel="noreferrer"' : ' href="#" data-fc="gift" data-open="' + (open ? 1 : 0) + '" data-date="' + esc(x.openAt || "") + '"') + ' aria-label="' + esc(x.title) + (open ? " 전자책 열기" : " 공개 전") + '">' +
-            '<span class="gift-cover-overlay" aria-hidden="true"></span><span class="gift-cover-number" aria-hidden="true">' + pad(n) + "</span>" +
-            '<span class="gift-cover-top"><strong>' + n + "번 선물</strong><i>" + esc(F.hero.instructor) + " 무료강의 선물</i></span>" +
-            '<span class="gift-cover-bottom">' + (open ? "" : '<span class="lock-state">' + SV(IC.lock, 30) + esc(lockWhen(x.openAt)) + " 공개 예정</span>") + "<strong>" + esc(x.title) + "</strong><small>전자책 · 강사 " + esc(F.hero.instructor) + "</small>" +
-              (open ? '<span class="open-hint">' + SV(IC.unlock, 16) + "전자책 열기</span>" : "") + "</span></a>" +
+            '<span class="gift-spine" aria-hidden="true"></span><span class="gift-cover-overlay" aria-hidden="true"></span><span class="gift-cover-number" aria-hidden="true">' + pad(n) + "</span>" +
+            '<span class="gift-cover-top"><strong><small>VOL.</small>' + pad(n) + "</strong><i>" + esc(F.hero.instructor) + " 무료강의 선물</i></span>" +
+            '<span class="gift-cover-bottom">' + (open ? "" : '<span class="lock-state">' + SV(IC.lock, 30) + esc(lockWhen(x.openAt)) + " 공개 예정</span>") + '<span class="gift-rule" aria-hidden="true"></span><strong>' + esc(x.title) + "</strong><small>" + esc(F.hero.instructor) + " 지음 · " + n + "번 선물</small>" +
+              (open ? '<span class="open-hint">' + SV(IC.unlock, 16) + "전자책 열기</span>" : "") + "</span></a></div></div>" +
           "<h3>" + esc(x.title) + "</h3>" + (x.desc ? "<p>" + esc(x.desc) + "</p>" : "") +
           '<span class="gift-status' + (open ? " is-open" : "") + '">' + SV(open ? IC.down : IC.lock, open ? 15 : 14) + (open ? "공개됨 · 표지를 눌러 열기" : esc(leftLabel(x.openAt, now))) + "</span></article>";
       }).join("") + "</div>" +
