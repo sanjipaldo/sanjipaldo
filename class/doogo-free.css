@@ -454,3 +454,49 @@
 .dg.bk .bk-plat-hero-logo img{display:block;width:100%;height:auto}
 .dg.bk .upcoming-platform>strong{font-size:15px;font-weight:850}
 @media (max-width:430px){.dg.bk .bk-plat-hero{margin-bottom:28px}.dg.bk .bk-plat-hero-logo{width:min(100%,300px);padding:14px 20px;border-radius:20px}.dg.bk .bk-plat-hero-tag{font-size:12px}}
+/* ================= v15: 썸네일 정면 · 크게 / 강사 · 배지 크게 / 전자책 정면 · 움직임 없음 ================= */
+/* 첫 화면: 마우스 효과 없이 정면으로 크게 */
+.dg.bk .bk-hero-in{width:min(100% - 40px,1320px);grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);column-gap:44px}
+.dg.bk .hero h1{font-size:clamp(42px,4.6vw,68px)}
+.dg.bk .bk-art{padding:12px 0 28px}
+.dg.bk .bk-frame,.dg.bk .bk-art:hover .bk-frame{transform:none;transition:none;border-radius:22px}
+.dg.bk .bk-tile,.dg.bk .bk-tile.t1,.dg.bk .bk-tile.t2,.dg.bk .bk-tile.t3{animation:none}
+.dg.bk .bk-tile.t1{top:-8px;right:-14px}
+.dg.bk .bk-tile.t2{bottom:2px;left:-18px}
+.dg.bk .top-badge{font-size:17px;font-weight:850;padding:13px 24px;gap:10px}
+.dg.bk .top-badge i{width:9px;height:9px}
+.dg.bk .instructor{font-size:28px;font-weight:700;margin:24px 0 14px;letter-spacing:-.02em}
+.dg.bk .instructor strong{font-weight:900}
+/* 전자책: 정면 · 움직임 없음 · 사이트 글씨체 */
+.dg.bk .gift-book{width:min(100%,244px);perspective:none}
+.dg.bk .gift-book-3d,.dg.bk .gift-card:hover .gift-book-3d,.dg.bk .gift-book-3d:focus-within{transform:none;transition:none}
+.dg.bk .gift-pages{transform:none;left:auto;right:-9px;top:7px;bottom:7px;width:22px;z-index:0;border-radius:0 5px 5px 0;box-shadow:4px 6px 14px rgba(0,0,0,.55);background:linear-gradient(90deg,rgba(0,0,0,.35),transparent 45%),repeating-linear-gradient(90deg,#f6f1e7 0 2px,#d9d1c2 2px 3px)}
+.dg.bk .gift-book .gift-cover{z-index:1;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 18px 34px -12px rgba(0,0,0,.85)}
+.dg.bk .gift-ribbon{transform:none;z-index:0;right:24%}
+.dg.bk .gift-book .gift-cover-bottom>strong{font-family:inherit;font-weight:900;font-size:21px;line-height:1.36;letter-spacing:-.035em}
+.dg.bk .gift-book .gift-cover-number{font-family:Inter,Pretendard,sans-serif;font-weight:900;opacity:.08}
+/* 잠긴 전자책: 표지는 그대로 두고 어둡게, '공개 예정' 판을 눈에 띄게 */
+.dg.bk .gift-card:not(.is-unlocked) .gift-cover{filter:none}
+.dg.bk .gift-card:not(.is-unlocked) .gift-cover-overlay{background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.55))}
+.dg.bk .gift-book .lock-state{width:100%;align-self:stretch;flex-direction:column;align-items:center;gap:6px;margin:0 0 18px;padding:14px 12px 13px;border-radius:16px;background:rgba(8,8,10,.86);border:1.5px solid var(--p);box-shadow:0 12px 26px rgba(0,0,0,.5),0 0 26px rgba(var(--rgb),.35);color:#fff;text-align:center;backdrop-filter:blur(4px)}
+.dg.bk .gift-book .lock-ic{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--p);color:var(--on);box-shadow:0 0 18px rgba(var(--rgb),.55)}
+.dg.bk .gift-book .lock-state b{font-size:15px;font-weight:900;color:var(--ac);letter-spacing:-.01em}
+.dg.bk .gift-book .lock-state em{font-style:normal;font-size:13px;font-weight:750;color:#e9e9ec;line-height:1.4}
+@media (max-width:1024px){.dg.bk .bk-hero-in{column-gap:28px}}
+@media (max-width:860px){
+  .dg.bk .bk-hero-in{grid-template-columns:minmax(0,1fr)}
+  .dg.bk .bk-frame,.dg.bk .bk-art:hover .bk-frame{transform:none;border-radius:18px}
+  .dg.bk .bk-tile.t1{top:-4px;right:-4px}
+  .dg.bk .bk-tile.t2{left:-4px;bottom:4px}
+  .dg.bk .instructor{font-size:21px;margin:20px 0 12px}
+}
+@media (max-width:430px){
+  .dg.bk .top-badge{font-size:14px;padding:10px 18px}
+  .dg.bk .instructor{font-size:19px}
+  .dg.bk .gift-book{width:min(100%,232px)}
+}
+/* 썸네일 글씨를 가리지 않게: 장식 타일은 모서리 밖으로, 모바일에서는 위쪽 하나만 */
+.dg.bk .bk-tile.t2{left:-34px;bottom:-14px}
+.dg.bk .bk-tile.t3{bottom:-26px}
+@media (max-width:860px){.dg.bk .bk-tile.t2,.dg.bk .bk-tile.t3{display:none}.dg.bk .bk-art{padding-bottom:18px}}
+@media (max-width:430px){.dg.bk .instructor{font-size:22px}}
