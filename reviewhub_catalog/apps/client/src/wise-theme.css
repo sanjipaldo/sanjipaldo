@@ -1039,3 +1039,20 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .editor-panel > .editor-actions { flex: 0 0 auto; margin: 0; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid #dfe8e3; background: #fff; box-shadow: 0 -8px 24px rgba(28,58,46,.08); }
   .editor-panel > .editor-actions > button { flex: 1; min-height: 48px; }
 }
+
+/* 공급사 단가표 업로드: 마진(%) 입력 + 신규 등록 체크 */
+.contract-margin-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin: 0 0 10px; padding: 14px; border: 1px solid var(--w-ink, #0e0f0c); border-radius: 14px; background: var(--w-primary-pale, #f1fbe6); }
+.contract-margin-fields > strong { color: var(--w-ink, #0e0f0c); font-size: 13px; font-weight: 800; }
+.contract-margin-fields > label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.contract-margin-input { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; }
+.contract-margin-input input { width: 76px; height: 38px; padding: 0 10px; border: 1px solid var(--w-line, #d9ddd5); border-radius: 10px; background: #fff; font-size: 15px; font-weight: 800; text-align: right; }
+.contract-margin-input input:focus { outline: 0; border-color: var(--w-ink, #0e0f0c); box-shadow: 0 0 0 3px rgba(14, 15, 12, .08); }
+.contract-create-missing { cursor: pointer; }
+.contract-create-missing input { width: 17px; height: 17px; accent-color: var(--w-ink, #0e0f0c); }
+.contract-margin-fields > small { flex-basis: 100%; color: var(--w-body, #454745); font-size: 12px; line-height: 1.5; }
+@media (max-width: 720px) {
+  .contract-margin-fields { gap: 10px 14px; }
+  .contract-margin-fields > strong { flex-basis: 100%; }
+  .contract-create-missing { white-space: normal !important; }
+  .admin-heading-actions .excel-bulk-action { grid-column: 1 / -1; }
+}

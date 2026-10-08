@@ -40,9 +40,17 @@ const A_PRICE_GROUP_KEYWORD = "황금농부";
 export const CONTRACT_A_MARGIN_PERCENT = 10;
 export const CONTRACT_GENERAL_MARGIN_PERCENT = 20;
 export function priceWithMargin(cost: number, marginPercent: number) {
-  // 정수 계산으로 부동소수점 오차(예: 9,999.999…)를 피합니다.
-  return Math.floor((cost * 100) / (100 - marginPercent));
+  // 마진은 0.1% 단위까지 받습니다. 정수 계산으로 부동소수점 오차(예: 9,999.999…)를 피합니다.
+  const tenths = Math.round(marginPercent * 10);
+  return Math.floor((cost * 1000) / (1000 - tenths));
 }
+// 관리자가 업로드 미리보기에서 정하는 값: 마진(%)과 없는 상품 신규 등록 여부
+export type ContractOptions = { aMargin: number; generalMargin: number; createMissing: boolean };
+export const DEFAULT_CONTRACT_OPTIONS: ContractOptions = {
+  aMargin: CONTRACT_A_MARGIN_PERCENT,
+  generalMargin: CONTRACT_GENERAL_MARGIN_PERCENT,
+  createMissing: true
+};
 
 export type BulkWorkbookPreview = {
   totalRows: number;
@@ -56,6 +64,8 @@ export type BulkWorkbookPreview = {
   // 단가관리 양식: 이번에 반영하도록 고른 항목
   priceFields?: PriceField[];
   newProducts?: number;
+  // 공급사 단가표 양식: 이번 미리보기에 쓴 마진·신규 등록 설정
+  contract?: ContractOptions;
 };
 
 // 신규 상품은 발주오라 파일에 카테고리 열이 없어 이 카테고리로 등록하고, 관리자가 나중에 지정합니다.
@@ -316,11 +326,11 @@ function asProductInput(product: ProductDraft): ProductInput {
   };
 }
 
-async function buildPreview(bytes: Uint8Array, priceFields: PriceField[] = ALL_PRICE_FIELDS) {
+async function buildPreview(bytes: Uint8Array, priceFields: PriceField[] = ALL_PRICE_FIELDS, contract: ContractOptions = DEFAULT_CONTRACT_OPTIONS) {
   const parsed = await parseWorkbook(bytes);
   if (parsed.format === "baljuora") return buildBaljuoraPreview(parsed.worksheet, parsed.columns);
   if (parsed.format === "danga") return buildDangaPreview(parsed.worksheet, parsed.columns, priceFields);
-  if (parsed.format === "contract") return buildContractPreview(parsed.worksheet, parsed.columns, priceFields);
+  if (parsed.format === "contract") return buildContractPreview(parsed.worksheet, parsed.columns, priceFields, contract);
   const { worksheet } = parsed;
   const data = await getAdminCatalog();
   const drafts = new Map<string, ProductDraft>(
@@ -764,9 +774,10 @@ const normalizeProductName = (value: string) => value.replace(/\s+/g, " ").trim(
 
 // 공급사 단가표(계약) 엑셀: 기존 상품의 원가·A급 단가·일반공급가만 바꿉니다. 신규 등록·다른 값 변경은 하지 않습니다.
 // - 원가 = A급단가 칸에 값이 있으면 A급단가, 없으면 공급가 (각각 "변경" 값이 있으면 변경 값, 없으면 기존 값)
-// - A급 단가 = 원가 ÷ 0.9, 일반공급가 = 원가 ÷ 0.8 (원 단위 미만 버림)
+// - A급 단가 = 원가 ÷ (1 − A 마진), 일반공급가 = 원가 ÷ (1 − 일반 마진) (원 단위 미만 버림, 기본 10%·20%)
 // - 상품코드 열이 있으면 상품코드로, 없으면 상품명(띄어쓰기 차이 무시)으로 찾습니다.
-async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<string, number>, priceFields: PriceField[]) {
+// - 찾지 못한 상품은 "신규 등록"을 켠 경우 미분류·숨김 상태로 새로 등록합니다.
+async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<string, number>, priceFields: PriceField[], contract: ContractOptions) {
   const data = await getAdminCatalog();
   const drafts = new Map<string, ProductDraft>(
     data.products.map((product) => [product.id, { ...product, options: product.options.map((option) => ({ ...option })) }])
@@ -783,6 +794,7 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
   const affected = new Set<string>();
   const seen = new Set<string>();
   const missing: string[] = [];
+  const newProducts: NewProductDraft[] = [];
   const ambiguous: string[] = [];
   const noPrice: string[] = [];
   let matchedRows = 0;
@@ -836,42 +848,52 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
       }
       baseProduct = candidates[0];
     }
-    if (!baseProduct) {
-      missing.push(code || name);
-      continue;
-    }
-    matchedRows += 1;
-
     const aGradePrice = latest(row, rowNumber, "A급단가");
     const supplyPrice = latest(row, rowNumber, "공급가");
     const cost = aGradePrice ?? supplyPrice;
     if (cost === null) {
-      noPrice.push(`${rowNumber}행 ${baseProduct.name}`);
+      noPrice.push(`${rowNumber}행 ${baseProduct?.name ?? (name || code)}`);
       continue;
     }
     if (aGradePrice !== null) aPriceBased += 1;
+    const nextA = priceWithMargin(cost, contract.aMargin);
+    const nextGeneral = priceWithMargin(cost, contract.generalMargin);
+
+    if (!baseProduct) {
+      if (!contract.createMissing || !name) {
+        missing.push(code || name);
+        continue;
+      }
+      // 신규 상품: 가격 세 가지를 모두 넣고, 카테고리·이미지·배송을 채운 뒤 노출할 수 있게 숨김으로 등록합니다.
+      newProducts.push({
+        row: rowNumber,
+        input: { productCode: code || null, name, costPrice: cost, aPrice: nextA, generalPrice: nextGeneral, shippingType: "domestic", isVisible: false, isSoldOut: false }
+      });
+      changes.push({ row: rowNumber, productName: name, optionName: null, field: "신규 등록", before: null, after: `원가 ${cost.toLocaleString("ko-KR")} · A ${nextA.toLocaleString("ko-KR")} · 일반 ${nextGeneral.toLocaleString("ko-KR")}` });
+      continue;
+    }
+    matchedRows += 1;
     const product = drafts.get(baseProduct.id)!;
     if (fields.has("cost")) {
       record(rowNumber, product, "원가", product.costPrice, cost);
       product.costPrice = cost;
     }
     if (fields.has("a")) {
-      const next = priceWithMargin(cost, CONTRACT_A_MARGIN_PERCENT);
-      record(rowNumber, product, "A단가", product.aPrice, next);
-      product.aPrice = next;
+      record(rowNumber, product, "A단가", product.aPrice, nextA);
+      product.aPrice = nextA;
     }
     if (fields.has("general")) {
-      const next = priceWithMargin(cost, CONTRACT_GENERAL_MARGIN_PERCENT);
-      record(rowNumber, product, "일반공급가", product.generalPrice, next);
-      product.generalPrice = next;
+      record(rowNumber, product, "일반공급가", product.generalPrice, nextGeneral);
+      product.generalPrice = nextGeneral;
     }
   }
 
   const fieldLabels = {
     cost: "원가(공급사 공급가, A급단가가 있으면 A급단가)",
-    a: `A급 단가(원가 기준 판매가 마진 ${CONTRACT_A_MARGIN_PERCENT}%)`,
-    general: `일반공급가(원가 기준 판매가 마진 ${CONTRACT_GENERAL_MARGIN_PERCENT}%)`
+    a: `A급 단가(원가 기준 판매가 마진 ${contract.aMargin}%)`,
+    general: `일반공급가(원가 기준 판매가 마진 ${contract.generalMargin}%)`
   } as const;
+  const example = 5250;
   const list = (items: string[]) => `${items.slice(0, 10).join(", ")}${items.length > 10 ? ` 외 ${items.length - 10}개` : ""}`;
   const preview: BulkWorkbookPreview = {
     totalRows,
@@ -880,26 +902,29 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
     changes,
     errors,
     format: "contract",
+    newProducts: newProducts.length,
+    contract,
     priceFields: ALL_PRICE_FIELDS.filter((field) => fields.has(field)),
     warnings: [
       `공급사 단가표(계약 마진) 양식으로 읽었습니다. 반영 항목: ${ALL_PRICE_FIELDS.filter((field) => fields.has(field)).map((field) => fieldLabels[field]).join(", ") || "없음"}. 가격 변경은 가격변동 이력에 기록됩니다.`,
-      `계산: A급 단가 = 원가 ÷ 0.9, 일반공급가 = 원가 ÷ 0.8 (원 단위 미만 버림). 예) 원가 5,250원 → A급 단가 5,833원 · 일반공급가 6,562원. "변경" 칸에 값이 있으면 변경 값을 씁니다.`,
+      `계산: A급 단가 = 원가 ÷ (1 − ${contract.aMargin}%), 일반공급가 = 원가 ÷ (1 − ${contract.generalMargin}%) (원 단위 미만 버림). 예) 원가 ${example.toLocaleString("ko-KR")}원 → A급 단가 ${priceWithMargin(example, contract.aMargin).toLocaleString("ko-KR")}원 · 일반공급가 ${priceWithMargin(example, contract.generalMargin).toLocaleString("ko-KR")}원. "변경" 칸에 값이 있으면 변경 값을 씁니다.`,
+      ...(newProducts.length > 0 ? [`데이터센터에 없는 ${newProducts.length.toLocaleString("ko-KR")}개 상품은 신규 등록합니다(미분류 카테고리 · 숨김 상태 · 원가·A급 단가·일반공급가 모두 입력). 카테고리·이미지·배송 정책을 채운 뒤 "일괄 변경"으로 노출해 주세요.`] : []),
       ...(aPriceBased > 0 ? [`A급단가 칸에 값이 있는 ${aPriceBased.toLocaleString("ko-KR")}개 행은 A급단가를 원가로 썼습니다.`] : []),
-      `${columns.has("상품코드") ? "상품코드" : "상품명(띄어쓰기 차이 무시)"}이 같은 기존 상품만 바뀝니다. 판매가·품절·노출·카테고리 등 다른 값과 신규 등록은 하지 않습니다.`,
-      ...(missing.length > 0 ? [`데이터센터에서 찾지 못한 ${missing.length.toLocaleString("ko-KR")}개 행은 건너뜁니다: ${list(missing)}`] : []),
+      `기존 상품은 ${columns.has("상품코드") ? "상품코드" : "상품명(띄어쓰기 차이 무시)"}으로 찾아 가격만 바꿉니다. 판매가·품절·노출·카테고리 등 다른 값은 바꾸지 않습니다.${contract.createMissing ? "" : " 없는 상품은 신규 등록하지 않습니다."}`,
+      ...(missing.length > 0 ? [`데이터센터에서 찾지 못한 ${missing.length.toLocaleString("ko-KR")}개 행은 건너뜁니다(신규 등록 꺼짐): ${list(missing)}`] : []),
       ...(ambiguous.length > 0 ? [`같은 이름의 상품이 여러 개라 건너뛴 행 ${ambiguous.length}개(상품명을 구분하거나 상품코드 열을 넣어 주세요): ${list(ambiguous)}`] : []),
       ...(noPrice.length > 0 ? [`공급가·A급단가가 비어 있어 건너뛴 행 ${noPrice.length}개: ${list(noPrice)}`] : [])
     ]
   };
-  return { preview, drafts, affected, newProducts: [] as NewProductDraft[] };
+  return { preview, drafts, affected, newProducts };
 }
 
-export async function previewBulkProductWorkbook(bytes: Uint8Array, priceFields?: PriceField[]) {
-  return (await buildPreview(bytes, priceFields)).preview;
+export async function previewBulkProductWorkbook(bytes: Uint8Array, priceFields?: PriceField[], contract?: ContractOptions) {
+  return (await buildPreview(bytes, priceFields, contract)).preview;
 }
 
-export async function applyBulkProductWorkbook(bytes: Uint8Array, changedBy: string, priceFields?: PriceField[]) {
-  const { preview, drafts, affected, newProducts } = await buildPreview(bytes, priceFields);
+export async function applyBulkProductWorkbook(bytes: Uint8Array, changedBy: string, priceFields?: PriceField[], contract?: ContractOptions) {
+  const { preview, drafts, affected, newProducts } = await buildPreview(bytes, priceFields, contract);
   if (preview.errors.length > 0) {
     throw new DatabaseError("DATABASE_QUERY_FAILED", "오류 행을 수정한 뒤 다시 업로드해 주세요.", 400);
   }

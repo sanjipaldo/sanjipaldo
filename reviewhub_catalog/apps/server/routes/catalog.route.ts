@@ -50,7 +50,9 @@ import {
   buildProductListWorkbook,
   previewBulkProductWorkbook,
   ALL_PRICE_FIELDS,
-  type PriceField
+  type PriceField,
+  type ContractOptions,
+  DEFAULT_CONTRACT_OPTIONS
 } from "../services/catalog-excel";
 import { getCatalogOperationsOverview } from "../services/catalog-operations";
 import { getSalesOverview } from "../services/catalog-sales";
@@ -473,6 +475,25 @@ function priceFieldsFrom(value: unknown): PriceField[] | undefined {
   return value.split(",").map((item) => item.trim()).filter((item): item is PriceField => allowed.has(item));
 }
 
+// 공급사 단가표: 미리보기에서 입력한 마진(%)과 신규 등록 여부. 마진은 0~90% 범위만 받습니다.
+function contractOptionsFrom(form: FormData): ContractOptions {
+  const margin = (key: string, fallback: number) => {
+    const raw = form.get(key);
+    if (typeof raw !== "string" || raw.trim() === "") return fallback;
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value < 0 || value > 90) {
+      throw new DatabaseError("DATABASE_QUERY_FAILED", "마진은 0~90% 사이로 입력해 주세요.", 400);
+    }
+    return Math.round(value * 10) / 10;
+  };
+  const createMissing = form.get("createMissing");
+  return {
+    aMargin: margin("aMargin", DEFAULT_CONTRACT_OPTIONS.aMargin),
+    generalMargin: margin("generalMargin", DEFAULT_CONTRACT_OPTIONS.generalMargin),
+    createMissing: typeof createMissing === "string" ? createMissing === "true" : DEFAULT_CONTRACT_OPTIONS.createMissing
+  };
+}
+
 catalogRouter.post("/admin/products/import-preview", adminRoute, async (c) => {
   const form = await c.req.formData();
   const file = form.get("file");
@@ -482,8 +503,13 @@ catalogRouter.post("/admin/products/import-preview", adminRoute, async (c) => {
   if (file.size > 5 * 1024 * 1024) {
     return c.json(apiFailure("FILE_TOO_LARGE", "엑셀 파일은 5MB 이하만 업로드할 수 있습니다."), 400);
   }
-  const preview = await previewBulkProductWorkbook(new Uint8Array(await file.arrayBuffer()), priceFieldsFrom(form.get("priceFields")));
-  return c.json(apiSuccess(preview));
+  try {
+    const preview = await previewBulkProductWorkbook(new Uint8Array(await file.arrayBuffer()), priceFieldsFrom(form.get("priceFields")), contractOptionsFrom(form));
+    return c.json(apiSuccess(preview));
+  } catch (error) {
+    if (error instanceof DatabaseError) return errorResponse(c, error);
+    throw error;
+  }
 });
 
 catalogRouter.post("/admin/products/import-apply", adminRoute, async (c) => {
@@ -500,7 +526,8 @@ catalogRouter.post("/admin/products/import-apply", adminRoute, async (c) => {
     const result = await applyBulkProductWorkbook(
       new Uint8Array(await file.arrayBuffer()),
       user.username || user.email,
-      priceFieldsFrom(form.get("priceFields"))
+      priceFieldsFrom(form.get("priceFields")),
+      contractOptionsFrom(form)
     );
     return c.json(apiSuccess(result));
   } catch (error) {
