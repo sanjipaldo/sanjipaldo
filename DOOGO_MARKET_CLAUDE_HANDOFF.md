@@ -65,7 +65,7 @@ doogo-market-latest/
 │   ├── doogohub-symbol.png
 │   ├── doogofood-logo.png
 │   ├── landing/                     # 랜딩 전용 이미지(실제 앱 화면 캡처 WebP · 로고 마크)
-│   │   └── gif/                     # 랜딩에 쓰는 실제 앱 녹화 GIF (orders·pick·send·map·pay·track·mobile)
+│   │   └── gif/                     # 랜딩에 쓰는 실제 앱 녹화 GIF + 같은 이름의 WebP 정지 화면(포스터). 위탁셀러: orders·pick·send·map·pay·track·mobile / 공급사: s-hero·s-product·s-pick·s-orders·s-sales·s-settle
 │   ├── fonts/pretendard/            # Pretendard 가변 글꼴(분할 woff2 92개 + CSS, SIL OFL 1.1 · LICENSE.txt)
 │   └── product-00.jpg ~ product-07.jpg
 └── dist/                             # 실제 배포 대상
@@ -76,7 +76,7 @@ doogo-market-latest/
     └── assets/                       # 루트 assets와 동일
 ```
 
-랜딩(v2)은 흰 바탕(토스·리펀디 톤)에 남색 밴드 두 곳(허브 다이어그램·사용 장면)이 있는 한 페이지다. 스크롤 모션은 라이브러리 없이 index.html 안의 스크립트로 처리한다: 등장(아래에서 올라오며 흐림이 걷힘)·제목 단어별 등장·히어로 화면 기울기 펴짐·문장 단어 하이라이트·허브 선 그리기와 흐르는 점(SVG)·이용 방법 스크롤 스토리(단계마다 GIF 교체, 다시 보일 때 첫 장면부터)·후기형 카드 세로 무한 슬라이드(testimonials-6 방식, 속도 30·50·35px/초, 마우스를 올리면 15·25·17). ‘움직임 줄이기’ 설정이면 모두 멈추고 GIF 대신 같은 화면의 WebP 정지 이미지를 보여 준다. ‘이런 분께 추천해요’ 카드는 실제 후기가 아니라 기능을 바탕으로 쓴 사용 장면 예시다(페이지에도 표시) — 실제 후기가 모이면 `.t-pool` 안의 카드만 바꾸면 된다. GIF는 scratchpad의 녹화 스크립트(Playwright로 데모 계정 조작 → ffmpeg 팔레트 → gifsicle 손실 압축)로 만들었다.
+랜딩(v3)은 흰 바탕(토스·리펀디 톤)에 남색 밴드 두 곳(허브 다이어그램·사용 장면)이 있는 한 페이지이고, 위쪽에서 **위탁셀러 / 공급사** 두 화면을 바꿔 본다. 바꾸는 곳: 상단 메뉴의 작은 토글, 히어로의 큰 탭, ‘공급사로 판매하고 싶다면’ 교차 카드, 푸터 버튼. 구현은 `<html data-aud="seller|supplier">` 하나로 하고, `data-aud="supplier"`가 붙은 요소는 공급사 화면에서만, `data-aud="seller"`는 위탁셀러 화면에서만 보인다(CSS `display:none`). 첫 화면을 그리기 전 head 스크립트가 주소 `#supplier`/`#seller` → 이 탭의 sessionStorage(`doogo-landing-aud`) 순서로 정한다. 바꾸면 주소 해시를 고치고, 보던 구역 위치를 그대로 유지한다. 공급사 화면에는 히어로·서비스 소개·이용 방법(공급사 GIF 5단계)·기능(12칸)·비교표·수수료(입점비 0원·수수료 7%·매주 월요일·굿스플로 100원 + 21,800원 계산 예)·FAQ·마지막 버튼이 따로 있다. 스크롤 모션은 라이브러리 없이 index.html 안의 스크립트로 처리한다: 등장·제목 단어별 등장·히어로 화면 기울기 펴짐·문장 단어 하이라이트·큰 글씨 흐르는 띠(+연동 쇼핑몰·판매 카테고리 카드)·허브(점선이 흐르는 선 + 움직이는 점, ‘상품 등록 / 주문·발주 / 송장’ 세 흐름이 탭 카드의 진행 바에 맞춰 차례로 바뀌고, 카드·노드·가운데 원에 마우스를 올리면 그 흐름·그 노드의 선만 밝아짐)·이용 방법 스크롤 스토리(넓은 1320px 칸, 화면 비율 그대로 `object-fit: contain`이라 잘리지 않음, 단계마다 GIF 교체, 다시 보일 때 첫 장면부터)·후기형 카드 세로 무한 슬라이드(testimonials-6 방식, 속도 30·50·35px/초, 마우스를 올리면 15·25·17). **모션 정책**: 컴퓨터의 ‘애니메이션 효과 끄기(prefers-reduced-motion)’ 설정이어도 GIF·띠·허브는 움직인다(그 설정이면 `.soft-motion`으로 기울기·패럴랙스·흔들림·흐림 등장만 뺀다). 대신 왼쪽 아래 **‘움직임 멈추기’** 버튼으로 전부 멈출 수 있고(GIF → 같은 이름의 WebP 정지 화면, 띠·허브·슬라이드 정지), 선택은 localStorage(`doogo-landing-paused`)에 남는다. GIF 자리에는 처음부터 정지 화면을 깔아 두고(지연 로드) 보일 때 GIF로 바꾼다. ‘이런 분께 추천해요’ 카드는 실제 후기가 아니라 기능을 바탕으로 쓴 사용 장면 예시다(페이지에도 표시) — 실제 후기가 모이면 `.t-pool` 안의 카드만 바꾸면 된다. GIF는 scratchpad의 녹화 스크립트(Playwright로 데모 계정 조작 → ffmpeg 팔레트 → gifsicle 손실 압축)로 만들었고, 정지 화면은 각 GIF의 마지막 장면이다.
 
 랜딩 → 앱 연결 주소: `app.html`(위탁셀러 로그인) · `app.html#partner`(공급사 로그인) · `app.html#master`(관리자 로그인) · `app.html#signup`(위탁셀러 가입) · `app.html#supplier-signup`(공급사 입점 신청). 앱은 이 #을 한 번 처리한 뒤 주소에서 지운다(`landingEntryRoute()`), 로그인 화면 위쪽 역할 탭(위탁셀러·공급사·관리자)으로도 바로 바꿀 수 있다.
 
