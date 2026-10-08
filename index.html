@@ -125,9 +125,17 @@ main.swapping { opacity: 0; }
 .menu-btn[aria-expanded="true"] span:first-child { top: 20px; transform: rotate(45deg); }
 .menu-btn[aria-expanded="true"] span:last-child { top: 20px; transform: rotate(-45deg); }
 .mobile-menu { pointer-events: auto; position: absolute; top: 70px; left: 12px; right: 12px; padding: 10px; border-radius: 24px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow-lg); }
-.mobile-menu > a { display: flex; justify-content: space-between; align-items: center; padding: 13px 14px; border-radius: 14px; font-weight: 700; font-size: 17px; color: var(--ink-2); }
-.mobile-menu > a:hover { background: var(--bg-gray); }
-.mobile-menu > a::after { content: "›"; color: var(--muted); font-size: 20px; }
+.mm-list { display: grid; gap: 2px; }
+.mm-k { padding: 4px 12px 8px; font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--blue-2); }
+html[data-aud="supplier"] .mm-k { color: var(--ink-2); }
+.mm-list a { display: flex; align-items: center; gap: 13px; padding: 9px 10px; border-radius: 16px; transition: background-color .2s; }
+.mm-list a:hover { background: var(--bg-gray); }
+.mm-list a i { flex: none; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font-style: normal; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; background: var(--blue-soft); color: var(--blue-2); }
+html[data-aud="supplier"] .mm-list a i { background: var(--ink); color: #fff; }
+.mm-list a span { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.mm-list a b { font-size: 16px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); }
+.mm-list a small { font-size: 13px; font-weight: 500; color: var(--muted); }
+.mm-list a::after { content: "›"; flex: none; color: var(--muted); font-size: 20px; }
 .mm-cta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 4px 4px; }
 
 /* 위탁셀러/공급사 바꾸기 — 머리글 정가운데. 아이콘 동그라미 + 글자, 고른 쪽으로 색 알약이 미끄러진다 */
@@ -147,14 +155,15 @@ html[data-aud="supplier"] .aud-mini .aud-ind { transform: translateX(100%); back
 
 /* ---------- 섹션 공통 ---------- */
 section { position: relative; }
-.sec { padding-block: clamp(96px, 12vw, 160px); }
+.sec { padding-block: clamp(64px, 7vw, 104px); }
 .sec-soft { background: var(--bg-soft); }
+html[data-aud="supplier"] #why { background: var(--bg); }
 .kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--blue); letter-spacing: -.01em; }
 .kicker::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .h2 { margin-top: 14px; font-size: clamp(30px, 4.6vw, 54px); line-height: 1.22; font-weight: 800; letter-spacing: -.035em; color: var(--ink); text-wrap: balance; }
 .h2 em { font-style: normal; color: var(--blue); }
 .lead { margin-top: 18px; max-width: 640px; font-size: clamp(16px, 1.5vw, 19px); color: var(--ink-3); line-height: 1.7; }
-.sec-head { margin-bottom: clamp(44px, 6vw, 72px); }
+.sec-head { margin-bottom: clamp(36px, 5vw, 64px); }
 .sec-head.center { text-align: center; }
 .sec-head.center .lead { margin-inline: auto; }
 
@@ -227,7 +236,7 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 @keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -10px; } }
 
 /* ---------- 큰 글씨 흐르는 띠 + 쇼핑몰·카테고리 ---------- */
-.tick-sec { padding-block: 84px 20px; }
+.tick-sec { padding-block: 64px 8px; }
 .ticker { overflow: hidden; padding-block: 6px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
 .ticker-track { display: flex; align-items: center; width: max-content; animation: slide 80s linear infinite; }
 .ticker:hover .ticker-track { animation-play-state: paused; }
@@ -252,7 +261,7 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 .cat-grid li span { font-size: 20px; line-height: 1; }
 
 /* ---------- 문장 하이라이트 ---------- */
-.statement { padding-block: clamp(110px, 13vw, 180px) clamp(90px, 11vw, 140px); }
+.statement { padding-block: clamp(72px, 8vw, 120px) clamp(64px, 7vw, 104px); }
 .say { margin-top: 26px; font-size: clamp(27px, 3.9vw, 50px); line-height: 1.42; font-weight: 800; letter-spacing: -.035em; color: var(--ink); max-width: 1040px; text-wrap: pretty; }
 .say em { font-style: normal; color: var(--blue); }
 .js-motion .say .w { color: #d5dae0; transition: color .35s ease; }
@@ -273,7 +282,7 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 /* ---------- 허브 (남색 밴드) ---------- */
 .dark { background: var(--navy); color: var(--on-navy); }
 .dark .kicker { color: var(--sky); }
-.hub-sec { padding-block: clamp(100px, 12vw, 160px); overflow: hidden; }
+.hub-sec { padding-block: clamp(72px, 8vw, 112px); overflow: hidden; }
 .hub-sec::before { content: ""; position: absolute; inset: 0; background: radial-gradient(50% 40% at 50% 50%, rgba(49, 130, 246, .22), transparent 70%), radial-gradient(30% 30% at 15% 10%, rgba(106, 166, 255, .08), transparent 70%); pointer-events: none; }
 .hub-title { margin-top: 18px; font-size: clamp(32px, 5.2vw, 62px); line-height: 1.22; font-weight: 800; letter-spacing: -.04em; }
 .hub-title .dim { display: block; color: #556179; }
@@ -418,21 +427,9 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 .cmp-row:not(.cmp-head) .doogo::before { content: ""; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5.5 10.4l2.9 2.8 6-6.3' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat; }
 
 /* ---------- 다른 쪽 보러 가기 (공급사 ↔ 위탁셀러) ---------- */
-.cross { padding-block: 0 clamp(96px, 12vw, 150px); }
-.cross-card { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: center; gap: clamp(28px, 4vw, 56px); padding: clamp(32px, 5vw, 64px); border-radius: var(--r-xl); color: #fff; background: radial-gradient(70% 90% at 100% 0%, rgba(106, 166, 255, .35), transparent 60%), linear-gradient(135deg, #111a2e, #0a101d); }
-.cross-card[data-aud="supplier"] { background: radial-gradient(70% 90% at 100% 0%, rgba(94, 161, 255, .55), transparent 60%), linear-gradient(135deg, #2272eb, #1b4fb4); }
-.cross-card .kicker { color: #9cc4ff; }
-.cross-card[data-aud="supplier"] .kicker { color: #dbe9ff; }
-.cross-card h2 { margin-top: 14px; font-size: clamp(28px, 3.6vw, 44px); line-height: 1.25; font-weight: 800; letter-spacing: -.04em; }
-.cross-card p.d { margin-top: 14px; font-size: 16.5px; line-height: 1.7; color: rgba(255, 255, 255, .78); }
-.cross-card .row { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px; }
-.cross-card .browser { border-color: rgba(255, 255, 255, .15); box-shadow: 0 40px 80px -30px rgba(0, 0, 0, .6); transform: rotate(-1.5deg); transition: transform .6s var(--ease); }
-.cross-card:hover .browser { transform: rotate(0) translateY(-4px); }
-.cross-card .browser-body { aspect-ratio: 1100 / 708; }
-.cross-card .browser-body img { position: absolute; inset: 0; height: 100%; object-fit: contain; }
 
 /* ---------- 사용 장면 (남색 밴드 + 세로 무한 슬라이드) ---------- */
-.stories { padding-block: clamp(100px, 12vw, 150px); overflow: hidden; }
+.stories { padding-block: clamp(72px, 8vw, 112px); overflow: hidden; }
 .stories .h2 { color: #fff; }
 .note { display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; padding: 8px 16px; border-radius: 999px; background: rgba(255, 255, 255, .06); border: 1px solid var(--navy-line-2); font-size: 13.5px; font-weight: 600; color: var(--on-navy-2); }
 .t-cols { position: relative; display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 24px; max-height: 640px; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 25%, #000 75%, transparent); mask-image: linear-gradient(to bottom, transparent, #000 25%, #000 75%, transparent); }
@@ -510,7 +507,7 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 .faq-list .a p { padding: 0 24px 24px 66px; font-size: 16px; line-height: 1.75; color: var(--ink-3); }
 
 /* ---------- 마지막 CTA ---------- */
-.final { padding-block: 40px clamp(96px, 12vw, 140px); }
+.final { padding-block: clamp(48px, 6vw, 80px); }
 .final-box { position: relative; overflow: hidden; border-radius: var(--r-xl); padding: clamp(56px, 8vw, 96px) clamp(24px, 5vw, 64px); text-align: center; color: #fff; background: radial-gradient(60% 80% at 80% 0%, #5ea1ff 0%, transparent 60%), radial-gradient(60% 80% at 10% 100%, #0f4fc2 0%, transparent 60%), linear-gradient(135deg, #2272eb, #1b64da); }
 .final-box[data-aud="supplier"] { background: radial-gradient(60% 80% at 80% 0%, #4e5968 0%, transparent 60%), radial-gradient(60% 80% at 10% 100%, #000 0%, transparent 60%), linear-gradient(135deg, #2a3140, #10141c); }
 .final-box::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255, 255, 255, .22) 1px, transparent 1.3px); background-size: 24px 24px; -webkit-mask-image: radial-gradient(60% 70% at 50% 50%, #000, transparent 80%); mask-image: radial-gradient(60% 70% at 50% 50%, #000, transparent 80%); pointer-events: none; }
@@ -518,18 +515,36 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 .final-box h2 { font-size: clamp(30px, 4.8vw, 56px); line-height: 1.22; font-weight: 800; letter-spacing: -.04em; text-wrap: balance; }
 .final-box p { margin-top: 16px; font-size: clamp(16px, 1.6vw, 19px); color: rgba(255, 255, 255, .86); }
 .final-box .row { margin-top: 34px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-.final-box .sup { display: inline-block; margin-top: 22px; font-size: 15px; font-weight: 600; color: rgba(255, 255, 255, .92); border: 0; border-bottom: 1px solid rgba(255, 255, 255, .45); background: none; cursor: pointer; padding: 0; }
 
 /* ---------- 바닥글 ---------- */
-.footer { padding-block: 64px 40px; background: var(--bg-soft); border-top: 1px solid var(--line); font-size: 14.5px; color: var(--ink-4); }
-.foot-grid { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: 32px; }
-.foot-brand img { height: 28px; width: auto; }
-.foot-brand p { margin-top: 14px; line-height: 1.7; }
-.footer h4 { margin: 0 0 12px; font-size: 14.5px; font-weight: 800; color: var(--ink-2); }
-.footer li + li { margin-top: 8px; }
-.footer a:hover, .footer button:hover { color: var(--ink); }
-.footer button { border: 0; background: none; padding: 0; cursor: pointer; color: inherit; font-size: inherit; }
-.foot-bottom { margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 13.5px; color: var(--muted); }
+.footer { position: relative; overflow: hidden; padding-block: clamp(56px, 7vw, 88px) calc(84px + env(safe-area-inset-bottom, 0px)); font-size: 14.5px; color: rgba(226, 236, 255, .68);
+  background: radial-gradient(70% 90% at 92% 0%, rgba(59, 138, 247, .42), transparent 62%), radial-gradient(55% 80% at 0% 100%, rgba(27, 100, 218, .28), transparent 62%), linear-gradient(180deg, #0d2557, #071433); }
+html[data-aud="supplier"] .footer { color: rgba(255, 255, 255, .6);
+  background: radial-gradient(70% 90% at 92% 0%, rgba(132, 144, 162, .26), transparent 62%), radial-gradient(55% 80% at 0% 100%, rgba(78, 89, 104, .22), transparent 62%), linear-gradient(180deg, #181c23, #090b0e); }
+.footer::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255, 255, 255, .09) 1px, transparent 1.2px); background-size: 24px 24px; -webkit-mask-image: linear-gradient(180deg, #000, transparent 75%); mask-image: linear-gradient(180deg, #000, transparent 75%); pointer-events: none; }
+.footer::after { content: ""; position: absolute; right: -3%; bottom: -14%; width: min(720px, 88vw); aspect-ratio: 508 / 151; background: url("assets/landing/logo-on-dark.png") center / contain no-repeat; opacity: .05; filter: grayscale(1) brightness(1.6); pointer-events: none; }
+.foot-in { position: relative; z-index: 1; }
+.foot-top { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(36px, 5vw, 72px); }
+.foot-logo { display: flex; align-items: center; gap: 12px; }
+.foot-logo img { height: 30px; width: auto; }
+.foot-badge { padding: 4px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 800; letter-spacing: -.01em; color: #a9cbff; background: rgba(59, 138, 247, .2); border: 1px solid rgba(169, 203, 255, .3); }
+html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .18); }
+.foot-tag { margin-top: 18px; font-size: 16px; line-height: 1.7; color: rgba(255, 255, 255, .84); text-wrap: pretty; }
+.foot-brand .btn { margin-top: 22px; }
+.footer .btn-white { color: var(--ink); }
+.footer .btn-white:hover { background: #e5e8eb; }
+.foot-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "a b c"; gap: 28px 24px; }
+.foot-cols > :nth-child(1) { grid-area: a; }
+.foot-cols > :nth-child(2) { grid-area: b; }
+.foot-cols > :nth-child(3) { grid-area: c; }
+.footer h4 { margin: 0 0 14px; font-size: 13.5px; font-weight: 800; letter-spacing: .02em; color: #fff; }
+.footer li + li { margin-top: 10px; }
+.footer a { transition: color .2s; }
+.footer a:hover { color: #fff; }
+.foot-bottom { margin-top: clamp(40px, 5vw, 60px); padding-top: 22px; border-top: 1px solid rgba(255, 255, 255, .12); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 20px; font-size: 13.5px; color: rgba(255, 255, 255, .5); }
+.foot-switch { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .18); background: rgba(255, 255, 255, .06); color: rgba(255, 255, 255, .74); font-size: 14px; cursor: pointer; transition: background-color .2s, border-color .2s; }
+.foot-switch b { color: #fff; font-weight: 700; }
+.foot-switch:hover { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .3); }
 
 /* ---------- 움직임 멈추기 버튼 ---------- */
 .motion-toggle { position: fixed; z-index: 45; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 15px 0 12px; border-radius: 999px; border: 1px solid rgba(0, 27, 55, .1); background: rgba(255, 255, 255, .9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: var(--shadow); font-size: 13.5px; font-weight: 700; color: var(--ink-3); cursor: pointer; transition: transform .25s var(--ease), color .2s; }
@@ -587,10 +602,10 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
   .step { min-height: 0; padding-block: 36px; }
   .js-motion .step { opacity: 1; }
   .step .step-media { display: block; margin-top: 26px; }
-  .mobile-grid, .faq-grid, .cross-card, .fee-calc { grid-template-columns: minmax(0, 1fr); }
+  .step:last-child { padding-bottom: 0; }
+  .mobile-grid, .faq-grid, .fee-calc { grid-template-columns: minmax(0, 1fr); }
   .plan-notes { grid-template-columns: minmax(0, 1fr); }
-  .foot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .foot-brand { grid-column: 1 / -1; }
+  .foot-top { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 720px) {
   :root { --gutter: 16px; }
@@ -612,7 +627,7 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
   .browser-bar .dots i { width: 8px; height: 8px; }
   .browser-bar .url { height: 22px; font-size: 11px; }
   .browser-bar .bar-end { display: none; }
-  .tick-sec { padding-top: 64px; }
+  .tick-sec { padding-top: 48px; }
   .reach-card { padding: 22px 18px; }
   .cat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .cat-grid li { padding: 10px; font-size: 13.5px; white-space: normal; }
@@ -632,7 +647,8 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
   .t-card { padding: 26px; }
   .faq-list summary { padding: 18px; font-size: 16px; }
   .faq-list .a p { padding: 0 18px 20px; font-size: 15px; }
-  .foot-grid { grid-template-columns: 1fr 1fr; }
+  .foot-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "a b" "a c"; }
+  .foot-tag { font-size: 15px; }
   .motion-toggle { width: 40px; padding: 0; justify-content: center; }
   .motion-toggle .t { display: none; }
 }
@@ -703,12 +719,24 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
     </div>
   </nav>
   <div id="mobileMenu" class="mobile-menu" hidden>
-    <a href="#about">서비스 소개</a>
-    <a href="#how">이용 방법</a>
-    <a href="#features">기능</a>
-    <a href="#stories">이런 분께</a>
-    <a href="#pricing"><span data-aud="seller">요금제</span><span data-aud="supplier">수수료</span></a>
-    <a href="#faq">자주 묻는 질문</a>
+    <div class="mm-list" data-aud="seller">
+      <p class="mm-k">위탁셀러 안내</p>
+      <a href="#about"><i>01</i><span><b>서비스 소개</b><small>도매 사이트와 무엇이 다른지</small></span></a>
+      <a href="#how"><i>02</i><span><b>이용 방법</b><small>첫 판매까지 다섯 단계</small></span></a>
+      <a href="#features"><i>03</i><span><b>주요 기능</b><small>판매에 필요한 기능 모음</small></span></a>
+      <a href="#why"><i>04</i><span><b>두고를 써야 하는 이유</b><small>혼자 할 때와 비교</small></span></a>
+      <a href="#pricing"><i>05</i><span><b>요금제</b><small>무료로 시작, 필요할 때 올리기</small></span></a>
+      <a href="#faq"><i>06</i><span><b>자주 묻는 질문</b><small>위탁셀러가 많이 묻는 것</small></span></a>
+    </div>
+    <div class="mm-list" data-aud="supplier">
+      <p class="mm-k">공급사 안내</p>
+      <a href="#about"><i>01</i><span><b>입점 안내</b><small>두고마켓이 공급사에게 하는 일</small></span></a>
+      <a href="#how"><i>02</i><span><b>이용 방법</b><small>입점부터 정산까지 다섯 단계</small></span></a>
+      <a href="#features"><i>03</i><span><b>공급사 기능</b><small>등록·송장·정산까지 한 곳에서</small></span></a>
+      <a href="#why"><i>04</i><span><b>입점 효과</b><small>혼자 할 때와 비교</small></span></a>
+      <a href="#pricing"><i>05</i><span><b>수수료</b><small>입점비 0원 · 판매 수수료 7%</small></span></a>
+      <a href="#faq"><i>06</i><span><b>자주 묻는 질문</b><small>공급사가 많이 묻는 것</small></span></a>
+    </div>
     <div class="mm-cta" data-aud="seller"><a class="btn btn-ghost" href="app.html" data-login-link>로그인</a><a class="btn btn-blue" href="app.html#signup">무료로 시작하기</a></div>
     <div class="mm-cta" data-aud="supplier"><a class="btn btn-ghost" href="app.html#partner">공급사 로그인</a><a class="btn btn-ink" href="app.html#supplier-signup">입점 신청</a></div>
   </div>
@@ -1108,30 +1136,6 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
   </div>
 </section>
 
-<!-- 다른 쪽 보러 가기 -->
-<section class="cross sec-soft" id="cross">
-  <div class="wrap">
-    <div class="cross-card" data-aud="seller" data-reveal>
-      <div>
-        <p class="kicker">공급사이신가요?</p>
-        <h2>상품만 올리면,<br>셀러들이 팔아 드려요</h2>
-        <p class="d">입점비 0원 · 결제된 주문만 출고 · 송장 자동 출력 · 매주 월요일 정산. 공급사 화면도 그대로 보여 드릴게요.</p>
-        <div class="row"><button type="button" class="btn btn-white" data-set-aud="supplier" data-go-top>공급사 페이지 보기 <i aria-hidden="true">→</i></button><a class="btn btn-line" href="app.html#supplier-signup">바로 입점 신청</a></div>
-      </div>
-      <div class="browser"><div class="browser-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="url">두고 파트너센터</span><span class="bar-end" aria-hidden="true"></span></div><div class="browser-body"><img src="assets/landing/gif/s-hero.webp" width="1100" height="708" loading="lazy" alt="두고 파트너센터 주문·출고 관리 화면: 송장 3건 자동발급 완료"></div></div>
-    </div>
-    <div class="cross-card" data-aud="supplier" data-reveal>
-      <div>
-        <p class="kicker">위탁셀러로 팔아 보고 싶다면</p>
-        <h2>재고 없이 고르고,<br>결제 한 번이면 발주 끝</h2>
-        <p class="d">상품 소싱 · 원클릭 쇼핑몰 등록 · 주문 자동 수집 · 송장 자동 전송. 위탁셀러 화면도 그대로 보여 드릴게요.</p>
-        <div class="row"><button type="button" class="btn btn-white" data-set-aud="seller" data-go-top>위탁셀러 페이지 보기 <i aria-hidden="true">→</i></button><a class="btn btn-line" href="app.html#signup">무료로 시작하기</a></div>
-      </div>
-      <div class="browser"><div class="browser-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="url">두고 셀러센터</span><span class="bar-end" aria-hidden="true"></span></div><div class="browser-body"><img src="assets/landing/gif/orders.webp" width="1100" height="708" loading="lazy" alt="두고 셀러센터 화면: 3건 결제 완료, 공급사 2곳에 주문 전달"></div></div>
-    </div>
-  </div>
-</section>
-
 <!-- 사용 장면 (testimonials-6 방식 세로 무한 슬라이드) -->
 <section class="stories dark" id="stories">
   <div class="wrap">
@@ -1269,7 +1273,6 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
         <a class="btn btn-lg btn-white" href="app.html#signup">무료로 시작하기 <i aria-hidden="true">→</i></a>
         <a class="btn btn-lg btn-line" href="app.html" data-login-link>로그인</a>
       </div>
-      <button type="button" class="sup" data-set-aud="supplier" data-go-top>공급사이신가요? 공급사 페이지 보기 →</button>
     </div>
     <div class="final-box" data-aud="supplier" data-reveal>
       <h2>상품만 올리면,<br>셀러들이 팔기 시작해요</h2>
@@ -1278,7 +1281,6 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
         <a class="btn btn-lg btn-white" href="app.html#supplier-signup" style="color:var(--ink)">공급사 입점 신청 <i aria-hidden="true">→</i></a>
         <a class="btn btn-lg btn-line" href="app.html#partner">공급사 로그인</a>
       </div>
-      <button type="button" class="sup" data-set-aud="seller" data-go-top>위탁셀러로 팔아 보고 싶다면? 위탁셀러 페이지 보기 →</button>
     </div>
   </div>
 </section>
@@ -1286,28 +1288,40 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 </main>
 
 <footer class="footer">
-  <div class="wrap">
-    <div class="foot-grid">
+  <div class="wrap foot-in" data-aud="seller">
+    <div class="foot-top">
       <div class="foot-brand">
-        <img src="assets/doogo-logo-horizontal.png" width="1015" height="302" alt="두고마켓" loading="lazy">
-        <p>쇼핑몰에 쉬운 시작 · 두고마켓<br>공급사와 위탁셀러를 잇는 위탁판매 오픈마켓</p>
+        <div class="foot-logo"><img src="assets/landing/logo-on-dark.png" width="508" height="151" alt="두고마켓" loading="lazy"><span class="foot-badge">위탁셀러</span></div>
+        <p class="foot-tag">재고 없이 시작하는 위탁판매.<br>상품 소싱부터 송장 전송까지 두고가 이어요.</p>
+        <a class="btn btn-sm btn-blue" href="app.html#signup">무료로 시작하기 <i aria-hidden="true">→</i></a>
       </div>
-      <div>
-        <h4>서비스</h4>
-        <ul><li><button type="button" data-set-aud="seller" data-go-top>위탁셀러 안내</button></li><li><button type="button" data-set-aud="supplier" data-go-top>공급사 안내</button></li><li><a href="#how">이용 방법</a></li><li><a href="#features">주요 기능</a></li><li><a href="#pricing">요금제 · 수수료</a></li><li><a href="#faq">자주 묻는 질문</a></li></ul>
-      </div>
-      <div>
-        <h4>시작하기</h4>
-        <ul><li><a href="app.html#signup">위탁셀러 무료 가입</a></li><li><a href="app.html#supplier-signup">공급사 입점 신청</a></li></ul>
-      </div>
-      <div>
-        <h4>로그인</h4>
-        <ul><li><a href="app.html" data-login-link>위탁셀러 로그인</a></li><li><a href="app.html#partner">공급사 로그인</a></li><li><a href="app.html#master">관리자 로그인</a></li></ul>
+      <div class="foot-cols">
+        <div><h4>위탁셀러 안내</h4><ul><li><a href="#about">서비스 소개</a></li><li><a href="#how">이용 방법</a></li><li><a href="#features">주요 기능</a></li><li><a href="#why">두고를 써야 하는 이유</a></li><li><a href="#faq">자주 묻는 질문</a></li></ul></div>
+        <div><h4>시작하기</h4><ul><li><a href="app.html#signup">무료 가입</a></li><li><a href="#pricing">요금제 보기</a></li></ul></div>
+        <div><h4>로그인</h4><ul><li><a href="app.html" data-login-link>위탁셀러 로그인</a></li><li><a href="app.html#partner">공급사 로그인</a></li><li><a href="app.html#master">관리자 로그인</a></li></ul></div>
       </div>
     </div>
     <div class="foot-bottom">
-      <span>© 2026 DOOGO HOLDINGS</span>
-      <span>두고마켓 · DOOGO MARKET</span>
+      <button type="button" class="foot-switch" data-set-aud="supplier" data-go-top>공급사이신가요? <b>공급사 안내 보기 →</b></button>
+      <span>© 2026 DOOGO HOLDINGS · 두고마켓</span>
+    </div>
+  </div>
+  <div class="wrap foot-in" data-aud="supplier">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <div class="foot-logo"><img src="assets/landing/logo-on-dark.png" width="508" height="151" alt="두고마켓" loading="lazy"><span class="foot-badge">공급사</span></div>
+        <p class="foot-tag">상품만 올리면 판로가 열려요.<br>입점비 0원 · 수수료 7% · 매주 월요일 정산</p>
+        <a class="btn btn-sm btn-white" href="app.html#supplier-signup">공급사 입점 신청 <i aria-hidden="true">→</i></a>
+      </div>
+      <div class="foot-cols">
+        <div><h4>공급사 안내</h4><ul><li><a href="#about">입점 안내</a></li><li><a href="#how">이용 방법</a></li><li><a href="#features">공급사 기능</a></li><li><a href="#why">입점 효과</a></li><li><a href="#faq">자주 묻는 질문</a></li></ul></div>
+        <div><h4>시작하기</h4><ul><li><a href="app.html#supplier-signup">입점 신청</a></li><li><a href="#pricing">수수료 보기</a></li></ul></div>
+        <div><h4>로그인</h4><ul><li><a href="app.html#partner">공급사 로그인</a></li><li><a href="app.html" data-login-link>위탁셀러 로그인</a></li><li><a href="app.html#master">관리자 로그인</a></li></ul></div>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <button type="button" class="foot-switch" data-set-aud="seller" data-go-top>위탁셀러로 판매하시나요? <b>위탁셀러 안내 보기 →</b></button>
+      <span>© 2026 DOOGO HOLDINGS · 두고마켓</span>
     </div>
   </div>
 </footer>
@@ -1375,7 +1389,7 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 
   const navLinks = [...document.querySelectorAll(".links a")];
   if (io$) {
-    const owner = { easy: "features", why: "features", cross: "features", stories: "pricing" };
+    const owner = { easy: "features", why: "features", stories: "pricing" };
     const spy = new IntersectionObserver(entries => entries.forEach(entry => {
       if (!entry.isIntersecting) return;
       const id = owner[entry.target.id] || entry.target.id;
@@ -1761,7 +1775,7 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
   /* ---------- 위탁셀러 / 공급사 바꾸기 ---------- */
   const mainEl = document.getElementById("main");
   const syncAudButtons = () => document.querySelectorAll("[data-set-aud]").forEach(btn => { if (btn.hasAttribute("aria-pressed")) btn.setAttribute("aria-pressed", String(btn.dataset.setAud === aud())); });
-  const anchorIds = ["top", "about", "platform", "how", "features", "easy", "why", "cross", "stories", "pricing", "faq"];
+  const anchorIds = ["top", "about", "platform", "how", "features", "easy", "why", "stories", "pricing", "faq"];
   const setAud = (next, { goTop = false } = {}) => {
     if (next === aud()) { if (goTop) window.scrollTo({ top: 0, behavior: soft ? "auto" : "smooth" }); return; }
     /* 지금 보고 있는 구역을 기억했다가, 바꾼 뒤 같은 구역으로 */
