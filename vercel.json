@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": null,
+  "buildCommand": "node class/scripts/db-build.js && node class/scripts/site.js",
+  "outputDirectory": "class/.site",
+  "ignoreCommand": "test -f class/scripts/db-build.js || exit 0; git diff --quiet \"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\" HEAD -- class api vercel.json .vercelignore",
+  "functions": {
+    "api/*.js": {
+      "includeFiles": "class/{data.js,db.js}"
+    }
+  }
+}

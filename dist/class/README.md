@@ -24,17 +24,25 @@ python3 -m http.server 4321 --directory class
 
 ### 배포 (Vercel)
 
-`class/` 폴더가 Vercel 프로젝트 **doogo-class**에 연결돼 있습니다(빌드 없이 정적 파일 그대로 배포, 설정은 `vercel.json`, 배포에서 빼는 파일은 `.vercelignore`).
+Vercel 프로젝트 **doogo-class**는 GitHub 저장소 `sanjipaldo/sanjipaldo`에 연결돼 있고, 루트 디렉터리는 **저장소 맨 위**입니다. 같은 저장소에 다른 작업(두고마켓 등) 브랜치도 있어서, 맨 위의 파일 몇 개가 두고 클래스로 이어 줍니다.
+
+| 파일 (저장소 맨 위) | 하는 일 |
+|---|---|
+| `vercel.json` | 빌드 `node class/scripts/db-build.js && node class/scripts/site.js`, 화면 파일은 `class/.site`, 함수 설정. `ignoreCommand`: `class/` 폴더가 없는 브랜치(다른 작업)는 빌드하지 않음(Canceled로 표시, 오류 아님) · `class/` · `api/`가 안 바뀐 커밋도 건너뜀 |
+| `api/*.js` | Vercel 함수 입구. 실제 코드 `class/api/*.js`를 그대로 불러옴 |
+| `.vercelignore` | 배포에 필요 없는 폴더(`dist/` · `server/` 등)와 `.env*` 제외 |
+
+`class/scripts/site.js`는 브라우저가 받는 파일만 `class/.site`로 복사합니다(서버 코드 · 빌드 스크립트 · 설명서는 공개하지 않음). 같은 건너뛰기 명령이 Vercel 프로젝트 설정(Ignored Build Step)에도 들어 있어, `vercel.json`이 없는 다른 브랜치도 오류 없이 건너뜁니다.
 
 ```bash
-cd class
+# 저장소 맨 위에서
 vercel link --yes --project doogo-class   # 새 컴퓨터에서 처음 한 번 (.vercel/ 은 git에 올리지 않음)
-vercel deploy --prod                      # 운영 주소에 배포
+vercel deploy --prod                      # 운영 주소에 배포 (보통은 푸시하면 자동)
 ```
 
 운영 주소: https://doogo-class.vercel.app
 
-GitHub 저장소 `sanjipaldo/sanjipaldo`가 이 프로젝트에 연결돼 있어 푸시하면 자동으로 배포됩니다(Vercel 프로젝트 루트 디렉터리 = `class`). `class/` 안이 바뀌지 않은 커밋은 배포를 건너뜁니다. 운영 주소에 바로 반영되는 브랜치(Production Branch)는 `claude/keen-ride-j85f6u`이고, 나머지 브랜치는 미리보기 배포(Vercel 로그인 필요)로 올라갑니다. 운영 주소는 로그인 없이 누구나 열 수 있습니다.
+운영 주소에 바로 반영되는 브랜치(Production Branch)는 `claude/keen-ride-j85f6u`이고, `class/`가 있는 다른 브랜치는 미리보기 배포(Vercel 로그인 필요)로 올라갑니다. 운영 주소는 로그인 없이 누구나 열 수 있습니다.
 
 ### 서버 · 데이터베이스
 
@@ -90,7 +98,7 @@ CLASS_SQLITE=/tmp/class.db MASTER_PASSWORD=test node scripts/dev-server.js 4400
 | `data.js` | 첫 실행 기본값 — 강사 4명(문대표·로직메이커·황금농부·초이), 문대표 콘텐츠, 기수, 수강생, 예시 제출 기록 |
 | `db.js` | 공용 데이터 계층 — 저장/불러오기(서버 모드: 문서 나누기 · 바뀐 부분 보내기 · 변경 받기), 기수 주차 계산, 일정 생성, 진행률, 세션 |
 | `api/` | 서버 (Vercel 함수) — `_lib/`에 저장소(Turso · SQLite) · 로그인 · 권한 · 처음 데이터 |
-| `scripts/` | `db-build.js`(배포 때 데이터베이스 준비) · `dev-server.js`(로컬 서버 모드) |
+| `scripts/` | `db-build.js`(배포 때 데이터베이스 준비) · `site.js`(배포할 화면 파일만 `.site`로 모으기) · `dev-server.js`(로컬 서버 모드) |
 | `icons.js` | 아이콘 (Lucide) |
 | `app.js` | 수강생 센터 — 로그인·수강 신청, 메뉴 11개, 자동검수, AI봇, 강사 미리보기 |
 | `admin.js` | 강사센터 · 마스터 |

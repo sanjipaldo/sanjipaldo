@@ -1,0 +1,9 @@
+# Vercel 프로젝트 doogo-class(두고 클래스) 배포에서 빼는 파일 — 루트 디렉터리 = 저장소 맨 위
+/dist
+/server
+/reviewhub_catalog
+/.claude
+/.openai
+**/.env*
+**/.vercel
+class/README.md
