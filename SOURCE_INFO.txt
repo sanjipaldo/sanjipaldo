@@ -4,7 +4,7 @@ Source branch: main
 Source commit: f1a43bc471ca6d689bbb8209a99a00e26224cf6e
 Source commit subject: feat: add return-confirmed refunds and Doogo Money wallet
 Live preview: https://doogofood-ops-hub.eugenemoon.chatgpt.site
-Static entry: dist/index.html
+Static entry: dist/index.html (landing) -> dist/app.html (app: login, signup, seller/supplier/master)
 
 Run locally:
   python3 -m http.server 4173 --directory dist

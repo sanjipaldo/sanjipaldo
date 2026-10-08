@@ -54,7 +54,8 @@ doogo-market-latest/
 ├── DOOGO_MARKET_CLAUDE_HANDOFF.md   # 이 문서
 ├── .openai/
 │   └── hosting.json                 # Sites 정적 배포 설정
-├── index.html                       # 로그인·가입·앱 셸·공통 모달
+├── index.html                       # 랜딩(두고마켓 소개) · 로그인/가입은 app.html로 연결
+├── app.html                         # 로그인·가입·앱 셸·공통 모달 (위탁셀러·공급사·관리자)
 ├── app.js                           # 상태, 렌더링, 이벤트, 업무 규칙 전체
 ├── styles.css                       # 데스크톱·태블릿·모바일 스타일
 ├── assets/
@@ -63,15 +64,19 @@ doogo-market-latest/
 │   ├── doogohub-app-icon.png
 │   ├── doogohub-symbol.png
 │   ├── doogofood-logo.png
+│   ├── landing/                     # 랜딩 전용 이미지(실제 앱 화면 캡처 WebP · 어두운 배경용 로고)
 │   └── product-00.jpg ~ product-07.jpg
 └── dist/                             # 실제 배포 대상
-    ├── index.html
+    ├── index.html                    # 랜딩
+    ├── app.html                      # 앱
     ├── app.js
     ├── styles.css
     └── assets/                       # 루트 assets와 동일
 ```
 
-루트의 `index.html`, `app.js`, `styles.css`와 `dist/`의 동명 파일은 현재 SHA-256 기준으로 동일하다. 수정 후 배포하려면 루트 변경을 `dist/`에도 동기화해야 한다.
+랜딩 → 앱 연결 주소: `app.html`(위탁셀러 로그인) · `app.html#partner`(공급사 로그인) · `app.html#master`(관리자 로그인) · `app.html#signup`(위탁셀러 가입) · `app.html#supplier-signup`(공급사 입점 신청). 앱은 이 #을 한 번 처리한 뒤 주소에서 지운다(`landingEntryRoute()`), 로그인 화면 위쪽 역할 탭(위탁셀러·공급사·관리자)으로도 바로 바꿀 수 있다.
+
+루트의 `index.html`, `app.html`, `app.js`, `styles.css`와 `dist/`의 동명 파일은 현재 SHA-256 기준으로 동일하다. 수정 후 배포하려면 루트 변경을 `dist/`에도 동기화해야 한다.
 
 ## 4. 기술 스택과 구조
 
@@ -550,7 +555,7 @@ POST   /webhooks/carriers/tracking
 
 ## 19. 변경·배포 절차
 
-1. 루트 `index.html`, `app.js`, `styles.css`를 수정한다.
+1. 루트 `index.html`(랜딩), `app.html`, `app.js`, `styles.css`를 수정한다.
 2. `node --check app.js`로 문법을 검사한다.
 3. 루트 파일과 assets를 `dist/`에 동기화한다.
 4. 루트/`dist` 해시가 같은지 확인한다.

@@ -1,306 +1,1099 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#1761e8" />
-  <title>두고 | 브랜드와 셀러를 연결하는 오픈마켓</title>
-  <link rel="icon" type="image/jpeg" href="assets/doogomarket-favicon.jpg" />
-  <link rel="apple-touch-icon" href="assets/doogomarket-favicon.jpg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Geist:wght@100..900&family=Geist+Mono:wght@400..700&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=99" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<title>두고마켓</title>
+<meta name="description" content="공급사와 위탁셀러를 잇는 AI 위탁판매 오픈마켓, 두고마켓. 상품 소싱부터 쇼핑몰 등록, 주문 발주, 송장 전송까지 재고 없이 시작하세요.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="두고마켓 · 물건은 공급사가, 판매는 내가, 나머지는 두고가.">
+<meta property="og:description" content="상품 소싱부터 쇼핑몰 등록, 주문 발주, 송장 전송까지. 재고 없이 시작하는 위탁판매 오픈마켓.">
+<link rel="icon" type="image/jpeg" href="assets/doogomarket-favicon.jpg">
+<link rel="apple-touch-icon" href="assets/doogomarket-favicon.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..600&family=Noto+Sans+KR:wght@400;500;700;800;900&display=swap">
+<style>
+/* 두고마켓 랜딩 · 단일 다크 테마(블랙 + 두고 블루) */
+:root {
+  color-scheme: dark;
+  --bg: #05070d;
+  --bg-2: #070b14;
+  --surface: #0b111e;
+  --surface-2: #0f1728;
+  --surface-3: #18233b;
+  --line: rgba(148, 170, 215, .13);
+  --line-2: rgba(148, 170, 215, .22);
+  --line-blue: rgba(77, 141, 255, .42);
+  --text: #f3f6fb;
+  --text-2: #aab4c6;
+  --text-3: #7a869d;
+  --blue: #2f7cff;
+  --blue-btn: #1f66f0;
+  --blue-btn-hover: #2c74ff;
+  --blue-text: #74a8ff;
+  --sky: #a9cdff;
+  --glow: rgba(47, 124, 255, .45);
+  --ok: #3ad29f;
+  --ok-soft: rgba(58, 210, 159, .13);
+  --pain: #ff8f8f;
+  --pain-soft: rgba(255, 107, 107, .1);
+  --font: "Geist", "Noto Sans KR", system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a9cdff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+  --cross: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235f6b82' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M7 7l10 10M17 7L7 17'/%3E%3C/svg%3E");
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 84px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+img { display: block; max-width: 100%; height: auto; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; }
+code { font-family: var(--mono); font-size: .9em; color: var(--sky); background: rgba(47, 124, 255, .13); padding: 1px 6px; border-radius: 6px; white-space: nowrap; }
+:focus-visible { outline: 2px solid var(--sky); outline-offset: 3px; border-radius: 8px; }
+.wrap { width: 100%; max-width: 1200px; margin-inline: auto; padding-inline: 20px; }
+.skip { position: absolute; left: 16px; top: -60px; z-index: 100; padding: 10px 16px; border-radius: 10px; background: var(--blue-btn); color: #fff; font-weight: 700; }
+.skip:focus { top: 12px; }
+.br-m { display: none; }
+
+/* 버튼 */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border: 1px solid transparent; border-radius: 12px; font-size: 16px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; cursor: pointer; transition: background-color .2s, border-color .2s, box-shadow .2s, transform .2s; }
+.btn-primary { background: var(--blue-btn); color: #fff; box-shadow: 0 10px 30px -10px var(--glow), inset 0 1px 0 rgba(255, 255, 255, .2); }
+.btn-primary:hover { background: var(--blue-btn-hover); box-shadow: 0 14px 36px -10px var(--glow), inset 0 1px 0 rgba(255, 255, 255, .2); }
+.btn-ghost { background: rgba(255, 255, 255, .04); color: var(--text); border-color: var(--line-2); }
+.btn-ghost:hover { background: rgba(255, 255, 255, .08); border-color: rgba(148, 170, 215, .4); }
+.btn-lg { height: 56px; padding: 0 28px; border-radius: 14px; font-size: 17px; }
+.btn-sm { height: 38px; padding: 0 16px; border-radius: 10px; font-size: 14px; }
+.btn-block { width: 100%; }
+@media (prefers-reduced-motion: no-preference) { .btn:active { transform: translateY(1px); } }
+
+/* 헤더 */
+.site-header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; background: rgba(5, 7, 13, .62); -webkit-backdrop-filter: saturate(1.4) blur(14px); backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid transparent; transition: background-color .25s, border-color .25s; }
+.site-header.scrolled, body.menu-open .site-header { background: rgba(5, 7, 13, .9); border-bottom-color: var(--line); }
+.header-in { display: flex; align-items: center; gap: 24px; height: 68px; }
+.brand { display: flex; align-items: center; flex: none; }
+.brand img { width: 108px; }
+.nav { display: flex; gap: 2px; }
+.nav a { padding: 8px 12px; border-radius: 9px; color: var(--text-2); font-size: 15px; font-weight: 600; transition: color .2s, background-color .2s; }
+.nav a:hover, .nav a[aria-current="true"] { color: var(--text); background: rgba(255, 255, 255, .05); }
+.header-cta { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.link-login { display: inline-flex; align-items: center; height: 38px; padding: 0 14px; border-radius: 10px; color: var(--text); font-size: 15px; font-weight: 700; transition: background-color .2s; }
+.link-login:hover { background: rgba(255, 255, 255, .07); }
+.menu-btn { display: none; place-items: center; width: 42px; height: 42px; padding: 0; border: 1px solid var(--line-2); border-radius: 11px; background: rgba(255, 255, 255, .04); color: var(--text); cursor: pointer; }
+.menu-btn-in { display: grid; gap: 5px; }
+.menu-btn-in > span { display: block; width: 18px; height: 2px; border-radius: 2px; background: currentColor; transition: transform .2s; }
+.menu-btn[aria-expanded="true"] .menu-btn-in > span:first-child { transform: translateY(3.5px) rotate(45deg); }
+.menu-btn[aria-expanded="true"] .menu-btn-in > span:last-child { transform: translateY(-3.5px) rotate(-45deg); }
+.mobile-menu { border-top: 1px solid var(--line); padding-block: 8px 24px; max-height: calc(100dvh - 68px); overflow-y: auto; }
+.mobile-menu nav { display: grid; }
+.mobile-menu nav a { padding: 15px 2px; border-bottom: 1px solid var(--line); font-size: 17px; font-weight: 700; }
+.mm-title { margin: 20px 0 10px; color: var(--text-3); font-size: 13px; font-weight: 700; }
+.mm-login { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.mm-login a { display: grid; gap: 2px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.mm-login b { font-size: 15px; }
+.mm-login small { color: var(--text-3); font-size: 12px; line-height: 1.4; }
+.mobile-menu .btn { margin-top: 16px; }
+
+/* 히어로 */
+.hero { position: relative; overflow: clip; padding-top: clamp(56px, 8vw, 104px); padding-bottom: clamp(72px, 9vw, 120px); }
+.hero-bg { position: absolute; inset: 0; pointer-events: none; background:
+  radial-gradient(56% 46% at 50% 0%, rgba(47, 124, 255, .34), transparent 72%),
+  radial-gradient(34% 30% at 88% 26%, rgba(90, 150, 255, .12), transparent 70%),
+  radial-gradient(30% 30% at 8% 36%, rgba(40, 96, 230, .12), transparent 70%); }
+.hero-bg::after { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(148, 170, 215, .07) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 170, 215, .07) 1px, transparent 1px); background-size: 64px 64px; -webkit-mask-image: radial-gradient(64% 52% at 50% 16%, #000 25%, transparent 78%); mask-image: radial-gradient(64% 52% at 50% 16%, #000 25%, transparent 78%); }
+.hero-in { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.pill { display: inline-flex; align-items: center; gap: 9px; max-width: 100%; margin: 0; padding: 7px 15px; border: 1px solid var(--line-blue); border-radius: 999px; background: rgba(47, 124, 255, .1); color: var(--sky); font-size: 14px; font-weight: 600; }
+.pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px rgba(58, 210, 159, .18); }
+.hero-title { margin: 24px 0 0; font-size: clamp(36px, 6.4vw, 82px); line-height: 1.12; font-weight: 800; letter-spacing: -.045em; text-wrap: balance; }
+.hero-title em { font-style: normal; background: linear-gradient(95deg, #4d8fff 0%, #8fbfff 52%, #e6f0ff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero-sub { max-width: 620px; margin: 26px 0 0; color: var(--text-2); font-size: clamp(16px, 1.55vw, 19px); line-height: 1.75; }
+.hero-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 36px; }
+.hero-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 34px 0 0; padding: 0; list-style: none; }
+.hero-facts li { display: flex; align-items: baseline; gap: 8px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255, 255, 255, .03); color: var(--text-3); font-size: 14px; }
+.hero-facts b { color: var(--text); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.stage { position: relative; max-width: 1080px; margin: clamp(52px, 7vw, 84px) auto 0; }
+.frame { position: relative; margin: 0; overflow: hidden; border: 1px solid var(--line-2); border-radius: 16px; background: #0d1424; box-shadow: 0 40px 120px -36px rgba(30, 100, 255, .5), 0 0 0 1px rgba(255, 255, 255, .02); }
+.frame-bar { display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-bottom: 1px solid var(--line); background: #0f1729; }
+.frame-bar i { width: 10px; height: 10px; border-radius: 50%; background: #27324a; }
+.frame-bar span { margin-left: 10px; color: var(--text-3); font-size: 12.5px; font-weight: 600; }
+.frame img { width: 100%; }
+.frame-app::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 22%; background: linear-gradient(transparent, rgba(5, 7, 13, .85)); pointer-events: none; }
+
+.float-card { border: 1px solid var(--line-2); border-radius: 18px; background: rgba(10, 16, 30, .88); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 30px 70px -24px rgba(0, 0, 0, .75); text-align: left; }
+.relay { position: absolute; left: -56px; bottom: -44px; width: 352px; padding: 18px 18px 8px; }
+.relay-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.live { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.relay-head small { color: var(--text-3); font-size: 12px; }
+.relay ol { margin: 0; padding: 0; list-style: none; }
+.relay li { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 8px; padding: 8px 0; transition: opacity .35s; }
+.relay time { padding-top: 1px; color: var(--text-3); font-family: var(--mono); font-size: 12px; }
+.relay li > div { position: relative; padding-left: 20px; }
+.relay li > div::before { content: ""; position: absolute; left: 0; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px rgba(58, 210, 159, .18); transition: background-color .3s, box-shadow .3s; }
+.relay li:not(:last-child) > div::after { content: ""; position: absolute; left: 4.5px; top: 20px; bottom: -14px; width: 1px; background: var(--line-2); }
+.relay b { display: block; font-size: 14px; line-height: 1.45; }
+.relay li span { display: block; color: var(--text-2); font-size: 12.5px; line-height: 1.55; }
+.relay.is-playing li { opacity: .32; }
+.relay.is-playing li > div::before { background: #33405a; box-shadow: none; }
+.relay.is-playing li.on { opacity: 1; }
+.relay.is-playing li.on > div::before { background: var(--ok); box-shadow: 0 0 0 3px rgba(58, 210, 159, .18); }
+.relay.is-playing li.cur > div::before { background: var(--blue-text); box-shadow: 0 0 0 4px rgba(116, 168, 255, .25); }
+.profit { position: absolute; right: -48px; top: 76px; width: 252px; padding: 18px; }
+.profit > small { color: var(--text-3); font-size: 12.5px; font-weight: 600; }
+.profit dl { display: grid; gap: 6px; margin: 10px 0 0; }
+.profit dl div { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.profit dt { color: var(--text-2); }
+.profit dd { margin: 0; font-variant-numeric: tabular-nums; }
+.profit-total { display: flex; align-items: baseline; justify-content: space-between; margin: 12px 0 0; padding-top: 12px; border-top: 1px dashed var(--line-2); }
+.profit-total b { font-size: 28px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.profit-total span { padding: 3px 9px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-size: 13px; font-weight: 700; }
+.profit-note { margin: 10px 0 0; color: var(--text-3); font-size: 12.5px; line-height: 1.5; }
+
+/* 쇼핑몰 띠 */
+.channels { border-block: 1px solid var(--line); background: var(--bg-2); }
+.channels-in { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px 40px; padding-block: 26px; }
+.channels p { margin: 0; color: var(--text-2); font-size: 15px; font-weight: 500; }
+.channels ul { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 0; padding: 0; list-style: none; }
+.channels li { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; }
+.channels img { width: 28px; height: 28px; border-radius: 8px; object-fit: cover; }
+
+/* 공통 섹션 */
+.sec { position: relative; padding-block: clamp(88px, 11vw, 140px); }
+.sec-alt { border-block: 1px solid var(--line); background: var(--bg-2); }
+.sec-head { max-width: 720px; margin-bottom: clamp(40px, 5vw, 64px); }
+.sec-head.center { margin-inline: auto; text-align: center; }
+.eyebrow { margin: 0 0 14px; color: var(--blue-text); font-size: 15px; font-weight: 700; letter-spacing: .01em; }
+.sec h2 { margin: 0; font-size: clamp(30px, 4.2vw, 52px); line-height: 1.22; font-weight: 800; letter-spacing: -.04em; text-wrap: balance; }
+.sec-head > p:not(.eyebrow) { margin: 20px 0 0; color: var(--text-2); font-size: clamp(16px, 1.5vw, 18px); line-height: 1.75; }
+.sec-head.center > p:not(.eyebrow) { margin-inline: auto; max-width: 600px; }
+
+/* 고민 */
+.pain-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.pain { padding: 28px; border: 1px solid var(--line); border-radius: 20px; background: linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .01)); }
+.ico { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; }
+.ico svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pain .ico { margin-bottom: 18px; background: var(--pain-soft); color: var(--pain); }
+.pain h3 { margin: 0; font-size: 20px; line-height: 1.45; font-weight: 700; letter-spacing: -.02em; }
+.pain p { margin: 10px 0 0; color: var(--text-2); font-size: 16px; line-height: 1.7; }
+.answer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; margin-top: 24px; padding: clamp(28px, 4vw, 44px); border: 1px solid var(--line-blue); border-radius: 24px; background: radial-gradient(120% 160% at 0% 0%, rgba(47, 124, 255, .3), transparent 62%), #0a1430; }
+.answer p { margin: 0; font-size: clamp(20px, 2.4vw, 28px); line-height: 1.5; font-weight: 700; letter-spacing: -.03em; }
+.answer em { font-style: normal; color: var(--sky); }
+
+/* 연결 구조 */
+.flow { display: grid; grid-template-columns: minmax(0, 1fr) 150px minmax(0, 1.12fr) 150px minmax(0, 1fr); align-items: center; }
+.node { padding: 26px; border: 1px solid var(--line-2); border-radius: 22px; background: var(--surface); }
+.node-kicker { margin: 0; color: var(--text-3); font-size: 13px; font-weight: 700; letter-spacing: .04em; }
+.node h3 { margin: 6px 0 16px; font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
+.node ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.node li { position: relative; padding-left: 18px; color: var(--text-2); font-size: 15px; line-height: 1.55; }
+.node li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--blue-text); }
+.node-hub { padding: 32px 24px; text-align: center; border-color: var(--line-blue); background: radial-gradient(100% 100% at 50% 0%, rgba(47, 124, 255, .36), transparent 72%), #0b1532; box-shadow: 0 0 0 6px rgba(47, 124, 255, .06), 0 30px 80px -24px rgba(47, 124, 255, .5); }
+.node-hub img { width: 124px; margin: 0 auto; }
+.node-hub > p { margin: 10px 0 0; color: var(--text-2); font-size: 15px; }
+.node .hub-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 18px; }
+.node .hub-chips li { padding: 6px 12px; border: 1px solid var(--line-2); border-radius: 999px; background: rgba(255, 255, 255, .06); color: var(--text); font-size: 14px; font-weight: 600; }
+.node .hub-chips li::before { content: none; }
+.link { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 34px; padding-inline: 6px; }
+.link::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed var(--line-blue); }
+.link span { position: relative; display: inline-flex; align-items: center; gap: 6px; color: var(--sky); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.link .ar { font-style: normal; display: inline-block; }
+.link .dot { position: absolute; top: calc(50% - 3px); left: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--sky); box-shadow: 0 0 10px 2px rgba(169, 205, 255, .6); opacity: 0; }
+.flow-foot { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 34px 0 0; color: var(--text-2); font-size: 16px; text-align: center; }
+.flow-foot .ico { width: 34px; height: 34px; flex: none; border-radius: 10px; background: rgba(47, 124, 255, .14); color: var(--sky); }
+.flow-foot .ico svg { width: 18px; height: 18px; }
+
+/* 다섯 단계 */
+.steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.step { position: relative; display: flex; flex-direction: column; padding: 24px 20px 20px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
+.step:not(:last-child)::after { content: ""; position: absolute; top: 36px; right: -15px; width: 16px; height: 1px; background: var(--line-blue); }
+.step-no { color: var(--blue-text); font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: .06em; }
+.step h3 { margin: 12px 0 8px; font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+.step p { flex: 1; margin: 0; color: var(--text-2); font-size: 15px; line-height: 1.65; }
+.step-ui { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 18px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #070c18; color: var(--text-2); font-size: 12.5px; line-height: 1.5; }
+.step-ui img { width: 20px; height: 20px; border-radius: 6px; }
+.step-ui .row { display: flex; justify-content: space-between; gap: 8px; width: 100%; }
+.step-ui .row b { color: var(--text); font-variant-numeric: tabular-nums; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, .06); color: var(--text-2); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.chip.on { background: rgba(47, 124, 255, .2); color: var(--sky); }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.steps-foot { margin: 28px 0 0; color: var(--text-3); font-size: 15px; text-align: center; }
+
+/* 주요 기능 */
+.feat { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; gap: clamp(36px, 5vw, 76px); }
+.feat + .feat { margin-top: clamp(84px, 10vw, 132px); }
+.feat.reverse { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+.feat.reverse .feat-copy { order: 2; }
+.feat-no { margin: 0 0 14px; color: var(--blue-text); font-family: var(--mono); font-size: 13.5px; font-weight: 600; letter-spacing: .04em; }
+.feat h3 { margin: 0; font-size: clamp(26px, 3vw, 38px); line-height: 1.3; font-weight: 800; letter-spacing: -.035em; text-wrap: balance; }
+.feat-copy > p { margin: 18px 0 0; color: var(--text-2); font-size: 17px; line-height: 1.75; }
+.ticks { display: grid; gap: 11px; margin: 26px 0 0; padding: 0; list-style: none; }
+.ticks li { position: relative; padding-left: 32px; font-size: 16px; font-weight: 500; line-height: 1.55; }
+.ticks li::before { content: ""; position: absolute; left: 0; top: .1em; width: 22px; height: 22px; border-radius: 50%; background: rgba(47, 124, 255, .17) var(--check) center / 12px no-repeat; }
+.feat-visual { position: relative; margin: 0; padding: clamp(18px, 3vw, 36px); border: 1px solid var(--line); border-radius: 28px; background: radial-gradient(90% 80% at 80% 0%, rgba(47, 124, 255, .22), transparent 70%), radial-gradient(70% 70% at 0% 100%, rgba(47, 124, 255, .1), transparent 70%), #0a1122; }
+.feat-visual .frame { box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .8); }
+.shot-modal { width: min(400px, 100%); margin-inline: auto; overflow: hidden; border: 1px solid rgba(255, 255, 255, .14); border-radius: 18px; box-shadow: 0 34px 80px -30px rgba(0, 0, 0, .85), 0 0 0 8px rgba(255, 255, 255, .03); }
+.shot-modal.wide { width: min(500px, 100%); }
+.feat-tag { position: absolute; right: clamp(14px, 3vw, 30px); bottom: clamp(14px, 3vw, 30px); display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--line-2); border-radius: 14px; background: rgba(10, 16, 30, .92); box-shadow: 0 16px 40px -16px rgba(0, 0, 0, .8); font-size: 13.5px; font-weight: 700; }
+.feat-tag i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+
+.all-feats { margin-top: clamp(84px, 10vw, 128px); padding-top: clamp(56px, 7vw, 84px); border-top: 1px solid var(--line); }
+.all-feats > h3 { margin: 0 0 32px; font-size: clamp(22px, 2.4vw, 30px); font-weight: 800; letter-spacing: -.03em; text-align: center; }
+.mini-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.mini { padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.mini .ico { width: 40px; height: 40px; border-radius: 11px; background: rgba(47, 124, 255, .13); color: var(--blue-text); }
+.mini .ico svg { width: 20px; height: 20px; }
+.mini b { display: block; margin-top: 14px; font-size: 16px; font-weight: 700; }
+.mini b + span { display: block; margin-top: 4px; color: var(--text-3); font-size: 14px; line-height: 1.55; }
+
+/* 초보자 */
+.easy { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: center; gap: clamp(40px, 6vw, 96px); }
+.phone-wrap { position: relative; }
+.phone-wrap::before { content: ""; position: absolute; inset: 8% 4%; border-radius: 50%; background: radial-gradient(closest-side, rgba(47, 124, 255, .4), transparent); filter: blur(30px); }
+.phone { position: relative; width: min(330px, 100%); margin-inline: auto; padding: 11px; border: 1px solid var(--line-2); border-radius: 48px; background: #0d1322; box-shadow: 0 50px 110px -40px rgba(47, 124, 255, .6), inset 0 0 0 1px rgba(255, 255, 255, .04); }
+.phone img { width: 100%; border-radius: 38px; }
+.easy-copy > p:not(.eyebrow) { margin: 20px 0 0; color: var(--text-2); font-size: 17px; line-height: 1.75; }
+.easy-list { display: grid; gap: 12px; margin: 32px 0 0; padding: 0; list-style: none; counter-reset: easy; }
+.easy-list li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 16px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); counter-increment: easy; }
+.easy-list li::before { content: counter(easy); display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--blue-btn); color: #fff; font-size: 15px; font-weight: 800; }
+.easy-list b { display: block; font-size: 17px; font-weight: 700; }
+.easy-list span { display: block; margin-top: 4px; color: var(--text-2); font-size: 15px; line-height: 1.65; }
+
+/* 써야 하는 이유 */
+.vs-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.vs { display: flex; flex-direction: column; gap: 14px; padding: 24px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
+.vs h3 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+.vs p { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 10px; align-items: start; margin: 0; font-size: 15px; line-height: 1.6; }
+.vs .before { color: var(--text-3); }
+.vs .after { color: var(--text); font-weight: 600; }
+.tag { display: inline-grid; place-items: center; height: 22px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+.before .tag { background: rgba(255, 255, 255, .06); color: var(--text-3); }
+.after .tag { background: rgba(47, 124, 255, .22); color: var(--sky); }
+
+/* 공급사 */
+.sup-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; gap: clamp(40px, 5vw, 72px); }
+.sup-copy > p:not(.eyebrow) { margin: 20px 0 0; color: var(--text-2); font-size: 17px; line-height: 1.75; }
+.sup-points { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 28px 0 0; padding: 0; list-style: none; }
+.sup-points li { padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.sup-points b { display: block; font-size: 16px; font-weight: 700; }
+.sup-points span { display: block; margin-top: 4px; color: var(--text-3); font-size: 14px; line-height: 1.55; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.tabs { display: inline-flex; gap: 4px; margin-bottom: 14px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.tabs button { padding: 8px 14px; border: 0; border-radius: 9px; background: transparent; color: var(--text-2); font-size: 14px; font-weight: 700; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--surface-3); color: var(--text); }
+
+/* 요금제 */
+.plans { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.plan { position: relative; display: flex; flex-direction: column; padding: 28px 24px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
+.plan h3 { margin: 0; font-size: 20px; font-weight: 800; }
+.plan-tagline { margin: 6px 0 0; color: var(--text-3); font-size: 14px; }
+.price { display: flex; align-items: baseline; gap: 4px; margin: 22px 0; color: var(--text-2); font-size: 16px; }
+.price b { color: var(--text); font-size: 40px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.plan ul { display: grid; gap: 11px; margin: 24px 0 0; padding: 24px 0 0; border-top: 1px solid var(--line); list-style: none; }
+.plan li { position: relative; padding-left: 26px; color: var(--text-2); font-size: 15px; line-height: 1.5; }
+.plan li::before { content: ""; position: absolute; left: 0; top: .15em; width: 18px; height: 18px; background: var(--check) center / 14px no-repeat; }
+.plan li b { color: var(--text); font-weight: 700; }
+.plan li.no { color: var(--text-3); }
+.plan li.no::before { background-image: var(--cross); }
+.plan.featured { border-color: var(--line-blue); background: radial-gradient(120% 60% at 50% 0%, rgba(47, 124, 255, .26), transparent 72%), #0b1430; box-shadow: 0 30px 80px -34px rgba(47, 124, 255, .6); }
+.badge { position: absolute; top: -12px; left: 24px; padding: 4px 11px; border-radius: 999px; background: var(--blue-btn); color: #fff; font-size: 12.5px; font-weight: 700; }
+.plan-notes { display: grid; gap: 10px; margin-top: 20px; padding: 22px 24px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255, 255, 255, .02); }
+.plan-notes p { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; margin: 0; color: var(--text-2); font-size: 14.5px; line-height: 1.65; }
+.plan-notes b { color: var(--text); }
+
+/* FAQ */
+.faq { display: grid; gap: 10px; max-width: 860px; margin-inline: auto; }
+.faq details { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); transition: border-color .2s; }
+.faq details[open] { border-color: var(--line-2); }
+.faq summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 22px; font-size: 17px; font-weight: 700; line-height: 1.5; list-style: none; cursor: pointer; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary > span { display: flex; gap: 12px; }
+.faq summary i { color: var(--blue-text); font-family: var(--mono); font-style: normal; font-weight: 600; }
+.faq summary::after { content: ""; flex: none; width: 10px; height: 10px; margin-right: 4px; border-right: 2px solid var(--text-3); border-bottom: 2px solid var(--text-3); transform: translateY(-3px) rotate(45deg); transition: transform .2s; }
+.faq details[open] summary::after { transform: translateY(2px) rotate(225deg); }
+.faq details p { margin: 0; padding: 0 22px 22px 48px; color: var(--text-2); font-size: 16px; line-height: 1.75; }
+
+/* 마지막 CTA */
+.final { position: relative; overflow: clip; padding-block: clamp(100px, 12vw, 160px); text-align: center; }
+.final::before { content: ""; position: absolute; left: 0; right: 0; bottom: -30%; height: 110%; background: radial-gradient(46% 52% at 50% 100%, rgba(47, 124, 255, .5), transparent 72%); pointer-events: none; }
+.final .wrap { position: relative; }
+.final h2 { margin: 0; font-size: clamp(32px, 5vw, 60px); line-height: 1.2; font-weight: 800; letter-spacing: -.045em; text-wrap: balance; }
+.final p { margin: 22px 0 0; color: var(--text-2); font-size: clamp(16px, 1.6vw, 19px); }
+.final .hero-cta { margin-top: 36px; }
+.final-sub { display: inline-block; margin-top: 22px; color: var(--sky); font-size: 15px; font-weight: 600; }
+.final-sub:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+/* 푸터 */
+.footer { padding-block: 56px 40px; border-top: 1px solid var(--line); background: #04060b; color: var(--text-3); font-size: 14px; }
+.foot-grid { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: 32px; }
+.foot-brand img { width: 116px; }
+.foot-brand p { margin: 14px 0 0; line-height: 1.7; }
+.footer h4 { margin: 0 0 12px; color: var(--text); font-size: 14px; font-weight: 700; }
+.footer ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.footer a { transition: color .2s; }
+.footer a:hover { color: var(--text); }
+.foot-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
+
+/* 스크롤 등장 (움직임 허용 + JS가 있을 때만) */
+.js-motion .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s cubic-bezier(.2, .7, .2, 1), transform .7s cubic-bezier(.2, .7, .2, 1); transition-delay: calc(var(--d, 0) * 70ms); }
+.js-motion .reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .live i { animation: live 2s ease-out infinite; }
+  .js-motion .link .dot { animation: travel 2.8s linear infinite; }
+  .js-motion .link .dot.back { animation-name: travel-back; animation-delay: 1.4s; }
+}
+@keyframes live { 0% { box-shadow: 0 0 0 0 rgba(58, 210, 159, .55); } 100% { box-shadow: 0 0 0 9px rgba(58, 210, 159, 0); } }
+@keyframes travel { 0% { left: 0; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: calc(100% - 6px); opacity: 0; } }
+@keyframes travel-back { 0% { left: calc(100% - 6px); opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: 0; opacity: 0; } }
+
+/* 반응형 */
+@media (max-width: 1220px) {
+  .relay { left: 16px; bottom: -40px; }
+  .profit { right: 16px; top: 56px; }
+}
+@media (max-width: 1080px) {
+  .steps { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .step { grid-column: span 2; }
+  .step:nth-child(4), .step:nth-child(5) { grid-column: span 3; }
+  .step::after { display: none; }
+  .plans { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 26px; }
+  .mini-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 980px) {
+  .nav { display: none; }
+  .menu-btn { display: grid; }
+  .stage { display: grid; gap: 14px; }
+  .frame-app::after { display: none; }
+  .relay, .profit { position: static; width: auto; }
+  .stage-cards { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+  .flow { grid-template-columns: minmax(0, 1fr); max-width: 560px; margin-inline: auto; }
+  .link { flex-direction: row; gap: 56px; height: 92px; padding: 0; }
+  .link::before { left: 50%; right: auto; top: 0; bottom: 0; border-top: 0; border-left: 1px dashed var(--line-blue); }
+  .link .ar { transform: rotate(90deg); }
+  .link .dot { display: none; }
+  .feat, .feat.reverse, .sup-grid, .easy { grid-template-columns: minmax(0, 1fr); }
+  .feat.reverse .feat-copy { order: 0; }
+  .easy-phone { order: 2; }
+  .vs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .foot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .foot-brand { grid-column: 1 / -1; }
+}
+@media (min-width: 981px) {
+  .mobile-menu { display: none !important; }
+  .stage-cards { display: contents; }
+}
+@media (max-width: 720px) {
+  .pain-grid { grid-template-columns: minmax(0, 1fr); }
+  .stage-cards { grid-template-columns: minmax(0, 1fr); }
+  .mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vs-grid { grid-template-columns: minmax(0, 1fr); }
+  .plans { grid-template-columns: minmax(0, 1fr); }
+  .plan-notes p { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .answer { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  .br-m { display: inline; }
+  .br-pc { display: none; }
+  .header-cta .btn-sm { display: none; }
+  .hero-cta { flex-direction: column; align-self: stretch; }
+  .hero-cta .btn { width: 100%; }
+  .hero-facts li { padding: 7px 13px; }
+  .steps { grid-template-columns: minmax(0, 1fr); }
+  .step, .step:nth-child(4), .step:nth-child(5) { grid-column: auto; }
+  .sup-points { grid-template-columns: minmax(0, 1fr); }
+  .mini { padding: 16px; }
+  .mini b + span { font-size: 13.5px; }
+  .pain { padding: 22px; }
+  .feat-copy > p, .easy-copy > p:not(.eyebrow), .sup-copy > p:not(.eyebrow) { font-size: 16px; }
+  .faq summary { padding: 18px; font-size: 16px; }
+  .faq details p { padding: 0 18px 20px 18px; font-size: 15px; }
+  .foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mm-login { grid-template-columns: minmax(0, 1fr); }
+  .mm-login a { grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 10px; }
+  .link { gap: 28px; }
+}
+</style>
 </head>
 <body>
-  <section id="loginView" class="login-screen seller-login-screen">
-    <div class="login-visual">
-      <div class="login-visual-mesh" aria-hidden="true"></div>
-      <div class="login-orb login-orb-1" aria-hidden="true"></div>
-      <div class="login-orb login-orb-2" aria-hidden="true"></div>
-      <div class="login-brand-row">
-        <div class="login-visual-logo" aria-label="두고">
-          <img src="assets/doogo-logo-horizontal.png" alt="두고">
-        </div>
-        <div class="partner-badge seller-badge">두고 셀러센터</div>
-      </div>
-      <p class="login-visual-tagline">쇼핑몰의 쉬운 시작 · 두고</p>
-      <div class="login-message">
-        <span>DOOGO SELLER</span>
-        <h1 id="sellerTypingText" class="typing-headline" aria-live="polite"></h1>
-        <ul class="login-feature-list">
-          <li><i>✓</i>공급사 상품을 내 쇼핑몰에 바로 등록</li>
-          <li><i>✓</i>신규 주문부터 송장 전송까지 자동 연동</li>
-          <li><i>✓</i>채널별 판매 현황과 마진율 실시간 확인</li>
-        </ul>
-      </div>
-      <div class="login-visual-footer"><button id="openPartnerCenter" class="partner-center-link" type="button"><span>P</span> 파트너센터 →</button><span>© 2026 DOOGO HOLDINGS</span></div>
-    </div>
+<a class="skip" href="#main">본문 바로가기</a>
 
-    <div class="login-panel">
-      <div class="login-box">
-        <div class="login-panel-brand-wrap">
-          <div class="login-panel-brand login-panel-brand-logo" aria-label="두고"><img src="assets/doogo-logo-horizontal.png" alt="두고"></div>
-          <p class="login-panel-tagline">쇼핑몰에 쉬운 시작 · 두고마켓</p>
-        </div>
-        <div class="login-heading"><span>SELLER CENTER</span><h2>두고 시작하기</h2><p>위탁셀러 전용 계정으로 로그인해 주세요.</p></div>
-        <form id="loginForm" class="login-form" autocomplete="on">
-          <div class="login-field"><label for="loginId">아이디 또는 이메일</label><input id="loginId" name="loginId" placeholder="아이디 또는 가입 이메일" autocomplete="username" required autofocus></div>
-          <div class="login-field"><div class="password-label"><label for="loginPassword">비밀번호</label><button type="button" id="togglePassword">보기</button></div><input id="loginPassword" name="loginPassword" type="password" placeholder="비밀번호를 입력해 주세요" autocomplete="current-password" required></div>
-          <div class="login-options"><label><input id="rememberId" type="checkbox"> 로그인정보 저장</label></div>
-          <p id="loginError" class="login-error" role="alert"></p>
-          <button type="submit" class="login-submit">로그인</button>
-        </form>
-        <div class="demo-accounts">
-          <div><button type="button" data-demo-login="seller">데모 계정으로 체험하기 <b>위탁셀러</b></button></div>
-        </div>
-        <div class="login-footer-links">
-          <div class="login-signup-card"><span>아직 계정이 없으신가요?</span><button id="openSignup" type="button">무료로 시작하기 →</button></div>
-          <div class="login-textlinks"><button type="button" class="login-textlink" data-find-account>아이디·비밀번호 찾기</button><button type="button" class="login-textlink" data-staff-join>직원 초대 코드로 시작하기</button></div>
-        </div>
-        <button id="mobilePartnerCenterLink" class="mobile-partner-link" type="button"><span>P</span> 공급사·관리자는 파트너센터로 →</button>
-      </div>
+<header class="site-header">
+  <div class="wrap header-in">
+    <a class="brand" href="#top" aria-label="두고마켓 처음으로"><img src="assets/landing/logo-on-dark.png" width="508" height="151" alt="두고"></a>
+    <nav class="nav" aria-label="주요 메뉴">
+      <a href="#about">서비스 소개</a>
+      <a href="#how">이용 방법</a>
+      <a href="#features">주요 기능</a>
+      <a href="#pricing">요금제</a>
+      <a href="#supplier">공급사 입점</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="header-cta">
+      <a class="link-login" href="app.html" data-login-link>로그인</a>
+      <a class="btn btn-primary btn-sm" href="app.html#signup">무료로 시작하기</a>
+      <button class="menu-btn" type="button" aria-expanded="false" aria-controls="mobileMenu" aria-label="메뉴 열기"><span class="menu-btn-in"><span></span><span></span></span></button>
     </div>
-  </section>
-
-  <section id="partnerLoginView" class="login-screen partner-login-screen" hidden>
-    <div class="login-visual partner-visual">
-      <div class="login-visual-mesh" aria-hidden="true"></div>
-      <div class="login-orb login-orb-1" aria-hidden="true"></div>
-      <div class="login-orb login-orb-2" aria-hidden="true"></div>
-      <div class="login-brand-row">
-        <div class="login-visual-logo" aria-label="두고">
-          <img src="assets/doogo-logo-horizontal.png" alt="두고">
-        </div>
-        <div id="partnerBadge" class="partner-badge">두고 파트너센터</div>
-      </div>
-      <p class="login-visual-tagline">쇼핑몰의 쉬운 시작 · 두고</p>
-      <div class="login-message partner-message">
-        <span id="partnerMessageKicker">SUPPLIER CENTER</span>
-        <h1 id="partnerTypingText" class="typing-headline" aria-live="polite"></h1>
-        <ul id="partnerFeatureList" class="login-feature-list">
-          <li><i>✓</i>상품·재고·공급가 실시간 관리</li>
-          <li><i>✓</i>배송준비중 주문 송장 자동 발급</li>
-          <li><i>✓</i>월별 정산 리포트와 수수료 내역 확인</li>
-        </ul>
-      </div>
-      <div class="login-visual-footer"><button id="backToSellerLogin" class="partner-center-link" type="button">← 위탁셀러 로그인</button><span>© 2026 DOOGO HOLDINGS</span></div>
-    </div>
-    <div class="login-panel partner-panel">
-      <div class="login-box">
-        <div class="login-panel-brand-wrap">
-          <div class="login-panel-brand login-panel-brand-logo" aria-label="두고"><img src="assets/doogo-logo-horizontal.png" alt="두고"></div>
-          <p class="login-panel-tagline">쇼핑몰에 쉬운 시작 · 두고마켓</p>
-        </div>
-        <div class="login-heading partner-heading"><span id="partnerLoginKicker">PARTNER CENTER</span><h2 id="partnerLoginTitle">공급사 로그인</h2><p id="partnerLoginDescription">상품·재고·주문·송장을 관리합니다.</p></div>
-        <form id="partnerLoginForm" class="login-form" autocomplete="on">
-          <div class="login-field"><label for="partnerLoginId">아이디 또는 이메일</label><input id="partnerLoginId" name="loginId" placeholder="아이디 또는 가입 이메일" autocomplete="username" required></div>
-          <div class="login-field"><div class="password-label"><label for="partnerLoginPassword">비밀번호</label><button type="button" id="togglePartnerPassword">보기</button></div><input id="partnerLoginPassword" name="loginPassword" type="password" placeholder="비밀번호를 입력해 주세요" autocomplete="current-password" required></div>
-          <div class="login-options"><label><input id="rememberPartnerId" type="checkbox"> 로그인정보 저장</label></div>
-          <p id="partnerLoginError" class="login-error" role="alert"></p>
-          <button type="submit" class="login-submit">로그인</button>
-        </form>
-        <div id="partnerDemoAccounts" class="demo-accounts">
-          <div><button type="button" data-partner-demo="supplier">데모 계정으로 체험하기 <b>공급사</b></button></div>
-        </div>
-        <div class="login-footer-links">
-          <div id="supplierSignupPrompt" class="login-signup-card"><span>공급사 계정이 없으신가요?</span><button id="openSupplierSignup" type="button">입점 신청하기 →</button></div>
-          <div class="login-textlink-row"><button type="button" id="partnerFindAccount" class="login-textlink" data-find-account>아이디·비밀번호 찾기</button><i aria-hidden="true">·</i><button type="button" id="partnerRoleSwitch" class="login-textlink" data-partner-role="master">관리자 로그인</button></div>
-        </div>
-        <button id="mobileBackToSellerLogin" class="mobile-partner-link" type="button">← 위탁셀러 로그인으로</button>
-      </div>
-    </div>
-  </section>
-
-  <section id="signupView" class="signup-screen" hidden>
-    <div class="signup-visual">
-      <div class="brand-lockup brand-lockup-inverse login-market-brand" aria-label="두고">
-        <span class="brand-mark"><img src="assets/doogomarket-symbol.png" alt=""></span>
-        <span class="brand-word"><b>두고</b><small>DOOGO</small></span>
-      </div>
-      <div class="login-message"><span id="signupVisualEyebrow">DOOGO SELLER</span><h1 id="signupVisualTitle">좋은 공급상품을 골라,<br>바로 판매를 시작하세요.</h1><p id="signupVisualDescription">상품 소싱부터 주문·송장·가격 변경까지<br>두고가 공급과 판매를 하나의 흐름으로 연결합니다.</p></div>
-      <div class="signup-visual-points"><span>✓ 공급사 원본 상품코드 자동 연결</span><span>✓ 판매 상품명·가격 자유롭게 수정</span><span>✓ 결제 완료 주문은 공급사에 자동 전달</span></div>
-      <div class="login-visual-footer"><span>DOOGO SELLER</span><span>쇼핑몰에 쉬운 시작 · 두고</span></div>
-    </div>
-    <div class="signup-panel">
-      <div class="signup-card">
-        <button id="backToLogin" class="signup-back" type="button">← 로그인으로</button>
-        <div id="signupFormWrap">
-        <div class="signup-heading"><span id="signupTypeLabel">SELLER REGISTRATION</span><h2 id="signupTitle">두고 가입하기</h2><p id="signupDescription">4단계 입력 후 두고 승인을 요청합니다.</p></div>
-        <div class="signup-steps four" aria-label="회원가입 진행 단계">
-          <button type="button" class="active" data-signup-step-nav="1"><b>1</b><span>계정</span></button><i></i>
-          <button type="button" data-signup-step-nav="2"><b>2</b><span>사업자 확인</span></button><i></i>
-          <button type="button" data-signup-step-nav="3"><b>3</b><span>서류·계좌</span></button><i></i>
-          <button type="button" data-signup-step-nav="4"><b>4</b><span>약관</span></button>
-        </div>
-        <div class="signup-draft-note" data-signup-draft-note hidden><span>작성하던 내용을 불러왔어요.</span><button type="button" data-signup-reset>처음부터 새로 쓰기</button></div>
-        <form id="signupForm" class="signup-form" autocomplete="off" novalidate>
-          <input id="signupRole" type="hidden" name="role" value="seller">
-          <input type="hidden" name="phoneVerified" value="">
-          <input type="hidden" name="businessVerified" value="">
-          <section class="signup-step-panel active" data-signup-step="1">
-            <div class="signup-section-copy"><h3>로그인할 계정을 만들어요</h3><p>이메일이 아이디가 돼요. 휴대폰은 승인 안내와 비밀번호 찾기에 써요.</p></div>
-            <div class="signup-fields single">
-              <div class="signup-field full"><label>이메일 (아이디) <em>필수</em></label><input name="email" type="email" inputmode="email" autocomplete="email" placeholder="business@example.com" required></div>
-              <div class="signup-field full"><label>비밀번호 <em>필수</em></label><input name="password" type="password" autocomplete="new-password" placeholder="영문·숫자 포함 8자 이상" minlength="8" required></div>
-              <div class="signup-field full"><label>비밀번호 확인 <em>필수</em></label><input name="passwordConfirm" type="password" autocomplete="new-password" placeholder="비밀번호를 한 번 더 입력" required></div>
-              <div class="signup-field full"><label>휴대폰 번호 <em>필수</em></label><div class="signup-inline"><input name="contact" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000" required><button type="button" class="signup-inline-btn" data-phone-send>인증번호 받기</button></div></div>
-              <div class="signup-field full" data-phone-code-row hidden><label>인증번호 6자리</label><div class="signup-inline"><input name="phoneCode" inputmode="numeric" maxlength="6" placeholder="문자로 받은 6자리"><button type="button" class="signup-inline-btn" data-phone-check>확인</button></div><small data-phone-status></small></div>
-            </div>
-            <p class="signup-step-error" data-signup-error></p>
-            <div class="signup-actions end"><button class="login-submit" type="button" data-signup-next>다음</button></div>
-          </section>
-          <section class="signup-step-panel" data-signup-step="2" hidden>
-            <div class="signup-section-copy"><h3>사업자인지 확인해요</h3><p>두고는 사업자만 쓸 수 있어요. 사업자등록증에 적힌 대로 넣으면 바로 확인돼요.</p></div>
-            <div class="signup-fields">
-              <div class="signup-field full"><label>사업자등록번호 <em>필수</em></label><input name="businessNo" inputmode="numeric" maxlength="12" placeholder="000-00-00000" required></div>
-              <div class="signup-field"><label>대표자명 <em>필수</em></label><input name="representative" placeholder="예: 홍길동" required></div>
-              <div class="signup-field"><label>개업일자 <em>필수</em></label><input name="openDate" inputmode="numeric" maxlength="10" placeholder="예: 2021-03-15" required></div>
-              <div class="signup-field full"><button type="button" class="signup-verify-btn" data-business-verify>사업자 진위 확인하기</button><div class="signup-verify-result" data-business-result hidden></div></div>
-              <div class="signup-field"><label>상호명 <em>필수</em></label><input name="company" placeholder="예: 두고셀러" required></div>
-              <div class="signup-field"><label>통신판매업 신고번호 <small>선택 · 나중에 입력 가능</small></label><input name="mailOrderNo" placeholder="예: 2024-서울강남-01234"></div>
-            </div>
-            <p class="signup-step-error" data-signup-error></p>
-            <div class="signup-actions"><button class="signup-secondary" type="button" data-signup-prev>이전</button><button class="login-submit" type="button" data-signup-next>다음</button></div>
-          </section>
-          <section class="signup-step-panel" data-signup-step="3" hidden>
-            <div class="signup-section-copy"><h3>서류와 정산 계좌를 올려요</h3><p>휴대폰으로 사진을 찍어 올려도 돼요. 지금 없으면 ‘나중에 올리기’를 눌러 가입부터 해도 돼요.</p></div>
-            <div class="signup-fields">
-              <div class="signup-field full"><label>사업자등록증 <em data-doc-required>필수</em></label><label class="signup-file"><input name="businessFile" type="file" accept="image/*,.pdf" data-signup-file><span data-file-label>📄 사진 찍기 또는 파일 선택</span></label></div>
-              <div class="signup-field"><label>정산·환불 은행 <em data-doc-required>필수</em></label><select name="bankName" data-bank-select></select></div>
-              <div class="signup-field"><label>예금주 <em data-doc-required>필수</em></label><input name="bankAccountHolder" placeholder="상호 또는 대표자명"></div>
-              <div class="signup-field full"><label>계좌번호 <em data-doc-required>필수</em></label><input name="bankAccountNumber" inputmode="numeric" placeholder="- 없이 숫자만"></div>
-              <div class="signup-field full"><label>통장 사본 <em data-doc-required>필수</em></label><label class="signup-file"><input name="bankbookFile" type="file" accept="image/*,.pdf" data-signup-file><span data-file-label>📄 사진 찍기 또는 파일 선택</span></label></div>
-              <div class="signup-field full"><label>세금계산서 받을 이메일 <small>비우면 아이디 이메일로 받아요</small></label><input name="taxInvoiceEmail" type="email" placeholder="tax@example.com"></div>
-            </div>
-            <label class="signup-later"><input type="checkbox" name="docsLater"><span><b>서류는 나중에 올릴게요</b><small>가입은 바로 되고, 로그인하면 남은 서류를 올리는 화면이 나와요. 두고 승인은 서류를 모두 올린 뒤에 진행돼요.</small></span></label>
-            <div class="prototype-warning">서류는 파일 이름으로 먼저 접수돼요. 원본 확인이 필요하면 두고가 따로 연락드려요.</div>
-            <p class="signup-step-error" data-signup-error></p>
-            <div class="signup-actions"><button class="signup-secondary" type="button" data-signup-prev>이전</button><button class="login-submit" type="button" data-signup-next>다음</button></div>
-          </section>
-          <section class="signup-step-panel" data-signup-step="4" hidden>
-            <div class="signup-section-copy"><h3>추천인 코드와 약관</h3><p>파트너에게 받은 추천인 코드를 넣고 약관에 동의하면 끝이에요.</p></div>
-            <div class="signup-field full referral-field"><label>추천인 코드 <em>필수</em></label><small>파트너에게 받은 코드를 입력해야 서비스 이용이 가능합니다.</small><input name="referralCode" autocomplete="off" placeholder="추천인 코드 입력 (예: MOON2026)" required></div>
-            <label class="signup-agreement all"><input type="checkbox" data-agree-all><span><b>전체 동의하기</b></span></label>
-            <label class="signup-agreement"><input name="terms" type="checkbox" required data-agree-item><span><b>(필수) 서비스 이용약관 동의</b></span></label>
-            <label class="signup-agreement"><input name="privacy" type="checkbox" required data-agree-item><span><b>(필수) 개인정보 수집·이용 동의</b><small>사업자 확인·정산·주문 처리에만 사용해요.</small></span></label>
-            <label class="signup-agreement"><input name="marketingConsent" type="checkbox" data-agree-item><span><b>(선택) 마케팅 정보 수신 동의</b><small>이벤트 및 프로모션 정보를 받아볼 수 있어요.</small></span></label>
-            <p class="signup-step-error" data-signup-error></p>
-            <div class="signup-actions"><button class="signup-secondary" type="button" data-signup-prev>이전</button><button class="login-submit" type="submit">가입 신청하기</button></div>
-          </section>
-          <div class="signup-login-link">이미 계정이 있으신가요? <button type="button" data-signup-login>로그인</button></div>
-          <div class="signup-legal-links"><span>이용약관</span><i></i><span>개인정보처리방침</span></div>
-        </form>
-      </div>
-      <div id="signupComplete" class="signup-complete" hidden>
-        <div id="signupStatusBody"></div>
-        <button id="completeToLogin" class="login-submit" type="button">로그인 화면으로</button>
-        </div>
-      </div>
-    </div>
-  </section>
-  <div id="kakaoSheet" class="kakao-sheet" hidden></div>
-
-
-  <div id="appView" class="app-shell" data-sidebar-open="false" hidden>
-    <button id="mobileSidebarBackdrop" class="mobile-sidebar-backdrop" type="button" aria-label="메뉴 닫기" hidden></button>
-    <aside id="appSidebar" class="sidebar" aria-label="두고 업무 메뉴">
-      <div class="sidebar-top-band">
-        <div class="sidebar-brand-row">
-          <a class="brand brand-lockup sidebar-market-brand" href="#" data-action="open-dashboard" aria-label="두고 대시보드로 이동">
-            <img src="assets/doogomarket-wordmark.png" alt="두고"><span class="sidebar-market-label">두고<small>DOOGO</small></span>
-          </a>
-          <button id="mobileSidebarClose" class="mobile-sidebar-close" type="button" aria-label="메뉴 닫기">×</button>
-        </div>
-        <p class="nav-label">쇼핑몰에 쉬운 시작 · 두고마켓</p>
-      </div>
-
-      <nav class="role-nav" aria-label="역할별 화면">
-        <button id="sidebarWorkspaceSwitcher" class="workspace-switcher-entry" type="button" data-action="open-user-switch">
-          <span id="sidebarRoleIcon" class="role-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9h14l-1 11H6L5 9Z"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/><circle cx="12" cy="14" r="2.2"/><path d="M9 19a3 3 0 0 1 6 0"/></svg></span><span><b id="sidebarRoleName">위탁셀러</b><small>사용자 전환 · 권한 관리</small></span><i>›</i>
-        </button>
+  </div>
+  <div class="mobile-menu" id="mobileMenu" hidden>
+    <div class="wrap">
+      <nav aria-label="모바일 메뉴">
+        <a href="#about">서비스 소개</a>
+        <a href="#how">이용 방법</a>
+        <a href="#features">주요 기능</a>
+        <a href="#pricing">요금제</a>
+        <a href="#supplier">공급사 입점</a>
+        <a href="#faq">자주 묻는 질문</a>
       </nav>
-
-      <nav id="workspaceMenu" class="workspace-menu" aria-label="업무 메뉴"></nav>
-
-      <div class="sidebar-footer">
-        <button id="logoutButton" class="ghost-button logout-button"><span aria-hidden="true">↪</span> 로그아웃</button>
+      <p class="mm-title">로그인</p>
+      <div class="mm-login">
+        <a href="app.html"><b>위탁셀러</b><small>상품 소싱 · 판매</small></a>
+        <a href="app.html#partner"><b>공급사</b><small>상품 공급 · 출고</small></a>
+        <a href="app.html#master"><b>관리자</b><small>두고 운영팀</small></a>
       </div>
-    </aside>
+      <a class="btn btn-primary btn-block" href="app.html#signup">무료로 시작하기</a>
+    </div>
+  </div>
+</header>
 
-    <main>
-      <header class="topbar">
-        <button id="mobileMenuButton" class="mobile-menu-button" type="button" aria-controls="appSidebar" aria-expanded="false" aria-label="전체 메뉴 열기"><span></span><span></span><span></span></button>
-        <div class="topbar-heading">
-          <button id="homeButton" class="topbar-home" type="button" data-action="tab-go" data-index="0" aria-label="홈 화면으로"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg><span>홈</span></button>
-          <p id="pageContext" class="eyebrow">위탁셀러 대시보드</p>
-          <h1 id="pageTitle">위탁셀러 워크스페이스</h1>
-          <p id="pageSubtitle" class="topbar-subtitle">오늘도 두고와 함께 쇼핑몰 성장을 만들어 가세요!</p>
+<main id="main">
+  <!-- 히어로 -->
+  <section class="hero" id="top" aria-labelledby="heroTitle">
+    <div class="hero-bg" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="hero-in">
+        <p class="pill"><i aria-hidden="true"></i>공급사와 셀러를 잇는 AI 위탁판매 오픈마켓</p>
+        <h1 class="hero-title" id="heroTitle">물건은 공급사가,<br>판매는 내가,<br><em>나머지는 두고가.</em></h1>
+        <p class="hero-sub">상품 소싱부터 쇼핑몰 등록, 주문 발주, 송장 전송까지 한곳에서. 재고⁠·⁠창고⁠·⁠포장 없이 시작하는 온라인 판매, 처음이어도 화면 순서대로 따라오면 됩니다.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary btn-lg" href="app.html#signup">무료로 시작하기 <span aria-hidden="true">→</span></a>
+          <a class="btn btn-ghost btn-lg" href="app.html#supplier-signup">공급사 입점 신청</a>
         </div>
-        <label class="quick-search"><span>⌕</span><input id="globalSearch" aria-label="주문번호 또는 주문자 검색" placeholder="주문번호·이름·전화·송장번호 검색"></label>
-        <button id="depositPillMobile" class="deposit-pill deposit-pill-mobile" type="button" data-action="deposit-view" data-view="charge" aria-label="예치금 잔액 보기" hidden><span class="deposit-pill-label">예치금</span><b id="depositPillMobileAmount">0원</b></button>
-        <div class="top-actions">
-          <button id="resetContentButton" class="edit-reset-button" type="button" data-action="reset-content-overrides" hidden>문구 초기화</button>
-          <button id="guideButton" class="secondary-button">전체 흐름 보기</button>
-          <button id="depositPill" class="deposit-pill" type="button" data-action="deposit-view" data-view="charge" aria-label="예치금 잔액 보기" hidden><span class="deposit-pill-label">예치금</span><b id="depositPillAmount">0원</b></button>
-          <button id="cartButton" class="cart-button" type="button" data-action="open-cart" aria-label="샘플 장바구니" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6"/><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg><b id="cartCount" hidden>0</b></button>
-          <div class="notification-center-wrap">
-            <button id="notificationButton" class="notification-button" type="button" data-action="open-notifications" aria-label="알림함 열기" aria-haspopup="true" aria-expanded="false"><span aria-hidden="true">🔔</span><b id="notificationCount">0</b></button>
-            <div id="notificationDropdown" class="notification-dropdown" role="dialog" aria-label="알림" hidden></div>
-          </div>
-          <div class="account-menu-wrap">
-            <button id="accountMenuButton" class="account-summary account-menu-button" type="button" aria-haspopup="menu" aria-expanded="false">
-              <span class="avatar-button" id="accountAvatar" aria-hidden="true"></span><span><b id="accountName">문원오</b><small id="accountRole">위탁셀러</small></span><i>⌄</i>
-            </button>
-            <div id="accountDropdown" class="account-dropdown" role="menu" hidden>
-              <div><b id="dropdownAccountName">두고 셀러</b><small>두고셀러 계정</small></div>
-              <button type="button" data-account-action="profile">정보 수정</button>
-              <button type="button" data-account-action="mypage">마이페이지 설정</button>
-              <button type="button" data-account-action="business">사업자 정보 수정</button>
-              <button type="button" data-account-action="sample-orders">샘플 주문 내역</button>
-              <button type="button" data-account-action="subscription">요금제 관리</button>
-              <button id="workspaceSwitchButton" class="workspace-switch-action" type="button" data-account-action="role-switch" hidden><span>⇄</span><b id="workspaceSwitchLabel">사용자 전환</b></button>
-            </div>
-          </div>
+        <ul class="hero-facts" aria-label="두고마켓 한눈에 보기">
+          <li>가입비 <b>0원</b></li>
+          <li>미리 살 재고 <b>0개</b></li>
+          <li>연결 쇼핑몰 <b>4곳</b></li>
+          <li>송장 전송 <b>자동</b></li>
+        </ul>
+      </div>
+
+      <div class="stage">
+        <figure class="frame frame-app">
+          <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i><span>두고 셀러센터 · 홈</span></div>
+          <img src="assets/landing/hero-app.webp" width="1600" height="1000" alt="두고 셀러센터 홈 화면. 오늘 확인할 일 7가지가 번호 순서대로 보이고, 주문 수집하기 버튼과 예치금 잔액이 보인다." fetchpriority="high">
+        </figure>
+        <div class="stage-cards">
+          <aside class="relay float-card" aria-label="주문 한 건이 처리되는 과정">
+            <div class="relay-head"><span class="live"><i aria-hidden="true"></i>주문 릴레이</span><small>스마트스토어 주문 1건</small></div>
+            <ol>
+              <li class="on"><time>14:02</time><div><b>스마트스토어 새 주문</b><span>경북 프리미엄 사과 3kg · 29,900원</span></div></li>
+              <li class="on"><time>14:02</time><div><b>AI 상품 매핑</b><span>두고 상품 <code>DF-1024</code> 산지팔도로 자동 연결</span></div></li>
+              <li class="on"><time>14:03</time><div><b>예치금 결제 · 발주</b><span>공급가 21,800원 결제 → 산지팔도에 전달</span></div></li>
+              <li class="on"><time>16:40</time><div><b>공급사 출고</b><span>한진택배 <code>501003839851</code></span></div></li>
+              <li class="on"><time>16:50</time><div><b>송장 자동 전송</b><span>스마트스토어 ‘배송중’ 반영 완료</span></div></li>
+            </ol>
+          </aside>
+          <aside class="profit float-card" aria-label="이 주문의 순수익">
+            <small>이 주문으로 남은 돈</small>
+            <dl>
+              <div><dt>판매가</dt><dd>29,900원</dd></div>
+              <div><dt>공급가</dt><dd>− 21,800원</dd></div>
+            </dl>
+            <p class="profit-total"><b>8,100원</b><span>마진 27%</span></p>
+            <p class="profit-note">내가 한 일: 상품 고르기, 결제 버튼 한 번</p>
+          </aside>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 쇼핑몰 -->
+  <section class="channels" aria-label="연결되는 쇼핑몰">
+    <div class="wrap channels-in">
+      <p>주문은 이 쇼핑몰들에서 들어오고, 송장은 자동으로 돌아갑니다</p>
+      <ul>
+        <li><img src="assets/channel-smartstore.webp" width="160" height="160" alt="" loading="lazy">네이버 스마트스토어</li>
+        <li><img src="assets/channel-coupang.png" width="160" height="160" alt="" loading="lazy">쿠팡</li>
+        <li><img src="assets/channel-cafe24.png" width="256" height="256" alt="" loading="lazy">CAFE24</li>
+        <li><img src="assets/channel-kakao.png" width="32" height="32" alt="" loading="lazy">카카오쇼핑</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 고민 -->
+  <section class="sec" id="about" aria-labelledby="aboutTitle">
+    <div class="wrap">
+      <header class="sec-head reveal">
+        <p class="eyebrow">서비스 소개</p>
+        <h2 id="aboutTitle">위탁판매, 이런 이유로<br>망설이셨죠?</h2>
+        <p>온라인 판매를 처음 시작하는 사장님들이 가장 많이 막히는 네 군데예요. 두고는 바로 여기서 출발했습니다.</p>
+      </header>
+      <div class="pain-grid">
+        <article class="pain reveal">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+          <h3>“뭘 팔아야 할지 모르겠어요”</h3>
+          <p>도매 사이트를 몇 시간씩 뒤져도 어떤 상품이 남는 장사인지 확신이 서지 않아요.</p>
+        </article>
+        <article class="pain reveal" style="--d:1">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg></span>
+          <h3>“상품 등록만 하다 하루가 가요”</h3>
+          <p>쇼핑몰마다 상품명⁠·⁠옵션⁠·⁠상세페이지⁠·⁠카테고리를 따로 맞춰 올려야 해요.</p>
+        </article>
+        <article class="pain reveal">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+          <h3>“주문이 들어오면 겁부터 나요”</h3>
+          <p>공급처에 발주하고, 송장을 받아 쇼핑몰에 하나씩 옮겨 적다 보면 꼭 하나씩 빠져요.</p>
+        </article>
+        <article class="pain reveal" style="--d:1">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg></span>
+          <h3>“재고 쌓아 둘 돈도 공간도 없어요”</h3>
+          <p>사입은 목돈이 들고, 안 팔린 재고는 그대로 손해가 돼요.</p>
+        </article>
+      </div>
+      <div class="answer reveal">
+        <p>셀러는 팔 상품을 고르고 가격만 정하세요.<br>발주⁠·⁠결제⁠·⁠송장⁠·⁠정산은 <em>두고가 이어 드려요.</em></p>
+        <a class="btn btn-primary" href="app.html#signup">무료로 시작하기 <span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 연결 구조 -->
+  <section class="sec sec-alt" id="platform" aria-labelledby="platformTitle">
+    <div class="wrap">
+      <header class="sec-head center reveal">
+        <p class="eyebrow">신개념 도매 오픈마켓</p>
+        <h2 id="platformTitle">공급사와 셀러가 만나는<br>새로운 B2B 오픈마켓</h2>
+        <p>도매 사이트처럼 상품을 고르지만, 판매에 필요한 일은 두고 안에서 끝나요. 공급사는 상품을 올리고, 셀러는 팔고, 그 사이의 발주⁠·⁠결제⁠·⁠송장⁠·⁠정산은 두고가 자동으로 잇습니다.</p>
+      </header>
+      <div class="flow reveal">
+        <article class="node">
+          <p class="node-kicker">공급사</p>
+          <h3>브랜드 · 제조사 · 산지</h3>
+          <ul><li>상품과 공급가 등록</li><li>결제된 주문만 받아서 출고</li><li>매주 월요일 정산</li></ul>
+        </article>
+        <div class="link" aria-hidden="true">
+          <span>상품 · 공급가 <i class="ar">→</i></span>
+          <span><i class="ar">←</i> 결제된 주문</span>
+          <i class="dot"></i><i class="dot back"></i>
+        </div>
+        <article class="node node-hub">
+          <img src="assets/landing/logo-on-dark.png" width="508" height="151" alt="두고마켓">
+          <p>사이에서 자동으로 잇는 일</p>
+          <ul class="hub-chips"><li>AI 상품 매핑</li><li>아이템 위너</li><li>예치금 결제</li><li>송장 중계</li><li>주간 정산</li></ul>
+        </article>
+        <div class="link" aria-hidden="true">
+          <span>상품 · 판매 도구 <i class="ar">→</i></span>
+          <span><i class="ar">←</i> 쇼핑몰 주문</span>
+          <i class="dot"></i><i class="dot back"></i>
+        </div>
+        <article class="node">
+          <p class="node-kicker">위탁셀러</p>
+          <h3>내 쇼핑몰 사장님</h3>
+          <ul><li>팔 상품 PICK</li><li>판매가 · 마진 결정</li><li>주문 확인 후 결제 한 번</li></ul>
+        </article>
+      </div>
+      <p class="flow-foot reveal"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h11v10H3z"/><path d="M14 9h4l3 3v4h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>배송은 공급사가 고객에게 직접 보내요. 셀러는 재고도, 포장도, 택배 계약도 필요 없어요.</p>
+    </div>
+  </section>
+
+  <!-- 이용 방법 -->
+  <section class="sec" id="how" aria-labelledby="howTitle">
+    <div class="wrap">
+      <header class="sec-head center reveal">
+        <p class="eyebrow">이용 방법</p>
+        <h2 id="howTitle">첫 판매까지, 다섯 단계</h2>
+        <p>메뉴에도 같은 번호가 붙어 있어요. 순서대로 누르기만 하면 됩니다.</p>
+      </header>
+      <ol class="steps">
+        <li class="step reveal">
+          <span class="step-no">STEP 01</span>
+          <h3>상품 고르기</h3>
+          <p>네이버쇼핑과 같은 카테고리로 찾고, 마음에 들면 PICK. 공급사가 확인하면 내 상품이 돼요.</p>
+          <div class="step-ui" aria-hidden="true"><span class="chip">식품</span><span class="chip">생활/건강</span><span class="chip on">✓ PICK 완료</span></div>
+        </li>
+        <li class="step reveal" style="--d:1">
+          <span class="step-no">STEP 02</span>
+          <h3>내 상품으로 꾸미기</h3>
+          <p>상품명⁠·⁠사진⁠·⁠상세페이지를 내 스타일로 바꾸고 판매가를 정해요. 마진은 자동으로 계산돼요.</p>
+          <div class="step-ui" aria-hidden="true"><span class="row"><span>공급가</span><b>12,900원</b></span><span class="row"><span>판매가</span><b>19,900원</b></span><span class="chip ok">마진 35%</span></div>
+        </li>
+        <li class="step reveal" style="--d:2">
+          <span class="step-no">STEP 03</span>
+          <h3>원클릭 전송</h3>
+          <p>체크한 쇼핑몰에 한 번에 등록해요. 쇼핑몰마다 따로 올릴 필요가 없어요.</p>
+          <div class="step-ui" aria-hidden="true"><img src="assets/channel-smartstore.webp" width="160" height="160" alt="" loading="lazy"><img src="assets/channel-coupang.png" width="160" height="160" alt="" loading="lazy"><img src="assets/channel-cafe24.png" width="256" height="256" alt="" loading="lazy"><span class="chip ok">3곳 등록 완료</span></div>
+        </li>
+        <li class="step reveal" style="--d:3">
+          <span class="step-no">STEP 04</span>
+          <h3>주문 결제</h3>
+          <p>주문이 들어오면 공급가만 예치금으로 결제해요. 결제하는 순간 공급사로 발주돼요.</p>
+          <div class="step-ui" aria-hidden="true"><span class="row"><span>예치금</span><b>− 12,900원</b></span><span class="chip on">공급사 발주 완료</span></div>
+        </li>
+        <li class="step reveal" style="--d:4">
+          <span class="step-no">STEP 05</span>
+          <h3>송장 자동 전송</h3>
+          <p>공급사가 고객에게 바로 보내고, 송장번호는 쇼핑몰에 자동으로 반영돼요.</p>
+          <div class="step-ui" aria-hidden="true"><span class="row"><span>한진택배</span><b>509203852990</b></span><span class="chip ok">배송중 반영</span></div>
+        </li>
+      </ol>
+      <p class="steps-foot reveal">가입은 사업자 정보 확인만 하면 끝나요. 심사를 기다릴 필요 없이 바로 시작할 수 있어요.</p>
+    </div>
+  </section>
+
+  <!-- 주요 기능 -->
+  <section class="sec sec-alt" id="features" aria-labelledby="featuresTitle">
+    <div class="wrap">
+      <header class="sec-head reveal">
+        <p class="eyebrow">주요 기능</p>
+        <h2 id="featuresTitle">사장님 대신,<br>두고가 하는 일</h2>
+        <p>아래 화면은 모두 실제 두고 셀러센터 화면이에요.</p>
       </header>
 
-      <section id="sellerView" class="role-view active"></section>
-      <section id="supplierView" class="role-view"></section>
-      <section id="masterView" class="role-view"></section>
-    </main>
-  </div>
+      <article class="feat">
+        <div class="feat-copy reveal">
+          <p class="feat-no">01 · 상품 소싱</p>
+          <h3>팔 상품 찾기,<br>네이버쇼핑 카테고리 그대로</h3>
+          <p>검증된 공급사의 상품을 익숙한 카테고리로 찾아보세요. 공급가와 권장 판매가, 발주 마감 시간까지 한눈에 보여요.</p>
+          <ul class="ticks">
+            <li>국내배송 · 해외소싱 · 나라별로 골라 보기</li>
+            <li>마음에 들면 PICK, 공급사 확인 후 내 상품으로</li>
+            <li>팔기 전에 샘플 구매로 먼저 받아 보기</li>
+            <li>브랜드관에서 브랜드별로 모아 보기</li>
+          </ul>
+        </div>
+        <figure class="feat-visual reveal" style="--d:1">
+          <div class="frame">
+            <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i><span>상품 소싱</span></div>
+            <img src="assets/landing/sourcing.webp" width="1200" height="788" alt="상품 소싱 화면. 네이버쇼핑 기준 카테고리 버튼과 발주마감 시간이 표시된 과일 상품 카드들이 보인다." loading="lazy" decoding="async">
+          </div>
+        </figure>
+      </article>
 
-  <div id="modal" class="modal-backdrop" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <button class="modal-close" data-close-modal aria-label="닫기">×</button>
-      <div id="modalContent"></div>
+      <article class="feat reverse">
+        <div class="feat-copy reveal">
+          <p class="feat-no">02 · 원클릭 상품 전송</p>
+          <h3>쇼핑몰 여러 곳에,<br>버튼 한 번으로 등록</h3>
+          <p>상품명⁠·⁠대표 이미지⁠·⁠상세페이지⁠·⁠검색 태그를 채워 체크한 쇼핑몰에 한 번에 올려요. 옵션마다 공급가와 판매가, 마진이 바로 계산돼요.</p>
+          <ul class="ticks">
+            <li>공급사 사진⁠·⁠상세페이지를 그대로 사용</li>
+            <li>AI가 검색 태그를 자동으로 추천</li>
+            <li>쇼핑몰마다 배송 정책 따로 선택</li>
+            <li>공급가가 바뀌면 알림, 쇼핑몰 가격⁠·⁠재고도 동기화</li>
+          </ul>
+        </div>
+        <figure class="feat-visual reveal" style="--d:1">
+          <div class="shot-modal">
+            <img src="assets/landing/send.webp" width="760" height="1041" alt="원클릭 상품 전송 창. 상품명·대표 이미지·상세페이지·검색 태그가 모두 확인 표시되어 있고, 옵션별 공급가·판매가·마진이 표로 보인다." loading="lazy" decoding="async">
+          </div>
+        </figure>
+      </article>
+
+      <article class="feat">
+        <div class="feat-copy reveal">
+          <p class="feat-no">03 · AI 상품 매핑 · 아이템 위너</p>
+          <h3>같은 상품이면,<br>가장 싼 공급가로 연결</h3>
+          <p>쇼핑몰에서 들어온 주문을 두고 상품과 연결해요. 같은 품목⁠·⁠중량 중 가장 싼 공급가를 ‘아이템 위너’로 추천하고, 고르는 순간 개당 마진을 보여 줘요.</p>
+          <ul class="ticks">
+            <li>한 번 연결하면 다음 주문부터 자동</li>
+            <li>더 싼 공급사가 나오면 위너를 따라 바꾸기</li>
+            <li>다른 곳에서 팔던 상품도 두고 공급사 상품으로 연결</li>
+          </ul>
+        </div>
+        <figure class="feat-visual reveal" style="--d:1">
+          <div class="shot-modal wide">
+            <img src="assets/landing/mapping.webp" width="860" height="860" alt="상품 매핑 창. 쇼핑몰에 들어온 주문 상품 옆에 두고마켓 상품 후보가 최저가 표시와 함께 보이고, 고른 상품의 개당 마진이 계산되어 있다." loading="lazy" decoding="async">
+          </div>
+        </figure>
+      </article>
+
+      <article class="feat reverse">
+        <div class="feat-copy reveal">
+          <p class="feat-no">04 · 주문 · 발주 · 송장 자동화</p>
+          <h3>주문 수집부터 송장 전송까지,<br>한 화면에서</h3>
+          <p>연결된 쇼핑몰의 주문을 자동으로 모아 ①~⑤ 단계로 보여 줘요. 공급사별로 묶어 예치금으로 한 번에 결제하면 발주 끝, 송장은 쇼핑몰로 자동 전송돼요.</p>
+          <ul class="ticks">
+            <li>주문 자동 수집, 요금제에 따라 1~10분마다</li>
+            <li>공급사별 묶음 결제, 결제하면 바로 발주</li>
+            <li>직접 보낼 주문은 송장번호만 넣으면 쇼핑몰로</li>
+            <li>엑셀 대량 주문 · 송장 엑셀 내려받기</li>
+          </ul>
+        </div>
+        <figure class="feat-visual reveal" style="--d:1">
+          <div class="frame">
+            <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i><span>주문 관리</span></div>
+            <img src="assets/landing/orders.webp" width="1200" height="616" alt="주문 관리 화면. 전체·상품 매핑·결제하기·공급사 출고·송장 받음 배송의 ①~⑤ 진행 단계와 단계별 주문 건수가 보인다." loading="lazy" decoding="async">
+          </div>
+        </figure>
+      </article>
+
+      <div class="all-feats">
+        <h3 class="reveal">그 밖에도, 판매에 필요한 건 다 있어요</h3>
+        <ul class="mini-grid">
+          <li class="mini reveal"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M16 15h2"/></svg></span><b>예치금 충전 · 결제</b><span>무통장입금⁠·⁠카드로 충전하고 주문마다 공급가만 결제</span></li>
+          <li class="mini reveal" style="--d:1"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/></svg></span><b>가격 · 재고 동기화</b><span>공급가가 바뀌면 알림, 쇼핑몰 가격도 한 번에</span></li>
+          <li class="mini reveal" style="--d:2"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/></svg></span><b>두고톡 1:1 채팅</b><span>공급사와 바로 대화하고 사진도 주고받기</span></li>
+          <li class="mini reveal" style="--d:3"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span><b>카카오톡 브리핑</b><span>아침엔 오늘 할 일, 저녁 6시엔 마감 리포트</span></li>
+          <li class="mini reveal"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 20a6.5 6.5 0 0 0-2-4.7"/></svg></span><b>직원 초대 · 권한</b><span>함께 쓰는 사람마다 권한을 따로 지정</span></li>
+          <li class="mini reveal" style="--d:1"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><b>매출 달력</b><span>날짜별 매출과 순수익을 한눈에</span></li>
+          <li class="mini reveal" style="--d:2"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M10 3v18"/></svg></span><b>엑셀 대량 주문</b><span>내 양식 그대로 올리고 송장은 엑셀로 받기</span></li>
+          <li class="mini reveal" style="--d:3"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></span><b>취소 · 반품 처리</b><span>공급사와 진행 상황을 함께 확인</span></li>
+          <li class="mini reveal"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><path d="M12 17.5h.01"/></svg></span><b>상품 FAQ</b><span>자주 묻는 질문은 공급사가 미리 답변</span></li>
+          <li class="mini reveal" style="--d:1"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h11v10H3z"/><path d="M14 9h4l3 3v4h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span><b>배송 정책 관리</b><span>무료⁠·⁠조건부⁠·⁠수량별 배송비를 쇼핑몰별로</span></li>
+          <li class="mini reveal" style="--d:2"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18"/><path d="M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5M12 8s1.5-5 4-5a2.5 2.5 0 0 1 0 5"/></svg></span><b>샘플 구매</b><span>PICK 전에 장바구니로 먼저 받아 보기</span></li>
+          <li class="mini reveal" style="--d:3"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span><b>브랜드 소싱</b><span>브랜드관에서 브랜드별로 상품 찾기</span></li>
+        </ul>
+      </div>
     </div>
-  </div>
-  <div id="addressPopup" class="address-popup-backdrop" hidden>
-    <div class="address-popup" role="dialog" aria-modal="true" aria-labelledby="addressPopupTitle">
-      <div class="address-popup-head"><div><span>ADDRESS SEARCH</span><h3 id="addressPopupTitle">주소 검색</h3></div><button type="button" class="modal-close" data-action="close-address-popup" aria-label="닫기">×</button></div>
-      <p id="addressPopupStatus" class="address-popup-status">주소 검색 서비스를 여는 중이에요…</p>
-      <div id="addressPopupEmbed" class="address-embed" hidden></div>
-      <div id="addressPopupFallback" class="address-fallback" hidden>
-        <label class="address-popup-search"><span>⌕</span><input id="addressPopupInput" type="search" enterkeyhint="search" placeholder="도로명·지번·건물명 (예: 강남대로146길 28)" autocomplete="off"></label>
-        <p class="address-hint">예) 도로명 + 건물번호 <b>강남대로146길 28</b> · 지번 <b>논현동 202-3</b> · 건물명 <b>두고빌딩</b></p>
-        <div id="addressPopupResults" class="address-popup-results"></div>
-        <details id="addressManualBox" class="address-manual">
-          <summary>찾는 주소가 없으면 직접 입력</summary>
-          <div class="address-manual-row"><label><span>우편번호</span><input id="addressManualZip" inputmode="numeric" maxlength="5" placeholder="5자리"></label><label class="grow"><span>도로명 또는 지번 주소</span><input id="addressManualAddr" placeholder="예: 서울특별시 강남구 강남대로146길 28"></label></div>
-          <div class="address-manual-actions"><a id="addressJusoLink" href="https://www.juso.go.kr/support/AddressMainSearch.do" target="_blank" rel="noopener">우편번호 모르면: 도로명주소 누리집에서 찾기 ↗</a><button type="button" class="primary-button" data-action="address-manual-apply">이 주소로 입력</button></div>
+  </section>
+
+  <!-- 초보자 -->
+  <section class="sec" id="easy" aria-labelledby="easyTitle">
+    <div class="wrap easy">
+      <div class="easy-phone reveal">
+        <div class="phone-wrap">
+          <div class="phone"><img src="assets/landing/mobile-home.webp" width="600" height="1298" alt="휴대폰으로 본 두고 셀러센터 홈. ‘오늘 확인할 일이 7가지 있어요’ 아래에 번호가 붙은 할 일 카드와 바로가기 버튼이 있다." loading="lazy" decoding="async"></div>
+        </div>
+      </div>
+      <div class="easy-copy">
+        <div class="reveal">
+          <p class="eyebrow">초보자도 누구나</p>
+          <h2 id="easyTitle">처음이어도,<br>휴대폰 하나로 충분해요</h2>
+          <p>온라인 판매가 처음인 분도 따라 할 수 있게 만들었어요. 무엇을 해야 할지는 두고가 먼저 알려 드려요.</p>
+        </div>
+        <ol class="easy-list">
+          <li class="reveal"><div><b>‘오늘 할 일’이 순서대로</b><span>들어가면 오늘 처리할 일이 번호대로 보여요. 버튼을 누르면 그 화면으로 바로 가요.</span></div></li>
+          <li class="reveal" style="--d:1"><div><b>메뉴에 번호가 붙어 있어요</b><span>상품도 ①~⑤, 주문도 ①~⑤. 순서대로 누르면 됩니다.</span></div></li>
+          <li class="reveal" style="--d:2"><div><b>낯선 말엔 ? 도움말</b><span>매핑, 송장, 예치금… 모르는 말 옆의 ?를 누르면 바로 설명이 나와요.</span></div></li>
+          <li class="reveal" style="--d:3"><div><b>놓칠 일은 빨간 숫자로</b><span>승인⁠·⁠결제를 기다리는 건수는 메뉴에 숫자로, 하루 요약은 카카오톡으로 받아요.</span></div></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 써야 하는 이유 -->
+  <section class="sec sec-alt" id="why" aria-labelledby="whyTitle">
+    <div class="wrap">
+      <header class="sec-head center reveal">
+        <p class="eyebrow">두고를 써야 하는 이유</p>
+        <h2 id="whyTitle">같은 주문 한 건,<br>일이 이만큼 줄어요</h2>
+        <p>혼자 위탁판매를 할 때와 두고로 할 때를 비교해 보세요.</p>
+      </header>
+      <div class="vs-grid">
+        <article class="vs reveal"><h3>상품 찾기</h3><p class="before"><span class="tag">혼자</span>도매 사이트 여러 곳을 돌며 하나씩 비교</p><p class="after"><span class="tag">두고</span>카테고리별 상품과 최저가 공급사를 한 화면에서</p></article>
+        <article class="vs reveal" style="--d:1"><h3>상품 등록</h3><p class="before"><span class="tag">혼자</span>쇼핑몰마다 사진⁠·⁠옵션⁠·⁠가격을 따로 입력</p><p class="after"><span class="tag">두고</span>원클릭 전송으로 여러 쇼핑몰에 한 번에</p></article>
+        <article class="vs reveal" style="--d:2"><h3>발주</h3><p class="before"><span class="tag">혼자</span>주문마다 공급처에 전화⁠·⁠문자⁠·⁠엑셀로 전달</p><p class="after"><span class="tag">두고</span>예치금으로 결제하면 공급사에 자동 발주</p></article>
+        <article class="vs reveal"><h3>송장</h3><p class="before"><span class="tag">혼자</span>송장을 받아 쇼핑몰에 하나씩 옮겨 적기</p><p class="after"><span class="tag">두고</span>공급사가 등록한 송장이 쇼핑몰로 자동 전송</p></article>
+        <article class="vs reveal" style="--d:1"><h3>재고 · 배송</h3><p class="before"><span class="tag">혼자</span>사입한 재고를 쌓아 두고 직접 포장</p><p class="after"><span class="tag">두고</span>재고 0개, 공급사가 고객에게 직접 배송</p></article>
+        <article class="vs reveal" style="--d:2"><h3>가격 관리</h3><p class="before"><span class="tag">혼자</span>공급가가 오른 줄 모르고 손해 보며 판매</p><p class="after"><span class="tag">두고</span>공급가 변경 알림, 쇼핑몰 가격까지 동기화</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 공급사 -->
+  <section class="sec" id="supplier" aria-labelledby="supplierTitle">
+    <div class="wrap sup-grid">
+      <div class="sup-copy">
+        <div class="reveal">
+          <p class="eyebrow">공급사 입점</p>
+          <h2 id="supplierTitle">상품만 올리세요.<br>판매는 셀러들이 합니다.</h2>
+          <p>두고에 상품을 올리면 위탁셀러들이 각자의 쇼핑몰에서 팔아요. 셀러가 먼저 결제한 주문만 들어오니 미수금 걱정이 없어요.</p>
+        </div>
+        <ul class="sup-points">
+          <li class="reveal"><b>입점비 0원</b><span>판매된 거래에만 수수료 7%</span></li>
+          <li class="reveal" style="--d:1"><b>결제된 주문만 출고</b><span>셀러가 예치금으로 먼저 결제한 주문</span></li>
+          <li class="reveal"><b>매주 월요일 정산</b><span>지난주 월~일 주문을 한 번에</span></li>
+          <li class="reveal" style="--d:1"><b>굿스플로 송장 출력</b><span>송장 1건 100원, 셀러 쇼핑몰까지 자동 반영</span></li>
+          <li class="reveal"><b>판매 현황 그래프</b><span>셀러별 판매가와 최고⁠·⁠평균⁠·⁠최저가 추이</span></li>
+          <li class="reveal" style="--d:1"><b>두고톡 · 상품 FAQ</b><span>셀러 문의는 1:1로, 자주 묻는 질문은 자동 응답</span></li>
+        </ul>
+        <div class="cta-row reveal">
+          <a class="btn btn-primary" href="app.html#supplier-signup">공급사 입점 신청 <span aria-hidden="true">→</span></a>
+          <a class="btn btn-ghost" href="app.html#partner">공급사 로그인</a>
+        </div>
+      </div>
+      <div class="sup-visual reveal" style="--d:1">
+        <div class="tabs" role="tablist" aria-label="공급사 화면 미리보기">
+          <button type="button" role="tab" id="supTab1" aria-selected="true" aria-controls="supPanel1">주문 · 출고 관리</button>
+          <button type="button" role="tab" id="supTab2" aria-selected="false" aria-controls="supPanel2" tabindex="-1">판매 현황</button>
+        </div>
+        <figure class="frame" id="supPanel1" role="tabpanel" aria-labelledby="supTab1">
+          <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i><span>두고 파트너센터 · 주문 · 출고 관리</span></div>
+          <img src="assets/landing/supplier.webp" width="1400" height="875" alt="공급사 주문·출고 관리 화면. 신규 주문, 포장·송장 대기, 배송중, 배송완료 단계별 건수와 굿스플로 연동 상태가 보인다." loading="lazy" decoding="async">
+        </figure>
+        <figure class="frame" id="supPanel2" role="tabpanel" aria-labelledby="supTab2" hidden>
+          <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i><span>두고 파트너센터 · 판매 현황</span></div>
+          <img src="assets/landing/supplier-sales.webp" width="1400" height="875" alt="공급사 판매 현황 화면. 판매 셀러 수와 쇼핑몰 판매중 건수, 상품별 평균 판매가 그래프가 보인다." decoding="async" fetchpriority="low">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 요금제 -->
+  <section class="sec sec-alt" id="pricing" aria-labelledby="pricingTitle">
+    <div class="wrap">
+      <header class="sec-head center reveal">
+        <p class="eyebrow">요금제</p>
+        <h2 id="pricingTitle">무료로 시작하고,<br>필요할 때 올리세요</h2>
+        <p>두고 공급사 상품 주문은 유료 요금제 모두 무제한이에요. 언제든 바꾸거나 해지할 수 있어요.</p>
+      </header>
+      <div class="plans">
+        <article class="plan reveal">
+          <h3>무료</h3>
+          <p class="plan-tagline">수기 주문으로 시작해요</p>
+          <p class="price"><b>0</b>원<span>/월</span></p>
+          <a class="btn btn-ghost btn-block" href="app.html#signup">무료로 시작하기</a>
+          <ul>
+            <li>상품 소싱 · PICK · 내 상품 꾸미기</li>
+            <li>수기(단건) 주문 · 엑셀 대량 주문</li>
+            <li>예치금 결제 → 공급사 바로 발주</li>
+            <li>공급사 송장 확인 · 매출 달력</li>
+            <li>함께 쓰는 사람 <b>2명</b></li>
+            <li class="no">쇼핑몰 연결 · 주문 자동 수집</li>
+          </ul>
+        </article>
+        <article class="plan reveal" style="--d:1">
+          <h3>스타트</h3>
+          <p class="plan-tagline">쇼핑몰 1~3개를 운영해요</p>
+          <p class="price"><b>9,900</b>원<span>/월</span></p>
+          <a class="btn btn-ghost btn-block" href="app.html#signup">스타트로 시작하기</a>
+          <ul>
+            <li>쇼핑몰 연결 <b>3개</b></li>
+            <li>두고 상품 주문 <b>무제한</b></li>
+            <li>다른 상품 주문 수집 <b>월 300건</b></li>
+            <li>상품 전송 <b>월 500건</b></li>
+            <li>주문 자동 수집 <b>10분마다</b></li>
+            <li>송장 자동 전송 · 가격⁠·⁠재고 동기화</li>
+            <li>함께 쓰는 사람 <b>3명</b></li>
+            <li>카카오톡 알림 <b>+2,900원</b></li>
+          </ul>
+        </article>
+        <article class="plan featured reveal" style="--d:2">
+          <span class="badge">추천</span>
+          <h3>그로스</h3>
+          <p class="plan-tagline">하루 100건 안팎을 처리해요</p>
+          <p class="price"><b>29,900</b>원<span>/월</span></p>
+          <a class="btn btn-primary btn-block" href="app.html#signup">그로스로 시작하기</a>
+          <ul>
+            <li>쇼핑몰 연결 <b>10개</b></li>
+            <li>두고 상품 주문 <b>무제한</b></li>
+            <li>다른 상품 주문 수집 <b>월 3,000건</b></li>
+            <li>상품 전송 <b>무제한</b></li>
+            <li>주문 자동 수집 <b>5분마다</b></li>
+            <li>송장 자동 전송 · 가격⁠·⁠재고 동기화</li>
+            <li>함께 쓰는 사람 <b>6명</b></li>
+            <li>카카오톡 알림 <b>포함</b></li>
+          </ul>
+        </article>
+        <article class="plan reveal" style="--d:3">
+          <h3>프로</h3>
+          <p class="plan-tagline">대량 판매 · 여러 직원이 함께 써요</p>
+          <p class="price"><b>99,000</b>원<span>/월</span></p>
+          <a class="btn btn-ghost btn-block" href="app.html#signup">프로로 시작하기</a>
+          <ul>
+            <li>쇼핑몰 연결 <b>30개</b></li>
+            <li>두고 상품 주문 <b>무제한</b></li>
+            <li>다른 상품 주문 수집 <b>월 20,000건</b></li>
+            <li>상품 전송 <b>무제한</b></li>
+            <li>주문 자동 수집 <b>1분마다</b></li>
+            <li>송장 자동 전송 · 가격⁠·⁠재고 동기화</li>
+            <li>함께 쓰는 사람 <b>무제한</b></li>
+            <li>카카오톡 알림 <b>포함</b></li>
+          </ul>
+        </article>
+      </div>
+      <div class="plan-notes reveal">
+        <p><b>카카오톡 알림</b><span>아침에 오늘 할 일을, 저녁 6시에 마감 리포트를 보내 드려요. 무료⁠·⁠스타트는 월 2,900원 부가서비스, 그로스⁠·⁠프로는 요금제에 포함돼요.</span></p>
+        <p><b>결제 · 해지</b><span>요금은 예치금 또는 신용카드로 매달 자동 결제돼요. 해지하면 남은 기간은 일할 계산해 돌려드려요.</span></p>
+        <p><b>공급사</b><span>입점비 0원 · 판매 수수료 7% · 매주 월요일 정산 · 굿스플로 송장 1건 100원</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="sec" id="faq" aria-labelledby="faqTitle">
+    <div class="wrap">
+      <header class="sec-head center reveal">
+        <p class="eyebrow">자주 묻는 질문</p>
+        <h2 id="faqTitle">궁금한 점을 모았어요</h2>
+      </header>
+      <div class="faq reveal">
+        <details>
+          <summary><span><i>Q</i>사업자등록이 꼭 있어야 하나요?</span></summary>
+          <p>네. 두고는 사업자끼리 거래하는 B2B 도매 플랫폼이라 가입할 때 사업자 정보를 확인해요. 확인되면 심사를 기다리지 않고 바로 쓸 수 있어요.</p>
+        </details>
+        <details>
+          <summary><span><i>Q</i>재고를 미리 사 둬야 하나요?</span></summary>
+          <p>아니요. 주문이 들어온 뒤에 그 주문의 공급가만 결제하면 돼요. 재고 보관과 포장, 출고는 공급사가 맡아요.</p>
+        </details>
+        <details>
+          <summary><span><i>Q</i>배송과 반품은 누가 하나요?</span></summary>
+          <p>공급사가 고객에게 직접 보내고, 송장번호는 두고가 쇼핑몰로 자동 전송해요. 취소⁠·⁠반품도 주문 화면에서 공급사와 진행 상황을 함께 확인하며 처리해요.</p>
+        </details>
+        <details>
+          <summary><span><i>Q</i>어떤 쇼핑몰을 연결할 수 있나요?</span></summary>
+          <p>네이버 스마트스토어, 쿠팡, CAFE24, 카카오쇼핑을 연결할 수 있어요. 쇼핑몰 비밀번호는 받지 않고, 각 쇼핑몰의 공식 연동 방식(API 연동⁠·⁠앱 설치)으로 연결해요.</p>
+        </details>
+        <details>
+          <summary><span><i>Q</i>예치금은 어떻게 쓰나요?</span></summary>
+          <p>무통장입금이나 신용카드로 충전해 두면 주문을 결제할 때 공급가만큼 차감돼요. 공급사별로 묶어 한 번에 결제할 수 있고, 남은 예치금은 출금 신청할 수 있어요.</p>
+        </details>
+        <details>
+          <summary><span><i>Q</i>무료 요금제로도 팔 수 있나요?</span></summary>
+          <p>네. 쇼핑몰 주문을 직접 옮겨 적는 수기 주문이나 엑셀 대량 주문으로 두고 상품을 발주할 수 있어요. 쇼핑몰 연결⁠·⁠주문 자동 수집⁠·⁠송장 자동 전송은 스타트 요금제부터 쓸 수 있어요.</p>
+        </details>
+        <details>
+          <summary><span><i>Q</i>요금제는 언제든 바꾸거나 해지할 수 있나요?</span></summary>
+          <p>네, 언제든지요. 요금제를 올리면 다음 결제일까지 차액만 일할 계산되고, 해지하면 남은 기간만큼 돌려드려요.</p>
+        </details>
+        <details>
+          <summary><span><i>Q</i>공급사로 입점하려면 어떻게 하나요?</span></summary>
+          <p>‘공급사 입점 신청’에서 사업자 정보와 공급 상품 정보를 넣으면 바로 공급사 화면을 쓸 수 있어요. 입점비는 없고, 두고에서 판매된 거래에만 수수료 7%가 붙어요.</p>
         </details>
       </div>
-      <div id="addressDetailStep" class="address-detail-step" hidden>
-        <div class="ads-picked"><em id="adsZip"></em><b id="adsRoad"></b><small id="adsJibun"></small></div>
-        <label class="ads-detail"><span>상세주소</span><input id="addressDetailInput" placeholder="동·호수, 층 등 (예: 101동 1203호)" autocomplete="off" enterkeyhint="done"></label>
-        <div class="ads-actions"><button type="button" class="secondary-button" data-action="address-back">다시 검색</button><button type="button" class="primary-button" data-action="address-detail-apply">이 주소로 입력</button></div>
+    </div>
+  </section>
+
+  <!-- 마지막 CTA -->
+  <section class="final" aria-labelledby="finalTitle">
+    <div class="wrap reveal">
+      <h2 id="finalTitle">오늘 가입하면,<br>오늘 첫 상품을 올릴 수 있어요</h2>
+      <p>가입비 0원 · 재고 0개 · 무료 요금제로 바로 시작</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-lg" href="app.html#signup">무료로 시작하기 <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost btn-lg" href="app.html">로그인</a>
+      </div>
+      <a class="final-sub" href="app.html#supplier-signup">공급사이신가요? 입점 신청하기 →</a>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <img src="assets/landing/logo-on-dark.png" width="508" height="151" alt="두고마켓" loading="lazy">
+        <p>쇼핑몰에 쉬운 시작 · 두고마켓<br>공급사와 위탁셀러를 잇는 위탁판매 오픈마켓</p>
+      </div>
+      <div>
+        <h4>서비스</h4>
+        <ul><li><a href="#about">서비스 소개</a></li><li><a href="#how">이용 방법</a></li><li><a href="#features">주요 기능</a></li><li><a href="#why">써야 하는 이유</a></li><li><a href="#pricing">요금제</a></li><li><a href="#faq">자주 묻는 질문</a></li></ul>
+      </div>
+      <div>
+        <h4>시작하기</h4>
+        <ul><li><a href="app.html#signup">위탁셀러 무료 가입</a></li><li><a href="app.html#supplier-signup">공급사 입점 신청</a></li></ul>
+      </div>
+      <div>
+        <h4>로그인</h4>
+        <ul><li><a href="app.html">위탁셀러 로그인</a></li><li><a href="app.html#partner">공급사 로그인</a></li><li><a href="app.html#master">관리자 로그인</a></li></ul>
       </div>
     </div>
+    <div class="foot-bottom">
+      <span>© 2026 DOOGO HOLDINGS</span>
+      <span>두고마켓 · DOOGO MARKET</span>
+    </div>
   </div>
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</footer>
 
-  <script src="app.js?v=99"></script>
+<script>
+(() => {
+  const root = document.documentElement;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const motion = !reduce && "IntersectionObserver" in window && document.visibilityState !== "hidden";
+
+  /* 헤더: 스크롤하면 바탕을 진하게 */
+  const header = document.querySelector(".site-header");
+  const onScroll = () => header.classList.toggle("scrolled", window.scrollY > 8);
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  /* 이 탭에서 이미 로그인했다면(앱 세션 있음) 로그인 대신 '내 화면으로' */
+  try {
+    if (sessionStorage.getItem("doogofood-current-account")) document.querySelectorAll("[data-login-link]").forEach(link => { link.textContent = "내 화면으로"; });
+  } catch (error) {}
+
+  /* 모바일 메뉴 */
+  const menuBtn = document.querySelector(".menu-btn");
+  const menu = document.getElementById("mobileMenu");
+  const setMenu = open => {
+    menuBtn.setAttribute("aria-expanded", String(open));
+    menuBtn.setAttribute("aria-label", open ? "메뉴 닫기" : "메뉴 열기");
+    menu.hidden = !open;
+    document.body.classList.toggle("menu-open", open);
+  };
+  menuBtn.addEventListener("click", () => setMenu(menuBtn.getAttribute("aria-expanded") !== "true"));
+  menu.addEventListener("click", event => { if (event.target.closest("a")) setMenu(false); });
+  document.addEventListener("keydown", event => { if (event.key === "Escape" && !menu.hidden) { setMenu(false); menuBtn.focus(); } });
+  window.matchMedia("(min-width: 981px)").addEventListener("change", event => { if (event.matches) setMenu(false); });
+
+  /* 지금 보고 있는 섹션을 메뉴에 표시 */
+  const navLinks = [...document.querySelectorAll(".nav a")];
+  if ("IntersectionObserver" in window) {
+    const spy = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        navLinks.forEach(link => link.setAttribute("aria-current", String(link.getAttribute("href") === `#${entry.target.id}`)));
+      });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    document.querySelectorAll("main > section[id]").forEach(section => spy.observe(section));
+  }
+
+  /* 공급사 화면 탭 */
+  const tabs = [...document.querySelectorAll('.tabs [role="tab"]')];
+  const selectTab = tab => tabs.forEach(item => {
+    const on = item === tab;
+    item.setAttribute("aria-selected", String(on));
+    item.tabIndex = on ? 0 : -1;
+    document.getElementById(item.getAttribute("aria-controls")).hidden = !on;
+  });
+  tabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => selectTab(tab));
+    tab.addEventListener("keydown", event => {
+      if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+      const next = tabs[(index + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      selectTab(next);
+      next.focus();
+    });
+  });
+
+  if (!motion) return;
+  root.classList.add("js-motion");
+
+  /* 스크롤하면 부드럽게 나타나기 */
+  const io = new IntersectionObserver(entries => entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    entry.target.classList.add("in");
+    io.unobserve(entry.target);
+  }), { rootMargin: "0px 0px -8% 0px" });
+  document.querySelectorAll(".reveal").forEach(element => io.observe(element));
+
+  /* 히어로 주문 릴레이: 한 단계씩 불이 켜진다 (멈춘 상태에서는 다섯 단계가 모두 완료로 보인다) */
+  const relay = document.querySelector(".relay");
+  const steps = [...relay.querySelectorAll("li")];
+  let index = 0;
+  const tick = () => {
+    if (index === 0) { relay.classList.add("is-playing"); steps.forEach(step => step.classList.remove("on", "cur")); }
+    steps.forEach(step => step.classList.remove("cur"));
+    steps[index].classList.add("on", "cur");
+    index += 1;
+    if (index < steps.length) setTimeout(tick, 1100);
+    else setTimeout(() => { steps[steps.length - 1].classList.remove("cur"); setTimeout(() => { index = 0; tick(); }, 2600); }, 1100);
+  };
+  setTimeout(tick, 900);
+})();
+</script>
 </body>
 </html>

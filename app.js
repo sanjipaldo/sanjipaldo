@@ -2440,6 +2440,11 @@ function setPartnerLoginRole(role) {
   /* 로그인 화면부터 역할 색을 나눈다: 위탁셀러 파랑 · 공급사 검정 · 마스터 보라 */
   document.body.dataset.role = partnerLoginRole;
   document.getElementById("partnerLoginView").classList.toggle("is-master", !isSupplier);
+  document.querySelectorAll("#partnerRoleTabs [data-login-role]").forEach(button => {
+    const on = button.dataset.loginRole === partnerLoginRole;
+    button.classList.toggle("active", on);
+    button.setAttribute("aria-pressed", String(on));
+  });
   document.getElementById("partnerBadge").textContent = isSupplier ? "두고 파트너센터" : "두고 마스터센터";
   document.getElementById("partnerMessageKicker").textContent = isSupplier ? "SUPPLIER CENTER" : "MASTER CENTER";
   document.getElementById("partnerFeatureList").innerHTML = (isSupplier
@@ -2500,10 +2505,30 @@ function showApp(accountId, staff = null) {
 }
 setInterval(() => { if (!document.hidden) { maybeAutoCollectOrders(); maybeAutoDailyReport(); } }, 60 * 1000);
 
+/* 랜딩(index.html)에서 넘어온 주소: app.html#partner · #master · #signup · #supplier-signup */
+function landingEntryRoute() {
+  let hash = "";
+  try { hash = decodeURIComponent((location.hash || "").slice(1)).trim().toLowerCase(); } catch (error) { return null; }
+  return ({
+    partner: () => showPartnerLogin("supplier"),
+    supplier: () => showPartnerLogin("supplier"),
+    master: () => showPartnerLogin("master"),
+    admin: () => showPartnerLogin("master"),
+    signup: () => showSignup("seller", "seller"),
+    "supplier-signup": () => showSignup("supplier", "partner")
+  })[hash] || null;
+}
+
 function initAuth() {
   const rememberedId = localStorage.getItem(REMEMBER_KEY) || "";
   document.getElementById("loginId").value = rememberedId;
   document.getElementById("rememberId").checked = Boolean(rememberedId);
+  const entry = landingEntryRoute();
+  if (entry) {
+    /* 한 번 연 뒤에는 주소의 #을 지워서, 로그인 후 새로고침하면 원래대로 내 화면이 열리게 한다 */
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (error) {}
+    return entry();
+  }
   const sessionId = (sessionStorage.getItem(AUTH_KEY) || "").toLowerCase();
   const sessionStaff = sessionId.startsWith("staff:") ? staffByEmail(sessionId.slice(6)) : null;
   if (sessionStaff?.status === "active" && getAccount(sessionStaff.ownerLoginId)?.status === "approved") showApp(sessionStaff.ownerLoginId, sessionStaff);
@@ -10635,6 +10660,8 @@ document.addEventListener("click", event => {
   }
   if (accountDropdown && !event.target.closest(".account-menu-wrap")) { accountDropdown.hidden = true; document.getElementById("accountMenuButton").setAttribute("aria-expanded", "false"); }
   if (!event.target.closest(".notification-center-wrap")) closeNotificationDropdown();
+  const loginRoleTab = event.target.closest("[data-login-role]");
+  if (loginRoleTab) { const role = loginRoleTab.dataset.loginRole; return role === "seller" ? showLogin() : showPartnerLogin(role); }
   const partnerTab = event.target.closest("[data-partner-role]");
   if (partnerTab) return setPartnerLoginRole(partnerTab.dataset.partnerRole);
   const partnerDemo = event.target.closest("[data-partner-demo]");

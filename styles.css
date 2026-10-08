@@ -11874,3 +11874,17 @@ body[data-role="supplier"] .gs-item.active { box-shadow: inset 3px 0 0 #111111; 
 .app-shell[data-role="seller"] .workspace-menu button.active .menu-badge.tone-count { color: #1b64da; background: #fff; }
 .app-shell[data-role="seller"] .workspace-menu button.active .menu-badge.tone-todo,
 .app-shell[data-role="seller"] .workspace-menu button.active .menu-badge.tone-wait { box-shadow: 0 0 0 2px #fff; }
+
+/* ===== v95 로그인: 역할 탭(위탁셀러·공급사·관리자) + 두고마켓 홈(랜딩)으로 가는 링크 ===== */
+.login-home-link { position: absolute; left: 2px; top: -42px; display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 9px; color: #4e5968; font-size: 13.5px; font-weight: 700; text-decoration: none; transition: background-color .2s, color .2s; }
+.login-home-link:hover { color: #191f28; background: rgba(15, 32, 66, .06); }
+.login-role-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 0 0 24px; padding: 4px; border-radius: 12px; background: #f1f4f8; }
+.login-role-tabs button { height: 38px; padding: 0 6px; border: 0; border-radius: 9px; background: transparent; color: #6b7684; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: background-color .2s, color .2s, box-shadow .2s; }
+.login-role-tabs button:hover { color: #333d4b; }
+.login-role-tabs button.active { background: #fff; color: #1b64da; box-shadow: 0 1px 3px rgba(15, 32, 66, .14), 0 0 0 1px rgba(15, 32, 66, .04); }
+body[data-role="supplier"] .login-role-tabs button.active { color: #111; }
+body[data-role="master"] .login-role-tabs button.active { color: #5a2fb3; }
+@media (max-width: 720px) {
+  .login-home-link { position: static; margin: -4px 0 10px -8px; padding: 4px 8px; font-size: 12.5px; }
+  .login-role-tabs { margin-bottom: 20px; }
+}
