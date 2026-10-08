@@ -1306,17 +1306,20 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 
   /* ---------- GIF: 한 번만 받고, 보일 때마다 첫 장면부터 다시 재생 · 멈춤이면 마지막 장면 ---------- */
   const gifCache = new Map();
-  const canFetch = /^https?:$/.test(location.protocol) && window.URL && typeof URL.createObjectURL === "function";
+  let canBlob = /^https?:$/.test(location.protocol) && window.URL && typeof URL.createObjectURL === "function";
   const playGif = (img, src, poster) => {
     if (!img || !src) return;
     if (paused) { if (poster && !img.src.endsWith(poster)) img.src = poster; return; }
-    if (!canFetch) { img.src = src; return; }
+    if (!canBlob) { if (!img.src.endsWith(src)) img.src = src; return; }
     let pending = gifCache.get(src);
     if (!pending) { pending = fetch(src).then(res => { if (!res.ok) throw new Error(String(res.status)); return res.blob(); }); gifCache.set(src, pending); }
     pending.then(blob => {
       if (paused) return;
       const url = URL.createObjectURL(blob);
       const old = img.dataset.obj;
+      /* blob: 이미지를 막는 환경이면 GIF 주소를 그대로 쓴다(처음부터 다시 재생만 빠짐) */
+      img.onerror = () => { img.onerror = null; if (img.src === url) { canBlob = false; img.src = src; } };
+      img.onload = () => { img.onload = null; img.onerror = null; };
       img.src = url; img.dataset.obj = url;
       if (old) setTimeout(() => URL.revokeObjectURL(old), 3000);
     }).catch(() => { gifCache.delete(src); img.src = src; });
