@@ -370,18 +370,21 @@ const MOON_CONTENT = {
     { id: "d1", title: "사업자등록", where: "홈택스", url: "https://www.hometax.go.kr", time: "즉시 ~ 3일", cost: "무료",
       docs: ["신분증", "임대차계약서 (자택이면 생략 가능)"],
       tips: ["업태 ‘도매 및 소매업’, 종목 ‘전자상거래 소매업’(525101)", "처음엔 간이과세자로 시작하는 경우가 많아요"] },
+    { id: "d6", title: "건강기능식품 일반 판매업 신고", where: "정부24 · 관할 시·군·구청 위생과", url: "https://www.gov.kr", time: "1 ~ 3일", cost: "신고 수수료 (지역별 상이)",
+      docs: ["사업자등록증", "건강기능식품 위생교육 수료증", "신분증"],
+      tips: ["신고 전에 한국건강기능식품협회의 신규 영업자 위생교육(온라인)을 먼저 들어 두세요", "영업신고증이 나오면 판매 채널에 함께 등록해요"] },
     { id: "d2", title: "통신판매업 신고", where: "정부24", url: "https://www.gov.kr", time: "1 ~ 3일", cost: "등록면허세 (지역별 상이)",
       docs: ["사업자등록증", "구매안전서비스 이용확인증"],
       tips: ["구매안전서비스 이용확인증은 스마트스토어·쿠팡에서 발급", "신고증은 시·군·구청에서 수령 또는 온라인 발급"] },
-    { id: "d3", title: "수입식품 위생교육", where: "한국식품산업협회", url: "https://www.kfia.or.kr", time: "온라인 약 8시간", cost: "교육비 별도",
-      docs: ["사업자 정보", "본인 인증"],
-      tips: ["‘수입식품등 인터넷 구매대행업’ 신규 영업자 교육 선택", "수료증은 바로 출력 가능"] },
     { id: "d4", title: "수입식품등 인터넷 구매대행업 영업등록", where: "식품안전나라 · 관할 지방식약청", url: "https://www.foodsafetykorea.go.kr", time: "3 ~ 7일", cost: "수수료 소액",
       docs: ["사업자등록증", "위생교육 수료증", "신분증"],
-      tips: ["영업등록증이 있어야 오픈마켓에서 구매대행 식품 판매 가능", "주소지 관할 지방식약청에서 처리"] },
-    { id: "d5", title: "판매 채널 가입", where: "스마트스토어 · 쿠팡 윙", url: "https://sell.smartstore.naver.com", time: "1 ~ 3일", cost: "무료",
-      docs: ["사업자등록증", "통신판매업 신고증", "정산 계좌 통장 사본"],
-      tips: ["스토어 이름은 나중에 브랜드가 됩니다", "구매대행 카테고리 서류로 영업등록증 제출"] }
+      tips: ["영업등록증이 있어야 오픈마켓에서 구매대행 식품 판매 가능", "주소지 관할 지방식약청에서 처리", "영업등록 전에 한국식품산업협회 ‘수입식품 위생교육’(온라인 약 8시간)을 먼저 이수해요"] },
+    { id: "d7", title: "구매안전서비스 이용확인증", where: "스마트스토어 판매자센터 · 쿠팡 윙", url: "https://sell.smartstore.naver.com", time: "즉시", cost: "무료",
+      docs: ["사업자등록증", "판매 채널 가입 (스마트스토어 등)"],
+      tips: ["통신판매업 신고 때 함께 내는 서류예요", "판매자센터의 판매자 정보 메뉴에서 바로 발급할 수 있어요"] },
+    { id: "d8", title: "사업자 통장 및 신용카드", where: "홈택스 · 거래 은행", url: "https://www.hometax.go.kr", time: "당일 ~ 1주", cost: "무료",
+      docs: ["사업자등록증", "신분증"],
+      tips: ["판매 채널 정산 계좌는 사업자 통장으로 등록해요", "사업용 카드를 홈택스에 등록해 두면 경비 처리와 부가세 신고가 쉬워져요"] }
   ],
 
   resources: {
@@ -417,12 +420,12 @@ const MOON_CONTENT = {
   },
 
   motivation: [
-    { id: "mv1", title: "“하루에 500병씩 팔려요” | 뉴질랜드산 꿀 팔아서 월 순수익 2억 원 버는 30대", minutes: "31:57", youtubeId: "", date: "2026-10-03" },
-    { id: "mv2", title: "직장 다니면서 월 300 부수입, 퇴근 후 1시간 루틴", minutes: "18:24", youtubeId: "", date: "2026-10-02" },
-    { id: "mv3", title: "60대에 시작한 구매대행, 1년 만에 바뀐 것들", minutes: "22:10", youtubeId: "", date: "2026-10-01" },
-    { id: "mv4", title: "첫 주문까지 걸린 19일, 포기하고 싶던 순간", minutes: "15:48", youtubeId: "", date: "2026-09-30" },
-    { id: "mv5", title: "초록입홍합 하나로 월 매출 3천 만든 상세페이지", minutes: "26:03", youtubeId: "", date: "2026-09-29" },
-    { id: "mv6", title: "실패한 상품 3개에서 배운 소싱 원칙", minutes: "19:37", youtubeId: "", date: "2026-09-28" }
+    { id: "mv-yt1", title: "이 영상을 보는 0.3%는 인생이 바뀔 겁니다 (스터디언)", youtubeId: "uMYLbqRGF2c", minutes: "", date: "2026-10-08" },
+    { id: "mv-yt2", title: "하루에 하나만 잘해도 얻게 되는 효과 4가지 (스터디언)", youtubeId: "_dRXf6W63XI", minutes: "", date: "2026-10-07" },
+    { id: "mv-yt3", title: "진짜 실패는 시도조차 하지 않는 것 (짧은명언 AWAKE)", youtubeId: "xSBV_7DdPw8", minutes: "", date: "2026-10-06" },
+    { id: "mv-yt4", title: "나의 노력이 하찮게 느껴질 때 (짧은명언 AWAKE)", youtubeId: "LTR2dknCmnc", minutes: "", date: "2026-10-05" },
+    { id: "mv-yt5", title: "넘어지거나, 넘어서거나 (스터디언)", youtubeId: "hcC8lMniCyA", minutes: "", date: "2026-10-04" },
+    { id: "mv-yt6", title: "당장의 쾌락을 죽여라 (멘탈훈련소)", youtubeId: "pQea9wWPFsM", minutes: "", date: "2026-10-03" }
   ],
 
   quotes: [
@@ -552,17 +555,8 @@ window.CLASS_SEED = {
   ],
   students: [
     { id: "s1", instructorId: "moon", cohortId: "c3", name: "이수진", phone4: "2186", status: "approved", appliedAt: "2026-09-21", demo: true },
-    { id: "s2", instructorId: "moon", cohortId: "c3", name: "김민준", phone4: "1234", status: "approved", appliedAt: "2026-09-22" },
-    { id: "s3", instructorId: "moon", cohortId: "c3", name: "박서연", phone4: "5678", status: "approved", appliedAt: "2026-09-22" },
-    { id: "s4", instructorId: "moon", cohortId: "c3", name: "최영희", phone4: "3321", status: "approved", appliedAt: "2026-09-24" },
-    { id: "s5", instructorId: "moon", cohortId: "c3", name: "정하늘", phone4: "7788", status: "approved", appliedAt: "2026-09-25" },
-    { id: "s6", instructorId: "moon", cohortId: "c3", name: "오세훈", phone4: "4410", status: "rejected", appliedAt: "2026-09-26", memo: "결제 내역 확인 안 됨" },
-    { id: "s7", instructorId: "moon", cohortId: "c3", name: "강다은", phone4: "9021", status: "pending", appliedAt: "2026-10-02" },
-    { id: "s8", instructorId: "moon", cohortId: "c4", name: "윤도현", phone4: "6612", status: "pending", appliedAt: "2026-10-02" },
-    { id: "s9", instructorId: "moon", cohortId: "c4", name: "한지민", phone4: "1590", status: "pending", appliedAt: "2026-10-03" },
-    { id: "s10", instructorId: "moon", cohortId: "c2", name: "서지훈", phone4: "2468", status: "approved", appliedAt: "2026-08-25" },
-    { id: "s11", instructorId: "moon", cohortId: "c2", name: "임수빈", phone4: "1357", status: "withdrawn", appliedAt: "2026-08-26", memo: "개인 사정으로 탈퇴 요청" },
-    { id: "s12", instructorId: "moon", cohortId: "c1", name: "배준호", phone4: "8080", status: "approved", appliedAt: "2026-07-28" },
+    { id: "demo1", instructorId: "moon", cohortId: "c1", name: "1기 체험단", phone4: "1111", status: "approved", appliedAt: "2026-07-28", demo: true },
+    { id: "demo2", instructorId: "moon", cohortId: "c2", name: "2기 체험단", phone4: "2222", status: "approved", appliedAt: "2026-08-25", demo: true },
     { id: "s13", instructorId: "logic", cohortId: "lc1", name: "홍길동", phone4: "0000", status: "approved", appliedAt: "2026-10-01" },
     { id: "s14", instructorId: "choi", cohortId: "cc1", name: "김영수", phone4: "0000", status: "pending", appliedAt: "2026-10-02" },
     { id: "s15", instructorId: "farmer", cohortId: "fc1", name: "김농부", phone4: "0000", status: "approved", appliedAt: "2026-09-28" }
@@ -573,11 +567,8 @@ window.CLASS_SEED = {
   ],
   // 강사센터 화면을 채우기 위한 예시 제출 기록 (첫 실행 때만 저장)
   sampleProgress: {
-    s2: { done: ["m1-1", "m1-2", "m1-3", "m1-5", "m1-8"], question: { category: "화면 깨짐", title: "과제 화면에서 단계 안내 글자가 겹쳐 보여요", body: "1주차 과제 ‘통신판매업 신고’ 화면에서 ‘이렇게 하세요’ 아래 글자가 겹쳐서 읽기 어려워요. 갤럭시 기본 브라우저입니다.", daysAgo: 0 } },
-    s3: { done: ["m1-1", "m1-2", "m1-3", "m1-4", "m1-5", "m1-6", "m1-7", "m1-9"], question: { category: "기타", title: "서류 준비 가이드 링크가 열리지 않아요", body: "3단계 ‘한국식품산업협회 바로가기’를 누르면 새 창이 안 떠요.", answer: "팝업 차단 때문이었어요. 주소창 오른쪽의 팝업 허용을 눌러 주시면 열립니다. 안내 문구도 추가해 둘게요.", daysAgo: 3 } },
-    s4: { done: ["m1-1"], fix: ["m1-5"], question: { category: "과제 제출", title: "사진을 올렸는데 제출 버튼이 회색이에요", body: "휴대폰에서 사업자등록증 사진을 고르면 미리보기는 뜨는데 제출하기를 눌러도 반응이 없습니다. 아이폰 사파리입니다.", daysAgo: 1 } },
-    s5: { done: ["m1-1", "m1-2", "m1-8", "m1-9", "m1-10"], question: { category: "영상 재생", title: "1주차 2강 영상이 소리만 나와요", body: "화면은 검은색이고 소리만 들립니다. 크롬에서 봤어요.", answer: "확인해 보니 영상 주소가 잘못 연결돼 있었어요. 지금 다시 연결했으니 새로고침 후 확인해 주세요!", daysAgo: 2 } },
-    s12: { question: { category: "로그인 · 접속", title: "다른 휴대폰에서 로그인이 안 돼요", body: "새 휴대폰으로 바꿨는데 이름과 뒷자리를 넣어도 정보가 없다고 나옵니다.", answer: "1기 수강생으로 등록돼 있어서 ‘문대표’ 강사를 고른 뒤 같은 정보로 들어오시면 됩니다. 띄어쓰기 없이 이름을 넣어 주세요.", daysAgo: 20 } },
-    s10: { done: ["m1-1", "m1-2", "m1-3", "m1-4", "m1-5", "m1-6", "m1-7", "m2-1", "m2-2", "m2-3", "m2-4", "m3-1", "m3-2", "m3-3", "m3-4", "m3-5", "m3-6", "m4-1", "m4-2", "m4-3", "m4-4", "m5-1", "m5-2"] }
+    // 1기 · 2기 체험 계정: 모든 과제 승인 · 모든 강의 시청 (수료증까지 열림)
+    demo1: { all: true },
+    demo2: { all: true }
   }
 };

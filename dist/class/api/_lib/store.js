@@ -4,6 +4,11 @@
  *  files       사진·첨부 (data: URL 을 떼어 내 보관, 주소는 /api/file?h=해시)
  *  file_scopes 파일마다 누가 볼 수 있는지 (pub · content:강사 · prog:강사:학생 …)
  *  rl          로그인 실패 횟수 (무차별 대입 막기)
+ *  backups     문서 전체 백업 (배포 · 초기화 · 복원 · 일회성 작업 전에 자동으로, 최근 40개)
+ *  oplog       사용자가 요청한 일회성 데이터 작업을 언제 했는지 (같은 작업을 두 번 하지 않게)
+ *
+ * 데이터 보존 원칙: 배포할 때 이미 저장된 내용은 지우거나 바꾸지 않는다 (빠진 칸만 채움).
+ * 지우기는 강사센터 · 마스터에서 사람이 직접 할 때만. 요청받은 데이터 수정은 oneoff.js 에 한 번만 도는 작업으로.
  */
 "use strict";
 
@@ -12,7 +17,9 @@ const SCHEMA = [
   "CREATE INDEX IF NOT EXISTS docs_updated ON docs(updated)",
   "CREATE TABLE IF NOT EXISTS files (h TEXT PRIMARY KEY, mime TEXT NOT NULL, b64 TEXT NOT NULL, size INTEGER NOT NULL, created INTEGER NOT NULL)",
   "CREATE TABLE IF NOT EXISTS file_scopes (h TEXT NOT NULL, scope TEXT NOT NULL, PRIMARY KEY (h, scope))",
-  "CREATE TABLE IF NOT EXISTS rl (k TEXT PRIMARY KEY, n INTEGER NOT NULL, until INTEGER NOT NULL)"
+  "CREATE TABLE IF NOT EXISTS rl (k TEXT PRIMARY KEY, n INTEGER NOT NULL, until INTEGER NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS backups (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, reason TEXT, docs INTEGER, size INTEGER, data TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS oplog (id TEXT PRIMARY KEY, at INTEGER NOT NULL, note TEXT, result TEXT)"
 ];
 
 /* Turso HTTP API (Hrana v2 pipeline) — 의존성 없이 fetch 로 부른다 */
@@ -143,7 +150,38 @@ async function rlFail(keys) {
 }
 async function rlClear(keys) { await batch(keys.map((k) => ({ sql: "DELETE FROM rl WHERE k = ?", args: [k] }))); }
 
-/* 초기화(마스터) — 모든 문서·파일을 지운다 */
-async function wipe() { await batch([{ sql: "DELETE FROM docs" }, { sql: "DELETE FROM files" }, { sql: "DELETE FROM file_scopes" }, { sql: "DELETE FROM rl" }]); }
+/* 초기화(마스터) — 문서를 지운다. 사진·첨부(files)는 백업으로 되돌릴 때 필요하니 남겨 둔다 */
+async function wipe() { await batch([{ sql: "DELETE FROM docs" }, { sql: "DELETE FROM rl" }]); }
 
-module.exports = { exec, batch, getDoc, getDocs, listDocs, writeDoc, countDocs, putFile, getFile, rlCheck, rlFail, rlClear, wipe, kind: () => getClient().kind };
+/* ---------------- 백업 ---------------- */
+const KEEP_BACKUPS = 40;
+async function backup(reason) {
+  const rows = (await exec("SELECT k, v, ver, updated, created FROM docs")).rows;
+  if (!rows.length) return null;
+  const data = JSON.stringify(rows);
+  await exec("INSERT INTO backups (at, reason, docs, size, data) VALUES (?, ?, ?, ?, ?)", [Date.now(), String(reason || "").slice(0, 120), rows.length, data.length, data]);
+  await exec("DELETE FROM backups WHERE id NOT IN (SELECT id FROM backups ORDER BY id DESC LIMIT " + KEEP_BACKUPS + ")");
+  return { docs: rows.length, size: data.length };
+}
+async function listBackups() { return (await exec("SELECT id, at, reason, docs, size FROM backups ORDER BY id DESC LIMIT " + KEEP_BACKUPS)).rows; }
+async function backupRows(id) {
+  const r = (await exec("SELECT data FROM backups WHERE id = ?", [Number(id)])).rows[0];
+  return r ? JSON.parse(r.data) : null;
+}
+/** 백업 그대로 문서를 되돌린다 (지금 상태도 먼저 백업) */
+async function restoreRows(rows) {
+  // 버전은 지금보다 크게 — 되돌리기 전에 열려 있던 화면의 저장이 되돌린 내용을 덮어쓰지 못하게
+  const cur = {};
+  (await exec("SELECT k, ver FROM docs")).rows.forEach((r) => { cur[r.k] = r.ver; });
+  await batch([{ sql: "DELETE FROM docs" }]);
+  const now = Date.now();
+  const stmts = rows.map((r) => ({ sql: "INSERT INTO docs (k, v, ver, updated, created) VALUES (?, ?, ?, ?, ?) ON CONFLICT(k) DO NOTHING", args: [r.k, r.v, Math.max(r.ver || 1, cur[r.k] || 0) + 1, now, r.created] }));
+  for (let i = 0; i < stmts.length; i += 40) await batch(stmts.slice(i, i + 40));
+  return stmts.length;
+}
+
+/* ---------------- 일회성 작업 기록 ---------------- */
+async function opsDone() { return new Set((await exec("SELECT id FROM oplog")).rows.map((r) => r.id)); }
+async function opMark(id, note, result) { await exec("INSERT INTO oplog (id, at, note, result) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO NOTHING", [id, Date.now(), note || "", JSON.stringify(result || {}).slice(0, 2000)]); }
+
+module.exports = { exec, batch, getDoc, getDocs, listDocs, writeDoc, countDocs, putFile, getFile, rlCheck, rlFail, rlClear, wipe, backup, listBackups, backupRows, restoreRows, opsDone, opMark, kind: () => getClient().kind };

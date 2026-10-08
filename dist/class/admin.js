@@ -1533,7 +1533,23 @@
       '<div class="a-kpis">' + kpi("저장된 데이터", kb + "KB", DB.remote.on ? "서버 데이터베이스 (사진은 따로 보관)" : "브라우저 저장 공간 약 5MB 중", "#/center/master/data", !DB.remote.on && kb > 3500 ? "warn" : "") + kpi("강사 플랫폼", DB.data.instructors.length + "개", "콘텐츠 포함", "#/center/master/instructors") + kpi("수강생", DB.data.students.length + "명", "제출 기록 포함", "#/center/master/students") + kpi("강사 공지", DB.data.announcements.length + "건", "", "#/center/master/notices") + "</div>" +
       '<section class="a-card"><div class="a-card-head"><h2>백업</h2><span class="a-muted">아래 내용을 복사해서 메모장 등에 보관하세요</span></div><textarea class="a-input a-mono" id="backup-out" rows="5" readonly>' + esc(json) + '</textarea><div class="a-card-foot">' + btn(icon("clipboard", "sm") + "백업 내용 복사", "backup-copy", "a-btn-primary a-btn-sm") + "</div></section>" +
       '<section class="a-card"><div class="a-card-head"><h2>복원</h2><span class="a-muted">백업해 둔 내용을 붙여 넣으면 그 시점으로 돌아가요</span></div><textarea class="a-input a-mono" id="backup-in" rows="4" placeholder="{&quot;exportedAt&quot;: … }"></textarea><div class="a-card-foot">' + btn(icon("refresh", "sm") + "이 내용으로 복원", "backup-restore", "a-btn-outline a-btn-sm") + "</div></section>" +
-      '<section class="a-card"><div class="a-card-head"><h2>체험 데이터 처음으로</h2></div><p class="a-muted" style="margin:0 0 12px">모든 강사·수강생·제출 기록을 지우고 처음 체험 상태로 되돌려요. 되돌릴 수 없으니 먼저 백업하세요.</p>' + btn(icon("trash", "sm") + "처음 상태로 초기화", "data-reset", "a-btn-ghost a-btn-sm danger") + "</section>";
+      (DB.remote.on ? serverBackups() : "") +
+      '<section class="a-card"><div class="a-card-head"><h2>체험 데이터 처음으로</h2></div><p class="a-muted" style="margin:0 0 12px">모든 강사·수강생·제출 기록을 지우고 처음 체험 상태로 되돌려요. ' + (DB.remote.on ? "지금 상태는 서버 자동 백업에 먼저 남겨요." : "되돌릴 수 없으니 먼저 백업하세요.") + "</p>" + btn(icon("trash", "sm") + "처음 상태로 초기화", "data-reset", "a-btn-ghost a-btn-sm danger") + "</section>";
+  }
+  // 서버 자동 백업: 배포할 때마다 · 초기화나 되돌리기 전에 서버가 스스로 만든다 (최근 40개)
+  function serverBackups() {
+    if (!ui.backups && !ui.backupsLoading) {
+      ui.backupsLoading = true;
+      DB.remote.call("admin", { action: "backups" }).then((r) => { ui.backups = r.backups || []; }, () => { ui.backups = []; ui.backupsErr = true; })
+        .then(() => { ui.backupsLoading = false; if (/^#\/center\/master\/data/.test(location.hash)) render(); });
+    }
+    const list = ui.backups || [];
+    return '<section class="a-card"><div class="a-card-head"><h2>서버 자동 백업</h2><span class="a-muted">배포할 때마다 · 초기화나 되돌리기 전에 자동으로 남아요 (최근 40개)</span></div>' +
+      '<p class="a-muted" style="margin:0 0 12px">새 기능을 배포해도 강사센터에서 올린 공지 · 영상 · 전자책 · 수강생 기록은 그대로 유지돼요. 지우기는 강사센터 · 마스터에서 직접 지울 때만 일어나요. 혹시 잘못 지웠다면 아래에서 그 전 시점으로 되돌릴 수 있어요.</p>' +
+      (!ui.backups ? '<p class="a-muted" style="margin:0">불러오는 중…</p>'
+        : list.length ? '<ul class="a-list">' + list.map((b) => '<li><div class="a-who"><span class="a-avatar">' + icon("database", "sm") + "</span><div><b>#" + b.id + " " + esc(b.reason || "백업") + "</b><small>" + fmtStamp(b.at) + " · 문서 " + b.docs + "개 · " + Math.max(1, Math.round((b.size || 0) / 1024)) + "KB</small></div></div>" + btn(icon("refresh", "sm") + "이 시점으로", "server-restore", "a-btn-outline a-btn-sm", ' data-id="' + b.id + '" data-at="' + b.at + '"') + "</li>").join("") + "</ul>"
+        : '<p class="a-muted" style="margin:0">' + (ui.backupsErr ? "백업 목록을 불러오지 못했어요." : "아직 백업이 없어요.") + "</p>") +
+      '<div class="a-card-foot">' + btn(icon("download", "sm") + "지금 백업", "server-backup", "a-btn-primary a-btn-sm") + "</div></section>";
   }
 
   /* ---------------- 강사: 추가 메뉴 내용 ---------------- */
@@ -1876,6 +1892,15 @@
         });
         break;
       }
+      case "server-backup":
+        DB.remote.call("admin", { action: "backup" }).then((r) => { if (r.error) throw new Error(r.error); ui.backups = null; render(); toast("지금 상태를 서버에 백업했어요."); }).catch(() => toast("백업하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"));
+        break;
+      case "server-restore":
+        confirmModal("백업 시점으로 되돌리기", fmtStamp(Number(d.at)) + " 백업(#" + esc(d.id) + ")으로 모든 데이터를 되돌릴까요?<br>지금 상태도 먼저 백업해 두니, 필요하면 다시 되돌릴 수 있어요.", "되돌리기", true, () => {
+          closeModal(); toast("되돌리는 중이에요…");
+          DB.remote.call("admin", { action: "restore-backup", id: Number(d.id) }).then((r) => { if (r.error) throw new Error(r.error); location.reload(); }).catch(() => toast("되돌리지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"));
+        });
+        break;
       case "data-reset":
         confirmModal("처음 상태로 초기화", "모든 강사·수강생·제출 기록이 지워지고 체험 데이터로 돌아가요.<br>되돌릴 수 없어요.", "초기화", true, () => {
           if (DB.remote.on) { closeModal(); toast("초기화하는 중이에요…"); DB.reset().then(() => location.reload(), () => toast("초기화하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn")); return; }

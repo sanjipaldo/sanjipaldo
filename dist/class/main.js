@@ -67,6 +67,53 @@
     window.addEventListener("hashchange", () => { typing = false; if (waiting) waiting = false; go(); });
     go();
   }
+  // 네이버 카페 링크: 휴대폰에서는 모바일 카페(m.cafe.naver.com), PC 에서는 PC 카페로 연다
+  // (PC 주소 그대로 휴대폰에서 열면 글이 PC 화면 틀 안에 작게 보인다)
+  const MOBILE = /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  function cafeLink(href, mobile) {
+    let u;
+    try { u = new URL(href); } catch (e) { return href; }
+    const host = u.hostname.toLowerCase();
+    if (host !== "cafe.naver.com" && host !== "m.cafe.naver.com") return href;
+    if ((host === "m.cafe.naver.com") === mobile) return href;
+    let club = "", cid = "", aid = "";
+    const fromPath = (p) => {
+      let m = /\/cafes\/(\d+)\/articles\/(\d+)/.exec(p);
+      if (m) { cid = m[1]; aid = m[2]; return; }
+      m = /ArticleRead\.nhn\?(.*)$/i.exec(p);
+      if (m) { const q = new URLSearchParams(m[1]); cid = q.get("clubid") || ""; aid = q.get("articleid") || ""; }
+    };
+    const inner = u.searchParams.get("iframe_url_utf8") || u.searchParams.get("iframe_url");
+    if (inner) { try { fromPath(decodeURIComponent(inner)); } catch (e) { fromPath(inner); } }
+    fromPath(u.pathname + u.search);
+    const seg = u.pathname.split("/").filter(Boolean);
+    if (seg[0] === "ca-fe" && seg[1] && !/^(web|cafes)$/.test(seg[1])) seg.shift();
+    if (seg[0] && !/^(f-e|ca-fe|ArticleRead\.nhn|ArticleList\.nhn|MyCafeIntro\.nhn)$/i.test(seg[0])) {
+      club = seg[0];
+      if (!aid && /^\d+$/.test(seg[1] || "")) aid = seg[1];
+    }
+    if (mobile) {
+      if (club && aid) return "https://m.cafe.naver.com/" + club + "/" + aid;
+      if (cid && aid) return "https://m.cafe.naver.com/ca-fe/web/cafes/" + cid + "/articles/" + aid;
+      if (club) return "https://m.cafe.naver.com/" + club;
+    } else {
+      if (club && aid) return "https://cafe.naver.com/" + club + "/" + aid;
+      if (cid && aid) return "https://cafe.naver.com/ca-fe/cafes/" + cid + "/articles/" + aid;
+      if (club) return "https://cafe.naver.com/" + club;
+    }
+    return href;
+  }
+  window.cafeLink = cafeLink;
+  const fixCafe = (e) => {
+    const a = e.target && e.target.closest && e.target.closest("a[href]");
+    if (!a || !/cafe\.naver\.com/i.test(a.href)) return;
+    const next = cafeLink(a.href, MOBILE);
+    if (next !== a.href) a.href = next;
+  };
+  document.addEventListener("click", fixCafe, true);
+  document.addEventListener("auxclick", fixCafe, true);
+  document.addEventListener("contextmenu", fixCafe, true);
+
   const root = document.getElementById("root");
   root.innerHTML = '<div class="boot-wait" role="status"><span class="boot-spin"></span>불러오는 중…</div>';
   DB.remote.connect().then(start, (err) => {

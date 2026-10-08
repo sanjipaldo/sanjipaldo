@@ -43,7 +43,8 @@
   const findMission = (id) => allMissions().find((m) => m.id === id);
   const openOf = (w) => DB.weekOpen(CO, w.no);
   const deadlineOf = (w) => DB.weekDeadline(CO, w.no);
-  const isOpen = (w) => todayStr() >= openOf(w);
+  // 체험 계정은 모든 주차를 열어 둔다 (강사 미리보기는 실제 수강생과 같은 일정으로)
+  const isOpen = (w) => (!!me && !!me.demo && !preview) || todayStr() >= openOf(w);
   const lastSub = (id) => DB.lastSub(P, id);
   const missionState = (id) => DB.subState(P, id);
   const isDone = (id) => missionState(id) === "done";
@@ -240,7 +241,7 @@
             "</div>" +
             (ins ? '<button type="button" class="login-alt" data-action="signup">' + icon("userPlus", "sm") + "아직 수강 신청 전이신가요? 수강 신청하기</button>" +
               ((DB.landingOf(ins.id) || {}).published ? '<a class="login-intro" href="#/p/' + esc(ins.id) + '">' + icon("book", "sm") + "강의 소개 보기 " + icon("arrowRight", "xs") + "</a>" : "") +
-              (ins.id === "moon" && !DB.remote.on ? '<div class="login-demo">체험 계정 · 이름 <b>이수진</b> / 뒷자리 <b>2186</b></div>' : "") : "") +
+              (ins.id === "moon" && !DB.remote.on ? '<div class="login-demo">체험 계정 · 이름 <b>이수진</b> / 뒷자리 <b>2186</b> (3기)<br>1기 <b>1기 체험단</b> / <b>1111</b> · 2기 <b>2기 체험단</b> / <b>2222</b></div>' : "") : "") +
             '<nav class="login-legal" aria-label="약관">' +
               '<button type="button" data-action="legal" data-doc="terms">이용약관</button>' +
               '<button type="button" data-action="legal" data-doc="privacy">개인정보처리방침</button>' +
@@ -1332,7 +1333,7 @@
   }
 
   /* ---------------- 수료증 ---------------- */
-  // 체험 계정 · 강사 미리보기는 잠긴 수료증을 ‘미리보기’로 열어 볼 수 있다
+  // 체험 계정은 수료증을 열어 둔 채로 보여 주고, 강사 미리보기는 잠긴 수료증을 ‘미리보기’로 열어 볼 수 있다
   let certPreview = false;
   function certSeal(name) {
     const nm = esc(String(name || "").replace(/\s+/g, "").slice(0, 4));
@@ -1351,8 +1352,10 @@
   function pageCertificate() {
     const o = overallStats();
     const earned = o.reqTotal > 0 && o.reqDone === o.reqTotal;
-    const canPreview = !earned && (preview || !!me.demo);
-    const showOpen = earned || (canPreview && certPreview);
+    const demoOpen = !earned && !preview && !!me.demo;
+    const canPreview = !earned && preview;
+    const isPv = demoOpen || (canPreview && certPreview);
+    const showOpen = earned || isPv;
     const remaining = allMissions().filter((m) => m.required && !isDone(m.id));
     let doneDate = todayStr();
     if (earned) {
@@ -1362,7 +1365,7 @@
     const pct = o.reqTotal ? Math.round((o.reqDone / o.reqTotal) * 100) : 0;
     const canPrint = window.self === window.top;
     const d = parseDate(doneDate), ko = d.getFullYear() + "년 " + (d.getMonth() + 1) + "월 " + d.getDate() + "일";
-    const cert = '<div class="cert-wrap"><article class="cert' + (showOpen ? "" : " locked") + (certPreview && !earned ? " is-preview" : "") + '" aria-label="수료증">' +
+    const cert = '<div class="cert-wrap"><article class="cert' + (showOpen ? "" : " locked") + (isPv ? " is-preview" : "") + '" aria-label="수료증">' +
         '<div class="cert-inner">' +
           '<span class="cert-corner tl"></span><span class="cert-corner tr"></span><span class="cert-corner bl"></span><span class="cert-corner br"></span>' +
           certRosette() +
@@ -1375,17 +1378,17 @@
           '<footer class="cert-foot"><p class="cert-date">' + ko + '</p><div class="cert-sign"><span class="cert-org">' + esc(D.brand.name) + '</span><span class="cert-who">대표 강사 <b>' + esc(D.brand.instructor) + "</b></span>" + certSeal(D.brand.instructor) + "</div></footer>" +
           '<p class="cert-powered">' + window.poweredBy("color") + "</p>" +
         "</div>" +
-        (certPreview && !earned ? '<div class="cert-ribbon">미리보기</div>' : "") +
+        (isPv ? '<div class="cert-ribbon">' + (demoOpen ? "체험 계정" : "미리보기") + "</div>" : "") +
         (showOpen ? "" : '<div class="cert-lock">' + icon("lock") + "<strong>필수 과제 " + remaining.length + '개가 남았어요</strong><span class="muted">모두 통과하면 이름이 새겨진 수료증이 열립니다.</span>' +
-          (canPreview ? '<button class="btn btn-primary" data-action="cert-preview">' + icon("eye", "sm") + (preview ? "강사 미리보기: 수료증 열어 보기" : "체험 계정: 수료증 열어 보기") + "</button>" : "") + "</div>") +
+          (canPreview ? '<button class="btn btn-primary" data-action="cert-preview">' + icon("eye", "sm") + "강사 미리보기: 수료증 열어 보기" + "</button>" : "") + "</div>") +
       "</article></div>";
     return '<div class="page">' + pageHead("수료증", "필수 과제 " + o.reqTotal + "개를 모두 통과하면 수료증이 발급됩니다.") +
       '<section class="card overall no-print"><div class="overall-top"><span>필수 과제 통과</span>' + pctText(pct) + "</div>" + progressBar(pct) + '<span class="tiny" style="color:var(--body)">' + o.reqTotal + "개 중 " + o.reqDone + "개 통과" + (earned ? " · 수료 조건을 모두 채웠어요!" : " · " + remaining.length + "개 남음") + "</span></section>" +
       cert +
       (showOpen
         ? '<div class="guide-actions no-print" style="justify-content:center;margin-top:16px">' + (canPrint ? '<button class="btn btn-primary" data-action="print">' + icon("printer", "sm") + "인쇄 · PDF로 저장</button>" : "") +
-            (certPreview && !earned ? '<button class="btn btn-secondary" data-action="cert-preview">' + icon("lock", "sm") + "미리보기 닫기</button>" : "") + "</div>" +
-            (certPreview && !earned ? '<p class="tiny no-print" style="text-align:center;margin:10px 0 0">체험용 미리보기예요. 실제 수강생은 필수 과제를 모두 통과해야 이 수료증이 열려요.</p>' : "")
+            (isPv && !demoOpen ? '<button class="btn btn-secondary" data-action="cert-preview">' + icon("lock", "sm") + "미리보기 닫기</button>" : "") + "</div>" +
+            (isPv ? '<p class="tiny no-print" style="text-align:center;margin:10px 0 0">' + (demoOpen ? "체험 계정이라 수료증을 열어 두었어요." : "체험용 미리보기예요.") + " 실제 수강생은 필수 과제를 모두 통과해야 이 수료증이 열려요.</p>" : "")
         : "") +
       (!earned ? '<div class="section-head no-print"><h2>남은 필수 과제</h2></div><section class="card no-print">' + remaining.map((m) => {
             const w = findWeek(m.weekNo);
@@ -1505,6 +1508,24 @@
   }
 
   /* ---------------- 렌더 ---------------- */
+  // 화면별 마지막 스크롤 위치: 과제 제출 화면에서 ‘‹ 1주차’ · 뒤로 가기로 돌아오면 보던 자리 그대로
+  const scrollMemo = {};
+  let navTrail = [];
+  function restoreScroll(prevKey, key) {
+    const m = scrollMemo[key];
+    const child = !!prevKey && prevKey.indexOf(key + "/") === 0;
+    const back = !!m && m.to === prevKey && (child || navTrail[navTrail.length - 2] === key);
+    if (back && navTrail[navTrail.length - 2] === key) navTrail.pop(); else navTrail = navTrail.concat(key).slice(-30);
+    if (!back && !child) { window.scrollTo(0, 0); return; }
+    const place = () => {
+      if (back) { window.scrollTo(0, m.y); return; }
+      // 다른 화면에서 바로 들어갔던 과제라면 목록에서 그 과제 카드가 보이게
+      const el = document.querySelector('#main a[href="' + prevKey.replace(/"/g, "") + '"]');
+      if (el) el.scrollIntoView({ block: "center" }); else window.scrollTo(0, 0);
+    };
+    place();
+    setTimeout(place, 80);
+  }
   function render() {
     closeModal();
     const r = route();
@@ -1532,6 +1553,7 @@
     const fn = pages[r.parts[0]] || notFound;
     const main = document.getElementById("main");
     const prevKey = main.dataset.key, key = location.hash;
+    if (prevKey && prevKey !== key) scrollMemo[prevKey] = { y: window.scrollY, to: key };
     // 휴대폰에서는 화면을 옮기면 AI봇 창을 닫는다 (반쯤 가린 채로 따라다니지 않게)
     if (prevKey !== key && window.matchMedia("(max-width: 720px)").matches) botOpen = false;
     main.innerHTML = fn(r) + (top === "library" ? watermark() : "");
@@ -1542,7 +1564,7 @@
     if (top !== "motivation") { mvAuto = false; mvSel = null; }
     if (top !== "certificate") certPreview = false;
     lastTop = top;
-    if (prevKey !== key) window.scrollTo(0, 0);
+    if (prevKey !== key) restoreScroll(prevKey, key);
     const nav = NAV().find((n) => n.id === r.parts[0] && (n.id !== "page" || n.sub === r.parts[1]));
     document.title = (nav ? navLabel(nav) + " · " : "") + D.brand.name;
     renderBotFab(r);

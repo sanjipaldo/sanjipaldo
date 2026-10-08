@@ -435,6 +435,35 @@
     return c;
   }
 
+  /** 체험 계정(1기 · 2기): 모든 강의 시청 · 모든 과제 강사 승인 · 서류 준비 완료 → 수료증까지 열린 기록
+   *  (서버는 api/_lib/oneoff.js 의 fullProgress 가 같은 기록을 만든다) */
+  function fullDemoProgress(data, st, c) {
+    const co = data.cohorts.find((x) => x.id === st.cohortId);
+    const cu = co && co.curriculumId && co.curriculumId !== "main" && (c.curricula || []).find((x) => x.id === co.curriculumId);
+    const ins = data.instructors.find((x) => x.id === st.instructorId);
+    const reviewer = { by: ((ins && ins.name) || "") + " 강사", byId: st.instructorId, role: "instructor" };
+    const p = Object.assign(emptyProgress(), { guideV: 2 });
+    const DAY = 86400000, start = Date.parse(((co && co.startDate) || "2026-08-01") + "T10:00:00+09:00");
+    ((cu ? cu.weeks : c.weeks) || []).forEach((w, wi) => {
+      const base = start + wi * 7 * DAY + DAY;
+      (w.lessons || []).forEach((l, i) => { p.watched[l.id] = base + i * 600000; });
+      (w.missions || []).forEach((m, i) => {
+        const at = base + DAY + i * 3600000;
+        p.submissions[m.id] = [{
+          at,
+          text: m.type === "text" ? m.title + " 과제를 마쳤습니다. 강의 내용대로 정리했어요." : "",
+          link: m.type === "link" ? "https://" + ((m.check && m.check.linkHint) || "example.com") + "/sample-store" : "",
+          files: m.type === "image" ? [{ type: "pdf", name: m.title + ".pdf" }] : [],
+          result: { pass: true, reasons: [], ok: ["체험 계정"] },
+          review: Object.assign({ status: "approved", comment: "", at: at + 7200000 }, reviewer)
+        }];
+      });
+    });
+    (c.docsGuide || []).forEach((g, i) => { p.docs[g.id] = start + i * 3600000; });
+    (c.notices || []).forEach((n) => { p.readNotices[n.id] = start; });
+    (c.guide || []).forEach((g) => { p.guide[g.id] = start; });
+    return p;
+  }
   function fromSeed() {
     const seed = clone(window.CLASS_SEED);
     const data = { version: 3, instructors: seed.instructors, content: seed.content || {}, cohorts: seed.cohorts, students: seed.students, announcements: seed.announcements || [] };
@@ -453,6 +482,7 @@
       const c = st && data.content[st.instructorId];
       if (!c) return;
       const p = emptyProgress();
+      if (s.all) { store.set(KEY_PROGRESS + sid, fullDemoProgress(data, st, c)); return; }
       const all = c.weeks.flatMap((w) => w.missions);
       const base = Date.now() - 86400000 * 2;
       (s.done || []).forEach((mid, i) => {

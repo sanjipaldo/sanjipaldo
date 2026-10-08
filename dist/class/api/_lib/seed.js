@@ -69,7 +69,27 @@ function seedDocs() {
   return split(JSON.parse(JSON.stringify(DB.data)), progress);
 }
 
-/** 지금 데이터에 db.js 의 정리(새 기본값·마이그레이션)를 적용 → 바뀐 문서만 { 키: 값 } */
+/** 빠진 칸만 채운다 — 이미 있는 값은 절대 바꾸거나 지우지 않는다.
+ *  객체: 없는 키만 더함 · 배열: 있는 항목(id 로 찾음)의 빠진 칸만 채우고 항목을 더하거나 빼지 않음 */
+const isObj = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
+function fillMissing(before, after) {
+  if (before === undefined) return after;
+  if (isObj(before) && isObj(after)) {
+    const out = Object.assign({}, before);
+    Object.keys(after).forEach((k) => { out[k] = fillMissing(before[k], after[k]); });
+    return out;
+  }
+  if (Array.isArray(before) && Array.isArray(after)) {
+    const byId = {};
+    after.forEach((x) => { if (isObj(x) && x.id != null) byId[x.id] = x; });
+    return before.map((x) => (isObj(x) && x.id != null && byId[x.id] ? fillMissing(x, byId[x.id]) : x));
+  }
+  return before;
+}
+
+/** 지금 데이터에 db.js 의 정리(새 기본값)를 적용 → 빠진 칸이 채워진 문서만 { 키: 값 }
+ *  저장된 내용은 그대로 두고 새로 생긴 칸만 더한다. 새 문서를 만들거나 지우지도 않는다
+ *  (데이터를 바꿔야 하는 요청은 oneoff.js 의 일회성 작업으로) */
 function migrateDocs(docs) {
   const { db, progress } = assemble(docs);
   if (db.version !== 3 || !db.instructors.length) throw new Error("데이터 형식이 예상과 달라 정리를 건너뜁니다");
@@ -78,18 +98,16 @@ function migrateDocs(docs) {
   const { DB, ls } = runDbJs(init);
   DB.load();
   const after = JSON.parse(JSON.stringify(DB.data));
-  // 안전장치: 강사·수강생이 줄었다면 (예: 처음 상태로 되돌아감) 아무것도 쓰지 않는다
-  const ids = (list) => new Set((list || []).map((x) => x.id));
-  const bi = ids(db.instructors), ai = ids(after.instructors), bs = ids(db.students), as = ids(after.students);
-  if ([...bi].some((x) => !ai.has(x)) || [...bs].some((x) => !as.has(x))) throw new Error("정리 후 데이터가 줄어 쓰지 않습니다");
   const prog = {};
   ls.forEach((v, k) => { if (k.indexOf("moonclass:progress:") === 0) prog[k.slice(19)] = JSON.parse(v); });
   const next = split(after, prog);
-  const before = {};
-  docs.forEach(({ k, v }) => { if (v != null) before[k] = JSON.stringify(v); });
   const changed = {};
-  Object.keys(next).forEach((k) => { if (before[k] !== JSON.stringify(next[k])) changed[k] = next[k]; });
+  docs.forEach(({ k, v }) => {
+    if (v == null || next[k] === undefined) return;
+    const merged = fillMissing(v, next[k]);
+    if (JSON.stringify(merged) !== JSON.stringify(v)) changed[k] = merged;
+  });
   return changed;
 }
 
-module.exports = { seedDocs, migrateDocs, split, assemble };
+module.exports = { seedDocs, migrateDocs, fillMissing, split, assemble };
