@@ -64,7 +64,9 @@ doogo-market-latest/
 │   ├── doogohub-app-icon.png
 │   ├── doogohub-symbol.png
 │   ├── doogofood-logo.png
-│   ├── landing/                     # 랜딩 전용 이미지(실제 앱 화면 캡처 WebP · 어두운 배경용 로고)
+│   ├── landing/                     # 랜딩 전용 이미지(실제 앱 화면 캡처 WebP · 로고 마크)
+│   │   └── gif/                     # 랜딩에 쓰는 실제 앱 녹화 GIF (orders·pick·send·map·pay·track·mobile)
+│   ├── fonts/pretendard/            # Pretendard 가변 글꼴(분할 woff2 92개 + CSS, SIL OFL 1.1 · LICENSE.txt)
 │   └── product-00.jpg ~ product-07.jpg
 └── dist/                             # 실제 배포 대상
     ├── index.html                    # 랜딩
@@ -73,6 +75,8 @@ doogo-market-latest/
     ├── styles.css
     └── assets/                       # 루트 assets와 동일
 ```
+
+랜딩(v2)은 흰 바탕(토스·리펀디 톤)에 남색 밴드 두 곳(허브 다이어그램·사용 장면)이 있는 한 페이지다. 스크롤 모션은 라이브러리 없이 index.html 안의 스크립트로 처리한다: 등장(아래에서 올라오며 흐림이 걷힘)·제목 단어별 등장·히어로 화면 기울기 펴짐·문장 단어 하이라이트·허브 선 그리기와 흐르는 점(SVG)·이용 방법 스크롤 스토리(단계마다 GIF 교체, 다시 보일 때 첫 장면부터)·후기형 카드 세로 무한 슬라이드(testimonials-6 방식, 속도 30·50·35px/초, 마우스를 올리면 15·25·17). ‘움직임 줄이기’ 설정이면 모두 멈추고 GIF 대신 같은 화면의 WebP 정지 이미지를 보여 준다. ‘이런 분께 추천해요’ 카드는 실제 후기가 아니라 기능을 바탕으로 쓴 사용 장면 예시다(페이지에도 표시) — 실제 후기가 모이면 `.t-pool` 안의 카드만 바꾸면 된다. GIF는 scratchpad의 녹화 스크립트(Playwright로 데모 계정 조작 → ffmpeg 팔레트 → gifsicle 손실 압축)로 만들었다.
 
 랜딩 → 앱 연결 주소: `app.html`(위탁셀러 로그인) · `app.html#partner`(공급사 로그인) · `app.html#master`(관리자 로그인) · `app.html#signup`(위탁셀러 가입) · `app.html#supplier-signup`(공급사 입점 신청). 앱은 이 #을 한 번 처리한 뒤 주소에서 지운다(`landingEntryRoute()`), 로그인 화면 위쪽 역할 탭(위탁셀러·공급사·관리자)으로도 바로 바꿀 수 있다.
 
