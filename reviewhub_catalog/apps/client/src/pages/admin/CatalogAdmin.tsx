@@ -61,7 +61,7 @@ type BulkWorkbookPreview = {
   }>;
   errors: Array<{ row: number; message: string }>;
   warnings: string[];
-  format?: "bulk" | "baljuora" | "danga";
+  format?: "bulk" | "baljuora" | "danga" | "contract";
   priceFields?: PriceField[];
   newProducts?: number;
 };
@@ -1355,7 +1355,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <div className="excel-sync-panel">
           <div>
             <span className="excel-icon"><FileSpreadsheet size={21} /></span>
-            <div><strong>발주오라형 엑셀 상품 관리</strong><small>발주오라 상품리스트 엑셀을 그대로 올리면 가격·품절·노출이 반영되고 신규 상품이 등록됩니다. 가격 변경은 가격변동 이력에 자동 기록됩니다. 단가관리(danga-admin) "엑셀 일괄변경" 파일도 그대로 올리면 매입원가·A급 단가(황금농부 수강생)·공급가를 골라 한 번에 바꿉니다.</small></div>
+            <div><strong>발주오라형 엑셀 상품 관리</strong><small>발주오라 상품리스트 엑셀을 그대로 올리면 가격·품절·노출이 반영되고 신규 상품이 등록됩니다. 가격 변경은 가격변동 이력에 자동 기록됩니다. 단가관리(danga-admin) "엑셀 일괄변경" 파일도 그대로 올리면 매입원가·A급 단가(황금농부 수강생)·공급가를 골라 한 번에 바꿉니다. 공급사 "단가표" 엑셀은 공급가(A급단가가 있으면 A급단가)를 원가로 넣고 A급 단가 10%·일반공급가 20% 마진으로 계산합니다.</small></div>
           </div>
           <div className="excel-actions">
             <button type="button" className="selected-excel-action" onClick={() => void downloadSelectedWorkbook()} disabled={excelBusy || selectedProductIds.size === 0}><Download size={15} /> 선택 상품 {selectedProductIds.size > 0 ? `(${selectedProductIds.size})` : ""} 다운로드</button>
@@ -1503,9 +1503,9 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       {bulkEditOpen && <BulkEditModal ids={Array.from(selectedProductIds)} categories={data.categories} shippingPolicies={shippingPolicies} suppliers={suppliers} preset={bulkEditOpen === "seasonInfo" ? "seasonInfo" : undefined} onClose={() => setBulkEditOpen(false)} onDone={() => { setBulkEditOpen(false); setSelectedProductIds(new Set()); void refresh(true); }} />}
       {bulkPreview && <div className="editor-overlay"><section className="excel-preview-panel"><div className="editor-header"><div><span>EXCEL PREVIEW</span><h2>상품 일괄변경 미리보기</h2></div><button type="button" onClick={() => { setBulkPreview(null); setBulkFile(null); }} aria-label="닫기"><X size={21} /></button></div>
         <div className="excel-preview-summary"><article><span>읽은 행</span><strong>{bulkPreview.totalRows}</strong></article><article><span>매칭 행</span><strong>{bulkPreview.matchedRows}</strong></article><article><span>변경 상품</span><strong>{bulkPreview.affectedProducts}</strong></article><article><span>변경 항목</span><strong>{bulkPreview.changes.length}</strong></article>{bulkPreview.newProducts ? <article><span>신규 상품</span><strong>{bulkPreview.newProducts}</strong></article> : null}</div>
-        {bulkPreview.format === "danga" && <div className="excel-price-fields" role="group" aria-label="반영할 가격 항목"><strong>반영할 항목</strong>{([["cost", "매입원가"], ["a", "A급 단가 (황금농부 수강생)"], ["general", "공급가"]] as Array<[PriceField, string]>).map(([field, label]) => <label key={field}><input type="checkbox" checked={priceFields.includes(field)} disabled={excelBusy} onChange={(event) => { const next = event.target.checked ? [...priceFields, field] : priceFields.filter((item) => item !== field); setPriceFields(next); if (bulkFile) void previewWorkbook(bulkFile, next); }} /> {label}</label>)}</div>}
+        {(bulkPreview.format === "danga" || bulkPreview.format === "contract") && <div className="excel-price-fields" role="group" aria-label="반영할 가격 항목"><strong>반영할 항목</strong>{(bulkPreview.format === "contract" ? [["cost", "원가 (공급사 공급가·A급단가)"], ["a", "A급 단가 (마진 10%)"], ["general", "일반공급가 (마진 20%)"]] as Array<[PriceField, string]> : [["cost", "매입원가"], ["a", "A급 단가 (황금농부 수강생)"], ["general", "공급가"]] as Array<[PriceField, string]>).map(([field, label]) => <label key={field}><input type="checkbox" checked={priceFields.includes(field)} disabled={excelBusy} onChange={(event) => { const next = event.target.checked ? [...priceFields, field] : priceFields.filter((item) => item !== field); setPriceFields(next); if (bulkFile) void previewWorkbook(bulkFile, next); }} /> {label}</label>)}</div>}
         {bulkPreview.errors.length > 0 && <div className="excel-error-list"><strong>수정이 필요한 행</strong>{bulkPreview.errors.map((error) => <p key={`${error.row}-${error.message}`}>{error.row}행 · {error.message}</p>)}</div>}
-        <div className="excel-change-list">{bulkPreview.changes.length === 0 ? <p className="excel-empty">변경되는 값이 없습니다.</p> : bulkPreview.changes.slice(0, 100).map((change, index) => <div key={`${change.row}-${change.field}-${index}`}><span>{change.row}행</span><strong>{change.productName}{change.optionName ? <small>{change.optionName}</small> : null}</strong><em>{change.field}</em><del>{String(change.before ?? "-")}</del><ChevronRight size={14} /><b>{String(change.after ?? "-")}</b></div>)}</div>
+        <div className="excel-change-list">{bulkPreview.changes.length === 0 ? <p className="excel-empty">변경되는 값이 없습니다.</p> : bulkPreview.changes.slice(0, 100).map((change, index) => <div key={`${change.row}-${change.field}-${index}`}><span>{change.row}행</span><strong>{change.productName}{change.optionName ? <small>{change.optionName}</small> : null}</strong><em>{change.field}</em><del>{typeof change.before === "number" ? change.before.toLocaleString("ko-KR") : String(change.before ?? "-")}</del><ChevronRight size={14} /><b>{typeof change.after === "number" ? change.after.toLocaleString("ko-KR") : String(change.after ?? "-")}</b></div>)}</div>
         <div className="excel-warning-list">{bulkPreview.warnings.map((warning) => <p key={warning}>• {warning}</p>)}</div>
         <div className="editor-footer"><button type="button" onClick={() => { setBulkPreview(null); setBulkFile(null); }}>취소</button><button className="primary-action" type="button" onClick={() => void applyWorkbook()} disabled={excelBusy || bulkPreview.errors.length > 0 || bulkPreview.changes.length === 0}><Upload size={16} /> {excelBusy ? "적용 중…" : "변경 적용"}</button></div>
       </section></div>}
