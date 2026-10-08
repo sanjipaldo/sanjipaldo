@@ -2503,7 +2503,7 @@ function showApp(accountId, staff = null) {
   if (activeRole === "seller") showApp.collectTimer = setTimeout(maybeAutoCollectOrders, 1500);
   if (activeRole === "master") setTimeout(maybeAutoDailyReport, 2500);
 }
-setInterval(() => { if (!document.hidden) { maybeAutoCollectOrders(); maybeAutoDailyReport(); } }, 60 * 1000);
+setInterval(() => { if (!document.hidden) { renewDueSubscriptions(); maybeAutoCollectOrders(); maybeAutoDailyReport(); } }, 60 * 1000);
 
 /* 랜딩(index.html)에서 넘어온 주소: app.html#partner · #master · #signup · #supplier-signup */
 function landingEntryRoute() {
@@ -6111,6 +6111,44 @@ function applyPlanSubscription(next, current, payment) {
     return showToast(fresh ? `${next.name} 요금제를 시작했어요${paidNote}! 이제 쇼핑몰을 연결해 보세요.` : `${next.name} 요금제로 ${upgrade ? "올렸어요" : "바꿨어요"}. 쇼핑몰 ${next.malls}개 · 다른 상품 주문 월 ${limitText(next.externalOrders)}${kakaoNote}`);
 }
 function addBilling(row) { state.billing = state.billing || []; const entry = { id: `BL-${billingSeq()}`, date: ymd(new Date()), status: "결제 완료", method: "", ...row }; state.billing.unshift(entry); return entry; }
+/* 요금제 자동 갱신: 다음 결제일이 오늘이거나 지났으면 같은 결제수단으로 그 달 요금(+카카오톡 알림)을 결제하고 다음 결제일을 한 달 뒤로 옮긴다.
+   예치금 결제는 잔액에서 빼고, 모자라면 '결제 실패'로 한 번만 남기고 알린다 — 다음 확인 때 다시 시도한다. */
+function renewDueSubscriptions(when = new Date()) {
+  const today = new Date(when.getFullYear(), when.getMonth(), when.getDate());
+  let changed = false;
+  Object.entries(state.subscriptions || {}).forEach(([loginId, sub]) => {
+    if (!sub || sub.status !== "active" || sub.autoRenew === false || !sub.monthlyFee) return;
+    for (let guard = 0; guard < 24; guard += 1) {
+      const due = parseDot(sub.nextBilling);
+      if (!due || due > today) break;
+      const month = `${due.getMonth() + 1}월`, key = `${loginId}-${ymd(due).replace(/-/g, "")}`;
+      const kakaoFee = state.notificationServices?.[loginId]?.status === "active" && !planTierById(sub.tier).kakao ? PLAN_KAKAO_FEE : 0;
+      const total = sub.monthlyFee + kakaoFee;
+      const paidAlready = (state.billing || []).some(row => row.id === `BL-R-${key}`);
+      if (!paidAlready && /예치금/.test(sub.method || "")) {
+        const wallet = sellerDeposit(loginId);
+        if (wallet.balance < total) {
+          if (!(state.billing || []).some(row => row.id === `BL-RF-${key}`)) {
+            addBilling({ id: `BL-RF-${key}`, loginId, kind: "payment", date: ymd(today), item: `${sub.plan} 요금제 ${month} 자동 결제 실패`, amount: total, method: "예치금", status: "결제 실패" });
+            pushNotification(loginId, "seller", "settlement", "요금제 자동 결제를 못 했어요", `예치금이 ${money(total - wallet.balance)} 모자라요. 충전하면 다시 결제돼요.`, ["내부 알림"]);
+            changed = true;
+          }
+          break;
+        }
+        wallet.balance -= total;
+        wallet.transactions = wallet.transactions || [];
+        wallet.transactions.unshift({ id: `DP-R-${key}`, type: "요금제 결제", amount: -total, reference: `${sub.plan} 요금제 ${month} 자동 결제`, createdAt: depositStamp(), at: Date.now() });
+      }
+      if (!paidAlready) addBilling({ id: `BL-R-${key}`, loginId, kind: "payment", date: ymd(due), item: `${sub.plan} 요금제 ${month}`, amount: sub.monthlyFee, method: sub.method || "카드", status: "결제 완료" });
+      if (!paidAlready && kakaoFee) addBilling({ id: `BL-R-${key}-K`, loginId, kind: "payment", date: ymd(due), item: `카카오톡 알림 ${month}`, amount: kakaoFee, method: sub.method || "카드", status: "결제 완료" });
+      const lastDay = new Date(due.getFullYear(), due.getMonth() + 2, 0).getDate();
+      sub.nextBilling = billingDateLabel(new Date(due.getFullYear(), due.getMonth() + 1, Math.min(due.getDate(), lastDay)));
+      if (!paidAlready) audit("요금제 자동 결제", `${memberByLogin(loginId)?.company || loginId} · ${sub.plan} ${month} ${money(total)} · 다음 결제 ${sub.nextBilling}`, "done", "money");
+      changed = true;
+    }
+  });
+  if (changed) saveState();
+}
 /* 카드 환불: 결제대행(PG) 서버가 연결돼 있으면 바로 카드 취소를 요청하고, 아니면 마스터 ‘환불 대기’ 목록에 올린다. */
 async function runCardRefund(refund) {
   if (!(CARD_PAYMENT_READY && CHANNEL_SERVER)) return false;
@@ -14028,6 +14066,7 @@ document.addEventListener("change", event => {
 
 
 const requestedPortal = new URLSearchParams(window.location.search).get("portal");
+renewDueSubscriptions();
 initAuth();
 /* 사진 저장소(IndexedDB)를 읽고, 예전에 상품 안에 직접 넣어 둔 사진을 옮긴 뒤 화면을 다시 그린다 */
 loadImageCache().then(() => {
