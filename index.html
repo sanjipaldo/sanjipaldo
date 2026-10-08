@@ -106,15 +106,16 @@ main.swapping { opacity: 0; }
 
 /* ---------- 떠 있는 알약 메뉴 ---------- */
 .nav-wrap { position: fixed; z-index: 50; left: 0; right: 0; top: calc(env(safe-area-inset-top, 0px) + 14px); display: flex; justify-content: center; padding-inline: 12px; pointer-events: none; }
-.pill { pointer-events: auto; display: flex; align-items: center; gap: 8px; width: min(1080px, 100%); height: 60px; padding: 0 8px 0 18px; border-radius: 999px; background: rgba(255, 255, 255, .82); backdrop-filter: saturate(180%) blur(18px); -webkit-backdrop-filter: saturate(180%) blur(18px); border: 1px solid rgba(0, 27, 55, .07); box-shadow: 0 8px 30px -14px rgba(0, 27, 55, .25); transition: height .35s var(--ease), box-shadow .35s, background-color .35s; }
+.pill { pointer-events: auto; display: grid; grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr); align-items: center; column-gap: 10px; width: min(1160px, 100%); height: 60px; padding: 0 10px; border-radius: 999px; background: rgba(255, 255, 255, .82); backdrop-filter: saturate(180%) blur(18px); -webkit-backdrop-filter: saturate(180%) blur(18px); border: 1px solid rgba(0, 27, 55, .07); box-shadow: 0 8px 30px -14px rgba(0, 27, 55, .25); transition: height .35s var(--ease), box-shadow .35s, background-color .35s; }
 .nav-wrap.scrolled .pill { height: 56px; background: rgba(255, 255, 255, .93); box-shadow: 0 12px 34px -14px rgba(0, 27, 55, .32); }
-.brand { display: flex; align-items: center; flex: none; margin-right: 4px; }
+.nav-l { display: flex; align-items: center; gap: 16px; justify-self: start; }
+.brand { display: flex; align-items: center; flex: none; margin-left: 10px; }
 .brand img { height: 25px; width: auto; }
-.links { display: flex; align-items: center; gap: 2px; margin: 0 auto; }
+.links { display: flex; align-items: center; gap: 2px; }
 .links a { display: block; padding: 8px 13px; border-radius: 999px; font-size: 15px; font-weight: 600; color: var(--ink-3); transition: background-color .2s, color .2s; }
 .links a:hover { background: var(--bg-gray); color: var(--ink); }
 .links a[aria-current="true"] { color: var(--blue-2); background: var(--blue-soft); }
-.nav-cta { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.nav-cta { display: flex; align-items: center; gap: 6px; justify-self: end; }
 .nav-login { padding: 8px 12px; border-radius: 999px; font-size: 15px; font-weight: 600; color: var(--ink-3); white-space: nowrap; }
 .nav-login:hover { background: var(--bg-gray); color: var(--ink); }
 .menu-btn { display: none; flex: none; width: 42px; height: 42px; border-radius: 999px; border: 0; background: var(--bg-gray); cursor: pointer; position: relative; }
@@ -129,12 +130,20 @@ main.swapping { opacity: 0; }
 .mobile-menu > a::after { content: "›"; color: var(--muted); font-size: 20px; }
 .mm-cta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 4px 4px; }
 
-/* 위탁셀러/공급사 바꾸기 (알약 안 · 작게) */
-.aud-mini { position: relative; flex: none; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 999px; background: var(--bg-gray); }
-.aud-mini button { position: relative; z-index: 1; border: 0; background: none; cursor: pointer; padding: 7px 13px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--ink-4); white-space: nowrap; transition: color .25s; }
-.aud-mini button[aria-pressed="true"] { color: var(--ink); }
-.aud-mini .aud-ind { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 999px; background: #fff; box-shadow: var(--shadow-sm); transition: transform .45s var(--ease); }
-html[data-aud="supplier"] .aud-mini .aud-ind { transform: translateX(100%); }
+/* 위탁셀러/공급사 바꾸기 — 머리글 정가운데. 아이콘 동그라미 + 글자, 고른 쪽으로 색 알약이 미끄러진다 */
+.aud-mini { position: relative; justify-self: center; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 999px; background: var(--bg-gray); box-shadow: inset 0 1px 2px rgba(0, 27, 55, .08), inset 0 0 0 1px rgba(0, 27, 55, .03); }
+.aud-mini button { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 7px; height: 38px; padding: 0 17px 0 6px; border: 0; background: none; border-radius: 999px; cursor: pointer; font-size: 15px; font-weight: 700; letter-spacing: -.025em; color: var(--ink-4); white-space: nowrap; transition: color .3s; }
+.aud-mini .ic { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: var(--ink-4); box-shadow: 0 1px 3px rgba(0, 27, 55, .14); transition: background-color .35s, color .35s, box-shadow .35s, transform .55s var(--ease); }
+.aud-mini .ic svg { width: 16px; height: 16px; }
+@media (hover: hover) {
+  .aud-mini button:hover { color: var(--ink-2); }
+  .aud-mini button:hover .ic { color: var(--ink-2); transform: translateY(-1px); }
+}
+.aud-mini button[aria-pressed="true"] { color: #fff; }
+.aud-mini button[aria-pressed="true"] .ic { background: rgba(255, 255, 255, .2); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); transform: rotate(-8deg) scale(1.06); }
+.aud-mini button:focus-visible { outline-offset: 1px; border-radius: 999px; }
+.aud-mini .aud-ind { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 999px; background: linear-gradient(135deg, #3d8bf8, #1b64da); box-shadow: 0 8px 18px -8px rgba(27, 100, 218, .8), inset 0 1px 0 rgba(255, 255, 255, .25); transition: transform .55s var(--ease), background .4s, box-shadow .4s; }
+html[data-aud="supplier"] .aud-mini .aud-ind { transform: translateX(100%); background: linear-gradient(135deg, #343c4a, #10141c); box-shadow: 0 8px 18px -8px rgba(16, 20, 28, .75), inset 0 1px 0 rgba(255, 255, 255, .14); }
 
 /* ---------- 섹션 공통 ---------- */
 section { position: relative; }
@@ -565,8 +574,8 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 @media (max-width: 980px) {
   .links, .nav-login { display: none; }
   .menu-btn { display: block; }
-  .pill { padding-left: 16px; gap: 6px; }
-  .nav-cta { margin-left: auto; }
+  .pill { padding: 0 8px; column-gap: 6px; }
+  .brand { margin-left: 8px; }
   .reach { grid-template-columns: minmax(0, 1fr); }
   .hub { grid-template-columns: minmax(0, 1fr); gap: 64px; }
   .hub-col { grid-template-columns: repeat(2, minmax(0, 1fr)); justify-items: stretch !important; gap: 16px 10px; }
@@ -629,8 +638,29 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 }
 @media (max-width: 520px) {
   .nav-cta .btn { display: none; }
-  .aud-mini button { padding: 7px 10px; font-size: 13.5px; }
-  .brand img { height: 22px; }
+  .pill { column-gap: 4px; }
+  .brand { margin-left: 6px; }
+  .brand img { height: 21px; }
+  .aud-mini { padding: 3px; }
+  .aud-mini .aud-ind { top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); }
+  .aud-mini button { height: 36px; padding: 0 9px 0 3px; gap: 4px; font-size: 13.5px; }
+  .aud-mini .ic { width: 24px; height: 24px; }
+  .aud-mini .ic svg { width: 14px; height: 14px; }
+}
+@media (max-width: 389px) {
+  .nav-wrap { padding-inline: 10px; }
+  .brand { margin-left: 5px; }
+  .brand img { height: 20px; }
+}
+@media (max-width: 374px) {
+  .brand img { height: 19px; }
+  .aud-mini button { padding: 0 9px 0 3px; gap: 4px; font-size: 13px; }
+  .aud-mini .ic { width: 22px; height: 22px; }
+  .aud-mini .ic svg { width: 13px; height: 13px; }
+}
+@media (max-width: 345px) {
+  .aud-mini .ic { display: none; }
+  .aud-mini button { padding: 0 10px; }
 }
 @media (max-width: 420px) {
   .bento { grid-template-columns: minmax(0, 1fr); }
@@ -650,18 +680,20 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 
 <header class="nav-wrap">
   <nav class="pill" aria-label="주 메뉴">
-    <a class="brand" href="#top" aria-label="두고마켓 처음으로"><img src="assets/doogo-logo-horizontal.png" width="1015" height="302" alt="두고마켓"></a>
+    <div class="nav-l">
+      <a class="brand" href="#top" aria-label="두고마켓 처음으로"><img src="assets/doogo-logo-horizontal.png" width="1015" height="302" alt="두고마켓"></a>
+      <ul class="links">
+        <li><a href="#how">이용 방법</a></li>
+        <li><a href="#features">기능</a></li>
+        <li><a href="#pricing"><span data-aud="seller">요금제</span><span data-aud="supplier">수수료</span></a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+    </div>
     <div class="aud-mini" role="group" aria-label="보는 화면 바꾸기">
-      <button type="button" data-set-aud="seller" aria-pressed="true">위탁셀러</button>
-      <button type="button" data-set-aud="supplier" aria-pressed="false">공급사</button>
+      <button type="button" data-set-aud="seller" aria-pressed="true"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 4.2h2.4l2.2 10.3a1.7 1.7 0 0 0 1.7 1.3h8a1.7 1.7 0 0 0 1.6-1.2l1.6-6.4H6.3"/><circle cx="9.6" cy="19.7" r="1.35"/><circle cx="17" cy="19.7" r="1.35"/></svg></span><span class="tx">위탁셀러</span></button>
+      <button type="button" data-set-aud="supplier" aria-pressed="false"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20.4V10.2l5.2 3.3v-3.3l5.2 3.3V5.6h6.6v14.8z"/><path d="M6.6 16.9h1.6M11.2 16.9h1.6M15.8 16.9h1.6"/></svg></span><span class="tx">공급사</span></button>
       <i class="aud-ind" aria-hidden="true"></i>
     </div>
-    <ul class="links">
-      <li><a href="#how">이용 방법</a></li>
-      <li><a href="#features">기능</a></li>
-      <li><a href="#pricing"><span data-aud="seller">요금제</span><span data-aud="supplier">수수료</span></a></li>
-      <li><a href="#faq">FAQ</a></li>
-    </ul>
     <div class="nav-cta">
       <a class="nav-login" href="app.html" data-aud="seller" data-login-link>로그인</a>
       <a class="nav-login" href="app.html#partner" data-aud="supplier">공급사 로그인</a>
