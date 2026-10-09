@@ -33,15 +33,11 @@
     ["phone", "휴대폰 · PC", "어디서든 같은 내 강의실"],
     ["shieldCheck", "승인제 입장", "승인된 수강생만 들어와요"]
   ];
+  // 강사센터는 핵심 화면 세 개만 보여 준다 (메뉴 전체는 공개하지 않음)
   const ADMIN_TABS = [
     { key: "dash", title: "대시보드", img: "ad-dash" },
     { key: "students", title: "수강생 진척도", img: "ad-students" },
-    { key: "review", title: "과제 검수", img: "ad-review-open" },
-    { key: "questions", title: "요청사항 답변", img: "ad-questions" },
-    { key: "cohorts", title: "기수 관리", img: "ad-cohorts" },
-    { key: "brand", title: "브랜드 · 색상", img: "ad-brand" },
-    { key: "coaches", title: "코치 관리", img: "ad-coaches" },
-    { key: "free", title: "무료강의 페이지", img: "ad-free" }
+    { key: "review", title: "과제 검수", img: "ad-review-open" }
   ];
   const ADMIN_FEATURES = [
     ["palette", "내 이름의 강의 플랫폼", "강의 이름 · 색상 · 메뉴 · 로그인 화면까지 강사님 브랜드로 운영해요."],
@@ -92,9 +88,10 @@
 
   /* ---------- 조각 ---------- */
   const mark = (t) => '<mark class="hm-mark">' + t + "</mark>";
-  // 두고 원본 로고 (assets/brand) — 'doogo CLASS'
-  const brandLock = (cls) => '<span class="hm-lock ' + (cls || "") + '"><img src="assets/brand/doogo-color.png" alt="doogo" width="342" height="96"><span>CLASS</span></span>';
-  const brandMark = (cls) => '<img class="hm-dmark ' + (cls || "") + '" src="assets/brand/doogo-mark.png" alt="" width="123" height="128">';
+  // 두고 원본 로고를 빨강 심볼 + 두 줄(doogo / CLASS)로 — 타이탄클래스 로고처럼
+  const brandLock = (cls) => '<span class="hm-lock ' + (cls || "") + '" role="img" aria-label="doogo CLASS"><span class="hm-sym"></span><span class="hm-lock-t">' +
+    '<img src="assets/brand/doogo-word.png" alt="" width="240" height="84"><span class="hm-lock-cls"><i>C</i><i>L</i><i>A</i><i>S</i><i>S</i></span></span></span>';
+  const brandMark = (cls) => '<span class="hm-sym ' + (cls || "") + '" aria-hidden="true"></span>';
   const kicker = (t) => '<p class="hm-kicker">' + t + "</p>";
   const phone = (img, cls, alt) => '<div class="hm-phone ' + (cls || "") + '"><span class="hm-phone-notch"></span><img src="' + IMG + img + '.webp" alt="' + esc(alt || "") + '" loading="lazy" decoding="async"></div>';
   const browser = (img, cls, alt, eager) => '<div class="hm-browser ' + (cls || "") + '"><div class="hm-browser-bar"><i></i><i></i><i></i><span>doogo-class.vercel.app</span></div><img src="' + IMG + img + '.webp" alt="' + esc(alt || "") + '"' + (eager ? "" : ' loading="lazy"') + ' decoding="async"></div>';
@@ -126,7 +123,7 @@
       '<div class="hm-hero-art">' +
         browser("ad-dash", "hm-hero-browser", "강사센터 대시보드 화면", true) +
         '<div class="hm-hero-phone-wrap">' + phone("st-home", "hm-hero-phone", "수강생 홈 화면").replace(' loading="lazy"', "") + "</div>" +
-        '<div class="hm-chip hm-chip-a">' + icon("check", "sm ok") + "<span><b>1주차 과제 승인</b><small>문원오 강사 · 방금</small></span></div>" +
+        '<div class="hm-chip hm-chip-a">' + icon("check", "sm ok") + "<span><b>1주차 과제 승인</b><small>OOO 강사님 · 방금</small></span></div>" +
         '<div class="hm-chip hm-chip-b"><span><small>3기 평균 진도</small><b>72%</b></span><i class="hm-chip-bar"><i style="width:72%"></i></i></div>' +
         '<div class="hm-chip hm-chip-c">' + icon("award", "sm") + "<span><b>수료증 발급</b><small>필수 과제 23개 통과</small></span></div>" +
       "</div>" +
@@ -192,7 +189,7 @@
       '<div class="hm-head hm-reveal">' + kicker("FOR INSTRUCTORS · 강사") + '<h2 class="hm-h2">강사님의 노하우가<br>' + mark("일하는 강의 플랫폼") + "이 됩니다</h2>" +
         '<p class="hm-sub">커리큘럼을 올려 두면 수강생은 혼자서도 따라오고, 강사님은 강사센터에서 모든 수강생의 진도와 과제를 확인해요. 코치와 나눠서 운영할 수도 있어요.</p></div>' +
       '<div class="hm-atabs" role="tablist" aria-label="강사센터 화면">' + ADMIN_TABS.map((x) => '<button type="button" role="tab" class="hm-atab' + (x.key === cur.key ? " on" : "") + '" aria-selected="' + (x.key === cur.key) + '" data-hm-ad="' + x.key + '">' + x.title + "</button>").join("") + "</div>" +
-      '<div class="hm-ashot hm-reveal">' + browser(cur.img, "hm-admin-browser", "강사센터 " + cur.title + " 화면") + '<p class="hm-cap">실제 강사센터 화면 · 예시 데이터</p></div>' +
+      '<div class="hm-ashot hm-reveal">' + browser(cur.img, "hm-admin-browser", "강사센터 " + cur.title + " 화면") + '<p class="hm-cap">실제 강사센터 화면 일부 · 예시 데이터 (이름은 가렸어요)</p></div>' +
       '<div class="hm-feats">' + ADMIN_FEATURES.map((x) => '<article class="hm-feat hm-reveal"><span class="hm-feat-ic">' + icon(x[0]) + "</span><h3>" + x[1] + "</h3><p>" + x[2] + "</p></article>").join("") + "</div>" +
     "</div></section>";
   }
@@ -206,7 +203,7 @@
         '<div class="hm-ld-copy"><h3>로그인은 이 세 가지면 끝</h3><p>아이디 · 비밀번호를 따로 만들 필요가 없어요. 신청할 때 적은 정보 그대로 들어와요.</p><a class="hm-btn hm-btn-p" href="#/login">로그인 화면으로' + icon("arrowRight", "sm") + "</a></div>" +
         '<div class="hm-ld-card" aria-hidden="true">' +
           '<div class="hm-ld-f"><small>1. 수강 중인 강사님</small><span>' + window.logoMark() + "두고보는 문대표" + icon("chevRight", "xs") + "</span></div>" +
-          '<div class="hm-ld-f"><small>2. 이름</small><span>홍길동</span></div>' +
+          '<div class="hm-ld-f"><small>2. 이름</small><span>OOO</span></div>' +
           '<div class="hm-ld-f"><small>3. 휴대폰 번호 뒷자리</small><span class="hm-ld-pw">● ● ● ●</span></div>' +
           '<span class="hm-ld-btn">로그인</span>' +
         "</div>" +
