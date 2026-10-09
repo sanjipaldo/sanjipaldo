@@ -28,17 +28,33 @@ async function workbook(rows: Array<Array<string | number | null>>) {
 }
 
 describe("공급사 단가표(계약 마진) 업로드", () => {
-  it("판매가 기준 마진으로 계산하고 원 단위 미만은 버립니다", () => {
-    expect(priceWithMargin(5250, 10)).toBe(5833);
-    expect(priceWithMargin(5250, 20)).toBe(6562);
-    expect(priceWithMargin(8400, 10)).toBe(9333);
+  it("입력한 마진 이상이 되는 끝자리 00원 금액으로 올립니다", () => {
+    expect(priceWithMargin(5250, 10)).toBe(5900);
+    expect(priceWithMargin(5250, 20)).toBe(6600);
+    expect(priceWithMargin(8400, 10)).toBe(9400);
     expect(priceWithMargin(8400, 20)).toBe(10500);
     expect(priceWithMargin(9000, 10)).toBe(10000);
-    expect(priceWithMargin(10000, 12.5)).toBe(11428);
+    expect(priceWithMargin(10000, 12.5)).toBe(11500);
     expect(priceWithMargin(10000, 0)).toBe(10000);
   });
 
-  it("공급가를 원가로 쓰고 A급 단가 10%·일반공급가 20% 마진을 적용합니다", async () => {
+  it("100원 단위면 마진이 2%p 넘게 커지는 저가 상품만 50원 단위로 올립니다", () => {
+    // 1,000원 → 1,111원: 1,200원이면 마진 16.7%라 1,150원(13.0%)
+    expect(priceWithMargin(1000, 10)).toBe(1150);
+    expect(priceWithMargin(800, 20)).toBe(1000);
+  });
+
+  it("어떤 원가에서도 끝자리는 00원·50원이고 마진은 입력값 이상입니다", () => {
+    for (let cost = 300; cost <= 60000; cost += 37) {
+      for (const margin of [10, 20, 12.5]) {
+        const price = priceWithMargin(cost, margin);
+        expect(price % 50).toBe(0);
+        expect((price - cost) / price).toBeGreaterThanOrEqual(margin / 100 - 1e-9);
+      }
+    }
+  });
+
+  it("공급가를 원가로 쓰고 A급 단가 10%·일반공급가 20% 이상 마진을 적용합니다", async () => {
     const bytes = await workbook([
       ["상품명", "기존원가", "변경원가", "기존공급가", "변경공급가"],
       ["[당도보장]  제주 감귤 소과 3S 3kg", 8050, null, 8400, null]
@@ -48,7 +64,7 @@ describe("공급사 단가표(계약 마진) 업로드", () => {
     expect(preview.errors).toEqual([]);
     expect(preview.changes.map((change) => [change.field, change.after])).toEqual([
       ["원가", 8400],
-      ["A단가", 9333],
+      ["A단가", 9400],
       ["일반공급가", 10500]
     ]);
   });
@@ -61,8 +77,8 @@ describe("공급사 단가표(계약 마진) 업로드", () => {
     const preview = await previewBulkProductWorkbook(bytes);
     expect(preview.changes.map((change) => [change.field, change.after])).toEqual([
       ["원가", 5250],
-      ["A단가", 5833],
-      ["일반공급가", 6562]
+      ["A단가", 5900],
+      ["일반공급가", 6600]
     ]);
   });
 
@@ -99,7 +115,7 @@ describe("공급사 단가표(계약 마진) 업로드", () => {
     expect(preview.contract).toEqual({ aMargin: 15, generalMargin: 25, createMissing: false });
     expect(preview.changes.map((change) => [change.field, change.after])).toEqual([
       ["원가", 8400],
-      ["A단가", 9882],
+      ["A단가", 9900],
       ["일반공급가", 11200]
     ]);
   });
@@ -116,7 +132,7 @@ describe("공급사 단가표(계약 마진) 업로드", () => {
     expect(catalog.createProduct).toHaveBeenCalledWith(expect.objectContaining({
       name: "표고버섯 실속 1kg",
       costPrice: 10000,
-      aPrice: 11111,
+      aPrice: 11200,
       generalPrice: 12500,
       isVisible: false,
       categoryId: "cat-uncategorized"

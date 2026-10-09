@@ -36,13 +36,20 @@ export const ALL_PRICE_FIELDS: PriceField[] = ["cost", "a", "general"];
 const A_PRICE_GROUP_KEYWORD = "황금농부";
 
 // 공급사 단가표(계약): 공급사 가격을 두고 원가로 쓰고, 판매가 기준 마진으로 A급 단가·일반공급가를 계산합니다.
-// 예) 원가 5,250원 → A급 단가 5,833원(10% 마진), 일반공급가 6,562원(20% 마진). 원 단위 미만은 버립니다.
+// 예) 원가 5,250원 → A급 단가 5,900원(마진 10% 이상), 일반공급가 6,600원(마진 20% 이상). 100원 단위(저가는 50원 단위)로 올립니다.
 export const CONTRACT_A_MARGIN_PERCENT = 10;
 export const CONTRACT_GENERAL_MARGIN_PERCENT = 20;
+// 판매가를 깔끔한 금액으로 맞출 때, 마진이 입력값보다 이만큼(%p)까지는 커져도 100원 단위를 씁니다.
+export const CONTRACT_ROUNDING_TOLERANCE_PERCENT = 2;
 export function priceWithMargin(cost: number, marginPercent: number) {
   // 마진은 0.1% 단위까지 받습니다. 정수 계산으로 부동소수점 오차(예: 9,999.999…)를 피합니다.
+  // 입력한 마진 이상이 되는 가장 작은 100원 단위 금액(끝자리 00)으로 올립니다.
+  // 100원 단위로 올리면 마진이 입력값보다 2%p 넘게 커지는 저가 상품만 50원 단위(끝자리 50)로 올립니다.
   const tenths = Math.round(marginPercent * 10);
-  return Math.floor((cost * 1000) / (1000 - tenths));
+  const roundUp = (unit: number) => Math.ceil((cost * 1000) / ((1000 - tenths) * unit)) * unit;
+  const hundreds = roundUp(100);
+  const marginTenths = hundreds > 0 ? ((hundreds - cost) * 1000) / hundreds : 0;
+  return marginTenths > tenths + CONTRACT_ROUNDING_TOLERANCE_PERCENT * 10 ? roundUp(50) : hundreds;
 }
 // 관리자가 업로드 미리보기에서 정하는 값: 마진(%)과 없는 상품 신규 등록 여부
 export type ContractOptions = { aMargin: number; generalMargin: number; createMissing: boolean };
@@ -774,7 +781,7 @@ const normalizeProductName = (value: string) => value.replace(/\s+/g, " ").trim(
 
 // 공급사 단가표(계약) 엑셀: 기존 상품의 원가·A급 단가·일반공급가만 바꿉니다. 신규 등록·다른 값 변경은 하지 않습니다.
 // - 원가 = A급단가 칸에 값이 있으면 A급단가, 없으면 공급가 (각각 "변경" 값이 있으면 변경 값, 없으면 기존 값)
-// - A급 단가 = 원가 ÷ (1 − A 마진), 일반공급가 = 원가 ÷ (1 − 일반 마진) (원 단위 미만 버림, 기본 10%·20%)
+// - A급 단가·일반공급가 = 원가 ÷ (1 − 마진)을 100원 단위(저가는 50원 단위)로 올림 (기본 마진 10%·20%)
 // - 상품코드 열이 있으면 상품코드로, 없으면 상품명(띄어쓰기 차이 무시)으로 찾습니다.
 // - 찾지 못한 상품은 "신규 등록"을 켠 경우 미분류·숨김 상태로 새로 등록합니다.
 async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<string, number>, priceFields: PriceField[], contract: ContractOptions) {
@@ -869,7 +876,8 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
         row: rowNumber,
         input: { productCode: code || null, name, costPrice: cost, aPrice: nextA, generalPrice: nextGeneral, shippingType: "domestic", isVisible: false, isSoldOut: false }
       });
-      changes.push({ row: rowNumber, productName: name, optionName: null, field: "신규 등록", before: null, after: `원가 ${cost.toLocaleString("ko-KR")} · A ${nextA.toLocaleString("ko-KR")} · 일반 ${nextGeneral.toLocaleString("ko-KR")}` });
+      const marginLabel = (price: number) => `${(Math.round(((price - cost) / price) * 1000) / 10).toFixed(1)}%`;
+      changes.push({ row: rowNumber, productName: name, optionName: null, field: "신규 등록", before: null, after: `원가 ${cost.toLocaleString("ko-KR")} · A ${nextA.toLocaleString("ko-KR")}(${marginLabel(nextA)}) · 일반 ${nextGeneral.toLocaleString("ko-KR")}(${marginLabel(nextGeneral)})` });
       continue;
     }
     matchedRows += 1;
@@ -907,7 +915,7 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
     priceFields: ALL_PRICE_FIELDS.filter((field) => fields.has(field)),
     warnings: [
       `공급사 단가표(계약 마진) 양식으로 읽었습니다. 반영 항목: ${ALL_PRICE_FIELDS.filter((field) => fields.has(field)).map((field) => fieldLabels[field]).join(", ") || "없음"}. 가격 변경은 가격변동 이력에 기록됩니다.`,
-      `계산: A급 단가 = 원가 ÷ (1 − ${contract.aMargin}%), 일반공급가 = 원가 ÷ (1 − ${contract.generalMargin}%) (원 단위 미만 버림). 예) 원가 ${example.toLocaleString("ko-KR")}원 → A급 단가 ${priceWithMargin(example, contract.aMargin).toLocaleString("ko-KR")}원 · 일반공급가 ${priceWithMargin(example, contract.generalMargin).toLocaleString("ko-KR")}원. "변경" 칸에 값이 있으면 변경 값을 씁니다.`,
+      `계산: A급 단가 = 원가 ÷ (1 − ${contract.aMargin}%), 일반공급가 = 원가 ÷ (1 − ${contract.generalMargin}%)를 끝자리 00원으로 올립니다(100원 단위로 올리면 마진이 ${CONTRACT_ROUNDING_TOLERANCE_PERCENT}%p 넘게 커지는 저가 상품만 50원 단위). 그래서 실제 마진은 입력값보다 조금 높을 수 있습니다. 예) 원가 ${example.toLocaleString("ko-KR")}원 → A급 단가 ${priceWithMargin(example, contract.aMargin).toLocaleString("ko-KR")}원 · 일반공급가 ${priceWithMargin(example, contract.generalMargin).toLocaleString("ko-KR")}원. "변경" 칸에 값이 있으면 변경 값을 씁니다.`,
       ...(newProducts.length > 0 ? [`데이터센터에 없는 ${newProducts.length.toLocaleString("ko-KR")}개 상품은 신규 등록합니다(미분류 카테고리 · 숨김 상태 · 원가·A급 단가·일반공급가 모두 입력). 카테고리·이미지·배송 정책을 채운 뒤 "일괄 변경"으로 노출해 주세요.`] : []),
       ...(aPriceBased > 0 ? [`A급단가 칸에 값이 있는 ${aPriceBased.toLocaleString("ko-KR")}개 행은 A급단가를 원가로 썼습니다.`] : []),
       `기존 상품은 ${columns.has("상품코드") ? "상품코드" : "상품명(띄어쓰기 차이 무시)"}으로 찾아 가격만 바꿉니다. 판매가·품절·노출·카테고리 등 다른 값은 바꾸지 않습니다.${contract.createMissing ? "" : " 없는 상품은 신규 등록하지 않습니다."}`,
