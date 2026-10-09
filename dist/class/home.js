@@ -6,7 +6,7 @@
  *  - 회원가입 없이 승인된 수강생만 들어오는 플랫폼이라, 가입 버튼은 두지 않는다
  *  - ‘강사 입점 문의’ 팝업 → 마스터 → 강사 입점 문의에서 관리 (#/partner 로 바로 열 수 있음)
  *  - 바닥의 사업자 정보 · 두고 그룹사는 마스터 → 첫 화면 · 사업자 정보에서 고친다 (채운 칸만 보임)
- *  - 위 막대는 내려가면 검정으로 바뀌고, 아래 빨간 줄이 읽은 만큼 차오른다
+ *  - 위 막대는 내려가면 타이탄클래스처럼 밝은 회색 유리로 바뀌고, 아래 빨간 줄이 읽은 만큼 차오른다
  */
 (function () {
   "use strict";
@@ -396,7 +396,7 @@
     old.replaceWith(next);
   }
 
-  // 위 막대: 조금 내려가면 검정(빨강 포인트), 아래 빨간 줄은 읽은 만큼 차오른다 · 휴대폰 주소창 색도 같이
+  // 위 막대: 조금 내려가면 밝은 회색 유리(타이탄클래스처럼), 아래 빨간 줄은 읽은 만큼 차오른다 · 휴대폰 주소창 색도 같이
   let dark = null, ticking = false;
   function onScroll() {
     if (!isActive() || ticking) return;
@@ -411,7 +411,7 @@
       if (on !== dark) {
         dark = on;
         top.classList.toggle("scrolled", on);
-        const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", on ? "#262622" : "#ffffff");
+        const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", on ? "#dcdcdb" : "#ffffff");
       }
       if (prog) prog.style.transform = "scaleX(" + (max > 0 ? Math.min(1, y / max) : 0).toFixed(4) + ")";
     });
