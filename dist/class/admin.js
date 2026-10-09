@@ -1750,7 +1750,7 @@
     if (master) {
       if (f.kind) b.kind = v("kind");
       if (v("amount")) b.amount = parseWon(v("amount")); else delete b.amount;
-      b.vat = v("vat") || "separate";
+      b.vat = v("vat") || "included";
       ["paidAt", "invoiceAt", "depositor", "invoiceNo", "masterMemo"].forEach((k) => { if (v(k)) b[k] = v(k); else delete b[k]; });
     }
     if (!DB.saveBill(b)) { err.textContent = "저장하지 못했어요. 잠시 후 다시 시도해 주세요."; return; }

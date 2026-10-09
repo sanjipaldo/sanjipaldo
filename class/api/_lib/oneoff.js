@@ -141,12 +141,30 @@ function moonProfile(get) {
   return { writes: { [k]: Object.assign({}, c, { brand: Object.assign({}, c.brand, add) }) }, result: { added: Object.keys(add) } };
 }
 
+/* ---------- 기수 이용료: 부가세 포함으로 (대표님 요청) ----------
+ * 마스터 설정(meta.billing)이 이미 저장돼 있으면 부가세 방식만 '포함'으로, 아직 입금 확인 전인 신청도 '포함'으로.
+ * 입금 확인을 마친 기록은 그때 방식 그대로 둔다 */
+function billingVatIncluded(get, keys) {
+  const writes = {}, result = { meta: false, bills: [] };
+  const meta = get("meta");
+  if (isObj(meta) && isObj(meta.billing) && meta.billing.vat !== "included") {
+    writes.meta = Object.assign({}, meta, { billing: Object.assign({}, meta.billing, { vat: "included" }) });
+    result.meta = true;
+  }
+  keys("bill:").forEach((k) => {
+    const b = get(k);
+    if (isObj(b) && b.vat && b.vat !== "included" && !b.paidAt && !b.canceledAt) { writes[k] = Object.assign({}, b, { vat: "included" }); result.bills.push(k); }
+  });
+  return { writes, result };
+}
+
 /* 위에서부터 차례로 (앞 작업 결과를 뒤 작업이 본다) */
 const OPS = [
   { id: "2026-10-08-docs-guide-6", note: "문대표 서류 준비 가이드를 6단계로", run: docsGuideSix },
   { id: "2026-10-08-motivation-videos", note: "문대표 동기부여 채널에 유튜브 영상 6개", run: motivationVideos },
   { id: "2026-10-08-moon-demo-accounts", note: "문대표 체험 계정(3기 이수진 · 1기 체험단 · 2기 체험단)만 남기기", run: moonDemoAccounts },
-  { id: "2026-10-09-moon-profile-photo", note: "문대표 강사 프로필 사진 · 강의 분야 (첫 화면 강사 카드)", run: moonProfile }
+  { id: "2026-10-09-moon-profile-photo", note: "문대표 강사 프로필 사진 · 강의 분야 (첫 화면 강사 카드)", run: moonProfile },
+  { id: "2026-10-09-billing-vat-included", note: "기수 이용료 부가세 방식을 '부가세 포함'으로", run: billingVatIncluded }
 ];
 
-module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile };
+module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded };

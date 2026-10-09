@@ -934,8 +934,8 @@
    * 마스터: 전화 → 무통장 입금 확인 → 세금계산서 발행 → 기수 열기 (PG 결제 없음)
    * 서버 모드는 문서 bill:<강사>:<id> (마스터 + 그 강사만 보임), 아니면 이 브라우저에.
    * 입금 계좌 · 부가세 방식은 마스터 설정(db.billing, 강사센터에만 보임) */
-  const BILLING_DEFAULT = { bank: "", account: "", holder: "", vat: "separate", note: "" };
-  const BILL_VAT = [["separate", "부가세 별도 (이용료 + 10%)"], ["included", "부가세 포함 (이용료 안에 10%)"], ["none", "부가세 없음"]];
+  const BILLING_DEFAULT = { bank: "", account: "", holder: "", vat: "included", note: "" };
+  const BILL_VAT = [["included", "부가세 포함 (이용료 안에 10%)"], ["separate", "부가세 별도 (이용료 + 10%)"], ["none", "부가세 없음"]];
   const BILL_STATE = { requested: { label: "신청 접수", cls: "warn" }, paid: { label: "입금 확인", cls: "info" }, opened: { label: "기수 오픈", cls: "ok" }, canceled: { label: "취소", cls: "mute" } };
   function billingInfo() { return Object.assign({}, BILLING_DEFAULT, (db && db.billing) || {}); }
   function saveBilling(next) { db.billing = next; return save(); }
@@ -955,7 +955,7 @@
   function billMoney(b) {
     const raw = b.amount != null && b.amount !== "" ? b.amount : b.fee;
     const base = Math.max(0, Math.round(Number(raw) || 0));
-    const mode = b.vat || billingInfo().vat || "separate";
+    const mode = b.vat || billingInfo().vat || "included";
     if (mode === "included") { const supply = Math.round(base / 1.1); return { supply, tax: base - supply, total: base, mode }; }
     if (mode === "none") return { supply: base, tax: 0, total: base, mode };
     const tax = Math.round(base * 0.1);
