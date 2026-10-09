@@ -120,16 +120,17 @@ describe("공급사 단가표(계약 마진) 업로드", () => {
     ]);
   });
 
-  it("데이터센터에 없는 상품은 미분류·숨김으로 신규 등록합니다", async () => {
+  it("데이터센터에 없는 상품은 상품코드가 있을 때만 미분류·숨김으로 신규 등록합니다", async () => {
     const bytes = await workbook([
-      ["상품명", "기존원가", "변경원가", "기존A급단가", "변경A급단가", "기존공급가", "변경공급가"],
-      ["표고버섯 실속 1kg", null, 9500, null, 10000, null, 10500]
+      ["상품코드", "상품명", "기존원가", "변경원가", "기존A급단가", "변경A급단가", "기존공급가", "변경공급가"],
+      ["ass00059", "표고버섯 실속 1kg", null, 9500, null, 10000, null, 10500]
     ]);
     const preview = await previewBulkProductWorkbook(bytes);
     expect(preview.newProducts).toBe(1);
     expect(preview.changes[0].field).toBe("신규 등록");
     await applyBulkProductWorkbook(bytes, "tester");
     expect(catalog.createProduct).toHaveBeenCalledWith(expect.objectContaining({
+      productCode: "ass00059",
       name: "표고버섯 실속 1kg",
       costPrice: 10000,
       aPrice: 11200,
@@ -137,5 +138,29 @@ describe("공급사 단가표(계약 마진) 업로드", () => {
       isVisible: false,
       categoryId: "cat-uncategorized"
     }));
+  });
+
+  it("상품코드가 없으면 신규 등록하지 않고 안내합니다", async () => {
+    const bytes = await workbook([
+      ["상품명", "기존공급가"],
+      ["새로운 상품 1kg", 5000]
+    ]);
+    const preview = await previewBulkProductWorkbook(bytes);
+    expect(preview.newProducts).toBe(0);
+    expect(preview.changes).toEqual([]);
+    expect(preview.warnings.some((warning) => warning.includes("상품코드가 없어 신규 등록하지 않았습니다"))).toBe(true);
+  });
+
+  it("신규 상품은 엑셀 순서대로 목록에 놓이도록 마지막 행부터 등록합니다", async () => {
+    vi.mocked(catalog.createProduct).mockClear();
+    const bytes = await workbook([
+      ["상품코드", "상품명", "기존공급가"],
+      ["ass00057", "표고버섯 가정용 1kg", 5250],
+      ["ass00058", "표고버섯 가정용 2kg", 9500],
+      ["ass00060", "표고버섯 실속 2kg", 19000]
+    ]);
+    await applyBulkProductWorkbook(bytes, "tester");
+    // 새 상품은 등록될 때마다 맨 앞에 들어가므로, 마지막 행 → 첫 행 순서로 등록해야 첫 행이 맨 위가 됩니다.
+    expect(vi.mocked(catalog.createProduct).mock.calls.map(([input]) => input.productCode)).toEqual(["ass00060", "ass00058", "ass00057"]);
   });
 });

@@ -617,7 +617,13 @@ catalogRouter.put("/admin/products/display-order", adminRoute, async (c) => {
 catalogRouter.post("/admin/products", adminRoute, async (c) => {
   const parsed = ProductSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", productInputMessage(parsed.error)), 400);
-  return c.json(apiSuccess({ product: await createProduct(parsed.data) }), 201);
+  // 신규 상품은 상품코드가 꼭 있어야 합니다(발주오라·단가관리 코드와 1:1).
+  if (!parsed.data.productCode?.trim()) return c.json(apiFailure("INVALID_INPUT", "상품코드를 입력해 주세요."), 400);
+  try {
+    return c.json(apiSuccess({ product: await createProduct(parsed.data) }), 201);
+  } catch (error) {
+    return errorResponse(c, error);
+  }
 });
 
 const BulkUpdateSchema = z.object({

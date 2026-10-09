@@ -802,6 +802,7 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
   const seen = new Set<string>();
   const missing: string[] = [];
   const newProducts: NewProductDraft[] = [];
+  const noCode: string[] = [];
   const ambiguous: string[] = [];
   const noPrice: string[] = [];
   let matchedRows = 0;
@@ -871,6 +872,11 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
         missing.push(code || name);
         continue;
       }
+      // 신규 등록은 상품코드가 있어야 합니다(발주오라·단가관리와 같은 코드로 1:1 매칭).
+      if (!code) {
+        noCode.push(`${rowNumber}행 ${name}`);
+        continue;
+      }
       // 신규 상품: 가격 세 가지를 모두 넣고, 카테고리·이미지·배송을 채운 뒤 노출할 수 있게 숨김으로 등록합니다.
       newProducts.push({
         row: rowNumber,
@@ -920,6 +926,7 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
       ...(aPriceBased > 0 ? [`A급단가 칸에 값이 있는 ${aPriceBased.toLocaleString("ko-KR")}개 행은 A급단가를 원가로 썼습니다.`] : []),
       `기존 상품은 ${columns.has("상품코드") ? "상품코드" : "상품명(띄어쓰기 차이 무시)"}으로 찾아 가격만 바꿉니다. 판매가·품절·노출·카테고리 등 다른 값은 바꾸지 않습니다.${contract.createMissing ? "" : " 없는 상품은 신규 등록하지 않습니다."}`,
       ...(missing.length > 0 ? [`데이터센터에서 찾지 못한 ${missing.length.toLocaleString("ko-KR")}개 행은 건너뜁니다(신규 등록 꺼짐): ${list(missing)}`] : []),
+      ...(noCode.length > 0 ? [`데이터센터에 없는 상품 ${noCode.length}개는 상품코드가 없어 신규 등록하지 않았습니다. 엑셀에 "상품코드" 열(예: ass00057)을 넣어 다시 올려 주세요: ${list(noCode)}`] : []),
       ...(ambiguous.length > 0 ? [`같은 이름의 상품이 여러 개라 건너뛴 행 ${ambiguous.length}개(상품명을 구분하거나 상품코드 열을 넣어 주세요): ${list(ambiguous)}`] : []),
       ...(noPrice.length > 0 ? [`공급가·A급단가가 비어 있어 건너뛴 행 ${noPrice.length}개: ${list(noPrice)}`] : [])
     ]
@@ -943,7 +950,8 @@ export async function applyBulkProductWorkbook(bytes: Uint8Array, changedBy: str
   if (newProducts.length > 0) {
     const data = await getAdminCatalog();
     const categoryIds = new Map<"domestic" | "overseas", string>();
-    for (const draft of newProducts) {
+    // 새 상품은 매번 진열순서 맨 앞에 들어가므로, 엑셀 마지막 행부터 등록해야 목록이 엑셀 순서(첫 행이 맨 위)대로 놓입니다.
+    for (const draft of [...newProducts].sort((a, b) => b.row - a.row)) {
       const shippingType = draft.input.shippingType;
       let categoryId = categoryIds.get(shippingType)
         ?? data.categories.find((category) => category.name === UNCATEGORIZED_NAME && category.shippingType === shippingType)?.id;

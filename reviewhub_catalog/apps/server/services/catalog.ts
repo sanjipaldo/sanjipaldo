@@ -919,6 +919,12 @@ export async function createProduct(input: ProductInput) {
   if (selectedShippingPolicy && selectedShippingPolicy.shippingType !== input.shippingType) {
     throw new DatabaseError("DATABASE_QUERY_FAILED", "배송 정책과 상품 배송유형이 일치하지 않습니다.", 400);
   }
+  // 상품코드는 중복될 수 없습니다(같은 코드가 있으면 DB 오류 대신 안내).
+  const requestedCode = input.productCode?.trim();
+  if (requestedCode) {
+    const duplicate = await db.select({ id: products.id, name: products.name }).from(products).where(eq(products.productCode, requestedCode)).limit(1);
+    if (duplicate[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", `상품코드 ${requestedCode}는 이미 '${duplicate[0].name}' 상품에서 쓰고 있습니다.`, 409);
+  }
   // 새로 등록한 상품이 목록 맨 위에 오도록 현재 가장 앞 순서보다 앞에 둡니다(진열순서 관리에서 다시 옮길 수 있음).
   const minimumOrderRows = await db
     .select({ value: sql<number>`coalesce(min(${products.displayOrder}), 0)` })
