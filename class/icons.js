@@ -89,7 +89,7 @@
     userX: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" x2="22" y1="8" y2="13"/><line x1="22" x2="17" y1="8" y2="13"/>'
   };
   window.ICONS = ICONS;
-  /** 로그인 화면 왼쪽 장식 — 사선 빛줄기 + 떠 있는 유리 아이콘 타일 (theme: wise | blue | violet) */
+  /** 로그인 화면 왼쪽 장식 — 사선 빛줄기 + 떠 있는 유리 아이콘 타일 (theme: wise | red | dark | green) */
   window.loginArt = (theme, names) => '<div class="lx-art lx-' + theme + '" aria-hidden="true"><span class="lx-glow"></span><span class="lx-beam b1"></span><span class="lx-beam b2"></span>' +
     names.map((n, i) => '<span class="lx-tile t' + (i + 1) + '">' + window.icon(n) + "</span>").join("") + "</div>";
   /** 강의 로고 마크 — 강사가 고른 색(--primary)으로 칠해진다 */
@@ -116,9 +116,10 @@
     const f = { color: "doogo-color.png", white: "doogo-white.png", mark: "doogo-mark.png", markWhite: "doogo-mark-white.png" }[variant || "color"];
     return '<img class="doogo-logo ' + (cls || "") + '" src="assets/brand/' + f + '" alt="doogo">';
   };
-  /** 두고 클래스 로고 — 여기어때 레드 심볼 + doogo 글자 로고 + CLASS(대문자, 좁은 자간). 소개 화면 · 로그인 · 강사센터 머리띠에서 쓴다 (모양은 home.css .hm-lock, 흰 글자판은 .hm-lock-inv) */
-  window.doogoClassLock = (cls) => '<span class="hm-lock ' + (cls || "") + '" role="img" aria-label="doogo CLASS"><span class="hm-sym"></span>' +
-    '<img class="hm-lock-word" src="assets/brand/doogo-word.png" alt="" width="240" height="84"><b class="hm-lock-cls">CLASS</b></span>';
+  /** 두고 클래스 로고 — doogo 로고(레드 심볼 + 검정 글자)는 그대로 두고, 오른쪽에 작은 빨간 CLASS 배지.
+   *  소개 화면 · 로그인 · 강사센터 머리띠에서 쓴다 (모양은 home.css .hm-lock, 크기는 --lh = doogo 로고 높이) */
+  window.doogoClassLock = (cls) => '<span class="hm-lock ' + (cls || "") + '" role="img" aria-label="doogo CLASS">' +
+    '<img class="hm-lock-logo" src="assets/brand/doogo-color.png" alt="" width="342" height="96"><b class="hm-lock-cls">CLASS</b></span>';
   /** ‘Powered by doogo’ 표시 */
   window.poweredBy = (variant, cls) => '<span class="powered ' + (cls || "") + '"><span>Powered by</span>' + window.doogoLogo(variant || "color") + "</span>";
   // 서비스 표시 (카카오톡 채널 · 네이버) — 연결되는 곳을 한눈에 알 수 있게

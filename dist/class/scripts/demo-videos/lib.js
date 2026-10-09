@@ -5,6 +5,7 @@
  *   2) node class/scripts/demo-videos/scenes.js lp free home care student admin
  *   3) out/ 의 v-*.mp4 · v-*.jpg 를 assets/home/ 으로 (jpg → webp, mp4 → webm 도 만들기, README 참고)
  *   4) 수강생 화면 · 강사센터 영상의 장(chapter) 시각이 바뀌면 home.js STUDENT_TABS · ADMIN_TABS 의 at 을 맞춘다
+ *   수강생 화면 · 강의 페이지는 녹화할 때만 여기어때 레드(흰 바탕) 색으로 바꿔서 찍는다 (demoTheme, DEMO_THEME=none 이면 강사 색 그대로)
  * 필요한 것: playwright(크로미움), ffmpeg */
 let chromium;
 try { ({ chromium } = require("playwright")); } catch (e) { ({ chromium } = require("/opt/node22/lib/node_modules/playwright")); }
@@ -230,4 +231,13 @@ async function studentLogin(p, name, pw) {
   for (let i = 0; i < 3; i++) { const m = await p.$("#modal-root > *"); if (!m) break; const btn = await p.$("#modal-root .btn-primary, #modal-root [data-action=modal-close], #modal-root button"); if (btn) await btn.click(); await sleep(300); }
 }
 
-module.exports = { B, SP, MAP, browser, context, record, encode, sleep, box, reveal, point, tap, scrollBy, scrollTop, moveTo, type, go, studentLogin };
+// 데모 영상의 수강생 화면 · 강의 페이지는 두고 클래스 첫 화면과 같은 색(여기어때 레드 · 흰 바탕)으로 찍는다.
+// 녹화 브라우저 안(이 브라우저 저장 모드)에서만 바꾸고 실제 강사 데이터는 그대로. DEMO_THEME=none 이면 강사 색 그대로
+const DEMO_THEME = process.env.DEMO_THEME || "red";
+async function demoTheme(p, id) {
+  if (!DEMO_THEME || DEMO_THEME === "none") return;
+  await p.evaluate(([who, t]) => { const c = DB.content(who); if (c && c.brand.theme !== t) { c.brand.theme = t; c.brand.themeSet = true; DB.save(); } }, [id || "moon", DEMO_THEME]);
+  await p.reload(); await sleep(900);
+}
+
+module.exports = { B, SP, MAP, browser, context, record, encode, sleep, box, reveal, point, tap, scrollBy, scrollTop, moveTo, type, go, studentLogin, demoTheme };

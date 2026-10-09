@@ -59,14 +59,15 @@ body[data-mode="home"] { background: #fff; }
 .hm-top.scrolled .hm-top-prog { opacity: 1; }
 .hm-top-in { display: flex; align-items: center; gap: 32px; height: 64px; }
 .hm-logo { display: flex; align-items: center; color: var(--g900); border-radius: 6px; }
-/* 두고 클래스 로고 — 빨강(#F7323F) d 심볼 + doogo 글자 로고 + CLASS (대문자 · 좁은 자간, doogo 글자 바닥선에 맞춤)
- * --lh = 심볼 높이 = doogo 의 d 높이. g 꼬리는 아래로 살짝 내려간다 */
-.hm-lock { --lh: 32px; display: inline-flex; align-items: flex-end; gap: calc(var(--lh) * .2); line-height: 1; vertical-align: middle; }
+/* 두고 클래스 로고 — doogo 로고(레드 심볼 + 검정 글자) 그대로 + 오른쪽에 작은 빨간 CLASS 배지
+ * --lh = doogo 로고 그림 높이(g 꼬리 포함). 배지는 로고 높이에 맞춰 같이 커지고 작아진다 */
+.hm-lock { --lh: 34px; display: inline-flex; align-items: center; gap: calc(var(--lh) * .24); line-height: 1; vertical-align: middle; }
+.hm-lock-logo { display: block; flex: none; height: var(--lh); width: auto; }
+.hm-lock-cls { display: block; flex: none; padding: calc(var(--lh) * .09) calc(var(--lh) * .2); border-radius: calc(var(--lh) * .15); background: #f94239; color: #fff;
+  font-family: var(--font); font-size: max(9px, calc(var(--lh) * .32)); font-weight: 700; font-style: normal; line-height: 1.05; letter-spacing: .06em; }
+/* 다른 곳(문제 · 답 줄, 랜딩 미리보기)에서 쓰는 두고 심볼 하나 */
 .hm-sym { display: block; flex: none; height: var(--lh, 40px); width: calc(var(--lh, 40px) * .958); background: var(--logo, #f7323f);
   -webkit-mask: url(assets/brand/doogo-symbol.png) center / contain no-repeat; mask: url(assets/brand/doogo-symbol.png) center / contain no-repeat; }
-.hm-lock-word { display: block; flex: none; height: calc(var(--lh) * 1.4); width: auto; margin-bottom: calc(var(--lh) * -.35); }
-.hm-lock-cls { display: block; flex: none; margin: 0 0 calc(var(--lh) * -.1) calc(var(--lh) * .04); font-family: var(--font); font-size: calc(var(--lh) * .62); font-weight: 700; font-style: normal; line-height: 1; letter-spacing: .03em; color: var(--g900, #222); }
-.hm-logo .hm-sym { transition: transform .4s var(--ease); }
 .hm-nav { display: flex; gap: 2px; }
 .hm-nav-a { position: relative; height: 36px; padding: 0 12px; border-radius: 8px; font-size: 15px; font-weight: 600; color: var(--g600); transition: color .15s ease, background-color .15s ease; }
 .hm-nav-apply { color: var(--pri); font-weight: 700; }
@@ -100,7 +101,6 @@ body[data-mode="home"] { background: #fff; }
 .hm-hero-browser { position: absolute; top: 40px; left: 18%; width: 100%; }
 .hm-phone { position: relative; border-radius: 36px; padding: 8px; background: var(--g900); box-shadow: var(--sh-lg); }
 .hm-phone img { display: block; width: 100%; aspect-ratio: 640 / 1300; object-fit: cover; object-position: top; border-radius: 29px; background: var(--g50); }
-.hm-phone-notch { position: absolute; top: 15px; left: 50%; width: 30%; height: 18px; transform: translateX(-50%); border-radius: 12px; background: var(--g900); z-index: 1; }
 /* 실제 화면 녹화 영상 (첫 장면 사진 → 보이면 재생) · 오른쪽 아래 멈춤 버튼 */
 .hm-browser-scr { position: relative; }
 .hm-browser video { display: block; width: 100%; height: auto; aspect-ratio: 1440 / 900; object-fit: cover; object-position: top; background: var(--g50); }
@@ -127,12 +127,6 @@ body[data-mode="home"] { background: #fff; }
 @keyframes hm-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
 /* 숫자 */
-.hm-stats { background: #fff; }
-.hm-stats-in { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding: 24px 0 0; }
-.hm-stat { display: flex; flex-direction: column-reverse; gap: 6px; padding: 20px 24px; border-radius: 16px; border: 1px solid var(--g200); background: #fff; transition: transform .25s var(--ease), box-shadow .25s ease, border-color .25s ease; }
-.hm-stat b { display: block; font-size: 34px; font-weight: 800; letter-spacing: 0; line-height: 1.2; color: var(--g900); transition: color .2s ease; }
-.hm-stat b small { margin-left: 2px; font-size: 16px; font-weight: 700; color: var(--pri); }
-.hm-stat span { display: block; font-size: 14px; font-weight: 400; color: var(--g500); }
 
 /* 공통 구역 */
 .hm-sec { padding: 96px 0; }
@@ -376,15 +370,12 @@ body[data-mode="home"] { background: #fff; }
   .hm-btn-inv:hover { background: var(--pri-soft); }
   .hm-btn-onpri:hover { background: #fff; color: var(--pri); border-color: #fff; }
   .hm-btn:hover .icon { transform: translateX(3px); }
-  .hm-logo:hover .hm-sym { transform: rotate(-10deg) scale(1.06); }
   .hm-nav-a:hover { color: var(--g900); background: var(--g50); }
   .hm-nav-apply:hover { color: #fff; background: var(--pri); }
   .hm-shead-link:hover { color: var(--pri); background: var(--pri-soft); }
   .hm-shead-link:hover .icon { transform: translateX(3px); }
   .hm-shead-link .icon { transition: transform .2s var(--ease); }
 
-  .hm-stat:hover { transform: translateY(-4px); border-color: var(--pri-line); box-shadow: var(--sh-hov); }
-  .hm-stat:hover b { color: var(--pri); }
 
   .hm-hov:hover { transform: translateY(-6px); border-color: var(--pri-line); box-shadow: var(--sh-hov); }
   .hm-hov:hover::after { transform: scaleX(1); }
@@ -423,7 +414,7 @@ body[data-mode="home"] { background: #fff; }
 }
 /* 휴대폰: 누르는 순간 살짝 눌리는 느낌 */
 @media (hover: none) {
-  .hm-hov:active, .hm-tc:active, .hm-stat:active, .hm-join:active { transform: scale(.98); }
+  .hm-hov:active, .hm-tc:active, .hm-join:active { transform: scale(.98); }
   .hm-hov:active .hm-ic { background: var(--pri); color: #fff; }
 }
 
@@ -442,7 +433,7 @@ html.hm-noscroll { overflow: hidden; }
 .hm-modal-x { position: absolute; top: 16px; right: 16px; z-index: 1; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--g500); transition: background-color .15s ease, color .15s ease, transform .3s var(--ease); }
 .hm-modal-x:hover { background: var(--g100); color: var(--g900); transform: rotate(90deg); }
 .hm-modal-in { padding: 40px 40px 36px; }
-.hm-modal-head .hm-lock { --lh: 26px; }
+.hm-modal-head .hm-lock { --lh: 28px; }
 .hm-modal-head h2 { margin-top: 24px !important; font-size: 24px; font-weight: 700; letter-spacing: 0; color: var(--g900); }
 .hm-modal-head p { margin-top: 10px !important; font-size: 15px; line-height: 1.6; color: var(--g500); }
 .hm-form { display: grid; gap: 18px; margin-top: 28px; }
@@ -476,8 +467,8 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 @media (prefers-reduced-motion: reduce) {
   .hm-reveal, .hm-reveal.in { opacity: 1; animation: none; }
   .hm-chip, .hm-dot, .hm-mbg, .hm-modal, .hm-done-ic { animation: none; }
-  .hm-btn, .hm-hov, .hm-tc, .hm-stat, .hm-join, .hm-ic, .hm-tc-photo img, .hm-tc-shape, .hm-join-ic { transition: none; }
-  .hm-hov:hover, .hm-tc:hover, .hm-stat:hover, .hm-join:hover,   .hm-top, .hm-top-prog { transition: none; }
+  .hm-btn, .hm-hov, .hm-tc, .hm-join, .hm-ic, .hm-tc-photo img, .hm-tc-shape, .hm-join-ic { transition: none; }
+  .hm-hov:hover, .hm-tc:hover, .hm-join:hover,   .hm-top, .hm-top-prog { transition: none; }
   .hm-hov:hover .hm-ic, .hm-join:hover .hm-join-ic, .hm-tc:hover .hm-tc-photo img { transform: none; }
 }
 
@@ -494,7 +485,6 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
   .hm-chip-a { top: 8px; left: 30%; }
   .hm-chip-b { right: 0; bottom: 20%; }
   .hm-chip-c { left: 36%; bottom: 8px; }
-  .hm-stats-in { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hm-sec { padding: 80px 0; }
   .hm-tcs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hm-pillars { grid-template-columns: 1fr; gap: 16px; }
@@ -515,7 +505,7 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 @media (max-width: 720px) {
   .hm-wrap { width: calc(100% - 40px); }
   .hm-top-in { gap: 10px; height: 56px; }
-  .hm-top .hm-lock { --lh: 22px; }
+  .hm-top .hm-lock { --lh: 26px; }
   .hm-top-r .hm-btn-ghost { padding: 0 10px; }
   .hm-hero-in { padding: 48px 0 32px; gap: 24px; }
   .hm-h1 { font-size: clamp(28px, 8.4vw, 40px); line-height: 1.3; }
@@ -529,7 +519,6 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
   .hm-phone { border-radius: 26px; padding: 6px; }
   .hm-phone img, .hm-phone video { border-radius: 21px; }
   .hm-phone .hm-vid-btn { right: 12px; bottom: 12px; width: 26px; height: 26px; }
-  .hm-phone-notch { top: 11px; height: 12px; }
   .hm-chip { padding: 8px 10px 8px 8px; gap: 8px; border-radius: 12px; }
   .hm-chip b { font-size: 12px; }
   .hm-chip small { font-size: 10px; }
@@ -539,10 +528,6 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
   .hm-chip-b b { font-size: 18px; }
   .hm-chip-bar { width: 92px; }
   .hm-chip-c { display: none; }
-  .hm-stats-in { gap: 10px; padding-top: 24px; }
-  .hm-stat { padding: 16px 18px; }
-  .hm-stat b { font-size: 26px; }
-  .hm-stat b small { font-size: 14px; }
   .hm-sec { padding: 72px 0; }
   .hm-h2 { font-size: 24px; line-height: 1.35; }
   .hm-h2-xl { font-size: 30px; }
@@ -669,14 +654,6 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 
 
 /* ===== PC에서 꽉 차게: 함께하는 강사 띠 · 운영 흐름 · 세부 기능 · 비교 · 강사센터 메뉴 · 기수 운영 · FAQ 2단 · 마지막 안내 · 바닥 ===== */
-.hm-ticker { border-top: 1px solid var(--g100); border-bottom: 1px solid var(--g100); background: var(--g10); }
-.hm-ticker-in { display: flex; align-items: center; gap: 24px; min-height: 64px; padding: 12px 0; }
-.hm-ticker-l { display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: 14px; font-weight: 700; color: var(--g900); }
-.hm .hm-ticker-l .icon { color: var(--pri); }
-.hm-ticker-names { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; flex: 1; }
-.hm-ticker-names > a, .hm-ticker-names > span { display: inline-flex; align-items: baseline; gap: 6px; padding: 7px 14px; border-radius: 50px; background: #fff; border: 1px solid var(--g200); font-size: 14px; font-weight: 700; color: var(--g800); text-decoration: none; transition: border-color .2s ease, color .2s ease; }
-.hm-ticker-names small { font-size: 12px; font-weight: 400; color: var(--g500); }
-.hm-ticker-go { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 14px; font-weight: 600; color: var(--g600); }
 
 .hm-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; counter-reset: f; }
 .hm-flow-i { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 20px 16px 18px; border-radius: 16px; background: #fff; border: 1px solid var(--g200); }
@@ -706,7 +683,7 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 .hm-cmp-new { display: flex; gap: 8px; align-items: flex-start; height: 100%; color: var(--g900); font-weight: 600; background: var(--pri-soft); }
 .hm .hm-cmp-old .icon { margin-top: 3px; color: var(--g300); stroke-width: 2.4; }
 .hm .hm-cmp-new .icon { margin-top: 3px; color: var(--pri); stroke-width: 2.6; }
-.hm-lock-xs { --lh: 18px; }
+.hm-lock-xs { --lh: 22px; }
 
 .hm-menus { margin-top: 24px; padding: 28px 32px; border-radius: 20px; background: #fff; border: 1px solid var(--g200); }
 .hm-menus-h { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 20px; }
@@ -761,8 +738,6 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 .hm-doc { margin: 16px 0 24px; max-height: 50vh; overflow: auto; font-size: 14px; line-height: 1.7; color: var(--g600); white-space: pre-wrap; }
 
 @media (hover: hover) {
-  .hm-ticker-names > a:hover { border-color: var(--pri); color: var(--pri); }
-  .hm-ticker-go:hover { color: var(--pri); }
   .hm-foot-cs-btn:hover { border-color: var(--pri); color: var(--pri); }
   .hm-foot-legal a:hover, .hm-foot-legal button:hover, .hm-foot-col button[data-hm-legal]:hover { color: var(--pri); }
 }
@@ -785,9 +760,6 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
   .hm-shead, .hm-shead.no-sub { grid-template-columns: 1fr; gap: 12px; }
   .hm-shead .hm-sub { grid-row: auto; }
   .hm-shead-r { justify-self: start; }
-  .hm-ticker-in { flex-wrap: wrap; gap: 10px; padding: 16px 0; }
-  .hm-ticker-names { flex-basis: 100%; }
-  .hm-ticker-go { display: none; }
   .hm-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .hm-flow-i { padding: 16px 14px; }
   .hm-flow-i::after { display: none; }
@@ -818,7 +790,7 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
   -webkit-mask: url(assets/brand/doogo-symbol.png) center / contain no-repeat; mask: url(assets/brand/doogo-symbol.png) center / contain no-repeat; }
 .dc-brand > * { position: relative; }
 .dc-logo { align-self: flex-start; border-radius: 8px; }
-.dc-logo .hm-lock { --lh: 34px; }
+.dc-logo .hm-lock { --lh: 36px; }
 .dc-hero { max-width: 520px; padding: 48px 0; }
 .dc-eyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 6px 12px; border-radius: 50px; background: var(--dc-pri-soft); color: var(--dc-pri-dark); font-size: 13px; font-weight: 600; }
 .dc-eyebrow i { width: 6px; height: 6px; border-radius: 50%; background: var(--dc-pri); }
@@ -836,7 +808,7 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 .dc-center { display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 10px; background: #ffedea; color: var(--dc-pri-dark); font-size: 14px; font-weight: 600; text-decoration: none; transition: background-color .15s ease; }
 .dc-card { padding: 40px 36px 32px; border: 1px solid var(--dc-g100); border-radius: 24px; background: #fff; box-shadow: 0 2px 16px rgba(0, 0, 0, .08); }
 .dc-card-logo { display: flex; justify-content: center; margin-bottom: 20px; }
-.dc-card-logo .hm-lock { --lh: 28px; }
+.dc-card-logo .hm-lock { --lh: 30px; }
 .login-dc .login-card h1 { margin: 0 0 8px; text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 0; color: var(--dc-ink); }
 .login-dc .login-card .lead { margin: 0 0 28px; text-align: center; font-size: 14px; color: var(--dc-g500); }
 .login-dc .field-label { font-size: 15px; font-weight: 600; color: var(--dc-ink); }
@@ -867,7 +839,7 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 @media (max-width: 1023px) {
   .dc-brand { padding: 20px 20px 0; border-right: 0; border-bottom: 1px solid var(--dc-g100); }
   .dc-brand::before { width: 260px; height: 272px; right: -60px; bottom: -40px; }
-  .dc-logo .hm-lock { --lh: 26px; }
+  .dc-logo .hm-lock { --lh: 28px; }
   .dc-hero { padding: 28px 0 32px; }
   .dc-eyebrow { font-size: 12px; }
   .dc-headline { margin-top: 16px; font-size: 30px; line-height: 1.3; }
@@ -882,7 +854,7 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 
 /* ---------- 제목 자간: 문대표 수강생 화면처럼 굵은 제목은 좁게 (본문은 0) ---------- */
 .hm-h1, .dc-headline { letter-spacing: -0.04em; }
-.hm-h2, .hm-h2-xl, .hm-final .hm-h2, .hm-frow h3, .hm-stat b, .hm-plan-price, .hm-pillar-no, .hm-chip-b b, .hm-foot-tel, .login-dc .login-card h1 { letter-spacing: -0.03em; }
+.hm-h2, .hm-h2-xl, .hm-final .hm-h2, .hm-frow h3, .hm-plan-price, .hm-pillar-no, .hm-chip-b b, .hm-foot-tel, .login-dc .login-card h1 { letter-spacing: -0.03em; }
 .hm-tc-body h3, .hm-join-t b, .hm-pain h3, .hm-answer p, .hm-scale-t, .hm-pillar h3, .hm-feat h3, .hm-step b, .hm-ld-copy h3, .hm-modal-head h2, .hm-done h2,
 .hm-show-cap b, .hm-flow-i b, .hm-menus-h b, .hm-cohort-h b, .hm-final-pts b, .hm-cmp th, .hm-faq summary, .dc-ins-t b { letter-spacing: -0.02em; }
 

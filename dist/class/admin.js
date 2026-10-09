@@ -131,16 +131,17 @@
     const coachTab = loginTab === "coach", ins = loginTab === "instructor" || coachTab;
     document.title = (coachTab ? "코치센터" : ins ? "강사센터" : "마스터 관리자") + " · 로그인";
     const L = coachTab
-      ? { theme: "green", tag: "코치", eyebrow: "DOOGO COACH WORKSPACE", h: "과제 피드백과<br>1:1 문의를 한 곳에서", sub: "강사님이 맡긴 메뉴에서 수강생 과제를 검수하고, 문의에 답하고, 진행 상황을 챙길 수 있습니다.", icons: ["checks", "message", "users", "award"], label: "COACH", title: "코치 로그인", lead: "강사님이 등록해 준 이름과 전화번호 뒷자리로 로그인하세요." }
+      ? { theme: "green", tag: "코치", eyebrow: "DOOGO COACH WORKSPACE", h: "과제 피드백과<br><em>1:1 문의</em>를 한 곳에서", sub: "강사님이 맡긴 메뉴에서 수강생 과제를 검수하고, 문의에 답하고, 진행 상황을 챙길 수 있습니다.", icons: ["checks", "message", "users", "award"], label: "COACH", title: "코치 로그인", lead: "강사님이 등록해 준 이름과 전화번호 뒷자리로 로그인하세요." }
       : ins
-      ? { theme: "red", tag: "강사센터", eyebrow: "DOOGO INSTRUCTOR CENTER", h: "수강생 관리부터<br>커리큘럼까지 한 곳에서", sub: "기수별 수강생 승인, 과제 검수, 강의 영상과 일정 업로드를 간편하게 운영할 수 있습니다.", icons: ["users", "play", "calendar", "settings"], label: "INSTRUCTOR", title: "강사 로그인", lead: "강사 이름과 전화번호 뒷자리로 로그인하세요." }
-      : { theme: "dark", tag: "마스터", eyebrow: "DOOGO MASTER CONSOLE", h: "강사 플랫폼을<br>분양하고 관리하세요", sub: "새 강사 플랫폼 개설, 운영 중지, 강사센터 대신 접속과 전체 수강생 현황을 한 곳에서 봅니다.", icons: ["store", "layers", "users", "shieldCheck"], label: "MASTER", title: "마스터 로그인", lead: "운영자 전용 관리자 계정으로 로그인하세요." };
+      ? { theme: "red", tag: "강사센터", eyebrow: "DOOGO INSTRUCTOR CENTER", h: "수강생 관리부터<br><em>커리큘럼까지</em> 한 곳에서", sub: "기수별 수강생 승인, 과제 검수, 강의 영상과 일정 업로드를 간편하게 운영할 수 있습니다.", icons: ["users", "play", "calendar", "settings"], label: "INSTRUCTOR", title: "강사 로그인", lead: "강사 이름과 전화번호 뒷자리로 로그인하세요." }
+      : { theme: "dark", tag: "마스터", eyebrow: "DOOGO MASTER CONSOLE", h: "강사 플랫폼을<br><em>분양하고 관리</em>하세요", sub: "새 강사 플랫폼 개설, 운영 중지, 강사센터 대신 접속과 전체 수강생 현황을 한 곳에서 봅니다.", icons: ["store", "layers", "users", "shieldCheck"], label: "MASTER", title: "마스터 로그인", lead: "운영자 전용 관리자 계정으로 로그인하세요." };
     root.innerHTML =
       '<main class="adm a-login a-login-' + L.theme + '">' +
         '<section class="a-login-brand">' + window.loginArt(L.theme, L.icons) +
-          '<span class="a-logo a-logo-doogo">' + window.doogoClassLock("hm-lock-inv") + "<em>" + L.tag + "</em></span>" +
+          '<span class="a-logo a-logo-doogo">' + window.doogoClassLock() + "<em>" + L.tag + "</em></span>" +
           '<div class="a-login-hero"><p class="a-eyebrow">' + L.eyebrow + "</p><h2>" + L.h + "</h2><p>" + L.sub + "</p></div>" +
-          '<div class="a-login-foot"><span>© 2026 (주) 두고홀딩스 · doogo</span><span>Secure ' + (coachTab ? "coach" : ins ? "instructor" : "admin") + " workspace</span></div>" +
+          // 왼쪽 아래: 두고 클래스 첫 화면(강의 플랫폼 소개)으로 가는 링크
+          '<div class="a-login-foot"><a class="a-login-home" href="#/about">' + icon("home", "sm") + "두고 클래스 페이지 바로가기" + icon("arrowRight", "xs") + "</a><span>© 2026 (주)두고홀딩스</span></div>" +
         "</section>" +
         '<section class="a-login-panel">' +
           '<div class="a-login-topright"><span>수강생이신가요?</span><a class="a-btn a-btn-primary a-btn-sm" href="#/login" data-action="to-student">바로가기</a></div>' +

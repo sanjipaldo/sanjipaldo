@@ -11,7 +11,7 @@ const scenes = {
   // 1) 강의 소개 페이지: 내려가며 둘러보고 → 수강 신청 버튼 → 신청 화면
   async lp(b) {
     const c = await L.context(b, "phone"); const p = await c.newPage();
-    await p.goto(L.B + "#/p/moon"); await S(1500);
+    await p.goto(L.B + "#/p/moon"); await S(1500); await L.demoTheme(p);
     const rec = await L.record(p, async () => {
       await S(900);
       await L.point(p, ".lp-hero .lp-btn-primary", { fy: 0.5 }); await S(500);
@@ -32,7 +32,7 @@ const scenes = {
   // 2) 무료강의 · 선물 전자책 페이지: 카운트다운 → 영상 → 전자책 3권 → 자주 묻는 질문
   async free(b) {
     const c = await L.context(b, "phone"); const p = await c.newPage();
-    await p.goto(L.B + "#/free/moon"); await S(1600);
+    await p.goto(L.B + "#/free/moon"); await S(1600); await L.demoTheme(p);
     const rec = await L.record(p, async () => {
       await S(900);
       await L.moveTo(p, 0.7, 0.62);
@@ -54,7 +54,7 @@ const scenes = {
   // 3) 수강생 홈: 시작 가이드 체크 → 이번 주 할 일 · 진행률 → 다음 과제 열기
   async home(b) {
     const c = await L.context(b, "phone"); const p = await c.newPage();
-    await L.studentLogin(p, "이수진", "2186");
+    await L.studentLogin(p, "이수진", "2186"); await L.demoTheme(p);
     await p.goto(L.B + "#/home"); await S(1000);
     const rec = await L.record(p, async () => {
       await S(900);
@@ -75,7 +75,7 @@ const scenes = {
   // 4) 커리큘럼 → 2주차 과제 → 과제 쓰고 제출 → 자동 검수 통과
   async care(b) {
     const c = await L.context(b, "phone"); const p = await c.newPage();
-    await L.studentLogin(p, "이수진", "2186");
+    await L.studentLogin(p, "이수진", "2186"); await L.demoTheme(p);
     await p.goto(L.B + "#/curriculum"); await S(1000);
     const rec = await L.record(p, async () => {
       await S(900);
@@ -98,9 +98,9 @@ const scenes = {
   // 5) 수강생 화면 8가지 (첫 화면 탭 순서와 같은 장)
   async student(b) {
     const c = await L.context(b, "phone"); const p = await c.newPage();
-    await L.studentLogin(p, "이수진", "2186");
+    await L.studentLogin(p, "이수진", "2186"); await L.demoTheme(p);
     const c2 = await L.context(b, "phone"); const q = await c2.newPage();
-    await L.studentLogin(q, "1기 체험단", "1111");
+    await L.studentLogin(q, "1기 체험단", "1111"); await L.demoTheme(q);
     await p.goto(L.B + "#/curriculum"); await S(900);
     const r1 = await L.record(p, async (mark) => {
       mark("tutorial");

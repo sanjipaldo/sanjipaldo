@@ -93,6 +93,10 @@
     binance: { label: "바이낸스", primary: "#fcd535", active: "#f0b90b", pale: "#fdf3c4", deep: "#181a20", onPrimary: "#181a20", accent: "#fcd535", accentActive: "#fcd535",
       rgb: "252,213,53", bg: ["#1e2329", "#0b0e11", "#0b0e11"], sub: "#929aa5",
       vars: { "--ink": "#181a20", "--body": "#474d57", "--mute": "#707a8a", "--line": "#eaecef", "--line-soft": "#f5f5f5", "--canvas-soft": "#eaecef", "--canvas-softer": "#fafafa" } },
+    // 여기어때 레드 — 흰 바탕(무채색 회색) 위에 빨강은 버튼 · 선택 표시 같은 포인트에만 (두고 클래스 첫 화면과 같은 색)
+    red: { label: "레드", primary: "#f94239", active: "#ea2013", pale: "#ffedea", deep: "#ea2013", onPrimary: "#ffffff", accent: "#ff6158", accentActive: "#fb7f79", swRing: "#f94239",
+      rgb: "249,66,57", bg: ["#2a1311", "#140908", "#1d0d0b"], sub: "#d9bcb6",
+      vars: { "--ink": "#222222", "--body": "#474747", "--mute": "#707070", "--line": "#e6e6e6", "--line-soft": "#f0f0f0", "--canvas-soft": "#f5f5f5", "--canvas-softer": "#fafafa", "--primary-neutral": "#fedfde" } },
     airtable: { label: "에어테이블", primary: "#181d26", active: "#0d1218", pale: "#f5e9d4", deep: "#181d26", onPrimary: "#ffffff", accent: "#fcab79", accentActive: "#f4d35e", swRing: "#fcab79",
       rgb: "170,45,0", bg: ["#2a1d17", "#181d26", "#0d1218"], sub: "#c9c4bc",
       vars: { "--ink": "#181d26", "--body": "#333840", "--line": "#dddddd", "--line-soft": "#ececec", "--canvas-soft": "#f2f0eb", "--canvas-softer": "#f8f7f4", "--positive-deep": "#0a2e0e", "--warning": "#f4d35e" } }

@@ -48,12 +48,12 @@
   const STUDENT_TABS = [
     { key: "tutorial", at: 0, ic: "book", title: "주차별 튜토리얼", desc: "이번 주에 볼 강의와 할 과제가 순서대로 정리돼 있어요. 1주차부터 차근차근 따라오고, 다 본 강의는 ‘시청 완료’로 체크해요." },
     { key: "mission", at: 4.97, ic: "checks", title: "과제 제출 · 피드백", desc: "사진 · 링크 · 글로 과제를 내면 자동 검수로 바로 확인하고, 강사님과 코치가 승인하거나 보완할 점을 알려 줘요." },
-    { key: "cert", at: 10.58, ic: "award", title: "진행률 · 수료증", desc: "잘 따라가고 있는지 진행률로 바로 보여요. 필수 과제를 모두 통과하면 이름이 새겨진 수료증이 나와요." },
-    { key: "bot", at: 13.65, ic: "sparkles", title: "24시간 AI 도우미", desc: "과제 방법 · 서류 · 일정 · 내 진도를 물어보면 강사님이 올린 자료로 바로 답해요. 새벽에도요." },
-    { key: "channel", at: 16.87, ic: "message", title: "강사 · 코치 1:1 소통", desc: "막히는 순간 강사님과 코치에게 바로 연결돼요. 카카오톡 채널 · 오픈채팅 등 강사님이 정한 창구로 이어져요." },
-    { key: "guide", at: 20.58, ic: "clipboard", title: "실무 가이드", desc: "사업자 등록처럼 강의에 필요한 준비를 단계별로 안내해요. 기관 · 기간 · 서류 · 강사님 팁까지 한 화면에." },
-    { key: "library", at: 24.37, ic: "library", title: "유료강의 자료실", desc: "전자책 · 엑셀 양식 · VOD · 기초 가이드 영상까지, 강사님의 노하우가 한 권의 책처럼 정리돼 있어요." },
-    { key: "schedule", at: 30.17, ic: "calendar", title: "강의 일정 · 공지", desc: "라이브 · 과제 마감 · 공지를 달력으로 한눈에. 해외에 있는 강사님과도 시간을 헷갈리지 않아요." }
+    { key: "cert", at: 10.55, ic: "award", title: "진행률 · 수료증", desc: "잘 따라가고 있는지 진행률로 바로 보여요. 필수 과제를 모두 통과하면 이름이 새겨진 수료증이 나와요." },
+    { key: "bot", at: 13.72, ic: "sparkles", title: "24시간 AI 도우미", desc: "과제 방법 · 서류 · 일정 · 내 진도를 물어보면 강사님이 올린 자료로 바로 답해요. 새벽에도요." },
+    { key: "channel", at: 16.93, ic: "message", title: "강사 · 코치 1:1 소통", desc: "막히는 순간 강사님과 코치에게 바로 연결돼요. 카카오톡 채널 · 오픈채팅 등 강사님이 정한 창구로 이어져요." },
+    { key: "guide", at: 20.68, ic: "clipboard", title: "실무 가이드", desc: "사업자 등록처럼 강의에 필요한 준비를 단계별로 안내해요. 기관 · 기간 · 서류 · 강사님 팁까지 한 화면에." },
+    { key: "library", at: 24.45, ic: "library", title: "유료강의 자료실", desc: "전자책 · 엑셀 양식 · VOD · 기초 가이드 영상까지, 강사님의 노하우가 한 권의 책처럼 정리돼 있어요." },
+    { key: "schedule", at: 30.25, ic: "calendar", title: "강의 일정 · 공지", desc: "라이브 · 과제 마감 · 공지를 달력으로 한눈에. 해외에 있는 강사님과도 시간을 헷갈리지 않아요." }
   ];
   const STUDENT_MORE = [
     ["flame", "동기부여 채널", "지칠 때 다시 힘을 주는 영상"],
@@ -66,8 +66,8 @@
   // 강사센터는 핵심 화면 세 개만 보여 준다 (메뉴 전체는 공개하지 않음)
   const ADMIN_TABS = [
     { key: "dash", at: 0, title: "대시보드" },
-    { key: "students", at: 9.86, title: "수강생 승인 · 진척도" },
-    { key: "review", at: 19.91, title: "과제 검수" }
+    { key: "students", at: 9.84, title: "수강생 승인 · 진척도" },
+    { key: "review", at: 19.9, title: "과제 검수" }
   ];
   const ADMIN_FEATURES = [
     ["palette", "내 이름의 강의 플랫폼", "강의 이름 · 색상 · 메뉴 · 로그인 화면까지 강사님 브랜드로 운영해요."],
@@ -161,7 +161,8 @@
   const PAUSE = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>';
   const video = (vid, alt, ch) => '<video class="hm-vid" muted playsinline loop preload="none" poster="' + IMG + vid + '.webp" data-src="' + IMG + vid + '"' + (ch ? " data-ch" : "") + ' aria-label="' + esc(alt || "") + ' (실제 화면 녹화)"></video>' +
     '<button type="button" class="hm-vid-btn" data-hm-vid aria-label="영상 멈추기">' + PAUSE + "</button>";
-  const phone = (vid, cls, alt, ch) => '<div class="hm-phone ' + (cls || "") + '"><span class="hm-phone-notch"></span>' + video(vid, alt, ch) + "</div>";
+  // 휴대폰 틀 — 화면을 가리는 검정 노치(스피커) 없이 깔끔하게
+  const phone = (vid, cls, alt, ch) => '<div class="hm-phone ' + (cls || "") + '">' + video(vid, alt, ch) + "</div>";
   const browser = (vid, cls, alt, ch) => '<div class="hm-browser ' + (cls || "") + '"><div class="hm-browser-bar"><i></i><i></i><i></i><span>doogo-class.vercel.app</span></div><div class="hm-browser-scr">' + video(vid, alt, ch) + "</div></div>";
   const scrollBtn = (to, label, cls) => '<button type="button" class="' + cls + '" data-hm-scroll="' + to + '">' + label + "</button>";
   const applyBtn = (label, cls) => '<button type="button" class="' + cls + '" data-hm-apply>' + label + "</button>";
@@ -185,7 +186,7 @@
     '</div><i class="hm-top-prog" id="hm-prog" aria-hidden="true"></i></header>';
   }
 
-  function hero(list) {
+  function hero() {
     const pts = [["users", "수강생은 무료"], ["layers", "수강생 수 무제한 · 같은 이용료"], ["refresh", "기수 무제한 운영"]];
     return '<section class="hm-hero" id="hm-hero"><div class="hm-hero-glow" aria-hidden="true"></div><div class="hm-wrap hm-hero-in">' +
       '<div class="hm-hero-copy">' +
@@ -204,18 +205,7 @@
         '<div class="hm-chip hm-chip-c">' + icon("award", "sm") + "<span><b>수료증 발급</b><small>필수 과제 23개 통과</small></span></div>" +
       "</div>" +
     "</div>" +
-    (list && list.length ? '<div class="hm-ticker"><div class="hm-wrap hm-ticker-in"><span class="hm-ticker-l">' + icon("award", "xs") + "지금 두고 클래스로 강의하는 강사</span>" +
-      '<span class="hm-ticker-names">' + list.map((x) => (x.landing ? '<a href="#/p/' + esc(x.id) + '">' : "<span>") + esc(x.who) + (x.field ? "<small>" + esc(x.field) + "</small>" : "") + (x.landing ? "</a>" : "</span>")).join("") + "</span>" +
-      scrollBtn("hm-classes", "강사진 보기" + icon("arrowRight", "xs"), "hm-ticker-go") + "</div></div>" : "") +
     "</section>";
-  }
-
-  function stats(list) {
-    const weeks = list.reduce((n, x) => n + x.weeks, 0), missions = list.reduce((n, x) => n + x.missions, 0);
-    const item = (i, num, unit, label) => '<div class="hm-stat hm-reveal"' + d(i) + '><span>' + label + "</span><b>" + num + "<small>" + unit + "</small></b></div>";
-    return '<section class="hm-stats" aria-label="두고 클래스 숫자"><div class="hm-wrap hm-stats-in">' +
-      item(0, list.length, "명", "두고 클래스로 강의하는 강사") + item(1, weeks, "주", "운영 중인 튜토리얼 커리큘럼") + item(2, missions, "개", "주차별 실전 과제") + item(3, 0, "원", "수강생 이용료") +
-    "</div></section>";
   }
 
   // 기수가 늘수록 버거워지는 운영 → 두고 클래스의 세 가지
@@ -509,7 +499,7 @@
     document.title = "두고 클래스 — 강사님을 위한 강의 운영 플랫폼";
     dark = null;
     const list = classes();
-    root.innerHTML = '<div class="hm">' + header() + "<main>" + hero(list) + stats(list) + problem() + flow() + features() + compare() + students() + teachers() + pricing() + lifelong() + classList(list) + journey() + faq() + finalCta() + "</main>" + footer() + "</div>";
+    root.innerHTML = '<div class="hm">' + header() + "<main>" + hero() + problem() + flow() + features() + compare() + students() + teachers() + pricing() + lifelong() + classList(list) + journey() + faq() + finalCta() + "</main>" + footer() + "</div>";
     onScroll();
     reveal();
     wireVideos();
