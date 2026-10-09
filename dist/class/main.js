@@ -14,6 +14,8 @@
     mode = next;
     document.body.dataset.mode = next;
     if (next === "admin") window.applyStudentTheme(null); else document.body.dataset.master = "";
+    // 소개 화면에서 내려가며 검정으로 바뀐 휴대폰 주소창 색을 다른 화면에서는 원래대로
+    if (next !== "home") { const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.setAttribute("content", "#ffffff"); }
     document.getElementById("modal-root").innerHTML = "";
     const app = next === "admin" ? window.AdminApp : next === "landing" ? window.LandingApp : next === "home" ? window.HomeApp : window.StudentApp;
     if (changed) app.mount(); else app.render();

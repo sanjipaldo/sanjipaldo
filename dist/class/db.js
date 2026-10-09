@@ -721,6 +721,15 @@
       if (b.loginEyebrow && /^DOOGO CAMPUS/.test(b.loginEyebrow)) { b.loginEyebrow = b.loginEyebrow.replace(/^DOOGO CAMPUS/, "DOOGO CLASS"); renamed = true; }
     });
     if (renamed) save();
+    // 강사 프로필 사진 · 강의 분야(첫 화면 강사 카드)가 생기기 전에 저장된 브라우저는 기본값을 채운다 (한 번만 · 서버는 일회성 작업이 맡음)
+    if (!R.on && !db.flags.profileSeeded) {
+      Object.keys(db.content).forEach((id) => {
+        const b = db.content[id].brand, sb = (window.CLASS_SEED.content[id] || {}).brand || {};
+        if (!b.photo && sb.photo) b.photo = sb.photo;
+        if (!b.field && sb.field) b.field = sb.field;
+      });
+      db.flags.profileSeeded = true; save();
+    }
     return db;
   }
   function save() {
@@ -886,6 +895,21 @@
 
   /* ---------------- 강사 입점 문의 ----------------
    * 방문자가 첫 화면에서 남기고 마스터가 관리한다. 서버 모드는 문서 inq:<id> (마스터만 보임), 아니면 이 브라우저에 */
+  /* ---------- 첫 화면 바닥 · 사업자 정보 (마스터 → 첫 화면 · 사업자 정보에서 고침, 누구나 읽음) ---------- */
+  const SITE_DEFAULT = {
+    company: "(주)두고홀딩스", ceo: "문원오", bizNo: "", mailOrderNo: "", address: "", phone: "", email: "", hours: "", privacyOfficer: "", hosting: "",
+    terms: "", privacy: "",
+    group: [
+      { name: "두고푸드", url: "https://www.doogofood.com/", desc: "" },
+      { name: "두고커넥트", url: "https://www.doogoconnect.com/", desc: "" }
+    ]
+  };
+  function siteInfo() {
+    const s = (db && db.site) || {};
+    return Object.assign({}, SITE_DEFAULT, s, { group: Array.isArray(s.group) ? s.group : clone(SITE_DEFAULT.group) });
+  }
+  function saveSite(next) { db.site = next; return save(); }
+
   const KEY_INQ = "moonclass:inquiries";
   const inqMap = () => (R.on ? R.inq : store.get(KEY_INQ, {}));
   const inquiries = () => { const m = inqMap(); return Object.keys(m).map((k) => m[k]).sort((a, b) => (b.at || 0) - (a.at || 0)); };
@@ -1186,7 +1210,7 @@
     curricula, curriculum, curriculumOf, weeksOf, cohortWeeks,
     weekOpen, weekDeadline, cohortEnd, cohortStatus, STATUS_LABEL, currentWeek, LEVEL_SET, levelSteps, level, currentCohort, nextCohortName,
     EVENT_TYPES, events, ruleText,
-    REQUEST_CATEGORIES, maskName, requests, inquiries, saveInquiry, removeInquiry, applyPartner,
+    REQUEST_CATEGORIES, maskName, requests, inquiries, saveInquiry, removeInquiry, applyPartner, siteInfo, saveSite, SITE_DEFAULT,
     THEMES, themeOf, STUDENT_MENUS, LIB_MENUS, CUSTOM_ICONS, menuConfig, menuOn, libOn, isCustom,
     emptyProgress, progress, saveProgress, allProgress, lastSub, subState, stats,
     session, remote,

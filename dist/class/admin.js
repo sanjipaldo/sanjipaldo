@@ -265,7 +265,7 @@
   const customPages = (iid) => DB.menuConfig(iid).items.filter((x) => DB.isCustom(x.key) && x.type !== "link");
   const allRequests = () => DB.data.instructors.flatMap((ins) => DB.requests(ins.id).map((x) => Object.assign({ ins }, x))).sort((a, b) => b.q.at - a.q.at);
   const masterNav = () => [
-    ["운영", [["master", "대시보드", "grid"], ["master/instructors", "강사 플랫폼 관리", "store"], ["master/menus", "메뉴 · 색상 설정", "sliders"], ["master/health", "플랫폼 현황", "activity"]]],
+    ["운영", [["master", "대시보드", "grid"], ["master/instructors", "강사 플랫폼 관리", "store"], ["master/menus", "메뉴 · 색상 설정", "sliders"], ["master/health", "플랫폼 현황", "activity"], ["master/site", "첫 화면 · 사업자 정보", "building"]]],
     ["지원", [["master/partners", "강사 입점 문의", "handshake", DB.inquiries().filter((x) => (x.status || "new") === "new").length], ["master/students", "전체 수강생", "users"], ["master/reports", "오류 신고 모아보기", "bug", allRequests().filter((x) => !x.q.answer).length], ["master/notices", "강사 공지", "megaphone"], ["master/data", "데이터 관리", "database"]]]
   ];
 
@@ -1584,6 +1584,29 @@
         '<div class="a-row-actions">' + btn(icon("pen", "sm") + "수정", "item-edit", "a-btn-ghost a-btn-sm", ' data-coll="ann" data-id="' + n.id + '"') + "</div></li>").join("") + "</ul>" : emptyBox("megaphone", "강사에게 보낸 공지가 없어요.")) + "</section>";
   }
 
+  /* ---------------- 마스터: 첫 화면 · 사업자 정보 (두고 클래스 첫 화면 바닥에 보임, 채운 칸만) ---------------- */
+  const SITE_FIELDS = [
+    ["company", "상호", "예: (주)두고홀딩스"], ["ceo", "대표자", "예: 홍길동"],
+    ["bizNo", "사업자등록번호", "예: 000-00-00000"], ["mailOrderNo", "통신판매업 신고번호", "예: 제0000-서울○○-0000호"],
+    ["address", "사업장 주소", "예: 서울특별시 ○○구 ○○로 00", true],
+    ["phone", "고객센터 전화", "예: 1600-0000"], ["email", "이메일", "예: help@example.com"],
+    ["hours", "운영 시간", "예: 평일 10:00 ~ 18:00"], ["privacyOfficer", "개인정보 보호책임자", "예: 홍길동"],
+    ["hosting", "호스팅 제공자", "예: Vercel Inc."], ["terms", "이용약관 주소", "https://"], ["privacy", "개인정보처리방침 주소", "https://"]
+  ];
+  function pageMasterSite() {
+    const s = DB.siteInfo();
+    const fld = (x) => '<div class="a-field' + (x[3] ? " a-span2" : "") + '"><label for="site-' + x[0] + '">' + x[1] + '</label><input class="a-input" id="site-' + x[0] + '" name="' + x[0] + '" value="' + esc(s[x[0]] || "") + '" placeholder="' + esc(x[2]) + '" maxlength="200"></div>';
+    const group = (s.group || []).map((g) => [g.name, g.url].concat(g.desc ? [g.desc] : []).join(" | ")).join("\n");
+    return head("첫 화면 · 사업자 정보", "두고 클래스 첫 화면 맨 아래(바닥)에 보이는 사업자 정보와 두고 그룹사예요. 채운 칸만 보여요.", '<a class="a-btn a-btn-outline a-btn-sm" href="#/about" target="_blank" rel="noopener">' + icon("arrowUpRight", "sm") + "첫 화면 열기</a>") +
+      '<form id="site-form" class="a-site-form" novalidate>' +
+        '<section class="a-card"><div class="a-card-head"><h2>사업자 정보</h2><span class="a-muted">전자상거래법에 따라 사이트 바닥에 표시하는 정보예요</span></div>' +
+          '<div class="a-site-grid">' + SITE_FIELDS.map(fld).join("") + "</div></section>" +
+        '<section class="a-card"><div class="a-card-head"><h2>두고 그룹사</h2><span class="a-muted">바닥의 ‘두고 그룹사’ 카드 · 한 줄에 하나씩</span></div>' +
+          '<div class="a-field"><label for="site-group">이름 | 주소 | 한 줄 설명(선택)</label><textarea class="a-input" id="site-group" name="group" rows="4" placeholder="두고푸드 | https://www.doogofood.com/ | 한 줄 설명">' + esc(group) + "</textarea></div></section>" +
+        '<div class="a-site-save"><button type="submit" class="a-btn a-btn-primary">' + icon("check", "sm") + "저장</button></div>" +
+      "</form>";
+  }
+
   /* ---------------- 마스터: 데이터 관리 ---------------- */
   function snapshot() {
     return { exportedAt: new Date().toISOString(), db: DB.data, progress: DB.allProgress(), inquiries: DB.inquiries() };
@@ -1759,7 +1782,7 @@
 
   /* ---------------- 렌더 ---------------- */
   const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, partners: pagePartners, coaches: pageCoaches, pages: pageCustomPages };
-  const MPAGES = { "": pageMasterHome, partners: pageMasterPartners, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData };
+  const MPAGES = { "": pageMasterHome, partners: pageMasterPartners, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData, site: pageMasterSite };
   function render() {
     closeModal();
     const r = route();
@@ -2028,6 +2051,17 @@
   document.addEventListener("submit", (e) => {
     if (!isActive()) return;
     const f = e.target;
+    if (f.id === "site-form") {
+      e.preventDefault();
+      const next = {};
+      SITE_FIELDS.forEach((x) => { next[x[0]] = String(f[x[0]].value || "").replace(/\s+/g, " ").trim().slice(0, 200); });
+      ["terms", "privacy"].forEach((k) => { if (next[k] && !/^https?:\/\//i.test(next[k])) next[k] = "https://" + next[k]; });
+      next.group = String(f.group.value || "").split("\n").map((ln) => ln.split("|").map((v) => v.trim())).filter((v) => v[0])
+        .map((v) => ({ name: v[0].slice(0, 30), url: v[1] ? (/^https?:\/\//i.test(v[1]) ? v[1] : "https://" + v[1]).slice(0, 200) : "", desc: (v[2] || "").slice(0, 60) })).slice(0, 8);
+      if (!DB.saveSite(next)) { toast("저장하지 못했어요.", "warn"); return; }
+      render(); toast("첫 화면 바닥 정보를 저장했어요.");
+      return;
+    }
     if (f.id === "faq-bulk-form") {
       e.preventDefault();
       const items = parseFaqText(f.text.value);

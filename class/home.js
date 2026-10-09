@@ -1,10 +1,12 @@
 /* 두고 클래스 — 플랫폼 소개 첫 화면 (주소 맨 앞 · #/about · #/partner)
  *
- *  - 두고 클래스가 어떤 플랫폼인지, 수강생 · 강사에게 무엇을 해 주는지 짧고 간결하게 (타이탄클래스 같은 구성)
+ *  - 두고 클래스가 어떤 플랫폼인지, 수강생 · 강사에게 무엇을 해 주는지 소개한다 (타이탄클래스처럼 깔끔한 구역 제목)
  *  - ‘로그인’을 누르면 지금의 수강생 로그인(강사 선택 → 이름 → 휴대폰 뒷자리)으로 간다
  *  - 강사 목록 · 숫자는 지금 운영 중인 강사 데이터에서 바로 가져온다 (꾸며 낸 숫자 없음)
  *  - 회원가입 없이 승인된 수강생만 들어오는 플랫폼이라, 가입 버튼은 두지 않는다
  *  - ‘강사 입점 문의’ 팝업 → 마스터 → 강사 입점 문의에서 관리 (#/partner 로 바로 열 수 있음)
+ *  - 바닥의 사업자 정보 · 두고 그룹사는 마스터 → 첫 화면 · 사업자 정보에서 고친다 (채운 칸만 보임)
+ *  - 위 막대는 내려가면 검정으로 바뀌고, 아래 빨간 줄이 읽은 만큼 차오른다
  */
 (function () {
   "use strict";
@@ -17,14 +19,14 @@
 
   /* ---------- 내용 ---------- */
   const STUDENT_TABS = [
-    { key: "tutorial", ic: "book", title: "주차별 튜토리얼", img: "st-curriculum", desc: "이번 주에 볼 강의와 할 과제가 순서대로. 1주차부터 차근차근 따라오면 돼요." },
-    { key: "mission", ic: "checks", title: "과제 제출 · 피드백", img: "st-missions", desc: "사진 · 링크 · 글로 내면 바로 확인하고, 강사님과 코치가 피드백해요." },
-    { key: "cert", ic: "award", title: "진행률 · 수료증", img: "st-cert", desc: "잘 따라가고 있는지 진행률로 보이고, 다 마치면 수료증이 나와요." },
-    { key: "bot", ic: "sparkles", title: "24시간 AI 도우미", img: "st-bot", desc: "과제 · 서류 · 일정을 물어보면 강사님 자료로 바로 답해요. 새벽에도요." },
-    { key: "channel", ic: "message", title: "강사 · 코치 1:1 소통", img: "st-channels", desc: "막히는 순간 강사님과 코치에게 바로 연결돼요." },
-    { key: "guide", ic: "clipboard", title: "실무 가이드", img: "st-docs", desc: "필요한 준비를 단계별로. 기관 · 기간 · 서류 · 강사님 팁까지." },
-    { key: "library", ic: "library", title: "유료강의 자료실", img: "st-library", desc: "전자책 · 엑셀 양식 · VOD까지 한 권의 책처럼 정리돼 있어요." },
-    { key: "schedule", ic: "calendar", title: "강의 일정 · 공지", img: "st-schedule", desc: "라이브 · 과제 마감 · 공지를 달력으로 한눈에 봐요." }
+    { key: "tutorial", ic: "book", title: "주차별 튜토리얼", img: "st-curriculum", desc: "이번 주에 볼 강의와 할 과제가 순서대로 정리돼 있어요. 1주차부터 차근차근 따라오고, 다 본 강의는 ‘시청 완료’로 체크해요." },
+    { key: "mission", ic: "checks", title: "과제 제출 · 피드백", img: "st-missions", desc: "사진 · 링크 · 글로 과제를 내면 자동 검수로 바로 확인하고, 강사님과 코치가 승인하거나 보완할 점을 알려 줘요." },
+    { key: "cert", ic: "award", title: "진행률 · 수료증", img: "st-cert", desc: "잘 따라가고 있는지 진행률로 바로 보여요. 필수 과제를 모두 통과하면 이름이 새겨진 수료증이 나와요." },
+    { key: "bot", ic: "sparkles", title: "24시간 AI 도우미", img: "st-bot", desc: "과제 방법 · 서류 · 일정 · 내 진도를 물어보면 강사님이 올린 자료로 바로 답해요. 새벽에도요." },
+    { key: "channel", ic: "message", title: "강사 · 코치 1:1 소통", img: "st-channels", desc: "막히는 순간 강사님과 코치에게 바로 연결돼요. 카카오톡 채널 · 오픈채팅 등 강사님이 정한 창구로 이어져요." },
+    { key: "guide", ic: "clipboard", title: "실무 가이드", img: "st-docs", desc: "사업자 등록처럼 강의에 필요한 준비를 단계별로 안내해요. 기관 · 기간 · 서류 · 강사님 팁까지 한 화면에." },
+    { key: "library", ic: "library", title: "유료강의 자료실", img: "st-library", desc: "전자책 · 엑셀 양식 · VOD · 기초 가이드 영상까지, 강사님의 노하우가 한 권의 책처럼 정리돼 있어요." },
+    { key: "schedule", ic: "calendar", title: "강의 일정 · 공지", img: "st-schedule", desc: "라이브 · 과제 마감 · 공지를 달력으로 한눈에. 해외에 있는 강사님과도 시간을 헷갈리지 않아요." }
   ];
   const STUDENT_MORE = [
     ["flame", "동기부여 채널", "지칠 때 다시 힘을 주는 영상"],
@@ -41,23 +43,29 @@
     { key: "review", title: "과제 검수", img: "ad-review-open" }
   ];
   const ADMIN_FEATURES = [
-    ["palette", "내 이름의 강의 플랫폼", "강의 이름 · 색상 · 메뉴까지 강사님 브랜드로."],
-    ["activity", "진척도 한눈에", "누가 멈춰 있는지 보이니 먼저 챙길 수 있어요."],
-    ["users", "코치와 함께 운영", "검수 · 답변을 코치와 나눠서 해요."],
-    ["refresh", "끝난 기수에게도 계속", "새 자료를 올리면 이전 기수도 다시 찾아와요."]
+    ["palette", "내 이름의 강의 플랫폼", "강의 이름 · 색상 · 메뉴 · 로그인 화면까지 강사님 브랜드로 운영해요."],
+    ["layers", "커리큘럼 · 과제 직접 편집", "주차 · 강의 · 과제 · 엑셀 양식을 직접 고치고, 기수마다 다른 커리큘럼도 써요."],
+    ["activity", "수강생 진척도 한눈에", "누가 어디까지 했는지, 누가 멈춰 있는지 보여서 먼저 챙길 수 있어요."],
+    ["checks", "과제 검수 · 일괄 승인", "자동 검수 결과를 보고 한 번에 승인하거나 보완을 요청해요."],
+    ["users", "코치와 함께 운영", "코치 계정에 필요한 메뉴만 열어 주고 검수 · 답변을 나눠요."],
+    ["userPlus", "승인제 수강생 관리", "신청을 확인하고 승인한 사람만 들어와요. 기수별로 관리해요."],
+    ["megaphone", "홍보 · 무료강의 페이지", "강의 소개 페이지와 무료강의 신청 페이지를 바로 만들어요."],
+    ["refresh", "끝난 기수에게도 계속", "새 영상 · 자료를 올리면 이전 기수도 함께 보고 다시 찾아와요."]
   ];
   const STEPS = [
-    ["신청 · 승인", "강사님 강의를 신청하면 확인 후 승인해 드려요."],
+    ["수강 신청", "강사님의 강의 소개 페이지에서 수강을 신청해요."],
+    ["승인", "강사님 · 운영진이 확인하고 승인해 드려요."],
     ["로그인", "강사 선택 → 이름 → 휴대폰 뒷자리 4자리"],
-    ["1주차부터", "튜토리얼대로 강의를 보고 과제를 내요."],
-    ["수료 · 평생 함께", "수료증을 받고, 그 뒤에도 계속 배워요."]
+    ["1주차부터", "튜토리얼대로 강의를 보고 과제를 내요. 강사 · 코치가 피드백해요."],
+    ["수료 · 평생 함께", "필수 과제를 마치면 수료증! 그 뒤에도 새 자료가 이어져요."]
   ];
   const FAQS = [
-    ["회원가입은 어떻게 하나요?", "따로 회원가입이 없는 승인제 플랫폼이에요. 강사님 강의를 신청하면 확인 후 승인해 드리고, 승인되면 바로 로그인할 수 있어요."],
-    ["로그인은 어떻게 하나요?", "수강 중인 강사님을 고르고, 신청할 때 적은 이름과 휴대폰 번호 뒷자리 4자리를 넣으면 돼요."],
-    ["강의가 끝나면 더 이상 못 보나요?", "수료한 뒤에도 내 강의실은 그대로 남아요. 강사님 재량에 따라 새 영상 · 자료가 계속 올라와요."],
-    ["휴대폰에서도 쓸 수 있나요?", "네. 휴대폰 · 태블릿 · PC 어디서든 같은 내 강의실이에요. 과제 사진도 휴대폰으로 바로 올려요."],
-    ["강사로 두고 클래스를 쓰고 싶어요.", "강사님의 노하우를 튜토리얼 강의 플랫폼으로 만들어 드려요. 아래 ‘강사 입점 문의’를 남겨 주시면 연락드릴게요.", true]
+    ["회원가입은 어떻게 하나요?", "두고 클래스는 따로 회원가입이 없는 승인제 플랫폼이에요. 강사님 강의를 신청하면 강사님(운영진)이 확인한 뒤 승인해 드리고, 승인되면 바로 로그인할 수 있어요."],
+    ["로그인은 어떻게 하나요?", "로그인 화면에서 수강 중인 강사님을 고르고, 신청할 때 적은 이름과 휴대폰 번호 뒷자리 4자리를 넣으면 돼요. 한 번 고른 강사님은 다음부터 바로 열려요."],
+    ["강의가 끝나면 더 이상 못 보나요?", "수료한 뒤에도 내 강의실은 그대로 남아요. 강사님 재량에 따라 새 영상 · 자료가 계속 올라오고, 이전 기수 수강생도 함께 볼 수 있어요."],
+    ["휴대폰에서도 쓸 수 있나요?", "네. 휴대폰 · 태블릿 · PC 어디서든 같은 내 강의실로 들어와요. 과제 사진도 휴대폰으로 바로 찍어서 올릴 수 있어요."],
+    ["막히는 부분은 어디에 물어보나요?", "24시간 AI 도우미에게 먼저 물어보고, 더 필요한 건 1:1 소통채널로 강사님 · 코치에게 바로 연락하면 돼요. 오류나 불편한 점은 요청사항으로 남겨 주세요."],
+    ["강사로 두고 클래스를 쓰고 싶어요.", "강사님의 노하우를 튜토리얼 강의 플랫폼으로 만들어 드려요. ‘강사 입점 문의’를 남겨 주시면 확인 후 연락드릴게요. 이미 등록된 강사님은 ‘강사센터’로 들어가면 돼요.", true]
   ];
 
   /* ---------- 데이터 (지금 운영 중인 강사) ---------- */
@@ -91,7 +99,7 @@
   const applyBtn = (label, cls) => '<button type="button" class="' + cls + '" data-hm-apply>' + label + "</button>";
   const d = (i) => ' style="--i:' + i + '"';
   // 타이탄클래스처럼: 아이콘 + 굵은 제목 + 오른쪽 화살표 · 아래 구분선
-  const secHead = (ic, title, sub, right) => '<div class="hm-shead hm-reveal"><div class="hm-shead-row"><h2 class="hm-h2"><span class="hm-shead-ic">' + icon(ic) + "</span>" + title + "</h2>" + (right || "") + "</div>" +
+  const secHead = (ic, title, sub, right) => '<div class="hm-shead hm-reveal"><div class="hm-shead-row"><h2 class="hm-h2"><span class="hm-shead-ic">' + icon(ic) + "</span><span>" + title + "</span></h2>" + (right || "") + "</div>" +
     (sub ? '<p class="hm-sub">' + sub + "</p>" : "") + "</div>";
 
   let stTab = "tutorial", adTab = "dash";
@@ -104,17 +112,18 @@
         scrollBtn("hm-teachers", "강사", "hm-nav-a") + scrollBtn("hm-faq", "자주 묻는 질문", "hm-nav-a") + applyBtn("입점 문의", "hm-nav-a hm-nav-apply") +
       "</nav>" +
       '<div class="hm-top-r"><a class="hm-btn hm-btn-ghost hm-btn-sm" href="#/center">강사센터</a><a class="hm-btn hm-btn-p hm-btn-sm" href="#/login">로그인</a></div>' +
-    "</div></header>";
+    '</div><i class="hm-top-prog" id="hm-prog" aria-hidden="true"></i></header>';
   }
 
   function hero() {
+    const pts = [["shieldCheck", "회원가입 없는 승인제"], ["phone", "휴대폰 · PC 어디서나"], ["heart", "수료 후에도 평생 이용"]];
     return '<section class="hm-hero" id="hm-hero"><div class="hm-hero-glow" aria-hidden="true"></div><div class="hm-wrap hm-hero-in">' +
       '<div class="hm-hero-copy">' +
         '<p class="hm-pill"><i class="hm-dot"></i>승인된 수강생만 들어오는 강의 플랫폼</p>' +
         '<h1 class="hm-h1">따라만 하면 완성되는<br>' + mark("튜토리얼 강의 플랫폼") + "</h1>" +
-        '<p class="hm-lead">강사님의 노하우를 <b>1주차부터 수료까지</b> 순서대로 담았어요. 수강생은 따라오고, 강사님은 모든 진도를 한눈에 봐요.</p>' +
+        '<p class="hm-lead">두고 클래스는 강사님의 노하우를 <b>1주차부터 수료까지</b> 순서대로 담은 강의 플랫폼이에요. 수강생은 튜토리얼대로 따라오고, 강사님은 모든 수강생의 진도를 한눈에 봐요.</p>' +
         '<div class="hm-cta"><a class="hm-btn hm-btn-p hm-btn-lg" href="#/login">수강생 로그인' + icon("arrowRight", "sm") + "</a>" + applyBtn("강사 입점 문의", "hm-btn hm-btn-sec hm-btn-lg") + "</div>" +
-        '<p class="hm-note">' + icon("shieldCheck", "xs") + "회원가입 없이, 강사님이 승인한 수강생만 로그인할 수 있어요</p>" +
+        '<ul class="hm-hero-pts">' + pts.map((x) => "<li>" + icon(x[0], "xs") + x[1] + "</li>").join("") + "</ul>" +
       "</div>" +
       '<div class="hm-hero-art">' +
         browser("ad-dash", "hm-hero-browser", "강사센터 대시보드 화면", true) +
@@ -130,7 +139,7 @@
     const weeks = list.reduce((n, x) => n + x.weeks, 0), missions = list.reduce((n, x) => n + x.missions, 0);
     const item = (i, num, unit, label) => '<div class="hm-stat hm-reveal"' + d(i) + '><span>' + label + "</span><b>" + num + "<small>" + unit + "</small></b></div>";
     return '<section class="hm-stats" aria-label="두고 클래스 숫자"><div class="hm-wrap hm-stats-in">' +
-      item(0, list.length, "명", "함께하는 강사") + item(1, weeks, "주", "튜토리얼 커리큘럼") + item(2, missions, "개", "주차별 실전 과제") + item(3, 24, "시간", "AI 도우미 응답") +
+      item(0, list.length, "명", "두고 클래스로 강의하는 강사") + item(1, weeks, "주", "튜토리얼 커리큘럼") + item(2, missions, "개", "주차별 실전 과제") + item(3, 24, "시간", "AI 도우미 응답") +
     "</div></section>";
   }
 
@@ -146,7 +155,7 @@
       .filter((v) => /^https?:\/\//i.test(v[1]))
       .map((v) => '<a class="hm-sns" href="' + esc(v[1]) + '" target="_blank" rel="noopener" aria-label="' + esc(x.who) + " " + v[2] + '">' + SNS[v[0]] + "</a>").join("");
     const card = (x, i) => {
-      const photo = '<span class="hm-tc-shape" aria-hidden="true"></span>' + (x.photo ? '<img src="' + esc(x.photo) + '" alt="' + esc(x.who) + ' 강사" loading="lazy" decoding="async">' : SILHOUETTE) +
+      const photo = '<span class="hm-tc-shape" aria-hidden="true"></span>' + (x.photo ? '<img src="' + esc(x.photo) + '" alt="' + esc(x.who) + ' 강사" decoding="async">' : SILHOUETTE) +
         '<span class="hm-tc-tag">' + x.weeks + "주 과정 · 과제 " + x.missions + "개</span>";
       return '<article class="hm-tc hm-reveal" style="--i:' + i + ";--c-p:" + esc(x.t.primary) + '">' +
         (x.landing ? '<a class="hm-tc-photo" href="#/p/' + esc(x.id) + '" aria-label="' + esc(x.who) + ' 강의 소개">' + photo + "</a>" : '<div class="hm-tc-photo">' + photo + "</div>") +
@@ -157,29 +166,43 @@
       "</article>";
     };
     return '<section class="hm-sec" id="hm-classes"><div class="hm-wrap">' +
-      secHead("award", "두고 클래스와 함께하는 강사진", "강사님마다 자기 이름과 커리큘럼으로 운영하는 강의 플랫폼이에요.", applyBtn("입점 문의" + icon("arrowRight", "sm"), "hm-shead-link")) +
+      secHead("award", "두고 클래스와 함께하는 강사진", "강사님마다 자기 이름과 커리큘럼으로 운영하는 강의 플랫폼이에요. 수강생은 로그인할 때 내 강사님을 골라 들어가요.", applyBtn("입점 문의" + icon("arrowRight", "sm"), "hm-shead-link")) +
       '<div class="hm-tcs">' + list.map(card).join("") + "</div>" +
-      '<div class="hm-join hm-reveal"><span class="hm-join-ic">' + icon("plus") + '</span><div class="hm-join-t"><b>강사님의 노하우도 두고 클래스로</b><p>지금 하고 있는 강의를 튜토리얼 강의 플랫폼으로 만들어 드려요.</p></div>' +
+      '<div class="hm-join hm-reveal"><span class="hm-join-ic">' + icon("plus") + '</span><div class="hm-join-t"><b>강사님의 노하우도 두고 클래스로</b><p>지금 하고 있는 강의를 튜토리얼 강의 플랫폼으로 만들어 드려요. 커리큘럼 정리부터 수강생 관리까지 함께해요.</p></div>' +
         applyBtn("강사 입점 문의하기" + icon("arrowRight", "sm"), "hm-btn hm-btn-p") + "</div>" +
     "</div></section>";
   }
 
+  // 혼자 들을 때 막히는 이유 → 두고 클래스가 푸는 방법
+  function problem() {
+    const card = (i, ic, t, txt) => '<article class="hm-pain hm-hov hm-reveal"' + d(i) + '><span class="hm-ic hm-ic-mute">' + icon(ic) + "</span><h3>" + t + "</h3><p>" + txt + "</p></article>";
+    return '<section class="hm-sec hm-soft" id="hm-why"><div class="hm-wrap">' +
+      secHead("target", "강의를 듣고도 혼자 헤맨 적 있으신가요?", "온라인 강의를 들은 분들이 가장 많이 이야기하는 세 가지예요.") +
+      '<div class="hm-pains">' +
+        card(0, "layers", "자료가 여기저기 흩어져 있어요", "영상은 유튜브에, 자료는 단톡방에, 과제는 메일로. 무엇을 어디서 봐야 할지부터 막혀요.") +
+        card(1, "target", "어디까지 했는지 모르겠어요", "지금 잘 따라가고 있는지, 다음엔 무엇을 해야 하는지 알려 주는 곳이 없어요.") +
+        card(2, "users", "기수가 끝나면 연결도 끝나요", "강의가 끝나는 순간 강사님과도, 함께 배운 동기들과도 멀어져요.") +
+      "</div>" +
+      '<div class="hm-answer hm-reveal"><span class="hm-sym" aria-hidden="true"></span><p>두고 클래스는 이 모든 것을 ' + mark("하나의 강의 플랫폼") + "에 담았어요.</p>" + scrollBtn("hm-platform", "어떻게요?" + icon("arrowRight", "sm"), "hm-answer-go") + "</div>" +
+    "</div></section>";
+  }
+
   function pillars() {
-    const p = (i, ic, t, txt, pts) => '<article class="hm-pillar hm-hov hm-reveal"' + d(i) + '><span class="hm-ic">' + icon(ic) + "</span><h3>" + t + "</h3><p>" + txt + '</p><ul class="hm-pillar-list">' + pts.map((x) => "<li>" + icon("check", "xs") + x + "</li>").join("") + "</ul></article>";
-    return '<section class="hm-sec hm-soft" id="hm-platform"><div class="hm-wrap">' +
-      secHead("layers", "강의 하나에 필요한 모든 것", "흩어진 영상 · 자료 · 과제 · 소통을 한 곳에 모았어요.") +
+    const p = (i, ic, t, txt, pts) => '<article class="hm-pillar hm-hov hm-reveal"' + d(i) + '><div class="hm-pillar-top"><span class="hm-ic">' + icon(ic) + '</span><span class="hm-pillar-no">0' + (i + 1) + "</span></div><h3>" + t + "</h3><p>" + txt + '</p><ul class="hm-pillar-list">' + pts.map((x) => "<li>" + icon("check", "xs") + x + "</li>").join("") + "</ul></article>";
+    return '<section class="hm-sec" id="hm-platform"><div class="hm-wrap">' +
+      secHead("layers", "강의 하나에 필요한 모든 것, 두고 클래스 하나로", "강사님마다 자기 이름과 색으로 운영하는 독립된 강의 플랫폼이에요. 강의의 처음부터 끝까지가 한 권의 책처럼 여기 들어 있어요.") +
       '<div class="hm-pillars">' +
-        p(0, "book", "튜토리얼 커리큘럼", "1주차부터 순서대로, 처음 시작해도 차근차근.", ["주차별 강의 · 목표", "과제 단계 안내", "실무 가이드 · 자료실"]) +
-        p(1, "activity", "진도 관리와 케어", "수강생도, 강사님도 진도가 한눈에 보여요.", ["진행률 · 수료증", "강사 · 코치 피드백", "AI 도우미 · 1:1 소통"]) +
-        p(2, "heart", "평생 네트워크", "수료 후에도 강의실은 남고 연결은 이어져요.", ["수료 후에도 계속 이용", "이전 기수에게도 새 자료", "단골 수강생 · 나만의 팬"]) +
+        p(0, "book", "튜토리얼 커리큘럼", "주차별 강의 · 과제 · 자료가 순서대로. 처음 시작하는 분도 1주차부터 차근차근 따라오면 돼요.", ["주차별 강의 · 핵심 목표", "과제 단계 안내 · 엑셀 양식", "실무 가이드 · 자료실"]) +
+        p(1, "activity", "진도 관리와 케어", "수강생은 내 진도를, 강사님과 코치는 모든 수강생의 진도를 봐요. 멈춘 사람을 먼저 챙길 수 있어요.", ["진행률 · 수료증", "자동 검수 + 강사 · 코치 피드백", "AI 도우미 · 1:1 소통채널"]) +
+        p(2, "heart", "평생 네트워크", "수료한 뒤에도 내 강의실은 남아요. 새 영상과 정보가 계속 올라오고, 강사와 수강생이 계속 연결돼요.", ["수료 후에도 계속 이용", "이전 기수에게도 새 자료", "단골 수강생 · 나만의 팬"]) +
       "</div>" +
     "</div></section>";
   }
 
   function students() {
     const cur = STUDENT_TABS.find((x) => x.key === stTab) || STUDENT_TABS[0];
-    return '<section class="hm-sec" id="hm-students"><div class="hm-wrap">' +
-      secHead("book", "수강생은 길을 잃지 않아요", "로그인하면 내 강사님의 강의실이 열려요. 오늘 할 일과 내 진도가 언제나 보여요.") +
+    return '<section class="hm-sec hm-soft" id="hm-students"><div class="hm-wrap">' +
+      secHead("book", "1주차부터 수료까지, 수강생은 길을 잃지 않아요", "로그인하면 내가 듣는 강사님의 강의실이 열려요. 오늘 무엇을 해야 하는지, 잘 따라가고 있는지 언제나 보여요.") +
       '<div class="hm-show">' +
         '<div class="hm-show-tabs" role="tablist" aria-label="수강생 기능">' + STUDENT_TABS.map((x) =>
           '<button type="button" role="tab" class="hm-tab' + (x.key === cur.key ? " on" : "") + '" aria-selected="' + (x.key === cur.key) + '" data-hm-st="' + x.key + '">' +
@@ -194,27 +217,40 @@
 
   function teachers() {
     const cur = ADMIN_TABS.find((x) => x.key === adTab) || ADMIN_TABS[0];
-    return '<section class="hm-sec hm-soft" id="hm-teachers"><div class="hm-wrap">' +
-      secHead("activity", "강사님은 모든 수강생을 한눈에", "강사센터에서 진도 · 과제 · 수강생을 관리하고, 코치와 나눠서 운영해요.") +
+    return '<section class="hm-sec" id="hm-teachers"><div class="hm-wrap">' +
+      secHead("activity", "강사님의 노하우가 일하는 강의 플랫폼이 돼요", "커리큘럼을 올려 두면 수강생은 혼자서도 따라오고, 강사님은 강사센터에서 모든 수강생의 진도와 과제를 확인해요. 코치와 나눠서 운영할 수도 있어요.", applyBtn("입점 문의" + icon("arrowRight", "sm"), "hm-shead-link")) +
       '<div class="hm-atabs" role="tablist" aria-label="강사센터 화면">' + ADMIN_TABS.map((x) => '<button type="button" role="tab" class="hm-atab' + (x.key === cur.key ? " on" : "") + '" aria-selected="' + (x.key === cur.key) + '" data-hm-ad="' + x.key + '">' + x.title + "</button>").join("") + "</div>" +
       '<div class="hm-ashot">' + browser(cur.img, "hm-admin-browser", "강사센터 " + cur.title + " 화면") + '<p class="hm-cap">실제 강사센터 화면 일부 · 예시 데이터 (이름은 가렸어요)</p></div>' +
-      '<div class="hm-feats">' + ADMIN_FEATURES.map((x, i) => '<article class="hm-feat hm-hov hm-reveal"' + d(i) + '><span class="hm-ic">' + icon(x[0]) + "</span><h3>" + x[1] + "</h3><p>" + x[2] + "</p></article>").join("") + "</div>" +
+      '<div class="hm-feats">' + ADMIN_FEATURES.map((x, i) => '<article class="hm-feat hm-hov hm-reveal"' + d(i % 4) + '><span class="hm-ic">' + icon(x[0]) + "</span><h3>" + x[1] + "</h3><p>" + x[2] + "</p></article>").join("") + "</div>" +
     "</div></section>";
   }
 
   function journey() {
-    return '<section class="hm-sec" id="hm-how"><div class="hm-wrap">' +
-      secHead("checks", "시작은 이렇게 간단해요", "회원가입 대신 승인제로 운영해요.", '<a class="hm-shead-link" href="#/login">로그인 화면' + icon("arrowRight", "sm") + "</a>") +
+    return '<section class="hm-sec hm-soft" id="hm-how"><div class="hm-wrap">' +
+      secHead("checks", "수강생은 이렇게 시작해요", "회원가입 대신 승인제로 운영해요. 내 강사님이 승인한 수강생만 강의실에 들어올 수 있어요.", '<a class="hm-shead-link" href="#/login">로그인 화면' + icon("arrowRight", "sm") + "</a>") +
       '<ol class="hm-steps">' + STEPS.map((s, i) => '<li class="hm-step hm-hov hm-reveal"' + d(i) + '><span class="hm-step-no">' + String(i + 1).padStart(2, "0") + "</span><b>" + s[0] + "</b><p>" + s[1] + "</p></li>").join("") + "</ol>" +
+      '<div class="hm-login-demo hm-reveal">' +
+        '<div class="hm-ld-copy"><h3>로그인은 이 세 가지면 끝</h3><p>아이디 · 비밀번호를 따로 만들 필요가 없어요. 신청할 때 적은 정보 그대로 들어와요.</p><a class="hm-btn hm-btn-p" href="#/login">로그인 화면으로' + icon("arrowRight", "sm") + "</a></div>" +
+        '<div class="hm-ld-card" aria-hidden="true">' +
+          '<div class="hm-ld-f"><small>1. 수강 중인 강사님</small><span><span class="hm-sym"></span>OOO 강사님' + icon("chevRight", "xs") + "</span></div>" +
+          '<div class="hm-ld-f"><small>2. 이름</small><span>OOO</span></div>' +
+          '<div class="hm-ld-f"><small>3. 휴대폰 번호 뒷자리</small><span class="hm-ld-pw">● ● ● ●</span></div>' +
+          '<span class="hm-ld-btn">로그인</span>' +
+        "</div>" +
+      "</div>" +
     "</div></section>";
   }
 
   function lifelong() {
-    const pts = [["refresh", "새 영상 · 자료 업데이트"], ["message", "강사 · 코치와 계속 소통"], ["heart", "단골 수강생 · 나만의 팬"]];
-    return '<section class="hm-sec hm-life"><div class="hm-wrap hm-life-in hm-reveal">' +
-      '<h2 class="hm-h2 hm-h2-xl">한 번 들어오면,<br>' + mark("평생 함께") + ".</h2>" +
-      '<p class="hm-sub">강의가 끝나도 강의실은 남아요. 강사님이 올리는 새 정보로 계속 연결되고, 그 연결이 강사님만의 단골과 팬이 돼요.</p>' +
-      '<div class="hm-life-pts">' + pts.map((x, i) => '<span class="hm-life-pt hm-hov"' + d(i) + ">" + icon(x[0], "sm") + x[1] + "</span>").join("") + "</div>" +
+    const loop = [["refresh", "새 영상 · 자료 업데이트", "끝난 기수에게도 새 정보가 올라가요"], ["sprout", "수강생이 다시 찾아와요", "공지 · 새 자료를 보고 강의실로 돌아와요"],
+      ["message", "질문 · 소통 · 피드백", "강사님 · 코치와 다시 이야기 나눠요"], ["heart", "단골 수강생 · 나만의 팬", "다음 강의도 함께하는 사람들이 돼요"]];
+    return '<section class="hm-sec hm-life"><div class="hm-wrap hm-life-in">' +
+      '<div class="hm-life-copy hm-reveal">' +
+        '<h2 class="hm-h2 hm-h2-xl">한 번 들어오면,<br>' + mark("평생 함께") + ".</h2>" +
+        "<p>강의가 끝나도 플랫폼은 남아요. 강사님은 끝난 기수에게도 좋은 영상과 새 정보를 계속 올리고, 수강생은 언제든 다시 찾아와 배우고 물어봐요.</p>" +
+        "<p>그렇게 이어지는 연결이 <b>강사님만의 단골 수강생, 나만의 팬</b>을 만들어요. 한 번 팔고 끝나는 강의가 아니라, 계속 함께 성장하는 강의를 위한 플랫폼이에요.</p>" +
+      "</div>" +
+      '<ol class="hm-loop" aria-label="평생 네트워크가 만들어지는 순서">' + loop.map((x, i) => '<li class="hm-loop-i hm-hov hm-reveal"' + d(i) + '><span class="hm-ic hm-ic-sm">' + icon(x[0]) + '</span><span class="hm-loop-t"><b>' + x[1] + "</b><small>" + x[2] + '</small></span><em>0' + (i + 1) + "</em></li>").join("") + "</ol>" +
     "</div></section>";
   }
 
@@ -234,12 +270,40 @@
     "</div></section>";
   }
 
+  /* 바닥 — 사업자 정보(채운 칸만) · 두고 그룹사 · 바로가기. 내용은 마스터 → 첫 화면 · 사업자 정보 */
   function footer() {
-    return '<footer class="hm-foot"><div class="hm-wrap hm-foot-in">' +
-      '<div class="hm-foot-brand">' + brandLock() + "<small>두고 클래스 · 튜토리얼 강의 플랫폼</small></div>" +
-      '<nav class="hm-foot-links" aria-label="바로가기"><a href="#/login">수강생 로그인</a><a href="#/center">강사센터</a>' + applyBtn("강사 입점 문의", "hm-foot-apply") +
-        '<a href="https://www.doogoconnect.com/" target="_blank" rel="noopener">두고커넥트</a><a href="https://www.doogofood.com/" target="_blank" rel="noopener">두고푸드</a></nav>' +
-      '<div class="hm-foot-bottom"><span>운영 (주)두고홀딩스 · © 2026 doogo. All rights reserved.</span></div>' +
+    const S = DB.siteInfo ? DB.siteInfo() : { company: "(주)두고홀딩스", group: [] };
+    const url = (u) => (/^https?:\/\//i.test(u || "") ? u : "");
+    const ext = (href, label, cls) => '<a' + (cls ? ' class="' + cls + '"' : "") + ' href="' + esc(href) + '" target="_blank" rel="noopener">' + label + "</a>";
+    const host = (u) => String(u || "").replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
+    const bizDigits = String(S.bizNo || "").replace(/[^0-9]/g, "");
+    const info = [
+      S.company && ["상호", esc(S.company)], S.ceo && ["대표", esc(S.ceo)],
+      S.bizNo && ["사업자등록번호", esc(S.bizNo) + (bizDigits.length === 10 ? " " + ext("https://www.ftc.go.kr/bizCommPop.do?wrkr_no=" + bizDigits, "사업자정보확인", "hm-foot-chk") : "")],
+      S.mailOrderNo && ["통신판매업 신고", esc(S.mailOrderNo)], S.address && ["주소", esc(S.address)],
+      S.phone && ["고객센터", '<a href="tel:' + esc(S.phone.replace(/[^0-9+]/g, "")) + '">' + esc(S.phone) + "</a>"], S.email && ["이메일", '<a href="mailto:' + esc(S.email) + '">' + esc(S.email) + "</a>"],
+      S.hours && ["운영 시간", esc(S.hours)], S.privacyOfficer && ["개인정보 보호책임자", esc(S.privacyOfficer)], S.hosting && ["호스팅 제공자", esc(S.hosting)]
+    ].filter(Boolean);
+    const group = [{ name: "두고 클래스", desc: "튜토리얼 강의 플랫폼", here: true }].concat((S.group || []).filter((g) => g && g.name));
+    const gCard = (g) => g.here
+      ? '<span class="hm-fam hm-fam-here"><span class="hm-sym" aria-hidden="true"></span><span class="hm-fam-t"><b>' + esc(g.name) + "</b><small>" + esc(g.desc) + '</small></span><em>지금 보는 곳</em></span>'
+      : (url(g.url) ? '<a class="hm-fam" href="' + esc(g.url) + '" target="_blank" rel="noopener">' : '<span class="hm-fam">') +
+        '<span class="hm-fam-mark" aria-hidden="true">' + esc(g.name.replace(/^두고\s*/, "").slice(0, 1) || "D") + '</span><span class="hm-fam-t"><b>' + esc(g.name) + "</b><small>" + esc(g.desc || host(g.url)) + "</small></span>" +
+        (url(g.url) ? icon("arrowUpRight", "sm") + "</a>" : "</span>");
+    return '<footer class="hm-foot"><div class="hm-wrap">' +
+      '<div class="hm-foot-top">' +
+        '<div class="hm-foot-brand">' + brandLock() + "<p>강사님의 노하우를 1주차부터 수료까지 담은<br>튜토리얼 강의 플랫폼, 두고 클래스</p></div>" +
+        '<nav class="hm-foot-cols" aria-label="바로가기">' +
+          '<div class="hm-foot-col"><b>서비스</b><a href="#/login">수강생 로그인</a><a href="#/center">강사센터</a>' + applyBtn("강사 입점 문의", "hm-foot-apply") + "</div>" +
+          '<div class="hm-foot-col"><b>고객지원</b>' + scrollBtn("hm-faq", "자주 묻는 질문", "hm-foot-a") +
+            (url(S.terms) ? ext(S.terms, "이용약관") : "") + (url(S.privacy) ? ext(S.privacy, "<strong>개인정보처리방침</strong>") : "") +
+            (S.email ? '<a href="mailto:' + esc(S.email) + '">이메일 문의</a>' : "") + "</div>" +
+        "</nav>" +
+      "</div>" +
+      '<div class="hm-foot-group"><p class="hm-foot-label">두고 그룹사<small>' + esc(S.company || "(주)두고홀딩스") + "가 운영하는 서비스</small></p>" +
+        '<div class="hm-fams">' + group.map(gCard).join("") + "</div></div>" +
+      '<div class="hm-foot-biz">' + (info.length ? '<dl class="hm-foot-info">' + info.map((x) => "<div><dt>" + x[0] + "</dt><dd>" + x[1] + "</dd></div>").join("") + "</dl>" : "") +
+        '<p class="hm-foot-copy">© 2026 DOOGO HOLDINGS. All rights reserved.</p></div>' +
     "</div></footer>";
   }
 
@@ -313,9 +377,9 @@
   function render() {
     window.applyStudentTheme(null);
     document.title = "두고 클래스 — 따라만 하면 완성되는 튜토리얼 강의 플랫폼";
-    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", "#ffffff");
+    dark = null;
     const list = classes();
-    root.innerHTML = '<div class="hm">' + header() + "<main>" + hero() + stats(list) + classList(list) + pillars() + students() + teachers() + journey() + lifelong() + faq() + finalCta() + "</main>" + footer() + "</div>";
+    root.innerHTML = '<div class="hm">' + header() + "<main>" + hero() + stats(list) + classList(list) + problem() + pillars() + students() + teachers() + journey() + lifelong() + faq() + finalCta() + "</main>" + footer() + "</div>";
     onScroll();
     reveal();
     if (/^#\/partner/.test(location.hash)) openApply();
@@ -333,12 +397,28 @@
     old.replaceWith(next);
   }
 
+  // 위 막대: 조금 내려가면 검정(빨강 포인트), 아래 빨간 줄은 읽은 만큼 차오른다 · 휴대폰 주소창 색도 같이
+  let dark = null, ticking = false;
   function onScroll() {
-    if (!isActive()) return;
-    const top = document.getElementById("hm-top");
-    if (top) top.classList.toggle("scrolled", window.scrollY > 12);
+    if (!isActive() || ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      if (!isActive()) return;
+      const top = document.getElementById("hm-top"), prog = document.getElementById("hm-prog");
+      if (!top) return;
+      const y = window.scrollY, max = document.documentElement.scrollHeight - window.innerHeight;
+      const on = y > 24;
+      if (on !== dark) {
+        dark = on;
+        top.classList.toggle("scrolled", on);
+        const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", on ? "#0c0e13" : "#ffffff");
+      }
+      if (prog) prog.style.transform = "scaleX(" + (max > 0 ? Math.min(1, y / max) : 0).toFixed(4) + ")";
+    });
   }
   window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
 
   document.addEventListener("click", (e) => {
     if (!isActive()) return;
