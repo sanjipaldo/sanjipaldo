@@ -92,7 +92,7 @@ body[data-mode="home"] { background: #fff; }
 .hm .hm-hero-pts .icon { width: 18px; height: 18px; padding: 3px; border-radius: 50%; background: var(--pri-soft); color: var(--pri); stroke-width: 2.4; box-sizing: border-box; }
 
 .hm-hero-art { position: relative; height: 480px; }
-.hm-hero-art::before { content: ""; position: absolute; inset: 0 -40px 0 12%; border-radius: 16px; background: radial-gradient(520px 320px at 100% 0%, rgba(249, 66, 57, .07), transparent 70%), linear-gradient(160deg, #fff5f3 0%, #fffaf9 70%); border: 1px solid #f8e4e1; }
+.hm-hero-art::before { content: ""; position: absolute; inset: 0 -40px 0 12%; border-radius: 16px; background: linear-gradient(160deg, #fffafa 0%, #ffffff 70%); border: 1px solid #f5eceb; }
 .hm-browser { position: relative; border-radius: 12px; background: #fff; overflow: hidden; border: 1px solid var(--g200); box-shadow: var(--sh-md); }
 .hm-browser-bar { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; background: var(--g50); border-bottom: 1px solid var(--g100); }
 .hm-browser-bar i { width: 9px; height: 9px; border-radius: 50%; background: var(--g300); }
@@ -141,8 +141,8 @@ body[data-mode="home"] { background: #fff; }
 .hm-sec.hm-flow-sec + .hm-sec { padding-top: 64px; }
 /* 메뉴 버튼으로 내려왔을 때 위 막대(60px)에 제목이 가리지 않게 */
 .hm-sec, .hm-hero { scroll-margin-top: 60px; }
-/* 파스텔 구역 — 첫 화면 맨 위처럼 흰 바탕에 아주 옅은 빨강 · 살구빛 (회색 대신) */
-.hm-soft { background: radial-gradient(1000px 480px at 100% 0%, rgba(249, 66, 57, .06), transparent 65%), radial-gradient(820px 420px at 0% 100%, rgba(255, 160, 110, .08), transparent 65%), #fffaf9; }
+/* 흰 구역 — 거의 흰색에 아주 옅은 빨강 기운만 (구분선으로 나눈다) */
+.hm-soft { background: radial-gradient(1000px 480px at 100% 0%, rgba(249, 66, 57, .025), transparent 65%), #fffdfd; border-top: 1px solid #f7f0ef; border-bottom: 1px solid #f7f0ef; }
 .hm-h2 { font-size: 32px; font-weight: 700; line-height: 1.35; letter-spacing: 0; color: var(--g900); }
 .hm-h2-xl { font-size: 40px; line-height: 1.3; font-weight: 800; letter-spacing: 0; }
 .hm-sub { margin-top: 12px !important; max-width: 42em; font-size: 16px; font-weight: 400; line-height: 1.6; color: var(--g500); }
@@ -220,7 +220,7 @@ body[data-mode="home"] { background: #fff; }
 
 /* 강사님이 받는 세 가지 — 실제 화면과 함께 */
 .hm-frows { display: grid; gap: 28px; }
-.hm-frow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: 64px; align-items: center; padding: 48px 56px; border-radius: 24px; background: radial-gradient(520px 320px at 100% 0%, rgba(249, 66, 57, .07), transparent 70%), linear-gradient(160deg, #fff5f3 0%, #fffaf9 70%); border: 1px solid #f8e4e1; }
+.hm-frow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: 64px; align-items: center; padding: 48px 56px; border-radius: 24px; background: linear-gradient(160deg, #fffafa 0%, #ffffff 70%); border: 1px solid #f5eceb; }
 .hm-frow.rev { grid-template-columns: minmax(0, 440px) minmax(0, 1fr); }
 .hm-frow.rev .hm-frow-copy { order: 2; }
 .hm-frow-top { display: flex; align-items: center; gap: 10px; }
@@ -276,8 +276,8 @@ body[data-mode="home"] { background: #fff; }
 .hm-tab-t b { display: block; padding-top: 10px; font-size: 16px; font-weight: 700; line-height: 1.4; }
 .hm-tab-t small { display: none; margin-top: 8px; font-size: 14px; font-weight: 400; line-height: 1.6; color: var(--g600); }
 .hm-tab.on .hm-tab-t small { display: block; }
-.hm-show-art { position: sticky; top: 92px; display: grid; justify-items: center; padding: 48px 24px; border-radius: 20px; background: radial-gradient(520px 320px at 100% 0%, rgba(249, 66, 57, .07), transparent 70%), linear-gradient(160deg, #fff5f3 0%, #fffaf9 70%); border: 1px solid #f8e4e1; }
-.hm-show-glow { position: absolute; inset: 12% 15%; border-radius: 50%; background: radial-gradient(closest-side, rgba(249, 66, 57, .10), transparent); }
+.hm-show-art { position: sticky; top: 92px; display: grid; justify-items: center; padding: 48px 24px; border-radius: 20px; background: linear-gradient(160deg, #fffafa 0%, #ffffff 70%); border: 1px solid #f5eceb; }
+.hm-show-glow { position: absolute; inset: 12% 15%; border-radius: 50%; background: radial-gradient(closest-side, rgba(249, 66, 57, .05), transparent); }
 .hm-show-phone { width: min(290px, 78%); }
 .hm-show-cap { display: none; }
 .hm-more { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 72px; }
@@ -308,7 +308,7 @@ body[data-mode="home"] { background: #fff; }
 .hm-login-demo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 400px); gap: 48px; align-items: center; margin-top: 24px; padding: 40px 48px; border-radius: 20px; background: #fff; border: 1px solid var(--g200); }
 .hm-ld-copy h3 { font-size: 24px; font-weight: 700; line-height: 1.4; letter-spacing: 0; }
 .hm-ld-copy p { margin: 12px 0 28px !important; font-size: 15px; line-height: 1.6; color: var(--g500); }
-.hm-ld-card { display: grid; gap: 12px; padding: 22px; border-radius: 16px; background: radial-gradient(520px 320px at 100% 0%, rgba(249, 66, 57, .07), transparent 70%), linear-gradient(160deg, #fff5f3 0%, #fffaf9 70%); border: 1px solid #f8e4e1; }
+.hm-ld-card { display: grid; gap: 12px; padding: 22px; border-radius: 16px; background: linear-gradient(160deg, #fffafa 0%, #ffffff 70%); border: 1px solid #f5eceb; }
 .hm-ld-f small { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; color: var(--g500); }
 .hm-ld-f > span { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--g200); background: #fff; font-size: 14px; font-weight: 700; }
 .hm-ld-f .hm-sym { --lh: 22px; }
@@ -343,8 +343,8 @@ body[data-mode="home"] { background: #fff; }
 .hm-faq-cta { padding: 0 4px 24px 48px; margin-top: -8px; }
 
 /* 마지막 안내 — 빨강 띠 */
-/* 마지막 안내 — 빨간 통바탕 대신 파스텔(읽기 쉽게), 빨강은 제목 일부 · 버튼에만 */
-.hm-final { background: radial-gradient(760px 440px at 92% 8%, rgba(249, 66, 57, .12), transparent 70%), radial-gradient(640px 420px at 4% 100%, rgba(255, 160, 110, .14), transparent 70%), linear-gradient(180deg, #fff4f2 0%, #fff9f8 100%); color: var(--g900); text-align: center; border-top: 1px solid #fbe7e4; }
+/* 마지막 안내 — 흰 바탕에 아주 옅은 빨강 기운, 빨강은 제목 일부 · 버튼에만 */
+.hm-final { background: radial-gradient(760px 440px at 92% 8%, rgba(249, 66, 57, .045), transparent 70%), #fffdfd; color: var(--g900); text-align: center; border-top: 1px solid #f5eceb; }
 .hm-final-in { padding: 96px 0; }
 .hm-final .hm-h2 { font-size: 40px; line-height: 1.3; color: var(--g900); letter-spacing: 0; font-weight: 800; }
 .hm-final p { margin-top: 14px !important; font-size: 17px; font-weight: 400; color: var(--g600); }
@@ -709,7 +709,7 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 .hm-menus-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .hm-menus-col li { padding: 6px 12px; border-radius: 50px; background: var(--g50); font-size: 13px; font-weight: 600; color: var(--g700); }
 
-.hm-cohort { margin-top: 24px; padding: 28px 32px; border-radius: 20px; background: radial-gradient(520px 320px at 100% 0%, rgba(249, 66, 57, .07), transparent 70%), linear-gradient(160deg, #fff5f3 0%, #fffaf9 70%); border: 1px solid #f8e4e1; }
+.hm-cohort { margin-top: 24px; padding: 28px 32px; border-radius: 20px; background: linear-gradient(160deg, #fffafa 0%, #ffffff 70%); border: 1px solid #f5eceb; }
 .hm-cohort-h { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 20px; }
 .hm-cohort-h b { font-size: 18px; font-weight: 700; color: var(--g900); }
 .hm-cohort-h span { font-size: 14px; color: var(--g500); }
@@ -728,13 +728,13 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 .hm-final-k { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px !important; padding: 6px 12px; border-radius: 50px; background: #fff; border: 1px solid var(--pri-200); font-size: 13px; font-weight: 600; color: var(--pri-dark); }
 .hm-final .hm-cta { margin-top: 32px; }
 .hm-final-pts { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.hm-final-pts li { display: flex; align-items: center; gap: 14px; padding: 18px 20px; border-radius: 16px; background: #fff; border: 1px solid #f6e6e3; box-shadow: 0 2px 16px rgba(249, 66, 57, .06); }
+.hm-final-pts li { display: flex; align-items: center; gap: 14px; padding: 18px 20px; border-radius: 16px; background: #fff; border: 1px solid #f2eaea; box-shadow: 0 2px 16px rgba(0, 0, 0, .04); }
 .hm-final-ic { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--tone-bg, var(--pri-soft)); color: var(--tone, var(--pri)); }
 .hm-final-pts b { display: block; font-size: 17px; font-weight: 700; color: var(--g900); }
 .hm-final-pts small { display: block; margin-top: 2px; font-size: 14px; color: var(--g500); }
 
 .hm-foot-cta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
-.hm-foot-cs { display: grid; align-content: start; gap: 6px; padding: 20px 22px; border-radius: 16px; background: radial-gradient(520px 320px at 100% 0%, rgba(249, 66, 57, .07), transparent 70%), linear-gradient(160deg, #fff5f3 0%, #fffaf9 70%); border: 1px solid #f8e4e1; }
+.hm-foot-cs { display: grid; align-content: start; gap: 6px; padding: 20px 22px; border-radius: 16px; background: linear-gradient(160deg, #fffafa 0%, #ffffff 70%); border: 1px solid #f5eceb; }
 .hm-foot-cs b { font-size: 14px; font-weight: 700; color: var(--g900); }
 .hm-foot-cs p { font-size: 13px; line-height: 1.5; color: var(--g500); }
 .hm-foot-cs a { color: var(--g700); text-decoration: none; }
@@ -799,9 +799,9 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 /* ---------- 수강생 첫 로그인 화면 (강사 고르기 전, app.js renderPicker) — 흰 바탕 + 여기어때 레드(YDS) ---------- */
 .login-dc { --dc-pri: #f94239; --dc-pri-dark: #ea2013; --dc-pri-soft: #fff5f5; --dc-ink: #222222; --dc-g50: #fafafa; --dc-g100: #f5f5f5; --dc-g200: #e6e6e6; --dc-g400: #999999; --dc-g500: #707070; --dc-g600: #474747;
   background: #fff; color: var(--dc-ink); font-family: var(--font); font-feature-settings: "calt"; word-break: keep-all; }
-.dc-brand { position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: 44px 48px 0; border-right: 1px solid #f8e6e3; overflow: hidden;
-  /* 첫 화면 맨 위와 같은 파스텔 — 흰 바탕에 옅은 빨강 · 살구빛 */
-  background: radial-gradient(640px 440px at 92% 0%, rgba(249, 66, 57, .11), transparent 70%), radial-gradient(560px 420px at 0% 100%, rgba(255, 160, 110, .13), transparent 70%), linear-gradient(180deg, #fff4f2 0%, #fffaf9 100%); }
+.dc-brand { position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: 44px 48px 0; border-right: 1px solid #f5eceb; overflow: hidden;
+  /* 흰 바탕에 아주 옅은 빨강 기운만 */
+  background: radial-gradient(640px 440px at 92% 0%, rgba(249, 66, 57, .05), transparent 70%), linear-gradient(180deg, #fffafa 0%, #ffffff 100%); }
 .dc-brand::before { content: ""; position: absolute; right: -90px; bottom: -70px; width: 440px; height: 460px; background: var(--dc-pri); opacity: .06; pointer-events: none;
   -webkit-mask: url(assets/brand/doogo-symbol.png) center / contain no-repeat; mask: url(assets/brand/doogo-symbol.png) center / contain no-repeat; }
 .dc-brand > * { position: relative; }

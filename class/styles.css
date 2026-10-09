@@ -721,8 +721,8 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 @keyframes lxfloat { 0%, 100% { translate: 0 0; } 50% { translate: 0 -12px; } }
 .lx-wise { --lx-glow: rgba(var(--theme-rgb), .22); --lx-beam-a: rgba(var(--theme-rgb), .30); --lx-beam-b: rgba(var(--theme-rgb), .06); --lx-tile-a: rgba(var(--theme-rgb), .34); --lx-tile-b: rgba(var(--theme-rgb), .10); --lx-tile-line: rgba(var(--theme-rgb), .40); --lx-icon: var(--accent-active); }
 /* 강사센터 · 마스터 = 흰 바탕 위 흰 카드 + 빨간 아이콘 · 코치 = 초록 아이콘 (로그인 왼쪽이 흰 바탕) */
-.lx-red, .lx-dark { --lx-glow: rgba(249, 66, 57, .10); --lx-beam-a: rgba(249, 66, 57, .07); --lx-beam-b: rgba(249, 66, 57, .01); --lx-tile-a: #ffffff; --lx-tile-b: #fff7f6; --lx-tile-line: #fedfde; --lx-icon: #f94239; }
-.lx-green { --lx-glow: rgba(1, 164, 132, .10); --lx-beam-a: rgba(1, 164, 132, .07); --lx-beam-b: rgba(1, 164, 132, .01); --lx-tile-a: #ffffff; --lx-tile-b: #f3fbf8; --lx-tile-line: #c2eae0; --lx-icon: #01a484; }
+.lx-red, .lx-dark { --lx-glow: rgba(249, 66, 57, .05); --lx-beam-a: rgba(249, 66, 57, .035); --lx-beam-b: rgba(249, 66, 57, .01); --lx-tile-a: #ffffff; --lx-tile-b: #fff7f6; --lx-tile-line: #fedfde; --lx-icon: #f94239; }
+.lx-green { --lx-glow: rgba(1, 164, 132, .05); --lx-beam-a: rgba(1, 164, 132, .035); --lx-beam-b: rgba(1, 164, 132, .01); --lx-tile-a: #ffffff; --lx-tile-b: #f3fbf8; --lx-tile-line: #c2eae0; --lx-icon: #01a484; }
 .lx-red .lx-tile, .lx-dark .lx-tile { box-shadow: 0 18px 40px -18px rgba(249, 66, 57, .35), 0 2px 8px rgba(0, 0, 0, .05); }
 .lx-green .lx-tile { box-shadow: 0 18px 40px -18px rgba(1, 164, 132, .35), 0 2px 8px rgba(0, 0, 0, .05); }
 

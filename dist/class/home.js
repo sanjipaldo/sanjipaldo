@@ -510,7 +510,6 @@
 
   /* ---------- 실제 화면 녹화 영상 ---------- */
   let vio = null, vload = null;
-  const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // H.264(mp4)을 못 트는 브라우저(일부 크로미움 · 리눅스 파이어폭스)는 VP9(webm)으로
   let vidExt = null;
   const pickExt = (v) => vidExt || (vidExt = v.canPlayType('video/mp4; codecs="avc1.640028"') ? ".mp4" : v.canPlayType('video/webm; codecs="vp9"') ? ".webm" : ".mp4");
@@ -560,12 +559,12 @@
     b.classList.toggle("paused", paused);
     b.setAttribute("aria-label", paused ? "영상 재생" : "영상 멈추기");
   }
-  // 화면에 보일 때만 받아서 재생 (안 보이면 멈춤). 움직임 줄이기 설정이면 멈춘 채로 두고 버튼으로 재생
+  // 화면에 보일 때만 받아서 재생 (안 보이면 멈춤, 다시 보면 멈췄던 곳부터 이어서).
+  // 휴대폰의 ‘애니메이션 줄이기’ · 절전 모드여도 멈춘 채로 두지 않는다 (소리 없는 화면 녹화라 저절로 재생)
   function wireVideos() {
     if (vio) vio.disconnect();
     const vids = Array.from(root.querySelectorAll("video.hm-vid"));
     vids.forEach((v) => {
-      if (reduceMotion()) v.dataset.hold = "1";
       setVidBtn(v);
       v.addEventListener("timeupdate", onVidTime);
       v.addEventListener("loadedmetadata", () => applySeek(v));
