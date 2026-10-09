@@ -1,17 +1,21 @@
-/* 화면 전환: #/center… 는 강사센터·마스터(admin.js), #/p/… 는 강사 홍보 랜딩페이지(landing.js), 나머지는 수강생 센터(app.js)
+/* 화면 전환: 주소 맨 앞(#/ · #/about)은 두고 클래스 소개(home.js), #/center… 는 강사센터·마스터(admin.js),
+ * #/p/… · #/free/… 는 강사 홍보 · 무료강의 페이지(landing.js), 나머지는 수강생 센터(app.js)
  * 서버(/api)가 있으면 데이터를 서버에서 받아 오고(여러 기기·여러 사람이 같은 데이터), 없으면 이 브라우저에 저장한다. */
 (function () {
   "use strict";
   let mode = null;
+  const isRoot = (h) => h === "" || h === "#" || h === "#/";
   function go() {
-    const h = location.hash;
-    const next = /^#\/center/.test(h) ? "admin" : /^#\/(p|free)(\/|\?|$)/.test(h) ? "landing" : "student";
+    let h = location.hash;
+    // 로그인한 수강생은 첫 화면 대신 바로 내 강의실로 (소개 화면은 #/about 으로 언제든)
+    if (isRoot(h) && DB.session.student()) { history.replaceState(null, "", "#/home"); h = "#/home"; }
+    const next = /^#\/center/.test(h) ? "admin" : /^#\/(p|free)(\/|\?|$)/.test(h) ? "landing" : isRoot(h) || /^#\/about(\/|\?|$)/.test(h) ? "home" : "student";
     const changed = next !== mode;
     mode = next;
     document.body.dataset.mode = next;
     if (next === "admin") window.applyStudentTheme(null); else document.body.dataset.master = "";
     document.getElementById("modal-root").innerHTML = "";
-    const app = next === "admin" ? window.AdminApp : next === "landing" ? window.LandingApp : window.StudentApp;
+    const app = next === "admin" ? window.AdminApp : next === "landing" ? window.LandingApp : next === "home" ? window.HomeApp : window.StudentApp;
     if (changed) app.mount(); else app.render();
   }
 

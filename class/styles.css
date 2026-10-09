@@ -737,7 +737,9 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 .login-foot { margin-right: 0; border-top-color: rgba(232, 235, 230, .12); font-size: 12px; }
 .login-copy { color: #8a9584; opacity: 1; }
 .login-panel { position: relative; background: var(--canvas); }
-.login-topright { position: absolute; top: 20px; right: 24px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--body); }
+.login-topright { position: absolute; top: 20px; right: 24px; left: 24px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-size: 13px; font-weight: 700; color: var(--body); }
+.login-home { display: inline-flex; align-items: center; gap: 4px; margin-right: auto; color: var(--body); text-decoration: none; }
+.login-home:hover { color: var(--ink); }
 .login-stack { width: 100%; max-width: 440px; display: grid; gap: 16px; }
 .login-card { max-width: none; padding: 36px 36px 28px; border: 1px solid var(--line-soft); border-radius: var(--r-xl); background: var(--canvas); box-shadow: 0 30px 60px -30px rgba(14, 15, 12, .25), 0 2px 6px rgba(14, 15, 12, .04); }
 .login-label { margin: 0 0 10px; text-align: center; font-size: 14px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink-deep); }

@@ -220,7 +220,7 @@
           '<div class="login-foot"><span class="login-copy">© 2026 ' + esc(B.name) + "</span>" + window.poweredBy("white", "login-powered") + "</div>" +
         "</section>" +
         '<section class="login-panel">' +
-          '<div class="login-topright"><span>강사님이신가요?</span><a class="btn btn-dark btn-sm" href="#/center">강사센터</a></div>' +
+          '<div class="login-topright"><a class="login-home" href="#/about">' + icon("arrowLeft", "sm") + "두고 클래스 소개</a><span>강사님이신가요?</span><a class=\"btn btn-dark btn-sm\" href=\"#/center\">강사센터</a></div>" +
           '<div class="login-stack">' +
             '<div class="login-card">' +
               '<p class="login-label">' + window.doogoLogo("color") + "<span>CLASS</span></p>" +
