@@ -7,6 +7,8 @@
  *  - 강사 목록 · 숫자는 지금 운영 중인 강사 데이터에서 바로 가져온다 (꾸며 낸 숫자 없음)
  *  - ‘입점 문의’ 팝업 → 마스터 → 강사 입점 문의에서 관리 (#/partner 로 바로 열 수 있음)
  *  - 바닥의 사업자 정보 · 두고 그룹사는 마스터 → 첫 화면 · 사업자 정보에서 고친다 (채운 칸만 보임)
+ *  - 휴대폰 · 브라우저 틀 안은 실제 화면을 녹화한 영상(마우스 커서 · 클릭이 보임, 이름은 OOO). 보일 때만 받아서 재생하고,
+ *    수강생 화면 · 강사센터 영상은 한 편을 장(chapter)으로 나눠 탭을 누르면 그 장면으로 넘어간다
  *  - 색 · 모양은 쏘카 디자인 시스템처럼: 파랑 하나(#0078FF) + 푸른 기가 도는 회색, 로고 심볼은 두고 원래 파랑
  */
 (function () {
@@ -26,22 +28,22 @@
     ["megaphone", "랜딩 · 전자책은 매번 따로", "모집 페이지와 무료강의 전자책을 기수마다 따로 만들고 고쳐요."]
   ];
   const FEATURES = [
-    { no: "01", tag: "모집", title: "강의 소개 랜딩페이지", img: "st-lp", lead: "내 강의를 소개하고 수강 신청까지 받는 세일즈 페이지예요.",
+    { no: "01", tag: "모집", title: "강의 소개 랜딩페이지", vid: "v-lp", lead: "내 강의를 소개하고 수강 신청까지 받는 세일즈 페이지예요.",
       pts: ["커리큘럼 · 후기 · 강사 소개 · 모집 일정을 한 페이지에", "신청하면 강사센터 ‘수강 신청’으로 바로 들어와요", "문구 · 사진 · 순서를 강사센터에서 직접 고쳐요"] },
-    { no: "02", tag: "무료 강의", title: "무료강의 전자책", img: "st-free", lead: "무료 강의 신청자에게 전자책과 실전 자료를 순서대로 열어 주는 페이지예요.",
+    { no: "02", tag: "무료 강의", title: "무료강의 전자책", vid: "v-free", lead: "무료 강의 신청자에게 전자책과 실전 자료를 순서대로 열어 주는 페이지예요.",
       pts: ["무료 강의 신청 · 일정 카운트다운 · 신청자 전용 자료", "전자책 · 실전 자료를 하나씩 순서대로 열어 줘요", "무료 강의에서 유료 강의 신청으로 자연스럽게 이어져요"] },
-    { no: "03", tag: "수강생 케어", title: "커리큘럼 · 튜토리얼 시스템", img: "st-home", lead: "1주차부터 수료까지 수강생을 끝까지 케어하는 나만의 강의실이에요.",
+    { no: "03", tag: "수강생 케어", title: "커리큘럼 · 튜토리얼 시스템", vid: "v-care", lead: "1주차부터 수료까지 수강생을 끝까지 케어하는 나만의 강의실이에요.",
       pts: ["주차별 강의 · 과제 · 자동 검수 · 강사 피드백", "진행률 · 수료증 · 24시간 AI 도우미 · 1:1 소통", "강사센터에서 진척도를 보고 코치와 나눠 운영해요"] }
   ];
   const STUDENT_TABS = [
-    { key: "tutorial", ic: "book", title: "주차별 튜토리얼", img: "st-curriculum", desc: "이번 주에 볼 강의와 할 과제가 순서대로 정리돼 있어요. 1주차부터 차근차근 따라오고, 다 본 강의는 ‘시청 완료’로 체크해요." },
-    { key: "mission", ic: "checks", title: "과제 제출 · 피드백", img: "st-missions", desc: "사진 · 링크 · 글로 과제를 내면 자동 검수로 바로 확인하고, 강사님과 코치가 승인하거나 보완할 점을 알려 줘요." },
-    { key: "cert", ic: "award", title: "진행률 · 수료증", img: "st-cert", desc: "잘 따라가고 있는지 진행률로 바로 보여요. 필수 과제를 모두 통과하면 이름이 새겨진 수료증이 나와요." },
-    { key: "bot", ic: "sparkles", title: "24시간 AI 도우미", img: "st-bot", desc: "과제 방법 · 서류 · 일정 · 내 진도를 물어보면 강사님이 올린 자료로 바로 답해요. 새벽에도요." },
-    { key: "channel", ic: "message", title: "강사 · 코치 1:1 소통", img: "st-channels", desc: "막히는 순간 강사님과 코치에게 바로 연결돼요. 카카오톡 채널 · 오픈채팅 등 강사님이 정한 창구로 이어져요." },
-    { key: "guide", ic: "clipboard", title: "실무 가이드", img: "st-docs", desc: "사업자 등록처럼 강의에 필요한 준비를 단계별로 안내해요. 기관 · 기간 · 서류 · 강사님 팁까지 한 화면에." },
-    { key: "library", ic: "library", title: "유료강의 자료실", img: "st-library", desc: "전자책 · 엑셀 양식 · VOD · 기초 가이드 영상까지, 강사님의 노하우가 한 권의 책처럼 정리돼 있어요." },
-    { key: "schedule", ic: "calendar", title: "강의 일정 · 공지", img: "st-schedule", desc: "라이브 · 과제 마감 · 공지를 달력으로 한눈에. 해외에 있는 강사님과도 시간을 헷갈리지 않아요." }
+    { key: "tutorial", at: 0, ic: "book", title: "주차별 튜토리얼", desc: "이번 주에 볼 강의와 할 과제가 순서대로 정리돼 있어요. 1주차부터 차근차근 따라오고, 다 본 강의는 ‘시청 완료’로 체크해요." },
+    { key: "mission", at: 4.95, ic: "checks", title: "과제 제출 · 피드백", desc: "사진 · 링크 · 글로 과제를 내면 자동 검수로 바로 확인하고, 강사님과 코치가 승인하거나 보완할 점을 알려 줘요." },
+    { key: "cert", at: 10.55, ic: "award", title: "진행률 · 수료증", desc: "잘 따라가고 있는지 진행률로 바로 보여요. 필수 과제를 모두 통과하면 이름이 새겨진 수료증이 나와요." },
+    { key: "bot", at: 13.64, ic: "sparkles", title: "24시간 AI 도우미", desc: "과제 방법 · 서류 · 일정 · 내 진도를 물어보면 강사님이 올린 자료로 바로 답해요. 새벽에도요." },
+    { key: "channel", at: 16.86, ic: "message", title: "강사 · 코치 1:1 소통", desc: "막히는 순간 강사님과 코치에게 바로 연결돼요. 카카오톡 채널 · 오픈채팅 등 강사님이 정한 창구로 이어져요." },
+    { key: "guide", at: 20.67, ic: "clipboard", title: "실무 가이드", desc: "사업자 등록처럼 강의에 필요한 준비를 단계별로 안내해요. 기관 · 기간 · 서류 · 강사님 팁까지 한 화면에." },
+    { key: "library", at: 24.47, ic: "library", title: "유료강의 자료실", desc: "전자책 · 엑셀 양식 · VOD · 기초 가이드 영상까지, 강사님의 노하우가 한 권의 책처럼 정리돼 있어요." },
+    { key: "schedule", at: 30.29, ic: "calendar", title: "강의 일정 · 공지", desc: "라이브 · 과제 마감 · 공지를 달력으로 한눈에. 해외에 있는 강사님과도 시간을 헷갈리지 않아요." }
   ];
   const STUDENT_MORE = [
     ["flame", "동기부여 채널", "지칠 때 다시 힘을 주는 영상"],
@@ -53,9 +55,9 @@
   ];
   // 강사센터는 핵심 화면 세 개만 보여 준다 (메뉴 전체는 공개하지 않음)
   const ADMIN_TABS = [
-    { key: "dash", title: "대시보드", img: "ad-dash" },
-    { key: "students", title: "수강생 진척도", img: "ad-students" },
-    { key: "review", title: "과제 검수", img: "ad-review-open" }
+    { key: "dash", at: 0, title: "대시보드" },
+    { key: "students", at: 9.84, title: "수강생 승인 · 진척도" },
+    { key: "review", at: 19.92, title: "과제 검수" }
   ];
   const ADMIN_FEATURES = [
     ["palette", "내 이름의 강의 플랫폼", "강의 이름 · 색상 · 메뉴 · 로그인 화면까지 강사님 브랜드로 운영해요."],
@@ -108,8 +110,12 @@
   const mark = (t) => '<mark class="hm-mark">' + t + "</mark>";
   // 두고 원본 로고 — 두고 파랑 심볼 + 두 줄(doogo / CLASS) (icons.js 공용)
   const brandLock = (cls) => window.doogoClassLock(cls);
-  const phone = (img, cls, alt, eager) => '<div class="hm-phone ' + (cls || "") + '"><span class="hm-phone-notch"></span><img src="' + IMG + img + '.webp" alt="' + esc(alt || "") + '"' + (eager ? "" : ' loading="lazy"') + ' decoding="async"></div>';
-  const browser = (img, cls, alt, eager) => '<div class="hm-browser ' + (cls || "") + '"><div class="hm-browser-bar"><i></i><i></i><i></i><span>doogo-class.vercel.app</span></div><img src="' + IMG + img + '.webp" alt="' + esc(alt || "") + '"' + (eager ? "" : ' loading="lazy"') + ' decoding="async"></div>';
+  // 실제 화면 녹화 영상: 처음엔 첫 장면 사진만, 화면에 보이면 영상을 받아 소리 없이 반복 재생 (wireVideos)
+  const PAUSE = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>';
+  const video = (vid, alt, ch) => '<video class="hm-vid" muted playsinline loop preload="none" poster="' + IMG + vid + '.webp" data-src="' + IMG + vid + '"' + (ch ? " data-ch" : "") + ' aria-label="' + esc(alt || "") + ' (실제 화면 녹화)"></video>' +
+    '<button type="button" class="hm-vid-btn" data-hm-vid aria-label="영상 멈추기">' + PAUSE + "</button>";
+  const phone = (vid, cls, alt, ch) => '<div class="hm-phone ' + (cls || "") + '"><span class="hm-phone-notch"></span>' + video(vid, alt, ch) + "</div>";
+  const browser = (vid, cls, alt, ch) => '<div class="hm-browser ' + (cls || "") + '"><div class="hm-browser-bar"><i></i><i></i><i></i><span>doogo-class.vercel.app</span></div><div class="hm-browser-scr">' + video(vid, alt, ch) + "</div></div>";
   const scrollBtn = (to, label, cls) => '<button type="button" class="' + cls + '" data-hm-scroll="' + to + '">' + label + "</button>";
   const applyBtn = (label, cls) => '<button type="button" class="' + cls + '" data-hm-apply>' + label + "</button>";
   const arrow = () => icon("arrowRight", "sm");
@@ -144,8 +150,8 @@
         '<p class="hm-student-link">수강생이신가요? <a href="#/login">수강생 로그인' + icon("arrowRight", "xs") + "</a></p>" +
       "</div>" +
       '<div class="hm-hero-art">' +
-        browser("ad-dash", "hm-hero-browser", "강사센터 대시보드 화면", true) +
-        '<div class="hm-hero-phone-wrap">' + phone("st-home", "hm-hero-phone", "수강생 홈 화면", true) + "</div>" +
+        browser("v-admin", "hm-hero-browser", "강사센터 화면") +
+        '<div class="hm-hero-phone-wrap">' + phone("v-home", "hm-hero-phone", "수강생 홈 화면") + "</div>" +
         '<div class="hm-chip hm-chip-a">' + icon("check", "sm ok") + "<span><b>1주차 과제 승인</b><small>OOO 강사님 · 방금</small></span></div>" +
         '<div class="hm-chip hm-chip-b"><span><small>3기 평균 진도</small><b>72%</b></span><i class="hm-chip-bar"><i style="width:72%"></i></i></div>' +
         '<div class="hm-chip hm-chip-c">' + icon("award", "sm") + "<span><b>수료증 발급</b><small>필수 과제 23개 통과</small></span></div>" +
@@ -175,7 +181,7 @@
     const row = (f, i) => '<article class="hm-frow hm-reveal' + (i % 2 ? " rev" : "") + '">' +
       '<div class="hm-frow-copy"><p class="hm-frow-top"><span class="hm-frow-no">' + f.no + '</span><span class="hm-frow-tag">' + f.tag + "</span></p>" +
         "<h3>" + f.title + '</h3><p class="hm-frow-lead">' + f.lead + "</p>" + checks(f.pts) + "</div>" +
-      '<div class="hm-frow-art"><div class="hm-show-glow" aria-hidden="true"></div>' + phone(f.img, "hm-frow-phone", f.title + " 화면") + '<p class="hm-cap">실제 화면 · 예시 데이터</p></div>' +
+      '<div class="hm-frow-art"><div class="hm-show-glow" aria-hidden="true"></div>' + phone(f.vid, "hm-frow-phone", f.title + " 화면") + '<p class="hm-cap">' + icon("play", "xs") + "실제 화면 녹화 · 예시 데이터</p></div>" +
     "</article>";
     return '<section class="hm-sec" id="hm-features"><div class="hm-wrap">' +
       secHead("layers", "강사님 이름으로 운영하는 3가지", "모집부터 수료 후 관리까지, 한 기수를 운영하는 데 필요한 화면이 모두 들어 있어요. 수강생 수와 상관없이 전부 포함돼요.", applyBtn("입점 문의" + arrow(), "hm-shead-link")) +
@@ -192,7 +198,7 @@
           '<button type="button" role="tab" class="hm-tab' + (x.key === cur.key ? " on" : "") + '" aria-selected="' + (x.key === cur.key) + '" data-hm-st="' + x.key + '">' +
             '<span class="hm-tab-ic">' + icon(x.ic) + '</span><span class="hm-tab-t"><b>' + x.title + "</b><small>" + x.desc + "</small></span></button>").join("") +
         "</div>" +
-        '<div class="hm-show-art"><div class="hm-show-glow" aria-hidden="true"></div>' + phone(cur.img, "hm-show-phone", cur.title + " 화면") +
+        '<div class="hm-show-art"><div class="hm-show-glow" aria-hidden="true"></div>' + phone("v-student", "hm-show-phone", "수강생 화면", true) +
           '<p class="hm-show-cap"><b>' + cur.title + "</b><span>" + cur.desc + "</span></p></div>" +
       "</div>" +
       '<div class="hm-more">' + STUDENT_MORE.map((x, i) => '<div class="hm-more-i hm-hov hm-reveal"' + d(i) + '><span class="hm-ic hm-ic-sm">' + icon(x[0]) + "</span><b>" + x[1] + "</b><span>" + x[2] + "</span></div>").join("") + "</div>" +
@@ -204,7 +210,7 @@
     return '<section class="hm-sec" id="hm-teachers"><div class="hm-wrap">' +
       secHead("activity", "강사님은 강사센터에서 모든 수강생을 한눈에", "커리큘럼을 한 번 올려 두면 수강생은 혼자서도 따라오고, 강사님은 진도 · 과제 · 질문을 한 화면에서 확인해요. 코치와 나눠서 운영할 수도 있어요.") +
       '<div class="hm-atabs" role="tablist" aria-label="강사센터 화면">' + ADMIN_TABS.map((x) => '<button type="button" role="tab" class="hm-atab' + (x.key === cur.key ? " on" : "") + '" aria-selected="' + (x.key === cur.key) + '" data-hm-ad="' + x.key + '">' + x.title + "</button>").join("") + "</div>" +
-      '<div class="hm-ashot">' + browser(cur.img, "hm-admin-browser", "강사센터 " + cur.title + " 화면") + '<p class="hm-cap">실제 강사센터 화면 일부 · 예시 데이터 (이름은 가렸어요)</p></div>' +
+      '<div class="hm-ashot">' + browser("v-admin", "hm-admin-browser", "강사센터", true) + '<p class="hm-cap">' + icon("play", "xs") + "실제 강사센터 화면 녹화 · 예시 데이터 (이름은 가렸어요)</p></div>" +
       '<div class="hm-feats">' + ADMIN_FEATURES.map((x, i) => '<article class="hm-feat hm-hov hm-reveal"' + d(i % 4) + '><span class="hm-ic">' + icon(x[0]) + "</span><h3>" + x[1] + "</h3><p>" + x[2] + "</p></article>").join("") + "</div>" +
     "</div></section>";
   }
@@ -418,19 +424,87 @@
     root.innerHTML = '<div class="hm">' + header() + "<main>" + hero() + stats(list) + problem() + features() + students() + teachers() + pricing() + lifelong() + classList(list) + journey() + faq() + finalCta() + "</main>" + footer() + "</div>";
     onScroll();
     reveal();
+    wireVideos();
     if (/^#\/partner/.test(location.hash)) openApply();
   }
   function mount() { root.innerHTML = ""; render(); window.scrollTo(0, 0); }
 
-  // 탭은 그 부분만 바꾼다 (화면 위치가 튀지 않게)
-  function swapTab(sel, html) {
-    const old = root.querySelector(sel);
-    if (!old) return;
-    const t = document.createElement("div");
-    t.innerHTML = html;
-    const next = t.querySelector(sel);
-    next.querySelectorAll(".hm-reveal").forEach((el) => el.classList.add("in", "now"));
-    old.replaceWith(next);
+  /* ---------- 실제 화면 녹화 영상 ---------- */
+  let vio = null;
+  const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // H.264(mp4)을 못 트는 브라우저(일부 크로미움 · 리눅스 파이어폭스)는 VP9(webm)으로
+  let vidExt = null;
+  const pickExt = (v) => vidExt || (vidExt = v.canPlayType('video/mp4; codecs="avc1.640028"') ? ".mp4" : v.canPlayType('video/webm; codecs="vp9"') ? ".webm" : ".mp4");
+  function loadVid(v) {
+    if (v.getAttribute("src") || v.dataset.loading) return;
+    const url = v.dataset.src + pickExt(v);
+    if (!v.hasAttribute("data-ch") || !window.fetch || !(window.URL && URL.createObjectURL)) { v.src = url; v.load(); return; }
+    // 탭으로 장면을 넘기는 영상은 통째로 받아 둔다 (구간 요청을 못 하는 곳에서도 원하는 장면으로 넘어가게, 1MB 남짓)
+    v.dataset.loading = "1";
+    fetch(url).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+      .then((bl) => { v.src = URL.createObjectURL(bl); }, () => { v.src = url; })
+      .then(() => { delete v.dataset.loading; v.load(); if (v.dataset.want === "1") playVid(v); });
+  }
+  function playVid(v) {
+    v.dataset.want = "1";
+    loadVid(v);
+    if (!v.getAttribute("src")) return;
+    const pr = v.play(); if (pr && pr.catch) pr.catch(() => {});
+  }
+  function stopVid(v) { v.dataset.want = ""; if (!v.paused) v.pause(); }
+  function applySeek(v) {
+    const at = v.dataset.seek;
+    if (at == null || at === "" || v.readyState < 1) return;
+    delete v.dataset.seek;
+    try { v.currentTime = Number(at) + 0.05; } catch (err) { /* 아직 못 넘김 */ }
+  }
+  function setVidBtn(v) {
+    const b = v.parentNode.querySelector("[data-hm-vid]");
+    if (!b) return;
+    const paused = v.dataset.hold === "1";
+    b.innerHTML = paused ? icon("play") : PAUSE;
+    b.classList.toggle("paused", paused);
+    b.setAttribute("aria-label", paused ? "영상 재생" : "영상 멈추기");
+  }
+  // 화면에 보일 때만 받아서 재생 (안 보이면 멈춤). 움직임 줄이기 설정이면 멈춘 채로 두고 버튼으로 재생
+  function wireVideos() {
+    if (vio) vio.disconnect();
+    const vids = Array.from(root.querySelectorAll("video.hm-vid"));
+    vids.forEach((v) => {
+      if (reduceMotion()) v.dataset.hold = "1";
+      setVidBtn(v);
+      v.addEventListener("timeupdate", onVidTime);
+      v.addEventListener("loadedmetadata", () => applySeek(v));
+    });
+    if (!("IntersectionObserver" in window)) { vids.forEach((v) => { loadVid(v); if (v.dataset.hold !== "1") playVid(v); }); return; }
+    vio = new IntersectionObserver((ents) => ents.forEach((en) => {
+      const v = en.target;
+      if (en.isIntersecting) { loadVid(v); if (v.dataset.hold !== "1") playVid(v); }
+      else stopVid(v);
+    }), { rootMargin: "120px 0px", threshold: 0.2 });
+    vids.forEach((v) => vio.observe(v));
+  }
+  // 수강생 화면 · 강사센터: 영상이 다음 장으로 넘어가면 탭 · 설명도 같이 바뀐다
+  function chapterAt(list, t) { let cur = list[0]; list.forEach((x) => { if (t + 0.05 >= x.at) cur = x; }); return cur; }
+  function markStudentTab(cur) {
+    stTab = cur.key;
+    root.querySelectorAll("[data-hm-st]").forEach((b) => { const on = b.dataset.hmSt === cur.key; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+    const cap = root.querySelector(".hm-show-cap");
+    if (cap) cap.innerHTML = "<b>" + cur.title + "</b><span>" + cur.desc + "</span>";
+  }
+  function markAdminTab(cur) {
+    adTab = cur.key;
+    root.querySelectorAll("[data-hm-ad]").forEach((b) => { const on = b.dataset.hmAd === cur.key; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+  }
+  function onVidTime(e) {
+    const v = e.target;
+    if (v.closest(".hm-show")) { const cur = chapterAt(STUDENT_TABS, v.currentTime); if (cur.key !== stTab) markStudentTab(cur); }
+    else if (v.closest(".hm-ashot")) { const cur = chapterAt(ADMIN_TABS, v.currentTime); if (cur.key !== adTab) markAdminTab(cur); }
+  }
+  function seekVid(v, at) {
+    v.dataset.seek = at;
+    applySeek(v);
+    if (v.dataset.hold !== "1") playVid(v); else loadVid(v);
   }
 
   // 위 막대: 조금 내려가면 밝은 회색 유리(타이탄클래스처럼), 아래 파란 줄은 읽은 만큼 차오른다 · 휴대폰 주소창 색도 같이
@@ -456,24 +530,47 @@
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onScroll, { passive: true });
 
+  // 메뉴 · "3가지 기능 보기" 같은 버튼으로 그 칸까지 내려가기.
+  // window.scrollTo 는 이 페이지가 다른 화면 안(클로드 아티팩트처럼 글 길이만큼 늘어난 틀)에 들어가 있으면
+  // 아무것도 움직이지 못한다 → scrollIntoView 는 바깥 화면까지 같이 스크롤해 준다 (위 막대 높이는 CSS scroll-margin-top)
+  function scrollToId(id) {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const behavior = reduce ? "auto" : "smooth";
+    const el = id === "top" ? root.querySelector(".hm") : document.getElementById(id);
+    if (!el) return;
+    if (id === "top") window.scrollTo({ top: 0, behavior });
+    try { el.scrollIntoView({ behavior, block: "start" }); }
+    catch (err) { el.scrollIntoView(true); }
+  }
+
   document.addEventListener("click", (e) => {
     if (!isActive()) return;
     if (e.target.closest("[data-hm-close]") || (e.target.matches && e.target.matches("[data-hm-bg]"))) { closeApply(); return; }
     if (e.target.closest("[data-hm-apply]")) { e.preventDefault(); openApply(); return; }
     const s = e.target.closest("[data-hm-scroll]");
-    if (s) {
-      e.preventDefault();
-      const id = s.dataset.hmScroll, el = id === "top" ? null : document.getElementById(id);
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (!el) { window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); return; }
-      const y = el.getBoundingClientRect().top + window.scrollY - 64;
-      window.scrollTo({ top: y, behavior: reduce ? "auto" : "smooth" });
+    if (s) { e.preventDefault(); scrollToId(s.dataset.hmScroll); return; }
+    const vb = e.target.closest("[data-hm-vid]");
+    if (vb) {
+      const v = vb.parentNode.querySelector("video.hm-vid");
+      if (v) { if (v.dataset.hold === "1") { v.dataset.hold = ""; playVid(v); } else { v.dataset.hold = "1"; stopVid(v); } setVidBtn(v); }
       return;
     }
+    // 탭: 영상의 그 장면으로 넘긴다
     const st = e.target.closest("[data-hm-st]");
-    if (st) { stTab = st.dataset.hmSt; swapTab(".hm-show", students()); return; }
+    if (st) {
+      const cur = STUDENT_TABS.find((x) => x.key === st.dataset.hmSt) || STUDENT_TABS[0];
+      markStudentTab(cur);
+      const v = root.querySelector(".hm-show video.hm-vid");
+      if (v) seekVid(v, cur.at);
+      return;
+    }
     const ad = e.target.closest("[data-hm-ad]");
-    if (ad) { adTab = ad.dataset.hmAd; swapTab(".hm-ashot", teachers()); root.querySelectorAll("[data-hm-ad]").forEach((b) => { const on = b.dataset.hmAd === adTab; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); }); }
+    if (ad) {
+      const cur = ADMIN_TABS.find((x) => x.key === ad.dataset.hmAd) || ADMIN_TABS[0];
+      markAdminTab(cur);
+      const v = root.querySelector(".hm-ashot video.hm-vid");
+      if (v) seekVid(v, cur.at);
+    }
   });
   document.addEventListener("submit", (e) => {
     if (!isActive() || e.target.id !== "hm-apply") return;

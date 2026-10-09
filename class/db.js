@@ -928,6 +928,42 @@
     return saveInquiry(x) ? { ok: true } : { error: "storage" };
   }
 
+  /* ---------------- 기수 이용료 신청 · 매출 ----------------
+   * 이용료 = 강사님의 수강생 1명 수강료(1인 수강료) × 1 기수마다. 수강생 수와 상관없이 같다.
+   * 강사: 강사센터에서 '다음 기수 열어 주세요' 신청 (기수 · 1인 수강료 · 연락처 · 이메일)
+   * 마스터: 전화 → 무통장 입금 확인 → 세금계산서 발행 → 기수 열기 (PG 결제 없음)
+   * 서버 모드는 문서 bill:<강사>:<id> (마스터 + 그 강사만 보임), 아니면 이 브라우저에.
+   * 입금 계좌 · 부가세 방식은 마스터 설정(db.billing, 강사센터에만 보임) */
+  const BILLING_DEFAULT = { bank: "", account: "", holder: "", vat: "separate", note: "" };
+  const BILL_VAT = [["separate", "부가세 별도 (이용료 + 10%)"], ["included", "부가세 포함 (이용료 안에 10%)"], ["none", "부가세 없음"]];
+  const BILL_STATE = { requested: { label: "신청 접수", cls: "warn" }, paid: { label: "입금 확인", cls: "info" }, opened: { label: "기수 오픈", cls: "ok" }, canceled: { label: "취소", cls: "mute" } };
+  function billingInfo() { return Object.assign({}, BILLING_DEFAULT, (db && db.billing) || {}); }
+  function saveBilling(next) { db.billing = next; return save(); }
+  const KEY_BILL = "moonclass:bills";
+  const billMap = () => (R.on ? R.bill : store.get(KEY_BILL, {}));
+  /** 이용료 신청 · 정산 기록 (강사 하나 또는 전체), 최근 신청이 위로 */
+  const bills = (iid) => { const m = billMap(); return Object.keys(m).map((k) => m[k]).filter((b) => b && (!iid || b.instructorId === iid)).sort((a, b) => (b.requestedAt || 0) - (a.requestedAt || 0)); };
+  function saveBill(x) {
+    if (R.on) { R.bill[x.id] = x; schedule(); return true; }
+    const m = store.get(KEY_BILL, {}); m[x.id] = x; return store.set(KEY_BILL, m);
+  }
+  function removeBill(id) {
+    if (R.on) { delete R.bill[id]; schedule(); return true; }
+    const m = store.get(KEY_BILL, {}); delete m[id]; return store.set(KEY_BILL, m);
+  }
+  /** 공급가액 · 부가세 · 합계 (금액을 마스터가 정하지 않았으면 1인 수강료 그대로) */
+  function billMoney(b) {
+    const raw = b.amount != null && b.amount !== "" ? b.amount : b.fee;
+    const base = Math.max(0, Math.round(Number(raw) || 0));
+    const mode = b.vat || billingInfo().vat || "separate";
+    if (mode === "included") { const supply = Math.round(base / 1.1); return { supply, tax: base - supply, total: base, mode }; }
+    if (mode === "none") return { supply: base, tax: 0, total: base, mode };
+    const tax = Math.round(base * 0.1);
+    return { supply: base, tax, total: base + tax, mode };
+  }
+  const billState = (b) => (b.canceledAt ? "canceled" : b.cohortId ? "opened" : b.paidAt ? "paid" : "requested");
+  const won = (n) => Math.round(Number(n) || 0).toLocaleString("ko-KR") + "원";
+
   /* ---------------- 요청사항 (오류·불편 신고) ---------------- */
   const REQUEST_CATEGORIES = ["로그인 · 접속", "과제 제출", "영상 재생", "화면 깨짐", "기타"];
   const maskName = (n) => { n = String(n || ""); return n ? n.slice(0, 1) + "OO" : "익명"; };
@@ -946,7 +982,7 @@
    * /api 가 없으면(로컬 정적 서버 · 미리보기) 예전처럼 이 브라우저(localStorage)에 저장한다.
    * 서버에서는 문서 단위(강사 · 콘텐츠 · 기수 · 수강생 · 진행 기록)로 나눠 보관하고,
    * 로그인한 사람이 볼 수 있는 문서만 내려온다. */
-  const R = { on: false, fresh: null, loading: false, me: { student: null, admin: null }, epoch: null, now: 0, ver: {}, snap: {}, prog: {}, inq: {}, timer: null, busy: false, again: false, fails: 0, polling: false, lastPoll: 0, listeners: [] };
+  const R = { on: false, fresh: null, loading: false, me: { student: null, admin: null }, epoch: null, now: 0, ver: {}, snap: {}, prog: {}, inq: {}, bill: {}, timer: null, busy: false, again: false, fails: 0, polling: false, lastPoll: 0, listeners: [] };
   const COLLS = ["instructors", "content", "cohorts", "students"];
   const CONTENT_PERMS = ["brand", "guide", "curriculum", "missions", "schedule", "notices", "faq", "docs", "library", "motivation", "channels", "partners", "pages", "free", "landing"];
   const isObj = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
@@ -982,7 +1018,7 @@
     R.me = j.me || { student: null, admin: null };
     R.epoch = j.epoch || R.epoch;
     R.now = j.now;
-    R.ver = {}; R.prog = {}; R.inq = {};
+    R.ver = {}; R.prog = {}; R.inq = {}; R.bill = {};
     const d = { instructors: [], content: {}, cohorts: [], students: [] };
     (j.docs || []).forEach((x) => { R.ver[x[0]] = x[2]; placeIn(d, x[0], x[1]); });
     R.fresh = d;
@@ -1009,6 +1045,7 @@
     d.students.forEach((s) => { sIns[s.id] = s.instructorId; out["stu:" + s.instructorId + ":" + s.id] = s; });
     Object.keys(R.prog).forEach((sid) => { if (sIns[sid]) out["prog:" + sIns[sid] + ":" + sid] = R.prog[sid]; });
     Object.keys(R.inq).forEach((id) => { out["inq:" + id] = R.inq[id]; });
+    Object.keys(R.bill).forEach((id) => { const b = R.bill[id]; if (b && b.instructorId) out["bill:" + b.instructorId + ":" + id] = b; });
     return out;
   }
   function docOf(k) {
@@ -1020,6 +1057,7 @@
     if (p[0] === "stu") return db.students.find((x) => x.id === p[2] && x.instructorId === p[1]);
     if (p[0] === "prog") return R.prog[p[2]];
     if (p[0] === "inq") return R.inq[p[1]];
+    if (p[0] === "bill") return R.bill[p[2]];
     return undefined;
   }
   const replaceIn = (t, src) => { Object.keys(t).forEach((k) => { delete t[k]; }); Object.assign(t, src); };
@@ -1045,6 +1083,8 @@
       if (v == null) delete R.prog[p[2]]; else R.prog[p[2]] = v;
     } else if (p[0] === "inq") {
       if (v == null) delete R.inq[p[1]]; else R.inq[p[1]] = v;
+    } else if (p[0] === "bill") {
+      if (v == null) delete R.bill[p[2]]; else R.bill[p[2]] = v;
     }
   }
   const snapOf = (k) => { const v = docOf(k); return v === undefined ? undefined : JSON.stringify(v); };
@@ -1083,6 +1123,8 @@
     const a = R.me.admin, st = R.me.student, p = k.split(":");
     if (a && a.role === "master") return true;
     if (k === "meta") return false;
+    // 이용료 신청은 강사 본인만 (코치 · 수강생은 못 봄)
+    if (p[0] === "bill") return !!(a && a.role === "instructor" && a.iid === p[1]);
     if (a && a.iid === p[1]) {
       if (a.role === "instructor") return true;
       const ins = db.instructors.find((x) => x.id === a.iid);
@@ -1211,6 +1253,7 @@
     weekOpen, weekDeadline, cohortEnd, cohortStatus, STATUS_LABEL, currentWeek, LEVEL_SET, levelSteps, level, currentCohort, nextCohortName,
     EVENT_TYPES, events, ruleText,
     REQUEST_CATEGORIES, maskName, requests, inquiries, saveInquiry, removeInquiry, applyPartner, siteInfo, saveSite, SITE_DEFAULT,
+    BILLING_DEFAULT, BILL_VAT, BILL_STATE, billingInfo, saveBilling, bills, saveBill, removeBill, billMoney, billState, won,
     THEMES, themeOf, STUDENT_MENUS, LIB_MENUS, CUSTOM_ICONS, menuConfig, menuOn, libOn, isCustom,
     emptyProgress, progress, saveProgress, allProgress, lastSub, subState, stats,
     session, remote,

@@ -1,6 +1,6 @@
 /* POST /api/admin — 마스터 전용
  *  { action: "reset" }                     처음 체험 상태로 되돌리기
- *  { action: "import", db, progress }      백업 파일로 되돌리기
+ *  { action: "import", db, progress, inquiries, bills }  백업 파일로 되돌리기
  *  { action: "backups" }                   서버 자동 백업 목록
  *  { action: "backup" }                    지금 상태를 서버에 백업
  *  { action: "restore-backup", id }        서버 백업으로 되돌리기
@@ -21,7 +21,9 @@ module.exports = handler(["POST"], async (req, res) => {
   if (b.action === "import") {
     if (!b.db || b.db.version !== 3 || !Array.isArray(b.db.instructors)) return send(res, 400, { error: "format" });
     const map = seed.split(b.db, b.progress || {});
-    (Array.isArray(b.inquiries) ? b.inquiries : []).forEach((x) => { if (x && x.id) map["inq:" + String(x.id).replace(/[^a-z0-9_-]/gi, "")] = x; });
+    const safe = (v) => String(v).replace(/[^a-z0-9_-]/gi, "");
+    (Array.isArray(b.inquiries) ? b.inquiries : []).forEach((x) => { if (x && x.id) map["inq:" + safe(x.id)] = x; });
+    (Array.isArray(b.bills) ? b.bills : []).forEach((x) => { if (x && x.id && x.instructorId) map["bill:" + safe(x.instructorId) + ":" + safe(x.id)] = x; });
     return send(res, 200, { ok: true, docs: await init.replaceAll(map, "백업 파일 불러오기 전 자동 백업") });
   }
   if (b.action === "backups") return send(res, 200, { ok: true, backups: await store.listBackups() });

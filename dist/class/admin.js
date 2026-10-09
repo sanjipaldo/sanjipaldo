@@ -255,7 +255,7 @@
         ["", "대시보드", "grid"],
         ["students", "수강생 관리", "users", n.pending],
         ["cohorts", "기수 관리", "layers"]
-      ].concat(on("missions") ? [["reviews", "과제 검수", "checks", n.review]] : []).concat(on("qna") ? [["questions", "요청사항 답변", "bug", n.questions]] : []).concat(isCoach() ? [] : [["coaches", "코치 관리", "shieldCheck", DB.coachesOf(iid).length || 0]])],
+      ].concat(isCoach() ? [] : [["billing", "다음 기수 신청", "coins", DB.bills(iid).filter((b) => !b.canceledAt && !b.cohortId).length]]).concat(on("missions") ? [["reviews", "과제 검수", "checks", n.review]] : []).concat(on("qna") ? [["questions", "요청사항 답변", "bug", n.questions]] : []).concat(isCoach() ? [] : [["coaches", "코치 관리", "shieldCheck", DB.coachesOf(iid).length || 0]])],
       ["수강생 화면 콘텐츠", content],
       ["홍보", [["free", "무료강의 페이지", "video"], ["landing", "강의 소개 페이지", "store"]]]
     ];
@@ -265,7 +265,7 @@
   const customPages = (iid) => DB.menuConfig(iid).items.filter((x) => DB.isCustom(x.key) && x.type !== "link");
   const allRequests = () => DB.data.instructors.flatMap((ins) => DB.requests(ins.id).map((x) => Object.assign({ ins }, x))).sort((a, b) => b.q.at - a.q.at);
   const masterNav = () => [
-    ["운영", [["master", "대시보드", "grid"], ["master/instructors", "강사 플랫폼 관리", "store"], ["master/menus", "메뉴 · 색상 설정", "sliders"], ["master/health", "플랫폼 현황", "activity"], ["master/site", "첫 화면 · 사업자 정보", "building"]]],
+    ["운영", [["master", "대시보드", "grid"], ["master/billing", "기수 신청 · 매출", "coins", DB.bills().filter((b) => DB.billState(b) === "requested").length], ["master/instructors", "강사 플랫폼 관리", "store"], ["master/menus", "메뉴 · 색상 설정", "sliders"], ["master/health", "플랫폼 현황", "activity"], ["master/site", "첫 화면 · 사업자 정보", "building"]]],
     ["지원", [["master/partners", "강사 입점 문의", "handshake", DB.inquiries().filter((x) => (x.status || "new") === "new").length], ["master/students", "전체 수강생", "users"], ["master/reports", "오류 신고 모아보기", "bug", allRequests().filter((x) => !x.q.answer).length], ["master/notices", "강사 공지", "megaphone"], ["master/data", "데이터 관리", "database"]]]
   ];
 
@@ -343,11 +343,12 @@
     const wk = co ? DB.currentWeek(co) : 0;
     const avg = rows.length ? Math.round(rows.reduce((a, r) => a + r.st.pct, 0) / rows.length) : 0;
     const anns = (DB.data.announcements || []).slice().sort((a, b) => (b.pinned - a.pinned) || b.date.localeCompare(a.date)).slice(0, 2);
-    return head(ins.name + " 강사님, 안녕하세요", esc(c.brand.courseTitle), btn(icon("userPlus", "sm") + "수강생 추가", "student-add", "a-btn-outline") + btn(icon("plus", "sm") + "새 기수", "cohort-add", "a-btn-primary")) +
+    return head(ins.name + " 강사님, 안녕하세요", esc(c.brand.courseTitle), btn(icon("userPlus", "sm") + "수강생 추가", "student-add", "a-btn-outline") + newCohortBtn()) +
+      billBanner(iid) +
       (anns.length ? '<section class="a-ann">' + icon("megaphone", "sm") + '<div class="a-ann-list">' + anns.map((a) => '<details><summary><b>' + esc(a.title) + "</b><small>두고 클래스 운영팀 · " + fmtMD(a.date) + "</small></summary>" + DB.rich(a.body) + "</details>").join("") + "</div></section>" : "") +
       '<div class="a-kpis">' +
         kpi("승인 대기", n.pending + "명", "새 수강 신청", "#/center/students?status=pending", n.pending ? "warn" : "") +
-        kpi("진행 중 기수", co ? co.name : "-", co ? (DB.cohortStatus(co) === "running" ? wk + "주차 진행 중" : fmtMD(co.startDate) + " 시작") : "기수를 만들어 주세요", "#/center/cohorts") +
+        kpi("진행 중 기수", co ? co.name : "-", co ? (DB.cohortStatus(co) === "running" ? wk + "주차 진행 중" : fmtMD(co.startDate) + " 시작") : "다음 기수를 신청해 주세요", co ? "#/center/cohorts" : "#/center/billing") +
         kpi("수강생 평균 진행률", avg + "%", (co ? co.name + " · " : "") + rows.length + "명 기준", "#/center/students?status=approved") +
         kpi("검수 대기 · 미답변", n.review + " · " + n.questions, "과제 검수 / 요청사항", "#/center/reviews", n.review + n.questions ? "info" : "") +
       "</div>" +
@@ -481,7 +482,7 @@
   function pageCohorts() {
     const iid = IID();
     const cos = DB.cohortsOf(iid).slice().reverse();
-    return head("기수 관리", "기수마다 1주차 시작일만 정하면 주차별 공개일과 과제 마감일이 자동으로 계산돼요.", btn(icon("plus", "sm") + "새 기수 만들기", "cohort-add", "a-btn-primary")) +
+    return head("기수 관리", "기수마다 1주차 시작일만 정하면 주차별 공개일과 과제 마감일이 자동으로 계산돼요." + (S.role === "master" ? "" : " 새 기수는 ‘다음 기수 신청’ 후 이용료 입금이 확인되면 두고 클래스가 열어 드려요."), newCohortBtn()) +
       (cos.length ? '<div class="a-stack">' + cos.map((co) => {
         const st = DB.cohortStatus(co);
         const ss = DB.studentsOf(iid).filter((s) => s.cohortId === co.id);
@@ -492,7 +493,7 @@
           '<div class="a-row-actions">' + btn(icon("eye", "sm") + "미리보기", "preview", "a-btn-ghost a-btn-sm", ' data-cohort="' + co.id + '"') + btn("수정", "cohort-edit", "a-btn-ghost a-btn-sm", ' data-id="' + co.id + '"') + "</div></div>" +
           '<div class="a-cohort-stats"><a href="#/center/students?cohort=' + co.id + '&status=approved"><b class="num">' + ap + "</b><span>수강 중</span></a><a href=\"#/center/students?cohort=" + co.id + '&status=pending"><b class="num">' + pe + "</b><span>승인 대기</span></a><div><b class=\"num\">" + ss.length + "</b><span>전체 신청</span></div></div>" +
           weekStrip(co) + "</section>";
-      }).join("") + "</div>" : '<section class="a-card">' + emptyBox("layers", "아직 기수가 없어요. 첫 기수를 만들어 주세요.", btn(icon("plus", "sm") + "새 기수 만들기", "cohort-add", "a-btn-primary")) + "</section>");
+      }).join("") + "</div>" : '<section class="a-card">' + emptyBox("layers", S.role === "master" ? "아직 기수가 없어요. 첫 기수를 열어 주세요." : "아직 기수가 없어요. ‘다음 기수 신청’을 남겨 주시면 연락드릴게요.", newCohortBtn()) + "</section>");
   }
   function cohortForm(co) {
     const iid = IID();
@@ -513,7 +514,7 @@
         '<div class="a-field"><span class="a-label">주차 일정 미리보기</span><div id="cf-preview" class="a-preview-weeks">' + weekPreview(co.startDate, co.curriculumId || (isNew && last ? last.curriculumId : ""), co.classDow, co.classTime || C().brand.liveTime) + "</div></div>" +
         '<p class="a-error" id="cf-error"></p>' +
       "</form>",
-      (isNew ? "" : btn("기수 삭제", "cohort-delete", "a-btn-ghost danger", ' data-id="' + co.id + '"' + (n ? ' disabled title="수강생이 있는 기수는 삭제할 수 없어요"' : ""))) + '<span class="a-spacer"></span>' + btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="cohort-form">' + (isNew ? "만들기" : "저장") + "</button>", "md");
+      (isNew || S.role !== "master" ? "" : btn("기수 삭제", "cohort-delete", "a-btn-ghost danger", ' data-id="' + co.id + '"' + (n ? ' disabled title="수강생이 있는 기수는 삭제할 수 없어요"' : ""))) + '<span class="a-spacer"></span>' + btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="cohort-form">' + (isNew ? "만들기" : "저장") + "</button>", "md");
   }
   function weekPreview(start, curId, dow, time) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(start || "")) return '<span class="a-muted">날짜를 고르면 주차 일정이 보여요.</span>';
@@ -1566,7 +1567,7 @@
         (x.message ? '<div class="a-inq-block"><b>남긴 말</b><p>' + esc(x.message) + "</p></div>" : "") +
         '<div class="a-inq-ctl"><label class="a-inq-st"><span>상태</span><select class="a-input a-sm" data-inq-status="' + esc(x.id) + '">' + INQ_STATUS.map((s) => '<option value="' + s[0] + '"' + (s[0] === st[0] ? " selected" : "") + ">" + s[1] + "</option>").join("") + "</select></label>" +
           '<textarea class="a-input" rows="2" data-inq-memo="' + esc(x.id) + '" placeholder="메모 (예: 10/12 통화 · 다음 주 미팅)" aria-label="메모">' + esc(x.memo || "") + "</textarea>" +
-          '<div class="a-row-actions">' + btn(icon("check", "sm") + "메모 저장", "inq-memo", "a-btn-outline a-btn-sm", ' data-id="' + esc(x.id) + '"') + btn(icon("trash", "sm") + "삭제", "inq-del", "a-btn-ghost a-btn-sm danger", ' data-id="' + esc(x.id) + '"') + "</div></div>" +
+          '<div class="a-row-actions">' + ((x.status || "new") !== "done" ? btn(icon("store", "sm") + "플랫폼 만들기", "inq-make", "a-btn-primary a-btn-sm", ' data-id="' + esc(x.id) + '"') : "") + btn(icon("check", "sm") + "메모 저장", "inq-memo", "a-btn-outline a-btn-sm", ' data-id="' + esc(x.id) + '"') + btn(icon("trash", "sm") + "삭제", "inq-del", "a-btn-ghost a-btn-sm danger", ' data-id="' + esc(x.id) + '"') + "</div></div>" +
       "</article>";
     };
     return head("강사 입점 문의", "첫 화면의 ‘강사 입점 문의’로 들어온 신청이에요. 연락한 뒤 상태를 바꾸고 메모를 남겨 두세요. 새 문의는 왼쪽 메뉴에 숫자로 보여요.",
@@ -1575,6 +1576,400 @@
         (shown.length ? '<div class="a-stack">' + shown.map(card).join("") + "</div>" : emptyBox("handshake", f === "all" ? "아직 들어온 입점 문의가 없어요." : "이 상태의 문의가 없어요.")) + "</section>";
   }
   function findInq(id) { return DB.inquiries().find((x) => x.id === id); }
+
+  /* ---------------- 기수 이용료 신청 · 매출 ----------------
+   * 강사: 강사센터 ‘다음 기수 신청’ (기수 · 1인 수강료 · 연락처 · 이메일)
+   * 마스터: 전화 → 무통장 입금 확인 → 세금계산서 발행 → 기수 열기. 열린 기수는 강사가 ‘기수 관리’에서 자유롭게 고친다
+   * 이용료 = 강사님 1인 수강료 × 1명분 (기수마다, 수강생 수와 상관없이 같음) · 매출은 입금일 기준 공급가액 */
+  const won = DB.won;
+  const dayOf = (ms) => (ms ? DB.date.toStr(new Date(ms)) : "");
+  const insName = (iid) => { const x = DB.instructor(iid); return x ? x.displayName : "삭제된 강사"; };
+  const billTodo = (b) => !b.canceledAt && (!b.paidAt || !b.invoiceAt || !b.cohortId);
+  const paidIn = (b, prefix) => !b.canceledAt && !!b.paidAt && b.paidAt.indexOf(prefix) === 0;
+  const parseWon = (v) => { const n = Number(String(v == null ? "" : v).replace(/[^0-9]/g, "")); return isFinite(n) ? Math.min(1e9, n) : 0; };
+  const sumMoney = (list, k) => list.reduce((a, b) => a + DB.billMoney(b)[k], 0);
+  const BILL_KIND = { next: "다음 기수", new: "신규 입점 · 1기", manual: "직접 기록" };
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  /** 다음에 열 기수 이름 (열린 기수 · 진행 중인 신청 다음 번호) */
+  function nextBillCohortName(iid) {
+    const nums = DB.cohortsOf(iid).map((c) => parseInt(c.name, 10)).concat(DB.bills(iid).filter((b) => !b.canceledAt).map((b) => parseInt(b.cohortName, 10))).filter((n) => !isNaN(n));
+    return (nums.length ? Math.max(...nums) + 1 : 1) + "기";
+  }
+  /** 다음 기수 1주차 시작 예정일: 마지막 기수가 끝난 다음 목요일 (이미 지났으면 2주 뒤) */
+  function nextStartDate(iid) {
+    const last = DB.cohortsOf(iid).slice(-1)[0];
+    if (!last) return addDays(todayStr(), 14);
+    const after = addDays(DB.cohortEnd(last), 1);
+    const d = addDays(after, (4 - parseDate(after).getDay() + 7) % 7);
+    return d < todayStr() ? addDays(todayStr(), 14) : d;
+  }
+  // ‘새 기수’ 버튼: 마스터만 바로 열고, 강사는 신청 (코치는 없음)
+  function newCohortBtn(cls) {
+    if (S.role === "master") return btn(icon("plus", "sm") + "새 기수 열기", "cohort-add", cls || "a-btn-primary");
+    if (isCoach()) return "";
+    return btn(icon("coins", "sm") + "다음 기수 신청", "bill-request", cls || "a-btn-primary");
+  }
+  function billSteps(b) {
+    const st = [["신청 접수", dayOf(b.requestedAt)], ["입금 확인", b.paidAt], ["세금계산서", b.invoiceAt], ["기수 오픈", b.openedAt || (b.cohortId ? "done" : "")]];
+    return '<ol class="a-bsteps' + (b.canceledAt ? " off" : "") + '">' + st.map((x, i) => '<li class="' + (x[1] ? "done" : "") + '"><i>' + (x[1] ? icon("check", "xs") : i + 1) + "</i><span><b>" + x[0] + "</b><small>" + (x[1] ? (/^\d{4}-/.test(x[1]) ? fmtMD(x[1]) : "완료") : "대기") + "</small></span></li>").join("") + "</ol>";
+  }
+  function calcHtml(b) {
+    const m = DB.billMoney(b);
+    if (!m.total) return '<span class="a-muted">1인 수강료를 적으면 이번 기수 이용료가 계산돼요.</span>';
+    return "<span>이번 기수 이용료</span><b class=\"num\">" + won(m.total) + "</b><small>" + (m.mode === "separate" ? "이용료 " + won(m.supply) + " + 부가세 10% " + won(m.tax) : m.mode === "included" ? "부가세 포함 (공급가 " + won(m.supply) + " · 부가세 " + won(m.tax) + ")" : "부가세 없음") + "</small>";
+  }
+  function billCard(b, master) {
+    const s = DB.billState(b), st = DB.BILL_STATE[s], m = DB.billMoney(b);
+    const co = b.cohortId ? DB.cohort(b.cohortId) : null;
+    const info = [
+      ["1인 수강료", b.fee ? won(b.fee) : "-"],
+      ["이용료 (입금액)", won(m.total) + (m.tax ? ' <small class="a-memo">공급가 ' + won(m.supply) + " · 부가세 " + won(m.tax) + "</small>" : "")],
+      ["1주차 시작 예정", b.startDate ? fmtFull(b.startDate) : "-"],
+      ["담당자", esc(b.contactName || "-")],
+      ["연락처", b.phone ? '<a href="tel:' + esc(String(b.phone).replace(/[^0-9+]/g, "")) + '">' + esc(b.phone) + "</a>" : "-"],
+      ["이메일 (세금계산서)", b.email ? '<a href="mailto:' + esc(b.email) + '">' + esc(b.email) + "</a>" : "-"]
+    ];
+    if (b.bizName || b.bizNo) info.push(["사업자", esc([b.bizName, b.bizNo].filter(Boolean).join(" · "))]);
+    if (b.paidAt) info.push(["입금", fmtFull(b.paidAt) + (b.depositor ? " · " + esc(b.depositor) : "")]);
+    if (b.invoiceAt) info.push(["세금계산서", fmtFull(b.invoiceAt) + (b.invoiceNo ? " · " + esc(b.invoiceNo) : "")]);
+    if (co) info.push(["열린 기수", esc(co.name) + " · " + fmtMD(co.startDate) + " 시작"]);
+    const id = ' data-id="' + esc(b.id) + '"';
+    const acts = master ? masterBillActions(b) : s === "requested" ? btn(icon("pen", "sm") + "신청 고치기", "bill-edit", "a-btn-ghost a-btn-sm", id) + btn("신청 취소", "bill-withdraw", "a-btn-ghost a-btn-sm danger", id) : co ? '<a class="a-btn a-btn-outline a-btn-sm" href="#/center/cohorts">' + icon("layers", "sm") + "기수 관리에서 고치기</a>" : "";
+    return '<article class="a-bill' + (b.canceledAt ? " off" : "") + '" data-bill="' + esc(b.id) + '">' +
+      '<div class="a-inq-head">' + (master ? '<span class="a-avatar">' + esc(insName(b.instructorId).slice(0, 1)) + "</span>" : '<span class="a-avatar">' + icon("coins", "sm") + "</span>") +
+        "<div><b>" + (master ? esc(insName(b.instructorId)) + " · " : "") + esc(b.cohortName || "-") + "</b><small>" + esc(BILL_KIND[b.kind] || BILL_KIND.next) + (b.requestedAt ? " · " + fmtStamp(b.requestedAt) + " 신청" : "") + "</small></div>" +
+        (b.paidAt && !b.invoiceAt && !b.canceledAt ? pill("계산서 미발행", "warn") : "") + pill(st.label, st.cls) + "</div>" +
+      billSteps(b) +
+      '<dl class="a-inq-info a-bill-info">' + info.map((x) => "<div><dt>" + x[0] + "</dt><dd>" + x[1] + "</dd></div>").join("") + "</dl>" +
+      (b.memo ? '<div class="a-inq-block"><b>강사님이 남긴 말</b><p>' + esc(b.memo) + "</p></div>" : "") +
+      (master && b.masterMemo ? '<div class="a-inq-block a-bill-mm"><b>마스터 메모</b><p>' + esc(b.masterMemo) + "</p></div>" : "") +
+      (acts ? '<div class="a-row-actions a-bill-act">' + acts + "</div>" : "") +
+    "</article>";
+  }
+  function masterBillActions(b) {
+    const id = ' data-id="' + esc(b.id) + '"';
+    if (b.canceledAt) return btn(icon("refresh", "sm") + "취소 되돌리기", "bill-uncancel", "a-btn-ghost a-btn-sm", id) + btn(icon("trash", "sm") + "삭제", "bill-del", "a-btn-ghost a-btn-sm danger", id);
+    return (!b.paidAt ? btn(icon("coins", "sm") + "입금 확인", "bill-pay", "a-btn-primary a-btn-sm", id) : "") +
+      (!b.invoiceAt ? btn(icon("file", "sm") + "세금계산서 발행", "bill-invoice", (b.paidAt ? "a-btn-primary" : "a-btn-outline") + " a-btn-sm", id) : "") +
+      (!b.cohortId ? btn(icon("layers", "sm") + "기수 열기", "bill-open", (b.paidAt ? "a-btn-primary" : "a-btn-outline") + " a-btn-sm", id) : "") +
+      btn(icon("pen", "sm") + "수정", "bill-edit", "a-btn-ghost a-btn-sm", id) +
+      (DB.instructor(b.instructorId) ? btn(icon("arrowUpRight", "sm") + "강사센터 접속", "ins-enter", "a-btn-ghost a-btn-sm", ' data-id="' + esc(b.instructorId) + '"') : "") +
+      (!b.paidAt && !b.cohortId ? btn("취소 처리", "bill-cancel", "a-btn-ghost a-btn-sm danger", id) : "");
+  }
+
+  /* 강사센터: 다음 기수 신청 */
+  function billGuide() {
+    const bi = DB.billingInfo();
+    const acct = bi.bank && bi.account ? esc(bi.bank) + " " + esc(bi.account) + (bi.holder ? " · 예금주 " + esc(bi.holder) : "") : "";
+    const flow = [["send", "신청", "기수 · 1인 수강료 · 연락처 · 이메일을 남겨요"], ["phone", "연락 · 입금", "담당자가 전화드리고, 이용료를 무통장으로 입금해 주세요"], ["file", "세금계산서", "입금이 확인되면 남겨 주신 이메일로 보내 드려요"], ["layers", "기수 오픈", "두고 클래스가 기수를 열어 드려요. 그다음은 ‘기수 관리’에서 자유롭게 고쳐요"]];
+    return '<section class="a-card"><div class="a-card-head"><h2>다음 기수는 이렇게 열려요</h2></div>' +
+      '<ol class="a-bflow">' + flow.map((x, i) => '<li><span class="a-bflow-ic">' + icon(x[0], "sm") + "</span><b>" + (i + 1) + ". " + x[1] + "</b><small>" + x[2] + "</small></li>").join("") + "</ol>" +
+      '<div class="a-bnote"><p><b>기수 이용료 = 강사님 1인 수강료 × 1명분</b> · 수강생이 100명이든 500명이든 기수마다 같아요. 자료 업로드 · AI봇 · 수강생 관리가 모두 들어 있어요.</p>' +
+        "<p>" + (acct ? "입금 계좌 <b>" + acct + "</b>" : "입금 계좌는 담당자가 연락드릴 때 알려 드려요.") + (bi.vat === "separate" ? " · 부가세 10% 별도" : bi.vat === "included" ? " · 부가세 포함" : "") + "</p>" + (bi.note ? "<p>" + esc(bi.note) + "</p>" : "") + "</div></section>";
+  }
+  function pageBilling() {
+    const iid = IID(), list = DB.bills(iid);
+    const right = newCohortBtn();
+    return head("다음 기수 신청", "새 기수는 이용료 입금이 확인되면 두고 클래스가 열어 드려요. 열린 기수의 일정 · 커리큘럼 · 수강생은 강사님이 자유롭게 관리해요.", right) +
+      billGuide() +
+      '<section class="a-card"><div class="a-card-head"><h2>신청 · 이용 내역</h2><span class="a-muted">' + list.length + "건</span></div>" +
+        (list.length ? '<div class="a-stack">' + list.map((b) => billCard(b, S.role === "master")).join("") + "</div>" : emptyBox("coins", "아직 신청한 기수가 없어요.", right)) + "</section>";
+  }
+  // 강사 대시보드 알림: 진행 중인 신청, 또는 마지막 기수가 곧 끝나면 다음 기수 신청 안내
+  function billBanner(iid) {
+    if (isCoach()) return "";
+    const open = DB.bills(iid).filter((b) => !b.canceledAt && !b.cohortId);
+    if (open.length) {
+      const b = open[0];
+      return '<a class="a-inq-alert a-bill-alert" href="#/center/billing">' + icon("coins", "sm") + "<b>" + esc(b.cohortName) + " 신청 " + (b.paidAt ? "입금 확인" : "접수") + "</b><span>" + (b.paidAt ? "곧 기수를 열어 드릴게요." : "담당자가 확인 후 연락드릴게요.") + "</span>" + icon("arrowRight", "sm") + "</a>";
+    }
+    const last = DB.cohortsOf(iid).slice(-1)[0];
+    if (!last) return '<a class="a-inq-alert a-bill-alert" href="#/center/billing">' + icon("coins", "sm") + "<b>첫 기수를 열어 볼까요?</b><span>‘다음 기수 신청’을 남겨 주시면 연락드릴게요.</span>" + icon("arrowRight", "sm") + "</a>";
+    const end = DB.cohortEnd(last), left = DB.date.diffDays(end, todayStr());
+    if (DB.cohortStatus(last) === "upcoming" || left > 21) return "";
+    return '<a class="a-inq-alert a-bill-alert" href="#/center/billing">' + icon("coins", "sm") + "<b>" + esc(last.name) + (left >= 0 ? "가 " + fmtMD(end) + "에 끝나요" : "가 끝났어요") + "</b><span>다음 기수(" + esc(nextBillCohortName(iid)) + ")를 열려면 ‘다음 기수 신청’을 해 주세요.</span>" + icon("arrowRight", "sm") + "</a>";
+  }
+  /** 신청서 (강사) · 이용료 기록 (마스터: 금액 · 입금 · 계산서 칸까지) */
+  function billForm(b, master, preset) {
+    const isNew = !b;
+    const iid = b ? b.instructorId : (preset && preset.instructorId) || IID() || (DB.data.instructors[0] || {}).id;
+    const ins = DB.instructor(iid) || {};
+    const last = DB.bills(iid).find((x) => x.phone || x.email) || {};
+    b = b || { instructorId: iid, kind: master ? "manual" : "next", cohortName: nextBillCohortName(iid), startDate: nextStartDate(iid), fee: last.fee || "", contactName: last.contactName || ins.name || "", phone: last.phone || "", email: last.email || "", bizName: last.bizName || "", bizNo: last.bizNo || "", memo: "" };
+    const fld = (id, label, val, attrs, help) => '<div class="a-field"><label for="bf-' + id + '">' + label + '</label><input class="a-input" id="bf-' + id + '" name="' + id + '" value="' + esc(val == null ? "" : val) + '"' + (attrs || "") + ">" + (help ? '<small class="a-muted">' + help + "</small>" : "") + "</div>";
+    const body = '<form id="bill-form" class="a-form" data-id="' + (isNew ? "" : esc(b.id)) + '" data-master="' + (master ? "1" : "") + '" novalidate>' +
+      (master ? '<div class="a-form-row"><div class="a-field"><label for="bf-ins">강사</label><select class="a-input" id="bf-ins" name="instructorId"' + (isNew ? "" : " disabled") + ">" + DB.data.instructors.map((x) => '<option value="' + esc(x.id) + '"' + (x.id === iid ? " selected" : "") + ">" + esc(x.displayName) + "</option>").join("") + "</select></div>" +
+          '<div class="a-field"><label for="bf-kind">구분</label><select class="a-input" id="bf-kind" name="kind">' + Object.keys(BILL_KIND).map((k) => '<option value="' + k + '"' + ((b.kind || "next") === k ? " selected" : "") + ">" + BILL_KIND[k] + "</option>").join("") + "</select></div></div>"
+        : '<p class="a-muted" style="margin:0">남겨 주시면 담당자가 확인 후 전화드려요. 입금 · 세금계산서 발행이 끝나면 기수를 열어 드려요.</p>') +
+      '<div class="a-form-row">' + fld("cohortName", "열고 싶은 기수", b.cohortName, ' placeholder="예: 2기" maxlength="30"') + fld("startDate", "1주차 시작 예정일", b.startDate, ' type="date"') + "</div>" +
+      fld("fee", "이 기수의 1인 수강료 (원)", b.fee ? Number(b.fee).toLocaleString("ko-KR") : "", ' inputmode="numeric" placeholder="예: 2,900,000"', "수강생 한 명이 내는 수강료예요. 이 금액이 이번 기수 이용료가 돼요.") +
+      '<div class="a-bcalc" id="bf-calc">' + calcHtml(b) + "</div>" +
+      '<div class="a-form-row">' + fld("contactName", "담당자 이름", b.contactName, ' maxlength="40"') + fld("phone", "연락처", b.phone, ' type="tel" inputmode="tel" placeholder="010-0000-0000" maxlength="20"') + "</div>" +
+      fld("email", "이메일 <small>(세금계산서 받을 곳)</small>", b.email, ' type="email" placeholder="tax@example.com" maxlength="100"') +
+      '<div class="a-form-row">' + fld("bizName", "상호 <small>(선택)</small>", b.bizName, ' maxlength="60"') + fld("bizNo", "사업자등록번호 <small>(선택)</small>", b.bizNo, ' inputmode="numeric" placeholder="000-00-00000" maxlength="20"') + "</div>" +
+      '<div class="a-field"><label for="bf-memo">남길 말 <small>(선택)</small></label><textarea class="a-input" id="bf-memo" name="memo" rows="2" maxlength="1000" placeholder="예: 평일 오후 통화 가능해요">' + esc(b.memo || "") + "</textarea></div>" +
+      (master ? masterBillFields(b) : "") +
+      '<p class="a-error" id="bf-error"></p></form>';
+    openModal(master ? (isNew ? "이용료 직접 기록" : insName(iid) + " · " + (b.cohortName || "") + " 수정") : isNew ? "다음 기수 신청" : "신청 고치기", body,
+      (master && !isNew ? btn(icon("trash", "sm") + "삭제", "bill-del", "a-btn-ghost danger", ' data-id="' + esc(b.id) + '"') + '<span class="a-spacer"></span>' : "") +
+      btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="bill-form">' + (master || !isNew ? "저장" : "신청 보내기") + "</button>", "md");
+  }
+  function masterBillFields(b) {
+    const date = (id, label, val) => '<div class="a-field"><label for="bf-' + id + '">' + label + '</label><input class="a-input" type="date" id="bf-' + id + '" name="' + id + '" value="' + esc(val || "") + '"></div>';
+    const txt = (id, label, val) => '<div class="a-field"><label for="bf-' + id + '">' + label + '</label><input class="a-input" id="bf-' + id + '" name="' + id + '" value="' + esc(val || "") + '" maxlength="60"></div>';
+    return '<fieldset class="a-fs"><legend>마스터 정산</legend>' +
+      '<div class="a-form-row"><div class="a-field"><label for="bf-amount">이용료 금액 (원)</label><input class="a-input" id="bf-amount" name="amount" inputmode="numeric" value="' + (b.amount != null && b.amount !== "" ? Number(b.amount).toLocaleString("ko-KR") : "") + '" placeholder="비우면 1인 수강료와 같아요"></div>' +
+        '<div class="a-field"><label for="bf-vat">부가세</label><select class="a-input" id="bf-vat" name="vat">' + DB.BILL_VAT.map((v) => '<option value="' + v[0] + '"' + ((b.vat || DB.billingInfo().vat) === v[0] ? " selected" : "") + ">" + v[1] + "</option>").join("") + "</select></div></div>" +
+      '<div class="a-form-row">' + date("paidAt", "입금일", b.paidAt) + txt("depositor", "입금자명", b.depositor) + "</div>" +
+      '<div class="a-form-row">' + date("invoiceAt", "세금계산서 발행일", b.invoiceAt) + txt("invoiceNo", "승인번호 <small>(선택)</small>", b.invoiceNo) + "</div>" +
+      '<div class="a-field"><label for="bf-masterMemo">마스터 메모 <small>(강사에게 안 보여요)</small></label><textarea class="a-input" id="bf-masterMemo" name="masterMemo" rows="2" maxlength="1000" placeholder="예: 10/12 통화 · 다음 주 입금 예정">' + esc(b.masterMemo || "") + "</textarea></div>" +
+      '<small class="a-muted">입금일 · 발행일을 비우면 ‘미입금 · 미발행’으로 돌아가요. 기수는 카드의 ‘기수 열기’로 열어요.</small></fieldset>';
+  }
+  function refreshBillCalc() {
+    const f = document.getElementById("bill-form"), box = document.getElementById("bf-calc");
+    if (!f || !box) return;
+    box.innerHTML = calcHtml({ fee: parseWon(f.fee.value), amount: f.amount && f.amount.value.trim() ? parseWon(f.amount.value) : undefined, vat: f.vat ? f.vat.value : undefined });
+  }
+  function saveBillForm(f) {
+    const err = document.getElementById("bf-error"), master = !!f.dataset.master, id = f.dataset.id;
+    const v = (k) => (f[k] ? String(f[k].value || "").trim() : "");
+    const cohortName = v("cohortName"), fee = parseWon(v("fee")), phone = v("phone"), email = v("email");
+    if (!cohortName) { err.textContent = "열고 싶은 기수를 적어 주세요. (예: 2기)"; return; }
+    if (!fee) { err.textContent = "1인 수강료를 적어 주세요."; return; }
+    if (!master && phone.replace(/[^0-9]/g, "").length < 9) { err.textContent = "연락받을 전화번호를 적어 주세요."; return; }
+    if ((!master || email) && !EMAIL_RE.test(email)) { err.textContent = "세금계산서를 받을 이메일을 확인해 주세요."; return; }
+    const old = id ? DB.bills().find((x) => x.id === id) : null;
+    const iid = old ? old.instructorId : master ? v("instructorId") : IID();
+    if (!iid || !DB.instructor(iid)) { err.textContent = "강사를 골라 주세요."; return; }
+    if (!master && old && DB.billState(old) !== "requested") { err.textContent = "이미 처리 중인 신청이라 고칠 수 없어요. 담당자에게 말씀해 주세요."; return; }
+    // 같은 기수를 두 번 신청하지 않게
+    const dup = DB.bills(iid).some((x) => x.id !== id && !x.canceledAt && !x.cohortId && x.cohortName === cohortName) || (!master && DB.cohortsOf(iid).some((c) => c.name === cohortName));
+    if (dup) { err.textContent = cohortName + "는 이미 신청했거나 열려 있어요. 기수 이름을 확인해 주세요."; return; }
+    const b = old ? DB.clone(old) : { id: DB.uid("b"), instructorId: iid, kind: master ? "manual" : "next", requestedAt: Date.now(), by: master ? "master" : "instructor" };
+    Object.assign(b, { cohortName, startDate: v("startDate"), fee, contactName: v("contactName"), phone, email, bizName: v("bizName"), bizNo: v("bizNo"), memo: v("memo") });
+    if (master) {
+      if (f.kind) b.kind = v("kind");
+      if (v("amount")) b.amount = parseWon(v("amount")); else delete b.amount;
+      b.vat = v("vat") || "separate";
+      ["paidAt", "invoiceAt", "depositor", "invoiceNo", "masterMemo"].forEach((k) => { if (v(k)) b[k] = v(k); else delete b[k]; });
+    }
+    if (!DB.saveBill(b)) { err.textContent = "저장하지 못했어요. 잠시 후 다시 시도해 주세요."; return; }
+    closeModal(); render();
+    toast(master ? "이용료 기록을 저장했어요." : old ? "신청 내용을 고쳤어요." : cohortName + " 신청을 보냈어요. 확인 후 연락드릴게요.");
+  }
+  const findBill = (id) => DB.bills().find((x) => x.id === id);
+  function payForm(b) {
+    const m = DB.billMoney(b);
+    openModal("입금 확인 · " + insName(b.instructorId) + " " + b.cohortName,
+      '<form id="pay-form" class="a-form" data-id="' + esc(b.id) + '" novalidate><div class="a-bcalc"><span>받을 금액</span><b class="num">' + won(m.total) + "</b><small>" + (m.tax ? "공급가 " + won(m.supply) + " + 부가세 " + won(m.tax) : "부가세 없음") + "</small></div>" +
+        '<div class="a-form-row"><div class="a-field"><label for="py-date">입금일</label><input class="a-input" type="date" id="py-date" name="paidAt" value="' + todayStr() + '"></div><div class="a-field"><label for="py-who">입금자명</label><input class="a-input" id="py-who" name="depositor" maxlength="60" value="' + esc(b.depositor || b.contactName || "") + '"></div></div>' +
+        '<p class="a-muted" style="margin:0">통장에 들어온 금액을 확인한 뒤 눌러 주세요. 이 날짜 기준으로 월 · 연 매출에 들어가요.</p><p class="a-error" id="py-error"></p></form>',
+      btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="pay-form">입금 확인</button>', "md");
+  }
+  function invoiceForm(b) {
+    openModal("세금계산서 발행 · " + insName(b.instructorId) + " " + b.cohortName,
+      '<form id="inv-form" class="a-form" data-id="' + esc(b.id) + '" novalidate>' +
+        '<dl class="a-inq-info"><div><dt>받는 곳</dt><dd>' + esc([b.bizName, b.bizNo].filter(Boolean).join(" · ") || b.contactName || "-") + "</dd></div><div><dt>이메일</dt><dd>" + esc(b.email || "-") + "</dd></div><div><dt>공급가액</dt><dd>" + won(DB.billMoney(b).supply) + "</dd></div><div><dt>부가세</dt><dd>" + won(DB.billMoney(b).tax) + "</dd></div></dl>" +
+        '<div class="a-form-row"><div class="a-field"><label for="iv-date">발행일</label><input class="a-input" type="date" id="iv-date" name="invoiceAt" value="' + todayStr() + '"></div><div class="a-field"><label for="iv-no">승인번호 <small>(선택)</small></label><input class="a-input" id="iv-no" name="invoiceNo" maxlength="60" value="' + esc(b.invoiceNo || "") + '"></div></div>' +
+        '<p class="a-muted" style="margin:0">홈택스 등에서 발행한 뒤 기록해 두세요.</p></form>',
+      btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="inv-form">발행 완료로 기록</button>', "md");
+  }
+  function openCohortForm(b) {
+    const iid = b.instructorId, last = DB.cohortsOf(iid).slice(-1)[0];
+    openModal(insName(iid) + " · 기수 열기",
+      '<form id="open-form" class="a-form" data-id="' + esc(b.id) + '" novalidate>' +
+        (b.paidAt ? "" : '<p class="a-warn-box">' + icon("alert", "sm") + "아직 입금 확인 전이에요. 먼저 열어 드려도 되는지 확인해 주세요.</p>") +
+        '<div class="a-form-row"><div class="a-field"><label for="op-name">기수 이름</label><input class="a-input" id="op-name" name="name" maxlength="30" value="' + esc(b.cohortName || nextBillCohortName(iid)) + '"></div>' +
+        '<div class="a-field"><label for="op-start">1주차 시작일</label><input class="a-input" type="date" id="op-start" name="startDate" value="' + esc(b.startDate || nextStartDate(iid)) + '"></div></div>' +
+        '<div class="a-field"><label for="op-cur">커리큘럼</label><select class="a-input" id="op-cur" name="curriculumId">' + DB.curricula(iid).map((x) => '<option value="' + x.id + '"' + (x.id === ((last && last.curriculumId) || "main") ? " selected" : "") + ">" + esc(x.name) + " · " + x.weeks.length + "주</option>").join("") + "</select>" +
+          '<small class="a-muted">강의 요일 · 시간은 지난 기수(' + esc(last ? last.name : "없음") + ")와 같게 열려요. 열고 나면 강사님이 ‘기수 관리’에서 바꿀 수 있어요.</small></div>" +
+        '<label class="a-check"><input type="checkbox" name="recruiting" checked><span>수강생 로그인 화면에서 이 기수로 수강 신청 받기</span></label>' +
+        '<p class="a-error" id="op-error"></p></form>',
+      btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="open-form">' + icon("layers", "sm") + "기수 열기</button>", "md");
+  }
+  function saveBillStep(f) {
+    const b = findBill(f.dataset.id);
+    if (!b) { closeModal(); return; }
+    const vat = b.vat || DB.billingInfo().vat;
+    if (f.id === "pay-form") {
+      if (!f.paidAt.value) { document.getElementById("py-error").textContent = "입금일을 골라 주세요."; return; }
+      Object.assign(b, { paidAt: f.paidAt.value, vat });
+      if (f.depositor.value.trim()) b.depositor = f.depositor.value.trim(); else delete b.depositor;
+      DB.saveBill(b); closeModal(); render(); toast("입금을 확인했어요. 세금계산서를 발행하고 기수를 열어 주세요.");
+      return;
+    }
+    if (f.id === "inv-form") {
+      Object.assign(b, { invoiceAt: f.invoiceAt.value || todayStr(), vat });
+      if (f.invoiceNo.value.trim()) b.invoiceNo = f.invoiceNo.value.trim(); else delete b.invoiceNo;
+      DB.saveBill(b); closeModal(); render(); toast("세금계산서 발행을 기록했어요.");
+      return;
+    }
+    // 기수 열기: 강사 기수 목록에 새 기수를 넣고 신청과 이어 둔다 (강사 · 코치는 기수를 새로 만들 수 없음)
+    const name = f.name.value.trim(), start = f.startDate.value, err = document.getElementById("op-error");
+    if (!name) { err.textContent = "기수 이름을 적어 주세요."; return; }
+    if (!start) { err.textContent = "1주차 시작일을 골라 주세요."; return; }
+    if (DB.cohortsOf(b.instructorId).some((c) => c.name === name)) { err.textContent = "이미 같은 이름의 기수가 있어요."; return; }
+    const last = DB.cohortsOf(b.instructorId).slice(-1)[0] || {};
+    const co = { id: DB.uid("c"), instructorId: b.instructorId, name, startDate: start, recruiting: f.recruiting.checked };
+    if (f.curriculumId.value && f.curriculumId.value !== "main") co.curriculumId = f.curriculumId.value;
+    if (last.classDow !== undefined && last.classDow !== null && last.classDow !== "") co.classDow = last.classDow;
+    if (last.classTime) co.classTime = last.classTime;
+    DB.data.cohorts.push(co);
+    Object.assign(b, { cohortId: co.id, openedAt: todayStr(), cohortName: name, startDate: start, vat });
+    DB.saveBill(b);
+    commit(insName(b.instructorId) + " " + name + "를 열었어요. 강사센터 ‘기수 관리’에 바로 보여요.");
+  }
+
+  /* 마스터: 기수 신청 · 매출 */
+  function billKpis() {
+    const all = DB.bills(), today = todayStr(), ym = today.slice(0, 7), yy = today.slice(0, 4);
+    const mon = all.filter((b) => paidIn(b, ym)), yr = all.filter((b) => paidIn(b, yy));
+    const unpaid = all.filter((b) => !b.canceledAt && !b.paidAt), noInv = all.filter((b) => !b.canceledAt && b.paidAt && !b.invoiceAt), toOpen = all.filter((b) => !b.canceledAt && !b.cohortId);
+    const href = (tab) => "#/center/master/billing?tab=" + tab;
+    return '<div class="a-kpis a-kpis-5">' +
+      kpi("이번 달 매출", won(sumMoney(mon, "supply")), "입금 " + mon.length + "건 · 부가세 포함 " + won(sumMoney(mon, "total")), href("sales")) +
+      kpi("올해 매출", won(sumMoney(yr, "supply")), yy + "년 입금 " + yr.length + "건", href("sales")) +
+      kpi("입금 대기", unpaid.length + "건", won(sumMoney(unpaid, "total")), href("todo"), unpaid.length ? "warn" : "") +
+      kpi("계산서 미발행", noInv.length + "건", "입금 확인 뒤 발행", href("todo"), noInv.length ? "warn" : "") +
+      kpi("기수 열기 대기", toOpen.length + "건", "신청 · 입금된 기수", href("todo"), toOpen.length ? "info" : "") +
+    "</div>";
+  }
+  const BILL_TABS = [["todo", "처리할 일"], ["cal", "달력"], ["sales", "매출표"], ["all", "전체 내역"], ["set", "입금 계좌 · 설정"]];
+  function pageMasterBilling(r) {
+    const tq = r && r.params.get("tab");
+    if (tq && BILL_TABS.some((t) => t[0] === tq)) { ui.billTab = tq; history.replaceState(null, "", "#/center/master/billing"); }
+    const all = DB.bills(), tab = ui.billTab || "todo";
+    DB.store.set("moonclass:bill-seen", all.map((b) => b.id).slice(-300));
+    const n = { todo: all.filter(billTodo).length, all: all.length };
+    const body = tab === "cal" ? billCalendar(all) : tab === "sales" ? billSales(all) : tab === "all" ? billAll(all) : tab === "set" ? billSettings() : billTodoList(all);
+    return head("기수 신청 · 매출", "강사님이 강사센터에서 ‘다음 기수 신청’을 하면 여기로 들어와요. 전화 → 무통장 입금 확인 → 세금계산서 발행 → 기수 열기 순서로 처리해요. 이용료 = 강사님 1인 수강료 × 1명분.",
+        btn(icon("download", "sm") + "CSV 내려받기", "bill-csv", "a-btn-ghost") + btn(icon("plus", "sm") + "직접 기록", "bill-add", "a-btn-primary")) +
+      billKpis() +
+      '<div class="a-tabs a-btabs">' + BILL_TABS.map((t) => '<button type="button" class="a-tab' + (tab === t[0] ? " on" : "") + '" data-action="bill-tab" data-k="' + t[0] + '">' + t[1] + (n[t[0]] != null ? ' <span class="num">' + n[t[0]] + "</span>" : "") + "</button>").join("") + "</div>" +
+      body;
+  }
+  function billTodoList(all) {
+    const list = all.filter(billTodo);
+    return '<section class="a-card"><div class="a-card-head"><h2>처리할 신청</h2><span class="a-muted">입금 · 세금계산서 · 기수 열기가 남은 신청 ' + list.length + "건</span></div>" +
+      (list.length ? '<div class="a-stack">' + list.map((b) => billCard(b, true)).join("") + "</div>" : emptyBox("check", "처리할 신청이 없어요. 새 신청이 들어오면 왼쪽 메뉴에 숫자로 보여요.")) + "</section>";
+  }
+  const CAL_TYPES = [["start", "기수 시작"], ["plan", "시작 예정"], ["req", "신청"], ["paid", "입금"], ["inv", "세금계산서"]];
+  function billEvents(all) {
+    const ev = [];
+    all.forEach((b) => {
+      if (b.canceledAt) return;
+      const nm = insName(b.instructorId) + " " + (b.cohortName || "");
+      if (b.requestedAt) ev.push({ date: dayOf(b.requestedAt), type: "req", label: nm + " 신청", id: b.id });
+      if (b.paidAt) ev.push({ date: b.paidAt, type: "paid", label: nm + " 입금 " + won(DB.billMoney(b).total), id: b.id });
+      if (b.invoiceAt) ev.push({ date: b.invoiceAt, type: "inv", label: nm + " 계산서", id: b.id });
+      if (!b.cohortId && b.startDate) ev.push({ date: b.startDate, type: "plan", label: nm + " 시작 예정", id: b.id });
+    });
+    DB.data.cohorts.forEach((co) => { const x = DB.instructor(co.instructorId); if (x && co.startDate) ev.push({ date: co.startDate, type: "start", label: x.displayName + " " + co.name + " 시작" }); });
+    return ev;
+  }
+  function billCalendar(all) {
+    const ym = ui.calYM || todayStr().slice(0, 7);
+    const y = Number(ym.slice(0, 4)), m = Number(ym.slice(5, 7));
+    const startDow = new Date(y, m - 1, 1).getDay(), days = new Date(y, m, 0).getDate(), today = todayStr();
+    const order = CAL_TYPES.map((t) => t[0]);
+    const ev = billEvents(all).filter((e) => e.date && e.date.slice(0, 7) === ym).sort((a, b) => a.date.localeCompare(b.date) || order.indexOf(a.type) - order.indexOf(b.type));
+    const byDay = {};
+    ev.forEach((e) => { (byDay[e.date] = byDay[e.date] || []).push(e); });
+    const cells = [];
+    for (let i = 0; i < startDow; i++) cells.push('<div class="a-cal-d out"></div>');
+    for (let d = 1; d <= days; d++) {
+      const ds = ym + "-" + String(d).padStart(2, "0"), list = byDay[ds] || [], dow = (startDow + d - 1) % 7;
+      cells.push('<button type="button" class="a-cal-d' + (ds === today ? " today" : "") + (ds === ui.calDay ? " on" : "") + (dow === 0 ? " sun" : dow === 6 ? " sat" : "") + (list.length ? " has" : "") + '" data-action="cal-day" data-d="' + ds + '" aria-label="' + m + "월 " + d + "일 일정 " + list.length + '개"><span class="a-cal-n">' + d + "</span>" +
+        list.slice(0, 3).map((e) => '<span class="a-cal-ev t-' + e.type + '">' + esc(e.label) + "</span>").join("") + (list.length > 3 ? '<span class="a-cal-more">+' + (list.length - 3) + "</span>" : "") +
+        (list.length ? '<span class="a-cal-dots">' + list.slice(0, 4).map((e) => '<i class="t-' + e.type + '"></i>').join("") + "</span>" : "") + "</button>");
+    }
+    while (cells.length % 7) cells.push('<div class="a-cal-d out"></div>');
+    const mb = all.filter((b) => paidIn(b, ym));
+    const sel = ui.calDay && ui.calDay.slice(0, 7) === ym ? ui.calDay : null;
+    const listEv = sel ? byDay[sel] || [] : ev;
+    const typeLabel = (t) => (CAL_TYPES.find((x) => x[0] === t) || ["", ""])[1];
+    return '<section class="a-card"><div class="a-card-head a-cal-head"><button type="button" class="a-icon-btn" data-action="cal-move" data-dir="-1" aria-label="이전 달">' + icon("chevLeft") + "</button><h2>" + y + "년 " + m + "월</h2>" + '<button type="button" class="a-icon-btn" data-action="cal-move" data-dir="1" aria-label="다음 달">' + icon("chevRight") + "</button>" + btn("오늘", "cal-today", "a-btn-ghost a-btn-sm") +
+        '<span class="a-cal-sum">이 달 입금 ' + mb.length + "건 · <b>" + won(sumMoney(mb, "supply")) + "</b></span></div>" +
+        '<div class="a-cal-legend">' + CAL_TYPES.map((t) => '<span><i class="t-' + t[0] + '"></i>' + t[1] + "</span>").join("") + "</div>" +
+        '<div class="a-cal"><div class="a-cal-w">' + DOW.map((d) => "<span>" + d + "</span>").join("") + '</div><div class="a-cal-g">' + cells.join("") + "</div></div></section>" +
+      '<section class="a-card"><div class="a-card-head"><h2>' + (sel ? fmtMD(sel) + " 일정" : m + "월 일정") + "</h2>" + (sel ? btn("이 달 전체 보기", "cal-day", "a-btn-ghost a-btn-sm", ' data-d=""') : '<span class="a-muted">' + ev.length + "개</span>") + "</div>" +
+        (listEv.length ? '<ul class="a-list a-cal-list">' + listEv.map((e) => "<li" + (e.id ? ' class="clickable" data-action="bill-edit" data-id="' + esc(e.id) + '"' : "") + '><span class="a-cal-date num">' + fmtMD(e.date) + '</span><span class="a-cal-tag t-' + e.type + '">' + typeLabel(e.type) + "</span><b>" + esc(e.label) + "</b></li>").join("") + "</ul>" : emptyBox("calendar", sel ? "이 날짜에는 일정이 없어요." : "이 달에는 일정이 없어요.")) + "</section>";
+  }
+  function billSales(all) {
+    const y = ui.revYear || Number(todayStr().slice(0, 4));
+    const paid = all.filter((b) => !b.canceledAt && b.paidAt);
+    const yr = paid.filter((b) => b.paidAt.slice(0, 4) === String(y));
+    const add = (a, b) => { const m = DB.billMoney(b); a.n++; a.supply += m.supply; a.tax += m.tax; a.total += m.total; if (b.invoiceAt) a.inv++; return a; };
+    const zero = () => ({ n: 0, supply: 0, tax: 0, total: 0, inv: 0 });
+    const months = Array.from({ length: 12 }, (_, i) => { const pre = y + "-" + String(i + 1).padStart(2, "0"); return Object.assign({ i, pre }, yr.filter((b) => b.paidAt.slice(0, 7) === pre).reduce(add, zero())); });
+    const tot = yr.reduce(add, zero());
+    const max = Math.max(1, ...months.map((x) => x.supply));
+    const thisM = todayStr().slice(0, 7);
+    const byIns = {}, years = {};
+    yr.forEach((b) => add(byIns[b.instructorId] = byIns[b.instructorId] || zero(), b));
+    paid.forEach((b) => add(years[b.paidAt.slice(0, 4)] = years[b.paidAt.slice(0, 4)] || zero(), b));
+    const short = (n) => (n >= 10000 ? Math.round(n / 10000).toLocaleString("ko-KR") + "만" : n.toLocaleString("ko-KR"));
+    const invPill = (x) => (!x.n ? '<span class="a-muted">-</span>' : x.inv === x.n ? pill("모두 발행", "ok") : pill("미발행 " + (x.n - x.inv) + "건", "warn"));
+    return '<section class="a-card"><div class="a-card-head a-cal-head"><button type="button" class="a-icon-btn" data-action="rev-year" data-dir="-1" aria-label="이전 해">' + icon("chevLeft") + "</button><h2>" + y + "년 매출</h2>" + '<button type="button" class="a-icon-btn" data-action="rev-year" data-dir="1" aria-label="다음 해">' + icon("chevRight") + "</button>" +
+        '<span class="a-cal-sum">입금 ' + tot.n + "건 · 공급가 <b>" + won(tot.supply) + "</b> · 부가세 포함 " + won(tot.total) + "</span></div>" +
+        '<div class="a-rev-chart" aria-hidden="true">' + months.map((x) => '<div class="a-rev-col' + (x.pre === thisM ? " now" : "") + '"><small class="num">' + (x.supply ? short(x.supply) : "") + '</small><span class="a-rev-bar"><i style="height:' + (x.supply ? Math.max(3, Math.round(x.supply / max * 100)) : 0) + '%"></i></span><b>' + (x.i + 1) + "월</b></div>").join("") + "</div>" +
+        '<div class="a-table-wrap"><table class="a-table a-rev-table"><thead><tr><th>월</th><th>입금</th><th>공급가액 (매출)</th><th>부가세</th><th>합계</th><th>세금계산서</th></tr></thead><tbody>' +
+          months.map((x) => "<tr" + (x.n ? "" : ' class="a-dim"') + "><td><b>" + y + "년 " + (x.i + 1) + '월</b></td><td class="num">' + x.n + '건</td><td class="num">' + won(x.supply) + '</td><td class="num">' + won(x.tax) + '</td><td class="num">' + won(x.total) + "</td><td>" + invPill(x) + "</td></tr>").join("") +
+          '<tr class="a-rev-total"><td><b>' + y + '년 합계</b></td><td class="num"><b>' + tot.n + '건</b></td><td class="num"><b>' + won(tot.supply) + '</b></td><td class="num">' + won(tot.tax) + '</td><td class="num"><b>' + won(tot.total) + "</b></td><td>" + invPill(tot) + "</td></tr>" +
+        "</tbody></table></div></section>" +
+      '<div class="a-grid-2">' +
+        '<section class="a-card"><div class="a-card-head"><h2>강사별 ' + y + "년 매출</h2></div>" + (Object.keys(byIns).length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>강사</th><th>기수</th><th>공급가액</th><th>합계</th></tr></thead><tbody>' +
+          Object.keys(byIns).sort((a, b) => byIns[b].supply - byIns[a].supply).map((k) => "<tr><td><b>" + esc(insName(k)) + '</b></td><td class="num">' + byIns[k].n + '건</td><td class="num">' + won(byIns[k].supply) + '</td><td class="num">' + won(byIns[k].total) + "</td></tr>").join("") + "</tbody></table></div>" : emptyBox("coins", "이 해에 입금된 이용료가 없어요.")) + "</section>" +
+        '<section class="a-card"><div class="a-card-head"><h2>연도별 매출</h2></div>' + (Object.keys(years).length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>연도</th><th>입금</th><th>공급가액</th><th>합계</th></tr></thead><tbody>' +
+          Object.keys(years).sort().reverse().map((k) => '<tr class="clickable" data-action="rev-year-set" data-y="' + k + '"><td><b>' + k + '년</b></td><td class="num">' + years[k].n + '건</td><td class="num">' + won(years[k].supply) + '</td><td class="num">' + won(years[k].total) + "</td></tr>").join("") + "</tbody></table></div>" : emptyBox("coins", "아직 입금된 이용료가 없어요.")) + "</section>" +
+      "</div>";
+  }
+  function billAll(all) {
+    const fi = ui.billIns || "all", fs = ui.billState || "all";
+    const list = all.filter((b) => (fi === "all" || b.instructorId === fi) && (fs === "all" || (fs === "noinv" ? !b.canceledAt && b.paidAt && !b.invoiceAt : DB.billState(b) === fs)));
+    const insIds = DB.data.instructors.map((x) => x.id).concat(all.map((b) => b.instructorId)).filter((v, i, a) => a.indexOf(v) === i);
+    return '<section class="a-card"><div class="a-toolbar"><div class="a-filters">' +
+        '<select class="a-input a-sm" id="bill-ins" aria-label="강사"><option value="all">전체 강사</option>' + insIds.map((k) => '<option value="' + esc(k) + '"' + (fi === k ? " selected" : "") + ">" + esc(insName(k)) + "</option>").join("") + "</select>" +
+        '<select class="a-input a-sm" id="bill-state" aria-label="상태"><option value="all">전체 상태</option>' + Object.keys(DB.BILL_STATE).map((k) => '<option value="' + k + '"' + (fs === k ? " selected" : "") + ">" + DB.BILL_STATE[k].label + "</option>").join("") + '<option value="noinv"' + (fs === "noinv" ? " selected" : "") + ">계산서 미발행</option></select>" +
+      '</div><span class="a-muted">' + list.length + "건 · 공급가 " + won(sumMoney(list.filter((b) => !b.canceledAt && b.paidAt), "supply")) + " 입금</span></div>" +
+      (list.length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>강사 · 기수</th><th>신청일</th><th>1인 수강료</th><th>이용료 (합계)</th><th>입금</th><th>세금계산서</th><th>기수</th><th>상태</th><th class="right">관리</th></tr></thead><tbody>' +
+        list.map((b) => {
+          const m = DB.billMoney(b), st = DB.BILL_STATE[DB.billState(b)], co = b.cohortId ? DB.cohort(b.cohortId) : null;
+          return "<tr><td><b>" + esc(insName(b.instructorId)) + " · " + esc(b.cohortName || "-") + '</b><small class="a-memo">' + esc(BILL_KIND[b.kind] || BILL_KIND.next) + '</small></td><td class="num">' + (b.requestedAt ? fmtMD(dayOf(b.requestedAt)) : "-") + '</td><td class="num">' + (b.fee ? won(b.fee) : "-") + '</td><td class="num">' + won(m.total) + (m.tax ? '<small class="a-memo">공급가 ' + won(m.supply) + "</small>" : "") + "</td>" +
+            "<td>" + (b.paidAt ? fmtMD(b.paidAt) : '<span class="a-muted">미입금</span>') + "</td><td>" + (b.invoiceAt ? fmtMD(b.invoiceAt) : '<span class="a-muted">미발행</span>') + "</td><td>" + (co ? esc(co.name) + ' <small class="a-memo">' + fmtMD(co.startDate) + " 시작</small>" : '<span class="a-muted">-</span>') + "</td><td>" + pill(st.label, st.cls) + '</td><td class="right">' + btn("수정", "bill-edit", "a-btn-ghost a-btn-sm", ' data-id="' + esc(b.id) + '"') + "</td></tr>";
+        }).join("") + "</tbody></table></div>" : emptyBox("coins", all.length ? "조건에 맞는 기록이 없어요." : "아직 이용료 기록이 없어요.")) + "</section>";
+  }
+  function billSettings() {
+    const bi = DB.billingInfo();
+    const fld = (k, label, ph) => '<div class="a-field"><label for="bl-' + k + '">' + label + '</label><input class="a-input" id="bl-' + k + '" name="' + k + '" value="' + esc(bi[k] || "") + '" placeholder="' + esc(ph) + '" maxlength="60"></div>';
+    return '<form id="billing-form" class="a-site-form" novalidate><section class="a-card"><div class="a-card-head"><h2>입금 계좌 · 부가세</h2><span class="a-muted">강사센터 ‘다음 기수 신청’ 화면에 보여요 (수강생 · 방문자에게는 안 보여요)</span></div>' +
+      '<div class="a-site-grid">' + fld("bank", "은행", "예: 국민은행") + fld("account", "계좌번호", "예: 000000-00-000000") + fld("holder", "예금주", "예: (주)두고홀딩스") +
+        '<div class="a-field"><label for="bl-vat">부가세</label><select class="a-input" id="bl-vat" name="vat">' + DB.BILL_VAT.map((v) => '<option value="' + v[0] + '"' + (bi.vat === v[0] ? " selected" : "") + ">" + v[1] + "</option>").join("") + "</select></div>" +
+        '<div class="a-field a-span2"><label for="bl-note">강사님께 보일 안내 <small>(선택)</small></label><textarea class="a-input" id="bl-note" name="note" rows="2" maxlength="300" placeholder="예: 입금자명은 강사님 성함으로 해 주세요.">' + esc(bi.note || "") + "</textarea></div>" +
+      "</div><p class=\"a-muted\" style=\"margin:12px 0 0\">부가세 방식은 앞으로 확인하는 입금부터 적용돼요. 이미 입금 확인한 기록은 그때 방식 그대로 남아요.</p></section>" +
+      '<div class="a-site-save"><button type="submit" class="a-btn a-btn-primary">' + icon("check", "sm") + "저장</button></div></form>";
+  }
+  function billCsv() {
+    const cols = ["신청일", "강사", "기수", "구분", "1인 수강료", "공급가액", "부가세", "합계", "입금일", "입금자", "세금계산서 발행일", "승인번호", "기수 오픈일", "상태", "담당자", "연락처", "이메일", "상호", "사업자등록번호", "남긴 말", "마스터 메모"];
+    const rows = DB.bills().slice().reverse().map((b) => { const m = DB.billMoney(b); return [dayOf(b.requestedAt), insName(b.instructorId), b.cohortName, BILL_KIND[b.kind] || "", b.fee || "", m.supply, m.tax, m.total, b.paidAt, b.depositor, b.invoiceAt, b.invoiceNo, b.openedAt, DB.BILL_STATE[DB.billState(b)].label, b.contactName, b.phone, b.email, b.bizName, b.bizNo, b.memo, b.masterMemo]; });
+    // 엑셀이 = + - @ 로 시작하는 칸을 수식으로 읽지 않게
+    const cell = (v) => { let s = String(v == null ? "" : v); if (/^[=+\-@]/.test(s)) s = "'" + s; return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const csv = "\uFEFF" + [cols].concat(rows).map((r) => r.map(cell).join(",")).join("\r\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = "두고클래스-기수이용료-" + todayStr() + ".csv";
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast("CSV 파일을 내려받았어요.");
+  }
+  // 새 신청이 들어오면 마스터 화면에 한 번 알린다 (왼쪽 메뉴 숫자 · 대시보드 알림과 함께)
+  function notifyBills() {
+    const seen = DB.store.get("moonclass:bill-seen", []) || [];
+    const fresh = DB.bills().filter((b) => DB.billState(b) === "requested" && seen.indexOf(b.id) === -1);
+    if (!fresh.length) return;
+    DB.store.set("moonclass:bill-seen", seen.concat(fresh.map((b) => b.id)).slice(-300));
+    toast("새 기수 신청: " + fresh.slice(0, 2).map((b) => insName(b.instructorId) + " " + b.cohortName).join(", ") + (fresh.length > 2 ? " 외 " + (fresh.length - 2) + "건" : ""));
+  }
 
   /* ---------------- 마스터: 강사 공지 ---------------- */
   function pageMasterNotices() {
@@ -1609,7 +2004,7 @@
 
   /* ---------------- 마스터: 데이터 관리 ---------------- */
   function snapshot() {
-    return { exportedAt: new Date().toISOString(), db: DB.data, progress: DB.allProgress(), inquiries: DB.inquiries() };
+    return { exportedAt: new Date().toISOString(), db: DB.data, progress: DB.allProgress(), inquiries: DB.inquiries(), bills: DB.bills() };
   }
   function pageMasterData() {
     const json = JSON.stringify(snapshot());
@@ -1690,14 +2085,16 @@
     const st = DB.data.students;
     const running = DB.data.cohorts.filter((c) => DB.cohortStatus(c) === "running").length;
     const newInq = DB.inquiries().filter((x) => (x.status || "new") === "new").length;
+    const newBills = DB.bills().filter((b) => DB.billState(b) === "requested");
     return head("마스터 대시보드", "강사 플랫폼을 만들어 분양하고, 전체 운영 현황을 봐요.", btn(icon("plus", "sm") + "새 강사 플랫폼", "ins-add", "a-btn-primary")) +
+      (newBills.length ? '<a class="a-inq-alert a-bill-alert" href="#/center/master/billing?tab=todo">' + icon("coins", "sm") + "<b>다음 기수 신청 " + newBills.length + "건</b><span>" + esc(newBills.slice(0, 2).map((b) => insName(b.instructorId) + " " + b.cohortName).join(", ")) + " · 전화 후 입금을 확인해 주세요</span>" + icon("arrowRight", "sm") + "</a>" : "") +
       (newInq ? '<a class="a-inq-alert" href="#/center/master/partners">' + icon("handshake", "sm") + "<b>새 강사 입점 문의 " + newInq + "건</b><span>확인하고 연락해 주세요</span>" + icon("arrowRight", "sm") + "</a>" : "") +
       '<div class="a-kpis">' +
         kpi("강사 플랫폼", ins.length + "개", "운영 중 " + ins.filter((x) => x.status === "active").length + "개", "#/center/master/instructors") +
         kpi("전체 수강생", st.filter((s) => s.status === "approved").length + "명", "수강 중 기준", "#/center/master/students") +
         kpi("진행 중 기수", running + "개", "모든 강사 합계", "#/center/master/instructors") +
         kpi("승인 대기", st.filter((s) => s.status === "pending").length + "명", "강사 승인 전", "#/center/master/students", "warn") +
-      "</div>" + masterLevels() + insTable();
+      "</div>" + '<h2 class="a-sub-h">기수 이용료 · 매출 <a class="a-link" href="#/center/master/billing">자세히 ' + icon("arrowRight", "xs") + "</a></h2>" + billKpis() + masterLevels() + insTable();
   }
   // 강사별 성장 단계 분포 (수강 중인 학생 기준)
   function masterLevels() {
@@ -1714,12 +2111,13 @@
   function insTable() {
     const list = DB.data.instructors;
     return '<section class="a-card"><div class="a-card-head"><h2>강사 플랫폼</h2><span class="a-muted">' + list.length + "개</span></div>" +
-      (list.length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>수강생에게 보이는 이름</th><th>강사 로그인</th><th>강의</th><th>기수</th><th>수강생</th><th>상태</th><th class="right">관리</th></tr></thead><tbody>' +
+      (list.length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>수강생에게 보이는 이름</th><th>강사 로그인</th><th>강의</th><th>기수</th><th>수강생</th><th>이용료 입금</th><th>상태</th><th class="right">관리</th></tr></thead><tbody>' +
         list.map((x) => {
           const c = DB.content(x.id), cos = DB.cohortsOf(x.id), cur = DB.currentCohort(x.id);
-          const ss = DB.studentsOf(x.id);
+          const ss = DB.studentsOf(x.id), paid = DB.bills(x.id).filter((b) => !b.canceledAt && b.paidAt);
           return "<tr><td><b>" + esc(x.displayName) + '</b><small class="a-memo">' + fmtMD(x.createdAt || todayStr()) + " 개설</small></td><td>" + esc(x.name) + ' <span class="a-muted num">/ ' + esc(x.phone4) + "</span></td><td>" + esc(c ? c.brand.courseTitle : "-") + "</td>" +
             "<td>" + cos.length + "개" + (cur ? ' <small class="a-memo">' + esc(cur.name) + " " + DB.STATUS_LABEL[DB.cohortStatus(cur)] + "</small>" : "") + '</td><td class="num">' + ss.filter((s) => s.status === "approved").length + "명" + (ss.filter((s) => s.status === "pending").length ? ' <small class="a-memo">대기 ' + ss.filter((s) => s.status === "pending").length + "</small>" : "") + "</td>" +
+            '<td class="num">' + (paid.length ? won(sumMoney(paid, "supply")) + ' <small class="a-memo">' + paid.length + "개 기수</small>" : '<span class="a-muted">-</span>') + "</td>" +
             "<td>" + (x.status === "active" ? pill("운영 중", "ok") : pill("중지", "mute")) + '</td><td class="right"><div class="a-row-actions">' +
             btn("강사센터 접속", "ins-enter", "a-btn-primary a-btn-sm", ' data-id="' + x.id + '"') + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/center/master/menus?ins=' + x.id + '">' + icon("sliders", "sm") + "메뉴·색상</a>" + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/free/' + x.id + '">' + icon("video", "sm") + "무료강의</a>" + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/p/' + x.id + '">' + icon("store", "sm") + "소개</a>" + btn("수정", "ins-edit", "a-btn-ghost a-btn-sm", ' data-id="' + x.id + '"') + "</div></td></tr>";
         }).join("") + "</tbody></table></div>" : emptyBox("store", "강사 플랫폼이 없어요.")) + "</section>";
@@ -1740,20 +2138,28 @@
           (s.status === "approved" && DB.cohort(s.cohortId) ? (() => { const lv = levelOfStudent(s); return "<td>" + lvBadge(lv) + '</td><td><div class="a-bar"><span style="width:' + lv.pct + '%"></span></div><small class="num">' + lv.pct + "% · 필수 " + lv.stats.reqDone + "/" + lv.stats.reqTotal + "</small></td>"; })() : '<td><span class="a-muted">-</span></td><td><span class="a-muted">-</span></td>') + "</tr>"; }).join("") +
         "</tbody></table></div>" : emptyBox("users", "조건에 맞는 수강생이 없어요.")) + "</section>";
   }
-  function insForm(x) {
+  /** pre: 입점 문의에서 만들 때 미리 채울 값 { inq, name, phone, email, course } */
+  function insForm(x, pre) {
     const isNew = !x;
-    x = x || { name: "", phone4: "", displayName: "", status: "active" };
+    pre = pre || {};
+    x = x || { name: pre.name || "", phone4: String(pre.phone || "").replace(/\D/g, "").slice(-4), displayName: pre.name || "", status: "active" };
     const c = isNew ? null : DB.content(x.id);
     openModal(isNew ? "새 강사 플랫폼 만들기" : x.displayName + " 수정",
-      '<form id="ins-form" class="a-form" data-id="' + (isNew ? "" : x.id) + '" novalidate>' +
+      '<form id="ins-form" class="a-form" data-id="' + (isNew ? "" : x.id) + '" data-inq="' + esc(pre.inq || "") + '" novalidate>' +
         '<div class="a-form-row"><div class="a-field"><label for="if-name">강사 이름 <small>(강사센터 로그인)</small></label><input class="a-input" id="if-name" name="name" value="' + esc(x.name) + '"></div>' +
         '<div class="a-field"><label for="if-phone">전화번호 뒷자리 <small>(비밀번호)</small></label><input class="a-input" id="if-phone" name="phone4" inputmode="numeric" maxlength="4" value="' + esc(x.phone4) + '"></div></div>' +
         '<div class="a-field"><label for="if-display">수강생에게 보이는 이름</label><input class="a-input" id="if-display" name="displayName" value="' + esc(x.displayName) + '" placeholder="예: 황금농부"><small class="a-muted">수강생 로그인 화면의 강사 선택 목록에 보여요.</small></div>' +
-        (isNew ? '<div class="a-field"><label for="if-course">강의 이름</label><input class="a-input" id="if-course" name="courseTitle" placeholder="예: 황금농부와 함께하는 스마트스토어 실전 클래스"></div>' +
+        (isNew ? '<div class="a-field"><label for="if-course">강의 이름</label><input class="a-input" id="if-course" name="courseTitle" value="' + esc(pre.course && pre.course.length <= 60 ? pre.course : "") + '" placeholder="예: 황금농부와 함께하는 스마트스토어 실전 클래스"></div>' +
           '<div class="a-field"><span class="a-label">처음 내용</span><div class="a-radio-cards">' +
             '<label><input type="radio" name="seed" value="moon" checked><span><b>문대표 플랫폼 그대로 시작 (추천)</b><small>메뉴 구성·5주 커리큘럼·과제·FAQ·서류 가이드·자료실 틀을 복사해요. 강사는 필요 없는 건 지우고 바꾸기만 하면 돼요.</small></span></label>' +
             '<label><input type="radio" name="seed" value="blank"><span><b>간단한 빈 틀</b><small>4주 예시 커리큘럼과 기본 FAQ 3개만 넣어요.</small></span></label></div></div>' +
           '<div class="a-field"><label for="if-start">1기 1주차 시작일</label><input class="a-input" id="if-start" name="startDate" type="date" value="' + addDays(todayStr(), 14) + '"></div>' +
+          '<fieldset class="a-fs"><legend>1기 이용료 <small>(선택)</small></legend>' +
+            '<div class="a-form-row"><div class="a-field"><label for="if-fee">1인 수강료 (원)</label><input class="a-input" id="if-fee" name="fee" inputmode="numeric" placeholder="예: 2,900,000"></div>' +
+            '<div class="a-field"><label for="if-cphone">연락처</label><input class="a-input" id="if-cphone" name="cphone" type="tel" maxlength="20" value="' + esc(pre.phone || "") + '" placeholder="010-0000-0000"></div></div>' +
+            '<div class="a-field"><label for="if-email">이메일 <small>(세금계산서 받을 곳)</small></label><input class="a-input" id="if-email" name="email" type="email" maxlength="100" value="' + esc(pre.email || "") + '"></div>' +
+            '<div class="a-form-row"><label class="a-check"><input type="checkbox" name="paid"><span>입금 확인됨 (오늘)</span></label><label class="a-check"><input type="checkbox" name="invoiced"><span>세금계산서 발행됨 (오늘)</span></label></div>' +
+            '<small class="a-muted">1인 수강료를 적으면 ‘기수 신청 · 매출’에 1기 이용료가 기록돼요. 비워 두면 기록 없이 만들어요.</small></fieldset>' +
           '<div class="a-field"><span class="a-label">수강생 화면 색상</span>' + themePicker("orange", "itheme") + "</div>"
           : '<div class="a-field"><label for="if-status">상태</label><select class="a-input" id="if-status" name="status"><option value="active"' + (x.status === "active" ? " selected" : "") + '>운영 중</option><option value="paused"' + (x.status !== "active" ? " selected" : "") + ">운영 중지 (강사·수강생 로그인 막기)</option></select></div>" +
             '<p class="a-muted">강의: ' + esc(c ? c.brand.courseTitle : "-") + "</p>") +
@@ -1767,6 +2173,7 @@
     if (!/^\d{4}$/.test(phone4)) { err.textContent = "전화번호 뒷자리는 숫자 4자리예요."; return; }
     const id = f.dataset.id;
     if (DB.data.instructors.some((x) => x.id !== id && x.name === name && x.phone4 === phone4)) { err.textContent = "같은 이름·뒷자리의 강사가 이미 있어요."; return; }
+    if (!id && f.email && f.email.value.trim() && !EMAIL_RE.test(f.email.value.trim())) { err.textContent = "이메일을 확인해 주세요."; return; }
     if (id) { Object.assign(DB.instructor(id), { name, phone4, displayName, status: f.status.value }); commit("강사 정보를 저장했어요."); return; }
     const nid = DB.uid("i");
     DB.data.instructors.push({ id: nid, name, phone4, displayName, status: "active", createdAt: todayStr() });
@@ -1776,13 +2183,25 @@
     DB.data.content[nid] = fromMoon ? DB.templateFromMoon(brand) : DB.normalizeContent(DB.template(brand));
     if (fromMoon) DB.instructor(nid).menu = DB.moonMenu();
     DB.data.content[nid].brand.themeSet = true;
-    DB.data.cohorts.push({ id: DB.uid("c"), instructorId: nid, name: "1기", startDate: f.startDate.value || addDays(todayStr(), 14), recruiting: true });
-    commit(displayName + " 플랫폼을 만들었어요. 강사 로그인: " + name + " / " + phone4);
+    const co1 = { id: DB.uid("c"), instructorId: nid, name: "1기", startDate: f.startDate.value || addDays(todayStr(), 14), recruiting: true };
+    DB.data.cohorts.push(co1);
+    // 1기 이용료 기록 (입점 = 1기 이용료)
+    const fee = parseWon(f.fee.value);
+    if (fee) {
+      const b = { id: DB.uid("b"), instructorId: nid, kind: "new", cohortName: "1기", startDate: co1.startDate, fee, contactName: name, phone: f.cphone.value.trim(), email: f.email.value.trim(), requestedAt: Date.now(), by: "master", cohortId: co1.id, openedAt: todayStr(), vat: DB.billingInfo().vat };
+      if (f.paid.checked) b.paidAt = todayStr();
+      if (f.invoiced.checked) b.invoiceAt = todayStr();
+      DB.saveBill(b);
+    }
+    // 입점 문의에서 만들었으면 그 문의는 ‘입점 완료’로
+    const inq = f.dataset.inq && findInq(f.dataset.inq);
+    if (inq) { inq.status = "done"; DB.saveInquiry(inq); }
+    commit(displayName + " 플랫폼을 만들었어요. 강사 로그인: " + name + " / " + phone4 + (fee ? " · 1기 이용료 기록" : ""));
   }
 
   /* ---------------- 렌더 ---------------- */
-  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, partners: pagePartners, coaches: pageCoaches, pages: pageCustomPages };
-  const MPAGES = { "": pageMasterHome, partners: pageMasterPartners, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData, site: pageMasterSite };
+  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, partners: pagePartners, coaches: pageCoaches, pages: pageCustomPages, billing: pageBilling };
+  const MPAGES = { "": pageMasterHome, partners: pageMasterPartners, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData, site: pageMasterSite, billing: pageMasterBilling };
   function render() {
     closeModal();
     const r = route();
@@ -1810,6 +2229,7 @@
     const fn = master ? (MPAGES[r.parts[1] || ""] || pageMasterHome) : (PAGES[r.parts[0] || ""] || pageDashboard);
     main.innerHTML = '<div class="a-page">' + fn(r) + "</div>";
     labelTables(main);
+    if (master) notifyBills();
     document.title = (master ? "마스터" : isCoach() ? "코치센터" : "강사센터") + " · 두고 클래스";
   }
   // 모바일에서 표를 카드로 바꿀 때 쓰는 칸 이름(data-label)을 표 머리글에서 채운다
@@ -1864,7 +2284,24 @@
       case "student-add": studentForm(null); break;
       case "student-open": studentForm(DB.student(d.id)); break;
       // 기수
-      case "cohort-add": cohortForm(null); break;
+      case "cohort-add": if (S.role !== "master") { if (!isCoach()) billForm(null, false); break; } cohortForm(null); break;
+      case "bill-request": billForm(null, false); break;
+      case "bill-add": billForm(null, true); break;
+      case "bill-edit": { const b = findBill(d.id); if (b) billForm(b, S.role === "master" && !S.actingAs); break; }
+      case "bill-withdraw": { const b = findBill(d.id); if (!b) break; confirmModal("신청 취소", esc(b.cohortName) + " 신청을 취소할까요?", "신청 취소", true, () => { DB.removeBill(b.id); closeModal(); render(); toast("신청을 취소했어요."); }); break; }
+      case "bill-pay": { const b = findBill(d.id); if (b) payForm(b); break; }
+      case "bill-invoice": { const b = findBill(d.id); if (b) invoiceForm(b); break; }
+      case "bill-open": { const b = findBill(d.id); if (b) openCohortForm(b); break; }
+      case "bill-cancel": { const b = findBill(d.id); if (!b) break; confirmModal("신청 취소 처리", esc(insName(b.instructorId) + " " + b.cohortName) + " 신청을 취소로 바꿀까요?<br>매출 · 달력에서 빠지고, 필요하면 다시 되돌릴 수 있어요.", "취소 처리", true, () => { b.canceledAt = todayStr(); DB.saveBill(b); closeModal(); render(); toast("취소로 바꿨어요."); }); break; }
+      case "bill-uncancel": { const b = findBill(d.id); if (!b) break; delete b.canceledAt; DB.saveBill(b); render(); toast("취소를 되돌렸어요."); break; }
+      case "bill-del": { const b = findBill(d.id); if (!b) break; confirmModal("이용료 기록 삭제", esc(insName(b.instructorId) + " " + (b.cohortName || "")) + " 기록을 완전히 지울까요?<br>열린 기수는 그대로 남아요. 되돌릴 수 없어요.", "삭제", true, () => { DB.removeBill(b.id); closeModal(); render(); toast("기록을 지웠어요."); }); break; }
+      case "bill-csv": billCsv(); break;
+      case "bill-tab": ui.billTab = d.k; ui.calDay = null; render(); break;
+      case "cal-move": { const ym = ui.calYM || todayStr().slice(0, 7); const dt = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1 + Number(d.dir), 1); ui.calYM = DB.date.toStr(dt).slice(0, 7); ui.calDay = null; render(); break; }
+      case "cal-today": ui.calYM = todayStr().slice(0, 7); ui.calDay = todayStr(); render(); break;
+      case "cal-day": ui.calDay = d.d && d.d !== ui.calDay ? d.d : null; render(); break;
+      case "rev-year": ui.revYear = (ui.revYear || Number(todayStr().slice(0, 4))) + Number(d.dir); render(); break;
+      case "rev-year-set": ui.revYear = Number(d.y); render(); break;
       case "cohort-edit": cohortForm(DB.cohort(d.id)); break;
       case "cohort-delete": { const co = DB.cohort(d.id); confirmModal("기수 삭제", esc(co.name) + "를 삭제할까요?", "삭제", true, () => { DB.data.cohorts = DB.data.cohorts.filter((x) => x.id !== d.id); commit("기수를 삭제했어요."); }); break; }
       // 검수 · 문의
@@ -1966,7 +2403,7 @@
         if (!data || !data.db || !Array.isArray(data.db.instructors)) { toast("두고 클래스 백업 형식이 아니에요.", "warn"); break; }
         confirmModal("백업으로 복원", "지금 데이터를 지우고 " + esc((data.exportedAt || "").slice(0, 16).replace("T", " ")) + " 백업으로 되돌릴까요?", "복원", true, () => {
           if (DB.remote.on) {
-            DB.remote.call("admin", { action: "import", db: data.db, progress: data.progress || {}, inquiries: data.inquiries || [] }).then((r) => {
+            DB.remote.call("admin", { action: "import", db: data.db, progress: data.progress || {}, inquiries: data.inquiries || [], bills: data.bills || [] }).then((r) => {
               if (r.error) { toast("복원하지 못했어요. 백업 내용을 확인해 주세요.", "warn"); return; }
               location.reload();
             }).catch(() => toast("서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"));
@@ -1975,12 +2412,14 @@
           DB.store.keys().filter((k) => k.indexOf("moonclass:progress:") === 0).forEach((k) => DB.store.remove(k));
           Object.keys(data.progress || {}).forEach((sid) => DB.store.set("moonclass:progress:" + sid, data.progress[sid]));
           if (Array.isArray(data.inquiries)) { const m = {}; data.inquiries.forEach((x) => { if (x && x.id) m[x.id] = x; }); DB.store.set("moonclass:inquiries", m); }
+          if (Array.isArray(data.bills)) { const m = {}; data.bills.forEach((x) => { if (x && x.id) m[x.id] = x; }); DB.store.set("moonclass:bills", m); }
           DB.store.set("moonclass:db:v2", data.db);
           DB.load(); closeModal(); render(); toast("백업으로 복원했어요.");
         });
         break;
       }
       case "inq-tab": ui.inqFilter = d.k; render(); break;
+      case "inq-make": { const x = findInq(d.id); if (x) insForm(null, { inq: x.id, name: x.name, phone: x.phone, email: x.email, course: x.course }); break; }
       case "inq-memo": { const x = findInq(d.id), ta = document.querySelector('[data-inq-memo="' + d.id + '"]'); if (x && ta) { x.memo = ta.value.trim(); DB.saveInquiry(x); toast("메모를 저장했어요."); } break; }
       case "inq-del": { const x = findInq(d.id); if (!x) break; confirmModal("입점 문의 삭제", "‘" + esc(x.name) + "’ 님의 입점 문의를 삭제할까요?<br>삭제하면 되돌릴 수 없어요.", "삭제", true, () => { DB.removeInquiry(x.id); closeModal(); render(); toast("입점 문의를 삭제했어요."); }); break; }
       case "brand-photo-del": if (C().brand.photo) setBrandPhoto(""); break;
@@ -2072,7 +2511,16 @@
       commit(items.length + "개 질문을 등록했어요.");
       return;
     }
-    const forms = { "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote, "coach-form": saveCoach };
+    if (f.id === "billing-form") {
+      e.preventDefault();
+      const next = {};
+      ["bank", "account", "holder", "note"].forEach((k) => { next[k] = String(f[k].value || "").trim().slice(0, k === "note" ? 300 : 60); });
+      next.vat = f.vat.value;
+      if (!DB.saveBilling(next)) { toast("저장하지 못했어요.", "warn"); return; }
+      render(); toast("입금 계좌 · 부가세 설정을 저장했어요.");
+      return;
+    }
+    const forms = { "bill-form": saveBillForm, "pay-form": saveBillStep, "inv-form": saveBillStep, "open-form": saveBillStep, "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote, "coach-form": saveCoach };
     if (forms[f.id]) { e.preventDefault(); forms[f.id](f); return; }
     if (f.classList.contains("a-q-form")) {
       e.preventDefault();
@@ -2102,6 +2550,9 @@
     else if (t.name === "mtheme") { const c = DB.content(ui.mMenuIns); c.brand.theme = t.value; c.brand.themeSet = true; DB.save(); render(); toast(DB.themeOf(t.value).label + " 색으로 바꿨어요."); }
     else if (t.name === "theme" || t.name === "itheme") { const box = document.getElementById("theme-preview-" + t.name); if (box) box.innerHTML = themePreview(t.value); }
     else if (t.id === "m-status") { ui.mStatus = t.value; render(); }
+    else if (t.id === "bill-ins") { ui.billIns = t.value; render(); }
+    else if (t.id === "bill-state") { ui.billState = t.value; render(); }
+    else if (t.id === "bf-vat") refreshBillCalc();
     else if (t.classList.contains("rev-pick")) { if (t.checked) ui.revPicked.add(t.dataset.key); else ui.revPicked.delete(t.dataset.key); render(); }
     else if (t.id === "rev-all" || t.id === "rev-all-2") {
       const keys = Array.from(document.querySelectorAll(".rev-pick")).map((x) => x.dataset.key);
@@ -2146,6 +2597,7 @@
     if (t.dataset && t.dataset.lpLines) { lpSet(lpDraft(), t.dataset.lpLines, LINES(t.value)); lpChanged(); return; }
     if (t.id === "fb-text") { const n = parseFaqText(t.value).length; const el = document.getElementById("fb-count"); if (el) el.textContent = n + "개 인식됨"; }
     if (t.id === "cf-start" || t.id === "cf-time") refreshWeekPreview();
+    if (t.id === "bf-fee" || t.id === "bf-amount") refreshBillCalc();
     if (t.id === "al-pw" && loginTab === "instructor") t.value = t.value.replace(/\D/g, "").slice(0, 4);
     if (t.id === "sf-phone" || t.id === "if-phone") t.value = t.value.replace(/\D/g, "").slice(0, 4);
     if (t.id === "al-id" || t.id === "al-pw") { const er = document.getElementById("al-error"); if (er) er.textContent = ""; }

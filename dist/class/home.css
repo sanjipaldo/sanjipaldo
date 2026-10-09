@@ -98,6 +98,17 @@ body[data-mode="home"] { background: #fff; }
 .hm-phone { position: relative; border-radius: 36px; padding: 8px; background: var(--g900); box-shadow: var(--sh-lg); }
 .hm-phone img { display: block; width: 100%; aspect-ratio: 640 / 1300; object-fit: cover; object-position: top; border-radius: 29px; background: var(--g50); }
 .hm-phone-notch { position: absolute; top: 15px; left: 50%; width: 30%; height: 18px; transform: translateX(-50%); border-radius: 12px; background: var(--g900); z-index: 1; }
+/* 실제 화면 녹화 영상 (첫 장면 사진 → 보이면 재생) · 오른쪽 아래 멈춤 버튼 */
+.hm-browser-scr { position: relative; }
+.hm-browser video { display: block; width: 100%; height: auto; aspect-ratio: 1440 / 900; object-fit: cover; object-position: top; background: var(--g50); }
+.hm-phone video { display: block; width: 100%; aspect-ratio: 640 / 1300; object-fit: cover; object-position: top; border-radius: 29px; background: var(--g50); }
+.hm-vid-btn { position: absolute; right: 12px; bottom: 12px; z-index: 2; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: rgba(20, 26, 36, .55); color: #fff; opacity: 0; transition: opacity .2s ease; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); cursor: pointer; }
+.hm-phone .hm-vid-btn { right: 18px; bottom: 18px; }
+.hm-phone:hover .hm-vid-btn, .hm-browser:hover .hm-vid-btn, .hm-vid-btn:focus-visible, .hm-vid-btn.paused { opacity: 1; }
+.hm .hm-vid-btn .icon { width: 14px; height: 14px; stroke-width: 2.4; }
+.hm .hm-vid-btn.paused .icon { fill: currentColor; }
+@media (hover: none) { .hm-vid-btn { opacity: .8; } }
+.hm .hm-cap .icon { width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; color: var(--pri); fill: currentColor; }
 .hm-hero-phone-wrap { position: absolute; left: 0; bottom: 0; width: 220px; }
 .hm-chip { position: absolute; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 10px 15px 10px 10px; border-radius: 16px; background: #fff; border: 1px solid var(--g100); box-shadow: var(--sh-lg); animation: hm-float 6s ease-in-out infinite; }
 .hm-chip b { display: block; font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--g900); }
@@ -122,6 +133,8 @@ body[data-mode="home"] { background: #fff; }
 
 /* 공통 구역 */
 .hm-sec { padding: 112px 0; }
+/* 메뉴 버튼으로 내려왔을 때 위 막대(60px)에 제목이 가리지 않게 */
+.hm-sec, .hm-hero { scroll-margin-top: 60px; }
 .hm-soft { background: var(--g50); }
 .hm-h2 { font-size: 32px; font-weight: 700; line-height: 1.35; letter-spacing: -.02em; color: var(--g900); }
 .hm-h2-xl { font-size: 44px; line-height: 1.25; }
@@ -523,7 +536,8 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
   .hm-hero-browser { width: 84%; margin-right: 0; }
   .hm-hero-phone-wrap { width: 38%; min-width: 0; bottom: 6px; }
   .hm-phone { border-radius: 26px; padding: 6px; }
-  .hm-phone img { border-radius: 21px; }
+  .hm-phone img, .hm-phone video { border-radius: 21px; }
+  .hm-phone .hm-vid-btn { right: 12px; bottom: 12px; width: 26px; height: 26px; }
   .hm-phone-notch { top: 11px; height: 12px; }
   .hm-chip { padding: 8px 10px 8px 8px; gap: 8px; border-radius: 12px; }
   .hm-chip b { font-size: 12px; }

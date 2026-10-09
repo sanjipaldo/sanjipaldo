@@ -7,6 +7,9 @@
  *  cohorts:<강사>       기수 목록
  *  stu:<강사>:<학생>    수강생 계정
  *  prog:<강사>:<학생>   수강생 진행 기록 (제출·검수·문의)
+ *  inq:<id>             강사 입점 문의 (마스터만)
+ *  bill:<강사>:<id>     기수 이용료 신청 · 정산 (마스터 + 그 강사만. 강사는 '다음 기수 열어 주세요' 신청만,
+ *                       입금 · 세금계산서 · 기수 열기는 마스터만)
  */
 "use strict";
 
@@ -19,6 +22,7 @@ function parseKey(k) {
   if (k === "meta") return { type: "meta" };
   if (p[0] === "ins" || p[0] === "content" || p[0] === "cohorts") return p.length === 2 && p[1] ? { type: p[0], iid: p[1] } : null;
   if ((p[0] === "stu" || p[0] === "prog") && p.length === 3 && p[1] && p[2]) return { type: p[0], iid: p[1], sid: p[2] };
+  if (p[0] === "bill") return p.length === 3 && p[1] && p[2] ? { type: "bill", iid: p[1], bid: p[2] } : null;
   // 강사 입점 문의 (방문자가 남기고 마스터만 본다)
   if (p[0] === "inq") return p.length === 2 && p[1] ? { type: "inq", id: p[1] } : null;
   return null;
@@ -29,6 +33,7 @@ const adminOf = (ids, iid) => !!(ids.admin && (ids.admin.role === "master" || id
 const instructorOf = (ids, iid) => !!(ids.admin && (ids.admin.role === "master" || (ids.admin.role === "instructor" && ids.admin.iid === iid)));
 const coachOf = (ids, iid) => !!(ids.admin && ids.admin.role === "coach" && ids.admin.iid === iid);
 const coachCan = (ids, list) => (ids.admin.perms || []).some((x) => list.indexOf(x) !== -1);
+const ownerOf = (ids, iid) => !!(ids.admin && ids.admin.role === "instructor" && ids.admin.iid === iid);
 const studentOf = (ids, iid) => !!(ids.student && ids.student.iid === iid);
 const memberOf = (ids, iid) => adminOf(ids, iid) || studentOf(ids, iid);
 
@@ -65,11 +70,13 @@ function view(k, v, ids) {
   if (!K) return undefined;
   if (isMaster(ids)) return v;
   if (K.type === "inq") return undefined;
+  // 이용료 신청은 그 강사 본인만 (마스터 메모는 빼고)
+  if (K.type === "bill") { if (!ownerOf(ids, K.iid)) return undefined; if (v == null) return null; const o = clone(v); delete o.masterMemo; return o; }
   if (v == null) return memberOf(ids, K.iid) || K.type === "ins" || K.type === "content" || K.type === "cohorts" || K.type === "meta" ? null : undefined;
   switch (K.type) {
     case "meta": {
       if (ids.admin) return v;
-      const o = clone(v); delete o.announcements; return o;
+      const o = clone(v); delete o.announcements; delete o.billing; return o;
     }
     case "ins":
       if (instructorOf(ids, K.iid)) return v;
@@ -96,6 +103,7 @@ function prefixesFor(ids) {
   if (ids.admin && ids.admin.iid) iids.add(ids.admin.iid);
   if (ids.student) iids.add(ids.student.iid);
   iids.forEach((iid) => { p.push("stu:" + iid + ":%", "prog:" + iid + ":%"); });
+  if (ids.admin && ids.admin.role === "instructor" && ids.admin.iid) p.push("bill:" + ids.admin.iid + ":%");
   return p;
 }
 
@@ -120,7 +128,11 @@ function writer(k, ids, creating) {
       if (instructorOf(ids, K.iid) || (coachOf(ids, K.iid) && coachCan(ids, CONTENT_PERMS))) return { fix: (o, n) => (n == null ? clone(o) : n) };
       return null;
     case "cohorts":
-      if (instructorOf(ids, K.iid) || (coachOf(ids, K.iid) && coachCan(ids, ["cohorts"]))) return { fix: same };
+      // 기존 기수 고치기는 자유, 새 기수 추가 · 기수 삭제는 마스터만 (다음 기수는 이용료 입금 뒤 마스터가 열어 준다)
+      if (instructorOf(ids, K.iid) || (coachOf(ids, K.iid) && coachCan(ids, ["cohorts"]))) return { fix: (o, n) => keepCohortSet(o, n, K.iid) };
+      return null;
+    case "bill":
+      if (ownerOf(ids, K.iid)) return { fix: (o, n) => fixBill(o, n, K) };
       return null;
     case "stu":
       if (instructorOf(ids, K.iid) || (coachOf(ids, K.iid) && coachCan(ids, ["students"]))) return { fix: (o, n) => (n == null ? null : Object.assign(n, { id: K.sid, instructorId: K.iid })) };
@@ -131,6 +143,32 @@ function writer(k, ids, creating) {
       return null;
   }
   return null;
+}
+/** 강사 · 코치가 보낸 기수 목록: 이미 있는 기수만 고치고, 새 기수는 빼고, 지운 기수는 되살린다 */
+function keepCohortSet(o, n, iid) {
+  const old = Array.isArray(o) ? o.filter(Boolean) : [];
+  if (!Array.isArray(n)) return clone(old);
+  const have = new Set(old.map((c) => c.id));
+  const out = n.filter((c) => c && have.has(c.id)).map((c) => Object.assign(c, { instructorId: iid }));
+  const kept = new Set(out.map((c) => c.id));
+  old.forEach((c) => { if (!kept.has(c.id)) out.push(clone(c)); });
+  return out;
+}
+/* 강사가 쓸 수 있는 이용료 신청 칸 (입금 · 계산서 · 기수 열기 · 금액 확정은 마스터만) */
+const BILL_EDIT = ["cohortName", "startDate", "fee", "contactName", "phone", "email", "bizName", "bizNo", "memo"];
+const billOpen = (b) => !!b && !b.paidAt && !b.invoiceAt && !b.cohortId && !b.canceledAt;
+function billValue(k, v) {
+  if (k === "fee") { const n = Math.round(Number(String(v == null ? "" : v).replace(/[^0-9.]/g, ""))); return isFinite(n) ? Math.max(0, Math.min(1e9, n)) : 0; }
+  if (k === "startDate") return /^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? String(v) : "";
+  return String(v == null ? "" : v).slice(0, k === "memo" ? 1000 : 200);
+}
+function fixBill(o, n, K) {
+  // 처리가 시작된(입금 · 계산서 · 기수 오픈 · 취소) 신청은 강사가 고치거나 지울 수 없다
+  if (o && !billOpen(o)) return clone(o);
+  if (n == null) return null;
+  const b = o ? clone(o) : { id: K.bid, instructorId: K.iid, kind: "next", requestedAt: Date.now(), by: "instructor" };
+  BILL_EDIT.forEach((k) => { if (n[k] !== undefined) b[k] = billValue(k, n[k]); else delete b[k]; });
+  return b;
 }
 /** 수강생이 자기 기록을 고쳐도 강사 검수 결과와 답변은 바꾸지 못하게 서버 값으로 되돌린다 */
 function keepStaffFields(o, n) {

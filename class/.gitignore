@@ -1,3 +1,5 @@
 .vercel
 .env*
 .site
+scripts/demo-videos/out/
+scripts/demo-videos/f-*/
