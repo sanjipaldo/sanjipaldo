@@ -446,6 +446,7 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 .t-card cite { display: block; font-style: normal; font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -.02em; }
 .t-card .role { display: block; font-size: 13px; color: var(--on-navy-3); }
 .t-pool { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 24px; }
+html[data-aud="supplier"] .t-pool [data-for="seller"], html:not([data-aud="supplier"]) .t-pool [data-for="supplier"] { display: none; }
 
 /* ---------- 요금제 · 수수료 ---------- */
 .plans { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
@@ -467,7 +468,8 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 @property --ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
 @keyframes spin { to { --ang: 360deg; } }
 .plan .badge { position: absolute; top: -13px; left: 26px; padding: 5px 12px; border-radius: 999px; background: var(--blue); color: #fff; font-size: 12.5px; font-weight: 800; letter-spacing: .02em; box-shadow: 0 8px 18px -8px rgba(49, 130, 246, .8); }
-.plan-notes { margin-top: 22px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.plan-tabs { display: none; }
+.plan-notes { margin-top: 22px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .plan-notes div { padding: 20px 22px; border-radius: 20px; background: var(--bg-soft); font-size: 14.5px; line-height: 1.6; color: var(--ink-4); }
 .plan-notes b { display: block; margin-bottom: 4px; font-size: 15.5px; color: var(--ink); }
 .fee-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
@@ -582,7 +584,15 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
   .float.f1 { left: -12px; }
   .float.f2 { right: -12px; }
   .bento { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .plans, .fee-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fee-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* 요금제: 좌우로 넘기는 슬라이드 + 위 탭 */
+  .plan-tabs { display: flex; gap: 4px; width: max-content; max-width: 100%; margin: 0 auto 20px; padding: 5px; border-radius: 999px; background: var(--bg-gray); }
+  .plan-tabs button { display: inline-flex; align-items: center; gap: 5px; padding: 9px 16px; border: 0; border-radius: 999px; background: none; cursor: pointer; font-size: 14.5px; font-weight: 700; color: var(--ink-4); white-space: nowrap; transition: background-color .25s, color .25s, box-shadow .25s; }
+  .plan-tabs button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: var(--shadow-sm); }
+  .plan-tabs small { padding: 1px 6px; border-radius: 999px; background: var(--blue); color: #fff; font-size: 11px; font-weight: 800; }
+  .plans { position: relative; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(300px, 44%); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter); padding: 18px var(--gutter) 34px; margin: -18px calc(var(--gutter) * -1) -34px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .plans::-webkit-scrollbar { display: none; }
+  .plans .plan { scroll-snap-align: start; }
   .pains { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .links a { padding: 8px 10px; }
 }
@@ -642,7 +652,9 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
   .cmp-row .doogo { padding-bottom: 20px; background: none; }
   .cmp-head { display: none; }
   .cmp-row .alone::before { content: "혼자"; flex: none; margin-right: 8px; padding: 1px 8px; border-radius: 6px; background: var(--bg-gray); font-size: 12.5px; font-weight: 700; color: var(--muted); }
-  .plans, .fee-grid { grid-template-columns: minmax(0, 1fr); }
+  .fee-grid { grid-template-columns: minmax(0, 1fr); }
+  .plans { grid-auto-columns: 84%; gap: 12px; }
+  .plan-tabs button { padding: 9px 13px; font-size: 14px; }
   .calc-l, .calc-r { padding: 24px 22px; }
   .t-card { padding: 26px; }
   .faq-list summary { padding: 18px; font-size: 16px; }
@@ -811,27 +823,43 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
 <!-- 큰 글씨 흐르는 띠 + 쇼핑몰·카테고리 -->
 <section class="tick-sec" aria-label="두고마켓이 잇는 일과 판매 채널">
   <div class="ticker">
-    <div class="ticker-track" aria-hidden="true">
-      <span class="w">상품 등록</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+    <div class="ticker-track" data-aud="seller" aria-hidden="true">
+      <span class="w">상품 소싱</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
       <span class="w b">셀러 PICK</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
       <span class="w">원클릭 쇼핑몰 등록</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
       <span class="w b">주문 자동 수집</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
       <span class="w">결제 한 번에 발주</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
       <span class="w b">송장 자동 전송</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
-      <span class="w">매주 정산</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
-      <span class="w">상품 등록</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w">아이템 위너</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w">상품 소싱</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
       <span class="w b">셀러 PICK</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
       <span class="w">원클릭 쇼핑몰 등록</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
       <span class="w b">주문 자동 수집</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
       <span class="w">결제 한 번에 발주</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
       <span class="w b">송장 자동 전송</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
-      <span class="w">매주 정산</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w">아이템 위너</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
     </div>
-    <p class="sr-only">상품 등록, 셀러 PICK, 원클릭 쇼핑몰 등록, 주문 자동 수집, 결제 한 번에 발주, 송장 자동 전송, 매주 정산</p>
+    <div class="ticker-track" data-aud="supplier" aria-hidden="true">
+      <span class="w">상품 등록</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w b">엑셀 대량 등록</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w">PICK 자동 승인</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w b">결제된 주문만 출고</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w">송장 자동 출력</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w b">판매 현황 그래프</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w">매주 월요일 정산</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w">상품 등록</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w b">엑셀 대량 등록</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w">PICK 자동 승인</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w b">결제된 주문만 출고</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w">송장 자동 출력</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w b">판매 현황 그래프</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+      <span class="w">매주 월요일 정산</span><svg class="sp" viewBox="0 0 24 24"><path d="M12 2l2.2 6.6L21 9.8l-5.4 4.1L17.6 21 12 17l-5.6 4 2-7.1L3 9.8l6.8-1.2z" fill="currentColor"/></svg>
+    </div>
+    <p class="sr-only"><span data-aud="seller">상품 소싱, 셀러 PICK, 원클릭 쇼핑몰 등록, 주문 자동 수집, 결제 한 번에 발주, 송장 자동 전송, 아이템 위너</span><span data-aud="supplier">상품 등록, 엑셀 대량 등록, PICK 자동 승인, 결제된 주문만 출고, 송장 자동 출력, 판매 현황 그래프, 매주 월요일 정산</span></p>
   </div>
   <div class="wrap reach">
     <div class="reach-card" data-reveal>
-      <p class="reach-k">연동 쇼핑몰 <em>상품 등록 · 주문 수집 · 송장 전송</em></p>
+      <p class="reach-k"><span data-aud="seller">연동 쇼핑몰</span><span data-aud="supplier">셀러 판매 채널</span> <em><span data-aud="seller">상품 등록 · 주문 수집 · 송장 전송</span><span data-aud="supplier">내 상품이 팔리는 쇼핑몰</span></em></p>
       <ul class="ch-list">
         <li><span class="lg"><img src="assets/channel-smartstore.webp" alt=""></span>네이버 스마트스토어</li>
         <li><span class="lg"><img src="assets/channel-coupang.png" alt=""></span>쿠팡</li>
@@ -894,8 +922,8 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
 <section class="hub-sec dark" id="platform">
   <div class="wrap">
     <p class="kicker" data-reveal>신개념 도매 오픈마켓</p>
-    <h2 class="hub-title"><span class="dim" data-reveal>도매 사이트는 상품을 준다</span><span class="lit" data-reveal style="--d:.15s">두고마켓은 <em>판매를 끝낸다</em></span></h2>
-    <p class="lead" data-reveal style="--d:.25s">공급사는 상품을 올리고, 셀러는 팔아요. 그 사이의 발주·결제·송장·정산은 두고가 자동으로 잇습니다. 아래 카드를 누르거나 마우스를 올리면 그 흐름만 따로 보여요.</p>
+    <h2 class="hub-title"><span class="dim" data-reveal><span data-aud="seller">도매 사이트는 상품을 준다</span><span data-aud="supplier">도매 사이트는 상품을 걸어 둔다</span></span><span class="lit" data-reveal style="--d:.15s">두고마켓은 <em data-aud="seller">판매를 끝낸다</em><em data-aud="supplier">판로를 연다</em></span></h2>
+    <p class="lead" data-reveal style="--d:.25s"><span data-aud="seller">공급사 상품을 골라 내 쇼핑몰에 올리면, 발주·결제·송장 전송은 두고가 자동으로 이어요.</span><span data-aud="supplier">상품을 올리면 셀러들이 각자의 쇼핑몰에서 팔아요. 주문 접수·송장 전송·정산은 두고가 자동으로 이어요.</span> 아래 카드를 누르거나 마우스를 올리면 그 흐름만 따로 보여요.</p>
     <div class="hub" data-hub>
       <svg class="hub-svg" aria-hidden="true"></svg>
       <div class="hub-col left">
@@ -913,11 +941,11 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
           <small class="core-sub" aria-live="polite">원클릭 등록</small>
         </div>
         <ul class="core-tags" aria-label="두고가 자동으로 하는 일">
-          <li>AI 상품 매핑</li><li>아이템 위너</li><li>예치금 결제</li><li>자동 발주</li><li>송장 중계</li><li>주간 정산</li>
+          <li data-aud="seller">AI 상품 매핑</li><li data-aud="seller">아이템 위너</li><li data-aud="seller">예치금 결제</li><li data-aud="seller">자동 발주</li><li data-aud="seller">송장 중계</li><li data-aud="seller">가격·재고 동기화</li><li data-aud="supplier">PICK 자동 승인</li><li data-aud="supplier">결제된 주문만</li><li data-aud="supplier">송장 자동 출력</li><li data-aud="supplier">송장 중계</li><li data-aud="supplier">판매 현황</li><li data-aud="supplier">주간 정산</li>
         </ul>
       </div>
       <div class="hub-col right">
-        <p class="col-label">내 쇼핑몰</p>
+        <p class="col-label"><span data-aud="seller">내 쇼핑몰</span><span data-aud="supplier">셀러 쇼핑몰</span></p>
         <div class="node" data-side="r"><span class="nb" style="--i:0"></span><span class="ni" aria-hidden="true"><img src="assets/channel-smartstore.webp" alt=""></span><div><b>네이버 스마트스토어</b><small>상품 등록 · 주문 · 송장</small></div></div>
         <div class="node" data-side="r"><span class="nb" style="--i:1"></span><span class="ni" aria-hidden="true"><img src="assets/channel-coupang.png" alt=""></span><div><b>쿠팡</b><small>상품 등록 · 주문 · 송장</small></div></div>
         <div class="node" data-side="r"><span class="nb" style="--i:2"></span><span class="ni" aria-hidden="true"><img src="assets/channel-cafe24.png" alt=""></span><div><b>CAFE24</b><small>상품 등록 · 주문 · 송장</small></div></div>
@@ -925,9 +953,9 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
       </div>
     </div>
     <div class="flow-tabs" role="group" aria-label="두고가 잇는 세 가지 흐름">
-      <button type="button" class="ft" data-flow="0" aria-pressed="true"><small><i></i>공급사 상품</small><b>→ 내 쇼핑몰에 <span>원클릭 등록</span></b><p>셀러가 PICK한 상품을 쇼핑몰 여러 곳에 한 번에 올려요.</p><span class="bar"><i></i></span></button>
-      <button type="button" class="ft" data-flow="1" aria-pressed="false"><small><i></i>쇼핑몰 주문</small><b>→ 결제 한 번이면 <span>자동 발주</span></b><p>들어온 주문을 셀러가 결제하는 순간 공급사로 발주돼요.</p><span class="bar"><i></i></span></button>
-      <button type="button" class="ft" data-flow="2" aria-pressed="false"><small><i></i>공급사 송장</small><b>→ 주문한 쇼핑몰로 <span>자동 전송</span></b><p>공급사가 송장을 넣으면 주문이 들어온 쇼핑몰로 보내져요.</p><span class="bar"><i></i></span></button>
+      <button type="button" class="ft" data-flow="0" aria-pressed="true"><small data-aud="seller"><i></i>공급사 상품</small><small data-aud="supplier"><i></i>내 상품</small><b data-aud="seller">→ 내 쇼핑몰에 <span>원클릭 등록</span></b><b data-aud="supplier">→ 셀러 쇼핑몰에 <span>원클릭 등록</span></b><p data-aud="seller">셀러가 PICK한 상품을 쇼핑몰 여러 곳에 한 번에 올려요.</p><p data-aud="supplier">셀러들이 PICK한 내 상품이 각자의 쇼핑몰에 올라가요.</p><span class="bar"><i></i></span></button>
+      <button type="button" class="ft" data-flow="1" aria-pressed="false"><small data-aud="seller"><i></i>쇼핑몰 주문</small><small data-aud="supplier"><i></i>셀러 결제</small><b data-aud="seller">→ 결제 한 번이면 <span>자동 발주</span></b><b data-aud="supplier">→ 결제된 주문만 <span>발주 도착</span></b><p data-aud="seller">들어온 주문을 셀러가 결제하는 순간 공급사로 발주돼요.</p><p data-aud="supplier">셀러가 먼저 결제한 주문만 내 주문함으로 들어와요.</p><span class="bar"><i></i></span></button>
+      <button type="button" class="ft" data-flow="2" aria-pressed="false"><small data-aud="seller"><i></i>공급사 송장</small><small data-aud="supplier"><i></i>내 송장</small><b data-aud="seller">→ 주문한 쇼핑몰로 <span>자동 전송</span></b><b data-aud="supplier">→ 셀러 쇼핑몰까지 <span>자동 전송</span></b><p data-aud="seller">공급사가 송장을 넣으면 주문이 들어온 쇼핑몰로 보내져요.</p><p data-aud="supplier">송장을 출력하거나 넣으면 주문이 들어온 쇼핑몰로 보내져요.</p><span class="bar"><i></i></span></button>
     </div>
   </div>
 </section>
@@ -1146,18 +1174,25 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
     </header>
     <div class="t-cols" data-tcols></div>
     <div class="t-pool">
-      <figure class="t-card"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>퇴근하고 <b>‘주문 수집하기’ 한 번, ‘한 번에 결제’ 한 번</b>이면 그날 발주가 끝나요. 송장은 공급사가 넣으면 쇼핑몰로 넘어가니까 저는 확인만 해요.</blockquote><figcaption><span class="av" aria-hidden="true">💼</span><span><cite>직장인 부업 셀러</cite><span class="role">스마트스토어 · 퇴근 후 운영</span></span></figcaption></figure>
-      <figure class="t-card"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>뭘 팔아야 할지 몰라 시작을 미뤘어요. 네이버쇼핑과 같은 카테고리로 고르고 판매가만 넣으면 <b>마진이 바로 계산</b>돼서, 재고 없이 첫 상품을 올렸어요.</blockquote><figcaption><span class="av" aria-hidden="true">🌱</span><span><cite>첫 온라인 창업</cite><span class="role">무료 요금제로 시작</span></span></figcaption></figure>
-      <figure class="t-card"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>같은 사과 3kg이라도 공급가가 가장 싼 곳을 <b>‘아이템 위너’로 알려 줘요.</b> 도매 사이트 여러 곳을 돌며 비교하던 시간이 없어졌어요.</blockquote><figcaption><span class="av" aria-hidden="true">🏆</span><span><cite>스마트스토어 2년차</cite><span class="role">스마트스토어 · 쿠팡 운영</span></span></figcaption></figure>
-      <figure class="t-card"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>송장 번호를 엑셀에서 복사해 쇼핑몰마다 붙여 넣던 일이 사라졌어요. <b>공급사가 송장을 넣으면 쇼핑몰로 자동 전송</b>돼요.</blockquote><figcaption><span class="av" aria-hidden="true">🚚</span><span><cite>주문이 많은 셀러</cite><span class="role">하루 100건 안팎 · 그로스</span></span></figcaption></figure>
-      <figure class="t-card"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>상품만 올려 두면 셀러분들이 각자 쇼핑몰에서 팔아요. <b>결제된 주문만 들어오니</b> 미수금 걱정이 없고, 정산은 매주 월요일에 받아요.</blockquote><figcaption><span class="av" aria-hidden="true">🍊</span><span><cite>산지 농가 공급사</cite><span class="role">공급사 · 제주 감귤</span></span></figcaption></figure>
-      <figure class="t-card"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>공급가가 바뀌면 바로 알림이 오고, <b>쇼핑몰 가격도 한 번에 바꿀 수 있어서</b> 모르고 손해 보며 파는 일이 없어요.</blockquote><figcaption><span class="av" aria-hidden="true">📉</span><span><cite>가격 경쟁이 고민인 셀러</cite><span class="role">쿠팡 · 가격 비교가 많은 카테고리</span></span></figcaption></figure>
-      <figure class="t-card"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>‘오늘 할 일’에 번호가 붙어 있어서 <b>위에서부터 누르기만</b> 하면 돼요. 아침엔 카카오톡으로 오늘 할 일이 와요.</blockquote><figcaption><span class="av" aria-hidden="true">📱</span><span><cite>휴대폰으로 운영</cite><span class="role">모바일 · 카카오톡 알림</span></span></figcaption></figure>
-      <figure class="t-card"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>셀러별 판매가를 그래프로 보니 <b>너무 싸게 파는 곳이 바로 보여요.</b> 두고톡으로 가격 조정도 바로 부탁할 수 있고요.</blockquote><figcaption><span class="av" aria-hidden="true">🏭</span><span><cite>자체 브랜드 제조사</cite><span class="role">공급사 · 생활용품</span></span></figcaption></figure>
-      <figure class="t-card"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>직원마다 <b>권한을 따로</b> 줘서 주문 담당은 주문만, 상품 담당은 상품만 봐요. 누가 무엇을 했는지 처리 기록도 남아요.</blockquote><figcaption><span class="av" aria-hidden="true">👥</span><span><cite>직원과 함께 운영</cite><span class="role">세 명이 함께 쓰는 팀 · 프로</span></span></figcaption></figure>
-      <figure class="t-card"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>쓰던 주문 엑셀 양식을 그대로 올리면 <b>열을 알아서 맞춰</b> 줘요. 송장도 엑셀로 내려받아 자사몰에 바로 올려요.</blockquote><figcaption><span class="av" aria-hidden="true">🧾</span><span><cite>엑셀이 편한 셀러</cite><span class="role">자사몰 · 엑셀 대량 주문</span></span></figcaption></figure>
-      <figure class="t-card"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>PICK하기 전에 <b>샘플을 장바구니로 먼저 받아</b> 봤어요. 직접 먹어 보고 찍은 사진으로 상세페이지를 꾸몄죠.</blockquote><figcaption><span class="av" aria-hidden="true">🎁</span><span><cite>샘플부터 받아 보는 셀러</cite><span class="role">식품 카테고리 · 샘플 구매</span></span></figcaption></figure>
-      <figure class="t-card"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>원래 팔던 상품도 두고 공급사 상품과 한 번 연결해 두니 <b>다음 주문부터는 자동으로 연결</b>돼요.</blockquote><figcaption><span class="av" aria-hidden="true">🔗</span><span><cite>다른 곳에서 팔던 셀러</cite><span class="role">기존 상품 · 상품 매핑</span></span></figcaption></figure>
+      <figure class="t-card" data-for="seller"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>퇴근하고 <b>‘주문 수집하기’ 한 번, ‘한 번에 결제’ 한 번</b>이면 그날 발주가 끝나요. 송장은 공급사가 넣으면 쇼핑몰로 넘어가니까 저는 확인만 해요.</blockquote><figcaption><span class="av" aria-hidden="true">💼</span><span><cite>직장인 부업 셀러</cite><span class="role">스마트스토어 · 퇴근 후 운영</span></span></figcaption></figure>
+      <figure class="t-card" data-for="seller"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>뭘 팔아야 할지 몰라 시작을 미뤘어요. 네이버쇼핑과 같은 카테고리로 고르고 판매가만 넣으면 <b>마진이 바로 계산</b>돼서, 재고 없이 첫 상품을 올렸어요.</blockquote><figcaption><span class="av" aria-hidden="true">🌱</span><span><cite>첫 온라인 창업</cite><span class="role">무료 요금제로 시작</span></span></figcaption></figure>
+      <figure class="t-card" data-for="seller"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>같은 사과 3kg이라도 공급가가 가장 싼 곳을 <b>‘아이템 위너’로 알려 줘요.</b> 도매 사이트 여러 곳을 돌며 비교하던 시간이 없어졌어요.</blockquote><figcaption><span class="av" aria-hidden="true">🏆</span><span><cite>스마트스토어 2년차</cite><span class="role">스마트스토어 · 쿠팡 운영</span></span></figcaption></figure>
+      <figure class="t-card" data-for="seller"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>송장 번호를 엑셀에서 복사해 쇼핑몰마다 붙여 넣던 일이 사라졌어요. <b>공급사가 송장을 넣으면 쇼핑몰로 자동 전송</b>돼요.</blockquote><figcaption><span class="av" aria-hidden="true">🚚</span><span><cite>주문이 많은 셀러</cite><span class="role">하루 100건 안팎 · 그로스</span></span></figcaption></figure>
+      <figure class="t-card" data-for="seller"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>공급가가 바뀌면 바로 알림이 오고, <b>쇼핑몰 가격도 한 번에 바꿀 수 있어서</b> 모르고 손해 보며 파는 일이 없어요.</blockquote><figcaption><span class="av" aria-hidden="true">📉</span><span><cite>가격 경쟁이 고민인 셀러</cite><span class="role">쿠팡 · 가격 비교가 많은 카테고리</span></span></figcaption></figure>
+      <figure class="t-card" data-for="seller"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>‘오늘 할 일’에 번호가 붙어 있어서 <b>위에서부터 누르기만</b> 하면 돼요. 아침엔 카카오톡으로 오늘 할 일이 와요.</blockquote><figcaption><span class="av" aria-hidden="true">📱</span><span><cite>휴대폰으로 운영</cite><span class="role">모바일 · 카카오톡 알림</span></span></figcaption></figure>
+      <figure class="t-card" data-for="seller"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>직원마다 <b>권한을 따로</b> 줘서 주문 담당은 주문만, 상품 담당은 상품만 봐요. 누가 무엇을 했는지 처리 기록도 남아요.</blockquote><figcaption><span class="av" aria-hidden="true">👥</span><span><cite>직원과 함께 운영</cite><span class="role">세 명이 함께 쓰는 팀 · 프로</span></span></figcaption></figure>
+      <figure class="t-card" data-for="seller"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>쓰던 주문 엑셀 양식을 그대로 올리면 <b>열을 알아서 맞춰</b> 줘요. 송장도 엑셀로 내려받아 자사몰에 바로 올려요.</blockquote><figcaption><span class="av" aria-hidden="true">🧾</span><span><cite>엑셀이 편한 셀러</cite><span class="role">자사몰 · 엑셀 대량 주문</span></span></figcaption></figure>
+      <figure class="t-card" data-for="seller"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>PICK하기 전에 <b>샘플을 장바구니로 먼저 받아</b> 봤어요. 직접 먹어 보고 찍은 사진으로 상세페이지를 꾸몄죠.</blockquote><figcaption><span class="av" aria-hidden="true">🎁</span><span><cite>샘플부터 받아 보는 셀러</cite><span class="role">식품 카테고리 · 샘플 구매</span></span></figcaption></figure>
+      <figure class="t-card" data-for="seller"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>원래 팔던 상품도 두고 공급사 상품과 한 번 연결해 두니 <b>다음 주문부터는 자동으로 연결</b>돼요.</blockquote><figcaption><span class="av" aria-hidden="true">🔗</span><span><cite>다른 곳에서 팔던 셀러</cite><span class="role">기존 상품 · 상품 매핑</span></span></figcaption></figure>
+      <figure class="t-card" data-for="supplier"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>상품만 올려 두면 셀러분들이 각자 쇼핑몰에서 팔아요. <b>결제된 주문만 들어오니</b> 미수금 걱정이 없고, 정산은 매주 월요일에 받아요.</blockquote><figcaption><span class="av" aria-hidden="true">🍊</span><span><cite>산지 농가 공급사</cite><span class="role">공급사 · 제주 감귤</span></span></figcaption></figure>
+      <figure class="t-card" data-for="supplier"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>상품이 수백 개라 하나씩 올릴 엄두가 안 났어요. <b>엑셀 한 장으로 옵션까지</b> 한 번에 올리고 바로 판매를 시작했어요.</blockquote><figcaption><span class="av" aria-hidden="true">📦</span><span><cite>상품이 많은 도매상</cite><span class="role">공급사 · 엑셀 대량 등록</span></span></figcaption></figure>
+      <figure class="t-card" data-for="supplier"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>아침에 <b>‘송장 자동 출력’ 한 번</b>이면 그날 주문 송장이 다 나와요. 송장번호는 셀러 쇼핑몰까지 알아서 넘어가요.</blockquote><figcaption><span class="av" aria-hidden="true">🖨️</span><span><cite>출고가 많은 공급사</cite><span class="role">공급사 · 굿스플로 송장</span></span></figcaption></figure>
+      <figure class="t-card" data-for="supplier"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>셀러별 판매가를 그래프로 보니 <b>너무 싸게 파는 곳이 바로 보여요.</b> 두고톡으로 가격 조정도 바로 부탁할 수 있고요.</blockquote><figcaption><span class="av" aria-hidden="true">🏭</span><span><cite>자체 브랜드 제조사</cite><span class="role">공급사 · 생활용품</span></span></figcaption></figure>
+      <figure class="t-card" data-for="supplier"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>아무에게나 풀기 어려운 상품은 <b>‘선택 셀러만’</b>으로 정해서 오래 거래한 셀러에게만 보여 줘요.</blockquote><figcaption><span class="av" aria-hidden="true">🤝</span><span><cite>거래처를 고르는 공급사</cite><span class="role">공급사 · 노출 범위 지정</span></span></figcaption></figure>
+      <figure class="t-card" data-for="supplier"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>PICK 요청을 하나하나 확인할 시간이 없어서 <b>자동 승인</b>을 켜 뒀어요. 셀러가 고르는 즉시 판매가 시작돼요.</blockquote><figcaption><span class="av" aria-hidden="true">⚡</span><span><cite>혼자 운영하는 공급사</cite><span class="role">공급사 · PICK 자동 승인</span></span></figcaption></figure>
+      <figure class="t-card" data-for="supplier"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>자주 받는 질문을 <b>상품 FAQ</b>로 등록해 두니 두고톡 문의에 답이 자동으로 나가요.</blockquote><figcaption><span class="av" aria-hidden="true">💬</span><span><cite>문의가 많은 공급사</cite><span class="role">공급사 · 상품 FAQ</span></span></figcaption></figure>
+      <figure class="t-card" data-for="supplier"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>날짜별 공급 매출과 <b>정산 예정액</b>이 달력에 보여서, 이번 주에 얼마가 들어올지 바로 알아요.</blockquote><figcaption><span class="av" aria-hidden="true">📅</span><span><cite>정산을 꼼꼼히 보는 공급사</cite><span class="role">공급사 · 매출 달력</span></span></figcaption></figure>
+      <figure class="t-card" data-for="supplier"><span class="qi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 7H6.5A2.5 2.5 0 004 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 016 19m14-12h-3.5A2.5 2.5 0 0014 9.5V13a2 2 0 002 2h2.5v1.5A2.5 2.5 0 0116 19" fill="none" stroke="#6aa6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><blockquote>무게별·수량별 배송비를 <b>배송 정책</b>으로 만들어 두고, 상품마다 불러와서 써요.</blockquote><figcaption><span class="av" aria-hidden="true">🚚</span><span><cite>배송비가 복잡한 공급사</cite><span class="role">공급사 · 배송 정책</span></span></figcaption></figure>
     </div>
   </div>
 </section>
@@ -1170,6 +1205,12 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
       <h2 class="h2 split" data-split>무료로 시작하고,<br><em>필요할 때</em> 올리세요</h2>
       <p class="lead" data-reveal>두고 공급사 상품 주문은 유료 요금제 모두 무제한이에요. 언제든 바꾸거나 해지할 수 있어요.</p>
     </header>
+    <div class="plan-tabs" role="group" aria-label="요금제 바로 보기">
+      <button type="button" data-plan="0" aria-pressed="true">무료</button>
+      <button type="button" data-plan="1" aria-pressed="false">스타트</button>
+      <button type="button" data-plan="2" aria-pressed="false">그로스 <small>추천</small></button>
+      <button type="button" data-plan="3" aria-pressed="false">프로</button>
+    </div>
     <div class="plans" data-stagger>
       <article class="plan">
         <h3>무료</h3><p class="for">수기 주문으로 시작해요</p>
@@ -1200,7 +1241,6 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
     <div class="plan-notes" data-stagger>
       <div><b>카카오톡 알림</b>아침에 오늘 할 일을, 저녁 6시에 마감 리포트를 보내 드려요. 무료·스타트는 월 2,900원 부가서비스, 그로스·프로는 요금제에 포함돼요.</div>
       <div><b>결제 · 해지</b>요금은 예치금 또는 신용카드로 매달 자동 결제돼요. 해지하면 남은 기간은 일할 계산해 돌려드려요.</div>
-      <div><b>공급사</b>입점비 0원 · 판매 수수료 7% · 매주 월요일 정산 · 굿스플로 송장 1건 100원</div>
     </div>
   </div>
   <div class="wrap" data-aud="supplier">
@@ -1248,7 +1288,7 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
       <details><summary><span class="q">Q</span>예치금은 어떻게 쓰나요?</summary><div class="a"><p>무통장입금이나 신용카드로 충전해 두면 주문을 결제할 때 공급가만큼 차감돼요. 공급사별로 묶어 한 번에 결제할 수 있고, 남은 예치금은 출금 신청할 수 있어요.</p></div></details>
       <details><summary><span class="q">Q</span>무료 요금제로도 팔 수 있나요?</summary><div class="a"><p>네. 쇼핑몰 주문을 직접 옮겨 적는 수기 주문이나 엑셀 대량 주문으로 두고 상품을 발주할 수 있어요. 쇼핑몰 연결·주문 자동 수집·송장 자동 전송은 스타트 요금제부터 쓸 수 있어요.</p></div></details>
       <details><summary><span class="q">Q</span>요금제는 언제든 바꾸거나 해지할 수 있나요?</summary><div class="a"><p>네, 언제든지요. 요금제를 올리면 다음 결제일까지 차액만 일할 계산되고, 해지하면 남은 기간만큼 돌려드려요.</p></div></details>
-      <details><summary><span class="q">Q</span>공급사로 입점하려면 어떻게 하나요?</summary><div class="a"><p>위쪽의 ‘공급사’ 탭을 누르면 공급사용 안내를 볼 수 있어요. ‘공급사 입점 신청’에서 사업자 정보와 공급 상품 정보를 넣으면 바로 공급사 화면을 쓸 수 있어요.</p></div></details>
+      <details><summary><span class="q">Q</span>팔기 전에 샘플을 받아 볼 수 있나요?</summary><div class="a"><p>네. 상품 상세에서 장바구니나 바로 구매로 샘플을 먼저 주문할 수 있어요. PICK하지 않아도 되고, 예치금이나 신용카드로 결제해요.</p></div></details>
     </div>
     <div class="faq-list" data-stagger data-aud="supplier">
       <details><summary><span class="q">Q</span>입점 비용이 있나요?</summary><div class="a"><p>입점비는 없어요. 두고에서 판매된 거래에만 공급가의 7%가 수수료로 붙어요. 굿스플로로 송장을 출력하면 송장 1건에 100원이 들어요.</p></div></details>
@@ -1696,19 +1736,54 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
   window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
   window.addEventListener("resize", onScroll);
 
+  /* ---------- 요금제: 휴대폰·태블릿에서는 좌우로 넘기는 슬라이드, 위 탭과 연동 ---------- */
+  const plansBox = document.querySelector("#pricing .plans");
+  const planTabs = [...document.querySelectorAll(".plan-tabs [data-plan]")];
+  if (plansBox && planTabs.length) {
+    const planCards = [...plansBox.querySelectorAll(".plan")];
+    const padLeft = () => parseFloat(getComputedStyle(plansBox).scrollPaddingLeft) || 0;
+    const currentPlan = () => {
+      if (plansBox.scrollLeft >= plansBox.scrollWidth - plansBox.clientWidth - 2) return planCards.length - 1;
+      const edge = plansBox.getBoundingClientRect().left + padLeft();
+      let best = 0, dist = Infinity;
+      planCards.forEach((card, i) => { const d = Math.abs(card.getBoundingClientRect().left - edge); if (d < dist) { dist = d; best = i; } });
+      return best;
+    };
+    /* 탭으로 고른 요금제는 넘어가는 동안(끝에 닿아 두 장이 함께 보여도) 그대로 표시 */
+    let planLock = -1, planLockTimer = 0;
+    const releasePlanLock = ms => { clearTimeout(planLockTimer); planLockTimer = setTimeout(() => { planLock = -1; }, ms); };
+    const syncPlanTabs = () => { const k = planLock >= 0 ? planLock : currentPlan(); planTabs.forEach((tab, i) => tab.setAttribute("aria-pressed", String(i === k))); };
+    ["pointerdown", "touchstart", "wheel"].forEach(type => plansBox.addEventListener(type, () => { planLock = -1; }, { passive: true }));
+    let planTick = false;
+    plansBox.addEventListener("scroll", () => { if (planLock >= 0) releasePlanLock(180); if (!planTick) { planTick = true; requestAnimationFrame(() => { planTick = false; syncPlanTabs(); }); } }, { passive: true });
+    planTabs.forEach(tab => tab.addEventListener("click", () => {
+      const card = planCards[+tab.dataset.plan];
+      planLock = +tab.dataset.plan; releasePlanLock(400);
+      const left = plansBox.scrollLeft + card.getBoundingClientRect().left - plansBox.getBoundingClientRect().left - padLeft();
+      plansBox.scrollTo({ left, behavior: soft ? "auto" : "smooth" });
+      planTabs.forEach(t => t.setAttribute("aria-pressed", String(t === tab)));
+    }));
+    if (motion && io$) new IntersectionObserver((entries, observer) => entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      planCards.forEach(card => card.classList.add("in"));
+      observer.disconnect();
+    }), { rootMargin: "0px 0px -10% 0px" }).observe(plansBox);
+  }
+
   /* ---------- 사용 장면: testimonials-6처럼 세로로 끝없이 흐르는 세 줄 (속도 30·50·35, 마우스를 올리면 15·25·17) ---------- */
   const tBox = document.querySelector("[data-tcols]");
   const poolBox = document.querySelector(".t-pool");
   const pool = poolBox ? [...poolBox.querySelectorAll(".t-card")] : [];
   const SPEEDS = [[30, 15], [50, 25], [35, 17]];
   const GAP = 24;
-  let sliders = [], running = false, last = 0, colCount = 0, tVisible = false;
+  let sliders = [], running = false, last = 0, colCount = 0, tVisible = false, builtAud = "";
   const colsFor = () => innerWidth >= 1024 ? 3 : innerWidth >= 768 ? 2 : 1;
   const measure = () => sliders.forEach(s => { s.size = s.set.offsetHeight + GAP; s.off = s.size ? s.off % s.size : 0; });
   const buildSliders = () => {
     const n = colsFor();
-    if (n === colCount) return;
-    colCount = n;
+    if (n === colCount && builtAud === aud()) return;
+    colCount = n; builtAud = aud();
+    const cards = pool.filter(card => card.dataset.for === builtAud);
     tBox.style.setProperty("--cols", n);
     tBox.textContent = "";
     sliders = [];
@@ -1716,7 +1791,7 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
       const col = document.createElement("div"); col.className = "t-col";
       const track = document.createElement("div"); track.className = "t-track";
       const set = document.createElement("div"); set.className = "t-set";
-      pool.forEach((card, i) => { if (i % n === c) set.appendChild(card.cloneNode(true)); });
+      cards.forEach((card, i) => { if (i % n === c) set.appendChild(card.cloneNode(true)); });
       track.appendChild(set);
       const copy = set.cloneNode(true); copy.setAttribute("aria-hidden", "true"); copy.inert = true; track.appendChild(copy);
       col.appendChild(track); tBox.appendChild(col);
@@ -1786,6 +1861,7 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
       try { sessionStorage.setItem("doogo-landing-aud", next); history.replaceState(null, "", `#${next}`); } catch (e) {}
       syncAudButtons();
       stories.forEach(s => s.reset());
+      if (tBox && pool.length && io$) { buildSliders(); measure(); }
       /* 내용이 통째로 바뀌는 순간이라 부드러운 스크롤 없이 바로 그 자리로 */
       root.style.scrollBehavior = "auto";
       if (goTop) window.scrollTo(0, 0);
