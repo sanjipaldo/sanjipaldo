@@ -72,7 +72,7 @@ const INIT = `(() => {
     click() {
       ensure();
       const r = document.createElement("div");
-      r.style.cssText = "position:fixed;left:" + (x - 22) + "px;top:" + (y - 22) + "px;width:44px;height:44px;border-radius:50%;background:rgba(210,52,40,.2);border:2px solid rgba(210,52,40,.9);z-index:2147483646;pointer-events:none;transform:scale(.25);opacity:1;transition:transform .55s cubic-bezier(.2,.8,.2,1),opacity .55s ease";
+      r.style.cssText = "position:fixed;left:" + (x - 22) + "px;top:" + (y - 22) + "px;width:44px;height:44px;border-radius:50%;background:rgba(249,66,57,.2);border:2px solid rgba(249,66,57,.9);z-index:2147483646;pointer-events:none;transform:scale(.25);opacity:1;transition:transform .55s cubic-bezier(.2,.8,.2,1),opacity .55s ease";
       document.documentElement.appendChild(r);
       requestAnimationFrame(() => requestAnimationFrame(() => { r.style.transform = "scale(1.45)"; r.style.opacity = "0"; }));
       setTimeout(() => r.remove(), 700);

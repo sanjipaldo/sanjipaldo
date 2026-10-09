@@ -270,7 +270,7 @@
           '<div class="login-topright"><a class="login-home" href="#/about">' + icon("arrowLeft", "sm") + "두고 클래스 소개</a><span>강사님이신가요?</span><a class=\"btn btn-dark btn-sm\" href=\"#/center\">강사센터</a></div>" +
           '<div class="login-stack">' +
             '<div class="login-card">' +
-              '<p class="login-label">' + window.doogoLogo("color") + "<span>CLASS</span></p>" +
+              '<p class="login-label">' + (window.doogoClassLock ? window.doogoClassLock() : window.doogoLogo("color")) + "</p>" +
               "<h1>" + esc(ins ? B.name : "두고 클래스") + " 시작하기</h1>" +
               '<p class="lead">수강 신청할 때 등록한 정보로 로그인하세요.</p>' +
               '<form class="login-form" id="login-form" novalidate>' + picker +
@@ -1492,6 +1492,7 @@
     privacy: ["개인정보처리방침", "수집 항목: 이름, 휴대폰 번호 뒷자리 4자리, 과제 제출 내용\n이용 목적: 수강생 확인, 학습 진행 관리, 수료증 발급\n보관 기간: 수강 종료 후 1년 또는 수강생 요청 시 즉시 파기\n\n현재 체험 버전에서는 모든 기록이 이 기기의 브라우저에만 저장됩니다."],
     oss: ["오픈소스 라이선스", "Pretendard — SIL Open Font License 1.1 (© Kil Hyung-jin)\nInter — SIL Open Font License 1.1 (© The Inter Project Authors)\nLucide Icons — ISC License (© Lucide Contributors)"]
   };
+  window.CLASS_LEGAL = LEGAL; // 두고 클래스 첫 화면 바닥의 약관 팝업도 같은 내용
   function openSignup() {
     const ins = loginInstructor();
     const cos = DB.cohortsOf(ins.id).filter((c) => c.recruiting && DB.cohortStatus(c) !== "ended");

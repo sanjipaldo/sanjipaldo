@@ -6,10 +6,11 @@
  *  - 수강생도 이 주소로 들어오므로 ‘수강생 로그인’은 위 막대 · 첫 화면 · 마지막 안내에 늘 둔다
  *  - 강사 목록 · 숫자는 지금 운영 중인 강사 데이터에서 바로 가져온다 (꾸며 낸 숫자 없음)
  *  - ‘입점 문의’ 팝업 → 마스터 → 강사 입점 문의에서 관리 (#/partner 로 바로 열 수 있음)
- *  - 바닥의 사업자 정보 · 두고 그룹사는 마스터 → 첫 화면 · 사업자 정보에서 고친다 (채운 칸만 보임)
+ *  - 바닥의 사업자 정보 · 고객센터는 마스터 → 첫 화면 · 사업자 정보에서 고친다 (채운 칸만 보임)
+ *  - PC에서 비어 보이지 않게 내용을 넉넉히: 운영 흐름 · 세 가지(세부 기능 6개씩) · 지금 방식과 비교 · 강사센터 메뉴 전체 · 기수 운영 방식 · 자주 묻는 질문 2단
  *  - 휴대폰 · 브라우저 틀 안은 실제 화면을 녹화한 영상(마우스 커서 · 클릭이 보임, 이름은 OOO). 보일 때만 받아서 재생하고,
  *    수강생 화면 · 강사센터 영상은 한 편을 장(chapter)으로 나눠 탭을 누르면 그 장면으로 넘어간다
- *  - 색은 타이탄클래스 빨강 하나(#D23428) + 푸른 기가 도는 회색, 글꼴 · 글자 위계는 핀터레스트 디자인 시스템 그대로 (home.css 맨 위)
+ *  - 색 · 글꼴은 여기어때 디자인 시스템처럼: Lively red #F94239 하나 + 무채색 회색, Pretendard (home.css 맨 위)
  */
 (function () {
   "use strict";
@@ -29,21 +30,30 @@
   ];
   const FEATURES = [
     { no: "01", tag: "모집", title: "강의 소개 랜딩페이지", vid: "v-lp", lead: "내 강의를 소개하고 수강 신청까지 받는 세일즈 페이지예요.",
-      pts: ["커리큘럼 · 후기 · 강사 소개 · 모집 일정을 한 페이지에", "신청하면 강사센터 ‘수강 신청’으로 바로 들어와요", "문구 · 사진 · 순서를 강사센터에서 직접 고쳐요"] },
+      pts: ["커리큘럼 · 후기 · 강사 소개 · 모집 일정을 한 페이지에", "신청하면 강사센터 ‘수강 신청’으로 바로 들어와요", "문구 · 사진 · 순서를 강사센터에서 직접 고쳐요"],
+      more: [["layers", "10가지 구역", "첫 화면 · 강사 소개 · 커리큘럼 · 후기 · 가격 · FAQ를 켜고 끄고 순서까지"], ["phone", "휴대폰에 맞춘 화면", "수강생 대부분이 보는 휴대폰에서 먼저 보기 좋게"],
+        ["userPlus", "신청 → 승인 대기", "신청하면 강사센터 ‘승인 대기’에 바로 들어와요"], ["calendar", "모집 일정 자동", "다음 기수 시작일 · 모집 중 표시가 기수에 맞춰"],
+        ["image", "사진 · 이력 · 후기", "강사 사진 · 경력 · 수강 후기를 직접 올려요"], ["link", "주소 하나로 홍보", "카카오톡 · 인스타그램 · 유튜브에 링크 하나로"]] },
     { no: "02", tag: "무료 강의", title: "무료강의 전자책", vid: "v-free", lead: "무료 강의 신청자에게 전자책과 실전 자료를 순서대로 열어 주는 페이지예요.",
-      pts: ["무료 강의 신청 · 일정 카운트다운 · 신청자 전용 자료", "전자책 · 실전 자료를 하나씩 순서대로 열어 줘요", "무료 강의에서 유료 강의 신청으로 자연스럽게 이어져요"] },
+      pts: ["무료 강의 신청 · 일정 카운트다운 · 신청자 전용 자료", "전자책 · 실전 자료를 하나씩 순서대로 열어 줘요", "무료 강의에서 유료 강의 신청으로 자연스럽게 이어져요"],
+      more: [["clock", "강의 카운트다운", "무료 강의까지 남은 일 · 시간 · 분 · 초가 보여요"], ["library", "선물 전자책 순차 공개", "정한 날짜 · 시간에 한 권씩 자동으로 열려요"],
+        ["video", "강의 전 영상", "유튜브 영상을 넘겨 보며 강사님을 먼저 만나요"], ["message", "질문 미리 받기", "강의 전에 궁금한 점을 이 페이지에서 모아요"],
+        ["headset", "오픈채팅 연결", "카카오톡 오픈채팅방으로 바로 이어져요"], ["store", "유료 강의로 연결", "진행 예정 강의 · 신청 링크로 자연스럽게"]] },
     { no: "03", tag: "수강생 케어", title: "커리큘럼 · 튜토리얼 시스템", vid: "v-care", lead: "1주차부터 수료까지 수강생을 끝까지 케어하는 나만의 강의실이에요.",
-      pts: ["주차별 강의 · 과제 · 자동 검수 · 강사 피드백", "진행률 · 수료증 · 24시간 AI 도우미 · 1:1 소통", "강사센터에서 진척도를 보고 코치와 나눠 운영해요"] }
+      pts: ["주차별 강의 · 과제 · 자동 검수 · 강사 피드백", "진행률 · 수료증 · 24시간 AI 도우미 · 1:1 소통", "강사센터에서 진척도를 보고 코치와 나눠 운영해요"],
+      more: [["book", "주차별 커리큘럼", "강의 · 핵심 목표 · 과제 · 자료가 주차별로"], ["checks", "자동 검수", "글자 수 · 키워드 · 링크 · 사진을 바로 확인"],
+        ["pen", "강사 · 코치 피드백", "승인하거나 보완할 점을 남기면 바로 보여요"], ["activity", "진행률 · 성장 단계", "씨앗부터 숲까지, 해낸 만큼 자라요"],
+        ["award", "수료증", "필수 과제를 마치면 이름이 새겨진 수료증"], ["sparkles", "24시간 AI 도우미", "강사님이 올린 자료로 밤에도 답해요"]] }
   ];
   const STUDENT_TABS = [
     { key: "tutorial", at: 0, ic: "book", title: "주차별 튜토리얼", desc: "이번 주에 볼 강의와 할 과제가 순서대로 정리돼 있어요. 1주차부터 차근차근 따라오고, 다 본 강의는 ‘시청 완료’로 체크해요." },
-    { key: "mission", at: 4.94, ic: "checks", title: "과제 제출 · 피드백", desc: "사진 · 링크 · 글로 과제를 내면 자동 검수로 바로 확인하고, 강사님과 코치가 승인하거나 보완할 점을 알려 줘요." },
-    { key: "cert", at: 10.53, ic: "award", title: "진행률 · 수료증", desc: "잘 따라가고 있는지 진행률로 바로 보여요. 필수 과제를 모두 통과하면 이름이 새겨진 수료증이 나와요." },
-    { key: "bot", at: 13.62, ic: "sparkles", title: "24시간 AI 도우미", desc: "과제 방법 · 서류 · 일정 · 내 진도를 물어보면 강사님이 올린 자료로 바로 답해요. 새벽에도요." },
-    { key: "channel", at: 16.84, ic: "message", title: "강사 · 코치 1:1 소통", desc: "막히는 순간 강사님과 코치에게 바로 연결돼요. 카카오톡 채널 · 오픈채팅 등 강사님이 정한 창구로 이어져요." },
-    { key: "guide", at: 20.59, ic: "clipboard", title: "실무 가이드", desc: "사업자 등록처럼 강의에 필요한 준비를 단계별로 안내해요. 기관 · 기간 · 서류 · 강사님 팁까지 한 화면에." },
-    { key: "library", at: 24.38, ic: "library", title: "유료강의 자료실", desc: "전자책 · 엑셀 양식 · VOD · 기초 가이드 영상까지, 강사님의 노하우가 한 권의 책처럼 정리돼 있어요." },
-    { key: "schedule", at: 30.21, ic: "calendar", title: "강의 일정 · 공지", desc: "라이브 · 과제 마감 · 공지를 달력으로 한눈에. 해외에 있는 강사님과도 시간을 헷갈리지 않아요." }
+    { key: "mission", at: 4.97, ic: "checks", title: "과제 제출 · 피드백", desc: "사진 · 링크 · 글로 과제를 내면 자동 검수로 바로 확인하고, 강사님과 코치가 승인하거나 보완할 점을 알려 줘요." },
+    { key: "cert", at: 10.58, ic: "award", title: "진행률 · 수료증", desc: "잘 따라가고 있는지 진행률로 바로 보여요. 필수 과제를 모두 통과하면 이름이 새겨진 수료증이 나와요." },
+    { key: "bot", at: 13.65, ic: "sparkles", title: "24시간 AI 도우미", desc: "과제 방법 · 서류 · 일정 · 내 진도를 물어보면 강사님이 올린 자료로 바로 답해요. 새벽에도요." },
+    { key: "channel", at: 16.87, ic: "message", title: "강사 · 코치 1:1 소통", desc: "막히는 순간 강사님과 코치에게 바로 연결돼요. 카카오톡 채널 · 오픈채팅 등 강사님이 정한 창구로 이어져요." },
+    { key: "guide", at: 20.58, ic: "clipboard", title: "실무 가이드", desc: "사업자 등록처럼 강의에 필요한 준비를 단계별로 안내해요. 기관 · 기간 · 서류 · 강사님 팁까지 한 화면에." },
+    { key: "library", at: 24.37, ic: "library", title: "유료강의 자료실", desc: "전자책 · 엑셀 양식 · VOD · 기초 가이드 영상까지, 강사님의 노하우가 한 권의 책처럼 정리돼 있어요." },
+    { key: "schedule", at: 30.17, ic: "calendar", title: "강의 일정 · 공지", desc: "라이브 · 과제 마감 · 공지를 달력으로 한눈에. 해외에 있는 강사님과도 시간을 헷갈리지 않아요." }
   ];
   const STUDENT_MORE = [
     ["flame", "동기부여 채널", "지칠 때 다시 힘을 주는 영상"],
@@ -56,8 +66,8 @@
   // 강사센터는 핵심 화면 세 개만 보여 준다 (메뉴 전체는 공개하지 않음)
   const ADMIN_TABS = [
     { key: "dash", at: 0, title: "대시보드" },
-    { key: "students", at: 9.84, title: "수강생 승인 · 진척도" },
-    { key: "review", at: 19.89, title: "과제 검수" }
+    { key: "students", at: 9.86, title: "수강생 승인 · 진척도" },
+    { key: "review", at: 19.91, title: "과제 검수" }
   ];
   const ADMIN_FEATURES = [
     ["palette", "내 이름의 강의 플랫폼", "강의 이름 · 색상 · 메뉴 · 로그인 화면까지 강사님 브랜드로 운영해요."],
@@ -68,6 +78,40 @@
     ["userPlus", "승인제 수강생 관리", "신청을 확인하고 승인한 사람만 들어와요. 기수별로 관리해요."],
     ["megaphone", "랜딩 · 무료강의 페이지 편집", "강의 소개 페이지와 무료강의 전자책 페이지를 직접 고쳐요."],
     ["refresh", "끝난 기수에게도 계속", "새 영상 · 자료를 올리면 이전 기수도 함께 보고 다시 찾아와요."]
+  ];
+  // 한 기수 운영 흐름 (어느 화면이 맡는지)
+  const FLOW = [
+    ["store", "모집", "강의 소개 랜딩페이지", "커리큘럼 · 후기 · 일정으로 모집"],
+    ["video", "무료 강의", "무료강의 전자책", "카운트다운 · 선물 전자책으로 신청자 모으기"],
+    ["userPlus", "신청 · 승인", "강사센터", "신청을 확인하고 승인한 사람만 입장"],
+    ["book", "주차별 학습", "튜토리얼 강의실", "1주차부터 강의 · 과제를 순서대로"],
+    ["checks", "과제 · 피드백", "강사센터 · 코치", "자동 검수 + 강사 · 코치 피드백"],
+    ["award", "수료", "튜토리얼 강의실", "필수 과제를 마치면 수료증"],
+    ["refresh", "다음 기수", "강사센터", "커리큘럼 그대로, 다음 기수 바로 시작"]
+  ];
+  // 단톡방 · 드라이브로 운영할 때와 비교
+  const COMPARE = [
+    ["강의 자료", "유튜브 · 드라이브 · 단톡방 · 노션에 흩어져 있어요", "주차별 강의실 한곳에 순서대로 정리돼요"],
+    ["진도 확인", "누가 어디까지 했는지 일일이 물어봐야 해요", "수강생별 진행률 · 성장 단계가 한눈에 보여요"],
+    ["과제 검수", "사진 · 링크를 단톡방에서 하나씩 찾아 확인해요", "자동 검수 뒤 승인 · 보완 요청을 한 번에 해요"],
+    ["반복 질문", "같은 질문에 기수마다 다시 답해요", "AI 도우미 · Q&A · 실무 가이드가 먼저 답해요"],
+    ["모집 · 무료 강의", "랜딩 · 전자책을 기수마다 따로 만들고 고쳐요", "강사센터에서 고치면 바로 반영돼요"],
+    ["운영 인력", "강사님 혼자, 또는 단톡방 관리자 한 명", "코치 계정에 필요한 메뉴만 나눠 맡겨요"],
+    ["수료 후", "단톡방이 닫히면 수강생과의 연결도 끝나요", "강의실이 남아 새 자료로 계속 이어져요"],
+    ["수강생이 늘면", "관리할 일이 그만큼 함께 늘어요", "같은 이용료 · 같은 운영 방식 그대로예요"]
+  ];
+  // 강사센터에서 직접 고치는 메뉴 (실제 강사센터 메뉴 그대로)
+  const ADMIN_MENUS = [
+    ["운영", ["대시보드", "수강생 관리", "기수 관리", "다음 기수 신청", "과제 검수", "요청사항 답변", "코치 관리"]],
+    ["수강생 화면 콘텐츠", ["기본 정보 · 색상 · AI봇", "메뉴 구성", "시작 가이드", "커리큘럼", "과제", "강의 일정", "공지사항", "Q&A", "서류 준비 가이드", "유료강의 자료실", "동기부여", "1:1 소통채널", "제휴채널"]],
+    ["홍보", ["강의 소개 랜딩페이지", "무료강의 전자책 페이지", "받은 질문 모아보기"]]
+  ];
+  // 기수 운영 방식 (강사센터 ‘다음 기수 신청’과 같은 흐름)
+  const COHORT = [
+    ["handshake", "1기 입점", "상담 뒤 플랫폼을 세팅하고 첫 기수를 열어요"],
+    ["send", "다음 기수 신청", "강사센터에서 기수 · 시작일 · 연락처를 남겨요"],
+    ["file", "입금 · 세금계산서", "무통장 입금을 확인하고 세금계산서를 발행해요"],
+    ["layers", "기수 오픈", "두고 클래스가 기수를 열면, 그다음은 강사님이 자유롭게"]
   ];
   const STEPS = [
     ["입점 문의", "팝업으로 강의 정보를 남겨 주세요."],
@@ -83,7 +127,10 @@
     ["내 브랜드로 운영할 수 있나요?", "강의 이름 · 색상 · 메뉴 · 로그인 화면 · 강의 소개 페이지까지 강사님 브랜드로 운영해요. 수강생에게는 강사님의 강의 플랫폼으로 보여요."],
     ["코치(조교)와 같이 운영할 수 있나요?", "코치 계정을 만들고 필요한 메뉴만 열어 줄 수 있어요. 과제 검수 · 질문 답변을 나눠서 해요."],
     ["끝난 기수는 어떻게 되나요?", "수료한 뒤에도 강의실은 그대로 남아요. 새 자료를 올리면 이전 기수도 함께 보고, 그 연결이 다음 기수 모집으로 이어져요."],
-    ["수강생은 어떻게 로그인하나요?", "회원가입 없이 강사를 고르고 이름과 휴대폰 뒷자리 4자리로 들어와요. 강사님이 승인한 수강생만 들어올 수 있어요."]
+    ["수강생은 어떻게 로그인하나요?", "회원가입 없이 강사를 고르고 이름과 휴대폰 뒷자리 4자리로 들어와요. 강사님이 승인한 수강생만 들어올 수 있어요."],
+    ["다음 기수는 어떻게 여나요?", "강사센터 ‘다음 기수 신청’에 기수 · 시작 예정일 · 연락처를 남기면 담당자가 연락드려요. 입금 확인과 세금계산서 발행이 끝나면 기수를 열어 드리고, 그다음은 강사님이 자유롭게 고쳐요."],
+    ["결제는 어떻게 하나요?", "지금은 무통장 입금으로 받고, 입금이 확인되면 세금계산서를 발행해 드려요."],
+    ["입점하면 언제부터 쓸 수 있나요?", "강의 자료가 준비돼 있다면 상담 뒤 바로 세팅을 시작해요. 다음 기수 시작일에 맞춰 준비를 마칠 수 있게 일정을 함께 잡아요."]
   ];
 
   /* ---------- 데이터 (지금 운영 중인 강사) ---------- */
@@ -121,9 +168,9 @@
   const arrow = () => icon("arrowRight", "sm");
   const d = (i) => ' style="--i:' + i + '"';
   const checks = (list) => '<ul class="hm-checks">' + list.map((x) => "<li>" + icon("check", "xs") + "<span>" + x + "</span></li>").join("") + "</ul>";
-  // 구역 제목: 파랑 아이콘 + 굵은 제목 + 오른쪽 화살표 · 아래 구분선
-  const secHead = (ic, title, sub, right) => '<div class="hm-shead hm-reveal"><div class="hm-shead-row"><h2 class="hm-h2"><span class="hm-shead-ic">' + icon(ic) + "</span><span>" + title + "</span></h2>" + (right || "") + "</div>" +
-    (sub ? '<p class="hm-sub">' + sub + "</p>" : "") + "</div>";
+  // 구역 제목: 빨강 아이콘 + 굵은 제목 · 설명 · 오른쪽 버튼 (PC에서는 한 줄로 넓게) · 아래 구분선
+  const secHead = (ic, title, sub, right) => '<div class="hm-shead hm-reveal' + (sub ? "" : " no-sub") + '"><div class="hm-shead-main"><span class="hm-shead-ic">' + icon(ic) + '</span><h2 class="hm-h2">' + title + "</h2></div>" +
+    (sub ? '<p class="hm-sub">' + sub + "</p>" : "") + (right ? '<div class="hm-shead-r">' + right + "</div>" : "") + "</div>";
 
   let stTab = "tutorial", adTab = "dash";
 
@@ -131,14 +178,14 @@
     return '<header class="hm-top" id="hm-top"><div class="hm-wrap hm-top-in">' +
       '<button type="button" class="hm-logo" data-hm-scroll="top" aria-label="두고 클래스 맨 위로">' + brandLock() + "</button>" +
       '<nav class="hm-nav" aria-label="소개 메뉴">' +
-        scrollBtn("hm-features", "기능", "hm-nav-a") + scrollBtn("hm-students", "수강생 화면", "hm-nav-a") + scrollBtn("hm-teachers", "강사센터", "hm-nav-a") +
-        scrollBtn("hm-pricing", "이용료", "hm-nav-a") + scrollBtn("hm-classes", "강사진", "hm-nav-a") + scrollBtn("hm-faq", "자주 묻는 질문", "hm-nav-a") +
+        scrollBtn("hm-flow", "운영 흐름", "hm-nav-a") + scrollBtn("hm-features", "3가지 기능", "hm-nav-a") + scrollBtn("hm-students", "수강생 화면", "hm-nav-a") + scrollBtn("hm-teachers", "강사센터", "hm-nav-a") +
+        scrollBtn("hm-pricing", "이용료", "hm-nav-a") + scrollBtn("hm-classes", "강사진", "hm-nav-a") + scrollBtn("hm-faq", "FAQ", "hm-nav-a") +
       "</nav>" +
       '<div class="hm-top-r"><a class="hm-top-link" href="#/center">강사센터</a><a class="hm-btn hm-btn-sec hm-btn-sm" href="#/login"><span class="hm-hide-m">수강생 </span>로그인</a>' + applyBtn("입점 문의", "hm-btn hm-btn-p hm-btn-sm") + "</div>" +
     '</div><i class="hm-top-prog" id="hm-prog" aria-hidden="true"></i></header>';
   }
 
-  function hero() {
+  function hero(list) {
     const pts = [["users", "수강생은 무료"], ["layers", "수강생 수 무제한 · 같은 이용료"], ["refresh", "기수 무제한 운영"]];
     return '<section class="hm-hero" id="hm-hero"><div class="hm-hero-glow" aria-hidden="true"></div><div class="hm-wrap hm-hero-in">' +
       '<div class="hm-hero-copy">' +
@@ -156,7 +203,11 @@
         '<div class="hm-chip hm-chip-b"><span><small>3기 평균 진도</small><b>72%</b></span><i class="hm-chip-bar"><i style="width:72%"></i></i></div>' +
         '<div class="hm-chip hm-chip-c">' + icon("award", "sm") + "<span><b>수료증 발급</b><small>필수 과제 23개 통과</small></span></div>" +
       "</div>" +
-    "</div></section>";
+    "</div>" +
+    (list && list.length ? '<div class="hm-ticker"><div class="hm-wrap hm-ticker-in"><span class="hm-ticker-l">' + icon("award", "xs") + "지금 두고 클래스로 강의하는 강사</span>" +
+      '<span class="hm-ticker-names">' + list.map((x) => (x.landing ? '<a href="#/p/' + esc(x.id) + '">' : "<span>") + esc(x.who) + (x.field ? "<small>" + esc(x.field) + "</small>" : "") + (x.landing ? "</a>" : "</span>")).join("") + "</span>" +
+      scrollBtn("hm-classes", "강사진 보기" + icon("arrowRight", "xs"), "hm-ticker-go") + "</div></div>" : "") +
+    "</section>";
   }
 
   function stats(list) {
@@ -176,11 +227,20 @@
     "</div></section>";
   }
 
+  // 한 기수 운영 흐름 — 모집부터 다음 기수까지 어느 화면이 맡는지
+  function flow() {
+    return '<section class="hm-sec hm-flow-sec" id="hm-flow"><div class="hm-wrap">' +
+      secHead("activity", "한 기수 운영, 처음부터 끝까지 한곳에서", "모집 → 무료 강의 → 신청 · 승인 → 주차별 학습 → 과제 피드백 → 수료 → 다음 기수. 지금 단톡방 · 드라이브 · 노션 · 구글폼으로 나눠 하던 일을 두고 클래스 하나로 이어요.", scrollBtn("hm-compare", "지금 방식과 비교" + arrow(), "hm-shead-link")) +
+      '<ol class="hm-flow">' + FLOW.map((x, i) => '<li class="hm-flow-i hm-hov hm-reveal"' + d(i) + '><span class="hm-flow-no">' + String(i + 1).padStart(2, "0") + '</span><span class="hm-ic hm-ic-sm">' + icon(x[0]) + "</span><b>" + x[1] + '</b><em>' + x[2] + "</em><p>" + x[3] + "</p></li>").join("") + "</ol>" +
+    "</div></section>";
+  }
+
   // 강사님이 받는 세 가지 — 실제 화면과 함께 (왼쪽 · 오른쪽 번갈아)
   function features() {
     const row = (f, i) => '<article class="hm-frow hm-reveal' + (i % 2 ? " rev" : "") + '">' +
       '<div class="hm-frow-copy"><p class="hm-frow-top"><span class="hm-frow-no">' + f.no + '</span><span class="hm-frow-tag">' + f.tag + "</span></p>" +
-        "<h3>" + f.title + '</h3><p class="hm-frow-lead">' + f.lead + "</p>" + checks(f.pts) + "</div>" +
+        "<h3>" + f.title + '</h3><p class="hm-frow-lead">' + f.lead + "</p>" + checks(f.pts) +
+        '<ul class="hm-frow-more">' + f.more.map((m) => '<li><span class="hm-ic hm-ic-xs">' + icon(m[0]) + "</span><span><b>" + m[1] + "</b><small>" + m[2] + "</small></span></li>").join("") + "</ul></div>" +
       '<div class="hm-frow-art"><div class="hm-show-glow" aria-hidden="true"></div>' + phone(f.vid, "hm-frow-phone", f.title + " 화면") + '<p class="hm-cap">' + icon("play", "xs") + "실제 화면 녹화 · 예시 데이터</p></div>" +
     "</article>";
     return '<section class="hm-sec" id="hm-features"><div class="hm-wrap">' +
@@ -189,9 +249,20 @@
     "</div></section>";
   }
 
+  // 단톡방 · 드라이브로 운영할 때와 비교
+  function compare() {
+    return '<section class="hm-sec hm-soft" id="hm-compare"><div class="hm-wrap">' +
+      secHead("swap", "단톡방 · 드라이브로 운영할 때와 무엇이 다른가요", "강의 내용은 그대로, 운영하는 방식만 바뀌어요. 기수가 쌓일수록 차이가 커져요.", applyBtn("입점 문의" + arrow(), "hm-shead-link")) +
+      '<div class="hm-cmp hm-reveal" role="table" aria-label="운영 방식 비교">' +
+        '<div class="hm-cmp-row hm-cmp-head" role="row"><span role="columnheader">항목</span><span role="columnheader">지금 방식 <small>단톡방 · 드라이브 · 노션</small></span><span role="columnheader">' + brandLock("hm-lock-xs") + "</span></div>" +
+        COMPARE.map((r) => '<div class="hm-cmp-row" role="row"><b role="rowheader">' + r[0] + '</b><span role="cell" class="hm-cmp-old">' + icon("minus", "xs") + r[1] + '</span><span role="cell" class="hm-cmp-new">' + icon("check", "xs") + r[2] + "</span></div>").join("") +
+      "</div>" +
+    "</div></section>";
+  }
+
   function students() {
     const cur = STUDENT_TABS.find((x) => x.key === stTab) || STUDENT_TABS[0];
-    return '<section class="hm-sec hm-soft" id="hm-students"><div class="hm-wrap">' +
+    return '<section class="hm-sec" id="hm-students"><div class="hm-wrap">' +
       secHead("book", "수강생은 이런 강의실을 받아요", "강사님 강의를 신청한 수강생이 로그인하면 열리는 화면이에요. 오늘 할 일과 내 진도가 언제나 보여서, 1주차부터 수료까지 길을 잃지 않아요.") +
       '<div class="hm-show">' +
         '<div class="hm-show-tabs" role="tablist" aria-label="수강생 기능">' + STUDENT_TABS.map((x) =>
@@ -207,18 +278,20 @@
 
   function teachers() {
     const cur = ADMIN_TABS.find((x) => x.key === adTab) || ADMIN_TABS[0];
-    return '<section class="hm-sec" id="hm-teachers"><div class="hm-wrap">' +
+    return '<section class="hm-sec hm-soft" id="hm-teachers"><div class="hm-wrap">' +
       secHead("activity", "강사님은 강사센터에서 모든 수강생을 한눈에", "커리큘럼을 한 번 올려 두면 수강생은 혼자서도 따라오고, 강사님은 진도 · 과제 · 질문을 한 화면에서 확인해요. 코치와 나눠서 운영할 수도 있어요.") +
       '<div class="hm-atabs" role="tablist" aria-label="강사센터 화면">' + ADMIN_TABS.map((x) => '<button type="button" role="tab" class="hm-atab' + (x.key === cur.key ? " on" : "") + '" aria-selected="' + (x.key === cur.key) + '" data-hm-ad="' + x.key + '">' + x.title + "</button>").join("") + "</div>" +
       '<div class="hm-ashot">' + browser("v-admin", "hm-admin-browser", "강사센터", true) + '<p class="hm-cap">' + icon("play", "xs") + "실제 강사센터 화면 녹화 · 예시 데이터 (이름은 가렸어요)</p></div>" +
       '<div class="hm-feats">' + ADMIN_FEATURES.map((x, i) => '<article class="hm-feat hm-hov hm-reveal"' + d(i % 4) + '><span class="hm-ic">' + icon(x[0]) + "</span><h3>" + x[1] + "</h3><p>" + x[2] + "</p></article>").join("") + "</div>" +
+      '<div class="hm-menus hm-reveal"><div class="hm-menus-h"><b>강사센터에서 직접 고치는 메뉴</b><span>코치 계정에는 이 중 필요한 메뉴만 열어 줄 수 있어요</span></div>' +
+        '<div class="hm-menus-g">' + ADMIN_MENUS.map((g) => '<div class="hm-menus-col"><em>' + g[0] + " <small>" + g[1].length + "</small></em><ul>" + g[1].map((m) => "<li>" + m + "</li>").join("") + "</ul></div>").join("") + "</div></div>" +
     "</div></section>";
   }
 
   // 이용료 구조 — 금액은 상담 때 안내 (화면에 숫자를 적지 않는다)
   function pricing() {
     const scale = [["100명", 20], ["300명", 60], ["500명", 100]];
-    return '<section class="hm-sec hm-soft" id="hm-pricing"><div class="hm-wrap">' +
+    return '<section class="hm-sec" id="hm-pricing"><div class="hm-wrap">' +
       secHead("coins", "수강생은 무료, 강사님은 하나의 이용료", "수강생이 100명이든 500명이든 이용료는 같아요. 수강생이 늘어도 비용 걱정 없이 다음 기수를 여세요.") +
       '<p class="hm-price-note hm-reveal">' + icon("award", "sm") + "<span>수강료 <b>239만 ~ 399만 원</b>짜리 강의, 수강생이 낸 만큼의 경험을 드리세요. 이용료는 수강생 수와 상관없이 고정이라, 기수가 커질수록 한 명당 부담은 줄어들어요.</span></p>" +
       '<div class="hm-plans">' +
@@ -231,6 +304,8 @@
           scale.map((s) => '<div class="hm-scale-row"><span class="hm-scale-n">수강생 ' + s[0] + '</span><span class="hm-scale-bar"><i style="width:' + s[1] + '%"></i></span><span class="hm-scale-fee">' + icon("check", "xs") + "같은 이용료</span></div>").join("") +
           '<p class="hm-scale-foot">인원당 과금이 아니라서, 모집이 잘될수록 강사님께 유리해요.</p></div>' +
       "</div>" +
+      '<div class="hm-cohort hm-reveal"><div class="hm-cohort-h"><b>기수 단위로 운영해요</b><span>무통장 입금 · 세금계산서 발행 · 기수 오픈까지 강사센터에서 이어져요</span></div>' +
+        '<ol class="hm-cohort-steps">' + COHORT.map((x, i) => '<li><span class="hm-ic hm-ic-sm">' + icon(x[0]) + '</span><span><em>STEP ' + (i + 1) + "</em><b>" + x[1] + "</b><small>" + x[2] + "</small></span></li>").join("") + "</ol></div>" +
     "</div></section>";
   }
 
@@ -238,7 +313,7 @@
   function lifelong() {
     const loop = [["layers", "1기 커리큘럼 세팅", "한 번 올리면 그대로 다음 기수에"], ["refresh", "2기 · 3기는 복사해서 바로", "기수별 일정 · 커리큘럼만 바꿔요"],
       ["heart", "끝난 기수에게도 새 자료", "강의실은 수료 후에도 남아요"], ["megaphone", "후기 · 단골이 다음 모집으로", "랜딩페이지 · 무료강의로 다시 연결"]];
-    return '<section class="hm-sec hm-life"><div class="hm-wrap hm-life-in">' +
+    return '<section class="hm-sec hm-soft hm-life"><div class="hm-wrap hm-life-in">' +
       '<div class="hm-life-copy hm-reveal">' +
         '<h2 class="hm-h2 hm-h2-xl">기수가 쌓일수록,<br>' + mark("강의가 강해져요") + ".</h2>" +
         "<p>1기 때 만든 커리큘럼 · 자료 · 과제를 2기, 3기에 그대로 쓰고 기수마다 조금씩 다듬기만 하면 돼요. 운영에 쓰던 시간을 강의에 쓰세요.</p>" +
@@ -297,56 +372,69 @@
 
   function faq() {
     return '<section class="hm-sec" id="hm-faq"><div class="hm-wrap hm-faq-in">' +
-      secHead("help", "자주 묻는 질문") +
-      '<div class="hm-faqs hm-reveal">' + FAQS.map((q, i) => '<details class="hm-faq"' + (i === 0 ? " open" : "") + "><summary><span>Q</span>" + q[0] + icon("chevDown", "sm") + "</summary><p>" + q[1] + "</p>" +
+      secHead("help", "자주 묻는 질문", "이용료 · 기수 운영 · 자료 옮기기 · 수강생 로그인까지, 입점 전에 가장 많이 물어보시는 것들이에요.", applyBtn("1:1 입점 상담" + arrow(), "hm-shead-link")) +
+      '<div class="hm-faqs hm-reveal">' + FAQS.map((q, i) => '<details class="hm-faq"' + (i < 2 ? " open" : "") + "><summary><span>Q</span>" + q[0] + icon("chevDown", "sm") + "</summary><p>" + q[1] + "</p>" +
         (q[2] ? '<div class="hm-faq-cta">' + applyBtn("이용료 상담 받기" + arrow(), "hm-btn hm-btn-p hm-btn-sm") + "</div>" : "") + "</details>").join("") + "</div>" +
     "</div></section>";
   }
 
   function finalCta() {
+    const pts = [["headset", "상담은 무료", "강의 방식 · 자료 · 일정부터 함께 정리해요"], ["layers", "처음 세팅을 함께", "랜딩 · 전자책 · 커리큘럼을 같이 만들어요"], ["users", "수강생은 무료", "수강생 수와 상관없이 같은 이용료"]];
     return '<section class="hm-final"><div class="hm-wrap hm-final-in">' +
-      '<h2 class="hm-h2">다음 기수부터,<br>두고 클래스로 운영해 보세요</h2>' +
-      "<p>강의 소개 랜딩페이지 · 무료강의 전자책 · 튜토리얼 시스템을 강사님 이름으로. 수강생은 무료예요.</p>" +
-      '<div class="hm-cta hm-cta-c">' + applyBtn("입점 문의하기" + arrow(), "hm-btn hm-btn-inv hm-btn-lg") + '<a class="hm-btn hm-btn-onpri hm-btn-lg" href="#/login">수강생 로그인</a></div>' +
+      '<div class="hm-final-copy"><p class="hm-final-k">' + icon("sparkles", "xs") + "다음 기수 준비, 지금 시작하세요</p>" +
+        '<h2 class="hm-h2">다음 기수부터,<br>두고 클래스로 운영해 보세요</h2>' +
+        "<p>강의 소개 랜딩페이지 · 무료강의 전자책 · 튜토리얼 시스템을 강사님 이름으로. 문의를 남겨 주시면 확인 후 바로 연락드려요.</p>" +
+        '<div class="hm-cta">' + applyBtn("입점 문의하기" + arrow(), "hm-btn hm-btn-inv hm-btn-lg") + '<a class="hm-btn hm-btn-onpri hm-btn-lg" href="#/login">수강생 로그인</a></div></div>' +
+      '<ul class="hm-final-pts">' + pts.map((x) => '<li><span class="hm-final-ic">' + icon(x[0]) + "</span><span><b>" + x[1] + "</b><small>" + x[2] + "</small></span></li>").join("") + "</ul>" +
     "</div></section>";
   }
 
-  /* 바닥 — 사업자 정보(채운 칸만) · 두고 그룹사 · 바로가기. 내용은 마스터 → 첫 화면 · 사업자 정보 */
+  /* 바닥 — 브랜드 · 바로가기 3단 · 고객센터 · 사업자 정보(채운 칸만) · 약관. 내용은 마스터 → 첫 화면 · 사업자 정보 */
   function footer() {
-    const S = DB.siteInfo ? DB.siteInfo() : { company: "(주)두고홀딩스", group: [] };
+    const S = DB.siteInfo ? DB.siteInfo() : { company: "(주)두고홀딩스" };
     const url = (u) => (/^https?:\/\//i.test(u || "") ? u : "");
     const ext = (href, label, cls) => '<a' + (cls ? ' class="' + cls + '"' : "") + ' href="' + esc(href) + '" target="_blank" rel="noopener">' + label + "</a>";
-    const host = (u) => String(u || "").replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
     const bizDigits = String(S.bizNo || "").replace(/[^0-9]/g, "");
+    const tel = (v) => '<a href="tel:' + esc(String(v).replace(/[^0-9+]/g, "")) + '">' + esc(v) + "</a>";
     const info = [
-      S.company && ["상호", esc(S.company)], S.ceo && ["대표", esc(S.ceo)],
+      ["상호", esc(S.company || "(주)두고홀딩스")], S.ceo && ["대표", esc(S.ceo)],
       S.bizNo && ["사업자등록번호", esc(S.bizNo) + (bizDigits.length === 10 ? " " + ext("https://www.ftc.go.kr/bizCommPop.do?wrkr_no=" + bizDigits, "사업자정보확인", "hm-foot-chk") : "")],
       S.mailOrderNo && ["통신판매업 신고", esc(S.mailOrderNo)], S.address && ["주소", esc(S.address)],
-      S.phone && ["고객센터", '<a href="tel:' + esc(S.phone.replace(/[^0-9+]/g, "")) + '">' + esc(S.phone) + "</a>"], S.email && ["이메일", '<a href="mailto:' + esc(S.email) + '">' + esc(S.email) + "</a>"],
-      S.hours && ["운영 시간", esc(S.hours)], S.privacyOfficer && ["개인정보 보호책임자", esc(S.privacyOfficer)], S.hosting && ["호스팅 제공자", esc(S.hosting)]
+      S.phone && ["고객센터", tel(S.phone)], S.email && ["이메일", '<a href="mailto:' + esc(S.email) + '">' + esc(S.email) + "</a>"],
+      S.privacyOfficer && ["개인정보 보호책임자", esc(S.privacyOfficer)], ["호스팅 제공자", esc(S.hosting || "Vercel Inc.")]
     ].filter(Boolean);
-    const group = [{ name: "두고 클래스", desc: "강사님을 위한 강의 운영 플랫폼", here: true }].concat((S.group || []).filter((g) => g && g.name));
-    // 그룹사 카드는 글자 대신 두고 로고 심볼로
-    const gCard = (g) => g.here
-      ? '<span class="hm-fam hm-fam-here"><span class="hm-fam-mark"><img src="assets/brand/doogo-mark.png" alt="" width="123" height="128"></span><span class="hm-fam-t"><b>' + esc(g.name) + "</b><small>" + esc(g.desc) + '</small></span><em>지금 보는 곳</em></span>'
-      : (url(g.url) ? '<a class="hm-fam" href="' + esc(g.url) + '" target="_blank" rel="noopener">' : '<span class="hm-fam">') +
-        '<span class="hm-fam-mark"><img src="assets/brand/doogo-mark.png" alt="" width="123" height="128"></span><span class="hm-fam-t"><b>' + esc(g.name) + "</b><small>" + esc(g.desc || host(g.url)) + "</small></span>" +
-        (url(g.url) ? icon("arrowUpRight", "sm") + "</a>" : "</span>");
+    const legal = (key, label, href) => (url(href) ? ext(href, label) : '<button type="button" data-hm-legal="' + key + '">' + label + "</button>");
     return '<footer class="hm-foot"><div class="hm-wrap">' +
       '<div class="hm-foot-top">' +
-        '<div class="hm-foot-brand">' + brandLock() + "<p>강사님 이름으로 운영하는 강의 플랫폼<br>랜딩페이지 · 무료강의 전자책 · 튜토리얼 시스템</p></div>" +
+        '<div class="hm-foot-brand">' + brandLock() + "<p>강사님 이름으로 운영하는 강의 플랫폼.<br>강의 소개 랜딩페이지 · 무료강의 전자책 · 수강생 케어 튜토리얼 시스템을 하나로.</p>" +
+          '<div class="hm-foot-cta">' + applyBtn("입점 문의하기" + arrow(), "hm-btn hm-btn-p hm-btn-sm") + '<a class="hm-btn hm-btn-sec hm-btn-sm" href="#/center">강사센터</a></div></div>' +
         '<nav class="hm-foot-cols" aria-label="바로가기">' +
-          '<div class="hm-foot-col"><b>서비스</b>' + applyBtn("입점 문의", "hm-foot-apply") + '<a href="#/center">강사센터</a><a href="#/login">수강생 로그인</a></div>' +
-          '<div class="hm-foot-col"><b>고객지원</b>' + scrollBtn("hm-faq", "자주 묻는 질문", "hm-foot-a") +
-            (url(S.terms) ? ext(S.terms, "이용약관") : "") + (url(S.privacy) ? ext(S.privacy, "<strong>개인정보처리방침</strong>") : "") +
+          '<div class="hm-foot-col"><b>두고 클래스</b>' + scrollBtn("hm-features", "3가지 기능", "hm-foot-a") + scrollBtn("hm-students", "수강생 화면", "hm-foot-a") + scrollBtn("hm-teachers", "강사센터 둘러보기", "hm-foot-a") + scrollBtn("hm-pricing", "이용료 · 기수 운영", "hm-foot-a") + scrollBtn("hm-classes", "강사진", "hm-foot-a") + "</div>" +
+          '<div class="hm-foot-col"><b>바로가기</b>' + applyBtn("강사 입점 문의", "hm-foot-apply") + '<a href="#/center">강사센터 로그인</a><a href="#/login">수강생 로그인</a><a href="#/center/billing">다음 기수 신청</a></div>' +
+          '<div class="hm-foot-col"><b>고객지원</b>' + scrollBtn("hm-faq", "자주 묻는 질문", "hm-foot-a") + legal("terms", "이용약관", S.terms) + legal("privacy", "<strong>개인정보처리방침</strong>", S.privacy) +
             (S.email ? '<a href="mailto:' + esc(S.email) + '">이메일 문의</a>' : "") + "</div>" +
         "</nav>" +
+        '<div class="hm-foot-cs"><b>고객센터</b>' +
+          (S.phone ? '<p class="hm-foot-tel">' + tel(S.phone) + "</p>" : '<p class="hm-foot-tel hm-foot-tel-sm">입점 문의로 남겨 주세요</p>') +
+          "<p>" + (S.hours ? esc(S.hours) : "입점 문의는 24시간 남길 수 있어요") + "</p>" +
+          (S.email ? '<p><a href="mailto:' + esc(S.email) + '">' + esc(S.email) + "</a></p>" : "") +
+          applyBtn(icon("handshake", "xs") + "입점 문의 남기기", "hm-foot-cs-btn") + "</div>" +
       "</div>" +
-      '<div class="hm-foot-group"><p class="hm-foot-label">두고 그룹사<small>' + esc(S.company || "(주)두고홀딩스") + "가 운영하는 서비스</small></p>" +
-        '<div class="hm-fams">' + group.map(gCard).join("") + "</div></div>" +
-      '<div class="hm-foot-biz">' + (info.length ? '<dl class="hm-foot-info">' + info.map((x) => "<div><dt>" + x[0] + "</dt><dd>" + x[1] + "</dd></div>").join("") + "</dl>" : "") +
-        '<p class="hm-foot-copy">© 2026 DOOGO HOLDINGS. All rights reserved.</p></div>' +
+      '<div class="hm-foot-biz"><dl class="hm-foot-info">' + info.map((x) => "<div><dt>" + x[0] + "</dt><dd>" + x[1] + "</dd></div>").join("") + "</dl>" +
+        '<div class="hm-foot-bottom"><nav class="hm-foot-legal" aria-label="약관">' + legal("terms", "이용약관", S.terms) + legal("privacy", "<strong>개인정보처리방침</strong>", S.privacy) + legal("oss", "오픈소스 라이선스", "") + "</nav>" +
+        '<p class="hm-foot-copy">© 2026 ' + esc(S.company || "(주)두고홀딩스") + ". All rights reserved.</p></div></div>" +
     "</div></footer>";
+  }
+  // 약관 (사이트 주소를 정하기 전에는 수강생 화면과 같은 내용을 팝업으로)
+  function openLegal(key) {
+    const L = (window.CLASS_LEGAL || {})[key];
+    if (!L) return;
+    const mr = document.getElementById("modal-root");
+    mr.innerHTML = '<div class="hm-mbg" data-hm-bg><div class="hm-modal hm-modal-doc" role="dialog" aria-modal="true" aria-labelledby="hm-lg-t">' +
+      '<button type="button" class="hm-modal-x" data-hm-close aria-label="닫기">' + icon("x") + "</button>" +
+      '<div class="hm-modal-in"><div class="hm-modal-head"><h2 id="hm-lg-t">' + esc(L[0]) + '</h2></div><div class="hm-doc">' + esc(L[1]) + "</div>" +
+      '<button type="button" class="hm-btn hm-btn-p hm-btn-lg hm-btn-block" data-hm-close>확인</button></div></div></div>';
+    document.documentElement.classList.add("hm-noscroll");
   }
 
   /* ---------- 강사 입점 문의 팝업 ---------- */
@@ -421,7 +509,7 @@
     document.title = "두고 클래스 — 강사님을 위한 강의 운영 플랫폼";
     dark = null;
     const list = classes();
-    root.innerHTML = '<div class="hm">' + header() + "<main>" + hero() + stats(list) + problem() + features() + students() + teachers() + pricing() + lifelong() + classList(list) + journey() + faq() + finalCta() + "</main>" + footer() + "</div>";
+    root.innerHTML = '<div class="hm">' + header() + "<main>" + hero(list) + stats(list) + problem() + flow() + features() + compare() + students() + teachers() + pricing() + lifelong() + classList(list) + journey() + faq() + finalCta() + "</main>" + footer() + "</div>";
     onScroll();
     reveal();
     wireVideos();
@@ -522,7 +610,7 @@
       if (on !== dark) {
         dark = on;
         top.classList.toggle("scrolled", on);
-        const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", on ? "#e5e8ef" : "#ffffff");
+        const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", "#ffffff");
       }
       if (prog) prog.style.transform = "scaleX(" + (max > 0 ? Math.min(1, y / max) : 0).toFixed(4) + ")";
     });
@@ -547,6 +635,8 @@
     if (!isActive()) return;
     if (e.target.closest("[data-hm-close]") || (e.target.matches && e.target.matches("[data-hm-bg]"))) { closeApply(); return; }
     if (e.target.closest("[data-hm-apply]")) { e.preventDefault(); openApply(); return; }
+    const lg = e.target.closest("[data-hm-legal]");
+    if (lg) { e.preventDefault(); openLegal(lg.dataset.hmLegal); return; }
     const s = e.target.closest("[data-hm-scroll]");
     if (s) { e.preventDefault(); scrollToId(s.dataset.hmScroll); return; }
     const vb = e.target.closest("[data-hm-vid]");

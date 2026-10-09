@@ -131,21 +131,21 @@
     const coachTab = loginTab === "coach", ins = loginTab === "instructor" || coachTab;
     document.title = (coachTab ? "코치센터" : ins ? "강사센터" : "마스터 관리자") + " · 로그인";
     const L = coachTab
-      ? { theme: "teal", tag: "코치", eyebrow: "DOOGO COACH WORKSPACE", h: "과제 피드백과<br>1:1 문의를 한 곳에서", sub: "강사님이 맡긴 메뉴에서 수강생 과제를 검수하고, 문의에 답하고, 진행 상황을 챙길 수 있습니다.", icons: ["checks", "message", "users", "award"], label: "COACH", title: "코치 로그인", lead: "강사님이 등록해 준 이름과 전화번호 뒷자리로 로그인하세요." }
+      ? { theme: "green", tag: "코치", eyebrow: "DOOGO COACH WORKSPACE", h: "과제 피드백과<br>1:1 문의를 한 곳에서", sub: "강사님이 맡긴 메뉴에서 수강생 과제를 검수하고, 문의에 답하고, 진행 상황을 챙길 수 있습니다.", icons: ["checks", "message", "users", "award"], label: "COACH", title: "코치 로그인", lead: "강사님이 등록해 준 이름과 전화번호 뒷자리로 로그인하세요." }
       : ins
-      ? { theme: "blue", tag: "강사센터", eyebrow: "DOOGO INSTRUCTOR CENTER", h: "수강생 관리부터<br>커리큘럼까지 한 곳에서", sub: "기수별 수강생 승인, 과제 검수, 강의 영상과 일정 업로드를 간편하게 운영할 수 있습니다.", icons: ["users", "play", "calendar", "settings"], label: "INSTRUCTOR", title: "강사 로그인", lead: "강사 이름과 전화번호 뒷자리로 로그인하세요." }
-      : { theme: "violet", tag: "마스터", eyebrow: "DOOGO MASTER CONSOLE", h: "강사 플랫폼을<br>분양하고 관리하세요", sub: "새 강사 플랫폼 개설, 운영 중지, 강사센터 대신 접속과 전체 수강생 현황을 한 곳에서 봅니다.", icons: ["store", "layers", "users", "shieldCheck"], label: "MASTER", title: "마스터 로그인", lead: "운영자 전용 관리자 계정으로 로그인하세요." };
+      ? { theme: "red", tag: "강사센터", eyebrow: "DOOGO INSTRUCTOR CENTER", h: "수강생 관리부터<br>커리큘럼까지 한 곳에서", sub: "기수별 수강생 승인, 과제 검수, 강의 영상과 일정 업로드를 간편하게 운영할 수 있습니다.", icons: ["users", "play", "calendar", "settings"], label: "INSTRUCTOR", title: "강사 로그인", lead: "강사 이름과 전화번호 뒷자리로 로그인하세요." }
+      : { theme: "dark", tag: "마스터", eyebrow: "DOOGO MASTER CONSOLE", h: "강사 플랫폼을<br>분양하고 관리하세요", sub: "새 강사 플랫폼 개설, 운영 중지, 강사센터 대신 접속과 전체 수강생 현황을 한 곳에서 봅니다.", icons: ["store", "layers", "users", "shieldCheck"], label: "MASTER", title: "마스터 로그인", lead: "운영자 전용 관리자 계정으로 로그인하세요." };
     root.innerHTML =
       '<main class="adm a-login a-login-' + L.theme + '">' +
         '<section class="a-login-brand">' + window.loginArt(L.theme, L.icons) +
-          '<span class="a-logo a-logo-doogo">' + window.doogoLogo("white") + '<span class="a-logo-sub">CLASS</span><em>' + L.tag + "</em></span>" +
+          '<span class="a-logo a-logo-doogo">' + window.doogoClassLock("hm-lock-inv") + "<em>" + L.tag + "</em></span>" +
           '<div class="a-login-hero"><p class="a-eyebrow">' + L.eyebrow + "</p><h2>" + L.h + "</h2><p>" + L.sub + "</p></div>" +
           '<div class="a-login-foot"><span>© 2026 (주) 두고홀딩스 · doogo</span><span>Secure ' + (coachTab ? "coach" : ins ? "instructor" : "admin") + " workspace</span></div>" +
         "</section>" +
         '<section class="a-login-panel">' +
           '<div class="a-login-topright"><span>수강생이신가요?</span><a class="a-btn a-btn-primary a-btn-sm" href="#/login" data-action="to-student">바로가기</a></div>' +
           '<div class="a-login-stack"><div class="a-login-card">' +
-            '<p class="a-login-label">' + window.doogoLogo("color") + "<span>" + L.label + "</span></p>" +
+            '<p class="a-login-label">' + window.doogoClassLock() + '<em class="a-login-role">' + L.label + "</em></p>" +
             "<h1>" + L.title + '</h1><p class="a-muted a-center">' + L.lead + "</p>" +
             '<div class="a-seg" role="tablist">' +
               '<button type="button" role="tab" aria-selected="' + (ins && !coachTab) + '" class="' + (ins && !coachTab ? "on" : "") + '" data-action="login-tab" data-tab="instructor">' + icon("user", "sm") + "강사</button>" +
@@ -281,7 +281,7 @@
         (S.role === "master" && S.actingAs ? '<div class="a-acting">' + icon("shieldCheck", "sm") + "<span>마스터 권한으로 <b>" + esc(ins.name) + "</b> 강사센터를 보고 있어요.</span>" + btn("마스터로 돌아가기", "stop-acting", "a-btn-light a-btn-sm") + "</div>" : "") +
         '<header class="a-top">' +
           '<button class="a-icon-btn a-menu" type="button" data-action="toggle-nav" aria-label="메뉴">' + icon("menu") + "</button>" +
-          '<a class="a-logo" href="#/center' + (master ? "/master" : "") + '"><span class="a-logo-mark">' + window.doogoLogo("markWhite") + "</span><b>" + (master ? "마스터 관리자" : isCoach() ? "코치센터" : "강사센터") + "</b>" + (ins ? '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>" : "") + "</a>" +
+          '<a class="a-logo" href="#/center' + (master ? "/master" : "") + '">' + window.doogoClassLock("hm-lock-xs") + '<b class="a-logo-role">' + (master ? "마스터 관리자" : isCoach() ? "코치센터" : "강사센터") + "</b>" + (ins ? '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>" : "") + "</a>" +
           '<div class="a-top-right">' +
             (ins ? '<span class="a-chip a-hide-sm">' + (co ? esc(co.name) + " · " + DB.STATUS_LABEL[DB.cohortStatus(co)] : "기수 없음") + "</span>" +
               btn(icon("eye", "sm") + '<span class="a-hide-sm">수강생 화면 보기</span>', "preview", "a-btn-outline a-btn-sm") : "") +
@@ -1991,13 +1991,10 @@
   function pageMasterSite() {
     const s = DB.siteInfo();
     const fld = (x) => '<div class="a-field' + (x[3] ? " a-span2" : "") + '"><label for="site-' + x[0] + '">' + x[1] + '</label><input class="a-input" id="site-' + x[0] + '" name="' + x[0] + '" value="' + esc(s[x[0]] || "") + '" placeholder="' + esc(x[2]) + '" maxlength="200"></div>';
-    const group = (s.group || []).map((g) => [g.name, g.url].concat(g.desc ? [g.desc] : []).join(" | ")).join("\n");
-    return head("첫 화면 · 사업자 정보", "두고 클래스 첫 화면 맨 아래(바닥)에 보이는 사업자 정보와 두고 그룹사예요. 채운 칸만 보여요.", '<a class="a-btn a-btn-outline a-btn-sm" href="#/about" target="_blank" rel="noopener">' + icon("arrowUpRight", "sm") + "첫 화면 열기</a>") +
+    return head("첫 화면 · 사업자 정보", "두고 클래스 첫 화면 맨 아래(바닥)에 보이는 사업자 정보 · 고객센터예요. 채운 칸만 보여요.", '<a class="a-btn a-btn-outline a-btn-sm" href="#/about" target="_blank" rel="noopener">' + icon("arrowUpRight", "sm") + "첫 화면 열기</a>") +
       '<form id="site-form" class="a-site-form" novalidate>' +
         '<section class="a-card"><div class="a-card-head"><h2>사업자 정보</h2><span class="a-muted">전자상거래법에 따라 사이트 바닥에 표시하는 정보예요</span></div>' +
           '<div class="a-site-grid">' + SITE_FIELDS.map(fld).join("") + "</div></section>" +
-        '<section class="a-card"><div class="a-card-head"><h2>두고 그룹사</h2><span class="a-muted">바닥의 ‘두고 그룹사’ 카드 · 한 줄에 하나씩</span></div>' +
-          '<div class="a-field"><label for="site-group">이름 | 주소 | 한 줄 설명(선택)</label><textarea class="a-input" id="site-group" name="group" rows="4" placeholder="두고푸드 | https://www.doogofood.com/ | 한 줄 설명">' + esc(group) + "</textarea></div></section>" +
         '<div class="a-site-save"><button type="submit" class="a-btn a-btn-primary">' + icon("check", "sm") + "저장</button></div>" +
       "</form>";
   }
@@ -2495,8 +2492,7 @@
       const next = {};
       SITE_FIELDS.forEach((x) => { next[x[0]] = String(f[x[0]].value || "").replace(/\s+/g, " ").trim().slice(0, 200); });
       ["terms", "privacy"].forEach((k) => { if (next[k] && !/^https?:\/\//i.test(next[k])) next[k] = "https://" + next[k]; });
-      next.group = String(f.group.value || "").split("\n").map((ln) => ln.split("|").map((v) => v.trim())).filter((v) => v[0])
-        .map((v) => ({ name: v[0].slice(0, 30), url: v[1] ? (/^https?:\/\//i.test(v[1]) ? v[1] : "https://" + v[1]).slice(0, 200) : "", desc: (v[2] || "").slice(0, 60) })).slice(0, 8);
+      next.group = DB.siteInfo().group; // 두고 그룹사 칸은 바닥에서 뺐지만, 저장해 둔 값은 그대로 둔다
       if (!DB.saveSite(next)) { toast("저장하지 못했어요.", "warn"); return; }
       render(); toast("첫 화면 바닥 정보를 저장했어요.");
       return;

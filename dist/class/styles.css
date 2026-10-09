@@ -720,8 +720,10 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 .lx-tile.t4 .icon { width: 28px; height: 28px; }
 @keyframes lxfloat { 0%, 100% { translate: 0 0; } 50% { translate: 0 -12px; } }
 .lx-wise { --lx-glow: rgba(var(--theme-rgb), .22); --lx-beam-a: rgba(var(--theme-rgb), .30); --lx-beam-b: rgba(var(--theme-rgb), .06); --lx-tile-a: rgba(var(--theme-rgb), .34); --lx-tile-b: rgba(var(--theme-rgb), .10); --lx-tile-line: rgba(var(--theme-rgb), .40); --lx-icon: var(--accent-active); }
-.lx-blue { --lx-glow: rgba(56, 140, 255, .32); --lx-beam-a: rgba(36, 120, 255, .42); --lx-beam-b: rgba(20, 50, 160, .10); --lx-tile-a: rgba(70, 140, 255, .50); --lx-tile-b: rgba(40, 60, 200, .22); --lx-tile-line: rgba(160, 200, 255, .35); --lx-icon: #cfe1ff; }
-.lx-violet { --lx-glow: rgba(160, 100, 255, .30); --lx-beam-a: rgba(140, 90, 255, .42); --lx-beam-b: rgba(70, 30, 170, .10); --lx-tile-a: rgba(150, 105, 255, .50); --lx-tile-b: rgba(80, 40, 190, .22); --lx-tile-line: rgba(210, 190, 255, .35); --lx-icon: #e6dbff; }
+/* 강사센터 = 여기어때 레드 바탕 위 흰 유리 · 마스터 = 차콜 위 레드 유리 · 코치 = 그린 바탕 위 흰 유리 */
+.lx-red, .lx-green { --lx-glow: rgba(255, 255, 255, .20); --lx-beam-a: rgba(255, 255, 255, .22); --lx-beam-b: rgba(255, 255, 255, .04); --lx-tile-a: rgba(255, 255, 255, .34); --lx-tile-b: rgba(255, 255, 255, .10); --lx-tile-line: rgba(255, 255, 255, .45); --lx-icon: #fff; }
+.lx-red .lx-tile, .lx-green .lx-tile { box-shadow: 0 24px 48px -20px rgba(90, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.lx-dark { --lx-glow: rgba(249, 66, 57, .26); --lx-beam-a: rgba(249, 66, 57, .36); --lx-beam-b: rgba(234, 32, 19, .08); --lx-tile-a: rgba(249, 66, 57, .50); --lx-tile-b: rgba(234, 32, 19, .18); --lx-tile-line: rgba(251, 127, 121, .40); --lx-icon: #ffedea; }
 
 .login-brand { background: linear-gradient(160deg, var(--login-bg-a) 0%, var(--login-bg-b) 46%, var(--login-bg-c) 100%); color: #e8ebe6; padding: 44px 48px 0; }
 .login-brand::after { display: none; }
@@ -743,7 +745,6 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 .login-stack { width: 100%; max-width: 440px; display: grid; gap: 16px; }
 .login-card { max-width: none; padding: 36px 36px 28px; border: 1px solid var(--line-soft); border-radius: var(--r-xl); background: var(--canvas); box-shadow: 0 30px 60px -30px rgba(14, 15, 12, .25), 0 2px 6px rgba(14, 15, 12, .04); }
 .login-label { margin: 0 0 10px; text-align: center; font-size: 14px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink-deep); }
-.login-label span { font-size: 10px; font-weight: 800; letter-spacing: .18em; color: var(--positive); margin-left: 4px; }
 .login-card h1 { font-size: 26px; }
 .login-card .lead { margin-bottom: 24px; font-size: 14px; }
 .input-icon { position: relative; }
@@ -859,7 +860,6 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 .custom-page .body { font-size: 16px; line-height: 1.85; white-space: pre-line; }
 .custom-page .video { margin-bottom: 18px; }
 @media (max-width: 720px) { .brand .logo-mark { width: 32px; height: 32px; } }
-.login-label span { color: var(--ink-deep); opacity: .75; }
 .ins-txt small, .faq-cat { color: var(--ink-deep); }
 
 /* ---------- 시작 가이드 · 오늘 라이브 · 새 공지 · 메모 ---------- */
@@ -923,7 +923,6 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 /* 로그인 카드 위 doogo 로고 2배 */
 .login-label { gap: 10px; margin-bottom: 14px; }
 .login-label .doogo-logo { height: 30px; }
-.login-label span { font-size: 13px; letter-spacing: .2em; }
 
 /* ===== v6: 본문 서식 · 커리큘럼 주차 카드 · 공지 사진 ===== */
 .rich { white-space: normal; overflow-wrap: anywhere; }
@@ -1368,3 +1367,6 @@ body.lib-gated #main > .page { filter: blur(6px); pointer-events: none; user-sel
 .boot-err b { font-size: 18px; color: #0e0f0c; }
 .boot-err button { margin-top: 6px; min-height: 44px; padding: 0 22px; border-radius: 999px; border: 0; background: #163300; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 @keyframes bootspin { to { transform: rotate(360deg); } }
+
+/* 로그인 카드 위 두고 클래스 로고 (새 로고 — 모양은 home.css .hm-lock) */
+.login-label .hm-lock { --lh: 26px; }
