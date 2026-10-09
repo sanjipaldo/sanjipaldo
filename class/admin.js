@@ -266,7 +266,7 @@
   const allRequests = () => DB.data.instructors.flatMap((ins) => DB.requests(ins.id).map((x) => Object.assign({ ins }, x))).sort((a, b) => b.q.at - a.q.at);
   const masterNav = () => [
     ["운영", [["master", "대시보드", "grid"], ["master/instructors", "강사 플랫폼 관리", "store"], ["master/menus", "메뉴 · 색상 설정", "sliders"], ["master/health", "플랫폼 현황", "activity"]]],
-    ["지원", [["master/students", "전체 수강생", "users"], ["master/reports", "오류 신고 모아보기", "bug", allRequests().filter((x) => !x.q.answer).length], ["master/notices", "강사 공지", "megaphone"], ["master/data", "데이터 관리", "database"]]]
+    ["지원", [["master/partners", "강사 입점 문의", "handshake", DB.inquiries().filter((x) => (x.status || "new") === "new").length], ["master/students", "전체 수강생", "users"], ["master/reports", "오류 신고 모아보기", "bug", allRequests().filter((x) => !x.q.answer).length], ["master/notices", "강사 공지", "megaphone"], ["master/data", "데이터 관리", "database"]]]
   ];
 
   function renderShell(r) {
@@ -1547,6 +1547,35 @@
       '<form class="a-q-form" data-sid="' + x.s.id + '" data-qid="' + x.q.id + '"><textarea class="a-input" name="answer" rows="3" placeholder="예: 확인해 보니 ○○ 문제였어요. 지금 고쳤으니 새로고침 후 다시 해 주세요." aria-label="답변">' + esc(x.q.answer || "") + '</textarea><button class="a-btn a-btn-primary a-btn-sm" type="submit">' + (x.q.answer ? "답변 수정" : "답변 등록") + "</button></form></article>").join("") + "</div>";
   }
 
+  /* ---------------- 마스터: 강사 입점 문의 (첫 화면 ‘강사 입점 문의’ 팝업으로 들어온 신청) ---------------- */
+  const INQ_STATUS = [["new", "새 문의", "warn"], ["contact", "연락 중", "info"], ["done", "입점 완료", "ok"], ["hold", "보류", "mute"]];
+  const inqStatus = (x) => INQ_STATUS.find((s) => s[0] === (x.status || "new")) || INQ_STATUS[0];
+  function pageMasterPartners() {
+    const all = DB.inquiries();
+    const f = ui.inqFilter || "all";
+    const shown = all.filter((x) => f === "all" || (x.status || "new") === f);
+    const tabs = [["all", "전체", all.length]].concat(INQ_STATUS.map((s) => [s[0], s[1], all.filter((x) => (x.status || "new") === s[0]).length])).map((t) =>
+      '<button type="button" class="a-tab' + (f === t[0] ? " on" : "") + '" data-action="inq-tab" data-k="' + t[0] + '">' + t[1] + ' <span class="num">' + t[2] + "</span></button>").join("");
+    const link = (u) => (/^https?:\/\//i.test(u || "") ? '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(u) + "</a>" : esc(u || "-"));
+    const card = (x) => {
+      const st = inqStatus(x);
+      return '<article class="a-inq" data-inq="' + esc(x.id) + '"><div class="a-inq-head"><span class="a-avatar">' + esc((x.name || "?").slice(0, 1)) + "</span><div><b>" + esc(x.name) + "</b><small>" + fmtStamp(x.at) + " 접수</small></div>" + pill(st[1], st[2]) + "</div>" +
+        '<dl class="a-inq-info"><div><dt>이메일</dt><dd><a href="mailto:' + esc(x.email) + '">' + esc(x.email) + "</a></dd></div><div><dt>연락처</dt><dd><a href=\"tel:" + esc(String(x.phone || "").replace(/[^0-9+]/g, "")) + '">' + esc(x.phone) + "</a></dd></div>" +
+          "<div><dt>강의 중인 곳</dt><dd>" + esc(x.where || "-") + "</dd></div><div><dt>강의 링크</dt><dd>" + link(x.link) + "</dd></div></dl>" +
+        '<div class="a-inq-block"><b>어떤 강의인가요</b><p>' + esc(x.course) + "</p></div>" +
+        (x.message ? '<div class="a-inq-block"><b>남긴 말</b><p>' + esc(x.message) + "</p></div>" : "") +
+        '<div class="a-inq-ctl"><label class="a-inq-st"><span>상태</span><select class="a-input a-sm" data-inq-status="' + esc(x.id) + '">' + INQ_STATUS.map((s) => '<option value="' + s[0] + '"' + (s[0] === st[0] ? " selected" : "") + ">" + s[1] + "</option>").join("") + "</select></label>" +
+          '<textarea class="a-input" rows="2" data-inq-memo="' + esc(x.id) + '" placeholder="메모 (예: 10/12 통화 · 다음 주 미팅)" aria-label="메모">' + esc(x.memo || "") + "</textarea>" +
+          '<div class="a-row-actions">' + btn(icon("check", "sm") + "메모 저장", "inq-memo", "a-btn-outline a-btn-sm", ' data-id="' + esc(x.id) + '"') + btn(icon("trash", "sm") + "삭제", "inq-del", "a-btn-ghost a-btn-sm danger", ' data-id="' + esc(x.id) + '"') + "</div></div>" +
+      "</article>";
+    };
+    return head("강사 입점 문의", "첫 화면의 ‘강사 입점 문의’로 들어온 신청이에요. 연락한 뒤 상태를 바꾸고 메모를 남겨 두세요. 새 문의는 왼쪽 메뉴에 숫자로 보여요.",
+        '<a class="a-btn a-btn-ghost" href="#/partner" target="_blank" rel="noopener">' + icon("arrowUpRight", "sm") + "문의 화면 열기</a>") +
+      '<section class="a-card"><div class="a-toolbar"><div class="a-tabs">' + tabs + "</div></div>" +
+        (shown.length ? '<div class="a-stack">' + shown.map(card).join("") + "</div>" : emptyBox("handshake", f === "all" ? "아직 들어온 입점 문의가 없어요." : "이 상태의 문의가 없어요.")) + "</section>";
+  }
+  function findInq(id) { return DB.inquiries().find((x) => x.id === id); }
+
   /* ---------------- 마스터: 강사 공지 ---------------- */
   function pageMasterNotices() {
     const list = DB.data.announcements.slice().sort((a, b) => (b.pinned - a.pinned) || b.date.localeCompare(a.date));
@@ -1557,7 +1586,7 @@
 
   /* ---------------- 마스터: 데이터 관리 ---------------- */
   function snapshot() {
-    return { exportedAt: new Date().toISOString(), db: DB.data, progress: DB.allProgress() };
+    return { exportedAt: new Date().toISOString(), db: DB.data, progress: DB.allProgress(), inquiries: DB.inquiries() };
   }
   function pageMasterData() {
     const json = JSON.stringify(snapshot());
@@ -1637,7 +1666,9 @@
     const ins = DB.data.instructors;
     const st = DB.data.students;
     const running = DB.data.cohorts.filter((c) => DB.cohortStatus(c) === "running").length;
+    const newInq = DB.inquiries().filter((x) => (x.status || "new") === "new").length;
     return head("마스터 대시보드", "강사 플랫폼을 만들어 분양하고, 전체 운영 현황을 봐요.", btn(icon("plus", "sm") + "새 강사 플랫폼", "ins-add", "a-btn-primary")) +
+      (newInq ? '<a class="a-inq-alert" href="#/center/master/partners">' + icon("handshake", "sm") + "<b>새 강사 입점 문의 " + newInq + "건</b><span>확인하고 연락해 주세요</span>" + icon("arrowRight", "sm") + "</a>" : "") +
       '<div class="a-kpis">' +
         kpi("강사 플랫폼", ins.length + "개", "운영 중 " + ins.filter((x) => x.status === "active").length + "개", "#/center/master/instructors") +
         kpi("전체 수강생", st.filter((s) => s.status === "approved").length + "명", "수강 중 기준", "#/center/master/students") +
@@ -1728,7 +1759,7 @@
 
   /* ---------------- 렌더 ---------------- */
   const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, partners: pagePartners, coaches: pageCoaches, pages: pageCustomPages };
-  const MPAGES = { "": pageMasterHome, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData };
+  const MPAGES = { "": pageMasterHome, partners: pageMasterPartners, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData };
   function render() {
     closeModal();
     const r = route();
@@ -1912,7 +1943,7 @@
         if (!data || !data.db || !Array.isArray(data.db.instructors)) { toast("두고 클래스 백업 형식이 아니에요.", "warn"); break; }
         confirmModal("백업으로 복원", "지금 데이터를 지우고 " + esc((data.exportedAt || "").slice(0, 16).replace("T", " ")) + " 백업으로 되돌릴까요?", "복원", true, () => {
           if (DB.remote.on) {
-            DB.remote.call("admin", { action: "import", db: data.db, progress: data.progress || {} }).then((r) => {
+            DB.remote.call("admin", { action: "import", db: data.db, progress: data.progress || {}, inquiries: data.inquiries || [] }).then((r) => {
               if (r.error) { toast("복원하지 못했어요. 백업 내용을 확인해 주세요.", "warn"); return; }
               location.reload();
             }).catch(() => toast("서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"));
@@ -1920,11 +1951,15 @@
           }
           DB.store.keys().filter((k) => k.indexOf("moonclass:progress:") === 0).forEach((k) => DB.store.remove(k));
           Object.keys(data.progress || {}).forEach((sid) => DB.store.set("moonclass:progress:" + sid, data.progress[sid]));
+          if (Array.isArray(data.inquiries)) { const m = {}; data.inquiries.forEach((x) => { if (x && x.id) m[x.id] = x; }); DB.store.set("moonclass:inquiries", m); }
           DB.store.set("moonclass:db:v2", data.db);
           DB.load(); closeModal(); render(); toast("백업으로 복원했어요.");
         });
         break;
       }
+      case "inq-tab": ui.inqFilter = d.k; render(); break;
+      case "inq-memo": { const x = findInq(d.id), ta = document.querySelector('[data-inq-memo="' + d.id + '"]'); if (x && ta) { x.memo = ta.value.trim(); DB.saveInquiry(x); toast("메모를 저장했어요."); } break; }
+      case "inq-del": { const x = findInq(d.id); if (!x) break; confirmModal("입점 문의 삭제", "‘" + esc(x.name) + "’ 님의 입점 문의를 삭제할까요?<br>삭제하면 되돌릴 수 없어요.", "삭제", true, () => { DB.removeInquiry(x.id); closeModal(); render(); toast("입점 문의를 삭제했어요."); }); break; }
       case "brand-photo-del": if (C().brand.photo) setBrandPhoto(""); break;
       case "server-backup":
         DB.remote.call("admin", { action: "backup" }).then((r) => { if (r.error) throw new Error(r.error); ui.backups = null; render(); toast("지금 상태를 서버에 백업했어요."); }).catch(() => toast("백업하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"));
@@ -2041,6 +2076,7 @@
     }
     else if (t.id === "att-file") { addAttFiles(t.files); t.value = ""; }
     else if (t.id === "img-file") { addImgFiles(t.files); t.value = ""; }
+    else if (t.dataset && t.dataset.inqStatus) { const x = findInq(t.dataset.inqStatus); if (x) { x.status = t.value; DB.saveInquiry(x); render(); toast("‘" + inqStatus(x)[1] + "’(으)로 바꿨어요."); } }
     else if (t.id === "brand-photo-file") { const f = t.files && t.files[0]; t.value = ""; if (f) brandPhotoCompress(f, setBrandPhoto); }
     else if (t.dataset && t.dataset.lpImg) { const f = t.files && t.files[0]; const path = t.dataset.lpImg; t.value = ""; if (f) lpCompress(f, (data) => { lpSet(lpDraft(), path, data); ui.lpDirty = true; render(); }); }
     else if (t.dataset && t.dataset.lpRadio) { lpSet(lpDraft(), t.dataset.lpRadio, t.value); lpChanged(); }

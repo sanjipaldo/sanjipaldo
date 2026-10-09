@@ -884,6 +884,26 @@
     return { total: all.length, done, reqTotal: req.length, reqDone, kinds, pct: all.length ? Math.round((done / all.length) * 100) : 0 };
   }
 
+  /* ---------------- 강사 입점 문의 ----------------
+   * 방문자가 첫 화면에서 남기고 마스터가 관리한다. 서버 모드는 문서 inq:<id> (마스터만 보임), 아니면 이 브라우저에 */
+  const KEY_INQ = "moonclass:inquiries";
+  const inqMap = () => (R.on ? R.inq : store.get(KEY_INQ, {}));
+  const inquiries = () => { const m = inqMap(); return Object.keys(m).map((k) => m[k]).sort((a, b) => (b.at || 0) - (a.at || 0)); };
+  function saveInquiry(x) {
+    if (R.on) { R.inq[x.id] = x; schedule(); return true; }
+    const m = store.get(KEY_INQ, {}); m[x.id] = x; return store.set(KEY_INQ, m);
+  }
+  function removeInquiry(id) {
+    if (R.on) { delete R.inq[id]; schedule(); return true; }
+    const m = store.get(KEY_INQ, {}); delete m[id]; return store.set(KEY_INQ, m);
+  }
+  async function applyPartner(a) {
+    if (R.on) return call("public", Object.assign({ action: "partner-apply" }, a));
+    const x = Object.assign({ id: uid("inq"), at: Date.now(), status: "new", memo: "" }, a);
+    delete x.agree;
+    return saveInquiry(x) ? { ok: true } : { error: "storage" };
+  }
+
   /* ---------------- 요청사항 (오류·불편 신고) ---------------- */
   const REQUEST_CATEGORIES = ["로그인 · 접속", "과제 제출", "영상 재생", "화면 깨짐", "기타"];
   const maskName = (n) => { n = String(n || ""); return n ? n.slice(0, 1) + "OO" : "익명"; };
@@ -902,7 +922,7 @@
    * /api 가 없으면(로컬 정적 서버 · 미리보기) 예전처럼 이 브라우저(localStorage)에 저장한다.
    * 서버에서는 문서 단위(강사 · 콘텐츠 · 기수 · 수강생 · 진행 기록)로 나눠 보관하고,
    * 로그인한 사람이 볼 수 있는 문서만 내려온다. */
-  const R = { on: false, fresh: null, loading: false, me: { student: null, admin: null }, epoch: null, now: 0, ver: {}, snap: {}, prog: {}, timer: null, busy: false, again: false, fails: 0, polling: false, lastPoll: 0, listeners: [] };
+  const R = { on: false, fresh: null, loading: false, me: { student: null, admin: null }, epoch: null, now: 0, ver: {}, snap: {}, prog: {}, inq: {}, timer: null, busy: false, again: false, fails: 0, polling: false, lastPoll: 0, listeners: [] };
   const COLLS = ["instructors", "content", "cohorts", "students"];
   const CONTENT_PERMS = ["brand", "guide", "curriculum", "missions", "schedule", "notices", "faq", "docs", "library", "motivation", "channels", "partners", "pages", "free", "landing"];
   const isObj = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
@@ -938,7 +958,7 @@
     R.me = j.me || { student: null, admin: null };
     R.epoch = j.epoch || R.epoch;
     R.now = j.now;
-    R.ver = {}; R.prog = {};
+    R.ver = {}; R.prog = {}; R.inq = {};
     const d = { instructors: [], content: {}, cohorts: [], students: [] };
     (j.docs || []).forEach((x) => { R.ver[x[0]] = x[2]; placeIn(d, x[0], x[1]); });
     R.fresh = d;
@@ -964,6 +984,7 @@
     const sIns = {};
     d.students.forEach((s) => { sIns[s.id] = s.instructorId; out["stu:" + s.instructorId + ":" + s.id] = s; });
     Object.keys(R.prog).forEach((sid) => { if (sIns[sid]) out["prog:" + sIns[sid] + ":" + sid] = R.prog[sid]; });
+    Object.keys(R.inq).forEach((id) => { out["inq:" + id] = R.inq[id]; });
     return out;
   }
   function docOf(k) {
@@ -974,6 +995,7 @@
     if (p[0] === "cohorts") { const l = db.cohorts.filter((c) => c.instructorId === p[1]); return l.length ? l : undefined; }
     if (p[0] === "stu") return db.students.find((x) => x.id === p[2] && x.instructorId === p[1]);
     if (p[0] === "prog") return R.prog[p[2]];
+    if (p[0] === "inq") return R.inq[p[1]];
     return undefined;
   }
   const replaceIn = (t, src) => { Object.keys(t).forEach((k) => { delete t[k]; }); Object.assign(t, src); };
@@ -997,6 +1019,8 @@
       d.cohorts.length = 0; rest.forEach((c) => d.cohorts.push(c));
     } else if (p[0] === "prog") {
       if (v == null) delete R.prog[p[2]]; else R.prog[p[2]] = v;
+    } else if (p[0] === "inq") {
+      if (v == null) delete R.inq[p[1]]; else R.inq[p[1]] = v;
     }
   }
   const snapOf = (k) => { const v = docOf(k); return v === undefined ? undefined : JSON.stringify(v); };
@@ -1162,7 +1186,7 @@
     curricula, curriculum, curriculumOf, weeksOf, cohortWeeks,
     weekOpen, weekDeadline, cohortEnd, cohortStatus, STATUS_LABEL, currentWeek, LEVEL_SET, levelSteps, level, currentCohort, nextCohortName,
     EVENT_TYPES, events, ruleText,
-    REQUEST_CATEGORIES, maskName, requests,
+    REQUEST_CATEGORIES, maskName, requests, inquiries, saveInquiry, removeInquiry, applyPartner,
     THEMES, themeOf, STUDENT_MENUS, LIB_MENUS, CUSTOM_ICONS, menuConfig, menuOn, libOn, isCustom,
     emptyProgress, progress, saveProgress, allProgress, lastSub, subState, stats,
     session, remote,

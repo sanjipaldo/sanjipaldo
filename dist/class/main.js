@@ -9,7 +9,7 @@
     let h = location.hash;
     // 로그인한 수강생은 첫 화면 대신 바로 내 강의실로 (소개 화면은 #/about 으로 언제든)
     if (isRoot(h) && DB.session.student()) { history.replaceState(null, "", "#/home"); h = "#/home"; }
-    const next = /^#\/center/.test(h) ? "admin" : /^#\/(p|free)(\/|\?|$)/.test(h) ? "landing" : isRoot(h) || /^#\/about(\/|\?|$)/.test(h) ? "home" : "student";
+    const next = /^#\/center/.test(h) ? "admin" : /^#\/(p|free)(\/|\?|$)/.test(h) ? "landing" : isRoot(h) || /^#\/(about|partner)(\/|\?|$)/.test(h) ? "home" : "student";
     const changed = next !== mode;
     mode = next;
     document.body.dataset.mode = next;

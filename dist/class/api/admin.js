@@ -20,7 +20,9 @@ module.exports = handler(["POST"], async (req, res) => {
   if (b.action === "reset") return send(res, 200, { ok: true, docs: await init.replaceAll(seed.seedDocs(), "처음 상태로 되돌리기 전 자동 백업") });
   if (b.action === "import") {
     if (!b.db || b.db.version !== 3 || !Array.isArray(b.db.instructors)) return send(res, 400, { error: "format" });
-    return send(res, 200, { ok: true, docs: await init.replaceAll(seed.split(b.db, b.progress || {}), "백업 파일 불러오기 전 자동 백업") });
+    const map = seed.split(b.db, b.progress || {});
+    (Array.isArray(b.inquiries) ? b.inquiries : []).forEach((x) => { if (x && x.id) map["inq:" + String(x.id).replace(/[^a-z0-9_-]/gi, "")] = x; });
+    return send(res, 200, { ok: true, docs: await init.replaceAll(map, "백업 파일 불러오기 전 자동 백업") });
   }
   if (b.action === "backups") return send(res, 200, { ok: true, backups: await store.listBackups() });
   if (b.action === "backup") return send(res, 200, { ok: true, backup: await store.backup("마스터가 직접 백업") });

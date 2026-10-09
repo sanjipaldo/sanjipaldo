@@ -19,6 +19,8 @@ function parseKey(k) {
   if (k === "meta") return { type: "meta" };
   if (p[0] === "ins" || p[0] === "content" || p[0] === "cohorts") return p.length === 2 && p[1] ? { type: p[0], iid: p[1] } : null;
   if ((p[0] === "stu" || p[0] === "prog") && p.length === 3 && p[1] && p[2]) return { type: p[0], iid: p[1], sid: p[2] };
+  // 강사 입점 문의 (방문자가 남기고 마스터만 본다)
+  if (p[0] === "inq") return p.length === 2 && p[1] ? { type: "inq", id: p[1] } : null;
   return null;
 }
 
@@ -62,6 +64,7 @@ function view(k, v, ids) {
   const K = parseKey(k);
   if (!K) return undefined;
   if (isMaster(ids)) return v;
+  if (K.type === "inq") return undefined;
   if (v == null) return memberOf(ids, K.iid) || K.type === "ins" || K.type === "content" || K.type === "cohorts" || K.type === "meta" ? null : undefined;
   switch (K.type) {
     case "meta": {
@@ -106,6 +109,7 @@ function writer(k, ids, creating) {
   if (isMaster(ids)) return { fix: same };
   switch (K.type) {
     case "meta": return null;
+    case "inq": return null;
     case "ins":
       if (creating) return null;
       if (instructorOf(ids, K.iid)) return { fix: (o, n) => (n == null ? clone(o) : Object.assign(n, { id: K.iid, status: o.status, createdAt: o.createdAt })) };
