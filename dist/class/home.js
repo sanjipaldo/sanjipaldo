@@ -90,9 +90,8 @@
 
   /* ---------- 조각 ---------- */
   const mark = (t) => '<mark class="hm-mark">' + t + "</mark>";
-  // 두고 원본 로고를 빨강 심볼 + 두 줄(doogo / CLASS)로 — 타이탄클래스 로고처럼
-  const brandLock = (cls) => '<span class="hm-lock ' + (cls || "") + '" role="img" aria-label="doogo CLASS"><span class="hm-sym"></span><span class="hm-lock-t">' +
-    '<img src="assets/brand/doogo-word.png" alt="" width="240" height="84"><span class="hm-lock-cls"><i>C</i><i>L</i><i>A</i><i>S</i><i>S</i></span></span></span>';
+  // 두고 원본 로고를 빨강 심볼 + 두 줄(doogo / CLASS)로 — 타이탄클래스 로고처럼 (icons.js 공용)
+  const brandLock = (cls) => window.doogoClassLock(cls);
   const phone = (img, cls, alt, eager) => '<div class="hm-phone ' + (cls || "") + '"><span class="hm-phone-notch"></span><img src="' + IMG + img + '.webp" alt="' + esc(alt || "") + '"' + (eager ? "" : ' loading="lazy"') + ' decoding="async"></div>';
   const browser = (img, cls, alt, eager) => '<div class="hm-browser ' + (cls || "") + '"><div class="hm-browser-bar"><i></i><i></i><i></i><span>doogo-class.vercel.app</span></div><img src="' + IMG + img + '.webp" alt="' + esc(alt || "") + '"' + (eager ? "" : ' loading="lazy"') + ' decoding="async"></div>';
   const scrollBtn = (to, label, cls) => '<button type="button" class="' + cls + '" data-hm-scroll="' + to + '">' + label + "</button>";
@@ -412,7 +411,7 @@
       if (on !== dark) {
         dark = on;
         top.classList.toggle("scrolled", on);
-        const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", on ? "#0c0e13" : "#ffffff");
+        const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", on ? "#1e1e1e" : "#ffffff");
       }
       if (prog) prog.style.transform = "scaleX(" + (max > 0 ? Math.min(1, y / max) : 0).toFixed(4) + ")";
     });

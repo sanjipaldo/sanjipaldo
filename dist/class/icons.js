@@ -116,6 +116,9 @@
     const f = { color: "doogo-color.png", white: "doogo-white.png", mark: "doogo-mark.png", markWhite: "doogo-mark-white.png" }[variant || "color"];
     return '<img class="doogo-logo ' + (cls || "") + '" src="assets/brand/' + f + '" alt="doogo">';
   };
+  /** 두고 클래스 로고 — 빨강 두고 심볼 + 두 줄(doogo / C L A S S). 소개 화면 · 수강생 첫 로그인 화면에서 쓴다 (모양은 home.css 의 .hm-lock) */
+  window.doogoClassLock = (cls) => '<span class="hm-lock ' + (cls || "") + '" role="img" aria-label="doogo CLASS"><span class="hm-sym"></span><span class="hm-lock-t">' +
+    '<img src="assets/brand/doogo-word.png" alt="" width="240" height="84"><span class="hm-lock-cls"><i>C</i><i>L</i><i>A</i><i>S</i><i>S</i></span></span></span>';
   /** ‘Powered by doogo’ 표시 */
   window.poweredBy = (variant, cls) => '<span class="powered ' + (cls || "") + '"><span>Powered by</span>' + window.doogoLogo(variant || "color") + "</span>";
   // 서비스 표시 (카카오톡 채널 · 네이버) — 연결되는 곳을 한눈에 알 수 있게

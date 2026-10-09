@@ -193,9 +193,56 @@
     const id = loginPick || DB.session.instructorPick();
     return list.find((x) => x.id === id) || null;
   }
+  // 강사를 고르기 전 첫 로그인 화면 — 특정 강사 색이 아니라 두고 클래스(흰 바탕 + 빨강, 타이탄클래스처럼 깔끔하게)
+  function renderPicker(list) {
+    document.title = "두고 클래스 · 수강생 로그인";
+    window.applyStudentTheme(null);
+    const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.setAttribute("content", "#ffffff");
+    const lock = (cls) => (window.doogoClassLock ? window.doogoClassLock(cls) : window.doogoLogo("color"));
+    const pts = [["book", "주차별 튜토리얼 · 과제 피드백"], ["award", "진행률 · 수료증"], ["heart", "수료 후에도 평생 이용"]];
+    const opt = (x) => {
+      const b = (DB.content(x.id) || {}).brand || {};
+      const av = b.photo ? '<img src="' + esc(b.photo) + '" alt="" decoding="async">' : esc(x.displayName.slice(0, 1));
+      return '<button type="button" class="dc-ins" role="radio" aria-checked="false" data-action="pick-instructor" data-id="' + x.id + '">' +
+        '<span class="dc-ins-av' + (b.photo ? " has-photo" : "") + '">' + av + '</span><span class="dc-ins-t"><b>' + esc(x.displayName) + "</b><small>" + esc(b.field || b.shortTitle || b.courseTitle || "") + "</small></span>" + icon("chevRight", "sm") + "</button>";
+    };
+    root.innerHTML =
+      '<main class="login login-dc">' +
+        '<section class="dc-brand">' +
+          '<a class="dc-logo" href="#/about" aria-label="두고 클래스 소개">' + lock() + "</a>" +
+          '<div class="dc-hero">' +
+            '<p class="dc-eyebrow"><i></i>DOOGO CLASS · 수강생 로그인</p>' +
+            '<h2 class="dc-headline">따라만 하면 완성되는<br><span>튜토리얼 강의 플랫폼</span></h2>' +
+            '<p class="dc-sub">내 강사님이 준비해 둔 1주차부터 수료까지의 튜토리얼이 기다리고 있어요. 회원가입 없이, 수강 신청할 때 적은 정보로 들어와요.</p>' +
+            '<ul class="dc-pts">' + pts.map((x) => "<li>" + icon(x[0], "sm") + x[1] + "</li>").join("") + "</ul>" +
+          "</div>" +
+          '<div class="dc-foot"><span>© 2026 DOOGO HOLDINGS</span><a href="#/about">두고 클래스 소개 ' + icon("arrowRight", "xs") + "</a></div>" +
+        "</section>" +
+        '<section class="login-panel dc-panel">' +
+          '<div class="login-topright"><a class="login-home" href="#/about">' + icon("arrowLeft", "sm") + "두고 클래스 소개</a><span>강사님이신가요?</span><a class=\"dc-center\" href=\"#/center\">강사센터</a></div>" +
+          '<div class="login-stack">' +
+            '<div class="login-card dc-card">' +
+              '<div class="dc-card-logo">' + lock() + "</div>" +
+              "<h1>두고 클래스 시작하기</h1>" +
+              '<p class="lead">수강 신청할 때 등록한 정보로 로그인하세요.</p>' +
+              '<div class="field"><span class="field-label">어떤 강사님의 강의를 듣고 계신가요?</span>' +
+                '<div class="dc-ins-list" role="radiogroup">' + list.map(opt).join("") + "</div>" +
+                '<span class="tiny">한 번 고르면 다음부터는 바로 로그인 화면이 열려요.</span></div>' +
+            "</div>" +
+            '<a class="dc-partner" href="#/partner">' + icon("handshake", "sm") + "<span><b>강사님이신가요?</b> 두고 클래스 입점을 문의해 보세요</span>" + icon("arrowRight", "xs") + "</a>" +
+            '<nav class="login-legal" aria-label="약관">' +
+              '<button type="button" data-action="legal" data-doc="terms">이용약관</button>' +
+              '<button type="button" data-action="legal" data-doc="privacy">개인정보처리방침</button>' +
+              '<button type="button" data-action="legal" data-doc="oss">오픈소스 라이선스</button>' +
+            "</nav>" +
+          "</div>" +
+        "</section>" +
+      "</main>";
+  }
   function renderLogin() {
     const list = DB.activeInstructors();
     const ins = loginInstructor();
+    if (!ins && list.length) return renderPicker(list);
     const brandIns = ins || list[0];
     const B = brandIns ? DB.content(brandIns.id).brand : { name: "두고 클래스", loginEyebrow: "DOOGO CLASS", loginHeadline: "온라인 강의\n함께 시작해요", loginSub: "" };
     document.title = (ins ? B.name : "두고 클래스") + " · 로그인";
