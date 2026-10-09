@@ -5083,7 +5083,6 @@ body { letter-spacing: normal; }
 .brand-hero-body p { margin: 0; color: #eef3fb; font-size: 15px; }
 .brand-hero-body small { display: block; margin-top: 6px; color: #c9d4e4; font-size: 13px; }
 .brand-hero-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.brand-hero-clear { padding: 10px 14px; color: #fff; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); border-radius: 10px; font-size: 15px; font-weight: 600; }
 
 /* ===== 개인통관고유부호 ===== */
 .customs-input label small { margin-left: 4px; color: #d9730d; font-size: 12px; font-weight: 700; }
@@ -5109,7 +5108,6 @@ body { letter-spacing: normal; }
   .brand-hero { padding: 18px 16px; min-height: 200px; }
   .brand-hero-body h2 { font-size: 22px; }
   .brand-hero-body .brand-logo { width: 50px; height: 50px; font-size: 20px; }
-  .brand-hero-actions > * { flex: 1; }
 }
 .market-product-body .card-brand-link, .card-brand-link { display: inline; width: auto; min-width: 0; min-height: 0; margin: 0; text-align: left; box-shadow: none; }
 /* 모바일: 가로 스크롤 칩 줄의 최소 폭 때문에 툴바 그리드 칸이 1000px 이상으로 늘어나던 문제 */
@@ -11887,4 +11885,11 @@ body[data-role="master"] .login-role-tabs button.active { color: #5a2fb3; }
 @media (max-width: 720px) {
   .login-home-link { position: static; margin: -4px 0 10px -8px; padding: 4px 8px; font-size: 12.5px; }
   .login-role-tabs { margin-bottom: 20px; }
+}
+/* 확인창 두 버튼(닫기 + 빨간 실행): 같은 알약 모양, 휴대폰 아래 시트에선 반반으로 */
+.modal-actions.confirm-actions button { min-width: 96px; min-height: 46px; padding: 0 18px; border-radius: 9999px; font-size: 15px; font-weight: 700; white-space: nowrap; }
+body[data-role="supplier"] .modal-actions.confirm-actions button { border-radius: 6px; }
+@media (max-width: 720px) {
+  .modal-actions.confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modal-actions.confirm-actions button { width: 100%; min-width: 0; min-height: 50px; padding: 0 10px; font-size: 16px; }
 }

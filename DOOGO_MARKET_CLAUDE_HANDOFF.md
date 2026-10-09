@@ -215,6 +215,7 @@ products.id
 - 계정 메뉴와 사업자 정보 수정
 - 데모 데이터 초기화
 - 모바일 사이드바 열기·닫기·배경 클릭·ESC 처리
+- 팝업 모양: 특별한 모양이 필요한 팝업은 `openModal()` 다음 줄에서 `#modal .modal`에 클래스를 붙인다(예: `mapping-pick-modal`). `openModal()`·`closeModal()`은 매번 `resetModalShell()`로 기본 `modal`만 남기므로 앞 팝업 모양이 다음 팝업에 남지 않는다. '닫기 + 빨간 실행' 두 버튼 확인창은 `.modal-actions.confirm-actions`(휴대폰에선 반반)
 
 ### 공급사 권한 신청과 사용자 전환
 

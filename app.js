@@ -1806,7 +1806,7 @@ function stopChannelListingModal(sellerProductId, channelId) {
   openModal(`<h2>판매중지 처리</h2><p>${escapeHtml(channel.name)} · ${escapeHtml(sellerProductTitle(item))}<br>중지 사유를 선택하면 해당 채널의 상태가 즉시 변경됩니다.</p>
     <form id="stopChannelForm" class="form-grid" data-id="${item.id}" data-channel="${channelId}">
       <div class="form-field full stop-reason-list">${reasons.map((reason, index) => `<label><input type="radio" name="reason" value="${escapeHtml(reason.value)}" ${index === 0 ? "checked" : ""}><span><b>${escapeHtml(reason.value)}</b><small>${escapeHtml(reason.desc)}</small></span></label>`).join("")}</div>
-      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="refund-button">판매중지 처리</button></div>
+      <div class="modal-actions full confirm-actions"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="refund-button">판매중지 처리</button></div>
     </form>`);
 }
 /* ===== 송장 → 쇼핑몰 전송 =====
@@ -2784,7 +2784,7 @@ function brandDirectoryTemplate() {
     </section>`;
 }
 function selectedBrandHero(brand) {
-  return `<section class="brand-hero">${productPhoto(brand.cover, "brand-hero-photo")}<div class="brand-hero-body">${brandLogo(brand.name)}<div><span>BRAND</span><h2>${escapeHtml(brand.name)}</h2><p>${escapeHtml(brand.tagline)}</p><small>공급사 ${escapeHtml(brand.supplier)} · ${escapeHtml(brand.categories.join(" · "))} · 상품 ${brand.products.length}개</small></div></div><div class="brand-hero-actions"><button type="button" class="white-button" data-action="select-brand" data-brand="전체 브랜드">← 브랜드 목록</button><button type="button" class="brand-hero-clear" data-action="select-brand" data-brand="전체 브랜드" aria-label="브랜드 선택 해제">× 브랜드 해제</button></div></section>`;
+  return `<section class="brand-hero">${productPhoto(brand.cover, "brand-hero-photo")}<div class="brand-hero-body">${brandLogo(brand.name)}<div><span>BRAND</span><h2>${escapeHtml(brand.name)}</h2><p>${escapeHtml(brand.tagline)}</p><small>공급사 ${escapeHtml(brand.supplier)} · ${escapeHtml(brand.categories.join(" · "))} · 상품 ${brand.products.length}개</small></div></div><div class="brand-hero-actions"><button type="button" class="white-button" data-action="select-brand" data-brand="전체 브랜드">← 브랜드 목록</button></div></section>`;
 }
 function sellerBrandSourcingTemplate() {
   const brand = sellerBrand === "전체 브랜드" ? null : brandProfiles().find(item => item.name === sellerBrand);
@@ -7049,13 +7049,14 @@ function scrollChatThreadToBottom() {
     if (thread) thread.scrollTop = thread.scrollHeight;
   });
 }
+/* 팝업 모양 클래스는 여는 함수가 openModal 뒤에 붙이므로, 열고 닫을 때마다 기본으로 되돌려 다음 팝업에 남지 않게 한다. */
+function resetModalShell() { const modal = document.querySelector("#modal .modal"); if (modal) modal.className = "modal"; }
 function openModal(html) {
-  const modal = document.querySelector("#modal .modal");
-  modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal", "notice-modal", "collect-result-modal", "pay-confirm-modal", "manual-order-modal");
+  resetModalShell();
   document.getElementById("modalContent").innerHTML = html;
   document.getElementById("modal").hidden = false;
 }
-function closeModal() { const modal = document.querySelector("#modal .modal"); document.getElementById("modal").hidden = true; modal.classList.remove("product-detail-modal", "product-editor-modal", "seller-product-editor-modal", "shipping-label-modal", "calendar-detail-modal", "channel-price-modal", "order-detail-modal", "pick-sheet-modal", "studio-modal", "notice-modal", "collect-result-modal", "pay-confirm-modal", "manual-order-modal"); document.querySelectorAll("#modalContent iframe").forEach(frame => frame.remove()); }
+function closeModal() { document.getElementById("modal").hidden = true; resetModalShell(); document.querySelectorAll("#modalContent iframe").forEach(frame => frame.remove()); }
 
 /* ===== 주소 검색 =====
    국내 쇼핑몰 표준인 카카오(다음) 우편번호 서비스를 화면 안에 띄운다 (무료·키 없음, 도로명·지번·건물명·우편번호 모두 검색).
@@ -8094,7 +8095,7 @@ function unmapProductMappingModal(mappingId) {
     <div class="mp-unmap-flow"><div><small>쇼핑몰 상품</small><b>${escapeHtml(mapping.externalProductName || "쇼핑몰 상품")}</b><em>${escapeHtml(mapping.channel || "")} · ${escapeHtml(mapping.externalProductCode)}</em></div><span aria-hidden="true">✕</span><div><small>두고 상품</small><b>${escapeHtml(product?.name || "공급사 상품")}${mapping.optionName ? ` · ${escapeHtml(mapping.optionName)}` : ""}</b><em>${escapeHtml(mapping.supplier || product?.supplier || "")}</em></div></div>
     <ul class="mp-unmap-notes"><li>${unpaid ? `아직 결제하지 않은 주문 <b>${unpaid}건</b>은 다시 ‘매핑 필요’로 돌아가요.` : "결제를 기다리는 주문은 없어요."}</li><li>${paid ? `이미 결제한 주문 ${paid}건은 그대로 공급사가 출고해요.` : "이미 결제한 주문은 영향을 받지 않아요."}</li><li>다음 주문부터는 다시 두고 상품을 골라 매핑해야 해요.</li></ul>
     <form id="unmapProductMappingForm" data-id="${mapping.id}">
-      <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="refund-button">매핑 해제</button></div>
+      <div class="modal-actions full confirm-actions"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="refund-button">매핑 해제</button></div>
     </form>`);
 }
 
@@ -8347,7 +8348,7 @@ function refundRequestModal(orderId) {
   if (!order) return;
   const supplyRefundAmount = orderUnitSupply(order, product) * Number(order.qty || 1);
   const returnBook = supplierAddressBook(product?.supplierLoginId);
-  openModal(`<div class="refund-request-head"><span>SELLER REFUND REQUEST</span><h2>취소 · 환불 요청</h2><p>${order.id} · ${escapeHtml(product?.name || "상품")}</p></div>${returnBook ? `<div class="refund-return-to"><b>반품 보낼 곳 (공급사)</b><span>${escapeHtml(addressLine(returnBook.returnTo))}</span><small>${escapeHtml(supplierName(product.supplierLoginId))} · 문의 ${escapeHtml(returnBook.phone)} · 고객에게 이 주소로 보내 달라고 안내해 주세요.</small></div>` : ""}<form id="refundRequestForm" class="form-grid" data-id="${order.id}"><div class="form-field"><label>요청 유형</label><select name="type"><option>반품</option><option>주문 취소</option><option>교환</option></select></div><div class="form-field"><label>소비자 환불액</label><input name="consumerRefundAmount" type="number" value="${order.amount}" readonly><small>판매채널에서 소비자에게 돌려준 주문 금액</small></div><div class="form-field full money-refund-field"><label>예치금 환급 예정액</label><input name="amount" type="number" value="${supplyRefundAmount}" readonly><small>공급가 ${money(orderUnitSupply(order, product))}${order.optionName ? ` (${escapeHtml(order.optionName)})` : ""} × ${order.qty || 1}개 기준이며, 공급사 확정 후 충전됩니다.</small></div><div class="form-field full"><label>사유</label><select name="reason"><option>상품 파손</option><option>오배송</option><option>단순 변심</option><option>배송 지연</option></select></div><div class="form-field full"><label>상세 내용</label><textarea name="detail" rows="4" placeholder="상품 상태와 소비자 요청 내용을 구체적으로 입력해 주세요." required>소비자 환불 처리를 완료했습니다. 상품 상태 확인이 필요합니다.</textarea></div><label class="consumer-refund-confirm full"><input type="checkbox" name="consumerRefunded" required><span><b>판매채널에서 소비자 환불을 완료했습니다.</b><small>소비자 결제 환불은 판매채널에서 먼저 처리하고, 두고에서는 공급대금만 예치금으로 복구합니다.</small></span></label><div class="refund-rule-preview full"><div><b>반품 회수 건</b><span>택배 도착 → 공급사 입고 확인 → 예치금 자동 충전</span></div><div><b>회수하지 않는 건</b><span>공급사 승인 → 예치금 자동 충전</span></div></div><div class="api-safe-notice full"><b>정산 안전장치</b><span>위탁셀러가 임의로 환불완료 처리할 수 없으며, 확정 시 공급사 정산도 자동으로 0원 처리됩니다.</span></div><div class="modal-actions full"><button class="secondary-button" data-close-modal>취소</button><button class="refund-button" type="submit">공급사 확인 요청</button></div></form>`);
+  openModal(`<div class="refund-request-head"><span>SELLER REFUND REQUEST</span><h2>취소 · 환불 요청</h2><p>${order.id} · ${escapeHtml(product?.name || "상품")}</p></div>${returnBook ? `<div class="refund-return-to"><b>반품 보낼 곳 (공급사)</b><span>${escapeHtml(addressLine(returnBook.returnTo))}</span><small>${escapeHtml(supplierName(product.supplierLoginId))} · 문의 ${escapeHtml(returnBook.phone)} · 고객에게 이 주소로 보내 달라고 안내해 주세요.</small></div>` : ""}<form id="refundRequestForm" class="form-grid" data-id="${order.id}"><div class="form-field"><label>요청 유형</label><select name="type"><option>반품</option><option>주문 취소</option><option>교환</option></select></div><div class="form-field"><label>소비자 환불액</label><input name="consumerRefundAmount" type="number" value="${order.amount}" readonly><small>판매채널에서 소비자에게 돌려준 주문 금액</small></div><div class="form-field full money-refund-field"><label>예치금 환급 예정액</label><input name="amount" type="number" value="${supplyRefundAmount}" readonly><small>공급가 ${money(orderUnitSupply(order, product))}${order.optionName ? ` (${escapeHtml(order.optionName)})` : ""} × ${order.qty || 1}개 기준이며, 공급사 확정 후 충전됩니다.</small></div><div class="form-field full"><label>사유</label><select name="reason"><option>상품 파손</option><option>오배송</option><option>단순 변심</option><option>배송 지연</option></select></div><div class="form-field full"><label>상세 내용</label><textarea name="detail" rows="4" placeholder="상품 상태와 소비자 요청 내용을 구체적으로 입력해 주세요." required>소비자 환불 처리를 완료했습니다. 상품 상태 확인이 필요합니다.</textarea></div><label class="consumer-refund-confirm full"><input type="checkbox" name="consumerRefunded" required><span><b>판매채널에서 소비자 환불을 완료했습니다.</b><small>소비자 결제 환불은 판매채널에서 먼저 처리하고, 두고에서는 공급대금만 예치금으로 복구합니다.</small></span></label><div class="refund-rule-preview full"><div><b>반품 회수 건</b><span>택배 도착 → 공급사 입고 확인 → 예치금 자동 충전</span></div><div><b>회수하지 않는 건</b><span>공급사 승인 → 예치금 자동 충전</span></div></div><div class="api-safe-notice full"><b>정산 안전장치</b><span>위탁셀러가 임의로 환불완료 처리할 수 없으며, 확정 시 공급사 정산도 자동으로 0원 처리됩니다.</span></div><div class="modal-actions full confirm-actions"><button type="button" class="secondary-button" data-close-modal>취소</button><button class="refund-button" type="submit">공급사 확인 요청</button></div></form>`);
 }
 
 function refundProgressIndex(refund) {
@@ -9115,7 +9116,7 @@ document.addEventListener("click", event => { if (event.target.closest?.("#track
 function shipmentCancelModal(orderId) {
   const order = state.orders.find(item => item.id === orderId);
   if (!order || order.status !== "배송중" || !order.provisionalTracking) return showToast("집하 전 자동발급 가송장만 취소할 수 있습니다.");
-  openModal(`<h2>가송장 출고 취소</h2><p>${order.id} · ${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)}<br>택배 집하 전이면 출고를 취소할 수 있어요.</p><form id="shipmentCancelForm" class="form-grid" data-id="${order.id}"><div class="form-field full"><label>취소 사유 *</label><select name="reason"><option>고객 출고 전 취소</option><option>재고 부족</option><option>주소 오류</option><option>상품 준비 지연</option></select></div><div class="form-field full"><label>공급사 메모</label><textarea name="memo" rows="4" required>집하 전 가송장을 취소하고 셀러에게 상태를 전달합니다.</textarea></div><div class="api-safe-notice full"><b>먼저 확인해 주세요</b><span>택배사(굿스플로)에서 송장 취소가 된 것을 확인한 뒤 출고 취소를 눌러 주세요.</span></div><div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>닫기</button><button type="submit" class="refund-button">가송장 취소 처리</button></div></form>`);
+  openModal(`<h2>가송장 출고 취소</h2><p>${order.id} · ${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)}<br>택배 집하 전이면 출고를 취소할 수 있어요.</p><form id="shipmentCancelForm" class="form-grid" data-id="${order.id}"><div class="form-field full"><label>취소 사유 *</label><select name="reason"><option>고객 출고 전 취소</option><option>재고 부족</option><option>주소 오류</option><option>상품 준비 지연</option></select></div><div class="form-field full"><label>공급사 메모</label><textarea name="memo" rows="4" required>집하 전 가송장을 취소하고 셀러에게 상태를 전달합니다.</textarea></div><div class="api-safe-notice full"><b>먼저 확인해 주세요</b><span>택배사(굿스플로)에서 송장 취소가 된 것을 확인한 뒤 출고 취소를 눌러 주세요.</span></div><div class="modal-actions full confirm-actions"><button type="button" class="secondary-button" data-close-modal>닫기</button><button type="submit" class="refund-button">가송장 취소 처리</button></div></form>`);
 }
 
 function shipmentLabelModal(orderId, batchCount = 1) {
@@ -11471,7 +11472,7 @@ document.addEventListener("click", event => {
       <form id="rejectPickForm" class="form-grid" data-id="${item.id}">
         <fieldset class="form-field full reject-reason-list"><legend>거절 사유 *</legend>${PICK_REJECT_REASONS.map((reason, index) => `<label><input type="radio" name="reason" value="${escapeHtml(reason)}" ${index === 0 ? "checked" : ""}><span>${escapeHtml(reason)}</span></label>`).join("")}<label><input type="radio" name="reason" value="__custom"><span>직접 입력</span></label></fieldset>
         <div class="form-field full"><label>추가 메모 (선택)</label><input name="memo" maxlength="80" placeholder="예: 10월 입고 후 다시 요청해 주세요"></div>
-        <div class="modal-actions full"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="refund-button">거절하기</button></div>
+        <div class="modal-actions full confirm-actions"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="refund-button">거절하기</button></div>
       </form>`);
     return;
   }
@@ -11489,7 +11490,7 @@ document.addEventListener("click", event => {
     const item = state.sellerProducts.find(entry => entry.id === id && entry.sellerLoginId === currentAccount.loginId);
     if (!item || item.approvalStatus === "승인완료") return;
     const pending = item.approvalStatus === "승인대기";
-    openModal(`<h2>${pending ? "PICK 요청을 취소할까요?" : "목록에서 삭제할까요?"}</h2><p>${escapeHtml(sellerProductTitle(item, productOf(item.productId)))}<br>${pending ? "공급사 승인 요청이 취소되고 목록에서 사라집니다." : "삭제 후에도 상품 소싱에서 언제든 다시 PICK할 수 있어요."}</p><div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>아니요</button><button type="button" class="refund-button" data-action="confirm-delete-pick" data-id="${item.id}">${pending ? "요청 취소" : "삭제"}</button></div>`);
+    openModal(`<h2>${pending ? "PICK 요청을 취소할까요?" : "목록에서 삭제할까요?"}</h2><p>${escapeHtml(sellerProductTitle(item, productOf(item.productId)))}<br>${pending ? "공급사 승인 요청이 취소되고 목록에서 사라집니다." : "삭제 후에도 상품 소싱에서 언제든 다시 PICK할 수 있어요."}</p><div class="modal-actions confirm-actions"><button type="button" class="secondary-button" data-close-modal>아니요</button><button type="button" class="refund-button" data-action="confirm-delete-pick" data-id="${item.id}">${pending ? "요청 취소" : "삭제"}</button></div>`);
     return;
   }
   if (action === "confirm-delete-pick") {
