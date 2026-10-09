@@ -14,8 +14,8 @@
   --m-steel: #707070;
   --m-stone: #999999;
   --m-hairline: #dcdcdc;
-  --m-hairline-soft: #e6e6e6;
-  --m-surface: #f5f5f5;
+  --m-hairline-soft: #efe6e5;
+  --m-surface: #f7f3f3;
   --m-canvas: #ffffff;
   --m-success: #01a484;
   --m-success-soft: #e7f7f3;
@@ -519,14 +519,14 @@ body[data-master="1"] .a-logo-role { padding: 2px 10px; border-radius: 8px; back
 .a-icon-pick input:checked + span { border: 2px solid var(--m-primary); background: var(--m-primary-soft); color: var(--m-primary-deep); }
 .a-flags { display: flex; flex-wrap: wrap; gap: 4px; }
 .a-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-all; }
-.a-ann { display: flex; gap: 12px; align-items: flex-start; padding: 14px 18px; border-radius: var(--m-r-xl); background: var(--m-ink-deep); color: #fff; }
-.a-ann > .icon { margin-top: 3px; color: #fb7f79; }
+.a-ann { display: flex; gap: 12px; align-items: flex-start; padding: 14px 18px; border-radius: var(--m-r-xl); background: linear-gradient(90deg, #fff0ee 0%, #fff8f6 100%); border: 1px solid #fde0dc; color: var(--m-ink); }
+.a-ann > .icon { margin-top: 3px; color: var(--m-primary); }
 .a-ann-list { flex: 1; min-width: 0; display: grid; gap: 6px; }
 .a-ann details summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .a-ann details summary::-webkit-details-marker { display: none; }
 .a-ann summary b { font-size: 15px; }
-.a-ann summary small { font-size: 12px; color: #bbbbbb; }
-.a-ann p { margin: 6px 0 2px; font-size: 14px; line-height: 1.6; color: #dcdcdc; white-space: pre-line; }
+.a-ann summary small { font-size: 12px; color: var(--m-stone); }
+.a-ann p { margin: 6px 0 2px; font-size: 14px; line-height: 1.6; color: var(--m-charcoal); white-space: pre-line; }
 @media (max-width: 1100px) { .a-menu-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 720px) {
   .a-menu-top select { min-width: 0; max-width: none; width: 100%; }
@@ -945,3 +945,18 @@ body[data-coach="1"] .a-logo-role { color: #00866b; }
   .a-logo .hm-lock { --lh: 22px; }
   .a-logo-role { padding-left: 8px; font-size: 14px; line-height: 18px; }
 }
+
+/* ---------- 강사센터 · 마스터 — 흰 바탕 + 아주 옅은 빨강 파스텔 (첫 화면 맨 위와 같은 느낌) ---------- */
+body[data-mode="admin"] { background: #fcf9f9; }
+.a-main { background: radial-gradient(900px 380px at 100% 0%, rgba(249, 66, 57, .07), transparent 70%), radial-gradient(720px 320px at 0% 0%, rgba(255, 160, 110, .07), transparent 70%); }
+.a-card { box-shadow: 0 1px 2px rgba(120, 40, 30, .03); }
+.a-side { background: linear-gradient(180deg, #fff 0%, #fffafa 100%); }
+/* 숫자 카드: 카드마다 다른 파스텔 (빨강 · 파랑 · 초록 · 보라) — 주의가 필요한 카드(.warn)는 주황 그대로 */
+.a-kpis > .a-kpi:nth-child(4n+1) { --tone: #f94239; --tone-wash: #fff3f1; }
+.a-kpis > .a-kpi:nth-child(4n+2) { --tone: #1f6fe0; --tone-wash: #f1f6ff; }
+.a-kpis > .a-kpi:nth-child(4n+3) { --tone: #0c9b7c; --tone-wash: #eefaf6; }
+.a-kpis > .a-kpi:nth-child(4n+4) { --tone: #6c55f0; --tone-wash: #f4f2ff; }
+.a-kpi:not(.warn) { background: linear-gradient(160deg, var(--tone-wash, #fff) 0%, #ffffff 65%); }
+.a-kpi span { display: inline-flex; align-items: center; gap: 6px; }
+.a-kpi span::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--tone, var(--m-primary)); }
+.a-kpi.warn span::before { background: var(--m-attention); }

@@ -3,7 +3,7 @@
  * 화면이 바뀌어 영상을 다시 찍을 때:
  *   1) class/ 에서 정적 서버 켜기 (이 브라우저 저장 모드):  python3 -m http.server 4321
  *   2) node class/scripts/demo-videos/scenes.js lp free home care student admin
- *   3) out/ 의 v-*.mp4 · v-*.jpg 를 assets/home/ 으로 (jpg → webp, mp4 → webm 도 만들기, README 참고)
+ *   3) out/ 의 v-*.mp4 · v-*.jpg 를 assets/home/ 으로 (jpg → webp, mp4 → webm, mp4 → v-*.anim.webp(자동 재생을 막는 앱용 움직이는 그림) 도 만들기, README 참고)
  *   4) 수강생 화면 · 강사센터 영상의 장(chapter) 시각이 바뀌면 home.js STUDENT_TABS · ADMIN_TABS 의 at 을 맞춘다
  *   수강생 화면 · 강의 페이지는 녹화할 때만 여기어때 레드(흰 바탕) 색으로 바꿔서 찍는다 (demoTheme, DEMO_THEME=none 이면 강사 색 그대로)
  * 필요한 것: playwright(크로미움), ffmpeg */

@@ -243,9 +243,10 @@
   function compare() {
     return '<section class="hm-sec hm-soft" id="hm-compare"><div class="hm-wrap">' +
       secHead("swap", "단톡방 · 드라이브로 운영할 때와 무엇이 다른가요", "강의 내용은 그대로, 운영하는 방식만 바뀌어요. 기수가 쌓일수록 차이가 커져요.", applyBtn("입점 문의" + arrow(), "hm-shead-link")) +
-      '<div class="hm-cmp hm-reveal" role="table" aria-label="운영 방식 비교">' +
+      // 줄마다 화면에 들어오면: 지금 방식 글자에 빨간 줄이 그어지고 → 두고 쪽 체크가 톡 튀어나오며 강조된다
+      '<div class="hm-cmp" role="table" aria-label="운영 방식 비교">' +
         '<div class="hm-cmp-row hm-cmp-head" role="row"><span role="columnheader">항목</span><span role="columnheader">지금 방식 <small>단톡방 · 드라이브 · 노션</small></span><span role="columnheader">' + brandLock("hm-lock-xs") + "</span></div>" +
-        COMPARE.map((r) => '<div class="hm-cmp-row" role="row"><b role="rowheader">' + r[0] + '</b><span role="cell" class="hm-cmp-old">' + icon("minus", "xs") + r[1] + '</span><span role="cell" class="hm-cmp-new">' + icon("check", "xs") + r[2] + "</span></div>").join("") +
+        COMPARE.map((r) => '<div class="hm-cmp-row hm-reveal" role="row"><b role="rowheader">' + r[0] + '</b><span role="cell" class="hm-cmp-old"><s class="hm-cmp-strike">' + r[1] + '</s></span><span role="cell" class="hm-cmp-new"><i class="hm-cmp-ok">' + icon("check", "xs") + "</i><span>" + r[2] + "</span></span></div>").join("") +
       "</div>" +
     "</div></section>";
   }
@@ -326,7 +327,7 @@
       .map((v) => '<a class="hm-sns" href="' + esc(v[1]) + '" target="_blank" rel="noopener" aria-label="' + esc(x.who) + " " + v[2] + '">' + SNS[v[0]] + "</a>").join("");
     const card = (x, i) => {
       const photo = '<span class="hm-tc-shape" aria-hidden="true"></span>' + (x.photo ? '<img src="' + esc(x.photo) + '" alt="' + esc(x.who) + ' 강사" decoding="async">' : SILHOUETTE) +
-        '<span class="hm-tc-tag">' + x.weeks + "주 과정 · 과제 " + x.missions + "개</span>";
+        '<span class="hm-tc-tag">' + x.weeks + "주 과정</span>";
       return '<article class="hm-tc hm-reveal" style="--i:' + i + '">' +
         (x.landing ? '<a class="hm-tc-photo" href="#/p/' + esc(x.id) + '" aria-label="' + esc(x.who) + ' 강의 소개">' + photo + "</a>" : '<div class="hm-tc-photo">' + photo + "</div>") +
         '<div class="hm-tc-body"><h3>' + esc(x.who) + '</h3><p class="hm-tc-field">' + esc(x.field) + '</p><p class="hm-tc-course">' + esc(x.title) + "</p></div>" +
@@ -372,9 +373,9 @@
     const pts = [["headset", "상담은 무료", "강의 방식 · 자료 · 일정부터 함께 정리해요"], ["layers", "처음 세팅을 함께", "랜딩 · 전자책 · 커리큘럼을 같이 만들어요"], ["users", "수강생은 무료", "수강생 수와 상관없이 같은 이용료"]];
     return '<section class="hm-final"><div class="hm-wrap hm-final-in">' +
       '<div class="hm-final-copy"><p class="hm-final-k">' + icon("sparkles", "xs") + "다음 기수 준비, 지금 시작하세요</p>" +
-        '<h2 class="hm-h2">다음 기수부터,<br>두고 클래스로 운영해 보세요</h2>' +
+        '<h2 class="hm-h2">다음 기수부터,<br>' + mark("두고 클래스") + "로 운영해 보세요</h2>" +
         "<p>강의 소개 랜딩페이지 · 무료강의 전자책 · 튜토리얼 시스템을 강사님 이름으로. 문의를 남겨 주시면 확인 후 바로 연락드려요.</p>" +
-        '<div class="hm-cta">' + applyBtn("입점 문의하기" + arrow(), "hm-btn hm-btn-inv hm-btn-lg") + '<a class="hm-btn hm-btn-onpri hm-btn-lg" href="#/login">수강생 로그인</a></div></div>' +
+        '<div class="hm-cta">' + applyBtn("입점 문의하기" + arrow(), "hm-btn hm-btn-p hm-btn-lg") + '<a class="hm-btn hm-btn-sec hm-btn-lg" href="#/login">수강생 로그인</a></div></div>' +
       '<ul class="hm-final-pts">' + pts.map((x) => '<li><span class="hm-final-ic">' + icon(x[0]) + "</span><span><b>" + x[1] + "</b><small>" + x[2] + "</small></span></li>").join("") + "</ul>" +
     "</div></section>";
   }
@@ -508,7 +509,7 @@
   function mount() { root.innerHTML = ""; render(); window.scrollTo(0, 0); }
 
   /* ---------- 실제 화면 녹화 영상 ---------- */
-  let vio = null;
+  let vio = null, vload = null;
   const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // H.264(mp4)을 못 트는 브라우저(일부 크로미움 · 리눅스 파이어폭스)는 VP9(webm)으로
   let vidExt = null;
@@ -524,12 +525,27 @@
       .then(() => { delete v.dataset.loading; v.load(); if (v.dataset.want === "1") playVid(v); });
   }
   function playVid(v) {
+    if (v.dataset.anim) return;
     v.dataset.want = "1";
     loadVid(v);
     if (!v.getAttribute("src")) return;
-    const pr = v.play(); if (pr && pr.catch) pr.catch(() => {});
+    const pr = v.play();
+    if (pr && pr.catch) pr.catch((err) => { if (err && err.name === "NotAllowedError") useAnim(v); });
+    // 재생을 조용히 막는 곳: 받아 둔 장면이 있는데도 멈춰 있으면 움직이는 그림으로
+    clearTimeout(v._chk);
+    v._chk = setTimeout(() => { if (v.dataset.want === "1" && v.dataset.hold !== "1" && v.paused && v.readyState >= 2 && v.isConnected) useAnim(v); }, 3000);
   }
-  function stopVid(v) { v.dataset.want = ""; if (!v.paused) v.pause(); }
+  // 영상 자동 재생을 막는 앱 안 브라우저(일부 웹뷰 · 절전 모드): 같은 녹화를 움직이는 그림(v-*.anim.webp)으로 보여 준다
+  function useAnim(v) {
+    if (v.dataset.anim || !v.isConnected) return;
+    v.dataset.anim = "1"; v.dataset.want = "";
+    const img = document.createElement("img");
+    img.className = "hm-vid-anim"; img.alt = v.getAttribute("aria-label") || ""; img.decoding = "async";
+    img.src = v.dataset.src + ".anim.webp";
+    img.onerror = () => { img.remove(); v.hidden = false; delete v.dataset.anim; };
+    v.hidden = true; v.after(img);
+  }
+  function stopVid(v) { v.dataset.want = ""; clearTimeout(v._chk); if (!v.paused) v.pause(); }
   function applySeek(v) {
     const at = v.dataset.seek;
     if (at == null || at === "" || v.readyState < 1) return;
@@ -555,12 +571,17 @@
       v.addEventListener("loadedmetadata", () => applySeek(v));
     });
     if (!("IntersectionObserver" in window)) { vids.forEach((v) => { loadVid(v); if (v.dataset.hold !== "1") playVid(v); }); return; }
+    // 받기는 화면에 오기 조금 전에 미리 (바로 움직이게)
+    if (vload) vload.disconnect();
+    vload = new IntersectionObserver((ents) => ents.forEach((en) => { if (en.isIntersecting) { loadVid(en.target); vload.unobserve(en.target); } }), { rootMargin: "400px 0px" });
+    // 재생은 지금 보고 있는 화면에서만: 영상이 절반 넘게 보이면 재생, 거의 안 보이면 멈춤 (아래에 있는 영상은 내려가서 볼 때 시작)
     vio = new IntersectionObserver((ents) => ents.forEach((en) => {
       const v = en.target;
-      if (en.isIntersecting) { loadVid(v); if (v.dataset.hold !== "1") playVid(v); }
-      else stopVid(v);
-    }), { rootMargin: "120px 0px", threshold: 0.2 });
-    vids.forEach((v) => vio.observe(v));
+      const seen = en.isIntersecting && (en.intersectionRatio >= 0.5 || en.intersectionRect.height >= window.innerHeight * 0.5);
+      if (seen) { if (v.dataset.hold !== "1") playVid(v); }
+      else if (!en.isIntersecting || en.intersectionRatio < 0.2) stopVid(v);
+    }), { threshold: [0, 0.2, 0.5, 0.75, 1] });
+    vids.forEach((v) => { vload.observe(v); vio.observe(v); });
   }
   // 수강생 화면 · 강사센터: 영상이 다음 장으로 넘어가면 탭 · 설명도 같이 바뀐다
   function chapterAt(list, t) { let cur = list[0]; list.forEach((x) => { if (t + 0.05 >= x.at) cur = x; }); return cur; }
