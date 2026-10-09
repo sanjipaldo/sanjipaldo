@@ -411,7 +411,7 @@
       if (on !== dark) {
         dark = on;
         top.classList.toggle("scrolled", on);
-        const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", on ? "#1e1e1e" : "#ffffff");
+        const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", on ? "#262622" : "#ffffff");
       }
       if (prog) prog.style.transform = "scaleX(" + (max > 0 ? Math.min(1, y / max) : 0).toFixed(4) + ")";
     });
