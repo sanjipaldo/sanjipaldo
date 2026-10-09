@@ -103,7 +103,7 @@
         scrollBtn("hm-platform", "플랫폼", "hm-nav-a") + scrollBtn("hm-students", "수강생", "hm-nav-a") + scrollBtn("hm-teachers", "강사", "hm-nav-a") +
         scrollBtn("hm-classes", "강사 소개", "hm-nav-a") + scrollBtn("hm-faq", "자주 묻는 질문", "hm-nav-a") +
       "</nav>" +
-      '<div class="hm-top-r"><a class="hm-top-link" href="#/center">강사센터</a><a class="hm-btn hm-btn-y hm-btn-sm" href="#/login">로그인</a></div>' +
+      '<div class="hm-top-r"><a class="hm-btn hm-btn-ghost hm-btn-sm" href="#/center">강사센터</a><a class="hm-btn hm-btn-p hm-btn-sm" href="#/login">로그인</a></div>' +
     "</div></header>";
   }
 
@@ -114,13 +114,13 @@
         '<p class="hm-pill"><i class="hm-dot"></i>승인된 수강생만 들어오는 강의 플랫폼</p>' +
         '<h1 class="hm-h1">따라만 하면 완성되는<br>' + mark("튜토리얼 강의 플랫폼") + "</h1>" +
         '<p class="hm-lead">두고 클래스는 강사님의 노하우를 <b>1주차부터 수료까지</b> 순서대로 담은 강의 플랫폼이에요. 수강생은 튜토리얼대로 따라오고, 강사님은 모든 수강생의 진도를 한눈에 봅니다.</p>' +
-        '<div class="hm-cta"><a class="hm-btn hm-btn-y hm-btn-lg" href="#/login">수강생 로그인' + icon("arrowRight", "sm") + "</a>" + scrollBtn("hm-platform", "플랫폼 둘러보기", "hm-btn hm-btn-ghost hm-btn-lg") + "</div>" +
+        '<div class="hm-cta"><a class="hm-btn hm-btn-p hm-btn-lg" href="#/login">수강생 로그인' + icon("arrowRight", "sm") + "</a>" + scrollBtn("hm-platform", "플랫폼 둘러보기", "hm-btn hm-btn-sec hm-btn-lg") + "</div>" +
         '<p class="hm-note">' + icon("shieldCheck", "xs") + "회원가입 없이, 강사님이 승인한 수강생만 로그인할 수 있어요</p>" +
       "</div>" +
       '<div class="hm-hero-art">' +
         browser("ad-dash", "hm-hero-browser", "강사센터 대시보드 화면", true) +
         '<div class="hm-hero-phone-wrap">' + phone("st-home", "hm-hero-phone", "수강생 홈 화면").replace(' loading="lazy"', "") + "</div>" +
-        '<div class="hm-chip hm-chip-a">' + icon("check", "sm") + "<span><b>1주차 과제 승인</b><small>문원오 강사 · 방금</small></span></div>" +
+        '<div class="hm-chip hm-chip-a">' + icon("check", "sm ok") + "<span><b>1주차 과제 승인</b><small>문원오 강사 · 방금</small></span></div>" +
         '<div class="hm-chip hm-chip-b"><span><small>3기 평균 진도</small><b>72%</b></span><i class="hm-chip-bar"><i style="width:72%"></i></i></div>' +
         '<div class="hm-chip hm-chip-c">' + icon("award", "sm") + "<span><b>수료증 발급</b><small>필수 과제 23개 통과</small></span></div>" +
       "</div>" +
@@ -182,7 +182,7 @@
 
   function teachers() {
     const cur = ADMIN_TABS.find((x) => x.key === adTab) || ADMIN_TABS[0];
-    return '<section class="hm-sec hm-dark" id="hm-teachers"><div class="hm-wrap">' +
+    return '<section class="hm-sec" id="hm-teachers"><div class="hm-wrap">' +
       '<div class="hm-head hm-reveal">' + kicker("FOR INSTRUCTORS · 강사") + '<h2 class="hm-h2">강사님의 노하우가<br>' + mark("일하는 강의 플랫폼") + "이 됩니다</h2>" +
         '<p class="hm-sub">커리큘럼을 올려 두면 수강생은 혼자서도 따라오고, 강사님은 강사센터에서 모든 수강생의 진도와 과제를 확인해요. 코치와 나눠서 운영할 수도 있어요.</p></div>' +
       '<div class="hm-atabs" role="tablist" aria-label="강사센터 화면">' + ADMIN_TABS.map((x) => '<button type="button" role="tab" class="hm-atab' + (x.key === cur.key ? " on" : "") + '" aria-selected="' + (x.key === cur.key) + '" data-hm-ad="' + x.key + '">' + x.title + "</button>").join("") + "</div>" +
@@ -192,12 +192,12 @@
   }
 
   function journey() {
-    return '<section class="hm-sec" id="hm-how"><div class="hm-wrap">' +
+    return '<section class="hm-sec hm-soft" id="hm-how"><div class="hm-wrap">' +
       '<div class="hm-head hm-reveal">' + kicker("HOW IT WORKS") + '<h2 class="hm-h2">수강생은 이렇게 시작해요</h2>' +
         '<p class="hm-sub">회원가입 대신 승인제로 운영해요. 내 강사님이 승인한 수강생만 강의실에 들어올 수 있어요.</p></div>' +
       '<ol class="hm-steps">' + STEPS.map((s, i) => '<li class="hm-step hm-reveal"><span class="hm-step-no">' + String(i + 1).padStart(2, "0") + "</span><b>" + s[0] + "</b><p>" + s[1] + "</p></li>").join("") + "</ol>" +
       '<div class="hm-login-demo hm-reveal">' +
-        '<div class="hm-ld-copy"><h3>로그인은 이 세 가지면 끝</h3><p>아이디 · 비밀번호를 따로 만들 필요가 없어요. 신청할 때 적은 정보 그대로 들어와요.</p><a class="hm-btn hm-btn-dark" href="#/login">로그인 화면으로' + icon("arrowRight", "sm") + "</a></div>" +
+        '<div class="hm-ld-copy"><h3>로그인은 이 세 가지면 끝</h3><p>아이디 · 비밀번호를 따로 만들 필요가 없어요. 신청할 때 적은 정보 그대로 들어와요.</p><a class="hm-btn hm-btn-p" href="#/login">로그인 화면으로' + icon("arrowRight", "sm") + "</a></div>" +
         '<div class="hm-ld-card" aria-hidden="true">' +
           '<div class="hm-ld-f"><small>1. 수강 중인 강사님</small><span>' + window.logoMark() + "두고보는 문대표" + icon("chevRight", "xs") + "</span></div>" +
           '<div class="hm-ld-f"><small>2. 이름</small><span>홍길동</span></div>' +
@@ -218,7 +218,7 @@
         (x.free ? '<a class="hm-cbtn" href="#/free/' + esc(x.id) + '">무료 강의</a>' : "") +
         '<a class="hm-cbtn hm-cbtn-p" href="#/login?ins=' + esc(x.id) + '">수강생 로그인</a>' +
       "</div></article>";
-    return '<section class="hm-sec hm-soft" id="hm-classes"><div class="hm-wrap">' +
+    return '<section class="hm-sec" id="hm-classes"><div class="hm-wrap">' +
       '<div class="hm-head hm-reveal">' + kicker("CLASSES") + '<h2 class="hm-h2">지금 두고 클래스로<br>강의하는 강사님</h2>' +
         '<p class="hm-sub">강사님마다 자기 이름 · 색 · 커리큘럼으로 운영하는 강의 플랫폼이에요. 수강생은 로그인할 때 내 강사님을 골라 들어가요.</p></div>' +
       '<div class="hm-classes">' + list.map(card).join("") +
@@ -230,7 +230,7 @@
 
   function lifelong() {
     const loop = ["새 영상 · 자료 업데이트", "수강생이 다시 찾아와요", "질문 · 소통 · 피드백", "단골 수강생 · 나만의 팬"];
-    return '<section class="hm-sec hm-dark hm-life"><div class="hm-wrap hm-life-in">' +
+    return '<section class="hm-sec hm-soft hm-life"><div class="hm-wrap hm-life-in">' +
       '<div class="hm-life-copy hm-reveal">' + kicker("LIFETIME NETWORK") + '<h2 class="hm-h2 hm-h2-xl">한 번 들어오면,<br>' + mark("평생 함께") + ".</h2>" +
         "<p>강의가 끝나도 플랫폼은 남아요. 강사님은 끝난 기수에게도 좋은 영상과 새 정보를 계속 올리고, 수강생은 언제든 다시 찾아와 배우고 물어봐요.</p>" +
         "<p>그렇게 끊임없이 이어지는 연결이 <b>강사님만의 단골 수강생, 나만의 팬</b>을 만들어요. 두고 클래스는 한 번 팔고 끝나는 강의가 아니라, 계속 함께 성장하는 강의를 위한 플랫폼이에요.</p>" +
@@ -253,7 +253,7 @@
     return '<section class="hm-final"><div class="hm-wrap hm-final-in">' +
       '<h2 class="hm-h2">오늘의 한 걸음이<br>수료증이 되는 곳</h2>' +
       "<p>내 강사님이 준비해 둔 튜토리얼이 기다리고 있어요.</p>" +
-      '<div class="hm-cta hm-cta-c"><a class="hm-btn hm-btn-dark hm-btn-lg" href="#/login">수강생 로그인' + icon("arrowRight", "sm") + '</a><a class="hm-btn hm-btn-line hm-btn-lg" href="#/center">강사센터</a></div>' +
+      '<div class="hm-cta hm-cta-c"><a class="hm-btn hm-btn-inv hm-btn-lg" href="#/login">수강생 로그인' + icon("arrowRight", "sm") + '</a><a class="hm-btn hm-btn-onred hm-btn-lg" href="#/center">강사센터</a></div>' +
     "</div></section>";
   }
 
@@ -261,7 +261,7 @@
     return '<footer class="hm-foot"><div class="hm-wrap hm-foot-in">' +
       '<div class="hm-foot-brand">' + window.logoMark() + "<span><b>두고 클래스</b><small>DOOGO CLASS · 튜토리얼 강의 플랫폼</small></span></div>" +
       '<nav class="hm-foot-links" aria-label="바로가기"><a href="#/login">수강생 로그인</a><a href="#/center">강사센터</a><a href="https://www.doogoconnect.com/" target="_blank" rel="noopener">두고커넥트</a><a href="https://www.doogofood.com/" target="_blank" rel="noopener">두고푸드</a></nav>' +
-      '<div class="hm-foot-bottom"><span>운영 (주)두고홀딩스 · © 2026 doogo. All rights reserved.</span>' + window.poweredBy("white", "hm-powered") + "</div>" +
+      '<div class="hm-foot-bottom"><span>운영 (주)두고홀딩스 · © 2026 doogo. All rights reserved.</span>' + window.poweredBy("color", "hm-powered") + "</div>" +
     "</div></footer>";
   }
 
@@ -277,7 +277,7 @@
   function render() {
     window.applyStudentTheme(null);
     document.title = "두고 클래스 — 따라만 하면 완성되는 튜토리얼 강의 플랫폼";
-    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", "#0a0a0b");
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", "#ffffff");
     const list = classes();
     root.innerHTML = '<div class="hm">' + header() + "<main>" + hero(list) + stats(list) + problem() + pillars() + students() + teachers() + journey() + classList(list) + lifelong() + faq() + finalCta() + "</main>" + footer() + "</div>";
     onScroll();
