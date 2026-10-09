@@ -16,6 +16,7 @@ import {
   sourcingRequests
 } from "../db/schema";
 import { enqueueProductSync } from "./catalog-sync";
+import { legacyFeeFields, parseRateTiers, rateSummaryLabel, type ShippingRateTiers, type ShippingRateType } from "./shipping-rates";
 
 export type ProductOptionInput = {
   id?: string;
@@ -99,10 +100,46 @@ export type ShippingPolicyInput = {
   description?: string | null;
   isActive?: boolean;
   sortOrder?: number;
+  // 발주오라와 같은 배송비 유형(migration 025). 있으면 아래 값으로 예전 칸(feeType 등)을 함께 채웁니다.
+  rateType?: ShippingRateType | null;
+  rateTiers?: ShippingRateTiers | null;
+  unitLabel?: string | null;
+  freeWholeOrder?: boolean;
+  policyCode?: string | null;
 };
+
+// 발주오라형 배송비 유형으로 저장: 유형별로 필요한 값만 남기고, 예전 칸·표시 문구를 맞춰 둡니다.
+function rateTypePolicyValues(input: ShippingPolicyInput & { rateType: ShippingRateType }) {
+  const rateType = input.rateType;
+  const tiered = rateType === "amount" || rateType === "quantity" || rateType === "unit";
+  const tiers = tiered ? input.rateTiers ?? null : null;
+  const unitLabel = rateType === "unit" ? input.unitLabel || "개" : null;
+  const fixedFee = rateType === "fixed" ? input.fee ?? 0 : 0;
+  const legacy = legacyFeeFields(rateType, fixedFee, tiers, unitLabel);
+  return {
+    name: input.name,
+    shippingType: input.shippingType,
+    courier: input.courier || null,
+    ...legacy,
+    feeLabel: input.feeLabel || rateSummaryLabel(rateType, fixedFee, tiers, unitLabel),
+    rateType,
+    rateTiers: tiers ? JSON.stringify(tiers) : null,
+    unitLabel,
+    freeWholeOrder: rateType === "free" ? input.freeWholeOrder ?? false : false,
+    policyCode: input.policyCode?.trim() || null,
+    jejuExtraFee: input.jejuExtraFee ?? 0,
+    islandExtraFee: input.islandExtraFee ?? 0,
+    returnFee: input.returnFee ?? null,
+    exchangeFee: input.exchangeFee ?? null,
+    description: input.description || null,
+    isActive: input.isActive ?? true,
+    sortOrder: input.sortOrder ?? 0
+  };
+}
 
 // 배송비 유형에 맞게 배송비·무료배송 기준금액을 정리합니다(무료면 배송비 0, 조건부가 아니면 기준금액 없음).
 function shippingPolicyValues(input: ShippingPolicyInput) {
+  if (input.rateType) return rateTypePolicyValues({ ...input, rateType: input.rateType });
   const feeType = input.feeType ?? ((input.fee ?? 0) === 0 ? "free" : input.freeShippingThreshold ? "conditional" : "paid");
   const fee = feeType === "free" ? 0 : input.fee ?? 0;
   const freeShippingThreshold = feeType === "conditional" ? input.freeShippingThreshold ?? null : null;
@@ -254,8 +291,25 @@ export function isPublicPriceHistoryDate(changedAt: string, now = Date.now()) {
 }
 
 // 공개 단가표의 "배송비 ?" 안내에 쓰는 배송 정책(사용 중인 정책만, 운영용 정렬값 제외)
-function publicShippingPolicyRows() {
-  return getDb().select({
+async function publicShippingPolicyRows() {
+  const rows = await getDb().select({
+    ...publicPolicyLegacyColumns(),
+    rateType: shippingPolicies.rateType,
+    rateTiers: shippingPolicies.rateTiers,
+    unitLabel: shippingPolicies.unitLabel,
+    freeWholeOrder: shippingPolicies.freeWholeOrder,
+    policyCode: shippingPolicies.policyCode
+  }).from(shippingPolicies).where(eq(shippingPolicies.isActive, true)).orderBy(asc(shippingPolicies.sortOrder), asc(shippingPolicies.name))
+    // migration 025 전 DB(예: 운영 DB를 함께 쓰는 미리보기)에서는 예전 칸만 읽습니다.
+    .catch(() => getDb().select(publicPolicyLegacyColumns()).from(shippingPolicies).where(eq(shippingPolicies.isActive, true)).orderBy(asc(shippingPolicies.sortOrder), asc(shippingPolicies.name))
+      .then((legacy) => legacy.map((row) => ({ ...row, rateType: null, rateTiers: null, unitLabel: null, freeWholeOrder: false, policyCode: null }))))
+    // 배송 정책을 못 읽어도 단가표는 보여야 하므로 빈 목록으로 대신합니다.
+    .catch(() => []);
+  return rows.map((row) => ({ ...row, rateTiers: parseRateTiers(row.rateTiers) }));
+}
+
+function publicPolicyLegacyColumns() {
+  return {
     id: shippingPolicies.id,
     name: shippingPolicies.name,
     shippingType: shippingPolicies.shippingType,
@@ -270,9 +324,7 @@ function publicShippingPolicyRows() {
     returnFee: shippingPolicies.returnFee,
     exchangeFee: shippingPolicies.exchangeFee,
     description: shippingPolicies.description
-  }).from(shippingPolicies).where(eq(shippingPolicies.isActive, true)).orderBy(asc(shippingPolicies.sortOrder), asc(shippingPolicies.name))
-    // 배송 정책을 못 읽어도(예: 새 칸이 아직 DB에 없을 때) 단가표는 보여야 하므로 빈 목록으로 대신합니다.
-    .catch(() => []);
+  };
 }
 
 export async function getPublicCatalog() {
@@ -670,30 +722,73 @@ export async function removeProductGroup(id: string) {
   return rows[0];
 }
 
+// 상품 저장에 필요한 배송 정책 칸만 읽습니다(새 칸이 없는 DB에서도 상품 저장이 되도록).
+function productPolicyColumns() {
+  return { id: shippingPolicies.id, name: shippingPolicies.name, shippingType: shippingPolicies.shippingType, courier: shippingPolicies.courier, feeLabel: shippingPolicies.feeLabel };
+}
+
+// 관리자 배송 정책 목록: 정책마다 연결된(삭제되지 않은) 상품 수를 함께 돌려줍니다.
 export async function getShippingPolicies() {
+  const db = getDb();
+  const [rows, counts] = await Promise.all([
+    db.select().from(shippingPolicies).orderBy(asc(shippingPolicies.sortOrder), asc(shippingPolicies.name))
+      // migration 025 전 DB(미리보기)에서는 예전 칸만 읽습니다.
+      .catch(async () => {
+        const legacyColumns = {
+          ...publicPolicyLegacyColumns(),
+          isActive: shippingPolicies.isActive,
+          sortOrder: shippingPolicies.sortOrder,
+          createdAt: shippingPolicies.createdAt,
+          updatedAt: shippingPolicies.updatedAt
+        };
+        const legacy = await db.select(legacyColumns).from(shippingPolicies).orderBy(asc(shippingPolicies.sortOrder), asc(shippingPolicies.name));
+        return legacy.map((row) => ({ ...row, rateType: null, rateTiers: null, unitLabel: null, freeWholeOrder: false, policyCode: null }));
+      }),
+    db.select({ policyId: products.shippingPolicyId, count: sql<number>`count(*)` }).from(products)
+      .where(and(sql`${products.deletedAt} IS NULL`, sql`${products.shippingPolicyId} IS NOT NULL`))
+      .groupBy(products.shippingPolicyId)
+  ]);
+  const countByPolicy = new Map(counts.map((row) => [row.policyId, Number(row.count)]));
   return {
-    policies: await getDb().select().from(shippingPolicies).orderBy(asc(shippingPolicies.sortOrder), asc(shippingPolicies.name))
+    policies: rows.map((row) => ({ ...row, rateTiers: parseRateTiers(row.rateTiers), productCount: countByPolicy.get(row.id) ?? 0 }))
   };
+}
+
+function shippingPolicyResponse<T extends { rateTiers: string | null }>(row: T) {
+  return { ...row, rateTiers: parseRateTiers(row.rateTiers) };
+}
+
+// 배송비 코드: 비우면 발주오라처럼 SP + 숫자로 자동 부여하고, 다른 정책과 겹치면 저장하지 않습니다.
+async function ensurePolicyCode(input: ShippingPolicyInput, currentId?: string) {
+  if (!input.rateType && !input.policyCode) return input;
+  const policyCode = input.policyCode?.trim() || `SP${Date.now()}`;
+  const duplicate = await getDb().select({ id: shippingPolicies.id }).from(shippingPolicies).where(eq(shippingPolicies.policyCode, policyCode)).limit(1);
+  if (duplicate[0] && duplicate[0].id !== currentId) {
+    throw new DatabaseError("DATABASE_QUERY_FAILED", `배송비 코드 ${policyCode}는 이미 다른 정책에서 쓰고 있습니다.`, 400);
+  }
+  return { ...input, policyCode };
 }
 
 export async function createShippingPolicy(input: ShippingPolicyInput) {
   const now = new Date().toISOString();
+  const values = shippingPolicyValues(await ensurePolicyCode(input));
   const rows = await getDb().insert(shippingPolicies).values({
     id: crypto.randomUUID(),
-    ...shippingPolicyValues(input),
+    ...values,
     createdAt: now,
     updatedAt: now
   }).returning();
-  return rows[0];
+  return shippingPolicyResponse(rows[0]);
 }
 
 export async function updateShippingPolicy(id: string, input: ShippingPolicyInput) {
+  const checked = await ensurePolicyCode(input, id);
   const rows = await getDb().update(shippingPolicies).set({
-    ...shippingPolicyValues(input),
+    ...shippingPolicyValues(checked),
     updatedAt: new Date().toISOString()
   }).where(eq(shippingPolicies.id, id)).returning();
   if (!rows[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "배송 정책을 찾을 수 없습니다.", 404);
-  return rows[0];
+  return shippingPolicyResponse(rows[0]);
 }
 
 export async function removeShippingPolicy(id: string) {
@@ -791,7 +886,7 @@ export async function createProduct(input: ProductInput) {
   const updatedAt = new Date().toISOString();
   const normalizedSaleFields = await normalizeSaleFields(input);
   const selectedShippingPolicy = input.shippingPolicyId
-    ? (await db.select().from(shippingPolicies).where(eq(shippingPolicies.id, input.shippingPolicyId)).limit(1))[0]
+    ? (await db.select(productPolicyColumns()).from(shippingPolicies).where(eq(shippingPolicies.id, input.shippingPolicyId)).limit(1))[0]
     : null;
   if (input.shippingPolicyId && !selectedShippingPolicy) {
     throw new DatabaseError("DATABASE_QUERY_FAILED", "선택한 배송 정책을 찾을 수 없습니다.", 400);
@@ -903,7 +998,7 @@ export async function updateProduct(id: string, input: ProductInput, changedBy: 
   const changedAt = new Date().toISOString();
   const normalizedSaleFields = await normalizeSaleFields(input);
   const selectedShippingPolicy = input.shippingPolicyId
-    ? (await db.select().from(shippingPolicies).where(eq(shippingPolicies.id, input.shippingPolicyId)).limit(1))[0]
+    ? (await db.select(productPolicyColumns()).from(shippingPolicies).where(eq(shippingPolicies.id, input.shippingPolicyId)).limit(1))[0]
     : null;
   if (input.shippingPolicyId && !selectedShippingPolicy) {
     throw new DatabaseError("DATABASE_QUERY_FAILED", "선택한 배송 정책을 찾을 수 없습니다.", 400);

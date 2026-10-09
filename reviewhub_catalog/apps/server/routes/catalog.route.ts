@@ -55,6 +55,7 @@ import {
   DEFAULT_CONTRACT_OPTIONS
 } from "../services/catalog-excel";
 import { getCatalogOperationsOverview } from "../services/catalog-operations";
+import { SHIPPING_RATE_TYPES, SHIPPING_UNIT_LABELS, validateRateTiers } from "../services/shipping-rates";
 import { getSalesOverview } from "../services/catalog-sales";
 import { disconnectConnection, getCatalogSyncOverview, listSyncOutbox, listSyncRuns, saveConnection, setAutoSync, verifyConnection } from "../services/catalog-sync";
 import { StorageError, storagePut } from "../services/s3_storage";
@@ -216,8 +217,35 @@ const ShippingPolicySchema = z.object({
   exchangeFee: z.coerce.number().int().nonnegative().max(1_000_000).nullable().optional(),
   description: z.string().trim().max(1000).nullable().optional(),
   isActive: z.boolean().optional(),
-  sortOrder: z.coerce.number().int().min(0).max(9999).optional()
+  sortOrder: z.coerce.number().int().min(0).max(9999).optional(),
+  // 발주오라형 배송비 유형(migration 025)
+  rateType: z.enum(SHIPPING_RATE_TYPES).nullable().optional(),
+  rateTiers: z.object({
+    tiers: z.array(z.object({ upTo: z.coerce.number().int().min(2).max(1_000_000_000), fee: z.coerce.number().int().nonnegative().max(10_000_000) })).max(20),
+    last: z.object({ fee: z.coerce.number().int().nonnegative().max(10_000_000), repeat: z.boolean() })
+  }).nullable().optional(),
+  unitLabel: z.enum(SHIPPING_UNIT_LABELS).nullable().optional(),
+  freeWholeOrder: z.boolean().optional(),
+  policyCode: z.string().trim().max(20).regex(/^[A-Za-z0-9]*$/, "배송비 코드는 영문·숫자만 쓸 수 있습니다.").nullable().optional()
+}).superRefine((value, context) => {
+  if (!value.rateType) return;
+  // 발주오라와 같이 정책명은 텍스트·숫자(공백 포함) 20자까지
+  if (value.name.length > 20 || !/^[가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9\s]+$/.test(value.name)) {
+    context.addIssue({ code: "custom", path: ["name"], message: "배송비 정책명은 한글·영문·숫자로 20자까지 입력해 주세요." });
+  }
+  if (value.rateType === "fixed" && !(value.fee && value.fee > 0)) {
+    context.addIssue({ code: "custom", path: ["fee"], message: "고정배송비를 입력해 주세요." });
+  }
+  if (["amount", "quantity", "unit"].includes(value.rateType)) {
+    const problem = value.rateTiers ? validateRateTiers(value.rateTiers) : "배송비 구간을 입력해 주세요.";
+    if (problem) context.addIssue({ code: "custom", path: ["rateTiers"], message: problem });
+  }
 });
+
+// 배송 정책 입력 오류는 어떤 칸이 문제인지 알려 줍니다.
+function shippingPolicyError(error: z.ZodError) {
+  return error.issues.find((issue) => issue.code === "custom" || issue.message.includes("배송비"))?.message ?? "배송 정책 입력값을 확인해 주세요.";
+}
 
 export const catalogRouter = new Hono();
 
@@ -336,7 +364,7 @@ catalogRouter.get("/admin/shipping-policies", adminRoute, async (c) => c.json(ap
 
 catalogRouter.post("/admin/shipping-policies", adminRoute, async (c) => {
   const parsed = ShippingPolicySchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "배송 정책 입력값을 확인해 주세요."), 400);
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", shippingPolicyError(parsed.error)), 400);
   try {
     return c.json(apiSuccess({ policy: await createShippingPolicy(parsed.data) }), 201);
   } catch (error) {
@@ -346,7 +374,7 @@ catalogRouter.post("/admin/shipping-policies", adminRoute, async (c) => {
 
 catalogRouter.put("/admin/shipping-policies/:id", adminRoute, async (c) => {
   const parsed = ShippingPolicySchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "배송 정책 입력값을 확인해 주세요."), 400);
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", shippingPolicyError(parsed.error)), 400);
   try {
     return c.json(apiSuccess({ policy: await updateShippingPolicy(c.req.param("id"), parsed.data) }));
   } catch (error) {

@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
+import { RATE_TYPE_LABELS, effectiveRate, rateTierLines, representativeFee } from "@/lib/shipping-rates";
 import type { CatalogData, GuideContent, Notice, OperationsOverview, PriceHistory, Product, PublicShippingPolicy, ShippingType, SoldOutIssue } from "./types";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 
@@ -571,11 +572,12 @@ type ShippingSummary = { kind: "free" | "paid" | "unknown"; text: string };
 
 function shippingFeeSummary(_product: Product, policy?: PublicShippingPolicy): ShippingSummary {
   if (!policy) return { kind: "unknown", text: "확인" };
-  if (policy.feeType === "free") return { kind: "free", text: "무료" };
-  return { kind: "paid", text: policy.fee > 0 ? `유료 (${formatPrice(policy.fee)})` : "유료" };
+  const rate = effectiveRate(policy);
+  const fee = representativeFee(policy);
+  if (rate.rateType === "free" || (fee === 0 && (rate.tiers?.last.fee ?? 0) === 0)) return { kind: "free", text: "무료" };
+  // 구간형은 첫 구간(가장 적게 주문할 때) 배송비를 대표 금액으로 보여 주고, 자세한 구간은 팝업에서 안내합니다.
+  return { kind: "paid", text: fee > 0 ? `유료 (${formatPrice(fee)})` : "유료" };
 }
-
-const feeBasisLabel = { order: "주문당 고정", quantity: "수량별 부과", weight: "무게별 부과(kg당)" } as const;
 
 // 배송비 ? 버튼 팝업: 무료/유료, 유료 방식, 무료 조건, 제주·도서산간 추가배송비, 반품·교환 배송비
 function ShippingInfoModal({ product, policy, onClose }: { product: Product; policy?: PublicShippingPolicy; onClose: () => void }) {
@@ -590,10 +592,16 @@ function ShippingInfoModal({ product, policy, onClose }: { product: Product; pol
   const extra = (value: number) => value > 0 ? `+${formatPrice(value)}` : "추가 없음";
   const rows: Array<[string, string]> = [];
   if (policy) {
-    const free = policy.feeType === "free";
-    rows.push(["배송비", free ? "무료배송" : `유료 ${formatPrice(policy.fee)}`]);
-    if (!free) rows.push(["부과 방식", feeBasisLabel[policy.feeBasis ?? "order"]]);
-    if (policy.feeType === "conditional" && policy.freeShippingThreshold) rows.push(["무료배송 조건", `${formatPrice(policy.freeShippingThreshold)} 이상 주문 시 무료`]);
+    const rate = effectiveRate(policy);
+    rows.push(["배송비 유형", RATE_TYPE_LABELS[rate.rateType]]);
+    if (rate.rateType === "free") {
+      rows.push(["배송비", policy.freeWholeOrder ? "무료배송 (이 상품이 포함된 주문은 배송비 전체 무료)" : "무료배송"]);
+    } else if (rate.rateType === "fixed" || !rate.tiers) {
+      rows.push(["배송비", `${formatPrice(rate.fee)} (주문 금액에 관계없이)`]);
+    } else {
+      // 금액별·수량별·단위별: 구간마다 한 줄씩
+      rows.push([rate.rateType === "amount" ? "주문 금액별 배송비" : rate.rateType === "quantity" ? "주문 수량별 배송비" : "단위별 배송비", rateTierLines(rate.rateType, rate.tiers, rate.unitLabel).join("\n")]);
+    }
     rows.push(["제주 추가배송비", extra(policy.jejuExtraFee)]);
     rows.push(["도서산간 추가배송비", extra(policy.islandExtraFee)]);
     if (policy.returnFee != null) rows.push(["반품 배송비(편도)", formatPrice(policy.returnFee)]);
@@ -611,7 +619,7 @@ function ShippingInfoModal({ product, policy, onClose }: { product: Product; pol
         <h2 id="shipping-info-title">배송비 안내</h2>
         <p className="shipping-info-product">{product.name}</p>
         <strong className={`shipping-info-headline ${summary.kind}`}>배송비 {summary.text}</strong>
-        <dl className="shipping-info-list">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+        <dl className="shipping-info-list">{rows.map(([label, value]) => <div key={label} className={value.includes("\n") ? "multi" : undefined}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
         {policy?.description && <p className="shipping-info-note">{policy.description}</p>}
         {!policy && <p className="shipping-info-note">이 상품은 배송 정책이 아직 정해지지 않았습니다. 정확한 배송비와 제주·도서산간 추가배송비는 1:1 상담으로 문의해 주세요.</p>}
       </section>

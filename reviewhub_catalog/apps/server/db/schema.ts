@@ -142,6 +142,17 @@ export const shippingPolicies = sqliteTable(
     feeType: text("feeType", { enum: ["free", "paid", "conditional"] }).notNull().default("free"),
     // 유료 배송비 부과 방식: order 주문당 고정 · quantity 수량별 · weight 무게별(kg당)
     feeBasis: text("feeBasis", { enum: ["order", "quantity", "weight"] }).notNull().default("order"),
+    // 발주오라와 같은 배송비 유형(migration 025): fixed 고정 · free 무료 · amount 금액별 · quantity 수량별 · unit 단위별
+    // 비어 있으면 예전 방식(feeType·feeBasis)으로 만든 정책입니다.
+    rateType: text("rateType", { enum: ["fixed", "free", "amount", "quantity", "unit"] }),
+    // 금액별·수량별·단위별 구간(JSON): { tiers: [{ upTo, fee }], last: { fee, repeat } }
+    rateTiers: text("rateTiers"),
+    // 단위별 배송비의 단위(개·kg 등)
+    unitLabel: text("unitLabel"),
+    // 배송비무료: 이 정책 상품이 포함된 주문은 배송비 전체를 무료 처리
+    freeWholeOrder: integer("freeWholeOrder", { mode: "boolean" }).notNull().default(false),
+    // 배송비 코드(영문·숫자, 비우면 자동 부여)
+    policyCode: text("policyCode"),
     jejuExtraFee: integer("jejuExtraFee").notNull().default(0),
     islandExtraFee: integer("islandExtraFee").notNull().default(0),
     returnFee: integer("returnFee"),

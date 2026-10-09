@@ -28,7 +28,18 @@ export type ShippingPolicy = {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  // 발주오라형 배송비 유형(migration 025). 예전에 만든 정책은 비어 있습니다.
+  rateType?: ShippingRateType | null;
+  rateTiers?: ShippingRateTiers | null;
+  unitLabel?: string | null;
+  freeWholeOrder?: boolean;
+  policyCode?: string | null;
+  // 관리자 목록: 이 정책이 연결된 상품 수
+  productCount?: number;
 };
+
+export type ShippingRateType = "fixed" | "free" | "amount" | "quantity" | "unit";
+export type ShippingRateTiers = { tiers: Array<{ upTo: number; fee: number }>; last: { fee: number; repeat: boolean } };
 
 export type Supplier = {
   id: string;
@@ -223,7 +234,7 @@ export type SourcingRequest = {
 };
 
 // 공개 단가표에 내려오는 배송 정책(관리용 필드 제외)
-export type PublicShippingPolicy = Omit<ShippingPolicy, "isActive" | "sortOrder" | "createdAt" | "updatedAt">;
+export type PublicShippingPolicy = Omit<ShippingPolicy, "isActive" | "sortOrder" | "createdAt" | "updatedAt" | "productCount">;
 
 export type CatalogData = {
   categories: Category[];
