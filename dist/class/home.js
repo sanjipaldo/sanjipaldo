@@ -315,25 +315,30 @@
   }
 
   /* 강사진 — 프로필 사진 카드 (타이탄클래스 강사진처럼: 사진 · 이름 · 분야 · 구분선 · SNS) */
+  // 강사 SNS — 한눈에 알아보게 실제 서비스 색 마크 (유튜브 빨강 · 인스타 그라데이션 · 카카오 노랑)
   const SNS = {
-    youtube: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>',
-    instagram: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg>',
-    kakao: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>'
+    youtube: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4.5" width="22" height="15" rx="4.5" fill="#ff0000"/><path d="M9.8 8.6v6.8l5.9-3.4z" fill="#fff"/></svg>',
+    instagram: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="hm-ig" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#feda75"/><stop offset=".35" stop-color="#fa7e1e"/><stop offset=".65" stop-color="#d62976"/><stop offset="1" stop-color="#4f5bd5"/></linearGradient></defs><rect x="2" y="2" width="20" height="20" rx="6" fill="url(#hm-ig)"/><rect x="6.5" y="6.5" width="11" height="11" rx="3.5" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="2.6" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="16.6" cy="7.4" r="1" fill="#fff"/></svg>',
+    kakao: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="1.5" width="21" height="21" rx="6" fill="#fee500"/><path d="M12 6.2c-3.6 0-6.4 2.2-6.4 5 0 1.8 1.2 3.4 3 4.3l-.6 2.3 2.6-1.7c.5.1.9.1 1.4.1 3.6 0 6.4-2.2 6.4-5s-2.8-5-6.4-5z" fill="#3c1e1e"/></svg>'
   };
   const SILHOUETTE = '<svg class="hm-tc-ph" viewBox="0 0 200 250" aria-hidden="true"><circle cx="100" cy="92" r="44"/><path d="M18 250c4-58 40-92 82-92s78 34 82 92Z"/></svg>';
   function classList(list) {
-    const sns = (x) => [["youtube", x.yt, "유튜브"], ["instagram", x.ig, "인스타그램"], ["kakao", x.kakao, "카카오톡"]]
+    // 강사 유튜브 · 인스타그램 · 카카오톡: 서비스 마크 + 이름표 (무엇으로 가는 링크인지 바로 보이게)
+    const sns = (x) => [["youtube", x.yt, "강사 유튜브"], ["instagram", x.ig, "인스타그램"], ["kakao", x.kakao, "카카오톡 채널"]]
       .filter((v) => /^https?:\/\//i.test(v[1]))
-      .map((v) => '<a class="hm-sns" href="' + esc(v[1]) + '" target="_blank" rel="noopener" aria-label="' + esc(x.who) + " " + v[2] + '">' + SNS[v[0]] + "</a>").join("");
+      .map((v) => '<a class="hm-sns hm-sns-' + v[0] + '" href="' + esc(v[1]) + '" target="_blank" rel="noopener" aria-label="' + esc(x.who) + " " + v[2] + ' (새 창)">' + SNS[v[0]] + "<span>" + v[2] + "</span>" + icon("arrowUpRight", "xs") + "</a>").join("");
     const card = (x, i) => {
       const photo = '<span class="hm-tc-shape" aria-hidden="true"></span>' + (x.photo ? '<img src="' + esc(x.photo) + '" alt="' + esc(x.who) + ' 강사" decoding="async">' : SILHOUETTE) +
         '<span class="hm-tc-tag">' + x.weeks + "주 과정</span>";
       return '<article class="hm-tc hm-reveal" style="--i:' + i + '">' +
         (x.landing ? '<a class="hm-tc-photo" href="#/p/' + esc(x.id) + '" aria-label="' + esc(x.who) + ' 강의 소개">' + photo + "</a>" : '<div class="hm-tc-photo">' + photo + "</div>") +
-        '<div class="hm-tc-body"><h3>' + esc(x.who) + '</h3><p class="hm-tc-field">' + esc(x.field) + '</p><p class="hm-tc-course">' + esc(x.title) + "</p></div>" +
-        '<div class="hm-tc-foot"><span class="hm-tc-sns">' + sns(x) + '</span><span class="hm-tc-links">' +
-          (x.landing ? '<a href="#/p/' + esc(x.id) + '">강의 소개</a>' : "") + (x.free ? '<a href="#/free/' + esc(x.id) + '">무료 강의</a>' : "") +
-          '<a class="hm-tc-login" href="#/login?ins=' + esc(x.id) + '">로그인</a></span></div>' +
+        '<div class="hm-tc-body"><div class="hm-tc-head"><h3>' + esc(x.who) + '</h3>' + (sns(x) ? '<div class="hm-tc-sns">' + sns(x) + "</div>" : "") + '</div><p class="hm-tc-field">' + esc(x.field) + '</p><p class="hm-tc-course">' + esc(x.title) + "</p></div>" +
+        // 이름 옆: 강사 유튜브 표시 · 아래: 강의 소개 · 무료 강의 두 버튼 → 수강생 로그인 (한 줄 전체) — 카드끼리 버튼 높이가 맞게
+        '<div class="hm-tc-foot">' +
+          '<div class="hm-tc-links' + (x.landing && x.free ? "" : " one") + '">' +
+            (x.landing ? '<a class="hm-tc-a" href="#/p/' + esc(x.id) + '">' + icon("file", "xs") + "강의 소개</a>" : "") +
+            (x.free ? '<a class="hm-tc-a" href="#/free/' + esc(x.id) + '">' + icon("circlePlay", "xs") + "무료 강의</a>" : "") +
+            '<a class="hm-tc-login" href="#/login?ins=' + esc(x.id) + '">수강생 로그인' + icon("arrowRight", "xs") + "</a></div></div>" +
       "</article>";
     };
     return '<section class="hm-sec" id="hm-classes"><div class="hm-wrap">' +

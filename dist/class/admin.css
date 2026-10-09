@@ -340,7 +340,7 @@ textarea.a-input { min-height: 0; resize: vertical; line-height: 1.6; }
 
 /* ===== v3: 로그인 왼쪽 — 흰 바탕 + 빨강 포인트 (강사 · 마스터 = 레드, 코치 = 그린). 제목의 <em> 만 포인트 색 ===== */
 .a-login-brand { padding: 44px 48px 0; color: var(--m-ink); border-right: 1px solid var(--m-hairline-soft);
-  background: radial-gradient(560px 440px at 90% 6%, rgba(249, 66, 57, .05), transparent 70%), linear-gradient(180deg, #fffafa 0%, #ffffff 72%); }
+  background: radial-gradient(560px 440px at 90% 6%, rgba(249, 66, 57, .03), transparent 70%), linear-gradient(180deg, #fffcfc 0%, #ffffff 72%); }
 .a-login-brand::after { display: none; }
 .a-login-brand > :not(.lx-art) { position: relative; z-index: 1; }
 .a-login-brand .a-logo em { background: #fff; border: 1px solid var(--m-primary-200); color: var(--m-primary-deep); }
@@ -947,8 +947,8 @@ body[data-coach="1"] .a-logo-role { color: #00866b; }
 }
 
 /* ---------- 강사센터 · 마스터 — 흰 바탕 + 아주 옅은 빨강 파스텔 (첫 화면 맨 위와 같은 느낌) ---------- */
-body[data-mode="admin"] { background: #fcf9f9; }
-.a-main { background: radial-gradient(900px 380px at 100% 0%, rgba(249, 66, 57, .07), transparent 70%), radial-gradient(720px 320px at 0% 0%, rgba(255, 160, 110, .07), transparent 70%); }
+body[data-mode="admin"] { background: #fdfbfb; }
+.a-main { background: radial-gradient(900px 380px at 100% 0%, rgba(249, 66, 57, .035), transparent 70%); }
 .a-card { box-shadow: 0 1px 2px rgba(120, 40, 30, .03); }
 .a-side { background: linear-gradient(180deg, #fff 0%, #fffafa 100%); }
 /* 숫자 카드: 카드마다 다른 파스텔 (빨강 · 파랑 · 초록 · 보라) — 주의가 필요한 카드(.warn)는 주황 그대로 */
