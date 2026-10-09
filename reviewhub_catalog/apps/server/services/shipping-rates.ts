@@ -60,7 +60,8 @@ export function rateTierLines(rateType: ShippingRateType, value: ShippingRateTie
     from = tier.upTo;
     return line;
   });
-  lines.push(`${amount(from)} 이상 ${feeText(value.last.fee)}${value.last.repeat ? " (조건 반복)" : ""}`);
+  // 조건 반복: 마지막 줄에는 배송비가 없고 위 구간을 반복해 적용합니다(발주오라와 같음).
+  lines.push(value.last.repeat ? `${amount(from)} 이상 위 구간 반복 적용` : `${amount(from)} 이상 ${feeText(value.last.fee)}`);
   return lines;
 }
 
@@ -70,7 +71,7 @@ export function rateSummaryLabel(rateType: ShippingRateType, fee: number, value:
   if (rateType === "fixed") return `고정 ${won(fee)}`;
   if (!value) return RATE_TYPE_LABELS[rateType];
   const first = value.tiers[0]?.fee ?? value.last.fee;
-  const tail = value.last.fee === 0 ? ` · ${value.tiers.at(-1)?.upTo.toLocaleString("ko-KR")}${rangeUnit(rateType, unitLabel)} 이상 무료` : "";
+  const tail = value.last.repeat ? " · 구간 반복" : value.last.fee === 0 ? ` · ${value.tiers.at(-1)?.upTo.toLocaleString("ko-KR")}${rangeUnit(rateType, unitLabel)} 이상 무료` : "";
   return `${RATE_TYPE_LABELS[rateType].replace("배송비", "")} ${feeText(first)}~${tail}`;
 }
 
@@ -80,9 +81,10 @@ export function legacyFeeFields(rateType: ShippingRateType, fee: number, value: 
   if (rateType === "fixed") return { feeType: (fee === 0 ? "free" : "paid") as "free" | "paid", fee, feeBasis: "order" as const, freeShippingThreshold: null };
   const first = value?.tiers[0]?.fee ?? value?.last.fee ?? 0;
   const lastTier = value?.tiers.at(-1);
-  if (rateType === "amount" && value && value.last.fee === 0 && lastTier && value.tiers.every((tier) => tier.fee === first) && first > 0) {
+  if (rateType === "amount" && value && !value.last.repeat && value.last.fee === 0 && lastTier && value.tiers.every((tier) => tier.fee === first) && first > 0) {
     return { feeType: "conditional" as const, fee: first, feeBasis: "order" as const, freeShippingThreshold: lastTier.upTo };
   }
   const feeBasis = rateType === "quantity" ? "quantity" as const : rateType === "unit" && (unitLabel === "kg" || unitLabel === "g") ? "weight" as const : rateType === "unit" ? "quantity" as const : "order" as const;
-  return { feeType: (first === 0 && (value?.last.fee ?? 0) === 0 ? "free" : "paid") as "free" | "paid", fee: first, feeBasis, freeShippingThreshold: null };
+  const lastFee = value?.last.repeat ? first : value?.last.fee ?? 0;
+  return { feeType: (first === 0 && lastFee === 0 ? "free" : "paid") as "free" | "paid", fee: first, feeBasis, freeShippingThreshold: null };
 }

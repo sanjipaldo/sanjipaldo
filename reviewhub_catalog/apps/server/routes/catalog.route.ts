@@ -230,8 +230,8 @@ const ShippingPolicySchema = z.object({
 }).superRefine((value, context) => {
   if (!value.rateType) return;
   // 발주오라와 같이 정책명은 텍스트·숫자(공백 포함) 20자까지
-  if (value.name.length > 20 || !/^[가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9\s]+$/.test(value.name)) {
-    context.addIssue({ code: "custom", path: ["name"], message: "배송비 정책명은 한글·영문·숫자로 20자까지 입력해 주세요." });
+  if (value.name.length > 20 || !/^[가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9\s_\-()]+$/.test(value.name)) {
+    context.addIssue({ code: "custom", path: ["name"], message: "배송비 정책명은 한글·영문·숫자(공백·_·-·괄호 가능)로 20자까지 입력해 주세요." });
   }
   if (value.rateType === "fixed" && !(value.fee && value.fee > 0)) {
     context.addIssue({ code: "custom", path: ["fee"], message: "고정배송비를 입력해 주세요." });

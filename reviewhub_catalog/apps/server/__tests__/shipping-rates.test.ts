@@ -16,9 +16,18 @@ describe("배송비 유형(발주오라형)", () => {
     expect(rateTierLines("quantity", { tiers: [{ upTo: 5, fee: 3500 }, { upTo: 10, fee: 7000 }], last: { fee: 3500, repeat: true } })).toEqual([
       "1개 이상 ~ 5개 미만 3,500원",
       "5개 이상 ~ 10개 미만 7,000원",
-      "10개 이상 3,500원 (조건 반복)"
+      "10개 이상 위 구간 반복 적용"
     ]);
     expect(rateTierLines("unit", { tiers: [{ upTo: 10, fee: 4000 }], last: { fee: 8000, repeat: false } }, "kg")).toEqual(["1kg 이상 ~ 10kg 미만 4,000원", "10kg 이상 8,000원"]);
+  });
+
+  it("조건 반복이면 마지막 줄 배송비 없이 위 구간을 반복합니다", () => {
+    const repeat = { tiers: [{ upTo: 2, fee: 3000 }], last: { fee: 0, repeat: true } };
+    expect(rateTierLines("quantity", repeat)).toEqual(["1개 이상 ~ 2개 미만 3,000원", "2개 이상 위 구간 반복 적용"]);
+    expect(rateSummaryLabel("quantity", 0, repeat)).toBe("수량별 3,000원~ · 구간 반복");
+    expect(legacyFeeFields("quantity", 0, repeat)).toMatchObject({ feeType: "paid", fee: 3000, feeBasis: "quantity" });
+    // 금액별에서도 조건 반복이면 "N원 이상 무료"(조건부 무료)로 보지 않습니다.
+    expect(legacyFeeFields("amount", 0, { tiers: [{ upTo: 30000, fee: 3000 }], last: { fee: 0, repeat: true } })).toMatchObject({ feeType: "paid" });
   });
 
   it("예전 칸(무료/유료·조건부·부과 방식)도 함께 맞춥니다", () => {

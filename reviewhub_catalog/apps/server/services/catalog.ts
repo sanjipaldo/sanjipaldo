@@ -769,7 +769,28 @@ async function ensurePolicyCode(input: ShippingPolicyInput, currentId?: string) 
   return { ...input, policyCode };
 }
 
+// migration 025(새 배송비 칸)가 아직 적용되지 않은 DB(운영 DB를 함께 쓰는 미리보기)에서 저장하려는 경우
+function isMissingRateColumns(error: unknown) {
+  const texts = [error instanceof Error ? error.message : String(error), (error as { cause?: { message?: string } })?.cause?.message ?? ""];
+  return texts.some((text) => text.includes("no such column"));
+}
+const MISSING_RATE_COLUMNS_MESSAGE = "새 배송비 정책 칸이 아직 운영 DB에 없습니다(운영 배포 때 migration 025로 추가됩니다). 운영 배포 후 다시 저장해 주세요.";
+
+async function withRateColumns<T>(work: () => Promise<T>) {
+  try {
+    return await work();
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    if (isMissingRateColumns(error)) throw new DatabaseError("DATABASE_QUERY_FAILED", MISSING_RATE_COLUMNS_MESSAGE, 409);
+    throw error;
+  }
+}
+
 export async function createShippingPolicy(input: ShippingPolicyInput) {
+  return withRateColumns(() => insertShippingPolicy(input));
+}
+
+async function insertShippingPolicy(input: ShippingPolicyInput) {
   const now = new Date().toISOString();
   const values = shippingPolicyValues(await ensurePolicyCode(input));
   const rows = await getDb().insert(shippingPolicies).values({
@@ -782,6 +803,10 @@ export async function createShippingPolicy(input: ShippingPolicyInput) {
 }
 
 export async function updateShippingPolicy(id: string, input: ShippingPolicyInput) {
+  return withRateColumns(() => saveShippingPolicy(id, input));
+}
+
+async function saveShippingPolicy(id: string, input: ShippingPolicyInput) {
   const checked = await ensurePolicyCode(input, id);
   const rows = await getDb().update(shippingPolicies).set({
     ...shippingPolicyValues(checked),

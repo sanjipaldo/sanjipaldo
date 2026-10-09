@@ -574,7 +574,8 @@ function shippingFeeSummary(_product: Product, policy?: PublicShippingPolicy): S
   if (!policy) return { kind: "unknown", text: "확인" };
   const rate = effectiveRate(policy);
   const fee = representativeFee(policy);
-  if (rate.rateType === "free" || (fee === 0 && (rate.tiers?.last.fee ?? 0) === 0)) return { kind: "free", text: "무료" };
+  const lastFee = rate.tiers?.last.repeat ? fee : rate.tiers?.last.fee ?? 0;
+  if (rate.rateType === "free" || (fee === 0 && lastFee === 0)) return { kind: "free", text: "무료" };
   // 구간형은 첫 구간(가장 적게 주문할 때) 배송비를 대표 금액으로 보여 주고, 자세한 구간은 팝업에서 안내합니다.
   return { kind: "paid", text: fee > 0 ? `유료 (${formatPrice(fee)})` : "유료" };
 }

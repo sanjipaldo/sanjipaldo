@@ -44,7 +44,8 @@ export function rateTierLines(rateType: ShippingRateType, value: ShippingRateTie
     from = tier.upTo;
     return line;
   });
-  lines.push(`${amount(from)} 이상 ${feeText(value.last.fee)}${value.last.repeat ? " (조건 반복)" : ""}`);
+  // 조건 반복: 마지막 줄에는 배송비가 없고 위 구간을 반복해 적용합니다(발주오라와 같음).
+  lines.push(value.last.repeat ? `${amount(from)} 이상 위 구간 반복 적용` : `${amount(from)} 이상 ${feeText(value.last.fee)}`);
   return lines;
 }
 

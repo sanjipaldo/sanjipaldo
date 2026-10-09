@@ -1147,3 +1147,22 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 /* 구간형 배송비(여러 줄)는 항목명 아래에 왼쪽 정렬로 */
 .shipping-info-list > div.multi { flex-direction: column; gap: 6px; }
 .shipping-info-list > div.multi dd { text-align: left; }
+/* 제주/도서산간 추가배송비 표(발주오라와 같은 지역명 | 추가되는 배송비) */
+.policy-region-block { display: flex; flex-direction: column; gap: 8px; flex-basis: 100%; }
+.policy-region-table { width: min(420px, 100%); overflow: hidden; border: 1px solid var(--w-line, #d9ddd5); border-radius: 12px; }
+.policy-region-head, .policy-region-row { display: grid; grid-template-columns: 1fr 1.3fr; align-items: center; }
+.policy-region-head { background: var(--w-soft-2, #f1f2ee); }
+.policy-region-head span { padding: 10px 12px; font-size: 13px; font-weight: 800; text-align: center; }
+.policy-region-row { border-top: 1px solid var(--w-line, #eceee9); }
+.policy-region-row > span { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; font-size: 14px; font-weight: 600; }
+.policy-region-row em { font-style: normal; font-size: 13px; font-weight: 600; }
+.shipping-policy-editor .policy-form .policy-region-row input { width: 130px !important; height: 40px; }
+.policy-region-note { margin: 0; color: var(--w-mute, #6b6f68); font-size: 12px; line-height: 1.6; }
+.policy-code-locked { background: var(--w-soft-2, #f1f2ee) !important; color: var(--w-body, #454745); }
+.policy-save { gap: 10px; }
+.policy-save .policy-delete { min-width: 120px; min-height: 46px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--w-ink, #0e0f0c); color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; }
+.policy-save .policy-delete:disabled { opacity: .35; cursor: not-allowed; }
+@media (max-width: 720px) {
+  .shipping-policy-editor .policy-form .policy-region-row input { width: 110px !important; }
+  .policy-save .policy-delete { min-width: 0; flex: 1; }
+}

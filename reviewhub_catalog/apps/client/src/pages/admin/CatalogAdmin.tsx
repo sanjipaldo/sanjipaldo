@@ -1774,7 +1774,8 @@ function BundlesAdmin({ data }: { data: AdminCatalogData }) {
 
 // 배송 정책: 발주오라 "배송비 정책 등록"과 같은 5가지 유형(고정·무료·금액별·수량별·단위별)으로 관리합니다.
 type TierDraft = { upTo: string; fee: string };
-const POLICY_NAME_PATTERN = /^[가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9\s]+$/;
+// 발주오라 정책명(예: 표고버섯_가정용)처럼 한글·영문·숫자와 공백·_·-·괄호를 받습니다.
+const POLICY_NAME_PATTERN = /^[가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9\s_\-()]+$/;
 
 function ShippingPoliciesAdmin() {
   const [policies, setPolicies] = useState<ShippingPolicy[]>([]);
@@ -1830,16 +1831,19 @@ function ShippingPoliciesAdmin() {
   };
   const won = (value: string) => Math.max(0, Math.floor(Number(value.replace(/[^0-9]/g, "")) || 0));
   const optionalWon = (value: string) => (value.trim() === "" ? null : won(value));
+  // 금액 입력칸은 발주오라처럼 3,000 형식으로 보여 주고, 저장 값은 숫자만 씁니다.
+  const comma = (value: string) => (value === "" ? "" : Number(value).toLocaleString("ko-KR"));
+  const onlyDigits = (value: string) => value.replace(/[^0-9]/g, "").replace(/^0+(?=\d)/, "");
   const tiered = rateType === "amount" || rateType === "quantity" || rateType === "unit";
   const unit = rangeUnit(rateType, unitLabel);
   // 각 구간의 시작값: 첫 구간은 1, 다음 구간은 앞 구간의 끝값
   const tierStart = (index: number) => (index === 0 ? 1 : won(tiers[index - 1]?.upTo ?? "") || null);
   const lastStart = won(tiers.at(-1)?.upTo ?? "") || null;
-  const updateTier = (index: number, key: keyof TierDraft, value: string) => setTiers((current) => current.map((tier, i) => (i === index ? { ...tier, [key]: value.replace(/[^0-9]/g, "") } : tier)));
+  const updateTier = (index: number, key: keyof TierDraft, value: string) => setTiers((current) => current.map((tier, i) => (i === index ? { ...tier, [key]: onlyDigits(value) } : tier)));
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedName = name.trim();
-    if (!trimmedName || trimmedName.length > 20 || !POLICY_NAME_PATTERN.test(trimmedName)) { toast.error("배송비 정책명은 한글·영문·숫자로 20자까지 입력해 주세요."); return; }
+    if (!trimmedName || trimmedName.length > 20 || !POLICY_NAME_PATTERN.test(trimmedName)) { toast.error("배송비 정책명은 한글·영문·숫자(공백·_·-·괄호 가능)로 20자까지 입력해 주세요."); return; }
     if (policyCode && !/^[A-Za-z0-9]{1,20}$/.test(policyCode)) { toast.error("배송비 코드는 영문·숫자로 20자까지 입력해 주세요."); return; }
     if (rateType === "fixed" && !won(fixedFee)) { toast.error("고정배송비를 입력해 주세요."); return; }
     let rateTiers: ShippingRateTiers | null = null;
@@ -1851,8 +1855,9 @@ function ShippingPoliciesAdmin() {
         if (tier.fee.trim() === "") { toast.error(`${index + 1}번째 구간의 배송비를 입력해 주세요.`); return; }
         previous = upTo;
       }
-      if (lastFee.trim() === "") { toast.error("마지막 구간의 배송비를 입력해 주세요."); return; }
-      rateTiers = { tiers: tiers.map((tier) => ({ upTo: won(tier.upTo), fee: won(tier.fee) })), last: { fee: won(lastFee), repeat: lastRepeat } };
+      // 조건 반복하기를 켜면 마지막 줄 배송비는 없습니다(위 구간을 반복 적용).
+      if (!lastRepeat && lastFee.trim() === "") { toast.error("마지막 구간의 배송비를 입력해 주세요."); return; }
+      rateTiers = { tiers: tiers.map((tier) => ({ upTo: won(tier.upTo), fee: won(tier.fee) })), last: { fee: lastRepeat ? 0 : won(lastFee), repeat: lastRepeat } };
     }
     if (regionOn && !won(jejuExtraFee) && !won(islandExtraFee)) { toast.error("제주 또는 도서산간 추가배송비를 입력해 주세요."); return; }
     const payload = {
@@ -1884,7 +1889,7 @@ function ShippingPoliciesAdmin() {
   const remove = async (policy: ShippingPolicy) => {
     if (!window.confirm(`'${policy.name}' 배송 정책을 삭제할까요?`)) return;
     const response = await apiFetch(`/catalog/admin/shipping-policies/${policy.id}`, { method: "DELETE" });
-    if (response.ok) { toast.success("배송 정책을 삭제했습니다."); await load(); }
+    if (response.ok) { toast.success("배송 정책을 삭제했습니다."); if (editing?.id === policy.id) close(); await load(); }
   };
   const keyword = query.trim().toLowerCase();
   const visible = policies.filter((policy) => !keyword || policy.name.toLowerCase().includes(keyword) || (policy.policyCode ?? "").toLowerCase().includes(keyword));
@@ -1911,13 +1916,13 @@ function ShippingPoliciesAdmin() {
         </tr>; })}
       </tbody></table></div>}
     </section>
-    {formOpen && <div className="editor-overlay"><form className="editor-panel shipping-policy-editor" onSubmit={save}><div className="editor-header"><div><span>SHIPPING POLICY</span><h2>{editing ? "배송비 정책 수정" : "배송비 정책 등록"}</h2></div><button type="button" onClick={close} aria-label="닫기"><X size={20} /></button></div>
+    {formOpen && <div className="editor-overlay"><form className="editor-panel shipping-policy-editor" onSubmit={save}><div className="editor-header"><div><span>SHIPPING POLICY</span><h2>{editing ? "배송비 정책 상세" : "배송비 정책 등록"}</h2></div><button type="button" onClick={close} aria-label="닫기"><X size={20} /></button></div>
       <div className="editor-grid policy-form">
         <div className="policy-row"><span className="policy-label">배송비 정책명</span><div className="policy-control"><input value={name} onChange={(event) => setName(event.target.value)} maxLength={20} placeholder="텍스트, 숫자만 가능(최대 20자)" required /><small>*매출처에게 노출됩니다</small></div></div>
         <div className="policy-row"><span className="policy-label">배송유형</span><div className="policy-control"><select value={shippingType} onChange={(event) => setShippingType(event.target.value as ShippingType)}><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select><small>같은 배송유형의 상품에만 연결할 수 있습니다</small></div></div>
         <div className="policy-row"><span className="policy-label">배송비 유형 선택</span><div className="policy-control"><div className="policy-type-tabs" role="radiogroup" aria-label="배송비 유형">{RATE_TYPE_OPTIONS.map((option) => <button key={option.value} type="button" role="radio" aria-checked={rateType === option.value} className={rateType === option.value ? "active" : ""} onClick={() => setRateType(option.value)}>{option.label}</button>)}</div></div></div>
         <div className="policy-row"><span className="policy-label">배송비 설정</span><div className="policy-control">
-          {rateType === "fixed" && <div className="policy-inline"><span>주문 금액에 관계없이</span><input className="policy-money" value={fixedFee} onChange={(event) => setFixedFee(event.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="배송비 입력" /><span>원</span></div>}
+          {rateType === "fixed" && <div className="policy-inline"><span>주문 금액에 관계없이</span><input className="policy-money" value={comma(fixedFee)} onChange={(event) => setFixedFee(onlyDigits(event.target.value))} inputMode="numeric" placeholder="배송비 입력" /><span>원</span></div>}
           {rateType === "free" && <label className="policy-check"><input type="checkbox" checked={freeWholeOrder} onChange={(event) => setFreeWholeOrder(event.target.checked)} /> 이 배송정책이 포함된 주문건은 배송비를 함께 무료로 처리합니다.</label>}
           {tiered && <div className="policy-tier-table" role="table" aria-label="배송비 구간">
             <div className="policy-tier-head" role="row"><span role="columnheader">범위</span><span role="columnheader">배송비</span><span role="columnheader">추가/삭제</span></div>
@@ -1925,25 +1930,32 @@ function ShippingPoliciesAdmin() {
               <span className="policy-range" role="cell">
                 <b>{tierStart(index)?.toLocaleString("ko-KR") ?? "-"}</b>
                 {rateType === "unit" && index === 0 ? <select value={unitLabel} onChange={(event) => setUnitLabel(event.target.value)} aria-label="단위">{SHIPPING_UNIT_LABELS.map((label) => <option key={label} value={label}>{label}</option>)}</select> : <em>{unit}</em>}
-                <em>이상 ~</em><input value={tier.upTo} onChange={(event) => updateTier(index, "upTo", event.target.value)} inputMode="numeric" placeholder="범위 입력" aria-label={`${index + 1}번째 구간 끝`} /><em>{unit} 미만</em>
+                <em>이상 ~</em><input value={comma(tier.upTo)} onChange={(event) => updateTier(index, "upTo", event.target.value)} inputMode="numeric" placeholder="범위 입력" aria-label={`${index + 1}번째 구간 끝`} /><em>{unit} 미만</em>
               </span>
-              <span className="policy-fee" role="cell"><input value={tier.fee} onChange={(event) => updateTier(index, "fee", event.target.value)} inputMode="numeric" placeholder="배송비 입력" aria-label={`${index + 1}번째 구간 배송비`} /><em>원</em></span>
+              <span className="policy-fee" role="cell"><input value={comma(tier.fee)} onChange={(event) => updateTier(index, "fee", event.target.value)} inputMode="numeric" placeholder="배송비 입력" aria-label={`${index + 1}번째 구간 배송비`} /><em>원</em></span>
               <span className="policy-tier-action" role="cell">{index === 0
                 ? <button type="button" onClick={() => setTiers((current) => (current.length >= 20 ? current : [...current, { upTo: "", fee: "" }]))} disabled={tiers.length >= 20}>추가</button>
                 : <button type="button" className="danger" onClick={() => setTiers((current) => current.filter((_, i) => i !== index))}>삭제</button>}</span>
             </div>)}
             <div className="policy-tier-row policy-tier-last" role="row">
               <span className="policy-range" role="cell"><b>{lastStart?.toLocaleString("ko-KR") ?? ""}</b><em>{unit} 이상</em><label className="policy-check"><input type="checkbox" checked={lastRepeat} onChange={(event) => setLastRepeat(event.target.checked)} /> 조건 반복하기</label></span>
-              <span className="policy-fee" role="cell"><input value={lastFee} onChange={(event) => setLastFee(event.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="배송비 입력" aria-label="마지막 구간 배송비" /><em>원</em></span>
+              <span className="policy-fee" role="cell">{!lastRepeat && <><input value={comma(lastFee)} onChange={(event) => setLastFee(onlyDigits(event.target.value))} inputMode="numeric" placeholder="배송비 입력" aria-label="마지막 구간 배송비" /><em>원</em></>}</span>
               <span className="policy-tier-action" role="cell" />
             </div>
           </div>}
         </div></div>
         <div className="policy-row"><span className="policy-label">제주/도서산간<br />'추가'배송비 설정</span><div className="policy-control">
           <div className="policy-radio" role="radiogroup" aria-label="제주/도서산간 추가배송비"><label><input type="radio" checked={regionOn} onChange={() => setRegionOn(true)} /> 있음</label><label><input type="radio" checked={!regionOn} onChange={() => setRegionOn(false)} /> 없음</label></div>
-          {regionOn && <div className="policy-region-fields"><label>제주<input className="policy-money" value={jejuExtraFee} onChange={(event) => setJejuExtraFee(event.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="추가배송비" />원</label><label>도서산간<input className="policy-money" value={islandExtraFee} onChange={(event) => setIslandExtraFee(event.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="추가배송비" />원</label></div>}
+          {regionOn && <div className="policy-region-block">
+            <div className="policy-region-table" role="table" aria-label="제주/도서산간 추가배송비">
+              <div className="policy-region-head" role="row"><span role="columnheader">지역명</span><span role="columnheader">추가되는 배송비</span></div>
+              <div className="policy-region-row" role="row"><span role="cell">제주지역</span><span role="cell"><input className="policy-money" value={comma(jejuExtraFee)} onChange={(event) => setJejuExtraFee(onlyDigits(event.target.value))} inputMode="numeric" placeholder="추가배송비" aria-label="제주지역 추가배송비" /><em>원</em></span></div>
+              <div className="policy-region-row" role="row"><span role="cell">도서산간지역</span><span role="cell"><input className="policy-money" value={comma(islandExtraFee)} onChange={(event) => setIslandExtraFee(onlyDigits(event.target.value))} inputMode="numeric" placeholder="추가배송비" aria-label="도서산간지역 추가배송비" /><em>원</em></span></div>
+            </div>
+            <p className="policy-region-note">*제주지역은 주문 시 주소에 '제주'라는 글자가 들어가면 부과됩니다.<br />*도서산간지역은 우편번호를 기준으로 부과됩니다.</p>
+          </div>}
         </div></div>
-        <div className="policy-row"><span className="policy-label">배송비 코드</span><div className="policy-control"><input value={policyCode} onChange={(event) => setPolicyCode(event.target.value.replace(/[^A-Za-z0-9]/g, ""))} maxLength={20} placeholder="영문, 숫자만 가능 (최대 20자)" /><small>*미입력시 임의부여</small></div></div>
+        <div className="policy-row"><span className="policy-label">배송비 코드</span><div className="policy-control"><input value={policyCode} onChange={(event) => setPolicyCode(event.target.value.replace(/[^A-Za-z0-9]/g, ""))} maxLength={20} placeholder="영문, 숫자만 가능 (최대 20자)" readOnly={Boolean(editing?.policyCode)} className={editing?.policyCode ? "policy-code-locked" : undefined} /><small>*미입력시 임의부여</small></div></div>
         <details className="policy-extra" open={Boolean(courier || returnFee || exchangeFee || description)}>
           <summary>단가표 안내용 추가 정보 (선택)</summary>
           <div className="policy-extra-grid">
@@ -1954,7 +1966,7 @@ function ShippingPoliciesAdmin() {
           </div>
         </details>
       </div>
-      <div className="editor-actions policy-save"><button type="submit" className="primary-action" disabled={saving}>{saving ? "저장 중…" : "저장하기"}</button></div></form></div>}</>;
+      <div className="editor-actions policy-save">{editing && <button type="button" className="policy-delete" onClick={() => void remove(editing)} disabled={saving || (editing.productCount ?? 0) > 0} title={(editing.productCount ?? 0) > 0 ? "상품이 연결된 정책은 삭제할 수 없습니다." : undefined}>삭제하기</button>}<button type="submit" className="primary-action" disabled={saving}>{saving ? "저장 중…" : "저장하기"}</button></div></form></div>}</>;
 }
 
 function SuppliersAdmin() {
