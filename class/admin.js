@@ -956,6 +956,11 @@
         '<h2 class="a-sub">브랜드</h2><div class="a-form-row">' + f("name", "브랜드 이름", b.name, "로그인 화면 왼쪽 위·상단 작은 글씨") + f("instructor", "강사 표시 이름", b.instructor, "공지·수료증 서명·AI봇 인사말에 쓰여요") + "</div>" +
         f("courseTitle", "강의 이름", b.courseTitle, "수강생 화면 맨 위 제목") +
         '<div class="a-form-row">' + f("shortTitle", "짧은 강의 이름", b.shortTitle, "로그인 화면 배지") + f("tagline", "한 줄 소개", b.tagline) + "</div>" +
+        '<h2 class="a-sub">강사 프로필</h2><p class="a-muted" style="margin:-6px 0 0">두고 클래스 첫 화면의 ‘지금 강의하는 강사님’ 카드에 보여요. 배경을 지운(투명) 사진이나 밝은 배경의 상반신 사진이 잘 어울려요.</p>' +
+        '<div class="a-brand-photo"><div class="a-brand-photo-box" id="brand-photo-box">' + brandPhotoBox(b.photo) + '</div><div class="a-brand-photo-ctl">' +
+          '<label class="a-btn a-btn-ghost a-btn-sm">' + icon("image", "sm") + '사진 올리기<input type="file" accept="image/*" class="sr-only" id="brand-photo-file"></label>' +
+          btn(icon("trash", "sm") + "지우기", "brand-photo-del", "a-btn-ghost a-btn-sm") + '<small class="a-muted">세로 4:5 비율로 보여요. 올리거나 지우면 바로 저장돼요.</small></div></div>' +
+        '<div class="a-form-row">' + f("field", "강의 분야", b.field || "", "카드에서 이름 아래 작게 (예: 뉴질랜드 건기식 브랜딩)") + f("instagram", "인스타그램 주소", b.instagram || "", "카드에 아이콘으로 연결돼요", "url") + "</div>" +
         '<h2 class="a-sub">로그인 화면</h2>' +
         f("loginEyebrow", "헤드라인 위 작은 글씨", b.loginEyebrow, "영문 대문자로 적으면 잘 어울려요 (예: DOOGO CLASS)") +
         f("loginHeadline", "헤드라인 (두 줄까지, 줄바꿈 가능)", b.loginHeadline, "마지막 줄은 고른 색으로 강조돼요", "textarea") +
@@ -968,9 +973,37 @@
         '<div class="a-form-foot"><button class="a-btn a-btn-primary" type="submit">저장</button></div>' +
       "</form>";
   }
+  // 강사 프로필 사진 — 투명 배경을 살리려고 webp(안 되면 png)로 줄여 저장한다
+  const brandPhotoBox = (v) => (v ? '<img src="' + esc(v) + '" alt="강사 프로필 사진">' : '<span>' + icon("user") + "사진 없음</span>");
+  function brandPhotoCompress(file, cb) {
+    const r = new FileReader();
+    r.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const sc = Math.min(1, 900 / Math.max(img.width, img.height));
+        const cv = document.createElement("canvas");
+        cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        let d = cv.toDataURL("image/webp", 0.86);
+        if (d.indexOf("data:image/webp") !== 0) d = /png|webp|gif/.test(file.type) ? cv.toDataURL("image/png") : cv.toDataURL("image/jpeg", 0.86);
+        cb(d);
+      };
+      img.onerror = () => toast("사진을 읽지 못했어요.", "warn");
+      img.src = r.result;
+    };
+    r.readAsDataURL(file);
+  }
+  function setBrandPhoto(v) {
+    const b = C().brand, prev = b.photo;
+    b.photo = v;
+    if (!DB.save()) { b.photo = prev; toast("저장 공간이 부족해요. 더 작은 사진을 올려 주세요.", "warn"); return; }
+    const box = document.getElementById("brand-photo-box");
+    if (box) box.innerHTML = brandPhotoBox(v);
+    toast(v ? "프로필 사진을 저장했어요." : "프로필 사진을 지웠어요.");
+  }
   function saveBrand(f) {
     const c = C(), b = c.brand;
-    ["name", "instructor", "courseTitle", "shortTitle", "tagline", "loginEyebrow", "loginSub", "youtubeChannel", "freeCourseUrl", "liveTime", "botName", "liveUrl", "kakaoChannel"].forEach((k) => { b[k] = f[k].value.trim(); });
+    ["name", "instructor", "courseTitle", "shortTitle", "tagline", "field", "instagram", "loginEyebrow", "loginSub", "youtubeChannel", "freeCourseUrl", "liveTime", "botName", "liveUrl", "kakaoChannel"].forEach((k) => { b[k] = f[k].value.trim(); });
     if (f.theme) { b.theme = f.theme.value; b.themeSet = true; }
     b.worldClock = !!(f.worldClock && f.worldClock.checked);
     b.loginHeadline = f.loginHeadline.value.split("\n").map((x) => x.trim()).filter(Boolean).join("\n");
@@ -1892,6 +1925,7 @@
         });
         break;
       }
+      case "brand-photo-del": if (C().brand.photo) setBrandPhoto(""); break;
       case "server-backup":
         DB.remote.call("admin", { action: "backup" }).then((r) => { if (r.error) throw new Error(r.error); ui.backups = null; render(); toast("지금 상태를 서버에 백업했어요."); }).catch(() => toast("백업하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"));
         break;
@@ -2007,6 +2041,7 @@
     }
     else if (t.id === "att-file") { addAttFiles(t.files); t.value = ""; }
     else if (t.id === "img-file") { addImgFiles(t.files); t.value = ""; }
+    else if (t.id === "brand-photo-file") { const f = t.files && t.files[0]; t.value = ""; if (f) brandPhotoCompress(f, setBrandPhoto); }
     else if (t.dataset && t.dataset.lpImg) { const f = t.files && t.files[0]; const path = t.dataset.lpImg; t.value = ""; if (f) lpCompress(f, (data) => { lpSet(lpDraft(), path, data); ui.lpDirty = true; render(); }); }
     else if (t.dataset && t.dataset.lpRadio) { lpSet(lpDraft(), t.dataset.lpRadio, t.value); lpChanged(); }
     else if (t.dataset && t.dataset.lpCheck) { lpSet(lpDraft(), t.dataset.lpCheck, t.checked); lpChanged(); }

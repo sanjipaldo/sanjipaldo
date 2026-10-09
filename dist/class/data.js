@@ -16,6 +16,8 @@ const MOON_CONTENT = {
     tagline: "온라인 비즈니스, 함께 성장하는 실전 클래스",
     botName: "24시 문대표 AI봇",
     youtubeChannel: "https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C",
+    photo: "assets/home/moon-profile.webp",
+    field: "뉴질랜드 건기식 브랜딩",
     freeCourseUrl: "https://www.ivyclass.co.kr/free-courses/c8f31bf5-1781-43cb-a4cc-5e713016ba88",
     kakaoChannel: "",
     worldClock: true,

@@ -203,7 +203,7 @@
     const t = template(brand).brand;
     Object.assign(c.brand, { name, instructor: inst, courseTitle: t.courseTitle, shortTitle: t.shortTitle, botName: t.botName,
       loginEyebrow: "DOOGO CLASS", loginHeadline: t.loginHeadline, loginSub: t.loginSub, theme: t.theme, themeSet: true,
-      youtubeChannel: "", freeCourseUrl: "", kakaoChannel: "", liveUrl: "", worldClock: false });
+      youtubeChannel: "", freeCourseUrl: "", kakaoChannel: "", liveUrl: "", worldClock: false, photo: "", field: "", instagram: "" });
     c.channels = defaultChannels();
     c.weeks.forEach((w) => w.lessons.forEach((l) => { l.youtubeId = ""; l.attachments = []; }));
     c.motivation = [];

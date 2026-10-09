@@ -79,8 +79,11 @@
       const weeks = c.weeks || [];
       const L = DB.landingOf ? DB.landingOf(x.id) : null;
       const F = DB.freeOf ? DB.freeOf(x.id) : null;
+      const ct = (L && L.contact) || {};
       return {
         id: x.id, name: b.name || x.displayName, who: b.instructor || x.displayName, title: b.courseTitle || "", t,
+        photo: b.photo || "", field: b.field || b.shortTitle || "",
+        yt: b.youtubeChannel || ct.youtube || "", ig: b.instagram || ct.instagram || "", kakao: b.kakaoChannel || ct.kakao || "",
         weeks: weeks.length, missions: weeks.reduce((n, w) => n + (w.missions || []).length, 0),
         landing: !!(L && L.published), free: !!(F && F.published)
       };
@@ -89,6 +92,9 @@
 
   /* ---------- 조각 ---------- */
   const mark = (t) => '<mark class="hm-mark">' + t + "</mark>";
+  // 두고 원본 로고 (assets/brand) — 'doogo CLASS'
+  const brandLock = (cls) => '<span class="hm-lock ' + (cls || "") + '"><img src="assets/brand/doogo-color.png" alt="doogo" width="342" height="96"><span>CLASS</span></span>';
+  const brandMark = (cls) => '<img class="hm-dmark ' + (cls || "") + '" src="assets/brand/doogo-mark.png" alt="" width="123" height="128">';
   const kicker = (t) => '<p class="hm-kicker">' + t + "</p>";
   const phone = (img, cls, alt) => '<div class="hm-phone ' + (cls || "") + '"><span class="hm-phone-notch"></span><img src="' + IMG + img + '.webp" alt="' + esc(alt || "") + '" loading="lazy" decoding="async"></div>';
   const browser = (img, cls, alt, eager) => '<div class="hm-browser ' + (cls || "") + '"><div class="hm-browser-bar"><i></i><i></i><i></i><span>doogo-class.vercel.app</span></div><img src="' + IMG + img + '.webp" alt="' + esc(alt || "") + '"' + (eager ? "" : ' loading="lazy"') + ' decoding="async"></div>';
@@ -98,7 +104,7 @@
 
   function header() {
     return '<header class="hm-top" id="hm-top"><div class="hm-wrap hm-top-in">' +
-      '<button type="button" class="hm-logo" data-hm-scroll="top" aria-label="두고 클래스 맨 위로">' + window.logoMark() + '<span><b>두고 클래스</b><small>DOOGO CLASS</small></span></button>' +
+      '<button type="button" class="hm-logo" data-hm-scroll="top" aria-label="두고 클래스 맨 위로">' + brandLock() + "</button>" +
       '<nav class="hm-nav" aria-label="소개 메뉴">' +
         scrollBtn("hm-platform", "플랫폼", "hm-nav-a") + scrollBtn("hm-students", "수강생", "hm-nav-a") + scrollBtn("hm-teachers", "강사", "hm-nav-a") +
         scrollBtn("hm-classes", "강사 소개", "hm-nav-a") + scrollBtn("hm-faq", "자주 묻는 질문", "hm-nav-a") +
@@ -146,7 +152,7 @@
         card("target", "어디까지 했는지 모르겠어요", "지금 잘 따라가고 있는지, 다음엔 무엇을 해야 하는지 알려 주는 곳이 없어요.") +
         card("users", "기수가 끝나면 연결도 끝나요", "강의가 끝나는 순간 강사님과도, 함께 배운 동기들과도 멀어져요.") +
       "</div>" +
-      '<div class="hm-answer hm-reveal"><span class="hm-answer-mark">' + window.logoMark() + "</span><p>두고 클래스는 이 모든 것을 " + mark("하나의 강의 플랫폼") + "에 담았습니다.</p></div>" +
+      '<div class="hm-answer hm-reveal"><span class="hm-answer-mark">' + brandMark() + "</span><p>두고 클래스는 이 모든 것을 " + mark("하나의 강의 플랫폼") + "에 담았습니다.</p></div>" +
     "</div></section>";
   }
 
@@ -208,23 +214,33 @@
     "</div></section>";
   }
 
+  const SNS = {
+    youtube: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>',
+    instagram: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg>',
+    kakao: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>'
+  };
+  const SILHOUETTE = '<svg class="hm-tc-ph" viewBox="0 0 200 250" aria-hidden="true"><circle cx="100" cy="92" r="44"/><path d="M18 250c4-58 40-92 82-92s78 34 82 92Z"/></svg>';
   function classList(list) {
-    const card = (x) => '<article class="hm-class hm-reveal" style="--logo-accent:' + esc(x.t.accent || x.t.primary) + ";--c-p:" + esc(x.t.primary) + ";--c-on:" + esc(x.t.onPrimary || x.t.deep) + '">' +
-      '<div class="hm-class-top">' + window.logoMark() + '<span class="hm-class-who"><b>' + esc(x.name) + "</b><small>" + esc(x.who) + " 강사</small></span></div>" +
-      "<h3>" + esc(x.title) + "</h3>" +
-      '<p class="hm-class-meta"><span>' + icon("book", "xs") + x.weeks + "주 과정</span><span>" + icon("checks", "xs") + "과제 " + x.missions + "개</span></p>" +
-      '<div class="hm-class-btns">' +
-        (x.landing ? '<a class="hm-cbtn" href="#/p/' + esc(x.id) + '">강의 소개</a>' : "") +
-        (x.free ? '<a class="hm-cbtn" href="#/free/' + esc(x.id) + '">무료 강의</a>' : "") +
-        '<a class="hm-cbtn hm-cbtn-p" href="#/login?ins=' + esc(x.id) + '">수강생 로그인</a>' +
-      "</div></article>";
+    const sns = (x) => [["youtube", x.yt, "유튜브"], ["instagram", x.ig, "인스타그램"], ["kakao", x.kakao, "카카오톡"]]
+      .filter((v) => /^https?:\/\//i.test(v[1]))
+      .map((v) => '<a class="hm-sns" href="' + esc(v[1]) + '" target="_blank" rel="noopener" aria-label="' + esc(x.who) + " " + v[2] + '">' + SNS[v[0]] + "</a>").join("");
+    const card = (x) => {
+      const photo = '<span class="hm-tc-shape" aria-hidden="true"></span>' + (x.photo ? '<img src="' + esc(x.photo) + '" alt="' + esc(x.who) + ' 강사" loading="lazy" decoding="async">' : SILHOUETTE) +
+        '<span class="hm-tc-tag">' + x.weeks + "주 과정 · 과제 " + x.missions + "개</span>";
+      return '<article class="hm-tc hm-reveal" style="--c-p:' + esc(x.t.primary) + '">' +
+        (x.landing ? '<a class="hm-tc-photo" href="#/p/' + esc(x.id) + '" aria-label="' + esc(x.who) + ' 강의 소개">' + photo + "</a>" : '<div class="hm-tc-photo">' + photo + "</div>") +
+        '<div class="hm-tc-body"><h3>' + esc(x.who) + '</h3><p class="hm-tc-field">' + esc(x.field) + '</p><p class="hm-tc-course">' + esc(x.title) + "</p></div>" +
+        '<div class="hm-tc-foot"><span class="hm-tc-sns">' + sns(x) + '</span><span class="hm-tc-links">' +
+          (x.landing ? '<a href="#/p/' + esc(x.id) + '">강의 소개</a>' : "") + (x.free ? '<a href="#/free/' + esc(x.id) + '">무료 강의</a>' : "") +
+          '<a class="hm-tc-login" href="#/login?ins=' + esc(x.id) + '">로그인</a></span></div>' +
+      "</article>";
+    };
     return '<section class="hm-sec" id="hm-classes"><div class="hm-wrap">' +
-      '<div class="hm-head hm-reveal">' + kicker("CLASSES") + '<h2 class="hm-h2">지금 두고 클래스로<br>강의하는 강사님</h2>' +
-        '<p class="hm-sub">강사님마다 자기 이름 · 색 · 커리큘럼으로 운영하는 강의 플랫폼이에요. 수강생은 로그인할 때 내 강사님을 골라 들어가요.</p></div>' +
-      '<div class="hm-classes">' + list.map(card).join("") +
-        '<article class="hm-class hm-class-next hm-reveal"><span class="hm-next-ic">' + icon("plus") + "</span><h3>다음 강사님의 자리</h3><p>강사님의 노하우도 두고 클래스로 만들어 보세요. 운영사 (주)두고홀딩스가 도와드려요.</p>" +
-          '<div class="hm-class-btns"><a class="hm-cbtn" href="#/center">강사센터</a></div></article>' +
-      "</div>" +
+      '<div class="hm-head hm-head-row hm-reveal"><div>' + kicker("CLASSES") + '<h2 class="hm-h2">지금 두고 클래스로<br>강의하는 강사님</h2>' +
+        '<p class="hm-sub">강사님마다 자기 이름과 커리큘럼으로 운영하는 강의 플랫폼이에요. 수강생은 로그인할 때 내 강사님을 골라 들어가요.</p></div></div>' +
+      '<div class="hm-tcs">' + list.map(card).join("") + "</div>" +
+      '<div class="hm-join hm-reveal"><span class="hm-next-ic">' + icon("plus") + '</span><div class="hm-join-t"><b>다음 강사님의 자리</b><p>강사님의 노하우도 두고 클래스로 만들어 보세요. 운영사 (주)두고홀딩스가 도와드려요.</p></div>' +
+        '<a class="hm-btn hm-btn-sec hm-btn-sm" href="#/center">강사센터</a></div>' +
     "</div></section>";
   }
 
@@ -236,7 +252,7 @@
         "<p>그렇게 끊임없이 이어지는 연결이 <b>강사님만의 단골 수강생, 나만의 팬</b>을 만들어요. 두고 클래스는 한 번 팔고 끝나는 강의가 아니라, 계속 함께 성장하는 강의를 위한 플랫폼이에요.</p>" +
       "</div>" +
       '<div class="hm-loop hm-reveal" aria-label="평생 네트워크가 만들어지는 순서">' +
-        '<div class="hm-loop-center">' + window.logoMark() + "<b>강사 · 수강생 · 코치</b><small>한 플랫폼에서 계속 연결</small></div>" +
+        '<div class="hm-loop-center">' + brandMark() + "<b>강사 · 수강생 · 코치</b><small>한 플랫폼에서 계속 연결</small></div>" +
         loop.map((t, i) => '<div class="hm-loop-i hm-loop-' + i + '"><span>' + String(i + 1).padStart(2, "0") + "</span>" + t + "</div>").join("") +
       "</div>" +
     "</div></section>";
@@ -259,9 +275,9 @@
 
   function footer() {
     return '<footer class="hm-foot"><div class="hm-wrap hm-foot-in">' +
-      '<div class="hm-foot-brand">' + window.logoMark() + "<span><b>두고 클래스</b><small>DOOGO CLASS · 튜토리얼 강의 플랫폼</small></span></div>" +
+      '<div class="hm-foot-brand">' + brandLock() + "<small>두고 클래스 · 튜토리얼 강의 플랫폼</small></div>" +
       '<nav class="hm-foot-links" aria-label="바로가기"><a href="#/login">수강생 로그인</a><a href="#/center">강사센터</a><a href="https://www.doogoconnect.com/" target="_blank" rel="noopener">두고커넥트</a><a href="https://www.doogofood.com/" target="_blank" rel="noopener">두고푸드</a></nav>' +
-      '<div class="hm-foot-bottom"><span>운영 (주)두고홀딩스 · © 2026 doogo. All rights reserved.</span>' + window.poweredBy("color", "hm-powered") + "</div>" +
+      '<div class="hm-foot-bottom"><span>운영 (주)두고홀딩스 · © 2026 doogo. All rights reserved.</span></div>' +
     "</div></footer>";
   }
 
