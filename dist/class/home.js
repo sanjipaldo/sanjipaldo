@@ -90,6 +90,7 @@
     ["book", "주차별 학습", "튜토리얼 강의실", "1주차부터 강의 · 과제를 순서대로"],
     ["checks", "과제 · 피드백", "강사센터 · 코치", "자동 검수 + 강사 · 코치 피드백"],
     ["award", "수료", "튜토리얼 강의실", "필수 과제를 마치면 수료증"],
+    ["heart", "수료 후 관리", "튜토리얼 강의실", "수료 후에도 강의실이 남아 새 자료 · 후기까지"],
     ["refresh", "다음 기수", "강사센터", "커리큘럼 그대로, 다음 기수 바로 시작"]
   ];
   // 단톡방 · 드라이브로 운영할 때와 비교
@@ -170,7 +171,8 @@
   const fchip = (c, k) => '<div class="hm-fchip hm-fchip-' + k + (c.ic ? "" : " stat") + '" aria-hidden="true">' +
     (c.ic ? icon(c.ic, "sm" + (c.ok ? " ok" : "")) + "<span><b>" + c.b + "</b><small>" + c.s + "</small></span>"
       : "<span><small>" + c.s + "</small><b" + (c.count ? ' data-hm-count="' + c.count + '"' : "") + ">" + c.b + "</b></span>" + (c.bar ? '<i class="hm-chip-bar"><i style="width:' + c.bar + '%"></i></i>' : "")) + "</div>";
-  const stage3d = (f) => '<div class="hm-3d"><div class="hm-3d-stage"><i class="hm-3d-slab" aria-hidden="true"></i>' +
+  const stage3d = (f) => '<div class="hm-3d"><div class="hm-3d-stage"><span class="hm-3d-sym" aria-hidden="true">' +
+    [6, 5, 4, 3, 2, 1, 0].map((k) => '<svg viewBox="0 0 364 380" style="--k:' + k + '"><use href="#hm-dsym"/></svg>').join("") + "</span>" +
     phone(f.vid, "hm-frow-phone", f.title + " 화면") + '<i class="hm-3d-glare" aria-hidden="true"></i>' +
     f.chips.map((c, k) => fchip(c, k ? "b" : "a")).join("") + '</div><i class="hm-3d-floor" aria-hidden="true"></i></div>';
   const browser = (vid, cls, alt, ch) => '<div class="hm-browser ' + (cls || "") + '"><div class="hm-browser-bar"><i></i><i></i><i></i><span>doogo-class.vercel.app</span></div><div class="hm-browser-scr">' + video(vid, alt, ch) + "</div></div>";
@@ -230,7 +232,7 @@
   // 한 기수 운영 흐름 — 모집부터 다음 기수까지 어느 화면이 맡는지
   function flow() {
     return '<section class="hm-sec hm-flow-sec" id="hm-flow"><div class="hm-wrap">' +
-      secHead("activity", "한 기수 운영, 처음부터 끝까지 한곳에서", "모집 → 무료 강의 → 신청 · 승인 → 주차별 학습 → 과제 피드백 → 수료 → 다음 기수. 지금 단톡방 · 드라이브 · 노션 · 구글폼으로 나눠 하던 일을 두고 클래스 하나로 이어요.", scrollBtn("hm-compare", "지금 방식과 비교" + arrow(), "hm-shead-link")) +
+      secHead("activity", "한 기수 운영, 처음부터 끝까지 한곳에서", "모집 → 무료 강의 → 신청 · 승인 → 주차별 학습 → 과제 피드백 → 수료 → 수료 후 관리 → 다음 기수. 지금 단톡방 · 드라이브 · 노션 · 구글폼으로 나눠 하던 일을 두고 클래스 하나로 이어요.", scrollBtn("hm-compare", "지금 방식과 비교" + arrow(), "hm-shead-link")) +
       '<ol class="hm-flow">' + FLOW.map((x, i) => '<li class="hm-flow-i hm-hov hm-reveal"' + d(i) + '><span class="hm-flow-no">' + String(i + 1).padStart(2, "0") + '</span><span class="hm-ic hm-ic-sm">' + icon(x[0]) + "</span><b>" + x[1] + '</b><em>' + x[2] + "</em><p>" + x[3] + "</p></li>").join("") + "</ol>" +
     "</div></section>";
   }
@@ -331,13 +333,23 @@
     kakao: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="1.5" width="21" height="21" rx="6" fill="#fee500"/><path d="M12 6.2c-3.6 0-6.4 2.2-6.4 5 0 1.8 1.2 3.4 3 4.3l-.6 2.3 2.6-1.7c.5.1.9.1 1.4.1 3.6 0 6.4-2.2 6.4-5s-2.8-5-6.4-5z" fill="#3c1e1e"/></svg>'
   };
   const SILHOUETTE = '<svg class="hm-tc-ph" viewBox="0 0 200 250" aria-hidden="true"><circle cx="100" cy="92" r="44"/><path d="M18 250c4-58 40-92 82-92s78 34 82 92Z"/></svg>';
+  // doogo 심볼(링 · 기둥 · 재생 표시)을 크게 — 기능 칸 휴대폰 뒤 · 강사 카드 뒤 배경. 페이지에 한 번만 정의하고 <use> 로 (여러 겹 = 입체 두께)
+  const DSYM_DEFS = '<svg class="hm-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>' +
+    '<linearGradient id="hm-dsym-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8378"/><stop offset=".5" stop-color="#f94239"/><stop offset="1" stop-color="#e0251a"/></linearGradient>' +
+    '<symbol id="hm-dsym" viewBox="0 0 364 380"><path fill-rule="evenodd" d="M148 88a145 145 0 1 0 .01 0Zm0 67a78 78 0 1 1-.01 0Z"/><rect x="232" width="58" height="272" rx="29"/><path d="M300 148L350 178Q364 190 350 202L300 232Z"/></symbol>' +
+    "</defs></svg>";
+  const DSYM = '<svg class="hm-tc-sym" viewBox="-4 -4 384 400" aria-hidden="true">' +
+    [6, 5, 4, 3, 2, 1].map((k) => '<use href="#hm-dsym" class="hm-tc-ex" x="' + (k * 1.6).toFixed(1) + '" y="' + (k * 2).toFixed(1) + '"/>').join("") +
+    '<use href="#hm-dsym" class="hm-tc-face"/></svg>';
   function classList(list) {
     // 강사 유튜브 · 인스타그램 · 카카오톡: 서비스 마크 + 이름표 (무엇으로 가는 링크인지 바로 보이게)
     const sns = (x) => [["youtube", x.yt, "강사 유튜브"], ["instagram", x.ig, "인스타그램"], ["kakao", x.kakao, "카카오톡 채널"]]
       .filter((v) => /^https?:\/\//i.test(v[1]))
       .map((v) => '<a class="hm-sns hm-sns-' + v[0] + '" href="' + esc(v[1]) + '" target="_blank" rel="noopener" aria-label="' + esc(x.who) + " " + v[2] + ' (새 창)">' + SNS[v[0]] + "<span>" + v[2] + "</span>" + icon("arrowUpRight", "xs") + "</a>").join("");
     const card = (x, i) => {
-      const photo = '<span class="hm-tc-shape" aria-hidden="true"></span>' + (x.photo ? '<img src="' + esc(x.photo) + '" alt="' + esc(x.who) + ' 강사" decoding="async">' : SILHOUETTE) +
+      // 액자(연한 바탕 + 큰 빨간 심볼) 위로 누끼 사진의 머리가 살짝 튀어나오게
+      const photo = '<span class="hm-tc-frame">' + DSYM + (x.photo ? "" : SILHOUETTE) + "</span>" +
+        (x.photo ? '<span class="hm-tc-cut"><img src="' + esc(x.photo) + '" alt="' + esc(x.who) + ' 강사" decoding="async"></span>' : "") +
         '<span class="hm-tc-tag">' + x.weeks + "주 과정</span>";
       return '<article class="hm-tc hm-reveal" style="--i:' + i + '">' +
         (x.landing ? '<a class="hm-tc-photo" href="#/p/' + esc(x.id) + '" aria-label="' + esc(x.who) + ' 강의 소개">' + photo + "</a>" : '<div class="hm-tc-photo">' + photo + "</div>") +
@@ -514,7 +526,7 @@
     document.title = "두고 클래스 — 강사님을 위한 강의 운영 플랫폼";
     dark = null;
     const list = classes();
-    root.innerHTML = '<div class="hm">' + header() + "<main>" + hero() + problem() + flow() + features() + compare() + students() + teachers() + pricing() + lifelong() + classList(list) + journey() + faq() + finalCta() + "</main>" + footer() + "</div>";
+    root.innerHTML = '<div class="hm">' + DSYM_DEFS + header() + "<main>" + hero() + problem() + flow() + features() + compare() + students() + teachers() + pricing() + lifelong() + classList(list) + journey() + faq() + finalCta() + "</main>" + footer() + "</div>";
     onScroll();
     reveal();
     wireVideos();
@@ -682,6 +694,24 @@
       art.addEventListener("pointerleave", () => { box.style.setProperty("--mx", "0"); box.style.setProperty("--my", "0"); });
     });
   }
+  // 휴대폰을 기울이면 화면 속 휴대폰도 따라 기울어요 (안드로이드처럼 권한을 묻지 않는 브라우저만 · 아이폰은 묻는 창이 떠서 쓰지 않음)
+  // 들고 있는 자세가 바뀌어도 몇 초 지나면 가운데로 돌아오게 기준을 천천히 따라간다
+  let tiltBase = null, tiltRaf = 0, tiltXY = [0, 0];
+  const clamp1 = (v) => Math.max(-1, Math.min(1, v));
+  function onOrient(e) {
+    if (!isActive() || e.gamma == null || e.beta == null || !st3d.length) return;
+    if (!tiltBase) tiltBase = [e.beta, e.gamma];
+    tiltBase[0] += (e.beta - tiltBase[0]) * 0.006;
+    tiltBase[1] += (e.gamma - tiltBase[1]) * 0.006;
+    tiltXY = [clamp1((e.gamma - tiltBase[1]) / 18), clamp1((e.beta - tiltBase[0]) / 18)];
+    if (tiltRaf) return;
+    tiltRaf = requestAnimationFrame(() => {
+      tiltRaf = 0;
+      st3d.forEach((b) => { b.style.setProperty("--mx", tiltXY[0].toFixed(3)); b.style.setProperty("--my", tiltXY[1].toFixed(3)); });
+    });
+  }
+  if (!fine.matches && window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== "function") window.addEventListener("deviceorientation", onOrient, { passive: true });
+
   // 무료 강의 카운트다운 카드: 1초마다 줄어든다 (0이 되면 처음부터)
   const pad2 = (x) => String(x).padStart(2, "0");
   setInterval(() => {

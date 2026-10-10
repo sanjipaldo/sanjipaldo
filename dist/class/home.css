@@ -173,14 +173,23 @@ body[data-mode="home"] { background: #fff; }
 /* 강사진 — 프로필 사진 카드 (사진 · 이름 · 분야 · 구분선 · SNS) */
 .hm-tcs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
 .hm-tc { display: flex; flex-direction: column; min-width: 0; transition: transform .3s var(--ease); }
-/* 강사 사진 — 차콜 스튜디오 + 머리 뒤 빨간 빛 (누끼 사진이 또렷하게 떠 보이게) */
-.hm-tc-photo { position: relative; display: block; aspect-ratio: 4 / 5; border-radius: 16px; overflow: hidden; background: radial-gradient(60% 45% at 50% 36%, rgba(249, 66, 57, .55), transparent 72%), linear-gradient(170deg, #34343a 0%, #17171b 100%); border: 0; box-shadow: 0 12px 30px -16px rgba(0, 0, 0, .45); transition: box-shadow .3s ease, border-color .3s ease; }
-.hm-tc-shape { position: absolute; left: 50%; top: 14%; width: 92%; height: 64%; transform: translateX(-50%); background: #fff; opacity: .05; transition: opacity .3s ease, transform .5s var(--ease);
-  -webkit-mask: url(assets/brand/doogo-symbol.png) center / contain no-repeat; mask: url(assets/brand/doogo-symbol.png) center / contain no-repeat; }
-.hm-tc-photo img { position: absolute; inset: auto 0 0 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; transition: transform .5s var(--ease); }
-.hm-tc-ph { position: absolute; left: 50%; bottom: 0; width: 66%; transform: translateX(-50%); fill: rgba(255, 255, 255, .16); }
-.hm-tc-photo::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: inherit; background: linear-gradient(to top, rgba(0, 0, 0, .22), transparent 32%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); }
-.hm-tc-tag { position: absolute; z-index: 2; left: 12px; bottom: 12px; padding: 4px 10px; border-radius: 50px; background: rgba(255, 255, 255, .94); border: 1px solid var(--g100); font-size: 12px; font-weight: 600; color: var(--g700); transition: background-color .25s ease, color .25s ease, border-color .25s ease; }
+/* 강사 사진 — 긱스쿨 강사진처럼 큰 브랜드 모양 위에 누끼 사진, 우리는 흰 바탕 + 빨간 doogo 심볼(뒤로 6겹 = 입체 두께).
+   액자(.hm-tc-frame)는 위를 14% 비워 두고, 사진(.hm-tc-cut)은 그 위로 머리가 살짝 튀어나오게 — 양옆 · 아래는 액자에 맞춰 자름 */
+.hm-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.hm-tc { --sw: 132%; --sl: -6%; --st: 4%; }
+.hm-tcs > .hm-tc:nth-child(4n+2) { --sw: 190%; --sl: -96%; --st: -6%; }
+.hm-tcs > .hm-tc:nth-child(4n+3) { --sw: 150%; --sl: -22%; --st: 22%; }
+.hm-tcs > .hm-tc:nth-child(4n+4) { --sw: 210%; --sl: -58%; --st: -64%; }
+.hm-tc-photo { position: relative; display: block; aspect-ratio: 4 / 5; border-radius: 18px; }
+.hm-tc-frame { position: absolute; left: 0; right: 0; top: 14%; bottom: 0; border-radius: 18px; overflow: hidden; background: linear-gradient(180deg, #fff7f6 0%, #ffffff 70%); border: 1px solid #f4e6e4; box-shadow: 0 22px 40px -26px rgba(150, 30, 20, .45); transition: box-shadow .3s ease; }
+.hm-tc-sym { position: absolute; left: var(--sl); top: var(--st); width: var(--sw); height: auto; overflow: visible; filter: drop-shadow(0 18px 22px rgba(170, 24, 12, .22)); transition: transform .6s var(--ease); }
+.hm-tc-ex { fill: #c61d12; }
+.hm-tc-ex:first-child { fill: #a8160c; }
+.hm-tc-face { fill: url(#hm-dsym-g); }
+.hm-tc-cut { position: absolute; inset: 0; z-index: 2; pointer-events: none; clip-path: inset(-40% 0 0 0 round 0 0 18px 18px); }
+.hm-tc-cut img { position: absolute; left: 50%; bottom: 0; height: 106%; width: auto; max-width: none; transform: translateX(-50%); transform-origin: 50% 100%; filter: drop-shadow(0 10px 18px rgba(60, 10, 6, .22)); transition: transform .5s var(--ease); }
+.hm-tc-ph { position: absolute; left: 50%; bottom: 0; width: 64%; transform: translateX(-50%); fill: #fff; filter: drop-shadow(0 10px 16px rgba(150, 24, 12, .28)); }
+.hm-tc-tag { position: absolute; z-index: 3; left: 12px; bottom: 12px; padding: 4px 10px; border-radius: 50px; background: rgba(255, 255, 255, .96); border: 1px solid var(--g100); box-shadow: 0 2px 8px rgba(0, 0, 0, .08); font-size: 12px; font-weight: 600; color: var(--g700); transition: background-color .25s ease, color .25s ease, border-color .25s ease; }
 .hm-tc-body { padding: 18px 2px 14px; border-bottom: 1px solid var(--g200); }
 .hm-tc-body h3 { font-size: 20px; font-weight: 700; line-height: 1.4; letter-spacing: 0; transition: color .2s ease; }
 .hm-tc-field { margin-top: 4px !important; font-size: 14px; font-weight: 400; color: var(--g600); }
@@ -236,7 +245,9 @@ body[data-mode="home"] { background: #fff; }
 .hm-frow.rev .hm-frow-copy { order: 2; }
 .hm-frow-top { display: flex; align-items: center; gap: 14px; }
 /* 기능 번호 01 · 02 · 03 — 가장 먼저 눈에 들어오게 크게 (빨강 그라데이션 글자) */
-.hm-frow-no { font-size: 48px; font-weight: 800; line-height: 1; letter-spacing: -0.04em; color: var(--pri); background: linear-gradient(135deg, #ff7a6e 0%, #ea2013 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+/* 01 · 02 · 03 — 두께가 있는 입체 숫자 (오른쪽 아래로 6겹 + 그림자) */
+.hm-frow-no { font-size: 60px; font-weight: 900; line-height: 1; letter-spacing: -0.05em; color: #f94239; padding: 0 8px 8px 0;
+  text-shadow: 1px 1px 0 #e52b1f, 2px 2px 0 #d9261a, 3px 3px 0 #cc2115, 4px 4px 0 #bf1d11, 5px 5px 0 #b1190e, 6px 6px 0 #a3160c, 8px 14px 22px rgba(170, 24, 12, .32); }
 .hm-frow-tag { padding: 8px 16px; border-radius: 50px; background: var(--pri-soft); border: 1px solid var(--pri-200); font-size: 16px; font-weight: 700; color: var(--pri-dark); }
 .hm-frow h3 { margin-top: 14px !important; font-size: 30px; font-weight: 800; line-height: 1.35; letter-spacing: 0; color: var(--g900); }
 .hm-frow-lead { margin: 12px 0 28px !important; font-size: 16px; line-height: 1.6; color: var(--g600); }
@@ -399,9 +410,9 @@ body[data-mode="home"] { background: #fff; }
   .hm-hov:hover .hm-ic { transform: rotate(-8deg) scale(1.08); }
 
   .hm-tc:hover { transform: translateY(-6px); }
-  .hm-tc:hover .hm-tc-photo { border-color: transparent; box-shadow: var(--sh-hov); }
-  .hm-tc:hover .hm-tc-photo img { transform: scale(1.05); }
-  .hm-tc:hover .hm-tc-shape { opacity: .1; transform: translateX(-50%) scale(1.08); }
+  .hm-tc:hover .hm-tc-frame { box-shadow: 0 28px 48px -24px rgba(150, 30, 20, .5); }
+  .hm-tc:hover .hm-tc-cut img { transform: translateX(-50%) scale(1.04); }
+  .hm-tc:hover .hm-tc-sym { transform: translate(-3%, -4%) scale(1.05); }
   .hm-tc:hover .hm-tc-tag { background: var(--pri); border-color: var(--pri); color: #fff; }
   .hm-tc:hover h3 { color: var(--pri); }
   .hm-sns:hover { border-color: var(--g400); background: #fff; }
@@ -484,9 +495,10 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
   .hm-cmp-strike { transition: none; background-size: 100% 2px; }
   .hm-cmp-row.in .hm-cmp-ok, .hm-cmp-row.in .hm-cmp-new { animation: none; }
   .hm-chip, .hm-dot, .hm-mbg, .hm-modal, .hm-done-ic { animation: none; }
-  .hm-btn, .hm-hov, .hm-tc, .hm-join, .hm-ic, .hm-tc-photo img, .hm-tc-shape, .hm-join-ic { transition: none; }
+  .hm-btn, .hm-hov, .hm-tc, .hm-join, .hm-ic, .hm-tc-cut img, .hm-tc-sym, .hm-join-ic { transition: none; }
   .hm-hov:hover, .hm-tc:hover, .hm-join:hover,   .hm-top, .hm-top-prog { transition: none; }
-  .hm-hov:hover .hm-ic, .hm-join:hover .hm-join-ic, .hm-tc:hover .hm-tc-photo img { transform: none; }
+  .hm-hov:hover .hm-ic, .hm-join:hover .hm-join-ic, .hm-tc:hover .hm-tc-sym { transform: none; }
+  .hm-tc:hover .hm-tc-cut img { transform: translateX(-50%); }
 }
 
 /* 태블릿 */
@@ -671,11 +683,11 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 
 /* ===== PC에서 꽉 차게: 함께하는 강사 띠 · 운영 흐름 · 세부 기능 · 비교 · 강사센터 메뉴 · 기수 운영 · FAQ 2단 · 마지막 안내 · 바닥 ===== */
 
-.hm-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; counter-reset: f; }
+.hm-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; counter-reset: f; }
 .hm-flow-i { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 20px 16px 18px; border-radius: 16px; background: #fff; border: 1px solid var(--g200); }
 .hm-flow-i::before { content: ""; position: absolute; top: 40px; right: -11px; width: 10px; height: 10px; border-top: 2px solid var(--g300); border-right: 2px solid var(--g300); transform: rotate(45deg); background: transparent; }
-.hm-flow-i:last-child::before { display: none; }
-.hm-flow-no { position: absolute; top: 16px; right: 16px; font-size: 12px; font-weight: 700; color: var(--g300); }
+.hm-flow-i:last-child::before, .hm-flow-i:nth-child(4n)::before { display: none; }
+.hm-flow-no { position: absolute; top: 14px; right: 16px; font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: -0.04em; color: var(--tone, var(--pri)); opacity: .9; }
 .hm-flow-i b { margin-top: 6px; font-size: 17px; font-weight: 700; color: var(--g900); }
 .hm-flow-i em { align-self: flex-start; padding: 3px 8px; border-radius: 6px; background: var(--pri-soft); font-size: 12px; font-style: normal; font-weight: 600; color: var(--pri-dark); }
 .hm-flow-i p { font-size: 13px; line-height: 1.55; color: var(--g500); }
@@ -904,16 +916,20 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 
 /* ---------- 기능 3가지 — 휴대폰을 입체 무대 위에 ----------
    스크롤하면 천천히 돌아가고(--sp: 들어올 때 +1 → 가운데 0 → 나갈 때 -1), 마우스를 올리면 따라 기울어요(--mx · --my).
-   뒤판(붉은 점무늬 판) · 휴대폰 두께 · 빛 반사 · 바닥 그림자 · 앞에 떠 있는 알림 카드가 서로 다른 깊이에 있어 입체로 보여요 */
-.hm-3d { --sp: 0; --mx: 0; --my: 0; --dir: 1; --ry: -14deg; --rx: 7deg; position: relative; z-index: 1; width: min(270px, 78%); perspective: 1600px; }
+   휴대폰 뒤 아주 큰 입체 doogo 심볼(7겹) · 휴대폰 두께 · 빛 반사 · 바닥 그림자 · 앞에 떠 있는 알림 카드가 서로 다른 깊이에 있어 입체로 보여요.
+   휴대폰(터치 화면)에서는 기기를 기울이면 따라 기울어요(권한을 묻지 않는 브라우저만) */
+.hm-3d { --sp: 0; --mx: 0; --my: 0; --dir: 1; --ry: -18deg; --rx: 8deg; position: relative; z-index: 1; width: min(270px, 78%); perspective: 1300px; }
 .hm-frow.rev .hm-3d { --dir: -1; }
-.hm-3d-stage { position: relative; transform-style: preserve-3d; transform: translateY(calc(var(--sp) * 14px)) rotateY(calc(var(--dir) * (var(--ry) - var(--sp) * 9deg) + var(--mx) * 12deg)) rotateX(calc(var(--rx) + var(--sp) * 5deg - var(--my) * 9deg)); transition: transform .6s cubic-bezier(.22, .8, .24, 1); will-change: transform; }
+.hm-3d-stage { position: relative; transform-style: preserve-3d; transform: translateY(calc(var(--sp) * 16px)) rotateY(calc(var(--dir) * (var(--ry) - var(--sp) * 12deg) + var(--mx) * 14deg)) rotateX(calc(var(--rx) + var(--sp) * 6deg - var(--my) * 10deg)); transition: transform .6s cubic-bezier(.22, .8, .24, 1); will-change: transform; }
 .hm-3d .hm-frow-phone { width: 100%; transform-style: preserve-3d; background: linear-gradient(145deg, #2c2c33 0%, #111114 55%, #1e1e23 100%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07); }
 .hm-3d .hm-frow-phone::before, .hm-3d .hm-frow-phone::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
-.hm-3d .hm-frow-phone::before { background: #3b3b43; transform: translateZ(-5px); }
-.hm-3d .hm-frow-phone::after { background: #0c0c0f; transform: translateZ(-11px); box-shadow: 0 50px 70px -30px rgba(30, 14, 20, .42), 0 20px 34px -18px rgba(30, 14, 20, .28); }
-.hm-3d-slab { position: absolute; left: -24%; right: -24%; top: 14%; bottom: 10%; border-radius: 30px; background: radial-gradient(120% 90% at 18% 8%, #fff 0%, rgba(255, 255, 255, 0) 60%), linear-gradient(150deg, #fff4f2 0%, #ffe3df 100%); border: 1px solid rgba(249, 66, 57, .1); box-shadow: 0 30px 60px -36px rgba(234, 32, 19, .3); transform: translateZ(-90px); }
-.hm-3d-slab::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background-image: radial-gradient(rgba(234, 32, 19, .16) 1.1px, transparent 1.6px); background-size: 18px 18px; -webkit-mask-image: radial-gradient(70% 70% at 50% 50%, #000 30%, transparent 100%); mask-image: radial-gradient(70% 70% at 50% 50%, #000 30%, transparent 100%); }
+.hm-3d .hm-frow-phone::before { background: linear-gradient(145deg, #5a5a64, #26262c); transform: translateZ(-7px); }
+.hm-3d .hm-frow-phone::after { background: #0c0c0f; transform: translateZ(-14px); box-shadow: 0 50px 70px -30px rgba(30, 14, 20, .42), 0 20px 34px -18px rgba(30, 14, 20, .28); }
+.hm-3d-sym { position: absolute; left: 50%; top: 50%; width: 172%; transform-style: preserve-3d; transform: translate(-52%, -60%) translateZ(-90px); pointer-events: none; }
+.hm-3d-sym svg { display: block; width: 100%; height: auto; overflow: visible; fill: #c61d12; transform: translateZ(calc(var(--k) * -3px)); }
+.hm-3d-sym svg + svg { position: absolute; left: 0; top: 0; }
+.hm-3d-sym svg:first-child { fill: #9e140b; filter: drop-shadow(0 30px 34px rgba(170, 24, 12, .25)); }
+.hm-3d-sym svg:last-child { fill: url(#hm-dsym-g); }
 .hm-3d-glare { position: absolute; inset: 8px; border-radius: 29px; pointer-events: none; transform: translateZ(1px); background: linear-gradient(112deg, rgba(255, 255, 255, 0) 40%, rgba(255, 255, 255, .26) 50%, rgba(255, 255, 255, 0) 60%); background-size: 300% 100%; background-position: calc(50% + var(--sp) * 40% - var(--mx) * 30%) 0; transition: background-position .6s cubic-bezier(.22, .8, .24, 1); }
 .hm-3d-floor { position: absolute; z-index: -1; left: 8%; right: 8%; bottom: -30px; height: 36px; border-radius: 50%; background: radial-gradient(closest-side, rgba(40, 18, 24, .24), rgba(40, 18, 24, 0)); filter: blur(3px); transform: translateX(calc(var(--dir) * 12px - var(--mx) * 10px)) scaleX(calc(1 - var(--sp) * .08)); transition: transform .6s cubic-bezier(.22, .8, .24, 1); pointer-events: none; }
 .hm-frow-art .hm-cap { margin-top: 40px !important; }
@@ -931,11 +947,12 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 .hm-frow.rev .hm-fchip-b { right: auto; left: -27%; }
 @keyframes hm-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -9px; } }
 @media (max-width: 720px) {
-  .hm-3d { --ry: -9deg; --rx: 6deg; width: min(230px, 64%); }
+  .hm-3d { --ry: -14deg; --rx: 8deg; width: min(230px, 64%); }
+  .hm-3d-sym { transform: translate(-52%, -60%) translateZ(-60px); }
+  .hm-frow-no { font-size: 46px; }
   .hm-3d .hm-frow-phone::before { transform: translateZ(-4px); }
   .hm-3d .hm-frow-phone::after { transform: translateZ(-8px); }
   .hm-3d-glare { inset: 6px; border-radius: 21px; }
-  .hm-3d-slab { left: -18%; right: -18%; border-radius: 22px; transform: translateZ(-60px); }
   .hm-3d-floor { bottom: -24px; height: 28px; }
   .hm-frow-art .hm-cap { margin-top: 32px !important; }
   .hm-fchip { gap: 8px; padding: 8px 10px 8px 8px; border-radius: 12px; transform: translateZ(50px); }
