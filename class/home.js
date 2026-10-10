@@ -33,17 +33,20 @@
       pts: ["커리큘럼 · 후기 · 강사 소개 · 모집 일정을 한 페이지에", "신청하면 강사센터 ‘수강 신청’으로 바로 들어와요", "문구 · 사진 · 순서를 강사센터에서 직접 고쳐요"],
       more: [["layers", "10가지 구역", "첫 화면 · 강사 소개 · 커리큘럼 · 후기 · 가격 · FAQ를 켜고 끄고 순서까지"], ["phone", "휴대폰에 맞춘 화면", "수강생 대부분이 보는 휴대폰에서 먼저 보기 좋게"],
         ["userPlus", "신청 → 승인 대기", "신청하면 강사센터 ‘승인 대기’에 바로 들어와요"], ["calendar", "모집 일정 자동", "다음 기수 시작일 · 모집 중 표시가 기수에 맞춰"],
-        ["image", "사진 · 이력 · 후기", "강사 사진 · 경력 · 수강 후기를 직접 올려요"], ["link", "주소 하나로 홍보", "카카오톡 · 인스타그램 · 유튜브에 링크 하나로"]] },
+        ["image", "사진 · 이력 · 후기", "강사 사진 · 경력 · 수강 후기를 직접 올려요"], ["link", "주소 하나로 홍보", "카카오톡 · 인스타그램 · 유튜브에 링크 하나로"]],
+      chips: [{ ic: "userPlus", ok: true, b: "수강 신청 1건", s: "방금 · 승인 대기로" }, { s: "4기 모집 중 · D-27", b: "38 / 50명", bar: 76 }] },
     { no: "02", tag: "무료 강의", title: "무료강의 전자책", vid: "v-free", lead: "무료 강의 신청자에게 전자책과 실전 자료를 순서대로 열어 주는 페이지예요.",
       pts: ["무료 강의 신청 · 일정 카운트다운 · 신청자 전용 자료", "전자책 · 실전 자료를 하나씩 순서대로 열어 줘요", "무료 강의에서 유료 강의 신청으로 자연스럽게 이어져요"],
       more: [["clock", "강의 카운트다운", "무료 강의까지 남은 일 · 시간 · 분 · 초가 보여요"], ["library", "선물 전자책 순차 공개", "정한 날짜 · 시간에 한 권씩 자동으로 열려요"],
         ["video", "강의 전 영상", "유튜브 영상을 넘겨 보며 강사님을 먼저 만나요"], ["message", "질문 미리 받기", "강의 전에 궁금한 점을 이 페이지에서 모아요"],
-        ["headset", "오픈채팅 연결", "카카오톡 오픈채팅방으로 바로 이어져요"], ["store", "유료 강의로 연결", "진행 예정 강의 · 신청 링크로 자연스럽게"]] },
+        ["headset", "오픈채팅 연결", "카카오톡 오픈채팅방으로 바로 이어져요"], ["store", "유료 강의로 연결", "진행 예정 강의 · 신청 링크로 자연스럽게"]],
+      chips: [{ ic: "library", b: "선물 전자책 2권 공개", s: "신청자 전용 · 방금" }, { s: "무료 강의 시작까지", b: "19일 14:22:05", count: 1693325 }] },
     { no: "03", tag: "수강생 케어", title: "커리큘럼 · 튜토리얼 시스템", vid: "v-care", lead: "1주차부터 수료까지 수강생을 끝까지 케어하는 나만의 강의실이에요.",
       pts: ["주차별 강의 · 과제 · 자동 검수 · 강사 피드백", "진행률 · 수료증 · 24시간 AI 도우미 · 1:1 소통", "강사센터에서 진척도를 보고 코치와 나눠 운영해요"],
       more: [["book", "주차별 커리큘럼", "강의 · 핵심 목표 · 과제 · 자료가 주차별로"], ["checks", "자동 검수", "글자 수 · 키워드 · 링크 · 사진을 바로 확인"],
         ["pen", "강사 · 코치 피드백", "승인하거나 보완할 점을 남기면 바로 보여요"], ["activity", "진행률 · 성장 단계", "씨앗부터 숲까지, 해낸 만큼 자라요"],
-        ["award", "수료증", "필수 과제를 마치면 이름이 새겨진 수료증"], ["sparkles", "24시간 AI 도우미", "강사님이 올린 자료로 밤에도 답해요"]] }
+        ["award", "수료증", "필수 과제를 마치면 이름이 새겨진 수료증"], ["sparkles", "24시간 AI 도우미", "강사님이 올린 자료로 밤에도 답해요"]],
+      chips: [{ ic: "check", ok: true, b: "과제 자동 검수 통과", s: "글자 수 · 키워드 · 사진" }, { s: "6주차 · 내 진행률", b: "75%", bar: 75 }] }
   ];
   const STUDENT_TABS = [
     { key: "tutorial", at: 0, ic: "book", title: "주차별 튜토리얼", desc: "이번 주에 볼 강의와 할 과제가 순서대로 정리돼 있어요. 1주차부터 차근차근 따라오고, 다 본 강의는 ‘시청 완료’로 체크해요." },
@@ -163,6 +166,13 @@
     '<button type="button" class="hm-vid-btn" data-hm-vid aria-label="영상 멈추기">' + PAUSE + "</button>";
   // 휴대폰 틀 — 화면을 가리는 검정 노치(스피커) 없이 깔끔하게
   const phone = (vid, cls, alt, ch) => '<div class="hm-phone ' + (cls || "") + '">' + video(vid, alt, ch) + "</div>";
+  // 기능 칸 휴대폰은 입체 무대 위에: 뒤판 · 두께 · 빛 반사 · 바닥 그림자 + 앞에 떠 있는 알림 카드 (스크롤 · 마우스에 따라 기울어짐)
+  const fchip = (c, k) => '<div class="hm-fchip hm-fchip-' + k + (c.ic ? "" : " stat") + '" aria-hidden="true">' +
+    (c.ic ? icon(c.ic, "sm" + (c.ok ? " ok" : "")) + "<span><b>" + c.b + "</b><small>" + c.s + "</small></span>"
+      : "<span><small>" + c.s + "</small><b" + (c.count ? ' data-hm-count="' + c.count + '"' : "") + ">" + c.b + "</b></span>" + (c.bar ? '<i class="hm-chip-bar"><i style="width:' + c.bar + '%"></i></i>' : "")) + "</div>";
+  const stage3d = (f) => '<div class="hm-3d"><div class="hm-3d-stage"><i class="hm-3d-slab" aria-hidden="true"></i>' +
+    phone(f.vid, "hm-frow-phone", f.title + " 화면") + '<i class="hm-3d-glare" aria-hidden="true"></i>' +
+    f.chips.map((c, k) => fchip(c, k ? "b" : "a")).join("") + '</div><i class="hm-3d-floor" aria-hidden="true"></i></div>';
   const browser = (vid, cls, alt, ch) => '<div class="hm-browser ' + (cls || "") + '"><div class="hm-browser-bar"><i></i><i></i><i></i><span>doogo-class.vercel.app</span></div><div class="hm-browser-scr">' + video(vid, alt, ch) + "</div></div>";
   const scrollBtn = (to, label, cls) => '<button type="button" class="' + cls + '" data-hm-scroll="' + to + '">' + label + "</button>";
   const applyBtn = (label, cls) => '<button type="button" class="' + cls + '" data-hm-apply>' + label + "</button>";
@@ -231,7 +241,7 @@
       '<div class="hm-frow-copy"><p class="hm-frow-top"><span class="hm-frow-no">' + f.no + '</span><span class="hm-frow-tag">' + f.tag + "</span></p>" +
         "<h3>" + f.title + '</h3><p class="hm-frow-lead">' + f.lead + "</p>" + checks(f.pts) +
         '<ul class="hm-frow-more">' + f.more.map((m) => '<li><span class="hm-ic hm-ic-xs">' + icon(m[0]) + "</span><span><b>" + m[1] + "</b><small>" + m[2] + "</small></span></li>").join("") + "</ul></div>" +
-      '<div class="hm-frow-art"><div class="hm-show-glow" aria-hidden="true"></div>' + phone(f.vid, "hm-frow-phone", f.title + " 화면") + '<p class="hm-cap">' + icon("play", "xs") + "실제 화면 녹화 · 예시 데이터</p></div>" +
+      '<div class="hm-frow-art"><div class="hm-show-glow" aria-hidden="true"></div>' + stage3d(f) + '<p class="hm-cap">' + icon("play", "xs") + "실제 화면 녹화 · 예시 데이터</p></div>" +
     "</article>";
     return '<section class="hm-sec" id="hm-features"><div class="hm-wrap">' +
       secHead("layers", "강사님 이름으로 운영하는 3가지", "모집부터 수료 후 관리까지, 한 기수를 운영하는 데 필요한 화면이 모두 들어 있어요. 수강생 수와 상관없이 전부 포함돼요.", applyBtn("입점 문의" + arrow(), "hm-shead-link")) +
@@ -284,7 +294,6 @@
     const scale = [["100명", 20], ["300명", 60], ["500명", 100]];
     return '<section class="hm-sec" id="hm-pricing"><div class="hm-wrap">' +
       secHead("coins", "수강생은 무료, 강사님은 하나의 이용료", "수강생이 100명이든 500명이든 이용료는 같아요. 수강생이 늘어도 비용 걱정 없이 다음 기수를 여세요.") +
-      '<p class="hm-price-note hm-reveal">' + icon("award", "sm") + "<span>수강료 <b>239만 ~ 399만 원</b>짜리 강의, 수강생이 낸 만큼의 경험을 드리세요. 이용료는 수강생 수와 상관없이 고정이라, 기수가 커질수록 한 명당 부담은 줄어들어요.</span></p>" +
       '<div class="hm-plans">' +
         '<article class="hm-plan hm-plan-main hm-reveal"' + d(0) + '><p class="hm-plan-who">강사님</p><b class="hm-plan-price">정액 이용료</b><p class="hm-plan-desc">수강생 수와 상관없이 강사님 한 분당 정해진 이용료</p>' +
           checks(["강의 소개 랜딩페이지 · 무료강의 전자책 · 튜토리얼 시스템 모두 포함", "수강생 수 · 기수 제한 없음", "강사센터 · 코치 계정 · AI 도우미 포함", "처음 세팅을 함께 도와드려요"]) +
@@ -509,6 +518,7 @@
     onScroll();
     reveal();
     wireVideos();
+    wire3d();
     if (/^#\/partner/.test(location.hash)) openApply();
   }
   function mount() { root.innerHTML = ""; render(); window.scrollTo(0, 0); }
@@ -628,8 +638,60 @@
         const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", "#ffffff");
       }
       if (prog) prog.style.transform = "scaleX(" + (max > 0 ? Math.min(1, y / max) : 0).toFixed(4) + ")";
+      tilt3d();
     });
   }
+
+  /* ---------- 기능 칸 휴대폰 입체 ---------- */
+  // --sp: 화면 아래에서 들어올 때 +1 → 가운데 0 → 위로 나갈 때 -1 · --mx/--my: 마우스 위치 -1 ~ 1
+  let st3d = [], v3d = null;
+  const fine = window.matchMedia("(hover: hover) and (pointer: fine)");
+  // 글 길이만큼 늘어난 틀(클로드 아티팩트 등) 안: 이 문서는 스크롤되지 않는다 → 보이는 비율로 대신 계산
+  const framed = () => document.documentElement.scrollHeight <= window.innerHeight + 4;
+  function tilt3d() {
+    if (!st3d.length || framed()) return;
+    const vh = window.innerHeight;
+    st3d.forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.bottom < -200 || r.top > vh + 200) return;
+      const p = (r.top + r.height / 2 - vh / 2) / ((vh + r.height) / 2);
+      el.style.setProperty("--sp", Math.max(-1, Math.min(1, p)).toFixed(3));
+    });
+  }
+  function wire3d() {
+    st3d = Array.from(root.querySelectorAll(".hm-3d"));
+    root.querySelectorAll("[data-hm-count]").forEach((el) => { el.dataset.end = String(Date.now() + Number(el.dataset.hmCount) * 1000); });
+    if (v3d) { v3d.disconnect(); v3d = null; }
+    if ("IntersectionObserver" in window) {
+      const th = []; for (let i = 0; i <= 20; i++) th.push(i / 20);
+      v3d = new IntersectionObserver((ents) => ents.forEach((en) => {
+        if (!framed() || !en.isIntersecting) return;
+        const hid = 1 - en.intersectionRatio;
+        en.target.style.setProperty("--sp", (en.intersectionRect.top > en.boundingClientRect.top + 1 ? -hid : hid).toFixed(3));
+      }), { threshold: th });
+      st3d.forEach((el) => v3d.observe(el));
+    }
+    if (!fine.matches) return;
+    st3d.forEach((box) => {
+      const art = box.parentNode;
+      art.addEventListener("pointermove", (e) => {
+        const r = art.getBoundingClientRect();
+        box.style.setProperty("--mx", Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1)).toFixed(3));
+        box.style.setProperty("--my", Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1)).toFixed(3));
+      });
+      art.addEventListener("pointerleave", () => { box.style.setProperty("--mx", "0"); box.style.setProperty("--my", "0"); });
+    });
+  }
+  // 무료 강의 카운트다운 카드: 1초마다 줄어든다 (0이 되면 처음부터)
+  const pad2 = (x) => String(x).padStart(2, "0");
+  setInterval(() => {
+    if (!isActive()) return;
+    root.querySelectorAll("[data-hm-count]").forEach((el) => {
+      let t = Math.round((Number(el.dataset.end) - Date.now()) / 1000);
+      if (!(t > 0)) { t = Number(el.dataset.hmCount); el.dataset.end = String(Date.now() + t * 1000); }
+      el.textContent = Math.floor(t / 86400) + "일 " + pad2(Math.floor(t / 3600) % 24) + ":" + pad2(Math.floor(t / 60) % 60) + ":" + pad2(t % 60);
+    });
+  }, 1000);
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onScroll, { passive: true });
 
