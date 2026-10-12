@@ -14,7 +14,10 @@ vi.mock("../services/catalog", () => ({
   getShippingPolicies: vi.fn(async () => []),
   createCategory: vi.fn(async () => ({ id: "cat-uncategorized" })),
   createProduct: vi.fn(async () => ({ id: "new" })),
-  updateProduct: vi.fn()
+  updateProduct: vi.fn(),
+  // 삭제된(숨김 + deletedAt) 상품: 같은 이름·코드로 올리면 새로 만들지 않고 다시 살립니다.
+  getDeletedProductsForRestore: vi.fn(async () => [{ id: "p-deleted", productCode: "ass00057", name: "표고버섯 가정용 1kg 삭제됨" }]),
+  restoreDeletedProduct: vi.fn(async (id: string) => ({ id, productCode: "ass00057", name: "표고버섯 가정용 1kg 삭제됨", costPrice: 0, aPrice: 0, generalPrice: 0, isVisible: false, options: [] }))
 }));
 
 const { previewBulkProductWorkbook, applyBulkProductWorkbook, priceWithMargin } = await import("../services/catalog-excel");
@@ -148,19 +151,54 @@ describe("공급사 단가표(계약 마진) 업로드", () => {
     const preview = await previewBulkProductWorkbook(bytes);
     expect(preview.newProducts).toBe(0);
     expect(preview.changes).toEqual([]);
-    expect(preview.warnings.some((warning) => warning.includes("상품코드가 없어 신규 등록하지 않았습니다"))).toBe(true);
+    expect(preview.needsCode).toEqual([{ row: 2, name: "새로운 상품 1kg" }]);
+    expect(preview.warnings.some((warning) => warning.includes("상품코드가 있어야 신규 등록됩니다"))).toBe(true);
   });
 
   it("신규 상품은 엑셀 순서대로 목록에 놓이도록 마지막 행부터 등록합니다", async () => {
     vi.mocked(catalog.createProduct).mockClear();
     const bytes = await workbook([
       ["상품코드", "상품명", "기존공급가"],
-      ["ass00057", "표고버섯 가정용 1kg", 5250],
-      ["ass00058", "표고버섯 가정용 2kg", 9500],
-      ["ass00060", "표고버섯 실속 2kg", 19000]
+      ["ass00071", "새 버섯 1kg", 5250],
+      ["ass00072", "새 버섯 2kg", 9500],
+      ["ass00073", "새 버섯 3kg", 19000]
     ]);
     await applyBulkProductWorkbook(bytes, "tester");
     // 새 상품은 등록될 때마다 맨 앞에 들어가므로, 마지막 행 → 첫 행 순서로 등록해야 첫 행이 맨 위가 됩니다.
-    expect(vi.mocked(catalog.createProduct).mock.calls.map(([input]) => input.productCode)).toEqual(["ass00060", "ass00058", "ass00057"]);
+    expect(vi.mocked(catalog.createProduct).mock.calls.map(([input]) => input.productCode)).toEqual(["ass00073", "ass00072", "ass00071"]);
+  });
+
+  it("삭제된 상품과 이름이 같으면 새로 만들지 않고 삭제 전 상품코드로 다시 살립니다", async () => {
+    vi.mocked(catalog.updateProduct).mockClear();
+    const bytes = await workbook([
+      ["상품명", "기존원가", "변경원가", "기존A급단가", "변경A급단가", "기존공급가", "변경공급가"],
+      ["표고버섯 가정용 1kg 삭제됨", null, 5000, null, 5250, null, 5500]
+    ]);
+    const preview = await previewBulkProductWorkbook(bytes);
+    expect(preview.restoredProducts).toBe(1);
+    expect(preview.newProducts).toBe(0);
+    expect(preview.changes[0]).toMatchObject({ field: "복원", before: "삭제됨 (ass00057)" });
+    await applyBulkProductWorkbook(bytes, "tester");
+    expect(catalog.restoreDeletedProduct).toHaveBeenCalledWith("p-deleted");
+    expect(catalog.updateProduct).toHaveBeenCalledWith("p-deleted", expect.objectContaining({ productCode: "ass00057", costPrice: 5250, aPrice: 5900, generalPrice: 6600, isVisible: false }), "tester");
+  });
+
+  it("미리보기에서 입력한 상품코드로 신규 등록하고, 이미 쓰는 코드는 막습니다", async () => {
+    vi.mocked(catalog.createProduct).mockClear();
+    const bytes = await workbook([
+      ["상품명", "기존공급가"],
+      ["새 상품 A", 5000],
+      ["새 상품 B", 6000]
+    ]);
+    const before = await previewBulkProductWorkbook(bytes);
+    expect(before.needsCode).toEqual([{ row: 2, name: "새 상품 A" }, { row: 3, name: "새 상품 B" }]);
+    const options = { aMargin: 10, generalMargin: 20, createMissing: true, newCodes: { "2": "ass00061", "3": "mush-1" } };
+    const preview = await previewBulkProductWorkbook(bytes, undefined, options);
+    expect(preview.newProducts).toBe(1);
+    expect(preview.errors).toEqual([{ row: 3, message: "상품코드 mush-1는 이미 '표고버섯 가정용 1kg' 상품에서 쓰고 있습니다." }]);
+    const fixed = { ...options, newCodes: { "2": "ass00061", "3": "ass00062" } };
+    expect((await previewBulkProductWorkbook(bytes, undefined, fixed)).needsCode).toEqual([]);
+    await applyBulkProductWorkbook(bytes, "tester", undefined, fixed);
+    expect(vi.mocked(catalog.createProduct).mock.calls.map(([input]) => input.productCode)).toEqual(["ass00062", "ass00061"]);
   });
 });

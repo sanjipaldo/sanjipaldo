@@ -66,6 +66,8 @@ type BulkWorkbookPreview = {
   priceFields?: PriceField[];
   newProducts?: number;
   contract?: ContractOptions;
+  restoredProducts?: number;
+  needsCode?: Array<{ row: number; name: string }>;
 };
 
 type PriceField = "cost" | "a" | "general";
@@ -95,6 +97,25 @@ function contractPrice(cost: number, marginPercent: number) {
   const hundreds = roundUp(100);
   const marginTenths = hundreds > 0 ? ((hundreds - cost) * 1000) / hundreds : 0;
   return marginTenths > tenths + 20 ? roundUp(50) : hundreds;
+}
+
+// 신규 등록 상품코드 입력: 엑셀에 상품코드 열이 없을 때 행마다 코드를 넣습니다(멈추면 0.6초 뒤 미리보기 다시 계산).
+function NewCodeInputs({ rows, value, disabled, onChange }: { rows: Array<{ row: number; name: string }>; value: Record<string, string>; disabled: boolean; onChange: (next: Record<string, string>) => void }) {
+  const [draft, setDraft] = useState<Record<string, string>>(value);
+  const timer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const update = (row: number, raw: string) => {
+    const next = { ...draft, [String(row)]: raw.replace(/[^A-Za-z0-9_-]/g, "") };
+    setDraft(next);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => onChange(next), 600);
+  };
+  return (
+    <div className="new-code-fields" role="group" aria-label="신규 등록 상품코드 입력">
+      <strong>신규 등록 상품코드 입력 <small>데이터센터에 없는 상품은 상품코드가 있어야 등록됩니다(발주오라·단가관리 코드)</small></strong>
+      {rows.map((item) => <label key={item.row}><span>{item.row}행 · {item.name}</span><input value={draft[String(item.row)] ?? ""} onChange={(event) => update(item.row, event.target.value)} placeholder="예: ass00061" disabled={disabled} aria-label={`${item.row}행 ${item.name} 상품코드`} /></label>)}
+    </div>
+  );
 }
 
 // 마진 입력: 입력하는 동안은 화면 값만 바꾸고, 멈추면(0.5초) 미리보기를 다시 계산합니다.
@@ -855,6 +876,8 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   // 단가관리 엑셀: 반영할 가격 항목(매입원가·A급 단가·공급가)
   const [priceFields, setPriceFields] = useState<PriceField[]>(["cost", "a", "general"]);
   const [contractOptions, setContractOptions] = useState<ContractOptions>(readContractOptions);
+  // 공급사 단가표: 행마다 입력한 신규 상품코드(파일을 새로 고르면 비웁니다)
+  const [newCodes, setNewCodes] = useState<Record<string, string>>({});
   const [excelBusy, setExcelBusy] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1304,7 +1327,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     }
   };
 
-  const previewWorkbook = async (file: File, fields: PriceField[] = priceFields, contract: ContractOptions = contractOptions) => {
+  const previewWorkbook = async (file: File, fields: PriceField[] = priceFields, contract: ContractOptions = contractOptions, codes: Record<string, string> = newCodes) => {
     setExcelBusy(true);
     try {
       const form = new FormData();
@@ -1313,6 +1336,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       form.set("aMargin", String(contract.aMargin));
       form.set("generalMargin", String(contract.generalMargin));
       form.set("createMissing", String(contract.createMissing));
+      form.set("newCodes", JSON.stringify(codes));
       const response = await apiFetch("/catalog/admin/products/import-preview", { method: "POST", body: form });
       const preview = await readData<BulkWorkbookPreview>(response);
       setBulkFile(file);
@@ -1331,10 +1355,16 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     if (bulkFile) void previewWorkbook(bulkFile, priceFields, next);
   };
 
+  const updateNewCodes = (next: Record<string, string>) => {
+    setNewCodes(next);
+    if (bulkFile) void previewWorkbook(bulkFile, priceFields, contractOptions, next);
+  };
+
   const applyWorkbook = async () => {
     if (!bulkFile || !bulkPreview || bulkPreview.errors.length > 0) return;
     const newCount = bulkPreview.newProducts ?? 0;
-    if (!window.confirm(`${bulkPreview.affectedProducts}개 상품 가격 변경${newCount > 0 ? `, ${newCount}개 상품 신규 등록` : ""}을 적용할까요?`)) return;
+    const restoreCount = bulkPreview.restoredProducts ?? 0;
+    if (!window.confirm(`${bulkPreview.affectedProducts}개 상품 가격 변경${newCount > 0 ? `, ${newCount}개 상품 신규 등록` : ""}${restoreCount > 0 ? `, 삭제된 상품 ${restoreCount}개 복원` : ""}을 적용할까요?`)) return;
     setExcelBusy(true);
     try {
       const form = new FormData();
@@ -1343,6 +1373,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       form.set("aMargin", String(contractOptions.aMargin));
       form.set("generalMargin", String(contractOptions.generalMargin));
       form.set("createMissing", String(contractOptions.createMissing));
+      form.set("newCodes", JSON.stringify(newCodes));
       const response = await apiFetch("/catalog/admin/products/import-apply", { method: "POST", body: form });
       if (!response.ok) return;
       toast.success("엑셀 일괄변경을 적용하고 가격변동 이력을 기록했습니다.");
@@ -1438,7 +1469,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             <button onClick={() => void downloadWorkbook("list")} disabled={excelBusy}><Download size={15} /> 상품 리스트</button>
             <button onClick={() => void downloadWorkbook("bulk")} disabled={excelBusy}><FileSpreadsheet size={15} /> 일괄변경 양식</button>
             <button className="excel-upload-action" onClick={() => fileInputRef.current?.click()} disabled={excelBusy}><Upload size={15} /> 엑셀 업로드</button>
-            <input ref={fileInputRef} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void previewWorkbook(file); }} />
+            <input ref={fileInputRef} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) { setNewCodes({}); void previewWorkbook(file, priceFields, contractOptions, {}); } }} />
           </div>
           <div className="sync-status"><span /> 발주오라 API 자동연동 준비 · 보안 인증 연결 대기</div>
         </div>
@@ -1578,8 +1609,9 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       </div><div className="editor-footer"><button type="button" onClick={() => setEditing(null)} disabled={saving}>취소</button><button className="primary-action" type="submit" disabled={saving}><Save size={16} /> {saving ? "빠르게 저장 중…" : "저장하기"}</button></div></form></div>}
       {bulkEditOpen && <BulkEditModal ids={Array.from(selectedProductIds)} categories={data.categories} shippingPolicies={shippingPolicies} suppliers={suppliers} preset={bulkEditOpen === "seasonInfo" ? "seasonInfo" : undefined} onClose={() => setBulkEditOpen(false)} onDone={() => { setBulkEditOpen(false); setSelectedProductIds(new Set()); void refresh(true); }} />}
       {bulkPreview && <div className="editor-overlay"><section className="excel-preview-panel"><div className="editor-header"><div><span>EXCEL PREVIEW</span><h2>상품 일괄변경 미리보기</h2></div><button type="button" onClick={() => { setBulkPreview(null); setBulkFile(null); }} aria-label="닫기"><X size={21} /></button></div>
-        <div className="excel-preview-summary"><article><span>읽은 행</span><strong>{bulkPreview.totalRows}</strong></article><article><span>매칭 행</span><strong>{bulkPreview.matchedRows}</strong></article><article><span>변경 상품</span><strong>{bulkPreview.affectedProducts}</strong></article><article><span>변경 항목</span><strong>{bulkPreview.changes.length}</strong></article>{bulkPreview.newProducts ? <article><span>신규 상품</span><strong>{bulkPreview.newProducts}</strong></article> : null}</div>
+        <div className="excel-preview-summary"><article><span>읽은 행</span><strong>{bulkPreview.totalRows}</strong></article><article><span>매칭 행</span><strong>{bulkPreview.matchedRows}</strong></article><article><span>변경 상품</span><strong>{bulkPreview.affectedProducts}</strong></article><article><span>변경 항목</span><strong>{bulkPreview.changes.length}</strong></article>{bulkPreview.newProducts ? <article><span>신규 상품</span><strong>{bulkPreview.newProducts}</strong></article> : null}{bulkPreview.restoredProducts ? <article><span>복원 상품</span><strong>{bulkPreview.restoredProducts}</strong></article> : null}</div>
         {bulkPreview.format === "contract" && <ContractMarginControls value={contractOptions} disabled={excelBusy} onChange={updateContractOptions} />}
+        {bulkPreview.format === "contract" && (bulkPreview.needsCode?.length ?? 0) > 0 && <NewCodeInputs key={bulkFile?.name ?? "codes"} rows={bulkPreview.needsCode ?? []} value={newCodes} disabled={excelBusy} onChange={updateNewCodes} />}
         {(bulkPreview.format === "danga" || bulkPreview.format === "contract") && <div className="excel-price-fields" role="group" aria-label="반영할 가격 항목"><strong>반영할 항목</strong>{(bulkPreview.format === "contract" ? [["cost", "원가 (공급사 공급가·A급단가)"], ["a", `A급 단가 (마진 ${contractOptions.aMargin}% 이상)`], ["general", `일반공급가 (마진 ${contractOptions.generalMargin}% 이상)`]] as Array<[PriceField, string]> : [["cost", "매입원가"], ["a", "A급 단가 (황금농부 수강생)"], ["general", "공급가"]] as Array<[PriceField, string]>).map(([field, label]) => <label key={field}><input type="checkbox" checked={priceFields.includes(field)} disabled={excelBusy} onChange={(event) => { const next = event.target.checked ? [...priceFields, field] : priceFields.filter((item) => item !== field); setPriceFields(next); if (bulkFile) void previewWorkbook(bulkFile, next); }} /> {label}</label>)}</div>}
         {bulkPreview.errors.length > 0 && <div className="excel-error-list"><strong>수정이 필요한 행</strong>{bulkPreview.errors.map((error) => <p key={`${error.row}-${error.message}`}>{error.row}행 · {error.message}</p>)}</div>}
         <div className="excel-change-list">{bulkPreview.changes.length === 0 ? <p className="excel-empty">변경되는 값이 없습니다.</p> : bulkPreview.changes.slice(0, 100).map((change, index) => <div key={`${change.row}-${change.field}-${index}`}><span>{change.row}행</span><strong>{change.productName}{change.optionName ? <small>{change.optionName}</small> : null}</strong><em>{change.field}</em><del>{typeof change.before === "number" ? change.before.toLocaleString("ko-KR") : String(change.before ?? "-")}</del><ChevronRight size={14} /><b>{typeof change.after === "number" ? change.after.toLocaleString("ko-KR") : String(change.after ?? "-")}</b></div>)}</div>

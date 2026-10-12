@@ -1166,3 +1166,14 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .shipping-policy-editor .policy-form .policy-region-row input { width: 110px !important; }
   .policy-save .policy-delete { min-width: 0; flex: 1; }
 }
+/* 공급사 단가표: 신규 등록 상품코드 입력 */
+.new-code-fields { display: grid; gap: 8px; margin: 0 0 10px; padding: 14px; border: 1px solid #e3a1a4; border-radius: 14px; background: #fff7f7; }
+.new-code-fields > strong { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; color: var(--w-ink, #0e0f0c); font-size: 13px; font-weight: 800; }
+.new-code-fields > strong small { color: var(--w-body, #454745); font-size: 12px; font-weight: 600; }
+.new-code-fields > label { display: grid; grid-template-columns: minmax(0, 1fr) 180px; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; }
+.new-code-fields > label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.new-code-fields input { height: 38px; padding: 0 10px; border: 1px solid var(--w-line, #d9ddd5); border-radius: 10px; background: #fff; font-size: 14px; font-weight: 700; }
+@media (max-width: 720px) {
+  .new-code-fields > label { grid-template-columns: 1fr; gap: 6px; }
+  .new-code-fields > label span { white-space: normal; }
+}

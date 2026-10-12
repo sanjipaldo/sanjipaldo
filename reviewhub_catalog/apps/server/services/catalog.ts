@@ -1014,6 +1014,24 @@ export async function createProduct(input: ProductInput) {
   return { ...product, options: normalizedOptions };
 }
 
+// 엑셀 업로드 복원용: 삭제(숨김 + deletedAt)된 상품의 코드·이름. 삭제된 상품도 상품코드를 계속 갖고 있습니다.
+export async function getDeletedProductsForRestore() {
+  return getDb().select({ id: products.id, productCode: products.productCode, name: products.name }).from(products).where(sql`${products.deletedAt} IS NOT NULL`);
+}
+
+// 삭제된 상품을 다시 살려 진열순서 맨 앞에 둡니다. 가격·이름은 이어서 updateProduct로 저장합니다(가격 이력·발주오라 대기열 기록).
+export async function restoreDeletedProduct(id: string) {
+  const db = getDb();
+  const top = await db.select({ value: sql<number>`coalesce(min(${products.displayOrder}), 0)` }).from(products).where(sql`${products.deletedAt} IS NULL`);
+  const rows = await db.update(products)
+    .set({ deletedAt: null, displayOrder: Number(top[0]?.value ?? 0) - 10, updatedAt: new Date().toISOString() })
+    .where(and(eq(products.id, id), sql`${products.deletedAt} IS NOT NULL`))
+    .returning();
+  if (!rows[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "복원할 삭제 상품을 찾을 수 없습니다.", 404);
+  const optionRows = await db.select().from(productOptions).where(eq(productOptions.productId, id)).orderBy(asc(productOptions.sortOrder));
+  return { ...rows[0], options: optionRows };
+}
+
 export async function updateProduct(id: string, input: ProductInput, changedBy: string) {
   const db = getDb();
   const previous = await db.select().from(products).where(eq(products.id, id)).limit(1);

@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { DatabaseError } from "../_core/db";
-import { createCategory, createProduct, getAdminCatalog, getShippingPolicies, type ProductInput, updateProduct } from "./catalog";
+import { createCategory, createProduct, getAdminCatalog, getDeletedProductsForRestore, getShippingPolicies, type ProductInput, restoreDeletedProduct, updateProduct } from "./catalog";
 
 const LIST_HEADERS = [
   "등록일", "노출여부", "품절여부", "상품코드", "관리코드", "상품명", "발주상품명",
@@ -25,7 +25,7 @@ export type BulkWorkbookChange = {
   optionName: string | null;
   field:
     | "상품명" | "A단가" | "일반공급가" | "원가" | "노출여부" | "품절여부" | "상품 간략설명" | "해외배송"
-    | "매입처" | "택배사" | "신규 등록";
+    | "매입처" | "택배사" | "신규 등록" | "복원";
   before: string | number | boolean | null;
   after: string | number | boolean | null;
 };
@@ -52,7 +52,13 @@ export function priceWithMargin(cost: number, marginPercent: number) {
   return marginTenths > tenths + CONTRACT_ROUNDING_TOLERANCE_PERCENT * 10 ? roundUp(50) : hundreds;
 }
 // 관리자가 업로드 미리보기에서 정하는 값: 마진(%)과 없는 상품 신규 등록 여부
-export type ContractOptions = { aMargin: number; generalMargin: number; createMissing: boolean };
+export type ContractOptions = {
+  aMargin: number;
+  generalMargin: number;
+  createMissing: boolean;
+  // 미리보기에서 행마다 입력한 신규 상품코드(엑셀에 상품코드 열이 없을 때): { "2": "ass00061" }
+  newCodes?: Record<string, string>;
+};
 export const DEFAULT_CONTRACT_OPTIONS: ContractOptions = {
   aMargin: CONTRACT_A_MARGIN_PERCENT,
   generalMargin: CONTRACT_GENERAL_MARGIN_PERCENT,
@@ -73,6 +79,9 @@ export type BulkWorkbookPreview = {
   newProducts?: number;
   // 공급사 단가표 양식: 이번 미리보기에 쓴 마진·신규 등록 설정
   contract?: ContractOptions;
+  // 공급사 단가표: 삭제된 상품을 다시 살리는 개수, 신규 등록에 상품코드 입력이 필요한 행
+  restoredProducts?: number;
+  needsCode?: Array<{ row: number; name: string }>;
 };
 
 // 신규 상품은 발주오라 파일에 카테고리 열이 없어 이 카테고리로 등록하고, 관리자가 나중에 지정합니다.
@@ -487,6 +496,8 @@ async function buildPreview(bytes: Uint8Array, priceFields: PriceField[] = ALL_P
 }
 
 type NewProductDraft = { row: number; input: Omit<ProductInput, "categoryId"> };
+// 삭제된 상품을 엑셀 값으로 다시 살리는 작업(상품코드는 삭제 전 코드 그대로)
+type RestoreDraft = { row: number; id: string; name: string; costPrice: number; aPrice: number; generalPrice: number };
 
 function statusValue(raw: string, truthy: string[], falsy: string[]) {
   const value = raw.replace(/\s+/g, "");
@@ -795,6 +806,13 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
     const key = normalizeProductName(product.name);
     productsByName.set(key, [...(productsByName.get(key) ?? []), product]);
   }
+  const deletedRows = await getDeletedProductsForRestore();
+  const deletedByCode = new Map(deletedRows.filter((row) => row.productCode).map((row) => [row.productCode!.trim(), row]));
+  const deletedByName = new Map<string, typeof deletedRows>();
+  for (const row of deletedRows) {
+    const key = normalizeProductName(row.name);
+    deletedByName.set(key, [...(deletedByName.get(key) ?? []), row]);
+  }
   const fields = new Set(priceFields);
   const changes: BulkWorkbookChange[] = [];
   const errors: BulkWorkbookPreview["errors"] = [];
@@ -802,6 +820,9 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
   const seen = new Set<string>();
   const missing: string[] = [];
   const newProducts: NewProductDraft[] = [];
+  const restores: RestoreDraft[] = [];
+  const needsCode: Array<{ row: number; name: string }> = [];
+  const claimedCodes = new Set<string>();
   const noCode: string[] = [];
   const ambiguous: string[] = [];
   const noPrice: string[] = [];
@@ -872,18 +893,46 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
         missing.push(code || name);
         continue;
       }
-      // 신규 등록은 상품코드가 있어야 합니다(발주오라·단가관리와 같은 코드로 1:1 매칭).
-      if (!code) {
+      const marginLabel = (price: number) => `${(Math.round(((price - cost) / price) * 1000) / 10).toFixed(1)}%`;
+      const priceText = `원가 ${cost.toLocaleString("ko-KR")} · A ${nextA.toLocaleString("ko-KR")}(${marginLabel(nextA)}) · 일반 ${nextGeneral.toLocaleString("ko-KR")}(${marginLabel(nextGeneral)})`;
+      // 상품코드: 엑셀 상품코드 열 → 미리보기에서 입력한 코드 순서로 씁니다.
+      const typedCode = contract.newCodes?.[String(rowNumber)]?.trim() ?? "";
+      const effectiveCode = code || typedCode;
+      if (typedCode && !/^[A-Za-z0-9_-]{1,80}$/.test(typedCode)) {
+        errors.push({ row: rowNumber, message: `상품코드 ${typedCode}는 영문·숫자·-·_만 쓸 수 있습니다.` });
+        continue;
+      }
+      // 삭제된 상품과 같은 코드(코드가 없으면 같은 이름 1개)면 새로 만들지 않고 그 상품을 다시 살립니다(삭제 전 상품코드 유지).
+      const sameNameDeleted = deletedByName.get(name) ?? [];
+      const deleted = effectiveCode ? deletedByCode.get(effectiveCode) : sameNameDeleted.length === 1 ? sameNameDeleted[0] : undefined;
+      if (deleted) {
+        if (claimedCodes.has(deleted.id)) {
+          errors.push({ row: rowNumber, message: `같은 삭제 상품(${deleted.name})을 여러 행이 복원하려고 합니다.` });
+          continue;
+        }
+        claimedCodes.add(deleted.id);
+        restores.push({ row: rowNumber, id: deleted.id, name, costPrice: cost, aPrice: nextA, generalPrice: nextGeneral });
+        changes.push({ row: rowNumber, productName: name, optionName: null, field: "복원", before: `삭제됨${deleted.productCode ? ` (${deleted.productCode})` : ""}`, after: priceText });
+        continue;
+      }
+      // 신규 등록은 상품코드가 있어야 합니다(발주오라·단가관리와 같은 코드로 1:1 매칭). 없으면 미리보기에서 입력받습니다.
+      if (!effectiveCode) {
+        needsCode.push({ row: rowNumber, name });
         noCode.push(`${rowNumber}행 ${name}`);
         continue;
       }
+      const liveOwner = productByCode.get(effectiveCode);
+      if (liveOwner || claimedCodes.has(`code:${effectiveCode}`)) {
+        errors.push({ row: rowNumber, message: `상품코드 ${effectiveCode}는 이미 ${liveOwner ? `'${liveOwner.name}' 상품에서` : "다른 행에서"} 쓰고 있습니다.` });
+        continue;
+      }
+      claimedCodes.add(`code:${effectiveCode}`);
       // 신규 상품: 가격 세 가지를 모두 넣고, 카테고리·이미지·배송을 채운 뒤 노출할 수 있게 숨김으로 등록합니다.
       newProducts.push({
         row: rowNumber,
-        input: { productCode: code || null, name, costPrice: cost, aPrice: nextA, generalPrice: nextGeneral, shippingType: "domestic", isVisible: false, isSoldOut: false }
+        input: { productCode: effectiveCode, name, costPrice: cost, aPrice: nextA, generalPrice: nextGeneral, shippingType: "domestic", isVisible: false, isSoldOut: false }
       });
-      const marginLabel = (price: number) => `${(Math.round(((price - cost) / price) * 1000) / 10).toFixed(1)}%`;
-      changes.push({ row: rowNumber, productName: name, optionName: null, field: "신규 등록", before: null, after: `원가 ${cost.toLocaleString("ko-KR")} · A ${nextA.toLocaleString("ko-KR")}(${marginLabel(nextA)}) · 일반 ${nextGeneral.toLocaleString("ko-KR")}(${marginLabel(nextGeneral)})` });
+      changes.push({ row: rowNumber, productName: name, optionName: null, field: "신규 등록", before: effectiveCode, after: priceText });
       continue;
     }
     matchedRows += 1;
@@ -917,6 +966,8 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
     errors,
     format: "contract",
     newProducts: newProducts.length,
+    restoredProducts: restores.length,
+    needsCode,
     contract,
     priceFields: ALL_PRICE_FIELDS.filter((field) => fields.has(field)),
     warnings: [
@@ -926,12 +977,13 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
       ...(aPriceBased > 0 ? [`A급단가 칸에 값이 있는 ${aPriceBased.toLocaleString("ko-KR")}개 행은 A급단가를 원가로 썼습니다.`] : []),
       `기존 상품은 ${columns.has("상품코드") ? "상품코드" : "상품명(띄어쓰기 차이 무시)"}으로 찾아 가격만 바꿉니다. 판매가·품절·노출·카테고리 등 다른 값은 바꾸지 않습니다.${contract.createMissing ? "" : " 없는 상품은 신규 등록하지 않습니다."}`,
       ...(missing.length > 0 ? [`데이터센터에서 찾지 못한 ${missing.length.toLocaleString("ko-KR")}개 행은 건너뜁니다(신규 등록 꺼짐): ${list(missing)}`] : []),
-      ...(noCode.length > 0 ? [`데이터센터에 없는 상품 ${noCode.length}개는 상품코드가 없어 신규 등록하지 않았습니다. 엑셀에 "상품코드" 열(예: ass00057)을 넣어 다시 올려 주세요: ${list(noCode)}`] : []),
+      ...(restores.length > 0 ? [`삭제된 상품 ${restores.length}개는 새로 만들지 않고 다시 살립니다(삭제 전 상품코드 유지, 숨김 상태, 진열순서 맨 앞, 가격은 이번 엑셀 값).`] : []),
+      ...(noCode.length > 0 ? [`데이터센터에 없는 상품 ${noCode.length}개는 상품코드가 있어야 신규 등록됩니다. 위 "상품코드 입력" 칸에 코드(예: ass00061)를 넣거나 엑셀에 "상품코드" 열을 넣어 주세요: ${list(noCode)}`] : []),
       ...(ambiguous.length > 0 ? [`같은 이름의 상품이 여러 개라 건너뛴 행 ${ambiguous.length}개(상품명을 구분하거나 상품코드 열을 넣어 주세요): ${list(ambiguous)}`] : []),
       ...(noPrice.length > 0 ? [`공급가·A급단가가 비어 있어 건너뛴 행 ${noPrice.length}개: ${list(noPrice)}`] : [])
     ]
   };
-  return { preview, drafts, affected, newProducts };
+  return { preview, drafts, affected, newProducts, restores };
 }
 
 export async function previewBulkProductWorkbook(bytes: Uint8Array, priceFields?: PriceField[], contract?: ContractOptions) {
@@ -939,7 +991,9 @@ export async function previewBulkProductWorkbook(bytes: Uint8Array, priceFields?
 }
 
 export async function applyBulkProductWorkbook(bytes: Uint8Array, changedBy: string, priceFields?: PriceField[], contract?: ContractOptions) {
-  const { preview, drafts, affected, newProducts } = await buildPreview(bytes, priceFields, contract);
+  const built = await buildPreview(bytes, priceFields, contract);
+  const { preview, drafts, affected, newProducts } = built;
+  const restores: RestoreDraft[] = "restores" in built ? (built.restores as RestoreDraft[]) : [];
   if (preview.errors.length > 0) {
     throw new DatabaseError("DATABASE_QUERY_FAILED", "오류 행을 수정한 뒤 다시 업로드해 주세요.", 400);
   }
@@ -947,11 +1001,23 @@ export async function applyBulkProductWorkbook(bytes: Uint8Array, changedBy: str
     const product = drafts.get(productId);
     if (product) await updateProduct(product.id, asProductInput(product), changedBy);
   }
-  if (newProducts.length > 0) {
+  if (newProducts.length > 0 || restores.length > 0) {
     const data = await getAdminCatalog();
     const categoryIds = new Map<"domestic" | "overseas", string>();
-    // 새 상품은 매번 진열순서 맨 앞에 들어가므로, 엑셀 마지막 행부터 등록해야 목록이 엑셀 순서(첫 행이 맨 위)대로 놓입니다.
-    for (const draft of [...newProducts].sort((a, b) => b.row - a.row)) {
+    // 새 상품·복원 상품은 매번 진열순서 맨 앞에 들어가므로, 엑셀 마지막 행부터 처리해야 목록이 엑셀 순서(첫 행이 맨 위)대로 놓입니다.
+    const queue = [
+      ...newProducts.map((draft) => ({ row: draft.row, draft, restore: null as RestoreDraft | null })),
+      ...restores.map((restore) => ({ row: restore.row, draft: null as NewProductDraft | null, restore }))
+    ].sort((a, b) => b.row - a.row);
+    for (const item of queue) {
+      if (item.restore) {
+        const restore = item.restore;
+        const restored = await restoreDeletedProduct(restore.id);
+        const draft = { ...restored, name: restore.name, costPrice: restore.costPrice, aPrice: restore.aPrice, generalPrice: restore.generalPrice, isVisible: false } as unknown as ProductDraft;
+        await updateProduct(restore.id, asProductInput(draft), changedBy);
+        continue;
+      }
+      const draft = item.draft!;
       const shippingType = draft.input.shippingType;
       let categoryId = categoryIds.get(shippingType)
         ?? data.categories.find((category) => category.name === UNCATEGORIZED_NAME && category.shippingType === shippingType)?.id;
@@ -966,7 +1032,7 @@ export async function applyBulkProductWorkbook(bytes: Uint8Array, changedBy: str
   }
   return {
     ...preview,
-    appliedProducts: affected.size + newProducts.length,
+    appliedProducts: affected.size + newProducts.length + restores.length,
     appliedChanges: preview.changes.length
   };
 }

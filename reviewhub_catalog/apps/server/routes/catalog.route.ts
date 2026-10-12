@@ -515,10 +515,24 @@ function contractOptionsFrom(form: FormData): ContractOptions {
     return Math.round(value * 10) / 10;
   };
   const createMissing = form.get("createMissing");
+  // 미리보기에서 행마다 입력한 신규 상품코드(JSON { "행번호": "코드" })
+  let newCodes: Record<string, string> | undefined;
+  const rawCodes = form.get("newCodes");
+  if (typeof rawCodes === "string" && rawCodes.trim()) {
+    try {
+      const parsed = JSON.parse(rawCodes) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        newCodes = Object.fromEntries(Object.entries(parsed as Record<string, unknown>).filter(([, value]) => typeof value === "string" && value.trim()).slice(0, 5000).map(([key, value]) => [key, String(value).trim().slice(0, 80)]));
+      }
+    } catch {
+      throw new DatabaseError("DATABASE_QUERY_FAILED", "입력한 상품코드를 읽지 못했습니다. 다시 시도해 주세요.", 400);
+    }
+  }
   return {
     aMargin: margin("aMargin", DEFAULT_CONTRACT_OPTIONS.aMargin),
     generalMargin: margin("generalMargin", DEFAULT_CONTRACT_OPTIONS.generalMargin),
-    createMissing: typeof createMissing === "string" ? createMissing === "true" : DEFAULT_CONTRACT_OPTIONS.createMissing
+    createMissing: typeof createMissing === "string" ? createMissing === "true" : DEFAULT_CONTRACT_OPTIONS.createMissing,
+    newCodes
   };
 }
 
