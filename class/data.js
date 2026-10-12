@@ -538,9 +538,9 @@ window.CLASS_SEED = {
       // 코치: 강사센터 ‘코치’ 탭으로 이름 + 뒷자리 로그인. perms = 볼 수 있는 강사센터 메뉴
       coaches: [{ id: "coach1", name: "김하나", phone4: "1004", status: "active", perms: ["students", "reviews", "questions"], memo: "과제 검수 · 1:1 문의 담당", createdAt: "2026-09-20" }] },
     { id: "logic", name: "로직메이커", phone4: "1111", displayName: "로직메이커", status: "active", createdAt: "2026-09-10",
-      brand: { name: "로직메이커", courseTitle: "로직메이커 실전 클래스", theme: "airtable" } },
+      brand: { name: "로직메이커", courseTitle: "로직메이커 실전 클래스", theme: "airtable", photo: "assets/home/logic-profile.webp" } },
     { id: "farmer", name: "황금농부", phone4: "3333", displayName: "황금농부", status: "active", createdAt: "2026-09-12",
-      brand: { name: "황금농부", courseTitle: "황금농부 실전 클래스", theme: "binance" } },
+      brand: { name: "황금농부", courseTitle: "황금농부 실전 클래스", theme: "binance", photo: "assets/home/farmer-profile.webp" } },
     { id: "choi", name: "초이", phone4: "2222", displayName: "초이", status: "active", createdAt: "2026-09-20",
       brand: { name: "초이 클래스", courseTitle: "초이와 함께하는 실전 클래스", theme: "pink" },
       menu: { items: [{ key: "home", on: true }, { key: "curriculum", on: true }, { key: "missions", on: true }, { key: "schedule", on: true }, { key: "notices", on: true }, { key: "qna", on: true }, { key: "docs", on: false }, { key: "bot", on: true }, { key: "library", on: true }, { key: "motivation", on: false }, { key: "certificate", on: true }], library: { ebook: true, file: true, vod: true, senior: false } } }

@@ -249,11 +249,13 @@
     window.applyStudentTheme(DB.themeOf(B.theme));
     const lines = String(B.loginHeadline || B.courseTitle || "").split("\n");
     const headline = lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? '<span class="accent">' + esc(l) + "</span>" : esc(l))).join("<br>");
+    // 강사 동그라미: 프로필 사진이 있으면 사진 (없으면 이름 첫 글자)
+    const insAv = (x) => { const ph = ((DB.content(x.id) || {}).brand || {}).photo; return '<span class="ins-avatar' + (ph ? " has-photo" : "") + '">' + (ph ? '<img src="' + esc(ph) + '" alt="" decoding="async">' : esc(x.displayName.slice(0, 1))) + "</span>"; };
     const picker = ins
-      ? '<div class="ins-picked"><span class="ins-avatar">' + esc(ins.displayName.slice(0, 1)) + '</span><span class="ins-txt"><small>수강 중인 강의</small><b>' + esc(ins.displayName) + "</b><span>" + esc(DB.content(ins.id).brand.shortTitle) + "</span></span>" +
+      ? '<div class="ins-picked">' + insAv(ins) + '<span class="ins-txt"><small>수강 중인 강의</small><b>' + esc(ins.displayName) + "</b><span>" + esc(DB.content(ins.id).brand.shortTitle) + "</span></span>" +
         '<button type="button" class="link-btn" data-action="change-instructor">변경</button></div>'
       : '<div class="field"><span class="field-label">어떤 강사님의 강의를 듣고 계신가요?</span><div class="ins-list" role="radiogroup">' +
-        list.map((x) => '<button type="button" class="ins-option" role="radio" aria-checked="false" data-action="pick-instructor" data-id="' + x.id + '"><span class="ins-avatar">' + esc(x.displayName.slice(0, 1)) + "</span><b>" + esc(x.displayName) + "</b>" + icon("chevRight", "sm") + "</button>").join("") +
+        list.map((x) => '<button type="button" class="ins-option" role="radio" aria-checked="false" data-action="pick-instructor" data-id="' + x.id + '">' + insAv(x) + "<b>" + esc(x.displayName) + "</b>" + icon("chevRight", "sm") + "</button>").join("") +
         '</div><span class="tiny">한 번 고르면 다음부터는 바로 로그인 화면이 열려요.</span></div>';
     root.innerHTML =
       '<main class="login">' +
@@ -1487,7 +1489,8 @@
     toastRoot.appendChild(t);
     setTimeout(() => t.remove(), 2800);
   }
-  const LEGAL = {
+  // 약관 글은 legal.js (두고클래스 www.doogoclass.com 기준). 없을 때만 아래 짧은 안내
+  const LEGAL = window.CLASS_LEGAL || {
     terms: ["이용약관", "본 플랫폼은 강사의 유료 강의 수강생에게 강의 영상, 과제 관리, 학습 자료를 제공합니다.\n\n1. 계정은 수강생 본인만 사용할 수 있으며 타인과 공유할 수 없습니다.\n2. 강의 영상과 자료의 저작권은 강사에게 있으며 무단 복제·배포를 금지합니다.\n3. 수강 기간이 끝난 뒤의 다시보기 기간은 공지사항으로 안내합니다.\n\n정식 약관은 서비스 오픈 시 확정 후 게시됩니다."],
     privacy: ["개인정보처리방침", "수집 항목: 이름, 휴대폰 번호 뒷자리 4자리, 과제 제출 내용\n이용 목적: 수강생 확인, 학습 진행 관리, 수료증 발급\n보관 기간: 수강 종료 후 1년 또는 수강생 요청 시 즉시 파기\n\n현재 체험 버전에서는 모든 기록이 이 기기의 브라우저에만 저장됩니다."],
     oss: ["오픈소스 라이선스", "Pretendard — SIL Open Font License 1.1 (© Kil Hyung-jin)\nInter — SIL Open Font License 1.1 (© The Inter Project Authors)\nLucide Icons — ISC License (© Lucide Contributors)"]
@@ -1650,7 +1653,7 @@
       case "forgot":
         openModal("로그인 정보를 잊으셨나요?", "이름은 수강 신청할 때 적은 이름 그대로, 비밀번호 칸에는 휴대폰 번호 뒷자리 4자리를 넣어 주세요.\n\n예) 010-1234-2186 → 2186\n\n수강 신청 후 강사님 승인 전이라면 로그인되지 않아요. 그래도 안 되면 강사님께 이름과 연락처를 보내 주세요.", '<button class="btn btn-primary" data-action="modal-close">확인</button>');
         break;
-      case "legal": { const doc = LEGAL[a.dataset.doc]; openModal(doc[0], esc(doc[1]), '<button class="btn btn-primary" data-action="modal-close">확인</button>'); break; }
+      case "legal": { const doc = LEGAL[a.dataset.doc]; openModal(doc[0], window.CLASS_LEGAL_HTML ? window.CLASS_LEGAL_HTML(doc[1]) : esc(doc[1]), '<button class="btn btn-primary" data-action="modal-close">확인</button>', true); break; }
       case "modal-close": closeModal(); break;
       case "modal-close-bg": if (e.target === a) closeModal(); break;
       case "logout": logout(); break;

@@ -642,6 +642,8 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 .ins-option b { flex: 1; font-weight: 800; }
 .ins-option .icon { color: var(--mute); }
 .ins-avatar { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: var(--accent); font-weight: 900; font-size: 16px; }
+.ins-avatar.has-photo { overflow: hidden; background: #f0f0f0; }
+.ins-avatar.has-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center top; transform: scale(1.5); transform-origin: 50% 34%; }
 .ins-picked { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-lg); background: var(--primary-pale); }
 .ins-txt { flex: 1; min-width: 0; display: grid; line-height: 1.35; }
 .ins-txt small { font-size: 12px; color: var(--positive-deep); font-weight: 600; }
@@ -1371,3 +1373,12 @@ body.lib-gated #main > .page { filter: blur(6px); pointer-events: none; user-sel
 
 /* 로그인 카드 위 두고 클래스 로고 (새 로고 — 모양은 home.css .hm-lock) */
 .login-label .hm-lock { --lh: 30px; }
+
+/* 약관 팝업 (legal.js): 소제목 · 문단 · 점 목록 */
+.legal-doc { max-height: 60vh; overflow: auto; font-size: 14px; line-height: 1.7; color: #4a4a4a; text-align: left; white-space: normal; }
+.legal-doc h4 { margin: 18px 0 6px; font-size: 15px; font-weight: 700; color: #222; letter-spacing: -0.01em; }
+.legal-doc h4:first-child { margin-top: 0; }
+.legal-doc p { margin: 0 0 8px; }
+.legal-doc ul { margin: 0 0 10px; padding-left: 18px; }
+.legal-doc li { margin: 3px 0; }
+.legal-doc a { color: inherit; text-decoration: underline; word-break: break-all; }

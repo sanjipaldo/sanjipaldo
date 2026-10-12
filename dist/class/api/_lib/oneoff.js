@@ -141,6 +141,20 @@ function moonProfile(get) {
   return { writes: { [k]: Object.assign({}, c, { brand: Object.assign({}, c.brand, add) }) }, result: { added: Object.keys(add) } };
 }
 
+/* ---------- 로직메이커(김신용 대표) · 황금농부 프로필 사진 (대표님 요청) ----------
+ * 사진이 비어 있을 때만 넣는다 (강사님이 이미 올린 사진은 그대로) */
+function logicFarmerPhotos(get) {
+  const want = { logic: "assets/home/logic-profile.webp", farmer: "assets/home/farmer-profile.webp" };
+  const writes = {}, added = [];
+  Object.keys(want).forEach((iid) => {
+    const k = "content:" + iid, c = get(k);
+    if (!isObj(c) || !isObj(c.brand) || c.brand.photo) return;
+    writes[k] = Object.assign({}, c, { brand: Object.assign({}, c.brand, { photo: want[iid] }) });
+    added.push(iid);
+  });
+  return { writes, result: added.length ? { added } : { skipped: "이미 있음" } };
+}
+
 /* ---------- 기수 이용료: 부가세 포함으로 (대표님 요청) ----------
  * 마스터 설정(meta.billing)이 이미 저장돼 있으면 부가세 방식만 '포함'으로, 아직 입금 확인 전인 신청도 '포함'으로.
  * 입금 확인을 마친 기록은 그때 방식 그대로 둔다 */
@@ -164,7 +178,8 @@ const OPS = [
   { id: "2026-10-08-motivation-videos", note: "문대표 동기부여 채널에 유튜브 영상 6개", run: motivationVideos },
   { id: "2026-10-08-moon-demo-accounts", note: "문대표 체험 계정(3기 이수진 · 1기 체험단 · 2기 체험단)만 남기기", run: moonDemoAccounts },
   { id: "2026-10-09-moon-profile-photo", note: "문대표 강사 프로필 사진 · 강의 분야 (첫 화면 강사 카드)", run: moonProfile },
-  { id: "2026-10-09-billing-vat-included", note: "기수 이용료 부가세 방식을 '부가세 포함'으로", run: billingVatIncluded }
+  { id: "2026-10-09-billing-vat-included", note: "기수 이용료 부가세 방식을 '부가세 포함'으로", run: billingVatIncluded },
+  { id: "2026-10-12-logic-farmer-photos", note: "로직메이커 · 황금농부 강사 프로필 사진 (사진이 비어 있을 때만)", run: logicFarmerPhotos }
 ];
 
 module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded };

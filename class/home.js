@@ -457,7 +457,7 @@
     const mr = document.getElementById("modal-root");
     mr.innerHTML = '<div class="hm-mbg" data-hm-bg><div class="hm-modal hm-modal-doc" role="dialog" aria-modal="true" aria-labelledby="hm-lg-t">' +
       '<button type="button" class="hm-modal-x" data-hm-close aria-label="닫기">' + icon("x") + "</button>" +
-      '<div class="hm-modal-in"><div class="hm-modal-head"><h2 id="hm-lg-t">' + esc(L[0]) + '</h2></div><div class="hm-doc">' + esc(L[1]) + "</div>" +
+      '<div class="hm-modal-in"><div class="hm-modal-head"><h2 id="hm-lg-t">' + esc(L[0]) + '</h2></div><div class="hm-doc">' + (window.CLASS_LEGAL_HTML ? window.CLASS_LEGAL_HTML(L[1]) : esc(L[1])) + "</div>" +
       '<button type="button" class="hm-btn hm-btn-p hm-btn-lg hm-btn-block" data-hm-close>확인</button></div></div></div>';
     document.documentElement.classList.add("hm-noscroll");
   }

@@ -474,6 +474,7 @@
     data.instructors.forEach((ins) => {
       if (!data.content[ins.id]) data.content[ins.id] = template(Object.assign({ instructor: ins.displayName }, ins.brand || {}));
       if (ins.brand && ins.brand.theme) data.content[ins.id].brand.theme = ins.brand.theme;
+      if (ins.brand && ins.brand.photo) data.content[ins.id].brand.photo = ins.brand.photo;
       delete ins.brand;
       normalizeContent(data.content[ins.id]);
     });
@@ -733,6 +734,14 @@
         if (!b.field && sb.field) b.field = sb.field;
       });
       db.flags.profileSeeded = true; save();
+    }
+    // 로직메이커 · 황금농부 프로필 사진 (사진이 비어 있을 때만 · 한 번만)
+    if (!R.on && !db.flags.profileSeeded2) {
+      (window.CLASS_SEED.instructors || []).forEach((si) => {
+        const c = db.content[si.id];
+        if (c && c.brand && si.brand && si.brand.photo && !c.brand.photo) c.brand.photo = si.brand.photo;
+      });
+      db.flags.profileSeeded2 = true; save();
     }
     return db;
   }

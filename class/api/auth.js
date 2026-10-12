@@ -12,6 +12,23 @@ const auth = require("./_lib/auth");
 const IP_LIMIT = 40, NAME_LIMIT = 8;
 const norm = auth.norm;
 const eq = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
+// 한글 자판 상태로 친 글자(예: 한글2@)를 같은 자리의 영문 자판 글자(gksrmf2@)로 바꾼다 — 마스터 아이디 · 비밀번호는 둘 다 받아 준다
+const KO_L = "rRseEfaqQtTdwWczxvg".split("");
+const KO_V = ["k", "o", "i", "O", "j", "p", "u", "P", "h", "hk", "ho", "hl", "y", "n", "nj", "np", "nl", "b", "m", "ml", "l"];
+const KO_T = ["", "r", "R", "rt", "s", "sw", "sg", "e", "f", "fr", "fa", "fq", "ft", "fx", "fv", "fg", "a", "q", "qt", "t", "T", "d", "w", "c", "z", "x", "v", "g"];
+const KO_J = "ㄱㄲㄳㄴㄵㄶㄷㄸㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅃㅄㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ";
+const KO_JK = ["r", "R", "rt", "s", "sw", "sg", "e", "E", "f", "fr", "fa", "fq", "ft", "fx", "fv", "fg", "a", "q", "Q", "qt", "t", "T", "d", "w", "W", "c", "z", "x", "v", "g",
+  "k", "o", "i", "O", "j", "p", "u", "P", "h", "hk", "ho", "hl", "y", "n", "nj", "np", "nl", "b", "m", "ml", "l"];
+function koToKeys(s) {
+  let out = "";
+  for (const ch of String(s)) {
+    const c = ch.charCodeAt(0);
+    if (c >= 0xac00 && c <= 0xd7a3) { const n = c - 0xac00; out += KO_L[Math.floor(n / 588)] + KO_V[Math.floor((n % 588) / 28)] + KO_T[n % 28]; continue; }
+    const j = KO_J.indexOf(ch);
+    out += j >= 0 ? KO_JK[j] : ch;
+  }
+  return out;
+}
 
 async function limited(req, nameKey) {
   return (await store.rlCheck(["ip:" + ip(req)], IP_LIMIT)) || (await store.rlCheck([nameKey], NAME_LIMIT));
@@ -52,9 +69,11 @@ async function adminLogin(req, res, b) {
   if (tab === "master") {
     const nameKey = "master";
     if (await limited(req, nameKey)) return send(res, 429, { error: "locked" });
+    // 마스터 아이디는 MASTER_ID(없으면 doogobiz, 대소문자 무관), 비밀번호는 Vercel 환경변수 MASTER_PASSWORD — 코드에는 비밀번호를 두지 않는다
     const want = process.env.MASTER_PASSWORD;
     if (!want) return send(res, 200, { error: "master-disabled" });
-    if (id.toUpperCase() !== "ADMIN" || !eq(pw, want)) { await fail(req, nameKey); return send(res, 200, { error: "notfound" }); }
+    const wantId = String(process.env.MASTER_ID || "doogobiz").trim().toLowerCase();
+    if (koToKeys(id).toLowerCase() !== wantId || !eq(koToKeys(pw), koToKeys(want))) { await fail(req, nameKey); return send(res, 200, { error: "notfound" }); }
     await store.rlClear([nameKey]);
     auth.setCookie(req, res, "admin", auth.sign({ r: "master" }));
     return send(res, 200, { ok: true, role: "master" });
