@@ -531,7 +531,7 @@
   }
   function render() {
     window.applyStudentTheme(null);
-    document.title = "두고 클래스 — 강사님을 위한 강의 운영 플랫폼";
+    document.title = "두고클래스 | 강사를 위한 올인원 강의 운영 플랫폼"; // index.html <title> 과 같게 (SEO)
     dark = null;
     const list = classes();
     root.innerHTML = '<div class="hm">' + DSYM_DEFS + header() + "<main>" + hero() + problem() + flow() + features() + compare() + students() + teachers() + pricing() + lifelong() + classList(list) + journey() + faq() + finalCta() + "</main>" + footer() + "</div>";
