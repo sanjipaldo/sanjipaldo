@@ -207,7 +207,9 @@
         '<p class="hm-lead">강의 소개 랜딩페이지 · 무료강의 전자책 · 수강생 케어 튜토리얼까지, <b>강사님 이름으로 된 강의 플랫폼</b> 하나로 운영하세요. 수강생은 무료, 강사님은 수강생 수와 상관없이 같은 이용료예요.</p>' +
         '<div class="hm-cta">' + applyBtn("입점 문의하기" + arrow(), "hm-btn hm-btn-p hm-btn-lg") + scrollBtn("hm-features", "3가지 기능 보기", "hm-btn hm-btn-sec hm-btn-lg") + "</div>" +
         '<ul class="hm-hero-pts">' + pts.map((x) => "<li>" + icon(x[0], "xs") + x[1] + "</li>").join("") + "</ul>" +
-        '<p class="hm-student-link">수강생이신가요? <a href="#/login">수강생 로그인' + icon("arrowRight", "xs") + "</a></p>" +
+        // 수강생 바로가기: 한눈에 읽히는 카드 (아이콘 · 두 줄 설명 · 로그인 버튼, 카드 전체를 눌러도 됨)
+        '<a class="hm-student-link" href="#/login"><span class="hm-sl-ic">' + icon("book") + '</span><span class="hm-sl-t"><b>수강생이신가요?</b><small>내 강의실로 바로 들어가요<span class="hm-hide-m"> · 회원가입 없이</span></small></span>' +
+          '<span class="hm-sl-btn">수강생 로그인' + icon("arrowRight", "xs") + "</span></a>" +
       "</div>" +
       '<div class="hm-hero-art">' +
         browser("v-admin", "hm-hero-browser", "강사센터 화면") +
@@ -243,7 +245,7 @@
       '<div class="hm-frow-copy"><p class="hm-frow-top"><span class="hm-frow-no">' + f.no + '</span><span class="hm-frow-tag">' + f.tag + "</span></p>" +
         "<h3>" + f.title + '</h3><p class="hm-frow-lead">' + f.lead + "</p>" + checks(f.pts) +
         '<ul class="hm-frow-more">' + f.more.map((m) => '<li><span class="hm-ic hm-ic-xs">' + icon(m[0]) + "</span><span><b>" + m[1] + "</b><small>" + m[2] + "</small></span></li>").join("") + "</ul></div>" +
-      '<div class="hm-frow-art"><div class="hm-show-glow" aria-hidden="true"></div>' + stage3d(f) + '<p class="hm-cap">' + icon("play", "xs") + "실제 화면 녹화 · 예시 데이터</p></div>" +
+      '<div class="hm-frow-art"><div class="hm-show-glow" aria-hidden="true"></div>' + stage3d(f) + '<p class="hm-cap">' + icon("play", "xs") + '실제 화면 녹화 · 예시 데이터<span class="hm-3d-hint">' + icon("swap", "xs") + "끌어서 돌려 보기</span></p></div>" +
     "</article>";
     return '<section class="hm-sec" id="hm-features"><div class="hm-wrap">' +
       secHead("layers", "강사님 이름으로 운영하는 3가지", "모집부터 수료 후 관리까지, 한 기수를 운영하는 데 필요한 화면이 모두 들어 있어요. 수강생 수와 상관없이 전부 포함돼요.", applyBtn("입점 문의" + arrow(), "hm-shead-link")) +
@@ -691,10 +693,52 @@
       }), { threshold: th });
       st3d.forEach((el) => v3d.observe(el));
     }
+    // 손가락 · 마우스로 끌어서 돌려 보기 — 앞면이 보이는 범위 안에서만 (좌우 ±30° · 위아래 ±14°), 놓으면 살짝 튕기며 제자리로.
+    // 휴대폰에서 세로로 끌면 원래대로 화면이 스크롤되고, 가로로 먼저 끌 때만 돌린다 (CSS touch-action: pan-y). 끌고 난 뒤의 클릭은 무시
+    st3d.forEach((box) => {
+      const stage = box.querySelector(".hm-3d-stage");
+      if (!stage) return;
+      let d = null, raf = 0, moved = false;
+      const put = (gy, gx) => { box.style.setProperty("--gy", gy.toFixed(2)); box.style.setProperty("--gx", gx.toFixed(2)); };
+      stage.addEventListener("dragstart", (e) => e.preventDefault());
+      stage.addEventListener("pointerdown", (e) => {
+        if (e.button > 0) return;
+        d = { id: e.pointerId, x: e.clientX, y: e.clientY, on: false, touch: e.pointerType !== "mouse", gy: 0, gx: 0 };
+      });
+      stage.addEventListener("pointermove", (e) => {
+        if (!d || e.pointerId !== d.id) return;
+        const dx = e.clientX - d.x, dy = e.clientY - d.y;
+        if (!d.on) {
+          if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+          if (d.touch && Math.abs(dy) > Math.abs(dx)) { d = null; return; }
+          d.on = true; moved = true;
+          box.classList.remove("releasing"); box.classList.add("dragging");
+          try { stage.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
+        }
+        d.gy = Math.max(-30, Math.min(30, dx * 0.32));
+        d.gx = Math.max(-14, Math.min(14, -dy * 0.25));
+        if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (d) put(d.gy, d.gx); });
+      });
+      const end = (e) => {
+        if (!d || (e && e.pointerId !== d.id)) return;
+        const was = d.on;
+        d = null;
+        if (!was) return;
+        box.classList.remove("dragging"); box.classList.add("releasing"); put(0, 0);
+        setTimeout(() => box.classList.remove("releasing"), 950);
+        setTimeout(() => { moved = false; }, 0);
+      };
+      stage.addEventListener("pointerup", end);
+      stage.addEventListener("pointercancel", end);
+      // 터치는 손가락이 닿은 안쪽 요소가 먼저 잡고 있어서, 무대가 잡아 올 때 안쪽 요소의 lostpointercapture 가 올라온다 → 무대 자신의 것만
+      stage.addEventListener("lostpointercapture", (e) => { if (e.target === stage) end(e); });
+      stage.addEventListener("click", (e) => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
+    });
     if (!fine.matches) return;
     st3d.forEach((box) => {
       const art = box.parentNode;
       art.addEventListener("pointermove", (e) => {
+        if (box.classList.contains("dragging")) return;
         const r = art.getBoundingClientRect();
         box.style.setProperty("--mx", Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1)).toFixed(3));
         box.style.setProperty("--my", Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1)).toFixed(3));
