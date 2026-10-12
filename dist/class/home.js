@@ -413,13 +413,20 @@
     const ext = (href, label, cls) => '<a' + (cls ? ' class="' + cls + '"' : "") + ' href="' + esc(href) + '" target="_blank" rel="noopener">' + label + "</a>";
     const bizDigits = String(S.bizNo || "").replace(/[^0-9]/g, "");
     const tel = (v) => '<a href="tel:' + esc(String(v).replace(/[^0-9+]/g, "")) + '">' + esc(v) + "</a>";
-    const info = [
-      ["상호", esc(S.company || "(주)두고홀딩스")], S.ceo && ["대표", esc(S.ceo)],
+    // 사업자 정보 두 줄: ① 상호(굵게) · 대표 · 사업자등록번호 · 통신판매업 ② 주소 · 우편번호 · 연락처 · 호스팅
+    const row1 = [
+      ["", "<strong>" + esc(S.company || "(주)두고홀딩스") + "</strong>"], S.ceo && ["대표", esc(S.ceo)],
       S.bizNo && ["사업자등록번호", esc(S.bizNo) + (bizDigits.length === 10 ? " " + ext("https://www.ftc.go.kr/bizCommPop.do?wrkr_no=" + bizDigits, "사업자정보확인", "hm-foot-chk") : "")],
-      S.mailOrderNo && ["통신판매업 신고", esc(S.mailOrderNo)], S.address && ["주소", esc(S.address)],
-      S.phone && ["고객센터", tel(S.phone)], S.email && ["이메일", '<a href="mailto:' + esc(S.email) + '">' + esc(S.email) + "</a>"],
+      S.mailOrderNo && ["통신판매업신고", esc(S.mailOrderNo)]
+    ].filter(Boolean);
+    const row2 = [
+      S.address && ["주소", esc(S.address)], S.zip && ["우편번호", esc(S.zip)],
+      S.phone && ["고객센터", tel(S.phone)], S.email && ["사업제휴 문의", '<a href="mailto:' + esc(S.email) + '">' + esc(S.email) + "</a>"],
       S.privacyOfficer && ["개인정보 보호책임자", esc(S.privacyOfficer)], ["호스팅 제공자", esc(S.hosting || "Vercel Inc.")]
     ].filter(Boolean);
+    const dl = (rows) => '<dl class="hm-foot-info">' + rows.map((x) => "<div>" + (x[0] ? "<dt>" + x[0] + "</dt>" : "") + "<dd>" + x[1] + "</dd></div>").join("") + "</dl>";
+    // 운영 시간: 첫 마디는 굵게, 나머지(점심 · 휴무)는 작게
+    const hrs = String(S.hours || "").split(/\s*·\s*(?=점심|주말|공휴|휴무|토|일요)/);
     const legal = (key, label, href) => (url(href) ? ext(href, label) : '<button type="button" data-hm-legal="' + key + '">' + label + "</button>");
     return '<footer class="hm-foot"><div class="hm-wrap">' +
       '<div class="hm-foot-top">' +
@@ -431,13 +438,14 @@
           '<div class="hm-foot-col"><b>고객지원</b>' + scrollBtn("hm-faq", "자주 묻는 질문", "hm-foot-a") + legal("terms", "이용약관", S.terms) + legal("privacy", "<strong>개인정보처리방침</strong>", S.privacy) +
             (S.email ? '<a href="mailto:' + esc(S.email) + '">이메일 문의</a>' : "") + "</div>" +
         "</nav>" +
-        '<div class="hm-foot-cs"><b>고객센터</b>' +
-          (S.phone ? '<p class="hm-foot-tel">' + tel(S.phone) + "</p>" : '<p class="hm-foot-tel hm-foot-tel-sm">입점 문의로 남겨 주세요</p>') +
-          "<p>" + (S.hours ? esc(S.hours) : "입점 문의는 24시간 남길 수 있어요") + "</p>" +
-          (S.email ? '<p><a href="mailto:' + esc(S.email) + '">' + esc(S.email) + "</a></p>" : "") +
+        // 전화가 있으면 고객센터 번호, 없으면 사업제휴 이메일을 크게
+        '<div class="hm-foot-cs"><b>' + (S.phone ? "고객센터" : "사업제휴 · 입점 문의") + "</b>" +
+          (S.phone ? '<p class="hm-foot-tel">' + tel(S.phone) + "</p>" : S.email ? '<p class="hm-foot-mail"><a href="mailto:' + esc(S.email) + '">' + icon("mail", "xs") + esc(S.email) + "</a></p>" : '<p class="hm-foot-tel hm-foot-tel-sm">입점 문의로 남겨 주세요</p>') +
+          (S.hours ? '<p class="hm-foot-hrs"><span>' + esc(hrs[0]) + "</span>" + (hrs.length > 1 ? "<small>" + esc(hrs.slice(1).join(" · ")) + "</small>" : "") + "</p>" : "<p>입점 문의는 24시간 남길 수 있어요</p>") +
+          (S.phone && S.email ? '<p><a href="mailto:' + esc(S.email) + '">' + esc(S.email) + "</a></p>" : "") +
           applyBtn(icon("handshake", "xs") + "입점 문의 남기기", "hm-foot-cs-btn") + "</div>" +
       "</div>" +
-      '<div class="hm-foot-biz"><dl class="hm-foot-info">' + info.map((x) => "<div><dt>" + x[0] + "</dt><dd>" + x[1] + "</dd></div>").join("") + "</dl>" +
+      '<div class="hm-foot-biz">' + dl(row1) + dl(row2) + (S.notice ? '<p class="hm-foot-notice">' + esc(S.notice) + "</p>" : "") +
         '<div class="hm-foot-bottom"><nav class="hm-foot-legal" aria-label="약관">' + legal("terms", "이용약관", S.terms) + legal("privacy", "<strong>개인정보처리방침</strong>", S.privacy) + legal("oss", "오픈소스 라이선스", "") + "</nav>" +
         '<p class="hm-foot-copy">© 2026 ' + esc(S.company || "(주)두고홀딩스") + ". All rights reserved.</p></div></div>" +
     "</div></footer>";

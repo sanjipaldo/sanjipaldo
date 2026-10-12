@@ -901,16 +901,23 @@
    * 방문자가 첫 화면에서 남기고 마스터가 관리한다. 서버 모드는 문서 inq:<id> (마스터만 보임), 아니면 이 브라우저에 */
   /* ---------- 첫 화면 바닥 · 사업자 정보 (마스터 → 첫 화면 · 사업자 정보에서 고침, 누구나 읽음) ---------- */
   const SITE_DEFAULT = {
-    company: "(주)두고홀딩스", ceo: "문원오", bizNo: "", mailOrderNo: "", address: "", phone: "", email: "", hours: "", privacyOfficer: "", hosting: "",
+    company: "(주)두고홀딩스", ceo: "문원오", bizNo: "726-87-03167", mailOrderNo: "제 2024-세종아름-0878 호",
+    address: "세종특별자치시 갈매로 353 에비뉴힐 5층 5023호", zip: "30121", phone: "", email: "doogobiz@gmail.com",
+    hours: "평일 오전 10시 ~ 오후 6시 · 점심시간 1시 ~ 2시 제외 · 주말 · 공휴일 제외", privacyOfficer: "", hosting: "",
+    notice: "(주)두고홀딩스는 통신판매중개자로서 통신판매의 당사자가 아니며, 입점 강사가 등록한 강의 정보 및 거래에 대하여 책임을 지지 않습니다.",
     terms: "", privacy: "",
     group: [
       { name: "두고푸드", url: "https://www.doogofood.com/", desc: "" },
       { name: "두고커넥트", url: "https://www.doogoconnect.com/", desc: "" }
     ]
   };
+  // 저장된 칸이 비어 있으면 기본 사업자 정보로 (예전에 빈칸으로 저장해 둔 사이트도 바닥에 정보가 보이게)
   function siteInfo() {
     const s = (db && db.site) || {};
-    return Object.assign({}, SITE_DEFAULT, s, { group: Array.isArray(s.group) ? s.group : clone(SITE_DEFAULT.group) });
+    const out = Object.assign({}, SITE_DEFAULT);
+    Object.keys(s).forEach((k) => { if (k !== "group" && s[k] != null && String(s[k]).trim() !== "") out[k] = s[k]; });
+    out.group = Array.isArray(s.group) ? s.group : clone(SITE_DEFAULT.group);
+    return out;
   }
   function saveSite(next) { db.site = next; return save(); }
 

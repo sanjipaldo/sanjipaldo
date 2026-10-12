@@ -1984,15 +1984,16 @@
   const SITE_FIELDS = [
     ["company", "상호", "예: (주)두고홀딩스"], ["ceo", "대표자", "예: 홍길동"],
     ["bizNo", "사업자등록번호", "예: 000-00-00000"], ["mailOrderNo", "통신판매업 신고번호", "예: 제0000-서울○○-0000호"],
-    ["address", "사업장 주소", "예: 서울특별시 ○○구 ○○로 00", true],
-    ["phone", "고객센터 전화", "예: 1600-0000"], ["email", "이메일", "예: help@example.com"],
+    ["address", "사업장 주소", "예: 서울특별시 ○○구 ○○로 00", true], ["zip", "우편번호", "예: 30121"],
+    ["phone", "고객센터 전화", "예: 1600-0000"], ["email", "사업제휴 · 입점 문의 이메일", "예: help@example.com"],
     ["hours", "운영 시간", "예: 평일 10:00 ~ 18:00"], ["privacyOfficer", "개인정보 보호책임자", "예: 홍길동"],
-    ["hosting", "호스팅 제공자", "예: Vercel Inc."], ["terms", "이용약관 주소", "https://"], ["privacy", "개인정보처리방침 주소", "https://"]
+    ["hosting", "호스팅 제공자", "예: Vercel Inc."], ["terms", "이용약관 주소", "https://"], ["privacy", "개인정보처리방침 주소", "https://"],
+    ["notice", "맨 아래 안내 문구", "예: (주)○○는 통신판매중개자로서 …", true]
   ];
   function pageMasterSite() {
     const s = DB.siteInfo();
-    const fld = (x) => '<div class="a-field' + (x[3] ? " a-span2" : "") + '"><label for="site-' + x[0] + '">' + x[1] + '</label><input class="a-input" id="site-' + x[0] + '" name="' + x[0] + '" value="' + esc(s[x[0]] || "") + '" placeholder="' + esc(x[2]) + '" maxlength="200"></div>';
-    return head("첫 화면 · 사업자 정보", "두고 클래스 첫 화면 맨 아래(바닥)에 보이는 사업자 정보 · 고객센터예요. 채운 칸만 보여요.", '<a class="a-btn a-btn-outline a-btn-sm" href="#/about" target="_blank" rel="noopener">' + icon("arrowUpRight", "sm") + "첫 화면 열기</a>") +
+    const fld = (x) => '<div class="a-field' + (x[3] ? " a-span2" : "") + '"><label for="site-' + x[0] + '">' + x[1] + '</label><input class="a-input" id="site-' + x[0] + '" name="' + x[0] + '" value="' + esc(s[x[0]] || "") + '" placeholder="' + esc(x[2]) + '" maxlength="' + (x[0] === "notice" ? 300 : 200) + '"></div>';
+    return head("첫 화면 · 사업자 정보", "두고 클래스 첫 화면 맨 아래(바닥)에 보이는 사업자 정보 · 사업제휴 문의예요. 채운 칸만 보이고, 기본 사업자 정보(두고홀딩스)가 들어 있는 칸은 비워 두면 기본값이 보여요.", '<a class="a-btn a-btn-outline a-btn-sm" href="#/about" target="_blank" rel="noopener">' + icon("arrowUpRight", "sm") + "첫 화면 열기</a>") +
       '<form id="site-form" class="a-site-form" novalidate>' +
         '<section class="a-card"><div class="a-card-head"><h2>사업자 정보</h2><span class="a-muted">전자상거래법에 따라 사이트 바닥에 표시하는 정보예요</span></div>' +
           '<div class="a-site-grid">' + SITE_FIELDS.map(fld).join("") + "</div></section>" +
@@ -2491,7 +2492,7 @@
     if (f.id === "site-form") {
       e.preventDefault();
       const next = {};
-      SITE_FIELDS.forEach((x) => { next[x[0]] = String(f[x[0]].value || "").replace(/\s+/g, " ").trim().slice(0, 200); });
+      SITE_FIELDS.forEach((x) => { next[x[0]] = String(f[x[0]].value || "").replace(/\s+/g, " ").trim().slice(0, x[0] === "notice" ? 300 : 200); });
       ["terms", "privacy"].forEach((k) => { if (next[k] && !/^https?:\/\//i.test(next[k])) next[k] = "https://" + next[k]; });
       next.group = DB.siteInfo().group; // 두고 그룹사 칸은 바닥에서 뺐지만, 저장해 둔 값은 그대로 둔다
       if (!DB.saveSite(next)) { toast("저장하지 못했어요.", "warn"); return; }
