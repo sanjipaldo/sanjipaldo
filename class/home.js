@@ -665,9 +665,8 @@
   }
 
   /* ---------- 기능 칸 휴대폰 입체 ---------- */
-  // --sp: 화면 아래에서 들어올 때 +1 → 가운데 0 → 위로 나갈 때 -1 · --mx/--my: 마우스 위치 -1 ~ 1
+  // --sp: 화면 아래에서 들어올 때 +1 → 가운데 0 → 위로 나갈 때 -1 (위아래로 살짝 뜨고 빛 반사만 움직임 · 각도는 늘 정면)
   let st3d = [], v3d = null;
-  const fine = window.matchMedia("(hover: hover) and (pointer: fine)");
   // 글 길이만큼 늘어난 틀(클로드 아티팩트 등) 안: 이 문서는 스크롤되지 않는다 → 보이는 비율로 대신 계산
   const framed = () => document.documentElement.scrollHeight <= window.innerHeight + 4;
   function tilt3d() {
@@ -693,7 +692,7 @@
       }), { threshold: th });
       st3d.forEach((el) => v3d.observe(el));
     }
-    // 손가락 · 마우스로 끌어서 돌려 보기 — 앞면이 보이는 범위 안에서만 (좌우 ±30° · 위아래 ±14°), 놓으면 살짝 튕기며 제자리로.
+    // 평소에는 정면. 손가락 · 마우스로 끌 때만 돌아간다 — 앞면이 보이는 범위 안에서만 (좌우 ±35° · 위아래 ±15°), 놓으면 살짝 튕기며 정면으로.
     // 휴대폰에서 세로로 끌면 원래대로 화면이 스크롤되고, 가로로 먼저 끌 때만 돌린다 (CSS touch-action: pan-y). 끌고 난 뒤의 클릭은 무시
     st3d.forEach((box) => {
       const stage = box.querySelector(".hm-3d-stage");
@@ -715,8 +714,8 @@
           box.classList.remove("releasing"); box.classList.add("dragging");
           try { stage.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
         }
-        d.gy = Math.max(-30, Math.min(30, dx * 0.32));
-        d.gx = Math.max(-14, Math.min(14, -dy * 0.25));
+        d.gy = Math.max(-35, Math.min(35, dx * 0.34));
+        d.gx = Math.max(-15, Math.min(15, -dy * 0.26));
         if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (d) put(d.gy, d.gx); });
       });
       const end = (e) => {
@@ -734,36 +733,7 @@
       stage.addEventListener("lostpointercapture", (e) => { if (e.target === stage) end(e); });
       stage.addEventListener("click", (e) => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
     });
-    if (!fine.matches) return;
-    st3d.forEach((box) => {
-      const art = box.parentNode;
-      art.addEventListener("pointermove", (e) => {
-        if (box.classList.contains("dragging")) return;
-        const r = art.getBoundingClientRect();
-        box.style.setProperty("--mx", Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1)).toFixed(3));
-        box.style.setProperty("--my", Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1)).toFixed(3));
-      });
-      art.addEventListener("pointerleave", () => { box.style.setProperty("--mx", "0"); box.style.setProperty("--my", "0"); });
-    });
   }
-  // 휴대폰을 기울이면 화면 속 휴대폰도 따라 기울어요 (안드로이드처럼 권한을 묻지 않는 브라우저만 · 아이폰은 묻는 창이 떠서 쓰지 않음)
-  // 들고 있는 자세가 바뀌어도 몇 초 지나면 가운데로 돌아오게 기준을 천천히 따라간다
-  let tiltBase = null, tiltRaf = 0, tiltXY = [0, 0];
-  const clamp1 = (v) => Math.max(-1, Math.min(1, v));
-  function onOrient(e) {
-    if (!isActive() || e.gamma == null || e.beta == null || !st3d.length) return;
-    if (!tiltBase) tiltBase = [e.beta, e.gamma];
-    tiltBase[0] += (e.beta - tiltBase[0]) * 0.006;
-    tiltBase[1] += (e.gamma - tiltBase[1]) * 0.006;
-    tiltXY = [clamp1((e.gamma - tiltBase[1]) / 18), clamp1((e.beta - tiltBase[0]) / 18)];
-    if (tiltRaf) return;
-    tiltRaf = requestAnimationFrame(() => {
-      tiltRaf = 0;
-      st3d.forEach((b) => { b.style.setProperty("--mx", tiltXY[0].toFixed(3)); b.style.setProperty("--my", tiltXY[1].toFixed(3)); });
-    });
-  }
-  if (!fine.matches && window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== "function") window.addEventListener("deviceorientation", onOrient, { passive: true });
-
   // 무료 강의 카운트다운 카드: 1초마다 줄어든다 (0이 되면 처음부터)
   const pad2 = (x) => String(x).padStart(2, "0");
   setInterval(() => {
