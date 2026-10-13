@@ -47,6 +47,7 @@ import {
   applyBulkProductWorkbook,
   bulkUpdateProducts,
   buildBulkProductWorkbook,
+  buildBaljuoraRegisterWorkbook,
   buildProductListWorkbook,
   previewBulkProductWorkbook,
   ALL_PRICE_FIELDS,
@@ -487,11 +488,12 @@ catalogRouter.post("/admin/products/export-selected", adminRoute, async (c) => {
   if (!parsed.success) {
     return c.json(apiFailure("INVALID_INPUT", "다운로드할 상품을 하나 이상 선택해 주세요."), 400);
   }
-  const workbook = await buildProductListWorkbook(parsed.data.ids);
+  // 체크한 상품은 발주오라 "대량상품등록_양식"으로 내려받습니다.
+  const workbook = await buildBaljuoraRegisterWorkbook(parsed.data.ids);
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   return c.body(workbook, 200, {
     "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(`선택상품리스트_${today}.xlsx`)}`,
+    "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(`발주오라_대량상품등록_${today}.xlsx`)}`,
     "Cache-Control": "no-store"
   });
 });

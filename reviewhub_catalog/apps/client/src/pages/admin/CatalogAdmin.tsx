@@ -1318,10 +1318,10 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       const anchor = document.createElement("a");
       const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
       anchor.href = url;
-      anchor.download = `선택상품리스트_${today}.xlsx`;
+      anchor.download = `발주오라_대량상품등록_${today}.xlsx`;
       anchor.click();
       URL.revokeObjectURL(url);
-      toast.success(`체크한 ${ids.length.toLocaleString("ko-KR")}개 상품을 다운로드했습니다.`);
+      toast.success(`체크한 ${ids.length.toLocaleString("ko-KR")}개 상품을 발주오라 대량상품등록 양식으로 다운로드했습니다.`);
     } finally {
       setExcelBusy(false);
     }
@@ -1465,7 +1465,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             <div><strong>발주오라형 엑셀 상품 관리</strong><small>발주오라 상품리스트 엑셀을 그대로 올리면 가격·품절·노출이 반영되고 신규 상품이 등록됩니다. 가격 변경은 가격변동 이력에 자동 기록됩니다. 단가관리(danga-admin) "엑셀 일괄변경" 파일도 그대로 올리면 매입원가·A급 단가(황금농부 수강생)·공급가를 골라 한 번에 바꿉니다. 공급사 "단가표" 엑셀은 "엑셀 대량 업로드"로 올리면 공급가(A급단가가 있으면 A급단가)를 원가로 넣고, 미리보기에서 입력한 마진(기본 A급 10%·일반 20%) 이상으로 끝자리 00원에 맞춰 계산하며 없는 상품은 신규 등록합니다.</small></div>
           </div>
           <div className="excel-actions">
-            <button type="button" className="selected-excel-action" onClick={() => void downloadSelectedWorkbook()} disabled={excelBusy || selectedProductIds.size === 0}><Download size={15} /> 선택 상품 {selectedProductIds.size > 0 ? `(${selectedProductIds.size})` : ""} 다운로드</button>
+            <button type="button" className="selected-excel-action" title="체크한 상품을 발주오라 대량상품등록 양식으로 받습니다" onClick={() => void downloadSelectedWorkbook()} disabled={excelBusy || selectedProductIds.size === 0}><Download size={15} /> 선택 상품 {selectedProductIds.size > 0 ? `(${selectedProductIds.size})` : ""} 다운로드</button>
             <button onClick={() => void downloadWorkbook("list")} disabled={excelBusy}><Download size={15} /> 상품 리스트</button>
             <button onClick={() => void downloadWorkbook("bulk")} disabled={excelBusy}><FileSpreadsheet size={15} /> 일괄변경 양식</button>
             <button className="excel-upload-action" onClick={() => fileInputRef.current?.click()} disabled={excelBusy}><Upload size={15} /> 엑셀 업로드</button>
