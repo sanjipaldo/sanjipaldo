@@ -162,9 +162,12 @@
      움직임 줄이기 설정이면 자동재생하지 않고 포스터만 보여줍니다.
      자동재생이 막히면 부모에 .is-autoplay-blocked 를 붙입니다 (재생 버튼 노출용). */
   var bgVideos = $$('video[data-autoplay]');
+  function videoWrap(v) { return v.closest('[data-video-wrap]') || v.parentElement; }
   function tryPlay(v) {
     var p = v.play();
-    if (p && p.catch) p.catch(function () { var w = v.closest('[data-video-wrap]') || v.parentElement; w.classList.add('is-autoplay-blocked'); });
+    // 브라우저가 자동재생을 막은 경우(NotAllowedError)만 '막힘'으로 표시합니다.
+    // 로딩 중 화면 밖으로 나가 pause()된 경우(AbortError)는 무시합니다.
+    if (p && p.catch) p.catch(function (err) { if (err && err.name === 'NotAllowedError') videoWrap(v).classList.add('is-autoplay-blocked'); });
   }
   if (!reduceMotion && 'IntersectionObserver' in window) {
     var vio = new IntersectionObserver(function (entries) {
@@ -177,7 +180,10 @@
         } else if (!v.paused) v.pause();
       });
     }, { threshold: 0.15 });
-    bgVideos.forEach(function (v) { v.muted = true; vio.observe(v); });
+    bgVideos.forEach(function (v) {
+      v.muted = true; vio.observe(v);
+      v.addEventListener('playing', function () { videoWrap(v).classList.remove('is-autoplay-blocked'); });
+    });
   } else {
     bgVideos.forEach(function (v) { v.removeAttribute('autoplay'); v.pause(); v.closest('[data-video-wrap]') && v.closest('[data-video-wrap]').classList.add('is-reduced'); });
   }
@@ -264,8 +270,17 @@
     if (p) { e.preventDefault(); toast((p.getAttribute('data-pending') || '해당 링크') + ' 주소가 확정되면 연결됩니다.'); }
   });
 
-  /* ---------- 서브 내비(페이지 안 앵커) 현재 위치 표시 ---------- */
-  var subLinks = $$('.subnav a[href^="#"]');
+  /* ---------- 서브 내비(페이지 안 앵커) 현재 위치 표시 ----------
+     .subnav 또는 [data-scrollspy] 안의 #앵커 링크. 가로로 넘치는 목록이면 현재 항목이 보이도록 밀어 줍니다. */
+  function revealInBar(a) {
+    var bar = a.closest('ul, ol');
+    if (!bar || bar.scrollWidth <= bar.clientWidth + 1) return;
+    var br = bar.getBoundingClientRect(), ar = a.getBoundingClientRect();
+    if (ar.left >= br.left + 8 && ar.right <= br.right - 8) return;
+    var left = Math.max(0, bar.scrollLeft + (ar.left - br.left) - 16);
+    try { bar.scrollTo({ left: left, behavior: reduceMotion ? 'auto' : 'smooth' }); } catch (e) { bar.scrollLeft = left; }
+  }
+  var subLinks = $$('.subnav a[href^="#"], [data-scrollspy] a[href^="#"]');
   if (subLinks.length && 'IntersectionObserver' in window) {
     var map = {};
     subLinks.forEach(function (a) { var t = $(a.getAttribute('href')); if (t) map[t.id] = a; });
@@ -274,6 +289,7 @@
         if (en.isIntersecting && map[en.target.id]) {
           subLinks.forEach(function (a) { a.classList.remove('is-active'); a.removeAttribute('aria-current'); });
           map[en.target.id].classList.add('is-active'); map[en.target.id].setAttribute('aria-current', 'true');
+          revealInBar(map[en.target.id]);
         }
       });
     }, { rootMargin: '-40% 0px -55% 0px' });

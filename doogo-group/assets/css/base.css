@@ -19,7 +19,7 @@
   --ink: #0B1B33;           /* 짙은 네이비 본문 */
   --ink-2: #2B3A52;
   --muted: #5F6B7E;
-  --muted-2: #8A93A3;
+  --muted-2: #667085;
   --line: #E5E1D8;
   --line-2: #EFECE5;
   --bg: #FFFFFF;
@@ -70,7 +70,7 @@
 
 /* ---------- 2. 리셋 ---------- */
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; overflow-x: clip; }
 body {
   margin: 0; background: var(--bg); color: var(--ink);
   font-family: var(--font-ko); font-size: var(--fs-body); line-height: 1.65;
@@ -306,12 +306,16 @@ html.is-locked, html.is-locked body { overflow: hidden; }
 .page-hero--navy .breadcrumb a:hover { color: #fff; }
 
 /* 페이지 안 탭 (앵커 내비) */
-.subnav { position: sticky; top: var(--header-h); z-index: 50; background: rgba(255, 255, 255, .94); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line-2); }
+.subnav { position: sticky; top: var(--header-h); z-index: 50; transition: top .45s var(--ease); background: rgba(255, 255, 255, .94); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line-2); }
 .subnav ul { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-block: 12px; }
 .subnav ul::-webkit-scrollbar { display: none; }
 .subnav a { display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 999px; font-weight: 600; font-size: .95rem; color: var(--muted); white-space: nowrap; transition: all .2s var(--ease); }
 .subnav a:hover { color: var(--ink); }
 .subnav a.is-active, .subnav a[aria-current="true"] { background: var(--ink); color: #fff; }
+
+/* 헤더가 숨으면 서브 내비가 맨 위로 붙습니다 · 서브 내비가 있는 페이지는 앵커 이동 시 그 높이만큼 더 띄웁니다 */
+.site-header.is-hidden ~ main .subnav { top: 0; }
+body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h) + 80px); }
 
 /* ---------- 8. CTA 띠 (모든 페이지 하단 공통) ---------- */
 .cta-band { position: relative; overflow: hidden; background: var(--navy); color: #fff; padding-block: clamp(80px, 10vw, 140px); isolation: isolate; }
