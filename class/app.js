@@ -110,23 +110,30 @@
     return { parts: parts.length ? parts : ["home"], params: new URLSearchParams(query || "") };
   }
 
+  // 기본 이름은 DB.STUDENT_MENUS 에서 (강사가 메뉴 구성에서 바꾼 이름이 있으면 그 이름)
+  const DEF_LABEL = (id) => (DB.STUDENT_MENUS.find((d) => d.key === id) || {}).label || "";
   const NAV_DEFS = [
-    { id: "home", label: "홈", icon: "home", href: "#/home" },
-    { id: "curriculum", label: "커리큘럼", icon: "book", href: "#/curriculum" },
-    { id: "missions", label: "과제 제출하기", icon: "checks", href: "#/missions",
+    { id: "home", icon: "home", href: "#/home" },
+    { id: "curriculum", icon: "book", href: "#/curriculum" },
+    { id: "replays", icon: "monitorPlay", href: "#/replays" },
+    { id: "missions", icon: "checks", href: "#/missions",
       children: () => D.weeks.map((w) => ({ id: String(w.no), label: w.no + "주차", href: "#/missions/" + w.no, locked: !isOpen(w) })) },
-    { id: "schedule", label: "강의 일정", icon: "calendar", href: "#/schedule" },
-    { id: "notices", label: "공지사항", icon: "megaphone", href: "#/notices" },
-    { id: "qna", label: "Q&A", icon: "help", href: "#/qna" },
-    { id: "docs", label: "서류 준비 가이드", icon: "clipboard", href: "#/docs" },
-    { id: "bot", label: () => D.brand.botName, icon: "sparkles", href: "#/bot" },
-    { id: "library", label: "유료강의 자료실", icon: "library", href: "#/library",
+    { id: "showcase", icon: "trophy", href: "#/showcase" },
+    { id: "notes", icon: "notebookPen", href: "#/notes" },
+    { id: "schedule", icon: "calendar", href: "#/schedule" },
+    { id: "notices", icon: "megaphone", href: "#/notices" },
+    { id: "qna", icon: "help", href: "#/qna" },
+    { id: "docs", icon: "clipboard", href: "#/docs" },
+    { id: "glossary", icon: "bookA", href: "#/glossary" },
+    { id: "bot", label: () => D.brand.botName, icon: "bot", href: "#/bot" },
+    { id: "library", icon: "library", href: "#/library",
       children: () => libList().map((c) => ({ id: c.id, label: c.label, href: "#/library/" + c.id })) },
-    { id: "motivation", label: "동기부여", icon: "flame", href: "#/motivation" },
-    { id: "channels", label: "1:1 소통채널", icon: "headset", href: "#/channels" },
-    { id: "partners", label: "제휴채널", icon: "handshake", href: "#/partners" },
-    { id: "certificate", label: "수료증", icon: "award", href: "#/certificate" }
+    { id: "motivation", icon: "flame", href: "#/motivation" },
+    { id: "channels", icon: "headset", href: "#/channels" },
+    { id: "partners", icon: "handshake", href: "#/partners" },
+    { id: "certificate", icon: "award", href: "#/certificate" }
   ];
+  NAV_DEFS.forEach((n) => { if (!n.label) n.label = DEF_LABEL(n.id); });
   const LIB = [
     { id: "ebook", label: "전자책 · 가이드북", icon: "book", cls: "ri-1", desc: () => D.brand.instructor + " 전자책과 가이드북을 웹에서 열람" },
     { id: "file", label: "자료 파일", icon: "fileSheet", cls: "ri-2", desc: () => "상품 리스트 · 키워드 · 마진 계산기 등 실전 자료" },
@@ -135,10 +142,14 @@
   ];
   const navLabel = (n) => (typeof n.label === "function" ? n.label() : n.label);
   // 마스터가 강사별로 정한 메뉴 구성(켜기·끄기·이름·순서·추가 메뉴)을 따른다
-  const on = (key) => DB.menuOn(INS.id, key);
+  // 라이브 다시보기 · 모범 과제 · 용어 사전은 강사가 내용을 올렸을 때만 메뉴에 보인다
+  const NEEDS = { replays: () => (D.replays || []).length, showcase: () => (D.showcase || []).length, glossary: () => (D.glossary || []).length };
+  const on = (key) => DB.menuOn(INS.id, key) && (!NEEDS[key] || !!NEEDS[key]());
+  /** 화면 제목 · 경로에 쓰는 메뉴 이름 (강사가 바꾼 이름 우선) */
+  const ML = (key) => { const it = DB.menuConfig(INS.id).items.find((x) => x.key === key); const d = NAV_DEFS.find((n) => n.id === key); return (it && it.label) || (d ? navLabel(d) : DEF_LABEL(key)); };
   const libList = () => LIB.filter((c) => DB.libOn(INS.id, c.id));
   function NAV() {
-    return DB.menuConfig(INS.id).items.filter((x) => x.on).map((x) => {
+    return DB.menuConfig(INS.id).items.filter((x) => x.on && (!NEEDS[x.key] || NEEDS[x.key]())).map((x) => {
       if (DB.isCustom(x.key)) {
         return x.type === "link"
           ? { id: x.key, label: x.label || "링크", icon: x.icon || "link", href: x.url || "#", external: true }
@@ -469,12 +480,25 @@
     document.getElementById("sidebar").innerHTML =
       (D.brand.worldClock ? '<div class="wclock side" aria-label="한국 · 뉴질랜드 현재 시간">' + worldClockHtml() + "</div>" : "") +
       '<ul class="nav">' + items + "</ul>" +
-      '<div class="help-card"><strong>도움이 필요하신가요?</strong><p>궁금한 점은 Q&A의 자주 묻는 질문에서 먼저 확인하시고, 화면이 이상하거나 기능이 안 되면 요청사항으로 알려 주세요.</p>' +
-      (D.brand.kakaoChannel ? '<a class="btn btn-primary btn-sm btn-block" href="' + esc(D.brand.kakaoChannel) + '" target="_blank" rel="noopener" style="margin-bottom:8px">' + icon("message", "sm") + "카카오톡 문의</a>" : "") +
-      (on("qna") ? '<a class="btn btn-tertiary btn-sm btn-block" href="#/qna/requests/new">' + icon("bug", "sm") + "오류 신고하기</a>" : "") + '<div class="side-powered">' + window.poweredBy("color") + "</div></div>";
+      helpCard();
+  }
+  // 왼쪽 메뉴 아래 ‘막힐 때’ 카드: AI 조교 → FAQ 검색 → 1:1 요청 순서로 안내 (켜진 메뉴만)
+  function helpCard() {
+    const steps = [];
+    if (on("bot")) steps.push('<button type="button" class="hc-step" data-action="bot-open">' + '<span class="hc-ic">' + icon("bot", "sm") + '</span><span class="hc-t"><b>' + esc(D.brand.botName) + "에게 묻기</b><small>밤에도 바로 답해요</small></span></button>");
+    if (on("qna")) {
+      steps.push('<a class="hc-step" href="#/qna"><span class="hc-ic">' + icon("search", "sm") + '</span><span class="hc-t"><b>FAQ에서 찾기</b><small>자주 나오는 답을 모았어요</small></span></a>');
+      steps.push('<a class="hc-step" href="#/qna/requests/new"><span class="hc-ic">' + icon("message", "sm") + '</span><span class="hc-t"><b>1:1 요청 남기기</b><small>' + esc(D.brand.instructor) + "님이 직접 확인해요</small></span></a>");
+    }
+    return '<div class="help-card hc2"><div class="hc-top"><span class="hc-tag">' + icon("sparkles", "xs") + "막힐 땐</span><strong>혼자 고민하지 마세요</strong><p>위에서부터 차례로 해 보면 대부분 금방 풀려요.</p></div>" +
+      (steps.length ? '<div class="hc-steps">' + steps.join("") + "</div>" : "") +
+      (D.brand.kakaoChannel ? '<a class="btn btn-primary btn-sm btn-block hc-kakao" href="' + esc(D.brand.kakaoChannel) + '" target="_blank" rel="noopener">' + icon("message", "sm") + "카카오톡으로 문의</a>" : "") +
+      '<div class="side-powered">' + window.poweredBy("color") + "</div></div>";
   }
 
   /* ---------------- 홈 ---------------- */
+  // 시간대마다 다른 인사
+  const greetWord = () => { const h = new Date().getHours(); return h >= 5 && h < 11 ? "좋은 아침이에요" : h >= 11 && h < 17 ? "오늘도 한 걸음 더 가 볼까요?" : h >= 17 && h < 22 ? "오늘 하루도 수고 많았어요" : "늦은 시간까지 공부 중이시네요"; };
   function pageHome() {
     const o = overallStats();
     const nm = nextMissionOverall();
@@ -491,11 +515,11 @@
     const todayLive = evs.find((e) => e.date === today && e.url);
     const guideCard = guideBlock();
     return '<div class="page">' +
-      '<header class="page-head greet"><span class="greet-icon lv-' + lv.cur.key + '" title="성장 단계 · ' + esc(lv.cur.name) + '">' + icon(lv.cur.icon, "lg") + '</span><div><h1>' + esc(me.name) + "님, 다시 만나서 반갑습니다</h1><p>" + esc(quote || (CO.name + " · " + (wk ? wk + "주차 진행 중" : fmtMD(CO.startDate) + " 시작"))) + "</p></div></header>" +
+      '<header class="page-head greet"><span class="greet-icon lv-' + lv.cur.key + '" title="성장 단계 · ' + esc(lv.cur.name) + '">' + icon(lv.cur.icon, "lg") + '</span><div><h1>' + esc(me.name) + "님, " + greetWord() + "</h1><p>" + esc(quote || (CO.name + " · " + (wk ? wk + "주차 진행 중" : fmtMD(CO.startDate) + " 시작"))) + "</p></div></header>" +
       guideCard +
       (todayLive ? '<section class="card live-today">' + icon("video") + '<div><b>오늘 ' + (todayLive.time ? esc(todayLive.time) + " " : "") + esc(todayLive.title) + '</b><span class="tiny">시간이 되면 아래 버튼으로 바로 들어오세요.</span></div>' + liveBtn(todayLive) + "</section>" : "") +
-      (mv ? '<section class="card home-mv"><div class="home-video-head"><h2>' + icon("flame") + "오늘의 동기부여</h2>" +
-        '<a class="link-btn" href="#/motivation">지난 영상 보기 ' + icon("arrowRight", "sm") + "</a></div>" + video(mv) +
+      (mv ? '<section class="card home-mv"><div class="home-video-head"><h2>' + icon("flame") + "오늘의 응원 영상</h2>" +
+        '<a class="link-btn" href="#/motivation">' + esc(ML("motivation")) + " 더 보기 " + icon("arrowRight", "sm") + "</a></div>" + video(mv) +
         '<p class="tiny" style="margin:12px 0 0">' + esc(mv.title) + "</p></section>" : "") +
       (on("missions") ? levelCard(lv) : "") +
       weekFocusCard() +
@@ -506,7 +530,7 @@
             '<div style="flex:1;min-width:0"><div class="tiny">' + nm.weekNo + "주차 · " + kindOf(nm).short + " · 마감 " + fmtMD(DB.weekDeadline(CO, nm.weekNo)) + '</div><div class="m-title">' + esc(nm.title) + " " + stateBadge(nm.id) + '</div><div class="m-desc">' + esc(nm.desc) + "</div></div>" +
             '<span class="btn btn-primary btn-sm">열기 ' + icon("arrowRight", "sm") + "</span></a>"
         : '<div class="card callout-ok callout">' + icon("check") + "<div>" + (D.weeks.length && !isOpen(D.weeks[0]) ? fmtMD(CO.startDate) + "에 1주차가 열려요. 조금만 기다려 주세요!" : "열린 주차의 과제를 모두 마쳤어요! 다음 주차가 열리면 바로 시작해 보세요.") + "</div></div>") : "") +
-      (on("notices") ? '<section class="card" style="margin-top:14px"><div class="home-video-head"><h2>공지사항</h2><a class="link-btn" href="#/notices">더보기 ' + icon("arrowRight", "sm") + "</a></div>" +
+      (on("notices") ? '<section class="card" style="margin-top:14px"><div class="home-video-head"><h2>' + esc(ML("notices")) + '</h2><a class="link-btn" href="#/notices">더보기 ' + icon("arrowRight", "sm") + "</a></div>" +
           (notices.length ? notices.map((n) => '<a class="list-row" href="#/notices/' + n.id + '">' + (n.pinned ? '<span class="badge badge-ink">필독</span>' : "") + '<span class="lr-title">' + esc(n.title) + "</span>" + newBadge(n) + '<span class="lr-date">' + fmtMD(n.date) + "</span></a>").join("") : '<p class="muted" style="margin:0">아직 공지가 없어요.</p>') +
         "</section>" : "") +
       quickLinks() +
@@ -554,7 +578,7 @@
         "<b>" + esc(l.title) + "</b>" + (l.desc ? "<span>" + esc(l.desc) + "</span>" : "") + "</a>";
     };
     const inner = list.filter((l) => !/^https?:/i.test(l.url)), outer = list.filter((l) => /^https?:/i.test(l.url));
-    return '<div class="section-head"><h2>자주 찾는 페이지</h2><span class="hint">바로 가기</span></div>' +
+    return '<div class="section-head"><h2>빠른 이동</h2><span class="hint">자주 여는 화면</span></div>' +
       (inner.length ? '<div class="ql-grid">' + inner.map(card).join("") + "</div>" : "") +
       (outer.length ? '<div class="ql-grid ql-outer">' + outer.map(card).join("") + "</div>" : "");
   }
@@ -572,7 +596,7 @@
         '<p class="wf-date">강의일 · ' + fmtMD(DB.classDate(CO, w.no)) + (w.subtitle ? " · " + esc(w.subtitle) : "") + "</p>" +
         (open ? '<div class="wf-prog">' + progressBar(st.pct, true) + '<span class="tiny">' + kindCount(st) + " · " + st.done + "/" + st.total + " 완료</span></div>"
           : '<div class="wf-lock">' + fmtMD(openOf(w)) + "부터 과제 제출이 공개됩니다." + (daysUntil(openOf(w)) > 0 ? " <b>D-" + daysUntil(openOf(w)) + "</b>" : "") + "</div>") +
-        '<a class="btn ' + (open ? "btn-primary" : "btn-secondary") + ' wf-btn" href="' + (open && on("missions") ? "#/missions/" + w.no : "#/curriculum") + '">' + (open && on("missions") ? w.no + "주차 과제 하러 가기" : "커리큘럼 미리 보기") + " " + icon("arrowRight", "sm") + "</a></section>";
+        '<a class="btn ' + (open ? "btn-primary" : "btn-secondary") + ' wf-btn" href="' + (open && on("missions") ? "#/missions/" + w.no : "#/curriculum") + '">' + (open && on("missions") ? w.no + "주차 과제 하러 가기" : ML("curriculum") + " 미리 보기") + " " + icon("arrowRight", "sm") + "</a></section>";
     };
     const out = (cur ? card(cur, "now") : "") + (next ? card(next, "next") : "");
     return out ? '<div class="wf-wrap' + (cur && next ? " two" : "") + '">' + out + "</div>" : "";
@@ -618,7 +642,7 @@
   function pageCurriculum(r) {
     if (r.parts[1]) return pageLesson(r.parts[1]);
     const cur = D.weeks.find((w) => isOpen(w) && todayStr() <= deadlineOf(w)) || D.weeks.filter(isOpen).slice(-1)[0];
-    return '<div class="page">' + pageHead("커리큘럼", "주차별 강의 내용과 과제를 한눈에 확인하세요.") +
+    return '<div class="page">' + pageHead(ML("curriculum"), "주차마다 무엇을 배우고 어떤 과제를 하는지 순서대로 정리했어요.") +
       (D.weeks.length ? '<div class="cw-list">' + D.weeks.map((w) => curWeekCard(w, cur === w)).join("") + "</div>"
         : '<section class="card">' + empty("book", "커리큘럼을 준비하고 있어요.") + "</section>") + "</div>";
   }
@@ -662,7 +686,7 @@
     const i = all.findIndex((l) => l.id === id);
     const l = all[i], prev = all[i - 1], next = all[i + 1];
     const done = !!P.watched[id];
-    return '<div class="page">' + pageHead(l.title, w.no + "주차 · " + w.title + (l.minutes ? " · " + l.minutes + "분" : ""), crumb([["커리큘럼", "#/curriculum"], [w.no + "주차", "#/curriculum"], [l.title]])) +
+    return '<div class="page">' + pageHead(l.title, w.no + "주차 · " + w.title + (l.minutes ? " · " + l.minutes + "분" : ""), crumb([[ML("curriculum"), "#/curriculum"], [w.no + "주차", "#/curriculum"], [l.title]])) +
       '<section class="card">' + video(l) +
         (l.desc ? '<div class="lesson-body">' + DB.rich(l.desc) + "</div>" : "") + attachmentList(l.attachments) +
         '<div class="guide-actions" style="margin-top:20px">' +
@@ -685,7 +709,7 @@
     const kind = DB.MISSION_KINDS.find((k) => k.key === r.params.get("kind"));
     if (kind) return pageMissionKind(kind);
     const o = overallStats();
-    return '<div class="page">' + pageHead("과제 제출하기", "주차별 과제를 선택해서 제출하고, 자동검수 결과를 확인하세요.") +
+    return '<div class="page">' + pageHead(ML("missions"), "주차를 고르고 과제를 내면 자동 검수 결과가 바로 나와요.") +
       '<section class="card overall"><div class="overall-top"><span>전체 진행률</span>' + pctText(o.pct) + "</div>" + progressBar(o.pct) +
         '<span class="tiny" style="color:var(--body)">전체 ' + o.total + "개 중 " + o.done + "개 완료</span></section>" +
       '<div class="section-head"><h2>주차 선택</h2><span class="hint">주차를 눌러 과제를 확인하세요</span></div>' +
@@ -701,7 +725,7 @@
       if (!isOpen(w)) return '<div class="section-head"><h2>' + w.no + "주차 · " + esc(w.title) + '</h2><span class="hint">' + icon("lock", "xs") + " " + fmtMD(openOf(w)) + " 공개 · " + list.length + "개</span></div>";
       return '<div class="section-head"><h2>' + w.no + "주차 · " + esc(w.title) + '</h2><span class="hint">마감 ' + fmtMD(deadlineOf(w)) + "</span></div>" + list.map((m) => missionCard(w, m)).join("");
     }).join("");
-    return '<div class="page">' + pageHead(k.label, k.hint + " · " + st.done + " / " + st.total + " 완료", crumb([["과제 제출하기", "#/missions"], [k.label]])) + tabs +
+    return '<div class="page">' + pageHead(k.label, k.hint + " · " + st.done + " / " + st.total + " 완료", crumb([[ML("missions"), "#/missions"], [k.label]])) + tabs +
       '<section class="card overall" style="margin-top:14px"><div class="overall-top"><span>' + k.label + " 진행률</span>" + pctText(st.total ? Math.round(st.done / st.total * 100) : 0) + "</div>" + progressBar(st.total ? Math.round(st.done / st.total * 100) : 0) + "</section>" +
       (groups || '<section class="card" style="margin-top:14px">' + empty("checks", "이 종류의 과제가 아직 없어요.") + "</section>") + "</div>";
   }
@@ -748,10 +772,11 @@
     const shown = byKind.filter((m) => f.state === "all" || missionState(m.id) === f.state);
     const chip = (grp, key, label, n) => '<button type="button" class="fchip' + (f[grp] === key ? " on" : "") + '" data-action="wk-filter" data-grp="' + grp + '" data-k="' + key + '" aria-pressed="' + (f[grp] === key) + '">' + label + ' <span class="fnum">' + n + "</span></button>";
     const tpls = w.missions.filter((m) => (m.templates || []).length);
-    return '<div class="page">' + pageHead(w.no + "주차 · " + w.title, w.summary, crumb([["과제 제출하기", "#/missions"], [w.no + "주차"]])) +
+    return '<div class="page">' + pageHead(w.no + "주차 · " + w.title, w.summary, crumb([[ML("missions"), "#/missions"], [w.no + "주차"]])) +
       '<section class="card overall"><div class="overall-top"><span>' + w.no + "주차 진행률</span>" + pctText(st.pct) + "</div>" + progressBar(st.pct) +
         '<span class="tiny" style="color:var(--body)">' + kindCount(st) + " · " + st.total + "개 중 " + st.done + "개 완료 · " + fmtMD(openOf(w)) + " 공개 · <b" + (late ? ' style="color:var(--negative)"' : "") + ">" + fmtMD(deadlineOf(w)) + " 마감" + (late ? " (지남)" : "") + "</b></span></section>" +
-      (w.no === 1 && on("docs") ? '<a class="card help-banner plain-link" href="#/docs"><span class="hb-ic">' + icon("clipboard") + '</span><span><b>서류 발급이 어렵다면?</b><span class="tiny">서류 준비 가이드에서 단계별로 화면과 함께 안내해 드려요.</span></span>' + icon("chevRight") + "</a>" : "") +
+      (w.no === 1 && on("docs") ? '<a class="card help-banner plain-link" href="#/docs"><span class="hb-ic">' + icon("clipboard") + '</span><span><b>서류 발급이 어렵다면?</b><span class="tiny">' + esc(ML("docs")) + '에서 단계별로 화면과 함께 안내해 드려요.</span></span>' + icon("chevRight") + "</a>" : "") +
+      (on("showcase") && (D.showcase || []).some((x) => Number(x.week) === w.no) ? '<a class="card help-banner sc-banner plain-link" href="#/showcase?w=' + w.no + '"><span class="hb-ic">' + icon("trophy") + '</span><span><b>' + w.no + "주차 모범 과제 보기</b><span class=\"tiny\">" + esc(D.brand.instructor) + "님이 고른 잘한 예시를 먼저 보고 시작해 보세요.</span></span>" + icon("chevRight") + "</a>" : "") +
       (tpls.length ? '<section class="card tpl-box"><div class="home-video-head"><h2>' + icon("fileSheet") + '이 주차 과제 양식 <span class="tiny">' + tpls.length + '개</span></h2></div><p class="tiny" style="margin:-6px 0 10px">양식을 내려받아 엑셀에서 채운 뒤, 해당 과제에서 올려 주세요.</p>' +
         tpls.map((m) => m.templates.map((t) => '<a class="tpl-row" href="' + esc(t.data || t.url || "#") + '"' + (t.data ? ' download="' + esc(t.name) + '"' : ' target="_blank" rel="noopener"') + '><span class="tpl-ic">' + icon("download", "sm") + '</span><span class="tpl-txt"><b>' + esc(m.title) + "</b><small>" + esc(t.name) + "</small></span></a>").join("")).join("") + "</section>" : "") +
       '<div class="ffilters"><p class="ff-label">과제 유형</p><div class="fchips">' + chip("kind", "all", "전체", w.missions.length) + DB.MISSION_KINDS.map((k) => chip("kind", k.key, k.label, w.missions.filter((m) => DB.missionKind(m) === k.key).length)).join("") + "</div>" +
@@ -801,7 +826,7 @@
           (s.review ? (s.review.status === "approved" ? '<span class="badge badge-positive">강사 승인</span>' : '<span class="badge badge-warning">보완 요청</span>') : s.result.pass ? '<span class="badge badge-positive">통과</span>' : '<span class="badge badge-warning">보완</span>') + "</li>").join("") + "</ul>"
       : '<p class="tiny" style="margin:0">아직 제출 기록이 없어요.</p>';
 
-    return '<div class="page">' + pageHead(m.title, "", crumb([["과제 제출하기", "#/missions"], [w.no + "주차", "#/missions/" + w.no], [m.title]])) +
+    return '<div class="page">' + pageHead(m.title, "", crumb([[ML("missions"), "#/missions"], [w.no + "주차", "#/missions/" + w.no], [m.title]])) +
       '<div class="detail-grid">' +
         '<section class="card">' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">' + (m.required ? '<span class="badge badge-ink">필수</span>' : '<span class="badge badge-neutral">' + kindOf(m).short + "</span>") + '<span class="badge badge-neutral">' + typeLabel + "</span>" +
@@ -815,8 +840,9 @@
         '<aside class="stack">' +
           '<div class="card"><p class="side-label">자동검수 기준</p><ul class="history">' + (checkCriteria(m).map((t) => "<li><span>" + esc(t) + "</span></li>").join("") || "<li><span>제출하면 바로 통과</span></li>") + "</ul></div>" +
           '<div class="card"><p class="side-label">제출 이력</p>' + history + "</div>" + lastFiles +
-          '<div class="card card-dark"><p style="margin:0 0 12px;font-weight:800;color:var(--accent)">막히셨나요?</p><p class="tiny" style="color:#b8bdb2;margin:0 0 14px">' + esc(D.brand.botName) + "에게 바로 물어보세요.</p>" +
-            '<button class="btn btn-primary btn-sm btn-block" data-action="ask-bot" data-q="' + esc(m.title + " 어떻게 해요?") + '">' + icon("sparkles", "sm") + "AI봇에게 물어보기</button></div>" +
+          (on("showcase") && showcaseOf(m.id).length ? '<a class="card sc-hint plain-link" href="#/showcase?w=' + w.no + '"><span class="sc-hint-ic">' + icon("trophy", "sm") + "</span><span><b>모범 과제 " + showcaseOf(m.id).length + "개 보기</b><small>" + esc(D.brand.instructor) + "님이 고른 잘한 예시</small></span>" + icon("chevRight", "sm") + "</a>" : "") +
+          (on("bot") ? '<div class="card ask-card"><p class="ask-t">' + icon("bot", "sm") + "어디서 막혔나요?</p><p class=\"tiny\">" + esc(D.brand.botName) + "가 이 과제 진행 방법을 단계별로 알려 드려요.</p>" +
+            '<button class="btn btn-primary btn-sm btn-block" data-action="ask-bot" data-q="' + esc(m.title + " 어떻게 해요?") + '">' + icon("bot", "sm") + "이 과제 물어보기</button></div>" : "") +
         "</aside>" +
       "</div></div>";
   }
@@ -926,7 +952,7 @@
     const sel = byDate[calSel] || [];
     const T = DB.EVENT_TYPES;
     const used = Object.keys(T).filter((k) => evs.some((e) => e.type === k) || ["open", "deadline", "qna", "notice", "challenge"].indexOf(k) !== -1);
-    return '<div class="page">' + pageHead("강의 일정", "강의 오픈일, 과제 마감일, 라이브 Q&A 일정을 한눈에 확인하세요.") +
+    return '<div class="page">' + pageHead(ML("schedule"), "강의가 열리는 날, 과제 마감, 라이브 시간을 달력 한 장으로 챙겨요.") +
       '<section class="card cal-card"><div class="cal-head"><h2>' + y + "년 " + (m + 1) + "월</h2>" +
         '<div class="cal-nav"><button class="icon-btn ghost" data-action="cal-move" data-d="-1" aria-label="이전 달">' + icon("chevLeft") + '</button><button class="btn btn-tertiary btn-sm" data-action="cal-today">오늘</button><button class="icon-btn ghost" data-action="cal-move" data-d="1" aria-label="다음 달">' + icon("chevRight") + "</button></div></div>" +
         '<div class="cal">' + DOW.map((d, i) => '<div class="cal-dow' + (i === 0 ? " sun" : "") + '">' + d + "</div>").join("") +
@@ -945,7 +971,7 @@
         (sel.length ? '<div class="stack">' + sel.map((e) =>
           '<div class="ev-card"><i class="ev-dot ' + e.type + '"></i><div style="flex:1;min-width:0"><div class="tiny">' + T[e.type].label + (e.week ? " · " + e.week + "주차" : "") + (e.time && e.type !== "open" ? " · " + esc(e.time) : "") + '</div><div class="ev-title">' + esc(e.title) + "</div></div>" +
           (e.url && e.date >= today ? liveBtn(e, true) : "") +
-          ((e.type === "open" || e.type === "deadline") && e.week && findWeek(e.week) ? '<span class="ev-acts">' + (on("curriculum") ? '<a class="btn btn-secondary btn-sm" href="#/curriculum">' + icon("book", "sm") + "커리큘럼 보기</a>" : "") +
+          ((e.type === "open" || e.type === "deadline") && e.week && findWeek(e.week) ? '<span class="ev-acts">' + (on("curriculum") ? '<a class="btn btn-secondary btn-sm" href="#/curriculum">' + icon("book", "sm") + esc(ML("curriculum")) + " 보기</a>" : "") +
             (on("missions") ? '<a class="btn btn-primary btn-sm" href="#/missions/' + e.week + '">' + icon("checks", "sm") + (e.type === "open" ? "과제 보기" : "과제 제출하기") + "</a>" : "") + "</span>" : "") + "</div>").join("") + "</div>"
           : '<p class="muted" style="margin:0">이 날은 일정이 없어요.</p>') +
       "</section></div>";
@@ -958,11 +984,11 @@
       const n = D.notices.find((x) => x.id === r.parts[1]);
       if (!n) return notFound();
       if (isUnread(n)) { P.readNotices = P.readNotices || {}; P.readNotices[n.id] = Date.now(); saveProgress(); setTimeout(() => renderSidebar(route()), 0); }
-      return '<div class="page">' + pageHead("공지사항", "", crumb([["공지사항", "#/notices"], ["상세"]])) +
+      return '<div class="page">' + pageHead(ML("notices"), "", crumb([[ML("notices"), "#/notices"], ["상세"]])) +
         '<article class="card article">' + (n.pinned ? '<span class="badge badge-ink" style="margin-bottom:10px">필독</span>' : "") + "<h2>" + esc(n.title) + '</h2><div class="meta">' + esc(D.brand.instructor) + " · " + fmtFull(n.date) + "</div>" + noticeBody(n) + "</article>" +
         '<div style="margin-top:14px"><a class="btn btn-secondary" href="#/notices">' + icon("chevLeft", "sm") + "목록으로</a></div></div>";
     }
-    return '<div class="page">' + pageHead("공지사항", D.brand.instructor + "이 전하는 안내와 소식입니다.") +
+    return '<div class="page">' + pageHead(ML("notices"), D.brand.instructor + "님이 전하는 수업 안내와 새 소식이에요.") +
       '<section class="card">' + (list.length ? list.map((n) =>
         '<a class="notice-row" href="#/notices/' + n.id + '">' + (n.pinned ? '<span class="badge badge-ink">' + icon("pin", "xs") + "필독</span>" : '<span class="badge badge-neutral">공지</span>') +
         '<span class="lr-title">' + esc(n.title) + "</span>" + ((n.images || []).length ? '<span class="n-ic" title="사진 ' + n.images.length + '장">' + icon("image", "xs") + "</span>" : "") + (DB.youtubeId(n.youtubeId) ? '<span class="n-ic" title="영상">' + icon("play", "xs") + "</span>" : "") + newBadge(n) + '<span class="lr-date">' + fmtFull(n.date) + "</span></a>").join("") : empty("megaphone", "아직 공지가 없어요.")) + "</section>" +
@@ -984,8 +1010,8 @@
   let faqCat = "전체";
   let reqDraft = [];
   const qnaTabs = (on) => '<div class="utabs" role="tablist">' +
-    '<a role="tab" href="#/qna" class="' + (on === "faq" ? "on" : "") + '" aria-selected="' + (on === "faq") + '">자주 묻는 질문</a>' +
-    '<a role="tab" href="#/qna/requests" class="' + (on === "req" ? "on" : "") + '" aria-selected="' + (on === "req") + '">요청사항</a></div>';
+    '<a role="tab" href="#/qna" class="' + (on === "faq" ? "on" : "") + '" aria-selected="' + (on === "faq") + '">' + icon("search", "xs") + "FAQ 검색</a>" +
+    '<a role="tab" href="#/qna/requests" class="' + (on === "req" ? "on" : "") + '" aria-selected="' + (on === "req") + '">' + icon("message", "xs") + "1:1 요청</a></div>";
   function pageQna(r) {
     if (r.params.get("tab") === "request") { history.replaceState(null, "", "#/qna/requests"); r = route(); }
     const sub = r.parts[1];
@@ -997,11 +1023,11 @@
     }
     const cats = ["전체"].concat(D.faqs.map((f) => f.category || "기타").filter((c, i, a) => a.indexOf(c) === i));
     if (cats.indexOf(faqCat) === -1) faqCat = "전체";
-    return '<div class="page">' + pageHead("Q&A", "자주 묻는 질문을 확인하거나, 프로그램이 이상할 때 요청사항을 남겨 주세요.") + qnaTabs("faq") +
+    return '<div class="page">' + pageHead(ML("qna"), "검색 한 번으로 답을 찾고, 화면 오류나 불편한 점은 1:1 요청으로 바로 알려 주세요.") + qnaTabs("faq") +
       '<section class="card"><div class="search">' + icon("search") + '<input class="input" id="faq-search" type="search" placeholder="궁금한 내용을 검색해 보세요 (예: 통관, 마진, 로그인)" aria-label="자주 묻는 질문 검색"></div>' +
         '<div class="faq-cats" role="tablist">' + cats.map((c) => '<button type="button" class="chip' + (c === faqCat ? " on" : "") + '" data-action="faq-cat" data-cat="' + esc(c) + '">' + esc(c) + ' <span>' + (c === "전체" ? D.faqs.length : D.faqs.filter((f) => (f.category || "기타") === c).length) + "</span></button>").join("") + "</div>" +
         '<div id="faq-list">' + faqList("") + "</div></section>" +
-      '<p class="tiny" style="margin-top:12px">찾는 답이 없으면 ' + esc(D.brand.botName) + "에게 물어보거나 라이브 Q&A 시간에 질문해 주세요.</p></div>";
+      '<p class="tiny" style="margin-top:12px">원하는 답이 없다면 ' + esc(D.brand.botName) + "에게 물어보거나 라이브 시간에 질문해 주세요.</p></div>";
   }
   function faqList(q) {
     const t = q.trim().toLowerCase();
@@ -1012,9 +1038,9 @@
   const myRequests = () => DB.requests(INS.id, preview ? me : null);
   function pageRequests() {
     const list = myRequests();
-    return '<div class="page">' + pageHead("Q&A", "프로그램 오류나 불편한 점을 남겨 주시면 강사님이 확인 후 해결해 드려요.") + qnaTabs("req") +
-      '<div class="req-bar"><span class="muted">총 <b>' + list.length + '</b>건의 요청사항</span><a class="btn btn-primary" href="#/qna/requests/new">' + icon("pen", "sm") + "문의하기</a></div>" +
-      '<div class="callout callout-ok req-note">' + icon("lock", "sm") + "<div>모든 요청사항은 <b>비공개</b>예요. 내용은 작성자와 강사님만 볼 수 있어요. 수업 내용 질문은 라이브 Q&A나 AI봇을 이용해 주세요.</div></div>" +
+    return '<div class="page">' + pageHead(ML("qna"), "화면 오류나 불편한 점을 남기면 강사님이 직접 확인하고 답해 드려요.") + qnaTabs("req") +
+      '<div class="req-bar"><span class="muted">총 <b>' + list.length + '</b>건의 1:1 요청</span><a class="btn btn-primary" href="#/qna/requests/new">' + icon("pen", "sm") + "요청 남기기</a></div>" +
+      '<div class="callout callout-ok req-note">' + icon("lock", "sm") + "<div>모든 1:1 요청은 <b>비공개</b>예요. 작성자와 강사님만 볼 수 있어요. 수업 내용 질문은 라이브 시간이나 " + esc(D.brand.botName) + "에게 물어보면 더 빨라요.</div></div>" +
       '<section class="card req-card">' + (list.length
         ? '<table class="req-table"><thead><tr><th class="c-no">번호</th><th class="c-st">상태</th><th>제목</th><th class="c-au">작성자</th><th class="c-dt">작성일</th><th class="c-an">답변</th></tr></thead><tbody>' +
           list.map((x) => {
@@ -1024,12 +1050,12 @@
               '<td class="c-title">' + (mine ? '<b>' + esc(x.q.title) + "</b>" + ((x.q.images || []).length ? icon("paperclip", "xs") : "") + '<span class="badge badge-ink mine-tag">내 글</span>' : '<span class="locked">' + icon("lock", "xs") + "(비공개)</span>") + (x.q.answer ? '<span class="re">RE</span>' : "") + "</td>" +
               '<td class="c-au">' + esc(mine ? me.name : DB.maskName(x.s.name)) + '</td><td class="c-dt num">' + DB.date.toStr(new Date(x.q.at)) + '</td><td class="c-an num">' + (x.q.answer ? "1" : "—") + "</td></tr>";
           }).join("") + "</tbody></table>"
-        : empty("message", "아직 요청사항이 없어요.")) + "</section></div>";
+        : empty("message", "아직 남긴 1:1 요청이 없어요.")) + "</section></div>";
   }
   function pageRequestNew() {
-    return '<div class="page">' + pageHead("Q&A", "프로그램 오류나 불편한 점을 남겨 주시면 강사님이 확인 후 해결해 드려요.") + qnaTabs("req") +
-      '<a class="back-link" href="#/qna/requests">' + icon("arrowLeft", "sm") + "요청사항 목록</a>" +
-      '<section class="card"><h2 class="card-title">문의하기</h2><p class="tiny" style="margin:0 0 18px">어떤 화면에서 무엇을 눌렀을 때 어떤 문제가 생겼는지 적고, 스크린샷을 함께 올려 주시면 더 빨리 고칠 수 있어요.</p>' +
+    return '<div class="page">' + pageHead(ML("qna"), "화면 오류나 불편한 점을 남기면 강사님이 직접 확인하고 답해 드려요.") + qnaTabs("req") +
+      '<a class="back-link" href="#/qna/requests">' + icon("arrowLeft", "sm") + "1:1 요청 목록</a>" +
+      '<section class="card"><h2 class="card-title">1:1 요청 남기기</h2><p class="tiny" style="margin:0 0 18px">어떤 화면에서 무엇을 눌렀을 때 어떤 문제가 생겼는지 적고, 스크린샷을 함께 올려 주시면 더 빨리 고칠 수 있어요.</p>' +
         '<form id="request-form" class="stack" novalidate>' +
           '<div class="field"><span class="field-label">분류</span><div class="req-cats">' + DB.REQUEST_CATEGORIES.map((c, i) => '<label class="chip-radio"><input type="radio" name="category" value="' + esc(c) + '"' + (i === 0 ? " checked" : "") + "><span>" + esc(c) + "</span></label>").join("") + "</div></div>" +
           '<div class="field"><label for="q-title">제목</label><input class="input" id="q-title" name="title" maxlength="80" placeholder="예: 과제 사진을 올려도 제출 버튼이 안 눌려요"></div>' +
@@ -1054,12 +1080,12 @@
   function pageRequestDetail(id) {
     const x = myRequests().find((r) => r.q.id === id);
     if (!x || x.s.id !== me.id) {
-      return '<div class="page">' + pageHead("Q&A", "") + qnaTabs("req") + '<section class="card empty">' + icon("lock") + '<p style="font-size:18px;font-weight:800;color:var(--ink);margin:0 0 6px">비공개 글이에요</p><p style="margin:0 0 18px">요청사항은 작성자와 강사님만 볼 수 있어요.</p><a class="btn btn-primary" href="#/qna/requests">목록으로</a></section></div>';
+      return '<div class="page">' + pageHead(ML("qna"), "") + qnaTabs("req") + '<section class="card empty">' + icon("lock") + '<p style="font-size:18px;font-weight:800;color:var(--ink);margin:0 0 6px">비공개 글이에요</p><p style="margin:0 0 18px">1:1 요청은 작성자와 강사님만 볼 수 있어요.</p><a class="btn btn-primary" href="#/qna/requests">목록으로</a></section></div>';
     }
     const q = x.q;
     const d = new Date(q.at);
-    return '<div class="page">' + pageHead("Q&A", "요청사항 내용을 확인하고, 강사님 답변을 받아 보세요.") + qnaTabs("req") +
-      '<a class="back-link" href="#/qna/requests">' + icon("arrowLeft", "sm") + "요청사항 목록</a>" +
+    return '<div class="page">' + pageHead(ML("qna"), "남긴 요청과 강사님 답변을 확인해요.") + qnaTabs("req") +
+      '<a class="back-link" href="#/qna/requests">' + icon("arrowLeft", "sm") + "1:1 요청 목록</a>" +
       '<article class="card req-detail"><div class="req-detail-top">' + (q.answer ? '<span class="badge badge-positive">답변완료</span>' : '<span class="badge badge-neutral">답변대기</span>') + '<span class="badge badge-neutral">' + esc(q.category || "기타") + '</span><span class="badge badge-neutral">' + icon("lock", "xs") + "비공개</span><span class=\"req-no\">#" + x.no + "</span></div>" +
         "<h2>" + esc(q.title) + '</h2><div class="meta">' + esc(me.name) + " · " + DB.date.toStr(d) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + "</div>" +
         '<div class="body">' + esc(q.body) + "</div>" +
@@ -1077,7 +1103,7 @@
     const G = D.docsGuide;
     const done = G.filter((g) => P.docs[g.id]).length;
     const pct = G.length ? Math.round((done / G.length) * 100) : 0;
-    return '<div class="page">' + pageHead("서류 준비 가이드", "판매를 시작하기 전에 필요한 서류를 순서대로 준비하세요.") +
+    return '<div class="page">' + pageHead(ML("docs"), "판매를 시작하기 전에 챙길 서류와 준비 단계를 하나씩 체크해요.") +
       (G.length ? '<section class="card overall"><div class="overall-top"><span>서류 준비</span>' + pctText(pct) + "</div>" + progressBar(pct) + '<span class="tiny" style="color:var(--body)">' + G.length + "단계 중 " + done + "단계 완료</span></section>" +
       '<div class="callout callout-warn" style="margin-top:14px">' + icon("alert") + "<div>기관 이름·수수료·처리 기간은 바뀔 수 있어요. 신청 전에 각 기관 안내를 꼭 한 번 더 확인해 주세요.</div></div>" +
       '<div class="stack" style="margin-top:14px">' + G.map((g, i) => {
@@ -1094,8 +1120,20 @@
 
   /* ---------------- AI 봇 ---------------- */
   // 강의 데이터(FAQ·서류 가이드·과제·일정)를 찾아서 답하는 규칙형 봇. 서버가 붙으면 askBot() 안쪽만 LLM 호출로 바꾸면 된다.
-  const BOT_CHIPS = ["다음 라이브 언제예요?", "내 진행률 알려줘", "이번 주 과제 마감 언제예요?", "수료 조건이 뭐예요?", "마진 계산은 어떻게 해요?"];
-  const botGreeting = () => ({ from: "bot", text: "안녕하세요! 24시간 언제든 물어보세요. " + D.brand.instructor + "의 노하우를 그대로 담은 " + D.brand.botName.replace(/^24시\s*/, "") + "이 바로 답변해 드릴게요." });
+  // 받침 있는 말이면 a, 없으면 b (예: 조교 → 예요 · 봇 → 이에요)
+  const josa = (w, a, b) => { const c = String(w || "").trim().slice(-1).charCodeAt(0); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 ? a : b; };
+  // 바로 물어볼 질문: 켜진 메뉴 · 올라온 내용에 맞춰 바뀐다
+  function botChips() {
+    const out = ["이번 주 과제 마감은?", "내 진도 알려줘", "다음 라이브 언제예요?"];
+    if (on("replays")) out.push("지난 라이브 다시 볼래요");
+    if (on("glossary") && (D.glossary || [])[0]) out.push("‘" + D.glossary[0].term + "’ 뜻이 뭐예요?");
+    if (on("certificate")) out.push("수료하려면 뭘 해야 해요?");
+    if (DB.libOn(INS.id, "file") && (D.resources.file || []).some((x) => x.tool === "calculator")) out.push("마진 계산은 어떻게 해요?");
+    return out.slice(0, 6);
+  }
+  const botGreeting = () => ({ from: "bot", text: me.name + "님, 반가워요! 저는 " + D.brand.instructor + "님의 강의 자료를 공부한 " + D.brand.botName + josa(D.brand.botName, "이에요", "예요") + ".\n과제 방법 · 서류 · 일정 · 내 진도까지, 막히는 건 뭐든 물어보세요. 밤에도 바로 답해 드려요." });
+  // AI 조교 얼굴: 강사 사진이 있으면 사진, 없으면 로봇 아이콘
+  const botFace = (size) => '<span class="bot-face' + (size ? " " + size : "") + '">' + (D.brand.photo ? '<img src="' + esc(D.brand.photo) + '" alt="">' : icon("bot", "sm")) + "</span>";
   function grams(s) {
     const t = s.toLowerCase().replace(/[^0-9a-z가-힣]/g, "");
     const out = new Set();
@@ -1115,12 +1153,25 @@
     if (/^(안녕|hi|hello|하이|ㅎㅇ)/i.test(t)) return { text: me.name + "님 안녕하세요! 과제, 서류, 일정 무엇이든 물어보세요." };
     if (/(마감|언제까지)/.test(t)) {
       const w = D.weeks.find((x) => isOpen(x) && deadlineOf(x) >= today) || D.weeks.find((x) => !isOpen(x));
-      return w ? { text: w.no + "주차 과제 마감은 " + fmtMD(deadlineOf(w)) + "입니다. 마감이 지나도 제출은 할 수 있지만 수료 전까지 필수 과제를 모두 통과해야 해요.", links: [[w.no + "주차 과제", "#/missions/" + w.no]] } : { text: "모든 주차의 마감이 지났어요. 남은 필수 과제를 확인해 보세요.", links: [["수료증", "#/certificate"]] };
+      return w ? { text: w.no + "주차 과제 마감은 " + fmtMD(deadlineOf(w)) + "입니다. 마감이 지나도 제출은 할 수 있지만 수료 전까지 필수 과제를 모두 통과해야 해요.", links: [[w.no + "주차 과제", "#/missions/" + w.no]] } : { text: "모든 주차의 마감이 지났어요. 남은 필수 과제를 확인해 보세요.", links: [[ML("certificate"), "#/certificate"]] };
+    }
+    if (on("replays") && /(다시\s*보기|다시\s*볼|놓쳤|지난\s*라이브|녹화|replay)/i.test(t)) {
+      const list = replaysSorted().slice(0, 3);
+      return { text: "지난 라이브는 ‘" + ML("replays") + "’에서 주차별로 다시 볼 수 있어요.\n최근 영상: " + list.map((x) => "‘" + x.title + "’").join(", "), links: [[ML("replays"), "#/replays"]].concat(list[0] ? [[list[0].title, "#/replays/" + list[0].id]] : []) };
+    }
+    // 용어 사전에 있는 단어를 물으면 바로 풀이
+    const nt = t.replace(/\s/g, "").toLowerCase();
+    // ‘마누카꿀 UMF · MGO’처럼 가운뎃점 · 괄호로 묶인 용어는 나눠서도 찾는다
+    const termKeys = (g) => [g.term].concat(String(g.term).split(/[·\/(),]/)).map((x) => x.replace(/\s/g, "").toLowerCase()).filter((x, i, a) => x.length >= 2 && a.indexOf(x) === i);
+    const hit = on("glossary") ? (D.glossary || []).filter((g) => g.term).map((g) => ({ g, k: termKeys(g).filter((x) => nt.indexOf(x) !== -1).sort((x, y) => y.length - x.length)[0] || "" })).filter((x) => x.k).sort((x, y) => y.k.length - x.k.length)[0] : null;
+    const term = hit ? hit.g : null;
+    if (term && (/(뭐|뜻|의미|이란|란\??$|무슨|설명|알려)/.test(t) || nt.length <= hit.k.length + 4)) {
+      return { text: "‘" + term.term + "’" + (term.category ? " (" + term.category + ")" : "") + "\n" + term.desc, links: [[ML("glossary") + "에서 보기", "#/glossary?q=" + encodeURIComponent(term.term)]] };
     }
     if (/(라이브|강의\s*일정|다음\s*강의|언제.*(강의|라이브)|일정)/.test(t)) {
       const n = myEvents().find((e) => e.date >= today && e.type !== "deadline");
-      return n ? { text: "다음 일정은 " + fmtMD(n.date) + (n.time ? " " + n.time : "") + " ‘" + n.title + "’ 입니다.\n지난 라이브 다시보기는 커리큘럼 메뉴에 올라가요.", links: [["강의 일정 보기", "#/schedule"]] }
-        : { text: "예정된 일정이 없어요. 공지사항을 확인해 주세요.", links: [["공지사항", "#/notices"]] };
+      return n ? { text: "다음 일정은 " + fmtMD(n.date) + (n.time ? " " + n.time : "") + " ‘" + n.title + "’ 입니다." + (on("replays") ? "\n지난 라이브는 ‘" + ML("replays") + "’에서 다시 볼 수 있어요." : ""), links: [[ML("schedule"), "#/schedule"]].concat(on("replays") ? [[ML("replays"), "#/replays"]] : []) }
+        : { text: "예정된 일정이 없어요. ‘" + ML("notices") + "’에 새 안내가 있는지 확인해 주세요.", links: [[ML("notices"), "#/notices"]] };
     }
     if (/(진행률|진도|몇\s*개|얼마나\s*했|남은\s*과제)/.test(t)) {
       const o = overallStats(), nm = nextMissionOverall();
@@ -1129,7 +1180,7 @@
     }
     if (/수료/.test(t)) {
       const o = overallStats();
-      return { text: "필수 과제 " + o.reqTotal + "개를 모두 통과하면 수료증이 발급돼요. 지금 " + o.reqDone + "개 통과, " + (o.reqTotal - o.reqDone) + "개 남았어요.", links: [["수료증 보기", "#/certificate"]] };
+      return { text: "필수 과제 " + o.reqTotal + "개를 모두 통과하면 수료증이 발급돼요. 지금 " + o.reqDone + "개 통과, " + (o.reqTotal - o.reqDone) + "개 남았어요.", links: [[ML("certificate"), "#/certificate"]] };
     }
     if (/(마진|계산기|순이익|판매가)/.test(t) && DB.libOn(INS.id, "file") && D.resources.file.some((x) => x.tool === "calculator")) {
       return { text: "자료실 ‘자료 파일’의 마진 계산기에 현지가·환율·배송비·수수료·광고비를 넣으면 순이익과 마진율이 바로 나와요. 판매가 기준 순이익 20~30%를 목표로 잡아 보세요.", links: [["마진 계산기 열기", "#/library/file?tool=calculator"]] };
@@ -1138,20 +1189,20 @@
     D.faqs.forEach((f) => {
       let s = similarity(t, f.q) * 2;
       (f.tags || []).forEach((tag) => { if (tag && t.indexOf(tag) !== -1) s += 1.2; });
-      cands.push({ s, text: f.a, links: [["Q&A 더 보기", "#/qna"]] });
+      cands.push({ s, text: f.a, links: [[ML("qna"), "#/qna"]] });
     });
     D.docsGuide.forEach((g) => {
       let s = similarity(t, g.title) * 2.2;
       if (t.replace(/\s/g, "").indexOf(g.title.replace(/\s/g, "")) !== -1) s += 2;
-      cands.push({ s, text: "‘" + g.title + "’은(는) " + (g.where || "") + "에서 진행해요." + (g.time ? " (소요 " + g.time + (g.cost ? ", 비용 " + g.cost : "") + ")" : "") + "\n필요 서류: " + (g.docs || []).join(", ") + ((g.tips || []).length ? "\n팁: " + g.tips.join(" / ") : ""), links: [["서류 준비 가이드", "#/docs"]] });
+      cands.push({ s, text: "‘" + g.title + "’은(는) " + (g.where || "") + "에서 진행해요." + (g.time ? " (소요 " + g.time + (g.cost ? ", 비용 " + g.cost : "") + ")" : "") + "\n필요 서류: " + (g.docs || []).join(", ") + ((g.tips || []).length ? "\n팁: " + g.tips.join(" / ") : ""), links: [[ML("docs"), "#/docs"]] });
     });
     allMissions().forEach((m) => {
       cands.push({ s: similarity(t, m.title) * 1.8, text: "‘" + m.title + "’ 과제는 이렇게 하면 돼요.\n" + (m.steps || []).map((x, i) => (i + 1) + ". " + x).join("\n"), links: [[m.weekNo + "주차 과제로 이동", "#/missions/" + m.weekNo + "/" + m.id]] });
     });
     cands.sort((a, b) => b.s - a.s);
     if (cands[0] && cands[0].s >= 0.9) return cands[0];
-    if (/(오류|버그|안\s*눌|안\s*돼|안\s*되|깨져|멈춰|에러|고장)/.test(t)) return { text: "프로그램이 이상하게 동작하나요? Q&A ‘요청사항’에 어떤 화면에서 무엇을 눌렀는지 적고 스크린샷을 올려 주시면 강사님이 확인 후 고쳐 드려요.", links: [["오류 신고하기", "#/qna/requests/new"]] };
-    return { text: "그 부분은 제가 정확히 답하기 어려워요. 자주 묻는 질문을 먼저 찾아보시고, 수업 내용은 라이브 Q&A 시간에 " + D.brand.instructor + "께 직접 물어봐 주세요.", links: [["자주 묻는 질문", "#/qna"], ["강의 일정", "#/schedule"]] };
+    if (/(오류|버그|안\s*눌|안\s*돼|안\s*되|깨져|멈춰|에러|고장)/.test(t)) return { text: "화면이 이상하게 동작하나요? ‘" + ML("qna") + " → 1:1 요청’에 어떤 화면에서 무엇을 눌렀는지 적고 스크린샷을 올려 주시면 강사님이 확인 후 고쳐 드려요.", links: [["1:1 요청 남기기", "#/qna/requests/new"]] };
+    return { text: "그 부분은 제가 정확히 답하기 어려워요. FAQ 검색에서 먼저 찾아보시고, 수업 내용은 라이브 시간에 " + D.brand.instructor + "님께 직접 물어봐 주세요.", links: [["FAQ 검색", "#/qna"], [ML("schedule"), "#/schedule"]] };
   }
   // 꺼진 메뉴로 가는 봇 답변 링크는 숨긴다
   function linkOk(l) {
@@ -1161,9 +1212,9 @@
   }
   function chatLog() {
     return [botGreeting()].concat(P.chat).map((m) =>
-      '<div class="msg' + (m.from === "me" ? " me" : "") + '">' + (m.from === "me" ? "" : '<span class="msg-avatar">' + icon("sparkles", "sm") + "</span>") +
+      '<div class="msg' + (m.from === "me" ? " me" : "") + '">' + (m.from === "me" ? "" : botFace("msg-avatar")) +
       '<div class="msg-bubble">' + esc(m.text) + (m.links && m.links.filter(linkOk).length ? '<div class="msg-links">' + m.links.filter(linkOk).map((l) => '<a href="' + esc(l[1]) + '">' + esc(l[0]) + "</a>").join("") + "</div>" : "") + "</div></div>").join("") +
-      (botThinking ? '<div class="msg"><span class="msg-avatar">' + icon("sparkles", "sm") + '</span><div class="msg-bubble"><span class="typing-dots"><i></i><i></i><i></i></span></div></div>' : "");
+      (botThinking ? '<div class="msg">' + botFace("msg-avatar") + '<div class="msg-bubble"><span class="typing-dots"><i></i><i></i><i></i></span></div></div>' : "");
   }
   function sendChat(text) {
     text = (text || "").trim();
@@ -1181,25 +1232,31 @@
     }, 550);
   }
   function refreshChats() { document.querySelectorAll("[data-chat-log]").forEach((el) => { el.innerHTML = chatLog(); el.scrollTop = el.scrollHeight; }); }
-  const chatForm = (id) => '<form class="chat-form" data-chat-form><input class="input" name="q" id="' + id + '" autocomplete="off" placeholder="메시지 입력" aria-label="메시지 입력"><button class="btn btn-primary" type="submit">전송</button></form>';
+  const chatForm = (id) => '<form class="chat-form" data-chat-form><input class="input" name="q" id="' + id + '" autocomplete="off" placeholder="궁금한 걸 편하게 적어 보세요" aria-label="질문 입력"><button class="btn btn-primary chat-send" type="submit" aria-label="보내기">' + icon("send", "sm") + "<span>보내기</span></button></form>";
+  const chipRow = (cls) => '<div class="' + cls + '">' + botChips().map((c) => '<button class="chip" type="button" data-action="chip" data-q="' + esc(c) + '">' + esc(c) + "</button>").join("") + "</div>";
   function pageBot() {
-    return '<div class="page">' + pageHead(D.brand.botName, D.brand.instructor + "의 강의 내용과 자주 묻는 질문을 바탕으로 24시간 답해 드려요.") +
-      '<section class="chat"><div class="chat-log" data-chat-log>' + chatLog() + "</div>" +
-        '<div class="chips">' + BOT_CHIPS.map((c) => '<button class="chip" type="button" data-action="chip" data-q="' + esc(c) + '">' + esc(c) + "</button>").join("") + "</div>" + chatForm("chat-input-page") +
+    return '<div class="page">' + pageHead(D.brand.botName, D.brand.instructor + "님의 강의 자료 · FAQ · 과제 안내를 바탕으로 24시간 답해 드려요.") +
+      '<section class="chat bot-full"><div class="bp-head">' + botFace("lg") + '<div class="bp-title"><strong>' + esc(D.brand.botName) + '</strong><small><i class="bp-dot"></i>지금 바로 답할 수 있어요</small></div></div>' +
+        '<div class="chat-log" data-chat-log>' + chatLog() + "</div>" + chipRow("chips") + chatForm("chat-input-page") +
       "</section>" +
-      '<p class="tiny" style="margin-top:12px">AI봇 답변은 참고용이에요. 사업자·통관 관련 최종 판단은 관할 기관 안내를 따라 주세요. <button class="link-btn" style="font-size:13px" data-action="clear-chat">대화 지우기</button></p></div>';
+      '<p class="tiny" style="margin-top:12px">' + esc(D.brand.botName) + "의 답변은 참고용이에요. 사업자 · 통관처럼 법이 정한 일은 관할 기관 안내를 꼭 확인해 주세요. <button class=\"link-btn\" style=\"font-size:13px\" data-action=\"clear-chat\">대화 지우기</button></p></div>";
   }
+  // 오른쪽 아래 AI 조교: 닫혀 있으면 말풍선 버튼, 열면 큰 대화창 (휴대폰은 아래에서 올라오는 시트)
   function renderBotFab(r) {
     const el = document.getElementById("bot-fab");
     if (!el) return;
-    if (r.parts[0] === "bot" || !on("bot")) { el.innerHTML = ""; return; }
+    el.classList.toggle("open", !!botOpen);
+    if (r.parts[0] === "bot" || !on("bot")) { el.innerHTML = ""; el.classList.remove("open"); return; }
     if (!botOpen) {
-      el.innerHTML = '<button class="bot-launch" type="button" data-action="bot-open"><span class="msg-avatar">' + icon("sparkles", "sm") + "</span><span>" + esc(D.brand.botName) + "</span></button>";
+      el.innerHTML = '<button class="bot-launch" type="button" data-action="bot-open" aria-label="' + esc(D.brand.botName) + ' 열기">' + botFace() + '<span class="bl-txt"><small>' + esc(D.brand.botName) + "</small><b>무엇이든 물어보세요</b></span>" + '<span class="bl-go">' + icon("message", "sm") + "</span></button>";
       return;
     }
-    el.innerHTML = '<section class="bot-panel" aria-label="' + esc(D.brand.botName) + '"><div class="bot-panel-head"><span class="msg-avatar">' + icon("sparkles", "sm") + "</span><strong>" + esc(D.brand.botName) + "</strong>" +
-      '<div class="tools"><a href="#/bot" aria-label="크게 보기">' + icon("arrowUpRight", "sm") + '</a><button type="button" data-action="bot-close" aria-label="닫기">' + icon("x", "sm") + "</button></div></div>" +
-      '<div class="chat-log" data-chat-log>' + chatLog() + "</div>" + chatForm("chat-input-fab") + "</section>";
+    el.innerHTML = '<button type="button" class="bp-scrim" data-action="bot-close" aria-label="닫기"></button>' +
+      '<section class="bot-panel" role="dialog" aria-label="' + esc(D.brand.botName) + '"><span class="bp-grab" aria-hidden="true"></span><div class="bp-head">' + botFace("lg") +
+        '<div class="bp-title"><strong>' + esc(D.brand.botName) + '</strong><small><i class="bp-dot"></i>' + esc(D.brand.instructor) + "님 강의 자료로 답해요 · 24시간</small></div>" +
+        '<div class="tools"><a href="#/bot" aria-label="전체 화면으로 보기" title="전체 화면">' + icon("arrowUpRight", "sm") + '</a><button type="button" data-action="bot-close" aria-label="닫기" title="닫기">' + icon("x", "sm") + "</button></div></div>" +
+      '<div class="chat-log" data-chat-log>' + chatLog() + "</div>" + chipRow("chips bp-chips") + chatForm("chat-input-fab") +
+      '<p class="bp-foot">답변은 참고용이에요 · <button type="button" class="link-btn" data-action="clear-chat">대화 지우기</button></p></section>';
     const log = el.querySelector("[data-chat-log]");
     log.scrollTop = log.scrollHeight;
   }
@@ -1209,7 +1266,7 @@
     const cat = r.parts[1];
     const warn = '<div class="callout callout-neg">' + icon("shield") + "<div>본 자료는 <b>유료 수강생 전용</b>입니다. 무단 다운로드·복사·캡처 배포 시 추적·법적 책임이 따릅니다.</div></div>";
     if (!cat) {
-      return '<div class="page">' + pageHead("유료강의 자료실", "분류를 선택해서 자료를 확인하세요.") + warn +
+      return '<div class="page">' + pageHead(ML("library"), "수강생에게만 열리는 전자책 · 실전 자료 · 강의 영상을 분류별로 모았어요.") + warn +
         '<div class="grid-2" style="margin-top:14px">' + libList().map((c) =>
           '<a class="res-card" href="#/library/' + c.id + '"><div class="res-top"><span class="res-icon ' + c.cls + '">' + icon(c.icon) + '</span><div><div class="res-title">' + esc(c.label) + '</div><div class="tiny">자료 ' + D.resources[c.id].length + "개</div></div></div>" +
           '<div class="res-desc">' + esc(c.desc()) + '</div><div class="res-foot"><span class="link-btn">열기 ' + icon("arrowRight", "sm") + "</span></div></a>").join("") + "</div></div>";
@@ -1238,7 +1295,7 @@
         return '<div class="res-item"><span class="res-icon ' + c.cls + '">' + icon(it.tool ? "calculator" : c.icon) + '</span><div style="min-width:0"><div class="m-title">' + esc(it.title) + '</div><div class="m-desc">' + esc([it.meta, it.desc].filter(Boolean).join(" · ")) + "</div></div>" + action + "</div>";
       }).join("");
     }
-    return '<div class="page">' + pageHead(c.label, c.desc(), crumb([["유료강의 자료실", "#/library"], [c.label]])) + warn +
+    return '<div class="page">' + pageHead(c.label, c.desc(), crumb([[ML("library"), "#/library"], [c.label]])) + warn +
       (showCalc ? '<div style="margin-top:14px">' + calculator() + "</div>" : "") + '<div style="margin-top:14px">' + body + "</div></div>";
   }
   // 자료 썸네일: 유튜브 썸네일 → 첫 사진 → 기본 그림
@@ -1257,7 +1314,7 @@
     const rest = imgs.filter((_, k) => !used[k]);
     const prev = list[i - 1], next = list[i + 1];
     const nav = (x, dir) => x ? '<a class="card list-row res-nav ' + dir + '" href="#/library/' + c.id + "/" + x.id + '">' + (dir === "prev" ? icon("chevLeft") : "") + '<span class="lr-title"><span class="tiny">' + (dir === "prev" ? "이전" : "다음") + "</span><br>" + esc(x.title) + "</span>" + (dir === "next" ? icon("chevRight") : "") + "</a>" : "<div></div>";
-    return '<div class="page">' + pageHead(it.title, [it.meta, it.desc].filter(Boolean).join(" · "), crumb([["유료강의 자료실", "#/library"], [c.label, "#/library/" + c.id], [it.title]])) +
+    return '<div class="page">' + pageHead(it.title, [it.meta, it.desc].filter(Boolean).join(" · "), crumb([[ML("library"), "#/library"], [c.label, "#/library/" + c.id], [it.title]])) +
       '<article class="card res-article">' + (DB.youtubeId(it.youtubeId) ? video(it) : "") +
         '<div class="body">' + body + (rest.length ? '<div class="n-imgs">' + rest.map(fig).join("") + "</div>" : "") + "</div>" +
         attachmentList(it.attachments) +
@@ -1312,16 +1369,16 @@
     const quote = D.quotes.length ? D.quotes[parseDate(todayStr()).getDate() % D.quotes.length] : "";
     const list = D.motivation;
     const cur = list.find((x) => x.id === mvSel) || list[0];
-    return '<div class="page mv-page">' + pageHead("동기부여", "매일 새로운 동기부여 영상이 올라옵니다.") +
+    return '<div class="page mv-page">' + pageHead(ML("motivation"), "지칠 때 다시 힘을 내도록 " + D.brand.instructor + "님이 고른 영상이에요.") +
       (cur ? '<section class="mv-stage" id="mv-stage">' + mvPlayer(cur) + '<div class="mv-now"><b>' + esc(cur.title) + "</b>" + (cur.minutes || cur.date ? '<span class="tiny">' + esc([cur.minutes, cur.date ? fmtMD(cur.date) : ""].filter(Boolean).join(" · ")) + "</span>" : "") + "</div></section>" +
-        '<div class="section-head"><h2>오늘의 동기부여 영상</h2>' + (D.brand.youtubeChannel ? '<a class="link-btn" href="' + esc(D.brand.youtubeChannel) + '" target="_blank" rel="noopener">유튜브 채널 ' + icon("arrowUpRight", "sm") + "</a>" : "") + "</div>" +
+        '<div class="section-head"><h2>오늘의 응원 영상</h2>' + (D.brand.youtubeChannel ? '<a class="link-btn" href="' + esc(D.brand.youtubeChannel) + '" target="_blank" rel="noopener">유튜브 채널 ' + icon("arrowUpRight", "sm") + "</a>" : "") + "</div>" +
         '<div class="mv-tiles">' + list.map((it, i) => {
           const yid = DB.youtubeId(it.youtubeId);
           return '<button type="button" class="mv-tile' + (it === cur ? " on" : "") + '" data-action="mv-pick" data-id="' + esc(it.id) + '" aria-pressed="' + (it === cur) + '" title="' + esc(it.title) + '">' +
             '<span class="mv-tile-img">' + (yid ? '<img src="https://i.ytimg.com/vi/' + esc(yid) + '/hqdefault.jpg" alt="" loading="lazy">' : '<span class="vod-ph">' + esc(it.title) + "</span>") + '<span class="mv-tile-play">' + icon("play") + "</span></span>" +
             '<span class="mv-tile-label">영상 ' + (i + 1) + (it === cur ? '<em>재생 중</em>' : "") + "</span></button>";
         }).join("") + "</div>"
-        : '<section class="card" style="margin-top:14px">' + empty("flame", "동기부여 영상을 준비하고 있어요.") + "</section>") +
+        : '<section class="card" style="margin-top:14px">' + empty("flame", "응원 영상을 준비하고 있어요.") + "</section>") +
       (quote ? '<div class="quote" style="margin-top:20px">“' + esc(quote) + "”<small>— " + esc(D.brand.instructor) + "</small></div>" : "") + "</div>";
   }
 
@@ -1341,9 +1398,9 @@
           : info ? '<span class="ch-info">' + icon("lock", "sm") + "<span>" + esc(ch.note) + "</span></span>" : '<span class="tiny">링크를 준비하고 있어요</span>') + "</div>";
       return ok ? '<a class="res-card ch-card" href="' + esc(ch.url) + '" target="_blank" rel="noopener"' + style + ">" + inner + "</a>" : '<div class="res-card ch-card ' + (info ? "info" : "off") + '"' + (info ? "" : ' aria-disabled="true"') + style + ">" + inner + "</div>";
     };
-    return '<div class="page">' + pageHead("1:1 소통채널", "궁금한 점이나 상담이 필요할 때, 아래 채널로 바로 문의하세요.") +
+    return '<div class="page">' + pageHead(ML("channels"), "상담이 필요할 때 편한 채널을 골라 바로 연결하세요.") +
       (list.length ? '<div class="grid-2 ch-grid">' + list.map(card).join("") + "</div>" : '<section class="card">' + empty("headset", "상담 채널을 준비하고 있어요.") + "</section>") +
-      '<p class="ch-note">' + icon("clock", "xs") + " 운영 시간 밖에는 답변이 늦을 수 있어요." + (on("qna") ? ' 화면 오류는 <a href="#/qna/requests/new">요청사항</a>으로 남겨 주시면 더 빨라요.' : "") + "</p></div>";
+      '<p class="ch-note">' + icon("clock", "xs") + " 운영 시간 밖에는 답변이 늦을 수 있어요." + (on("qna") ? ' 화면 오류는 <a href="#/qna/requests/new">1:1 요청</a>으로 남겨 주시면 더 빨라요.' : "") + "</p></div>";
   }
 
   /* ---------------- 제휴채널 ---------------- */
@@ -1375,10 +1432,10 @@
       return '<section class="pt-sec"><div class="section-head"><h2>' + esc(g.label) + ' <span class="tiny">' + list.length + '곳</span></h2><span class="hint">' + esc(g.desc) + "</span></div>" +
         '<div class="grid-2 ch-grid">' + list.map(card).join("") + "</div></section>";
     };
-    return '<div class="page">' + pageHead("제휴채널", "두고그룹 서비스와 수강생 전용 제휴 혜택을 한곳에서 확인하고 바로 이동하세요.") +
+    return '<div class="page">' + pageHead(ML("partners"), "수강생만 받을 수 있는 제휴 혜택과 두고그룹 서비스를 모았어요.") +
       (feat ? '<a class="pt-notice" href="' + esc(feat.url) + '" target="_blank" rel="noopener">' + window.brandMark(isCafe(feat.url) ? "naver" : "kakao", "md") + "<span><b>제휴 혜택 · 할인 코드는 모두 " + esc(feat.title) + "에서 안내해 드려요</b><small>" + esc(feat.tag || "") + (feat.tag ? " · " : "") + "카페에 가입하면 제휴사 할인 코드와 이용 방법을 바로 볼 수 있어요.</small></span>" + icon("arrowUpRight", "sm") + "</a>" : "") +
       tabs + (all.length ? G.filter((g) => tab === "all" || tab === g.key).map(section).join("") || '<section class="card" style="margin-top:14px">' + empty("handshake", "이 분류에는 아직 등록된 곳이 없어요.") + "</section>"
-        : '<section class="card" style="margin-top:14px">' + empty("handshake", "제휴채널을 준비하고 있어요.") + "</section>") + "</div>";
+        : '<section class="card" style="margin-top:14px">' + empty("handshake", "제휴 혜택을 준비하고 있어요.") + "</section>") + "</div>";
   }
 
   /* ---------------- 수료증 ---------------- */
@@ -1431,7 +1488,7 @@
         (showOpen ? "" : '<div class="cert-lock">' + icon("lock") + "<strong>필수 과제 " + remaining.length + '개가 남았어요</strong><span class="muted">모두 통과하면 이름이 새겨진 수료증이 열립니다.</span>' +
           (canPreview ? '<button class="btn btn-primary" data-action="cert-preview">' + icon("eye", "sm") + "강사 미리보기: 수료증 열어 보기" + "</button>" : "") + "</div>") +
       "</article></div>";
-    return '<div class="page">' + pageHead("수료증", "필수 과제 " + o.reqTotal + "개를 모두 통과하면 수료증이 발급됩니다.") +
+    return '<div class="page">' + pageHead(ML("certificate"), "필수 과제 " + o.reqTotal + "개를 모두 통과하면 수료증이 발급됩니다.") +
       '<section class="card overall no-print"><div class="overall-top"><span>필수 과제 통과</span>' + pctText(pct) + "</div>" + progressBar(pct) + '<span class="tiny" style="color:var(--body)">' + o.reqTotal + "개 중 " + o.reqDone + "개 통과" + (earned ? " · 수료 조건을 모두 채웠어요!" : " · " + remaining.length + "개 남음") + "</span></section>" +
       cert +
       (showOpen
@@ -1446,6 +1503,151 @@
               : '<div class="list-row" style="opacity:.6"><span class="badge badge-neutral">' + m.weekNo + '주차</span><span class="lr-title">' + esc(m.title) + '</span><span class="lr-date">' + icon("lock", "xs") + " " + fmtMD(openOf(w)) + "</span></div>";
           }).join("") + "</section>" : "") +
       "</div>";
+  }
+
+  /* ---------------- 라이브 다시보기 ---------------- */
+  // 강사가 올린 지난 라이브 녹화를 주차별로. 다 본 영상은 ‘다 봤어요’로 표시해 둔다 (P.replays)
+  let rpWeek = "all";
+  const replaysSorted = () => (D.replays || []).slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+  const weekChips = (nums, cur, action, all) => '<div class="fchips wk-chips">' + [["all", "전체", all]].concat(nums.map((n) => [String(n), n + "주차", null])).map((x) =>
+    '<button type="button" class="fchip' + (String(cur) === x[0] ? " on" : "") + '" data-action="' + action + '" data-k="' + x[0] + '" aria-pressed="' + (String(cur) === x[0]) + '">' + x[1] + (x[2] != null ? ' <span class="fnum">' + x[2] + "</span>" : "") + "</button>").join("") + "</div>";
+  function pageReplays(r) {
+    if (r.parts[1]) return pageReplay(r.parts[1]);
+    const all = replaysSorted(), seen = P.replays || {};
+    const weeks = all.map((x) => Number(x.week) || 0).filter((n, i, a) => n && a.indexOf(n) === i).sort((a, b) => a - b);
+    if (rpWeek !== "all" && weeks.indexOf(Number(rpWeek)) === -1) rpWeek = "all";
+    const list = all.filter((x) => rpWeek === "all" || Number(x.week) === Number(rpWeek));
+    const done = all.filter((x) => seen[x.id]).length, pct = all.length ? Math.round(done / all.length * 100) : 0;
+    return '<div class="page">' + pageHead(ML("replays"), "라이브를 놓쳤거나 한 번 더 듣고 싶을 때, 주차별로 골라 보세요.") +
+      (all.length ? '<section class="card overall"><div class="overall-top"><span>다시보기 시청</span>' + pctText(pct) + "</div>" + progressBar(pct) + '<span class="tiny" style="color:var(--body)">' + all.length + "개 중 " + done + "개 시청 · 최근 영상이 맨 앞에 있어요</span></section>" +
+        (weeks.length > 1 ? weekChips(weeks, rpWeek, "rp-week", all.length) : "") +
+        '<div class="rp-grid">' + list.map((x) => {
+          const yid = DB.youtubeId(x.youtubeId);
+          return '<a class="card rp-card plain-link" href="#/replays/' + esc(x.id) + '"><span class="rp-thumb">' + (yid ? '<img src="https://i.ytimg.com/vi/' + esc(yid) + '/mqdefault.jpg" alt="" loading="lazy">' : "") + '<span class="rp-play">' + icon("play") + "</span>" + (x.minutes ? '<span class="rp-len">' + esc(x.minutes) + "</span>" : "") + "</span>" +
+            '<span class="rp-body"><span class="rp-meta">' + (x.week ? '<span class="badge badge-neutral">' + Number(x.week) + "주차</span>" : "") + (x.date ? "<span>" + fmtMD(x.date) + " 라이브</span>" : "") + (seen[x.id] ? '<span class="badge badge-positive">' + icon("check", "xs") + "다 봤어요</span>" : "") + "</span>" +
+            "<b>" + esc(x.title) + "</b>" + (x.summary ? '<span class="rp-sum">' + esc(String(x.summary).replace(/\s+/g, " ").slice(0, 90)) + "</span>" : "") + "</span></a>";
+        }).join("") + "</div>"
+        : '<section class="card">' + empty("monitorPlay", "아직 올라온 다시보기 영상이 없어요.") + "</section>") + "</div>";
+  }
+  function pageReplay(id) {
+    const all = replaysSorted(), i = all.findIndex((x) => x.id === id), x = all[i];
+    if (!x) return notFound();
+    const seen = !!(P.replays || {})[id], newer = all[i - 1], older = all[i + 1];
+    return '<div class="page">' + pageHead(x.title, [x.week ? Number(x.week) + "주차" : "", x.date ? fmtFull(x.date) + " 라이브" : "", x.minutes || ""].filter(Boolean).join(" · "), crumb([[ML("replays"), "#/replays"], [x.title]])) +
+      '<section class="card">' + video(x) +
+        (x.summary ? '<div class="rp-notes"><p class="side-label">' + icon("pin", "xs") + " 이번 라이브 핵심 정리</p>" + DB.rich(x.summary) + "</div>" : "") + attachmentList(x.attachments) +
+        '<div class="guide-actions" style="margin-top:20px"><button class="btn ' + (seen ? "btn-secondary" : "btn-primary") + '" data-action="toggle-replay" data-id="' + esc(id) + '">' + icon("check", "sm") + (seen ? "다 봤어요 · 취소" : "다 봤어요") + "</button>" +
+          (x.week && on("missions") && findWeek(x.week) && isOpen(findWeek(x.week)) ? '<a class="btn btn-tertiary" href="#/missions/' + Number(x.week) + '">' + Number(x.week) + "주차 과제 보기</a>" : "") +
+          (on("notes") ? '<a class="btn btn-tertiary" href="#/notes">' + icon("notebookPen", "sm") + esc(ML("notes")) + "에 정리하기</a>" : "") + "</div></section>" +
+      '<div class="grid-2" style="margin-top:14px">' +
+        (older ? '<a class="card list-row" href="#/replays/' + esc(older.id) + '">' + icon("chevLeft") + '<span class="lr-title"><span class="tiny">이전 라이브</span><br>' + esc(older.title) + "</span></a>" : "<div></div>") +
+        (newer ? '<a class="card list-row" href="#/replays/' + esc(newer.id) + '" style="text-align:right"><span class="lr-title"><span class="tiny">다음 라이브</span><br>' + esc(newer.title) + "</span>" + icon("chevRight") + "</a>" : "<div></div>") +
+      "</div></div>";
+  }
+
+  /* ---------------- 모범 과제 ---------------- */
+  // 강사가 고른 잘한 과제 예시 (사진 + 강사 코멘트). 과제와 이어 두면 과제 화면에서도 바로 보인다
+  let scWeek = "all";
+  const showcaseOf = (missionId) => (D.showcase || []).filter((x) => x.missionId && x.missionId === missionId);
+  function pageShowcase(r) {
+    if (r && r.params.get("w")) { scWeek = r.params.get("w"); history.replaceState(null, "", "#/showcase"); }
+    const all = (D.showcase || []).slice().sort((a, b) => (Number(a.week) || 99) - (Number(b.week) || 99));
+    const weeks = all.map((x) => Number(x.week) || 0).filter((n, i, a) => n && a.indexOf(n) === i).sort((a, b) => a - b);
+    if (scWeek !== "all" && weeks.indexOf(Number(scWeek)) === -1) scWeek = "all";
+    const list = all.filter((x) => scWeek === "all" || Number(x.week) === Number(scWeek));
+    return '<div class="page">' + pageHead(ML("showcase"), D.brand.instructor + "님이 고른 잘한 과제예요. 어떻게 하면 좋은지 감을 잡고 내 과제에 적용해 보세요.") +
+      (all.length ? (weeks.length > 1 ? weekChips(weeks, scWeek, "sc-week", all.length) : "") +
+        '<div class="sc-grid">' + list.map(showcaseCard).join("") + "</div>"
+        : '<section class="card">' + empty("trophy", "아직 등록된 모범 과제가 없어요.") + "</section>") + "</div>";
+  }
+  function showcaseCard(x) {
+    const imgs = x.images || [], w = x.week ? findWeek(x.week) : null;
+    const m = x.missionId && w ? w.missions.find((mm) => mm.id === x.missionId) : null;
+    return '<article class="card sc-card">' +
+      (imgs.length ? '<div class="sc-shots n' + Math.min(imgs.length, 3) + '">' + imgs.slice(0, 3).map((im, i) => '<button type="button" class="sc-shot" data-action="sc-zoom" data-id="' + esc(x.id) + '" data-i="' + i + '" aria-label="사진 크게 보기"><img src="' + esc(im.data || im.url) + '" alt="" loading="lazy">' + (i === 2 && imgs.length > 3 ? '<span class="sc-more">+' + (imgs.length - 3) + "</span>" : "") + "</button>").join("") + "</div>" : "") +
+      '<div class="sc-body"><div class="sc-tags"><span class="sc-medal">' + icon("trophy", "xs") + "모범 과제</span>" + (x.week ? '<span class="badge badge-neutral">' + Number(x.week) + "주차</span>" : "") + (x.author ? '<span class="sc-author">' + esc(x.author) + "</span>" : "") + "</div>" +
+        "<h3>" + esc(x.title) + "</h3>" +
+        (x.desc ? '<div class="sc-comment"><span class="sc-c-label">' + icon("message", "xs") + esc(D.brand.instructor) + " 코멘트</span>" + DB.rich(x.desc) + "</div>" : "") +
+        (m && on("missions") && isOpen(w) ? '<a class="link-btn sc-go" href="#/missions/' + w.no + "/" + m.id + '">‘' + esc(m.title) + "’ 과제 하러 가기 " + icon("arrowRight", "sm") + "</a>" : "") +
+      "</div></article>";
+  }
+  function showcaseZoom(id, i) {
+    const x = (D.showcase || []).find((s) => s.id === id);
+    if (!x) return;
+    const imgs = x.images || [];
+    openModal(x.title, '<div class="sc-zoom">' + imgs.map((im, k) => '<img src="' + esc(im.data || im.url) + '" alt="' + esc(x.title + " 사진 " + (k + 1)) + '"' + (k === Number(i) ? ' id="sc-zoom-at"' : "") + ">").join("") + "</div>", '<button class="btn btn-primary" data-action="modal-close">닫기</button>', true);
+    const at = document.getElementById("sc-zoom-at"); if (at) at.scrollIntoView({ block: "start" });
+  }
+
+  /* ---------------- 학습 노트 ---------------- */
+  // 주차마다 회고 질문(강사가 정함, 없으면 기본 질문)에 답하고, 강의 화면에서 적은 메모도 주차별로 모아 본다 (P.journal · P.notes)
+  const promptsOf = (no) => { const own = (D.notePrompts || []).filter((x) => Number(x.week) === Number(no) && x.q); return own.length ? own : DB.NOTE_PROMPTS.map((q, i) => ({ id: "d" + i, q })); };
+  function pageNotes() {
+    const J = P.journal || {}, N = P.notes || {};
+    const open = D.weeks.filter(isOpen);
+    const cur = D.weeks.find((w) => isOpen(w) && todayStr() <= deadlineOf(w)) || open[open.length - 1];
+    const answered = open.filter((w) => Object.keys((J[w.no] || {}).a || {}).some((k) => (J[w.no].a[k] || "").trim())).length;
+    const memoCount = Object.keys(N).filter((k) => (N[k] || "").trim()).length;
+    return '<div class="page">' + pageHead(ML("notes"), "주차마다 배운 것을 짧게 돌아보고, 강의 메모까지 한곳에 모아 두는 나만의 노트예요.") +
+      '<section class="card nt-sum"><div class="nt-stat"><b>' + answered + "<small> / " + open.length + '주</small></b><span>회고 작성</span></div><div class="nt-stat"><b>' + memoCount + '<small>개</small></b><span>강의 메모</span></div>' +
+        '<button type="button" class="btn btn-secondary btn-sm nt-export" data-action="notes-export">' + icon("download", "sm") + "노트 내려받기</button></section>" +
+      (D.weeks.length ? D.weeks.map((w) => {
+        if (!isOpen(w)) return '<section class="card nt-week locked"><div class="nt-head"><span class="nt-no">' + w.no + '</span><div><b>' + w.no + "주차 · " + esc(w.title) + '</b><small>' + icon("lock", "xs") + " " + fmtMD(openOf(w)) + "에 열려요</small></div></div></section>";
+        const ans = (J[w.no] || {}).a || {};
+        const memos = w.lessons.filter((l) => (N[l.id] || "").trim());
+        const filled = promptsOf(w.no).filter((p) => (ans[p.id] || "").trim()).length;
+        return '<details class="card nt-week"' + (w === cur ? " open" : "") + '><summary class="nt-head"><span class="nt-no">' + w.no + '</span><div><b>' + w.no + "주차 · " + esc(w.title) + "</b><small>" + (filled ? "회고 " + filled + "개 작성" : "아직 비어 있어요") + (memos.length ? " · 강의 메모 " + memos.length + "개" : "") + (w === cur ? " · 이번 주" : "") + "</small></div>" + icon("chevDown", "sm chev") + "</summary>" +
+          '<div class="nt-qs">' + promptsOf(w.no).map((p, i) => '<label class="nt-q"><span class="nt-q-t"><i>Q' + (i + 1) + "</i>" + esc(p.q) + '</span><textarea class="textarea" rows="3" data-journal="' + w.no + '" data-q="' + esc(p.id) + '" placeholder="생각나는 대로 짧게 적어도 좋아요">' + esc(ans[p.id] || "") + "</textarea></label>").join("") +
+            '<p class="tiny nt-state" id="nt-state-' + w.no + '">' + ((J[w.no] || {}).at ? fmtStamp((J[w.no] || {}).at) + " 저장됨" : "적으면 자동으로 저장돼요") + "</p></div>" +
+          (memos.length ? '<div class="nt-memos"><p class="side-label">' + icon("pen", "xs") + " 강의 메모</p>" + memos.map((l) => '<a class="nt-memo" href="#/curriculum/' + esc(l.id) + '"><b>' + esc(l.title) + "</b><span>" + esc(N[l.id]) + "</span></a>").join("") + "</div>"
+            : '<p class="tiny nt-hint">' + icon("pen", "xs") + " 강의 화면의 ‘내 메모’에 적은 내용도 여기에 모여요.</p>") +
+        "</details>";
+      }).join("") : '<section class="card">' + empty("notebookPen", "주차가 열리면 노트를 쓸 수 있어요.") + "</section>") + "</div>";
+  }
+  function exportNotes() {
+    const J = P.journal || {}, N = P.notes || {}, lines = [D.brand.courseTitle + " · " + me.name + "님의 " + ML("notes"), ""];
+    D.weeks.filter(isOpen).forEach((w) => {
+      lines.push("■ " + w.no + "주차 · " + w.title);
+      const ans = (J[w.no] || {}).a || {};
+      promptsOf(w.no).forEach((p) => { if ((ans[p.id] || "").trim()) lines.push("Q. " + p.q, "A. " + ans[p.id].trim(), ""); });
+      w.lessons.filter((l) => (N[l.id] || "").trim()).forEach((l) => lines.push("[강의 메모] " + l.title, N[l.id].trim(), ""));
+      lines.push("");
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" }));
+    a.download = ML("notes").replace(/\s/g, "") + "_" + todayStr() + ".txt";
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+
+  /* ---------------- 용어 사전 ---------------- */
+  // 강의에 나오는 용어를 가나다 순으로. 검색 · 분류 · 초성 색인. AI 조교도 이 풀이로 답한다
+  let glCat = "전체";
+  const CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+  const initialOf = (s) => {
+    const t = String(s || "").trim(), c = t.charCodeAt(0);
+    if (c >= 0xac00 && c <= 0xd7a3) { const ch = CHO[Math.floor((c - 0xac00) / 588)]; return { "ㄲ": "ㄱ", "ㄸ": "ㄷ", "ㅃ": "ㅂ", "ㅆ": "ㅅ", "ㅉ": "ㅈ" }[ch] || ch; }
+    return /[a-z]/i.test(t.charAt(0)) ? "A-Z" : "0-9";
+  };
+  function glossaryList(q) {
+    const t = String(q || "").trim().toLowerCase().replace(/\s/g, "");
+    const list = (D.glossary || []).filter((g) => (glCat === "전체" || (g.category || "기타") === glCat) && (!t || (g.term + g.desc + (g.category || "")).toLowerCase().replace(/\s/g, "").indexOf(t) !== -1))
+      .sort((a, b) => String(a.term).localeCompare(String(b.term), "ko"));
+    if (!list.length) return empty("search", "찾는 용어가 없어요. " + esc(D.brand.botName) + "에게 물어보세요.");
+    const groups = [];
+    list.forEach((g) => { const k = initialOf(g.term); let grp = groups.find((x) => x.k === k); if (!grp) groups.push(grp = { k, items: [] }); grp.items.push(g); });
+    return (t ? "" : '<nav class="gl-index" aria-label="초성 색인">' + groups.map((g) => '<a href="#gl-' + encodeURIComponent(g.k) + '" data-action="gl-jump" data-k="' + esc(g.k) + '">' + esc(g.k) + "</a>").join("") + "</nav>") +
+      groups.map((g) => '<div class="gl-group" id="gl-' + encodeURIComponent(g.k) + '"><h3 class="gl-k">' + esc(g.k) + "</h3>" + g.items.map((x) =>
+        '<article class="gl-item"><div class="gl-term"><b>' + esc(x.term) + "</b>" + (x.category ? '<span class="badge badge-neutral">' + esc(x.category) + "</span>" : "") + "</div><p>" + esc(x.desc) + "</p></article>").join("") + "</div>").join("");
+  }
+  function pageGlossary(r) {
+    const G = D.glossary || [], q = r.params.get("q") || "";
+    const cats = ["전체"].concat(G.map((g) => g.category || "기타").filter((c, i, a) => a.indexOf(c) === i));
+    if (cats.indexOf(glCat) === -1) glCat = "전체";
+    return '<div class="page">' + pageHead(ML("glossary"), "강의에 나오는 낯선 용어를 쉬운 말로 풀어 두었어요. 모르는 말이 나오면 여기서 찾아보세요.") +
+      '<section class="card gl-card"><div class="search">' + icon("search") + '<input class="input" id="gl-search" type="search" value="' + esc(q) + '" placeholder="용어를 검색해 보세요 (예: ' + esc((G[0] || {}).term || "마진율") + ')" aria-label="용어 검색"></div>' +
+        (cats.length > 2 ? '<div class="faq-cats" role="tablist">' + cats.map((c) => '<button type="button" class="chip' + (c === glCat ? " on" : "") + '" data-action="gl-cat" data-cat="' + esc(c) + '">' + esc(c) + " <span>" + (c === "전체" ? G.length : G.filter((g) => (g.category || "기타") === c).length) + "</span></button>").join("") + "</div>" : "") +
+        '<div id="gl-list">' + glossaryList(q) + "</div></section>" +
+      (on("bot") ? '<p class="tiny" style="margin-top:12px">' + icon("bot", "xs") + " " + esc(D.brand.botName) + "에게 ‘○○가 뭐예요?’라고 물어봐도 이 풀이로 답해 드려요.</p>" : "") + "</div>";
   }
 
   /* ---------------- 추가 메뉴 (마스터가 만든 자유 페이지) ---------------- */
@@ -1465,9 +1667,9 @@
   /* ---------------- 기타 ---------------- */
   function lockedPage(w, from) {
     const cur = from === "curriculum";
-    return '<div class="page">' + pageHead(w.no + "주차 · " + w.title, "", crumb([[cur ? "커리큘럼" : "과제 제출하기", cur ? "#/curriculum" : "#/missions"], [w.no + "주차"]])) +
+    return '<div class="page">' + pageHead(w.no + "주차 · " + w.title, "", crumb([[cur ? ML("curriculum") : ML("missions"), cur ? "#/curriculum" : "#/missions"], [w.no + "주차"]])) +
       '<section class="card empty">' + icon("lock") + '<p style="font-size:18px;font-weight:800;color:var(--ink);margin:0 0 6px">' + fmtMD(openOf(w)) + '에 공개됩니다</p><p style="margin:0 0 20px">' + esc(w.summary) + "</p>" +
-      '<a class="btn btn-primary" href="' + (cur ? "#/curriculum" : "#/missions") + '">' + (cur ? "커리큘럼으로" : "주차 목록으로") + "</a></section></div>";
+      '<a class="btn btn-primary" href="' + (cur ? "#/curriculum" : "#/missions") + '">' + (cur ? ML("curriculum") + "으로" : "주차 목록으로") + "</a></section></div>";
   }
   function notFound() {
     return '<div class="page"><section class="card empty">' + icon("alert") + '<p style="font-size:18px;font-weight:800;color:var(--ink)">페이지를 찾을 수 없어요</p><a class="btn btn-primary" href="#/home">홈으로</a></section></div>';
@@ -1600,7 +1802,7 @@
     if (!document.getElementById("app") || root.dataset.who !== me.id) { renderShell(); root.dataset.who = me.id; }
     document.getElementById("app").classList.remove("nav-open");
     renderSidebar(r);
-    const pages = { home: pageHome, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, qna: pageQna, docs: pageDocs, bot: pageBot, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, partners: pagePartners, certificate: pageCertificate, page: pageCustom };
+    const pages = { home: pageHome, curriculum: pageCurriculum, replays: pageReplays, showcase: pageShowcase, notes: pageNotes, glossary: pageGlossary, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, qna: pageQna, docs: pageDocs, bot: pageBot, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, partners: pagePartners, certificate: pageCertificate, page: pageCustom };
     const fn = pages[r.parts[0]] || notFound;
     const main = document.getElementById("main");
     const prevKey = main.dataset.key, key = location.hash;
@@ -1689,11 +1891,18 @@
       case "chip": sendChat(a.dataset.q); break;
       case "ask-bot": botOpen = true; DB.store.set(KEY_BOT, true); renderBotFab(route()); sendChat(a.dataset.q); break;
       case "clear-chat": P.chat = []; saveProgress(); refreshChats(); break;
-      case "bot-open": botOpen = true; DB.store.set(KEY_BOT, true); renderBotFab(route()); { const i = document.getElementById("chat-input-fab"); if (i) i.focus(); } break;
+      case "bot-open": document.getElementById("app").classList.remove("nav-open"); botOpen = true; DB.store.set(KEY_BOT, true); renderBotFab(route()); { const i = document.getElementById("chat-input-fab") || document.getElementById("chat-input-page"); if (i && !window.matchMedia("(max-width: 720px)").matches) i.focus(); } break;
       case "bot-close": botOpen = false; DB.store.set(KEY_BOT, false); renderBotFab(route()); break;
       case "not-ready": toast("자료를 준비하고 있어요. 올라오면 공지로 알려 드릴게요."); break;
       case "play": playModal(a.dataset.cat, a.dataset.id); break;
       case "cert-preview": certPreview = !certPreview; document.getElementById("main").innerHTML = pageCertificate(); if (certPreview) { const c = document.querySelector(".cert-wrap"); if (c) c.scrollIntoView({ behavior: "smooth", block: "start" }); } break;
+      case "rp-week": rpWeek = a.dataset.k; { const y = window.scrollY; render(); window.scrollTo(0, y); } break;
+      case "sc-week": scWeek = a.dataset.k; { const y = window.scrollY; render(); window.scrollTo(0, y); } break;
+      case "toggle-replay": { const id = a.dataset.id; P.replays = P.replays || {}; if (P.replays[id]) delete P.replays[id]; else P.replays[id] = Date.now(); saveProgress(); render(); if (P.replays[id]) toast("다 본 영상으로 표시했어요."); break; }
+      case "sc-zoom": showcaseZoom(a.dataset.id, a.dataset.i); break;
+      case "notes-export": exportNotes(); break;
+      case "gl-cat": glCat = a.dataset.cat; { const i = document.getElementById("gl-search"); document.getElementById("gl-list").innerHTML = glossaryList(i ? i.value : ""); document.querySelectorAll("[data-action=gl-cat]").forEach((b) => b.classList.toggle("on", b.dataset.cat === glCat)); } break;
+      case "gl-jump": { e.preventDefault(); const g = document.getElementById("gl-" + encodeURIComponent(a.dataset.k)); if (g) g.scrollIntoView({ behavior: "smooth", block: "start" }); break; }
       case "wk-filter": wkFilter[a.dataset.grp] = a.dataset.k; { const y = window.scrollY; document.getElementById("main").innerHTML = pageWeek(route().parts[1]); window.scrollTo(0, y); } break;
       case "lib-gate-ok": document.body.classList.remove("lib-gated"); closeModal(); break;
       case "mv-pick": {
@@ -1728,12 +1937,12 @@
       if (!saveProgress()) { P.questions.pop(); return; }
       reqDraft = [];
       location.hash = "#/qna/requests/" + q.id;
-      toast("요청사항을 등록했어요. 강사님 답변이 달리면 여기서 확인할 수 있어요.");
+      toast("1:1 요청을 남겼어요. 강사님 답변이 달리면 여기서 확인할 수 있어요.");
       return;
     }
     if (f.hasAttribute("data-chat-form")) { e.preventDefault(); const v = f.q.value; f.q.value = ""; sendChat(v); f.q.focus(); }
   });
-  let noteTimer = null;
+  let noteTimer = null, journalTimer = null;
   document.addEventListener("input", (e) => {
     if (!isActive()) return;
     const t = e.target;
@@ -1741,6 +1950,23 @@
       clearTimeout(noteTimer);
       const st = document.getElementById("note-state"); if (st) st.textContent = "저장 중…";
       noteTimer = setTimeout(() => { P.notes = P.notes || {}; const v = t.value.trim(); if (v) P.notes[t.dataset.id] = t.value; else delete P.notes[t.dataset.id]; saveProgress(); const s2 = document.getElementById("note-state"); if (s2) s2.textContent = "저장됨"; }, 500);
+      return;
+    }
+    if (t.id === "gl-search") { document.getElementById("gl-list").innerHTML = glossaryList(t.value); return; }
+    if (t.dataset && t.dataset.journal) {
+      const wk = t.dataset.journal, st = document.getElementById("nt-state-" + wk);
+      if (st) st.textContent = "저장 중…";
+      clearTimeout(journalTimer);
+      journalTimer = setTimeout(() => {
+        P.journal = P.journal || {};
+        const j = P.journal[wk] = P.journal[wk] || { a: {} };
+        j.a = j.a || {};
+        document.querySelectorAll('[data-journal="' + wk + '"]').forEach((el) => { if (el.value.trim()) j.a[el.dataset.q] = el.value; else delete j.a[el.dataset.q]; });
+        j.at = Date.now();
+        if (!Object.keys(j.a).length) delete P.journal[wk];
+        saveProgress();
+        const s2 = document.getElementById("nt-state-" + wk); if (s2) s2.textContent = "방금 저장됨";
+      }, 600);
       return;
     }
     if (t.id === "faq-search") { document.getElementById("faq-list").innerHTML = faqList(t.value); return; }

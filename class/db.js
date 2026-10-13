@@ -104,21 +104,64 @@
   const themeOf = (key) => THEMES[key] || THEMES.lime;
 
   /* ---------------- 수강생 메뉴 구성 (마스터가 강사별로 켜고 끄고 이름을 바꾼다) ---------------- */
+  // 이름은 두고 클래스 표현으로 (강사·마스터가 메뉴 구성에서 바꿀 수 있다). replays · showcase · glossary 는 내용이 있을 때만 수강생에게 보인다
   const STUDENT_MENUS = [
-    { key: "home", label: "홈", icon: "home", locked: true },
-    { key: "curriculum", label: "커리큘럼", icon: "book" },
-    { key: "missions", label: "과제 제출하기", icon: "checks" },
-    { key: "schedule", label: "강의 일정", icon: "calendar" },
-    { key: "notices", label: "공지사항", icon: "megaphone" },
-    { key: "qna", label: "Q&A", icon: "help" },
-    { key: "docs", label: "서류 준비 가이드", icon: "clipboard" },
-    { key: "bot", label: "AI봇", icon: "sparkles" },
-    { key: "library", label: "유료강의 자료실", icon: "library" },
-    { key: "motivation", label: "동기부여", icon: "flame" },
-    { key: "channels", label: "1:1 소통채널", icon: "headset" },
-    { key: "partners", label: "제휴채널", icon: "handshake" },
-    { key: "certificate", label: "수료증", icon: "award" }
+    { key: "home", label: "내 강의실", icon: "home", locked: true },
+    { key: "curriculum", label: "주차별 강의", icon: "book" },
+    { key: "replays", label: "라이브 다시보기", icon: "monitorPlay", needs: "replays", desc: "지난 라이브를 주차별로 다시 봐요" },
+    { key: "missions", label: "과제 · 미션", icon: "checks" },
+    { key: "showcase", label: "모범 과제", icon: "trophy", needs: "showcase", desc: "강사가 고른 잘한 과제 예시" },
+    { key: "notes", label: "학습 노트", icon: "notebookPen", desc: "주차별 회고 질문 + 강의 메모 모음" },
+    { key: "schedule", label: "수업 캘린더", icon: "calendar" },
+    { key: "notices", label: "클래스 소식", icon: "megaphone" },
+    { key: "qna", label: "질문 · 요청", icon: "help" },
+    { key: "docs", label: "실무 체크리스트", icon: "clipboard" },
+    { key: "glossary", label: "용어 사전", icon: "bookA", needs: "glossary", desc: "강의에 나오는 용어를 쉽게 풀어 둔 사전" },
+    { key: "bot", label: "AI 조교", icon: "bot" },
+    { key: "library", label: "강의 자료함", icon: "library" },
+    { key: "motivation", label: "응원 영상", icon: "flame" },
+    { key: "channels", label: "1:1 상담", icon: "headset" },
+    { key: "partners", label: "제휴 혜택", icon: "handshake" },
+    { key: "certificate", label: "수료증 발급", icon: "award" }
   ];
+  // 예전 기본 이름 — 강사가 직접 바꾼 이름이 아니라 예전 기본 이름이 그대로 저장돼 있으면 새 기본 이름을 쓴다
+  const OLD_MENU_LABELS = { home: "홈", curriculum: "커리큘럼", missions: "과제 제출하기", schedule: "강의 일정", notices: "공지사항", qna: "Q&A", docs: "서류 준비 가이드", bot: "AI봇", library: "유료강의 자료실", motivation: "동기부여", channels: "1:1 소통채널", partners: "제휴채널", certificate: "수료증" };
+  const botNameOf = (inst) => (inst || "강사") + " AI 조교";
+  const OLD_BOT_NAME = (inst) => "24시 " + (inst || "강사") + " AI봇";
+  // 학습 노트: 강사가 주차별 질문을 정하지 않은 주차에 쓰는 기본 회고 질문
+  // 예전 메뉴 이름이 들어간 기본 문구 → 새 이름 (기본 문구가 그대로 남아 있을 때만 바뀐다 · 서버는 api/_lib/oneoff.js 의 같은 목록)
+  const RENAME_PHRASES = [
+    [/다시보기는 커리큘럼 메뉴에 올라갑니다/g, "다시보기는 ‘라이브 다시보기’ 메뉴에 올라갑니다"],
+    [/‘과제 제출하기’에서 주차별로/g, "‘과제 · 미션’에서 주차별로"],
+    [/Q&A 메뉴나 24시 (\S+) AI봇에 먼저/g, "‘질문 · 요청’ 메뉴나 $1 AI 조교에게 먼저"],
+    [/^유료강의 자료실 이용 시 주의사항$/, "강의 자료함 이용 시 주의사항"],
+    [/다시보기가 커리큘럼 1주차에 올라갔습니다/g, "다시보기가 ‘주차별 강의’ 1주차에 올라갔습니다"],
+    [/‘서류 준비 가이드’ 메뉴/g, "‘실무 체크리스트’ 메뉴"],
+    [/라이브 다음 날까지 커리큘럼 메뉴에 다시보기가 올라갑니다\. 강의 일정 메뉴에서/g, "라이브 다음 날까지 ‘라이브 다시보기’ 메뉴에 영상이 올라갑니다. ‘수업 캘린더’ 메뉴에서"],
+    [/강의 일정 메뉴의 파란 점/g, "‘수업 캘린더’ 메뉴의 파란 점"],
+    [/Q&A의 ‘요청사항’ 탭에서 ‘문의하기’를 눌러/g, "‘질문 · 요청’ 메뉴의 ‘1:1 요청’ 탭에서 ‘요청 남기기’를 눌러"],
+    [/^다시보기가 커리큘럼 메뉴에 올라갑니다\.$/, "다시보기가 ‘라이브 다시보기’ 메뉴에 올라갑니다."],
+    [/AI봇에 밤에 물어봐도/g, "AI 조교한테 밤에 물어봐도"],
+    [/^서류 준비 가이드 · 마진 계산기$/, "실무 체크리스트 · 마진 계산기"],
+    [/^24시 (\S+) AI봇$/, "$1 AI 조교 (24시간 답변)"],
+    [/일정, 자료실, 24시 AI봇까지 한 곳에서/g, "일정, 자료함, AI 조교까지 한 곳에서"],
+    [/^AI봇에게 궁금한 점 물어보기$/, "AI 조교에게 궁금한 점 물어보기"],
+    [/^강의 일정 확인하기$/, "수업 캘린더 확인하기"]
+  ];
+  const QL_RENAME = { ql1: ["공지사항", "클래스 소식"], ql2: ["자주 묻는 질문", "FAQ 검색"], ql3: ["서류 준비 가이드", "실무 체크리스트"], ql4: ["요청사항", "1:1 요청"] };
+  /** 콘텐츠 한 개의 예전 기본 문구를 새 메뉴 이름으로. 바뀐 칸 수를 돌려준다 */
+  function renameContentPhrases(c) {
+    let n = 0;
+    const walk = (o) => {
+      if (Array.isArray(o)) { o.forEach((v, i) => { if (typeof v === "string") { const r = RENAME_PHRASES.reduce((t, p) => t.replace(p[0], p[1]), v); if (r !== v) { o[i] = r; n++; } } else if (v && typeof v === "object") walk(v); }); return; }
+      Object.keys(o).forEach((k) => { const v = o[k]; if (typeof v === "string") { if (k === "data" || k === "photo") return; const r = RENAME_PHRASES.reduce((t, p) => t.replace(p[0], p[1]), v); if (r !== v) { o[k] = r; n++; } } else if (v && typeof v === "object") walk(v); });
+    };
+    ["notices", "faqs", "guide", "landing"].forEach((k) => { if (c[k] && typeof c[k] === "object") walk(c[k]); });
+    if (c.brand && c.brand.botName === OLD_BOT_NAME(c.brand.instructor)) { c.brand.botName = botNameOf(c.brand.instructor); n++; }
+    (Array.isArray(c.quickLinks) ? c.quickLinks : []).forEach((l) => { const r = QL_RENAME[l.id]; if (r && l.title === r[0]) { l.title = r[1]; n++; } });
+    return n;
+  }
+  const NOTE_PROMPTS = ["이번 주 강의에서 가장 기억에 남는 한 가지는?", "다음 주까지 바로 실행해 볼 행동 한 가지는?", "아직 헷갈리거나 강사님께 물어보고 싶은 점은?"];
   const LIB_MENUS = [
     { key: "ebook", label: "전자책 · 가이드북" }, { key: "file", label: "자료 파일" },
     { key: "vod", label: "이커머스 실전 VOD" }, { key: "senior", label: "시니어 기초 가이드" }
@@ -136,7 +179,7 @@
       for (let j = i - 1; j >= 0; j--) { const k = m.items.findIndex((x) => x.key === STUDENT_MENUS[j].key); if (k !== -1) { at = k + 1; break; } }
       m.items.splice(at, 0, { key: d.key, on: true });
     });
-    m.items.forEach((x) => { if (x.key === "home") x.on = true; });
+    m.items.forEach((x) => { if (x.key === "home") x.on = true; if (x.label && OLD_MENU_LABELS[x.key] === x.label) delete x.label; });
     m.library = Object.assign({ ebook: true, file: true, vod: true, senior: true }, m.library || {});
     return m;
   }
@@ -156,7 +199,7 @@
         courseTitle: brand.courseTitle || name + " 실전 클래스",
         shortTitle: brand.shortTitle || "실전 클래스",
         tagline: "함께 성장하는 실전 클래스",
-        botName: "24시 " + inst + " AI봇",
+        botName: botNameOf(inst),
         youtubeChannel: "", freeCourseUrl: "", kakaoChannel: "",
         loginEyebrow: "DOOGO CLASS",
         loginHeadline: name + "\n함께 시작해요",
@@ -181,16 +224,17 @@
       faqs: [
         { id: "q1", category: "수강 · 로그인", q: "로그인이 안 돼요.", a: "수강 신청 때 적은 이름과 휴대폰 번호 뒷자리 4자리로 로그인합니다. 승인 전이라면 강사님 승인을 기다려 주세요.", tags: ["로그인", "비밀번호", "승인"] },
         { id: "q2", category: "과제 · 수료", q: "과제는 언제까지 내야 하나요?", a: "주차가 열리고 6일 뒤가 과제 마감일입니다. 마감이 지나도 제출은 가능하지만 수료 전까지 필수 과제를 모두 통과해야 합니다.", tags: ["과제", "마감", "기한"] },
-        { id: "q3", category: "라이브 · 강의", q: "라이브를 놓쳤어요.", a: "다시보기가 커리큘럼 메뉴에 올라갑니다.", tags: ["라이브", "다시보기"] }
+        { id: "q3", category: "라이브 · 강의", q: "라이브를 놓쳤어요.", a: "다시보기가 ‘라이브 다시보기’ 메뉴에 올라갑니다.", tags: ["라이브", "다시보기"] }
       ],
       guide: [
-        { id: "g-1", title: "강의 일정 확인하기", desc: "라이브와 과제 마감일을 먼저 확인해 두세요.", url: "#/schedule" },
+        { id: "g-1", title: "수업 캘린더 확인하기", desc: "라이브와 과제 마감일을 먼저 확인해 두세요.", url: "#/schedule" },
         { id: "g-2", title: "[필독] 공지 읽기", desc: "수강 방법이 정리돼 있어요.", url: "#/notices" },
         { id: "g-3", title: "1주차 첫 강의 보기", desc: "다 본 강의는 ‘시청 완료’로 표시해 주세요.", url: "#/curriculum" }
       ],
       docsGuide: [],
       resources: { ebook: [], file: [], vod: [], senior: [] },
       motivation: [],
+      replays: [], showcase: [], glossary: [], notePrompts: [],
       quotes: ["오늘의 작은 실천이 더 큰 기회를 만듭니다"]
     };
   }
@@ -211,6 +255,7 @@
     c.channels = defaultChannels();
     c.weeks.forEach((w) => w.lessons.forEach((l) => { l.youtubeId = ""; l.attachments = []; }));
     c.motivation = [];
+    c.replays = []; c.showcase = [];
     ["ebook", "file", "vod", "senior"].forEach((k) => (c.resources[k] || []).forEach((it) => { it.youtubeId = ""; it.attachments = []; if (!it.tool) it.url = ""; }));
     c.notices.forEach((n) => { n.date = todayStr(); });
     c.pages = {};
@@ -248,7 +293,7 @@
         { title: "수료증 발급", desc: "필수 과제를 모두 마치면 이름이 새겨진 수료증을 드려요." }
       ], forWho: [] },
       curriculum: { title: "커리큘럼", sub: "주차별로 강의를 듣고 과제를 해내면 끝까지 갈 수 있어요." },
-      platform: { title: "결제하면 바로 열리는 수강생 전용 학습 공간", sub: "강의 영상, 과제 제출, 일정, 자료실, 24시 AI봇까지 한 곳에서 이어서 공부해요." },
+      platform: { title: "결제하면 바로 열리는 수강생 전용 학습 공간", sub: "강의 영상, 과제 제출, 일정, 자료함, AI 조교까지 한 곳에서 이어서 공부해요." },
       reviews: { title: "먼저 들은 수강생 이야기", items: [] },
       pricing: { title: "수강 안내", price: "", original: "", period: "", includes: [], ctaLabel: "수강 신청하기", ctaUrl: "", note: "" },
       faq: { title: "자주 묻는 질문", items: [] },
@@ -341,10 +386,10 @@
   function defaultQuickLinks(c) {
     const b = c.brand || {};
     return [
-      { id: "ql1", title: "공지사항", desc: "최신 공지와 일정 안내", url: "#/notices", icon: "megaphone" },
-      { id: "ql2", title: "자주 묻는 질문", desc: "수강 · 과제 · 수료 궁금증 모음", url: "#/qna", icon: "help" },
-      { id: "ql3", title: "서류 준비 가이드", desc: "1주차 서류 발급 단계별 안내", url: "#/docs", icon: "clipboard" },
-      { id: "ql4", title: "요청사항", desc: "오류 · 불편을 강사님께 바로 알리기", url: "#/qna/requests", icon: "bug" },
+      { id: "ql1", title: "클래스 소식", desc: "최신 공지와 일정 안내", url: "#/notices", icon: "megaphone" },
+      { id: "ql2", title: "FAQ 검색", desc: "수강 · 과제 · 수료 궁금증 모음", url: "#/qna", icon: "help" },
+      { id: "ql3", title: "실무 체크리스트", desc: "1주차 서류 발급 단계별 안내", url: "#/docs", icon: "clipboard" },
+      { id: "ql4", title: "1:1 요청", desc: "오류 · 불편을 강사님께 바로 알리기", url: "#/qna/requests", icon: "bug" },
       { id: "ql6", title: (b.instructor || "강사") + " 유튜브", desc: "실전 노하우 영상 모음", url: b.youtubeChannel || "", icon: "play", color: "#ff0000" },
       { id: "ql8", title: "네이버 카페", desc: "두고마켓 회원 게시판 · 정보 나눔", url: "https://cafe.naver.com/doogomarket", icon: "users", color: "#03c75a" },
       { id: "ql9", title: "두고커넥트", desc: "건강식품 제조 · OEM 파트너", url: "https://www.doogoconnect.com/", icon: "layers", color: "#0a5de2" },
@@ -429,11 +474,13 @@
     normalizeWeeks(c.weeks);
     c.curricula = Array.isArray(c.curricula) ? c.curricula : [];
     c.curricula.forEach((cu) => { cu.weeks = cu.weeks || []; normalizeWeeks(cu.weeks); });
-    ["schedule", "notices", "faqs", "docsGuide", "motivation", "quotes", "guide"].forEach((k) => { c[k] = c[k] || []; });
+    ["schedule", "notices", "faqs", "docsGuide", "motivation", "quotes", "guide", "replays", "showcase", "glossary", "notePrompts"].forEach((k) => { c[k] = Array.isArray(c[k]) ? c[k] : []; });
     c.resources = Object.assign({ ebook: [], file: [], vod: [], senior: [] }, c.resources || {});
     c.pages = c.pages || {};
     if (!c.brand.theme) c.brand.theme = "lime";
-    [c.schedule, c.notices, c.faqs, c.docsGuide, c.motivation, c.guide].forEach((list) => list.forEach((it) => { if (!it.id) it.id = uid("x"); }));
+    if (c.brand.botName === OLD_BOT_NAME(c.brand.instructor)) c.brand.botName = botNameOf(c.brand.instructor);
+    [c.schedule, c.notices, c.faqs, c.docsGuide, c.motivation, c.guide, c.replays, c.showcase, c.glossary, c.notePrompts].forEach((list) => list.forEach((it) => { if (!it.id) it.id = uid("x"); }));
+    c.showcase.forEach((x) => { x.images = x.images || []; });
     c.notices.forEach((n) => { n.images = n.images || []; });
     ["vod", "senior"].forEach((k) => c.resources[k].forEach((it) => { it.images = it.images || []; }));
     return c;
@@ -736,6 +783,16 @@
       db.flags.profileSeeded = true; save();
     }
     // 로직메이커 · 황금농부 프로필 사진 (사진이 비어 있을 때만 · 한 번만)
+    // 메뉴 이름을 두고 클래스 표현으로 바꾸면서, 예전 이름이 들어간 기본 문구도 함께 (한 번만 · 이 브라우저 데이터)
+    if (!R.on && !db.flags.menuNamesV15) {
+      Object.keys(db.content).forEach((id) => renameContentPhrases(db.content[id]));
+      // 새 메뉴 예시: 비어 있을 때만 시드 내용으로. 용어 사전은 어디서나, 라이브 다시보기 · 모범 과제 예시는 브라우저 체험(로컬)에서만
+      // (서버 배포 때 ‘기본값 채우기’도 이 코드를 돌리므로, 운영 데이터에는 체험용 영상 · 사진이 들어가지 않게 한다)
+      const demo = typeof document !== "undefined" ? ["glossary", "replays", "showcase"] : ["glossary"];
+      Object.keys(db.content).forEach((id) => { const sc = window.CLASS_SEED.content[id], c = db.content[id]; if (sc) demo.forEach((k) => { if (Array.isArray(sc[k]) && sc[k].length && !(c[k] || []).length) c[k] = clone(sc[k]); }); });
+      db.instructors.forEach((ins) => menuConfig(ins.id));
+      db.flags.menuNamesV15 = true; save();
+    }
     if (!R.on && !db.flags.profileSeeded2) {
       (window.CLASS_SEED.instructors || []).forEach((si) => {
         const c = db.content[si.id];
@@ -870,7 +927,7 @@
   }
 
   /* ---------------- 진행 기록 ---------------- */
-  function emptyProgress() { return { submissions: {}, watched: {}, docs: {}, questions: [], chat: [], notes: {}, readNotices: {}, guide: {} }; }
+  function emptyProgress() { return { submissions: {}, watched: {}, docs: {}, questions: [], chat: [], notes: {}, journal: {}, readNotices: {}, guide: {} }; }
   // 서버 모드에서도 미리보기(preview-…) 기록은 이 브라우저에만 둔다
   const localSid = (sid) => /^preview-/.test(String(sid));
   const progress = (sid) => Object.assign(emptyProgress(), R.on && !localSid(sid) ? clone(R.prog[sid] || {}) : store.get(KEY_PROGRESS + sid, {}));
@@ -1274,7 +1331,7 @@
     EVENT_TYPES, events, ruleText,
     REQUEST_CATEGORIES, maskName, requests, inquiries, saveInquiry, removeInquiry, applyPartner, siteInfo, saveSite, SITE_DEFAULT,
     BILLING_DEFAULT, BILL_VAT, BILL_STATE, billingInfo, saveBilling, bills, saveBill, removeBill, billMoney, billState, won,
-    THEMES, themeOf, STUDENT_MENUS, LIB_MENUS, CUSTOM_ICONS, menuConfig, menuOn, libOn, isCustom,
+    THEMES, themeOf, STUDENT_MENUS, LIB_MENUS, CUSTOM_ICONS, menuConfig, menuOn, libOn, isCustom, NOTE_PROMPTS, botNameOf,
     emptyProgress, progress, saveProgress, allProgress, lastSub, subState, stats,
     session, remote,
     date: { DOW, todayStr, parseDate, addDays, diffDays, fmtMD, fmtFull, fmtKo, fmtStamp, toStr }

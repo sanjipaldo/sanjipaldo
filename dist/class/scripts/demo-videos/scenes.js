@@ -120,11 +120,14 @@ const scenes = {
       await L.reveal(q, ".cert-wrap", { at: 0.12, ms: 1200 }); await S(400);
       await L.point(q, ".cert-wrap", { fy: 0.4 }); await S(1300);
     });
-    await p.goto(L.B + "#/bot"); await S(900);
+    await p.goto(L.B + "#/home"); await S(900);
     const r3 = await L.record(p, async (mark) => {
       mark("bot");
       await S(500);
-      await L.tap(p, '[data-action="chip"]', { nth: 2, after: 2000 });
+      // 오른쪽 아래 AI 조교 버튼 → 아래에서 올라오는 대화창 → 바로 묻기 칩
+      await L.tap(p, ".bot-launch", { after: 1000 });
+      await L.tap(p, '.bp-chips [data-action="chip"]', { nth: 0, after: 1900 });
+      await L.tap(p, '.bot-panel [data-action="bot-close"]', { after: 500 });
       mark("channel");
       await L.go(p, "#/channels", 700);
       await L.scrollBy(p, 360, 1000); await S(400);

@@ -58,7 +58,7 @@
   S.stats = (L, c) => {
     const lessons = c.weeks.reduce((a, w) => a + w.lessons.length, 0), missions = c.weeks.reduce((a, w) => a + w.missions.length, 0);
     const items = (L.stats || []).filter((x) => x.value).length ? L.stats.filter((x) => x.value)
-      : [{ value: c.weeks.length + "주", label: "완성 커리큘럼" }, { value: lessons + "개", label: "강의 영상" }, { value: missions + "개", label: "실습 과제" }, { value: "24시", label: "AI봇 질문 답변" }];
+      : [{ value: c.weeks.length + "주", label: "완성 커리큘럼" }, { value: lessons + "개", label: "강의 영상" }, { value: missions + "개", label: "실습 과제" }, { value: "24시", label: "AI 조교 답변" }];
     return '<section class="lp-stats"><div class="lp-wrap lp-stats-grid">' + items.map((x) => '<div><b>' + esc(x.value) + "</b><span>" + esc(x.label) + "</span></div>").join("") + "</div></section>";
   };
   S.about = (L) => {
@@ -89,7 +89,7 @@
   };
   S.platform = (L, c, ins) => {
     const P = L.platform;
-    const feats = [["checks", "과제 제출 · 자동 검수", "사진·링크·글로 과제를 내면 바로 결과가 나와요"], ["calendar", "강의 일정", "강의 오픈·과제 마감·라이브가 달력에"], ["library", "자료실", "전자책·자료 파일·VOD를 한 곳에"], ["sparkles", "24시 AI봇", "밤에도 바로 물어보고 답을 받아요"], ["award", "수료증", "필수 과제를 마치면 바로 발급"], ["help", "Q&A · 요청사항", "막히면 강사에게 직접 남겨요"]];
+    const feats = [["checks", "과제 제출 · 자동 검수", "사진·링크·글로 과제를 내면 바로 결과가 나와요"], ["calendar", "수업 캘린더", "강의 오픈·과제 마감·라이브가 달력에"], ["library", "강의 자료함", "전자책·자료 파일·VOD를 한 곳에"], ["bot", "AI 조교", "밤에도 바로 물어보고 답을 받아요"], ["award", "수료증", "필수 과제를 마치면 바로 발급"], ["help", "질문 · 1:1 요청", "막히면 강사에게 직접 남겨요"]];
     return '<section class="lp-sec lp-dark"><div class="lp-wrap"><p class="lp-kicker">STUDENT PLATFORM</p><h2>' + esc(P.title) + "</h2>" + (P.sub ? '<p class="lp-lead">' + esc(P.sub) + "</p>" : "") +
       '<div class="lp-feats">' + feats.map((f) => '<div><span class="lp-feat-ic">' + icon(f[0]) + "</span><b>" + f[1] + "</b><small>" + f[2] + "</small></div>").join("") + "</div>" +
       '<p class="lp-dark-foot">이미 수강 중이신가요? <a href="#/login?ins=' + esc(ins.id) + '">수강생 로그인 ' + icon("arrowRight", "xs") + "</a></p></div></section>";

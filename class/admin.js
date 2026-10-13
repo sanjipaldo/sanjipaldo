@@ -40,8 +40,8 @@
   const IID = () => (S.role === "instructor" || S.role === "coach" ? S.instructorId : S.actingAs);
   // 코치가 볼 수 있는 강사센터 메뉴 (강사가 ‘코치 관리’에서 고른다). 대시보드와 수강생 화면 미리보기는 늘 열려 있다
   const COACH_PERMS = [
-    ["운영", [["students", "수강생 관리", "승인 · 기수 이동 · 탈퇴"], ["cohorts", "기수 관리", "기수 만들기 · 일정"], ["reviews", "과제 검수", "과제 피드백 · 승인 · 보완 요청"], ["questions", "요청사항 답변", "수강생 1:1 문의 · 오류 신고 답변"]]],
-    ["수강생 화면 콘텐츠", [["brand", "기본 정보 · 색상 · AI봇"], ["menus", "메뉴 구성"], ["guide", "시작 가이드 · 자주 찾는 페이지"], ["curriculum", "커리큘럼"], ["missions", "과제"], ["schedule", "강의 일정"], ["notices", "공지사항"], ["faq", "Q&A 자주 묻는 질문"], ["docs", "서류 준비 가이드"], ["library", "유료강의 자료실"], ["motivation", "동기부여"], ["channels", "1:1 소통채널"], ["partners", "제휴채널"], ["pages", "추가 메뉴"]]],
+    ["운영", [["students", "수강생 관리", "승인 · 기수 이동 · 탈퇴"], ["cohorts", "기수 관리", "기수 만들기 · 일정"], ["reviews", "과제 검수", "과제 피드백 · 승인 · 보완 요청"], ["questions", "1:1 요청 답변", "수강생 1:1 요청 · 오류 신고 답변"]]],
+    ["수강생 화면 콘텐츠", [["brand", "기본 정보 · 색상 · AI 조교"], ["menus", "메뉴 구성"], ["guide", "시작 가이드 · 빠른 이동"], ["curriculum", "주차별 강의 (커리큘럼)"], ["replays", "라이브 다시보기"], ["missions", "과제 · 미션"], ["showcase", "모범 과제"], ["notes", "학습 노트 질문"], ["schedule", "수업 캘린더"], ["notices", "클래스 소식 (공지)"], ["faq", "FAQ · 자주 묻는 질문"], ["docs", "실무 체크리스트"], ["glossary", "용어 사전"], ["library", "강의 자료함"], ["motivation", "응원 영상"], ["channels", "1:1 상담 채널"], ["partners", "제휴 혜택"], ["pages", "추가 메뉴"]]],
     ["홍보", [["free", "무료강의 페이지"], ["landing", "강의 소개 페이지"]]]
   ];
   const COACH_DEFAULT = ["reviews", "questions"];
@@ -236,19 +236,23 @@
   function instructorNav() {
     const iid = IID(), n = counts(iid), on = (k) => DB.menuOn(iid, k);
     const content = [
-      ["brand", "기본 정보 · 색상 · AI봇", "settings", null],
+      ["brand", "기본 정보 · 색상 · AI 조교", "settings", null],
       ["menus", "메뉴 구성", "sliders", null],
-      ["guide", "시작 가이드 · 자주 찾는 페이지", "sparkles", null],
-      ["curriculum", "커리큘럼", "book", "curriculum"],
-      ["missions", "과제", "clipboard", "missions"],
-      ["schedule", "강의 일정", "calendar", "schedule"],
-      ["notices", "공지사항", "megaphone", "notices"],
-      ["faq", "Q&A 자주 묻는 질문", "help", "qna"],
-      ["docs", "서류 준비 가이드", "file", "docs"],
-      ["library", "유료강의 자료실", "library", "library"],
-      ["motivation", "동기부여", "flame", "motivation"],
-      ["channels", "1:1 소통채널", "headset", "channels"],
-      ["partners", "제휴채널", "handshake", "partners"]
+      ["guide", "시작 가이드 · 빠른 이동", "sparkles", null],
+      ["curriculum", "주차별 강의 (커리큘럼)", "book", "curriculum"],
+      ["replays", "라이브 다시보기", "monitorPlay", "replays"],
+      ["missions", "과제 · 미션", "clipboard", "missions"],
+      ["showcase", "모범 과제", "trophy", "showcase"],
+      ["notes", "학습 노트 질문", "notebookPen", "notes"],
+      ["schedule", "수업 캘린더", "calendar", "schedule"],
+      ["notices", "클래스 소식 (공지)", "megaphone", "notices"],
+      ["faq", "FAQ · 자주 묻는 질문", "help", "qna"],
+      ["docs", "실무 체크리스트", "file", "docs"],
+      ["glossary", "용어 사전", "bookA", "glossary"],
+      ["library", "강의 자료함", "library", "library"],
+      ["motivation", "응원 영상", "flame", "motivation"],
+      ["channels", "1:1 상담 채널", "headset", "channels"],
+      ["partners", "제휴 혜택", "handshake", "partners"]
     ].filter((x) => !x[3] || on(x[3])).map((x) => x.slice(0, 3));
     if (customPages(iid).length) content.push(["pages", "추가 메뉴", "star"]);
     const groups = [
@@ -256,7 +260,7 @@
         ["", "대시보드", "grid"],
         ["students", "수강생 관리", "users", n.pending],
         ["cohorts", "기수 관리", "layers"]
-      ].concat(isCoach() ? [] : [["billing", "다음 기수 신청", "coins", DB.bills(iid).filter((b) => !b.canceledAt && !b.cohortId).length]]).concat(on("missions") ? [["reviews", "과제 검수", "checks", n.review]] : []).concat(on("qna") ? [["questions", "요청사항 답변", "bug", n.questions]] : []).concat(isCoach() ? [] : [["coaches", "코치 관리", "shieldCheck", DB.coachesOf(iid).length || 0]])],
+      ].concat(isCoach() ? [] : [["billing", "다음 기수 신청", "coins", DB.bills(iid).filter((b) => !b.canceledAt && !b.cohortId).length]]).concat(on("missions") ? [["reviews", "과제 검수", "checks", n.review]] : []).concat(on("qna") ? [["questions", "1:1 요청 답변", "bug", n.questions]] : []).concat(isCoach() ? [] : [["coaches", "코치 관리", "shieldCheck", DB.coachesOf(iid).length || 0]])],
       ["수강생 화면 콘텐츠", content],
       ["홍보", [["free", "무료강의 페이지", "video"], ["landing", "강의 소개 페이지", "store"]]]
     ];
@@ -316,7 +320,7 @@
     const myMenus = COACH_PERMS.flatMap((g) => g[1]).filter((x) => can(x[0]));
     const kpis = [];
     if (can("reviews")) kpis.push(kpi("검수 대기 과제", n.review + "개", "피드백 · 승인 · 보완 요청", "#/center/reviews", n.review ? "info" : ""));
-    if (can("questions")) kpis.push(kpi("답변 대기 문의", n.questions + "건", "요청사항 · 1:1 문의", "#/center/questions", n.questions ? "warn" : ""));
+    if (can("questions")) kpis.push(kpi("답변 대기 문의", n.questions + "건", "1:1 요청 · 오류 신고", "#/center/questions", n.questions ? "warn" : ""));
     if (can("students")) kpis.push(kpi("승인 대기 수강생", n.pending + "명", "새 수강 신청", "#/center/students?status=pending", n.pending ? "warn" : ""));
     kpis.push(kpi("진행 중 기수", co ? co.name : "-", co ? (DB.cohortStatus(co) === "running" ? wk + "주차 진행 중" : fmtMD(co.startDate) + " 시작") : "기수 없음", can("cohorts") ? "#/center/cohorts" : "#/center"));
     return head(esc(me.name || "") + " 코치님, 안녕하세요", esc(ins.displayName) + " · " + esc(c.brand.courseTitle) + " 코치" + (me.memo ? " · " + esc(me.memo) : "")) +
@@ -326,7 +330,7 @@
       (can("reviews") ? '<section class="a-card"><div class="a-card-head"><h2>검수를 기다리는 과제</h2><a class="a-link" href="#/center/reviews">과제 검수 ' + icon("arrowRight", "xs") + "</a></div>" +
         (subs.length ? '<ul class="a-list">' + subs.map((x) => '<li class="clickable" data-action="review-open" data-sid="' + x.s.id + '" data-mid="' + x.m.id + '"><div class="a-who"><span class="a-avatar">' + esc(x.s.name.slice(0, 1)) + "</span><div><b>" + esc(x.s.name) + " · " + esc(x.m.title) + "</b><small>" + esc(cohortName(x.s.cohortId)) + " · " + x.w.no + "주차 · " + fmtStamp(x.sub.at) + "</small></div></div>" + reviewPill(x) + "</li>").join("") + "</ul>"
           : emptyBox("check", "검수를 기다리는 과제가 없어요.")) + "</section>" : "") +
-      (can("questions") ? '<section class="a-card"><div class="a-card-head"><h2>답변을 기다리는 문의</h2><a class="a-link" href="#/center/questions">요청사항 답변 ' + icon("arrowRight", "xs") + "</a></div>" +
+      (can("questions") ? '<section class="a-card"><div class="a-card-head"><h2>답변을 기다리는 문의</h2><a class="a-link" href="#/center/questions">1:1 요청 답변 ' + icon("arrowRight", "xs") + "</a></div>" +
         (reqs.length ? '<ul class="a-list">' + reqs.map((x) => '<li><div class="a-who"><span class="a-avatar">' + esc(x.s.name.slice(0, 1)) + "</span><div><b>#" + x.no + " " + esc(x.q.title) + "</b><small>" + esc(x.s.name) + " · " + esc(cohortName(x.s.cohortId)) + " · " + fmtStamp(x.q.at) + "</small></div></div>" + pill(x.q.category || "기타", "mute") + "</li>").join("") + "</ul>"
           : emptyBox("check", "답변을 기다리는 문의가 없어요.")) + "</section>" : "") +
       (can("students") && pend.length ? '<section class="a-card"><div class="a-card-head"><h2>승인 대기</h2><a class="a-link" href="#/center/students?status=pending">전체 ' + icon("arrowRight", "xs") + "</a></div>" +
@@ -351,7 +355,7 @@
         kpi("승인 대기", n.pending + "명", "새 수강 신청", "#/center/students?status=pending", n.pending ? "warn" : "") +
         kpi("진행 중 기수", co ? co.name : "-", co ? (DB.cohortStatus(co) === "running" ? wk + "주차 진행 중" : fmtMD(co.startDate) + " 시작") : "다음 기수를 신청해 주세요", co ? "#/center/cohorts" : "#/center/billing") +
         kpi("수강생 평균 진행률", avg + "%", (co ? co.name + " · " : "") + rows.length + "명 기준", "#/center/students?status=approved") +
-        kpi("검수 대기 · 미답변", n.review + " · " + n.questions, "과제 검수 / 요청사항", "#/center/reviews", n.review + n.questions ? "info" : "") +
+        kpi("검수 대기 · 미답변", n.review + " · " + n.questions, "과제 검수 / 1:1 요청", "#/center/reviews", n.review + n.questions ? "info" : "") +
       "</div>" +
       (co ? '<section class="a-card"><div class="a-card-head"><h2>' + esc(co.name) + " 주차 일정</h2>" + pill(DB.STATUS_LABEL[DB.cohortStatus(co)], COHORT_CLS[DB.cohortStatus(co)]) + '<a class="a-link" href="#/center/cohorts">기수 관리 ' + icon("arrowRight", "xs") + "</a></div>" + weekStrip(co) + "</section>" : "") +
       '<div class="a-grid-2">' +
@@ -614,6 +618,22 @@
     closeModal(); render();
     toast(n + "개를 " + (status === "approved" ? "승인했어요." : "보완 요청했어요."));
   }
+  // 검수 중인 제출물로 모범 과제 만들기: 사진 · 과제 · 주차 · 가린 이름을 채운 편집 창을 연다 (강사가 코멘트를 적고 저장)
+  function showcaseFrom(sid, mid) {
+    const s = DB.student(sid), p = DB.progress(sid), sco = DB.cohort(s.cohortId), weeks = sco ? DB.weeksOf(sco) : C().weeks;
+    const w = weeks.find((x) => x.missions.some((m) => m.id === mid)), m = w && w.missions.find((x) => x.id === mid);
+    const subs = p.submissions[mid] || [], sub = subs[subs.length - 1];
+    if (!m || !sub) return;
+    const main = C().weeks.find((x) => x.missions.some((mm) => mm.id === mid));
+    // 서버에 올라간 제출 사진은 그 수강생 · 강사만 열 수 있으므로, 사진 내용을 복사해 강의 콘텐츠 사진으로 다시 저장한다
+    const asData = (f) => (/^data:/.test(f.data) ? Promise.resolve({ name: f.name, data: f.data }) : fetch(f.data, { credentials: "same-origin" }).then((r) => (r.ok ? r.blob() : null))
+      .then((bl) => bl && new Promise((ok) => { const fr = new FileReader(); fr.onload = () => ok({ name: f.name, data: fr.result }); fr.onerror = () => ok(null); fr.readAsDataURL(bl); })).catch(() => null));
+    Promise.all((sub.files || []).filter((f) => f.type === "image" && f.data).slice(0, 6).map(asData)).then((list) => {
+      editItem("showcase", "", "", { title: m.title, missionId: main ? mid : "", week: w.no, author: (sco ? sco.name + " " : "") + DB.maskName(s.name), images: list.filter(Boolean),
+        desc: sub.text ? String(sub.text).slice(0, 400) : (sub.link ? "제출 링크: " + sub.link : "") });
+      toast("사진과 과제를 채웠어요. 잘한 점을 코멘트로 적고 저장해 주세요.");
+    });
+  }
   function reviewModal(sid, mid) {
     const s = DB.student(sid), p = DB.progress(sid), sco = DB.cohort(s.cohortId), c = { weeks: sco ? DB.weeksOf(sco) : C().weeks };
     const w = c.weeks.find((x) => x.missions.some((m) => m.id === mid));
@@ -635,6 +655,7 @@
         (sub.result.pass ? (sub.result.ok.length ? "<span>" + esc(sub.result.ok.join(" · ")) + "</span>" : "") : "<span>" + esc(sub.result.reasons.join(" / ")) + "</span>") + "</div>" +
       (sub.review ? '<p class="a-muted">현재 검수: <b>' + (sub.review.status === "approved" ? "승인" : "보완 요청") + "</b> · " + (sub.review.by ? '<span class="a-by">' + icon("user", "xs") + esc(sub.review.by) + "</span> · " : "") + fmtStamp(sub.review.at) + "</p>" : "") +
       '<div class="a-field"><label for="rv-comment">수강생에게 남길 말 <small>(보완 요청 시 꼭 적어 주세요)</small></label><textarea class="a-input" id="rv-comment" rows="3" placeholder="예: 사업자등록증 전체가 보이게 다시 찍어 주세요.">' + esc(sub.review ? sub.review.comment || "" : "") + "</textarea></div>",
+      (DB.menuOn(IID(), "showcase") && can("showcase") ? btn(icon("trophy", "sm") + "모범 과제로 올리기", "showcase-from", "a-btn-ghost", ' data-sid="' + sid + '" data-mid="' + mid + '"') : "") +
       '<span class="a-spacer"></span>' + btn(icon("alert", "sm") + "보완 요청", "review-save", "a-btn-outline danger", ' data-sid="' + sid + '" data-mid="' + mid + '" data-status="fix"') + btn(icon("check", "sm") + "승인", "review-save", "a-btn-primary", ' data-sid="' + sid + '" data-mid="' + mid + '" data-status="approved"'), "lg");
   }
 
@@ -645,7 +666,7 @@
     const shown = list.filter((x) => ui.qFilter === "all" || (ui.qFilter === "open" ? !x.q.answer : !!x.q.answer));
     const tabs = [["open", "답변 대기", list.filter((x) => !x.q.answer).length], ["done", "답변 완료", list.filter((x) => x.q.answer).length], ["all", "전체", list.length]].map((t) =>
       '<button type="button" class="a-tab' + (ui.qFilter === t[0] ? " on" : "") + '" data-action="q-tab" data-k="' + t[0] + '">' + t[1] + ' <span class="num">' + t[2] + "</span></button>").join("");
-    return head("요청사항 답변", "수강생이 Q&A ‘요청사항’에 남긴 프로그램 오류·불편 신고예요. 모두 비공개로, 작성자와 강사님만 봐요. 답변하면 수강생 화면에 바로 보여요.") +
+    return head("1:1 요청 답변", "수강생이 ‘질문 · 요청 → 1:1 요청’에 남긴 화면 오류·불편 신고예요. 모두 비공개로, 작성자와 강사님만 봐요. 답변하면 수강생 화면에 바로 보여요.") +
       '<section class="a-card"><div class="a-toolbar"><div class="a-tabs">' + tabs + "</div></div>" +
         (shown.length ? '<div class="a-stack">' + shown.map((x) =>
           '<article class="a-q"><div class="a-q-head"><span class="a-avatar">' + esc(x.s.name.slice(0, 1)) + "</span><div><b>#" + x.no + " " + esc(x.q.title) + "</b><small>" + esc(x.s.name) + " · " + esc(cohortName(x.s.cohortId)) + " · " + fmtStamp(x.q.at) + "</small></div>" + pill(x.q.category || "기타", "mute") + (x.q.answer ? pill("답변 완료", "ok") : pill("답변 대기", "warn")) + "</div>" +
@@ -653,7 +674,7 @@
           '<p class="a-q-body">' + esc(x.q.body) + "</p>" +
           ((x.q.images || []).length ? '<div class="a-shots a-q-shots">' + x.q.images.map((im) => '<a class="a-shot" href="' + im.data + '" target="_blank" rel="noopener"><img src="' + im.data + '" alt="' + esc(im.name) + '"></a>').join("") + "</div>" : "") +
           '<form class="a-q-form" data-sid="' + x.s.id + '" data-qid="' + x.q.id + '"><textarea class="a-input" name="answer" rows="3" placeholder="예: 확인해 보니 ○○ 문제였어요. 지금 고쳤으니 새로고침 후 다시 해 주세요." aria-label="답변">' + esc(x.q.answer || "") + '</textarea><button class="a-btn a-btn-primary a-btn-sm" type="submit">' + (x.q.answer ? "답변 수정" : "답변 등록") + "</button></form></article>").join("") + "</div>"
-          : emptyBox("bug", ui.qFilter === "open" ? "답변을 기다리는 요청사항이 없어요." : "요청사항이 없어요.")) +
+          : emptyBox("bug", ui.qFilter === "open" ? "답변을 기다리는 1:1 요청이 없어요." : "1:1 요청이 없어요.")) +
       "</section>";
   }
 
@@ -700,7 +721,7 @@
     notice: { name: "공지", list: (c) => c.notices, idp: "n", init: () => ({ date: todayStr(), pinned: false }),
       fields: [F("title", "제목"), F("body", "내용", "textarea", { rows: 9, rich: true, photos: true }), F("images", "사진 (여러 장 가능)", "images"),
         F("youtubeId", "유튜브 영상 (선택)", "youtube", { hint: "넣으면 공지 맨 아래에 영상이 보여요." }), F("date", "게시일", "date"), F("pinned", "상단 고정 (필독)", "checkbox")] },
-    faq: { name: "질문", list: (c) => c.faqs, idp: "q", init: () => ({ category: "기타" }), fields: [F("q", "질문"), F("category", "분류", "combo", { options: () => faqCats(), hint: "목록에서 고르거나 새 분류를 적으면 돼요." }), F("a", "답변", "textarea", { rows: 4 }), F("tags", "AI봇 검색어 (쉼표로 구분)", "tags", { hint: "수강생이 이 단어로 물어보면 AI봇이 이 답변을 보여 줘요." })] },
+    faq: { name: "FAQ 질문", list: (c) => c.faqs, idp: "q", init: () => ({ category: "기타" }), fields: [F("q", "질문"), F("category", "분류", "combo", { options: () => faqCats(), hint: "목록에서 고르거나 새 분류를 적으면 돼요." }), F("a", "답변", "textarea", { rows: 4 }), F("tags", "AI 조교 검색어 (쉼표로 구분)", "tags", { hint: "수강생이 이 단어로 물어보면 AI 조교가 이 답변을 보여 줘요." })] },
     doc: { name: "서류 단계", list: (c) => c.docsGuide, idp: "d",
       fields: [F("title", "단계 이름"), F("where", "어디서 (기관·사이트)"), F("url", "바로가기 주소", "url"), F("time", "소요 시간"), F("cost", "비용"), F("docs", "필요 서류 (한 줄에 하나)", "lines", { rows: 3 }), F("tips", "팁 (한 줄에 하나)", "lines", { rows: 3 })] },
     guide: { name: "시작 가이드 단계", list: (c) => c.guide, idp: "g",
@@ -717,7 +738,7 @@
         F("hours", "운영 시간 (선택)", "text", { hint: "예: 평일 10:00 ~ 18:00" }),
         F("label", "버튼 글자", "text", { hint: "예: 카카오톡으로 상담하기" }),
         F("note", "링크가 없을 때 보일 안내 (선택)", "textarea", { rows: 2, hint: "개별 카톡방처럼 공개 링크가 없는 채널이면 주소는 비우고 여기에 안내를 적어요. 예: 입금이 확인되면 담당 팀이 링크를 보내 드려요." })] },
-    partner: { name: "제휴채널", list: (c) => c.partners || (c.partners = DB.defaultPartners(c)), idp: "pt", init: () => ({ group: "partner", label: "바로가기", icon: "handshake", color: "#0a5de2" }),
+    partner: { name: "제휴 혜택", list: (c) => c.partners || (c.partners = DB.defaultPartners(c)), idp: "pt", init: () => ({ group: "partner", label: "바로가기", icon: "handshake", color: "#0a5de2" }),
       fields: [F("title", "이름 (카드 제목)", "text", { hint: "예: 두고 N카페, 코워크시티" }),
         F("group", "분류 (수강생 화면의 탭)", "select", { options: () => DB.PARTNER_GROUPS.map((g) => [g.key, g.label + " — " + g.desc]) }),
         F("featured", "맨 위에 크게 보이기 (제휴 혜택을 안내하는 대표 카페 등 · 하나만 켜 주세요)", "checkbox"),
@@ -728,13 +749,32 @@
         F("label", "버튼 글자", "text", { hint: "예: 제휴 혜택 보기" }),
         F("icon", "카드 아이콘", "select", { options: () => DB.PARTNER_ICONS }),
         F("color", "카드 색", "select", { options: () => DB.CHANNEL_COLORS.concat([["#0d9488", "청록"], ["#4f46e5", "남색"]]) })] },
-    ql: { name: "자주 찾는 페이지", list: (c) => c.quickLinks || (c.quickLinks = DB.defaultQuickLinks(c)), idp: "ql", init: () => ({ icon: "link" }),
+    ql: { name: "빠른 이동", list: (c) => c.quickLinks || (c.quickLinks = DB.defaultQuickLinks(c)), idp: "ql", init: () => ({ icon: "link" }),
       fields: [F("title", "이름"), F("desc", "한 줄 설명"), F("url", "주소", "text", { hint: "수강생 화면(#/notices, #/qna, #/docs, #/qna/requests, #/bot, #/library …) 또는 https:// 외부 주소(유튜브·카페·카카오톡 등, 새 창으로 열려요)" }),
         F("color", "아이콘 색 (외부 링크용 · 비우면 기본 색)", "text", { hint: "예: 유튜브 #ff0000 · 네이버 #03c75a · 두고 #0a5de2. # 뒤에 6자리 색 코드를 적어요." }),
         F("icon", "아이콘", "select", { options: () => DB.QL_ICONS.map((k) => [k, ({ layers: "층층 (제조 · OEM)",  megaphone: "확성기 (공지)", help: "물음표 (FAQ)", clipboard: "클립보드 (서류)", bug: "벌레 (오류 신고)", sparkles: "반짝이 (AI)", play: "재생 (유튜브)", message: "말풍선 (카톡)", book: "책", calendar: "달력", library: "자료실", flame: "불꽃 (동기부여)", award: "메달 (수료증)", link: "링크", store: "가게", users: "사람들 (카페)", video: "비디오 (라이브)" })[k] || k]) })] },
     ann: { name: "강사 공지", list: () => DB.data.announcements, idp: "an", init: () => ({ date: todayStr(), pinned: false }),
       fields: [F("title", "제목"), F("body", "내용", "textarea", { rows: 6, rich: true }), F("date", "날짜", "date"), F("pinned", "맨 위에 고정", "checkbox")] },
-    mv: { name: "동기부여 영상", prepend: true, list: (c) => c.motivation, idp: "mv", init: () => ({ date: todayStr() }),
+    replay: { name: "라이브 다시보기", prepend: true, list: (c) => c.replays || (c.replays = []), idp: "rp", init: () => ({ date: todayStr(), attachments: [] }),
+      fields: [F("title", "영상 제목", "text", { hint: "예: 2주차 라이브 Q&A · 상세페이지 첨삭" }), F("youtubeId", "유튜브 주소", "youtube", { hint: "일부 공개(링크가 있는 사람만)로 올린 영상도 돼요." }),
+        F("week", "주차", "select", { options: () => weekOpts("주차 없음"), get: (x) => (x.week ? String(x.week) : ""), set: (x, v) => { x.week = v ? Number(v) : ""; } }),
+        F("date", "라이브 날짜", "date"), F("minutes", "영상 길이 (선택 · 예: 1:12:30)"),
+        F("summary", "핵심 정리 (영상 아래에 보여요)", "textarea", { rows: 6, rich: true, hint: "라이브에서 나온 핵심 내용, 자주 나온 질문을 짧게 정리해 두면 수강생이 다시 찾기 쉬워요." }),
+        F("attachments", "라이브 자료 (선택)", "attachments")] },
+    showcase: { name: "모범 과제", list: (c) => c.showcase || (c.showcase = []), idp: "sc", init: (ctx, seed) => Object.assign({ images: [] }, seed || {}),
+      fields: [F("title", "제목", "text", { hint: "예: 상세페이지 첫 화면 · 한눈에 들어오는 구성" }),
+        F("missionId", "이어 둘 과제 (선택)", "select", { options: () => [["", "연결 안 함"]].concat(missionOpts()), hint: "고르면 그 과제 화면에 ‘모범 과제 보기’가 떠요." }),
+        F("week", "주차", "select", { options: () => weekOpts("주차 없음"), get: (x) => (x.week ? String(x.week) : ""), set: (x, v) => { x.week = v ? Number(v) : ""; } }),
+        F("author", "작성자 표시 (선택)", "text", { hint: "이름은 꼭 가려 주세요. 예: 2기 김OO" }),
+        F("images", "사진 (첫 사진이 크게 보여요 · 개인정보가 보이는 사진은 빼 주세요)", "images"),
+        F("desc", "강사 코멘트 (어디가 잘했는지)", "textarea", { rows: 5, rich: true })] },
+    glossary: { name: "용어", list: (c) => c.glossary || (c.glossary = []), idp: "gl", init: () => ({ category: "" }),
+      fields: [F("term", "용어", "text", { hint: "예: 마진율, 개인통관고유부호" }), F("category", "분류 (선택)", "combo", { options: () => glossaryCats(), hint: "목록에서 고르거나 새 분류를 적으면 돼요." }),
+        F("desc", "쉬운 풀이", "textarea", { rows: 4, hint: "수강생이 처음 들어도 이해할 수 있게 한두 문장으로. AI 조교도 이 풀이로 답해요." })] },
+    notePrompt: { name: "회고 질문", list: (c) => c.notePrompts || (c.notePrompts = []), idp: "np", init: (ctx) => ({ week: Number(ctx) || 1 }),
+      fields: [F("q", "질문", "text", { hint: "예: 이번 주 경쟁 상품을 보며 내 상품에 적용할 점은?" }),
+        F("week", "주차", "select", { options: () => weekOpts(), get: (x) => String(x.week || 1), set: (x, v) => { x.week = Number(v) || 1; } })] },
+    mv: { name: "응원 영상", prepend: true, list: (c) => c.motivation, idp: "mv", init: () => ({ date: todayStr() }),
       fields: [F("title", "영상 제목"), F("youtubeId", "유튜브 주소", "youtube"), F("minutes", "영상 길이 (예: 31:57)"), F("date", "올린 날", "date")] }
   };
   ["ebook", "file"].forEach((k) => { COLL["res-" + k] = { name: "자료", list: (c) => c.resources[k], idp: k[0], fields: [F("title", "자료 이름"), F("meta", "형식 (예: 전자책 · 86쪽)"), F("desc", "한 줄 설명"), F("url", "열람·다운로드 주소 (구글 드라이브 등)", "url")] }; });
@@ -743,6 +783,10 @@
       F("body", "본문 (게시판처럼 글을 쓰고, 사진은 [사진1] 자리에 들어가요)", "textarea", { rows: 14, rich: true, photos: true }), F("images", "사진 (여러 장 가능 · 첫 사진은 영상이 없을 때 썸네일)", "images"),
       F("attachments", "첨부 자료 (교습지·엑셀·PDF 등)", "attachments")] }; });
   const faqCats = () => C().faqs.map((f) => f.category || "기타").filter((c, i, a) => a.indexOf(c) === i);
+  const glossaryCats = () => (C().glossary || []).map((g) => g.category).filter((c, i, a) => c && a.indexOf(c) === i);
+  // 주차 · 과제 고르기 (기본 커리큘럼 기준 — 주차 번호는 기수별 커리큘럼에도 그대로 맞춰 보여요)
+  const weekOpts = (none) => (none ? [["", none]] : []).concat(C().weeks.map((w) => [String(w.no), w.no + "주차 · " + w.title]));
+  const missionOpts = () => C().weeks.flatMap((w) => w.missions.map((m) => [m.id, w.no + "주차 · " + m.title]));
   const kindPill = (m) => { const k = DB.missionKind(m); return pill(DB.MISSION_KINDS.find((x) => x.key === k).short, k === "required" ? "dark" : k === "mind" ? "warn" : "info"); };
   function weekOf(c, ctx) { return CUR().weeks.find((w) => String(w.no) === String(ctx)); }
 
@@ -844,10 +888,10 @@
     });
   }
 
-  function editItem(coll, id, ctx) {
+  function editItem(coll, id, ctx, seed) {
     const def = COLL[coll], c = C();
     const list = def.list(c, ctx);
-    const item = id ? list.find((x) => (x.id || String(x.no)) === id) : Object.assign({}, def.init ? def.init() : {});
+    const item = id ? list.find((x) => (x.id || String(x.no)) === id) : Object.assign({}, def.init ? def.init(ctx, seed) : {});
     if (!item) return;
     const attF = def.fields.find((f) => f.type === "attachments");
     attDraft = DB.clone((attF && item[attF.key]) || []);
@@ -868,7 +912,7 @@
   function saveItem(form) {
     const def = COLL[form.dataset.coll], c = C(), ctx = form.dataset.ctx, id = form.dataset.id;
     const list = def.list(c, ctx);
-    const item = id ? list.find((x) => (x.id || String(x.no)) === id) : Object.assign({}, def.init ? def.init() : {});
+    const item = id ? list.find((x) => (x.id || String(x.no)) === id) : Object.assign({}, def.init ? def.init(ctx) : {});
     const err = document.getElementById("coll-error");
     for (const f of def.fields) {
       const el = f.type === "attachments" || f.type === "images" ? true : form[f.key];
@@ -900,6 +944,7 @@
       else if (u && item.type === "phone" && !/^tel:/i.test(u) && /^[\d\s+()-]+$/.test(u)) item.url = "tel:" + u.replace(/[^\d+]/g, "");
       else if (u && !/^(https?:|mailto:|tel:)/i.test(u)) item.url = "https://" + u.replace(/^\/+/, "");
     }
+    if (form.dataset.coll === "showcase" && item.missionId && !item.week) { const w = C().weeks.find((x) => x.missions.some((m) => m.id === item.missionId)); if (w) item.week = w.no; }
     if (form.dataset.coll === "partner" && item.featured) list.forEach((x) => { if (x !== item) x.featured = false; });
     if (form.dataset.coll === "event") {
       if (!item.title) { err.textContent = "일정 이름을 입력해 주세요."; return; }
@@ -952,10 +997,10 @@
   function pageBrand() {
     const b = C().brand;
     const f = (k, label, v, hint, type) => '<div class="a-field"><label for="bf-' + k + '">' + label + "</label>" + (type === "textarea" ? '<textarea class="a-input" id="bf-' + k + '" name="' + k + '" rows="3">' + esc(v) + "</textarea>" : '<input class="a-input" id="bf-' + k + '" name="' + k + '" value="' + esc(v) + '"' + (type ? ' type="' + type + '"' : "") + ">") + (hint ? '<small class="a-muted">' + hint + "</small>" : "") + "</div>";
-    return head("기본 정보 · 색상 · AI봇", "수강생 화면의 색상, 상단 이름, 로그인 화면 문구, AI봇 이름을 정해요.") +
+    return head("기본 정보 · 색상 · AI 조교", "수강생 화면의 색상, 상단 이름, 로그인 화면 문구, AI 조교 이름을 정해요.") +
       '<form id="brand-form" class="a-card a-form">' +
         '<h2 class="a-sub">수강생 화면 색상</h2><p class="a-muted" style="margin:-6px 0 0">수강생 로그인 화면과 학습 화면 전체가 이 색으로 바뀌어요. 강사센터는 늘 파란색이에요.</p>' + themePicker(b.theme) +
-        '<h2 class="a-sub">브랜드</h2><div class="a-form-row">' + f("name", "브랜드 이름", b.name, "로그인 화면 왼쪽 위·상단 작은 글씨") + f("instructor", "강사 표시 이름", b.instructor, "공지·수료증 서명·AI봇 인사말에 쓰여요") + "</div>" +
+        '<h2 class="a-sub">브랜드</h2><div class="a-form-row">' + f("name", "브랜드 이름", b.name, "로그인 화면 왼쪽 위·상단 작은 글씨") + f("instructor", "강사 표시 이름", b.instructor, "공지·수료증 서명·AI 조교 인사말에 쓰여요") + "</div>" +
         f("courseTitle", "강의 이름", b.courseTitle, "수강생 화면 맨 위 제목") +
         '<div class="a-form-row">' + f("shortTitle", "짧은 강의 이름", b.shortTitle, "로그인 화면 배지") + f("tagline", "한 줄 소개", b.tagline) + "</div>" +
         '<h2 class="a-sub">강사 프로필</h2><p class="a-muted" style="margin:-6px 0 0">두고 클래스 첫 화면의 ‘지금 강의하는 강사님’ 카드에 보여요. 배경을 지운(투명) 사진이나 밝은 배경의 상반신 사진이 잘 어울려요.</p>' +
@@ -968,10 +1013,10 @@
         f("loginHeadline", "헤드라인 (두 줄까지, 줄바꿈 가능)", b.loginHeadline, "마지막 줄은 고른 색으로 강조돼요", "textarea") +
         f("loginSub", "헤드라인 아래 설명", b.loginSub, "", "textarea") +
         '<div class="a-form-row">' + f("youtubeChannel", "유튜브 채널 주소", b.youtubeChannel, "", "url") + f("freeCourseUrl", "무료 강의 · 소개 페이지 주소", b.freeCourseUrl, "", "url") + "</div>" +
-        '<h2 class="a-sub">강의 운영</h2><div class="a-form-row">' + f("liveTime", "주차 강의 오픈 시간", b.liveTime, "강의 일정의 ‘강의 오픈’ 옆에 표시", "time") + f("botName", "AI봇 이름", b.botName, "수강생 메뉴와 채팅창 이름") + "</div>" +
+        '<h2 class="a-sub">강의 운영</h2><div class="a-form-row">' + f("liveTime", "주차 강의 오픈 시간", b.liveTime, "강의 일정의 ‘강의 오픈’ 옆에 표시", "time") + f("botName", "AI 조교 이름", b.botName, "수강생 메뉴와 대화창 이름 (예: " + esc(DB.botNameOf(b.instructor)) + ")") + "</div>" +
         '<div class="a-form-row">' + f("liveUrl", "주차 강의 입장 링크 (줌 등)", b.liveUrl || "", "넣으면 강의 오픈일에 수강생 홈·일정에 ‘입장하기’ 버튼이 생겨요", "url") + f("kakaoChannel", "카카오톡 문의 주소", b.kakaoChannel || "", "오픈채팅·채널 주소. 수강생 왼쪽 메뉴 아래에 ‘카카오톡 문의’ 버튼이 생겨요", "url") + "</div>" +
         '<label class="a-check"><input type="checkbox" name="worldClock"' + (b.worldClock ? " checked" : "") + '><span>수강생 화면 위에 <b>한국 · 뉴질랜드 현재 시간</b> 보이기 <small class="a-muted">(뉴질랜드 서머타임 자동 반영)</small></span></label>' +
-        f("quotes", "오늘의 한마디 (한 줄에 하나)", (C().quotes || []).join("\n"), "홈·동기부여 화면에 날마다 돌아가며 보여요", "textarea") +
+        f("quotes", "오늘의 한마디 (한 줄에 하나)", (C().quotes || []).join("\n"), "홈·응원 영상 화면에 날마다 돌아가며 보여요", "textarea") +
         '<div class="a-form-foot"><button class="a-btn a-btn-primary" type="submit">저장</button></div>' +
       "</form>";
   }
@@ -1054,7 +1099,7 @@
     const co = DB.cohort(ui.schedCohort);
     const T = DB.EVENT_TYPES;
     const cls = { qna: "warn", notice: "mute", challenge: "ok", event: "dark", open: "info", deadline: "bad" };
-    return head("강의 일정", "‘강의 오픈’과 ‘과제 마감’은 기수 시작일로 자동 계산돼요. 라이브 Q&A·공지·챌린지 같은 일정만 추가하세요.", addBtn("event", "일정 추가")) +
+    return head("수업 캘린더", "‘강의 오픈’과 ‘과제 마감’은 기수 시작일로 자동 계산돼요. 라이브 Q&A·공지·챌린지 같은 일정만 추가하세요.", addBtn("event", "일정 추가")) +
       '<section class="a-card"><div class="a-card-head"><h2>추가한 일정</h2><span class="a-muted">' + c.schedule.length + "개</span></div>" +
         simpleList("event", c.schedule, (e) => '<div class="a-item-main"><b>' + esc(e.title) + "</b><small>" + esc(DB.ruleText(e)) + (e.time ? " · " + esc(e.time) : "") + "</small></div>" + pill(T[e.type].label, cls[e.type]), "추가한 일정이 없어요.") + "</section>" +
       '<section class="a-card"><div class="a-card-head"><h2>기수별 전체 일정 미리보기</h2><select class="a-input a-sm" id="sched-cohort" aria-label="기수">' + cos.map((x) => '<option value="' + x.id + '"' + (x.id === ui.schedCohort ? " selected" : "") + ">" + esc(x.name) + "</option>").join("") + "</select></div>" +
@@ -1063,20 +1108,20 @@
   }
   function pageNotices() {
     const list = C().notices.slice().sort((a, b) => (b.pinned - a.pinned) || b.date.localeCompare(a.date));
-    return head("공지사항", "수강생 홈과 공지사항 메뉴에 보여요. ‘필독’으로 고정하면 맨 위에 떠요.", addBtn("notice", "공지 쓰기")) +
+    return head("클래스 소식 (공지)", "수강생 홈과 ‘클래스 소식’ 메뉴에 보여요. ‘필독’으로 고정하면 맨 위에 떠요.", addBtn("notice", "공지 쓰기")) +
       '<section class="a-card">' + (list.length ? '<ul class="a-items">' + list.map((n) => '<li><div class="a-item-main"><b>' + esc(n.title) + "</b><small>" + fmtFull(n.date) + " · " + esc((n.body || "").slice(0, 60)) + "</small></div>" + ((n.images || []).length ? pill("사진 " + n.images.length, "info") : "") + (DB.youtubeId(n.youtubeId) ? pill("영상", "info") : "") + (n.pinned ? pill("필독", "dark") : "") +
         '<div class="a-row-actions">' + btn(icon("pen", "sm") + "수정", "item-edit", "a-btn-ghost a-btn-sm", ' data-coll="notice" data-id="' + n.id + '"') + "</div></li>").join("") + "</ul>" : emptyBox("megaphone", "아직 공지가 없어요.")) + "</section>";
   }
   function pageFaq() {
     const c = C();
     const cats = faqCats();
-    return head("Q&A 자주 묻는 질문", "수강생 Q&A 메뉴에 분류별로 보이고, AI봇도 이 답변을 바탕으로 대답해요.", btn(icon("clipboard", "sm") + "한꺼번에 붙여넣기", "faq-bulk", "a-btn-outline") + addBtn("faq", "질문 추가")) +
+    return head("FAQ · 자주 묻는 질문", "수강생 ‘질문 · 요청’ 메뉴의 FAQ 검색에 분류별로 보이고, AI 조교도 이 답변을 바탕으로 대답해요.", btn(icon("clipboard", "sm") + "한꺼번에 붙여넣기", "faq-bulk", "a-btn-outline") + addBtn("faq", "질문 추가")) +
       (c.faqs.length ? cats.map((cat) => {
         const items = c.faqs.filter((f) => (f.category || "기타") === cat);
         return '<section class="a-card"><div class="a-card-head"><h2>' + esc(cat) + '</h2><span class="a-muted">' + items.length + "개</span></div>" +
           '<ul class="a-items">' + items.map((f) => { const i = c.faqs.indexOf(f); return '<li><div class="a-item-main"><b>Q. ' + esc(f.q) + "</b><small>" + esc(f.a) + "</small></div>" + rowTools("faq", f.id, "", i, c.faqs.length) + "</li>"; }).join("") + "</ul></section>";
       }).join("") : '<section class="a-card">' + emptyBox("help", "자주 묻는 질문이 없어요.", btn(icon("clipboard", "sm") + "한꺼번에 붙여넣기", "faq-bulk", "a-btn-primary")) + "</section>") +
-      '<p class="a-hint">' + icon("bug", "xs") + " 수강생의 오류·불편 신고는 ‘요청사항 답변’ 메뉴에서 답해 주세요.</p>";
+      '<p class="a-hint">' + icon("bug", "xs") + " 수강생의 오류·불편 신고는 ‘1:1 요청 답변’ 메뉴에서 답해 주세요.</p>";
   }
   // 붙여넣기 형식: [분류] 줄, Q. 질문 줄, A. 답변(여러 줄 가능)
   function parseFaqText(text) {
@@ -1105,10 +1150,10 @@
 
   function pageGuide() {
     const qls = DB.quickLinksOf(C());
-    return head("시작 가이드 · 자주 찾는 페이지", "수강생 홈 맨 위에 체크리스트로 보여요. 수강생이 모두 체크하면 자동으로 사라져요. 1주차 항목은 처음 한 번, ‘보이는 주차’를 정한 항목은 그 주차가 열릴 때 다시 떠요.", addBtn("guide", "단계 추가")) +
+    return head("시작 가이드 · 빠른 이동", "수강생 홈 맨 위에 체크리스트로 보여요. 수강생이 모두 체크하면 자동으로 사라져요. 1주차 항목은 처음 한 번, ‘보이는 주차’를 정한 항목은 그 주차가 열릴 때 다시 떠요.", addBtn("guide", "단계 추가")) +
       '<section class="a-card">' + simpleList("guide", C().guide, (g) => '<div class="a-item-main"><b>' + esc(g.title) + "</b><small>" + esc([g.desc, g.url].filter(Boolean).join(" · ")) + "</small></div>" + pill((Number(g.week) || 1) <= 1 ? "처음 한 번" : g.week + "주차", (Number(g.week) || 1) <= 1 ? "mute" : "info"), "단계가 없어요. 단계가 없으면 홈에 시작 가이드가 보이지 않아요.") + "</section>" +
-      '<p class="a-hint">' + icon("alert", "xs") + " 예: 오픈채팅방 입장 → 공지 읽기 → 1주차 첫 강의 보기 → AI봇에게 질문해 보기 · 2주차: 2주차 라이브 다시보기 → 마진 계산기 써 보기</p>" +
-      '<div class="a-card-head" style="margin-top:28px"><h2 class="a-grow">자주 찾는 페이지</h2>' + btn("기본 목록으로", "ql-reset", "a-btn-ghost a-btn-sm") + addBtn("ql", "페이지 추가") + "</div>" +
+      '<p class="a-hint">' + icon("alert", "xs") + " 예: 오픈채팅방 입장 → 공지 읽기 → 1주차 첫 강의 보기 → AI 조교에게 질문해 보기 · 2주차: 2주차 라이브 다시보기 → 마진 계산기 써 보기</p>" +
+      '<div class="a-card-head" style="margin-top:28px"><h2 class="a-grow">빠른 이동 (홈 바로 가기)</h2>' + btn("기본 목록으로", "ql-reset", "a-btn-ghost a-btn-sm") + addBtn("ql", "페이지 추가") + "</div>" +
       '<p class="a-muted" style="margin:0 0 12px">수강생 홈 공지사항 밑에 카드로 보여요. 플랫폼 안 메뉴는 윗줄(기본 색), https:// 외부 링크는 아랫줄(아이콘 색)로 나뉘어요. 꺼진 메뉴나 주소가 빈 카드는 보이지 않아요.</p>' +
       '<section class="a-card">' + simpleList("ql", qls, (l) => '<div class="a-item-main"><b>' + icon(l.icon || "link", "xs") + " " + esc(l.title) + "</b><small>" + esc([l.desc, l.url || "주소 없음 (숨김)"].filter(Boolean).join(" · ")) + "</small></div>" + (l.color ? '<span class="a-ql-swatch" style="background:' + esc(l.color) + '"></span>' : "") + (/^https?:/i.test(l.url || "") ? pill("외부 링크 · 아랫줄", "info") : !l.url ? pill("숨김", "mute") : pill("플랫폼 · 윗줄", "mute")), "자주 찾는 페이지가 없어요.") + "</section>";
   }
@@ -1117,14 +1162,14 @@
     return pageMasterMenus({ params: new URLSearchParams() }, true);
   }
   function pageDocs() {
-    return head("서류 준비 가이드", "판매 시작 전에 필요한 서류를 단계별로 안내해요. 순서는 화살표로 바꿀 수 있어요.", addBtn("doc", "단계 추가")) +
+    return head("실무 체크리스트", "판매 시작 전에 필요한 서류 · 준비 단계를 안내하고, 수강생이 하나씩 체크해요. 순서는 화살표로 바꿀 수 있어요.", addBtn("doc", "단계 추가")) +
       '<section class="a-card">' + simpleList("doc", C().docsGuide, (g) => '<div class="a-item-main"><b>' + esc(g.title) + "</b><small>" + esc([g.where, g.time, g.cost].filter(Boolean).join(" · ")) + "</small></div>", "서류 단계가 없어요.") + "</section>";
   }
   function pageChannels() {
     const list = DB.channelsOf(C());
-    return head("1:1 소통채널", "수강생 메뉴 ‘1:1 소통채널’에 카드로 보여요. 카카오톡 채널 · 채널톡 · 네이버 톡톡 · 이메일 · 전화 등 강사님이 실제로 쓰는 상담 창구를 넣어 두면, 수강생이 누르는 순간 그 채널로 연결돼요.", addBtn("channel", "채널 추가")) +
+    return head("1:1 상담 채널", "수강생 메뉴 ‘1:1 상담’에 카드로 보여요. 카카오톡 채널 · 채널톡 · 네이버 톡톡 · 이메일 · 전화 등 강사님이 실제로 쓰는 상담 창구를 넣어 두면, 수강생이 누르는 순간 그 채널로 연결돼요.", addBtn("channel", "채널 추가")) +
       '<section class="a-card">' + simpleList("channel", list, (ch) => { const t = DB.channelType(ch.type), lk = DB.channelLook(ch); return '<span class="a-ch-ic" style="background:' + (lk.color || "var(--m-primary)") + ";color:" + (lk.ink || "#fff") + '">' + icon(lk.icon, "sm") + '</span><div class="a-item-main"><b>' + esc(ch.title || t.label) + "</b><small>" + esc([ch.tag, t.label, ch.hours, ch.url || ((ch.note || "").trim() ? "링크 없이 안내 문구만 보여요" : "주소 없음 (수강생에게 ‘준비 중’으로 보여요)")].filter(Boolean).join(" · ")) + "</small></div>" + (ch.url ? pill("연결됨", "ok") : (ch.note || "").trim() ? pill("안내만 (링크 없음)", "info") : pill("준비 중", "mute")); }, "채널이 없어요. ‘채널 추가’로 상담 창구를 만들어 주세요.") + "</section>" +
-      '<p class="a-hint">' + icon("alert", "xs") + " 순서는 화살표로 바꿀 수 있어요. 메뉴를 숨기려면 ‘메뉴 구성’에서 1:1 소통채널을 꺼 주세요.</p>";
+      '<p class="a-hint">' + icon("alert", "xs") + " 순서는 화살표로 바꿀 수 있어요. 메뉴를 숨기려면 ‘메뉴 구성’에서 1:1 상담을 꺼 주세요.</p>";
   }
   /* ---------------- 코치 관리 (강사 전용) ---------------- */
   function coachStats(iid, coachId) {
@@ -1181,10 +1226,10 @@
   }
   function pagePartners() {
     const c = C(), list = DB.partnersOf(c), G = DB.PARTNER_GROUPS;
-    return head("제휴채널", "수강생 메뉴 ‘제휴채널’에 탭(전체보기 · 두고그룹 · 제휴사)으로 보여요. ‘맨 위에 크게’를 켠 곳(예: 두고 N카페)은 가장 위에 큰 카드와 ‘제휴 혜택 · 할인 코드 안내’ 띠로 보여요.", addBtn("partner", "제휴처 추가")) +
+    return head("제휴 혜택", "수강생 메뉴 ‘제휴 혜택’에 탭(전체보기 · 두고그룹 · 제휴사)으로 보여요. ‘맨 위에 크게’를 켠 곳(예: 두고 N카페)은 가장 위에 큰 카드와 ‘제휴 혜택 · 할인 코드 안내’ 띠로 보여요.", addBtn("partner", "제휴처 추가")) +
       '<section class="a-card">' + simpleList("partner", list, (x) => { const lk = DB.channelLook(Object.assign({ type: "other" }, x)); return '<span class="a-ch-ic" style="background:' + (lk.color || "var(--m-primary)") + ";color:" + DB.inkOn(lk.color) + '">' + icon(lk.icon, "sm") + '</span><div class="a-item-main"><b>' + esc(x.title) + "</b><small>" + esc([x.tag, x.url || "주소 없음 (‘준비 중’으로 보여요)"].filter(Boolean).join(" · ")) + "</small></div>" +
         pill((G.find((g) => g.key === x.group) || G[0]).label, x.group === "doogo" ? "dark" : "info") + (x.featured ? pill("맨 위 크게", "ok") : ""); }, "제휴처가 없어요. ‘제휴처 추가’로 만들어 주세요.") + "</section>" +
-      '<p class="a-hint">' + icon("alert", "xs") + " 순서는 화살표로 바꿀 수 있어요. 메뉴를 숨기려면 ‘메뉴 구성’에서 제휴채널을 꺼 주세요. " + (Array.isArray(c.partners) || IID() === "moon" ? "" : "지금은 문대표 기본 구성(강사님 이름으로 바뀜)이 보이고 있어요. 하나라도 수정하면 강사님 것으로 저장돼요.") + "</p>";
+      '<p class="a-hint">' + icon("alert", "xs") + " 순서는 화살표로 바꿀 수 있어요. 메뉴를 숨기려면 ‘메뉴 구성’에서 제휴 혜택을 꺼 주세요. " + (Array.isArray(c.partners) || IID() === "moon" ? "" : "지금은 문대표 기본 구성(강사님 이름으로 바뀜)이 보이고 있어요. 하나라도 수정하면 강사님 것으로 저장돼요.") + "</p>";
   }
   function pageLibrary() {
     const c = C();
@@ -1193,15 +1238,85 @@
     const items = c.resources[k];
     const isVideo = k === "vod" || k === "senior";
     const ln = DB.libNoticeOf(c);
-    return head("유료강의 자료실", "수강생 자료실 4개 분류에 자료와 영상을 올려요. VOD · 시니어 기초 가이드는 게시판처럼 영상(선택) + 글 + 사진 + 첨부 자료를 한 페이지로 보여 줘요.", addBtn("res-" + k, isVideo ? "글 쓰기" : "자료 추가")) +
+    return head("강의 자료함", "수강생 ‘강의 자료함’ 4개 분류에 자료와 영상을 올려요. VOD · 시니어 기초 가이드는 게시판처럼 영상(선택) + 글 + 사진 + 첨부 자료를 한 페이지로 보여 줘요.", addBtn("res-" + k, isVideo ? "글 쓰기" : "자료 추가")) +
       '<section class="a-card a-libnote"><div class="a-card-head"><span class="a-menu-ico">' + icon("shield", "sm") + '</span><div class="a-grow"><h2>자료실 이용 안내 팝업</h2><p class="a-muted">수강생이 자료실에 들어올 때마다 떠요. ‘' + esc(ln.button) + "’을 눌러야 자료가 보이고, 자료실 화면에는 열람자 이름 · 기수 · 시각이 옅게 표시돼요.</p></div>" +
         btn(icon("pen", "sm") + "문구 수정", "libnote-edit", "a-btn-ghost a-btn-sm") + "</div></section>" +
       '<section class="a-card"><div class="a-toolbar"><div class="a-tabs">' + tabs.map((t) => '<button type="button" class="a-tab' + (k === t[0] ? " on" : "") + '" data-action="lib-tab" data-k="' + t[0] + '">' + t[1] + ' <span class="num">' + c.resources[t[0]].length + "</span></button>").join("") + "</div></div>" +
         simpleList("res-" + k, items, (it) => '<div class="a-item-main"><b>' + esc(it.title) + "</b><small>" + esc([it.meta, it.desc].filter(Boolean).join(" · ")) + "</small></div>" + ((it.attachments || []).length ? pill("첨부 " + it.attachments.length, "info") : "") + (it.tool ? pill("계산기", "info") : isVideo ? ytBadge(it) : it.url ? pill("링크 연결됨", "ok") : pill("준비 중", "mute")), "아직 자료가 없어요.") + "</section>";
   }
   function pageMotivation() {
-    return head("동기부여", "맨 위 영상이 수강생 홈의 ‘오늘의 동기부여’로 보여요. 새로 올린 영상은 맨 위에 들어가요. 한마디 문구는 기본 정보에서 고쳐요.", addBtn("mv", "영상 추가")) +
-      '<section class="a-card">' + simpleList("mv", C().motivation, (it) => '<div class="a-item-main"><b>' + esc(it.title) + "</b><small>" + esc([it.minutes, it.date ? fmtMD(it.date) : ""].filter(Boolean).join(" · ")) + "</small></div>" + ytBadge(it), "동기부여 영상이 없어요.") + "</section>";
+    return head("응원 영상", "맨 위 영상이 수강생 홈의 ‘오늘의 응원 영상’으로 보여요. 새로 올린 영상은 맨 위에 들어가요. 한마디 문구는 기본 정보에서 고쳐요.", addBtn("mv", "영상 추가")) +
+      '<section class="a-card">' + simpleList("mv", C().motivation, (it) => '<div class="a-item-main"><b>' + esc(it.title) + "</b><small>" + esc([it.minutes, it.date ? fmtMD(it.date) : ""].filter(Boolean).join(" · ")) + "</small></div>" + ytBadge(it), "응원 영상이 없어요.") + "</section>";
+  }
+
+  /* ---------------- 새 수강생 메뉴: 라이브 다시보기 · 모범 과제 · 용어 사전 · 학습 노트 질문 ---------------- */
+  // 내용이 하나도 없으면 수강생 메뉴에 안 보인다는 안내 (메뉴 구성에서 꺼 두었으면 그 안내)
+  function menuNote(key, n) {
+    if (!DB.menuOn(IID(), key)) return '<p class="a-hint">' + icon("alert", "xs") + " 지금은 ‘메뉴 구성’에서 꺼져 있어요. 켜면 수강생 왼쪽 메뉴에 나타나요.</p>";
+    return n ? "" : '<p class="a-hint">' + icon("eye", "xs") + " 하나라도 올리면 수강생 왼쪽 메뉴에 자동으로 나타나요. 지금은 비어 있어서 수강생에게 보이지 않아요.</p>";
+  }
+  const editRow = (coll, it, main) => "<li>" + main + '<div class="a-row-actions">' + btn(icon("pen", "sm") + "수정", "item-edit", "a-btn-ghost a-btn-sm", ' data-coll="' + coll + '" data-id="' + esc(it.id) + '"') + "</div></li>";
+  function pageReplays() {
+    const list = (C().replays || []).slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+    return head("라이브 다시보기", "지난 라이브 녹화를 올리면 수강생 ‘라이브 다시보기’에 주차별로 모여요. 영상 아래 ‘핵심 정리’를 적어 두면 다시 찾기 쉬워요.", addBtn("replay", "다시보기 올리기")) +
+      menuNote("replays", list.length) +
+      '<section class="a-card">' + (list.length ? '<ul class="a-items">' + list.map((it) => editRow("replay", it, '<div class="a-item-main"><b>' + esc(it.title) + "</b><small>" + esc([it.week ? it.week + "주차" : "", it.date ? fmtFull(it.date) : "", it.minutes || ""].filter(Boolean).join(" · ")) + "</small></div>" + ytBadge(it) + ((it.attachments || []).length ? pill("자료 " + it.attachments.length, "info") : ""))).join("") + "</ul>"
+        : emptyBox("monitorPlay", "아직 올린 다시보기가 없어요.", addBtn("replay", "첫 다시보기 올리기"))) + "</section>";
+  }
+  function pageShowcase() {
+    const list = (C().showcase || []).slice().sort((a, b) => (Number(a.week) || 99) - (Number(b.week) || 99));
+    const mName = (id) => { const o = missionOpts().find((x) => x[0] === id); return o ? o[1] : ""; };
+    return head("모범 과제", "잘한 과제를 골라 사진과 코멘트를 올리면 수강생이 보고 따라 할 수 있어요. ‘과제 검수’에서 제출물을 열고 <b>모범 과제로 올리기</b>를 눌러도 바로 만들어져요.", addBtn("showcase", "모범 과제 추가")) +
+      menuNote("showcase", list.length) +
+      '<section class="a-card">' + (list.length ? '<ul class="a-items">' + list.map((it) => editRow("showcase", it,
+          ((it.images || [])[0] ? '<img class="a-sc-thumb" src="' + esc(it.images[0].data || it.images[0].url) + '" alt="">' : '<span class="a-sc-thumb">' + icon("trophy", "sm") + "</span>") +
+          '<div class="a-item-main"><b>' + esc(it.title) + "</b><small>" + esc([it.week ? it.week + "주차" : "", it.missionId ? mName(it.missionId) : "", it.author || ""].filter(Boolean).join(" · ")) + "</small></div>" + ((it.images || []).length ? pill("사진 " + it.images.length, "info") : ""))).join("") + "</ul>"
+        : emptyBox("trophy", "아직 모범 과제가 없어요. 과제 검수에서 잘한 제출물을 열고 ‘모범 과제로 올리기’를 눌러 보세요.")) + "</section>";
+  }
+  function pageGlossary() {
+    const G = C().glossary || [];
+    const cats = G.map((g) => g.category || "").filter((c, i, a) => a.indexOf(c) === i).sort((a, b) => (a ? 0 : 1) - (b ? 0 : 1) || a.localeCompare(b, "ko"));
+    return head("용어 사전", "강의에 나오는 용어를 쉬운 말로 풀어 두면 수강생 ‘용어 사전’에 가나다 순으로 보이고, AI 조교도 ‘○○가 뭐예요?’에 이 풀이로 답해요.", btn(icon("clipboard", "sm") + "한꺼번에 붙여넣기", "gl-bulk", "a-btn-outline") + addBtn("glossary", "용어 추가")) +
+      menuNote("glossary", G.length) +
+      (G.length ? cats.map((cat) => {
+        const items = G.filter((g) => (g.category || "") === cat).sort((a, b) => String(a.term).localeCompare(String(b.term), "ko"));
+        return '<section class="a-card"><div class="a-card-head"><h2>' + esc(cat || "분류 없음") + '</h2><span class="a-muted">' + items.length + "개</span></div>" +
+          '<ul class="a-items">' + items.map((it) => editRow("glossary", it, '<div class="a-item-main"><b>' + esc(it.term) + "</b><small>" + esc(String(it.desc || "").slice(0, 80)) + "</small></div>")).join("") + "</ul></section>";
+      }).join("") : '<section class="a-card">' + emptyBox("bookA", "아직 등록한 용어가 없어요.", btn(icon("clipboard", "sm") + "한꺼번에 붙여넣기", "gl-bulk", "a-btn-primary")) + "</section>");
+  }
+  function glBulkModal() {
+    openModal("용어 한꺼번에 붙여넣기",
+      '<form id="gl-bulk-form" class="a-form" novalidate><p class="a-muted" style="margin:0">한 줄에 용어 하나씩, <b>용어 : 풀이</b> 형식으로 붙여 넣으면 한 번에 등록돼요. [분류] 줄은 없어도 돼요.</p>' +
+      '<pre class="a-format">[세금 · 사업자]\n간이과세자 : 연 매출이 적은 개인사업자. 부가세 부담이 적어요.\n부가세 : 물건값에 붙는 10% 세금.\n\n[판매 · 마케팅]\n객단가 : 손님 한 명이 한 번에 쓰는 평균 금액.</pre>' +
+      '<div class="a-field"><label for="gb-text">붙여넣을 내용</label><textarea class="a-input" id="gb-text" name="text" rows="10" placeholder="용어 : 풀이"></textarea><small class="a-muted" id="gb-count">0개 인식됨</small></div>' +
+      '<label class="a-check"><input type="checkbox" name="replace"><span>기존 용어를 모두 지우고 이걸로 바꾸기</span></label></form>',
+      btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="gl-bulk-form">등록</button>', "lg");
+  }
+  function parseGlossaryText(text) {
+    let cat = "";
+    const out = [];
+    String(text || "").split(/\r?\n/).forEach((raw) => {
+      const line = raw.trim();
+      if (!line) return;
+      const m = line.match(/^\[(.+)\]$/);
+      if (m) { cat = m[1].trim(); return; }
+      const k = line.search(/\s*[:：]\s*|\s+[-–—]\s+|\t/);
+      if (k <= 0) return;
+      const term = line.slice(0, k).replace(/^[-•·*]\s*/, "").trim(), desc = line.slice(k).replace(/^\s*([:：]|[-–—]|\t)\s*/, "").trim();
+      if (term && desc) out.push({ term: term.slice(0, 60), desc: desc.slice(0, 600), category: cat });
+    });
+    return out;
+  }
+  function pageNotePrompts() {
+    const P = C().notePrompts || [], weeks = C().weeks;
+    return head("학습 노트 질문", "주차마다 수강생이 스스로 돌아볼 질문을 정해요. 수강생은 ‘학습 노트’에서 답을 적고, 강의 화면에서 쓴 메모도 같이 모여요. 질문을 비워 둔 주차는 기본 질문 3개가 나가요.") +
+      menuNote("notes", 1) +
+      (weeks.length ? weeks.map((w) => {
+        const own = P.filter((x) => Number(x.week) === w.no);
+        return '<section class="a-card"><div class="a-card-head"><h2>' + w.no + "주차 · " + esc(w.title) + "</h2>" + addBtn("notePrompt", "질문 추가", String(w.no), "a-btn-ghost a-btn-sm") + "</div>" +
+          (own.length ? '<ul class="a-items">' + own.map((it, i) => editRow("notePrompt", it, '<span class="a-np-no">Q' + (i + 1) + '</span><div class="a-item-main"><b>' + esc(it.q) + "</b></div>")).join("") + "</ul>"
+            : '<ul class="a-items a-np-default">' + DB.NOTE_PROMPTS.map((q, i) => '<li><span class="a-np-no">Q' + (i + 1) + '</span><div class="a-item-main"><span>' + esc(q) + "</span></div>" + pill("기본 질문", "mute") + "</li>").join("") + "</ul>") + "</section>";
+      }).join("") : '<section class="a-card">' + emptyBox("notebookPen", "커리큘럼에 주차를 먼저 만들어 주세요.") + "</section>");
   }
 
   /* ---------------- 홍보 랜딩페이지 편집 ---------------- */
@@ -1665,7 +1780,7 @@
     const flow = [["send", "신청", "기수 · 1인 수강료 · 연락처 · 이메일을 남겨요"], ["phone", "연락 · 입금", "담당자가 전화드리고, 이용료를 무통장으로 입금해 주세요"], ["file", "세금계산서", "입금이 확인되면 남겨 주신 이메일로 보내 드려요"], ["layers", "기수 오픈", "두고 클래스가 기수를 열어 드려요. 그다음은 ‘기수 관리’에서 자유롭게 고쳐요"]];
     return '<section class="a-card"><div class="a-card-head"><h2>다음 기수는 이렇게 열려요</h2></div>' +
       '<ol class="a-bflow">' + flow.map((x, i) => '<li><span class="a-bflow-ic">' + icon(x[0], "sm") + "</span><b>" + (i + 1) + ". " + x[1] + "</b><small>" + x[2] + "</small></li>").join("") + "</ol>" +
-      '<div class="a-bnote"><p><b>기수 이용료 = 강사님 1인 수강료 × 1명분</b> · 수강생이 100명이든 500명이든 기수마다 같아요. 자료 업로드 · AI봇 · 수강생 관리가 모두 들어 있어요.</p>' +
+      '<div class="a-bnote"><p><b>기수 이용료 = 강사님 1인 수강료 × 1명분</b> · 수강생이 100명이든 500명이든 기수마다 같아요. 자료 업로드 · AI 조교 · 수강생 관리가 모두 들어 있어요.</p>' +
         "<p>" + (acct ? "입금 계좌 <b>" + acct + "</b>" : "입금 계좌는 담당자가 연락드릴 때 알려 드려요.") + (bi.vat === "separate" ? " · 부가세 10% 별도" : bi.vat === "included" ? " · 부가세 포함" : "") + "</p>" + (bi.note ? "<p>" + esc(bi.note) + "</p>" : "") + "</div></section>";
   }
   function pageBilling() {
@@ -2199,7 +2314,7 @@
   }
 
   /* ---------------- 렌더 ---------------- */
-  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, partners: pagePartners, coaches: pageCoaches, pages: pageCustomPages, billing: pageBilling };
+  const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, replays: pageReplays, showcase: pageShowcase, glossary: pageGlossary, notes: pageNotePrompts, channels: pageChannels, partners: pagePartners, coaches: pageCoaches, pages: pageCustomPages, billing: pageBilling };
   const MPAGES = { "": pageMasterHome, partners: pageMasterPartners, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData, site: pageMasterSite, billing: pageMasterBilling };
   function render() {
     closeModal();
@@ -2340,6 +2455,8 @@
       // 콘텐츠
       case "lib-tab": ui.libTab = d.k; render(); break;
       case "faq-bulk": faqBulkModal(); break;
+      case "gl-bulk": glBulkModal(); break;
+      case "showcase-from": showcaseFrom(a.dataset.sid, a.dataset.mid); break;
       case "menu-off": case "menu-on": {
         const m = DB.menuConfig(ui.mMenuIns), it = m.items.find((x) => x.key === d.key);
         it.on = d.action === "menu-on";
@@ -2387,7 +2504,7 @@
         f.querySelectorAll("input[name=perm]").forEach((x) => { x.checked = set.indexOf(x.value) !== -1; });
         break;
       }
-      case "ql-reset": confirmModal("자주 찾는 페이지", "기본 목록(윗줄: 공지사항 · 자주 묻는 질문 · 서류 준비 가이드 · 요청사항 / 아랫줄: 유튜브 · 네이버 카페 · 두고커넥트 · 두고푸드)으로 되돌릴까요?", "되돌리기", false, () => { delete C().quickLinks; commit("기본 목록으로 되돌렸어요."); }); break;
+      case "ql-reset": confirmModal("빠른 이동", "기본 목록(윗줄: 클래스 소식 · FAQ 검색 · 실무 체크리스트 · 1:1 요청 / 아랫줄: 유튜브 · 네이버 카페 · 두고커넥트 · 두고푸드)으로 되돌릴까요?", "되돌리기", false, () => { delete C().quickLinks; commit("기본 목록으로 되돌렸어요."); }); break;
       case "libnote-reset": delete C().libNotice; DB.save(); commit("기본 문구로 되돌렸어요."); break;
       case "backup-copy": {
         const ta = document.getElementById("backup-out");
@@ -2499,6 +2616,17 @@
       render(); toast("첫 화면 바닥 정보를 저장했어요.");
       return;
     }
+    if (f.id === "gl-bulk-form") {
+      e.preventDefault();
+      const items = parseGlossaryText(f.text.value);
+      if (!items.length) { toast("‘용어 : 풀이’ 형식의 줄을 찾지 못했어요. 형식을 확인해 주세요.", "warn"); return; }
+      const c = C();
+      if (f.replace.checked) c.glossary = [];
+      c.glossary = c.glossary || [];
+      items.forEach((it) => { const same = c.glossary.find((g) => g.term === it.term); if (same) Object.assign(same, it); else c.glossary.push(Object.assign({ id: DB.uid("gl") }, it)); });
+      commit(items.length + "개 용어를 등록했어요.");
+      return;
+    }
     if (f.id === "faq-bulk-form") {
       e.preventDefault();
       const items = parseFaqText(f.text.value);
@@ -2593,6 +2721,7 @@
     }
     if (t.dataset && t.dataset.lp) { lpSet(lpDraft(), t.dataset.lp, t.value); lpChanged(); return; }
     if (t.dataset && t.dataset.lpLines) { lpSet(lpDraft(), t.dataset.lpLines, LINES(t.value)); lpChanged(); return; }
+    if (t.id === "gb-text") { const n = parseGlossaryText(t.value).length; const el = document.getElementById("gb-count"); if (el) el.textContent = n + "개 인식됨"; }
     if (t.id === "fb-text") { const n = parseFaqText(t.value).length; const el = document.getElementById("fb-count"); if (el) el.textContent = n + "개 인식됨"; }
     if (t.id === "cf-start" || t.id === "cf-time") refreshWeekPreview();
     if (t.id === "bf-fee" || t.id === "bf-amount") refreshBillCalc();

@@ -172,6 +172,63 @@ function billingVatIncluded(get, keys) {
   return { writes, result };
 }
 
+/* ---------- 수강생 메뉴 이름을 두고 클래스 표현으로 (대표님 요청) ----------
+ * 1) 강사 메뉴 구성에 예전 기본 이름이 그대로 저장돼 있으면 지워서 새 기본 이름이 보이게 (강사가 직접 바꾼 이름은 그대로)
+ * 2) AI봇 이름이 예전 기본값('24시 OOO AI봇')이면 'OOO AI 조교'로
+ * 3) 공지 · FAQ · 시작 가이드 · 강의 소개 페이지의 예전 기본 문구 가운데 메뉴 이름이 들어간 문장만 새 이름으로 (문장이 그대로 남아 있을 때만)
+ * 4) 홈 ‘빠른 이동’ 기본 4칸 이름 (예전 기본 이름일 때만)
+ * (db.js 의 RENAME_PHRASES · QL_RENAME · OLD_MENU_LABELS 와 같은 목록) */
+const OLD_MENU_LABELS = { home: "홈", curriculum: "커리큘럼", missions: "과제 제출하기", schedule: "강의 일정", notices: "공지사항", qna: "Q&A", docs: "서류 준비 가이드", bot: "AI봇", library: "유료강의 자료실", motivation: "동기부여", channels: "1:1 소통채널", partners: "제휴채널", certificate: "수료증" };
+const RENAME_PHRASES = [
+  [/다시보기는 커리큘럼 메뉴에 올라갑니다/g, "다시보기는 ‘라이브 다시보기’ 메뉴에 올라갑니다"],
+  [/‘과제 제출하기’에서 주차별로/g, "‘과제 · 미션’에서 주차별로"],
+  [/Q&A 메뉴나 24시 (\S+) AI봇에 먼저/g, "‘질문 · 요청’ 메뉴나 $1 AI 조교에게 먼저"],
+  [/^유료강의 자료실 이용 시 주의사항$/, "강의 자료함 이용 시 주의사항"],
+  [/다시보기가 커리큘럼 1주차에 올라갔습니다/g, "다시보기가 ‘주차별 강의’ 1주차에 올라갔습니다"],
+  [/‘서류 준비 가이드’ 메뉴/g, "‘실무 체크리스트’ 메뉴"],
+  [/라이브 다음 날까지 커리큘럼 메뉴에 다시보기가 올라갑니다\. 강의 일정 메뉴에서/g, "라이브 다음 날까지 ‘라이브 다시보기’ 메뉴에 영상이 올라갑니다. ‘수업 캘린더’ 메뉴에서"],
+  [/강의 일정 메뉴의 파란 점/g, "‘수업 캘린더’ 메뉴의 파란 점"],
+  [/Q&A의 ‘요청사항’ 탭에서 ‘문의하기’를 눌러/g, "‘질문 · 요청’ 메뉴의 ‘1:1 요청’ 탭에서 ‘요청 남기기’를 눌러"],
+  [/^다시보기가 커리큘럼 메뉴에 올라갑니다\.$/, "다시보기가 ‘라이브 다시보기’ 메뉴에 올라갑니다."],
+  [/AI봇에 밤에 물어봐도/g, "AI 조교한테 밤에 물어봐도"],
+  [/^서류 준비 가이드 · 마진 계산기$/, "실무 체크리스트 · 마진 계산기"],
+  [/^24시 (\S+) AI봇$/, "$1 AI 조교 (24시간 답변)"],
+  [/일정, 자료실, 24시 AI봇까지 한 곳에서/g, "일정, 자료함, AI 조교까지 한 곳에서"],
+  [/^AI봇에게 궁금한 점 물어보기$/, "AI 조교에게 궁금한 점 물어보기"],
+  [/^강의 일정 확인하기$/, "수업 캘린더 확인하기"]
+];
+const QL_RENAME = { ql1: ["공지사항", "클래스 소식"], ql2: ["자주 묻는 질문", "FAQ 검색"], ql3: ["서류 준비 가이드", "실무 체크리스트"], ql4: ["요청사항", "1:1 요청"] };
+function renamePhrases(c) {
+  let n = 0;
+  const fix = (v) => RENAME_PHRASES.reduce((t, p) => t.replace(p[0], p[1]), v);
+  const walk = (o) => {
+    if (Array.isArray(o)) { o.forEach((v, i) => { if (typeof v === "string") { const r = fix(v); if (r !== v) { o[i] = r; n++; } } else if (v && typeof v === "object") walk(v); }); return; }
+    Object.keys(o).forEach((k) => { const v = o[k]; if (typeof v === "string") { if (k === "data" || k === "photo") return; const r = fix(v); if (r !== v) { o[k] = r; n++; } } else if (v && typeof v === "object") walk(v); });
+  };
+  ["notices", "faqs", "guide", "landing"].forEach((k) => { if (c[k] && typeof c[k] === "object") walk(c[k]); });
+  const b = c.brand;
+  if (isObj(b) && b.botName === "24시 " + (b.instructor || "강사") + " AI봇") { b.botName = (b.instructor || "강사") + " AI 조교"; n++; }
+  (Array.isArray(c.quickLinks) ? c.quickLinks : []).forEach((l) => { const r = isObj(l) && QL_RENAME[l.id]; if (r && l.title === r[0]) { l.title = r[1]; n++; } });
+  return n;
+}
+function menuNamesV15(get, keys) {
+  const writes = {}, result = { menus: [], content: [] };
+  keys("ins:").forEach((k) => {
+    const ins = get(k);
+    if (!isObj(ins) || !isObj(ins.menu) || !Array.isArray(ins.menu.items)) return;
+    let n = 0;
+    ins.menu.items.forEach((x) => { if (isObj(x) && x.label && OLD_MENU_LABELS[x.key] === x.label) { delete x.label; n++; } });
+    if (n) { writes[k] = ins; result.menus.push(k + " · " + n); }
+  });
+  keys("content:").forEach((k) => {
+    const c = get(k);
+    if (!isObj(c)) return;
+    const n = renamePhrases(c);
+    if (n) { writes[k] = c; result.content.push(k + " · " + n); }
+  });
+  return { writes, result };
+}
+
 /* 위에서부터 차례로 (앞 작업 결과를 뒤 작업이 본다) */
 const OPS = [
   { id: "2026-10-08-docs-guide-6", note: "문대표 서류 준비 가이드를 6단계로", run: docsGuideSix },
@@ -179,7 +236,8 @@ const OPS = [
   { id: "2026-10-08-moon-demo-accounts", note: "문대표 체험 계정(3기 이수진 · 1기 체험단 · 2기 체험단)만 남기기", run: moonDemoAccounts },
   { id: "2026-10-09-moon-profile-photo", note: "문대표 강사 프로필 사진 · 강의 분야 (첫 화면 강사 카드)", run: moonProfile },
   { id: "2026-10-09-billing-vat-included", note: "기수 이용료 부가세 방식을 '부가세 포함'으로", run: billingVatIncluded },
-  { id: "2026-10-12-logic-farmer-photos", note: "로직메이커 · 황금농부 강사 프로필 사진 (사진이 비어 있을 때만)", run: logicFarmerPhotos }
+  { id: "2026-10-12-logic-farmer-photos", note: "로직메이커 · 황금농부 강사 프로필 사진 (사진이 비어 있을 때만)", run: logicFarmerPhotos },
+  { id: "2026-10-13-menu-names-v15", note: "수강생 메뉴 이름 · AI 조교 이름 · 예전 메뉴 이름이 들어간 기본 문구를 새 이름으로 (기본값 그대로일 때만)", run: menuNamesV15 }
 ];
 
-module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded };
+module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15 };
