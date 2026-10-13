@@ -1,0 +1,112 @@
+{
+  "_about": "두고그룹 홈페이지 영상 — Seedance 2.0 샷 리스트. 11개 장면(스토리보드)을 한 번 생성해 메인 배경(26초)·전체 그룹 영상(45초)·사업별 루프 7개에 모두 사용합니다. assemble.sh 가 이 파일의 순서·길이로 편집합니다.",
+  "model": "seedance_2_0",
+  "defaults": {
+    "mode": "std",
+    "resolution": "1080p",
+    "aspect_ratio": "16:9",
+    "generate_audio": false
+  },
+  "draft_defaults": {
+    "mode": "fast",
+    "resolution": "720p",
+    "aspect_ratio": "16:9",
+    "generate_audio": false
+  },
+  "cost_estimate_credits": {
+    "total_seconds": 47,
+    "std_1080p": 423,
+    "std_720p": 212,
+    "fast_720p_draft": 118,
+    "note": "Higgsfield get_cost 기준(2026-10-13): 1080p std 9/초, 720p std 4.5/초, 720p fast 2.5/초"
+  },
+  "character_ref": "tools/seedance/character-ref.png",
+  "style": "miniature 3D clay diorama world, soft warm daylight, tilt-shift depth of field, cream-white rounded buildings with large warm-lit windows, lush round trees and planters, pastel palette, gentle Pixar-like animation, smooth cinematic camera, no on-screen text, no subtitles, no logos added",
+  "mascot": "a cute soft-clay light-blue mascot shaped like a rounded droplet, big glossy black oval eyes, small friendly smile, navy crossbody satchel with a tiny teal button, navy shoes (same character as the reference image)",
+  "shots": [
+    {
+      "id": "S01", "slug": "idea", "scene": "아이디어", "duration": 4,
+      "keyframe": "tools/seedance/keyframes/S01-idea.webp",
+      "narration": "처음엔, 작은 생각 하나였습니다.",
+      "prompt": "{mascot} stands on a rooftop terrace of the miniature town, looks up as a tiny warm glowing spark of an idea twinkles above its head, then smiles and waves happily. Slow gentle push-in. {style}"
+    },
+    {
+      "id": "S02", "slug": "bio", "scene": "두고바이오 NZ", "duration": 4,
+      "keyframe": "tools/seedance/keyframes/S02-bio.webp",
+      "narration": "살펴보고, 시험하고, 다시 들여다보며.",
+      "prompt": "Camera glides toward the BIO NZ laboratory building. Inside the bright window, tiny researchers in white lab coats carefully examine green health-supplement bottles and test tubes; {mascot} peeks through the glass with curiosity, tilting its head. Calm, precise, clean mood. {style}"
+    },
+    {
+      "id": "S03", "slug": "commerce", "scene": "두고커머스", "duration": 4,
+      "keyframe": "tools/seedance/keyframes/S03-commerce.webp",
+      "narration": "생각은 제품이 되고, 제품은 브랜드가 됩니다.",
+      "prompt": "Inside the COMMERCE shop, simple plain products on a table transform into neatly designed branded packages lined up on a glowing display shelf; {mascot} places the last package and steps back proudly. Slow lateral dolly. {style}"
+    },
+    {
+      "id": "S04", "slug": "media", "scene": "두고미디어", "duration": 4,
+      "keyframe": "tools/seedance/keyframes/S04-media.webp",
+      "narration": "그 가치를 발견하고, 이야기로 전합니다.",
+      "prompt": "Inside the MEDIA studio, a small cinema camera on a tripod and a soft ring light; a host speaks warmly to the camera while {mascot} behind the camera gives a cheerful thumbs-up; monitors glow softly. Slow push-in through the window. {style}"
+    },
+    {
+      "id": "S05", "slug": "campus", "scene": "두고캠퍼스", "duration": 5,
+      "keyframe": "tools/seedance/keyframes/S05-campus.webp",
+      "narration": "경험을 나누면, 또 다른 시작이 태어납니다.",
+      "prompt": "Camera moves through the entrance of the CAMPUS building into a bright classroom: an instructor presents to attentive students at round tables; {mascot} sits in the front row taking notes, then raises its hand with excitement. Warm, hopeful mood. {style}"
+    },
+    {
+      "id": "S06", "slug": "ad", "scene": "두고애드", "duration": 4,
+      "keyframe": "tools/seedance/keyframes/S06-ad.webp",
+      "narration": "각자의 가능성이, 필요한 사람에게 닿도록.",
+      "prompt": "Inside the AD office, a wall of screens shows simple colorful bar charts that grow upward and a rising arrow line; {mascot} points at the rising graph and does a small happy hop. No readable text on screens. Slow push-in. {style}"
+    },
+    {
+      "id": "S07", "slug": "food", "scene": "두고푸드", "duration": 4,
+      "keyframe": "tools/seedance/keyframes/S07-food.webp",
+      "narration": "좋은 먹거리도, 정성을 담아 일상으로.",
+      "prompt": "At the FOOD market with a navy awning, crates of fresh colorful vegetables and fruit; a small white delivery van gently pulls up; {mascot} carries a crate of fresh produce with a big smile while customers sit at cafe tables. Gentle tracking shot. {style}"
+    },
+    {
+      "id": "S08", "slug": "space", "scene": "두고스페이스", "duration": 4,
+      "keyframe": "tools/seedance/keyframes/S08-space.webp",
+      "narration": "함께 일하고, 잠시 쉬어갈 자리까지.",
+      "prompt": "Inside the SPACE building, a bright coworking office with plants where people work at long desks; the light shifts to a warm evening glow as {mascot} relaxes on a soft sofa by the large window, content. Slow push-in. {style}"
+    },
+    {
+      "id": "S09", "slug": "connect", "scene": "가능성의 연결", "duration": 4,
+      "keyframe": "tools/seedance/keyframes/S09-connect.webp",
+      "narration": "하나의 생각이, 더 많은 가능성과 만났습니다.",
+      "prompt": "Camera slowly pulls back over the plaza; soft glowing blue light lines travel along the paths and connect all seven buildings into one network; {mascot} stands at the central plaza watching the lights link up. Magical but subtle. {style}"
+    },
+    {
+      "id": "S10", "slug": "street", "scene": "그룹의 거리", "duration": 5,
+      "keyframe": "tools/seedance/keyframes/S10-street.webp",
+      "narration": "사람과 브랜드, 그리고 일상이 이어지는 곳.",
+      "prompt": "Slow wide dolly across the lively plaza: people walk between the buildings, sit by the round planter, trees sway gently, a delivery van passes; {mascot} waves to passers-by. Warm golden-hour light. {style}"
+    },
+    {
+      "id": "S11", "slug": "group", "scene": "그룹 전체 + 로고", "duration": 5,
+      "keyframe": "tools/seedance/keyframes/S11-group.webp",
+      "narration": "좋은 사업이 더 나은 내일을 만듭니다.",
+      "prompt": "Smooth aerial pull-back revealing the whole miniature town of seven rounded buildings around the central plaza, people moving below, {mascot} waving from the rooftop terrace; ends on a calm wide establishing shot with open soft sky in the upper third for a logo overlay. {style}"
+    }
+  ],
+  "edit": {
+    "hero_loop": {
+      "_about": "메인 첫 화면 배경(무음 반복). 구간 경계 시간은 index.html 히어로 장면 표시기의 data-start/data-end 와 같아야 합니다.",
+      "segments": [
+        { "shot": "S01", "start": 0, "end": 2 },
+        { "shot": "S02", "start": 2, "end": 5 },
+        { "shot": "S03", "start": 5, "end": 8 },
+        { "shot": "S04", "start": 8, "end": 11 },
+        { "shot": "S05", "start": 11, "end": 14 },
+        { "shot": "S06", "start": 14, "end": 17 },
+        { "shot": "S07", "start": 17, "end": 20 },
+        { "shot": "S08", "start": 20, "end": 23 },
+        { "shot": "S11", "start": 23, "end": 26 }
+      ]
+    },
+    "film": { "_about": "그룹 영상 보기(45초) — S01~S11 전체 길이를 순서대로. 자막은 assets/video/group-film.ko.vtt", "shots": ["S01","S02","S03","S04","S05","S06","S07","S08","S09","S10","S11"] },
+    "biz_loops": { "campus": "S05", "bio": "S02", "commerce": "S03", "media": "S04", "ad": "S06", "food": "S07", "space": "S08" }
+  }
+}
