@@ -1,6 +1,6 @@
 /* =========================================================
    DOOGO GROUP — business.css (사업영역 목록)
-   영상 첫 화면 + 사업 바로가기 · 가치사슬 띠 · 7개 사업 카드
+   사진 첫 화면(7개 사업 크로스페이드) + 사업 바로가기 · 가치사슬 띠 · 7개 사업 카드(사진 · 운영 법인)
    ========================================================= */
 
 /* 서브 내비 번호: 작은 글씨라 투명도 대신 대비가 충분한 색(흰 바탕 위 블루, 활성 탭의 남색 위 밝은 블루) */
@@ -15,21 +15,25 @@
   min-height: clamp(700px, 100svh, 1000px);
   padding: calc(var(--header-h) + clamp(48px, 7vw, 112px)) 0 clamp(28px, 3.4vw, 48px);
 }
-.bz-hero-media { position: absolute; inset: 0; z-index: -2; background: var(--navy) url(../../video/hero-poster.webp) center / cover no-repeat; }
-.bz-hero-media video, .bz-hero-swap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.bz-hero-media video { transition: opacity .8s var(--ease), transform 1.4s var(--ease); }
-.bz-hero.is-swap .bz-hero-media video { opacity: 0; transform: scale(1.04); }
-.bz-hero-swap img { opacity: 0; transform: scale(1.08); transition: opacity .7s var(--ease), transform 1.6s var(--ease); }
-.bz-hero-swap img.is-on { opacity: 1; transform: scale(1); }
+.bz-hero-media { position: absolute; inset: 0; z-index: -2; overflow: hidden; background: var(--navy); }
+/* 7개 사업 사진 크로스페이드 (business.js): 새 사진이 위에서 1.2초 동안 나타나며 1.08 → 1로 6.5초에 걸쳐 가라앉음(Ken Burns).
+   아래 사진은 새 사진이 다 덮은 뒤에 치웁니다 → 두 장이 함께 옅어지며 어두워지는 구간이 없음 */
+.bz-slides { position: absolute; inset: 0; }
+.bz-slide {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  object-position: var(--fx, 50%) var(--fy, 50%); transform-origin: var(--fx, 50%) var(--fy, 50%);
+  opacity: 0; transform: scale(1.08); backface-visibility: hidden;
+}
+.bz-slide.is-on { opacity: 1; transform: scale(1); transition: opacity 1.2s var(--ease-in-out), transform 6.5s cubic-bezier(.25, .6, .3, 1); }
+.js .bz-slide.is-first { animation: bzKen 6.5s cubic-bezier(.25, .6, .3, 1) both; }
+@keyframes bzKen { from { transform: scale(1.08); } to { transform: scale(1); } }
 .bz-hero-shade {
   position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background:
     linear-gradient(90deg, rgba(10, 20, 38, .82) 0%, rgba(10, 20, 38, .45) 55%, rgba(10, 20, 38, 0) 85%),
     radial-gradient(55% 60% at 88% 0%, rgba(10, 93, 226, .38), transparent 66%),
-    linear-gradient(180deg, rgba(10, 20, 38, .78) 0%, rgba(10, 20, 38, .6) 34%, rgba(10, 20, 38, .82) 70%, rgba(10, 20, 38, .97) 100%);
-  transition: background-color .6s var(--ease);
+    linear-gradient(180deg, rgba(10, 20, 38, .66) 0%, rgba(10, 20, 38, .42) 34%, rgba(10, 20, 38, .74) 70%, rgba(10, 20, 38, .96) 100%);
 }
-.bz-hero.is-swap .bz-hero-shade { background-color: rgba(10, 20, 38, .06); }
 
 .bz-hero-inner { position: relative; }
 .bz-hero .breadcrumb { color: var(--on-dark-2); }
@@ -41,7 +45,7 @@
 .bz-hero-foot { margin-top: clamp(44px, 6.5vw, 96px); padding-top: 22px; border-top: 1px solid var(--line-dark); }
 .bz-jump-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 16px; }
 .bz-jump-label { margin-right: auto; font-size: .9rem; font-weight: 600; color: var(--on-dark-2); }
-/* 그룹 구조: DOOGO HOLDINGS → 7개 계열 사업 */
+/* 그룹 구조: DOOGO HOLDINGS → 7개 사업영역 */
 .bz-org { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .bz-org-hold { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 999px; background: rgba(111, 162, 242, .16); border: 1px solid rgba(111, 162, 242, .4); font-size: .74rem; font-weight: 600; letter-spacing: .18em; color: #fff; }
 .bz-org-arrow { display: inline-flex; color: var(--blue-300); }
@@ -57,9 +61,9 @@
 }
 .bz-vtoggle:hover { background: rgba(255, 255, 255, .16); border-color: #fff; }
 .bz-vtoggle .ico { width: 15px; height: 15px; }
+.bz-vtoggle[hidden] { display: none; }
 .bz-vtoggle .ico-play, .bz-vtoggle.is-paused .ico-pause { display: none; }
 .bz-vtoggle.is-paused .ico-play { display: block; margin-left: 2px; }
-.is-reduced .bz-vtoggle { display: none; }
 
 .bz-jump { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
 .bz-jump-item {
@@ -81,6 +85,11 @@
 .bz-jump-item:hover .bz-jump-num, .bz-jump-item:focus-visible .bz-jump-num { color: var(--blue); }
 .bz-jump-item:hover .bz-jump-ico, .bz-jump-item:focus-visible .bz-jump-ico { opacity: 1; color: var(--blue); }
 .bz-jump-item:hover .en, .bz-jump-item:focus-visible .en { color: var(--muted); }
+/* 지금 배경에 보이는 사업: 조금 밝게 + 자동 넘김 중이면 아래 선이 다음 사진까지 남은 시간만큼 차오름 */
+.bz-jump-item.is-cur:not(:hover, :focus-visible) { background: rgba(255, 255, 255, .13); border-color: rgba(255, 255, 255, .34); }
+.bz-jump-item.is-cur .bz-jump-ico { opacity: 1; }
+.bz-hero.is-auto .bz-jump-item.is-cur:not(:hover, :focus-visible)::after { background: var(--blue-300); animation: bzProg var(--slide-dur, 5s) linear both; }
+@keyframes bzProg { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 /* 바로가기 등장: 순서대로 */
 .js .bz-hero-foot[data-reveal] .bz-jump li { opacity: 0; transform: translateY(18px); transition: opacity .7s var(--ease), transform .7s var(--ease); transition-delay: calc(var(--i, 0) * .06s + .45s); }
 .js .bz-hero-foot.is-in .bz-jump li { opacity: 1; transform: none; }
@@ -130,7 +139,6 @@
   scroll-margin-top: calc(var(--header-h) + 84px);
   transition: box-shadow .5s var(--ease);
 }
-.bz-card.is-key { background: linear-gradient(160deg, var(--blue-50) 0%, var(--ivory) 46%); box-shadow: inset 0 0 0 1.5px rgba(10, 93, 226, .16); }
 .bz-card:nth-child(even) .bz-media { order: 2; }
 
 .bz-media {
@@ -140,8 +148,11 @@
 .js .bz-media[data-reveal] { opacity: 1; transform: none; clip-path: inset(7% 7% 7% 7% round var(--radius)); transition: clip-path 1.3s var(--ease); }
 .js .bz-media[data-reveal].is-in { clip-path: inset(0 0 0 0 round 0px); }
 .bz-media-inner { position: absolute; inset: -8% 0; transform: translate3d(0, var(--py, 0px), 0); will-change: transform; }
-.bz-media video { width: 100%; height: 100%; object-fit: cover; object-position: var(--op, 50%) 50%; transition: transform 1.4s var(--ease); }
-.bz-card:hover .bz-media video { transform: scale(1.045); }
+.bz-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.4s var(--ease); }
+/* 등장: 테두리가 열리면서 사진이 1.12 → 1로 가라앉음 */
+.js .bz-media[data-reveal] img { scale: 1.12; transition: scale 2s var(--ease), transform 1.4s var(--ease); }
+.js .bz-media[data-reveal].is-in img { scale: 1; }
+.bz-card:hover .bz-media img { transform: scale(1.045); }
 .bz-media::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(10, 20, 38, .18) 0%, transparent 26%, transparent 48%, rgba(10, 20, 38, .82) 100%); }
 .bz-media-tag {
   position: absolute; left: 18px; top: 18px; z-index: 2; display: inline-flex; align-items: center; gap: 8px;
@@ -152,7 +163,7 @@
 .bz-media-quote {
   position: absolute; left: clamp(18px, 2.2vw, 30px); right: clamp(18px, 2.2vw, 30px); bottom: clamp(18px, 2.2vw, 28px); z-index: 2;
   color: #fff; font-size: clamp(1.02rem, 1.45vw, 1.3rem); font-weight: 600; line-height: 1.45; letter-spacing: -.025em;
-  text-shadow: 0 2px 18px rgba(0, 0, 0, .28);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, .28); text-wrap: balance;
 }
 /* 마우스를 따라오는 VIEW 표시 (정밀 포인터에서만) */
 .bz-cursor { position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none; display: none; }
@@ -178,7 +189,16 @@
 .bz-brand { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .bz-brand .en { font-size: .95rem; font-weight: 600; letter-spacing: .14em; color: var(--ink-2); }
 .bz-brand-ko { font-size: .92rem; font-weight: 500; color: var(--muted); }
-.bz-def { margin-top: 18px; font-size: clamp(1.06rem, 1.3vw, 1.2rem); font-weight: 600; line-height: 1.6; letter-spacing: -.025em; color: var(--ink); }
+/* 운영 법인 · 대표 */
+.bz-corp { margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: .95rem; line-height: 1.4; color: var(--ink-2); }
+.bz-corp-k { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 6px; background: var(--blue); color: #fff; font-size: .74rem; font-weight: 700; }
+.bz-corp-n { font-weight: 700; color: var(--ink); letter-spacing: -.02em; }
+.bz-corp-type { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 999px; border: 1px solid rgba(10, 93, 226, .28); color: var(--blue-700); font-size: .74rem; font-weight: 700; background: #fff; }
+.bz-corp-type.is-hold { background: var(--ink); border-color: var(--ink); color: #fff; }
+.bz-corp-ceo { position: relative; padding-left: 12px; font-size: .9rem; color: var(--muted); }
+.bz-corp-ceo::before { content: ""; position: absolute; left: 0; top: 50%; width: 1px; height: 12px; margin-top: -6px; background: rgba(11, 27, 51, .2); }
+.bz-corp-ceo strong { font-weight: 700; color: var(--ink-2); }
+.bz-def { margin-top: 16px; font-size: clamp(1.06rem, 1.3vw, 1.2rem); font-weight: 600; line-height: 1.6; letter-spacing: -.025em; color: var(--ink); }
 .bz-def-label { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; margin-right: 10px; border-radius: 7px; background: #fff; border: 1px solid rgba(10, 93, 226, .22); color: var(--blue-700); font-size: .78rem; font-weight: 700; vertical-align: 2px; }
 .bz-role { margin-top: 10px; color: var(--muted); font-size: 1rem; }
 
@@ -195,6 +215,8 @@
 .bz-actions { margin-top: auto; padding-top: clamp(24px, 3vw, 36px); display: flex; flex-wrap: wrap; gap: 10px; }
 .bz-actions .btn--line { background: rgba(255, 255, 255, .6); }
 .bz-actions .btn--line:hover { background: #fff; }
+.bz-note { margin-top: 20px; display: flex; align-items: center; gap: 8px; }
+.bz-note::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: #E0A100; }
 
 /* ---------- 반응형 ---------- */
 /* 짧은 데스크톱 화면: 첫 화면 안에 사업 바로가기 줄까지 보이게 */
@@ -236,8 +258,8 @@
 }
 @media (max-width: 640px) {
   .bz-hero { min-height: min(100svh, 880px); }
-  .bz-hero-media video { object-position: 50% 50%; }
-  .bz-hero-shade { background: linear-gradient(180deg, rgba(10, 20, 38, .82) 0%, rgba(10, 20, 38, .76) 40%, rgba(10, 20, 38, .86) 70%, rgba(10, 20, 38, .97) 100%); }
+  .bz-slide { object-position: var(--mx, 50%) var(--fy, 50%); transform-origin: var(--mx, 50%) var(--fy, 50%); }
+  .bz-hero-shade { background: linear-gradient(180deg, rgba(10, 20, 38, .72) 0%, rgba(10, 20, 38, .6) 40%, rgba(10, 20, 38, .8) 68%, rgba(10, 20, 38, .96) 100%); }
   /* 사업 바로가기: 가로로 넘기는 한 줄 (빈칸 없음) */
   .bz-jump { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain;
     margin-inline: calc(var(--gutter) * -1); padding: 8px var(--gutter) 6px; scroll-padding-inline: var(--gutter); }
@@ -254,6 +276,10 @@
   .bz-media-quote { font-size: .95rem; }
   .bz-media-tag { left: 12px; top: 12px; height: 32px; font-size: .84rem; }
   .bz-title { margin-top: 16px; }
+  .bz-corp { margin-top: 12px; font-size: .9rem; gap: 6px 8px; }
+  /* 대표 줄은 항상 따로: 줄이 넘어갈 때 앞에 세로 구분선만 남지 않게 */
+  .bz-corp-ceo { flex-basis: 100%; padding-left: 0; }
+  .bz-corp-ceo::before { display: none; }
   .bz-def { margin-top: 12px; font-size: 1.02rem; }
   .bz-info { grid-template-columns: 1fr; margin-top: 16px; }
   .bz-info-col { padding: 16px 0 0; }
@@ -267,7 +293,12 @@
   .bz-actions .btn { flex: 1 1 auto; min-height: 50px; padding-inline: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  /* 첫 화면 사진: 자동 넘김 없음(business.js) · 바로가기로 바꿀 때도 줌 없이 opacity만 */
+  .bz-slide, .bz-slide.is-on { transform: none !important; animation: none !important; }
+  .bz-slide.is-on { transition: opacity .5s linear; }
   .js .bz-media[data-reveal] { clip-path: none !important; }
+  .js .bz-media[data-reveal] img { scale: 1 !important; }
+  .bz-card:hover .bz-media img { transform: none; }
   .js .bz-hero-foot[data-reveal] .bz-jump li { opacity: 1 !important; transform: none !important; }
   .bz-media-inner { transform: none !important; }
 }

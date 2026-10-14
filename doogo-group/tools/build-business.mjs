@@ -11,11 +11,12 @@
    - 생성된 HTML 파일이 최종 결과물입니다. 문구를 고칠 때는 이 파일의 BIZ 데이터를 고친 뒤 다시 실행하세요.
      (HTML을 직접 고쳐도 되지만, 그 뒤에 이 스크립트를 다시 실행하면 덮어써집니다.)
    - 헤더/푸터는 partials/ 내용을 그대로 넣습니다(sync-partials.mjs와 같은 결과).
-   - 사업별 영상 프레이밍: BIZ[].op(모바일·카드 가로 위치), BIZ[].frame {vs 확대, vx/vy 초점, q:'right' 문구 오른쪽}
-     → 사업 영상(biz-{slug}.mp4)을 교체하면 이 값만 맞추면 됩니다.
-   - 현장 갤러리의 '그룹 영상 속' 사진은 히어로 포스터와 겹치지 않게 영상 5초 지점을 잘라낸 별도 정지 화면입니다:
-       ffmpeg -ss 5 -i assets/video/biz-{slug}.mp4 -frames:v 1 -vf "crop=W:H:X:Y" -c:v libwebp -quality 84 assets/img/biz/still-{slug}.webp
-     (크기는 BIZ[].still [W, H]와 맞출 것)
+   - 그룹 구조(2차 확정): 지주회사 (주)두고홀딩스 + 자회사 5곳(국내 4 · 해외 1). 사업별 운영 법인·대표는 BIZ[].corp
+     (유통은 운영 법인이 정해지지 않아 corp: null → '두고그룹 유통 사업', 대표 '확정 후 게시')
+   - 사진: assets/img/photo/{name}.webp (AI로 만든 예시 · 실제 사진으로 교체 예정) — PHOTO 표의 크기·alt와 함께 사용
+     BIZ[].hero {f 사진 이름, fx/fy 데스크톱 초점, mx 모바일 가로 초점} — 상세 첫 화면 + business.html 첫 화면 슬라이드
+     BIZ[].gallery 현장 2장(사진 또는 3D 렌더, 히어로와 같은 사진이면 zoom/focus로 확대 디테일 컷)
+     → 실제 사진으로 바꿀 때는 같은 이름으로 덮어쓰고 초점 값만 맞추면 됩니다.
    - 스타일: assets/css/pages/business.css, business-detail.css
      동작:   assets/js/pages/business.js,  business-detail.js
    ========================================================= */
@@ -44,8 +45,36 @@ const euro = (word) => {
   const jong = c % 28;
   return jong === 0 || jong === 8 ? '로' : '으로';
 };
-const HOLDING = '(주)두고홀딩스 계열 사업';
-const SIL = '<svg class="dt-sil" viewBox="0 0 300 400" aria-hidden="true" focusable="false"><circle cx="150" cy="148" r="64"/><path d="M24 400c0-86 56-146 126-146s126 60 126 146Z"/></svg>';
+const GROUP_FOOD = '두고그룹 유통 사업'; // 유통: 운영 법인 미지정 — 어느 회사 소속이라고 쓰지 않음
+const AI_NOTE = 'AI로 만든 예시 이미지 · 실제 사진으로 교체 예정';
+
+/* ---------- 이미지 (AI 생성 예시) ---------- */
+const PHOTO = {
+  campus: { w: 1280, h: 950, alt: '밝은 강의실에서 강사가 성인 수강생들 앞에서 강의하는 모습' },
+  studio: { w: 1280, h: 949, alt: '링라이트와 카메라 앞에서 온라인 강의를 촬영하는 모습' },
+  bio: { w: 1280, h: 952, alt: '건강식품 제조 현장에서 작업자가 캡슐 병을 검수하는 모습' },
+  commerce: { w: 1280, h: 950, alt: '라벨을 붙이기 전의 박스·병·파우치 패키지와 컬러칩을 살펴보는 디자이너의 손' },
+  media: { w: 1280, h: 951, alt: '도심 야외에서 짐벌 카메라와 붐마이크로 영상 콘텐츠를 촬영하는 모습' },
+  ad: { w: 1280, h: 954, alt: '회의실 대형 화면의 광고 성과 그래프를 보며 마케팅 회의를 하는 모습' },
+  food: { w: 1280, h: 951, alt: '선과장에서 작업자들이 컨베이어 위 사과를 선별하는 모습' },
+  space: { w: 1280, h: 949, alt: '노을 진 바다가 창밖으로 보이는 숙박 객실' },
+  cowork: { w: 1280, h: 951, alt: '식물이 놓인 밝은 공유오피스에서 사람들이 일하는 모습' },
+};
+const RENDER = {
+  bio: { w: 674, h: 755, alt: 'DOOGOBIO를 표현한 앰버 캡슐 병과 설산 3D 이미지' },
+  makers: { w: 674, h: 755, alt: 'DOOGO MAKERS를 표현한 블루 패키지 박스·병·컬러칩 3D 이미지' },
+  media: { w: 671, h: 755, alt: 'DOOGO MEDIA를 표현한 방송 카메라와 재생 말풍선 3D 이미지' },
+  ad: { w: 671, h: 755, alt: 'DOOGO AD를 표현한 상승 막대그래프와 확성기 3D 이미지' },
+  market: { w: 674, h: 755, alt: 'DOOGO MARKET을 표현한 과일·채소 나무상자와 트럭 3D 이미지' },
+  stay: { w: 674, h: 755, alt: 'NORA STAY를 표현한 바다 창이 있는 객실 미니어처 3D 이미지' },
+};
+const photo = (name, extra = {}) => ({ kind: 'photo', src: `assets/img/photo/${name}.webp`, ...PHOTO[name], ...extra });
+const render = (name, extra = {}) => ({ kind: 'render', src: `assets/img/3d/${name}.webp`, ...RENDER[name], ...extra });
+
+// 운영 법인 표시: 구분 칩 + 법인명 (유통은 '두고그룹 유통 사업')
+const corpName = (b) => (b.corp ? b.corp.name : GROUP_FOOD);
+const corpType = (b) => (b.corp ? b.corp.type : '');
+const corpTypeFull = (b) => (b.corp ? b.corp.type + (b.corp.place ? ` · ${b.corp.place}` : '') : '');
 
 // 페이지 전용 아이콘 (24×24, 선 1.7)
 const SVC_ICONS = {
@@ -80,7 +109,8 @@ const SPRITE = `<svg class="sr-only" aria-hidden="true" focusable="false">\n${Ob
 /* ---------- 7개 사업 데이터 (순서 고정: 교육이 첫 번째) ---------- */
 const BIZ = [
   {
-    slug: 'campus', num: '01', area: '교육', en: 'DOOGO CAMPUS', ko: '두고캠퍼스', chain: 'Education', icon: 'i-campus', key: true,
+    slug: 'campus', num: '01', area: '교육', en: 'DOOGO CAMPUS', ko: '두고캠퍼스', chain: 'Education', icon: 'i-campus',
+    corp: { name: '(주)두고홀딩스', en: 'DOOGO HOLDINGS', type: '지주회사', role: '교육 및 총괄 운영', ceo: '문원오', photo: 'assets/img/people/moon-wonoh.webp', anchor: 'ceo' },
     defLabel: '교육 플랫폼', def: '사람을 성장시키고, 새로운 사업과 브랜드를 만듭니다.',
     role: '경험과 노하우를 나누고, 새로운 사업과 브랜드의 시작을 돕습니다.',
     services: ['실전 교육', '강사·과정 소개', '온라인 클래스 ‘두고클래스’', '교육장 연계(두고스페이스)'],
@@ -89,7 +119,8 @@ const BIZ = [
     cta: { label: '교육 플랫폼 보기', pending: '두고클래스 교육 플랫폼' },
     site: { label: '두고클래스 바로가기', pending: '두고클래스 사이트' },
     narration: '경험을 나누면, 또 다른 시작이 태어납니다.',
-    op: '44%', frame: { vs: 1.08, vx: '0%', vy: '55%' }, still: [960, 540],
+    hero: { f: 'campus', fx: '50%', fy: '42%', mx: '58%' },
+    gallery: [photo('studio', { label: '온라인 클래스 촬영', pos: '62% 50%' }), photo('campus', { label: '강의 현장', pos: '50% 50%' })],
     facts: [['대표 서비스', '온라인 클래스 ‘두고클래스’'], ['함께 쓰는 공간', '두고스페이스 교육장']],
     svcHead: '두고캠퍼스가 하는 일',
     svcLead: '실전 교육부터 온라인 클래스, 교육장까지 배움에 필요한 과정을 한곳에서 연결합니다.',
@@ -99,25 +130,25 @@ const BIZ = [
       { icon: 's-online', name: '온라인 클래스 ‘두고클래스’', desc: '시간과 장소에 얽매이지 않고 들을 수 있는 온라인 클래스로 실전 과정을 만납니다.' },
       { icon: 's-classroom', name: '교육장 연계', desc: '오프라인 수업과 모임은 두고스페이스의 교육장과 연계해 진행합니다.' },
     ],
-    scenes: [{ src: 'assets/img/biz/campus-scene.webp', w: 714, h: 450, alt: '강의실에서 강사가 수강생들에게 발표하는 교육 현장 예시 이미지' }],
-    sceneLead: '강의가 열리는 현장과 강사, 수강생이 함께하는 장면을 실제 사진으로 담을 예정입니다.',
+    sceneLead: '온라인 클래스 촬영과 강의실 수업, 배움이 이루어지는 두 장면입니다. 실제 현장 사진으로 교체할 예정입니다.',
     relNav: '두고클래스',
-    leaderTask: '실전 교육 과정과 강사·과정 운영, 온라인 클래스 ‘두고클래스’',
   },
   {
-    slug: 'bio', num: '02', area: '제조', en: 'DOOGO BIO NZ', ko: '두고바이오 NZ', chain: 'Product', icon: 'i-bio',
+    slug: 'bio', num: '02', area: '제조', en: 'DOOGOBIO', ko: '두고바이오', chain: 'Product', icon: 'i-bio',
+    corp: { name: 'DOOGOBIO', en: 'DOOGOBIO', type: '해외법인', place: '뉴질랜드', role: '건강식품 제조', ceo: '백영호' },
     defLabel: '건강식품 제조', def: '뉴질랜드 건강식품 소량 제조 및 인쇄까지, 좋은 제품을 만듭니다.',
     role: '뉴질랜드 건강식품의 개발과 소량 제조, 제품화를 지원합니다.',
     services: ['제품 개발', '소량 제조', '패키지·인쇄', '제조 상담·연결 ‘두고커넥트’'],
     targets: ['자체 건강식품 브랜드를 준비하는 사업자', '소량으로 시작하려는 셀러'],
     ask: '제조 상담하기',
     cta: { label: '제조 상담하기', href: ASK('bio') },
-    site: { label: '두고바이오 NZ 사이트', pending: '두고바이오 NZ 사이트' },
+    site: { label: 'DOOGOBIO 사이트', pending: 'DOOGOBIO 사이트' },
     narration: '살펴보고, 시험하고, 다시 들여다보며.',
-    op: '4%', frame: { vs: 1.2, vx: '0%', vy: '50%', q: 'right' }, still: [800, 450],
+    hero: { f: 'bio', fx: '50%', fy: '24%', mx: '68%' },
+    gallery: [photo('bio', { label: '캡슐 병 검수', zoom: 1.5, focus: '46% 66%', alt: '생산 라인 위 캡슐 병을 장갑 낀 손으로 하나씩 검수하는 모습(확대)' }), render('bio', { label: 'DOOGOBIO' })],
     heroAlt: { label: '두고커넥트 알아보기', href: '#related' },
     facts: [['대표 서비스', '제조 상담·연결 ‘두고커넥트’'], ['주요 제품', '뉴질랜드 건강식품']],
-    svcHead: '두고바이오 NZ가 하는 일',
+    svcHead: 'DOOGOBIO가 하는 일',
     svcLead: '제품 개발부터 소량 제조, 패키지·인쇄까지 건강식품이 제품이 되는 과정을 함께합니다.',
     detail: [
       { icon: 's-flask', name: '제품 개발', desc: '만들고 싶은 건강식품의 방향을 함께 정리하고, 원료와 제형을 검토해 제품으로 구체화합니다.' },
@@ -125,13 +156,12 @@ const BIZ = [
       { icon: 's-print', name: '패키지·인쇄', desc: '제품에 맞는 용기·라벨·패키지를 정하고, 인쇄까지 이어서 준비합니다.' },
       { icon: 's-link', name: '제조 상담·연결 ‘두고커넥트’', desc: '무엇부터 준비할지 막막할 때, 상담으로 필요한 제조 과정을 정리하고 연결합니다.' },
     ],
-    scenes: [{ src: 'assets/img/biz/bio-scene.webp', w: 642, h: 570, alt: '뉴질랜드 산을 배경으로 연구원이 건강식품 원료를 살피는 제조 현장 예시 이미지' }],
-    sceneLead: '실제 제품과 원료, 제조와 패키지 과정을 사진으로 소개할 예정입니다.',
+    sceneLead: '건강식품이 제품이 되는 제조 현장입니다. 실제 제품과 제조 과정 사진으로 교체할 예정입니다.',
     relNav: '두고커넥트',
-    leaderTask: '건강식품 제품 개발과 소량 제조, 패키지·인쇄, 제조 상담 ‘두고커넥트’',
   },
   {
-    slug: 'commerce', num: '03', area: '커머스', en: 'DOOGO COMMERCE', ko: '두고커머스', chain: 'Brand', icon: 'i-commerce',
+    slug: 'commerce', num: '03', area: '커머스', en: 'DOOGO MAKERS', ko: '두고메이커스', chain: 'Brand', icon: 'i-commerce',
+    corp: { name: '(주)두고메이커스', en: 'DOOGO MAKERS', type: '자회사', role: '브랜딩', ceo: '신동훈' },
     defLabel: '브랜드 커머스', def: '브랜드를 만들고 성장시키며, EXIT까지 연결합니다.',
     role: '브랜드를 기획하고 운영하며, 판매와 성장 전략을 함께 만듭니다.',
     services: ['브랜드 기획', '상품 운영', '브랜드 성장과 EXIT 전략'],
@@ -140,22 +170,22 @@ const BIZ = [
     cta: { label: '브랜드 보기', href: 'brands.html#brands' },
     site: null, // 별도 사이트 없음 — 마무리 블록은 문의 버튼 하나만
     narration: '생각은 제품이 되고, 제품은 브랜드가 됩니다.',
-    op: '57%', frame: { vs: 1.2, vx: '74%', vy: '55%' }, still: [800, 450],
+    hero: { f: 'commerce', fx: '50%', fy: '48%', mx: '56%' },
+    gallery: [photo('commerce', { label: '패키지 디자인', zoom: 1.7, focus: '70% 78%', alt: '무지 패키지 박스를 들고 컬러칩과 맞춰 보는 디자이너의 손(확대)' }), render('makers', { label: 'DOOGO MAKERS' })],
     facts: [['대표 서비스', '브랜드 기획 · 운영 · EXIT 전략'], ['연계할 수 있는 사업', '미디어 · 광고 · 유통']],
-    svcHead: '두고커머스가 하는 일',
+    svcHead: '두고메이커스가 하는 일',
     svcLead: '브랜드의 시작부터 운영과 성장, 그다음 단계까지 함께 고민합니다.',
     detail: [
       { icon: 's-bulb', name: '브랜드 기획', desc: '누구에게 무엇을 팔지부터 이름·콘셉트·상품 구성까지, 브랜드의 기본을 함께 설계합니다.' },
       { icon: 's-store', name: '상품 운영', desc: '상세페이지·가격·재고 등 판매에 필요한 운영을 맡아 브랜드가 꾸준히 팔리도록 관리합니다.' },
       { icon: 's-growth', name: '브랜드 성장과 EXIT 전략', desc: '판매 채널과 콘텐츠를 넓혀 브랜드를 키우고, EXIT까지 내다보는 성장 전략을 세웁니다.' },
     ],
-    scenes: [{ src: 'assets/img/biz/commerce-scene.webp', w: 588, h: 615, alt: '온라인 쇼핑 화면과 진열된 건강식품 제품이 보이는 커머스 예시 이미지' }],
-    sceneLead: '운영 중인 브랜드와 상품, 판매 화면을 실제 자료로 소개할 예정입니다.',
+    sceneLead: '브랜드의 첫인상을 만드는 패키지와 디자인 작업 장면입니다. 실제 브랜드와 상품 자료로 교체할 예정입니다.',
     relNav: '성장 단계',
-    leaderTask: '브랜드 기획과 상품 운영, 브랜드 성장과 EXIT 전략',
   },
   {
     slug: 'media', num: '04', area: '미디어', en: 'DOOGO MEDIA', ko: '두고미디어', chain: 'Content', icon: 'i-media',
+    corp: { name: '(주)두고미디어', en: 'DOOGO MEDIA', type: '자회사', role: '영상 미디어', ceo: '김윤정' },
     defLabel: '미디어 & 콘텐츠', def: '사람을 모으고, 브랜드를 키우는 미디어를 만듭니다.',
     role: '사람과 브랜드의 가치를 영상과 콘텐츠로 전합니다.',
     services: ['촬영', '유튜브 콘텐츠', '라이브 콘텐츠 제작'],
@@ -164,7 +194,8 @@ const BIZ = [
     cta: { label: '콘텐츠 문의하기', href: ASK('media') },
     site: { label: '두고미디어 채널', pending: '두고미디어 채널' },
     narration: '그 가치를 발견하고, 이야기로 전합니다.',
-    op: '47%', frame: { vs: 1.2, vx: '38%', vy: '45%' }, still: [800, 450],
+    hero: { f: 'media', fx: '50%', fy: '38%', mx: '62%' },
+    gallery: [photo('media', { label: '촬영 장비', zoom: 1.75, focus: '36% 48%', alt: '짐벌에 단 카메라로 출연자를 촬영하는 모습(확대)' }), render('media', { label: 'DOOGO MEDIA' })],
     heroAlt: { label: '콘텐츠 형식 보기', href: '#related' },
     facts: [['대표 서비스', '촬영 · 유튜브 · 라이브 콘텐츠'], ['연계할 수 있는 사업', '교육 · 커머스 · 광고']],
     svcHead: '두고미디어가 하는 일',
@@ -174,13 +205,12 @@ const BIZ = [
       { icon: 's-video', name: '유튜브 콘텐츠', desc: '채널의 방향을 잡고, 기획·촬영·편집으로 이어지는 유튜브 콘텐츠를 만듭니다.' },
       { icon: 's-live', name: '라이브 콘텐츠 제작', desc: '라이브 방송과 실시간 강의를 준비하고 진행해, 고객과 바로 만나는 콘텐츠를 만듭니다.' },
     ],
-    scenes: [{ src: 'assets/img/biz/media-scene.webp', w: 576, h: 465, alt: '카메라와 조명 앞에서 진행자가 콘텐츠를 촬영하는 스튜디오 예시 이미지' }],
-    sceneLead: '촬영 현장과 실제로 만든 콘텐츠 화면을 사진으로 소개할 예정입니다.',
+    sceneLead: '도심 야외 촬영처럼 콘텐츠가 만들어지는 현장입니다. 실제 촬영 현장과 결과물로 교체할 예정입니다.',
     relNav: '콘텐츠 형식',
-    leaderTask: '촬영과 유튜브·라이브 콘텐츠 기획·제작',
   },
   {
     slug: 'ad', num: '05', area: '광고', en: 'DOOGO AD', ko: '두고애드', chain: 'Marketing', icon: 'i-ad',
+    corp: { name: '(주)두고애드', en: 'DOOGO AD', type: '자회사', role: '마케팅', ceo: '김신용' },
     defLabel: '퍼포먼스 마케팅', def: '네이버·쿠팡을 중심으로 브랜드를 더 멀리 알립니다.',
     role: '브랜드가 필요한 고객에게 닿도록 광고를 기획하고 운영합니다.',
     services: ['네이버·쿠팡 중심 광고 운영', '광고 소재 기획', '성과 분석'],
@@ -189,7 +219,8 @@ const BIZ = [
     cta: { label: '광고 상담하기', href: ASK('ad') },
     site: { label: '두고애드 사이트', pending: '두고애드 사이트' },
     narration: '각자의 가능성이, 필요한 사람에게 닿도록.',
-    op: '17%', frame: { vs: 1.2, vx: '0%', vy: '50%', q: 'right' }, still: [960, 540],
+    hero: { f: 'ad', fx: '50%', fy: '45%', mx: '50%' },
+    gallery: [photo('ad', { label: '성과 리뷰', zoom: 1.8, focus: '45% 40%', alt: '회의실 대형 화면에 띄운 광고 성과 그래프와 발표하는 사람(확대)' }), render('ad', { label: 'DOOGO AD' })],
     heroAlt: { label: '운영 채널 보기', href: '#related' },
     facts: [['운영 채널', '네이버 · 쿠팡'], ['연계할 수 있는 사업', '커머스 · 미디어']],
     svcHead: '두고애드가 하는 일',
@@ -199,13 +230,12 @@ const BIZ = [
       { icon: 's-pen', name: '광고 소재 기획', desc: '상품의 강점이 한눈에 보이도록 광고 문구와 이미지·영상 소재를 기획합니다.' },
       { icon: 's-chart', name: '성과 분석', desc: '광고 결과를 정리해 무엇이 효과가 있었는지 확인하고, 다음 운영에 반영합니다.' },
     ],
-    scenes: [{ src: 'assets/img/biz/ad-scene.webp', w: 579, h: 435, alt: '광고 성과 그래프가 띄워진 화면을 함께 보는 마케팅 현장 예시 이미지' }],
-    sceneLead: '실제 캠페인 소재와 운영 화면을 공개 가능한 범위에서 소개할 예정입니다.',
+    sceneLead: '광고 성과를 함께 보며 다음 운영을 정하는 회의 장면입니다. 공개 가능한 실제 운영 자료로 교체할 예정입니다.',
     relNav: '운영 채널',
-    leaderTask: '네이버·쿠팡 광고 운영, 광고 소재 기획과 성과 분석',
   },
   {
     slug: 'food', num: '06', area: '유통', en: 'DOOGO FOOD', ko: '두고푸드', chain: 'Sales', icon: 'i-food',
+    corp: null, // 운영 법인 미지정 → '두고그룹 유통 사업' · 담당 대표 확정 후 게시
     defLabel: '식품 유통', def: '대한민국 농수산물과 건강식품을 연결하여 좋은 먹거리를 전합니다.',
     role: '농수산물과 가공식품, 건강식품의 공급사와 판매자를 연결합니다.',
     services: ['식품 전문 도매 플랫폼 ‘DOOGO MARKET’', '상품 공급', '판매자 협력'],
@@ -214,7 +244,8 @@ const BIZ = [
     cta: { label: '도매 플랫폼 보기', ext: MARKET_URL },
     site: { label: 'DOOGO MARKET 바로가기', ext: MARKET_URL },
     narration: '좋은 먹거리도, 정성을 담아 일상으로.',
-    op: '79%', frame: { vs: 1.2, vx: '100%', vy: '55%' }, still: [960, 540],
+    hero: { f: 'food', fx: '50%', fy: '52%', mx: '45%' },
+    gallery: [photo('food', { label: '사과 선별', zoom: 1.8, focus: '52% 86%', alt: '컨베이어 위 사과를 작업자들이 손으로 고르는 모습(확대)' }), render('market', { label: 'DOOGO MARKET' })],
     facts: [['대표 서비스', '식품 도매 플랫폼 ‘DOOGO MARKET’'], ['연결 대상', '공급사 · 위탁 판매자']],
     svcHead: '두고푸드가 하는 일',
     svcLead: '식품 공급사와 판매자가 한곳에서 만나도록, 도매 플랫폼과 상품 공급·판매자 협력을 연결합니다.',
@@ -223,13 +254,12 @@ const BIZ = [
       { icon: 's-truck', name: '상품 공급', desc: '농수산물·가공식품·건강식품 공급사의 상품을 모아 판매자에게 공급합니다.' },
       { icon: 'i-partner', name: '판매자 협력', desc: '온라인 위탁 판매자가 좋은 식품을 찾아 판매할 수 있도록 상품 정보와 판매를 함께 돕습니다.' },
     ],
-    scenes: [{ src: 'assets/img/biz/food-scene.webp', w: 603, h: 720, alt: '신선 식품이 진열된 매장과 배송 트럭이 보이는 식품 유통 예시 이미지' }],
-    sceneLead: '산지와 상품, 공급사와 판매자가 만나는 현장을 실제 사진으로 담을 예정입니다.',
+    sceneLead: '산지에서 선별된 상품이 판매자에게 가기까지의 현장입니다. 실제 산지와 상품 사진으로 교체할 예정입니다.',
     relNav: 'DOOGO MARKET',
-    leaderTask: '식품 도매 플랫폼 DOOGO MARKET 운영, 공급사와 판매자 연결',
   },
   {
     slug: 'space', num: '07', area: '공간', en: 'DOOGO SPACE', ko: '두고스페이스', chain: 'Space', icon: 'i-space',
+    corp: { name: '(주)두고스페이스', en: 'DOOGO SPACE', type: '자회사', role: '공간 임대', ceo: '문성오' },
     defLabel: '공간 & 숙박', def: '공유오피스·비상주 사무실 그리고 NORA STAY를 통한 숙박 사업까지, 사람과 비즈니스를 위한 공간을 만듭니다.',
     role: '함께 일하고 배우며, 쉬어갈 수 있는 공간을 만듭니다.',
     services: ['공유오피스', '비상주 사무실', '교육장 대여', '숙박 ‘NORA STAY’'],
@@ -238,7 +268,8 @@ const BIZ = [
     cta: { label: '공간 상담하기', href: ASK('space') },
     site: { label: 'NORA STAY 바로가기', pending: 'NORA STAY 사이트' },
     narration: '함께 일하고, 잠시 쉬어갈 자리까지.',
-    op: '86%', frame: { vs: 1.2, vx: '100%', vy: '50%' }, still: [960, 540],
+    hero: { f: 'space', fx: '50%', fy: '58%', mx: '50%' },
+    gallery: [photo('cowork', { label: '공유오피스', pos: '58% 50%' }), photo('space', { label: '숙박 객실', pos: '50% 55%' })],
     heroAlt: { label: '공간 둘러보기', href: '#related' },
     facts: [['대표 서비스', '공유오피스 · 비상주 · 교육장'], ['숙박', 'NORA STAY']],
     svcHead: '두고스페이스가 하는 일',
@@ -249,13 +280,8 @@ const BIZ = [
       { icon: 's-classroom', name: '교육장 대여', desc: '강의·워크숍·모임을 위한 교육장을 대여하며, 두고캠퍼스 수업 공간으로도 연계합니다.' },
       { icon: 's-bed', name: '숙박 ‘NORA STAY’', desc: '여행과 출장 중 편하게 쉬어갈 수 있는 숙박 서비스 NORA STAY로 이어집니다.' },
     ],
-    scenes: [
-      { src: 'assets/img/biz/stay-scene.webp', w: 630, h: 420, alt: '바다가 보이는 NORA STAY 객실 예시 이미지' },
-      { src: 'assets/img/biz/space-scene.webp', w: 630, h: 255, alt: '책상과 의자가 놓인 밝은 공유오피스 예시 이미지' },
-    ],
-    sceneLead: '실제 시설과 사용하는 모습을 공간별 사진으로 소개할 예정입니다.',
+    sceneLead: '함께 일하는 공유오피스와 쉬어가는 객실, 두 가지 공간입니다. 실제 시설 사진으로 교체할 예정입니다.',
     relNav: '공간 안내',
-    leaderTask: '공유오피스·비상주 사무실·교육장 운영, 숙박 ‘NORA STAY’',
   },
 ];
 
@@ -276,11 +302,14 @@ const parts = {
   footer: readFileSync(join(root, 'partials/footer.html'), 'utf8').trim(),
 };
 
+// <html class="js">는 첫 페인트 전에 인라인으로 붙입니다 (site.js는 defer라 늦게 붙으면 첫 화면이 '보임→숨김→등장'으로 깜빡임).
+// site.js를 못 불러오면(window.DOOGO 없음) DOMContentLoaded에서 떼어 내 등장 대기 상태로 숨은 내용이 그대로 보이게 합니다.
 function head({ title, desc, css }) {
   return `<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
+  <script>(function(d){d.classList.add('js');document.addEventListener('DOMContentLoaded',function(){if(!window.DOOGO)d.classList.remove('js')})})(document.documentElement)</script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title} | 두고그룹 DOOGO GROUP</title>
   <meta name="description" content="${desc}">
@@ -365,10 +394,12 @@ function buildList() {
 
   const subnav = BIZ.map(b => `<li><a href="#${b.slug}"><span class="en">${b.num}</span> ${b.area}</a></li>`).join('');
 
-  const cards = BIZ.map((b, i) => `      <article class="bz-card${b.key ? ' is-key' : ''}" id="${b.slug}" aria-labelledby="bz-t-${b.slug}" style="--op:${b.op}">
+  const cards = BIZ.map((b, i) => {
+    const ph = PHOTO[b.hero.f];
+    return `      <article class="bz-card" id="${b.slug}" aria-labelledby="bz-t-${b.slug}">
         <a class="bz-media" href="business-${b.slug}.html" tabindex="-1" aria-hidden="true" data-reveal="scale">
           <span class="bz-media-inner" data-parallax>
-            <video data-hover-play muted loop playsinline preload="none" data-poster="assets/video/biz-${b.slug}.webp"><source src="assets/video/biz-${b.slug}.mp4" type="video/mp4"></video>
+            <img src="assets/img/photo/${b.hero.f}.webp" alt="" width="${ph.w}" height="${ph.h}" loading="lazy" decoding="async" style="object-position:${b.hero.mx} ${b.hero.fy}">
           </span>
           <span class="bz-media-tag"><span class="en">${b.num}</span>${b.area}</span>
           <span class="bz-media-quote">“${b.narration}”</span>
@@ -380,6 +411,7 @@ function buildList() {
             <span class="bz-stage en">${b.chain}</span>
           </div>
           <h3 class="bz-title" id="bz-t-${b.slug}" data-reveal style="--d:.05s"><span class="bz-area">${b.area}</span><span class="bz-brand"><span class="en">${b.en}</span><span class="bz-brand-ko">${b.ko}</span></span></h3>
+          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n">${corpName(b)}</strong>${b.corp ? `<span class="bz-corp-type${b.corp.type === '지주회사' ? ' is-hold' : ''}">${corpTypeFull(b)}</span>` : ''}<span class="bz-corp-ceo">대표 ${b.corp ? `<strong>${b.corp.ceo}</strong>` : '확정 후 게시'}</span></p>
           <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">${b.defLabel}</span>${nw(b.def)}</p>
           <p class="bz-role" data-reveal style="--d:.12s">${b.role}</p>
           <div class="bz-info" data-reveal style="--d:.16s">
@@ -401,25 +433,38 @@ ${b.targets.map(t => `                <li>${t}</li>`).join('\n')}
             ${action(b.cta, 'btn btn--line')}
           </div>
         </div>
-      </article>`).join('\n\n');
+      </article>`;
+  }).join('\n\n');
+
+  // 첫 화면 배경: 7개 사업 사진이 차례로 크로스페이드(+느린 줌). 첫 장만 바로 불러오고,
+  // 나머지는 <template> 안에 두어(불러오지 않음) business.js가 넘기기 직전에 하나씩 꺼내 씁니다.
+  const slide = (b, i) => {
+    const ph = PHOTO[b.hero.f];
+    return `<img class="bz-slide${i === 0 ? ' is-on is-first' : ''}" src="assets/img/photo/${b.hero.f}.webp" alt="" width="${ph.w}" height="${ph.h}" decoding="async"${i === 0 ? ' fetchpriority="high"' : ''} data-key="${b.slug}" style="--fx:${b.hero.fx};--fy:${b.hero.fy};--mx:${b.hero.mx}">`;
+  };
+  const slides = `      <div class="bz-slides">
+        ${slide(BIZ[0], 0)}
+        <template id="bz-slides-more">
+${BIZ.slice(1).map((b, i) => `          ${slide(b, i + 1)}`).join('\n')}
+        </template>
+      </div>`;
 
   const main = `  <!-- 1. 첫 화면 -->
-  <section class="page-hero page-hero--navy bz-hero" aria-labelledby="bz-title" data-video-wrap>
+  <section class="page-hero page-hero--navy bz-hero" aria-labelledby="bz-title">
     <div class="bz-hero-media" aria-hidden="true">
-      <video id="bz-hero-video" data-auto-min="761" muted loop playsinline preload="none" poster="assets/video/hero-poster.webp"><source src="assets/video/hero-loop.mp4" type="video/mp4"></video>
-      <div class="bz-hero-swap"></div>
+${slides}
     </div>
     <div class="bz-hero-shade" aria-hidden="true"></div>
     <div class="container bz-hero-inner">
       <nav aria-label="현재 위치"><ol class="breadcrumb"><li><a href="index.html">홈</a></li><li aria-current="page">사업영역</li></ol></nav>
       <span class="eyebrow" data-reveal="fade">Our Business</span>
       <h1 class="display bz-hero-title" id="bz-title" data-lines><span class="line"><span>배우고, 만들고,</span></span><span class="line"><span class="accent">키우고.</span></span></h1>
-      <p class="lead bz-hero-lead" data-reveal style="--d:.25s">제품을 만드는 일부터 사람을 키우는 일까지.<br class="hide-mobile"> <span class="nowrap">(주)두고홀딩스</span> 아래 7개 계열 사업이 성장의 다음 단계를 함께 만듭니다.</p>
+      <p class="lead bz-hero-lead" data-reveal style="--d:.25s">제품을 만드는 일부터 사람을 키우는 일까지.<br class="hide-mobile"> 지주회사 <span class="nowrap">(주)두고홀딩스</span>와 다섯 자회사가 일곱 개 사업으로 성장의 다음 단계를 함께 만듭니다.</p>
       <div class="bz-hero-foot" data-reveal style="--d:.35s">
         <div class="bz-jump-head">
-          <p class="bz-jump-label"><span class="bz-org"><span class="bz-org-hold en">DOOGO HOLDINGS</span><span class="bz-org-arrow" aria-hidden="true">${ico('i-arrow', '')}</span><span>7개 계열 사업 바로가기</span></span></p>
+          <p class="bz-jump-label"><span class="bz-org"><span class="bz-org-hold en">DOOGO HOLDINGS</span><span class="bz-org-arrow" aria-hidden="true">${ico('i-arrow', '')}</span><span>7개 사업영역 바로가기</span></span></p>
           <a class="bz-org-link" href="about.html#structure">그룹 구조 보기 ${ico('i-arrow', '')}</a>
-          <button class="bz-vtoggle" type="button" data-video-toggle="#bz-hero-video" aria-label="배경 영상 정지">${pauseIcons}</button>
+          <button class="bz-vtoggle" type="button" aria-pressed="false" aria-label="배경 사진 자동 넘김 정지" hidden>${pauseIcons}</button>
         </div>
         <ul class="bz-jump" aria-label="사업 바로가기">
 ${jump}
@@ -457,12 +502,13 @@ ${rail}
           <span class="eyebrow" data-reveal="fade">7 Businesses</span>
           <h2 class="h2" id="list-title" data-lines style="margin-top:20px"><span class="line"><span>필요한 사업을</span></span><span class="line"><span>찾아보세요</span></span></h2>
         </div>
-        <p class="lead" data-reveal style="--d:.15s">사업마다 하는 일과 주요 서비스, 함께하면 좋은 분을 정리했습니다. ‘자세히 보기’를 누르면 사업별 상세 페이지로, 옆 버튼을 누르면 상담이나 각 서비스로 바로 이동합니다.</p>
+        <p class="lead" data-reveal style="--d:.15s">사업마다 운영 법인과 하는 일, 주요 서비스, 함께하면 좋은 분을 정리했습니다. ‘자세히 보기’를 누르면 사업별 상세 페이지로, 옆 버튼을 누르면 상담이나 각 서비스로 바로 이동합니다.</p>
       </div>
 
       <div class="bz-cards">
 ${cards}
       </div>
+      <p class="note bz-note" data-reveal>사업 사진은 AI로 만든 예시 이미지이며, 실제 사진으로 교체할 예정입니다.</p>
     </div>
   </section>
 
@@ -470,7 +516,7 @@ ${CTA_BAND}`;
 
   return shell({
     title: '사업영역',
-    desc: '배우고, 만들고, 키우고. (주)두고홀딩스 아래 교육·제조·커머스·미디어·광고·유통·공간, 7개 계열 사업을 한 번에 소개합니다.',
+    desc: '배우고, 만들고, 키우고. 지주회사 (주)두고홀딩스와 다섯 자회사가 운영하는 교육·제조·커머스·미디어·광고·유통·공간, 7개 사업영역을 한 번에 소개합니다.',
     css: 'business', js: 'business',
     bodyAttrs: 'data-page="business" data-header="overlay"',
     main,
@@ -483,7 +529,7 @@ ${CTA_BAND}`;
 const REL = {
   campus: () => {
     const people = [
-      { name: '문대표', sub: '문원오 · 그룹 대표', course: '뉴질랜드 건기식 브랜딩', len: '5주 과정', photo: 'assets/img/people/moon-wonoh.webp' },
+      { name: '문대표', sub: '문원오 · (주)두고홀딩스 대표', course: '뉴질랜드 건기식 브랜딩', len: '5주 과정', photo: 'assets/img/people/moon-wonoh.webp' },
       { name: '로직메이커', course: '실전 클래스', len: '4주 과정', initial: '로' },
       { name: '황금농부', course: '실전 클래스', len: '4주 과정', initial: '황' },
       { name: '초이', course: '실전 클래스', len: '4주 과정', initial: '초' },
@@ -504,7 +550,7 @@ const REL = {
       <ul class="dt-people">
 ${people.map((p, i) => `        <li class="dt-person${p.photo ? ' has-photo' : ''}" data-reveal style="--d:${(i * 0.08).toFixed(2)}s">
           <div class="dt-person-photo">
-            ${p.photo ? `<img src="${p.photo}" alt="${p.name}(${p.sub}) 프로필 사진" width="627" height="694" loading="lazy">` : `<span class="dt-avatar" aria-hidden="true">${p.initial}</span>`}
+            ${p.photo ? `<img src="${p.photo}" alt="${p.name} — ${p.sub} 사진" width="627" height="694" loading="lazy">` : `<span class="dt-avatar" aria-hidden="true">${p.initial}</span>`}
             <span class="dt-person-len">${p.len}</span>
           </div>
           <div class="dt-person-body">
@@ -642,9 +688,9 @@ ${spaces.map((sp, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
         </li>`).join('\n')}
       </ol>
       <article class="dt-stay" data-reveal>
-        <div class="dt-stay-media media-cover">
-          <img src="assets/img/biz/stay-scene.webp" alt="바다가 보이는 NORA STAY 객실 예시 이미지" width="630" height="420" loading="lazy">
-          <span class="dt-stay-badge">이미지 예시</span>
+        <div class="dt-stay-media">
+          <img src="assets/img/3d/stay.webp" alt="${RENDER.stay.alt}" width="${RENDER.stay.w}" height="${RENDER.stay.h}" loading="lazy" decoding="async">
+          <span class="dt-stay-badge">AI로 만든 3D 이미지</span>
         </div>
         <div class="dt-stay-body">
           <span class="dt-row-num en">04</span>
@@ -690,14 +736,58 @@ function buildDetail(b, idx) {
   const heroSecond = (b.cta.href === ASK(b.slug) && b.heroAlt)
     ? `<a class="btn btn--line btn--lg" href="${b.heroAlt.href}">${b.heroAlt.label} ${DOWN}</a>`
     : action(b.cta, 'btn btn--line btn--lg');
-  const fr = b.frame || {};
-  const frameStyle = `--op:${b.op};--vs:${fr.vs || 1};--vx:${fr.vx || '50%'};--vy:${fr.vy || '50%'}`;
+  const c = b.corp;
+  const h = b.hero;
+  const hp = PHOTO[h.f];
 
-  // 현장 사진: 원본 비율(--ar)·원본 폭(--w)을 넘겨, 화면에서 원본보다 크게 늘어나지 않도록 CSS에서 제한
-  const sceneFigs = b.scenes.map((s, i) => `        <figure class="dt-shot dt-shot--scene" data-reveal style="--d:${(i * 0.08).toFixed(2)}s;--ar:${s.w}/${s.h};--w:${s.w}px">
-          <div class="media-cover"><img src="${s.src}" alt="${s.alt}" width="${s.w}" height="${s.h}" loading="lazy"></div>
-          <figcaption><span class="badge-sample">이미지 예시</span> 실제 현장 사진으로 교체 예정</figcaption>
+  // 운영 법인 알약: [운영] 법인명 [구분] — 유통은 '두고그룹 유통 사업'만 (특정 법인 소속으로 쓰지 않음)
+  const corpPill = c
+    ? `<a class="dt-corp${c.type === '지주회사' ? ' is-hold' : ''}" href="about.html#structure"><span class="dt-corp-k">운영</span><span class="dt-corp-n">${c.name}</span><span class="dt-corp-type">${corpTypeFull(b)}</span><span class="sr-only"> — 그룹 구조 보기</span></a>`
+    : `<a class="dt-corp is-group" href="about.html#structure"><span class="dt-corp-n">${GROUP_FOOD}</span><span class="sr-only"> — 그룹 구조 보기</span></a>`;
+
+  // 현장: 사진 2장 또는 사진 + 브랜드 3D 렌더 (모두 AI로 만든 예시)
+  //  히어로와 같은 사진을 큰 칸에 쓸 때는 zoom/focus로 확대한 '디테일 컷'으로 보여 줘 반복을 피함
+  const shotStyle = (g) => {
+    const st = [g.pos && `object-position:${g.pos}`, g.zoom && `--z:${g.zoom};--zo:${g.focus || '50% 50%'}`].filter(Boolean).join(';');
+    return st ? ` style="${st}"` : '';
+  };
+  const shots = b.gallery.map((g, i) => `        <figure class="dt-shot dt-shot--${g.kind}" data-reveal style="--d:${(i * 0.14).toFixed(2)}s">
+          <div class="dt-shot-media"><img src="${g.src}" alt="${g.alt}" width="${g.w}" height="${g.h}" loading="lazy" decoding="async"${shotStyle(g)}></div>
+          <span class="dt-shot-label"><span class="en">${String(i + 1).padStart(2, '0')}</span>${g.label}</span>
+          <figcaption>${g.kind === 'render' ? 'AI로 만든 브랜드 3D 이미지' : AI_NOTE}</figcaption>
         </figure>`).join('\n');
+
+  // 담당 대표: 문원오만 사진, 나머지는 이름 첫 글자 모노그램 (이력은 지어내지 않음)
+  const leaderVisual = c && c.photo
+    ? `<img class="dt-leader-img" src="${c.photo}" alt="${c.ceo} 대표 사진" width="627" height="694" loading="lazy" decoding="async">`
+    : `<span class="dt-mono" aria-hidden="true"><span class="dt-mono-ring"></span><span class="dt-mono-ring"></span><span class="dt-mono-box">${c ? `<span class="dt-mono-ch">${c.ceo.charAt(0)}</span>` : ico(b.icon, 'dt-mono-ico')}</span></span>
+          <span class="dt-leader-tag">${c ? '사진 준비 중' : '대표 확정 후 게시'}</span>`;
+  const leaderLead = !c
+    ? '유통 사업을 맡을 담당 대표는 확정되는 대로 게시합니다.'
+    : c.photo
+      ? `지주회사 ${c.name}의 대표로, 교육 사업과 그룹 총괄 운영을 이끕니다.`
+      : `${c.name}를 이끄는 대표입니다. 세부 이력과 사진은 확정되는 대로 게시합니다.`;
+  const leaderBody = c ? `<p class="dt-leader-corp"><span class="dt-corp-type">${c.type}</span>${c.name}</p>
+          <h3 class="dt-leader-name" id="leader-name">${c.ceo}<span class="dt-leader-title">대표</span></h3>
+${c.photo ? `
+          <p class="dt-leader-sub">${c.name} 대표 · 그룹 대표</p>
+          <blockquote class="dt-leader-quote"><p>“제품과 브랜드, 그리고 사람의 성장이 이어지는 사업을 만듭니다.”</p></blockquote>` : ''}
+          <dl class="dt-leader-dl">
+            <div><dt>법인</dt><dd>${c.name}<span class="dt-dd-sub">${corpTypeFull(b)}</span></dd></div>
+            <div><dt>역할</dt><dd>${c.role}</dd></div>
+            <div><dt>사업영역</dt><dd>${b.area} · <span class="en nowrap">${b.en}</span></dd></div>${c.photo ? `
+            <div><dt>두고클래스</dt><dd>‘문대표’ · 뉴질랜드 건기식 브랜딩 강의</dd></div>` : ''}
+          </dl>
+          <p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '직함·이력은 공식 자료로 확정되는 대로 게시합니다.' : '이력은 확정 후 게시합니다.'}</p>
+          <a class="btn btn--line btn--sm" href="leadership.html#${c.anchor || 'leaders'}">${c.photo ? '대표 소개 보기' : '리더십 페이지에서 보기'} ${ARROW}</a>`
+    : `<p class="dt-leader-corp"><span class="dt-corp-type is-group">유통</span>${GROUP_FOOD}</p>
+          <h3 class="dt-leader-name" id="leader-name">담당 대표</h3>
+          <dl class="dt-leader-dl">
+            <div><dt>운영</dt><dd>${GROUP_FOOD}</dd></div>
+            <div><dt>사업영역</dt><dd>${b.area} · <span class="en nowrap">${b.en}</span></dd></div>
+            <div><dt>플랫폼</dt><dd><span class="en nowrap">DOOGO MARKET</span><span class="dt-dd-sub">식품 도매 플랫폼</span></dd></div>
+          </dl>
+          <a class="btn btn--line btn--sm" href="leadership.html#leaders">사업을 이끄는 사람들 보기 ${ARROW}</a>`;
 
   const main = `${SPRITE}
 
@@ -710,7 +800,7 @@ function buildDetail(b, idx) {
       <h1 class="display dt-title" id="dt-title" data-lines><span class="line"><span class="en">${b.en}</span></span></h1>
       <div class="dt-hero-grid">
         <div class="dt-hero-copy">
-          <p class="dt-sub" data-reveal style="--d:.15s"><span class="dt-sub-ico">${ico(b.icon, '')}</span><span>${b.ko}</span><i aria-hidden="true"></i><span>${b.area}</span><a class="dt-key" href="about.html#structure">${HOLDING}<span class="sr-only"> — 그룹 구조 보기</span></a></p>
+          <p class="dt-sub" data-reveal style="--d:.15s"><span class="dt-sub-ico">${ico(b.icon, '')}</span><span>${b.ko}</span><i aria-hidden="true"></i><span>${b.area}</span>${corpPill}</p>
           <p class="dt-role" data-reveal style="--d:.2s">${b.role}</p>
         </div>
         <div class="dt-hero-actions" data-reveal style="--d:.28s">
@@ -720,18 +810,18 @@ function buildDetail(b, idx) {
       </div>
     </div>
     <div class="container dt-frame-wrap">
-      <figure class="dt-frame${fr.q === 'right' ? ' is-q-right' : ''}" data-video-wrap data-reveal="scale" style="${frameStyle}">
+      <figure class="dt-frame" data-reveal="scale" style="--fx:${h.fx};--fy:${h.fy};--mx:${h.mx}">
         <div class="dt-frame-media" data-parallax>
-          <video id="dt-video" data-autoplay muted loop playsinline preload="metadata" poster="assets/video/biz-${b.slug}.webp" aria-hidden="true" tabindex="-1"><source src="assets/video/biz-${b.slug}.mp4" type="video/mp4"></video>
+          <img class="dt-frame-img" src="assets/img/photo/${h.f}.webp" alt="${hp.alt}" width="${hp.w}" height="${hp.h}" fetchpriority="high" decoding="async">
         </div>
-        <figcaption class="dt-quote">
-          <span class="dt-quote-label en">Group Film · ${b.en}</span>
-          <q>${b.narration}</q>
-        </figcaption>
+        <span class="dt-frame-badge">AI로 만든 예시 이미지</span>
         <div class="dt-frame-ctrl">
           <button class="dt-film-btn" type="button" data-film-open><span class="play-ring">${ico('i-play', '')}</span><span>그룹 영상 보기</span></button>
-          <button class="dt-vtoggle" type="button" data-video-toggle="#dt-video" aria-label="배경 영상 정지">${pauseIcons}</button>
         </div>
+        <figcaption class="dt-quote">
+          <span class="dt-quote-label en">${b.en}${b.en.toUpperCase().includes(b.chain.toUpperCase()) ? '' : ` · ${b.chain}`}</span>
+          <q>${b.narration}</q>
+        </figcaption>
       </figure>
     </div>
     <div class="container">
@@ -787,13 +877,8 @@ ${b.targets.map(t => `          <li>${CHECK}${t}</li>`).join('\n')}
         </div>
         <p class="lead" data-reveal style="--d:.15s">${b.sceneLead}</p>
       </div>
-      <div class="dt-gallery${b.scenes.length > 1 ? ' has-two' : ''}">
-${sceneFigs}
-        <figure class="dt-shot dt-shot--film" data-reveal style="--d:.12s">
-          <div class="media-cover"><img src="assets/img/biz/still-${b.slug}.webp" alt="그룹 영상 속 ${b.en} 건물을 가까이에서 본 장면" width="${b.still[0]}" height="${b.still[1]}" loading="lazy"></div>
-          <figcaption><span class="en">Group Film</span> 그룹 영상 속 ${b.en}</figcaption>
-          <button class="dt-shot-play" type="button" data-film-open aria-label="그룹 영상 보기">${ico('i-play', '')}</button>
-        </figure>
+      <div class="dt-gallery dt-gallery--${b.gallery[1].kind}">
+${shots}
       </div>
     </div>
   </section>
@@ -811,24 +896,16 @@ ${REL[b.slug]()}
       <div class="dt-leader-head">
         <span class="eyebrow" data-reveal="fade">Leader</span>
         <h2 class="h2" id="leader-title" data-lines style="margin-top:20px"><span class="line"><span>이 사업을</span></span><span class="line"><span>이끄는 사람</span></span></h2>
-        <p class="lead" data-reveal style="--d:.15s">담당 대표의 이름·직함·사진은 공식 자료가 확정되는 대로 게시합니다.</p>
+        <p class="lead" data-reveal style="--d:.15s">${leaderLead}</p>
         <a class="link-arrow" href="leadership.html#leaders" data-reveal style="--d:.2s">사업을 이끄는 사람들 전체 보기 ${ico('i-arrow')}</a>
       </div>
-      <article class="dt-leader-card" data-reveal="scale" aria-labelledby="leader-name">
-        <div class="dt-leader-photo">
+      <article class="dt-leader-card${c && c.photo ? ' has-photo' : ''}" data-reveal="scale" aria-labelledby="leader-name">
+        <div class="dt-leader-visual">
           <span class="dt-leader-num en" aria-hidden="true">${b.num}</span>
-          ${ico(b.icon, 'dt-leader-ico')}
-          ${SIL}
+          ${leaderVisual}
         </div>
         <div class="dt-leader-body">
-          <p class="dt-leader-area">${b.area} <span class="en">${b.en}</span></p>
-          <h3 class="dt-leader-name" id="leader-name">${b.area} 사업 대표</h3>
-          <p class="dt-leader-status"><i aria-hidden="true"></i>프로필 준비 중</p>
-          <dl class="dt-leader-dl">
-            <div><dt>담당 영역</dt><dd>${b.area} · ${b.ko}</dd></div>
-            <div><dt>핵심 업무</dt><dd>${b.leaderTask}</dd></div>
-          </dl>
-          <a class="btn btn--line btn--sm" href="leadership.html#leader-${b.slug}">리더십 페이지에서 보기 ${ARROW}</a>
+          ${leaderBody}
         </div>
       </article>
     </div>
@@ -882,7 +959,7 @@ ${CTA_BAND}`;
 
   return shell({
     title: `${b.area} · ${b.en}`,
-    desc: `${HOLDING} · ${b.ko}(${b.en}) — ${b.role} ${b.defLabel}: ${b.def}`,
+    desc: `${c ? `${c.name} 운영` : GROUP_FOOD} · ${b.ko}(${b.en}) — ${b.role} ${b.defLabel}: ${b.def}`,
     css: 'business-detail', js: 'business-detail',
     bodyAttrs: `data-page="business-${b.slug}"`,
     main,

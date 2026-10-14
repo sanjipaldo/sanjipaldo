@@ -253,6 +253,11 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .mega-area .num { font-family: var(--font-en); font-size: .72rem; color: var(--blue); font-weight: 600; }
 .mega-brand { font-family: var(--font-en); font-size: .7rem; letter-spacing: .04em; color: var(--muted); font-weight: 500; margin-top: -6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mega-desc { font-size: .82rem; line-height: 1.5; color: var(--muted); }
+/* 운영 법인 (맨 아래 줄 · 설명 길이와 상관없이 같은 높이에 정렬)
+   '운영' 라벨은 늘 위 줄, 법인명은 아래 줄(줄바꿈 없음) → 화면 폭이 달라도 일곱 칸의 구분선·글자가 같은 높이 */
+.mega-item { grid-template-rows: auto auto auto 1fr auto; }
+.mega-corp { display: grid; gap: 3px; padding-top: 10px; border-top: 1px solid var(--line-2); font-size: .76rem; font-weight: 600; line-height: 1.4; color: var(--ink-2); letter-spacing: -0.01em; white-space: nowrap; }
+.mega-corp .k { font-size: .7rem; font-weight: 500; color: var(--muted-2); }
 .mega-item[aria-current="page"] { background: var(--ivory); }
 .mega-item[aria-current="page"] .mega-area { color: var(--blue); }
 
@@ -266,6 +271,14 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .hd-menu-btn[aria-expanded="true"] span::before { transform: translateY(7px) rotate(45deg); }
 .hd-menu-btn[aria-expanded="true"] span::after { transform: translateY(-7px) rotate(-45deg); }
 
+/* 1181–1365px 노트북: 왼쪽 소개 칸과 칸 간격을 줄여 브랜드 영문명이 잘리지 않게 */
+@media (min-width: 1181px) and (max-width: 1365px) {
+  .mega-inner { grid-template-columns: 196px 1fr; gap: 28px; }
+  .mega-intro p { font-size: 1.2rem; }
+  .mega-grid { gap: 8px; }
+  .mega-item { padding: 8px; }
+  .mega-brand { font-size: .66rem; letter-spacing: .02em; }
+}
 @media (max-width: 1180px) {
   .mega-inner { grid-template-columns: 1fr; gap: 20px; }
   .mega-intro p { margin-bottom: 8px; }
@@ -299,6 +312,9 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .mnav-panel a[aria-current="page"] { background: var(--ivory); color: var(--blue); font-weight: 700; }
 .mnav-group.is-current > .mnav-toggle { color: var(--blue); }
 .mnav-panel a small { font-family: var(--font-en); color: var(--muted-2); font-size: .74rem; letter-spacing: .06em; align-self: center; }
+.mnav-biz { display: grid; gap: 1px; }
+.mnav-corp { font-size: .78rem; font-weight: 500; color: var(--muted-2); letter-spacing: -0.01em; }
+.mnav-panel a[aria-current="page"] .mnav-corp { color: var(--blue-700); }
 .mnav-cta { display: grid; gap: 10px; margin-top: 28px; }
 .mnav-cta .btn { width: 100%; }
 html.is-locked, html.is-locked body { overflow: hidden; }
@@ -335,10 +351,10 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
 
 /* ---------- 8. CTA 띠 (모든 페이지 하단 공통) ---------- */
 .cta-band { position: relative; overflow: hidden; background: var(--navy); color: #fff; padding-block: clamp(80px, 10vw, 140px); isolation: isolate; }
-.cta-band::before { content: ""; position: absolute; inset: 0; z-index: -2; background: center 60% / cover no-repeat; opacity: .32; }
-/* 배경 그림은 띠가 가까워질 때만 불러옵니다 (site.js 가 .is-near 부여 — 장식이라 JS가 없으면 생략) · 모바일은 작은 판 */
-.cta-band.is-near::before { background-image: url(../img/scene/town.webp); }
-@media (max-width: 760px) { .cta-band.is-near::before { background-image: url(../img/scene/town-sm.webp); } }
+.cta-band::before { content: ""; position: absolute; inset: 0; z-index: -2; background: center 55% / cover no-repeat; opacity: .3; filter: saturate(.75); }
+/* 배경 사진(함께 일하는 공유오피스)은 띠가 가까워질 때만 불러옵니다 (site.js 가 .is-near 부여 — 장식이라 JS가 없으면 생략)
+   옛 마을 일러스트는 간판에 예전 사업 이름이 남아 있어 쓰지 않습니다 */
+.cta-band.is-near::before { background-image: url(../img/photo/cowork.webp); }
 .cta-band::after { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(80% 120% at 85% 0%, rgba(10, 93, 226, .55), transparent 60%), linear-gradient(180deg, rgba(10, 20, 38, .65), rgba(10, 20, 38, .92)); }
 .cta-band .h2 { max-width: 20ch; }
 .cta-band .lead { color: var(--on-dark-2); margin-top: 20px; max-width: 44ch; }
@@ -348,56 +364,135 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
 .cta-chips a:hover { border-color: #fff; color: #fff; background: rgba(255, 255, 255, .08); }
 
 /* ---------- 9. 푸터 ---------- */
-.site-footer { background: #060D1A; color: var(--on-dark-2); padding: clamp(64px, 7vw, 96px) 0 40px; font-size: .92rem; }
-.ft-top { display: grid; grid-template-columns: minmax(240px, 1.2fr) 3fr; gap: 48px; padding-bottom: 48px; border-bottom: 1px solid var(--line-dark); }
+/* 구조: 브랜드(+맨 위로) → 메인 카테고리 6개 한 줄 → 그룹 법인 줄 → 정책·SNS·패밀리 사이트 → 회사 정보 */
+.site-footer { background: #060D1A; color: var(--on-dark-2); padding: clamp(64px, 7vw, 104px) 0 40px; font-size: .92rem; }
+.ft-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px 48px; padding-bottom: clamp(40px, 4.6vw, 64px); }
 .ft-brand svg { height: 30px; width: auto; color: #fff; }
 .ft-brand .lg-sym { fill: #fff; }
-.ft-brand p { margin-top: 20px; color: var(--on-dark-3); line-height: 1.7; }
-.ft-brand .ft-slogan { color: #fff; font-weight: 600; font-size: 1.05rem; margin-top: 22px; letter-spacing: -0.02em; }
-.ft-cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
-.ft-col h3 { font-size: .95rem; color: #fff; font-weight: 700; margin-bottom: 16px; }
-.ft-col li + li { margin-top: 10px; }
-.ft-col a { color: var(--on-dark-3); transition: color .2s; }
-.ft-col a:hover { color: #fff; }
-.ft-mid { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; padding-block: 32px; }
+.ft-brand p { margin-top: 12px; color: var(--on-dark-3); line-height: 1.7; }
+.ft-brand .ft-slogan { margin-top: 26px; color: #fff; font-weight: 700; font-size: clamp(1.15rem, 1.5vw, 1.375rem); line-height: 1.4; letter-spacing: -0.03em; }
+
+/* 맨 위로 */
+.ft-totop { display: inline-flex; align-items: center; gap: 14px; flex: none; min-height: 48px; color: var(--on-dark-2); transition: color .3s var(--ease); }
+.ft-totop-t { font-size: .78rem; font-weight: 600; letter-spacing: .24em; }
+.ft-totop-ring { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--line-dark); transition: background-color .35s var(--ease), border-color .35s var(--ease), color .35s var(--ease); }
+.ft-totop-ring .ico { width: 18px; height: 18px; transform: rotate(-90deg); transition: transform .45s var(--ease); }
+.ft-totop:hover { color: #fff; }
+.ft-totop:hover .ft-totop-ring { background: #fff; border-color: #fff; color: var(--ink); }
+.ft-totop:hover .ft-totop-ring .ico { transform: rotate(-90deg) translateX(3px); }
+
+/* 메인 카테고리 (한 줄) */
+.ft-nav ul { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--line-dark); border-bottom: 1px solid var(--line-dark); }
+.ft-nav li + li { border-left: 1px solid var(--line-dark); }
+.ft-nav a { position: relative; display: grid; justify-items: start; gap: 16px; height: 100%; padding: 30px clamp(16px, 1.8vw, 28px) 34px; color: #fff; }
+.ft-nav li:first-child a { padding-left: 0; }
+.ft-nav-num { font-family: var(--font-en); font-size: .78rem; font-weight: 500; letter-spacing: .1em; color: var(--on-dark-3); transition: color .35s var(--ease); }
+.ft-nav-t { position: relative; padding-bottom: 6px; font-size: clamp(1.15rem, 1.75vw, 1.75rem); font-weight: 700; line-height: 1.25; letter-spacing: -0.035em; white-space: nowrap; }
+/* 밑줄: 올리면 왼쪽에서 그려지고, 떠나면 오른쪽으로 빠집니다 */
+.ft-nav-t::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 2px; background: currentColor; transform: scaleX(0); transform-origin: right center; transition: transform .55s var(--ease); }
+.ft-nav .ico { position: absolute; top: 30px; right: clamp(16px, 1.8vw, 28px); width: 18px; height: 18px; color: var(--blue-300); opacity: 0; transform: translate(-6px, 6px); transition: opacity .35s var(--ease), transform .45s var(--ease); }
+.ft-nav a:hover .ft-nav-t::after, .ft-nav a:focus-visible .ft-nav-t::after, .ft-nav a.is-current .ft-nav-t::after { transform: scaleX(1); transform-origin: left center; }
+.ft-nav a:hover .ico, .ft-nav a:focus-visible .ico { opacity: 1; transform: none; }
+.ft-nav a:hover .ft-nav-num, .ft-nav a:focus-visible .ft-nav-num, .ft-nav a.is-current .ft-nav-num { color: var(--blue-300); }
+.ft-nav a.is-current .ft-nav-t::after { background: var(--blue-300); }
+/* 등장: 여섯 칸이 차례로 올라옵니다 (컨테이너는 그대로, 칸만 움직임) */
+.js .ft-nav[data-reveal] { opacity: 1; transform: none; }
+.js .ft-nav[data-reveal] li { opacity: 0; transform: translateY(18px); transition: opacity .7s var(--ease), transform .8s var(--ease); }
+.js .ft-nav[data-reveal].is-in li { opacity: 1; transform: none; }
+.js .ft-nav[data-reveal] li:nth-child(2) { transition-delay: .06s; }
+.js .ft-nav[data-reveal] li:nth-child(3) { transition-delay: .12s; }
+.js .ft-nav[data-reveal] li:nth-child(4) { transition-delay: .18s; }
+.js .ft-nav[data-reveal] li:nth-child(5) { transition-delay: .24s; }
+.js .ft-nav[data-reveal] li:nth-child(6) { transition-delay: .3s; }
+
+/* 그룹 법인 줄 */
+.ft-corps { display: flex; align-items: center; gap: 12px 40px; padding-block: 26px; border-bottom: 1px solid var(--line-dark); }
+.ft-label { flex: none; font-size: .74rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--on-dark-3); }
+/* 점 구분자: 모든 항목 앞에 점을 두고, 목록을 점 폭(35px)만큼 왼쪽으로 당겨 잘라 냅니다
+   → 줄이 바뀌어도 줄 첫머리에 점이 남지 않습니다 (위·아래·오른쪽은 포커스 링이 보이도록 넉넉히) */
+.ft-corps ul { display: flex; flex-wrap: wrap; align-items: center; row-gap: 4px; min-width: 0; margin-left: -35px; clip-path: inset(-12px -12px -12px 27px); }
+.ft-corps li { display: inline-flex; align-items: center; }
+.ft-corps li::before { content: ""; flex: none; width: 3px; height: 3px; margin-inline: 16px; border-radius: 50%; background: var(--on-dark-3); }
+.ft-corps a { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 36px; color: var(--on-dark-2); font-weight: 500; transition: color .25s var(--ease); }
+.ft-corp-n { position: relative; white-space: nowrap; }
+.ft-corp-n::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 1px; background: currentColor; transform: scaleX(0); transform-origin: right center; transition: transform .45s var(--ease); }
+.ft-corps a:is(:hover, :focus-visible) { color: #fff; }
+.ft-corps a:is(:hover, :focus-visible) .ft-corp-n::after { transform: scaleX(1); transform-origin: left center; }
+.ft-corps small { display: inline-flex; align-items: center; flex: none; height: 20px; padding: 0 8px; border-radius: 999px; border: 1px solid rgba(111, 162, 242, .45); color: var(--blue-300); font-size: .7rem; font-weight: 600; letter-spacing: 0; }
+
+/* 정책 · SNS · 패밀리 사이트 */
+.ft-mid { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; padding-block: 28px; }
 .ft-policy { display: flex; flex-wrap: wrap; gap: 8px 22px; }
-.ft-policy a { color: var(--on-dark-2); }
+.ft-policy a { color: var(--on-dark-2); transition: color .2s; }
 .ft-policy a:hover { color: #fff; }
 .ft-policy .is-strong { color: #fff; font-weight: 700; }
 .ft-side { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .ft-sns { display: flex; gap: 8px; }
-.ft-sns a { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line-dark); color: var(--on-dark-2); transition: all .2s; }
+.ft-sns a { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line-dark); color: var(--on-dark-2); transition: color .2s, border-color .2s; }
 .ft-sns a:hover { color: #fff; border-color: #fff; }
 .ft-sns svg { width: 18px; height: 18px; }
 .family { position: relative; }
-.family-btn { display: inline-flex; align-items: center; justify-content: space-between; gap: 18px; min-width: 210px; height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--line-dark); color: #fff; font-weight: 600; font-size: .9rem; }
+.family-btn { display: inline-flex; align-items: center; justify-content: space-between; gap: 18px; min-width: 210px; height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--line-dark); color: #fff; font-weight: 600; font-size: .9rem; transition: border-color .2s; }
+.family-btn:hover { border-color: rgba(255, 255, 255, .4); }
 .family-btn .ico { width: 16px; height: 16px; transition: transform .3s; }
 .family-btn[aria-expanded="true"] .ico { transform: rotate(180deg); }
-.family-list { position: absolute; right: 0; bottom: calc(100% + 8px); min-width: 260px; padding: 8px; border-radius: 14px; background: var(--navy-2); border: 1px solid var(--line-dark); box-shadow: var(--shadow-lg); }
+.family-list { position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 2; min-width: 260px; padding: 8px; border-radius: 14px; background: var(--navy-2); border: 1px solid var(--line-dark); box-shadow: var(--shadow-lg); }
 .family-list[hidden] { display: none; }
 .family-list a, .family-list span { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 8px; color: var(--on-dark-2); }
 .family-list a:hover { background: rgba(255, 255, 255, .06); color: #fff; }
 .family-list small { color: var(--on-dark-3); font-size: .75rem; }
+
+/* 회사 정보 */
 .ft-info { display: grid; gap: 6px; color: var(--on-dark-3); font-size: .85rem; line-height: 1.7; }
+.ft-info a { color: var(--on-dark-2); text-decoration: underline; text-decoration-color: var(--line-dark); text-underline-offset: 3px; }
+.ft-info a:hover { color: #fff; text-decoration-color: currentColor; }
 .ft-info .sep { display: inline-block; width: 1px; height: 10px; background: var(--line-dark); margin: 0 10px; vertical-align: middle; }
 .ft-copy { margin-top: 18px; font-family: var(--font-en); font-size: .8rem; letter-spacing: .02em; color: var(--on-dark-3); }
+
+@media (max-width: 1180px) { .ft-corps { column-gap: 28px; } }
+/* 태블릿: 3열 · 각 칸 위에 선 */
 @media (max-width: 1024px) {
-  .ft-top { grid-template-columns: 1fr; }
-  .ft-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ft-nav ul { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 28px; border-top: 0; }
+  .ft-nav li { border-top: 1px solid var(--line-dark); }
+  .ft-nav li + li { border-left: 0; }
+  .ft-nav a, .ft-nav li:first-child a { padding: 24px 28px 26px 0; gap: 12px; }
+  .ft-nav .ico { top: 24px; right: 0; }
+  .ft-nav-t { font-size: clamp(1.2rem, 2.4vw, 1.5rem); }
+  .ft-corps { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .ft-corps ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 28px; row-gap: 0; width: 100%; margin-left: 0; clip-path: none; }
+  .ft-corps li::before { display: none; }
 }
-/* 터치 화면: 작은 글자 링크도 누르는 영역은 44px 이상 */
+/* 터치 화면: 화살표를 늘 흐리게 보여 링크임을 알리고, 작은 글자 링크도 누르는 영역은 44px 이상 */
+@media (hover: none) {
+  .ft-nav .ico { opacity: .5; transform: none; }
+}
 @media (max-width: 1024px) {
-  .ft-col h3 { margin-bottom: 6px; }
-  .ft-col li + li { margin-top: 0; }
-  .ft-col a { display: inline-block; padding-block: 10px; }
+  .ft-corps a { min-height: 44px; }
   .ft-policy { row-gap: 0; }
   .ft-policy a { display: inline-block; padding-block: 10px; }
   .breadcrumb a { display: inline-flex; align-items: center; min-height: 44px; margin-block: -11px; padding-inline: 10px; margin-inline: -10px; }
   .link-arrow { min-height: 44px; }
 }
+/* 모바일: 2열 */
 @media (max-width: 560px) {
+  .ft-head { gap: 20px; }
+  .ft-totop-t { display: none; }
+  .ft-totop-ring { width: 48px; height: 48px; }
+  .ft-nav ul { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; }
+  .ft-nav a, .ft-nav li:first-child a { padding: 18px 24px 20px 0; gap: 8px; }
+  .ft-nav .ico { top: 19px; width: 16px; height: 16px; }
+  .ft-nav-num { font-size: .72rem; }
+  .ft-nav-t { font-size: 1.2rem; padding-bottom: 4px; }
+  .ft-corps { gap: 6px; padding-block: 22px 18px; }
+  .ft-corps ul { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; }
+  .ft-corps a { font-size: .9rem; }
   .ft-mid { flex-direction: column; align-items: flex-start; }
   .family-list { left: 0; right: auto; }
+}
+
+/* 아주 좁은 화면(≤359px): 지주회사 줄은 한 줄 전체를 쓰고(이름·배지가 끊기지 않게), 자회사 다섯은 아래 2열 */
+@media (max-width: 359px) {
+  .ft-corps li:first-child { grid-column: 1 / -1; }
 }
 
 /* ---------- 10. 영상 모달 ---------- */
@@ -432,7 +527,7 @@ video::cue { font-family: var(--font-ko); background: rgba(0, 0, 0, .55); color:
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .js [data-reveal], .js [data-lines] .line > span { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .js [data-reveal], .js .ft-nav[data-reveal] li, .js [data-lines] .line > span { opacity: 1 !important; transform: none !important; transition: none !important; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
 

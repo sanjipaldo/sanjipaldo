@@ -30,16 +30,24 @@ main .note { color: var(--muted); }
 .ld-hero-index-label .en { order: 2; font-size: .68rem; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--blue); }
 .ld-hero-index ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
 .ld-hero-index a {
-  display: grid; grid-template-columns: 26px auto minmax(0, 1fr) 16px; align-items: center; gap: 8px; min-height: 52px;
+  display: grid; grid-template-columns: 26px minmax(0, 1fr) 16px; align-items: center; gap: 8px; min-height: 60px; padding-block: 8px;
   border-bottom: 1px solid var(--line-2); transition: color .25s var(--ease), padding .35s var(--ease);
 }
 .ld-hero-index li:nth-last-child(-n+2) a { border-bottom: 0; }
 .ld-hero-index .num { font-size: .74rem; font-weight: 600; color: var(--blue); }
-.ld-idx-area { font-weight: 700; letter-spacing: -.02em; }
-.ld-hero-index small { font-size: .62rem; font-weight: 600; letter-spacing: .06em; color: var(--muted-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ld-idx-co { display: grid; min-width: 0; line-height: 1.35; }
+.ld-idx-co b { font-weight: 700; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ld-idx-co b.en { letter-spacing: 0; font-weight: 600; }
+.ld-idx-co small { font-size: .78rem; font-weight: 500; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ld-hero-index .ico { width: 16px; height: 16px; opacity: 0; transform: translateX(-6px); transition: opacity .25s var(--ease), transform .35s var(--ease); }
 .ld-hero-index a:hover { color: var(--blue); padding-left: 4px; }
 .ld-hero-index a:hover .ico { opacity: 1; transform: none; }
+
+/* 구분 칩 (지주회사 / 자회사 / 해외법인) */
+.ld-type { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--ivory-2); color: var(--ink-2); font-size: .74rem; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
+.ld-type svg { width: 12px; height: 12px; }
+.ld-type--global { background: var(--blue); color: #fff; }
+.ld-type--hold { background: var(--navy); color: #fff; }
 
 /* ---------- 01 CEO ---------- */
 .ld-ceo-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: center; gap: 64px clamp(48px, 7vw, 128px); }
@@ -77,16 +85,22 @@ main .note { color: var(--muted); }
 }
 .ld-ceo-chip-k { font-weight: 500; opacity: .8; }
 @keyframes ldFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.ld-ceo-fig.is-paused .ld-ceo-chip { animation-play-state: paused; } /* 화면 밖이면 정지 (leadership.js) */
 
-.ld-ceo-org { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-top: 30px; font-size: 1.02rem; font-weight: 600; color: var(--ink-2); }
+.ld-ceo-org { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 30px; font-size: 1.02rem; font-weight: 600; color: var(--ink-2); }
 .ld-ceo-org .en { font-size: .72rem; font-weight: 600; letter-spacing: .2em; color: var(--muted-2); }
 .ld-ceo-name { margin-top: 8px; font-size: clamp(3.4rem, 7.2vw, 6.6rem); font-weight: 700; line-height: 1.05; letter-spacing: -.045em; }
-.ld-ceo-title { display: inline-flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 1.2rem; font-weight: 700; color: var(--blue); letter-spacing: -.02em; }
+.ld-ceo-title { display: inline-flex; align-items: center; gap: 10px; margin-top: 14px; font-size: clamp(1.05rem, 1.4vw, 1.2rem); font-weight: 700; color: var(--blue); letter-spacing: -.02em; }
 .ld-ceo-title::before { content: ""; width: 24px; height: 2px; background: currentColor; }
 .ld-dl { margin-top: 36px; border-top: 1.5px solid var(--ink); }
 .ld-dl > div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: baseline; padding: 18px 0; border-bottom: 1px solid var(--line); }
 .ld-dl dt { font-size: .9rem; font-weight: 500; color: var(--muted); }
 .ld-dl dd { font-weight: 600; line-height: 1.6; letter-spacing: -.015em; }
+.ld-dl-link { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); transition: color .25s var(--ease); }
+.ld-dl-link .ico { width: 16px; height: 16px; color: var(--blue); transition: transform .3s var(--ease); }
+.ld-dl-link:hover { color: var(--blue); }
+.ld-dl-link:hover .ico { transform: translateX(3px); }
+.ld-dl-sub { display: inline-flex; align-items: center; height: 24px; margin-left: 10px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); font-size: .76rem; font-weight: 600; color: var(--ink-2); vertical-align: 1px; }
 .ld-quote { position: relative; margin-top: 44px; padding: 32px 0 0; }
 .ld-quote-mark { width: 40px; height: 30px; fill: var(--blue); }
 .ld-quote p { margin-top: 18px; font-size: clamp(1.4rem, 2.3vw, 2.05rem); font-weight: 700; line-height: 1.45; letter-spacing: -.035em; max-width: 24ch; }
@@ -94,139 +108,264 @@ main .note { color: var(--muted); }
 .ld-ceo-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 40px; }
 .ld-ceo-note { margin-top: 18px; }
 
-/* ---------- 02 LEADERS ---------- */
-.ld-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+
+/* ---------- 02 LEADERS (자회사 대표 5) ---------- */
+/* 섹션 머리: 제목은 왼쪽, 설명은 오른쪽 칸 아래쪽에 맞춰 (한 줄이 너무 길어지지 않게) */
+.ld-leaders .sec-head--split { grid-template-columns: minmax(0, 1fr) minmax(0, 33rem); }
+.ld-leaders .sec-head--split .lead { grid-column: 2; grid-row: 1; align-self: end; max-width: 46ch; }
+@media (max-width: 860px) { .ld-leaders .sec-head--split .lead { grid-column: 1; grid-row: auto; } }
+.ld-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .ld-intro, .ld-card { display: flex; min-width: 0; }
 .ld-card { scroll-margin-top: calc(var(--header-h) + 88px); }
-/* 첫 칸: 그룹 구조로 이어지는 네이비 안내 카드 */
+
+/* 첫 칸: 1 + 5 안내 카드 */
 .ld-intro-in {
   position: relative; isolation: isolate; overflow: hidden; flex: 1; display: flex; flex-direction: column;
-  padding: 30px 28px 28px; border-radius: var(--radius); background: var(--navy); color: #fff;
+  padding: 32px 30px 30px; border-radius: 24px; background: var(--navy); color: #fff;
 }
-.ld-intro-in::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(90% 60% at 100% 0%, rgba(10, 93, 226, .5), transparent 70%); }
+.ld-intro-in::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(90% 60% at 100% 0%, rgba(10, 93, 226, .55), transparent 70%), radial-gradient(60% 50% at 0% 100%, rgba(76, 141, 246, .14), transparent 70%); }
 .ld-intro-eyebrow { font-size: .7rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--blue-300); }
-.ld-intro-num { display: flex; align-items: baseline; gap: 10px; margin-top: 18px; }
-.ld-intro-num .en { font-size: clamp(4.6rem, 6.4vw, 6rem); font-weight: 600; line-height: .9; letter-spacing: -.05em; }
-.ld-intro-unit { font-size: 1rem; font-weight: 600; color: var(--on-dark-2); }
-.ld-intro-icons { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; max-width: 280px; margin-top: 24px; }
-.ld-intro-icons li { display: grid; place-items: center; aspect-ratio: 1; border-radius: 9px; background: rgba(255, 255, 255, .06); border: 1px solid var(--line-dark); }
-.ld-intro-icons svg { width: 50%; max-width: 17px; aspect-ratio: 1; height: auto; color: var(--blue-300); }
+.ld-intro-num { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-top: 18px; }
+.ld-intro-num .en { font-size: clamp(4.2rem, 5.8vw, 5.6rem); font-weight: 600; line-height: .9; letter-spacing: -.05em; }
+.ld-intro-num .en i { font-style: normal; font-weight: 300; font-size: .62em; color: var(--blue-300); margin-inline: .08em; vertical-align: .18em; }
+.ld-intro-unit { font-size: .95rem; font-weight: 600; color: var(--on-dark-2); }
+/* 1 + 5 미니 조직도: 지주회사 대표(사진) → 가로선 → 자회사 대표 5 (이름 첫 글자) */
+.ld-intro-team { --av: 46px; --gap-y: 40px; position: relative; display: grid; grid-template-columns: repeat(5, var(--av)); justify-content: space-between; row-gap: var(--gap-y); width: 100%; max-width: 320px; margin: auto auto 0; padding-top: 30px; }
+.ld-intro-team li {
+  position: relative; flex: none; display: grid; place-items: center; width: var(--av); height: var(--av); border-radius: 50%;
+  background: linear-gradient(140deg, #4C8DF6 0%, #0A5DE2 55%, #0742A3 100%); color: #fff; font-size: .98rem; font-weight: 700;
+  box-shadow: 0 0 0 3px var(--navy), 0 10px 20px -10px rgba(10, 93, 226, .9);
+}
+.ld-intro-team li.is-photo { grid-column: 1 / -1; justify-self: center; width: 60px; height: 60px; overflow: hidden; background: linear-gradient(180deg, #F3F1EC, #D9E4F4); box-shadow: 0 0 0 3px var(--navy), 0 0 0 4.5px rgba(111, 162, 242, .7); }
+.ld-intro-team li.is-photo img { position: absolute; left: 50%; top: 0; width: 160%; max-width: none; height: auto; transform: translate(-50%, -3%); }
+/* 선: 사진 아래 줄기 · 가로선 · 각 대표 위로 내려오는 선 */
+.ld-intro-team::before, .ld-intro-team::after, .ld-intro-team li:not(.is-photo)::before { content: ""; position: absolute; background: rgba(111, 162, 242, .55); }
+.ld-intro-team::before { left: 50%; top: calc(30px + 60px); width: 1.5px; height: calc(var(--gap-y) / 2); margin-left: -.75px; transform-origin: top; }
+.ld-intro-team::after { left: calc(var(--av) / 2); right: calc(var(--av) / 2); top: calc(30px + 60px + var(--gap-y) / 2); height: 1.5px; margin-top: -.75px; }
+.ld-intro-team li:not(.is-photo)::before { left: 50%; bottom: 100%; width: 1.5px; height: calc(var(--gap-y) / 2); margin-left: -.75px; transform-origin: top; }
+/* 등장: 줄기 → 가로선(가운데서 양쪽) → 내려가는 선 → 대표가 차례로 */
+.js .ld-intro[data-reveal] .ld-intro-team::before { transform: scaleY(0); transition: transform .4s var(--ease-in-out) .45s; }
+.js .ld-intro[data-reveal] .ld-intro-team::after { transform: scaleX(0); transition: transform .55s var(--ease-in-out) .8s; }
+.js .ld-intro[data-reveal] .ld-intro-team li:not(.is-photo)::before { transform: scaleY(0); transition: transform .3s var(--ease) calc(1.25s + var(--k) * .12s); }
+.js .ld-intro[data-reveal] .ld-intro-team li { opacity: 0; scale: .6; transition: opacity .5s var(--ease), scale .7s cubic-bezier(.2, 1.3, .4, 1), transform .45s var(--ease); transition-delay: calc(1.4s + var(--k) * .12s), calc(1.4s + var(--k) * .12s), 0s; }
+.js .ld-intro[data-reveal] .ld-intro-team li.is-photo { transition-delay: .2s, .2s, 0s; }
+.js .ld-intro[data-reveal].is-in .ld-intro-team::before, .js .ld-intro[data-reveal].is-in .ld-intro-team::after, .js .ld-intro[data-reveal].is-in .ld-intro-team li:not(.is-photo)::before { transform: none; }
+.js .ld-intro[data-reveal].is-in .ld-intro-team li { opacity: 1; scale: none; }
+.ld-intro-team li:nth-child(2) { --k: 0; } .ld-intro-team li:nth-child(3) { --k: 1; } .ld-intro-team li:nth-child(4) { --k: 2; } .ld-intro-team li:nth-child(5) { --k: 3; } .ld-intro-team li:nth-child(6) { --k: 4; }
+.ld-intro-team li:not(.is-photo) { transition: transform .45s var(--ease); }
+.ld-intro-in:hover .ld-intro-team li:not(.is-photo) { transform: translateY(-3px); }
 .ld-intro-main { margin-top: auto; padding-top: 32px; }
-.ld-intro-title { font-size: 1.24rem; font-weight: 700; line-height: 1.45; letter-spacing: -.025em; }
-.ld-intro-text { margin-top: 10px; font-size: .9rem; line-height: 1.65; color: var(--on-dark-2); }
+.ld-intro-title { font-size: 1.32rem; font-weight: 700; line-height: 1.45; letter-spacing: -.03em; }
+.ld-intro-text { margin-top: 10px; font-size: .92rem; line-height: 1.65; color: var(--on-dark-2); }
 .ld-intro-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; margin-top: 22px; }
 .ld-intro-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: .88rem; font-weight: 600; color: #fff; transition: color .25s var(--ease); }
 .ld-intro-link .ico { width: 16px; height: 16px; transition: transform .3s var(--ease); }
 .ld-intro-link:hover { color: var(--blue-300); }
 .ld-intro-link:hover .ico { transform: translateX(3px); }
 
+/* 대표 카드: 3D 렌더(배경 장식) + 이름 첫 글자 모노그램 */
 .ld-card-in {
-  position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden;
-  border-radius: var(--radius); background: #fff; border: 1px solid var(--line-2);
+  position: relative; isolation: isolate; flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 24px; background: #fff; border: 1px solid var(--line-2);
   transition: transform .5s var(--ease), box-shadow .5s var(--ease), border-color .3s var(--ease);
 }
 .ld-card-in:hover { transform: translateY(-6px); box-shadow: var(--shadow); border-color: transparent; }
-.ld-photo {
-  position: relative; isolation: isolate; overflow: hidden; aspect-ratio: 3 / 4;
-  background: linear-gradient(165deg, #EAF1FD 0%, #F4F2EC 58%, #ECE6DA 100%);
+.ld-visual { position: relative; isolation: isolate; overflow: hidden; aspect-ratio: 16 / 10; background: linear-gradient(180deg, #A8C5E8 0%, #C3D7EF 52%, #D8E5F4 100%); }
+.ld-render {
+  position: absolute; right: -3%; top: -6%; height: 112%; width: auto; max-width: none; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 36%); mask-image: linear-gradient(90deg, transparent 0, #000 36%);
+  transition: transform 1.2s var(--ease), translate 1.1s var(--ease), opacity .8s var(--ease);
 }
-.ld-photo::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(60% 45% at 50% 52%, rgba(255, 255, 255, .85), transparent 72%); }
-/* 사업 현장 장면을 아주 옅은 블루 톤으로 — 카드마다 어떤 사업인지 읽히도록(인물 사진 아님) */
-.ld-photo-scene {
-  position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; pointer-events: none;
-  filter: grayscale(1) brightness(1.12) contrast(.92) sepia(.55) hue-rotate(178deg) saturate(1.8) blur(1.6px); mix-blend-mode: multiply; opacity: .2;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .75) 34%, transparent 78%); mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .75) 34%, transparent 78%);
-  transform: scale(1.06); transition: transform 1.4s var(--ease), opacity .6s var(--ease);
+.ld-card-in:hover .ld-render { transform: translateY(-8px) scale(1.035); }
+.ld-visual::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--blue); transform: scaleX(0); transform-origin: left; transition: transform .6s var(--ease); }
+.ld-card-in:hover .ld-visual::after { transform: scaleX(1); }
+.ld-idx { position: absolute; left: 20px; top: 16px; font-size: .95rem; font-weight: 600; color: var(--ink); }
+.ld-idx small { margin-left: 3px; font-size: .72rem; color: rgba(11, 27, 51, .5); }
+.ld-mono {
+  position: absolute; left: 20px; bottom: 20px; display: grid; place-items: center; width: 92px; height: 92px; border-radius: 28px;
+  background: linear-gradient(140deg, #4C8DF6 0%, #0A5DE2 52%, #0742A3 100%); color: #fff; font-size: 2.6rem; font-weight: 700; letter-spacing: -.02em; line-height: 1;
+  box-shadow: 0 24px 40px -18px rgba(10, 93, 226, .9), inset 0 1px 0 rgba(255, 255, 255, .4), inset 0 -10px 20px rgba(5, 30, 90, .25);
+  transition: transform .6s var(--ease), translate .9s cubic-bezier(.2, 1.25, .4, 1), scale .9s cubic-bezier(.2, 1.25, .4, 1), opacity .6s var(--ease);
 }
-.ld-card-in:hover .ld-photo-scene { opacity: .32; transform: scale(1.12); }
-.ld-photo::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--blue); transform: scaleX(0); transform-origin: left; transition: transform .6s var(--ease); }
-.ld-card-in:hover .ld-photo::after { transform: scaleX(1); }
-.ld-sil { position: absolute; left: 50%; bottom: 0; width: 80%; height: auto; fill: rgba(11, 27, 51, .09); transform: translateX(-50%); transition: transform .8s var(--ease), fill .5s var(--ease); }
-.ld-card-in:hover .ld-sil { transform: translateX(-50%) translateY(-8px); fill: rgba(10, 93, 226, .14); }
-.ld-photo-num { position: absolute; left: 18px; top: 12px; font-size: 3.2rem; font-weight: 500; line-height: 1; letter-spacing: -.04em; color: rgba(10, 93, 226, .16); }
-.ld-photo-ico { position: absolute; right: 18px; top: 18px; width: 28px; height: 28px; color: var(--ink); opacity: .62; transition: opacity .3s var(--ease), color .3s var(--ease); }
-.ld-card-in:hover .ld-photo-ico { opacity: 1; color: var(--blue); }
-.ld-dot { position: relative; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
-.ld-dot::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid var(--blue-300); animation: ldPing 2.2s var(--ease) infinite; }
-@keyframes ldPing { 0% { transform: scale(.5); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
-.ld-card-body { flex: 1; display: flex; flex-direction: column; padding: 22px 22px 18px; }
-.ld-card-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
-.ld-card-area { font-size: 1.32rem; font-weight: 700; letter-spacing: -.03em; line-height: 1.35; }
-.ld-card-brand { font-size: .68rem; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
-.ld-card-status { display: flex; align-items: center; gap: 9px; margin-top: 6px; font-size: .88rem; font-weight: 500; color: var(--muted); }
-.ld-card-task { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line-2); font-size: .9rem; line-height: 1.6; color: var(--ink-2); }
-.ld-card-label { display: block; margin-bottom: 4px; font-size: .74rem; font-weight: 600; color: var(--blue); }
-.ld-card-foot { display: flex; align-items: center; margin-top: auto; padding-top: 14px; }
-.ld-go { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: .84rem; font-weight: 600; color: var(--ink); transition: color .25s var(--ease); }
+.ld-mono::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(160deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0) 46%); pointer-events: none; }
+.ld-mono > span { position: relative; }
+.ld-card-in:hover .ld-mono { transform: translateY(-4px) rotate(-4deg); }
+.ld-soon {
+  position: absolute; left: 124px; bottom: 22px; display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px;
+  background: rgba(255, 255, 255, .78); color: var(--ink-2); font-size: .72rem; font-weight: 600; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.ld-card-body { flex: 1; display: flex; flex-direction: column; align-items: flex-start; padding: 22px 24px 18px; }
+.ld-card-co { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; font-size: .94rem; font-weight: 600; color: var(--ink-2); }
+.ld-co.en { letter-spacing: .02em; }
+.ld-co-sub { font-size: .7rem; font-weight: 600; letter-spacing: .1em; color: var(--muted-2); }
+.ld-card-name { margin-top: 6px; font-size: clamp(1.6rem, 2.2vw, 2rem); font-weight: 700; line-height: 1.2; letter-spacing: -.04em; }
+.ld-card-name small { margin-left: 2px; font-size: .95rem; font-weight: 600; letter-spacing: -.01em; color: var(--muted); }
+.ld-card-body > .ld-type { margin-top: 12px; }
+.ld-card-facts { width: 100%; margin-top: 18px; border-top: 1px solid var(--line-2); }
+.ld-card-facts > div { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; min-height: 46px; border-bottom: 1px solid var(--line-2); }
+.ld-card-facts dt { font-size: .82rem; color: var(--muted); }
+.ld-card-facts dd { font-size: .98rem; font-weight: 600; letter-spacing: -.02em; }
+.ld-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; width: 100%; margin-top: auto; padding-top: 16px; }
+.ld-more {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 18px; border-radius: 999px; border: 1px solid var(--line);
+  font-size: .88rem; font-weight: 600; color: var(--ink); transition: background-color .3s var(--ease), color .3s var(--ease), border-color .3s var(--ease);
+}
+.ld-more .ico { width: 16px; height: 16px; transition: transform .45s var(--ease); }
+.ld-more::after { content: ""; position: absolute; inset: 0; z-index: 1; } /* 카드 어디를 눌러도 상세가 열립니다 */
+.ld-card-in:hover .ld-more { background: var(--ink); border-color: var(--ink); color: #fff; }
+.ld-card-in:hover .ld-more .ico { transform: rotate(90deg); }
+.ld-go { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: .88rem; font-weight: 600; color: var(--ink); transition: color .25s var(--ease); }
 .ld-go .ico { width: 16px; height: 16px; transition: transform .3s var(--ease); }
-.ld-go::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; }
-.ld-card-in:hover .ld-go, .ld-go:focus-visible { color: var(--blue); }
-.ld-card-in:hover .ld-go .ico { transform: translateX(3px); }
-.ld-card-in:has(.ld-go:focus-visible) { outline: 3px solid var(--blue); outline-offset: 3px; }
+.ld-go:hover { color: var(--blue); }
+.ld-go:hover .ico { transform: translateX(3px); }
+.ld-note { margin-top: 28px; display: flex; align-items: flex-start; gap: 8px; }
+.ld-note::before { content: "i"; display: inline-grid; place-items: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; border: 1px solid currentColor; font-family: var(--font-en); font-size: .7rem; font-weight: 600; flex: none; }
+
+/* 카드 등장: 카드가 올라온 뒤 3D 렌더가 옆에서 들어오고 모노그램이 살짝 튀어 오릅니다 */
+.js .ld-card[data-reveal] .ld-render { opacity: 0; translate: 28px 0; transition-delay: 0s, calc(var(--d, 0s) + .18s), calc(var(--d, 0s) + .18s); }
+.js .ld-card[data-reveal] .ld-mono { opacity: 0; translate: 0 18px; scale: .82; transition-delay: 0s, calc(var(--d, 0s) + .32s), calc(var(--d, 0s) + .32s), calc(var(--d, 0s) + .32s); }
+.js .ld-card[data-reveal].is-in .ld-render { opacity: 1; translate: none; }
+.js .ld-card[data-reveal].is-in .ld-mono { opacity: 1; translate: none; scale: none; }
+
+/* ---------- 대표 상세 (dialog) ---------- */
+.ld-modal {
+  width: min(940px, calc(100vw - 48px)); max-width: none; max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px);
+  padding: 0; border: 0; border-radius: 28px; background: #fff; color: var(--ink); overflow: hidden; box-shadow: var(--shadow-lg);
+}
+.ld-modal::backdrop { background: rgba(5, 12, 26, .62); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.ld-modal[open] { animation: ldModalIn .55s var(--ease); }
+.ld-modal[open]::backdrop { animation: ldFadeIn .4s var(--ease); }
+.ld-modal.is-closing { animation: ldModalOut .26s var(--ease-in-out) forwards; }
+.ld-modal.is-closing::backdrop { animation: ldFadeOut .26s var(--ease-in-out) forwards; }
+@keyframes ldModalIn { from { opacity: 0; transform: translateY(24px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes ldModalOut { to { opacity: 0; transform: translateY(14px) scale(.98); } }
+@keyframes ldFadeIn { from { opacity: 0; } }
+@keyframes ldFadeOut { to { opacity: 0; } }
+.ld-m-in { position: relative; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); min-height: 540px; max-height: inherit; overflow: auto; overscroll-behavior: contain; }
+.ld-m-visual { position: relative; isolation: isolate; overflow: hidden; min-height: 100%; background: linear-gradient(180deg, #A8C5E8 0%, #C3D7EF 52%, #D8E5F4 100%); }
+.ld-m-render { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%; }
+.ld-m-mono { left: 28px; bottom: 28px; width: 112px; height: 112px; border-radius: 32px; font-size: 3.2rem; }
+.ld-m-visual .ld-soon { left: 28px; top: 24px; bottom: auto; }
+.ld-m-body { display: flex; flex-direction: column; align-items: flex-start; padding: 52px 44px 104px; }
+.ld-m-co { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; font-size: 1rem; font-weight: 600; color: var(--ink-2); }
+.ld-m-name { margin-top: 8px; font-size: clamp(2.3rem, 4.2vw, 3.2rem); font-weight: 700; line-height: 1.1; letter-spacing: -.045em; }
+.ld-m-name small { font-size: 1.05rem; font-weight: 600; letter-spacing: -.01em; color: var(--muted); }
+.ld-m-facts { width: 100%; margin-top: 28px; border-top: 1.5px solid var(--ink); }
+.ld-m-facts > div { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: center; gap: 12px; min-height: 52px; border-bottom: 1px solid var(--line); }
+.ld-m-facts dt { font-size: .86rem; color: var(--muted); }
+.ld-m-facts dd { font-weight: 600; letter-spacing: -.015em; }
+.ld-m-facts dd.is-pending { font-weight: 500; color: var(--muted); }
+.ld-m-area { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--blue); }
+.ld-m-area .ico { width: 16px; height: 16px; transition: transform .3s var(--ease); }
+.ld-m-area:hover .ico { transform: translateX(3px); }
+.ld-m-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.ld-m-nav { position: absolute; right: 32px; bottom: 26px; display: flex; align-items: center; gap: 14px; }
+.ld-m-step { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line); color: var(--ink); transition: background-color .25s var(--ease), border-color .25s var(--ease), color .25s var(--ease); }
+.ld-m-step:hover { background: var(--ink); border-color: var(--ink); color: #fff; }
+.ld-m-step .ico { width: 18px; height: 18px; }
+.ld-m-step[data-m-step="-1"] .ico { transform: rotate(180deg); }
+.ld-m-count { min-width: 64px; text-align: center; font-size: .9rem; color: var(--muted); }
+.ld-m-count b { font-weight: 600; color: var(--ink); }
+.ld-m-close { position: absolute; z-index: 3; right: 18px; top: 18px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: var(--ivory); color: var(--ink); transition: background-color .25s var(--ease), color .25s var(--ease); }
+.ld-m-close:hover { background: var(--ink); color: #fff; }
+.ld-m-close svg { width: 20px; height: 20px; }
+/* 이전/다음 대표로 바꿀 때 내용이 살짝 빠졌다 들어옵니다 */
+.ld-m-body > *, .ld-m-render, .ld-m-mono { transition: opacity .22s var(--ease), transform .3s var(--ease); }
+.ld-m-in.is-swap .ld-m-body > * { opacity: 0; transform: translateY(8px); }
+.ld-m-in.is-swap .ld-m-render { opacity: 0; transform: scale(1.03); }
+.ld-m-in.is-swap .ld-m-mono { opacity: 0; transform: translateY(8px); }
+html.is-locked .ld-modal { overscroll-behavior: contain; }
 
 /* ---------- 반응형 ---------- */
 @media (max-width: 1180px) {
-  .ld-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .ld-intro { grid-column: span 2; }
-  .ld-intro-in { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); grid-template-rows: auto auto 1fr; column-gap: 40px; padding: 36px; }
-  .ld-intro-eyebrow { grid-column: 1; grid-row: 1; }
-  .ld-intro-num { grid-column: 1; grid-row: 2; }
-  .ld-intro-icons { grid-column: 1; grid-row: 3; align-self: end; }
-  .ld-intro-main { grid-column: 2; grid-row: 1 / -1; align-self: end; padding-top: 0; }
-  .ld-intro-title { font-size: 1.4rem; }
-  .ld-intro-num .en { font-size: clamp(6rem, 11vw, 8.5rem); }
   .ld-ceo-cap { left: 12px; }
   .ld-ceo-chip { right: 8px; }
+  .ld-card-body { padding: 20px 20px 16px; }
+  .ld-card .ld-mono { width: 80px; height: 80px; border-radius: 24px; font-size: 2.2rem; }
+  .ld-card .ld-soon { left: 110px; }
 }
 @media (max-width: 1024px) {
   .ld-hero-grid, .ld-ceo-grid { grid-template-columns: 1fr; }
   .ld-hero-index { max-width: 640px; }
   .ld-ceo-fig { max-width: 460px; }
-}
-@media (max-width: 860px) {
   .ld-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .ld-intro { grid-column: auto; }
-  .ld-intro-in { display: flex; padding: 28px 24px; }
-  .ld-intro-num .en { font-size: 4.6rem; }
-  .ld-intro-icons { align-self: stretch; }
-  .ld-intro-main { align-self: stretch; padding-top: 28px; }
-  .ld-intro-title { font-size: 1.2rem; }
+}
+@media (max-width: 760px) {
+  .ld-modal { inset: auto 0 0 0; margin: 0; width: 100%; max-height: 92vh; max-height: 92dvh; border-radius: 24px 24px 0 0; }
+  .ld-modal[open] { animation: ldSheetIn .5s var(--ease); }
+  .ld-modal.is-closing { animation: ldSheetOut .26s var(--ease-in-out) forwards; }
+  @keyframes ldSheetIn { from { transform: translateY(100%); } to { transform: none; } }
+  @keyframes ldSheetOut { to { transform: translateY(100%); } }
+  .ld-m-in { grid-template-columns: 1fr; min-height: 0; }
+  .ld-m-visual { height: 180px; min-height: 0; }
+  .ld-m-render { object-position: 50% 42%; }
+  .ld-m-mono { left: 20px; bottom: 18px; width: 76px; height: 76px; border-radius: 22px; font-size: 2.1rem; }
+  .ld-m-visual .ld-soon { left: 20px; top: 18px; }
+  .ld-m-body { padding: 26px 20px 28px; }
+  .ld-m-name { font-size: 2.2rem; }
+  .ld-m-facts > div { grid-template-columns: 76px minmax(0, 1fr); min-height: 48px; }
+  .ld-m-actions .btn { flex: 1 1 auto; }
+  .ld-m-nav { position: sticky; z-index: 2; right: auto; bottom: 0; justify-content: space-between; padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, .94); border-top: 1px solid var(--line-2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .ld-m-close { right: 14px; top: 14px; background: rgba(255, 255, 255, .86); }
 }
 @media (max-width: 560px) {
   .ld-hero-word { bottom: -.12em; }
-  .ld-hero-index { padding: 18px 18px 6px; }
-  .ld-hero-index ul { column-gap: 16px; }
-  .ld-hero-index a { grid-template-columns: 24px minmax(0, 1fr); min-height: 46px; }
-  .ld-hero-index small, .ld-hero-index .ico { display: none; }
+  .ld-hero-index { padding: 18px 16px 6px; }
+  .ld-hero-index ul { column-gap: 12px; }
+  .ld-hero-index a { grid-template-columns: 22px minmax(0, 1fr); min-height: 56px; gap: 6px; }
+  .ld-hero-index .ico { display: none; }
+  .ld-idx-co b { font-size: .92rem; }
+  .ld-idx-co small { font-size: .74rem; }
   .ld-ceo-name { font-size: 3.4rem; }
   .ld-ceo-cap { left: 10px; bottom: 16px; padding: 10px 14px 10px 10px; }
   .ld-ceo-cap img { width: 34px; height: 34px; }
   .ld-ceo-chip { bottom: 24%; right: 6px; height: 38px; padding: 0 14px; font-size: .84rem; }
   .ld-dl > div { grid-template-columns: 1fr; gap: 4px; padding: 14px 0; }
+  .ld-dl-sub { margin: 6px 0 0; }
   .ld-quote { margin-top: 32px; padding-top: 20px; }
   .ld-ceo-actions .btn { width: 100%; }
 
   .ld-grid { grid-template-columns: 1fr; gap: 12px; }
-  .ld-intro-in { padding: 24px 20px 20px; }
+  .ld-intro-in { padding: 24px 20px 22px; border-radius: 20px; }
   .ld-intro-num { margin-top: 14px; }
-  .ld-intro-num .en { font-size: 4rem; }
-  .ld-intro-icons { margin-top: 18px; }
+  .ld-intro-num .en { font-size: 3.6rem; }
   .ld-intro-main { padding-top: 22px; }
-  .ld-card-in { display: grid; grid-template-columns: 104px minmax(0, 1fr); grid-template-rows: auto auto auto auto; column-gap: 16px; padding: 14px; }
-  .ld-photo { grid-column: 1; grid-row: 1 / span 2; border-radius: 12px; }
-  .ld-photo-num { font-size: 1.8rem; left: 10px; top: 8px; }
-  .ld-photo-ico { width: 18px; height: 18px; right: 10px; top: 10px; }
-  .ld-card-body { display: contents; }
-  .ld-card-title { grid-column: 2; grid-row: 1; align-self: end; flex-direction: column; gap: 0; }
-  .ld-card-status { grid-column: 2; grid-row: 2; align-self: start; }
-  .ld-card-task { grid-column: 1 / -1; grid-row: 3; margin-top: 14px; padding-top: 14px; }
-  .ld-card-foot { grid-column: 1 / -1; grid-row: 4; padding-top: 10px; }
+  .ld-intro-title { font-size: 1.18rem; }
+  /* 카드: 왼쪽 세로 비주얼 + 오른쪽 내용 */
+  .ld-card-in { display: grid; grid-template-columns: 108px minmax(0, 1fr); border-radius: 20px; }
   .ld-card-in:hover { transform: translateY(-3px); }
+  .ld-visual { aspect-ratio: auto; height: 100%; min-height: 100%; }
+  .ld-render { right: -62%; top: -2%; height: 104%; -webkit-mask-image: none; mask-image: none; opacity: .9; }
+  .ld-idx { left: 12px; top: 10px; font-size: .82rem; }
+  .ld-idx small { display: none; }
+  .ld-card .ld-mono { left: 50%; bottom: auto; top: 50%; width: 64px; height: 64px; margin: -40px 0 0 -32px; border-radius: 20px; font-size: 1.8rem; }
+  .ld-card .ld-soon { left: 8px; right: 8px; bottom: 10px; justify-content: center; height: 22px; padding: 0 6px; font-size: .64rem; }
+  .ld-card-body { padding: 16px 16px 10px; }
+  .ld-card-co { font-size: .86rem; }
+  .ld-card .ld-co-sub { display: none; } /* 카드에서만 숨김 — 상세(바텀 시트)에는 그대로 */
+  .ld-card-name { font-size: 1.5rem; }
+  .ld-card-name small { font-size: .85rem; }
+  .ld-card-body > .ld-type { margin-top: 8px; height: 22px; font-size: .7rem; }
+  .ld-card-facts { margin-top: 12px; }
+  .ld-card-facts > div { grid-template-columns: 62px minmax(0, 1fr); min-height: 38px; }
+  .ld-card-facts dt { font-size: .78rem; }
+  .ld-card-facts dd { font-size: .92rem; }
+  .ld-card-foot { padding-top: 10px; flex-wrap: nowrap; }
+  .ld-more { padding: 0 14px 0 16px; font-size: .84rem; white-space: nowrap; }
+  .ld-go { justify-content: center; width: 44px; border-radius: 50%; border: 1px solid var(--line); }
+  .ld-go-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ld-intro-team { --av: 40px; --gap-y: 34px; max-width: 290px; padding-top: 24px; }
+  .ld-intro-team li.is-photo { width: 52px; height: 52px; }
+  .ld-intro-team::before { top: calc(24px + 52px); }
+  .ld-intro-team::after { top: calc(24px + 52px + var(--gap-y) / 2); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ld-ceo-chip, .ld-dot::after { animation: none !important; }
+  .ld-ceo-chip { animation: none !important; }
   .ld-ceo-img { transform: none !important; }
   .ld-ceo-ring { transform: translate3d(50%, -50%, 0) !important; }
-  .ld-photo-scene { transition: none; }
+  .js .ld-card[data-reveal] .ld-render, .js .ld-card[data-reveal] .ld-mono, .js .ld-intro[data-reveal] .ld-intro-team li { opacity: 1 !important; translate: none !important; scale: none !important; }
+  .js .ld-intro[data-reveal] .ld-intro-team::before, .js .ld-intro[data-reveal] .ld-intro-team::after, .js .ld-intro[data-reveal] .ld-intro-team li::before { transform: none !important; }
+  .ld-modal[open], .ld-modal[open]::backdrop, .ld-modal.is-closing, .ld-modal.is-closing::backdrop { animation: none !important; }
+  .ld-render, .ld-mono, .ld-m-body > *, .ld-m-render, .ld-m-mono { transition: none !important; }
 }

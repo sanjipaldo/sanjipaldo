@@ -1,12 +1,35 @@
 /* =========================================================
    DOOGO GROUP — brands.js (브랜드와 성과)
-   프로젝트 분야 필터(FLIP 재배치) · 성장 사례 카드 쌓임 효과
+   브랜드 3D 카드(포인터를 따라 떠오름) · 프로젝트 분야 필터(FLIP 재배치) · 성장 사례 카드 쌓임 효과
    ========================================================= */
 (function () {
   'use strict';
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
+
+  /* ---------- 브랜드 3D 카드: 포인터를 따라 오브젝트가 살짝 기울며 떠오름 ----------
+     마우스(정밀 포인터)에서만, 움직임 줄이기 설정이면 동작하지 않습니다. CSS 변수 --mx/--my(-1~1)만 바꾸고
+     실제 움직임은 CSS transform 전환(.9s)으로 부드럽게 따라갑니다. */
+  if (!reduce && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    $$('.bn-card:not(.bn-card--chain)').forEach(function (card) {
+      var media = $('.bn-card-media', card);
+      if (!media) return;
+      var raf = 0, nx = 0, ny = 0;
+      function apply() { raf = 0; card.style.setProperty('--mx', nx.toFixed(3)); card.style.setProperty('--my', ny.toFixed(3)); }
+      card.addEventListener('pointermove', function (e) {
+        if (e.pointerType !== 'mouse') return;
+        var r = media.getBoundingClientRect();
+        nx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width - 0.5) * 2));
+        ny = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height - 0.5) * 2));
+        if (!raf) raf = requestAnimationFrame(apply);
+      });
+      card.addEventListener('pointerleave', function () {
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+        card.style.removeProperty('--mx'); card.style.removeProperty('--my');
+      });
+    });
+  }
 
   /* ---------- 프로젝트 필터 ---------- */
   var chips = $$('[data-filter]');
@@ -100,45 +123,6 @@
   var fitTimer;
   window.addEventListener('resize', function () { clearTimeout(fitTimer); fitTimer = setTimeout(fitCta, 120); });
 
-  /* ---------- 성장 사례: 사업 장면 영상 ----------
-     재생할 수 있는 형식이 없거나 움직임 줄이기 설정이면 내려받지 않고 포스터만 보여 줍니다.
-     화면에 보일 때만 재생하고, 사용자가 정지한 영상은 다시 재생하지 않습니다. */
-  var caseVids = $$('.bn-case video');
-  var managed = [];
-  function playable(v) {
-    return $$('source', v).some(function (src) {
-      var t = src.getAttribute('type');
-      if (!t) return true;
-      return v.canPlayType(t === 'video/mp4' ? 'video/mp4; codecs="avc1.42E01E"' : t) !== '';
-    });
-  }
-  // 보이고(_inView) · 다음 카드에 덮이지 않았고(_covered) · 사용자가 멈추지 않았을 때만 재생
-  function syncVid(v) {
-    if (managed.indexOf(v) < 0) return;
-    var go = v._inView && !v._covered && v.dataset.userPaused !== '1';
-    if (go && v.paused) {
-      if (v.preload === 'none') v.preload = 'auto';
-      var p = v.play();
-      if (p && p.catch) p.catch(function () { var w = v.closest('[data-video-wrap]'); if (w) w.classList.add('is-autoplay-blocked'); });
-    } else if (!go && !v.paused) v.pause();
-  }
-  var vio = ('IntersectionObserver' in window) ? new IntersectionObserver(function (entries) {
-    entries.forEach(function (en) { en.target._inView = en.isIntersecting; syncVid(en.target); });
-  }, { threshold: 0.35 }) : null;
-  caseVids.forEach(function (v) {
-    var wrap = v.closest('[data-video-wrap]');
-    if (reduce || !vio || !playable(v)) { if (wrap) wrap.classList.add('is-reduced'); return; }
-    v.muted = true;
-    managed.push(v);
-    vio.observe(v);
-  });
-  function setCovered(card, covered) {
-    var v = $('video', card);
-    if (!v || !!v._covered === covered) return;
-    v._covered = covered;
-    syncVid(v);
-  }
-
   /* ---------- 성장 사례: 쌓이는 카드 (데스크톱) ---------- */
   var cases = $$('.bn-case');
   var stackMq = window.matchMedia('(min-width: 1025px) and (min-height: 760px)');
@@ -146,18 +130,17 @@
   function updateStack() {
     ticking = false;
     if (reduce || !stackMq.matches) {
-      cases.forEach(function (c) { c.style.removeProperty('--sc'); c.style.removeProperty('--dim'); setCovered(c, false); });
+      cases.forEach(function (c) { c.style.removeProperty('--sc'); c.style.removeProperty('--dim'); });
       return;
     }
     cases.forEach(function (c, i) {
       var next = cases[i + 1];
-      if (!next) { setCovered(c, false); return; }
+      if (!next) return;
       var cr = c.getBoundingClientRect(), nr = next.getBoundingClientRect();
       var h = c.offsetHeight || 1;
       var p = Math.min(Math.max(1 - (nr.top - cr.top) / h, 0), 1);
       c.style.setProperty('--sc', (1 - p * 0.05).toFixed(4));
       c.style.setProperty('--dim', (p * 0.45).toFixed(3));
-      setCovered(c, p > 0.6); // 다음 카드에 대부분 덮이면 영상 정지 (동시에 여러 개 디코딩하지 않도록)
     });
   }
   function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(updateStack); } }

@@ -26,12 +26,19 @@
 .dt-sub i { width: 1px; height: 16px; background: rgba(11, 27, 51, .25); }
 .dt-sub-ico { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--radius-sm); background: var(--blue); color: #fff; box-shadow: 0 10px 24px -12px rgba(10, 93, 226, .8); }
 .dt-sub-ico svg { width: 21px; height: 21px; }
-/* 소속 표시: (주)두고홀딩스 계열 사업 → 그룹 구조로 연결 (보이는 크기 32px, 누르는 영역은 ::after로 44px) */
-.dt-key { position: relative; display: inline-flex; white-space: nowrap; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 999px; background: var(--blue-50); color: var(--blue-700); font-size: .84rem; font-weight: 700; letter-spacing: 0; transition: background-color .25s var(--ease), color .25s var(--ease); }
-.dt-key::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); transition: background-color .25s; }
-.dt-key::after { content: ""; position: absolute; inset: -6px -2px; }
-.dt-key:hover { background: var(--blue); color: #fff; }
-.dt-key:hover::before { background: #fff; }
+/* 운영 법인 알약: [운영] 법인명 [구분] → 그룹 구조로 연결 (보이는 높이 36px, 누르는 영역은 ::after로 44px) */
+.dt-corp {
+  position: relative; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 5px 0 14px; border-radius: 999px;
+  background: #fff; border: 1px solid rgba(10, 93, 226, .2); color: var(--ink); font-size: .9rem; font-weight: 700; letter-spacing: -.015em; white-space: nowrap;
+  box-shadow: 0 8px 22px -14px rgba(10, 93, 226, .55); transition: border-color .3s var(--ease), box-shadow .3s var(--ease), transform .3s var(--ease);
+}
+.dt-corp::after { content: ""; position: absolute; inset: -4px -2px; }
+.dt-corp-k { font-size: .76rem; font-weight: 600; color: var(--muted); }
+.dt-corp-type { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: var(--blue-50); color: var(--blue-700); font-size: .75rem; font-weight: 700; letter-spacing: 0; white-space: nowrap; }
+.dt-corp.is-hold .dt-corp-type, .dt-corp-type.is-hold { background: var(--ink); color: #fff; }
+.dt-corp.is-group { padding-right: 14px; }
+.dt-corp.is-group::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+.dt-corp:hover { border-color: var(--blue); box-shadow: 0 12px 26px -14px rgba(10, 93, 226, .7); transform: translateY(-1px); }
 
 .dt-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 24px clamp(32px, 5vw, 80px); margin-top: clamp(16px, 1.8vw, 26px); }
 .dt-role { margin-top: clamp(12px, 1.2vw, 16px); font-size: clamp(1.15rem, 1.75vw, 1.55rem); font-weight: 600; line-height: 1.5; letter-spacing: -.035em; color: var(--ink); max-width: 32ch; text-wrap: balance; }
@@ -57,24 +64,30 @@
 .js .dt-frame[data-reveal] { transform: none; opacity: 1; clip-path: inset(6% 4% 6% 4% round var(--radius-lg)); transition: clip-path 1.4s var(--ease) .15s; }
 .js .dt-frame[data-reveal].is-in { clip-path: inset(0 0 0 0 round 0px); }
 .dt-frame-media { position: absolute; inset: -8% 0; transform: translate3d(0, var(--py, 0px), 0); will-change: transform; }
-.dt-frame video { width: 100%; height: 100%; object-fit: cover; object-position: var(--op, 50%) 50%; }
-/* 가로로 긴 프레임에서는 object-position 가로값이 듣지 않으므로, 사업별 초점(--vx/--vy)을 기준으로 살짝 확대해
-   그 사업의 건물이 가운데 쪽으로 오게 함 (영상 교체 시 build-business.mjs의 frame 값만 고치면 됨) */
-@media (min-width: 641px) {
-  .dt-frame video { transform: scale(var(--vs, 1)); transform-origin: var(--vx, 50%) var(--vy, 50%); }
-}
+/* 사진: 사업별 초점(--fx/--fy, 모바일 --mx) · 등장 때 천천히 당겨지고(1.14→1), 화면에 있는 동안 아주 느리게 숨 쉬듯 확대(Ken Burns) */
+.dt-frame-img { width: 100%; height: 100%; object-fit: cover; object-position: var(--fx, 50%) var(--fy, 50%); transform-origin: var(--fx, 50%) var(--fy, 50%); }
+.js .dt-frame-img { scale: 1.14; transition: scale 2.8s cubic-bezier(.16, .84, .24, 1) .1s; animation: dtKen 24s ease-in-out 2.2s infinite alternate; animation-play-state: paused; }
+.js .dt-frame.is-in .dt-frame-img { scale: 1; }
+.js .dt-frame.is-live .dt-frame-img { animation-play-state: running; }
+@keyframes dtKen { from { transform: scale(1) translate3d(0, 0, 0); } to { transform: scale(1.07) translate3d(-1.1%, -.7%, 0); } }
 .dt-frame::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background: linear-gradient(90deg, rgba(10, 20, 38, .58) 0%, rgba(10, 20, 38, .1) 48%, transparent 70%), linear-gradient(0deg, rgba(10, 20, 38, .5) 0%, transparent 46%); }
-.dt-quote { position: absolute; left: clamp(20px, 3.2vw, 48px); bottom: clamp(20px, 3.2vw, 44px); z-index: 2; max-width: min(34ch, 60%); color: #fff; }
-.dt-quote-label { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: .74rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: rgba(255, 255, 255, .78); }
+  background: linear-gradient(90deg, rgba(10, 20, 38, .6) 0%, rgba(10, 20, 38, .14) 46%, transparent 68%), linear-gradient(0deg, rgba(10, 20, 38, .55) 0%, transparent 48%), linear-gradient(180deg, rgba(10, 20, 38, .28) 0%, transparent 22%); }
+.dt-frame-badge {
+  position: absolute; left: clamp(18px, 2.6vw, 36px); top: clamp(16px, 2.2vw, 28px); z-index: 2; display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 12px;
+  border-radius: 999px; background: rgba(10, 20, 38, .4); border: 1px solid rgba(255, 255, 255, .22); color: rgba(255, 255, 255, .92); font-size: .74rem; font-weight: 600;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.dt-frame-badge::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #FFD66B; }
+.dt-quote { position: absolute; left: clamp(20px, 3.2vw, 48px); bottom: clamp(20px, 3.2vw, 44px); z-index: 2; max-width: 60%; color: #fff; }
+.dt-quote-label { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: .74rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: rgba(255, 255, 255, .8); }
 .dt-quote-label::before { content: ""; width: 22px; height: 1.5px; background: currentColor; }
-.dt-quote q { display: block; font-size: clamp(1.25rem, 2.4vw, 2.2rem); font-weight: 700; line-height: 1.32; letter-spacing: -.035em; quotes: "\201C" "\201D"; text-shadow: 0 2px 20px rgba(0, 0, 0, .25); }
+.dt-quote q { display: block; font-size: clamp(1.25rem, 2.4vw, 2.2rem); font-weight: 700; line-height: 1.32; letter-spacing: -.035em; quotes: "\201C" "\201D"; text-shadow: 0 2px 20px rgba(0, 0, 0, .3); text-wrap: balance; max-width: 13em; /* 글자 크기에 맞춘 폭 → 두 줄로 고르게 */ }
+/* 문구·버튼은 사진이 열린 뒤 차례로 */
+.js .dt-frame :is(.dt-quote, .dt-frame-ctrl, .dt-frame-badge) { opacity: 0; transform: translateY(14px); transition: opacity .8s var(--ease), transform .9s var(--ease); }
+.js .dt-frame.is-in .dt-quote { opacity: 1; transform: none; transition-delay: .7s; }
+.js .dt-frame.is-in .dt-frame-ctrl { opacity: 1; transform: none; transition-delay: .9s; }
+.js .dt-frame.is-in .dt-frame-badge { opacity: 1; transform: none; transition-delay: 1s; }
 .dt-frame-ctrl { position: absolute; right: clamp(16px, 2.4vw, 32px); bottom: clamp(16px, 2.4vw, 32px); z-index: 2; display: flex; align-items: center; gap: 10px; }
-/* 건물이 왼쪽에 있는 영상: 문구는 오른쪽 아래, 버튼은 오른쪽 위 */
-.dt-frame.is-q-right::after { background: linear-gradient(270deg, rgba(10, 20, 38, .6) 0%, rgba(10, 20, 38, .1) 46%, transparent 68%), linear-gradient(0deg, rgba(10, 20, 38, .45) 0%, transparent 42%); }
-.dt-frame.is-q-right .dt-quote { left: auto; right: clamp(20px, 3.2vw, 48px); text-align: right; }
-.dt-frame.is-q-right .dt-quote-label { flex-direction: row-reverse; }
-.dt-frame.is-q-right .dt-frame-ctrl { top: clamp(16px, 2.4vw, 32px); bottom: auto; }
 .dt-film-btn {
   display: inline-flex; align-items: center; gap: 10px; height: 50px; padding: 0 20px 0 8px; border-radius: 999px;
   background: rgba(10, 20, 38, .45); border: 1px solid rgba(255, 255, 255, .28); color: #fff; font-weight: 600; font-size: .94rem;
@@ -83,16 +96,6 @@
 .dt-film-btn:hover { background: #fff; color: var(--ink); }
 .dt-film-btn:hover .play-ring { background: var(--blue); color: #fff; }
 .dt-film-btn .play-ring { transition: background-color .25s, color .25s; }
-.dt-vtoggle {
-  display: grid; place-items: center; width: 50px; height: 50px; border-radius: 50%; color: #fff;
-  background: rgba(10, 20, 38, .45); border: 1px solid rgba(255, 255, 255, .28); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  transition: background-color .25s var(--ease);
-}
-.dt-vtoggle:hover { background: rgba(10, 20, 38, .7); }
-.dt-vtoggle .ico { width: 15px; height: 15px; }
-.dt-vtoggle .ico-play, .dt-vtoggle.is-paused .ico-pause { display: none; }
-.dt-vtoggle.is-paused .ico-play { display: block; margin-left: 2px; }
-.is-reduced .dt-vtoggle { display: none; }
 
 /* ---------- 2. 주요 서비스 ---------- */
 .dt-services .sec-head .lead { max-width: 40ch; }
@@ -128,34 +131,38 @@
 .dt-for-list .ico { width: 18px; height: 18px; padding: 3px; border-radius: 50%; background: var(--blue); color: #fff; flex: none; }
 
 /* ---------- 3. 현장 ---------- */
+/* 대표 사진(7칸, 4:3이 행 높이를 정함) + 두 번째 사진 또는 브랜드 3D 렌더(5칸, 같은 높이) */
 .dt-scene .sec-head .lead { max-width: 40ch; }
-.dt-gallery { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; align-items: start; }
-.dt-shot { position: relative; margin: 0; overflow: hidden; border-radius: var(--radius); background: var(--ivory-2); }
-.dt-shot .media-cover { position: absolute; inset: 0; background: transparent; }
-.dt-shot img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s var(--ease); }
-.dt-shot:hover img { transform: scale(1.04); }
-/* 현장 사진(5칸) + 그룹 영상 속 장면(7칸, 16:9가 행 높이를 정함).
-   1440 기준 사진 칸 541×429 — 모든 현장 사진이 원본 크기 이하로 표시됨 */
-.dt-shot--scene { grid-column: 1 / span 5; grid-row: 1; align-self: stretch; }
-.dt-shot--film { grid-column: 6 / -1; grid-row: 1; aspect-ratio: 16 / 9; }
-/* 사진 2장(공간): 왼쪽 칸에 원본 비율로 위아래 쌓고(원본 폭 이하), 영상 장면이 두 행 높이를 채움 */
-.dt-gallery.has-two .dt-shot--scene { aspect-ratio: var(--ar); align-self: start; max-width: var(--w); }
-.dt-gallery.has-two .dt-shot--scene:nth-child(2) { grid-row: 2; }
-.dt-gallery.has-two .dt-shot--film { grid-row: 1 / span 2; aspect-ratio: auto; align-self: stretch; }
+.dt-gallery { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; align-items: stretch; }
+.dt-shot { position: relative; margin: 0; overflow: hidden; isolation: isolate; border-radius: var(--radius); background: var(--ivory-2); }
+.dt-shot:first-child { aspect-ratio: 4 / 3; }
+.dt-shot--render { background: linear-gradient(180deg, #D5E2F7 0%, #E7EEF9 100%); }
+.dt-shot-media { position: absolute; inset: 0; }
+/* --z/--zo: 히어로와 같은 사진을 확대한 '디테일 컷' (배율 · 확대 중심) */
+.dt-shot img { width: 100%; height: 100%; object-fit: cover; scale: var(--z, 1); transform-origin: var(--zo, 50% 50%); transition: transform 1.2s var(--ease); }
+.dt-shot--photo:hover img { transform: scale(1.04); }
+.dt-shot--render:hover img { transform: translateY(-10px) scale(1.02); }
+.dt-shot--photo::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(0deg, rgba(10, 20, 38, .32) 0%, transparent 34%); }
+.dt-shot-label {
+  position: absolute; left: 16px; top: 16px; z-index: 2; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px;
+  border-radius: 999px; background: rgba(255, 255, 255, .94); color: var(--ink); font-size: .86rem; font-weight: 700; letter-spacing: -.02em;
+  box-shadow: 0 8px 20px -12px rgba(11, 27, 51, .45);
+}
+.dt-shot-label .en { font-size: .74rem; font-weight: 600; color: var(--blue); }
 .dt-shot figcaption {
-  position: absolute; left: 14px; bottom: 14px; z-index: 2; display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% - 28px);
-  padding: 6px 13px 6px 6px; border-radius: 999px; background: rgba(255, 255, 255, .94); color: var(--ink-2);
-  font-size: .8rem; font-weight: 600; line-height: 1.3; box-shadow: 0 8px 20px -12px rgba(11, 27, 51, .45);
+  position: absolute; left: 16px; bottom: 16px; z-index: 2; display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% - 32px);
+  padding: 7px 13px 7px 11px; border-radius: 999px; background: rgba(10, 20, 38, .46); border: 1px solid rgba(255, 255, 255, .18); color: #fff;
+  font-size: .78rem; font-weight: 600; line-height: 1.35; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
-.dt-shot--film figcaption { padding-left: 13px; }
-.dt-shot--film figcaption .en { font-size: .68rem; letter-spacing: .16em; color: var(--blue); text-transform: uppercase; }
-.dt-shot-play {
-  position: absolute; left: 50%; top: 50%; z-index: 2; display: grid; place-items: center; width: 68px; height: 68px; margin: -34px 0 0 -34px;
-  border-radius: 50%; background: rgba(255, 255, 255, .92); color: var(--blue); box-shadow: 0 16px 40px -14px rgba(11, 27, 51, .5);
-  transition: transform .35s var(--ease), background-color .25s, color .25s;
-}
-.dt-shot-play svg { width: 22px; height: 22px; margin-left: 3px; }
-.dt-shot-play:hover { transform: scale(1.08); background: var(--blue); color: #fff; }
+.dt-shot figcaption::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: #FFD66B; }
+.dt-shot--render figcaption { background: rgba(255, 255, 255, .7); border-color: rgba(10, 93, 226, .14); color: var(--ink-2); }
+/* 등장: 아래에서 위로 열리며 사진이 1.14 → 1로 가라앉음, 라벨은 그다음 */
+.js .dt-shot[data-reveal] { opacity: 1; transform: none; clip-path: inset(16% 0 0 0 round var(--radius)); transition: clip-path 1.3s var(--ease) var(--d, 0s); }
+.js .dt-shot[data-reveal].is-in { clip-path: inset(0 0 0 0 round var(--radius)); }
+.js .dt-shot[data-reveal] img { scale: calc(var(--z, 1) * 1.14); transition: scale 1.9s var(--ease) var(--d, 0s), transform 1.2s var(--ease); }
+.js .dt-shot[data-reveal].is-in img { scale: var(--z, 1); }
+.js .dt-shot[data-reveal] :is(.dt-shot-label, figcaption) { opacity: 0; transform: translateY(10px); transition: opacity .7s var(--ease) calc(var(--d, 0s) + .55s), transform .7s var(--ease) calc(var(--d, 0s) + .55s); }
+.js .dt-shot[data-reveal].is-in :is(.dt-shot-label, figcaption) { opacity: 1; transform: none; }
 
 /* ---------- 4. 관련 브랜드·프로젝트 (네이비) ---------- */
 .dt-rel { overflow: hidden; isolation: isolate; }
@@ -223,13 +230,14 @@
 .dt-row-link .ico { width: 16px; height: 16px; transition: transform .3s var(--ease); }
 .dt-row-link:hover .ico { transform: translateX(4px); }
 
-/* NORA STAY: 사진 칸은 원본 폭(630px) 이하·원본 비율(3:2)로 고정 → 늘어나지 않음 */
-.dt-stay { margin-top: clamp(28px, 3.4vw, 44px); display: grid; grid-template-columns: minmax(0, 630px) minmax(0, 1fr); align-items: center; border-radius: var(--radius); overflow: hidden; background: var(--navy-2); border: 1px solid var(--line-dark); }
-.dt-stay-media { aspect-ratio: 3 / 2; border-radius: 0; }
-.dt-stay-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s var(--ease); }
-.dt-stay:hover .dt-stay-media img { transform: scale(1.03); }
-.dt-stay-badge { position: absolute; left: 16px; top: 16px; z-index: 2; display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: #FFF4D6; color: #8A5A00; font-size: .78rem; font-weight: 700; }
-.dt-stay-body { position: relative; display: flex; flex-direction: column; align-items: flex-start; padding: clamp(26px, 3.4vw, 48px); }
+/* NORA STAY: 브랜드 3D 렌더(연한 블루 배경) + 설명 */
+.dt-stay { margin-top: clamp(28px, 3.4vw, 44px); display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); align-items: stretch; border-radius: var(--radius); overflow: hidden; background: var(--navy-2); border: 1px solid var(--line-dark); }
+.dt-stay-media { position: relative; overflow: hidden; aspect-ratio: 4 / 3; background: linear-gradient(180deg, #D5E2F7 0%, #E7EEF9 100%); }
+.dt-stay-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 58%; transition: transform 1.2s var(--ease); }
+.dt-stay:hover .dt-stay-media img { transform: translateY(-10px) scale(1.02); }
+.dt-stay-badge { position: absolute; left: 16px; top: 16px; z-index: 2; display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, .8); color: var(--ink-2); font-size: .76rem; font-weight: 600; }
+.dt-stay-badge::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #E0A100; }
+.dt-stay-body { position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: clamp(26px, 3.4vw, 48px); }
 .dt-stay .dt-row-num { position: absolute; right: clamp(20px, 2.6vw, 34px); top: clamp(16px, 2vw, 26px); }
 .dt-stay-en { font-size: .74rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--blue-300); }
 .dt-stay-title { margin-top: 8px; font-size: clamp(1.7rem, 2.8vw, 2.4rem); font-weight: 700; letter-spacing: -.035em; line-height: 1.2; }
@@ -272,30 +280,85 @@
 @keyframes dtFlow { to { background-position: 14px 0; } }
 
 /* ---------- 5. 담당 대표 ---------- */
-.dt-leader-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); align-items: center; gap: 40px clamp(40px, 6vw, 96px); }
+/* 왼쪽: 사진(문원오) 또는 이름 첫 글자 모노그램 · 오른쪽: 이름 · 법인 · 구분 · 역할 (이력은 지어내지 않음) */
+.dt-leader-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); align-items: center; gap: 40px clamp(40px, 6vw, 96px); }
 .dt-leader-head .lead { margin-top: 20px; max-width: 30ch; }
 .dt-leader-head .link-arrow { margin-top: 26px; min-height: 44px; }
-.dt-leader-card { display: grid; grid-template-columns: minmax(0, .62fr) minmax(0, 1fr); overflow: hidden; border-radius: var(--radius-lg); background: #fff; border: 1px solid var(--line-2); transition: box-shadow .5s var(--ease); }
-.dt-leader-card:hover { box-shadow: var(--shadow); }
-.dt-leader-photo { position: relative; isolation: isolate; overflow: hidden; min-height: 340px; background: linear-gradient(165deg, #EAF1FD 0%, #F4F2EC 58%, #ECE6DA 100%); }
-.dt-leader-photo::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(60% 45% at 50% 40%, rgba(255, 255, 255, .9), transparent 70%); }
-.dt-sil { position: absolute; left: 50%; bottom: 0; width: 80%; height: auto; fill: rgba(11, 27, 51, .09); transform: translateX(-50%); transition: transform .8s var(--ease), fill .5s var(--ease); }
-.dt-leader-card:hover .dt-sil { transform: translateX(-50%) translateY(-8px); fill: rgba(10, 93, 226, .14); }
-.dt-leader-num { position: absolute; left: 20px; top: 14px; font-size: 3.4rem; font-weight: 500; line-height: 1; letter-spacing: -.04em; color: rgba(10, 93, 226, .16); }
-.dt-leader-ico { position: absolute; right: 20px; top: 20px; width: 26px; height: 26px; color: var(--ink); opacity: .5; }
-.dt-leader-status i { position: relative; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
-.dt-leader-status i::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid var(--blue-300); animation: dtPing 2.2s var(--ease) infinite; }
-@keyframes dtPing { 0% { transform: scale(.6); opacity: 1; } 100% { transform: scale(1.8); opacity: 0; } }
-.dt-leader-body { display: flex; flex-direction: column; align-items: flex-start; padding: clamp(24px, 3vw, 40px); }
-.dt-leader-area { font-size: .92rem; font-weight: 700; color: var(--blue); }
-.dt-leader-area .en { margin-left: 6px; font-size: .74rem; letter-spacing: .14em; color: var(--muted); }
-.dt-leader-name { margin-top: 10px; font-size: clamp(1.35rem, 1.8vw, 1.6rem); font-weight: 800; letter-spacing: -.035em; line-height: 1.3; }
-.dt-leader-status { margin-top: 6px; display: inline-flex; align-items: center; gap: 9px; font-size: .9rem; font-weight: 600; color: var(--muted); }
+.dt-leader-card {
+  display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1fr); overflow: hidden; border-radius: var(--radius-lg);
+  background: #fff; border: 1px solid var(--line-2); box-shadow: 0 34px 80px -48px rgba(11, 27, 51, .4); transition: box-shadow .5s var(--ease);
+}
+.dt-leader-card:hover { box-shadow: 0 44px 90px -44px rgba(11, 27, 51, .45); }
+.dt-leader-visual {
+  position: relative; isolation: isolate; overflow: hidden; display: grid; place-items: center; min-height: 440px;
+  container-type: size; /* 사진·모노그램 크기를 패널 크기(cqw/cqh)에 맞춤 — 패널 높이는 오른쪽 내용이 정함 */
+  background: radial-gradient(60% 50% at 50% 42%, rgba(255, 255, 255, .95), transparent 72%), linear-gradient(162deg, #E4EEFD 0%, #F2F0EA 62%, #EAE3D6 100%);
+}
+.dt-leader-visual::before { /* 바닥 그림자 */
+  content: ""; position: absolute; left: 22%; right: 22%; bottom: 13%; height: 22px; z-index: -1; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(10, 42, 102, .18), transparent); filter: blur(4px);
+}
+.dt-leader-card.has-photo .dt-leader-visual::before { display: none; }
+.dt-leader-num { position: absolute; left: 22px; top: 14px; font-size: 3.4rem; font-weight: 500; line-height: 1; letter-spacing: -.04em; color: rgba(10, 93, 226, .16); }
+
+/* 모노그램 */
+/* 바깥 고리(상자의 1.52배, 회전 중 대각선 포함 약 1.67배)까지 패널 안에 들어오게 패널 폭 기준으로 크기 결정 */
+.dt-mono { position: relative; display: grid; place-items: center; width: min(184px, 50cqw, 46cqh); aspect-ratio: 1; transition: transform .7s var(--ease); }
+.dt-mono-box {
+  position: relative; z-index: 1; display: grid; place-items: center; width: 100%; height: 100%; border-radius: 30%; overflow: hidden;
+  background: linear-gradient(145deg, #5B98F8 0%, #0A5DE2 46%, #0742A3 100%); color: #fff;
+  box-shadow: 0 34px 60px -26px rgba(10, 93, 226, .75), inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+.dt-mono-box::before { content: ""; position: absolute; inset: 0; background: radial-gradient(90% 60% at 28% 10%, rgba(255, 255, 255, .38), transparent 62%); }
+.dt-mono-ch { position: relative; font-size: clamp(3.6rem, 5.6vw, 4.8rem); font-weight: 700; line-height: 1; letter-spacing: -.04em; text-shadow: 0 6px 20px rgba(4, 30, 80, .3); }
+.dt-mono-ico { position: relative; width: 38%; height: 38%; }
+.dt-mono-ring { position: absolute; inset: -13%; border-radius: 34%; border: 1px solid rgba(10, 93, 226, .2); }
+.dt-mono-ring + .dt-mono-ring { inset: -26%; border-radius: 38%; border-color: rgba(10, 93, 226, .12); border-style: dashed; animation: dtSpin 48s linear infinite; }
+@keyframes dtSpin { to { rotate: 360deg; } }
+.dt-leader-card:hover .dt-mono { transform: translateY(-8px); }
+.dt-leader-tag {
+  position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 13px;
+  border-radius: 999px; background: rgba(255, 255, 255, .86); border: 1px solid var(--line-2); color: var(--muted); font-size: .8rem; font-weight: 600; white-space: nowrap;
+}
+.dt-leader-tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--blue-300); }
+/* 등장: 상자가 살짝 회전하며 커지고, 고리가 뒤따라 퍼짐 */
+.js .dt-leader-card .dt-mono-box { opacity: 0; transform: scale(.78) rotate(-8deg); transition: opacity .6s var(--ease) .25s, transform 1.2s cubic-bezier(.2, .9, .25, 1.12) .25s; }
+.js .dt-leader-card.is-in .dt-mono-box { opacity: 1; transform: none; }
+.js .dt-leader-card .dt-mono-ring { opacity: 0; transform: scale(.7); transition: opacity 1s var(--ease) .5s, transform 1.4s var(--ease) .5s; }
+.js .dt-leader-card .dt-mono-ring + .dt-mono-ring { transition-delay: .7s; }
+.js .dt-leader-card.is-in .dt-mono-ring { opacity: 1; transform: none; }
+
+/* 사진(문원오, 투명 배경 컷아웃 627×694 — 머리 위 여백이 거의 없고 어깨가 양옆 끝에서 잘려 있음)
+   패널 높이의 84% 이상으로 키우되, 폭이 패널보다 넓어(≥107%) 잘린 어깨선이 패널 밖으로 나가게 하고,
+   머리가 잘리지 않게 패널 높이의 92%를 넘지 않음. 그래도 패널이 넓을 때는 양옆을 부드럽게 흐려 잘린 선을 감춤 */
+.dt-leader-img {
+  position: absolute; left: 50%; bottom: 0; translate: -50% 0;
+  width: auto; max-width: none; height: min(max(84cqh, 118cqw), 92cqh);
+  transform-origin: 50% 100%; transition: transform .9s var(--ease);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 93%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 93%, transparent 100%);
+}
+.js .dt-leader-card.has-photo .dt-leader-img { opacity: 0; translate: -50% 26px; transition: opacity .9s var(--ease) .2s, translate 1.2s var(--ease) .2s, transform .9s var(--ease); }
+.js .dt-leader-card.has-photo.is-in .dt-leader-img { opacity: 1; translate: -50% 0; }
+.dt-leader-card.has-photo:hover .dt-leader-img { transform: scale(1.03); }
+
+.dt-leader-body { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: clamp(26px, 3.2vw, 46px); }
+.dt-leader-corp { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: .95rem; font-weight: 700; color: var(--ink-2); }
+.dt-leader-card.has-photo .dt-leader-corp .dt-corp-type { background: var(--ink); color: #fff; }
+.dt-corp-type.is-group { background: var(--ivory-2); color: var(--ink-2); }
+.dt-leader-name { margin-top: 14px; display: flex; align-items: baseline; gap: 10px; font-size: clamp(2.1rem, 3.2vw, 2.8rem); font-weight: 800; line-height: 1.1; letter-spacing: -.045em; }
+.dt-leader-title { font-size: clamp(1rem, 1.3vw, 1.15rem); font-weight: 600; letter-spacing: -.02em; color: var(--muted); }
+.dt-leader-sub { margin-top: 8px; font-size: .95rem; font-weight: 600; color: var(--muted); }
+.dt-leader-quote { margin-top: 18px; padding-left: 14px; border-left: 2px solid var(--blue); }
+.dt-leader-quote p { font-size: 1.02rem; font-weight: 600; line-height: 1.6; letter-spacing: -.02em; color: var(--ink); text-wrap: balance; }
 .dt-leader-dl { width: 100%; margin-top: 22px; border-top: 1px solid var(--line-2); }
-.dt-leader-dl > div { padding: 14px 0; border-bottom: 1px solid var(--line-2); }
-.dt-leader-dl dt { font-size: .78rem; font-weight: 700; color: var(--blue); }
-.dt-leader-dl dd { margin-top: 4px; font-weight: 600; line-height: 1.6; color: var(--ink-2); }
-.dt-leader-body .btn { margin-top: 24px; }
+.dt-leader-dl > div { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: baseline; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line-2); }
+.dt-leader-dl dt { font-size: .8rem; font-weight: 700; color: var(--blue); }
+.dt-leader-dl dd { font-weight: 600; line-height: 1.55; color: var(--ink-2); }
+.dt-leader-dl dd .en { font-size: .86rem; letter-spacing: .06em; }
+.dt-dd-sub { display: inline-flex; margin-left: 8px; font-size: .8rem; font-weight: 600; color: var(--muted); }
+.dt-leader-note { margin-top: 16px; display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 500; color: var(--muted); }
+.dt-leader-note i { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--blue-300); }
+.dt-leader-body .btn { margin-top: 22px; }
 
 /* ---------- 6. 마무리 ---------- */
 .dt-ask {
@@ -381,21 +444,16 @@
   .dt-svc-grid[style*="--n:3"] { grid-template-columns: 1fr; }
   .dt-svc { min-height: 0; }
   .dt-svc-name { margin-top: 28px; }
-  /* 현장: 2열 유지 (사진 칸이 원본 폭보다 커지지 않게) */
-  .dt-gallery { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
-  .dt-shot--scene { grid-column: 1; grid-row: 1; aspect-ratio: 4 / 3; align-self: start; }
-  .dt-shot--film { grid-column: 2; grid-row: 1; aspect-ratio: auto; align-self: stretch; }
-  .dt-gallery.has-two .dt-shot--scene:first-child { aspect-ratio: 4 / 3; }
-  .dt-gallery.has-two .dt-shot--film { grid-row: 1; }
-  .dt-gallery.has-two .dt-shot--scene:nth-child(2) { grid-column: 1 / -1; grid-row: 2; justify-self: center; width: 100%; }
+  .dt-gallery { gap: 12px; }
+  .dt-shot figcaption { font-size: .74rem; }
   .dt-paths { grid-template-columns: 1fr; }
   .dt-path-hub { flex-direction: column; height: 200px; }
   .dt-hub-line { width: 2px; height: auto; flex: 1; background: repeating-linear-gradient(180deg, var(--blue-300) 0 7px, transparent 7px 14px); background-size: 2px 14px; animation-name: dtFlowY; }
   @keyframes dtFlowY { to { background-position: 0 14px; } }
-  .dt-stay { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: stretch; }
+  .dt-stay { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .dt-stay-media { aspect-ratio: auto; min-height: 100%; }
   .dt-stay .dt-stay-desc { font-size: .94rem; }
-  .dt-leader-photo { min-height: 300px; }
+  .dt-leader-visual { min-height: 380px; }
   .dt-pager { grid-template-columns: 1fr; }
   /* 1열에서는 이전/다음 카드가 옆에서 들어오지 않고 아래에서 올라오게 (등장 전 가로 넘침 방지) */
   .js .dt-pager-card[data-reveal]:not(.is-in) { transform: translateY(28px); }
@@ -408,21 +466,24 @@
   .dt-hero-actions .btn { flex: 1 1 auto; min-height: 54px; padding-inline: 22px; font-size: 1rem; }
   .dt-facts { grid-template-columns: 1fr; }
   .dt-facts > div, .dt-facts > div:first-child, .dt-facts > div:nth-child(even) { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 13px 0; border-left: 0; border-top: 0; border-bottom: 1px solid var(--line-2); }
-  .dt-frame { aspect-ratio: 4 / 5; border-radius: var(--radius); }
-  .dt-frame::after, .dt-frame.is-q-right::after { background: linear-gradient(0deg, rgba(10, 20, 38, .72) 0%, rgba(10, 20, 38, .1) 50%, transparent 70%), linear-gradient(180deg, rgba(10, 20, 38, .35) 0%, transparent 25%); }
-  .dt-quote, .dt-frame.is-q-right .dt-quote { left: 18px; right: 18px; bottom: 20px; max-width: none; text-align: left; }
-  .dt-frame.is-q-right .dt-quote-label { flex-direction: row; }
-  .dt-quote q { font-size: 1.3rem; }
-  .dt-frame-ctrl, .dt-frame.is-q-right .dt-frame-ctrl { top: 14px; right: 14px; bottom: auto; }
-  .dt-film-btn { height: 44px; font-size: .86rem; padding-right: 16px; gap: 8px; padding-left: 6px; }
+  /* 첫 화면 사진: 정사각에 가깝게, 모바일 가로 초점(--mx) */
+  .dt-frame { aspect-ratio: 1 / 1.04; border-radius: var(--radius); }
+  .dt-frame-img { object-position: var(--mx, 50%) var(--fy, 50%); transform-origin: var(--mx, 50%) var(--fy, 50%); }
+  .dt-frame::after { background: linear-gradient(0deg, rgba(10, 20, 38, .78) 0%, rgba(10, 20, 38, .12) 48%, transparent 66%), linear-gradient(180deg, rgba(10, 20, 38, .4) 0%, transparent 24%); }
+  .dt-quote { left: 18px; right: 18px; bottom: 20px; max-width: none; }
+  .dt-quote-label { margin-bottom: 8px; font-size: .7rem; letter-spacing: .16em; }
+  .dt-quote q { font-size: 1.28rem; max-width: none; }
+  .dt-frame-badge { left: 14px; top: 14px; height: 26px; padding: 0 10px; font-size: .7rem; }
+  .dt-frame-ctrl { top: 10px; right: 10px; bottom: auto; }
+  .dt-film-btn { height: 44px; font-size: .84rem; padding-right: 14px; gap: 8px; padding-left: 6px; }
   .dt-film-btn .play-ring { width: 30px; height: 30px; }
-  .dt-vtoggle { width: 44px; height: 44px; }
   .dt-svc-grid, .dt-channels { grid-template-columns: 1fr; }
-  /* 현장: 1열, 사진은 원본 비율로 (390 기준 원본 폭 이하) */
+  /* 현장: 1열 — 사진 4:3, 3D 렌더는 정사각 */
   .dt-gallery { grid-template-columns: 1fr; }
-  .dt-gallery > * { grid-column: 1 !important; grid-row: auto !important; }
-  .dt-shot--scene, .dt-gallery.has-two .dt-shot--scene, .dt-gallery.has-two .dt-shot--scene:first-child { aspect-ratio: var(--ar, 4 / 3); max-width: none; }
-  .dt-shot--film, .dt-gallery.has-two .dt-shot--film { aspect-ratio: 16 / 9; }
+  .dt-shot { aspect-ratio: 4 / 3; }
+  .dt-shot--render { aspect-ratio: 1 / 1; }
+  .dt-shot-label { left: 12px; top: 12px; height: 32px; padding: 0 12px; font-size: .82rem; }
+  .dt-shot figcaption { left: 12px; bottom: 12px; max-width: calc(100% - 24px); padding: 6px 11px 6px 9px; font-size: .72rem; }
   .dt-steps { grid-template-columns: 1fr; }
   .dt-step-title { margin-top: 16px; }
   .dt-rows-head { display: none; }
@@ -432,15 +493,22 @@
   .dt-row .dt-row-cell:nth-of-type(1), .dt-row .dt-row-cell:nth-of-type(2), .dt-row .dt-row-cell:last-child { grid-column: 2; grid-row: auto; font-size: .95rem; }
   .dt-row::before { left: -10px; right: -10px; }
   .dt-stay { grid-template-columns: 1fr; }
-  .dt-stay-media { aspect-ratio: 3 / 2; min-height: 0; }
+  .dt-stay-media { aspect-ratio: 4 / 3; min-height: 0; }
   .dt-people { gap: 10px; }
   .dt-person-body { padding: 14px 14px 18px; }
   .dt-person-name { font-size: 1.15rem; }
   .dt-person-sub { font-size: .8rem; }
   .dt-person-len { left: 10px; top: 10px; height: 26px; padding: 0 9px; font-size: .78rem; }
   .dt-leader-card { grid-template-columns: 1fr; }
-  .dt-leader-photo { min-height: 0; aspect-ratio: 16 / 9; max-height: 240px; }
-  .dt-leader-photo .dt-sil { width: 38%; }
+  .dt-leader-visual { min-height: 0; aspect-ratio: 1 / .78; }
+  /* 사진 패널은 세로 4:5 — 사진 폭이 패널보다 넓고(잘린 어깨선은 밖으로) 머리 위에도 여백이 남는 비율 */
+  .dt-leader-card.has-photo .dt-leader-visual { aspect-ratio: 4 / 5; }
+  .dt-mono { width: min(128px, 46cqh); }
+  .dt-mono-ch { font-size: 3.4rem; }
+  .dt-leader-num { font-size: 2.8rem; left: 18px; top: 12px; }
+  .dt-leader-tag { bottom: 14px; }
+  .dt-leader-name { font-size: 2.1rem; }
+  .dt-leader-dl > div { grid-template-columns: 72px minmax(0, 1fr); }
   .dt-ask-title br { display: none; }
   .dt-ask-actions { grid-auto-flow: row; justify-content: stretch; }
   .dt-ask-actions .btn { width: 100%; }
@@ -450,9 +518,14 @@
   .dt-others-list small { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .js .dt-frame[data-reveal] { clip-path: none !important; }
+  .js .dt-frame[data-reveal], .js .dt-shot[data-reveal] { clip-path: none !important; }
   .js .dt-steps .dt-step { opacity: 1 !important; transform: none !important; }
   .dt-frame-media { transform: none !important; }
-  .dt-hub-line, .dt-leader-status i::after { animation: none !important; }
-  .dt-row:hover .dt-row-title { transform: none; }
+  .js .dt-frame-img { scale: 1 !important; animation: none !important; transform: none !important; }
+  .js .dt-shot[data-reveal] img { scale: var(--z, 1) !important; transform: none !important; }
+  .js .dt-frame :is(.dt-quote, .dt-frame-ctrl, .dt-frame-badge), .js .dt-shot[data-reveal] :is(.dt-shot-label, figcaption) { opacity: 1 !important; transform: none !important; }
+  .js .dt-leader-card :is(.dt-mono-box, .dt-mono-ring), .js .dt-leader-card.has-photo .dt-leader-img { opacity: 1 !important; transform: none !important; }
+  .js .dt-leader-card.has-photo .dt-leader-img { translate: -50% 0 !important; }
+  .dt-hub-line, .dt-mono-ring { animation: none !important; }
+  .dt-row:hover .dt-row-title, .dt-leader-card:hover .dt-mono, .dt-shot:hover img, .dt-stay:hover .dt-stay-media img { transform: none !important; }
 }

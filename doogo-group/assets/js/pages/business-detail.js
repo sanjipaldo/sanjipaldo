@@ -1,7 +1,7 @@
 /* =========================================================
    DOOGO GROUP — business-detail.js (사업 상세 7개 공통)
-   첫 화면 영상 프레임 패럴랙스 · 서브 내비 현재 위치 보정
-   (영상 자동재생·재생/정지·그룹 영상 창·등장 모션·준비 중 링크는 site.js가 처리)
+   첫 화면 사진 프레임: 느린 줌(Ken Burns)은 화면에 보일 때만 · 패럴랙스 · 서브 내비 현재 위치 보정
+   (그룹 영상 창·등장 모션·준비 중 링크는 site.js가 처리)
    ========================================================= */
 (function () {
   'use strict';
@@ -9,7 +9,15 @@
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
   var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
 
-  /* ---------- 영상 프레임 패럴랙스 ---------- */
+  /* ---------- 사진 프레임 느린 줌: 보일 때만 진행, 화면 밖이면 그 자리에서 멈춤 ---------- */
+  if (!reduce && 'IntersectionObserver' in window) {
+    var kio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { en.target.classList.toggle('is-live', en.isIntersecting); });
+    }, { threshold: 0.05 });
+    $$('.dt-frame').forEach(function (f) { kio.observe(f); });
+  }
+
+  /* ---------- 사진 프레임 패럴랙스 ---------- */
   var par = $$('[data-parallax]');
   if (!reduce && par.length) {
     var ticking = false;

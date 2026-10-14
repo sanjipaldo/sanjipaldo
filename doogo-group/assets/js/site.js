@@ -70,6 +70,12 @@
     if (curToggle.parentElement) curToggle.parentElement.classList.add('is-current');
   }
   if (file === 'contact') $$('[data-nav-cta]').forEach(function (a) { a.setAttribute('aria-current', 'page'); });
+  // 푸터 메인 카테고리: 지금 있는 대분류에 표시 (같은 파일이면 aria-current, 하위 페이지면 모양만)
+  $$('.ft-nav a[data-nav]').forEach(function (a) {
+    if (a.getAttribute('data-nav') !== section) return;
+    a.classList.add('is-current');
+    if ((a.getAttribute('href') || '').toLowerCase().replace(/\.html$/, '') === file) a.setAttribute('aria-current', 'page');
+  });
 
   /* ---------- 데스크톱 드롭다운 · 메가메뉴 ---------- */
   var closeTimer = null;
@@ -372,6 +378,17 @@
     }, { rootMargin: '900px 0px' });
     bands.forEach(function (b) { bio.observe(b); });
   } else bands.forEach(function (b) { b.classList.add('is-near'); });
+
+  /* ---------- 맨 위로 (푸터): JS가 없으면 #main 으로 이동 ---------- */
+  $$('[data-to-top]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      // 움직임 줄이기 설정이면 base.css 가 scroll-behavior 를 끄므로 'auto' 는 바로 이동합니다
+      window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+      var logo = $('.hd-logo');
+      if (logo) { try { logo.focus({ preventScroll: true }); } catch (err) { logo.focus(); } }
+    });
+  });
 
   /* ---------- 연도 ---------- */
   $$('[data-year]').forEach(function (el) { el.textContent = new Date().getFullYear(); });

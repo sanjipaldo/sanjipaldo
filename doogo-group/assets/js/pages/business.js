@@ -1,7 +1,7 @@
 /* =========================================================
    DOOGO GROUP — business.js (사업영역 목록)
-   사업 바로가기에 마우스를 올리면 첫 화면 배경이 해당 사업 장면으로 바뀜 ·
-   카드 영상 포스터 지연 로드 · 카드 영상 패럴랙스 · VIEW 커서 · 서브 내비 보정
+   첫 화면 7개 사업 사진 슬라이드(바로가기 hover/focus 시 그 사업 사진으로 고정) ·
+   카드 사진 패럴랙스 · VIEW 커서 · 서브 내비 보정
    ========================================================= */
 (function () {
   'use strict';
@@ -11,89 +11,127 @@
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
   var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
 
-  /* ---------- 0) 영상 재생 (이 페이지는 site.js의 data-autoplay 대신 직접 관리) ----------
-     - 첫 화면 영상(data-auto-min): 그 폭 이상에서만 보일 때 자동재생. 좁은 화면·데이터 절약·움직임 줄이기는
-       포스터만 보여 주고, 재생/정지 버튼(site.js의 data-video-toggle)으로 원할 때만 재생
-     - 카드 영상(data-hover-play): 마우스를 올린 카드만 재생, 벗어나면 정지 (터치 화면은 포스터만 — 영상 파일을 받지 않음) */
-  var saveData = !!(navigator.connection && navigator.connection.saveData);
-  function play(v) {
-    if (v.preload === 'none') v.preload = 'auto';
-    var p = v.play();
-    if (p && p.catch) p.catch(function () {});
-  }
-  $$('video[data-auto-min]').forEach(function (v) {
-    var wrap = v.closest('[data-video-wrap]') || v.parentElement;
-    var mq = window.matchMedia('(min-width: ' + v.getAttribute('data-auto-min') + 'px)');
-    v.muted = true;
-    if (reduce) { wrap.classList.add('is-reduced'); return; }
-    if (saveData || !('IntersectionObserver' in window)) return;
-    new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) {
-        if (v.dataset.userPaused === '1') return;
-        if (en.isIntersecting) { if (mq.matches || v.dataset.userPaused === '0') play(v); }
-        else if (!v.paused) v.pause();
-      });
-    }, { threshold: 0.15 }).observe(v);
-  });
-  if (fine && !reduce && !saveData) {
-    $$('.bz-card').forEach(function (card) {
-      var v = $('video[data-hover-play]', card);
-      if (!v) return;
-      v.muted = true;
-      card.addEventListener('pointerenter', function () {
-        if (!v.getAttribute('poster')) v.setAttribute('poster', v.getAttribute('data-poster'));
-        play(v);
-      });
-      card.addEventListener('pointerleave', function () { if (!v.paused) v.pause(); });
-    });
-  }
-
-  /* ---------- 1) 카드 영상 포스터: 가까워지면 불러오기 ---------- */
-  var lazyVids = $$('video[data-poster]');
-  function setPoster(v) { if (!v.getAttribute('poster')) v.setAttribute('poster', v.getAttribute('data-poster')); }
-  if ('IntersectionObserver' in window) {
-    var pio = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) { if (en.isIntersecting) { setPoster(en.target); pio.unobserve(en.target); } });
-    }, { rootMargin: '900px 0px' });
-    lazyVids.forEach(function (v) { pio.observe(v); });
-  } else lazyVids.forEach(setPoster);
-
-  /* ---------- 2) 첫 화면: 바로가기 hover → 배경 장면 교체 ---------- */
+  /* ---------- 1) 첫 화면: 7개 사업 사진 슬라이드 ----------
+     5초마다 다음 사업 사진으로 크로스페이드(+느린 줌, business.css). 지금 보이는 사업은 바로가기 카드에 표시.
+     · 바로가기에 마우스를 올리거나 포커스하면 그 사업 사진으로 고정, 벗어나면 그 자리에서 다시 넘김
+     · 화면 밖 · 탭이 숨겨짐 · 정지 버튼 → 멈춤 / 움직임 줄이기 설정이면 첫 사진에서 넘기지 않음
+     · 첫 장 외 사진은 <template> 안에 있다가 넘기기 직전(또는 바로가기에 처음 다가갈 때) 불러옴 */
+  var DUR = 5000, FADE = 1250;
   var hero = $('.bz-hero');
+  var stack = $('.bz-slides');
+  var tpl = document.getElementById('bz-slides-more');
   var jump = $('.bz-jump');
-  var swapBox = $('.bz-hero-swap');
-  if (hero && jump && swapBox && fine) {
-    var swaps = [];
-    var load = function () {
-      if (swaps.length) return;
-      $$('.bz-jump-item', jump).forEach(function (a) {
-        var img = new Image();
-        img.alt = ''; img.decoding = 'async'; img.width = 1280; img.height = 720;
-        img.setAttribute('data-key', a.getAttribute('data-key'));
-        img.src = 'assets/video/biz-' + a.getAttribute('data-key') + '.webp';
-        swapBox.appendChild(img); swaps.push(img);
-      });
+  if (hero && stack && jump) {
+    var items = $$('.bz-jump-item', jump);
+    var keys = items.map(function (a) { return a.getAttribute('data-key'); });
+    var first = $('.bz-slide', stack);
+    var spare = tpl && tpl.content ? Array.prototype.slice.call(tpl.content.querySelectorAll('.bz-slide')) : [];
+    var slides = keys.map(function (k, i) { return i === 0 ? first : null; });
+    var cur = 0, want = 0, top = 1, timer = 0, cleanT = 0;
+    var inView = true, pinned = false, userPaused = false;
+    var toggle = $('.bz-vtoggle', hero);
+
+    hero.style.setProperty('--slide-dur', DUR + 'ms');
+    if (first) first.style.zIndex = 1;
+
+    var slideFor = function (i) { // i번째 사진 <img> (처음 부를 때 template에서 꺼내 문서에 넣음 → 그때 불러오기 시작)
+      if (slides[i]) return slides[i];
+      var src = spare.filter(function (img) { return img.getAttribute('data-key') === keys[i]; })[0];
+      if (!src) return null;
+      slides[i] = document.importNode(src, true);
+      stack.appendChild(slides[i]);
+      return slides[i];
     };
-    var show = function (key) {
-      load();
-      swaps.forEach(function (img) { img.classList.toggle('is-on', img.getAttribute('data-key') === key); });
-      hero.classList.add('is-swap');
+    var ready = function (img) {
+      if (!img) return Promise.reject();
+      if (img.complete && img.naturalWidth) return Promise.resolve();
+      if (img.decode) return img.decode();
+      return new Promise(function (res, rej) { img.addEventListener('load', res, { once: true }); img.addEventListener('error', rej, { once: true }); });
     };
-    var hide = function () {
-      hero.classList.remove('is-swap');
-      swaps.forEach(function (img) { img.classList.remove('is-on'); });
+    var preloadAll = function () { keys.forEach(function (k, i) { slideFor(i); }); };
+
+    var mark = function (i) {
+      items.forEach(function (a, j) { a.classList.toggle('is-cur', j === i); });
     };
-    jump.addEventListener('pointerenter', load);
-    $$('.bz-jump-item', jump).forEach(function (a) {
-      var key = a.getAttribute('data-key');
-      a.addEventListener('pointerenter', function () { show(key); });
-      a.addEventListener('focus', function () { show(key); });
+    var restartProgress = function () { // 진행선 애니메이션을 처음부터
+      hero.classList.remove('is-auto');
+      if (running()) { void hero.offsetWidth; hero.classList.add('is-auto'); }
+    };
+    var running = function () { return !reduce && !userPaused && !pinned && inView && !document.hidden; };
+
+    var show = function (i) {
+      want = i;
+      var img = slideFor(i);
+      ready(img).then(function () {
+        if (want !== i || i === cur) return;
+        // 새 사진을 맨 위에서 처음부터 나타나게 (이미 켜져 있던 사진이면 껐다가 다시)
+        img.classList.remove('is-on', 'is-first');
+        img.style.zIndex = ++top;
+        void img.offsetWidth;
+        img.classList.add('is-on');
+        cur = i;
+        mark(i);
+        // 새 사진이 다 덮은 뒤 아래 사진들을 치움(보이지 않는 상태에서 처음 위치로)
+        clearTimeout(cleanT);
+        cleanT = setTimeout(function () {
+          slides.forEach(function (s, j) { if (s && j !== cur) s.classList.remove('is-on', 'is-first'); });
+        }, FADE);
+        // 다음 사진 미리 불러오기
+        if (!reduce) slideFor((i + 1) % keys.length);
+      }, function () { /* 불러오기 실패: 지금 사진 유지 */ });
+    };
+
+    var schedule = function () {
+      clearTimeout(timer);
+      restartProgress();
+      if (!running()) return;
+      timer = setTimeout(function () { show((cur + 1) % keys.length); schedule(); }, DUR);
+    };
+
+    mark(0);
+    if (!reduce) {
+      // 다음 사진은 첫 화면이 그려진 뒤에 미리 불러옴
+      var warm = function () { slideFor(1); };
+      if (document.readyState === 'complete') warm(); else window.addEventListener('load', warm, { once: true });
+
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (entries) {
+          inView = entries[0].isIntersecting; schedule();
+        }, { threshold: 0.12 }).observe(hero);
+      }
+      document.addEventListener('visibilitychange', schedule);
+
+      if (toggle) {
+        toggle.hidden = false;
+        toggle.addEventListener('click', function () {
+          userPaused = !userPaused;
+          toggle.setAttribute('aria-pressed', String(userPaused));
+          toggle.setAttribute('aria-label', userPaused ? '배경 사진 자동 넘김 재생' : '배경 사진 자동 넘김 정지');
+          toggle.classList.toggle('is-paused', userPaused);
+          schedule();
+        });
+      }
+      schedule();
+    }
+
+    // 바로가기 hover · focus → 그 사업 사진으로 고정
+    var pin = function (i) { pinned = true; schedule(); show(i); };
+    var unpin = function () { if (!pinned) return; pinned = false; schedule(); };
+    if (fine) jump.addEventListener('pointerenter', preloadAll);
+    items.forEach(function (a, i) {
+      if (fine) a.addEventListener('pointerenter', function () { pin(i); });
+      a.addEventListener('focus', function () { preloadAll(); pin(i); });
     });
-    jump.addEventListener('pointerleave', hide);
-    jump.addEventListener('focusout', function (e) { if (!jump.contains(e.relatedTarget)) hide(); });
+    var kbdIn = function () { // 키보드 포커스(포커스 링이 보이는 상태)가 바로가기 안에 있는지
+      var el = document.activeElement;
+      if (!el || !jump.contains(el)) return false;
+      try { return el.matches(':focus-visible'); } catch (e) { return true; }
+    };
+    if (fine) jump.addEventListener('pointerleave', function () { if (!kbdIn()) unpin(); });
+    jump.addEventListener('focusout', function (e) { if (!jump.contains(e.relatedTarget) && !(fine && jump.matches(':hover'))) unpin(); });
   }
 
-  /* ---------- 3) 카드 영상 VIEW 커서 ---------- */
+  /* ---------- 3) 카드 사진 VIEW 커서 ---------- */
   if (fine && !reduce) {
     $$('.bz-media').forEach(function (m) {
       var cur = $('.bz-cursor', m);
@@ -116,7 +154,7 @@
     });
   }
 
-  /* ---------- 4) 카드 영상 패럴랙스 ---------- */
+  /* ---------- 4) 카드 사진 패럴랙스 ---------- */
   var par = $$('[data-parallax]');
   if (!reduce && par.length) {
     var ticking = false;
