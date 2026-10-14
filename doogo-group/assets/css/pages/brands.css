@@ -95,12 +95,7 @@ main section[id] { scroll-margin-top: calc(var(--header-h) + 72px); }
 }
 .is-hold .bn-lg-key { background: var(--navy); }
 .is-sub .bn-lg-key { background: var(--blue); box-shadow: 0 12px 24px -14px rgba(10, 93, 226, .8); }
-.bn-lg-key.is-thumbs { display: flex; width: auto; padding-left: 2px; }
-.bn-lg-key.is-thumbs img {
-  width: 38px; height: 38px; flex: none; border-radius: 50%; object-fit: cover; object-position: 50% 55%;
-  background: #C3D6EE; border: 2px solid #fff; box-shadow: 0 6px 14px -8px rgba(11, 27, 51, .5);
-}
-.bn-lg-key.is-thumbs img + img { margin-left: -14px; }
+.is-brand .bn-lg-key { background: var(--blue-50); color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue-100); }
 .bn-lg-txt { display: grid; min-width: 0; line-height: 1.35; }
 .bn-lg-k { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font-size: .74rem; font-weight: 700; color: var(--blue); letter-spacing: 0; }
 .bn-lg-kk { font-weight: 600; color: var(--muted-2); }
@@ -397,8 +392,9 @@ main .note { color: var(--muted); }
 .bn-proj-meta + .bn-proj-title { display: block; width: fit-content; max-width: 100%; }
 .bn-proj-desc { display: block; margin-top: 8px; font-size: .94rem; line-height: 1.65; color: var(--muted); }
 
-/* 프로젝트 문의 카드 (JS가 남은 칸 수만큼 넓힘) */
-.bn-proj--cta { display: flex; }
+/* 프로젝트 문의 카드 (JS가 남은 칸 수만큼 넓힘 — 모양이 바뀔 때는 .is-morph 로 흐려졌다가 새 모양으로 다시 나타남) */
+.bn-proj--cta { display: flex; transition: transform .6s var(--ease), opacity .5s var(--ease) .06s; }
+.bn-proj--cta.is-morph { opacity: 0; transform: scale(.97); transition: transform .24s var(--ease), opacity .2s var(--ease); }
 .bn-proj-cta-media { display: none; }
 .bn-proj--cta.is-wide .bn-proj-cta {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); grid-template-rows: auto 1fr auto; grid-template-areas: "k media" "main media" "go media";
@@ -544,7 +540,6 @@ main .note { color: var(--muted); }
   .bn-lg-node { gap: 12px; padding: 12px 14px; }
   .bn-lg-node + .bn-lg-node { padding-left: 28px; }
   .bn-lg-key { width: 44px; height: 44px; border-radius: 13px; font-size: 1.4rem; }
-  .bn-lg-key.is-thumbs img { width: 34px; height: 34px; }
 
   .bn-hold { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) clamp(200px, 22vw, 260px); }
   .bn-tree { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -596,9 +591,6 @@ main .note { color: var(--muted); }
   .bn-lg-node + .bn-lg-node { padding-left: 14px; border-left: 0; border-top: 1px solid var(--line-2); }
   .bn-lg-arrow { left: 21px; top: -15px; margin-top: 0; }
   .bn-lg-arrow svg { transform: rotate(90deg); }
-  .bn-lg-key.is-thumbs { width: 44px; justify-content: center; padding-left: 0; }
-  .bn-lg-key.is-thumbs img { width: 26px; height: 26px; }
-  .bn-lg-key.is-thumbs img + img { margin-left: -12px; }
 }
 @media (max-width: 760px) {
   .bn-hero-index a { min-height: 56px; }

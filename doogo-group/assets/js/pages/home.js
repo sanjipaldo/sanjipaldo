@@ -195,6 +195,14 @@
     var prev = { scale: [], shade: [], img: [], fill: -1, conn: -1, on: -1, cur: -2, ghost: -1 };
 
     function measure() {
+      // 1024px 이하(카드 높이 auto): 다섯 장을 가장 큰 카드 높이로 맞춤
+      // → 쌓인 더미가 같은 순간에 함께 떠나고(CSS 마진), 아래 깔린 카드가 비어져 나오지 않음
+      root.style.removeProperty('--gs-eq');
+      if (!desktopMQ.matches) {
+        var mx = 0;
+        inners.forEach(function (el) { mx = Math.max(mx, el.offsetHeight); });
+        if (mx) root.style.setProperty('--gs-eq', Math.ceil(mx) + 'px');
+      }
       var sy = window.scrollY;
       var gap = parseFloat(getComputedStyle(list).rowGap) || 0;
       var y = list.getBoundingClientRect().top + sy; // 목록 자체는 스티키가 아니므로 제자리 위치
@@ -657,9 +665,11 @@
       measure: function (s) {
         var w = s.offsetWidth || 360;
         var mob = window.innerWidth <= 640;
+        // 데스크톱: 옆 카드의 안쪽 가장자리(태그·제목이 시작되는 쪽)가 가운데 카드 밑으로 숨지 않게 x1 ≈ 0.97w
+        // (회전·원근으로 안쪽 끝이 가운데 쪽으로 약 0.4w 당겨 보이므로 가운데 카드 끝(0.5w)에 맞춤)
         return mob
           ? { x1: w * 0.62, x2: w * 0.4, rot: 32, z: 130, ss: 0.92, edge: 1.6, dk: 0.22, unit: w * 0.7 }
-          : { x1: w * 0.8, x2: w * 0.5, rot: 34, z: 150, ss: 0.94, edge: 2.5, dk: 0.1, unit: w * 0.8 };
+          : { x1: w * 0.97, x2: w * 0.42, rot: 34, z: 150, ss: 0.94, edge: 2.5, dk: 0.1, unit: w * 0.9 };
       },
       layout: function (d, m) {
         var a = Math.abs(d), sg = d < 0 ? -1 : 1;

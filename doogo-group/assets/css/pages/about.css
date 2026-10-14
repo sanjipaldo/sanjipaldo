@@ -277,9 +277,11 @@ main .note { color: var(--muted); }
 }
 
 /* 섹션 머리: 제목은 왼쪽, 설명은 오른쪽 칸 아래쪽에 맞춰 (한 줄이 너무 길어지지 않게) */
-.ab-structure .sec-head--split { grid-template-columns: minmax(0, 1fr) minmax(0, 33rem); }
-.ab-structure .sec-head--split .lead { grid-column: 2; grid-row: 1; align-self: end; max-width: 46ch; }
-@media (max-width: 860px) { .ab-structure .sec-head--split .lead { grid-column: 1; grid-row: auto; } }
+.ab-structure .sec-head--split .lead { max-width: 46ch; }
+@media (min-width: 861px) {
+  .ab-structure .sec-head--split { grid-template-columns: minmax(0, 1fr) minmax(0, 33rem); }
+  .ab-structure .sec-head--split .lead { grid-column: 2; grid-row: 1; align-self: end; }
+}
 
 /* 지주회사 카드 */
 .ab-hold-wrap { display: flex; justify-content: center; }
@@ -583,6 +585,7 @@ main .note { color: var(--muted); }
   .ab-sat-label b { font-size: .7rem; }
   .ab-sat-label small { font-size: .64rem; }
 }
+@media (max-width: 860px) { .ab-stage-cap { display: none; } } /* 좁은 무대에서는 01 타일과 겹치므로 (지주회사 라벨이 같은 정보를 보여 줌) */
 @media (max-width: 1024px) {
   .ab-intro-grid, .ab-history-grid, .ab-loc-grid { grid-template-columns: 1fr; }
   .ab-history-head { position: static; }

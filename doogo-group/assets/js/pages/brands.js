@@ -50,13 +50,16 @@
   // 문의 카드가 마지막 줄의 남은 칸을 모두 채우도록
   var grid = $('#bn-projs');
   var cta = $('.bn-proj--cta', grid);
+  function ctaLayout(n) { // 문의 카드 앞에 n장이 보일 때 문의 카드의 칸 수와 넓은 모양 여부
+    var cols = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 1;
+    var rest = cols - (n % cols);
+    return { col: rest >= cols ? '1 / -1' : 'span ' + rest, wide: cols > 1 && rest > 1 };
+  }
   function fitCta() {
     if (!grid || !cta) return;
-    var cols = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 1;
-    var n = cards.filter(function (c) { return !c.hidden && c !== cta; }).length;
-    var rest = cols - (n % cols);
-    cta.style.gridColumn = rest >= cols ? '1 / -1' : 'span ' + rest;
-    cta.classList.toggle('is-wide', cols > 1 && rest > 1);
+    var L = ctaLayout(cards.filter(function (c) { return !c.hidden && c !== cta; }).length);
+    cta.style.gridColumn = L.col;
+    cta.classList.toggle('is-wide', L.wide);
   }
 
   function finish(cat) {
@@ -74,6 +77,15 @@
     var leaving = cards.filter(function (c) { return !c.hidden && !matches(c, cat); });
     var entering = cards.filter(function (c) { return c.hidden && matches(c, cat); });
     var staying = cards.filter(function (c) { return !c.hidden && matches(c, cat); });
+
+    // 문의 카드의 모양(칸 수 · 넓은 모양)이 바뀔 차례면, 다른 카드가 빠지는 동안 함께 흐려졌다가
+    // 새 자리에서 다시 나타나게 합니다 (FLIP 이동 대신 — 크기가 달라져 미끄러지면 어색하므로)
+    var morph = false;
+    if (cta) {
+      var next = ctaLayout(cards.filter(function (c) { return c !== cta && matches(c, cat); }).length);
+      morph = !reduce && (next.col !== cta.style.gridColumn || next.wide !== cta.classList.contains('is-wide'));
+      cta.classList.toggle('is-morph', morph);
+    }
 
     if (reduce) {
       cards.forEach(function (c) { c.hidden = !matches(c, cat); });
@@ -97,6 +109,7 @@
       });
       // Last + Invert: 남는 카드는 이전 자리에서 새 자리로 미끄러지듯 이동
       staying.forEach(function (c) {
+        if (morph && c === cta) return;
         var f = first.get(c), l = c.getBoundingClientRect();
         var dx = f.left - l.left, dy = f.top - l.top;
         if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
@@ -106,10 +119,11 @@
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
           staying.forEach(function (c) { c.style.transition = ''; c.style.transform = ''; });
+          if (cta) cta.classList.remove('is-morph');
         });
       });
       finish(cat);
-    }, leaving.length ? 240 : 0);
+    }, (leaving.length || morph) ? 240 : 0);
   }
 
   chips.forEach(function (b) {

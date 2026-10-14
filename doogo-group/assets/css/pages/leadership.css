@@ -111,9 +111,11 @@ main .note { color: var(--muted); }
 
 /* ---------- 02 LEADERS (자회사 대표 5) ---------- */
 /* 섹션 머리: 제목은 왼쪽, 설명은 오른쪽 칸 아래쪽에 맞춰 (한 줄이 너무 길어지지 않게) */
-.ld-leaders .sec-head--split { grid-template-columns: minmax(0, 1fr) minmax(0, 33rem); }
-.ld-leaders .sec-head--split .lead { grid-column: 2; grid-row: 1; align-self: end; max-width: 46ch; }
-@media (max-width: 860px) { .ld-leaders .sec-head--split .lead { grid-column: 1; grid-row: auto; } }
+.ld-leaders .sec-head--split .lead { max-width: 46ch; }
+@media (min-width: 861px) {
+  .ld-leaders .sec-head--split { grid-template-columns: minmax(0, 1fr) minmax(0, 33rem); }
+  .ld-leaders .sec-head--split .lead { grid-column: 2; grid-row: 1; align-self: end; }
+}
 .ld-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .ld-intro, .ld-card { display: flex; min-width: 0; }
 .ld-card { scroll-margin-top: calc(var(--header-h) + 88px); }
