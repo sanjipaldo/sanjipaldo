@@ -18,6 +18,9 @@
      BIZ[].hero {f 사진 이름, fx/fy 데스크톱 초점, mx 모바일 가로 초점} — 상세 첫 화면 + business.html 첫 화면 슬라이드
      BIZ[].gallery 현장 2장(사진 또는 3D 렌더, 히어로와 같은 사진이면 zoom/focus로 확대 디테일 컷)
      → 실제 사진으로 바꿀 때는 같은 이름으로 덮어쓰고 초점 값만 맞추면 됩니다.
+   - 운영 사이트(4차): BIZ[].web — 사업마다 실제 사이트(새 창)와 첫 화면 캡처 assets/img/sites/{shot}(-720).webp.
+     상세 페이지 '운영 사이트' 구간(#site) · 첫 화면 핵심 정보 띠 · 마무리 버튼, business.html 카드의 주소 알약에 씁니다.
+     캡처를 새로 찍으면 같은 이름으로 덮어쓰고 WEB_NOTE의 기준 날짜만 고치세요.
    - 스타일: assets/css/pages/business.css, business-detail.css
      동작:   assets/js/pages/business.js,  business-detail.js
    ========================================================= */
@@ -26,8 +29,13 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+// 그룹사·직접 운영 사업의 실제 사이트 (사용자가 준 주소 그대로 · 모두 새 창)
 const CLASS_URL = 'https://www.doogoclass.com'; // DOOGO CLASS (교육)
-const FOOD_URL = 'https://www.doogofood.com';   // DOOGOFOOD (유통 · 식품 도매 플랫폼)
+const FOOD_URL = 'https://www.doogofood.com';   // DOOGOFOOD (유통 · 식품 도매 플랫폼) — DOOGO MAKERS 운영 사이트도 같은 주소
+const BIO_URL = 'https://www.doogobio.com/';    // DOOGOBIO
+const AD_URL = 'https://www.doogoad.com/';      // DOOGO AD
+const NORA_URL = 'https://www.norastay.com/';   // NORA STAY (DOOGO SPACE 숙박)
+const MEDIA_URL = 'https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C'; // DOOGO MEDIA · YouTube 두고보는 문대표
 
 /* ---------- 아이콘 ---------- */
 const ico = (id, cls = 'ico') => `<svg class="${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -47,8 +55,14 @@ const euro = (word) => {
   const jong = c % 28;
   return jong === 0 || jong === 8 ? '로' : '으로';
 };
-// 외부 서비스 주소 링크 (상세 첫 화면 핵심 정보 띠)
-const SITE = (url) => `<a class="dt-site" href="${url}" target="_blank" rel="noopener"><span class="en">${url.replace(/^https?:\/\//, '')}</span>${ARROW_UR}${NEWWIN}</a>`;
+// 외부 서비스 주소 링크 (상세 첫 화면 핵심 정보 띠) — text 를 주면 주소 대신 그 이름(예: 유튜브 채널명)을 보여 줌
+const SITE = (url, text) => `<a class="dt-site" href="${url}" target="_blank" rel="noopener">${text ? `<span>${text}</span>` : `<span class="en">${url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</span>`}${ARROW_UR}${NEWWIN}</a>`;
+// 운영 사이트 블록(상세 3번 구간) · 사업영역 목록의 주소 알약에 쓰는 사이트 정보
+//  shot: assets/img/sites/{shot}.webp (1200×750) · {shot}-720.webp (720×450) — 각 사이트 실제 첫 화면 캡처, 2026년 10월 14일 기준
+//  host: 화면에 크게 보이는 주소(유튜브는 채널명) · bar: 브라우저 주소 알약 · desc: 캡처에 보이는 내용만으로 쓴 한 줄 소개
+const web = (o) => ({ bar: o.host, btn: '사이트 바로가기', ...o });
+const WEB_NOTE = '사이트 첫 화면 · 2026년 10월 기준';
+const LOCK = '<svg class="dt-web-lock" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.6" fill="currentColor"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
 // 지주회사가 직접 운영하는 사업(교육·유통)의 운영 회사
 const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '교육 및 총괄 운영', ceo: '문원오', photo: 'assets/img/people/moon-wonoh.webp', anchor: 'ceo' };
 const AI_NOTE = 'AI로 만든 예시 이미지 · 실제 사진으로 교체 예정';
@@ -113,14 +127,15 @@ const SPRITE = `<svg class="sr-only" aria-hidden="true" focusable="false">\n${Ob
 const BIZ = [
   {
     slug: 'campus', num: '01', area: '교육', en: 'DOOGO CLASS', chain: 'Education', icon: 'i-campus',
-    corp: HOLD, domain: 'doogoclass.com',
+    corp: HOLD,
     defLabel: '교육 플랫폼', def: '사람을 성장시키고, 새로운 사업과 브랜드를 만듭니다.',
     role: '경험과 노하우를 나누고, 새로운 사업과 브랜드의 시작을 돕습니다.',
     services: ['실전 교육', '강사·과정 소개', '온라인 클래스', '교육장 연계(DOOGO SPACE)'],
     targets: ['창업·부업을 준비하는 분', '브랜드를 키우려는 사업자', '실무 역량을 키우려는 분'],
     ask: '교육 상담하기',
     cta: { label: '교육 플랫폼 보기', ext: CLASS_URL },
-    site: { label: 'DOOGO CLASS 바로가기', ext: CLASS_URL },
+    web: web({ name: 'DOOGO CLASS', kind: '강의 플랫폼', host: 'doogoclass.com', url: CLASS_URL, shot: 'class', close: 'DOOGO CLASS 바로가기',
+      desc: '강의 소개 페이지부터 수강생 관리까지, 강사가 자기 이름으로 강의를 운영하는 강의 플랫폼입니다.' }),
     narration: '경험을 나누면, 또 다른 시작이 태어납니다.',
     hero: { f: 'campus', fx: '50%', fy: '42%', mx: '58%' },
     gallery: [photo('studio', { label: '온라인 클래스 촬영', pos: '62% 50%' }), photo('campus', { label: '강의 현장', pos: '50% 50%' })],
@@ -146,12 +161,13 @@ const BIZ = [
     targets: ['자체 건강식품 브랜드를 준비하는 사업자', '소량으로 시작하려는 셀러'],
     ask: '제조 상담하기',
     cta: { label: '제조 상담하기', href: ASK('bio') },
-    site: { label: 'DOOGOBIO 사이트', pending: 'DOOGOBIO 사이트' },
+    web: web({ name: 'DOOGOBIO', kind: '웹사이트', host: 'doogobio.com', url: BIO_URL, shot: 'bio', close: 'DOOGOBIO 사이트',
+      desc: '건강식품 B2B 도매와 OEM 제조, 제조 상담·연결 ‘두고커넥트’를 안내하는 DOOGOBIO의 사이트입니다.' }),
     narration: '살펴보고, 시험하고, 다시 들여다보며.',
     hero: { f: 'bio', fx: '50%', fy: '24%', mx: '68%' },
     gallery: [photo('bio', { label: '캡슐 병 검수', zoom: 1.5, focus: '46% 66%', alt: '생산 라인 위 캡슐 병을 장갑 낀 손으로 하나씩 검수하는 모습(확대)' }), render('bio', { label: 'DOOGOBIO' })],
     heroAlt: { label: '두고커넥트 알아보기', href: '#related' },
-    facts: [['대표 서비스', '제조 상담·연결 ‘두고커넥트’'], ['주요 제품', '뉴질랜드 건강식품']],
+    facts: [['대표 서비스', '제조 상담·연결 ‘두고커넥트’'], ['사이트', SITE(BIO_URL)]],
     svcHead: 'DOOGOBIO가 하는 일',
     svcLead: '제품 개발부터 소량 제조, 패키지·인쇄까지 건강식품이 제품이 되는 과정을 함께합니다.',
     detail: [
@@ -173,11 +189,12 @@ const BIZ = [
     targets: ['새 브랜드를 만들려는 분', '운영 중인 브랜드를 키우려는 사업자'],
     ask: '커머스 상담하기',
     cta: { label: '브랜드 보기', href: 'brands.html#brands' },
-    site: null, // 별도 사이트 없음 — 마무리 블록은 문의 버튼 하나만
+    web: web({ name: 'DOOGO MAKERS', kind: '운영 사이트', host: 'doogofood.com', url: FOOD_URL, shot: 'makers', close: '운영 사이트 바로가기',
+      desc: 'DOOGO MAKERS의 운영 사이트로, 생산자와 판매자를 연결하는 식품 전문 도매 플랫폼이 열립니다.' }),
     narration: '생각은 제품이 되고, 제품은 브랜드가 됩니다.',
     hero: { f: 'commerce', fx: '50%', fy: '48%', mx: '56%' },
     gallery: [photo('commerce', { label: '패키지 디자인', zoom: 1.7, focus: '70% 78%', alt: '무지 패키지 박스를 들고 컬러칩과 맞춰 보는 디자이너의 손(확대)' }), render('makers', { label: 'DOOGO MAKERS' })],
-    facts: [['대표 서비스', '브랜드 기획 · 운영 · EXIT 전략'], ['연계할 수 있는 사업', '미디어 · 광고 · 유통']],
+    facts: [['대표 서비스', '브랜드 기획 · 운영 · EXIT 전략'], ['운영 사이트', SITE(FOOD_URL)]],
     svcHead: 'DOOGO MAKERS가 하는 일',
     svcLead: '브랜드의 시작부터 운영과 성장, 그다음 단계까지 함께 고민합니다.',
     detail: [
@@ -198,12 +215,13 @@ const BIZ = [
     targets: ['콘텐츠로 고객을 모으려는 브랜드', '강사·전문가'],
     ask: '콘텐츠 문의하기',
     cta: { label: '콘텐츠 문의하기', href: ASK('media') },
-    site: { label: 'DOOGO MEDIA 채널', pending: 'DOOGO MEDIA 채널' },
+    web: web({ name: 'DOOGO MEDIA', kind: 'YouTube 채널', host: '두고보는 문대표', bar: 'youtube.com/@두고보는문대표', yt: true, url: MEDIA_URL, shot: 'media',
+      btn: '채널 바로가기', close: 'DOOGO MEDIA 채널', desc: 'DOOGO MEDIA의 유튜브 채널 <span class="nowrap">‘두고보는 문대표’</span>입니다. 채널에서 영상 콘텐츠를 볼 수 있습니다.' }),
     narration: '그 가치를 발견하고, 이야기로 전합니다.',
     hero: { f: 'media', fx: '50%', fy: '38%', mx: '62%' },
     gallery: [photo('media', { label: '촬영 장비', zoom: 1.75, focus: '36% 48%', alt: '짐벌에 단 카메라로 출연자를 촬영하는 모습(확대)' }), render('media', { label: 'DOOGO MEDIA' })],
     heroAlt: { label: '콘텐츠 형식 보기', href: '#related' },
-    facts: [['대표 서비스', '촬영 · 유튜브 · 라이브 콘텐츠'], ['연계할 수 있는 사업', '교육 · 커머스 · 광고']],
+    facts: [['대표 서비스', '촬영 · 유튜브 · 라이브 콘텐츠'], ['유튜브 채널', SITE(MEDIA_URL, '두고보는 문대표')]],
     svcHead: 'DOOGO MEDIA가 하는 일',
     svcLead: '브랜드와 사람의 이야기를 촬영하고, 유튜브와 라이브로 고객에게 전합니다.',
     detail: [
@@ -224,12 +242,13 @@ const BIZ = [
     targets: ['온라인으로 판매 중인 브랜드·셀러'],
     ask: '광고 상담하기',
     cta: { label: '광고 상담하기', href: ASK('ad') },
-    site: { label: 'DOOGO AD 사이트', pending: 'DOOGO AD 사이트' },
+    web: web({ name: 'DOOGO AD', kind: '웹사이트', host: 'doogoad.com', url: AD_URL, shot: 'ad', close: 'DOOGO AD 사이트',
+      desc: 'DOOGO AD의 마케팅 플랫폼입니다. 서비스 소개와 마케팅 상품, 제휴 상담 안내를 사이트에서 확인할 수 있습니다.' }),
     narration: '각자의 가능성이, 필요한 사람에게 닿도록.',
     hero: { f: 'ad', fx: '50%', fy: '45%', mx: '50%' },
     gallery: [photo('ad', { label: '성과 리뷰', zoom: 1.8, focus: '45% 40%', alt: '회의실 대형 화면에 띄운 광고 성과 그래프와 발표하는 사람(확대)' }), render('ad', { label: 'DOOGO AD' })],
     heroAlt: { label: '운영 채널 보기', href: '#related' },
-    facts: [['운영 채널', '네이버 · 쿠팡'], ['연계할 수 있는 사업', '커머스 · 미디어']],
+    facts: [['운영 채널', '네이버 · 쿠팡'], ['사이트', SITE(AD_URL)]],
     svcHead: 'DOOGO AD가 하는 일',
     svcLead: '판매가 일어나는 채널을 중심으로 광고를 기획하고, 결과를 다음 운영에 반영합니다.',
     detail: [
@@ -242,14 +261,15 @@ const BIZ = [
   },
   {
     slug: 'food', num: '06', area: '유통', en: 'DOOGOFOOD', chain: 'Sales', icon: 'i-food',
-    corp: HOLD, domain: 'doogofood.com', // DOOGO HOLDINGS 직접 운영 · 담당 대표 문원오
+    corp: HOLD, // DOOGO HOLDINGS 직접 운영 · 담당 대표 문원오
     defLabel: '식품 유통', def: '대한민국 농수산물과 건강식품을 연결하여 좋은 먹거리를 전합니다.',
     role: '농수산물과 가공식품, 건강식품의 공급사와 판매자를 연결합니다.',
     services: ['식품 전문 도매 플랫폼 운영', '상품 공급', '판매자 협력'],
     targets: ['식품 공급사(생산자·제조사)', '온라인 위탁 판매자'],
     ask: '유통 상담하기',
     cta: { label: '도매 플랫폼 보기', ext: FOOD_URL },
-    site: { label: 'DOOGOFOOD 바로가기', ext: FOOD_URL },
+    web: web({ name: 'DOOGOFOOD', kind: '도매 플랫폼', host: 'doogofood.com', url: FOOD_URL, shot: 'makers', close: 'DOOGOFOOD 바로가기',
+      desc: '생산자와 판매자를 연결하고 필요한 먹거리를 공급하는 식품 전문 B2B 도매 플랫폼입니다.' }),
     narration: '좋은 먹거리도, 정성을 담아 일상으로.',
     hero: { f: 'food', fx: '50%', fy: '52%', mx: '45%' },
     gallery: [photo('food', { label: '사과 선별', zoom: 1.8, focus: '52% 86%', alt: '컨베이어 위 사과를 작업자들이 손으로 고르는 모습(확대)' }), render('market', { label: 'DOOGOFOOD' })],
@@ -274,12 +294,13 @@ const BIZ = [
     targets: ['작은 팀·1인 사업자', '교육·행사 주최자', '여행·출장객'],
     ask: '공간 상담하기',
     cta: { label: '공간 상담하기', href: ASK('space') },
-    site: { label: 'NORA STAY 바로가기', pending: 'NORA STAY 사이트' },
+    web: web({ name: 'NORA STAY', kind: 'DOOGO SPACE 숙박', host: 'norastay.com', url: NORA_URL, shot: 'space', close: 'NORA STAY 바로가기',
+      desc: 'DOOGO SPACE의 숙박 서비스 NORA STAY의 사이트입니다. 숙소 소개와 예약 안내를 확인할 수 있습니다.' }),
     narration: '함께 일하고, 잠시 쉬어갈 자리까지.',
     hero: { f: 'space', fx: '50%', fy: '58%', mx: '50%' },
     gallery: [photo('cowork', { label: '공유오피스', pos: '58% 50%' }), photo('space', { label: '숙박 객실', pos: '50% 55%' })],
     heroAlt: { label: '공간 둘러보기', href: '#related' },
-    facts: [['대표 서비스', '공유오피스 · 비상주 · 교육장'], ['숙박', 'NORA STAY']],
+    facts: [['대표 서비스', '공유오피스 · 비상주 · 교육장'], ['숙박', `NORA STAY · ${SITE(NORA_URL)}`]],
     svcHead: 'DOOGO SPACE가 하는 일',
     svcLead: '일하고, 배우고, 쉬어가는 데 필요한 공간을 목적에 맞게 제공합니다.',
     detail: [
@@ -374,13 +395,10 @@ const CTA_BAND = `  <section class="cta-band" aria-labelledby="cta-title">
     </div>
   </section>`;
 
-// 버튼/링크: {href} 내부, {ext} 외부(새 창), {pending} 준비 중
-function action(a, cls, opts = {}) {
-  const label = opts.label || a.label;
-  const extra = opts.sr ? `<span class="sr-only">${opts.sr}</span>` : '';
-  if (a.ext) return `<a class="${cls}" href="${a.ext}" target="_blank" rel="noopener">${label} ${ARROW_UR}${NEWWIN}</a>`;
-  if (a.pending) return `<a class="${cls}" href="#" data-pending="${a.pending}">${label}${extra}</a>`;
-  return `<a class="${cls}" href="${a.href}">${label}${opts.arrow ? ' ' + ARROW : ''}${extra}</a>`;
+// 버튼/링크: {href} 내부, {ext} 외부(새 창)
+function action(a, cls) {
+  if (a.ext) return `<a class="${cls}" href="${a.ext}" target="_blank" rel="noopener">${a.label} ${ARROW_UR}${NEWWIN}</a>`;
+  return `<a class="${cls}" href="${a.href}">${a.label}</a>`;
 }
 
 const pauseIcons = `<svg class="ico ico-pause" aria-hidden="true"><use href="#i-pause"/></svg><svg class="ico ico-play" aria-hidden="true"><use href="#i-play"/></svg>`;
@@ -419,9 +437,9 @@ function buildList() {
             <span class="bz-stage en">${b.chain}</span>
           </div>
           <h3 class="bz-title" id="bz-t-${b.slug}" data-reveal style="--d:.05s"><span class="bz-area">${b.area}</span><span class="bz-brand"><span class="en">${b.en}</span></span></h3>
-          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong><span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp)}</span><span class="bz-corp-ceo">대표 <strong>${b.corp.ceo}</strong></span></p>${b.domain ? `
-          <!-- 직접 운영 사업의 서비스 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
-          <a class="bz-site" href="${b.site.ext}" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s"><span class="en">${b.domain}</span>${ARROW_UR}<span class="sr-only"> — ${b.en} 사이트(새 창)</span></a>` : ''}
+          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong><span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp)}</span><span class="bz-corp-ceo">대표 <strong>${b.corp.ceo}</strong></span></p>
+          <!-- 운영 사이트 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
+          <a class="bz-site" href="${b.web.url}" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s">${b.web.yt ? `<span>YouTube · ${b.web.host}</span>` : `<span class="en">${b.web.host}</span>`}${ARROW_UR}<span class="sr-only"> — ${b.web.name} ${b.web.yt ? '유튜브 채널' : '사이트'}(새 창)</span></a>
           <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">${b.defLabel}</span>${nw(b.def)}</p>
           <p class="bz-role" data-reveal style="--d:.12s">${b.role}</p>
           <div class="bz-info" data-reveal style="--d:.16s">
@@ -708,11 +726,44 @@ ${spaces.map((sp, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
           <h3 class="dt-stay-title"><span class="en nowrap">NORA STAY</span> 숙박</h3>
           <p class="dt-stay-desc">여행과 출장 중에 편하게 쉬어갈 수 있는 <span class="nowrap">DOOGO SPACE</span>의 숙박 서비스입니다. 일하는 공간에서 쉬는 공간까지, 머무는 시간 전체를 함께 준비합니다.</p>
           <p class="dt-stay-for"><span>이런 분께</span>여행객 · 출장객</p>
-          <a class="btn btn--white" href="#" data-pending="NORA STAY 사이트">NORA STAY 바로가기</a>
+          <a class="btn btn--white" href="${NORA_URL}" target="_blank" rel="noopener">NORA STAY 바로가기 ${ARROW_UR}${NEWWIN}</a>
         </div>
       </article>`;
   },
 };
+
+// 운영 사이트 블록: 왼쪽 이름·주소·소개, 오른쪽 브라우저 창 모양 캡처(16:10, 맨 위 사이트 헤더 기준), 아래 바로가기
+//  창은 스크롤해 들어오며 뒤로 누운 상태에서 바로 서고(business-detail.js --wp), 주소 막대의 로딩 줄이 지나간 뒤 화면이 선명해짐
+function webBlock(b) {
+  const w = b.web;
+  const what = w.yt ? `유튜브 채널(${w.host})` : `웹사이트(${w.host})`;
+  return `  <section class="section dt-web" id="site" aria-labelledby="web-title">
+    <div class="container">
+      <div class="dt-web-card" data-reveal data-web>
+        <div class="dt-web-head">
+          <span class="eyebrow">${w.yt ? 'Official Channel' : 'Official Site'}</span>
+          <h2 class="dt-web-title" id="web-title">${w.yt ? '운영 채널' : '운영 사이트'}</h2>
+          <div class="dt-web-id">
+            <p class="dt-web-name"><span class="en">${w.name}</span><span class="dt-web-kind">${w.kind}</span></p>
+            <p class="dt-web-host${w.yt ? ' is-ko' : ' en'}">${w.host}</p>
+            <p class="dt-web-desc">${nw(w.desc)}</p>
+          </div>
+        </div>
+        <figure class="dt-web-shot">
+          <div class="dt-web-window">
+            <div class="dt-web-bar" aria-hidden="true"><span class="dt-web-dots"><i></i><i></i><i></i></span><span class="dt-web-url">${LOCK}<span>${w.bar}</span></span><span class="dt-web-dots is-ghost"><i></i><i></i><i></i></span></div>
+            <div class="dt-web-view"><img src="assets/img/sites/${w.shot}-720.webp" srcset="assets/img/sites/${w.shot}-720.webp 720w, assets/img/sites/${w.shot}.webp 1200w" sizes="(max-width: 860px) calc(100vw - 72px), 46vw" alt="${w.name} ${what} 첫 화면" width="1200" height="750" loading="lazy" decoding="async"></div>
+          </div>
+          <a class="dt-web-hit" href="${w.url}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><span class="dt-web-go">새 창에서 열기 ${ARROW_UR}</span></a>
+        </figure>
+        <div class="dt-web-foot">
+          <a class="btn btn--white btn--lg" href="${w.url}" target="_blank" rel="noopener">${w.btn} ${ARROW_UR}<span class="sr-only"> — ${w.name} ${what}</span>${NEWWIN}</a>
+          <p class="dt-web-note">${WEB_NOTE}</p>
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
 
 function steps({ eyebrow, h2, lead, actions = '', label, items, pre = '', goalLast = false }) {
   return `      <div class="dt-rel-head">
@@ -832,7 +883,7 @@ ${b.facts.map(([k, v]) => `        <div><dt>${k}</dt><dd>${nw(v)}</dd></div>`).j
   </section>
 
   <nav class="subnav dt-subnav" aria-label="${b.area} 페이지 안 바로가기">
-    <div class="container"><ul><li><a href="#services">주요 서비스</a></li><li><a href="#scene">현장</a></li><li><a href="#related">${b.relNav}</a></li><li><a href="#leader">담당 대표</a></li><li><a href="#inquiry">문의</a></li></ul></div>
+    <div class="container"><ul><li><a href="#services">주요 서비스</a></li><li><a href="#site">${b.web.yt ? '운영 채널' : '운영 사이트'}</a></li><li><a href="#scene">현장</a></li><li><a href="#related">${b.relNav}</a></li><li><a href="#leader">담당 대표</a></li><li><a href="#inquiry">문의</a></li></ul></div>
   </nav>
 
   <!-- 2. 주요 서비스 -->
@@ -865,7 +916,10 @@ ${b.targets.map(t => `          <li>${CHECK}${t}</li>`).join('\n')}
     </div>
   </section>
 
-  <!-- 3. 현장 -->
+  <!-- 3. 운영 사이트: 실제 사이트 첫 화면 캡처(브라우저 창 모양) + 새 창 바로가기 -->
+${webBlock(b)}
+
+  <!-- 4. 현장 -->
   <section class="section section--ivory dt-scene" id="scene" aria-labelledby="scene-title">
     <div class="container">
       <div class="sec-head sec-head--split">
@@ -881,14 +935,14 @@ ${shots}
     </div>
   </section>
 
-  <!-- 4. 관련 브랜드·프로젝트 -->
+  <!-- 5. 관련 브랜드·프로젝트 -->
   <section class="section section--navy dt-rel dt-rel--${b.slug}" id="related" aria-labelledby="rel-title">
     <div class="container">
 ${REL[b.slug]()}
     </div>
   </section>
 
-  <!-- 5. 담당 대표 -->
+  <!-- 6. 담당 대표 -->
   <section class="section dt-leader" id="leader" aria-labelledby="leader-title">
     <div class="container dt-leader-grid">
       <div class="dt-leader-head">
@@ -909,7 +963,7 @@ ${REL[b.slug]()}
     </div>
   </section>
 
-  <!-- 6. 마무리: 문의 · 이전/다음 · 다른 사업 -->
+  <!-- 7. 마무리: 문의 · 이전/다음 · 다른 사업 -->
   <section class="section section--ivory dt-close" id="inquiry" aria-labelledby="ask-title">
     <div class="container">
       <div class="dt-ask" data-reveal>
@@ -919,8 +973,8 @@ ${REL[b.slug]()}
           <p class="dt-ask-desc">문의 분야가 ‘${b.area}’${euro(b.area)} 선택된 상태로 접수 화면이 열립니다. 담당자가 확인한 뒤 남겨 주신 연락처로 회신합니다.</p>
         </div>
         <div class="dt-ask-actions">
-          <a class="btn btn--white btn--lg" href="${ASK(b.slug)}">${b.ask} ${ARROW}</a>${b.site ? `
-          ${action(b.site, 'btn btn--ghost btn--lg')}` : ''}
+          <a class="btn btn--white btn--lg" href="${ASK(b.slug)}">${b.ask} ${ARROW}</a>
+          ${action({ label: b.web.close, ext: b.web.url }, 'btn btn--ghost btn--lg')}
         </div>
       </div>
 

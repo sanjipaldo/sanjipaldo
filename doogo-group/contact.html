@@ -227,6 +227,10 @@
 <!-- @header:end -->
 
 <main id="main">
+  <!-- 페이지 전용 아이콘 -->
+  <svg class="sr-only" aria-hidden="true" focusable="false">
+    <symbol id="ct-i-shield" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.3 7.5 9.5 4.3-1.2 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m8.8 12.2 2.3 2.3 4.3-4.6"/></g></symbol>
+  </svg>
 
   <!-- =========================================================
        HERO
@@ -350,9 +354,10 @@
                 </a>
               </li>
               <li>
-                <a href="#" data-pending="NORA STAY 예약 사이트">
+                <a href="https://www.norastay.com/" target="_blank" rel="noopener">
                   <span class="ct-svc-name"><strong class="en">NORA STAY</strong><small>숙박 · 객실 예약</small></span>
-                  <span class="ct-svc-go is-pending">주소 확정 예정</span>
+                  <span class="ct-svc-go">바로가기 <svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span>
+                  <span class="sr-only">(새 창에서 norastay.com 열기)</span>
                 </a>
               </li>
             </ul>
@@ -456,6 +461,14 @@
                   <span class="ct-type-check" aria-hidden="true"><svg><use href="#i-check"/></svg></span>
                 </span>
               </label>
+              <label class="ct-type ct-type--wide">
+                <input class="ct-type-input" type="radio" name="type" value="privacy" data-label="개인정보 · DOOGO HOLDINGS">
+                <span class="ct-type-card">
+                  <span class="ct-type-ico"><svg aria-hidden="true"><use href="#ct-i-shield"/></svg></span>
+                  <span class="ct-type-text"><span class="ct-type-area">개인정보</span><span class="ct-type-corp"><span class="ct-type-n en">DOOGO HOLDINGS</span><span class="ct-type-k">열람·정정·삭제 등 요청</span></span></span>
+                  <span class="ct-type-check" aria-hidden="true"><svg><use href="#i-check"/></svg></span>
+                </span>
+              </label>
             </div>
             <p class="ct-type-hint" id="typeHint" aria-live="polite">분야를 선택하면 어떤 내용을 적으면 좋을지 안내해 드립니다.</p>
             <p class="field-error" id="typeErr" hidden></p>
@@ -510,9 +523,11 @@
                   <div class="ct-consent-clip">
                     <div class="ct-consent-in">
                       <dl>
-                        <div><dt>수집 항목</dt><dd>이름, 회신 이메일 또는 연락처, 문의 분야·내용 (필수) · 회사·브랜드명 (선택)</dd></div>
+                        <div><dt>수집 항목</dt><dd>이름, 회신 이메일 또는 연락처, 문의 분야, 문의 내용 (필수) · 회사·브랜드명 (선택)</dd></div>
                         <div><dt>이용 목적</dt><dd>문의 확인 및 회신</dd></div>
-                        <div><dt>보유 기간</dt><dd>목적 달성 후 지체 없이 파기합니다. 관계 법령에 따라 보존이 필요한 경우 해당 기간 동안 보관합니다.</dd></div>
+                        <div><dt>보유 기간</dt><dd><strong>회신 완료 후 1년</strong>간 보관한 뒤 지체 없이 파기합니다. 삭제를 요청하시면 즉시 파기합니다.</dd></div>
+                        <div><dt>처리 위탁</dt><dd>문의 분야에 맞는 그룹사(<span class="ct-nw en">DOOGO SPACE</span> · <span class="ct-nw en">DOOGO MEDIA</span> · <span class="ct-nw en">DOOGO MAKERS</span> · <span class="ct-nw en">DOOGO AD</span> · <span class="ct-nw en">DOOGOBIO</span>)가 문의 확인 및 회신 업무를 맡습니다.</dd></div>
+                        <div><dt>국외 이전</dt><dd>제조 분야 문의는 회신을 위해 위 항목이 정보통신망으로 뉴질랜드 <span class="ct-nw en">DOOGOBIO</span>에 전송되며, 회신 완료 후 1년간 보관됩니다. 원하지 않으시면 문의 내용에 그 뜻을 적거나 다른 분야로 문의해 주세요.</dd></div>
                       </dl>
                       <p>동의를 거부할 수 있으며, 거부하시면 온라인 문의 접수가 어렵습니다.</p>
                       <a class="link-arrow" href="privacy.html" target="_blank" rel="noopener">개인정보처리방침 전문 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
@@ -571,6 +586,7 @@
           <span class="line"><span>확인해 보세요.</span></span>
         </h2>
         <p class="lead" data-reveal style="--d:.15s">자주 받는 질문을 모았습니다.<br> 찾는 답이 없다면 문의 양식으로 남겨 주세요.</p>
+        <a class="btn btn--line ct-faq-all" href="faq.html">자주 묻는 질문 전체 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
       </div>
 
       <div class="ct-faq-list" data-reveal style="--d:.1s">
@@ -594,7 +610,7 @@
                 <li><strong>유통</strong><span><span class="ct-faq-corp en">DOOGOFOOD</span> 식품 도매 플랫폼 공급·입점, 판매자 협력</span></li>
                 <li><strong>공간</strong><span><span class="ct-faq-corp en">DOOGO SPACE</span> 공유오피스, 비상주 사무실, 교육장 대여, 숙박</span></li>
               </ul>
-              <p>어느 분야에 해당하는지 애매하다면 가장 가까운 분야를 고르고, 내용에 상황을 적어 주세요.</p>
+              <p>어느 분야에 해당하는지 애매하다면 가장 가까운 분야를 고르고, 내용에 상황을 적어 주세요. 개인정보 열람·정정·삭제 요청은 ‘개인정보’ 분야로 남겨 주세요.</p>
             </div></div>
           </div>
         </div>
@@ -603,14 +619,14 @@
           <h3 class="ct-faq-h">
             <button class="ct-faq-q" type="button" id="faq-2-q" aria-expanded="false" aria-controls="faq-2-a">
               <span class="ct-faq-num en" aria-hidden="true">Q2</span>
-              <span class="ct-faq-t">회신은 언제 받을 수 있나요?</span>
+              <span class="ct-faq-t">회신은 어떻게 받나요?</span>
               <span class="ct-faq-plus" aria-hidden="true"></span>
             </button>
           </h3>
           <div class="ct-faq-a" id="faq-2-a" role="region" aria-labelledby="faq-2-q">
             <div class="ct-faq-clip"><div class="ct-faq-in">
               <p>접수된 문의는 선택하신 분야의 담당자가 확인한 뒤, 남겨 주신 이메일 또는 연락처로 회신합니다.</p>
-              <p>회신 기준 시간과 운영 시간은 확정되는 대로 이 페이지에 안내하겠습니다.</p>
+              <p>공간·미디어·커머스·광고·제조 분야는 해당 그룹사가 회신 업무를 맡고, 교육·유통·그룹 제휴·개인정보 분야는 <span class="ct-nw en">DOOGO HOLDINGS</span>가 직접 회신합니다.</p>
             </div></div>
           </div>
         </div>
@@ -629,7 +645,7 @@
               <ul class="ct-faq-links">
                 <li><a class="link-arrow" href="https://www.doogoclass.com" target="_blank" rel="noopener">온라인 클래스 · DOOGO CLASS <svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a></li>
                 <li><a class="link-arrow" href="https://www.doogofood.com" target="_blank" rel="noopener">식품 도매 · DOOGOFOOD <svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a></li>
-                <li><a class="link-arrow" href="#" data-pending="NORA STAY 예약 사이트">숙박 예약 · NORA STAY <span class="ct-tbd">주소 확정 예정</span></a></li>
+                <li><a class="link-arrow" href="https://www.norastay.com/" target="_blank" rel="noopener">숙박 예약 · NORA STAY <svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a></li>
               </ul>
             </div></div>
           </div>
@@ -650,6 +666,31 @@
             </div></div>
           </div>
         </div>
+
+        <div class="ct-faq-item">
+          <h3 class="ct-faq-h">
+            <button class="ct-faq-q" type="button" id="faq-5-q" aria-expanded="false" aria-controls="faq-5-a">
+              <span class="ct-faq-num en" aria-hidden="true">Q5</span>
+              <span class="ct-faq-t">남긴 개인정보는 어떻게 처리되나요?</span>
+              <span class="ct-faq-plus" aria-hidden="true"></span>
+            </button>
+          </h3>
+          <div class="ct-faq-a" id="faq-5-a" role="region" aria-labelledby="faq-5-q">
+            <div class="ct-faq-clip"><div class="ct-faq-in">
+              <p>문의 확인과 회신에만 쓰고, <strong>회신 완료 후 1년간 보관한 뒤 지체 없이 파기</strong>합니다. 삭제를 요청하시면 즉시 파기합니다.</p>
+              <p>문의 분야에 맞는 그룹사가 회신 업무를 맡으며, 제조 분야 문의는 뉴질랜드의 <span class="ct-nw en">DOOGOBIO</span>로 전송됩니다(국외 이전). 열람·정정·삭제는 문의 분야 ‘개인정보’로 요청해 주세요.</p>
+              <ul class="ct-faq-links">
+                <li><a class="link-arrow" href="privacy.html">개인정보처리방침 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+                <li><a class="link-arrow" href="contact.html?type=privacy#inquiry" data-pick-type="privacy">개인정보로 문의하기 <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              </ul>
+            </div></div>
+          </div>
+        </div>
+
+        <a class="ct-faq-more" href="faq.html">
+          <span><strong>자주 묻는 질문 전체 보기</strong><small>그룹 구성, 서비스 사이트, 제휴·입점, 개인정보</small></span>
+          <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>
+        </a>
       </div>
     </div>
   </section>

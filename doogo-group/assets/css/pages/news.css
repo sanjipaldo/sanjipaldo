@@ -199,6 +199,15 @@ html, body { overflow-anchor: none; } /* 접힘·펼침 중 스크롤 보정은 
 .nw-steps { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .nw-steps li { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px 0 8px; border-radius: 999px; background: #fff; border: 1px solid var(--line); font-size: .9rem; font-weight: 600; }
 .nw-steps .en { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--blue-50); color: var(--blue); font-size: .72rem; font-weight: 600; }
+/* 공지 요약 (개인정보처리방침 시행 안내) */
+.nw-sum { max-width: 66ch; border-top: 1px solid var(--line); }
+.nw-sum li { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: .94rem; line-height: 1.65; }
+.nw-sum-k { font-weight: 700; color: var(--ink); }
+.nw-body-pad strong { color: var(--ink); }
+@media (max-width: 760px) {
+  .nw-sum li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .nw-sum-k { font-size: .84rem; color: var(--blue); }
+}
 
 /* 결과 없음 */
 .nw-empty { display: grid; justify-items: center; gap: 8px; padding: 72px 20px; text-align: center; border-bottom: 1px solid var(--line); }

@@ -122,7 +122,6 @@ main section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
 .ct-svc-name small { font-size: .82rem; color: var(--muted); }
 .ct-svc-go { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: .82rem; font-weight: 600; color: var(--blue); }
 .ct-svc-go .ico { width: 16px; height: 16px; transition: transform .3s var(--ease); }
-.ct-svc-go.is-pending { color: var(--muted); font-weight: 500; }
 .ct-svc a:hover { padding-left: 6px; }
 .ct-svc a:hover .ct-svc-go .ico { transform: translate(2px, -2px); }
 
@@ -213,12 +212,24 @@ fieldset.ct-fs + fieldset.ct-fs { margin-top: 40px; border-top: 1px solid var(--
 .ct-type-input:checked + .ct-type-card .ct-type-check svg { transform: scale(1); }
 .ct-fs[aria-invalid="true"] .ct-type-card { border-color: #E9A9A9; }
 
+/* 개인정보 요청: 한 줄 전체 폭 카드 */
+.ct-type--wide { grid-column: 1 / -1; }
+.ct-type--wide .ct-type-card { flex-direction: row; align-items: center; gap: 14px; min-height: 0; padding: 14px 52px 14px 14px; background: var(--ivory); border-style: dashed; }
+.ct-type--wide .ct-type-ico { margin-bottom: 0; background: #fff; }
+.ct-type--wide .ct-type-text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; margin-top: 0; }
+.ct-type--wide .ct-type-corp { gap: 0 10px; }
+.ct-type--wide .ct-type-k { font-size: .76rem; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.ct-type--wide .ct-type-check { top: 50%; margin-top: -12px; }
+.ct-type--wide .ct-type-input:checked + .ct-type-card { border-style: solid; }
+
 .ct-type-hint {
   margin-top: 16px; padding: 14px 18px; border-radius: 12px; background: var(--ivory);
   font-size: .9rem; line-height: 1.6; color: var(--muted); min-height: 52px;
 }
 .ct-type-hint strong { color: var(--ink); font-weight: 700; margin-right: 6px; }
 .ct-type-hint.is-on { background: var(--blue-50); color: var(--ink-2); }
+.ct-type-note { display: block; margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(10, 93, 226, .22); font-size: .84rem; color: var(--ink-2); }
+.ct-type-note a { color: var(--blue); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .ct-type-hint.is-flash { animation: ct-flash .6s var(--ease); }
 @keyframes ct-flash { from { opacity: .3; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 #typeErr { margin-top: 10px; }
@@ -368,6 +379,23 @@ html:not(.js) .ct-faq-a { grid-template-rows: 1fr; visibility: visible; }
 .ct-faq-links { display: grid; gap: 4px; }
 .ct-faq-links a { display: inline-flex; flex-wrap: wrap; min-height: 44px; font-size: .97rem; }
 .ct-faq-links a:hover { color: var(--blue); }
+.ct-faq-in .ct-nw.en { font-weight: 600; letter-spacing: .01em; color: var(--ink); }
+.ct-consent-in .ct-nw.en { font-weight: 600; letter-spacing: .01em; }
+.ct-consent-in strong { color: var(--ink); }
+
+/* 자주 묻는 질문 전체 보기 */
+.ct-faq-all { margin-top: 28px; }
+.ct-faq-more {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; margin-top: 20px; padding: 22px 24px;
+  border-radius: 18px; background: #fff; border: 1px solid var(--line-2);
+  transition: border-color .3s var(--ease), box-shadow .4s var(--ease), transform .4s var(--ease);
+}
+.ct-faq-more span { display: grid; gap: 2px; }
+.ct-faq-more strong { font-size: 1.08rem; font-weight: 700; letter-spacing: -.025em; }
+.ct-faq-more small { font-size: .86rem; color: var(--muted); }
+.ct-faq-more .ico { width: 44px; height: 44px; padding: 13px; border-radius: 50%; background: var(--ink); color: #fff; transition: background-color .3s var(--ease), transform .35s var(--ease); }
+.ct-faq-more:hover { border-color: var(--line); box-shadow: 0 24px 44px -32px rgba(11, 27, 51, .5); transform: translateY(-2px); }
+.ct-faq-more:hover .ico { background: var(--blue); transform: translateX(3px); }
 
 /* ---------- 반응형 ---------- */
 @media (min-width: 1025px) and (min-height: 760px) {
@@ -407,6 +435,7 @@ html:not(.js) .ct-faq-a { grid-template-rows: 1fr; visibility: visible; }
   .ct-flow li { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .ct-faq-grid { grid-template-columns: minmax(0, 1fr); }
   .ct-faq-head .lead { max-width: none; }
+  .ct-faq-all { display: none; }
 }
 
 @media (max-width: 1024px) and (min-width: 761px) {
@@ -495,6 +524,11 @@ html:not(.js) .ct-faq-a { grid-template-rows: 1fr; visibility: visible; }
   .ct-faq-plus::before, .ct-faq-plus::after { width: 14px; margin-left: -7px; }
   .ct-faq-in { padding: 0 0 28px 42px; }
   .ct-faq-tags li { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .ct-faq-more { padding: 18px 18px 18px 20px; }
+  .ct-faq-more .ico { width: 40px; height: 40px; padding: 11px; }
+  .ct-type--wide .ct-type-card { flex-direction: row; padding: 12px 44px 12px 12px; }
+  .ct-type--wide .ct-type-text { margin-top: 0; }
+  .ct-type--wide .ct-type-check { top: 50%; margin-top: -11px; }
 }
 
 @media (max-width: 340px) {

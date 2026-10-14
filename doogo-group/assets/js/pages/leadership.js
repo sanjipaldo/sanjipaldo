@@ -98,7 +98,6 @@
   var html = document.documentElement;
   var inner = $('.ld-m-in', modal);
   var visual = $('.ld-m-visual', modal);
-  var render = $('.ld-m-render', modal);
   var photo = $('.ld-m-photo', modal);
   var areasBox = $('[data-m-areas]', modal);
   var cur = 0, opener = null, swapTimer = null;
@@ -136,7 +135,6 @@
     var tag = $('.ld-m-co .ld-tag', modal);
     if (tag) { tag.classList.toggle('ld-tag--hold', d.tag === '지주회사'); tag.classList.toggle('ld-tag--global', d.tag === '뉴질랜드'); }
     var c = $('[data-m-contact]', modal); if (c) c.setAttribute('href', 'contact.html?type=' + d.contact);
-    if (render) { render.setAttribute('width', d.w || 671); render.src = d.img; }
     if (photo) { if (d.photo) { photo.src = d.photo; photo.hidden = false; } else photo.hidden = true; }
     if (visual) visual.classList.toggle('has-photo', !!d.photo);
     cur = i;

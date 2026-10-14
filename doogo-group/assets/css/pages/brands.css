@@ -282,38 +282,42 @@ main section[id] { scroll-margin-top: calc(var(--header-h) + 72px); }
 .bn-corp-chip.is-global { background: #fff; color: var(--blue-700); box-shadow: inset 0 0 0 1px var(--blue-100); }
 .bn-card-desc { margin: 12px 0 20px; font-size: .9rem; line-height: 1.62; color: var(--muted); }
 
-/* 하위 서비스 카드 */
-.bn-svc {
-  position: relative; z-index: 2; margin-top: auto;
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "k go" "name go" "desc go"; align-items: center; column-gap: 12px; row-gap: 1px;
-  padding: 12px 12px 12px 16px; border-radius: 14px;
-  background: var(--ivory); border: 1.5px dashed rgba(11, 27, 51, .18); color: var(--ink);
+/* 운영 사이트: 실제 사이트 첫 화면 썸네일(브라우저 창 모양) + 주소 — 새 창 (카드 전체 링크 위로 올림)
+   썸네일은 각 사이트 첫 화면 캡처(assets/img/sites/*-720.webp · 2026년 10월 기준), 맨 위 사이트 헤더 기준으로 자름 */
+.bn-site {
+  --ur: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 17 17 7M8 7h9v9' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  position: relative; z-index: 2; display: block; margin-top: auto; container-type: inline-size; /* 상자 폭에 따라 가로(썸네일 옆 주소) ↔ 세로(썸네일 위) */
+  padding: 8px 10px 8px 8px; border-radius: 14px; background: var(--ivory); border: 1px solid rgba(11, 27, 51, .08); color: var(--ink);
   transition: background-color .4s var(--ease), border-color .4s var(--ease), color .4s var(--ease);
 }
-.bn-svc-k { grid-area: k; display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; font-weight: 700; color: var(--blue); transition: color .4s var(--ease); }
-.bn-up { font-weight: 700; }
-.bn-svc-name { grid-area: name; font-size: 1.08rem; font-weight: 800; letter-spacing: -.035em; line-height: 1.35; }
-.bn-svc-name.en { font-weight: 700; letter-spacing: -.005em; }
-.bn-svc-desc { grid-area: desc; font-size: .82rem; line-height: 1.5; color: var(--muted); transition: color .4s var(--ease); }
-.bn-svc-go { grid-area: go; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: #fff; transition: background-color .4s var(--ease), color .4s var(--ease); }
-.bn-svc-go svg { width: 15px; height: 15px; transition: transform .4s var(--ease); }
-.bn-svc .bn-live { margin-left: 4px; height: 22px; font-size: .7rem; }
-.bn-svc:hover, .bn-svc:focus-visible { background: var(--ink); border-color: var(--ink); color: #fff; }
-.bn-svc:hover .bn-svc-k, .bn-svc:focus-visible .bn-svc-k { color: var(--blue-300); }
-.bn-svc:hover .bn-svc-desc, .bn-svc:focus-visible .bn-svc-desc { color: var(--on-dark-2); }
-.bn-svc:hover .bn-svc-go, .bn-svc:focus-visible .bn-svc-go { background: var(--blue); color: #fff; }
-.bn-svc:hover .bn-svc-go svg, .bn-svc:focus-visible .bn-svc-go svg { transform: translateX(2px); }
-.bn-svc--live:hover .bn-svc-go svg, .bn-svc--live:focus-visible .bn-svc-go svg { transform: translate(2px, -2px); }
-.bn-svc:hover .bn-live, .bn-svc:focus-visible .bn-live { background: #fff; color: var(--ink); }
-
-/* 이름 붙은 하위 서비스가 없는 사업: 주요 서비스 — 하위 서비스 칸과 같은 상자(링크가 아니므로 점선·화살표 없이)
-   카드 맨 아래에 붙어 있어, 줄의 다른 카드 때문에 늘어나도 빈 틈은 설명과 상자 사이에만 생깁니다 */
-.bn-biz-svcs {
-  position: relative; display: grid; align-content: center; gap: 2px; margin-top: auto; min-height: 91px;
-  padding: 12px 16px; border-radius: 14px; border: 1.5px solid transparent; background: var(--ivory);
-  font-size: .86rem; font-weight: 600; line-height: 1.55; letter-spacing: -.015em; color: var(--ink-2);
+.bn-site-in { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
+.bn-site-shot { position: relative; display: block; overflow: hidden; aspect-ratio: 16 / 11; border-radius: 8px; background: #fff; box-shadow: 0 0 0 1px rgba(11, 27, 51, .1), 0 8px 18px -10px rgba(11, 27, 51, .45); }
+.bn-site-bar { position: absolute; left: 0; right: 0; top: 0; z-index: 1; display: flex; align-items: center; gap: 2.5px; height: 9px; padding: 0 5px; background: #EEF1F6; border-bottom: 1px solid #E0E5EE; }
+.bn-site-bar i { width: 3.5px; height: 3.5px; border-radius: 50%; background: rgba(11, 27, 51, .22); }
+.bn-site-shot img { position: absolute; left: 0; top: 9px; width: 100%; height: calc(100% - 9px); object-fit: cover; object-position: 50% 0; transform-origin: 50% 0; transition: transform .8s var(--ease); }
+.bn-site-txt { display: grid; gap: 2px; min-width: 0; }
+.bn-site-k { font-size: .72rem; font-weight: 700; color: var(--muted); transition: color .4s var(--ease); white-space: nowrap; }
+.bn-site-k .en { letter-spacing: .02em; color: var(--blue-700); transition: color .4s var(--ease); }
+.bn-site-host { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: .94rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.3; white-space: nowrap; }
+.bn-site-host::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: #1DB97A; box-shadow: 0 0 0 3px rgba(29, 185, 122, .18); }
+.bn-site-host.en { font-weight: 600; letter-spacing: 0; }
+.bn-site-go { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: #fff; transition: background-color .4s var(--ease), color .4s var(--ease); }
+.bn-site-go svg { width: 14px; height: 14px; transition: transform .4s var(--ease); }
+/* 좁은 상자(4열 카드가 좁아지는 폭 · 휴대폰 2열): 썸네일을 위에 넓게, 그 아래 주소 한 줄 + 작은 ↗ (분류 글자·화살표 원 생략) */
+@container (max-width: 250px) {
+  .bn-site-in { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
+  .bn-site-shot { aspect-ratio: 16 / 8; }
+  .bn-site-k, .bn-site-go { display: none; }
+  .bn-site-txt { padding: 0 2px 0 4px; }
+  .bn-site-host { font-size: .86rem; }
+  .bn-site-host::after { content: ""; flex: none; width: 11px; height: 11px; margin-left: auto; background: currentColor; opacity: .55;
+    -webkit-mask: var(--ur) center / contain no-repeat; mask: var(--ur) center / contain no-repeat; }
 }
-.bn-biz-svcs .bn-svc-k { grid-area: auto; font-weight: 700; color: var(--muted); }
+.bn-site:hover, .bn-site:focus-visible { background: var(--ink); border-color: var(--ink); color: #fff; }
+.bn-site:hover .bn-site-k, .bn-site:focus-visible .bn-site-k, .bn-site:hover .bn-site-k .en, .bn-site:focus-visible .bn-site-k .en { color: var(--blue-300); }
+.bn-site:hover .bn-site-shot img, .bn-site:focus-visible .bn-site-shot img { transform: scale(1.08); }
+.bn-site:hover .bn-site-go, .bn-site:focus-visible .bn-site-go { background: var(--blue); color: #fff; }
+.bn-site:hover .bn-site-go svg, .bn-site:focus-visible .bn-site-go svg { transform: translate(2px, -2px); }
 
 /* 하나의 그룹 타일 */
 .bn-card.bn-card--chain { overflow: hidden; border: 0; background: var(--blue); color: #fff; }
@@ -403,7 +407,6 @@ main .note { color: var(--muted); }
 
 .bn-proj-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 20px; }
 .bn-proj-meta .tag { background: #fff; color: var(--ink); }
-.bn-proj-meta .tag--line { background: transparent; border-color: rgba(11, 27, 51, .16); color: var(--muted); }
 .bn-proj-title {
   display: inline; margin-top: 12px; font-size: clamp(1.14rem, 1.45vw, 1.34rem); font-weight: 700; line-height: 1.45; letter-spacing: -.028em;
   background: linear-gradient(currentColor, currentColor) 0 100% / 0 1.5px no-repeat; transition: background-size .5s var(--ease), color .3s;
@@ -662,19 +665,14 @@ main .note { color: var(--muted); }
   .bn-corp-chip { height: 18px; padding: 0 6px; font-size: .6rem; }
   .bn-card-desc, .bn-hide-sm { display: none; }
   .bn-card-corp { margin-bottom: 12px; }
-  .bn-biz-svcs { min-height: 44px; padding: 8px 10px; gap: 1px; border-radius: 10px; font-size: .72rem; font-weight: 500; line-height: 1.5; color: var(--ink-2); }
-  .bn-biz-svcs .bn-svc-k { display: block; font-size: .64rem; }
-  .bn-svc {
-    grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "up name" "up live"; column-gap: 6px; row-gap: 0;
-    padding: 8px 8px 8px 10px; min-height: 44px; border-radius: 10px;
-  }
-  .bn-svc .bn-svc-k { display: contents; }
-  .bn-svc-kt, .bn-svc-desc { display: none; }
-  .bn-svc .bn-up { grid-area: up; align-self: start; margin-top: 1px; color: var(--blue); }
-  .bn-svc-name { grid-area: name; font-size: .86rem; line-height: 1.3; }
-  .bn-svc-name.en { font-size: .78rem; }
-  .bn-svc .bn-live { grid-area: live; justify-self: start; margin: 4px 0 0; height: 20px; padding: 0 8px 0 7px; font-size: .64rem; gap: 5px; }
-  .bn-svc-go { display: none; } /* 좁은 칸: 카드 전체가 링크이므로 화살표는 생략 */
+  /* 운영 사이트(세로 배치는 위 @container): 휴대폰 2열에서는 여백·글자만 더 촘촘히 */
+  .bn-site { padding: 5px 5px 8px; border-radius: 11px; }
+  .bn-site-in { row-gap: 7px; }
+  .bn-site-shot { aspect-ratio: 16 / 9; border-radius: 7px; }
+  .bn-site-host { gap: 5px; font-size: .76rem; }
+  .bn-site-host.en { font-size: .74rem; }
+  .bn-site-host::before { width: 5px; height: 5px; box-shadow: 0 0 0 2px rgba(29, 185, 122, .18); }
+  .bn-site-host::after { width: 10px; height: 10px; }
   .bn-chain { gap: 8px; padding: 16px 14px 12px; }
   .bn-chain-k { font-size: .62rem; letter-spacing: .16em; }
   .bn-chain-t { font-size: 1.06rem; }
@@ -733,6 +731,7 @@ html.motion-off .bn-card[data-reveal] .bn-card-obj img, html.motion-off .bn-rela
 html.motion-off .bn-co-dot { --conv: 1 !important; opacity: 1 !important; } /* 궤도 위치는 유지하고 집결 이동만 생략 */
 html.motion-off .bn-co-core::after { animation: none !important; }
 html.motion-off .bn-card-media::after { display: none; }
+html.motion-off .bn-site-shot img { transform: none !important; }
 html.motion-off .bn-hold:hover .bn-hold-visual img, html.motion-off .bn-hold:focus-within .bn-hold-visual img { transform: none; }
 /* 포인터를 따라 기우는 효과는 OS 설정이 켜진 기기(html.soft-motion)에서도 생략 */
 html.motion-off .bn-card, html.soft-motion .bn-card { --mx: 0 !important; --my: 0 !important; }

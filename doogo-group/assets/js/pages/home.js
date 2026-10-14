@@ -1,7 +1,7 @@
 /* =========================================================
    DOOGO GROUP — home.js (메인 페이지 전용)
    히어로 장면 표시기 · 인트로 글자 새김 · 숫자 카운트(0부터)
-   · 그룹 구조(그룹사 카드 쌓기) · 사업영역 스티키 스토리(사진) · One Group 트리(DOOGO GROUP → 7개 사업)
+   · 그룹 구조(사이트 첫 화면 카드 · 고정 무대 가로 스크롤) · 사업영역 스티키 스토리(사진) · One Group 트리(DOOGO GROUP → 7개 사업)
    · 리더십 한 줄 카드 · 브랜드 슬라이더 · 그룹소식 커버플로우 · 화면 밖 애니메이션 정지
    움직임 정책: OS의 '애니메이션 줄이기' 설정과 관계없이 모든 모션을 재생합니다.
    사용자가 '움직임 멈추기' 버튼(site.js)을 고른 경우에만 멈춥니다 → motionOff() · 'doogo:motion' 이벤트.
@@ -256,186 +256,334 @@
     });
   }
 
-  /* ---------- S3 그룹 구조: 그룹사 카드 스티키 쌓기 ----------
-     카드(li.gs-card)는 CSS sticky 로 한 장씩 올라와 겹칩니다.
-     여기서는 스크롤 위치로 ① 아래 깔린 카드의 축소·어둡게 ② 들어오는 카드 이미지의 정착(1.08→1)
-     ③ 왼쪽 패널의 세로선 채움과 그룹사 번호 채움(데스크톱) / 지주회사 카드의 세로선(1024px 이하)을 계산합니다.
-     transform·opacity 만 바꿉니다. 움직임 멈추기(html.motion-off)면 CSS 가 쌓지 않는 목록으로 바꾸고,
-     여기서는 선·번호를 모두 채운 정지 상태로 둡니다(전환 시 'doogo:motion' 으로 다시 계산). */
-  function groupStack() {
-    var root = $('[data-gs]');
+  /* ---------- S3 그룹 구조: 각 사이트 첫 화면 카드 · 고정 무대 가로 스크롤 ----------
+     고정 모드(.is-pin): 섹션 높이 = 무대(100svh) + 가로 이동 거리 + 앞뒤로 잠깐 머무는 구간.
+       아래로 스크롤한 만큼 카드 줄이 왼쪽으로 이동합니다(transform 만 · rAF + 약한 보간).
+       가로 이동량에 따라 '지금 카드'가 정해짐(넓은 화면: 왼쪽 시작선 쪽 · 휴대폰: 화면 가운데) → 지금 카드는 선명·크기 1, 나머지는 0.94·어둡게.
+       캡처 이미지는 카드 이동과 반대로 살짝 움직임(html.soft-motion 이면 이 패럴랙스만 끔).
+       카드 폭은 무대 높이에 카드 전체(브라우저 창 + 본문)가 들어오도록 계산합니다(리사이즈·글꼴·이미지 로드 시 다시).
+     대체 모드(움직임 멈추기 · 높이 560px 미만 화면 · JS 없음 = CSS 기본값): 고정 없이 가로 스크롤 목록 + 이전/다음 버튼.
+     'doogo:motion' 이벤트로 바로 전환하고, 보던 카드를 유지합니다. */
+  function groupScroll() {
+    var root = $('[data-hs]');
     if (!root) return null;
-    var cards = $$('.gs-card', root);
-    var inners = cards.map(function (c) { return $('.gs-card-in', c); });
-    var shades = cards.map(function (c) { return $('.gs-shade', c); });
-    var imgs = cards.map(function (c) { return $('.gs-visual img', c); });
-    var nodes = $$('[data-gs-node]', root);
-    var fill = $('[data-gs-fill]', root);
-    var conn = $('[data-gs-conn]', root);
-    var panel = $('.gs-panel', root);
-    var ghost = $('.gs-ghost', root);
-    var list = $('.gs-cards', root);
-    var n = cards.length;
-    if (!n || !list) return null;
+    var html = document.documentElement;
+    var stage = $('.hs-stage', root);
+    var view = $('[data-hs-view]', root);
+    var track = $('[data-hs-track]', root);
+    var panel = $('.hs-panel', root);
+    var allItems = $$('[data-hs-item]', root);
+    var endCell = $('.hs-end', root);
+    var chips = $$('[data-hs-go]', root);
+    var chipBox = $('[data-hs-chips]', root);
+    var numEl = $('[data-hs-num]', root);
+    var barEl = $('[data-hs-bar]', root);
+    var prevBtn = $('[data-hs-prev]', root);
+    var nextBtn = $('[data-hs-next]', root);
+    var foot = $('.hs-foot', root);
+    if (!stage || !view || !track || !allItems.length) return null;
 
-    root.classList.add('is-live');
+    var MIN_H = 560;     // 이보다 낮은 화면은 고정하지 않음
+    var LERP = 0.17;     // 60fps 한 프레임당 따라가는 비율
+    var pinned = null;
+    var items = [], cards = [], dims = [], shots = [], n = 0;
+    // 가로 이동량 S(px, 카드 줄을 왼쪽으로 민 거리): sStart → sEnd. 카드 i 가 '지금 카드'가 되는 S = sA0 + i × 간격
+    var sStart = 0, sA0 = 0, sAn = 0, travel = 0, narrow = false;
+    var dwell0 = 0, total = 0, padL = 0, sizeKey = '';
+    var x = 0, tx = 0, lastT = 0, raf = 0, near = false, snap = true, curIdx = -1;
+    var prevS = [], prevD = [], prevP = [], prevBar = -1;
 
-    var tops = [], hs = [], natural = [], nodeY = [0];
-    var measured = false, near = false, isStatic = false;
-    var prev = { scale: [], shade: [], img: [], fill: -1, conn: -1, on: -1, cur: -2, ghost: -1 };
-    function resetPrev() { prev = { scale: [], shade: [], img: [], fill: -1, conn: -1, on: -1, cur: -2, ghost: -1 }; }
-
-    // 움직임 멈추기: 쌓지 않는 목록(CSS) · 선과 번호는 모두 채운 상태
-    function setStatic() {
-      if (isStatic) return;
-      isStatic = true;
-      inners.forEach(function (el) { el.style.transform = ''; });
-      shades.forEach(function (el) { el.style.opacity = ''; });
-      imgs.forEach(function (el) { if (el) el.style.scale = ''; });
-      if (ghost) ghost.style.opacity = '';
-      if (fill) fill.style.transform = 'scaleY(1)';
-      if (conn) conn.style.transform = 'scaleY(1)';
-      nodes.forEach(function (a) { a.classList.add('is-on'); a.classList.remove('is-current'); });
-      root.style.removeProperty('--gs-eq');
-      resetPrev();
+    function shown(el) { return !!(el && el.getClientRects().length); }
+    function collect() {
+      items = allItems.filter(shown);
+      cards = items.map(function (li) { return $('.hs-card', li); });
+      dims = items.map(function (li) { return $('.hs-dim', li); });
+      shots = items.map(function (li) { return $('.hs-shot img', li); });
+      n = items.length;
+      prevS = []; prevD = []; prevP = []; prevBar = -1; curIdx = -1;
+    }
+    function wantPin() {
+      var h = Math.min(window.innerHeight, html.clientHeight || window.innerHeight);
+      return !motionOff() && h >= MIN_H;
+    }
+    function idOf(i) { return items[i] ? +items[i].getAttribute('data-hs-item') : 1; }
+    function indexOfId(id) {
+      for (var i = 0; i < n; i++) if (idOf(i) === id) return i;
+      return -1;
     }
 
+    // ---- 진행 표시: 번호 · 막대 · 칩 · 지금 카드 ----
+    function setBar(t) {
+      var v = Math.round(t * 10000) / 10000;
+      if (!barEl || v === prevBar) return;
+      prevBar = v;
+      barEl.style.transform = 'scaleX(' + v + ')';
+    }
+    function setCurrent(i) {
+      if (i === curIdx || !n) return;
+      curIdx = i;
+      var id = idOf(i), chip = null;
+      cards.forEach(function (c, j) { c.classList.toggle('is-current', j === i); });
+      chips.forEach(function (b) {
+        if (+b.getAttribute('data-hs-go') === id) { b.setAttribute('aria-current', 'true'); chip = b; }
+        else b.removeAttribute('aria-current');
+      });
+      if (numEl) numEl.textContent = id === 0 ? '1+5' : pad(id);
+      root.classList.toggle('is-hold-now', id === 0);
+      // 칩 줄이 넘치면(좁은 화면) 지금 칩이 보이도록 칩 줄만 가로로 이동
+      if (chip && chipBox && chipBox.scrollWidth > chipBox.clientWidth + 1) {
+        var l = chip.offsetLeft - (chipBox.clientWidth - chip.offsetWidth) / 2;
+        chipBox.scrollTo({ left: Math.max(0, l), behavior: motionOff() ? 'auto' : 'smooth' });
+      }
+    }
+
+    // ---- 고정 모드: 카드 폭 맞춤 → 위치·이동 거리 → 섹션 높이 ----
+    function fit() {
+      root.style.removeProperty('--hs-card-w');
+      root.style.removeProperty('--hs-row-h');
+      root.classList.add('is-measure');
+      var site = items.filter(function (li) { return $('.hs-shot', li); });
+      var probe = site[0] || items[0];
+      var cs = getComputedStyle(track);
+      var avail = view.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+      var maxW = probe.offsetWidth;
+      var minW = Math.min(maxW, desktopMQ.matches ? 320 : 232);
+      var w = maxW, h = 0, k;
+      function tallest(list) { var m = 0; list.forEach(function (li) { m = Math.max(m, li.offsetHeight); }); return m; }
+      for (k = 0; k < 5; k++) {
+        h = tallest(site);
+        if (h <= avail || w <= minW) break;
+        // 캡처는 16:10 → 폭을 1.6px 줄이면 높이가 1px 줄어듦 (본문 줄바꿈 변화는 다음 회차에서 다시 확인)
+        w = Math.max(minW, Math.floor(w - (h - avail) * 1.6 - 2));
+        root.style.setProperty('--hs-card-w', w + 'px');
+      }
+      var rowH = Math.max(h, tallest(items));
+      if (shown(panel)) rowH = Math.max(rowH, panel.offsetHeight);
+      rowH = Math.max(0, Math.min(rowH, Math.floor(avail)));
+      root.style.setProperty('--hs-row-h', rowH + 'px');
+      root.classList.remove('is-measure');
+    }
     function measure() {
-      // 1024px 이하(카드 높이 auto): 다섯 장을 가장 큰 카드 높이로 맞춤
-      // → 쌓인 더미가 같은 순간에 함께 떠나고(CSS 마진), 아래 깔린 카드가 비어져 나오지 않음
-      root.style.removeProperty('--gs-eq');
-      if (!desktopMQ.matches) {
-        var mx = 0;
-        inners.forEach(function (el) { mx = Math.max(mx, el.offsetHeight); });
-        if (mx) root.style.setProperty('--gs-eq', Math.ceil(mx) + 'px');
-      }
-      var sy = window.scrollY;
-      var gap = parseFloat(getComputedStyle(list).rowGap) || 0;
-      var y = list.getBoundingClientRect().top + sy; // 목록 자체는 스티키가 아니므로 제자리 위치
-      cards.forEach(function (c, i) {
-        tops[i] = parseFloat(getComputedStyle(c).top) || 0;
-        hs[i] = c.offsetHeight || 1;
-        natural[i] = y;
-        y += hs[i] + gap;
-      });
-      // 세로선 위 그룹사 점의 위치(선 길이 대비 0~1)
-      if (fill) {
-        var lr = fill.parentNode.getBoundingClientRect();
-        var lh = lr.height || 1;
-        nodeY = [0].concat(nodes.map(function (a) {
-          var d = $('.gs-dot', a).getBoundingClientRect();
-          return clamp((d.top + d.height / 2 - lr.top) / lh, 0, 1);
-        }));
-      }
-      measured = true;
+      track.style.transform = 'none';
+      view.scrollLeft = 0;
+      fit();
+      var vw = view.clientWidth, w = items[0].offsetWidth;
+      var c0 = items[0].offsetLeft + w / 2, cN = items[n - 1].offsetLeft + w / 2;
+      var step = n > 1 ? (cN - c0) / (n - 1) : w;
+      var sEnd = Math.max(0, track.offsetWidth - vw);
+      // 한 화면에 카드가 1.5장도 안 들어가면(휴대폰) 지금 카드를 가운데에 · 넓은 화면은 첫 카드 왼쪽 정렬에서 시작해 마지막엔 마무리 칸까지
+      narrow = vw < step * 1.5;
+      if (narrow) { sA0 = c0 - vw / 2; sAn = cN - vw / 2; sStart = Math.min(sA0, sEnd); }
+      else { sA0 = 0; sAn = Math.min(sEnd, (n - 1) * step); sStart = 0; } // 지금 카드가 왼쪽 시작선보다 더 밀려나지 않게
+      travel = Math.max(0, sEnd - sStart);
+      var sh = stage.offsetHeight;
+      dwell0 = Math.round(sh * 0.06);
+      total = dwell0 + travel + Math.round(sh * 0.16);
+      root.style.height = (sh + total) + 'px';
+      snap = true;
+      tx = x = xAt(targetT());
+      render(x);
     }
-    // 진행값 s(0~5) → 세로선 채움 비율: 점과 점 사이를 이어서 채움
-    function lineAt(s) {
-      if (s <= 0) return 0;
-      var k = Math.min(Math.floor(s), n - 1), f = s - k;
-      return nodeY[k] + ((nodeY[k + 1] || 1) - nodeY[k]) * f;
+    function targetT() {
+      if (!travel) return 0;
+      return clamp((-root.getBoundingClientRect().top - dwell0) / travel, 0, 1);
     }
-    function setNodes(on, cur) {
-      if (on === prev.on && cur === prev.cur) return;
-      prev.on = on; prev.cur = cur;
-      nodes.forEach(function (a, i) {
-        a.classList.toggle('is-on', i < on);
-        a.classList.toggle('is-current', i === cur);
-      });
-    }
-    function setFill(v) {
-      if (!fill || Math.abs(v - prev.fill) < 0.0005) return;
-      prev.fill = v;
-      fill.style.transform = 'scaleY(' + v.toFixed(4) + ')';
-    }
-
-    function update(vh) {
-      if (motionOff()) { setStatic(); return; }
-      isStatic = false;
-      if (!near) return;
-      if (!measured) measure();
-      var desk = desktopMQ.matches;
-      var p = [], s = 0, on = 0, i;
-      for (i = 0; i < n; i++) {
-        var r = cards[i].getBoundingClientRect();
-        // 0: 아직 아래 / 1: 제자리에 붙음(또는 지나감)
-        var v = clamp(1 - (r.top - tops[i]) / (hs[i] * 0.85), 0, 1);
-        p.push(v); s += v;
-        if (v >= 0.55) on = i + 1;
-      }
-      // 1024px 이하에서 쓰는 위치도 쓰기 전에 모두 읽어 둠 (레이아웃 강제 방지)
-      var pr = desk ? null : panel.getBoundingClientRect();
-      var cr = desk || !conn ? null : conn.parentNode.getBoundingClientRect();
-      // 아래 깔린 카드: 위에 쌓인 장수만큼 작아지고 어두워짐
-      var depth = 0;
-      for (i = n - 1; i >= 0; i--) {
-        var sc = Math.round((1 - Math.min(depth, 4) * 0.045) * 10000) / 10000;
-        var sh = Math.round(Math.min(0.6, depth * 0.3) * 1000) / 1000;
-        var e = 1 - Math.pow(1 - p[i], 3);
-        var im = Math.round((1.08 - 0.08 * e) * 10000) / 10000;
-        if (sc !== prev.scale[i]) { inners[i].style.transform = 'scale(' + sc + ')'; prev.scale[i] = sc; }
-        if (sh !== prev.shade[i]) { shades[i].style.opacity = sh; prev.shade[i] = sh; }
-        if (im !== prev.img[i] && imgs[i]) { imgs[i].style.scale = im; prev.img[i] = im; }
-        depth += p[i];
-      }
-      // 자리 표시(+5)는 첫 카드가 덮는 동안 사라짐 (축소된 카드 뒤로 테두리가 비치지 않게)
-      if (ghost) {
-        var g = Math.round((1 - p[0]) * 1000) / 1000;
-        if (g !== prev.ghost) { ghost.style.opacity = g; prev.ghost = g; }
-      }
-      if (desk) {
-        setFill(lineAt(s));
-        setNodes(on, on - 1);
-      } else {
-        // 1024px 이하: 지주회사 카드가 지나가는 동안 세로선이 그룹사 쪽으로 그려짐
-        var t = clamp((vh * 0.85 - pr.top) / (pr.height * 0.95), 0, 1);
-        setFill(lineAt(t * n));
-        setNodes(Math.floor(t * n + 0.02), -1);
-        if (cr) {
-          var c = Math.round(clamp((vh * 0.8 - cr.top) / (cr.height || 1), 0, 1) * 1000) / 1000;
-          if (c !== prev.conn) { conn.style.transform = 'scaleY(' + c + ')'; prev.conn = c; }
+    function xAt(t) { return -(sStart + t * travel); }
+    function sOf(i) { return sA0 + (n > 1 ? i / (n - 1) : 0) * (sAn - sA0); } // 카드 i 가 지금 카드가 되는 이동량
+    function render(xx) {
+      track.style.transform = 'translate3d(' + (Math.round(xx * 100) / 100) + 'px,0,0)';
+      var S = -xx;
+      var t = travel ? clamp((S - sStart) / travel, 0, 1) : 0;
+      var a = sAn > sA0 ? (n - 1) * (S - sA0) / (sAn - sA0) : 0;
+      var soft = html.classList.contains('soft-motion');
+      for (var i = 0; i < n; i++) {
+        var d = i - a;
+        var f = clamp(1 - Math.abs(d), 0, 1);
+        var e = f * f * (3 - 2 * f);
+        var s = Math.round((0.94 + 0.06 * e) * 10000) / 10000;
+        // 지나간 카드(왼쪽)는 조금 더 어둡게 → 패널 옆에 걸친 조각이 뒤로 물러나 보임
+        var o = Math.round((1 - e) * (d < 0 ? 0.6 : 0.42) * 1000) / 1000;
+        if (s !== prevS[i]) { cards[i].style.transform = s === 1 ? '' : 'scale(' + s + ')'; prevS[i] = s; }
+        if (o !== prevD[i] && dims[i]) { dims[i].style.opacity = o; prevD[i] = o; }
+        if (shots[i]) {
+          var p = soft ? 0 : Math.round(clamp(-d, -1.2, 1.2) * 3 * 100) / 100; // 확대 1.08 → 양옆 여유 4% 안에서만 이동
+          if (p !== prevP[i]) { shots[i].style.transform = soft ? '' : 'translate3d(' + p + '%,0,0) scale(1.08)'; prevP[i] = p; }
         }
       }
+      setBar(t);
+      setCurrent(clamp(Math.round(a), 0, n - 1));
+    }
+    function loop(now) {
+      raf = 0;
+      var dt = lastT ? Math.min(64, now - lastT) : 16.7;
+      lastT = now;
+      var diff = tx - x;
+      if (snap || Math.abs(diff) < 0.3) { x = tx; snap = false; }
+      else x += diff * (1 - Math.pow(1 - LERP, dt / 16.7));
+      render(x);
+      if (x !== tx) raf = requestAnimationFrame(loop);
+      else lastT = 0;
+    }
+    function update() {
+      if (!pinned || !near) return;
+      tx = xAt(targetT());
+      if (tx !== x || snap) { if (!raf) raf = requestAnimationFrame(loop); }
+    }
+    // 카드 i 가 '지금 카드'가 되는 페이지 스크롤 위치 (i = n 이면 마무리 칸까지 다 보이는 끝 위치)
+    function yFor(i) {
+      var top = root.getBoundingClientRect().top + window.scrollY;
+      var s = i >= n ? sStart + travel : sOf(i);
+      return Math.round(top + dwell0 + clamp(s - sStart, 0, travel));
+    }
+    function clearPin() {
+      cancelAnimationFrame(raf); raf = 0; lastT = 0;
+      root.style.height = '';
+      root.style.removeProperty('--hs-card-w');
+      root.style.removeProperty('--hs-row-h');
+      track.style.transform = '';
+      allItems.forEach(function (li) {
+        var c = $('.hs-card', li), dm = $('.hs-dim', li), im = $('.hs-shot img', li);
+        if (c) c.style.transform = '';
+        if (dm) dm.style.opacity = '';
+        if (im) im.style.transform = '';
+      });
+      x = tx = 0;
     }
 
-    // 그룹사 바로가기: 해당 카드가 맨 위에 막 쌓인 위치로 이동
-    nodes.forEach(function (a, i) {
-      a.addEventListener('click', function (e) {
-        e.preventDefault();
-        measure();
-        window.scrollTo({ top: Math.max(0, natural[i] - tops[i] + 1), behavior: motionOff() ? 'auto' : 'smooth' });
-        inners[i].setAttribute('tabindex', '-1');
-        inners[i].focus({ preventScroll: true });
+    // ---- 대체 모드: 가로 스크롤 목록 ----
+    function fbSync() {
+      if (pinned) return;
+      var sl = view.scrollLeft, vw = view.clientWidth, max = view.scrollWidth - vw;
+      setBar(max > 0 ? clamp(sl / max, 0, 1) : 0);
+      var best = 0, bd = Infinity;
+      for (var i = 0; i < n; i++) {
+        var dd = Math.abs(fbLeft(i) - sl);
+        if (dd < bd) { bd = dd; best = i; }
+      }
+      if (max > 0 && sl >= max - 2) best = n - 1;
+      setCurrent(best);
+      // disabled 대신 aria-disabled: 키보드 포커스가 버튼에서 튕겨 나가지 않게
+      if (prevBtn) prevBtn.setAttribute('aria-disabled', String(sl <= 2));
+      if (nextBtn) nextBtn.setAttribute('aria-disabled', String(max <= 2 || sl >= max - 2));
+    }
+    // 대체 모드에서 카드 i 를 보여 주는 가로 스크롤 위치 (휴대폰은 가운데 · 넓은 화면은 왼쪽 정렬)
+    function fbLeft(i) {
+      var li = items[i];
+      return narrow ? li.offsetLeft + li.offsetWidth / 2 - view.clientWidth / 2 : li.offsetLeft - padL;
+    }
+    var fbRaf = 0;
+    view.addEventListener('scroll', function () {
+      if (pinned) { if (view.scrollLeft) view.scrollLeft = 0; return; }
+      if (!fbRaf) fbRaf = requestAnimationFrame(function () { fbRaf = 0; fbSync(); });
+    }, { passive: true });
+
+    // ---- 이동: 칩 · 이전/다음 ----
+    function go(i, smooth) {
+      if (!n) return;
+      i = clamp(i, 0, n - 1);
+      var beh = smooth && !motionOff() ? 'smooth' : 'instant';
+      if (pinned) window.scrollTo({ top: yFor(i), behavior: beh });
+      else view.scrollTo({ left: Math.max(0, fbLeft(i)), behavior: beh });
+    }
+    chips.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var i = indexOfId(+b.getAttribute('data-hs-go'));
+        if (i >= 0) go(i, true);
       });
     });
-    // 키보드로 아래 깔린 카드 안 링크에 포커스가 가면 그 카드가 맨 위에 오도록
+    function off(b) { return b.getAttribute('aria-disabled') === 'true'; }
+    if (prevBtn) prevBtn.addEventListener('click', function () { if (!off(prevBtn)) go(curIdx - 1, true); });
+    if (nextBtn) nextBtn.addEventListener('click', function () {
+      if (off(nextBtn)) return;
+      if (curIdx >= n - 1) view.scrollTo({ left: view.scrollWidth, behavior: motionOff() ? 'instant' : 'smooth' });
+      else go(curIdx + 1, true);
+    });
+
+    // ---- 키보드: 카드 안 링크에 포커스가 가면 그 카드가 보이는 스크롤 위치로 ----
     root.addEventListener('focusin', function (e) {
-      var li = e.target.closest && e.target.closest('.gs-card');
-      if (!li) return;
+      if (!pinned) return;
       var kbd = true;
       try { kbd = e.target.matches(':focus-visible'); } catch (err) { /* 무시 */ }
       if (!kbd) return;
-      var i = cards.indexOf(li);
-      requestAnimationFrame(function () {
-        measure();
-        var y = Math.max(0, natural[i] - tops[i] + 1);
-        if (Math.abs(window.scrollY - y) > 4) window.scrollTo({ top: y, behavior: 'instant' });
-      });
+      view.scrollLeft = 0;
+      var li = e.target.closest && e.target.closest('[data-hs-item]');
+      var i = li ? items.indexOf(li) : (endCell && endCell.contains(e.target) ? n : -1);
+      if (i < 0) return;
+      var y = yFor(i);
+      if (Math.abs(window.scrollY - y) > 2) window.scrollTo({ top: y, behavior: 'instant' });
+      cancelAnimationFrame(raf); raf = 0;
+      tx = x = i >= n ? xAt(1) : -clamp(sOf(i), sStart, sStart + travel);
+      render(x);
     });
 
+    // ---- 모드 결정 · 다시 계산 ----
+    function layout(force) {
+      var want = wantPin();
+      var key = window.innerWidth + 'x' + (want ? stage.offsetHeight : 0) + (want ? 'p' : 'f');
+      if (!force && want === pinned && key === sizeKey) { update(); return; }
+      var r = root.getBoundingClientRect(), y0 = window.scrollY, oldH = r.height;
+      var inView = r.top < window.innerHeight && r.bottom > 0;
+      var keep = Math.max(0, curIdx), keepId = n ? idOf(keep) : 1;
+      var first = pinned === null, switched = want !== pinned;
+      if (switched) {
+        if (pinned) clearPin();
+        pinned = want;
+        root.classList.toggle('is-pin', pinned);
+      }
+      collect();
+      if (pinned) measure();
+      else {
+        root.style.height = '';
+        padL = parseFloat(getComputedStyle(track).paddingLeft) || 0;
+        narrow = n > 1 && view.clientWidth < (items[1].offsetLeft - items[0].offsetLeft) * 1.5;
+      }
+      sizeKey = window.innerWidth + 'x' + (pinned ? stage.offsetHeight : 0) + (pinned ? 'p' : 'f');
+      if (switched && !first) {
+        // 보던 위치 유지: 섹션이 화면에 있으면 같은 카드로, 위쪽에 지나갔으면 높이 차이만큼 보정
+        var ki = Math.max(0, indexOfId(keepId));
+        if (inView) {
+          if (pinned) window.scrollTo({ top: yFor(ki), behavior: 'instant' });
+          else {
+            window.scrollTo({ top: Math.round(root.getBoundingClientRect().top + window.scrollY), behavior: 'instant' });
+            view.scrollTo({ left: Math.max(0, fbLeft(ki)), behavior: 'instant' });
+          }
+        } else if (r.bottom <= 0) {
+          window.scrollTo({ top: y0 + (root.offsetHeight - oldH), behavior: 'instant' });
+        }
+      }
+      if (pinned) { snap = true; update(); if (!near) { tx = x = xAt(targetT()); render(x); } }
+      else fbSync();
+    }
+
+    // 화면 근처에서만 계산 · 캡처 이미지는 섹션에 가까워지면 미리 불러옴
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) { near = en.isIntersecting; if (near) update(window.innerHeight); });
-      }, { rootMargin: '200px 0px' }).observe(root);
+        entries.forEach(function (en) {
+          near = en.isIntersecting;
+          if (!near) return;
+          // 고정 중엔 아래쪽 진행 표시가 화면 아래 10% 안에 머물러 공통 등장(site.js) 관찰에 안 걸릴 수 있어 여기서 드러냄
+          if (foot) foot.classList.add('is-in');
+          snap = true; update();
+        });
+      }, { rootMargin: '40% 0px' }).observe(root);
+      var lio = new IntersectionObserver(function (entries) {
+        if (!entries.some(function (en) { return en.isIntersecting; })) return;
+        $$('img[loading="lazy"]', root).forEach(function (im) { im.loading = 'eager'; });
+        lio.disconnect();
+      }, { rootMargin: '150% 0px' });
+      lio.observe(root);
     } else near = true;
-    var rt;
-    function remeasure() { measured = false; prev.fill = -1; prev.conn = -1; update(window.innerHeight); }
-    window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(remeasure, 120); });
-    window.addEventListener('load', remeasure);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(remeasure);
-    onMQ(desktopMQ, remeasure);
-    onMotion(function () { resetPrev(); requestAnimationFrame(remeasure); });
-    if (motionOff()) setStatic();
+
+    var rt, ft;
+    function relayout() { clearTimeout(rt); rt = setTimeout(function () { layout(false); }, 120); }
+    function remeasure() { clearTimeout(ft); ft = setTimeout(function () { layout(true); }, 80); }
+    window.addEventListener('resize', relayout);
+    window.addEventListener('load', function () { layout(true); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { layout(true); });
+    $$('img', root).forEach(function (im) { if (!im.complete) im.addEventListener('load', remeasure, { once: true }); });
+    onMQ(desktopMQ, function () { layout(true); });
+    onMotion(function () { requestAnimationFrame(function () { layout(true); }); });
+    layout(true);
     return update;
   }
 
@@ -1017,7 +1165,7 @@
   heroPlayGuard();
   engrave();
   factsCount();
-  var updaters = [groupStack(), bizStory()].filter(Boolean);
+  var updaters = [groupScroll(), bizStory()].filter(Boolean);
   tree();
   leaders();
   brandSlider();
