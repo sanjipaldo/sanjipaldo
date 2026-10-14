@@ -11,6 +11,43 @@
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
   var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
 
+  /* ---------- 0) 영상 재생 (이 페이지는 site.js의 data-autoplay 대신 직접 관리) ----------
+     - 첫 화면 영상(data-auto-min): 그 폭 이상에서만 보일 때 자동재생. 좁은 화면·데이터 절약·움직임 줄이기는
+       포스터만 보여 주고, 재생/정지 버튼(site.js의 data-video-toggle)으로 원할 때만 재생
+     - 카드 영상(data-hover-play): 마우스를 올린 카드만 재생, 벗어나면 정지 (터치 화면은 포스터만 — 영상 파일을 받지 않음) */
+  var saveData = !!(navigator.connection && navigator.connection.saveData);
+  function play(v) {
+    if (v.preload === 'none') v.preload = 'auto';
+    var p = v.play();
+    if (p && p.catch) p.catch(function () {});
+  }
+  $$('video[data-auto-min]').forEach(function (v) {
+    var wrap = v.closest('[data-video-wrap]') || v.parentElement;
+    var mq = window.matchMedia('(min-width: ' + v.getAttribute('data-auto-min') + 'px)');
+    v.muted = true;
+    if (reduce) { wrap.classList.add('is-reduced'); return; }
+    if (saveData || !('IntersectionObserver' in window)) return;
+    new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (v.dataset.userPaused === '1') return;
+        if (en.isIntersecting) { if (mq.matches || v.dataset.userPaused === '0') play(v); }
+        else if (!v.paused) v.pause();
+      });
+    }, { threshold: 0.15 }).observe(v);
+  });
+  if (fine && !reduce && !saveData) {
+    $$('.bz-card').forEach(function (card) {
+      var v = $('video[data-hover-play]', card);
+      if (!v) return;
+      v.muted = true;
+      card.addEventListener('pointerenter', function () {
+        if (!v.getAttribute('poster')) v.setAttribute('poster', v.getAttribute('data-poster'));
+        play(v);
+      });
+      card.addEventListener('pointerleave', function () { if (!v.paused) v.pause(); });
+    });
+  }
+
   /* ---------- 1) 카드 영상 포스터: 가까워지면 불러오기 ---------- */
   var lazyVids = $$('video[data-poster]');
   function setPoster(v) { if (!v.getAttribute('poster')) v.setAttribute('poster', v.getAttribute('data-poster')); }

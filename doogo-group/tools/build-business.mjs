@@ -35,6 +35,16 @@ const NEWWIN = '<span class="sr-only">(새 창)</span>';
 // 브랜드명이 줄바꿈으로 갈라지지 않게 (화면 문구에만 사용 — 속성값에는 쓰지 말 것)
 const nw = (t) => t.replace(/DOOGO MARKET|NORA STAY|두고클래스|두고커넥트/g, (m) => `<span class="nowrap">${m}</span>`);
 const DOWN = ico('i-arrow', 'ico ico-arrow ico-down');
+// 문의 페이지: 분야를 미리 고른 상태로 양식(#inquiry)까지 바로 내려가게 (contact.html 자신의 분야 칩과 같은 형식)
+const ASK = (type) => `contact.html?type=${type}#inquiry`;
+// 받침에 맞는 조사 '으로/로' (ㄹ 받침은 '로')
+const euro = (word) => {
+  const c = word.charCodeAt(word.length - 1) - 0xAC00;
+  if (c < 0 || c > 11171) return '로';
+  const jong = c % 28;
+  return jong === 0 || jong === 8 ? '로' : '으로';
+};
+const HOLDING = '(주)두고홀딩스 계열 사업';
 const SIL = '<svg class="dt-sil" viewBox="0 0 300 400" aria-hidden="true" focusable="false"><circle cx="150" cy="148" r="64"/><path d="M24 400c0-86 56-146 126-146s126 60 126 146Z"/></svg>';
 
 // 페이지 전용 아이콘 (24×24, 선 1.7)
@@ -75,6 +85,7 @@ const BIZ = [
     role: '경험과 노하우를 나누고, 새로운 사업과 브랜드의 시작을 돕습니다.',
     services: ['실전 교육', '강사·과정 소개', '온라인 클래스 ‘두고클래스’', '교육장 연계(두고스페이스)'],
     targets: ['창업·부업을 준비하는 분', '브랜드를 키우려는 사업자', '실무 역량을 키우려는 분'],
+    ask: '교육 상담하기',
     cta: { label: '교육 플랫폼 보기', pending: '두고클래스 교육 플랫폼' },
     site: { label: '두고클래스 바로가기', pending: '두고클래스 사이트' },
     narration: '경험을 나누면, 또 다른 시작이 태어납니다.',
@@ -89,7 +100,6 @@ const BIZ = [
       { icon: 's-classroom', name: '교육장 연계', desc: '오프라인 수업과 모임은 두고스페이스의 교육장과 연계해 진행합니다.' },
     ],
     scenes: [{ src: 'assets/img/biz/campus-scene.webp', w: 714, h: 450, alt: '강의실에서 강사가 수강생들에게 발표하는 교육 현장 예시 이미지' }],
-    photoPlan: ['강의·수업 현장', '강사와 과정 소개 자료', '교육장과 수강생 모습'],
     sceneLead: '강의가 열리는 현장과 강사, 수강생이 함께하는 장면을 실제 사진으로 담을 예정입니다.',
     relNav: '두고클래스',
     leaderTask: '실전 교육 과정과 강사·과정 운영, 온라인 클래스 ‘두고클래스’',
@@ -100,7 +110,8 @@ const BIZ = [
     role: '뉴질랜드 건강식품의 개발과 소량 제조, 제품화를 지원합니다.',
     services: ['제품 개발', '소량 제조', '패키지·인쇄', '제조 상담·연결 ‘두고커넥트’'],
     targets: ['자체 건강식품 브랜드를 준비하는 사업자', '소량으로 시작하려는 셀러'],
-    cta: { label: '제조 상담하기', href: 'contact.html?type=bio' },
+    ask: '제조 상담하기',
+    cta: { label: '제조 상담하기', href: ASK('bio') },
     site: { label: '두고바이오 NZ 사이트', pending: '두고바이오 NZ 사이트' },
     narration: '살펴보고, 시험하고, 다시 들여다보며.',
     op: '4%', frame: { vs: 1.2, vx: '0%', vy: '50%', q: 'right' }, still: [800, 450],
@@ -115,7 +126,6 @@ const BIZ = [
       { icon: 's-link', name: '제조 상담·연결 ‘두고커넥트’', desc: '무엇부터 준비할지 막막할 때, 상담으로 필요한 제조 과정을 정리하고 연결합니다.' },
     ],
     scenes: [{ src: 'assets/img/biz/bio-scene.webp', w: 642, h: 570, alt: '뉴질랜드 산을 배경으로 연구원이 건강식품 원료를 살피는 제조 현장 예시 이미지' }],
-    photoPlan: ['제품과 원료', '제조·검수 과정', '패키지·인쇄 결과물'],
     sceneLead: '실제 제품과 원료, 제조와 패키지 과정을 사진으로 소개할 예정입니다.',
     relNav: '두고커넥트',
     leaderTask: '건강식품 제품 개발과 소량 제조, 패키지·인쇄, 제조 상담 ‘두고커넥트’',
@@ -126,8 +136,9 @@ const BIZ = [
     role: '브랜드를 기획하고 운영하며, 판매와 성장 전략을 함께 만듭니다.',
     services: ['브랜드 기획', '상품 운영', '브랜드 성장과 EXIT 전략'],
     targets: ['새 브랜드를 만들려는 분', '운영 중인 브랜드를 키우려는 사업자'],
+    ask: '커머스 상담하기',
     cta: { label: '브랜드 보기', href: 'brands.html#brands' },
-    site: { label: '운영 브랜드 보기', href: 'brands.html#brands' },
+    site: null, // 별도 사이트 없음 — 마무리 블록은 문의 버튼 하나만
     narration: '생각은 제품이 되고, 제품은 브랜드가 됩니다.',
     op: '57%', frame: { vs: 1.2, vx: '74%', vy: '55%' }, still: [800, 450],
     facts: [['대표 서비스', '브랜드 기획 · 운영 · EXIT 전략'], ['연계할 수 있는 사업', '미디어 · 광고 · 유통']],
@@ -139,7 +150,6 @@ const BIZ = [
       { icon: 's-growth', name: '브랜드 성장과 EXIT 전략', desc: '판매 채널과 콘텐츠를 넓혀 브랜드를 키우고, EXIT까지 내다보는 성장 전략을 세웁니다.' },
     ],
     scenes: [{ src: 'assets/img/biz/commerce-scene.webp', w: 588, h: 615, alt: '온라인 쇼핑 화면과 진열된 건강식품 제품이 보이는 커머스 예시 이미지' }],
-    photoPlan: ['운영 브랜드와 상품', '상세페이지·판매 화면', '브랜드가 자라 온 과정'],
     sceneLead: '운영 중인 브랜드와 상품, 판매 화면을 실제 자료로 소개할 예정입니다.',
     relNav: '성장 단계',
     leaderTask: '브랜드 기획과 상품 운영, 브랜드 성장과 EXIT 전략',
@@ -150,7 +160,8 @@ const BIZ = [
     role: '사람과 브랜드의 가치를 영상과 콘텐츠로 전합니다.',
     services: ['촬영', '유튜브 콘텐츠', '라이브 콘텐츠 제작'],
     targets: ['콘텐츠로 고객을 모으려는 브랜드', '강사·전문가'],
-    cta: { label: '콘텐츠 문의하기', href: 'contact.html?type=media' },
+    ask: '콘텐츠 문의하기',
+    cta: { label: '콘텐츠 문의하기', href: ASK('media') },
     site: { label: '두고미디어 채널', pending: '두고미디어 채널' },
     narration: '그 가치를 발견하고, 이야기로 전합니다.',
     op: '47%', frame: { vs: 1.2, vx: '38%', vy: '45%' }, still: [800, 450],
@@ -164,7 +175,6 @@ const BIZ = [
       { icon: 's-live', name: '라이브 콘텐츠 제작', desc: '라이브 방송과 실시간 강의를 준비하고 진행해, 고객과 바로 만나는 콘텐츠를 만듭니다.' },
     ],
     scenes: [{ src: 'assets/img/biz/media-scene.webp', w: 576, h: 465, alt: '카메라와 조명 앞에서 진행자가 콘텐츠를 촬영하는 스튜디오 예시 이미지' }],
-    photoPlan: ['촬영 현장', '유튜브·라이브 콘텐츠 화면', '스튜디오와 제작 장비'],
     sceneLead: '촬영 현장과 실제로 만든 콘텐츠 화면을 사진으로 소개할 예정입니다.',
     relNav: '콘텐츠 형식',
     leaderTask: '촬영과 유튜브·라이브 콘텐츠 기획·제작',
@@ -175,12 +185,13 @@ const BIZ = [
     role: '브랜드가 필요한 고객에게 닿도록 광고를 기획하고 운영합니다.',
     services: ['네이버·쿠팡 중심 광고 운영', '광고 소재 기획', '성과 분석'],
     targets: ['온라인으로 판매 중인 브랜드·셀러'],
-    cta: { label: '광고 상담하기', href: 'contact.html?type=ad' },
+    ask: '광고 상담하기',
+    cta: { label: '광고 상담하기', href: ASK('ad') },
     site: { label: '두고애드 사이트', pending: '두고애드 사이트' },
     narration: '각자의 가능성이, 필요한 사람에게 닿도록.',
     op: '17%', frame: { vs: 1.2, vx: '0%', vy: '50%', q: 'right' }, still: [960, 540],
     heroAlt: { label: '운영 채널 보기', href: '#related' },
-    facts: [['운영 채널', '네이버 · 쿠팡 중심'], ['연계할 수 있는 사업', '커머스 · 미디어']],
+    facts: [['운영 채널', '네이버 · 쿠팡'], ['연계할 수 있는 사업', '커머스 · 미디어']],
     svcHead: '두고애드가 하는 일',
     svcLead: '판매가 일어나는 채널을 중심으로 광고를 기획하고, 결과를 다음 운영에 반영합니다.',
     detail: [
@@ -189,10 +200,9 @@ const BIZ = [
       { icon: 's-chart', name: '성과 분석', desc: '광고 결과를 정리해 무엇이 효과가 있었는지 확인하고, 다음 운영에 반영합니다.' },
     ],
     scenes: [{ src: 'assets/img/biz/ad-scene.webp', w: 579, h: 435, alt: '광고 성과 그래프가 띄워진 화면을 함께 보는 마케팅 현장 예시 이미지' }],
-    photoPlan: ['캠페인 소재', '운영 채널 화면', '공개 가능한 범위의 성과 리포트'],
     sceneLead: '실제 캠페인 소재와 운영 화면을 공개 가능한 범위에서 소개할 예정입니다.',
     relNav: '운영 채널',
-    leaderTask: '네이버·쿠팡 중심 광고 운영, 광고 소재 기획과 성과 분석',
+    leaderTask: '네이버·쿠팡 광고 운영, 광고 소재 기획과 성과 분석',
   },
   {
     slug: 'food', num: '06', area: '유통', en: 'DOOGO FOOD', ko: '두고푸드', chain: 'Sales', icon: 'i-food',
@@ -200,6 +210,7 @@ const BIZ = [
     role: '농수산물과 가공식품, 건강식품의 공급사와 판매자를 연결합니다.',
     services: ['식품 전문 도매 플랫폼 ‘DOOGO MARKET’', '상품 공급', '판매자 협력'],
     targets: ['식품 공급사(생산자·제조사)', '온라인 위탁 판매자'],
+    ask: '유통 상담하기',
     cta: { label: '도매 플랫폼 보기', ext: MARKET_URL },
     site: { label: 'DOOGO MARKET 바로가기', ext: MARKET_URL },
     narration: '좋은 먹거리도, 정성을 담아 일상으로.',
@@ -213,7 +224,6 @@ const BIZ = [
       { icon: 'i-partner', name: '판매자 협력', desc: '온라인 위탁 판매자가 좋은 식품을 찾아 판매할 수 있도록 상품 정보와 판매를 함께 돕습니다.' },
     ],
     scenes: [{ src: 'assets/img/biz/food-scene.webp', w: 603, h: 720, alt: '신선 식품이 진열된 매장과 배송 트럭이 보이는 식품 유통 예시 이미지' }],
-    photoPlan: ['산지와 상품', '공급사·판매자 연결 현장', 'DOOGO MARKET 화면'],
     sceneLead: '산지와 상품, 공급사와 판매자가 만나는 현장을 실제 사진으로 담을 예정입니다.',
     relNav: 'DOOGO MARKET',
     leaderTask: '식품 도매 플랫폼 DOOGO MARKET 운영, 공급사와 판매자 연결',
@@ -224,7 +234,8 @@ const BIZ = [
     role: '함께 일하고 배우며, 쉬어갈 수 있는 공간을 만듭니다.',
     services: ['공유오피스', '비상주 사무실', '교육장 대여', '숙박 ‘NORA STAY’'],
     targets: ['작은 팀·1인 사업자', '교육·행사 주최자', '여행·출장객'],
-    cta: { label: '공간 알아보기', href: 'contact.html?type=space' },
+    ask: '공간 상담하기',
+    cta: { label: '공간 상담하기', href: ASK('space') },
     site: { label: 'NORA STAY 바로가기', pending: 'NORA STAY 사이트' },
     narration: '함께 일하고, 잠시 쉬어갈 자리까지.',
     op: '86%', frame: { vs: 1.2, vx: '100%', vy: '50%' }, still: [960, 540],
@@ -236,13 +247,12 @@ const BIZ = [
       { icon: 's-desk', name: '공유오피스', desc: '작은 팀과 1인 사업자가 필요한 만큼 자리를 쓰며 함께 일하는 업무 공간입니다.' },
       { icon: 's-address', name: '비상주 사무실', desc: '상주하지 않아도 사업장 주소가 필요한 사업자를 위한 비상주 사무실 서비스입니다.' },
       { icon: 's-classroom', name: '교육장 대여', desc: '강의·워크숍·모임을 위한 교육장을 대여하며, 두고캠퍼스 수업 공간으로도 연계합니다.' },
-      { icon: 's-bed', name: '숙박 ‘NORA STAY’', desc: '여행과 출장 중 편하게 쉬어갈 수 있는 숙박 서비스 NORA STAY를 함께 운영합니다.' },
+      { icon: 's-bed', name: '숙박 ‘NORA STAY’', desc: '여행과 출장 중 편하게 쉬어갈 수 있는 숙박 서비스 NORA STAY로 이어집니다.' },
     ],
     scenes: [
       { src: 'assets/img/biz/stay-scene.webp', w: 630, h: 420, alt: '바다가 보이는 NORA STAY 객실 예시 이미지' },
       { src: 'assets/img/biz/space-scene.webp', w: 630, h: 255, alt: '책상과 의자가 놓인 밝은 공유오피스 예시 이미지' },
     ],
-    photoPlan: ['공유오피스·비상주 공간', '교육장', 'NORA STAY 객실'],
     sceneLead: '실제 시설과 사용하는 모습을 공간별 사진으로 소개할 예정입니다.',
     relNav: '공간 안내',
     leaderTask: '공유오피스·비상주 사무실·교육장 운영, 숙박 ‘NORA STAY’',
@@ -316,13 +326,13 @@ const CTA_BAND = `  <section class="cta-band" aria-labelledby="cta-title">
     <div class="container">
       <span class="eyebrow">Contact</span>
       <h2 class="h2" id="cta-title" data-reveal style="margin-top:20px">다음 사업, 두고그룹과 함께 이야기해 보세요.</h2>
-      <p class="lead" data-reveal style="--d:.1s">제조·브랜드·콘텐츠·광고·유통·교육·공간, 그리고 그룹 제휴까지 하나의 창구로 접수합니다.</p>
+      <p class="lead" data-reveal style="--d:.1s">교육·제조·커머스·미디어·광고·유통·공간, 그리고 그룹 제휴까지 하나의 창구로 접수합니다.</p>
       <div class="cta-chips" data-reveal style="--d:.15s">
-        <a href="contact.html?type=campus">교육</a><a href="contact.html?type=bio">제조</a><a href="contact.html?type=commerce">커머스</a><a href="contact.html?type=media">미디어</a><a href="contact.html?type=ad">광고</a><a href="contact.html?type=food">유통</a><a href="contact.html?type=space">공간</a><a href="contact.html?type=partner">그룹 제휴</a>
+        ${[['campus', '교육'], ['bio', '제조'], ['commerce', '커머스'], ['media', '미디어'], ['ad', '광고'], ['food', '유통'], ['space', '공간'], ['partner', '그룹 제휴']].map(([t, l]) => `<a href="${ASK(t)}">${l}</a>`).join('')}
       </div>
       <div class="cta-band-actions" data-reveal style="--d:.2s">
         <a class="btn btn--primary btn--lg" href="contact.html">사업 상담하기 ${ARROW}</a>
-        <a class="btn btn--ghost btn--lg" href="contact.html?type=partner">제휴 제안하기</a>
+        <a class="btn btn--ghost btn--lg" href="${ASK('partner')}">제휴 문의하기</a>
       </div>
     </div>
   </section>`;
@@ -358,7 +368,7 @@ function buildList() {
   const cards = BIZ.map((b, i) => `      <article class="bz-card${b.key ? ' is-key' : ''}" id="${b.slug}" aria-labelledby="bz-t-${b.slug}" style="--op:${b.op}">
         <a class="bz-media" href="business-${b.slug}.html" tabindex="-1" aria-hidden="true" data-reveal="scale">
           <span class="bz-media-inner" data-parallax>
-            <video data-autoplay muted loop playsinline preload="none" data-poster="assets/video/biz-${b.slug}.webp"><source src="assets/video/biz-${b.slug}.mp4" type="video/mp4"></video>
+            <video data-hover-play muted loop playsinline preload="none" data-poster="assets/video/biz-${b.slug}.webp"><source src="assets/video/biz-${b.slug}.mp4" type="video/mp4"></video>
           </span>
           <span class="bz-media-tag"><span class="en">${b.num}</span>${b.area}</span>
           <span class="bz-media-quote">“${b.narration}”</span>
@@ -368,7 +378,6 @@ function buildList() {
           <div class="bz-top" data-reveal>
             <span class="bz-num en" aria-hidden="true">${b.num}</span>
             <span class="bz-stage en">${b.chain}</span>
-            ${b.key ? '<span class="bz-key">그룹 주요 사업</span>' : ''}
           </div>
           <h3 class="bz-title" id="bz-t-${b.slug}" data-reveal style="--d:.05s"><span class="bz-area">${b.area}</span><span class="bz-brand"><span class="en">${b.en}</span><span class="bz-brand-ko">${b.ko}</span></span></h3>
           <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">${b.defLabel}</span>${nw(b.def)}</p>
@@ -397,7 +406,7 @@ ${b.targets.map(t => `                <li>${t}</li>`).join('\n')}
   const main = `  <!-- 1. 첫 화면 -->
   <section class="page-hero page-hero--navy bz-hero" aria-labelledby="bz-title" data-video-wrap>
     <div class="bz-hero-media" aria-hidden="true">
-      <video id="bz-hero-video" data-autoplay muted loop playsinline preload="metadata" poster="assets/video/hero-poster.webp"><source src="assets/video/hero-loop.mp4" type="video/mp4"></video>
+      <video id="bz-hero-video" data-auto-min="761" muted loop playsinline preload="none" poster="assets/video/hero-poster.webp"><source src="assets/video/hero-loop.mp4" type="video/mp4"></video>
       <div class="bz-hero-swap"></div>
     </div>
     <div class="bz-hero-shade" aria-hidden="true"></div>
@@ -405,10 +414,11 @@ ${b.targets.map(t => `                <li>${t}</li>`).join('\n')}
       <nav aria-label="현재 위치"><ol class="breadcrumb"><li><a href="index.html">홈</a></li><li aria-current="page">사업영역</li></ol></nav>
       <span class="eyebrow" data-reveal="fade">Our Business</span>
       <h1 class="display bz-hero-title" id="bz-title" data-lines><span class="line"><span>배우고, 만들고,</span></span><span class="line"><span class="accent">키우고.</span></span></h1>
-      <p class="lead bz-hero-lead" data-reveal style="--d:.25s">제품을 만드는 일부터 사람을 키우는 일까지.<br class="hide-mobile"> 두고그룹의 7개 사업이 성장의 다음 단계를 함께 만듭니다.</p>
+      <p class="lead bz-hero-lead" data-reveal style="--d:.25s">제품을 만드는 일부터 사람을 키우는 일까지.<br class="hide-mobile"> <span class="nowrap">(주)두고홀딩스</span> 아래 7개 계열 사업이 성장의 다음 단계를 함께 만듭니다.</p>
       <div class="bz-hero-foot" data-reveal style="--d:.35s">
         <div class="bz-jump-head">
-          <p class="bz-jump-label"><span class="en">7 Businesses</span>사업 바로가기</p>
+          <p class="bz-jump-label"><span class="bz-org"><span class="bz-org-hold en">DOOGO HOLDINGS</span><span class="bz-org-arrow" aria-hidden="true">${ico('i-arrow', '')}</span><span>7개 계열 사업 바로가기</span></span></p>
+          <a class="bz-org-link" href="about.html#structure">그룹 구조 보기 ${ico('i-arrow', '')}</a>
           <button class="bz-vtoggle" type="button" data-video-toggle="#bz-hero-video" aria-label="배경 영상 정지">${pauseIcons}</button>
         </div>
         <ul class="bz-jump" aria-label="사업 바로가기">
@@ -447,7 +457,7 @@ ${rail}
           <span class="eyebrow" data-reveal="fade">7 Businesses</span>
           <h2 class="h2" id="list-title" data-lines style="margin-top:20px"><span class="line"><span>필요한 사업을</span></span><span class="line"><span>찾아보세요</span></span></h2>
         </div>
-        <p class="lead" data-reveal style="--d:.15s">사업마다 하는 일과 주요 서비스, 함께하면 좋은 분을 정리했습니다. 자세히 보기에서 사업별 상세를, 옆 버튼에서 바로 상담이나 서비스로 이어집니다.</p>
+        <p class="lead" data-reveal style="--d:.15s">사업마다 하는 일과 주요 서비스, 함께하면 좋은 분을 정리했습니다. ‘자세히 보기’를 누르면 사업별 상세 페이지로, 옆 버튼을 누르면 상담이나 각 서비스로 바로 이동합니다.</p>
       </div>
 
       <div class="bz-cards">
@@ -460,7 +470,7 @@ ${CTA_BAND}`;
 
   return shell({
     title: '사업영역',
-    desc: '배우고, 만들고, 키우고. 교육·제조·커머스·미디어·광고·유통·공간, 두고그룹의 7개 사업을 한 번에 소개합니다.',
+    desc: '배우고, 만들고, 키우고. (주)두고홀딩스 아래 교육·제조·커머스·미디어·광고·유통·공간, 7개 계열 사업을 한 번에 소개합니다.',
     css: 'business', js: 'business',
     bodyAttrs: 'data-page="business" data-header="overlay"',
     main,
@@ -507,9 +517,9 @@ ${people.map((p, i) => `        <li class="dt-person${p.photo ? ' has-photo' : '
       <p class="dt-rel-note" data-reveal>강사·과정 정보는 두고클래스 강사 소개 화면을 기준으로 정리했습니다. 세부 일정과 신청은 두고클래스에서 안내합니다.</p>`;
   },
   bio: () => steps({
-    eyebrow: 'DOOGO CONNECT', h2: ['제조 상담·연결 서비스', '<span class="accent">‘두고커넥트’</span>'],
+    eyebrow: 'Manufacturing Support', h2: ['제조 상담·연결 서비스', '<span class="accent">‘두고커넥트’</span>'],
     lead: '무엇부터 준비해야 할지 막막할 때, 두고커넥트가 상담부터 제품 개발, 소량 제조와 패키지까지 필요한 과정을 이어 줍니다.',
-    actions: `<a class="btn btn--white" href="contact.html?type=bio">두고커넥트 상담 신청 ${ARROW}</a>`,
+    actions: `<a class="btn btn--white" href="${ASK('bio')}">제조 상담하기 ${ARROW}</a>`,
     label: '제조 흐름',
     items: [
       { icon: 's-chat', ko: '상담', en: 'Consult', desc: '만들고 싶은 제품과 판매 계획을 듣고 방향을 잡습니다.' },
@@ -521,7 +531,7 @@ ${people.map((p, i) => `        <li class="dt-person${p.photo ? ' has-photo' : '
   commerce: () => steps({
     eyebrow: 'Brand Growth', h2: ['기획에서 EXIT까지,', '브랜드 성장 4단계'],
     lead: '브랜드를 만드는 데서 끝나지 않고, 운영과 성장을 거쳐 다음 단계까지 함께 설계합니다. 성장 단계에서는 그룹의 콘텐츠·광고·유통 사업과 연계할 수 있습니다.',
-    actions: `<a class="btn btn--white" href="brands.html#brands">운영 브랜드 보기 ${ARROW}</a>`,
+    actions: `<a class="btn btn--white" href="${ASK('commerce')}">커머스 상담하기 ${ARROW}</a>`,
     label: '브랜드 성장 단계',
     goalLast: true,
     items: [
@@ -565,7 +575,6 @@ ${formats.map((f, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
     pre: `      <ul class="dt-channels" aria-label="운영 채널">
         <li class="dt-channel" data-reveal><span class="dt-channel-en en">NAVER</span><span class="dt-channel-ko">네이버</span><p>검색과 쇼핑에서 상품을 찾는 고객에게 브랜드를 보여 줍니다.</p></li>
         <li class="dt-channel" data-reveal style="--d:.08s"><span class="dt-channel-en en">COUPANG</span><span class="dt-channel-ko">쿠팡</span><p>구매를 고민하는 고객에게 상품이 닿도록 광고를 운영합니다.</p></li>
-        <li class="dt-channel dt-channel--note" data-reveal style="--d:.16s"><p>운영 채널은 네이버·쿠팡 중심입니다.</p></li>
       </ul>`,
     items: [
       { icon: 's-target', ko: '목표 설정', en: 'Goal', desc: '판매 상황을 살펴 광고로 이루려는 목표를 정합니다.' },
@@ -581,7 +590,7 @@ ${formats.map((f, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
         </div>
         <div class="dt-rel-side" data-reveal style="--d:.15s">
           <p class="lead">DOOGO MARKET(두고마켓)은 농수산물·가공식품·건강식품 공급사와 온라인 위탁 판매자를 연결하는 B2B 도매 플랫폼입니다.</p>
-          <div class="dt-rel-actions"><a class="btn btn--primary" href="${MARKET_URL}" target="_blank" rel="noopener">DOOGO MARKET 바로가기 ${ARROW_UR}${NEWWIN}</a></div>
+          <div class="dt-rel-actions"><a class="btn btn--white" href="${MARKET_URL}" target="_blank" rel="noopener">DOOGO MARKET 바로가기 ${ARROW_UR}${NEWWIN}</a></div>
         </div>
       </div>
       <div class="dt-paths">
@@ -591,7 +600,7 @@ ${formats.map((f, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
           <h3 class="dt-path-title">공급사</h3>
           <p class="dt-path-who">생산자 · 제조사</p>
           <p class="dt-path-desc">농수산물과 가공식품, 건강식품을 판매자에게 소개하고 온라인 판로를 넓힙니다.</p>
-          <a class="link-arrow" href="contact.html?type=food">공급 문의하기 ${ARROW}</a>
+          <a class="link-arrow" href="${ASK('food')}">공급 문의하기 ${ARROW}</a>
         </article>
         <div class="dt-path-hub" data-reveal="scale" aria-hidden="true">
           <span class="dt-hub-line"></span>
@@ -620,7 +629,7 @@ ${formats.map((f, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
           <h2 class="h2" id="rel-title" data-lines style="margin-top:20px"><span class="line"><span>일하고, 배우고, 쉬어가는</span></span><span class="line"><span>네 가지 공간</span></span></h2>
         </div>
         <div class="dt-rel-side" data-reveal style="--d:.15s">
-          <p class="lead">목적에 맞는 공간을 고를 수 있도록 공유오피스·비상주 사무실·교육장, 그리고 숙박 <span class="nowrap">NORA STAY</span>를 함께 운영합니다.</p>
+          <p class="lead">목적에 맞는 공간을 고를 수 있도록 공유오피스·비상주 사무실·교육장을 마련하고, 숙박은 <span class="nowrap">NORA STAY</span>로 이어집니다.</p>
         </div>
       </div>
       <ol class="dt-rows">
@@ -643,7 +652,7 @@ ${spaces.map((sp, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
           <h3 class="dt-stay-title"><span class="en nowrap">NORA STAY</span> 숙박</h3>
           <p class="dt-stay-desc">여행과 출장 중에 편하게 쉬어갈 수 있는 두고스페이스의 숙박 서비스입니다. 일하는 공간에서 쉬는 공간까지, 머무는 시간 전체를 함께 준비합니다.</p>
           <p class="dt-stay-for"><span>이런 분께</span>여행객 · 출장객</p>
-          <a class="btn btn--white btn--sm" href="#" data-pending="NORA STAY 사이트">NORA STAY 바로가기</a>
+          <a class="btn btn--white" href="#" data-pending="NORA STAY 사이트">NORA STAY 바로가기</a>
         </div>
       </article>`;
   },
@@ -677,8 +686,8 @@ function buildDetail(b, idx) {
   const others = BIZ.filter(x => x.slug !== b.slug);
   const svcCount = b.detail.length;
 
-  // 히어로 두 번째 버튼: 서비스 CTA가 '문의하기'와 같은 주소면 페이지 안 관련 구간으로 보냄
-  const heroSecond = (b.cta.href === `contact.html?type=${b.slug}` && b.heroAlt)
+  // 히어로 두 번째 버튼: 서비스 CTA가 문의 버튼과 같은 주소면 페이지 안 관련 구간으로 보냄
+  const heroSecond = (b.cta.href === ASK(b.slug) && b.heroAlt)
     ? `<a class="btn btn--line btn--lg" href="${b.heroAlt.href}">${b.heroAlt.label} ${DOWN}</a>`
     : action(b.cta, 'btn btn--line btn--lg');
   const fr = b.frame || {};
@@ -697,15 +706,15 @@ function buildDetail(b, idx) {
     <div class="dt-hero-glow" aria-hidden="true"></div>
     <div class="container">
       <nav aria-label="현재 위치"><ol class="breadcrumb"><li><a href="index.html">홈</a></li><li><a href="business.html">사업영역</a></li><li aria-current="page">${b.area}</li></ol></nav>
-      <span class="eyebrow" data-reveal="fade">${b.num} · ${b.chain}</span>
-      <h1 class="dt-title" id="dt-title" data-lines><span class="line"><span class="en">${b.en}</span></span></h1>
+      <span class="eyebrow" data-reveal="fade">Business ${b.num} / 07</span>
+      <h1 class="display dt-title" id="dt-title" data-lines><span class="line"><span class="en">${b.en}</span></span></h1>
       <div class="dt-hero-grid">
         <div class="dt-hero-copy">
-          <p class="dt-sub" data-reveal style="--d:.15s"><span class="dt-sub-ico">${ico(b.icon, '')}</span><span>${b.ko}</span><i aria-hidden="true"></i><span>${b.area}</span>${b.key ? '<span class="dt-key">그룹 주요 사업</span>' : ''}</p>
+          <p class="dt-sub" data-reveal style="--d:.15s"><span class="dt-sub-ico">${ico(b.icon, '')}</span><span>${b.ko}</span><i aria-hidden="true"></i><span>${b.area}</span><a class="dt-key" href="about.html#structure">${HOLDING}<span class="sr-only"> — 그룹 구조 보기</span></a></p>
           <p class="dt-role" data-reveal style="--d:.2s">${b.role}</p>
         </div>
         <div class="dt-hero-actions" data-reveal style="--d:.28s">
-          <a class="btn btn--primary btn--lg" href="contact.html?type=${b.slug}">문의하기 ${ARROW}</a>
+          <a class="btn btn--primary btn--lg" href="${ASK(b.slug)}">${b.ask} ${ARROW}</a>
           ${heroSecond}
         </div>
       </div>
@@ -763,7 +772,7 @@ ${b.detail.map((s, i) => `        <li class="dt-svc" data-reveal style="--d:${(i
         <ul class="dt-for-list">
 ${b.targets.map(t => `          <li>${CHECK}${t}</li>`).join('\n')}
         </ul>
-        <a class="btn btn--dark btn--sm dt-for-cta" href="contact.html?type=${b.slug}">${b.area} 상담 신청 ${ARROW}</a>
+        <a class="btn btn--dark btn--sm dt-for-cta" href="${ASK(b.slug)}">${b.ask} ${ARROW}</a>
       </div>
     </div>
   </section>
@@ -785,13 +794,6 @@ ${sceneFigs}
           <figcaption><span class="en">Group Film</span> 그룹 영상 속 ${b.en}</figcaption>
           <button class="dt-shot-play" type="button" data-film-open aria-label="그룹 영상 보기">${ico('i-play', '')}</button>
         </figure>
-        <div class="dt-plan dt-plan--wide" data-reveal style="--d:.18s">
-          <p class="dt-plan-label"><span class="badge-sample">준비 중</span> 이곳에 담길 사진</p>
-          <ol class="dt-plan-list">
-${b.photoPlan.map((p, i) => `            <li><span class="en">${String(i + 1).padStart(2, '0')}</span>${p}</li>`).join('\n')}
-          </ol>
-          <p class="note">이미지 예시 · 실제 현장 사진으로 교체 예정</p>
-        </div>
       </div>
     </div>
   </section>
@@ -817,17 +819,16 @@ ${REL[b.slug]()}
           <span class="dt-leader-num en" aria-hidden="true">${b.num}</span>
           ${ico(b.icon, 'dt-leader-ico')}
           ${SIL}
-          <span class="dt-leader-badge"><i aria-hidden="true"></i>프로필 준비 중</span>
         </div>
         <div class="dt-leader-body">
           <p class="dt-leader-area">${b.area} <span class="en">${b.en}</span></p>
-          <h3 class="dt-leader-name" id="leader-name">${b.area} 사업 담당 대표</h3>
-          <p class="dt-leader-status">대표자 프로필 준비 중</p>
+          <h3 class="dt-leader-name" id="leader-name">${b.area} 사업 대표</h3>
+          <p class="dt-leader-status"><i aria-hidden="true"></i>프로필 준비 중</p>
           <dl class="dt-leader-dl">
             <div><dt>담당 영역</dt><dd>${b.area} · ${b.ko}</dd></div>
             <div><dt>핵심 업무</dt><dd>${b.leaderTask}</dd></div>
           </dl>
-          <a class="btn btn--line btn--sm" href="leadership.html#leaders">리더십 페이지에서 보기 ${ARROW}</a>
+          <a class="btn btn--line btn--sm" href="leadership.html#leader-${b.slug}">리더십 페이지에서 보기 ${ARROW}</a>
         </div>
       </article>
     </div>
@@ -840,11 +841,11 @@ ${REL[b.slug]()}
         <div class="dt-ask-copy">
           <span class="eyebrow">Inquiry · ${b.area}</span>
           <h2 class="dt-ask-title" id="ask-title">${b.ko}와 함께할<br> 일을 알려 주세요.</h2>
-          <p class="dt-ask-desc">문의 분야가 ‘${b.area}’로 선택된 상태로 접수 화면이 열립니다. 담당자가 확인한 뒤 남겨 주신 연락처로 회신합니다.</p>
+          <p class="dt-ask-desc">문의 분야가 ‘${b.area}’${euro(b.area)} 선택된 상태로 접수 화면이 열립니다. 담당자가 확인한 뒤 남겨 주신 연락처로 회신합니다.</p>
         </div>
         <div class="dt-ask-actions">
-          <a class="btn btn--white btn--lg" href="contact.html?type=${b.slug}">${b.area} 문의하기 ${ARROW}</a>
-          ${action(b.site, 'btn btn--ghost btn--lg')}
+          <a class="btn btn--white btn--lg" href="${ASK(b.slug)}">${b.ask} ${ARROW}</a>${b.site ? `
+          ${action(b.site, 'btn btn--ghost btn--lg')}` : ''}
         </div>
       </div>
 
@@ -881,7 +882,7 @@ ${CTA_BAND}`;
 
   return shell({
     title: `${b.area} · ${b.en}`,
-    desc: `${b.ko}(${b.en}) — ${b.role} ${b.defLabel}: ${b.def}`,
+    desc: `${HOLDING} · ${b.ko}(${b.en}) — ${b.role} ${b.defLabel}: ${b.def}`,
     css: 'business-detail', js: 'business-detail',
     bodyAttrs: `data-page="business-${b.slug}"`,
     main,

@@ -435,39 +435,33 @@ main .note { color: var(--muted); }
 .bn-step.is-result dd { color: #fff; }
 .bn-cases-note { margin-top: clamp(28px, 3.5vw, 44px); font-size: var(--fs-xs); line-height: 1.7; color: rgba(255, 255, 255, .62); }
 
-/* ---------- 04 협력 파트너 ---------- */
-.bn-pt-wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(28px, 4vw, 56px); }
-.bn-pt-label { display: flex; align-items: baseline; gap: 10px; padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1.5px solid var(--ink); font-size: 1.05rem; font-weight: 700; letter-spacing: -.02em; }
+/* ---------- 04 협력 파트너 (공개 파트너 전: 제휴 안내 + 제휴 분야) ---------- */
+.bn-pt-wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(28px, 4vw, 56px); align-items: stretch; }
+.bn-pt-call {
+  --sym-bg: rgba(10, 93, 226, .07); --sym-fg: var(--ivory);
+  position: relative; overflow: hidden; isolation: isolate; display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+  padding: clamp(28px, 3.4vw, 44px); border-radius: var(--radius); background: var(--ivory);
+}
+.bn-pt-call-sym { position: absolute; z-index: -1; right: -48px; bottom: -48px; width: clamp(180px, 20vw, 260px); height: clamp(180px, 20vw, 260px); }
+.bn-pt-call-k { font-size: .7rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--blue); }
+.bn-pt-call-t { font-size: clamp(1.6rem, 2.5vw, 2.15rem); font-weight: 800; line-height: 1.25; letter-spacing: -.04em; }
+.bn-pt-call-d { max-width: 34ch; color: var(--muted); line-height: 1.7; }
+.bn-pt-call-btn { margin-top: auto; }
+.bn-pt-call-d { margin-bottom: 14px; }
+
+.bn-pt-label { display: flex; align-items: baseline; gap: 10px; padding-bottom: 14px; border-bottom: 1.5px solid var(--ink); font-size: 1.05rem; font-weight: 700; letter-spacing: -.02em; }
 .bn-pt-label .en { font-size: .68rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--blue); }
-.bn-ch-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.bn-ch {
-  position: relative; overflow: hidden; isolation: isolate; display: grid; align-content: end; gap: 4px; min-height: 236px;
-  padding: 24px; border-radius: var(--radius); background: var(--ivory);
+.bn-pt-item {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 6px 18px;
+  padding: 20px 0; border-bottom: 1px solid var(--line);
 }
-.bn-ch-name { font-size: clamp(2rem, 3vw, 2.75rem); font-weight: 800; line-height: 1.1; letter-spacing: -.05em; }
-.bn-ch-en { font-size: .72rem; font-weight: 600; letter-spacing: .22em; color: var(--muted); }
-.bn-ch-desc { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(11, 27, 51, .1); font-size: .86rem; color: var(--muted); }
-.bn-ch-note { margin-top: 14px; }
-
-.bn-slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.bn-slot {
-  --sym-bg: rgba(11, 27, 51, .14); --sym-fg: #fff;
-  display: grid; justify-items: center; align-content: center; gap: 10px; min-height: 112px; padding: 16px 10px;
-  border-radius: var(--radius-sm); border: 1.5px dashed rgba(11, 27, 51, .16); text-align: center;
-  background: repeating-linear-gradient(135deg, transparent 0 11px, rgba(11, 27, 51, .022) 11px 22px);
-  font-size: .76rem; font-weight: 500; line-height: 1.4; color: var(--muted);
-}
-.bn-slot svg { width: 26px; height: 26px; }
-
-.bn-pt-foot {
-  display: flex; align-items: center; gap: 18px 24px; margin-top: clamp(28px, 3.5vw, 44px);
-  padding: 22px 24px; border-radius: var(--radius); background: var(--blue-50);
-}
-.bn-pt-ico { width: 48px; height: 48px; flex: none; display: grid; place-items: center; border-radius: 50%; background: #fff; color: var(--blue); }
+.bn-pt-ico { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: var(--blue-50); color: var(--blue); }
 .bn-pt-ico svg { width: 22px; height: 22px; }
-.bn-pt-foot p { flex: 1; display: grid; gap: 2px; min-width: 0; }
-.bn-pt-foot strong { font-weight: 700; letter-spacing: -.02em; }
-.bn-pt-foot p span { font-size: .9rem; color: var(--muted); }
+.bn-pt-txt { display: grid; gap: 4px; min-width: 0; }
+.bn-pt-txt strong { font-size: 1.05rem; font-weight: 700; letter-spacing: -.02em; }
+.bn-pt-txt span { font-size: .92rem; line-height: 1.6; color: var(--muted); }
+.bn-pt-biz { font-size: .68rem; font-weight: 600; letter-spacing: .16em; color: var(--muted); white-space: nowrap; }
+.bn-pt-note { margin-top: 16px; }
 
 /* ---------- 반응형 ---------- */
 @media (max-width: 1180px) {
@@ -494,9 +488,16 @@ main .note { color: var(--muted); }
   .bn-hold-desc { grid-area: desc; max-width: 60ch; padding: 20px 0 0; border-left: 0; border-top: 1px solid var(--line-dark); }
   .bn-projs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bn-case { grid-template-columns: 1fr; }
-  .bn-pt-wrap { grid-template-columns: 1fr; }
+}
+@media (max-width: 960px) {
+  /* 제휴 분야: 담당 사업 표기를 설명 아래로 내려 설명 폭 확보 */
+  .bn-pt-item { grid-template-columns: 48px minmax(0, 1fr); grid-template-areas: "ico txt" ". biz"; align-items: start; }
+  .bn-pt-ico { grid-area: ico; }
+  .bn-pt-txt { grid-area: txt; }
+  .bn-pt-biz { grid-area: biz; }
 }
 @media (max-width: 860px) {
+  .bn-pt-wrap { grid-template-columns: 1fr; }
   .bn-tree { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bn-tree::after { left: calc((100% - var(--gap)) / 4); right: calc((100% - var(--gap)) / 4); }
   .bn-tree span:nth-child(n+3) { display: none; }
@@ -514,10 +515,6 @@ main .note { color: var(--muted); }
   .bn-filter .chip { flex: none; }
   .bn-step dd { padding-left: 0; }
   .bn-step.is-result { padding: 18px; }
-  .bn-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .bn-slot:nth-child(n+5) { display: none; }
-  .bn-pt-foot { flex-wrap: wrap; }
-  .bn-pt-foot .btn { width: 100%; }
 }
 @media (max-width: 560px) {
   /* 모바일: 2열 압축 타일 — 설명은 접고 워드마크·상위/하위 관계만 */
@@ -564,8 +561,10 @@ main .note { color: var(--muted); }
   .bn-proj-cta { min-height: 260px; }
   .bn-projs { grid-template-columns: 1fr; }
   .bn-proj-media { aspect-ratio: 16 / 10; }
-  .bn-ch { min-height: 180px; padding: 20px; }
-  .bn-ch-name { font-size: 1.9rem; }
+  .bn-pt-call-btn { align-self: stretch; }
+  .bn-pt-item { grid-template-columns: 40px minmax(0, 1fr); gap: 6px 14px; padding: 18px 0; }
+  .bn-pt-ico { width: 40px; height: 40px; }
+  .bn-pt-ico svg { width: 19px; height: 19px; }
 }
 
 /* 움직임 줄이기 */

@@ -28,12 +28,13 @@
     });
     var current = -2, raf = null;
 
+    /* 장면 카운터는 사업 번호(01 교육 …)와 헷갈리지 않게 'SCENE 1 / 7' 형식으로 표시합니다. */
     function label(i, t) {
       if (!countEl) return;
       var en, ko;
-      if (i >= 0) { en = ranges[i].en ? ranges[i].en.textContent : ''; ko = ranges[i].ko ? ranges[i].ko.textContent : ''; countEl.textContent = pad(i + 1) + ' / ' + pad(items.length); }
-      else if (t < ranges[0].start) { en = 'IDEA'; ko = '하나의 아이디어에서'; countEl.textContent = '00 / ' + pad(items.length); }
-      else { en = 'DOOGO GROUP'; ko = '일곱 사업이 하나로'; countEl.textContent = pad(items.length) + ' / ' + pad(items.length); }
+      if (i >= 0) { en = ranges[i].en ? ranges[i].en.textContent : ''; ko = ranges[i].ko ? ranges[i].ko.textContent : ''; countEl.textContent = 'SCENE ' + (i + 1) + ' / ' + items.length; }
+      else if (t < ranges[0].start) { en = 'IDEA'; ko = '하나의 아이디어에서'; countEl.textContent = 'INTRO'; }
+      else { en = 'DOOGO GROUP'; ko = '일곱 사업이 하나로'; countEl.textContent = 'OUTRO'; }
       enEl.textContent = en; koEl.textContent = ko;
     }
     function render() {

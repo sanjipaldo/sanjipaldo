@@ -3,15 +3,15 @@
    첫 화면 · 주요 서비스 · 현장 · 관련 브랜드/프로젝트 · 담당 대표 · 문의/이전·다음
    ========================================================= */
 
-.subnav { transition: top .45s var(--ease); }
-
 .nowrap { white-space: nowrap; }
 .ico-down { transform: rotate(90deg); }
 .btn:hover .ico-down { transform: rotate(90deg) translateX(3px); }
 
 /* ---------- 1. 첫 화면 ---------- */
-/* 제목 → 역할 카피·버튼 → 영상 프레임 → 핵심 정보 순서. 프레임이 첫 화면 안에 들어오도록 위쪽을 압축 */
-.dt-hero { padding: clamp(28px, 3.6vw, 60px) 0 clamp(20px, 2.6vw, 36px); background: var(--ivory); isolation: isolate; }
+/* 제목 → 역할 카피·버튼 → 영상 프레임 → 핵심 정보 순서.
+   위 여백·breadcrumb·eyebrow·제목 크기는 다른 서브페이지와 같은 공통 값(.page-hero, .display)을 그대로 쓰고,
+   프레임이 첫 화면에 들어오도록 제목 아래 간격만 줄임 */
+.dt-hero { padding-bottom: clamp(20px, 2.6vw, 36px); background: var(--ivory); isolation: isolate; }
 .dt-hero-glow { position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: radial-gradient(48% 60% at 96% 0%, rgba(10, 93, 226, .13), transparent 70%), radial-gradient(40% 50% at 0% 60%, rgba(10, 93, 226, .05), transparent 70%); }
 .dt-hero-glow::after {
@@ -20,18 +20,20 @@
   background-size: 88px 88px;
   -webkit-mask-image: radial-gradient(60% 70% at 85% 0%, #000, transparent 72%); mask-image: radial-gradient(60% 70% at 85% 0%, #000, transparent 72%);
 }
-.dt-hero .breadcrumb { margin-bottom: clamp(16px, 1.8vw, 24px); color: var(--muted); }
-.dt-hero .eyebrow { margin-bottom: clamp(12px, 1.4vw, 18px); }
-.dt-title { font-size: clamp(2.6rem, 8.4vw, 8.1rem); font-weight: 600; line-height: 1; letter-spacing: -.035em; color: var(--ink); }
-.dt-title .en { font-family: var(--font-en); letter-spacing: -.035em; }
+.dt-title { color: var(--ink); }
+.dt-title .en { font-family: var(--font-en); }
 .dt-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; font-size: clamp(1.02rem, 1.35vw, 1.22rem); font-weight: 700; letter-spacing: -.025em; color: var(--ink-2); }
 .dt-sub i { width: 1px; height: 16px; background: rgba(11, 27, 51, .25); }
-.dt-sub-ico { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--blue); color: #fff; box-shadow: 0 10px 24px -12px rgba(10, 93, 226, .8); }
+.dt-sub-ico { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--radius-sm); background: var(--blue); color: #fff; box-shadow: 0 10px 24px -12px rgba(10, 93, 226, .8); }
 .dt-sub-ico svg { width: 21px; height: 21px; }
-.dt-key { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 13px; border-radius: 999px; background: var(--blue-50); color: var(--blue-700); font-size: .8rem; font-weight: 700; letter-spacing: 0; }
-.dt-key::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+/* 소속 표시: (주)두고홀딩스 계열 사업 → 그룹 구조로 연결 (보이는 크기 32px, 누르는 영역은 ::after로 44px) */
+.dt-key { position: relative; display: inline-flex; white-space: nowrap; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 999px; background: var(--blue-50); color: var(--blue-700); font-size: .84rem; font-weight: 700; letter-spacing: 0; transition: background-color .25s var(--ease), color .25s var(--ease); }
+.dt-key::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); transition: background-color .25s; }
+.dt-key::after { content: ""; position: absolute; inset: -6px -2px; }
+.dt-key:hover { background: var(--blue); color: #fff; }
+.dt-key:hover::before { background: #fff; }
 
-.dt-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 24px clamp(32px, 5vw, 80px); margin-top: clamp(20px, 2.4vw, 34px); }
+.dt-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 24px clamp(32px, 5vw, 80px); margin-top: clamp(16px, 1.8vw, 26px); }
 .dt-role { margin-top: clamp(12px, 1.2vw, 16px); font-size: clamp(1.15rem, 1.75vw, 1.55rem); font-weight: 600; line-height: 1.5; letter-spacing: -.035em; color: var(--ink); max-width: 32ch; text-wrap: balance; }
 .dt-hero-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
 .dt-hero-actions .btn--line { background: rgba(255, 255, 255, .7); }
@@ -45,14 +47,14 @@
 .dt-facts dd { font-size: .98rem; font-weight: 600; line-height: 1.6; color: var(--ink-2); }
 .dt-facts dd .en { margin-left: 6px; font-size: .74rem; letter-spacing: .16em; color: var(--blue); }
 
-.dt-frame-wrap { position: relative; margin-top: clamp(26px, 3vw, 44px); }
+.dt-frame-wrap { position: relative; margin-top: clamp(24px, 2.6vw, 36px); }
 /* 프레임 중간부터 아래는 흰 바탕 (히어로가 overflow:hidden 이라 가로 넘침 없음) */
 .dt-frame-wrap::before { content: ""; position: absolute; z-index: -1; top: 56%; bottom: -100vh; left: calc(50% - 50vw); right: calc(50% - 50vw); background: #fff; }
 .dt-frame {
   position: relative; overflow: hidden; isolation: isolate; aspect-ratio: 21 / 9;
-  border-radius: clamp(18px, 2.4vw, 32px); background: var(--ivory-2); box-shadow: 0 50px 100px -44px rgba(11, 27, 51, .45);
+  border-radius: var(--radius-lg); background: var(--ivory-2); box-shadow: 0 50px 100px -44px rgba(11, 27, 51, .45);
 }
-.js .dt-frame[data-reveal] { transform: none; opacity: 1; clip-path: inset(6% 4% 6% 4% round 32px); transition: clip-path 1.4s var(--ease) .15s; }
+.js .dt-frame[data-reveal] { transform: none; opacity: 1; clip-path: inset(6% 4% 6% 4% round var(--radius-lg)); transition: clip-path 1.4s var(--ease) .15s; }
 .js .dt-frame[data-reveal].is-in { clip-path: inset(0 0 0 0 round 0px); }
 .dt-frame-media { position: absolute; inset: -8% 0; transform: translate3d(0, var(--py, 0px), 0); will-change: transform; }
 .dt-frame video { width: 100%; height: 100%; object-fit: cover; object-position: var(--op, 50%) 50%; }
@@ -104,7 +106,7 @@
 .dt-svc:hover { transform: translateY(-6px); border-color: transparent; box-shadow: var(--shadow); }
 .dt-svc:hover::before { transform: scaleX(1); }
 .dt-svc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.dt-svc-ico { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 17px; background: var(--blue-50); color: var(--blue); transition: background-color .35s var(--ease), color .35s var(--ease), transform .45s var(--ease); }
+.dt-svc-ico { display: grid; place-items: center; width: 58px; height: 58px; border-radius: var(--radius-sm); background: var(--blue-50); color: var(--blue); transition: background-color .35s var(--ease), color .35s var(--ease), transform .45s var(--ease); }
 .dt-svc-ico svg { width: 28px; height: 28px; }
 .dt-svc:hover .dt-svc-ico { background: var(--blue); color: #fff; transform: rotate(-6deg); }
 .dt-svc-num { font-family: var(--font-en); font-size: 2.4rem; font-weight: 500; line-height: 1; letter-spacing: -.04em; color: rgba(10, 93, 226, .14); transition: color .35s; }
@@ -132,14 +134,14 @@
 .dt-shot .media-cover { position: absolute; inset: 0; background: transparent; }
 .dt-shot img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s var(--ease); }
 .dt-shot:hover img { transform: scale(1.04); }
-/* 1행: 현장 사진(5칸) + 그룹 영상 속 장면(7칸, 16:9가 행 높이를 정함).
+/* 현장 사진(5칸) + 그룹 영상 속 장면(7칸, 16:9가 행 높이를 정함).
    1440 기준 사진 칸 541×429 — 모든 현장 사진이 원본 크기 이하로 표시됨 */
 .dt-shot--scene { grid-column: 1 / span 5; grid-row: 1; align-self: stretch; }
 .dt-shot--film { grid-column: 6 / -1; grid-row: 1; aspect-ratio: 16 / 9; }
-.dt-plan { grid-column: 1 / -1; grid-row: 2; }
-/* 사진 2장(공간): 2행 = 공유오피스 사진(원본 비율 630×255, 원본 폭 이하) + 사진 계획 */
-.dt-gallery.has-two .dt-shot--scene:nth-child(2) { grid-row: 2; align-self: start; aspect-ratio: var(--ar); max-width: var(--w); }
-.dt-gallery.has-two .dt-plan { grid-column: 6 / -1; align-self: stretch; }
+/* 사진 2장(공간): 왼쪽 칸에 원본 비율로 위아래 쌓고(원본 폭 이하), 영상 장면이 두 행 높이를 채움 */
+.dt-gallery.has-two .dt-shot--scene { aspect-ratio: var(--ar); align-self: start; max-width: var(--w); }
+.dt-gallery.has-two .dt-shot--scene:nth-child(2) { grid-row: 2; }
+.dt-gallery.has-two .dt-shot--film { grid-row: 1 / span 2; aspect-ratio: auto; align-self: stretch; }
 .dt-shot figcaption {
   position: absolute; left: 14px; bottom: 14px; z-index: 2; display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% - 28px);
   padding: 6px 13px 6px 6px; border-radius: 999px; background: rgba(255, 255, 255, .94); color: var(--ink-2);
@@ -154,16 +156,6 @@
 }
 .dt-shot-play svg { width: 22px; height: 22px; margin-left: 3px; }
 .dt-shot-play:hover { transform: scale(1.08); background: var(--blue); color: #fff; }
-.dt-plan { display: flex; flex-direction: column; padding: clamp(22px, 2.4vw, 30px); border-radius: var(--radius); background: #fff; border: 1.5px dashed rgba(11, 27, 51, .16); }
-.dt-plan-label { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.02rem; letter-spacing: -.02em; }
-.dt-plan-list { margin-top: 14px; }
-.dt-plan-list li { display: flex; align-items: baseline; gap: 14px; padding: 11px 0; border-top: 1px solid var(--line-2); font-weight: 600; color: var(--ink-2); }
-.dt-plan-list .en { flex: none; font-size: .78rem; color: var(--blue); }
-.dt-plan .note { margin-top: auto; padding-top: 14px; color: var(--muted); }
-.dt-plan--wide { flex-direction: row; flex-wrap: wrap; align-items: center; align-content: center; gap: 14px 32px; padding-block: 20px; }
-.dt-plan--wide .dt-plan-list { flex: 1 1 auto; display: flex; flex-wrap: wrap; margin-top: 0; }
-.dt-plan--wide .dt-plan-list li { padding: 4px 22px; border-top: 0; border-left: 1px solid var(--line); }
-.dt-plan--wide .note { margin-top: 0; padding-top: 0; }
 
 /* ---------- 4. 관련 브랜드·프로젝트 (네이비) ---------- */
 .dt-rel { overflow: hidden; isolation: isolate; }
@@ -205,14 +197,12 @@
 .dt-step-links a:hover { background: #fff; border-color: #fff; color: var(--ink); }
 
 /* 광고 채널 */
-.dt-channels { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, .8fr); gap: 16px; margin-bottom: clamp(40px, 5vw, 64px); }
+.dt-channels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: clamp(40px, 5vw, 64px); }
 .dt-channel { display: flex; flex-direction: column; padding: clamp(24px, 2.6vw, 34px); border-radius: var(--radius); background: #fff; color: var(--ink); transition: transform .45s var(--ease); }
 .dt-channel:hover { transform: translateY(-6px); }
 .dt-channel-en { font-size: clamp(2rem, 3.4vw, 3rem); font-weight: 700; line-height: 1; letter-spacing: -.02em; }
 .dt-channel-ko { margin-top: 10px; font-size: .95rem; font-weight: 700; color: var(--blue); }
 .dt-channel p { margin-top: auto; padding-top: 24px; color: var(--ink-2); line-height: 1.6; }
-.dt-channel--note { justify-content: flex-end; background: transparent; border: 1.5px dashed var(--line-dark); color: var(--on-dark-2); }
-.dt-channel--note p { color: var(--on-dark-2); }
 
 /* 큰 번호 목록(콘텐츠 형식 · 공간) — PLAYD식 번호 리스트, 2) 서비스 카드와 다른 정보(결과물·이런 분께) */
 .dt-rows { border-top: 1px solid rgba(255, 255, 255, .22); }
@@ -220,7 +210,7 @@
 .dt-rows-head { padding: 14px 0; border-bottom: 1px solid var(--line-dark); font-size: .8rem; font-weight: 700; color: var(--on-dark-2); }
 .dt-rows-head span:first-child { grid-column: 1 / span 2; }
 .dt-row { position: relative; align-items: center; padding: clamp(24px, 2.8vw, 38px) 0; border-bottom: 1px solid var(--line-dark); isolation: isolate; }
-.dt-row::before { content: ""; position: absolute; top: 0; bottom: 0; left: -18px; right: -18px; z-index: -1; border-radius: 14px; background: rgba(255, 255, 255, .05); opacity: 0; transition: opacity .4s var(--ease); }
+.dt-row::before { content: ""; position: absolute; top: 0; bottom: 0; left: -18px; right: -18px; z-index: -1; border-radius: var(--radius-sm); background: rgba(255, 255, 255, .05); opacity: 0; transition: opacity .4s var(--ease); }
 .dt-row:hover::before { opacity: 1; }
 .dt-row-num { font-family: var(--font-en); font-size: clamp(2.2rem, 3.4vw, 3.2rem); font-weight: 500; line-height: 1; letter-spacing: -.04em; color: rgba(255, 255, 255, .3); transition: color .4s var(--ease); }
 .dt-row:hover .dt-row-num { color: var(--blue-300); }
@@ -238,7 +228,7 @@
 .dt-stay-media { aspect-ratio: 3 / 2; border-radius: 0; }
 .dt-stay-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s var(--ease); }
 .dt-stay:hover .dt-stay-media img { transform: scale(1.03); }
-.dt-stay-badge { position: absolute; left: 16px; top: 16px; z-index: 2; display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: #FFF4D6; color: #8A5A00; font-size: .74rem; font-weight: 700; }
+.dt-stay-badge { position: absolute; left: 16px; top: 16px; z-index: 2; display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: #FFF4D6; color: #8A5A00; font-size: .78rem; font-weight: 700; }
 .dt-stay-body { position: relative; display: flex; flex-direction: column; align-items: flex-start; padding: clamp(26px, 3.4vw, 48px); }
 .dt-stay .dt-row-num { position: absolute; right: clamp(20px, 2.6vw, 34px); top: clamp(16px, 2vw, 26px); }
 .dt-stay-en { font-size: .74rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--blue-300); }
@@ -268,7 +258,7 @@
 /* DOOGO MARKET 두 갈래 */
 .dt-paths { display: grid; grid-template-columns: minmax(0, 1fr) clamp(150px, 16vw, 230px) minmax(0, 1fr); align-items: stretch; }
 .dt-path { display: flex; flex-direction: column; align-items: flex-start; padding: clamp(26px, 3.4vw, 44px); border-radius: var(--radius-lg); background: #fff; color: var(--ink); }
-.dt-path-ico { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 17px; background: var(--blue-50); color: var(--blue); }
+.dt-path-ico { display: grid; place-items: center; width: 58px; height: 58px; border-radius: var(--radius-sm); background: var(--blue-50); color: var(--blue); }
 .dt-path-ico svg { width: 28px; height: 28px; }
 .dt-path-en { margin-top: clamp(28px, 3.6vw, 44px); font-size: .74rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--blue); }
 .dt-path-title { margin-top: 6px; font-size: clamp(1.7rem, 2.6vw, 2.3rem); font-weight: 800; letter-spacing: -.04em; line-height: 1.2; }
@@ -285,7 +275,7 @@
 .dt-leader-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); align-items: center; gap: 40px clamp(40px, 6vw, 96px); }
 .dt-leader-head .lead { margin-top: 20px; max-width: 30ch; }
 .dt-leader-head .link-arrow { margin-top: 26px; min-height: 44px; }
-.dt-leader-card { display: grid; grid-template-columns: minmax(0, .62fr) minmax(0, 1fr); overflow: hidden; border-radius: var(--radius-lg); background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow-sm); transition: box-shadow .5s var(--ease); }
+.dt-leader-card { display: grid; grid-template-columns: minmax(0, .62fr) minmax(0, 1fr); overflow: hidden; border-radius: var(--radius-lg); background: #fff; border: 1px solid var(--line-2); transition: box-shadow .5s var(--ease); }
 .dt-leader-card:hover { box-shadow: var(--shadow); }
 .dt-leader-photo { position: relative; isolation: isolate; overflow: hidden; min-height: 340px; background: linear-gradient(165deg, #EAF1FD 0%, #F4F2EC 58%, #ECE6DA 100%); }
 .dt-leader-photo::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(60% 45% at 50% 40%, rgba(255, 255, 255, .9), transparent 70%); }
@@ -293,15 +283,14 @@
 .dt-leader-card:hover .dt-sil { transform: translateX(-50%) translateY(-8px); fill: rgba(10, 93, 226, .14); }
 .dt-leader-num { position: absolute; left: 20px; top: 14px; font-size: 3.4rem; font-weight: 500; line-height: 1; letter-spacing: -.04em; color: rgba(10, 93, 226, .16); }
 .dt-leader-ico { position: absolute; right: 20px; top: 20px; width: 26px; height: 26px; color: var(--ink); opacity: .5; }
-.dt-leader-badge { position: absolute; left: 16px; bottom: 16px; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, .94); color: var(--ink-2); font-size: .78rem; font-weight: 600; box-shadow: 0 6px 16px -10px rgba(11, 27, 51, .4); }
-.dt-leader-badge i { position: relative; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
-.dt-leader-badge i::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid var(--blue-300); animation: dtPing 2.2s var(--ease) infinite; }
+.dt-leader-status i { position: relative; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
+.dt-leader-status i::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid var(--blue-300); animation: dtPing 2.2s var(--ease) infinite; }
 @keyframes dtPing { 0% { transform: scale(.6); opacity: 1; } 100% { transform: scale(1.8); opacity: 0; } }
 .dt-leader-body { display: flex; flex-direction: column; align-items: flex-start; padding: clamp(24px, 3vw, 40px); }
 .dt-leader-area { font-size: .92rem; font-weight: 700; color: var(--blue); }
 .dt-leader-area .en { margin-left: 6px; font-size: .74rem; letter-spacing: .14em; color: var(--muted); }
 .dt-leader-name { margin-top: 10px; font-size: clamp(1.35rem, 1.8vw, 1.6rem); font-weight: 800; letter-spacing: -.035em; line-height: 1.3; }
-.dt-leader-status { margin-top: 4px; font-size: .9rem; color: var(--muted); }
+.dt-leader-status { margin-top: 6px; display: inline-flex; align-items: center; gap: 9px; font-size: .9rem; font-weight: 600; color: var(--muted); }
 .dt-leader-dl { width: 100%; margin-top: 22px; border-top: 1px solid var(--line-2); }
 .dt-leader-dl > div { padding: 14px 0; border-bottom: 1px solid var(--line-2); }
 .dt-leader-dl dt { font-size: .78rem; font-weight: 700; color: var(--blue); }
@@ -328,7 +317,7 @@
 .dt-pager-card.is-next { grid-template-columns: minmax(0, 1fr) clamp(130px, 15vw, 210px); }
 .dt-pager-card.is-next .dt-pager-media { order: 2; }
 .dt-pager-card.is-next .dt-pager-body { align-items: flex-end; text-align: right; }
-.dt-pager-media { display: block; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 12px; background: var(--ivory-2); }
+.dt-pager-media { display: block; aspect-ratio: 16 / 10; overflow: hidden; border-radius: var(--radius-sm); background: var(--ivory-2); }
 .dt-pager-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 1s var(--ease); }
 .dt-pager-card:hover .dt-pager-media img { transform: scale(1.07); }
 .dt-pager-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding-inline: 4px; }
@@ -354,11 +343,6 @@
 .dt-others-all { margin-left: auto; min-height: 44px; }
 
 /* ---------- 반응형 ---------- */
-/* 짧은 데스크톱 화면(1366×768 등): 제목을 줄여 영상 프레임이 첫 화면에 들어오게 */
-@media (min-width: 1025px) and (max-height: 860px) {
-  .dt-title { font-size: clamp(2.6rem, 6.6vw, 6.4rem); }
-  .dt-hero { padding-top: clamp(24px, 2.6vw, 40px); }
-}
 @media (max-width: 1180px) {
   .dt-svc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dt-svc-grid[style*="--n:3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -377,8 +361,6 @@
   .dt-facts > div:nth-child(n+3) { border-top: 1px solid var(--line-2); }
   .dt-facts > div:nth-child(even) { padding-left: 18px; border-left: 1px solid var(--line-2); }
   .dt-rel-head { grid-template-columns: 1fr; }
-  .dt-channels { grid-template-columns: 1fr 1fr; }
-  .dt-channel--note { grid-column: 1 / -1; }
   .dt-for { grid-template-columns: 1fr; }
   .dt-for-cta { justify-self: start; }
   .dt-ask { grid-template-columns: 1fr; align-items: start; }
@@ -403,11 +385,9 @@
   .dt-gallery { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
   .dt-shot--scene { grid-column: 1; grid-row: 1; aspect-ratio: 4 / 3; align-self: start; }
   .dt-shot--film { grid-column: 2; grid-row: 1; aspect-ratio: auto; align-self: stretch; }
-  .dt-plan, .dt-gallery.has-two .dt-plan { grid-column: 1 / -1; grid-row: auto; }
+  .dt-gallery.has-two .dt-shot--scene:first-child { aspect-ratio: 4 / 3; }
+  .dt-gallery.has-two .dt-shot--film { grid-row: 1; }
   .dt-gallery.has-two .dt-shot--scene:nth-child(2) { grid-column: 1 / -1; grid-row: 2; justify-self: center; width: 100%; }
-  .dt-plan--wide { flex-direction: column; flex-wrap: nowrap; align-items: stretch; align-content: stretch; }
-  .dt-plan--wide .dt-plan-list { display: block; }
-  .dt-plan--wide .dt-plan-list li { padding: 11px 0; border-left: 0; border-top: 1px solid var(--line-2); }
   .dt-paths { grid-template-columns: 1fr; }
   .dt-path-hub { flex-direction: column; height: 200px; }
   .dt-hub-line { width: 2px; height: auto; flex: 1; background: repeating-linear-gradient(180deg, var(--blue-300) 0 7px, transparent 7px 14px); background-size: 2px 14px; animation-name: dtFlowY; }
@@ -422,15 +402,13 @@
   .dt-others-all { margin-left: 0; }
 }
 @media (max-width: 640px) {
-  .dt-hero .breadcrumb { margin-bottom: 16px; }
-  .dt-title { font-size: clamp(2.5rem, 11.4vw, 3.4rem); }
   .dt-sub-ico { width: 36px; height: 36px; border-radius: 11px; }
   .dt-sub-ico svg { width: 19px; height: 19px; }
   .dt-hero-grid { gap: 20px; }
   .dt-hero-actions .btn { flex: 1 1 auto; min-height: 54px; padding-inline: 22px; font-size: 1rem; }
   .dt-facts { grid-template-columns: 1fr; }
   .dt-facts > div, .dt-facts > div:first-child, .dt-facts > div:nth-child(even) { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 13px 0; border-left: 0; border-top: 0; border-bottom: 1px solid var(--line-2); }
-  .dt-frame { aspect-ratio: 4 / 5; border-radius: 18px; }
+  .dt-frame { aspect-ratio: 4 / 5; border-radius: var(--radius); }
   .dt-frame::after, .dt-frame.is-q-right::after { background: linear-gradient(0deg, rgba(10, 20, 38, .72) 0%, rgba(10, 20, 38, .1) 50%, transparent 70%), linear-gradient(180deg, rgba(10, 20, 38, .35) 0%, transparent 25%); }
   .dt-quote, .dt-frame.is-q-right .dt-quote { left: 18px; right: 18px; bottom: 20px; max-width: none; text-align: left; }
   .dt-frame.is-q-right .dt-quote-label { flex-direction: row; }
@@ -443,8 +421,8 @@
   /* 현장: 1열, 사진은 원본 비율로 (390 기준 원본 폭 이하) */
   .dt-gallery { grid-template-columns: 1fr; }
   .dt-gallery > * { grid-column: 1 !important; grid-row: auto !important; }
-  .dt-shot--scene, .dt-gallery.has-two .dt-shot--scene:nth-child(2) { aspect-ratio: var(--ar, 4 / 3); max-width: none; }
-  .dt-shot--film { aspect-ratio: 16 / 9; }
+  .dt-shot--scene, .dt-gallery.has-two .dt-shot--scene, .dt-gallery.has-two .dt-shot--scene:first-child { aspect-ratio: var(--ar, 4 / 3); max-width: none; }
+  .dt-shot--film, .dt-gallery.has-two .dt-shot--film { aspect-ratio: 16 / 9; }
   .dt-steps { grid-template-columns: 1fr; }
   .dt-step-title { margin-top: 16px; }
   .dt-rows-head { display: none; }
@@ -459,7 +437,7 @@
   .dt-person-body { padding: 14px 14px 18px; }
   .dt-person-name { font-size: 1.15rem; }
   .dt-person-sub { font-size: .8rem; }
-  .dt-person-len { left: 10px; top: 10px; height: 24px; padding: 0 9px; font-size: .72rem; }
+  .dt-person-len { left: 10px; top: 10px; height: 26px; padding: 0 9px; font-size: .78rem; }
   .dt-leader-card { grid-template-columns: 1fr; }
   .dt-leader-photo { min-height: 0; aspect-ratio: 16 / 9; max-height: 240px; }
   .dt-leader-photo .dt-sil { width: 38%; }
@@ -475,6 +453,6 @@
   .js .dt-frame[data-reveal] { clip-path: none !important; }
   .js .dt-steps .dt-step { opacity: 1 !important; transform: none !important; }
   .dt-frame-media { transform: none !important; }
-  .dt-hub-line, .dt-leader-badge i::after { animation: none !important; }
+  .dt-hub-line, .dt-leader-status i::after { animation: none !important; }
   .dt-row:hover .dt-row-title { transform: none; }
 }

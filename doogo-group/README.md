@@ -51,6 +51,7 @@ doogo-group/
 ```
 
 ## 자주 하는 수정
+- **사업 페이지 8개(사업영역 + 7개 상세)**: 문구는 `tools/build-business.mjs`의 데이터를 고친 뒤 `node tools/build-business.mjs`로 다시 만듭니다.
 - **메뉴·푸터 고치기**: `partials/header.html` 또는 `partials/footer.html`을 고친 다음 `node tools/sync-partials.mjs`를 실행하면 모든 페이지에 반영됩니다.
 - **색·글꼴**: `assets/css/base.css` 맨 위 `:root`의 값을 바꿉니다. 그룹 블루는 `--blue: #0A5DE2`(로고 색)입니다.
 - **영상 교체**: `assets/video/`에 같은 파일 이름으로 덮어씁니다. Seedance 2.0으로 만들 때는 `tools/seedance/README.md`를 보세요.
@@ -62,8 +63,8 @@ doogo-group/
 | 확정할 자료 | 지금 상태 | 바꿀 곳 |
 |---|---|---|
 | 메인 영상 · 그룹 영상 | 기획서 마을 일러스트로 만든 임시 영상 (카메라 이동 + 자막) | `assets/video/` · `tools/seedance/` |
-| 사업별 현장 사진 | 그룹 구성 이미지에서 잘라낸 장면 (해상도 낮음) | `assets/img/biz/*-scene.webp` |
-| 대표자 이름·직함·사진 | 문원오 그룹 대표만 있음 (두고클래스 강사 화면 사진의 빨간 배경을 블루로 보정), 나머지는 "프로필 준비 중" | `leadership.html`, 각 사업 상세 |
+| 사업별 현장 사진 | 그룹 구성 이미지에서 잘라낸 장면 (해상도 낮음) · 그룹 구성 이미지의 BIO NZ 국기는 호주 국기로 그려져 있어 뉴질랜드 국기로 고쳐 둠 | `assets/img/biz/*-scene.webp`, `assets/img/scene/ecosystem.webp` |
+| 대표자 이름·직함·사진 | 문원오 그룹 대표만 있음 (기획서의 두고클래스 강사 화면 사진에서 배경을 걷어낸 컷아웃), 나머지는 "프로필 준비 중" | `assets/img/people/`, `leadership.html`, 각 사업 상세 |
 | 교육 명칭 | 사업명 DOOGO CAMPUS, 온라인 클래스 서비스 '두고클래스'로 정리함 (같은 브랜드인지 확인 필요) | 전체 |
 | 법인·브랜드 관계 | "(주)두고홀딩스 아래 7개 계열 사업"으로 표기 | `about.html#structure`, 메인 그룹 구조 |
 | 연혁 · 소식 · 사례 · 파트너 | 샘플 | `about.html`, `news.html`, `brands.html` |

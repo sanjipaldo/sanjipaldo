@@ -13,19 +13,38 @@
 
   /* ---------- 헤더: 스크롤 상태 ---------- */
   var header = $('[data-header-el]');
-  var lastY = window.scrollY;
+  var lastY = window.scrollY, turnY = lastY, dir = 0;
+  function kbdFocusIn(el) { // 키보드 포커스(포커스 링이 보이는 상태)가 el 안에 있는지
+    var a = document.activeElement;
+    if (!a || !el.contains(a)) return false;
+    try { return a.matches(':focus-visible'); } catch (e) { return true; }
+  }
+  function headerBusy() { // 메뉴가 열렸거나 헤더 안에 키보드 포커스가 있으면 숨기지 않음
+    return header.classList.contains('is-mega') || header.classList.contains('is-menu') || doc.classList.contains('is-locked') || kbdFocusIn(header);
+  }
   function onScroll() {
     var y = window.scrollY;
     if (!header) return;
     header.classList.toggle('is-scrolled', y > 24);
-    // 아래로 많이 내릴 때 헤더 숨김, 위로 올리면 표시 (메뉴 열림 상태 제외)
-    var open = header.classList.contains('is-mega') || header.classList.contains('is-menu') || doc.classList.contains('is-locked');
-    if (!open && y > 480 && y > lastY + 6) header.classList.add('is-hidden');
-    else if (y < lastY - 6 || y < 480) header.classList.remove('is-hidden');
+    // 방향이 바뀐 지점부터의 누적 이동량으로 판단 → 천천히 끌어올려도 헤더가 다시 나타남
+    var d = y > lastY ? 1 : (y < lastY ? -1 : 0);
+    if (d && d !== dir) { dir = d; turnY = lastY; }
+    if (y < 480) header.classList.remove('is-hidden');
+    else if (dir > 0 && y - turnY > 8) { if (!headerBusy()) header.classList.add('is-hidden'); }
+    else if (dir < 0 && turnY - y > 12) header.classList.remove('is-hidden');
     lastY = y;
   }
   onScroll();
   window.addEventListener('scroll', onScroll, { passive: true });
+  // 숨은 헤더 안으로 키보드 포커스가 들어오면 다시 보여 줌
+  if (header) header.addEventListener('focusin', function () { header.classList.remove('is-hidden'); });
+
+  /* ---------- Tab 이동 중 표시 (base.css: html.is-tabbing 의 scroll-padding) ---------- */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Tab') doc.classList.add('is-tabbing');
+    else if (!/^(Shift|Control|Alt|Meta)$/.test(e.key)) doc.classList.remove('is-tabbing');
+  }, true);
+  document.addEventListener('pointerdown', function () { doc.classList.remove('is-tabbing'); }, true);
 
   /* ---------- 현재 메뉴 표시 ---------- */
   var page = document.body.getAttribute('data-page') || '';
@@ -36,6 +55,21 @@
       if (a) { a.classList.add('is-current'); a.setAttribute('aria-current', 'page'); }
     }
   });
+  // 메가메뉴 · 모바일 메뉴: 지금 페이지와 주소(파일명)가 같은 링크에 표시, 모바일은 해당 그룹을 펼쳐 둠
+  // (확장자 없는 주소 /about 으로 서빙돼도 맞도록 .html 은 떼고 비교)
+  var file = (location.pathname.split('/').pop() || 'index').toLowerCase().replace(/\.html$/, '');
+  $$('.mega a[href], #mnav .mnav-panel a[href]').forEach(function (a) {
+    var h = (a.getAttribute('href') || '').toLowerCase().replace(/\.html$/, '');
+    if (h === file) a.setAttribute('aria-current', 'page');
+  });
+  var curToggle = $('.mnav-toggle[aria-controls="mnav-' + section + '"]');
+  if (curToggle) {
+    var curPanel = document.getElementById(curToggle.getAttribute('aria-controls'));
+    curToggle.setAttribute('aria-expanded', 'true');
+    if (curPanel) curPanel.hidden = false;
+    if (curToggle.parentElement) curToggle.parentElement.classList.add('is-current');
+  }
+  if (file === 'contact') $$('[data-nav-cta]').forEach(function (a) { a.setAttribute('aria-current', 'page'); });
 
   /* ---------- 데스크톱 드롭다운 · 메가메뉴 ---------- */
   var closeTimer = null;
@@ -63,10 +97,9 @@
     });
     li.addEventListener('focusin', function () { openItem(li); });
   });
+  // .mega 는 li.has-mega 안에 있어 마우스 진입·이탈은 위 li 처리로 함께 다룹니다
   var mega = $('.mega');
   if (mega) {
-    mega.addEventListener('mouseenter', function () { clearTimeout(closeTimer); });
-    mega.addEventListener('mouseleave', function () { closeTimer = setTimeout(closeAll, 160); });
     mega.addEventListener('focusout', function (e) {
       if (!header.contains(e.relatedTarget)) closeAll();
     });
@@ -87,6 +120,14 @@
   /* ---------- 모바일 메뉴 ---------- */
   var menuBtn = $('.hd-menu-btn');
   var mnav = $('#mnav');
+  // 메뉴가 열린 동안 뒤쪽 본문·푸터는 inert → 포커스가 메뉴(와 헤더) 안에서만 돕니다
+  function setBackgroundInert(on) {
+    Array.prototype.forEach.call(document.body.children, function (el) {
+      if (el === header || el === mnav || el.id === 'toast' || /^(SCRIPT|svg)$/i.test(el.tagName)) return;
+      if (on) { if (!el.inert) { el.inert = true; el.setAttribute('data-menu-inert', ''); } }
+      else if (el.hasAttribute('data-menu-inert')) { el.inert = false; el.removeAttribute('data-menu-inert'); }
+    });
+  }
   function setMenu(open) {
     if (!mnav || !menuBtn) return;
     menuBtn.setAttribute('aria-expanded', String(open));
@@ -95,11 +136,14 @@
       mnav.hidden = false;
       requestAnimationFrame(function () { mnav.classList.add('is-open'); });
       header.classList.add('is-menu');
+      header.classList.remove('is-hidden');
       doc.classList.add('is-locked');
+      setBackgroundInert(true);
     } else {
       mnav.classList.remove('is-open');
       header.classList.remove('is-menu');
       doc.classList.remove('is-locked');
+      setBackgroundInert(false);
       setTimeout(function () { if (!mnav.classList.contains('is-open')) mnav.hidden = true; }, 320);
     }
   }
@@ -134,6 +178,12 @@
   } else {
     revealEls.forEach(function (el) { el.classList.add('is-in'); });
   }
+  // Tab 으로 화면 아래 가장자리의 요소에 포커스가 가면 관찰 영역 밖이라도 바로 드러냄
+  document.addEventListener('focusin', function (e) {
+    for (var n = e.target; n && n.nodeType === 1 && n !== document.body; n = n.parentElement) {
+      if (n.hasAttribute('data-reveal') || n.hasAttribute('data-lines')) n.classList.add('is-in');
+    }
+  });
 
   /* ---------- 숫자 카운트: <span data-count="7" data-suffix="개"> ---------- */
   function runCount(el) {
@@ -211,6 +261,9 @@
   function openFilm() {
     if (!modal) return;
     lastFocus = document.activeElement;
+    // 모바일 메뉴 안에서 열었으면 메뉴는 닫히므로, 닫을 때 메뉴 버튼으로 돌아갑니다
+    if (lastFocus && mnav && mnav.contains(lastFocus)) lastFocus = menuBtn;
+    if (film && !film.getAttribute('poster') && film.dataset.filmPoster) film.setAttribute('poster', film.dataset.filmPoster);
     if (film && !film.getAttribute('src') && film.dataset.src) film.setAttribute('src', film.dataset.src);
     modal.hidden = false;
     requestAnimationFrame(function () { modal.classList.add('is-open'); });
@@ -223,6 +276,7 @@
     if (film) film.pause();
     doc.classList.remove('is-locked');
     setTimeout(function () { modal.hidden = true; }, 350);
+    if (lastFocus && (!lastFocus.isConnected || lastFocus.getClientRects().length === 0)) lastFocus = (menuBtn && menuBtn.getClientRects().length) ? menuBtn : null;
     if (lastFocus && lastFocus.focus) lastFocus.focus();
   }
   document.addEventListener('click', function (e) {
@@ -295,6 +349,29 @@
     }, { rootMargin: '-40% 0px -55% 0px' });
     Object.keys(map).forEach(function (id) { sio.observe(document.getElementById(id)); });
   }
+
+  // 서브 내비가 가로로 넘치면 끝 흐림 표시 (base.css: .is-scrollable / .is-start / .is-end)
+  $$('.subnav ul, .subnav ol').forEach(function (bar) {
+    function edge() {
+      var max = bar.scrollWidth - bar.clientWidth;
+      bar.classList.toggle('is-scrollable', max > 2);
+      bar.classList.toggle('is-start', bar.scrollLeft <= 2);
+      bar.classList.toggle('is-end', bar.scrollLeft >= max - 2);
+    }
+    bar.addEventListener('scroll', edge, { passive: true });
+    window.addEventListener('resize', edge);
+    window.addEventListener('load', edge);
+    edge();
+  });
+
+  /* ---------- 하단 CTA 띠 배경: 가까워질 때만 불러오기 ---------- */
+  var bands = $$('.cta-band');
+  if (bands.length && 'IntersectionObserver' in window) {
+    var bio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('is-near'); bio.unobserve(en.target); } });
+    }, { rootMargin: '900px 0px' });
+    bands.forEach(function (b) { bio.observe(b); });
+  } else bands.forEach(function (b) { b.classList.add('is-near'); });
 
   /* ---------- 연도 ---------- */
   $$('[data-year]').forEach(function (el) { el.textContent = new Date().getFullYear(); });

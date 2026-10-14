@@ -64,7 +64,6 @@
 .scene:hover, .scene:focus-visible { color: rgba(255, 255, 255, .85); }
 .scene.is-active { color: #fff; }
 .scene-en { display: flex; gap: 8px; font-size: .68rem; font-weight: 600; letter-spacing: .16em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.scene-en b { font-weight: 600; color: var(--blue-300); opacity: .9; }
 .scene-ko { font-size: .92rem; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .scene-bar { position: relative; display: block; height: 2px; margin-top: 12px; border-radius: 2px; background: rgba(255, 255, 255, .22); overflow: hidden; }
 .scene-bar::after { content: ""; position: absolute; inset: 0; background: #fff; transform-origin: left center; transform: scaleX(var(--p, 0)); }
@@ -89,9 +88,6 @@
 .hero-scroll i::after { content: ""; position: absolute; left: 0; top: 0; width: 100%; height: 45%; background: #fff; animation: scrollLine 2s var(--ease-in-out) infinite; }
 @keyframes scrollLine { 0% { transform: translateY(-100%); } 100% { transform: translateY(230%); } }
 
-@media (max-width: 1180px) {
-  .scene-en b { display: none; }
-}
 /* 낮은 노트북 화면(예: 1280×720)에서도 하단 장면 바까지 한 화면에 */
 @media (max-height: 780px) and (min-width: 1025px) {
   .hero-inner { padding-top: calc(var(--header-h) + 28px); padding-bottom: 28px; }
@@ -490,6 +486,7 @@
 .mq-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .is-paused .marquee-track, .marquee.is-paused .marquee-track, .chain-flow.is-paused .chain-track i, .is-paused .gflow, .group.is-paused .ghub::before { animation-play-state: paused; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
 
 @media (max-width: 1024px) {
   .chain-flow { --ico: 64px; }
@@ -591,7 +588,7 @@
 }
 
 /* =========================================================
-   S7 브랜드와 성장 사례 — 벤토
+   S7 브랜드와 서비스 — 벤토
    ========================================================= */
 .works-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: clamp(230px, 21vw, 300px); grid-auto-flow: row dense; gap: 18px; }
 .work--a { grid-column: span 2; grid-row: span 2; }
@@ -625,6 +622,8 @@
   .work-more { grid-template-rows: 1fr; }
   .work-desc { opacity: 1; }
 }
+/* 카드 이미지는 생성 예시 이미지 — 사업 상세 페이지와 같은 '이미지 예시' 표시를 오른쪽 위에 작게 */
+.work-ex { position: absolute; top: 16px; right: 16px; z-index: 1; height: 22px; box-shadow: 0 2px 8px rgba(5, 12, 26, .18); pointer-events: none; }
 .works-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; margin-top: 36px; }
 .works .note { color: var(--on-dark-3); }
 @media (max-width: 1024px) {

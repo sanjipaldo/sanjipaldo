@@ -3,11 +3,10 @@
    영상 첫 화면 + 사업 바로가기 · 가치사슬 띠 · 7개 사업 카드
    ========================================================= */
 
-/* 헤더가 숨으면 서브 내비를 맨 위로 */
-.subnav { transition: top .45s var(--ease); }
-.bz-subnav a .en { font-size: .78rem; font-weight: 600; margin-right: 6px; opacity: .55; }
+/* 서브 내비 번호: 작은 글씨라 투명도 대신 대비가 충분한 색(흰 바탕 위 블루, 활성 탭의 남색 위 밝은 블루) */
+.bz-subnav a .en { font-size: .78rem; font-weight: 600; margin-right: 6px; color: var(--blue); }
+.bz-subnav a.is-active .en { color: var(--blue-300); }
 .nowrap { white-space: nowrap; }
-.bz-subnav a.is-active .en { opacity: .8; }
 
 /* ---------- 1. 첫 화면 ---------- */
 .bz-hero {
@@ -33,16 +32,24 @@
 .bz-hero.is-swap .bz-hero-shade { background-color: rgba(10, 20, 38, .06); }
 
 .bz-hero-inner { position: relative; }
-.bz-hero .breadcrumb { margin-bottom: 26px; color: var(--on-dark-2); }
-.bz-hero .eyebrow { margin-bottom: 24px; }
-.bz-hero-title { max-width: none; font-size: clamp(2.9rem, 8.2vw, 7.75rem); line-height: 1.04; letter-spacing: -.045em; }
+.bz-hero .breadcrumb { color: var(--on-dark-2); }
+/* 제목 크기·행간은 메인과 같은 .display 공통 값 */
+.bz-hero-title { max-width: none; }
 .bz-hero-title .accent { color: var(--blue-300); }
-.bz-hero .bz-hero-lead { margin-top: clamp(22px, 2.6vw, 34px); max-width: 44ch; color: rgba(255, 255, 255, .78); }
+.bz-hero .bz-hero-lead { margin-top: clamp(22px, 2.6vw, 34px); max-width: 50ch; color: rgba(255, 255, 255, .78); }
 
 .bz-hero-foot { margin-top: clamp(44px, 6.5vw, 96px); padding-top: 22px; border-top: 1px solid var(--line-dark); }
-.bz-jump-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
-.bz-jump-label { display: inline-flex; align-items: center; gap: 12px; font-size: .9rem; font-weight: 600; color: var(--on-dark-2); }
-.bz-jump-label .en { font-size: .74rem; letter-spacing: .22em; text-transform: uppercase; color: var(--blue-300); }
+.bz-jump-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 16px; }
+.bz-jump-label { margin-right: auto; font-size: .9rem; font-weight: 600; color: var(--on-dark-2); }
+/* 그룹 구조: DOOGO HOLDINGS → 7개 계열 사업 */
+.bz-org { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.bz-org-hold { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 999px; background: rgba(111, 162, 242, .16); border: 1px solid rgba(111, 162, 242, .4); font-size: .74rem; font-weight: 600; letter-spacing: .18em; color: #fff; }
+.bz-org-arrow { display: inline-flex; color: var(--blue-300); }
+.bz-org-arrow svg { width: 16px; height: 16px; }
+.bz-org-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .3); color: #fff; font-size: .88rem; font-weight: 600; transition: background-color .25s var(--ease), color .25s var(--ease), border-color .25s var(--ease); }
+.bz-org-link svg { width: 15px; height: 15px; transition: transform .3s var(--ease); }
+.bz-org-link:hover { background: #fff; border-color: #fff; color: var(--ink); }
+.bz-org-link:hover svg { transform: translateX(3px); }
 .bz-vtoggle {
   flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, .3); color: #fff; background: rgba(255, 255, 255, .06);
@@ -57,7 +64,7 @@
 .bz-jump { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
 .bz-jump-item {
   position: relative; display: grid; grid-template-columns: 1fr auto; align-content: space-between; gap: 18px 8px;
-  min-height: 132px; padding: 16px 16px 18px; border-radius: 18px; overflow: hidden;
+  min-height: 132px; padding: 16px 16px 18px; border-radius: var(--radius); overflow: hidden;
   background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .14); color: #fff;
   backdrop-filter: blur(12px) saturate(140%); -webkit-backdrop-filter: blur(12px) saturate(140%);
   transition: background-color .35s var(--ease), border-color .35s var(--ease), color .35s var(--ease), transform .45s var(--ease);
@@ -119,7 +126,7 @@
 .bz-cards { display: grid; gap: clamp(18px, 2.6vw, 36px); }
 .bz-card {
   position: relative; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 64px);
-  padding: clamp(12px, 1.5vw, 20px); border-radius: clamp(22px, 2.4vw, 34px); background: var(--ivory);
+  padding: clamp(12px, 1.5vw, 20px); border-radius: var(--radius-lg); background: var(--ivory);
   scroll-margin-top: calc(var(--header-h) + 84px);
   transition: box-shadow .5s var(--ease);
 }
@@ -128,9 +135,9 @@
 
 .bz-media {
   position: relative; display: block; overflow: hidden; isolation: isolate; min-height: 540px;
-  border-radius: clamp(14px, 1.8vw, 24px); background: var(--ivory-2);
+  border-radius: var(--radius); background: var(--ivory-2);
 }
-.js .bz-media[data-reveal] { opacity: 1; transform: none; clip-path: inset(7% 7% 7% 7% round 24px); transition: clip-path 1.3s var(--ease); }
+.js .bz-media[data-reveal] { opacity: 1; transform: none; clip-path: inset(7% 7% 7% 7% round var(--radius)); transition: clip-path 1.3s var(--ease); }
 .js .bz-media[data-reveal].is-in { clip-path: inset(0 0 0 0 round 0px); }
 .bz-media-inner { position: absolute; inset: -8% 0; transform: translate3d(0, var(--py, 0px), 0); will-change: transform; }
 .bz-media video { width: 100%; height: 100%; object-fit: cover; object-position: var(--op, 50%) 50%; transition: transform 1.4s var(--ease); }
@@ -165,8 +172,6 @@
 .bz-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .bz-num { font-size: clamp(2.6rem, 4.4vw, 4.4rem); font-weight: 500; line-height: .9; letter-spacing: -.045em; color: var(--blue); }
 .bz-stage { font-size: .74rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); padding-left: 14px; border-left: 1px solid rgba(11, 27, 51, .16); line-height: 1.2; }
-.bz-key { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border-radius: 999px; background: var(--blue); color: #fff; font-size: .8rem; font-weight: 700; }
-.bz-key::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .3); }
 
 .bz-title { margin-top: clamp(22px, 2.6vw, 36px); display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
 .bz-area { font-size: clamp(2.1rem, 3.4vw, 3.1rem); font-weight: 800; line-height: 1.1; letter-spacing: -.045em; }
@@ -197,14 +202,12 @@
   .bz-hero { padding-top: calc(var(--header-h) + clamp(24px, 3vw, 44px)); }
   .bz-hero .breadcrumb { margin-bottom: 18px; }
   .bz-hero .eyebrow { margin-bottom: 18px; }
-  .bz-hero-title { font-size: clamp(2.9rem, 6vw, 5.5rem); }
   .bz-hero .bz-hero-lead { margin-top: 20px; }
   .bz-hero-foot { margin-top: 32px; padding-top: 18px; }
   .bz-jump-head { margin-bottom: 12px; }
   .bz-jump-item { min-height: 112px; }
 }
 @media (min-width: 1025px) and (max-height: 800px) {
-  .bz-hero-title { font-size: clamp(2.9rem, 5.4vw, 4.8rem); }
   .bz-jump-item { min-height: 100px; padding-block: 14px; }
 }
 @media (max-width: 1180px) {
@@ -235,13 +238,12 @@
   .bz-hero { min-height: min(100svh, 880px); }
   .bz-hero-media video { object-position: 50% 50%; }
   .bz-hero-shade { background: linear-gradient(180deg, rgba(10, 20, 38, .82) 0%, rgba(10, 20, 38, .76) 40%, rgba(10, 20, 38, .86) 70%, rgba(10, 20, 38, .97) 100%); }
-  .bz-hero-title { font-size: clamp(2.6rem, 12vw, 3.4rem); }
   /* 사업 바로가기: 가로로 넘기는 한 줄 (빈칸 없음) */
   .bz-jump { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain;
     margin-inline: calc(var(--gutter) * -1); padding: 8px var(--gutter) 6px; scroll-padding-inline: var(--gutter); }
   .bz-jump::-webkit-scrollbar { display: none; }
   .bz-jump li { flex: 0 0 auto; scroll-snap-align: start; }
-  .bz-jump-item { min-height: 0; min-width: 92px; padding: 12px 14px; gap: 6px; border-radius: 14px; grid-template-columns: 1fr; }
+  .bz-jump-item { min-height: 0; min-width: 92px; padding: 12px 14px; gap: 6px; border-radius: var(--radius-sm); grid-template-columns: 1fr; }
   .bz-jump-ico, .bz-jump-txt .en { display: none; }
   .bz-jump-txt strong { font-size: 1rem; white-space: nowrap; }
   .bz-jump-item::after { left: 10px; right: 10px; }
@@ -261,7 +263,6 @@
   .bz-for-list { display: flex; flex-wrap: wrap; gap: 6px; }
   .bz-for-list li { padding: 4px 10px; border-radius: 999px; background: #fff; font-size: .86rem; }
   .bz-for-list li::before { display: none; }
-  .bz-key { margin-left: 0; }
   .bz-actions { padding-top: 20px; gap: 8px; }
   .bz-actions .btn { flex: 1 1 auto; min-height: 50px; padding-inline: 18px; }
 }

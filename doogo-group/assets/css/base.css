@@ -87,7 +87,15 @@ h1, h2, h3, h4, h5, p, ul, ol, figure, dl, dd, blockquote { margin: 0; }
 ul, ol { padding: 0; list-style: none; }
 :where(section, [id]) { scroll-margin-top: calc(var(--header-h) + 16px); }
 ::selection { background: var(--blue); color: #fff; }
-:focus-visible { outline: 3px solid var(--blue-300); outline-offset: 3px; border-radius: 6px; }
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; border-radius: 6px; }
+/* 어두운 구간에서는 밝은 링 (흰·아이보리 위 --blue 5.2:1 이상 / 네이비 위 --blue-300 7:1) */
+:is(.section--navy, .page-hero--navy, .cta-band, .site-footer, .film-modal, .on-dark, .hero, .toast) :focus-visible,
+body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is-menu) :focus-visible { outline-color: var(--blue-300); }
+.section--blue :focus-visible { outline-color: #fff; }
+/* Tab 이동 중에만: 포커스된 요소가 고정 헤더·서브 내비 밑으로 숨지 않게 (site.js가 html.is-tabbing 부여).
+   앵커 이동(scroll-margin)과 겹치지 않도록 Tab 키를 누르는 동안에만 적용합니다. */
+html.is-tabbing { scroll-padding-top: calc(var(--header-h) + 16px); scroll-padding-bottom: 16px; }
+html.is-tabbing:has(.subnav) { scroll-padding-top: calc(var(--header-h) + 80px); }
 
 .sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .skip-link { position: fixed; left: 16px; top: -60px; z-index: 1000; padding: 10px 16px; border-radius: 10px; background: var(--ink); color: #fff; font-weight: 600; transition: top .2s; }
@@ -111,7 +119,7 @@ main { display: block; }
   color: var(--blue);
 }
 .eyebrow::before { content: ""; width: 28px; height: 1.5px; background: currentColor; opacity: .9; }
-.section--navy .eyebrow, .on-dark .eyebrow { color: var(--blue-300); }
+.section--navy .eyebrow, .on-dark .eyebrow, .cta-band .eyebrow { color: var(--blue-300); }
 .eyebrow--plain::before { display: none; }
 
 .display { font-size: var(--fs-display); line-height: 1.12; font-weight: 700; letter-spacing: -0.035em; }
@@ -157,9 +165,10 @@ main { display: block; }
 .btn--ghost:hover { --btn-bg: #fff; --btn-fg: var(--ink); --btn-bd: #fff; }
 .btn--white { --btn-bg: #fff; --btn-fg: var(--ink); }
 .btn--white:hover { --btn-bg: var(--blue-50); }
-.btn--sm { min-height: 42px; padding: 0 20px; font-size: .92rem; }
+.btn--sm { min-height: 44px; padding: 0 20px; font-size: .92rem; }
 .btn--lg { min-height: 60px; padding: 0 32px; font-size: 1.05rem; }
 .btn[aria-disabled="true"], .btn:disabled { opacity: .45; pointer-events: none; }
+.btn--primary[aria-current="page"] { box-shadow: 0 0 0 3px var(--blue-100); }
 
 .link-arrow { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--ink); }
 .link-arrow .ico { width: 18px; height: 18px; transition: transform .3s var(--ease); }
@@ -175,7 +184,7 @@ main { display: block; }
 .chip.is-active, .chip[aria-pressed="true"], .chip[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
 .tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 6px; background: var(--blue-50); color: var(--blue-700); font-size: .78rem; font-weight: 600; letter-spacing: 0; }
 .tag--line { background: transparent; border: 1px solid var(--line); color: var(--muted); }
-.badge-sample { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: #FFF4D6; color: #8A5A00; font-size: .72rem; font-weight: 700; letter-spacing: 0; vertical-align: middle; }
+.badge-sample { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: #FFF4D6; color: #8A5A00; font-size: .75rem; font-weight: 700; letter-spacing: 0; vertical-align: middle; }
 .note { font-size: var(--fs-xs); color: var(--muted-2); }
 
 /* 카드 공통 */
@@ -210,6 +219,7 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .gnb { margin-left: auto; height: 100%; }
 .gnb > ul { display: flex; height: 100%; gap: clamp(12px, 2.4vw, 44px); }
 .gnb > ul > li { position: relative; height: 100%; display: flex; align-items: center; }
+.gnb > ul > li.has-mega { position: static; } /* 안의 .mega 가 헤더 전체 폭 기준으로 놓이도록 */
 .gnb-link { position: relative; display: inline-flex; align-items: center; height: 100%; font-size: 1.02rem; font-weight: 600; letter-spacing: -0.02em; }
 .gnb-link::after { content: ""; position: absolute; left: 0; right: 0; bottom: 24px; height: 2px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform .35s var(--ease); }
 .gnb > ul > li:hover > .gnb-link::after, .gnb > ul > li.is-open > .gnb-link::after, .gnb-link[aria-current="page"]::after, .gnb-link.is-current::after { transform: scaleX(1); }
@@ -243,10 +253,10 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .mega-area .num { font-family: var(--font-en); font-size: .72rem; color: var(--blue); font-weight: 600; }
 .mega-brand { font-family: var(--font-en); font-size: .7rem; letter-spacing: .04em; color: var(--muted); font-weight: 500; margin-top: -6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mega-desc { font-size: .82rem; line-height: 1.5; color: var(--muted); }
-.mega-item--lead .mega-area { color: var(--blue); }
+.mega-item[aria-current="page"] { background: var(--ivory); }
+.mega-item[aria-current="page"] .mega-area { color: var(--blue); }
 
 .hd-util { display: flex; align-items: center; gap: 12px; flex: none; }
-.hd-util .btn--sm { min-height: 40px; }
 .hd-menu-btn { display: none; width: 44px; height: 44px; border-radius: 12px; place-items: center; color: inherit; }
 .hd-menu-btn span, .hd-menu-btn span::before, .hd-menu-btn span::after { display: block; width: 22px; height: 2px; background: currentColor; border-radius: 2px; position: relative; transition: transform .3s var(--ease), background-color .2s; }
 .hd-menu-btn span::before, .hd-menu-btn span::after { content: ""; position: absolute; left: 0; }
@@ -286,6 +296,8 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .mnav-panel[hidden] { display: none; }
 .mnav-panel a { display: flex; justify-content: space-between; gap: 12px; padding: 11px 12px; border-radius: 10px; color: var(--ink-2); font-weight: 500; }
 .mnav-panel a:hover { background: var(--ivory); }
+.mnav-panel a[aria-current="page"] { background: var(--ivory); color: var(--blue); font-weight: 700; }
+.mnav-group.is-current > .mnav-toggle { color: var(--blue); }
 .mnav-panel a small { font-family: var(--font-en); color: var(--muted-2); font-size: .74rem; letter-spacing: .06em; align-self: center; }
 .mnav-cta { display: grid; gap: 10px; margin-top: 28px; }
 .mnav-cta .btn { width: 100%; }
@@ -307,9 +319,13 @@ html.is-locked, html.is-locked body { overflow: hidden; }
 
 /* 페이지 안 탭 (앵커 내비) */
 .subnav { position: sticky; top: var(--header-h); z-index: 50; transition: top .45s var(--ease); background: rgba(255, 255, 255, .94); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line-2); }
-.subnav ul { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-block: 12px; }
+.subnav ul { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-block: 10px; }
+/* 가로로 넘치면 끝을 흐리게 해서 더 넘길 수 있음을 알립니다 (site.js 가 is-scrollable / is-start / is-end 부여) */
+.subnav :is(ul, ol).is-scrollable { --fade-l: 28px; --fade-r: 44px; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent 100%); }
+.subnav :is(ul, ol).is-scrollable.is-start { --fade-l: 0px; }
+.subnav :is(ul, ol).is-scrollable.is-end { --fade-r: 0px; }
 .subnav ul::-webkit-scrollbar { display: none; }
-.subnav a { display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 999px; font-weight: 600; font-size: .95rem; color: var(--muted); white-space: nowrap; transition: all .2s var(--ease); }
+.subnav a { display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 999px; font-weight: 600; font-size: .95rem; color: var(--muted); white-space: nowrap; transition: all .2s var(--ease); }
 .subnav a:hover { color: var(--ink); }
 .subnav a.is-active, .subnav a[aria-current="true"] { background: var(--ink); color: #fff; }
 
@@ -319,13 +335,16 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
 
 /* ---------- 8. CTA 띠 (모든 페이지 하단 공통) ---------- */
 .cta-band { position: relative; overflow: hidden; background: var(--navy); color: #fff; padding-block: clamp(80px, 10vw, 140px); isolation: isolate; }
-.cta-band::before { content: ""; position: absolute; inset: 0; z-index: -2; background: url(../img/scene/town.webp) center 60% / cover no-repeat; opacity: .32; }
+.cta-band::before { content: ""; position: absolute; inset: 0; z-index: -2; background: center 60% / cover no-repeat; opacity: .32; }
+/* 배경 그림은 띠가 가까워질 때만 불러옵니다 (site.js 가 .is-near 부여 — 장식이라 JS가 없으면 생략) · 모바일은 작은 판 */
+.cta-band.is-near::before { background-image: url(../img/scene/town.webp); }
+@media (max-width: 760px) { .cta-band.is-near::before { background-image: url(../img/scene/town-sm.webp); } }
 .cta-band::after { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(80% 120% at 85% 0%, rgba(10, 93, 226, .55), transparent 60%), linear-gradient(180deg, rgba(10, 20, 38, .65), rgba(10, 20, 38, .92)); }
 .cta-band .h2 { max-width: 20ch; }
 .cta-band .lead { color: var(--on-dark-2); margin-top: 20px; max-width: 44ch; }
 .cta-band-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 40px; }
 .cta-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 36px; }
-.cta-chips a { display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line-dark); color: var(--on-dark-2); font-weight: 500; font-size: .92rem; transition: all .2s var(--ease); }
+.cta-chips a { display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line-dark); color: var(--on-dark-2); font-weight: 500; font-size: .92rem; transition: all .2s var(--ease); }
 .cta-chips a:hover { border-color: #fff; color: #fff; background: rgba(255, 255, 255, .08); }
 
 /* ---------- 9. 푸터 ---------- */
@@ -347,7 +366,7 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
 .ft-policy .is-strong { color: #fff; font-weight: 700; }
 .ft-side { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .ft-sns { display: flex; gap: 8px; }
-.ft-sns a { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line-dark); color: var(--on-dark-2); transition: all .2s; }
+.ft-sns a { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line-dark); color: var(--on-dark-2); transition: all .2s; }
 .ft-sns a:hover { color: #fff; border-color: #fff; }
 .ft-sns svg { width: 18px; height: 18px; }
 .family { position: relative; }
@@ -365,6 +384,16 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
 @media (max-width: 1024px) {
   .ft-top { grid-template-columns: 1fr; }
   .ft-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* 터치 화면: 작은 글자 링크도 누르는 영역은 44px 이상 */
+@media (max-width: 1024px) {
+  .ft-col h3 { margin-bottom: 6px; }
+  .ft-col li + li { margin-top: 0; }
+  .ft-col a { display: inline-block; padding-block: 10px; }
+  .ft-policy { row-gap: 0; }
+  .ft-policy a { display: inline-block; padding-block: 10px; }
+  .breadcrumb a { display: inline-flex; align-items: center; min-height: 44px; margin-block: -11px; padding-inline: 10px; margin-inline: -10px; }
+  .link-arrow { min-height: 44px; }
 }
 @media (max-width: 560px) {
   .ft-mid { flex-direction: column; align-items: flex-start; }
@@ -393,6 +422,8 @@ video::cue { font-family: var(--font-ko); background: rgba(0, 0, 0, .55); color:
 .js [data-reveal="right"] { transform: translateX(32px); }
 .js [data-reveal="scale"] { transform: scale(.96); }
 .js [data-reveal].is-in { opacity: 1; transform: none; }
+/* 키보드 포커스가 들어오면 등장 전이라도 바로 보이게 (site.js 의 focusin 처리와 함께) */
+.js [data-reveal]:focus-within, .js [data-reveal]:focus-visible { opacity: 1; transform: none; transition-delay: 0s; transition-duration: .25s; }
 /* 줄 단위 마스크 등장: <span class="line"><span>텍스트</span></span> */
 .line { display: block; overflow: hidden; padding-bottom: .06em; margin-bottom: -.06em; }
 .line > span { display: inline-block; }

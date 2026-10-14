@@ -47,6 +47,12 @@
   var defaultPh = msgEl ? msgEl.getAttribute('data-default-ph') : '';
   var submitted = false; // 첫 제출 이후에만 오류 해제 검사
 
+  /* ---------- 시안 모드 안내 ---------- */
+  // data-endpoint가 비어 있으면 시안 모드: 양식 위 안내를 보이고, 연결되면 숨깁니다.
+  function getEndpoint() { return (form.getAttribute('data-endpoint') || '').trim(); }
+  var isDemo = !(getEndpoint() && window.fetch);
+  $$('[data-demo-only]').forEach(function (el) { el.hidden = !isDemo; });
+
   function currentType() {
     var r = radios.filter(function (x) { return x.checked; })[0];
     return r ? r.value : '';
@@ -272,7 +278,7 @@
       page: window.location.href,
       submittedAt: new Date().toISOString()
     };
-    var endpoint = (form.getAttribute('data-endpoint') || '').trim();
+    var endpoint = getEndpoint();
     setLoading(true);
 
     if (endpoint && window.fetch) {
@@ -290,7 +296,7 @@
         if (alertEl) { alertEl.setAttribute('tabindex', '-1'); alertEl.focus(); }
       });
     } else {
-      // 시안 모드: 실제 전송 없이 완료 화면만 보여 줍니다.
+      // 시안 모드: 실제 전송 없이 '전송되지 않았습니다' 안내 화면을 보여 줍니다.
       setTimeout(function () { setLoading(false); showDone(data, true); }, reduce ? 0 : 700);
     }
   });
@@ -313,6 +319,12 @@
     $('[data-sum="contact"]', done).textContent = data.contact;
     var note = $('[data-demo-note]', done);
     if (note) note.hidden = !demo;
+    // 시안 모드에서는 '접수되었습니다' 대신 '전송되지 않았습니다' 문구와 안내 아이콘으로 바꿉니다.
+    done.classList.toggle('is-demo', !!demo);
+    $$('[data-demo-text]', done).forEach(function (el) {
+      if (el.getAttribute('data-real-text') === null) el.setAttribute('data-real-text', el.textContent);
+      el.textContent = demo ? el.getAttribute('data-demo-text') : el.getAttribute('data-real-text');
+    });
 
     form.hidden = true;
     done.hidden = false;
