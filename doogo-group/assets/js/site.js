@@ -7,7 +7,18 @@
   'use strict';
   var doc = document.documentElement;
   doc.classList.add('js');
-  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* 움직임 정책(두고 사이트 공통): OS의 '애니메이션 줄이기' 설정과 관계없이 모션·영상은 재생합니다.
+     대신 화면 왼쪽 아래 '움직임 멈추기' 버튼으로 모두 멈출 수 있고, 선택은 이 브라우저에 기억됩니다(localStorage).
+     OS 설정이 켜져 있으면 html.soft-motion 만 붙여, 페이지에서 패럴랙스·기울기 같은 큰 움직임만 줄일 수 있게 합니다.
+     페이지 스크립트는 window.DOOGO.motionOff() 로 확인하고, 'doogo:motion' 이벤트(detail.off)로 전환을 받습니다. */
+  var MOTION_KEY = 'doogo-motion-off';
+  var motionOff = false;
+  try { motionOff = window.localStorage.getItem(MOTION_KEY) === '1'; } catch (e) {}
+  if (motionOff) doc.classList.add('motion-off');
+  try { if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) doc.classList.add('soft-motion'); } catch (e) {}
+  window.DOOGO = window.DOOGO || {};
+  window.DOOGO.motionOff = function () { return doc.classList.contains('motion-off'); };
+  var reduceMotion = motionOff;
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
 
@@ -174,7 +185,7 @@
   $$('[data-lines]').forEach(function (el) {
     $$('.line', el).forEach(function (l, i) { l.style.setProperty('--i', i); });
   });
-  if ('IntersectionObserver' in window && !reduceMotion) {
+  if ('IntersectionObserver' in window && !window.DOOGO.motionOff()) {
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target); }
@@ -196,7 +207,7 @@
     var target = parseFloat(el.getAttribute('data-count')) || 0;
     var suffix = el.getAttribute('data-suffix') || '';
     var dur = 1400, start = null;
-    if (reduceMotion) { el.textContent = target + suffix; return; }
+    if (window.DOOGO.motionOff()) { el.textContent = target + suffix; return; }
     function step(ts) {
       if (!start) start = ts;
       var p = Math.min((ts - start) / dur, 1);
@@ -215,34 +226,57 @@
   } else counters.forEach(runCount);
 
   /* ---------- 배경 영상: <video data-autoplay muted loop playsinline> ----------
-     움직임 줄이기 설정이면 자동재생하지 않고 포스터만 보여줍니다.
-     자동재생이 막히면 부모에 .is-autoplay-blocked 를 붙입니다 (재생 버튼 노출용). */
+     페이지가 열리면 바로 무음 자동재생합니다(화면 밖이면 잠시 멈춤).
+     브라우저·앱이 자동재생을 막으면(.is-autoplay-blocked) 화면을 처음 터치·클릭하는 순간 바로 재생합니다. */
   var bgVideos = $$('video[data-autoplay]');
   function videoWrap(v) { return v.closest('[data-video-wrap]') || v.parentElement; }
-  function tryPlay(v) {
-    var p = v.play();
-    // 브라우저가 자동재생을 막은 경우(NotAllowedError)만 '막힘'으로 표시합니다.
-    // 로딩 중 화면 밖으로 나가 pause()된 경우(AbortError)는 무시합니다.
-    if (p && p.catch) p.catch(function (err) { if (err && err.name === 'NotAllowedError') videoWrap(v).classList.add('is-autoplay-blocked'); });
+  function inView(v) { var r = v.getBoundingClientRect(); return r.bottom > 0 && r.top < (window.innerHeight || doc.clientHeight) && r.width > 0; }
+  var blockedVideos = [], gestureArmed = false;
+  var GESTURES = ['pointerdown', 'touchstart', 'keydown', 'click'];
+  function onFirstGesture() {
+    gestureArmed = false;
+    GESTURES.forEach(function (t) { document.removeEventListener(t, onFirstGesture, true); });
+    var list = blockedVideos.slice(); blockedVideos.length = 0;
+    list.forEach(function (v) { if (inView(v)) tryPlay(v); });
   }
-  if (!reduceMotion && 'IntersectionObserver' in window) {
+  function armGesture() {
+    if (gestureArmed) return; gestureArmed = true;
+    GESTURES.forEach(function (t) { document.addEventListener(t, onFirstGesture, { capture: true, passive: true }); });
+  }
+  function tryPlay(v) {
+    if (window.DOOGO.motionOff() || v.dataset.userPaused === '1') return;
+    v.muted = true;
+    var p = v.play();
+    // 자동재생이 막힌 경우(NotAllowedError)만 '막힘'으로 표시하고 첫 터치를 기다립니다.
+    // 로딩 중 화면 밖으로 나가 pause()된 경우(AbortError)는 무시합니다.
+    if (p && p.catch) p.catch(function (err) {
+      if (err && err.name === 'NotAllowedError') {
+        videoWrap(v).classList.add('is-autoplay-blocked');
+        if (blockedVideos.indexOf(v) < 0) blockedVideos.push(v);
+        armGesture();
+      }
+    });
+  }
+  bgVideos.forEach(function (v) {
+    v.muted = true; v.defaultMuted = true;
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+    if (!window.DOOGO.motionOff()) v.setAttribute('autoplay', '');
+    v.addEventListener('playing', function () { videoWrap(v).classList.remove('is-autoplay-blocked'); });
+  });
+  if ('IntersectionObserver' in window) {
     var vio = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         var v = en.target;
-        if (v.dataset.userPaused === '1') return;
         if (en.isIntersecting) {
-          if (v.preload === 'none' || !v.currentSrc) { v.preload = 'auto'; }
+          if (v.preload === 'none') v.preload = 'auto';
           tryPlay(v);
         } else if (!v.paused) v.pause();
       });
     }, { threshold: 0.15 });
-    bgVideos.forEach(function (v) {
-      v.muted = true; vio.observe(v);
-      v.addEventListener('playing', function () { videoWrap(v).classList.remove('is-autoplay-blocked'); });
-    });
-  } else {
-    bgVideos.forEach(function (v) { v.removeAttribute('autoplay'); v.pause(); v.closest('[data-video-wrap]') && v.closest('[data-video-wrap]').classList.add('is-reduced'); });
+    bgVideos.forEach(function (v) { vio.observe(v); });
   }
+  // 첫 화면에 보이는 영상은 관찰을 기다리지 않고 바로 시작
+  bgVideos.forEach(function (v) { if (inView(v)) tryPlay(v); });
   // 재생/정지 버튼: <button data-video-toggle="#videoId">
   $$('[data-video-toggle]').forEach(function (btn) {
     var v = $(btn.getAttribute('data-video-toggle'));
@@ -389,6 +423,32 @@
       if (logo) { try { logo.focus({ preventScroll: true }); } catch (err) { logo.focus(); } }
     });
   });
+
+  /* ---------- 움직임 멈추기 버튼 (왼쪽 아래) ---------- */
+  (function () {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'motion-toggle';
+    function sync() {
+      var off = window.DOOGO.motionOff();
+      b.setAttribute('aria-pressed', String(off));
+      b.innerHTML = '<span class="mt-ico" aria-hidden="true"></span><span class="mt-txt">' + (off ? '움직임 켜기' : '움직임 멈추기') + '</span>';
+    }
+    b.addEventListener('click', function () {
+      var off = !window.DOOGO.motionOff();
+      doc.classList.toggle('motion-off', off);
+      try { window.localStorage.setItem(MOTION_KEY, off ? '1' : '0'); } catch (e) {}
+      if (off) {
+        bgVideos.forEach(function (v) { v.pause(); });
+        revealEls.forEach(function (el) { el.classList.add('is-in'); });
+      } else {
+        bgVideos.forEach(function (v) { if (v.dataset.userPaused !== '1') { v.setAttribute('autoplay', ''); if (inView(v)) tryPlay(v); } });
+      }
+      sync();
+      try { document.dispatchEvent(new CustomEvent('doogo:motion', { detail: { off: off } })); } catch (e) {}
+    });
+    sync();
+    document.body.appendChild(b);
+  })();
 
   /* ---------- 연도 ---------- */
   $$('[data-year]').forEach(function (el) { el.textContent = new Date().getFullYear(); });

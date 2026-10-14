@@ -525,11 +525,26 @@ video::cue { font-family: var(--font-ko); background: rgba(0, 0, 0, .55); color:
 .js [data-lines] .line > span { transform: translateY(105%); transition: transform 1s var(--ease); transition-delay: calc(var(--i, 0) * .09s + var(--d, 0s)); }
 .js [data-lines].is-in .line > span { transform: none; }
 
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  .js [data-reveal], .js .ft-nav[data-reveal] li, .js [data-lines] .line > span { opacity: 1 !important; transform: none !important; transition: none !important; }
-  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+/* 움직임 멈추기 — OS 설정이 아니라 사용자가 '움직임 멈추기' 버튼으로 고른 경우(html.motion-off)에만 적용 */
+html.motion-off { scroll-behavior: auto; }
+html.motion-off [data-reveal], html.motion-off .ft-nav[data-reveal] li, html.motion-off [data-lines] .line > span { opacity: 1 !important; transform: none !important; transition: none !important; }
+html.motion-off *, html.motion-off *::before, html.motion-off *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+
+/* 움직임 멈추기 버튼 */
+.motion-toggle {
+  position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 90;
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px 0 10px; border-radius: 999px;
+  background: rgba(10, 20, 38, .72); color: #fff; font-size: .78rem; font-weight: 600; letter-spacing: -0.01em;
+  border: 1px solid rgba(255, 255, 255, .16); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, .5); opacity: .82; transition: opacity .2s, background-color .2s;
 }
+.motion-toggle:hover, .motion-toggle:focus-visible { opacity: 1; background: rgba(10, 20, 38, .9); }
+.motion-toggle .mt-ico { position: relative; width: 16px; height: 16px; border-radius: 50%; background: rgba(255, 255, 255, .16); }
+.motion-toggle .mt-ico::before, .motion-toggle .mt-ico::after { content: ""; position: absolute; top: 4px; width: 2px; height: 8px; border-radius: 1px; background: #fff; }
+.motion-toggle .mt-ico::before { left: 5px; } .motion-toggle .mt-ico::after { left: 9px; }
+.motion-toggle[aria-pressed="true"] .mt-ico::before { left: 6px; width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 6px; border-color: transparent transparent transparent #fff; background: none; }
+.motion-toggle[aria-pressed="true"] .mt-ico::after { display: none; }
+@media (max-width: 760px) { .motion-toggle { left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); min-height: 32px; padding: 0 12px 0 8px; font-size: .72rem; } }
 
 /* ---------- 12. 폼 기본 ---------- */
 .field { display: grid; gap: 8px; }
