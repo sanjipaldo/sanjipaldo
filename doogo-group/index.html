@@ -338,232 +338,185 @@
   </section>
 
   <!-- =========================================================
-       S3 그룹 구조 — DOOGO HOLDINGS(지주회사) 1 + 그룹사 5 · 각 사이트 첫 화면 카드
-       기본(home.js · data-hs): 섹션이 화면에 고정되고(100svh 무대), 아래로 스크롤하는 만큼 카드 줄이 왼쪽으로 이동
-         데스크톱(≥1025px): 왼쪽 DOOGO HOLDINGS 패널 고정 + 그룹사 카드 5장(SPACE → MEDIA → MAKERS → AD → BIO) + 마무리 칸
-         1024px 이하: DOOGO HOLDINGS 가 카드 줄의 첫 카드
-       대체(움직임 멈추기 html.motion-off · JS 없음 · 높이 560px 미만 화면): 고정 없이 가로 스크롤 목록(scroll-snap) + 이전/다음 버튼
+       S3 두고그룹이 운영하는 프로젝트 — 한 카드 = 한 프로젝트(7장) · 각 사이트 첫 화면 캡처
+       페이지 세로 스크롤은 건드리지 않습니다(고정·가로 스크롤 전환 없음).
+       카드 줄은 좌우 슬라이드만: 이전/다음 버튼 · 터치 스와이프 · 마우스 끌기 · 가로 휠 · scroll-snap (home.js · data-gp)
+       보이는 카드: 데스크톱 약 2.5장 · 태블릿 1.6장 · 휴대폰 1.1장
        ========================================================= -->
-  <section class="section section--navy group hs" id="group" aria-labelledby="group-title" data-hs data-anim>
-    <div class="hs-stage">
-      <div class="container hs-head">
-        <div class="hs-title">
-          <span class="eyebrow" data-reveal="fade">Group Structure</span>
-          <h2 class="h2 hs-h2" id="group-title" data-lines><span class="line"><span>하나의 지주회사 아래,</span></span> <span class="line"><span>하나의 두고그룹</span></span></h2>
-        </div>
-        <p class="hs-lead" data-reveal style="--d:.15s"><span class="hs-lead-l">DOOGO HOLDINGS가 교육과 유통을 직접 운영하고, 국내 4곳·해외 1곳의 다섯 그룹사가 각자의 분야를 맡아 하나의 그룹으로 움직입니다.</span><span class="hs-lead-s" aria-hidden="true">교육·유통을 직접 운영하며 다섯 그룹사와 함께합니다.</span></p>
+  <section class="section section--navy gp" id="group" aria-labelledby="group-title" data-gp>
+    <div class="container gp-head">
+      <div class="gp-title">
+        <span class="eyebrow" data-reveal="fade">Group Projects</span>
+        <h2 class="h2 gp-h2" id="group-title" data-lines><span class="line"><span>두고그룹이 운영하는</span></span> <span class="line"><span>프로젝트</span></span></h2>
       </div>
+      <div class="gp-intro" data-reveal style="--d:.15s">
+        <p class="gp-lead">지주회사 DOOGO HOLDINGS와 다섯 그룹사가 지금 직접 운영하는 서비스입니다.</p>
+        <p class="gp-struct"><span class="gp-struct-n en" aria-hidden="true">1<i>+</i>5</span><span class="gp-struct-t">지주회사&nbsp;1 · 그룹사&nbsp;5</span><a class="gp-struct-a" href="about.html#structure">그룹 구조 보기<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></p>
+      </div>
+    </div>
 
-      <div class="hs-body" data-reveal style="--d:.2s">
-        <!-- 데스크톱(≥1025px): 왼쪽에 고정된 DOOGO HOLDINGS 패널 -->
-        <aside class="hs-panel" aria-labelledby="hs-hold-t">
-          <div class="hs-hold">
-                <div class="hs-hold-top">
-                  <span class="hs-hold-mark"><img src="assets/img/logo/doogo-symbol.svg" alt="" width="48" height="48"></span>
-                  <span class="hs-tag">지주회사</span>
-                  <p class="hs-hold-sum"><span class="en" aria-hidden="true">1<i>+</i>5</span><span class="sr-only">지주회사 1곳과 그룹사 5곳</span></p>
+    <div class="gp-slider" data-reveal style="--d:.2s">
+      <div class="gp-view" data-gp-view>
+        <ol class="gp-list" id="gp-list" aria-label="두고그룹이 운영하는 프로젝트 7개">
+            <li class="gp-item" id="gp-class" data-gp-item>
+              <article class="gp-card" aria-labelledby="gp-class-t">
+                <div class="gp-win">
+                  <div class="gp-win-bar" aria-hidden="true"><span class="gp-dots"><i></i><i></i><i></i></span><span class="gp-url">doogoclass.com</span></div>
+                  <div class="gp-shot"><img src="assets/img/sites/class-720.webp" srcset="assets/img/sites/class-720.webp 720w, assets/img/sites/class.webp 1200w" sizes="(max-width: 760px) 88vw, (max-width: 1024px) 60vw, 560px" width="1200" height="750" alt="DOOGO CLASS 웹사이트(doogoclass.com) 첫 화면" loading="lazy" decoding="async" draggable="false"></div>
                 </div>
-                <h3 class="hs-hold-name en" id="hs-hold-t">DOOGO HOLDINGS</h3>
-                <dl class="hs-meta">
-                  <div><dt>역할</dt><dd>교육 및 총괄 운영</dd></div>
-                  <div><dt>대표</dt><dd>문원오</dd></div>
-                </dl>
-                <div class="hs-direct">
-                  <p class="hs-direct-k" id="hs-direct-k">직접 운영</p>
-                  <ul class="hs-direct-list" aria-labelledby="hs-direct-k">
-                    <li><a class="hs-direct-a" href="https://www.doogoclass.com" target="_blank" rel="noopener"><span class="hs-direct-shot"><img src="assets/img/sites/class-720.webp" alt="" width="720" height="450" loading="lazy" decoding="async"></span><span class="hs-direct-txt"><span class="hs-direct-n en">DOOGO CLASS</span><span class="hs-direct-f">교육업</span><span class="hs-direct-u en">doogoclass.com</span></span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a></li>
-                    <li><a class="hs-direct-a" href="https://www.doogofood.com" target="_blank" rel="noopener"><span class="hs-direct-shot"><img src="assets/img/sites/makers-720.webp" alt="" width="720" height="450" loading="lazy" decoding="async"></span><span class="hs-direct-txt"><span class="hs-direct-n en">DOOGOFOOD</span><span class="hs-direct-f">유통</span><span class="hs-direct-u en">doogofood.com</span></span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a></li>
-                  </ul>
+                <div class="gp-body">
+                  <div class="gp-top">
+                    <span class="gp-tag"><span class="sr-only">분야 </span>교육업</span>
+                    <span class="gp-idx en" aria-hidden="true">01</span>
+                  </div>
+                  <h3 class="gp-name en" id="gp-class-t">DOOGO CLASS</h3>
+                  <p class="gp-op"><span class="gp-op-k">운영</span><span class="gp-op-v"><span class="en">DOOGO HOLDINGS</span><span class="gp-op-dot" aria-hidden="true">·</span>교육팀</span></p>
+                  <p class="gp-desc">실무자의 경험과 노하우를 나누는 온라인 클래스입니다.</p>
+                  <div class="gp-btns">
+                    <a class="btn btn--primary gp-btn" href="https://www.doogoclass.com" target="_blank" rel="noopener" draggable="false"><span class="sr-only">DOOGO CLASS </span>사이트 바로가기<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
+                    <a class="btn gp-btn gp-btn--line" href="business-campus.html" draggable="false"><span class="sr-only">DOOGO CLASS </span>사업 보기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+                  </div>
                 </div>
-                <p class="hs-hold-to" aria-hidden="true"><span>그룹사&nbsp;5</span><span class="hs-hold-to-s">국내&nbsp;4 · 해외&nbsp;1</span><svg class="ico"><use href="#i-arrow"/></svg></p>
-          </div>
-        </aside>
-
-        <div class="hs-view" data-hs-view>
-          <div class="hs-track" data-hs-track>
-            <ol class="hs-list" aria-label="그룹사 사이트">
-            <!-- 1024px 이하: DOOGO HOLDINGS 가 첫 카드 -->
-            <li class="hs-item hs-item--hold" id="hs-hold-card" data-hs-item="0">
-              <article class="hs-card hs-card--hold" aria-labelledby="hs-hold-t2">
-                <div class="hs-hold">
-                <div class="hs-hold-top">
-                  <span class="hs-hold-mark"><img src="assets/img/logo/doogo-symbol.svg" alt="" width="48" height="48"></span>
-                  <span class="hs-tag">지주회사</span>
-                  <p class="hs-hold-sum"><span class="en" aria-hidden="true">1<i>+</i>5</span><span class="sr-only">지주회사 1곳과 그룹사 5곳</span></p>
-                </div>
-                <h3 class="hs-hold-name en" id="hs-hold-t2">DOOGO HOLDINGS</h3>
-                <dl class="hs-meta">
-                  <div><dt>역할</dt><dd>교육 및 총괄 운영</dd></div>
-                  <div><dt>대표</dt><dd>문원오</dd></div>
-                </dl>
-                <div class="hs-direct">
-                  <p class="hs-direct-k" id="hs-direct-k2">직접 운영</p>
-                  <ul class="hs-direct-list" aria-labelledby="hs-direct-k2">
-                    <li><a class="hs-direct-a" href="https://www.doogoclass.com" target="_blank" rel="noopener"><span class="hs-direct-shot"><img src="assets/img/sites/class-720.webp" alt="" width="720" height="450" loading="lazy" decoding="async"></span><span class="hs-direct-txt"><span class="hs-direct-n en">DOOGO CLASS</span><span class="hs-direct-f">교육업</span><span class="hs-direct-u en">doogoclass.com</span></span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a></li>
-                    <li><a class="hs-direct-a" href="https://www.doogofood.com" target="_blank" rel="noopener"><span class="hs-direct-shot"><img src="assets/img/sites/makers-720.webp" alt="" width="720" height="450" loading="lazy" decoding="async"></span><span class="hs-direct-txt"><span class="hs-direct-n en">DOOGOFOOD</span><span class="hs-direct-f">유통</span><span class="hs-direct-u en">doogofood.com</span></span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a></li>
-                  </ul>
-                </div>
-                <p class="hs-hold-to" aria-hidden="true"><span>그룹사&nbsp;5</span><span class="hs-hold-to-s">국내&nbsp;4 · 해외&nbsp;1</span><svg class="ico"><use href="#i-arrow"/></svg></p>
-                </div>
-                <span class="hs-dim" aria-hidden="true"></span>
               </article>
             </li>
-            <li class="hs-item" id="gc-space" data-hs-item="1">
-              <article class="hs-card" aria-labelledby="gc-space-t">
-                <div class="hs-win">
-                  <div class="hs-win-bar" aria-hidden="true"><span class="hs-dots"><i></i><i></i><i></i></span><span class="hs-url">norastay.com</span></div>
-                  <div class="hs-shot"><img src="assets/img/sites/space-720.webp" srcset="assets/img/sites/space-720.webp 720w, assets/img/sites/space.webp 1200w" sizes="(max-width: 760px) 84vw, (max-width: 1024px) 46vw, 600px" width="1200" height="750" alt="DOOGO SPACE의 NORA STAY 웹사이트(norastay.com) 첫 화면" loading="lazy" decoding="async"></div>
+            <li class="gp-item" id="gp-food" data-gp-item>
+              <article class="gp-card" aria-labelledby="gp-food-t">
+                <div class="gp-win">
+                  <div class="gp-win-bar" aria-hidden="true"><span class="gp-dots"><i></i><i></i><i></i></span><span class="gp-url">doogofood.com</span></div>
+                  <div class="gp-shot"><img src="assets/img/sites/makers-720.webp" srcset="assets/img/sites/makers-720.webp 720w, assets/img/sites/makers.webp 1200w" sizes="(max-width: 760px) 88vw, (max-width: 1024px) 60vw, 560px" width="1200" height="750" alt="DOOGOFOOD 웹사이트(doogofood.com) 첫 화면" loading="lazy" decoding="async" draggable="false"></div>
                 </div>
-                <div class="hs-card-body">
-                  <div class="hs-card-top">
-                    <span class="hs-idx en"><b>01</b> / 05</span>
-                    <span class="hs-tag"><span class="sr-only">분야 </span>공간 &amp; 숙박업</span>
+                <div class="gp-body">
+                  <div class="gp-top">
+                    <span class="gp-tag"><span class="sr-only">분야 </span>유통</span>
+                    <span class="gp-idx en" aria-hidden="true">02</span>
                   </div>
-                  <h3 class="hs-name en" id="gc-space-t">DOOGO SPACE</h3>
-                  <p class="hs-desc">함께 일하고 배우며, 쉬어갈 수 있는 공간을 만듭니다.</p>
-                  <div class="hs-card-foot">
-                    <p class="hs-ceo"><span>대표</span>문성오</p>
-                    <div class="hs-btns">
-                      <a class="btn btn--primary hs-btn" href="https://www.norastay.com/" target="_blank" rel="noopener"><span class="sr-only">DOOGO SPACE </span>사이트 바로가기<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
-                      <a class="btn hs-btn hs-btn--line" href="business-space.html"><span class="sr-only">DOOGO SPACE </span>사업 보기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-                    </div>
+                  <h3 class="gp-name en" id="gp-food-t">DOOGOFOOD</h3>
+                  <p class="gp-op"><span class="gp-op-k">운영</span><span class="gp-op-v"><span class="en">DOOGO HOLDINGS</span><span class="gp-op-dot" aria-hidden="true">·</span>유통팀</span></p>
+                  <p class="gp-desc">식품 공급사와 온라인 위탁 판매자를 잇는 B2B 도매 플랫폼입니다.</p>
+                  <div class="gp-btns">
+                    <a class="btn btn--primary gp-btn" href="https://www.doogofood.com" target="_blank" rel="noopener" draggable="false"><span class="sr-only">DOOGOFOOD </span>사이트 바로가기<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
+                    <a class="btn gp-btn gp-btn--line" href="business-food.html" draggable="false"><span class="sr-only">DOOGOFOOD </span>사업 보기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
                   </div>
                 </div>
-                <span class="hs-dim" aria-hidden="true"></span>
               </article>
             </li>
-            <li class="hs-item" id="gc-media" data-hs-item="2">
-              <article class="hs-card" aria-labelledby="gc-media-t">
-                <div class="hs-win">
-                  <div class="hs-win-bar" aria-hidden="true"><span class="hs-dots"><i></i><i></i><i></i></span><span class="hs-url">YouTube · 두고보는 문대표</span></div>
-                  <div class="hs-shot"><img src="assets/img/sites/media-720.webp" srcset="assets/img/sites/media-720.webp 720w, assets/img/sites/media.webp 1200w" sizes="(max-width: 760px) 84vw, (max-width: 1024px) 46vw, 600px" width="1200" height="750" alt="DOOGO MEDIA 유튜브 채널(두고보는 문대표) 첫 화면" loading="lazy" decoding="async"></div>
+            <li class="gp-item" id="gp-nora" data-gp-item>
+              <article class="gp-card" aria-labelledby="gp-nora-t">
+                <div class="gp-win">
+                  <div class="gp-win-bar" aria-hidden="true"><span class="gp-dots"><i></i><i></i><i></i></span><span class="gp-url">norastay.com</span></div>
+                  <div class="gp-shot"><img src="assets/img/sites/space-720.webp" srcset="assets/img/sites/space-720.webp 720w, assets/img/sites/space.webp 1200w" sizes="(max-width: 760px) 88vw, (max-width: 1024px) 60vw, 560px" width="1200" height="750" alt="NORA STAY 웹사이트(norastay.com) 첫 화면" loading="lazy" decoding="async" draggable="false"></div>
                 </div>
-                <div class="hs-card-body">
-                  <div class="hs-card-top">
-                    <span class="hs-idx en"><b>02</b> / 05</span>
-                    <span class="hs-tag"><span class="sr-only">분야 </span>미디어 &amp; 콘텐츠</span>
+                <div class="gp-body">
+                  <div class="gp-top">
+                    <span class="gp-tag"><span class="sr-only">분야 </span>공간 &amp; 숙박업</span>
+                    <span class="gp-idx en" aria-hidden="true">03</span>
                   </div>
-                  <h3 class="hs-name en" id="gc-media-t">DOOGO MEDIA</h3>
-                  <p class="hs-desc">사람과 브랜드의 가치를 영상과 콘텐츠로 전합니다.</p>
-                  <div class="hs-card-foot">
-                    <p class="hs-ceo"><span>대표</span>김윤정</p>
-                    <div class="hs-btns">
-                      <a class="btn btn--primary hs-btn" href="https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C" target="_blank" rel="noopener"><span class="sr-only">DOOGO MEDIA </span>사이트 바로가기<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
-                      <a class="btn hs-btn hs-btn--line" href="business-media.html"><span class="sr-only">DOOGO MEDIA </span>사업 보기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-                    </div>
+                  <h3 class="gp-name en" id="gp-nora-t">NORA STAY</h3>
+                  <p class="gp-op"><span class="gp-op-k">운영</span><span class="gp-op-v"><span class="en">DOOGO SPACE</span><span class="gp-op-dot" aria-hidden="true">·</span>공간팀</span></p>
+                  <p class="gp-desc">여행과 출장 사이, 잠시 쉬어갈 수 있는 숙박 서비스입니다.</p>
+                  <div class="gp-btns">
+                    <a class="btn btn--primary gp-btn" href="https://www.norastay.com/" target="_blank" rel="noopener" draggable="false"><span class="sr-only">NORA STAY </span>사이트 바로가기<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
+                    <a class="btn gp-btn gp-btn--line" href="business-space.html" draggable="false"><span class="sr-only">NORA STAY </span>사업 보기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
                   </div>
                 </div>
-                <span class="hs-dim" aria-hidden="true"></span>
               </article>
             </li>
-            <li class="hs-item" id="gc-makers" data-hs-item="3">
-              <article class="hs-card" aria-labelledby="gc-makers-t">
-                <div class="hs-win">
-                  <div class="hs-win-bar" aria-hidden="true"><span class="hs-dots"><i></i><i></i><i></i></span><span class="hs-url">doogofood.com</span></div>
-                  <div class="hs-shot"><img src="assets/img/sites/makers-720.webp" srcset="assets/img/sites/makers-720.webp 720w, assets/img/sites/makers.webp 1200w" sizes="(max-width: 760px) 84vw, (max-width: 1024px) 46vw, 600px" width="1200" height="750" alt="DOOGO MAKERS 웹사이트(doogofood.com) 첫 화면" loading="lazy" decoding="async"></div>
+            <li class="gp-item" id="gp-yt" data-gp-item>
+              <article class="gp-card" aria-labelledby="gp-yt-t">
+                <div class="gp-win">
+                  <div class="gp-win-bar" aria-hidden="true"><span class="gp-dots"><i></i><i></i><i></i></span><span class="gp-url">YouTube · 두고보는 문대표</span></div>
+                  <div class="gp-shot"><img src="assets/img/sites/media-720.webp" srcset="assets/img/sites/media-720.webp 720w, assets/img/sites/media.webp 1200w" sizes="(max-width: 760px) 88vw, (max-width: 1024px) 60vw, 560px" width="1200" height="750" alt="유튜브 채널 두고보는 문대표 첫 화면" loading="lazy" decoding="async" draggable="false"></div>
                 </div>
-                <div class="hs-card-body">
-                  <div class="hs-card-top">
-                    <span class="hs-idx en"><b>03</b> / 05</span>
-                    <span class="hs-tag"><span class="sr-only">분야 </span>브랜드</span>
+                <div class="gp-body">
+                  <div class="gp-top">
+                    <span class="gp-tag"><span class="sr-only">분야 </span>미디어 &amp; 콘텐츠</span>
+                    <span class="gp-idx en" aria-hidden="true">04</span>
                   </div>
-                  <h3 class="hs-name en" id="gc-makers-t">DOOGO MAKERS</h3>
-                  <p class="hs-desc">브랜드를 기획하고 운영하며, 판매와 성장 전략을 함께 만듭니다.</p>
-                  <div class="hs-card-foot">
-                    <p class="hs-ceo"><span>대표</span>신동훈</p>
-                    <div class="hs-btns">
-                      <a class="btn btn--primary hs-btn" href="https://www.doogofood.com/" target="_blank" rel="noopener"><span class="sr-only">DOOGO MAKERS </span>사이트 바로가기<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
-                      <a class="btn hs-btn hs-btn--line" href="business-commerce.html"><span class="sr-only">DOOGO MAKERS </span>사업 보기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-                    </div>
+                  <h3 class="gp-name gp-name--ko" id="gp-yt-t">두고보는 문대표<span class="gp-name-sub en">YouTube</span></h3>
+                  <p class="gp-op"><span class="gp-op-k">운영</span><span class="gp-op-v"><span class="en">DOOGO MEDIA</span><span class="gp-op-dot" aria-hidden="true">·</span>미디어팀</span></p>
+                  <p class="gp-desc">사람과 브랜드의 가치를 영상과 콘텐츠로 전합니다.</p>
+                  <div class="gp-btns">
+                    <a class="btn btn--primary gp-btn" href="https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C" target="_blank" rel="noopener" draggable="false"><span class="sr-only">두고보는 문대표 </span>사이트 바로가기<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
+                    <a class="btn gp-btn gp-btn--line" href="business-media.html" draggable="false"><span class="sr-only">두고보는 문대표 </span>사업 보기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
                   </div>
                 </div>
-                <span class="hs-dim" aria-hidden="true"></span>
               </article>
             </li>
-            <li class="hs-item" id="gc-ad" data-hs-item="4">
-              <article class="hs-card" aria-labelledby="gc-ad-t">
-                <div class="hs-win">
-                  <div class="hs-win-bar" aria-hidden="true"><span class="hs-dots"><i></i><i></i><i></i></span><span class="hs-url">doogoad.com</span></div>
-                  <div class="hs-shot"><img src="assets/img/sites/ad-720.webp" srcset="assets/img/sites/ad-720.webp 720w, assets/img/sites/ad.webp 1200w" sizes="(max-width: 760px) 84vw, (max-width: 1024px) 46vw, 600px" width="1200" height="750" alt="DOOGO AD 웹사이트(doogoad.com) 첫 화면" loading="lazy" decoding="async"></div>
+            <li class="gp-item" id="gp-makers" data-gp-item>
+              <article class="gp-card" aria-labelledby="gp-makers-t">
+                <div class="gp-win">
+                  <div class="gp-win-bar" aria-hidden="true"><span class="gp-dots"><i></i><i></i><i></i></span><span class="gp-url">doogofood.com</span></div>
+                  <div class="gp-shot"><img src="assets/img/sites/makers-2-720.webp" srcset="assets/img/sites/makers-2-720.webp 720w, assets/img/sites/makers-2.webp 1200w" sizes="(max-width: 760px) 88vw, (max-width: 1024px) 60vw, 560px" width="1200" height="750" alt="doogofood.com의 취급상품 1000+ SKU 소개 화면" loading="lazy" decoding="async" draggable="false"></div>
                 </div>
-                <div class="hs-card-body">
-                  <div class="hs-card-top">
-                    <span class="hs-idx en"><b>04</b> / 05</span>
-                    <span class="hs-tag"><span class="sr-only">분야 </span>마케팅</span>
+                <div class="gp-body">
+                  <div class="gp-top">
+                    <span class="gp-tag"><span class="sr-only">분야 </span>브랜드 · 커머스</span>
+                    <span class="gp-idx en" aria-hidden="true">05</span>
                   </div>
-                  <h3 class="hs-name en" id="gc-ad-t">DOOGO AD</h3>
-                  <p class="hs-desc">브랜드가 필요한 고객에게 닿도록 광고를 기획하고 운영합니다.</p>
-                  <div class="hs-card-foot">
-                    <p class="hs-ceo"><span>대표</span>김신용</p>
-                    <div class="hs-btns">
-                      <a class="btn btn--primary hs-btn" href="https://www.doogoad.com/" target="_blank" rel="noopener"><span class="sr-only">DOOGO AD </span>사이트 바로가기<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
-                      <a class="btn hs-btn hs-btn--line" href="business-ad.html"><span class="sr-only">DOOGO AD </span>사업 보기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-                    </div>
+                  <h3 class="gp-name en" id="gp-makers-t">DOOGO MAKERS</h3>
+                  <p class="gp-op"><span class="gp-op-k">운영</span><span class="gp-op-v"><span class="en">DOOGO MAKERS</span><span class="gp-op-dot" aria-hidden="true">·</span>브랜드팀</span></p>
+                  <p class="gp-desc">브랜드를 기획하고 운영하며, 판매와 성장 전략을 함께 만듭니다.</p>
+                  <div class="gp-btns">
+                    <a class="btn btn--primary gp-btn" href="https://www.doogofood.com/" target="_blank" rel="noopener" draggable="false"><span class="sr-only">DOOGO MAKERS </span>사이트 바로가기<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
+                    <a class="btn gp-btn gp-btn--line" href="business-commerce.html" draggable="false"><span class="sr-only">DOOGO MAKERS </span>사업 보기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
                   </div>
                 </div>
-                <span class="hs-dim" aria-hidden="true"></span>
               </article>
             </li>
-            <li class="hs-item" id="gc-bio" data-hs-item="5">
-              <article class="hs-card" aria-labelledby="gc-bio-t">
-                <div class="hs-win">
-                  <div class="hs-win-bar" aria-hidden="true"><span class="hs-dots"><i></i><i></i><i></i></span><span class="hs-url">doogobio.com</span></div>
-                  <div class="hs-shot"><img src="assets/img/sites/bio-720.webp" srcset="assets/img/sites/bio-720.webp 720w, assets/img/sites/bio.webp 1200w" sizes="(max-width: 760px) 84vw, (max-width: 1024px) 46vw, 600px" width="1200" height="750" alt="DOOGOBIO 웹사이트(doogobio.com) 첫 화면" loading="lazy" decoding="async"></div>
+            <li class="gp-item" id="gp-ad" data-gp-item>
+              <article class="gp-card" aria-labelledby="gp-ad-t">
+                <div class="gp-win">
+                  <div class="gp-win-bar" aria-hidden="true"><span class="gp-dots"><i></i><i></i><i></i></span><span class="gp-url">doogoad.com</span></div>
+                  <div class="gp-shot"><img src="assets/img/sites/ad-720.webp" srcset="assets/img/sites/ad-720.webp 720w, assets/img/sites/ad.webp 1200w" sizes="(max-width: 760px) 88vw, (max-width: 1024px) 60vw, 560px" width="1200" height="750" alt="DOOGO AD 웹사이트(doogoad.com) 첫 화면" loading="lazy" decoding="async" draggable="false"></div>
                 </div>
-                <div class="hs-card-body">
-                  <div class="hs-card-top">
-                    <span class="hs-idx en"><b>05</b> / 05</span>
-                    <span class="hs-tag"><span class="sr-only">분야 </span>건기식 제조</span>
-                  <span class="hs-tag hs-tag--global"><svg aria-hidden="true"><use href="#i-globe"/></svg>뉴질랜드 · 해외법인</span>
+                <div class="gp-body">
+                  <div class="gp-top">
+                    <span class="gp-tag"><span class="sr-only">분야 </span>마케팅</span>
+                    <span class="gp-idx en" aria-hidden="true">06</span>
                   </div>
-                  <h3 class="hs-name en" id="gc-bio-t">DOOGOBIO</h3>
-                  <p class="hs-desc">뉴질랜드 건강식품의 개발과 소량 제조, 제품화를 지원합니다.</p>
-                  <div class="hs-card-foot">
-                    <p class="hs-ceo"><span>대표</span>백영호</p>
-                    <div class="hs-btns">
-                      <a class="btn btn--primary hs-btn" href="https://www.doogobio.com/" target="_blank" rel="noopener"><span class="sr-only">DOOGOBIO </span>사이트 바로가기<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
-                      <a class="btn hs-btn hs-btn--line" href="business-bio.html"><span class="sr-only">DOOGOBIO </span>사업 보기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-                    </div>
+                  <h3 class="gp-name en" id="gp-ad-t">DOOGO AD</h3>
+                  <p class="gp-op"><span class="gp-op-k">운영</span><span class="gp-op-v"><span class="en">DOOGO AD</span><span class="gp-op-dot" aria-hidden="true">·</span>마케팅팀</span></p>
+                  <p class="gp-desc">브랜드가 필요한 고객에게 닿도록 광고를 기획하고 운영합니다.</p>
+                  <div class="gp-btns">
+                    <a class="btn btn--primary gp-btn" href="https://www.doogoad.com/" target="_blank" rel="noopener" draggable="false"><span class="sr-only">DOOGO AD </span>사이트 바로가기<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
+                    <a class="btn gp-btn gp-btn--line" href="business-ad.html" draggable="false"><span class="sr-only">DOOGO AD </span>사업 보기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
                   </div>
                 </div>
-                <span class="hs-dim" aria-hidden="true"></span>
               </article>
             </li>
-            </ol>
-            <!-- 마무리 칸 -->
-            <div class="hs-end">
-              <p class="hs-end-sum"><span class="en" aria-hidden="true">1<i>+</i>5</span><span class="sr-only">지주회사 1곳과 그룹사 5곳,</span></p>
-              <p class="hs-end-t">하나의 두고그룹</p>
-              <p class="hs-end-s">지주회사&nbsp;1&nbsp;· 그룹사&nbsp;5&nbsp;· 국내&nbsp;4&nbsp;· 해외&nbsp;1</p>
-              <a class="link-arrow hs-end-link" href="about.html#structure">그룹 구조 자세히 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-              <p class="hs-note hs-note--end">각 사이트 첫 화면 · 2026년 10월 기준</p>
-            </div>
-          </div>
+            <li class="gp-item" id="gp-bio" data-gp-item>
+              <article class="gp-card" aria-labelledby="gp-bio-t">
+                <div class="gp-win">
+                  <div class="gp-win-bar" aria-hidden="true"><span class="gp-dots"><i></i><i></i><i></i></span><span class="gp-url">doogobio.com</span></div>
+                  <div class="gp-shot"><img src="assets/img/sites/bio-720.webp" srcset="assets/img/sites/bio-720.webp 720w, assets/img/sites/bio.webp 1200w" sizes="(max-width: 760px) 88vw, (max-width: 1024px) 60vw, 560px" width="1200" height="750" alt="DOOGOBIO 웹사이트(doogobio.com) 첫 화면" loading="lazy" decoding="async" draggable="false"></div>
+                </div>
+                <div class="gp-body">
+                  <div class="gp-top">
+                    <span class="gp-tag"><span class="sr-only">분야 </span>제조업</span>
+                    <span class="gp-idx en" aria-hidden="true">07</span>
+                  </div>
+                  <h3 class="gp-name en" id="gp-bio-t">DOOGOBIO</h3>
+                  <p class="gp-op"><span class="gp-op-k">운영</span><span class="gp-op-v"><span class="en">DOOGOBIO</span><span class="gp-op-dot" aria-hidden="true">·</span>제조팀<span class="gp-op-loc">뉴질랜드</span></span></p>
+                  <p class="gp-desc">뉴질랜드 건강식품의 개발과 소량 제조, 제품화를 지원합니다.</p>
+                  <div class="gp-btns">
+                    <a class="btn btn--primary gp-btn" href="https://www.doogobio.com/" target="_blank" rel="noopener" draggable="false"><span class="sr-only">DOOGOBIO </span>사이트 바로가기<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
+                    <a class="btn gp-btn gp-btn--line" href="business-bio.html" draggable="false"><span class="sr-only">DOOGOBIO </span>사업 보기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+                  </div>
+                </div>
+              </article>
+            </li>
+        </ol>
+      </div>
+      <div class="container gp-foot">
+        <p class="gp-count en" aria-hidden="true"><b data-gp-num>01</b><span>/ 07</span></p>
+        <span class="gp-bar" aria-hidden="true"><i data-gp-bar></i></span>
+        <p class="gp-note">각 사이트 첫 화면 · 2026년 10월 기준</p>
+        <div class="gp-nav">
+          <button class="gp-arrow" type="button" data-gp-prev aria-controls="gp-list" aria-label="이전 프로젝트"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+          <button class="gp-arrow" type="button" data-gp-next aria-controls="gp-list" aria-label="다음 프로젝트"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
         </div>
       </div>
-
-      <!-- 진행 표시: 번호 + 막대 + 그룹사 칩(누르면 그 카드로) · 대체 모드에서만 이전/다음 버튼 -->
-      <div class="hs-foot" data-reveal style="--d:.3s">
-        <div class="hs-prog">
-          <p class="hs-count en" aria-hidden="true"><b data-hs-num>01</b><span>/ 05</span></p>
-          <span class="hs-bar" aria-hidden="true"><i data-hs-bar></i></span>
-        </div>
-        <div class="hs-ctrl">
-          <div class="hs-chips" role="group" aria-label="그룹사 카드 바로가기" data-hs-chips>
-              <button class="hs-chip hs-chip--hold" type="button" data-hs-go="0" aria-controls="hs-hold-card"><span class="en"><span class="sr-only">DOOGO </span>HOLDINGS</span></button>
-              <button class="hs-chip" type="button" data-hs-go="1" aria-controls="gc-space"><span class="en"><span class="hs-chip-pre">DOOGO </span>SPACE</span></button>
-              <button class="hs-chip" type="button" data-hs-go="2" aria-controls="gc-media"><span class="en"><span class="hs-chip-pre">DOOGO </span>MEDIA</span></button>
-              <button class="hs-chip" type="button" data-hs-go="3" aria-controls="gc-makers"><span class="en"><span class="hs-chip-pre">DOOGO </span>MAKERS</span></button>
-              <button class="hs-chip" type="button" data-hs-go="4" aria-controls="gc-ad"><span class="en"><span class="hs-chip-pre">DOOGO </span>AD</span></button>
-              <button class="hs-chip" type="button" data-hs-go="5" aria-controls="gc-bio" aria-label="DOOGOBIO"><span class="en"><span class="hs-chip-pre">DOOGO</span>BIO</span></button>
-          </div>
-          <div class="hs-nav">
-            <button class="hs-arrow" type="button" data-hs-prev aria-label="이전 카드"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-            <button class="hs-arrow" type="button" data-hs-next aria-label="다음 카드"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-          </div>
-          <p class="hs-note hs-note--foot">각 사이트 첫 화면 · 2026년 10월 기준</p>
-        </div>
-      </div>
+      <p class="sr-only" aria-live="polite" data-gp-live></p>
     </div>
   </section>
 
@@ -1182,24 +1135,11 @@
       </ul>
     </nav>
 
-    <div class="ft-corps">
-      <p class="ft-label en" id="ft-corps-title">Doogo Group</p>
-      <ul aria-labelledby="ft-corps-title">
-        <li><a href="about.html#structure"><span class="ft-corp-n">DOOGO HOLDINGS</span><small><span class="sr-only">, </span>지주회사</small></a></li>
-        <li><a href="business-campus.html"><span class="ft-corp-n">DOOGO CLASS</span></a></li>
-        <li><a href="business-food.html"><span class="ft-corp-n">DOOGOFOOD</span></a></li>
-        <li><a href="business-space.html"><span class="ft-corp-n">DOOGO SPACE</span></a></li>
-        <li><a href="business-media.html"><span class="ft-corp-n">DOOGO MEDIA</span></a></li>
-        <li><a href="business-commerce.html"><span class="ft-corp-n">DOOGO MAKERS</span></a></li>
-        <li><a href="business-ad.html"><span class="ft-corp-n">DOOGO AD</span></a></li>
-        <li><a href="business-bio.html"><span class="ft-corp-n">DOOGOBIO</span></a></li>
-      </ul>
-    </div>
 
     <div class="ft-mid">
       <div class="ft-policy">
-        <a class="is-strong" href="privacy.html">개인정보처리방침</a>
-        <a href="email-policy.html">이메일무단수집거부</a>
+        <a class="is-strong" href="privacy.html" data-legal-modal>개인정보처리방침</a>
+        <a href="email-policy.html" data-legal-modal>이메일무단수집거부</a>
         <a href="faq.html">자주 묻는 질문</a>
       </div>
       <div class="ft-side">
@@ -1221,8 +1161,16 @@
     </div>
 
     <div class="ft-info">
-      <p>(주)두고홀딩스 <span class="sep"></span>대표 문원오 <span class="sep"></span>사업자등록번호 726-87-03167 <span class="sep"></span>개인정보 보호책임자 문원오</p>
-      <p>세종특별자치시 갈매로 353 에비뉴힐 5층 5023호 <span class="sep"></span>이메일 <a href="mailto:doogobiz@gmail.com">doogobiz@gmail.com</a> <span class="sep"></span>대표 문의 <a href="contact.html">온라인 문의 접수</a></p>
+      <ul class="ft-info-row">
+        <li>(주)두고홀딩스</li>
+        <li>대표 문원오</li>
+        <li>사업자등록번호 726-87-03167</li>
+        <li>개인정보 보호책임자 : (주)두고홀딩스</li>
+      </ul>
+      <ul class="ft-info-row">
+        <li>세종특별자치시 갈매로 353 에비뉴힐 5층 5023호</li>
+        <li>이메일 <a href="mailto:doogobiz@gmail.com">doogobiz@gmail.com</a></li>
+      </ul>
       <p class="ft-copy">© <span data-year>2026</span> DOOGO HOLDINGS Co., Ltd. All rights reserved.</p>
     </div>
   </div>

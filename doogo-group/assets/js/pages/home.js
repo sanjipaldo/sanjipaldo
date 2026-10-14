@@ -1,9 +1,9 @@
 /* =========================================================
    DOOGO GROUP — home.js (메인 페이지 전용)
    히어로 장면 표시기 · 인트로 글자 새김 · 숫자 카운트(0부터)
-   · 그룹 구조(사이트 첫 화면 카드 · 고정 무대 가로 스크롤) · 사업영역 스티키 스토리(사진)
+   · 운영 프로젝트(사이트 첫 화면 카드 7장 · 좌우 슬라이드) · 사업영역 스티키 스토리(사진)
    · One Group · Brands(세로 트리 ↔ 3D 브랜드 슬라이더 동기화) · 리더십 한 줄 카드(.pcard) · 그룹소식 커버플로우 · 화면 밖 애니메이션 정지
-   · 해시(#chain 등)로 들어온 경우 #group 높이 계산 뒤 앵커 위치 보정
+   · 해시(#chain 등)로 들어온 경우 글꼴 · 이미지 로드 뒤 앵커 위치 보정
    움직임 정책: OS의 '애니메이션 줄이기' 설정과 관계없이 모든 모션을 재생합니다.
    사용자가 '움직임 멈추기' 버튼(site.js)을 고른 경우에만 멈춥니다 → motionOff() · 'doogo:motion' 이벤트.
    ========================================================= */
@@ -257,356 +257,157 @@
     });
   }
 
-  /* ---------- S3 그룹 구조: 각 사이트 첫 화면 카드 · 고정 무대 가로 스크롤 ----------
-     고정 모드(.is-pin): 섹션 높이 = 무대(100svh) + 가로 이동 거리 + 앞뒤로 잠깐 머무는 구간.
-       아래로 스크롤한 만큼 카드 줄이 왼쪽으로 이동합니다(transform 만 · rAF + 약한 보간).
-       가로 이동량에 따라 '지금 카드'가 정해짐(넓은 화면: 왼쪽 시작선 쪽 · 휴대폰: 화면 가운데) → 지금 카드는 선명·크기 1, 나머지는 0.94·어둡게.
-       캡처 이미지는 카드 이동과 반대로 살짝 움직임(html.soft-motion 이면 이 패럴랙스만 끔).
-       카드 폭은 무대 높이에 카드 전체(브라우저 창 + 본문)가 들어오도록 계산합니다(리사이즈·글꼴·이미지 로드 시 다시).
-     대체 모드(움직임 멈추기 · 높이 560px 미만 화면 · JS 없음 = CSS 기본값): 고정 없이 가로 스크롤 목록 + 이전/다음 버튼.
-     'doogo:motion' 이벤트로 바로 전환하고, 보던 카드를 유지합니다. */
-  function groupScroll() {
-    var root = $('[data-hs]');
-    if (!root) return null;
-    var html = document.documentElement;
-    var stage = $('.hs-stage', root);
-    var view = $('[data-hs-view]', root);
-    var track = $('[data-hs-track]', root);
-    var panel = $('.hs-panel', root);
-    var allItems = $$('[data-hs-item]', root);
-    var endCell = $('.hs-end', root);
-    var chips = $$('[data-hs-go]', root);
-    var chipBox = $('[data-hs-chips]', root);
-    var numEl = $('[data-hs-num]', root);
-    var barEl = $('[data-hs-bar]', root);
-    var prevBtn = $('[data-hs-prev]', root);
-    var nextBtn = $('[data-hs-next]', root);
-    var foot = $('.hs-foot', root);
-    if (!stage || !view || !track || !allItems.length) return null;
+  /* ---------- S3 두고그룹이 운영하는 프로젝트: 좌우 슬라이드 ----------
+     페이지 세로 스크롤은 절대 가로채지 않습니다(고정 · 섹션 높이 계산 · 세로 휠 가로채기 없음).
+     카드 줄(.gp-view)은 일반 가로 스크롤 영역 + scroll-snap → 터치 스와이프 · 가로 휠 · 트랙패드는 브라우저 기본 동작.
+     더하는 것: 이전/다음 버튼 · 마우스 끌기(놓으면 가장 가까운 카드로) · 진행 표시(01 / 07 + 막대) · 지금 카드 강조 · 키보드 포커스 따라가기.
+     '지금 카드'(cur): 버튼으로 고른 카드, 또는 손으로 넘겼을 때 왼쪽 시작선에 가장 가까운 카드.
+       넓은 화면은 끝에서 마지막 2–3장이 한 화면에 함께 보이므로, 끝 위치에서는 버튼이 스크롤 없이 강조만 다음 카드로 옮깁니다.
+     움직임 멈추기(html.motion-off): 같은 동작 · 스크롤 전환만 즉시. */
+  function groupProjects() {
+    var root = $('[data-gp]');
+    if (!root) return;
+    var view = $('[data-gp-view]', root);
+    var items = $$('[data-gp-item]', root);
+    var n = items.length;
+    if (!view || !n) return;
+    var cards = items.map(function (li) { return $('.gp-card', li); });
+    var numEl = $('[data-gp-num]', root);
+    var barEl = $('[data-gp-bar]', root);
+    var prevBtn = $('[data-gp-prev]', root);
+    var nextBtn = $('[data-gp-next]', root);
+    var live = $('[data-gp-live]', root);
+    var cur = -1, driving = 0, driveT = 0, raf = 0;
 
-    var MIN_H = 560;     // 이보다 낮은 화면은 고정하지 않음
-    var LERP = 0.17;     // 60fps 한 프레임당 따라가는 비율
-    var pinned = null;
-    var items = [], cards = [], dims = [], shots = [], n = 0;
-    // 가로 이동량 S(px, 카드 줄을 왼쪽으로 민 거리): sStart → sEnd. 카드 i 가 '지금 카드'가 되는 S = sA0 + i × 간격
-    var sStart = 0, sA0 = 0, sAn = 0, travel = 0, narrow = false;
-    var dwell0 = 0, total = 0, padL = 0, sizeKey = '';
-    var x = 0, tx = 0, lastT = 0, raf = 0, near = false, snap = true, curIdx = -1;
-    var prevS = [], prevD = [], prevP = [], prevBar = -1;
-
-    function shown(el) { return !!(el && el.getClientRects().length); }
-    function collect() {
-      items = allItems.filter(shown);
-      cards = items.map(function (li) { return $('.hs-card', li); });
-      dims = items.map(function (li) { return $('.hs-dim', li); });
-      shots = items.map(function (li) { return $('.hs-shot img', li); });
-      n = items.length;
-      prevS = []; prevD = []; prevP = []; prevBar = -1; curIdx = -1;
+    items.forEach(function (li, i) { li.style.setProperty('--i', i); });
+    function beh() { return motionOff() ? 'instant' : 'smooth'; }
+    function maxL() { return Math.max(0, view.scrollWidth - view.clientWidth); }
+    // 카드 i 를 왼쪽 시작선에 맞추는 스크롤 위치 (첫 카드 = 0)
+    function leftOf(i) { return items[i].offsetLeft - items[0].offsetLeft; }
+    function lead() {
+      var sl = view.scrollLeft, best = 0, bd = Infinity;
+      for (var i = 0; i < n; i++) { var d = Math.abs(leftOf(i) - sl); if (d < bd) { bd = d; best = i; } }
+      return best;
     }
-    function wantPin() {
-      var h = Math.min(window.innerHeight, html.clientHeight || window.innerHeight);
-      return !motionOff() && h >= MIN_H;
+    // 지금 화면에 다 보이는 카드 범위
+    function fullyShown(i) {
+      var sl = view.scrollLeft, edge = items[0].offsetLeft;
+      var l = items[i].offsetLeft, r = l + items[i].offsetWidth;
+      return l >= sl - 2 && r <= sl + view.clientWidth - Math.min(edge, 24) + 2;
     }
-    function idOf(i) { return items[i] ? +items[i].getAttribute('data-hs-item') : 1; }
-    function indexOfId(id) {
-      for (var i = 0; i < n; i++) if (idOf(i) === id) return i;
-      return -1;
-    }
-
-    // ---- 진행 표시: 번호 · 막대 · 칩 · 지금 카드 ----
-    function setBar(t) {
-      var v = Math.round(t * 10000) / 10000;
-      if (!barEl || v === prevBar) return;
-      prevBar = v;
-      barEl.style.transform = 'scaleX(' + v + ')';
-    }
-    function setCurrent(i) {
-      if (i === curIdx || !n) return;
-      curIdx = i;
-      var id = idOf(i), chip = null;
-      cards.forEach(function (c, j) { c.classList.toggle('is-current', j === i); });
-      chips.forEach(function (b) {
-        if (+b.getAttribute('data-hs-go') === id) { b.setAttribute('aria-current', 'true'); chip = b; }
-        else b.removeAttribute('aria-current');
-      });
-      if (numEl) numEl.textContent = id === 0 ? '1+5' : pad(id);
-      root.classList.toggle('is-hold-now', id === 0);
-      // 칩 줄이 넘치면(좁은 화면) 지금 칩이 보이도록 칩 줄만 가로로 이동
-      if (chip && chipBox && chipBox.scrollWidth > chipBox.clientWidth + 1) {
-        var l = chip.offsetLeft - (chipBox.clientWidth - chip.offsetWidth) / 2;
-        chipBox.scrollTo({ left: Math.max(0, l), behavior: motionOff() ? 'auto' : 'smooth' });
-      }
-    }
-
-    // ---- 고정 모드: 카드 폭 맞춤 → 위치·이동 거리 → 섹션 높이 ----
-    function fit() {
-      root.style.removeProperty('--hs-card-w');
-      root.style.removeProperty('--hs-row-h');
-      root.classList.add('is-measure');
-      var site = items.filter(function (li) { return $('.hs-shot', li); });
-      var probe = site[0] || items[0];
-      var cs = getComputedStyle(track);
-      var avail = view.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
-      var maxW = probe.offsetWidth;
-      var minW = Math.min(maxW, desktopMQ.matches ? 320 : 232);
-      var w = maxW, h = 0, k;
-      function tallest(list) { var m = 0; list.forEach(function (li) { m = Math.max(m, li.offsetHeight); }); return m; }
-      for (k = 0; k < 5; k++) {
-        h = tallest(site);
-        if (h <= avail || w <= minW) break;
-        // 캡처는 16:10 → 폭을 1.6px 줄이면 높이가 1px 줄어듦 (본문 줄바꿈 변화는 다음 회차에서 다시 확인)
-        w = Math.max(minW, Math.floor(w - (h - avail) * 1.6 - 2));
-        root.style.setProperty('--hs-card-w', w + 'px');
-      }
-      var rowH = Math.max(h, tallest(items));
-      if (shown(panel)) rowH = Math.max(rowH, panel.offsetHeight);
-      rowH = Math.max(0, Math.min(rowH, Math.floor(avail)));
-      root.style.setProperty('--hs-row-h', rowH + 'px');
-      root.classList.remove('is-measure');
-    }
-    // 넓은 화면의 끝 위치: 마지막 카드가 왼쪽 시작선에 멈추고 그 오른쪽에 마무리 칸이 다 보이는 이동량.
-    // 줄 끝 여백(--hs-edge-r)이 큰 화면(1680px 이상)에서 마지막 카드가 시작선을 지나 패널 쪽으로 밀려나지 않게 하고,
-    // 마무리 칸이 모자라는 화면(1025px 부근)은 마무리 칸 폭만 줄여 맞춥니다.
-    function endShift(step, vw) {
-      var last = (n - 1) * step;
-      if (!endCell) return last;
-      var need = function () { return endCell.offsetLeft + endCell.offsetWidth + 8 - vw; };
-      var over = need() - last;
-      if (over > 0) {
-        var ew = Math.max(196, Math.floor(endCell.offsetWidth - over));
-        endCell.style.width = ew + 'px';
-        endCell.classList.toggle('is-tight', ew < 240);
-      }
-      return Math.max(last, need());
-    }
-    function measure() {
-      track.style.transform = 'none';
-      view.scrollLeft = 0;
-      if (endCell) { endCell.style.width = ''; endCell.classList.remove('is-tight'); }
-      fit();
-      var vw = view.clientWidth, w = items[0].offsetWidth;
-      var c0 = items[0].offsetLeft + w / 2, cN = items[n - 1].offsetLeft + w / 2;
-      var step = n > 1 ? (cN - c0) / (n - 1) : w;
-      var sEnd = Math.max(0, track.offsetWidth - vw);
-      // 한 화면에 카드가 1.5장도 안 들어가면(휴대폰) 지금 카드를 가운데에 · 넓은 화면은 첫 카드 왼쪽 정렬에서 시작해 마지막엔 마무리 칸까지
-      narrow = vw < step * 1.5;
-      if (narrow) { sA0 = c0 - vw / 2; sAn = cN - vw / 2; sStart = Math.min(sA0, sEnd); }
-      else {
-        // 지금 카드가 왼쪽 시작선보다 더 밀려나지 않게: 끝 = min(줄 끝, 마지막 카드 시작선 + 마무리 칸)
-        sEnd = Math.min(sEnd, endShift(step, vw));
-        sA0 = 0; sAn = Math.min(sEnd, (n - 1) * step); sStart = 0;
-      }
-      travel = Math.max(0, sEnd - sStart);
-      var sh = stage.offsetHeight;
-      dwell0 = Math.round(sh * 0.06);
-      total = dwell0 + travel + Math.round(sh * 0.16);
-      root.style.height = (sh + total) + 'px';
-      snap = true;
-      tx = x = xAt(targetT());
-      render(x);
-    }
-    function targetT() {
-      if (!travel) return 0;
-      return clamp((-root.getBoundingClientRect().top - dwell0) / travel, 0, 1);
-    }
-    function xAt(t) { return -(sStart + t * travel); }
-    function sOf(i) { return sA0 + (n > 1 ? i / (n - 1) : 0) * (sAn - sA0); } // 카드 i 가 지금 카드가 되는 이동량
-    function render(xx) {
-      track.style.transform = 'translate3d(' + (Math.round(xx * 100) / 100) + 'px,0,0)';
-      var S = -xx;
-      var t = travel ? clamp((S - sStart) / travel, 0, 1) : 0;
-      var a = sAn > sA0 ? (n - 1) * (S - sA0) / (sAn - sA0) : 0;
-      var soft = html.classList.contains('soft-motion');
-      for (var i = 0; i < n; i++) {
-        var d = i - a;
-        var f = clamp(1 - Math.abs(d), 0, 1);
-        var e = f * f * (3 - 2 * f);
-        var s = Math.round((0.94 + 0.06 * e) * 10000) / 10000;
-        // 지나간 카드(왼쪽)는 조금 더 어둡게 → 패널 옆에 걸친 조각이 뒤로 물러나 보임
-        var o = Math.round((1 - e) * (d < 0 ? 0.6 : 0.42) * 1000) / 1000;
-        if (s !== prevS[i]) { cards[i].style.transform = s === 1 ? '' : 'scale(' + s + ')'; prevS[i] = s; }
-        if (o !== prevD[i] && dims[i]) { dims[i].style.opacity = o; prevD[i] = o; }
-        if (shots[i]) {
-          var p = soft ? 0 : Math.round(clamp(-d, -1.2, 1.2) * 3 * 100) / 100; // 확대 1.08 → 양옆 여유 4% 안에서만 이동
-          if (p !== prevP[i]) { shots[i].style.transform = soft ? '' : 'translate3d(' + p + '%,0,0) scale(1.08)'; prevP[i] = p; }
-        }
-      }
-      setBar(t);
-      setCurrent(clamp(Math.round(a), 0, n - 1));
-    }
-    function loop(now) {
-      raf = 0;
-      var dt = lastT ? Math.min(64, now - lastT) : 16.7;
-      lastT = now;
-      var diff = tx - x;
-      if (snap || Math.abs(diff) < 0.3) { x = tx; snap = false; }
-      else x += diff * (1 - Math.pow(1 - LERP, dt / 16.7));
-      render(x);
-      if (x !== tx) raf = requestAnimationFrame(loop);
-      else lastT = 0;
-    }
-    function update() {
-      if (!pinned || !near) return;
-      tx = xAt(targetT());
-      if (tx !== x || snap) { if (!raf) raf = requestAnimationFrame(loop); }
-    }
-    // 카드 i 가 '지금 카드'가 되는 페이지 스크롤 위치 (i = n 이면 마무리 칸까지 다 보이는 끝 위치)
-    function yFor(i) {
-      var top = root.getBoundingClientRect().top + window.scrollY;
-      var s = i >= n ? sStart + travel : sOf(i);
-      return Math.round(top + dwell0 + clamp(s - sStart, 0, travel));
-    }
-    function clearPin() {
-      cancelAnimationFrame(raf); raf = 0; lastT = 0;
-      root.style.height = '';
-      root.style.removeProperty('--hs-card-w');
-      root.style.removeProperty('--hs-row-h');
-      track.style.transform = '';
-      if (endCell) { endCell.style.width = ''; endCell.classList.remove('is-tight'); }
-      allItems.forEach(function (li) {
-        var c = $('.hs-card', li), dm = $('.hs-dim', li), im = $('.hs-shot img', li);
-        if (c) c.style.transform = '';
-        if (dm) dm.style.opacity = '';
-        if (im) im.style.transform = '';
-      });
-      x = tx = 0;
-    }
-
-    // ---- 대체 모드: 가로 스크롤 목록 ----
-    function fbSync() {
-      if (pinned) return;
-      var sl = view.scrollLeft, vw = view.clientWidth, max = view.scrollWidth - vw;
-      setBar(max > 0 ? clamp(sl / max, 0, 1) : 0);
-      var best = 0, bd = Infinity;
-      for (var i = 0; i < n; i++) {
-        var dd = Math.abs(fbLeft(i) - sl);
-        if (dd < bd) { bd = dd; best = i; }
-      }
-      if (max > 0 && sl >= max - 2) best = n - 1;
-      setCurrent(best);
-      // disabled 대신 aria-disabled: 키보드 포커스가 버튼에서 튕겨 나가지 않게
-      if (prevBtn) prevBtn.setAttribute('aria-disabled', String(sl <= 2));
-      if (nextBtn) nextBtn.setAttribute('aria-disabled', String(max <= 2 || sl >= max - 2));
-    }
-    // 대체 모드에서 카드 i 를 보여 주는 가로 스크롤 위치 (휴대폰은 가운데 · 넓은 화면은 왼쪽 정렬)
-    function fbLeft(i) {
-      var li = items[i];
-      return narrow ? li.offsetLeft + li.offsetWidth / 2 - view.clientWidth / 2 : li.offsetLeft - padL;
-    }
-    var fbRaf = 0;
-    view.addEventListener('scroll', function () {
-      if (pinned) { if (view.scrollLeft) view.scrollLeft = 0; return; }
-      if (!fbRaf) fbRaf = requestAnimationFrame(function () { fbRaf = 0; fbSync(); });
-    }, { passive: true });
-
-    // ---- 이동: 칩 · 이전/다음 ----
-    function go(i, smooth) {
-      if (!n) return;
+    function name(i) { var h = $('h3', items[i]); return h ? h.textContent.replace(/YouTube$/, '').trim() : ''; }
+    function setCur(i, say) {
       i = clamp(i, 0, n - 1);
-      var beh = smooth && !motionOff() ? 'smooth' : 'instant';
-      if (pinned) window.scrollTo({ top: yFor(i), behavior: beh });
-      else view.scrollTo({ left: Math.max(0, fbLeft(i)), behavior: beh });
+      if (i !== cur) {
+        cur = i;
+        cards.forEach(function (c, j) { c.classList.toggle('is-current', j === i); });
+        if (numEl) numEl.textContent = pad(i + 1);
+        if (barEl) barEl.style.transform = 'scaleX(' + ((i + 1) / n).toFixed(4) + ')';
+      }
+      // disabled 대신 aria-disabled: 키보드 포커스가 버튼에서 튕겨 나가지 않게
+      if (prevBtn) prevBtn.setAttribute('aria-disabled', String(cur <= 0));
+      if (nextBtn) nextBtn.setAttribute('aria-disabled', String(cur >= n - 1));
+      if (say && live) live.textContent = (cur + 1) + ' / ' + n + ' ' + name(cur);
     }
-    chips.forEach(function (b) {
-      b.addEventListener('click', function () {
-        var i = indexOfId(+b.getAttribute('data-hs-go'));
-        if (i >= 0) go(i, true);
-      });
-    });
-    function off(b) { return b.getAttribute('aria-disabled') === 'true'; }
-    if (prevBtn) prevBtn.addEventListener('click', function () { if (!off(prevBtn)) go(curIdx - 1, true); });
-    if (nextBtn) nextBtn.addEventListener('click', function () {
-      if (off(nextBtn)) return;
-      if (curIdx >= n - 1) view.scrollTo({ left: view.scrollWidth, behavior: motionOff() ? 'instant' : 'smooth' });
-      else go(curIdx + 1, true);
-    });
+    // 프로그램이 움직이는 동안(버튼 · 끌기 뒤 맞춤)에는 스크롤 위치로 cur 를 바꾸지 않음
+    function drive() {
+      driving = 1; clearTimeout(driveT);
+      driveT = setTimeout(function () { driving = 0; }, motionOff() ? 60 : 900);
+    }
+    function go(i, say) {
+      i = clamp(i, 0, n - 1);
+      setCur(i, say);
+      var target = Math.min(leftOf(i), maxL());
+      if (Math.abs(view.scrollLeft - target) < 2 && fullyShown(i)) return; // 이미 보임(넓은 화면의 끝) → 강조만 이동
+      drive();
+      view.scrollTo({ left: target, behavior: beh() });
+    }
+    function onScroll() {
+      raf = 0;
+      if (driving || drag) return;
+      var l = lead();
+      // 끝까지 넘겼을 때: 보이는 카드 중 지금 카드를 유지(이미 보이는 뒤쪽 카드를 골라 둔 경우), 아니면 시작선 카드
+      if (view.scrollLeft >= maxL() - 2 && cur >= l && fullyShown(cur)) setCur(cur);
+      else setCur(l);
+    }
+    view.addEventListener('scroll', function () { if (!raf) raf = requestAnimationFrame(onScroll); }, { passive: true });
+    if ('onscrollend' in window) view.addEventListener('scrollend', function () { if (!drag) { driving = 0; clearTimeout(driveT); } });
 
-    // ---- 키보드: 카드 안 링크에 포커스가 가면 그 카드가 보이는 스크롤 위치로 ----
+    if (prevBtn) prevBtn.addEventListener('click', function () { if (cur > 0) go(cur - 1, true); });
+    if (nextBtn) nextBtn.addEventListener('click', function () { if (cur < n - 1) go(cur + 1, true); });
+
+    // ---- 마우스 끌기 (터치 · 펜은 브라우저 기본 스와이프) ----
+    var drag = null, moved = false;
+    view.addEventListener('pointerdown', function (e) {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      drag = { id: e.pointerId, x0: e.clientX, sl0: view.scrollLeft, on: false, lx: e.clientX, lt: e.timeStamp, v: 0 };
+      moved = false;
+    });
+    view.addEventListener('pointermove', function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      var dx = e.clientX - drag.x0;
+      if (!drag.on) {
+        if (Math.abs(dx) < 6) return;
+        drag.on = true; moved = true;
+        view.classList.add('is-drag');
+        try { view.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
+      }
+      var dt = Math.max(1, e.timeStamp - drag.lt);
+      drag.v = 0.8 * ((e.clientX - drag.lx) / dt) + 0.2 * drag.v;
+      drag.lx = e.clientX; drag.lt = e.timeStamp;
+      view.scrollLeft = drag.sl0 - dx;
+      e.preventDefault();
+    });
+    function endDrag(e) {
+      if (!drag || (e && e.pointerId !== drag.id)) return;
+      var was = drag.on, v = drag.v;
+      drag = null;
+      if (!was) return;
+      view.classList.remove('is-drag');
+      // 놓을 때 속도만큼 조금 더 간 위치에서 가장 가까운 카드로
+      var aim = view.scrollLeft - v * 160, best = 0, bd = Infinity;
+      for (var i = 0; i < n; i++) { var d = Math.abs(Math.min(leftOf(i), maxL()) - aim); if (d < bd) { bd = d; best = i; } }
+      go(best, false);
+    }
+    view.addEventListener('pointerup', endDrag);
+    view.addEventListener('pointercancel', endDrag);
+    view.addEventListener('lostpointercapture', endDrag);
+    // 끌기 직후의 클릭(링크 열림)은 막음
+    view.addEventListener('click', function (e) {
+      if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; }
+    }, true);
+    view.addEventListener('dragstart', function (e) { e.preventDefault(); });
+
+    // ---- 키보드: 카드 안 링크로 탭 이동하면 그 카드가 다 보이게 · ←/→ 로 카드 이동 ----
     root.addEventListener('focusin', function (e) {
-      if (!pinned) return;
-      var kbd = true;
-      try { kbd = e.target.matches(':focus-visible'); } catch (err) { /* 무시 */ }
-      if (!kbd) return;
-      view.scrollLeft = 0;
-      var li = e.target.closest && e.target.closest('[data-hs-item]');
-      var i = li ? items.indexOf(li) : (endCell && endCell.contains(e.target) ? n : -1);
+      var li = e.target.closest && e.target.closest('[data-gp-item]');
+      if (!li) return;
+      var i = items.indexOf(li);
       if (i < 0) return;
-      var y = yFor(i);
-      if (Math.abs(window.scrollY - y) > 2) window.scrollTo({ top: y, behavior: 'instant' });
-      cancelAnimationFrame(raf); raf = 0;
-      tx = x = i >= n ? xAt(1) : -clamp(sOf(i), sStart, sStart + travel);
-      render(x);
+      setCur(i);
+      if (!fullyShown(i)) { drive(); view.scrollTo({ left: Math.min(leftOf(i), maxL()), behavior: 'instant' }); }
+    });
+    view.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      var i = cur + (e.key === 'ArrowRight' ? 1 : -1);
+      if (i < 0 || i >= n) return;
+      e.preventDefault();
+      go(i, true);
+      var a = $('a[href]', items[i]);
+      if (a) a.focus({ preventScroll: true });
     });
 
-    // ---- 모드 결정 · 다시 계산 ----
-    function layout(force) {
-      var want = wantPin();
-      var key = window.innerWidth + 'x' + (want ? stage.offsetHeight : 0) + (want ? 'p' : 'f');
-      if (!force && want === pinned && key === sizeKey) { update(); return; }
-      var r = root.getBoundingClientRect(), y0 = window.scrollY, oldH = r.height;
-      var inView = r.top < window.innerHeight && r.bottom > 0;
-      var keep = Math.max(0, curIdx), keepId = n ? idOf(keep) : 1;
-      var first = pinned === null, switched = want !== pinned;
-      if (switched) {
-        if (pinned) clearPin();
-        pinned = want;
-        root.classList.toggle('is-pin', pinned);
-      }
-      collect();
-      if (pinned) measure();
-      else {
-        root.style.height = '';
-        padL = parseFloat(getComputedStyle(track).paddingLeft) || 0;
-        narrow = n > 1 && view.clientWidth < (items[1].offsetLeft - items[0].offsetLeft) * 1.5;
-      }
-      sizeKey = window.innerWidth + 'x' + (pinned ? stage.offsetHeight : 0) + (pinned ? 'p' : 'f');
-      if (switched && !first) {
-        // 보던 위치 유지: 섹션이 화면에 있으면 같은 카드로, 위쪽에 지나갔으면 높이 차이만큼 보정
-        var ki = Math.max(0, indexOfId(keepId));
-        if (inView) {
-          if (pinned) window.scrollTo({ top: yFor(ki), behavior: 'instant' });
-          else {
-            window.scrollTo({ top: Math.round(root.getBoundingClientRect().top + window.scrollY), behavior: 'instant' });
-            view.scrollTo({ left: Math.max(0, fbLeft(ki)), behavior: 'instant' });
-          }
-        } else if (r.bottom <= 0) {
-          window.scrollTo({ top: y0 + (root.offsetHeight - oldH), behavior: 'instant' });
-        }
-      }
-      if (pinned) { snap = true; update(); if (!near) { tx = x = xAt(targetT()); render(x); } }
-      else fbSync();
-    }
-
-    // 화면 근처에서만 계산 · 캡처 이미지는 섹션에 가까워지면 미리 불러옴
+    // 캡처 이미지는 섹션에 가까워지면 미리 불러옴(가로로 숨어 있는 카드 포함)
     if ('IntersectionObserver' in window) {
-      new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) {
-          near = en.isIntersecting;
-          if (!near) return;
-          // 고정 중엔 아래쪽 진행 표시가 화면 아래 10% 안에 머물러 공통 등장(site.js) 관찰에 안 걸릴 수 있어 여기서 드러냄
-          if (foot) foot.classList.add('is-in');
-          snap = true; update();
-        });
-      }, { rootMargin: '40% 0px' }).observe(root);
       var lio = new IntersectionObserver(function (entries) {
         if (!entries.some(function (en) { return en.isIntersecting; })) return;
         $$('img[loading="lazy"]', root).forEach(function (im) { im.loading = 'eager'; });
         lio.disconnect();
-      }, { rootMargin: '150% 0px' });
+      }, { rootMargin: '120% 0px' });
       lio.observe(root);
-    } else near = true;
-
-    var rt, ft;
-    function relayout() { clearTimeout(rt); rt = setTimeout(function () { layout(false); }, 120); }
-    function remeasure() { clearTimeout(ft); ft = setTimeout(function () { layout(true); }, 80); }
-    window.addEventListener('resize', relayout);
-    window.addEventListener('load', function () { layout(true); });
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { layout(true); });
-    $$('img', root).forEach(function (im) { if (!im.complete) im.addEventListener('load', remeasure, { once: true }); });
-    onMQ(desktopMQ, function () { layout(true); });
-    onMotion(function () { requestAnimationFrame(function () { layout(true); }); });
-    layout(true);
-    return update;
+    }
+    window.addEventListener('resize', function () { if (!raf) raf = requestAnimationFrame(onScroll); });
+    setCur(0);
   }
 
   /* ---------- S4 사업영역: 스티키 스크롤 스토리 (사진) ----------
@@ -1103,15 +904,15 @@
   }
 
   /* ---------- 해시로 바로 들어온 경우(index.html#chain · #works · #leaders …) 위치 보정 ----------
-     그룹 구조(#group)는 글꼴 · 캡처 이미지 · load 뒤에 높이를 다시 계산하므로, 브라우저가 먼저 옮겨 둔 앵커 위치가 어긋납니다
-     (#chain 으로 들어오면 섹션 위가 잘려 보이던 문제). #group 보다 아래 앵커라면 높이 계산이 끝날 때마다 그 앵커로 다시 맞춥니다.
+     글꼴 · 이미지 로드로 위쪽 섹션 높이가 바뀌면 브라우저가 먼저 옮겨 둔 앵커 위치가 어긋날 수 있어,
+     #group 보다 아래 앵커라면 높이 변화가 멈출 때마다 그 앵커로 다시 맞춥니다.
      사용자가 직접 스크롤 · 터치 · 키를 누르면 즉시 멈추고, load 뒤 1.5초(최소 4초)가 지나면 더 이상 건드리지 않습니다. */
   function hashSettle() {
     var id = (location.hash || '').slice(1);
     if (!id) return;
     var target = null;
     try { target = document.getElementById(decodeURIComponent(id)); } catch (e) { target = document.getElementById(id); }
-    var group = $('[data-hs]');
+    var group = $('#group');
     if (!target || !group || !(group.compareDocumentPosition(target) & 4)) return; // 4 = #group 뒤(아래)에 있는 앵커
     var html = document.documentElement;
     var stopped = false, timer = 0, until = Date.now() + 4000;
@@ -1161,7 +962,8 @@
   heroPlayGuard();
   engrave();
   factsCount();
-  var updaters = [groupScroll(), bizStory()].filter(Boolean);
+  groupProjects();
+  var updaters = [bizStory()].filter(Boolean);
   leaders();
   hashSettle();
   brandSlider();

@@ -412,19 +412,8 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
 .js .ft-nav[data-reveal] li:nth-child(6) { transition-delay: .3s; }
 
 /* 그룹 법인 줄 */
-.ft-corps { display: flex; align-items: center; gap: 12px 40px; padding-block: 26px; border-bottom: 1px solid var(--line-dark); }
-.ft-label { flex: none; font-size: .74rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--on-dark-3); }
 /* 점 구분자: 모든 항목 앞에 점을 두고, 목록을 점 폭(35px)만큼 왼쪽으로 당겨 잘라 냅니다
    → 줄이 바뀌어도 줄 첫머리에 점이 남지 않습니다 (위·아래·오른쪽은 포커스 링이 보이도록 넉넉히) */
-.ft-corps ul { display: flex; flex-wrap: wrap; align-items: center; row-gap: 4px; min-width: 0; margin-left: -35px; clip-path: inset(-12px -12px -12px 27px); }
-.ft-corps li { display: inline-flex; align-items: center; }
-.ft-corps li::before { content: ""; flex: none; width: 3px; height: 3px; margin-inline: 16px; border-radius: 50%; background: var(--on-dark-3); }
-.ft-corps a { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 36px; color: var(--on-dark-2); font-weight: 500; transition: color .25s var(--ease); }
-.ft-corp-n { position: relative; white-space: nowrap; }
-.ft-corp-n::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 1px; background: currentColor; transform: scaleX(0); transform-origin: right center; transition: transform .45s var(--ease); }
-.ft-corps a:is(:hover, :focus-visible) { color: #fff; }
-.ft-corps a:is(:hover, :focus-visible) .ft-corp-n::after { transform: scaleX(1); transform-origin: left center; }
-.ft-corps small { display: inline-flex; align-items: center; flex: none; height: 20px; padding: 0 8px; border-radius: 999px; border: 1px solid rgba(111, 162, 242, .45); color: var(--blue-300); font-size: .7rem; font-weight: 600; letter-spacing: 0; }
 
 /* 정책 · SNS · 패밀리 사이트 */
 .ft-mid { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; padding-block: 28px; }
@@ -449,13 +438,22 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
 .family-list small { color: var(--on-dark-3); font-size: .75rem; white-space: nowrap; }
 
 /* 회사 정보 */
-.ft-info { display: grid; gap: 6px; color: var(--on-dark-3); font-size: .85rem; line-height: 1.7; }
+.ft-info { display: grid; gap: 8px; color: var(--on-dark-3); font-size: .875rem; line-height: 1.6; letter-spacing: -0.01em; }
+.ft-info-row { display: flex; flex-wrap: wrap; align-items: center; row-gap: 4px; }
+.ft-info-row li { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.ft-info-row li + li::before { content: ""; flex: none; width: 1px; height: 11px; margin: 0 14px; background: var(--line-dark); }
+@media (max-width: 760px) {
+  .ft-info { font-size: .82rem; }
+  .ft-info { gap: 12px; }
+  .ft-info-row { display: grid; gap: 2px; }
+  .ft-info-row li + li::before { display: none; }
+  .ft-info-row li { white-space: normal; }
+}
 .ft-info a { color: var(--on-dark-2); text-decoration: underline; text-decoration-color: var(--line-dark); text-underline-offset: 3px; }
 .ft-info a:hover { color: #fff; text-decoration-color: currentColor; }
 .ft-info .sep { display: inline-block; width: 1px; height: 10px; background: var(--line-dark); margin: 0 10px; vertical-align: middle; }
 .ft-copy { margin-top: 18px; font-family: var(--font-en); font-size: .8rem; letter-spacing: .02em; color: var(--on-dark-3); }
 
-@media (max-width: 1180px) { .ft-corps { column-gap: 28px; } }
 /* 태블릿: 3열 · 각 칸 위에 선 */
 @media (max-width: 1024px) {
   .ft-nav ul { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 28px; border-top: 0; }
@@ -464,16 +462,12 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
   .ft-nav a, .ft-nav li:first-child a { padding: 24px 28px 26px 0; gap: 12px; }
   .ft-nav .ico { top: 24px; right: 0; }
   .ft-nav-t { font-size: clamp(1.2rem, 2.4vw, 1.5rem); }
-  .ft-corps { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .ft-corps ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 28px; row-gap: 0; width: 100%; margin-left: 0; clip-path: none; }
-  .ft-corps li::before { display: none; }
 }
 /* 터치 화면: 화살표를 늘 흐리게 보여 링크임을 알리고, 작은 글자 링크도 누르는 영역은 44px 이상 */
 @media (hover: none) {
   .ft-nav .ico { opacity: .5; transform: none; }
 }
 @media (max-width: 1024px) {
-  .ft-corps a { min-height: 44px; }
   .ft-policy { row-gap: 0; }
   .ft-policy a { display: inline-block; padding-block: 10px; }
   .breadcrumb a { display: inline-flex; align-items: center; min-height: 44px; margin-block: -11px; padding-inline: 10px; margin-inline: -10px; }
@@ -489,16 +483,12 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
   .ft-nav .ico { top: 19px; width: 16px; height: 16px; }
   .ft-nav-num { font-size: .72rem; }
   .ft-nav-t { font-size: 1.2rem; padding-bottom: 4px; }
-  .ft-corps { gap: 6px; padding-block: 22px 18px; }
-  .ft-corps ul { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; }
-  .ft-corps a { font-size: .9rem; }
   .ft-mid { flex-direction: column; align-items: flex-start; }
   .family-list { left: 0; right: auto; }
 }
 
 /* 모바일(≤560px): 지주회사 줄은 한 줄 전체를 쓰고(이름·배지가 끊기지 않게), 나머지 일곱은 아래 2열 */
 @media (max-width: 560px) {
-  .ft-corps li:first-child { grid-column: 1 / -1; }
 }
 
 /* ---------- 10. 영상 모달 ---------- */
@@ -721,3 +711,40 @@ html.motion-off *, html.motion-off *::before, html.motion-off *::after { animati
 html.motion-off .pcards[data-reveal] .pcard { opacity: 1 !important; transform: none !important; }
 html.motion-off .pcard :is(.pcard-img, .pcard-sil) { opacity: 1 !important; translate: none !important; filter: none !important; }
 html.motion-off .pcard .pcard-ph::before { opacity: var(--pc-mark, .09) !important; scale: none !important; }
+
+/* 법적 고지 팝업 (푸터 '개인정보처리방침'·'이메일무단수집거부' — site.js 가 본문을 불러와 띄움) */
+.legal-modal { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 20px; }
+.legal-modal[hidden] { display: none; }
+.legal-modal-dim { position: absolute; inset: 0; background: rgba(5, 12, 26, .62); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.legal-modal-box { position: relative; display: flex; flex-direction: column; width: min(860px, 100%); max-height: min(86vh, 900px); border-radius: 20px; background: #fff; color: var(--ink); box-shadow: 0 40px 80px -30px rgba(0, 0, 0, .5); overflow: hidden; }
+.legal-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 28px; border-bottom: 1px solid var(--line-2); }
+.legal-modal-head h2 { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.03em; }
+.legal-modal-x { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line-2); color: var(--ink); }
+.legal-modal-x svg { width: 20px; height: 20px; }
+.legal-modal-body { overflow-y: auto; overscroll-behavior: contain; padding: 24px 28px 32px; font-size: .95rem; line-height: 1.75; color: var(--ink-2); }
+.legal-modal-body h2, .legal-modal-body h3 { margin: 28px 0 10px; font-size: 1.08rem; font-weight: 800; color: var(--ink); letter-spacing: -0.02em; }
+.legal-modal-body > :first-child h2, .legal-modal-body section:first-child h2 { margin-top: 0; }
+.legal-modal-body p, .legal-modal-body ul, .legal-modal-body ol, .legal-modal-body dl, .legal-modal-body table { margin: 8px 0; }
+.legal-modal-body ul { padding-left: 1.1em; list-style: disc; }
+.legal-modal-body ol { padding-left: 1.2em; list-style: decimal; }
+.legal-modal-body table { width: 100%; border-collapse: collapse; font-size: .88rem; display: block; overflow-x: auto; }
+.legal-modal-body th, .legal-modal-body td { padding: 10px 12px; border: 1px solid var(--line-2); text-align: left; vertical-align: top; }
+.legal-modal-body th { background: var(--ivory); color: var(--ink); font-weight: 700; white-space: nowrap; }
+.legal-modal-body dl > div { display: flex; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--line-2); }
+.legal-modal-body dt { flex: none; min-width: 7em; font-weight: 700; color: var(--ink); }
+.legal-modal-body a { color: var(--blue); text-decoration: underline; text-underline-offset: 3px; }
+.legal-modal-body [data-reveal], .legal-modal-body [data-lines] .line > span { opacity: 1 !important; transform: none !important; }
+.legal-modal-body svg { max-width: 24px; max-height: 24px; }
+.legal-modal-foot { padding: 14px 28px; border-top: 1px solid var(--line-2); font-size: .85rem; }
+.legal-modal-foot a { color: var(--blue); font-weight: 700; }
+html.legal-open { overflow: hidden; }
+@media (max-width: 760px) {
+  .legal-modal { padding: 0; align-items: end; }
+  .legal-modal-box { width: 100%; max-height: 92svh; border-radius: 20px 20px 0 0; }
+  .legal-modal-head { padding: 18px 20px; }
+  .legal-modal-body { padding: 18px 20px 28px; font-size: .92rem; }
+  .legal-modal-foot { padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)); }
+}
+.legal-modal-body :is(th, td) { min-width: 7.5em; }
+.legal-modal-body :is(th, td) > * + * { margin-left: 4px; }
+.legal-modal-body .pv-num { margin-right: 8px; color: var(--blue); }

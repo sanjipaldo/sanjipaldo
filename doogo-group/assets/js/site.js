@@ -450,6 +450,73 @@
     document.body.appendChild(b);
   })();
 
+  /* ---------- 법적 고지 팝업 (푸터 '개인정보처리방침'·'이메일무단수집거부') ----------
+     링크 주소의 문서를 불러와 본문(.pv-body / .em-body)만 팝업에 넣습니다. 실패하면 원래 페이지로 이동. */
+  (function () {
+    var links = $$('a[data-legal-modal]');
+    if (!links.length || !window.fetch || !window.DOMParser) return;
+    var modal, body, title, foot, lastFocus, cache = {};
+    function build() {
+      modal = document.createElement('div');
+      modal.className = 'legal-modal'; modal.hidden = true;
+      modal.innerHTML = '<div class="legal-modal-dim" data-legal-close></div>' +
+        '<div class="legal-modal-box" role="dialog" aria-modal="true" aria-labelledby="legal-modal-t">' +
+        '<div class="legal-modal-head"><h2 id="legal-modal-t"></h2>' +
+        '<button class="legal-modal-x" type="button" data-legal-close aria-label="닫기"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>' +
+        '<div class="legal-modal-body" tabindex="0"></div><div class="legal-modal-foot"></div></div>';
+      document.body.appendChild(modal);
+      body = $('.legal-modal-body', modal); title = $('#legal-modal-t', modal); foot = $('.legal-modal-foot', modal);
+      modal.addEventListener('click', function (e) { if (e.target.closest('[data-legal-close]')) close(); });
+      modal.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { close(); return; }
+        if (e.key !== 'Tab') return;
+        var f = $$('a[href], button, [tabindex="0"]', modal).filter(function (el) { return el.offsetParent !== null; });
+        if (!f.length) return;
+        if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+        else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+      });
+    }
+    function close() {
+      if (!modal || modal.hidden) return;
+      modal.hidden = true; doc.classList.remove('legal-open');
+      if (lastFocus) lastFocus.focus();
+    }
+    function open(a, html) {
+      var d = new DOMParser().parseFromString(html, 'text/html');
+      var main = d.querySelector('.pv-body, .em-body, article');
+      if (!main) return false;
+      $$('script, .pv-toc, .pv-glance, .em-mark, .em-k, .em-related, svg, [aria-hidden="true"]', main).forEach(function (n) { n.remove(); });
+      $$('[id]', main).forEach(function (n) { n.removeAttribute('id'); });
+      $$('a[href^="#"]', main).forEach(function (n) { n.setAttribute('href', a.getAttribute('href') + n.getAttribute('href')); });
+      var h1 = d.querySelector('h1');
+      title.textContent = (h1 ? h1.textContent : a.textContent).replace(/\s+/g, ' ').trim();
+      body.innerHTML = main.innerHTML;
+      foot.innerHTML = '<a href="' + a.getAttribute('href') + '">전체 페이지로 보기 →</a>';
+      lastFocus = a; modal.hidden = false; doc.classList.add('legal-open');
+      body.scrollTop = 0; $('.legal-modal-x', modal).focus();
+      return true;
+    }
+    links.forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+        e.preventDefault();
+        if (!modal) build();
+        var url = a.getAttribute('href');
+        var go = function () { location.href = url; };
+        if (cache[url]) { if (!open(a, cache[url])) go(); return; }
+        fetch(url).then(function (r) { if (!r.ok) throw 0; return r.text(); })
+          .then(function (t) { cache[url] = t; if (!open(a, t)) go(); })
+          .catch(go);
+      });
+    });
+  })();
+
+  /* ---------- 다른 페이지로 넘어오면 늘 맨 위에서 시작 (주소에 #앵커가 없을 때) ---------- */
+  if (!location.hash) {
+    try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+
   /* ---------- 연도 ---------- */
   $$('[data-year]').forEach(function (el) { el.textContent = new Date().getFullYear(); });
 })();
