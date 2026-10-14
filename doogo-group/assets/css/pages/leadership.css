@@ -1,6 +1,6 @@
 /* =========================================================
    DOOGO GROUP — leadership.css (리더십)
-   여섯 명의 대표를 리더 프로필 카드(.pcard · base.css 공통) 한 그리드로 (문원오 카드 = #ceo) · 짧은 그룹 소개(1 + 5 트리) · 대표 상세(dialog)
+   여섯 명의 리더(대표 4 · 총괄이사 2)를 리더 프로필 카드(.pcard · base.css 공통) 한 그리드로 (문원오 카드 = #ceo) · 짧은 그룹 소개(1 + 5 트리) · 리더 상세(dialog)
    움직임 멈추기(html.motion-off)를 고르면 모두 멈춘 최종 상태로 보입니다.
    ========================================================= */
 
@@ -47,7 +47,7 @@ main .note { color: var(--muted); }
 .ld-tag--hold { background: var(--navy); color: #fff; }
 .ld-tag--global { background: var(--blue-50); color: var(--blue-700); }
 
-/* ---------- 여섯 명의 대표 ---------- */
+/* ---------- 여섯 명의 리더 ---------- */
 /* 섹션 머리: 제목은 왼쪽, 설명은 오른쪽 칸 아래쪽에 맞춰 */
 .ld-leaders .sec-head--split .lead { max-width: 46ch; }
 @media (min-width: 861px) {

@@ -200,8 +200,8 @@
   })();
 
   /* ---------- 대표 상세 ----------
-     카드의 data-* (이름 · 회사 · 분야 · 사업영역 · 직접 운영 · 소개 · 한마디 · 사진)만 옮겨 보여 줍니다. 이력은 '확정 후 게시'.
-     사진이 없는 대표는 카드와 같은 실루엣 + '사진 준비 중'. */
+     카드의 data-* (이름 · 직함(data-title, 없으면 '대표') · 회사 · 분야 · 사업영역 · 직접 운영 · 소개 · 한마디 · 사진)만 옮겨 보여 줍니다. 이력은 '확정 후 게시'.
+     사진이 없는 리더는 카드와 같은 실루엣 + '사진 준비 중'. */
   var modal = $('#ld-modal');
   var cards = $$('[data-leader]');
   if (!modal || !cards.length) return;
@@ -230,7 +230,7 @@
     var d = cards[i].dataset;
     var links = parseLinks(d.links);
     var first = links[0] || { label: '', href: 'business.html' };
-    var map = { name: d.name, co: d.co, tag: d.tag || '', field: d.field, area: bizName(first.label), note: d.note || '', quote: d.quote || '', idx: pad(i + 1) };
+    var map = { name: d.name, title: d.title || '대표', co: d.co, tag: d.tag || '', field: d.field, area: bizName(first.label), note: d.note || '', quote: d.quote || '', idx: pad(i + 1) };
     Object.keys(map).forEach(function (k) { $$('[data-m="' + k + '"]', modal).forEach(function (el) { el.textContent = map[k]; }); });
     // 사업영역: 연결된 사업 페이지 링크 (DOOGO HOLDINGS 는 교육업 · 유통 두 개)
     //  분야와 사업영역 이름이 같으면(공간 & 숙박업 · 미디어 & 콘텐츠 · 마케팅) 같은 말이 겹치지 않게 이 줄을 숨김 — 아래 버튼으로 이동

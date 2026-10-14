@@ -13,7 +13,9 @@
    - 헤더/푸터는 partials/ 내용을 그대로 넣습니다(sync-partials.mjs와 같은 결과).
    - 그룹 구성(3차 확정): 지주회사 DOOGO HOLDINGS가 교육(DOOGO CLASS)과 유통(DOOGOFOOD)을 직접 운영하고,
      그룹사 5곳(DOOGO SPACE 공간 & 숙박업 · DOOGO MEDIA 미디어 & 콘텐츠 · DOOGO MAKERS 브랜드 · DOOGO AD 마케팅 · DOOGOBIO 건기식 제조)이
-     나머지 사업을 맡습니다. 사업별 운영 회사·대표는 BIZ[].corp (화면의 회사·브랜드 이름은 모두 영문 표기)
+     나머지 사업을 맡습니다. 사업별 운영 회사·리더는 BIZ[].corp (화면의 회사·브랜드 이름은 모두 영문 표기)
+     리더 직함은 corp.title — DOOGO MEDIA 김윤정 · DOOGO MAKERS 신동훈은 '총괄이사'
+     (title이 없으면 기본 직함 · 화면의 직함은 모두 ttl(corp)로 씁니다)
    - 사업 분야 이름(6차 확정): 교육업 · 제조업 · 커머스 · 미디어 & 콘텐츠 · 마케팅 · 유통 · 공간 & 숙박업 (BIZ[].area — HTML 문구라 &는 &amp;로 씀)
      그룹사 분야 라벨(corp.field)이 사업 분야 이름과 같으면 운영 회사 칩에서 분야를 다시 쓰지 않습니다(corpChip).
    - 사진: assets/img/photo/{name}.webp (AI로 만든 예시 · 실제 사진으로 교체 예정) — PHOTO 표의 크기·alt와 함께 사용
@@ -24,7 +26,7 @@
      상세 페이지 '운영 사이트' 구간(#site) · 첫 화면 핵심 정보 띠 · 마무리 버튼, business.html 카드의 주소 알약에 씁니다.
      캡처를 새로 찍으면 같은 이름으로 덮어쓰고 WEB_DATE의 기준 날짜만 고치세요.
      (공간 상세의 NORA STAY 카드 사진 sites/space-stay.webp = space.webp 캡처 속 숙소 사진 부분을 잘라 낸 것 — 캡처를 바꾸면 같이 다시 자르기)
-   - 담당 대표(5차): 리더 프로필 카드(.pcard · 생김새는 base.css '15. 리더 프로필 카드 공통', 배치만 business-detail.css)
+   - 담당 리더(5차): 리더 프로필 카드(.pcard · 생김새는 base.css '15. 리더 프로필 카드 공통', 배치만 business-detail.css)
      사진은 BIZ[].corp.photo (assets/img/people/{photo}.webp 900×1200 · -600.webp) — 사진이 생기면 corp에 photo만 넣으면
      실루엣·'사진 준비 중'·'이력과 사진은' 문구가 사진·'이력은 확정 후 게시합니다.'로 바뀝니다.
    - 스타일: assets/css/pages/business.css, business-detail.css
@@ -75,9 +77,11 @@ const web = (o) => ({
   note: `${o.yt ? '채널' : '사이트'} 첫 화면 · ${WEB_DATE}`, ...o,
 });
 const LOCK = '<svg class="dt-web-lock" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.6" fill="currentColor"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
-// 대표 프로필 사진 (5차 · 배경 없는 상반신 컷아웃 900×1200 + 작은 판 -600, 세 사람의 머리 크기·위치를 맞춰 둠)
-//  photo: 파일 이름(assets/img/people/{photo}.webp · {photo}-600.webp). 사진이 없는 대표는 공통 카드의 중립 실루엣 + '사진 준비 중'
+// 리더 프로필 사진 (5차 · 배경 없는 상반신 컷아웃 900×1200 + 작은 판 -600, 머리 크기·위치를 맞춰 둠 · 현재 백영호만 사진 없음)
+//  photo: 파일 이름(assets/img/people/{photo}.webp · {photo}-600.webp). 사진이 없는 리더는 공통 카드의 중립 실루엣 + '사진 준비 중'
 const PEOPLE = 'assets/img/people';
+// 리더 직함: corp.title(총괄이사 등) · 없으면 '대표'
+const ttl = (c) => c.title || '대표';
 const peopleSrcset = (name) => `${PEOPLE}/${name}-600.webp 600w, ${PEOPLE}/${name}.webp 900w`;
 // 지주회사가 직접 운영하는 사업(교육·유통)의 운영 회사
 const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '교육 및 총괄 운영', field: '교육 · 총괄 운영', ceo: '문원오', photo: 'leader-moon-wonoh', anchor: 'ceo' };
@@ -196,7 +200,7 @@ const BIZ = [
   },
   {
     slug: 'commerce', num: '03', area: '커머스', en: 'DOOGO MAKERS', chain: 'Brand', icon: 'i-commerce',
-    corp: { en: 'DOOGO MAKERS', field: '브랜드', ceo: '신동훈', key: 'makers' },
+    corp: { en: 'DOOGO MAKERS', field: '브랜드', ceo: '신동훈', title: '총괄이사', key: 'makers', photo: 'leader-shin-donghoon' },
     scope: '브랜드 기획 · 상품 운영 · EXIT 전략',
     defLabel: '브랜드 커머스', def: '브랜드를 만들고 성장시키며, EXIT까지 연결합니다.',
     role: '브랜드를 기획하고 운영하며, 판매와 성장 전략을 함께 만듭니다.',
@@ -223,7 +227,7 @@ const BIZ = [
   },
   {
     slug: 'media', num: '04', area: '미디어 &amp; 콘텐츠', en: 'DOOGO MEDIA', chain: 'Content', icon: 'i-media',
-    corp: { en: 'DOOGO MEDIA', field: '미디어 &amp; 콘텐츠', ceo: '김윤정', key: 'media' },
+    corp: { en: 'DOOGO MEDIA', field: '미디어 &amp; 콘텐츠', ceo: '김윤정', title: '총괄이사', key: 'media', photo: 'leader-kim-yunjung' },
     scope: '촬영 · 유튜브 · 라이브 콘텐츠',
     defLabel: '영상 제작', def: '사람을 모으고, 브랜드를 키우는 미디어를 만듭니다.',
     role: '사람과 브랜드의 가치를 영상과 콘텐츠로 전합니다.',
@@ -459,7 +463,7 @@ function buildList() {
             <span class="bz-stage en">${b.chain}</span>
           </div>
           <h3 class="bz-title" id="bz-t-${b.slug}" data-reveal style="--d:.05s"><span class="bz-area">${b.area}</span><span class="bz-brand"><span class="en">${b.en}</span></span></h3>
-          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong>${corpChip(b.corp, b.area) ? `<span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp, b.area)}</span>` : ''}<span class="bz-corp-ceo">대표 <strong>${b.corp.ceo}</strong></span></p>
+          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong>${corpChip(b.corp, b.area) ? `<span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp, b.area)}</span>` : ''}<span class="bz-corp-ceo">${ttl(b.corp)} <strong>${b.corp.ceo}</strong></span></p>
           <!-- 운영 사이트 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
           <a class="bz-site" href="${b.web.url}" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s">${b.web.yt ? `<span>YouTube · ${b.web.host}</span>` : `<span class="en">${b.web.host}</span>`}${ARROW_UR}<span class="sr-only"> — ${b.web.name} ${b.web.yt ? '유튜브 채널' : b.web.site !== b.web.name ? `연결 사이트(${b.web.site})` : '사이트'}(새 창)</span></a>
           <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">${b.defLabel}</span>${nw(b.def)}</p>
@@ -840,20 +844,20 @@ function buildDetail(b, idx) {
           <figcaption>${g.kind === 'render' ? 'AI로 만든 브랜드 3D 이미지' : AI_NOTE}</figcaption>
         </figure>`).join('\n');
 
-  // 담당 대표: 리더 프로필 카드(.pcard · 생김새는 base.css '15. 리더 프로필 카드 공통') 가로형 한 장
-  //  사진 칸 = 흰 칸 + 두고 'd' 심볼 + 상반신 사진(문원오 · 문성오 · 김신용) 또는 중립 실루엣 + '사진 준비 중'
+  // 담당 리더: 리더 프로필 카드(.pcard · 생김새는 base.css '15. 리더 프로필 카드 공통') 가로형 한 장
+  //  사진 칸 = 흰 칸 + 두고 'd' 심볼 + 상반신 사진(백영호 외 모두) 또는 중립 실루엣 + '사진 준비 중'
   //  본문 = 이름 · 영문 회사명 · 분야 → 이 사업과 관련된 정보(dl) → '자세히 보기'(카드 전체가 링크) + 안내 문구 · 이력은 지어내지 않음
   const leaderVisual = c.photo
     ? `<div class="pcard-ph">
-          <img class="pcard-img" src="${PEOPLE}/${c.photo}-600.webp" srcset="${peopleSrcset(c.photo)}" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 1180px) 40vw, 380px" width="900" height="1200" alt="${c.ceo} ${c.en} 대표" loading="lazy" decoding="async">
+          <img class="pcard-img" src="${PEOPLE}/${c.photo}-600.webp" srcset="${peopleSrcset(c.photo)}" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 1180px) 40vw, 380px" width="900" height="1200" alt="${c.ceo} ${c.en} ${ttl(c)}" loading="lazy" decoding="async">
         </div>`
     : `<div class="pcard-ph is-empty" aria-hidden="true"><span class="pcard-sil"></span><span class="pcard-soon">사진 준비 중</span></div>`;
   const leaderLead = c.direct
     ? `지주회사 <span class="nowrap">${c.en}</span>의 대표로, ${nw(b.area)} 분야의 <span class="nowrap">${b.en}</span>를 직접 운영하며 그룹 총괄 운영을 이끕니다.`
-    : `${nw(b.area)} 분야는 그룹사 <span class="nowrap">${c.en}</span>가 맡고, ${c.ceo} 대표가 이끌고 있습니다.`;
+    : `${nw(b.area)} 분야는 그룹사 <span class="nowrap">${c.en}</span>가 맡고, ${c.ceo} ${ttl(c)}가 이끌고 있습니다.`;
   // 회사 줄: 영문 회사명(공통 .pcard-co) + 지주회사 / 해외 거점 칩 — 분야는 그 아래 .pcard-field 한 줄
   const leaderTag = c.direct ? `<span class="dt-corp-type is-hold">${c.type}</span>` : c.place ? `<span class="dt-corp-type is-place">${c.place}</span>` : '';
-  const leaderBody = `<h3 class="pcard-name" id="leader-name">${c.ceo} <small>대표</small></h3>
+  const leaderBody = `<h3 class="pcard-name" id="leader-name">${c.ceo} <small>${ttl(c)}</small></h3>
           <p class="dt-leader-co"><span class="pcard-co en">${c.en}</span>${leaderTag}</p>
           <p class="pcard-field"><span class="sr-only">분야 </span>${c.field}</p>
 ${c.direct ? `          <blockquote class="dt-leader-quote"><p>“제품과 브랜드, 그리고 사람의 성장이 이어지는 사업을 만듭니다.”</p></blockquote>
@@ -866,7 +870,7 @@ ${c.direct ? `              <div><dt>직접 운영</dt><dd class="dt-dd-chips"><
             </dl>
           </div>
           <div class="pcard-foot dt-leader-foot">
-            <a class="pcard-link pcard-stretch" href="leadership.html#${c.anchor || `leader-${c.key}`}">자세히 보기<span class="sr-only"> (${c.en} ${c.ceo} 대표 · 리더십)</span> ${ico('i-arrow')}</a>
+            <a class="pcard-link pcard-stretch" href="leadership.html#${c.anchor || `leader-${c.key}`}">자세히 보기<span class="sr-only"> (${c.en} ${c.ceo} ${ttl(c)} · 리더십)</span> ${ico('i-arrow')}</a>
             <p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '이력은 확정 후 게시합니다.' : '이력과 사진은 확정 후 게시합니다.'}</p>
           </div>`;
 
@@ -915,7 +919,7 @@ ${b.facts.map(([k, v]) => `        <div><dt>${k}</dt><dd>${nw(v)}</dd></div>`).j
   </section>
 
   <nav class="subnav dt-subnav" aria-label="${b.area} 페이지 안 바로가기">
-    <div class="container"><ul><li><a href="#services">주요 서비스</a></li><li><a href="#site">${b.web.title}</a></li><li><a href="#scene">현장</a></li><li><a href="#related">${b.relNav}</a></li><li><a href="#leader">담당 대표</a></li><li><a href="#inquiry">문의</a></li></ul></div>
+    <div class="container"><ul><li><a href="#services">주요 서비스</a></li><li><a href="#site">${b.web.title}</a></li><li><a href="#scene">현장</a></li><li><a href="#related">${b.relNav}</a></li><li><a href="#leader">담당 ${ttl(c)}</a></li><li><a href="#inquiry">문의</a></li></ul></div>
   </nav>
 
   <!-- 2. 주요 서비스 -->
@@ -974,7 +978,7 @@ ${REL[b.slug]()}
     </div>
   </section>
 
-  <!-- 6. 담당 대표 -->
+  <!-- 6. 담당 리더 -->
   <section class="section dt-leader" id="leader" aria-labelledby="leader-title">
     <div class="container dt-leader-grid">
       <div class="dt-leader-head">
@@ -1041,7 +1045,7 @@ ${CTA_BAND}`;
   return shell({
     title: `${b.area} · ${b.en}`,
     // 회사 이름은 한 번만: 직접 운영 사업은 '운영 회사 직접 운영', 그룹사 사업은 회사 이름이 곧 브랜드라 생략
-    desc: `${b.en} — 두고그룹 ${b.area} 분야 (${c.direct ? `${c.en} 직접 운영 · ` : ''}대표 ${c.ceo}). ${b.role} ${b.def}`,
+    desc: `${b.en} — 두고그룹 ${b.area} 분야 (${c.direct ? `${c.en} 직접 운영 · ` : ''}${ttl(c)} ${c.ceo}). ${b.role} ${b.def}`,
     css: 'business-detail', js: 'business-detail',
     bodyAttrs: `data-page="business-${b.slug}"`,
     main,
