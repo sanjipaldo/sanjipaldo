@@ -317,9 +317,9 @@ html.motion-off .intro-statement .eg-accent::after { transform: scaleX(1) !impor
 .gp-tag { display: inline-flex; align-items: center; height: 26px; padding: 0 11px; border-radius: 999px; background: rgba(111, 162, 242, .14); border: 1px solid rgba(111, 162, 242, .34); color: #D3E2FB; font-size: .76rem; font-weight: 700; white-space: nowrap; }
 .gp-idx { font-size: .86rem; font-weight: 600; letter-spacing: .08em; color: var(--on-dark-3); font-variant-numeric: tabular-nums; transition: color .4s var(--ease); }
 .gp-card.is-current .gp-idx { color: var(--blue-300); }
-.gp-name { display: flex; align-items: baseline; gap: 10px; margin-top: 14px; font-size: min(2.25rem, 10.4cqi); font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; color: #fff; white-space: nowrap; }
+.gp-name { display: flex; align-items: center; gap: 10px; height: calc(min(2.25rem, 10.4cqi) * 1.12); margin-top: 14px; font-size: min(2.25rem, 10.4cqi); font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; color: #fff; white-space: nowrap; }
 .gp-name--ko { font-weight: 800; letter-spacing: -0.045em; font-size: min(2.1rem, 9.6cqi); }
-.gp-name-sub { flex: none; align-self: center; display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; background: rgba(255, 255, 255, .1); color: var(--on-dark-2); font-size: .7rem; font-weight: 600; letter-spacing: .04em; }
+.gp-name-sub { flex: none; display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; background: rgba(255, 255, 255, .1); color: var(--on-dark-2); font-size: .7rem; font-weight: 600; letter-spacing: .04em; }
 .gp-op { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin-top: 10px; font-size: .92rem; line-height: 1.4; }
 .gp-op-k { flex: none; font-size: .76rem; font-weight: 600; color: var(--on-dark-3); }
 .gp-op-v { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 0; font-weight: 600; color: #fff; }
@@ -375,7 +375,7 @@ html:not(.js) .gp-count, html:not(.js) .gp-bar, html:not(.js) .gp-nav { display:
   .gp-body { padding: 16px 8px 4px; }
   .gp-tag { height: 24px; padding: 0 9px; font-size: .72rem; }
   .gp-idx { font-size: .78rem; }
-  .gp-name { margin-top: 12px; font-size: min(1.85rem, 11cqi); }
+  .gp-name { height: calc(min(1.85rem, 11cqi) * 1.12); margin-top: 12px; font-size: min(1.85rem, 11cqi); }
   .gp-name--ko { font-size: min(1.75rem, 10cqi); }
   .gp-op { margin-top: 8px; font-size: .86rem; }
   .gp-desc { margin-top: 10px; padding-top: 10px; font-size: .86rem; line-height: 1.55; }
