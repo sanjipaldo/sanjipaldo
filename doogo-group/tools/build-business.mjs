@@ -21,6 +21,10 @@
    - 운영 사이트(4차): BIZ[].web — 사업마다 실제 사이트(새 창)와 첫 화면 캡처 assets/img/sites/{shot}(-720).webp.
      상세 페이지 '운영 사이트' 구간(#site) · 첫 화면 핵심 정보 띠 · 마무리 버튼, business.html 카드의 주소 알약에 씁니다.
      캡처를 새로 찍으면 같은 이름으로 덮어쓰고 WEB_DATE의 기준 날짜만 고치세요.
+     (공간 상세의 NORA STAY 카드 사진 sites/space-stay.webp = space.webp 캡처 속 숙소 사진 부분을 잘라 낸 것 — 캡처를 바꾸면 같이 다시 자르기)
+   - 담당 대표(5차): 리더 프로필 카드(.pcard · 생김새는 base.css '15. 리더 프로필 카드 공통', 배치만 business-detail.css)
+     사진은 BIZ[].corp.photo (assets/img/people/{photo}.webp 900×1200 · -600.webp) — 사진이 생기면 corp에 photo만 넣으면
+     실루엣·'사진 준비 중'·'이력과 사진은' 문구가 사진·'이력은 확정 후 게시합니다.'로 바뀝니다.
    - 스타일: assets/css/pages/business.css, business-detail.css
      동작:   assets/js/pages/business.js,  business-detail.js
    ========================================================= */
@@ -69,8 +73,12 @@ const web = (o) => ({
   note: `${o.yt ? '채널' : '사이트'} 첫 화면 · ${WEB_DATE}`, ...o,
 });
 const LOCK = '<svg class="dt-web-lock" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.6" fill="currentColor"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+// 대표 프로필 사진 (5차 · 배경 없는 상반신 컷아웃 900×1200 + 작은 판 -600, 세 사람의 머리 크기·위치를 맞춰 둠)
+//  photo: 파일 이름(assets/img/people/{photo}.webp · {photo}-600.webp). 사진이 없는 대표는 공통 카드의 중립 실루엣 + '사진 준비 중'
+const PEOPLE = 'assets/img/people';
+const peopleSrcset = (name) => `${PEOPLE}/${name}-600.webp 600w, ${PEOPLE}/${name}.webp 900w`;
 // 지주회사가 직접 운영하는 사업(교육·유통)의 운영 회사
-const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '교육 및 총괄 운영', ceo: '문원오', photo: 'assets/img/people/moon-wonoh.webp', anchor: 'ceo' };
+const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '교육 및 총괄 운영', field: '교육 · 총괄 운영', ceo: '문원오', photo: 'leader-moon-wonoh', anchor: 'ceo' };
 const AI_NOTE = 'AI로 만든 예시 이미지 · 실제 사진으로 교체 예정';
 
 /* ---------- 이미지 (AI 생성 예시) ---------- */
@@ -82,7 +90,6 @@ const PHOTO = {
   media: { w: 1280, h: 951, alt: '도심 야외에서 짐벌 카메라와 붐마이크로 영상 콘텐츠를 촬영하는 모습' },
   ad: { w: 1280, h: 954, alt: '회의실 대형 화면의 광고 성과 그래프를 보며 마케팅 회의를 하는 모습' },
   food: { w: 1280, h: 951, alt: '선과장에서 작업자들이 컨베이어 위 사과를 선별하는 모습' },
-  space: { w: 1280, h: 949, alt: '노을 진 바다가 창밖으로 보이는 숙박 객실' },
   cowork: { w: 1280, h: 951, alt: '식물이 놓인 밝은 공유오피스에서 사람들이 일하는 모습' },
 };
 const RENDER = {
@@ -91,7 +98,6 @@ const RENDER = {
   media: { w: 671, h: 755, alt: 'DOOGO MEDIA를 표현한 방송 카메라와 재생 말풍선 3D 이미지' },
   ad: { w: 671, h: 755, alt: 'DOOGO AD를 표현한 상승 막대그래프와 확성기 3D 이미지' },
   market: { w: 674, h: 755, alt: 'DOOGOFOOD를 표현한 과일·채소 나무상자와 트럭 3D 이미지' },
-  stay: { w: 674, h: 755, alt: 'NORA STAY를 표현한 바다 창이 있는 객실 미니어처 3D 이미지' },
 };
 const photo = (name, extra = {}) => ({ kind: 'photo', src: `assets/img/photo/${name}.webp`, ...PHOTO[name], ...extra });
 const render = (name, extra = {}) => ({ kind: 'render', src: `assets/img/3d/${name}.webp`, ...RENDER[name], ...extra });
@@ -241,7 +247,7 @@ const BIZ = [
   },
   {
     slug: 'ad', num: '05', area: '광고', en: 'DOOGO AD', chain: 'Marketing', icon: 'i-ad',
-    corp: { en: 'DOOGO AD', field: '마케팅', ceo: '김신용', key: 'ad' },
+    corp: { en: 'DOOGO AD', field: '마케팅', ceo: '김신용', key: 'ad', photo: 'leader-kim-sinyong' },
     scope: '네이버·쿠팡 광고 운영 · 소재 기획 · 성과 분석',
     defLabel: '퍼포먼스 마케팅', def: '네이버·쿠팡을 중심으로 브랜드를 더 멀리 알립니다.',
     role: '브랜드가 필요한 고객에게 닿도록 광고를 기획하고 운영합니다.',
@@ -293,7 +299,7 @@ const BIZ = [
   },
   {
     slug: 'space', num: '07', area: '공간', en: 'DOOGO SPACE', chain: 'Space', icon: 'i-space',
-    corp: { en: 'DOOGO SPACE', field: '공간', ceo: '문성오', key: 'space' },
+    corp: { en: 'DOOGO SPACE', field: '공간', ceo: '문성오', key: 'space', photo: 'leader-moon-sungoh' },
     scope: '공유오피스 · 비상주 사무실 · 교육장 · NORA STAY',
     defLabel: '공간 & 숙박', def: '공유오피스·비상주 사무실 그리고 NORA STAY를 통한 숙박 사업까지, 사람과 비즈니스를 위한 공간을 만듭니다.',
     role: '함께 일하고 배우며, 쉬어갈 수 있는 공간을 만듭니다.',
@@ -304,8 +310,14 @@ const BIZ = [
     web: web({ name: 'NORA STAY', kind: 'DOOGO SPACE 숙박', host: 'norastay.com', url: NORA_URL, shot: 'space', close: 'NORA STAY 바로가기',
       desc: 'DOOGO SPACE의 숙박 서비스 NORA STAY의 사이트입니다. 숙소 소개와 예약 안내를 확인할 수 있습니다.' }),
     narration: '함께 일하고, 잠시 쉬어갈 자리까지.',
-    hero: { f: 'space', fx: '50%', fy: '58%', mx: '50%' },
-    gallery: [photo('cowork', { label: '공유오피스', pos: '58% 50%' }), photo('space', { label: '숙박 객실', pos: '50% 55%' })],
+    // 첫 화면·현장 사진은 공간 사업 전체(공유오피스·교육장)를 보여 주는 예시 — NORA STAY를 가리키는 곳(관련 구간 카드 · 운영 사이트)은
+    // 실제 사이트(norastay.com) 첫 화면 캡처와 그 일부(sites/space-stay.webp)만 씁니다 (5차 · AI 바다 객실 사진은 실제와 달라 뺌)
+    hero: { f: 'cowork', fx: '50%', fy: '62%', mx: '64%' },
+    thumb: 'space-office', // 이전·다음 사업 카드 썸네일 = 첫 화면 사진(공유오피스) — 기본 thumb-{slug}.webp(바다 객실)는 헤더 메뉴용으로 남김
+    gallery: [
+      photo('cowork', { label: '공유오피스', zoom: 1.6, focus: '74% 72%', alt: '공유오피스 책상에서 노트북으로 일하는 사람들(확대)' }),
+      photo('campus', { label: '교육장', pos: '58% 50%', alt: '밝은 교육장에서 강사가 성인 수강생들 앞에서 강의하는 모습' }),
+    ],
     heroAlt: { label: '공간 둘러보기', href: '#related' },
     facts: [['대표 서비스', '공유오피스 · 비상주 · 교육장'], ['숙박', `NORA STAY · ${SITE(NORA_URL)}`]],
     svcHead: 'DOOGO SPACE가 하는 일',
@@ -316,7 +328,7 @@ const BIZ = [
       { icon: 's-classroom', name: '교육장 대여', desc: '강의·워크숍·모임을 위한 교육장을 대여하며, DOOGO CLASS 수업 공간으로도 연계합니다.' },
       { icon: 's-bed', name: '숙박 ‘NORA STAY’', desc: '여행과 출장 중 편하게 쉬어갈 수 있는 숙박 서비스 NORA STAY로 이어집니다.' },
     ],
-    sceneLead: '함께 일하는 공유오피스와 쉬어가는 객실, 두 가지 공간입니다. 실제 시설 사진으로 교체할 예정입니다.',
+    sceneLead: '함께 일하는 공유오피스와 함께 배우는 교육장, 두 가지 공간입니다. 실제 시설 사진으로 교체할 예정입니다.',
     relNav: '공간 안내',
   },
 ];
@@ -564,7 +576,7 @@ ${CTA_BAND}`;
 const REL = {
   campus: () => {
     const people = [
-      { name: '문대표', sub: ['문원오', 'DOOGO HOLDINGS 대표'], course: '뉴질랜드 건기식 브랜딩', len: '5주 과정', photo: 'assets/img/people/moon-wonoh.webp' },
+      { name: '문대표', sub: ['문원오', 'DOOGO HOLDINGS 대표'], course: '뉴질랜드 건기식 브랜딩', len: '5주 과정', photo: 'leader-moon-wonoh' },
       { name: '로직메이커', course: '실전 클래스', len: '4주 과정', initial: '로' },
       { name: '황금농부', course: '실전 클래스', len: '4주 과정', initial: '황' },
       { name: '초이', course: '실전 클래스', len: '4주 과정', initial: '초' },
@@ -585,7 +597,7 @@ const REL = {
       <ul class="dt-people">
 ${people.map((p, i) => `        <li class="dt-person${p.photo ? ' has-photo' : ''}" data-reveal style="--d:${(i * 0.08).toFixed(2)}s">
           <div class="dt-person-photo">
-            ${p.photo ? `<img src="${p.photo}" alt="${p.name} — ${p.sub.join(' · ')} 사진" width="627" height="694" loading="lazy">` : `<span class="dt-avatar" aria-hidden="true">${p.initial}</span>`}
+            ${p.photo ? `<img src="${PEOPLE}/${p.photo}-600.webp" srcset="${peopleSrcset(p.photo)}" sizes="(max-width: 640px) 46vw, (max-width: 1180px) 44vw, 300px" alt="${p.name} — ${p.sub.join(' · ')}" width="900" height="1200" loading="lazy" decoding="async">` : `<span class="dt-avatar" aria-hidden="true">${p.initial}</span>`}
             <span class="dt-person-len">${p.len}</span>
           </div>
           <div class="dt-person-body">
@@ -698,7 +710,8 @@ ${formats.map((f, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
         </article>
       </div>`,
   space: () => {
-    // 2) 주요 서비스 카드와 겹치지 않게: 공간별 '이런 분께'와 연결 정보를 큰 번호 목록으로, NORA STAY는 사진 카드로
+    // 2) 주요 서비스 카드와 겹치지 않게: 공간별 '이런 분께'와 연결 정보를 큰 번호 목록으로,
+    //    NORA STAY는 실제 사이트 첫 화면 속 숙소 사진(일부)을 쓴 카드로 (AI 이미지는 실제 숙소와 달라 쓰지 않음)
     const spaces = [
       { en: 'Shared Office', ko: '공유오피스', use: '필요한 만큼 자리를 쓰며 함께 일하는 업무 공간', who: '작은 팀 · 1인 사업자' },
       { en: 'Virtual Office', ko: '비상주 사무실', use: '상주하지 않아도 사업장 주소가 필요할 때', who: '1인 사업자' },
@@ -724,8 +737,8 @@ ${spaces.map((sp, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
       </ol>
       <article class="dt-stay" data-reveal>
         <div class="dt-stay-media">
-          <img src="assets/img/3d/stay.webp" alt="${RENDER.stay.alt}" width="${RENDER.stay.w}" height="${RENDER.stay.h}" loading="lazy" decoding="async">
-          <span class="dt-stay-badge">AI로 만든 3D 이미지</span>
+          <img src="assets/img/sites/space-stay.webp" alt="NORA STAY 웹사이트(norastay.com) 첫 화면에 실린 숙소 건물 외관(일부 확대)" width="490" height="584" loading="lazy" decoding="async">
+          <span class="dt-stay-badge"><span class="en">norastay.com</span> 첫 화면 일부 · ${WEB_DATE}</span>
         </div>
         <div class="dt-stay-body">
           <span class="dt-row-num en">04</span>
@@ -823,27 +836,35 @@ function buildDetail(b, idx) {
           <figcaption>${g.kind === 'render' ? 'AI로 만든 브랜드 3D 이미지' : AI_NOTE}</figcaption>
         </figure>`).join('\n');
 
-  // 담당 대표: 문원오만 사진, 나머지는 이름 첫 글자 모노그램 (이력은 지어내지 않음)
+  // 담당 대표: 리더 프로필 카드(.pcard · 생김새는 base.css '15. 리더 프로필 카드 공통') 가로형 한 장
+  //  사진 칸 = 흰 칸 + 두고 'd' 심볼 + 상반신 사진(문원오 · 문성오 · 김신용) 또는 중립 실루엣 + '사진 준비 중'
+  //  본문 = 이름 · 영문 회사명 · 분야 → 이 사업과 관련된 정보(dl) → '자세히 보기'(카드 전체가 링크) + 안내 문구 · 이력은 지어내지 않음
   const leaderVisual = c.photo
-    ? `<img class="dt-leader-img" src="${c.photo}" alt="${c.ceo} 대표 사진" width="627" height="694" loading="lazy" decoding="async">`
-    : `<span class="dt-mono" aria-hidden="true"><span class="dt-mono-ring"></span><span class="dt-mono-ring"></span><span class="dt-mono-box"><span class="dt-mono-ch">${c.ceo.charAt(0)}</span></span></span>
-          <span class="dt-leader-tag">사진 준비 중</span>`;
+    ? `<div class="pcard-ph">
+          <img class="pcard-img" src="${PEOPLE}/${c.photo}-600.webp" srcset="${peopleSrcset(c.photo)}" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 1180px) 40vw, 380px" width="900" height="1200" alt="${c.ceo} ${c.en} 대표" loading="lazy" decoding="async">
+        </div>`
+    : `<div class="pcard-ph is-empty" aria-hidden="true"><span class="pcard-sil"></span><span class="pcard-soon">사진 준비 중</span></div>`;
   const leaderLead = c.direct
     ? `지주회사 <span class="nowrap">${c.en}</span>의 대표로, ${b.area} 사업 <span class="nowrap">${b.en}</span>를 직접 운영하며 그룹 총괄 운영을 이끕니다.`
     : `${b.area} 사업은 그룹사 <span class="nowrap">${c.en}</span>가 맡고, ${c.ceo} 대표가 이끌고 있습니다.`;
-  // 카드: 회사(영문)·구분(지주회사 / 분야)은 머리 줄에 한 번만 — 아래 목록은 머리 줄과 겹치지 않는 정보만
-  const leaderBody = `<p class="dt-leader-corp"><span class="dt-corp-type${c.direct ? ' is-hold' : ''}">${c.direct ? c.type : c.field}</span><span class="en">${c.en}</span></p>
-          <h3 class="dt-leader-name" id="leader-name">${c.ceo}<span class="dt-leader-title">대표</span></h3>
+  // 회사 줄: 영문 회사명(공통 .pcard-co) + 지주회사 / 해외 거점 칩 — 분야는 그 아래 .pcard-field 한 줄
+  const leaderTag = c.direct ? `<span class="dt-corp-type is-hold">${c.type}</span>` : c.place ? `<span class="dt-corp-type is-place">${c.place}</span>` : '';
+  const leaderBody = `<h3 class="pcard-name" id="leader-name">${c.ceo} <small>대표</small></h3>
+          <p class="dt-leader-co"><span class="pcard-co en">${c.en}</span>${leaderTag}</p>
+          <p class="pcard-field"><span class="sr-only">분야 </span>${c.field}</p>
 ${c.direct ? `          <blockquote class="dt-leader-quote"><p>“제품과 브랜드, 그리고 사람의 성장이 이어지는 사업을 만듭니다.”</p></blockquote>
-` : ''}          <dl class="dt-leader-dl">
-${c.direct ? `            <div><dt>역할</dt><dd>그룹 대표 · ${c.role}</dd></div>
-            <div><dt>직접 운영</dt><dd class="dt-dd-chips"><span class="dt-dd-chip${b.slug === 'campus' ? ' is-cur' : ''}"><span class="en">DOOGO CLASS</span>교육</span><span class="dt-dd-chip${b.slug === 'food' ? ' is-cur' : ''}"><span class="en">DOOGOFOOD</span>유통</span></dd></div>
-            <div><dt>강의</dt><dd><span class="en nowrap">DOOGO CLASS</span> ‘문대표’ · 뉴질랜드 건기식 브랜딩</dd></div>`
-    : `            <div><dt>주요 서비스</dt><dd class="dt-dd-chips">${b.scope.split(' · ').map(x => `<span class="dt-dd-chip is-svc">${nw(x)}</span>`).join('')}</dd></div>${c.place ? `
-            <div><dt>거점</dt><dd>${c.place}</dd></div>` : ''}`}
-          </dl>
-          <p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '직함·이력은 공식 자료로 확정되는 대로 게시합니다.' : '이력과 사진은 확정 후 게시합니다.'}</p>
-          <a class="btn btn--line btn--sm" href="leadership.html#${c.anchor || `leader-${c.key}`}">${c.photo ? '대표 소개 보기' : '리더십 페이지에서 보기'} ${ARROW}<span class="sr-only"> — ${c.ceo} 대표</span></a>`;
+` : `          <p class="dt-leader-role"><span class="dt-leader-role-k">${b.area} 사업</span>${b.role}</p>
+`}          <div class="dt-leader-more">
+            <dl class="dt-leader-dl">
+${c.direct ? `              <div><dt>직접 운영</dt><dd class="dt-dd-chips"><span class="dt-dd-chip${b.slug === 'campus' ? ' is-cur' : ''}"><span class="en">DOOGO CLASS</span>교육</span><span class="dt-dd-chip${b.slug === 'food' ? ' is-cur' : ''}"><span class="en">DOOGOFOOD</span>유통</span></dd></div>
+              <div><dt>강의</dt><dd><span class="en nowrap">DOOGO CLASS</span> ‘문대표’ · 뉴질랜드 건기식 브랜딩</dd></div>`
+    : `              <div><dt>주요 서비스</dt><dd class="dt-dd-chips">${b.scope.split(' · ').map(x => `<span class="dt-dd-chip is-svc">${nw(x)}</span>`).join('')}</dd></div>`}
+            </dl>
+          </div>
+          <div class="pcard-foot dt-leader-foot">
+            <a class="pcard-link pcard-stretch" href="leadership.html#${c.anchor || `leader-${c.key}`}">자세히 보기<span class="sr-only"> (${c.en} ${c.ceo} 대표 · 리더십)</span> ${ico('i-arrow')}</a>
+            <p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '이력은 확정 후 게시합니다.' : '이력과 사진은 확정 후 게시합니다.'}</p>
+          </div>`;
 
   const main = `${SPRITE}
 
@@ -958,12 +979,9 @@ ${REL[b.slug]()}
         <p class="lead" data-reveal style="--d:.15s">${leaderLead}</p>
         <a class="link-arrow" href="leadership.html#leaders" data-reveal style="--d:.2s">사업을 이끄는 사람들 전체 보기 ${ico('i-arrow')}</a>
       </div>
-      <article class="dt-leader-card${c.photo ? ' has-photo' : ''}" data-reveal="scale" aria-labelledby="leader-name">
-        <div class="dt-leader-visual">
-          <span class="dt-leader-num en" aria-hidden="true">${b.num}</span>
-          ${leaderVisual}
-        </div>
-        <div class="dt-leader-body">
+      <article class="dt-leader-card pcard pcard--panel pcard--row" data-reveal style="--d:.1s" aria-labelledby="leader-name">
+        ${leaderVisual}
+        <div class="pcard-body">
           ${leaderBody}
         </div>
       </article>
@@ -987,7 +1005,7 @@ ${REL[b.slug]()}
 
       <nav class="dt-pager" aria-label="이전·다음 사업">
         <a class="dt-pager-card is-prev" href="business-${prev.slug}.html" data-reveal="left">
-          <span class="dt-pager-media"><img src="assets/img/biz/thumb-${prev.slug}.webp" alt="" width="480" height="270" loading="lazy"></span>
+          <span class="dt-pager-media"><img src="assets/img/biz/thumb-${prev.thumb || prev.slug}.webp" alt="" width="480" height="270" loading="lazy"></span>
           <span class="dt-pager-body">
             <span class="dt-pager-dir">${ico('i-arrow')}이전 사업</span>
             <span class="dt-pager-name"><span class="en">${prev.num}</span>${prev.area}</span>
@@ -995,7 +1013,7 @@ ${REL[b.slug]()}
           </span>
         </a>
         <a class="dt-pager-card is-next" href="business-${next.slug}.html" data-reveal="right">
-          <span class="dt-pager-media"><img src="assets/img/biz/thumb-${next.slug}.webp" alt="" width="480" height="270" loading="lazy"></span>
+          <span class="dt-pager-media"><img src="assets/img/biz/thumb-${next.thumb || next.slug}.webp" alt="" width="480" height="270" loading="lazy"></span>
           <span class="dt-pager-body">
             <span class="dt-pager-dir">다음 사업${ico('i-arrow')}</span>
             <span class="dt-pager-name"><span class="en">${next.num}</span>${next.area}</span>

@@ -2,7 +2,8 @@
    DOOGO GROUP — home.js (메인 페이지 전용)
    히어로 장면 표시기 · 인트로 글자 새김 · 숫자 카운트(0부터)
    · 그룹 구조(사이트 첫 화면 카드 · 고정 무대 가로 스크롤) · 사업영역 스티키 스토리(사진)
-   · One Group · Brands(세로 트리 ↔ 3D 브랜드 슬라이더 동기화) · 리더십 한 줄 카드 · 그룹소식 커버플로우 · 화면 밖 애니메이션 정지
+   · One Group · Brands(세로 트리 ↔ 3D 브랜드 슬라이더 동기화) · 리더십 한 줄 카드(.pcard) · 그룹소식 커버플로우 · 화면 밖 애니메이션 정지
+   · 해시(#chain 등)로 들어온 경우 #group 높이 계산 뒤 앵커 위치 보정
    움직임 정책: OS의 '애니메이션 줄이기' 설정과 관계없이 모든 모션을 재생합니다.
    사용자가 '움직임 멈추기' 버튼(site.js)을 고른 경우에만 멈춥니다 → motionOff() · 'doogo:motion' 이벤트.
    ========================================================= */
@@ -692,8 +693,9 @@
     return update;
   }
 
-  /* ---------- S6 리더십: 한 줄 카드 · 넘칠 때만 이전/다음 + 진행 바 ----------
-     1200px 이상은 6열이 한 줄에 다 들어가 버튼이 숨고, 좁은 화면에서는 가로 스크롤 스냅 + 버튼. */
+  /* ---------- S6 리더십: 리더 프로필 카드(.pcard) 한 줄 · 넘칠 때만 이전/다음 + 진행 바 ----------
+     1280px 이상은 6장이 한 줄에 다 들어가 버튼이 숨고, 1279px 이하는 가로 스크롤 스냅 + 버튼.
+     카드 생김새 · 등장 모션은 base.css '리더 프로필 카드 공통'. */
   function leaders() {
     var wrap = $('[data-ldr]');
     if (!wrap) return;
@@ -1100,6 +1102,50 @@
     dots.forEach(function (b, j) { b.addEventListener('click', function () { api.go(j, true); }); });
   }
 
+  /* ---------- 해시로 바로 들어온 경우(index.html#chain · #works · #leaders …) 위치 보정 ----------
+     그룹 구조(#group)는 글꼴 · 캡처 이미지 · load 뒤에 높이를 다시 계산하므로, 브라우저가 먼저 옮겨 둔 앵커 위치가 어긋납니다
+     (#chain 으로 들어오면 섹션 위가 잘려 보이던 문제). #group 보다 아래 앵커라면 높이 계산이 끝날 때마다 그 앵커로 다시 맞춥니다.
+     사용자가 직접 스크롤 · 터치 · 키를 누르면 즉시 멈추고, load 뒤 1.5초(최소 4초)가 지나면 더 이상 건드리지 않습니다. */
+  function hashSettle() {
+    var id = (location.hash || '').slice(1);
+    if (!id) return;
+    var target = null;
+    try { target = document.getElementById(decodeURIComponent(id)); } catch (e) { target = document.getElementById(id); }
+    var group = $('[data-hs]');
+    if (!target || !group || !(group.compareDocumentPosition(target) & 4)) return; // 4 = #group 뒤(아래)에 있는 앵커
+    var html = document.documentElement;
+    var stopped = false, timer = 0, until = Date.now() + 4000;
+    var evs = ['wheel', 'touchstart', 'keydown', 'mousedown'];
+    // 보정하는 동안은 브라우저의 앵커 이동도 부드러운 스크롤 없이 바로 (위에서부터 페이지 전체를 훑어 내려가지 않게)
+    var prevBehavior = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto';
+    function stop() {
+      if (stopped) return;
+      stopped = true; clearTimeout(timer);
+      html.style.scrollBehavior = prevBehavior;
+      evs.forEach(function (ev) { window.removeEventListener(ev, stop, { passive: true }); });
+      window.removeEventListener('scroll', onScroll);
+    }
+    evs.forEach(function (ev) { window.addEventListener(ev, stop, { passive: true }); });
+    function snap() {
+      if (stopped) return;
+      if (Date.now() > until) { stop(); return; }
+      var mt = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+      var y = Math.max(0, Math.round(target.getBoundingClientRect().top + window.scrollY - mt));
+      if (Math.abs(window.scrollY - y) > 1) window.scrollTo({ top: y, behavior: 'instant' });
+    }
+    function queue(ms) { if (stopped) return; clearTimeout(timer); timer = setTimeout(snap, ms); }
+    // 사용자 입력 없이 일어난 스크롤(브라우저의 앵커 이동 · load 뒤 다시 이동)이 멈추면 한 번 더 확인
+    function onScroll() { queue(140); }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    // #group(및 위쪽 섹션) 높이가 바뀔 때마다 — 마지막 변화 뒤 잠깐 기다렸다가 한 번
+    if ('ResizeObserver' in window) new ResizeObserver(function () { queue(160); }).observe($('#main') || document.body);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { queue(260); });
+    if (document.readyState === 'complete') queue(260);
+    else window.addEventListener('load', function () { until = Math.max(until, Date.now() + 1500); queue(260); });
+    (function expire() { if (stopped) return; if (Date.now() > until) stop(); else setTimeout(expire, until - Date.now() + 50); })();
+  }
+
   /* ---------- 화면 밖이면 반복 애니메이션 정지 (그룹 구조 · 트리 파동) ---------- */
   function pauseOffscreen() {
     var els = $$('[data-anim]');
@@ -1117,6 +1163,7 @@
   factsCount();
   var updaters = [groupScroll(), bizStory()].filter(Boolean);
   leaders();
+  hashSettle();
   brandSlider();
   coverflow();
   pauseOffscreen();

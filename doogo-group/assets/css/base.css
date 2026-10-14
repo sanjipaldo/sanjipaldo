@@ -582,3 +582,140 @@ html.motion-off *, html.motion-off *::before, html.motion-off *::after { animati
 .toast.is-show { opacity: 1; transform: translate(-50%, 0); }
 /* 모바일 토스트는 화면 폭을 거의 다 쓰므로 왼쪽 아래 '움직임 멈추기' 버튼 위로 띄워 겹치지 않게 */
 @media (max-width: 760px) { .toast { bottom: calc(56px + env(safe-area-inset-bottom, 0px)); } }
+
+/* =========================================================
+   15. 리더 프로필 카드 공통 (.pcard) — 메인 #leaders · leadership.html · 사업 상세 '담당 대표' · about 에서 함께 씀
+   생김새: 흰 사진 칸(3:4, 순백) + 인물 뒤에 크게·옅게 깔린 두고 'd' 심볼 + 배경 없는 상반신 사진(머리 위 약 8% ~ 배꼽)
+           → 이름(굵게) + 대표 · 영문 회사명(블루) · 분야(회색) · 얇은 구분선 · '자세히 보기 →'
+   사진이 없는 대표: 같은 칸 + 같은 구도의 중립 실루엣(.pcard-sil) + '사진 준비 중'(.pcard-soon) — 머리 높이가 사진과 같음
+   (페이지는 배치만 맡고, 생김새는 여기 한 곳에서만 정의합니다)
+
+   <article class="pcard" aria-labelledby="pc-moon">                      ← 흰 배경 섹션: 기본(사진 칸 + 본문, 테두리 없음)
+   <article class="pcard pcard--panel" aria-labelledby="pc-moon">        ← 아이보리 등 색 배경: 흰 패널(테두리 · 본문 여백)
+   <article class="pcard pcard--panel pcard--row" …>                     ← 카드 하나를 가로로(왼쪽 사진 · 오른쪽 본문, 560px 이하 세로)
+     <div class="pcard-ph">
+       <img class="pcard-img" src="assets/img/people/leader-moon-wonoh-600.webp"
+            srcset="assets/img/people/leader-moon-wonoh-600.webp 600w, assets/img/people/leader-moon-wonoh.webp 900w"
+            sizes="(max-width: 760px) 62vw, 240px" width="900" height="1200"
+            alt="문원오 DOOGO HOLDINGS 대표" loading="lazy" decoding="async">
+     </div>
+     <!-- 사진 없음: <div class="pcard-ph is-empty" aria-hidden="true"><span class="pcard-sil"></span><span class="pcard-soon">사진 준비 중</span></div> -->
+     <div class="pcard-body">
+       <h3 class="pcard-name" id="pc-moon">문원오 <small>대표</small></h3>
+       <p class="pcard-co en">DOOGO HOLDINGS</p>
+       <p class="pcard-field">교육 · 총괄 운영</p>
+       <div class="pcard-foot">
+         <a class="pcard-link [pcard-stretch]" href="leadership.html#ceo">자세히 보기<span class="sr-only"> (문원오 대표)</span> <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+       </div>
+     </div>
+   </article>
+   · .pcard-stretch: 그 링크가 카드 전체를 덮음(카드 어디를 눌러도 이동 · 포커스 링은 카드 둘레). 카드 안 다른 링크·버튼은 그 위로 올라옵니다.
+   · 등장 모션: 카드 묶음에 class="pcards" + data-reveal (각 카드나 감싼 li 에 style="--i:0…5" → 왼쪽부터 0.08초 간격)
+               또는 카드 하나에 data-reveal (+ style="--d:.08s" 지연). 인물·실루엣은 아래에서 살짝 올라오며 선명해집니다.
+               html.motion-off 면 처음부터 정지 상태로 다 보입니다. (OS '움직임 줄이기' 설정과 관계없이 재생 · BRIEF3)
+   · 칸 크기를 바꿔도(작은 칸 · 세로로 긴 칸) 심볼 · 사진 · 실루엣은 칸에 맞춰 같은 비율로 따라갑니다.
+   ========================================================= */
+.pcard {
+  --pc-r: 16px;        /* 모서리 */
+  --pc-mark: .09;      /* 심볼 불투명도 (호버 · 포커스 때 진해짐) */
+  --pc-lift: 8px;      /* 인물이 위로 뜰 때 칸 아래가 비지 않도록 아래로 더 그려 두는 여유 */
+  position: relative; display: flex; flex-direction: column; min-width: 0; height: 100%;
+  border-radius: var(--pc-r); background: #fff; color: var(--ink);
+  transition: box-shadow .5s var(--ease);
+}
+.pcard:hover, .pcard:focus-within { --pc-mark: .14; box-shadow: 0 26px 48px -34px rgba(11, 27, 51, .32); }
+
+/* 사진 칸: 순백 · 아래쪽에만 얇은 선 · 심볼은 인물 뒤(z-index -1) */
+.pcard-ph {
+  position: relative; isolation: isolate; overflow: hidden; flex: none; aspect-ratio: 3 / 4;
+  background: #fff; border-bottom: 1px solid var(--line-2); border-radius: var(--pc-r, 16px) var(--pc-r, 16px) 0 0;
+}
+.pcard-ph::before {
+  content: ""; position: absolute; z-index: -1; left: 50%; top: 9%; width: 90%; aspect-ratio: 85.3 / 88.7; translate: -50% 0;
+  background: var(--blue); opacity: var(--pc-mark, .09); pointer-events: none;
+  -webkit-mask: url("../img/logo/doogo-mark-d.svg") center / contain no-repeat; mask: url("../img/logo/doogo-mark-d.svg") center / contain no-repeat;
+  transition: opacity .5s var(--ease), scale 1.1s var(--ease);
+}
+/* 인물 사진(900×1200 · 투명 배경)과 실루엣: 칸을 꽉 채우고 아래 정렬 */
+.pcard-img, .pcard-sil {
+  position: absolute; left: 0; top: 0; width: 100%; height: calc(100% + var(--pc-lift, 8px)); max-width: none;
+  transform-origin: 50% 100%; transition: transform .7s var(--ease);
+}
+.pcard-img { object-fit: cover; object-position: 50% 100%; }
+.pcard-sil {
+  display: block; background: linear-gradient(180deg, #E9EDF3 0%, #EDF0F5 50%, #F4F6F9 100%);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 1200'%3E%3Cpath d='M450 95C541 95 604 152 604 238C604 330 579 398 534 438L534 508C548 540 640 560 735 590C800 612 828 660 836 740L846 1200L54 1200L64 740C72 660 100 612 165 590C260 560 352 540 366 508L366 438C321 398 296 330 296 238C296 152 359 95 450 95Z'/%3E%3C/svg%3E") 50% 100% / cover no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 1200'%3E%3Cpath d='M450 95C541 95 604 152 604 238C604 330 579 398 534 438L534 508C548 540 640 560 735 590C800 612 828 660 836 740L846 1200L54 1200L64 740C72 660 100 612 165 590C260 560 352 540 366 508L366 438C321 398 296 330 296 238C296 152 359 95 450 95Z'/%3E%3C/svg%3E") 50% 100% / cover no-repeat;
+}
+.pcard:hover :is(.pcard-img, .pcard-sil), .pcard:focus-within :is(.pcard-img, .pcard-sil) { transform: translateY(-4px) scale(1.03); }
+/* 호버 · 포커스: 사진 칸 아래 선이 왼쪽부터 블루로 그어짐 */
+.pcard-ph::after { content: ""; position: absolute; z-index: 1; left: 0; right: 0; bottom: 0; height: 2px; background: var(--blue); transform: scaleX(0); transform-origin: left center; transition: transform .6s var(--ease); pointer-events: none; }
+.pcard:hover .pcard-ph::after, .pcard:focus-within .pcard-ph::after { transform: none; }
+.pcard-soon {
+  position: absolute; z-index: 1; left: 12px; bottom: 12px; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px;
+  border-radius: 999px; background: rgba(255, 255, 255, .94); border: 1px solid rgba(11, 27, 51, .08); box-shadow: 0 6px 14px -10px rgba(11, 27, 51, .4);
+  color: var(--muted); font-size: .7rem; font-weight: 600; letter-spacing: -.01em; line-height: 1; white-space: nowrap;
+}
+.pcard-soon::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--blue-300); }
+
+/* 본문: 이름 → 영문 회사명 → 분야 → 구분선 → 링크 (카드 높이는 줄 안에서 모두 같게 · 링크는 맨 아래) */
+.pcard-body { flex: 1; display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 18px 0 4px; }
+.pcard-name { font-size: clamp(1.18rem, 1.08rem + .3vw, 1.34rem); font-weight: 800; line-height: 1.25; letter-spacing: -.04em; color: var(--ink); white-space: nowrap; }
+.pcard-name small { margin-left: 3px; font-size: .64em; font-weight: 600; letter-spacing: -.01em; color: var(--muted); }
+.pcard-co { margin-top: 6px; font-family: var(--font-en); font-size: .74rem; font-weight: 600; line-height: 1.3; letter-spacing: .12em; color: var(--blue); white-space: nowrap; }
+.pcard-field { margin-top: 3px; font-size: .86rem; font-weight: 500; line-height: 1.45; letter-spacing: -.01em; color: var(--muted); }
+.pcard-foot { width: 100%; margin-top: auto; }
+.pcard-foot::before { content: ""; display: block; height: 1px; margin: 16px 0 6px; background: var(--line-2); }
+.pcard-link { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-size: .86rem; font-weight: 700; letter-spacing: -.01em; color: var(--ink); transition: color .25s var(--ease); }
+.pcard-link .ico { width: 16px; height: 16px; flex: none; transition: transform .35s var(--ease); }
+.pcard-link:hover, .pcard:hover .pcard-stretch { color: var(--blue); }
+.pcard-link:hover .ico, .pcard:hover .pcard-stretch .ico { transform: translateX(3px); }
+/* 카드 전체를 덮는 링크: 포커스 링은 카드 둘레에 */
+.pcard-stretch::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: var(--pc-r, 16px); }
+.pcard-body :is(a, button):not(.pcard-stretch) { position: relative; z-index: 3; }
+@supports selector(:has(*)) {
+  .pcard-stretch:focus-visible { outline: none; }
+  .pcard:has(.pcard-stretch:focus-visible) { outline: 3px solid var(--blue); outline-offset: 4px; }
+}
+
+/* 색 배경 위: 흰 패널 */
+.pcard--panel { overflow: hidden; border: 1px solid var(--line-2); }
+.pcard--panel .pcard-body { padding: 20px 22px 14px; }
+
+/* 가로형(카드 하나 · 사업 상세 '담당 대표' 같은 자리): 왼쪽 사진 칸(기본 폭 38% · --pc-ph-w 로 조절) + 오른쪽 본문. 560px 이하는 세로로 */
+.pcard--row { flex-direction: row; align-items: flex-start; }
+.pcard--row .pcard-ph { flex: 0 0 var(--pc-ph-w, 38%); border-bottom: 0; border-right: 1px solid var(--line-2); border-radius: var(--pc-r, 16px) 0 0 var(--pc-r, 16px); }
+.pcard--row .pcard-ph::after { top: 0; bottom: 0; left: auto; width: 2px; height: auto; transform: scaleY(0); transform-origin: center top; }
+.pcard--row:is(:hover, :focus-within) .pcard-ph::after { transform: none; }
+.pcard--row .pcard-body { align-self: stretch; padding: clamp(20px, 2.4vw, 32px) clamp(20px, 2.6vw, 36px) 16px; }
+@media (max-width: 560px) {
+  .pcard--row { flex-direction: column; align-items: stretch; }
+  .pcard--row .pcard-ph { flex-basis: auto; border-right: 0; border-bottom: 1px solid var(--line-2); border-radius: var(--pc-r, 16px) var(--pc-r, 16px) 0 0; }
+  .pcard--row .pcard-ph::after { top: auto; left: 0; width: auto; height: 2px; transform: scaleX(0); transform-origin: left center; }
+  .pcard--row .pcard-body { padding: 20px 20px 14px; }
+}
+
+/* 등장: 카드가 왼쪽부터 차례로 올라오고(0.08초 간격) → 심볼이 번지고 → 인물이 아래에서 올라오며 선명해짐 */
+.js .pcards[data-reveal] { opacity: 1; transform: none; }
+.js .pcards[data-reveal] .pcard {
+  opacity: 0; transform: translateY(36px);
+  transition: opacity .8s var(--ease), transform 1s var(--ease), box-shadow .5s var(--ease);
+  transition-delay: calc(var(--i, 0) * .08s), calc(var(--i, 0) * .08s), 0s;
+}
+.js .pcards[data-reveal].is-in .pcard, .js .pcards[data-reveal]:focus-within .pcard { opacity: 1; transform: none; }
+.js .pcard[data-reveal] { transition: opacity .8s var(--ease) var(--d, 0s), transform 1s var(--ease) var(--d, 0s), box-shadow .5s var(--ease) 0s; }
+.js :is(.pcards, .pcard)[data-reveal] :is(.pcard-img, .pcard-sil) {
+  opacity: 0; translate: 0 7%; filter: blur(6px);
+  transition: opacity .9s var(--ease), translate 1.2s var(--ease), filter 1s var(--ease), transform .7s var(--ease);
+  transition-delay: calc(var(--i, 0) * .08s + var(--d, 0s) + .2s), calc(var(--i, 0) * .08s + var(--d, 0s) + .2s), calc(var(--i, 0) * .08s + var(--d, 0s) + .2s), 0s;
+}
+.js :is(.pcards, .pcard)[data-reveal] .pcard-ph::before { opacity: 0; scale: .9; transition-delay: calc(var(--i, 0) * .08s + var(--d, 0s) + .1s); }
+.js :is(.pcards, .pcard)[data-reveal]:is(.is-in, :focus-within) :is(.pcard-img, .pcard-sil) { opacity: 1; translate: none; filter: none; }
+.js :is(.pcards, .pcard)[data-reveal]:is(.is-in, :focus-within) .pcard-ph::before { opacity: var(--pc-mark, .09); scale: none; }
+/* 호버로 진해지는 심볼은 바로 반응 (등장 지연 없이) */
+.js :is(.pcards, .pcard)[data-reveal].is-in .pcard:is(:hover, :focus-within) .pcard-ph::before,
+.js .pcard[data-reveal].is-in:is(:hover, :focus-within) .pcard-ph::before { transition-delay: 0s; }
+/* 움직임 멈추기: 처음부터 정지 상태로 모두 보임 */
+html.motion-off .pcards[data-reveal] .pcard { opacity: 1 !important; transform: none !important; }
+html.motion-off .pcard :is(.pcard-img, .pcard-sil) { opacity: 1 !important; translate: none !important; filter: none !important; }
+html.motion-off .pcard .pcard-ph::before { opacity: var(--pc-mark, .09) !important; scale: none !important; }

@@ -1,6 +1,6 @@
 /* =========================================================
    DOOGO GROUP — leadership.css (리더십)
-   여섯 명의 대표를 같은 크기 카드 한 그리드로 (문원오 카드 = #ceo) · 짧은 그룹 소개(1 + 5 트리) · 대표 상세(dialog)
+   여섯 명의 대표를 리더 프로필 카드(.pcard · base.css 공통) 한 그리드로 (문원오 카드 = #ceo) · 짧은 그룹 소개(1 + 5 트리) · 대표 상세(dialog)
    움직임 멈추기(html.motion-off)를 고르면 모두 멈춘 최종 상태로 보입니다.
    ========================================================= */
 
@@ -145,86 +145,56 @@ main .note { color: var(--muted); }
 .ld-brief.is-play .ld-tree-list a { opacity: 1; transform: none; transition: opacity .55s var(--ease) calc(1.4s + var(--k) * .12s), transform .7s var(--ease) calc(1.4s + var(--k) * .12s), background-color .3s var(--ease), border-color .3s var(--ease); }
 .ld-brief.is-play .ld-tree-list a:hover { transform: translateY(-3px); transition-delay: 0s; }
 
-/* ----- 카드 그리드: 여섯 명 모두 같은 크기 ----- */
-.ld-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 20px; } /* 모든 줄 · 모든 카드가 같은 높이 */
-.ld-card { display: flex; min-width: 0; scroll-margin-top: calc(var(--header-h) + 24px); }
-
-/* 대표 카드: 위 사진 칸(순백 + 1px 선) — 문원오는 투명 배경 컷아웃 사진을 칸 아래에 맞추고,
-   사진이 없는 대표는 이름 첫 글자(모노그램) + '사진 준비 중' (사진이 생기면 .has-photo + img.ld-photo 로 바꾸면 됨) */
-.ld-card-in {
-  position: relative; isolation: isolate; flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden;
-  border-radius: 24px; background: #fff; border: 1px solid var(--line-2);
-  transition: transform .5s var(--ease), box-shadow .5s var(--ease), border-color .3s var(--ease);
-}
-.ld-card-in:hover { transform: translateY(-6px); box-shadow: var(--shadow); border-color: transparent; }
-.ld-card:target .ld-card-in { box-shadow: 0 0 0 2px var(--blue), var(--shadow); }
-.ld-visual { position: relative; isolation: isolate; overflow: hidden; aspect-ratio: 16 / 10; margin: 8px 8px 0; border-radius: 17px; background: #fff; border: 1px solid var(--line-2); }
-/* 사진이 없는 칸: 모노그램 뒤로 아주 옅은 동심원 안내선 */
-.ld-visual:not(.has-photo)::before {
-  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: radial-gradient(circle at 50% 44%, transparent 0 68px, rgba(10, 93, 226, .1) 68px 69px, transparent 69px 104px, rgba(10, 93, 226, .065) 104px 105px, transparent 105px 142px, rgba(10, 93, 226, .04) 142px 143px, transparent 143px);
-}
-.ld-visual::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--blue); transform: scaleX(0); transform-origin: left; transition: transform .6s var(--ease); }
-.ld-card-in:hover .ld-visual::after { transform: scaleX(1); }
-.ld-idx { position: absolute; z-index: 1; left: 18px; top: 14px; font-size: .95rem; font-weight: 600; color: var(--ink); }
-.ld-idx small { margin-left: 3px; font-size: .72rem; color: rgba(11, 27, 51, .5); }
-/* 사진(투명 배경 컷아웃 627×694): 칸 아래에 맞춰 가운데 */
-.ld-photo {
-  position: absolute; left: 50%; bottom: 0; height: 94%; width: auto; max-width: none; translate: -50% 0; transform-origin: 50% 100%;
-  transition: transform .9s var(--ease), translate 1.1s var(--ease), opacity .8s var(--ease);
-}
-.ld-card-in:hover .ld-photo { transform: scale(1.03); }
-.ld-mono {
-  position: absolute; left: 50%; top: 44%; display: grid; place-items: center; width: 92px; height: 92px; margin: -46px 0 0 -46px; border-radius: 28px; overflow: hidden;
-  background: linear-gradient(140deg, #4C8DF6 0%, #0A5DE2 52%, #0742A3 100%); color: #fff; font-size: 2.6rem; font-weight: 700; letter-spacing: -.02em; line-height: 1;
-  box-shadow: 0 24px 40px -18px rgba(10, 93, 226, .9), inset 0 1px 0 rgba(255, 255, 255, .4), inset 0 -10px 20px rgba(5, 30, 90, .25);
-  transition: transform .6s var(--ease), translate .9s cubic-bezier(.2, 1.25, .4, 1), scale .9s cubic-bezier(.2, 1.25, .4, 1), opacity .6s var(--ease);
-}
-.ld-mono::before { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; background: linear-gradient(160deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0) 46%); pointer-events: none; }
-.ld-mono > span { position: relative; }
-.ld-card-in:hover .ld-mono { transform: translateY(-4px) rotate(-4deg); }
-.ld-soon {
-  position: absolute; left: 50%; bottom: 14px; translate: -50% 0; display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 999px;
-  background: var(--ivory); border: 1px solid var(--line-2); color: var(--muted); font-size: .72rem; font-weight: 600; white-space: nowrap;
-}
-.ld-soon::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--blue-300); }
-.ld-card-body { flex: 1; display: flex; flex-direction: column; align-items: flex-start; padding: 22px 24px 18px; }
-.ld-card-co { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 24px; font-size: 1rem; font-weight: 600; color: var(--ink-2); }
-.ld-co.en { letter-spacing: .03em; }
-.ld-card-name { margin-top: 6px; font-size: clamp(1.6rem, 2.2vw, 2rem); font-weight: 700; line-height: 1.2; letter-spacing: -.04em; }
-.ld-card-name small { margin-left: 2px; font-size: .95rem; font-weight: 600; letter-spacing: -.01em; color: var(--muted); }
-.ld-card-facts { width: 100%; margin-top: 18px; border-top: 1px solid var(--line-2); }
-.ld-card-facts > div { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; min-height: 46px; border-bottom: 1px solid var(--line-2); }
-.ld-card-facts dt { font-size: .82rem; color: var(--muted); }
-.ld-card-facts dd { font-size: .98rem; font-weight: 600; letter-spacing: -.02em; }
-/* 직접 운영: 실제 사이트로 (새 창) — 카드 전체를 덮는 '상세 보기' 영역 위로 올림 */
+/* ----- 대표 카드: 리더 프로필 카드(.pcard · 생김새는 base.css 공통)를 크게 -----
+   데스크톱 3열 × 2줄(카드 약 370–410px · 위 제목·소개와 같은 폭) · 태블릿 2열 · 휴대폰(680px 이하) 가로 스와이프. 모든 줄 · 모든 카드가 같은 높이.
+   카드 어디를 눌러도 상세(dialog)가 열리고(.pcard-stretch), 직접 운영 · 사업 보기 링크는 그 위로 올라옴 */
+.ld-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 48px 40px; margin-top: clamp(48px, 5vw, 72px); }
+.ld-card { scroll-margin-top: calc(var(--header-h) + 24px); }
+.ld-card.pcard { --pc-r: 22px; }
+.ld-card.pcard:hover, .ld-card.pcard:focus-within { box-shadow: 0 34px 60px -38px rgba(11, 27, 51, .38); }
+.ld-card:target { box-shadow: 0 0 0 2px var(--blue), 0 34px 60px -38px rgba(11, 27, 51, .38); }
+.ld-idx { position: absolute; z-index: 1; left: 20px; top: 18px; font-size: .9rem; font-weight: 600; line-height: 1; color: var(--ink); }
+.ld-idx small { margin-left: 3px; font-size: .7rem; color: rgba(11, 27, 51, .45); }
+.ld-card .pcard-soon { left: 16px; bottom: 16px; }
+.ld-card .pcard-body { padding: 24px 26px 14px; }
+.ld-card .pcard-name { font-size: clamp(1.45rem, 1.2rem + .7vw, 1.8rem); letter-spacing: -.045em; }
+.ld-card .pcard-name small { font-size: .56em; }
+.ld-co-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 24px; margin-top: 8px; }
+.ld-co-line .pcard-co { margin-top: 0; font-size: .8rem; }
+.ld-card .pcard-field { margin-top: 4px; font-size: .95rem; color: var(--ink-2); font-weight: 600; }
+/* 역할 한 줄: 직접 운영(DOOGO HOLDINGS) / 사업영역 */
+.ld-card-facts { width: 100%; margin-top: 10px; }
+.ld-card-facts > div { display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; min-height: 30px; }
+.ld-card-facts dt { flex: none; font-size: .78rem; font-weight: 600; color: var(--muted); }
+.ld-card-facts dd { font-size: .9rem; font-weight: 500; letter-spacing: -.015em; color: var(--muted); }
+/* 직접 운영: 실제 사이트로 (새 창) */
 .ld-direct { display: flex; flex-wrap: wrap; align-items: center; gap: 0 9px; }
-.ld-direct a { position: relative; z-index: 2; display: inline-flex; align-items: center; min-height: 40px; font-size: .86rem; font-weight: 600; letter-spacing: .01em; white-space: nowrap; color: var(--blue-700); background: linear-gradient(currentColor, currentColor) 0 calc(100% - 9px) / 0 1px no-repeat; transition: background-size .35s var(--ease), color .25s var(--ease); }
+.ld-direct a { display: inline-flex; align-items: center; min-height: 34px; font-size: .84rem; font-weight: 600; letter-spacing: .01em; white-space: nowrap; color: var(--blue-700); background: linear-gradient(currentColor, currentColor) 0 calc(100% - 7px) / 0 1px no-repeat; transition: background-size .35s var(--ease), color .25s var(--ease); }
 .ld-direct a:hover { background-size: 100% 1px; color: var(--blue); }
 .ld-direct a .ico { flex: none; width: 12px; height: 12px; margin-left: 3px; transition: transform .3s var(--ease); } /* 새 창 외부 링크 표시 */
 .ld-direct a:hover .ico { transform: translate(2px, -2px); }
 .ld-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--muted-2); }
-.ld-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; width: 100%; margin-top: auto; padding-top: 16px; }
-.ld-more {
-  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 18px; border-radius: 999px; border: 1px solid var(--line);
-  font-size: .88rem; font-weight: 600; color: var(--ink); transition: background-color .3s var(--ease), color .3s var(--ease), border-color .3s var(--ease);
-}
-.ld-more .ico { width: 16px; height: 16px; transition: transform .45s var(--ease); }
-.ld-more::after { content: ""; position: absolute; inset: 0; z-index: 1; } /* 카드 어디를 눌러도 상세가 열립니다 */
-.ld-card-in:hover .ld-more { background: var(--ink); border-color: var(--ink); color: #fff; }
-.ld-card-in:hover .ld-more .ico { transform: rotate(90deg); }
-.ld-go { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: .88rem; font-weight: 600; color: var(--ink); transition: color .25s var(--ease); }
-.ld-go .ico { width: 16px; height: 16px; transition: transform .3s var(--ease); }
-.ld-go:hover { color: var(--blue); }
-.ld-go:hover .ico { transform: translateX(3px); }
-.ld-note { margin-top: 28px; display: flex; align-items: flex-start; gap: 8px; }
+/* 아래: 구분선(공통) → 자세히 보기(상세 열기) · 사업 보기 */
+.ld-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 12px; }
+.ld-card-foot::before { flex: 0 0 100%; margin-top: 18px; }
+.ld-go { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px 0 14px; border-radius: 999px; border: 1px solid var(--line); font-size: .8rem; font-weight: 600; color: var(--ink-2); white-space: nowrap; transition: background-color .3s var(--ease), border-color .3s var(--ease), color .3s var(--ease); }
+.ld-go .ico { width: 14px; height: 14px; transition: transform .3s var(--ease); }
+.ld-go:hover { background: var(--ink); border-color: var(--ink); color: #fff; }
+.ld-go:hover .ico { transform: translateX(2px); }
+.ld-note { margin-top: 32px; display: flex; align-items: flex-start; gap: 8px; }
 .ld-note::before { content: "i"; display: inline-grid; place-items: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; border: 1px solid currentColor; font-family: var(--font-en); font-size: .7rem; font-weight: 600; flex: none; }
-
-/* 카드 등장: 카드가 올라온 뒤 사진이 아래에서 떠오르고, 모노그램은 살짝 튀어 오릅니다 */
-.js .ld-card[data-reveal] .ld-photo { opacity: 0; translate: -50% 26px; transition-delay: 0s, calc(var(--d, 0s) + .2s), calc(var(--d, 0s) + .2s); }
-.js .ld-card[data-reveal] .ld-mono { opacity: 0; translate: 0 18px; scale: .82; transition-delay: 0s, calc(var(--d, 0s) + .32s), calc(var(--d, 0s) + .32s), calc(var(--d, 0s) + .32s); }
-.js .ld-card[data-reveal].is-in .ld-photo { opacity: 1; translate: -50% 0; }
-.js .ld-card[data-reveal].is-in .ld-mono { opacity: 1; translate: none; scale: none; }
+/* 휴대폰 가로 스와이프: 번호 · 진행 막대 · 이전/다음 (leadership.js 가 넘칠 때만 보여 줌) */
+.ld-ctrl { display: none; align-items: center; gap: 14px; margin-top: 4px; }
+.ld-ctrl-count { flex: none; min-width: 56px; font-size: .86rem; color: var(--muted); }
+.ld-ctrl-count b { font-weight: 600; color: var(--ink); }
+.ld-ctrl-bar { position: relative; flex: 1; height: 2px; border-radius: 2px; overflow: hidden; background: var(--line); }
+.ld-ctrl-bar i { position: absolute; inset: 0; background: var(--ink); transform-origin: left center; transform: scaleX(var(--p, .2)); transition: transform .35s var(--ease); }
+.ld-ctrl-btns { display: flex; gap: 8px; }
+.ld-ctrl-btn { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #fff; border: 1px solid rgba(11, 27, 51, .16); color: var(--ink); transition: background-color .3s var(--ease), border-color .3s var(--ease), color .3s var(--ease), opacity .3s var(--ease); }
+.ld-ctrl-btn .ico { width: 18px; height: 18px; }
+.ld-ctrl-btn[data-ld-prev] .ico { transform: rotate(180deg); }
+.ld-ctrl-btn:hover:not(:disabled) { background: var(--ink); border-color: var(--ink); color: #fff; }
+.ld-ctrl-btn:disabled { opacity: .35; cursor: default; }
 
 /* ---------- 대표 상세 (dialog) ---------- */
 .ld-modal {
@@ -241,19 +211,13 @@ main .note { color: var(--muted); }
 @keyframes ldFadeIn { from { opacity: 0; } }
 @keyframes ldFadeOut { to { opacity: 0; } }
 .ld-m-in { position: relative; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); min-height: 560px; max-height: inherit; overflow: auto; overscroll-behavior: contain; }
-/* 상세 사진 칸도 카드와 같은 규칙: 순백 + 1px 선, 사진은 아래 가운데 · 없으면 모노그램 + '사진 준비 중' */
-.ld-m-visual { position: relative; isolation: isolate; overflow: hidden; min-height: 100%; background: #fff; border-right: 1px solid var(--line-2); }
-.ld-m-visual:not(.has-photo)::before {
-  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: radial-gradient(circle at 50% 46%, transparent 0 84px, rgba(10, 93, 226, .1) 84px 85px, transparent 85px 128px, rgba(10, 93, 226, .065) 128px 129px, transparent 129px 176px, rgba(10, 93, 226, .04) 176px 177px, transparent 177px);
-}
-.ld-m-photo { position: absolute; left: 50%; bottom: 0; height: 88%; width: auto; max-width: none; transform: translateX(-50%); }
-.ld-m-photo[hidden] { display: none; }
-.ld-m-visual.has-photo .ld-m-mono, .ld-m-visual.has-photo .ld-soon { display: none; }
-.ld-m-mono { top: 46%; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 32px; font-size: 3.2rem; }
-.ld-m-visual .ld-soon { bottom: 24px; }
+/* 상세 사진 칸도 카드와 같은 생김새(.pcard-ph): 순백 + 두고 심볼 + 사진(아래 정렬) · 없으면 실루엣 + '사진 준비 중' */
+.ld-m-visual.pcard-ph { aspect-ratio: auto; min-height: 100%; border-radius: 0; border-bottom: 0; border-right: 1px solid var(--line-2); }
+.ld-m-visual .pcard-img[hidden], .ld-m-visual.has-photo .pcard-sil, .ld-m-visual.has-photo .pcard-soon { display: none; }
+.ld-m-visual .pcard-soon { left: 50%; bottom: 22px; translate: -50% 0; }
 .ld-m-body { display: flex; flex-direction: column; align-items: flex-start; padding: 52px 44px 104px; }
 .ld-m-co { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 1.05rem; font-weight: 600; color: var(--ink-2); }
+.ld-m-co .ld-co { letter-spacing: .1em; font-size: .86rem; color: var(--blue); }
 .ld-m-name { margin-top: 8px; font-size: clamp(2.3rem, 4.2vw, 3.2rem); font-weight: 700; line-height: 1.1; letter-spacing: -.045em; }
 .ld-m-name small { font-size: 1.05rem; font-weight: 600; letter-spacing: -.01em; color: var(--muted); }
 .ld-m-facts { width: 100%; margin-top: 28px; border-top: 1.5px solid var(--ink); }
@@ -283,10 +247,10 @@ main .note { color: var(--muted); }
 .ld-m-close:hover { background: var(--ink); color: #fff; }
 .ld-m-close svg { width: 20px; height: 20px; }
 /* 이전/다음 대표로 바꿀 때 내용이 살짝 빠졌다 들어옵니다 */
-.ld-m-body > *, .ld-m-mono, .ld-m-photo { transition: opacity .22s var(--ease), transform .3s var(--ease); }
+.ld-m-body > * { transition: opacity .22s var(--ease), transform .3s var(--ease); }
+.ld-m-visual :is(.pcard-img, .pcard-sil) { transition: opacity .22s var(--ease), translate .3s var(--ease); }
 .ld-m-in.is-swap .ld-m-body > * { opacity: 0; transform: translateY(8px); }
-.ld-m-in.is-swap .ld-m-mono { opacity: 0; transform: translateY(8px); }
-.ld-m-in.is-swap .ld-m-photo { opacity: 0; transform: translate(-50%, 8px); }
+.ld-m-in.is-swap .ld-m-visual :is(.pcard-img, .pcard-sil) { opacity: 0; translate: 0 10px; }
 html.is-locked .ld-modal { overscroll-behavior: contain; }
 
 /* ---------- 반응형 ---------- */
@@ -306,14 +270,14 @@ html.is-locked .ld-modal { overscroll-behavior: contain; }
   .ld-brief-link { margin: 0 0 0 auto; }
 }
 @media (max-width: 1180px) {
-  .ld-card-body { padding: 20px 20px 16px; }
-  .ld-card-facts > div { grid-template-columns: 64px minmax(0, 1fr); }
+  .ld-grid { gap: 40px 24px; }
+  .ld-card .pcard-body { padding: 22px 22px 12px; }
   .ld-direct { gap: 0 8px; }
   .ld-direct a { font-size: .8rem; letter-spacing: 0; }
-  .ld-card .ld-mono { width: 80px; height: 80px; margin: -40px 0 0 -40px; border-radius: 24px; font-size: 2.2rem; }
 }
+/* 태블릿: 2열 (카드 약 340–390px · 넓은 태블릿은 가운데) */
 @media (max-width: 1024px) {
-  .ld-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .ld-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 20px; max-width: 800px; margin-inline: auto; }
 }
 @media (max-width: 860px) {
   .ld-hero-index { max-width: 640px; }
@@ -335,13 +299,18 @@ html.is-locked .ld-modal { overscroll-behavior: contain; }
   .ld-tree-list { grid-row: 3; }
 }
 @media (max-width: 720px) and (min-width: 681px) { .ld-tree-list b { font-size: .74rem; } }
-/* 2열 카드가 좁아지는 폭: 사업 바로가기는 동그란 화살표만 (줄바꿈 없이 같은 높이) */
+/* 휴대폰: 가로 스와이프 (카드 약 78vw → 다음 카드가 살짝 보임) · 넘침은 카드 줄 안에서만 */
 @media (max-width: 680px) {
-  .ld-card-co { font-size: .92rem; }
-  .ld-card-foot { flex-wrap: nowrap; }
-  .ld-more { padding: 0 14px 0 16px; font-size: .84rem; white-space: nowrap; }
-  .ld-go { justify-content: center; width: 44px; border-radius: 50%; border: 1px solid var(--line); }
-  .ld-go-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ld-grid {
+    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: min(78vw, 340px); grid-auto-rows: auto; gap: 14px;
+    max-width: none; margin: 36px calc(var(--gutter) * -1) 0; padding: 6px var(--gutter) 26px;
+    overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter); scrollbar-width: none;
+  }
+  .ld-grid::-webkit-scrollbar { display: none; }
+  .ld-card { scroll-snap-align: start; }
+  .ld-ctrl:not([hidden]) { display: flex; }
+  .ld-card .pcard-body { padding: 20px 20px 10px; }
+  .ld-note { margin-top: 20px; }
 }
 @media (max-width: 760px) {
   .ld-modal { inset: auto 0 0 0; margin: 0; width: 100%; max-height: 92vh; max-height: 92dvh; border-radius: 24px 24px 0 0; }
@@ -350,11 +319,12 @@ html.is-locked .ld-modal { overscroll-behavior: contain; }
   @keyframes ldSheetIn { from { transform: translateY(100%); } to { transform: none; } }
   @keyframes ldSheetOut { to { transform: translateY(100%); } }
   .ld-m-in { grid-template-columns: 1fr; min-height: 0; }
-  .ld-m-visual { height: 200px; min-height: 0; border-right: 0; border-bottom: 1px solid var(--line-2); }
-  .ld-m-visual:not(.has-photo)::before { background-position: 0 -14px; background-size: 100% 100%; }
-  .ld-m-photo { height: 94%; }
-  .ld-m-mono { top: 42%; width: 76px; height: 76px; margin: -38px 0 0 -38px; border-radius: 22px; font-size: 2.1rem; }
-  .ld-m-visual .ld-soon { bottom: 14px; }
+  /* 휴대폰 상세: 사진 칸은 위쪽 띠(얼굴 · 어깨가 보이게) */
+  .ld-m-visual.pcard-ph { height: 232px; min-height: 0; border-right: 0; border-bottom: 1px solid var(--line-2); }
+  .ld-m-visual.pcard-ph::before { width: 56%; top: 8%; }
+  .ld-m-visual .pcard-img { object-position: 50% 8%; }
+  .ld-m-visual .pcard-sil { -webkit-mask-position: 50% 8%; mask-position: 50% 8%; }
+  .ld-m-visual .pcard-soon { bottom: 14px; }
   .ld-m-body { padding: 26px 20px 28px; }
   .ld-m-name { font-size: 2.2rem; }
   .ld-m-facts > div { grid-template-columns: 76px minmax(0, 1fr); min-height: 48px; }
@@ -402,62 +372,21 @@ html.is-locked .ld-modal { overscroll-behavior: contain; }
   .ld-tree-root { min-height: 44px; padding: 6px 12px 6px 6px; gap: 8px; }
   .ld-tree-root img { width: 32px; height: 32px; }
   .ld-tree-root .en { font-size: .94rem; }
-
-  .ld-grid { grid-template-columns: 1fr; gap: 12px; }
-  /* 카드: 왼쪽 세로 비주얼 + 오른쪽 내용 */
-  .ld-card-in { display: grid; grid-template-columns: 108px minmax(0, 1fr); border-radius: 20px; }
-  .ld-card-in:hover { transform: translateY(-3px); }
-  .ld-visual { aspect-ratio: auto; height: auto; margin: 6px 0 6px 6px; border-radius: 15px; }
-  .ld-visual:not(.has-photo)::before { background: radial-gradient(circle at 50% 44%, transparent 0 44px, rgba(10, 93, 226, .1) 44px 45px, transparent 45px 68px, rgba(10, 93, 226, .06) 68px 69px, transparent 69px); }
-  .ld-idx { left: 10px; top: 8px; font-size: .82rem; }
-  .ld-idx small { display: none; }
-  .ld-photo { height: auto; width: 172%; max-height: 96%; object-fit: contain; object-position: 50% 100%; }
-  .ld-card .ld-mono { top: 44%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 20px; font-size: 1.8rem; }
-  .ld-card .ld-soon { left: 6px; right: 6px; bottom: 8px; translate: none; justify-content: center; gap: 4px; height: 22px; padding: 0 4px; font-size: .62rem; }
-  .ld-card .ld-soon::before { display: none; }
-  .ld-card-body { padding: 16px 16px 10px; }
-  .ld-card-co { font-size: .92rem; }
-  .ld-card-name { font-size: 1.5rem; }
-  .ld-card-name small { font-size: .85rem; }
-  .ld-card-facts { margin-top: 12px; }
-  .ld-card-facts > div { grid-template-columns: 62px minmax(0, 1fr); min-height: 38px; }
-  .ld-card-facts dt { font-size: .78rem; }
-  .ld-card-facts dd { font-size: .92rem; }
-  .ld-card-co { gap: 4px 8px; }
-  .ld-card-co .ld-co { font-size: .88rem; letter-spacing: .02em; }
-  /* 직접 운영 두 링크는 한 줄에 들어가지 않으므로 촘촘히 두 줄 — 나머지 카드도 grid-auto-rows 로 같은 높이 */
-  .ld-direct { flex-direction: column; align-items: flex-start; gap: 0; padding-block: 3px; }
-  .ld-direct a { min-height: 24px; font-size: .8rem; background-position: 0 calc(100% - 3px); }
-  .ld-dot { display: none; }
-  .ld-card-foot { padding-top: 10px; }
 }
-/* 아주 좁은 폭(≤400px): 번호 칸을 빼서 영문 회사명이 잘리지 않게 · 카드 왼쪽 비주얼을 조금 좁혀 회사명 + 칩이 한 줄에 */
+/* 아주 좁은 폭(≤400px): '회사로 찾기' 번호 칸을 빼서 영문 회사명이 잘리지 않게 */
 @media (max-width: 400px) {
-  .ld-card-in { grid-template-columns: 92px minmax(0, 1fr); }
-  .ld-card .ld-mono { width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 18px; font-size: 1.6rem; }
-  .ld-card .ld-soon { left: 5px; right: 5px; font-size: .58rem; }
-  .ld-card-co .ld-co { font-size: .84rem; letter-spacing: .01em; }
-  .ld-card-co .ld-tag { height: 20px; padding: 0 7px; font-size: .64rem; }
   .ld-hero-index a { grid-template-columns: minmax(0, 1fr); padding-block: 9px; }
   .ld-hero-index .num { display: none; }
   .ld-idx-co small { font-size: .7rem; }
 }
-@media (max-width: 359px) {
-  .ld-card-co { gap: 4px 6px; }
-  .ld-card-co .ld-co { font-size: .76rem; letter-spacing: 0; }
-  .ld-card-co .ld-tag { padding: 0 6px; font-size: .62rem; }
-}
 
 /* ---------- 움직임 멈추기 (사용자가 왼쪽 아래 버튼으로 고른 경우만) ---------- */
-html.motion-off .ld-card[data-reveal] .ld-mono { opacity: 1 !important; translate: none !important; scale: none !important; }
-html.motion-off .ld-card[data-reveal] .ld-photo { opacity: 1 !important; translate: -50% 0 !important; transform: none !important; }
 html.motion-off .ld-brief .ld-brief-head > *, html.motion-off .ld-brief .ld-tree-root, html.motion-off .ld-brief .ld-tree-direct > *,
 html.motion-off .ld-brief .ld-tree-list a { opacity: 1 !important; transform: none !important; }
 html.motion-off .ld-brief .ld-tree-direct::before, html.motion-off .ld-brief .ld-tree-stem, html.motion-off .ld-brief .ld-tree-list::before,
 html.motion-off .ld-brief .ld-tree-list li::before, html.motion-off .ld-brief .ld-tree-list li::after, html.motion-off .ld-brief .ld-tree::before { transform: none !important; }
 html.motion-off .ld-tree-stem::after, html.motion-off .ld-tree-list li::after { animation: none !important; }
 html.motion-off .ld-modal[open], html.motion-off .ld-modal[open]::backdrop, html.motion-off .ld-modal.is-closing, html.motion-off .ld-modal.is-closing::backdrop { animation: none !important; }
-html.motion-off .ld-m-in.is-swap .ld-m-body > *, html.motion-off .ld-m-in.is-swap .ld-m-mono { opacity: 1; transform: none; }
-/* OS '애니메이션 줄이기' 기기: 카드 hover 기울기 같은 큰 움직임만 줄임 */
-html.soft-motion .ld-card-in:hover .ld-mono { transform: none; }
-html.soft-motion .ld-card-in:hover .ld-photo { transform: none; }
+html.motion-off .ld-m-in.is-swap .ld-m-body > * { opacity: 1; transform: none; }
+html.motion-off .ld-m-in.is-swap .ld-m-visual :is(.pcard-img, .pcard-sil) { opacity: 1; translate: none; }
+html.motion-off .ld-grid { scroll-behavior: auto; }

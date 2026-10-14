@@ -262,7 +262,7 @@
   </section>
 
   <!-- =========================================================
-       여섯 명의 대표 — 같은 크기 카드 한 그리드 (문원오 카드 = #ceo)
+       여섯 명의 대표 — 리더 프로필 카드 한 그리드 (문원오 카드 = #ceo · 나머지 #leader-space … #leader-bio)
        ========================================================= -->
   <section class="section section--ivory ld-leaders" id="leaders" aria-labelledby="leaders-title">
     <div class="container">
@@ -295,155 +295,135 @@
         </div>
       </div>
 
-      <div class="ld-grid">
-        <article class="ld-card" id="ceo" data-reveal style="--d:0s" aria-labelledby="ld-n-holdings"
-          data-leader data-name="문원오" data-mono="문" data-co="DOOGO HOLDINGS" data-tag="지주회사" data-field="교육 및 총괄 운영" data-links="교육|business-campus.html,유통|business-food.html" data-contact="partner" data-photo="assets/img/people/moon-wonoh.webp" data-direct="1" data-note="DOOGO CLASS에서 ‘문대표’로 ‘뉴질랜드 건기식 브랜딩’(5주 과정)을 강의합니다." data-quote="제품과 브랜드, 그리고 사람의 성장이 이어지는 사업을 만듭니다.">
-          <div class="ld-card-in">
-            <div class="ld-visual has-photo" aria-hidden="true">
-              <span class="ld-idx en">01<small>/06</small></span>
-              <img class="ld-photo" src="assets/img/people/moon-wonoh.webp" width="627" height="694" alt="" loading="lazy" decoding="async">
-            </div>
-            <div class="ld-card-body">
-              <p class="ld-card-co"><span class="ld-co en">DOOGO HOLDINGS</span><span class="ld-tag ld-tag--hold">지주회사</span></p>
-              <h3 class="ld-card-name" id="ld-n-holdings">문원오 <small>대표</small></h3>
-              <dl class="ld-card-facts">
-                <div><dt>분야</dt><dd>교육 · 총괄 운영</dd></div>
-                <div><dt>직접 운영</dt><dd class="ld-direct"><a class="en" href="https://www.doogoclass.com" target="_blank" rel="noopener">DOOGO CLASS<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> (새 창)</span></a><span class="ld-dot" aria-hidden="true"></span><a class="en" href="https://www.doogofood.com" target="_blank" rel="noopener">DOOGOFOOD<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> (새 창)</span></a></dd></div>
-              </dl>
-              <div class="ld-card-foot">
-                <button class="ld-more" type="button" aria-haspopup="dialog" aria-controls="ld-modal" data-leader-open>상세 보기<span class="sr-only"> — DOOGO HOLDINGS 문원오 대표</span><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></button>
-                <a class="ld-go" href="business-campus.html"><span class="ld-go-t">교육 사업 보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-              </div>
+      <!-- 여섯 명의 대표: 리더 프로필 카드(.pcard · 생김새는 base.css 공통) — 데스크톱 3열 × 2줄 · 태블릿 2열 · 휴대폰 가로 스와이프
+           카드 어디를 눌러도 상세(dialog)가 열림(.pcard-stretch) · 사진: 문원오 · 문성오 · 김신용 / 나머지는 실루엣 + '사진 준비 중' -->
+      <div class="ld-grid" id="ld-grid" data-ld-grid>
+        <article class="ld-card pcard pcard--panel" id="ceo" data-reveal style="--d:0s" aria-labelledby="ld-n-holdings"
+          data-leader data-name="문원오" data-co="DOOGO HOLDINGS" data-tag="지주회사" data-field="교육 및 총괄 운영" data-links="교육|business-campus.html,유통|business-food.html" data-contact="partner" data-photo="assets/img/people/leader-moon-wonoh.webp" data-direct="1" data-note="DOOGO CLASS에서 ‘문대표’로 ‘뉴질랜드 건기식 브랜딩’(5주 과정)을 강의합니다." data-quote="제품과 브랜드, 그리고 사람의 성장이 이어지는 사업을 만듭니다.">
+          <div class="pcard-ph">
+            <span class="ld-idx en" aria-hidden="true">01<small>/06</small></span>
+            <img class="pcard-img" src="assets/img/people/leader-moon-wonoh-600.webp" srcset="assets/img/people/leader-moon-wonoh-600.webp 600w, assets/img/people/leader-moon-wonoh.webp 900w" sizes="(max-width: 680px) 78vw, (max-width: 1024px) 46vw, 380px" width="900" height="1200" alt="문원오 DOOGO HOLDINGS 대표" loading="lazy" decoding="async">
+          </div>
+          <div class="pcard-body">
+            <h3 class="pcard-name" id="ld-n-holdings">문원오 <small>대표</small></h3>
+            <p class="ld-co-line"><span class="pcard-co en">DOOGO HOLDINGS</span><span class="ld-tag ld-tag--hold">지주회사</span></p>
+            <p class="pcard-field"><span class="sr-only">분야 </span>교육 · 총괄 운영</p>
+            <dl class="ld-card-facts">
+              <div><dt>직접 운영</dt><dd class="ld-direct"><a class="en" href="https://www.doogoclass.com" target="_blank" rel="noopener">DOOGO CLASS<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> (새 창)</span></a><span class="ld-dot" aria-hidden="true"></span><a class="en" href="https://www.doogofood.com" target="_blank" rel="noopener">DOOGOFOOD<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> (새 창)</span></a></dd></div>
+            </dl>
+            <div class="pcard-foot ld-card-foot">
+              <button class="pcard-link pcard-stretch ld-more" type="button" aria-haspopup="dialog" aria-controls="ld-modal" data-leader-open>자세히 보기<span class="sr-only"> — DOOGO HOLDINGS 문원오 대표</span> <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+              <a class="ld-go" href="business-campus.html"><span class="ld-go-t">교육 사업 보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
             </div>
           </div>
         </article>
-
-        <article class="ld-card" id="leader-space" data-reveal style="--d:.08s" aria-labelledby="ld-n-space"
-          data-leader data-name="문성오" data-mono="문" data-co="DOOGO SPACE" data-field="공간" data-links="공간|business-space.html" data-contact="space">
-          <div class="ld-card-in">
-            <div class="ld-visual" aria-hidden="true">
-              <span class="ld-idx en">02<small>/06</small></span>
-              <span class="ld-mono"><span>문</span></span>
-              <span class="ld-soon">사진 준비 중</span>
-            </div>
-            <div class="ld-card-body">
-              <p class="ld-card-co"><span class="ld-co en">DOOGO SPACE</span></p>
-              <h3 class="ld-card-name" id="ld-n-space">문성오 <small>대표</small></h3>
-              <dl class="ld-card-facts">
-                <div><dt>분야</dt><dd>공간</dd></div>
-                <div><dt>사업영역</dt><dd>공간 · NORA STAY</dd></div>
-              </dl>
-              <div class="ld-card-foot">
-                <button class="ld-more" type="button" aria-haspopup="dialog" aria-controls="ld-modal" data-leader-open>상세 보기<span class="sr-only"> — DOOGO SPACE 문성오 대표</span><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></button>
-                <a class="ld-go" href="business-space.html"><span class="ld-go-t">공간 사업 보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-              </div>
+        <article class="ld-card pcard pcard--panel" id="leader-space" data-reveal style="--d:0.08s" aria-labelledby="ld-n-space"
+          data-leader data-name="문성오" data-co="DOOGO SPACE" data-field="공간" data-links="공간|business-space.html" data-contact="space" data-photo="assets/img/people/leader-moon-sungoh.webp">
+          <div class="pcard-ph">
+            <span class="ld-idx en" aria-hidden="true">02<small>/06</small></span>
+            <img class="pcard-img" src="assets/img/people/leader-moon-sungoh-600.webp" srcset="assets/img/people/leader-moon-sungoh-600.webp 600w, assets/img/people/leader-moon-sungoh.webp 900w" sizes="(max-width: 680px) 78vw, (max-width: 1024px) 46vw, 380px" width="900" height="1200" alt="문성오 DOOGO SPACE 대표" loading="lazy" decoding="async">
+          </div>
+          <div class="pcard-body">
+            <h3 class="pcard-name" id="ld-n-space">문성오 <small>대표</small></h3>
+            <p class="ld-co-line"><span class="pcard-co en">DOOGO SPACE</span></p>
+            <p class="pcard-field"><span class="sr-only">분야 </span>공간</p>
+            <dl class="ld-card-facts">
+              <div><dt>사업영역</dt><dd>공간 · NORA STAY</dd></div>
+            </dl>
+            <div class="pcard-foot ld-card-foot">
+              <button class="pcard-link pcard-stretch ld-more" type="button" aria-haspopup="dialog" aria-controls="ld-modal" data-leader-open>자세히 보기<span class="sr-only"> — DOOGO SPACE 문성오 대표</span> <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+              <a class="ld-go" href="business-space.html"><span class="ld-go-t">공간 사업 보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
             </div>
           </div>
         </article>
-
-        <article class="ld-card" id="leader-media" data-reveal style="--d:.16s" aria-labelledby="ld-n-media"
-          data-leader data-name="김윤정" data-mono="김" data-co="DOOGO MEDIA" data-field="콘텐츠" data-links="미디어|business-media.html" data-contact="media">
-          <div class="ld-card-in">
-            <div class="ld-visual" aria-hidden="true">
-              <span class="ld-idx en">03<small>/06</small></span>
-              <span class="ld-mono"><span>김</span></span>
-              <span class="ld-soon">사진 준비 중</span>
-            </div>
-            <div class="ld-card-body">
-              <p class="ld-card-co"><span class="ld-co en">DOOGO MEDIA</span></p>
-              <h3 class="ld-card-name" id="ld-n-media">김윤정 <small>대표</small></h3>
-              <dl class="ld-card-facts">
-                <div><dt>분야</dt><dd>콘텐츠</dd></div>
-                <div><dt>사업영역</dt><dd>미디어</dd></div>
-              </dl>
-              <div class="ld-card-foot">
-                <button class="ld-more" type="button" aria-haspopup="dialog" aria-controls="ld-modal" data-leader-open>상세 보기<span class="sr-only"> — DOOGO MEDIA 김윤정 대표</span><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></button>
-                <a class="ld-go" href="business-media.html"><span class="ld-go-t">미디어 사업 보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-              </div>
+        <article class="ld-card pcard pcard--panel" id="leader-media" data-reveal style="--d:0.16s" aria-labelledby="ld-n-media"
+          data-leader data-name="김윤정" data-co="DOOGO MEDIA" data-field="콘텐츠" data-links="미디어|business-media.html" data-contact="media">
+          <div class="pcard-ph is-empty" aria-hidden="true"><span class="ld-idx en" aria-hidden="true">03<small>/06</small></span><span class="pcard-sil"></span><span class="pcard-soon">사진 준비 중</span></div>
+          <div class="pcard-body">
+            <h3 class="pcard-name" id="ld-n-media">김윤정 <small>대표</small></h3>
+            <p class="ld-co-line"><span class="pcard-co en">DOOGO MEDIA</span></p>
+            <p class="pcard-field"><span class="sr-only">분야 </span>콘텐츠</p>
+            <dl class="ld-card-facts">
+              <div><dt>사업영역</dt><dd>미디어</dd></div>
+            </dl>
+            <div class="pcard-foot ld-card-foot">
+              <button class="pcard-link pcard-stretch ld-more" type="button" aria-haspopup="dialog" aria-controls="ld-modal" data-leader-open>자세히 보기<span class="sr-only"> — DOOGO MEDIA 김윤정 대표</span> <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+              <a class="ld-go" href="business-media.html"><span class="ld-go-t">미디어 사업 보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
             </div>
           </div>
         </article>
-
-        <article class="ld-card" id="leader-makers" data-reveal style="--d:0s" aria-labelledby="ld-n-makers"
-          data-leader data-name="신동훈" data-mono="신" data-co="DOOGO MAKERS" data-field="브랜드" data-links="커머스|business-commerce.html" data-contact="commerce">
-          <div class="ld-card-in">
-            <div class="ld-visual" aria-hidden="true">
-              <span class="ld-idx en">04<small>/06</small></span>
-              <span class="ld-mono"><span>신</span></span>
-              <span class="ld-soon">사진 준비 중</span>
-            </div>
-            <div class="ld-card-body">
-              <p class="ld-card-co"><span class="ld-co en">DOOGO MAKERS</span></p>
-              <h3 class="ld-card-name" id="ld-n-makers">신동훈 <small>대표</small></h3>
-              <dl class="ld-card-facts">
-                <div><dt>분야</dt><dd>브랜드</dd></div>
-                <div><dt>사업영역</dt><dd>커머스</dd></div>
-              </dl>
-              <div class="ld-card-foot">
-                <button class="ld-more" type="button" aria-haspopup="dialog" aria-controls="ld-modal" data-leader-open>상세 보기<span class="sr-only"> — DOOGO MAKERS 신동훈 대표</span><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></button>
-                <a class="ld-go" href="business-commerce.html"><span class="ld-go-t">커머스 사업 보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-              </div>
+        <article class="ld-card pcard pcard--panel" id="leader-makers" data-reveal style="--d:0s" aria-labelledby="ld-n-makers"
+          data-leader data-name="신동훈" data-co="DOOGO MAKERS" data-field="브랜드" data-links="커머스|business-commerce.html" data-contact="commerce">
+          <div class="pcard-ph is-empty" aria-hidden="true"><span class="ld-idx en" aria-hidden="true">04<small>/06</small></span><span class="pcard-sil"></span><span class="pcard-soon">사진 준비 중</span></div>
+          <div class="pcard-body">
+            <h3 class="pcard-name" id="ld-n-makers">신동훈 <small>대표</small></h3>
+            <p class="ld-co-line"><span class="pcard-co en">DOOGO MAKERS</span></p>
+            <p class="pcard-field"><span class="sr-only">분야 </span>브랜드</p>
+            <dl class="ld-card-facts">
+              <div><dt>사업영역</dt><dd>커머스</dd></div>
+            </dl>
+            <div class="pcard-foot ld-card-foot">
+              <button class="pcard-link pcard-stretch ld-more" type="button" aria-haspopup="dialog" aria-controls="ld-modal" data-leader-open>자세히 보기<span class="sr-only"> — DOOGO MAKERS 신동훈 대표</span> <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+              <a class="ld-go" href="business-commerce.html"><span class="ld-go-t">커머스 사업 보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
             </div>
           </div>
         </article>
-
-        <article class="ld-card" id="leader-ad" data-reveal style="--d:.08s" aria-labelledby="ld-n-ad"
-          data-leader data-name="김신용" data-mono="김" data-co="DOOGO AD" data-field="마케팅" data-links="광고|business-ad.html" data-contact="ad">
-          <div class="ld-card-in">
-            <div class="ld-visual" aria-hidden="true">
-              <span class="ld-idx en">05<small>/06</small></span>
-              <span class="ld-mono"><span>김</span></span>
-              <span class="ld-soon">사진 준비 중</span>
-            </div>
-            <div class="ld-card-body">
-              <p class="ld-card-co"><span class="ld-co en">DOOGO AD</span></p>
-              <h3 class="ld-card-name" id="ld-n-ad">김신용 <small>대표</small></h3>
-              <dl class="ld-card-facts">
-                <div><dt>분야</dt><dd>마케팅</dd></div>
-                <div><dt>사업영역</dt><dd>광고</dd></div>
-              </dl>
-              <div class="ld-card-foot">
-                <button class="ld-more" type="button" aria-haspopup="dialog" aria-controls="ld-modal" data-leader-open>상세 보기<span class="sr-only"> — DOOGO AD 김신용 대표</span><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></button>
-                <a class="ld-go" href="business-ad.html"><span class="ld-go-t">광고 사업 보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-              </div>
+        <article class="ld-card pcard pcard--panel" id="leader-ad" data-reveal style="--d:0.08s" aria-labelledby="ld-n-ad"
+          data-leader data-name="김신용" data-co="DOOGO AD" data-field="마케팅" data-links="광고|business-ad.html" data-contact="ad" data-photo="assets/img/people/leader-kim-sinyong.webp">
+          <div class="pcard-ph">
+            <span class="ld-idx en" aria-hidden="true">05<small>/06</small></span>
+            <img class="pcard-img" src="assets/img/people/leader-kim-sinyong-600.webp" srcset="assets/img/people/leader-kim-sinyong-600.webp 600w, assets/img/people/leader-kim-sinyong.webp 900w" sizes="(max-width: 680px) 78vw, (max-width: 1024px) 46vw, 380px" width="900" height="1200" alt="김신용 DOOGO AD 대표" loading="lazy" decoding="async">
+          </div>
+          <div class="pcard-body">
+            <h3 class="pcard-name" id="ld-n-ad">김신용 <small>대표</small></h3>
+            <p class="ld-co-line"><span class="pcard-co en">DOOGO AD</span></p>
+            <p class="pcard-field"><span class="sr-only">분야 </span>마케팅</p>
+            <dl class="ld-card-facts">
+              <div><dt>사업영역</dt><dd>광고</dd></div>
+            </dl>
+            <div class="pcard-foot ld-card-foot">
+              <button class="pcard-link pcard-stretch ld-more" type="button" aria-haspopup="dialog" aria-controls="ld-modal" data-leader-open>자세히 보기<span class="sr-only"> — DOOGO AD 김신용 대표</span> <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+              <a class="ld-go" href="business-ad.html"><span class="ld-go-t">광고 사업 보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
             </div>
           </div>
         </article>
-
-        <article class="ld-card" id="leader-bio" data-reveal style="--d:.16s" aria-labelledby="ld-n-bio"
-          data-leader data-name="백영호" data-mono="백" data-co="DOOGOBIO" data-tag="뉴질랜드" data-field="건기식 제조" data-links="제조|business-bio.html" data-contact="bio">
-          <div class="ld-card-in">
-            <div class="ld-visual" aria-hidden="true">
-              <span class="ld-idx en">06<small>/06</small></span>
-              <span class="ld-mono"><span>백</span></span>
-              <span class="ld-soon">사진 준비 중</span>
-            </div>
-            <div class="ld-card-body">
-              <p class="ld-card-co"><span class="ld-co en">DOOGOBIO</span><span class="ld-tag ld-tag--global"><svg aria-hidden="true"><use href="#i-globe"/></svg>뉴질랜드</span></p>
-              <h3 class="ld-card-name" id="ld-n-bio">백영호 <small>대표</small></h3>
-              <dl class="ld-card-facts">
-                <div><dt>분야</dt><dd>건기식 제조</dd></div>
-                <div><dt>사업영역</dt><dd>제조</dd></div>
-              </dl>
-              <div class="ld-card-foot">
-                <button class="ld-more" type="button" aria-haspopup="dialog" aria-controls="ld-modal" data-leader-open>상세 보기<span class="sr-only"> — DOOGOBIO 백영호 대표</span><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></button>
-                <a class="ld-go" href="business-bio.html"><span class="ld-go-t">제조 사업 보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-              </div>
+        <article class="ld-card pcard pcard--panel" id="leader-bio" data-reveal style="--d:0.16s" aria-labelledby="ld-n-bio"
+          data-leader data-name="백영호" data-co="DOOGOBIO" data-tag="뉴질랜드" data-field="건기식 제조" data-links="제조|business-bio.html" data-contact="bio">
+          <div class="pcard-ph is-empty" aria-hidden="true"><span class="ld-idx en" aria-hidden="true">06<small>/06</small></span><span class="pcard-sil"></span><span class="pcard-soon">사진 준비 중</span></div>
+          <div class="pcard-body">
+            <h3 class="pcard-name" id="ld-n-bio">백영호 <small>대표</small></h3>
+            <p class="ld-co-line"><span class="pcard-co en">DOOGOBIO</span><span class="ld-tag ld-tag--global"><svg aria-hidden="true"><use href="#i-globe"/></svg>뉴질랜드</span></p>
+            <p class="pcard-field"><span class="sr-only">분야 </span>건기식 제조</p>
+            <dl class="ld-card-facts">
+              <div><dt>사업영역</dt><dd>제조</dd></div>
+            </dl>
+            <div class="pcard-foot ld-card-foot">
+              <button class="pcard-link pcard-stretch ld-more" type="button" aria-haspopup="dialog" aria-controls="ld-modal" data-leader-open>자세히 보기<span class="sr-only"> — DOOGOBIO 백영호 대표</span> <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+              <a class="ld-go" href="business-bio.html"><span class="ld-go-t">제조 사업 보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
             </div>
           </div>
         </article>
       </div>
-      <p class="note ld-note">대표 이력은 공식 자료로 확정 후 게시합니다. 이름 첫 글자 표시는 사진이 준비되기 전의 임시 표시입니다.</p>
+      <!-- 휴대폰(680px 이하) 가로 스와이프일 때만 보임 (leadership.js) -->
+      <div class="ld-ctrl" data-ld-ctrl hidden>
+        <p class="ld-ctrl-count en" aria-hidden="true"><b data-ld-cur>01</b> / 06</p>
+        <span class="ld-ctrl-bar" aria-hidden="true"><i data-ld-fill></i></span>
+        <div class="ld-ctrl-btns">
+          <button class="ld-ctrl-btn" type="button" data-ld-prev aria-controls="ld-grid" aria-label="이전 대표"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+          <button class="ld-ctrl-btn" type="button" data-ld-next aria-controls="ld-grid" aria-label="다음 대표"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        </div>
+      </div>
+      <p class="note ld-note">대표 이력은 공식 자료로 확정 후 게시합니다. 일부 대표 사진은 준비 중이며, 그동안 같은 구도의 실루엣으로 표시합니다.</p>
     </div>
   </section>
 
   <!-- 대표 상세 (leadership.js 가 카드의 data-* 로 채움 · 사실만, 이력은 확정 후 게시) -->
   <dialog class="ld-modal" id="ld-modal" aria-labelledby="ld-m-name">
     <div class="ld-m-in">
-      <div class="ld-m-visual" aria-hidden="true">
-        <img class="ld-m-photo" src="assets/img/people/moon-wonoh.webp" width="627" height="694" alt="" loading="lazy" hidden>
-        <span class="ld-mono ld-m-mono"><span data-m="mono">문</span></span>
-        <span class="ld-soon">사진 준비 중</span>
+      <div class="ld-m-visual pcard-ph" aria-hidden="true">
+        <img class="pcard-img ld-m-photo" src="assets/img/people/leader-moon-wonoh.webp" width="900" height="1200" alt="" loading="lazy" decoding="async" hidden>
+        <span class="pcard-sil ld-m-sil"></span>
+        <span class="pcard-soon">사진 준비 중</span>
       </div>
       <div class="ld-m-body">
         <p class="ld-m-co"><span class="ld-co en" data-m="co"></span><span class="ld-tag" data-m="tag"></span></p>

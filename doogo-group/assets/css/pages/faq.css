@@ -199,6 +199,7 @@ html:not(.js) .fq-a { grid-template-rows: 1fr; visibility: visible; }
 .fq-tags li { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border-radius: 999px; background: var(--ivory); font-size: .86rem; font-weight: 600; }
 .fq-tags li span:first-child { color: var(--blue); }
 .fq-tags .en { letter-spacing: .01em; color: var(--ink); }
+.fq-tags small { margin-left: -2px; font-size: .74rem; font-weight: 600; color: var(--muted); }
 
 .fq-steps { display: flex; flex-wrap: wrap; gap: 8px; }
 .fq-steps li { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px 0 8px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-weight: 600; font-size: .92rem; }

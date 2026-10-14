@@ -1,6 +1,7 @@
 /* =========================================================
    DOOGO GROUP — contact.js (문의하기)
    분야 선택(URL ?type= 동기화 · ?type=privacy 개인정보) · 분야별 안내 · 글자 수 · 동의 펼치기
+   · 제조(bio) 문의 전용 [선택] 개인정보 국외 이전 동의(overseasConsent)
    · 제출 시 검증 · 전송(data-endpoint) 또는 시안 모드 · 접수 완료 화면 · FAQ 아코디언
    ========================================================= */
 (function () {
@@ -15,7 +16,8 @@
   var TYPES = {
     campus:   { label: '교육 · DOOGO CLASS', topics: 'DOOGO HOLDINGS가 직접 운영하는 교육 플랫폼의 실전 교육 과정, 강사·과정 소개, 온라인 클래스, 교육장 연계', ph: '관심 있는 과정이나 주제, 인원, 희망 일정 등을 적어 주세요.' },
     bio:      { label: '제조 · DOOGOBIO', topics: '뉴질랜드 건강식품 개발, 소량 제조, 패키지·인쇄, 제조 상담·연결 ‘두고커넥트’', ph: '만들고 싶은 제품, 예상 수량, 패키지·인쇄 필요 여부 등을 적어 주세요.',
-                note: '제조 분야 문의는 DOOGO HOLDINGS가 확인한 뒤 회신을 위해 뉴질랜드 DOOGOBIO로 전송됩니다(국외 이전). 원하지 않으시면 문의 내용에 그 뜻을 적거나 다른 분야로 문의해 주세요. 이 경우 DOOGO HOLDINGS가 직접 회신합니다. <a href="privacy.html#overseas" target="_blank" rel="noopener">국외 이전 안내<span class="sr-only">(새 창)</span></a>' },
+                xfer: true,
+                note: '아래 동의 영역에 <strong>[선택] 개인정보 국외 이전 동의</strong>가 추가되었습니다. 동의하시면 뉴질랜드 DOOGOBIO가 직접 회신하고, 동의하지 않아도 문의할 수 있으며 이 경우 DOOGO HOLDINGS가 직접 회신합니다. <a href="#f-xfer" data-jump-xfer>국외 이전 동의로 이동</a>' },
     commerce: { label: '커머스 · DOOGO MAKERS', topics: '브랜드 기획, 상품 운영, 브랜드 성장과 EXIT 전략', ph: '브랜드 현황(준비 중·운영 중), 판매 채널, 고민하는 부분을 적어 주세요.' },
     media:    { label: '미디어 · DOOGO MEDIA', topics: '촬영, 유튜브 콘텐츠, 라이브 콘텐츠 제작', ph: '필요한 콘텐츠(촬영·유튜브·라이브), 목적, 희망 일정을 적어 주세요.' },
     ad:       { label: '광고 · DOOGO AD', topics: '네이버·쿠팡 중심 광고 운영, 광고 소재 기획, 성과 분석', ph: '판매 중인 상품과 채널, 현재 광고 운영 여부, 목표를 적어 주세요.' },
@@ -42,6 +44,9 @@
   var msgEl = $('#f-message');
   var consentEl = $('#f-consent');
   var consentBox = $('.ct-consent');
+  var xferWrap = $('#xferWrap');        // [선택] 국외 이전 동의 영역 (제조 문의일 때만)
+  var xferEl = $('#f-xfer');
+  var xferShown = null;                 // 현재 표시 상태 (처음 동기화 전 null)
   var alertEl = $('#formAlert');
   var submitBtn = $('.ct-submit', form);
   var countNow = $('[data-count-now]');
@@ -89,6 +94,7 @@
       }
     }
     if (msgEl) msgEl.setAttribute('placeholder', t ? t.ph : defaultPh);
+    syncXfer(!!(t && t.xfer), opts);
     if (step1) step1.classList.toggle('is-done', !!t);
     $$('.ct-orbit a[data-pick-type], .ct-desk a[data-pick-type]').forEach(function (a) { a.classList.toggle('is-picked', a.getAttribute('data-pick-type') === v); });
     if (!opts.noUrl) setUrlType(v);
@@ -96,6 +102,25 @@
     syncStep2();
   }
   radios.forEach(function (r) { r.addEventListener('change', function () { syncType(); }); });
+
+  /* ---------- [선택] 개인정보 국외 이전 동의: 제조(bio) 문의일 때만 ----------
+     보일 때: 펼침 + 체크박스 활성화. 숨길 때: 접힘 + 비활성화(포커스·전송 제외)하고,
+     펼쳐 둔 고지도 접습니다. 체크 상태는 사용자가 다시 제조를 고를 때를 위해 그대로 두되,
+     접수 데이터에는 제조 문의일 때만 반영합니다(overseasConsent). */
+  function syncXfer(on, opts) {
+    if (!xferWrap || !xferEl) return;
+    if (xferShown === on) return;
+    var first = xferShown === null;
+    xferShown = on;
+    xferEl.disabled = !on;
+    if (on) { xferWrap.removeAttribute('inert'); } else { xferWrap.setAttribute('inert', ''); }
+    xferWrap.classList.toggle('is-on', on);
+    if (!on) closeDetail(xferWrap.querySelector('.ct-consent-toggle'));
+    // 처음 진입(?type=bio 등)이나 움직임 멈추기 상태에서는 강조 효과 없이 바로 표시
+    xferWrap.classList.remove('is-flash');
+    if (on && !first && !still() && !(opts && opts.silent)) { void xferWrap.offsetWidth; xferWrap.classList.add('is-flash'); }
+  }
+  function overseasConsent() { return !!(xferShown && xferEl && !xferEl.disabled && xferEl.checked); }
 
   function pickType(v, opts) {
     var r = radios.filter(function (x) { return x.value === v; })[0];
@@ -148,17 +173,30 @@
   }
   [nameEl, contactEl].forEach(function (el) { el && el.addEventListener('input', syncStep2); });
 
-  /* ---------- 동의 내용 펼치기 ---------- */
-  var cToggle = $('.ct-consent-toggle');
-  var cDetail = $('#consentDetail');
-  if (cToggle && cDetail) {
-    cToggle.addEventListener('click', function () {
-      var open = cToggle.getAttribute('aria-expanded') !== 'true';
-      cToggle.setAttribute('aria-expanded', String(open));
-      cDetail.classList.toggle('is-open', open);
-      cToggle.firstChild.nodeValue = open ? '내용 접기 ' : '내용 보기 ';
-    });
+  /* ---------- 동의 내용 펼치기 (필수 수집·이용 / 선택 국외 이전) ---------- */
+  function setDetail(btn, open) {
+    if (!btn) return;
+    var panel = document.getElementById(btn.getAttribute('aria-controls'));
+    if (!panel) return;
+    btn.setAttribute('aria-expanded', String(open));
+    panel.classList.toggle('is-open', open);
+    btn.firstChild.nodeValue = open ? '내용 접기 ' : '내용 보기 ';
   }
+  function closeDetail(btn) { setDetail(btn, false); }
+  var cToggles = $$('.ct-consent-toggle', form);
+  cToggles.forEach(function (btn) {
+    btn.addEventListener('click', function () { setDetail(btn, btn.getAttribute('aria-expanded') !== 'true'); });
+  });
+  // 분야 안내의 '국외 이전 동의로 이동' → 체크박스로 스크롤 + 포커스
+  form.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-jump-xfer]');
+    if (!a || !xferEl) return;
+    e.preventDefault();
+    if (xferEl.disabled) return;
+    var box = xferEl.closest('.ct-consent') || xferEl;
+    box.scrollIntoView({ behavior: still() ? 'auto' : 'smooth', block: 'center' });
+    setTimeout(function () { try { xferEl.focus({ preventScroll: true }); } catch (err) { xferEl.focus(); } }, still() ? 0 : 400);
+  });
   if (consentEl) consentEl.addEventListener('change', function () { syncStep2(); if (submitted) recheck('consent'); });
 
   /* ---------- 검증 ---------- */
@@ -280,6 +318,9 @@
       contact: contactEl.value.trim(),
       message: msgEl.value.trim(),
       consent: true,
+      // [선택] 개인정보 국외 이전 동의: 제조(bio) 문의에서 체크한 경우만 true (그 밖의 분야는 항상 false)
+      //  true  → DOOGOBIO(뉴질랜드)가 직접 회신 / false → 국외로 이전하지 않고 DOOGO HOLDINGS가 직접 회신
+      overseasConsent: v === 'bio' && overseasConsent(),
       page: window.location.href,
       submittedAt: new Date().toISOString()
     };
@@ -322,6 +363,13 @@
     $('[data-sum="type"]', done).textContent = data.typeLabel;
     $('[data-sum="name"]', done).textContent = data.name + (data.company ? ' (' + data.company + ')' : '');
     $('[data-sum="contact"]', done).textContent = data.contact;
+    var xRow = $('[data-sum-row="xfer"]', done);
+    if (xRow) {
+      xRow.hidden = data.type !== 'bio';
+      $('[data-sum="xfer"]', done).textContent = data.overseasConsent
+        ? '동의 · 뉴질랜드 DOOGOBIO가 직접 회신'
+        : '동의하지 않음 · DOOGO HOLDINGS가 직접 회신';
+    }
     var note = $('[data-demo-note]', done);
     if (note) note.hidden = !demo;
     // 시안 모드에서는 '접수되었습니다' 대신 '전송되지 않았습니다' 문구와 안내 아이콘으로 바꿉니다.
@@ -352,7 +400,7 @@
     ORDER.forEach(function (k) { var f = FIELDS[k]; setError(f.el, f.err, ''); });
     if (consentBox) consentBox.classList.remove('is-invalid');
     if (alertEl) { alertEl.hidden = true; alertEl.textContent = ''; alertEl.classList.remove('is-net'); }
-    if (cToggle && cDetail) { cToggle.setAttribute('aria-expanded', 'false'); cDetail.classList.remove('is-open'); cToggle.firstChild.nodeValue = '내용 보기 '; }
+    cToggles.forEach(closeDetail);
     syncCount();
     syncType({ silent: true });
     if (done) { done.hidden = true; done.classList.remove('is-show'); }

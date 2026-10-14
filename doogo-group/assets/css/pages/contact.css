@@ -229,6 +229,7 @@ fieldset.ct-fs + fieldset.ct-fs { margin-top: 40px; border-top: 1px solid var(--
 .ct-type-hint strong { color: var(--ink); font-weight: 700; margin-right: 6px; }
 .ct-type-hint.is-on { background: var(--blue-50); color: var(--ink-2); }
 .ct-type-note { display: block; margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(10, 93, 226, .22); font-size: .84rem; color: var(--ink-2); }
+.ct-type-note strong { margin-right: 0; }
 .ct-type-note a { color: var(--blue); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .ct-type-hint.is-flash { animation: ct-flash .6s var(--ease); }
 @keyframes ct-flash { from { opacity: .3; transform: translateY(4px); } to { opacity: 1; transform: none; } }
@@ -291,6 +292,42 @@ html:not(.js) .ct-consent-detail { grid-template-rows: 1fr; visibility: visible;
 .ct-consent-in .link-arrow { margin-top: 10px; font-size: .88rem; color: var(--blue); }
 .ct-consent-in .link-arrow .ico { width: 16px; height: 16px; }
 .ct-consent .field-error { margin-top: 8px; }
+
+/* 동의 묶음: 필수 수집·이용 + (제조 · DOOGOBIO 문의일 때만) [선택] 국외 이전
+   — 숨김 상태는 접힘 + visibility:hidden + inert + 체크박스 disabled (포커스·스크린리더·전송 모두 제외) */
+.ct-consents { display: grid; }
+.ct-xfer {
+  display: grid; grid-template-rows: 0fr; visibility: hidden; opacity: 0;
+  transition: grid-template-rows .55s var(--ease), opacity .45s var(--ease), visibility .55s;
+}
+.ct-xfer.is-on { grid-template-rows: 1fr; visibility: visible; opacity: 1; }
+html:not(.js) .ct-xfer { grid-template-rows: 1fr; visibility: visible; opacity: 1; }
+.ct-xfer-clip { overflow: hidden; min-height: 0; }
+.ct-consent--xfer {
+  margin-top: 10px; padding-top: 16px; background: #fff; border-color: rgba(10, 93, 226, .26);
+  transform: translateY(-8px); transition: transform .55s var(--ease), border-color .3s, background-color .6s var(--ease);
+}
+.ct-xfer.is-on .ct-consent--xfer { transform: none; }
+.ct-xfer.is-flash .ct-consent--xfer { animation: ct-xfer-in 1.2s var(--ease); }
+@keyframes ct-xfer-in { 0%, 30% { background-color: var(--blue-50); border-color: var(--blue); } 100% { background-color: #fff; border-color: rgba(10, 93, 226, .26); } }
+.ct-xfer-tag {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 2px;
+  font-size: .76rem; font-weight: 700; letter-spacing: -.005em; color: var(--blue-700);
+}
+.ct-xfer-tag svg { width: 15px; height: 15px; flex: none; color: var(--blue); }
+.ct-xfer-tag .en { font-weight: 700; letter-spacing: .02em; }
+.ct-check-t em.is-opt { color: var(--muted); }
+.ct-xfer-desc { margin: 0 0 2px 36px; font-size: .86rem; line-height: 1.6; color: var(--muted); }
+.ct-xfer-desc .ct-nw.en { font-weight: 600; letter-spacing: .01em; color: var(--ink-2); }
+.ct-consent--xfer .ct-consent-in dl > div { grid-template-columns: 104px minmax(0, 1fr); }
+/* 고지 펼침 영역의 잘림 경계를 좌우 12px 넓혀 '거부 권리와 효과' 강조 상자가 다른 행과 글자 위치를 맞추게 */
+.ct-consent--xfer .ct-consent-clip { margin-inline: -12px; padding-inline: 12px; }
+.ct-consent--xfer .ct-consent-in dl > div.is-key { margin: 2px -12px 0; padding: 10px 12px; border-radius: 10px; background: var(--blue-50); }
+.ct-consent--xfer .ct-consent-in dl > div.is-key dd { color: var(--ink); }
+.ct-xfer-contact { color: var(--muted); }
+.ct-xfer-contact a { color: var(--blue); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.ct-type-note a[data-jump-xfer] { white-space: nowrap; }
+.ct-done-sum [data-sum-row][hidden] { display: none; }
 
 /* 제출 */
 .ct-submit-row { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 16px 24px; margin-top: 40px; padding-top: 32px; border-top: 1px solid var(--line-2); }
@@ -506,7 +543,19 @@ html:not(.js) .ct-faq-a { grid-template-rows: 1fr; visibility: visible; }
   .ct-consent { padding: 14px 14px; }
   .ct-consent-row { flex-wrap: wrap; gap: 0 8px; }
   .ct-consent-toggle { padding-left: 36px; }
-  .ct-consent-in dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .ct-consent-in dl > div,
+  .ct-consent--xfer .ct-consent-in dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .ct-consent--xfer { padding-top: 14px; }
+  /* 모바일: 체크 → 요약 → 내용 보기 → 고지 순서로 */
+  .ct-consent--xfer { display: flex; flex-direction: column; }
+  .ct-consent--xfer .ct-consent-row { display: contents; }
+  .ct-consent--xfer .ct-xfer-tag { order: 0; align-self: flex-start; }
+  .ct-consent--xfer .ct-check { order: 1; }
+  .ct-consent--xfer .ct-xfer-desc { order: 2; margin-bottom: 0; }
+  .ct-consent--xfer .ct-consent-toggle { order: 3; align-self: flex-start; }
+  .ct-consent--xfer .ct-consent-detail { order: 4; }
+  .ct-consent--xfer .ct-consent-clip { margin-inline: 0; padding-inline: 0; }
+  .ct-consent--xfer .ct-consent-in dl > div.is-key { margin: 4px 0 0; padding: 12px 14px; }
   .ct-submit-row { flex-direction: column-reverse; align-items: stretch; margin-top: 32px; padding-top: 24px; }
   .ct-submit { width: 100%; min-width: 0; }
 
@@ -540,3 +589,5 @@ html.motion-off .ct-orbit-track, html.motion-off .ct-orbit-item > a { animation:
 html.motion-off .ct-orbit-core::before, html.motion-off .ct-orbit-core::after, html.motion-off .ct-desk-core::after { animation: none !important; }
 html.motion-off .ct-desk-grid li { opacity: 1; transform: none; transition: none; }
 html.motion-off .ct-done-ico path { stroke-dashoffset: 0; }
+html.motion-off .ct-xfer, html.motion-off .ct-consent--xfer, html.motion-off .ct-consent-detail { transition: none; }
+html.motion-off .ct-xfer.is-flash .ct-consent--xfer { animation: none; }
