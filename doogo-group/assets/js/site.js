@@ -66,20 +66,17 @@
       if (a) { a.classList.add('is-current'); a.setAttribute('aria-current', 'page'); }
     }
   });
-  // 메가메뉴 · 모바일 메뉴: 지금 페이지와 주소(파일명)가 같은 링크에 표시, 모바일은 해당 그룹을 펼쳐 둠
+  // 메가메뉴 · 모바일 메뉴: 지금 페이지와 주소(파일명)가 같은 링크에 표시
   // (확장자 없는 주소 /about 으로 서빙돼도 맞도록 .html 은 떼고 비교)
   var file = (location.pathname.split('/').pop() || 'index').toLowerCase().replace(/\.html$/, '');
-  $$('.mega a[href], #mnav .mnav-panel a[href]').forEach(function (a) {
+  $$('.mega a[href], #mnav a[href]').forEach(function (a) {
     var h = (a.getAttribute('href') || '').toLowerCase().replace(/\.html$/, '');
     if (h === file) a.setAttribute('aria-current', 'page');
   });
-  var curToggle = $('.mnav-toggle[aria-controls="mnav-' + section + '"]');
-  if (curToggle) {
-    var curPanel = document.getElementById(curToggle.getAttribute('aria-controls'));
-    curToggle.setAttribute('aria-expanded', 'true');
-    if (curPanel) curPanel.hidden = false;
-    if (curToggle.parentElement) curToggle.parentElement.classList.add('is-current');
-  }
+  // 모바일 대메뉴: 하위 페이지(예: 사업 상세)에 있어도 속한 대분류를 모양으로 표시
+  $$('#mnav .mnav-link[data-nav]').forEach(function (a) {
+    if (a.getAttribute('data-nav') === section) a.classList.add('is-current');
+  });
   if (file === 'contact') $$('[data-nav-cta]').forEach(function (a) { a.setAttribute('aria-current', 'page'); });
   // 푸터 메인 카테고리: 지금 있는 대분류에 표시 (같은 파일이면 aria-current, 하위 페이지면 모양만)
   $$('.ft-nav a[data-nav]').forEach(function (a) {
@@ -151,7 +148,10 @@
     menuBtn.setAttribute('aria-label', open ? '전체 메뉴 닫기' : '전체 메뉴 열기');
     if (open) {
       mnav.hidden = false;
-      requestAnimationFrame(function () { mnav.classList.add('is-open'); });
+      mnav.scrollTop = 0;
+      // 보이는 상태(닫힌 모양)를 한 번 계산해 둔 뒤 is-open 을 붙여야 줄마다 차례로 올라오는 등장이 처음부터 재생됩니다
+      void mnav.offsetWidth;
+      mnav.classList.add('is-open');
       header.classList.add('is-menu');
       header.classList.remove('is-hidden');
       doc.classList.add('is-locked');
@@ -165,14 +165,6 @@
     }
   }
   if (menuBtn) menuBtn.addEventListener('click', function () { setMenu(menuBtn.getAttribute('aria-expanded') !== 'true'); });
-  $$('.mnav-toggle').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var panel = document.getElementById(btn.getAttribute('aria-controls'));
-      var open = btn.getAttribute('aria-expanded') !== 'true';
-      btn.setAttribute('aria-expanded', String(open));
-      if (panel) panel.hidden = !open;
-    });
-  });
   if (mnav) {
     mnav.addEventListener('click', function (e) { if (e.target.closest('a')) setMenu(false); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && mnav.classList.contains('is-open')) { setMenu(false); menuBtn.focus(); } });

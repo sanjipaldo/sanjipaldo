@@ -299,29 +299,103 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
   .hd-logo svg { height: 28px; }
 }
 
-/* 모바일 메뉴 */
+/* 모바일 메뉴 (≤1024px · 햄버거로 여는 전체 화면 메뉴)
+   위: 대메뉴 6개 — 번호 · 이름 · 화살표, 누르면 바로 이동 (하위 항목은 각 페이지의 탭에서)
+   가운데: 사업영역 바로가기 — 일곱 사업 + '전체 보기' 타일 (2열, 600px 이상 4열)
+   아래: 문의하기 · 그룹 영상 보기 (한 줄)
+   지금 페이지: aria-current="page" / 지금 속한 대분류: .is-current (site.js) — 둘 다 블루
+   열릴 때: 각 줄이 --i 순번대로 살짝 올라오며 나타나고 대메뉴 구분선이 왼쪽부터 그어집니다. html.motion-off 면 바로 보임 */
 .mnav {
   position: fixed; inset: var(--header-h) 0 0 0; z-index: 99; background: #fff; color: var(--ink);
-  overflow-y: auto; overscroll-behavior: contain; padding: 8px var(--gutter) 40px;
-  opacity: 0; visibility: hidden; transform: translateY(-10px); transition: opacity .3s var(--ease), transform .3s var(--ease), visibility .3s;
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  opacity: 0; visibility: hidden; transition: opacity .3s var(--ease), visibility .3s;
 }
-.mnav.is-open { opacity: 1; visibility: visible; transform: none; }
-.mnav-group { border-bottom: 1px solid var(--line-2); }
-.mnav-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 20px 2px; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.03em; text-align: left; }
-.mnav-toggle .ico { width: 20px; height: 20px; transition: transform .3s var(--ease); color: var(--muted); }
-.mnav-toggle[aria-expanded="true"] .ico { transform: rotate(180deg); }
-.mnav-panel { display: grid; gap: 2px; padding: 0 0 18px; }
-.mnav-panel[hidden] { display: none; }
-.mnav-panel a { display: flex; justify-content: space-between; gap: 12px; padding: 11px 12px; border-radius: 10px; color: var(--ink-2); font-weight: 500; }
-.mnav-panel a:hover { background: var(--ivory); }
-.mnav-panel a[aria-current="page"] { background: var(--ivory); color: var(--blue); font-weight: 700; }
-.mnav-group.is-current > .mnav-toggle { color: var(--blue); }
-.mnav-panel a small { font-family: var(--font-en); color: var(--muted-2); font-size: .74rem; letter-spacing: .06em; align-self: center; }
-.mnav-biz { display: grid; gap: 1px; }
-.mnav-corp { font-size: .78rem; font-weight: 500; color: var(--muted-2); letter-spacing: -0.01em; }
-.mnav-panel a[aria-current="page"] .mnav-corp { color: var(--blue-700); }
-.mnav-cta { display: grid; gap: 10px; margin-top: 28px; }
-.mnav-cta .btn { width: 100%; }
+.mnav.is-open { opacity: 1; visibility: visible; }
+.mnav-inner { max-width: 760px; margin-inline: auto; padding: 4px var(--gutter) calc(28px + env(safe-area-inset-bottom, 0px)); }
+
+/* 대메뉴 */
+.mnav-main > li { position: relative; }
+.mnav-main > li::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--line-2); transform-origin: left center; }
+.mnav-link {
+  display: flex; align-items: baseline; gap: 14px; padding: 17px 2px 16px;
+  color: var(--ink); -webkit-tap-highlight-color: transparent; transition: color .25s var(--ease);
+}
+.mnav-num { flex: none; width: 1.6rem; font-family: var(--font-en); font-size: .74rem; font-weight: 500; letter-spacing: .06em; color: var(--muted-2); transition: color .25s var(--ease); }
+.mnav-t { flex: 1; min-width: 0; font-size: clamp(1.5rem, 1.1rem + 1.9vw, 2.05rem); font-weight: 800; line-height: 1.2; letter-spacing: -0.045em; transition: transform .45s var(--ease); }
+.mnav-link .ico { flex: none; align-self: center; width: 22px; height: 22px; color: var(--muted-2); transition: transform .45s var(--ease), color .25s var(--ease); }
+.mnav-link:hover .mnav-t, .mnav-link:focus-visible .mnav-t { transform: translateX(4px); }
+.mnav-link:hover .ico, .mnav-link:focus-visible .ico { color: var(--ink); transform: translateX(4px); }
+.mnav-link:active { color: var(--blue); }
+.mnav-link:is([aria-current="page"], .is-current), .mnav-link:is([aria-current="page"], .is-current) :is(.mnav-num, .ico) { color: var(--blue); }
+
+/* 사업영역 바로가기 */
+.mnav-biz { margin-top: 30px; }
+.mnav-biz-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.mnav-biz-t { font-size: .92rem; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.mnav-biz-en { font-family: var(--font-en); font-size: .68rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--muted-2); }
+.mnav-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.mnav-tiles > li { display: grid; }
+.mnav-tile {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: 1fr 1fr; column-gap: 10px; align-items: center;
+  min-height: 62px; padding: 11px 12px 11px 11px; border-radius: 14px; background: var(--ivory); border: 1px solid transparent;
+  -webkit-tap-highlight-color: transparent; transition: background-color .25s var(--ease), border-color .25s var(--ease);
+}
+.mnav-tile-ico { grid-row: 1 / 3; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #fff; color: var(--blue); box-shadow: 0 1px 2px rgba(11, 27, 51, .06), 0 0 0 1px rgba(11, 27, 51, .04); transition: background-color .25s var(--ease), color .25s var(--ease); }
+.mnav-tile-ico svg { width: 18px; height: 18px; }
+.mnav-tile-t { align-self: end; font-size: .9rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.04em; color: var(--ink); white-space: nowrap; }
+.mnav-tile-en { align-self: start; margin-top: 1px; font-family: var(--font-en); font-size: .6rem; font-weight: 600; line-height: 1.3; letter-spacing: .07em; text-transform: uppercase; color: var(--muted-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mnav-tile:hover, .mnav-tile:active { background: var(--ivory-2); }
+.mnav-tile[aria-current="page"] { background: var(--blue-50); border-color: var(--blue-100); }
+.mnav-tile[aria-current="page"] .mnav-tile-t { color: var(--blue); }
+.mnav-tile[aria-current="page"] .mnav-tile-ico { background: var(--blue); color: #fff; }
+/* 여덟째 칸: 사업영역 전체 보기 */
+.mnav-tile--all { background: transparent; border-color: var(--line); }
+.mnav-tile--all .mnav-tile-ico { background: var(--ink); color: #fff; box-shadow: none; }
+.mnav-tile--all .mnav-tile-ico svg { width: 16px; height: 16px; transition: transform .45s var(--ease); }
+.mnav-tile--all:hover, .mnav-tile--all:active { background: var(--ivory); }
+.mnav-tile--all:hover .mnav-tile-ico svg { transform: translateX(2px); }
+.mnav-tile--all[aria-current="page"] { background: transparent; border-color: var(--blue-100); }
+.mnav-tile--all[aria-current="page"] .mnav-tile-ico { background: var(--blue); }
+
+/* 문의 · 그룹 영상 */
+.mnav-cta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 24px; }
+.mnav-cta .btn { min-height: 50px; padding: 0 12px; gap: 8px; font-size: .95rem; }
+.mnav-cta .btn .ico { width: 16px; height: 16px; }
+.mnav-cta .btn--line .ico { width: 13px; height: 13px; color: var(--blue); }
+
+/* 열릴 때 등장 (닫을 때는 메뉴 전체가 바로 흐려지므로 지연 없이) */
+.mnav :is(.mnav-main > li, .mnav-biz-head, .mnav-tiles > li, .mnav-cta) { opacity: 0; transform: translateY(14px); transition: opacity .2s var(--ease), transform .2s var(--ease); }
+.mnav.is-open :is(.mnav-main > li, .mnav-biz-head, .mnav-tiles > li, .mnav-cta) { opacity: 1; transform: none; transition: opacity .55s var(--ease) calc(var(--i, 0) * 45ms + 40ms), transform .7s var(--ease) calc(var(--i, 0) * 45ms + 40ms); }
+.mnav .mnav-main > li::after { transform: scaleX(0); transition: transform .2s var(--ease); }
+.mnav.is-open .mnav-main > li::after { transform: none; transition: transform .9s var(--ease) calc(var(--i, 0) * 45ms + 120ms); }
+html.motion-off .mnav :is(.mnav-main > li, .mnav-biz-head, .mnav-tiles > li, .mnav-cta), html.motion-off .mnav .mnav-main > li::after { opacity: 1; transform: none; transition: none; }
+
+/* 600px 이상: 타일 4열(두 줄) · 대메뉴 조금 더 넉넉히 */
+@media (min-width: 600px) {
+  .mnav-inner { padding-top: 16px; }
+  .mnav-link { padding-block: 20px 19px; gap: 18px; }
+  .mnav-num { width: 1.8rem; font-size: .8rem; }
+  .mnav-link .ico { width: 26px; height: 26px; }
+  .mnav-biz { margin-top: 40px; }
+  .mnav-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .mnav-tile { grid-template-columns: 1fr; grid-template-rows: auto; row-gap: 0; align-items: start; min-height: 0; padding: 14px; }
+  .mnav-tile-ico { grid-row: auto; margin-bottom: 14px; }
+}
+/* 900px 이상(태블릿 가로): 왼쪽 대메뉴 · 오른쪽 사업영역 바로가기와 버튼 */
+@media (min-width: 900px) {
+  .mnav-inner { max-width: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: clamp(40px, 6vw, 72px); align-items: start; padding-top: 20px; }
+  .mnav-main { grid-row: 1 / 3; }
+  .mnav-biz { margin-top: 20px; }
+  .mnav-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mnav-tile { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: 1fr 1fr; align-items: center; padding: 12px; }
+  .mnav-tile-ico { grid-row: 1 / 3; margin-bottom: 0; }
+}
+/* 359px 이하(작은 폰): 칸이 좁아 이름이 넘치지 않도록 아이콘을 위로 올림 */
+@media (max-width: 359px) {
+  .mnav-tile { grid-template-columns: 1fr; grid-template-rows: auto; align-items: start; padding: 12px; }
+  .mnav-tile-ico { grid-row: auto; width: 30px; height: 30px; margin-bottom: 10px; }
+  .mnav-cta .btn { padding: 0 8px; font-size: .9rem; }
+}
 html.is-locked, html.is-locked body { overflow: hidden; }
 
 /* ---------- 7. 서브페이지 공통 히어로 ---------- */
@@ -748,3 +822,5 @@ html.legal-open { overflow: hidden; }
 .legal-modal-body :is(th, td) { min-width: 7.5em; }
 .legal-modal-body :is(th, td) > * + * { margin-left: 4px; }
 .legal-modal-body .pv-num { margin-right: 8px; color: var(--blue); }
+/* 모바일 메뉴가 열려 있을 때는 헤더의 '문의하기' 버튼을 숨김(메뉴 안 06 행·아래 버튼과 중복 방지) */
+@media (max-width: 1024px) { .site-header.is-menu .hd-util .btn[data-nav-cta] { visibility: hidden; opacity: 0; } }

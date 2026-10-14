@@ -167,61 +167,38 @@
   </div>
 </header>
 
+<!-- 모바일 메뉴(≤1024px): 대메뉴 6개는 바로 이동(하위 항목은 각 페이지의 탭에서) → 사업영역 바로가기 타일 → 문의 · 그룹 영상
+     style="--i" 는 열릴 때 차례로 올라오는 순번입니다 (base.css '모바일 메뉴') -->
 <nav class="mnav" id="mnav" aria-label="전체 메뉴" hidden>
-  <div class="mnav-group">
-    <button class="mnav-toggle" type="button" aria-expanded="false" aria-controls="mnav-about">두고그룹 <svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg></button>
-    <div class="mnav-panel" id="mnav-about" hidden>
-      <a href="about.html">두고그룹 전체 보기</a>
-      <a href="about.html#intro">그룹 소개</a>
-      <a href="about.html#vision">비전과 철학</a>
-      <a href="about.html#structure">그룹 구조</a>
-      <a href="about.html#history">주요 연혁</a>
-      <a href="about.html#locations">국내외 거점</a>
+  <div class="mnav-inner">
+    <ul class="mnav-main">
+      <li style="--i:0"><a class="mnav-link" href="about.html" data-nav="about"><span class="mnav-num" aria-hidden="true">01</span><span class="mnav-t">두고그룹</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+      <li style="--i:1"><a class="mnav-link" href="business.html" data-nav="business"><span class="mnav-num" aria-hidden="true">02</span><span class="mnav-t">사업영역</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+      <li style="--i:2"><a class="mnav-link" href="leadership.html" data-nav="leadership"><span class="mnav-num" aria-hidden="true">03</span><span class="mnav-t">리더십</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+      <li style="--i:3"><a class="mnav-link" href="brands.html" data-nav="brands"><span class="mnav-num" aria-hidden="true">04</span><span class="mnav-t">브랜드와 성과</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+      <li style="--i:4"><a class="mnav-link" href="news.html" data-nav="news"><span class="mnav-num" aria-hidden="true">05</span><span class="mnav-t">그룹소식</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+      <li style="--i:5"><a class="mnav-link" href="contact.html" data-nav="contact"><span class="mnav-num" aria-hidden="true">06</span><span class="mnav-t">문의하기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+    </ul>
+    <section class="mnav-biz" aria-labelledby="mnav-biz-t">
+      <div class="mnav-biz-head" style="--i:6">
+        <h2 class="mnav-biz-t" id="mnav-biz-t">사업영역 바로가기</h2>
+        <span class="mnav-biz-en" aria-hidden="true">7 Businesses</span>
+      </div>
+      <ul class="mnav-tiles">
+        <li style="--i:7"><a class="mnav-tile" href="business-campus.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-campus"/></svg></span><span class="mnav-tile-t">교육업</span><span class="mnav-tile-en">DOOGO CLASS</span></a></li>
+        <li style="--i:7"><a class="mnav-tile" href="business-bio.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-bio"/></svg></span><span class="mnav-tile-t">제조업</span><span class="mnav-tile-en">DOOGOBIO</span></a></li>
+        <li style="--i:8"><a class="mnav-tile" href="business-commerce.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-commerce"/></svg></span><span class="mnav-tile-t">브랜드 커머스</span><span class="mnav-tile-en">DOOGO MAKERS</span></a></li>
+        <li style="--i:8"><a class="mnav-tile" href="business-media.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-media"/></svg></span><span class="mnav-tile-t">미디어 &amp; 콘텐츠</span><span class="mnav-tile-en">DOOGO MEDIA</span></a></li>
+        <li style="--i:9"><a class="mnav-tile" href="business-ad.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-ad"/></svg></span><span class="mnav-tile-t">마케팅</span><span class="mnav-tile-en">DOOGO AD</span></a></li>
+        <li style="--i:9"><a class="mnav-tile" href="business-food.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-food"/></svg></span><span class="mnav-tile-t">유통</span><span class="mnav-tile-en">DOOGOFOOD</span></a></li>
+        <li style="--i:10"><a class="mnav-tile" href="business-space.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-space"/></svg></span><span class="mnav-tile-t">공간 &amp; 숙박업</span><span class="mnav-tile-en">DOOGO SPACE</span></a></li>
+        <li style="--i:10"><a class="mnav-tile mnav-tile--all" href="business.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-arrow"/></svg></span><span class="mnav-tile-t"><span class="sr-only">사업영역 </span>전체 보기</span><span class="mnav-tile-en">View all</span></a></li>
+      </ul>
+    </section>
+    <div class="mnav-cta" style="--i:11">
+      <a class="btn btn--primary" href="contact.html" data-nav-cta>문의하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      <button class="btn btn--line" type="button" data-film-open><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>그룹 영상 보기</button>
     </div>
-  </div>
-  <div class="mnav-group">
-    <button class="mnav-toggle" type="button" aria-expanded="false" aria-controls="mnav-business">사업영역 <svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg></button>
-    <div class="mnav-panel" id="mnav-business" hidden>
-      <a href="business.html">사업영역 전체 보기</a>
-      <a href="business-campus.html"><span class="mnav-biz">교육업<span class="mnav-corp">운영 DOOGO HOLDINGS</span></span><small>DOOGO CLASS</small></a>
-      <a href="business-bio.html"><span class="mnav-biz">제조업<span class="mnav-corp">운영 DOOGOBIO NZ</span></span><small>DOOGOBIO</small></a>
-      <a href="business-commerce.html"><span class="mnav-biz">브랜드 커머스<span class="mnav-corp">운영 DOOGO MAKERS</span></span><small>DOOGO MAKERS</small></a>
-      <a href="business-media.html"><span class="mnav-biz">미디어 &amp; 콘텐츠<span class="mnav-corp">운영 DOOGO MEDIA</span></span><small>DOOGO MEDIA</small></a>
-      <a href="business-ad.html"><span class="mnav-biz">마케팅<span class="mnav-corp">운영 DOOGO AD</span></span><small>DOOGO AD</small></a>
-      <a href="business-food.html"><span class="mnav-biz">유통<span class="mnav-corp">운영 DOOGO HOLDINGS</span></span><small>DOOGOFOOD</small></a>
-      <a href="business-space.html"><span class="mnav-biz">공간 &amp; 숙박업<span class="mnav-corp">운영 DOOGO SPACE</span></span><small>DOOGO SPACE</small></a>
-    </div>
-  </div>
-  <div class="mnav-group">
-    <button class="mnav-toggle" type="button" aria-expanded="false" aria-controls="mnav-leadership">리더십 <svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg></button>
-    <div class="mnav-panel" id="mnav-leadership" hidden>
-      <a href="leadership.html">리더십 전체 보기</a>
-      <a href="leadership.html#leaders">여섯 명의 리더</a>
-    </div>
-  </div>
-  <div class="mnav-group">
-    <button class="mnav-toggle" type="button" aria-expanded="false" aria-controls="mnav-brands">브랜드와 성과 <svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg></button>
-    <div class="mnav-panel" id="mnav-brands" hidden>
-      <a href="brands.html">브랜드와 성과 전체 보기</a>
-      <a href="brands.html#brands">운영 브랜드</a>
-      <a href="brands.html#projects">프로젝트</a>
-      <a href="brands.html#cases">성장 사례</a>
-      <a href="brands.html#partners">협력 파트너</a>
-    </div>
-  </div>
-  <div class="mnav-group">
-    <button class="mnav-toggle" type="button" aria-expanded="false" aria-controls="mnav-news">그룹소식 <svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg></button>
-    <div class="mnav-panel" id="mnav-news" hidden>
-      <a href="news.html">전체 소식</a>
-      <a href="news.html?cat=notice">공지</a>
-      <a href="news.html?cat=business">사업 소식</a>
-      <a href="news.html?cat=campus">교육 현장</a>
-      <a href="news.html?cat=recruit">채용 소식</a>
-    </div>
-  </div>
-  <div class="mnav-cta">
-    <a class="btn btn--primary" href="contact.html" data-nav-cta>문의하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-    <button class="btn btn--line" type="button" data-film-open>그룹 영상 보기</button>
   </div>
 </nav>
 <!-- @header:end -->
