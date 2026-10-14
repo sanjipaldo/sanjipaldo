@@ -12,11 +12,11 @@
      (HTML을 직접 고쳐도 되지만, 그 뒤에 이 스크립트를 다시 실행하면 덮어써집니다.)
    - 헤더/푸터는 partials/ 내용을 그대로 넣습니다(sync-partials.mjs와 같은 결과).
    - 그룹 구성(3차 확정): 지주회사 DOOGO HOLDINGS가 교육(DOOGO CLASS)과 유통(DOOGOFOOD)을 직접 운영하고,
-     그룹사 5곳(DOOGO SPACE 공간 & 숙박업 · DOOGO MEDIA 미디어 & 콘텐츠 · DOOGO MAKERS 브랜드 · DOOGO AD 마케팅 · DOOGOBIO 건기식 제조)이
+     그룹사 5곳(DOOGO SPACE 공간 & 숙박업 · DOOGO MEDIA 미디어 & 콘텐츠 · DOOGO MAKERS 브랜드 커머스 · DOOGO AD 마케팅 · DOOGOBIO NZ 뉴질랜드 건강식품 제조)이
      나머지 사업을 맡습니다. 사업별 운영 회사·리더는 BIZ[].corp (화면의 회사·브랜드 이름은 모두 영문 표기)
-     리더 직함은 corp.title — DOOGO MEDIA 김윤정 · DOOGO MAKERS 신동훈은 '총괄이사'
+     리더 직함은 corp.title — DOOGO MEDIA 김윤정 · DOOGO MAKERS 신동훈은 '총괄이사' (나머지는 기본 직함 '대표이사')
      (title이 없으면 기본 직함 · 화면의 직함은 모두 ttl(corp)로 씁니다)
-   - 사업 분야 이름(6차 확정): 교육업 · 제조업 · 커머스 · 미디어 & 콘텐츠 · 마케팅 · 유통 · 공간 & 숙박업 (BIZ[].area — HTML 문구라 &는 &amp;로 씀)
+   - 사업 분야 이름(6차 확정): 교육업 · 제조업 · 브랜드 커머스 · 미디어 & 콘텐츠 · 마케팅 · 유통 · 공간 & 숙박업 (BIZ[].area — HTML 문구라 &는 &amp;로 씀)
      그룹사 분야 라벨(corp.field)이 사업 분야 이름과 같으면 운영 회사 칩에서 분야를 다시 쓰지 않습니다(corpChip).
    - 사진: assets/img/photo/{name}.webp (AI로 만든 예시 · 실제 사진으로 교체 예정) — PHOTO 표의 크기·alt와 함께 사용
      BIZ[].hero {f 사진 이름, fx/fy 데스크톱 초점, mx 모바일 가로 초점} — 상세 첫 화면 + business.html 첫 화면 슬라이드
@@ -53,7 +53,7 @@ const ARROW_UR = ico('i-arrow-ur', 'ico');
 const CHECK = ico('i-check', 'ico');
 const NEWWIN = '<span class="sr-only">(새 창)</span>';
 // 브랜드명·'&'로 묶인 사업 분야 이름이 줄바꿈으로 갈라지지 않게 (화면 문구에만 사용 — 속성값에는 쓰지 말 것)
-const nw = (t) => t.replace(/DOOGO (?:HOLDINGS|CLASS|SPACE|MEDIA|MAKERS|AD)|DOOGOFOOD|DOOGOBIO|NORA STAY|두고커넥트|미디어 &amp; 콘텐츠|공간 &amp; 숙박업/g, (m) => `<span class="nowrap">${m}</span>`);
+const nw = (t) => t.replace(/DOOGO (?:HOLDINGS|CLASS|SPACE|MEDIA|MAKERS|AD)|DOOGOFOOD|DOOGOBIO(?: NZ)?|NORA STAY|두고커넥트|미디어 &amp; 콘텐츠|공간 &amp; 숙박업/g, (m) => `<span class="nowrap">${m}</span>`);
 const DOWN = ico('i-arrow', 'ico ico-arrow ico-down');
 // 문의 페이지: 분야를 미리 고른 상태로 양식(#inquiry)까지 바로 내려가게 (contact.html 자신의 분야 칩과 같은 형식)
 const ASK = (type) => `contact.html?type=${type}#inquiry`;
@@ -77,11 +77,11 @@ const web = (o) => ({
   note: `${o.yt ? '채널' : '사이트'} 첫 화면 · ${WEB_DATE}`, ...o,
 });
 const LOCK = '<svg class="dt-web-lock" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.6" fill="currentColor"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
-// 리더 프로필 사진 (5차 · 배경 없는 상반신 컷아웃 900×1200 + 작은 판 -600, 머리 크기·위치를 맞춰 둠 · 현재 백영호만 사진 없음)
+// 리더 프로필 사진 (5차 · 배경 없는 상반신 컷아웃 900×1200 + 작은 판 -600, 머리 크기·위치를 맞춰 둠 · 여섯 명 모두 사진 있음)
 //  photo: 파일 이름(assets/img/people/{photo}.webp · {photo}-600.webp). 사진이 없는 리더는 공통 카드의 중립 실루엣 + '사진 준비 중'
 const PEOPLE = 'assets/img/people';
-// 리더 직함: corp.title(총괄이사 등) · 없으면 '대표'
-const ttl = (c) => c.title || '대표';
+// 리더 직함: corp.title(총괄이사 등) · 없으면 '대표이사'
+const ttl = (c) => c.title || '대표이사';
 const peopleSrcset = (name) => `${PEOPLE}/${name}-600.webp 600w, ${PEOPLE}/${name}.webp 900w`;
 // 지주회사가 직접 운영하는 사업(교육·유통)의 운영 회사
 const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '교육 및 총괄 운영', field: '교육 · 총괄 운영', ceo: '문원오', photo: 'leader-moon-wonoh', anchor: 'ceo' };
@@ -172,7 +172,7 @@ const BIZ = [
   },
   {
     slug: 'bio', num: '02', area: '제조업', en: 'DOOGOBIO', chain: 'Product', icon: 'i-bio',
-    corp: { en: 'DOOGOBIO', field: '건기식 제조', place: '뉴질랜드', ceo: '백영호', key: 'bio' },
+    corp: { en: 'DOOGOBIO NZ', field: '뉴질랜드 건강식품 제조', place: '해외법인', ceo: '백영호', key: 'bio', photo: 'leader-baek-youngho' },
     scope: '제품 개발 · 소량 제조 · 패키지·인쇄',
     defLabel: '건강식품 제조', def: '뉴질랜드 건강식품 소량 제조 및 인쇄까지, 좋은 제품을 만듭니다.',
     role: '뉴질랜드 건강식품의 개발과 소량 제조, 제품화를 지원합니다.',
@@ -199,14 +199,14 @@ const BIZ = [
     relNav: '두고커넥트',
   },
   {
-    slug: 'commerce', num: '03', area: '커머스', en: 'DOOGO MAKERS', chain: 'Brand', icon: 'i-commerce',
-    corp: { en: 'DOOGO MAKERS', field: '브랜드', ceo: '신동훈', title: '총괄이사', key: 'makers', photo: 'leader-shin-donghoon' },
+    slug: 'commerce', num: '03', area: '브랜드 커머스', en: 'DOOGO MAKERS', chain: 'Brand', icon: 'i-commerce',
+    corp: { en: 'DOOGO MAKERS', field: '브랜드 커머스', ceo: '신동훈', title: '총괄이사', key: 'makers', photo: 'leader-shin-donghoon' },
     scope: '브랜드 기획 · 상품 운영 · EXIT 전략',
-    defLabel: '브랜드 커머스', def: '브랜드를 만들고 성장시키며, EXIT까지 연결합니다.',
+    defLabel: '브랜드 기획 · 운영', def: '브랜드를 만들고 성장시키며, EXIT까지 연결합니다.',
     role: '브랜드를 기획하고 운영하며, 판매와 성장 전략을 함께 만듭니다.',
     services: ['브랜드 기획', '상품 운영', '브랜드 성장과 EXIT 전략'],
     targets: ['새 브랜드를 만들려는 분', '운영 중인 브랜드를 키우려는 사업자'],
-    ask: '커머스 상담하기',
+    ask: '브랜드 커머스 상담하기',
     cta: { label: '브랜드 보기', href: 'brands.html#brands' },
     web: web({ name: 'DOOGO MAKERS', kind: '연결 사이트', site: 'DOOGOFOOD', title: '연결 사이트', eyebrow: 'Related Site',
       host: 'doogofood.com', url: MAKERS_URL, shot: 'makers', close: '연결 사이트 바로가기',
@@ -281,7 +281,7 @@ const BIZ = [
   },
   {
     slug: 'food', num: '06', area: '유통', en: 'DOOGOFOOD', chain: 'Sales', icon: 'i-food',
-    corp: HOLD, // DOOGO HOLDINGS 직접 운영 · 담당 대표 문원오
+    corp: HOLD, // DOOGO HOLDINGS 직접 운영 · 담당 대표이사 문원오
     defLabel: '식품 유통', def: '대한민국 농수산물과 건강식품을 연결하여 좋은 먹거리를 전합니다.',
     role: '농수산물과 가공식품, 건강식품의 공급사와 판매자를 연결합니다.',
     services: ['식품 전문 도매 플랫폼 운영', '상품 공급', '판매자 협력'],
@@ -570,7 +570,7 @@ ${CTA_BAND}`;
 
   return shell({
     title: '사업영역',
-    desc: '배우고, 만들고, 키우고. 지주회사 DOOGO HOLDINGS와 다섯 그룹사가 운영하는 교육업 · 제조업 · 커머스 · 미디어 &amp; 콘텐츠 · 마케팅 · 유통 · 공간 &amp; 숙박업, 7개 사업영역을 한 번에 소개합니다.',
+    desc: '배우고, 만들고, 키우고. 지주회사 DOOGO HOLDINGS와 다섯 그룹사가 운영하는 교육업 · 제조업 · 브랜드 커머스 · 미디어 &amp; 콘텐츠 · 마케팅 · 유통 · 공간 &amp; 숙박업, 7개 사업영역을 한 번에 소개합니다.',
     css: 'business', js: 'business',
     bodyAttrs: 'data-page="business" data-header="overlay"',
     main,
@@ -583,7 +583,7 @@ ${CTA_BAND}`;
 const REL = {
   campus: () => {
     const people = [
-      { name: '문대표', sub: ['문원오', 'DOOGO HOLDINGS 대표'], course: '뉴질랜드 건기식 브랜딩', len: '5주 과정', photo: 'leader-moon-wonoh' },
+      { name: '문대표', sub: ['문원오', 'DOOGO HOLDINGS 대표이사'], course: '뉴질랜드 건기식 브랜딩', len: '5주 과정', photo: 'leader-moon-wonoh' },
       { name: '로직메이커', course: '실전 클래스', len: '4주 과정', initial: '로' },
       { name: '황금농부', course: '실전 클래스', len: '4주 과정', initial: '황' },
       { name: '초이', course: '실전 클래스', len: '4주 과정', initial: '초' },
@@ -631,7 +631,7 @@ ${people.map((p, i) => `        <li class="dt-person${p.photo ? ' has-photo' : '
   commerce: () => steps({
     eyebrow: 'Brand Growth', h2: ['기획에서 EXIT까지,', '브랜드 성장 4단계'],
     lead: '브랜드를 만드는 데서 끝나지 않고, 운영과 성장을 거쳐 다음 단계까지 함께 설계합니다. 성장 단계에서는 그룹의 콘텐츠·마케팅·유통 사업과 연계할 수 있습니다.',
-    actions: `<a class="btn btn--white" href="${ASK('commerce')}">커머스 상담하기 ${ARROW}</a>`,
+    actions: `<a class="btn btn--white" href="${ASK('commerce')}">브랜드 커머스 상담하기 ${ARROW}</a>`,
     label: '브랜드 성장 단계',
     goalLast: true,
     items: [
@@ -845,7 +845,7 @@ function buildDetail(b, idx) {
         </figure>`).join('\n');
 
   // 담당 리더: 리더 프로필 카드(.pcard · 생김새는 base.css '15. 리더 프로필 카드 공통') 가로형 한 장
-  //  사진 칸 = 흰 칸 + 두고 'd' 심볼 + 상반신 사진(백영호 외 모두) 또는 중립 실루엣 + '사진 준비 중'
+  //  사진 칸 = 흰 칸 + 두고 'd' 심볼 + 상반신 사진(현재 여섯 명 모두) 또는 사진이 없을 때 중립 실루엣 + '사진 준비 중'
   //  본문 = 이름 · 영문 회사명 · 분야 → 이 사업과 관련된 정보(dl) → '자세히 보기'(카드 전체가 링크) + 안내 문구 · 이력은 지어내지 않음
   const leaderVisual = c.photo
     ? `<div class="pcard-ph">
@@ -853,7 +853,7 @@ function buildDetail(b, idx) {
         </div>`
     : `<div class="pcard-ph is-empty" aria-hidden="true"><span class="pcard-sil"></span><span class="pcard-soon">사진 준비 중</span></div>`;
   const leaderLead = c.direct
-    ? `지주회사 <span class="nowrap">${c.en}</span>의 대표로, ${nw(b.area)} 분야의 <span class="nowrap">${b.en}</span>를 직접 운영하며 그룹 총괄 운영을 이끕니다.`
+    ? `지주회사 <span class="nowrap">${c.en}</span>의 대표이사로, ${nw(b.area)} 분야의 <span class="nowrap">${b.en}</span>를 직접 운영하며 그룹 총괄 운영을 이끕니다.`
     : `${nw(b.area)} 분야는 그룹사 <span class="nowrap">${c.en}</span>가 맡고, ${c.ceo} ${ttl(c)}가 이끌고 있습니다.`;
   // 회사 줄: 영문 회사명(공통 .pcard-co) + 지주회사 / 해외 거점 칩 — 분야는 그 아래 .pcard-field 한 줄
   const leaderTag = c.direct ? `<span class="dt-corp-type is-hold">${c.type}</span>` : c.place ? `<span class="dt-corp-type is-place">${c.place}</span>` : '';
