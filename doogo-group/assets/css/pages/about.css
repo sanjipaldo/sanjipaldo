@@ -208,6 +208,7 @@ main .note { color: var(--muted); }
 .js .ab-intro-lede.is-split.is-on .eg-c { opacity: 1; transform: none; filter: none; color: var(--ink); }
 .js .ab-intro-lede.is-split.is-accent .eg-accent .eg-c { color: var(--blue); transition: color .6s var(--ease) calc(var(--ai, 0) * 45ms); }
 .ab-intro-lede.is-accent .eg-accent::after { transform: scaleX(1); transition: transform 1s cubic-bezier(.65, 0, .35, 1) .2s; }
+.js .ab-intro-lede.is-split.is-reset .eg-c, .ab-intro-lede.is-reset .eg-accent::after { transition: none !important; } /* 다시 켤 때 즉시 되돌림 (about.js) */
 
 .ab-tagline-wrap { margin-top: clamp(88px, 11vw, 160px); }
 .ab-tagline { font-size: clamp(2.1rem, 5.6vw, 5.4rem); line-height: 1.06; font-weight: 600; letter-spacing: -.035em; }
@@ -340,7 +341,7 @@ main .note { color: var(--muted); }
 /* 직접 운영: 실제 사이트(새 창) */
 .ab-ext { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; color: #fff; transition: color .25s var(--ease); }
 .ab-ext-area { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; background: rgba(111, 162, 242, .18); color: var(--blue-300); font-size: .72rem; font-weight: 700; }
-.ab-ext .en { font-size: .92rem; font-weight: 600; letter-spacing: .03em; }
+.ab-ext .en { font-size: .92rem; font-weight: 600; letter-spacing: .03em; white-space: nowrap; }
 .ab-ext .ico { width: 14px; height: 14px; color: var(--blue-300); transition: transform .3s var(--ease); }
 .ab-ext:hover { color: var(--blue-300); }
 .ab-ext:hover .ico { transform: translate(2px, -2px); }
@@ -642,23 +643,26 @@ main .note { color: var(--muted); }
   .ab-fact-n .en { font-size: 3rem; }
   .ab-fact dt { margin-top: 10px; }
   /* 모바일 무대: 지주회사를 위에, 다섯 그룹사를 아래 호(⌣)로 */
-  .ab-stage-fig { margin-bottom: 30px; }
+  .ab-stage-fig { margin-bottom: 46px; }
   .ab-stage { aspect-ratio: 1 / 1.1; --core-x: 50%; --core-y: 34%; --core-h: 64%; --tile: 15.5cqw; }
   .ab-core { top: 2%; }
   .ab-orbit { --o: 74cqw; }
   .ab-orbit:nth-child(2) { --o: 118cqw; }
   .ab-orbit:nth-child(3) { --o: 168cqw; }
-  .ab-sat:nth-child(1) { --x: 12%; --y: 69%; }
-  .ab-sat:nth-child(2) { --x: 31%; --y: 79%; }
-  .ab-sat:nth-child(3) { --x: 50%; --y: 83%; }
-  .ab-sat:nth-child(4) { --x: 69%; --y: 79%; }
-  .ab-sat:nth-child(5) { --x: 88%; --y: 69%; }
+  .ab-sat:nth-child(1) { --x: 12%; --y: 64.5%; }
+  .ab-sat:nth-child(2) { --x: 31%; --y: 73.5%; }
+  .ab-sat:nth-child(3) { --x: 50%; --y: 77%; }
+  .ab-sat:nth-child(4) { --x: 69%; --y: 73.5%; }
+  .ab-sat:nth-child(5) { --x: 88%; --y: 64.5%; }
   .ab-sat-tile { padding: 3px; }
-  .ab-sat-label { display: none; }
+  /* 모바일에서도 타일마다 영문 회사명 (좁으면 두 줄 · 분야는 아래 구조 섹션에서) */
+  .ab-sat-label { top: calc(100% + 5px); width: max-content; max-width: 18.5cqw; padding: 2px 6px 3px; border-radius: 7px; white-space: normal; text-align: center; background: rgba(255, 255, 255, .78); }
+  .ab-sat-label b { font-size: .56rem; letter-spacing: .02em; line-height: 1.2; }
+  .ab-sat-label small { display: none; }
   .ab-core-label b { font-size: .92rem; }
   .ab-stage-cap { display: none; }
   /* 영상 버튼은 무대 아래 가장자리에 걸쳐 가운데 */
-  .ab-film { left: 50%; bottom: -27px; translate: -50% 0; white-space: nowrap; }
+  .ab-film { left: 50%; bottom: -40px; translate: -50% 0; white-space: nowrap; } /* 타일 아래 회사명과 겹치지 않게 조금 더 아래로 */
   .ab-film:hover { translate: -50% -2px; }
   .ab-film { min-height: 54px; padding: 6px 18px 6px 6px; gap: 10px; }
   .ab-film-ring { width: 42px; height: 42px; }
@@ -740,6 +744,12 @@ main .note { color: var(--muted); }
   .ab-map-cap-sub { display: none; }
 }
 @media (max-width: 380px) {
+  .ab-hold-id { gap: 12px; }
+  .ab-hold-sym { width: 44px; height: 44px; border-radius: 12px; }
+  .ab-hold-name { font-size: clamp(1.15rem, 6.1vw, 1.4rem); letter-spacing: 0; } /* 320px 에서도 DOOGO HOLDINGS 가 카드 안에 */
+  .ab-hold-facts > div { grid-template-columns: 58px minmax(0, 1fr); }
+  .ab-ext { gap: 6px; }
+  .ab-ext .en { font-size: .84rem; letter-spacing: .01em; }
   .ab-sub-card { grid-template-columns: minmax(0, 1fr) 88px; }
   .ab-loc-dl > div { grid-template-columns: 1fr; gap: 6px; }
 }

@@ -138,7 +138,8 @@ const BIZ = [
   },
   {
     slug: 'bio', num: '02', area: '제조', en: 'DOOGOBIO', chain: 'Product', icon: 'i-bio',
-    corp: { en: 'DOOGOBIO', field: '건기식 제조', place: '뉴질랜드', ceo: '백영호' },
+    corp: { en: 'DOOGOBIO', field: '건기식 제조', place: '뉴질랜드', ceo: '백영호', key: 'bio' },
+    scope: '제품 개발 · 소량 제조 · 패키지·인쇄',
     defLabel: '건강식품 제조', def: '뉴질랜드 건강식품 소량 제조 및 인쇄까지, 좋은 제품을 만듭니다.',
     role: '뉴질랜드 건강식품의 개발과 소량 제조, 제품화를 지원합니다.',
     services: ['제품 개발', '소량 제조', '패키지·인쇄', '제조 상담·연결 ‘두고커넥트’'],
@@ -164,7 +165,8 @@ const BIZ = [
   },
   {
     slug: 'commerce', num: '03', area: '커머스', en: 'DOOGO MAKERS', chain: 'Brand', icon: 'i-commerce',
-    corp: { en: 'DOOGO MAKERS', field: '브랜드', ceo: '신동훈' },
+    corp: { en: 'DOOGO MAKERS', field: '브랜드', ceo: '신동훈', key: 'makers' },
+    scope: '브랜드 기획 · 상품 운영 · EXIT 전략',
     defLabel: '브랜드 커머스', def: '브랜드를 만들고 성장시키며, EXIT까지 연결합니다.',
     role: '브랜드를 기획하고 운영하며, 판매와 성장 전략을 함께 만듭니다.',
     services: ['브랜드 기획', '상품 운영', '브랜드 성장과 EXIT 전략'],
@@ -188,7 +190,8 @@ const BIZ = [
   },
   {
     slug: 'media', num: '04', area: '미디어', en: 'DOOGO MEDIA', chain: 'Content', icon: 'i-media',
-    corp: { en: 'DOOGO MEDIA', field: '콘텐츠', ceo: '김윤정' },
+    corp: { en: 'DOOGO MEDIA', field: '콘텐츠', ceo: '김윤정', key: 'media' },
+    scope: '촬영 · 유튜브 · 라이브 콘텐츠',
     defLabel: '미디어 & 콘텐츠', def: '사람을 모으고, 브랜드를 키우는 미디어를 만듭니다.',
     role: '사람과 브랜드의 가치를 영상과 콘텐츠로 전합니다.',
     services: ['촬영', '유튜브 콘텐츠', '라이브 콘텐츠 제작'],
@@ -213,7 +216,8 @@ const BIZ = [
   },
   {
     slug: 'ad', num: '05', area: '광고', en: 'DOOGO AD', chain: 'Marketing', icon: 'i-ad',
-    corp: { en: 'DOOGO AD', field: '마케팅', ceo: '김신용' },
+    corp: { en: 'DOOGO AD', field: '마케팅', ceo: '김신용', key: 'ad' },
+    scope: '네이버·쿠팡 광고 운영 · 소재 기획 · 성과 분석',
     defLabel: '퍼포먼스 마케팅', def: '네이버·쿠팡을 중심으로 브랜드를 더 멀리 알립니다.',
     role: '브랜드가 필요한 고객에게 닿도록 광고를 기획하고 운영합니다.',
     services: ['네이버·쿠팡 중심 광고 운영', '광고 소재 기획', '성과 분석'],
@@ -262,7 +266,8 @@ const BIZ = [
   },
   {
     slug: 'space', num: '07', area: '공간', en: 'DOOGO SPACE', chain: 'Space', icon: 'i-space',
-    corp: { en: 'DOOGO SPACE', field: '공간', ceo: '문성오' },
+    corp: { en: 'DOOGO SPACE', field: '공간', ceo: '문성오', key: 'space' },
+    scope: '공유오피스 · 비상주 사무실 · 교육장 · NORA STAY',
     defLabel: '공간 & 숙박', def: '공유오피스·비상주 사무실 그리고 NORA STAY를 통한 숙박 사업까지, 사람과 비즈니스를 위한 공간을 만듭니다.',
     role: '함께 일하고 배우며, 쉬어갈 수 있는 공간을 만듭니다.',
     services: ['공유오피스', '비상주 사무실', '교육장 대여', '숙박 ‘NORA STAY’'],
@@ -411,11 +416,12 @@ function buildList() {
         <div class="bz-body">
           <div class="bz-top" data-reveal>
             <span class="bz-num en" aria-hidden="true">${b.num}</span>
-            <span class="bz-stage en">${b.chain}</span>${b.domain ? `
-            <a class="bz-site" href="${b.site.ext}" target="_blank" rel="noopener"><span class="en">${b.domain}</span>${ARROW_UR}<span class="sr-only"> — ${b.en} 사이트(새 창)</span></a>` : ''}
+            <span class="bz-stage en">${b.chain}</span>
           </div>
           <h3 class="bz-title" id="bz-t-${b.slug}" data-reveal style="--d:.05s"><span class="bz-area">${b.area}</span><span class="bz-brand"><span class="en">${b.en}</span></span></h3>
-          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong><span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp)}</span><span class="bz-corp-ceo">대표 <strong>${b.corp.ceo}</strong></span></p>
+          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong><span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp)}</span><span class="bz-corp-ceo">대표 <strong>${b.corp.ceo}</strong></span></p>${b.domain ? `
+          <!-- 직접 운영 사업의 서비스 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
+          <a class="bz-site" href="${b.site.ext}" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s"><span class="en">${b.domain}</span>${ARROW_UR}<span class="sr-only"> — ${b.en} 사이트(새 창)</span></a>` : ''}
           <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">${b.defLabel}</span>${nw(b.def)}</p>
           <p class="bz-role" data-reveal style="--d:.12s">${b.role}</p>
           <div class="bz-info" data-reveal style="--d:.16s">
@@ -533,7 +539,7 @@ ${CTA_BAND}`;
 const REL = {
   campus: () => {
     const people = [
-      { name: '문대표', sub: '문원오 · DOOGO HOLDINGS 대표', course: '뉴질랜드 건기식 브랜딩', len: '5주 과정', photo: 'assets/img/people/moon-wonoh.webp' },
+      { name: '문대표', sub: ['문원오', 'DOOGO HOLDINGS 대표'], course: '뉴질랜드 건기식 브랜딩', len: '5주 과정', photo: 'assets/img/people/moon-wonoh.webp' },
       { name: '로직메이커', course: '실전 클래스', len: '4주 과정', initial: '로' },
       { name: '황금농부', course: '실전 클래스', len: '4주 과정', initial: '황' },
       { name: '초이', course: '실전 클래스', len: '4주 과정', initial: '초' },
@@ -554,13 +560,13 @@ const REL = {
       <ul class="dt-people">
 ${people.map((p, i) => `        <li class="dt-person${p.photo ? ' has-photo' : ''}" data-reveal style="--d:${(i * 0.08).toFixed(2)}s">
           <div class="dt-person-photo">
-            ${p.photo ? `<img src="${p.photo}" alt="${p.name} — ${p.sub} 사진" width="627" height="694" loading="lazy">` : `<span class="dt-avatar" aria-hidden="true">${p.initial}</span>`}
+            ${p.photo ? `<img src="${p.photo}" alt="${p.name} — ${p.sub.join(' · ')} 사진" width="627" height="694" loading="lazy">` : `<span class="dt-avatar" aria-hidden="true">${p.initial}</span>`}
             <span class="dt-person-len">${p.len}</span>
           </div>
           <div class="dt-person-body">
             <p class="dt-person-course">${p.course}</p>
             <h3 class="dt-person-name">${p.name}</h3>
-            ${p.sub ? `<p class="dt-person-sub">${nw(p.sub)}</p>` : '<p class="dt-person-sub"><span class="nowrap">DOOGO CLASS</span> 강사</p>'}
+            ${p.sub ? `<p class="dt-person-sub is-split"><span>${p.sub[0]}</span><span class="dt-sub-dot" aria-hidden="true"> · </span><span>${nw(p.sub[1])}</span></p>` : '<p class="dt-person-sub"><span class="nowrap">DOOGO CLASS</span> 강사</p>'}
           </div>
         </li>`).join('\n')}
       </ul>
@@ -766,22 +772,20 @@ function buildDetail(b, idx) {
           <span class="dt-leader-tag">사진 준비 중</span>`;
   const leaderLead = c.direct
     ? `지주회사 <span class="nowrap">${c.en}</span>의 대표로, ${b.area} 사업 <span class="nowrap">${b.en}</span>를 직접 운영하며 그룹 총괄 운영을 이끕니다.`
-    : `<span class="nowrap">${c.en}</span>를 이끄는 대표입니다. 세부 이력과 사진은 확정되는 대로 게시합니다.`;
+    : `${b.area} 사업은 그룹사 <span class="nowrap">${c.en}</span>가 맡고, ${c.ceo} 대표가 이끌고 있습니다.`;
+  // 카드: 회사(영문)·구분(지주회사 / 분야)은 머리 줄에 한 번만 — 아래 목록은 머리 줄과 겹치지 않는 정보만
   const leaderBody = `<p class="dt-leader-corp"><span class="dt-corp-type${c.direct ? ' is-hold' : ''}">${c.direct ? c.type : c.field}</span><span class="en">${c.en}</span></p>
           <h3 class="dt-leader-name" id="leader-name">${c.ceo}<span class="dt-leader-title">대표</span></h3>
-${c.direct ? `
-          <p class="dt-leader-sub"><span class="en">${c.en}</span> 대표 · 그룹 대표</p>
-          <blockquote class="dt-leader-quote"><p>“제품과 브랜드, 그리고 사람의 성장이 이어지는 사업을 만듭니다.”</p></blockquote>` : ''}
-          <dl class="dt-leader-dl">
-            <div><dt>회사</dt><dd><span class="en nowrap">${c.en}</span>${c.direct ? `<span class="dt-dd-sub">${c.type}</span>` : c.place ? `<span class="dt-dd-sub">${c.place}</span>` : ''}</dd></div>
-${c.direct ? `            <div><dt>역할</dt><dd>${c.role}</dd></div>
+${c.direct ? `          <blockquote class="dt-leader-quote"><p>“제품과 브랜드, 그리고 사람의 성장이 이어지는 사업을 만듭니다.”</p></blockquote>
+` : ''}          <dl class="dt-leader-dl">
+${c.direct ? `            <div><dt>역할</dt><dd>그룹 대표 · ${c.role}</dd></div>
             <div><dt>직접 운영</dt><dd class="dt-dd-chips"><span class="dt-dd-chip${b.slug === 'campus' ? ' is-cur' : ''}"><span class="en">DOOGO CLASS</span>교육</span><span class="dt-dd-chip${b.slug === 'food' ? ' is-cur' : ''}"><span class="en">DOOGOFOOD</span>유통</span></dd></div>
             <div><dt>강의</dt><dd><span class="en nowrap">DOOGO CLASS</span> ‘문대표’ · 뉴질랜드 건기식 브랜딩</dd></div>`
-    : `            <div><dt>분야</dt><dd>${c.field}</dd></div>
-            <div><dt>사업영역</dt><dd>${b.area} · ${b.defLabel}</dd></div>`}
+    : `            <div><dt>주요 서비스</dt><dd class="dt-dd-chips">${b.scope.split(' · ').map(x => `<span class="dt-dd-chip is-svc">${nw(x)}</span>`).join('')}</dd></div>${c.place ? `
+            <div><dt>거점</dt><dd>${c.place}</dd></div>` : ''}`}
           </dl>
-          <p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '직함·이력은 공식 자료로 확정되는 대로 게시합니다.' : '이력은 확정 후 게시합니다.'}</p>
-          <a class="btn btn--line btn--sm" href="leadership.html#${c.anchor || 'leaders'}">${c.photo ? '대표 소개 보기' : '리더십 페이지에서 보기'} ${ARROW}</a>`;
+          <p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '직함·이력은 공식 자료로 확정되는 대로 게시합니다.' : '이력과 사진은 확정 후 게시합니다.'}</p>
+          <a class="btn btn--line btn--sm" href="leadership.html#${c.anchor || `leader-${c.key}`}">${c.photo ? '대표 소개 보기' : '리더십 페이지에서 보기'} ${ARROW}<span class="sr-only"> — ${c.ceo} 대표</span></a>`;
 
   const main = `${SPRITE}
 
@@ -953,7 +957,8 @@ ${CTA_BAND}`;
 
   return shell({
     title: `${b.area} · ${b.en}`,
-    desc: `${b.en} — ${c.direct ? `${c.en} 직접 운영` : `${c.en} 운영 · ${c.field}`}. ${b.role} ${b.defLabel}: ${b.def}`,
+    // 회사 이름은 한 번만: 직접 운영 사업은 '운영 회사 직접 운영', 그룹사 사업은 회사 이름이 곧 브랜드라 생략
+    desc: `${b.en} — 두고그룹 ${b.area} 사업 (${c.direct ? `${c.en} 직접 운영 · ` : ''}대표 ${c.ceo}). ${b.role} ${b.def}`,
     css: 'business-detail', js: 'business-detail',
     bodyAttrs: `data-page="business-${b.slug}"`,
     main,

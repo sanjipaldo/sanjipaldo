@@ -13,7 +13,10 @@
   position: relative; isolation: isolate; overflow: hidden;
   display: flex; flex-direction: column; justify-content: flex-end;
   min-height: clamp(700px, 100svh, 1000px);
-  padding: calc(var(--header-h) + clamp(48px, 7vw, 112px)) 0 clamp(28px, 3.4vw, 48px);
+  /* 아래 여백 = 왼쪽 아래 고정 '움직임 멈추기' 버튼 자리(site.js · 버튼 36px + 아래 16px) + 14px:
+     첫 화면에서 사업 바로가기 카드가 버튼 밑으로 들어가지 않게 (모바일 값은 아래 반응형) */
+  --mt-clear: 66px;
+  padding: calc(var(--header-h) + clamp(48px, 7vw, 112px)) 0 var(--mt-clear);
 }
 .bz-hero-media { position: absolute; inset: 0; z-index: -2; overflow: hidden; background: var(--navy); }
 /* 7개 사업 사진 크로스페이드 (business.js): 새 사진이 위에서 1.2초 동안 나타나며 1.08 → 1로 6.5초에 걸쳐 가라앉음(Ken Burns).
@@ -178,14 +181,18 @@
 .bz-cursor-in svg { width: 18px; height: 18px; }
 .bz-media.is-hover .bz-cursor-in { transform: scale(1); }
 
-.bz-body { display: flex; flex-direction: column; min-width: 0; padding: clamp(10px, 2.2vw, 34px) clamp(6px, 1.6vw, 26px) clamp(6px, 1.2vw, 16px); }
+.bz-body {
+  --bz-pt: clamp(10px, 2.2vw, 34px); --bz-pr: clamp(6px, 1.6vw, 26px); --bz-num: clamp(2.6rem, 4.4vw, 4.4rem);
+  position: relative; display: flex; flex-direction: column; min-width: 0; padding: var(--bz-pt) var(--bz-pr) clamp(6px, 1.2vw, 16px);
+}
 .bz-card:nth-child(even) .bz-body { padding-left: clamp(10px, 2vw, 30px); }
 .bz-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.bz-num { font-size: clamp(2.6rem, 4.4vw, 4.4rem); font-weight: 500; line-height: .9; letter-spacing: -.045em; color: var(--blue); }
+.bz-num { font-size: var(--bz-num); font-weight: 500; line-height: .9; letter-spacing: -.045em; color: var(--blue); }
 .bz-stage { font-size: .74rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); padding-left: 14px; border-left: 1px solid rgba(11, 27, 51, .16); line-height: 1.2; }
-/* 직접 운영 사업의 서비스 주소 (DOOGO CLASS · DOOGOFOOD) — 번호 줄 오른쪽 */
+/* 직접 운영 사업의 서비스 주소 (DOOGO CLASS · DOOGOFOOD)
+   HTML에서는 운영 회사 줄 바로 다음(읽는 순서) — 넓은 화면에서는 번호 줄 오른쪽 끝에 맞춰 띄우고, 모바일(≤640)은 운영 회사 줄 아래 */
 .bz-site {
-  position: relative; margin-left: auto; display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px 0 14px; border-radius: 999px;
+  position: absolute; right: var(--bz-pr); top: calc(var(--bz-pt) + (var(--bz-num) * .9 - 38px) / 2); display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px 0 14px; border-radius: 999px;
   background: #fff; border: 1px solid rgba(10, 93, 226, .2); color: var(--ink-2); font-size: .84rem; font-weight: 600; letter-spacing: .02em;
   transition: background-color .3s var(--ease), border-color .3s var(--ease), color .3s var(--ease);
 }
@@ -231,30 +238,51 @@
 .bz-note::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: #E0A100; }
 
 /* ---------- 반응형 ---------- */
-/* 짧은 데스크톱 화면: 첫 화면 안에 사업 바로가기 줄까지 보이게 */
-@media (min-width: 1025px) and (max-height: 920px) {
+@media (max-width: 1180px) {
+  /* 가로 태블릿·작은 노트북(961–1180)도 7개를 한 줄로 — 두 줄이 되면 첫 화면 아래로 밀려 버튼 밑에 깔림 */
+  .bz-jump { gap: 8px; }
+  .bz-jump-item { min-height: 112px; padding: 14px 12px 16px; gap: 14px 6px; }
+  .bz-jump-ico { width: 22px; height: 22px; }
+  .bz-jump-txt strong { font-size: 1.08rem; }
+  .bz-jump-txt .en { font-size: .66rem; letter-spacing: .04em; }
+  .bz-jump-item::after { left: 12px; right: 12px; }
+  .bz-chain-inner { grid-template-columns: 1fr; }
+  .bz-chain-title br { display: none; }
+}
+@media (max-width: 960px) {
+  .bz-jump { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .bz-jump-item { padding: 16px 16px 18px; gap: 18px 8px; }
+  .bz-jump-ico { width: 24px; height: 24px; }
+  .bz-jump-txt strong { font-size: 1.2rem; }
+  .bz-jump-txt .en { font-size: .72rem; letter-spacing: .08em; }
+  .bz-jump-item::after { left: 16px; right: 16px; }
+}
+@media (max-width: 1024px) {
+  .bz-card { grid-template-columns: 1fr; gap: 6px; }
+  .bz-card:nth-child(even) .bz-media { order: 0; }
+  .bz-media { min-height: 0; aspect-ratio: 16 / 10; }
+  .bz-card:nth-child(even) .bz-body, .bz-body { --bz-pt: 22px; --bz-pr: 14px; padding: 22px 14px 12px; }
+}
+/* 짧은 화면(노트북 · 가로 태블릿): 제목부터 사업 바로가기 줄까지 첫 화면 안에, 아래 버튼 자리 위에서 끝나게 */
+@media (min-width: 761px) and (max-height: 920px) {
   .bz-hero { padding-top: calc(var(--header-h) + clamp(24px, 3vw, 44px)); }
   .bz-hero .breadcrumb { margin-bottom: 18px; }
   .bz-hero .eyebrow { margin-bottom: 18px; }
   .bz-hero .bz-hero-lead { margin-top: 20px; }
   .bz-hero-foot { margin-top: 32px; padding-top: 18px; }
   .bz-jump-head { margin-bottom: 12px; }
-  .bz-jump-item { min-height: 112px; }
 }
-@media (min-width: 1025px) and (max-height: 800px) {
-  .bz-jump-item { min-height: 100px; padding-block: 14px; }
-}
-@media (max-width: 1180px) {
-  .bz-jump { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .bz-jump-item { min-height: 112px; }
-  .bz-chain-inner { grid-template-columns: 1fr; }
-  .bz-chain-title br { display: none; }
-}
-@media (max-width: 1024px) {
-  .bz-card { grid-template-columns: 1fr; gap: 6px; }
-  .bz-card:nth-child(even) .bz-media { order: 0; }
-  .bz-media { min-height: 0; aspect-ratio: 16 / 10; }
-  .bz-card:nth-child(even) .bz-body, .bz-body { padding: 22px 14px 12px; }
+@media (min-width: 761px) and (max-height: 820px) {
+  .bz-hero { padding-top: calc(var(--header-h) + 18px); }
+  .bz-hero .breadcrumb { margin-bottom: 12px; }
+  .bz-hero .eyebrow { margin-bottom: 14px; }
+  .bz-hero-title { font-size: min(var(--fs-display), 10svh); }
+  /* 설명은 두 줄로 (줄바꿈 대신 폭으로 나눔) */
+  .bz-hero .bz-hero-lead { margin-top: 16px; max-width: 37em; text-wrap: balance; }
+  .bz-hero .bz-hero-lead br { display: none; }
+  .bz-hero-foot { margin-top: 24px; padding-top: 16px; }
+  .bz-jump-head { margin-bottom: 10px; }
+  .bz-jump-item { min-height: 96px; padding-block: 13px 14px; gap: 10px 6px; }
 }
 @media (max-width: 860px) {
   .bz-rail { grid-template-columns: 1fr; }
@@ -267,6 +295,18 @@
   .bz-rail-goal { margin-top: 10px; padding-left: 52px; border-bottom: 0; }
   .bz-rail-goal .bz-rail-dot { top: 8px; left: -10px; }
   .bz-rail-goal .bz-rail-biz { margin-left: 0; }
+}
+@media (max-width: 760px) {
+  .bz-hero { --mt-clear: 58px; } /* 모바일 버튼 32px + 아래 12px + 14px */
+}
+/* 짧은 휴대폰(높이 ≤760): 위쪽 간격을 줄여 바로가기 줄이 버튼 자리 위에서 끝나게 */
+@media (max-width: 760px) and (max-height: 760px) {
+  .bz-hero { padding-top: calc(var(--header-h) + 22px); }
+  .bz-hero .breadcrumb { margin-bottom: 14px; }
+  .bz-hero .eyebrow { margin-bottom: 14px; }
+  .bz-hero .bz-hero-lead { margin-top: 16px; }
+  .bz-hero-foot { margin-top: 26px; padding-top: 16px; }
+  .bz-jump-head { margin-bottom: 8px; }
 }
 @media (max-width: 640px) {
   .bz-hero { min-height: min(100svh, 880px); }
@@ -291,10 +331,9 @@
   .bz-corp { margin-top: 12px; font-size: .88rem; gap: 6px 7px; }
   .bz-corp-n { letter-spacing: .01em; }
   .bz-corp-type { padding: 0 8px; }
-  /* 서비스 주소는 번호 줄 아래 따로 (좁은 폭에서 오른쪽에 홀로 떨어지지 않게) */
+  /* 서비스 주소: 번호와 제목 사이가 아니라 운영 회사 줄 바로 아래 (HTML 순서 그대로) */
   .bz-top { gap: 12px 14px; }
-  .bz-top:has(.bz-site)::after { content: ""; order: 2; flex-basis: 100%; height: 0; }
-  .bz-site { order: 3; margin-left: 0; height: 34px; padding: 0 11px 0 12px; font-size: .78rem; }
+  .bz-site { position: relative; top: auto; right: auto; align-self: flex-start; margin-top: 12px; height: 34px; padding: 0 11px 0 12px; font-size: .8rem; }
   .bz-site::after { inset: -5px -2px; }
   /* 대표 줄은 항상 따로: 줄이 넘어갈 때 앞에 세로 구분선만 남지 않게 */
   .bz-corp-ceo { flex-basis: 100%; padding-left: 0; }

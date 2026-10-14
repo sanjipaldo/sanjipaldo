@@ -20,7 +20,8 @@
      5초마다 다음 사업 사진으로 크로스페이드(+느린 줌, business.css). 지금 보이는 사업은 바로가기 카드에 표시.
      · 바로가기에 마우스를 올리거나 포커스하면 그 사업 사진으로 고정, 벗어나면 그 자리에서 다시 넘김
      · 화면 밖 · 탭이 숨겨짐 · 정지 버튼 · '움직임 멈추기' → 멈춤 (다시 켜면 그 자리에서 이어서 넘김)
-     · 첫 장 외 사진은 <template> 안에 있다가 넘기기 직전(또는 바로가기에 처음 다가갈 때) 불러옴 */
+     · 첫 장 외 사진은 <template> 안에 있다가 넘기기 직전(또는 바로가기에 처음 다가갈 때) 불러옴
+     · 바로가기가 가로로 넘기는 한 줄(휴대폰)이면, 자동 넘김으로 바뀐 사업 카드가 보이도록 띠만 가로로 따라 넘김 */
   var DUR = 5000, FADE = 1250;
   var hero = $('.bz-hero');
   var stack = $('.bz-slides');
@@ -58,6 +59,24 @@
     var mark = function (i) {
       items.forEach(function (a, j) { a.classList.toggle('is-cur', j === i); });
     };
+
+    // 휴대폰처럼 바로가기가 가로로 넘기는 한 줄일 때: 자동 넘김으로 바뀐 사업 카드가 띠 밖에 있으면 그 카드까지 띠를 넘김
+    // (지금 사진이 어느 사업인지 표시가 화면에서 사라지지 않게). 사용자가 띠를 만지거나 넘긴 뒤 4초 동안,
+    // 띠 안에 포커스가 있을 때, 첫 화면이 안 보일 때는 건드리지 않음. 페이지 세로 위치는 바꾸지 않음(띠만 가로로).
+    var touchedAt = 0, autoUntil = 0;
+    var userTouch = function () { touchedAt = Date.now(); };
+    ['pointerdown', 'touchstart', 'wheel'].forEach(function (ev) { jump.addEventListener(ev, userTouch, { passive: true }); });
+    jump.addEventListener('scroll', function () { if (Date.now() > autoUntil) userTouch(); }, { passive: true });
+    var follow = function (i) {
+      if (jump.scrollWidth <= jump.clientWidth + 2 || !inView || jump.contains(document.activeElement) || Date.now() - touchedAt < 4000) return;
+      var li = items[i].parentNode;
+      var box = jump.getBoundingClientRect(), r = li.getBoundingClientRect();
+      var pad = parseFloat(window.getComputedStyle(jump).scrollPaddingLeft) || 0;
+      if (r.left >= box.left + pad - 1 && r.right <= box.right - pad + 1) return; // 이미 다 보임
+      var left = clamp(jump.scrollLeft + (r.left - box.left) - pad, 0, jump.scrollWidth - jump.clientWidth);
+      autoUntil = Date.now() + 1000;
+      try { jump.scrollTo({ left: left, behavior: motionOff() ? 'auto' : 'smooth' }); } catch (e) { jump.scrollLeft = left; }
+    };
     var restartProgress = function () { // 진행선 애니메이션을 처음부터
       hero.classList.remove('is-auto');
       if (running()) { void hero.offsetWidth; hero.classList.add('is-auto'); }
@@ -76,6 +95,7 @@
         img.classList.add('is-on');
         cur = i;
         mark(i);
+        if (!pinned) follow(i);
         // 새 사진이 다 덮은 뒤 아래 사진들을 치움(보이지 않는 상태에서 처음 위치로)
         clearTimeout(cleanT);
         cleanT = setTimeout(function () {

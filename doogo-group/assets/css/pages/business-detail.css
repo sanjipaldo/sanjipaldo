@@ -268,6 +268,8 @@
 .dt-person-course { font-size: .86rem; font-weight: 700; color: var(--blue); }
 .dt-person-name { margin-top: 6px; font-size: 1.4rem; font-weight: 800; letter-spacing: -.035em; line-height: 1.25; }
 .dt-person-sub { margin-top: 4px; font-size: .88rem; color: var(--muted); }
+/* 이름 · 회사 대표 두 덩어리: 좁은 카드에서는 가운뎃점 없이 두 줄로 (점이 줄 끝에 홀로 남지 않게) */
+.dt-person-sub.is-split > span:last-child { white-space: nowrap; }
 
 /* DOOGOFOOD 도매 플랫폼: 공급사 · 판매자 두 갈래 */
 .dt-paths { display: grid; grid-template-columns: minmax(0, 1fr) clamp(150px, 16vw, 230px) minmax(0, 1fr); align-items: stretch; }
@@ -371,6 +373,8 @@
 .dt-dd-chip { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px; border-radius: 999px; background: var(--ivory); color: var(--muted); font-size: .78rem; font-weight: 600; white-space: nowrap; }
 .dt-leader-dl .dt-dd-chip .en { font-size: .8rem; font-weight: 600; letter-spacing: .03em; color: var(--ink-2); }
 .dt-dd-chip.is-cur { background: var(--blue-50); color: var(--blue-700); }
+/* 그룹사 대표 카드의 주요 서비스: 항목 단위로만 줄바꿈 (가운뎃점이 줄 끝에 남지 않게) */
+.dt-dd-chip.is-svc { color: var(--ink-2); font-size: .82rem; }
 .dt-leader-dl .dt-dd-chip.is-cur .en { color: var(--blue); }
 .dt-leader-note { margin-top: 16px; display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 500; color: var(--muted); }
 .dt-leader-note i { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--blue-300); }
@@ -475,6 +479,11 @@
   .js .dt-pager-card[data-reveal]:not(.is-in) { transform: translateY(28px); }
   .dt-others-all { margin-left: 0; }
 }
+/* 휴대폰·작은 태블릿(≤760, site.js 버튼이 작아지는 구간과 같음): 사진 문구 왼쪽 끝을 화면 x 128px에 —
+   왼쪽 아래 고정 '움직임 멈추기' 버튼(x 12–120px)이 첫 화면 접히는 선 근처의 문구를 덮지 않게 (프레임 왼쪽 = 거터) */
+@media (max-width: 760px) {
+  .dt-quote { left: calc(128px - var(--gutter)); }
+}
 @media (max-width: 640px) {
   .dt-sub-ico { width: 36px; height: 36px; border-radius: 11px; }
   .dt-sub-ico svg { width: 19px; height: 19px; }
@@ -486,9 +495,11 @@
   .dt-frame { aspect-ratio: 1 / 1.04; border-radius: var(--radius); }
   .dt-frame-img { object-position: var(--mx, 50%) var(--fy, 50%); transform-origin: var(--mx, 50%) var(--fy, 50%); }
   .dt-frame::after { background: linear-gradient(0deg, rgba(10, 20, 38, .78) 0%, rgba(10, 20, 38, .12) 48%, transparent 66%), linear-gradient(180deg, rgba(10, 20, 38, .4) 0%, transparent 24%); }
-  .dt-quote { left: 18px; right: 18px; bottom: 20px; max-width: none; }
-  .dt-quote-label { margin-bottom: 8px; font-size: .7rem; letter-spacing: .16em; }
-  .dt-quote q { font-size: 1.28rem; max-width: none; }
+  /* 문구는 프레임 오른쪽 칸 (왼쪽 끝 = 화면 x 128px, 위 ≤760 규칙) */
+  .dt-quote { left: calc(128px - var(--gutter)); right: 18px; bottom: 20px; max-width: none; }
+  .dt-quote-label { margin-bottom: 8px; font-size: .7rem; letter-spacing: .1em; white-space: nowrap; }
+  .dt-quote-label::before { display: none; }
+  .dt-quote q { font-size: 1.18rem; line-height: 1.36; max-width: none; }
   .dt-frame-badge { left: 14px; top: 14px; height: 26px; padding: 0 10px; font-size: .7rem; }
   .dt-frame-ctrl { top: 10px; right: 10px; bottom: auto; }
   .dt-film-btn { height: 44px; font-size: .84rem; padding-right: 14px; gap: 8px; padding-left: 6px; }
@@ -514,6 +525,8 @@
   .dt-person-body { padding: 14px 14px 18px; }
   .dt-person-name { font-size: 1.15rem; }
   .dt-person-sub { font-size: .8rem; }
+  .dt-person-sub.is-split > span:not(.dt-sub-dot) { display: block; }
+  .dt-person-sub.is-split .dt-sub-dot { display: none; }
   .dt-person-len { left: 10px; top: 10px; height: 26px; padding: 0 9px; font-size: .78rem; }
   .dt-leader-card { grid-template-columns: 1fr; }
   .dt-leader-visual { min-height: 0; aspect-ratio: 1 / .78; }

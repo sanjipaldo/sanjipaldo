@@ -161,22 +161,38 @@
     eg.textContent = ''; eg.appendChild(sr); eg.appendChild(vis);
     chars.forEach(function (c, i) { c.style.setProperty('--ci', i); });
     accents.forEach(function (c, i) { c.style.setProperty('--ai', i); });
-    var accTimer = 0;
+    // egPlayed: 실제로 한 글자씩 새겨졌는지. 멈춤 상태에서 최종 모습만 보인 경우엔 false 로 두어,
+    // 나중에 '움직임 켜기'를 누르면 (보이는 중이면 바로, 아니면 화면에 들어올 때) 처음부터 새깁니다.
+    var accTimer = 0, egPlayed = false, egIn = false, egIO = null;
     var finish = function () { clearTimeout(accTimer); eg.classList.add('is-on', 'is-accent'); };
     var start = function () {
       if (motionOff()) { finish(); return; }
+      egPlayed = true;
+      if (egIO) egIO.disconnect();
       eg.classList.add('is-on');
       accTimer = setTimeout(function () { eg.classList.add('is-accent'); }, chars.length * 24 + 750);
     };
+    var rearm = function () { // 전환 없이 즉시 새기기 전 상태로
+      clearTimeout(accTimer);
+      eg.classList.add('is-reset');
+      eg.classList.remove('is-on', 'is-accent');
+      void eg.offsetWidth;
+      eg.classList.remove('is-reset');
+    };
     eg.classList.add('is-split');
     if (!hasIO || motionOff()) finish();
-    else {
-      var egIO = new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) { if (en.isIntersecting) { start(); egIO.disconnect(); } });
+    if (hasIO) {
+      egIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { egIn = en.isIntersecting; if (egIn) start(); });
       }, { rootMargin: '0px 0px -18% 0px', threshold: 0.2 });
       egIO.observe(eg);
     }
-    onMotion.push(function (off) { if (off) finish(); });
+    onMotion.push(function (off) {
+      if (off) { finish(); return; }
+      if (egPlayed || !hasIO) return;
+      rearm();
+      if (egIn) requestAnimationFrame(start);
+    });
   }
 
   /* ---------- 히어로 무대: 다섯 그룹사가 지주회사로 모여듭니다 ----------

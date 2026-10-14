@@ -272,6 +272,7 @@ main .note { color: var(--muted); }
 }
 
 /* 움직임 멈추기 — OS 설정과 관계없이 모션은 재생하고, 사용자가 '움직임 멈추기'를 고른 경우(html.motion-off)에만 멈춥니다 */
+html.motion-off .nw-hero-film { animation: none; }
 html.motion-off .nw-tab-ind { transition: none; }
 html.motion-off .nw-feature-wrap, html.motion-off .nw-feature-clip { transition: none; }
 html.motion-off .nw-item.is-entering { animation: none; }

@@ -40,6 +40,7 @@
     };
     var play = function () {
       if (motionOff()) { showStill(); return; }
+      brief.classList.add('is-armed'); // 멈춤 → 다시 켬, 키보드로 먼저 보인 뒤에도 다시 그려지도록
       reset();
       void brief.offsetWidth; // 되돌린 상태를 먼저 그린 뒤 재생
       brief.classList.add('is-play');
@@ -56,10 +57,13 @@
     else {
       brief.classList.add('is-armed');
       counts.forEach(function (el) { el.textContent = '0'; });
+    }
+    // 멈춤 상태로 열렸어도 관찰은 계속합니다 — 나중에 '움직임 켜기'를 누르면 보이는 동안 바로, 아니면 다시 들어올 때 재생
+    if (hasIO) {
       new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
           if (en.isIntersecting && en.intersectionRatio >= 0.3) {
-            if (!inView) { inView = true; play(); }
+            if (!inView) { inView = true; play(); } // 멈춤이면 play() 가 최종 상태로
           } else if (!en.isIntersecting && inView) {
             inView = false;
             if (!motionOff()) reset();
