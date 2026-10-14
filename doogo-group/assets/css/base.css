@@ -250,7 +250,7 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .mega-thumb { aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: var(--ivory-2); }
 .mega-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform .8s var(--ease); }
 .mega-item:hover .mega-thumb img { transform: scale(1.06); }
-.mega-area { font-weight: 700; font-size: 1.02rem; display: flex; align-items: baseline; gap: 6px; }
+.mega-area { font-weight: 700; font-size: .96rem; letter-spacing: -.035em; display: flex; align-items: baseline; gap: 5px; white-space: nowrap; } /* 6차: 분야 이름이 길어져(미디어 & 콘텐츠) 한 줄 유지 */
 .mega-area .num { font-family: var(--font-en); font-size: .72rem; color: var(--blue); font-weight: 600; }
 .mega-brand { font-family: var(--font-en); font-size: .7rem; letter-spacing: .04em; color: var(--muted); font-weight: 500; margin-top: -6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mega-desc { font-size: .82rem; line-height: 1.5; color: var(--muted); }
@@ -281,10 +281,12 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
   .mega-item { padding: 8px; }
   .mega-brand { font-size: .66rem; letter-spacing: .02em; }
   .mega-corp { font-size: .72rem; letter-spacing: -0.02em; } /* 'DOOGO HOLDINGS' 가 칸(약 100px) 안에 한 줄로 */
+  .mega-area { font-size: .9rem; letter-spacing: -.04em; gap: 4px; }
 }
 @media (max-width: 1180px) {
   .mega-inner { grid-template-columns: 1fr; gap: 20px; }
   .mega-intro p { margin-bottom: 8px; }
+  .mega-area { font-size: .9rem; letter-spacing: -.04em; gap: 4px; }
 }
 @media (max-width: 1024px) {
   .gnb, .mega { display: none; }

@@ -417,7 +417,8 @@ main .note { color: var(--muted); }
 .ab-site:hover .en { background-size: 100% 1px; }
 .ab-site:hover .ico { transform: translate(2px, -2px); }
 .ab-sub-go { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; margin-top: auto; padding-top: 12px; font-size: .9rem; font-weight: 600; color: var(--ink); }
-.ab-sub-area { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 6px; background: var(--blue-50); color: var(--blue-700); font-size: .8rem; font-weight: 700; }
+.ab-sub-area { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 6px; background: var(--blue-50); color: var(--blue-700); font-size: .8rem; font-weight: 700; white-space: nowrap; }
+.ab-sub-go-t { white-space: nowrap; }
 .ab-sub-go .ico { flex: none; width: 34px; height: 34px; margin-left: auto; padding: 9px; border-radius: 50%; background: var(--ivory); color: var(--ink); transition: background-color .3s var(--ease), color .3s var(--ease), transform .35s var(--ease); }
 .ab-sub-go:hover .ico, .ab-sub-card:hover .ab-sub-go .ico { background: var(--blue); color: #fff; }
 .ab-sub-go:hover .ico { transform: translateX(3px); }

@@ -109,7 +109,7 @@
 .bz-rail.is-in::after { transform: scaleX(1); }
 .bz-rail > li { position: relative; min-width: 0; }
 .bz-chain-note { margin-top: 12px; font-size: .86rem; line-height: 1.6; color: var(--muted); }
-.bz-rail a, .bz-rail-goal { position: relative; display: grid; align-content: start; justify-items: start; gap: 3px; height: 100%; padding: 32px 10px 4px 0; }
+.bz-rail a, .bz-rail-goal { position: relative; display: grid; align-content: start; justify-items: start; gap: 3px; height: 100%; padding: 32px 4px 4px 0; } /* 6차: 오른쪽 10→4px (긴 분야 이름 알약 자리) */
 .bz-rail-dot {
   position: absolute; left: 0; top: 0; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid var(--line);
   transition: border-color .4s var(--ease), background-color .3s var(--ease), transform .3s var(--ease);
@@ -121,6 +121,11 @@
 /* 이 단계를 맡은 사업 (카드 번호 01–07과 같은 체계) */
 .bz-rail-biz { margin-top: 10px; display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--ivory); color: var(--ink-2); font-size: .8rem; font-weight: 700; white-space: nowrap; transition: background-color .25s var(--ease), color .25s var(--ease); }
 .bz-rail-biz .en { font-size: .74rem; color: var(--blue); transition: color .25s var(--ease); }
+/* 6차: 분야 이름이 길어져(미디어 & 콘텐츠 · 공간 & 숙박업) 칸보다 넓으면 알약 안에서 글줄처럼 두 줄로 — 옆 칸을 덮지 않게
+   (한 줄일 때 높이 28px · 생김새는 그대로) */
+.bz-rail-biz { display: inline-block; height: auto; padding: 6px 9px; border-radius: 14px; line-height: 16px; white-space: normal; word-break: keep-all; }
+.bz-rail-biz .en { margin-right: 3px; }
+.bz-rail-biz svg { display: inline-block; margin-left: 3px; vertical-align: -1px; }
 .bz-rail-biz svg { width: 12px; height: 12px; opacity: .6; transition: transform .3s var(--ease); }
 .bz-rail-biz.is-goal { background: var(--blue-50); color: var(--blue-700); }
 .bz-rail a:hover strong, .bz-rail a:focus-visible strong { color: var(--blue); }
@@ -243,7 +248,7 @@
   .bz-jump { gap: 8px; }
   .bz-jump-item { min-height: 112px; padding: 14px 12px 16px; gap: 14px 6px; }
   .bz-jump-ico { width: 22px; height: 22px; }
-  .bz-jump-txt strong { font-size: 1.08rem; }
+  .bz-jump-txt strong { font-size: .98rem; letter-spacing: -.045em; white-space: nowrap; } /* 6차: '미디어 & 콘텐츠'가 칸 안에서 한 줄로 */
   .bz-jump-txt .en { font-size: .66rem; letter-spacing: .04em; }
   .bz-jump-item::after { left: 12px; right: 12px; }
   .bz-chain-inner { grid-template-columns: 1fr; }
@@ -253,7 +258,7 @@
   .bz-jump { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
   .bz-jump-item { padding: 16px 16px 18px; gap: 18px 8px; }
   .bz-jump-ico { width: 24px; height: 24px; }
-  .bz-jump-txt strong { font-size: 1.2rem; }
+  .bz-jump-txt strong { font-size: 1.2rem; letter-spacing: -.03em; }
   .bz-jump-txt .en { font-size: .72rem; letter-spacing: .08em; }
   .bz-jump-item::after { left: 16px; right: 16px; }
 }

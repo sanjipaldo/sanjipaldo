@@ -224,21 +224,25 @@
       var p = pair.split('|'); return { label: (p[0] || '').trim(), href: (p[1] || '').trim() };
     }).filter(function (o) { return o.label && o.href; });
   }
+  // 사업 이름 + '사업': '교육업'·'공간 & 숙박업'처럼 이미 '업'으로 끝나거나 '&'로 묶인 이름은 '사업'을 붙이지 않음
+  function bizName(l) { return /업$|&/.test(l) ? l : l + ' 사업'; }
   function fill(i) {
     var d = cards[i].dataset;
     var links = parseLinks(d.links);
     var first = links[0] || { label: '', href: 'business.html' };
-    var map = { name: d.name, co: d.co, tag: d.tag || '', field: d.field, area: first.label, note: d.note || '', quote: d.quote || '', idx: pad(i + 1) };
+    var map = { name: d.name, co: d.co, tag: d.tag || '', field: d.field, area: bizName(first.label), note: d.note || '', quote: d.quote || '', idx: pad(i + 1) };
     Object.keys(map).forEach(function (k) { $$('[data-m="' + k + '"]', modal).forEach(function (el) { el.textContent = map[k]; }); });
-    // 사업영역: 연결된 사업 페이지 링크 (DOOGO HOLDINGS 는 교육 · 유통 두 개)
+    // 사업영역: 연결된 사업 페이지 링크 (DOOGO HOLDINGS 는 교육업 · 유통 두 개)
+    //  분야와 사업영역 이름이 같으면(공간 & 숙박업 · 미디어 & 콘텐츠 · 마케팅) 같은 말이 겹치지 않게 이 줄을 숨김 — 아래 버튼으로 이동
     if (areasBox) {
       areasBox.innerHTML = '';
       links.forEach(function (o) {
         var a = document.createElement('a');
         a.className = 'ld-m-area'; a.href = o.href;
-        a.innerHTML = '<span>' + o.label + ' 사업 페이지</span>' + arrowSvg;
+        a.innerHTML = '<span>' + bizName(o.label) + ' 페이지</span>' + arrowSvg;
         areasBox.appendChild(a);
       });
+      areasBox.parentNode.hidden = links.length === 1 && links[0].label === d.field;
     }
     $$('[data-m-link]', modal).forEach(function (a) { a.setAttribute('href', first.href); });
     // 있는 정보만 보여 줌

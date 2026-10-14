@@ -12,8 +12,10 @@
      (HTML을 직접 고쳐도 되지만, 그 뒤에 이 스크립트를 다시 실행하면 덮어써집니다.)
    - 헤더/푸터는 partials/ 내용을 그대로 넣습니다(sync-partials.mjs와 같은 결과).
    - 그룹 구성(3차 확정): 지주회사 DOOGO HOLDINGS가 교육(DOOGO CLASS)과 유통(DOOGOFOOD)을 직접 운영하고,
-     그룹사 5곳(DOOGO SPACE 공간 · DOOGO MEDIA 콘텐츠 · DOOGO MAKERS 브랜드 · DOOGO AD 마케팅 · DOOGOBIO 건기식 제조)이
+     그룹사 5곳(DOOGO SPACE 공간 & 숙박업 · DOOGO MEDIA 미디어 & 콘텐츠 · DOOGO MAKERS 브랜드 · DOOGO AD 마케팅 · DOOGOBIO 건기식 제조)이
      나머지 사업을 맡습니다. 사업별 운영 회사·대표는 BIZ[].corp (화면의 회사·브랜드 이름은 모두 영문 표기)
+   - 사업 분야 이름(6차 확정): 교육업 · 제조업 · 커머스 · 미디어 & 콘텐츠 · 마케팅 · 유통 · 공간 & 숙박업 (BIZ[].area — HTML 문구라 &는 &amp;로 씀)
+     그룹사 분야 라벨(corp.field)이 사업 분야 이름과 같으면 운영 회사 칩에서 분야를 다시 쓰지 않습니다(corpChip).
    - 사진: assets/img/photo/{name}.webp (AI로 만든 예시 · 실제 사진으로 교체 예정) — PHOTO 표의 크기·alt와 함께 사용
      BIZ[].hero {f 사진 이름, fx/fy 데스크톱 초점, mx 모바일 가로 초점} — 상세 첫 화면 + business.html 첫 화면 슬라이드
      BIZ[].gallery 현장 2장(사진 또는 3D 렌더, 히어로와 같은 사진이면 zoom/focus로 확대 디테일 컷)
@@ -48,8 +50,8 @@ const ARROW = ico('i-arrow', 'ico ico-arrow');
 const ARROW_UR = ico('i-arrow-ur', 'ico');
 const CHECK = ico('i-check', 'ico');
 const NEWWIN = '<span class="sr-only">(새 창)</span>';
-// 브랜드명이 줄바꿈으로 갈라지지 않게 (화면 문구에만 사용 — 속성값에는 쓰지 말 것)
-const nw = (t) => t.replace(/DOOGO (?:HOLDINGS|CLASS|SPACE|MEDIA|MAKERS|AD)|DOOGOFOOD|DOOGOBIO|NORA STAY|두고커넥트/g, (m) => `<span class="nowrap">${m}</span>`);
+// 브랜드명·'&'로 묶인 사업 분야 이름이 줄바꿈으로 갈라지지 않게 (화면 문구에만 사용 — 속성값에는 쓰지 말 것)
+const nw = (t) => t.replace(/DOOGO (?:HOLDINGS|CLASS|SPACE|MEDIA|MAKERS|AD)|DOOGOFOOD|DOOGOBIO|NORA STAY|두고커넥트|미디어 &amp; 콘텐츠|공간 &amp; 숙박업/g, (m) => `<span class="nowrap">${m}</span>`);
 const DOWN = ico('i-arrow', 'ico ico-arrow ico-down');
 // 문의 페이지: 분야를 미리 고른 상태로 양식(#inquiry)까지 바로 내려가게 (contact.html 자신의 분야 칩과 같은 형식)
 const ASK = (type) => `contact.html?type=${type}#inquiry`;
@@ -103,7 +105,8 @@ const photo = (name, extra = {}) => ({ kind: 'photo', src: `assets/img/photo/${n
 const render = (name, extra = {}) => ({ kind: 'render', src: `assets/img/3d/${name}.webp`, ...RENDER[name], ...extra });
 
 // 운영 회사 표시: 영문 회사명 + 칩(지주회사 직접 운영 / 그룹사 분야 라벨 · 해외 거점)
-const corpChip = (c) => (c.direct ? `${c.type} · 직접 운영` : c.field + (c.place ? ` · ${c.place}` : ''));
+// area 를 주면(사업 분야 이름 옆에 붙는 칩) 분야 라벨이 그 이름과 같을 때 분야를 다시 쓰지 않음 — 남는 글자가 없으면 칩 자체를 생략
+const corpChip = (c, area) => (c.direct ? `${c.type} · 직접 운영` : [c.field === area ? '' : c.field, c.place || ''].filter(Boolean).join(' · '));
 
 // 페이지 전용 아이콘 (24×24, 선 1.7)
 const SVC_ICONS = {
@@ -138,7 +141,7 @@ const SPRITE = `<svg class="sr-only" aria-hidden="true" focusable="false">\n${Ob
 /* ---------- 7개 사업 데이터 (순서 고정: 교육이 첫 번째) ---------- */
 const BIZ = [
   {
-    slug: 'campus', num: '01', area: '교육', en: 'DOOGO CLASS', chain: 'Education', icon: 'i-campus',
+    slug: 'campus', num: '01', area: '교육업', en: 'DOOGO CLASS', chain: 'Education', icon: 'i-campus',
     corp: HOLD,
     defLabel: '교육 플랫폼', def: '사람을 성장시키고, 새로운 사업과 브랜드를 만듭니다.',
     role: '경험과 노하우를 나누고, 새로운 사업과 브랜드의 시작을 돕습니다.',
@@ -164,7 +167,7 @@ const BIZ = [
     relNav: '강사·과정',
   },
   {
-    slug: 'bio', num: '02', area: '제조', en: 'DOOGOBIO', chain: 'Product', icon: 'i-bio',
+    slug: 'bio', num: '02', area: '제조업', en: 'DOOGOBIO', chain: 'Product', icon: 'i-bio',
     corp: { en: 'DOOGOBIO', field: '건기식 제조', place: '뉴질랜드', ceo: '백영호', key: 'bio' },
     scope: '제품 개발 · 소량 제조 · 패키지·인쇄',
     defLabel: '건강식품 제조', def: '뉴질랜드 건강식품 소량 제조 및 인쇄까지, 좋은 제품을 만듭니다.',
@@ -219,10 +222,10 @@ const BIZ = [
     relNav: '성장 단계',
   },
   {
-    slug: 'media', num: '04', area: '미디어', en: 'DOOGO MEDIA', chain: 'Content', icon: 'i-media',
-    corp: { en: 'DOOGO MEDIA', field: '콘텐츠', ceo: '김윤정', key: 'media' },
+    slug: 'media', num: '04', area: '미디어 &amp; 콘텐츠', en: 'DOOGO MEDIA', chain: 'Content', icon: 'i-media',
+    corp: { en: 'DOOGO MEDIA', field: '미디어 &amp; 콘텐츠', ceo: '김윤정', key: 'media' },
     scope: '촬영 · 유튜브 · 라이브 콘텐츠',
-    defLabel: '미디어 & 콘텐츠', def: '사람을 모으고, 브랜드를 키우는 미디어를 만듭니다.',
+    defLabel: '영상 제작', def: '사람을 모으고, 브랜드를 키우는 미디어를 만듭니다.',
     role: '사람과 브랜드의 가치를 영상과 콘텐츠로 전합니다.',
     services: ['촬영', '유튜브 콘텐츠', '라이브 콘텐츠 제작'],
     targets: ['콘텐츠로 고객을 모으려는 브랜드', '강사·전문가'],
@@ -246,10 +249,10 @@ const BIZ = [
     relNav: '콘텐츠 형식',
   },
   {
-    slug: 'ad', num: '05', area: '광고', en: 'DOOGO AD', chain: 'Marketing', icon: 'i-ad',
+    slug: 'ad', num: '05', area: '마케팅', en: 'DOOGO AD', chain: 'Marketing', icon: 'i-ad',
     corp: { en: 'DOOGO AD', field: '마케팅', ceo: '김신용', key: 'ad', photo: 'leader-kim-sinyong' },
     scope: '네이버·쿠팡 광고 운영 · 소재 기획 · 성과 분석',
-    defLabel: '퍼포먼스 마케팅', def: '네이버·쿠팡을 중심으로 브랜드를 더 멀리 알립니다.',
+    defLabel: '퍼포먼스 광고', def: '네이버·쿠팡을 중심으로 브랜드를 더 멀리 알립니다.',
     role: '브랜드가 필요한 고객에게 닿도록 광고를 기획하고 운영합니다.',
     services: ['네이버·쿠팡 중심 광고 운영', '광고 소재 기획', '성과 분석'],
     targets: ['온라인으로 판매 중인 브랜드·셀러'],
@@ -298,10 +301,10 @@ const BIZ = [
     relNav: '도매 플랫폼',
   },
   {
-    slug: 'space', num: '07', area: '공간', en: 'DOOGO SPACE', chain: 'Space', icon: 'i-space',
-    corp: { en: 'DOOGO SPACE', field: '공간', ceo: '문성오', key: 'space', photo: 'leader-moon-sungoh' },
+    slug: 'space', num: '07', area: '공간 &amp; 숙박업', en: 'DOOGO SPACE', chain: 'Space', icon: 'i-space',
+    corp: { en: 'DOOGO SPACE', field: '공간 &amp; 숙박업', ceo: '문성오', key: 'space', photo: 'leader-moon-sungoh' },
     scope: '공유오피스 · 비상주 사무실 · 교육장 · NORA STAY',
-    defLabel: '공간 & 숙박', def: '공유오피스·비상주 사무실 그리고 NORA STAY를 통한 숙박 사업까지, 사람과 비즈니스를 위한 공간을 만듭니다.',
+    defLabel: '오피스 &amp; 스테이', def: '공유오피스·비상주 사무실 그리고 NORA STAY를 통한 숙박 사업까지, 사람과 비즈니스를 위한 공간을 만듭니다.',
     role: '함께 일하고 배우며, 쉬어갈 수 있는 공간을 만듭니다.',
     services: ['공유오피스', '비상주 사무실', '교육장 대여', '숙박 ‘NORA STAY’'],
     targets: ['작은 팀·1인 사업자', '교육·행사 주최자', '여행·출장객'],
@@ -403,9 +406,9 @@ const CTA_BAND = `  <section class="cta-band" aria-labelledby="cta-title">
     <div class="container">
       <span class="eyebrow">Contact</span>
       <h2 class="h2" id="cta-title" data-reveal style="margin-top:20px">다음 사업, 두고그룹과 함께 이야기해 보세요.</h2>
-      <p class="lead" data-reveal style="--d:.1s">교육·제조·커머스·미디어·광고·유통·공간, 그리고 그룹 제휴까지 하나의 창구로 접수합니다.</p>
+      <p class="lead" data-reveal style="--d:.1s">${BIZ.map(b => nw(b.area)).join(' · ')}, 그리고 그룹 제휴까지 하나의 창구로 접수합니다.</p>
       <div class="cta-chips" data-reveal style="--d:.15s">
-        ${[['campus', '교육'], ['bio', '제조'], ['commerce', '커머스'], ['media', '미디어'], ['ad', '광고'], ['food', '유통'], ['space', '공간'], ['partner', '그룹 제휴']].map(([t, l]) => `<a href="${ASK(t)}">${l}</a>`).join('')}
+        ${[...BIZ.map(b => [b.slug, b.area]), ['partner', '그룹 제휴']].map(([t, l]) => `<a href="${ASK(t)}">${l}</a>`).join('')}
       </div>
       <div class="cta-band-actions" data-reveal style="--d:.2s">
         <a class="btn btn--primary btn--lg" href="contact.html">사업 상담하기 ${ARROW}</a>
@@ -456,7 +459,7 @@ function buildList() {
             <span class="bz-stage en">${b.chain}</span>
           </div>
           <h3 class="bz-title" id="bz-t-${b.slug}" data-reveal style="--d:.05s"><span class="bz-area">${b.area}</span><span class="bz-brand"><span class="en">${b.en}</span></span></h3>
-          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong><span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp)}</span><span class="bz-corp-ceo">대표 <strong>${b.corp.ceo}</strong></span></p>
+          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong>${corpChip(b.corp, b.area) ? `<span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp, b.area)}</span>` : ''}<span class="bz-corp-ceo">대표 <strong>${b.corp.ceo}</strong></span></p>
           <!-- 운영 사이트 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
           <a class="bz-site" href="${b.web.url}" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s">${b.web.yt ? `<span>YouTube · ${b.web.host}</span>` : `<span class="en">${b.web.host}</span>`}${ARROW_UR}<span class="sr-only"> — ${b.web.name} ${b.web.yt ? '유튜브 채널' : b.web.site !== b.web.name ? `연결 사이트(${b.web.site})` : '사이트'}(새 창)</span></a>
           <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">${b.defLabel}</span>${nw(b.def)}</p>
@@ -563,7 +566,7 @@ ${CTA_BAND}`;
 
   return shell({
     title: '사업영역',
-    desc: '배우고, 만들고, 키우고. 지주회사 DOOGO HOLDINGS와 다섯 그룹사가 운영하는 교육·제조·커머스·미디어·광고·유통·공간, 7개 사업영역을 한 번에 소개합니다.',
+    desc: '배우고, 만들고, 키우고. 지주회사 DOOGO HOLDINGS와 다섯 그룹사가 운영하는 교육업 · 제조업 · 커머스 · 미디어 &amp; 콘텐츠 · 마케팅 · 유통 · 공간 &amp; 숙박업, 7개 사업영역을 한 번에 소개합니다.',
     css: 'business', js: 'business',
     bodyAttrs: 'data-page="business" data-header="overlay"',
     main,
@@ -623,14 +626,14 @@ ${people.map((p, i) => `        <li class="dt-person${p.photo ? ' has-photo' : '
   }),
   commerce: () => steps({
     eyebrow: 'Brand Growth', h2: ['기획에서 EXIT까지,', '브랜드 성장 4단계'],
-    lead: '브랜드를 만드는 데서 끝나지 않고, 운영과 성장을 거쳐 다음 단계까지 함께 설계합니다. 성장 단계에서는 그룹의 콘텐츠·광고·유통 사업과 연계할 수 있습니다.',
+    lead: '브랜드를 만드는 데서 끝나지 않고, 운영과 성장을 거쳐 다음 단계까지 함께 설계합니다. 성장 단계에서는 그룹의 콘텐츠·마케팅·유통 사업과 연계할 수 있습니다.',
     actions: `<a class="btn btn--white" href="${ASK('commerce')}">커머스 상담하기 ${ARROW}</a>`,
     label: '브랜드 성장 단계',
     goalLast: true,
     items: [
       { icon: 's-bulb', ko: '기획', en: 'Plan', desc: '시장과 고객을 살펴 브랜드 콘셉트와 첫 상품을 정합니다.' },
       { icon: 's-store', ko: '운영', en: 'Operate', desc: '판매 채널을 열고 상품과 고객 응대를 안정적으로 운영합니다.' },
-      { icon: 's-growth', ko: '성장', en: 'Grow', desc: '콘텐츠·광고·유통과 연계해 판매를 넓힙니다.', links: [['business-media.html', '미디어'], ['business-ad.html', '광고'], ['business-food.html', '유통']] },
+      { icon: 's-growth', ko: '성장', en: 'Grow', desc: '콘텐츠·마케팅·유통과 연계해 판매를 넓힙니다.', links: [['business-media.html', '미디어 &amp; 콘텐츠'], ['business-ad.html', '마케팅'], ['business-food.html', '유통']] },
       { icon: 's-flag', ko: 'EXIT', en: 'Exit', desc: '브랜드의 가치를 정리해 다음 단계로 연결합니다.' },
     ],
   }),
@@ -822,7 +825,8 @@ function buildDetail(b, idx) {
   const hp = PHOTO[h.f];
 
   // 운영 회사 알약: [운영] 영문 회사명 [지주회사 · 직접 운영 | 분야 라벨] → 그룹 구조로 연결
-  const corpPill = `<a class="dt-corp${c.direct ? ' is-hold' : ''}" href="about.html#structure"><span class="dt-corp-k">운영</span><span class="dt-corp-n en">${c.en}</span><span class="dt-corp-type">${corpChip(c)}</span><span class="sr-only"> — 그룹 구조 보기</span></a>`;
+  //  (분야 라벨이 사업 분야 이름과 같아 칩이 없으면 is-group — 오른쪽 여백을 맞추고 앞에 점 표시)
+  const corpPill = `<a class="dt-corp${c.direct ? ' is-hold' : corpChip(c, b.area) ? '' : ' is-group'}" href="about.html#structure"><span class="dt-corp-k">운영</span><span class="dt-corp-n en">${c.en}</span>${corpChip(c, b.area) ? `<span class="dt-corp-type">${corpChip(c, b.area)}</span>` : ''}<span class="sr-only"> — 그룹 구조 보기</span></a>`;
 
   // 현장: 사진 2장 또는 사진 + 브랜드 3D 렌더 (모두 AI로 만든 예시)
   //  히어로와 같은 사진을 큰 칸에 쓸 때는 zoom/focus로 확대한 '디테일 컷'으로 보여 줘 반복을 피함
@@ -845,18 +849,18 @@ function buildDetail(b, idx) {
         </div>`
     : `<div class="pcard-ph is-empty" aria-hidden="true"><span class="pcard-sil"></span><span class="pcard-soon">사진 준비 중</span></div>`;
   const leaderLead = c.direct
-    ? `지주회사 <span class="nowrap">${c.en}</span>의 대표로, ${b.area} 사업 <span class="nowrap">${b.en}</span>를 직접 운영하며 그룹 총괄 운영을 이끕니다.`
-    : `${b.area} 사업은 그룹사 <span class="nowrap">${c.en}</span>가 맡고, ${c.ceo} 대표가 이끌고 있습니다.`;
+    ? `지주회사 <span class="nowrap">${c.en}</span>의 대표로, ${nw(b.area)} 분야의 <span class="nowrap">${b.en}</span>를 직접 운영하며 그룹 총괄 운영을 이끕니다.`
+    : `${nw(b.area)} 분야는 그룹사 <span class="nowrap">${c.en}</span>가 맡고, ${c.ceo} 대표가 이끌고 있습니다.`;
   // 회사 줄: 영문 회사명(공통 .pcard-co) + 지주회사 / 해외 거점 칩 — 분야는 그 아래 .pcard-field 한 줄
   const leaderTag = c.direct ? `<span class="dt-corp-type is-hold">${c.type}</span>` : c.place ? `<span class="dt-corp-type is-place">${c.place}</span>` : '';
   const leaderBody = `<h3 class="pcard-name" id="leader-name">${c.ceo} <small>대표</small></h3>
           <p class="dt-leader-co"><span class="pcard-co en">${c.en}</span>${leaderTag}</p>
           <p class="pcard-field"><span class="sr-only">분야 </span>${c.field}</p>
 ${c.direct ? `          <blockquote class="dt-leader-quote"><p>“제품과 브랜드, 그리고 사람의 성장이 이어지는 사업을 만듭니다.”</p></blockquote>
-` : `          <p class="dt-leader-role"><span class="dt-leader-role-k">${b.area} 사업</span>${b.role}</p>
+` : `          <p class="dt-leader-role"><span class="dt-leader-role-k">하는 일</span>${b.role}</p>
 `}          <div class="dt-leader-more">
             <dl class="dt-leader-dl">
-${c.direct ? `              <div><dt>직접 운영</dt><dd class="dt-dd-chips"><span class="dt-dd-chip${b.slug === 'campus' ? ' is-cur' : ''}"><span class="en">DOOGO CLASS</span>교육</span><span class="dt-dd-chip${b.slug === 'food' ? ' is-cur' : ''}"><span class="en">DOOGOFOOD</span>유통</span></dd></div>
+${c.direct ? `              <div><dt>직접 운영</dt><dd class="dt-dd-chips"><span class="dt-dd-chip${b.slug === 'campus' ? ' is-cur' : ''}"><span class="en">DOOGO CLASS</span>교육업</span><span class="dt-dd-chip${b.slug === 'food' ? ' is-cur' : ''}"><span class="en">DOOGOFOOD</span>유통</span></dd></div>
               <div><dt>강의</dt><dd><span class="en nowrap">DOOGO CLASS</span> ‘문대표’ · 뉴질랜드 건기식 브랜딩</dd></div>`
     : `              <div><dt>주요 서비스</dt><dd class="dt-dd-chips">${b.scope.split(' · ').map(x => `<span class="dt-dd-chip is-svc">${nw(x)}</span>`).join('')}</dd></div>`}
             </dl>
@@ -953,7 +957,7 @@ ${webBlock(b)}
       <div class="sec-head sec-head--split">
         <div>
           <span class="eyebrow" data-reveal="fade">On Site</span>
-          <h2 class="h2" id="scene-title" data-lines style="margin-top:20px"><span class="line"><span>현장에서 보는 ${b.area}</span></span></h2>
+          <h2 class="h2" id="scene-title" data-lines style="margin-top:20px"><span class="line"><span>현장에서 보는 ${nw(b.area)}</span></span></h2>
         </div>
         <p class="lead" data-reveal style="--d:.15s">${b.sceneLead}</p>
       </div>
@@ -995,7 +999,7 @@ ${REL[b.slug]()}
         <div class="dt-ask-copy">
           <span class="eyebrow">Inquiry · ${b.area}</span>
           <h2 class="dt-ask-title" id="ask-title"><span class="en nowrap">${b.en}</span>와 함께할<br> 일을 알려 주세요.</h2>
-          <p class="dt-ask-desc">문의 분야가 ‘${b.area}’${euro(b.area)} 선택된 상태로 접수 화면이 열립니다. 담당자가 확인한 뒤 남겨 주신 연락처로 회신합니다.</p>
+          <p class="dt-ask-desc">문의 분야가 ‘${nw(b.area)}’${euro(b.area)} 선택된 상태로 접수 화면이 열립니다. 담당자가 확인한 뒤 남겨 주신 연락처로 회신합니다.</p>
         </div>
         <div class="dt-ask-actions">
           <a class="btn btn--white btn--lg" href="${ASK(b.slug)}">${b.ask} ${ARROW}</a>
@@ -1037,7 +1041,7 @@ ${CTA_BAND}`;
   return shell({
     title: `${b.area} · ${b.en}`,
     // 회사 이름은 한 번만: 직접 운영 사업은 '운영 회사 직접 운영', 그룹사 사업은 회사 이름이 곧 브랜드라 생략
-    desc: `${b.en} — 두고그룹 ${b.area} 사업 (${c.direct ? `${c.en} 직접 운영 · ` : ''}대표 ${c.ceo}). ${b.role} ${b.def}`,
+    desc: `${b.en} — 두고그룹 ${b.area} 분야 (${c.direct ? `${c.en} 직접 운영 · ` : ''}대표 ${c.ceo}). ${b.role} ${b.def}`,
     css: 'business-detail', js: 'business-detail',
     bodyAttrs: `data-page="business-${b.slug}"`,
     main,

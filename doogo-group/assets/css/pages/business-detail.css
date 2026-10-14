@@ -578,6 +578,7 @@
   .dt-ask-actions { grid-auto-flow: row; justify-content: stretch; }
   .dt-ask-actions .btn { width: 100%; }
   .dt-pager-card, .dt-pager-card.is-next { grid-template-columns: 112px minmax(0, 1fr); padding: 10px; }
+  .dt-pager-name { gap: 8px; font-size: clamp(1.2rem, 5.6vw, 1.5rem); white-space: nowrap; } /* 6차: 긴 분야 이름 한 줄 */
   .dt-pager-card.is-next .dt-pager-media { order: 0; }
   .dt-pager-card.is-next .dt-pager-body { align-items: flex-start; text-align: left; }
   .dt-others-list small { display: none; }
