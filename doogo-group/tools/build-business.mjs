@@ -84,7 +84,7 @@ const PEOPLE = 'assets/img/people';
 const ttl = (c) => c.title || '대표이사';
 const peopleSrcset = (name) => `${PEOPLE}/${name}-600.webp 600w, ${PEOPLE}/${name}.webp 900w`;
 // 지주회사가 직접 운영하는 사업(교육·유통)의 운영 회사
-const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '교육 및 총괄 운영', field: '교육 · 총괄 운영', ceo: '문원오', photo: 'leader-moon-wonoh', anchor: 'ceo' };
+const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '교육 · 그룹 경영 · 투자 및 성장 지원', field: '교육 · 그룹 경영 · 투자 및 성장 지원', ceo: '문원오', photo: 'leader-moon-wonoh', anchor: 'ceo' };
 const AI_NOTE = 'AI로 만든 예시 이미지 · 실제 사진으로 교체 예정';
 
 /* ---------- 이미지 (AI 생성 예시) ---------- */

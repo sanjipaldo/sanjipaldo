@@ -506,7 +506,17 @@
   /* ---------- 다른 페이지로 넘어오면 늘 맨 위에서 시작 (주소에 #앵커가 없을 때) ---------- */
   if (!location.hash) {
     try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
-    window.scrollTo(0, 0);
+    var toTop = function () {
+      window.scrollTo(0, 0);
+      /* 미리보기 앱처럼 바깥 화면이 대신 스크롤되는 환경에서도 맨 위가 보이도록 */
+      try { doc.scrollIntoView({ block: 'start', inline: 'nearest' }); } catch (e) {}
+    };
+    toTop();
+    window.addEventListener('load', function () { if (window.scrollY < 4 || !window.__userScrolled) toTop(); });
+    window.addEventListener('pageshow', function (e) { if (e.persisted) toTop(); });
+    ['wheel', 'touchmove', 'keydown'].forEach(function (t) {
+      window.addEventListener(t, function () { window.__userScrolled = true; }, { once: true, passive: true });
+    });
   }
 
   /* ---------- 연도 ---------- */
