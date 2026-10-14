@@ -1,6 +1,6 @@
 /* =========================================================
    DOOGO GROUP — business.css (사업영역 목록)
-   사진 첫 화면(7개 사업 크로스페이드) + 사업 바로가기 · 가치사슬 띠 · 7개 사업 카드(사진 · 운영 법인)
+   사진 첫 화면(7개 사업 크로스페이드) + 사업 바로가기 · 가치사슬 띠 · 7개 사업 카드(사진 · 운영 회사)
    ========================================================= */
 
 /* 서브 내비 번호: 작은 글씨라 투명도 대신 대비가 충분한 색(흰 바탕 위 블루, 활성 탭의 남색 위 밝은 블루) */
@@ -183,16 +183,28 @@
 .bz-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .bz-num { font-size: clamp(2.6rem, 4.4vw, 4.4rem); font-weight: 500; line-height: .9; letter-spacing: -.045em; color: var(--blue); }
 .bz-stage { font-size: .74rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); padding-left: 14px; border-left: 1px solid rgba(11, 27, 51, .16); line-height: 1.2; }
+/* 직접 운영 사업의 서비스 주소 (DOOGO CLASS · DOOGOFOOD) — 번호 줄 오른쪽 */
+.bz-site {
+  position: relative; margin-left: auto; display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px 0 14px; border-radius: 999px;
+  background: #fff; border: 1px solid rgba(10, 93, 226, .2); color: var(--ink-2); font-size: .84rem; font-weight: 600; letter-spacing: .02em;
+  transition: background-color .3s var(--ease), border-color .3s var(--ease), color .3s var(--ease);
+}
+.bz-site::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: #1DB97A; box-shadow: 0 0 0 3px rgba(29, 185, 122, .18); }
+.bz-site::after { content: ""; position: absolute; inset: -3px -2px; }
+.bz-site svg { width: 13px; height: 13px; color: var(--blue); transition: transform .3s var(--ease), color .3s var(--ease); }
+.bz-site:hover, .bz-site:focus-visible { background: var(--blue); border-color: var(--blue); color: #fff; }
+.bz-site:hover::before { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .25); }
+.bz-site:hover svg, .bz-site:focus-visible svg { color: #fff; transform: translate(2px, -2px); }
 
 .bz-title { margin-top: clamp(22px, 2.6vw, 36px); display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
 .bz-area { font-size: clamp(2.1rem, 3.4vw, 3.1rem); font-weight: 800; line-height: 1.1; letter-spacing: -.045em; }
 .bz-brand { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .bz-brand .en { font-size: .95rem; font-weight: 600; letter-spacing: .14em; color: var(--ink-2); }
-.bz-brand-ko { font-size: .92rem; font-weight: 500; color: var(--muted); }
-/* 운영 법인 · 대표 */
+
+/* 운영 회사 · 대표 */
 .bz-corp { margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: .95rem; line-height: 1.4; color: var(--ink-2); }
 .bz-corp-k { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 6px; background: var(--blue); color: #fff; font-size: .74rem; font-weight: 700; }
-.bz-corp-n { font-weight: 700; color: var(--ink); letter-spacing: -.02em; }
+.bz-corp-n { font-weight: 600; color: var(--ink); letter-spacing: .04em; }
 .bz-corp-type { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 999px; border: 1px solid rgba(10, 93, 226, .28); color: var(--blue-700); font-size: .74rem; font-weight: 700; background: #fff; }
 .bz-corp-type.is-hold { background: var(--ink); border-color: var(--ink); color: #fff; }
 .bz-corp-ceo { position: relative; padding-left: 12px; font-size: .9rem; color: var(--muted); }
@@ -276,7 +288,14 @@
   .bz-media-quote { font-size: .95rem; }
   .bz-media-tag { left: 12px; top: 12px; height: 32px; font-size: .84rem; }
   .bz-title { margin-top: 16px; }
-  .bz-corp { margin-top: 12px; font-size: .9rem; gap: 6px 8px; }
+  .bz-corp { margin-top: 12px; font-size: .88rem; gap: 6px 7px; }
+  .bz-corp-n { letter-spacing: .01em; }
+  .bz-corp-type { padding: 0 8px; }
+  /* 서비스 주소는 번호 줄 아래 따로 (좁은 폭에서 오른쪽에 홀로 떨어지지 않게) */
+  .bz-top { gap: 12px 14px; }
+  .bz-top:has(.bz-site)::after { content: ""; order: 2; flex-basis: 100%; height: 0; }
+  .bz-site { order: 3; margin-left: 0; height: 34px; padding: 0 11px 0 12px; font-size: .78rem; }
+  .bz-site::after { inset: -5px -2px; }
   /* 대표 줄은 항상 따로: 줄이 넘어갈 때 앞에 세로 구분선만 남지 않게 */
   .bz-corp-ceo { flex-basis: 100%; padding-left: 0; }
   .bz-corp-ceo::before { display: none; }
@@ -292,13 +311,14 @@
   .bz-actions { padding-top: 20px; gap: 8px; }
   .bz-actions .btn { flex: 1 1 auto; min-height: 50px; padding-inline: 18px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  /* 첫 화면 사진: 자동 넘김 없음(business.js) · 바로가기로 바꿀 때도 줌 없이 opacity만 */
-  .bz-slide, .bz-slide.is-on { transform: none !important; animation: none !important; }
-  .bz-slide.is-on { transition: opacity .5s linear; }
-  .js .bz-media[data-reveal] { clip-path: none !important; }
-  .js .bz-media[data-reveal] img { scale: 1 !important; }
-  .bz-card:hover .bz-media img { transform: none; }
-  .js .bz-hero-foot[data-reveal] .bz-jump li { opacity: 1 !important; transform: none !important; }
-  .bz-media-inner { transform: none !important; }
-}
+/* ---------- 움직임 정책 ----------
+   OS의 '애니메이션 줄이기' 설정과 관계없이 슬라이드·등장 모션은 재생합니다(site.js).
+   html.motion-off: 사용자가 '움직임 멈추기'를 고른 경우 — 자동 넘김 없음(business.js), 줌·열림 없이 바로 보임
+   html.soft-motion: OS 설정이 켜진 기기 — 스크롤 패럴랙스만 끔 */
+html.motion-off .bz-slide, html.motion-off .bz-slide.is-on { transform: none !important; animation: none !important; }
+html.motion-off .bz-slide.is-on { transition: opacity .5s linear !important; }
+html.motion-off .bz-media[data-reveal] { clip-path: none !important; }
+html.motion-off .bz-media[data-reveal] img { scale: 1 !important; }
+html.motion-off .bz-card:hover .bz-media img { transform: none; }
+html.motion-off .bz-hero-foot[data-reveal] .bz-jump li { opacity: 1 !important; transform: none !important; }
+html.motion-off .bz-media-inner, html.soft-motion .bz-media-inner { transform: none !important; }

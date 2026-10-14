@@ -1,12 +1,13 @@
 /* =========================================================
    DOOGO GROUP — home.js (메인 페이지 전용)
-   히어로 장면 표시기 · 인트로 단어 하이라이트 · 숫자 굴림
-   · 그룹 구조(자회사 카드 쌓기) · 사업영역 스티키 스토리(사진) · One Group 집결
-   · 브랜드 슬라이더 · 그룹소식 커버플로우 · 화면 밖 애니메이션 정지
+   히어로 장면 표시기 · 인트로 글자 새김 · 숫자 카운트(0부터)
+   · 그룹 구조(그룹사 카드 쌓기) · 사업영역 스티키 스토리(사진) · One Group 트리(DOOGO GROUP → 7개 사업)
+   · 리더십 한 줄 카드 · 브랜드 슬라이더 · 그룹소식 커버플로우 · 화면 밖 애니메이션 정지
+   움직임 정책: OS의 '애니메이션 줄이기' 설정과 관계없이 모든 모션을 재생합니다.
+   사용자가 '움직임 멈추기' 버튼(site.js)을 고른 경우에만 멈춥니다 → motionOff() · 'doogo:motion' 이벤트.
    ========================================================= */
 (function () {
   'use strict';
-  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var desktopMQ = window.matchMedia('(min-width: 1025px)');
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
@@ -15,6 +16,14 @@
   // play() 거절(자동재생 차단·연속 전환)로 콘솔 오류가 나지 않게
   function safePlay(v) { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
   function onMQ(mq, fn) { if (mq.addEventListener) mq.addEventListener('change', fn); else if (mq.addListener) mq.addListener(fn); }
+  // 사용자가 '움직임 멈추기'를 고른 경우만 true (site.js)
+  function motionOff() { return !!(window.DOOGO && window.DOOGO.motionOff && window.DOOGO.motionOff()); }
+  var motionFns = [];
+  function onMotion(fn) { motionFns.push(fn); }
+  document.addEventListener('doogo:motion', function (e) {
+    var off = !!(e && e.detail && e.detail.off);
+    motionFns.forEach(function (fn) { fn(off); });
+  });
 
   /* ---------- S1 히어로: 영상 장면 표시기 ----------
      각 .scene 버튼의 data-start / data-end(초)로 현재 장면을 계산합니다.
@@ -34,8 +43,8 @@
       if (!countEl) return;
       var en, ko;
       if (i >= 0) { en = ranges[i].en ? ranges[i].en.textContent : ''; ko = ranges[i].ko ? ranges[i].ko.textContent : ''; countEl.textContent = 'SCENE ' + (i + 1) + ' / ' + items.length; }
-      else if (t < ranges[0].start) { en = 'IDEA'; ko = '하나의 아이디어에서'; countEl.textContent = 'INTRO'; }
-      else { en = 'DOOGO GROUP'; ko = '일곱 사업이 하나로'; countEl.textContent = 'OUTRO'; }
+      else if (t < ranges[0].start) { en = 'IDEA'; ko = 'GOOD BUSINESS'; countEl.textContent = 'INTRO'; }
+      else { en = 'ONE GROUP'; ko = 'A BETTER TOMORROW'; countEl.textContent = 'OUTRO'; }
       enEl.textContent = en; koEl.textContent = ko;
     }
     function render() {
@@ -77,6 +86,15 @@
     var hero = video && video.closest('.hero');
     if (!hero) return;
     function clear() { hero.classList.remove('is-autoplay-blocked'); }
+    // 마크업의 autoplay 는 '움직임 멈추기'를 고른 경우에만 거둠 (OS 설정과 무관하게 자동재생)
+    if (motionOff()) { video.removeAttribute('autoplay'); video.autoplay = false; if (!video.paused) video.pause(); }
+    // 메타데이터만 받고 멈춰 있으면(일부 브라우저의 preload 제한) 데이터가 준비되는 대로 다시 재생 시도
+    video.addEventListener('canplay', function () {
+      if (video.paused && !motionOff() && video.dataset.userPaused !== '1') {
+        var r = video.getBoundingClientRect();
+        if (r.bottom > 0 && r.top < window.innerHeight) safePlay(video);
+      }
+    });
     // 자동재생이 정말 막히면 play 이벤트가 오지 않으므로, play/playing 이 오면 차단이 아님
     video.addEventListener('play', clear);
     video.addEventListener('playing', clear);
@@ -95,77 +113,155 @@
     });
   }
 
-  /* ---------- S2 인트로: 스크롤에 따라 단어가 차오름 ---------- */
-  function introWords() {
-    var el = $('[data-words]');
-    if (!el) return null;
-    var words = [];
-    function wrap(node, accent) {
+  /* ---------- S2 인트로: 글자가 하나씩 새겨지는 큰 문장 ----------
+     원문은 sr-only 로 한 번만 읽히고, 화면용 글자 조각(span.eg-c)은 aria-hidden.
+     단어(span.eg-w)는 줄바꿈되지 않게 묶고, '하나의 흐름으로'(data-accent)는 한 덩어리(span.eg-accent).
+     화면에 들어오면(.is-on) 글자마다 --ci × 26ms 지연으로 흐림→선명 · 아래→제자리 · 투명→잉크색,
+     다 새겨지면(.is-accent) '하나의 흐름으로'가 블루로 바뀌고 밑줄이 그려집니다.
+     화면 밖으로 완전히 나가면 처음 상태로 되돌려, 다시 들어올 때 다시 새깁니다. */
+  var EG_STEP = 26; // 글자당 지연(ms)
+  function engrave() {
+    var el = $('[data-engrave]');
+    if (!el) return;
+    var full = el.textContent.replace(/\s+/g, ' ').trim();
+    var vis = document.createElement('span');
+    vis.className = 'eg';
+    vis.setAttribute('aria-hidden', 'true');
+    var chars = [], accents = [];
+    function build(node, target, accent) {
       Array.prototype.slice.call(node.childNodes).forEach(function (n) {
         if (n.nodeType === 3) {
-          var frag = document.createDocumentFragment();
           n.textContent.split(/(\s+)/).forEach(function (part) {
             if (!part) return;
-            if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
-            var s = document.createElement('span');
-            s.className = 'w' + (accent ? ' w--accent' : '');
-            s.textContent = part;
-            frag.appendChild(s); words.push(s);
+            if (/^\s+$/.test(part)) { target.appendChild(document.createTextNode(' ')); return; }
+            var w = document.createElement('span');
+            w.className = 'eg-w';
+            Array.from(part).forEach(function (ch) {
+              var c = document.createElement('span');
+              c.className = 'eg-c';
+              c.textContent = ch;
+              w.appendChild(c); chars.push(c);
+              if (accent) accents.push(c);
+            });
+            target.appendChild(w);
           });
-          node.replaceChild(frag, n);
+        } else if (n.nodeName === 'BR') {
+          target.appendChild(n.cloneNode(false));
         } else if (n.nodeType === 1) {
-          wrap(n, accent || n.hasAttribute('data-accent'));
+          if (n.hasAttribute('data-accent')) {
+            var a = document.createElement('span');
+            a.className = 'eg-accent';
+            target.appendChild(a);
+            build(n, a, true);
+          } else build(n, target, accent);
         }
       });
     }
-    wrap(el, false);
+    build(el, vis, false);
+    var sr = document.createElement('span');
+    sr.className = 'sr-only';
+    sr.textContent = full;
+    el.textContent = '';
+    el.appendChild(sr);
+    el.appendChild(vis);
+    chars.forEach(function (c, i) { c.style.setProperty('--ci', i); });
+    accents.forEach(function (c, i) { c.style.setProperty('--ai', i); });
+    el.style.setProperty('--eg-n', chars.length);
     el.classList.add('is-split');
-    if (reduceMotion) { words.forEach(function (w) { w.classList.add('is-on'); }); return null; }
-    var lit = -1;
-    return function (vh) {
+
+    var accentT = 0;
+    var total = chars.length * EG_STEP + 700; // 마지막 글자가 자리 잡을 무렵 강조 시작
+    function play() {
+      if (el.classList.contains('is-on')) return;
+      el.classList.add('is-on');
+      clearTimeout(accentT);
+      if (motionOff()) { el.classList.add('is-accent'); return; }
+      accentT = setTimeout(function () { el.classList.add('is-accent'); }, total);
+    }
+    function reset() {
+      if (!el.classList.contains('is-on')) return;
+      clearTimeout(accentT);
+      el.classList.add('no-tr');
+      el.classList.remove('is-on', 'is-accent');
+      void el.offsetWidth;
+      el.classList.remove('no-tr');
+    }
+    if (!('IntersectionObserver' in window)) { el.classList.add('is-on', 'is-accent'); return; }
+    new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (motionOff()) { play(); return; }
+        if (en.isIntersecting && en.intersectionRatio >= 0.3) play();
+        else if (!en.isIntersecting) reset();
+      });
+    }, { threshold: [0, 0.3] }).observe(el);
+    onMotion(function (off) {
+      if (off) { clearTimeout(accentT); el.classList.add('is-on', 'is-accent'); return; }
+      // 다시 켰을 때 화면 밖이면 처음 상태로 → 들어올 때 다시 새김
       var r = el.getBoundingClientRect();
-      // 문장 위쪽이 화면 85% 지점에 오면 시작 → 문장 아래쪽이 45% 지점에 오면 끝
-      var p = (vh * 0.85 - r.top) / (vh * 0.4 + r.height);
-      var n = Math.round(clamp(p, 0, 1) * words.length);
-      if (n === lit) return;
-      lit = n;
-      words.forEach(function (w, i) { w.classList.toggle('is-on', i < n); });
-    };
+      if (r.bottom <= 0 || r.top >= window.innerHeight) reset();
+    });
   }
 
-  /* ---------- S2 숫자 4칸: 굴러 올라가는 숫자 + 선 그리기 ----------
-     칸이 화면에 절반쯤 들어오면 재생(.is-on), 화면 밖으로 완전히 나가면 0으로 되돌려
-     다시 들어올 때마다 처음부터 재생합니다. 움직임 줄이기면 최종 숫자만. */
-  function factsRoll() {
+  /* ---------- S2 숫자 4칸: 0부터 세어 올라가는 숫자 + 아래 선 그리기 ----------
+     숫자는 0 … n 이 세로로 쌓인 띠(.fact-reel)가 위로 올라가며 0부터 차례로 지나갑니다(약 1.8초, 칸마다 0.15초 지연).
+     칸이 화면에 30% 들어오면 재생(.is-on), 화면 밖으로 완전히 나가면 0으로 되돌려 다시 들어올 때마다 처음부터.
+     움직임 멈추기: 띠 없이 최종 숫자만. */
+  function factsCount() {
     var root = $('[data-facts]');
-    if (!root) return;
-    if (reduceMotion || !('IntersectionObserver' in window)) return; // 정적: 마크업의 숫자 그대로
-    $$('.fact-roll', root).forEach(function (el) {
-      var n = parseInt(el.getAttribute('data-roll'), 10) || 0;
-      var reel = document.createElement('span');
-      reel.className = 'fact-reel';
-      for (var d = 0; d <= n; d++) { var s = document.createElement('span'); s.textContent = d; reel.appendChild(s); }
-      el.textContent = '';
-      el.appendChild(reel);
-      el.style.setProperty('--n', n);
-      el.style.setProperty('--rd', (1.15 + n * 0.11).toFixed(2) + 's'); // 큰 숫자는 조금 더 길게 굴러감
-    });
-    root.classList.add('is-ready');
+    if (!root || !('IntersectionObserver' in window)) return;
+    var facts = $$('.fact', root);
+    var nums = $$('.fact-count', root);
+    var built = false;
+    function build() {
+      if (built) return;
+      built = true;
+      nums.forEach(function (el) {
+        var n = parseInt(el.getAttribute('data-to'), 10) || 0;
+        var reel = document.createElement('span');
+        reel.className = 'fact-reel';
+        for (var d = 0; d <= n; d++) { var s = document.createElement('span'); s.textContent = d; reel.appendChild(s); }
+        el.textContent = '';
+        el.appendChild(reel);
+        el.style.setProperty('--n', n);
+      });
+      root.classList.add('is-ready');
+    }
+    function unbuild() {
+      if (!built) return;
+      built = false;
+      nums.forEach(function (el) { el.textContent = el.getAttribute('data-to'); });
+      root.classList.remove('is-ready');
+      facts.forEach(function (f) { f.classList.remove('is-on'); });
+    }
+    if (!motionOff()) build();
     // 칸마다 관찰: 모바일 2×2 에서도 보이는 줄부터 재생
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
-        if (en.isIntersecting && en.intersectionRatio >= 0.45) en.target.classList.add('is-on');
+        if (!built) return;
+        if (en.isIntersecting && en.intersectionRatio >= 0.3) en.target.classList.add('is-on');
         else if (!en.isIntersecting) en.target.classList.remove('is-on');
       });
-    }, { threshold: [0, 0.45] });
-    $$('.fact', root).forEach(function (f) { io.observe(f); });
+    }, { threshold: [0, 0.3] });
+    facts.forEach(function (f) { io.observe(f); });
+    onMotion(function (off) {
+      if (off) unbuild();
+      else {
+        build();
+        // 지금 보이는 칸은 바로 다시 셈
+        facts.forEach(function (f) {
+          var r = f.getBoundingClientRect();
+          if (r.top < window.innerHeight * 0.85 && r.bottom > 0) requestAnimationFrame(function () { requestAnimationFrame(function () { f.classList.add('is-on'); }); });
+        });
+      }
+    });
   }
 
-  /* ---------- S3 그룹 구조: 자회사 카드 스티키 쌓기 ----------
+  /* ---------- S3 그룹 구조: 그룹사 카드 스티키 쌓기 ----------
      카드(li.gs-card)는 CSS sticky 로 한 장씩 올라와 겹칩니다.
      여기서는 스크롤 위치로 ① 아래 깔린 카드의 축소·어둡게 ② 들어오는 카드 이미지의 정착(1.08→1)
-     ③ 왼쪽 패널의 세로선 채움과 자회사 번호 채움(데스크톱) / 지주회사 카드의 세로선(1024px 이하)을 계산합니다.
-     transform·opacity 만 바꿉니다. */
+     ③ 왼쪽 패널의 세로선 채움과 그룹사 번호 채움(데스크톱) / 지주회사 카드의 세로선(1024px 이하)을 계산합니다.
+     transform·opacity 만 바꿉니다. 움직임 멈추기(html.motion-off)면 CSS 가 쌓지 않는 목록으로 바꾸고,
+     여기서는 선·번호를 모두 채운 정지 상태로 둡니다(전환 시 'doogo:motion' 으로 다시 계산). */
   function groupStack() {
     var root = $('[data-gs]');
     if (!root) return null;
@@ -182,17 +278,27 @@
     var n = cards.length;
     if (!n || !list) return null;
 
-    // 움직임 줄이기: 쌓지 않는 목록(CSS) · 선과 번호는 모두 채운 상태
-    if (reduceMotion) {
-      root.classList.add('is-static');
-      nodes.forEach(function (a) { a.classList.add('is-on'); });
-      return null;
-    }
     root.classList.add('is-live');
 
     var tops = [], hs = [], natural = [], nodeY = [0];
-    var measured = false, near = false;
+    var measured = false, near = false, isStatic = false;
     var prev = { scale: [], shade: [], img: [], fill: -1, conn: -1, on: -1, cur: -2, ghost: -1 };
+    function resetPrev() { prev = { scale: [], shade: [], img: [], fill: -1, conn: -1, on: -1, cur: -2, ghost: -1 }; }
+
+    // 움직임 멈추기: 쌓지 않는 목록(CSS) · 선과 번호는 모두 채운 상태
+    function setStatic() {
+      if (isStatic) return;
+      isStatic = true;
+      inners.forEach(function (el) { el.style.transform = ''; });
+      shades.forEach(function (el) { el.style.opacity = ''; });
+      imgs.forEach(function (el) { if (el) el.style.scale = ''; });
+      if (ghost) ghost.style.opacity = '';
+      if (fill) fill.style.transform = 'scaleY(1)';
+      if (conn) conn.style.transform = 'scaleY(1)';
+      nodes.forEach(function (a) { a.classList.add('is-on'); a.classList.remove('is-current'); });
+      root.style.removeProperty('--gs-eq');
+      resetPrev();
+    }
 
     function measure() {
       // 1024px 이하(카드 높이 auto): 다섯 장을 가장 큰 카드 높이로 맞춤
@@ -212,7 +318,7 @@
         natural[i] = y;
         y += hs[i] + gap;
       });
-      // 세로선 위 자회사 점의 위치(선 길이 대비 0~1)
+      // 세로선 위 그룹사 점의 위치(선 길이 대비 0~1)
       if (fill) {
         var lr = fill.parentNode.getBoundingClientRect();
         var lh = lr.height || 1;
@@ -244,6 +350,8 @@
     }
 
     function update(vh) {
+      if (motionOff()) { setStatic(); return; }
+      isStatic = false;
       if (!near) return;
       if (!measured) measure();
       var desk = desktopMQ.matches;
@@ -279,7 +387,7 @@
         setFill(lineAt(s));
         setNodes(on, on - 1);
       } else {
-        // 1024px 이하: 지주회사 카드가 지나가는 동안 세로선이 자회사 쪽으로 그려짐
+        // 1024px 이하: 지주회사 카드가 지나가는 동안 세로선이 그룹사 쪽으로 그려짐
         var t = clamp((vh * 0.85 - pr.top) / (pr.height * 0.95), 0, 1);
         setFill(lineAt(t * n));
         setNodes(Math.floor(t * n + 0.02), -1);
@@ -290,12 +398,12 @@
       }
     }
 
-    // 자회사 바로가기: 해당 카드가 맨 위에 막 쌓인 위치로 이동
+    // 그룹사 바로가기: 해당 카드가 맨 위에 막 쌓인 위치로 이동
     nodes.forEach(function (a, i) {
       a.addEventListener('click', function (e) {
         e.preventDefault();
         measure();
-        window.scrollTo({ top: Math.max(0, natural[i] - tops[i] + 1), behavior: 'smooth' });
+        window.scrollTo({ top: Math.max(0, natural[i] - tops[i] + 1), behavior: motionOff() ? 'auto' : 'smooth' });
         inners[i].setAttribute('tabindex', '-1');
         inners[i].focus({ preventScroll: true });
       });
@@ -321,11 +429,13 @@
       }, { rootMargin: '200px 0px' }).observe(root);
     } else near = true;
     var rt;
-    function remeasure() { measured = false; prev.fill = -1; prev.conn = -1; if (near) update(window.innerHeight); }
+    function remeasure() { measured = false; prev.fill = -1; prev.conn = -1; update(window.innerHeight); }
     window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(remeasure, 120); });
     window.addEventListener('load', remeasure);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(remeasure);
     onMQ(desktopMQ, remeasure);
+    onMotion(function () { resetPrev(); requestAnimationFrame(remeasure); });
+    if (motionOff()) setStatic();
     return update;
   }
 
@@ -344,7 +454,7 @@
     var frame = $('.biz-frame', root);
     var labelEl = $('[data-biz-label]', root);
     var active = -1, centerIdx = -1, lastScroll = 0, px = null, py = null;
-    var seen = reduceMotion || !('IntersectionObserver' in window);
+    var seen = !('IntersectionObserver' in window);
 
     function setActive(i) {
       if (i === active || i < 0) return;
@@ -403,7 +513,7 @@
 
     // 1024px 이하 카드 사진: 들어올 때 천천히 자리 잡음
     var medias = $$('.biz-row-media', root);
-    if ('IntersectionObserver' in window && !reduceMotion) {
+    if ('IntersectionObserver' in window) {
       var mio = new IntersectionObserver(function (entries) {
         entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('is-in'); mio.unobserve(en.target); } });
       }, { rootMargin: '0px 0px -10% 0px' });
@@ -413,36 +523,232 @@
     return update;
   }
 
-  /* ---------- S5 One Group: 일곱 사업이 가운데로 모임(집결) ----------
-     무대가 화면에 충분히 들어오면 .is-in → CSS 가 노드 모임 → 선 그리기 → 빛 점 흐름 → 파동을 차례로 재생.
-     화면 밖으로 완전히 나가면 전환 없이 처음 상태로 되돌려, 다시 들어올 때마다 다시 모입니다. */
-  function converge() {
-    var root = $('[data-cv]');
+  /* ---------- S5 One Group: 위의 DOOGO GROUP → 아래 7개 사업 트리 ----------
+     실제 노드 위치를 재서 선(SVG path)과 빛 점 경로를 만듭니다(px 좌표 · 크기가 바뀌면 다시 만듦).
+     - 760px 초과: 짧은 줄기 → 7개 가지(곡선)가 각 노드 윗면으로
+     - 760px 이하: 가운데 세로 줄기 → 좌우 노드 안쪽 면으로 가지 · 일곱 번째는 줄기 끝
+     재생(.is-in): ① 줄기·가지가 위에서 아래로 그려지고(지연·길이는 여기서 path 마다 지정)
+     ② 선이 닿는 순간 노드가 왼쪽부터 차례로 켜지며(.is-lit) ③ 다 켜지면 빛 점이 계속 흐르고(.is-flow) ④ 위 노드에 파동(CSS).
+     화면 밖으로 완전히 나가면 처음 상태로 되돌려, 다시 들어올 때마다 다시 이어집니다.
+     움직임 멈추기면 다 이어진 상태만 보여 줍니다. */
+  function tree() {
+    var root = $('[data-tree]');
     if (!root) return;
-    if (reduceMotion || !('IntersectionObserver' in window)) { root.classList.add('is-in', 'is-done'); return; }
-    var doneT = 0;
+    var svg = $('.tree-lines', root), flowEl = $('.tree-flow', root), core = $('.tree-core', root);
+    var items = $$('.tree-item', root);
+    var nodes = items.map(function (li) { return $('.tree-node', li); });
+    var n = items.length;
+    if (!svg || !core || !n) return;
+    var colMQ = window.matchMedia('(max-width: 760px)');
+    var NS = 'http://www.w3.org/2000/svg';
+    var canFlow = !!(window.CSS && CSS.supports && CSS.supports('offset-path', 'path("M 0 0 L 1 1")'));
+    var main = null, segs = [], plan = { lit: [], flowAt: 0 }, timers = [], playing = false, built = false, lastKey = '';
+
+    function r1(v) { return Math.round(v * 10) / 10; }
+    function mk(d) { var p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); svg.appendChild(p); return p; }
+    function timing(p, dl, du, ez) {
+      p.style.setProperty('--dl', dl.toFixed(2) + 's');
+      p.style.setProperty('--dur', du.toFixed(2) + 's');
+      p.style.setProperty('--ez', ez);
+    }
+
+    // 트리 안 좌표(변형 무시): 등장 전 이동·호버 들림과 상관없이 제자리 기준으로 잼
+    function box(el) {
+      var x = 0, y = 0, w = el.offsetWidth, h = el.offsetHeight;
+      while (el && el !== root) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; }
+      return { l: x, r: x + w, t: y, b: y + h, cx: x + w / 2, cy: y + h / 2 };
+    }
+    function build() {
+      var W = root.offsetWidth, H = root.offsetHeight;
+      if (!W) return false;
+      var C = box(core);
+      var cx = r1(C.cx), y0 = r1(C.b);
+      var col = colMQ.matches;
+      var q = nodes.map(box);
+      var key = [Math.round(W), Math.round(H), Math.round(cx), Math.round(q[n - 1].t), col ? 1 : 0].join('x');
+      if (built && key === lastKey) return true;
+      lastKey = key;
+      svg.setAttribute('viewBox', '0 0 ' + r1(W) + ' ' + r1(H));
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      segs = []; main = null;
+      var flows = [], lit = [];
+      var T0 = 0.3; // 위 노드가 나타난 뒤 선이 출발하는 시각(초)
+      if (!col) {
+        // 줄기(짧게) → 가지(곡선)
+        var yJ = r1(y0 + Math.min(26, (q[0].t - y0) * 0.2));
+        var tDur = 0.32;
+        main = mk('M' + cx + ' ' + y0 + 'V' + yJ);
+        timing(main, T0, tDur, 'cubic-bezier(.5,0,1,1)');
+        q.forEach(function (o, i) {
+          // 줄기에서 갈라질 때 노드 쪽으로 살짝 기울여 출발 → 가지끼리 겹치지 않고 부채꼴로 퍼짐
+          var nx = r1(o.cx), ny = r1(o.t - 1), h = ny - yJ;
+          var c = 'C' + r1(cx + (nx - cx) * 0.14) + ' ' + r1(yJ + h * 0.52) + ' ' + nx + ' ' + r1(yJ + h * 0.26) + ' ' + nx + ' ' + ny;
+          var p = mk('M' + cx + ' ' + yJ + c);
+          var dl = T0 + tDur - 0.02 + i * 0.12, du = 0.8;
+          timing(p, dl, du, 'cubic-bezier(.22,.6,.3,1)');
+          segs[i] = p;
+          flows[i] = 'M ' + cx + ' ' + y0 + ' V ' + yJ + ' ' + c;
+          lit[i] = dl + du * 0.88;
+        });
+      } else {
+        // 세로 줄기 → 좌우 가지
+        var last = q[n - 1];
+        var mid = function (o) { return Math.abs(o.cx - cx) < 8; };
+        var yEnd = r1(mid(last) ? last.t - 1 : last.cy);
+        var len = Math.max(1, yEnd - y0), sDur = Math.max(0.95, len / 340);
+        main = mk('M' + cx + ' ' + y0 + 'V' + yEnd);
+        timing(main, T0, sDur, 'linear');
+        q.forEach(function (o, i) {
+          if (mid(o)) { // 줄기 끝 가운데 노드
+            flows[i] = 'M ' + cx + ' ' + y0 + ' V ' + r1(o.t - 1);
+            lit[i] = T0 + sDur * Math.min(1, (o.t - y0) / len);
+            segs[i] = null;
+            return;
+          }
+          var left = o.cx < cx, ex = r1(left ? o.r + 1 : o.l - 1), ny = r1(o.cy);
+          var rr = Math.min(12, Math.abs(cx - ex) / 2), sx = left ? -1 : 1, yS = r1(ny - rr);
+          var b = 'Q' + cx + ' ' + ny + ' ' + r1(cx + sx * rr) + ' ' + ny + 'H' + ex;
+          var p = mk('M' + cx + ' ' + yS + b);
+          var dl = T0 + sDur * Math.max(0, (yS - y0) / len) + (left ? 0 : 0.1), du = 0.4;
+          timing(p, dl, du, 'cubic-bezier(.22,.6,.3,1)');
+          segs[i] = p;
+          flows[i] = 'M ' + cx + ' ' + y0 + ' V ' + yS + ' ' + b.replace(/([QH])/g, ' $1 ');
+          lit[i] = dl + du * 0.85;
+        });
+      }
+      // 길이 → dash 값 (Safari 의 pathLength 처리 차이를 피해 실제 길이로)
+      $$('path', svg).forEach(function (p) {
+        var L = 0;
+        try { L = p.getTotalLength(); } catch (e) { L = 2000; }
+        p.style.setProperty('--len', Math.ceil(L + 2) + 'px');
+      });
+      // 이미 켜진 노드의 가지는 켜진 색으로
+      items.forEach(function (li, i) { if (li.classList.contains('is-lit')) markLit(i); });
+      // 빛 점
+      flowEl.textContent = '';
+      if (canFlow) {
+        flows.forEach(function (d, i) {
+          var s = document.createElement('i');
+          s.className = 'tree-dot';
+          s.style.setProperty('--i', i);
+          s.style.offsetPath = 'path("' + d + '")';
+          flowEl.appendChild(s);
+        });
+      }
+      plan = { lit: lit, flowAt: Math.max.apply(null, lit) + 0.2 };
+      built = true;
+      return true;
+    }
+
+    function markLit(i) {
+      items[i].classList.add('is-lit');
+      if (segs[i]) segs[i].classList.add('is-lit');
+      if (main) main.classList.add('is-lit');
+    }
+    function clearTimers() { timers.forEach(clearTimeout); timers = []; }
     function play() {
-      if (root.classList.contains('is-in')) return;
+      if (playing) return;
+      if (!built && !build()) return;
+      playing = true;
+      void root.offsetWidth; // 새로 만든 선의 시작 상태(숨김)를 먼저 확정 → 전환으로 그려짐
       root.classList.add('is-in');
-      clearTimeout(doneT);
-      doneT = setTimeout(function () { root.classList.add('is-done'); }, 2300);
+      plan.lit.forEach(function (t, i) { timers.push(setTimeout(function () { markLit(i); }, t * 1000)); });
+      timers.push(setTimeout(function () { root.classList.add('is-flow'); }, plan.flowAt * 1000));
     }
     function reset() {
-      if (!root.classList.contains('is-in')) return;
-      clearTimeout(doneT);
+      if (!playing) return;
+      playing = false;
+      clearTimers();
       root.classList.add('no-tr');
-      root.classList.remove('is-in', 'is-done');
+      root.classList.remove('is-in', 'is-flow');
+      items.forEach(function (li) { li.classList.remove('is-lit'); });
+      $$('path', svg).forEach(function (p) { p.classList.remove('is-lit'); });
       void root.offsetWidth;
       root.classList.remove('no-tr');
     }
+    function finish() {
+      clearTimers();
+      if (!built) build();
+      playing = true;
+      root.classList.add('no-tr');
+      root.classList.add('is-in', 'is-flow');
+      for (var i = 0; i < n; i++) markLit(i);
+      void root.offsetWidth;
+      root.classList.remove('no-tr');
+    }
+
+    // 노드에 올리면 그 가지와 줄기가 진하게
+    nodes.forEach(function (a, i) {
+      function hot(on) {
+        var p = segs[i];
+        if (p) p.classList.toggle('is-hot', on);
+        if (main) main.classList.toggle('is-hot', on);
+      }
+      a.addEventListener('pointerenter', function () { hot(true); });
+      a.addEventListener('pointerleave', function () { hot(false); });
+      a.addEventListener('focus', function () { hot(true); });
+      a.addEventListener('blur', function () { hot(false); });
+    });
+
+    // 크기가 바뀌면 경로를 다시 만듦 (재생 중이면 새 선은 바로 다 그려진 상태로 들어옴)
+    var rt = 0;
+    function rebuild() { clearTimeout(rt); rt = setTimeout(function () { build(); }, 120); }
+    if ('ResizeObserver' in window) new ResizeObserver(rebuild).observe(root);
+    else window.addEventListener('resize', rebuild);
+    onMQ(colMQ, rebuild);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { lastKey = ''; build(); });
+    window.addEventListener('load', function () { lastKey = ''; build(); });
+
+    if (!('IntersectionObserver' in window)) { finish(); return; }
+    build();
+    if (motionOff()) finish();
     new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
-        if (en.isIntersecting && en.intersectionRatio >= 0.42) play();
+        if (motionOff()) { finish(); return; }
+        if (en.isIntersecting && en.intersectionRatio >= 0.35) play();
         else if (!en.isIntersecting) reset();
       });
-    }, { threshold: [0, 0.42] }).observe(root);
-    // 키보드로 노드에 들어오면 바로 완성 상태로
+    }, { threshold: [0, 0.35] }).observe(root);
+    // 키보드로 노드에 들어오면 바로 재생
     root.addEventListener('focusin', play);
+    onMotion(function (off) {
+      if (off) { finish(); return; }
+      var r = root.getBoundingClientRect();
+      if (r.bottom <= 0 || r.top >= window.innerHeight) reset();
+    });
+  }
+
+  /* ---------- S6 리더십: 한 줄 카드 · 넘칠 때만 이전/다음 + 진행 바 ----------
+     1200px 이상은 6열이 한 줄에 다 들어가 버튼이 숨고, 좁은 화면에서는 가로 스크롤 스냅 + 버튼. */
+  function leaders() {
+    var wrap = $('[data-ldr]');
+    if (!wrap) return;
+    var track = $('.ldr', wrap), prev = $('[data-ldr-prev]', wrap), next = $('[data-ldr-next]', wrap), fill = $('[data-ldr-fill]', wrap);
+    if (!track) return;
+    var raf = 0;
+    function step() {
+      var it = $('.ldr-item', track);
+      var gap = parseFloat(getComputedStyle(track).columnGap) || 14;
+      return it ? it.getBoundingClientRect().width + gap : track.clientWidth * 0.8;
+    }
+    function sync() {
+      raf = 0;
+      var max = track.scrollWidth - track.clientWidth;
+      var on = max > 4;
+      wrap.classList.toggle('is-scroll', on);
+      if (prev) prev.disabled = !on || track.scrollLeft <= 2;
+      if (next) next.disabled = !on || track.scrollLeft >= max - 2;
+      if (fill) fill.style.setProperty('--p', on ? Math.min(1, (track.scrollLeft + track.clientWidth) / track.scrollWidth).toFixed(4) : '1');
+    }
+    function queue() { if (!raf) raf = requestAnimationFrame(sync); }
+    function go(dir) { track.scrollBy({ left: dir * step(), behavior: motionOff() ? 'auto' : 'smooth' }); }
+    if (prev) prev.addEventListener('click', function () { go(-1); });
+    if (next) next.addEventListener('click', function () { go(1); });
+    track.addEventListener('scroll', queue, { passive: true });
+    window.addEventListener('resize', queue);
+    window.addEventListener('load', queue);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(queue);
+    sync();
   }
 
   /* ---------- 공통: 무한 캐러셀 (S7 브랜드 슬라이더 · S8 커버플로우) ----------
@@ -583,10 +889,10 @@
     var toggle = $('[data-bs-toggle]', root);
     var names = $$('.bs-name', root).map(function (el) { return el.textContent; });
     var MS = 3500;
-    var st = { stopped: reduceMotion, hover: false, focus: false, touch: false, view: false };
+    var st = { stopped: false, moff: motionOff(), hover: false, focus: false, touch: false, view: false };
     var timer = 0, touchT = 0, api = null;
 
-    function running() { return !!api && !st.stopped && !st.hover && !st.focus && !st.touch && st.view && !document.hidden; }
+    function running() { return !!api && !st.stopped && !st.moff && !st.hover && !st.focus && !st.touch && st.view && !document.hidden; }
     function ring() { root.classList.remove('is-auto'); if (running()) { void root.offsetWidth; root.classList.add('is-auto'); } }
     function schedule() {
       clearTimeout(timer); timer = 0;
@@ -594,8 +900,9 @@
       ring();
     }
     function sync() {
-      root.classList.toggle('is-stopped', st.stopped);
-      if (toggle) toggle.setAttribute('aria-label', st.stopped ? '자동 넘김 시작' : '자동 넘김 정지');
+      var stopped = st.stopped || st.moff;
+      root.classList.toggle('is-stopped', stopped);
+      if (toggle) toggle.setAttribute('aria-label', stopped ? '자동 넘김 시작' : '자동 넘김 정지');
       if (running()) { if (!timer) schedule(); }
       else { clearTimeout(timer); timer = 0; root.classList.remove('is-auto'); }
     }
@@ -633,7 +940,13 @@
 
     $('[data-bs-prev]', root).addEventListener('click', function () { api.go(api.cur() - 1, true); });
     $('[data-bs-next]', root).addEventListener('click', function () { api.go(api.cur() + 1, true); });
-    if (toggle) toggle.addEventListener('click', function () { st.stopped = !st.stopped; sync(); if (!st.stopped) schedule(); });
+    // 정지/재생 버튼: 움직임 멈추기 상태에서 누르면 이 슬라이더만 다시 자동 넘김
+    if (toggle) toggle.addEventListener('click', function () {
+      var stopped = st.stopped || st.moff;
+      st.stopped = !stopped; st.moff = false;
+      sync(); if (!st.stopped) schedule();
+    });
+    onMotion(function (off) { st.moff = off; if (!off) st.stopped = false; sync(); });
     root.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') { st.hover = true; sync(); } });
     root.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') { st.hover = false; sync(); } });
     function focusState() {
@@ -689,7 +1002,7 @@
     dots.forEach(function (b, j) { b.addEventListener('click', function () { api.go(j, true); }); });
   }
 
-  /* ---------- 화면 밖이면 반복 애니메이션 정지 (마키 · 집결 궤도·빛 점·파동) ---------- */
+  /* ---------- 화면 밖이면 반복 애니메이션 정지 (마키 · 트리 빛 점·파동) ---------- */
   function pauseOffscreen() {
     var els = $$('[data-anim]');
     if (!els.length || !('IntersectionObserver' in window)) return;
@@ -702,9 +1015,11 @@
   /* ---------- 실행 + 스크롤 루프 (rAF 1회로 묶음) ---------- */
   heroScenes();
   heroPlayGuard();
-  factsRoll();
-  var updaters = [introWords(), groupStack(), bizStory()].filter(Boolean);
-  converge();
+  engrave();
+  factsCount();
+  var updaters = [groupStack(), bizStory()].filter(Boolean);
+  tree();
+  leaders();
   brandSlider();
   coverflow();
   pauseOffscreen();

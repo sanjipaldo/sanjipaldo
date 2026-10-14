@@ -77,7 +77,7 @@ main section[id] { scroll-margin-top: calc(var(--header-h) + 72px); }
 /* 3D 렌더 배경과 같은 연한 블루 그라데이션 (카드 상단 · 지주회사 배너 비주얼) */
 .bn-brands { --render-bg: linear-gradient(180deg, #ABC5E8 0%, #C3D6EE 52%, #DCE6F5 100%); }
 
-/* 구조 범례: 지주회사 1 → 자회사 5 → 브랜드 */
+/* 구조 범례: 지주회사 1 → 그룹사 5 → 브랜드 */
 .bn-legend {
   display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.45fr) minmax(0, 1.05fr);
   margin-bottom: clamp(28px, 3.2vw, 44px); padding: 6px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff;
@@ -100,6 +100,7 @@ main section[id] { scroll-margin-top: calc(var(--header-h) + 72px); }
 .bn-lg-k { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font-size: .74rem; font-weight: 700; color: var(--blue); letter-spacing: 0; }
 .bn-lg-kk { font-weight: 600; color: var(--muted-2); }
 .bn-lg-txt strong { font-size: 1.04rem; font-weight: 700; letter-spacing: -.02em; }
+.bn-lg-txt strong.en { font-weight: 600; letter-spacing: .005em; }
 .bn-lg-txt small { margin-top: 3px; font-size: .78rem; line-height: 1.5; color: var(--muted); }
 
 /* 타일 공통 조각 */
@@ -163,6 +164,24 @@ main section[id] { scroll-margin-top: calc(var(--header-h) + 72px); }
 .bn-hold-n b { font-size: clamp(3.2rem, 5vw, 4.6rem); font-weight: 600; line-height: .82; letter-spacing: -.04em; color: #fff; }
 .bn-hold-n small { font-size: .82rem; font-weight: 600; color: var(--on-dark-2); transition: color .45s var(--ease); }
 .bn-hold-plus { align-self: flex-start; margin-top: .55em; font-size: clamp(1.4rem, 2vw, 1.9rem); font-weight: 400; color: var(--blue-300); transition: color .45s var(--ease); }
+/* 직접 운영: DOOGO CLASS · DOOGOFOOD (배너 전체 링크 위로 올려 따로 누를 수 있게) */
+.bn-hold-direct { position: relative; z-index: 4; display: grid; gap: 8px; margin-top: 12px; }
+.bn-hold-direct-k { font-size: .74rem; font-weight: 600; color: var(--on-dark-3); transition: color .45s var(--ease); }
+.bn-hold-direct ul { display: flex; flex-wrap: wrap; gap: 8px; }
+.bn-hold-direct a {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px 0 16px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .26); background: rgba(255, 255, 255, .06); color: #fff;
+  transition: background-color .35s var(--ease), border-color .35s var(--ease), color .35s var(--ease);
+}
+.bn-hold-direct .t { font-size: .94rem; font-weight: 600; letter-spacing: .01em; white-space: nowrap; }
+.bn-hold-direct .d { font-size: .74rem; font-weight: 600; color: var(--on-dark-2); transition: color .35s var(--ease); }
+.bn-hold-direct svg { width: 14px; height: 14px; flex: none; transition: transform .35s var(--ease); }
+.bn-hold-direct a:hover, .bn-hold-direct a:focus-visible { background: #fff; border-color: #fff; color: var(--blue); }
+.bn-hold-direct a:hover .d, .bn-hold-direct a:focus-visible .d { color: var(--muted); }
+.bn-hold-direct a:hover svg, .bn-hold-direct a:focus-visible svg { transform: translate(2px, -2px); }
+.bn-hold-direct a:focus-visible { outline: 3px solid var(--blue-300); outline-offset: 2px; }
+.bn-hold:hover .bn-hold-direct-k, .bn-hold:focus-within .bn-hold-direct-k { color: rgba(255, 255, 255, .86); }
+.bn-hold:hover .bn-hold-direct a:not(:hover):not(:focus-visible), .bn-hold:focus-within .bn-hold-direct a:not(:hover):not(:focus-visible) { border-color: rgba(255, 255, 255, .5); background: rgba(255, 255, 255, .1); }
 .bn-hold-visual {
   grid-area: visual; position: relative; overflow: hidden; align-self: stretch; min-height: 250px;
   margin-block: calc(clamp(28px, 3.2vw, 44px) * -1 + 14px); border-radius: calc(var(--radius-lg) - 10px); background: var(--render-bg);
@@ -254,6 +273,7 @@ main section[id] { scroll-margin-top: calc(var(--header-h) + 72px); }
 .bn-card:hover .bn-card-link { color: var(--blue); }
 .bn-card-corp { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 12px; font-size: .88rem; font-weight: 700; line-height: 1.35; letter-spacing: -.015em; color: var(--ink-2); }
 .bn-card-corp .k { font-size: .74rem; font-weight: 500; color: var(--muted-2); }
+.bn-card-corp .n.en { font-weight: 600; letter-spacing: .01em; }
 .bn-corp-chip {
   display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px;
   background: var(--blue-50); color: var(--blue-700); font-size: .7rem; font-weight: 700; letter-spacing: 0; white-space: nowrap;
@@ -618,6 +638,10 @@ main .note { color: var(--muted); }
   .bn-hold-n b { font-size: 2.8rem; }
   .bn-hold-plus { font-size: 1.3rem; }
   .bn-hold-go { justify-self: stretch; justify-content: space-between; padding-top: 14px; border-top: 1px solid var(--line-dark); }
+  .bn-hold-direct { margin-top: 8px; }
+  .bn-hold-direct a { min-height: 44px; padding: 0 12px 0 14px; gap: 6px; }
+  .bn-hold-direct .t { font-size: .86rem; }
+  .bn-hold-direct .d { display: none; } /* 좁은 화면: 두 링크를 한 줄에 */
   .bn-hold .bn-tile-go { width: 44px; height: 44px; }
 
   /* 브랜드 카드: 2열 압축 — 설명은 접고 이름·운영 법인·하위 서비스만 */
@@ -697,17 +721,17 @@ main .note { color: var(--muted); }
   .bn-card-media::after { display: none; }
 }
 
-/* 움직임 줄이기 */
-@media (prefers-reduced-motion: reduce) {
-  .bn-marquee-track { animation: none; }
-  .bn-live::before { animation: none; }
-  .bn-case { transform: none; position: relative !important; top: auto !important; } /* 쌓기 없이 목록으로 */
-  .bn-case::after { opacity: 0; }
-  .bn-card { --mx: 0 !important; --my: 0 !important; }
-  .bn-card:not(.bn-card--chain):hover, .bn-card:not(.bn-card--chain):focus-within { --lift: 0px; --sc: 1; translate: none; }
-  .js .bn-card[data-reveal] .bn-card-obj img, .js .bn-relay[data-reveal] :is(.bn-relay-step, .bn-relay-arrow) { transform: none !important; opacity: 1 !important; }
-  .bn-co-dot { --conv: 1 !important; opacity: 1 !important; } /* 궤도 위치는 유지하고 집결 이동만 생략 */
-  .bn-co-core::after { animation: none !important; }
-  .bn-card-media::after { display: none; }
-  .bn-hold:hover .bn-hold-visual img, .bn-hold:focus-within .bn-hold-visual img { transform: none; }
-}
+/* 움직임 멈추기 — OS의 '애니메이션 줄이기' 설정과 관계없이 모션은 재생하고,
+   사용자가 왼쪽 아래 '움직임 멈추기'를 고른 경우(html.motion-off)에만 멈춥니다. */
+html.motion-off .bn-marquee-track { animation: none; }
+html.motion-off .bn-live::before { animation: none; }
+html.motion-off .bn-case { transform: none; position: relative !important; top: auto !important; } /* 쌓기 없이 목록으로 */
+html.motion-off .bn-case::after { opacity: 0; }
+html.motion-off .bn-card:not(.bn-card--chain):hover, html.motion-off .bn-card:not(.bn-card--chain):focus-within { --lift: 0px; --sc: 1; translate: none; }
+html.motion-off .bn-card[data-reveal] .bn-card-obj img, html.motion-off .bn-relay[data-reveal] :is(.bn-relay-step, .bn-relay-arrow) { transform: none !important; opacity: 1 !important; }
+html.motion-off .bn-co-dot { --conv: 1 !important; opacity: 1 !important; } /* 궤도 위치는 유지하고 집결 이동만 생략 */
+html.motion-off .bn-co-core::after { animation: none !important; }
+html.motion-off .bn-card-media::after { display: none; }
+html.motion-off .bn-hold:hover .bn-hold-visual img, html.motion-off .bn-hold:focus-within .bn-hold-visual img { transform: none; }
+/* 포인터를 따라 기우는 효과는 OS 설정이 켜진 기기(html.soft-motion)에서도 생략 */
+html.motion-off .bn-card, html.soft-motion .bn-card { --mx: 0 !important; --my: 0 !important; }

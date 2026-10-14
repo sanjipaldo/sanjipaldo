@@ -278,6 +278,7 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
   .mega-grid { gap: 8px; }
   .mega-item { padding: 8px; }
   .mega-brand { font-size: .66rem; letter-spacing: .02em; }
+  .mega-corp { font-size: .72rem; letter-spacing: -0.02em; } /* 'DOOGO HOLDINGS' 가 칸(약 100px) 안에 한 줄로 */
 }
 @media (max-width: 1180px) {
   .mega-inner { grid-template-columns: 1fr; gap: 20px; }
@@ -365,7 +366,8 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
 
 /* ---------- 9. 푸터 ---------- */
 /* 구조: 브랜드(+맨 위로) → 메인 카테고리 6개 한 줄 → 그룹 법인 줄 → 정책·SNS·패밀리 사이트 → 회사 정보 */
-.site-footer { background: #060D1A; color: var(--on-dark-2); padding: clamp(64px, 7vw, 104px) 0 40px; font-size: .92rem; }
+/* 아래 여백: 왼쪽 아래 '움직임 멈추기' 버튼(높이 32–36px, 바닥에서 12–16px)이 맨 끝 저작권 줄을 가리지 않게 넉넉히 */
+.site-footer { background: #060D1A; color: var(--on-dark-2); padding: clamp(64px, 7vw, 104px) 0 calc(76px + env(safe-area-inset-bottom, 0px)); font-size: .92rem; }
 .ft-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px 48px; padding-bottom: clamp(40px, 4.6vw, 64px); }
 .ft-brand svg { height: 30px; width: auto; color: #fff; }
 .ft-brand .lg-sym { fill: #fff; }
@@ -490,8 +492,8 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
   .family-list { left: 0; right: auto; }
 }
 
-/* 아주 좁은 화면(≤359px): 지주회사 줄은 한 줄 전체를 쓰고(이름·배지가 끊기지 않게), 자회사 다섯은 아래 2열 */
-@media (max-width: 359px) {
+/* 모바일(≤560px): 지주회사 줄은 한 줄 전체를 쓰고(이름·배지가 끊기지 않게), 나머지 일곱은 아래 2열 */
+@media (max-width: 560px) {
   .ft-corps li:first-child { grid-column: 1 / -1; }
 }
 
@@ -544,7 +546,9 @@ html.motion-off *, html.motion-off *::before, html.motion-off *::after { animati
 .motion-toggle .mt-ico::before { left: 5px; } .motion-toggle .mt-ico::after { left: 9px; }
 .motion-toggle[aria-pressed="true"] .mt-ico::before { left: 6px; width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 6px; border-color: transparent transparent transparent #fff; background: none; }
 .motion-toggle[aria-pressed="true"] .mt-ico::after { display: none; }
-@media (max-width: 760px) { .motion-toggle { left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); min-height: 32px; padding: 0 12px 0 8px; font-size: .72rem; } }
+@media (max-width: 760px) {
+  .motion-toggle { left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); min-height: 32px; padding: 0 12px 0 8px; font-size: .72rem; }
+}
 
 /* ---------- 12. 폼 기본 ---------- */
 .field { display: grid; gap: 8px; }
@@ -569,3 +573,5 @@ html.motion-off *, html.motion-off *::before, html.motion-off *::after { animati
 /* ---------- 14. 토스트 ---------- */
 .toast { position: fixed; left: 50%; bottom: 28px; z-index: 400; transform: translate(-50%, 16px); padding: 14px 20px; border-radius: 12px; background: var(--ink); color: #fff; font-size: .92rem; font-weight: 500; box-shadow: var(--shadow-lg); opacity: 0; transition: opacity .3s var(--ease), transform .3s var(--ease); max-width: calc(100vw - 32px); }
 .toast.is-show { opacity: 1; transform: translate(-50%, 0); }
+/* 모바일 토스트는 화면 폭을 거의 다 쓰므로 왼쪽 아래 '움직임 멈추기' 버튼 위로 띄워 겹치지 않게 */
+@media (max-width: 760px) { .toast { bottom: calc(56px + env(safe-area-inset-bottom, 0px)); } }

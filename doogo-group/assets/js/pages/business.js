@@ -2,10 +2,15 @@
    DOOGO GROUP — business.js (사업영역 목록)
    첫 화면 7개 사업 사진 슬라이드(바로가기 hover/focus 시 그 사업 사진으로 고정) ·
    카드 사진 패럴랙스 · VIEW 커서 · 서브 내비 보정
+   움직임 정책(site.js): OS의 '애니메이션 줄이기' 설정과 관계없이 재생하고,
+   사용자가 '움직임 멈추기'를 고른 경우(window.DOOGO.motionOff())만 멈춥니다 — 'doogo:motion' 이벤트로 바로 전환.
+   패럴랙스만 OS 설정이 켜진 기기(html.soft-motion)에서 끕니다.
    ========================================================= */
 (function () {
   'use strict';
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var doc = document.documentElement;
+  var motionOff = function () { return !!(window.DOOGO && window.DOOGO.motionOff && window.DOOGO.motionOff()); };
+  var softMotion = function () { return doc.classList.contains('soft-motion'); };
   var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
@@ -14,7 +19,7 @@
   /* ---------- 1) 첫 화면: 7개 사업 사진 슬라이드 ----------
      5초마다 다음 사업 사진으로 크로스페이드(+느린 줌, business.css). 지금 보이는 사업은 바로가기 카드에 표시.
      · 바로가기에 마우스를 올리거나 포커스하면 그 사업 사진으로 고정, 벗어나면 그 자리에서 다시 넘김
-     · 화면 밖 · 탭이 숨겨짐 · 정지 버튼 → 멈춤 / 움직임 줄이기 설정이면 첫 사진에서 넘기지 않음
+     · 화면 밖 · 탭이 숨겨짐 · 정지 버튼 · '움직임 멈추기' → 멈춤 (다시 켜면 그 자리에서 이어서 넘김)
      · 첫 장 외 사진은 <template> 안에 있다가 넘기기 직전(또는 바로가기에 처음 다가갈 때) 불러옴 */
   var DUR = 5000, FADE = 1250;
   var hero = $('.bz-hero');
@@ -57,7 +62,7 @@
       hero.classList.remove('is-auto');
       if (running()) { void hero.offsetWidth; hero.classList.add('is-auto'); }
     };
-    var running = function () { return !reduce && !userPaused && !pinned && inView && !document.hidden; };
+    var running = function () { return !motionOff() && !userPaused && !pinned && inView && !document.hidden; };
 
     var show = function (i) {
       want = i;
@@ -77,7 +82,7 @@
           slides.forEach(function (s, j) { if (s && j !== cur) s.classList.remove('is-on', 'is-first'); });
         }, FADE);
         // 다음 사진 미리 불러오기
-        if (!reduce) slideFor((i + 1) % keys.length);
+        if (!motionOff()) slideFor((i + 1) % keys.length);
       }, function () { /* 불러오기 실패: 지금 사진 유지 */ });
     };
 
@@ -89,30 +94,31 @@
     };
 
     mark(0);
-    if (!reduce) {
-      // 다음 사진은 첫 화면이 그려진 뒤에 미리 불러옴
-      var warm = function () { slideFor(1); };
-      if (document.readyState === 'complete') warm(); else window.addEventListener('load', warm, { once: true });
+    // 다음 사진은 첫 화면이 그려진 뒤에 미리 불러옴
+    var warm = function () { if (!motionOff()) slideFor(1); };
+    if (document.readyState === 'complete') warm(); else window.addEventListener('load', warm, { once: true });
 
-      if ('IntersectionObserver' in window) {
-        new IntersectionObserver(function (entries) {
-          inView = entries[0].isIntersecting; schedule();
-        }, { threshold: 0.12 }).observe(hero);
-      }
-      document.addEventListener('visibilitychange', schedule);
-
-      if (toggle) {
-        toggle.hidden = false;
-        toggle.addEventListener('click', function () {
-          userPaused = !userPaused;
-          toggle.setAttribute('aria-pressed', String(userPaused));
-          toggle.setAttribute('aria-label', userPaused ? '배경 사진 자동 넘김 재생' : '배경 사진 자동 넘김 정지');
-          toggle.classList.toggle('is-paused', userPaused);
-          schedule();
-        });
-      }
-      schedule();
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        inView = entries[0].isIntersecting; schedule();
+      }, { threshold: 0.12 }).observe(hero);
     }
+    document.addEventListener('visibilitychange', schedule);
+
+    // 이 사진 넘김만 멈추는 버튼 ('움직임 멈추기' 상태에서는 숨김 — 전체 정지가 우선)
+    var syncToggle = function () { if (toggle) toggle.hidden = motionOff(); };
+    if (toggle) {
+      toggle.addEventListener('click', function () {
+        userPaused = !userPaused;
+        toggle.setAttribute('aria-pressed', String(userPaused));
+        toggle.setAttribute('aria-label', userPaused ? '배경 사진 자동 넘김 재생' : '배경 사진 자동 넘김 정지');
+        toggle.classList.toggle('is-paused', userPaused);
+        schedule();
+      });
+    }
+    document.addEventListener('doogo:motion', function () { syncToggle(); if (!motionOff()) warm(); schedule(); });
+    syncToggle();
+    schedule();
 
     // 바로가기 hover · focus → 그 사업 사진으로 고정
     var pin = function (i) { pinned = true; schedule(); show(i); };
@@ -132,7 +138,7 @@
   }
 
   /* ---------- 3) 카드 사진 VIEW 커서 ---------- */
-  if (fine && !reduce) {
+  if (fine) {
     $$('.bz-media').forEach(function (m) {
       var cur = $('.bz-cursor', m);
       if (!cur) return;
@@ -154,12 +160,13 @@
     });
   }
 
-  /* ---------- 4) 카드 사진 패럴랙스 ---------- */
+  /* ---------- 4) 카드 사진 패럴랙스 (움직임 멈추기 · OS 애니메이션 줄이기 기기에서는 끔) ---------- */
   var par = $$('[data-parallax]');
-  if (!reduce && par.length) {
+  if (par.length) {
     var ticking = false;
     var update = function () {
       ticking = false;
+      if (motionOff() || softMotion()) { par.forEach(function (el) { el.style.removeProperty('--py'); }); return; }
       var vh = window.innerHeight || 800;
       par.forEach(function (el) {
         var box = el.parentElement.getBoundingClientRect();
@@ -171,6 +178,7 @@
     var onScroll = function () { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
+    document.addEventListener('doogo:motion', onScroll);
     update();
   }
 

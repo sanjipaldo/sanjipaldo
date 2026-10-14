@@ -4,7 +4,9 @@
    ========================================================= */
 (function () {
   'use strict';
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* 움직임 정책: OS 설정과 관계없이 탭·목록 모션과 부드러운 스크롤을 쓰고,
+     사용자가 '움직임 멈추기'를 고른 경우(html.motion-off)에만 바로 바꿉니다 */
+  function still() { return !!(window.DOOGO && window.DOOGO.motionOff && window.DOOGO.motionOff()); }
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
 
@@ -65,7 +67,7 @@
     if (!featWrap) return;
     var off = !show;
     if (featWrap.classList.contains('is-off') === off) return;
-    if (instant || reduce) {
+    if (instant || still()) {
       featWrap.classList.add('is-instant');
       featWrap.classList.toggle('is-off', off);
       void featWrap.offsetHeight;
@@ -86,7 +88,7 @@
     // 위로 올라가면 공통 헤더가 다시 나타나므로(site.js) 헤더 높이까지 비워 둡니다.
     var headH = header ? header.offsetHeight : 0;
     var target = aTop + window.scrollY - headH - toolbar.offsetHeight - 24;
-    window.scrollTo({ top: Math.max(0, target), behavior: reduce ? 'auto' : 'smooth' });
+    window.scrollTo({ top: Math.max(0, target), behavior: still() ? 'auto' : 'smooth' });
   }
 
   /* ---------- 목록 그리기 ---------- */
@@ -111,7 +113,7 @@
       if (!show && li.classList.contains('is-open')) setOpen(li, false);
       if (show) {
         shown.push(li);
-        if (!reduce && !opts.instant && (opts.restagger || wasHidden)) {
+        if (!still() && !opts.instant && (opts.restagger || wasHidden)) {
           li.classList.remove('is-entering');
           void li.offsetWidth;
           li.style.setProperty('--stagger', (shown.length - 1) * 0.05 + 's');
@@ -214,7 +216,7 @@
     }
     setOpen(li, true);
     syncUrl(id);
-    li.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    li.scrollIntoView({ behavior: still() ? 'auto' : 'smooth', block: 'start' });
     if (focus) { var b = $('.nw-row', li); if (b) b.focus({ preventScroll: true }); }
     return true;
   }

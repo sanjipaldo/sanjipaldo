@@ -1,41 +1,89 @@
 /* =========================================================
    DOOGO GROUP — leadership.js (리더십)
-   그룹 대표 사진 미세 모션 · 화면 밖 무한 모션 정지 · 자회사 대표 상세 (dialog: 열기/닫기 · 이전/다음 · Esc · 바깥 클릭)
+   짧은 그룹 소개(1 + 5 숫자 카운트 · 트리 그리기 · 흐르는 빛) · 대표 상세 (dialog: 열기/닫기 · 이전/다음 · Esc · 바깥 클릭)
+   모션은 OS 설정과 관계없이 재생하고, 사용자가 '움직임 멈추기'를 고르면(window.DOOGO.motionOff()) 최종 상태로 보여 줍니다.
    ========================================================= */
 (function () {
   'use strict';
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
+  var motionOff = function () { return !!(window.DOOGO && window.DOOGO.motionOff && window.DOOGO.motionOff()); };
+  var hasIO = 'IntersectionObserver' in window;
 
-  /* ---------- 대표 사진: 마우스 위치에 따른 미세 이동 ---------- */
-  var stage = $('[data-tilt]');
-  if (stage && !reduce && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-    var img = $('.ld-ceo-img', stage);
-    var ring = $('.ld-ceo-ring', stage);
-    stage.addEventListener('pointermove', function (e) {
-      var r = stage.getBoundingClientRect();
-      var x = (e.clientX - r.left) / r.width - 0.5;
-      var y = (e.clientY - r.top) / r.height - 0.5;
-      if (img) { img.style.setProperty('--ix', (x * 10).toFixed(1) + 'px'); img.style.setProperty('--iy', (y * 6).toFixed(1) + 'px'); }
-      if (ring) { ring.style.setProperty('--rx', (x * -14).toFixed(1) + 'px'); ring.style.setProperty('--ry', (y * -10).toFixed(1) + 'px'); }
-    });
-    stage.addEventListener('pointerleave', function () {
-      [img, ring].forEach(function (el) { if (el) { el.style.removeProperty('--ix'); el.style.removeProperty('--iy'); el.style.removeProperty('--rx'); el.style.removeProperty('--ry'); } });
+  /* ---------- 짧은 그룹 소개: 지주회사 1 → 그룹사 5 ----------
+     화면에 30% 들어오면 숫자가 0에서 올라가고(1.8초, 칸마다 0.15초 지연), 뿌리 → 줄기 → 가로선 → 그룹사 순서로 그려집니다.
+     완전히 벗어나면 처음 상태로 되돌려 두었다가 다시 들어오면 또 재생합니다. 다 그려진 뒤에는 보이는 동안만 빛이 흐릅니다. */
+  var brief = $('[data-brief]');
+  if (brief) {
+    var counts = $$('[data-ld-count]', brief);
+    var rafs = [], liveTimer = 0, inView = false;
+    var finalNums = function () { counts.forEach(function (el) { el.textContent = el.getAttribute('data-ld-count'); }); };
+    var stopCount = function () { rafs.forEach(cancelAnimationFrame); rafs = []; };
+    var runCount = function () {
+      stopCount();
+      counts.forEach(function (el, i) {
+        var n = parseInt(el.getAttribute('data-ld-count'), 10) || 0, start = null, delay = 150 * i + 120, dur = 1800;
+        el.textContent = '0';
+        var step = function (ts) {
+          if (start === null) start = ts + delay;
+          var p = Math.max(0, Math.min((ts - start) / dur, 1));
+          el.textContent = String(Math.round(n * (1 - Math.pow(1 - p, 3))));
+          if (p < 1) rafs[i] = requestAnimationFrame(step);
+        };
+        rafs[i] = requestAnimationFrame(step);
+      });
+    };
+    var reset = function () {
+      stopCount(); clearTimeout(liveTimer);
+      brief.classList.remove('is-play', 'is-live');
+      counts.forEach(function (el) { el.textContent = '0'; });
+    };
+    var play = function () {
+      if (motionOff()) { showStill(); return; }
+      reset();
+      void brief.offsetWidth; // 되돌린 상태를 먼저 그린 뒤 재생
+      brief.classList.add('is-play');
+      runCount();
+      liveTimer = setTimeout(function () { if (inView) brief.classList.add('is-live'); }, 2300);
+    };
+    var showStill = function () {
+      stopCount(); clearTimeout(liveTimer);
+      brief.classList.remove('is-armed', 'is-live');
+      brief.classList.add('is-play');
+      finalNums();
+    };
+    if (!hasIO || motionOff()) showStill();
+    else {
+      brief.classList.add('is-armed');
+      counts.forEach(function (el) { el.textContent = '0'; });
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting && en.intersectionRatio >= 0.3) {
+            if (!inView) { inView = true; play(); }
+          } else if (!en.isIntersecting && inView) {
+            inView = false;
+            if (!motionOff()) reset();
+          }
+          if (!en.isIntersecting) brief.classList.remove('is-live'); // 화면 밖이면 흐르는 빛 정지
+        });
+      }, { threshold: [0, 0.3] }).observe(brief);
+    }
+    // 키보드로 들어오면 기다리지 않고 바로 보여 줌
+    brief.addEventListener('focusin', function () { if (!brief.classList.contains('is-play')) showStill(); });
+    // '움직임 멈추기' 전환 — 멈추면 이미 시작된 전환까지 바로 끝 상태로
+    document.addEventListener('doogo:motion', function (e) {
+      if (e.detail && e.detail.off) {
+        showStill();
+        requestAnimationFrame(function () {
+          var main = $('#main');
+          if (main && main.getAnimations) main.getAnimations({ subtree: true }).forEach(function (a) { try { a.finish(); } catch (err) { /* 무한 반복은 base.css 가 정지 */ } });
+        });
+      } else { brief.classList.add('is-armed'); if (inView) play(); }
     });
   }
 
-  /* ---------- 화면 밖이면 '문대표' 칩의 둥실 모션 정지 ---------- */
-  var ceoFig = $('.ld-ceo-fig');
-  if (ceoFig && !reduce && 'IntersectionObserver' in window) {
-    ceoFig.classList.add('is-paused');
-    new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) { ceoFig.classList.toggle('is-paused', !en.isIntersecting); });
-    }, { rootMargin: '80px 0px' }).observe(ceoFig);
-  }
-
-  /* ---------- 자회사 대표 상세 ----------
-     카드의 data-* (이름 · 법인 · 구분 · 역할 · 연결 사업)만 옮겨 보여 줍니다. 이력은 '확정 후 게시'. */
+  /* ---------- 대표 상세 ----------
+     카드의 data-* (이름 · 회사 · 분야 · 사업영역 · 직접 운영 · 소개 · 한마디)만 옮겨 보여 줍니다. 이력은 '확정 후 게시'. */
   var modal = $('#ld-modal');
   var cards = $$('[data-leader]');
   if (!modal || !cards.length) return;
@@ -45,22 +93,53 @@
   }
   var html = document.documentElement;
   var inner = $('.ld-m-in', modal);
+  var visual = $('.ld-m-visual', modal);
   var render = $('.ld-m-render', modal);
+  var photo = $('.ld-m-photo', modal);
+  var areasBox = $('[data-m-areas]', modal);
   var cur = 0, opener = null, swapTimer = null;
   var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  var arrowSvg = '<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>';
+  $$('.ld-m-count', modal).forEach(function (el) { el.innerHTML = '<b data-m="idx">01</b> / ' + pad(cards.length); });
 
+  function parseLinks(str) {
+    return (str || '').split(',').map(function (pair) {
+      var p = pair.split('|'); return { label: (p[0] || '').trim(), href: (p[1] || '').trim() };
+    }).filter(function (o) { return o.label && o.href; });
+  }
   function fill(i) {
     var d = cards[i].dataset;
-    var map = { name: d.name, mono: d.mono, co: d.co, coSub: d.coSub, type: d.type, role: d.role, area: d.area, idx: pad(i + 1) };
+    var links = parseLinks(d.links);
+    var first = links[0] || { label: '', href: 'business.html' };
+    var map = { name: d.name, mono: d.mono, co: d.co, tag: d.tag || '', field: d.field, area: first.label, note: d.note || '', quote: d.quote || '', idx: pad(i + 1) };
     Object.keys(map).forEach(function (k) { $$('[data-m="' + k + '"]', modal).forEach(function (el) { el.textContent = map[k]; }); });
-    $$('[data-m-link]', modal).forEach(function (a) { a.setAttribute('href', d.href); });
+    // 사업영역: 연결된 사업 페이지 링크 (DOOGO HOLDINGS 는 교육 · 유통 두 개)
+    if (areasBox) {
+      areasBox.innerHTML = '';
+      links.forEach(function (o) {
+        var a = document.createElement('a');
+        a.className = 'ld-m-area'; a.href = o.href;
+        a.innerHTML = '<span>' + o.label + ' 사업 페이지</span>' + arrowSvg;
+        areasBox.appendChild(a);
+      });
+    }
+    $$('[data-m-link]', modal).forEach(function (a) { a.setAttribute('href', first.href); });
+    // 있는 정보만 보여 줌
+    $$('[data-m-row]', modal).forEach(function (row) {
+      var k = row.getAttribute('data-m-row');
+      row.hidden = !(k === 'direct' ? d.direct : d[k]);
+    });
+    var tag = $('.ld-m-co .ld-tag', modal);
+    if (tag) { tag.classList.toggle('ld-tag--hold', d.tag === '지주회사'); tag.classList.toggle('ld-tag--global', d.tag === '뉴질랜드'); }
     var c = $('[data-m-contact]', modal); if (c) c.setAttribute('href', 'contact.html?type=' + d.contact);
     if (render) { render.setAttribute('width', d.w || 671); render.src = d.img; }
+    if (photo) { if (d.photo) { photo.src = d.photo; photo.hidden = false; } else photo.hidden = true; }
+    if (visual) visual.classList.toggle('has-photo', !!d.photo);
     cur = i;
   }
   function show(i) { // 열린 상태에서 이전/다음
     i = (i + cards.length) % cards.length;
-    if (reduce) { fill(i); return; }
+    if (motionOff()) { fill(i); return; }
     clearTimeout(swapTimer);
     inner.classList.add('is-swap');
     swapTimer = setTimeout(function () { fill(i); requestAnimationFrame(function () { inner.classList.remove('is-swap'); }); }, 200);
@@ -75,7 +154,7 @@
   }
   function close() {
     if (!modal.open || modal.classList.contains('is-closing')) return;
-    if (reduce) { modal.close(); return; }
+    if (motionOff()) { modal.close(); return; }
     modal.classList.add('is-closing');
     setTimeout(function () { modal.classList.remove('is-closing'); modal.close(); }, 250);
   }

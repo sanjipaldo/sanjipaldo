@@ -4,21 +4,25 @@
    ========================================================= */
 (function () {
   'use strict';
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* 움직임 정책: OS의 '애니메이션 줄이기'와 관계없이 모션은 재생하고, 사용자가 '움직임 멈추기'를 고른 경우(html.motion-off)만 멈춥니다.
+     OS 설정이 켜진 기기(html.soft-motion)에서는 포인터를 따라 기우는 효과만 생략합니다. */
+  var root = document.documentElement;
+  function motionOff() { return !!(window.DOOGO && window.DOOGO.motionOff && window.DOOGO.motionOff()); }
+  var soft = root.classList.contains('soft-motion');
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
 
   /* ---------- 브랜드 3D 카드: 포인터를 따라 오브젝트가 살짝 기울며 떠오름 ----------
-     마우스(정밀 포인터)에서만, 움직임 줄이기 설정이면 동작하지 않습니다. CSS 변수 --mx/--my(-1~1)만 바꾸고
-     실제 움직임은 CSS transform 전환(.9s)으로 부드럽게 따라갑니다. */
-  if (!reduce && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+     마우스(정밀 포인터)에서만 — 움직임 멈추기 상태이거나 OS 설정이 켜진 기기(soft-motion)에서는 동작하지 않습니다.
+     CSS 변수 --mx/--my(-1~1)만 바꾸고 실제 움직임은 CSS transform 전환(.9s)으로 부드럽게 따라갑니다. */
+  if (!soft && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     $$('.bn-card:not(.bn-card--chain)').forEach(function (card) {
       var media = $('.bn-card-media', card);
       if (!media) return;
       var raf = 0, nx = 0, ny = 0;
       function apply() { raf = 0; card.style.setProperty('--mx', nx.toFixed(3)); card.style.setProperty('--my', ny.toFixed(3)); }
       card.addEventListener('pointermove', function (e) {
-        if (e.pointerType !== 'mouse') return;
+        if (e.pointerType !== 'mouse' || motionOff()) return;
         var r = media.getBoundingClientRect();
         nx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width - 0.5) * 2));
         ny = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height - 0.5) * 2));
@@ -80,14 +84,15 @@
 
     // 문의 카드의 모양(칸 수 · 넓은 모양)이 바뀔 차례면, 다른 카드가 빠지는 동안 함께 흐려졌다가
     // 새 자리에서 다시 나타나게 합니다 (FLIP 이동 대신 — 크기가 달라져 미끄러지면 어색하므로)
+    var still = motionOff();
     var morph = false;
     if (cta) {
       var next = ctaLayout(cards.filter(function (c) { return c !== cta && matches(c, cat); }).length);
-      morph = !reduce && (next.col !== cta.style.gridColumn || next.wide !== cta.classList.contains('is-wide'));
+      morph = !still && (next.col !== cta.style.gridColumn || next.wide !== cta.classList.contains('is-wide'));
       cta.classList.toggle('is-morph', morph);
     }
 
-    if (reduce) {
+    if (still) {
       cards.forEach(function (c) { c.hidden = !matches(c, cat); });
       finish(cat); return;
     }
@@ -143,7 +148,7 @@
   var ticking = false;
   function updateStack() {
     ticking = false;
-    if (reduce || !stackMq.matches) {
+    if (motionOff() || !stackMq.matches) {
       cases.forEach(function (c) { c.style.removeProperty('--sc'); c.style.removeProperty('--dim'); });
       return;
     }
@@ -161,6 +166,7 @@
   if (cases.length > 1) {
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
+    document.addEventListener('doogo:motion', onScroll); // 움직임 멈추기/켜기 전환 시 바로 반영
     updateStack();
   }
 

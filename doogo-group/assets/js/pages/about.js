@@ -1,14 +1,30 @@
 /* =========================================================
    DOOGO GROUP — about.js (그룹 소개)
-   히어로(지주회사로 모이는 자회사 · 패럴랙스) · 첫 화면 숫자 굴림 · 태그라인 스크롤 채움
-   · 그룹 구조(지주회사 → 자회사) 순차 등장 · 연혁 진행선 · 화면 밖 무한 모션 정지
+   히어로(지주회사로 모이는 그룹사 · 패럴랙스) · 첫 화면 숫자 굴림 · 소개 문장 글자 새김 · 태그라인 스크롤 채움
+   · 그룹 구조(지주회사 → 그룹사) 순차 등장 · 연혁 진행선 · 화면 밖 무한 모션 정지
+   모션은 OS 설정과 관계없이 재생합니다. 사용자가 '움직임 멈추기'를 고르면(window.DOOGO.motionOff()) 최종 상태로 보여 주고,
+   'doogo:motion' 이벤트로 다시 켜면 이어서 움직입니다. OS 설정이 켜진 기기(html.soft-motion)는 패럴랙스만 뺍니다.
    ========================================================= */
 (function () {
   'use strict';
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var doc = document.documentElement;
+  var motionOff = function () { return !!(window.DOOGO && window.DOOGO.motionOff && window.DOOGO.motionOff()); };
+  var softMotion = function () { return doc.classList.contains('soft-motion'); };
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
   var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
+  var hasIO = 'IntersectionObserver' in window;
+  var onMotion = []; // 'doogo:motion' 전환 때 부를 함수들 (off: true/false)
+  // 움직이는 중에 멈추면, 이미 시작된 전환(transition)까지 바로 끝 상태로 보냅니다
+  var finishAnims = function (root) {
+    if (!root || !root.getAnimations) return;
+    root.getAnimations({ subtree: true }).forEach(function (a) { try { a.finish(); } catch (e) { /* 무한 반복은 base.css 가 정지 */ } });
+  };
+  document.addEventListener('doogo:motion', function (e) {
+    var off = !!(e.detail && e.detail.off);
+    onMotion.forEach(function (fn) { fn(off); });
+    if (off) requestAnimationFrame(function () { finishAnims($('#main')); });
+  });
 
   /* ---------- 스크롤 연동 (rAF 한 번에 처리) ---------- */
   var stageFig = $('[data-stage]');
@@ -22,22 +38,25 @@
   function update() {
     ticking = false;
     var vh = window.innerHeight || 800;
+    var still = motionOff();
 
-    // 1) 히어로 무대 패럴랙스: 배경 궤도와 앞쪽(지주회사·자회사)이 서로 반대로 조금씩 (about.css 에서 --py 배율)
-    if (stageFig && !reduce) {
-      var r = stageFig.getBoundingClientRect();
-      if (r.bottom > 0 && r.top < vh) {
-        var p = (r.top + r.height / 2 - vh / 2) / vh; // -1 ~ 1
-        stageFig.style.setProperty('--py', clamp(p * -70, -60, 60).toFixed(1) + 'px');
+    // 1) 히어로 무대 패럴랙스: 배경 궤도와 앞쪽(지주회사·그룹사)이 서로 반대로 조금씩 (about.css 에서 --py 배율)
+    if (stageFig) {
+      if (still || softMotion()) stageFig.style.removeProperty('--py');
+      else {
+        var r = stageFig.getBoundingClientRect();
+        if (r.bottom > 0 && r.top < vh) {
+          var p = (r.top + r.height / 2 - vh / 2) / vh; // -1 ~ 1
+          stageFig.style.setProperty('--py', clamp(p * -70, -60, 60).toFixed(1) + 'px');
+        }
       }
     }
 
-    // 2) 영문 태그라인: 스크롤에 따라 단어가 차례로 채워짐
+    // 2) 영문 태그라인: 스크롤에 따라 단어가 차례로 채워짐 (한 번 채워진 단어는 유지)
     if (words.length) {
       var tr = tagline.getBoundingClientRect();
       var prog = clamp((vh * 0.88 - tr.top) / (tr.height + vh * 0.4), 0, 1);
-      var lit = reduce ? words.length : Math.round(prog * words.length * 1.2);
-      // 한 번 채워진 단어는 유지 (위로 스크롤해도 다시 흐려지지 않음)
+      var lit = still ? words.length : Math.round(prog * words.length * 1.2);
       words.forEach(function (w, i) { if (i < lit) w.classList.add('is-lit'); });
     }
 
@@ -58,14 +77,12 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);
   update();
+  onMotion.push(function () { update(); });
 
-  var hasIO = 'IntersectionObserver' in window;
-
-  /* ---------- 첫 화면 숫자: 1 지주회사 · 5 자회사 · 7 사업영역 · 2 국가 ----------
-     0 … n 숫자 띠를 transform 으로 굴려 올립니다(이징). 화면에서 완전히 벗어나는 순간 0 으로 되돌려 두었다가
-     다시 들어와 절반 이상 보이면 또 굴립니다(최종 숫자 → 0 으로 튀는 모습이 보이지 않게).
-     숫자 아래 얇은 선은 .is-counted 로 왼쪽부터 그려집니다 — 첫 화면에서는 블록이 떠오른(fade-up) 뒤에 그려지도록 --line-base 로 늦춤.
-     움직임 줄이기면 최종 숫자만 보여 줍니다. */
+  /* ---------- 첫 화면 숫자: 1 지주회사 · 5 그룹사 · 7 사업영역 · 2 국가 ----------
+     0 … n 숫자 띠를 transform 으로 굴려 올립니다(약 1.8초, 칸마다 0.15초 지연, 이징).
+     화면에 30% 들어오면 시작하고, 완전히 벗어나는 순간 0 으로 되돌려 두었다가 다시 들어오면 또 굴립니다.
+     숫자 아래 얇은 선은 .is-counted 로 왼쪽부터 그려집니다 — 첫 화면에서는 블록이 떠오른(fade-up) 뒤에 그려지도록 --line-base 로 늦춤. */
   var facts = $('[data-facts]');
   if (facts) {
     var nums = $$('[data-ab-count]', facts).map(function (el) {
@@ -75,43 +92,96 @@
       el.innerHTML = '<span class="ab-odo" aria-hidden="true"><span class="ab-odo-strip">' + strip + '</span></span><span class="sr-only">' + n + '</span>';
       return { n: n, odo: el.firstChild };
     });
+    var firstRoll = true, factsIn = false;
     var showFinal = function () {
-      nums.forEach(function (o) { o.odo.style.setProperty('--n', o.n); });
+      nums.forEach(function (o) { o.odo.classList.remove('is-rolling'); o.odo.style.setProperty('--n', o.n); });
       facts.classList.add('is-counted');
     };
-    if (reduce || !hasIO) showFinal();
-    else {
-      var firstRoll = true, factsIn = false;
-      var reset = function () { // 전환 없이 즉시 0 · 밑줄 지움
-        nums.forEach(function (o) { o.odo.classList.remove('is-rolling'); o.odo.style.setProperty('--n', 0); });
-        facts.classList.remove('is-counted');
-      };
-      var roll = function () {
-        reset();
-        void facts.offsetWidth; // 0 으로 되돌린 상태를 먼저 그린 뒤 굴림 시작
-        var base = firstRoll ? 0.55 : 0.08; // 처음엔 등장(fade-up: --d .45s + .8s) 모션과 맞춰 조금 늦게
-        facts.style.setProperty('--line-base', firstRoll ? '.85s' : '.12s');
-        firstRoll = false;
-        nums.forEach(function (o, i) {
-          o.odo.style.setProperty('--odo-dur', (0.95 + o.n * 0.12).toFixed(2) + 's');
-          o.odo.style.setProperty('--odo-delay', (base + i * 0.12).toFixed(2) + 's');
-          o.odo.classList.add('is-rolling');
-          o.odo.style.setProperty('--n', o.n);
-        });
-        facts.classList.add('is-counted');
-      };
+    var resetFacts = function () { // 전환 없이 즉시 0 · 밑줄 지움
+      nums.forEach(function (o) { o.odo.classList.remove('is-rolling'); o.odo.style.setProperty('--n', 0); });
+      facts.classList.remove('is-counted');
+    };
+    var roll = function () {
+      if (motionOff()) { showFinal(); return; }
+      resetFacts();
+      void facts.offsetWidth; // 0 으로 되돌린 상태를 먼저 그린 뒤 굴림 시작
+      var base = firstRoll ? 0.55 : 0.08; // 처음엔 등장(fade-up: --d .45s + .8s) 모션과 맞춰 조금 늦게
+      facts.style.setProperty('--line-base', firstRoll ? '.85s' : '.12s');
+      firstRoll = false;
+      nums.forEach(function (o, i) {
+        o.odo.style.setProperty('--odo-dur', '1.8s');
+        o.odo.style.setProperty('--odo-delay', (base + i * 0.15).toFixed(2) + 's');
+        o.odo.classList.add('is-rolling');
+        o.odo.style.setProperty('--n', o.n);
+      });
+      facts.classList.add('is-counted');
+    };
+    if (!hasIO || motionOff()) showFinal();
+    else resetFacts();
+    if (hasIO) {
       new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
-          if (en.isIntersecting && en.intersectionRatio >= 0.55) { if (!factsIn) { factsIn = true; roll(); } }
-          else if (!en.isIntersecting && factsIn) { factsIn = false; reset(); } // 완전히 벗어나면 0 으로 되돌려 두고 다음에 다시 굴림
+          if (en.isIntersecting && en.intersectionRatio >= 0.3) { if (!factsIn) { factsIn = true; roll(); } }
+          else if (!en.isIntersecting && factsIn) { factsIn = false; if (!motionOff()) resetFacts(); } // 완전히 벗어나면 0 으로 되돌려 두고 다음에 다시 굴림
         });
-      }, { threshold: [0, 0.6] }).observe(facts);
+      }, { threshold: [0, 0.3] }).observe(facts);
     }
+    onMotion.push(function (off) { if (off) showFinal(); else if (factsIn) roll(); });
   }
 
-  /* ---------- 히어로 무대: 다섯 자회사가 지주회사로 모여듭니다 ----------
-     자회사 타일 가운데 → 지주회사 3D(블록 덩어리) 가장자리까지 선을 실제 위치로 계산해 그립니다(창 크기가 바뀌면 다시 계산).
-     등장: 지주회사 → 바깥에 흩어져 있던 자회사가 01~05 차례로 모임(--ox/--oy: 바깥쪽 출발 위치) → 선 → 끝점.
+  /* ---------- 소개 문장 글자 새김 (data-engrave) ----------
+     글자마다 span 으로 나눠(aria-hidden) 화면에 들어오면 차례로 새기고, 원문은 sr-only 로 한 번만 읽힙니다.
+     다 새겨지면 강조 구절([data-accent])이 블루로 바뀌고 밑줄이 그려집니다. */
+  var eg = $('[data-engrave]');
+  if (eg) {
+    var plain = eg.textContent.replace(/\s+/g, ' ').trim();
+    var vis = document.createElement('span'); vis.setAttribute('aria-hidden', 'true');
+    var chars = [], accents = [];
+    var addText = function (text, target, isAccent) {
+      text.split(/(\s+)/).forEach(function (part) {
+        if (!part) return;
+        if (/^\s+$/.test(part)) { target.appendChild(document.createTextNode(' ')); return; }
+        var w = document.createElement('span'); w.className = 'eg-w';
+        Array.prototype.forEach.call(part, function (ch) {
+          var c = document.createElement('span'); c.className = 'eg-c'; c.textContent = ch;
+          w.appendChild(c); chars.push(c); if (isAccent) accents.push(c);
+        });
+        target.appendChild(w);
+      });
+    };
+    Array.prototype.slice.call(eg.childNodes).forEach(function (node) {
+      if (node.nodeType === 3) addText(node.textContent, vis, false);
+      else if (node.nodeType === 1 && node.hasAttribute('data-accent')) {
+        var acc = document.createElement('span'); acc.className = 'eg-accent';
+        addText(node.textContent, acc, true);
+        vis.appendChild(acc);
+      } else if (node.nodeType === 1) addText(node.textContent, vis, false);
+    });
+    var sr = document.createElement('span'); sr.className = 'sr-only'; sr.textContent = plain;
+    eg.textContent = ''; eg.appendChild(sr); eg.appendChild(vis);
+    chars.forEach(function (c, i) { c.style.setProperty('--ci', i); });
+    accents.forEach(function (c, i) { c.style.setProperty('--ai', i); });
+    var accTimer = 0;
+    var finish = function () { clearTimeout(accTimer); eg.classList.add('is-on', 'is-accent'); };
+    var start = function () {
+      if (motionOff()) { finish(); return; }
+      eg.classList.add('is-on');
+      accTimer = setTimeout(function () { eg.classList.add('is-accent'); }, chars.length * 24 + 750);
+    };
+    eg.classList.add('is-split');
+    if (!hasIO || motionOff()) finish();
+    else {
+      var egIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { if (en.isIntersecting) { start(); egIO.disconnect(); } });
+      }, { rootMargin: '0px 0px -18% 0px', threshold: 0.2 });
+      egIO.observe(eg);
+    }
+    onMotion.push(function (off) { if (off) finish(); });
+  }
+
+  /* ---------- 히어로 무대: 다섯 그룹사가 지주회사로 모여듭니다 ----------
+     그룹사 타일 가운데 → 지주회사 3D(블록 덩어리) 가장자리까지 선을 실제 위치로 계산해 그립니다(창 크기가 바뀌면 다시 계산).
+     등장: 지주회사 → 바깥에 흩어져 있던 그룹사가 01~05 차례로 모임(--ox/--oy: 바깥쪽 출발 위치) → 선 → 끝점.
      다 모인 뒤에는 화면에 보이는 동안만 빛 점이 선을 따라 가운데로 흐르고 고리가 퍼집니다(.is-vis). */
   if (stageFig) {
     var fg = $('.ab-stage-fg', stageFig);
@@ -155,10 +225,11 @@
     var stageRaf = 0;
     window.addEventListener('resize', function () { cancelAnimationFrame(stageRaf); stageRaf = requestAnimationFrame(layoutStage); });
 
-    if (reduce || !hasIO) stageFig.classList.add('is-gathered');
-    else {
-      stageFig.classList.add('is-armed');
-      var gathered = false;
+    var gathered = false, gTimers = [];
+    var gatherNow = function () { gTimers.forEach(clearTimeout); gathered = true; stageFig.classList.add('is-gather', 'is-gathered'); };
+    if (!hasIO || motionOff()) gatherNow();
+    else stageFig.classList.add('is-armed');
+    if (hasIO) {
       new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
           stageFig.classList.toggle('is-vis', en.isIntersecting); // 화면 밖이면 빛 점·고리·영상 버튼 링 정지
@@ -166,38 +237,43 @@
             gathered = true;
             layoutStage();
             // 첫 화면에서는 무대가 떠오르는(data-reveal scale, --d .2s) 동안 조금 기다렸다가 모읍니다
-            setTimeout(function () { stageFig.classList.add('is-gather'); }, 260);
-            setTimeout(function () { stageFig.classList.add('is-gathered'); }, 260 + 2100);
+            gTimers.push(setTimeout(function () { stageFig.classList.add('is-gather'); }, 260));
+            gTimers.push(setTimeout(function () { stageFig.classList.add('is-gathered'); }, 260 + 2100));
           }
         });
       }, { threshold: [0, 0.25] }).observe(stageFig);
     }
+    onMotion.push(function (off) { if (off) gatherNow(); });
   }
 
-  /* ---------- 그룹 구조: 지주회사 → 연결선 → 자회사 01~05 순차 등장 ----------
-     데스크톱(5열): 지주회사 카드가 보이면 줄기·가로선이 그려지고, 자회사마다 선이 내려간 뒤 카드가 차례로 올라옵니다(CSS 지연).
+  /* ---------- 그룹 구조: 지주회사 → 연결선 → 그룹사 01~05 순차 등장 ----------
+     데스크톱(5열): 지주회사 카드가 보이면 줄기·가로선이 그려지고, 그룹사마다 선이 내려간 뒤 카드가 차례로 올라옵니다(CSS 지연).
      1100px 이하(세로 트리): 카드마다 화면에 들어올 때 줄기 → 가지 → 카드 순으로 그려집니다.
-     다 그려진 뒤에는 화면에 보이는 동안만 선을 따라 빛이 흐릅니다. 움직임 줄이기면 처음부터 모두 보입니다. */
+     다 그려진 뒤에는 화면에 보이는 동안만 선을 따라 빛이 흐릅니다. 움직임 멈추기면 처음부터 모두 보입니다. */
   var org = $('[data-org]');
-  if (org && !reduce && hasIO) {
+  if (org && hasIO) {
     var subs = $$('.ab-sub', org);
     var vertical = window.matchMedia('(max-width: 1100px)');
-    var played = false;
+    var played = false, liveIO = null, liveTimer = 0;
     var showAll = function () { subs.forEach(function (li) { li.classList.add('is-in'); }); };
     var startLive = function () {
       org.classList.add('is-done');
-      new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) { org.classList.toggle('is-live', en.isIntersecting); });
-      }).observe(org);
+      if (liveIO) return;
+      liveIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { org.classList.toggle('is-live', en.isIntersecting && !motionOff()); });
+      });
+      liveIO.observe(org);
     };
     var play = function () {
       if (played) return;
       played = true;
       org.classList.add('is-play');
       if (!vertical.matches) showAll();
-      setTimeout(startLive, vertical.matches ? 1200 : 3000); // 데스크톱: 마지막 카드(05)가 다 올라온 뒤 (about.css 의 지연과 맞춤)
+      liveTimer = setTimeout(startLive, vertical.matches ? 1200 : 3000); // 데스크톱: 마지막 카드(05)가 다 올라온 뒤 (about.css 의 지연과 맞춤)
     };
-    org.classList.add('is-armed');
+    var finishOrg = function () { played = true; clearTimeout(liveTimer); org.classList.add('is-play'); showAll(); startLive(); org.classList.remove('is-live'); };
+    if (motionOff()) finishOrg();
+    else org.classList.add('is-armed');
     var holdIO = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) { if (en.isIntersecting) { play(); holdIO.disconnect(); } });
     }, { rootMargin: '0px 0px -20% 0px' });
@@ -208,22 +284,28 @@
     subs.forEach(function (li) { subIO.observe(li); });
     // 키보드로 들어오면 기다리지 않고 바로 모두 보여 줌
     org.addEventListener('focusin', function () { play(); showAll(); });
+    onMotion.push(function (off) {
+      if (off) finishOrg();
+      else if (org.classList.contains('is-done')) { var r = org.getBoundingClientRect(); org.classList.toggle('is-live', r.bottom > 0 && r.top < window.innerHeight); }
+    });
   }
 
   /* ---------- 화면 밖 무한 모션 정지 (배터리·성능) ----------
-     비전 마키 띠, 지도(SMIL 빛 점 + 핀 파동)는 화면에 보일 때만 움직입니다. 움직임 줄이기면 처음부터 멈춤. */
+     비전 마키 띠, 지도(SMIL 빛 점 + 핀 파동)는 화면에 보일 때만 움직입니다. 움직임 멈추기면 멈춘 채로. */
   var mapSvg = $('.ab-map-svg');
+  var mapFig = $('[data-map]');
   var canPauseSvg = mapSvg && typeof mapSvg.pauseAnimations === 'function';
-  if (reduce) { if (canPauseSvg) mapSvg.pauseAnimations(); }
-  else if (hasIO) {
+  var mapVisible = false;
+  var syncMap = function () { if (!canPauseSvg) return; if (mapVisible && !motionOff()) mapSvg.unpauseAnimations(); else mapSvg.pauseAnimations(); };
+  if (hasIO) {
     var idleIO = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         en.target.classList.toggle('is-paused', !en.isIntersecting);
-        if (en.target === mapFig && canPauseSvg) { if (en.isIntersecting) mapSvg.unpauseAnimations(); else mapSvg.pauseAnimations(); }
+        if (en.target === mapFig) { mapVisible = en.isIntersecting; syncMap(); }
       });
     }, { rootMargin: '80px 0px' });
-    var mapFig = $('[data-map]');
     [$('.ab-vision-flow'), mapFig].forEach(function (el) { if (el) { el.classList.add('is-paused'); idleIO.observe(el); } });
-    if (canPauseSvg) mapSvg.pauseAnimations();
   }
+  syncMap();
+  onMotion.push(syncMap);
 })();

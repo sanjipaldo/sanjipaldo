@@ -5,20 +5,22 @@
    ========================================================= */
 (function () {
   'use strict';
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* 움직임 정책: OS 설정과 관계없이 부드러운 스크롤·강조 효과를 쓰고,
+     사용자가 '움직임 멈추기'를 고른 경우(html.motion-off)에만 바로 이동·효과 생략 */
+  function still() { return !!(window.DOOGO && window.DOOGO.motionOff && window.DOOGO.motionOff()); }
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
 
   /* ---------- 분야 정보 ---------- */
   var TYPES = {
-    campus:   { label: '교육 · (주)두고홀딩스', topics: 'DOOGO CAMPUS 실전 교육 과정, 강사·과정 소개, 온라인 클래스 ‘두고클래스’, 교육장 연계', ph: '관심 있는 과정이나 주제, 인원, 희망 일정 등을 적어 주세요.' },
-    bio:      { label: '제조 · DOOGOBIO', topics: '뉴질랜드 해외법인의 건강식품 개발, 소량 제조, 패키지·인쇄, 제조 상담·연결 ‘두고커넥트’', ph: '만들고 싶은 제품, 예상 수량, 패키지·인쇄 필요 여부 등을 적어 주세요.' },
-    commerce: { label: '커머스 · (주)두고메이커스', topics: 'DOOGO MAKERS 브랜드 기획, 상품 운영, 브랜드 성장과 EXIT 전략', ph: '브랜드 현황(준비 중·운영 중), 판매 채널, 고민하는 부분을 적어 주세요.' },
-    media:    { label: '미디어 · (주)두고미디어', topics: 'DOOGO MEDIA 촬영, 유튜브 콘텐츠, 라이브 콘텐츠 제작', ph: '필요한 콘텐츠(촬영·유튜브·라이브), 목적, 희망 일정을 적어 주세요.' },
-    ad:       { label: '광고 · (주)두고애드', topics: 'DOOGO AD 네이버·쿠팡 중심 광고 운영, 광고 소재 기획, 성과 분석', ph: '판매 중인 상품과 채널, 현재 광고 운영 여부, 목표를 적어 주세요.' },
-    food:     { label: '유통 · DOOGO FOOD', topics: '두고그룹 유통 사업의 식품 도매 플랫폼 DOOGO MARKET 공급·입점, 상품 공급, 판매자 협력', ph: '공급사인지 판매자인지, 취급 품목과 원하는 협력 방식을 적어 주세요.' },
-    space:    { label: '공간 · (주)두고스페이스', topics: 'DOOGO SPACE 공유오피스, 비상주 사무실, 교육장 대여, 숙박 ‘NORA STAY’', ph: '필요한 공간(공유오피스·비상주·교육장·숙박), 인원, 기간을 적어 주세요.' },
-    partner:  { label: '그룹 제휴 · (주)두고홀딩스', topics: '지주회사 창구로 받는 사업 간 제휴, 공동 프로젝트, 그룹 차원의 협력 제안', ph: '회사 소개와 제안 내용, 기대하는 협력 방식을 적어 주세요.' }
+    campus:   { label: '교육 · DOOGO CLASS', topics: 'DOOGO HOLDINGS가 직접 운영하는 교육 플랫폼의 실전 교육 과정, 강사·과정 소개, 온라인 클래스, 교육장 연계', ph: '관심 있는 과정이나 주제, 인원, 희망 일정 등을 적어 주세요.' },
+    bio:      { label: '제조 · DOOGOBIO', topics: '뉴질랜드 건강식품 개발, 소량 제조, 패키지·인쇄, 제조 상담·연결 ‘두고커넥트’', ph: '만들고 싶은 제품, 예상 수량, 패키지·인쇄 필요 여부 등을 적어 주세요.' },
+    commerce: { label: '커머스 · DOOGO MAKERS', topics: '브랜드 기획, 상품 운영, 브랜드 성장과 EXIT 전략', ph: '브랜드 현황(준비 중·운영 중), 판매 채널, 고민하는 부분을 적어 주세요.' },
+    media:    { label: '미디어 · DOOGO MEDIA', topics: '촬영, 유튜브 콘텐츠, 라이브 콘텐츠 제작', ph: '필요한 콘텐츠(촬영·유튜브·라이브), 목적, 희망 일정을 적어 주세요.' },
+    ad:       { label: '광고 · DOOGO AD', topics: '네이버·쿠팡 중심 광고 운영, 광고 소재 기획, 성과 분석', ph: '판매 중인 상품과 채널, 현재 광고 운영 여부, 목표를 적어 주세요.' },
+    food:     { label: '유통 · DOOGOFOOD', topics: 'DOOGO HOLDINGS가 직접 운영하는 식품 도매 플랫폼의 공급·입점, 상품 공급, 판매자 협력', ph: '공급사인지 판매자인지, 취급 품목과 원하는 협력 방식을 적어 주세요.' },
+    space:    { label: '공간 · DOOGO SPACE', topics: '공유오피스, 비상주 사무실, 교육장 대여, 숙박 ‘NORA STAY’', ph: '필요한 공간(공유오피스·비상주·교육장·숙박), 인원, 기간을 적어 주세요.' },
+    partner:  { label: '그룹 제휴 · DOOGO HOLDINGS', topics: '지주회사 창구로 받는 사업 간 제휴, 공동 프로젝트, 그룹 차원의 협력 제안', ph: '회사 소개와 제안 내용, 기대하는 협력 방식을 적어 주세요.' }
   };
   var MAX = 1000;
 
@@ -77,7 +79,7 @@
       if (t) {
         typeHint.innerHTML = '<strong>' + t.label + '</strong> ' + t.topics + ' 관련 문의를 받습니다.';
         typeHint.classList.add('is-on');
-        if (!reduce && !opts.silent) { typeHint.classList.remove('is-flash'); void typeHint.offsetWidth; typeHint.classList.add('is-flash'); }
+        if (!still() && !opts.silent) { typeHint.classList.remove('is-flash'); void typeHint.offsetWidth; typeHint.classList.add('is-flash'); }
       } else {
         typeHint.innerHTML = defaultHint;
         typeHint.classList.remove('is-on');
@@ -118,8 +120,8 @@
     if (done && !done.hidden) resetForm({ keepFocus: true });
     var r = pickType(v);
     var target = typeGroup || form;
-    target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
-    if (r) setTimeout(function () { try { r.focus({ preventScroll: true }); } catch (err) { r.focus(); } }, reduce ? 0 : 450);
+    target.scrollIntoView({ behavior: still() ? 'auto' : 'smooth', block: 'start' });
+    if (r) setTimeout(function () { try { r.focus({ preventScroll: true }); } catch (err) { r.focus(); } }, still() ? 0 : 450);
   });
 
   /* ---------- 글자 수 ---------- */
@@ -297,7 +299,7 @@
       });
     } else {
       // 시안 모드: 실제 전송 없이 '전송되지 않았습니다' 안내 화면을 보여 줍니다.
-      setTimeout(function () { setLoading(false); showDone(data, true); }, reduce ? 0 : 700);
+      setTimeout(function () { setLoading(false); showDone(data, true); }, still() ? 0 : 700);
     }
   });
 
@@ -335,7 +337,7 @@
     requestAnimationFrame(function () { requestAnimationFrame(function () { done.classList.remove('is-enter'); }); });
 
     var top = card.getBoundingClientRect().top;
-    if (top < 0 || top > window.innerHeight * 0.5) card.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    if (top < 0 || top > window.innerHeight * 0.5) card.scrollIntoView({ behavior: still() ? 'auto' : 'smooth', block: 'start' });
     var title = $('#ct-done-title');
     if (title) setTimeout(function () { try { title.focus({ preventScroll: true }); } catch (e) { title.focus(); } }, 60);
   }
@@ -353,8 +355,8 @@
     if (done) { done.hidden = true; done.classList.remove('is-show'); }
     form.hidden = false;
     if (!opts.keepFocus) {
-      card.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
-      setTimeout(function () { try { radios[0].focus({ preventScroll: true }); } catch (e) { radios[0].focus(); } }, reduce ? 0 : 400);
+      card.scrollIntoView({ behavior: still() ? 'auto' : 'smooth', block: 'start' });
+      setTimeout(function () { try { radios[0].focus({ preventScroll: true }); } catch (e) { radios[0].focus(); } }, still() ? 0 : 400);
     }
   }
   var resetBtn = done && $('[data-reset]', done);

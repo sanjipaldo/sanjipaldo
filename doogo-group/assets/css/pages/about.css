@@ -39,7 +39,7 @@ main .note { color: var(--muted); }
   margin-top: clamp(36px, 5vw, 64px); padding-top: 28px; border-top: 1px solid var(--line-dark);
 }
 .ab-hero .ab-hero-foot .lead { margin-top: 0; max-width: 40ch; }
-/* 첫 화면 숫자: 1 지주회사 · 5 자회사 · 7 사업영역 · 2 국가 (about.js 가 화면에 들어올 때마다 0부터 굴려 올림) */
+/* 첫 화면 숫자: 1 지주회사 · 5 그룹사 · 7 사업영역 · 2 국가 (about.js 가 화면에 들어올 때마다 0부터 굴려 올림) */
 .ab-facts { display: grid; grid-template-columns: repeat(4, minmax(96px, auto)); gap: 0 clamp(24px, 3.4vw, 52px); }
 .ab-fact { display: flex; flex-direction: column; min-width: 0; }
 .ab-fact-n { order: -1; position: relative; padding-bottom: 16px; }
@@ -51,6 +51,7 @@ main .note { color: var(--muted); }
 .ab-facts.is-counted .ab-fact-n::after { transform: scaleX(1); transition: transform 1.2s var(--ease) calc(var(--line-base, .12s) + var(--i, 0) * .12s); }
 .ab-fact dt { margin-top: 14px; font-size: .98rem; font-weight: 700; letter-spacing: -.02em; color: #fff; }
 .ab-fact-sub { margin-top: 3px; font-size: .8rem; font-weight: 500; color: var(--on-dark-3); white-space: nowrap; }
+.ab-fact-sub.en { font-size: .72rem; font-weight: 600; letter-spacing: .1em; }
 /* 숫자 굴림(odometer): 0 … n 세로 띠를 transform 으로 올립니다 */
 .ab-odo { display: block; height: 1.2em; margin-block: -.1em; overflow: hidden; -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 16%, #000 84%, transparent 100%); mask-image: linear-gradient(180deg, transparent 0, #000 16%, #000 84%, transparent 100%); }
 .ab-odo-strip { display: block; transform: translate3d(0, calc(var(--n, 0) * -1.2em), 0); }
@@ -61,7 +62,7 @@ main .note { color: var(--muted); }
 /* 1500px 이하에서는 위 글줄(.container)과 같은 폭으로 정렬, 그 이상에서만 넓게 펼침 */
 @media (max-width: 1500px) { .ab-hero-visual { max-width: calc(var(--container) + var(--gutter) * 2); } }
 
-/* 첫 화면 비주얼: 지주회사(가운데 3D) 쪽으로 다섯 자회사가 모여듭니다.
+/* 첫 화면 비주얼: 지주회사(가운데 3D) 쪽으로 다섯 그룹사가 모여듭니다.
    위치는 무대 너비·높이에 대한 % (--x/--y), 크기는 무대 너비 기준(cqw). 선(.ab-ray)은 about.js 가 실제 위치로 계산합니다. */
 .ab-stage-fig { position: relative; margin: 0; }
 .ab-stage {
@@ -99,11 +100,12 @@ main .note { color: var(--muted); }
   position: absolute; left: clamp(14px, 2.4cqw, 36px); top: clamp(14px, 2.4cqw, 34px);
   display: grid; gap: 1px; color: var(--ink); line-height: 1.3;
 }
-.ab-core-label .en { font-size: .66rem; font-weight: 600; letter-spacing: .2em; color: var(--blue-700); }
-.ab-core-label b { font-size: 1.02rem; font-weight: 700; letter-spacing: -.02em; }
-.ab-core-label small { justify-self: start; display: inline-flex; align-items: center; height: 22px; margin-top: 6px; padding: 0 9px; border-radius: 999px; background: var(--navy); color: #fff; font-size: .7rem; font-weight: 700; }
+.ab-core-label b { margin-top: 6px; font-size: clamp(.98rem, 1.5cqw, 1.3rem); font-weight: 600; letter-spacing: .02em; line-height: 1.2; }
+.ab-core-label small { justify-self: start; display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--navy); color: #fff; font-size: .7rem; font-weight: 700; }
+.ab-core-direct { margin-top: 2px; font-size: .72rem; font-weight: 600; color: var(--ink-2); }
+.ab-core-direct .en { font-size: .68rem; letter-spacing: .06em; color: var(--blue-700); }
 
-/* 연결선: 자회사 → 지주회사. 선이 그려진 뒤 빛 점이 가운데로 흘러 들어갑니다 */
+/* 연결선: 그룹사 → 지주회사. 선이 그려진 뒤 빛 점이 가운데로 흘러 들어갑니다 */
 .ab-rays { position: absolute; inset: 0; pointer-events: none; }
 .ab-ray { position: absolute; height: 2px; margin-top: -1px; transform-origin: 0 50%; transform: rotate(var(--a, 0rad)); }
 .ab-ray::before { content: ""; position: absolute; inset: 0; border-radius: 2px; background: linear-gradient(90deg, rgba(255, 255, 255, .6), #fff); box-shadow: 0 1px 3px rgba(10, 60, 160, .14); transform-origin: 0 50%; }
@@ -113,7 +115,7 @@ main .note { color: var(--muted); }
 }
 .ab-ray i { position: absolute; left: 0; top: 50%; width: 34px; height: 4px; margin-top: -2px; border-radius: 4px; background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff 70%, var(--blue-300)); opacity: 0; transform: translate3d(var(--from, 0px), 0, 0); }
 
-/* 자회사 타일 */
+/* 그룹사 타일 */
 .ab-sats { position: absolute; inset: 0; }
 .ab-sat { position: absolute; left: calc(var(--x) - var(--tile) / 2); top: calc(var(--y) - var(--tile) / 2); width: var(--tile); }
 .ab-sat:nth-child(1) { --x: 58%; --y: 15%; }
@@ -135,7 +137,7 @@ main .note { color: var(--muted); }
 .ab-sat-label b { font-size: .76rem; font-weight: 600; letter-spacing: .04em; color: var(--ink); }
 .ab-sat-label small { font-size: .68rem; font-weight: 600; color: var(--ink-2); }
 
-/* 등장: 지주회사가 먼저 떠오르고 → 바깥에 흩어져 있던 자회사가 01부터 차례로 모여든 뒤 → 선이 그려지고 → 고리가 퍼집니다 (about.js: .is-armed → .is-gather → .is-gathered) */
+/* 등장: 지주회사가 먼저 떠오르고 → 바깥에 흩어져 있던 그룹사가 01부터 차례로 모여든 뒤 → 선이 그려지고 → 고리가 퍼집니다 (about.js: .is-armed → .is-gather → .is-gathered) */
 .ab-stage-fig.is-armed .ab-core { opacity: 0; transform: scale(.92); }
 .ab-stage-fig.is-armed .ab-core-label { opacity: 0; transform: translateY(10px); }
 .ab-stage-fig.is-armed .ab-sat { opacity: 0; transform: translate3d(var(--ox, 0px), var(--oy, 0px), 0) scale(.8); }
@@ -191,6 +193,21 @@ main .note { color: var(--muted); }
 .ab-intro-head .h2 { margin-top: 20px; }
 .ab-intro-body { display: grid; gap: 22px; padding-top: 8px; color: var(--ink-2); font-size: 1.06rem; line-height: 1.85; }
 .ab-intro-lede { font-size: clamp(1.22rem, 1.85vw, 1.55rem); line-height: 1.6; font-weight: 600; color: var(--ink); letter-spacing: -.025em; }
+.ab-intro-lede [data-accent] { color: var(--blue); } /* JS 없을 때 */
+/* 글자 새김 (about.js · data-engrave): 화면에 들어오면 글자마다 --ci × 24ms 지연으로 흐림 → 선명 · 아래 → 제자리 · 흐린 색 → 잉크색.
+   다 새겨지면 '한 그룹 안에서'가 블루로 바뀌고 밑줄이 그려집니다. */
+.ab-intro-lede .eg-w { display: inline-block; white-space: nowrap; }
+.ab-intro-lede .eg-c { display: inline-block; }
+.ab-intro-lede .eg-accent { position: relative; display: inline-block; white-space: nowrap; }
+.ab-intro-lede .eg-accent::after { content: ""; position: absolute; left: 0; right: 0; bottom: .02em; height: 2px; border-radius: 2px; background: var(--blue); transform: scaleX(0); transform-origin: left center; }
+.js .ab-intro-lede.is-split .eg-c {
+  opacity: 0; transform: translateY(.38em); filter: blur(6px); color: #9AA3B2;
+  transition: opacity .55s var(--ease), transform .75s var(--ease), filter .6s var(--ease), color .9s var(--ease);
+  transition-delay: calc(var(--ci, 0) * 24ms);
+}
+.js .ab-intro-lede.is-split.is-on .eg-c { opacity: 1; transform: none; filter: none; color: var(--ink); }
+.js .ab-intro-lede.is-split.is-accent .eg-accent .eg-c { color: var(--blue); transition: color .6s var(--ease) calc(var(--ai, 0) * 45ms); }
+.ab-intro-lede.is-accent .eg-accent::after { transform: scaleX(1); transition: transform 1s cubic-bezier(.65, 0, .35, 1) .2s; }
 
 .ab-tagline-wrap { margin-top: clamp(88px, 11vw, 160px); }
 .ab-tagline { font-size: clamp(2.1rem, 5.6vw, 5.4rem); line-height: 1.06; font-weight: 600; letter-spacing: -.035em; }
@@ -266,11 +283,11 @@ main .note { color: var(--muted); }
 .ab-promise-en { margin-top: 8px; font-size: .7rem; font-weight: 600; letter-spacing: .16em; color: var(--blue-300); }
 .ab-promise-desc { margin-top: 14px; font-size: .92rem; line-height: 1.65; color: var(--on-dark-2); }
 
-/* ---------- 03 STRUCTURE (조직도: 지주회사 1 + 자회사 5) ---------- */
+/* ---------- 03 STRUCTURE (조직도: 지주회사 1 + 그룹사 5) ---------- */
 .ab-org {
-  --g: 16px;            /* 자회사 카드 사이 간격 */
+  --g: 16px;            /* 그룹사 카드 사이 간격 */
   --stem: 48px;         /* 지주회사 → 가로선 */
-  --drop: 36px;         /* 가로선 → 자회사 카드 */
+  --drop: 36px;         /* 가로선 → 그룹사 카드 */
   --lc: rgba(11, 27, 51, .26);
   --g3d: linear-gradient(180deg, #A8C5E8 0%, #C3D7EF 52%, #D8E5F4 100%); /* 3D 렌더 배경과 같은 블루 */
   position: relative;
@@ -303,8 +320,7 @@ main .note { color: var(--muted); }
 .ab-hold-id { display: flex; align-items: center; gap: 18px; }
 .ab-hold-sym { width: 60px; height: 60px; border-radius: 16px; flex: none; box-shadow: 0 12px 24px -10px rgba(10, 93, 226, .8); }
 .ab-hold-label { font-size: .78rem; font-weight: 600; color: var(--blue-300); }
-.ab-hold-name { margin-top: 2px; font-size: clamp(1.45rem, 2vw, 1.75rem); font-weight: 700; letter-spacing: -.035em; line-height: 1.25; white-space: nowrap; }
-.ab-hold-en { margin-top: 2px; font-size: .7rem; font-weight: 500; letter-spacing: .22em; color: var(--on-dark-3); }
+.ab-hold-name { margin-top: 4px; font-size: clamp(1.4rem, 2vw, 1.8rem); font-weight: 600; letter-spacing: .01em; line-height: 1.15; white-space: nowrap; }
 .ab-hold-facts { display: grid; grid-template-columns: auto auto auto; justify-content: end; }
 .ab-hold-facts > div { display: grid; align-content: center; gap: 6px; padding: 4px clamp(18px, 2vw, 28px); border-left: 1px solid var(--line-dark); }
 .ab-hold-facts > div:last-child { padding-right: 0; }
@@ -320,9 +336,16 @@ main .note { color: var(--muted); }
 .ab-area-link .ico { width: 16px; height: 16px; transition: transform .3s var(--ease); }
 .ab-area-link:hover { color: var(--blue-300); }
 .ab-area-link:hover .ico { transform: translateX(3px); }
-.ab-hold-plus { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line-dark); font-size: .74rem; font-weight: 600; color: var(--on-dark-2); }
+.ab-hold-direct dd { display: grid; gap: 2px; }
+/* 직접 운영: 실제 사이트(새 창) */
+.ab-ext { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; color: #fff; transition: color .25s var(--ease); }
+.ab-ext-area { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; background: rgba(111, 162, 242, .18); color: var(--blue-300); font-size: .72rem; font-weight: 700; }
+.ab-ext .en { font-size: .92rem; font-weight: 600; letter-spacing: .03em; }
+.ab-ext .ico { width: 14px; height: 14px; color: var(--blue-300); transition: transform .3s var(--ease); }
+.ab-ext:hover { color: var(--blue-300); }
+.ab-ext:hover .ico { transform: translate(2px, -2px); }
 
-/* 연결선: 세로 줄기 → 가로선(가운데에서 양쪽으로) → 자회사마다 내려가는 선 */
+/* 연결선: 세로 줄기 → 가로선(가운데에서 양쪽으로) → 그룹사마다 내려가는 선 */
 .ab-org-lines { position: relative; height: calc(var(--stem) + var(--drop)); }
 .ab-org-stem, .ab-org-half, .ab-org-drop i { position: relative; overflow: hidden; display: block; background: var(--lc); }
 .ab-org-stem { position: absolute; left: 50%; top: 0; width: 1.5px; height: var(--stem); margin-left: -.75px; transform-origin: top center; }
@@ -339,7 +362,7 @@ main .note { color: var(--muted); }
 .ab-org-stem::before { /* 지주회사 아래 시작점 */
   content: ""; position: absolute; left: 50%; top: 0; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%; background: var(--blue);
 }
-/* 흐르는 빛: 그려진 뒤에 지주회사 → 자회사 방향으로 은은하게 (화면에 보일 때만) */
+/* 흐르는 빛: 그려진 뒤에 지주회사 → 그룹사 방향으로 은은하게 (화면에 보일 때만) */
 .ab-org-stem::after, .ab-org-half::after, .ab-org-drop i::after { content: ""; position: absolute; inset: 0; opacity: 0; }
 .ab-org-stem::after, .ab-org-drop i::after { background: linear-gradient(180deg, transparent 0 40%, var(--blue) 80%, transparent 100%); transform: translateY(-100%); }
 .ab-org-half--r::after { background: linear-gradient(90deg, transparent 0 55%, var(--blue) 88%, transparent 100%); transform: translateX(-100%); }
@@ -353,7 +376,7 @@ main .note { color: var(--muted); }
 @keyframes abFlowL { 0%, 11% { opacity: 1; transform: translateX(100%); } 34% { opacity: 1; transform: translateX(-100%); } 35%, 100% { opacity: 0; transform: translateX(-100%); } }
 @keyframes abFlowD { 0%, 31% { opacity: 1; transform: translateY(-100%); } 42% { opacity: 1; transform: translateY(100%); } 43%, 100% { opacity: 0; transform: translateY(100%); } }
 
-/* 자회사 카드 */
+/* 그룹사 카드 */
 .ab-subs { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--g); }
 .ab-sub { position: relative; display: flex; min-width: 0; }
 .ab-sub-card {
@@ -369,12 +392,13 @@ main .note { color: var(--muted); }
 .ab-sub-card:hover .ab-sub-visual::after { transform: scaleX(1); }
 .ab-sub-idx { position: absolute; left: 16px; top: 13px; font-size: .92rem; font-weight: 600; letter-spacing: .02em; color: var(--ink); }
 .ab-sub-idx small { margin-left: 3px; font-size: .7rem; color: rgba(11, 27, 51, .5); }
+.ab-sub-flag { position: absolute; right: 12px; top: 11px; display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 999px; background: rgba(255, 255, 255, .82); color: var(--blue-700); font-size: .68rem; font-weight: 700; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.ab-sub-flag svg { width: 11px; height: 11px; }
 .ab-sub-body { flex: 1; display: flex; flex-direction: column; align-items: flex-start; padding: 18px 20px 14px; }
 .ab-chip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--ivory-2); color: var(--ink-2); font-size: .72rem; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
 .ab-chip svg { width: 12px; height: 12px; }
 .ab-chip--global { background: var(--blue); color: #fff; }
-.ab-sub-en { margin-top: 12px; font-size: clamp(1.12rem, 1.45vw, 1.4rem); font-weight: 600; line-height: 1.15; letter-spacing: -.01em; white-space: nowrap; }
-.ab-sub-ko { margin-top: 4px; font-size: .88rem; font-weight: 500; color: var(--muted); }
+.ab-sub-en { margin-top: 2px; font-size: clamp(1.08rem, 1.4vw, 1.36rem); font-weight: 600; line-height: 1.15; letter-spacing: 0; white-space: nowrap; }
 .ab-sub-facts { width: 100%; margin-top: 14px; border-top: 1px solid var(--line-2); }
 .ab-sub-facts > div { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid var(--line-2); }
 .ab-sub-facts dt { font-size: .76rem; font-weight: 500; color: var(--muted); }
@@ -410,7 +434,11 @@ main .note { color: var(--muted); }
 .ab-lt-arrow { display: inline-block; width: 16px; height: 16px; margin-right: 12px; vertical-align: -2px; color: var(--blue); transition: transform .35s var(--ease); }
 .ab-link-table tbody tr:hover .ab-lt-arrow { transform: translateX(4px); }
 .ab-lt-area { font-size: 1.02rem; font-weight: 700; letter-spacing: -.02em; }
+.ab-lt-area.en { font-size: .95rem; font-weight: 600; letter-spacing: .03em; }
 .ab-lt-svc { margin-left: 12px; font-size: .86rem; color: var(--muted); }
+.ab-lt-svc--only { margin-left: 0; font-size: .92rem; color: var(--ink-2); }
+.ab-lt-type { letter-spacing: .02em; }
+.ab-lt-op { margin-left: 8px; font-size: .76rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .ab-lt-gcell { width: 56px; text-align: right !important; }
 .ab-lt-go { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); color: var(--ink); transition: background-color .3s var(--ease), border-color .3s var(--ease), color .3s var(--ease); }
 .ab-lt-go::after { content: ""; position: absolute; inset: 0; } /* 줄 전체를 누를 수 있게 */
@@ -419,7 +447,6 @@ main .note { color: var(--muted); }
 .ab-link-table tbody tr:hover .ab-lt-go { background: var(--blue); border-color: var(--blue); color: #fff; }
 .ab-link-table tbody tr:has(.ab-lt-go:focus-visible) { outline: 3px solid var(--blue); outline-offset: -3px; }
 .ab-lt-go:focus-visible { outline: none; }
-.ab-link-table tr.is-group .ab-lt-co { color: var(--ink-2); }
 /* 표 줄이 차례로 올라옵니다 */
 .js .ab-link[data-reveal] tbody tr { opacity: 0; transform: translateY(14px); transition: opacity .6s var(--ease), transform .7s var(--ease), background-color .3s var(--ease); transition-delay: calc(var(--i, 0) * .06s + .15s), calc(var(--i, 0) * .06s + .15s), 0s; }
 .js .ab-link[data-reveal].is-in tbody tr { opacity: 1; transform: none; }
@@ -427,7 +454,7 @@ main .note { color: var(--muted); }
 .ab-org-note::before { content: "i"; display: inline-grid; place-items: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; border: 1px solid currentColor; font-family: var(--font-en); font-size: .7rem; font-weight: 600; flex: none; }
 
 /* ----- 조직도 등장 모션 (about.js 가 .is-armed → .is-play / 줄마다 .is-in) -----
-   데스크톱: 지주회사 → 줄기 → 가로선(가운데에서 양쪽) → 자회사 01~05 순서로 선이 내려가고 카드가 차례로 올라옵니다. */
+   데스크톱: 지주회사 → 줄기 → 가로선(가운데에서 양쪽) → 그룹사 01~05 순서로 선이 내려가고 카드가 차례로 올라옵니다. */
 .ab-org.is-armed .ab-hold { opacity: 0; transform: translateY(24px) scale(.98); }
 .ab-org.is-armed .ab-org-stem { transform: scaleY(0); }
 .ab-org.is-armed .ab-org-half { transform: scaleX(0); }
@@ -549,7 +576,7 @@ main .note { color: var(--muted); }
   .ab-promise-item:nth-child(4), .ab-promise-item:nth-child(5) { grid-column: span 3; }
   .ab-promise { min-height: 320px; }
 
-  /* 조직도: 지주회사 아래로 세로 줄기 → 자회사 카드가 하나씩 가지를 칩니다 (스크롤해 내려가면 차례로 그려짐) */
+  /* 조직도: 지주회사 아래로 세로 줄기 → 그룹사 카드가 하나씩 가지를 칩니다 (스크롤해 내려가면 차례로 그려짐) */
   .ab-org { --spine: 26px; --arm: 30px; --bj: 54px; --g: 14px; }
   .ab-hold { width: 100%; }
   .ab-org-lines { height: 30px; }
@@ -614,7 +641,7 @@ main .note { color: var(--muted); }
   .ab-fact-n { padding-bottom: 12px; }
   .ab-fact-n .en { font-size: 3rem; }
   .ab-fact dt { margin-top: 10px; }
-  /* 모바일 무대: 지주회사를 위에, 다섯 자회사를 아래 호(⌣)로 */
+  /* 모바일 무대: 지주회사를 위에, 다섯 그룹사를 아래 호(⌣)로 */
   .ab-stage-fig { margin-bottom: 30px; }
   .ab-stage { aspect-ratio: 1 / 1.1; --core-x: 50%; --core-y: 34%; --core-h: 64%; --tile: 15.5cqw; }
   .ab-core { top: 2%; }
@@ -665,8 +692,8 @@ main .note { color: var(--muted); }
   .ab-sub-body { padding: 16px 16px 8px; }
   .ab-sub-idx { left: 10px; top: 9px; font-size: .8rem; }
   .ab-sub-idx small { display: none; }
-  .ab-sub-en { margin-top: 10px; font-size: 1.18rem; }
-  .ab-sub-ko { font-size: .84rem; }
+  .ab-sub-en { margin-top: 2px; font-size: 1.14rem; }
+  .ab-sub-flag { right: 8px; top: 8px; height: 20px; padding: 0 6px; font-size: .62rem; }
   .ab-sub-facts { grid-template-columns: 1fr; margin-top: 12px; }
   .ab-sub-facts > div { min-height: 40px; }
   .ab-sub-go { min-height: 46px; padding-top: 8px; }
@@ -685,9 +712,10 @@ main .note { color: var(--muted); }
   .ab-lt-co { font-size: .98rem; }
   .ab-lt-en { display: none; }
   .ab-lt-type { height: 22px; padding: 0 8px; font-size: .7rem; }
-  .ab-lt-type.is-none { display: none; }
+  .ab-lt-op { display: none; }
   .ab-lt-arrow { margin-right: 8px; }
   .ab-lt-svc { display: block; margin: 2px 0 0 24px; font-size: .82rem; }
+  .ab-lt-svc--only { display: inline; margin: 0; font-size: .9rem; }
   .ab-lt-go { width: 38px; height: 38px; }
 
   .ab-timeline { padding-left: 40px; }
@@ -716,15 +744,17 @@ main .note { color: var(--muted); }
   .ab-loc-dl > div { grid-template-columns: 1fr; gap: 6px; }
 }
 
-/* 움직임 줄이기 */
-@media (prefers-reduced-motion: reduce) {
-  .ab-stage-bg, .ab-stage-fg { transform: none !important; }
-  .ab-ray i, .ab-core-pulse { animation: none !important; opacity: 0 !important; }
-  .ab-vision-track, .ab-map-pulse, .ab-film-ring::after { animation: none !important; }
-  .ab-map-arc--flow { stroke-dashoffset: 0; }
-  .ab-map-traveler { display: none; }
-  .ab-org-stem::after, .ab-org-half::after, .ab-org-drop i::after { animation: none !important; opacity: 0 !important; }
-  .js .ab-link[data-reveal] tbody tr { opacity: 1; transform: none; }
-  .ab-facts .ab-fact-n::after { transform: none; }
-  .ab-sub-card, .ab-sub-visual img { transition: none; }
-}
+/* 움직임 멈추기 (사용자가 왼쪽 아래 버튼으로 고른 경우만 · base.css 의 html.motion-off) */
+html.motion-off .ab-stage-bg, html.motion-off .ab-stage-fg { transform: none !important; }
+html.motion-off .ab-ray i, html.motion-off .ab-core-pulse { animation: none !important; opacity: 0 !important; }
+html.motion-off .ab-vision-track, html.motion-off .ab-map-pulse, html.motion-off .ab-film-ring::after { animation: none !important; }
+html.motion-off .ab-map-arc--flow { stroke-dashoffset: 0; }
+html.motion-off .ab-map-traveler { display: none; }
+html.motion-off .ab-org-stem::after, html.motion-off .ab-org-half::after, html.motion-off .ab-org-drop i::after { animation: none !important; opacity: 0 !important; }
+html.motion-off .ab-link[data-reveal] tbody tr { opacity: 1; transform: none; }
+html.motion-off .ab-facts .ab-fact-n::after { transform: none; }
+html.motion-off .ab-sub-card, html.motion-off .ab-sub-visual img { transition: none; }
+html.motion-off .ab-intro-lede .eg-c { opacity: 1 !important; transform: none !important; filter: none !important; }
+html.motion-off .ab-intro-lede .eg-accent::after { transform: scaleX(1) !important; }
+/* OS '애니메이션 줄이기' 기기: 패럴랙스 같은 큰 움직임만 줄임 (등장 · 숫자 · 선 그리기는 그대로) */
+html.soft-motion .ab-stage-bg, html.soft-motion .ab-stage-fg { transform: none !important; }
