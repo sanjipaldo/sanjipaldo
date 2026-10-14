@@ -212,16 +212,17 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .hd-inner { height: 100%; display: flex; align-items: center; gap: 32px; }
 .hd-logo { display: inline-flex; align-items: center; gap: 10px; flex: none; color: inherit; }
 .hd-logo svg { height: 30px; width: auto; }
-.hd-logo .lg-sym { transition: fill .35s var(--ease); }
-body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is-menu) .hd-logo .lg-sym { fill: #fff; }
-.hd-logo-group { font-family: var(--font-en); font-size: .78rem; font-weight: 600; letter-spacing: .26em; padding-left: 10px; border-left: 1px solid currentColor; line-height: 1; opacity: .85; }
+.hd-logo .lg-sym, .hd-logo .lg-dot { transition: fill .35s var(--ease); }
+body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is-menu) .hd-logo :is(.lg-sym, .lg-dot) { fill: #fff; }
+/* DOOGO · GROUP 로고: doogo 글자와 같은 둥근 획의 GROUP 워드마크(assets/img/logo/doogo-group-lockup.svg) */
 
 .gnb { margin-left: auto; height: 100%; }
-.gnb > ul { display: flex; height: 100%; gap: clamp(12px, 2.4vw, 44px); }
+.gnb > ul { display: flex; height: 100%; gap: clamp(14px, 2.2vw, 40px); }
 .gnb > ul > li { position: relative; height: 100%; display: flex; align-items: center; }
 .gnb > ul > li.has-mega { position: static; } /* 안의 .mega 가 헤더 전체 폭 기준으로 놓이도록 */
-.gnb-link { position: relative; display: inline-flex; align-items: center; height: 100%; font-size: 1.02rem; font-weight: 600; letter-spacing: -0.02em; }
-.gnb-link::after { content: ""; position: absolute; left: 0; right: 0; bottom: 24px; height: 2px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform .35s var(--ease); }
+/* 메뉴 글자: 기존(1.02rem · 600)의 약 1.5배 · 굵게. 1025–1440px 에서는 화면 폭에 맞춰 줄어듦 */
+.gnb-link { position: relative; display: inline-flex; align-items: center; height: 100%; font-size: clamp(1.12rem, .25rem + 1.45vw, 1.53rem); font-weight: 800; letter-spacing: -0.035em; white-space: nowrap; }
+.gnb-link::after { content: ""; position: absolute; left: 0; right: 0; bottom: 20px; height: 3px; border-radius: 2px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform .35s var(--ease); }
 .gnb > ul > li:hover > .gnb-link::after, .gnb > ul > li.is-open > .gnb-link::after, .gnb-link[aria-current="page"]::after, .gnb-link.is-current::after { transform: scaleX(1); }
 .gnb-sub {
   position: absolute; top: calc(100% - 10px); left: 50%; min-width: 200px; padding: 12px;
@@ -262,6 +263,7 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .mega-item[aria-current="page"] .mega-area { color: var(--blue); }
 
 .hd-util { display: flex; align-items: center; gap: 12px; flex: none; }
+.hd-util .btn--sm[data-nav-cta] { min-height: 48px; padding: 0 24px; font-size: clamp(1rem, .45rem + .8vw, 1.2rem); font-weight: 800; letter-spacing: -0.03em; }
 .hd-menu-btn { display: none; width: 44px; height: 44px; border-radius: 12px; place-items: center; color: inherit; }
 .hd-menu-btn span, .hd-menu-btn span::before, .hd-menu-btn span::after { display: block; width: 22px; height: 2px; background: currentColor; border-radius: 2px; position: relative; transition: transform .3s var(--ease), background-color .2s; }
 .hd-menu-btn span::before, .hd-menu-btn span::after { content: ""; position: absolute; left: 0; }
@@ -291,8 +293,8 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
   .hd-logo svg { height: 26px; }
 }
 @media (max-width: 420px) {
-  .hd-util .btn--sm { padding: 0 14px; }
-  .hd-logo-group { display: none; }
+  .hd-util .btn--sm[data-nav-cta] { min-height: 42px; padding: 0 14px; font-size: .95rem; }
+  .hd-logo svg { height: 23px; }
 }
 
 /* 모바일 메뉴 */
@@ -370,7 +372,7 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
 .site-footer { background: #060D1A; color: var(--on-dark-2); padding: clamp(64px, 7vw, 104px) 0 calc(76px + env(safe-area-inset-bottom, 0px)); font-size: .92rem; }
 .ft-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px 48px; padding-bottom: clamp(40px, 4.6vw, 64px); }
 .ft-brand svg { height: 30px; width: auto; color: #fff; }
-.ft-brand .lg-sym { fill: #fff; }
+.ft-brand :is(.lg-sym, .lg-dot) { fill: #fff; }
 .ft-brand p { margin-top: 12px; color: var(--on-dark-3); line-height: 1.7; }
 .ft-brand .ft-slogan { margin-top: 26px; color: #fff; font-weight: 700; font-size: clamp(1.15rem, 1.5vw, 1.375rem); line-height: 1.4; letter-spacing: -0.03em; }
 
@@ -438,11 +440,11 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
 .family-btn:hover { border-color: rgba(255, 255, 255, .4); }
 .family-btn .ico { width: 16px; height: 16px; transition: transform .3s; }
 .family-btn[aria-expanded="true"] .ico { transform: rotate(180deg); }
-.family-list { position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 2; min-width: 260px; padding: 8px; border-radius: 14px; background: var(--navy-2); border: 1px solid var(--line-dark); box-shadow: var(--shadow-lg); }
+.family-list { position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 2; min-width: 320px; max-width: calc(100vw - 32px); padding: 8px; border-radius: 14px; background: var(--navy-2); border: 1px solid var(--line-dark); box-shadow: var(--shadow-lg); }
 .family-list[hidden] { display: none; }
 .family-list a, .family-list span { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 8px; color: var(--on-dark-2); }
 .family-list a:hover { background: rgba(255, 255, 255, .06); color: #fff; }
-.family-list small { color: var(--on-dark-3); font-size: .75rem; }
+.family-list small { color: var(--on-dark-3); font-size: .75rem; white-space: nowrap; }
 
 /* 회사 정보 */
 .ft-info { display: grid; gap: 6px; color: var(--on-dark-3); font-size: .85rem; line-height: 1.7; }
@@ -535,19 +537,22 @@ html.motion-off *, html.motion-off *::before, html.motion-off *::after { animati
 /* 움직임 멈추기 버튼 */
 .motion-toggle {
   position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 90;
-  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px 0 10px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 0; min-height: 36px; padding: 0 9px; border-radius: 999px;
   background: rgba(10, 20, 38, .72); color: #fff; font-size: .78rem; font-weight: 600; letter-spacing: -0.01em;
   border: 1px solid rgba(255, 255, 255, .16); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 10px 24px -14px rgba(0, 0, 0, .5); opacity: .82; transition: opacity .2s, background-color .2s;
 }
 .motion-toggle:hover, .motion-toggle:focus-visible { opacity: 1; background: rgba(10, 20, 38, .9); }
+/* 평소엔 작은 원(아이콘만) → 마우스를 올리거나 키보드로 오면 글자가 펼쳐짐. 화면 내용을 가리지 않도록 */
+.motion-toggle .mt-txt { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width .35s var(--ease), margin .35s var(--ease); }
+.motion-toggle:hover .mt-txt, .motion-toggle:focus-visible .mt-txt { max-width: 7.5em; margin: 0 5px 0 8px; }
 .motion-toggle .mt-ico { position: relative; width: 16px; height: 16px; border-radius: 50%; background: rgba(255, 255, 255, .16); }
 .motion-toggle .mt-ico::before, .motion-toggle .mt-ico::after { content: ""; position: absolute; top: 4px; width: 2px; height: 8px; border-radius: 1px; background: #fff; }
 .motion-toggle .mt-ico::before { left: 5px; } .motion-toggle .mt-ico::after { left: 9px; }
 .motion-toggle[aria-pressed="true"] .mt-ico::before { left: 6px; width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 6px; border-color: transparent transparent transparent #fff; background: none; }
 .motion-toggle[aria-pressed="true"] .mt-ico::after { display: none; }
 @media (max-width: 760px) {
-  .motion-toggle { left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); min-height: 32px; padding: 0 12px 0 8px; font-size: .72rem; }
+  .motion-toggle { left: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); min-height: 32px; padding: 0 7px; font-size: .72rem; opacity: .7; }
 }
 
 /* ---------- 12. 폼 기본 ---------- */
