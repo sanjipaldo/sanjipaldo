@@ -201,6 +201,8 @@ main .note { color: var(--muted); }
 .ld-direct { display: flex; flex-wrap: wrap; align-items: center; gap: 0 9px; }
 .ld-direct a { position: relative; z-index: 2; display: inline-flex; align-items: center; min-height: 40px; font-size: .86rem; font-weight: 600; letter-spacing: .01em; white-space: nowrap; color: var(--blue-700); background: linear-gradient(currentColor, currentColor) 0 calc(100% - 9px) / 0 1px no-repeat; transition: background-size .35s var(--ease), color .25s var(--ease); }
 .ld-direct a:hover { background-size: 100% 1px; color: var(--blue); }
+.ld-direct a .ico { flex: none; width: 12px; height: 12px; margin-left: 3px; transition: transform .3s var(--ease); } /* 새 창 외부 링크 표시 */
+.ld-direct a:hover .ico { transform: translate(2px, -2px); }
 .ld-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--muted-2); }
 .ld-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; width: 100%; margin-top: auto; padding-top: 16px; }
 .ld-more {

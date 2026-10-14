@@ -172,7 +172,7 @@
   --wp: 1;
   position: relative; overflow: hidden; border-radius: 16px; background: #fff;
   box-shadow: 0 60px 100px -46px rgba(0, 0, 0, .75), 0 0 0 1px rgba(255, 255, 255, .1);
-  transform-origin: 50% 100%; transform: perspective(1600px) rotateX(calc((1 - var(--wp)) * 18deg)) scale(calc(.9 + var(--wp) * .1));
+  transform-origin: 50% 100%; transform: perspective(1600px) rotateX(calc((1 - var(--wp)) * 14deg)) scale(calc(.92 + var(--wp) * .08));
   transition: translate .6s var(--ease), box-shadow .6s var(--ease);
 }
 .dt-web-bar { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 40px; padding: 0 14px; background: #F2F4F8; border-bottom: 1px solid #E2E7EF; }
@@ -657,6 +657,6 @@ html.motion-off :is(.dt-row:hover .dt-row-title, .dt-leader-card:hover .dt-mono,
 /* 운영 사이트: 창 기울기(스크롤)는 움직임 멈추기와 OS 애니메이션 줄이기 기기 모두에서 끄고, 캡처는 바로 선명하게 */
 html.motion-off .dt-web-window, html.soft-motion .dt-web-window { transform: none !important; }
 html.motion-off .dt-web-window { translate: none !important; }
-html.motion-off .dt-web-view img { opacity: 1 !important; filter: none !important; scale: 1 !important; transform: none !important; }
+html.motion-off .dt-web-view img { opacity: 1 !important; filter: none !important; scale: 1 !important; transform: none !important; transition: none !important; }
 html.motion-off .dt-web-bar::after { animation: none !important; opacity: 0 !important; }
 html.motion-off .dt-web-go { transition: none; }

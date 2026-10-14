@@ -20,7 +20,7 @@
      → 실제 사진으로 바꿀 때는 같은 이름으로 덮어쓰고 초점 값만 맞추면 됩니다.
    - 운영 사이트(4차): BIZ[].web — 사업마다 실제 사이트(새 창)와 첫 화면 캡처 assets/img/sites/{shot}(-720).webp.
      상세 페이지 '운영 사이트' 구간(#site) · 첫 화면 핵심 정보 띠 · 마무리 버튼, business.html 카드의 주소 알약에 씁니다.
-     캡처를 새로 찍으면 같은 이름으로 덮어쓰고 WEB_NOTE의 기준 날짜만 고치세요.
+     캡처를 새로 찍으면 같은 이름으로 덮어쓰고 WEB_DATE의 기준 날짜만 고치세요.
    - 스타일: assets/css/pages/business.css, business-detail.css
      동작:   assets/js/pages/business.js,  business-detail.js
    ========================================================= */
@@ -31,7 +31,8 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // 그룹사·직접 운영 사업의 실제 사이트 (사용자가 준 주소 그대로 · 모두 새 창)
 const CLASS_URL = 'https://www.doogoclass.com'; // DOOGO CLASS (교육)
-const FOOD_URL = 'https://www.doogofood.com';   // DOOGOFOOD (유통 · 식품 도매 플랫폼) — DOOGO MAKERS 운영 사이트도 같은 주소
+const FOOD_URL = 'https://www.doogofood.com';   // DOOGOFOOD (유통 · 식품 도매 플랫폼)
+const MAKERS_URL = 'https://www.doogofood.com/'; // DOOGO MAKERS — 같은 DOOGOFOOD 사이트(운영 주체를 단정하지 않고 '연결 사이트'로 표기)
 const BIO_URL = 'https://www.doogobio.com/';    // DOOGOBIO
 const AD_URL = 'https://www.doogoad.com/';      // DOOGO AD
 const NORA_URL = 'https://www.norastay.com/';   // NORA STAY (DOOGO SPACE 숙박)
@@ -60,8 +61,13 @@ const SITE = (url, text) => `<a class="dt-site" href="${url}" target="_blank" re
 // 운영 사이트 블록(상세 3번 구간) · 사업영역 목록의 주소 알약에 쓰는 사이트 정보
 //  shot: assets/img/sites/{shot}.webp (1200×750) · {shot}-720.webp (720×450) — 각 사이트 실제 첫 화면 캡처, 2026년 10월 14일 기준
 //  host: 화면에 크게 보이는 주소(유튜브는 채널명) · bar: 브라우저 주소 알약 · desc: 캡처에 보이는 내용만으로 쓴 한 줄 소개
-const web = (o) => ({ bar: o.host, btn: '사이트 바로가기', ...o });
-const WEB_NOTE = '사이트 첫 화면 · 2026년 10월 기준';
+//  title/eyebrow: 구간 제목(운영 사이트 · 운영 채널 · 연결 사이트) · site: 캡처 속 사이트 이름(alt·스크린리더 문구, 기본 = name)
+const WEB_DATE = '2026년 10월 기준';
+const web = (o) => ({
+  bar: o.host, btn: '사이트 바로가기', site: o.name,
+  title: o.yt ? '운영 채널' : '운영 사이트', eyebrow: o.yt ? 'Official Channel' : 'Official Site',
+  note: `${o.yt ? '채널' : '사이트'} 첫 화면 · ${WEB_DATE}`, ...o,
+});
 const LOCK = '<svg class="dt-web-lock" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.6" fill="currentColor"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
 // 지주회사가 직접 운영하는 사업(교육·유통)의 운영 회사
 const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '교육 및 총괄 운영', ceo: '문원오', photo: 'assets/img/people/moon-wonoh.webp', anchor: 'ceo' };
@@ -189,12 +195,13 @@ const BIZ = [
     targets: ['새 브랜드를 만들려는 분', '운영 중인 브랜드를 키우려는 사업자'],
     ask: '커머스 상담하기',
     cta: { label: '브랜드 보기', href: 'brands.html#brands' },
-    web: web({ name: 'DOOGO MAKERS', kind: '운영 사이트', host: 'doogofood.com', url: FOOD_URL, shot: 'makers', close: '운영 사이트 바로가기',
-      desc: 'DOOGO MAKERS의 운영 사이트로, 생산자와 판매자를 연결하는 식품 전문 도매 플랫폼이 열립니다.' }),
+    web: web({ name: 'DOOGO MAKERS', kind: '연결 사이트', site: 'DOOGOFOOD', title: '연결 사이트', eyebrow: 'Related Site',
+      host: 'doogofood.com', url: MAKERS_URL, shot: 'makers', close: '연결 사이트 바로가기',
+      desc: 'DOOGO MAKERS와 연결된 DOOGOFOOD 식품 도매 플랫폼입니다. 생산자와 판매자를 잇는 식품 전문 B2B 도매 사이트를 볼 수 있습니다.' }),
     narration: '생각은 제품이 되고, 제품은 브랜드가 됩니다.',
     hero: { f: 'commerce', fx: '50%', fy: '48%', mx: '56%' },
     gallery: [photo('commerce', { label: '패키지 디자인', zoom: 1.7, focus: '70% 78%', alt: '무지 패키지 박스를 들고 컬러칩과 맞춰 보는 디자이너의 손(확대)' }), render('makers', { label: 'DOOGO MAKERS' })],
-    facts: [['대표 서비스', '브랜드 기획 · 운영 · EXIT 전략'], ['운영 사이트', SITE(FOOD_URL)]],
+    facts: [['대표 서비스', '브랜드 기획 · 운영 · EXIT 전략'], ['연결 사이트', SITE(MAKERS_URL)]],
     svcHead: 'DOOGO MAKERS가 하는 일',
     svcLead: '브랜드의 시작부터 운영과 성장, 그다음 단계까지 함께 고민합니다.',
     detail: [
@@ -439,7 +446,7 @@ function buildList() {
           <h3 class="bz-title" id="bz-t-${b.slug}" data-reveal style="--d:.05s"><span class="bz-area">${b.area}</span><span class="bz-brand"><span class="en">${b.en}</span></span></h3>
           <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong><span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp)}</span><span class="bz-corp-ceo">대표 <strong>${b.corp.ceo}</strong></span></p>
           <!-- 운영 사이트 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
-          <a class="bz-site" href="${b.web.url}" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s">${b.web.yt ? `<span>YouTube · ${b.web.host}</span>` : `<span class="en">${b.web.host}</span>`}${ARROW_UR}<span class="sr-only"> — ${b.web.name} ${b.web.yt ? '유튜브 채널' : '사이트'}(새 창)</span></a>
+          <a class="bz-site" href="${b.web.url}" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s">${b.web.yt ? `<span>YouTube · ${b.web.host}</span>` : `<span class="en">${b.web.host}</span>`}${ARROW_UR}<span class="sr-only"> — ${b.web.name} ${b.web.yt ? '유튜브 채널' : b.web.site !== b.web.name ? `연결 사이트(${b.web.site})` : '사이트'}(새 창)</span></a>
           <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">${b.defLabel}</span>${nw(b.def)}</p>
           <p class="bz-role" data-reveal style="--d:.12s">${b.role}</p>
           <div class="bz-info" data-reveal style="--d:.16s">
@@ -736,13 +743,13 @@ ${spaces.map((sp, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
 //  창은 스크롤해 들어오며 뒤로 누운 상태에서 바로 서고(business-detail.js --wp), 주소 막대의 로딩 줄이 지나간 뒤 화면이 선명해짐
 function webBlock(b) {
   const w = b.web;
-  const what = w.yt ? `유튜브 채널(${w.host})` : `웹사이트(${w.host})`;
+  const what = w.yt ? `유튜브 채널(${w.host})` : `웹사이트(${w.host})`; // 캡처에 보이는 사이트 기준 (MAKERS → DOOGOFOOD 웹사이트)
   return `  <section class="section dt-web" id="site" aria-labelledby="web-title">
     <div class="container">
       <div class="dt-web-card" data-reveal data-web>
         <div class="dt-web-head">
-          <span class="eyebrow">${w.yt ? 'Official Channel' : 'Official Site'}</span>
-          <h2 class="dt-web-title" id="web-title">${w.yt ? '운영 채널' : '운영 사이트'}</h2>
+          <span class="eyebrow">${w.eyebrow}</span>
+          <h2 class="dt-web-title" id="web-title">${w.title}</h2>
           <div class="dt-web-id">
             <p class="dt-web-name"><span class="en">${w.name}</span><span class="dt-web-kind">${w.kind}</span></p>
             <p class="dt-web-host${w.yt ? ' is-ko' : ' en'}">${w.host}</p>
@@ -752,13 +759,13 @@ function webBlock(b) {
         <figure class="dt-web-shot">
           <div class="dt-web-window">
             <div class="dt-web-bar" aria-hidden="true"><span class="dt-web-dots"><i></i><i></i><i></i></span><span class="dt-web-url">${LOCK}<span>${w.bar}</span></span><span class="dt-web-dots is-ghost"><i></i><i></i><i></i></span></div>
-            <div class="dt-web-view"><img src="assets/img/sites/${w.shot}-720.webp" srcset="assets/img/sites/${w.shot}-720.webp 720w, assets/img/sites/${w.shot}.webp 1200w" sizes="(max-width: 860px) calc(100vw - 72px), 46vw" alt="${w.name} ${what} 첫 화면" width="1200" height="750" loading="lazy" decoding="async"></div>
+            <div class="dt-web-view"><img src="assets/img/sites/${w.shot}-720.webp" srcset="assets/img/sites/${w.shot}-720.webp 720w, assets/img/sites/${w.shot}.webp 1200w" sizes="(max-width: 860px) calc(100vw - 72px), 46vw" alt="${w.site} ${what} 첫 화면" width="1200" height="750" loading="lazy" decoding="async"></div>
           </div>
           <a class="dt-web-hit" href="${w.url}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><span class="dt-web-go">새 창에서 열기 ${ARROW_UR}</span></a>
         </figure>
         <div class="dt-web-foot">
-          <a class="btn btn--white btn--lg" href="${w.url}" target="_blank" rel="noopener">${w.btn} ${ARROW_UR}<span class="sr-only"> — ${w.name} ${what}</span>${NEWWIN}</a>
-          <p class="dt-web-note">${WEB_NOTE}</p>
+          <a class="btn btn--white btn--lg" href="${w.url}" target="_blank" rel="noopener">${w.btn} ${ARROW_UR}<span class="sr-only"> — ${w.site} ${what}</span>${NEWWIN}</a>
+          <p class="dt-web-note">${w.note}</p>
         </div>
       </div>
     </div>
@@ -883,7 +890,7 @@ ${b.facts.map(([k, v]) => `        <div><dt>${k}</dt><dd>${nw(v)}</dd></div>`).j
   </section>
 
   <nav class="subnav dt-subnav" aria-label="${b.area} 페이지 안 바로가기">
-    <div class="container"><ul><li><a href="#services">주요 서비스</a></li><li><a href="#site">${b.web.yt ? '운영 채널' : '운영 사이트'}</a></li><li><a href="#scene">현장</a></li><li><a href="#related">${b.relNav}</a></li><li><a href="#leader">담당 대표</a></li><li><a href="#inquiry">문의</a></li></ul></div>
+    <div class="container"><ul><li><a href="#services">주요 서비스</a></li><li><a href="#site">${b.web.title}</a></li><li><a href="#scene">현장</a></li><li><a href="#related">${b.relNav}</a></li><li><a href="#leader">담당 대표</a></li><li><a href="#inquiry">문의</a></li></ul></div>
   </nav>
 
   <!-- 2. 주요 서비스 -->

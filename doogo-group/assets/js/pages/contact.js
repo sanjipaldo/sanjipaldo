@@ -15,7 +15,7 @@
   var TYPES = {
     campus:   { label: '교육 · DOOGO CLASS', topics: 'DOOGO HOLDINGS가 직접 운영하는 교육 플랫폼의 실전 교육 과정, 강사·과정 소개, 온라인 클래스, 교육장 연계', ph: '관심 있는 과정이나 주제, 인원, 희망 일정 등을 적어 주세요.' },
     bio:      { label: '제조 · DOOGOBIO', topics: '뉴질랜드 건강식품 개발, 소량 제조, 패키지·인쇄, 제조 상담·연결 ‘두고커넥트’', ph: '만들고 싶은 제품, 예상 수량, 패키지·인쇄 필요 여부 등을 적어 주세요.',
-                note: '제조 분야 문의는 회신을 위해 뉴질랜드 DOOGOBIO로 전송됩니다(국외 이전). 원하지 않으시면 문의 내용에 그 뜻을 적어 주세요. <a href="privacy.html#overseas" target="_blank" rel="noopener">국외 이전 안내<span class="sr-only">(새 창)</span></a>' },
+                note: '제조 분야 문의는 DOOGO HOLDINGS가 확인한 뒤 회신을 위해 뉴질랜드 DOOGOBIO로 전송됩니다(국외 이전). 원하지 않으시면 문의 내용에 그 뜻을 적거나 다른 분야로 문의해 주세요. 이 경우 DOOGO HOLDINGS가 직접 회신합니다. <a href="privacy.html#overseas" target="_blank" rel="noopener">국외 이전 안내<span class="sr-only">(새 창)</span></a>' },
     commerce: { label: '커머스 · DOOGO MAKERS', topics: '브랜드 기획, 상품 운영, 브랜드 성장과 EXIT 전략', ph: '브랜드 현황(준비 중·운영 중), 판매 채널, 고민하는 부분을 적어 주세요.' },
     media:    { label: '미디어 · DOOGO MEDIA', topics: '촬영, 유튜브 콘텐츠, 라이브 콘텐츠 제작', ph: '필요한 콘텐츠(촬영·유튜브·라이브), 목적, 희망 일정을 적어 주세요.' },
     ad:       { label: '광고 · DOOGO AD', topics: '네이버·쿠팡 중심 광고 운영, 광고 소재 기획, 성과 분석', ph: '판매 중인 상품과 채널, 현재 광고 운영 여부, 목표를 적어 주세요.' },

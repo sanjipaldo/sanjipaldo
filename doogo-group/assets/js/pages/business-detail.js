@@ -55,7 +55,6 @@
       var vh = window.innerHeight || 800;
       wins.forEach(function (w) {
         var box = w.parentElement.getBoundingClientRect(); // 기울어지지 않는 바깥 상자 기준
-        if (box.top > vh + 200 || box.bottom < -200) return;
         var end = vh * 0.6 - box.height / 2;
         var p = clamp((vh - box.top) / Math.max(1, vh - end), 0, 1);
         w.style.setProperty('--wp', (1 - Math.pow(1 - p, 2)).toFixed(3));

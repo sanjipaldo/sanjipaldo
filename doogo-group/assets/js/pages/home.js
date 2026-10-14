@@ -1,8 +1,8 @@
 /* =========================================================
    DOOGO GROUP — home.js (메인 페이지 전용)
    히어로 장면 표시기 · 인트로 글자 새김 · 숫자 카운트(0부터)
-   · 그룹 구조(사이트 첫 화면 카드 · 고정 무대 가로 스크롤) · 사업영역 스티키 스토리(사진) · One Group 트리(DOOGO GROUP → 7개 사업)
-   · 리더십 한 줄 카드 · 브랜드 슬라이더 · 그룹소식 커버플로우 · 화면 밖 애니메이션 정지
+   · 그룹 구조(사이트 첫 화면 카드 · 고정 무대 가로 스크롤) · 사업영역 스티키 스토리(사진)
+   · One Group · Brands(세로 트리 ↔ 3D 브랜드 슬라이더 동기화) · 리더십 한 줄 카드 · 그룹소식 커버플로우 · 화면 밖 애니메이션 정지
    움직임 정책: OS의 '애니메이션 줄이기' 설정과 관계없이 모든 모션을 재생합니다.
    사용자가 '움직임 멈추기' 버튼(site.js)을 고른 경우에만 멈춥니다 → motionOff() · 'doogo:motion' 이벤트.
    ========================================================= */
@@ -363,9 +363,25 @@
       root.style.setProperty('--hs-row-h', rowH + 'px');
       root.classList.remove('is-measure');
     }
+    // 넓은 화면의 끝 위치: 마지막 카드가 왼쪽 시작선에 멈추고 그 오른쪽에 마무리 칸이 다 보이는 이동량.
+    // 줄 끝 여백(--hs-edge-r)이 큰 화면(1680px 이상)에서 마지막 카드가 시작선을 지나 패널 쪽으로 밀려나지 않게 하고,
+    // 마무리 칸이 모자라는 화면(1025px 부근)은 마무리 칸 폭만 줄여 맞춥니다.
+    function endShift(step, vw) {
+      var last = (n - 1) * step;
+      if (!endCell) return last;
+      var need = function () { return endCell.offsetLeft + endCell.offsetWidth + 8 - vw; };
+      var over = need() - last;
+      if (over > 0) {
+        var ew = Math.max(196, Math.floor(endCell.offsetWidth - over));
+        endCell.style.width = ew + 'px';
+        endCell.classList.toggle('is-tight', ew < 240);
+      }
+      return Math.max(last, need());
+    }
     function measure() {
       track.style.transform = 'none';
       view.scrollLeft = 0;
+      if (endCell) { endCell.style.width = ''; endCell.classList.remove('is-tight'); }
       fit();
       var vw = view.clientWidth, w = items[0].offsetWidth;
       var c0 = items[0].offsetLeft + w / 2, cN = items[n - 1].offsetLeft + w / 2;
@@ -374,7 +390,11 @@
       // 한 화면에 카드가 1.5장도 안 들어가면(휴대폰) 지금 카드를 가운데에 · 넓은 화면은 첫 카드 왼쪽 정렬에서 시작해 마지막엔 마무리 칸까지
       narrow = vw < step * 1.5;
       if (narrow) { sA0 = c0 - vw / 2; sAn = cN - vw / 2; sStart = Math.min(sA0, sEnd); }
-      else { sA0 = 0; sAn = Math.min(sEnd, (n - 1) * step); sStart = 0; } // 지금 카드가 왼쪽 시작선보다 더 밀려나지 않게
+      else {
+        // 지금 카드가 왼쪽 시작선보다 더 밀려나지 않게: 끝 = min(줄 끝, 마지막 카드 시작선 + 마무리 칸)
+        sEnd = Math.min(sEnd, endShift(step, vw));
+        sA0 = 0; sAn = Math.min(sEnd, (n - 1) * step); sStart = 0;
+      }
       travel = Math.max(0, sEnd - sStart);
       var sh = stage.offsetHeight;
       dwell0 = Math.round(sh * 0.06);
@@ -441,6 +461,7 @@
       root.style.removeProperty('--hs-card-w');
       root.style.removeProperty('--hs-row-h');
       track.style.transform = '';
+      if (endCell) { endCell.style.width = ''; endCell.classList.remove('is-tight'); }
       allItems.forEach(function (li) {
         var c = $('.hs-card', li), dm = $('.hs-dim', li), im = $('.hs-shot img', li);
         if (c) c.style.transform = '';
@@ -671,201 +692,6 @@
     return update;
   }
 
-  /* ---------- S5 One Group: 위의 DOOGO GROUP → 아래 7개 사업 트리 ----------
-     실제 노드 위치를 재서 선(SVG path)과 빛 점 경로를 만듭니다(px 좌표 · 크기가 바뀌면 다시 만듦).
-     - 760px 초과: 짧은 줄기 → 7개 가지(곡선)가 각 노드 윗면으로
-     - 760px 이하: 가운데 세로 줄기 → 좌우 노드 안쪽 면으로 가지 · 일곱 번째는 줄기 끝
-     재생(.is-in): ① 줄기·가지가 위에서 아래로 그려지고(지연·길이는 여기서 path 마다 지정)
-     ② 선이 닿는 순간 노드가 왼쪽부터 차례로 켜지며(.is-lit) ③ 다 켜지면 빛 점이 계속 흐르고(.is-flow) ④ 위 노드에 파동(CSS).
-     화면 밖으로 완전히 나가면 처음 상태로 되돌려, 다시 들어올 때마다 다시 이어집니다.
-     움직임 멈추기면 다 이어진 상태만 보여 줍니다. */
-  function tree() {
-    var root = $('[data-tree]');
-    if (!root) return;
-    var svg = $('.tree-lines', root), flowEl = $('.tree-flow', root), core = $('.tree-core', root);
-    var items = $$('.tree-item', root);
-    var nodes = items.map(function (li) { return $('.tree-node', li); });
-    var n = items.length;
-    if (!svg || !core || !n) return;
-    var colMQ = window.matchMedia('(max-width: 760px)');
-    var NS = 'http://www.w3.org/2000/svg';
-    var canFlow = !!(window.CSS && CSS.supports && CSS.supports('offset-path', 'path("M 0 0 L 1 1")'));
-    var main = null, segs = [], plan = { lit: [], flowAt: 0 }, timers = [], playing = false, built = false, lastKey = '';
-
-    function r1(v) { return Math.round(v * 10) / 10; }
-    function mk(d) { var p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); svg.appendChild(p); return p; }
-    function timing(p, dl, du, ez) {
-      p.style.setProperty('--dl', dl.toFixed(2) + 's');
-      p.style.setProperty('--dur', du.toFixed(2) + 's');
-      p.style.setProperty('--ez', ez);
-    }
-
-    // 트리 안 좌표(변형 무시): 등장 전 이동·호버 들림과 상관없이 제자리 기준으로 잼
-    function box(el) {
-      var x = 0, y = 0, w = el.offsetWidth, h = el.offsetHeight;
-      while (el && el !== root) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; }
-      return { l: x, r: x + w, t: y, b: y + h, cx: x + w / 2, cy: y + h / 2 };
-    }
-    function build() {
-      var W = root.offsetWidth, H = root.offsetHeight;
-      if (!W) return false;
-      var C = box(core);
-      var cx = r1(C.cx), y0 = r1(C.b);
-      var col = colMQ.matches;
-      var q = nodes.map(box);
-      var key = [Math.round(W), Math.round(H), Math.round(cx), Math.round(q[n - 1].t), col ? 1 : 0].join('x');
-      if (built && key === lastKey) return true;
-      lastKey = key;
-      svg.setAttribute('viewBox', '0 0 ' + r1(W) + ' ' + r1(H));
-      while (svg.firstChild) svg.removeChild(svg.firstChild);
-      segs = []; main = null;
-      var flows = [], lit = [];
-      var T0 = 0.3; // 위 노드가 나타난 뒤 선이 출발하는 시각(초)
-      if (!col) {
-        // 줄기(짧게) → 가지(곡선)
-        var yJ = r1(y0 + Math.min(26, (q[0].t - y0) * 0.2));
-        var tDur = 0.32;
-        main = mk('M' + cx + ' ' + y0 + 'V' + yJ);
-        timing(main, T0, tDur, 'cubic-bezier(.5,0,1,1)');
-        q.forEach(function (o, i) {
-          // 줄기에서 갈라질 때 노드 쪽으로 살짝 기울여 출발 → 가지끼리 겹치지 않고 부채꼴로 퍼짐
-          var nx = r1(o.cx), ny = r1(o.t - 1), h = ny - yJ;
-          var c = 'C' + r1(cx + (nx - cx) * 0.14) + ' ' + r1(yJ + h * 0.52) + ' ' + nx + ' ' + r1(yJ + h * 0.26) + ' ' + nx + ' ' + ny;
-          var p = mk('M' + cx + ' ' + yJ + c);
-          var dl = T0 + tDur - 0.02 + i * 0.12, du = 0.8;
-          timing(p, dl, du, 'cubic-bezier(.22,.6,.3,1)');
-          segs[i] = p;
-          flows[i] = 'M ' + cx + ' ' + y0 + ' V ' + yJ + ' ' + c;
-          lit[i] = dl + du * 0.88;
-        });
-      } else {
-        // 세로 줄기 → 좌우 가지
-        var last = q[n - 1];
-        var mid = function (o) { return Math.abs(o.cx - cx) < 8; };
-        var yEnd = r1(mid(last) ? last.t - 1 : last.cy);
-        var len = Math.max(1, yEnd - y0), sDur = Math.max(0.95, len / 340);
-        main = mk('M' + cx + ' ' + y0 + 'V' + yEnd);
-        timing(main, T0, sDur, 'linear');
-        q.forEach(function (o, i) {
-          if (mid(o)) { // 줄기 끝 가운데 노드
-            flows[i] = 'M ' + cx + ' ' + y0 + ' V ' + r1(o.t - 1);
-            lit[i] = T0 + sDur * Math.min(1, (o.t - y0) / len);
-            segs[i] = null;
-            return;
-          }
-          var left = o.cx < cx, ex = r1(left ? o.r + 1 : o.l - 1), ny = r1(o.cy);
-          var rr = Math.min(12, Math.abs(cx - ex) / 2), sx = left ? -1 : 1, yS = r1(ny - rr);
-          var b = 'Q' + cx + ' ' + ny + ' ' + r1(cx + sx * rr) + ' ' + ny + 'H' + ex;
-          var p = mk('M' + cx + ' ' + yS + b);
-          var dl = T0 + sDur * Math.max(0, (yS - y0) / len) + (left ? 0 : 0.1), du = 0.4;
-          timing(p, dl, du, 'cubic-bezier(.22,.6,.3,1)');
-          segs[i] = p;
-          flows[i] = 'M ' + cx + ' ' + y0 + ' V ' + yS + ' ' + b.replace(/([QH])/g, ' $1 ');
-          lit[i] = dl + du * 0.85;
-        });
-      }
-      // 길이 → dash 값 (Safari 의 pathLength 처리 차이를 피해 실제 길이로)
-      $$('path', svg).forEach(function (p) {
-        var L = 0;
-        try { L = p.getTotalLength(); } catch (e) { L = 2000; }
-        p.style.setProperty('--len', Math.ceil(L + 2) + 'px');
-      });
-      // 이미 켜진 노드의 가지는 켜진 색으로
-      items.forEach(function (li, i) { if (li.classList.contains('is-lit')) markLit(i); });
-      // 빛 점
-      flowEl.textContent = '';
-      if (canFlow) {
-        flows.forEach(function (d, i) {
-          var s = document.createElement('i');
-          s.className = 'tree-dot';
-          s.style.setProperty('--i', i);
-          s.style.offsetPath = 'path("' + d + '")';
-          flowEl.appendChild(s);
-        });
-      }
-      plan = { lit: lit, flowAt: Math.max.apply(null, lit) + 0.2 };
-      built = true;
-      return true;
-    }
-
-    function markLit(i) {
-      items[i].classList.add('is-lit');
-      if (segs[i]) segs[i].classList.add('is-lit');
-      if (main) main.classList.add('is-lit');
-    }
-    function clearTimers() { timers.forEach(clearTimeout); timers = []; }
-    function play() {
-      if (playing) return;
-      if (!built && !build()) return;
-      playing = true;
-      void root.offsetWidth; // 새로 만든 선의 시작 상태(숨김)를 먼저 확정 → 전환으로 그려짐
-      root.classList.add('is-in');
-      plan.lit.forEach(function (t, i) { timers.push(setTimeout(function () { markLit(i); }, t * 1000)); });
-      timers.push(setTimeout(function () { root.classList.add('is-flow'); }, plan.flowAt * 1000));
-    }
-    function reset() {
-      if (!playing) return;
-      playing = false;
-      clearTimers();
-      root.classList.add('no-tr');
-      root.classList.remove('is-in', 'is-flow');
-      items.forEach(function (li) { li.classList.remove('is-lit'); });
-      $$('path', svg).forEach(function (p) { p.classList.remove('is-lit'); });
-      void root.offsetWidth;
-      root.classList.remove('no-tr');
-    }
-    function finish() {
-      clearTimers();
-      if (!built) build();
-      playing = true;
-      root.classList.add('no-tr');
-      root.classList.add('is-in', 'is-flow');
-      for (var i = 0; i < n; i++) markLit(i);
-      void root.offsetWidth;
-      root.classList.remove('no-tr');
-    }
-
-    // 노드에 올리면 그 가지와 줄기가 진하게
-    nodes.forEach(function (a, i) {
-      function hot(on) {
-        var p = segs[i];
-        if (p) p.classList.toggle('is-hot', on);
-        if (main) main.classList.toggle('is-hot', on);
-      }
-      a.addEventListener('pointerenter', function () { hot(true); });
-      a.addEventListener('pointerleave', function () { hot(false); });
-      a.addEventListener('focus', function () { hot(true); });
-      a.addEventListener('blur', function () { hot(false); });
-    });
-
-    // 크기가 바뀌면 경로를 다시 만듦 (재생 중이면 새 선은 바로 다 그려진 상태로 들어옴)
-    var rt = 0;
-    function rebuild() { clearTimeout(rt); rt = setTimeout(function () { build(); }, 120); }
-    if ('ResizeObserver' in window) new ResizeObserver(rebuild).observe(root);
-    else window.addEventListener('resize', rebuild);
-    onMQ(colMQ, rebuild);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { lastKey = ''; build(); });
-    window.addEventListener('load', function () { lastKey = ''; build(); });
-
-    if (!('IntersectionObserver' in window)) { finish(); return; }
-    build();
-    if (motionOff()) finish();
-    new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) {
-        if (motionOff()) { finish(); return; }
-        if (en.isIntersecting && en.intersectionRatio >= 0.35) play();
-        else if (!en.isIntersecting) reset();
-      });
-    }, { threshold: [0, 0.35] }).observe(root);
-    // 키보드로 노드에 들어오면 바로 재생
-    root.addEventListener('focusin', play);
-    onMotion(function (off) {
-      if (off) { finish(); return; }
-      var r = root.getBoundingClientRect();
-      if (r.bottom <= 0 || r.top >= window.innerHeight) reset();
-    });
-  }
-
   /* ---------- S6 리더십: 한 줄 카드 · 넘칠 때만 이전/다음 + 진행 바 ----------
      1200px 이상은 6열이 한 줄에 다 들어가 버튼이 숨고, 좁은 화면에서는 가로 스크롤 스냅 + 버튼. */
   function leaders() {
@@ -899,7 +725,7 @@
     sync();
   }
 
-  /* ---------- 공통: 무한 캐러셀 (S7 브랜드 슬라이더 · S8 커버플로우) ----------
+  /* ---------- 공통: 무한 캐러셀 (S5 브랜드 슬라이더 · S7 커버플로우) ----------
      모든 슬라이드는 한 칸에 겹쳐 있고, 현재 카드 기준 거리 d(… -1, 0, 1 …, 범위 [-n/2, n/2))로 배치합니다.
      o.layout(d, m) → { x, z, ry, s, op, dim } · o.measure(첫 슬라이드) → m (m.unit: 한 칸 넘기는 끌기 거리 px)
      반대편 끝으로 넘어가는 카드(이음매)는 전환 없이 옮긴 뒤 투명도만 서서히 올립니다.
@@ -1027,20 +853,118 @@
     return { go: go, cur: function () { return cur; }, n: n };
   }
 
-  /* ---------- S7 브랜드와 서비스: 3D 브랜드 슬라이더 ----------
+  /* ---------- S5 One Group · Brands: 세로 트리 (슬라이더와 동기화) ----------
+     슬라이드 0 = DOOGO HOLDINGS(맨 위 DOOGO GROUP 행) · 1–7 = 트리 행 순서와 같음.
+     set(i): 현재 행(aria-current) 표시 + 빛 점이 줄기를 따라 그 행 높이까지 이동(--dy) + 줄기 채움(--f)
+             960px 이하(칩 레일)에서는 현재 칩이 보이도록 레일만 가로로 스크롤(페이지는 움직이지 않음).
+     화면 진입(.works.is-in, 한 번): 줄기 선 그리기 → 행이 위에서부터 차례로 점등 → DOOGO GROUP 파동 · 카드 등장(CSS).
+     움직임 멈추기면 처음부터 다 보인 상태. */
+  function worksTree(sec) {
+    var wt = $('[data-wt]', sec);
+    var rows = wt ? $$('[data-wt-go]', wt) : [];
+    var lis = rows.map(function (b) { return b.closest('li'); });
+    var list = wt ? $('.wt-list', wt) : null;
+    var stem = wt ? $('.wt-stem', wt) : null, dot = stem ? $('.wt-dot', stem) : null;
+    var railMQ = window.matchMedia('(max-width: 960px)');
+    var ys = null, cur = -1, moveT = 0;
+
+    // .wt 기준 세로 위치 (변형 무시 → 등장 중 이동과 상관없이 제자리 기준)
+    function topIn(el) { var y = 0; while (el && el !== wt) { y += el.offsetTop; el = el.offsetParent; } return y; }
+    function measure() {
+      ys = null;
+      if (!stem || !rows.length || railMQ.matches || !wt.offsetHeight) return;
+      var sym = $('.wt-sym', rows[0]) || rows[0];
+      var y0 = topIn(sym) + sym.offsetHeight + 5;
+      ys = rows.map(function (b, i) { return i ? topIn(b) + b.offsetHeight / 2 : y0; });
+      stem.style.setProperty('--y0', y0.toFixed(1) + 'px');
+      stem.style.setProperty('--h', Math.max(1, ys[ys.length - 1] - y0).toFixed(1) + 'px');
+    }
+    function place(i, animate) {
+      if (!ys || !stem) return;
+      var h = Math.max(1, ys[ys.length - 1] - ys[0]);
+      var dy = ys[i] - ys[0];
+      var prev = parseFloat(stem.style.getPropertyValue('--dy')) || 0;
+      if (dot && animate && Math.abs(dy - prev) > 1 && !motionOff()) {
+        dot.classList.toggle('is-up', dy < prev);
+        dot.classList.add('is-moving');
+        clearTimeout(moveT);
+        moveT = setTimeout(function () { dot.classList.remove('is-moving'); }, 700);
+      }
+      stem.style.setProperty('--dy', dy.toFixed(1) + 'px');
+      stem.style.setProperty('--f', (dy / h).toFixed(4));
+    }
+    function railTo(i, smooth) {
+      if (!list || !railMQ.matches || !lis[i]) return;
+      var max = list.scrollWidth - list.clientWidth;
+      if (max <= 2) return;
+      var left = clamp(lis[i].offsetLeft - (list.clientWidth - lis[i].offsetWidth) / 2, 0, max);
+      if (Math.abs(left - list.scrollLeft) < 2) return;
+      try { list.scrollTo({ left: left, behavior: smooth && !motionOff() ? 'smooth' : 'auto' }); } catch (e) { list.scrollLeft = left; }
+    }
+    function set(i, animate) {
+      if (!rows[i]) return;
+      var changed = i !== cur;
+      cur = i;
+      rows.forEach(function (b, j) {
+        if (j === i) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+        lis[j].classList.toggle('is-current', j === i);
+      });
+      place(i, animate && changed);
+      railTo(i, animate);
+    }
+    function relayout() { measure(); if (cur >= 0) { place(cur, false); railTo(cur, false); } }
+
+    // 화면 진입 모션 (한 번 재생 · 이후 트리·카드는 그대로 두고 슬라이더 동기화만 계속)
+    var playing = false, io = null;
+    function play() { if (playing) return; playing = true; sec.classList.add('is-in'); if (io) io.disconnect(); }
+    if (!('IntersectionObserver' in window) || motionOff()) play();
+    else {
+      io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { if (motionOff() || (en.isIntersecting && en.intersectionRatio >= 0.22)) play(); });
+      }, { threshold: [0, 0.22] });
+      io.observe(sec);
+    }
+    sec.addEventListener('focusin', play);
+    onMotion(function (off) { if (off) play(); });
+
+    // 키보드: 행 사이를 화살표로 이동 (위/아래 · 칩 레일은 왼쪽/오른쪽)
+    if (list) list.addEventListener('keydown', function (e) {
+      var k = e.key, d = (k === 'ArrowDown' || k === 'ArrowRight') ? 1 : (k === 'ArrowUp' || k === 'ArrowLeft') ? -1 : 0;
+      var i = rows.indexOf(document.activeElement);
+      if (!d || i < 0) return;
+      e.preventDefault();
+      rows[(i + d + rows.length) % rows.length].focus();
+    });
+
+    var rt = 0;
+    function queue() { clearTimeout(rt); rt = setTimeout(relayout, 100); }
+    if (wt && 'ResizeObserver' in window) new ResizeObserver(queue).observe(wt);
+    else window.addEventListener('resize', queue);
+    onMQ(railMQ, queue);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+    window.addEventListener('load', relayout);
+    measure();
+
+    return { rows: rows, set: set };
+  }
+
+  /* ---------- S5 One Group · Brands: 3D 브랜드 슬라이더 + 트리 동기화 ----------
      무한 반복 · 가운데 카드 강조(크기·밝기) · 자동 넘김 3.5초
-     (마우스 올림 · 키보드 포커스 · 터치 · 화면 밖 · 탭 숨김 · 움직임 줄이기 · 정지 버튼이면 멈춤) */
+     (가운데 카드에 마우스 · 키보드 포커스 · 터치 · 화면 밖 · 탭 숨김 · 움직임 멈추기 · 정지 버튼이면 멈춤)
+     슬라이드가 바뀌면 트리의 해당 행이 켜지고, 트리 행을 누르면 그 슬라이드로 이동(자동 넘김은 몇 초 쉰 뒤 재개). */
   function brandSlider() {
+    var sec = $('[data-works]');
     var root = $('[data-bs]');
     if (!root) return;
+    var tree = sec ? worksTree(sec) : null;
     var curEl = $('[data-bs-cur]', root), fill = $('[data-bs-fill]', root), status = $('[data-bs-status]', root);
-    var toggle = $('[data-bs-toggle]', root);
+    var toggle = $('[data-bs-toggle]', root), vp = $('[data-bs-viewport]', root);
     var names = $$('.bs-name', root).map(function (el) { return el.textContent; });
-    var MS = 3500;
-    var st = { stopped: false, moff: motionOff(), hover: false, focus: false, touch: false, view: false };
-    var timer = 0, touchT = 0, api = null;
+    var MS = 3500, HOLD = 6000;
+    var st = { stopped: false, moff: motionOff(), hover: false, focus: false, touch: false, hold: false, view: false };
+    var timer = 0, touchT = 0, holdT = 0, api = null, ready = false;
 
-    function running() { return !!api && !st.stopped && !st.moff && !st.hover && !st.focus && !st.touch && st.view && !document.hidden; }
+    function running() { return !!api && !st.stopped && !st.moff && !st.hover && !st.focus && !st.touch && !st.hold && st.view && !document.hidden; }
     function ring() { root.classList.remove('is-auto'); if (running()) { void root.offsetWidth; root.classList.add('is-auto'); } }
     function schedule() {
       clearTimeout(timer); timer = 0;
@@ -1057,21 +981,26 @@
 
     api = carousel(root, {
       viewport: '[data-bs-viewport]', slide: '.bs-slide', dim: '.bs-dim',
+      // 양옆 카드: 데스크톱은 무대 폭 안에 다 들어오는 크기(0.72–0.86배 · 오른쪽 칸이 좁은 961–1180px 는 0.5배까지 줄여
+      // 옆 카드가 화면 끝에서 잘리지 않게), 760px 이하는 0.9배로 살짝 보임
       measure: function (s) {
-        var w = s.offsetWidth || 340;
-        var gap = parseFloat(getComputedStyle(root).getPropertyValue('--bs-gap')) || 24;
-        var ss = window.innerWidth <= 640 ? 0.9 : 0.86;
+        var w = s.offsetWidth || 300;
+        var gap = parseFloat(getComputedStyle(root).getPropertyValue('--bs-gap')) || 22;
+        var vw = vp ? vp.clientWidth : window.innerWidth;
+        var iw = window.innerWidth;
+        var ss = iw <= 760 ? 0.9 : clamp((vw * 0.96 - w - 2 * gap) / (2 * w), iw <= 1180 ? 0.5 : 0.72, 0.86);
         var x1 = w / 2 + gap + (w * ss) / 2;
         return { x1: x1, x2: w * ss + gap, ss: ss, unit: x1 };
       },
       layout: function (d, m) {
         var a = Math.abs(d), sg = d < 0 ? -1 : 1;
         var x = a <= 1 ? d * m.x1 : sg * (m.x1 + (a - 1) * m.x2);
-        return { x: x, s: 1 - Math.min(a, 1) * (1 - m.ss), op: clamp(3 - a, 0, 1), dim: Math.min(a, 1.6) * 0.34 };
+        return { x: x, s: 1 - Math.min(a, 1) * (1 - m.ss), op: clamp(2.6 - a, 0, 1), dim: Math.min(a, 1.6) * 0.36 };
       },
       onChange: function (i, n) {
         if (curEl) curEl.textContent = pad(i + 1);
         if (fill) fill.style.transform = 'scaleX(' + ((i + 1) / n).toFixed(4) + ')';
+        if (tree) tree.set(i, ready);
       },
       onGo: function (i, user) {
         if (user && status) status.textContent = (i + 1) + ' / ' + names.length + ' ' + (names[i] || '');
@@ -1085,9 +1014,20 @@
       }
     });
     if (!api) return;
+    ready = true;
 
     $('[data-bs-prev]', root).addEventListener('click', function () { api.go(api.cur() - 1, true); });
     $('[data-bs-next]', root).addEventListener('click', function () { api.go(api.cur() + 1, true); });
+    // 트리 행 · 칩: 그 슬라이드로 이동하고 자동 넘김은 잠시 쉼
+    if (tree) tree.rows.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var i = +b.getAttribute('data-wt-go') || 0;
+        st.hold = true;
+        clearTimeout(holdT);
+        holdT = setTimeout(function () { st.hold = false; sync(); }, HOLD);
+        if (i !== api.cur()) api.go(i, true); else sync();
+      });
+    });
     // 정지/재생 버튼: 움직임 멈추기 상태에서 누르면 이 슬라이더만 다시 자동 넘김
     if (toggle) toggle.addEventListener('click', function () {
       var stopped = st.stopped || st.moff;
@@ -1095,27 +1035,37 @@
       sync(); if (!st.stopped) schedule();
     });
     onMotion(function (off) { st.moff = off; if (!off) st.stopped = false; sync(); });
-    root.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') { st.hover = true; sync(); } });
-    root.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') { st.hover = false; sync(); } });
+    // 마우스: 가운데(현재) 카드 위에 있을 때만 멈춤 → 옆 카드·빈 곳에 커서가 있어도 트리와 함께 계속 넘어감
+    root.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      var on = !!(e.target.closest && e.target.closest('.bs-slide.is-current'));
+      if (on !== st.hover) { st.hover = on; sync(); }
+    });
+    root.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse' && st.hover) { st.hover = false; sync(); } });
+    // 키보드 포커스가 슬라이더 또는 트리 행(칩)에 있으면 자동 넘김을 멈춤 → 행을 Tab 으로 지나가는 동안 슬라이드·현재 행이 바뀌지 않게
+    var wtEl = sec ? $('[data-wt]', sec) : null;
     function focusState() {
       var a = document.activeElement, kbd = false;
-      if (a && root.contains(a)) { try { kbd = a.matches(':focus-visible'); } catch (err) { kbd = true; } }
+      if (a && (root.contains(a) || (wtEl && wtEl.contains(a)))) { try { kbd = a.matches(':focus-visible'); } catch (err) { kbd = true; } }
       // 정지/재생 버튼에 포커스가 있을 때는 상태를 버튼이 직접 정하므로 제외
       st.focus = kbd && a !== toggle;
       sync();
     }
-    root.addEventListener('focusin', focusState);
-    root.addEventListener('focusout', function () { setTimeout(focusState, 0); });
+    [root, wtEl].forEach(function (el) {
+      if (!el) return;
+      el.addEventListener('focusin', focusState);
+      el.addEventListener('focusout', function () { setTimeout(focusState, 0); });
+    });
     document.addEventListener('visibilitychange', sync);
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function (entries) {
         entries.forEach(function (en) { st.view = en.isIntersecting; sync(); });
       }, { threshold: 0.3 }).observe(root);
-    }
+    } else st.view = true;
     sync();
   }
 
-  /* ---------- S8 그룹소식: 커버플로우 ----------
+  /* ---------- S7 그룹소식: 커버플로우 ----------
      가운데 카드는 정면, 양옆은 rotateY 로 살짝 돌아 뒤로 물러남 · 점 표시 · 이전/다음 · 스와이프 */
   function coverflow() {
     var root = $('[data-cf]');
@@ -1150,7 +1100,7 @@
     dots.forEach(function (b, j) { b.addEventListener('click', function () { api.go(j, true); }); });
   }
 
-  /* ---------- 화면 밖이면 반복 애니메이션 정지 (마키 · 트리 빛 점·파동) ---------- */
+  /* ---------- 화면 밖이면 반복 애니메이션 정지 (그룹 구조 · 트리 파동) ---------- */
   function pauseOffscreen() {
     var els = $$('[data-anim]');
     if (!els.length || !('IntersectionObserver' in window)) return;
@@ -1166,7 +1116,6 @@
   engrave();
   factsCount();
   var updaters = [groupScroll(), bizStory()].filter(Boolean);
-  tree();
   leaders();
   brandSlider();
   coverflow();

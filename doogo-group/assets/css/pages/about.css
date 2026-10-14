@@ -765,7 +765,19 @@ main .note { color: var(--muted); }
   .ab-ext { gap: 6px; }
   .ab-ext .en { font-size: .84rem; letter-spacing: .01em; }
   .ab-sub-card { grid-template-columns: minmax(0, 1fr) 88px; }
+  /* 360–380px: 사이트 주소(doogofood.com 등)가 말줄임 없이 한 줄에 — 본문 좌우 여백·항목 열을 좁히고 글자를 살짝 줄임 */
+  .ab-sub-body { padding-inline: 14px; }
+  .ab-sub-facts > div { grid-template-columns: 34px minmax(0, 1fr); gap: 6px; }
+  .ab-site { gap: 4px; font-size: .84rem; letter-spacing: 0; }
   .ab-loc-dl > div { grid-template-columns: 1fr; gap: 6px; }
+}
+/* 340px 이하(320 등): 옆 그림 칸 대신 위쪽 띠로 — 회사명·주소·'사업 보기' 줄이 카드 폭을 다 씀 */
+@media (max-width: 340px) {
+  .ab-org { --spine: 14px; --arm: 16px; }
+  .ab-sub-card { grid-template-columns: minmax(0, 1fr); }
+  .ab-sub-visual { grid-column: 1; grid-row: 1; height: 84px; }
+  .ab-sub-visual img { object-position: 50% 42%; }
+  .ab-sub-body { grid-column: 1; grid-row: 2; padding: 14px 14px 8px; }
 }
 
 /* 움직임 멈추기 (사용자가 왼쪽 아래 버튼으로 고른 경우만 · base.css 의 html.motion-off) */

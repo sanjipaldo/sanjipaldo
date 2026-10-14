@@ -73,7 +73,8 @@
     if (!inner) return;
     var b = document.createElement('button');
     b.type = 'button'; b.className = 'fq-copy';
-    b.innerHTML = '<svg aria-hidden="true"><use href="#fq-i-link"/></svg><span>이 질문 링크 복사</span>';
+    // 버튼 이름에 질문 제목을 덧붙여(화면에는 안 보임) 버튼 목록에서 서로 구분되게 합니다
+    b.innerHTML = '<svg aria-hidden="true"><use href="#fq-i-link"/></svg><span>이 질문 링크 복사</span><span class="sr-only">: ' + esc(it._title) + '</span>';
     b.addEventListener('click', function () {
       var url = location.href.split('#')[0].split('?')[0] + '#' + it.id;
       copyText(url).then(function () {
@@ -239,10 +240,33 @@
   function toggleClear() { if (clearBtn) clearBtn.hidden = !input.value; }
   function resetQuery() { if (input) input.value = ''; state.q = ''; toggleClear(); }
   var qTimer = 0;
+  /* 목록을 내려 본 상태에서 (붙어 있는) 검색창에 입력하면 결과가 줄어 화면 위로 빠져나가므로,
+     입력 중에는 목록 시작으로 바로 옮깁니다. 이때 위로 움직였다고 숨은 헤더가 다시 내려와
+     검색창을 가리거나 메뉴가 열리지 않도록 헤더는 숨긴 채로 둡니다. */
+  var holdHeader = false, holdTimer = 0;
+  function holdHeaderHidden() {
+    if (!header || !header.classList.contains('is-hidden')) return;
+    holdHeader = true;
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(function () { holdHeader = false; }, 200);
+  }
+  window.addEventListener('scroll', function () { if (holdHeader) header.classList.add('is-hidden'); }, { passive: true });
+  function followResults() {
+    var target = boardTop();
+    if (window.scrollY <= target + 4) return; // 목록 시작이 이미 보임
+    holdHeaderHidden();
+    // html 의 scroll-behavior: smooth 를 잠시 끄고 즉시 이동(입력 중 화면이 미끄러지지 않게)
+    var de = document.documentElement, prev = de.style.scrollBehavior;
+    de.style.scrollBehavior = 'auto';
+    window.scrollTo(0, Math.max(0, target));
+    de.style.scrollBehavior = prev;
+  }
   if (form) form.addEventListener('submit', function (e) { e.preventDefault(); input.blur(); keepBoardInView(); });
   if (input) {
     input.addEventListener('input', function () {
+      holdHeaderHidden(); // 목록이 줄어 브라우저가 스크롤을 끌어올리는 경우도 포함
       state.q = input.value; toggleClear(); render();
+      followResults();
       clearTimeout(qTimer); qTimer = setTimeout(function () { syncUrl(''); }, 400);
     });
     input.addEventListener('keydown', function (e) {
@@ -312,7 +336,8 @@
     if (!h) return;
     var el = document.getElementById(h);
     if (el && el.classList.contains('fq-item')) {
-      if (el.hidden) { resetQuery(); selectTab('all', { instant: true, url: false }); }
+      // 지금 분류에서 숨은 질문이면 '전체'로 바꾸고 주소의 ?cat=·?q= 도 지워 탭과 맞춥니다(#q-… 는 유지)
+      if (el.hidden) { resetQuery(); selectTab('all', { instant: true, url: false }); syncUrl(h); }
       setOpen(el, true, fromLoad);
       // 글꼴·레이아웃이 자리 잡은 뒤 위치를 맞춥니다
       setTimeout(function () { scrollToItem(el, !fromLoad); try { el._btn.focus({ preventScroll: true }); } catch (e) {} }, fromLoad ? 120 : 0);
