@@ -167,61 +167,38 @@
   </div>
 </header>
 
+<!-- 모바일 메뉴(≤1024px): 대메뉴 6개는 바로 이동(하위 항목은 각 페이지의 탭에서) → 사업영역 바로가기 타일 → 문의 · 그룹 영상
+     style="--i" 는 열릴 때 차례로 올라오는 순번입니다 (base.css '모바일 메뉴') -->
 <nav class="mnav" id="mnav" aria-label="전체 메뉴" hidden>
-  <div class="mnav-group">
-    <button class="mnav-toggle" type="button" aria-expanded="false" aria-controls="mnav-about">두고그룹 <svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg></button>
-    <div class="mnav-panel" id="mnav-about" hidden>
-      <a href="about.html">두고그룹 전체 보기</a>
-      <a href="about.html#intro">그룹 소개</a>
-      <a href="about.html#vision">비전과 철학</a>
-      <a href="about.html#structure">그룹 구조</a>
-      <a href="about.html#history">주요 연혁</a>
-      <a href="about.html#locations">국내외 거점</a>
+  <div class="mnav-inner">
+    <ul class="mnav-main">
+      <li style="--i:0"><a class="mnav-link" href="about.html" data-nav="about"><span class="mnav-num" aria-hidden="true">01</span><span class="mnav-t">두고그룹</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+      <li style="--i:1"><a class="mnav-link" href="business.html" data-nav="business"><span class="mnav-num" aria-hidden="true">02</span><span class="mnav-t">사업영역</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+      <li style="--i:2"><a class="mnav-link" href="leadership.html" data-nav="leadership"><span class="mnav-num" aria-hidden="true">03</span><span class="mnav-t">리더십</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+      <li style="--i:3"><a class="mnav-link" href="brands.html" data-nav="brands"><span class="mnav-num" aria-hidden="true">04</span><span class="mnav-t">브랜드와 성과</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+      <li style="--i:4"><a class="mnav-link" href="news.html" data-nav="news"><span class="mnav-num" aria-hidden="true">05</span><span class="mnav-t">그룹소식</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+      <li style="--i:5"><a class="mnav-link" href="contact.html" data-nav="contact"><span class="mnav-num" aria-hidden="true">06</span><span class="mnav-t">문의하기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+    </ul>
+    <section class="mnav-biz" aria-labelledby="mnav-biz-t">
+      <div class="mnav-biz-head" style="--i:6">
+        <h2 class="mnav-biz-t" id="mnav-biz-t">사업영역 바로가기</h2>
+        <span class="mnav-biz-en" aria-hidden="true">7 Businesses</span>
+      </div>
+      <ul class="mnav-tiles">
+        <li style="--i:7"><a class="mnav-tile" href="business-campus.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-campus"/></svg></span><span class="mnav-tile-t">교육업</span><span class="mnav-tile-en">DOOGO CLASS</span></a></li>
+        <li style="--i:7"><a class="mnav-tile" href="business-bio.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-bio"/></svg></span><span class="mnav-tile-t">제조업</span><span class="mnav-tile-en">DOOGOBIO</span></a></li>
+        <li style="--i:8"><a class="mnav-tile" href="business-commerce.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-commerce"/></svg></span><span class="mnav-tile-t">브랜드 커머스</span><span class="mnav-tile-en">DOOGO MAKERS</span></a></li>
+        <li style="--i:8"><a class="mnav-tile" href="business-media.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-media"/></svg></span><span class="mnav-tile-t">미디어 &amp; 콘텐츠</span><span class="mnav-tile-en">DOOGO MEDIA</span></a></li>
+        <li style="--i:9"><a class="mnav-tile" href="business-ad.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-ad"/></svg></span><span class="mnav-tile-t">마케팅</span><span class="mnav-tile-en">DOOGO AD</span></a></li>
+        <li style="--i:9"><a class="mnav-tile" href="business-food.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-food"/></svg></span><span class="mnav-tile-t">유통</span><span class="mnav-tile-en">DOOGOFOOD</span></a></li>
+        <li style="--i:10"><a class="mnav-tile" href="business-space.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-space"/></svg></span><span class="mnav-tile-t">공간 &amp; 숙박업</span><span class="mnav-tile-en">DOOGO SPACE</span></a></li>
+        <li style="--i:10"><a class="mnav-tile mnav-tile--all" href="business.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-arrow"/></svg></span><span class="mnav-tile-t"><span class="sr-only">사업영역 </span>전체 보기</span><span class="mnav-tile-en">View all</span></a></li>
+      </ul>
+    </section>
+    <div class="mnav-cta" style="--i:11">
+      <a class="btn btn--primary" href="contact.html" data-nav-cta>문의하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      <button class="btn btn--line" type="button" data-film-open><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>그룹 영상 보기</button>
     </div>
-  </div>
-  <div class="mnav-group">
-    <button class="mnav-toggle" type="button" aria-expanded="false" aria-controls="mnav-business">사업영역 <svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg></button>
-    <div class="mnav-panel" id="mnav-business" hidden>
-      <a href="business.html">사업영역 전체 보기</a>
-      <a href="business-campus.html"><span class="mnav-biz">교육업<span class="mnav-corp">운영 DOOGO HOLDINGS</span></span><small>DOOGO CLASS</small></a>
-      <a href="business-bio.html"><span class="mnav-biz">제조업<span class="mnav-corp">운영 DOOGOBIO NZ</span></span><small>DOOGOBIO</small></a>
-      <a href="business-commerce.html"><span class="mnav-biz">브랜드 커머스<span class="mnav-corp">운영 DOOGO MAKERS</span></span><small>DOOGO MAKERS</small></a>
-      <a href="business-media.html"><span class="mnav-biz">미디어 &amp; 콘텐츠<span class="mnav-corp">운영 DOOGO MEDIA</span></span><small>DOOGO MEDIA</small></a>
-      <a href="business-ad.html"><span class="mnav-biz">마케팅<span class="mnav-corp">운영 DOOGO AD</span></span><small>DOOGO AD</small></a>
-      <a href="business-food.html"><span class="mnav-biz">유통<span class="mnav-corp">운영 DOOGO HOLDINGS</span></span><small>DOOGOFOOD</small></a>
-      <a href="business-space.html"><span class="mnav-biz">공간 &amp; 숙박업<span class="mnav-corp">운영 DOOGO SPACE</span></span><small>DOOGO SPACE</small></a>
-    </div>
-  </div>
-  <div class="mnav-group">
-    <button class="mnav-toggle" type="button" aria-expanded="false" aria-controls="mnav-leadership">리더십 <svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg></button>
-    <div class="mnav-panel" id="mnav-leadership" hidden>
-      <a href="leadership.html">리더십 전체 보기</a>
-      <a href="leadership.html#leaders">여섯 명의 리더</a>
-    </div>
-  </div>
-  <div class="mnav-group">
-    <button class="mnav-toggle" type="button" aria-expanded="false" aria-controls="mnav-brands">브랜드와 성과 <svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg></button>
-    <div class="mnav-panel" id="mnav-brands" hidden>
-      <a href="brands.html">브랜드와 성과 전체 보기</a>
-      <a href="brands.html#brands">운영 브랜드</a>
-      <a href="brands.html#projects">프로젝트</a>
-      <a href="brands.html#cases">성장 사례</a>
-      <a href="brands.html#partners">협력 파트너</a>
-    </div>
-  </div>
-  <div class="mnav-group">
-    <button class="mnav-toggle" type="button" aria-expanded="false" aria-controls="mnav-news">그룹소식 <svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg></button>
-    <div class="mnav-panel" id="mnav-news" hidden>
-      <a href="news.html">전체 소식</a>
-      <a href="news.html?cat=notice">공지</a>
-      <a href="news.html?cat=business">사업 소식</a>
-      <a href="news.html?cat=campus">교육 현장</a>
-      <a href="news.html?cat=recruit">채용 소식</a>
-    </div>
-  </div>
-  <div class="mnav-cta">
-    <a class="btn btn--primary" href="contact.html" data-nav-cta>문의하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-    <button class="btn btn--line" type="button" data-film-open>그룹 영상 보기</button>
   </div>
 </nav>
 <!-- @header:end -->
@@ -417,7 +394,9 @@
   </section>
 
   <!-- =========================================================
-       03 그룹 구조
+       03 그룹 구조 — 조직도
+       맨 위 지주회사 DOOGO HOLDINGS(총괄 운영 · 문원오 대표이사) → 다섯 그룹사와 각 대표이사 · 총괄이사.
+       연결선(SVG)과 흐르는 빛은 about.js 가 실제 카드 위치로 그립니다(창 크기가 바뀌면 다시 계산).
        ========================================================= -->
   <section class="section ab-structure" id="structure" aria-labelledby="structure-title">
     <div class="container">
@@ -429,133 +408,140 @@
             <span class="line"><span>다섯 개의 그룹사</span></span>
           </h2>
         </div>
-        <p class="lead" data-reveal>지주회사 DOOGO HOLDINGS가 교육과 총괄 운영을 맡아 DOOGO CLASS와 DOOGOFOOD를 직접 운영하고, 다섯 그룹사가 공간&nbsp;&amp;&nbsp;숙박업 · 미디어&nbsp;&amp;&nbsp;콘텐츠 · 브랜드 커머스 · 마케팅 · 뉴질랜드 건강식품 제조를 맡아 하나의 두고그룹으로 움직입니다.</p>
+        <p class="lead" data-reveal>문원오 대표이사가 이끄는 지주회사 DOOGO HOLDINGS가 그룹 전체를 총괄 운영하며 교육업 DOOGO CLASS와 유통 DOOGOFOOD를 직접 맡고, 다섯 그룹사는 각 대표이사 · 총괄이사가 사업을 이끕니다.</p>
       </div>
+    </div>
 
-      <div class="ab-org" data-org>
-        <!-- 지주회사 -->
-        <div class="ab-hold-wrap">
-          <article class="ab-hold" aria-labelledby="ab-hold-name">
-            <div class="ab-hold-id">
-              <img class="ab-hold-sym" src="assets/img/logo/doogo-symbol.svg" width="60" height="60" alt="">
-              <div>
-                <p class="ab-hold-label">지주회사</p>
-                <h3 class="ab-hold-name en" id="ab-hold-name">DOOGO HOLDINGS</h3>
-              </div>
-            </div>
-            <dl class="ab-hold-facts">
-              <div><dt>역할</dt><dd>교육 및 총괄 운영</dd></div>
-              <div><dt>대표이사</dt><dd class="ab-hold-ceo"><span class="ab-av ab-av--lg" aria-hidden="true"><img src="assets/img/people/leader-moon-wonoh-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span><a class="ab-person" href="leadership.html#ceo">문원오</a></dd></div>
-              <div class="ab-hold-direct"><dt>직접 운영</dt><dd>
-                <a class="ab-ext" href="https://www.doogoclass.com" target="_blank" rel="noopener"><span class="ab-ext-area">교육업</span><span class="en">DOOGO CLASS</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> (새 창)</span></a>
-                <a class="ab-ext" href="https://www.doogofood.com" target="_blank" rel="noopener"><span class="ab-ext-area">유통</span><span class="en">DOOGOFOOD</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> (새 창)</span></a>
-              </dd></div>
-            </dl>
-          </article>
+    <div class="container-wide ab-oc-wrap">
+      <div class="ab-oc on-dark" data-oc>
+        <div class="ab-oc-bg" aria-hidden="true">
+          <span class="ab-oc-aurora ab-oc-aurora--1"></span>
+          <span class="ab-oc-aurora ab-oc-aurora--3"></span>
+          <span class="ab-oc-grid"><i></i></span>
+          <span class="ab-oc-beam"></span>
         </div>
 
-        <!-- 지주회사 → 그룹사 연결선 -->
-        <div class="ab-org-lines" aria-hidden="true">
-          <span class="ab-org-stem"></span>
-          <span class="ab-org-bus"><span class="ab-org-half ab-org-half--l"></span><span class="ab-org-half ab-org-half--r"></span></span>
-          <span class="ab-org-drop" style="--i:0"><i></i></span>
-          <span class="ab-org-drop" style="--i:1"><i></i></span>
-          <span class="ab-org-drop" style="--i:2"><i></i></span>
-          <span class="ab-org-drop" style="--i:3"><i></i></span>
-          <span class="ab-org-drop" style="--i:4"><i></i></span>
+        <div class="ab-oc-top">
+          <div class="ab-oc-brand">
+            <img class="ab-oc-lockup" src="assets/img/logo/doogo-group-lockup-white.svg" width="271" height="50" alt="DOOGO GROUP" loading="lazy" decoding="async">
+            <p class="ab-oc-kicker"><span class="en">Group Organization</span>그룹 조직도</p>
+          </div>
+          <div class="ab-oc-count">
+            <p class="ab-oc-num en" aria-hidden="true"><span class="ab-oc-n" data-oc-n="1">1</span><span class="ab-oc-plus">+</span><span class="ab-oc-n" data-oc-n="5">5</span></p>
+            <p class="ab-oc-num-sub"><span>지주회사 1</span><span>그룹사 5</span></p>
+          </div>
         </div>
 
-        <!-- 그룹사 5 -->
-        <ol class="ab-subs" aria-label="그룹사 5곳">
-          <li class="ab-sub" style="--i:0">
-            <article class="ab-sub-card" aria-labelledby="ab-sub-bio">
-              <div class="ab-sub-visual" aria-hidden="true">
-                <img src="assets/img/3d/bio.webp" width="674" height="755" alt="" loading="lazy">
-                <span class="ab-sub-idx en">01<small>/05</small></span>
-                <span class="ab-sub-flag"><svg><use href="#i-globe"/></svg>해외법인</span>
-              </div>
-              <div class="ab-sub-body">
-                <h3 class="ab-sub-en en" id="ab-sub-bio">DOOGOBIO NZ</h3>
-                <dl class="ab-sub-facts">
-                  <div><dt>분야</dt><dd>뉴질랜드 건강식품 제조</dd></div>
-                  <div><dt>대표이사</dt><dd><span class="ab-av" aria-hidden="true"><img src="assets/img/people/leader-baek-youngho-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span><a class="ab-person" href="leadership.html#leader-bio">백영호</a></dd></div>
-                  <div class="ab-sub-site"><dt>사이트</dt><dd><a class="ab-site" href="https://www.doogobio.com/" target="_blank" rel="noopener"><span class="en">doogobio.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGOBIO 사이트 (새 창)</span></a></dd></div>
-                </dl>
-                <a class="ab-sub-go" href="business-bio.html"><span class="ab-sub-area">제조업</span><span class="ab-sub-go-t">보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-              </div>
-            </article>
-          </li>
-          <li class="ab-sub" style="--i:1">
-            <article class="ab-sub-card" aria-labelledby="ab-sub-ad">
-              <div class="ab-sub-visual" aria-hidden="true">
-                <img src="assets/img/3d/ad.webp" width="671" height="755" alt="" loading="lazy">
-                <span class="ab-sub-idx en">02<small>/05</small></span>
-              </div>
-              <div class="ab-sub-body">
-                <h3 class="ab-sub-en en" id="ab-sub-ad">DOOGO AD</h3>
-                <dl class="ab-sub-facts">
-                  <div><dt>분야</dt><dd>마케팅</dd></div>
-                  <div><dt>대표이사</dt><dd><span class="ab-av" aria-hidden="true"><img src="assets/img/people/leader-kim-sinyong-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span><a class="ab-person" href="leadership.html#leader-ad">김신용</a></dd></div>
-                  <div class="ab-sub-site"><dt>사이트</dt><dd><a class="ab-site" href="https://www.doogoad.com/" target="_blank" rel="noopener"><span class="en">doogoad.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO AD 사이트 (새 창)</span></a></dd></div>
-                </dl>
-                <a class="ab-sub-go" href="business-ad.html"><span class="ab-sub-area">마케팅</span><span class="ab-sub-go-t">보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-              </div>
-            </article>
-          </li>
-          <li class="ab-sub" style="--i:2">
-            <article class="ab-sub-card" aria-labelledby="ab-sub-space">
-              <div class="ab-sub-visual" aria-hidden="true">
-                <img src="assets/img/3d/stay.webp" width="674" height="755" alt="" loading="lazy">
-                <span class="ab-sub-idx en">03<small>/05</small></span>
-              </div>
-              <div class="ab-sub-body">
-                <h3 class="ab-sub-en en" id="ab-sub-space">DOOGO SPACE</h3>
-                <dl class="ab-sub-facts">
-                  <div><dt>분야</dt><dd>공간 &amp; 숙박업</dd></div>
-                  <div><dt>대표이사</dt><dd><span class="ab-av" aria-hidden="true"><img src="assets/img/people/leader-moon-sungoh-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span><a class="ab-person" href="leadership.html#leader-space">문성오</a></dd></div>
-                  <div class="ab-sub-site"><dt>사이트</dt><dd><a class="ab-site" href="https://www.norastay.com/" target="_blank" rel="noopener"><span class="en">norastay.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO SPACE의 숙박 서비스 NORA STAY 사이트 (새 창)</span></a></dd></div>
-                </dl>
-                <a class="ab-sub-go" href="business-space.html"><span class="ab-sub-area">공간 &amp; 숙박업</span><span class="ab-sub-go-t">보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-              </div>
-            </article>
-          </li>
-          <li class="ab-sub" style="--i:3">
-            <article class="ab-sub-card" aria-labelledby="ab-sub-media">
-              <div class="ab-sub-visual" aria-hidden="true">
-                <img src="assets/img/3d/media.webp" width="671" height="755" alt="" loading="lazy">
-                <span class="ab-sub-idx en">04<small>/05</small></span>
-              </div>
-              <div class="ab-sub-body">
-                <h3 class="ab-sub-en en" id="ab-sub-media">DOOGO MEDIA</h3>
-                <dl class="ab-sub-facts">
-                  <div><dt>분야</dt><dd>미디어 &amp; 콘텐츠</dd></div>
-                  <div><dt>총괄이사</dt><dd><span class="ab-av" aria-hidden="true"><img src="assets/img/people/leader-kim-yunjung-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span><a class="ab-person" href="leadership.html#leader-media">김윤정</a></dd></div>
-                  <div class="ab-sub-site"><dt>사이트</dt><dd><a class="ab-site" href="https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C" target="_blank" rel="noopener"><span class="en">YouTube</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO MEDIA 유튜브 채널 두고보는 문대표 (새 창)</span></a></dd></div>
-                </dl>
-                <a class="ab-sub-go" href="business-media.html"><span class="ab-sub-area">미디어 &amp; 콘텐츠</span><span class="ab-sub-go-t">보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-              </div>
-            </article>
-          </li>
-          <li class="ab-sub" style="--i:4">
-            <article class="ab-sub-card" aria-labelledby="ab-sub-makers">
-              <div class="ab-sub-visual" aria-hidden="true">
-                <img src="assets/img/3d/makers.webp" width="674" height="755" alt="" loading="lazy">
-                <span class="ab-sub-idx en">05<small>/05</small></span>
-              </div>
-              <div class="ab-sub-body">
-                <h3 class="ab-sub-en en" id="ab-sub-makers">DOOGO MAKERS</h3>
-                <dl class="ab-sub-facts">
-                  <div><dt>분야</dt><dd>브랜드 커머스</dd></div>
-                  <div><dt>총괄이사</dt><dd><span class="ab-av" aria-hidden="true"><img src="assets/img/people/leader-shin-donghoon-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span><a class="ab-person" href="leadership.html#leader-makers">신동훈</a></dd></div>
-                  <div class="ab-sub-site"><dt>사이트</dt><dd><a class="ab-site" href="https://www.doogofood.com/" target="_blank" rel="noopener"><span class="en">doogofood.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO MAKERS와 연결된 DOOGOFOOD 식품 도매 플랫폼 (새 창)</span></a></dd></div>
-                </dl>
-                <a class="ab-sub-go" href="business-commerce.html"><span class="ab-sub-area">브랜드 커머스</span><span class="ab-sub-go-t">보기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-              </div>
-            </article>
-          </li>
-        </ol>
-      </div>
+        <div class="ab-oc-chart" data-oc-chart>
+          <svg class="ab-oc-svg" aria-hidden="true" focusable="false"></svg>
+          <div class="ab-oc-fx" aria-hidden="true"></div>
 
+          <!-- 지주회사 · 총괄 운영 -->
+          <div class="ab-oc-root" data-oc-root>
+            <span class="ab-oc-halo" aria-hidden="true"></span>
+            <article class="ab-oc-hold" aria-labelledby="oc-hold-name">
+              <div class="ab-oc-hold-main">
+                <span class="ab-oc-av ab-oc-av--xl" aria-hidden="true"><img src="assets/img/people/leader-moon-wonoh-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span>
+                <div class="ab-oc-hold-txt">
+                  <p class="ab-oc-hold-tags"><span class="ab-oc-tag ab-oc-tag--solid">지주회사</span><span class="ab-oc-tag">총괄 운영</span></p>
+                  <h3 class="ab-oc-hold-name en" id="oc-hold-name">DOOGO HOLDINGS</h3>
+                  <p class="ab-oc-who ab-oc-who--hold"><a class="ab-oc-person" href="leadership.html#ceo">문원오</a><span class="ab-oc-role">대표이사</span></p>
+                </div>
+              </div>
+              <div class="ab-oc-direct">
+                <p class="ab-oc-direct-k">직접 운영</p>
+                <ul class="ab-oc-chips">
+                  <li><a class="ab-oc-chip" href="https://www.doogoclass.com" target="_blank" rel="noopener"><span class="ab-oc-chip-k">교육업</span><span class="en">DOOGO CLASS</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> (새 창)</span></a></li>
+                  <li><a class="ab-oc-chip" href="https://www.doogofood.com" target="_blank" rel="noopener"><span class="ab-oc-chip-k">유통</span><span class="en">DOOGOFOOD</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> (새 창)</span></a></li>
+                </ul>
+              </div>
+            </article>
+          </div>
+
+          <!-- 그룹사 5 -->
+          <ol class="ab-oc-subs" aria-label="그룹사 5곳">
+            <li class="ab-oc-node" style="--i:0">
+              <article class="ab-oc-card" aria-labelledby="oc-bio">
+                <span class="ab-oc-idx en" aria-hidden="true">01</span>
+                <span class="ab-oc-av" aria-hidden="true"><img src="assets/img/people/leader-baek-youngho-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span>
+                <div class="ab-oc-body">
+                  <p class="ab-oc-who"><a class="ab-oc-person" href="leadership.html#leader-bio">백영호</a><span class="ab-oc-role">대표이사</span></p>
+                  <h3 class="ab-oc-name en" id="oc-bio">DOOGOBIO NZ</h3>
+                  <p class="ab-oc-field">뉴질랜드 건강식품 제조</p>
+                  <span class="ab-oc-flag"><svg aria-hidden="true"><use href="#i-globe"/></svg>해외법인</span>
+                </div>
+                <div class="ab-oc-links">
+                  <a class="ab-oc-site" href="https://www.doogobio.com/" target="_blank" rel="noopener">사이트<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGOBIO 사이트 (새 창)</span></a>
+                  <a class="ab-oc-go" href="business-bio.html"><span class="sr-only">제조업 </span>사업 보기<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+                </div>
+              </article>
+            </li>
+            <li class="ab-oc-node" style="--i:1">
+              <article class="ab-oc-card" aria-labelledby="oc-ad">
+                <span class="ab-oc-idx en" aria-hidden="true">02</span>
+                <span class="ab-oc-av" aria-hidden="true"><img src="assets/img/people/leader-kim-sinyong-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span>
+                <div class="ab-oc-body">
+                  <p class="ab-oc-who"><a class="ab-oc-person" href="leadership.html#leader-ad">김신용</a><span class="ab-oc-role">대표이사</span></p>
+                  <h3 class="ab-oc-name en" id="oc-ad">DOOGO AD</h3>
+                  <p class="ab-oc-field">마케팅</p>
+                </div>
+                <div class="ab-oc-links">
+                  <a class="ab-oc-site" href="https://www.doogoad.com/" target="_blank" rel="noopener">사이트<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO AD 사이트 (새 창)</span></a>
+                  <a class="ab-oc-go" href="business-ad.html"><span class="sr-only">마케팅 </span>사업 보기<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+                </div>
+              </article>
+            </li>
+            <li class="ab-oc-node" style="--i:2">
+              <article class="ab-oc-card" aria-labelledby="oc-space">
+                <span class="ab-oc-idx en" aria-hidden="true">03</span>
+                <span class="ab-oc-av" aria-hidden="true"><img src="assets/img/people/leader-moon-sungoh-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span>
+                <div class="ab-oc-body">
+                  <p class="ab-oc-who"><a class="ab-oc-person" href="leadership.html#leader-space">문성오</a><span class="ab-oc-role">대표이사</span></p>
+                  <h3 class="ab-oc-name en" id="oc-space">DOOGO SPACE</h3>
+                  <p class="ab-oc-field">공간 &amp; 숙박업</p>
+                </div>
+                <div class="ab-oc-links">
+                  <a class="ab-oc-site" href="https://www.norastay.com/" target="_blank" rel="noopener">사이트<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO SPACE의 숙박 서비스 NORA STAY 사이트 (새 창)</span></a>
+                  <a class="ab-oc-go" href="business-space.html"><span class="sr-only">공간 &amp; 숙박업 </span>사업 보기<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+                </div>
+              </article>
+            </li>
+            <li class="ab-oc-node" style="--i:3">
+              <article class="ab-oc-card" aria-labelledby="oc-media">
+                <span class="ab-oc-idx en" aria-hidden="true">04</span>
+                <span class="ab-oc-av" aria-hidden="true"><img src="assets/img/people/leader-kim-yunjung-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span>
+                <div class="ab-oc-body">
+                  <p class="ab-oc-who"><a class="ab-oc-person" href="leadership.html#leader-media">김윤정</a><span class="ab-oc-role">총괄이사</span></p>
+                  <h3 class="ab-oc-name en" id="oc-media">DOOGO MEDIA</h3>
+                  <p class="ab-oc-field">미디어 &amp; 콘텐츠</p>
+                </div>
+                <div class="ab-oc-links">
+                  <a class="ab-oc-site" href="https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C" target="_blank" rel="noopener">YouTube<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO MEDIA 유튜브 채널 두고보는 문대표 (새 창)</span></a>
+                  <a class="ab-oc-go" href="business-media.html"><span class="sr-only">미디어 &amp; 콘텐츠 </span>사업 보기<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+                </div>
+              </article>
+            </li>
+            <li class="ab-oc-node" style="--i:4">
+              <article class="ab-oc-card" aria-labelledby="oc-makers">
+                <span class="ab-oc-idx en" aria-hidden="true">05</span>
+                <span class="ab-oc-av" aria-hidden="true"><img src="assets/img/people/leader-shin-donghoon-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span>
+                <div class="ab-oc-body">
+                  <p class="ab-oc-who"><a class="ab-oc-person" href="leadership.html#leader-makers">신동훈</a><span class="ab-oc-role">총괄이사</span></p>
+                  <h3 class="ab-oc-name en" id="oc-makers">DOOGO MAKERS</h3>
+                  <p class="ab-oc-field">브랜드 커머스</p>
+                </div>
+                <div class="ab-oc-links">
+                  <a class="ab-oc-site" href="https://www.doogofood.com/" target="_blank" rel="noopener">사이트<svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO MAKERS와 연결된 DOOGOFOOD 식품 도매 플랫폼 (새 창)</span></a>
+                  <a class="ab-oc-go" href="business-commerce.html"><span class="sr-only">브랜드 커머스 </span>사업 보기<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+                </div>
+              </article>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
       <div class="ab-link" data-reveal>
         <div class="ab-link-head">
           <h3 class="ab-link-title"><span class="en">Business Map</span>7개 사업영역과 운영 회사</h3>
@@ -612,43 +598,91 @@
           </tbody>
         </table>
       </div>
-      <p class="note ab-org-note">대표이사 · 총괄이사 이력은 공식 자료로 확정 후 게시합니다. 3D 이미지는 AI로 만든 예시 이미지입니다.</p>
     </div>
   </section>
 
   <!-- =========================================================
-       04 주요 연혁
+       04 주요 연혁 — 최신순 · 연도별
+       진행선은 스크롤에 따라 채워지고(about.js), 항목은 연도 묶음이 보이면 차례로 올라옵니다.
        ========================================================= -->
   <section class="section section--ivory ab-history" id="history" aria-labelledby="history-title">
-    <div class="container ab-history-grid">
-      <div class="ab-history-head">
-        <span class="eyebrow">History</span>
-        <h2 class="h2" id="history-title" style="margin-top:20px">주요 연혁 <span class="badge-sample">샘플</span></h2>
-        <p class="lead">두고그룹의 주요 발자취를 연도별로 정리합니다.</p>
-        <p class="note">연혁은 공식 자료로 교체 예정입니다. 아래 항목은 구성을 보여주는 예시입니다.</p>
+    <div class="container">
+      <div class="sec-head sec-head--split ab-history-head">
+        <div>
+          <span class="eyebrow">History</span>
+          <h2 class="h2" id="history-title" data-lines style="margin-top:20px">
+            <span class="line"><span>온라인 쇼핑몰에서</span></span>
+            <span class="line"><span>하나의 그룹으로</span></span>
+          </h2>
+        </div>
+        <p class="lead" data-reveal>2020년 온라인 쇼핑몰로 첫 사업을 시작한 두고그룹은 브랜드 · 유통 · 제조 · 교육 · 미디어 · 공간으로 사업을 넓혀, 지주회사 DOOGO HOLDINGS와 5개 그룹사 체제로 움직입니다.</p>
       </div>
 
-      <div class="ab-timeline" data-timeline>
-        <div class="ab-timeline-track" aria-hidden="true"><span class="ab-timeline-fill"></span></div>
+      <div class="ab-stats" data-stats>
+        <dl class="ab-stats-list">
+          <div class="ab-stat" style="--i:0">
+            <dt>E커머스 누적 거래액</dt>
+            <dd><span class="ab-stat-v" aria-hidden="true"><span class="ab-stat-n en" data-roll="30">30</span><span class="ab-stat-u">억원</span><span class="ab-stat-p en">+</span></span><span class="sr-only">30억원 이상</span></dd>
+          </div>
+          <div class="ab-stat" style="--i:1">
+            <dt>사용자 누적 리뷰</dt>
+            <dd><span class="ab-stat-v" aria-hidden="true"><span class="ab-stat-n en" data-roll="105,855">105,855</span><span class="ab-stat-u">개</span><span class="ab-stat-p en">+</span></span><span class="sr-only">105,855개 이상</span></dd>
+          </div>
+          <div class="ab-stat" style="--i:2">
+            <dt>협업 판매 가능 상품</dt>
+            <dd><span class="ab-stat-v" aria-hidden="true"><span class="ab-stat-n en" data-roll="10,000">10,000</span><span class="ab-stat-u">개</span><span class="ab-stat-p en">+</span></span><span class="sr-only">10,000개 이상</span></dd>
+          </div>
+          <div class="ab-stat" style="--i:3">
+            <dt>상품 공급 파트너</dt>
+            <dd><span class="ab-stat-v" aria-hidden="true"><span class="ab-stat-n en" data-roll="100">100</span><span class="ab-stat-u">곳</span><span class="ab-stat-p en">+</span></span><span class="sr-only">100곳 이상</span></dd>
+          </div>
+        </dl>
+      </div>
 
-        <div class="ab-year" data-reveal>
-          <span class="ab-year-dot" aria-hidden="true"></span>
-          <h3 class="ab-year-num en">2026</h3>
-          <ul class="ab-year-list">
-            <li><span class="ab-year-cat">그룹</span><p>두고그룹 홈페이지 오픈</p></li>
-            <li><span class="ab-year-cat">그룹</span><p>7개 사업영역 체계 정비 — 교육업 · 제조업 · 브랜드 커머스 · 미디어&nbsp;&amp;&nbsp;콘텐츠 · 마케팅 · 유통 · 공간&nbsp;&amp;&nbsp;숙박업</p></li>
-            <li><span class="ab-year-cat">유통</span><p>식품 도매 플랫폼 DOOGOFOOD 운영</p></li>
-          </ul>
+      <div class="ab-tl" data-timeline>
+        <div class="ab-tl-track" aria-hidden="true"><span class="ab-tl-fill"></span><span class="ab-tl-head"></span></div>
+
+        <div class="ab-tl-year" data-tl-year data-reveal>
+          <h3 class="ab-tl-y en"><span>2026</span></h3>
+          <ol class="ab-tl-list">
+            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-10">10<span class="sr-only">월</span></time><p class="ab-tl-t">두고그룹 공식 홈페이지 오픈 · 지주회사 DOOGO HOLDINGS와 5개 그룹사 체제</p><span class="ab-tl-tag is-group">그룹</span></li>
+            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">NORA STAY 가로수길 1호점 오픈</p><span class="ab-tl-tag"><span class="en">DOOGO SPACE</span> · 공간 &amp; 숙박업</span></li>
+          </ol>
         </div>
 
-        <div class="ab-year ab-year--pending" data-reveal>
-          <span class="ab-year-dot" aria-hidden="true"></span>
-          <h3 class="ab-year-num"><span class="en" aria-hidden="true">Earlier</span><span class="ab-year-ko">이전 연혁</span></h3>
-          <div class="ab-year-pending">
-            <span class="ab-skel" aria-hidden="true"></span>
-            <span class="ab-skel ab-skel--short" aria-hidden="true"></span>
-            <p>연혁 자료 확정 후 게시</p>
-          </div>
+        <div class="ab-tl-year" data-tl-year data-reveal>
+          <h3 class="ab-tl-y en"><span>2025</span></h3>
+          <ol class="ab-tl-list">
+            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-10">10<span class="sr-only">월</span></time><p class="ab-tl-t">식품 전문 도매몰 DOOGOFOOD 오픈</p><span class="ab-tl-tag">유통</span></li>
+            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-07">07<span class="sr-only">월</span></time><p class="ab-tl-t">농수산물 앱 ‘산지팔도’ 런칭</p><span class="ab-tl-tag">유통</span></li>
+            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-06">06<span class="sr-only">월</span></time><p class="ab-tl-t">마누카꿀 브랜드 ‘리얼엔젯’ 런칭</p><span class="ab-tl-tag"><span class="en">DOOGOBIO NZ</span> · 제조업</span></li>
+            <li class="ab-tl-item" style="--i:3"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-02">02<span class="sr-only">월</span></time><p class="ab-tl-t">건국대학교 이커머스 교육 프로그램 운영</p><span class="ab-tl-tag">교육업</span></li>
+          </ol>
+        </div>
+
+        <div class="ab-tl-year" data-tl-year data-reveal>
+          <h3 class="ab-tl-y en"><span>2024</span></h3>
+          <ol class="ab-tl-list">
+            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2024-12">12<span class="sr-only">월</span></time><p class="ab-tl-t">투자 유치 및 (주)두고 법인 설립</p><span class="ab-tl-tag is-group">그룹</span></li>
+            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2024-07">07<span class="sr-only">월</span></time><p class="ab-tl-t">한미양행과 ‘원데이코어’ 공동 제품 개발</p><span class="ab-tl-tag">브랜드 커머스</span></li>
+            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2024-02">02<span class="sr-only">월</span></time><p class="ab-tl-t">건강식품 B2B 구독 모델 ‘원데이박스 B2B’ 오픈</p><span class="ab-tl-tag">유통</span></li>
+          </ol>
+        </div>
+
+        <div class="ab-tl-year" data-tl-year data-reveal>
+          <h3 class="ab-tl-y en"><span>2023</span></h3>
+          <ol class="ab-tl-list">
+            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2023-08">08<span class="sr-only">월</span></time><p class="ab-tl-t">라이브커머스 영상 콘텐츠 제작팀 구성</p><span class="ab-tl-tag">미디어 &amp; 콘텐츠</span></li>
+            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2023-05">05<span class="sr-only">월</span></time><p class="ab-tl-t">오세아니아 3PL 유통 법인 설립</p><span class="ab-tl-tag is-global">해외</span></li>
+            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2023-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">자사 건강식품 브랜드 ‘원데이코어’ 런칭</p><span class="ab-tl-tag">브랜드 커머스</span></li>
+          </ol>
+        </div>
+
+        <div class="ab-tl-year" data-tl-year data-reveal>
+          <h3 class="ab-tl-y en"><span>2020</span></h3>
+          <ol class="ab-tl-list">
+            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2020-03">03<span class="sr-only">월</span></time><p class="ab-tl-t">온라인 쇼핑몰로 첫 사업 시작</p><span class="ab-tl-tag is-group">그룹</span></li>
+          </ol>
         </div>
       </div>
     </div>
@@ -683,7 +717,7 @@
             <dl class="ab-loc-dl">
               <div><dt>지주회사</dt><dd><ul class="ab-loc-tags"><li class="is-hold en">DOOGO HOLDINGS</li></ul></dd></div>
               <div><dt>그룹사</dt><dd><ul class="ab-loc-tags en"><li>DOOGO SPACE</li><li>DOOGO MEDIA</li><li>DOOGO MAKERS</li><li>DOOGO AD</li></ul></dd></div>
-              <div><dt>주소</dt><dd class="is-pending">확정 후 게시</dd></div>
+              <div><dt>주소</dt><dd class="ab-loc-addr">세종특별자치시 갈매로 353 에비뉴힐 5층 5023호<small><span class="en">DOOGO HOLDINGS</span></small></dd></div>
             </dl>
             <a class="link-arrow ab-loc-link" href="#structure">그룹 구조 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
           </article>
@@ -703,12 +737,11 @@
             <dl class="ab-loc-dl">
               <div><dt>그룹사</dt><dd><ul class="ab-loc-tags"><li class="is-global"><span class="en">DOOGOBIO</span> <span>해외법인</span></li></ul></dd></div>
               <div><dt>분야</dt><dd>뉴질랜드 건강식품 제조</dd></div>
-              <div><dt>주소</dt><dd class="is-pending">확정 후 게시</dd></div>
             </dl>
             <a class="link-arrow ab-loc-link" href="business-bio.html">제조업 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
           </article>
         </div>
-        <p class="note ab-loc-note">지도의 점과 좌표는 국가 위치를 나타내는 표시입니다. 세부 주소는 확정 후 게시합니다.</p>
+        <p class="note ab-loc-note">지도의 점과 좌표는 국가 위치를 나타내는 표시입니다.</p>
       </div>
 
       <figure class="ab-map" data-reveal="fade" data-map>
