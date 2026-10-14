@@ -211,7 +211,7 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .site-header.is-hidden { transform: translateY(-100%); }
 .hd-inner { height: 100%; display: flex; align-items: center; gap: 32px; }
 .hd-logo { display: inline-flex; align-items: center; gap: 10px; flex: none; color: inherit; }
-.hd-logo svg { height: 30px; width: auto; }
+.hd-logo svg { height: 36px; width: auto; }
 .hd-logo .lg-sym, .hd-logo .lg-dot { transition: fill .35s var(--ease); }
 body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is-menu) .hd-logo :is(.lg-sym, .lg-dot) { fill: #fff; }
 /* DOOGO · GROUP 로고: doogo 글자와 같은 둥근 획의 GROUP 워드마크(assets/img/logo/doogo-group-lockup.svg) */
@@ -290,11 +290,11 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
   .gnb, .mega { display: none; }
   .hd-menu-btn { display: grid; }
   .hd-util { margin-left: auto; }
-  .hd-logo svg { height: 26px; }
+  .hd-logo svg { height: 32px; }
 }
 @media (max-width: 420px) {
   .hd-util .btn--sm[data-nav-cta] { min-height: 42px; padding: 0 14px; font-size: .95rem; }
-  .hd-logo svg { height: 23px; }
+  .hd-logo svg { height: 28px; }
 }
 
 /* 모바일 메뉴 */
@@ -371,7 +371,7 @@ body:has(.subnav) :where(section, [id]) { scroll-margin-top: calc(var(--header-h
 /* 아래 여백: 왼쪽 아래 '움직임 멈추기' 버튼(높이 32–36px, 바닥에서 12–16px)이 맨 끝 저작권 줄을 가리지 않게 넉넉히 */
 .site-footer { background: #060D1A; color: var(--on-dark-2); padding: clamp(64px, 7vw, 104px) 0 calc(76px + env(safe-area-inset-bottom, 0px)); font-size: .92rem; }
 .ft-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px 48px; padding-bottom: clamp(40px, 4.6vw, 64px); }
-.ft-brand svg { height: 30px; width: auto; color: #fff; }
+.ft-brand svg { height: 38px; width: auto; color: #fff; }
 .ft-brand :is(.lg-sym, .lg-dot) { fill: #fff; }
 .ft-brand p { margin-top: 12px; color: var(--on-dark-3); line-height: 1.7; }
 .ft-brand .ft-slogan { margin-top: 26px; color: #fff; font-weight: 700; font-size: clamp(1.15rem, 1.5vw, 1.375rem); line-height: 1.4; letter-spacing: -0.03em; }
