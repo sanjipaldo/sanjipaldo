@@ -512,11 +512,24 @@
       try { doc.scrollIntoView({ block: 'start', inline: 'nearest' }); } catch (e) {}
     };
     toTop();
-    window.addEventListener('load', function () { if (window.scrollY < 4 || !window.__userScrolled) toTop(); });
-    window.addEventListener('pageshow', function (e) { if (e.persisted) toTop(); });
-    ['wheel', 'touchmove', 'keydown'].forEach(function (t) {
-      window.addEventListener(t, function () { window.__userScrolled = true; }, { once: true, passive: true });
+    /* 미리보기 앱은 페이지를 연 뒤 이전 페이지의 스크롤 위치를 다시 넣는 경우가 있어(→ 짧은 페이지는 푸터가 보임),
+       사용자가 아직 화면을 만지지 않았다면 열린 뒤 약 2.5초 동안 생기는 스크롤은 맨 위로 되돌립니다. */
+    var guardUntil = Date.now() + 2500;
+    var touched = function () { window.__userScrolled = true; };
+    ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(function (t) {
+      window.addEventListener(t, touched, { once: true, passive: true });
     });
+    var guard = function () {
+      if (window.__userScrolled || Date.now() > guardUntil) { window.removeEventListener('scroll', guard); return; }
+      if (window.scrollY > 0) window.scrollTo(0, 0);
+    };
+    window.addEventListener('scroll', guard, { passive: true });
+    window.addEventListener('load', function () {
+      guardUntil = Math.max(guardUntil, Date.now() + 1500);
+      if (!window.__userScrolled) toTop();
+      [120, 400, 900].forEach(function (ms) { setTimeout(function () { if (!window.__userScrolled && window.scrollY > 0) window.scrollTo(0, 0); }, ms); });
+    });
+    window.addEventListener('pageshow', function (e) { if (e.persisted && !window.__userScrolled) toTop(); });
   }
 
   /* ---------- 연도 ---------- */

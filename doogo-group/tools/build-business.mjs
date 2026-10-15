@@ -118,7 +118,7 @@ const render = (name, extra = {}) => ({ kind: 'render', src: `assets/img/3d/${na
 
 // 운영 회사 표시: 영문 회사명 + 칩(지주회사 직접 운영 / 그룹사 분야 라벨 · 해외 거점)
 // area 를 주면(사업 분야 이름 옆에 붙는 칩) 분야 라벨이 그 이름과 같을 때 분야를 다시 쓰지 않음 — 남는 글자가 없으면 칩 자체를 생략
-const corpChip = (c, area) => (c.direct ? `${c.type} · 직접 운영` : [c.field === area ? '' : c.field, c.place || ''].filter(Boolean).join(' · '));
+const corpChip = (c, area) => (c.direct ? `${c.type}` : [c.field === area ? '' : c.field, c.place || ''].filter(Boolean).join(' · '));
 
 // 페이지 전용 아이콘 (24×24, 선 1.7)
 const SVC_ICONS = {
@@ -214,7 +214,7 @@ const BIZ = [
   {
     slug: 'commerce', num: '03', area: '브랜드 커머스', en: 'DOOGO MAKERS', chain: 'Brand', icon: 'i-commerce',
     corp: { en: 'DOOGO MAKERS', field: '브랜드 커머스', ceo: '신동훈', title: '총괄이사', key: 'makers', photo: 'leader-shin-donghoon' },
-    scope: '브랜드 기획 · 상품 운영 · EXIT 전략',
+    scope: '세일즈·영업 · 브랜드 기획 · 상품 운영 · EXIT 전략',
     defLabel: '브랜드 기획 · 운영', def: '브랜드를 만들고 성장시키며, EXIT까지 연결합니다.',
     role: '브랜드를 기획하고 운영하며, 판매와 성장 전략을 함께 만듭니다.',
     services: ['브랜드 기획', '상품 운영', '브랜드 성장과 EXIT 전략'],
@@ -760,7 +760,7 @@ ${formats.map((f, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
           <h2 class="h2" id="rel-title" data-lines style="margin-top:20px"><span class="line"><span>위탁셀러와 공급사를 잇는</span></span><span class="line"><span class="accent">식품 전문 도매 플랫폼</span></span></h2>
         </div>
         <div class="dt-rel-side" data-reveal style="--d:.15s">
-          <p class="lead"><span class="nowrap">DOOGOFOOD</span>(doogofood.com)는 농수산물·가공식품·건강식품 공급사와 온라인 위탁 판매자를 연결하는 B2B 식품 도매 플랫폼입니다. 지주회사 <span class="nowrap">DOOGO HOLDINGS</span>가 직접 운영합니다.</p>
+          <p class="lead"><span class="nowrap">DOOGOFOOD</span>(doogofood.com)는 농수산물·가공식품·건강식품 공급사와 온라인 위탁 판매자를 연결하는 B2B 식품 도매 플랫폼입니다. 지주회사 <span class="nowrap">DOOGO HOLDINGS</span>가 운영합니다.</p>
           <div class="dt-rel-actions"><a class="btn btn--white" href="${FOOD_URL}" target="_blank" rel="noopener">DOOGOFOOD 바로가기 ${ARROW_UR}${NEWWIN}</a></div>
         </div>
       </div>
@@ -938,7 +938,7 @@ function buildDetail(b, idx) {
         </div>`
     : `<div class="pcard-ph is-empty" aria-hidden="true"><span class="pcard-sil"></span><span class="pcard-soon">사진 준비 중</span></div>`;
   const leaderLead = c.direct
-    ? `지주회사 <span class="nowrap">${c.en}</span>의 대표이사로, ${nw(b.area)} 분야의 <span class="nowrap">${b.en}</span>를 직접 운영하며 그룹 총괄 운영을 이끕니다.`
+    ? `지주회사 <span class="nowrap">${c.en}</span>의 대표이사로, ${nw(b.area)} 분야의 <span class="nowrap">${b.en}</span>를 운영하며 그룹 총괄 운영을 이끕니다.`
     : `${nw(b.area)} 분야는 그룹사 <span class="nowrap">${c.en}</span>가 맡고, ${c.ceo} ${ttl(c)}가 이끌고 있습니다.`;
   // 회사 줄: 영문 회사명(공통 .pcard-co) + 지주회사 / 해외 거점 칩 — 분야는 그 아래 .pcard-field 한 줄
   const leaderTag = c.direct ? `<span class="dt-corp-type is-hold">${c.type}</span>` : c.place ? `<span class="dt-corp-type is-place">${c.place}</span>` : '';
@@ -949,13 +949,13 @@ ${c.direct ? `          <blockquote class="dt-leader-quote"><p>“제품과 브�
 ` : `          <p class="dt-leader-role"><span class="dt-leader-role-k">하는 일</span>${b.role}</p>
 `}          <div class="dt-leader-more">
             <dl class="dt-leader-dl">
-${c.direct ? `              <div><dt>직접 운영</dt><dd class="dt-dd-chips"><span class="dt-dd-chip${b.slug === 'campus' ? ' is-cur' : ''}"><span class="en">DOOGO CLASS</span>교육업</span><span class="dt-dd-chip${b.slug === 'food' ? ' is-cur' : ''}"><span class="en">DOOGOFOOD</span>유통</span></dd></div>
+${c.direct ? `              <div><dt>운영 브랜드</dt><dd class="dt-dd-chips"><span class="dt-dd-chip${b.slug === 'campus' ? ' is-cur' : ''}"><span class="en">DOOGO CLASS</span>교육업</span><span class="dt-dd-chip${b.slug === 'food' ? ' is-cur' : ''}"><span class="en">DOOGOFOOD</span>유통</span></dd></div>
               <div><dt>강의</dt><dd><span class="en nowrap">DOOGO CLASS</span> ‘문대표’ · 뉴질랜드 건기식 브랜딩</dd></div>`
     : `              <div><dt>주요 서비스</dt><dd class="dt-dd-chips">${b.scope.split(' · ').map(x => `<span class="dt-dd-chip is-svc">${nw(x)}</span>`).join('')}</dd></div>`}
             </dl>
           </div>
           <div class="pcard-foot dt-leader-foot">
-            <a class="pcard-link pcard-stretch" href="leadership.html#${c.anchor || `leader-${c.key}`}">자세히 보기<span class="sr-only"> (${c.en} ${c.ceo} ${ttl(c)} · 리더십)</span> ${ico('i-arrow')}</a>
+            <a class="pcard-link pcard-stretch" href="leadership.html#${c.anchor || `leader-${c.key}`}">자세히 보기<span class="sr-only"> (${c.en} ${c.ceo} ${ttl(c)} · 피플)</span> ${ico('i-arrow')}</a>
             <p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '이력은 확정 후 게시합니다.' : '이력과 사진은 확정 후 게시합니다.'}</p>
           </div>`;
 
@@ -1138,7 +1138,7 @@ ${CTA_BAND}`;
   return shell({
     title: `${b.area} · ${b.en}`,
     // 회사 이름은 한 번만: 직접 운영 사업은 '운영 회사 직접 운영', 그룹사 사업은 회사 이름이 곧 브랜드라 생략
-    desc: `${b.en} — 두고그룹 ${b.area} 분야 (${c.direct ? `${c.en} 직접 운영 · ` : ''}${ttl(c)} ${c.ceo}). ${b.role} ${b.def}`,
+    desc: `${b.en} — 두고그룹 ${b.area} 분야 (${c.direct ? `${c.en} · ` : ''}${ttl(c)} ${c.ceo}). ${b.role} ${b.def}`,
     css: 'business-detail', js: 'business-detail',
     bodyAttrs: `data-page="business-${b.slug}"`,
     main,

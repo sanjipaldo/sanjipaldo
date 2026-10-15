@@ -1,8 +1,8 @@
 /* =========================================================
-   DOOGO GROUP — leadership.js (리더십)
-   짧은 그룹 소개(1 + 5 숫자 카운트 · 트리 그리기 · 흐르는 빛) · 대표 카드 가로 스와이프 컨트롤(휴대폰)
-   · 대표 상세 (dialog: 열기/닫기 · 이전/다음 · Esc · 바깥 클릭)
-   카드 생김새·등장 모션은 base.css '리더 프로필 카드 공통'(.pcard)이 맡습니다.
+   DOOGO GROUP — leadership.js (두고 피플)
+   짧은 그룹 소개(1 + 5 숫자 카운트 · 트리 그리기 · 흐르는 빛) · 프로필 카드 가로 스와이프 컨트롤(휴대폰)
+   · 프로필 상세 (dialog: 열기/닫기 · 이전/다음 · Esc · 바깥 클릭)
+   카드 생김새·등장 모션은 base.css 프로필 카드 공통(.pcard)이 맡습니다.
    모션은 OS 설정과 관계없이 재생하고, 사용자가 '움직임 멈추기'를 고르면(window.DOOGO.motionOff()) 최종 상태로 보여 줍니다.
    ========================================================= */
 (function () {
@@ -88,7 +88,7 @@
     });
   }
 
-  /* ---------- 대표 카드: 휴대폰(680px 이하) 가로 스와이프일 때만 번호 · 진행 막대 · 이전/다음 ----------
+  /* ---------- 프로필 카드: 휴대폰(680px 이하) 가로 스와이프일 때만 번호 · 진행 막대 · 이전/다음 ----------
      넓은 화면에서는 3열·2열 그리드라 넘치지 않으므로 컨트롤을 숨깁니다. */
   (function () {
     var grid = $('[data-ld-grid]'), ctrl = $('[data-ld-ctrl]');
@@ -199,9 +199,9 @@
     });
   })();
 
-  /* ---------- 대표 상세 ----------
-     카드의 data-* (이름 · 직함(data-title, 없으면 '대표이사') · 회사 · 분야 · 사업영역 · 직접 운영 · 소개 · 한마디 · 사진)만 옮겨 보여 줍니다. 이력은 '확정 후 게시'.
-     사진이 없는 리더는 카드와 같은 실루엣 + '사진 준비 중'. */
+  /* ---------- 프로필 상세 ----------
+     카드의 data-* (이름 · 직함(data-title, 없으면 '대표이사') · 회사 · 분야 · 주요 서비스(data-services, DOOGO HOLDINGS 는 data-brands → 운영 브랜드 링크) · 사업영역 · 소개 · 한마디 · 사진)만 옮겨 보여 줍니다. 이력은 '확정 후 게시'.
+     사진이 없는 사람은 카드와 같은 실루엣 + '사진 준비 중'. */
   var modal = $('#ld-modal');
   var cards = $$('[data-leader]');
   if (!modal || !cards.length) return;
@@ -230,7 +230,7 @@
     var d = cards[i].dataset;
     var links = parseLinks(d.links);
     var first = links[0] || { label: '', href: 'business.html' };
-    var map = { name: d.name, title: d.title || '대표이사', co: d.co, tag: d.tag || '', field: d.field, area: bizName(first.label), note: d.note || '', quote: d.quote || '', idx: pad(i + 1) };
+    var map = { name: d.name, title: d.title || '대표이사', co: d.co, tag: d.tag || '', field: d.field, services: d.services || '', area: bizName(first.label), note: d.note || '', quote: d.quote || '', idx: pad(i + 1) };
     Object.keys(map).forEach(function (k) { $$('[data-m="' + k + '"]', modal).forEach(function (el) { el.textContent = map[k]; }); });
     // 사업영역: 연결된 사업 페이지 링크 (DOOGO HOLDINGS 는 교육업 · 유통 두 개)
     //  분야와 사업영역 이름이 같으면(공간 & 라이프스타일 · 마케팅 · 브랜드 커머스) 같은 말이 겹치지 않게 이 줄을 숨김 — 아래 버튼으로 이동
@@ -248,7 +248,7 @@
     // 있는 정보만 보여 줌
     $$('[data-m-row]', modal).forEach(function (row) {
       var k = row.getAttribute('data-m-row');
-      row.hidden = !(k === 'direct' ? d.direct : d[k]);
+      row.hidden = !d[k];
     });
     var tag = $('.ld-m-co .ld-tag', modal);
     if (tag) { tag.classList.toggle('ld-tag--hold', d.tag === '지주회사'); tag.classList.toggle('ld-tag--global', d.tag === '해외법인'); }
