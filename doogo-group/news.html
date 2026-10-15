@@ -242,6 +242,31 @@
   </section>
 
   <!-- =========================================================
+       소식 배너 — 게시물마다 하나씩 (아래 목록의 data-sum · data-img · data-visual 에서 news.js가 만듭니다)
+       배너를 누르면 게시판의 해당 글이 열립니다
+       ========================================================= -->
+  <section class="nw-banners" id="nw-banners" aria-labelledby="nw-bn-title" aria-roledescription="carousel" hidden>
+    <div class="container">
+      <h2 class="sr-only" id="nw-bn-title">소식 배너</h2>
+      <p class="sr-only">배너를 누르면 아래 게시판에서 해당 글이 열립니다.</p>
+      <div class="nw-bn" data-reveal>
+        <div class="nw-bn-stage">
+          <div class="nw-bn-ctrl">
+            <span class="nw-bn-count en" aria-hidden="true"><b>01</b><i></i><span>08</span></span>
+            <button class="nw-bn-btn" type="button" data-bn="prev" aria-controls="nw-bn-track" aria-label="이전 배너"><svg aria-hidden="true"><use href="#i-chev"/></svg></button>
+            <button class="nw-bn-btn" type="button" data-bn="toggle" aria-label="배너 자동 넘김 멈추기"><svg class="is-pause" aria-hidden="true"><use href="#i-pause"/></svg><svg class="is-play" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <button class="nw-bn-btn" type="button" data-bn="next" aria-controls="nw-bn-track" aria-label="다음 배너"><svg aria-hidden="true"><use href="#i-chev"/></svg></button>
+          </div>
+          <div class="nw-bn-viewport">
+            <div class="nw-bn-track" id="nw-bn-track" aria-live="off"></div>
+          </div>
+        </div>
+        <div class="nw-bn-nav" role="group" aria-label="배너 고르기"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
        분류 탭 + 검색
        ========================================================= -->
   <div class="nw-toolbar" id="board-top">
@@ -269,22 +294,6 @@
   <section class="nw-board" id="nw-panel" role="tabpanel" aria-labelledby="tab-all" tabindex="-1">
     <div class="container">
 
-      <!-- 피처 기사 (전체 분류에서만 — 접힐 때 높이가 부드럽게 줄어듭니다) -->
-      <div class="nw-feature-wrap" id="nw-feature-wrap"><div class="nw-feature-clip">
-      <article class="nw-feature" id="nw-feature" aria-labelledby="nw-feature-title" data-reveal>
-        <a class="nw-feature-media media-cover" href="#n-site-open" data-open="n-site-open" tabindex="-1" aria-hidden="true">
-          <img src="assets/img/photo/cowork.webp" width="1280" height="950" alt="식물이 놓인 밝은 공유오피스에서 일하는 사람들" loading="lazy" decoding="async">
-          <span class="nw-feature-flag en">Featured</span>
-        </a>
-        <div class="nw-feature-body">
-          <p class="nw-feature-meta"><span class="nw-pill">공지</span><span class="badge-sample">샘플</span><time class="en" datetime="2026-10-13">2026.10.13</time></p>
-          <h2 class="nw-feature-title" id="nw-feature-title"><a href="#n-site-open" data-open="n-site-open">두고그룹 홈페이지를 새롭게 열었습니다</a></h2>
-          <p class="nw-feature-sum">지주회사 DOOGO HOLDINGS와 다섯 그룹사, 7개 사업영역을 한곳에서 소개하는 그룹 홈페이지를 열었습니다. 사업별 서비스와 문의 창구를 한 번에 확인해 보세요.</p>
-          <a class="btn btn--white nw-feature-btn" href="#n-site-open" data-open="n-site-open">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        </div>
-      </article>
-      </div></div>
-
       <h2 class="sr-only" id="nw-list-title">소식 목록</h2>
       <p class="nw-result" id="nw-result" aria-live="polite"></p>
 
@@ -294,7 +303,9 @@
 
       <ul class="nw-list" id="nw-list" aria-labelledby="nw-list-title" data-reveal style="--d:.08s">
         <!-- 공지 -->
-        <li class="nw-item" id="n-privacy" data-cat="notice">
+        <li class="nw-item" id="n-privacy" data-cat="notice"
+            data-sum="홈페이지 온라인 문의에 적용하는 개인정보처리방침을 10월 14일부터 시행합니다. 수집 항목과 보유 기간, 처리 위탁 내용을 확인해 보세요."
+            data-visual="privacy">
           <h3 class="nw-h">
             <button class="nw-row" type="button" id="n-privacy-btn" aria-expanded="false" aria-controls="n-privacy-body">
               <span class="nw-cat">공지</span>
@@ -317,11 +328,13 @@
             </div></div>
           </div>
         </li>
-        <li class="nw-item" id="n-site-open" data-cat="notice">
+        <li class="nw-item" id="n-site-open" data-cat="notice"
+            data-sum="지주회사 DOOGO HOLDINGS와 다섯 그룹사, 7개 사업영역을 한곳에서 소개하는 그룹 홈페이지를 열었습니다. 사업별 서비스와 문의 창구를 한 번에 확인해 보세요."
+            data-img="assets/img/photo/cowork.webp">
           <h3 class="nw-h">
             <button class="nw-row" type="button" id="n-site-open-btn" aria-expanded="false" aria-controls="n-site-open-body">
               <span class="nw-cat">공지</span>
-              <span class="nw-title"><span class="nw-title-t">두고그룹 홈페이지를 새롭게 열었습니다</span> <span class="badge-sample">샘플</span></span>
+              <span class="nw-title"><span class="nw-title-t">두고그룹 홈페이지를 새롭게 열었습니다</span></span>
               <time class="nw-date en" datetime="2026-10-13">2026.10.13</time>
               <span class="nw-plus" aria-hidden="true"><svg><use href="#i-plus"/></svg></span>
             </button>
@@ -335,11 +348,13 @@
           </div>
         </li>
         <!-- 사업 소식 -->
-        <li class="nw-item" id="n-film" data-cat="business">
+        <li class="nw-item" id="n-film" data-cat="business"
+            data-sum="교육부터 공간까지, 두고그룹의 7개 사업을 11개 장면에 담은 그룹 영상을 공개합니다."
+            data-img="assets/video/group-film-news-thumb.webp">
           <h3 class="nw-h">
             <button class="nw-row" type="button" id="n-film-btn" aria-expanded="false" aria-controls="n-film-body">
               <span class="nw-cat">사업 소식</span>
-              <span class="nw-title"><span class="nw-title-t">7개 사업영역 소개 영상 공개</span> <span class="badge-sample">샘플</span></span>
+              <span class="nw-title"><span class="nw-title-t">7개 사업영역 소개 영상 공개</span></span>
               <time class="nw-date en" datetime="2026-10-13">2026.10.13</time>
               <span class="nw-plus" aria-hidden="true"><svg><use href="#i-plus"/></svg></span>
             </button>
@@ -347,16 +362,17 @@
           <div class="nw-body" id="n-film-body" role="region" aria-labelledby="n-film-btn">
             <div class="nw-body-in"><div class="nw-body-pad">
               <p>교육부터 공간까지, 두고그룹의 7개 사업을 11개 장면에 담은 그룹 영상을 공개합니다. 홈페이지의 ‘그룹 영상 보기’ 버튼으로 언제든 볼 수 있습니다.</p>
-              <p>지금 공개한 영상은 임시 편집본이며, 완성본이 준비되면 교체합니다.</p>
               <p class="nw-links"><button class="link-arrow" type="button" data-film-open><span class="nw-play" aria-hidden="true"><svg><use href="#i-play"/></svg></span>그룹 영상 보기</button></p>
             </div></div>
           </div>
         </li>
-        <li class="nw-item" id="n-market" data-cat="business">
+        <li class="nw-item" id="n-market" data-cat="business"
+            data-sum="식품 전문 도매 플랫폼 DOOGOFOOD에서 함께할 공급사와 위탁셀러를 찾습니다. 생산자·제조사·온라인 판매자라면 입점을 문의해 주세요."
+            data-img="assets/img/photo/food.webp">
           <h3 class="nw-h">
             <button class="nw-row" type="button" id="n-market-btn" aria-expanded="false" aria-controls="n-market-body">
               <span class="nw-cat">사업 소식</span>
-              <span class="nw-title"><span class="nw-title-t">DOOGOFOOD 공급사·위탁셀러 입점 안내</span> <span class="badge-sample">샘플</span></span>
+              <span class="nw-title"><span class="nw-title-t">DOOGOFOOD 공급사·위탁셀러 입점 안내</span></span>
               <time class="nw-date en" datetime="2026-10-13">2026.10.13</time>
               <span class="nw-plus" aria-hidden="true"><svg><use href="#i-plus"/></svg></span>
             </button>
@@ -370,11 +386,13 @@
           </div>
         </li>
         <!-- 교육 현장 -->
-        <li class="nw-item" id="n-class" data-cat="campus">
+        <li class="nw-item" id="n-class" data-cat="campus"
+            data-sum="실무 경험을 나누는 DOOGO CLASS의 실전 클래스 과정과 강사진을 소개합니다. 과정별 일정과 신청 방법도 확인해 보세요."
+            data-img="assets/img/photo/campus.webp">
           <h3 class="nw-h">
             <button class="nw-row" type="button" id="n-class-btn" aria-expanded="false" aria-controls="n-class-body">
               <span class="nw-cat">교육 현장</span>
-              <span class="nw-title"><span class="nw-title-t">DOOGO CLASS 실전 클래스 과정을 소개합니다</span> <span class="badge-sample">샘플</span></span>
+              <span class="nw-title"><span class="nw-title-t">DOOGO CLASS 실전 클래스 과정을 소개합니다</span></span>
               <time class="nw-date en" datetime="2026-10-13">2026.10.13</time>
               <span class="nw-plus" aria-hidden="true"><svg><use href="#i-plus"/></svg></span>
             </button>
@@ -387,11 +405,13 @@
             </div></div>
           </div>
         </li>
-        <li class="nw-item" id="n-space" data-cat="campus">
+        <li class="nw-item" id="n-space" data-cat="campus"
+            data-sum="DOOGO CLASS 오프라인 수업과 외부 교육·행사에 쓰는 DOOGO SPACE 교육장, 대여 신청 방법을 안내합니다."
+            data-img="assets/img/photo/ad.webp">
           <h3 class="nw-h">
             <button class="nw-row" type="button" id="n-space-btn" aria-expanded="false" aria-controls="n-space-body">
               <span class="nw-cat">교육 현장</span>
-              <span class="nw-title"><span class="nw-title-t">DOOGO SPACE 교육장 이용 안내</span> <span class="badge-sample">샘플</span></span>
+              <span class="nw-title"><span class="nw-title-t">DOOGO SPACE 교육장 이용 안내</span></span>
               <time class="nw-date en" datetime="2026-10-13">2026.10.13</time>
               <span class="nw-plus" aria-hidden="true"><svg><use href="#i-plus"/></svg></span>
             </button>
@@ -405,11 +425,13 @@
           </div>
         </li>
         <!-- 채용 소식 -->
-        <li class="nw-item" id="n-recruit" data-cat="recruit">
+        <li class="nw-item" id="n-recruit" data-cat="recruit"
+            data-sum="7개 사업영역에서 함께 일할 동료를 기다립니다. 모집 분야와 자격 요건은 확정되는 대로 이 게시판에 공고합니다."
+            data-visual="recruit">
           <h3 class="nw-h">
             <button class="nw-row" type="button" id="n-recruit-btn" aria-expanded="false" aria-controls="n-recruit-body">
               <span class="nw-cat">채용 소식</span>
-              <span class="nw-title"><span class="nw-title-t">함께 성장할 동료를 찾습니다</span> <span class="badge-sample">샘플</span></span>
+              <span class="nw-title"><span class="nw-title-t">함께 성장할 동료를 찾습니다</span></span>
               <time class="nw-date en" datetime="2026-10-13">2026.10.13</time>
               <span class="nw-plus" aria-hidden="true"><svg><use href="#i-plus"/></svg></span>
             </button>
@@ -422,11 +444,13 @@
             </div></div>
           </div>
         </li>
-        <li class="nw-item" id="n-process" data-cat="recruit">
+        <li class="nw-item" id="n-process" data-cat="recruit"
+            data-sum="서류 검토, 면접, 처우 협의 순서로 진행하는 두고그룹 채용 절차와 결과 안내 방법을 알려 드립니다."
+            data-visual="process">
           <h3 class="nw-h">
             <button class="nw-row" type="button" id="n-process-btn" aria-expanded="false" aria-controls="n-process-body">
               <span class="nw-cat">채용 소식</span>
-              <span class="nw-title"><span class="nw-title-t">채용 절차 안내</span> <span class="badge-sample">샘플</span></span>
+              <span class="nw-title"><span class="nw-title-t">채용 절차 안내</span></span>
               <time class="nw-date en" datetime="2026-10-13">2026.10.13</time>
               <span class="nw-plus" aria-hidden="true"><svg><use href="#i-plus"/></svg></span>
             </button>
@@ -457,8 +481,6 @@
         <span class="nw-pg is-current en" aria-current="page"><span class="sr-only">현재 페이지 </span>1</span>
         <button class="nw-pg nw-pg--arrow is-next" type="button" disabled aria-label="다음 페이지"><svg aria-hidden="true"><use href="#i-chev"/></svg></button>
       </nav>
-
-      <p class="note nw-note"><span class="badge-sample">샘플</span> 게시물은 예시 콘텐츠입니다. 실제 소식으로 교체됩니다. 이미지는 AI로 만든 예시이며 실제 사진으로 교체됩니다.</p>
     </div>
   </section>
 
