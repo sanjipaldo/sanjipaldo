@@ -12,11 +12,11 @@
      (HTML을 직접 고쳐도 되지만, 그 뒤에 이 스크립트를 다시 실행하면 덮어써집니다.)
    - 헤더/푸터는 partials/ 내용을 그대로 넣습니다(sync-partials.mjs와 같은 결과).
    - 그룹 구성(3차 확정): 지주회사 DOOGO HOLDINGS가 교육(DOOGO CLASS)과 유통(DOOGOFOOD)을 직접 운영하고,
-     그룹사 5곳(DOOGO SPACE 공간 & 숙박업 · DOOGO MEDIA 미디어 & 콘텐츠 · DOOGO MAKERS 브랜드 커머스 · DOOGO AD 마케팅 · DOOGOBIO NZ 뉴질랜드 건강식품 제조)이
+     그룹사 5곳(DOOGO SPACE 공간 & 라이프스타일 · DOOGO MEDIA 미디어 & 콘텐츠 · DOOGO MAKERS 브랜드 커머스 · DOOGO AD 마케팅 · DOOGOBIO NZ 뉴질랜드 건강식품 제조)이
      나머지 사업을 맡습니다. 사업별 운영 회사·리더는 BIZ[].corp (화면의 회사·브랜드 이름은 모두 영문 표기)
      리더 직함은 corp.title — DOOGO MEDIA 김윤정 · DOOGO MAKERS 신동훈은 '총괄이사' (나머지는 기본 직함 '대표이사')
      (title이 없으면 기본 직함 · 화면의 직함은 모두 ttl(corp)로 씁니다)
-   - 사업 분야 이름(6차 확정): 교육업 · 제조업 · 브랜드 커머스 · 미디어 & 콘텐츠 · 마케팅 · 유통 · 공간 & 숙박업 (BIZ[].area — HTML 문구라 &는 &amp;로 씀)
+   - 사업 분야 이름(6차 확정): 교육업 · 제조업 · 브랜드 커머스 · 미디어 & 콘텐츠 · 마케팅 · 유통 · 공간 & 라이프스타일 (BIZ[].area — HTML 문구라 &는 &amp;로 씀)
      그룹사 분야 라벨(corp.field)이 사업 분야 이름과 같으면 운영 회사 칩에서 분야를 다시 쓰지 않습니다(corpChip).
    - 사진: assets/img/photo/{name}.webp (AI로 만든 예시 · 실제 사진으로 교체 예정) — PHOTO 표의 크기·alt와 함께 사용
      BIZ[].hero {f 사진 이름, fx/fy 데스크톱 초점, mx 모바일 가로 초점} — 상세 첫 화면 + business.html 첫 화면 슬라이드
@@ -52,8 +52,10 @@ const ARROW = ico('i-arrow', 'ico ico-arrow');
 const ARROW_UR = ico('i-arrow-ur', 'ico');
 const CHECK = ico('i-check', 'ico');
 const NEWWIN = '<span class="sr-only">(새 창)</span>';
+// '준비 중' 작은 표시 (DOOGO SPACE F&B 사업부처럼 아직 열지 않은 서비스 — 지어내지 않고 정직하게 표시)
+const SOON = '<span class="soon-tag">준비 중</span>';
 // 브랜드명·'&'로 묶인 사업 분야 이름이 줄바꿈으로 갈라지지 않게 (화면 문구에만 사용 — 속성값에는 쓰지 말 것)
-const nw = (t) => t.replace(/DOOGO (?:HOLDINGS|CLASS|SPACE|MEDIA|MAKERS|AD)|DOOGOFOOD|DOOGOBIO(?: NZ)?|NORA STAY|두고커넥트|미디어 &amp; 콘텐츠|공간 &amp; 숙박업/g, (m) => `<span class="nowrap">${m}</span>`);
+const nw = (t) => t.replace(/DOOGO (?:HOLDINGS|CLASS|SPACE|MEDIA|MAKERS|AD)|DOOGOFOOD|DOOGOBIO(?: NZ)?|NORA STAY|두고커넥트|미디어 &amp; 콘텐츠|공간 &amp; 라이프스타일/g, (m) => `<span class="nowrap">${m}</span>`);
 // 마지막 낱말 + 아이콘을 한 덩어리로 (줄이 넘어갈 때 화살표만 다음 줄에 혼자 남지 않게)
 const glue = (t, icon) => { const k = t.lastIndexOf(' '); return k < 0 ? `<span class="nowrap">${t}${icon}</span>` : `${t.slice(0, k + 1)}<span class="nowrap">${t.slice(k + 1)}${icon}</span>`; };
 const DOWN = ico('i-arrow', 'ico ico-arrow ico-down');
@@ -140,6 +142,7 @@ const SVC_ICONS = {
   's-person': '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.8 3.6-6 7-6s6.2 2.2 7 6"/>',
   's-seed': '<path d="M12 21v-8"/><path d="M12 13c0-4 2.6-6.6 7-7-.2 4.3-2.8 7-7 7Z"/><path d="M12 15c0-3.3-2.2-5.5-6-5.8.2 3.6 2.4 5.8 6 5.8Z"/>',
   's-flag': '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+  's-cup': '<path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9Z"/><path d="M17 10.5h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3.5c-.6.8-.6 1.7 0 2.5M12 3.5c-.6.8-.6 1.7 0 2.5"/><path d="M3 21h15"/>',
   's-chat': '<path d="M4 5h16v11H9l-5 4V5Z"/><path d="M8 9.5h8M8 12.5h5"/>',
 };
 const SPRITE = `<svg class="sr-only" aria-hidden="true" focusable="false">\n${Object.entries(SVC_ICONS).map(([id, d]) => `    <symbol id="${id}" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${d}</g></symbol>`).join('\n')}\n  </svg>`;
@@ -307,18 +310,23 @@ const BIZ = [
     relNav: '도매 플랫폼',
   },
   {
-    slug: 'space', num: '07', area: '공간 &amp; 숙박업', en: 'DOOGO SPACE', chain: 'Space', icon: 'i-space',
-    corp: { en: 'DOOGO SPACE', field: '공간 &amp; 숙박업', ceo: '문성오', key: 'space', photo: 'leader-moon-sungoh' },
-    scope: '공유오피스 · 비상주 사무실 · 교육장 · NORA STAY',
-    defLabel: '오피스 &amp; 스테이', def: '공유오피스·비상주 사무실 그리고 NORA STAY를 통한 숙박 사업까지, 사람과 비즈니스를 위한 공간을 만듭니다.',
-    role: '함께 일하고 배우며, 쉬어갈 수 있는 공간을 만듭니다.',
-    services: ['공유오피스', '비상주 사무실', '교육장 대여', '숙박 ‘NORA STAY’'],
-    targets: ['작은 팀·1인 사업자', '교육·행사 주최자', '여행·출장객'],
+    slug: 'space', num: '07', area: '공간 &amp; 라이프스타일', en: 'DOOGO SPACE', chain: 'Space', icon: 'i-space',
+    corp: { en: 'DOOGO SPACE', field: '공간 &amp; 라이프스타일', ceo: '문성오', key: 'space', photo: 'leader-moon-sungoh' },
+    scope: '공유오피스 · 비상주오피스 · 미팅룸 · 교육장 · NORA STAY',
+    defLabel: 'OFFICE · STAY · F&amp;B', def: '공유오피스·비상주오피스·미팅룸·교육장과 NORA STAY 숙박, 그리고 준비 중인 F&amp;B까지, 일하고 머물고 즐기는 모든 순간을 하나의 공간 안에서 연결합니다.',
+    role: '일과 휴식, 그리고 한 끼까지. 사람의 하루를 연결하는 공간을 만듭니다.',
+    // 주요 서비스(business.html 카드) = 세 갈래 WORK · STAY · F&B — F&B는 DOOGO SPACE 안의 F&B 사업부로 준비 중(별도 회사 아님)
+    services: [
+      `<b class="svc-pillar en">WORK</b>공유오피스 · 비상주오피스 · 미팅룸 · 교육장`,
+      `<b class="svc-pillar en">STAY</b>NORA STAY · 숙박 · 장단기 체류`,
+      `<b class="svc-pillar en">F&amp;B</b>카페 · 라운지 · 브런치 · 케이터링 ${SOON}`,
+    ],
+    targets: ['작은 팀·1인 사업자', '교육·행사 주최자', '여행·출장·장단기 체류객'],
     ask: '공간 상담하기',
     cta: { label: '공간 상담하기', href: ASK('space') },
     web: web({ name: 'NORA STAY', kind: 'DOOGO SPACE 숙박', host: 'norastay.com', url: NORA_URL, shot: 'space', close: 'NORA STAY 바로가기',
       desc: 'DOOGO SPACE의 숙박 서비스 NORA STAY의 사이트입니다. 숙소 소개와 예약 안내를 확인할 수 있습니다.' }),
-    narration: '함께 일하고, 잠시 쉬어갈 자리까지.',
+    narration: '일하고, 머물고, 즐기는 하루를 한 공간에.',
     // 첫 화면·현장 사진은 공간 사업 전체(공유오피스·교육장)를 보여 주는 예시 — NORA STAY를 가리키는 곳(관련 구간 카드 · 운영 사이트)은
     // 실제 사이트(norastay.com) 첫 화면 캡처와 그 일부(sites/space-stay.webp)만 씁니다 (5차 · AI 바다 객실 사진은 실제와 달라 뺌)
     hero: { f: 'cowork', fx: '50%', fy: '62%', mx: '64%' },
@@ -328,14 +336,17 @@ const BIZ = [
       photo('campus', { label: '교육장', pos: '58% 50%', alt: '밝은 교육장에서 강사가 성인 수강생들 앞에서 강의하는 모습' }),
     ],
     heroAlt: { label: '공간 둘러보기', href: '#related' },
-    facts: [['대표 서비스', '공유오피스 · 비상주 · 교육장'], ['숙박', `NORA STAY · ${SITE(NORA_URL)}`]],
+    facts: [['서비스 구성', `WORK · STAY · F&amp;B ${SOON}`], ['숙박', `NORA STAY · ${SITE(NORA_URL)}`]],
     svcHead: 'DOOGO SPACE가 하는 일',
-    svcLead: '일하고, 배우고, 쉬어가는 데 필요한 공간을 목적에 맞게 제공합니다.',
+    svcLead: '일하고, 머물고, 즐기는 모든 순간을 하나의 공간 안에서 연결합니다.',
+    // 세 갈래(pillar): en 영문 갈래 이름 · items 서비스 칩 · soon 준비 중 표시 (F&B = DOOGO SPACE F&B 사업부, 준비 중)
     detail: [
-      { icon: 's-desk', name: '공유오피스', desc: '작은 팀과 1인 사업자가 필요한 만큼 자리를 쓰며 함께 일하는 업무 공간입니다.' },
-      { icon: 's-address', name: '비상주 사무실', desc: '상주하지 않아도 사업장 주소가 필요한 사업자를 위한 비상주 사무실 서비스입니다.' },
-      { icon: 's-classroom', name: '교육장 대여', desc: '강의·워크숍·모임을 위한 교육장을 대여하며, DOOGO CLASS 수업 공간으로도 연계합니다.' },
-      { icon: 's-bed', name: '숙박 ‘NORA STAY’', desc: '여행과 출장 중 편하게 쉬어갈 수 있는 숙박 서비스 NORA STAY로 이어집니다.' },
+      { icon: 's-desk', en: 'WORK', name: '일하는 공간', items: ['공유오피스', '비상주오피스', '미팅룸', '교육장'],
+        desc: '작은 팀과 1인 사업자의 업무 공간, 사업장 주소가 필요한 비상주오피스, 회의와 강의를 위한 미팅룸·교육장을 마련합니다.' },
+      { icon: 's-bed', en: 'STAY', name: '머무는 공간', items: ['NORA STAY', '숙박', '장단기 체류'],
+        desc: '여행과 출장, 장단기 체류까지 편하게 머물 수 있도록 숙박 서비스 NORA STAY를 운영합니다.' },
+      { icon: 's-cup', en: 'F&amp;B', name: '즐기는 공간', items: ['카페', '라운지', '브런치', '케이터링'], soon: true,
+        desc: 'DOOGO SPACE의 F&amp;B 사업부가 공간 안에서 즐기는 한 끼와 휴식을 준비하고 있습니다.' },
     ],
     sceneLead: '함께 일하는 공유오피스와 함께 배우는 교육장, 두 가지 공간입니다. 실제 시설 사진으로 교체할 예정입니다.',
     relNav: '공간 안내',
@@ -350,7 +361,7 @@ const CHAIN = [
   { ko: '교육·인재 육성', en: 'EDUCATION', slug: 'campus' },
   { ko: '마케팅', en: 'MARKETING', slug: 'ad' },
   { ko: '판매·유통', en: 'SALES', slug: 'food' },
-  { ko: '공간·숙박', en: 'SPACE', slug: 'space' },
+  { ko: '공간·라이프스타일', en: 'OFFICE · STAY · F&amp;B', slug: 'space' },
 ];
 
 /* ---------- 공통 조각 ---------- */
@@ -576,7 +587,7 @@ ${CTA_BAND}`;
 
   return shell({
     title: '사업영역',
-    desc: '배우고, 만들고, 키우고. 지주회사 DOOGO HOLDINGS와 다섯 그룹사가 운영하는 교육업 · 제조업 · 브랜드 커머스 · 미디어 &amp; 콘텐츠 · 마케팅 · 유통 · 공간 &amp; 숙박업, 7개 사업영역을 한 번에 소개합니다.',
+    desc: '배우고, 만들고, 키우고. 지주회사 DOOGO HOLDINGS와 다섯 그룹사가 운영하는 교육업 · 제조업 · 브랜드 커머스 · 미디어 &amp; 콘텐츠 · 마케팅 · 유통 · 공간 &amp; 라이프스타일, 7개 사업영역을 한 번에 소개합니다.',
     css: 'business', js: 'business',
     bodyAttrs: 'data-page="business" data-header="overlay"',
     main,

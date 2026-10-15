@@ -926,3 +926,15 @@ html.motion-off .biz-ph, html.motion-off .biz-ph.is-active, html.motion-off .biz
 html.motion-off .bs-media img, html.motion-off .cf-thumb img { transition: none; }
 /* OS '애니메이션 줄이기' 기기(html.soft-motion): 큰 확대 움직임만 덜어 냄 — 나머지 모션은 그대로 */
 html.soft-motion .hero-media video { animation-duration: 1.4s; transform: scale(1.03); }
+
+/* 11차: 대표 프로필 카드를 약 1.5배로 — 한 줄 가로 스냅(넘치면 이전·다음 버튼), 1440px 기준 4장 보임 */
+.ldr {
+  grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: clamp(290px, 22vw, 340px); gap: 18px;
+  overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none;
+  margin-inline: calc(var(--gutter) * -1); padding: 10px var(--gutter) 30px; scroll-padding-inline: var(--gutter);
+}
+.ldr::-webkit-scrollbar { display: none; }
+.ldr-item { scroll-snap-align: start; }
+.ldr .pcard-name { font-size: clamp(1.25rem, 1.05rem + .5vw, 1.55rem); }
+@media (max-width: 1024px) { .ldr { grid-auto-columns: clamp(280px, 46vw, 360px); } }
+@media (max-width: 760px) { .ldr { grid-auto-columns: 80vw; gap: 14px; } }

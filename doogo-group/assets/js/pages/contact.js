@@ -2,7 +2,8 @@
    DOOGO GROUP — contact.js (문의하기)
    분야 선택(URL ?type= 동기화 · ?type=privacy 개인정보) · 분야별 안내 · 글자 수 · 동의 펼치기
    · 제조(bio) 문의 전용 [선택] 개인정보 국외 이전 동의(overseasConsent)
-   · 제출 시 검증 · 전송(data-endpoint) 또는 시안 모드 · 접수 완료 화면 · FAQ 아코디언
+   · 제출 시 검증 · 전송(FormSubmit → doogobiz@gmail.com, 또는 data-endpoint) · 실패 시 메일 직접 보내기
+   · 접수 완료 화면 · FAQ 아코디언
    ========================================================= */
 (function () {
   'use strict';
@@ -57,11 +58,35 @@
   var defaultPh = msgEl ? msgEl.getAttribute('data-default-ph') : '';
   var submitted = false; // 첫 제출 이후에만 오류 해제 검사
 
-  /* ---------- 시안 모드 안내 ---------- */
-  // data-endpoint가 비어 있으면 시안 모드: 양식 위 안내를 보이고, 연결되면 숨깁니다.
-  function getEndpoint() { return (form.getAttribute('data-endpoint') || '').trim(); }
-  var isDemo = !(getEndpoint() && window.fetch);
-  $$('[data-demo-only]').forEach(function (el) { el.hidden = !isDemo; });
+  /* ---------- 접수 전송 설정 ----------
+     기본: FormSubmit(formsubmit.co)이 문의 내용을 회사 메일(INBOX)로 전달합니다. 별도 서버가 필요 없습니다.
+     ※ 첫 실제 접수 때 FormSubmit이 INBOX로 '활성화(Activate)' 메일을 한 번 보냅니다. 그 메일의 버튼을 눌러야
+       이후 문의가 메일로 도착합니다.
+     form의 data-endpoint에 다른 주소를 넣으면 그 주소로 원본 JSON(type·name·contact…)을 보냅니다. */
+  var INBOX = 'doogobiz@gmail.com';
+  var DEFAULT_ENDPOINT = 'https://formsubmit.co/ajax/' + INBOX;
+  var TIMEOUT_MS = 15000;
+  function getEndpoint() { return (form.getAttribute('data-endpoint') || '').trim() || DEFAULT_ENDPOINT; }
+  function isFormSubmit(url) { return /^https:\/\/formsubmit\.co\//i.test(url); }
+  // 전송 대상이 항상 있으므로 '시안' 안내는 숨깁니다.
+  $$('[data-demo-only]').forEach(function (el) { el.hidden = true; });
+
+  /* ---------- 스팸 방지(허니팟) ----------
+     사람에게는 보이지 않는 입력란. 자동 입력 봇이 채우면 실제로 보내지 않고 접수된 것처럼만 처리합니다. */
+  var honeyEl = (function () {
+    var wrap = document.createElement('div');
+    wrap.className = 'ct-hp';
+    wrap.setAttribute('aria-hidden', 'true');
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.name = '_honey';
+    input.tabIndex = -1;
+    input.autocomplete = 'off';
+    input.setAttribute('autocomplete', 'off');
+    wrap.appendChild(input);
+    form.appendChild(wrap);
+    return input;
+  })();
 
   function currentType() {
     var r = radios.filter(function (x) { return x.checked; })[0];
@@ -327,25 +352,107 @@
     var endpoint = getEndpoint();
     setLoading(true);
 
-    if (endpoint && window.fetch) {
-      fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(data)
-      }).then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        setLoading(false);
-        showDone(data, false);
-      }).catch(function () {
-        setLoading(false);
-        showAlert('전송하지 못했습니다. 잠시 후 다시 시도해 주세요. 입력하신 내용은 그대로 남아 있습니다.', true);
-        if (alertEl) { alertEl.setAttribute('tabindex', '-1'); alertEl.focus(); }
-      });
-    } else {
-      // 시안 모드: 실제 전송 없이 '전송되지 않았습니다' 안내 화면을 보여 줍니다.
-      setTimeout(function () { setLoading(false); showDone(data, true); }, still() ? 0 : 700);
+    // 허니팟이 채워졌으면(봇) 보내지 않고 접수된 것처럼만 처리
+    if (honeyEl && honeyEl.value) {
+      setTimeout(function () { setLoading(false); showDone(data, false); }, still() ? 0 : 700);
+      return;
     }
+    if (!window.fetch) { setLoading(false); showSendError(data); return; }
+
+    var viaFS = isFormSubmit(endpoint);
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var settled = false;
+    var timer = setTimeout(function () {
+      if (ctrl) ctrl.abort();
+      finish(false);
+    }, TIMEOUT_MS);
+    function finish(ok) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      setLoading(false);
+      if (ok) showDone(data, false); else showSendError(data);
+    }
+
+    var opts = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(viaFS ? mailPayload(data) : data)
+    };
+    if (ctrl) opts.signal = ctrl.signal;
+    fetch(endpoint, opts).then(function (res) {
+      if (!viaFS) { if (!res.ok) throw new Error('HTTP ' + res.status); return finish(true); }
+      // FormSubmit: HTTP 200이어도 본문의 success가 "true"일 때만 접수 성공
+      return res.json().then(function (j) {
+        finish(!!j && String(j.success) === 'true');
+      });
+    }).catch(function () { finish(false); });
   });
+
+  /* ---------- 메일로 받을 내용(한글 항목명) ---------- */
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function kstTime(iso) {
+    var d = new Date(new Date(iso).getTime() + 9 * 3600 * 1000); // UTC+9 (한국 표준시, 일광 절약 없음)
+    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) + ' ' +
+      pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds()) + ' (KST)';
+  }
+  function xferText(data) {
+    if (data.type !== 'bio') return '해당 없음';
+    return data.overseasConsent ? '동의' : '미동의';
+  }
+  function mailSubject(data) { return '[두고그룹 홈페이지 문의] ' + data.typeLabel + ' · ' + data.name; }
+  function mailPayload(data) {
+    var p = {
+      _subject: mailSubject(data),
+      _template: 'table',
+      _captcha: 'false'
+    };
+    if (isEmail(data.contact)) p._replyto = data.contact; // 메일의 '답장'이 문의하신 분에게 바로 가도록
+    p['문의 분야'] = data.typeLabel;
+    p['이름'] = data.name;
+    p['회사·브랜드명'] = data.company || '-';
+    p['회신 연락처'] = data.contact;
+    p['문의 내용'] = data.message;
+    p['개인정보 수집·이용 동의'] = '동의';
+    p['국외 이전 동의(제조 문의)'] = xferText(data);
+    p['접수 페이지'] = data.page;
+    p['접수 시각'] = kstTime(data.submittedAt);
+    return p;
+  }
+  function mailtoHref(data) {
+    var body = [
+      '문의 분야: ' + data.typeLabel,
+      '이름: ' + data.name,
+      '회사·브랜드명: ' + (data.company || '-'),
+      '회신 연락처: ' + data.contact,
+      '국외 이전 동의(제조 문의): ' + xferText(data),
+      '',
+      '[문의 내용]',
+      data.message
+    ].join('\r\n');
+    return 'mailto:' + INBOX + '?subject=' + encodeURIComponent(mailSubject(data)) + '&body=' + encodeURIComponent(body);
+  }
+
+  /* ---------- 전송 실패: 안내 + 메일 직접 보내기 ---------- */
+  function showSendError(data) {
+    if (!alertEl) return;
+    alertEl.classList.add('is-net');
+    alertEl.textContent = '';
+    var box = document.createElement('div');
+    box.className = 'ct-alert-body';
+    var p = document.createElement('p');
+    p.textContent = '전송하지 못했습니다. 잠시 후 다시 시도하시거나, 아래 버튼으로 이메일을 직접 보내 주세요. 입력하신 내용은 그대로 남아 있습니다.';
+    var a = document.createElement('a');
+    a.className = 'ct-alert-mail';
+    a.href = mailtoHref(data);
+    a.textContent = '이메일로 보내기 (' + INBOX + ')';
+    box.appendChild(p);
+    box.appendChild(a);
+    alertEl.appendChild(box);
+    alertEl.hidden = false;
+    alertEl.setAttribute('tabindex', '-1');
+    alertEl.focus();
+  }
 
   function setLoading(on) {
     sending = on;

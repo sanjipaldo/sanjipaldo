@@ -824,3 +824,32 @@ html.legal-open { overflow: hidden; }
 .legal-modal-body .pv-num { margin-right: 8px; color: var(--blue); }
 /* 모바일 메뉴가 열려 있을 때는 헤더의 '문의하기' 버튼을 숨김(메뉴 안 06 행·아래 버튼과 중복 방지) */
 @media (max-width: 1024px) { .site-header.is-menu .hd-util .btn[data-nav-cta] { visibility: hidden; opacity: 0; } }
+
+/* ---------- 메가메뉴(사업영역) 크게 · 가독성 개선 (11차) ----------
+   소개 문구는 위쪽 한 줄로, 7개 사업 칸은 컨테이너 전체 폭을 써서 사진·글자를 키움 */
+@media (min-width: 1025px) {
+  .mega-inner { grid-template-columns: 1fr; gap: 26px; padding-block: 34px 40px; }
+  .mega-intro { display: grid; grid-template-columns: 1fr auto; align-items: end; column-gap: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--line-2); }
+  .mega-intro .eyebrow, .mega-intro p { grid-column: 1; }
+  .mega-intro .link-arrow { grid-column: 2; grid-row: 1 / span 2; align-self: end; }
+  .mega-intro .eyebrow { margin-bottom: 10px; }
+  .mega-intro p { margin: 0; font-size: 1.5rem; }
+  .mega-intro p br { display: none; }
+  .mega-intro .link-arrow { font-size: 1rem; font-weight: 700; flex: none; }
+  .mega-grid { gap: 16px; }
+  .mega-item { gap: 12px; padding: 12px; border-radius: 18px; }
+  .mega-thumb { aspect-ratio: 4 / 3.1; border-radius: 14px; }
+  .mega-area { font-size: 1.12rem; gap: 6px; white-space: normal; letter-spacing: -.03em; }
+  .mega-area .num { font-size: .8rem; }
+  .mega-brand { font-size: .8rem; margin-top: -4px; letter-spacing: .03em; }
+  .mega-desc { font-size: .92rem; line-height: 1.55; color: var(--ink-2); }
+  .mega-corp { font-size: .86rem; padding-top: 12px; }
+  .mega-corp .k { font-size: .76rem; }
+}
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .mega-grid { gap: 10px; }
+  .mega-item { padding: 8px; }
+  .mega-area { font-size: 1rem; }
+  .mega-desc { font-size: .85rem; }
+  .mega-brand, .mega-corp { font-size: .76rem; }
+}

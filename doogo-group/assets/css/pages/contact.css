@@ -159,6 +159,18 @@ main section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
 .ct-alert::before { content: "!"; flex: none; display: grid; place-items: center; width: 20px; height: 20px; margin-top: 2px; border-radius: 50%; background: #C62F2F; color: #fff; font-size: .75rem; font-weight: 800; }
 .ct-alert.is-net { background: var(--ivory); border-color: var(--line); color: var(--ink-2); }
 .ct-alert.is-net::before { background: var(--ink-2); }
+/* 전송 실패 시: 안내 문구 + 이메일로 직접 보내기 */
+.ct-alert-body { min-width: 0; }
+.ct-alert-body p { margin: 0; }
+.ct-alert-mail {
+  display: inline-flex; align-items: center; min-height: 40px; margin-top: 10px; padding: 0 16px; border-radius: 999px;
+  background: var(--ink); color: #fff; font-size: .88rem; font-weight: 600; text-decoration: none; overflow-wrap: anywhere;
+  transition: background-color .2s var(--ease);
+}
+.ct-alert-mail:hover { background: var(--blue); }
+.ct-alert-mail:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+/* 스팸 방지 입력란(허니팟): 화면·보조기기 모두에서 숨김 */
+.ct-hp { position: absolute !important; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
 
 fieldset.ct-fs { border: 0; margin: 0; padding: 36px 0 0; min-width: 0; }
 fieldset.ct-fs + fieldset.ct-fs { margin-top: 40px; border-top: 1px solid var(--line-2); padding-top: 40px; }
