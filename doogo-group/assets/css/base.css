@@ -221,7 +221,7 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .gnb > ul > li { position: relative; height: 100%; display: flex; align-items: center; }
 .gnb > ul > li.has-mega { position: static; } /* 안의 .mega 가 헤더 전체 폭 기준으로 놓이도록 */
 /* 메뉴 글자: 기존(1.02rem · 600)의 약 1.5배 · 굵게. 1025–1440px 에서는 화면 폭에 맞춰 줄어듦 */
-.gnb-link { position: relative; display: inline-flex; align-items: center; height: 100%; font-size: clamp(1.12rem, .25rem + 1.45vw, 1.53rem); font-weight: 800; letter-spacing: -0.035em; white-space: nowrap; }
+.gnb-link { position: relative; display: inline-flex; align-items: center; height: 100%; font-size: clamp(1rem, .55rem + .62vw, 1.18rem); font-weight: 700; letter-spacing: -0.03em; white-space: nowrap; }
 .gnb-link::after { content: ""; position: absolute; left: 0; right: 0; bottom: 20px; height: 3px; border-radius: 2px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform .35s var(--ease); }
 .gnb > ul > li:hover > .gnb-link::after, .gnb > ul > li.is-open > .gnb-link::after, .gnb-link[aria-current="page"]::after, .gnb-link.is-current::after { transform: scaleX(1); }
 .gnb-sub {
@@ -263,7 +263,7 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .mega-item[aria-current="page"] .mega-area { color: var(--blue); }
 
 .hd-util { display: flex; align-items: center; gap: 12px; flex: none; }
-.hd-util .btn--sm[data-nav-cta] { min-height: 48px; padding: 0 24px; font-size: clamp(1rem, .45rem + .8vw, 1.2rem); font-weight: 800; letter-spacing: -0.03em; }
+.hd-util .btn--sm[data-nav-cta] { min-height: 46px; padding: 0 22px; font-size: clamp(.95rem, .6rem + .4vw, 1.05rem); font-weight: 700; letter-spacing: -0.02em; }
 .hd-menu-btn { display: none; width: 44px; height: 44px; border-radius: 12px; place-items: center; color: inherit; }
 .hd-menu-btn span, .hd-menu-btn span::before, .hd-menu-btn span::after { display: block; width: 22px; height: 2px; background: currentColor; border-radius: 2px; position: relative; transition: transform .3s var(--ease), background-color .2s; }
 .hd-menu-btn span::before, .hd-menu-btn span::after { content: ""; position: absolute; left: 0; }
@@ -414,7 +414,7 @@ html.is-locked, html.is-locked body { overflow: hidden; }
 
 /* 페이지 안 탭 (앵커 내비) */
 .subnav { position: sticky; top: var(--header-h); z-index: 50; transition: top .45s var(--ease); background: rgba(255, 255, 255, .94); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line-2); }
-.subnav ul { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-block: 10px; }
+.subnav ul { display: flex; justify-content: safe center; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-block: 10px; }
 /* 가로로 넘치면 끝을 흐리게 해서 더 넘길 수 있음을 알립니다 (site.js 가 is-scrollable / is-start / is-end 부여) */
 .subnav :is(ul, ol).is-scrollable { --fade-l: 28px; --fade-r: 44px; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent 100%); }
 .subnav :is(ul, ol).is-scrollable.is-start { --fade-l: 0px; }
