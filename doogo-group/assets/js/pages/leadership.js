@@ -233,7 +233,7 @@
     var map = { name: d.name, title: d.title || '대표이사', co: d.co, tag: d.tag || '', field: d.field, area: bizName(first.label), note: d.note || '', quote: d.quote || '', idx: pad(i + 1) };
     Object.keys(map).forEach(function (k) { $$('[data-m="' + k + '"]', modal).forEach(function (el) { el.textContent = map[k]; }); });
     // 사업영역: 연결된 사업 페이지 링크 (DOOGO HOLDINGS 는 교육업 · 유통 두 개)
-    //  분야와 사업영역 이름이 같으면(공간 & 라이프스타일 · 미디어 & 콘텐츠 · 마케팅) 같은 말이 겹치지 않게 이 줄을 숨김 — 아래 버튼으로 이동
+    //  분야와 사업영역 이름이 같으면(공간 & 라이프스타일 · 마케팅 · 브랜드 커머스) 같은 말이 겹치지 않게 이 줄을 숨김 — 아래 버튼으로 이동
     if (areasBox) {
       areasBox.innerHTML = '';
       links.forEach(function (o) {

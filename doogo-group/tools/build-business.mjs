@@ -231,31 +231,33 @@ const BIZ = [
     relNav: '성장 단계',
   },
   {
-    slug: 'media', num: '04', area: '미디어 &amp; 콘텐츠', en: 'DOOGO MEDIA', chain: 'Content', icon: 'i-media',
+    slug: 'media', num: '04', area: '미디어 &amp; 콘텐츠', en: 'DOOGO MEDIA', chain: 'Owned Media', icon: 'i-media',
     corp: { en: 'DOOGO MEDIA', field: '미디어 &amp; 콘텐츠', ceo: '김윤정', title: '총괄이사', key: 'media', photo: 'leader-kim-yunjung' },
-    scope: '촬영 · 유튜브 · 라이브 콘텐츠',
-    defLabel: '영상 제작', def: '사람을 모으고, 브랜드를 키우는 미디어를 만듭니다.',
-    role: '사람과 브랜드의 가치를 영상과 콘텐츠로 전합니다.',
-    services: ['촬영', '유튜브 콘텐츠', '라이브 콘텐츠 제작'],
-    targets: ['콘텐츠로 고객을 모으려는 브랜드', '강사·전문가'],
+    // 8차: DOOGO MEDIA = 온드미디어(브랜드가 직접 소유·운영하는 채널) 전문 — 분야 이름은 '미디어 & 콘텐츠' 그대로, 설명 문구만 온드미디어로
+    scope: '온드미디어 촬영 · 유튜브 채널 운영 · 숏폼·라이브 콘텐츠',
+    defLabel: '온드미디어 제작', def: '광고비에 기대지 않고, 브랜드의 자산으로 쌓이는 채널을 만듭니다.',
+    role: '브랜드가 직접 소유하는 채널, 온드미디어를 기획하고 촬영하고 운영합니다.',
+    services: ['온드미디어 촬영', '브랜드 유튜브 채널 운영', '숏폼·라이브 콘텐츠 제작', '콘텐츠 기획·편집'],
+    targets: ['자체 채널로 고객을 모으려는 브랜드', '강사·전문가'],
     ask: '콘텐츠 문의하기',
     cta: { label: '콘텐츠 문의하기', href: ASK('media') },
     web: web({ name: 'DOOGO MEDIA', kind: 'YouTube 채널', host: '두고보는 문대표', bar: 'youtube.com/@두고보는문대표', yt: true, url: MEDIA_URL, shot: 'media',
-      btn: '채널 바로가기', close: 'DOOGO MEDIA 채널', desc: 'DOOGO MEDIA의 유튜브 채널 <span class="nowrap">‘두고보는 문대표’</span>입니다. 채널에서 영상 콘텐츠를 볼 수 있습니다.' }),
-    narration: '그 가치를 발견하고, 이야기로 전합니다.',
+      btn: '채널 바로가기', close: 'DOOGO MEDIA 채널', desc: 'DOOGO MEDIA가 운영하는 온드미디어 채널, 유튜브 <span class="nowrap">‘두고보는 문대표’</span>입니다. 채널에서 영상 콘텐츠를 볼 수 있습니다.' }),
+    narration: '브랜드의 채널을, 브랜드의 자산으로.',
     hero: { f: 'media', fx: '50%', fy: '38%', mx: '62%' },
-    gallery: [photo('media', { label: '촬영 장비', zoom: 1.75, focus: '36% 48%', alt: '짐벌에 단 카메라로 출연자를 촬영하는 모습(확대)' }), render('media', { label: 'DOOGO MEDIA' })],
-    heroAlt: { label: '콘텐츠 형식 보기', href: '#related' },
-    facts: [['대표 서비스', '촬영 · 유튜브 · 라이브 콘텐츠'], ['유튜브 채널', SITE(MEDIA_URL, '두고보는 문대표')]],
+    gallery: [photo('media', { label: '온드미디어 촬영', zoom: 1.75, focus: '36% 48%', alt: '짐벌에 단 카메라로 출연자를 촬영하는 모습(확대)' }), render('media', { label: 'DOOGO MEDIA' })],
+    heroAlt: { label: '온드미디어 알아보기', href: '#related' },
+    facts: [['대표 서비스', '온드미디어 촬영 · 유튜브 채널 운영'], ['유튜브 채널', SITE(MEDIA_URL, '두고보는 문대표')]],
     svcHead: 'DOOGO MEDIA가 하는 일',
-    svcLead: '브랜드와 사람의 이야기를 촬영하고, 유튜브와 라이브로 고객에게 전합니다.',
+    svcLead: '브랜드가 직접 소유하는 유튜브·SNS 채널을 기획하고, 촬영과 편집으로 채우고, 꾸준히 운영합니다.',
     detail: [
-      { icon: 's-camera', name: '촬영', desc: '브랜드와 사람을 보여 줄 영상과 사진을 촬영해, 콘텐츠와 판매에 쓰는 소스를 만듭니다.' },
-      { icon: 's-video', name: '유튜브 콘텐츠', desc: '채널의 방향을 잡고, 기획·촬영·편집으로 이어지는 유튜브 콘텐츠를 만듭니다.' },
-      { icon: 's-live', name: '라이브 콘텐츠 제작', desc: '라이브 방송과 실시간 강의를 준비하고 진행해, 고객과 바로 만나는 콘텐츠를 만듭니다.' },
+      { icon: 's-camera', name: '온드미디어 촬영', desc: '브랜드 채널에 올릴 영상과 사진을 촬영해, 채널에 꾸준히 쌓아 갈 콘텐츠 소스를 만듭니다.' },
+      { icon: 's-video', name: '브랜드 유튜브 채널 운영', desc: '채널의 방향과 주제를 잡고, 업로드와 관리까지 브랜드 유튜브 채널을 함께 운영합니다.' },
+      { icon: 's-live', name: '숏폼·라이브 콘텐츠 제작', desc: 'SNS용 숏폼 영상과 라이브 방송·실시간 강의를 준비해, 고객과 바로 만나는 콘텐츠를 만듭니다.' },
+      { icon: 's-pen', name: '콘텐츠 기획·편집', desc: '무엇을 어떤 순서로 보여 줄지 기획하고, 촬영한 소스를 채널에 맞게 편집합니다.' },
     ],
-    sceneLead: '도심 야외 촬영처럼 콘텐츠가 만들어지는 현장입니다. 실제 촬영 현장과 결과물로 교체할 예정입니다.',
-    relNav: '콘텐츠 형식',
+    sceneLead: '도심 야외 촬영처럼 브랜드 채널에 올릴 콘텐츠가 만들어지는 현장입니다. 실제 촬영 현장과 결과물로 교체할 예정입니다.',
+    relNav: '온드미디어',
   },
   {
     slug: 'ad', num: '05', area: '마케팅', en: 'DOOGO AD', chain: 'Marketing', icon: 'i-ad',
@@ -357,7 +359,7 @@ const BIZ = [
 const CHAIN = [
   { ko: '제품 제조', en: 'PRODUCT', slug: 'bio' },
   { ko: '브랜드 기획', en: 'BRAND', slug: 'commerce' },
-  { ko: '콘텐츠 제작', en: 'CONTENT', slug: 'media' },
+  { ko: '온드미디어 제작', en: 'OWNED MEDIA', slug: 'media' },
   { ko: '교육·인재 육성', en: 'EDUCATION', slug: 'campus' },
   { ko: '마케팅', en: 'MARKETING', slug: 'ad' },
   { ko: '판매·유통', en: 'SALES', slug: 'food' },
@@ -659,26 +661,31 @@ ${people.map((p, i) => `        <li class="dt-person${p.photo ? ' has-photo' : '
     ],
   }),
   media: () => {
+    // 1) 온드미디어 설명(무엇인지 · 왜 자산인지) — 광고 페이지의 채널 카드(.dt-channels)와 같은 생김새
     // 2) 주요 서비스 카드(무엇을 하는지)와 겹치지 않게: 형식별 '결과물'과 '이런 분께'를 큰 번호 목록으로
     const formats = [
-      { en: 'Shooting', ko: '촬영', out: '영상 · 사진 소스', who: '콘텐츠로 고객을 모으려는 브랜드' },
-      { en: 'YouTube', ko: '유튜브 콘텐츠', out: '채널에 올리는 영상 콘텐츠', who: '강사·전문가 · 브랜드' },
-      { en: 'Live', ko: '라이브 콘텐츠', out: '실시간 방송 · 강의', who: '강사·전문가 · 브랜드' },
+      { en: 'Shooting', ko: '온드미디어 촬영', out: '채널에 올릴 영상 · 사진 소스', who: '자체 채널로 고객을 모으려는 브랜드' },
+      { en: 'YouTube', ko: '브랜드 유튜브 채널', out: '채널에 쌓이는 영상 콘텐츠', who: '강사·전문가 · 브랜드' },
+      { en: 'Short-form · Live', ko: '숏폼·라이브 콘텐츠', out: 'SNS 숏폼 · 실시간 방송 · 강의', who: '강사·전문가 · 브랜드' },
     ];
     return `      <div class="dt-rel-head">
         <div>
-          <span class="eyebrow" data-reveal="fade">Content Formats</span>
-          <h2 class="h2" id="rel-title" data-lines style="margin-top:20px"><span class="line"><span>목적에 맞는</span></span><span class="line"><span>세 가지 콘텐츠 형식</span></span></h2>
+          <span class="eyebrow" data-reveal="fade">Owned Media</span>
+          <h2 class="h2" id="rel-title" data-lines style="margin-top:20px"><span class="line"><span>브랜드가 직접 소유하는</span></span><span class="line"><span>채널, <span class="accent">온드미디어</span></span></span></h2>
         </div>
         <div class="dt-rel-side" data-reveal style="--d:.15s">
-          <p class="lead">알리고 싶은 내용과 만나고 싶은 고객에 맞춰 형식을 고르고, 기획부터 촬영·편집까지 이어서 진행합니다.</p>
+          <p class="lead">온드미디어(Owned Media)는 브랜드가 직접 소유하고 운영하는 유튜브·SNS·블로그·자사몰 같은 콘텐츠 채널입니다. <span class="nowrap">DOOGO MEDIA</span>는 이 채널을 기획하고, 촬영하고, 운영합니다.</p>
         </div>
       </div>
-      <ol class="dt-rows">
+      <ul class="dt-channels" aria-label="온드미디어란">
+        <li class="dt-channel" data-reveal><span class="dt-channel-en en">OWNED</span><span class="dt-channel-ko">브랜드가 직접 소유·운영하는 채널</span><p>유튜브·SNS·블로그·자사몰처럼 브랜드가 주인인 채널에서 고객을 직접 만납니다.</p></li>
+        <li class="dt-channel" data-reveal style="--d:.08s"><span class="dt-channel-en en">ASSET</span><span class="dt-channel-ko">쌓이는 브랜드 자산</span><p>광고비에 의존하지 않고, 올린 콘텐츠가 채널에 남아 브랜드의 자산으로 쌓입니다.</p></li>
+      </ul>
+      <ol class="dt-rows" aria-label="콘텐츠 형식">
         <li class="dt-rows-head" aria-hidden="true"><span>형식</span><span>결과물</span><span>이런 분께</span></li>
 ${formats.map((f, i) => `        <li class="dt-row" data-reveal style="--d:${(i * 0.08).toFixed(2)}s">
           <span class="dt-row-num en">${String(i + 1).padStart(2, '0')}</span>
-          <h3 class="dt-row-title"><span class="dt-row-en en">${f.en}</span>${f.ko}</h3>
+          <h3 class="dt-row-title"><span class="dt-row-en en">${f.en}</span>${nw(f.ko)}</h3>
           <p class="dt-row-cell"><span class="dt-row-label">결과물</span>${f.out}</p>
           <p class="dt-row-cell"><span class="dt-row-label">이런 분께</span>${f.who}</p>
         </li>`).join('\n')}
