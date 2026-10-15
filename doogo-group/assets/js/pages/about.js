@@ -640,6 +640,205 @@
     onMotion.push(function (off) { if (off) statsFinal(); });
   }
 
+  /* ---------- 가치사슬 — 성장의 7단계 (3D 계단) ----------
+     화면에 들어오면: 카메라가 비스듬한 각도에서 제자리로 → 기둥이 차례로 솟음 → 빛 줄기가 계단 윤곽을 따라 오르며 기둥마다 불을 켬
+     (위 계기판 숫자 01 → 07 → EXIT) → 정상(EXIT)이 번쩍이고 빛기둥 · 바닥 파동. 그 뒤로는 빛 하나가 줄기를 따라 계속 흐르며
+     지나가는 기둥을 비춥니다(화면에 보일 때만). 마우스를 올리면 무대가 살짝 기울어집니다(html.soft-motion 이면 생략).
+     움직임 멈추기 · JS 없음: 처음부터 최종 상태(모두 켜짐 · 줄기 그려짐). 탭으로 숨어 있던 동안은 크기가 0 이라 보일 때 다시 잽니다. */
+  var chain = $('[data-chain]');
+  if (chain) (function () {
+    var scene = $('[data-chain-scene]', chain);
+    var svg = $('[data-chain-beam]', chain);
+    var meter = $('.ab-chain-meter', chain);
+    var meterN = $('[data-chain-n]', chain);
+    var meterT = $('[data-chain-t]', chain);
+    if (!scene || !svg) return;
+    var pHalo = $('.ab-chain-beam-halo', svg), pBase = $('.ab-chain-beam-base', svg), pLine = $('.ab-chain-beam-line', svg);
+    var pGlow = $('.ab-chain-beam-glow', svg), pCore = $('.ab-chain-beam-core', svg);
+    var steps = $$('.ab-chain > li', chain).concat($$('.ab-chain-goal', chain));
+    var goal = steps[steps.length - 1];
+    var labels = steps.map(function (el, i) {
+      var en = el.querySelector(':scope > .en:last-child');
+      return { n: i < steps.length - 1 ? ('0' + (i + 1)).slice(-2) : 'EXIT', t: i < steps.length - 1 ? (en ? en.textContent.split('·')[0].trim() : '') : 'Brand Growth' };
+    });
+    var geo = { L: 0, at: [], mode: '' };
+    var state = 'idle', vis = false, timers = [], raf = 0, anims = [];
+    var f1 = function (v) { return (Math.round(v * 10) / 10).toString(); };
+    var offIn = function (el) { var x = 0, y = 0; while (el && el !== scene) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; } return { x: x, y: y }; };
+
+    // 빛 줄기 경로: 가로 계단이면 기둥 윗변 · 다음 기둥 왼변을 따라 오르는 윤곽, 세로 계단이면 왼쪽 줄기(마디 → 마디)
+    function layout() {
+      var W = scene.offsetWidth, H = scene.offsetHeight;
+      if (!W || !H) return false;
+      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+      var rows = window.matchMedia('(max-width: 1100px)').matches;
+      var d = '', L = 0, at = [], px = 0, py = 0;
+      var go = function (x, y) { L += Math.abs(x - px) + Math.abs(y - py); d += ' L' + f1(x) + ' ' + f1(y); px = x; py = y; };
+      var box = steps.map(function (el) { var o = offIn(el); return { x: o.x, y: o.y, w: el.offsetWidth, h: el.offsetHeight }; });
+      if (!rows) {
+        px = box[0].x; py = box[0].y; d = 'M' + f1(px) + ' ' + f1(py);
+        box.forEach(function (b, i) {
+          if (i) { go(b.x, py); go(b.x, b.y); }
+          at.push(L);
+          if (i < box.length - 1) go(b.x + b.w, b.y);
+          else go(b.x + b.w / 2, b.y);
+        });
+      } else {
+        var cs = getComputedStyle(steps[0], '::before');
+        var sx = box[0].x + (parseFloat(cs.left) || -24) + (parseFloat(cs.width) || 11) / 2;
+        px = sx; py = box[0].y + box[0].h / 2; d = 'M' + f1(px) + ' ' + f1(py);
+        box.forEach(function (b) { go(sx, b.y + b.h / 2); at.push(L); });
+      }
+      geo.L = Math.max(1, L); geo.at = at; geo.mode = rows ? 'rows' : 'cols';
+      [pHalo, pBase, pLine, pGlow, pCore].forEach(function (p) { if (p) p.setAttribute('d', d); });
+      pLine.style.strokeDasharray = f1(geo.L + 2) + ' ' + f1(geo.L + 2);
+      if (state === 'idle' || state === 'armed') pLine.style.strokeDashoffset = f1(geo.L + 2);
+      else if (state === 'done') pLine.style.strokeDashoffset = '0';
+      return true;
+    }
+
+    var setMeter = function (i, tick) {
+      if (!meterN || !labels[i]) return;
+      if (meter) meter.style.setProperty('--p', i + 1);
+      if (meterN.textContent === labels[i].n) return;
+      meterN.textContent = labels[i].n;
+      if (meterT) meterT.textContent = labels[i].t;
+      if (tick && meter) { meter.classList.remove('is-tick'); void meter.offsetWidth; meter.classList.add('is-tick'); }
+    };
+    var light = function (i) { steps[i].classList.add('is-lit'); };
+
+    // 최종 상태 (움직임 멈추기 · IO 없음)
+    function finishAll() {
+      timers.forEach(clearTimeout); timers = [];
+      cancelAnimationFrame(raf); raf = 0;
+      steps.forEach(function (el, i) { light(i); });
+      chain.classList.remove('is-armed', 'is-on');
+      state = 'done';
+      layout();
+      pLine.style.strokeDashoffset = '0';
+      setMeter(steps.length - 1, false);
+      syncLive();
+    }
+
+    // 등장
+    function play() {
+      if (state !== 'armed') return;
+      if (motionOff()) { finishAll(); return; }
+      if (!layout()) return;
+      state = 'rising';
+      chain.classList.add('is-on');
+      timers.push(setTimeout(draw, softMotion() ? 900 : 1500));
+    }
+    function draw() {
+      state = 'drawing';
+      var t0 = 0, D = 2300, lit = -1;
+      var ease = function (p) { return p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; };
+      var step = function (ts) {
+        if (!t0) t0 = ts;
+        var p = Math.min(1, (ts - t0) / D), s = ease(p) * geo.L;
+        pLine.style.strokeDashoffset = f1(geo.L + 2 - s);
+        while (lit + 1 < steps.length && geo.at[lit + 1] <= s + 1) { lit++; if (lit < steps.length - 1) { light(lit); setMeter(lit, true); } }
+        if (p < 1) { raf = requestAnimationFrame(step); return; }
+        raf = 0;
+        pLine.style.strokeDashoffset = '0';
+        light(steps.length - 1); setMeter(steps.length - 1, true);
+        goal.classList.add('is-peak');
+        chain.classList.add('is-done');
+        timers.push(setTimeout(function () { goal.classList.remove('is-peak'); }, 1200));
+        state = 'done';
+        timers.push(setTimeout(syncLive, 700));
+      };
+      raf = requestAnimationFrame(step);
+    }
+
+    // 흐르는 빛: 혜성(빛 머리 + 번짐)이 줄기를 따라 오르고, 지나가는 기둥 앞면이 번쩍
+    function stopFx() { anims.forEach(function (a) { try { a.cancel(); } catch (e) {} }); anims = []; }
+    function startFx() {
+      stopFx();
+      if (!pCore.animate || !geo.L) return;
+      var v = geo.mode === 'rows' ? .32 : .62;          // px/ms
+      var run = geo.L / v, T = run + 1600, C = Math.min(140, geo.L * .2);
+      var kf = [
+        { strokeDashoffset: C, offset: 0 },
+        { strokeDashoffset: -geo.L, offset: run / T },
+        { strokeDashoffset: -geo.L, offset: 1 }
+      ];
+      [pGlow, pCore].forEach(function (p, k) {
+        var c = k ? C * .55 : C;
+        p.style.strokeDasharray = f1(c) + ' ' + f1(geo.L + C + 10);
+        anims.push(p.animate(kf, { duration: T, iterations: Infinity, easing: 'linear' }));
+      });
+      steps.forEach(function (el) {
+        var fl = el.querySelector('.ab-cf-flash');
+        if (!fl) return;
+        var i = steps.indexOf(el), a0 = Math.min(.97, (geo.at[i] + (i < steps.length - 1 ? 0 : 0)) / v / T);
+        anims.push(fl.animate([
+          { opacity: 0, offset: 0 },
+          { opacity: 0, offset: a0 },
+          { opacity: i === steps.length - 1 ? 1 : .8, offset: Math.min(.98, a0 + 140 / T) },
+          { opacity: 0, offset: Math.min(.99, a0 + 1100 / T) },
+          { opacity: 0, offset: 1 }
+        ], { duration: T, iterations: Infinity, easing: 'linear' }));
+      });
+    }
+    function syncLive() {
+      var live = vis && state === 'done' && !motionOff();
+      chain.classList.toggle('is-live', live);
+      if (motionOff()) { stopFx(); return; }
+      if (live) { if (!anims.length) startFx(); else anims.forEach(function (a) { a.play(); }); }
+      else anims.forEach(function (a) { a.pause(); });
+    }
+
+    // 마우스 기울기 (화면에 보일 때 · 마우스만)
+    var tx = 0, ty = 0, gx = 0, gy = 0, tRaf = 0;
+    var tiltOk = function () { return !motionOff() && !softMotion() && window.matchMedia('(hover: hover) and (pointer: fine)').matches; };
+    function tilt() {
+      tx += (gx - tx) * .08; ty += (gy - ty) * .08;
+      scene.style.setProperty('--tx', tx.toFixed(2) + 'deg');
+      scene.style.setProperty('--ty', ty.toFixed(2) + 'deg');
+      tRaf = (Math.abs(gx - tx) > .01 || Math.abs(gy - ty) > .01) ? requestAnimationFrame(tilt) : 0;
+    }
+    var kick = function () { if (!tRaf) tRaf = requestAnimationFrame(tilt); };
+    chain.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse' || !tiltOk()) return;
+      var r = chain.getBoundingClientRect();
+      gy = ((e.clientX - r.left) / r.width - .5) * 12;   // 좌우 → rotateY
+      gx = ((e.clientY - r.top) / r.height - .5) * -7;   // 위아래 → rotateX
+      kick();
+    });
+    chain.addEventListener('pointerleave', function () { gx = 0; gy = 0; kick(); });
+
+    // 시작
+    var relayout = function () {
+      var was = geo.mode;
+      if (!layout()) return;
+      if (state === 'done' && anims.length && was) { stopFx(); syncLive(); }
+    };
+    if (!hasIO || motionOff()) finishAll();
+    else { chain.classList.add('is-armed'); state = 'armed'; setMeter(0, false); layout(); }
+    if ('ResizeObserver' in window) new ResizeObserver(function () { relayout(); }).observe(scene);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+    if (hasIO) {
+      var playIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { if (en.isIntersecting && state === 'armed') { if (play() !== false && state !== 'armed') playIO.disconnect(); } });
+      }, { rootMargin: '0px 0px -22% 0px', threshold: 0.15 });
+      playIO.observe(chain);
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          vis = en.isIntersecting;
+          chain.classList.toggle('is-vis', vis);
+          if (!vis) { gx = gy = 0; kick(); }
+          syncLive();
+        });
+      }, { rootMargin: '80px 0px' }).observe(chain);
+    }
+    onShow.push(function (panel) { if (panel.contains(chain)) requestAnimationFrame(relayout); });
+    onMotion.push(function (off) {
+      if (off) { stopFx(); finishAll(); gx = gy = tx = ty = 0; scene.style.removeProperty('--tx'); scene.style.removeProperty('--ty'); }
+      syncLive();
+    });
+  })();
+
   /* ---------- 화면 밖 무한 모션 정지 (배터리·성능) ----------
      비전 마키 띠, 지도(SMIL 빛 점 + 핀 파동)는 화면에 보일 때만 움직입니다. 움직임 멈추기면 멈춘 채로. */
   var mapSvg = $('.ab-map-svg');

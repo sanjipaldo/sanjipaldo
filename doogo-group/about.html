@@ -509,18 +509,40 @@
         <p class="ab-tagline-ko" data-reveal>제품을 넘어, 사람과 비즈니스의 더 큰 가치를 만들어갑니다.</p>
       </div>
 
-      <div class="ab-chain-wrap">
-        <p class="ab-chain-label"><span class="en">Value Chain</span>성장의 7단계</p>
-        <ol class="ab-chain" aria-label="두고그룹 가치사슬 7단계">
-          <li data-reveal style="--d:0s"><span class="num en">01</span><strong>제품 제조</strong><span class="en">PRODUCT</span></li>
-          <li data-reveal style="--d:.05s"><span class="num en">02</span><strong>브랜드 기획</strong><span class="en">BRAND</span></li>
-          <li data-reveal style="--d:.1s"><span class="num en">03</span><strong>콘텐츠 제작</strong><span class="en">CONTENT</span></li>
-          <li data-reveal style="--d:.15s"><span class="num en">04</span><strong>교육·인재 육성</strong><span class="en">EDUCATION</span></li>
-          <li data-reveal style="--d:.2s"><span class="num en">05</span><strong>마케팅</strong><span class="en">MARKETING</span></li>
-          <li data-reveal style="--d:.25s"><span class="num en">06</span><strong>판매·유통</strong><span class="en">SALES</span></li>
-          <li data-reveal style="--d:.3s"><span class="num en">07</span><strong>공간·라이프스타일</strong><span class="en">OFFICE · STAY · F&amp;B</span></li>
-        </ol>
-        <p class="ab-chain-goal" data-reveal style="--d:.35s"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg><strong>브랜드 성장 &amp; EXIT</strong><span class="en">BRAND GROWTH &amp; EXIT</span></p>
+      <!-- 가치사슬 — 성장의 7단계: 어두운 무대 위 3D 계단(기둥이 차례로 솟고 · 빛 줄기가 윤곽을 따라 오르며 불을 켜고 · EXIT 정상에서 빛이 솟음).
+           장식 요소(.ab-chain-3d · 바닥 · 빛 줄기 · 숫자 계기판)는 aria-hidden. 동작은 about.js '가치사슬' 블록. -->
+      <div class="ab-chain-wrap" data-chain>
+        <div class="ab-chain-bg" aria-hidden="true"></div>
+        <div class="ab-chain-head">
+          <p class="ab-chain-label"><span class="en">Value Chain</span>성장의 7단계</p>
+          <p class="ab-chain-meter en" aria-hidden="true" style="--p:8"><span class="ab-chain-meter-n" data-chain-n>EXIT</span><span class="ab-chain-meter-bar"></span><span class="ab-chain-meter-t" data-chain-t>Brand Growth</span></p>
+        </div>
+        <div class="ab-chain-stage">
+          <div class="ab-chain-cam">
+            <div class="ab-chain-scene" data-chain-scene>
+              <div class="ab-chain-floor" aria-hidden="true"></div>
+              <div class="ab-chain-wall en" aria-hidden="true">GROWTH</div>
+              <svg class="ab-chain-beam" aria-hidden="true" focusable="false" data-chain-beam>
+                <defs><filter id="ab-chain-blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4"/></filter></defs>
+                <path class="ab-chain-beam-halo" d="" filter="url(#ab-chain-blur)"/>
+                <path class="ab-chain-beam-base" d=""/>
+                <path class="ab-chain-beam-line" d=""/>
+                <path class="ab-chain-beam-glow" d="" filter="url(#ab-chain-blur)"/>
+                <path class="ab-chain-beam-core" d=""/>
+              </svg>
+              <ol class="ab-chain" aria-label="두고그룹 가치사슬 7단계">
+          <li style="--i:0"><span class="ab-chain-3d" aria-hidden="true"><i class="ab-cf ab-cf-fill"></i><i class="ab-cf ab-cf-top"></i><i class="ab-cf ab-cf-side"></i><i class="ab-cf ab-cf-pool"></i><i class="ab-cf ab-cf-flash"></i></span><span class="num en">01</span><strong>제품 제조</strong><span class="en">PRODUCT</span></li>
+          <li style="--i:1"><span class="ab-chain-3d" aria-hidden="true"><i class="ab-cf ab-cf-fill"></i><i class="ab-cf ab-cf-top"></i><i class="ab-cf ab-cf-side"></i><i class="ab-cf ab-cf-pool"></i><i class="ab-cf ab-cf-flash"></i></span><span class="num en">02</span><strong>브랜드 기획</strong><span class="en">BRAND</span></li>
+          <li style="--i:2"><span class="ab-chain-3d" aria-hidden="true"><i class="ab-cf ab-cf-fill"></i><i class="ab-cf ab-cf-top"></i><i class="ab-cf ab-cf-side"></i><i class="ab-cf ab-cf-pool"></i><i class="ab-cf ab-cf-flash"></i></span><span class="num en">03</span><strong>콘텐츠 제작</strong><span class="en">CONTENT</span></li>
+          <li style="--i:3"><span class="ab-chain-3d" aria-hidden="true"><i class="ab-cf ab-cf-fill"></i><i class="ab-cf ab-cf-top"></i><i class="ab-cf ab-cf-side"></i><i class="ab-cf ab-cf-pool"></i><i class="ab-cf ab-cf-flash"></i></span><span class="num en">04</span><strong>교육·인재 육성</strong><span class="en">EDUCATION</span></li>
+          <li style="--i:4"><span class="ab-chain-3d" aria-hidden="true"><i class="ab-cf ab-cf-fill"></i><i class="ab-cf ab-cf-top"></i><i class="ab-cf ab-cf-side"></i><i class="ab-cf ab-cf-pool"></i><i class="ab-cf ab-cf-flash"></i></span><span class="num en">05</span><strong>마케팅</strong><span class="en">MARKETING</span></li>
+          <li style="--i:5"><span class="ab-chain-3d" aria-hidden="true"><i class="ab-cf ab-cf-fill"></i><i class="ab-cf ab-cf-top"></i><i class="ab-cf ab-cf-side"></i><i class="ab-cf ab-cf-pool"></i><i class="ab-cf ab-cf-flash"></i></span><span class="num en">06</span><strong>판매·유통</strong><span class="en">SALES</span></li>
+          <li style="--i:6"><span class="ab-chain-3d" aria-hidden="true"><i class="ab-cf ab-cf-fill"></i><i class="ab-cf ab-cf-top"></i><i class="ab-cf ab-cf-side"></i><i class="ab-cf ab-cf-pool"></i><i class="ab-cf ab-cf-flash"></i></span><span class="num en">07</span><strong>공간·<wbr>라이프스타일</strong><span class="en">OFFICE · STAY · F&amp;B</span></li>
+              </ol>
+              <p class="ab-chain-goal" style="--i:7"><span class="ab-chain-3d" aria-hidden="true"><i class="ab-cf ab-cf-fill"></i><i class="ab-cf ab-cf-top"></i><i class="ab-cf ab-cf-side"></i><i class="ab-cf ab-cf-pool"></i><i class="ab-cf ab-cf-flash"></i><i class="ab-cf ab-cf-shaft"></i><i class="ab-cf ab-cf-ring"></i><i class="ab-cf ab-cf-ring ab-cf-ring--2"></i></span><span class="ab-chain-goal-ico"><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span><strong>브랜드 성장 &amp; EXIT</strong><span class="en">BRAND GROWTH &amp; EXIT</span></p>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>
