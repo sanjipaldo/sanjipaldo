@@ -255,6 +255,20 @@ function logicToBualnam(get) {
   return { writes, result: Object.keys(result).length ? result : { skipped: "이미 바뀜" } };
 }
 
+/* ---------- 빠른 이동 ‘두고푸드’ 설명 (대표님 요청) ----------
+ * 예전 기본 문구 그대로인 칸만 ‘전문 식품 도매몰 · 사업자 전용가’로 (강사가 고친 설명은 그대로) */
+function foodQuickLinkDesc(get, keys) {
+  const writes = {}, changed = [];
+  keys("content:").forEach((k) => {
+    const c = get(k);
+    if (!isObj(c) || !Array.isArray(c.quickLinks)) return;
+    let n = 0;
+    c.quickLinks.forEach((l) => { if (isObj(l) && l.id === "ql10" && l.desc === "식품 도매몰 · 사업자 전용가") { l.desc = "전문 식품 도매몰 · 사업자 전용가"; n++; } });
+    if (n) { writes[k] = c; changed.push(k); }
+  });
+  return { writes, result: changed.length ? { changed } : { skipped: "바꿀 칸 없음" } };
+}
+
 /* 위에서부터 차례로 (앞 작업 결과를 뒤 작업이 본다) */
 const OPS = [
   { id: "2026-10-08-docs-guide-6", note: "문대표 서류 준비 가이드를 6단계로", run: docsGuideSix },
@@ -264,7 +278,8 @@ const OPS = [
   { id: "2026-10-09-billing-vat-included", note: "기수 이용료 부가세 방식을 '부가세 포함'으로", run: billingVatIncluded },
   { id: "2026-10-12-logic-farmer-photos", note: "로직메이커 · 황금농부 강사 프로필 사진 (사진이 비어 있을 때만)", run: logicFarmerPhotos },
   { id: "2026-10-13-menu-names-v15", note: "수강생 메뉴 이름 · AI 조교 이름 · 예전 메뉴 이름이 들어간 기본 문구를 새 이름으로 (기본값 그대로일 때만)", run: menuNamesV15 },
-  { id: "2026-10-15-logic-to-bualnam", note: "강사 표시 이름 로직메이커 → 부알남 (로그인 이름은 그대로)", run: logicToBualnam }
+  { id: "2026-10-15-logic-to-bualnam", note: "강사 표시 이름 로직메이커 → 부알남 (로그인 이름은 그대로)", run: logicToBualnam },
+  { id: "2026-10-16-food-quicklink-desc", note: "빠른 이동 두고푸드 설명 → 전문 식품 도매몰 · 사업자 전용가 (기본 문구일 때만)", run: foodQuickLinkDesc }
 ];
 
-module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam };
+module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc };

@@ -188,6 +188,11 @@
   const pctText = (pct) => '<span class="big-pct">' + pct + "<small>%</small></span>";
   const pageHead = (title, sub, crumbs) =>
     '<header class="page-head">' + (crumbs ? '<nav class="crumbs">' + crumbs + "</nav>" : "") + "<h1>" + esc(title) + "</h1>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + "</header>";
+  // 상세 화면 아래 이전 · 다음 카드 (+ 목록으로). 한쪽이 없으면 빈 칸으로 자리를 맞춘다 — p · n: { href, label, title } | null
+  const pager = (p, n, back) => '<nav class="pager" aria-label="이전 · 다음">' +
+      (p ? '<a class="pager-a prev" href="' + esc(p.href) + '"><span class="pager-ic">' + icon("chevLeft", "sm") + '</span><span class="pager-t"><small>' + esc(p.label) + "</small><b>" + esc(p.title) + "</b></span></a>" : '<span class="pager-empty"></span>') +
+      (n ? '<a class="pager-a next" href="' + esc(n.href) + '"><span class="pager-t"><small>' + esc(n.label) + "</small><b>" + esc(n.title) + '</b></span><span class="pager-ic">' + icon("chevRight", "sm") + "</span></a>" : '<span class="pager-empty"></span>') +
+    "</nav>" + (back ? '<div class="pager-back"><a class="btn btn-secondary" href="' + esc(back) + '">' + icon("menu", "sm") + "목록으로</a></div>" : "");
   const crumb = (items) => items.map((c, i) => (i < items.length - 1 ? '<a href="' + c[1] + '">' + esc(c[0]) + "</a>" + icon("chevRight", "xs") : "<span>" + esc(c[0]) + "</span>")).join("");
   function stateBadge(id) {
     const s = missionState(id);
@@ -695,10 +700,9 @@
         "</div></section>" +
       '<section class="card" style="margin-top:14px"><div class="home-video-head"><h2>' + icon("pen") + '내 메모</h2><span class="tiny" id="note-state">' + ((P.notes || {})[id] ? "저장됨" : "적으면 자동으로 저장돼요") + "</span></div>" +
         '<textarea class="textarea" id="lesson-note" data-id="' + esc(id) + '" rows="5" placeholder="강의를 보며 기억할 내용, 궁금한 점을 적어 두세요. 나만 볼 수 있어요.">' + esc((P.notes || {})[id] || "") + "</textarea></section>" +
-      '<div class="grid-2" style="margin-top:14px">' +
-        (prev && isOpen(prev.w) ? '<a class="card list-row" href="#/curriculum/' + prev.id + '">' + icon("chevLeft") + '<span class="lr-title"><span class="tiny">이전 강의</span><br>' + esc(prev.title) + "</span></a>" : "<div></div>") +
-        (next && isOpen(next.w) ? '<a class="card list-row" href="#/curriculum/' + next.id + '" style="text-align:right"><span class="lr-title"><span class="tiny">다음 강의</span><br>' + esc(next.title) + "</span>" + icon("chevRight") + "</a>" : "<div></div>") +
-      "</div></div>";
+      pager(prev && isOpen(prev.w) ? { href: "#/curriculum/" + prev.id, label: "이전 강의", title: prev.title } : null,
+        next && isOpen(next.w) ? { href: "#/curriculum/" + next.id, label: "다음 강의", title: next.title } : null) +
+      "</div>";
   }
 
   /* ---------------- 과제 ---------------- */
@@ -1313,15 +1317,14 @@
     const body = it.body ? DB.rich(it.body, { token: (n) => { const im = imgs[n - 1]; if (!im) return ""; used[n - 1] = true; return fig(im); } }) : "";
     const rest = imgs.filter((_, k) => !used[k]);
     const prev = list[i - 1], next = list[i + 1];
-    const nav = (x, dir) => x ? '<a class="card list-row res-nav ' + dir + '" href="#/library/' + c.id + "/" + x.id + '">' + (dir === "prev" ? icon("chevLeft") : "") + '<span class="lr-title"><span class="tiny">' + (dir === "prev" ? "이전" : "다음") + "</span><br>" + esc(x.title) + "</span>" + (dir === "next" ? icon("chevRight") : "") + "</a>" : "<div></div>";
     return '<div class="page">' + pageHead(it.title, [it.meta, it.desc].filter(Boolean).join(" · "), crumb([[ML("library"), "#/library"], [c.label, "#/library/" + c.id], [it.title]])) +
       '<article class="card res-article">' + (DB.youtubeId(it.youtubeId) ? video(it) : "") +
         '<div class="body">' + body + (rest.length ? '<div class="n-imgs">' + rest.map(fig).join("") + "</div>" : "") + "</div>" +
         attachmentList(it.attachments) +
         (!body && !imgs.length && !DB.youtubeId(it.youtubeId) && !(it.attachments || []).length ? empty(c.icon, "내용을 준비하고 있어요.") : "") +
       "</article>" +
-      '<div class="grid-2" style="margin-top:14px">' + nav(prev, "prev") + nav(next, "next") + "</div>" +
-      '<div style="margin-top:14px"><a class="btn btn-secondary" href="#/library/' + c.id + '">' + icon("chevLeft", "sm") + "목록으로</a></div></div>";
+      pager(prev ? { href: "#/library/" + c.id + "/" + prev.id, label: "이전 자료", title: prev.title } : null, next ? { href: "#/library/" + c.id + "/" + next.id, label: "다음 자료", title: next.title } : null, "#/library/" + c.id) +
+      "</div>";
   }
   // 자료실 이용 안내 팝업 + 열람자 표시(워터마크)
   function libNoticeModal() {
@@ -1539,10 +1542,8 @@
         '<div class="guide-actions" style="margin-top:20px"><button class="btn ' + (seen ? "btn-secondary" : "btn-primary") + '" data-action="toggle-replay" data-id="' + esc(id) + '">' + icon("check", "sm") + (seen ? "다 봤어요 · 취소" : "다 봤어요") + "</button>" +
           (x.week && on("missions") && findWeek(x.week) && isOpen(findWeek(x.week)) ? '<a class="btn btn-tertiary" href="#/missions/' + Number(x.week) + '">' + Number(x.week) + "주차 과제 보기</a>" : "") +
           (on("notes") ? '<a class="btn btn-tertiary" href="#/notes">' + icon("notebookPen", "sm") + esc(ML("notes")) + "에 정리하기</a>" : "") + "</div></section>" +
-      '<div class="grid-2" style="margin-top:14px">' +
-        (older ? '<a class="card list-row" href="#/replays/' + esc(older.id) + '">' + icon("chevLeft") + '<span class="lr-title"><span class="tiny">이전 라이브</span><br>' + esc(older.title) + "</span></a>" : "<div></div>") +
-        (newer ? '<a class="card list-row" href="#/replays/' + esc(newer.id) + '" style="text-align:right"><span class="lr-title"><span class="tiny">다음 라이브</span><br>' + esc(newer.title) + "</span>" + icon("chevRight") + "</a>" : "<div></div>") +
-      "</div></div>";
+      pager(older ? { href: "#/replays/" + older.id, label: "이전 라이브", title: older.title } : null, newer ? { href: "#/replays/" + newer.id, label: "다음 라이브", title: newer.title } : null, "#/replays") +
+      "</div>";
   }
 
   /* ---------------- 모범 과제 ---------------- */

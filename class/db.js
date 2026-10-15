@@ -399,7 +399,7 @@
       { id: "ql6", title: (b.instructor || "강사") + " 유튜브", desc: "실전 노하우 영상 모음", url: b.youtubeChannel || "", icon: "play", color: "#ff0000" },
       { id: "ql8", title: "네이버 카페", desc: "두고마켓 회원 게시판 · 정보 나눔", url: "https://cafe.naver.com/doogomarket", icon: "users", color: "#03c75a" },
       { id: "ql9", title: "두고커넥트", desc: "건강식품 제조 · OEM 파트너", url: "https://www.doogoconnect.com/", icon: "layers", color: "#0a5de2" },
-      { id: "ql10", title: "두고푸드", desc: "식품 도매몰 · 사업자 전용가", url: "https://www.doogofood.com/", icon: "store", color: "#f97316" }
+      { id: "ql10", title: "두고푸드", desc: "전문 식품 도매몰 · 사업자 전용가", url: "https://www.doogofood.com/", icon: "store", color: "#f97316" }
     ];
   }
   const quickLinksOf = (c) => (Array.isArray(c.quickLinks) ? c.quickLinks : defaultQuickLinks(c));
@@ -806,6 +806,11 @@
       if (li && li.brand) renameWord(li.brand, /로직메이커/g, "부알남");
       if (lc) renameWord(lc, /로직메이커/g, "부알남");
       db.flags.bualnamV1 = true; save();
+    }
+    // 빠른 이동 ‘두고푸드’ 설명 (대표님 요청 · 이 브라우저 데이터 · 한 번만, 예전 기본 문구일 때만)
+    if (!R.on && typeof document !== "undefined" && !db.flags.foodDescV2) {
+      Object.keys(db.content).forEach((id) => (Array.isArray(db.content[id].quickLinks) ? db.content[id].quickLinks : []).forEach((l) => { if (l.id === "ql10" && l.desc === "식품 도매몰 · 사업자 전용가") l.desc = "전문 식품 도매몰 · 사업자 전용가"; }));
+      db.flags.foodDescV2 = true; save();
     }
     if (!R.on && !db.flags.profileSeeded2) {
       (window.CLASS_SEED.instructors || []).forEach((si) => {
