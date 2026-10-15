@@ -19,6 +19,8 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/pages/about.css">
+  <link rel="stylesheet" href="assets/css/pages/about-vision.css">
+  <link rel="stylesheet" href="assets/css/pages/about-loc.css">
   <!-- 탭(그룹 소개 · 비전과 철학 · 그룹 구조 · 주요 연혁 · 국내외 거점): 주소의 #앵커로 처음 보일 탭을 미리 정해,
        스크립트가 돌기 전에도 다른 탭이 잠깐 보였다 사라지지 않게 합니다 (이후는 about.js 가 이어받음) -->
   <script>(function (d) { var h = (location.hash || '').slice(1); d.setAttribute('data-ab-tab', /^(intro|vision|structure|history|locations)$/.test(h) ? h : 'intro'); })(document.documentElement);</script>
@@ -681,7 +683,7 @@
                 <span class="ab-oc-av" aria-hidden="true"><img src="assets/img/people/leader-baek-youngho-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span>
                 <div class="ab-oc-body">
                   <p class="ab-oc-who"><a class="ab-oc-person" href="leadership.html#leader-bio">백영호</a><span class="ab-oc-role">대표이사</span></p>
-                  <h3 class="ab-oc-name en" id="oc-bio">DOOGOBIO NZ</h3>
+                  <h3 class="ab-oc-name en" id="oc-bio"><span class="ab-oc-ico" aria-hidden="true"><svg><use href="#i-bio"/></svg></span>DOOGOBIO NZ</h3>
                   <p class="ab-oc-field">뉴질랜드 건강식품 제조</p>
                   <span class="ab-oc-flag"><svg aria-hidden="true"><use href="#i-globe"/></svg>해외법인</span>
                 </div>
@@ -697,7 +699,7 @@
                 <span class="ab-oc-av" aria-hidden="true"><img src="assets/img/people/leader-kim-sinyong-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span>
                 <div class="ab-oc-body">
                   <p class="ab-oc-who"><a class="ab-oc-person" href="leadership.html#leader-ad">김신용</a><span class="ab-oc-role">대표이사</span></p>
-                  <h3 class="ab-oc-name en" id="oc-ad">DOOGO AD</h3>
+                  <h3 class="ab-oc-name en" id="oc-ad"><span class="ab-oc-ico" aria-hidden="true"><svg><use href="#i-ad"/></svg></span>DOOGO AD</h3>
                   <p class="ab-oc-field">마케팅</p>
                 </div>
                 <div class="ab-oc-links">
@@ -712,7 +714,7 @@
                 <span class="ab-oc-av" aria-hidden="true"><img src="assets/img/people/leader-moon-sungoh-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span>
                 <div class="ab-oc-body">
                   <p class="ab-oc-who"><a class="ab-oc-person" href="leadership.html#leader-space">문성오</a><span class="ab-oc-role">대표이사</span></p>
-                  <h3 class="ab-oc-name en" id="oc-space">DOOGO SPACE</h3>
+                  <h3 class="ab-oc-name en" id="oc-space"><span class="ab-oc-ico" aria-hidden="true"><svg><use href="#i-space"/></svg></span>DOOGO SPACE</h3>
                   <p class="ab-oc-field">공간 &amp; 라이프스타일</p>
                 </div>
                 <div class="ab-oc-links">
@@ -727,7 +729,7 @@
                 <span class="ab-oc-av" aria-hidden="true"><img src="assets/img/people/leader-kim-yunjung-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span>
                 <div class="ab-oc-body">
                   <p class="ab-oc-who"><a class="ab-oc-person" href="leadership.html#leader-media">김윤정</a><span class="ab-oc-role">총괄이사</span></p>
-                  <h3 class="ab-oc-name en" id="oc-media">DOOGO MEDIA</h3>
+                  <h3 class="ab-oc-name en" id="oc-media"><span class="ab-oc-ico" aria-hidden="true"><svg><use href="#i-media"/></svg></span>DOOGO MEDIA</h3>
                   <p class="ab-oc-field">온드미디어 전문</p>
                   <p class="sr-only">브랜드가 직접 소유하는 채널, 온드미디어를 기획하고 촬영하고 운영합니다.</p>
                 </div>
@@ -743,7 +745,7 @@
                 <span class="ab-oc-av" aria-hidden="true"><img src="assets/img/people/leader-shin-donghoon-600.webp" width="600" height="800" alt="" loading="lazy" decoding="async"></span>
                 <div class="ab-oc-body">
                   <p class="ab-oc-who"><a class="ab-oc-person" href="leadership.html#leader-makers">신동훈</a><span class="ab-oc-role">총괄이사</span></p>
-                  <h3 class="ab-oc-name en" id="oc-makers">DOOGO MAKERS</h3>
+                  <h3 class="ab-oc-name en" id="oc-makers"><span class="ab-oc-ico" aria-hidden="true"><svg><use href="#i-commerce"/></svg></span>DOOGO MAKERS</h3>
                   <p class="ab-oc-field">브랜드 커머스</p>
                 </div>
                 <div class="ab-oc-links">
@@ -862,7 +864,10 @@
           <h3 class="ab-tl-y en"><span>2026</span></h3>
           <ol class="ab-tl-list">
             <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-10">10<span class="sr-only">월</span></time><p class="ab-tl-t">두고그룹 공식 홈페이지 오픈 · 지주회사 DOOGO HOLDINGS와 5개 그룹사 체제</p><span class="ab-tl-tag is-group">그룹</span></li>
-            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">NORA STAY 가로수길 1호점 오픈</p><span class="ab-tl-tag"><span class="en">DOOGO SPACE</span> · 공간 &amp; 라이프스타일</span></li>
+            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-09">09<span class="sr-only">월</span></time><p class="ab-tl-t">교육 플랫폼 <span class="nowrap">DOOGO CLASS</span> 런칭</p><span class="ab-tl-tag">교육업</span></li>
+            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-08">08<span class="sr-only">월</span></time><p class="ab-tl-t">‘리뷰허브’ &amp; ‘업라이트’ 플랫폼 런칭</p><span class="ab-tl-tag"><span class="en">DOOGO AD</span> · 마케팅</span></li>
+            <li class="ab-tl-item" style="--i:3"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">NORA STAY 가로수길 1호점 오픈</p><span class="ab-tl-tag"><span class="en">DOOGO SPACE</span> · 공간 &amp; 라이프스타일</span></li>
+            <li class="ab-tl-item" style="--i:4"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">(주)두고애드 설립</p><span class="ab-tl-tag"><span class="en">DOOGO AD</span> · 마케팅</span></li>
           </ol>
         </div>
 
@@ -871,8 +876,9 @@
           <ol class="ab-tl-list">
             <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-10">10<span class="sr-only">월</span></time><p class="ab-tl-t">식품 전문 도매몰 DOOGOFOOD 오픈</p><span class="ab-tl-tag">유통</span></li>
             <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-07">07<span class="sr-only">월</span></time><p class="ab-tl-t">농수산물 앱 ‘산지팔도’ 런칭</p><span class="ab-tl-tag">유통</span></li>
-            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-06">06<span class="sr-only">월</span></time><p class="ab-tl-t">마누카꿀 브랜드 ‘리얼엔젯’ 런칭</p><span class="ab-tl-tag"><span class="en">DOOGOBIO NZ</span> · 제조업</span></li>
+            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-06">06<span class="sr-only">월</span></time><p class="ab-tl-t">뉴질랜드 건강식품 브랜드 ‘리얼엔젯’ · ‘마우리엔젯’ 동시 런칭</p><span class="ab-tl-tag"><span class="en">DOOGOBIO NZ</span> · 제조업</span></li>
             <li class="ab-tl-item" style="--i:3"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-02">02<span class="sr-only">월</span></time><p class="ab-tl-t">건국대학교 이커머스 교육 프로그램 운영</p><span class="ab-tl-tag">교육업</span></li>
+            <li class="ab-tl-item" style="--i:4"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-01">01<span class="sr-only">월</span></time><p class="ab-tl-t"><span class="nowrap">DOOGOBIO LTD</span> 뉴질랜드 건강식품 공장 설립</p><span class="ab-tl-tag"><span class="en">DOOGOBIO NZ</span> · 제조업</span></li>
           </ol>
         </div>
 
@@ -890,7 +896,7 @@
           <ol class="ab-tl-list">
             <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2023-08">08<span class="sr-only">월</span></time><p class="ab-tl-t">라이브커머스 영상 콘텐츠 제작팀 구성</p><span class="ab-tl-tag">미디어 &amp; 콘텐츠</span></li>
             <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2023-05">05<span class="sr-only">월</span></time><p class="ab-tl-t">오세아니아 3PL 유통 법인 설립</p><span class="ab-tl-tag is-global">해외</span></li>
-            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2023-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">자사 건강식품 브랜드 ‘원데이코어’ 런칭</p><span class="ab-tl-tag">브랜드 커머스</span></li>
+            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2023-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">캐나다 청정 건강식품 브랜드 ‘원데이코어’ 런칭</p><span class="ab-tl-tag">브랜드 커머스</span></li>
           </ol>
         </div>
 
@@ -1095,5 +1101,7 @@
 <!-- @footer:end -->
 <script src="assets/js/site.js" defer></script>
 <script src="assets/js/pages/about.js" defer></script>
+<script src="assets/js/pages/about-vision.js" defer></script>
+<script src="assets/js/pages/about-loc.js" defer></script>
 </body>
 </html>

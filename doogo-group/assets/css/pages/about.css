@@ -1230,3 +1230,28 @@ html.motion-off .ab-oc-card, html.motion-off .ab-tl-head { transition: none; }
 html.motion-off .ab-tl-year .ab-tl-item, html.motion-off .ab-tl-year .ab-tl-y > span { opacity: 1 !important; transform: none !important; }
 /* OS '애니메이션 줄이기' 기기: 패럴랙스 같은 큰 움직임만 줄임 (등장 · 숫자 · 선 그리기는 그대로) */
 html.soft-motion .ab-stage-bg, html.soft-motion .ab-stage-fg { transform: none !important; }
+
+/* ---------- 그룹 조직도: 회사를 상징하는 둥근 아이콘 (16차) ----------
+   회사 이름 앞 작은 원 — 블루 그라데이션 구슬(위쪽 하이라이트 · 바깥 링)로 입체감, 카드에 올리면 살짝 떠오르며 링이 퍼짐 */
+.ab-oc-name { display: inline-flex; align-items: center; justify-content: center; gap: 9px; }
+.ab-oc-ico {
+  position: relative; flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  background: radial-gradient(120% 120% at 30% 22%, #6FA8FF 0%, #2A78F5 38%, #0A4FC4 78%, #083A94 100%);
+  box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, .55), inset 0 -3px 6px rgba(4, 22, 64, .45), 0 6px 14px -4px rgba(10, 93, 226, .75), 0 0 0 1px rgba(150, 190, 255, .28);
+  color: #fff; transition: transform .5s cubic-bezier(.2, .8, .2, 1), box-shadow .5s var(--ease);
+}
+.ab-oc-ico::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 1px solid rgba(111, 162, 242, .35); opacity: .7; transition: inset .5s var(--ease), opacity .5s var(--ease); }
+.ab-oc-ico svg { width: 15px; height: 15px; filter: drop-shadow(0 1px 1px rgba(4, 22, 64, .35)); }
+.ab-oc-card:hover .ab-oc-ico, .ab-oc-card:focus-within .ab-oc-ico { transform: translateY(-2px) rotate(-8deg) scale(1.06); box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, .6), inset 0 -3px 6px rgba(4, 22, 64, .45), 0 10px 20px -4px rgba(59, 139, 255, .85), 0 0 0 1px rgba(150, 190, 255, .4); }
+.ab-oc-card:hover .ab-oc-ico::after, .ab-oc-card:focus-within .ab-oc-ico::after { inset: -9px; opacity: 0; }
+@media (min-width: 700px) and (max-width: 1280px) {
+  .ab-oc-name { gap: 7px; }
+  .ab-oc-ico { width: 26px; height: 26px; }
+  .ab-oc-ico svg { width: 13px; height: 13px; }
+}
+@media (max-width: 699.98px) {
+  .ab-oc-name { justify-content: flex-start; }
+  .ab-oc-ico { width: 26px; height: 26px; }
+  .ab-oc-ico svg { width: 13px; height: 13px; }
+}
+html.motion-off .ab-oc-ico, html.motion-off .ab-oc-ico::after { transition: none; }
