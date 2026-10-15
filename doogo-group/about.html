@@ -1078,21 +1078,224 @@
 
   </div><!-- /.ab-panels -->
 
-  <!-- 공통 CTA 띠 -->
-  <section class="cta-band" aria-labelledby="cta-title">
-    <div class="container">
-      <span class="eyebrow">Contact</span>
-      <h2 class="h2" id="cta-title" data-reveal style="margin-top:20px">다음 사업, 두고그룹과 함께 이야기해 보세요.</h2>
-      <p class="lead" data-reveal style="--d:.1s">교육업 · 제조업 · 브랜드 커머스 · 미디어&nbsp;&amp;&nbsp;콘텐츠 · 마케팅 · 유통 · 공간&nbsp;&amp;&nbsp;라이프스타일, 그리고 그룹 제휴까지 하나의 창구로 접수합니다.</p>
-      <div class="cta-chips" data-reveal style="--d:.15s">
-        <a href="contact.html?type=campus">교육업</a><a href="contact.html?type=bio">제조업</a><a href="contact.html?type=commerce">브랜드 커머스</a><a href="contact.html?type=media">미디어 &amp; 콘텐츠</a><a href="contact.html?type=ad">마케팅</a><a href="contact.html?type=food">유통</a><a href="contact.html?type=space">공간 &amp; 라이프스타일</a><a href="contact.html?type=partner">그룹 제휴</a>
+  <!-- 탭별 마무리 배너 — 지금 열린 탭에 맞는 배너 하나만 보입니다 (about-cta.css · about-cta.js)
+       · 스크립트 전: <head> 스크립트가 정한 html[data-ab-tab] 으로 그 탭의 배너만 보여 줌 (스크립트가 전혀 없으면 '그룹 소개' 배너)
+       · about-cta.js 가 준비되면(html.acx-on) hidden 속성으로 이어받아, 탭이 바뀔 때마다 배너를 바꾸고 등장 모션을 다시 재생
+       · 등장 묶음 [data-acx-g] → 그 안의 [data-acx-in] 이 차례로. html.motion-off 면 처음부터 정지된 최종 상태 -->
+  <div class="acx" data-acx>
+
+  <!-- 01 그룹 소개 — 종합 상담 창구 (네이비 · 사진 · 8개 분야 바로 접수) -->
+  <section class="cta-band acx-band acx--intro" data-acx-tab="intro" aria-labelledby="acx-intro-t">
+    <div class="container acx-intro-grid">
+      <div class="acx-intro-copy" data-acx-g>
+        <span class="eyebrow" data-acx-in>Contact</span>
+        <h2 class="h2 acx-intro-title" id="acx-intro-t" data-acx-in style="--d:.06s">다음 사업, 두고그룹과 함께 이야기해 보세요.</h2>
+        <p class="lead" data-acx-in style="--d:.12s">교육부터 제조 · 브랜드 · 콘텐츠 · 마케팅 · 유통 · 공간까지, 그리고 그룹 제휴까지 하나의 창구로 접수합니다.</p>
+        <div class="acx-actions" data-acx-in style="--d:.18s">
+          <a class="btn btn--primary btn--lg" href="contact.html">사업 상담하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn--ghost btn--lg" href="contact.html?type=partner#inquiry">제휴 제안하기</a>
+        </div>
       </div>
-      <div class="cta-band-actions" data-reveal style="--d:.2s">
-        <a class="btn btn--primary btn--lg" href="contact.html">사업 상담하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        <a class="btn btn--ghost btn--lg" href="contact.html?type=partner">제휴 제안하기</a>
+      <div class="acx-desk" data-acx-g>
+        <p class="acx-desk-t" id="acx-desk-t" data-acx-in><span class="en">8 Desks</span>분야를 고르면 문의 양식에 바로 선택됩니다</p>
+        <ul class="acx-desk-list" aria-labelledby="acx-desk-t">
+          <li data-acx-in style="--i:1"><a href="contact.html?type=campus#inquiry"><span class="acx-desk-ico" aria-hidden="true"><svg><use href="#i-campus"/></svg></span><span class="acx-desk-l">교육업</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg></a></li>
+          <li data-acx-in style="--i:2"><a href="contact.html?type=bio#inquiry"><span class="acx-desk-ico" aria-hidden="true"><svg><use href="#i-bio"/></svg></span><span class="acx-desk-l">제조업</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg></a></li>
+          <li data-acx-in style="--i:3"><a href="contact.html?type=commerce#inquiry"><span class="acx-desk-ico" aria-hidden="true"><svg><use href="#i-commerce"/></svg></span><span class="acx-desk-l">브랜드 커머스</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg></a></li>
+          <li data-acx-in style="--i:4"><a href="contact.html?type=media#inquiry"><span class="acx-desk-ico" aria-hidden="true"><svg><use href="#i-media"/></svg></span><span class="acx-desk-l">미디어 &amp; 콘텐츠</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg></a></li>
+          <li data-acx-in style="--i:5"><a href="contact.html?type=ad#inquiry"><span class="acx-desk-ico" aria-hidden="true"><svg><use href="#i-ad"/></svg></span><span class="acx-desk-l">마케팅</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg></a></li>
+          <li data-acx-in style="--i:6"><a href="contact.html?type=food#inquiry"><span class="acx-desk-ico" aria-hidden="true"><svg><use href="#i-food"/></svg></span><span class="acx-desk-l">유통</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg></a></li>
+          <li data-acx-in style="--i:7"><a href="contact.html?type=space#inquiry"><span class="acx-desk-ico" aria-hidden="true"><svg><use href="#i-space"/></svg></span><span class="acx-desk-l">공간 &amp; 라이프스타일</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg></a></li>
+          <li data-acx-in style="--i:8"><a class="is-partner" href="contact.html?type=partner#inquiry"><span class="acx-desk-ico" aria-hidden="true"><svg><use href="#i-partner"/></svg></span><span class="acx-desk-l">그룹 제휴</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg></a></li>
+        </ul>
       </div>
     </div>
   </section>
+
+  <!-- 02 비전과 철학 — 배우고 · 만들고 · 키우고 세 계단 (아이보리) -->
+  <section class="acx-band acx--vision" data-acx-tab="vision" aria-labelledby="acx-vision-t" hidden>
+    <div class="container acx-vis-grid">
+      <div class="acx-vis-copy" data-acx-g>
+        <span class="eyebrow" data-acx-in>Learn · Make · Grow</span>
+        <h2 class="h2 acx-vis-title" id="acx-vision-t" data-acx-in style="--d:.06s">배우고, 만들고, <span class="accent">키우는 길</span>에 함께하세요.</h2>
+        <p class="acx-vis-lead" data-acx-in style="--d:.12s">현장에서 배우고, 좋은 제품과 브랜드를 만들고, 사업을 키우기까지. 두고그룹의 7개 사업은 한 방향으로 이어져 있어, 어느 단계에서 만나든 다음 단계까지 함께 갑니다.</p>
+        <div class="acx-actions" data-acx-in style="--d:.18s">
+          <a class="btn btn--primary btn--lg" href="business.html">사업영역 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn--line btn--lg" href="leadership.html">두고 사람들 보기</a>
+        </div>
+      </div>
+      <ol class="acx-steps" data-acx-g aria-label="두고그룹 성장의 세 단계">
+        <li class="acx-step" style="--i:0">
+          <span class="acx-step-n en" aria-hidden="true">01</span>
+          <p class="acx-step-w"><span class="en">Learn</span><strong>배우고</strong></p>
+          <ul class="acx-step-tags"><li>교육업</li></ul>
+        </li>
+        <li class="acx-step" style="--i:1">
+          <span class="acx-step-n en" aria-hidden="true">02</span>
+          <p class="acx-step-w"><span class="en">Make</span><strong>만들고</strong></p>
+          <ul class="acx-step-tags"><li>제조업</li><li>브랜드 커머스</li><li>미디어 &amp; 콘텐츠</li></ul>
+        </li>
+        <li class="acx-step" style="--i:2">
+          <span class="acx-step-n en" aria-hidden="true">03</span>
+          <svg class="acx-step-up" aria-hidden="true" focusable="false"><use href="#i-arrow-ur"/></svg>
+          <p class="acx-step-w"><span class="en">Grow</span><strong>키우고</strong></p>
+          <ul class="acx-step-tags"><li>마케팅</li><li>유통</li><li>공간 &amp; 라이프스타일</li></ul>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 03 그룹 구조 — 1+5 바로 연결 (블루 · 지주회사 → 다섯 그룹사, 카드마다 분야가 골라진 문의 양식으로) -->
+  <section class="acx-band acx--structure" data-acx-tab="structure" aria-labelledby="acx-structure-t" hidden>
+    <div class="container">
+      <div class="acx-st-head" data-acx-g>
+        <div>
+          <span class="eyebrow" data-acx-in>Direct Line</span>
+          <h2 class="h2 acx-st-title" id="acx-structure-t" data-acx-in style="--d:.06s">필요한 회사와 바로 연결됩니다.</h2>
+        </div>
+        <div class="acx-st-side" data-acx-in style="--d:.12s">
+          <p>지주회사와 다섯 그룹사 가운데 이야기할 회사를 고르세요. 그 회사의 분야가 선택된 문의 양식으로 바로 이동합니다.</p>
+          <a class="link-arrow" href="business.html">7개 사업영역 한눈에 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+      </div>
+
+      <div class="acx-org" data-acx-g>
+        <div class="acx-org-hold" data-acx-in>
+          <div class="acx-org-id">
+            <span class="acx-org-mark" aria-hidden="true"><i></i></span>
+            <div>
+              <p class="acx-org-tag">지주회사 · 그룹 경영</p>
+              <h3 class="acx-org-hold-name en">DOOGO HOLDINGS</h3>
+            </div>
+          </div>
+          <ul class="acx-org-direct" aria-label="DOOGO HOLDINGS가 직접 운영하는 사업 상담">
+            <li><a href="contact.html?type=campus#inquiry"><svg aria-hidden="true"><use href="#i-campus"/></svg><span>교육업</span><span class="en">DOOGO CLASS</span><span class="sr-only"> 상담</span></a></li>
+            <li><a href="contact.html?type=food#inquiry"><svg aria-hidden="true"><use href="#i-food"/></svg><span>유통</span><span class="en">DOOGOFOOD</span><span class="sr-only"> 상담</span></a></li>
+          </ul>
+          <a class="btn btn--white acx-org-go-hold" href="contact.html?type=partner#inquiry">그룹 제휴 상담 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+
+        <ol class="acx-org-subs" aria-label="그룹사 5곳 바로 상담">
+          <li data-acx-in style="--i:0"><a class="acx-org-card" href="contact.html?type=bio#inquiry">
+            <span class="acx-org-ico" aria-hidden="true"><svg><use href="#i-bio"/></svg></span>
+            <span class="acx-org-idx en" aria-hidden="true">01</span>
+            <span class="acx-org-txt"><span class="acx-org-name en">DOOGOBIO NZ</span><span class="acx-org-field">제조업 · 뉴질랜드</span></span>
+            <span class="acx-org-go"><span class="acx-org-go-t">상담하기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+          </a></li>
+          <li data-acx-in style="--i:1"><a class="acx-org-card" href="contact.html?type=ad#inquiry">
+            <span class="acx-org-ico" aria-hidden="true"><svg><use href="#i-ad"/></svg></span>
+            <span class="acx-org-idx en" aria-hidden="true">02</span>
+            <span class="acx-org-txt"><span class="acx-org-name en">DOOGO AD</span><span class="acx-org-field">마케팅</span></span>
+            <span class="acx-org-go"><span class="acx-org-go-t">상담하기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+          </a></li>
+          <li data-acx-in style="--i:2"><a class="acx-org-card" href="contact.html?type=space#inquiry">
+            <span class="acx-org-ico" aria-hidden="true"><svg><use href="#i-space"/></svg></span>
+            <span class="acx-org-idx en" aria-hidden="true">03</span>
+            <span class="acx-org-txt"><span class="acx-org-name en">DOOGO SPACE</span><span class="acx-org-field">공간 &amp; 라이프스타일</span></span>
+            <span class="acx-org-go"><span class="acx-org-go-t">상담하기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+          </a></li>
+          <li data-acx-in style="--i:3"><a class="acx-org-card" href="contact.html?type=media#inquiry">
+            <span class="acx-org-ico" aria-hidden="true"><svg><use href="#i-media"/></svg></span>
+            <span class="acx-org-idx en" aria-hidden="true">04</span>
+            <span class="acx-org-txt"><span class="acx-org-name en">DOOGO MEDIA</span><span class="acx-org-field">미디어 &amp; 콘텐츠</span></span>
+            <span class="acx-org-go"><span class="acx-org-go-t">상담하기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+          </a></li>
+          <li data-acx-in style="--i:4"><a class="acx-org-card" href="contact.html?type=commerce#inquiry">
+            <span class="acx-org-ico" aria-hidden="true"><svg><use href="#i-commerce"/></svg></span>
+            <span class="acx-org-idx en" aria-hidden="true">05</span>
+            <span class="acx-org-txt"><span class="acx-org-name en">DOOGO MAKERS</span><span class="acx-org-field">브랜드 커머스</span></span>
+            <span class="acx-org-go"><span class="acx-org-go-t">상담하기</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+          </a></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 주요 연혁 — 아직 쓰지 않은 다음 해 (잉크 · 큰 윤곽 숫자 + 연혁 끝의 NEXT) -->
+  <section class="acx-band acx--history" data-acx-tab="history" aria-labelledby="acx-history-t" hidden>
+    <div class="container">
+      <div class="acx-hi-grid">
+        <div class="acx-hi-copy" data-acx-g>
+          <span class="eyebrow" data-acx-in>Next Chapter</span>
+          <h2 class="h2 acx-hi-title" id="acx-history-t" data-acx-in style="--d:.06s">다음 연혁을 함께 쓸 파트너를 찾습니다.</h2>
+          <p class="acx-hi-lead" data-acx-in style="--d:.12s">2020년 온라인 쇼핑몰 하나로 시작한 이야기가 지주회사와 다섯 그룹사, 7개 사업으로 이어졌습니다. 다음 장에 함께 이름을 올릴 제휴와 공동 프로젝트를 기다립니다.</p>
+          <div class="acx-actions" data-acx-in style="--d:.18s">
+            <a class="btn btn--primary btn--lg" href="contact.html?type=partner#inquiry">제휴 제안하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <a class="btn btn--ghost btn--lg" href="news.html">그룹소식 보기</a>
+          </div>
+        </div>
+        <div class="acx-hi-year en" data-acx-g aria-hidden="true">
+          <span class="acx-hi-k">Unwritten</span>
+          <span class="acx-hi-num"><span class="acx-hi-n" data-acx-next>2027</span><span class="acx-hi-dash"></span><i class="acx-hi-caret"></i></span>
+        </div>
+      </div>
+      <ol class="acx-tl en" data-acx-g aria-hidden="true">
+        <li style="--i:0"><span class="acx-tl-y">2020</span></li>
+        <li style="--i:1"><span class="acx-tl-y">2023</span></li>
+        <li style="--i:2"><span class="acx-tl-y">2024</span></li>
+        <li style="--i:3"><span class="acx-tl-y">2025</span></li>
+        <li style="--i:4" class="is-now"><span class="acx-tl-y">2026</span></li>
+        <li style="--i:5" class="is-next"><span class="acx-tl-y">NEXT</span><span class="acx-tl-s">함께 쓸 다음&nbsp;장</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 05 국내외 거점 — 가까운 거점으로 (하늘빛 · 세종 / 오클랜드 연락 카드 · 현지 시각 · 가운데 지구 고리에서 퍼지는 동심원) -->
+  <section class="acx-band acx--locations" data-acx-tab="locations" aria-labelledby="acx-locations-t" hidden>
+    <div class="container">
+      <div class="acx-lc-head" data-acx-g>
+        <span class="eyebrow" data-acx-in>Contact Points</span>
+        <h2 class="h2 acx-lc-title" id="acx-locations-t" data-acx-in style="--d:.06s">한국과 뉴질랜드, 가까운 거점으로 문의하세요.</h2>
+        <p class="acx-lc-lead" data-acx-in style="--d:.12s">사업 상담과 그룹 제휴는 세종의 지주회사 DOOGO HOLDINGS가, 뉴질랜드 건강식품 제조 상담은 오클랜드의 DOOGOBIO&nbsp;NZ 창구가 받습니다.</p>
+      </div>
+
+      <div class="acx-lc-cards" data-acx-g>
+        <article class="acx-lc-card acx-lc-card--kr" data-acx-in aria-labelledby="acx-lc-kr">
+          <div class="acx-lc-top">
+            <span class="acx-lc-code en" aria-hidden="true">KR</span>
+            <div class="acx-lc-id">
+              <p class="acx-lc-country">대한민국 <span class="en">KOREA</span></p>
+              <h3 class="acx-lc-name en" id="acx-lc-kr">DOOGO HOLDINGS</h3>
+              <p class="acx-lc-role">지주회사 · 그룹사 4곳</p>
+            </div>
+          </div>
+          <dl class="acx-lc-dl">
+            <div><dt><svg aria-hidden="true"><use href="#i-pin"/></svg>주소</dt><dd>세종특별자치시 갈매로 353 5층&nbsp;5023호</dd></div>
+            <div><dt><svg aria-hidden="true"><use href="#i-phone"/></svg>대표전화</dt><dd><a class="en" href="tel:+827080274213">070-8027-4213</a></dd></div>
+            <div><dt><svg aria-hidden="true"><use href="#i-mail"/></svg>이메일</dt><dd><a class="en" href="mailto:doogobiz@gmail.com">doogobiz@gmail.com</a></dd></div>
+          </dl>
+          <div class="acx-lc-foot">
+            <a class="btn btn--primary" href="contact.html">사업 상담하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <p class="acx-lc-meta"><span class="acx-lc-time" data-acx-clock="Asia/Seoul" hidden>세종 현지 <span class="en" data-acx-time>--:--</span></span><span class="en" aria-hidden="true">36.5°N · 127.3°E</span></p>
+          </div>
+        </article>
+
+        <span class="acx-lc-link" aria-hidden="true"><svg><use href="#i-globe"/></svg></span>
+
+        <article class="acx-lc-card acx-lc-card--nz" data-acx-in style="--d:.12s" aria-labelledby="acx-lc-nz">
+          <div class="acx-lc-top">
+            <span class="acx-lc-code en" aria-hidden="true">NZ</span>
+            <div class="acx-lc-id">
+              <p class="acx-lc-country">뉴질랜드 <span class="en">NEW ZEALAND</span></p>
+              <h3 class="acx-lc-name en" id="acx-lc-nz">DOOGOBIO NZ</h3>
+              <p class="acx-lc-role">건강식품 제조 · 해외법인</p>
+            </div>
+          </div>
+          <dl class="acx-lc-dl">
+            <div><dt><svg aria-hidden="true"><use href="#i-pin"/></svg>주소</dt><dd class="en">3F, 10 Piermark Drive, <span class="nowrap">Auckland, New Zealand</span></dd></div>
+            <div><dt><svg aria-hidden="true"><use href="#i-bio"/></svg>분야</dt><dd>건강기능식품 개발 · 소량 제조</dd></div>
+            <div><dt><svg aria-hidden="true"><use href="#i-mail"/></svg>접수</dt><dd>문의 양식의 ‘제조업’ 분야</dd></div>
+          </dl>
+          <div class="acx-lc-foot">
+            <a class="btn btn--dark" href="contact.html?type=bio#inquiry">제조 상담하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <p class="acx-lc-meta"><span class="acx-lc-time" data-acx-clock="Pacific/Auckland" hidden>오클랜드 현지 <span class="en" data-acx-time>--:--</span></span><span class="en" aria-hidden="true">36.8°S · 174.7°E</span></p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  </div><!-- /.acx -->
 
 </main>
 
