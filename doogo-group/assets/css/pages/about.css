@@ -98,106 +98,171 @@ main .note { color: var(--muted); }
 /* 1500px 이하에서는 위 글줄(.container)과 같은 폭으로 정렬, 그 이상에서만 넓게 펼침 */
 @media (max-width: 1500px) { .ab-hero-visual { max-width: calc(var(--container) + var(--gutter) * 2); } }
 
-/* 첫 화면 비주얼: 지주회사(가운데 3D) 쪽으로 다섯 그룹사가 모여듭니다.
-   위치는 무대 너비·높이에 대한 % (--x/--y), 크기는 무대 너비 기준(cqw). 선(.ab-ray)은 about.js 가 실제 위치로 계산합니다. */
+/* 첫 화면 비주얼: 두고그룹 빌딩 — 지주회사 DOOGO HOLDINGS 로비 위로 일곱 개 층에 사업이 하나씩 들어서 있습니다.
+   빌딩은 about.html 안의 아이소메트릭 SVG(이미지 파일 없음). 층 안내판(.ab-plate)은 SVG 좌표의 %(--y · --e)로 층에 맞추고,
+   그룹사 카드(.ab-sat)까지의 연결선(.ab-links)은 about.js 가 실제 위치로 그립니다.
+   무대 크기: --bh(빌딩 높이) · --bx(빌딩 가운데)는 무대 너비 기준(cqw · %). */
 .ab-stage-fig { position: relative; margin: 0; }
 .ab-stage {
-  --core-x: 29%; --core-y: 49%; --core-h: 104%; --tile: 9.4cqw;
+  --bx: 38.5%; --bh: 40cqw; --core-x: var(--bx); --core-y: 50%;
   position: relative; overflow: hidden; isolation: isolate; container-type: inline-size;
   aspect-ratio: 21 / 9; border-radius: clamp(18px, 2.4vw, 32px);
-  /* 3D 렌더의 배경과 같은 하늘색 스튜디오 */
   background: linear-gradient(180deg, #A9C5E8 0%, #BFD5EE 42%, #D2E1F2 78%, #DAE5F3 100%);
   box-shadow: 0 50px 100px -40px rgba(5, 12, 26, .55);
 }
+.ab-stage :focus-visible { outline-color: var(--blue); }
 .ab-stage-bg { position: absolute; inset: -12% 0; z-index: -1; pointer-events: none; transform: translate3d(0, calc(var(--py, 0px) * -.3), 0); }
-.ab-stage-bg::before { /* 지주회사 뒤 은은한 빛 */
+.ab-stage-bg::before { /* 빌딩 뒤 은은한 빛 */
   content: ""; position: absolute; inset: 0;
-  background: radial-gradient(38% 62% at var(--core-x) var(--core-y), rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 70%), radial-gradient(60% 90% at 100% 0%, rgba(10, 93, 226, .16), transparent 70%);
+  background: radial-gradient(30% 62% at var(--core-x) var(--core-y), rgba(255, 255, 255, .62), rgba(255, 255, 255, 0) 70%), radial-gradient(60% 90% at 100% 0%, rgba(10, 93, 226, .16), transparent 70%);
 }
 .ab-orbit { position: absolute; left: var(--core-x); top: var(--core-y); width: var(--o, 40cqw); aspect-ratio: 1; margin-left: calc(var(--o, 40cqw) / -2); border-radius: 50%; border: 1px solid rgba(255, 255, 255, .5); transform: translateY(-50%); }
 .ab-orbit:nth-child(2) { --o: 66cqw; border-color: rgba(255, 255, 255, .36); }
 .ab-orbit:nth-child(3) { --o: 96cqw; border-color: rgba(255, 255, 255, .24); border-style: dashed; }
 
 .ab-stage-fg { position: absolute; inset: 0; transform: translate3d(0, calc(var(--py, 0px) * .22), 0); }
-.ab-core { position: absolute; top: -2%; height: var(--core-h); aspect-ratio: 671 / 755; left: var(--core-x); translate: -50% 0; }
-.ab-core-img {
-  width: 100%; height: 100%; object-fit: cover;
-  /* 네 가장자리를 흐려 무대 배경에 녹임 (가로 · 세로 두 그라데이션의 겹친 부분만 보임) */
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16%, #000 84%, transparent 100%), linear-gradient(180deg, transparent 0, #000 13%, #000 87%, transparent 100%);
-  -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(90deg, transparent 0, #000 16%, #000 84%, transparent 100%), linear-gradient(180deg, transparent 0, #000 13%, #000 87%, transparent 100%);
-  mask-composite: intersect;
-}
-.ab-core-pulse { /* 빛이 모이면 가운데에서 퍼지는 고리 (위치·크기는 about.js) */
-  position: absolute; left: var(--ax, 29%); top: var(--ay, 47%); width: var(--pr, 30cqw); aspect-ratio: 1; margin-left: calc(var(--pr, 30cqw) / -2); margin-top: calc(var(--pr, 30cqw) / -2);
-  border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .95); opacity: 0; pointer-events: none;
-}
 .ab-core-label {
-  position: absolute; left: clamp(14px, 2.4cqw, 36px); top: clamp(14px, 2.4cqw, 34px);
-  display: grid; gap: 1px; color: var(--ink); line-height: 1.3;
+  position: absolute; z-index: 1; left: clamp(14px, 2.4cqw, 36px); top: clamp(14px, 2.4cqw, 34px);
+  display: grid; gap: 1px; margin: 0; color: var(--ink); line-height: 1.3;
 }
 .ab-core-label b { margin-top: 6px; font-size: clamp(.98rem, 1.5cqw, 1.3rem); font-weight: 600; letter-spacing: .02em; line-height: 1.2; }
 .ab-core-label small { justify-self: start; display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--navy); color: #fff; font-size: .7rem; font-weight: 700; }
 .ab-core-direct { margin-top: 2px; font-size: .72rem; font-weight: 600; color: var(--ink-2); }
 .ab-core-direct .en { font-size: .68rem; letter-spacing: .06em; color: var(--blue-700); }
 
-/* 연결선: 그룹사 → 지주회사. 선이 그려진 뒤 빛 점이 가운데로 흘러 들어갑니다 */
-.ab-rays { position: absolute; inset: 0; pointer-events: none; }
-.ab-ray { position: absolute; height: 2px; margin-top: -1px; transform-origin: 0 50%; transform: rotate(var(--a, 0rad)); }
-.ab-ray::before { content: ""; position: absolute; inset: 0; border-radius: 2px; background: linear-gradient(90deg, rgba(255, 255, 255, .6), #fff); box-shadow: 0 1px 3px rgba(10, 60, 160, .14); transform-origin: 0 50%; }
-.ab-ray::after { /* 지주회사 쪽 끝점 */
-  content: ""; position: absolute; left: 100%; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%;
-  background: #fff; box-shadow: 0 0 0 3px rgba(10, 93, 226, .28);
+/* ----- 빌딩 (SVG viewBox 360 × 516) ----- */
+.ab-bld {
+  position: absolute; top: calc(50% - var(--bh) / 2); left: calc(var(--bx) - var(--bh) * .3488);
+  width: calc(var(--bh) * .6977); height: var(--bh); container-type: inline-size;
 }
-.ab-ray i { position: absolute; left: 0; top: 50%; width: 34px; height: 4px; margin-top: -2px; border-radius: 4px; background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff 70%, var(--blue-300)); opacity: 0; transform: translate3d(var(--from, 0px), 0, 0); }
+.ab-bld-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.ab-bld-svg polygon, .ab-bld-svg path { stroke-linejoin: round; }
+.ab-bld-shadow { opacity: .9; }
+.ab-pz-t { fill: #EEF4FC; } .ab-pz-l { fill: #D3E1F4; } .ab-pz-r { fill: #AFC6E8; }
+.ab-pz-grid { fill: none; stroke: rgba(10, 93, 226, .13); stroke-width: .8; }
+.ab-pz-sh { fill: rgba(11, 42, 102, .1); }
+.ab-sp-l { fill: #FBFDFF; } .ab-sp-r { fill: #C6D8F2; }
+.ab-gl-l { fill: #1C3A6E; } .ab-gl-r { fill: #102A58; }
+.ab-lit-l { fill: url(#abg-litL); } .ab-lit-r { fill: url(#abg-litR); }
+.ab-mul { fill: none; stroke: rgba(11, 27, 51, .17); stroke-width: .9; }
+.ab-glow { fill: #fff; opacity: 0; pointer-events: none; }
+.ab-glow-r { fill: #D6E7FF; }
+.ab-hl { fill: #fff; stroke: #fff; stroke-width: 1.4; opacity: 0; pointer-events: none; transition: opacity .3s var(--ease); }
+.ab-hl-r { fill: #A9CCFF; }
+.ab-fl-no { font-family: var(--font-en); font-size: 6.2px; font-weight: 600; letter-spacing: .1em; fill: #7487A6; }
+.ab-port { fill: #fff; stroke: var(--blue); stroke-width: 1.4; }
+.ab-door { fill: #0B1B33; } .ab-door-ln { stroke: rgba(255, 255, 255, .35); stroke-width: .8; }
+.ab-canopy-t { fill: #fff; } .ab-canopy-f { fill: var(--blue); }
+.ab-lobby-sign { font-family: var(--font-en); font-size: 8.8px; font-weight: 700; letter-spacing: .16em; fill: var(--ink); }
+.ab-lobby-d { fill: var(--blue); }
+.ab-pod-t { fill: #E1EBF9; }
+.ab-cap { fill: #E4EDFA; }
+.ab-roof-t { fill: #F4F8FE; } .ab-roof-in { fill: #D8E5F7; }
+.ab-mech-l { fill: #F1F5FC; } .ab-mech-r { fill: #B4CAEA; } .ab-mech-t { fill: #fff; }
+.ab-mast { stroke: #6680A8; stroke-width: 1.2; }
+.ab-beacon { fill: var(--sky); }
+.ab-sign { fill: #fff; stroke: rgba(11, 27, 51, .1); stroke-width: .6; }
+.ab-sign-side { fill: #AFC5E6; } .ab-sign-top { fill: #E4EDF9; }
+.ab-sign-leg { stroke: #7B92B8; stroke-width: 1.6; }
+.ab-sign-glint { fill: none; }
+.ab-edge { stroke: rgba(255, 255, 255, .95); stroke-width: 1.2; }
+.ab-core-ln { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: .16 1.3; stroke-dashoffset: .16; opacity: 0; }
+.ab-beam { opacity: 0; }
+.ab-beam-clip, .ab-lv--core, .ab-mul { pointer-events: none; }
+.ab-lv[data-co] { cursor: pointer; }
 
-/* 그룹사 타일 */
-.ab-sats { position: absolute; inset: 0; }
-.ab-sat { position: absolute; left: calc(var(--x) - var(--tile) / 2); top: calc(var(--y) - var(--tile) / 2); width: var(--tile); }
-.ab-sat:nth-child(1) { --x: 58%; --y: 15%; }
-.ab-sat:nth-child(2) { --x: 70.5%; --y: 27%; }
-.ab-sat:nth-child(3) { --x: 82%; --y: 45%; }
-.ab-sat:nth-child(4) { --x: 70.5%; --y: 63%; }
-.ab-sat:nth-child(5) { --x: 58%; --y: 75%; }
-.ab-sat-tile {
-  position: relative; display: block; width: var(--tile); aspect-ratio: 1; padding: 4px; border-radius: 24%;
-  background: rgba(255, 255, 255, .5); box-shadow: 0 24px 40px -22px rgba(7, 40, 110, .55), inset 0 0 0 1px rgba(255, 255, 255, .8);
+/* 층 안내판: 빌딩 왼쪽 벽면 모서리(--e)에서 가는 선으로 이어진 이름표 */
+.ab-plates { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; pointer-events: none; }
+.ab-plate { position: absolute; top: calc(var(--y) * 1%); right: calc(100% - var(--e) * 1%); display: flex; align-items: center; translate: 0 -50%; pointer-events: auto; cursor: pointer; }
+.ab-plate-card {
+  display: flex; align-items: center; gap: 7px; padding: 3px 10px 3px 3px; border-radius: 8px; white-space: nowrap;
+  background: rgba(255, 255, 255, .8); color: var(--ink);
+  box-shadow: 0 8px 18px -12px rgba(7, 40, 110, .55), inset 0 0 0 1px rgba(255, 255, 255, .9);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  transition: background-color .3s var(--ease), color .3s var(--ease), box-shadow .3s var(--ease);
 }
-.ab-sat-tile img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 54%; border-radius: 21%; }
-.ab-sat-label {
-  position: absolute; left: 50%; top: calc(100% + 8px); translate: -50% 0; display: grid; justify-items: center; gap: 0;
-  padding: 3px 10px 4px; border-radius: 10px; background: rgba(255, 255, 255, .62); white-space: nowrap; line-height: 1.3;
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-}
-.ab-sat-label b { font-size: .76rem; font-weight: 600; letter-spacing: .04em; color: var(--ink); }
-.ab-sat-label small { font-size: .68rem; font-weight: 600; color: var(--ink-2); }
+.ab-plate-no { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: var(--ink); color: #fff; font-size: .66rem; font-weight: 600; letter-spacing: .02em; transition: background-color .3s var(--ease); }
+.ab-plate--hold .ab-plate-no { background: var(--blue); }
+.ab-plate-t { display: grid; line-height: 1.18; }
+.ab-plate-t b { font-size: .66rem; font-weight: 600; letter-spacing: .04em; }
+.ab-plate-t small { font-size: .6rem; font-weight: 600; color: var(--ink-2); transition: color .3s var(--ease); }
+.ab-plate-ln { position: relative; flex: none; width: calc((var(--e) - 2.5) * 1cqw); height: 1px; background: linear-gradient(90deg, rgba(11, 27, 51, .18), rgba(11, 27, 51, .45)); }
+.ab-plate-ln::after { content: ""; position: absolute; right: -3px; top: -2.5px; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px var(--ink); }
+.ab-plate.is-hl .ab-plate-card { background: var(--ink); color: #fff; box-shadow: 0 12px 24px -12px rgba(7, 40, 110, .7); }
+.ab-plate.is-hl .ab-plate-no { background: var(--blue); }
+.ab-plate.is-hl .ab-plate-t small { color: rgba(255, 255, 255, .72); }
 
-/* 등장: 지주회사가 먼저 떠오르고 → 바깥에 흩어져 있던 그룹사가 01부터 차례로 모여든 뒤 → 선이 그려지고 → 고리가 퍼집니다 (about.js: .is-armed → .is-gather → .is-gathered) */
-.ab-stage-fig.is-armed .ab-core { opacity: 0; transform: scale(.92); }
+/* 연결선: 층 → 그룹사 카드 (about.js 가 경로를 그림) */
+.ab-links { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.ab-link { transition: opacity .3s var(--ease); }
+.ab-link-base { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; filter: drop-shadow(0 1px 1.5px rgba(10, 60, 160, .2)); transition: stroke .3s var(--ease), stroke-width .3s var(--ease); }
+.ab-link-flow { fill: none; stroke: var(--blue); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 0 46; opacity: 0; }
+.ab-link-end { fill: #fff; stroke: var(--blue); stroke-width: 1.5; }
+.ab-link.is-hl .ab-link-base { stroke: var(--blue); stroke-width: 2.2; }
+.ab-stage-fig.has-hl .ab-link:not(.is-hl) { opacity: .3; }
+
+/* 그룹사 카드: 위에서부터 6F → 1F (층 순서) */
+.ab-sats { position: absolute; z-index: 1; right: 2.6%; top: 0; bottom: 0; width: 22.5%; height: fit-content; margin: auto 0; padding: 0; list-style: none; display: grid; gap: .9cqw; }
+.ab-sat-link {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0 .95cqw;
+  padding: .5cqw 1cqw .5cqw .5cqw; border-radius: 1.3cqw; color: var(--ink);
+  background: rgba(255, 255, 255, .62); box-shadow: 0 22px 40px -26px rgba(7, 40, 110, .6), inset 0 0 0 1px rgba(255, 255, 255, .85);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  transition: background-color .3s var(--ease), box-shadow .3s var(--ease), translate .35s var(--ease);
+}
+.ab-sat-tile { display: block; width: 4.4cqw; aspect-ratio: 1; border-radius: 24%; overflow: hidden; background: #DCE8F7; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8); }
+.ab-sat-tile img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 54%; transition: scale .5s var(--ease); }
+.ab-sat-label { display: grid; gap: 1px; min-width: 0; line-height: 1.3; }
+.ab-sat-label b { font-size: clamp(.7rem, .98cqw, .84rem); font-weight: 600; letter-spacing: .04em; }
+.ab-sat-label small { font-size: clamp(.62rem, .86cqw, .74rem); font-weight: 600; color: var(--ink-2); }
+.ab-sat-fl { justify-self: end; padding: 3px 8px; border-radius: 999px; background: rgba(10, 93, 226, .1); color: var(--blue-700); font-size: .66rem; font-weight: 600; letter-spacing: .04em; transition: background-color .3s var(--ease), color .3s var(--ease); }
+.ab-sat.is-hl .ab-sat-link, .ab-sat-link:focus-visible { background: #fff; translate: -6px 0; box-shadow: 0 26px 44px -24px rgba(7, 40, 110, .7), inset 0 0 0 1.5px var(--blue); }
+.ab-sat.is-hl .ab-sat-fl { background: var(--blue); color: #fff; }
+.ab-sat.is-hl .ab-sat-tile img { scale: 1.06; }
+
+/* 등장 (about.js: .is-armed → .is-gather → .is-gathered)
+   ① 플라자 · 로비 · 1F … 7F · 옥상 · 간판 순으로 한 층씩 내려앉고(--f) ② 층마다 창에 불이 켜지고 ③ 안내판 · 그룹사 카드 → 연결선 */
+.ab-stage-fig.is-armed .ab-lv { opacity: 0; transform: translateY(-34px); }
+.ab-stage-fig.is-armed .ab-lit { opacity: 0; }
 .ab-stage-fig.is-armed .ab-core-label { opacity: 0; transform: translateY(10px); }
-.ab-stage-fig.is-armed .ab-sat { opacity: 0; transform: translate3d(var(--ox, 0px), var(--oy, 0px), 0) scale(.8); }
-.ab-stage-fig.is-armed .ab-ray::before { transform: scaleX(0); }
-.ab-stage-fig.is-armed .ab-ray::after { transform: scale(0); }
-.ab-stage-fig.is-gather .ab-core { opacity: 1; transform: none; transition: opacity .9s var(--ease), transform 1.4s var(--ease); }
-.ab-stage-fig.is-gather .ab-core-label { opacity: 1; transform: none; transition: opacity .7s var(--ease) .3s, transform .8s var(--ease) .3s; }
-.ab-stage-fig.is-gather .ab-sat { opacity: 1; transform: none; transition: opacity .55s var(--ease) calc(.25s + var(--i) * .13s), transform 1.15s cubic-bezier(.16, .84, .24, 1) calc(.25s + var(--i) * .13s); }
-.ab-stage-fig.is-gather .ab-ray::before { transform: none; transition: transform .7s var(--ease-in-out) calc(.95s + var(--i) * .09s); }
-.ab-stage-fig.is-gather .ab-ray::after { transform: none; transition: transform .45s cubic-bezier(.2, 1.4, .4, 1) calc(1.5s + var(--i) * .09s); }
-/* 다 모인 뒤, 화면에 보이는 동안만: 빛 점이 선을 따라 가운데로 → 도착하면 고리가 퍼짐 */
-.ab-stage-fig.is-gathered.is-vis .ab-ray i { animation: abRayDot 3.6s cubic-bezier(.5, 0, .25, 1) infinite; }
-.ab-stage-fig.is-gathered.is-vis .ab-core-pulse { animation: abCorePulse 3.6s var(--ease) infinite; }
-@keyframes abRayDot {
-  0% { opacity: 0; transform: translate3d(var(--from, 0px), 0, 0); }
-  10% { opacity: 1; }
-  42% { opacity: 1; transform: translate3d(calc(var(--len, 100px) - 30px), 0, 0); }
-  50%, 100% { opacity: 0; transform: translate3d(calc(var(--len, 100px) - 30px), 0, 0); }
+.ab-stage-fig.is-armed .ab-plate { opacity: 0; transform: translateX(-10px); }
+.ab-stage-fig.is-armed .ab-sat { opacity: 0; transform: translateX(18px); }
+.ab-stage-fig.is-armed .ab-link-base { stroke-dashoffset: var(--len, 0); }
+.ab-stage-fig.is-armed .ab-link-end { opacity: 0; }
+.ab-stage-fig.is-gather .ab-lv { opacity: 1; transform: none; transition: opacity .5s var(--ease) calc(var(--f) * .13s), transform .75s cubic-bezier(.2, .9, .3, 1.04) calc(var(--f) * .13s); }
+.ab-stage-fig.is-gather .ab-lit { opacity: 1; transition: opacity .55s var(--ease) calc(.85s + var(--f) * .12s); }
+.ab-stage-fig.is-gather .ab-core-label { opacity: 1; transform: none; transition: opacity .7s var(--ease) .2s, transform .8s var(--ease) .2s; }
+.ab-stage-fig.is-gather .ab-plate { opacity: 1; transform: none; transition: opacity .5s var(--ease) calc(.35s + var(--f) * .13s), transform .6s var(--ease) calc(.35s + var(--f) * .13s); }
+.ab-stage-fig.is-gather .ab-sat { opacity: 1; transform: none; transition: opacity .55s var(--ease) calc(1.3s + var(--i) * .1s), transform .8s var(--ease) calc(1.3s + var(--i) * .1s); }
+.ab-stage-fig.is-gather .ab-link-base { stroke-dashoffset: 0; transition: stroke-dashoffset .9s var(--ease-in-out) calc(1.7s + var(--i) * .12s), stroke .3s var(--ease), stroke-width .3s var(--ease); }
+.ab-stage-fig.is-gather .ab-link-end { opacity: 1; transition: opacity .3s var(--ease) calc(2.5s + var(--i) * .12s); }
+/* 다 지어진 뒤: 마우스 · 포커스 강조는 바로 반응 */
+.ab-stage-fig.is-gathered .ab-lit { transition: opacity .3s var(--ease); }
+.ab-stage-fig.is-gathered .ab-link-flow { opacity: 1; transition: opacity .5s var(--ease); }
+.ab-stage-fig.has-hl .ab-lv:not(.is-hl) .ab-lit { opacity: .55; }
+.ab-lv.is-hl .ab-hl { opacity: .5; }
+.ab-lv.is-hl .ab-hl-r { opacity: .6; }
+/* 화면에 보이는 동안만: 빛이 코어를 타고 오르며 층마다 차례로 밝아지고, 연결선에는 빛 점이 그룹사 쪽으로 흐릅니다 */
+.ab-stage-fig.is-gathered.is-vis .ab-beam { animation: abBeam 6.4s var(--ease-in-out) infinite; }
+.ab-stage-fig.is-gathered.is-vis .ab-core-ln { animation: abCoreLn 6.4s var(--ease-in-out) infinite; }
+.ab-stage-fig.is-gathered.is-vis .ab-glow { animation: abGlow 6.4s ease-in-out calc((var(--f) - 1) * .32s) infinite; }
+.ab-stage-fig.is-gathered.is-vis .ab-link-flow { animation: abLinkFlow 1.6s linear infinite; }
+.ab-stage-fig.is-gathered.is-vis .ab-beacon { animation: abBeacon 2.4s ease-in-out infinite; }
+@keyframes abBeam {
+  0% { opacity: 0; transform: translateY(0); }
+  6% { opacity: 1; }
+  44% { opacity: 1; transform: translateY(-300px); }
+  52%, 100% { opacity: 0; transform: translateY(-330px); }
 }
-@keyframes abCorePulse {
-  0%, 40% { opacity: 0; transform: scale(.72); }
-  46% { opacity: .75; }
-  86%, 100% { opacity: 0; transform: scale(1.32); }
+@keyframes abCoreLn {
+  0% { opacity: 0; stroke-dashoffset: .16; }
+  5% { opacity: 1; }
+  44% { opacity: 1; stroke-dashoffset: -1; }
+  50%, 100% { opacity: 0; stroke-dashoffset: -1; }
 }
+@keyframes abGlow { 0%, 100% { opacity: 0; } 6% { opacity: .55; } 24% { opacity: 0; } }
+@keyframes abLinkFlow { to { stroke-dashoffset: -46; } }
+@keyframes abBeacon { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
 
 .ab-film {
   position: absolute; z-index: 2; left: clamp(14px, 2.4vw, 36px); bottom: clamp(14px, 2.4vw, 36px);
@@ -223,6 +288,72 @@ main .note { color: var(--muted); }
 }
 .ab-stage-cap .en { font-size: .7rem; font-weight: 600; letter-spacing: .18em; color: var(--blue); padding-right: 12px; border-right: 1px solid var(--line); }
 @keyframes abRing { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
+
+/* 무대 반응형 — 1100 이하: 16:9 · 760 이하: 빌딩 위 · 그룹사 카드 격자 아래 */
+@media (max-width: 1100px) and (min-width: 761px) {
+  .ab-stage { aspect-ratio: 16 / 9; --bh: 50cqw; --bx: 38%; }
+  .ab-sats { width: 26%; gap: 1.2cqw; }
+  .ab-sat-tile { width: 5.4cqw; }
+  .ab-sat-link { padding: .6cqw 1.2cqw .6cqw .6cqw; gap: 0 1.1cqw; border-radius: 1.6cqw; }
+  .ab-sat-label b { font-size: .72rem; }
+  .ab-sat-label small { font-size: .64rem; }
+  .ab-stage-cap { height: 34px; padding: 0 12px; gap: 9px; font-size: .78rem; }
+  .ab-stage-cap .en { padding-right: 9px; font-size: .62rem; }
+  .ab-film { min-height: 54px; padding: 6px 18px 6px 6px; gap: 10px; }
+  .ab-film-ring { width: 42px; height: 42px; }
+  .ab-film-txt strong { font-size: .92rem; }
+}
+@media (max-width: 900px) and (min-width: 761px) {
+  .ab-stage { --bx: 41%; }
+  .ab-plate-t small { display: none; }
+  .ab-sat-label small { display: none; }
+}
+@media (max-width: 760px) {
+  .ab-stage-fig { margin-bottom: 46px; }
+  .ab-stage { aspect-ratio: auto; padding: 18px 14px 46px; }
+  .ab-stage-fg { position: relative; inset: auto; }
+  .ab-core-label { position: relative; left: auto; top: auto; }
+  .ab-core-label b { font-size: .92rem; }
+  .ab-bld { position: relative; top: auto; left: auto; width: 64%; height: auto; aspect-ratio: 360 / 516; margin: 6px 0 0 auto; }
+  .ab-links { display: none; }
+  .ab-plate-card { gap: 5px; padding: 2px 7px 2px 2px; border-radius: 6px; }
+  .ab-plate-no { width: 17px; height: 17px; border-radius: 4px; font-size: .52rem; }
+  .ab-plate-t b { font-size: .56rem; letter-spacing: .02em; }
+  .ab-plate-t small { display: none; }
+  .ab-sats { position: relative; inset: auto; width: auto; height: auto; margin: 16px 0 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .ab-sat:last-child { grid-column: 1 / -1; }
+  .ab-sat-link { grid-template-columns: auto minmax(0, 1fr); gap: 0 8px; padding: 6px 8px 6px 6px; border-radius: 12px; }
+  .ab-sat-tile { width: 36px; }
+  .ab-sat-label b { font-size: .66rem; letter-spacing: .01em; }
+  .ab-sat-label small { font-size: .6rem; line-height: 1.3; }
+  .ab-sat-fl { position: absolute; left: 2px; top: 2px; padding: 1px 5px; font-size: .52rem; background: var(--blue); color: #fff; }
+  .ab-sat.is-hl .ab-sat-link, .ab-sat-link:focus-visible { translate: 0 -2px; }
+  .ab-stage-cap { display: none; }
+  /* 영상 버튼은 무대 아래 가장자리에 걸쳐 가운데 */
+  .ab-film { left: 50%; bottom: -40px; translate: -50% 0; white-space: nowrap; min-height: 54px; padding: 6px 18px 6px 6px; gap: 10px; }
+  .ab-film:hover { translate: -50% -2px; }
+  .ab-film-ring { width: 42px; height: 42px; }
+  .ab-film-txt strong { font-size: .94rem; }
+}
+@media (max-width: 380px) {
+  .ab-bld { width: 59%; }
+  .ab-plate-card { gap: 4px; padding-right: 6px; }
+  .ab-plate-no { width: 15px; height: 15px; font-size: .48rem; }
+  .ab-plate-t b { font-size: .52rem; letter-spacing: 0; }
+  .ab-sat-link { gap: 0 7px; padding-right: 6px; }
+  .ab-sat-tile { width: 34px; }
+  .ab-sat-label b { font-size: .6rem; }
+  .ab-sat-label small { font-size: .56rem; }
+}
+@media (max-width: 340px) {
+  .ab-sats { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .ab-sat:last-child { grid-column: auto; }
+  .ab-sat-link { padding-block: 4px; }
+  .ab-sat-tile { width: 30px; }
+  .ab-sat-label { grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 0 6px; }
+  .ab-plate-card { padding-block: 1px; }
+  .ab-plate-no { width: 13px; height: 13px; border-radius: 3px; }
+}
 
 /* ---------- 01 INTRO ---------- */
 .ab-intro-grid { display: grid; grid-template-columns: 5fr 7fr; gap: 40px clamp(40px, 7vw, 120px); align-items: start; }
@@ -784,13 +915,6 @@ main .note { color: var(--muted); }
   .ab-promise-item:nth-child(4), .ab-promise-item:nth-child(5) { grid-column: span 3; }
   .ab-promise { min-height: 320px; }
 }
-@media (max-width: 1100px) and (min-width: 761px) {
-  .ab-stage { aspect-ratio: 16 / 9; --tile: 9.6cqw; }
-  .ab-sat-label { padding: 2px 8px 3px; }
-  .ab-sat-label b { font-size: .7rem; }
-  .ab-sat-label small { font-size: .64rem; }
-}
-@media (max-width: 860px) { .ab-stage-cap { display: none; } } /* 좁은 무대에서는 01 타일과 겹치므로 (지주회사 라벨이 같은 정보를 보여 줌) */
 @media (max-width: 1024px) {
   .ab-intro-grid, .ab-loc-grid { grid-template-columns: 1fr; }
   .ab-chain-wrap { grid-template-columns: 1fr; }
@@ -813,31 +937,6 @@ main .note { color: var(--muted); }
   .ab-fact-n { padding-bottom: 12px; }
   .ab-fact-n .en { font-size: 3rem; }
   .ab-fact dt { margin-top: 10px; }
-  /* 모바일 무대: 지주회사를 위에, 다섯 그룹사를 아래 호(⌣)로 */
-  .ab-stage-fig { margin-bottom: 46px; }
-  .ab-stage { aspect-ratio: 1 / 1.1; --core-x: 50%; --core-y: 34%; --core-h: 64%; --tile: 15.5cqw; }
-  .ab-core { top: 2%; }
-  .ab-orbit { --o: 74cqw; }
-  .ab-orbit:nth-child(2) { --o: 118cqw; }
-  .ab-orbit:nth-child(3) { --o: 168cqw; }
-  .ab-sat:nth-child(1) { --x: 12%; --y: 64.5%; }
-  .ab-sat:nth-child(2) { --x: 31%; --y: 73.5%; }
-  .ab-sat:nth-child(3) { --x: 50%; --y: 77%; }
-  .ab-sat:nth-child(4) { --x: 69%; --y: 73.5%; }
-  .ab-sat:nth-child(5) { --x: 88%; --y: 64.5%; }
-  .ab-sat-tile { padding: 3px; }
-  /* 모바일에서도 타일마다 영문 회사명 (좁으면 두 줄 · 분야는 아래 구조 섹션에서) */
-  .ab-sat-label { top: calc(100% + 5px); width: max-content; max-width: 18.5cqw; padding: 2px 6px 3px; border-radius: 7px; white-space: normal; text-align: center; background: rgba(255, 255, 255, .78); }
-  .ab-sat-label b { font-size: .56rem; letter-spacing: .02em; line-height: 1.2; }
-  .ab-sat-label small { display: none; }
-  .ab-core-label b { font-size: .92rem; }
-  .ab-stage-cap { display: none; }
-  /* 영상 버튼은 무대 아래 가장자리에 걸쳐 가운데 */
-  .ab-film { left: 50%; bottom: -40px; translate: -50% 0; white-space: nowrap; } /* 타일 아래 회사명과 겹치지 않게 조금 더 아래로 */
-  .ab-film:hover { translate: -50% -2px; }
-  .ab-film { min-height: 54px; padding: 6px 18px 6px 6px; gap: 10px; }
-  .ab-film-ring { width: 42px; height: 42px; }
-  .ab-film-txt strong { font-size: .94rem; }
   .ab-br-lg { display: none; }
   .ab-tagline-ko { align-items: flex-start; }
   .ab-tagline-ko::before { margin-top: .8em; width: 28px; }
@@ -897,7 +996,9 @@ main .note { color: var(--muted); }
 
 /* 움직임 멈추기 (사용자가 왼쪽 아래 버튼으로 고른 경우만 · base.css 의 html.motion-off) */
 html.motion-off .ab-stage-bg, html.motion-off .ab-stage-fg { transform: none !important; }
-html.motion-off .ab-ray i, html.motion-off .ab-core-pulse { animation: none !important; opacity: 0 !important; }
+html.motion-off :is(.ab-beam, .ab-core-ln, .ab-glow) { animation: none !important; opacity: 0 !important; }
+html.motion-off :is(.ab-link-flow, .ab-beacon) { animation: none !important; }
+html.motion-off .ab-link-base { stroke-dasharray: none !important; stroke-dashoffset: 0 !important; }
 html.motion-off .ab-vision-track, html.motion-off .ab-map-pulse, html.motion-off .ab-film-ring::after { animation: none !important; }
 html.motion-off .ab-map-arc--flow { stroke-dashoffset: 0; }
 html.motion-off .ab-map-traveler { display: none; }

@@ -1,6 +1,6 @@
 /* =========================================================
    DOOGO GROUP — about.js (그룹 소개)
-   히어로(지주회사로 모이는 그룹사 · 패럴랙스) · 첫 화면 숫자 굴림 · 소개 문장 글자 새김 · 태그라인 스크롤 채움
+   히어로(두고그룹 빌딩 — 층별 사업 · 그룹사 연결선 · 패럴랙스) · 첫 화면 숫자 굴림 · 소개 문장 글자 새김 · 태그라인 스크롤 채움
    · 그룹 조직도(지주회사 → 연결선 그리기 → 그룹사 · 흐르는 빛) · 연혁 숫자 굴림 · 연혁 진행선 · 화면 밖 무한 모션 정지
    · 탭(그룹 소개 · 비전과 철학 · 그룹 구조 · 주요 연혁 · 국내외 거점 — 주소 #앵커 연동, 맨 아래)
    모션은 OS 설정과 관계없이 재생합니다. 사용자가 '움직임 멈추기'를 고르면(window.DOOGO.motionOff()) 최종 상태로 보여 주고,
@@ -235,72 +235,101 @@
     });
   }
 
-  /* ---------- 히어로 무대: 다섯 그룹사가 지주회사로 모여듭니다 ----------
-     그룹사 타일 가운데 → 지주회사 3D(블록 덩어리) 가장자리까지 선을 실제 위치로 계산해 그립니다(창 크기가 바뀌면 다시 계산).
-     등장: 지주회사 → 바깥에 흩어져 있던 그룹사가 01~05 차례로 모임(--ox/--oy: 바깥쪽 출발 위치) → 선 → 끝점.
-     다 모인 뒤에는 화면에 보이는 동안만 빛 점이 선을 따라 가운데로 흐르고 고리가 퍼집니다(.is-vis). */
-  if (stageFig) {
+  /* ---------- 히어로 무대: 두고그룹 빌딩 ----------
+     지주회사 로비 위로 일곱 개 층(사업)이 쌓이고, 층마다 맡은 그룹사 카드로 선이 이어집니다.
+     연결선은 층의 오른쪽 벽면 점(.ab-port, SVG 좌표)에서 카드 왼쪽 가운데까지 — 창 크기가 바뀌면 다시 계산합니다.
+     좌표는 offsetLeft/Top(등장 · 패럴랙스 transform 의 영향 없음)과 SVG viewBox 배율로 구합니다.
+     등장: .is-armed → .is-gather(층 쌓기 · 불 켜기 · 안내판 · 카드 · 선 그리기) → .is-gathered(코어 빛 · 층 반짝임 · 흐르는 빛 점, 화면에 보일 때만 .is-vis)
+     강조: 카드에 마우스 · 포커스 → 그 층 · 안내판 · 선이 함께 밝아지고, 층 · 안내판에 마우스를 올려도 같은 짝이 밝아집니다. */
+  if (stageFig) (function () {
+    var NS = 'http://www.w3.org/2000/svg';
     var fg = $('.ab-stage-fg', stageFig);
-    var core = $('.ab-core', stageFig);
-    var sats = $$('.ab-sat', stageFig);
-    var raysBox = $('.ab-rays', stageFig);
-    var rays = sats.map(function (s, i) {
-      var ray = document.createElement('span');
-      ray.className = 'ab-ray'; ray.style.setProperty('--i', i); ray.appendChild(document.createElement('i'));
-      raysBox.appendChild(ray);
-      return ray;
+    var bld = $('.ab-bld', stageFig);
+    var bsvg = $('.ab-bld-svg', stageFig);
+    var linksSvg = $('.ab-links', stageFig);
+    if (!fg || !bld || !bsvg || !linksSvg) return;
+    var vb = bsvg.viewBox.baseVal;
+    var mk = function (tag, cls) { var el = document.createElementNS(NS, tag); el.setAttribute('class', cls); return el; };
+    var links = $$('.ab-sat', stageFig).map(function (sat, i) {
+      var key = sat.getAttribute('data-co');
+      var port = $('.ab-lv[data-co="' + key + '"] .ab-port', bsvg);
+      var g = mk('g', 'ab-link'), base = mk('path', 'ab-link-base'), flow = mk('path', 'ab-link-flow'), end = mk('circle', 'ab-link-end');
+      g.setAttribute('data-co', key); g.style.setProperty('--i', i);
+      end.setAttribute('r', '3.5');
+      g.appendChild(base); g.appendChild(flow); g.appendChild(end);
+      linksSvg.appendChild(g);
+      return { sat: sat, port: port, g: g, base: base, flow: flow, end: end };
     });
+    // anc 기준 위치 (offsetParent 를 따라 더함)
+    var offIn = function (el, anc) {
+      var x = 0, y = 0;
+      while (el && el !== anc) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; }
+      return { x: x, y: y };
+    };
     var layoutStage = function () {
-      var W = fg.offsetWidth;
-      if (!W || !core.offsetWidth) return;
-      // 지주회사 3D 안의 가운데 블록(이미지 가로 50% · 세로 47.6%)과 블록 덩어리의 반지름(가로 37% · 세로 28%)
-      var cw = core.offsetWidth, ch = core.offsetHeight;
-      var cl = core.offsetLeft - cw / 2; // .ab-core 는 translate: -50% 0 (offsetLeft 는 translate 전 위치)
-      var ax = cl + cw * 0.5, ay = core.offsetTop + ch * 0.476, rx = cw * 0.37, ry = ch * 0.28;
-      stageFig.style.setProperty('--ax', ax.toFixed(1) + 'px');
-      stageFig.style.setProperty('--ay', ay.toFixed(1) + 'px');
-      stageFig.style.setProperty('--pr', (rx * 2).toFixed(1) + 'px');
-      sats.forEach(function (s, i) {
-        var tile = s.firstElementChild, half = tile.offsetWidth / 2;
-        var cx = s.offsetLeft + half, cy = s.offsetTop + tile.offsetHeight / 2;
-        var dx = ax - cx, dy = ay - cy, d = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / d, uy = dy / d;
-        var edge = 1 / Math.sqrt((ux / rx) * (ux / rx) + (uy / ry) * (uy / ry)); // 이 방향에서 블록 덩어리 가장자리까지
-        var len = Math.max(0, d - edge);
-        var ray = rays[i];
-        ray.style.left = cx.toFixed(1) + 'px'; ray.style.top = cy.toFixed(1) + 'px'; ray.style.width = len.toFixed(1) + 'px';
-        ray.style.setProperty('--a', Math.atan2(dy, dx).toFixed(4) + 'rad');
-        ray.style.setProperty('--len', len.toFixed(1) + 'px');
-        ray.style.setProperty('--from', Math.min(len, half / Math.max(Math.abs(ux), Math.abs(uy))).toFixed(1) + 'px'); // 타일 가장자리에서 출발
-        s.style.setProperty('--ox', (-ux * W * 0.13).toFixed(1) + 'px'); // 모이기 전: 지주회사 반대쪽(바깥)으로 물러나 있음
-        s.style.setProperty('--oy', (-uy * W * 0.13).toFixed(1) + 'px');
+      var W = fg.offsetWidth, H = fg.offsetHeight;
+      if (!W || !bld.offsetWidth || getComputedStyle(linksSvg).display === 'none') return;
+      linksSvg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+      var b = offIn(bld, fg), k = bld.offsetWidth / vb.width;
+      links.forEach(function (l) {
+        if (!l.port) return;
+        var px = b.x + (+l.port.getAttribute('cx') - vb.x) * k, py = b.y + (+l.port.getAttribute('cy') - vb.y) * k;
+        var card = l.sat.firstElementChild, c = offIn(card, fg);
+        var cx = c.x - 6, cy = c.y + card.offsetHeight / 2, h = Math.max(24, (cx - px) * 0.5);
+        var d = 'M' + px.toFixed(1) + ',' + py.toFixed(1) + 'C' + (px + h).toFixed(1) + ',' + py.toFixed(1) + ' ' + (cx - h).toFixed(1) + ',' + cy.toFixed(1) + ' ' + cx.toFixed(1) + ',' + cy.toFixed(1);
+        l.base.setAttribute('d', d); l.flow.setAttribute('d', d);
+        l.end.setAttribute('cx', cx.toFixed(1)); l.end.setAttribute('cy', cy.toFixed(1));
+        var len = l.base.getTotalLength ? l.base.getTotalLength() : 0;
+        l.base.style.strokeDasharray = len.toFixed(1); // 선 그리기: dashoffset len → 0 (about.css)
+        l.g.style.setProperty('--len', len.toFixed(1));
       });
     };
     layoutStage();
-    var coreImg = $('img', core);
-    if (coreImg && !coreImg.complete) coreImg.addEventListener('load', layoutStage);
     var stageRaf = 0;
-    window.addEventListener('resize', function () { cancelAnimationFrame(stageRaf); stageRaf = requestAnimationFrame(layoutStage); });
+    var relayout = function () { cancelAnimationFrame(stageRaf); stageRaf = requestAnimationFrame(layoutStage); };
+    window.addEventListener('resize', relayout);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout); // 글꼴이 바뀌면 카드 높이가 달라짐
+    $$('img', stageFig).forEach(function (im) { if (!im.complete) im.addEventListener('load', relayout); });
+
+    // 강조: 같은 data-co 의 층 · 안내판 · 카드 · 선
+    var hlKey = null;
+    var hl = function (key) {
+      if (key === hlKey) return;
+      hlKey = key;
+      stageFig.classList.toggle('has-hl', !!key);
+      $$('[data-co]', stageFig).forEach(function (el) { el.classList.toggle('is-hl', !!key && el.getAttribute('data-co') === key); });
+    };
+    $$('[data-co]', stageFig).forEach(function (el) {
+      var key = el.getAttribute('data-co');
+      el.addEventListener('mouseenter', function () { hl(key); });
+      el.addEventListener('mouseleave', function () { hl(null); });
+    });
+    $$('.ab-sat-link', stageFig).forEach(function (a) {
+      var key = a.parentNode.getAttribute('data-co');
+      a.addEventListener('focus', function () { hl(key); });
+      a.addEventListener('blur', function () { hl(null); });
+    });
 
     var gathered = false, gTimers = [];
-    var gatherNow = function () { gTimers.forEach(clearTimeout); gathered = true; stageFig.classList.add('is-gather', 'is-gathered'); };
+    var gatherNow = function () { gTimers.forEach(clearTimeout); gathered = true; stageFig.classList.remove('is-armed'); stageFig.classList.add('is-gather', 'is-gathered'); };
     if (!hasIO || motionOff()) gatherNow();
     else stageFig.classList.add('is-armed');
     if (hasIO) {
       new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
-          stageFig.classList.toggle('is-vis', en.isIntersecting); // 화면 밖이면 빛 점·고리·영상 버튼 링 정지
-          if (en.isIntersecting && !gathered && en.intersectionRatio >= 0.25) {
+          stageFig.classList.toggle('is-vis', en.isIntersecting); // 화면 밖이면 코어 빛 · 층 반짝임 · 빛 점 · 영상 버튼 링 정지
+          if (en.isIntersecting && !gathered && en.intersectionRatio >= 0.2) {
             gathered = true;
             layoutStage();
-            // 첫 화면에서는 무대가 떠오르는(data-reveal scale, --d .2s) 동안 조금 기다렸다가 모읍니다
-            gTimers.push(setTimeout(function () { stageFig.classList.add('is-gather'); }, 260));
-            gTimers.push(setTimeout(function () { stageFig.classList.add('is-gathered'); }, 260 + 2100));
+            // 첫 화면에서는 무대가 떠오르는(data-reveal scale, --d .2s) 동안 조금 기다렸다가 짓기 시작합니다
+            gTimers.push(setTimeout(function () { stageFig.classList.add('is-gather'); }, 220));
+            gTimers.push(setTimeout(function () { stageFig.classList.add('is-gathered'); }, 220 + 2900));
           }
         });
-      }, { threshold: [0, 0.25] }).observe(stageFig);
+      }, { threshold: [0, 0.2] }).observe(stageFig);
     }
     onMotion.push(function (off) { if (off) gatherNow(); });
-  }
+  })();
 
   /* ---------- 공통: 숫자 띠 굴림 (0–9 세로 띠를 transform 으로 올려 멈춤) ---------- */
   // el 의 글자를 숫자 띠로 바꿉니다. 숫자는 0–9 를 한 바퀴 돈 뒤(10 + n) 멈춤. 반환: 띠 목록 [{ strip, n }]
