@@ -246,6 +246,18 @@
     }
     $$('[data-m-link]', modal).forEach(function (a) { a.setAttribute('href', first.href); });
     // 있는 정보만 보여 줌
+    // 이력: 카드의 data-career('|'로 구분)가 있으면 목록으로, 없으면 '확정 후 게시'
+    var careerEl = $('[data-m-career]', modal);
+    if (careerEl) {
+      careerEl.innerHTML = '';
+      var items = (d.career || '').split('|').filter(Boolean);
+      careerEl.classList.toggle('is-pending', !items.length);
+      if (items.length) {
+        var ul = document.createElement('ul'); ul.className = 'ld-m-career';
+        items.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+        careerEl.appendChild(ul);
+      } else careerEl.textContent = '확정 후 게시';
+    }
     $$('[data-m-row]', modal).forEach(function (row) {
       var k = row.getAttribute('data-m-row');
       row.hidden = !d[k];

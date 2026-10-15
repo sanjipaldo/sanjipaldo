@@ -657,3 +657,8 @@ html.motion-off .dt-web-go { transition: none; }
   .dt-corp { gap: 6px; padding-left: 12px; font-size: .84rem; }
   .dt-corp-type { padding: 0 8px; font-size: .7rem; }
 }
+
+/* 담당 대표 주요 이력 (19차 · 문원오) */
+.dt-career { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.dt-career li { position: relative; padding-left: 12px; line-height: 1.5; word-break: keep-all; }
+.dt-career li::before { content: ""; position: absolute; left: 0; top: .66em; width: 5px; height: 5px; border-radius: 50%; background: var(--blue); }

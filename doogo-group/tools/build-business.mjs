@@ -955,13 +955,14 @@ ${c.direct ? `          <blockquote class="dt-leader-quote"><p>“제품과 브�
 `}          <div class="dt-leader-more">
             <dl class="dt-leader-dl">
 ${c.direct ? `              <div><dt>운영 브랜드</dt><dd class="dt-dd-chips"><span class="dt-dd-chip${b.slug === 'campus' ? ' is-cur' : ''}"><span class="en">DOOGO CLASS</span>교육업</span><span class="dt-dd-chip${b.slug === 'food' ? ' is-cur' : ''}"><span class="en">DOOGOFOOD</span>유통</span></dd></div>
-              <div><dt>강의</dt><dd><span class="en nowrap">DOOGO CLASS</span> ‘문대표’ · 뉴질랜드 건기식 브랜딩</dd></div>`
+              <div><dt>강의</dt><dd><span class="en nowrap">DOOGO CLASS</span> ‘문대표’ · 뉴질랜드 건기식 브랜딩</dd></div>
+              <div><dt>주요 이력</dt><dd><ul class="dt-career"><li>現 두고그룹 총괄 대표이사</li><li>前 (주)키위몬 대표이사</li><li>건강식품 E커머스 누적 매출 100억 원 이상</li></ul></dd></div>`
     : `              <div><dt>주요 서비스</dt><dd class="dt-dd-chips">${b.scope.split(' · ').map(x => `<span class="dt-dd-chip is-svc">${nw(x)}</span>`).join('')}</dd></div>`}
             </dl>
           </div>
           <div class="pcard-foot dt-leader-foot">
             <a class="pcard-link pcard-stretch" href="leadership.html#${c.anchor || `leader-${c.key}`}">자세히 보기<span class="sr-only"> (${c.en} ${c.ceo} ${ttl(c)} · 두고 사람들)</span> ${ico('i-arrow')}</a>
-            <p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '이력은 확정 후 게시합니다.' : '이력과 사진은 확정 후 게시합니다.'}</p>
+            ${c.direct ? '' : `<p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '이력은 확정 후 게시합니다.' : '이력과 사진은 확정 후 게시합니다.'}</p>`}
           </div>`;
 
   const main = `${SPRITE}

@@ -388,3 +388,12 @@ html.motion-off .ld-modal[open], html.motion-off .ld-modal[open]::backdrop, html
 html.motion-off .ld-m-in.is-swap .ld-m-body > * { opacity: 1; transform: none; }
 html.motion-off .ld-m-in.is-swap .ld-m-visual :is(.pcard-img, .pcard-sil) { opacity: 1; translate: none; }
 html.motion-off .ld-grid { scroll-behavior: auto; }
+
+/* ---------- 이력 (19차 · 문원오 대표) ---------- */
+.ld-card-facts > .ld-career-row { align-items: flex-start; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line-2); }
+.ld-career-row dt { padding-top: 2px; }
+.ld-career { display: grid; gap: 3px; flex: 1 1 200px; min-width: 0; }
+.ld-career li, .ld-m-career li { position: relative; padding-left: 12px; font-size: .86rem; line-height: 1.5; color: var(--ink-2); word-break: keep-all; }
+.ld-career li::before, .ld-m-career li::before { content: ""; position: absolute; left: 0; top: .66em; width: 5px; height: 5px; border-radius: 50%; background: var(--blue); }
+.ld-m-career { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.ld-m-career li { font-size: .92rem; color: var(--ink); }
