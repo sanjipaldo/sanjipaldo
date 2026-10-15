@@ -265,14 +265,14 @@
     BOKEH.push({ x: -380 + br(1) * 820, z: -260 + br(2) * 760, y: 120 + br(3) * 260, r: 10 + br(4) * 20, a: 0.05 + br(5) * 0.07, ph: br(6) * TAU, t: br(7) });
   }
 
-  // 바다 위 색 안개(판 위 좌표, 느리게 떠다님)
+  // 바다 위 색 안개(판 위 좌표 · 바탕에 한 번만 그림)
   var NEB = [
-    { mx: 300, my: 560, r: 360, c: [20, 92, 255], a: 0.30, sx: 26, sz: 18, w: 0.031, ph: 0.4 },  // 브랜드 블루(동남아 아래)
-    { mx: 625, my: 470, r: 390, c: [104, 76, 255], a: 0.34, sx: 34, sz: 22, w: 0.024, ph: 1.9 }, // 바이올렛(가운데 바다)
-    { mx: 560, my: 200, r: 300, c: [24, 190, 255], a: 0.22, sx: 30, sz: 16, w: 0.028, ph: 3.1 }, // 시안(북태평양)
-    { mx: 860, my: 560, r: 300, c: [190, 70, 255], a: 0.16, sx: 22, sz: 26, w: 0.022, ph: 2.6 }, // 오키드(곡선 바깥 바다)
-    { mx: 735, my: 790, r: 300, c: [255, 70, 165], a: 0.19, sx: 24, sz: 20, w: 0.035, ph: 4.4 }, // 마젠타(뉴질랜드 쪽)
-    { mx: 160, my: 900, r: 280, c: [0, 168, 186], a: 0.14, sx: 20, sz: 14, w: 0.026, ph: 5.2 }  // 딥 틸(인도양)
+    { mx: 300, my: 560, r: 360, c: [20, 92, 255], a: 0.30 },  // 브랜드 블루(동남아 아래)
+    { mx: 625, my: 470, r: 390, c: [104, 76, 255], a: 0.34 }, // 바이올렛(가운데 바다)
+    { mx: 560, my: 200, r: 300, c: [24, 190, 255], a: 0.22 }, // 시안(북태평양)
+    { mx: 860, my: 560, r: 300, c: [190, 70, 255], a: 0.16 }, // 오키드(곡선 바깥 바다)
+    { mx: 735, my: 790, r: 300, c: [255, 70, 165], a: 0.19 }, // 마젠타(뉴질랜드 쪽)
+    { mx: 160, my: 900, r: 280, c: [0, 168, 186], a: 0.14 }  // 딥 틸(인도양)
   ];
   NEB.forEach(function (n) { n.spr = mkBlob(n.c); });
 
@@ -366,6 +366,19 @@
     glowAt(W * 0.42, -H * 0.12, H * 0.72, 'rgba(118,104,255,.20)');
     glowAt(W * 1.02, H * 0.08, H * 0.5, 'rgba(214,92,220,.10)');
     glowAt(-W * 0.05, H * 1.02, H * 0.6, 'rgba(0,170,180,.13)');
+    // 바다 위 색 안개(판 위 자리에 눕혀 한 번만 그림 — 카메라가 흔들려도 대기처럼 뒤에 머묾)
+    bgx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < NEB.length; i++) {
+      var n = NEB[i];
+      proj(n.mx - MCX, 0, n.my - MCZ, PT);
+      var cx = PT.x, cy = PT.y, rx = n.r * PT.k;
+      proj(n.mx - MCX, 0, n.my - MCZ + n.r, PT);
+      var ry = Math.max(rx * 0.42, Math.abs(PT.y - cy));
+      bgx.globalAlpha = n.a;
+      bgx.drawImage(n.spr, cx - rx, cy - ry, rx * 2, ry * 2);
+    }
+    bgx.globalAlpha = 1;
+    bgx.globalCompositeOperation = 'source-over';
     // 가장자리 어둡게(비네트)
     var vg = bgx.createRadialGradient(W * 0.5, H * 0.52, Math.min(W, H) * 0.35, W * 0.5, H * 0.52, Math.max(W, H) * 0.78);
     vg.addColorStop(0, 'rgba(2,5,16,0)'); vg.addColorStop(1, 'rgba(2,5,16,.45)');
@@ -456,7 +469,7 @@
   //  [0, NCB)            색 띠
   //  BLEND0 + …          빛을 받아 거점 색으로 물드는 중(거점 2 × 2단계 × NCB) — 물결이 띠처럼 끊기지 않고 번지게
   //  ACC0 + k * 3 + j    거점 색(가운데 → 밝은 빛)
-  var NCB = 18, NB = 9;
+  var NCB = 14, NB = 8;
   var PAL = [];
   for (var ci = 0; ci < NCB; ci++) PAL.push(ramp(ci / (NCB - 1)));
   var BLEND0 = NCB, BLENDS = [0.38, 0.72];
@@ -475,24 +488,6 @@
     proj(X, 0, Z + 1, PT); var bx = PT.x - p0x, by = PT.y - p0y;
     ctx.setTransform(ax, ay, bx, by, p0x, p0y);
     return Math.sqrt(Math.abs(ax * by - ay * bx)); // 대략의 배율
-  };
-
-  var drawNebula = function (rev, final) {
-    if (rev <= 0) return;
-    var tt = final ? 0 : clock;
-    ctx.globalCompositeOperation = 'lighter';
-    for (var i = 0; i < NEB.length; i++) {
-      var n = NEB[i];
-      var X = n.mx + Math.sin(tt * TAU * n.w + n.ph) * n.sx - MCX, Z = n.my + Math.cos(tt * TAU * n.w * 0.8 + n.ph) * n.sz - MCZ;
-      proj(X, 0, Z, PT);
-      var cx = PT.x, cy = PT.y, rx = n.r * PT.k;
-      proj(X, 0, Z + n.r, PT);
-      var ry = Math.max(rx * 0.42, Math.abs(PT.y - cy));
-      ctx.globalAlpha = n.a * rev * (0.86 + 0.14 * Math.sin(tt * 0.45 + n.ph * 2));
-      ctx.drawImage(n.spr, cx - rx, cy - ry, rx * 2, ry * 2);
-    }
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
   };
 
   var drawGrid = function (rev, final) {
@@ -589,34 +584,35 @@
   };
 
   // 해류를 따라 흐르는 빛 알갱이 (머리 위치에서 흐름을 거슬러 올라가며 꼬리를 그림)
-  var TRK = 16, TR = new Float32Array((TRK + 1) * 2);
-  var FPART = [[11, 16, 0.12, 0.55], [7, 11, 0.3, 0.7], [3, 7, 0.58, 0.85], [0, 3, 1, 1]]; // [끝, 시작, 밝기, 굵기]
+  var TRK = 14, TR = new Float32Array((TRK + 1) * 2);
   var drawFlow = function (rev, final) {
     if (rev <= 0 || !FL.length) return;
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';
-    var K = TRK, h = 0.1;
+    ctx.lineJoin = 'round';
+    var K = TRK, h = 0.115;
     for (var i = 0; i < FL.length; i++) {
       var p = FL[i];
       var env = final ? 0.7 : Math.sin(Math.PI * c01(p.age / p.life));
-      var a = env * rev * edgeFade(p.x, p.y) * (1 - c01(landAt(p.x, p.y) * 2.5));
-      if (a < 0.03) continue;
+      var a = env * rev * edgeFade(p.x, p.y) * (1 - c01(landAt(p.x, p.y) * 2.5)) * 0.5;
+      if (a < 0.02) continue;
       var x = p.x, y = p.y, k;
       proj(x - MCX, 0, y - MCZ, PT); TR[0] = PT.x; TR[1] = PT.y;
       var depth = c01((PT.k - kMin) / (kMax - kMin));
       for (k = 1; k <= K; k++) { flowV(x, y, V); x -= V.x * h; y -= V.y * h; proj(x - MCX, 0, y - MCZ, PT); TR[k * 2] = PT.x; TR[k * 2 + 1] = PT.y; }
-      var wd = p.w * dpr * (0.7 + 0.5 * depth);
-      // 꼬리 → 머리 순으로 네 토막(뒤로 갈수록 흐리고 가늘게)
-      for (var j = 0; j < FPART.length; j++) {
-        var P = FPART[j];
-        ctx.strokeStyle = 'rgba(' + p.c + ',' + (a * P[2] * 0.45).toFixed(3) + ')';
-        ctx.lineWidth = wd * P[3];
-        ctx.beginPath(); ctx.moveTo(TR[P[1] * 2], TR[P[1] * 2 + 1]);
-        for (k = P[1] - 1; k >= P[0]; k--) ctx.lineTo(TR[k * 2], TR[k * 2 + 1]);
-        ctx.stroke();
-      }
+      // 꼬리(투명) → 머리(밝게) 한 획
+      var g = ctx.createLinearGradient(TR[K * 2], TR[K * 2 + 1], TR[0], TR[1]);
+      g.addColorStop(0, 'rgba(' + p.c + ',0)');
+      g.addColorStop(0.65, 'rgba(' + p.c + ',' + (a * 0.38).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(' + p.c + ',' + a.toFixed(3) + ')');
+      ctx.strokeStyle = g;
+      ctx.lineWidth = p.w * dpr * (0.7 + 0.5 * depth);
+      ctx.beginPath(); ctx.moveTo(TR[K * 2], TR[K * 2 + 1]);
+      for (k = K - 1; k >= 0; k--) ctx.lineTo(TR[k * 2], TR[k * 2 + 1]);
+      ctx.stroke();
     }
     ctx.lineCap = 'butt';
+    ctx.lineJoin = 'miter';
     ctx.globalCompositeOperation = 'source-over';
   };
 
@@ -929,7 +925,6 @@
     ctx.globalAlpha = 1;
     ctx.drawImage(bg, 0, 0);
     var rev = final ? 1 : easeOut3(t / 1.4);
-    drawNebula(rev, final);
     drawGrid(rev, final);
     drawFlow(final ? 1 : easeOut3((t - 0.6) / 1.6), final);
     drawDots(t, final);
