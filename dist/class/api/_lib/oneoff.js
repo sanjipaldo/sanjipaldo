@@ -229,6 +229,32 @@ function menuNamesV15(get, keys) {
   return { writes, result };
 }
 
+/* ---------- 로직메이커 → 부알남 (대표님 요청) ----------
+ * 강사 표시 이름이 아직 ‘로직메이커’이면 ‘부알남’으로, 그 강사 콘텐츠(브랜드 · 강의 소개 · 무료강의 · 공지 등)의 ‘로직메이커’ 글자도 ‘부알남’으로.
+ * 강사센터 로그인 이름(name)은 그대로 둔다 (로그인이 막히지 않게). 사진 · 파일 데이터 칸은 건너뜀 */
+function renameWordDeep(o, re, to) {
+  let n = 0;
+  const walk = (x) => {
+    if (Array.isArray(x)) { x.forEach((v, i) => { if (typeof v === "string") { const r = v.replace(re, to); if (r !== v) { x[i] = r; n++; } } else if (v && typeof v === "object") walk(v); }); return; }
+    Object.keys(x).forEach((k) => { const v = x[k]; if (typeof v === "string") { if (k === "data" || k === "photo") return; const r = v.replace(re, to); if (r !== v) { x[k] = r; n++; } } else if (v && typeof v === "object") walk(v); });
+  };
+  walk(o);
+  return n;
+}
+function logicToBualnam(get) {
+  const writes = {}, result = {};
+  const ins = get("ins:logic");
+  if (isObj(ins)) {
+    let n = 0;
+    if (ins.displayName === "로직메이커") { ins.displayName = "부알남"; n++; }
+    if (isObj(ins.brand)) n += renameWordDeep(ins.brand, /로직메이커/g, "부알남");
+    if (n) { writes["ins:logic"] = ins; result.ins = n; }
+  }
+  const c = get("content:logic");
+  if (isObj(c)) { const n = renameWordDeep(c, /로직메이커/g, "부알남"); if (n) { writes["content:logic"] = c; result.content = n; } }
+  return { writes, result: Object.keys(result).length ? result : { skipped: "이미 바뀜" } };
+}
+
 /* 위에서부터 차례로 (앞 작업 결과를 뒤 작업이 본다) */
 const OPS = [
   { id: "2026-10-08-docs-guide-6", note: "문대표 서류 준비 가이드를 6단계로", run: docsGuideSix },
@@ -237,7 +263,8 @@ const OPS = [
   { id: "2026-10-09-moon-profile-photo", note: "문대표 강사 프로필 사진 · 강의 분야 (첫 화면 강사 카드)", run: moonProfile },
   { id: "2026-10-09-billing-vat-included", note: "기수 이용료 부가세 방식을 '부가세 포함'으로", run: billingVatIncluded },
   { id: "2026-10-12-logic-farmer-photos", note: "로직메이커 · 황금농부 강사 프로필 사진 (사진이 비어 있을 때만)", run: logicFarmerPhotos },
-  { id: "2026-10-13-menu-names-v15", note: "수강생 메뉴 이름 · AI 조교 이름 · 예전 메뉴 이름이 들어간 기본 문구를 새 이름으로 (기본값 그대로일 때만)", run: menuNamesV15 }
+  { id: "2026-10-13-menu-names-v15", note: "수강생 메뉴 이름 · AI 조교 이름 · 예전 메뉴 이름이 들어간 기본 문구를 새 이름으로 (기본값 그대로일 때만)", run: menuNamesV15 },
+  { id: "2026-10-15-logic-to-bualnam", note: "강사 표시 이름 로직메이커 → 부알남 (로그인 이름은 그대로)", run: logicToBualnam }
 ];
 
-module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15 };
+module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam };

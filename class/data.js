@@ -582,8 +582,9 @@ window.CLASS_SEED = {
     { id: "moon", name: "문원오", phone4: "2186", displayName: "문대표", status: "active", createdAt: "2026-08-01",
       // 코치: 강사센터 ‘코치’ 탭으로 이름 + 뒷자리 로그인. perms = 볼 수 있는 강사센터 메뉴
       coaches: [{ id: "coach1", name: "김하나", phone4: "1004", status: "active", perms: ["students", "reviews", "questions"], memo: "과제 검수 · 1:1 문의 담당", createdAt: "2026-09-20" }] },
-    { id: "logic", name: "로직메이커", phone4: "1111", displayName: "로직메이커", status: "active", createdAt: "2026-09-10",
-      brand: { name: "로직메이커", courseTitle: "로직메이커 실전 클래스", theme: "airtable", photo: "assets/home/logic-profile.webp" } },
+    // 부알남(예전 이름 로직메이커) — 강사센터 로그인 이름은 예전 그대로 ‘로직메이커’
+    { id: "logic", name: "로직메이커", phone4: "1111", displayName: "부알남", status: "active", createdAt: "2026-09-10",
+      brand: { name: "부알남", courseTitle: "부알남 실전 클래스", theme: "airtable", photo: "assets/home/logic-profile.webp" } },
     { id: "farmer", name: "황금농부", phone4: "3333", displayName: "황금농부", status: "active", createdAt: "2026-09-12",
       brand: { name: "황금농부", courseTitle: "황금농부 실전 클래스", theme: "binance", photo: "assets/home/farmer-profile.webp" } },
     { id: "choi", name: "초이", phone4: "2222", displayName: "초이", status: "active", createdAt: "2026-09-20",

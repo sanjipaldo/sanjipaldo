@@ -173,22 +173,13 @@ body[data-mode="home"] { background: #fff; }
 /* 강사진 — 프로필 사진 카드 (사진 · 이름 · 분야 · 구분선 · SNS) */
 .hm-tcs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
 .hm-tc { display: flex; flex-direction: column; min-width: 0; transition: transform .3s var(--ease); }
-/* 강사 사진 — 긱스쿨 강사진처럼 큰 브랜드 모양 위에 누끼 사진, 우리는 흰 바탕 + 빨간 doogo 심볼(뒤로 6겹 = 입체 두께).
-   액자(.hm-tc-frame)는 위를 14% 비워 두고, 사진(.hm-tc-cut)은 그 위로 머리가 살짝 튀어나오게 — 양옆 · 아래는 액자에 맞춰 자름 */
+/* 강사 사진 — 타이탄클래스 강사진처럼 배경 장식 없이 밝은 회색 카드 안에 강사만. 누끼 사진(4:5, 머리 위 5% 여백 · 허리 위까지)을 아래에 붙여 꽉 채운다 */
 .hm-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
-.hm-tc { --sw: 132%; --sl: -6%; --st: 4%; }
-.hm-tcs > .hm-tc:nth-child(4n+2) { --sw: 220%; --sl: -40%; --st: -40%; }
-.hm-tcs > .hm-tc:nth-child(4n+3) { --sw: 150%; --sl: -22%; --st: 22%; }
-.hm-tcs > .hm-tc:nth-child(4n+4) { --sw: 190%; --sl: -96%; --st: -6%; }
-.hm-tc-photo { position: relative; display: block; aspect-ratio: 4 / 5; border-radius: 18px; }
-.hm-tc-frame { position: absolute; left: 0; right: 0; top: 14%; bottom: 0; border-radius: 18px; overflow: hidden; background: linear-gradient(180deg, #fff7f6 0%, #ffffff 70%); border: 1px solid #f4e6e4; box-shadow: 0 22px 40px -26px rgba(150, 30, 20, .45); transition: box-shadow .3s ease; }
-.hm-tc-sym { position: absolute; left: var(--sl); top: var(--st); width: var(--sw); height: auto; overflow: visible; filter: drop-shadow(0 18px 22px rgba(170, 24, 12, .22)); transition: transform .6s var(--ease); }
-.hm-tc-ex { fill: #c61d12; }
-.hm-tc-ex:first-child { fill: #a8160c; }
-.hm-tc-face { fill: url(#hm-dsym-g); }
-.hm-tc-cut { position: absolute; inset: 0; z-index: 2; pointer-events: none; clip-path: inset(-40% 0 0 0 round 0 0 18px 18px); }
-.hm-tc-cut img { position: absolute; left: 50%; bottom: 0; height: 106%; width: auto; max-width: none; transform: translateX(-50%); transform-origin: 50% 100%; filter: drop-shadow(0 10px 18px rgba(60, 10, 6, .22)); transition: transform .5s var(--ease); }
-.hm-tc-ph { position: absolute; left: 50%; bottom: 0; width: 64%; transform: translateX(-50%); fill: #fff; filter: drop-shadow(0 10px 16px rgba(150, 24, 12, .28)); }
+.hm-tc-photo { position: relative; display: block; aspect-ratio: 4 / 5; border-radius: 16px; overflow: hidden; isolation: isolate; background: linear-gradient(180deg, #f5f6f8 0%, #eceef1 100%); box-shadow: inset 0 0 0 1px rgba(17, 24, 39, .04); transition: box-shadow .3s ease; }
+.hm-tc-frame { position: absolute; inset: 0; }
+.hm-tc-cut { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.hm-tc-cut img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; transform-origin: 50% 100%; transition: transform .5s var(--ease); }
+.hm-tc-ph { position: absolute; left: 50%; bottom: 0; width: 70%; transform: translateX(-50%); fill: #d9dde3; }
 .hm-tc-tag { position: absolute; z-index: 3; left: 12px; bottom: 12px; padding: 4px 10px; border-radius: 50px; background: rgba(255, 255, 255, .96); border: 1px solid var(--g100); box-shadow: 0 2px 8px rgba(0, 0, 0, .08); font-size: 12px; font-weight: 600; color: var(--g700); transition: background-color .25s ease, color .25s ease, border-color .25s ease; }
 .hm-tc-body { padding: 18px 2px 14px; border-bottom: 1px solid var(--g200); }
 .hm-tc-body h3 { font-size: 20px; font-weight: 700; line-height: 1.4; letter-spacing: 0; transition: color .2s ease; }
@@ -427,9 +418,8 @@ body[data-mode="home"] { background: #fff; }
   .hm-hov:hover .hm-ic { transform: rotate(-8deg) scale(1.08); }
 
   .hm-tc:hover { transform: translateY(-6px); }
-  .hm-tc:hover .hm-tc-frame { box-shadow: 0 28px 48px -24px rgba(150, 30, 20, .5); }
-  .hm-tc:hover .hm-tc-cut img { transform: translateX(-50%) scale(1.04); }
-  .hm-tc:hover .hm-tc-sym { transform: translate(-3%, -4%) scale(1.05); }
+  .hm-tc:hover .hm-tc-photo { box-shadow: inset 0 0 0 1px rgba(17, 24, 39, .04), 0 22px 40px -26px rgba(17, 24, 39, .35); }
+  .hm-tc:hover .hm-tc-cut img { transform: scale(1.03); }
   .hm-tc:hover .hm-tc-tag { background: var(--pri); border-color: var(--pri); color: #fff; }
   .hm-tc:hover h3 { color: var(--pri); }
   .hm-sns:hover { border-color: var(--g400); background: #fff; }
@@ -513,10 +503,10 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
   .hm-cmp-strike { transition: none; background-size: 100% 2px; }
   .hm-cmp-row.in .hm-cmp-ok, .hm-cmp-row.in .hm-cmp-new { animation: none; }
   .hm-chip, .hm-dot, .hm-mbg, .hm-modal, .hm-done-ic { animation: none; }
-  .hm-btn, .hm-hov, .hm-tc, .hm-join, .hm-ic, .hm-tc-cut img, .hm-tc-sym, .hm-join-ic { transition: none; }
+  .hm-btn, .hm-hov, .hm-tc, .hm-join, .hm-ic, .hm-tc-cut img, .hm-join-ic { transition: none; }
   .hm-hov:hover, .hm-tc:hover, .hm-join:hover,   .hm-top, .hm-top-prog { transition: none; }
-  .hm-hov:hover .hm-ic, .hm-join:hover .hm-join-ic, .hm-tc:hover .hm-tc-sym { transform: none; }
-  .hm-tc:hover .hm-tc-cut img { transform: translateX(-50%); }
+  .hm-hov:hover .hm-ic, .hm-join:hover .hm-join-ic { transform: none; }
+  .hm-tc:hover .hm-tc-cut img { transform: none; }
 }
 
 /* 태블릿 */
@@ -877,7 +867,7 @@ textarea.hm-in { height: auto; min-height: 76px; padding: 13px 16px; line-height
 .dc-ins:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(249, 66, 57, .3); }
 .dc-ins-av { display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: var(--tone-bg, var(--dc-pri-soft)); color: var(--tone, var(--dc-pri-dark)); font-size: 18px; font-weight: 700; }
 .dc-ins-av.has-photo { background: var(--dc-g100); }
-.dc-ins-av img { width: 100%; height: 100%; object-fit: cover; object-position: center top; transform: scale(1.5); transform-origin: 50% 34%; }
+.dc-ins-av img { width: 100%; height: 100%; object-fit: cover; object-position: center top; transform: scale(1.15); transform-origin: 50% 0; }
 .dc-ins-t { flex: 1; min-width: 0; }
 .dc-ins-t b { display: block; font-size: 16px; font-weight: 700; color: var(--dc-ink); }
 .dc-ins-t small { display: block; margin-top: 2px; font-size: 13px; color: var(--dc-g500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

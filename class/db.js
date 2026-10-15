@@ -149,6 +149,12 @@
     [/^강의 일정 확인하기$/, "수업 캘린더 확인하기"]
   ];
   const QL_RENAME = { ql1: ["공지사항", "클래스 소식"], ql2: ["자주 묻는 질문", "FAQ 검색"], ql3: ["서류 준비 가이드", "실무 체크리스트"], ql4: ["요청사항", "1:1 요청"] };
+  /** 콘텐츠 안의 글자를 통째로 바꾼다 (사진 · 파일 데이터 칸은 건너뜀) */
+  function renameWord(o, re, to) {
+    if (Array.isArray(o)) { o.forEach((v, i) => { if (typeof v === "string") o[i] = v.replace(re, to); else if (v && typeof v === "object") renameWord(v, re, to); }); return o; }
+    Object.keys(o).forEach((k) => { const v = o[k]; if (typeof v === "string") { if (k !== "data" && k !== "photo") o[k] = v.replace(re, to); } else if (v && typeof v === "object") renameWord(v, re, to); });
+    return o;
+  }
   /** 콘텐츠 한 개의 예전 기본 문구를 새 메뉴 이름으로. 바뀐 칸 수를 돌려준다 */
   function renameContentPhrases(c) {
     let n = 0;
@@ -792,6 +798,14 @@
       Object.keys(db.content).forEach((id) => { const sc = window.CLASS_SEED.content[id], c = db.content[id]; if (sc) demo.forEach((k) => { if (Array.isArray(sc[k]) && sc[k].length && !(c[k] || []).length) c[k] = clone(sc[k]); }); });
       db.instructors.forEach((ins) => menuConfig(ins.id));
       db.flags.menuNamesV15 = true; save();
+    }
+    // 로직메이커 → 부알남 (대표님 요청 · 이 브라우저 데이터 · 한 번만). 로그인 이름(name)은 그대로. 서버는 api/_lib/oneoff.js 가 같은 일을 한다
+    if (!R.on && typeof document !== "undefined" && !db.flags.bualnamV1) {
+      const li = db.instructors.find((x) => x.id === "logic"), lc = db.content.logic;
+      if (li && li.displayName === "로직메이커") li.displayName = "부알남";
+      if (li && li.brand) renameWord(li.brand, /로직메이커/g, "부알남");
+      if (lc) renameWord(lc, /로직메이커/g, "부알남");
+      db.flags.bualnamV1 = true; save();
     }
     if (!R.on && !db.flags.profileSeeded2) {
       (window.CLASS_SEED.instructors || []).forEach((si) => {

@@ -1,4 +1,4 @@
-/* 화면 전환: 주소 맨 앞(#/ · #/about)은 두고 클래스 소개(home.js), #/center… 는 강사센터·마스터(admin.js),
+/* 화면 전환: 주소 맨 앞(https://www.doogoclass.com/ · #/about 은 맨 앞 주소로 정리)은 두고 클래스 소개(home.js), #/center… 는 강사센터·마스터(admin.js),
  * #/p/… · #/free/… 는 강사 홍보 · 무료강의 페이지(landing.js), 나머지는 수강생 센터(app.js)
  * 서버(/api)가 있으면 데이터를 서버에서 받아 오고(여러 기기·여러 사람이 같은 데이터), 없으면 이 브라우저에 저장한다. */
 (function () {
@@ -10,6 +10,8 @@
     // 로그인한 수강생은 첫 화면 대신 바로 내 강의실로 (소개 화면은 #/about 으로 언제든)
     if (isRoot(h) && DB.session.student()) { history.replaceState(null, "", "#/home"); h = "#/home"; }
     const next = /^#\/center/.test(h) ? "admin" : /^#\/(p|free)(\/|\?|$)/.test(h) ? "landing" : isRoot(h) || /^#\/(about|partner)(\/|\?|$)/.test(h) ? "home" : "student";
+    // 두고 클래스 첫 화면의 대표 주소는 https://www.doogoclass.com/ — #/about · #/ 로 들어와도 주소창은 깨끗하게 (검색 · 공유 주소를 하나로)
+    if (next === "home" && h && (h === "#" || h === "#/" || /^#\/about(\?|$)/.test(h))) history.replaceState(null, "", location.pathname + location.search);
     const changed = next !== mode;
     mode = next;
     document.body.dataset.mode = next;
