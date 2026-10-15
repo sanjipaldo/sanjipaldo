@@ -594,6 +594,7 @@
   .bz-vc-step { padding: 16px 11px 14px; }
   .bz-vc-en { letter-spacing: .06em; }
   .bz-vc-biz { font-size: .76rem; }
+  .bz-vc-goal .bz-vc-en { letter-spacing: .05em; }
 }
 /* 1100 이하: 세로 계단 — 위에서 아래로, 띠가 오른쪽으로 길어지며 EXIT 로. 꼬리표는 띠 오른쪽 끝 */
 @media (max-width: 1100px) {

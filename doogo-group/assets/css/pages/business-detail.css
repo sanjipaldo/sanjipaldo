@@ -211,6 +211,32 @@
 .dt-web-shot:hover .dt-web-window { translate: 0 -8px; box-shadow: 0 70px 110px -44px rgba(0, 0, 0, .8), 0 0 0 1px rgba(255, 255, 255, .16); }
 .dt-web-shot:hover .dt-web-view img { transform: scale(1.025); }
 .dt-web-shot:hover .dt-web-go { opacity: 1; transform: none; background: var(--blue); }
+/* 함께 보는 사이트 (14차: 브랜드 커머스 → MAURINZ · 제조업 → DOOGO CONNECT) — 카드 아래 한 줄, 작은 캡처 + 이름 · 주소 · 소개 (카드 전체가 새 창 링크) */
+.dt-web-card.has-more { grid-template-areas: "head shot" "foot shot" "more more"; grid-template-rows: auto 1fr auto; }
+.dt-web-more { grid-area: more; min-width: 0; margin-top: clamp(36px, 4.4vw, 56px); padding-top: clamp(24px, 3vw, 32px); border-top: 1px solid var(--line-dark); }
+.dt-web-more-label { font-size: .8rem; font-weight: 700; letter-spacing: .02em; color: var(--blue-300); }
+.dt-web-subs { margin-top: 16px; display: grid; gap: 14px; }
+.dt-web-sub {
+  display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: clamp(20px, 3vw, 44px); align-items: center;
+  padding: 14px; border-radius: 20px; background: rgba(255, 255, 255, .04); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
+  transition: background-color .35s var(--ease), box-shadow .35s var(--ease);
+}
+.dt-web-sub:is(:hover, :focus-visible) { background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px rgba(141, 182, 255, .45); }
+.dt-web-sub-shot { position: relative; display: block; overflow: hidden; border-radius: 12px; background: #fff; box-shadow: 0 30px 60px -34px rgba(0, 0, 0, .8); }
+.dt-web-sub-bar { display: flex; align-items: center; gap: 5px; height: 22px; padding: 0 10px; background: #F2F4F8; border-bottom: 1px solid #E2E7EF; }
+.dt-web-sub-bar i { width: 7px; height: 7px; border-radius: 50%; background: rgba(11, 27, 51, .16); }
+.dt-web-sub-bar i:first-child { background: rgba(10, 93, 226, .55); }
+.dt-web-sub-shot img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: 50% 0; transition: transform 1s var(--ease); }
+.dt-web-sub:hover .dt-web-sub-shot img { transform: scale(1.03); }
+.dt-web-sub-body { display: grid; justify-items: start; gap: 8px; min-width: 0; padding-right: clamp(0px, 2vw, 24px); }
+.dt-web-sub-host { font-size: clamp(1.5rem, 2.4vw, 2.1rem); font-weight: 500; line-height: 1.1; letter-spacing: -.03em; overflow-wrap: anywhere; }
+.dt-web-sub-desc { max-width: 52ch; font-size: .95rem; line-height: 1.7; color: var(--on-dark-2); text-wrap: pretty; }
+.dt-web-sub-go { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; height: 40px; padding: 0 16px; border-radius: 999px; background: rgba(255, 255, 255, .1); color: #fff; font-size: .88rem; font-weight: 600; transition: background-color .3s var(--ease), color .3s var(--ease); }
+.dt-web-sub-go svg { width: 14px; height: 14px; transition: transform .3s var(--ease); }
+.dt-web-sub:is(:hover, :focus-visible) .dt-web-sub-go { background: #fff; color: var(--ink); }
+.dt-web-sub:is(:hover, :focus-visible) .dt-web-sub-go svg { transform: translate(2px, -2px); }
+/* 사이트 링크 여러 개(첫 화면 핵심 정보 띠) */
+.dt-sites { display: flex; flex-direction: column; align-items: flex-start; }
 
 /* ---------- 4. 현장 ---------- */
 /* 대표 사진(7칸, 4:3이 행 높이를 정함) + 두 번째 사진 또는 브랜드 3D 렌더(5칸, 같은 높이) */
@@ -486,6 +512,10 @@
   .dt-hero-grid { grid-template-columns: 1fr; align-items: start; gap: 22px; }
   /* 운영 사이트: 이름·소개 → 캡처 → 바로가기 순서로 한 칸 */
   .dt-web-card { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "shot" "foot"; grid-template-rows: none; row-gap: 28px; }
+  .dt-web-card.has-more { grid-template-areas: "head" "shot" "foot" "more"; grid-template-rows: none; }
+  .dt-web-more { margin-top: 8px; }
+  .dt-web-sub { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 12px 12px 18px; }
+  .dt-web-sub-body { padding: 0 6px; }
   .dt-web-head { align-self: start; }
   .dt-web-foot { margin-top: 0; }
   .dt-web-desc { max-width: 46ch; }
@@ -617,7 +647,13 @@ html.motion-off .dt-hub-line, html.motion-off .dt-hub-core::after { animation: n
 html.motion-off :is(.dt-row:hover .dt-row-title, .dt-shot:hover img, .dt-stay:hover .dt-stay-media img) { transform: none !important; }
 /* 운영 사이트: 창 기울기(스크롤)는 움직임 멈추기와 OS 애니메이션 줄이기 기기 모두에서 끄고, 캡처는 바로 선명하게 */
 html.motion-off .dt-web-window, html.soft-motion .dt-web-window { transform: none !important; }
+html.motion-off .dt-web-sub:hover .dt-web-sub-shot img { transform: none; }
 html.motion-off .dt-web-window { translate: none !important; }
 html.motion-off .dt-web-view img { opacity: 1 !important; filter: none !important; scale: 1 !important; transform: none !important; transition: none !important; }
 html.motion-off .dt-web-bar::after { animation: none !important; opacity: 0 !important; }
 html.motion-off .dt-web-go { transition: none; }
+/* 아주 좁은 휴대폰(≤370): 운영 회사 알약이 칸을 넘지 않게 글자·여백을 조금 줄임 (DOOGOBIO NZ · 뉴질랜드 건강식품 제조 · 해외법인) */
+@media (max-width: 370px) {
+  .dt-corp { gap: 6px; padding-left: 12px; font-size: .84rem; }
+  .dt-corp-type { padding: 0 8px; font-size: .7rem; }
+}
