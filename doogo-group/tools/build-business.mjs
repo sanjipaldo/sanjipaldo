@@ -336,7 +336,7 @@ const BIZ = [
       photo('campus', { label: '교육장', pos: '58% 50%', alt: '밝은 교육장에서 강사가 성인 수강생들 앞에서 강의하는 모습' }),
     ],
     heroAlt: { label: '공간 둘러보기', href: '#related' },
-    facts: [['서비스 구성', `WORK · STAY · F&amp;B ${SOON}`], ['숙박', `NORA STAY · ${SITE(NORA_URL)}`]],
+    facts: [['서비스 구성', `WORK · STAY · <span class="nowrap">F&amp;B ${SOON}</span>`], ['숙박', `NORA STAY · ${SITE(NORA_URL)}`]],
     svcHead: 'DOOGO SPACE가 하는 일',
     svcLead: '일하고, 머물고, 즐기는 모든 순간을 하나의 공간 안에서 연결합니다.',
     // 세 갈래(pillar): en 영문 갈래 이름 · items 서비스 칩 · soon 준비 중 표시 (F&B = DOOGO SPACE F&B 사업부, 준비 중)
@@ -738,16 +738,17 @@ ${formats.map((f, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
     //    NORA STAY는 실제 사이트 첫 화면 속 숙소 사진(일부)을 쓴 카드로 (AI 이미지는 실제 숙소와 달라 쓰지 않음)
     const spaces = [
       { en: 'Shared Office', ko: '공유오피스', use: '필요한 만큼 자리를 쓰며 함께 일하는 업무 공간', who: '작은 팀 · 1인 사업자' },
-      { en: 'Virtual Office', ko: '비상주 사무실', use: '상주하지 않아도 사업장 주소가 필요할 때', who: '1인 사업자' },
+      { en: 'Virtual Office', ko: '비상주오피스', use: '상주하지 않아도 사업장 주소가 필요할 때', who: '1인 사업자' },
+      { en: 'Meeting Room', ko: '미팅룸', use: '회의·상담·인터뷰를 위한 공간', who: '팀 · 외부 미팅이 필요한 사업자' },
       { en: 'Classroom', ko: '교육장', use: '강의·워크숍·모임 공간', who: '교육 · 행사 주최자', link: ['business-campus.html', 'DOOGO CLASS 수업과 연계'] },
     ];
     return `      <div class="dt-rel-head">
         <div>
           <span class="eyebrow" data-reveal="fade">Spaces</span>
-          <h2 class="h2" id="rel-title" data-lines style="margin-top:20px"><span class="line"><span>일하고, 배우고, 쉬어가는</span></span><span class="line"><span>네 가지 공간</span></span></h2>
+          <h2 class="h2" id="rel-title" data-lines style="margin-top:20px"><span class="line"><span>일하고, 머물고, 즐기는</span></span><span class="line"><span>하루를 위한 공간</span></span></h2>
         </div>
         <div class="dt-rel-side" data-reveal style="--d:.15s">
-          <p class="lead">목적에 맞는 공간을 고를 수 있도록 공유오피스·비상주 사무실·교육장을 마련하고, 숙박은 <span class="nowrap">NORA STAY</span>로 이어집니다.</p>
+          <p class="lead">일하는 공간(WORK)으로 공유오피스·비상주오피스·미팅룸·교육장을 마련하고, 머무는 공간(STAY)은 <span class="nowrap">NORA STAY</span>로 이어집니다. 카페·라운지 등 F&amp;B는 <span class="nowrap">DOOGO SPACE</span> F&amp;B 사업부에서 준비하고 있습니다.</p>
         </div>
       </div>
       <ol class="dt-rows">
@@ -765,11 +766,11 @@ ${spaces.map((sp, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
           <span class="dt-stay-badge"><span class="en">norastay.com</span> 첫 화면 일부 · ${WEB_DATE}</span>
         </div>
         <div class="dt-stay-body">
-          <span class="dt-row-num en">04</span>
+          <span class="dt-row-num en">05</span>
           <p class="dt-stay-en en">Stay</p>
           <h3 class="dt-stay-title"><span class="en nowrap">NORA STAY</span> 숙박</h3>
-          <p class="dt-stay-desc">여행과 출장 중에 편하게 쉬어갈 수 있는 <span class="nowrap">DOOGO SPACE</span>의 숙박 서비스입니다. 일하는 공간에서 쉬는 공간까지, 머무는 시간 전체를 함께 준비합니다.</p>
-          <p class="dt-stay-for"><span>이런 분께</span>여행객 · 출장객</p>
+          <p class="dt-stay-desc">여행과 출장, 장단기 체류까지 편하게 머물 수 있는 <span class="nowrap">DOOGO SPACE</span>의 숙박 서비스입니다. 일하는 공간에서 머무는 공간까지, 하루 전체를 함께 준비합니다.</p>
+          <p class="dt-stay-for"><span>이런 분께</span>여행객 · 출장객 · 장단기 체류객</p>
           <a class="btn btn--white" href="${NORA_URL}" target="_blank" rel="noopener">NORA STAY 바로가기 ${ARROW_UR}${NEWWIN}</a>
         </div>
       </article>`;
@@ -950,7 +951,16 @@ ${b.facts.map(([k, v]) => `        <div><dt>${k}</dt><dd>${nw(v)}</dd></div>`).j
         <p class="lead" data-reveal style="--d:.15s">${b.svcLead}</p>
       </div>
       <ol class="dt-svc-grid" style="--n:${svcCount}">
-${b.detail.map((s, i) => `        <li class="dt-svc" data-reveal style="--d:${(i * 0.07).toFixed(2)}s">
+${b.detail.map((s, i) => s.en
+    // 세 갈래 카드(공간: WORK · STAY · F&B) — 영문 갈래 이름 + 한글 이름 + 서비스 칩 + 설명, 준비 중이면 작은 표시
+    ? `        <li class="dt-svc is-pillar${s.soon ? ' is-soon' : ''}" data-reveal style="--d:${(i * 0.07).toFixed(2)}s">
+          <div class="dt-svc-top"><span class="dt-svc-ico">${ico(s.icon, '')}</span><span class="dt-svc-num en">${String(i + 1).padStart(2, '0')}</span></div>
+          <p class="dt-svc-en"><span class="en">${s.en}</span>${s.soon ? SOON : ''}</p>
+          <h3 class="dt-svc-name">${nw(s.name)}</h3>
+          <ul class="dt-svc-items" aria-label="${s.en} 서비스">${s.items.map(x => `<li>${nw(x)}</li>`).join('')}</ul>
+          <p class="dt-svc-desc">${nw(s.desc)}</p>
+        </li>`
+    : `        <li class="dt-svc" data-reveal style="--d:${(i * 0.07).toFixed(2)}s">
           <div class="dt-svc-top"><span class="dt-svc-ico">${ico(s.icon, '')}</span><span class="dt-svc-num en">${String(i + 1).padStart(2, '0')}</span></div>
           <h3 class="dt-svc-name">${nw(s.name)}</h3>
           <p class="dt-svc-desc">${nw(s.desc)}</p>
