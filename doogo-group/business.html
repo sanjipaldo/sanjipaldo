@@ -173,17 +173,16 @@
     <section class="mnav-biz" aria-labelledby="mnav-biz-t">
       <div class="mnav-biz-head" style="--i:6">
         <h2 class="mnav-biz-t" id="mnav-biz-t">사업영역 바로가기</h2>
-        <span class="mnav-biz-en" aria-hidden="true">7 Businesses</span>
+        <a class="mnav-biz-all" href="business.html"><span class="sr-only">사업영역 </span>전체 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
       </div>
       <ul class="mnav-tiles">
-        <li style="--i:7"><a class="mnav-tile" href="business-campus.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-campus"/></svg></span><span class="mnav-tile-t">교육업</span><span class="mnav-tile-en">DOOGO CLASS</span></a></li>
-        <li style="--i:7"><a class="mnav-tile" href="business-bio.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-bio"/></svg></span><span class="mnav-tile-t">제조업</span><span class="mnav-tile-en">DOOGOBIO</span></a></li>
-        <li style="--i:8"><a class="mnav-tile" href="business-commerce.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-commerce"/></svg></span><span class="mnav-tile-t">브랜드 커머스</span><span class="mnav-tile-en">DOOGO MAKERS</span></a></li>
-        <li style="--i:8"><a class="mnav-tile" href="business-media.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-media"/></svg></span><span class="mnav-tile-t">미디어 &amp; 콘텐츠</span><span class="mnav-tile-en">DOOGO MEDIA</span></a></li>
-        <li style="--i:9"><a class="mnav-tile" href="business-ad.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-ad"/></svg></span><span class="mnav-tile-t">마케팅</span><span class="mnav-tile-en">DOOGO AD</span></a></li>
-        <li style="--i:9"><a class="mnav-tile" href="business-food.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-food"/></svg></span><span class="mnav-tile-t">유통</span><span class="mnav-tile-en">DOOGOFOOD</span></a></li>
-        <li style="--i:10"><a class="mnav-tile" href="business-space.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-space"/></svg></span><span class="mnav-tile-t">공간 &amp; 라이프스타일</span><span class="mnav-tile-en">DOOGO SPACE</span></a></li>
-        <li style="--i:10"><a class="mnav-tile mnav-tile--all" href="business.html"><span class="mnav-tile-ico" aria-hidden="true"><svg><use href="#i-arrow"/></svg></span><span class="mnav-tile-t"><span class="sr-only">사업영역 </span>전체 보기</span><span class="mnav-tile-en">View all</span></a></li>
+        <li style="--i:7"><a class="mnav-tile" href="business-campus.html"><span class="mnav-tile-num en" aria-hidden="true">01</span><span class="mnav-tile-t">교육업</span><span class="mnav-tile-en">DOOGO CLASS</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+        <li style="--i:7"><a class="mnav-tile" href="business-bio.html"><span class="mnav-tile-num en" aria-hidden="true">02</span><span class="mnav-tile-t">제조업</span><span class="mnav-tile-en">DOOGOBIO</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+        <li style="--i:8"><a class="mnav-tile" href="business-commerce.html"><span class="mnav-tile-num en" aria-hidden="true">03</span><span class="mnav-tile-t">브랜드 커머스</span><span class="mnav-tile-en">DOOGO MAKERS</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+        <li style="--i:8"><a class="mnav-tile" href="business-media.html"><span class="mnav-tile-num en" aria-hidden="true">04</span><span class="mnav-tile-t">미디어 &amp; 콘텐츠</span><span class="mnav-tile-en">DOOGO MEDIA</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+        <li style="--i:9"><a class="mnav-tile" href="business-ad.html"><span class="mnav-tile-num en" aria-hidden="true">05</span><span class="mnav-tile-t">마케팅</span><span class="mnav-tile-en">DOOGO AD</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+        <li style="--i:9"><a class="mnav-tile" href="business-food.html"><span class="mnav-tile-num en" aria-hidden="true">06</span><span class="mnav-tile-t">유통</span><span class="mnav-tile-en">DOOGOFOOD</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+        <li style="--i:10"><a class="mnav-tile" href="business-space.html"><span class="mnav-tile-num en" aria-hidden="true">07</span><span class="mnav-tile-t">공간 &amp; 라이프스타일</span><span class="mnav-tile-en">DOOGO SPACE</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
       </ul>
     </section>
     <div class="mnav-cta" style="--i:11">
@@ -270,158 +269,172 @@
     </div>
   </section>
 
-  <!-- 2. 가치사슬 띠 -->
+  <!-- 2. 가치사슬: 3D 계단 (단계마다 그 단계를 맡은 사업 상세로) -->
   <section class="bz-chain" aria-labelledby="chain-title">
-    <div class="container bz-chain-inner">
-      <div class="bz-chain-head" data-reveal="fade">
-        <span class="eyebrow">Value Chain</span>
-        <h2 class="bz-chain-title" id="chain-title">제품에서 사람까지, <br>7단계로 이어지는 성장</h2>
-        <p class="bz-chain-note">단계를 누르면 그 단계를 맡은 사업의 상세 페이지로 이동합니다.</p>
-      </div>
-      <div class="bz-rail-wrap">
-        <ol class="bz-rail" data-reveal="fade">
-          <li style="--i:0"><a href="business-bio.html"><span class="bz-rail-dot" aria-hidden="true"></span><strong>제품 제조</strong><span class="bz-rail-en en">PRODUCT</span><span class="bz-rail-biz"><span class="en">02</span><span class="bz-rail-biz-t"><span class="nowrap">제조업<svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span></span><span class="sr-only"> — DOOGOBIO 상세 보기</span></a></li>
-          <li style="--i:1"><a href="business-commerce.html"><span class="bz-rail-dot" aria-hidden="true"></span><strong>브랜드 기획</strong><span class="bz-rail-en en">BRAND</span><span class="bz-rail-biz"><span class="en">03</span><span class="bz-rail-biz-t">브랜드 <span class="nowrap">커머스<svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span></span><span class="sr-only"> — DOOGO MAKERS 상세 보기</span></a></li>
-          <li style="--i:2"><a href="business-media.html"><span class="bz-rail-dot" aria-hidden="true"></span><strong>온드미디어 제작</strong><span class="bz-rail-en en">OWNED MEDIA</span><span class="bz-rail-biz"><span class="en">04</span><span class="bz-rail-biz-t">미디어 &amp; <span class="nowrap">콘텐츠<svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span></span><span class="sr-only"> — DOOGO MEDIA 상세 보기</span></a></li>
-          <li style="--i:3"><a href="business-campus.html"><span class="bz-rail-dot" aria-hidden="true"></span><strong>교육·인재 육성</strong><span class="bz-rail-en en">EDUCATION</span><span class="bz-rail-biz"><span class="en">01</span><span class="bz-rail-biz-t"><span class="nowrap">교육업<svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span></span><span class="sr-only"> — DOOGO CLASS 상세 보기</span></a></li>
-          <li style="--i:4"><a href="business-ad.html"><span class="bz-rail-dot" aria-hidden="true"></span><strong>마케팅</strong><span class="bz-rail-en en">MARKETING</span><span class="bz-rail-biz"><span class="en">05</span><span class="bz-rail-biz-t"><span class="nowrap">마케팅<svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span></span><span class="sr-only"> — DOOGO AD 상세 보기</span></a></li>
-          <li style="--i:5"><a href="business-food.html"><span class="bz-rail-dot" aria-hidden="true"></span><strong>판매·유통</strong><span class="bz-rail-en en">SALES</span><span class="bz-rail-biz"><span class="en">06</span><span class="bz-rail-biz-t"><span class="nowrap">유통<svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span></span><span class="sr-only"> — DOOGOFOOD 상세 보기</span></a></li>
-          <li style="--i:6"><a href="business-space.html"><span class="bz-rail-dot" aria-hidden="true"></span><strong>공간·라이프스타일</strong><span class="bz-rail-en en is-long">OFFICE·STAY·<wbr>F&amp;B</span><span class="bz-rail-biz"><span class="en">07</span><span class="bz-rail-biz-t">공간 &amp; <span class="nowrap">라이프스타일<svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span></span><span class="sr-only"> — DOOGO SPACE 상세 보기</span></a></li>
-          <li class="bz-rail-goal" style="--i:7"><span class="bz-rail-dot" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span><strong>브랜드 성장 &amp; EXIT</strong><span class="bz-rail-en en">BRAND GROWTH &amp; EXIT</span><span class="bz-rail-biz is-goal">그룹이 함께 만드는 결과</span></li>
-        </ol>
+    <div class="container">
+      <div class="bz-vc" data-chain>
+        <div class="bz-vc-bg" aria-hidden="true"></div>
+        <div class="bz-vc-head">
+          <div class="bz-vc-copy">
+            <span class="eyebrow">Value Chain</span>
+            <h2 class="bz-vc-title" id="chain-title">제품에서 사람까지,<br> 7단계로 이어지는 성장</h2>
+            <p class="bz-vc-note">단계를 누르면 그 단계를 맡은 사업의 상세 페이지로 이동합니다.</p>
+          </div>
+          <p class="bz-vc-meter en" aria-hidden="true" style="--p:8"><span class="bz-vc-meter-n" data-chain-n>EXIT</span><span class="bz-vc-meter-bar"></span><span class="bz-vc-meter-t" data-chain-t>Brand Growth</span></p>
+        </div>
+        <div class="bz-vc-stage">
+          <div class="bz-vc-cam">
+            <div class="bz-vc-scene" data-chain-scene>
+              <div class="bz-vc-floor" aria-hidden="true"></div>
+              <div class="bz-vc-wall en" aria-hidden="true">GROWTH</div>
+              <svg class="bz-vc-beam" aria-hidden="true" focusable="false" data-chain-beam>
+                <defs><filter id="bz-vc-blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4"/></filter></defs>
+                <path class="bz-vc-beam-halo" d="" filter="url(#bz-vc-blur)"/>
+                <path class="bz-vc-beam-base" d=""/>
+                <path class="bz-vc-beam-line" d=""/>
+                <path class="bz-vc-beam-glow" d="" filter="url(#bz-vc-blur)"/>
+                <path class="bz-vc-beam-core" d=""/>
+              </svg>
+              <ol class="bz-vc-steps" aria-label="가치사슬 7단계와 각 단계를 맡은 사업">
+              <li style="--i:0"><a class="bz-vc-step" href="business-bio.html" data-t="Product"><span class="bz-vc-3d" aria-hidden="true"><i class="bz-cf bz-cf-fill"></i><i class="bz-cf bz-cf-top"></i><i class="bz-cf bz-cf-side"></i><i class="bz-cf bz-cf-pool"></i><i class="bz-cf bz-cf-flash"></i></span><span class="bz-vc-num en">01</span><strong class="bz-vc-ko">제품 제조</strong><span class="bz-vc-en en">PRODUCT</span><span class="bz-vc-biz"><span class="bz-vc-biz-n en">02</span><span class="bz-vc-biz-t">제조업</span><svg class="bz-vc-biz-go" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span><span class="sr-only"> — DOOGOBIO 상세 보기</span></a></li>
+              <li style="--i:1"><a class="bz-vc-step" href="business-commerce.html" data-t="Brand"><span class="bz-vc-3d" aria-hidden="true"><i class="bz-cf bz-cf-fill"></i><i class="bz-cf bz-cf-top"></i><i class="bz-cf bz-cf-side"></i><i class="bz-cf bz-cf-pool"></i><i class="bz-cf bz-cf-flash"></i></span><span class="bz-vc-num en">02</span><strong class="bz-vc-ko">브랜드 기획</strong><span class="bz-vc-en en">BRAND</span><span class="bz-vc-biz"><span class="bz-vc-biz-n en">03</span><span class="bz-vc-biz-t">브랜드 커머스</span><svg class="bz-vc-biz-go" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span><span class="sr-only"> — DOOGO MAKERS 상세 보기</span></a></li>
+              <li style="--i:2"><a class="bz-vc-step" href="business-media.html" data-t="Owned Media"><span class="bz-vc-3d" aria-hidden="true"><i class="bz-cf bz-cf-fill"></i><i class="bz-cf bz-cf-top"></i><i class="bz-cf bz-cf-side"></i><i class="bz-cf bz-cf-pool"></i><i class="bz-cf bz-cf-flash"></i></span><span class="bz-vc-num en">03</span><strong class="bz-vc-ko">온드미디어 제작</strong><span class="bz-vc-en en">OWNED MEDIA</span><span class="bz-vc-biz"><span class="bz-vc-biz-n en">04</span><span class="bz-vc-biz-t">미디어&nbsp;&amp; 콘텐츠</span><svg class="bz-vc-biz-go" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span><span class="sr-only"> — DOOGO MEDIA 상세 보기</span></a></li>
+              <li style="--i:3"><a class="bz-vc-step" href="business-campus.html" data-t="Education"><span class="bz-vc-3d" aria-hidden="true"><i class="bz-cf bz-cf-fill"></i><i class="bz-cf bz-cf-top"></i><i class="bz-cf bz-cf-side"></i><i class="bz-cf bz-cf-pool"></i><i class="bz-cf bz-cf-flash"></i></span><span class="bz-vc-num en">04</span><strong class="bz-vc-ko">교육·인재 육성</strong><span class="bz-vc-en en">EDUCATION</span><span class="bz-vc-biz"><span class="bz-vc-biz-n en">01</span><span class="bz-vc-biz-t">교육업</span><svg class="bz-vc-biz-go" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span><span class="sr-only"> — DOOGO CLASS 상세 보기</span></a></li>
+              <li style="--i:4"><a class="bz-vc-step" href="business-ad.html" data-t="Marketing"><span class="bz-vc-3d" aria-hidden="true"><i class="bz-cf bz-cf-fill"></i><i class="bz-cf bz-cf-top"></i><i class="bz-cf bz-cf-side"></i><i class="bz-cf bz-cf-pool"></i><i class="bz-cf bz-cf-flash"></i></span><span class="bz-vc-num en">05</span><strong class="bz-vc-ko">마케팅</strong><span class="bz-vc-en en">MARKETING</span><span class="bz-vc-biz"><span class="bz-vc-biz-n en">05</span><span class="bz-vc-biz-t">마케팅</span><svg class="bz-vc-biz-go" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span><span class="sr-only"> — DOOGO AD 상세 보기</span></a></li>
+              <li style="--i:5"><a class="bz-vc-step" href="business-food.html" data-t="Sales"><span class="bz-vc-3d" aria-hidden="true"><i class="bz-cf bz-cf-fill"></i><i class="bz-cf bz-cf-top"></i><i class="bz-cf bz-cf-side"></i><i class="bz-cf bz-cf-pool"></i><i class="bz-cf bz-cf-flash"></i></span><span class="bz-vc-num en">06</span><strong class="bz-vc-ko">판매·유통</strong><span class="bz-vc-en en">SALES</span><span class="bz-vc-biz"><span class="bz-vc-biz-n en">06</span><span class="bz-vc-biz-t">유통</span><svg class="bz-vc-biz-go" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span><span class="sr-only"> — DOOGOFOOD 상세 보기</span></a></li>
+              <li style="--i:6"><a class="bz-vc-step" href="business-space.html" data-t="Space"><span class="bz-vc-3d" aria-hidden="true"><i class="bz-cf bz-cf-fill"></i><i class="bz-cf bz-cf-top"></i><i class="bz-cf bz-cf-side"></i><i class="bz-cf bz-cf-pool"></i><i class="bz-cf bz-cf-flash"></i></span><span class="bz-vc-num en">07</span><strong class="bz-vc-ko">공간·<wbr>라이프스타일</strong><span class="bz-vc-en en">OFFICE · STAY · F&amp;B</span><span class="bz-vc-biz"><span class="bz-vc-biz-n en">07</span><span class="bz-vc-biz-t">공간&nbsp;&amp; 라이프스타일</span><svg class="bz-vc-biz-go" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span><span class="sr-only"> — DOOGO SPACE 상세 보기</span></a></li>
+              </ol>
+              <p class="bz-vc-goal" style="--i:7"><span class="bz-vc-3d" aria-hidden="true"><i class="bz-cf bz-cf-fill"></i><i class="bz-cf bz-cf-top"></i><i class="bz-cf bz-cf-side"></i><i class="bz-cf bz-cf-pool"></i><i class="bz-cf bz-cf-flash"></i><i class="bz-cf bz-cf-shaft"></i><i class="bz-cf bz-cf-ring"></i><i class="bz-cf bz-cf-ring bz-cf-ring--2"></i></span><span class="bz-vc-goal-ico"><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span><strong>브랜드 성장 &amp; EXIT</strong><span class="bz-vc-en en">BRAND GROWTH &amp; EXIT</span><span class="bz-vc-goal-sub">그룹이 함께 만드는 결과</span></p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <nav class="subnav bz-subnav" aria-label="사업 바로가기">
-    <div class="container"><ul><li><a href="#campus"><span class="en">01</span> 교육업</a></li><li><a href="#bio"><span class="en">02</span> 제조업</a></li><li><a href="#commerce"><span class="en">03</span> 브랜드 커머스</a></li><li><a href="#media"><span class="en">04</span> 미디어 &amp; 콘텐츠</a></li><li><a href="#ad"><span class="en">05</span> 마케팅</a></li><li><a href="#food"><span class="en">06</span> 유통</a></li><li><a href="#space"><span class="en">07</span> 공간 &amp; 라이프스타일</a></li></ul></div>
-  </nav>
-
-  <!-- 3. 7개 사업 -->
-  <section class="section bz-list" aria-labelledby="list-title">
+  <!-- 3. 7개 사업: 탭 줄 + 고른 사업 하나의 소개 화면 -->
+  <section class="section bz-list" id="businesses" aria-labelledby="list-title">
     <div class="container">
-      <div class="sec-head sec-head--split bz-list-head">
+      <div class="bz-list-head">
         <div>
           <span class="eyebrow" data-reveal="fade">7 Businesses</span>
-          <h2 class="h2" id="list-title" data-lines style="margin-top:20px"><span class="line"><span>필요한 사업을</span></span><span class="line"><span>찾아보세요</span></span></h2>
+          <h2 class="h2" id="list-title" data-lines style="margin-top:20px"><span class="line"><span>필요한 사업을 찾아보세요</span></span></h2>
         </div>
-        <p class="lead" data-reveal style="--d:.15s">사업마다 운영 회사와 하는 일, 주요 서비스, 함께하면 좋은 분을 정리했습니다. ‘자세히 보기’를 누르면 사업별 상세 페이지로, 옆 버튼을 누르면 상담이나 각 서비스로 바로 이동합니다.</p>
+        <p class="bz-list-lead" data-reveal style="--d:.15s">사업을 고르면 운영 회사와 주요 서비스를 바로 볼 수 있습니다. ‘자세히 보기’에서 사업별 상세 페이지로 이어집니다.</p>
       </div>
-
-      <div class="bz-cards">
-      <article class="bz-card" id="campus" aria-labelledby="bz-t-campus">
-        <a class="bz-media" href="business-campus.html" tabindex="-1" aria-hidden="true" data-reveal="scale">
-          <span class="bz-media-inner" data-parallax>
-            <img src="assets/img/photo/campus.webp" alt="" width="1280" height="950" loading="lazy" decoding="async" style="object-position:58% 42%">
-          </span>
-          <span class="bz-media-tag"><span class="en">01</span>교육업</span>
-          <span class="bz-media-quote">“경험을 나누면, 또 다른 시작이 태어납니다.”</span>
-          <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
-        </a>
-        <div class="bz-body">
-          <div class="bz-top" data-reveal>
-            <span class="bz-num en" aria-hidden="true">01</span>
-            <span class="bz-stage en">Education</span>
-          </div>
-          <h3 class="bz-title" id="bz-t-campus" data-reveal style="--d:.05s"><span class="bz-area">교육업</span><span class="bz-brand"><span class="en">DOOGO CLASS</span></span></h3>
-          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGO HOLDINGS</strong><span class="bz-corp-type is-hold">지주회사 · 직접 운영</span><span class="bz-corp-ceo">대표이사 <strong>문원오</strong></span></p>
-          <!-- 운영 사이트 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
-          <a class="bz-site" href="https://www.doogoclass.com" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s"><span class="en">doogoclass.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO CLASS 사이트(새 창)</span></a>
-          <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">교육 플랫폼</span>사람을 성장시키고, 새로운 사업과 브랜드를 만듭니다.</p>
-          <p class="bz-role" data-reveal style="--d:.12s">경험과 노하우를 나누고, 새로운 사업과 브랜드의 시작을 돕습니다.</p>
-          <div class="bz-info" data-reveal style="--d:.16s">
-            <div class="bz-info-col">
+    </div>
+    <div class="bz-tabs-spot" aria-hidden="true"></div>
+    <div class="bz-tabbar">
+      <div class="container">
+        <div class="bz-tabs" role="tablist" aria-label="7개 사업">
+          <span class="bz-tab-ink" aria-hidden="true"></span>
+          <a class="bz-tab is-on" href="#campus" id="tab-campus" role="tab" aria-controls="campus" aria-selected="true"><span class="bz-tab-n en">01</span><span class="bz-tab-t">교육업</span></a>
+          <a class="bz-tab" href="#bio" id="tab-bio" role="tab" aria-controls="bio" aria-selected="false" tabindex="-1"><span class="bz-tab-n en">02</span><span class="bz-tab-t">제조업</span></a>
+          <a class="bz-tab" href="#commerce" id="tab-commerce" role="tab" aria-controls="commerce" aria-selected="false" tabindex="-1"><span class="bz-tab-n en">03</span><span class="bz-tab-t">브랜드 커머스</span></a>
+          <a class="bz-tab" href="#media" id="tab-media" role="tab" aria-controls="media" aria-selected="false" tabindex="-1"><span class="bz-tab-n en">04</span><span class="bz-tab-t">미디어 &amp; 콘텐츠</span></a>
+          <a class="bz-tab" href="#ad" id="tab-ad" role="tab" aria-controls="ad" aria-selected="false" tabindex="-1"><span class="bz-tab-n en">05</span><span class="bz-tab-t">마케팅</span></a>
+          <a class="bz-tab" href="#food" id="tab-food" role="tab" aria-controls="food" aria-selected="false" tabindex="-1"><span class="bz-tab-n en">06</span><span class="bz-tab-t">유통</span></a>
+          <a class="bz-tab" href="#space" id="tab-space" role="tab" aria-controls="space" aria-selected="false" tabindex="-1"><span class="bz-tab-n en">07</span><span class="bz-tab-t">공간 &amp; 라이프스타일</span></a>
+        </div>
+      </div>
+    </div>
+    <div class="container">
+      <div class="bz-panels">
+        <article class="bz-panel is-on" id="campus" role="tabpanel" aria-labelledby="tab-campus" tabindex="0">
+          <a class="bz-media" href="business-campus.html" tabindex="-1" aria-hidden="true">
+            <span class="bz-media-inner" data-parallax>
+              <img src="assets/img/photo/campus.webp" alt="" width="1280" height="950" loading="lazy" decoding="async" style="object-position:58% 42%">
+            </span>
+            <span class="bz-media-tag"><span class="en">01</span>교육업</span>
+            <span class="bz-media-quote">“경험을 나누면, 또 다른 시작이 태어납니다.”</span>
+            <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
+          </a>
+          <div class="bz-body">
+            <div class="bz-top">
+              <span class="bz-num en" aria-hidden="true">01</span>
+              <span class="bz-stage en">Education</span>
+              <span class="bz-count en" aria-hidden="true">01 / 07</span>
+            </div>
+            <h3 class="bz-title" id="bz-t-campus"><span class="bz-area">교육업</span><span class="bz-brand en">DOOGO CLASS</span></h3>
+            <p class="bz-corp"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGO HOLDINGS</strong><span class="bz-corp-type is-hold">지주회사 · 직접 운영</span><span class="bz-corp-ceo">대표이사 <strong>문원오</strong></span></p>
+            <p class="bz-def"><span class="bz-def-label">교육 플랫폼</span>사람을 성장시키고, 새로운 사업과 브랜드를 만듭니다.</p>
+            <div class="bz-svc-box">
               <p class="bz-label">주요 서비스</p>
-              <ul class="bz-svcs">
+              <ul class="bz-svcs is-4">
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>실전 교육</span></li>
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>강사·과정 소개</span></li>
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>온라인 클래스</span></li>
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>교육장 연계(<span class="nowrap">DOOGO SPACE</span>)</span></li>
               </ul>
             </div>
-            <div class="bz-info-col bz-for">
-              <p class="bz-label">이런 분께</p>
-              <ul class="bz-for-list">
-                <li>창업·부업을 준비하는 분</li>
-                <li>브랜드를 키우려는 사업자</li>
-                <li>실무 역량을 키우려는 분</li>
-              </ul>
+            <div class="bz-sites">
+              <p class="bz-label">운영 사이트</p>
+              <div class="bz-site-list"><a class="bz-site" href="https://www.doogoclass.com" target="_blank" rel="noopener"><span class="bz-site-name en">DOOGO CLASS</span><span class="bz-site-host en">doogoclass.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO CLASS 사이트(새 창)</span></a></div>
             </div>
+            <div class="bz-actions">
+              <a class="btn btn--dark" href="business-campus.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 교육업 DOOGO CLASS</span></a>
+              <a class="btn btn--line" href="https://www.doogoclass.com" target="_blank" rel="noopener">교육 플랫폼 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
+            </div>
+            <button class="bz-next" type="button" data-next="bio"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">02</span>제조업</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
           </div>
-          <div class="bz-actions" data-reveal style="--d:.2s">
-            <a class="btn btn--dark" href="business-campus.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 교육업 DOOGO CLASS</span></a>
-            <a class="btn btn--line" href="https://www.doogoclass.com" target="_blank" rel="noopener">교육 플랫폼 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
-          </div>
-        </div>
-      </article>
-
-      <article class="bz-card" id="bio" aria-labelledby="bz-t-bio">
-        <a class="bz-media" href="business-bio.html" tabindex="-1" aria-hidden="true" data-reveal="scale">
-          <span class="bz-media-inner" data-parallax>
-            <img src="assets/img/photo/bio.webp" alt="" width="1280" height="952" loading="lazy" decoding="async" style="object-position:68% 24%">
-          </span>
-          <span class="bz-media-tag"><span class="en">02</span>제조업</span>
-          <span class="bz-media-quote">“살펴보고, 시험하고, 다시 들여다보며.”</span>
-          <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
-        </a>
-        <div class="bz-body">
-          <div class="bz-top" data-reveal>
-            <span class="bz-num en" aria-hidden="true">02</span>
-            <span class="bz-stage en">Product</span>
-          </div>
-          <h3 class="bz-title" id="bz-t-bio" data-reveal style="--d:.05s"><span class="bz-area">제조업</span><span class="bz-brand"><span class="en">DOOGOBIO</span></span></h3>
-          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGOBIO NZ</strong><span class="bz-corp-type">뉴질랜드 건강식품 제조 · 해외법인</span><span class="bz-corp-ceo">대표이사 <strong>백영호</strong></span></p>
-          <!-- 운영 사이트 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
-          <a class="bz-site" href="https://www.doogobio.com/" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s"><span class="en">doogobio.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGOBIO 사이트(새 창)</span></a>
-          <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">건강식품 제조</span>뉴질랜드 건강식품 소량 제조 및 인쇄까지, 좋은 제품을 만듭니다.</p>
-          <p class="bz-role" data-reveal style="--d:.12s">뉴질랜드 건강식품의 개발과 소량 제조, 제품화를 지원합니다.</p>
-          <div class="bz-info" data-reveal style="--d:.16s">
-            <div class="bz-info-col">
+        </article>
+        <article class="bz-panel" id="bio" role="tabpanel" aria-labelledby="tab-bio" tabindex="0">
+          <a class="bz-media" href="business-bio.html" tabindex="-1" aria-hidden="true">
+            <span class="bz-media-inner" data-parallax>
+              <img src="assets/img/photo/bio.webp" alt="" width="1280" height="952" loading="lazy" decoding="async" style="object-position:68% 24%">
+            </span>
+            <span class="bz-media-tag"><span class="en">02</span>제조업</span>
+            <span class="bz-media-quote">“살펴보고, 시험하고, 다시 들여다보며.”</span>
+            <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
+          </a>
+          <div class="bz-body">
+            <div class="bz-top">
+              <span class="bz-num en" aria-hidden="true">02</span>
+              <span class="bz-stage en">Product</span>
+              <span class="bz-count en" aria-hidden="true">02 / 07</span>
+            </div>
+            <h3 class="bz-title" id="bz-t-bio"><span class="bz-area">제조업</span><span class="bz-brand en">DOOGOBIO</span></h3>
+            <p class="bz-corp"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGOBIO NZ</strong><span class="bz-corp-type">뉴질랜드 건강식품 제조 · 해외법인</span><span class="bz-corp-ceo">대표이사 <strong>백영호</strong></span></p>
+            <p class="bz-def"><span class="bz-def-label">건강식품 제조</span>뉴질랜드 건강식품 소량 제조 및 인쇄까지, 좋은 제품을 만듭니다.</p>
+            <div class="bz-svc-box">
               <p class="bz-label">주요 서비스</p>
-              <ul class="bz-svcs">
+              <ul class="bz-svcs is-4">
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>제품 개발</span></li>
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>소량 제조</span></li>
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>패키지·인쇄</span></li>
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>제조 상담·연결 ‘<span class="nowrap">두고커넥트</span>’</span></li>
               </ul>
             </div>
-            <div class="bz-info-col bz-for">
-              <p class="bz-label">이런 분께</p>
-              <ul class="bz-for-list">
-                <li>자체 건강식품 브랜드를 준비하는 사업자</li>
-                <li>소량으로 시작하려는 셀러</li>
-              </ul>
+            <div class="bz-sites">
+              <p class="bz-label">운영 사이트 2곳</p>
+              <div class="bz-site-list"><a class="bz-site" href="https://www.doogobio.com/" target="_blank" rel="noopener"><span class="bz-site-name en">DOOGOBIO</span><span class="bz-site-host en">doogobio.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGOBIO 사이트(새 창)</span></a><a class="bz-site" href="https://www.doogoconnect.com/" target="_blank" rel="noopener"><span class="bz-site-name en">DOOGO CONNECT</span><span class="bz-site-host en">doogoconnect.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO CONNECT 사이트(새 창)</span></a></div>
             </div>
+            <div class="bz-actions">
+              <a class="btn btn--dark" href="business-bio.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 제조업 DOOGOBIO</span></a>
+              <a class="btn btn--line" href="contact.html?type=bio#inquiry">제조 상담하기</a>
+            </div>
+            <button class="bz-next" type="button" data-next="commerce"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">03</span>브랜드 커머스</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
           </div>
-          <div class="bz-actions" data-reveal style="--d:.2s">
-            <a class="btn btn--dark" href="business-bio.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 제조업 DOOGOBIO</span></a>
-            <a class="btn btn--line" href="contact.html?type=bio#inquiry">제조 상담하기</a>
-          </div>
-        </div>
-      </article>
-
-      <article class="bz-card" id="commerce" aria-labelledby="bz-t-commerce">
-        <a class="bz-media" href="business-commerce.html" tabindex="-1" aria-hidden="true" data-reveal="scale">
-          <span class="bz-media-inner" data-parallax>
-            <img src="assets/img/photo/commerce.webp" alt="" width="1280" height="950" loading="lazy" decoding="async" style="object-position:56% 48%">
-          </span>
-          <span class="bz-media-tag"><span class="en">03</span>브랜드 커머스</span>
-          <span class="bz-media-quote">“생각은 제품이 되고, 제품은 브랜드가 됩니다.”</span>
-          <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
-        </a>
-        <div class="bz-body">
-          <div class="bz-top" data-reveal>
-            <span class="bz-num en" aria-hidden="true">03</span>
-            <span class="bz-stage en">Brand</span>
-          </div>
-          <h3 class="bz-title" id="bz-t-commerce" data-reveal style="--d:.05s"><span class="bz-area">브랜드 커머스</span><span class="bz-brand"><span class="en">DOOGO MAKERS</span></span></h3>
-          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGO MAKERS</strong><span class="bz-corp-ceo">총괄이사 <strong>신동훈</strong></span></p>
-          <!-- 운영 사이트 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
-          <a class="bz-site" href="https://www.doogofood.com/" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s"><span class="en">doogofood.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO MAKERS 연결 사이트(DOOGOFOOD)(새 창)</span></a>
-          <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">브랜드 기획 · 운영</span>브랜드를 만들고 성장시키며, EXIT까지 연결합니다.</p>
-          <p class="bz-role" data-reveal style="--d:.12s">브랜드를 기획하고 운영하며, 판매와 성장 전략을 함께 만듭니다.</p>
-          <div class="bz-info" data-reveal style="--d:.16s">
-            <div class="bz-info-col">
+        </article>
+        <article class="bz-panel" id="commerce" role="tabpanel" aria-labelledby="tab-commerce" tabindex="0">
+          <a class="bz-media" href="business-commerce.html" tabindex="-1" aria-hidden="true">
+            <span class="bz-media-inner" data-parallax>
+              <img src="assets/img/photo/commerce.webp" alt="" width="1280" height="950" loading="lazy" decoding="async" style="object-position:56% 48%">
+            </span>
+            <span class="bz-media-tag"><span class="en">03</span>브랜드 커머스</span>
+            <span class="bz-media-quote">“생각은 제품이 되고, 제품은 브랜드가 됩니다.”</span>
+            <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
+          </a>
+          <div class="bz-body">
+            <div class="bz-top">
+              <span class="bz-num en" aria-hidden="true">03</span>
+              <span class="bz-stage en">Brand</span>
+              <span class="bz-count en" aria-hidden="true">03 / 07</span>
+            </div>
+            <h3 class="bz-title" id="bz-t-commerce"><span class="bz-area">브랜드 커머스</span><span class="bz-brand en">DOOGO MAKERS</span></h3>
+            <p class="bz-corp"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGO MAKERS</strong><span class="bz-corp-ceo">총괄이사 <strong>신동훈</strong></span></p>
+            <p class="bz-def"><span class="bz-def-label">브랜드 기획 · 운영</span>브랜드를 만들고 성장시키며, EXIT까지 연결합니다.</p>
+            <div class="bz-svc-box">
               <p class="bz-label">주요 서비스</p>
               <ul class="bz-svcs">
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>브랜드 기획</span></li>
@@ -429,88 +442,74 @@
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>브랜드 성장과 EXIT 전략</span></li>
               </ul>
             </div>
-            <div class="bz-info-col bz-for">
-              <p class="bz-label">이런 분께</p>
-              <ul class="bz-for-list">
-                <li>새 브랜드를 만들려는 분</li>
-                <li>운영 중인 브랜드를 키우려는 사업자</li>
-              </ul>
+            <div class="bz-sites">
+              <p class="bz-label">브랜드 사이트 2곳</p>
+              <div class="bz-site-list"><a class="bz-site" href="https://www.onedaycore.com/" target="_blank" rel="noopener"><span class="bz-site-name en">ONEDAYCORE</span><span class="bz-site-host en">onedaycore.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — ONEDAYCORE 사이트(새 창)</span></a><a class="bz-site" href="https://maurinz.co.kr/" target="_blank" rel="noopener"><span class="bz-site-name en">MAURINZ</span><span class="bz-site-host en">maurinz.co.kr</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — MAURINZ 사이트(새 창)</span></a></div>
             </div>
+            <div class="bz-actions">
+              <a class="btn btn--dark" href="business-commerce.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 브랜드 커머스 DOOGO MAKERS</span></a>
+              <a class="btn btn--line" href="brands.html#brands">브랜드 보기</a>
+            </div>
+            <button class="bz-next" type="button" data-next="media"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">04</span>미디어 &amp; 콘텐츠</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
           </div>
-          <div class="bz-actions" data-reveal style="--d:.2s">
-            <a class="btn btn--dark" href="business-commerce.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 브랜드 커머스 DOOGO MAKERS</span></a>
-            <a class="btn btn--line" href="brands.html#brands">브랜드 보기</a>
-          </div>
-        </div>
-      </article>
-
-      <article class="bz-card" id="media" aria-labelledby="bz-t-media">
-        <a class="bz-media" href="business-media.html" tabindex="-1" aria-hidden="true" data-reveal="scale">
-          <span class="bz-media-inner" data-parallax>
-            <img src="assets/img/photo/media.webp" alt="" width="1280" height="951" loading="lazy" decoding="async" style="object-position:62% 38%">
-          </span>
-          <span class="bz-media-tag"><span class="en">04</span>미디어 &amp; 콘텐츠</span>
-          <span class="bz-media-quote">“브랜드의 채널을, 브랜드의 자산으로.”</span>
-          <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
-        </a>
-        <div class="bz-body">
-          <div class="bz-top" data-reveal>
-            <span class="bz-num en" aria-hidden="true">04</span>
-            <span class="bz-stage en">Owned Media</span>
-          </div>
-          <h3 class="bz-title" id="bz-t-media" data-reveal style="--d:.05s"><span class="bz-area">미디어 &amp; 콘텐츠</span><span class="bz-brand"><span class="en">DOOGO MEDIA</span></span></h3>
-          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGO MEDIA</strong><span class="bz-corp-ceo">총괄이사 <strong>김윤정</strong></span></p>
-          <!-- 운영 사이트 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
-          <a class="bz-site" href="https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s"><span>YouTube · 두고보는 문대표</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO MEDIA 유튜브 채널(새 창)</span></a>
-          <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">온드미디어 제작</span>광고비에 기대지 않고, 브랜드의 자산으로 쌓이는 채널을 만듭니다.</p>
-          <p class="bz-role" data-reveal style="--d:.12s">브랜드가 직접 소유하는 채널, 온드미디어를 기획하고 촬영하고 운영합니다.</p>
-          <div class="bz-info" data-reveal style="--d:.16s">
-            <div class="bz-info-col">
+        </article>
+        <article class="bz-panel" id="media" role="tabpanel" aria-labelledby="tab-media" tabindex="0">
+          <a class="bz-media" href="business-media.html" tabindex="-1" aria-hidden="true">
+            <span class="bz-media-inner" data-parallax>
+              <img src="assets/img/photo/media.webp" alt="" width="1280" height="951" loading="lazy" decoding="async" style="object-position:62% 38%">
+            </span>
+            <span class="bz-media-tag"><span class="en">04</span>미디어 &amp; 콘텐츠</span>
+            <span class="bz-media-quote">“브랜드의 채널을, 브랜드의 자산으로.”</span>
+            <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
+          </a>
+          <div class="bz-body">
+            <div class="bz-top">
+              <span class="bz-num en" aria-hidden="true">04</span>
+              <span class="bz-stage en">Owned Media</span>
+              <span class="bz-count en" aria-hidden="true">04 / 07</span>
+            </div>
+            <h3 class="bz-title" id="bz-t-media"><span class="bz-area">미디어 &amp; 콘텐츠</span><span class="bz-brand en">DOOGO MEDIA</span></h3>
+            <p class="bz-corp"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGO MEDIA</strong><span class="bz-corp-ceo">총괄이사 <strong>김윤정</strong></span></p>
+            <p class="bz-def"><span class="bz-def-label">온드미디어 제작</span>광고비에 기대지 않고, 브랜드의 자산으로 쌓이는 채널을 만듭니다.</p>
+            <div class="bz-svc-box">
               <p class="bz-label">주요 서비스</p>
-              <ul class="bz-svcs">
+              <ul class="bz-svcs is-4">
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>온드미디어 촬영</span></li>
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>브랜드 유튜브 채널 운영</span></li>
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>숏폼·라이브 콘텐츠 제작</span></li>
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>콘텐츠 기획·편집</span></li>
               </ul>
             </div>
-            <div class="bz-info-col bz-for">
-              <p class="bz-label">이런 분께</p>
-              <ul class="bz-for-list">
-                <li>자체 채널로 고객을 모으려는 브랜드</li>
-                <li>강사·전문가</li>
-              </ul>
+            <div class="bz-sites">
+              <p class="bz-label">운영 채널</p>
+              <div class="bz-site-list"><a class="bz-site" href="https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C" target="_blank" rel="noopener"><span>YouTube · 두고보는 문대표</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO MEDIA 유튜브 채널(새 창)</span></a></div>
             </div>
+            <div class="bz-actions">
+              <a class="btn btn--dark" href="business-media.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 미디어 &amp; 콘텐츠 DOOGO MEDIA</span></a>
+              <a class="btn btn--line" href="contact.html?type=media#inquiry">콘텐츠 문의하기</a>
+            </div>
+            <button class="bz-next" type="button" data-next="ad"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">05</span>마케팅</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
           </div>
-          <div class="bz-actions" data-reveal style="--d:.2s">
-            <a class="btn btn--dark" href="business-media.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 미디어 &amp; 콘텐츠 DOOGO MEDIA</span></a>
-            <a class="btn btn--line" href="contact.html?type=media#inquiry">콘텐츠 문의하기</a>
-          </div>
-        </div>
-      </article>
-
-      <article class="bz-card" id="ad" aria-labelledby="bz-t-ad">
-        <a class="bz-media" href="business-ad.html" tabindex="-1" aria-hidden="true" data-reveal="scale">
-          <span class="bz-media-inner" data-parallax>
-            <img src="assets/img/photo/ad.webp" alt="" width="1280" height="954" loading="lazy" decoding="async" style="object-position:50% 45%">
-          </span>
-          <span class="bz-media-tag"><span class="en">05</span>마케팅</span>
-          <span class="bz-media-quote">“각자의 가능성이, 필요한 사람에게 닿도록.”</span>
-          <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
-        </a>
-        <div class="bz-body">
-          <div class="bz-top" data-reveal>
-            <span class="bz-num en" aria-hidden="true">05</span>
-            <span class="bz-stage en">Marketing</span>
-          </div>
-          <h3 class="bz-title" id="bz-t-ad" data-reveal style="--d:.05s"><span class="bz-area">마케팅</span><span class="bz-brand"><span class="en">DOOGO AD</span></span></h3>
-          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGO AD</strong><span class="bz-corp-ceo">대표이사 <strong>김신용</strong></span></p>
-          <!-- 운영 사이트 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
-          <a class="bz-site" href="https://www.doogoad.com/" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s"><span class="en">doogoad.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO AD 사이트(새 창)</span></a>
-          <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">퍼포먼스 광고</span>네이버·쿠팡을 중심으로 브랜드를 더 멀리 알립니다.</p>
-          <p class="bz-role" data-reveal style="--d:.12s">브랜드가 필요한 고객에게 닿도록 광고를 기획하고 운영합니다.</p>
-          <div class="bz-info" data-reveal style="--d:.16s">
-            <div class="bz-info-col">
+        </article>
+        <article class="bz-panel" id="ad" role="tabpanel" aria-labelledby="tab-ad" tabindex="0">
+          <a class="bz-media" href="business-ad.html" tabindex="-1" aria-hidden="true">
+            <span class="bz-media-inner" data-parallax>
+              <img src="assets/img/photo/ad.webp" alt="" width="1280" height="954" loading="lazy" decoding="async" style="object-position:50% 45%">
+            </span>
+            <span class="bz-media-tag"><span class="en">05</span>마케팅</span>
+            <span class="bz-media-quote">“각자의 가능성이, 필요한 사람에게 닿도록.”</span>
+            <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
+          </a>
+          <div class="bz-body">
+            <div class="bz-top">
+              <span class="bz-num en" aria-hidden="true">05</span>
+              <span class="bz-stage en">Marketing</span>
+              <span class="bz-count en" aria-hidden="true">05 / 07</span>
+            </div>
+            <h3 class="bz-title" id="bz-t-ad"><span class="bz-area">마케팅</span><span class="bz-brand en">DOOGO AD</span></h3>
+            <p class="bz-corp"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGO AD</strong><span class="bz-corp-ceo">대표이사 <strong>김신용</strong></span></p>
+            <p class="bz-def"><span class="bz-def-label">퍼포먼스 광고</span>네이버·쿠팡을 중심으로 브랜드를 더 멀리 알립니다.</p>
+            <div class="bz-svc-box">
               <p class="bz-label">주요 서비스</p>
               <ul class="bz-svcs">
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>네이버·쿠팡 중심 광고 운영</span></li>
@@ -518,42 +517,36 @@
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>성과 분석</span></li>
               </ul>
             </div>
-            <div class="bz-info-col bz-for">
-              <p class="bz-label">이런 분께</p>
-              <ul class="bz-for-list">
-                <li>온라인으로 판매 중인 브랜드·셀러</li>
-              </ul>
+            <div class="bz-sites">
+              <p class="bz-label">운영 사이트</p>
+              <div class="bz-site-list"><a class="bz-site" href="https://www.doogoad.com/" target="_blank" rel="noopener"><span class="bz-site-name en">DOOGO AD</span><span class="bz-site-host en">doogoad.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGO AD 사이트(새 창)</span></a></div>
             </div>
+            <div class="bz-actions">
+              <a class="btn btn--dark" href="business-ad.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 마케팅 DOOGO AD</span></a>
+              <a class="btn btn--line" href="contact.html?type=ad#inquiry">광고 상담하기</a>
+            </div>
+            <button class="bz-next" type="button" data-next="food"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">06</span>유통</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
           </div>
-          <div class="bz-actions" data-reveal style="--d:.2s">
-            <a class="btn btn--dark" href="business-ad.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 마케팅 DOOGO AD</span></a>
-            <a class="btn btn--line" href="contact.html?type=ad#inquiry">광고 상담하기</a>
-          </div>
-        </div>
-      </article>
-
-      <article class="bz-card" id="food" aria-labelledby="bz-t-food">
-        <a class="bz-media" href="business-food.html" tabindex="-1" aria-hidden="true" data-reveal="scale">
-          <span class="bz-media-inner" data-parallax>
-            <img src="assets/img/photo/food.webp" alt="" width="1280" height="951" loading="lazy" decoding="async" style="object-position:45% 52%">
-          </span>
-          <span class="bz-media-tag"><span class="en">06</span>유통</span>
-          <span class="bz-media-quote">“좋은 먹거리도, 정성을 담아 일상으로.”</span>
-          <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
-        </a>
-        <div class="bz-body">
-          <div class="bz-top" data-reveal>
-            <span class="bz-num en" aria-hidden="true">06</span>
-            <span class="bz-stage en">Sales</span>
-          </div>
-          <h3 class="bz-title" id="bz-t-food" data-reveal style="--d:.05s"><span class="bz-area">유통</span><span class="bz-brand"><span class="en">DOOGOFOOD</span></span></h3>
-          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGO HOLDINGS</strong><span class="bz-corp-type is-hold">지주회사 · 직접 운영</span><span class="bz-corp-ceo">대표이사 <strong>문원오</strong></span></p>
-          <!-- 운영 사이트 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
-          <a class="bz-site" href="https://www.doogofood.com" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s"><span class="en">doogofood.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGOFOOD 사이트(새 창)</span></a>
-          <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">식품 유통</span>대한민국 농수산물과 건강식품을 연결하여 좋은 먹거리를 전합니다.</p>
-          <p class="bz-role" data-reveal style="--d:.12s">농수산물과 가공식품, 건강식품의 공급사와 판매자를 연결합니다.</p>
-          <div class="bz-info" data-reveal style="--d:.16s">
-            <div class="bz-info-col">
+        </article>
+        <article class="bz-panel" id="food" role="tabpanel" aria-labelledby="tab-food" tabindex="0">
+          <a class="bz-media" href="business-food.html" tabindex="-1" aria-hidden="true">
+            <span class="bz-media-inner" data-parallax>
+              <img src="assets/img/photo/food.webp" alt="" width="1280" height="951" loading="lazy" decoding="async" style="object-position:45% 52%">
+            </span>
+            <span class="bz-media-tag"><span class="en">06</span>유통</span>
+            <span class="bz-media-quote">“좋은 먹거리도, 정성을 담아 일상으로.”</span>
+            <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
+          </a>
+          <div class="bz-body">
+            <div class="bz-top">
+              <span class="bz-num en" aria-hidden="true">06</span>
+              <span class="bz-stage en">Sales</span>
+              <span class="bz-count en" aria-hidden="true">06 / 07</span>
+            </div>
+            <h3 class="bz-title" id="bz-t-food"><span class="bz-area">유통</span><span class="bz-brand en">DOOGOFOOD</span></h3>
+            <p class="bz-corp"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGO HOLDINGS</strong><span class="bz-corp-type is-hold">지주회사 · 직접 운영</span><span class="bz-corp-ceo">대표이사 <strong>문원오</strong></span></p>
+            <p class="bz-def"><span class="bz-def-label">식품 유통</span>대한민국 농수산물과 건강식품을 연결하여 좋은 먹거리를 전합니다.</p>
+            <div class="bz-svc-box">
               <p class="bz-label">주요 서비스</p>
               <ul class="bz-svcs">
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>식품 전문 도매 플랫폼 운영</span></li>
@@ -561,43 +554,36 @@
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span>판매자 협력</span></li>
               </ul>
             </div>
-            <div class="bz-info-col bz-for">
-              <p class="bz-label">이런 분께</p>
-              <ul class="bz-for-list">
-                <li>식품 공급사(생산자·제조사)</li>
-                <li>온라인 위탁 판매자</li>
-              </ul>
+            <div class="bz-sites">
+              <p class="bz-label">운영 사이트</p>
+              <div class="bz-site-list"><a class="bz-site" href="https://www.doogofood.com" target="_blank" rel="noopener"><span class="bz-site-name en">DOOGOFOOD</span><span class="bz-site-host en">doogofood.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — DOOGOFOOD 사이트(새 창)</span></a></div>
             </div>
+            <div class="bz-actions">
+              <a class="btn btn--dark" href="business-food.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 유통 DOOGOFOOD</span></a>
+              <a class="btn btn--line" href="https://www.doogofood.com" target="_blank" rel="noopener">도매 플랫폼 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
+            </div>
+            <button class="bz-next" type="button" data-next="space"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">07</span>공간 &amp; 라이프스타일</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
           </div>
-          <div class="bz-actions" data-reveal style="--d:.2s">
-            <a class="btn btn--dark" href="business-food.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 유통 DOOGOFOOD</span></a>
-            <a class="btn btn--line" href="https://www.doogofood.com" target="_blank" rel="noopener">도매 플랫폼 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
-          </div>
-        </div>
-      </article>
-
-      <article class="bz-card" id="space" aria-labelledby="bz-t-space">
-        <a class="bz-media" href="business-space.html" tabindex="-1" aria-hidden="true" data-reveal="scale">
-          <span class="bz-media-inner" data-parallax>
-            <img src="assets/img/photo/cowork.webp" alt="" width="1280" height="951" loading="lazy" decoding="async" style="object-position:64% 62%">
-          </span>
-          <span class="bz-media-tag"><span class="en">07</span>공간 &amp; 라이프스타일</span>
-          <span class="bz-media-quote">“일하고, 머물고, 즐기는 하루를 한 공간에.”</span>
-          <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
-        </a>
-        <div class="bz-body">
-          <div class="bz-top" data-reveal>
-            <span class="bz-num en" aria-hidden="true">07</span>
-            <span class="bz-stage en">Space</span>
-          </div>
-          <h3 class="bz-title" id="bz-t-space" data-reveal style="--d:.05s"><span class="bz-area">공간 &amp; 라이프스타일</span><span class="bz-brand"><span class="en">DOOGO SPACE</span></span></h3>
-          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGO SPACE</strong><span class="bz-corp-ceo">대표이사 <strong>문성오</strong></span></p>
-          <!-- 운영 사이트 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
-          <a class="bz-site" href="https://www.norastay.com/" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s"><span class="en">norastay.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — NORA STAY 사이트(새 창)</span></a>
-          <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">OFFICE · STAY · F&amp;B</span>공유오피스·비상주오피스·미팅룸·교육장과 <span class="nowrap">NORA STAY</span> 숙박, 그리고 준비 중인 F&amp;B까지, 일하고 머물고 즐기는 모든 순간을 하나의 공간 안에서 연결합니다.</p>
-          <p class="bz-role" data-reveal style="--d:.12s">일과 휴식, 그리고 한 끼까지. 사람의 하루를 연결하는 공간을 만듭니다.</p>
-          <div class="bz-info" data-reveal style="--d:.16s">
-            <div class="bz-info-col">
+        </article>
+        <article class="bz-panel" id="space" role="tabpanel" aria-labelledby="tab-space" tabindex="0">
+          <a class="bz-media" href="business-space.html" tabindex="-1" aria-hidden="true">
+            <span class="bz-media-inner" data-parallax>
+              <img src="assets/img/photo/cowork.webp" alt="" width="1280" height="951" loading="lazy" decoding="async" style="object-position:64% 62%">
+            </span>
+            <span class="bz-media-tag"><span class="en">07</span>공간 &amp; 라이프스타일</span>
+            <span class="bz-media-quote">“일하고, 머물고, 즐기는 하루를 한 공간에.”</span>
+            <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span><svg class="" aria-hidden="true"><use href="#i-arrow-ur"/></svg></span></span>
+          </a>
+          <div class="bz-body">
+            <div class="bz-top">
+              <span class="bz-num en" aria-hidden="true">07</span>
+              <span class="bz-stage en">Space</span>
+              <span class="bz-count en" aria-hidden="true">07 / 07</span>
+            </div>
+            <h3 class="bz-title" id="bz-t-space"><span class="bz-area">공간 &amp; 라이프스타일</span><span class="bz-brand en">DOOGO SPACE</span></h3>
+            <p class="bz-corp"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">DOOGO SPACE</strong><span class="bz-corp-ceo">대표이사 <strong>문성오</strong></span></p>
+            <p class="bz-def"><span class="bz-def-label">OFFICE · STAY · F&amp;B</span>공유오피스·비상주오피스·미팅룸·교육장과 <span class="nowrap">NORA STAY</span> 숙박, 그리고 준비 중인 F&amp;B까지, 일하고 머물고 즐기는 모든 순간을 하나의 공간 안에서 연결합니다.</p>
+            <div class="bz-svc-box">
               <p class="bz-label">주요 서비스</p>
               <ul class="bz-svcs">
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span><b class="svc-pillar en">WORK</b>공유오피스 · 비상주오피스 · 미팅룸 · 교육장</span></li>
@@ -605,25 +591,20 @@
                 <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span><b class="svc-pillar en">F&amp;B<span class="soon-tag">준비 중</span></b>카페 · 라운지 · 브런치 · 케이터링</span></li>
               </ul>
             </div>
-            <div class="bz-info-col bz-for">
-              <p class="bz-label">이런 분께</p>
-              <ul class="bz-for-list">
-                <li>작은 팀·1인 사업자</li>
-                <li>교육·행사 주최자</li>
-                <li>여행·출장·장단기 체류객</li>
-              </ul>
+            <div class="bz-sites">
+              <p class="bz-label">운영 사이트</p>
+              <div class="bz-site-list"><a class="bz-site" href="https://www.norastay.com/" target="_blank" rel="noopener"><span class="bz-site-name en">NORA STAY</span><span class="bz-site-host en">norastay.com</span><svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only"> — NORA STAY 사이트(새 창)</span></a></div>
             </div>
+            <div class="bz-actions">
+              <a class="btn btn--dark" href="business-space.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 공간 &amp; 라이프스타일 DOOGO SPACE</span></a>
+              <a class="btn btn--line" href="contact.html?type=space#inquiry">공간 상담하기</a>
+            </div>
+            <button class="bz-next" type="button" data-next="campus"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">01</span>교육업</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
           </div>
-          <div class="bz-actions" data-reveal style="--d:.2s">
-            <a class="btn btn--dark" href="business-space.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 공간 &amp; 라이프스타일 DOOGO SPACE</span></a>
-            <a class="btn btn--line" href="contact.html?type=space#inquiry">공간 상담하기</a>
-          </div>
-        </div>
-      </article>
+        </article>
       </div>
     </div>
   </section>
-
   <section class="cta-band" aria-labelledby="cta-title">
     <div class="container">
       <span class="eyebrow">Contact</span>

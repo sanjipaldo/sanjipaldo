@@ -40,8 +40,11 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // 그룹사·직접 운영 사업의 실제 사이트 (사용자가 준 주소 그대로 · 모두 새 창)
 const CLASS_URL = 'https://www.doogoclass.com'; // DOOGO CLASS (교육)
 const FOOD_URL = 'https://www.doogofood.com';   // DOOGOFOOD (유통 · 식품 도매 플랫폼)
-const MAKERS_URL = 'https://www.doogofood.com/'; // DOOGO MAKERS — 같은 DOOGOFOOD 사이트(운영 주체를 단정하지 않고 '연결 사이트'로 표기)
+// DOOGO MAKERS(브랜드 커머스)가 키우는 자사몰 브랜드 두 곳 (14차 — doogofood.com 은 이제 DOOGOFOOD 에만 씀)
+const ONEDAY_URL = 'https://www.onedaycore.com/'; // ONEDAYCORE 원데이코어 · 건강기능식품 자사몰
+const MAURINZ_URL = 'https://maurinz.co.kr/';      // MAURINZ 마우리엔젯 · 뉴질랜드 건강식품
 const BIO_URL = 'https://www.doogobio.com/';    // DOOGOBIO
+const CONNECT_URL = 'https://www.doogoconnect.com/'; // DOOGO CONNECT 두고커넥트 · 해외 건강식품 소량 OEM 플랫폼 (DOOGOBIO 운영)
 const AD_URL = 'https://www.doogoad.com/';      // DOOGO AD
 const NORA_URL = 'https://www.norastay.com/';   // NORA STAY (DOOGO SPACE 숙박)
 const MEDIA_URL = 'https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C'; // DOOGO MEDIA · YouTube 두고보는 문대표
@@ -55,7 +58,7 @@ const NEWWIN = '<span class="sr-only">(새 창)</span>';
 // '준비 중' 작은 표시 (DOOGO SPACE F&B 사업부처럼 아직 열지 않은 서비스 — 지어내지 않고 정직하게 표시)
 const SOON = '<span class="soon-tag">준비 중</span>';
 // 브랜드명·'&'로 묶인 사업 분야 이름이 줄바꿈으로 갈라지지 않게 (화면 문구에만 사용 — 속성값에는 쓰지 말 것)
-const nw = (t) => t.replace(/DOOGO (?:HOLDINGS|CLASS|SPACE|MEDIA|MAKERS|AD)|DOOGOFOOD|DOOGOBIO(?: NZ)?|NORA STAY|두고커넥트|미디어 &amp; 콘텐츠|공간 &amp; 라이프스타일/g, (m) => `<span class="nowrap">${m}</span>`);
+const nw = (t) => t.replace(/DOOGO (?:HOLDINGS|CLASS|SPACE|MEDIA|MAKERS|CONNECT|AD)|DOOGOFOOD|DOOGOBIO(?: NZ)?|ONEDAYCORE|MAURINZ|NORA STAY|두고커넥트|미디어 &amp; 콘텐츠|공간 &amp; 라이프스타일/g, (m) => `<span class="nowrap">${m}</span>`);
 // 마지막 낱말 + 아이콘을 한 덩어리로 (줄이 넘어갈 때 화살표만 다음 줄에 혼자 남지 않게)
 const glue = (t, icon) => { const k = t.lastIndexOf(' '); return k < 0 ? `<span class="nowrap">${t}${icon}</span>` : `${t.slice(0, k + 1)}<span class="nowrap">${t.slice(k + 1)}${icon}</span>`; };
 const DOWN = ico('i-arrow', 'ico ico-arrow ico-down');
@@ -70,6 +73,8 @@ const euro = (word) => {
 };
 // 외부 서비스 주소 링크 (상세 첫 화면 핵심 정보 띠) — text 를 주면 주소 대신 그 이름(예: 유튜브 채널명)을 보여 줌
 const SITE = (url, text) => `<a class="dt-site" href="${url}" target="_blank" rel="noopener">${text ? `<span>${text}</span>` : `<span class="en">${url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</span>`}${ARROW_UR}${NEWWIN}</a>`;
+// 사이트 링크 여러 개(한 사업이 사이트 두 곳을 가질 때 · 한 줄에 하나씩)
+const SITES = (...links) => `<span class="dt-sites">${links.join('')}</span>`;
 // 운영 사이트 블록(상세 3번 구간) · 사업영역 목록의 주소 알약에 쓰는 사이트 정보
 //  shot: assets/img/sites/{shot}.webp (1200×750) · {shot}-720.webp (720×450) — 각 사이트 실제 첫 화면 캡처, 2026년 10월 14일 기준
 //  host: 화면에 크게 보이는 주소(유튜브는 채널명) · bar: 브라우저 주소 알약 · desc: 캡처에 보이는 내용만으로 쓴 한 줄 소개
@@ -185,12 +190,16 @@ const BIZ = [
     ask: '제조 상담하기',
     cta: { label: '제조 상담하기', href: ASK('bio') },
     web: web({ name: 'DOOGOBIO', kind: '웹사이트', host: 'doogobio.com', url: BIO_URL, shot: 'bio', close: 'DOOGOBIO 사이트',
-      desc: '건강식품 B2B 도매와 OEM 제조, 제조 상담·연결 ‘두고커넥트’를 안내하는 DOOGOBIO의 사이트입니다.' }),
+      desc: '건강식품 B2B 도매와 OEM 제조, 제조 상담·연결 ‘두고커넥트’를 안내하는 DOOGOBIO의 사이트입니다.',
+      // 14차: DOOGOBIO가 운영하는 두고커넥트 플랫폼 (사이트 첫 화면 문구 기준)
+      moreLabel: 'DOOGOBIO가 함께 운영하는 플랫폼',
+      more: [{ name: 'DOOGO CONNECT', kind: '소량 OEM 플랫폼', host: 'doogoconnect.com', url: CONNECT_URL, shot: 'connect', close: 'DOOGO CONNECT 바로가기',
+        desc: '건강식품 OEM의 수요와 공급을 온라인으로 연결하는 해외 건강식품 소량 OEM 플랫폼 ‘두고커넥트’입니다. 50개 소량부터 실시간 견적으로 브랜드를 시작할 수 있습니다.' }] }),
     narration: '살펴보고, 시험하고, 다시 들여다보며.',
     hero: { f: 'bio', fx: '50%', fy: '24%', mx: '68%' },
     gallery: [photo('bio', { label: '캡슐 병 검수', zoom: 1.5, focus: '46% 66%', alt: '생산 라인 위 캡슐 병을 장갑 낀 손으로 하나씩 검수하는 모습(확대)' }), render('bio', { label: 'DOOGOBIO' })],
     heroAlt: { label: '두고커넥트 알아보기', href: '#related' },
-    facts: [['대표 서비스', '제조 상담·연결 ‘두고커넥트’'], ['사이트', SITE(BIO_URL)]],
+    facts: [['대표 서비스', '제조 상담·연결 ‘두고커넥트’'], ['사이트', SITES(SITE(BIO_URL), SITE(CONNECT_URL))]],
     svcHead: 'DOOGOBIO가 하는 일',
     svcLead: '제품 개발부터 소량 제조, 패키지·인쇄까지 건강식품이 제품이 되는 과정을 함께합니다.',
     detail: [
@@ -212,13 +221,17 @@ const BIZ = [
     targets: ['새 브랜드를 만들려는 분', '운영 중인 브랜드를 키우려는 사업자'],
     ask: '브랜드 커머스 상담하기',
     cta: { label: '브랜드 보기', href: 'brands.html#brands' },
-    web: web({ name: 'DOOGO MAKERS', kind: '연결 사이트', site: 'DOOGOFOOD', title: '연결 사이트', eyebrow: 'Related Site',
-      host: 'doogofood.com', url: MAKERS_URL, shot: 'makers', close: '연결 사이트 바로가기',
-      desc: 'DOOGO MAKERS와 연결된 DOOGOFOOD 식품 도매 플랫폼입니다. 생산자와 판매자를 잇는 식품 전문 B2B 도매 사이트를 볼 수 있습니다.' }),
+    // 14차: DOOGO MAKERS 브랜드팀이 키우는 자사몰 브랜드 두 곳 — ONEDAYCORE(대표) · MAURINZ (사이트 첫 화면 문구 기준)
+    web: web({ name: 'ONEDAYCORE', kind: '건강기능식품 자사몰', title: '브랜드 사이트', eyebrow: 'Brand Sites',
+      host: 'onedaycore.com', url: ONEDAY_URL, shot: 'onedaycore', close: 'ONEDAYCORE 바로가기',
+      desc: 'DOOGO MAKERS가 키우는 건강기능식품 자사몰 브랜드 ‘원데이코어’입니다. 동결건조 고농축 알부민 ‘프리미엄 알부민 골드’와 뉴질랜드 프로폴리스 등을 소개합니다.',
+      moreLabel: 'DOOGO MAKERS의 또 다른 브랜드',
+      more: [{ name: 'MAURINZ', kind: '뉴질랜드 건강식품', host: 'maurinz.co.kr', url: MAURINZ_URL, shot: 'maurinz', close: 'MAURINZ 바로가기',
+        desc: '마오리 자연 철학을 담은 뉴질랜드 건강식품 브랜드 ‘마우리엔젯’입니다. 대표 제품은 뉴질랜드 GMP·RMP·HACCP 인증 시설에서 단일 원료로 만든 뉴질랜드산 밀크씨슬입니다.' }] }),
     narration: '생각은 제품이 되고, 제품은 브랜드가 됩니다.',
     hero: { f: 'commerce', fx: '50%', fy: '48%', mx: '56%' },
     gallery: [photo('commerce', { label: '패키지 디자인', zoom: 1.7, focus: '70% 78%', alt: '무지 패키지 박스를 들고 컬러칩과 맞춰 보는 디자이너의 손(확대)' }), render('makers', { label: 'DOOGO MAKERS' })],
-    facts: [['대표 서비스', '브랜드 기획 · 운영 · EXIT 전략'], ['연결 사이트', SITE(MAKERS_URL)]],
+    facts: [['대표 서비스', '브랜드 기획 · 운영 · EXIT 전략'], ['브랜드 사이트', SITES(SITE(ONEDAY_URL), SITE(MAURINZ_URL))]],
     svcHead: 'DOOGO MAKERS가 하는 일',
     svcLead: '브랜드의 시작부터 운영과 성장, 그다음 단계까지 함께 고민합니다.',
     detail: [
@@ -355,6 +368,7 @@ const BIZ = [
 ];
 
 // 가치사슬 7단계 (기획안 순서) → 사업 연결
+//  ko 단계 이름 · en 영문(칸 안 작은 글씨) · slug 그 단계를 맡은 사업 (계기판 영문은 BIZ[].chain)
 const CHAIN = [
   { ko: '제품 제조', en: 'PRODUCT', slug: 'bio' },
   { ko: '브랜드 기획', en: 'BRAND', slug: 'commerce' },
@@ -362,7 +376,7 @@ const CHAIN = [
   { ko: '교육·인재 육성', en: 'EDUCATION', slug: 'campus' },
   { ko: '마케팅', en: 'MARKETING', slug: 'ad' },
   { ko: '판매·유통', en: 'SALES', slug: 'food' },
-  { ko: '공간·라이프스타일', en: 'OFFICE·STAY·<wbr>F&amp;B', slug: 'space', long: true },
+  { ko: '공간·<wbr>라이프스타일', en: 'OFFICE · STAY · F&amp;B', slug: 'space' },
 ];
 
 /* ---------- 공통 조각 ---------- */
@@ -457,56 +471,65 @@ function buildList() {
             <span class="bz-jump-foot"><span class="bz-jump-desc">${b.defLabel}</span><span class="bz-jump-go" aria-hidden="true"><span>${ico('i-arrow', '')}${ico('i-arrow', '')}</span></span></span>
           </a></li>`).join('\n');
 
+  // 가치사슬 3D 계단 (14차 · 회사 소개 about.html 의 3D 계단과 같은 시각 언어 — 구조·동작은 business.css/js '가치사슬')
+  //  계단 한 칸(a.bz-vc-step) = 그 단계를 맡은 사업 상세 페이지 링크 전체. 칸 안: 단계 번호 · 단계 이름 · 영문 · 맡은 사업 꼬리표(번호 + 분야 ↗)
+  //  윗면·옆면·바닥 빛·지나가는 빛은 .bz-vc-3d 안의 <i> 면(aria-hidden). data-t = 위 계기판에 뜨는 영문 단계 이름
+  const FACES = '<i class="bz-cf bz-cf-fill"></i><i class="bz-cf bz-cf-top"></i><i class="bz-cf bz-cf-side"></i><i class="bz-cf bz-cf-pool"></i><i class="bz-cf bz-cf-flash"></i>';
+  // 꼬리표의 분야 이름: '공간 & 라이프스타일'처럼 &로 묶인 이름은 '&' 뒤에서만 줄이 바뀌게 (앞 칸은 붙임)
+  const tagArea = (a) => a.replace(/ &amp; /g, '&nbsp;&amp; ');
   const rail = CHAIN.map((c, i) => {
     const b = BIZ.find(x => x.slug === c.slug);
-    return `          <li style="--i:${i}"><a href="business-${c.slug}.html"><span class="bz-rail-dot" aria-hidden="true"></span><strong>${c.ko}</strong><span class="bz-rail-en en${c.long ? ' is-long' : ''}">${c.en}</span><span class="bz-rail-biz"><span class="en">${b.num}</span><span class="bz-rail-biz-t">${glue(b.area, ico('i-arrow-ur', ''))}</span></span><span class="sr-only"> — ${b.en} 상세 보기</span></a></li>`;
+    return `              <li style="--i:${i}"><a class="bz-vc-step" href="business-${c.slug}.html" data-t="${b.chain}"><span class="bz-vc-3d" aria-hidden="true">${FACES}</span><span class="bz-vc-num en">${String(i + 1).padStart(2, '0')}</span><strong class="bz-vc-ko">${c.ko}</strong><span class="bz-vc-en en">${c.en}</span><span class="bz-vc-biz"><span class="bz-vc-biz-n en">${b.num}</span><span class="bz-vc-biz-t">${tagArea(b.area)}</span>${ico('i-arrow-ur', 'bz-vc-biz-go')}</span><span class="sr-only"> — ${b.en} 상세 보기</span></a></li>`;
   }).join('\n');
 
-  const subnav = BIZ.map(b => `<li><a href="#${b.slug}"><span class="en">${b.num}</span> ${b.area}</a></li>`).join('');
+  // 7개 사업 탭 (14차): 위 탭 줄(role=tablist · 휴대폰은 가로로 넘기며 고른 탭을 가운데로) + 고른 사업 하나의 소개 화면(role=tabpanel)
+  //  탭 = #slug 링크(스크립트가 없어도 그 사업으로 이동) · 소개 화면 id = slug (business.html#bio 처럼 들어와도 그 탭이 열림 · business.js)
+  //  첫 탭만 is-on — 나머지는 .js 일 때 숨김(business.css), 스크립트가 고르면 hidden 으로 바꿔 씀
+  const tabs = BIZ.map((b, i) => `          <a class="bz-tab${i === 0 ? ' is-on' : ''}" href="#${b.slug}" id="tab-${b.slug}" role="tab" aria-controls="${b.slug}" aria-selected="${i === 0}"${i === 0 ? '' : ' tabindex="-1"'}><span class="bz-tab-n en">${b.num}</span><span class="bz-tab-t">${b.area}</span></a>`).join('\n');
 
-  const cards = BIZ.map((b, i) => {
+  // 사업 사이트(새 창) 알약 — 한 사업에 사이트가 둘이면 둘 다 (브랜드 커머스: ONEDAYCORE · MAURINZ / 제조업: DOOGOBIO · DOOGO CONNECT)
+  const sitePill = (w) => `<a class="bz-site" href="${w.url}" target="_blank" rel="noopener">${w.yt ? `<span>YouTube · ${w.host}</span>` : `<span class="bz-site-name en">${w.name}</span><span class="bz-site-host en">${w.host}</span>`}${ARROW_UR}<span class="sr-only"> — ${w.name} ${w.yt ? '유튜브 채널' : '사이트'}(새 창)</span></a>`;
+
+  const panels = BIZ.map((b, i) => {
     const ph = PHOTO[b.hero.f];
-    return `      <article class="bz-card" id="${b.slug}" aria-labelledby="bz-t-${b.slug}">
-        <a class="bz-media" href="business-${b.slug}.html" tabindex="-1" aria-hidden="true" data-reveal="scale">
-          <span class="bz-media-inner" data-parallax>
-            <img src="assets/img/photo/${b.hero.f}.webp" alt="" width="${ph.w}" height="${ph.h}" loading="lazy" decoding="async" style="object-position:${b.hero.mx} ${b.hero.fy}">
-          </span>
-          <span class="bz-media-tag"><span class="en">${b.num}</span>${b.area}</span>
-          <span class="bz-media-quote">“${b.narration}”</span>
-          <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span>${ico('i-arrow-ur', '')}</span></span>
-        </a>
-        <div class="bz-body">
-          <div class="bz-top" data-reveal>
-            <span class="bz-num en" aria-hidden="true">${b.num}</span>
-            <span class="bz-stage en">${b.chain}</span>
-          </div>
-          <h3 class="bz-title" id="bz-t-${b.slug}" data-reveal style="--d:.05s"><span class="bz-area">${b.area}</span><span class="bz-brand"><span class="en">${b.en}</span></span></h3>
-          <p class="bz-corp" data-reveal style="--d:.08s"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong>${corpChip(b.corp, b.area) ? `<span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp, b.area)}</span>` : ''}<span class="bz-corp-ceo">${ttl(b.corp)} <strong>${b.corp.ceo}</strong></span></p>
-          <!-- 운영 사이트 주소: 데스크톱은 번호 줄 오른쪽, 모바일은 운영 회사 줄 아래 (business.css) -->
-          <a class="bz-site" href="${b.web.url}" target="_blank" rel="noopener" data-reveal="fade" style="--d:.1s">${b.web.yt ? `<span>YouTube · ${b.web.host}</span>` : `<span class="en">${b.web.host}</span>`}${ARROW_UR}<span class="sr-only"> — ${b.web.name} ${b.web.yt ? '유튜브 채널' : b.web.site !== b.web.name ? `연결 사이트(${b.web.site})` : '사이트'}(새 창)</span></a>
-          <p class="bz-def" data-reveal style="--d:.1s"><span class="bz-def-label">${b.defLabel}</span>${nw(b.def)}</p>
-          <p class="bz-role" data-reveal style="--d:.12s">${b.role}</p>
-          <div class="bz-info" data-reveal style="--d:.16s">
-            <div class="bz-info-col">
+    const next = BIZ[(i + 1) % BIZ.length];
+    const sites = [b.web, ...(b.web.more || [])];
+    return `        <article class="bz-panel${i === 0 ? ' is-on' : ''}" id="${b.slug}" role="tabpanel" aria-labelledby="tab-${b.slug}" tabindex="0">
+          <a class="bz-media" href="business-${b.slug}.html" tabindex="-1" aria-hidden="true">
+            <span class="bz-media-inner" data-parallax>
+              <img src="assets/img/photo/${b.hero.f}.webp" alt="" width="${ph.w}" height="${ph.h}" loading="lazy" decoding="async" style="object-position:${b.hero.mx} ${b.hero.fy}">
+            </span>
+            <span class="bz-media-tag"><span class="en">${b.num}</span>${b.area}</span>
+            <span class="bz-media-quote">“${b.narration}”</span>
+            <span class="bz-cursor"><span class="bz-cursor-in"><span class="en">VIEW</span>${ico('i-arrow-ur', '')}</span></span>
+          </a>
+          <div class="bz-body">
+            <div class="bz-top">
+              <span class="bz-num en" aria-hidden="true">${b.num}</span>
+              <span class="bz-stage en">${b.chain}</span>
+              <span class="bz-count en" aria-hidden="true">${b.num} / ${String(BIZ.length).padStart(2, '0')}</span>
+            </div>
+            <h3 class="bz-title" id="bz-t-${b.slug}"><span class="bz-area">${b.area}</span><span class="bz-brand en">${b.en}</span></h3>
+            <p class="bz-corp"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong>${corpChip(b.corp, b.area) ? `<span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp, b.area)}</span>` : ''}<span class="bz-corp-ceo">${ttl(b.corp)} <strong>${b.corp.ceo}</strong></span></p>
+            <p class="bz-def"><span class="bz-def-label">${b.defLabel}</span>${nw(b.def)}</p>
+            <div class="bz-svc-box">
               <p class="bz-label">주요 서비스</p>
-              <ul class="bz-svcs">
+              <ul class="bz-svcs${b.services.length > 3 ? ' is-4' : ''}">
 ${b.services.map(s => `                <li>${CHECK}<span>${nw(s)}</span></li>`).join('\n')}
               </ul>
             </div>
-            <div class="bz-info-col bz-for">
-              <p class="bz-label">이런 분께</p>
-              <ul class="bz-for-list">
-${b.targets.map(t => `                <li>${t}</li>`).join('\n')}
-              </ul>
+            <div class="bz-sites">
+              <p class="bz-label">${b.web.yt ? '운영 채널' : sites.length > 1 ? `${b.web.title} ${sites.length}곳` : b.web.title}</p>
+              <div class="bz-site-list">${sites.map(sitePill).join('')}</div>
             </div>
+            <div class="bz-actions">
+              <a class="btn btn--dark" href="business-${b.slug}.html">자세히 보기 ${ARROW}<span class="sr-only"> — ${b.area} ${b.en}</span></a>
+              ${action(b.cta, 'btn btn--line')}
+            </div>
+            <button class="bz-next" type="button" data-next="${next.slug}"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">${next.num}</span>${next.area}</span>${ico('i-arrow', '')}</button>
           </div>
-          <div class="bz-actions" data-reveal style="--d:.2s">
-            <a class="btn btn--dark" href="business-${b.slug}.html">자세히 보기 ${ARROW}<span class="sr-only"> — ${b.area} ${b.en}</span></a>
-            ${action(b.cta, 'btn btn--line')}
-          </div>
-        </div>
-      </article>`;
-  }).join('\n\n');
+        </article>`;
+  }).join('\n');
 
   // 첫 화면 배경: 7개 사업 사진이 차례로 크로스페이드(+느린 줌). 첫 장만 바로 불러오고,
   // 나머지는 <template> 안에 두어(불러오지 않음) business.js가 넘기기 직전에 하나씩 꺼내 씁니다.
@@ -545,44 +568,69 @@ ${jump}
     </div>
   </section>
 
-  <!-- 2. 가치사슬 띠 -->
+  <!-- 2. 가치사슬: 3D 계단 (단계마다 그 단계를 맡은 사업 상세로) -->
   <section class="bz-chain" aria-labelledby="chain-title">
-    <div class="container bz-chain-inner">
-      <div class="bz-chain-head" data-reveal="fade">
-        <span class="eyebrow">Value Chain</span>
-        <h2 class="bz-chain-title" id="chain-title">제품에서 사람까지, <br>7단계로 이어지는 성장</h2>
-        <p class="bz-chain-note">단계를 누르면 그 단계를 맡은 사업의 상세 페이지로 이동합니다.</p>
-      </div>
-      <div class="bz-rail-wrap">
-        <ol class="bz-rail" data-reveal="fade">
+    <div class="container">
+      <div class="bz-vc" data-chain>
+        <div class="bz-vc-bg" aria-hidden="true"></div>
+        <div class="bz-vc-head">
+          <div class="bz-vc-copy">
+            <span class="eyebrow">Value Chain</span>
+            <h2 class="bz-vc-title" id="chain-title">제품에서 사람까지,<br> 7단계로 이어지는 성장</h2>
+            <p class="bz-vc-note">단계를 누르면 그 단계를 맡은 사업의 상세 페이지로 이동합니다.</p>
+          </div>
+          <p class="bz-vc-meter en" aria-hidden="true" style="--p:8"><span class="bz-vc-meter-n" data-chain-n>EXIT</span><span class="bz-vc-meter-bar"></span><span class="bz-vc-meter-t" data-chain-t>Brand Growth</span></p>
+        </div>
+        <div class="bz-vc-stage">
+          <div class="bz-vc-cam">
+            <div class="bz-vc-scene" data-chain-scene>
+              <div class="bz-vc-floor" aria-hidden="true"></div>
+              <div class="bz-vc-wall en" aria-hidden="true">GROWTH</div>
+              <svg class="bz-vc-beam" aria-hidden="true" focusable="false" data-chain-beam>
+                <defs><filter id="bz-vc-blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4"/></filter></defs>
+                <path class="bz-vc-beam-halo" d="" filter="url(#bz-vc-blur)"/>
+                <path class="bz-vc-beam-base" d=""/>
+                <path class="bz-vc-beam-line" d=""/>
+                <path class="bz-vc-beam-glow" d="" filter="url(#bz-vc-blur)"/>
+                <path class="bz-vc-beam-core" d=""/>
+              </svg>
+              <ol class="bz-vc-steps" aria-label="가치사슬 7단계와 각 단계를 맡은 사업">
 ${rail}
-          <li class="bz-rail-goal" style="--i:7"><span class="bz-rail-dot" aria-hidden="true">${ico('i-arrow-ur', '')}</span><strong>브랜드 성장 &amp; EXIT</strong><span class="bz-rail-en en">BRAND GROWTH &amp; EXIT</span><span class="bz-rail-biz is-goal">그룹이 함께 만드는 결과</span></li>
-        </ol>
+              </ol>
+              <p class="bz-vc-goal" style="--i:7"><span class="bz-vc-3d" aria-hidden="true">${FACES}<i class="bz-cf bz-cf-shaft"></i><i class="bz-cf bz-cf-ring"></i><i class="bz-cf bz-cf-ring bz-cf-ring--2"></i></span><span class="bz-vc-goal-ico">${ico('i-arrow-ur')}</span><strong>브랜드 성장 &amp; EXIT</strong><span class="bz-vc-en en">BRAND GROWTH &amp; EXIT</span><span class="bz-vc-goal-sub">그룹이 함께 만드는 결과</span></p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <nav class="subnav bz-subnav" aria-label="사업 바로가기">
-    <div class="container"><ul>${subnav}</ul></div>
-  </nav>
-
-  <!-- 3. 7개 사업 -->
-  <section class="section bz-list" aria-labelledby="list-title">
+  <!-- 3. 7개 사업: 탭 줄 + 고른 사업 하나의 소개 화면 -->
+  <section class="section bz-list" id="businesses" aria-labelledby="list-title">
     <div class="container">
-      <div class="sec-head sec-head--split bz-list-head">
+      <div class="bz-list-head">
         <div>
           <span class="eyebrow" data-reveal="fade">7 Businesses</span>
-          <h2 class="h2" id="list-title" data-lines style="margin-top:20px"><span class="line"><span>필요한 사업을</span></span><span class="line"><span>찾아보세요</span></span></h2>
+          <h2 class="h2" id="list-title" data-lines style="margin-top:20px"><span class="line"><span>필요한 사업을 찾아보세요</span></span></h2>
         </div>
-        <p class="lead" data-reveal style="--d:.15s">사업마다 운영 회사와 하는 일, 주요 서비스, 함께하면 좋은 분을 정리했습니다. ‘자세히 보기’를 누르면 사업별 상세 페이지로, 옆 버튼을 누르면 상담이나 각 서비스로 바로 이동합니다.</p>
+        <p class="bz-list-lead" data-reveal style="--d:.15s">사업을 고르면 운영 회사와 주요 서비스를 바로 볼 수 있습니다. ‘자세히 보기’에서 사업별 상세 페이지로 이어집니다.</p>
       </div>
-
-      <div class="bz-cards">
-${cards}
+    </div>
+    <div class="bz-tabs-spot" aria-hidden="true"></div>
+    <div class="bz-tabbar">
+      <div class="container">
+        <div class="bz-tabs" role="tablist" aria-label="7개 사업">
+          <span class="bz-tab-ink" aria-hidden="true"></span>
+${tabs}
+        </div>
+      </div>
+    </div>
+    <div class="container">
+      <div class="bz-panels">
+${panels}
       </div>
     </div>
   </section>
-
 ${CTA_BAND}`;
 
   return shell({
@@ -635,8 +683,9 @@ ${people.map((p, i) => `        <li class="dt-person${p.photo ? ' has-photo' : '
   },
   bio: () => steps({
     eyebrow: 'Manufacturing Support', h2: ['제조 상담·연결 서비스', '<span class="accent">‘두고커넥트’</span>'],
-    lead: '무엇부터 준비해야 할지 막막할 때, 두고커넥트가 상담부터 제품 개발, 소량 제조와 패키지까지 필요한 과정을 이어 줍니다.',
-    actions: `<a class="btn btn--white" href="${ASK('bio')}">제조 상담하기 ${ARROW}</a>`,
+    // 14차: 두고커넥트 = DOOGOBIO가 운영하는 해외 건강식품 소량 OEM 플랫폼 doogoconnect.com (사이트 첫 화면 문구 기준)
+    lead: '무엇부터 준비해야 할지 막막할 때, 두고커넥트가 상담부터 제품 개발, 소량 제조와 패키지까지 필요한 과정을 이어 줍니다. <span class="nowrap">DOOGOBIO</span>가 운영하는 <span class="nowrap">DOOGO CONNECT</span>(doogoconnect.com)는 건강식품 OEM의 수요와 공급을 온라인으로 연결하는 해외 건강식품 소량 OEM 플랫폼으로, 50개 소량부터 실시간 견적으로 시작할 수 있습니다.',
+    actions: `<a class="btn btn--white" href="${ASK('bio')}">제조 상담하기 ${ARROW}</a><a class="btn btn--ghost" href="${CONNECT_URL}" target="_blank" rel="noopener">DOOGO CONNECT 바로가기 ${ARROW_UR}${NEWWIN}</a>`,
     label: '제조 흐름',
     items: [
       { icon: 's-chat', ko: '상담', en: 'Consult', desc: '만들고 싶은 제품과 판매 계획을 듣고 방향을 잡습니다.' },
@@ -789,7 +838,7 @@ function webBlock(b) {
   const what = w.yt ? `유튜브 채널(${w.host})` : `웹사이트(${w.host})`; // 캡처에 보이는 사이트 기준 (MAKERS → DOOGOFOOD 웹사이트)
   return `  <section class="section dt-web" id="site" aria-labelledby="web-title">
     <div class="container">
-      <div class="dt-web-card" data-reveal data-web>
+      <div class="dt-web-card${w.more ? ' has-more' : ''}" data-reveal data-web>
         <div class="dt-web-head">
           <span class="eyebrow">${w.eyebrow}</span>
           <h2 class="dt-web-title" id="web-title">${w.title}</h2>
@@ -809,7 +858,21 @@ function webBlock(b) {
         <div class="dt-web-foot">
           <a class="btn btn--white btn--lg" href="${w.url}" target="_blank" rel="noopener">${w.btn} ${ARROW_UR}<span class="sr-only"> — ${w.site} ${what}</span>${NEWWIN}</a>
           <p class="dt-web-note">${w.note}</p>
-        </div>
+        </div>${w.more ? `
+        <div class="dt-web-more">
+          <p class="dt-web-more-label">${nw(w.moreLabel)}</p>
+          <ul class="dt-web-subs">
+${w.more.map(m => `          <li><a class="dt-web-sub" href="${m.url}" target="_blank" rel="noopener">
+            <span class="dt-web-sub-shot"><span class="dt-web-sub-bar" aria-hidden="true"><i></i><i></i><i></i></span><img src="assets/img/sites/${m.shot}-720.webp" alt="${m.name} 웹사이트(${m.host}) 첫 화면" width="720" height="450" loading="lazy" decoding="async"></span>
+            <span class="dt-web-sub-body">
+              <span class="dt-web-name"><span class="en">${m.name}</span><span class="dt-web-kind">${m.kind}</span></span>
+              <span class="dt-web-sub-host en">${m.host}</span>
+              <span class="dt-web-sub-desc">${nw(m.desc)}</span>
+              <span class="dt-web-sub-go">${m.close || '사이트 바로가기'} ${ARROW_UR}${NEWWIN}</span>
+            </span>
+          </a></li>`).join('\n')}
+          </ul>
+        </div>` : ''}
       </div>
     </div>
   </section>`;
