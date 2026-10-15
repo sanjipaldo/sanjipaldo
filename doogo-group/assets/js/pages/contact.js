@@ -32,6 +32,7 @@
 
   var form = $('#inquiryForm');
   var done = $('#inquiryDone');
+  var modal = $('#ct-modal');
   var card = $('#ct-card');
   if (!form) return;
 
@@ -64,7 +65,9 @@
        이후 문의가 메일로 도착합니다.
      form의 data-endpoint에 다른 주소를 넣으면 그 주소로 원본 JSON(type·name·contact…)을 보냅니다. */
   var INBOX = 'doogobiz@gmail.com';
-  var DEFAULT_ENDPOINT = 'https://formsubmit.co/ajax/' + INBOX;
+  // FormSubmit이 활성화 메일에서 준 별칭(이메일 주소 대신 사용 · 페이지 소스에 메일 주소가 드러나지 않음)
+  var FS_ALIAS = 'aceef5c71bff1c3bc5b0db0e1bc2c3b7';
+  var DEFAULT_ENDPOINT = 'https://formsubmit.co/ajax/' + FS_ALIAS;
   var TIMEOUT_MS = 15000;
   function getEndpoint() { return (form.getAttribute('data-endpoint') || '').trim() || DEFAULT_ENDPOINT; }
   function isFormSubmit(url) { return /^https:\/\/formsubmit\.co\//i.test(url); }
@@ -486,16 +489,19 @@
       el.textContent = demo ? el.getAttribute('data-demo-text') : el.getAttribute('data-real-text');
     });
 
-    form.hidden = true;
-    done.hidden = false;
+    // 접수되면 작성하던 내용은 비우고(처음 상태) '문의가 접수되었습니다' 팝업을 띄웁니다.
+    resetForm({ keepFocus: true });
     done.classList.add('is-enter');
     done.classList.remove('is-show');
+    if (modal && typeof modal.showModal === 'function') {
+      if (!modal.open) modal.showModal();
+      document.documentElement.classList.add('is-locked');
+    } else {
+      window.alert('문의가 접수되었습니다. 담당자가 확인한 뒤 회신합니다.');
+    }
     void done.offsetWidth;
     done.classList.add('is-show');
     requestAnimationFrame(function () { requestAnimationFrame(function () { done.classList.remove('is-enter'); }); });
-
-    var top = card.getBoundingClientRect().top;
-    if (top < 0 || top > window.innerHeight * 0.5) card.scrollIntoView({ behavior: still() ? 'auto' : 'smooth', block: 'start' });
     var title = $('#ct-done-title');
     if (title) setTimeout(function () { try { title.focus({ preventScroll: true }); } catch (e) { title.focus(); } }, 60);
   }
@@ -510,15 +516,24 @@
     cToggles.forEach(closeDetail);
     syncCount();
     syncType({ silent: true });
-    if (done) { done.hidden = true; done.classList.remove('is-show'); }
     form.hidden = false;
     if (!opts.keepFocus) {
       card.scrollIntoView({ behavior: still() ? 'auto' : 'smooth', block: 'start' });
       setTimeout(function () { try { radios[0].focus({ preventScroll: true }); } catch (e) { radios[0].focus(); } }, still() ? 0 : 400);
     }
   }
-  var resetBtn = done && $('[data-reset]', done);
-  if (resetBtn) resetBtn.addEventListener('click', function () { resetForm(); });
+  /* ---------- 접수 완료 팝업 닫기 (확인 · X · Esc · 바깥 클릭) ---------- */
+  function closeModal() { if (modal && modal.open) modal.close(); }
+  if (modal) {
+    $$('[data-modal-close]', modal).forEach(function (b) { b.addEventListener('click', closeModal); });
+    modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+    modal.addEventListener('close', function () {
+      document.documentElement.classList.remove('is-locked');
+      done.classList.remove('is-show');
+      card.scrollIntoView({ behavior: still() ? 'auto' : 'smooth', block: 'start' });
+      setTimeout(function () { try { radios[0].focus({ preventScroll: true }); } catch (e) { radios[0].focus(); } }, still() ? 0 : 400);
+    });
+  }
 
   /* ---------- 화면 크기에 따라 숨긴 히어로 요소(궤도 / 모바일 분야 칩)는 등장 처리만 ---------- */
   $$('.ct-orbit, .ct-desk').forEach(function (box) {

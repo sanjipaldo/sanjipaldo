@@ -609,3 +609,27 @@ html.motion-off .ct-desk-grid li { opacity: 1; transform: none; transition: none
 html.motion-off .ct-done-ico path { stroke-dashoffset: 0; }
 html.motion-off .ct-xfer, html.motion-off .ct-consent--xfer, html.motion-off .ct-consent-detail { transition: none; }
 html.motion-off .ct-xfer.is-flash .ct-consent--xfer { animation: none; }
+
+/* ---------- 접수 완료 팝업 (dialog) ----------
+   전송이 성공하면 양식을 비우고 이 창을 띄웁니다. 안쪽 생김새는 기존 접수 완료(.ct-done) 그대로 */
+.ct-modal {
+  width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: clamp(28px, 4vw, 44px);
+  border: 0; border-radius: 28px; background: #fff; color: var(--ink); overflow: auto;
+  box-shadow: 0 40px 90px -30px rgba(11, 27, 51, .45), 0 0 0 1px rgba(11, 27, 51, .06);
+}
+.ct-modal::backdrop { background: rgba(10, 20, 38, .55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.ct-modal[open] { animation: ct-modal-in .45s cubic-bezier(.16, 1, .3, 1) both; }
+.ct-modal[open]::backdrop { animation: ct-modal-fade .3s ease both; }
+@keyframes ct-modal-in { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes ct-modal-fade { from { opacity: 0; } to { opacity: 1; } }
+.ct-modal .ct-done { padding-block: 0; }
+.ct-modal .ct-done-ico { width: 64px; height: 64px; margin-bottom: 22px; border-radius: 20px; }
+.ct-modal .ct-done-ico svg { width: 32px; height: 32px; }
+.ct-modal .ct-done-title { font-size: clamp(1.5rem, 2.6vw, 2rem); }
+.ct-modal .ct-done-sum { margin-top: 26px; }
+.ct-modal .ct-done-sum > div { grid-template-columns: 96px minmax(0, 1fr); padding: 13px 0; }
+.ct-modal .ct-done-actions { margin-top: 26px; }
+.ct-modal-x { position: absolute; top: 16px; right: 16px; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--muted); transition: background-color .2s var(--ease), color .2s var(--ease); }
+.ct-modal-x:hover { background: var(--ivory); color: var(--ink); }
+.ct-modal-x svg { width: 18px; height: 18px; }
+html.motion-off .ct-modal[open], html.motion-off .ct-modal[open]::backdrop { animation: none; }
