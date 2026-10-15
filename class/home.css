@@ -240,6 +240,10 @@ body[data-mode="home"] { background: #fff; }
 .hm-sl-t small { font-size: 13px; line-height: 1.4; color: var(--g500); }
 .hm-sl-btn { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 40px; padding: 0 14px 0 16px; border-radius: 10px; background: var(--pri); font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; }
 .hm .hm-sl-btn .icon { width: 15px; height: 15px; stroke-width: 2.4; }
+/* 첫 화면 강사님 카드(버튼): 수강생 로그인이 중심이라 입점 문의는 흰 바탕 + 빨간 글자로 한 단계 낮춤 */
+button.hm-ins-link { width: 100%; font: inherit; text-align: left; cursor: pointer; }
+.hm-ins-link .hm-sl-btn { background: #fff; border: 1px solid var(--pri-200); color: var(--pri-dark); }
+.hm .hm-cta .hm-btn-lg .icon:first-child { width: 18px; height: 18px; }
 
 /* 체크 목록 */
 .hm-checks { list-style: none; display: grid; gap: 10px; margin: 0; padding: 0; }
@@ -449,6 +453,7 @@ body[data-mode="home"] { background: #fff; }
   .hm-top-link:hover { color: var(--pri); }
   .hm-student-link:hover { border-color: var(--pri-200); box-shadow: 0 16px 34px -18px rgba(150, 30, 20, .45); transform: translateY(-2px); }
   .hm-student-link:hover .hm-sl-btn { background: var(--pri-dark); }
+  .hm-ins-link:hover .hm-sl-btn { background: var(--pri); border-color: var(--pri); color: #fff; }
     a  .hm-foot-info a:hover, .hm-foot-chk:hover { color: var(--pri); }
   .hm-foot-chk:hover { border-color: var(--pri); }
   .hm-top.scrolled .hm-nav-a:hover { background: rgba(0, 0, 0, .05); }

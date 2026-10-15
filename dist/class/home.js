@@ -197,7 +197,8 @@
         scrollBtn("hm-flow", "운영 흐름", "hm-nav-a") + scrollBtn("hm-features", "3가지 기능", "hm-nav-a") + scrollBtn("hm-students", "수강생 화면", "hm-nav-a") + scrollBtn("hm-teachers", "강사센터", "hm-nav-a") +
         scrollBtn("hm-pricing", "이용료", "hm-nav-a") + scrollBtn("hm-classes", "강사진", "hm-nav-a") + scrollBtn("hm-faq", "FAQ", "hm-nav-a") +
       "</nav>" +
-      '<div class="hm-top-r"><a class="hm-top-link" href="#/center">강사센터</a><a class="hm-btn hm-btn-sec hm-btn-sm" href="#/login"><span class="hm-hide-m">수강생 </span>로그인</a>' + applyBtn("입점 문의", "hm-btn hm-btn-p hm-btn-sm") + "</div>" +
+      // 오른쪽 위: 강사센터(글자) + 수강생 로그인(빨간 버튼). 입점 문의는 첫 화면 카드 · 강사진 · 맨 아래에서
+      '<div class="hm-top-r"><a class="hm-top-link" href="#/center">강사센터</a><a class="hm-btn hm-btn-p hm-btn-sm hm-top-login" href="#/login">수강생 로그인</a></div>' +
     '</div><i class="hm-top-prog" id="hm-prog" aria-hidden="true"></i></header>';
   }
 
@@ -208,11 +209,12 @@
         '<p class="hm-pill"><i class="hm-dot"></i>강사님을 위한 강의 운영 플랫폼</p>' +
         '<h1 class="hm-h1">강의는 강사님이,<br>운영은 ' + mark("두고 클래스") + "가</h1>" +
         '<p class="hm-lead">강의 소개 랜딩페이지 · 무료강의 전자책 · 수강생 케어 튜토리얼까지, <b>강사님 이름으로 된 강의 플랫폼</b> 하나로 운영하세요. 수강생은 무료, 강사님은 수강생 수와 상관없이 같은 이용료예요.</p>' +
-        '<div class="hm-cta">' + applyBtn("입점 문의하기" + arrow(), "hm-btn hm-btn-p hm-btn-lg") + scrollBtn("hm-features", "3가지 기능 보기", "hm-btn hm-btn-sec hm-btn-lg") + "</div>" +
+        // 첫 화면 중심 버튼은 수강생 로그인 (내 강의실로 바로)
+        '<div class="hm-cta"><a class="hm-btn hm-btn-p hm-btn-lg" href="#/login">' + icon("book", "sm") + "수강생 로그인" + arrow() + "</a>" + scrollBtn("hm-features", "3가지 기능 보기", "hm-btn hm-btn-sec hm-btn-lg") + "</div>" +
         '<ul class="hm-hero-pts">' + pts.map((x) => "<li>" + icon(x[0], "xs") + x[1] + "</li>").join("") + "</ul>" +
-        // 수강생 바로가기: 한눈에 읽히는 카드 (아이콘 · 두 줄 설명 · 로그인 버튼, 카드 전체를 눌러도 됨)
-        '<a class="hm-student-link" href="#/login"><span class="hm-sl-ic">' + icon("book") + '</span><span class="hm-sl-t"><b>수강생이신가요?</b><small>내 강의실로 바로 들어가요<span class="hm-hide-m"> · 회원가입 없이</span></small></span>' +
-          '<span class="hm-sl-btn">수강생 로그인' + icon("arrowRight", "xs") + "</span></a>" +
+        // 강사님 바로가기: 한눈에 읽히는 카드 (아이콘 · 두 줄 설명 · 입점 문의, 카드 전체를 눌러도 팝업이 열림)
+        '<button type="button" class="hm-student-link hm-ins-link" data-hm-apply><span class="hm-sl-ic">' + icon("handshake") + '</span><span class="hm-sl-t"><b>강사님이신가요?</b><small>내 이름으로 된 강의 플랫폼<span class="hm-hide-m"> · 상담은 무료</span></small></span>' +
+          '<span class="hm-sl-btn">입점 문의' + icon("arrowRight", "xs") + "</span></button>" +
       "</div>" +
       '<div class="hm-hero-art">' +
         browser("v-admin", "hm-hero-browser", "강사센터 화면") +
@@ -406,7 +408,7 @@
       '<div class="hm-final-copy"><p class="hm-final-k">' + icon("sparkles", "xs") + "다음 기수 준비, 지금 시작하세요</p>" +
         '<h2 class="hm-h2">다음 기수부터,<br>' + mark("두고 클래스") + "로 운영해 보세요</h2>" +
         "<p>강의 소개 랜딩페이지 · 무료강의 전자책 · 튜토리얼 시스템을 강사님 이름으로. 문의를 남겨 주시면 확인 후 바로 연락드려요.</p>" +
-        '<div class="hm-cta">' + applyBtn("입점 문의하기" + arrow(), "hm-btn hm-btn-p hm-btn-lg") + '<a class="hm-btn hm-btn-sec hm-btn-lg" href="#/login">수강생 로그인</a></div></div>' +
+        '<div class="hm-cta">' + applyBtn("입점 문의하기" + arrow(), "hm-btn hm-btn-p hm-btn-lg") + "</div></div>" +
       '<ul class="hm-final-pts">' + pts.map((x) => '<li><span class="hm-final-ic">' + icon(x[0]) + "</span><span><b>" + x[1] + "</b><small>" + x[2] + "</small></span></li>").join("") + "</ul>" +
     "</div></section>";
   }
