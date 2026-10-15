@@ -1255,3 +1255,33 @@ html.soft-motion .ab-stage-bg, html.soft-motion .ab-stage-fg { transform: none !
   .ab-oc-ico svg { width: 13px; height: 13px; }
 }
 html.motion-off .ab-oc-ico, html.motion-off .ab-oc-ico::after { transition: none; }
+
+/* ---------- 그룹 소개 첫 문장: 메인 'Who We Are' 큰 문장과 같은 디자인 · 모션 (18차) ----------
+   왼쪽 좁은 칸(eyebrow + 제목) · 오른쪽 큰 문장 — 글자가 흐림·아래 → 선명·제자리로 새겨지고(블루 빛 → 잉크),
+   다 새겨지면 '한 그룹 안에서'가 블루 + 그라데이션 밑줄 */
+.ab-intro-grid { grid-template-columns: minmax(0, 3fr) minmax(0, 9fr); gap: 40px clamp(32px, 4vw, 72px); }
+.ab-intro-head { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; padding-top: 14px; }
+.ab-intro-head .h2 { margin-top: 0; font-size: clamp(1.1rem, 1.35vw, 1.3rem); font-weight: 700; line-height: 1.55; letter-spacing: -0.03em; color: var(--muted); }
+.ab-intro-body { gap: 18px; padding-top: 0; }
+.ab-intro-lede { margin-bottom: 18px; font-size: clamp(28px, 3.5vw, 52px); font-weight: 700; line-height: 1.4; letter-spacing: -0.04em; color: var(--ink); }
+.ab-intro-body > p:not(.ab-intro-lede) { max-width: 62ch; font-size: 1.04rem; line-height: 1.85; color: var(--muted); }
+.ab-intro-lede .eg-accent::after {
+  left: .02em; right: .06em; bottom: .02em; height: .075em; border-radius: .08em;
+  background: linear-gradient(90deg, var(--blue) 0%, var(--sky) 100%);
+}
+.js .ab-intro-lede.is-split .eg-c {
+  opacity: 0; color: var(--blue-300);
+  transform: translate3d(0, .42em, 0) scale(1.04); filter: blur(10px);
+  transition: none;
+}
+.js .ab-intro-lede.is-split.is-on .eg-c {
+  --d: calc(var(--ci, 0) * 24ms);
+  opacity: 1; color: var(--ink); transform: none; filter: blur(0);
+  transition: opacity .5s var(--ease) var(--d), transform .9s cubic-bezier(.16, 1, .3, 1) var(--d), filter .7s var(--ease) var(--d), color 1.2s var(--ease) calc(var(--d) + .18s);
+}
+.js .ab-intro-lede.is-split.is-accent .eg-accent .eg-c { color: var(--blue); transition: color .6s var(--ease) calc(var(--ai, 0) * 45ms); }
+@media (max-width: 1024px) {
+  .ab-intro-grid { grid-template-columns: 1fr; gap: 22px; }
+  .ab-intro-head { gap: 10px; padding-top: 0; }
+  .ab-intro-head .h2 .line { display: inline-block; vertical-align: top; }
+}
