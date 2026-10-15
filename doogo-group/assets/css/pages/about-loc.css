@@ -333,6 +333,10 @@
 @container glcard (min-width: 600px) {
   .ab-gl-tags--grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+@container glcard (max-width: 520px) { /* 두 장이 나란한 좁은 카드: 이름 칸을 줄여 주소가 두 줄에 들어가게 */
+  .ab-gl-dl > div { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; }
+  .ab-gl-card--nz .ab-gl-face { grid-template-columns: minmax(0, 1fr) minmax(0, 34%); }
+}
 @container glcard (max-width: 380px) {
   .ab-gl-dl > div { grid-template-columns: minmax(0, 1fr); gap: 7px; padding: 12px 0; }
   .ab-gl-dl dt { font-size: .78rem; }
