@@ -771,7 +771,7 @@
       steps.forEach(function (el) {
         var fl = el.querySelector('.ab-cf-flash');
         if (!fl) return;
-        var i = steps.indexOf(el), a0 = Math.min(.97, (geo.at[i] + (i < steps.length - 1 ? 0 : 0)) / v / T);
+        var i = steps.indexOf(el), a0 = Math.min(.97, geo.at[i] / v / T);
         anims.push(fl.animate([
           { opacity: 0, offset: 0 },
           { opacity: 0, offset: a0 },
@@ -809,10 +809,9 @@
     chain.addEventListener('pointerleave', function () { gx = 0; gy = 0; kick(); });
 
     // 시작
-    var relayout = function () {
-      var was = geo.mode;
+    var relayout = function () { // 크기 · 배치가 바뀌면 경로를 다시 그리고, 흐르던 빛도 새 길이로
       if (!layout()) return;
-      if (state === 'done' && anims.length && was) { stopFx(); syncLive(); }
+      if (state === 'done' && anims.length) { stopFx(); syncLive(); }
     };
     if (!hasIO || motionOff()) finishAll();
     else { chain.classList.add('is-armed'); state = 'armed'; setMeter(0, false); layout(); }
@@ -820,7 +819,7 @@
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
     if (hasIO) {
       var playIO = new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) { if (en.isIntersecting && state === 'armed') { if (play() !== false && state !== 'armed') playIO.disconnect(); } });
+        entries.forEach(function (en) { if (en.isIntersecting && state === 'armed') { play(); if (state !== 'armed') playIO.disconnect(); } });
       }, { rootMargin: '0px 0px -22% 0px', threshold: 0.15 });
       playIO.observe(chain);
       new IntersectionObserver(function (entries) {
