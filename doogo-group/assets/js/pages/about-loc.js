@@ -128,7 +128,7 @@
   var countEl = fig.querySelector('[data-gl-count]');
 
   // 점 만들기: 원래 격자 사이를 촘촘히(S 배) 채우되 해안선은 넓히지 않음(이웃이 모두 육지일 때만)
-  var N = 0, DX, DZ, DT, DF, DK, DN, DP, DL, SX, SY, SS, LV, density = 0, maxDK = 1;
+  var ORD = null, N = 0, DX, DZ, DT, DF, DK, DN, DP, DL, SX, SY, SS, LV, density = 0, maxDK = 1;
   var buildDots = function (S) {
     if (S === density) return;
     density = S;
@@ -208,7 +208,8 @@
   };
 
   /* ---------- 캔버스 크기 · 화면 맞춤 ---------- */
-  var W = 0, H = 0, dpr = 1, cssW = 0, cssH = 0, sized = false, compact = false;
+  var W = 0, H = 0, dpr = 1, dprCap = 2, cssW = 0, cssH = 0, sized = false, compact = false;
+  var perf = { n: 0, sum: 0, tries: 0 }; // 느린 기기면 해상도를 한 단계씩 낮춤
   var bg = document.createElement('canvas'), bgx = bg.getContext('2d');
   var glow = document.createElement('canvas');
   (function () { // 둥근 빛 스프라이트
@@ -273,7 +274,7 @@
   var resize = function () {
     var w = fig.clientWidth, h = fig.clientHeight;
     if (!w || !h) { sized = false; return false; }
-    var d = Math.min(window.devicePixelRatio || 1, 2);
+    var d = Math.min(window.devicePixelRatio || 1, dprCap);
     if (w === cssW && h === cssH && d === dpr && sized) return true;
     cssW = w; cssH = h; dpr = d;
     compact = w < 560;
@@ -324,37 +325,55 @@
     ctx.lineWidth = 1 * dpr;
     var seg = 34, i, s, x0, y0, a;
     var fadeAt = function (mx, my) { return sstep(0, 220, mx) * sstep(0, 260, my) * (1 - sstep(820, 900, mx)) * (1 - sstep(960, 1020, my)); };
-    var line = function (ax, ay, bx, by, base, rgb) {
+    // 선을 짧게 나눠 가장자리로 갈수록 흐리게 — 같은 밝기 단계끼리 한 번에 그림
+    var LVN = 6, segs = [], L;
+    for (L = 0; L < LVN; L++) segs.push([]);
+    var line = function (ax, ay, bx, by) {
       for (i = 0; i < seg; i++) {
         var t0 = i / seg, t1 = (i + 1) / seg, tm = (t0 + t1) / 2;
-        a = base * fadeAt(ax + (bx - ax) * tm, ay + (by - ay) * tm) * rev;
-        if (a < 0.004) continue;
-        ctx.strokeStyle = 'rgba(' + rgb + ',' + a.toFixed(3) + ')';
-        ctx.beginPath();
+        a = fadeAt(ax + (bx - ax) * tm, ay + (by - ay) * tm);
+        if (a < 0.05) continue;
         proj(ax + (bx - ax) * t0 - MCX, 0, ay + (by - ay) * t0 - MCZ, PT); x0 = PT.x; y0 = PT.y;
         proj(ax + (bx - ax) * t1 - MCX, 0, ay + (by - ay) * t1 - MCZ, PT);
-        ctx.moveTo(x0, y0); ctx.lineTo(PT.x, PT.y); ctx.stroke();
+        segs[Math.min(LVN - 1, (a * LVN) | 0)].push(x0, y0, PT.x, PT.y);
       }
     };
-    for (s = 70; s <= 970; s += 150) if (s !== 520) line(0, s, 900, s, 0.085, '200,215,240');
-    for (s = 100; s <= 850; s += 150) line(s, 0, s, 1020, 0.085, '200,215,240');
+    var flush = function (base, rgb) {
+      for (L = 0; L < LVN; L++) {
+        var g = segs[L];
+        if (!g.length) continue;
+        ctx.strokeStyle = 'rgba(' + rgb + ',' + (base * rev * (L + 0.5) / LVN).toFixed(3) + ')';
+        ctx.beginPath();
+        for (var q = 0; q < g.length; q += 4) { ctx.moveTo(g[q], g[q + 1]); ctx.lineTo(g[q + 2], g[q + 3]); }
+        ctx.stroke();
+        segs[L] = [];
+      }
+    };
+    for (s = 70; s <= 970; s += 150) if (s !== 520) line(0, s, 900, s);
+    for (s = 100; s <= 850; s += 150) line(s, 0, s, 1020);
+    flush(0.085, '200,215,240');
     ctx.setLineDash([4 * dpr, 6 * dpr]);
-    line(0, 520, 900, 520, 0.42, '111,162,242');
+    line(0, 520, 900, 520);
+    flush(0.42, '111,162,242');
     ctx.setLineDash([]);
     // 판에 누운 좌표 글자
     ctx.save();
-    var sc = planeXf(700 - MCX, 506 - MCZ);
-    if (sc > 0) {
-      ctx.globalAlpha = 0.55 * rev;
-      ctx.fillStyle = '#9FBDEB';
-      ctx.font = '600 15px Outfit, Pretendard, sans-serif';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText('EQUATOR 0°', 0, 0);
-      planeXf(812 - MCX, 1004 - MCZ);
-      ctx.globalAlpha = 0.4 * rev;
-      ctx.fillText('180°', 0, 0);
-      if (!compact) { planeXf(150 - MCX, 962 - MCZ); ctx.fillText('45\u00B0S', 0, 0); }
-    }
+    ctx.fillStyle = '#9FBDEB';
+    ctx.font = '600 15px Outfit, Pretendard, sans-serif';
+    ctx.textBaseline = 'alphabetic';
+    var tag = function (txt, mx, my, al) { // 글자 전체가 화면 안에 있을 때만
+      proj(mx - MCX, 0, my - MCZ, PT);
+      var m = 14 * dpr;
+      if (PT.x < m || PT.y < m * 2 || PT.y > H - m) return;
+      proj(mx + 15 * txt.length * 0.62 - MCX, 0, my - MCZ, PT);
+      if (PT.x > W - m) return;
+      planeXf(mx - MCX, my - MCZ);
+      ctx.globalAlpha = al * rev;
+      ctx.fillText(txt, 0, 0);
+    };
+    tag('EQUATOR 0\u00B0', 700, 506, 0.55);
+    tag('180\u00B0', 812, 1004, 0.4);
+    if (!compact) tag('45\u00B0S', 150, 962, 0.4);
     ctx.restore();
   };
 
@@ -390,14 +409,21 @@
       SX[n] = PT.x; SY[n] = PT.y;
       SS[n] = Math.max(0.9 * dpr, R * PT.k * (t ? 1.28 : 1) * (1 + lit * 0.3));
     }
-    for (var b = 0; b < 3 * NB; b++) {
+    // 밝기 단계별로 모아(계수 정렬) 단계마다 한 번씩 채움 · 작은 점은 사각형(가장 가벼움), 큰 점만 원
+    var b, off = 0, start = new Int32Array(3 * NB);
+    for (b = 0; b < 3 * NB; b++) { start[b] = off; off += counts[b]; }
+    if (!ORD || ORD.length < N) ORD = new Int32Array(N);
+    var pos = start.slice();
+    for (i = 0; i < N; i++) if (LV[i] !== 255) ORD[pos[LV[i]]++] = i;
+    var big = 4.6 * Math.max(1, dpr / 1.5);
+    for (b = 0; b < 3 * NB; b++) {
       if (!counts[b]) continue;
       ctx.fillStyle = FILL[b];
       ctx.beginPath();
-      for (i = 0; i < N; i++) {
-        if (LV[i] !== b) continue;
+      for (var o = start[b], e2 = start[b] + counts[b]; o < e2; o++) {
+        i = ORD[o];
         var s = SS[i];
-        if (s < 2.6) ctx.rect(SX[i] - s / 2, SY[i] - s / 2, s, s);
+        if (s < big) { var q = Math.max(1, Math.round(s)); ctx.rect(Math.round(SX[i] - q / 2), Math.round(SY[i] - q / 2), q, q); } // 픽셀에 맞춰 무늬(모아레) 없이
         else { ctx.moveTo(SX[i] + s / 2, SY[i]); ctx.arc(SX[i], SY[i], s / 2, 0, TAU); }
       }
       ctx.fill();
@@ -648,6 +674,13 @@
   /* ---------- 루프 ---------- */
   var frame = function (now) {
     raf = 0;
+    if (last && phase === 'live' && perf.tries < 2 && now - last < 120) { // 탭 전환 등으로 생긴 긴 공백은 빼고
+      perf.n++; perf.sum += now - last;
+      if (perf.n >= 45) {
+        if (perf.sum / perf.n > 26 && dprCap > 1) { dprCap = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1) - 0.5); perf.tries++; sized = false; cssW = 0; resize(); }
+        perf.n = 0; perf.sum = 0;
+      }
+    }
     var dt = last ? Math.min(0.05, (now - last) / 1000) : 0.016;
     last = now;
     clock += dt;
@@ -665,7 +698,7 @@
   };
   var running = function () { return visible && sized && !motionOff() && (phase === 'intro' || phase === 'live'); };
   var sync = function () {
-    if (running()) { if (!raf) { last = 0; raf = requestAnimationFrame(frame); } }
+    if (running()) { if (!raf) { last = 0; perf.n = 0; perf.sum = 0; raf = requestAnimationFrame(frame); } }
     else if (raf) { cancelAnimationFrame(raf); raf = 0; }
   };
   var showFinal = function () {
