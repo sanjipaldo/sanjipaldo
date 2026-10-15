@@ -19,6 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/cta-variants.css">
   <link rel="stylesheet" href="assets/css/pages/business.css">
 </head>
 <body data-page="business" data-header="overlay">
@@ -607,18 +608,59 @@
       </div>
     </div>
   </section>
-  <section class="cta-band" aria-labelledby="cta-title">
+  <!-- 마무리 배너: 사업을 고르면 문의 분야가 선택된 채 접수 화면으로 (7개 사업 + 그룹 제휴) -->
+  <section class="cbx cbx--pick" aria-labelledby="pick-title">
     <div class="container">
-      <span class="eyebrow">Contact</span>
-      <h2 class="h2" id="cta-title" data-reveal style="margin-top:20px">다음 사업, 두고그룹과 함께 이야기해 보세요.</h2>
-      <p class="lead" data-reveal style="--d:.1s">교육업 · 제조업 · 브랜드 커머스 · <span class="nowrap">미디어 &amp; 콘텐츠</span> · 마케팅 · 유통 · <span class="nowrap">공간 &amp; 라이프스타일</span>, 그리고 그룹 제휴까지 하나의 창구로 접수합니다.</p>
-      <div class="cta-chips" data-reveal style="--d:.15s">
-        <a href="contact.html?type=campus#inquiry">교육업</a><a href="contact.html?type=bio#inquiry">제조업</a><a href="contact.html?type=commerce#inquiry">브랜드 커머스</a><a href="contact.html?type=media#inquiry">미디어 &amp; 콘텐츠</a><a href="contact.html?type=ad#inquiry">마케팅</a><a href="contact.html?type=food#inquiry">유통</a><a href="contact.html?type=space#inquiry">공간 &amp; 라이프스타일</a><a href="contact.html?type=partner#inquiry">그룹 제휴</a>
+      <div class="cbx-pick-head">
+        <div>
+          <span class="eyebrow" data-reveal="fade">Quick Contact</span>
+          <h2 class="h2" id="pick-title" data-reveal style="--d:.06s">어떤 사업이든,<br> 맞는 창구로 연결합니다.</h2>
+        </div>
+        <p class="cbx-pick-lead" data-reveal style="--d:.12s">상담할 사업을 고르면 <strong>문의 분야가 선택된 상태로</strong> 접수 화면이 열립니다. 담당자가 확인한 뒤 남겨 주신 연락처로 회신합니다.</p>
       </div>
-      <div class="cta-band-actions" data-reveal style="--d:.2s">
-        <a class="btn btn--primary btn--lg" href="contact.html">사업 상담하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        <a class="btn btn--ghost btn--lg" href="contact.html?type=partner#inquiry">제휴 문의하기</a>
-      </div>
+      <ul class="cbx-tiles" data-reveal aria-label="사업별 바로 상담">
+        <li style="--i:0"><a class="cbx-tile" href="contact.html?type=campus#inquiry">
+          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-campus"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">01</span></span>
+          <span class="cbx-tile-t"><strong>교육업</strong><span class="en">DOOGO CLASS</span></span>
+          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </a></li>
+        <li style="--i:1"><a class="cbx-tile" href="contact.html?type=bio#inquiry">
+          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-bio"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">02</span></span>
+          <span class="cbx-tile-t"><strong>제조업</strong><span class="en">DOOGOBIO</span></span>
+          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </a></li>
+        <li style="--i:2"><a class="cbx-tile" href="contact.html?type=commerce#inquiry">
+          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-commerce"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">03</span></span>
+          <span class="cbx-tile-t"><strong>브랜드 커머스</strong><span class="en">DOOGO MAKERS</span></span>
+          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </a></li>
+        <li style="--i:3"><a class="cbx-tile" href="contact.html?type=media#inquiry">
+          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-media"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">04</span></span>
+          <span class="cbx-tile-t"><strong>미디어&nbsp;&amp; 콘텐츠</strong><span class="en">DOOGO MEDIA</span></span>
+          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </a></li>
+        <li style="--i:4"><a class="cbx-tile" href="contact.html?type=ad#inquiry">
+          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-ad"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">05</span></span>
+          <span class="cbx-tile-t"><strong>마케팅</strong><span class="en">DOOGO AD</span></span>
+          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </a></li>
+        <li style="--i:5"><a class="cbx-tile" href="contact.html?type=food#inquiry">
+          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-food"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">06</span></span>
+          <span class="cbx-tile-t"><strong>유통</strong><span class="en">DOOGOFOOD</span></span>
+          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </a></li>
+        <li style="--i:6"><a class="cbx-tile" href="contact.html?type=space#inquiry">
+          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-space"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">07</span></span>
+          <span class="cbx-tile-t"><strong>공간&nbsp;&amp; 라이프스타일</strong><span class="en">DOOGO SPACE</span></span>
+          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </a></li>
+        <li style="--i:7"><a class="cbx-tile cbx-tile--partner" href="contact.html?type=partner#inquiry">
+          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-partner"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">+</span></span>
+          <span class="cbx-tile-t"><strong>그룹 제휴</strong><span class="en">DOOGO HOLDINGS</span></span>
+          <span class="cbx-tile-go">제휴 문의<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </a></li>
+      </ul>
+      <p class="cbx-pick-foot" data-reveal style="--d:.1s">어느 사업에 맞는지 모르겠다면 분야를 고르지 않고 문의해도 됩니다. <a class="link-arrow" href="contact.html">문의하기 <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></p>
     </div>
   </section>
 </main>

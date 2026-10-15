@@ -19,6 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/cta-variants.css">
   <link rel="stylesheet" href="assets/css/pages/business-detail.css">
 </head>
 <body data-page="business-bio">
@@ -501,17 +502,23 @@
     </div>
   </section>
 
-  <section class="cta-band" aria-labelledby="cta-title">
-    <div class="container">
-      <span class="eyebrow">Contact</span>
-      <h2 class="h2" id="cta-title" data-reveal style="margin-top:20px">다음 사업, 두고그룹과 함께 이야기해 보세요.</h2>
-      <p class="lead" data-reveal style="--d:.1s">교육업 · 제조업 · 브랜드 커머스 · <span class="nowrap">미디어 &amp; 콘텐츠</span> · 마케팅 · 유통 · <span class="nowrap">공간 &amp; 라이프스타일</span>, 그리고 그룹 제휴까지 하나의 창구로 접수합니다.</p>
-      <div class="cta-chips" data-reveal style="--d:.15s">
-        <a href="contact.html?type=campus#inquiry">교육업</a><a href="contact.html?type=bio#inquiry">제조업</a><a href="contact.html?type=commerce#inquiry">브랜드 커머스</a><a href="contact.html?type=media#inquiry">미디어 &amp; 콘텐츠</a><a href="contact.html?type=ad#inquiry">마케팅</a><a href="contact.html?type=food#inquiry">유통</a><a href="contact.html?type=space#inquiry">공간 &amp; 라이프스타일</a><a href="contact.html?type=partner#inquiry">그룹 제휴</a>
+  <!-- 마무리 배너: DOOGOBIO 전용 문구 + 대표 버튼 + 현장 사진 -->
+  <section class="cbx cbx--biz on-dark" aria-labelledby="biz-close-title">
+    <div class="cbx-biz-word en" aria-hidden="true">DOOGOBIO</div>
+    <div class="container cbx-biz-grid">
+      <div class="cbx-biz-copy">
+        <p class="cbx-biz-kicker" data-reveal="fade"><span class="cbx-biz-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-bio"/></svg></span><span class="en">Business 02 / 07</span><i aria-hidden="true"></i><span class="cbx-biz-area">제조업</span></p>
+        <h2 class="cbx-biz-title" id="biz-close-title" data-reveal style="--d:.08s"><span class="en nowrap">DOOGOBIO</span>와 <span class="nowrap">첫 제품을</span> 만들어 보세요.</h2>
+        <p class="cbx-biz-lead" data-reveal style="--d:.14s">뉴질랜드 건강식품 소량 제조 및 인쇄까지, 좋은 제품을 만듭니다.</p>
+        <div class="cbx-actions" data-reveal style="--d:.2s">
+          <a class="btn btn--primary btn--lg" href="contact.html?type=bio#inquiry">제조 상담하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn--ghost btn--lg" href="business.html#businesses">다른 사업 보기</a>
+        </div>
       </div>
-      <div class="cta-band-actions" data-reveal style="--d:.2s">
-        <a class="btn btn--primary btn--lg" href="contact.html">사업 상담하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        <a class="btn btn--ghost btn--lg" href="contact.html?type=partner#inquiry">제휴 문의하기</a>
+      <div class="cbx-biz-media" data-reveal="scale" style="--d:.1s" aria-hidden="true">
+        <img src="assets/img/photo/bio.webp" alt="" width="1280" height="952" loading="lazy" decoding="async" style="object-position:50% 24%">
+        <span class="cbx-biz-tag en">DOOGOBIO</span>
+        <p class="cbx-biz-quote">살펴보고, 시험하고, 다시 들여다보며.</p>
       </div>
     </div>
   </section>

@@ -18,6 +18,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/cta-variants.css">
   <link rel="stylesheet" href="assets/css/pages/leadership.css">
 </head>
 <body data-page="leadership">
@@ -428,18 +429,27 @@
     </div>
   </dialog>
 
-  <!-- 공통 CTA 띠 -->
-  <section class="cta-band" aria-labelledby="cta-title">
+  <!-- 마무리 배너 — 사람들 전용: 리더 얼굴 + '+ YOU' 웜 카드 (함께 일할 사람 · 채용 소식)
+       페이지마다 다른 배너 · 스타일 assets/css/cta-variants.css (.cbx--people) -->
+  <section class="cbx cbx--people" aria-labelledby="people-close-title">
     <div class="container">
-      <span class="eyebrow">Contact</span>
-      <h2 class="h2" id="cta-title" data-reveal style="margin-top:20px">다음 사업, 두고그룹과 함께 이야기해 보세요.</h2>
-      <p class="lead" data-reveal style="--d:.1s">교육업 · 제조업 · 브랜드 커머스 · 미디어&nbsp;&amp;&nbsp;콘텐츠 · 마케팅 · 유통 · 공간&nbsp;&amp;&nbsp;라이프스타일, 그리고 그룹 제휴까지 하나의 창구로 접수합니다.</p>
-      <div class="cta-chips" data-reveal style="--d:.15s">
-        <a href="contact.html?type=campus">교육업</a><a href="contact.html?type=bio">제조업</a><a href="contact.html?type=commerce">브랜드 커머스</a><a href="contact.html?type=media">미디어 &amp; 콘텐츠</a><a href="contact.html?type=ad">마케팅</a><a href="contact.html?type=food">유통</a><a href="contact.html?type=space">공간 &amp; 라이프스타일</a><a href="contact.html?type=partner">그룹 제휴</a>
-      </div>
-      <div class="cta-band-actions" data-reveal style="--d:.2s">
-        <a class="btn btn--primary btn--lg" href="contact.html">사업 상담하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        <a class="btn btn--ghost btn--lg" href="contact.html?type=partner">제휴 제안하기</a>
+      <div class="cbx-people-card">
+        <ul class="cbx-faces" data-reveal aria-hidden="true">
+          <li style="--i:0"><img src="assets/img/people/leader-moon-wonoh-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async"></li>
+          <li style="--i:1"><img src="assets/img/people/leader-baek-youngho-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async"></li>
+          <li style="--i:2"><img src="assets/img/people/leader-kim-sinyong-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async"></li>
+          <li style="--i:3"><img src="assets/img/people/leader-moon-sungoh-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async"></li>
+          <li style="--i:4"><img src="assets/img/people/leader-kim-yunjung-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async"></li>
+          <li style="--i:5"><img src="assets/img/people/leader-shin-donghoon-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async"></li>
+          <li class="cbx-face-you" style="--i:6"><span>+ YOU</span></li>
+        </ul>
+        <p class="cbx-people-note" data-reveal style="--d:.1s">여섯 명의 리더와 일곱 개 사업, <span class="nowrap">그리고 함께할 당신</span></p>
+        <h2 class="cbx-people-title" id="people-close-title" data-reveal style="--d:.15s"><span class="cbx-people-kicker">좋은 사람들과 함께 일하고 싶다면</span> 두고와 함께 <span class="nowrap"><span class="accent">성장할 사람</span>을</span> 찾습니다.</h2>
+        <p class="cbx-people-lead" data-reveal style="--d:.2s">일곱 개 사업 현장에서 함께 배우고, 만들고, 키워 갈 동료를 기다립니다. 모집 분야와 자격 요건은 확정되는 대로 채용 소식에 공고합니다.</p>
+        <div class="cbx-actions" data-reveal style="--d:.25s">
+          <a class="btn btn--dark btn--lg" href="news.html?cat=recruit#n-recruit">채용 소식 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn--line btn--lg" href="contact.html?type=partner">협업 문의하기</a>
+        </div>
       </div>
     </div>
   </section>

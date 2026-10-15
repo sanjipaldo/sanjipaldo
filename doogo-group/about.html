@@ -882,54 +882,58 @@
         </dl>
       </div>
 
-      <div class="ab-tl" data-timeline>
-        <div class="ab-tl-track" aria-hidden="true"><span class="ab-tl-fill"></span><span class="ab-tl-head"></span></div>
+      <!-- 연혁 타임라인 (about-tl.css · about-tl.js): 왼쪽 3D 연도(화면에 붙어 연도가 바뀔 때 숫자 드럼이 굴러감 — 스크립트가 만듦)
+           · 가운데 빛 레일(스크롤에 따라 채워지고 빛 머리가 내려감) · 오른쪽 항목(아래에서 일어서며 등장). 모바일은 연도 막대가 위에 붙음 -->
+      <div class="ab-tl ab-tl3" data-tl3>
+        <div class="ab-tl3-main">
+        <div class="ab-tl3-rail" aria-hidden="true"><span class="ab-tl3-fill"></span><span class="ab-tl3-head"></span></div>
 
-        <div class="ab-tl-year" data-tl-year data-reveal>
+        <div class="ab-tl-year" data-tl3-year>
           <h3 class="ab-tl-y en"><span>2026</span></h3>
           <ol class="ab-tl-list">
-            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-10">10<span class="sr-only">월</span></time><p class="ab-tl-t">두고그룹 공식 홈페이지 오픈 · 지주회사 DOOGO HOLDINGS와 5개 그룹사 체제</p><span class="ab-tl-tag is-group">그룹</span></li>
-            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-09">09<span class="sr-only">월</span></time><p class="ab-tl-t">교육 플랫폼 <span class="nowrap">DOOGO CLASS</span> 런칭</p><span class="ab-tl-tag">교육업</span></li>
-            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-08">08<span class="sr-only">월</span></time><p class="ab-tl-t">‘리뷰허브’ &amp; ‘업라이트’ 플랫폼 런칭</p><span class="ab-tl-tag"><span class="en">DOOGO AD</span> · 마케팅</span></li>
-            <li class="ab-tl-item" style="--i:3"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">NORA STAY 가로수길 1호점 오픈</p><span class="ab-tl-tag"><span class="en">DOOGO SPACE</span> · 공간 &amp; 라이프스타일</span></li>
-            <li class="ab-tl-item" style="--i:4"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2026-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">(주)두고애드 설립</p><span class="ab-tl-tag"><span class="en">DOOGO AD</span> · 마케팅</span></li>
+            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2026-10">10<span class="sr-only">월</span></time><p class="ab-tl-t">두고그룹 공식 홈페이지 오픈 · 지주회사 DOOGO HOLDINGS와 5개 그룹사 체제</p><span class="ab-tl-tag is-group">그룹</span></div></li>
+            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2026-09">09<span class="sr-only">월</span></time><p class="ab-tl-t">교육 플랫폼 <span class="nowrap">DOOGO CLASS</span> 런칭</p><span class="ab-tl-tag">교육업</span></div></li>
+            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2026-08">08<span class="sr-only">월</span></time><p class="ab-tl-t">‘리뷰허브’ &amp; ‘업라이트’ 플랫폼 런칭</p><span class="ab-tl-tag"><span class="en">DOOGO AD</span> · 마케팅</span></div></li>
+            <li class="ab-tl-item" style="--i:3"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2026-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">NORA STAY 가로수길 1호점 오픈</p><span class="ab-tl-tag"><span class="en">DOOGO SPACE</span> · 공간 &amp; 라이프스타일</span></div></li>
+            <li class="ab-tl-item" style="--i:4"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2026-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">(주)두고애드 설립</p><span class="ab-tl-tag"><span class="en">DOOGO AD</span> · 마케팅</span></div></li>
           </ol>
         </div>
 
-        <div class="ab-tl-year" data-tl-year data-reveal>
+        <div class="ab-tl-year" data-tl3-year>
           <h3 class="ab-tl-y en"><span>2025</span></h3>
           <ol class="ab-tl-list">
-            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-10">10<span class="sr-only">월</span></time><p class="ab-tl-t">식품 전문 도매몰 DOOGOFOOD 오픈</p><span class="ab-tl-tag">유통</span></li>
-            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-07">07<span class="sr-only">월</span></time><p class="ab-tl-t">농수산물 앱 ‘산지팔도’ 런칭</p><span class="ab-tl-tag">유통</span></li>
-            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-06">06<span class="sr-only">월</span></time><p class="ab-tl-t">뉴질랜드 건강식품 브랜드 ‘리얼엔젯’ · ‘마우리엔젯’ 동시 런칭</p><span class="ab-tl-tag"><span class="en">DOOGOBIO NZ</span> · 제조업</span></li>
-            <li class="ab-tl-item" style="--i:3"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-02">02<span class="sr-only">월</span></time><p class="ab-tl-t">건국대학교 이커머스 교육 프로그램 운영</p><span class="ab-tl-tag">교육업</span></li>
-            <li class="ab-tl-item" style="--i:4"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2025-01">01<span class="sr-only">월</span></time><p class="ab-tl-t"><span class="nowrap">DOOGOBIO LTD</span> 뉴질랜드 건강식품 공장 설립</p><span class="ab-tl-tag"><span class="en">DOOGOBIO NZ</span> · 제조업</span></li>
+            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2025-10">10<span class="sr-only">월</span></time><p class="ab-tl-t">식품 전문 도매몰 DOOGOFOOD 오픈</p><span class="ab-tl-tag">유통</span></div></li>
+            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2025-07">07<span class="sr-only">월</span></time><p class="ab-tl-t">농수산물 앱 ‘산지팔도’ 런칭</p><span class="ab-tl-tag">유통</span></div></li>
+            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2025-06">06<span class="sr-only">월</span></time><p class="ab-tl-t">뉴질랜드 건강식품 브랜드 ‘리얼엔젯’ · ‘마우리엔젯’ 동시 런칭</p><span class="ab-tl-tag"><span class="en">DOOGOBIO NZ</span> · 제조업</span></div></li>
+            <li class="ab-tl-item" style="--i:3"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2025-02">02<span class="sr-only">월</span></time><p class="ab-tl-t">건국대학교 이커머스 교육 프로그램 운영</p><span class="ab-tl-tag">교육업</span></div></li>
+            <li class="ab-tl-item" style="--i:4"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2025-01">01<span class="sr-only">월</span></time><p class="ab-tl-t"><span class="nowrap">DOOGOBIO LTD</span> 뉴질랜드 건강식품 공장 설립</p><span class="ab-tl-tag"><span class="en">DOOGOBIO NZ</span> · 제조업</span></div></li>
           </ol>
         </div>
 
-        <div class="ab-tl-year" data-tl-year data-reveal>
+        <div class="ab-tl-year" data-tl3-year>
           <h3 class="ab-tl-y en"><span>2024</span></h3>
           <ol class="ab-tl-list">
-            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2024-12">12<span class="sr-only">월</span></time><p class="ab-tl-t">투자 유치 및 (주)두고 법인 설립</p><span class="ab-tl-tag is-group">그룹</span></li>
-            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2024-07">07<span class="sr-only">월</span></time><p class="ab-tl-t">한미양행과 ‘원데이코어’ 공동 제품 개발</p><span class="ab-tl-tag">브랜드 커머스</span></li>
-            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2024-02">02<span class="sr-only">월</span></time><p class="ab-tl-t">건강식품 B2B 구독 모델 ‘원데이박스 B2B’ 오픈</p><span class="ab-tl-tag">유통</span></li>
+            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2024-12">12<span class="sr-only">월</span></time><p class="ab-tl-t">투자 유치 및 (주)두고 법인 설립</p><span class="ab-tl-tag is-group">그룹</span></div></li>
+            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2024-07">07<span class="sr-only">월</span></time><p class="ab-tl-t">한미양행과 ‘원데이코어’ 공동 제품 개발</p><span class="ab-tl-tag">브랜드 커머스</span></div></li>
+            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2024-02">02<span class="sr-only">월</span></time><p class="ab-tl-t">건강식품 B2B 구독 모델 ‘원데이박스 B2B’ 오픈</p><span class="ab-tl-tag">유통</span></div></li>
           </ol>
         </div>
 
-        <div class="ab-tl-year" data-tl-year data-reveal>
+        <div class="ab-tl-year" data-tl3-year>
           <h3 class="ab-tl-y en"><span>2023</span></h3>
           <ol class="ab-tl-list">
-            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2023-08">08<span class="sr-only">월</span></time><p class="ab-tl-t">라이브커머스 영상 콘텐츠 제작팀 구성</p><span class="ab-tl-tag">미디어 &amp; 콘텐츠</span></li>
-            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2023-05">05<span class="sr-only">월</span></time><p class="ab-tl-t">오세아니아 3PL 유통 법인 설립</p><span class="ab-tl-tag is-global">해외</span></li>
-            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2023-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">캐나다 청정 건강식품 브랜드 ‘원데이코어’ 런칭</p><span class="ab-tl-tag">브랜드 커머스</span></li>
+            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2023-08">08<span class="sr-only">월</span></time><p class="ab-tl-t">라이브커머스 영상 콘텐츠 제작팀 구성</p><span class="ab-tl-tag">미디어 &amp; 콘텐츠</span></div></li>
+            <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2023-05">05<span class="sr-only">월</span></time><p class="ab-tl-t">오세아니아 3PL 유통 법인 설립</p><span class="ab-tl-tag is-global">해외</span></div></li>
+            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2023-01">01<span class="sr-only">월</span></time><p class="ab-tl-t">캐나다 청정 건강식품 브랜드 ‘원데이코어’ 런칭</p><span class="ab-tl-tag">브랜드 커머스</span></div></li>
           </ol>
         </div>
 
-        <div class="ab-tl-year" data-tl-year data-reveal>
+        <div class="ab-tl-year" data-tl3-year>
           <h3 class="ab-tl-y en"><span>2020</span></h3>
           <ol class="ab-tl-list">
-            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><time class="ab-tl-m en" datetime="2020-03">03<span class="sr-only">월</span></time><p class="ab-tl-t">온라인 쇼핑몰로 첫 사업 시작</p><span class="ab-tl-tag is-group">그룹</span></li>
+            <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2020-03">03<span class="sr-only">월</span></time><p class="ab-tl-t">온라인 쇼핑몰로 첫 사업 시작</p><span class="ab-tl-tag is-group">그룹</span></div></li>
           </ol>
+        </div>
         </div>
       </div>
     </div>
@@ -946,14 +950,14 @@
           <span class="line"><span>한국과 뉴질랜드,</span></span>
           <span class="line"><span>두 개의 거점</span></span>
         </h2>
-        <p class="lead" data-reveal>두고그룹은 한국과 뉴질랜드, 두 나라에서 사업을 이어 갑니다. 한국에는 지주회사 DOOGO HOLDINGS와 그룹사 4곳이, 뉴질랜드에는 건강기능식품을 제조하는 DOOGOBIO가 있습니다.</p>
+        <p class="lead" data-reveal>두고그룹은 한국과 뉴질랜드, 두 나라에서 사업을 이어 갑니다. 한국에는 지주회사 DOOGO HOLDINGS와 그룹사 4곳이, 뉴질랜드에는 건강기능식품을 제조하는 DOOGOBIO NZ가 있습니다.</p>
       </div>
 
       <!-- 3D 거점 지도: about-loc.js 가 아래 SVG 의 점 데이터를 읽어 canvas 로 그림 (스크립트가 없으면 SVG 가 보임) -->
       <figure class="ab-gl-map" data-reveal="fade" data-gl-map>
         <svg class="ab-map-svg" viewBox="0 0 900 1020" role="img" aria-labelledby="ab-map-title ab-map-desc">
           <title id="ab-map-title">두고그룹 국내외 거점 지도</title>
-          <desc id="ab-map-desc">아시아·태평양 지역을 점으로 표현한 지도 위에 지주회사 DOOGO HOLDINGS와 그룹사 4곳이 있는 대한민국, DOOGOBIO가 있는 뉴질랜드를 표시하고 두 거점을 곡선으로 연결했습니다.</desc>
+          <desc id="ab-map-desc">아시아·태평양 지역을 점으로 표현한 지도 위에 지주회사 DOOGO HOLDINGS와 그룹사 4곳이 있는 대한민국, DOOGOBIO NZ가 있는 뉴질랜드를 표시하고 두 거점을 곡선으로 연결했습니다.</desc>
           <g class="ab-map-grid">
             <path d="M0 70H900M0 220H900M0 370H900M0 670H900M0 820H900M0 970H900M100 0V1020M250 0V1020M400 0V1020M550 0V1020M700 0V1020M850 0V1020"/>
             <path class="ab-map-eq" d="M0 520H900"/>
@@ -974,7 +978,7 @@
         </svg>
         <canvas class="ab-gl-cv" role="img" aria-labelledby="ab-map-title ab-map-desc" hidden></canvas>
         <div class="ab-gl-label ab-gl-label--kr" data-gl-label="kr" aria-hidden="true"><span class="ab-gl-label-in"><strong>대한민국</strong><span class="en">DOOGO HOLDINGS + 4</span></span></div>
-        <div class="ab-gl-label ab-gl-label--nz" data-gl-label="nz" aria-hidden="true"><span class="ab-gl-label-in"><strong>뉴질랜드</strong><span class="en">DOOGOBIO</span></span></div>
+        <div class="ab-gl-label ab-gl-label--nz" data-gl-label="nz" aria-hidden="true"><span class="ab-gl-label-in"><strong>뉴질랜드</strong><span class="en">DOOGOBIO NZ</span></span></div>
         <figcaption class="ab-gl-cap"><span class="en" data-gl-count>02</span>국가 거점<span class="ab-gl-cap-sub"> · 한국과 뉴질랜드</span></figcaption>
       </figure>
 
@@ -1024,13 +1028,14 @@
               </span>
               <div class="ab-gl-head">
                 <p class="ab-gl-country">뉴질랜드 <span class="en">NEW ZEALAND</span></p>
-                <h3 id="loc-nz" class="en">DOOGOBIO</h3>
+                <h3 id="loc-nz" class="en">DOOGOBIO NZ</h3>
               </div>
               <span class="ab-gl-count en" aria-hidden="true">1</span>
             </div>
             <dl class="ab-gl-dl">
-              <div style="--i:0"><dt>그룹사</dt><dd><ul class="ab-gl-tags"><li class="is-global"><span class="en">DOOGOBIO</span> <span>해외법인</span></li></ul></dd></div>
+              <div style="--i:0"><dt>그룹사</dt><dd><ul class="ab-gl-tags"><li class="is-global"><span class="en">DOOGOBIO NZ</span> <span>해외법인</span></li></ul></dd></div>
               <div style="--i:1"><dt>분야</dt><dd>뉴질랜드 건강식품 제조</dd></div>
+              <div style="--i:2"><dt>주소</dt><dd class="ab-gl-addr"><span class="ab-gl-addr-l">3F, 10 Piermark Drive,</span> <span class="ab-gl-addr-l"><span class="ab-gl-addr-l">Auckland,</span> <span class="ab-gl-addr-l">New Zealand</span></span><small><span class="en">DOOGOBIO NZ</span></small></dd></div>
             </dl>
             <div class="ab-gl-foot">
               <a class="link-arrow ab-gl-link" href="business-bio.html">제조업 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
@@ -1038,6 +1043,15 @@
             <div class="ab-gl-mini" aria-hidden="true">
               <div class="ab-gl-mini-plane">
                 <svg viewBox="0 0 192 192">
+                  <defs>
+                    <linearGradient id="ab-gl-mini-ink" gradientUnits="userSpaceOnUse" x1="184" y1="8" x2="16" y2="184">
+                      <stop offset="0" stop-color="#3E9BFF"/><stop offset=".34" stop-color="#7B63FF"/><stop offset=".68" stop-color="#D45BD3"/><stop offset="1" stop-color="#FF7C6E"/>
+                    </linearGradient>
+                    <radialGradient id="ab-gl-mini-glow" gradientUnits="userSpaceOnUse" cx="108.8" cy="104" r="64">
+                      <stop offset="0" stop-color="#FF6F86" stop-opacity=".22"/><stop offset="1" stop-color="#FF6F86" stop-opacity="0"/>
+                    </radialGradient>
+                  </defs>
+                  <circle cx="108.8" cy="104" r="64" fill="url(#ab-gl-mini-glow)"/>
                   <path class="ab-gl-mini-grid" d="M0 104H192M108.8 0V192"/>
                   <circle class="ab-gl-mini-grid" cx="108.8" cy="104" r="44"/>
                   <circle class="ab-gl-mini-grid" cx="108.8" cy="104" r="86"/>

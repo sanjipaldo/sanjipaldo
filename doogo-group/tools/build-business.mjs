@@ -30,6 +30,7 @@
      사진은 BIZ[].corp.photo (assets/img/people/{photo}.webp 900×1200 · -600.webp) — 사진이 생기면 corp에 photo만 넣으면
      실루엣·'사진 준비 중'·'이력과 사진은' 문구가 사진·'이력은 확정 후 게시합니다.'로 바뀝니다.
    - 스타일: assets/css/pages/business.css, business-detail.css
+     마무리 배너(맨 아래 · 페이지마다 다름): assets/css/cta-variants.css — PICK_BAND(목록) · bizBand(상세, 제목 BIZ[].band)
      동작:   assets/js/pages/business.js,  business-detail.js
    ========================================================= */
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -162,6 +163,7 @@ const BIZ = [
     services: ['실전 교육', '강사·과정 소개', '온라인 클래스', '교육장 연계(DOOGO SPACE)'],
     targets: ['창업·부업을 준비하는 분', '브랜드를 키우려는 사업자', '실무 역량을 키우려는 분'],
     ask: '교육 상담하기',
+    band: '{en}에서 배움을 시작해 보세요.', // 마무리 배너 제목 ({en} = 영문 브랜드)
     cta: { label: '교육 플랫폼 보기', ext: CLASS_URL },
     web: web({ name: 'DOOGO CLASS', kind: '강의 플랫폼', host: 'doogoclass.com', url: CLASS_URL, shot: 'class', close: 'DOOGO CLASS 바로가기',
       desc: '강의 소개 페이지부터 수강생 관리까지, 강사가 자기 이름으로 강의를 운영하는 강의 플랫폼입니다.' }),
@@ -189,6 +191,7 @@ const BIZ = [
     services: ['제품 개발', '소량 제조', '패키지·인쇄', '제조 상담·연결 ‘두고커넥트’'],
     targets: ['자체 건강식품 브랜드를 준비하는 사업자', '소량으로 시작하려는 셀러'],
     ask: '제조 상담하기',
+    band: '{en}와 <span class="nowrap">첫 제품을</span> 만들어 보세요.',
     cta: { label: '제조 상담하기', href: ASK('bio') },
     web: web({ name: 'DOOGOBIO', kind: '웹사이트', host: 'doogobio.com', url: BIO_URL, shot: 'bio', close: 'DOOGOBIO 사이트',
       desc: '건강식품 B2B 도매와 OEM 제조, 제조 상담·연결 ‘두고커넥트’를 안내하는 DOOGOBIO의 사이트입니다.',
@@ -221,6 +224,7 @@ const BIZ = [
     services: ['브랜드 기획', '상품 운영', '브랜드 성장과 EXIT 전략'],
     targets: ['새 브랜드를 만들려는 분', '운영 중인 브랜드를 키우려는 사업자'],
     ask: '브랜드 커머스 상담하기',
+    band: '{en}가 키우는 브랜드를 만나 보세요.',
     cta: { label: '브랜드 보기', href: 'brands.html#brands' },
     // 14차: DOOGO MAKERS 브랜드팀이 키우는 자사몰 브랜드 두 곳 — ONEDAYCORE(대표) · MAURINZ (사이트 첫 화면 문구 기준)
     web: web({ name: 'ONEDAYCORE', kind: '캐나다 건강식품', title: '브랜드 사이트', eyebrow: 'Brand Sites',
@@ -253,6 +257,7 @@ const BIZ = [
     services: ['온드미디어 촬영', '브랜드 유튜브 채널 운영', '숏폼·라이브 콘텐츠 제작', '콘텐츠 기획·편집'],
     targets: ['자체 채널로 고객을 모으려는 브랜드', '강사·전문가'],
     ask: '콘텐츠 문의하기',
+    band: '{en}와 브랜드 채널을 시작해 보세요.',
     cta: { label: '콘텐츠 문의하기', href: ASK('media') },
     web: web({ name: 'DOOGO MEDIA', kind: 'YouTube 채널', host: '두고보는 문대표', bar: 'youtube.com/@두고보는문대표', yt: true, url: MEDIA_URL, shot: 'media',
       btn: '채널 바로가기', close: 'DOOGO MEDIA 채널', desc: 'DOOGO MEDIA가 운영하는 온드미디어 채널, 유튜브 <span class="nowrap">‘두고보는 문대표’</span>입니다. 채널에서 영상 콘텐츠를 볼 수 있습니다.' }),
@@ -281,6 +286,7 @@ const BIZ = [
     services: ['네이버·쿠팡 중심 광고 운영', '체험단 마케팅 ‘리뷰허브’', '광고 소재 기획', '성과 분석'],
     targets: ['온라인으로 판매 중인 브랜드·셀러'],
     ask: '광고 상담하기',
+    band: '{en}와 광고를 시작해 보세요.',
     cta: { label: '광고 상담하기', href: ASK('ad') },
     web: web({ name: 'DOOGO AD', kind: '웹사이트', host: 'doogoad.com', url: AD_URL, shot: 'ad', close: 'DOOGO AD 사이트',
       desc: 'DOOGO AD의 마케팅 플랫폼입니다. 서비스 소개와 마케팅 상품, 제휴 상담 안내를 사이트에서 확인할 수 있습니다.',
@@ -311,6 +317,7 @@ const BIZ = [
     services: ['식품 전문 도매 플랫폼 운영', '상품 공급', '판매자 협력'],
     targets: ['식품 공급사(생산자·제조사)', '온라인 위탁 판매자'],
     ask: '유통 상담하기',
+    band: '{en}에서 좋은 먹거리를 만나 보세요.',
     cta: { label: '도매 플랫폼 보기', ext: FOOD_URL },
     web: web({ name: 'DOOGOFOOD', kind: '도매 플랫폼', host: 'doogofood.com', url: FOOD_URL, shot: 'makers', close: 'DOOGOFOOD 바로가기',
       desc: '생산자와 판매자를 연결하고 필요한 먹거리를 공급하는 식품 전문 B2B 도매 플랫폼입니다.' }),
@@ -342,6 +349,7 @@ const BIZ = [
     ],
     targets: ['작은 팀·1인 사업자', '교육·행사 주최자', '여행·출장·장단기 체류객'],
     ask: '공간 상담하기',
+    band: '{en}에서 일하고, 머물러 보세요.',
     cta: { label: '공간 상담하기', href: ASK('space') },
     web: web({ name: 'NORA STAY', kind: 'DOOGO SPACE 숙박', host: 'norastay.com', url: NORA_URL, shot: 'space', close: 'NORA STAY 바로가기',
       desc: 'DOOGO SPACE의 숙박 서비스 NORA STAY의 사이트입니다. 숙소 소개와 예약 안내를 확인할 수 있습니다.' }),
@@ -414,6 +422,7 @@ function head({ title, desc, css }) {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/cta-variants.css">
   <link rel="stylesheet" href="assets/css/pages/${css}.css">
 </head>`;
 }
@@ -439,20 +448,67 @@ ${parts.footer}
 `;
 }
 
-const CTA_BAND = `  <section class="cta-band" aria-labelledby="cta-title">
+/* ---------- 마무리 배너 (페이지 맨 아래 · 푸터 바로 위) ----------
+   원래의 공통 CTA 띠(.cta-band)는 두고그룹(about.html)에만 남기고, 페이지마다 다른 배너를 씁니다.
+   스타일은 assets/css/cta-variants.css (head()가 모든 사업 페이지에 넣음)
+   - business.html: PICK_BAND — 7개 사업 + 그룹 제휴 '바로 상담' 타일 (밝은 블루 그리드 · .cbx--pick)
+   - business-{slug}.html: bizBand(b) — 그 사업의 문구(BIZ[].band) + 대표 버튼(BIZ[].cta) + 현장 사진 분할 (잉크 네이비 · .cbx--biz) */
+const PICK_BAND = `  <!-- 마무리 배너: 사업을 고르면 문의 분야가 선택된 채 접수 화면으로 (7개 사업 + 그룹 제휴) -->
+  <section class="cbx cbx--pick" aria-labelledby="pick-title">
     <div class="container">
-      <span class="eyebrow">Contact</span>
-      <h2 class="h2" id="cta-title" data-reveal style="margin-top:20px">다음 사업, 두고그룹과 함께 이야기해 보세요.</h2>
-      <p class="lead" data-reveal style="--d:.1s">${BIZ.map(b => nw(b.area)).join(' · ')}, 그리고 그룹 제휴까지 하나의 창구로 접수합니다.</p>
-      <div class="cta-chips" data-reveal style="--d:.15s">
-        ${[...BIZ.map(b => [b.slug, b.area]), ['partner', '그룹 제휴']].map(([t, l]) => `<a href="${ASK(t)}">${l}</a>`).join('')}
+      <div class="cbx-pick-head">
+        <div>
+          <span class="eyebrow" data-reveal="fade">Quick Contact</span>
+          <h2 class="h2" id="pick-title" data-reveal style="--d:.06s">어떤 사업이든,<br> 맞는 창구로 연결합니다.</h2>
+        </div>
+        <p class="cbx-pick-lead" data-reveal style="--d:.12s">상담할 사업을 고르면 <strong>문의 분야가 선택된 상태로</strong> 접수 화면이 열립니다. 담당자가 확인한 뒤 남겨 주신 연락처로 회신합니다.</p>
       </div>
-      <div class="cta-band-actions" data-reveal style="--d:.2s">
-        <a class="btn btn--primary btn--lg" href="contact.html">사업 상담하기 ${ARROW}</a>
-        <a class="btn btn--ghost btn--lg" href="${ASK('partner')}">제휴 문의하기</a>
+      <ul class="cbx-tiles" data-reveal aria-label="사업별 바로 상담">
+${BIZ.map((b, i) => `        <li style="--i:${i}"><a class="cbx-tile" href="${ASK(b.slug)}">
+          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true">${ico(b.icon, '')}</span><span class="cbx-tile-num en" aria-hidden="true">${b.num}</span></span>
+          <span class="cbx-tile-t"><strong>${b.area.replace(/ &amp; /g, '&nbsp;&amp; ')}</strong><span class="en">${b.en}</span></span>
+          <span class="cbx-tile-go">상담하기${ARROW}</span>
+        </a></li>`).join('\n')}
+        <li style="--i:${BIZ.length}"><a class="cbx-tile cbx-tile--partner" href="${ASK('partner')}">
+          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true">${ico('i-partner', '')}</span><span class="cbx-tile-num en" aria-hidden="true">+</span></span>
+          <span class="cbx-tile-t"><strong>그룹 제휴</strong><span class="en">DOOGO HOLDINGS</span></span>
+          <span class="cbx-tile-go">제휴 문의${ARROW}</span>
+        </a></li>
+      </ul>
+      <p class="cbx-pick-foot" data-reveal style="--d:.1s">어느 사업에 맞는지 모르겠다면 분야를 고르지 않고 문의해도 됩니다. <a class="link-arrow" href="contact.html">문의하기 ${ico('i-arrow')}</a></p>
+    </div>
+  </section>`;
+
+// 사업 상세 마무리 배너: '{브랜드}와 ~해 보세요.' + 그 사업의 대표 버튼(cta: 내부 링크 또는 새 창) + 다른 사업 보기
+//  사진은 첫 화면과 같은 사업 사진(이미 불러온 파일)을 확대 컷으로 · 아래에 큰 영문 브랜드 윤곽 글자(장식)
+function bizBand(b) {
+  const h = b.hero;
+  const ph = PHOTO[h.f];
+  const title = b.band.replace('{en}', `<span class="en nowrap">${b.en}</span>`);
+  const main = b.cta.ext
+    ? `<a class="btn btn--primary btn--lg" href="${b.cta.ext}" target="_blank" rel="noopener">${b.cta.label} ${ARROW_UR}${NEWWIN}</a>`
+    : `<a class="btn btn--primary btn--lg" href="${b.cta.href}">${b.cta.label} ${ARROW}</a>`;
+  return `  <!-- 마무리 배너: ${b.en} 전용 문구 + 대표 버튼 + 현장 사진 -->
+  <section class="cbx cbx--biz on-dark" aria-labelledby="biz-close-title">
+    <div class="cbx-biz-word en" aria-hidden="true">${b.en}</div>
+    <div class="container cbx-biz-grid">
+      <div class="cbx-biz-copy">
+        <p class="cbx-biz-kicker" data-reveal="fade"><span class="cbx-biz-ico" aria-hidden="true">${ico(b.icon, '')}</span><span class="en">Business ${b.num} / 07</span><i aria-hidden="true"></i><span class="cbx-biz-area">${b.area}</span></p>
+        <h2 class="cbx-biz-title" id="biz-close-title" data-reveal style="--d:.08s">${title}</h2>
+        <p class="cbx-biz-lead" data-reveal style="--d:.14s">${nw(b.def)}</p>
+        <div class="cbx-actions" data-reveal style="--d:.2s">
+          ${main}
+          <a class="btn btn--ghost btn--lg" href="business.html#businesses">다른 사업 보기</a>
+        </div>
+      </div>
+      <div class="cbx-biz-media" data-reveal="scale" style="--d:.1s" aria-hidden="true">
+        <img src="assets/img/photo/${h.f}.webp" alt="" width="${ph.w}" height="${ph.h}" loading="lazy" decoding="async" style="object-position:${h.fx} ${h.fy}">
+        <span class="cbx-biz-tag en">${b.en}</span>
+        <p class="cbx-biz-quote">${b.narration}</p>
       </div>
     </div>
   </section>`;
+}
 
 // 버튼/링크: {href} 내부, {ext} 외부(새 창)
 function action(a, cls) {
@@ -636,7 +692,7 @@ ${panels}
       </div>
     </div>
   </section>
-${CTA_BAND}`;
+${PICK_BAND}`;
 
   return shell({
     title: '사업영역',
@@ -1139,7 +1195,7 @@ ${others.map(o => `          <li><a href="business-${o.slug}.html">${ico(o.icon,
     </div>
   </section>
 
-${CTA_BAND}`;
+${bizBand(b)}`;
 
   return shell({
     title: `${b.area} · ${b.en}`,

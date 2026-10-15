@@ -18,6 +18,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/cta-variants.css">
   <link rel="stylesheet" href="assets/css/pages/news.css">
 </head>
 <body data-page="news">
@@ -478,19 +479,40 @@
   </section>
 
   <!-- =========================================================
-       공통 CTA 띠
+       마무리 배너 — 그룹소식 전용: 문구 + 블루 패널 위 최근 소식 알림 카드 (아이보리)
+       페이지마다 다른 배너 · 스타일 assets/css/cta-variants.css (.cbx--news)
+       알림 카드 = 이 게시판의 실제 글(data-open → news.js 가 위 게시판에서 그 글을 펼침)
        ========================================================= -->
-  <section class="cta-band" aria-labelledby="cta-title">
-    <div class="container">
-      <span class="eyebrow">Contact</span>
-      <h2 class="h2" id="cta-title" data-reveal style="margin-top:20px">다음 사업, 두고그룹과 함께 이야기해 보세요.</h2>
-      <p class="lead" data-reveal style="--d:.1s">교육업 · 제조업 · 브랜드 커머스 · 미디어&nbsp;&amp;&nbsp;콘텐츠 · 마케팅 · 유통 · 공간&nbsp;&amp;&nbsp;라이프스타일, 그리고 그룹 제휴까지 하나의 창구로 접수합니다.</p>
-      <div class="cta-chips" data-reveal style="--d:.15s">
-        <a href="contact.html?type=campus">교육업</a><a href="contact.html?type=bio">제조업</a><a href="contact.html?type=commerce">브랜드 커머스</a><a href="contact.html?type=media">미디어 &amp; 콘텐츠</a><a href="contact.html?type=ad">마케팅</a><a href="contact.html?type=food">유통</a><a href="contact.html?type=space">공간 &amp; 라이프스타일</a><a href="contact.html?type=partner">그룹 제휴</a>
+  <section class="cbx cbx--news" aria-labelledby="news-close-title">
+    <div class="container cbx-news-grid">
+      <div class="cbx-news-copy">
+        <span class="eyebrow" data-reveal="fade">Stay Updated</span>
+        <h2 class="h2" id="news-close-title" data-reveal style="--d:.08s">두고그룹의 새 소식을 가장 먼저 만나 보세요.</h2>
+        <p class="cbx-news-lead" data-reveal style="--d:.14s">공지와 사업 소식, 교육 현장과 채용 소식은 이 게시판에서, 영상으로 전하는 사업 이야기는 유튜브 채널 <span class="nowrap">‘두고보는 문대표’</span>에서 전합니다. 취재와 제휴 제안은 문의하기로 보내 주세요.</p>
+        <div class="cbx-actions" data-reveal style="--d:.2s">
+          <a class="btn btn--primary btn--lg" href="contact.html?type=partner">언론·제휴 문의 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn--line btn--lg" href="https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C" target="_blank" rel="noopener"><svg class="ico i-yt" aria-hidden="true"><use href="#i-youtube"/></svg>유튜브 채널 보기<span class="sr-only">(새 창)</span></a>
+        </div>
       </div>
-      <div class="cta-band-actions" data-reveal style="--d:.2s">
-        <a class="btn btn--primary btn--lg" href="contact.html">사업 상담하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        <a class="btn btn--ghost btn--lg" href="contact.html?type=partner">제휴 제안하기</a>
+      <div class="cbx-news-stage" data-reveal="fade">
+        <p class="cbx-news-bar en" aria-hidden="true"><b>LATEST</b><span>DOOGO NEWSROOM</span></p>
+        <ul class="cbx-notes" aria-label="최근 소식">
+          <li style="--i:0"><a class="cbx-note" href="#n-site-open" data-open="n-site-open">
+            <span class="cbx-note-app is-d" aria-hidden="true"><i></i></span>
+            <span class="cbx-note-body"><span class="cbx-note-meta"><span>공지</span><time datetime="2026-10-13">10.13</time></span><span class="cbx-note-t">두고그룹 홈페이지를 새롭게 열었습니다</span></span>
+            <svg class="cbx-note-go" aria-hidden="true"><use href="#i-arrow"/></svg>
+          </a></li>
+          <li style="--i:1"><a class="cbx-note" href="#n-film" data-open="n-film">
+            <span class="cbx-note-app is-ink" aria-hidden="true"><svg><use href="#i-play"/></svg></span>
+            <span class="cbx-note-body"><span class="cbx-note-meta"><span>사업 소식</span><time datetime="2026-10-13">10.13</time></span><span class="cbx-note-t">7개 사업영역 소개 영상 공개</span></span>
+            <svg class="cbx-note-go" aria-hidden="true"><use href="#i-arrow"/></svg>
+          </a></li>
+          <li style="--i:2"><a class="cbx-note" href="#n-recruit" data-open="n-recruit">
+            <span class="cbx-note-app is-sky" aria-hidden="true"><svg viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8" r="3.6"/><path d="M3 20c.7-3.7 3.3-6 6.5-6s5.8 2.3 6.5 6M18.5 7.5v6M15.5 10.5h6"/></g></svg></span>
+            <span class="cbx-note-body"><span class="cbx-note-meta"><span>채용 소식</span><time datetime="2026-10-13">10.13</time></span><span class="cbx-note-t">함께 성장할 동료를 찾습니다</span></span>
+            <svg class="cbx-note-go" aria-hidden="true"><use href="#i-arrow"/></svg>
+          </a></li>
+        </ul>
       </div>
     </div>
   </section>

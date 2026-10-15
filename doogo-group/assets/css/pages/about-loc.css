@@ -3,6 +3,7 @@
    about.css 다음에 읽힙니다. 이 탭의 마크업은 ab-gl-* 이름만 쓰므로 예전 .ab-loc-* / .ab-map 규칙과 겹치지 않습니다.
    · 위: 소개 글(왼쪽) + 3D 거점 지도(오른쪽, canvas — about-loc.js)
    · 아래: 거점 카드 두 장(같은 높이) — 겹친 유리판 · 깊은 그림자 · 3D 구슬 아이콘 · 기울기 · 뉴질랜드 미니 3D 타일
+   색: 지도와 같은 하나의 색 띠 — 대한민국(일렉트릭 블루 · 시안) → 바이올렛 → 오키드 → 뉴질랜드(코럴 · 로즈).
    움직임 멈추기(html.motion-off)는 처음부터 마지막 정지 상태, html.soft-motion 은 기울기만 뺍니다(스크립트).
    ========================================================= */
 
@@ -27,11 +28,12 @@
   aspect-ratio: 1 / .98;
   border-radius: var(--radius-lg);
   background:
-    radial-gradient(70% 55% at 55% 62%, rgba(10, 93, 226, .3), transparent 70%),
-    linear-gradient(180deg, #060E1E 0%, #0A1630 50%, #081227 100%);
+    radial-gradient(55% 42% at 64% 50%, rgba(104, 76, 255, .2), transparent 70%),
+    radial-gradient(70% 55% at 42% 64%, rgba(10, 93, 226, .22), transparent 70%),
+    linear-gradient(165deg, #050A1D 0%, #0B1238 45%, #071A33 80%, #04192A 100%);
   box-shadow:
     0 2px 4px rgba(6, 16, 38, .12),
-    0 30px 60px -36px rgba(10, 60, 160, .55),
+    0 30px 60px -36px rgba(64, 56, 200, .55),
     0 70px 120px -60px rgba(6, 16, 38, .75);
 }
 /* 유리 테두리 · 위쪽 반사 */
@@ -40,18 +42,26 @@
   background: linear-gradient(180deg, rgba(255, 255, 255, .07) 0%, rgba(255, 255, 255, 0) 22%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 0 0 1px rgba(255, 255, 255, .05);
 }
+/* 색 띠 머리카락 테두리(시안 → 바이올렛 → 코럴) */
+.ab-gl-map::before {
+  content: ""; position: absolute; inset: 0; z-index: 3; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(135deg, rgba(104, 228, 255, .32) 0%, rgba(146, 108, 255, .12) 38%, rgba(146, 108, 255, .06) 62%, rgba(255, 138, 122, .3) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
 .ab-gl-cv { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .ab-gl-cv[hidden] { display: none; }
 .ab-gl-map.is-3d .ab-map-svg { display: none; }
 .ab-gl-map:not(.is-3d) { aspect-ratio: 900 / 1020; } /* 스크립트가 없을 때: 예전 점 지도(SVG) */
 
-/* 거점 이름표 — 빛기둥 꼭대기를 따라다님(스크립트가 transform 으로 위치) */
-.ab-gl-label { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; will-change: transform; }
+/* 거점 이름표 — 빛기둥 꼭대기를 따라다님(스크립트가 transform 으로 위치) · 거점 색(--acc)을 띰 */
+.ab-gl-label { --acc: 111, 200, 255; position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; will-change: transform; }
+.ab-gl-label--nz { --acc: 255, 152, 140; }
 .ab-gl-label-in {
   position: relative; display: grid; gap: 2px; padding: 9px 14px 10px; border-radius: 12px;
-  background: linear-gradient(180deg, rgba(24, 41, 75, .9), rgba(10, 21, 44, .88));
-  border: 1px solid rgba(160, 196, 255, .22);
-  box-shadow: 0 18px 34px -16px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .14);
+  background: linear-gradient(180deg, rgba(24, 31, 72, .9), rgba(10, 16, 42, .88));
+  border: 1px solid rgba(var(--acc), .3);
+  box-shadow: 0 18px 34px -16px rgba(0, 0, 0, .7), 0 0 26px -10px rgba(var(--acc), .45), inset 0 1px 0 rgba(255, 255, 255, .12);
   color: #fff; line-height: 1.3; white-space: nowrap;
   transform: translate(18px, -50%);
   opacity: 0; translate: 0 8px; scale: .94;
@@ -59,16 +69,20 @@
 }
 .ab-gl-label-in::before { /* 기둥 꼭대기에서 이름표로 이어지는 선 */
   content: ""; position: absolute; top: 50%; right: 100%; width: 14px; height: 1px;
-  background: linear-gradient(90deg, rgba(160, 200, 255, .1), rgba(160, 200, 255, .85));
+  background: linear-gradient(90deg, rgba(var(--acc), .1), rgba(var(--acc), .9));
+}
+.ab-gl-label-in::after { /* 위 가장자리의 색 빛 */
+  content: ""; position: absolute; left: 14%; right: 14%; top: -1px; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(var(--acc), 0), rgba(var(--acc), .95), rgba(var(--acc), 0));
 }
 .ab-gl-label strong { font-size: .95rem; font-weight: 700; letter-spacing: -.02em; }
-.ab-gl-label .en { font-size: .62rem; font-weight: 600; letter-spacing: .16em; color: #8FB8FF; }
+.ab-gl-label .en { font-size: .62rem; font-weight: 600; letter-spacing: .16em; color: rgb(var(--acc)); }
 .ab-gl-label.is-flip .ab-gl-label-in { transform: translate(calc(-100% - 18px), -50%); }
 .ab-gl-label.is-flip .ab-gl-label-in::before { right: auto; left: 100%; transform: scaleX(-1); }
 .ab-gl-label.is-below .ab-gl-label-in { transform: translate(calc(-100% + 10px), 18px); }
-.ab-gl-label.is-below .ab-gl-label-in::before { top: auto; bottom: 100%; right: 9px; width: 1px; height: 14px; background: linear-gradient(0deg, rgba(160, 200, 255, .85), rgba(160, 200, 255, .1)); }
+.ab-gl-label.is-below .ab-gl-label-in::before { top: auto; bottom: 100%; right: 9px; width: 1px; height: 14px; background: linear-gradient(0deg, rgba(var(--acc), .9), rgba(var(--acc), .1)); }
 .ab-gl-label.is-on .ab-gl-label-in { opacity: 1; translate: 0 0; scale: 1; }
-.ab-gl-label.is-focus .ab-gl-label-in { border-color: rgba(160, 200, 255, .6); box-shadow: 0 18px 34px -14px rgba(10, 93, 226, .65), inset 0 1px 0 rgba(255, 255, 255, .2); scale: 1.05; }
+.ab-gl-label.is-focus .ab-gl-label-in { border-color: rgba(var(--acc), .7); box-shadow: 0 18px 34px -14px rgba(0, 0, 0, .6), 0 0 34px -6px rgba(var(--acc), .6), inset 0 1px 0 rgba(255, 255, 255, .2); scale: 1.05; }
 /* 스크립트가 없을 때의 자리(예전 지도 기준) */
 .ab-gl-map:not(.is-3d) .ab-gl-label-in { opacity: 1; translate: none; scale: none; transform: translateY(-50%); }
 .ab-gl-map:not(.is-3d) .ab-gl-label-in::before { display: none; }
@@ -83,7 +97,7 @@
 .ab-gl-cap .en {
   display: block; margin-bottom: 8px; font-size: clamp(2.4rem, 4vw, 3.6rem); font-weight: 500; line-height: 1; letter-spacing: -.03em;
   font-variant-numeric: tabular-nums;
-  background: linear-gradient(180deg, #FFFFFF 30%, #A9C8FF 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  background: linear-gradient(180deg, #FFFFFF 28%, #CFCBFF 74%, #FFC0C4 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
 /* ---------- 거점 카드 ---------- */
@@ -92,13 +106,15 @@
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;
   margin-top: clamp(48px, 6vw, 84px);
 }
-.ab-gl-cards::before { /* 카드 뒤로 번지는 은은한 푸른 빛 → 유리판이 떠 보이게 */
+.ab-gl-cards::before { /* 카드 뒤로 번지는 은은한 거점 색 → 유리판이 떠 보이게 */
   content: ""; position: absolute; z-index: -2; inset: 4% -2% -14%; pointer-events: none;
   background:
-    radial-gradient(42% 60% at 22% 60%, rgba(10, 93, 226, .07), transparent 70%),
-    radial-gradient(42% 60% at 78% 55%, rgba(111, 162, 242, .1), transparent 70%);
+    radial-gradient(42% 60% at 22% 60%, rgba(47, 139, 255, .08), transparent 70%),
+    radial-gradient(34% 56% at 54% 40%, rgba(123, 99, 255, .05), transparent 70%),
+    radial-gradient(42% 60% at 80% 58%, rgba(255, 111, 134, .075), transparent 70%);
 }
-.ab-gl-card { position: relative; isolation: isolate; display: flex; min-width: 0; container: glcard / inline-size; }
+.ab-gl-card { --acc: 47, 139, 255; position: relative; isolation: isolate; display: flex; min-width: 0; container: glcard / inline-size; }
+.ab-gl-card--nz { --acc: 236, 88, 140; }
 /* 겹친 유리판: 뒤에 한 장 더 */
 .ab-gl-card::before {
   content: ""; position: absolute; z-index: -1; left: 22px; right: 22px; top: 22px; bottom: -12px; border-radius: 22px;
@@ -107,6 +123,7 @@
   box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .9), 0 26px 40px -26px rgba(11, 27, 51, .26);
   transition: transform .7s var(--ease), opacity .7s var(--ease);
 }
+.ab-gl-card--nz::before { background: linear-gradient(180deg, rgba(255, 255, 255, .5), rgba(246, 236, 244, .95)); }
 .ab-gl-card.is-hover::before { transform: translateY(5px) scale(.985); }
 
 /* 등장: 아래에서 비스듬히 일어서며 (base.css 의 data-reveal 대신) */
@@ -131,17 +148,17 @@
   transform: perspective(1200px) rotateX(var(--rx)) rotateY(var(--ry)) translate3d(0, var(--lift), 0);
   transition: transform .8s cubic-bezier(.2, .8, .2, 1), box-shadow .6s var(--ease);
 }
-/* 유리 가장자리(위·왼쪽은 밝게, 아래는 푸르게) */
+/* 유리 가장자리(위·왼쪽은 밝게, 아래는 거점 색) */
 .ab-gl-face::before {
   content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 1) 0%, rgba(11, 27, 51, .07) 38%, rgba(11, 27, 51, .07) 70%, rgba(10, 93, 226, .2) 100%);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 1) 0%, rgba(11, 27, 51, .07) 38%, rgba(11, 27, 51, .07) 70%, rgba(var(--acc), .26) 100%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
 }
 /* 포인터를 따라가는 빛 */
 .ab-gl-face::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
-  background: radial-gradient(520px circle at var(--mx, 50%) var(--my, 0%), rgba(10, 93, 226, .07), rgba(10, 93, 226, 0) 46%);
+  background: radial-gradient(520px circle at var(--mx, 50%) var(--my, 0%), rgba(var(--acc), .075), rgba(var(--acc), 0) 46%);
   transition: opacity .5s var(--ease);
 }
 .ab-gl-card.is-hover .ab-gl-face {
@@ -151,7 +168,7 @@
     inset 0 1px 0 #fff,
     0 1px 2px rgba(11, 27, 51, .05),
     0 18px 30px -16px rgba(11, 27, 51, .18),
-    0 56px 80px -40px rgba(10, 50, 130, .38);
+    0 56px 80px -40px rgba(var(--acc), .34);
 }
 .ab-gl-card.is-hover .ab-gl-face::after { opacity: 1; }
 .ab-gl-face > * { position: relative; z-index: 1; }
@@ -164,24 +181,39 @@
 .ab-gl-count {
   align-self: start; display: inline-flex; align-items: baseline; gap: 2px;
   font-size: clamp(2rem, 2.8vw, 2.6rem); font-weight: 500; line-height: 1; letter-spacing: -.03em;
-  background: linear-gradient(180deg, #3D8BFF 10%, #0A4FC4 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 6px 10px rgba(10, 93, 226, .22));
+  background: linear-gradient(180deg, #43B6FF 0%, #1F72F2 52%, #0A4FC4 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 6px 10px rgba(var(--acc), .22));
   translate: calc(var(--px) * -5px) calc(var(--py) * -4px);
   transition: translate .5s var(--ease);
 }
+.ab-gl-card--nz .ab-gl-count { background-image: linear-gradient(180deg, #FF907A 0%, #EC5288 52%, #8E52EC 100%); }
 .ab-gl-count i { align-self: center; margin-inline: 3px; font-style: normal; font-size: .62em; font-weight: 400; color: var(--blue-300); -webkit-text-fill-color: var(--blue-300); }
 
-/* 3D 구슬(지구) — 블루 그라데이션 · 반사광 · 천천히 도는 자오선 · 거점 점 */
+/* 3D 구슬(지구) — 거점 색 그라데이션 · 반사광 · 천천히 도는 자오선 · 거점 점 */
 .ab-gl-orb {
   position: relative; width: 56px; height: 56px; border-radius: 50%;
-  background: radial-gradient(circle at 34% 28%, #A9CBFF 0%, #4D8EF7 22%, #0A5DE2 52%, #0742A3 78%, #04245E 100%);
+  background:
+    radial-gradient(circle at 30% 24%, rgba(220, 248, 255, .9) 0%, rgba(150, 228, 255, 0) 30%),
+    radial-gradient(circle at 34% 30%, #6AD8FF 0%, #2F8BFF 30%, #0A5DE2 58%, #073C9F 82%, #041E58 100%);
   box-shadow:
     inset 0 2px 3px rgba(255, 255, 255, .45),
-    inset -5px -7px 12px rgba(2, 16, 48, .5),
-    0 14px 22px -10px rgba(10, 93, 226, .7),
+    inset -5px -7px 12px rgba(2, 14, 52, .5),
+    inset 4px 3px 10px rgba(120, 230, 255, .25),
+    0 14px 22px -10px rgba(20, 112, 255, .7),
     0 3px 6px -2px rgba(10, 93, 226, .35);
   translate: calc(var(--px) * 7px) calc(var(--py) * 6px);
   transition: translate .5s var(--ease), transform .8s cubic-bezier(.2, .8, .2, 1);
+}
+.ab-gl-card--nz .ab-gl-orb {
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 238, 228, .92) 0%, rgba(255, 200, 180, 0) 30%),
+    radial-gradient(circle at 34% 30%, #FFB496 0%, #FF7A8A 22%, #D856B0 44%, #8048E4 70%, #33228F 100%);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, .5),
+    inset -5px -7px 12px rgba(36, 10, 84, .45),
+    inset 4px 3px 10px rgba(255, 190, 160, .3),
+    0 14px 22px -10px rgba(222, 79, 140, .6),
+    0 3px 6px -2px rgba(134, 69, 220, .3);
 }
 .ab-gl-orb::before { /* 반사광 */
   content: ""; position: absolute; z-index: 2; left: 13%; top: 8%; width: 46%; height: 32%; border-radius: 50%;
@@ -189,7 +221,7 @@
 }
 .ab-gl-orb::after { /* 바닥 그림자 */
   content: ""; position: absolute; z-index: -1; left: 10%; right: 10%; bottom: -10px; height: 10px; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(11, 27, 51, .22), rgba(11, 27, 51, 0));
+  background: radial-gradient(closest-side, rgba(var(--acc), .26), rgba(var(--acc), 0));
 }
 .ab-gl-orb svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .ab-gl-orb-lat, .ab-gl-orb-mer { fill: none; stroke: rgba(255, 255, 255, .4); stroke-width: 1.1; }
@@ -197,7 +229,8 @@
 .ab-gl-orb-mer:nth-of-type(2) { animation-delay: -5s; }
 .ab-gl-orb-mer:nth-of-type(3) { animation-delay: -10s; }
 @keyframes abGlMer { 0% { transform: scaleX(1); } 50% { transform: scaleX(-1); } 100% { transform: scaleX(1); } }
-.ab-gl-orb-pt { fill: #fff; stroke: #0A5DE2; stroke-width: 1.6; filter: drop-shadow(0 0 3px rgba(190, 220, 255, .95)); }
+.ab-gl-orb-pt { fill: #fff; stroke: #0A5DE2; stroke-width: 1.6; filter: drop-shadow(0 0 3px rgba(170, 230, 255, .95)); }
+.ab-gl-card--nz .ab-gl-orb-pt { stroke: #E2457A; filter: drop-shadow(0 0 3px rgba(255, 200, 190, .95)); }
 .ab-gl-orb-ping { fill: none; stroke: rgba(255, 255, 255, .85); stroke-width: 1.2; transform-box: fill-box; transform-origin: center; animation: abGlPing 2.6s var(--ease) infinite; }
 @keyframes abGlPing { 0% { transform: scale(.6); opacity: .9; } 100% { transform: scale(2.6); opacity: 0; } }
 .ab-gl-card.is-hover .ab-gl-orb { transform: translateY(-3px) rotate(-8deg) scale(1.05); }
@@ -210,6 +243,7 @@
 .ab-gl-dl dt { font-size: .84rem; color: var(--muted); }
 .ab-gl-dl dd { min-width: 0; font-size: .96rem; font-weight: 600; }
 .ab-gl-addr small { display: block; margin-top: 2px; font-size: .72rem; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
+.ab-gl-addr-l { display: inline-block; max-width: 100%; } /* 영문 주소는 쉼표 자리에서만 줄바꿈(먼저 'Drive,' 뒤, 좁으면 'Auckland,' 뒤) */
 
 /* 태그: 줄바꿈이 깔끔하도록 같은 너비 칸(2칸 → 넓으면 4칸) */
 .ab-gl-tags { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; max-width: 100%; }
@@ -226,12 +260,12 @@
   background: linear-gradient(180deg, #1B2A47, #0A1426); border-color: #0A1426; color: #fff;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 6px 12px -6px rgba(10, 20, 38, .55);
 }
-.ab-gl-tags li.is-global {
-  background: linear-gradient(180deg, #2C7BF6, #0A55D2); border-color: #0A55D2; color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 6px 12px -6px rgba(10, 93, 226, .6);
+.ab-gl-tags li.is-global { /* 뉴질랜드 색 띠(바이올렛 → 로즈) — 흰 글자 대비 4.5:1 이상 */
+  background: linear-gradient(115deg, #5A40E4 0%, #9A3FC8 52%, #C8336A 100%); border-color: rgba(90, 40, 140, .35); color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 6px 14px -6px rgba(170, 60, 150, .55);
 }
 .ab-gl-tags li span { font-weight: 600; }
-.ab-gl-tags li span + span { font-weight: 500; opacity: .8; }
+.ab-gl-tags li span + span { font-weight: 500; opacity: .85; }
 
 .ab-gl-foot { grid-area: foot; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding-top: 6px; min-width: 0; }
 .ab-gl-link { display: inline-flex; min-height: 44px; font-size: .9rem; color: var(--blue); }
@@ -246,42 +280,46 @@
 .js .ab-gl-card[data-reveal] .ab-gl-foot { --i: 3; }
 .js .ab-gl-card[data-reveal]:is(.is-in, :focus-within) :is(.ab-gl-top, .ab-gl-dl > div, .ab-gl-foot) { opacity: 1; transform: none; }
 
-/* 뉴질랜드 미니 3D 타일 — 점으로 그린 뉴질랜드가 비스듬히 누운 판 + 빛기둥 + 파동 */
+/* 뉴질랜드 미니 3D 타일 — 색 띠 점으로 그린 뉴질랜드가 비스듬히 누운 판 + 코럴 빛기둥 + 파동 */
 .ab-gl-mini { grid-area: mini; position: relative; min-width: 0; min-height: 132px; pointer-events: none; perspective: 640px; }
 .ab-gl-mini-plane {
   position: absolute; left: 50%; top: 50%; width: min(86%, 210px); aspect-ratio: 1;
   translate: -50% -46%; transform: rotateX(56deg) rotateZ(-32deg); transform-style: preserve-3d;
   transition: transform 1s cubic-bezier(.2, .8, .2, 1);
 }
-.ab-gl-mini-plane::before { /* 판 아래 빛 */
-  content: ""; position: absolute; inset: -14%; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(10, 93, 226, .13), rgba(10, 93, 226, 0));
+.ab-gl-mini-plane::before { /* 타일 판(옅은 색 유리) + 아래로 번지는 빛 */
+  content: ""; position: absolute; inset: 1%; border-radius: 21%;
+  background:
+    radial-gradient(closest-side at 57% 54%, rgba(255, 111, 134, .12), rgba(255, 111, 134, 0)),
+    linear-gradient(135deg, rgba(62, 155, 255, .09) 0%, rgba(123, 99, 255, .07) 46%, rgba(255, 124, 110, .1) 100%);
+  border: 1px solid rgba(123, 99, 255, .2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55), 0 0 40px 6px rgba(123, 99, 255, .1);
 }
 .ab-gl-mini-plane svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.ab-gl-mini-grid { fill: none; stroke: rgba(10, 93, 226, .12); stroke-width: 1; }
-.ab-gl-mini-dots { fill: none; stroke: #6FA2F2; stroke-width: 5.4; stroke-linecap: round; }
+.ab-gl-mini-grid { fill: none; stroke: rgba(123, 99, 255, .2); stroke-width: 1; }
+.ab-gl-mini-dots { fill: none; stroke: #7B63FF; stroke: url(#ab-gl-mini-ink) #7B63FF; stroke-width: 5.4; stroke-linecap: round; }
 .ab-gl-mini-pin { position: absolute; width: 0; height: 0; transform-style: preserve-3d; }
 .ab-gl-mini-pin i {
   position: absolute; left: -24px; top: -24px; width: 48px; height: 48px; border-radius: 50%;
-  border: 1.5px solid rgba(10, 93, 226, .55);
+  border: 1.5px solid rgba(240, 70, 120, .6);
   animation: abGlRing 2.8s cubic-bezier(.2, .7, .2, 1) infinite;
 }
-.ab-gl-mini-pin i:nth-child(2) { animation-delay: -1.4s; }
+.ab-gl-mini-pin i:nth-child(2) { animation-delay: -1.4s; border-color: rgba(140, 90, 255, .5); }
 @keyframes abGlRing { 0% { transform: scale(.2); opacity: 1; } 100% { transform: scale(1.7); opacity: 0; } }
 .ab-gl-mini-pin::before { /* 판 위의 핀 점 */
   content: ""; position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%;
-  background: #0A5DE2; box-shadow: 0 0 0 3px #fff, 0 0 14px 4px rgba(10, 93, 226, .45);
+  background: linear-gradient(135deg, #FF9A7E, #E8417E); box-shadow: 0 0 0 3px #fff, 0 0 16px 5px rgba(240, 80, 120, .42);
 }
 .ab-gl-mini-pin b { /* 서 있는 빛기둥 */
   position: absolute; left: -2px; bottom: 0; width: 4px; height: 92px; border-radius: 2px;
   transform-origin: 50% 100%; transform: rotateX(-90deg);
-  background: linear-gradient(0deg, #0A5DE2 0%, #3B8BFF 45%, #A9CBFF 100%);
-  box-shadow: 0 0 10px 3px rgba(59, 139, 255, .32), 0 0 22px 6px rgba(59, 139, 255, .12);
+  background: linear-gradient(0deg, #E8417E 0%, #FF7F7A 42%, #FFC9B6 82%, #FFF1EA 100%);
+  box-shadow: 0 0 10px 3px rgba(255, 100, 128, .3), 0 0 24px 7px rgba(255, 110, 140, .12);
   transition: height .8s cubic-bezier(.2, .8, .2, 1);
 }
 .ab-gl-mini-pin b::after { /* 기둥 꼭대기 빛 */
   content: ""; position: absolute; left: 50%; top: -7px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%;
-  background: radial-gradient(circle, #fff 0 20%, #3B8BFF 30%, rgba(59, 139, 255, .35) 48%, rgba(59, 139, 255, 0) 72%);
+  background: radial-gradient(circle, #fff 0 20%, #FF8A7A 30%, rgba(255, 120, 130, .35) 48%, rgba(255, 120, 130, 0) 72%);
 }
 .ab-gl-card.is-hover .ab-gl-mini-plane { transform: rotateX(52deg) rotateZ(-24deg); }
 .ab-gl-card.is-hover .ab-gl-mini-pin b { height: 110px; }

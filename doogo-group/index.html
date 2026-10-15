@@ -18,6 +18,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/cta-variants.css">
   <link rel="stylesheet" href="assets/css/pages/home.css">
 </head>
 <body data-page="home" data-header="overlay">
@@ -1116,19 +1117,21 @@
   </section>
 
   <!-- =========================================================
-       S8 공통 CTA 띠
+       S8 마무리 배너 — 메인 전용: 큰 영문 슬로건 타이포 띠 (블루)
+       페이지마다 다른 배너 · 스타일 assets/css/cta-variants.css (.cbx--home)
+       (원래의 공통 CTA 띠 .cta-band 는 두고그룹 about.html 에만 남김)
        ========================================================= -->
-  <section class="cta-band" aria-labelledby="cta-title">
+  <section class="cbx cbx--home" aria-labelledby="home-close-title">
+    <div class="cbx-home-deco" data-reveal="fade" aria-hidden="true"><i class="cbx-home-mark"></i></div>
     <div class="container">
-      <span class="eyebrow">Contact</span>
-      <h2 class="h2" id="cta-title" data-reveal style="margin-top:20px">다음 사업, 두고그룹과 함께 이야기해 보세요.</h2>
-      <p class="lead" data-reveal style="--d:.1s">교육업 · 제조업 · 브랜드 커머스 · 미디어&nbsp;&amp;&nbsp;콘텐츠 · 마케팅 · 유통 · 공간&nbsp;&amp;&nbsp;라이프스타일, 그리고 그룹 제휴까지 하나의 창구로 접수합니다.</p>
-      <div class="cta-chips" data-reveal style="--d:.15s">
-        <a href="contact.html?type=campus">교육업</a><a href="contact.html?type=bio">제조업</a><a href="contact.html?type=commerce">브랜드 커머스</a><a href="contact.html?type=media">미디어 &amp; 콘텐츠</a><a href="contact.html?type=ad">마케팅</a><a href="contact.html?type=food">유통</a><a href="contact.html?type=space">공간 &amp; 라이프스타일</a><a href="contact.html?type=partner">그룹 제휴</a>
-      </div>
-      <div class="cta-band-actions" data-reveal style="--d:.2s">
-        <a class="btn btn--primary btn--lg" href="contact.html">사업 상담하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        <a class="btn btn--ghost btn--lg" href="contact.html?type=partner">제휴 제안하기</a>
+      <span class="eyebrow" data-reveal="fade">Let’s Grow Together</span>
+      <h2 class="cbx-home-title" id="home-close-title" lang="en" data-lines><span class="line"><span>Product to People,</span></span> <span class="line"><span>People to a <em>Better Tomorrow.</em></span></span></h2>
+      <div class="cbx-home-foot" data-reveal style="--d:.25s">
+        <p class="cbx-home-ko"><strong>좋은 사업이 더 나은 내일을 만듭니다.</strong>제품에서 사람으로, 사람에서 더 나은 내일로. 두고그룹과 함께 다음 이야기를 시작해 보세요.</p>
+        <div class="cbx-actions">
+          <a class="btn btn--white btn--lg" href="contact.html">문의하기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn--ghost btn--lg" href="about.html">두고그룹 소개</a>
+        </div>
       </div>
     </div>
   </section>
