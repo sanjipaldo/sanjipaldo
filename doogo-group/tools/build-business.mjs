@@ -41,11 +41,12 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CLASS_URL = 'https://www.doogoclass.com'; // DOOGO CLASS (교육)
 const FOOD_URL = 'https://www.doogofood.com';   // DOOGOFOOD (유통 · 식품 도매 플랫폼)
 // DOOGO MAKERS(브랜드 커머스)가 키우는 자사몰 브랜드 두 곳 (14차 — doogofood.com 은 이제 DOOGOFOOD 에만 씀)
-const ONEDAY_URL = 'https://www.onedaycore.com/'; // ONEDAYCORE 원데이코어 · 건강기능식품 자사몰
+const ONEDAY_URL = 'https://www.onedaycore.com/'; // ONEDAYCORE 원데이코어 · 캐나다 건강식품
 const MAURINZ_URL = 'https://maurinz.co.kr/';      // MAURINZ 마우리엔젯 · 뉴질랜드 건강식품
 const BIO_URL = 'https://www.doogobio.com/';    // DOOGOBIO
 const CONNECT_URL = 'https://www.doogoconnect.com/'; // DOOGO CONNECT 두고커넥트 · 해외 건강식품 소량 OEM 플랫폼 (DOOGOBIO 운영)
 const AD_URL = 'https://www.doogoad.com/';      // DOOGO AD
+const REVIEW_URL = 'https://www.reviewhub.co.kr/'; // REVIEW HUB 리뷰허브 · 프리미엄 체험단 마케팅 플랫폼 (DOOGO AD 운영)
 const NORA_URL = 'https://www.norastay.com/';   // NORA STAY (DOOGO SPACE 숙박)
 const MEDIA_URL = 'https://www.youtube.com/@%EB%91%90%EA%B3%A0%EB%B3%B4%EB%8A%94%EB%AC%B8%EB%8C%80%ED%91%9C'; // DOOGO MEDIA · YouTube 두고보는 문대표
 
@@ -58,7 +59,7 @@ const NEWWIN = '<span class="sr-only">(새 창)</span>';
 // '준비 중' 작은 표시 (DOOGO SPACE F&B 사업부처럼 아직 열지 않은 서비스 — 지어내지 않고 정직하게 표시)
 const SOON = '<span class="soon-tag">준비 중</span>';
 // 브랜드명·'&'로 묶인 사업 분야 이름이 줄바꿈으로 갈라지지 않게 (화면 문구에만 사용 — 속성값에는 쓰지 말 것)
-const nw = (t) => t.replace(/DOOGO (?:HOLDINGS|CLASS|SPACE|MEDIA|MAKERS|CONNECT|AD)|DOOGOFOOD|DOOGOBIO(?: NZ)?|ONEDAYCORE|MAURINZ|NORA STAY|두고커넥트|미디어 &amp; 콘텐츠|공간 &amp; 라이프스타일/g, (m) => `<span class="nowrap">${m}</span>`);
+const nw = (t) => t.replace(/DOOGO (?:HOLDINGS|CLASS|SPACE|MEDIA|MAKERS|CONNECT|AD)|DOOGOFOOD|DOOGOBIO(?: NZ)?|ONEDAYCORE|MAURINZ|REVIEW HUB|NORA STAY|두고커넥트|미디어 &amp; 콘텐츠|공간 &amp; 라이프스타일/g, (m) => `<span class="nowrap">${m}</span>`);
 // 마지막 낱말 + 아이콘을 한 덩어리로 (줄이 넘어갈 때 화살표만 다음 줄에 혼자 남지 않게)
 const glue = (t, icon) => { const k = t.lastIndexOf(' '); return k < 0 ? `<span class="nowrap">${t}${icon}</span>` : `${t.slice(0, k + 1)}<span class="nowrap">${t.slice(k + 1)}${icon}</span>`; };
 const DOWN = ico('i-arrow', 'ico ico-arrow ico-down');
@@ -222,12 +223,12 @@ const BIZ = [
     ask: '브랜드 커머스 상담하기',
     cta: { label: '브랜드 보기', href: 'brands.html#brands' },
     // 14차: DOOGO MAKERS 브랜드팀이 키우는 자사몰 브랜드 두 곳 — ONEDAYCORE(대표) · MAURINZ (사이트 첫 화면 문구 기준)
-    web: web({ name: 'ONEDAYCORE', kind: '건강기능식품 자사몰', title: '브랜드 사이트', eyebrow: 'Brand Sites',
+    web: web({ name: 'ONEDAYCORE', kind: '캐나다 건강식품', title: '브랜드 사이트', eyebrow: 'Brand Sites',
       host: 'onedaycore.com', url: ONEDAY_URL, shot: 'onedaycore', close: 'ONEDAYCORE 바로가기',
-      desc: 'DOOGO MAKERS가 키우는 건강기능식품 자사몰 브랜드 ‘원데이코어’입니다. 동결건조 고농축 알부민 ‘프리미엄 알부민 골드’와 뉴질랜드 프로폴리스 등을 소개합니다.',
+      desc: '캐나다 로키산맥의 깨끗한 자연에서 온 원료로 만든 캐나다 건강식품 브랜드 ‘원데이코어’입니다. 대표 제품은 동결건조 고농축 알부민 ‘프리미엄 알부민 골드’입니다.',
       moreLabel: 'DOOGO MAKERS의 또 다른 브랜드',
       more: [{ name: 'MAURINZ', kind: '뉴질랜드 건강식품', host: 'maurinz.co.kr', url: MAURINZ_URL, shot: 'maurinz', close: 'MAURINZ 바로가기',
-        desc: '마오리 자연 철학을 담은 뉴질랜드 건강식품 브랜드 ‘마우리엔젯’입니다. 대표 제품은 뉴질랜드 GMP·RMP·HACCP 인증 시설에서 단일 원료로 만든 뉴질랜드산 밀크씨슬입니다.' }] }),
+        desc: '뉴질랜드 마오리 부족이 즐겨 먹던 천연 원료로 영양제를 만드는 뉴질랜드 건강식품 브랜드 ‘마우리엔젯’입니다. 대표 제품은 뉴질랜드산 밀크씨슬입니다.' }] }),
     narration: '생각은 제품이 되고, 제품은 브랜드가 됩니다.',
     hero: { f: 'commerce', fx: '50%', fy: '48%', mx: '56%' },
     gallery: [photo('commerce', { label: '패키지 디자인', zoom: 1.7, focus: '70% 78%', alt: '무지 패키지 박스를 들고 컬러칩과 맞춰 보는 디자이너의 손(확대)' }), render('makers', { label: 'DOOGO MAKERS' })],
@@ -277,17 +278,21 @@ const BIZ = [
     scope: '네이버·쿠팡 광고 운영 · 소재 기획 · 성과 분석',
     defLabel: '퍼포먼스 광고', def: '네이버·쿠팡을 중심으로 브랜드를 더 멀리 알립니다.',
     role: '브랜드가 필요한 고객에게 닿도록 광고를 기획하고 운영합니다.',
-    services: ['네이버·쿠팡 중심 광고 운영', '광고 소재 기획', '성과 분석'],
+    services: ['네이버·쿠팡 중심 광고 운영', '체험단 마케팅 ‘리뷰허브’', '광고 소재 기획', '성과 분석'],
     targets: ['온라인으로 판매 중인 브랜드·셀러'],
     ask: '광고 상담하기',
     cta: { label: '광고 상담하기', href: ASK('ad') },
     web: web({ name: 'DOOGO AD', kind: '웹사이트', host: 'doogoad.com', url: AD_URL, shot: 'ad', close: 'DOOGO AD 사이트',
-      desc: 'DOOGO AD의 마케팅 플랫폼입니다. 서비스 소개와 마케팅 상품, 제휴 상담 안내를 사이트에서 확인할 수 있습니다.' }),
+      desc: 'DOOGO AD의 마케팅 플랫폼입니다. 서비스 소개와 마케팅 상품, 제휴 상담 안내를 사이트에서 확인할 수 있습니다.',
+      // 15차: DOOGO AD가 운영하는 리뷰허브
+      moreLabel: 'DOOGO AD가 함께 운영하는 플랫폼',
+      more: [{ name: 'REVIEW HUB', kind: '체험단 마케팅 플랫폼', host: 'reviewhub.co.kr', url: REVIEW_URL, shot: 'reviewhub', close: 'REVIEW HUB 바로가기',
+        desc: '리뷰허브 · 프리미엄 체험단 마케팅 플랫폼입니다. 브랜드가 체험단을 모집하고 리뷰를 빠르게 확보하도록 돕습니다.' }] }),
     narration: '각자의 가능성이, 필요한 사람에게 닿도록.',
     hero: { f: 'ad', fx: '50%', fy: '45%', mx: '50%' },
     gallery: [photo('ad', { label: '성과 리뷰', zoom: 1.8, focus: '45% 40%', alt: '회의실 대형 화면에 띄운 광고 성과 그래프와 발표하는 사람(확대)' }), render('ad', { label: 'DOOGO AD' })],
     heroAlt: { label: '운영 채널 보기', href: '#related' },
-    facts: [['운영 채널', '네이버 · 쿠팡'], ['사이트', SITE(AD_URL)]],
+    facts: [['운영 채널', '네이버 · 쿠팡'], ['사이트', SITES(SITE(AD_URL), SITE(REVIEW_URL))]],
     svcHead: 'DOOGO AD가 하는 일',
     svcLead: '판매가 일어나는 채널을 중심으로 광고를 기획하고, 결과를 다음 운영에 반영합니다.',
     detail: [
@@ -955,7 +960,7 @@ ${c.direct ? `              <div><dt>운영 브랜드</dt><dd class="dt-dd-chips
             </dl>
           </div>
           <div class="pcard-foot dt-leader-foot">
-            <a class="pcard-link pcard-stretch" href="leadership.html#${c.anchor || `leader-${c.key}`}">자세히 보기<span class="sr-only"> (${c.en} ${c.ceo} ${ttl(c)} · 피플)</span> ${ico('i-arrow')}</a>
+            <a class="pcard-link pcard-stretch" href="leadership.html#${c.anchor || `leader-${c.key}`}">자세히 보기<span class="sr-only"> (${c.en} ${c.ceo} ${ttl(c)} · 두고 사람들)</span> ${ico('i-arrow')}</a>
             <p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '이력은 확정 후 게시합니다.' : '이력과 사진은 확정 후 게시합니다.'}</p>
           </div>`;
 
