@@ -938,3 +938,10 @@ html.soft-motion .hero-media video { animation-duration: 1.4s; transform: scale(
 .ldr .pcard-name { font-size: clamp(1.25rem, 1.05rem + .5vw, 1.55rem); }
 @media (max-width: 1024px) { .ldr { grid-auto-columns: clamp(280px, 46vw, 360px); } }
 @media (max-width: 760px) { .ldr { grid-auto-columns: 80vw; gap: 14px; } }
+
+/* 12차: 그룹소식·리더 섹션 위아래 여백 축소 */
+.newsroom.section { padding-block: clamp(56px, 6vw, 96px) clamp(48px, 5vw, 84px); }
+.newsroom .news-head { margin-bottom: clamp(16px, 2vw, 28px); }
+.newsroom .cf.is-ready .cf-track { padding: 8px 0 24px; }
+.leaders.section { padding-top: clamp(48px, 5vw, 80px); padding-bottom: clamp(56px, 6vw, 96px); }
+.leaders .ldr-head { margin-bottom: clamp(20px, 2.4vw, 36px); }
