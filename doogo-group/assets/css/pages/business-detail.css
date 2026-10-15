@@ -81,21 +81,14 @@
 @keyframes dtKen { from { transform: scale(1) translate3d(0, 0, 0); } to { transform: scale(1.07) translate3d(-1.1%, -.7%, 0); } }
 .dt-frame::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: linear-gradient(90deg, rgba(10, 20, 38, .6) 0%, rgba(10, 20, 38, .14) 46%, transparent 68%), linear-gradient(0deg, rgba(10, 20, 38, .55) 0%, transparent 48%), linear-gradient(180deg, rgba(10, 20, 38, .28) 0%, transparent 22%); }
-.dt-frame-badge {
-  position: absolute; left: clamp(18px, 2.6vw, 36px); top: clamp(16px, 2.2vw, 28px); z-index: 2; display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 12px;
-  border-radius: 999px; background: rgba(10, 20, 38, .4); border: 1px solid rgba(255, 255, 255, .22); color: rgba(255, 255, 255, .92); font-size: .74rem; font-weight: 600;
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-}
-.dt-frame-badge::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #FFD66B; }
 .dt-quote { position: absolute; left: clamp(20px, 3.2vw, 48px); bottom: clamp(20px, 3.2vw, 44px); z-index: 2; max-width: 60%; color: #fff; }
 .dt-quote-label { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: .74rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: rgba(255, 255, 255, .8); }
 .dt-quote-label::before { content: ""; width: 22px; height: 1.5px; background: currentColor; }
 .dt-quote q { display: block; font-size: clamp(1.25rem, 2.4vw, 2.2rem); font-weight: 700; line-height: 1.32; letter-spacing: -.035em; quotes: "\201C" "\201D"; text-shadow: 0 2px 20px rgba(0, 0, 0, .3); text-wrap: balance; max-width: 13em; /* 글자 크기에 맞춘 폭 → 두 줄로 고르게 */ }
 /* 문구·버튼은 사진이 열린 뒤 차례로 */
-.js .dt-frame :is(.dt-quote, .dt-frame-ctrl, .dt-frame-badge) { opacity: 0; transform: translateY(14px); transition: opacity .8s var(--ease), transform .9s var(--ease); }
+.js .dt-frame :is(.dt-quote, .dt-frame-ctrl) { opacity: 0; transform: translateY(14px); transition: opacity .8s var(--ease), transform .9s var(--ease); }
 .js .dt-frame.is-in .dt-quote { opacity: 1; transform: none; transition-delay: .7s; }
 .js .dt-frame.is-in .dt-frame-ctrl { opacity: 1; transform: none; transition-delay: .9s; }
-.js .dt-frame.is-in .dt-frame-badge { opacity: 1; transform: none; transition-delay: 1s; }
 .dt-frame-ctrl { position: absolute; right: clamp(16px, 2.4vw, 32px); bottom: clamp(16px, 2.4vw, 32px); z-index: 2; display: flex; align-items: center; gap: 10px; }
 .dt-film-btn {
   display: inline-flex; align-items: center; gap: 10px; height: 50px; padding: 0 20px 0 8px; border-radius: 999px;
@@ -238,20 +231,13 @@
   box-shadow: 0 8px 20px -12px rgba(11, 27, 51, .45);
 }
 .dt-shot-label .en { font-size: .74rem; font-weight: 600; color: var(--blue); }
-.dt-shot figcaption {
-  position: absolute; left: 16px; bottom: 16px; z-index: 2; display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% - 32px);
-  padding: 7px 13px 7px 11px; border-radius: 999px; background: rgba(10, 20, 38, .46); border: 1px solid rgba(255, 255, 255, .18); color: #fff;
-  font-size: .78rem; font-weight: 600; line-height: 1.35; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-}
-.dt-shot figcaption::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: #FFD66B; }
-.dt-shot--render figcaption { background: rgba(255, 255, 255, .7); border-color: rgba(10, 93, 226, .14); color: var(--ink-2); }
 /* 등장: 아래에서 위로 열리며 사진이 1.14 → 1로 가라앉음, 라벨은 그다음 */
 .js .dt-shot[data-reveal] { opacity: 1; transform: none; clip-path: inset(16% 0 0 0 round var(--radius)); transition: clip-path 1.3s var(--ease) var(--d, 0s); }
 .js .dt-shot[data-reveal].is-in { clip-path: inset(0 0 0 0 round var(--radius)); }
 .js .dt-shot[data-reveal] img { scale: calc(var(--z, 1) * 1.14); transition: scale 1.9s var(--ease) var(--d, 0s), transform 1.2s var(--ease); }
 .js .dt-shot[data-reveal].is-in img { scale: var(--z, 1); }
-.js .dt-shot[data-reveal] :is(.dt-shot-label, figcaption) { opacity: 0; transform: translateY(10px); transition: opacity .7s var(--ease) calc(var(--d, 0s) + .55s), transform .7s var(--ease) calc(var(--d, 0s) + .55s); }
-.js .dt-shot[data-reveal].is-in :is(.dt-shot-label, figcaption) { opacity: 1; transform: none; }
+.js .dt-shot[data-reveal] .dt-shot-label { opacity: 0; transform: translateY(10px); transition: opacity .7s var(--ease) calc(var(--d, 0s) + .55s), transform .7s var(--ease) calc(var(--d, 0s) + .55s); }
+.js .dt-shot[data-reveal].is-in .dt-shot-label { opacity: 1; transform: none; }
 
 /* ---------- 5. 관련 브랜드·프로젝트 (네이비) ---------- */
 .dt-rel { overflow: hidden; isolation: isolate; }
@@ -509,7 +495,6 @@
   .dt-svc-name { margin-top: 28px; }
   .dt-svc.is-pillar .dt-svc-en { margin-top: 24px; }
   .dt-gallery { gap: 12px; }
-  .dt-shot figcaption { font-size: .74rem; }
   .dt-paths { grid-template-columns: 1fr; }
   .dt-path-hub { flex-direction: column; height: 200px; }
   .dt-hub-line { width: 2px; height: auto; flex: 1; background: repeating-linear-gradient(180deg, var(--blue-300) 0 7px, transparent 7px 14px); background-size: 2px 14px; animation-name: dtFlowY; }
@@ -543,7 +528,6 @@
   .dt-quote-label { margin-bottom: 8px; font-size: .7rem; letter-spacing: .1em; white-space: nowrap; }
   .dt-quote-label::before { display: none; }
   .dt-quote q { font-size: 1.18rem; line-height: 1.36; max-width: none; }
-  .dt-frame-badge { left: 14px; top: 14px; height: 26px; padding: 0 10px; font-size: .7rem; }
   .dt-frame-ctrl { top: 10px; right: 10px; bottom: auto; }
   .dt-film-btn { height: 44px; font-size: .84rem; padding-right: 14px; gap: 8px; padding-left: 6px; }
   .dt-film-btn .play-ring { width: 30px; height: 30px; }
@@ -569,7 +553,6 @@
   .dt-shot { aspect-ratio: 4 / 3; }
   .dt-shot--render { aspect-ratio: 1 / 1; }
   .dt-shot-label { left: 12px; top: 12px; height: 32px; padding: 0 12px; font-size: .82rem; }
-  .dt-shot figcaption { left: 12px; bottom: 12px; max-width: calc(100% - 24px); padding: 6px 11px 6px 9px; font-size: .72rem; }
   .dt-steps { grid-template-columns: 1fr; }
   .dt-step-title { margin-top: 16px; }
   .dt-rows-head { display: none; }
@@ -629,7 +612,7 @@ html.motion-off .dt-steps .dt-step { opacity: 1 !important; transform: none !imp
 html.motion-off .dt-frame-media, html.soft-motion .dt-frame-media { transform: none !important; }
 html.motion-off .dt-frame-img { scale: 1 !important; animation: none !important; transform: none !important; }
 html.motion-off .dt-shot[data-reveal] img { scale: var(--z, 1) !important; transform: none !important; }
-html.motion-off .dt-frame :is(.dt-quote, .dt-frame-ctrl, .dt-frame-badge), html.motion-off .dt-shot[data-reveal] :is(.dt-shot-label, figcaption) { opacity: 1 !important; transform: none !important; }
+html.motion-off .dt-frame :is(.dt-quote, .dt-frame-ctrl), html.motion-off .dt-shot[data-reveal] .dt-shot-label { opacity: 1 !important; transform: none !important; }
 html.motion-off .dt-hub-line, html.motion-off .dt-hub-core::after { animation: none !important; }
 html.motion-off :is(.dt-row:hover .dt-row-title, .dt-shot:hover img, .dt-stay:hover .dt-stay-media img) { transform: none !important; }
 /* 운영 사이트: 창 기울기(스크롤)는 움직임 멈추기와 OS 애니메이션 줄이기 기기 모두에서 끄고, 캡처는 바로 선명하게 */

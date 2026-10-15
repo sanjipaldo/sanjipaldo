@@ -224,7 +224,6 @@ main section[id] { scroll-margin-top: calc(var(--header-h) + 72px); }
 .bn-chain:hover .bn-tile-go svg, .bn-chain:focus-visible .bn-tile-go svg { transform: translateX(2px); }
 .bn-chain:focus-visible { outline-offset: -4px; }
 
-.bn-brands-note { margin-top: 20px; }
 main .note { color: var(--muted); }
 
 /* ---------- 02 프로젝트 — 큰 이미지 커버플로우 ----------
@@ -414,7 +413,6 @@ main .note { color: var(--muted); }
 .bn-step.is-result { margin-top: 6px; padding: 22px 24px; border: 0; border-radius: var(--radius); background: rgba(10, 93, 226, .16); box-shadow: inset 0 0 0 1px rgba(111, 162, 242, .28); }
 .bn-step.is-result dt { color: #fff; }
 .bn-step.is-result dd { color: #fff; }
-.bn-cases-note { margin-top: clamp(28px, 3.5vw, 44px); font-size: var(--fs-xs); line-height: 1.7; color: rgba(255, 255, 255, .62); }
 
 /* ---------- 04 협력 파트너 (공개 파트너 전: 제휴 안내 + 제휴 분야) ---------- */
 .bn-pt-wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(28px, 4vw, 56px); align-items: stretch; }

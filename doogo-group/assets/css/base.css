@@ -184,7 +184,6 @@ main { display: block; }
 .chip.is-active, .chip[aria-pressed="true"], .chip[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
 .tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 6px; background: var(--blue-50); color: var(--blue-700); font-size: .78rem; font-weight: 600; letter-spacing: 0; }
 .tag--line { background: transparent; border: 1px solid var(--line); color: var(--muted); }
-.badge-sample { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: #FFF4D6; color: #8A5A00; font-size: .75rem; font-weight: 700; letter-spacing: 0; vertical-align: middle; }
 .note { font-size: var(--fs-xs); color: var(--muted-2); }
 
 /* 카드 공통 */
@@ -254,11 +253,6 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
 .mega-area .num { font-family: var(--font-en); font-size: .72rem; color: var(--blue); font-weight: 600; }
 .mega-brand { font-family: var(--font-en); font-size: .7rem; letter-spacing: .04em; color: var(--muted); font-weight: 500; margin-top: -6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mega-desc { font-size: .82rem; line-height: 1.5; color: var(--muted); }
-/* 운영 법인 (맨 아래 줄 · 설명 길이와 상관없이 같은 높이에 정렬)
-   '운영' 라벨은 늘 위 줄, 법인명은 아래 줄(줄바꿈 없음) → 화면 폭이 달라도 일곱 칸의 구분선·글자가 같은 높이 */
-.mega-item { grid-template-rows: auto auto auto 1fr auto; }
-.mega-corp { display: grid; gap: 3px; padding-top: 10px; border-top: 1px solid var(--line-2); font-size: .76rem; font-weight: 600; line-height: 1.4; color: var(--ink-2); letter-spacing: -0.01em; white-space: nowrap; }
-.mega-corp .k { font-size: .7rem; font-weight: 500; color: var(--muted-2); }
 .mega-item[aria-current="page"] { background: var(--ivory); }
 .mega-item[aria-current="page"] .mega-area { color: var(--blue); }
 
@@ -280,7 +274,6 @@ body[data-header="overlay"] .site-header:not(.is-scrolled):not(.is-mega):not(.is
   .mega-grid { gap: 8px; }
   .mega-item { padding: 8px; }
   .mega-brand { font-size: .66rem; letter-spacing: .02em; }
-  .mega-corp { font-size: .72rem; letter-spacing: -0.02em; } /* 'DOOGO HOLDINGS' 가 칸(약 100px) 안에 한 줄로 */
   .mega-area { font-size: .9rem; letter-spacing: -.04em; gap: 4px; }
 }
 @media (max-width: 1180px) {
@@ -843,13 +836,46 @@ html.legal-open { overflow: hidden; }
   .mega-area .num { font-size: .8rem; }
   .mega-brand { font-size: .8rem; margin-top: -4px; letter-spacing: .03em; }
   .mega-desc { font-size: .92rem; line-height: 1.55; color: var(--ink-2); }
-  .mega-corp { font-size: .86rem; padding-top: 12px; }
-  .mega-corp .k { font-size: .76rem; }
 }
 @media (min-width: 1025px) and (max-width: 1280px) {
   .mega-grid { gap: 10px; }
   .mega-item { padding: 8px; }
   .mega-area { font-size: .94rem; letter-spacing: -.05em; gap: 4px; }
   .mega-desc { font-size: .85rem; }
-  .mega-brand, .mega-corp { font-size: .76rem; }
+}
+
+/* ---------- 메가메뉴 브랜드명 강조 (13차) ----------
+   '운영 법인' 줄을 없애고, 분야는 작은 칩 · 브랜드명(DOOGO AD, DOOGOFOOD …)은 굵은 영문 헤드라인으로 */
+.mega-item { position: relative; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto 1fr; align-content: start; }
+.mega-thumb { position: relative; }
+.mega-thumb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(11, 27, 51, .06); pointer-events: none; }
+.mega-area { justify-self: start; align-items: center; height: 26px; padding: 0 10px 0 6px; border-radius: 999px; background: var(--ivory-2); color: var(--ink-2); font-size: .8rem !important; font-weight: 700; letter-spacing: -.03em !important; gap: 6px !important; }
+.mega-area .num { display: inline-grid; place-items: center; min-width: 20px; height: 18px; padding: 0 4px; border-radius: 999px; background: var(--ink); color: #fff; font-size: .66rem !important; font-weight: 700; letter-spacing: .02em; }
+.mega-brand {
+  display: block; margin-top: 0; padding-bottom: 10px;
+  font-family: var(--font-en); font-weight: 800; font-size: clamp(.92rem, .05rem + 1.24vw, 1.32rem); line-height: 1.1; letter-spacing: -.03em; color: var(--blue);
+  white-space: nowrap; overflow: visible;
+  background: linear-gradient(90deg, #0A5DE2, #3B8BFF 60%, #9CC3FF) no-repeat 0 100% / 22px 3px; transition: background-size .5s var(--ease);
+}
+.mega-brand-t {
+  display: inline-block; max-width: 100%; vertical-align: top; overflow: hidden; text-overflow: ellipsis;
+  background: linear-gradient(90deg, #0A4FC4 0%, #2F7BFF 50%, var(--ink) 50%, var(--ink) 100%); background-size: 200% 100%; background-position: 0 0;
+  -webkit-background-clip: text; background-clip: text; color: transparent; transition: background-position .55s var(--ease);
+}
+/* 사진 오른쪽 위 둥근 화살표 (호버 시 등장) */
+.mega-brand .ico {
+  position: absolute; top: 20px; right: 20px; width: 32px; height: 32px; padding: 8px; border-radius: 50%;
+  background: #fff; color: var(--blue); box-shadow: 0 6px 18px -6px rgba(11, 27, 51, .35);
+  opacity: 0; transform: translate(-6px, 6px) scale(.85); transition: transform .4s var(--ease), opacity .4s var(--ease);
+}
+.mega-item:hover .mega-brand, .mega-item:focus-visible .mega-brand, .mega-item[aria-current="page"] .mega-brand { background-size: 100% 3px; }
+.mega-item:hover .mega-brand-t, .mega-item:focus-visible .mega-brand-t, .mega-item[aria-current="page"] .mega-brand-t { background-position: -100% 0; }
+.mega-item:hover .mega-brand .ico, .mega-item:focus-visible .mega-brand .ico { opacity: 1; transform: none; }
+.mega-item[aria-current="page"] .mega-area { color: var(--ink); }
+.mega-item:hover .mega-area .num, .mega-item:focus-visible .mega-area .num, .mega-item[aria-current="page"] .mega-area .num { background: var(--blue); }
+.mega-area .num { transition: background-color .3s var(--ease); }
+@media (min-width: 1025px) { .mega-desc { margin-top: 2px; } }
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .mega-area { font-size: .74rem !important; padding: 0 8px 0 5px; }
+  .mega-brand .ico { top: 14px; right: 14px; width: 28px; height: 28px; padding: 7px; }
 }

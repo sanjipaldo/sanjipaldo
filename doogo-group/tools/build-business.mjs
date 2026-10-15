@@ -18,10 +18,10 @@
      (title이 없으면 기본 직함 · 화면의 직함은 모두 ttl(corp)로 씁니다)
    - 사업 분야 이름(6차 확정): 교육업 · 제조업 · 브랜드 커머스 · 미디어 & 콘텐츠 · 마케팅 · 유통 · 공간 & 라이프스타일 (BIZ[].area — HTML 문구라 &는 &amp;로 씀)
      그룹사 분야 라벨(corp.field)이 사업 분야 이름과 같으면 운영 회사 칩에서 분야를 다시 쓰지 않습니다(corpChip).
-   - 사진: assets/img/photo/{name}.webp (AI로 만든 예시 · 실제 사진으로 교체 예정) — PHOTO 표의 크기·alt와 함께 사용
+   - 사진: assets/img/photo/{name}.webp — PHOTO 표의 크기·alt와 함께 사용
      BIZ[].hero {f 사진 이름, fx/fy 데스크톱 초점, mx 모바일 가로 초점} — 상세 첫 화면 + business.html 첫 화면 슬라이드
      BIZ[].gallery 현장 2장(사진 또는 3D 렌더, 히어로와 같은 사진이면 zoom/focus로 확대 디테일 컷)
-     → 실제 사진으로 바꿀 때는 같은 이름으로 덮어쓰고 초점 값만 맞추면 됩니다.
+     → 사진을 바꿀 때는 같은 이름으로 덮어쓰고 초점 값만 맞추면 됩니다.
    - 운영 사이트(4차): BIZ[].web — 사업마다 실제 사이트(새 창)와 첫 화면 캡처 assets/img/sites/{shot}(-720).webp.
      상세 페이지 '운영 사이트' 구간(#site) · 첫 화면 핵심 정보 띠 · 마무리 버튼, business.html 카드의 주소 알약에 씁니다.
      캡처를 새로 찍으면 같은 이름으로 덮어쓰고 WEB_DATE의 기준 날짜만 고치세요.
@@ -89,9 +89,8 @@ const ttl = (c) => c.title || '대표이사';
 const peopleSrcset = (name) => `${PEOPLE}/${name}-600.webp 600w, ${PEOPLE}/${name}.webp 900w`;
 // 지주회사가 직접 운영하는 사업(교육·유통)의 운영 회사
 const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '교육 · 그룹 경영 · 투자 및 성장 지원', field: '교육 · 그룹 경영 · 투자 및 성장 지원', ceo: '문원오', photo: 'leader-moon-wonoh', anchor: 'ceo' };
-const AI_NOTE = 'AI로 만든 예시 이미지 · 실제 사진으로 교체 예정';
 
-/* ---------- 이미지 (AI 생성 예시) ---------- */
+/* ---------- 이미지 ---------- */
 const PHOTO = {
   campus: { w: 1280, h: 950, alt: '밝은 강의실에서 강사가 성인 수강생들 앞에서 강의하는 모습' },
   studio: { w: 1280, h: 949, alt: '링라이트와 카메라 앞에서 온라인 강의를 촬영하는 모습' },
@@ -172,7 +171,7 @@ const BIZ = [
       { icon: 's-online', name: '온라인 클래스', desc: '시간과 장소에 얽매이지 않고 들을 수 있는 온라인 클래스로 실전 과정을 만납니다.' },
       { icon: 's-classroom', name: '교육장 연계', desc: '오프라인 수업과 모임은 DOOGO SPACE의 교육장과 연계해 진행합니다.' },
     ],
-    sceneLead: '온라인 클래스 촬영과 강의실 수업, 배움이 이루어지는 두 장면입니다. 실제 현장 사진으로 교체할 예정입니다.',
+    sceneLead: '온라인 클래스 촬영과 강의실 수업, 배움이 이루어지는 두 장면입니다.',
     relNav: '강사·과정',
   },
   {
@@ -200,7 +199,7 @@ const BIZ = [
       { icon: 's-print', name: '패키지·인쇄', desc: '제품에 맞는 용기·라벨·패키지를 정하고, 인쇄까지 이어서 준비합니다.' },
       { icon: 's-link', name: '제조 상담·연결 ‘두고커넥트’', desc: '무엇부터 준비할지 막막할 때, 상담으로 필요한 제조 과정을 정리하고 연결합니다.' },
     ],
-    sceneLead: '건강식품이 제품이 되는 제조 현장입니다. 실제 제품과 제조 과정 사진으로 교체할 예정입니다.',
+    sceneLead: '건강식품이 제품이 되는 제조 현장입니다.',
     relNav: '두고커넥트',
   },
   {
@@ -227,7 +226,7 @@ const BIZ = [
       { icon: 's-store', name: '상품 운영', desc: '상세페이지·가격·재고 등 판매에 필요한 운영을 맡아 브랜드가 꾸준히 팔리도록 관리합니다.' },
       { icon: 's-growth', name: '브랜드 성장과 EXIT 전략', desc: '판매 채널과 콘텐츠를 넓혀 브랜드를 키우고, EXIT까지 내다보는 성장 전략을 세웁니다.' },
     ],
-    sceneLead: '브랜드의 첫인상을 만드는 패키지와 디자인 작업 장면입니다. 실제 브랜드와 상품 자료로 교체할 예정입니다.',
+    sceneLead: '브랜드의 첫인상을 만드는 패키지와 디자인 작업 장면입니다.',
     relNav: '성장 단계',
   },
   {
@@ -256,7 +255,7 @@ const BIZ = [
       { icon: 's-live', name: '숏폼·라이브 콘텐츠 제작', desc: 'SNS용 숏폼 영상과 라이브 방송·실시간 강의를 준비해, 고객과 바로 만나는 콘텐츠를 만듭니다.' },
       { icon: 's-pen', name: '콘텐츠 기획·편집', desc: '무엇을 어떤 순서로 보여 줄지 기획하고, 촬영한 소스를 채널에 맞게 편집합니다.' },
     ],
-    sceneLead: '도심 야외 촬영처럼 브랜드 채널에 올릴 콘텐츠가 만들어지는 현장입니다. 실제 촬영 현장과 결과물로 교체할 예정입니다.',
+    sceneLead: '도심 야외 촬영처럼 브랜드 채널에 올릴 콘텐츠가 만들어지는 현장입니다.',
     relNav: '온드미디어',
   },
   {
@@ -283,7 +282,7 @@ const BIZ = [
       { icon: 's-pen', name: '광고 소재 기획', desc: '상품의 강점이 한눈에 보이도록 광고 문구와 이미지·영상 소재를 기획합니다.' },
       { icon: 's-chart', name: '성과 분석', desc: '광고 결과를 정리해 무엇이 효과가 있었는지 확인하고, 다음 운영에 반영합니다.' },
     ],
-    sceneLead: '광고 성과를 함께 보며 다음 운영을 정하는 회의 장면입니다. 공개 가능한 실제 운영 자료로 교체할 예정입니다.',
+    sceneLead: '광고 성과를 함께 보며 다음 운영을 정하는 회의 장면입니다.',
     relNav: '운영 채널',
   },
   {
@@ -308,7 +307,7 @@ const BIZ = [
       { icon: 's-truck', name: '상품 공급', desc: '농수산물·가공식품·건강식품 공급사의 상품을 모아 판매자에게 공급합니다.' },
       { icon: 'i-partner', name: '판매자 협력', desc: '온라인 위탁 판매자가 좋은 식품을 찾아 판매할 수 있도록 상품 정보와 판매를 함께 돕습니다.' },
     ],
-    sceneLead: '산지에서 선별된 상품이 판매자에게 가기까지의 현장입니다. 실제 산지와 상품 사진으로 교체할 예정입니다.',
+    sceneLead: '산지에서 선별된 상품이 판매자에게 가기까지의 현장입니다.',
     relNav: '도매 플랫폼',
   },
   {
@@ -329,8 +328,8 @@ const BIZ = [
     web: web({ name: 'NORA STAY', kind: 'DOOGO SPACE 숙박', host: 'norastay.com', url: NORA_URL, shot: 'space', close: 'NORA STAY 바로가기',
       desc: 'DOOGO SPACE의 숙박 서비스 NORA STAY의 사이트입니다. 숙소 소개와 예약 안내를 확인할 수 있습니다.' }),
     narration: '일하고, 머물고, 즐기는 하루를 한 공간에.',
-    // 첫 화면·현장 사진은 공간 사업 전체(공유오피스·교육장)를 보여 주는 예시 — NORA STAY를 가리키는 곳(관련 구간 카드 · 운영 사이트)은
-    // 실제 사이트(norastay.com) 첫 화면 캡처와 그 일부(sites/space-stay.webp)만 씁니다 (5차 · AI 바다 객실 사진은 실제와 달라 뺌)
+    // 첫 화면·현장 사진은 공간 사업 전체(공유오피스·교육장)를 보여 줌 — NORA STAY를 가리키는 곳(관련 구간 카드 · 운영 사이트)은
+    // 실제 사이트(norastay.com) 첫 화면 캡처와 그 일부(sites/space-stay.webp)만 씁니다 (5차 · 바다 객실 사진은 NORA STAY 숙소와 달라 뺌)
     hero: { f: 'cowork', fx: '50%', fy: '62%', mx: '64%' },
     thumb: 'space-office', // 이전·다음 사업 카드 썸네일 = 첫 화면 사진(공유오피스) — 기본 thumb-{slug}.webp(바다 객실)는 헤더 메뉴용으로 남김
     gallery: [
@@ -350,7 +349,7 @@ const BIZ = [
       { icon: 's-cup', en: 'F&amp;B', name: '즐기는 공간', items: ['카페', '라운지', '브런치', '케이터링'], soon: true,
         desc: 'DOOGO SPACE의 F&amp;B 사업부가 공간 안에서 즐기는 한 끼와 휴식을 준비하고 있습니다.' },
     ],
-    sceneLead: '함께 일하는 공유오피스와 함께 배우는 교육장, 두 가지 공간입니다. 실제 시설 사진으로 교체할 예정입니다.',
+    sceneLead: '함께 일하는 공유오피스와 함께 배우는 교육장, 두 가지 공간입니다.',
     relNav: '공간 안내',
   },
 ];
@@ -581,7 +580,6 @@ ${rail}
       <div class="bz-cards">
 ${cards}
       </div>
-      <p class="note bz-note" data-reveal>사업 사진은 AI로 만든 예시 이미지이며, 실제 사진으로 교체할 예정입니다.</p>
     </div>
   </section>
 
@@ -742,7 +740,7 @@ ${formats.map((f, i) => `        <li class="dt-row" data-reveal style="--d:${(i 
       </div>`,
   space: () => {
     // 2) 주요 서비스 카드와 겹치지 않게: 공간별 '이런 분께'와 연결 정보를 큰 번호 목록으로,
-    //    NORA STAY는 실제 사이트 첫 화면 속 숙소 사진(일부)을 쓴 카드로 (AI 이미지는 실제 숙소와 달라 쓰지 않음)
+    //    NORA STAY는 실제 사이트 첫 화면 속 숙소 사진(일부)을 쓴 카드로 (공간 사진은 NORA STAY 숙소와 달라 쓰지 않음)
     const spaces = [
       { en: 'Shared Office', ko: '공유오피스', use: '필요한 만큼 자리를 쓰며 함께 일하는 업무 공간', who: '작은 팀 · 1인 사업자' },
       { en: 'Virtual Office', ko: '비상주오피스', use: '상주하지 않아도 사업장 주소가 필요할 때', who: '1인 사업자' },
@@ -857,7 +855,7 @@ function buildDetail(b, idx) {
   //  (분야 라벨이 사업 분야 이름과 같아 칩이 없으면 is-group — 오른쪽 여백을 맞추고 앞에 점 표시)
   const corpPill = `<a class="dt-corp${c.direct ? ' is-hold' : corpChip(c, b.area) ? '' : ' is-group'}" href="about.html#structure"><span class="dt-corp-k">운영</span><span class="dt-corp-n en">${c.en}</span>${corpChip(c, b.area) ? `<span class="dt-corp-type">${corpChip(c, b.area)}</span>` : ''}<span class="sr-only"> — 그룹 구조 보기</span></a>`;
 
-  // 현장: 사진 2장 또는 사진 + 브랜드 3D 렌더 (모두 AI로 만든 예시)
+  // 현장: 사진 2장 또는 사진 + 브랜드 3D 렌더
   //  히어로와 같은 사진을 큰 칸에 쓸 때는 zoom/focus로 확대한 '디테일 컷'으로 보여 줘 반복을 피함
   const shotStyle = (g) => {
     const st = [g.pos && `object-position:${g.pos}`, g.zoom && `--z:${g.zoom};--zo:${g.focus || '50% 50%'}`].filter(Boolean).join(';');
@@ -866,7 +864,6 @@ function buildDetail(b, idx) {
   const shots = b.gallery.map((g, i) => `        <figure class="dt-shot dt-shot--${g.kind}" data-reveal style="--d:${(i * 0.14).toFixed(2)}s">
           <div class="dt-shot-media"><img src="${g.src}" alt="${g.alt}" width="${g.w}" height="${g.h}" loading="lazy" decoding="async"${shotStyle(g)}></div>
           <span class="dt-shot-label"><span class="en">${String(i + 1).padStart(2, '0')}</span>${g.label}</span>
-          <figcaption>${g.kind === 'render' ? 'AI로 만든 브랜드 3D 이미지' : AI_NOTE}</figcaption>
         </figure>`).join('\n');
 
   // 담당 리더: 리더 프로필 카드(.pcard · 생김새는 base.css '15. 리더 프로필 카드 공통') 가로형 한 장
@@ -924,7 +921,6 @@ ${c.direct ? `              <div><dt>직접 운영</dt><dd class="dt-dd-chips"><
         <div class="dt-frame-media" data-parallax>
           <img class="dt-frame-img" src="assets/img/photo/${h.f}.webp" alt="${hp.alt}" width="${hp.w}" height="${hp.h}" fetchpriority="high" decoding="async">
         </div>
-        <span class="dt-frame-badge">AI로 만든 예시 이미지</span>
         <div class="dt-frame-ctrl">
           <button class="dt-film-btn" type="button" data-film-open><span class="play-ring">${ico('i-play', '')}</span><span>그룹 영상 보기</span></button>
         </div>

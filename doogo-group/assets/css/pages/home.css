@@ -890,8 +890,7 @@ html.motion-off .gp-card:hover .gp-win, html.motion-off .gp-card:hover .gp-shot 
 .cf-dots button:hover::before { background: rgba(11, 27, 51, .45); }
 .cf-dots button[aria-current="true"]::before { width: 28px; background: var(--blue); }
 .cf:not(.is-ready) .cf-ctrl { display: none; }
-.news-notes { display: grid; justify-items: center; gap: 2px; margin-top: 28px; text-align: center; }
-.intro .note, .leaders .note, .newsroom .note { color: #687286; }
+.intro .note, .leaders .note { color: #687286; }
 
 @media (max-width: 1024px) {
   .cf { --cf-w: 380px; }
@@ -903,7 +902,6 @@ html.motion-off .gp-card:hover .gp-win, html.motion-off .gp-card:hover .gp-shot 
   .cf-body { padding: 16px 18px 16px; gap: 8px; }
   .cf-title { font-size: 1.04rem; }
   .cf-btn { width: 46px; height: 46px; }
-  .news-notes { justify-items: start; text-align: left; }
 }
 
 /* =========================================================
