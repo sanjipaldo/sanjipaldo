@@ -338,19 +338,22 @@
     kakao: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="1.5" width="21" height="21" rx="6" fill="#fee500"/><path d="M12 6.2c-3.6 0-6.4 2.2-6.4 5 0 1.8 1.2 3.4 3 4.3l-.6 2.3 2.6-1.7c.5.1.9.1 1.4.1 3.6 0 6.4-2.2 6.4-5s-2.8-5-6.4-5z" fill="#3c1e1e"/></svg>'
   };
   const SILHOUETTE = '<svg class="hm-tc-ph" viewBox="0 0 200 250" aria-hidden="true"><circle cx="100" cy="92" r="44"/><path d="M18 250c4-58 40-92 82-92s78 34 82 92Z"/></svg>';
-  // doogo 심볼(링 · 기둥 · 재생 표시)을 크게 — 기능 칸 휴대폰 뒤 배경. 페이지에 한 번만 정의하고 <use> 로 (여러 겹 = 입체 두께)
+  // doogo 심볼(링 · 기둥 · 재생 표시)을 크게 — 기능 칸 휴대폰 뒤 · 강사 카드 뒤 배경. 페이지에 한 번만 정의하고 <use> 로 (여러 겹 = 입체 두께)
   const DSYM_DEFS = '<svg class="hm-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>' +
     '<linearGradient id="hm-dsym-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8378"/><stop offset=".5" stop-color="#f94239"/><stop offset="1" stop-color="#e0251a"/></linearGradient>' +
     '<symbol id="hm-dsym" viewBox="0 0 364 380"><path fill-rule="evenodd" d="M148 88a145 145 0 1 0 .01 0Zm0 67a78 78 0 1 1-.01 0Z"/><rect x="232" width="58" height="272" rx="29"/><path d="M300 148L350 178Q364 190 350 202L300 232Z"/></symbol>' +
     "</defs></svg>";
+  const DSYM = '<svg class="hm-tc-sym" viewBox="-4 -4 384 400" aria-hidden="true">' +
+    [6, 5, 4, 3, 2, 1].map((k) => '<use href="#hm-dsym" class="hm-tc-ex" x="' + (k * 1.6).toFixed(1) + '" y="' + (k * 2).toFixed(1) + '"/>').join("") +
+    '<use href="#hm-dsym" class="hm-tc-face"/></svg>';
   function classList(list) {
     // 강사 유튜브 · 인스타그램 · 카카오톡: 서비스 마크 + 이름표 (무엇으로 가는 링크인지 바로 보이게)
     const sns = (x) => [["youtube", x.yt, "강사 유튜브"], ["instagram", x.ig, "인스타그램"], ["kakao", x.kakao, "카카오톡 채널"]]
       .filter((v) => /^https?:\/\//i.test(v[1]))
       .map((v) => '<a class="hm-sns hm-sns-' + v[0] + '" href="' + esc(v[1]) + '" target="_blank" rel="noopener" aria-label="' + esc(x.who) + " " + v[2] + ' (새 창)">' + SNS[v[0]] + "<span>" + v[2] + "</span>" + icon("arrowUpRight", "xs") + "</a>").join("");
     const card = (x, i) => {
-      // 장식 없이 밝은 회색 카드 안에 강사만 (사진이 없으면 회색 실루엣)
-      const photo = '<span class="hm-tc-frame">' + (x.photo ? "" : SILHOUETTE) + "</span>" +
+      // 액자(연한 바탕 + 큰 빨간 3D doogo 심볼) 위로 누끼 사진(허리 위까지)의 머리가 살짝 튀어나오게
+      const photo = '<span class="hm-tc-frame">' + DSYM + (x.photo ? "" : SILHOUETTE) + "</span>" +
         (x.photo ? '<span class="hm-tc-cut"><img src="' + esc(x.photo) + '" alt="' + esc(x.who) + ' 강사" decoding="async"></span>' : "") +
         '<span class="hm-tc-tag">' + x.weeks + "주 과정</span>";
       return '<article class="hm-tc hm-reveal" style="--i:' + i + '">' +
