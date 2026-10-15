@@ -839,7 +839,7 @@ html.legal-open { overflow: hidden; }
   .mega-grid { gap: 16px; }
   .mega-item { gap: 12px; padding: 12px; border-radius: 18px; }
   .mega-thumb { aspect-ratio: 4 / 3.1; border-radius: 14px; }
-  .mega-area { font-size: 1.12rem; gap: 6px; white-space: normal; letter-spacing: -.03em; }
+  .mega-area { font-size: 1.08rem; gap: 6px; white-space: nowrap; letter-spacing: -.045em; }
   .mega-area .num { font-size: .8rem; }
   .mega-brand { font-size: .8rem; margin-top: -4px; letter-spacing: .03em; }
   .mega-desc { font-size: .92rem; line-height: 1.55; color: var(--ink-2); }
@@ -849,7 +849,7 @@ html.legal-open { overflow: hidden; }
 @media (min-width: 1025px) and (max-width: 1280px) {
   .mega-grid { gap: 10px; }
   .mega-item { padding: 8px; }
-  .mega-area { font-size: 1rem; }
+  .mega-area { font-size: .94rem; letter-spacing: -.05em; gap: 4px; }
   .mega-desc { font-size: .85rem; }
   .mega-brand, .mega-corp { font-size: .76rem; }
 }

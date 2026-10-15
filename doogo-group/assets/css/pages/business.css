@@ -179,6 +179,7 @@
 .bz-rail.is-in .bz-rail-dot { border-color: var(--blue); }
 .bz-rail strong { font-size: .98rem; font-weight: 700; letter-spacing: -.03em; line-height: 1.35; transition: color .25s var(--ease); }
 .bz-rail-en { font-size: .72rem; font-weight: 600; letter-spacing: .12em; color: var(--muted); }
+.bz-rail-en.is-long { letter-spacing: .03em; } /* 공간: OFFICE·STAY·F&B — 긴 라벨이 한 줄에 들어가게 */
 /* 이 단계를 맡은 사업 (카드 번호 01–07과 같은 체계) */
 .bz-rail-biz { margin-top: 10px; display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--ivory); color: var(--ink-2); font-size: .8rem; font-weight: 700; white-space: nowrap; transition: background-color .25s var(--ease), color .25s var(--ease); }
 .bz-rail-biz .en { font-size: .74rem; color: var(--blue); transition: color .25s var(--ease); }
@@ -296,7 +297,7 @@
 .bz-svcs li { display: flex; align-items: flex-start; gap: 10px; font-size: .97rem; font-weight: 600; line-height: 1.45; color: var(--ink-2); }
 .bz-svcs .ico { flex: none; width: 20px; height: 20px; padding: 3px; margin-top: 0; border-radius: 50%; background: var(--blue); color: #fff; }
 /* 공간(DOOGO SPACE) 주요 서비스: 세 갈래 WORK · STAY · F&B 라벨 + '준비 중' 표시 */
-.bz-svcs .svc-pillar { display: inline-block; min-width: 3.4em; margin-right: 8px; font-size: .74rem; font-weight: 700; letter-spacing: .1em; color: var(--blue); vertical-align: .08em; }
+.bz-svcs .svc-pillar { display: block; margin-bottom: 1px; font-size: .7rem; font-weight: 700; letter-spacing: .14em; line-height: 1.5; color: var(--blue); }
 .soon-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; margin-left: 6px; border-radius: 6px; border: 1px dashed rgba(10, 93, 226, .45); background: rgba(10, 93, 226, .06); color: var(--blue-700, #0a4fc0); font-size: .7rem; font-weight: 700; letter-spacing: 0; line-height: 1; white-space: nowrap; vertical-align: .12em; }
 .bz-for-list { display: grid; gap: 8px; }
 .bz-for-list li { position: relative; padding-left: 14px; font-size: .94rem; line-height: 1.5; color: var(--ink-2); }

@@ -319,7 +319,7 @@ const BIZ = [
     services: [
       `<b class="svc-pillar en">WORK</b>공유오피스 · 비상주오피스 · 미팅룸 · 교육장`,
       `<b class="svc-pillar en">STAY</b>NORA STAY · 숙박 · 장단기 체류`,
-      `<b class="svc-pillar en">F&amp;B</b>카페 · 라운지 · 브런치 · 케이터링 ${SOON}`,
+      `<b class="svc-pillar en">F&amp;B${SOON}</b>카페 · 라운지 · 브런치 · 케이터링`,
     ],
     targets: ['작은 팀·1인 사업자', '교육·행사 주최자', '여행·출장·장단기 체류객'],
     ask: '공간 상담하기',
@@ -361,7 +361,7 @@ const CHAIN = [
   { ko: '교육·인재 육성', en: 'EDUCATION', slug: 'campus' },
   { ko: '마케팅', en: 'MARKETING', slug: 'ad' },
   { ko: '판매·유통', en: 'SALES', slug: 'food' },
-  { ko: '공간·라이프스타일', en: 'OFFICE · STAY · F&amp;B', slug: 'space' },
+  { ko: '공간·라이프스타일', en: 'OFFICE·STAY·<wbr>F&amp;B', slug: 'space', long: true },
 ];
 
 /* ---------- 공통 조각 ---------- */
@@ -458,7 +458,7 @@ function buildList() {
 
   const rail = CHAIN.map((c, i) => {
     const b = BIZ.find(x => x.slug === c.slug);
-    return `          <li style="--i:${i}"><a href="business-${c.slug}.html"><span class="bz-rail-dot" aria-hidden="true"></span><strong>${c.ko}</strong><span class="bz-rail-en en">${c.en}</span><span class="bz-rail-biz"><span class="en">${b.num}</span><span class="bz-rail-biz-t">${glue(b.area, ico('i-arrow-ur', ''))}</span></span><span class="sr-only"> — ${b.en} 상세 보기</span></a></li>`;
+    return `          <li style="--i:${i}"><a href="business-${c.slug}.html"><span class="bz-rail-dot" aria-hidden="true"></span><strong>${c.ko}</strong><span class="bz-rail-en en${c.long ? ' is-long' : ''}">${c.en}</span><span class="bz-rail-biz"><span class="en">${b.num}</span><span class="bz-rail-biz-t">${glue(b.area, ico('i-arrow-ur', ''))}</span></span><span class="sr-only"> — ${b.en} 상세 보기</span></a></li>`;
   }).join('\n');
 
   const subnav = BIZ.map(b => `<li><a href="#${b.slug}"><span class="en">${b.num}</span> ${b.area}</a></li>`).join('');
