@@ -1,7 +1,7 @@
 /* =========================================================
    DOOGO GROUP — business.js (사업영역 목록)
    첫 화면 7개 사업 사진 슬라이드(바로가기 hover/focus 시 그 사업 사진으로 고정) ·
-   카드 사진 패럴랙스 · VIEW 커서 · 서브 내비 보정
+   가치사슬 3D 계단(14차) · 7개 사업 탭(14차 · 주소 #slug 와 맞춤) · 소개 화면 사진 패럴랙스 · VIEW 커서
    움직임 정책(site.js): OS의 '애니메이션 줄이기' 설정과 관계없이 재생하고,
    사용자가 '움직임 멈추기'를 고른 경우(window.DOOGO.motionOff())만 멈춥니다 — 'doogo:motion' 이벤트로 바로 전환.
    패럴랙스만 OS 설정이 켜진 기기(html.soft-motion)에서 끕니다.
@@ -15,6 +15,8 @@
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
   var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
+  var hasIO = 'IntersectionObserver' in window;
+  var parKick = function () {}; // 소개 화면이 바뀌면 패럴랙스 위치를 다시 (4)에서 채움)
 
   /* ---------- 1) 첫 화면: 7개 사업 사진 슬라이드 ----------
      5초마다 다음 사업 사진으로 크로스페이드(+느린 줌, business.css). 지금 보이는 사업은 바로가기 카드에 표시.
@@ -157,7 +159,7 @@
     jump.addEventListener('focusout', function (e) { if (!jump.contains(e.relatedTarget) && !(fine && jump.matches(':hover'))) unpin(); });
   }
 
-  /* ---------- 3) 카드 사진 VIEW 커서 ---------- */
+  /* ---------- 3) 소개 화면 사진 VIEW 커서 ---------- */
   if (fine) {
     $$('.bz-media').forEach(function (m) {
       var cur = $('.bz-cursor', m);
@@ -180,7 +182,7 @@
     });
   }
 
-  /* ---------- 4) 카드 사진 패럴랙스 (움직임 멈추기 · OS 애니메이션 줄이기 기기에서는 끔) ---------- */
+  /* ---------- 4) 소개 화면 사진 패럴랙스 (움직임 멈추기 · OS 애니메이션 줄이기 기기에서는 끔) ---------- */
   var par = $$('[data-parallax]');
   if (par.length) {
     var ticking = false;
@@ -199,21 +201,363 @@
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
     document.addEventListener('doogo:motion', onScroll);
+    parKick = onScroll;
     update();
   }
 
 
-  /* ---------- 서브 내비: 첫 구간보다 위로 올라가면 현재 표시 해제 ---------- */
-  var subLinks = Array.prototype.slice.call(document.querySelectorAll('.subnav a[href^="#"]'));
-  var firstSec = subLinks.length ? document.querySelector(subLinks[0].getAttribute('href')) : null;
-  if (firstSec) {
-    var subTick = false;
-    var clearTop = function () {
-      subTick = false;
-      if (firstSec.getBoundingClientRect().top > (window.innerHeight || 800) * 0.6) {
-        subLinks.forEach(function (a) { a.classList.remove('is-active'); a.removeAttribute('aria-current'); });
+  /* ---------- 2) 가치사슬 — 3D 계단 (14차 · 회사 소개 가치사슬과 같은 동작) ----------
+     화면에 들어오면: 카메라가 비스듬한 각도에서 제자리로 → 기둥이 차례로 솟음 → 빛 줄기가 계단 윤곽을 따라 오르며 기둥마다 불을 켬
+     (위 계기판 숫자 01 → 07 → EXIT) → 정상(EXIT)이 번쩍이고 빛기둥 · 바닥 파동. 그 뒤로는 빛 하나가 줄기를 따라 계속 흐르며
+     지나가는 기둥을 비춥니다(화면에 보일 때만). 마우스를 올리면 무대가 살짝 기울어집니다(html.soft-motion 이면 생략).
+     기둥 하나하나는 그 단계를 맡은 사업 상세 페이지 링크입니다(a.bz-vc-step).
+     움직임 멈추기 · JS 없음: 처음부터 최종 상태(모두 켜짐 · 줄기 그려짐). */
+  var chain = $('[data-chain]');
+  if (chain) (function () {
+    var scene = $('[data-chain-scene]', chain);
+    var svg = $('[data-chain-beam]', chain);
+    var meter = $('.bz-vc-meter', chain);
+    var meterN = $('[data-chain-n]', chain);
+    var meterT = $('[data-chain-t]', chain);
+    if (!scene || !svg) return;
+    var pHalo = $('.bz-vc-beam-halo', svg), pBase = $('.bz-vc-beam-base', svg), pLine = $('.bz-vc-beam-line', svg);
+    var pGlow = $('.bz-vc-beam-glow', svg), pCore = $('.bz-vc-beam-core', svg);
+    var steps = $$('.bz-vc-step', chain).concat($$('.bz-vc-goal', chain));
+    var goal = steps[steps.length - 1];
+    var labels = steps.map(function (el, i) {
+      return { n: i < steps.length - 1 ? ('0' + (i + 1)).slice(-2) : 'EXIT', t: i < steps.length - 1 ? (el.getAttribute('data-t') || '') : 'Brand Growth' };
+    });
+    var geo = { L: 0, at: [], mode: '' };
+    var state = 'idle', vis = false, timers = [], raf = 0, anims = [];
+    var f1 = function (v) { return (Math.round(v * 10) / 10).toString(); };
+    var offIn = function (el) { var x = 0, y = 0; while (el && el !== scene) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; } return { x: x, y: y }; };
+
+    // 빛 줄기 경로: 가로 계단이면 기둥 윗변 · 다음 기둥 왼변을 따라 오르는 윤곽, 세로 계단이면 왼쪽 줄기(마디 → 마디)
+    function layout() {
+      var W = scene.offsetWidth, H = scene.offsetHeight;
+      if (!W || !H) return false;
+      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+      var rows = window.matchMedia('(max-width: 1100px)').matches;
+      var d = '', L = 0, at = [], px = 0, py = 0;
+      var go = function (x, y) { L += Math.abs(x - px) + Math.abs(y - py); d += ' L' + f1(x) + ' ' + f1(y); px = x; py = y; };
+      var box = steps.map(function (el) { var o = offIn(el); return { x: o.x, y: o.y, w: el.offsetWidth, h: el.offsetHeight }; });
+      if (!rows) {
+        px = box[0].x; py = box[0].y; d = 'M' + f1(px) + ' ' + f1(py);
+        box.forEach(function (b, i) {
+          if (i) { go(b.x, py); go(b.x, b.y); }
+          at.push(L);
+          if (i < box.length - 1) go(b.x + b.w, b.y);
+          else go(b.x + b.w / 2, b.y);
+        });
+      } else {
+        var cs = getComputedStyle(steps[0], '::before');
+        var sx = box[0].x + (parseFloat(cs.left) || -24) + (parseFloat(cs.width) || 11) / 2;
+        px = sx; py = box[0].y + box[0].h / 2; d = 'M' + f1(px) + ' ' + f1(py);
+        box.forEach(function (b) { go(sx, b.y + b.h / 2); at.push(L); });
       }
+      geo.L = Math.max(1, L); geo.at = at; geo.mode = rows ? 'rows' : 'cols';
+      [pHalo, pBase, pLine, pGlow, pCore].forEach(function (p) { if (p) p.setAttribute('d', d); });
+      pLine.style.strokeDasharray = f1(geo.L + 2) + ' ' + f1(geo.L + 2);
+      if (state === 'idle' || state === 'armed') pLine.style.strokeDashoffset = f1(geo.L + 2);
+      else if (state === 'done') pLine.style.strokeDashoffset = '0';
+      return true;
+    }
+
+    var setMeter = function (i, tick) {
+      if (!meterN || !labels[i]) return;
+      if (meter) meter.style.setProperty('--p', i + 1);
+      if (meterN.textContent === labels[i].n) return;
+      meterN.textContent = labels[i].n;
+      if (meterT) meterT.textContent = labels[i].t;
+      if (tick && meter) { meter.classList.remove('is-tick'); void meter.offsetWidth; meter.classList.add('is-tick'); }
     };
-    window.addEventListener('scroll', function () { if (!subTick) { subTick = true; requestAnimationFrame(clearTop); } }, { passive: true });
-  }
+    var light = function (i) { steps[i].classList.add('is-lit'); };
+
+    // 최종 상태 (움직임 멈추기 · IO 없음)
+    function finishAll() {
+      timers.forEach(clearTimeout); timers = [];
+      cancelAnimationFrame(raf); raf = 0;
+      steps.forEach(function (el, i) { light(i); });
+      chain.classList.remove('is-armed', 'is-on');
+      state = 'done';
+      layout();
+      pLine.style.strokeDashoffset = '0';
+      setMeter(steps.length - 1, false);
+      syncLive();
+    }
+
+    // 등장
+    function play() {
+      if (state !== 'armed') return;
+      if (motionOff()) { finishAll(); return; }
+      if (!layout()) return;
+      state = 'rising';
+      chain.classList.add('is-on');
+      timers.push(setTimeout(draw, softMotion() ? 900 : 1500));
+    }
+    function draw() {
+      state = 'drawing';
+      var t0 = 0, D = 2300, lit = -1;
+      var ease = function (p) { return p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; };
+      var step = function (ts) {
+        if (!t0) t0 = ts;
+        var p = Math.min(1, (ts - t0) / D), s = ease(p) * geo.L;
+        pLine.style.strokeDashoffset = f1(geo.L + 2 - s);
+        while (lit + 1 < steps.length && geo.at[lit + 1] <= s + 1) { lit++; if (lit < steps.length - 1) { light(lit); setMeter(lit, true); } }
+        if (p < 1) { raf = requestAnimationFrame(step); return; }
+        raf = 0;
+        pLine.style.strokeDashoffset = '0';
+        light(steps.length - 1); setMeter(steps.length - 1, true);
+        goal.classList.add('is-peak');
+        chain.classList.add('is-done');
+        timers.push(setTimeout(function () { goal.classList.remove('is-peak'); }, 1200));
+        state = 'done';
+        timers.push(setTimeout(syncLive, 700));
+      };
+      raf = requestAnimationFrame(step);
+    }
+
+    // 흐르는 빛: 혜성(빛 머리 + 번짐)이 줄기를 따라 오르고, 지나가는 기둥 앞면이 번쩍
+    function stopFx() { anims.forEach(function (a) { try { a.cancel(); } catch (e) {} }); anims = []; }
+    function startFx() {
+      stopFx();
+      if (!pCore.animate || !geo.L) return;
+      var v = geo.mode === 'rows' ? .32 : .62;          // px/ms
+      var run = geo.L / v, T = run + 1600, C = Math.min(140, geo.L * .2);
+      var kf = [
+        { strokeDashoffset: C, offset: 0 },
+        { strokeDashoffset: -geo.L, offset: run / T },
+        { strokeDashoffset: -geo.L, offset: 1 }
+      ];
+      [pGlow, pCore].forEach(function (p, k) {
+        var c = k ? C * .55 : C;
+        p.style.strokeDasharray = f1(c) + ' ' + f1(geo.L + C + 10);
+        anims.push(p.animate(kf, { duration: T, iterations: Infinity, easing: 'linear' }));
+      });
+      steps.forEach(function (el, i) {
+        var fl = el.querySelector('.bz-cf-flash');
+        if (!fl) return;
+        var a0 = Math.min(.97, geo.at[i] / v / T);
+        anims.push(fl.animate([
+          { opacity: 0, offset: 0 },
+          { opacity: 0, offset: a0 },
+          { opacity: i === steps.length - 1 ? 1 : .8, offset: Math.min(.98, a0 + 140 / T) },
+          { opacity: 0, offset: Math.min(.99, a0 + 1100 / T) },
+          { opacity: 0, offset: 1 }
+        ], { duration: T, iterations: Infinity, easing: 'linear' }));
+      });
+    }
+    function syncLive() {
+      var live = vis && state === 'done' && !motionOff();
+      chain.classList.toggle('is-live', live);
+      if (motionOff()) { stopFx(); return; }
+      if (live) { if (!anims.length) startFx(); else anims.forEach(function (a) { a.play(); }); }
+      else anims.forEach(function (a) { a.pause(); });
+    }
+
+    // 마우스 기울기 (화면에 보일 때 · 마우스만)
+    var tx = 0, ty = 0, gx = 0, gy = 0, tRaf = 0;
+    var tiltOk = function () { return !motionOff() && !softMotion() && window.matchMedia('(hover: hover) and (pointer: fine)').matches; };
+    function tilt() {
+      tx += (gx - tx) * .08; ty += (gy - ty) * .08;
+      scene.style.setProperty('--tx', tx.toFixed(2) + 'deg');
+      scene.style.setProperty('--ty', ty.toFixed(2) + 'deg');
+      tRaf = (Math.abs(gx - tx) > .01 || Math.abs(gy - ty) > .01) ? requestAnimationFrame(tilt) : 0;
+    }
+    var kick = function () { if (!tRaf) tRaf = requestAnimationFrame(tilt); };
+    chain.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse' || !tiltOk()) return;
+      var r = chain.getBoundingClientRect();
+      gy = ((e.clientX - r.left) / r.width - .5) * 12;   // 좌우 → rotateY
+      gx = ((e.clientY - r.top) / r.height - .5) * -7;   // 위아래 → rotateX
+      kick();
+    });
+    chain.addEventListener('pointerleave', function () { gx = 0; gy = 0; kick(); });
+
+    // 시작
+    var relayout = function () { // 크기 · 배치가 바뀌면 경로를 다시 그리고, 흐르던 빛도 새 길이로
+      if (!layout()) return;
+      if (state === 'done' && anims.length) { stopFx(); syncLive(); }
+    };
+    if (!hasIO || motionOff()) finishAll();
+    else { chain.classList.add('is-armed'); state = 'armed'; setMeter(0, false); layout(); }
+    if ('ResizeObserver' in window) new ResizeObserver(function () { relayout(); }).observe(scene);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+    if (hasIO) {
+      var playIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { if (en.isIntersecting && state === 'armed') { play(); if (state !== 'armed') playIO.disconnect(); } });
+      }, { rootMargin: '0px 0px -22% 0px', threshold: 0.15 });
+      playIO.observe(chain);
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          vis = en.isIntersecting;
+          chain.classList.toggle('is-vis', vis);
+          if (!vis) { gx = gy = 0; kick(); }
+          syncLive();
+        });
+      }, { rootMargin: '80px 0px' }).observe(chain);
+    }
+    document.addEventListener('doogo:motion', function () {
+      if (motionOff()) { stopFx(); finishAll(); gx = gy = tx = ty = 0; scene.style.removeProperty('--tx'); scene.style.removeProperty('--ty'); }
+      syncLive();
+    });
+  })();
+
+  /* ---------- 5) 7개 사업 탭 (14차) ----------
+     탭(role=tab · #slug 링크) 하나를 고르면 그 사업의 소개 화면(role=tabpanel · id=slug) 하나만 보입니다.
+     · 왼쪽/오른쪽 화살표 · Home · End 로 옮기면 바로 고름(자동 활성화), Space · Enter 도 고름
+     · 주소 #slug 와 맞춤: business.html#bio 처럼 들어오거나 주소가 바뀌면 그 탭을 고르고 탭 줄까지 내려감, 고르면 주소도 바꿈(기록은 쌓지 않음)
+     · 페이지 안 다른 #slug 링크(첫 화면 사업 바로가기)도 같은 방식으로 탭을 고름
+     · 탭 줄이 가로로 넘치면(휴대폰) 고른 탭을 가운데로 넘김 · 고른 탭 뒤 남색 알약이 미끄러져 옮겨 감
+     · 소개 화면이 바뀔 때 사진이 열리며 가라앉고 글이 차례로 떠오름(.is-enter) — 움직임 멈추기면 바로 바뀜 */
+  var tablist = $('.bz-tabs[role="tablist"]');
+  if (tablist) (function () {
+    var tabs = $$('[role="tab"]', tablist);
+    var panels = tabs.map(function (t) { return document.getElementById(t.getAttribute('aria-controls')); });
+    if (panels.some(function (p) { return !p; })) return;
+    var ids = panels.map(function (p) { return p.id; });
+    var ink = $('.bz-tab-ink', tablist);
+    var bar = $('.bz-tabbar');
+    var spot = $('.bz-tabs-spot');
+    var cur = -1;
+    var headerH = function () { return parseFloat(getComputedStyle(doc).getPropertyValue('--header-h')) || 84; };
+    var idxOf = function (hash) { try { hash = decodeURIComponent(hash || ''); } catch (e) {} return ids.indexOf(hash.replace(/^#/, '')); };
+
+    function placeInk(instant) {
+      if (!ink || cur < 0) return;
+      var t = tabs[cur];
+      if (instant) ink.classList.remove('is-ready');
+      ink.style.setProperty('--x', t.offsetLeft + 'px');
+      ink.style.setProperty('--w', t.offsetWidth + 'px');
+      tablist.classList.add('has-ink');
+      if (instant) { void ink.offsetWidth; ink.classList.add('is-ready'); }
+    }
+    function edge() {
+      var max = tablist.scrollWidth - tablist.clientWidth;
+      tablist.classList.toggle('is-scrollable', max > 2);
+      tablist.classList.toggle('is-start', tablist.scrollLeft <= 2);
+      tablist.classList.toggle('is-end', tablist.scrollLeft >= max - 2);
+    }
+    function center(smooth) {
+      var max = tablist.scrollWidth - tablist.clientWidth;
+      if (max <= 2 || cur < 0) return;
+      var t = tabs[cur];
+      var left = clamp(t.offsetLeft - (tablist.clientWidth - t.offsetWidth) / 2, 0, max);
+      try { tablist.scrollTo({ left: left, behavior: smooth ? 'smooth' : 'auto' }); } catch (e) { tablist.scrollLeft = left; }
+    }
+    // 탭 줄이 헤더 바로 아래 오는 위치(= 소개 화면 맨 위가 보이는 위치)로
+    function toList(smooth, onlyIfPast) {
+      if (!spot) return;
+      var y = Math.max(0, spot.getBoundingClientRect().top + window.pageYOffset - headerH());
+      if (onlyIfPast && window.pageYOffset <= y + 2) return;
+      var b = smooth && !motionOff() ? 'smooth' : 'auto';
+      try { window.scrollTo({ top: y, behavior: b }); } catch (e) { window.scrollTo(0, y); }
+    }
+
+    function select(i, o) {
+      o = o || {};
+      if (i < 0 || i >= tabs.length) return;
+      var prev = cur, changed = i !== cur;
+      cur = i;
+      tabs.forEach(function (t, j) {
+        var on = j === i;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        t.classList.toggle('is-on', on);
+        panels[j].classList.toggle('is-on', on);
+        panels[j].hidden = !on;
+      });
+      placeInk(prev < 0 || motionOff());
+      center(prev >= 0 && !motionOff());
+      if (changed && prev >= 0) {
+        var p = panels[i];
+        p.classList.remove('is-enter');
+        if (!motionOff()) {
+          void p.offsetWidth; p.classList.add('is-enter');
+          clearTimeout(p._bzT); p._bzT = setTimeout(function () { p.classList.remove('is-enter'); }, 1800);
+        }
+      }
+      if (o.hash && ('#' + ids[i]) !== location.hash) { try { history.replaceState(history.state, '', '#' + ids[i]); } catch (e) {} }
+      if (o.focus) { try { tabs[i].focus({ preventScroll: true }); } catch (e) { tabs[i].focus(); } }
+      if (o.scroll) toList(o.scroll === 'smooth', o.onlyIfPast);
+      parKick();
+    }
+
+    // 클릭 · 키보드
+    tablist.addEventListener('click', function (e) {
+      var t = e.target.closest('[role="tab"]');
+      if (!t) return;
+      e.preventDefault();
+      select(tabs.indexOf(t), { hash: true, scroll: 'smooth', onlyIfPast: true });
+    });
+    tablist.addEventListener('keydown', function (e) {
+      var i = tabs.indexOf(document.activeElement);
+      if (i < 0) return;
+      var n = tabs.length, to = -1;
+      if (e.key === 'ArrowRight') to = (i + 1) % n;
+      else if (e.key === 'ArrowLeft') to = (i - 1 + n) % n;
+      else if (e.key === 'Home') to = 0;
+      else if (e.key === 'End') to = n - 1;
+      else if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') to = i;
+      if (to < 0) return;
+      e.preventDefault();
+      select(to, { hash: true, focus: true, scroll: 'smooth', onlyIfPast: true });
+    });
+    tablist.addEventListener('scroll', edge, { passive: true });
+
+    // '다음 사업' 버튼
+    $$('.bz-next').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        select(ids.indexOf(btn.getAttribute('data-next')), { hash: true, focus: true, scroll: 'smooth' });
+      });
+    });
+
+    // 페이지 안의 다른 #slug 링크(첫 화면 사업 바로가기 등)
+    document.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var a = e.target.closest('a[href^="#"]');
+      if (!a || tablist.contains(a)) return;
+      var i = idxOf(a.getAttribute('href'));
+      if (i < 0) return;
+      e.preventDefault();
+      select(i, { hash: true, scroll: 'smooth' });
+      try { panels[i].focus({ preventScroll: true }); } catch (err) {}
+    });
+    // 주소의 #slug 가 바뀌면(뒤로 가기 · 직접 입력)
+    window.addEventListener('hashchange', function () {
+      var i = idxOf(location.hash);
+      if (i >= 0) select(i, { scroll: 'auto' });
+    });
+
+    // 처음: 주소에 #slug 가 있으면 그 탭을 고르고 탭 줄까지 (글꼴·사진 자리 잡힌 뒤 한 번 더 맞춤)
+    var start = idxOf(location.hash);
+    select(start >= 0 ? start : 0);
+    if (start >= 0) {
+      var moved = false;
+      ['wheel', 'touchmove', 'keydown'].forEach(function (t) { window.addEventListener(t, function () { moved = true; }, { once: true, passive: true }); });
+      var land = function () { if (!moved) toList(false); };
+      requestAnimationFrame(land);
+      if (document.readyState === 'complete') setTimeout(land, 60); else window.addEventListener('load', function () { setTimeout(land, 60); }, { once: true });
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(land);
+    }
+
+    // 알약 위치 · 넘침 표시는 글꼴이 바뀌거나 폭이 바뀌면 다시
+    var refit = function () { placeInk(true); edge(); };
+    if ('ResizeObserver' in window) new ResizeObserver(refit).observe(tablist);
+    else window.addEventListener('resize', refit);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { refit(); center(false); });
+    edge();
+
+    // 탭 줄이 붙어 있는 동안 아래 그림자
+    if (bar && spot) {
+      var sTick = false;
+      var stuck = function () {
+        sTick = false;
+        var top = parseFloat(getComputedStyle(bar).top) || 0;
+        bar.classList.toggle('is-stuck', spot.getBoundingClientRect().top < top - 1 && bar.getBoundingClientRect().top <= top + 1);
+      };
+      window.addEventListener('scroll', function () { if (!sTick) { sTick = true; requestAnimationFrame(stuck); } }, { passive: true });
+      stuck();
+    }
+  })();
 })();
