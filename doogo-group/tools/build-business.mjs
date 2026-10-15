@@ -1210,7 +1210,7 @@ ${bizBand(b)}`;
 /* ---------- 쓰기 ---------- */
 const out = [['business.html', buildList()], ...BIZ.map((b, i) => [`business-${b.slug}.html`, buildDetail(b, i)])];
 // SEO 공유 이미지: 실제 배포 주소 기준 절대 경로 + 페이지 주소(og:url)
-const SITE_URL = 'https://doogo-group.vercel.app/';
+const SITE_URL = 'https://www.doogogroup.com/';
 const OG_IMG = `${SITE_URL}assets/img/og/og-doogo-holdings.jpg`;
 const ogBlock = (file) => `<meta property="og:url" content="${SITE_URL}${file}">
   <meta property="og:locale" content="ko_KR">

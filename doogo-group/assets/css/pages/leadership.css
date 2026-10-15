@@ -317,11 +317,12 @@ html.is-locked .ld-modal { overscroll-behavior: contain; }
   @keyframes ldSheetIn { from { transform: translateY(100%); } to { transform: none; } }
   @keyframes ldSheetOut { to { transform: translateY(100%); } }
   .ld-m-in { grid-template-columns: 1fr; min-height: 0; }
-  /* 휴대폰 상세: 사진 칸은 위쪽 띠(얼굴 · 어깨가 보이게) */
-  .ld-m-visual.pcard-ph { height: 232px; min-height: 0; border-right: 0; border-bottom: 1px solid var(--line-2); }
-  .ld-m-visual.pcard-ph::before { width: 56%; top: 8%; }
-  .ld-m-visual .pcard-img { object-position: 50% 8%; }
-  .ld-m-visual .pcard-sil { -webkit-mask-position: 50% 8%; mask-position: 50% 8%; }
+  /* 휴대폰 상세: 카드와 같은 상반신(머리 위 여백 ~ 허리)이 잘리지 않고 다 보이게 — 사진 전체를 칸 높이에 맞춰 넣음 */
+  .ld-m-visual.pcard-ph { height: clamp(320px, 52vh, 440px); min-height: 0; border-right: 0; border-bottom: 1px solid var(--line-2); }
+  .ld-m-visual.pcard-ph::before { width: auto; height: 74%; top: 10%; }
+  .ld-m-visual :is(.pcard-img, .pcard-sil) { height: 100%; }
+  .ld-m-visual .pcard-img { object-fit: contain; object-position: 50% 100%; }
+  .ld-m-visual .pcard-sil { -webkit-mask-size: contain; mask-size: contain; -webkit-mask-position: 50% 100%; mask-position: 50% 100%; }
   .ld-m-visual .pcard-soon { bottom: 14px; }
   .ld-m-body { padding: 26px 20px 28px; }
   .ld-m-name { font-size: 2.2rem; }
