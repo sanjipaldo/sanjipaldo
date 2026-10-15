@@ -3,6 +3,9 @@
    첫 화면 · 주요 서비스 · 운영 사이트 · 현장 · 관련 브랜드/프로젝트 · 담당 대표 · 문의/이전·다음
    ========================================================= */
 
+/* 서브 내비 가운데 정렬 (사업영역 목록과 같게 · safe: 넘치면 왼쪽부터 넘김) */
+.dt-subnav ul { justify-content: safe center; }
+
 .nowrap { white-space: nowrap; }
 .ico-down { transform: rotate(90deg); }
 .btn:hover .ico-down { transform: rotate(90deg) translateX(3px); }

@@ -54,6 +54,8 @@ const CHECK = ico('i-check', 'ico');
 const NEWWIN = '<span class="sr-only">(새 창)</span>';
 // 브랜드명·'&'로 묶인 사업 분야 이름이 줄바꿈으로 갈라지지 않게 (화면 문구에만 사용 — 속성값에는 쓰지 말 것)
 const nw = (t) => t.replace(/DOOGO (?:HOLDINGS|CLASS|SPACE|MEDIA|MAKERS|AD)|DOOGOFOOD|DOOGOBIO(?: NZ)?|NORA STAY|두고커넥트|미디어 &amp; 콘텐츠|공간 &amp; 숙박업/g, (m) => `<span class="nowrap">${m}</span>`);
+// 마지막 낱말 + 아이콘을 한 덩어리로 (줄이 넘어갈 때 화살표만 다음 줄에 혼자 남지 않게)
+const glue = (t, icon) => { const k = t.lastIndexOf(' '); return k < 0 ? `<span class="nowrap">${t}${icon}</span>` : `${t.slice(0, k + 1)}<span class="nowrap">${t.slice(k + 1)}${icon}</span>`; };
 const DOWN = ico('i-arrow', 'ico ico-arrow ico-down');
 // 문의 페이지: 분야를 미리 고른 상태로 양식(#inquiry)까지 바로 내려가게 (contact.html 자신의 분야 칩과 같은 형식)
 const ASK = (type) => `contact.html?type=${type}#inquiry`;
@@ -433,15 +435,19 @@ const pauseIcons = `<svg class="ico ico-pause" aria-hidden="true"><use href="#i-
    1) business.html — 사업영역 목록
    ========================================================= */
 function buildList() {
+  // 7개 사업 바로가기 카드 (7차): 유리 카드 + 그 사업 사진(썸네일 · 마우스를 올리거나 지금 배경에 보이는 사업이면 나타남) ·
+  // 원형 아이콘 배지 · 번호 · 분야 이름 · 영문 브랜드 · 한 줄 설명(defLabel) · 아래로 내려가는 화살표.
+  // 설명 위 가는 선 = 지금 배경 사진이 넘어가기까지 남은 시간(진행선 · business.css)
   const jump = BIZ.map((b, i) => `          <li><a class="bz-jump-item" href="#${b.slug}" data-key="${b.slug}">
-            <span class="bz-jump-num en">${b.num}</span>
-            <span class="bz-jump-ico">${ico(b.icon, '')}</span>
-            <span class="bz-jump-txt"><strong>${b.area}</strong><span class="en">${b.en}</span></span>
+            <span class="bz-jump-bg" aria-hidden="true"><img src="assets/img/biz/thumb-${b.thumb || b.slug}.webp" alt="" width="480" height="270" loading="lazy" decoding="async"></span>
+            <span class="bz-jump-top"><span class="bz-jump-ico" aria-hidden="true">${ico(b.icon, '')}</span><span class="bz-jump-num en">${b.num}</span></span>
+            <span class="bz-jump-txt"><strong>${nw(b.area)}</strong><span class="en">${b.en}</span></span>
+            <span class="bz-jump-foot"><span class="bz-jump-desc">${b.defLabel}</span><span class="bz-jump-go" aria-hidden="true"><span>${ico('i-arrow', '')}${ico('i-arrow', '')}</span></span></span>
           </a></li>`).join('\n');
 
   const rail = CHAIN.map((c, i) => {
     const b = BIZ.find(x => x.slug === c.slug);
-    return `          <li style="--i:${i}"><a href="business-${c.slug}.html"><span class="bz-rail-dot" aria-hidden="true"></span><strong>${c.ko}</strong><span class="bz-rail-en en">${c.en}</span><span class="bz-rail-biz"><span class="en">${b.num}</span>${b.area}${ico('i-arrow-ur', '')}</span><span class="sr-only"> — ${b.en} 상세 보기</span></a></li>`;
+    return `          <li style="--i:${i}"><a href="business-${c.slug}.html"><span class="bz-rail-dot" aria-hidden="true"></span><strong>${c.ko}</strong><span class="bz-rail-en en">${c.en}</span><span class="bz-rail-biz"><span class="en">${b.num}</span><span class="bz-rail-biz-t">${glue(b.area, ico('i-arrow-ur', ''))}</span></span><span class="sr-only"> — ${b.en} 상세 보기</span></a></li>`;
   }).join('\n');
 
   const subnav = BIZ.map(b => `<li><a href="#${b.slug}"><span class="en">${b.num}</span> ${b.area}</a></li>`).join('');
