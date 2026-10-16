@@ -1,0 +1,4 @@
+Contact: mailto:doogobiz@gmail.com
+Expires: 2027-10-16T00:00:00.000Z
+Preferred-Languages: ko, en
+Canonical: https://www.doogogroup.com/.well-known/security.txt

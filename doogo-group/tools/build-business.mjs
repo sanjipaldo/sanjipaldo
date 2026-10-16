@@ -295,7 +295,7 @@ const BIZ = [
   },
   {
     slug: 'ad', num: '05', area: '마케팅', en: 'DOOGO AD', chain: 'Marketing', icon: 'i-ad',
-    corp: { en: 'DOOGO AD', field: '마케팅', ceo: '김신용', key: 'ad', photo: 'leader-kim-sinyong' },
+    corp: { en: 'DOOGO AD', field: '온·오프라인 마케팅', ceo: '김신용', key: 'ad', photo: 'leader-kim-sinyong' },
     scope: '네이버·쿠팡 광고 운영 · 소재 기획 · 성과 분석',
     defLabel: '퍼포먼스 광고', def: '네이버·쿠팡을 중심으로 브랜드를 더 멀리 알립니다.',
     role: '브랜드가 필요한 고객에게 닿도록 광고를 기획하고 운영합니다.',
@@ -419,8 +419,10 @@ function head({ title, desc, css }) {
   <meta property="og:title" content="${title} | 두고그룹">
   <meta property="og:description" content="${desc}">
   <meta property="og:image" content="assets/img/og/og-default.jpg">
-  <link rel="icon" href="assets/img/logo/doogo-symbol.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="assets/img/logo/apple-touch-icon.png">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" href="assets/img/logo/favicon-d-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/img/logo/apple-touch-icon-d.png">
+  <link rel="manifest" href="site.webmanifest">
   <link rel="stylesheet" href="assets/fonts/pretendard/pretendardvariable-dynamic-subset.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

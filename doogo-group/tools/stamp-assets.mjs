@@ -34,6 +34,26 @@ export function stampAssets(only = []) {
     if (after !== before) { writeFileSync(path, after); changed++; }
   }
   console.log(`버전 표시: ${changed}개 페이지 갱신`);
+  syncCsp();
+}
+
+// 24차 보안: vercel.json 의 Content-Security-Policy 에 페이지 안 인라인 스크립트(<script>…</script>)의 sha256 해시를 맞춰 넣습니다.
+//   해시가 맞는 인라인 스크립트만 실행되므로, 인라인 스크립트를 고치거나 새로 넣었다면 이 도구를 꼭 다시 실행하세요.
+//   (application/ld+json 같은 데이터 블록은 실행되지 않아 제외)
+export function syncCsp() {
+  const cfgPath = join(root, 'vercel.json');
+  if (!existsSync(cfgPath)) return;
+  const hashes = new Set();
+  for (const file of readdirSync(root).filter(f => f.endsWith('.html'))) {
+    const html = readFileSync(join(root, file), 'utf8');
+    for (const m of html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)) {
+      if (/type="application\/(ld\+)?json"/.test(m[1])) continue;
+      hashes.add(`'sha256-${createHash('sha256').update(m[2]).digest('base64')}'`);
+    }
+  }
+  const raw = readFileSync(cfgPath, 'utf8');
+  const next = raw.replace(/(script-src 'self')[^;"]*/, `$1 ${[...hashes].sort().join(' ')}`);
+  if (next !== raw) { writeFileSync(cfgPath, next); console.log(`보안 정책: 인라인 스크립트 해시 ${hashes.size}개 반영`); }
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) stampAssets(process.argv.slice(2));

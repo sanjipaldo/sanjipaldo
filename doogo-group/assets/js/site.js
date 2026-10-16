@@ -250,9 +250,13 @@
     accents.forEach(function (c, i) { c.style.setProperty('--ai', i); });
     el.removeAttribute('data-lines');
     el.removeAttribute('data-reveal');
-    if (!el.hasAttribute('data-engrave')) el.setAttribute('data-engrave', 'auto');
+    var auto = !el.hasAttribute('data-engrave');
+    if (auto) el.setAttribute('data-engrave', 'auto');
     el.classList.add('is-split');
-    var accentT = 0, total = chars.length * EG_STEP + 700; // 마지막 글자가 자리 잡을 무렵 강조 시작
+    // 24차: 직접 지정한 문장([data-engrave] — 메인 인트로 · 마무리 배너 슬로건 · 회사 소개 문장)은 글자가 적어도 새기는 데 1.7초쯤 걸리게(글자당 26–48ms)
+    var step = auto ? EG_STEP : Math.round(Math.max(EG_STEP, Math.min(48, 1700 / chars.length)));
+    if (step !== EG_STEP) el.style.setProperty('--eg-step', step + 'ms');
+    var accentT = 0, total = chars.length * step + 700; // 마지막 글자가 자리 잡을 무렵 강조 시작
     el._eg = {
       play: function () {
         if (el.classList.contains('is-on')) return;
@@ -278,15 +282,22 @@
   if (egItems.length) {
     if (!('IntersectionObserver' in window)) egItems.forEach(function (el) { el._eg.finish(); });
     else {
+      // 24차: 화면에 살짝 걸쳤을 때가 아니라 충분히 들어왔을 때 새김 — 화면 아래 20%를 뺀 영역에 75% 이상(키 큰 문장은 화면 절반 이상) 들어오면 시작,
+      // 화면 밖으로 완전히 나가면 처음 상태로(다시 들어올 때 다시 새김)
       var egIO = new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
           var g = en.target._eg;
           if (window.DOOGO.motionOff()) { g.finish(); return; }
-          if (en.isIntersecting && en.intersectionRatio >= 0.3) g.play();
-          else if (!en.isIntersecting) g.reset();
+          if (!en.isIntersecting) return;
+          var rootH = en.rootBounds ? en.rootBounds.height : window.innerHeight;
+          var need = Math.min(0.75, rootH * 0.5 / Math.max(1, en.boundingClientRect.height));
+          if (en.intersectionRatio >= need - 0.001) g.play();
         });
-      }, { threshold: [0, 0.3] });
-      egItems.forEach(function (el) { egIO.observe(el); });
+      }, { rootMargin: '0px 0px -20% 0px', threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75] });
+      var egOut = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { if (!en.isIntersecting && !window.DOOGO.motionOff()) en.target._eg.reset(); });
+      }, { threshold: 0 });
+      egItems.forEach(function (el) { egIO.observe(el); egOut.observe(el); });
     }
     document.addEventListener('doogo:motion', function (e) {
       var off = !!(e.detail && e.detail.off);

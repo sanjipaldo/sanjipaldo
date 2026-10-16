@@ -613,7 +613,7 @@ video::cue { font-family: var(--font-ko); background: rgba(0, 0, 0, .55); color:
   transform: translate3d(0, .42em, 0) scale(1.04); filter: blur(10px);
 }
 .js [data-engrave].is-split.is-on .eg-c {
-  --d: calc(var(--ci, 0) * 26ms);
+  --d: calc(var(--ci, 0) * var(--eg-step, 26ms)); /* --eg-step: site.js 가 짧은 문장에 더 길게 */
   opacity: 1; color: var(--eg-ink); transform: none; filter: blur(0);
   transition: opacity .5s var(--ease) var(--d), transform .9s cubic-bezier(.16, 1, .3, 1) var(--d), filter .7s var(--ease) var(--d), color 1.2s var(--ease) calc(var(--d) + .18s);
 }
