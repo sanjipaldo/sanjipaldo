@@ -22,7 +22,9 @@ for (const file of files) {
   const before = html;
   for (const [name, body] of Object.entries(parts)) {
     const re = new RegExp(`(<!-- @${name}:start -->)[\\s\\S]*?(<!-- @${name}:end -->)`);
-    if (re.test(html)) html = html.replace(re, `$1\n${body}\n$2`);
+    // 404.html 은 어느 주소에서든 열리므로 공통 부분의 상대 주소(about.html · assets/…)를 사이트 루트 기준(/about.html)으로 바꿉니다
+    const b = file === '404.html' ? body.replace(/(href|src)="(?!https?:|\/|#|mailto:|tel:|data:)([^"]+)"/g, '$1="/$2"') : body;
+    if (re.test(html)) html = html.replace(re, `$1\n${b}\n$2`);
     else console.warn(`! ${file}: @${name} 표시가 없습니다`);
   }
   if (html !== before) { writeFileSync(path, html); changed++; console.log(`✓ ${file}`); }

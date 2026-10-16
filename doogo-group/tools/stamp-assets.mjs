@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const RE = /(href|src)="(assets\/[^"?#]+\.(?:css|js))(?:\?v=[0-9a-f]+)?"/g;
+const RE = /(href|src)="(\/?)(assets\/[^"?#]+\.(?:css|js))(?:\?v=[0-9a-f]+)?"/g; // 404.html 은 /assets/… (루트 기준)
 
 export function stampAssets(only = []) {
   const names = only.map(f => f.replace(/^.*\//, ''));
@@ -26,10 +26,10 @@ export function stampAssets(only = []) {
   for (const file of files) {
     const path = join(root, file);
     const before = readFileSync(path, 'utf8');
-    const after = before.replace(RE, (m, attr, rel) => {
+    const after = before.replace(RE, (m, attr, lead, rel) => {
       const v = ver(rel);
       if (!v) { console.warn(`! ${file}: ${rel} 파일이 없습니다`); return m; }
-      return `${attr}="${rel}?v=${v}"`;
+      return `${attr}="${lead}${rel}?v=${v}"`;
     });
     if (after !== before) { writeFileSync(path, after); changed++; }
   }
