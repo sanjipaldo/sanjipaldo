@@ -344,3 +344,6 @@ html.motion-off .ld-m-in.is-swap .ld-m-visual :is(.pcard-img, .pcard-sil) { opac
 .ld-career li::before, .ld-m-career li::before { content: ""; position: absolute; left: 0; top: .66em; width: 5px; height: 5px; border-radius: 50%; background: var(--blue); }
 .ld-m-career { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
 .ld-m-career li { font-size: .92rem; color: var(--ink); }
+/* 21차: 상세 맨 위 '주요 이력' 줄 (이력이 있는 사람만 · 없으면 줄을 숨김) — 목록이라 위쪽 맞춤 */
+.ld-m-facts > .ld-m-career-row { align-items: start; padding-block: 14px 12px; }
+.ld-m-career-row dt { padding-top: 1px; }

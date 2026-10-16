@@ -99,12 +99,19 @@ const peopleSrcset = (name) => `${PEOPLE}/${name}-600.webp 600w, ${PEOPLE}/${nam
 const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '교육 · 그룹 경영 · 투자 및 성장 지원', field: '교육 · 그룹 경영 · 투자 및 성장 지원', ceo: '문원오', photo: 'leader-moon-wonoh', anchor: 'ceo' };
 
 /* ---------- 이미지 ---------- */
+// 문원오 대표 주요 이력 (21차 · 사용자 확정본, 이 순서 그대로 맨 위에) — leadership.html 의 data-career 와 같게 유지
+const CEO_CAREER = [
+  '뉴질랜드 오클랜드 AUT 대학교 비즈니스·마케팅 졸업',
+  '現 두고그룹 총괄 대표이사',
+  '前 (주)키위몬 대표이사',
+  '해외·국내 건강식품 E커머스 누적 매출 100억 원 이상 달성',
+];
 const PHOTO = {
   campus: { w: 1280, h: 950, alt: '밝은 강의실에서 강사가 성인 수강생들 앞에서 강의하는 모습' },
   studio: { w: 1280, h: 949, alt: '링라이트와 카메라 앞에서 온라인 강의를 촬영하는 모습' },
   bio: { w: 1280, h: 952, alt: '건강식품 제조 현장에서 작업자가 캡슐 병을 검수하는 모습' },
   commerce: { w: 1280, h: 950, alt: '라벨을 붙이기 전의 박스·병·파우치 패키지와 컬러칩을 살펴보는 디자이너의 손' },
-  media: { w: 1280, h: 951, alt: '도심 야외에서 짐벌 카메라와 붐마이크로 영상 콘텐츠를 촬영하는 모습' },
+  'media-creator': { w: 1280, h: 951, alt: '도심 길거리에서 여성 크리에이터가 마이크를 들고 유튜브 방송을 촬영하는 모습' },
   ad: { w: 1280, h: 954, alt: '회의실 대형 화면의 광고 성과 그래프를 보며 마케팅 회의를 하는 모습' },
   food: { w: 1280, h: 951, alt: '선과장에서 작업자들이 컨베이어 위 사과를 선별하는 모습' },
   cowork: { w: 1280, h: 951, alt: '식물이 놓인 밝은 공유오피스에서 사람들이 일하는 모습' },
@@ -263,8 +270,9 @@ const BIZ = [
     web: web({ name: 'DOOGO MEDIA', kind: 'YouTube 채널', host: '두고보는 문대표', bar: 'youtube.com/@두고보는문대표', yt: true, url: MEDIA_URL, shot: 'media',
       btn: '채널 바로가기', close: 'DOOGO MEDIA 채널', desc: 'DOOGO MEDIA가 운영하는 온드미디어 채널, 유튜브 <span class="nowrap">‘두고보는 문대표’</span>입니다. 채널에서 영상 콘텐츠를 볼 수 있습니다.' }),
     narration: '브랜드의 채널을, 브랜드의 자산으로.',
-    hero: { f: 'media', fx: '50%', fy: '38%', mx: '62%' },
-    gallery: [photo('media', { label: '온드미디어 촬영', zoom: 1.75, focus: '36% 48%', alt: '짐벌에 단 카메라로 출연자를 촬영하는 모습(확대)' }), render('media', { label: 'DOOGO MEDIA' })],
+    hero: { f: 'media-creator', fx: '50%', fy: '38%', mx: '62%' },
+    thumb: 'media-creator', // 21차: 여성 크리에이터 길거리 방송 사진 (새 파일 이름 → 캐시에 남은 옛 사진 대신 바로 새 사진)
+    gallery: [photo('media-creator', { label: '온드미디어 촬영', zoom: 1.75, focus: '36% 48%', alt: '짐벌 카메라로 길거리 방송 중인 크리에이터를 촬영하는 모습(확대)' }), render('media', { label: 'DOOGO MEDIA' })],
     heroAlt: { label: '온드미디어 알아보기', href: '#related' },
     facts: [['대표 서비스', '온드미디어 촬영 · 유튜브 채널 운영'], ['유튜브 채널', SITE(MEDIA_URL, '두고보는 문대표')]],
     svcHead: 'DOOGO MEDIA가 하는 일',
@@ -1030,9 +1038,9 @@ ${c.direct ? `          <blockquote class="dt-leader-quote"><p>“제품과 브�
 ` : `          <p class="dt-leader-role"><span class="dt-leader-role-k">하는 일</span>${b.role}</p>
 `}          <div class="dt-leader-more">
             <dl class="dt-leader-dl">
-${c.direct ? `              <div><dt>운영 브랜드</dt><dd class="dt-dd-chips"><span class="dt-dd-chip${b.slug === 'campus' ? ' is-cur' : ''}"><span class="en">DOOGO CLASS</span>교육업</span><span class="dt-dd-chip${b.slug === 'food' ? ' is-cur' : ''}"><span class="en">DOOGOFOOD</span>유통</span></dd></div>
-              <div><dt>강의</dt><dd><span class="en nowrap">DOOGO CLASS</span> ‘문대표’ · 뉴질랜드 건기식 브랜딩</dd></div>
-              <div><dt>주요 이력</dt><dd><ul class="dt-career"><li>現 두고그룹 총괄 대표이사</li><li>前 (주)키위몬 대표이사</li><li>건강식품 E커머스 누적 매출 100억 원 이상</li></ul></dd></div>`
+${c.direct ? `              <div><dt>주요 이력</dt><dd><ul class="dt-career">${CEO_CAREER.map(t => `<li>${t}</li>`).join('')}</ul></dd></div>
+              <div><dt>운영 브랜드</dt><dd class="dt-dd-chips"><span class="dt-dd-chip${b.slug === 'campus' ? ' is-cur' : ''}"><span class="en">DOOGO CLASS</span>교육업</span><span class="dt-dd-chip${b.slug === 'food' ? ' is-cur' : ''}"><span class="en">DOOGOFOOD</span>유통</span></dd></div>
+              <div><dt>강의</dt><dd><span class="en nowrap">DOOGO CLASS</span> ‘문대표’ · 뉴질랜드 건기식 브랜딩</dd></div>`
     : `              <div><dt>주요 서비스</dt><dd class="dt-dd-chips">${b.scope.split(' · ').map(x => `<span class="dt-dd-chip is-svc">${nw(x)}</span>`).join('')}</dd></div>`}
             </dl>
           </div>
