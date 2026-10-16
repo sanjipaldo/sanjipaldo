@@ -569,7 +569,8 @@
     // 1) .subnav (탭 또는 앵커 바로가기)
     $$('.subnav').forEach(function (bar) {
       var list = $('ul, ol', bar);
-      if (!list || bar.classList.contains('sn-ready')) return;
+      // 24차: 개인정보처리방침의 세로 목차(.pv-toc)는 자체 디자인이 있어 탭 메뉴 꾸밈을 하지 않음 (번호 겹침 · 글자 세로 줄바꿈 방지)
+      if (!list || bar.classList.contains('sn-ready') || bar.classList.contains('pv-toc')) return;
       var links = $$('a', list);
       var n = links.length;
       if (n < 2) return;
