@@ -486,11 +486,12 @@ main .note { color: var(--muted); }
   position: relative; display: block; overflow: hidden; aspect-ratio: 1 / 1.04; border-radius: 16px;
   background: linear-gradient(180deg, #ABC5E8 0%, #C3D6EE 52%, #DCE6F5 100%);
   transform-origin: 50% 100%;
-  /* 바닥에 서서 살짝 뒤로 기댄 자세 + 양옆 장은 가운데를 향해 돌아섬 · 포인터 따라 몇 도 */
+  /* 떠오르는 동안만 뒤로 누웠다가 자리에 서면 정면(기울기 0) — 기울어진 채로 두면 브라우저가 이미지를 낮은 해상도로 그려 뿌옇게 보임(24차)
+     · 포인터를 올렸을 때만 몇 도 기울임 */
   transform: perspective(820px)
     translate3d(0, calc((1 - var(--bn-t)) * 54px), calc((1 - var(--bn-t)) * -160px))
-    rotateX(calc(7deg + (1 - var(--bn-t)) * 42deg - var(--py) * 5deg))
-    rotateY(calc((1 - var(--i)) * 12deg + var(--px) * 7deg));
+    rotateX(calc((1 - var(--bn-t)) * 49deg - var(--py) * 5deg))
+    rotateY(calc((1 - var(--bn-t)) * (1 - var(--i)) * 12deg + var(--px) * 7deg));
   opacity: calc(var(--bn-t) * 1.8);
   box-shadow:
     0 1px 0 #DDE8F8,
@@ -501,14 +502,13 @@ main .note { color: var(--muted); }
     0 0 0 1px rgba(255, 255, 255, .08);
   -webkit-box-reflect: below 9px linear-gradient(transparent 90%, rgba(255, 255, 255, .1));
   transition: --bn-t 1.15s cubic-bezier(.16, .84, .24, 1); transition-delay: calc(.12s + var(--i) * .16s);
-  will-change: transform;
+  backface-visibility: hidden;
 }
-.bn-relay-img img { width: 100%; height: 108%; margin-top: -3%; object-fit: cover; object-position: 50% 52%; }
+.bn-relay-img img { width: 100%; height: 108%; margin-top: -3%; object-fit: cover; object-position: 50% 52%; filter: contrast(1.06) saturate(1.1); } /* 24차: 또렷하게 */
 .bn-relay-img::after { /* 유리 광택 · 테두리 하이라이트 (포인터에 따라 광택이 미끄러짐) */
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
   background:
-    linear-gradient(118deg, rgba(255, 255, 255, .5) 0%, rgba(255, 255, 255, .12) 26%, transparent 42%) calc(50% + var(--px) * 30%) 0 / 160% 100% no-repeat,
-    linear-gradient(to top, rgba(12, 40, 96, .22), transparent 38%);
+    linear-gradient(118deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, .04) 22%, transparent 34%) calc(50% + var(--px) * 30%) 0 / 160% 100% no-repeat; /* 24차: 광택을 옅게(뿌옇지 않게) */
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6), inset 0 -2px 0 rgba(20, 60, 140, .18);
 }
 .bn-relay-arrow {
