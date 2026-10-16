@@ -557,6 +557,32 @@
     }
   })();
 
+  /* ---------- 24차: 소개 화면 사진 높이를 일곱 사업 모두 같게 ----------
+     넓은 화면(1025px 이상)에서는 사진 칸이 글 칸 높이를 따라 늘어나, 글이 긴 사업(공간 & 라이프스타일)만 사진이 커졌습니다.
+     일곱 소개 글의 본래 높이 중 가장 짧은 값을 사진 높이(--bz-mh)로 정해 모두 같은 크기로 맞춥니다(창 크기 · 글꼴이 바뀌면 다시). */
+  (function () {
+    var wrap = $('.bz-panels'), list = $$('.bz-panel');
+    if (!wrap || !list.length) return;
+    var wide = window.matchMedia('(min-width: 1025px)');
+    function fit() {
+      if (!wide.matches) { wrap.style.removeProperty('--bz-mh'); return; }
+      var hs = list.map(function (p) {
+        var body = $('.bz-body', p); if (!body) return 0;
+        var was = p.hidden; p.hidden = false;
+        body.style.alignSelf = 'start';
+        var h = body.offsetHeight;
+        body.style.alignSelf = ''; p.hidden = was;
+        return h;
+      }).filter(Boolean);
+      if (hs.length) wrap.style.setProperty('--bz-mh', Math.min.apply(null, hs) + 'px');
+    }
+    fit();
+    var t = 0;
+    window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(fit, 120); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+    window.addEventListener('load', fit, { once: true });
+  })();
+
   /* ---------- 5) 소개 화면 사진 → 짧게 움직이는 영상 (23차) ----------
      지금 열린 사업 화면(.bz-panel.is-on)의 영상만 재생하고 나머지는 멈춤. 4초짜리 끊김 없는 반복(끝이 처음으로 겹쳐 녹아듦).
      영상은 preload="none" — 처음 재생할 때 받기 시작하고, 실제로 움직이기 시작하면(.is-playing) 사진 위로 서서히 나타남.

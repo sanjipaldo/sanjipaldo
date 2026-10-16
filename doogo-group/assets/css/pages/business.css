@@ -514,6 +514,7 @@
 .bz-panel:focus-visible { outline: 2px solid rgba(10, 93, 226, .32); outline-offset: 3px; }
 
 .bz-media { position: relative; display: block; overflow: hidden; isolation: isolate; min-height: 580px; border-radius: var(--radius); background: var(--ivory-2); }
+@media (min-width: 1025px) { .bz-panels[style*="--bz-mh"] .bz-media { align-self: start; min-height: 0; height: var(--bz-mh); } } /* 24차: 일곱 사업 사진 높이 같게 (business.js) */
 .bz-media-inner { position: absolute; inset: -8% 0; transform: translate3d(0, var(--py, 0px), 0); will-change: transform; }
 .bz-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.4s var(--ease); }
 .bz-panel:hover .bz-media img { transform: scale(1.04); }

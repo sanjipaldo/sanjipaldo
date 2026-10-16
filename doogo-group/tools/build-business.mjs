@@ -107,10 +107,10 @@ const CEO_CAREER = [
 ];
 // 그룹사 대표 · 총괄이사 주요 이력 (21차 · 사용자 확정본, 이 순서 그대로) — leadership.html 의 data-career 와 같게 유지
 const LEADER_CAREER = {
-  bio: ['現 DOOGOBIO NZ 대표이사', '前 WITHYOU NZ 대표이사', '前 NATURAL HONEY NZ 대표이사', '前 하이웰 대표이사'], // 백영호
+  bio: ['現 DOOGOBIO NZ 대표이사', '前 NATURAL HONEY NZ 대표이사', '前 하이웰 대표이사'], // 백영호
   ad: ['現 두고애드 대표', '前 히즈마케팅 대표', '前 제로커머스 대표'], // 김신용
   space: ['現 NORA STAY 대표이사', '現 DOOGO SPACE 대표이사', '現 문득 F&amp;B 대표이사'], // 문성오
-  media: ['現 (주)하이비주얼 대표이사', '現 라온프로덕션 대표', '現 국가무형유산 이수자'], // 김윤정
+  media: ['現 (주) 하이비주얼 대표이사', '現 라온프로덕션 대표', '現 국가무형유산 이수자'], // 김윤정
   makers: ['건국대학교 경제학과 졸업', '現 마우리엔젯 B 총괄이사', '現 신나용 대표이사'], // 신동훈
 };
 const PHOTO = {
@@ -1304,7 +1304,7 @@ const out = [['business.html', buildList()], ...BIZ.map((b, i) => [`business-${b
 // SEO 공유 이미지: 실제 배포 주소 기준 절대 경로 + 페이지 주소(og:url)
 const SITE_URL = 'https://www.doogogroup.com/';
 const OG_IMG = `${SITE_URL}assets/img/og/og-doogo-holdings-2.jpg`;
-const ogBlock = (file) => `<meta property="og:url" content="${SITE_URL}${file}">
+const ogBlock = (file) => `<meta property="og:url" content="${SITE_URL}${file}">\n  <link rel="canonical" href="${SITE_URL}${file}">
   <meta property="og:locale" content="ko_KR">
   <meta property="og:image" content="${OG_IMG}">
   <meta property="og:image:width" content="1200">

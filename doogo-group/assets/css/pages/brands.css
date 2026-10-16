@@ -48,7 +48,7 @@ main section.bn-panel { scroll-margin-top: calc(var(--header-h) + var(--bn-tabs-
 .bn-panels { min-height: calc(100vh - var(--header-h) - var(--bn-tabs-h, 65px)); }
 .bn-panels > .bn-panel { min-height: inherit; }
 /* 성장 사례(남색) 다음에 바로 남색 CTA 띠가 오면 경계가 사라지므로 얇은 선으로 나눔 */
-.bn-cases.bn-panel { border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.bn-cases.bn-panel { border-bottom: 1px solid var(--line-2); }
 
 /* 섹션 머리: 제목은 왼쪽, 설명은 오른쪽 */
 @media (min-width: 861px) {
@@ -402,18 +402,18 @@ main .note { color: var(--muted); }
 }
 
 /* ---------- 03 성장 사례 ---------- */
-.bn-cases { overflow: clip; isolation: isolate; }
+.bn-cases { overflow: clip; isolation: isolate; background: #fff; } /* 24차 투톤: 흰 바탕 위에 짙은 사례 카드 (위 남색 히어로와 구분) */
 .bn-cases-glow {
   position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: radial-gradient(50% 40% at 100% 0%, rgba(10, 93, 226, .32), transparent 70%), radial-gradient(40% 35% at 0% 100%, rgba(76, 141, 246, .12), transparent 70%);
+  background: radial-gradient(50% 40% at 100% 0%, rgba(10, 93, 226, .08), transparent 70%), radial-gradient(40% 35% at 0% 100%, rgba(76, 141, 246, .06), transparent 70%);
 }
 .bn-case-list { display: grid; gap: 28px; }
 .bn-case {
   --sc: 1; --dim: 0;
   position: relative; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(28px, 4vw, 72px);
   padding: clamp(24px, 3.2vw, 48px); border-radius: var(--radius-lg);
-  background: linear-gradient(160deg, var(--navy-3) 0%, var(--navy-2) 55%); border: 1px solid var(--line-dark);
-  box-shadow: 0 -24px 60px -28px rgba(0, 0, 0, .55);
+  background: linear-gradient(160deg, var(--navy-3) 0%, var(--navy-2) 55%); border: 1px solid var(--line-dark); color: var(--on-dark);
+  box-shadow: 0 30px 60px -30px rgba(11, 27, 51, .45), 0 -18px 40px -26px rgba(11, 27, 51, .3);
   transform: scale(var(--sc)); transform-origin: 50% 0;
 }
 .bn-case::after { /* 뒤로 밀린 카드는 살짝 어둡게 */
