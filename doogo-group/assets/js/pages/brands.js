@@ -1,6 +1,6 @@
 /* =========================================================
    DOOGO GROUP — brands.js (브랜드와 성과)
-   브랜드 3D 카드(포인터를 따라 떠오름) · 프로젝트 커버플로우 · 성장 사례 카드 쌓임 효과
+   브랜드 3D 카드(포인터를 따라 떠오름) · 프로젝트 커버플로우 · 성장 사례 3D 릴레이 카드(등장 · 기울기 · 쌓임)
    · 탭(운영 브랜드 · 프로젝트 · 성장 사례 · 협력 파트너 — 주소 #앵커 연동, 맨 아래)
    ========================================================= */
 (function () {
@@ -184,14 +184,22 @@
   }
   coverflow();
 
-  /* ---------- 성장 사례: 쌓이는 카드 (데스크톱) ---------- */
+  /* ---------- 성장 사례: 3D 릴레이 카드 ----------
+     · 등장: 카드 왼쪽(렌더 무대)이 화면에 들어오면 카드에 .is-on — 렌더가 차례로 일어서고 바닥 빛길이 그려짐.
+       오른쪽 과제·한 일·결과(.bn-steps)는 따로 지켜보다 들어오면 .is-on — 01 → 02 → 03 차례로, 레일 빛이 결과 칸에 닿으면 결과 칸이 켜짐(모바일에서도 보일 때 재생).
+     · 보이는 동안만 .is-live(빛길을 흐르는 빛 · 결과 칸 광택 반복) — 화면 밖이거나 탭 패널이 숨으면 떼어 멈춤.
+     · 마우스(정밀 포인터)로 카드 위를 움직이면 렌더가 몇 도 기울고 빛 자국이 따라옴(--px/--py, -1~1).
+       포인터가 카드 위에 있는 동안에만 requestAnimationFrame 으로 부드럽게 따라가고, 떠나면 0 으로 돌아온 뒤 멈춥니다.
+     · 데스크톱 쌓임: 다음 카드가 올라오면 앞 카드는 살짝 작아지고 어두워짐(--sc/--dim) · 많이 덮이면 .is-back(반복 빛 멈춤).
+     · 움직임 멈추기(html.motion-off): 모두 마지막 그림으로(.is-on), 반복 빛 · 기울기 없음. */
   var cases = $$('.bn-case');
+  var caseList = $('[data-cases]');
   var stackMq = window.matchMedia('(min-width: 1025px) and (min-height: 760px)');
   var ticking = false;
   function updateStack() {
     ticking = false;
     if (motionOff() || !stackMq.matches) {
-      cases.forEach(function (c) { c.style.removeProperty('--sc'); c.style.removeProperty('--dim'); });
+      cases.forEach(function (c) { c.style.removeProperty('--sc'); c.style.removeProperty('--dim'); c.classList.remove('is-back'); });
       return;
     }
     cases.forEach(function (c, i) {
@@ -203,6 +211,7 @@
       var p = Math.min(Math.max(1 - (nr.top - cr.top) / h, 0), 1);
       c.style.setProperty('--sc', (1 - p * 0.05).toFixed(4));
       c.style.setProperty('--dim', (p * 0.45).toFixed(3));
+      c.classList.toggle('is-back', p > 0.55);
     });
   }
   function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(updateStack); } }
@@ -212,6 +221,67 @@
     document.addEventListener('doogo:motion', onScroll); // 움직임 멈추기/켜기 전환 시 바로 반영
     updateStack();
     onShow.push(function (panel) { if (panel.contains(cases[0])) updateStack(); });
+  }
+
+  if (caseList && cases.length) {
+    var stepsOf = function (c) { return $('.bn-steps', c); };
+    var allOn = function () {
+      cases.forEach(function (c) { c.classList.add('is-on'); c.classList.remove('is-live'); var s = stepsOf(c); if (s) s.classList.add('is-on'); });
+    };
+    caseList.classList.add('is-fx');
+    if (motionOff() || !('IntersectionObserver' in window)) allOn();
+    if ('IntersectionObserver' in window) {
+      // 등장(한 번): 무대 · 단계 목록이 화면 아래 12% 선을 넘어 25% 이상 보이면
+      var playIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (!en.isIntersecting || en.intersectionRatio < 0.25) return;
+          var t = en.target;
+          (t.classList.contains('bn-steps') ? t : t.closest('.bn-case')).classList.add('is-on');
+          playIO.unobserve(t);
+        });
+      }, { rootMargin: '0px 0px -12% 0px', threshold: [0, 0.25, 0.5] });
+      // 반복 빛: 카드가 조금이라도 보이는 동안만
+      var liveIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { en.target.classList.toggle('is-live', en.isIntersecting && !motionOff()); });
+      });
+      cases.forEach(function (c) {
+        var stage = $('.bn-stage', c) || c, steps = stepsOf(c);
+        if (!c.classList.contains('is-on')) playIO.observe(stage);
+        if (steps && !steps.classList.contains('is-on')) playIO.observe(steps);
+        liveIO.observe(c);
+      });
+      document.addEventListener('doogo:motion', function (e) {
+        if (e.detail && e.detail.off) { allOn(); return; }
+        // 다시 켜면: 보이는 카드에만 반복 빛 (관찰을 새로 걸면 현재 상태로 콜백이 옴)
+        cases.forEach(function (c) { liveIO.unobserve(c); liveIO.observe(c); });
+      });
+    }
+
+    // 포인터 기울기 (마우스만 · OS 설정이 켜진 기기 제외)
+    if (!soft && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      cases.forEach(function (c) {
+        var tx = 0, ty = 0, cx = 0, cy = 0, raf = 0, rect = null;
+        function step() {
+          cx += (tx - cx) * 0.12; cy += (ty - cy) * 0.12;
+          if (Math.abs(tx - cx) < 0.002 && Math.abs(ty - cy) < 0.002) { cx = tx; cy = ty; raf = 0; }
+          else raf = requestAnimationFrame(step);
+          if (cx === 0 && cy === 0 && !raf) { c.style.removeProperty('--px'); c.style.removeProperty('--py'); return; }
+          c.style.setProperty('--px', cx.toFixed(4));
+          c.style.setProperty('--py', cy.toFixed(4));
+        }
+        function kick() { if (!raf) raf = requestAnimationFrame(step); }
+        c.addEventListener('pointerenter', function () { rect = null; });
+        c.addEventListener('pointermove', function (e) {
+          if (e.pointerType !== 'mouse' || motionOff()) return;
+          if (!rect) rect = c.getBoundingClientRect();
+          tx = clamp(((e.clientX - rect.left) / rect.width - 0.5) * 2, -1, 1);
+          ty = clamp(((e.clientY - rect.top) / rect.height - 0.5) * 2, -1, 1);
+          kick();
+        });
+        c.addEventListener('pointerleave', function () { tx = 0; ty = 0; rect = null; kick(); });
+        window.addEventListener('scroll', function () { rect = null; }, { passive: true }); // 쌓이며 움직이는 카드라 위치를 다시 잼
+      });
+    }
   }
 
   /* ---------- 탭: 운영 브랜드 · 프로젝트 · 성장 사례 · 협력 파트너 ----------
