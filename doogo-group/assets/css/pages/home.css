@@ -152,35 +152,8 @@
 .intro-statement { font-size: clamp(28px, 3.5vw, 52px); font-weight: 700; line-height: 1.4; letter-spacing: -0.04em; color: var(--ink); }
 .intro-statement [data-accent] { color: var(--blue); } /* JS 없을 때 */
 
-/* 글자 새김 (home.js · data-engrave) — 단어(.eg-w)는 줄바꿈 단위, 글자(.eg-c)마다 --ci × 26ms 지연
-   대기: 흐림 · 아래 · 투명 / .is-on: 선명 · 제자리 · 잉크색 (새겨지는 순간 잠깐 블루 빛이 돌다 잉크로 가라앉음)
-   .is-accent: '하나의 흐름으로' 블루 + 밑줄 그리기 */
-/* 21차: 메인 마무리 배너 슬로건(.cbx-home-title)도 같은 새김 — 색만 변수로 (--eg-ink 최종 글자 · --eg-glow 새겨지는 순간 · --eg-accent 강조 · --eg-line 밑줄) */
-[data-engrave] { --eg-ink: var(--ink); --eg-glow: var(--blue-300); --eg-accent: var(--blue); --eg-line: linear-gradient(90deg, var(--blue) 0%, var(--sky) 100%); }
-[data-engrave] .eg-w { display: inline-block; white-space: nowrap; }
-[data-engrave] .eg-c { display: inline-block; }
-[data-engrave] .eg-accent { position: relative; display: inline-block; white-space: nowrap; }
-[data-engrave] .eg-accent::after {
-  content: ""; position: absolute; left: .02em; right: .06em; bottom: .02em; height: .075em; border-radius: .08em;
-  background: var(--eg-line);
-  transform: scaleX(0); transform-origin: left center;
-}
-.js [data-engrave].is-split .eg-c {
-  opacity: 0; color: var(--eg-glow);
-  transform: translate3d(0, .42em, 0) scale(1.04); filter: blur(10px);
-}
-.js [data-engrave].is-split.is-on .eg-c {
-  --d: calc(var(--ci, 0) * 26ms);
-  opacity: 1; color: var(--eg-ink); transform: none; filter: blur(0);
-  transition: opacity .5s var(--ease) var(--d), transform .9s cubic-bezier(.16, 1, .3, 1) var(--d), filter .7s var(--ease) var(--d), color 1.2s var(--ease) calc(var(--d) + .18s);
-}
-.js [data-engrave].is-split.is-accent .eg-accent .eg-c { color: var(--eg-accent); transition: color .6s var(--ease) calc(var(--ai, 0) * 45ms); }
-.js [data-engrave].is-split .eg-accent::after { transition: transform 0s; }
-.js [data-engrave].is-split.is-accent .eg-accent::after { transform: scaleX(1); transition: transform 1s cubic-bezier(.65, 0, .35, 1) .2s; }
-[data-engrave].no-tr .eg-c, [data-engrave].no-tr .eg-accent::after { transition: none !important; }
-/* JS 가 글자를 나눴지만 아직 실행 전이 아닌 정지 상태(움직임 멈추기): 바로 완성 */
-html.motion-off [data-engrave] .eg-c { opacity: 1 !important; transform: none !important; filter: none !important; }
-html.motion-off [data-engrave] .eg-accent::after { transform: scaleX(1) !important; }
+/* 글자 새김(data-engrave)은 base.css · site.js 공용 (23차) — 메인은 색만 덮어씀 */
+.intro-statement[data-engrave] { --eg-ink: var(--ink); }
 /* 마무리 배너(블루 바탕): 흰 글자 · 새겨질 때 하늘빛 · 'Better Tomorrow.' 연한 블루 + 흰 밑줄 */
 .cbx-home-title[data-engrave] { --eg-ink: #fff; --eg-glow: #9CC2FF; --eg-accent: #C6DBFF; --eg-line: linear-gradient(90deg, #fff 0%, #9CC2FF 100%); }
 .cbx-home-title [data-accent] { color: #C6DBFF; } /* JS 없을 때 */
@@ -249,7 +222,7 @@ html.motion-off [data-engrave] .eg-accent::after { transform: scaleX(1) !importa
 
 /* 머리: 제목 + 소개 한 줄 + 그룹 구조 한 줄 */
 .gp-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px 48px; }
-.gp-h2 .line { display: inline-block; vertical-align: top; }
+.gp-h2 .line, .gp-h2 .eg-line { display: inline-block; vertical-align: top; } /* .eg-line: 글자 새김 후 줄 (site.js) */
 .gp-intro { max-width: 460px; }
 .gp-lead { font-size: clamp(.95rem, 1.1vw, 1.06rem); line-height: 1.65; letter-spacing: -0.015em; color: var(--on-dark-2); text-wrap: pretty; }
 .gp-struct { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line-dark); font-size: .86rem; color: var(--on-dark-3); }

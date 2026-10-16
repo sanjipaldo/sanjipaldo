@@ -169,71 +169,7 @@
     onMotion.push(function (off) { if (off) showFinal(); else if (factsIn) roll(); });
   }
 
-  /* ---------- 소개 문장 글자 새김 (data-engrave) ----------
-     글자마다 span 으로 나눠(aria-hidden) 화면에 들어오면 차례로 새기고, 원문은 sr-only 로 한 번만 읽힙니다.
-     다 새겨지면 강조 구절([data-accent])이 블루로 바뀌고 밑줄이 그려집니다. */
-  var eg = $('[data-engrave]');
-  if (eg) {
-    var plain = eg.textContent.replace(/\s+/g, ' ').trim();
-    var vis = document.createElement('span'); vis.setAttribute('aria-hidden', 'true');
-    var chars = [], accents = [];
-    var addText = function (text, target, isAccent) {
-      text.split(/(\s+)/).forEach(function (part) {
-        if (!part) return;
-        if (/^\s+$/.test(part)) { target.appendChild(document.createTextNode(' ')); return; }
-        var w = document.createElement('span'); w.className = 'eg-w';
-        Array.prototype.forEach.call(part, function (ch) {
-          var c = document.createElement('span'); c.className = 'eg-c'; c.textContent = ch;
-          w.appendChild(c); chars.push(c); if (isAccent) accents.push(c);
-        });
-        target.appendChild(w);
-      });
-    };
-    Array.prototype.slice.call(eg.childNodes).forEach(function (node) {
-      if (node.nodeType === 3) addText(node.textContent, vis, false);
-      else if (node.nodeType === 1 && node.hasAttribute('data-accent')) {
-        var acc = document.createElement('span'); acc.className = 'eg-accent';
-        addText(node.textContent, acc, true);
-        vis.appendChild(acc);
-      } else if (node.nodeType === 1) addText(node.textContent, vis, false);
-    });
-    var sr = document.createElement('span'); sr.className = 'sr-only'; sr.textContent = plain;
-    eg.textContent = ''; eg.appendChild(sr); eg.appendChild(vis);
-    chars.forEach(function (c, i) { c.style.setProperty('--ci', i); });
-    accents.forEach(function (c, i) { c.style.setProperty('--ai', i); });
-    // egPlayed: 실제로 한 글자씩 새겨졌는지. 멈춤 상태에서 최종 모습만 보인 경우엔 false 로 두어,
-    // 나중에 '움직임 켜기'를 누르면 (보이는 중이면 바로, 아니면 화면에 들어올 때) 처음부터 새깁니다.
-    var accTimer = 0, egPlayed = false, egIn = false, egIO = null;
-    var finish = function () { clearTimeout(accTimer); eg.classList.add('is-on', 'is-accent'); };
-    var start = function () {
-      if (motionOff()) { finish(); return; }
-      egPlayed = true;
-      if (egIO) egIO.disconnect();
-      eg.classList.add('is-on');
-      accTimer = setTimeout(function () { eg.classList.add('is-accent'); }, chars.length * 24 + 750);
-    };
-    var rearm = function () { // 전환 없이 즉시 새기기 전 상태로
-      clearTimeout(accTimer);
-      eg.classList.add('is-reset');
-      eg.classList.remove('is-on', 'is-accent');
-      void eg.offsetWidth;
-      eg.classList.remove('is-reset');
-    };
-    eg.classList.add('is-split');
-    if (!hasIO || motionOff()) finish();
-    if (hasIO) {
-      egIO = new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) { egIn = en.isIntersecting; if (egIn) start(); });
-      }, { rootMargin: '0px 0px -18% 0px', threshold: 0.2 });
-      egIO.observe(eg);
-    }
-    onMotion.push(function (off) {
-      if (off) { finish(); return; }
-      if (egPlayed || !hasIO) return;
-      rearm();
-      if (egIn) requestAnimationFrame(start);
-    });
-  }
+  /* 소개 문장 글자 새김(data-engrave)은 site.js 공용 (23차) */
 
   /* ---------- 히어로 무대: 두고그룹 빌딩 ----------
      지주회사 로비 위로 일곱 개 층(사업)이 쌓이고, 층마다 맡은 그룹사 카드로 선이 이어집니다.

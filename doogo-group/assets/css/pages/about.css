@@ -361,21 +361,7 @@ main .note { color: var(--muted); }
 .ab-intro-body { display: grid; gap: 22px; padding-top: 8px; color: var(--ink-2); font-size: 1.06rem; line-height: 1.85; }
 .ab-intro-lede { font-size: clamp(1.22rem, 1.85vw, 1.55rem); line-height: 1.6; font-weight: 600; color: var(--ink); letter-spacing: -.025em; }
 .ab-intro-lede [data-accent] { color: var(--blue); } /* JS 없을 때 */
-/* 글자 새김 (about.js · data-engrave): 화면에 들어오면 글자마다 --ci × 24ms 지연으로 흐림 → 선명 · 아래 → 제자리 · 흐린 색 → 잉크색.
-   다 새겨지면 '한 그룹 안에서'가 블루로 바뀌고 밑줄이 그려집니다. */
-.ab-intro-lede .eg-w { display: inline-block; white-space: nowrap; }
-.ab-intro-lede .eg-c { display: inline-block; }
-.ab-intro-lede .eg-accent { position: relative; display: inline-block; white-space: nowrap; }
-.ab-intro-lede .eg-accent::after { content: ""; position: absolute; left: 0; right: 0; bottom: .02em; height: 2px; border-radius: 2px; background: var(--blue); transform: scaleX(0); transform-origin: left center; }
-.js .ab-intro-lede.is-split .eg-c {
-  opacity: 0; transform: translateY(.38em); filter: blur(6px); color: #9AA3B2;
-  transition: opacity .55s var(--ease), transform .75s var(--ease), filter .6s var(--ease), color .9s var(--ease);
-  transition-delay: calc(var(--ci, 0) * 24ms);
-}
-.js .ab-intro-lede.is-split.is-on .eg-c { opacity: 1; transform: none; filter: none; color: var(--ink); }
-.js .ab-intro-lede.is-split.is-accent .eg-accent .eg-c { color: var(--blue); transition: color .6s var(--ease) calc(var(--ai, 0) * 45ms); }
-.ab-intro-lede.is-accent .eg-accent::after { transform: scaleX(1); transition: transform 1s cubic-bezier(.65, 0, .35, 1) .2s; }
-.js .ab-intro-lede.is-split.is-reset .eg-c, .ab-intro-lede.is-reset .eg-accent::after { transition: none !important; } /* 다시 켤 때 즉시 되돌림 (about.js) */
+/* 글자 새김(data-engrave)은 base.css · site.js 공용 (23차) */
 
 .ab-tagline-wrap { margin-top: clamp(88px, 11vw, 160px); }
 .ab-tagline { font-size: clamp(2.1rem, 5.6vw, 5.4rem); line-height: 1.06; font-weight: 600; letter-spacing: -.035em; }
@@ -1283,5 +1269,5 @@ html.motion-off .ab-oc-ico, html.motion-off .ab-oc-ico::after { transition: none
 @media (max-width: 1024px) {
   .ab-intro-grid { grid-template-columns: 1fr; gap: 22px; }
   .ab-intro-head { gap: 10px; padding-top: 0; }
-  .ab-intro-head .h2 .line { display: inline-block; vertical-align: top; }
+  .ab-intro-head .h2 .line, .ab-intro-head .h2 .eg-line { display: inline-block; vertical-align: top; }
 }

@@ -114,94 +114,7 @@
     });
   }
 
-  /* ---------- S2 인트로: 글자가 하나씩 새겨지는 큰 문장 ----------
-     원문은 sr-only 로 한 번만 읽히고, 화면용 글자 조각(span.eg-c)은 aria-hidden.
-     단어(span.eg-w)는 줄바꿈되지 않게 묶고, '하나의 흐름으로'(data-accent)는 한 덩어리(span.eg-accent).
-     화면에 들어오면(.is-on) 글자마다 --ci × 26ms 지연으로 흐림→선명 · 아래→제자리 · 투명→잉크색,
-     다 새겨지면(.is-accent) '하나의 흐름으로'가 블루로 바뀌고 밑줄이 그려집니다.
-     화면 밖으로 완전히 나가면 처음 상태로 되돌려, 다시 들어올 때 다시 새깁니다. */
-  var EG_STEP = 26; // 글자당 지연(ms)
-  // 21차: 같은 새김을 마무리 배너 영문 슬로건(.cbx-home-title · 'Better Tomorrow.' 강조)에도 — data-engrave 가 붙은 문장마다 따로 재생
-  function engrave() { $$('[data-engrave]').forEach(engraveOne); }
-  function engraveOne(el) {
-    var full = el.textContent.replace(/\s+/g, ' ').trim();
-    var vis = document.createElement('span');
-    vis.className = 'eg';
-    vis.setAttribute('aria-hidden', 'true');
-    var chars = [], accents = [];
-    function build(node, target, accent) {
-      Array.prototype.slice.call(node.childNodes).forEach(function (n) {
-        if (n.nodeType === 3) {
-          n.textContent.split(/(\s+)/).forEach(function (part) {
-            if (!part) return;
-            if (/^\s+$/.test(part)) { target.appendChild(document.createTextNode(' ')); return; }
-            var w = document.createElement('span');
-            w.className = 'eg-w';
-            Array.from(part).forEach(function (ch) {
-              var c = document.createElement('span');
-              c.className = 'eg-c';
-              c.textContent = ch;
-              w.appendChild(c); chars.push(c);
-              if (accent) accents.push(c);
-            });
-            target.appendChild(w);
-          });
-        } else if (n.nodeName === 'BR') {
-          target.appendChild(n.cloneNode(false));
-        } else if (n.nodeType === 1) {
-          if (n.hasAttribute('data-accent')) {
-            var a = document.createElement('span');
-            a.className = 'eg-accent';
-            target.appendChild(a);
-            build(n, a, true);
-          } else build(n, target, accent);
-        }
-      });
-    }
-    build(el, vis, false);
-    var sr = document.createElement('span');
-    sr.className = 'sr-only';
-    sr.textContent = full;
-    el.textContent = '';
-    el.appendChild(sr);
-    el.appendChild(vis);
-    chars.forEach(function (c, i) { c.style.setProperty('--ci', i); });
-    accents.forEach(function (c, i) { c.style.setProperty('--ai', i); });
-    el.style.setProperty('--eg-n', chars.length);
-    el.classList.add('is-split');
-
-    var accentT = 0;
-    var total = chars.length * EG_STEP + 700; // 마지막 글자가 자리 잡을 무렵 강조 시작
-    function play() {
-      if (el.classList.contains('is-on')) return;
-      el.classList.add('is-on');
-      clearTimeout(accentT);
-      if (motionOff()) { el.classList.add('is-accent'); return; }
-      accentT = setTimeout(function () { el.classList.add('is-accent'); }, total);
-    }
-    function reset() {
-      if (!el.classList.contains('is-on')) return;
-      clearTimeout(accentT);
-      el.classList.add('no-tr');
-      el.classList.remove('is-on', 'is-accent');
-      void el.offsetWidth;
-      el.classList.remove('no-tr');
-    }
-    if (!('IntersectionObserver' in window)) { el.classList.add('is-on', 'is-accent'); return; }
-    new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) {
-        if (motionOff()) { play(); return; }
-        if (en.isIntersecting && en.intersectionRatio >= 0.3) play();
-        else if (!en.isIntersecting) reset();
-      });
-    }, { threshold: [0, 0.3] }).observe(el);
-    onMotion(function (off) {
-      if (off) { clearTimeout(accentT); el.classList.add('is-on', 'is-accent'); return; }
-      // 다시 켰을 때 화면 밖이면 처음 상태로 → 들어올 때 다시 새김
-      var r = el.getBoundingClientRect();
-      if (r.bottom <= 0 || r.top >= window.innerHeight) reset();
-    });
-  }
+  /* S2 인트로 큰 문장 · 마무리 배너 슬로건의 글자 새김(data-engrave)은 site.js 공용 (23차) */
 
   /* ---------- S2 숫자 4칸: 0부터 세어 올라가는 숫자 + 아래 선 그리기 ----------
      숫자는 0 … n 이 세로로 쌓인 띠(.fact-reel)가 위로 올라가며 0부터 차례로 지나갑니다(약 1.8초, 칸마다 0.15초 지연).
@@ -928,7 +841,6 @@
   /* ---------- 실행 + 스크롤 루프 (rAF 1회로 묶음) ---------- */
   heroScenes();
   heroPlayGuard();
-  engrave();
   factsCount();
   groupProjects();
   var updaters = [bizStory()].filter(Boolean);

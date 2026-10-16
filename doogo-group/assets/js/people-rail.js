@@ -166,11 +166,20 @@
     root.addEventListener('mouseleave', function () { hover = false; hold(); });
     root.addEventListener('focusin', function () { focusIn = true; });
     root.addEventListener('focusout', function (e) { if (!root.contains(e.relatedTarget)) focusIn = false; });
+    // 23차: 줄이 화면에 거의 다 들어온 뒤에만 자동 넘김 — 처음 보일 때는 항상 첫 카드(문원오)부터, 들어올 때마다 6초 쉬었다가
+    var seenOnce = false;
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function (en) {
-        inView = en[0].isIntersecting;
-        if (inView) root.classList.add('is-seen');
-      }, { threshold: 0.25 }).observe(root);
+        var e = en[0], was = inView;
+        if (e.isIntersecting && !seenOnce) {
+          seenOnce = true;
+          if (idx !== n) { idx = n; render(false); }
+          root.classList.add('is-seen');
+          hold();
+        }
+        inView = e.isIntersecting && e.intersectionRatio >= 0.6;
+        if (inView && !was) hold();
+      }, { threshold: [0, 0.6] }).observe(root);
     } else { inView = true; root.classList.add('is-seen'); }
 
     function refit() { measure(); render(false); }

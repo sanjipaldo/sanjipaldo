@@ -351,3 +351,6 @@ html.motion-off .ld-m-in.is-swap .ld-m-visual :is(.pcard-img, .pcard-sil) { opac
 .ld-card-career { display: grid; gap: 3px; margin-top: 12px; padding-top: 11px; border-top: 1px dashed rgba(11, 27, 51, .14); width: 100%; }
 .ld-card-career li { position: relative; padding-left: 11px; font-size: .84rem; font-weight: 500; line-height: 1.5; letter-spacing: -.02em; color: var(--ink-2); word-break: keep-all; }
 .ld-card-career li::before { content: ""; position: absolute; left: 0; top: .64em; width: 4px; height: 4px; border-radius: 50%; background: var(--blue); }
+/* 23차: 이력은 줄마다 한 줄로 — 카드 폭에 맞춰 글자 크기를 정함(컨테이너 쿼리 cqi) · 가장 긴 줄도 카드 안에 */
+.ld-card { container-type: inline-size; }
+.ld-card-career li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: min(.84rem, 5.3cqi); }

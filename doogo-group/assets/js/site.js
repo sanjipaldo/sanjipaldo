@@ -171,6 +171,134 @@
     window.addEventListener('resize', function () { if (window.innerWidth > 1024 && mnav.classList.contains('is-open')) setMenu(false); });
   }
 
+  /* ---------- 글자 새김 (23차 · 전 페이지 공용) ----------
+     메인 인트로 문장('두고그룹은 제품을 만들고…')의 모션을 같은 크기의 큰 글씨에 똑같이 줍니다.
+     대상: [data-engrave] + 섹션 제목(.h2) · 사업 마무리 배너 제목 · 상세 '운영 사이트' · 상세 문의 제목 · FAQ 마무리 제목 · 사업영역 사진 위 문장
+     · 원문은 sr-only 로 한 번만 읽히고, 화면용 글자 조각(span.eg-c)은 aria-hidden
+     · 단어(span.eg-w)는 줄바꿈되지 않게 묶음 · 줄(.line)은 블록(span.eg-line) · <br> 그대로 · .en / .nowrap / .accent 같은 span 은 같은 class 로 다시 감쌈
+     · [data-accent] 는 한 덩어리(span.eg-accent) — 다 새겨지면 블루로 바뀌고 밑줄이 그려짐
+     · 화면에 30% 들어오면 글자마다 --ci × 26ms 지연으로 흐림→선명 · 아래→제자리 · 투명→글자색, 화면 밖으로 완전히 나가면 처음 상태로(다시 들어올 때 다시 새김)
+     · 줄 마스크 등장(data-lines) · 떠오르기(data-reveal)를 쓰던 제목은 그 속성을 떼고 새김으로 바꿈
+     · 안에 링크 · 버튼이 있는 제목, 법적 고지 창 안, data-engrave="off" 는 건너뜀 */
+  var EG_STEP = 26; // 글자당 지연(ms)
+  var EG_AUTO = '.h2, .cbx-biz-title, .dt-ask-title, .dt-web-title, .fq-cta-t, .bz-media-quote';
+  var egItems = [];
+  function egSplit(el) {
+    if (el.classList.contains('is-split') || el.getAttribute('data-engrave') === 'off') return;
+    if (el.closest('.legal-modal-body, template') || el.querySelector('a, button, input, select, textarea, img')) return;
+    var vis = document.createElement('span');
+    vis.className = 'eg';
+    vis.setAttribute('aria-hidden', 'true');
+    var chars = [], accents = [], said = '';
+    function gap() { if (said && !/\s$/.test(said)) said += ' '; }
+    function build(node, target, accent) {
+      Array.prototype.slice.call(node.childNodes).forEach(function (n) {
+        if (n.nodeType === 3) {
+          said += n.textContent;
+          n.textContent.split(/(\s+)/).forEach(function (part) {
+            if (!part) return;
+            if (/^\s+$/.test(part)) { target.appendChild(document.createTextNode(' ')); return; }
+            var w = document.createElement('span');
+            w.className = 'eg-w';
+            Array.from(part).forEach(function (ch) {
+              var c = document.createElement('span');
+              c.className = 'eg-c';
+              c.textContent = ch;
+              w.appendChild(c); chars.push(c);
+              if (accent) accents.push(c);
+            });
+            target.appendChild(w);
+          });
+        } else if (n.nodeName === 'BR') {
+          gap();
+          target.appendChild(n.cloneNode(false));
+        } else if (n.nodeType === 1) {
+          if (n.classList.contains('sr-only')) { said += n.textContent; return; }
+          if (n.getAttribute('aria-hidden') === 'true') { target.appendChild(n.cloneNode(true)); return; }
+          var box;
+          if (n.hasAttribute('data-accent')) {
+            box = document.createElement('span');
+            box.className = 'eg-accent';
+            target.appendChild(box);
+            build(n, box, true);
+          } else if (n.classList.contains('line')) {
+            gap();
+            box = document.createElement('span');
+            box.className = 'eg-line';
+            target.appendChild(box);
+            build(n, box, accent);
+            gap();
+          } else {
+            box = document.createElement(/^(B|STRONG|EM|I|SMALL|SUP|SUB|MARK)$/.test(n.nodeName) ? n.nodeName.toLowerCase() : 'span');
+            if (n.className) box.className = n.className;
+            if (n.hasAttribute('lang')) box.setAttribute('lang', n.getAttribute('lang'));
+            target.appendChild(box);
+            build(n, box, accent);
+          }
+        }
+      });
+    }
+    build(el, vis, false);
+    if (!chars.length) return;
+    var sr = document.createElement('span');
+    sr.className = 'sr-only';
+    sr.textContent = said.replace(/\s+/g, ' ').trim();
+    el.textContent = '';
+    el.appendChild(sr);
+    el.appendChild(vis);
+    chars.forEach(function (c, i) { c.style.setProperty('--ci', i); });
+    accents.forEach(function (c, i) { c.style.setProperty('--ai', i); });
+    el.removeAttribute('data-lines');
+    el.removeAttribute('data-reveal');
+    if (!el.hasAttribute('data-engrave')) el.setAttribute('data-engrave', 'auto');
+    el.classList.add('is-split');
+    var accentT = 0, total = chars.length * EG_STEP + 700; // 마지막 글자가 자리 잡을 무렵 강조 시작
+    el._eg = {
+      play: function () {
+        if (el.classList.contains('is-on')) return;
+        el.classList.add('is-on');
+        clearTimeout(accentT);
+        if (window.DOOGO.motionOff() || !accents.length) { if (accents.length) el.classList.add('is-accent'); return; }
+        accentT = setTimeout(function () { el.classList.add('is-accent'); }, total);
+      },
+      finish: function () { clearTimeout(accentT); el.classList.add('is-on', 'is-accent'); },
+      reset: function () {
+        if (!el.classList.contains('is-on')) return;
+        clearTimeout(accentT);
+        el.classList.add('no-tr');
+        el.classList.remove('is-on', 'is-accent');
+        void el.offsetWidth;
+        el.classList.remove('no-tr');
+      }
+    };
+    egItems.push(el);
+  }
+  $$('[data-engrave]').forEach(egSplit);
+  $$(EG_AUTO).forEach(egSplit);
+  if (egItems.length) {
+    if (!('IntersectionObserver' in window)) egItems.forEach(function (el) { el._eg.finish(); });
+    else {
+      var egIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          var g = en.target._eg;
+          if (window.DOOGO.motionOff()) { g.finish(); return; }
+          if (en.isIntersecting && en.intersectionRatio >= 0.3) g.play();
+          else if (!en.isIntersecting) g.reset();
+        });
+      }, { threshold: [0, 0.3] });
+      egItems.forEach(function (el) { egIO.observe(el); });
+    }
+    document.addEventListener('doogo:motion', function (e) {
+      var off = !!(e.detail && e.detail.off);
+      egItems.forEach(function (el) {
+        if (off) { el._eg.finish(); return; }
+        // 다시 켰을 때 화면 밖이면 처음 상태로 → 들어올 때 다시 새김
+        var r = el.getBoundingClientRect();
+        if (r.bottom <= 0 || r.top >= window.innerHeight) el._eg.reset();
+      });
+    });
+  }
+
   /* ---------- 스크롤 등장 ---------- */
   var revealEls = $$('[data-reveal], [data-lines]');
   // [data-lines] 안의 .line 에 순번(--i) 부여

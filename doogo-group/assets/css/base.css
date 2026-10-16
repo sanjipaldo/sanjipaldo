@@ -591,6 +591,40 @@ video::cue { font-family: var(--font-ko); background: rgba(0, 0, 0, .55); color:
 .js [data-lines] .line > span { transform: translateY(105%); transition: transform 1s var(--ease); transition-delay: calc(var(--i, 0) * .09s + var(--d, 0s)); }
 .js [data-lines].is-in .line > span { transform: none; }
 
+/* 글자 새김 (site.js · 23차 전 페이지 공용) — 메인 인트로 문장과 같은 모션
+   대상: [data-engrave] + 섹션 제목(.h2) 등 같은 크기의 큰 글씨(site.js 의 EG_AUTO). 단어(.eg-w)는 줄바꿈 단위, 글자(.eg-c)마다 --ci × 26ms 지연
+   대기: 흐림 · 아래 · 투명 / .is-on: 선명 · 제자리 · 글자색 (새겨지는 순간 잠깐 블루 빛이 돌다 제 색으로 가라앉음)
+   .is-accent: [data-accent] 구절 블루 + 밑줄 그리기
+   색은 변수로: --eg-ink 최종 글자(기본: 원래 글자색) · --eg-glow 새겨지는 순간 · --eg-accent 강조 · --eg-line 밑줄 */
+[data-engrave] { --eg-ink: currentColor; --eg-glow: var(--blue-300); --eg-accent: var(--blue); --eg-line: linear-gradient(90deg, var(--blue) 0%, var(--sky) 100%); }
+[data-engrave] .eg-line { display: block; }
+[data-engrave] .eg-w { display: inline-block; white-space: nowrap; }
+[data-engrave] .eg-c { display: inline-block; }
+[data-engrave] .eg-accent { position: relative; display: inline-block; white-space: nowrap; }
+[data-engrave] .eg-accent::after {
+  content: ""; position: absolute; left: .02em; right: .06em; bottom: .02em; height: .075em; border-radius: .08em;
+  background: var(--eg-line);
+  transform: scaleX(0); transform-origin: left center;
+}
+/* 새김 전(스크립트가 글자를 나누기 전) 잠깐 보였다 사라지는 깜빡임 방지 — 줄 마스크 · 떠오르기를 쓰던 제목은 원래 그 규칙으로 숨겨져 있음 */
+.js .dt-ask-title:not(.is-split), .js .dt-web-title:not(.is-split), .js .fq-cta-t:not(.is-split), .js .bz-media-quote:not(.is-split) { opacity: 0; }
+.js [data-engrave].is-split .eg-c {
+  opacity: 0; color: var(--eg-glow);
+  transform: translate3d(0, .42em, 0) scale(1.04); filter: blur(10px);
+}
+.js [data-engrave].is-split.is-on .eg-c {
+  --d: calc(var(--ci, 0) * 26ms);
+  opacity: 1; color: var(--eg-ink); transform: none; filter: blur(0);
+  transition: opacity .5s var(--ease) var(--d), transform .9s cubic-bezier(.16, 1, .3, 1) var(--d), filter .7s var(--ease) var(--d), color 1.2s var(--ease) calc(var(--d) + .18s);
+}
+.js [data-engrave].is-split.is-accent .eg-accent .eg-c { color: var(--eg-accent); transition: color .6s var(--ease) calc(var(--ai, 0) * 45ms); }
+.js [data-engrave].is-split .eg-accent::after { transition: transform 0s; }
+.js [data-engrave].is-split.is-accent .eg-accent::after { transform: scaleX(1); transition: transform 1s cubic-bezier(.65, 0, .35, 1) .2s; }
+[data-engrave].no-tr .eg-c, [data-engrave].no-tr .eg-accent::after { transition: none !important; }
+html.motion-off [data-engrave] .eg-c { opacity: 1 !important; transform: none !important; filter: none !important; color: var(--eg-ink) !important; }
+html.motion-off [data-engrave] .eg-accent .eg-c { color: var(--eg-accent) !important; }
+html.motion-off [data-engrave] .eg-accent::after { transform: scaleX(1) !important; }
+
 /* 움직임 멈추기 — OS 설정이 아니라 사용자가 '움직임 멈추기' 버튼으로 고른 경우(html.motion-off)에만 적용 */
 html.motion-off { scroll-behavior: auto; }
 html.motion-off [data-reveal], html.motion-off .ft-nav[data-reveal] li, html.motion-off [data-lines] .line > span { opacity: 1 !important; transform: none !important; transition: none !important; }
