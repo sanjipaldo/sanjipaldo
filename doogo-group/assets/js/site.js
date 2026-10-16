@@ -396,6 +396,117 @@
     edge();
   });
 
+  /* ---------- 21차: 페이지 안 메뉴 꾸밈 ----------
+     두고그룹 · 브랜드와 성과 탭(.subnav [role=tab]), 사업 상세 바로가기(.subnav #앵커), 그룹소식 분류 탭(.nw-tabs)을
+     '이 페이지에 더 볼 메뉴가 있다'가 보이는 메뉴로 꾸밉니다 (생김새: base.css 21차).
+     · 왼쪽 안내 'IN THIS PAGE · 05개 메뉴' · 탭마다 번호 01… (소식 분류는 글 개수)
+     · 아직 열지 않은 메뉴에 작은 점 — 한 번 열면 사라짐 · 오른쪽 '다음 메뉴 → 이름' · 아래 진행 막대
+     탭을 고르는 동작은 각 페이지 스크립트(about.js · brands.js · news.js)와 위 위치 표시가 맡고,
+     여기서는 선택 상태(aria-selected · .is-active · aria-current)를 지켜보기만 합니다. 페이지 스크립트보다 먼저 실행되어
+     번호를 붙인 뒤의 탭 크기로 알약 위치를 잽니다. */
+  (function () {
+    var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
+    var isOn = function (el) { return el.classList.contains('is-active') || el.getAttribute('aria-current') === 'true' || el.getAttribute('aria-selected') === 'true'; };
+    var arrow = '<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>';
+    function label(kicker, n, unit) {
+      var p = document.createElement('p');
+      p.className = 'sn-label';
+      p.setAttribute('aria-hidden', 'true');
+      p.innerHTML = '<span class="sn-label-k">' + kicker + '</span><span class="sn-label-n"><b>' + pad2(n) + '</b>' + unit + '</span>';
+      return p;
+    }
+    function play(root) {
+      if (window.DOOGO.motionOff() || !('IntersectionObserver' in window)) { root.classList.add('sn-in'); return; }
+      var io = new IntersectionObserver(function (en) {
+        if (!en[0].isIntersecting) return;
+        io.disconnect();
+        requestAnimationFrame(function () { root.classList.add('sn-in'); });
+      });
+      io.observe(root);
+    }
+
+    // 1) .subnav (탭 또는 앵커 바로가기)
+    $$('.subnav').forEach(function (bar) {
+      var list = $('ul, ol', bar);
+      if (!list || bar.classList.contains('sn-ready')) return;
+      var links = $$('a', list);
+      var n = links.length;
+      if (n < 2) return;
+      var names = links.map(function (a) { return a.textContent.replace(/\s+/g, ' ').trim(); });
+      links.forEach(function (a, i) {
+        var num = document.createElement('span');
+        num.className = 'sn-num'; num.setAttribute('aria-hidden', 'true'); num.textContent = pad2(i + 1);
+        a.insertBefore(num, a.firstChild);
+        var dot = document.createElement('i');
+        dot.className = 'sn-dot'; dot.setAttribute('aria-hidden', 'true');
+        a.appendChild(dot);
+        var li = a.closest('li');
+        if (li) { li.classList.add('sn-item'); li.style.setProperty('--k', i); }
+      });
+      var box = list.parentNode;
+      box.insertBefore(label('In this page', n, '개 메뉴'), list);
+      var next = document.createElement('button');
+      next.type = 'button'; next.className = 'sn-next';
+      next.innerHTML = '<span class="sn-next-tx"><span class="sn-next-k">다음 메뉴</span><span class="sn-next-t"></span></span><span class="sn-next-ar">' + arrow + '</span>';
+      box.appendChild(next);
+      var prog = document.createElement('span');
+      prog.className = 'sn-prog'; prog.setAttribute('aria-hidden', 'true'); prog.innerHTML = '<i></i>';
+      bar.appendChild(prog);
+      var nextT = $('.sn-next-t', next);
+
+      var cur = -2, raf = 0;
+      function sync() {
+        raf = 0;
+        var i = -1;
+        links.forEach(function (a, k) { if (i < 0 && isOn(a)) i = k; });
+        if (i >= 0 && !links[i].classList.contains('is-seen')) links[i].classList.add('is-seen');
+        if (i === cur) return;
+        cur = i;
+        var to = (i + 1) % n, last = i === n - 1;
+        nextT.textContent = names[to];
+        $('.sn-next-k', next).textContent = last ? '처음으로' : '다음 메뉴';
+        next.setAttribute('aria-label', (last ? '처음 메뉴로: ' : '다음 메뉴: ') + names[to]);
+        bar.style.setProperty('--p', i < 0 ? '0' : ((i + 1) / n).toFixed(4));
+      }
+      var queue = function () { if (!raf) raf = requestAnimationFrame(sync); };
+      new MutationObserver(queue).observe(list, { subtree: true, attributes: true, attributeFilter: ['class', 'aria-selected', 'aria-current'] });
+      next.addEventListener('click', function () {
+        var to = links[(cur + 1 + n) % n];
+        if (cur < 0) to = links[0];
+        to.click();
+        if (to.getAttribute('role') === 'tab') { try { to.focus({ preventScroll: true }); } catch (e) { to.focus(); } }
+      });
+      bar.classList.add('sn-ready');
+      sync();
+      play(bar);
+    });
+
+    // 2) 그룹소식 분류 탭: 번호 대신 분류별 글 개수 · 왼쪽 안내
+    var nw = $('.nw-tabs');
+    if (nw && !nw.classList.contains('sn-ready')) {
+      var items = $$('.nw-item[data-cat]');
+      var tabs = $$('.nw-tab[data-cat]', nw);
+      tabs.forEach(function (t, i) {
+        var cat = t.getAttribute('data-cat');
+        var c = cat === 'all' ? items.length : items.filter(function (it) { return it.getAttribute('data-cat') === cat; }).length;
+        if (items.length) {
+          var b = document.createElement('span');
+          b.className = 'sn-cnt'; b.setAttribute('aria-hidden', 'true'); b.textContent = c;
+          t.appendChild(b);
+          var sr = document.createElement('span');
+          sr.className = 'sr-only'; sr.textContent = ' (' + c + '건)';
+          t.appendChild(sr);
+        }
+        t.classList.add('sn-item'); t.style.setProperty('--k', i);
+      });
+      var row = nw.parentNode;
+      if (row) row.insertBefore(label('Newsroom', tabs.length, '개 분류'), nw);
+      nw.classList.add('sn-ready');
+      play(nw);
+      if (row) { row.classList.add('sn-ready'); play(row); }
+    }
+  })();
+
   /* ---------- 하단 CTA 띠 배경: 가까워질 때만 불러오기 ---------- */
   var bands = $$('.cta-band');
   if (bands.length && 'IntersectionObserver' in window) {
