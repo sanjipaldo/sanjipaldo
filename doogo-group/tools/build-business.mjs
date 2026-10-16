@@ -1303,7 +1303,7 @@ ${bizBand(b)}`;
 const out = [['business.html', buildList()], ...BIZ.map((b, i) => [`business-${b.slug}.html`, buildDetail(b, i)])];
 // SEO 공유 이미지: 실제 배포 주소 기준 절대 경로 + 페이지 주소(og:url)
 const SITE_URL = 'https://www.doogogroup.com/';
-const OG_IMG = `${SITE_URL}assets/img/og/og-doogo-holdings-2.jpg`;
+const OG_IMG = `${SITE_URL}assets/img/og/og-doogo-holdings-3.jpg`;
 const ogBlock = (file) => `<meta property="og:url" content="${SITE_URL}${file}">\n  <link rel="canonical" href="${SITE_URL}${file}">
   <meta property="og:locale" content="ko_KR">
   <meta property="og:image" content="${OG_IMG}">
