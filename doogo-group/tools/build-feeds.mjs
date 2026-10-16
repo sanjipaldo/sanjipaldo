@@ -12,7 +12,7 @@ const plain = (h) => h.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(
 
 // ---------- sitemap.xml ----------
 const PRIORITY = { 'index.html': '1.0', 'about.html': '0.9', 'business.html': '0.9', 'leadership.html': '0.8', 'brands.html': '0.8', 'news.html': '0.8', 'contact.html': '0.7', 'faq.html': '0.6', 'privacy.html': '0.3', 'email-policy.html': '0.3' };
-const pages = readdirSync(root).filter(f => f.endsWith('.html')).sort((a, b) => (a === 'index.html' ? -1 : b === 'index.html' ? 1 : a.localeCompare(b)));
+const pages = readdirSync(root).filter(f => f.endsWith('.html') && f !== '404.html').sort((a, b) => (a === 'index.html' ? -1 : b === 'index.html' ? 1 : a.localeCompare(b)));
 const urls = pages.map(f => {
   const loc = f === 'index.html' ? `${SITE}/` : `${SITE}/${f}`;
   const mod = statSync(join(root, f)).mtime.toISOString().slice(0, 10);
