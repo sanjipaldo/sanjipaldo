@@ -468,31 +468,91 @@ ${parts.footer}
 /* ---------- 마무리 배너 (페이지 맨 아래 · 푸터 바로 위) ----------
    원래의 공통 CTA 띠(.cta-band)는 두고그룹(about.html)에만 남기고, 페이지마다 다른 배너를 씁니다.
    스타일은 assets/css/cta-variants.css (head()가 모든 사업 페이지에 넣음)
-   - business.html: PICK_BAND — 7개 사업 + 그룹 제휴 '바로 상담' 타일 (밝은 블루 그리드 · .cbx--pick)
+   - business.html: PICK_BAND — '맞는 창구로 연결' 컨시어지 (22차 · .cbx--pick.cbx--qc — 3단계 안내 + 사업 메뉴 + 고른 창구 카드의 큰 버튼 하나)
+     모양은 pages/business.css '22차', 동작은 pages/business.js '8)' (cta-variants.css 의 옛 .cbx-tile 타일은 이제 쓰지 않음)
    - business-{slug}.html: bizBand(b) — 그 사업의 문구(BIZ[].band) + 대표 버튼(BIZ[].cta) + 현장 사진 분할 (잉크 네이비 · .cbx--biz) */
-const PICK_BAND = `  <!-- 마무리 배너: 사업을 고르면 문의 분야가 선택된 채 접수 화면으로 (7개 사업 + 그룹 제휴) -->
-  <section class="cbx cbx--pick" aria-labelledby="pick-title">
+// 22차 · 마무리 배너 '맞는 창구로 연결' 컨시어지 — 8번째 창구(그룹 제휴)의 카드 문구 (사업 7개는 BIZ 데이터를 그대로 씀)
+const QC_PARTNER = {
+  slug: 'partner', num: '+', area: '그룹 제휴', en: 'DOOGO HOLDINGS', icon: 'i-partner', corp: { en: 'DOOGO HOLDINGS' },
+  def: '여러 사업이 함께하는 제휴·투자·협업 문의는 지주회사 DOOGO HOLDINGS가 직접 받습니다.',
+  services: ['사업 간 제휴·협업', '공동 프로젝트 제안', '투자 및 성장 지원', '그룹 차원의 협력 제안'],
+};
+// '이런 상담을 받아요' 한 줄: BIZ[].services 는 HTML 조각(공간의 WORK·STAY·F&B 갈래 이름 · 준비 중 표시)이라
+// 갈래 이름은 작은 영문 꼬리표로, 준비 중 표시는 어두운 카드용 표시로 바꾸고 나머지 태그는 지움
+const qcSvc = (s) => {
+  const m = s.match(/^<b class="svc-pillar en">(.*?)<\/b>(.*)$/);
+  const tag = m ? `<b class="qc-svc-tag en">${m[1].replace(/<span class="soon-tag">.*?<\/span>/, '')}</b>` : '';
+  const soon = s.includes('soon-tag') ? '<span class="qc-soon">준비 중</span>' : '';
+  // ' · ' 앞에서는 줄이 바뀌지 않게(가운뎃점이 줄 맨 앞에 오지 않도록)
+  return `<span class="qc-svc-t">${tag}${nw((m ? m[2] : s).replace(/<[^>]+>/g, '')).replace(/ · /g, '&nbsp;· ')}${soon}</span>`;
+};
+// 왼쪽 메뉴 한 줄 = 그 창구의 접수 화면 링크(스크립트가 없을 때 그대로 이동) — business.js '8)'이 탭(role=tab)으로 바꿈
+const qcOpt = (b, i) => `              ${b === QC_PARTNER ? `<li class="qc-sep" aria-hidden="true"><span>그룹 차원의 제안이라면</span></li>
+              ` : ''}<li style="--i:${i}"><a class="qc-opt${i === 0 ? ' is-on' : ''}${b === QC_PARTNER ? ' qc-opt--partner' : ''}" href="${ASK(b.slug)}" data-key="${b.slug}"><span class="qc-opt-ico" aria-hidden="true">${ico(b.icon, '')}</span><span class="qc-opt-t"><strong>${b.area.replace(/ &amp; /g, '&nbsp;&amp; ')}</strong><span class="en">${b.en}</span></span><span class="qc-opt-n en" aria-hidden="true">${b.num}</span>${ARROW}</a></li>`;
+// 오른쪽 카드 한 장 = 고른 창구 (큰 아이콘 · 분야 · 브랜드 · 운영 회사 · 한 줄 정의 · 상담 항목 · 큰 버튼 하나)
+//  사진: 그 사업 첫 화면 사진(hero.f · 이 페이지에서 이미 불러온 파일)을 어둡게 깔아 글이 잘 보이게 · 그룹 제휴는 'd' 심볼
+const qcPanel = (b, i) => {
+  const isP = b === QC_PARTNER;
+  const ph = isP ? null : PHOTO[b.hero.f];
+  const photo = isP
+    ? '<span class="qc-photo qc-photo--mark" aria-hidden="true"></span>'
+    : `<span class="qc-photo" aria-hidden="true"><img src="assets/img/photo/${b.hero.f}.webp" alt="" width="${ph.w}" height="${ph.h}" loading="lazy" decoding="async" style="object-position:${b.hero.fx} ${b.hero.fy}"></span>`;
+  return `            <div class="qc-panel${i === 0 ? ' is-on' : ''}${isP ? ' qc-panel--partner' : ''}" id="qc-p-${b.slug}" data-key="${b.slug}">
+              ${photo}
+              <div class="qc-p-in">
+                <div class="qc-p-top">
+                  <span class="qc-p-badge" aria-hidden="true">${ico(b.icon, '')}</span>
+                  <p class="qc-p-meta"><span class="qc-p-kicker en">${isP ? 'Group Partnership' : `Business ${b.num} / 07`}</span><span class="qc-p-corp"><span>${isP ? '창구' : '운영'}</span><b class="en">${b.corp.en}</b></span></p>
+                </div>
+                <h3 class="qc-p-title"><span class="qc-p-area">${nw(b.area)}</span><span class="qc-p-brand en">${b.en}</span></h3>
+                <p class="qc-p-def">${nw(b.def)}</p>
+                <div class="qc-p-svc">
+                  <p class="qc-p-label">이런 상담을 받아요</p>
+                  <ul class="qc-svcs${b.services.some(s => s.includes('svc-pillar')) ? ' is-col' : ''}">
+${b.services.map(s => `                    <li>${CHECK}${qcSvc(s)}</li>`).join('\n')}
+                  </ul>
+                </div>
+                <div class="qc-p-act">
+                  <a class="btn btn--primary btn--lg qc-cta" href="${ASK(b.slug)}">${glue(isP ? '제휴 문의 시작하기' : `${nw(b.area)} 상담 시작하기`, ARROW)}</a>
+                  <p class="qc-p-note"><span class="qc-k en" aria-hidden="true">2</span>누르면 <strong>${nw(b.area)} · ${nw(b.en)}</strong> 분야가 선택된 접수 화면이 열립니다.</p>
+                </div>
+              </div>
+            </div>`;
+};
+const QC_ALL = [...BIZ, QC_PARTNER];
+const PICK_BAND = `  <!-- 마무리 배너 (22차 · 컨시어지): 3단계 안내 + 왼쪽 메뉴에서 창구 하나 고르기 → 오른쪽 카드의 큰 버튼 하나로 접수 화면(분야 선택됨)
+       스크립트가 없으면 메뉴 항목이 곧 접수 화면 링크 · 카드는 첫 창구(교육업)만 보임. 동작: business.js '8)' · 모양: business.css '22차' -->
+  <section class="cbx cbx--pick cbx--qc" aria-labelledby="pick-title" data-qc>
     <div class="container">
-      <div class="cbx-pick-head">
-        <div>
+      <div class="qc-head">
+        <div class="qc-head-copy">
           <span class="eyebrow" data-reveal="fade">Quick Contact</span>
           <h2 class="h2" id="pick-title" data-reveal style="--d:.06s">어떤 사업이든,<br> 맞는 창구로 연결합니다.</h2>
         </div>
-        <p class="cbx-pick-lead" data-reveal style="--d:.12s">상담할 사업을 고르면 <strong>문의 분야가 선택된 상태로</strong> 접수 화면이 열립니다. 담당자가 확인한 뒤 남겨 주신 연락처로 회신합니다.</p>
+        <ol class="qc-steps" data-reveal style="--d:.14s" aria-label="상담 접수 순서">
+          <li class="qc-step is-cur" style="--i:0"><span class="qc-step-n" aria-hidden="true"><b class="en">1</b>${CHECK}</span><span class="qc-step-line" aria-hidden="true"></span><span class="qc-step-t"><strong>사업 고르기</strong><span>상담할 사업을 선택</span></span></li>
+          <li class="qc-step" style="--i:1"><span class="qc-step-n" aria-hidden="true"><b class="en">2</b>${CHECK}</span><span class="qc-step-line" aria-hidden="true"></span><span class="qc-step-t"><strong>내용 남기기</strong><span>분야가 선택된 접수 화면에서</span></span></li>
+          <li class="qc-step" style="--i:2"><span class="qc-step-n" aria-hidden="true"><b class="en">3</b>${CHECK}</span><span class="qc-step-t"><strong>담당자 회신</strong><span>확인 후 남겨 주신 연락처로</span></span></li>
+        </ol>
       </div>
-      <ul class="cbx-tiles" data-reveal aria-label="사업별 바로 상담">
-${BIZ.map((b, i) => `        <li style="--i:${i}"><a class="cbx-tile" href="${ASK(b.slug)}">
-          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true">${ico(b.icon, '')}</span><span class="cbx-tile-num en" aria-hidden="true">${b.num}</span></span>
-          <span class="cbx-tile-t"><strong>${b.area.replace(/ &amp; /g, '&nbsp;&amp; ')}</strong><span class="en">${b.en}</span></span>
-          <span class="cbx-tile-go">상담하기${ARROW}</span>
-        </a></li>`).join('\n')}
-        <li style="--i:${BIZ.length}"><a class="cbx-tile cbx-tile--partner" href="${ASK('partner')}">
-          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true">${ico('i-partner', '')}</span><span class="cbx-tile-num en" aria-hidden="true">+</span></span>
-          <span class="cbx-tile-t"><strong>그룹 제휴</strong><span class="en">DOOGO HOLDINGS</span></span>
-          <span class="cbx-tile-go">제휴 문의${ARROW}</span>
-        </a></li>
-      </ul>
-      <p class="cbx-pick-foot" data-reveal style="--d:.1s">어느 사업에 맞는지 모르겠다면 분야를 고르지 않고 문의해도 됩니다. <a class="link-arrow" href="contact.html">문의하기 ${ico('i-arrow')}</a></p>
+      <div class="qc" data-reveal style="--d:.1s">
+        <div class="qc-menu">
+          <p class="qc-menu-head" id="qc-menu-t"><span class="qc-k en" aria-hidden="true">1</span>상담할 사업을 고르세요</p>
+          <div class="qc-list-wrap">
+            <span class="qc-ink" aria-hidden="true"></span>
+            <ul class="qc-list">
+${QC_ALL.map(qcOpt).join('\n')}
+            </ul>
+          </div>
+        </div>
+        <div class="qc-stage">
+          <div class="qc-card on-dark">
+            <span class="qc-glare" aria-hidden="true"></span>
+${QC_ALL.map(qcPanel).join('\n')}
+          </div>
+        </div>
+      </div>
+      <p class="cbx-pick-foot qc-foot" data-reveal style="--d:.1s">어느 사업에 맞는지 모르겠다면 분야를 고르지 않고 문의해도 됩니다. <a class="link-arrow" href="contact.html">문의하기 ${ico('i-arrow')}</a></p>
     </div>
   </section>`;
 

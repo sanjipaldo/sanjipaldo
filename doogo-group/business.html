@@ -25,9 +25,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="assets/css/base.css?v=a88e2a79">
+  <link rel="stylesheet" href="assets/css/base.css?v=b8235d1b">
   <link rel="stylesheet" href="assets/css/cta-variants.css?v=042dd8b0">
-  <link rel="stylesheet" href="assets/css/pages/business.css?v=e98c27c4">
+  <link rel="stylesheet" href="assets/css/pages/business.css?v=0c4dfaee">
 </head>
 <body data-page="business" data-header="overlay">
 <!-- @header:start -->
@@ -647,59 +647,235 @@
       </div>
     </div>
   </section>
-  <!-- 마무리 배너: 사업을 고르면 문의 분야가 선택된 채 접수 화면으로 (7개 사업 + 그룹 제휴) -->
-  <section class="cbx cbx--pick" aria-labelledby="pick-title">
+  <!-- 마무리 배너 (22차 · 컨시어지): 3단계 안내 + 왼쪽 메뉴에서 창구 하나 고르기 → 오른쪽 카드의 큰 버튼 하나로 접수 화면(분야 선택됨)
+       스크립트가 없으면 메뉴 항목이 곧 접수 화면 링크 · 카드는 첫 창구(교육업)만 보임. 동작: business.js '8)' · 모양: business.css '22차' -->
+  <section class="cbx cbx--pick cbx--qc" aria-labelledby="pick-title" data-qc>
     <div class="container">
-      <div class="cbx-pick-head">
-        <div>
+      <div class="qc-head">
+        <div class="qc-head-copy">
           <span class="eyebrow" data-reveal="fade">Quick Contact</span>
           <h2 class="h2" id="pick-title" data-reveal style="--d:.06s">어떤 사업이든,<br> 맞는 창구로 연결합니다.</h2>
         </div>
-        <p class="cbx-pick-lead" data-reveal style="--d:.12s">상담할 사업을 고르면 <strong>문의 분야가 선택된 상태로</strong> 접수 화면이 열립니다. 담당자가 확인한 뒤 남겨 주신 연락처로 회신합니다.</p>
+        <ol class="qc-steps" data-reveal style="--d:.14s" aria-label="상담 접수 순서">
+          <li class="qc-step is-cur" style="--i:0"><span class="qc-step-n" aria-hidden="true"><b class="en">1</b><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></span><span class="qc-step-line" aria-hidden="true"></span><span class="qc-step-t"><strong>사업 고르기</strong><span>상담할 사업을 선택</span></span></li>
+          <li class="qc-step" style="--i:1"><span class="qc-step-n" aria-hidden="true"><b class="en">2</b><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></span><span class="qc-step-line" aria-hidden="true"></span><span class="qc-step-t"><strong>내용 남기기</strong><span>분야가 선택된 접수 화면에서</span></span></li>
+          <li class="qc-step" style="--i:2"><span class="qc-step-n" aria-hidden="true"><b class="en">3</b><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></span><span class="qc-step-t"><strong>담당자 회신</strong><span>확인 후 남겨 주신 연락처로</span></span></li>
+        </ol>
       </div>
-      <ul class="cbx-tiles" data-reveal aria-label="사업별 바로 상담">
-        <li style="--i:0"><a class="cbx-tile" href="contact.html?type=campus#inquiry">
-          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-campus"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">01</span></span>
-          <span class="cbx-tile-t"><strong>교육업</strong><span class="en">DOOGO CLASS</span></span>
-          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
-        </a></li>
-        <li style="--i:1"><a class="cbx-tile" href="contact.html?type=bio#inquiry">
-          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-bio"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">02</span></span>
-          <span class="cbx-tile-t"><strong>제조업</strong><span class="en">DOOGOBIO</span></span>
-          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
-        </a></li>
-        <li style="--i:2"><a class="cbx-tile" href="contact.html?type=commerce#inquiry">
-          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-commerce"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">03</span></span>
-          <span class="cbx-tile-t"><strong>브랜드 커머스</strong><span class="en">DOOGO MAKERS</span></span>
-          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
-        </a></li>
-        <li style="--i:3"><a class="cbx-tile" href="contact.html?type=media#inquiry">
-          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-media"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">04</span></span>
-          <span class="cbx-tile-t"><strong>미디어&nbsp;&amp; 콘텐츠</strong><span class="en">DOOGO MEDIA</span></span>
-          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
-        </a></li>
-        <li style="--i:4"><a class="cbx-tile" href="contact.html?type=ad#inquiry">
-          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-ad"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">05</span></span>
-          <span class="cbx-tile-t"><strong>마케팅</strong><span class="en">DOOGO AD</span></span>
-          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
-        </a></li>
-        <li style="--i:5"><a class="cbx-tile" href="contact.html?type=food#inquiry">
-          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-food"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">06</span></span>
-          <span class="cbx-tile-t"><strong>유통</strong><span class="en">DOOGOFOOD</span></span>
-          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
-        </a></li>
-        <li style="--i:6"><a class="cbx-tile" href="contact.html?type=space#inquiry">
-          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-space"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">07</span></span>
-          <span class="cbx-tile-t"><strong>공간&nbsp;&amp; 라이프스타일</strong><span class="en">DOOGO SPACE</span></span>
-          <span class="cbx-tile-go">상담하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
-        </a></li>
-        <li style="--i:7"><a class="cbx-tile cbx-tile--partner" href="contact.html?type=partner#inquiry">
-          <span class="cbx-tile-top"><span class="cbx-tile-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-partner"/></svg></span><span class="cbx-tile-num en" aria-hidden="true">+</span></span>
-          <span class="cbx-tile-t"><strong>그룹 제휴</strong><span class="en">DOOGO HOLDINGS</span></span>
-          <span class="cbx-tile-go">제휴 문의<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span>
-        </a></li>
-      </ul>
-      <p class="cbx-pick-foot" data-reveal style="--d:.1s">어느 사업에 맞는지 모르겠다면 분야를 고르지 않고 문의해도 됩니다. <a class="link-arrow" href="contact.html">문의하기 <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></p>
+      <div class="qc" data-reveal style="--d:.1s">
+        <div class="qc-menu">
+          <p class="qc-menu-head" id="qc-menu-t"><span class="qc-k en" aria-hidden="true">1</span>상담할 사업을 고르세요</p>
+          <div class="qc-list-wrap">
+            <span class="qc-ink" aria-hidden="true"></span>
+            <ul class="qc-list">
+              <li style="--i:0"><a class="qc-opt is-on" href="contact.html?type=campus#inquiry" data-key="campus"><span class="qc-opt-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-campus"/></svg></span><span class="qc-opt-t"><strong>교육업</strong><span class="en">DOOGO CLASS</span></span><span class="qc-opt-n en" aria-hidden="true">01</span><svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              <li style="--i:1"><a class="qc-opt" href="contact.html?type=bio#inquiry" data-key="bio"><span class="qc-opt-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-bio"/></svg></span><span class="qc-opt-t"><strong>제조업</strong><span class="en">DOOGOBIO</span></span><span class="qc-opt-n en" aria-hidden="true">02</span><svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              <li style="--i:2"><a class="qc-opt" href="contact.html?type=commerce#inquiry" data-key="commerce"><span class="qc-opt-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-commerce"/></svg></span><span class="qc-opt-t"><strong>브랜드 커머스</strong><span class="en">DOOGO MAKERS</span></span><span class="qc-opt-n en" aria-hidden="true">03</span><svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              <li style="--i:3"><a class="qc-opt" href="contact.html?type=media#inquiry" data-key="media"><span class="qc-opt-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-media"/></svg></span><span class="qc-opt-t"><strong>미디어&nbsp;&amp; 콘텐츠</strong><span class="en">DOOGO MEDIA</span></span><span class="qc-opt-n en" aria-hidden="true">04</span><svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              <li style="--i:4"><a class="qc-opt" href="contact.html?type=ad#inquiry" data-key="ad"><span class="qc-opt-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-ad"/></svg></span><span class="qc-opt-t"><strong>마케팅</strong><span class="en">DOOGO AD</span></span><span class="qc-opt-n en" aria-hidden="true">05</span><svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              <li style="--i:5"><a class="qc-opt" href="contact.html?type=food#inquiry" data-key="food"><span class="qc-opt-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-food"/></svg></span><span class="qc-opt-t"><strong>유통</strong><span class="en">DOOGOFOOD</span></span><span class="qc-opt-n en" aria-hidden="true">06</span><svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              <li style="--i:6"><a class="qc-opt" href="contact.html?type=space#inquiry" data-key="space"><span class="qc-opt-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-space"/></svg></span><span class="qc-opt-t"><strong>공간&nbsp;&amp; 라이프스타일</strong><span class="en">DOOGO SPACE</span></span><span class="qc-opt-n en" aria-hidden="true">07</span><svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              <li class="qc-sep" aria-hidden="true"><span>그룹 차원의 제안이라면</span></li>
+              <li style="--i:7"><a class="qc-opt qc-opt--partner" href="contact.html?type=partner#inquiry" data-key="partner"><span class="qc-opt-ico" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-partner"/></svg></span><span class="qc-opt-t"><strong>그룹 제휴</strong><span class="en">DOOGO HOLDINGS</span></span><span class="qc-opt-n en" aria-hidden="true">+</span><svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="qc-stage">
+          <div class="qc-card on-dark">
+            <span class="qc-glare" aria-hidden="true"></span>
+            <div class="qc-panel is-on" id="qc-p-campus" data-key="campus">
+              <span class="qc-photo" aria-hidden="true"><img src="assets/img/photo/campus.webp" alt="" width="1280" height="950" loading="lazy" decoding="async" style="object-position:50% 42%"></span>
+              <div class="qc-p-in">
+                <div class="qc-p-top">
+                  <span class="qc-p-badge" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-campus"/></svg></span>
+                  <p class="qc-p-meta"><span class="qc-p-kicker en">Business 01 / 07</span><span class="qc-p-corp"><span>운영</span><b class="en">DOOGO HOLDINGS</b></span></p>
+                </div>
+                <h3 class="qc-p-title"><span class="qc-p-area">교육업</span><span class="qc-p-brand en">DOOGO CLASS</span></h3>
+                <p class="qc-p-def">사람을 성장시키고, 새로운 사업과 브랜드를 만듭니다.</p>
+                <div class="qc-p-svc">
+                  <p class="qc-p-label">이런 상담을 받아요</p>
+                  <ul class="qc-svcs">
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">실전 교육</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">강사·과정 소개</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">온라인 클래스</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">교육장 연계(<span class="nowrap">DOOGO SPACE</span>)</span></li>
+                  </ul>
+                </div>
+                <div class="qc-p-act">
+                  <a class="btn btn--primary btn--lg qc-cta" href="contact.html?type=campus#inquiry">교육업 상담 <span class="nowrap">시작하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+                  <p class="qc-p-note"><span class="qc-k en" aria-hidden="true">2</span>누르면 <strong>교육업 · <span class="nowrap">DOOGO CLASS</span></strong> 분야가 선택된 접수 화면이 열립니다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="qc-panel" id="qc-p-bio" data-key="bio">
+              <span class="qc-photo" aria-hidden="true"><img src="assets/img/photo/bio.webp" alt="" width="1280" height="952" loading="lazy" decoding="async" style="object-position:50% 24%"></span>
+              <div class="qc-p-in">
+                <div class="qc-p-top">
+                  <span class="qc-p-badge" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-bio"/></svg></span>
+                  <p class="qc-p-meta"><span class="qc-p-kicker en">Business 02 / 07</span><span class="qc-p-corp"><span>운영</span><b class="en">DOOGOBIO NZ</b></span></p>
+                </div>
+                <h3 class="qc-p-title"><span class="qc-p-area">제조업</span><span class="qc-p-brand en">DOOGOBIO</span></h3>
+                <p class="qc-p-def">뉴질랜드 건강식품 소량 제조 및 인쇄까지, 좋은 제품을 만듭니다.</p>
+                <div class="qc-p-svc">
+                  <p class="qc-p-label">이런 상담을 받아요</p>
+                  <ul class="qc-svcs">
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">제품 개발</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">소량 제조</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">패키지·인쇄</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">제조 상담·연결 ‘<span class="nowrap">두고커넥트</span>’</span></li>
+                  </ul>
+                </div>
+                <div class="qc-p-act">
+                  <a class="btn btn--primary btn--lg qc-cta" href="contact.html?type=bio#inquiry">제조업 상담 <span class="nowrap">시작하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+                  <p class="qc-p-note"><span class="qc-k en" aria-hidden="true">2</span>누르면 <strong>제조업 · <span class="nowrap">DOOGOBIO</span></strong> 분야가 선택된 접수 화면이 열립니다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="qc-panel" id="qc-p-commerce" data-key="commerce">
+              <span class="qc-photo" aria-hidden="true"><img src="assets/img/photo/commerce.webp" alt="" width="1280" height="950" loading="lazy" decoding="async" style="object-position:50% 48%"></span>
+              <div class="qc-p-in">
+                <div class="qc-p-top">
+                  <span class="qc-p-badge" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-commerce"/></svg></span>
+                  <p class="qc-p-meta"><span class="qc-p-kicker en">Business 03 / 07</span><span class="qc-p-corp"><span>운영</span><b class="en">DOOGO MAKERS</b></span></p>
+                </div>
+                <h3 class="qc-p-title"><span class="qc-p-area">브랜드 커머스</span><span class="qc-p-brand en">DOOGO MAKERS</span></h3>
+                <p class="qc-p-def">브랜드를 만들고 성장시키며, EXIT까지 연결합니다.</p>
+                <div class="qc-p-svc">
+                  <p class="qc-p-label">이런 상담을 받아요</p>
+                  <ul class="qc-svcs">
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">브랜드 기획</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">상품 운영</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">브랜드 성장과 EXIT 전략</span></li>
+                  </ul>
+                </div>
+                <div class="qc-p-act">
+                  <a class="btn btn--primary btn--lg qc-cta" href="contact.html?type=commerce#inquiry">브랜드 커머스 상담 <span class="nowrap">시작하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+                  <p class="qc-p-note"><span class="qc-k en" aria-hidden="true">2</span>누르면 <strong>브랜드 커머스 · <span class="nowrap">DOOGO MAKERS</span></strong> 분야가 선택된 접수 화면이 열립니다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="qc-panel" id="qc-p-media" data-key="media">
+              <span class="qc-photo" aria-hidden="true"><img src="assets/img/photo/media-creator.webp" alt="" width="1280" height="951" loading="lazy" decoding="async" style="object-position:50% 38%"></span>
+              <div class="qc-p-in">
+                <div class="qc-p-top">
+                  <span class="qc-p-badge" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-media"/></svg></span>
+                  <p class="qc-p-meta"><span class="qc-p-kicker en">Business 04 / 07</span><span class="qc-p-corp"><span>운영</span><b class="en">DOOGO MEDIA</b></span></p>
+                </div>
+                <h3 class="qc-p-title"><span class="qc-p-area"><span class="nowrap">미디어 &amp; 콘텐츠</span></span><span class="qc-p-brand en">DOOGO MEDIA</span></h3>
+                <p class="qc-p-def">광고비에 기대지 않고, 브랜드의 자산으로 쌓이는 채널을 만듭니다.</p>
+                <div class="qc-p-svc">
+                  <p class="qc-p-label">이런 상담을 받아요</p>
+                  <ul class="qc-svcs">
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">온드미디어 촬영</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">브랜드 유튜브 채널 운영</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">숏폼·라이브 콘텐츠 제작</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">콘텐츠 기획·편집</span></li>
+                  </ul>
+                </div>
+                <div class="qc-p-act">
+                  <a class="btn btn--primary btn--lg qc-cta" href="contact.html?type=media#inquiry"><span class="nowrap">미디어 &amp; 콘텐츠</span> 상담 <span class="nowrap">시작하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+                  <p class="qc-p-note"><span class="qc-k en" aria-hidden="true">2</span>누르면 <strong><span class="nowrap">미디어 &amp; 콘텐츠</span> · <span class="nowrap">DOOGO MEDIA</span></strong> 분야가 선택된 접수 화면이 열립니다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="qc-panel" id="qc-p-ad" data-key="ad">
+              <span class="qc-photo" aria-hidden="true"><img src="assets/img/photo/ad.webp" alt="" width="1280" height="954" loading="lazy" decoding="async" style="object-position:50% 45%"></span>
+              <div class="qc-p-in">
+                <div class="qc-p-top">
+                  <span class="qc-p-badge" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-ad"/></svg></span>
+                  <p class="qc-p-meta"><span class="qc-p-kicker en">Business 05 / 07</span><span class="qc-p-corp"><span>운영</span><b class="en">DOOGO AD</b></span></p>
+                </div>
+                <h3 class="qc-p-title"><span class="qc-p-area">마케팅</span><span class="qc-p-brand en">DOOGO AD</span></h3>
+                <p class="qc-p-def">네이버·쿠팡을 중심으로 브랜드를 더 멀리 알립니다.</p>
+                <div class="qc-p-svc">
+                  <p class="qc-p-label">이런 상담을 받아요</p>
+                  <ul class="qc-svcs">
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">네이버·쿠팡 중심 광고 운영</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">체험단 마케팅 ‘리뷰허브’</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">광고 소재 기획</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">성과 분석</span></li>
+                  </ul>
+                </div>
+                <div class="qc-p-act">
+                  <a class="btn btn--primary btn--lg qc-cta" href="contact.html?type=ad#inquiry">마케팅 상담 <span class="nowrap">시작하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+                  <p class="qc-p-note"><span class="qc-k en" aria-hidden="true">2</span>누르면 <strong>마케팅 · <span class="nowrap">DOOGO AD</span></strong> 분야가 선택된 접수 화면이 열립니다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="qc-panel" id="qc-p-food" data-key="food">
+              <span class="qc-photo" aria-hidden="true"><img src="assets/img/photo/food.webp" alt="" width="1280" height="951" loading="lazy" decoding="async" style="object-position:50% 52%"></span>
+              <div class="qc-p-in">
+                <div class="qc-p-top">
+                  <span class="qc-p-badge" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-food"/></svg></span>
+                  <p class="qc-p-meta"><span class="qc-p-kicker en">Business 06 / 07</span><span class="qc-p-corp"><span>운영</span><b class="en">DOOGO HOLDINGS</b></span></p>
+                </div>
+                <h3 class="qc-p-title"><span class="qc-p-area">유통</span><span class="qc-p-brand en">DOOGOFOOD</span></h3>
+                <p class="qc-p-def">대한민국 농수산물과 건강식품을 연결하여 좋은 먹거리를 전합니다.</p>
+                <div class="qc-p-svc">
+                  <p class="qc-p-label">이런 상담을 받아요</p>
+                  <ul class="qc-svcs">
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">식품 전문 도매 플랫폼 운영</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">상품 공급</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">판매자 협력</span></li>
+                  </ul>
+                </div>
+                <div class="qc-p-act">
+                  <a class="btn btn--primary btn--lg qc-cta" href="contact.html?type=food#inquiry">유통 상담 <span class="nowrap">시작하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+                  <p class="qc-p-note"><span class="qc-k en" aria-hidden="true">2</span>누르면 <strong>유통 · <span class="nowrap">DOOGOFOOD</span></strong> 분야가 선택된 접수 화면이 열립니다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="qc-panel" id="qc-p-space" data-key="space">
+              <span class="qc-photo" aria-hidden="true"><img src="assets/img/photo/cowork.webp" alt="" width="1280" height="951" loading="lazy" decoding="async" style="object-position:50% 62%"></span>
+              <div class="qc-p-in">
+                <div class="qc-p-top">
+                  <span class="qc-p-badge" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-space"/></svg></span>
+                  <p class="qc-p-meta"><span class="qc-p-kicker en">Business 07 / 07</span><span class="qc-p-corp"><span>운영</span><b class="en">DOOGO SPACE</b></span></p>
+                </div>
+                <h3 class="qc-p-title"><span class="qc-p-area"><span class="nowrap">공간 &amp; 라이프스타일</span></span><span class="qc-p-brand en">DOOGO SPACE</span></h3>
+                <p class="qc-p-def">공유오피스·비상주오피스·미팅룸·교육장과 <span class="nowrap">NORA STAY</span> 숙박, 그리고 준비 중인 F&amp;B까지, 일하고 머물고 즐기는 모든 순간을 하나의 공간 안에서 연결합니다.</p>
+                <div class="qc-p-svc">
+                  <p class="qc-p-label">이런 상담을 받아요</p>
+                  <ul class="qc-svcs is-col">
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t"><b class="qc-svc-tag en">WORK</b>공유오피스&nbsp;· 비상주오피스&nbsp;· 미팅룸&nbsp;· 교육장</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t"><b class="qc-svc-tag en">STAY</b><span class="nowrap">NORA STAY</span>&nbsp;· 숙박&nbsp;· 장단기 체류</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t"><b class="qc-svc-tag en">F&amp;B</b>카페&nbsp;· 라운지&nbsp;· 브런치&nbsp;· 케이터링<span class="qc-soon">준비 중</span></span></li>
+                  </ul>
+                </div>
+                <div class="qc-p-act">
+                  <a class="btn btn--primary btn--lg qc-cta" href="contact.html?type=space#inquiry"><span class="nowrap">공간 &amp; 라이프스타일</span> 상담 <span class="nowrap">시작하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+                  <p class="qc-p-note"><span class="qc-k en" aria-hidden="true">2</span>누르면 <strong><span class="nowrap">공간 &amp; 라이프스타일</span> · <span class="nowrap">DOOGO SPACE</span></strong> 분야가 선택된 접수 화면이 열립니다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="qc-panel qc-panel--partner" id="qc-p-partner" data-key="partner">
+              <span class="qc-photo qc-photo--mark" aria-hidden="true"></span>
+              <div class="qc-p-in">
+                <div class="qc-p-top">
+                  <span class="qc-p-badge" aria-hidden="true"><svg class="" aria-hidden="true"><use href="#i-partner"/></svg></span>
+                  <p class="qc-p-meta"><span class="qc-p-kicker en">Group Partnership</span><span class="qc-p-corp"><span>창구</span><b class="en">DOOGO HOLDINGS</b></span></p>
+                </div>
+                <h3 class="qc-p-title"><span class="qc-p-area">그룹 제휴</span><span class="qc-p-brand en">DOOGO HOLDINGS</span></h3>
+                <p class="qc-p-def">여러 사업이 함께하는 제휴·투자·협업 문의는 지주회사 <span class="nowrap">DOOGO HOLDINGS</span>가 직접 받습니다.</p>
+                <div class="qc-p-svc">
+                  <p class="qc-p-label">이런 상담을 받아요</p>
+                  <ul class="qc-svcs">
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">사업 간 제휴·협업</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">공동 프로젝트 제안</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">투자 및 성장 지원</span></li>
+                    <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="qc-svc-t">그룹 차원의 협력 제안</span></li>
+                  </ul>
+                </div>
+                <div class="qc-p-act">
+                  <a class="btn btn--primary btn--lg qc-cta" href="contact.html?type=partner#inquiry">제휴 문의 <span class="nowrap">시작하기<svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>
+                  <p class="qc-p-note"><span class="qc-k en" aria-hidden="true">2</span>누르면 <strong>그룹 제휴 · <span class="nowrap">DOOGO HOLDINGS</span></strong> 분야가 선택된 접수 화면이 열립니다.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cbx-pick-foot qc-foot" data-reveal style="--d:.1s">어느 사업에 맞는지 모르겠다면 분야를 고르지 않고 문의해도 됩니다. <a class="link-arrow" href="contact.html">문의하기 <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></p>
     </div>
   </section>
 </main>
@@ -787,7 +963,7 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <!-- @footer:end -->
-<script src="assets/js/site.js?v=94747099" defer></script>
-<script src="assets/js/pages/business.js?v=069340b6" defer></script>
+<script src="assets/js/site.js?v=191d49f3" defer></script>
+<script src="assets/js/pages/business.js?v=db10f062" defer></script>
 </body>
 </html>

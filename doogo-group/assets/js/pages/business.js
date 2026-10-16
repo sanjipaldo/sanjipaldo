@@ -654,3 +654,238 @@
     }
   })();
 })();
+
+/* ---------- 8) 마무리 배너 '맞는 창구로 연결' — 컨시어지 (22차 · build-business.mjs PICK_BAND · business.css '22차') ----------
+   왼쪽 메뉴(7개 사업 + 그룹 제휴)에서 하나를 고르면 오른쪽 카드가 그 창구로 바뀌고, 카드의 큰 버튼 하나가
+   분야가 선택된 접수 화면(contact.html?type=…)으로 이어집니다.
+   · 스크립트가 없으면 메뉴 항목이 곧 접수 화면 링크 — 여기서 탭(role=tablist/tab/tabpanel)으로 바꿈
+   · 고르기: 클릭 · 키보드(↑↓←→ · Home · End · Enter · Space, 자동 선택) · 마우스를 잠깐 올려 두기(1025 이상)
+     — 카드 쪽으로 비스듬히 지나가는 중이면 기다려서, 버튼으로 가는 길에 다른 줄이 골라지지 않게 함
+     — Ctrl/⌘/Shift 클릭 · 가운데 버튼은 원래 링크대로(새 탭에서 바로 접수 화면)
+   · 위 3단계 안내: 처음엔 ①이 차례, 사업을 직접 고르면 ① 완료(체크) → ② 차례 + 버튼 위로 빛이 한 번 지나감
+   · 1024 이하: 칩 한 줄을 가로로 넘김(고른 칩을 가운데로) · 카드가 화면 아래로 벗어나 있으면 카드가 보이게 살짝 내림
+   · 카드: 마우스를 따라 살짝 기울고 사진이 반대로 조금 움직임(1025 이상 · 마우스 · html.soft-motion 이면 생략)
+   · 움직임 멈추기(html.motion-off · 'doogo:motion'): 바로 바뀌고 기울기·빛 없음 */
+(function () {
+  'use strict';
+  var root = document.querySelector('[data-qc]');
+  if (!root) return;
+  var doc = document.documentElement;
+  var $ = function (s, c) { return (c || document).querySelector(s); };
+  var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
+  var motionOff = function () { return !!(window.DOOGO && window.DOOGO.motionOff && window.DOOGO.motionOff()); };
+  var mq = function (q) { return window.matchMedia ? window.matchMedia(q) : { matches: false }; };
+  var desk = mq('(min-width: 1025px)');
+  var fine = mq('(hover: hover) and (pointer: fine)');
+  var now = function () { return window.performance && performance.now ? performance.now() : Date.now(); };
+
+  var shell = $('.qc', root), wrap = $('.qc-list-wrap', root), list = $('.qc-list', root), ink = $('.qc-ink', root), card = $('.qc-card', root);
+  var opts = $$('.qc-opt', root);
+  var panels = opts.map(function (a) { return document.getElementById('qc-p-' + a.getAttribute('data-key')); });
+  if (!shell || !wrap || !list || !opts.length || panels.some(function (p) { return !p; })) return;
+  var steps = $$('.qc-step', root);
+  var cur = -1, stepped = false;
+
+  // 링크 목록 → 탭
+  list.setAttribute('role', 'tablist');
+  list.setAttribute('aria-labelledby', 'qc-menu-t');
+  Array.prototype.forEach.call(list.children, function (li) { li.setAttribute('role', 'presentation'); });
+  opts.forEach(function (a, i) {
+    a.id = 'qc-tab-' + a.getAttribute('data-key');
+    a.setAttribute('role', 'tab');
+    a.setAttribute('aria-controls', panels[i].id);
+    panels[i].setAttribute('role', 'tabpanel');
+    panels[i].setAttribute('aria-labelledby', a.id);
+  });
+  var orient = function () { list.setAttribute('aria-orientation', desk.matches ? 'vertical' : 'horizontal'); };
+
+  // 요소의 위치(메뉴 틀 기준 · 등장 중 transform 과 상관없이)
+  var offIn = function (el, top) {
+    var x = 0, y = 0;
+    while (el && el !== top) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; }
+    return { x: x, y: y };
+  };
+  function placeInk(instant) {
+    if (!ink || cur < 0) return;
+    var a = opts[cur], o = offIn(a, wrap);
+    if (instant) ink.classList.add('is-snap');
+    ink.style.setProperty('--x', o.x + 'px');
+    ink.style.setProperty('--y', o.y + 'px');
+    ink.style.setProperty('--w', a.offsetWidth + 'px');
+    ink.style.setProperty('--h', a.offsetHeight + 'px');
+    if (instant) { void ink.offsetWidth; ink.classList.remove('is-snap'); }
+  }
+  // 칩 줄(1024 이하): 넘침 표시 · 고른 칩을 가운데로
+  function edge() {
+    var max = wrap.scrollWidth - wrap.clientWidth;
+    wrap.classList.toggle('is-scrollable', max > 2);
+    wrap.classList.toggle('is-start', wrap.scrollLeft <= 2);
+    wrap.classList.toggle('is-end', wrap.scrollLeft >= max - 2);
+  }
+  function center(smooth) {
+    var max = wrap.scrollWidth - wrap.clientWidth;
+    if (max <= 2 || cur < 0) return;
+    var a = opts[cur], o = offIn(a, wrap);
+    var left = Math.max(0, Math.min(max, o.x - (wrap.clientWidth - a.offsetWidth) / 2));
+    try { wrap.scrollTo({ left: left, behavior: smooth ? 'smooth' : 'auto' }); } catch (e) { wrap.scrollLeft = left; }
+  }
+  // 3단계 안내: 사업을 직접 고르면 ① 완료 → ② 차례
+  function markSteps() {
+    if (stepped || steps.length < 2) return;
+    stepped = true;
+    steps[0].classList.remove('is-cur');
+    steps[0].classList.add('is-done');
+    steps[1].classList.add('is-cur');
+  }
+
+  function select(i, o) {
+    o = o || {};
+    if (i < 0 || i >= opts.length) return;
+    var prev = cur, changed = i !== cur;
+    cur = i;
+    opts.forEach(function (a, j) {
+      var on = j === i;
+      a.classList.toggle('is-on', on);
+      a.setAttribute('aria-selected', on ? 'true' : 'false');
+      a.tabIndex = on ? 0 : -1;
+      panels[j].classList.toggle('is-on', on);
+      if (on) panels[j].removeAttribute('inert'); else panels[j].setAttribute('inert', '');
+    });
+    placeInk(prev < 0 || motionOff());
+    if (changed && prev >= 0) {
+      var p = panels[i];
+      p.setAttribute('data-dir', i > prev ? 'down' : 'up');
+      p.classList.remove('is-enter', 'is-shine');
+      if (!motionOff()) {
+        void p.offsetWidth;
+        p.classList.add('is-enter');
+        if (o.user) p.classList.add('is-shine');
+        clearTimeout(p._qcT);
+        p._qcT = setTimeout(function () { p.classList.remove('is-enter', 'is-shine'); }, 1700);
+      }
+    }
+    if (o.user) markSteps();
+    if (!desk.matches) center(prev >= 0 && !motionOff());
+    if (o.focus) { try { opts[i].focus({ preventScroll: true }); } catch (e) { opts[i].focus(); } }
+    if (o.reveal && !desk.matches && card) { // 칩을 눌렀는데 카드가 화면 아래에 있으면 카드 윗부분이 보이게
+      var r = card.getBoundingClientRect(), vh = window.innerHeight || 800;
+      if (r.top > vh - 180) {
+        try { window.scrollBy({ top: r.top - vh * .45, behavior: motionOff() ? 'auto' : 'smooth' }); } catch (e) { window.scrollBy(0, r.top - vh * .45); }
+      }
+    }
+  }
+
+  // 클릭 (보조 키 · 가운데 버튼은 원래 링크 그대로)
+  list.addEventListener('click', function (e) {
+    var a = e.target.closest('.qc-opt');
+    if (!a || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    select(opts.indexOf(a), { user: true, reveal: true });
+  });
+  // 키보드 (자동 선택)
+  list.addEventListener('keydown', function (e) {
+    var i = opts.indexOf(document.activeElement);
+    if (i < 0) return;
+    var n = opts.length, to = -1;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') to = (i + 1) % n;
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') to = (i - 1 + n) % n;
+    else if (e.key === 'Home') to = 0;
+    else if (e.key === 'End') to = n - 1;
+    else if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') to = i;
+    if (to < 0) return;
+    e.preventDefault();
+    select(to, { user: true, focus: true });
+  });
+
+  // 마우스를 잠깐 올려 두면 고름 (1025 이상) — 카드 쪽으로 비스듬히 지나가는 중이면 기다림(메뉴 조준 판정)
+  var hT = 0, hi = -1, pts = [];
+  var hoverOk = function () { return desk.matches && fine.matches; };
+  list.addEventListener('pointermove', function (e) {
+    if (e.pointerType !== 'mouse') return;
+    pts.push({ x: e.clientX, y: e.clientY, t: now() });
+    if (pts.length > 8) pts.shift();
+  }, { passive: true });
+  // 지금 움직임이 카드(오른쪽) 쪽을 향하는지 — 카드 왼쪽 위·아래 모서리로 그은 두 선의 기울기 변화로 판정
+  var aiming = function () {
+    var t = now(), recent = pts.filter(function (o) { return t - o.t < 400; }); // 최근 0.4초 움직임만(오래전 위치는 무시)
+    if (!card || recent.length < 2) return false;
+    var p = recent[recent.length - 1], q = recent[0];
+    var r = card.getBoundingClientRect();
+    if (p.x >= r.left || p.x <= q.x) return false;
+    var sl = function (a, b) { return (b.y - a.y) / (b.x - a.x); };
+    var tl = { x: r.left, y: r.top - 30 }, bl = { x: r.left, y: r.bottom + 30 };
+    return sl(p, tl) < sl(q, tl) && sl(p, bl) > sl(q, bl);
+  };
+  // 그 줄에 들어와 잠깐 머물면 고름. 카드 쪽으로 가는 중이었다면 멈춘 게 확인될 때(0.3초)까지 기다림
+  var queue = function (i) {
+    clearTimeout(hT);
+    hi = i;
+    var t0 = now(), aimed = false;
+    var check = function () {
+      if (hi !== i || !hoverOk()) return;
+      var idle = pts.length ? now() - pts[pts.length - 1].t : 999;
+      if (aiming()) aimed = true;
+      if (aimed && idle < 300 && now() - t0 < 1400) { hT = setTimeout(check, 70); return; }
+      if (i !== cur) select(i, { user: true });
+    };
+    hT = setTimeout(check, 110);
+  };
+  opts.forEach(function (a, i) {
+    a.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse' && hoverOk()) queue(i); });
+    a.addEventListener('pointerleave', function () { if (hi === i) { clearTimeout(hT); hi = -1; } });
+  });
+
+  // 카드 기울기 + 빛 반사 + 사진 시차 (1025 이상 · 마우스)
+  if (card) (function () {
+    var tx = 0, ty = 0, gx = 0, gy = 0, raf = 0;
+    var ok = function () { return desk.matches && fine.matches && !motionOff() && !doc.classList.contains('soft-motion'); };
+    var clear = function () {
+      card.classList.remove('is-tilting', 'is-tilt');
+      ['--rx', '--ry', '--px', '--py'].forEach(function (k) { card.style.removeProperty(k); });
+    };
+    function loop() {
+      tx += (gx - tx) * .1; ty += (gy - ty) * .1;
+      var moving = Math.abs(gx - tx) > .004 || Math.abs(gy - ty) > .004;
+      if (!moving && !gx && !gy) { raf = 0; tx = ty = 0; clear(); return; }
+      card.style.setProperty('--rx', tx.toFixed(3) + 'deg');
+      card.style.setProperty('--ry', ty.toFixed(3) + 'deg');
+      card.style.setProperty('--px', (ty * -3).toFixed(2) + 'px');
+      card.style.setProperty('--py', (tx * 3).toFixed(2) + 'px');
+      raf = moving ? requestAnimationFrame(loop) : 0;
+    }
+    var kick = function () { if (!raf) raf = requestAnimationFrame(loop); };
+    card.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse' || !ok()) return;
+      var r = card.getBoundingClientRect();
+      var u = (e.clientX - r.left) / r.width, v = (e.clientY - r.top) / r.height;
+      gy = (u - .5) * 4.4;   // 좌우 → rotateY (±2.2°)
+      gx = (v - .5) * -3.6;  // 위아래 → rotateX (±1.8°)
+      card.style.setProperty('--gx', (u * 100).toFixed(1) + '%');
+      card.style.setProperty('--gy', (v * 100).toFixed(1) + '%');
+      card.classList.add('is-tilting', 'is-tilt');
+      kick();
+    });
+    card.addEventListener('pointerleave', function () { gx = gy = 0; card.classList.remove('is-tilt'); kick(); });
+    document.addEventListener('doogo:motion', function () { if (motionOff()) { gx = gy = tx = ty = 0; cancelAnimationFrame(raf); raf = 0; clear(); } });
+  })();
+
+  // 크기·글꼴·배치가 바뀌면 알약 위치 · 칩 넘침 다시
+  var refit = function () { orient(); placeInk(true); edge(); };
+  wrap.addEventListener('scroll', edge, { passive: true });
+  if ('ResizeObserver' in window) new ResizeObserver(refit).observe(wrap);
+  else window.addEventListener('resize', refit);
+  if (desk.addEventListener) desk.addEventListener('change', function () { refit(); center(false); });
+  else if (desk.addListener) desk.addListener(function () { refit(); center(false); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
+  window.addEventListener('load', refit, { once: true });
+  document.addEventListener('doogo:motion', function () {
+    if (motionOff()) panels.forEach(function (p) { p.classList.remove('is-enter', 'is-shine'); });
+    placeInk(true);
+  });
+
+  // 시작: 첫 창구(교육업) — 판이 준비되면 블루 알약이 보임
+  orient();
+  select(0);
+  shell.classList.add('is-ready');
+  edge();
+})();
