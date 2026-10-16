@@ -256,21 +256,23 @@
     // 24차: 직접 지정한 문장([data-engrave] — 메인 인트로 · 마무리 배너 슬로건 · 회사 소개 문장)은 글자가 적어도 새기는 데 1.7초쯤 걸리게(글자당 26–48ms)
     var step = auto ? EG_STEP : Math.round(Math.max(EG_STEP, Math.min(48, 1700 / chars.length)));
     if (step !== EG_STEP) el.style.setProperty('--eg-step', step + 'ms');
-    var accentT = 0, total = chars.length * step + 700; // 마지막 글자가 자리 잡을 무렵 강조 시작
+    var accentT = 0, doneT = 0, total = chars.length * step + 700; // 마지막 글자가 자리 잡을 무렵 강조 시작
     el._eg = {
       play: function () {
         if (el.classList.contains('is-on')) return;
         el.classList.add('is-on');
         clearTimeout(accentT);
-        if (window.DOOGO.motionOff() || !accents.length) { if (accents.length) el.classList.add('is-accent'); return; }
-        accentT = setTimeout(function () { el.classList.add('is-accent'); }, total);
+        if (window.DOOGO.motionOff()) { el.classList.add('is-accent', 'is-done'); return; }
+        // .is-done: 다 새겨진 뒤 — 뒤따르는 문장(예: 메인 마무리 배너의 한글 문구)이 이때 나타남 (24차)
+        if (accents.length) accentT = setTimeout(function () { el.classList.add('is-accent'); }, total);
+        doneT = setTimeout(function () { el.classList.add('is-done'); }, total + 200);
       },
-      finish: function () { clearTimeout(accentT); el.classList.add('is-on', 'is-accent'); },
+      finish: function () { clearTimeout(accentT); clearTimeout(doneT); el.classList.add('is-on', 'is-accent', 'is-done'); },
       reset: function () {
         if (!el.classList.contains('is-on')) return;
-        clearTimeout(accentT);
+        clearTimeout(accentT); clearTimeout(doneT);
         el.classList.add('no-tr');
-        el.classList.remove('is-on', 'is-accent');
+        el.classList.remove('is-on', 'is-accent', 'is-done');
         void el.offsetWidth;
         el.classList.remove('no-tr');
       }

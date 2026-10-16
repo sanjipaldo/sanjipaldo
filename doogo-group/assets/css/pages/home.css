@@ -157,6 +157,13 @@
 /* 마무리 배너(블루 바탕): 흰 글자 · 새겨질 때 하늘빛 · 'Better Tomorrow.' 연한 블루 + 흰 밑줄 */
 .cbx-home-title[data-engrave] { --eg-ink: #fff; --eg-glow: #9CC2FF; --eg-accent: #C6DBFF; --eg-line: linear-gradient(90deg, #fff 0%, #9CC2FF 100%); }
 .cbx-home-title [data-accent] { color: #C6DBFF; } /* JS 없을 때 */
+/* 24차: 한글 문구는 영문 슬로건이 다 새겨진 뒤(.is-done · site.js) 굵은 줄 → 설명 순서로 떠오름. 슬로건이 처음 상태로 돌아가면 함께 숨김 */
+.js .cbx-home-title.is-split ~ .cbx-home-foot .cbx-home-ko strong, .js .cbx-home-title.is-split ~ .cbx-home-foot .cbx-home-ko .cbx-home-ko-d { opacity: 0; transform: translate3d(0, 18px, 0); filter: blur(6px); transition: opacity .7s var(--ease), transform .9s cubic-bezier(.16, 1, .3, 1), filter .7s var(--ease); }
+.js .cbx-home-title.is-done ~ .cbx-home-foot .cbx-home-ko strong, .js .cbx-home-title.is-done ~ .cbx-home-foot .cbx-home-ko .cbx-home-ko-d { opacity: 1; transform: none; filter: none; }
+.js .cbx-home-title.is-done ~ .cbx-home-foot .cbx-home-ko .cbx-home-ko-d { transition-delay: .35s; }
+.cbx-home-ko-d { display: block; }
+.js .cbx-home-title.no-tr ~ .cbx-home-foot .cbx-home-ko * { transition: none !important; }
+html.motion-off .cbx-home-ko strong, html.motion-off .cbx-home-ko .cbx-home-ko-d { opacity: 1 !important; transform: none !important; filter: none !important; }
 
 /* 숫자 4칸 — 굴러 올라가는 숫자 + 아래 선 그리기 (home.js 가 .is-ready / .is-on 부여, 재진입 시 다시 재생) */
 .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 48px clamp(24px, 3vw, 52px); margin-top: clamp(72px, 9vw, 136px); }
@@ -786,7 +793,7 @@ html.motion-off .gp-card:hover .gp-win, html.motion-off .gp-card:hover .gp-shot 
    ========================================================= */
 .newsroom { overflow: hidden; }
 .news-head { margin-bottom: clamp(28px, 3.6vw, 52px); }
-.cf { --cf-w: 400px; position: relative; isolation: isolate; }
+.cf { --cf-w: clamp(420px, 37vw, 560px); position: relative; isolation: isolate; } /* 24차: 카드 키움 (가독성) */
 .cf-track { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 8px var(--gutter) 24px; }
 .cf-track::-webkit-scrollbar { display: none; }
 .cf-slide { flex: none; width: var(--cf-w); scroll-snap-align: center; }
@@ -805,11 +812,11 @@ html.motion-off .gp-card:hover .gp-win, html.motion-off .gp-card:hover .gp-shot 
 .cf-thumb { position: relative; display: block; aspect-ratio: 16 / 9; overflow: hidden; background: var(--ivory-2); }
 .cf-thumb img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.03); transition: transform 1.1s var(--ease); pointer-events: none; }
 .cf-slide.is-current .cf-card:hover .cf-thumb img { transform: scale(1.08); }
-.cf-body { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 18px 22px 18px; }
+.cf-body { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 24px 28px 22px; }
 .cf-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.cf-title { font-size: 1.12rem; font-weight: 700; line-height: 1.45; letter-spacing: -0.03em; min-height: 2.9em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cf-title { font-size: clamp(1.18rem, 1.02rem + .5vw, 1.42rem); font-weight: 700; line-height: 1.45; letter-spacing: -0.03em; min-height: 2.9em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .cf-foot { margin-top: auto; padding-top: 12px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--line-2); }
-.cf-date { font-size: .84rem; font-weight: 500; letter-spacing: .04em; color: var(--muted-2); }
+.cf-date { font-size: .92rem; font-weight: 500; letter-spacing: .04em; color: var(--muted-2); }
 .cf-go { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); color: var(--ink); transition: background-color .3s var(--ease), border-color .3s var(--ease), color .3s var(--ease); }
 .cf-go svg { width: 16px; height: 16px; transition: transform .35s var(--ease); }
 .cf-slide.is-current .cf-card:hover .cf-go { background: var(--blue); border-color: var(--blue); color: #fff; }
@@ -830,14 +837,14 @@ html.motion-off .gp-card:hover .gp-win, html.motion-off .gp-card:hover .gp-shot 
 .intro .note, .leaders .note { color: #687286; }
 
 @media (max-width: 1024px) {
-  .cf { --cf-w: 380px; }
+  .cf { --cf-w: 460px; }
 }
 /* 모바일: 가운데 카드 78% 폭 · 양옆 카드가 살짝 보임 */
 @media (max-width: 640px) {
-  .cf { --cf-w: 78vw; }
+  .cf { --cf-w: 84vw; }
   .cf.is-ready .cf-track { perspective: 1000px; padding: 12px 0 28px; }
   .cf-body { padding: 16px 18px 16px; gap: 8px; }
-  .cf-title { font-size: 1.04rem; }
+  .cf-title { font-size: 1.12rem; }
   .cf-btn { width: 46px; height: 46px; }
 }
 
