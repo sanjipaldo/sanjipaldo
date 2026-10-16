@@ -335,17 +335,22 @@
     <div class="bz-tabs-spot" aria-hidden="true"></div>
     <div class="bz-tabbar">
       <div class="container">
-        <div class="bz-tabs" role="tablist" aria-label="7개 사업">
-          <span class="bz-tab-ink" aria-hidden="true"></span>
-          <a class="bz-tab is-on" href="#campus" id="tab-campus" role="tab" aria-controls="campus" aria-selected="true"><span class="bz-tab-n en">01</span><span class="bz-tab-t">교육업</span></a>
-          <a class="bz-tab" href="#bio" id="tab-bio" role="tab" aria-controls="bio" aria-selected="false" tabindex="-1"><span class="bz-tab-n en">02</span><span class="bz-tab-t">제조업</span></a>
-          <a class="bz-tab" href="#commerce" id="tab-commerce" role="tab" aria-controls="commerce" aria-selected="false" tabindex="-1"><span class="bz-tab-n en">03</span><span class="bz-tab-t">브랜드 커머스</span></a>
-          <a class="bz-tab" href="#media" id="tab-media" role="tab" aria-controls="media" aria-selected="false" tabindex="-1"><span class="bz-tab-n en">04</span><span class="bz-tab-t">미디어 &amp; 콘텐츠</span></a>
-          <a class="bz-tab" href="#ad" id="tab-ad" role="tab" aria-controls="ad" aria-selected="false" tabindex="-1"><span class="bz-tab-n en">05</span><span class="bz-tab-t">마케팅</span></a>
-          <a class="bz-tab" href="#food" id="tab-food" role="tab" aria-controls="food" aria-selected="false" tabindex="-1"><span class="bz-tab-n en">06</span><span class="bz-tab-t">유통</span></a>
-          <a class="bz-tab" href="#space" id="tab-space" role="tab" aria-controls="space" aria-selected="false" tabindex="-1"><span class="bz-tab-n en">07</span><span class="bz-tab-t">공간 &amp; 라이프스타일</span></a>
+        <div class="bz-tabrow">
+          <button class="bz-tabnav bz-tabnav--prev" type="button" data-step="-1" aria-label="이전 사업"><svg class="ico ico-l" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+          <div class="bz-tabs" role="tablist" aria-label="7개 사업">
+            <span class="bz-tab-ink" aria-hidden="true"></span>
+          <a class="bz-tab is-on" href="#campus" id="tab-campus" role="tab" aria-controls="campus" aria-selected="true" style="--i:0"><span class="bz-tab-ico"><svg class="" aria-hidden="true"><use href="#i-campus"/></svg></span><span class="bz-tab-n en">01</span><span class="bz-tab-t">교육업</span></a>
+          <a class="bz-tab" href="#bio" id="tab-bio" role="tab" aria-controls="bio" aria-selected="false" tabindex="-1" style="--i:1"><span class="bz-tab-ico"><svg class="" aria-hidden="true"><use href="#i-bio"/></svg></span><span class="bz-tab-n en">02</span><span class="bz-tab-t">제조업</span></a>
+          <a class="bz-tab" href="#commerce" id="tab-commerce" role="tab" aria-controls="commerce" aria-selected="false" tabindex="-1" style="--i:2"><span class="bz-tab-ico"><svg class="" aria-hidden="true"><use href="#i-commerce"/></svg></span><span class="bz-tab-n en">03</span><span class="bz-tab-t">브랜드 커머스</span></a>
+          <a class="bz-tab" href="#media" id="tab-media" role="tab" aria-controls="media" aria-selected="false" tabindex="-1" style="--i:3"><span class="bz-tab-ico"><svg class="" aria-hidden="true"><use href="#i-media"/></svg></span><span class="bz-tab-n en">04</span><span class="bz-tab-t">미디어 &amp; 콘텐츠</span></a>
+          <a class="bz-tab" href="#ad" id="tab-ad" role="tab" aria-controls="ad" aria-selected="false" tabindex="-1" style="--i:4"><span class="bz-tab-ico"><svg class="" aria-hidden="true"><use href="#i-ad"/></svg></span><span class="bz-tab-n en">05</span><span class="bz-tab-t">마케팅</span></a>
+          <a class="bz-tab" href="#food" id="tab-food" role="tab" aria-controls="food" aria-selected="false" tabindex="-1" style="--i:5"><span class="bz-tab-ico"><svg class="" aria-hidden="true"><use href="#i-food"/></svg></span><span class="bz-tab-n en">06</span><span class="bz-tab-t">유통</span></a>
+          <a class="bz-tab" href="#space" id="tab-space" role="tab" aria-controls="space" aria-selected="false" tabindex="-1" style="--i:6"><span class="bz-tab-ico"><svg class="" aria-hidden="true"><use href="#i-space"/></svg></span><span class="bz-tab-n en">07</span><span class="bz-tab-t">공간 &amp; 라이프스타일</span></a>
+          </div>
+          <button class="bz-tabnav bz-tabnav--next" type="button" data-step="1" aria-label="다음 사업"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
         </div>
       </div>
+      <span class="bz-tabbar-prog" aria-hidden="true"><span></span></span>
     </div>
     <div class="container">
       <div class="bz-panels">
@@ -384,7 +389,10 @@
               <a class="btn btn--dark" href="business-campus.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 교육업 DOOGO CLASS</span></a>
               <a class="btn btn--line" href="https://www.doogoclass.com" target="_blank" rel="noopener">교육 플랫폼 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
             </div>
-            <button class="bz-next" type="button" data-next="bio"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">02</span>제조업</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <div class="bz-pager" role="group" aria-label="이전·다음 사업">
+              <button class="bz-pg bz-pg--prev" type="button" data-go="space"><span class="bz-pg-ar"><svg class="ico ico-l" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="bz-pg-txt"><span class="bz-pg-k">이전 사업</span><span class="bz-pg-n"><span class="en">07</span>공간 &amp; 라이프스타일</span></span></button>
+              <button class="bz-pg bz-pg--next" type="button" data-go="bio"><span class="bz-pg-txt"><span class="bz-pg-k">다음 사업</span><span class="bz-pg-n"><span class="en">02</span>제조업</span></span><span class="bz-pg-ar"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span></button>
+            </div>
           </div>
         </article>
         <article class="bz-panel" id="bio" role="tabpanel" aria-labelledby="tab-bio" tabindex="0">
@@ -422,7 +430,10 @@
               <a class="btn btn--dark" href="business-bio.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 제조업 DOOGOBIO</span></a>
               <a class="btn btn--line" href="contact.html?type=bio#inquiry">제조 상담하기</a>
             </div>
-            <button class="bz-next" type="button" data-next="commerce"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">03</span>브랜드 커머스</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <div class="bz-pager" role="group" aria-label="이전·다음 사업">
+              <button class="bz-pg bz-pg--prev" type="button" data-go="campus"><span class="bz-pg-ar"><svg class="ico ico-l" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="bz-pg-txt"><span class="bz-pg-k">이전 사업</span><span class="bz-pg-n"><span class="en">01</span>교육업</span></span></button>
+              <button class="bz-pg bz-pg--next" type="button" data-go="commerce"><span class="bz-pg-txt"><span class="bz-pg-k">다음 사업</span><span class="bz-pg-n"><span class="en">03</span>브랜드 커머스</span></span><span class="bz-pg-ar"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span></button>
+            </div>
           </div>
         </article>
         <article class="bz-panel" id="commerce" role="tabpanel" aria-labelledby="tab-commerce" tabindex="0">
@@ -459,7 +470,10 @@
               <a class="btn btn--dark" href="business-commerce.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 브랜드 커머스 DOOGO MAKERS</span></a>
               <a class="btn btn--line" href="brands.html#brands">브랜드 보기</a>
             </div>
-            <button class="bz-next" type="button" data-next="media"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">04</span>미디어 &amp; 콘텐츠</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <div class="bz-pager" role="group" aria-label="이전·다음 사업">
+              <button class="bz-pg bz-pg--prev" type="button" data-go="bio"><span class="bz-pg-ar"><svg class="ico ico-l" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="bz-pg-txt"><span class="bz-pg-k">이전 사업</span><span class="bz-pg-n"><span class="en">02</span>제조업</span></span></button>
+              <button class="bz-pg bz-pg--next" type="button" data-go="media"><span class="bz-pg-txt"><span class="bz-pg-k">다음 사업</span><span class="bz-pg-n"><span class="en">04</span>미디어 &amp; 콘텐츠</span></span><span class="bz-pg-ar"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span></button>
+            </div>
           </div>
         </article>
         <article class="bz-panel" id="media" role="tabpanel" aria-labelledby="tab-media" tabindex="0">
@@ -497,7 +511,10 @@
               <a class="btn btn--dark" href="business-media.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 미디어 &amp; 콘텐츠 DOOGO MEDIA</span></a>
               <a class="btn btn--line" href="contact.html?type=media#inquiry">콘텐츠 문의하기</a>
             </div>
-            <button class="bz-next" type="button" data-next="ad"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">05</span>마케팅</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <div class="bz-pager" role="group" aria-label="이전·다음 사업">
+              <button class="bz-pg bz-pg--prev" type="button" data-go="commerce"><span class="bz-pg-ar"><svg class="ico ico-l" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="bz-pg-txt"><span class="bz-pg-k">이전 사업</span><span class="bz-pg-n"><span class="en">03</span>브랜드 커머스</span></span></button>
+              <button class="bz-pg bz-pg--next" type="button" data-go="ad"><span class="bz-pg-txt"><span class="bz-pg-k">다음 사업</span><span class="bz-pg-n"><span class="en">05</span>마케팅</span></span><span class="bz-pg-ar"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span></button>
+            </div>
           </div>
         </article>
         <article class="bz-panel" id="ad" role="tabpanel" aria-labelledby="tab-ad" tabindex="0">
@@ -535,7 +552,10 @@
               <a class="btn btn--dark" href="business-ad.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 마케팅 DOOGO AD</span></a>
               <a class="btn btn--line" href="contact.html?type=ad#inquiry">광고 상담하기</a>
             </div>
-            <button class="bz-next" type="button" data-next="food"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">06</span>유통</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <div class="bz-pager" role="group" aria-label="이전·다음 사업">
+              <button class="bz-pg bz-pg--prev" type="button" data-go="media"><span class="bz-pg-ar"><svg class="ico ico-l" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="bz-pg-txt"><span class="bz-pg-k">이전 사업</span><span class="bz-pg-n"><span class="en">04</span>미디어 &amp; 콘텐츠</span></span></button>
+              <button class="bz-pg bz-pg--next" type="button" data-go="food"><span class="bz-pg-txt"><span class="bz-pg-k">다음 사업</span><span class="bz-pg-n"><span class="en">06</span>유통</span></span><span class="bz-pg-ar"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span></button>
+            </div>
           </div>
         </article>
         <article class="bz-panel" id="food" role="tabpanel" aria-labelledby="tab-food" tabindex="0">
@@ -572,7 +592,10 @@
               <a class="btn btn--dark" href="business-food.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 유통 DOOGOFOOD</span></a>
               <a class="btn btn--line" href="https://www.doogofood.com" target="_blank" rel="noopener">도매 플랫폼 보기 <svg class="ico" aria-hidden="true"><use href="#i-arrow-ur"/></svg><span class="sr-only">(새 창)</span></a>
             </div>
-            <button class="bz-next" type="button" data-next="space"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">07</span>공간 &amp; 라이프스타일</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <div class="bz-pager" role="group" aria-label="이전·다음 사업">
+              <button class="bz-pg bz-pg--prev" type="button" data-go="ad"><span class="bz-pg-ar"><svg class="ico ico-l" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="bz-pg-txt"><span class="bz-pg-k">이전 사업</span><span class="bz-pg-n"><span class="en">05</span>마케팅</span></span></button>
+              <button class="bz-pg bz-pg--next" type="button" data-go="space"><span class="bz-pg-txt"><span class="bz-pg-k">다음 사업</span><span class="bz-pg-n"><span class="en">07</span>공간 &amp; 라이프스타일</span></span><span class="bz-pg-ar"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span></button>
+            </div>
           </div>
         </article>
         <article class="bz-panel" id="space" role="tabpanel" aria-labelledby="tab-space" tabindex="0">
@@ -609,9 +632,18 @@
               <a class="btn btn--dark" href="business-space.html">자세히 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg><span class="sr-only"> — 공간 &amp; 라이프스타일 DOOGO SPACE</span></a>
               <a class="btn btn--line" href="contact.html?type=space#inquiry">공간 상담하기</a>
             </div>
-            <button class="bz-next" type="button" data-next="campus"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">01</span>교육업</span><svg class="" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <div class="bz-pager" role="group" aria-label="이전·다음 사업">
+              <button class="bz-pg bz-pg--prev" type="button" data-go="food"><span class="bz-pg-ar"><svg class="ico ico-l" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="bz-pg-txt"><span class="bz-pg-k">이전 사업</span><span class="bz-pg-n"><span class="en">06</span>유통</span></span></button>
+              <button class="bz-pg bz-pg--next" type="button" data-go="campus"><span class="bz-pg-txt"><span class="bz-pg-k">다음 사업</span><span class="bz-pg-n"><span class="en">01</span>교육업</span></span><span class="bz-pg-ar"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span></button>
+            </div>
           </div>
         </article>
+        <div class="bz-side" aria-hidden="true">
+          <div class="bz-side-in">
+            <button class="bz-side-btn bz-side-btn--prev" type="button" data-step="-1" tabindex="-1"><span class="bz-side-ar"><svg class="ico ico-l" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="bz-side-lb"><span class="bz-side-k">이전 사업</span><span class="bz-side-n" data-side-name><span class="en">07</span>공간 &amp; 라이프스타일</span></span></button>
+            <button class="bz-side-btn bz-side-btn--next" type="button" data-step="1" tabindex="-1"><span class="bz-side-ar"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="bz-side-lb"><span class="bz-side-k">다음 사업</span><span class="bz-side-n" data-side-name><span class="en">02</span>제조업</span></span></button>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -734,7 +766,6 @@
       </ul>
       <ul class="ft-info-row">
         <li>주소 세종특별자치시 갈매로 353 5층 5023호</li>
-        <li>대표전화 <a href="tel:+827080274213">070-8027-4213</a></li>
         <li>이메일 <a href="mailto:doogobiz@gmail.com">doogobiz@gmail.com</a></li>
       </ul>
       <p class="ft-copy">© <span data-year>2026</span> DOOGO HOLDINGS Co., Ltd. All rights reserved.</p>

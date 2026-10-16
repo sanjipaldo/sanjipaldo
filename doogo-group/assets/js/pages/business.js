@@ -409,7 +409,10 @@
      · 주소 #slug 와 맞춤: business.html#bio 처럼 들어오거나 주소가 바뀌면 그 탭을 고르고 탭 줄까지 내려감, 고르면 주소도 바꿈(기록은 쌓지 않음)
      · 페이지 안 다른 #slug 링크(첫 화면 사업 바로가기)도 같은 방식으로 탭을 고름
      · 탭 줄이 가로로 넘치면(휴대폰) 고른 탭을 가운데로 넘김 · 고른 탭 뒤 남색 알약이 미끄러져 옮겨 감
-     · 소개 화면이 바뀔 때 사진이 열리며 가라앉고 글이 차례로 떠오름(.is-enter) — 움직임 멈추기면 바로 바뀜 */
+     · 소개 화면이 바뀔 때 사진이 열리며 가라앉고 글이 차례로 떠오름(.is-enter) — 움직임 멈추기면 바로 바뀜
+     (20차) 이전 · 다음 사업으로 넘기기: 탭 줄 양끝 화살표(1100 이하) · 소개 화면 양옆 화살표(1101 이상) · 소개 화면 아래 이전/다음 카드
+       · 휴대폰은 소개 화면을 좌우로 밀어도 넘어감. 넘긴 방향에서 소개 화면이 밀려 들어옴(data-dir)
+       · 알약은 두 탭 사이로 늘어났다가 새 탭 크기로 줄어듦 · 탭 줄 아래 진행 막대(--p) · 처음 보일 때 탭이 차례로 떠오름(.is-in) */
   var tablist = $('.bz-tabs[role="tablist"]');
   if (tablist) (function () {
     var tabs = $$('[role="tab"]', tablist);
@@ -419,18 +422,59 @@
     var ink = $('.bz-tab-ink', tablist);
     var bar = $('.bz-tabbar');
     var spot = $('.bz-tabs-spot');
-    var cur = -1;
+    var side = $('.bz-side');
+    var sideNames = side ? $$('[data-side-name]', side) : [];
+    var navBtns = $$('.bz-tabnav');
+    var cur = -1, inkT = 0;
+    var info = function (j) {
+      var t = tabs[j], n = $('.bz-tab-n', t), a = $('.bz-tab-t', t);
+      return { n: n ? n.textContent : '', html: a ? a.innerHTML : '', text: a ? a.textContent : '' };
+    };
     var headerH = function () { return parseFloat(getComputedStyle(doc).getPropertyValue('--header-h')) || 84; };
     var idxOf = function (hash) { try { hash = decodeURIComponent(hash || ''); } catch (e) {} return ids.indexOf(hash.replace(/^#/, '')); };
 
-    function placeInk(instant) {
+    function setInk(x, w) { ink.style.setProperty('--x', x.toFixed(2) + 'px'); ink.style.setProperty('--w', w.toFixed(2) + 'px'); }
+    // 탭 위치(탭 줄 안쪽 좌표 · 소수점까지 — offsetLeft 는 반올림돼 1px 어긋남)
+    function box(t) {
+      var a = t.getBoundingClientRect(), b = tablist.getBoundingClientRect();
+      return { l: a.left - b.left - tablist.clientLeft + tablist.scrollLeft, w: a.width };
+    }
+    // from: 옮기기 전 탭 — 먼저 두 탭을 다 덮도록 늘였다가(.is-stretch) 새 탭 크기로 줄임
+    function placeInk(instant, from) {
       if (!ink || cur < 0) return;
       var t = tabs[cur];
-      if (instant) ink.classList.remove('is-ready');
-      ink.style.setProperty('--x', t.offsetLeft + 'px');
-      ink.style.setProperty('--w', t.offsetWidth + 'px');
+      clearTimeout(inkT);
+      ink.style.setProperty('--t', t.offsetTop + 'px');
+      ink.style.setProperty('--h', t.offsetHeight + 'px');
       tablist.classList.add('has-ink');
-      if (instant) { void ink.offsetWidth; ink.classList.add('is-ready'); }
+      var to = box(t);
+      if (instant) {
+        ink.classList.remove('is-ready', 'is-stretch');
+        setInk(to.l, to.w);
+        void ink.offsetWidth; ink.classList.add('is-ready');
+        return;
+      }
+      if (from >= 0 && from !== cur && tabs[from]) {
+        var f = box(tabs[from]);
+        var l = Math.min(f.l, to.l), r = Math.max(f.l + f.w, to.l + to.w);
+        ink.classList.add('is-stretch');
+        setInk(l, r - l);
+        inkT = setTimeout(function () { ink.classList.remove('is-stretch'); setInk(to.l, to.w); }, 190);
+      } else {
+        ink.classList.remove('is-stretch');
+        setInk(to.l, to.w);
+      }
+    }
+    // 이전 · 다음 화살표의 사업 이름 · 진행 막대
+    function syncNav() {
+      var n = tabs.length, a = info((cur - 1 + n) % n), b = info((cur + 1) % n);
+      if (sideNames[0]) sideNames[0].innerHTML = '<span class="en">' + a.n + '</span>' + a.html;
+      if (sideNames[1]) sideNames[1].innerHTML = '<span class="en">' + b.n + '</span>' + b.html;
+      navBtns.forEach(function (btn) {
+        var back = +btn.getAttribute('data-step') < 0, x = back ? a : b;
+        btn.setAttribute('aria-label', (back ? '이전 사업: ' : '다음 사업: ') + x.n + ' ' + x.text);
+      });
+      if (bar) bar.style.setProperty('--p', ((cur + 1) / n).toFixed(4));
     }
     function edge() {
       var max = tablist.scrollWidth - tablist.clientWidth;
@@ -467,16 +511,19 @@
         panels[j].classList.toggle('is-on', on);
         panels[j].hidden = !on;
       });
-      placeInk(prev < 0 || motionOff());
+      placeInk(prev < 0 || motionOff(), prev);
       center(prev >= 0 && !motionOff());
       if (changed && prev >= 0) {
-        var p = panels[i];
+        var p = panels[i], t = tabs[i];
+        p.setAttribute('data-dir', o.dir || (i > prev ? 'next' : 'prev'));
         p.classList.remove('is-enter');
+        t.classList.remove('is-pop');
         if (!motionOff()) {
-          void p.offsetWidth; p.classList.add('is-enter');
-          clearTimeout(p._bzT); p._bzT = setTimeout(function () { p.classList.remove('is-enter'); }, 1800);
+          void p.offsetWidth; p.classList.add('is-enter'); t.classList.add('is-pop');
+          clearTimeout(p._bzT); p._bzT = setTimeout(function () { p.classList.remove('is-enter'); t.classList.remove('is-pop'); }, 1800);
         }
       }
+      syncNav();
       if (o.hash && ('#' + ids[i]) !== location.hash) { try { history.replaceState(history.state, '', '#' + ids[i]); } catch (e) {} }
       if (o.focus) { try { tabs[i].focus({ preventScroll: true }); } catch (e) { tabs[i].focus(); } }
       if (o.scroll) toList(o.scroll === 'smooth', o.onlyIfPast);
@@ -505,12 +552,58 @@
     });
     tablist.addEventListener('scroll', edge, { passive: true });
 
-    // '다음 사업' 버튼
-    $$('.bz-next').forEach(function (btn) {
+    // 이전 · 다음: 한 칸씩(끝에서는 처음으로 돌아감)
+    function step(d, o) {
+      var n = tabs.length;
+      o = o || {}; o.dir = d < 0 ? 'prev' : 'next';
+      select((cur + d + n) % n, o);
+    }
+    // 탭 줄 양끝 · 소개 화면 양옆 화살표 — 소개 화면 중간을 보고 있었다면 새 사업의 맨 위로
+    $$('.bz-tabnav, .bz-side-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        select(ids.indexOf(btn.getAttribute('data-next')), { hash: true, focus: true, scroll: 'smooth' });
+        step(+btn.getAttribute('data-step') < 0 ? -1 : 1, { hash: true, scroll: 'smooth', onlyIfPast: true });
       });
     });
+    // 소개 화면 아래 이전 / 다음 카드
+    $$('.bz-pg[data-go]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        select(ids.indexOf(btn.getAttribute('data-go')), { hash: true, focus: true, scroll: 'smooth', dir: btn.classList.contains('bz-pg--prev') ? 'prev' : 'next' });
+      });
+    });
+    // 휴대폰: 소개 화면을 좌우로 밀면 이전 · 다음 (세로 스크롤 · 화면 가장자리 뒤로 가기 몸짓과는 구분)
+    var pz = $('.bz-panels');
+    if (pz) {
+      var sx = 0, sy = 0, st = 0, track = false;
+      pz.addEventListener('touchstart', function (e) {
+        var t = e.touches[0];
+        track = e.touches.length === 1 && t.clientX > 24 && t.clientX < window.innerWidth - 24;
+        if (track) { sx = t.clientX; sy = t.clientY; st = Date.now(); }
+      }, { passive: true });
+      pz.addEventListener('touchend', function (e) {
+        if (!track) return;
+        track = false;
+        var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+        if (Math.abs(dx) < 64 || Math.abs(dx) < Math.abs(dy) * 1.8 || Date.now() - st > 700) return;
+        step(dx < 0 ? 1 : -1, { hash: true, scroll: 'smooth', onlyIfPast: true });
+      }, { passive: true });
+      pz.addEventListener('touchcancel', function () { track = false; }, { passive: true });
+    }
+
+    // 처음 보일 때: 탭 줄(.is-in) · 양옆 화살표(.is-seen)
+    if ('IntersectionObserver' in window) {
+      var seen = new IntersectionObserver(function (es) {
+        es.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          e.target.classList.add(e.target === bar ? 'is-in' : 'is-seen');
+          seen.unobserve(e.target);
+        });
+      }, { threshold: 0.15 });
+      if (bar) seen.observe(bar);
+      if (side) seen.observe(side);
+    } else {
+      if (bar) bar.classList.add('is-in');
+      if (side) side.classList.add('is-seen');
+    }
 
     // 페이지 안의 다른 #slug 링크(첫 화면 사업 바로가기 등)
     document.addEventListener('click', function (e) {

@@ -546,7 +546,11 @@ function buildList() {
   // 7개 사업 탭 (14차): 위 탭 줄(role=tablist · 휴대폰은 가로로 넘기며 고른 탭을 가운데로) + 고른 사업 하나의 소개 화면(role=tabpanel)
   //  탭 = #slug 링크(스크립트가 없어도 그 사업으로 이동) · 소개 화면 id = slug (business.html#bio 처럼 들어와도 그 탭이 열림 · business.js)
   //  첫 탭만 is-on — 나머지는 .js 일 때 숨김(business.css), 스크립트가 고르면 hidden 으로 바꿔 씀
-  const tabs = BIZ.map((b, i) => `          <a class="bz-tab${i === 0 ? ' is-on' : ''}" href="#${b.slug}" id="tab-${b.slug}" role="tab" aria-controls="${b.slug}" aria-selected="${i === 0}"${i === 0 ? '' : ' tabindex="-1"'}><span class="bz-tab-n en">${b.num}</span><span class="bz-tab-t">${b.area}</span></a>`).join('\n');
+  const tabs = BIZ.map((b, i) => `          <a class="bz-tab${i === 0 ? ' is-on' : ''}" href="#${b.slug}" id="tab-${b.slug}" role="tab" aria-controls="${b.slug}" aria-selected="${i === 0}"${i === 0 ? '' : ' tabindex="-1"'} style="--i:${i}"><span class="bz-tab-ico">${ico(b.icon, '')}</span><span class="bz-tab-n en">${b.num}</span><span class="bz-tab-t">${b.area}</span></a>`).join('\n');
+  // 이전 · 다음 사업 화살표 (탭 줄 양끝 · 소개 화면 양옆) — 고른 사업 기준으로 business.js 가 이름을 바꿔 씀
+  const LEFT = ico('i-arrow', 'ico ico-l');
+  const stepBtn = (d) => `<button class="bz-tabnav bz-tabnav--${d < 0 ? 'prev' : 'next'}" type="button" data-step="${d}" aria-label="${d < 0 ? '이전' : '다음'} 사업">${d < 0 ? LEFT : ico('i-arrow', 'ico')}</button>`;
+  const sideBtn = (d, b) => `<button class="bz-side-btn bz-side-btn--${d < 0 ? 'prev' : 'next'}" type="button" data-step="${d}" tabindex="-1"><span class="bz-side-ar">${d < 0 ? LEFT : ico('i-arrow', 'ico')}</span><span class="bz-side-lb"><span class="bz-side-k">${d < 0 ? '이전 사업' : '다음 사업'}</span><span class="bz-side-n" data-side-name><span class="en">${b.num}</span>${b.area}</span></span></button>`;
 
   // 사업 사이트(새 창) 알약 — 한 사업에 사이트가 둘이면 둘 다 (브랜드 커머스: ONEDAYCORE · MAURINZ / 제조업: DOOGOBIO · DOOGO CONNECT)
   const sitePill = (w) => `<a class="bz-site" href="${w.url}" target="_blank" rel="noopener">${w.yt ? `<span>YouTube · ${w.host}</span>` : `<span class="bz-site-name en">${w.name}</span><span class="bz-site-host en">${w.host}</span>`}${ARROW_UR}<span class="sr-only"> — ${w.name} ${w.yt ? '유튜브 채널' : '사이트'}(새 창)</span></a>`;
@@ -554,6 +558,7 @@ function buildList() {
   const panels = BIZ.map((b, i) => {
     const ph = PHOTO[b.hero.f];
     const next = BIZ[(i + 1) % BIZ.length];
+    const prev = BIZ[(i - 1 + BIZ.length) % BIZ.length];
     const sites = [b.web, ...(b.web.more || [])];
     return `        <article class="bz-panel${i === 0 ? ' is-on' : ''}" id="${b.slug}" role="tabpanel" aria-labelledby="tab-${b.slug}" tabindex="0">
           <a class="bz-media" href="business-${b.slug}.html" tabindex="-1" aria-hidden="true">
@@ -587,7 +592,10 @@ ${b.services.map(s => `                <li>${CHECK}<span>${nw(s)}</span></li>`).
               <a class="btn btn--dark" href="business-${b.slug}.html">자세히 보기 ${ARROW}<span class="sr-only"> — ${b.area} ${b.en}</span></a>
               ${action(b.cta, 'btn btn--line')}
             </div>
-            <button class="bz-next" type="button" data-next="${next.slug}"><span class="bz-next-k">다음 사업</span><span class="bz-next-n"><span class="en">${next.num}</span>${next.area}</span>${ico('i-arrow', '')}</button>
+            <div class="bz-pager" role="group" aria-label="이전·다음 사업">
+              <button class="bz-pg bz-pg--prev" type="button" data-go="${prev.slug}"><span class="bz-pg-ar">${LEFT}</span><span class="bz-pg-txt"><span class="bz-pg-k">이전 사업</span><span class="bz-pg-n"><span class="en">${prev.num}</span>${prev.area}</span></span></button>
+              <button class="bz-pg bz-pg--next" type="button" data-go="${next.slug}"><span class="bz-pg-txt"><span class="bz-pg-k">다음 사업</span><span class="bz-pg-n"><span class="en">${next.num}</span>${next.area}</span></span><span class="bz-pg-ar">${ico('i-arrow', 'ico')}</span></button>
+            </div>
           </div>
         </article>`;
   }).join('\n');
@@ -680,15 +688,26 @@ ${rail}
     <div class="bz-tabs-spot" aria-hidden="true"></div>
     <div class="bz-tabbar">
       <div class="container">
-        <div class="bz-tabs" role="tablist" aria-label="7개 사업">
-          <span class="bz-tab-ink" aria-hidden="true"></span>
+        <div class="bz-tabrow">
+          ${stepBtn(-1)}
+          <div class="bz-tabs" role="tablist" aria-label="7개 사업">
+            <span class="bz-tab-ink" aria-hidden="true"></span>
 ${tabs}
+          </div>
+          ${stepBtn(1)}
         </div>
       </div>
+      <span class="bz-tabbar-prog" aria-hidden="true"><span></span></span>
     </div>
     <div class="container">
       <div class="bz-panels">
 ${panels}
+        <div class="bz-side" aria-hidden="true">
+          <div class="bz-side-in">
+            ${sideBtn(-1, BIZ[BIZ.length - 1])}
+            ${sideBtn(1, BIZ[1])}
+          </div>
+        </div>
       </div>
     </div>
   </section>
