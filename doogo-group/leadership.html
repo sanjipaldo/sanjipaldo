@@ -24,8 +24,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="assets/css/base.css?v=a88e2a79">
+  <link rel="stylesheet" href="assets/css/base.css?v=b8235d1b">
   <link rel="stylesheet" href="assets/css/people-rail.css?v=a0ffe34a">
+  <link rel="stylesheet" href="assets/css/people-close.css?v=69c7594d">
   <link rel="stylesheet" href="assets/css/cta-variants.css?v=042dd8b0">
   <link rel="stylesheet" href="assets/css/pages/leadership.css?v=effdb11d">
 </head>
@@ -416,27 +417,89 @@
     </div>
   </dialog>
 
-  <!-- 마무리 배너 — 사람들 전용: 리더 얼굴 + '+ YOU' 웜 카드 (함께 일할 사람 · 채용 소식)
-       페이지마다 다른 배너 · 스타일 assets/css/cta-variants.css (.cbx--people) -->
-  <section class="cbx cbx--people" aria-labelledby="people-close-title">
-    <div class="container">
-      <div class="cbx-people-card">
-        <ul class="cbx-faces" data-reveal aria-hidden="true">
-          <li style="--i:0"><img src="assets/img/people/leader-moon-wonoh-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async"></li>
-          <li style="--i:1"><img src="assets/img/people/leader-baek-youngho-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async"></li>
-          <li style="--i:2"><img src="assets/img/people/leader-kim-sinyong-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async"></li>
-          <li style="--i:3"><img src="assets/img/people/leader-moon-sungoh-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async"></li>
-          <li style="--i:4"><img src="assets/img/people/leader-kim-yunjung-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async"></li>
-          <li style="--i:5"><img src="assets/img/people/leader-shin-donghoon-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async"></li>
-          <li class="cbx-face-you" style="--i:6"><span>+ YOU</span></li>
-        </ul>
-        <p class="cbx-people-note" data-reveal style="--d:.1s">두고 사람들과 일곱 개 사업, <span class="nowrap">그리고 함께할 당신</span></p>
-        <h2 class="cbx-people-title" id="people-close-title" data-reveal style="--d:.15s"><span class="cbx-people-kicker">좋은 사람들과 함께 일하고 싶다면</span> 두고와 함께 <span class="nowrap"><span class="accent">성장할 사람</span>을</span> 찾습니다.</h2>
-        <p class="cbx-people-lead" data-reveal style="--d:.2s">일곱 개 사업 현장에서 함께 배우고, 만들고, 키워 갈 동료를 기다립니다. 모집 분야와 자격 요건은 확정되는 대로 채용 소식에 공고합니다.</p>
-        <div class="cbx-actions" data-reveal style="--d:.25s">
-          <a class="btn btn--dark btn--lg" href="news.html?cat=recruit#n-recruit">채용 소식 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-          <a class="btn btn--line btn--lg" href="contact.html?type=partner">협업 문의하기</a>
+  <!-- 마무리 배너 — 사람들 전용 '3D 링' (22차): 짙은 네이비 무대 위에서 두고 사람들 6명 + '+ YOU' 카드 7장이 천천히 도는 회전 링
+       넓은 화면은 왼쪽 문구 · 오른쪽 링, 1024px 이하는 링 위 · 문구 아래. 링은 장식(aria-hidden)이고 문구 · 버튼만 읽힘
+       스타일 assets/css/people-close.css · 동작 assets/js/people-close.js -->
+  <section class="cbx cbx--orbit on-dark" aria-labelledby="people-close-title" data-orbit>
+    <div class="container orb-wrap">
+      <div class="orb-copy">
+        <p class="orb-chip en" data-reveal><i aria-hidden="true"></i>Join DOOGO</p>
+        <h2 class="orb-title" id="people-close-title" data-lines>
+          <span class="line orb-kicker"><span>좋은 사람들과 함께 일하고 싶다면</span></span>
+          <span class="line"><span>두고와 함께</span></span>
+          <span class="line"><span><span class="orb-accent">성장할 사람</span>을 찾습니다.</span></span>
+        </h2>
+        <p class="orb-lead" data-reveal style="--d:.18s">일곱 개 사업 현장에서 함께 배우고, 만들고, 키워 갈 동료를 기다립니다. <span class="nowrap">모집 분야와</span> 자격 요건은 <span class="nowrap">확정되는 대로</span> <span class="nowrap">채용 소식에 공고합니다.</span></p>
+        <div class="cbx-actions orb-actions" data-reveal style="--d:.26s">
+          <a class="btn btn--primary btn--lg" href="news.html?cat=recruit#n-recruit">채용 소식 보기 <svg class="ico ico-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn--ghost btn--lg" href="contact.html?type=partner">협업 문의하기</a>
         </div>
+        <ul class="orb-stats" data-reveal style="--d:.34s">
+          <li><span>두고 사람들</span><b class="en">6</b></li>
+          <li><span>사업</span><b class="en">7</b></li>
+          <li class="is-you"><span>당신의 자리</span><b class="en">+1</b></li>
+        </ul>
+      </div>
+
+      <div class="orb-stage" aria-hidden="true">
+        <div class="orb-scene">
+          <span class="orb-aura"></span>
+          <span class="orb-beam"></span>
+          <div class="orb-floor">
+            <span class="orb-grid"></span>
+            <span class="orb-pool"></span>
+            <span class="orb-disc"></span>
+            <span class="orb-spot"></span>
+          </div>
+          <ul class="orb-ring">
+            <li class="orb-card" style="--k:0">
+              <div class="orb-face">
+                <img class="orb-img" src="assets/img/people/leader-moon-wonoh-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async" draggable="false">
+                <p class="orb-cap"><b>문원오<small>대표이사</small></b><span class="en">DOOGO HOLDINGS</span></p>
+              </div>
+            </li>
+            <li class="orb-card" style="--k:1">
+              <div class="orb-face">
+                <img class="orb-img" src="assets/img/people/leader-baek-youngho-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async" draggable="false">
+                <p class="orb-cap"><b>백영호<small>대표이사</small></b><span class="en">DOOGOBIO NZ</span></p>
+              </div>
+            </li>
+            <li class="orb-card" style="--k:2">
+              <div class="orb-face">
+                <img class="orb-img" src="assets/img/people/leader-kim-sinyong-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async" draggable="false">
+                <p class="orb-cap"><b>김신용<small>대표이사</small></b><span class="en">DOOGO AD</span></p>
+              </div>
+            </li>
+            <li class="orb-card" style="--k:3">
+              <div class="orb-face">
+                <img class="orb-img" src="assets/img/people/leader-moon-sungoh-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async" draggable="false">
+                <p class="orb-cap"><b>문성오<small>대표이사</small></b><span class="en">DOOGO SPACE</span></p>
+              </div>
+            </li>
+            <li class="orb-card" style="--k:4">
+              <div class="orb-face">
+                <img class="orb-img" src="assets/img/people/leader-kim-yunjung-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async" draggable="false">
+                <p class="orb-cap"><b>김윤정<small>총괄이사</small></b><span class="en">DOOGO MEDIA</span></p>
+              </div>
+            </li>
+            <li class="orb-card" style="--k:5">
+              <div class="orb-face">
+                <img class="orb-img" src="assets/img/people/leader-shin-donghoon-600.webp" alt="" width="600" height="800" loading="lazy" decoding="async" draggable="false">
+                <p class="orb-cap"><b>신동훈<small>총괄이사</small></b><span class="en">DOOGO MAKERS</span></p>
+              </div>
+            </li>
+            <li class="orb-card orb-card--you" style="--k:6">
+              <span class="orb-halo"></span>
+              <div class="orb-face">
+                <svg class="orb-sil" viewBox="0 0 120 160" focusable="false"><path d="M8 168c0-34 22-60 52-60s52 26 52 60"/></svg>
+                <span class="orb-plus"><i></i></span>
+                <span class="orb-you en">YOU</span>
+                <p class="orb-cap"><b>당신의 자리</b><span class="en">Join DOOGO</span></p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <p class="orb-hint en"><span class="orb-hint-m">Drag to spin</span><span class="orb-hint-t">Swipe to spin</span></p>
       </div>
     </div>
   </section>
@@ -526,8 +589,9 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <!-- @footer:end -->
-<script src="assets/js/site.js?v=94747099" defer></script>
+<script src="assets/js/site.js?v=191d49f3" defer></script>
 <script src="assets/js/people-rail.js?v=12030ac4" defer></script>
+<script src="assets/js/people-close.js?v=7153ac89" defer></script>
 <script src="assets/js/pages/leadership.js?v=bbac9488" defer></script>
 </body>
 </html>

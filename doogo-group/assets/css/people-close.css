@@ -1,0 +1,316 @@
+/* =========================================================
+   DOOGO GROUP — people-close.css (사람들 마무리 배너 '3D 링' · 22차)
+   leadership.html 맨 아래 .cbx--orbit — 동작은 assets/js/people-close.js
+   · 짙은 네이비 무대: 푸른 빛 번짐 + 원근 격자 바닥 + 링 아래 빛나는 원판(눈금이 링과 함께 돎)
+   · 넓은 화면: 왼쪽 문구 · 오른쪽 링 / 1024px 이하: 링 위 · 문구 아래(가운데 정렬)
+   · 링: 두고 사람들 6명 + '+ YOU' 카드 7장 — 위치 · 크기 · 밝기 · 흐림은 스크립트가 매 프레임 지정
+     가장 앞 카드(.is-front)만 이름 · 회사가 또렷이 보이고 푸른 테두리 빛
+   · 스크립트 전 / 없을 때(.orb-stage:not(.is-ready)): CSS 삼각함수로 정지된 링
+   · html.motion-off(움직임 멈추기): 회전 · 등장 없이 정지된 구도, 깜빡임 · 빛 번짐 애니메이션도 멈춤
+   ========================================================= */
+.cbx.cbx--orbit {
+  --cw: clamp(166px, 15.4vw, 226px);      /* 카드 폭 (가장 앞 카드 기준) */
+  --ch: calc(var(--cw) * 4 / 3);          /* 카드 높이 3:4 */
+  --ring-y: calc(var(--ch) * .86);        /* 무대 위에서 링 중심까지 */
+  padding-block: clamp(88px, 9.4vw, 144px);
+  color: #fff;
+  background:
+    radial-gradient(46% 56% at 8% 6%, rgba(76, 141, 246, .13), rgba(76, 141, 246, 0) 72%),
+    radial-gradient(60% 70% at 74% 54%, rgba(10, 93, 226, .2), rgba(10, 93, 226, 0) 70%),
+    linear-gradient(180deg, #0B1B33 0%, #0A1426 52%, #070F1E 100%);
+}
+/* 위쪽 가는 빛줄 */
+.cbx--orbit::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(111, 162, 242, 0), rgba(111, 162, 242, .55) 50%, rgba(111, 162, 242, 0));
+}
+.orb-wrap {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  align-items: center; gap: clamp(28px, 3.4vw, 64px);
+}
+
+/* ---------- 문구 ---------- */
+.orb-copy { position: relative; z-index: 2; min-width: 0; }
+.orb-chip {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 34px; padding: 0 16px 0 13px; border-radius: 999px;
+  border: 1px solid rgba(111, 162, 242, .34); background: rgba(10, 93, 226, .16);
+  color: #D3E3FF; font-size: .76rem; font-weight: 600; line-height: 1; letter-spacing: .2em; text-transform: uppercase;
+}
+.orb-chip i { position: relative; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--sky); }
+.orb-chip i::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--sky); animation: orb-ping 2.4s var(--ease) infinite; }
+@keyframes orb-ping {
+  0% { transform: scale(1); opacity: .75; }
+  70%, 100% { transform: scale(3.4); opacity: 0; }
+}
+.orb-title {
+  margin-top: 26px; color: #fff;
+  font-size: clamp(2.05rem, 4vw, 3.35rem); font-weight: 700; line-height: 1.18; letter-spacing: -0.042em;
+}
+.orb-title .orb-kicker {
+  margin-bottom: 14px; color: rgba(255, 255, 255, .7);
+  font-size: clamp(1.02rem, 1.3vw, 1.2rem); font-weight: 600; line-height: 1.5; letter-spacing: -0.02em;
+}
+.orb-accent {
+  background: linear-gradient(100deg, #3B83FF 0%, #5C9BFA 42%, #A6CBFF 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+}
+.orb-lead {
+  margin-top: 22px; max-width: 31em; color: rgba(255, 255, 255, .7);
+  font-size: var(--fs-lead); line-height: 1.72; letter-spacing: -0.015em; text-wrap: pretty;
+}
+.orb-actions { margin-top: 36px; }
+.cbx--orbit .btn--primary { box-shadow: 0 16px 40px -14px rgba(10, 93, 226, .95), inset 0 1px 0 rgba(255, 255, 255, .2); }
+.cbx--orbit .btn--primary:hover { --btn-bg: #1B6BF0; box-shadow: 0 20px 46px -14px rgba(46, 125, 255, 1), inset 0 1px 0 rgba(255, 255, 255, .24); }
+.cbx--orbit .btn--ghost { --btn-bg: rgba(255, 255, 255, .05); --btn-bd: rgba(255, 255, 255, .3); }
+.cbx--orbit .btn--ghost:hover { --btn-bg: #fff; --btn-fg: var(--ink); --btn-bd: #fff; }
+
+.orb-stats {
+  display: flex; max-width: 440px; margin-top: 44px; padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+}
+.orb-stats li { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column-reverse; gap: 6px; padding-inline: 20px; border-left: 1px solid rgba(255, 255, 255, .12); }
+.orb-stats li:first-child { padding-left: 0; border-left: 0; }
+.orb-stats b { color: #fff; font-size: clamp(1.7rem, 2.2vw, 2.15rem); font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+.orb-stats span { color: rgba(255, 255, 255, .58); font-size: .86rem; font-weight: 500; line-height: 1.4; white-space: nowrap; }
+.orb-stats .is-you b {
+  background: linear-gradient(100deg, #5C9BFA, #A6CBFF);
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+}
+
+/* ---------- 무대 ---------- */
+.orb-stage {
+  position: relative; z-index: 1; min-width: 0;
+  height: calc(var(--ch) * 1.66);
+  touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.orb-stage.is-ready { cursor: grab; }
+.orb-stage.is-drag { cursor: grabbing; }
+html.motion-off .orb-stage { cursor: default; }
+.orb-scene { position: absolute; inset: 0; }
+
+/* 링 뒤 큰 빛 번짐 · 위에서 내려오는 옅은 빛기둥 */
+.orb-aura {
+  position: absolute; left: 50%; top: calc(var(--ring-y) - var(--ch) * .05);
+  width: calc(var(--cw) * 4.6); height: calc(var(--cw) * 3.4); translate: -50% -50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(28, 108, 240, .5), rgba(10, 93, 226, .16) 52%, rgba(10, 93, 226, 0));
+}
+.orb-beam {
+  position: absolute; left: 50%; top: calc(var(--ring-y) - var(--ch) * 1.7);
+  width: calc(var(--cw) * 5); height: calc(var(--ch) * 2.4); translate: -50% 0; pointer-events: none;
+  background: conic-gradient(from 160deg at 50% 0%, rgba(111, 162, 242, 0) 0deg, rgba(111, 162, 242, .13) 20deg, rgba(111, 162, 242, 0) 40deg);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 45%, #000 70%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 45%, #000 70%, transparent 100%);
+}
+
+/* 바닥: 링 중심을 원점으로 (--rx · --ry · --cy 는 스크립트가 지정, 없으면 아래 기본값) */
+.orb-floor {
+  --rx: calc(var(--cw) * 1.1); --ry: calc(var(--ch) * .26); --cy: calc(var(--ch) * .26);
+  position: absolute; left: 50%; top: var(--ring-y); width: 0; height: 0;
+}
+.orb-grid {
+  position: absolute; left: calc(var(--rx) * -1.8); top: calc(var(--cy) - var(--ry) * 1.7);
+  width: calc(var(--rx) * 3.6); height: calc(var(--ch) * 1.25);
+  transform-origin: 50% 0; transform: perspective(800px) rotateX(64deg);
+  background-image:
+    linear-gradient(rgba(111, 162, 242, .28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(111, 162, 242, .28) 1px, transparent 1px);
+  background-size: 46px 46px; background-position: 50% 0;
+  -webkit-mask-image: radial-gradient(50% 50% at 50% 42%, #000 0%, rgba(0, 0, 0, .45) 55%, transparent 100%);
+  mask-image: radial-gradient(50% 50% at 50% 42%, #000 0%, rgba(0, 0, 0, .45) 55%, transparent 100%);
+  pointer-events: none;
+}
+.orb-pool {
+  position: absolute; left: calc(var(--rx) * -1.35); top: calc(var(--cy) - var(--ry) * 1.7);
+  width: calc(var(--rx) * 2.7); height: calc(var(--ry) * 3.4); border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(76, 141, 246, .55), rgba(10, 93, 226, .22) 48%, rgba(10, 93, 226, 0));
+}
+/* 앞 카드 발밑의 밝은 빛 */
+.orb-spot {
+  position: absolute; left: calc(var(--cw) * -.9); top: calc(var(--cy) + var(--ry) * .55);
+  width: calc(var(--cw) * 1.8); height: calc(var(--ry) * .95); border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(166, 203, 255, .5), rgba(76, 141, 246, .2) 55%, rgba(76, 141, 246, 0));
+}
+/* 원판: 둥근 원을 납작하게 눌러 바닥에 눕힘 — 크기 · 눌림 · 회전은 스크립트(transform) */
+.orb-disc {
+  position: absolute; left: calc(var(--rx) * -1); top: calc(var(--rx) * -1);
+  width: calc(var(--rx) * 2); height: calc(var(--rx) * 2); border-radius: 50%; pointer-events: none;
+  transform: translateY(var(--cy)) scaleY(.3);
+  border: 3px solid rgba(111, 162, 242, .55);
+  box-shadow: 0 0 34px 2px rgba(76, 141, 246, .45), inset 0 0 40px rgba(76, 141, 246, .28);
+}
+.orb-disc::before, .orb-disc::after { content: ""; position: absolute; border-radius: 50%; }
+/* 눈금 고리 */
+.orb-disc::before {
+  inset: 7%;
+  background: repeating-conic-gradient(from 0deg, rgba(166, 203, 255, .75) 0deg .7deg, rgba(166, 203, 255, 0) .7deg 7.5deg);
+  -webkit-mask-image: radial-gradient(closest-side, transparent 88%, #000 89%, #000 100%);
+  mask-image: radial-gradient(closest-side, transparent 88%, #000 89%, #000 100%);
+}
+/* 안쪽 가는 고리 */
+.orb-disc::after { inset: 24%; border: 2px solid rgba(111, 162, 242, .28); }
+
+/* ---------- 링 · 카드 ---------- */
+.orb-ring { position: absolute; left: 50%; top: var(--ring-y); width: 0; height: 0; margin: 0; padding: 0; }
+.orb-card {
+  position: absolute; left: calc(var(--cw) / -2); top: calc(var(--ch) / -2);
+  width: var(--cw); height: var(--ch); transform-origin: 50% 50%;
+}
+.orb-face {
+  position: relative; width: 100%; height: 100%; overflow: hidden; isolation: isolate; border-radius: 22px;
+  background:
+    radial-gradient(95% 62% at 50% 20%, rgba(160, 200, 255, .55), rgba(160, 200, 255, 0) 72%),
+    linear-gradient(180deg, #3767B9 0%, #1D4283 46%, #0D2350 100%);
+  box-shadow: 0 30px 60px -26px rgba(0, 0, 0, .75);
+}
+/* 가장 앞 카드의 푸른 테두리 빛 — 투명도만 바뀜 */
+.orb-card::before {
+  content: ""; position: absolute; inset: 0; border-radius: 22px; pointer-events: none;
+  box-shadow: 0 0 0 1.5px rgba(111, 162, 242, .85), 0 0 64px -8px rgba(76, 141, 246, .62);
+  opacity: 0; transition: opacity .6s var(--ease); will-change: opacity;
+}
+.orb-card.is-front::before { opacity: 1; }
+.orb-card--you::before { box-shadow: 0 0 72px -4px rgba(76, 141, 246, .7); }
+/* 위쪽 유리 반사 · 가는 테두리 */
+.orb-face::after {
+  content: ""; position: absolute; inset: 0; z-index: 3; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(160deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, 0) 32%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), inset 0 1px 0 rgba(255, 255, 255, .32);
+}
+/* 아래 어둠 (이름 자리) */
+.orb-face::before {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 46%; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(6, 13, 26, 0) 0%, rgba(6, 13, 26, .62) 52%, rgba(6, 13, 26, .9) 100%);
+}
+/* 깊이 그늘 (스크립트가 넣고 투명도를 지정) */
+.orb-shade { position: absolute; inset: 0; z-index: 5; border-radius: inherit; background: #050C1A; opacity: 0; pointer-events: none; will-change: opacity; }
+.orb-img {
+  position: absolute; inset: 0; width: 100%; height: 100%; max-width: none;
+  object-fit: cover; object-position: 50% 0; transform: translateY(4%);
+  pointer-events: none; -webkit-user-drag: none;
+}
+.orb-cap {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  display: grid; gap: 5px; padding: 0 16px 16px;
+  opacity: 0; transform: translateY(8px); transition: opacity .5s var(--ease), transform .6s var(--ease);
+}
+.orb-cap b {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 7px; color: #fff;
+  font-size: clamp(1rem, .55rem + .62vw, 1.16rem); font-weight: 700; line-height: 1.25; letter-spacing: -0.03em;
+}
+.orb-cap small { color: rgba(255, 255, 255, .74); font-size: .8em; font-weight: 500; letter-spacing: -0.01em; }
+.orb-cap .en { color: #8DB8FF; font-size: .66rem; font-weight: 600; line-height: 1.2; letter-spacing: .15em; text-transform: uppercase; white-space: nowrap; }
+.orb-card.is-front .orb-cap { opacity: 1; transform: none; }
+
+/* '+ YOU' 카드 — 점선 테두리 · 비어 있는 자리 실루엣 · 숨 쉬듯 빛남 */
+.orb-card--you .orb-face {
+  background:
+    radial-gradient(90% 60% at 50% 34%, rgba(76, 141, 246, .42), rgba(76, 141, 246, 0) 72%),
+    linear-gradient(180deg, #13305F 0%, #0C1E3E 60%, #091630 100%);
+}
+.orb-card--you .orb-face::after {
+  background: linear-gradient(160deg, rgba(255, 255, 255, .12) 0%, rgba(255, 255, 255, 0) 30%);
+  box-shadow: none; border: 1.5px dashed rgba(140, 186, 255, .85);
+}
+.orb-card--you .orb-face::before { height: 34%; }
+.orb-halo {
+  position: absolute; inset: 0; border-radius: 22px; pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(111, 162, 242, .4), 0 0 46px 4px rgba(76, 141, 246, .55), 0 0 110px 10px rgba(10, 93, 226, .35);
+  opacity: .55; animation: orb-breathe 2.8s ease-in-out infinite alternate;
+}
+@keyframes orb-breathe { to { opacity: 1; } }
+.orb-sil {
+  position: absolute; left: 50%; bottom: 0; width: 92%; height: auto; translate: -50% 0; overflow: visible;
+  fill: rgba(111, 162, 242, .1); stroke: rgba(140, 186, 255, .42); stroke-width: 1.3; stroke-dasharray: 3 4;
+}
+.orb-plus {
+  position: absolute; left: 50%; top: 31%; width: 36%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #4C8DF6, #0A5DE2 70%);
+  box-shadow: 0 0 0 6px rgba(76, 141, 246, .16), 0 14px 34px -8px rgba(10, 93, 226, .95), inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+.orb-plus::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 1px solid rgba(140, 186, 255, .7); animation: orb-ring 2.4s var(--ease) infinite; }
+@keyframes orb-ring { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(1.55); opacity: 0; } }
+.orb-plus i::before, .orb-plus i::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 38%; height: 3px; border-radius: 2px; background: #fff; translate: -50% -50%;
+}
+.orb-plus i::after { rotate: 90deg; }
+.orb-you {
+  position: absolute; left: 0; right: 0; top: 52%; z-index: 2; text-align: center;
+  font-size: calc(var(--cw) * .2); font-weight: 600; line-height: 1; letter-spacing: .06em; color: #fff;
+  text-shadow: 0 0 24px rgba(76, 141, 246, .9);
+}
+html.motion-off .orb-halo { opacity: .9; }
+html.motion-off .orb-plus::before { opacity: 0; }
+
+/* 끌어서 돌리기 안내 (마우스 · 터치 문구 따로) */
+.orb-hint {
+  position: absolute; left: 50%; bottom: 0; translate: -50% 0; margin: 0;
+  display: inline-flex; align-items: center; gap: 12px; white-space: nowrap;
+  color: rgba(255, 255, 255, .42); font-size: .66rem; font-weight: 600; letter-spacing: .3em; text-transform: uppercase;
+  transition: opacity .6s var(--ease);
+}
+.orb-hint::before, .orb-hint::after { content: ""; width: 26px; height: 1px; background: linear-gradient(90deg, rgba(111, 162, 242, 0), rgba(111, 162, 242, .7)); }
+.orb-hint::after { transform: scaleX(-1); }
+.orb-hint-t { display: none; }
+@media (hover: none) {
+  .orb-hint-m { display: none; }
+  .orb-hint-t { display: inline; }
+}
+html.motion-off .orb-hint, .orb-stage:not(.is-ready) .orb-hint { opacity: 0; }
+
+/* ---------- 등장: 화면에 들어오면 .is-live (카드는 스크립트가 펼침) ---------- */
+.orb-aura, .orb-beam, .orb-floor { transition: opacity 1.3s var(--ease), scale 1.6s var(--ease); }
+.orb-stage.is-ready:not(.is-live) :is(.orb-aura, .orb-beam, .orb-floor) { opacity: 0; scale: .6; }
+.orb-stage.is-ready:not(.is-live) .orb-hint { opacity: 0; }
+.orb-stage.is-live .orb-floor { transition-delay: .15s; }
+.orb-stage.is-live .orb-hint { transition-delay: 1.4s; }
+html.motion-off .orb-stage :is(.orb-aura, .orb-beam, .orb-floor) { opacity: 1 !important; scale: none !important; }
+
+/* ---------- 스크립트 전 / 없을 때: 정지된 링 ('+ YOU' 카드가 앞) ---------- */
+.orb-stage:not(.is-ready) .orb-card {
+  --a: calc((var(--k) - 6) * 51.4286deg);
+  --c: cos(var(--a));
+  --s: calc(3 / (4 - var(--c)));
+  transform: translate(calc(sin(var(--a)) * var(--cw) * 1.25 * var(--s)), calc((var(--s) - 1) * var(--ch) * .75)) scale(var(--s));
+  opacity: calc(.3 + .7 * (var(--c) + 1) / 2);
+}
+.orb-stage:not(.is-ready) .orb-card:nth-child(7) { z-index: 7; }
+.orb-stage:not(.is-ready) .orb-card:is(:nth-child(1), :nth-child(6)) { z-index: 6; }
+.orb-stage:not(.is-ready) .orb-card:is(:nth-child(2), :nth-child(5)) { z-index: 5; }
+.orb-stage:not(.is-ready) .orb-card--you .orb-cap, .orb-stage:not(.is-ready) .orb-card--you::before { opacity: 1; transform: none; }
+
+/* ---------- 태블릿 · 휴대폰: 링 위 · 문구 아래 ---------- */
+@media (max-width: 1024px) {
+  .cbx.cbx--orbit {
+    --cw: clamp(140px, 21vw, 218px);
+    padding-block: clamp(64px, 9vw, 104px) clamp(80px, 10vw, 120px);
+    background:
+      radial-gradient(70% 36% at 50% 22%, rgba(10, 93, 226, .26), rgba(10, 93, 226, 0) 72%),
+      linear-gradient(180deg, #0B1B33 0%, #0A1426 52%, #070F1E 100%);
+  }
+  .orb-wrap { grid-template-columns: minmax(0, 1fr); gap: clamp(28px, 5vw, 48px); }
+  .orb-stage { order: -1; }
+  .orb-copy { max-width: 640px; margin-inline: auto; text-align: center; }
+  .orb-title { font-size: clamp(2rem, 4.8vw, 3rem); }
+  .orb-lead { margin-inline: auto; }
+  .orb-actions { justify-content: center; }
+  .orb-stats { margin-inline: auto; }
+  .orb-stats li { align-items: center; }
+  .orb-stats li:first-child { padding-left: 20px; }
+}
+@media (max-width: 560px) {
+  .cbx.cbx--orbit { --cw: clamp(112px, 33vw, 146px); }
+  .orb-stage { margin-inline: calc(var(--gutter) * -1); }
+  .orb-face, .orb-halo, .orb-card::before { border-radius: 16px; }
+  .orb-cap { gap: 3px; padding: 0 11px 11px; }
+  .orb-cap b { font-size: .92rem; }
+  .orb-cap .en { font-size: .54rem; letter-spacing: .1em; }
+  .orb-title { margin-top: 22px; }
+  .orb-title .orb-kicker { margin-bottom: 10px; }
+  .orb-lead { margin-top: 18px; }
+  .orb-actions { margin-top: 30px; }
+  .orb-stats { margin-top: 36px; padding-top: 22px; }
+  .orb-stats li { padding-inline: 10px; }
+  .orb-stats li:first-child { padding-left: 10px; }
+  .orb-stats span { font-size: .8rem; }
+  .orb-hint { font-size: .6rem; letter-spacing: .26em; }
+}
