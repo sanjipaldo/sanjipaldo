@@ -879,3 +879,19 @@ html.legal-open { overflow: hidden; }
   .mega-area { font-size: .74rem !important; padding: 0 8px 0 5px; }
   .mega-brand .ico { top: 14px; right: 14px; width: 28px; height: 28px; padding: 7px; }
 }
+
+/* ---------- 메가메뉴(사업영역) 21차: 사진 크게 · 브랜드명 작게 · 설명 한 줄 ----------
+   데스크톱은 메뉴 패널만 넓게(최대 1600px) 써서 7칸 사진을 키우고, 칸 폭에 맞춰(컨테이너 쿼리 cqi) 브랜드명 · 설명 글자 크기를 정해
+   'DOOGO MAKERS'도 말줄임 없이, 설명은 항상 한 줄로 */
+@media (min-width: 1025px) {
+  .mega-inner.container { max-width: calc(1600px + var(--gutter) * 2); }
+  .mega-grid { gap: 14px; }
+  .mega-item { container-type: inline-size; gap: 11px; padding: 8px; }
+  .mega-thumb { aspect-ratio: 4 / 3.3; }
+  .mega-brand { font-size: min(1.02rem, 9.6cqi); padding-bottom: 9px; }
+  .mega-desc { font-size: min(.86rem, 7.6cqi); line-height: 1.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.02em; }
+}
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .mega-grid { gap: 8px; }
+  .mega-item { padding: 6px; }
+}

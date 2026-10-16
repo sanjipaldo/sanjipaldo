@@ -347,3 +347,7 @@ html.motion-off .ld-m-in.is-swap .ld-m-visual :is(.pcard-img, .pcard-sil) { opac
 /* 21차: 상세 맨 위 '주요 이력' 줄 (이력이 있는 사람만 · 없으면 줄을 숨김) — 목록이라 위쪽 맞춤 */
 .ld-m-facts > .ld-m-career-row { align-items: start; padding-block: 14px 12px; }
 .ld-m-career-row dt { padding-top: 1px; }
+/* 21차: 카드의 주요 이력(전원 확정본) — 분야 아래 짧은 목록 · 상세 팝업 맨 위에도 같은 이력 */
+.ld-card-career { display: grid; gap: 3px; margin-top: 12px; padding-top: 11px; border-top: 1px dashed rgba(11, 27, 51, .14); width: 100%; }
+.ld-card-career li { position: relative; padding-left: 11px; font-size: .84rem; font-weight: 500; line-height: 1.5; letter-spacing: -.02em; color: var(--ink-2); word-break: keep-all; }
+.ld-card-career li::before { content: ""; position: absolute; left: 0; top: .64em; width: 4px; height: 4px; border-radius: 50%; background: var(--blue); }

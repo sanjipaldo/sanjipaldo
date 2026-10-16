@@ -106,6 +106,14 @@ const CEO_CAREER = [
   '前 (주)키위몬 대표이사',
   '해외·국내 건강식품 E커머스 누적 매출 100억 원 이상 달성',
 ];
+// 그룹사 대표 · 총괄이사 주요 이력 (21차 · 사용자 확정본, 이 순서 그대로) — leadership.html 의 data-career 와 같게 유지
+const LEADER_CAREER = {
+  bio: ['現 DOOGOBIO NZ 대표이사', '前 WITHYOU NZ 대표이사', '前 NATURAL HONEY NZ 대표이사', '前 하이웰 대표이사'], // 백영호
+  ad: ['現 두고애드 대표', '前 히즈마케팅 대표', '前 제로커머스 대표'], // 김신용
+  space: ['現 NORA STAY 대표이사', '現 DOOGO SPACE 대표이사', '現 문득 F&amp;B 대표이사'], // 문성오
+  media: ['現 (주)하이비주얼 대표이사', '現 라온프로덕션 대표', '現 국가무형유산 이수자'], // 김윤정
+  makers: ['건국대학교 경제학과 졸업', '現 마우리엔젯 B 총괄이사', '現 신나용 대표이사'], // 신동훈
+};
 const PHOTO = {
   campus: { w: 1280, h: 950, alt: '밝은 강의실에서 강사가 성인 수강생들 앞에서 강의하는 모습' },
   studio: { w: 1280, h: 949, alt: '링라이트와 카메라 앞에서 온라인 강의를 촬영하는 모습' },
@@ -1041,12 +1049,13 @@ ${c.direct ? `          <blockquote class="dt-leader-quote"><p>“제품과 브�
 ${c.direct ? `              <div><dt>주요 이력</dt><dd><ul class="dt-career">${CEO_CAREER.map(t => `<li>${t}</li>`).join('')}</ul></dd></div>
               <div><dt>운영 브랜드</dt><dd class="dt-dd-chips"><span class="dt-dd-chip${b.slug === 'campus' ? ' is-cur' : ''}"><span class="en">DOOGO CLASS</span>교육업</span><span class="dt-dd-chip${b.slug === 'food' ? ' is-cur' : ''}"><span class="en">DOOGOFOOD</span>유통</span></dd></div>
               <div><dt>강의</dt><dd><span class="en nowrap">DOOGO CLASS</span> ‘문대표’ · 뉴질랜드 건기식 브랜딩</dd></div>`
-    : `              <div><dt>주요 서비스</dt><dd class="dt-dd-chips">${b.scope.split(' · ').map(x => `<span class="dt-dd-chip is-svc">${nw(x)}</span>`).join('')}</dd></div>`}
+    : `${LEADER_CAREER[c.key] ? `              <div><dt>주요 이력</dt><dd><ul class="dt-career">${LEADER_CAREER[c.key].map(t => `<li>${t}</li>`).join('')}</ul></dd></div>
+` : ''}              <div><dt>주요 서비스</dt><dd class="dt-dd-chips">${b.scope.split(' · ').map(x => `<span class="dt-dd-chip is-svc">${nw(x)}</span>`).join('')}</dd></div>`}
             </dl>
           </div>
           <div class="pcard-foot dt-leader-foot">
             <a class="pcard-link pcard-stretch" href="leadership.html#${c.anchor || `leader-${c.key}`}">자세히 보기<span class="sr-only"> (${c.en} ${c.ceo} ${ttl(c)} · 두고 사람들)</span> ${ico('i-arrow')}</a>
-            ${c.direct ? '' : `<p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '이력은 확정 후 게시합니다.' : '이력과 사진은 확정 후 게시합니다.'}</p>`}
+            ${c.direct || LEADER_CAREER[c.key] ? '' : `<p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '이력은 확정 후 게시합니다.' : '이력과 사진은 확정 후 게시합니다.'}</p>`}
           </div>`;
 
   const main = `${SPRITE}

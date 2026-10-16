@@ -68,3 +68,5 @@
 
 html.motion-off .prail-track { transition: none !important; }
 html.motion-off .prail-btn svg { animation: none !important; }
+/* 카드 높이를 줄 안에서 같게 (이력 줄 수가 달라도 '자세히 보기' 선이 한 높이) — .pcard 의 height:100% 대신 줄 높이에 맞춰 늘림 */
+.prail-item.pcard, .prail-item > .pcard { height: auto; align-self: stretch; }
