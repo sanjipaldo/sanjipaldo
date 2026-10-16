@@ -29,7 +29,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/css/base.css?v=7afb5562">
-  <link rel="stylesheet" href="assets/css/pages/about.css?v=b5632406">
+  <link rel="stylesheet" href="assets/css/pages/about.css?v=4bdd161d">
   <link rel="stylesheet" href="assets/css/pages/about-vision.css?v=b884b1c8">
   <link rel="stylesheet" href="assets/css/pages/about-loc.css?v=c9ee8c33">
   <link rel="stylesheet" href="assets/css/pages/about-tl.css?v=6da809e3">
@@ -250,12 +250,13 @@
     </div>
 
     <div class="container-wide ab-hero-visual">
-      <!-- 두고그룹 빌딩(정면): 지주회사 DOOGO HOLDINGS 로비 위로 일곱 개 층에 사업이 하나씩 들어서 있습니다.
-           층마다 유리에 층 번호 · 회사 · 업종을 새기고(그룹사 층은 블루, 지주회사 직영 층은 아이보리 불빛),
-           그룹사 다섯 곳은 자기 층 높이에 맞춘 돌출 간판(카드)으로 빌딩 오른쪽에 짧은 브래킷으로 붙습니다 — 연결선 없이 한 줄씩 읽힙니다.
-           빌딩과 간판은 같은 줄 높이(about.css 의 --rows)를 나눠 쓰는 격자라 위치를 JS 로 재지 않습니다. 빌딩은 HTML · CSS 로 그림(이미지는 옥상 간판 로고뿐).
-           등장: 기단 · 로비부터 한 층씩 내려앉고(--f) → 아래층부터 불이 켜지며 엘리베이터 빛이 함께 오르고 → 불이 켜진 층의 간판이 벽에서 밀려 나옵니다.
-           그 뒤 화면에 보이는 동안만 엘리베이터가 천천히 층을 오가고(about.js) 유리에 빛이 스칩니다. -->
+      <!-- 두고그룹 빌딩(3D): 정면은 그대로 두고, 오른쪽 옆면 · 옥상 · 바닥판을 원근(CSS 3D)으로 그려 입체 건물로 보입니다.
+           정면(층 번호 · 회사 · 업종 유리, 그룹사 층은 블루 · 지주회사 직영 층은 아이보리 불빛)은 평면 그대로라 글자가 선명하고,
+           입체 껍데기(.ab-3d)는 정면 뒤에 깔리는 옆면 · 옥상 바닥 · 간판 상자 · 피뢰침 · 바닥판(그림자), 로비 캐노피만 정면 위(.ab-3d--over).
+           그룹사 다섯 곳의 간판(카드)은 옆면 뒤 모서리와 같은 깊이(.ab-wing)에 짧은 브래킷으로 붙어 자기 층 줄과 맞습니다 — 연결선 없음.
+           빌딩 · 옆면 · 간판은 같은 줄 높이(about.css 의 --rows)를 나눠 쓰는 격자라 위치를 JS 로 재지 않습니다. 이미지는 옥상 간판 로고뿐.
+           등장: 바닥판 · 로비부터 한 층씩 옆면과 함께 내려앉고(--f) 카메라가 위에서 제자리로 내려오며 → 아래층부터 불이 켜지고 엘리베이터 빛이 오르고 → 간판이 밀려 나옵니다.
+           그 뒤 화면에 보이는 동안만 카메라가 아주 천천히 흔들리고(옆면 · 옥상만 움직이고 정면은 그대로) 엘리베이터가 층을 오가며 유리에 빛이 스칩니다. -->
       <figure class="ab-stage-fig" data-reveal="scale" style="--d:.2s" data-stage>
         <div class="ab-stage">
           <div class="ab-stage-bg" aria-hidden="true"><span class="ab-orbit"></span><span class="ab-orbit"></span><span class="ab-orbit"></span></div>
@@ -263,27 +264,44 @@
             <p class="ab-core-label" aria-hidden="true"><small>지주회사</small><b class="en">DOOGO HOLDINGS</b><span class="ab-core-direct"><span class="en">DOOGO CLASS · DOOGOFOOD</span></span></p>
             <div class="ab-tower">
               <div class="ab-bld" aria-hidden="true">
-                <div class="ab-bld-top" style="--f:10"><span class="ab-sign"><img src="assets/img/logo/doogo-group-lockup.svg" width="272" height="50" alt="" decoding="async"></span><span class="ab-mast"><i class="ab-beacon"></i></span></div>
+                <div class="ab-3d">
+                  <i class="ab-gd" style="--f:0"></i><i class="ab-gd-sd" style="--f:0"></i><i class="ab-gd-fr" style="--f:0"></i>
+                  <i class="ab-rf-tp" style="--f:9"></i><i class="ab-pent" style="--f:10"></i><i class="ab-pent-sd" style="--f:10"></i><i class="ab-pent-tp" style="--f:10"></i>
+                  <i class="ab-mast" style="--f:10"><i class="ab-beacon"></i></i>
+                  <i class="ab-sgn-tp" style="--f:10"></i><i class="ab-sgn-sd" style="--f:10"></i><i class="ab-rf-sd" style="--f:9"></i>
+                  <i class="ab-sd ab-sd--hq" data-co="class" style="--r:3;--f:8"></i>
+                  <i class="ab-sd" data-co="bio" style="--r:4;--f:7"></i>
+                  <i class="ab-sd" data-co="makers" style="--r:5;--f:6"></i>
+                  <i class="ab-sd" data-co="media" style="--r:6;--f:5"></i>
+                  <i class="ab-sd" data-co="ad" style="--r:7;--f:4"></i>
+                  <i class="ab-sd ab-sd--hq" data-co="food" style="--r:8;--f:3"></i>
+                  <i class="ab-sd" data-co="space" style="--r:9;--f:2"></i>
+                  <i class="ab-sd ab-sd--hq ab-sd--lobby" data-co="hold" style="--r:10;--f:1"></i>
+                </div>
+                <div class="ab-bld-top" style="--f:10"><span class="ab-sign"><img src="assets/img/logo/doogo-group-lockup.svg" width="272" height="50" alt="" decoding="async"></span></div>
                 <div class="ab-bld-roof" style="--f:9"></div>
-                <div class="ab-fl ab-fl--hq" data-co="class" style="--f:8"><span class="ab-fl-no en">7F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGO CLASS</b><small>교육업</small></span></span><span class="ab-fl-tag">지주회사 직영</span></div>
+                <div class="ab-fl ab-fl--hq" data-co="class" style="--f:8"><span class="ab-fl-no en">7F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGO CLASS</b><small>교육업</small></span></span></div>
                 <div class="ab-fl" data-co="bio" style="--f:7"><span class="ab-fl-no en">6F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGOBIO NZ</b><small>제조업</small></span></span></div>
                 <div class="ab-fl" data-co="makers" style="--f:6"><span class="ab-fl-no en">5F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGO MAKERS</b><small>브랜드 커머스</small></span></span></div>
                 <div class="ab-fl" data-co="media" style="--f:5"><span class="ab-fl-no en">4F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGO MEDIA</b><small>미디어 &amp; 콘텐츠</small></span></span></div>
                 <div class="ab-fl" data-co="ad" style="--f:4"><span class="ab-fl-no en">3F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGO AD</b><small>마케팅</small></span></span></div>
-                <div class="ab-fl ab-fl--hq" data-co="food" style="--f:3"><span class="ab-fl-no en">2F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGOFOOD</b><small>유통</small></span></span><span class="ab-fl-tag">지주회사 직영</span></div>
+                <div class="ab-fl ab-fl--hq" data-co="food" style="--f:3"><span class="ab-fl-no en">2F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGOFOOD</b><small>유통</small></span></span></div>
                 <div class="ab-fl" data-co="space" style="--f:2"><span class="ab-fl-no en">1F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGO SPACE</b><small>공간 &amp; 라이프스타일</small></span></span></div>
                 <div class="ab-fl ab-fl--hq ab-fl--lobby" data-co="hold" style="--f:1"><span class="ab-fl-no en">L</span><span class="ab-lobby"><span class="ab-lobby-fa"><b class="en">DOOGO HOLDINGS</b><small>지주회사</small></span><span class="ab-fl-gl ab-lobby-sf"><span class="ab-door"></span></span></span></div>
-                <div class="ab-bld-base" style="--f:0"></div>
                 <span class="ab-lift"><span class="ab-lift-car"></span></span>
                 <span class="ab-sheen"></span>
+                <div class="ab-3d ab-3d--over"><i class="ab-cnp-tp" style="--f:1"></i><i class="ab-cnp-fr" style="--f:1"></i></div>
               </div>
-              <ul class="ab-sats" aria-label="두고그룹 빌딩에 입주한 그룹사 5곳">
-                <li class="ab-sat" data-co="bio" style="--r:4;--f:7"><a class="ab-sat-link" href="business-bio.html"><span class="ab-sat-tile"><img src="assets/img/3d/bio.webp" width="674" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">6층 DOOGOBIO — </span>뉴질랜드 건강식품 제조</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
-                <li class="ab-sat" data-co="makers" style="--r:5;--f:6"><a class="ab-sat-link" href="business-commerce.html"><span class="ab-sat-tile"><img src="assets/img/3d/makers.webp" width="674" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">5층 DOOGO MAKERS — </span>브랜드 기획 · 운영</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
-                <li class="ab-sat" data-co="media" style="--r:6;--f:5"><a class="ab-sat-link" href="business-media.html"><span class="ab-sat-tile"><img src="assets/img/3d/media.webp" width="671" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">4층 DOOGO MEDIA — </span>온드미디어 전문</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
-                <li class="ab-sat" data-co="ad" style="--r:7;--f:4"><a class="ab-sat-link" href="business-ad.html"><span class="ab-sat-tile"><img src="assets/img/3d/ad.webp" width="671" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">3층 DOOGO AD — </span>온·오프라인 마케팅</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
-                <li class="ab-sat" data-co="space" style="--r:9;--f:2"><a class="ab-sat-link" href="business-space.html"><span class="ab-sat-tile"><img src="assets/img/3d/stay.webp" width="674" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">1층 DOOGO SPACE — </span>공유오피스 · 스테이</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
-              </ul>
+              <div class="ab-wing">
+                <ul class="ab-sats" aria-label="두고그룹 빌딩에 입주한 그룹사 5곳">
+                  <li class="ab-sat" data-co="bio" style="--r:4;--f:7"><a class="ab-sat-link" href="business-bio.html"><span class="ab-sat-tile"><img src="assets/img/3d/bio.webp" width="674" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">6층 DOOGOBIO — </span>뉴질랜드 건강식품 제조</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+                  <li class="ab-sat" data-co="makers" style="--r:5;--f:6"><a class="ab-sat-link" href="business-commerce.html"><span class="ab-sat-tile"><img src="assets/img/3d/makers.webp" width="674" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">5층 DOOGO MAKERS — </span>브랜드 기획 · 운영</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+                  <li class="ab-sat" data-co="media" style="--r:6;--f:5"><a class="ab-sat-link" href="business-media.html"><span class="ab-sat-tile"><img src="assets/img/3d/media.webp" width="671" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">4층 DOOGO MEDIA — </span>온드미디어 전문</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+                  <li class="ab-sat" data-co="ad" style="--r:7;--f:4"><a class="ab-sat-link" href="business-ad.html"><span class="ab-sat-tile"><img src="assets/img/3d/ad.webp" width="671" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">3층 DOOGO AD — </span>온·오프라인 마케팅</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+                  <li class="ab-sat" data-co="space" style="--r:9;--f:2"><a class="ab-sat-link" href="business-space.html"><span class="ab-sat-tile"><img src="assets/img/3d/stay.webp" width="674" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">1층 DOOGO SPACE — </span>공유오피스 · 스테이</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+                </ul>
+                <div class="ab-tags" aria-hidden="true"><span class="ab-tag" style="--r:3;--f:8">지주회사 직영</span><span class="ab-tag" style="--r:8;--f:3">지주회사 직영</span></div>
+              </div>
             </div>
           </div>
         </div>
@@ -292,7 +310,7 @@
           <span class="ab-film-txt"><strong>그룹 영상 보기</strong><small class="en">GROUP FILM · 11 SCENES</small></span>
         </button>
         <figcaption class="ab-stage-cap"><span class="en" aria-hidden="true">ONE GROUP</span>지주회사 1 · 그룹사 5
-          <span class="sr-only">— 두고그룹을 정면에서 본 하나의 빌딩으로 표현한 그림입니다. 모든 사업이 두고그룹 빌딩 안에서 이루어지고, 그룹사 다섯 곳은 자기 층 옆에 간판으로 붙어 있습니다.</span>
+          <span class="sr-only">— 두고그룹을 앞쪽 오른편에서 본 하나의 입체 빌딩으로 표현한 그림입니다. 모든 사업이 두고그룹 빌딩 안에서 이루어지고, 그룹사 다섯 곳은 자기 층 옆에 간판으로 붙어 있습니다.</span>
           <ol class="sr-only">
             <li>옥상: DOOGO GROUP 간판.</li>
             <li>7층: DOOGO CLASS, 교육업 — DOOGO HOLDINGS 직영.</li>
@@ -1221,7 +1239,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <!-- @footer:end -->
 <script src="assets/js/site.js?v=1353045c" defer></script>
-<script src="assets/js/pages/about.js?v=1326f5ae" defer></script>
+<script src="assets/js/pages/about.js?v=b74d1eb6" defer></script>
 <script src="assets/js/pages/about-vision.js?v=60b409d9" defer></script>
 <script src="assets/js/pages/about-loc.js?v=3b4f5a15" defer></script>
 <script src="assets/js/pages/about-tl.js?v=1c59625d" defer></script>

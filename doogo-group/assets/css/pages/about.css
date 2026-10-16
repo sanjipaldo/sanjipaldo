@@ -98,20 +98,29 @@ main .note { color: var(--muted); }
 /* 1500px 이하에서는 위 글줄(.container)과 같은 폭으로 정렬, 그 이상에서만 넓게 펼침 */
 @media (max-width: 1500px) { .ab-hero-visual { max-width: calc(var(--container) + var(--gutter) * 2); } }
 
-/* 첫 화면 비주얼: 두고그룹 빌딩(정면) — 지주회사 DOOGO HOLDINGS 로비 위로 일곱 개 층에 사업이 하나씩 들어서 있습니다.
-   빌딩은 about.html 안의 HTML · CSS 정면 입면(이미지는 옥상 간판 로고뿐). 층마다 유리에 층 번호 · 회사 · 업종을 새기고
-   그룹사 층은 블루, 지주회사 직영 층(7F · 2F · 로비)은 아이보리 불빛. 그룹사 다섯 곳은 자기 층 줄에 맞춘 돌출 간판(.ab-sat)으로
-   빌딩 오른쪽에 짧은 브래킷으로 붙습니다 — 연결선 없음. 빌딩(.ab-bld)과 간판 목록(.ab-sats)은 같은 줄 높이(--rows)를 나눠 쓰는 격자.
-   크기 변수: --fh 층 높이 · --sp 층 사이 슬래브 · --sh 옥상 간판 · --rh 옥상 난간 · --lh 로비 · --ph 기단 · --bw 빌딩 너비
-   · --nw 층 번호 기둥 · --lw 엘리베이터 샤프트 · --pl 오른쪽 기둥 · --ch 엘리베이터 빛 높이 · --bk 간판 브래킷 · --cw 간판 너비
-   · --gp 유리 안쪽 여백 · --f1/--f2 회사 · 업종 글자 · --tx 빌딩 왼쪽 위치 (데스크톱은 무대 너비 기준 cqw, 1100 이하는 px) */
+/* 첫 화면 비주얼: 두고그룹 빌딩(3D) — 지주회사 DOOGO HOLDINGS 로비 위로 일곱 개 층에 사업이 하나씩 들어서 있습니다.
+   정면(.ab-bld 의 층 · 유리 · 글자)은 평면 그대로 두어 글자가 선명하고, 그 뒤에 원근(perspective)을 건 입체 껍데기(.ab-3d)가
+   오른쪽 옆면 · 옥상 바닥 · 간판 상자 · 옥탑 · 피뢰침 · 바닥판(그림자)을 그립니다. 정면 위에 오는 로비 캐노피만 .ab-3d--over.
+   카메라(소실점)는 빌딩 오른쪽 위 — perspective-origin = (오른쪽 끝 + --ex, 위끝에서 --eye). 정면(z = 0)은 원근을 받아도 그대로라 흔들리지 않습니다.
+   그룹사 간판(.ab-wing)은 옆면 뒤 모서리(z = -깊이)와 같은 깊이: 같은 소실점을 중심으로 --s 배 줄인 2D 배율이라
+   뒤 모서리의 층 줄과 정확히 맞고(연결선 없이 짧은 브래킷) 글자도 선명합니다.
+   크기 변수: --fh 층 높이 · --sp 층 슬래브 · --sh 옥상 간판 줄 · --rh 난간 · --lh 로비 · --ph 바닥판 줄 · --bw 빌딩 너비
+   · --nw 층 번호 기둥 · --lw 엘리베이터 샤프트 · --pl 오른쪽 기둥 · --ch 엘리베이터 빛 · --bk 간판 브래킷 · --cw 간판 너비
+   · --gp 유리 안쪽 여백 · --f1/--f2 회사 · 업종 글자 · --tx 빌딩 왼쪽 위치 (데스크톱은 무대 너비 기준 cqw, 1100 이하는 px)
+   3D 변수: --dz 건물 깊이 · --k 원근 거리(깊이의 배수) · --sw 화면에 보이는 옆면 폭 · --rf 보이는 옥상 깊이 · --gz/--gm 바닥판 앞 · 옆 여유
+   · --gt 바닥판 두께 · --cz 캐노피 돌출 · --st 간판 두께 · --ro 난간 돌출 · --jb/--sl 유리 문설주 · 아래 턱 · --cam-x/--cam-y 카메라 흔들림
+   (--p 원근 거리 · --ex/--eye 카메라 위치 · --s 간판 배율은 위 값으로 계산) */
 .ab-stage-fig { position: relative; margin: 0; }
 .ab-stage {
-  --fh: 3.6cqw; --sp: .5cqw; --sh: 3.7cqw; --rh: 1.1cqw; --lh: 5.4cqw; --ph: 1.6cqw;
+  --fh: 3.6cqw; --sp: .5cqw; --sh: 3.7cqw; --rh: 1.1cqw; --lh: 5.4cqw; --ph: 3cqw;
   --bw: 27cqw; --nw: 2.9cqw; --lw: 1.05cqw; --pl: .55cqw; --ch: 1.5cqw; --bk: 1.4cqw; --cw: 18.4cqw;
   --gp: 1.1cqw; --f1: clamp(.64rem, .96cqw, .9rem); --f2: clamp(.58rem, .8cqw, .76rem); --fn: clamp(.56rem, .76cqw, .72rem);
+  --dz: 10cqw; --k: 12; --sw: 3.4cqw; --rf: .9cqw; --gz: 3.4cqw; --gm: 1.8cqw; --gt: 1.1cqw; --cz: 1.6cqw; --cnt: .42cqw; --st: .9cqw; --ro: .45cqw;
+  --jb: .32cqw; --sl: .2cqw; --cam-x: .6; --cam-y: 3cqw;
+  --sgl: 23%; --sgw: 54%; --sgt: calc(var(--sh) * .06); --sgh: calc(var(--sh) * .64);
+  --p: calc(var(--dz) * var(--k)); --ex: calc(var(--sw) * (var(--k) + 1)); --eye: calc(var(--sh) - var(--rf) * (var(--k) + 1)); --s: calc(var(--k) / (var(--k) + 1));
   --drop: -1.6cqw; --slide: -1.4cqw; /* 등장: 층이 내려앉는 거리 · 간판이 밀려 나오는 거리 */
-  --tx: 32.5cqw; --core-x: calc(var(--tx) + var(--bw) / 2); --core-y: 50%;
+  --tx: 31cqw; --core-x: calc(var(--tx) + var(--bw) / 2); --core-y: 50%;
   --rows: var(--sh) var(--rh) repeat(7, var(--fh)) var(--lh) var(--ph);
   position: relative; overflow: hidden; isolation: isolate; container-type: inline-size;
   aspect-ratio: 21 / 9; border-radius: clamp(18px, 2.4vw, 32px);
@@ -138,34 +147,32 @@ main .note { color: var(--muted); }
 .ab-core-direct { margin-top: 2px; font-size: .72rem; font-weight: 600; color: var(--ink-2); }
 .ab-core-direct .en { font-size: .68rem; letter-spacing: .06em; color: var(--blue-700); }
 
-/* ----- 빌딩 + 간판: 두 열(빌딩 · 간판)이 같은 줄 높이(--rows)를 씀 ----- */
+/* ----- 빌딩 + 간판: 두 열(빌딩 · 옆면과 간판)이 같은 줄 높이(--rows)를 씀 ----- */
 .ab-tower {
   position: absolute; left: var(--tx); top: 50%; translate: 0 -50%;
-  display: grid; grid-template-columns: var(--bw) calc(var(--bk) + var(--cw));
+  display: grid; grid-template-columns: var(--bw) calc(var(--sw) + (var(--bk) + var(--cw)) * var(--s));
 }
-.ab-bld, .ab-sats { grid-row: 1; display: grid; grid-template-rows: var(--rows); min-width: 0; }
-.ab-bld { grid-column: 1; position: relative; }
-.ab-bld::before { /* 빌딩 그림자 (오른쪽 아래로 은은하게) */
-  content: ""; position: absolute; z-index: -1; left: 0; right: 0; top: calc(var(--sh) + var(--rh)); bottom: var(--ph);
-  box-shadow: 1.2cqw 1.4cqw 2.8cqw -.4cqw rgba(9, 40, 100, .3); transition: opacity .8s var(--ease);
-}
-/* 옥상 간판 · 피뢰침 */
-.ab-bld-top { position: relative; display: flex; justify-content: center; align-items: flex-start; }
+.ab-bld { grid-column: 1; grid-row: 1; position: relative; isolation: isolate; display: grid; grid-template-rows: var(--rows); min-width: 0; }
+/* 옥상 간판(정면은 평면 — 로고가 선명): 두께 · 윗면은 .ab-3d 의 .ab-sgn-sd · .ab-sgn-tp */
+.ab-bld-top { position: relative; }
 .ab-sign {
-  position: relative; display: grid; place-items: center; width: 54%; height: 70%; margin-top: 2%; border-radius: .4cqw;
-  background: linear-gradient(180deg, #fff, #F4F8FE); box-shadow: 0 .5cqw 1.2cqw -.6cqw rgba(7, 40, 110, .5), inset 0 0 0 1px rgba(11, 27, 51, .06);
+  position: absolute; left: var(--sgl); width: var(--sgw); top: var(--sgt); height: var(--sgh); display: grid; place-items: center; border-radius: .25cqw;
+  background: linear-gradient(180deg, #fff 0%, #F3F7FD 100%); box-shadow: inset 0 0 0 1px rgba(11, 27, 51, .06), inset 0 -.2cqw 0 rgba(11, 27, 51, .05);
 }
 .ab-sign img { display: block; width: 72%; height: auto; }
-.ab-sign::before, .ab-sign::after { content: ""; position: absolute; top: 100%; width: .3cqw; min-width: 2px; height: calc(var(--sh) * .3); background: linear-gradient(180deg, #7F97BE, #A9BCDA); }
+.ab-sign::before, .ab-sign::after { /* 간판 기둥: 간판 아래 ~ 옥상 바닥 */
+  content: ""; position: absolute; top: 100%; width: .3cqw; min-width: 2px; height: calc(var(--sh) - var(--sgt) - var(--sgh));
+  background: linear-gradient(90deg, #A9BCDA, #7F97BE);
+}
 .ab-sign::before { left: 16%; } .ab-sign::after { right: 16%; }
-.ab-mast { position: absolute; right: 9%; bottom: 0; width: 2px; height: 84%; background: linear-gradient(180deg, #6E87AD, #A6B9D6); }
-.ab-beacon { position: absolute; top: -3px; left: 50%; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--sky); box-shadow: 0 0 8px 2px rgba(76, 141, 246, .55); }
-.ab-bld-roof { margin-inline: -.45cqw; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, #fff 0 34%, #DAE5F4 34% 100%); box-shadow: inset 0 -1px 0 rgba(11, 27, 51, .1); }
-/* 층: 층 번호 기둥 | 엘리베이터 샤프트 | 유리 띠 */
+.ab-bld-roof { margin-inline: calc(var(--ro) * -1); border-radius: 2px 2px 0 0; background: linear-gradient(180deg, #fff 0 34%, #E3EBF6 34% 100%); box-shadow: inset 0 -1px 0 rgba(11, 27, 51, .12), inset -1px 0 0 #fff; }
+/* 층: 층 번호 기둥 | 엘리베이터 샤프트 | 유리 띠 — 위쪽 --sp 는 층 슬래브(밝은 윗선 · 아래 그늘) */
 .ab-fl {
   position: relative; display: grid; grid-template-columns: var(--nw) var(--lw) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); padding: var(--sp) var(--pl) 0 0;
-  background: linear-gradient(90deg, #E6EEF9 0%, #FDFEFF 16%, #F8FBFF 74%, #DFE9F6 100%);
-  box-shadow: inset 1px 0 0 rgba(255, 255, 255, .9), inset -1px 0 0 rgba(11, 27, 51, .07);
+  background:
+    linear-gradient(180deg, #fff 0 1px, #E2EAF5 1px calc(100% - 1px), rgba(11, 27, 51, .16) calc(100% - 1px)) top / 100% var(--sp) no-repeat,
+    linear-gradient(90deg, #EDF2F9 0%, #FDFEFF 20%, #F8FBFE 80%, #ECF1F8 100%);
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, .9), inset -1px 0 0 #fff;
 }
 .ab-fl.has-link { cursor: pointer; } /* 그룹사 층: 누르면 간판 링크로 (about.js) */
 .ab-fl-no {
@@ -175,20 +182,24 @@ main .note { color: var(--muted); }
 }
 .ab-fl-no.is-stop { background: #fff; color: var(--blue); box-shadow: 0 0 0 1px rgba(10, 93, 226, .35), 0 .3cqw .8cqw -.2cqw rgba(10, 93, 226, .45); }
 .ab-fl.is-hl .ab-fl-no { background: var(--blue); color: #fff; box-shadow: none; }
-/* 유리: 불 꺼진 짙은 유리 위에 불빛(::before)이 켜지고, 멀리언 · 반사(::after)가 그 위 */
+/* 유리: 벽보다 안쪽으로 들어간 창 — 불 꺼진 짙은 유리 위에 불빛(::before)이 켜지고, 그 위(::after)에
+   위 슬래브 그늘 · 왼쪽 문설주(오른쪽 위에서 보여 비침) · 아래 턱 · 반사 · 멀리언 */
 .ab-fl-gl {
   --lit: radial-gradient(70% 150% at 20% -30%, rgba(255, 255, 255, .34), rgba(255, 255, 255, 0) 62%), linear-gradient(180deg, #3D86F7 0%, #1667EA 50%, #0A55D2 100%);
-  --mul: rgba(255, 255, 255, .17);
+  --mul: rgba(255, 255, 255, .17); --jbc: #A7B9D6; --slc: #F4F8FD;
   grid-column: 3; position: relative; isolation: isolate; display: flex; align-items: center; min-width: 0; padding: 0 var(--gp);
-  border-radius: 2px; overflow: hidden; background: linear-gradient(180deg, #273D63 0%, #182B4C 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), inset 0 -2px 3px rgba(4, 16, 40, .22);
-  transition: box-shadow .3s var(--ease);
+  border-radius: 1px; overflow: hidden; background: linear-gradient(180deg, #273D63 0%, #182B4C 100%);
+  outline: 1.5px solid transparent; outline-offset: -1.5px;
+  transition: box-shadow .3s var(--ease), outline-color .3s var(--ease);
 }
-.ab-fl--hq .ab-fl-gl { --lit: radial-gradient(70% 150% at 22% -30%, #fff, rgba(255, 255, 255, 0) 62%), linear-gradient(180deg, #FFFDF8 0%, #FAF4E6 58%, #F1E7D1 100%); --mul: rgba(120, 96, 50, .1); }
+.ab-fl--hq .ab-fl-gl { --lit: radial-gradient(70% 150% at 22% -30%, #fff, rgba(255, 255, 255, 0) 62%), linear-gradient(180deg, #FFFDF8 0%, #FAF4E6 58%, #F1E7D1 100%); --mul: rgba(120, 96, 50, .1); --jbc: #CFC4AC; }
 .ab-fl-gl::before, .ab-fl-gl::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
 .ab-fl-gl::before { background: var(--lit); }
 .ab-fl-gl::after {
   background:
+    linear-gradient(180deg, rgba(4, 16, 40, .3), rgba(4, 16, 40, 0) calc(var(--jb) * 2.4)),
+    linear-gradient(90deg, var(--jbc) 0 var(--jb), rgba(4, 16, 40, .14) var(--jb), rgba(4, 16, 40, 0) calc(var(--jb) * 3)),
+    linear-gradient(0deg, var(--slc) 0 var(--sl), rgba(4, 16, 40, .12) var(--sl), rgba(4, 16, 40, 0) calc(var(--sl) * 2.5)),
     linear-gradient(115deg, rgba(255, 255, 255, .13) 0 13%, transparent 13% 64%, rgba(255, 255, 255, .07) 64% 71%, transparent 71%),
     linear-gradient(180deg, transparent 0 30%, var(--mul) 30% calc(30% + 1px), transparent calc(30% + 1px)),
     repeating-linear-gradient(90deg, var(--mul) 0 1px, transparent 1px 12.5%);
@@ -199,36 +210,32 @@ main .note { color: var(--muted); }
 .ab-fl--hq .ab-fl-t { color: var(--ink); }
 .ab-fl--hq .ab-fl-t b { text-shadow: none; }
 .ab-fl--hq .ab-fl-t small { color: #6A6250; }
-.ab-fl.is-hl .ab-fl-gl { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .95), 0 0 1.6cqw rgba(10, 93, 226, .5); }
-.ab-fl--hq.is-hl .ab-fl-gl { box-shadow: inset 0 0 0 1.5px rgba(10, 93, 226, .55), 0 0 1.4cqw rgba(255, 236, 190, .9); }
-/* 지주회사 직영 층: 간판 자리(오른쪽)에 아이보리 점 + 글자 */
-.ab-fl-tag {
-  position: absolute; left: calc(100% + var(--bk)); top: var(--sp); bottom: 0; display: flex; align-items: center; gap: .55cqw;
-  white-space: nowrap; font-size: var(--f2); font-weight: 600; color: rgba(11, 27, 51, .62);
-}
-.ab-fl-tag::before { content: ""; flex: none; width: .75cqw; height: .75cqw; min-width: 7px; min-height: 7px; border-radius: 50%; background: #FAF3E3; box-shadow: 0 0 0 1px rgba(120, 96, 50, .35), 0 0 .8cqw rgba(255, 236, 190, .9); }
-/* 로비: 간판 띠(DOOGO HOLDINGS) + 아이보리 불빛 유리 · 출입문 · 캐노피 */
+.ab-fl.is-hl .ab-fl-gl { outline-color: rgba(255, 255, 255, .95); box-shadow: 0 0 1.6cqw rgba(10, 93, 226, .5); }
+.ab-fl--hq.is-hl .ab-fl-gl { outline-color: rgba(10, 93, 226, .55); box-shadow: 0 0 1.4cqw rgba(255, 236, 190, .9); }
+/* 로비: 간판 띠(DOOGO HOLDINGS) + 아이보리 불빛 유리 · 출입문 (캐노피는 .ab-3d--over) */
 .ab-lobby { grid-column: 3; display: grid; grid-template-rows: 40% minmax(0, 1fr); min-width: 0; }
 .ab-lobby-fa { display: flex; align-items: center; justify-content: space-between; gap: .6cqw; padding: 0 var(--gp); min-width: 0; white-space: nowrap; background: linear-gradient(180deg, #fff, #F2F6FC); box-shadow: inset 0 -1px 0 rgba(11, 27, 51, .08); }
 .ab-lobby-fa b { font-size: var(--f1); font-weight: 600; letter-spacing: .2em; color: var(--ink); }
 .ab-lobby-fa small { display: inline-flex; align-items: center; height: 1.45cqw; min-height: 16px; padding: 0 .6cqw; border-radius: 999px; background: var(--navy); color: #fff; font-size: var(--fn); font-weight: 700; }
-.ab-lobby-sf { grid-column: auto; border-radius: 0 0 2px 2px; }
-.ab-lobby-sf::after { background: linear-gradient(115deg, rgba(255, 255, 255, .16) 0 12%, transparent 12%), repeating-linear-gradient(90deg, var(--mul) 0 1px, transparent 1px 16.666%); }
-.ab-door {
-  position: absolute; left: 50%; bottom: 0; width: 22%; height: 80%; translate: -50% 0; border-radius: 2px 2px 0 0;
-  background: linear-gradient(90deg, transparent calc(50% - .5px), rgba(255, 255, 255, .45) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px)), linear-gradient(180deg, #23406F, #0E2246);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
+.ab-lobby-sf { grid-column: auto; border-radius: 0 0 1px 1px; }
+.ab-lobby-sf::after {
+  background:
+    linear-gradient(180deg, rgba(60, 46, 20, .16), rgba(60, 46, 20, 0) calc(var(--jb) * 2.4)),
+    linear-gradient(90deg, var(--jbc) 0 var(--jb), rgba(60, 46, 20, .1) var(--jb), rgba(60, 46, 20, 0) calc(var(--jb) * 3)),
+    linear-gradient(115deg, rgba(255, 255, 255, .16) 0 12%, transparent 12%),
+    repeating-linear-gradient(90deg, var(--mul) 0 1px, transparent 1px 16.666%);
 }
-.ab-door::before { /* 캐노피 */ content: ""; position: absolute; left: -22%; right: -22%; top: -.42cqw; height: .42cqw; min-height: 3px; border-radius: 2px; background: var(--blue); box-shadow: 0 .3cqw .5cqw -.1cqw rgba(7, 40, 110, .4); }
-/* 기단(플라자): 빌딩보다 넓은 밝은 바닥 + 땅 그림자 */
-.ab-bld-base { position: relative; margin-inline: -2.2cqw; border-radius: 3px; background: linear-gradient(180deg, #fff 0 22%, #E2EAF6 22% 62%, #CBD8EB 100%); box-shadow: 0 1px 0 rgba(255, 255, 255, .6); }
-.ab-bld-base::after { content: ""; position: absolute; z-index: -1; left: -8%; right: -8%; top: 40%; height: 3cqw; min-height: 18px; background: radial-gradient(50% 50% at 50% 50%, rgba(11, 42, 102, .3), transparent 72%); }
+.ab-door { /* 안쪽으로 들어간 출입문 — 위는 캐노피 그늘 */
+  position: absolute; left: 50%; bottom: 0; width: 22%; height: 80%; translate: -50% 0; border-radius: 1px 1px 0 0;
+  background: linear-gradient(180deg, rgba(2, 10, 28, .45), rgba(2, 10, 28, 0) 30%), linear-gradient(90deg, transparent calc(50% - .5px), rgba(255, 255, 255, .45) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px)), linear-gradient(180deg, #23406F, #0E2246);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12), inset var(--jb) 0 0 #8FA3C4;
+}
 /* 엘리베이터: 7F 유리 위끝 ~ 로비 바닥까지 세로 유리 샤프트 · 빛(.ab-lift-car)이 --k 층(0 = 로비)으로 오르내림 (about.js) */
 .ab-lift {
   position: absolute; left: var(--nw); width: var(--lw); top: calc(var(--sh) + var(--rh) + var(--sp)); height: calc(7 * var(--fh) + var(--lh) - var(--sp));
   border-radius: 2px; overflow: hidden; pointer-events: none;
   background: linear-gradient(90deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .16) 50%, rgba(255, 255, 255, .06)), linear-gradient(180deg, #1D3560, #13264A);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); transition: opacity .6s var(--ease);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), inset calc(var(--jb) * .7) 0 0 #8FA3C4; transition: opacity .6s var(--ease);
 }
 .ab-lift-car {
   position: absolute; left: 20%; right: 20%; bottom: 0; height: var(--ch); border-radius: 2px;
@@ -240,8 +247,101 @@ main .note { color: var(--muted); }
 .ab-sheen { position: absolute; left: calc(var(--nw) + var(--lw)); right: var(--pl); top: calc(var(--sh) + var(--rh)); height: calc(7 * var(--fh)); overflow: hidden; pointer-events: none; }
 .ab-sheen::before { content: ""; position: absolute; top: -10%; bottom: -10%; left: 0; width: 36%; background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .26) 50%, rgba(255, 255, 255, 0)); transform: translateX(-130%) skewX(-14deg); }
 
-/* ----- 돌출 간판(그룹사 카드): 자기 층 줄(--r)에 · 빌딩 벽에서 짧은 브래킷(::before 두 줄 막대)으로 ----- */
-.ab-sats { grid-column: 2; margin: 0; padding: 0; list-style: none; }
+/* ----- 입체 껍데기(.ab-3d): 정면과 같은 줄 격자 위에 면을 하나씩 세움 ----- 
+   면마다 원근을 따로 받으므로(preserve-3d 없음) 뒤쪽 면부터 앞쪽 면 순으로 놓았습니다(about.html).
+   옆면: 오른쪽 끝(1px 안쪽 — 이음매 없게)에서 rotateY(90deg) 로 뒤로 접힘 · 윗면: translateZ(-깊이) rotateX(90deg) 로 눕힘(요소 위 = 뒤, 아래 = 앞).
+   이 면들에는 등장 때 opacity 와 translate 만 씁니다(transform 은 면을 세우는 데 사용). */
+.ab-3d {
+  position: absolute; inset: 0; z-index: -1; display: grid; grid-template-rows: var(--rows); grid-template-columns: 100%;
+  perspective: var(--p); perspective-origin: calc(100% + var(--ex)) var(--eye); pointer-events: none;
+}
+.ab-3d--over { z-index: 1; }
+.ab-3d > i { grid-column: 1; position: relative; display: block; min-width: 0; justify-self: start; }
+/* 바닥판: 윗면(포장 줄눈 · 빌딩 발치 그늘 · 오른쪽으로 지는 그림자) · 앞면 · 오른쪽 면 */
+.ab-gd {
+  grid-row: 11; align-self: start; width: calc(100% + var(--gm) * 2); height: calc(var(--dz) + var(--gz) * 2); margin: 0 0 0 calc(var(--gm) * -1);
+  transform-origin: 50% 0; transform: translateZ(calc((var(--dz) + var(--gz)) * -1)) rotateX(90deg);
+  background:
+    linear-gradient(90deg, rgba(11, 42, 102, .26), rgba(11, 42, 102, .03)) right 0 top var(--gz) / var(--gm) var(--dz) no-repeat,
+    linear-gradient(180deg, rgba(11, 42, 102, .2), rgba(11, 42, 102, 0)) var(--gm) calc(100% - var(--gz) + 1px) / calc(100% - var(--gm) * 2) calc(var(--gz) * .55) no-repeat,
+    repeating-linear-gradient(90deg, rgba(11, 42, 102, .07) 0 1px, transparent 1px 12.5%),
+    linear-gradient(180deg, #E9EFF8 0%, #F7FAFE 100%);
+  box-shadow: 0 0 2.4cqw .4cqw rgba(30, 70, 140, .16);
+}
+.ab-gd-fr { grid-row: 11; align-self: start; width: calc(100% + var(--gm) * 2); height: var(--gt); margin-left: calc(var(--gm) * -1); transform: translateZ(var(--gz)); background: linear-gradient(180deg, #fff 0 1px, #D9E3F1 1px, #C3D1E6 100%); box-shadow: 0 1.2cqw 1.8cqw -1cqw rgba(9, 40, 100, .45); }
+.ab-gd-sd { grid-row: 11; align-self: start; width: calc(var(--dz) + var(--gz) * 2); height: var(--gt); margin-left: calc(100% + var(--gm)); transform-origin: 0 50%; transform: translateZ(var(--gz)) rotateY(90deg); background: linear-gradient(90deg, #AEBFD9, #C2D0E5); }
+/* 옥상: 바닥(난간 테두리 · 안쪽 그늘) · 난간 옆면 · 옥탑(기계실) 상자 · 피뢰침 */
+.ab-rf-tp {
+  grid-row: 2; align-self: start; width: calc(100% + var(--ro) * 2); height: var(--dz); margin: 1px 0 0 calc(var(--ro) * -1);
+  transform-origin: 50% 0; transform: translateZ(calc(var(--dz) * -1)) rotateX(90deg);
+  background:
+    linear-gradient(#fff 0 0) left top / var(--ro) 100% no-repeat, linear-gradient(#fff 0 0) right top / var(--ro) 100% no-repeat,
+    linear-gradient(#fff 0 0) left top / 100% 10% no-repeat,
+    linear-gradient(180deg, #C7D4E8 0%, #D6E0EF 80%, #B9C8DF 100%);
+}
+.ab-rf-sd { grid-row: 2; width: var(--dz); margin-left: calc(100% + var(--ro) - 1px); transform-origin: 0 50%; transform: rotateY(90deg); background: linear-gradient(180deg, #E9EFF8 0 34%, #B4C4DD 34% 100%); }
+.ab-pent, .ab-pent-sd, .ab-pent-tp { --phx: 76%; --phw: 16%; --phh: calc(var(--sh) * .38); --phz: calc(var(--dz) * .2); --phd: calc(var(--dz) * .5); grid-row: 1; align-self: end; }
+.ab-pent { width: var(--phw); height: var(--phh); margin-left: var(--phx); transform: translateZ(calc(var(--phz) * -1)); background: linear-gradient(180deg, #F2F6FC, #DCE5F2); box-shadow: inset 0 1px 0 #fff; }
+.ab-pent::after { content: ""; position: absolute; left: 18%; right: 18%; top: 30%; height: 34%; background: repeating-linear-gradient(180deg, rgba(11, 42, 102, .22) 0 1px, transparent 1px 3px); } /* 환기 루버 */
+.ab-pent-sd { width: var(--phd); height: var(--phh); margin-left: calc(var(--phx) + var(--phw)); transform-origin: 0 50%; transform: translateZ(calc(var(--phz) * -1)) rotateY(90deg); background: linear-gradient(90deg, #B9C8DF, #A8B9D4); }
+.ab-pent-tp { width: var(--phw); height: var(--phd); margin: 0 0 var(--phh) var(--phx); transform-origin: 50% 100%; transform: translateZ(calc(var(--phz) * -1)) rotateX(90deg); background: linear-gradient(180deg, #E8EEF7, #FBFCFE); }
+.ab-mast {
+  grid-row: 1; align-self: end; width: 2px; height: calc(var(--sh) * .85); margin: 0 0 calc(var(--sh) * .38) calc(76% + 16% * .55);
+  transform: translateZ(calc(var(--dz) * -.45)); background: linear-gradient(180deg, #6E87AD, #A6B9D6);
+}
+.ab-beacon { position: absolute; top: -3px; left: 50%; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--sky); box-shadow: 0 0 8px 2px rgba(76, 141, 246, .55); }
+/* 옥상 간판 상자: 윗면 · 오른쪽 두께 (정면은 .ab-sign) */
+.ab-sgn-tp { grid-row: 1; align-self: start; width: var(--sgw); height: var(--st); margin: calc(var(--sgt) - var(--st)) 0 0 var(--sgl); transform-origin: 50% 100%; transform: rotateX(90deg); background: linear-gradient(180deg, #E3EAF5, #fff); }
+.ab-sgn-sd { grid-row: 1; align-self: start; width: var(--st); height: var(--sgh); margin: var(--sgt) 0 0 calc(var(--sgl) + var(--sgw) - 1px); transform-origin: 0 50%; transform: rotateY(90deg); background: linear-gradient(90deg, #C9D6EA, #B3C3DC); }
+/* 층 옆면: 위 슬래브(밝은 윗선) · 앞 · 뒤 모서리 기둥 사이 유리 — 불빛(::before)은 정면과 같은 때 켜지고 ::after 는 그늘 · 반사 · 멀리언 */
+.ab-sd {
+  --gl: linear-gradient(180deg, #1E355C, #122546);
+  --lit: linear-gradient(180deg, #2B6BD8 0%, #1255C6 55%, #0B47AA 100%);
+  --mul: rgba(255, 255, 255, .15); --j0: calc(var(--pl) * 1.5); --j1: calc(var(--dz) * .06);
+  grid-row: var(--r); width: var(--dz); margin-left: calc(100% - 1px);
+  transform-origin: 0 50%; transform: rotateY(90deg);
+  background:
+    linear-gradient(180deg, #F2F6FC 0 1px, #C3D1E6 1px calc(var(--sp) - 1px), rgba(11, 27, 51, .22) calc(var(--sp) - 1px) var(--sp), transparent var(--sp)),
+    var(--gl) var(--j0) var(--sp) / calc(100% - var(--j0) - var(--j1)) calc(100% - var(--sp)) no-repeat,
+    linear-gradient(90deg, #BCCAE1, #AABBD6);
+}
+.ab-sd--hq { --lit: linear-gradient(180deg, #F1E9D7 0%, #E6DABF 60%, #D8C9A6 100%); --mul: rgba(120, 96, 50, .14); }
+.ab-sd::before, .ab-sd::after { content: ""; position: absolute; left: var(--j0); right: var(--j1); top: var(--sp); bottom: 0; }
+.ab-sd::before { background: var(--lit); }
+.ab-sd::after {
+  background:
+    linear-gradient(180deg, rgba(4, 16, 40, .32), rgba(4, 16, 40, 0) 28%),
+    linear-gradient(100deg, rgba(255, 255, 255, .12) 0 16%, transparent 16% 58%, rgba(255, 255, 255, .06) 58% 66%, transparent 66%),
+    linear-gradient(180deg, transparent 0 30%, var(--mul) 30% calc(30% + 1px), transparent calc(30% + 1px)),
+    repeating-linear-gradient(90deg, var(--mul) 0 1px, transparent 1px 25%);
+}
+.ab-sd--lobby { background:
+    linear-gradient(180deg, #F2F6FC 0 1px, #C3D1E6 1px calc(var(--sp) - 1px), rgba(11, 27, 51, .22) calc(var(--sp) - 1px) var(--sp), transparent var(--sp)),
+    linear-gradient(180deg, #DCE4F0, #CBD6E7) 0 var(--sp) / 100% calc((100% - var(--sp)) * .4) no-repeat,
+    linear-gradient(90deg, #BCCAE1, #AABBD6); }
+.ab-sd--lobby::before, .ab-sd--lobby::after { top: calc(var(--sp) + (100% - var(--sp)) * .4); }
+.ab-sd.is-hl::after { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .7); }
+/* 로비 캐노피(정면 위): 블루 윗면 · 앞 모서리 — 출입문 위로 --cz 만큼 돌출 */
+.ab-3d--over > i {
+  --cnw: calc((100% - var(--nw) - var(--lw) - var(--pl)) * .34);
+  grid-row: 10; align-self: start; width: var(--cnw);
+  margin: calc(var(--sp) + (var(--lh) - var(--sp)) * .52 - var(--cnt)) 0 0 calc((var(--nw) + var(--lw) + 100% - var(--pl)) / 2 - var(--cnw) / 2);
+}
+.ab-cnp-tp { height: var(--cz); transform-origin: 50% 0; transform: rotateX(90deg); background: linear-gradient(180deg, #2C74EE, #5D9BFA); }
+.ab-cnp-fr { height: var(--cnt); transform: translateZ(var(--cz)); border-radius: 0 0 1px 1px; background: linear-gradient(180deg, #2A71EC, #0A4FC4); box-shadow: 0 .35cqw .6cqw -.15cqw rgba(7, 40, 110, .45); }
+
+/* ----- 그룹사 간판(카드) · 직영 표시: 옆면 뒤 모서리와 같은 깊이(.ab-wing — 소실점 중심 --s 배) · 자기 층 줄(--r)에 짧은 브래킷 ----- */
+.ab-wing {
+  grid-column: 2; grid-row: 1; justify-self: start; display: grid; width: calc(var(--bk) + var(--cw)); min-width: 0;
+  transform-origin: var(--ex) var(--eye); scale: var(--s);
+}
+.ab-sats, .ab-tags { grid-area: 1 / 1; display: grid; grid-template-rows: var(--rows); min-width: 0; margin: 0; padding: 0; list-style: none; }
+.ab-tags { pointer-events: none; }
+.ab-tag {
+  grid-row: var(--r); display: flex; align-items: center; gap: .55cqw; padding: var(--sp) 0 0 var(--bk);
+  white-space: nowrap; font-size: calc(var(--f2) / var(--s)); font-weight: 600; color: rgba(11, 27, 51, .62);
+}
+.ab-tag::before { content: ""; flex: none; width: .75cqw; height: .75cqw; min-width: 7px; min-height: 7px; border-radius: 50%; background: #FAF3E3; box-shadow: 0 0 0 1px rgba(120, 96, 50, .35), 0 0 .8cqw rgba(255, 236, 190, .9); }
 .ab-sat { grid-row: var(--r); position: relative; display: flex; min-width: 0; padding: var(--sp) 0 0 var(--bk); }
 .ab-sat::before, .ab-sat::after { /* 브래킷: 벽 고정판(세로) + 짧은 팔(가로) — ::after 는 강조 때 블루 */
   content: ""; position: absolute; left: 0; width: var(--bk); top: calc(var(--sp) + (var(--fh) - var(--sp)) * .3); height: calc((var(--fh) - var(--sp)) * .4);
@@ -258,7 +358,7 @@ main .note { color: var(--muted); }
 }
 .ab-sat-tile { flex: none; align-self: stretch; aspect-ratio: 1; border-radius: .5cqw; overflow: hidden; background: #DCE8F7; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8); }
 .ab-sat-tile img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 54%; transition: scale .5s var(--ease); }
-.ab-sat-label { flex: 1; min-width: 0; font-size: var(--f2); font-weight: 600; line-height: 1.22; color: var(--ink); }
+.ab-sat-label { flex: 1; min-width: 0; font-size: calc(var(--f2) / var(--s)); font-weight: 600; line-height: 1.22; color: var(--ink); }
 .ab-sat-go { flex: none; width: 1.9cqw; height: 1.9cqw; min-width: 20px; min-height: 20px; padding: .42cqw; border-radius: 50%; background: var(--blue-50); color: var(--blue); transition: background-color .3s var(--ease), color .3s var(--ease); }
 .ab-sat.is-hl .ab-sat-link, .ab-sat-link:focus-visible { background: #fff; translate: .3cqw 0; box-shadow: 0 1.4cqw 2.6cqw -1.5cqw rgba(7, 40, 110, .7), inset 0 0 0 1.5px var(--blue); }
 .ab-sat.is-hl::after { opacity: 1; }
@@ -268,29 +368,37 @@ main .note { color: var(--muted); }
 .ab-stage-fig.has-hl .ab-sat:not(.is-hl) .ab-sat-link { opacity: .62; }
 
 /* 등장 (about.js: .is-armed → .is-gather → .is-gathered)
-   ① 기단 · 로비 · 1F … 7F · 난간 · 간판 순으로 한 층씩 내려앉고(--f) ② 아래층부터 유리에 불이 켜지며 엘리베이터 빛이 함께 오르고
-   ③ 불이 켜진 층의 간판이 브래킷과 함께 벽에서 밀려 나옵니다 */
-.ab-stage-fig.is-armed :is(.ab-fl, .ab-bld-roof, .ab-bld-top, .ab-bld-base) { opacity: 0; transform: translateY(var(--drop)); }
-.ab-stage-fig.is-armed .ab-bld::before, .ab-stage-fig.is-armed .ab-lift { opacity: 0; }
-.ab-stage-fig.is-armed .ab-fl-gl::before { opacity: 0; }
-.ab-stage-fig.is-armed :is(.ab-fl-t, .ab-fl-tag) { opacity: 0; }
+   ① 바닥판 · 로비 · 1F … 7F · 난간 · 옥상 순으로 정면과 옆면이 함께 한 층씩 내려앉고(--f), 카메라는 높은 곳에서 제자리로 천천히 내려오며
+   ② 아래층부터 정면 · 옆면 유리에 불이 켜지고 엘리베이터 빛이 함께 오르고 ③ 불이 켜진 층의 간판이 브래킷과 함께 벽에서 밀려 나옵니다 */
+.ab-stage-fig.is-armed :is(.ab-fl, .ab-bld-roof, .ab-bld-top, .ab-3d > i) { opacity: 0; translate: 0 var(--drop); }
+.ab-stage-fig.is-armed .ab-lift { opacity: 0; }
+.ab-stage-fig.is-armed :is(.ab-fl-gl, .ab-sd)::before { opacity: 0; }
+.ab-stage-fig.is-armed :is(.ab-fl-t, .ab-tag) { opacity: 0; }
 .ab-stage-fig.is-armed .ab-core-label { opacity: 0; transform: translateY(10px); }
 .ab-stage-fig.is-armed .ab-sat { opacity: 0; transform: translateX(var(--slide)); }
 .ab-stage-fig.is-armed .ab-sat::before { transform: scaleX(0); }
-.ab-stage-fig.is-gather :is(.ab-fl, .ab-bld-roof, .ab-bld-top, .ab-bld-base) { opacity: 1; transform: none; transition: opacity .45s var(--ease) calc(var(--f) * .11s), transform .7s cubic-bezier(.2, .9, .3, 1.04) calc(var(--f) * .11s); }
-.ab-stage-fig.is-gather .ab-bld::before { opacity: 1; transition: opacity .9s var(--ease) .4s; }
+.ab-stage-fig.is-armed .ab-3d { perspective-origin: calc(100% + var(--ex) * 1.8) calc(var(--eye) - var(--cam-y) * 3); }
+.ab-stage-fig.is-armed .ab-wing { transform-origin: calc(var(--ex) * 1.8) calc(var(--eye) - var(--cam-y) * 3); }
+.ab-stage-fig.is-gather :is(.ab-fl, .ab-bld-roof, .ab-bld-top, .ab-3d > i) { opacity: 1; translate: none; transition: opacity .45s var(--ease) calc(var(--f) * .11s), translate .7s cubic-bezier(.2, .9, .3, 1.04) calc(var(--f) * .11s); }
+.ab-stage-fig.is-gather .ab-3d { perspective-origin: calc(100% + var(--ex)) var(--eye); transition: perspective-origin 3.2s cubic-bezier(.3, .6, .15, 1) .1s; }
+.ab-stage-fig.is-gather .ab-wing { transform-origin: var(--ex) var(--eye); transition: transform-origin 3.2s cubic-bezier(.3, .6, .15, 1) .1s; }
 .ab-stage-fig.is-gather .ab-lift { opacity: 1; transition: opacity .5s var(--ease) .7s; }
-.ab-stage-fig.is-gather .ab-fl-gl::before { opacity: 1; transition: opacity .5s var(--ease) calc(.78s + var(--f) * .14s); }
-.ab-stage-fig.is-gather :is(.ab-fl-t, .ab-fl-tag) { opacity: 1; transition: opacity .5s var(--ease) calc(.86s + var(--f) * .14s); }
+.ab-stage-fig.is-gather :is(.ab-fl-gl, .ab-sd)::before { opacity: 1; transition: opacity .5s var(--ease) calc(.78s + var(--f) * .14s); }
+.ab-stage-fig.is-gather :is(.ab-fl-t, .ab-tag) { opacity: 1; transition: opacity .5s var(--ease) calc(.86s + var(--f) * .14s); }
 .ab-stage-fig.is-gather .ab-core-label { opacity: 1; transform: none; transition: opacity .7s var(--ease) .2s, transform .8s var(--ease) .2s; }
 .ab-stage-fig.is-gather .ab-sat { opacity: 1; transform: none; transition: opacity .5s var(--ease) calc(1s + var(--f) * .14s), transform .7s var(--ease) calc(1s + var(--f) * .14s); }
 .ab-stage-fig.is-gather .ab-sat::before { transform: none; transition: transform .45s var(--ease) calc(.9s + var(--f) * .14s), opacity .3s var(--ease); }
-/* 다 지어진 뒤: 마우스 · 포커스 강조는 바로 반응 (다른 그룹사 층은 불빛을 살짝 낮춤) */
-.ab-stage-fig.is-gathered .ab-fl-gl::before { transition: opacity .3s var(--ease); }
-.ab-stage-fig.is-gathered.has-hl .ab-fl:not(.is-hl, .ab-fl--hq) .ab-fl-gl::before { opacity: .78; }
-/* 화면에 보이는 동안만: 유리에 빛이 스치고 피뢰침 불빛이 깜박임 (엘리베이터는 about.js) */
+/* 다 지어진 뒤: 마우스 · 포커스 강조는 바로 반응 (다른 그룹사 층은 정면 · 옆면 불빛을 살짝 낮춤) */
+.ab-stage-fig.is-gathered :is(.ab-fl-gl, .ab-sd)::before { transition: opacity .3s var(--ease); }
+.ab-stage-fig.is-gathered.has-hl :is(.ab-fl:not(.is-hl, .ab-fl--hq) .ab-fl-gl, .ab-sd:not(.is-hl, .ab-sd--hq))::before { opacity: .78; }
+/* 화면에 보이는 동안만: 카메라가 아주 천천히 오른쪽 위 ↔ 조금 앞쪽으로 흔들리고(옆면 · 옥상 · 간판만 움직임 — 정면 글자는 그대로),
+   유리에 빛이 스치고 피뢰침 불빛이 깜박임 (엘리베이터는 about.js). 원근 중심과 간판 배율 중심은 같은 키프레임 · 같은 때 시작이라 함께 움직입니다 */
+.ab-stage-fig.is-gathered.is-vis .ab-3d { animation: abCam 11s var(--ease-in-out) 1.4s infinite alternate; }
+.ab-stage-fig.is-gathered.is-vis .ab-wing { animation: abCamW 11s var(--ease-in-out) 1.4s infinite alternate; }
 .ab-stage-fig.is-gathered.is-vis .ab-sheen::before { animation: abSheen 11s var(--ease-in-out) 1.2s infinite; }
 .ab-stage-fig.is-gathered.is-vis .ab-beacon { animation: abBeacon 2.6s ease-in-out infinite; }
+@keyframes abCam { from { perspective-origin: calc(100% + var(--ex)) var(--eye); } to { perspective-origin: calc(100% + var(--ex) * var(--cam-x)) calc(var(--eye) + var(--cam-y)); } }
+@keyframes abCamW { from { transform-origin: var(--ex) var(--eye); } to { transform-origin: calc(var(--ex) * var(--cam-x)) calc(var(--eye) + var(--cam-y)); } }
 @keyframes abSheen { 0% { transform: translateX(-130%) skewX(-14deg); } 24%, 100% { transform: translateX(320%) skewX(-14deg); } }
 @keyframes abBeacon { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
 
@@ -320,13 +428,15 @@ main .note { color: var(--muted); }
 @keyframes abRing { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
 
 /* 무대 반응형 — 1100 이하: 위에 지주회사 글, 아래 가운데 빌딩 + 간판(px 크기) · 영상 버튼은 아래 가장자리에 걸침
-   760 이하: 빌딩이 폭을 채우고 간판은 3D 타일만(설명은 화면 낭독용) · 유리에 회사 · 업종 두 줄 */
+   760 이하: 빌딩이 폭을 채우고 간판은 3D 타일만(설명은 화면 낭독용) · 유리에 회사 · 업종 두 줄 · 옆면 · 원근은 작게 */
 @media (max-width: 1100px) {
   .ab-stage-fig { margin-bottom: 46px; }
   .ab-stage {
-    --fh: 50px; --sp: 7px; --sh: 50px; --rh: 12px; --lh: 74px; --ph: 18px;
+    --fh: 50px; --sp: 7px; --sh: 50px; --rh: 12px; --lh: 74px; --ph: 32px;
     --bw: clamp(360px, 45cqw, 430px); --nw: 36px; --lw: 12px; --pl: 7px; --ch: 18px; --bk: 16px; --cw: clamp(230px, 28cqw, 270px);
     --gp: 14px; --f1: .8rem; --f2: .7rem; --fn: .66rem; --core-x: 50%; --core-y: 58%; --drop: -18px; --slide: -16px;
+    --dz: 130px; --sw: 30px; --rf: 10px; --gz: 34px; --gm: 12px; --gt: 13px; --cz: 18px; --cnt: 5px; --st: 11px; --ro: 5px;
+    --jb: 4px; --sl: 3px; --cam-y: 34px;
     aspect-ratio: auto; padding: 24px 24px 64px;
   }
   .ab-stage-fg { position: relative; inset: auto; }
@@ -334,14 +444,14 @@ main .note { color: var(--muted); }
   .ab-tower { position: relative; left: auto; top: auto; translate: none; width: fit-content; margin: 22px auto 0; }
   .ab-fl-no { min-width: 24px; height: 20px; padding: 0 4px; border-radius: 5px; }
   .ab-fl-no.is-stop { box-shadow: 0 0 0 1px rgba(10, 93, 226, .35), 0 3px 8px -2px rgba(10, 93, 226, .45); }
-  .ab-fl-tag { gap: 7px; }
-  .ab-fl-tag::before { width: 8px; height: 8px; }
+  .ab-tag { gap: 7px; }
+  .ab-tag::before { width: 8px; height: 8px; }
   .ab-lobby-fa small { height: 18px; padding: 0 8px; }
-  .ab-sign { border-radius: 5px; }
+  .ab-sign { border-radius: 3px; }
   .ab-sign::before, .ab-sign::after { width: 3px; }
-  .ab-door::before { top: -4px; height: 4px; }
-  .ab-bld-base { margin-inline: -22px; }
-  .ab-bld::before { box-shadow: 14px 16px 30px -6px rgba(9, 40, 100, .28); }
+  .ab-gd { box-shadow: 0 0 30px 5px rgba(30, 70, 140, .16); }
+  .ab-gd-fr { box-shadow: 0 14px 22px -12px rgba(9, 40, 100, .45); }
+  .ab-cnp-fr { box-shadow: 0 4px 7px -2px rgba(7, 40, 110, .45); }
   .ab-lift-car { box-shadow: 0 0 10px 3px rgba(120, 175, 255, .7); }
   .ab-sat-link { gap: 10px; padding: 4px 8px 4px 4px; border-radius: 10px; box-shadow: 0 14px 28px -18px rgba(7, 40, 110, .55), inset 0 0 0 1px rgba(255, 255, 255, .9); }
   .ab-sat-tile { border-radius: 7px; }
@@ -357,20 +467,20 @@ main .note { color: var(--muted); }
 }
 @media (max-width: 760px) {
   .ab-stage {
-    --fh: 50px; --sp: 6px; --sh: 44px; --rh: 10px; --lh: 70px; --ph: 16px;
+    --fh: 50px; --sp: 6px; --sh: 44px; --rh: 10px; --lh: 70px; --ph: 24px;
     --nw: 28px; --lw: 9px; --pl: 6px; --ch: 14px; --bk: 9px; --cw: 44px;
     --gp: 11px; --f1: .72rem; --f2: .62rem; --fn: .6rem;
+    --dz: 84px; --sw: 16px; --rf: 7px; --gz: 12px; --gm: 2px; --gt: 9px; --cz: 12px; --cnt: 4px; --st: 8px; --ro: 3px;
+    --jb: 3px; --sl: 2px; --cam-y: 22px; --sgl: 19%; --sgw: 62%;
     padding: 18px 14px 58px;
   }
   .ab-core-label b { font-size: .92rem; }
-  .ab-tower { width: auto; margin-top: 26px; grid-template-columns: minmax(0, 1fr) calc(var(--bk) + var(--cw)); }
+  .ab-tower { width: auto; margin-top: 26px; grid-template-columns: minmax(0, 1fr) calc(var(--sw) + (var(--bk) + var(--cw)) * var(--s)); }
   .ab-fl-no { min-width: 21px; height: 18px; padding: 0 3px; border-radius: 4px; }
   .ab-fl-t { flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; }
   .ab-fl-t b { letter-spacing: .05em; }
-  .ab-fl-tag { display: none; }
+  .ab-tags { display: none; }
   .ab-lobby-fa b { letter-spacing: .12em; }
-  .ab-bld-base { margin-inline: -10px; }
-  .ab-sign { width: 62%; }
   /* 간판: 3D 타일 + 모서리 화살표만 (설명은 sr-only 처럼 숨겨 화면 낭독에 남김) */
   .ab-sat-link { padding: 3px; border-radius: 9px; }
   .ab-sat-tile { border-radius: 6px; }
@@ -380,7 +490,7 @@ main .note { color: var(--muted); }
   .ab-stage-cap { display: none; }
 }
 @media (max-width: 380px) {
-  .ab-stage { --nw: 25px; --lw: 8px; --gp: 9px; --f1: .66rem; --f2: .58rem; --cw: 42px; --bk: 8px; }
+  .ab-stage { --nw: 25px; --lw: 8px; --gp: 9px; --f1: .66rem; --f2: .58rem; --cw: 42px; --bk: 8px; --sw: 13px; }
   .ab-lobby-fa b { letter-spacing: .08em; }
   .ab-lobby-fa small { padding: 0 6px; }
 }
@@ -1235,8 +1345,9 @@ html.soft-motion .ab-chain-scene { --tx: 0deg !important; --ty: 0deg !important;
 /* 움직임 멈추기 (사용자가 왼쪽 아래 버튼으로 고른 경우만 · base.css 의 html.motion-off) */
 html.motion-off .ab-stage-bg, html.motion-off .ab-stage-fg { transform: none !important; }
 html.motion-off .ab-sheen::before, html.motion-off .ab-beacon { animation: none !important; }
-html.motion-off .ab-stage-fig :is(.ab-fl, .ab-bld-roof, .ab-bld-top, .ab-bld-base, .ab-fl-t, .ab-fl-tag, .ab-sat, .ab-lift, .ab-core-label) { transition-delay: 0s !important; }
-html.motion-off .ab-stage-fig .ab-fl-gl::before, html.motion-off .ab-stage-fig .ab-sat::before, html.motion-off .ab-stage-fig .ab-bld::before { transition-delay: 0s !important; }
+html.motion-off .ab-stage-fig :is(.ab-fl, .ab-bld-roof, .ab-bld-top, .ab-3d > i, .ab-fl-t, .ab-tag, .ab-sat, .ab-lift, .ab-core-label) { transition-delay: 0s !important; }
+html.motion-off .ab-stage-fig :is(.ab-fl-gl, .ab-sd, .ab-sat)::before { transition-delay: 0s !important; }
+html.motion-off .ab-stage-fig :is(.ab-3d, .ab-wing) { animation: none !important; transition: none !important; } /* 카메라: 제자리 */
 html.motion-off .ab-lift-car { transition: none !important; }
 html.motion-off .ab-vision-track, html.motion-off .ab-map-pulse, html.motion-off .ab-film-ring::after { animation: none !important; }
 html.motion-off .ab-map-arc--flow { stroke-dashoffset: 0; }
