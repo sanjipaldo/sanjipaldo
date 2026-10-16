@@ -47,12 +47,14 @@ doogo-group/
 │   └── fonts/pretendard/     Pretendard 글꼴 (SIL OFL)
 └── tools/
     ├── sync-partials.mjs     헤더·푸터를 고친 뒤 모든 페이지에 반영
+    ├── stamp-assets.mjs      CSS·JS 주소에 버전(?v=내용 해시)을 붙여 휴대폰 캐시에 옛 파일이 남지 않게 함
     └── seedance/             Seedance 2.0 영상 생성·교체 도구 (README 참고)
 ```
 
 ## 자주 하는 수정
 - **사업 페이지 8개(사업영역 + 7개 상세)**: 문구는 `tools/build-business.mjs`의 데이터를 고친 뒤 `node tools/build-business.mjs`로 다시 만듭니다.
 - **메뉴·푸터 고치기**: `partials/header.html` 또는 `partials/footer.html`을 고친 다음 `node tools/sync-partials.mjs`를 실행하면 모든 페이지에 반영됩니다.
+- **CSS·JS 고친 뒤**: `node tools/stamp-assets.mjs`를 꼭 실행합니다(위 두 도구는 끝에 자동 실행). `assets/`는 7일 캐시라, 버전이 바뀌지 않으면 한 번 들어왔던 기기에 옛 디자인이 남습니다.
 - **색·글꼴**: `assets/css/base.css` 맨 위 `:root`의 값을 바꿉니다. 그룹 블루는 `--blue: #0A5DE2`(로고 색)입니다.
 - **영상 교체**: `assets/video/`에 같은 파일 이름으로 덮어씁니다. Seedance 2.0으로 만들 때는 `tools/seedance/README.md`를 보세요.
 - **문의 접수 연결**: `contact.html`의 `<form id="inquiryForm" data-endpoint="">`에 접수 주소(폼 서비스, 사내 API 등)를 넣으면 JSON으로 전송합니다. 비워 두면 시안 모드라서 실제로 전송되지 않습니다.

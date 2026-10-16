@@ -6,6 +6,7 @@
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stampAssets } from './stamp-assets.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const parts = {
@@ -27,3 +28,4 @@ for (const file of files) {
   if (html !== before) { writeFileSync(path, html); changed++; console.log(`✓ ${file}`); }
 }
 console.log(`완료: ${changed}개 페이지 갱신`);
+stampAssets(only);

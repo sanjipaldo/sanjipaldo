@@ -36,6 +36,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stampAssets } from './stamp-assets.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // 그룹사·직접 운영 사업의 실제 사이트 (사용자가 준 주소 그대로 · 모두 새 창)
@@ -1244,3 +1245,4 @@ for (const [file, html] of out) {
   console.log(`✓ ${file}`);
 }
 console.log(`완료: ${out.length}개 페이지 생성`);
+stampAssets(out.map(([f]) => f));
