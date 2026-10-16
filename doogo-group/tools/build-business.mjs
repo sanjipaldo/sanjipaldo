@@ -411,7 +411,7 @@ function head({ title, desc, css }) {
   <meta name="description" content="${desc}">
   <meta name="theme-color" content="#0A1426">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="두고그룹 DOOGO GROUP">
+  <meta property="og:site_name" content="두고홀딩스 DOOGO HOLDINGS">
   <meta property="og:title" content="${title} | 두고그룹">
   <meta property="og:description" content="${desc}">
   <meta property="og:image" content="assets/img/og/og-default.jpg">
@@ -1217,7 +1217,7 @@ const ogBlock = (file) => `<meta property="og:url" content="${SITE_URL}${file}">
   <meta property="og:image" content="${OG_IMG}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="사람과 브랜드, 세상을 연결하는 DOOGO HOLDINGS — 두고그룹">
+  <meta property="og:image:alt" content="사람과 브랜드, 세상을 연결하는 DOOGO HOLDINGS — 두고홀딩스 글로벌 비즈니스 그룹">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="${OG_IMG}">`;
 for (const [file, html] of out) {
