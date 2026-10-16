@@ -99,12 +99,11 @@ const peopleSrcset = (name) => `${PEOPLE}/${name}-600.webp 600w, ${PEOPLE}/${nam
 const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '교육 · 그룹 경영 · 투자 및 성장 지원', field: '교육 · 그룹 경영 · 투자 및 성장 지원', ceo: '문원오', photo: 'leader-moon-wonoh', anchor: 'ceo' };
 
 /* ---------- 이미지 ---------- */
-// 문원오 대표 주요 이력 (21차 · 사용자 확정본, 이 순서 그대로 맨 위에) — leadership.html 의 data-career 와 같게 유지
+// 문원오 대표 주요 이력 (23차 · 사용자 확정본, 이 순서 그대로 맨 위에) — leadership.html 의 data-career 와 같게 유지
 const CEO_CAREER = [
-  '뉴질랜드 오클랜드 AUT 대학교 비즈니스·마케팅 졸업',
+  '뉴질랜드 AUT 대학교 비즈니스·마케팅 졸업',
   '現 두고그룹 총괄 대표이사',
   '前 (주)키위몬 대표이사',
-  '해외·국내 건강식품 E커머스 누적 매출 100억 원 이상 달성',
 ];
 // 그룹사 대표 · 총괄이사 주요 이력 (21차 · 사용자 확정본, 이 순서 그대로) — leadership.html 의 data-career 와 같게 유지
 const LEADER_CAREER = {
@@ -397,18 +396,6 @@ const BIZ = [
   },
 ];
 
-// 가치사슬 7단계 (기획안 순서) → 사업 연결
-//  ko 단계 이름 · en 영문(칸 안 작은 글씨) · slug 그 단계를 맡은 사업 (계기판 영문은 BIZ[].chain)
-const CHAIN = [
-  { ko: '제품 제조', en: 'PRODUCT', slug: 'bio' },
-  { ko: '브랜드 기획', en: 'BRAND', slug: 'commerce' },
-  { ko: '온드미디어 제작', en: 'OWNED MEDIA', slug: 'media' },
-  { ko: '교육·인재 육성', en: 'EDUCATION', slug: 'campus' },
-  { ko: '마케팅', en: 'MARKETING', slug: 'ad' },
-  { ko: '판매·유통', en: 'SALES', slug: 'food' },
-  { ko: '공간·<wbr>라이프스타일', en: 'OFFICE · STAY · F&amp;B', slug: 'space' },
-];
-
 /* ---------- 공통 조각 ---------- */
 const parts = {
   header: readFileSync(join(root, 'partials/header.html'), 'utf8').trim(),
@@ -609,16 +596,20 @@ function buildList() {
             <span class="bz-jump-foot"><span class="bz-jump-desc">${b.defLabel}</span><span class="bz-jump-go" aria-hidden="true"><span>${ico('i-arrow', '')}${ico('i-arrow', '')}</span></span></span>
           </a></li>`).join('\n');
 
-  // 가치사슬 3D 계단 (14차 · 회사 소개 about.html 의 3D 계단과 같은 시각 언어 — 구조·동작은 business.css/js '가치사슬')
-  //  계단 한 칸(a.bz-vc-step) = 그 단계를 맡은 사업 상세 페이지 링크 전체. 칸 안: 단계 번호 · 단계 이름 · 영문 · 맡은 사업 꼬리표(번호 + 분야 ↗)
-  //  윗면·옆면·바닥 빛·지나가는 빛은 .bz-vc-3d 안의 <i> 면(aria-hidden). data-t = 위 계기판에 뜨는 영문 단계 이름
-  const FACES = '<i class="bz-cf bz-cf-fill"></i><i class="bz-cf bz-cf-top"></i><i class="bz-cf bz-cf-side"></i><i class="bz-cf bz-cf-pool"></i><i class="bz-cf bz-cf-flash"></i>';
-  // 꼬리표의 분야 이름: '공간 & 라이프스타일'처럼 &로 묶인 이름은 '&' 뒤에서만 줄이 바뀌게 (앞 칸은 붙임)
+  // 사업 구조 (23차 · 가치사슬 3D 계단 대체): 지주회사 DOOGO HOLDINGS 기초판 위에 일곱 개 사업 블록이 엇갈려 쌓인 구조물
+  //  블록 하나(a.bz-st-block) = 그 사업 상세 페이지 링크. 블록 안: 번호 · 아이콘 · 분야 이름 · 영문 브랜드 · 운영 회사 ↗
+  //  윗면 · 옆면 · 앞면 · 지나가는 빛 · 이음새 빛은 .bz-st-geo 안의 <i> 면(aria-hidden) — 모양·배치는 business.css '사업 구조'
+  //  is-hold = 지주회사 DOOGO HOLDINGS가 운영하는 사업(교육 · 유통) → 기초판과 같은 흰 재질 · 나머지 다섯 = 그룹사(블루)
+  //  data-st-kind = 쌓일 때 위 숫자(지주회사 · 그룹사 · 사업영역)를 올리는 데 씀 (business.js '2) 사업 구조')
+  // 분야 이름: '공간 & 라이프스타일'처럼 &로 묶인 이름은 '&' 뒤에서만 줄이 바뀌게 (앞 칸은 붙임)
   const tagArea = (a) => a.replace(/ &amp; /g, '&nbsp;&amp; ');
-  const rail = CHAIN.map((c, i) => {
-    const b = BIZ.find(x => x.slug === c.slug);
-    return `              <li style="--i:${i}"><a class="bz-vc-step" href="business-${c.slug}.html" data-t="${b.chain}"><span class="bz-vc-3d" aria-hidden="true">${FACES}</span><span class="bz-vc-num en">${String(i + 1).padStart(2, '0')}</span><strong class="bz-vc-ko">${c.ko}</strong><span class="bz-vc-en en">${c.en}</span><span class="bz-vc-biz"><span class="bz-vc-biz-n en">${b.num}</span><span class="bz-vc-biz-t">${tagArea(b.area)}</span>${ico('i-arrow-ur', 'bz-vc-biz-go')}</span><span class="sr-only"> — ${b.en} 상세 보기</span></a></li>`;
+  const GEO = '<span class="bz-st-geo" aria-hidden="true"><i class="bz-st-top"></i><i class="bz-st-side"></i><i class="bz-st-front"><i class="bz-st-gleam"></i></i><i class="bz-st-seam"></i></span>';
+  const blocks = BIZ.map((b, i) => {
+    const hold = !!b.corp.direct;
+    return `            <li class="bz-st-cell" style="--i:${i}"><a class="bz-st-block${hold ? ' is-hold' : ''}" href="business-${b.slug}.html" data-st-kind="${hold ? 'hold' : 'group'}">${GEO}<span class="bz-st-row"><span class="bz-st-num en">${b.num}</span> <span class="bz-st-ico">${ico(b.icon, '')}</span></span> <strong class="bz-st-area">${tagArea(b.area)}</strong> <span class="bz-st-brand en">${b.en}</span> <span class="bz-st-op"><span class="bz-st-op-k">운영</span> <span class="bz-st-op-n en">${b.corp.en}</span>${ico('i-arrow-ur', 'bz-st-go')}</span><span class="sr-only"> — 상세 보기</span></a></li>`;
   }).join('\n');
+  const groupN = new Set(BIZ.filter(b => !b.corp.direct).map(b => b.corp.en)).size; // 그룹사 수 (5)
+  const fact = (k, n, key) => `<div class="bz-st-fact"><dt>${k}</dt><dd><span class="bz-st-fig en" data-st-fig="${key}" data-to="${n}">${n}</span></dd></div>`;
 
   // 7개 사업 탭 (14차): 위 탭 줄(role=tablist · 휴대폰은 가로로 넘기며 고른 탭을 가운데로) + 고른 사업 하나의 소개 화면(role=tabpanel)
   //  탭 = #slug 링크(스크립트가 없어도 그 사업으로 이동) · 소개 화면 id = slug (business.html#bio 처럼 들어와도 그 탭이 열림 · business.js)
@@ -641,6 +632,7 @@ function buildList() {
           <a class="bz-media" href="business-${b.slug}.html" tabindex="-1" aria-hidden="true">
             <span class="bz-media-inner" data-parallax>
               <img src="assets/img/photo/${b.hero.f}.webp" alt="" width="${ph.w}" height="${ph.h}" loading="lazy" decoding="async" style="object-position:${b.hero.mx} ${b.hero.fy}">
+              <video class="bz-media-video" muted loop playsinline preload="none" disablepictureinpicture tabindex="-1" aria-hidden="true" style="object-position:${b.hero.mx} ${b.hero.fy}"><source src="assets/video/panel-${b.slug}.mp4" type="video/mp4"><source src="assets/video/panel-${b.slug}.webm" type="video/webm"></video>
             </span>
             <span class="bz-media-tag"><span class="en">${b.num}</span>${b.area}</span>
             <span class="bz-media-quote">“${b.narration}”</span>
@@ -714,38 +706,38 @@ ${jump}
     </div>
   </section>
 
-  <!-- 2. 가치사슬: 3D 계단 (단계마다 그 단계를 맡은 사업 상세로) -->
+  <!-- 2. 사업 구조: 지주회사 기초판 위 일곱 개 사업 블록 (블록마다 그 사업 상세로) -->
   <section class="bz-chain" aria-labelledby="chain-title">
     <div class="container">
-      <div class="bz-vc" data-chain>
-        <div class="bz-vc-bg" aria-hidden="true"></div>
-        <div class="bz-vc-head">
-          <div class="bz-vc-copy">
-            <span class="eyebrow">Value Chain</span>
-            <h2 class="bz-vc-title" id="chain-title">제품에서 사람까지,<br> 7단계로 이어지는 성장</h2>
-            <p class="bz-vc-note">단계를 누르면 그 단계를 맡은 사업의 상세 페이지로 이동합니다.</p>
+      <div class="bz-st" data-structure>
+        <div class="bz-st-bg" aria-hidden="true"><span class="bz-st-grid"></span><span class="bz-st-spot"></span></div>
+        <div class="bz-st-head">
+          <div class="bz-st-copy">
+            <span class="eyebrow">Business Structure</span>
+            <h2 class="bz-st-title" id="chain-title" data-lines><span class="line"><span>일곱 개 사업,</span></span><span class="line"><span>하나의 단단한 구조</span></span></h2>
+            <p class="bz-st-lead" data-reveal style="--d:.15s">지주회사 <span class="nowrap en">DOOGO HOLDINGS</span>가 경영 · 투자 · <span class="nowrap">성장 지원으로</span> 받치고,<br class="hide-mobile"> 다섯 그룹사와 함께 일곱 개 사업을 체계적으로 운영합니다.</p>
           </div>
-          <p class="bz-vc-meter en" aria-hidden="true" style="--p:8"><span class="bz-vc-meter-n" data-chain-n>EXIT</span><span class="bz-vc-meter-bar"></span><span class="bz-vc-meter-t" data-chain-t>Brand Growth</span></p>
+          <dl class="bz-st-facts" data-reveal style="--d:.25s">
+            ${fact('지주회사', 1, 'hold')}
+            ${fact('그룹사', groupN, 'group')}
+            ${fact('사업영역', BIZ.length, 'biz')}
+          </dl>
         </div>
-        <div class="bz-vc-stage">
-          <div class="bz-vc-cam">
-            <div class="bz-vc-scene" data-chain-scene>
-              <div class="bz-vc-floor" aria-hidden="true"></div>
-              <div class="bz-vc-wall en" aria-hidden="true">GROWTH</div>
-              <svg class="bz-vc-beam" aria-hidden="true" focusable="false" data-chain-beam>
-                <defs><filter id="bz-vc-blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4"/></filter></defs>
-                <path class="bz-vc-beam-halo" d="" filter="url(#bz-vc-blur)"/>
-                <path class="bz-vc-beam-base" d=""/>
-                <path class="bz-vc-beam-line" d=""/>
-                <path class="bz-vc-beam-glow" d="" filter="url(#bz-vc-blur)"/>
-                <path class="bz-vc-beam-core" d=""/>
-              </svg>
-              <ol class="bz-vc-steps" aria-label="가치사슬 7단계와 각 단계를 맡은 사업">
-${rail}
-              </ol>
-              <p class="bz-vc-goal" style="--i:7"><span class="bz-vc-3d" aria-hidden="true">${FACES}<i class="bz-cf bz-cf-shaft"></i><i class="bz-cf bz-cf-ring"></i><i class="bz-cf bz-cf-ring bz-cf-ring--2"></i></span><span class="bz-vc-goal-ico">${ico('i-arrow-ur')}</span><strong>브랜드 성장 &amp; EXIT</strong><span class="bz-vc-en en">BRAND GROWTH &amp; EXIT</span><span class="bz-vc-goal-sub">그룹이 함께 만드는 결과</span></p>
-            </div>
+        <div class="bz-st-stage">
+          <p class="bz-st-dim en" aria-hidden="true"><i></i><span>7 Businesses · One Structure</span><i></i></p>
+          <ol class="bz-st-blocks" aria-label="DOOGO HOLDINGS 그룹의 일곱 개 사업과 운영 회사">
+${blocks}
+          </ol>
+          <div class="bz-st-base">
+            <span class="bz-st-geo" aria-hidden="true"><i class="bz-st-top"></i><i class="bz-st-side"></i><i class="bz-st-front"><i class="bz-st-gleam"></i></i><i class="bz-st-seam"></i></span>
+            <span class="bz-st-base-k en" aria-hidden="true">Foundation</span>
+            <strong class="bz-st-base-n en">DOOGO HOLDINGS</strong>
+            <span class="bz-st-base-t"><span class="bz-st-base-c">지주회사</span><span class="bz-st-base-tags"><span>경영</span><span>투자</span><span>성장 지원</span></span></span>
           </div>
+        </div>
+        <div class="bz-st-foot">
+          <p class="bz-st-legend"><span class="bz-st-leg"><span class="bz-st-key is-hold" aria-hidden="true"></span><span><span class="en">DOOGO HOLDINGS</span> 운영</span></span> <span class="bz-st-leg"><span class="bz-st-key" aria-hidden="true"></span><span>그룹사 운영</span></span></p>
+          <p class="bz-st-note">블록을 누르면 사업별 상세 페이지로 이동합니다.</p>
         </div>
       </div>
     </div>

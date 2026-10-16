@@ -1,7 +1,7 @@
 /* =========================================================
    DOOGO GROUP — business.js (사업영역 목록)
    첫 화면 7개 사업 사진 슬라이드(바로가기 hover/focus 시 그 사업 사진으로 고정) ·
-   가치사슬 3D 계단(14차) · 7개 사업 탭(14차 · 주소 #slug 와 맞춤) · 소개 화면 사진 패럴랙스 · VIEW 커서
+   사업 구조(23차 · 기초판 위 일곱 개 사업 블록) · 7개 사업 탭(14차 · 주소 #slug 와 맞춤) · 소개 화면 사진 패럴랙스 · VIEW 커서
    움직임 정책(site.js): OS의 '애니메이션 줄이기' 설정과 관계없이 재생하고,
    사용자가 '움직임 멈추기'를 고른 경우(window.DOOGO.motionOff())만 멈춥니다 — 'doogo:motion' 이벤트로 바로 전환.
    패럴랙스만 OS 설정이 켜진 기기(html.soft-motion)에서 끕니다.
@@ -206,200 +206,103 @@
   }
 
 
-  /* ---------- 2) 가치사슬 — 3D 계단 (14차 · 회사 소개 가치사슬과 같은 동작) ----------
-     화면에 들어오면: 카메라가 비스듬한 각도에서 제자리로 → 기둥이 차례로 솟음 → 빛 줄기가 계단 윤곽을 따라 오르며 기둥마다 불을 켬
-     (위 계기판 숫자 01 → 07 → EXIT) → 정상(EXIT)이 번쩍이고 빛기둥 · 바닥 파동. 그 뒤로는 빛 하나가 줄기를 따라 계속 흐르며
-     지나가는 기둥을 비춥니다(화면에 보일 때만). 마우스를 올리면 무대가 살짝 기울어집니다(html.soft-motion 이면 생략).
-     기둥 하나하나는 그 단계를 맡은 사업 상세 페이지 링크입니다(a.bz-vc-step).
-     움직임 멈추기 · JS 없음: 처음부터 최종 상태(모두 켜짐 · 줄기 그려짐). */
-  var chain = $('[data-chain]');
-  if (chain) (function () {
-    var scene = $('[data-chain-scene]', chain);
-    var svg = $('[data-chain-beam]', chain);
-    var meter = $('.bz-vc-meter', chain);
-    var meterN = $('[data-chain-n]', chain);
-    var meterT = $('[data-chain-t]', chain);
-    if (!scene || !svg) return;
-    var pHalo = $('.bz-vc-beam-halo', svg), pBase = $('.bz-vc-beam-base', svg), pLine = $('.bz-vc-beam-line', svg);
-    var pGlow = $('.bz-vc-beam-glow', svg), pCore = $('.bz-vc-beam-core', svg);
-    var steps = $$('.bz-vc-step', chain).concat($$('.bz-vc-goal', chain));
-    var goal = steps[steps.length - 1];
-    var labels = steps.map(function (el, i) {
-      return { n: i < steps.length - 1 ? ('0' + (i + 1)).slice(-2) : 'EXIT', t: i < steps.length - 1 ? (el.getAttribute('data-t') || '') : 'Brand Growth' };
-    });
-    var geo = { L: 0, at: [], mode: '' };
-    var state = 'idle', vis = false, timers = [], raf = 0, anims = [];
-    var f1 = function (v) { return (Math.round(v * 10) / 10).toString(); };
-    var offIn = function (el) { var x = 0, y = 0; while (el && el !== scene) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; } return { x: x, y: y }; };
+  /* ---------- 2) 사업 구조 — 지주회사 기초판 위 일곱 개 사업 블록 (23차 · 가치사슬 3D 계단 대체) ----------
+     화면에 들어오면: 기초판(DOOGO HOLDINGS)이 아래에서 올라오며 앞 가장자리 빛이 그어짐 → 블록 01–07이 차례로 위에서 떨어져 맞물림
+     (맞물릴 때마다 이음새 빛이 번쩍 · 위 숫자 지주회사 1 · 그룹사 0→5 · 사업영역 0→7이 하나씩 올라감) → 다 쌓이면 빛 한 줄기가
+     왼쪽부터 구조물을 훑고 지나감 → 잠시 뒤 등장용 클래스를 떼어 평소 상태로(.is-armed 제거 · 마우스 올림 효과가 그대로 먹게).
+     그 뒤에는 화면에 보일 때만(.is-vis) 기초판 빛이 천천히 숨 쉼(CSS). 마우스를 움직이면 설계도 격자가 커서 둘레만 밝아짐
+     (정밀 포인터 · 움직일 때만 rAF 한 번 · 상시 도는 루프 없음). 블록 하나하나는 그 사업 상세 페이지 링크입니다(a.bz-st-block).
+     움직임 멈추기 · JS 없음 · IO 없음: 처음부터 다 쌓인 상태(숫자도 최종값). 등장 전 · 도중에 블록으로 포커스가 오면 바로 다 쌓음. */
+  var st = $('[data-structure]');
+  if (st) (function () {
+    var cells = $$('.bz-st-cell', st);
+    var figs = {};
+    $$('[data-st-fig]', st).forEach(function (el) { figs[el.getAttribute('data-st-fig')] = el; });
+    var STEP = 165;  // 블록 사이 간격(ms)
+    var LAND = 450;  // 떨어지기 시작해 닿기까지(ms) — business.css bzStDrop .78s 의 58%
+    var state = 'idle', timers = [];
+    var clear = function () { timers.forEach(clearTimeout); timers = []; };
+    var later = function (fn, ms) { timers.push(setTimeout(fn, ms)); };
 
-    // 빛 줄기 경로: 가로 계단이면 기둥 윗변 · 다음 기둥 왼변을 따라 오르는 윤곽, 세로 계단이면 왼쪽 줄기(마디 → 마디)
-    function layout() {
-      var W = scene.offsetWidth, H = scene.offsetHeight;
-      if (!W || !H) return false;
-      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-      var rows = window.matchMedia('(max-width: 1100px)').matches;
-      var d = '', L = 0, at = [], px = 0, py = 0;
-      var go = function (x, y) { L += Math.abs(x - px) + Math.abs(y - py); d += ' L' + f1(x) + ' ' + f1(y); px = x; py = y; };
-      var box = steps.map(function (el) { var o = offIn(el); return { x: o.x, y: o.y, w: el.offsetWidth, h: el.offsetHeight }; });
-      if (!rows) {
-        px = box[0].x; py = box[0].y; d = 'M' + f1(px) + ' ' + f1(py);
-        box.forEach(function (b, i) {
-          if (i) { go(b.x, py); go(b.x, b.y); }
-          at.push(L);
-          if (i < box.length - 1) go(b.x + b.w, b.y);
-          else go(b.x + b.w / 2, b.y);
-        });
-      } else {
-        var cs = getComputedStyle(steps[0], '::before');
-        var sx = box[0].x + (parseFloat(cs.left) || -24) + (parseFloat(cs.width) || 11) / 2;
-        px = sx; py = box[0].y + box[0].h / 2; d = 'M' + f1(px) + ' ' + f1(py);
-        box.forEach(function (b) { go(sx, b.y + b.h / 2); at.push(L); });
-      }
-      geo.L = Math.max(1, L); geo.at = at; geo.mode = rows ? 'rows' : 'cols';
-      [pHalo, pBase, pLine, pGlow, pCore].forEach(function (p) { if (p) p.setAttribute('d', d); });
-      pLine.style.strokeDasharray = f1(geo.L + 2) + ' ' + f1(geo.L + 2);
-      if (state === 'idle' || state === 'armed') pLine.style.strokeDashoffset = f1(geo.L + 2);
-      else if (state === 'done') pLine.style.strokeDashoffset = '0';
-      return true;
-    }
-
-    var setMeter = function (i, tick) {
-      if (!meterN || !labels[i]) return;
-      if (meter) meter.style.setProperty('--p', i + 1);
-      if (meterN.textContent === labels[i].n) return;
-      meterN.textContent = labels[i].n;
-      if (meterT) meterT.textContent = labels[i].t;
-      if (tick && meter) { meter.classList.remove('is-tick'); void meter.offsetWidth; meter.classList.add('is-tick'); }
+    var setFig = function (k, n, tick) {
+      var el = figs[k];
+      if (!el || el.textContent === String(n)) return;
+      el.textContent = String(n);
+      if (tick) { el.classList.remove('is-tick'); void el.offsetWidth; el.classList.add('is-tick'); }
     };
-    var light = function (i) { steps[i].classList.add('is-lit'); };
+    var finalFigs = function () { Object.keys(figs).forEach(function (k) { setFig(k, figs[k].getAttribute('data-to'), false); }); };
 
-    // 최종 상태 (움직임 멈추기 · IO 없음)
-    function finishAll() {
-      timers.forEach(clearTimeout); timers = [];
-      cancelAnimationFrame(raf); raf = 0;
-      steps.forEach(function (el, i) { light(i); });
-      chain.classList.remove('is-armed', 'is-on');
+    // 평소 상태(다 쌓임) — 움직임 멈추기 · IO 없음 · 포커스 · 등장이 끝난 뒤
+    function settle() {
+      clear();
+      st.classList.remove('is-armed', 'is-on');
+      st.classList.add('is-done');
+      cells.forEach(function (c) { c.classList.add('is-set', 'is-lock'); });
+      finalFigs();
       state = 'done';
-      layout();
-      pLine.style.strokeDashoffset = '0';
-      setMeter(steps.length - 1, false);
-      syncLive();
     }
 
     // 등장
     function play() {
       if (state !== 'armed') return;
-      if (motionOff()) { finishAll(); return; }
-      if (!layout()) return;
-      state = 'rising';
-      chain.classList.add('is-on');
-      timers.push(setTimeout(draw, softMotion() ? 900 : 1500));
-    }
-    function draw() {
-      state = 'drawing';
-      var t0 = 0, D = 2300, lit = -1;
-      var ease = function (p) { return p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; };
-      var step = function (ts) {
-        if (!t0) t0 = ts;
-        var p = Math.min(1, (ts - t0) / D), s = ease(p) * geo.L;
-        pLine.style.strokeDashoffset = f1(geo.L + 2 - s);
-        while (lit + 1 < steps.length && geo.at[lit + 1] <= s + 1) { lit++; if (lit < steps.length - 1) { light(lit); setMeter(lit, true); } }
-        if (p < 1) { raf = requestAnimationFrame(step); return; }
-        raf = 0;
-        pLine.style.strokeDashoffset = '0';
-        light(steps.length - 1); setMeter(steps.length - 1, true);
-        goal.classList.add('is-peak');
-        chain.classList.add('is-done');
-        timers.push(setTimeout(function () { goal.classList.remove('is-peak'); }, 1200));
-        state = 'done';
-        timers.push(setTimeout(syncLive, 700));
-      };
-      raf = requestAnimationFrame(step);
+      if (motionOff()) { settle(); return; }
+      state = 'playing';
+      st.classList.add('is-on');
+      var t0 = 560, n = { group: 0, biz: 0 };
+      later(function () { setFig('hold', 1, true); }, 420);
+      cells.forEach(function (c, i) {
+        var b = $('.bz-st-block', c);
+        var kind = b ? b.getAttribute('data-st-kind') : '';
+        later(function () { c.classList.add('is-set'); }, t0 + i * STEP);
+        later(function () {
+          c.classList.add('is-lock');
+          setFig('biz', ++n.biz, true);
+          if (kind === 'group') setFig('group', ++n.group, true);
+        }, t0 + i * STEP + LAND);
+      });
+      var end = t0 + (cells.length - 1) * STEP + LAND + 280;
+      later(function () { st.classList.add('is-done'); finalFigs(); }, end);
+      later(settle, end + 2600); // 빛줄기(기초판 2.6s)가 다 지나간 뒤 등장용 클래스 정리
     }
 
-    // 흐르는 빛: 혜성(빛 머리 + 번짐)이 줄기를 따라 오르고, 지나가는 기둥 앞면이 번쩍
-    function stopFx() { anims.forEach(function (a) { try { a.cancel(); } catch (e) {} }); anims = []; }
-    function startFx() {
-      stopFx();
-      if (!pCore.animate || !geo.L) return;
-      var v = geo.mode === 'rows' ? .32 : .62;          // px/ms
-      var run = geo.L / v, T = run + 1600, C = Math.min(140, geo.L * .2);
-      var kf = [
-        { strokeDashoffset: C, offset: 0 },
-        { strokeDashoffset: -geo.L, offset: run / T },
-        { strokeDashoffset: -geo.L, offset: 1 }
-      ];
-      [pGlow, pCore].forEach(function (p, k) {
-        var c = k ? C * .55 : C;
-        p.style.strokeDasharray = f1(c) + ' ' + f1(geo.L + C + 10);
-        anims.push(p.animate(kf, { duration: T, iterations: Infinity, easing: 'linear' }));
+    // 마우스 둘레만 밝아지는 설계도 격자
+    var mx = 0, my = 0, mRaf = 0;
+    var spotOk = function () { return fine && !motionOff(); };
+    st.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse' || !spotOk()) return;
+      var r = st.getBoundingClientRect();
+      mx = e.clientX - r.left; my = e.clientY - r.top;
+      if (mRaf) return;
+      mRaf = requestAnimationFrame(function () {
+        mRaf = 0;
+        st.style.setProperty('--mx', Math.round(mx) + 'px');
+        st.style.setProperty('--my', Math.round(my) + 'px');
+        st.classList.add('is-pointer');
       });
-      steps.forEach(function (el, i) {
-        var fl = el.querySelector('.bz-cf-flash');
-        if (!fl) return;
-        var a0 = Math.min(.97, geo.at[i] / v / T);
-        anims.push(fl.animate([
-          { opacity: 0, offset: 0 },
-          { opacity: 0, offset: a0 },
-          { opacity: i === steps.length - 1 ? 1 : .8, offset: Math.min(.98, a0 + 140 / T) },
-          { opacity: 0, offset: Math.min(.99, a0 + 1100 / T) },
-          { opacity: 0, offset: 1 }
-        ], { duration: T, iterations: Infinity, easing: 'linear' }));
-      });
-    }
-    function syncLive() {
-      var live = vis && state === 'done' && !motionOff();
-      chain.classList.toggle('is-live', live);
-      if (motionOff()) { stopFx(); return; }
-      if (live) { if (!anims.length) startFx(); else anims.forEach(function (a) { a.play(); }); }
-      else anims.forEach(function (a) { a.pause(); });
-    }
-
-    // 마우스 기울기 (화면에 보일 때 · 마우스만)
-    var tx = 0, ty = 0, gx = 0, gy = 0, tRaf = 0;
-    var tiltOk = function () { return !motionOff() && !softMotion() && window.matchMedia('(hover: hover) and (pointer: fine)').matches; };
-    function tilt() {
-      tx += (gx - tx) * .08; ty += (gy - ty) * .08;
-      scene.style.setProperty('--tx', tx.toFixed(2) + 'deg');
-      scene.style.setProperty('--ty', ty.toFixed(2) + 'deg');
-      tRaf = (Math.abs(gx - tx) > .01 || Math.abs(gy - ty) > .01) ? requestAnimationFrame(tilt) : 0;
-    }
-    var kick = function () { if (!tRaf) tRaf = requestAnimationFrame(tilt); };
-    chain.addEventListener('pointermove', function (e) {
-      if (e.pointerType !== 'mouse' || !tiltOk()) return;
-      var r = chain.getBoundingClientRect();
-      gy = ((e.clientX - r.left) / r.width - .5) * 12;   // 좌우 → rotateY
-      gx = ((e.clientY - r.top) / r.height - .5) * -7;   // 위아래 → rotateX
-      kick();
     });
-    chain.addEventListener('pointerleave', function () { gx = 0; gy = 0; kick(); });
+    st.addEventListener('pointerleave', function () { st.classList.remove('is-pointer'); });
 
     // 시작
-    var relayout = function () { // 크기 · 배치가 바뀌면 경로를 다시 그리고, 흐르던 빛도 새 길이로
-      if (!layout()) return;
-      if (state === 'done' && anims.length) { stopFx(); syncLive(); }
-    };
-    if (!hasIO || motionOff()) finishAll();
-    else { chain.classList.add('is-armed'); state = 'armed'; setMeter(0, false); layout(); }
-    if ('ResizeObserver' in window) new ResizeObserver(function () { relayout(); }).observe(scene);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
-    if (hasIO) {
+    if (!hasIO || motionOff()) settle();
+    else {
+      st.classList.add('is-armed'); state = 'armed';
+      setFig('hold', 0); setFig('group', 0); setFig('biz', 0);
       var playIO = new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) { if (en.isIntersecting && state === 'armed') { play(); if (state !== 'armed') playIO.disconnect(); } });
-      }, { rootMargin: '0px 0px -22% 0px', threshold: 0.15 });
-      playIO.observe(chain);
-      new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) {
-          vis = en.isIntersecting;
-          chain.classList.toggle('is-vis', vis);
-          if (!vis) { gx = gy = 0; kick(); }
-          syncLive();
-        });
-      }, { rootMargin: '80px 0px' }).observe(chain);
+        entries.forEach(function (en) { if (en.isIntersecting && state === 'armed') { play(); playIO.disconnect(); } });
+      }, { rootMargin: '0px 0px -14% 0px', threshold: 0.35 });
+      playIO.observe($('.bz-st-stage', st) || st);
     }
+    if (hasIO) {
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { st.classList.toggle('is-vis', en.isIntersecting); });
+      }, { rootMargin: '60px 0px' }).observe(st);
+    }
+    // 키보드로 블록에 먼저 닿으면(등장 전 · 도중) 바로 다 쌓음 — 안 보이는 링크에 포커스가 머물지 않게
+    st.addEventListener('focusin', function () { if (state === 'armed' || state === 'playing') settle(); });
     document.addEventListener('doogo:motion', function () {
-      if (motionOff()) { stopFx(); finishAll(); gx = gy = tx = ty = 0; scene.style.removeProperty('--tx'); scene.style.removeProperty('--ty'); }
-      syncLive();
+      if (!motionOff()) return;
+      if (state !== 'idle') settle();
+      st.classList.remove('is-pointer');
     });
   })();
 
@@ -652,6 +555,37 @@
       window.addEventListener('scroll', function () { if (!sTick) { sTick = true; requestAnimationFrame(stuck); } }, { passive: true });
       stuck();
     }
+  })();
+
+  /* ---------- 5) 소개 화면 사진 → 짧게 움직이는 영상 (23차) ----------
+     지금 열린 사업 화면(.bz-panel.is-on)의 영상만 재생하고 나머지는 멈춤. 4초짜리 끊김 없는 반복(끝이 처음으로 겹쳐 녹아듦).
+     영상은 preload="none" — 처음 재생할 때 받기 시작하고, 실제로 움직이기 시작하면(.is-playing) 사진 위로 서서히 나타남.
+     화면 밖 · 탭이 가려짐 · '움직임 멈추기'면 멈추고 사진만(CSS 가 영상을 감춤). */
+  (function () {
+    var vids = $$('.bz-media-video');
+    if (!vids.length) return;
+    var wrap = $('.bz-panels'), inView = !hasIO || !wrap;
+    vids.forEach(function (v) {
+      v.muted = true;
+      v.addEventListener('playing', function () { v.classList.add('is-playing'); });
+    });
+    function sync() {
+      vids.forEach(function (v) {
+        var p = v.closest('.bz-panel');
+        var go = inView && p && p.classList.contains('is-on') && !p.hidden && !motionOff() && document.visibilityState !== 'hidden';
+        if (go) {
+          if (v.paused) { var r = v.play(); if (r && r.catch) r.catch(function () {}); }
+        } else if (!v.paused) v.pause();
+      });
+    }
+    if (hasIO && wrap) new IntersectionObserver(function (es) { inView = es[0].isIntersecting; sync(); }, { rootMargin: '160px 0px' }).observe(wrap);
+    if ('MutationObserver' in window) {
+      var mo = new MutationObserver(sync);
+      $$('.bz-panel').forEach(function (p) { mo.observe(p, { attributes: true, attributeFilter: ['class', 'hidden'] }); });
+    }
+    document.addEventListener('visibilitychange', sync);
+    document.addEventListener('doogo:motion', sync);
+    sync();
   })();
 })();
 
