@@ -692,7 +692,7 @@ ${slides}
     </div>
     <div class="bz-hero-shade" aria-hidden="true"></div>
     <div class="container bz-hero-inner">
-      <nav aria-label="현재 위치"><ol class="breadcrumb"><li><a href="index.html">홈</a></li><li aria-current="page">사업영역</li></ol></nav>
+      <nav aria-label="현재 위치"><ol class="breadcrumb"><li><a href="/">홈</a></li><li aria-current="page">사업영역</li></ol></nav>
       <span class="eyebrow" data-reveal="fade">Our Business</span>
       <h1 class="display bz-hero-title" id="bz-title" data-lines><span class="line"><span>배우고, 만들고,</span></span><span class="line"><span class="accent">키우고.</span></span></h1>
       <p class="lead bz-hero-lead" data-reveal style="--d:.25s">제품을 만드는 일부터 사람을 키우는 일까지.<br class="hide-mobile"> 지주회사 <span class="nowrap en">DOOGO HOLDINGS</span>와 다섯 그룹사가<br class="hide-mobile"> 일곱 개 사업으로 성장의 다음 단계를 함께 만듭니다.</p>
@@ -1119,7 +1119,7 @@ ${c.direct ? `              <div><dt>주요 이력</dt><dd><ul class="dt-career"
   <section class="page-hero dt-hero" aria-labelledby="dt-title">
     <div class="dt-hero-glow" aria-hidden="true"></div>
     <div class="container">
-      <nav aria-label="현재 위치"><ol class="breadcrumb"><li><a href="index.html">홈</a></li><li><a href="business.html">사업영역</a></li><li aria-current="page">${b.area}</li></ol></nav>
+      <nav aria-label="현재 위치"><ol class="breadcrumb"><li><a href="/">홈</a></li><li><a href="business.html">사업영역</a></li><li aria-current="page">${b.area}</li></ol></nav>
       <span class="eyebrow" data-reveal="fade">Business ${b.num} / 07</span>
       <h1 class="display dt-title" id="dt-title" data-lines><span class="line"><span class="en">${b.en}</span></span></h1>
       <div class="dt-hero-grid">
