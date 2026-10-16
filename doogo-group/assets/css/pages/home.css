@@ -155,30 +155,35 @@
 /* 글자 새김 (home.js · data-engrave) — 단어(.eg-w)는 줄바꿈 단위, 글자(.eg-c)마다 --ci × 26ms 지연
    대기: 흐림 · 아래 · 투명 / .is-on: 선명 · 제자리 · 잉크색 (새겨지는 순간 잠깐 블루 빛이 돌다 잉크로 가라앉음)
    .is-accent: '하나의 흐름으로' 블루 + 밑줄 그리기 */
-.intro-statement .eg-w { display: inline-block; white-space: nowrap; }
-.intro-statement .eg-c { display: inline-block; }
-.intro-statement .eg-accent { position: relative; display: inline-block; white-space: nowrap; }
-.intro-statement .eg-accent::after {
+/* 21차: 메인 마무리 배너 슬로건(.cbx-home-title)도 같은 새김 — 색만 변수로 (--eg-ink 최종 글자 · --eg-glow 새겨지는 순간 · --eg-accent 강조 · --eg-line 밑줄) */
+[data-engrave] { --eg-ink: var(--ink); --eg-glow: var(--blue-300); --eg-accent: var(--blue); --eg-line: linear-gradient(90deg, var(--blue) 0%, var(--sky) 100%); }
+[data-engrave] .eg-w { display: inline-block; white-space: nowrap; }
+[data-engrave] .eg-c { display: inline-block; }
+[data-engrave] .eg-accent { position: relative; display: inline-block; white-space: nowrap; }
+[data-engrave] .eg-accent::after {
   content: ""; position: absolute; left: .02em; right: .06em; bottom: .02em; height: .075em; border-radius: .08em;
-  background: linear-gradient(90deg, var(--blue) 0%, var(--sky) 100%);
+  background: var(--eg-line);
   transform: scaleX(0); transform-origin: left center;
 }
-.js .intro-statement.is-split .eg-c {
-  opacity: 0; color: var(--blue-300);
+.js [data-engrave].is-split .eg-c {
+  opacity: 0; color: var(--eg-glow);
   transform: translate3d(0, .42em, 0) scale(1.04); filter: blur(10px);
 }
-.js .intro-statement.is-split.is-on .eg-c {
+.js [data-engrave].is-split.is-on .eg-c {
   --d: calc(var(--ci, 0) * 26ms);
-  opacity: 1; color: var(--ink); transform: none; filter: blur(0);
+  opacity: 1; color: var(--eg-ink); transform: none; filter: blur(0);
   transition: opacity .5s var(--ease) var(--d), transform .9s cubic-bezier(.16, 1, .3, 1) var(--d), filter .7s var(--ease) var(--d), color 1.2s var(--ease) calc(var(--d) + .18s);
 }
-.js .intro-statement.is-split.is-accent .eg-accent .eg-c { color: var(--blue); transition: color .6s var(--ease) calc(var(--ai, 0) * 45ms); }
-.js .intro-statement.is-split .eg-accent::after { transition: transform 0s; }
-.js .intro-statement.is-split.is-accent .eg-accent::after { transform: scaleX(1); transition: transform 1s cubic-bezier(.65, 0, .35, 1) .2s; }
-.intro-statement.no-tr .eg-c, .intro-statement.no-tr .eg-accent::after { transition: none !important; }
+.js [data-engrave].is-split.is-accent .eg-accent .eg-c { color: var(--eg-accent); transition: color .6s var(--ease) calc(var(--ai, 0) * 45ms); }
+.js [data-engrave].is-split .eg-accent::after { transition: transform 0s; }
+.js [data-engrave].is-split.is-accent .eg-accent::after { transform: scaleX(1); transition: transform 1s cubic-bezier(.65, 0, .35, 1) .2s; }
+[data-engrave].no-tr .eg-c, [data-engrave].no-tr .eg-accent::after { transition: none !important; }
 /* JS 가 글자를 나눴지만 아직 실행 전이 아닌 정지 상태(움직임 멈추기): 바로 완성 */
-html.motion-off .intro-statement .eg-c { opacity: 1 !important; transform: none !important; filter: none !important; }
-html.motion-off .intro-statement .eg-accent::after { transform: scaleX(1) !important; }
+html.motion-off [data-engrave] .eg-c { opacity: 1 !important; transform: none !important; filter: none !important; }
+html.motion-off [data-engrave] .eg-accent::after { transform: scaleX(1) !important; }
+/* 마무리 배너(블루 바탕): 흰 글자 · 새겨질 때 하늘빛 · 'Better Tomorrow.' 연한 블루 + 흰 밑줄 */
+.cbx-home-title[data-engrave] { --eg-ink: #fff; --eg-glow: #9CC2FF; --eg-accent: #C6DBFF; --eg-line: linear-gradient(90deg, #fff 0%, #9CC2FF 100%); }
+.cbx-home-title [data-accent] { color: #C6DBFF; } /* JS 없을 때 */
 
 /* 숫자 4칸 — 굴러 올라가는 숫자 + 아래 선 그리기 (home.js 가 .is-ready / .is-on 부여, 재진입 시 다시 재생) */
 .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 48px clamp(24px, 3vw, 52px); margin-top: clamp(72px, 9vw, 136px); }
@@ -796,50 +801,9 @@ html.motion-off .gp-card:hover .gp-win, html.motion-off .gp-card:hover .gp-shot 
    등장(카드가 왼쪽부터 0.08초 간격 · 인물이 아래에서 선명해짐)은 base.css 의 .pcards[data-reveal] 규칙
    ========================================================= */
 .ldr-head { margin-bottom: clamp(32px, 4vw, 56px); }
-.ldr { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
-.ldr-item { display: flex; min-width: 0; }
-.ldr-item > .pcard { flex: 1; }
-.leaders-note { margin-top: 28px; }
-
-/* 이전·다음 (넘칠 때만) */
-.ldr-ctrl { display: none; align-items: center; gap: 20px; margin-top: 10px; }
-.ldr-wrap.is-scroll .ldr-ctrl { display: flex; }
-.ldr-bar { position: relative; flex: 1; height: 2px; border-radius: 2px; overflow: hidden; background: var(--line); }
-.ldr-bar i { position: absolute; inset: 0; background: var(--ink); transform-origin: left center; transform: scaleX(var(--p, .3)); transition: transform .35s var(--ease); }
-.ldr-btns { display: flex; gap: 10px; }
-.ldr-btn { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 1px solid rgba(11, 27, 51, .16); color: var(--ink); transition: background-color .3s var(--ease), border-color .3s var(--ease), color .3s var(--ease), opacity .3s var(--ease); }
-.ldr-btn:hover:not(:disabled) { background: var(--ink); border-color: var(--ink); color: #fff; }
-.ldr-btn:disabled { opacity: .35; cursor: default; }
-.ldr-btn .ico { width: 18px; height: 18px; }
-
-/* 1280–1439px: 이 섹션만 좌우 여백을 줄이고 컨테이너를 넓혀 6장이 한 줄에 (카드 약 195–210px)
-   1440px 이상은 기본 컨테이너(1320px)로도 카드가 200px 이상이라 다른 섹션과 왼쪽 끝을 맞춤 */
-@media (min-width: 1280px) and (max-width: 1439px) {
-  .leaders { --gutter: 24px; }
-  .leaders > .container { max-width: calc(1440px + var(--gutter) * 2); }
-  .ldr { gap: 12px; }
-}
-/* 1279px 이하: 가로 스크롤 스냅 (넘침은 트랙 안에서만) */
-@media (max-width: 1279px) {
-  .ldr {
-    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: clamp(214px, 21.5vw, 252px); gap: 14px;
-    overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none;
-    margin-inline: calc(var(--gutter) * -1); padding: 10px var(--gutter) 30px; scroll-padding-inline: var(--gutter);
-  }
-  .ldr::-webkit-scrollbar { display: none; }
-  .ldr-item { scroll-snap-align: start; }
-}
-@media (max-width: 1024px) {
-  .ldr { grid-auto-columns: clamp(214px, 33vw, 262px); }
-}
+/* 21차: 카드 줄은 타이탄식 무한 루프(assets/css/people-rail.css · people-rail.js) — 화면 끝에서 끝까지 */
 @media (max-width: 860px) {
   .ldr-head .link-arrow { order: 3; }
-}
-/* 휴대폰: 카드 약 62vw → 1.5장 보임 */
-@media (max-width: 760px) {
-  .ldr { grid-auto-columns: 62vw; gap: 12px; padding-bottom: 24px; }
-  .ldr-btn { width: 44px; height: 44px; }
-  .leaders-note { margin-top: 18px; }
 }
 
 /* =========================================================
@@ -924,18 +888,6 @@ html.motion-off .biz-ph, html.motion-off .biz-ph.is-active, html.motion-off .biz
 html.motion-off .bs-media img, html.motion-off .cf-thumb img { transition: none; }
 /* OS '애니메이션 줄이기' 기기(html.soft-motion): 큰 확대 움직임만 덜어 냄 — 나머지 모션은 그대로 */
 html.soft-motion .hero-media video { animation-duration: 1.4s; transform: scale(1.03); }
-
-/* 11차: 대표 프로필 카드를 약 1.5배로 — 한 줄 가로 스냅(넘치면 이전·다음 버튼), 1440px 기준 4장 보임 */
-.ldr {
-  grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: clamp(290px, 22vw, 340px); gap: 18px;
-  overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none;
-  margin-inline: calc(var(--gutter) * -1); padding: 10px var(--gutter) 30px; scroll-padding-inline: var(--gutter);
-}
-.ldr::-webkit-scrollbar { display: none; }
-.ldr-item { scroll-snap-align: start; }
-.ldr .pcard-name { font-size: clamp(1.25rem, 1.05rem + .5vw, 1.55rem); }
-@media (max-width: 1024px) { .ldr { grid-auto-columns: clamp(280px, 46vw, 360px); } }
-@media (max-width: 760px) { .ldr { grid-auto-columns: 80vw; gap: 14px; } }
 
 /* 12차: 그룹소식·리더 섹션 위아래 여백 축소 */
 .newsroom.section { padding-block: clamp(56px, 6vw, 96px) clamp(48px, 5vw, 84px); }

@@ -1,6 +1,6 @@
 /* =========================================================
    DOOGO GROUP — leadership.js (두고 사람들)
-   짧은 그룹 소개(1 + 5 숫자 카운트 · 트리 그리기 · 흐르는 빛) · 프로필 카드 가로 스와이프 컨트롤(휴대폰)
+   짧은 그룹 소개(1 + 5 숫자 카운트 · 트리 그리기 · 흐르는 빛) · 프로필 카드 줄 앵커(줄 자체는 people-rail.js)
    · 프로필 상세 (dialog: 열기/닫기 · 이전/다음 · Esc · 바깥 클릭)
    카드 생김새·등장 모션은 base.css 프로필 카드 공통(.pcard)이 맡습니다.
    모션은 OS 설정과 관계없이 재생하고, 사용자가 '움직임 멈추기'를 고르면(window.DOOGO.motionOff()) 최종 상태로 보여 줍니다.
@@ -88,85 +88,35 @@
     });
   }
 
-  /* ---------- 프로필 카드: 휴대폰(680px 이하) 가로 스와이프일 때만 번호 · 진행 막대 · 이전/다음 ----------
-     넓은 화면에서는 3열·2열 그리드라 넘치지 않으므로 컨트롤을 숨깁니다. */
+  /* ---------- 프로필 카드 줄 (21차 타이탄식 · people-rail.js) ----------
+     카드 앵커(#ceo · #leader-space …)나 '회사로 찾기' · 그룹 구조 링크로 오면: 그 사람 카드를 줄 맨 앞으로 옮기고 줄이 보이게 내려감 */
   (function () {
-    var grid = $('[data-ld-grid]'), ctrl = $('[data-ld-ctrl]');
-    if (!grid || !ctrl) return;
-    var items = $$('.ld-card', grid);
-    var prev = $('[data-ld-prev]', ctrl), next = $('[data-ld-next]', ctrl), fill = $('[data-ld-fill]', ctrl), cur = $('[data-ld-cur]', ctrl);
-    var raf = 0;
-    var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
-    function nearest() {
-      var pl = parseFloat(getComputedStyle(grid).scrollPaddingLeft) || 0, best = 0, bd = Infinity;
-      items.forEach(function (it, i) { var d = Math.abs(it.offsetLeft - pl - grid.scrollLeft); if (d < bd) { bd = d; best = i; } });
-      if (grid.scrollLeft >= grid.scrollWidth - grid.clientWidth - 2) best = items.length - 1;
-      return best;
-    }
-    function sync() {
-      raf = 0;
-      var max = grid.scrollWidth - grid.clientWidth, on = max > 4;
-      ctrl.hidden = !on;
-      if (!on) return;
-      var i = nearest();
-      if (cur) cur.textContent = pad2(i + 1);
-      if (prev) prev.disabled = grid.scrollLeft <= 2;
-      if (next) next.disabled = grid.scrollLeft >= max - 2;
-      if (fill) fill.style.setProperty('--p', Math.min(1, (grid.scrollLeft + grid.clientWidth) / grid.scrollWidth).toFixed(4));
-    }
-    function queue() { if (!raf) raf = requestAnimationFrame(sync); }
-    function go(dir) {
-      var i = Math.max(0, Math.min(items.length - 1, nearest() + dir));
-      var pl = parseFloat(getComputedStyle(grid).scrollPaddingLeft) || 0;
-      grid.scrollTo({ left: items[i].offsetLeft - pl, behavior: motionOff() ? 'auto' : 'smooth' });
-    }
-    if (prev) prev.addEventListener('click', function () { go(-1); });
-    if (next) next.addEventListener('click', function () { go(1); });
-    // 가로 스와이프일 때는 줄이 화면에 들어오면 옆으로 가려진 카드까지 한꺼번에 드러냄
-    // (밀어 넘길 때 빈 카드가 잠깐 보였다가 나타나지 않도록 — 처음 보이는 카드만 등장 모션이 보임)
-    if ('IntersectionObserver' in window) {
-      var gio = new IntersectionObserver(function (entries) {
-        if (!entries.some(function (en) { return en.isIntersecting; })) return;
-        if (grid.scrollWidth - grid.clientWidth <= 4) return;
-        items.forEach(function (it) { it.classList.add('is-in'); });
-        gio.disconnect();
-      }, { rootMargin: '0px 0px -10% 0px', threshold: 0.08 });
-      gio.observe(grid);
-    }
-    grid.addEventListener('scroll', queue, { passive: true });
-    window.addEventListener('resize', queue);
-    window.addEventListener('load', queue);
-    sync();
-
-    /* 카드 앵커(#ceo · #leader-space …) 위치 보정
-       - 휴대폰 가로 스와이프: 브라우저는 줄 안쪽 스크롤에만 scroll-margin 을 적용해 카드 위가 헤더에 가려지므로 직접 맞춤
-       - 넓은 화면: 등장 전(아래로 28px 내려가 있던) 위치를 기준으로 이동해 위가 살짝 가려지던 것을 보정 */
+    var rail = $('.ld-rail[data-prail]');
+    var grid = $('[id="ld-grid"]');
+    if (!rail || !grid) return;
+    var items = $$('.ld-card[data-leader]', grid);
     var html = document.documentElement;
     function cardOf(hash) {
       var id = (hash || '').replace(/^#/, '');
-      if (!id) return null;
-      var el = null;
-      try { el = document.getElementById(decodeURIComponent(id)); } catch (e) { el = document.getElementById(id); }
-      return el && items.indexOf(el) >= 0 ? el : null;
+      if (!id) return -1;
+      try { id = decodeURIComponent(id); } catch (e) { /* 그대로 */ }
+      for (var i = 0; i < items.length; i++) if (items[i].id === id) return i;
+      return -1;
     }
-    function docTop(el) { var y = 0; for (var n = el; n; n = n.offsetParent) y += n.offsetTop; return y; } // transform(등장 모션) 제외
-    function showCard(card, smooth) {
+    function docTop(el) { var y = 0; for (var n = el; n; n = n.offsetParent) y += n.offsetTop; return y; }
+    function showCard(k, smooth) {
+      if (rail._prail) rail._prail.go(k, !smooth);
+      var hh = parseFloat(getComputedStyle(html).getPropertyValue('--header-h')) || 84;
+      var y = Math.max(0, Math.round(docTop(rail) - hh - 24));
       var beh = smooth && !motionOff() ? 'smooth' : 'instant';
-      if (grid.scrollWidth - grid.clientWidth > 4) {
-        var pl = parseFloat(getComputedStyle(grid).scrollPaddingLeft) || 0;
-        grid.scrollTo({ left: Math.max(0, card.offsetLeft - pl), behavior: beh === 'instant' ? 'auto' : 'smooth' });
-      }
-      var mt = parseFloat(getComputedStyle(card).scrollMarginTop) || 0;
-      var y = Math.max(0, Math.round(docTop(card) - mt));
       if (Math.abs(window.scrollY - y) > 2) window.scrollTo({ top: y, behavior: beh });
     }
-    // 해시로 바로 들어온 경우: 브라우저의 부드러운 앵커 이동을 잠시 끄고(load 뒤 다시 이동할 때 엇나가지 않게) 끝에 한 번 맞춤
+    // 해시로 바로 들어온 경우: 글꼴·사진이 자리 잡은 뒤 한 번 맞춤 (사용자가 먼저 움직이면 그대로 둠)
     var entry = cardOf(location.hash);
-    if (entry) {
+    if (entry >= 0) {
       var prevBehavior = html.style.scrollBehavior, userMoved = false;
       html.style.scrollBehavior = 'auto';
-      var mark = function () { userMoved = true; };
-      ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(function (ev) { window.addEventListener(ev, mark, { passive: true, once: true }); });
+      ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(function (ev) { window.addEventListener(ev, function () { userMoved = true; }, { passive: true, once: true }); });
       var settle = function () {
         if (!userMoved) showCard(entry, false);
         setTimeout(function () { if (!userMoved) showCard(entry, false); html.style.scrollBehavior = prevBehavior; }, 350);
@@ -174,28 +124,19 @@
       if (document.readyState === 'complete') setTimeout(settle, 60);
       else window.addEventListener('load', function () { setTimeout(settle, 60); });
     }
-    // 주소창 · 뒤로 가기 등으로 해시만 바뀐 경우(브라우저가 먼저 옮긴 뒤 한 번 맞춤)
     window.addEventListener('hashchange', function () {
-      var card = cardOf(location.hash);
-      if (!card) return;
-      card.classList.add('is-in');
-      // 브라우저의 (부드러운) 앵커 이동이 끝난 뒤에 맞춤 — 스크롤이 120ms 멈추면
-      var t = 0, end = Date.now() + 2500;
-      var done = function () { window.removeEventListener('scroll', onS); showCard(card, false); };
-      var onS = function () { clearTimeout(t); if (Date.now() > end) { done(); return; } t = setTimeout(done, 120); };
-      window.addEventListener('scroll', onS, { passive: true });
-      t = setTimeout(done, 160);
+      var k = cardOf(location.hash);
+      if (k >= 0) showCard(k, false);
     });
     // 같은 페이지 안 링크(회사로 찾기 · 그룹 구조 트리 → 카드)
     document.addEventListener('click', function (e) {
       var a = e.target.closest && e.target.closest('a[href^="#"]');
       if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      var card = cardOf(a.getAttribute('href'));
-      if (!card) return;
+      var k = cardOf(a.getAttribute('href'));
+      if (k < 0) return;
       e.preventDefault();
-      if (history.pushState) history.pushState(null, '', '#' + card.id); else location.hash = card.id;
-      card.classList.add('is-in');
-      showCard(card, true);
+      if (history.pushState) history.pushState(null, '', '#' + items[k].id); else location.hash = items[k].id;
+      showCard(k, true);
     });
   })();
 
@@ -294,6 +235,13 @@
   cards.forEach(function (card, i) {
     var btn = $('[data-leader-open]', card);
     if (btn) btn.addEventListener('click', function () { open(i, btn); });
+  });
+  // 줄 양옆을 채우는 복제 카드(people-rail.js · data-prail-src = 원본 번호)를 눌러도 같은 사람 상세
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-prail-src] [data-leader-open]');
+    if (!btn) return;
+    var k = parseInt(btn.closest('[data-prail-src]').getAttribute('data-prail-src'), 10);
+    if (k >= 0 && k < cards.length) open(k, $('[data-leader-open]', cards[k]));
   });
   modal.addEventListener('close', function () {
     html.classList.remove('is-locked');

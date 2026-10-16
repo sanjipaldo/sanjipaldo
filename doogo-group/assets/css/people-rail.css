@@ -1,0 +1,70 @@
+/* =========================================================
+   DOOGO GROUP — people-rail.css (두고 사람들 '타이탄' 줄 · 21차)
+   메인 #leaders · leadership.html #leaders 공통 — 동작은 assets/js/people-rail.js
+   · 카드(.pcard)가 화면 끝에서 끝까지 한 줄로 이어짐 (여백 없음) · 배경 없는 상반신 사진 뒤로 연한 두고 심볼
+   · 이름 → 회사(영문) → 분야 → 가는 선 → 링크 (카드는 테두리 · 그림자 없이 섹션 바탕 위에)
+   · 양옆 큰 화살표: 사진 높이 가운데, 첫 카드 바깥쪽
+   스크립트가 없으면 카드 줄을 가로로 넘겨 봅니다.
+   ========================================================= */
+.prail {
+  --cw: clamp(236px, 17.5vw, 330px);   /* 카드 폭 */
+  --gap: clamp(14px, 1.5vw, 26px);
+  --arw: 60px;                          /* 화살표 지름 */
+  position: relative; isolation: isolate;
+}
+.prail-anchor { height: 0; overflow: hidden; }
+.prail-anchor > span { display: block; height: 0; }
+.prail-view { overflow: hidden; padding-block: 6px 26px; touch-action: pan-y; }
+.prail.is-ready .prail-view { cursor: grab; }
+.prail.is-drag .prail-view { cursor: grabbing; }
+.prail-track { display: flex; gap: var(--gap); width: max-content; will-change: transform; transition: transform .85s cubic-bezier(.22, .8, .25, 1); }
+.prail-track.no-tr { transition: none; }
+.prail-item { flex: 0 0 var(--cw); display: flex; min-width: 0; }
+.prail-item.pcard, .prail-item > .pcard { flex: 0 0 var(--cw); }
+.prail-item > .pcard { flex: 1; }
+.prail img { -webkit-user-drag: none; user-select: none; }
+.prail.is-drag a, .prail.is-drag button { pointer-events: none; }
+/* 스크립트 전 / 없을 때: 가로로 넘겨 보기 (컨테이너 왼쪽 선에서 시작) */
+.prail:not(.is-ready) .prail-view { overflow-x: auto; scrollbar-width: none; padding-inline: max(var(--gutter), calc((100% - var(--container)) / 2)); }
+.prail:not(.is-ready) .prail-view::-webkit-scrollbar { display: none; }
+
+/* 카드: 테두리 · 그림자 없이 섹션 바탕 위에 — 사진 칸도 투명(인물 뒤 심볼만) */
+.prail .pcard { background: transparent; border-radius: 0; }
+.prail .pcard:hover, .prail .pcard:focus-within { box-shadow: none; }
+.prail .pcard-ph { background: transparent; border-radius: 0; }
+.prail .pcard-body { padding: 18px 2px 0; }
+.prail .pcard-name { font-size: clamp(1.2rem, 1.02rem + .45vw, 1.5rem); }
+.prail .pcard-foot::before { margin: 14px 0 4px; background: rgba(11, 27, 51, .12); }
+
+/* 양옆 화살표 — 사진 높이 가운데 · 첫 카드 바깥(넓은 화면) / 화면 가장자리(좁은 화면) */
+.prail-btn {
+  position: absolute; z-index: 5; top: calc(6px + var(--cw) * 2 / 3); translate: 0 -50%;
+  display: none; place-items: center; width: var(--arw); height: var(--arw); padding: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, .95); color: var(--ink); cursor: pointer;
+  box-shadow: 0 18px 36px -16px rgba(11, 27, 51, .5), 0 0 0 1px rgba(11, 27, 51, .07);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  transition: background-color .3s var(--ease), color .3s var(--ease), box-shadow .3s var(--ease), scale .3s var(--ease);
+}
+.prail.is-ready .prail-btn { display: grid; }
+.prail-btn svg { width: 22px; height: 22px; }
+.prail-btn--prev svg { transform: rotate(180deg); }
+.prail-btn--prev { left: max(12px, calc((100% - var(--container)) / 2 - var(--arw) - 18px)); }
+.prail-btn--next { right: max(12px, calc((100% - var(--container)) / 2 - var(--arw) - 18px)); }
+.prail-btn:hover { background: var(--blue); color: #fff; box-shadow: 0 18px 36px -14px rgba(10, 93, 226, .8); scale: 1.06; }
+.prail-btn:active { scale: .94; }
+.prail-btn:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+/* 다음 쪽 화살표가 가끔 가리키는 쪽으로 툭 */
+.prail.is-seen .prail-btn--next svg { animation: prailNudge 3.2s 2s var(--ease) infinite; }
+.prail-btn:hover svg { animation: none !important; }
+@keyframes prailNudge { 0%, 62%, 100% { translate: 0 0; } 72% { translate: 5px 0; } 82% { translate: 0 0; } 90% { translate: 2px 0; } }
+
+@media (max-width: 760px) {
+  .prail { --cw: 64vw; --gap: 12px; --arw: 44px; }
+  .prail-btn--prev { left: 8px; }
+  .prail-btn--next { right: 8px; }
+  .prail-btn svg { width: 18px; height: 18px; }
+  .prail .pcard-body { padding-top: 14px; }
+}
+
+html.motion-off .prail-track { transition: none !important; }
+html.motion-off .prail-btn svg { animation: none !important; }

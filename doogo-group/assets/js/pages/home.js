@@ -121,9 +121,9 @@
      다 새겨지면(.is-accent) '하나의 흐름으로'가 블루로 바뀌고 밑줄이 그려집니다.
      화면 밖으로 완전히 나가면 처음 상태로 되돌려, 다시 들어올 때 다시 새깁니다. */
   var EG_STEP = 26; // 글자당 지연(ms)
-  function engrave() {
-    var el = $('[data-engrave]');
-    if (!el) return;
+  // 21차: 같은 새김을 마무리 배너 영문 슬로건(.cbx-home-title · 'Better Tomorrow.' 강조)에도 — data-engrave 가 붙은 문장마다 따로 재생
+  function engrave() { $$('[data-engrave]').forEach(engraveOne); }
+  function engraveOne(el) {
     var full = el.textContent.replace(/\s+/g, ' ').trim();
     var vis = document.createElement('span');
     vis.className = 'eg';
@@ -494,39 +494,7 @@
     return update;
   }
 
-  /* ---------- S6 리더십: 리더 프로필 카드(.pcard) 한 줄 · 넘칠 때만 이전/다음 + 진행 바 ----------
-     1280px 이상은 6장이 한 줄에 다 들어가 버튼이 숨고, 1279px 이하는 가로 스크롤 스냅 + 버튼.
-     카드 생김새 · 등장 모션은 base.css '리더 프로필 카드 공통'. */
-  function leaders() {
-    var wrap = $('[data-ldr]');
-    if (!wrap) return;
-    var track = $('.ldr', wrap), prev = $('[data-ldr-prev]', wrap), next = $('[data-ldr-next]', wrap), fill = $('[data-ldr-fill]', wrap);
-    if (!track) return;
-    var raf = 0;
-    function step() {
-      var it = $('.ldr-item', track);
-      var gap = parseFloat(getComputedStyle(track).columnGap) || 14;
-      return it ? it.getBoundingClientRect().width + gap : track.clientWidth * 0.8;
-    }
-    function sync() {
-      raf = 0;
-      var max = track.scrollWidth - track.clientWidth;
-      var on = max > 4;
-      wrap.classList.toggle('is-scroll', on);
-      if (prev) prev.disabled = !on || track.scrollLeft <= 2;
-      if (next) next.disabled = !on || track.scrollLeft >= max - 2;
-      if (fill) fill.style.setProperty('--p', on ? Math.min(1, (track.scrollLeft + track.clientWidth) / track.scrollWidth).toFixed(4) : '1');
-    }
-    function queue() { if (!raf) raf = requestAnimationFrame(sync); }
-    function go(dir) { track.scrollBy({ left: dir * step(), behavior: motionOff() ? 'auto' : 'smooth' }); }
-    if (prev) prev.addEventListener('click', function () { go(-1); });
-    if (next) next.addEventListener('click', function () { go(1); });
-    track.addEventListener('scroll', queue, { passive: true });
-    window.addEventListener('resize', queue);
-    window.addEventListener('load', queue);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(queue);
-    sync();
-  }
+  /* S6 두고 사람들: 21차부터 타이탄식 무한 루프 줄 — assets/js/people-rail.js 가 맡음 */
 
   /* ---------- 공통: 무한 캐러셀 (S5 브랜드 슬라이더 · S7 커버플로우) ----------
      모든 슬라이드는 한 칸에 겹쳐 있고, 현재 카드 기준 거리 d(… -1, 0, 1 …, 범위 [-n/2, n/2))로 배치합니다.
@@ -964,7 +932,6 @@
   factsCount();
   groupProjects();
   var updaters = [bizStory()].filter(Boolean);
-  leaders();
   hashSettle();
   brandSlider();
   coverflow();

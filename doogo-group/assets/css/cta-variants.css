@@ -54,14 +54,7 @@ html.motion-off .cbx-home-mark { transform: none !important; }
   -webkit-mask-image: radial-gradient(70% 80% at 18% 20%, #000, transparent 72%); mask-image: radial-gradient(70% 80% at 18% 20%, #000, transparent 72%);
 }
 .cbx-home-title { margin-top: 30px; font-family: var(--font-en); font-size: clamp(2.2rem, 7.4vw, 7.25rem); font-weight: 600; line-height: 1.04; letter-spacing: -0.045em; }
-.cbx-home-title em {
-  font-style: normal; color: #C6DBFF;
-  background: linear-gradient(currentColor, currentColor) 0 88% / 0 .05em no-repeat;
-  -webkit-box-decoration-break: clone; box-decoration-break: clone;
-  transition: background-size 1.3s var(--ease) .8s;
-}
-.cbx-home-title.is-in em, html:not(.js) .cbx-home-title em { background-size: 100% .05em; }
-html.motion-off .cbx-home-title em { background-size: 100% .05em; transition: none; }
+/* 슬로건 글자 새김 · 'Better Tomorrow.' 강조는 pages/home.css (data-engrave) */
 .cbx-home-foot {
   display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 28px 48px;
   margin-top: clamp(44px, 5.4vw, 80px); padding-top: clamp(28px, 3vw, 40px); border-top: 1px solid rgba(255, 255, 255, .22);
