@@ -103,7 +103,7 @@ const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '
 const CEO_CAREER = [
   '뉴질랜드 AUT 대학교 비즈니스·마케팅 졸업',
   '現 두고그룹 총괄 대표이사',
-  '前 (주)키위몬 대표이사',
+  '前 (주) 키위몬 대표이사',
 ];
 // 그룹사 대표 · 총괄이사 주요 이력 (21차 · 사용자 확정본, 이 순서 그대로) — leadership.html 의 data-career 와 같게 유지
 const LEADER_CAREER = {
