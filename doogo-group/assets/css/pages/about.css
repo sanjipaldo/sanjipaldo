@@ -98,13 +98,21 @@ main .note { color: var(--muted); }
 /* 1500px 이하에서는 위 글줄(.container)과 같은 폭으로 정렬, 그 이상에서만 넓게 펼침 */
 @media (max-width: 1500px) { .ab-hero-visual { max-width: calc(var(--container) + var(--gutter) * 2); } }
 
-/* 첫 화면 비주얼: 두고그룹 빌딩 — 지주회사 DOOGO HOLDINGS 로비 위로 일곱 개 층에 사업이 하나씩 들어서 있습니다.
-   빌딩은 about.html 안의 아이소메트릭 SVG(이미지 파일 없음). 층 안내판(.ab-plate)은 SVG 좌표의 %(--y · --e)로 층에 맞추고,
-   그룹사 카드(.ab-sat)까지의 연결선(.ab-links)은 about.js 가 실제 위치로 그립니다.
-   무대 크기: --bh(빌딩 높이) · --bx(빌딩 가운데)는 무대 너비 기준(cqw · %). */
+/* 첫 화면 비주얼: 두고그룹 빌딩(정면) — 지주회사 DOOGO HOLDINGS 로비 위로 일곱 개 층에 사업이 하나씩 들어서 있습니다.
+   빌딩은 about.html 안의 HTML · CSS 정면 입면(이미지는 옥상 간판 로고뿐). 층마다 유리에 층 번호 · 회사 · 업종을 새기고
+   그룹사 층은 블루, 지주회사 직영 층(7F · 2F · 로비)은 아이보리 불빛. 그룹사 다섯 곳은 자기 층 줄에 맞춘 돌출 간판(.ab-sat)으로
+   빌딩 오른쪽에 짧은 브래킷으로 붙습니다 — 연결선 없음. 빌딩(.ab-bld)과 간판 목록(.ab-sats)은 같은 줄 높이(--rows)를 나눠 쓰는 격자.
+   크기 변수: --fh 층 높이 · --sp 층 사이 슬래브 · --sh 옥상 간판 · --rh 옥상 난간 · --lh 로비 · --ph 기단 · --bw 빌딩 너비
+   · --nw 층 번호 기둥 · --lw 엘리베이터 샤프트 · --pl 오른쪽 기둥 · --ch 엘리베이터 빛 높이 · --bk 간판 브래킷 · --cw 간판 너비
+   · --gp 유리 안쪽 여백 · --f1/--f2 회사 · 업종 글자 · --tx 빌딩 왼쪽 위치 (데스크톱은 무대 너비 기준 cqw, 1100 이하는 px) */
 .ab-stage-fig { position: relative; margin: 0; }
 .ab-stage {
-  --bx: 38.5%; --bh: 40cqw; --core-x: var(--bx); --core-y: 50%;
+  --fh: 3.6cqw; --sp: .5cqw; --sh: 3.7cqw; --rh: 1.1cqw; --lh: 5.4cqw; --ph: 1.6cqw;
+  --bw: 27cqw; --nw: 2.9cqw; --lw: 1.05cqw; --pl: .55cqw; --ch: 1.5cqw; --bk: 1.4cqw; --cw: 18.4cqw;
+  --gp: 1.1cqw; --f1: clamp(.64rem, .96cqw, .9rem); --f2: clamp(.58rem, .8cqw, .76rem); --fn: clamp(.56rem, .76cqw, .72rem);
+  --drop: -1.6cqw; --slide: -1.4cqw; /* 등장: 층이 내려앉는 거리 · 간판이 밀려 나오는 거리 */
+  --tx: 32.5cqw; --core-x: calc(var(--tx) + var(--bw) / 2); --core-y: 50%;
+  --rows: var(--sh) var(--rh) repeat(7, var(--fh)) var(--lh) var(--ph);
   position: relative; overflow: hidden; isolation: isolate; container-type: inline-size;
   aspect-ratio: 21 / 9; border-radius: clamp(18px, 2.4vw, 32px);
   background: linear-gradient(180deg, #A9C5E8 0%, #BFD5EE 42%, #D2E1F2 78%, #DAE5F3 100%);
@@ -112,13 +120,13 @@ main .note { color: var(--muted); }
 }
 .ab-stage :focus-visible { outline-color: var(--blue); }
 .ab-stage-bg { position: absolute; inset: -12% 0; z-index: -1; pointer-events: none; transform: translate3d(0, calc(var(--py, 0px) * -.3), 0); }
-.ab-stage-bg::before { /* 빌딩 뒤 은은한 빛 */
+.ab-stage-bg::before { /* 빌딩 뒤 은은한 빛 · 바닥 */
   content: ""; position: absolute; inset: 0;
-  background: radial-gradient(30% 62% at var(--core-x) var(--core-y), rgba(255, 255, 255, .62), rgba(255, 255, 255, 0) 70%), radial-gradient(60% 90% at 100% 0%, rgba(10, 93, 226, .16), transparent 70%);
+  background: radial-gradient(26% 60% at var(--core-x) var(--core-y), rgba(255, 255, 255, .66), rgba(255, 255, 255, 0) 70%), radial-gradient(60% 90% at 100% 0%, rgba(10, 93, 226, .16), transparent 70%), linear-gradient(180deg, transparent 72%, rgba(255, 255, 255, .28) 100%);
 }
-.ab-orbit { position: absolute; left: var(--core-x); top: var(--core-y); width: var(--o, 40cqw); aspect-ratio: 1; margin-left: calc(var(--o, 40cqw) / -2); border-radius: 50%; border: 1px solid rgba(255, 255, 255, .5); transform: translateY(-50%); }
-.ab-orbit:nth-child(2) { --o: 66cqw; border-color: rgba(255, 255, 255, .36); }
-.ab-orbit:nth-child(3) { --o: 96cqw; border-color: rgba(255, 255, 255, .24); border-style: dashed; }
+.ab-orbit { position: absolute; left: var(--core-x); top: var(--core-y); width: var(--o, 44cqw); aspect-ratio: 1; margin-left: calc(var(--o, 44cqw) / -2); border-radius: 50%; border: 1px solid rgba(255, 255, 255, .46); transform: translateY(-50%); }
+.ab-orbit:nth-child(2) { --o: 70cqw; border-color: rgba(255, 255, 255, .32); }
+.ab-orbit:nth-child(3) { --o: 100cqw; border-color: rgba(255, 255, 255, .22); border-style: dashed; }
 
 .ab-stage-fg { position: absolute; inset: 0; transform: translate3d(0, calc(var(--py, 0px) * .22), 0); }
 .ab-core-label {
@@ -130,138 +138,160 @@ main .note { color: var(--muted); }
 .ab-core-direct { margin-top: 2px; font-size: .72rem; font-weight: 600; color: var(--ink-2); }
 .ab-core-direct .en { font-size: .68rem; letter-spacing: .06em; color: var(--blue-700); }
 
-/* ----- 빌딩 (SVG viewBox 360 × 516) ----- */
-.ab-bld {
-  position: absolute; top: calc(50% - var(--bh) / 2); left: calc(var(--bx) - var(--bh) * .3488);
-  width: calc(var(--bh) * .6977); height: var(--bh); container-type: inline-size;
+/* ----- 빌딩 + 간판: 두 열(빌딩 · 간판)이 같은 줄 높이(--rows)를 씀 ----- */
+.ab-tower {
+  position: absolute; left: var(--tx); top: 50%; translate: 0 -50%;
+  display: grid; grid-template-columns: var(--bw) calc(var(--bk) + var(--cw));
 }
-.ab-bld-svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.ab-bld-svg polygon, .ab-bld-svg path { stroke-linejoin: round; }
-.ab-bld-shadow { opacity: .9; }
-.ab-pz-t { fill: #EEF4FC; } .ab-pz-l { fill: #D3E1F4; } .ab-pz-r { fill: #AFC6E8; }
-.ab-pz-grid { fill: none; stroke: rgba(10, 93, 226, .13); stroke-width: .8; }
-.ab-pz-sh { fill: rgba(11, 42, 102, .1); }
-.ab-sp-l { fill: #FBFDFF; } .ab-sp-r { fill: #C6D8F2; }
-.ab-gl-l { fill: #1C3A6E; } .ab-gl-r { fill: #102A58; }
-.ab-lit-l { fill: url(#abg-litL); } .ab-lit-r { fill: url(#abg-litR); }
-.ab-mul { fill: none; stroke: rgba(11, 27, 51, .17); stroke-width: .9; }
-.ab-glow { fill: #fff; opacity: 0; pointer-events: none; }
-.ab-glow-r { fill: #D6E7FF; }
-.ab-hl { fill: #fff; stroke: #fff; stroke-width: 1.4; opacity: 0; pointer-events: none; transition: opacity .3s var(--ease); }
-.ab-hl-r { fill: #A9CCFF; }
-.ab-fl-no { font-family: var(--font-en); font-size: 6.2px; font-weight: 600; letter-spacing: .1em; fill: #7487A6; }
-.ab-port { fill: #fff; stroke: var(--blue); stroke-width: 1.4; }
-.ab-door { fill: #0B1B33; } .ab-door-ln { stroke: rgba(255, 255, 255, .35); stroke-width: .8; }
-.ab-canopy-t { fill: #fff; } .ab-canopy-f { fill: var(--blue); }
-.ab-lobby-sign { font-family: var(--font-en); font-size: 8.8px; font-weight: 700; letter-spacing: .16em; fill: var(--ink); }
-.ab-lobby-d { fill: var(--blue); }
-.ab-pod-t { fill: #E1EBF9; }
-.ab-cap { fill: #E4EDFA; }
-.ab-roof-t { fill: #F4F8FE; } .ab-roof-in { fill: #D8E5F7; }
-.ab-mech-l { fill: #F1F5FC; } .ab-mech-r { fill: #B4CAEA; } .ab-mech-t { fill: #fff; }
-.ab-mast { stroke: #6680A8; stroke-width: 1.2; }
-.ab-beacon { fill: var(--sky); }
-.ab-sign { fill: #fff; stroke: rgba(11, 27, 51, .1); stroke-width: .6; }
-.ab-sign-side { fill: #AFC5E6; } .ab-sign-top { fill: #E4EDF9; }
-.ab-sign-leg { stroke: #7B92B8; stroke-width: 1.6; }
-.ab-sign-glint { fill: none; }
-.ab-edge { stroke: rgba(255, 255, 255, .95); stroke-width: 1.2; }
-.ab-core-ln { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: .16 1.3; stroke-dashoffset: .16; opacity: 0; }
-.ab-beam { opacity: 0; }
-.ab-beam-clip, .ab-lv--core, .ab-mul { pointer-events: none; }
-.ab-lv[data-co] { cursor: pointer; }
-
-/* 층 안내판: 빌딩 왼쪽 벽면 모서리(--e)에서 가는 선으로 이어진 이름표 */
-.ab-plates { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; pointer-events: none; }
-.ab-plate { position: absolute; top: calc(var(--y) * 1%); right: calc(100% - var(--e) * 1%); display: flex; align-items: center; translate: 0 -50%; pointer-events: auto; cursor: pointer; }
-.ab-plate-card {
-  display: flex; align-items: center; gap: 7px; padding: 3px 10px 3px 3px; border-radius: 8px; white-space: nowrap;
-  background: rgba(255, 255, 255, .8); color: var(--ink);
-  box-shadow: 0 8px 18px -12px rgba(7, 40, 110, .55), inset 0 0 0 1px rgba(255, 255, 255, .9);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  transition: background-color .3s var(--ease), color .3s var(--ease), box-shadow .3s var(--ease);
+.ab-bld, .ab-sats { grid-row: 1; display: grid; grid-template-rows: var(--rows); min-width: 0; }
+.ab-bld { grid-column: 1; position: relative; }
+.ab-bld::before { /* 빌딩 그림자 (오른쪽 아래로 은은하게) */
+  content: ""; position: absolute; z-index: -1; left: 0; right: 0; top: calc(var(--sh) + var(--rh)); bottom: var(--ph);
+  box-shadow: 1.2cqw 1.4cqw 2.8cqw -.4cqw rgba(9, 40, 100, .3); transition: opacity .8s var(--ease);
 }
-.ab-plate-no { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: var(--ink); color: #fff; font-size: .66rem; font-weight: 600; letter-spacing: .02em; transition: background-color .3s var(--ease); }
-.ab-plate--hold .ab-plate-no { background: var(--blue); }
-.ab-plate-t { display: grid; line-height: 1.18; }
-.ab-plate-t b { font-size: .66rem; font-weight: 600; letter-spacing: .04em; }
-.ab-plate-t small { font-size: .6rem; font-weight: 600; color: var(--ink-2); transition: color .3s var(--ease); }
-.ab-plate-ln { position: relative; flex: none; width: calc((var(--e) - 2.5) * 1cqw); height: 1px; background: linear-gradient(90deg, rgba(11, 27, 51, .18), rgba(11, 27, 51, .45)); }
-.ab-plate-ln::after { content: ""; position: absolute; right: -3px; top: -2.5px; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px var(--ink); }
-.ab-plate.is-hl .ab-plate-card { background: var(--ink); color: #fff; box-shadow: 0 12px 24px -12px rgba(7, 40, 110, .7); }
-.ab-plate.is-hl .ab-plate-no { background: var(--blue); }
-.ab-plate.is-hl .ab-plate-t small { color: rgba(255, 255, 255, .72); }
+/* 옥상 간판 · 피뢰침 */
+.ab-bld-top { position: relative; display: flex; justify-content: center; align-items: flex-start; }
+.ab-sign {
+  position: relative; display: grid; place-items: center; width: 54%; height: 70%; margin-top: 2%; border-radius: .4cqw;
+  background: linear-gradient(180deg, #fff, #F4F8FE); box-shadow: 0 .5cqw 1.2cqw -.6cqw rgba(7, 40, 110, .5), inset 0 0 0 1px rgba(11, 27, 51, .06);
+}
+.ab-sign img { display: block; width: 72%; height: auto; }
+.ab-sign::before, .ab-sign::after { content: ""; position: absolute; top: 100%; width: .3cqw; min-width: 2px; height: calc(var(--sh) * .3); background: linear-gradient(180deg, #7F97BE, #A9BCDA); }
+.ab-sign::before { left: 16%; } .ab-sign::after { right: 16%; }
+.ab-mast { position: absolute; right: 9%; bottom: 0; width: 2px; height: 84%; background: linear-gradient(180deg, #6E87AD, #A6B9D6); }
+.ab-beacon { position: absolute; top: -3px; left: 50%; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--sky); box-shadow: 0 0 8px 2px rgba(76, 141, 246, .55); }
+.ab-bld-roof { margin-inline: -.45cqw; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, #fff 0 34%, #DAE5F4 34% 100%); box-shadow: inset 0 -1px 0 rgba(11, 27, 51, .1); }
+/* 층: 층 번호 기둥 | 엘리베이터 샤프트 | 유리 띠 */
+.ab-fl {
+  position: relative; display: grid; grid-template-columns: var(--nw) var(--lw) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); padding: var(--sp) var(--pl) 0 0;
+  background: linear-gradient(90deg, #E6EEF9 0%, #FDFEFF 16%, #F8FBFF 74%, #DFE9F6 100%);
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, .9), inset -1px 0 0 rgba(11, 27, 51, .07);
+}
+.ab-fl.has-link { cursor: pointer; } /* 그룹사 층: 누르면 간판 링크로 (about.js) */
+.ab-fl-no {
+  grid-column: 1; align-self: center; justify-self: center; display: grid; place-items: center; min-width: 1.9cqw; height: 1.55cqw; padding: 0 .3cqw; border-radius: .35cqw;
+  font-size: var(--fn); font-weight: 600; letter-spacing: .04em; line-height: 1; color: #5B7092;
+  transition: background-color .5s var(--ease), color .5s var(--ease), box-shadow .5s var(--ease);
+}
+.ab-fl-no.is-stop { background: #fff; color: var(--blue); box-shadow: 0 0 0 1px rgba(10, 93, 226, .35), 0 .3cqw .8cqw -.2cqw rgba(10, 93, 226, .45); }
+.ab-fl.is-hl .ab-fl-no { background: var(--blue); color: #fff; box-shadow: none; }
+/* 유리: 불 꺼진 짙은 유리 위에 불빛(::before)이 켜지고, 멀리언 · 반사(::after)가 그 위 */
+.ab-fl-gl {
+  --lit: radial-gradient(70% 150% at 20% -30%, rgba(255, 255, 255, .34), rgba(255, 255, 255, 0) 62%), linear-gradient(180deg, #3D86F7 0%, #1667EA 50%, #0A55D2 100%);
+  --mul: rgba(255, 255, 255, .17);
+  grid-column: 3; position: relative; isolation: isolate; display: flex; align-items: center; min-width: 0; padding: 0 var(--gp);
+  border-radius: 2px; overflow: hidden; background: linear-gradient(180deg, #273D63 0%, #182B4C 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), inset 0 -2px 3px rgba(4, 16, 40, .22);
+  transition: box-shadow .3s var(--ease);
+}
+.ab-fl--hq .ab-fl-gl { --lit: radial-gradient(70% 150% at 22% -30%, #fff, rgba(255, 255, 255, 0) 62%), linear-gradient(180deg, #FFFDF8 0%, #FAF4E6 58%, #F1E7D1 100%); --mul: rgba(120, 96, 50, .1); }
+.ab-fl-gl::before, .ab-fl-gl::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.ab-fl-gl::before { background: var(--lit); }
+.ab-fl-gl::after {
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, .13) 0 13%, transparent 13% 64%, rgba(255, 255, 255, .07) 64% 71%, transparent 71%),
+    linear-gradient(180deg, transparent 0 30%, var(--mul) 30% calc(30% + 1px), transparent calc(30% + 1px)),
+    repeating-linear-gradient(90deg, var(--mul) 0 1px, transparent 1px 12.5%);
+}
+.ab-fl-t { display: flex; align-items: baseline; justify-content: space-between; gap: .6cqw; width: 100%; min-width: 0; color: #fff; white-space: nowrap; line-height: 1.15; }
+.ab-fl-t b { font-size: var(--f1); font-weight: 600; letter-spacing: .08em; text-shadow: 0 1px 2px rgba(4, 30, 90, .25); }
+.ab-fl-t small { font-size: var(--f2); font-weight: 600; color: rgba(255, 255, 255, .8); }
+.ab-fl--hq .ab-fl-t { color: var(--ink); }
+.ab-fl--hq .ab-fl-t b { text-shadow: none; }
+.ab-fl--hq .ab-fl-t small { color: #6A6250; }
+.ab-fl.is-hl .ab-fl-gl { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .95), 0 0 1.6cqw rgba(10, 93, 226, .5); }
+.ab-fl--hq.is-hl .ab-fl-gl { box-shadow: inset 0 0 0 1.5px rgba(10, 93, 226, .55), 0 0 1.4cqw rgba(255, 236, 190, .9); }
+/* 지주회사 직영 층: 간판 자리(오른쪽)에 아이보리 점 + 글자 */
+.ab-fl-tag {
+  position: absolute; left: calc(100% + var(--bk)); top: var(--sp); bottom: 0; display: flex; align-items: center; gap: .55cqw;
+  white-space: nowrap; font-size: var(--f2); font-weight: 600; color: rgba(11, 27, 51, .62);
+}
+.ab-fl-tag::before { content: ""; flex: none; width: .75cqw; height: .75cqw; min-width: 7px; min-height: 7px; border-radius: 50%; background: #FAF3E3; box-shadow: 0 0 0 1px rgba(120, 96, 50, .35), 0 0 .8cqw rgba(255, 236, 190, .9); }
+/* 로비: 간판 띠(DOOGO HOLDINGS) + 아이보리 불빛 유리 · 출입문 · 캐노피 */
+.ab-lobby { grid-column: 3; display: grid; grid-template-rows: 40% minmax(0, 1fr); min-width: 0; }
+.ab-lobby-fa { display: flex; align-items: center; justify-content: space-between; gap: .6cqw; padding: 0 var(--gp); min-width: 0; white-space: nowrap; background: linear-gradient(180deg, #fff, #F2F6FC); box-shadow: inset 0 -1px 0 rgba(11, 27, 51, .08); }
+.ab-lobby-fa b { font-size: var(--f1); font-weight: 600; letter-spacing: .2em; color: var(--ink); }
+.ab-lobby-fa small { display: inline-flex; align-items: center; height: 1.45cqw; min-height: 16px; padding: 0 .6cqw; border-radius: 999px; background: var(--navy); color: #fff; font-size: var(--fn); font-weight: 700; }
+.ab-lobby-sf { grid-column: auto; border-radius: 0 0 2px 2px; }
+.ab-lobby-sf::after { background: linear-gradient(115deg, rgba(255, 255, 255, .16) 0 12%, transparent 12%), repeating-linear-gradient(90deg, var(--mul) 0 1px, transparent 1px 16.666%); }
+.ab-door {
+  position: absolute; left: 50%; bottom: 0; width: 22%; height: 80%; translate: -50% 0; border-radius: 2px 2px 0 0;
+  background: linear-gradient(90deg, transparent calc(50% - .5px), rgba(255, 255, 255, .45) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px)), linear-gradient(180deg, #23406F, #0E2246);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
+}
+.ab-door::before { /* 캐노피 */ content: ""; position: absolute; left: -22%; right: -22%; top: -.42cqw; height: .42cqw; min-height: 3px; border-radius: 2px; background: var(--blue); box-shadow: 0 .3cqw .5cqw -.1cqw rgba(7, 40, 110, .4); }
+/* 기단(플라자): 빌딩보다 넓은 밝은 바닥 + 땅 그림자 */
+.ab-bld-base { position: relative; margin-inline: -2.2cqw; border-radius: 3px; background: linear-gradient(180deg, #fff 0 22%, #E2EAF6 22% 62%, #CBD8EB 100%); box-shadow: 0 1px 0 rgba(255, 255, 255, .6); }
+.ab-bld-base::after { content: ""; position: absolute; z-index: -1; left: -8%; right: -8%; top: 40%; height: 3cqw; min-height: 18px; background: radial-gradient(50% 50% at 50% 50%, rgba(11, 42, 102, .3), transparent 72%); }
+/* 엘리베이터: 7F 유리 위끝 ~ 로비 바닥까지 세로 유리 샤프트 · 빛(.ab-lift-car)이 --k 층(0 = 로비)으로 오르내림 (about.js) */
+.ab-lift {
+  position: absolute; left: var(--nw); width: var(--lw); top: calc(var(--sh) + var(--rh) + var(--sp)); height: calc(7 * var(--fh) + var(--lh) - var(--sp));
+  border-radius: 2px; overflow: hidden; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .16) 50%, rgba(255, 255, 255, .06)), linear-gradient(180deg, #1D3560, #13264A);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); transition: opacity .6s var(--ease);
+}
+.ab-lift-car {
+  position: absolute; left: 20%; right: 20%; bottom: 0; height: var(--ch); border-radius: 2px;
+  background: linear-gradient(180deg, #fff, #D4E4FF); box-shadow: 0 0 .9cqw .25cqw rgba(120, 175, 255, .7);
+  translate: 0 calc(-1 * (var(--lh) + (var(--k, 0) - 1) * var(--fh) + (var(--fh) - var(--sp) - var(--ch)) / 2));
+  transition: translate var(--t, 1.6s) cubic-bezier(.5, 0, .25, 1);
+}
+/* 유리에 스치는 빛 (화면에 보일 때만) */
+.ab-sheen { position: absolute; left: calc(var(--nw) + var(--lw)); right: var(--pl); top: calc(var(--sh) + var(--rh)); height: calc(7 * var(--fh)); overflow: hidden; pointer-events: none; }
+.ab-sheen::before { content: ""; position: absolute; top: -10%; bottom: -10%; left: 0; width: 36%; background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .26) 50%, rgba(255, 255, 255, 0)); transform: translateX(-130%) skewX(-14deg); }
 
-/* 연결선: 층 → 그룹사 카드 (about.js 가 경로를 그림) */
-.ab-links { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.ab-link { transition: opacity .3s var(--ease); }
-.ab-link-base { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; filter: drop-shadow(0 1px 1.5px rgba(10, 60, 160, .2)); transition: stroke .3s var(--ease), stroke-width .3s var(--ease); }
-.ab-link-flow { fill: none; stroke: var(--blue); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 0 46; opacity: 0; }
-.ab-link-end { fill: #fff; stroke: var(--blue); stroke-width: 1.5; }
-.ab-link.is-hl .ab-link-base { stroke: var(--blue); stroke-width: 2.2; }
-.ab-stage-fig.has-hl .ab-link:not(.is-hl) { opacity: .3; }
-
-/* 그룹사 카드: 위에서부터 6F → 1F (층 순서) */
-.ab-sats { position: absolute; z-index: 1; right: 2.6%; top: 0; bottom: 0; width: 22.5%; height: fit-content; margin: auto 0; padding: 0; list-style: none; display: grid; gap: .9cqw; }
+/* ----- 돌출 간판(그룹사 카드): 자기 층 줄(--r)에 · 빌딩 벽에서 짧은 브래킷(::before 두 줄 막대)으로 ----- */
+.ab-sats { grid-column: 2; margin: 0; padding: 0; list-style: none; }
+.ab-sat { grid-row: var(--r); position: relative; display: flex; min-width: 0; padding: var(--sp) 0 0 var(--bk); }
+.ab-sat::before, .ab-sat::after { /* 브래킷: 벽 고정판(세로) + 짧은 팔(가로) — ::after 는 강조 때 블루 */
+  content: ""; position: absolute; left: 0; width: var(--bk); top: calc(var(--sp) + (var(--fh) - var(--sp)) * .3); height: calc((var(--fh) - var(--sp)) * .4);
+  background: linear-gradient(var(--rod) 0 0) left / 3px 100% no-repeat, linear-gradient(var(--rod) 0 0) center / 100% 2px no-repeat;
+  transform-origin: left center; transition: opacity .3s var(--ease);
+}
+.ab-sat::before { --rod: #8EA4C8; }
+.ab-sat::after { --rod: var(--blue); opacity: 0; }
 .ab-sat-link {
-  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0 .95cqw;
-  padding: .5cqw 1cqw .5cqw .5cqw; border-radius: 1.3cqw; color: var(--ink);
-  background: rgba(255, 255, 255, .62); box-shadow: 0 22px 40px -26px rgba(7, 40, 110, .6), inset 0 0 0 1px rgba(255, 255, 255, .85);
+  position: relative; flex: 1; display: flex; align-items: center; gap: .8cqw; min-width: 0; padding: .32cqw .55cqw .32cqw .32cqw; border-radius: .7cqw; color: var(--ink);
+  background: rgba(255, 255, 255, .8); box-shadow: 0 1.2cqw 2.4cqw -1.6cqw rgba(7, 40, 110, .55), inset 0 0 0 1px rgba(255, 255, 255, .9);
   -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-  transition: background-color .3s var(--ease), box-shadow .3s var(--ease), translate .35s var(--ease);
+  transition: background-color .3s var(--ease), box-shadow .3s var(--ease), translate .35s var(--ease), opacity .3s var(--ease);
 }
-.ab-sat-tile { display: block; width: 4.4cqw; aspect-ratio: 1; border-radius: 24%; overflow: hidden; background: #DCE8F7; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8); }
-.ab-sat-tile img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 54%; transition: scale .5s var(--ease); }
-.ab-sat-label { display: grid; gap: 1px; min-width: 0; line-height: 1.3; }
-.ab-sat-label b { font-size: clamp(.7rem, .98cqw, .84rem); font-weight: 600; letter-spacing: .04em; }
-.ab-sat-label small { font-size: clamp(.62rem, .86cqw, .74rem); font-weight: 600; color: var(--ink-2); }
-.ab-sat-fl { justify-self: end; padding: 3px 8px; border-radius: 999px; background: rgba(10, 93, 226, .1); color: var(--blue-700); font-size: .66rem; font-weight: 600; letter-spacing: .04em; transition: background-color .3s var(--ease), color .3s var(--ease); }
-.ab-sat.is-hl .ab-sat-link, .ab-sat-link:focus-visible { background: #fff; translate: -6px 0; box-shadow: 0 26px 44px -24px rgba(7, 40, 110, .7), inset 0 0 0 1.5px var(--blue); }
-.ab-sat.is-hl .ab-sat-fl { background: var(--blue); color: #fff; }
+.ab-sat-tile { flex: none; align-self: stretch; aspect-ratio: 1; border-radius: .5cqw; overflow: hidden; background: #DCE8F7; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8); }
+.ab-sat-tile img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 54%; transition: scale .5s var(--ease); }
+.ab-sat-label { flex: 1; min-width: 0; font-size: var(--f2); font-weight: 600; line-height: 1.22; color: var(--ink); }
+.ab-sat-go { flex: none; width: 1.9cqw; height: 1.9cqw; min-width: 20px; min-height: 20px; padding: .42cqw; border-radius: 50%; background: var(--blue-50); color: var(--blue); transition: background-color .3s var(--ease), color .3s var(--ease); }
+.ab-sat.is-hl .ab-sat-link, .ab-sat-link:focus-visible { background: #fff; translate: .3cqw 0; box-shadow: 0 1.4cqw 2.6cqw -1.5cqw rgba(7, 40, 110, .7), inset 0 0 0 1.5px var(--blue); }
+.ab-sat.is-hl::after { opacity: 1; }
+.ab-sat.is-hl::before { opacity: 0; }
+.ab-sat.is-hl .ab-sat-go { background: var(--blue); color: #fff; }
 .ab-sat.is-hl .ab-sat-tile img { scale: 1.06; }
+.ab-stage-fig.has-hl .ab-sat:not(.is-hl) .ab-sat-link { opacity: .62; }
 
 /* 등장 (about.js: .is-armed → .is-gather → .is-gathered)
-   ① 플라자 · 로비 · 1F … 7F · 옥상 · 간판 순으로 한 층씩 내려앉고(--f) ② 층마다 창에 불이 켜지고 ③ 안내판 · 그룹사 카드 → 연결선 */
-.ab-stage-fig.is-armed .ab-lv { opacity: 0; transform: translateY(-34px); }
-.ab-stage-fig.is-armed .ab-lit { opacity: 0; }
+   ① 기단 · 로비 · 1F … 7F · 난간 · 간판 순으로 한 층씩 내려앉고(--f) ② 아래층부터 유리에 불이 켜지며 엘리베이터 빛이 함께 오르고
+   ③ 불이 켜진 층의 간판이 브래킷과 함께 벽에서 밀려 나옵니다 */
+.ab-stage-fig.is-armed :is(.ab-fl, .ab-bld-roof, .ab-bld-top, .ab-bld-base) { opacity: 0; transform: translateY(var(--drop)); }
+.ab-stage-fig.is-armed .ab-bld::before, .ab-stage-fig.is-armed .ab-lift { opacity: 0; }
+.ab-stage-fig.is-armed .ab-fl-gl::before { opacity: 0; }
+.ab-stage-fig.is-armed :is(.ab-fl-t, .ab-fl-tag) { opacity: 0; }
 .ab-stage-fig.is-armed .ab-core-label { opacity: 0; transform: translateY(10px); }
-.ab-stage-fig.is-armed .ab-plate { opacity: 0; transform: translateX(-10px); }
-.ab-stage-fig.is-armed .ab-sat { opacity: 0; transform: translateX(18px); }
-.ab-stage-fig.is-armed .ab-link-base { stroke-dashoffset: var(--len, 0); }
-.ab-stage-fig.is-armed .ab-link-end { opacity: 0; }
-.ab-stage-fig.is-gather .ab-lv { opacity: 1; transform: none; transition: opacity .5s var(--ease) calc(var(--f) * .13s), transform .75s cubic-bezier(.2, .9, .3, 1.04) calc(var(--f) * .13s); }
-.ab-stage-fig.is-gather .ab-lit { opacity: 1; transition: opacity .55s var(--ease) calc(.85s + var(--f) * .12s); }
+.ab-stage-fig.is-armed .ab-sat { opacity: 0; transform: translateX(var(--slide)); }
+.ab-stage-fig.is-armed .ab-sat::before { transform: scaleX(0); }
+.ab-stage-fig.is-gather :is(.ab-fl, .ab-bld-roof, .ab-bld-top, .ab-bld-base) { opacity: 1; transform: none; transition: opacity .45s var(--ease) calc(var(--f) * .11s), transform .7s cubic-bezier(.2, .9, .3, 1.04) calc(var(--f) * .11s); }
+.ab-stage-fig.is-gather .ab-bld::before { opacity: 1; transition: opacity .9s var(--ease) .4s; }
+.ab-stage-fig.is-gather .ab-lift { opacity: 1; transition: opacity .5s var(--ease) .7s; }
+.ab-stage-fig.is-gather .ab-fl-gl::before { opacity: 1; transition: opacity .5s var(--ease) calc(.78s + var(--f) * .14s); }
+.ab-stage-fig.is-gather :is(.ab-fl-t, .ab-fl-tag) { opacity: 1; transition: opacity .5s var(--ease) calc(.86s + var(--f) * .14s); }
 .ab-stage-fig.is-gather .ab-core-label { opacity: 1; transform: none; transition: opacity .7s var(--ease) .2s, transform .8s var(--ease) .2s; }
-.ab-stage-fig.is-gather .ab-plate { opacity: 1; transform: none; transition: opacity .5s var(--ease) calc(.35s + var(--f) * .13s), transform .6s var(--ease) calc(.35s + var(--f) * .13s); }
-.ab-stage-fig.is-gather .ab-sat { opacity: 1; transform: none; transition: opacity .55s var(--ease) calc(1.3s + var(--i) * .1s), transform .8s var(--ease) calc(1.3s + var(--i) * .1s); }
-.ab-stage-fig.is-gather .ab-link-base { stroke-dashoffset: 0; transition: stroke-dashoffset .9s var(--ease-in-out) calc(1.7s + var(--i) * .12s), stroke .3s var(--ease), stroke-width .3s var(--ease); }
-.ab-stage-fig.is-gather .ab-link-end { opacity: 1; transition: opacity .3s var(--ease) calc(2.5s + var(--i) * .12s); }
-/* 다 지어진 뒤: 마우스 · 포커스 강조는 바로 반응 */
-.ab-stage-fig.is-gathered .ab-lit { transition: opacity .3s var(--ease); }
-.ab-stage-fig.is-gathered .ab-link-flow { opacity: 1; transition: opacity .5s var(--ease); }
-.ab-stage-fig.has-hl .ab-lv:not(.is-hl) .ab-lit { opacity: .55; }
-.ab-lv.is-hl .ab-hl { opacity: .5; }
-.ab-lv.is-hl .ab-hl-r { opacity: .6; }
-/* 화면에 보이는 동안만: 빛이 코어를 타고 오르며 층마다 차례로 밝아지고, 연결선에는 빛 점이 그룹사 쪽으로 흐릅니다 */
-.ab-stage-fig.is-gathered.is-vis .ab-beam { animation: abBeam 6.4s var(--ease-in-out) infinite; }
-.ab-stage-fig.is-gathered.is-vis .ab-core-ln { animation: abCoreLn 6.4s var(--ease-in-out) infinite; }
-.ab-stage-fig.is-gathered.is-vis .ab-glow { animation: abGlow 6.4s ease-in-out calc((var(--f) - 1) * .32s) infinite; }
-.ab-stage-fig.is-gathered.is-vis .ab-link-flow { animation: abLinkFlow 1.6s linear infinite; }
-.ab-stage-fig.is-gathered.is-vis .ab-beacon { animation: abBeacon 2.4s ease-in-out infinite; }
-@keyframes abBeam {
-  0% { opacity: 0; transform: translateY(0); }
-  6% { opacity: 1; }
-  44% { opacity: 1; transform: translateY(-300px); }
-  52%, 100% { opacity: 0; transform: translateY(-330px); }
-}
-@keyframes abCoreLn {
-  0% { opacity: 0; stroke-dashoffset: .16; }
-  5% { opacity: 1; }
-  44% { opacity: 1; stroke-dashoffset: -1; }
-  50%, 100% { opacity: 0; stroke-dashoffset: -1; }
-}
-@keyframes abGlow { 0%, 100% { opacity: 0; } 6% { opacity: .55; } 24% { opacity: 0; } }
-@keyframes abLinkFlow { to { stroke-dashoffset: -46; } }
+.ab-stage-fig.is-gather .ab-sat { opacity: 1; transform: none; transition: opacity .5s var(--ease) calc(1s + var(--f) * .14s), transform .7s var(--ease) calc(1s + var(--f) * .14s); }
+.ab-stage-fig.is-gather .ab-sat::before { transform: none; transition: transform .45s var(--ease) calc(.9s + var(--f) * .14s), opacity .3s var(--ease); }
+/* 다 지어진 뒤: 마우스 · 포커스 강조는 바로 반응 (다른 그룹사 층은 불빛을 살짝 낮춤) */
+.ab-stage-fig.is-gathered .ab-fl-gl::before { transition: opacity .3s var(--ease); }
+.ab-stage-fig.is-gathered.has-hl .ab-fl:not(.is-hl, .ab-fl--hq) .ab-fl-gl::before { opacity: .78; }
+/* 화면에 보이는 동안만: 유리에 빛이 스치고 피뢰침 불빛이 깜박임 (엘리베이터는 about.js) */
+.ab-stage-fig.is-gathered.is-vis .ab-sheen::before { animation: abSheen 11s var(--ease-in-out) 1.2s infinite; }
+.ab-stage-fig.is-gathered.is-vis .ab-beacon { animation: abBeacon 2.6s ease-in-out infinite; }
+@keyframes abSheen { 0% { transform: translateX(-130%) skewX(-14deg); } 24%, 100% { transform: translateX(320%) skewX(-14deg); } }
 @keyframes abBeacon { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
 
 .ab-film {
@@ -289,70 +319,74 @@ main .note { color: var(--muted); }
 .ab-stage-cap .en { font-size: .7rem; font-weight: 600; letter-spacing: .18em; color: var(--blue); padding-right: 12px; border-right: 1px solid var(--line); }
 @keyframes abRing { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
 
-/* 무대 반응형 — 1100 이하: 16:9 · 760 이하: 빌딩 위 · 그룹사 카드 격자 아래 */
-@media (max-width: 1100px) and (min-width: 761px) {
-  .ab-stage { aspect-ratio: 16 / 9; --bh: 50cqw; --bx: 38%; }
-  .ab-sats { width: 26%; gap: 1.2cqw; }
-  .ab-sat-tile { width: 5.4cqw; }
-  .ab-sat-link { padding: .6cqw 1.2cqw .6cqw .6cqw; gap: 0 1.1cqw; border-radius: 1.6cqw; }
-  .ab-sat-label b { font-size: .72rem; }
-  .ab-sat-label small { font-size: .64rem; }
-  .ab-stage-cap { height: 34px; padding: 0 12px; gap: 9px; font-size: .78rem; }
-  .ab-stage-cap .en { padding-right: 9px; font-size: .62rem; }
-  .ab-film { min-height: 54px; padding: 6px 18px 6px 6px; gap: 10px; }
-  .ab-film-ring { width: 42px; height: 42px; }
-  .ab-film-txt strong { font-size: .92rem; }
-}
-@media (max-width: 900px) and (min-width: 761px) {
-  .ab-stage { --bx: 41%; }
-  .ab-plate-t small { display: none; }
-  .ab-sat-label small { display: none; }
-}
-@media (max-width: 760px) {
+/* 무대 반응형 — 1100 이하: 위에 지주회사 글, 아래 가운데 빌딩 + 간판(px 크기) · 영상 버튼은 아래 가장자리에 걸침
+   760 이하: 빌딩이 폭을 채우고 간판은 3D 타일만(설명은 화면 낭독용) · 유리에 회사 · 업종 두 줄 */
+@media (max-width: 1100px) {
   .ab-stage-fig { margin-bottom: 46px; }
-  .ab-stage { aspect-ratio: auto; padding: 18px 14px 46px; }
+  .ab-stage {
+    --fh: 50px; --sp: 7px; --sh: 50px; --rh: 12px; --lh: 74px; --ph: 18px;
+    --bw: clamp(360px, 45cqw, 430px); --nw: 36px; --lw: 12px; --pl: 7px; --ch: 18px; --bk: 16px; --cw: clamp(230px, 28cqw, 270px);
+    --gp: 14px; --f1: .8rem; --f2: .7rem; --fn: .66rem; --core-x: 50%; --core-y: 58%; --drop: -18px; --slide: -16px;
+    aspect-ratio: auto; padding: 24px 24px 64px;
+  }
   .ab-stage-fg { position: relative; inset: auto; }
   .ab-core-label { position: relative; left: auto; top: auto; }
-  .ab-core-label b { font-size: .92rem; }
-  .ab-bld { position: relative; top: auto; left: auto; width: 64%; height: auto; aspect-ratio: 360 / 516; margin: 6px 0 0 auto; }
-  .ab-links { display: none; }
-  .ab-plate-card { gap: 5px; padding: 2px 7px 2px 2px; border-radius: 6px; }
-  .ab-plate-no { width: 17px; height: 17px; border-radius: 4px; font-size: .52rem; }
-  .ab-plate-t b { font-size: .56rem; letter-spacing: .02em; }
-  .ab-plate-t small { display: none; }
-  .ab-sats { position: relative; inset: auto; width: auto; height: auto; margin: 16px 0 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .ab-sat:last-child { grid-column: 1 / -1; }
-  .ab-sat-link { grid-template-columns: auto minmax(0, 1fr); gap: 0 8px; padding: 6px 8px 6px 6px; border-radius: 12px; }
-  .ab-sat-tile { width: 36px; }
-  .ab-sat-label b { font-size: .66rem; letter-spacing: .01em; }
-  .ab-sat-label small { font-size: .6rem; line-height: 1.3; }
-  .ab-sat-fl { position: absolute; left: 2px; top: 2px; padding: 1px 5px; font-size: .52rem; background: var(--blue); color: #fff; }
-  .ab-sat.is-hl .ab-sat-link, .ab-sat-link:focus-visible { translate: 0 -2px; }
-  .ab-stage-cap { display: none; }
+  .ab-tower { position: relative; left: auto; top: auto; translate: none; width: fit-content; margin: 22px auto 0; }
+  .ab-fl-no { min-width: 24px; height: 20px; padding: 0 4px; border-radius: 5px; }
+  .ab-fl-no.is-stop { box-shadow: 0 0 0 1px rgba(10, 93, 226, .35), 0 3px 8px -2px rgba(10, 93, 226, .45); }
+  .ab-fl-tag { gap: 7px; }
+  .ab-fl-tag::before { width: 8px; height: 8px; }
+  .ab-lobby-fa small { height: 18px; padding: 0 8px; }
+  .ab-sign { border-radius: 5px; }
+  .ab-sign::before, .ab-sign::after { width: 3px; }
+  .ab-door::before { top: -4px; height: 4px; }
+  .ab-bld-base { margin-inline: -22px; }
+  .ab-bld::before { box-shadow: 14px 16px 30px -6px rgba(9, 40, 100, .28); }
+  .ab-lift-car { box-shadow: 0 0 10px 3px rgba(120, 175, 255, .7); }
+  .ab-sat-link { gap: 10px; padding: 4px 8px 4px 4px; border-radius: 10px; box-shadow: 0 14px 28px -18px rgba(7, 40, 110, .55), inset 0 0 0 1px rgba(255, 255, 255, .9); }
+  .ab-sat-tile { border-radius: 7px; }
+  .ab-sat-go { width: 24px; height: 24px; padding: 5px; }
+  .ab-sat.is-hl .ab-sat-link, .ab-sat-link:focus-visible { translate: 3px 0; box-shadow: 0 16px 30px -18px rgba(7, 40, 110, .7), inset 0 0 0 1.5px var(--blue); }
+  .ab-stage-cap { height: 34px; padding: 0 12px; gap: 9px; font-size: .78rem; }
+  .ab-stage-cap .en { padding-right: 9px; font-size: .62rem; }
   /* 영상 버튼은 무대 아래 가장자리에 걸쳐 가운데 */
   .ab-film { left: 50%; bottom: -40px; translate: -50% 0; white-space: nowrap; min-height: 54px; padding: 6px 18px 6px 6px; gap: 10px; }
   .ab-film:hover { translate: -50% -2px; }
   .ab-film-ring { width: 42px; height: 42px; }
   .ab-film-txt strong { font-size: .94rem; }
 }
+@media (max-width: 760px) {
+  .ab-stage {
+    --fh: 50px; --sp: 6px; --sh: 44px; --rh: 10px; --lh: 70px; --ph: 16px;
+    --nw: 28px; --lw: 9px; --pl: 6px; --ch: 14px; --bk: 9px; --cw: 44px;
+    --gp: 11px; --f1: .72rem; --f2: .62rem; --fn: .6rem;
+    padding: 18px 14px 58px;
+  }
+  .ab-core-label b { font-size: .92rem; }
+  .ab-tower { width: auto; margin-top: 26px; grid-template-columns: minmax(0, 1fr) calc(var(--bk) + var(--cw)); }
+  .ab-fl-no { min-width: 21px; height: 18px; padding: 0 3px; border-radius: 4px; }
+  .ab-fl-t { flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; }
+  .ab-fl-t b { letter-spacing: .05em; }
+  .ab-fl-tag { display: none; }
+  .ab-lobby-fa b { letter-spacing: .12em; }
+  .ab-bld-base { margin-inline: -10px; }
+  .ab-sign { width: 62%; }
+  /* 간판: 3D 타일 + 모서리 화살표만 (설명은 sr-only 처럼 숨겨 화면 낭독에 남김) */
+  .ab-sat-link { padding: 3px; border-radius: 9px; }
+  .ab-sat-tile { border-radius: 6px; }
+  .ab-sat-label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ab-sat-go { position: absolute; right: -5px; bottom: -5px; width: 18px; height: 18px; min-width: 0; min-height: 0; padding: 4px; background: var(--blue); color: #fff; box-shadow: 0 0 0 2px #fff; }
+  .ab-sat.is-hl .ab-sat-link, .ab-sat-link:focus-visible { translate: 2px 0; }
+  .ab-stage-cap { display: none; }
+}
 @media (max-width: 380px) {
-  .ab-bld { width: 59%; }
-  .ab-plate-card { gap: 4px; padding-right: 6px; }
-  .ab-plate-no { width: 15px; height: 15px; font-size: .48rem; }
-  .ab-plate-t b { font-size: .52rem; letter-spacing: 0; }
-  .ab-sat-link { gap: 0 7px; padding-right: 6px; }
-  .ab-sat-tile { width: 34px; }
-  .ab-sat-label b { font-size: .6rem; }
-  .ab-sat-label small { font-size: .56rem; }
+  .ab-stage { --nw: 25px; --lw: 8px; --gp: 9px; --f1: .66rem; --f2: .58rem; --cw: 42px; --bk: 8px; }
+  .ab-lobby-fa b { letter-spacing: .08em; }
+  .ab-lobby-fa small { padding: 0 6px; }
 }
 @media (max-width: 340px) {
-  .ab-sats { grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  .ab-sat:last-child { grid-column: auto; }
-  .ab-sat-link { padding-block: 4px; }
-  .ab-sat-tile { width: 30px; }
-  .ab-sat-label { grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 0 6px; }
-  .ab-plate-card { padding-block: 1px; }
-  .ab-plate-no { width: 13px; height: 13px; border-radius: 3px; }
+  .ab-stage { --fh: 46px; --cw: 38px; --f1: .62rem; }
+  .ab-lobby-fa small { display: none; }
 }
 
 /* ---------- 01 INTRO ---------- */
@@ -1200,9 +1234,10 @@ html.soft-motion .ab-chain-scene { --tx: 0deg !important; --ty: 0deg !important;
 
 /* 움직임 멈추기 (사용자가 왼쪽 아래 버튼으로 고른 경우만 · base.css 의 html.motion-off) */
 html.motion-off .ab-stage-bg, html.motion-off .ab-stage-fg { transform: none !important; }
-html.motion-off :is(.ab-beam, .ab-core-ln, .ab-glow) { animation: none !important; opacity: 0 !important; }
-html.motion-off :is(.ab-link-flow, .ab-beacon) { animation: none !important; }
-html.motion-off .ab-link-base { stroke-dasharray: none !important; stroke-dashoffset: 0 !important; }
+html.motion-off .ab-sheen::before, html.motion-off .ab-beacon { animation: none !important; }
+html.motion-off .ab-stage-fig :is(.ab-fl, .ab-bld-roof, .ab-bld-top, .ab-bld-base, .ab-fl-t, .ab-fl-tag, .ab-sat, .ab-lift, .ab-core-label) { transition-delay: 0s !important; }
+html.motion-off .ab-stage-fig .ab-fl-gl::before, html.motion-off .ab-stage-fig .ab-sat::before, html.motion-off .ab-stage-fig .ab-bld::before { transition-delay: 0s !important; }
+html.motion-off .ab-lift-car { transition: none !important; }
 html.motion-off .ab-vision-track, html.motion-off .ab-map-pulse, html.motion-off .ab-film-ring::after { animation: none !important; }
 html.motion-off .ab-map-arc--flow { stroke-dashoffset: 0; }
 html.motion-off .ab-map-traveler { display: none; }

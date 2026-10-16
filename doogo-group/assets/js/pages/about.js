@@ -1,6 +1,6 @@
 /* =========================================================
    DOOGO GROUP — about.js (그룹 소개)
-   히어로(두고그룹 빌딩 — 층별 사업 · 그룹사 연결선 · 패럴랙스) · 첫 화면 숫자 굴림 · 소개 문장 글자 새김 · 태그라인 스크롤 채움
+   히어로(두고그룹 빌딩 정면 — 층별 사업 · 층에 붙은 그룹사 간판 · 엘리베이터 빛 · 패럴랙스) · 첫 화면 숫자 굴림 · 소개 문장 글자 새김 · 태그라인 스크롤 채움
    · 그룹 조직도(지주회사 → 연결선 그리기 → 그룹사 · 흐르는 빛) · 연혁 숫자 굴림 · 연혁 진행선 · 화면 밖 무한 모션 정지
    · 탭(그룹 소개 · 비전과 철학 · 그룹 구조 · 주요 연혁 · 국내외 거점 — 주소 #앵커 연동, 맨 아래)
    모션은 OS 설정과 관계없이 재생합니다. 사용자가 '움직임 멈추기'를 고르면(window.DOOGO.motionOff()) 최종 상태로 보여 주고,
@@ -171,63 +171,19 @@
 
   /* 소개 문장 글자 새김(data-engrave)은 site.js 공용 (23차) */
 
-  /* ---------- 히어로 무대: 두고그룹 빌딩 ----------
-     지주회사 로비 위로 일곱 개 층(사업)이 쌓이고, 층마다 맡은 그룹사 카드로 선이 이어집니다.
-     연결선은 층의 오른쪽 벽면 점(.ab-port, SVG 좌표)에서 카드 왼쪽 가운데까지 — 창 크기가 바뀌면 다시 계산합니다.
-     좌표는 offsetLeft/Top(등장 · 패럴랙스 transform 의 영향 없음)과 SVG viewBox 배율로 구합니다.
-     등장: .is-armed → .is-gather(층 쌓기 · 불 켜기 · 안내판 · 카드 · 선 그리기) → .is-gathered(코어 빛 · 층 반짝임 · 흐르는 빛 점, 화면에 보일 때만 .is-vis)
-     강조: 카드에 마우스 · 포커스 → 그 층 · 안내판 · 선이 함께 밝아지고, 층 · 안내판에 마우스를 올려도 같은 짝이 밝아집니다. */
+  /* ---------- 히어로 무대: 두고그룹 빌딩 (정면) ----------
+     지주회사 로비 위로 일곱 개 층(사업)이 쌓이고, 그룹사 다섯 곳은 자기 층 옆 돌출 간판(카드)으로 붙습니다 — 위치는 CSS 격자(--rows)라 계산 없음.
+     등장: .is-armed → .is-gather(층 쌓기 · 아래층부터 불 켜기 · 엘리베이터 빛이 7F 까지 오름 · 간판) → .is-gathered
+     그 뒤 화면에 보이는 동안만(.is-vis) 엘리베이터가 천천히 층을 오가고 멈춘 층 번호가 밝아집니다(setTimeout 사슬 · CSS transition, rAF 없음).
+     강조: 간판에 마우스 · 포커스 → 그 층 유리 · 층 번호 · 브래킷이 함께 밝아지고, 층에 마우스를 올려도 같은 짝이 밝아집니다. 그룹사 층을 누르면 간판 링크로 이동. */
   if (stageFig) (function () {
-    var NS = 'http://www.w3.org/2000/svg';
-    var fg = $('.ab-stage-fg', stageFig);
-    var bld = $('.ab-bld', stageFig);
-    var bsvg = $('.ab-bld-svg', stageFig);
-    var linksSvg = $('.ab-links', stageFig);
-    if (!fg || !bld || !bsvg || !linksSvg) return;
-    var vb = bsvg.viewBox.baseVal;
-    var mk = function (tag, cls) { var el = document.createElementNS(NS, tag); el.setAttribute('class', cls); return el; };
-    var links = $$('.ab-sat', stageFig).map(function (sat, i) {
-      var key = sat.getAttribute('data-co');
-      var port = $('.ab-lv[data-co="' + key + '"] .ab-port', bsvg);
-      var g = mk('g', 'ab-link'), base = mk('path', 'ab-link-base'), flow = mk('path', 'ab-link-flow'), end = mk('circle', 'ab-link-end');
-      g.setAttribute('data-co', key); g.style.setProperty('--i', i);
-      end.setAttribute('r', '3.5');
-      g.appendChild(base); g.appendChild(flow); g.appendChild(end);
-      linksSvg.appendChild(g);
-      return { sat: sat, port: port, g: g, base: base, flow: flow, end: end };
-    });
-    // anc 기준 위치 (offsetParent 를 따라 더함)
-    var offIn = function (el, anc) {
-      var x = 0, y = 0;
-      while (el && el !== anc) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; }
-      return { x: x, y: y };
-    };
-    var layoutStage = function () {
-      var W = fg.offsetWidth, H = fg.offsetHeight;
-      if (!W || !bld.offsetWidth || getComputedStyle(linksSvg).display === 'none') return;
-      linksSvg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-      var b = offIn(bld, fg), k = bld.offsetWidth / vb.width;
-      links.forEach(function (l) {
-        if (!l.port) return;
-        var px = b.x + (+l.port.getAttribute('cx') - vb.x) * k, py = b.y + (+l.port.getAttribute('cy') - vb.y) * k;
-        var card = l.sat.firstElementChild, c = offIn(card, fg);
-        var cx = c.x - 6, cy = c.y + card.offsetHeight / 2, h = Math.max(24, (cx - px) * 0.5);
-        var d = 'M' + px.toFixed(1) + ',' + py.toFixed(1) + 'C' + (px + h).toFixed(1) + ',' + py.toFixed(1) + ' ' + (cx - h).toFixed(1) + ',' + cy.toFixed(1) + ' ' + cx.toFixed(1) + ',' + cy.toFixed(1);
-        l.base.setAttribute('d', d); l.flow.setAttribute('d', d);
-        l.end.setAttribute('cx', cx.toFixed(1)); l.end.setAttribute('cy', cy.toFixed(1));
-        var len = l.base.getTotalLength ? l.base.getTotalLength() : 0;
-        l.base.style.strokeDasharray = len.toFixed(1); // 선 그리기: dashoffset len → 0 (about.css)
-        l.g.style.setProperty('--len', len.toFixed(1));
-      });
-    };
-    layoutStage();
-    var stageRaf = 0;
-    var relayout = function () { cancelAnimationFrame(stageRaf); stageRaf = requestAnimationFrame(layoutStage); };
-    window.addEventListener('resize', relayout);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout); // 글꼴이 바뀌면 카드 높이가 달라짐
-    $$('img', stageFig).forEach(function (im) { if (!im.complete) im.addEventListener('load', relayout); });
+    var car = $('.ab-lift-car', stageFig);
+    if (!car) return;
+    var floors = $$('.ab-fl', stageFig); // 위(7F)부터 로비까지
+    var stops = floors.map(function (fl) { return $('.ab-fl-no', fl); }).reverse(); // [0] 로비 · [1] 1F … [7] 7F
+    var linkOf = function (key) { var a = $('.ab-sat[data-co="' + key + '"] .ab-sat-link', stageFig); return a; };
 
-    // 강조: 같은 data-co 의 층 · 안내판 · 카드 · 선
+    // 강조: 같은 data-co 의 층 · 간판
     var hlKey = null;
     var hl = function (key) {
       if (key === hlKey) return;
@@ -245,26 +201,62 @@
       a.addEventListener('focus', function () { hl(key); });
       a.addEventListener('blur', function () { hl(null); });
     });
+    // 그룹사 층(빌딩 그림은 aria-hidden)을 마우스로 누르면 같은 간판 링크로 — 키보드는 간판 링크로 이동
+    floors.forEach(function (fl) {
+      var a = linkOf(fl.getAttribute('data-co'));
+      if (!a) return;
+      fl.classList.add('has-link');
+      fl.addEventListener('click', function () { a.click(); });
+    });
+
+    // 엘리베이터: --k 층(0 = 로비)으로 --t 동안 이동 (about.css 의 .ab-lift-car translate)
+    var liftK = 0, liftTimer = 0, liftOn = false, liftIdx = 0, built = false;
+    var tour = [3, 6, 1, 4, 0, 5, 2, 7]; // 들르는 층 순서 (반복)
+    var mark = function (k) { stops.forEach(function (s, i) { if (s) s.classList.toggle('is-stop', i === k); }); };
+    var liftTo = function (k, ms) { car.style.setProperty('--t', ms + 'ms'); car.style.setProperty('--k', k); liftK = k; };
+    var liftStep = function () {
+      var k = tour[liftIdx++ % tour.length];
+      if (k === liftK) k = tour[liftIdx++ % tour.length];
+      var ms = 1100 + Math.abs(k - liftK) * 420; // 멀수록 조금 더 오래, 그래도 차분하게
+      mark(-1);
+      liftTo(k, ms);
+      liftTimer = setTimeout(function () { mark(k); liftTimer = setTimeout(liftStep, 3200); }, ms);
+    };
+    var syncLift = function () {
+      var live = built && stageFig.classList.contains('is-vis') && !motionOff();
+      if (live === liftOn) return;
+      liftOn = live;
+      clearTimeout(liftTimer);
+      if (live) liftTimer = setTimeout(liftStep, 2400);
+    };
+    var parkLift = function () { clearTimeout(liftTimer); liftOn = false; mark(-1); liftTo(0, 0); }; // 움직임 멈추기: 로비에 세워 둠
 
     var gathered = false, gTimers = [];
-    var gatherNow = function () { gTimers.forEach(clearTimeout); gathered = true; stageFig.classList.remove('is-armed'); stageFig.classList.add('is-gather', 'is-gathered'); };
+    var gatherNow = function () {
+      gTimers.forEach(clearTimeout); gathered = true; built = true;
+      stageFig.classList.remove('is-armed'); stageFig.classList.add('is-gather', 'is-gathered');
+      parkLift();
+    };
     if (!hasIO || motionOff()) gatherNow();
-    else stageFig.classList.add('is-armed');
+    else { stageFig.classList.add('is-armed'); liftTo(0, 0); }
     if (hasIO) {
       new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
-          stageFig.classList.toggle('is-vis', en.isIntersecting); // 화면 밖이면 코어 빛 · 층 반짝임 · 빛 점 · 영상 버튼 링 정지
+          stageFig.classList.toggle('is-vis', en.isIntersecting); // 화면 밖이면 유리 빛 · 피뢰침 · 엘리베이터 · 영상 버튼 링 정지
           if (en.isIntersecting && !gathered && en.intersectionRatio >= 0.2) {
             gathered = true;
-            layoutStage();
             // 첫 화면에서는 무대가 떠오르는(data-reveal scale, --d .2s) 동안 조금 기다렸다가 짓기 시작합니다
             gTimers.push(setTimeout(function () { stageFig.classList.add('is-gather'); }, 220));
-            gTimers.push(setTimeout(function () { stageFig.classList.add('is-gathered'); }, 220 + 2900));
+            // 로비 불이 켜질 무렵 엘리베이터 빛이 출발해 아래층부터 켜지는 불과 함께 7F 까지 오릅니다
+            gTimers.push(setTimeout(function () { if (!motionOff()) liftTo(7, 1150); }, 220 + 900));
+            gTimers.push(setTimeout(function () { if (!motionOff()) mark(7); }, 220 + 2050));
+            gTimers.push(setTimeout(function () { stageFig.classList.add('is-gathered'); built = true; syncLift(); }, 220 + 2700));
           }
+          syncLift();
         });
       }, { threshold: [0, 0.2] }).observe(stageFig);
     }
-    onMotion.push(function (off) { if (off) gatherNow(); });
+    onMotion.push(function (off) { if (off) gatherNow(); else syncLift(); });
   })();
 
   /* ---------- 공통: 숫자 띠 굴림 (0–9 세로 띠를 transform 으로 올려 멈춤) ---------- */

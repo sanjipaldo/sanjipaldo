@@ -19,15 +19,16 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://www.doogogroup.com/assets/img/og/og-doogo-holdings-2.jpg">
   <link rel="icon" href="favicon.ico" sizes="48x48">
-  <link rel="icon" href="assets/img/logo/favicon-d-32.png" type="image/png" sizes="32x32">
-  <link rel="apple-touch-icon" href="assets/img/logo/apple-touch-icon-d.png">
+  <link rel="icon" href="assets/img/logo/favicon-d2.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/img/logo/favicon-d2-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/img/logo/apple-touch-icon-d2.png">
   <link rel="manifest" href="site.webmanifest">
   <link rel="stylesheet" href="assets/fonts/pretendard/pretendardvariable-dynamic-subset.css?v=80e2dfd2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/css/base.css?v=7afb5562">
-  <link rel="stylesheet" href="assets/css/pages/about.css?v=e01ecab3">
+  <link rel="stylesheet" href="assets/css/pages/about.css?v=b5632406">
   <link rel="stylesheet" href="assets/css/pages/about-vision.css?v=b884b1c8">
   <link rel="stylesheet" href="assets/css/pages/about-loc.css?v=c9ee8c33">
   <link rel="stylesheet" href="assets/css/pages/about-tl.css?v=6da809e3">
@@ -248,207 +249,41 @@
     </div>
 
     <div class="container-wide ab-hero-visual">
-      <!-- 두고그룹 빌딩: 지주회사 DOOGO HOLDINGS 로비 위로 일곱 개 층에 사업이 하나씩 들어서 있고, 층마다 맡은 그룹사로 선이 이어집니다.
-           빌딩은 손으로 그린 아이소메트릭 SVG(이미지 파일 없음) · 층 위치와 연결선은 about.js 가 실제 크기로 계산합니다.
-           등장: 1층부터 한 층씩 쌓이고(--f) → 창에 불이 켜지고 → 빛이 코어를 타고 오르며 → 연결선이 그려진 뒤 빛 점이 그룹사로 흐릅니다. -->
+      <!-- 두고그룹 빌딩(정면): 지주회사 DOOGO HOLDINGS 로비 위로 일곱 개 층에 사업이 하나씩 들어서 있습니다.
+           층마다 유리에 층 번호 · 회사 · 업종을 새기고(그룹사 층은 블루, 지주회사 직영 층은 아이보리 불빛),
+           그룹사 다섯 곳은 자기 층 높이에 맞춘 돌출 간판(카드)으로 빌딩 오른쪽에 짧은 브래킷으로 붙습니다 — 연결선 없이 한 줄씩 읽힙니다.
+           빌딩과 간판은 같은 줄 높이(about.css 의 --rows)를 나눠 쓰는 격자라 위치를 JS 로 재지 않습니다. 빌딩은 HTML · CSS 로 그림(이미지는 옥상 간판 로고뿐).
+           등장: 기단 · 로비부터 한 층씩 내려앉고(--f) → 아래층부터 불이 켜지며 엘리베이터 빛이 함께 오르고 → 불이 켜진 층의 간판이 벽에서 밀려 나옵니다.
+           그 뒤 화면에 보이는 동안만 엘리베이터가 천천히 층을 오가고(about.js) 유리에 빛이 스칩니다. -->
       <figure class="ab-stage-fig" data-reveal="scale" style="--d:.2s" data-stage>
         <div class="ab-stage">
           <div class="ab-stage-bg" aria-hidden="true"><span class="ab-orbit"></span><span class="ab-orbit"></span><span class="ab-orbit"></span></div>
           <div class="ab-stage-fg">
             <p class="ab-core-label" aria-hidden="true"><small>지주회사</small><b class="en">DOOGO HOLDINGS</b><span class="ab-core-direct"><span class="en">DOOGO CLASS · DOOGOFOOD</span></span></p>
-            <svg class="ab-links" aria-hidden="true" focusable="false"></svg>
-            <div class="ab-bld" aria-hidden="true">
-              <svg class="ab-bld-svg" viewBox="0 34 360 516" focusable="false">
-              <defs>
-              <linearGradient id="abg-litL" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EEF6FF"/><stop offset=".44" stop-color="#C3DBFB"/><stop offset=".52" stop-color="#E6F0FE"/><stop offset="1" stop-color="#A3C4F2"/></linearGradient>
-              <linearGradient id="abg-litR" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5E9EFB"/><stop offset=".5" stop-color="#1F6CEB"/><stop offset=".58" stop-color="#4A8DF5"/><stop offset="1" stop-color="#0A4FC8"/></linearGradient>
-              <linearGradient id="abg-beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-              <linearGradient id="abg-core" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".25" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#9CC3FF" stop-opacity=".2"/></linearGradient>
-              <radialGradient id="abg-shadow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#0B2A66" stop-opacity=".32"/><stop offset="1" stop-color="#0B2A66" stop-opacity="0"/></radialGradient>
-              <clipPath id="abg-tower"><polygon points="76.1,398.0 180.0,458.0 283.9,398.0 283.9,132.0 180.0,72.0 76.1,132.0"/></clipPath>
-              <symbol id="abg-d" viewBox="241.6 224.9 85.3 88.7"><path d="M321.65 264.98 311.5 259.5v15.25l3.27 2.04c3.74 2.34 8.68.6 10.1-3.58 1.09-3.16-.27-6.65-3.22-8.23"/><path d="M301.91 226.88c-3.98 0-7.2 3.22-7.2 7.2v44.7c0 5.12-1.75 9.38-5.34 13.01-3.59 3.63-7.86 5.4-13.07 5.4-5.12 0-9.37-1.77-13-5.4-3.64-3.63-5.4-7.89-5.4-13.01s1.76-9.37 5.4-13.01c3.63-3.63 7.89-5.34 13-5.4 8.57-.09 14.09 4.55 16.21 6.74v-16.49c-2.26-1.35-8.25-4.41-16.21-4.54-5.86-.09-11.36 1.47-16.35 4.36-4.98 2.88-8.99 6.89-11.92 11.92-2.94 5.03-4.43 10.55-4.43 16.42 0 5.96 1.5 11.51 4.43 16.49 2.93 4.98 6.94 8.99 11.91 11.91 4.99 2.94 10.49 4.43 16.36 4.43 5.96 0 11.51-1.49 16.5-4.43 4.97-2.93 8.98-6.93 11.91-11.91 2.46-4.17 3.89-8.75 4.29-13.63l.11-47.54c.01-3.98-3.22-7.22-7.2-7.22"/></symbol>
-              </defs>
-              <ellipse class="ab-bld-shadow" cx="198" cy="480" rx="190" ry="70" fill="url(#abg-shadow)"/>
-              <g class="ab-lv ab-lv--plaza" style="--f:0">
-              <polygon class="ab-pz-l" points="24.1,450.0 180.0,540.0 180.0,534.0 24.1,444.0"/>
-              <polygon class="ab-pz-r" points="180.0,540.0 335.9,450.0 335.9,444.0 180.0,534.0"/>
-              <polygon class="ab-pz-t" points="180.0,354.0 335.9,444.0 180.0,534.0 24.1,444.0"/>
-              <path class="ab-pz-grid" d="M206,369L50.1,459M154,369L309.9,459M232,384L76.1,474M128,384L283.9,474M257.9,399L102.1,489M102.1,399L257.9,489M283.9,414L128,504M76.1,414L232,504M309.9,429L154,519M50.1,429L206,519"/>
-              <polygon class="ab-pz-sh" points="180.0,520.0 311.6,444.0 337.6,451.0 207.7,526.0"/>
-              </g>
-              <g class="ab-lv ab-lv--lobby" data-co="hold" style="--f:1">
-              <polygon class="ab-sp-l" points="48.4,444.0 180.0,520.0 180.0,474.0 48.4,398.0"/>
-              <polygon class="ab-sp-r" points="180.0,520.0 311.6,444.0 311.6,398.0 180.0,474.0"/>
-              <polygon class="ab-gl-l" points="48.4,444.0 180.0,520.0 180.0,488.0 48.4,412.0"/>
-              <polygon class="ab-gl-r" points="180.0,520.0 311.6,444.0 311.6,412.0 180.0,488.0"/>
-              <polygon class="ab-lit ab-lit-l" points="48.4,444.0 180.0,520.0 180.0,488.0 48.4,412.0"/>
-              <polygon class="ab-lit ab-lit-r" points="180.0,520.0 311.6,444.0 311.6,412.0 180.0,488.0"/>
-              <path class="ab-mul" d="M64.8,453.5V421.5M81.3,463V431M97.7,472.5V440.5M114.2,482V450M130.6,491.5V459.5M147.1,501V469M163.5,510.5V478.5M196.5,510.5V478.5M212.9,501V469M229.4,491.5V459.5M245.8,482V450M262.3,472.5V440.5M278.7,463V431M295.2,453.5V421.5"/>
-              <polygon class="ab-door" points="102.1,475.0 126.3,489.0 126.3,465.0 102.1,451.0"/>
-              <path class="ab-door-ln" d="M114.2,482V458"/>
-              <polygon class="ab-canopy-t" points="96.9,445.0 131.5,465.0 121.1,471.0 86.5,451.0"/>
-              <polygon class="ab-canopy-f" points="86.5,451.0 121.1,471.0 121.1,474.0 86.5,454.0"/>
-              <text class="ab-lobby-sign" transform="matrix(0.8660 0.5000 0 1 58.8 415.6)" x="0" y="0">DOOGO HOLDINGS</text>
-              <use class="ab-lobby-d" href="#abg-d" width="10" height="10.4" transform="matrix(0.8660 -0.5000 0 1 254.5 433)"/>
-              <polygon class="ab-hl" points="48.4,444.0 180.0,520.0 180.0,488.0 48.4,412.0"/>
-              <polygon class="ab-hl ab-hl-r" points="180.0,520.0 311.6,444.0 311.6,412.0 180.0,488.0"/>
-              <polygon class="ab-pod-t" points="180.0,322.0 311.6,398.0 180.0,474.0 48.4,398.0"/>
-              </g>
-              <g class="ab-lv ab-fl" data-co="space" style="--f:2">
-              <polygon class="ab-cap" points="180.0,300.0 283.9,360.0 180.0,420.0 76.1,360.0"/>
-              <polygon class="ab-sp-l" points="76.1,398.0 180.0,458.0 180.0,420.0 76.1,360.0"/>
-              <polygon class="ab-sp-r" points="180.0,458.0 283.9,398.0 283.9,360.0 180.0,420.0"/>
-              <polygon class="ab-gl-l" points="76.1,390.0 180.0,450.0 180.0,420.0 76.1,360.0"/>
-              <polygon class="ab-gl-r" points="180.0,450.0 283.9,390.0 283.9,360.0 180.0,420.0"/>
-              <polygon class="ab-lit ab-lit-l" points="76.1,390.0 180.0,450.0 180.0,420.0 76.1,360.0"/>
-              <polygon class="ab-lit ab-lit-r" points="180.0,450.0 283.9,390.0 283.9,360.0 180.0,420.0"/>
-              <path class="ab-mul" d="M93.4,400V370M110.7,410V380M128,420V390M145.4,430V400M162.7,440V410M197.3,440V410M214.6,430V400M232,420V390M249.3,410V380M266.6,400V370"/>
-              <polygon class="ab-glow" points="76.1,390.0 180.0,450.0 180.0,420.0 76.1,360.0"/>
-              <polygon class="ab-glow ab-glow-r" points="180.0,450.0 283.9,390.0 283.9,360.0 180.0,420.0"/>
-              <polygon class="ab-hl" points="76.1,390.0 180.0,450.0 180.0,420.0 76.1,360.0"/>
-              <polygon class="ab-hl ab-hl-r" points="180.0,450.0 283.9,390.0 283.9,360.0 180.0,420.0"/>
-              <text class="ab-fl-no" transform="matrix(0.8660 0.5000 0 1 80.4 398.9)">1F</text>
-              <circle class="ab-port" cx="264.9" cy="386" r="2.6"/>
-              </g>
-              <g class="ab-lv ab-fl" data-co="food" style="--f:3">
-              <polygon class="ab-cap" points="180.0,262.0 283.9,322.0 180.0,382.0 76.1,322.0"/>
-              <polygon class="ab-sp-l" points="76.1,360.0 180.0,420.0 180.0,382.0 76.1,322.0"/>
-              <polygon class="ab-sp-r" points="180.0,420.0 283.9,360.0 283.9,322.0 180.0,382.0"/>
-              <polygon class="ab-gl-l" points="76.1,352.0 180.0,412.0 180.0,382.0 76.1,322.0"/>
-              <polygon class="ab-gl-r" points="180.0,412.0 283.9,352.0 283.9,322.0 180.0,382.0"/>
-              <polygon class="ab-lit ab-lit-l" points="76.1,352.0 180.0,412.0 180.0,382.0 76.1,322.0"/>
-              <polygon class="ab-lit ab-lit-r" points="180.0,412.0 283.9,352.0 283.9,322.0 180.0,382.0"/>
-              <path class="ab-mul" d="M93.4,362V332M110.7,372V342M128,382V352M145.4,392V362M162.7,402V372M197.3,402V372M214.6,392V362M232,382V352M249.3,372V342M266.6,362V332"/>
-              <polygon class="ab-glow" points="76.1,352.0 180.0,412.0 180.0,382.0 76.1,322.0"/>
-              <polygon class="ab-glow ab-glow-r" points="180.0,412.0 283.9,352.0 283.9,322.0 180.0,382.0"/>
-              <polygon class="ab-hl" points="76.1,352.0 180.0,412.0 180.0,382.0 76.1,322.0"/>
-              <polygon class="ab-hl ab-hl-r" points="180.0,412.0 283.9,352.0 283.9,322.0 180.0,382.0"/>
-              <text class="ab-fl-no" transform="matrix(0.8660 0.5000 0 1 80.4 360.9)">2F</text>
-              <circle class="ab-port" cx="264.9" cy="348" r="2.6"/>
-              </g>
-              <g class="ab-lv ab-fl" data-co="ad" style="--f:4">
-              <polygon class="ab-cap" points="180.0,224.0 283.9,284.0 180.0,344.0 76.1,284.0"/>
-              <polygon class="ab-sp-l" points="76.1,322.0 180.0,382.0 180.0,344.0 76.1,284.0"/>
-              <polygon class="ab-sp-r" points="180.0,382.0 283.9,322.0 283.9,284.0 180.0,344.0"/>
-              <polygon class="ab-gl-l" points="76.1,314.0 180.0,374.0 180.0,344.0 76.1,284.0"/>
-              <polygon class="ab-gl-r" points="180.0,374.0 283.9,314.0 283.9,284.0 180.0,344.0"/>
-              <polygon class="ab-lit ab-lit-l" points="76.1,314.0 180.0,374.0 180.0,344.0 76.1,284.0"/>
-              <polygon class="ab-lit ab-lit-r" points="180.0,374.0 283.9,314.0 283.9,284.0 180.0,344.0"/>
-              <path class="ab-mul" d="M93.4,324V294M110.7,334V304M128,344V314M145.4,354V324M162.7,364V334M197.3,364V334M214.6,354V324M232,344V314M249.3,334V304M266.6,324V294"/>
-              <polygon class="ab-glow" points="76.1,314.0 180.0,374.0 180.0,344.0 76.1,284.0"/>
-              <polygon class="ab-glow ab-glow-r" points="180.0,374.0 283.9,314.0 283.9,284.0 180.0,344.0"/>
-              <polygon class="ab-hl" points="76.1,314.0 180.0,374.0 180.0,344.0 76.1,284.0"/>
-              <polygon class="ab-hl ab-hl-r" points="180.0,374.0 283.9,314.0 283.9,284.0 180.0,344.0"/>
-              <text class="ab-fl-no" transform="matrix(0.8660 0.5000 0 1 80.4 322.9)">3F</text>
-              <circle class="ab-port" cx="264.9" cy="310" r="2.6"/>
-              </g>
-              <g class="ab-lv ab-fl" data-co="media" style="--f:5">
-              <polygon class="ab-cap" points="180.0,186.0 283.9,246.0 180.0,306.0 76.1,246.0"/>
-              <polygon class="ab-sp-l" points="76.1,284.0 180.0,344.0 180.0,306.0 76.1,246.0"/>
-              <polygon class="ab-sp-r" points="180.0,344.0 283.9,284.0 283.9,246.0 180.0,306.0"/>
-              <polygon class="ab-gl-l" points="76.1,276.0 180.0,336.0 180.0,306.0 76.1,246.0"/>
-              <polygon class="ab-gl-r" points="180.0,336.0 283.9,276.0 283.9,246.0 180.0,306.0"/>
-              <polygon class="ab-lit ab-lit-l" points="76.1,276.0 180.0,336.0 180.0,306.0 76.1,246.0"/>
-              <polygon class="ab-lit ab-lit-r" points="180.0,336.0 283.9,276.0 283.9,246.0 180.0,306.0"/>
-              <path class="ab-mul" d="M93.4,286V256M110.7,296V266M128,306V276M145.4,316V286M162.7,326V296M197.3,326V296M214.6,316V286M232,306V276M249.3,296V266M266.6,286V256"/>
-              <polygon class="ab-glow" points="76.1,276.0 180.0,336.0 180.0,306.0 76.1,246.0"/>
-              <polygon class="ab-glow ab-glow-r" points="180.0,336.0 283.9,276.0 283.9,246.0 180.0,306.0"/>
-              <polygon class="ab-hl" points="76.1,276.0 180.0,336.0 180.0,306.0 76.1,246.0"/>
-              <polygon class="ab-hl ab-hl-r" points="180.0,336.0 283.9,276.0 283.9,246.0 180.0,306.0"/>
-              <text class="ab-fl-no" transform="matrix(0.8660 0.5000 0 1 80.4 284.9)">4F</text>
-              <circle class="ab-port" cx="264.9" cy="272" r="2.6"/>
-              </g>
-              <g class="ab-lv ab-fl" data-co="makers" style="--f:6">
-              <polygon class="ab-cap" points="180.0,148.0 283.9,208.0 180.0,268.0 76.1,208.0"/>
-              <polygon class="ab-sp-l" points="76.1,246.0 180.0,306.0 180.0,268.0 76.1,208.0"/>
-              <polygon class="ab-sp-r" points="180.0,306.0 283.9,246.0 283.9,208.0 180.0,268.0"/>
-              <polygon class="ab-gl-l" points="76.1,238.0 180.0,298.0 180.0,268.0 76.1,208.0"/>
-              <polygon class="ab-gl-r" points="180.0,298.0 283.9,238.0 283.9,208.0 180.0,268.0"/>
-              <polygon class="ab-lit ab-lit-l" points="76.1,238.0 180.0,298.0 180.0,268.0 76.1,208.0"/>
-              <polygon class="ab-lit ab-lit-r" points="180.0,298.0 283.9,238.0 283.9,208.0 180.0,268.0"/>
-              <path class="ab-mul" d="M93.4,248V218M110.7,258V228M128,268V238M145.4,278V248M162.7,288V258M197.3,288V258M214.6,278V248M232,268V238M249.3,258V228M266.6,248V218"/>
-              <polygon class="ab-glow" points="76.1,238.0 180.0,298.0 180.0,268.0 76.1,208.0"/>
-              <polygon class="ab-glow ab-glow-r" points="180.0,298.0 283.9,238.0 283.9,208.0 180.0,268.0"/>
-              <polygon class="ab-hl" points="76.1,238.0 180.0,298.0 180.0,268.0 76.1,208.0"/>
-              <polygon class="ab-hl ab-hl-r" points="180.0,298.0 283.9,238.0 283.9,208.0 180.0,268.0"/>
-              <text class="ab-fl-no" transform="matrix(0.8660 0.5000 0 1 80.4 246.9)">5F</text>
-              <circle class="ab-port" cx="264.9" cy="234" r="2.6"/>
-              </g>
-              <g class="ab-lv ab-fl" data-co="bio" style="--f:7">
-              <polygon class="ab-cap" points="180.0,110.0 283.9,170.0 180.0,230.0 76.1,170.0"/>
-              <polygon class="ab-sp-l" points="76.1,208.0 180.0,268.0 180.0,230.0 76.1,170.0"/>
-              <polygon class="ab-sp-r" points="180.0,268.0 283.9,208.0 283.9,170.0 180.0,230.0"/>
-              <polygon class="ab-gl-l" points="76.1,200.0 180.0,260.0 180.0,230.0 76.1,170.0"/>
-              <polygon class="ab-gl-r" points="180.0,260.0 283.9,200.0 283.9,170.0 180.0,230.0"/>
-              <polygon class="ab-lit ab-lit-l" points="76.1,200.0 180.0,260.0 180.0,230.0 76.1,170.0"/>
-              <polygon class="ab-lit ab-lit-r" points="180.0,260.0 283.9,200.0 283.9,170.0 180.0,230.0"/>
-              <path class="ab-mul" d="M93.4,210V180M110.7,220V190M128,230V200M145.4,240V210M162.7,250V220M197.3,250V220M214.6,240V210M232,230V200M249.3,220V190M266.6,210V180"/>
-              <polygon class="ab-glow" points="76.1,200.0 180.0,260.0 180.0,230.0 76.1,170.0"/>
-              <polygon class="ab-glow ab-glow-r" points="180.0,260.0 283.9,200.0 283.9,170.0 180.0,230.0"/>
-              <polygon class="ab-hl" points="76.1,200.0 180.0,260.0 180.0,230.0 76.1,170.0"/>
-              <polygon class="ab-hl ab-hl-r" points="180.0,260.0 283.9,200.0 283.9,170.0 180.0,230.0"/>
-              <text class="ab-fl-no" transform="matrix(0.8660 0.5000 0 1 80.4 208.9)">6F</text>
-              <circle class="ab-port" cx="264.9" cy="196" r="2.6"/>
-              </g>
-              <g class="ab-lv ab-fl" data-co="class" style="--f:8">
-              <polygon class="ab-cap" points="180.0,72.0 283.9,132.0 180.0,192.0 76.1,132.0"/>
-              <polygon class="ab-sp-l" points="76.1,170.0 180.0,230.0 180.0,192.0 76.1,132.0"/>
-              <polygon class="ab-sp-r" points="180.0,230.0 283.9,170.0 283.9,132.0 180.0,192.0"/>
-              <polygon class="ab-gl-l" points="76.1,162.0 180.0,222.0 180.0,192.0 76.1,132.0"/>
-              <polygon class="ab-gl-r" points="180.0,222.0 283.9,162.0 283.9,132.0 180.0,192.0"/>
-              <polygon class="ab-lit ab-lit-l" points="76.1,162.0 180.0,222.0 180.0,192.0 76.1,132.0"/>
-              <polygon class="ab-lit ab-lit-r" points="180.0,222.0 283.9,162.0 283.9,132.0 180.0,192.0"/>
-              <path class="ab-mul" d="M93.4,172V142M110.7,182V152M128,192V162M145.4,202V172M162.7,212V182M197.3,212V182M214.6,202V172M232,192V162M249.3,182V152M266.6,172V142"/>
-              <polygon class="ab-glow" points="76.1,162.0 180.0,222.0 180.0,192.0 76.1,132.0"/>
-              <polygon class="ab-glow ab-glow-r" points="180.0,222.0 283.9,162.0 283.9,132.0 180.0,192.0"/>
-              <polygon class="ab-hl" points="76.1,162.0 180.0,222.0 180.0,192.0 76.1,132.0"/>
-              <polygon class="ab-hl ab-hl-r" points="180.0,222.0 283.9,162.0 283.9,132.0 180.0,192.0"/>
-              <text class="ab-fl-no" transform="matrix(0.8660 0.5000 0 1 80.4 170.9)">7F</text>
-              <circle class="ab-port" cx="264.9" cy="158" r="2.6"/>
-              </g>
-              <g class="ab-beam-clip" clip-path="url(#abg-tower)">
-              <g class="ab-beam"><rect x="60" y="398" width="240" height="70" fill="url(#abg-beam)"/></g>
-              </g>
-              <g class="ab-lv ab-lv--core" style="--f:9">
-              <path class="ab-edge" d="M180,458V192"/>
-              <path class="ab-core-ln" d="M180,458V192" pathLength="1"/>
-              </g>
-              <g class="ab-lv ab-lv--roof" style="--f:9">
-              <polygon class="ab-sp-l" points="72.6,132.0 180.0,194.0 180.0,187.0 72.6,125.0"/>
-              <polygon class="ab-sp-r" points="180.0,194.0 287.4,132.0 287.4,125.0 180.0,187.0"/>
-              <polygon class="ab-roof-t" points="180.0,63.0 287.4,125.0 180.0,187.0 72.6,125.0"/>
-              <polygon class="ab-roof-in" points="180.0,69.0 277.0,125.0 180.0,181.0 83.0,125.0"/>
-              <polygon class="ab-mech-l" points="199.1,125.0 225.0,140.0 225.0,127.0 199.1,112.0"/><polygon class="ab-mech-r" points="225.0,140.0 251.0,125.0 251.0,112.0 225.0,127.0"/><polygon class="ab-mech-t" points="225.0,97.0 251.0,112.0 225.0,127.0 199.1,112.0"/>
-              <path class="ab-mast" d="M180,91V36"/>
-              <circle class="ab-beacon" cx="180" cy="36" r="2.4"/>
-              </g>
-              <g class="ab-lv ab-lv--sign" style="--f:10">
-              <path class="ab-sign-leg" d="M141.9,107V98M211.2,147V138"/>
-              <polygon class="ab-sign-side" points="223.3,147.0 226.8,145.0 226.8,115.0 223.3,117.0"/>
-              <polygon class="ab-sign-top" points="129.8,59.0 226.8,115.0 223.3,117.0 126.3,61.0"/>
-              <polygon class="ab-sign" points="126.3,91.0 223.3,147.0 223.3,117.0 126.3,61.0"/>
-              <image class="ab-sign-logo" href="assets/img/logo/doogo-group-lockup.svg" width="100" height="18.3" transform="matrix(0.8660 0.5000 0 1 131.5 69.8)"/>
-              <polygon class="ab-sign-glint" points="126.3,91.0 223.3,147.0 223.3,117.0 126.3,61.0"/>
-              </g>
-              </svg>
-              <ol class="ab-plates">
-                <li class="ab-plate" data-co="class" style="--y:21.90;--e:21.13;--f:8"><span class="ab-plate-card"><span class="ab-plate-no en">7F</span><span class="ab-plate-t"><b class="en">DOOGO CLASS</b><small>교육업</small></span></span><span class="ab-plate-ln"></span></li>
-                <li class="ab-plate" data-co="bio" style="--y:29.26;--e:21.13;--f:7"><span class="ab-plate-card"><span class="ab-plate-no en">6F</span><span class="ab-plate-t"><b class="en">DOOGOBIO NZ</b><small>제조업</small></span></span><span class="ab-plate-ln"></span></li>
-                <li class="ab-plate" data-co="makers" style="--y:36.63;--e:21.13;--f:6"><span class="ab-plate-card"><span class="ab-plate-no en">5F</span><span class="ab-plate-t"><b class="en">DOOGO MAKERS</b><small>브랜드 커머스</small></span></span><span class="ab-plate-ln"></span></li>
-                <li class="ab-plate" data-co="media" style="--y:43.99;--e:21.13;--f:5"><span class="ab-plate-card"><span class="ab-plate-no en">4F</span><span class="ab-plate-t"><b class="en">DOOGO MEDIA</b><small>미디어 &amp; 콘텐츠</small></span></span><span class="ab-plate-ln"></span></li>
-                <li class="ab-plate" data-co="ad" style="--y:51.36;--e:21.13;--f:4"><span class="ab-plate-card"><span class="ab-plate-no en">3F</span><span class="ab-plate-t"><b class="en">DOOGO AD</b><small>마케팅</small></span></span><span class="ab-plate-ln"></span></li>
-                <li class="ab-plate" data-co="food" style="--y:58.72;--e:21.13;--f:3"><span class="ab-plate-card"><span class="ab-plate-no en">2F</span><span class="ab-plate-t"><b class="en">DOOGOFOOD</b><small>유통</small></span></span><span class="ab-plate-ln"></span></li>
-                <li class="ab-plate" data-co="space" style="--y:66.09;--e:21.13;--f:2"><span class="ab-plate-card"><span class="ab-plate-no en">1F</span><span class="ab-plate-t"><b class="en">DOOGO SPACE</b><small>공간 &amp; 라이프스타일</small></span></span><span class="ab-plate-ln"></span></li>
-                <li class="ab-plate ab-plate--hold" data-co="hold" style="--y:75.00;--e:13.43;--f:1"><span class="ab-plate-card"><span class="ab-plate-no en">L</span><span class="ab-plate-t"><b class="en">DOOGO HOLDINGS</b><small>지주회사 · 로비</small></span></span><span class="ab-plate-ln"></span></li>
-              </ol>
+            <div class="ab-tower">
+              <div class="ab-bld" aria-hidden="true">
+                <div class="ab-bld-top" style="--f:10"><span class="ab-sign"><img src="assets/img/logo/doogo-group-lockup.svg" width="272" height="50" alt="" decoding="async"></span><span class="ab-mast"><i class="ab-beacon"></i></span></div>
+                <div class="ab-bld-roof" style="--f:9"></div>
+                <div class="ab-fl ab-fl--hq" data-co="class" style="--f:8"><span class="ab-fl-no en">7F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGO CLASS</b><small>교육업</small></span></span><span class="ab-fl-tag">지주회사 직영</span></div>
+                <div class="ab-fl" data-co="bio" style="--f:7"><span class="ab-fl-no en">6F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGOBIO NZ</b><small>제조업</small></span></span></div>
+                <div class="ab-fl" data-co="makers" style="--f:6"><span class="ab-fl-no en">5F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGO MAKERS</b><small>브랜드 커머스</small></span></span></div>
+                <div class="ab-fl" data-co="media" style="--f:5"><span class="ab-fl-no en">4F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGO MEDIA</b><small>미디어 &amp; 콘텐츠</small></span></span></div>
+                <div class="ab-fl" data-co="ad" style="--f:4"><span class="ab-fl-no en">3F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGO AD</b><small>마케팅</small></span></span></div>
+                <div class="ab-fl ab-fl--hq" data-co="food" style="--f:3"><span class="ab-fl-no en">2F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGOFOOD</b><small>유통</small></span></span><span class="ab-fl-tag">지주회사 직영</span></div>
+                <div class="ab-fl" data-co="space" style="--f:2"><span class="ab-fl-no en">1F</span><span class="ab-fl-gl"><span class="ab-fl-t"><b class="en">DOOGO SPACE</b><small>공간 &amp; 라이프스타일</small></span></span></div>
+                <div class="ab-fl ab-fl--hq ab-fl--lobby" data-co="hold" style="--f:1"><span class="ab-fl-no en">L</span><span class="ab-lobby"><span class="ab-lobby-fa"><b class="en">DOOGO HOLDINGS</b><small>지주회사</small></span><span class="ab-fl-gl ab-lobby-sf"><span class="ab-door"></span></span></span></div>
+                <div class="ab-bld-base" style="--f:0"></div>
+                <span class="ab-lift"><span class="ab-lift-car"></span></span>
+                <span class="ab-sheen"></span>
+              </div>
+              <ul class="ab-sats" aria-label="두고그룹 빌딩에 입주한 그룹사 5곳">
+                <li class="ab-sat" data-co="bio" style="--r:4;--f:7"><a class="ab-sat-link" href="business-bio.html"><span class="ab-sat-tile"><img src="assets/img/3d/bio.webp" width="674" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">6층 DOOGOBIO — </span>뉴질랜드 건강식품 제조</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+                <li class="ab-sat" data-co="makers" style="--r:5;--f:6"><a class="ab-sat-link" href="business-commerce.html"><span class="ab-sat-tile"><img src="assets/img/3d/makers.webp" width="674" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">5층 DOOGO MAKERS — </span>브랜드 기획 · 운영</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+                <li class="ab-sat" data-co="media" style="--r:6;--f:5"><a class="ab-sat-link" href="business-media.html"><span class="ab-sat-tile"><img src="assets/img/3d/media.webp" width="671" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">4층 DOOGO MEDIA — </span>온드미디어 전문</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+                <li class="ab-sat" data-co="ad" style="--r:7;--f:4"><a class="ab-sat-link" href="business-ad.html"><span class="ab-sat-tile"><img src="assets/img/3d/ad.webp" width="671" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">3층 DOOGO AD — </span>온·오프라인 마케팅</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+                <li class="ab-sat" data-co="space" style="--r:9;--f:2"><a class="ab-sat-link" href="business-space.html"><span class="ab-sat-tile"><img src="assets/img/3d/stay.webp" width="674" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><span class="sr-only">1층 DOOGO SPACE — </span>공유오피스 · 스테이</span><svg class="ab-sat-go" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              </ul>
             </div>
-            <ul class="ab-sats" aria-label="두고그룹 빌딩에 입주한 그룹사 5곳">
-              <li class="ab-sat" data-co="bio" style="--i:0"><a class="ab-sat-link" href="business-bio.html"><span class="ab-sat-tile"><img src="assets/img/3d/bio.webp" width="674" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><b class="en">DOOGOBIO</b><small>뉴질랜드 건강식품 제조</small></span><span class="ab-sat-fl en"><span class="sr-only">두고그룹 빌딩 </span>6F</span></a></li>
-              <li class="ab-sat" data-co="makers" style="--i:1"><a class="ab-sat-link" href="business-commerce.html"><span class="ab-sat-tile"><img src="assets/img/3d/makers.webp" width="674" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><b class="en">DOOGO MAKERS</b><small>브랜드 커머스</small></span><span class="ab-sat-fl en"><span class="sr-only">두고그룹 빌딩 </span>5F</span></a></li>
-              <li class="ab-sat" data-co="media" style="--i:2"><a class="ab-sat-link" href="business-media.html"><span class="ab-sat-tile"><img src="assets/img/3d/media.webp" width="671" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><b class="en">DOOGO MEDIA</b><small>온드미디어 전문</small></span><span class="ab-sat-fl en"><span class="sr-only">두고그룹 빌딩 </span>4F</span></a></li>
-              <li class="ab-sat" data-co="ad" style="--i:3"><a class="ab-sat-link" href="business-ad.html"><span class="ab-sat-tile"><img src="assets/img/3d/ad.webp" width="671" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><b class="en">DOOGO AD</b><small>온·오프라인 마케팅</small></span><span class="ab-sat-fl en"><span class="sr-only">두고그룹 빌딩 </span>3F</span></a></li>
-              <li class="ab-sat" data-co="space" style="--i:4"><a class="ab-sat-link" href="business-space.html"><span class="ab-sat-tile"><img src="assets/img/3d/stay.webp" width="674" height="755" alt="" decoding="async"></span><span class="ab-sat-label"><b class="en">DOOGO SPACE</b><small>공간 &amp; 라이프스타일</small></span><span class="ab-sat-fl en"><span class="sr-only">두고그룹 빌딩 </span>1F</span></a></li>
-            </ul>
           </div>
         </div>
         <button class="ab-film" type="button" data-film-open>
@@ -456,16 +291,16 @@
           <span class="ab-film-txt"><strong>그룹 영상 보기</strong><small class="en">GROUP FILM · 11 SCENES</small></span>
         </button>
         <figcaption class="ab-stage-cap"><span class="en" aria-hidden="true">ONE GROUP</span>지주회사 1 · 그룹사 5
-          <span class="sr-only">— 두고그룹을 하나의 빌딩으로 표현한 그림입니다. 모든 사업이 두고그룹 빌딩 안에서 이루어집니다.</span>
+          <span class="sr-only">— 두고그룹을 정면에서 본 하나의 빌딩으로 표현한 그림입니다. 모든 사업이 두고그룹 빌딩 안에서 이루어지고, 그룹사 다섯 곳은 자기 층 옆에 간판으로 붙어 있습니다.</span>
           <ol class="sr-only">
             <li>옥상: DOOGO GROUP 간판.</li>
-            <li>7층: DOOGO CLASS, 교육업 — DOOGO HOLDINGS.</li>
+            <li>7층: DOOGO CLASS, 교육업 — DOOGO HOLDINGS 직영.</li>
             <li>6층: DOOGOBIO NZ, 제조업 — 뉴질랜드 건강식품 제조 해외법인.</li>
-            <li>5층: DOOGO MAKERS, 브랜드 커머스.</li>
+            <li>5층: DOOGO MAKERS, 브랜드 커머스 — 브랜드 기획 · 운영.</li>
             <li>4층: DOOGO MEDIA, 미디어 &amp; 콘텐츠 — 온드미디어 전문. 브랜드가 직접 소유하는 채널, 온드미디어를 기획하고 촬영하고 운영합니다.</li>
-            <li>3층: DOOGO AD, 마케팅.</li>
-            <li>2층: DOOGOFOOD, 유통 — DOOGO HOLDINGS.</li>
-            <li>1층: DOOGO SPACE, 공간 &amp; 라이프스타일.</li>
+            <li>3층: DOOGO AD, 마케팅 — 온·오프라인 마케팅.</li>
+            <li>2층: DOOGOFOOD, 유통 — DOOGO HOLDINGS 직영.</li>
+            <li>1층: DOOGO SPACE, 공간 &amp; 라이프스타일 — 공유오피스 · 스테이.</li>
             <li>로비: 지주회사 DOOGO HOLDINGS.</li>
           </ol>
         </figcaption>
@@ -925,7 +760,7 @@
           <ol class="ab-tl-list">
             <li class="ab-tl-item" style="--i:0"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2024-12">12<span class="sr-only">월</span></time><p class="ab-tl-t">투자 유치 및 (주)두고 법인 설립</p><span class="ab-tl-tag is-group">그룹</span></div></li>
             <li class="ab-tl-item" style="--i:1"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2024-07">07<span class="sr-only">월</span></time><p class="ab-tl-t">한미양행과 ‘원데이코어’ 공동 제품 개발</p><span class="ab-tl-tag">브랜드 커머스</span></div></li>
-            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2024-02">02<span class="sr-only">월</span></time><p class="ab-tl-t">건강식품 B2B 구독 모델 ‘원데이박스 B2B’ 오픈</p><span class="ab-tl-tag">유통</span></div></li>
+            <li class="ab-tl-item" style="--i:2"><span class="ab-tl-dot" aria-hidden="true"></span><div class="ab-tl3-row"><time class="ab-tl-m en" datetime="2024-02">02<span class="sr-only">월</span></time><p class="ab-tl-t">건강식품 B2B 구독 모델 ‘키위몬 B2B’ 오픈</p><span class="ab-tl-tag">유통</span></div></li>
           </ol>
         </div>
 
@@ -1384,8 +1219,8 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <!-- @footer:end -->
-<script src="assets/js/site.js?v=9b129138" defer></script>
-<script src="assets/js/pages/about.js?v=0cafdb02" defer></script>
+<script src="assets/js/site.js?v=1353045c" defer></script>
+<script src="assets/js/pages/about.js?v=1326f5ae" defer></script>
 <script src="assets/js/pages/about-vision.js?v=60b409d9" defer></script>
 <script src="assets/js/pages/about-loc.js?v=3b4f5a15" defer></script>
 <script src="assets/js/pages/about-tl.js?v=1c59625d" defer></script>
