@@ -274,7 +274,7 @@ const BIZ = [
     ask: '콘텐츠 문의하기',
     band: '{en}와 브랜드 채널을 시작해 보세요.',
     cta: { label: '콘텐츠 문의하기', href: ASK('media') },
-    web: web({ name: 'DOOGO MEDIA', kind: 'YouTube 채널', host: '두고보는 문대표', bar: 'youtube.com/@두고보는문대표', yt: true, url: MEDIA_URL, shot: 'media',
+    web: web({ name: 'DOOGO MEDIA', kind: 'YouTube 채널', host: '두고보는 문대표', bar: 'youtube.com/@두고보는문대표', yt: true, url: MEDIA_URL, shot: 'media-yt',
       btn: '채널 바로가기', close: 'DOOGO MEDIA 채널', desc: 'DOOGO MEDIA가 운영하는 온드미디어 채널, 유튜브 <span class="nowrap">‘두고보는 문대표’</span>입니다. 채널에서 영상 콘텐츠를 볼 수 있습니다.' }),
     narration: '브랜드의 채널을, 브랜드의 자산으로.',
     hero: { f: 'media-creator', fx: '50%', fy: '38%', mx: '62%' },
