@@ -52,7 +52,8 @@ export function syncCsp() {
     }
   }
   const raw = readFileSync(cfgPath, 'utf8');
-  const next = raw.replace(/(script-src 'self')[^;"]*/, `$1 ${[...hashes].sort().join(' ')}`);
+  // script-src 의 허용 주소(예: 네이버 애널리틱스 https://wcs.pstatic.net)는 그대로 두고 'sha256-…' 해시만 바꿉니다
+  const next = raw.replace(/script-src ([^;"]*)/, (m, list) => `script-src ${[...list.split(/\s+/).filter(t => t && !/^'sha256-/.test(t)), ...[...hashes].sort()].join(' ')}`);
   if (next !== raw) { writeFileSync(cfgPath, next); console.log(`보안 정책: 인라인 스크립트 해시 ${hashes.size}개 반영`); }
 }
 
