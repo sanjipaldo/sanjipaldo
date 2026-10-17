@@ -29,7 +29,7 @@
   <link rel="icon" href="assets/img/logo/favicon-d2-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/img/logo/apple-touch-icon-d2.png">
   <link rel="manifest" href="site.webmanifest">
-  <link rel="preload" as="image" href="assets/video/hero-poster.webp" fetchpriority="high">
+  <link rel="preload" as="image" href="assets/video/hero-v2-poster.webp" fetchpriority="high">
   <link rel="alternate" type="application/rss+xml" title="두고그룹 그룹소식" href="https://www.doogogroup.com/rss.xml">
   <link rel="stylesheet" href="assets/fonts/pretendard/pretendardvariable-dynamic-subset.css?v=80e2dfd2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -220,8 +220,9 @@
        ========================================================= -->
   <section class="hero" id="top" aria-labelledby="hero-title" data-video-wrap>
     <div class="hero-media">
-      <video id="heroVideo" data-autoplay autoplay muted loop playsinline webkit-playsinline disablepictureinpicture preload="auto" poster="assets/video/hero-poster.webp" aria-hidden="true" tabindex="-1">
-        <source src="assets/video/hero-loop.mp4" type="video/mp4">
+      <video id="heroVideo" data-autoplay autoplay muted loop playsinline webkit-playsinline disablepictureinpicture preload="auto" poster="assets/video/hero-v2-poster.webp" aria-hidden="true" tabindex="-1">
+        <source src="assets/video/hero-v2-540.mp4" type="video/mp4" media="(max-width: 760px)">
+        <source src="assets/video/hero-v2-1080.mp4" type="video/mp4">
       </video>
     </div>
     <div class="hero-shade" aria-hidden="true"></div>
@@ -254,16 +255,16 @@
         <!--
           영상 장면 표시기 — 영상 순서 = 가치사슬 순서.
           영상을 교체할 때는 각 버튼의 data-start / data-end(초)만 새 영상의 장면 시간에 맞게 고치면 됩니다.
-          (현재 임시 영상: 아이디어 0–2 · 각 사업 2–23 · 전체 23–26)
+          (현재 영상 81초 반복: 아이디어 0–11 · 각 사업 11–71 · 그룹 타운 71–81 — 81초 이후 흰 엔딩 로고는 배경 영상에서 뺌)
         -->
         <ol class="scenes" aria-label="영상 장면 바로가기">
-          <li><button class="scene" type="button" data-start="2" data-end="5" aria-label="PRODUCT DOOGOBIO 장면 보기"><span class="scene-en en">PRODUCT</span><span class="scene-ko en">DOOGOBIO</span><span class="scene-bar" aria-hidden="true"></span></button></li>
-          <li><button class="scene" type="button" data-start="5" data-end="8" aria-label="BRAND DOOGO MAKERS 장면 보기"><span class="scene-en en">BRAND</span><span class="scene-ko en">DOOGO MAKERS</span><span class="scene-bar" aria-hidden="true"></span></button></li>
-          <li><button class="scene" type="button" data-start="8" data-end="11" aria-label="CONTENT DOOGO MEDIA 장면 보기"><span class="scene-en en">CONTENT</span><span class="scene-ko en">DOOGO MEDIA</span><span class="scene-bar" aria-hidden="true"></span></button></li>
-          <li><button class="scene" type="button" data-start="11" data-end="14" aria-label="EDUCATION DOOGO CLASS 장면 보기"><span class="scene-en en">EDUCATION</span><span class="scene-ko en">DOOGO CLASS</span><span class="scene-bar" aria-hidden="true"></span></button></li>
-          <li><button class="scene" type="button" data-start="14" data-end="17" aria-label="MARKETING DOOGO AD 장면 보기"><span class="scene-en en">MARKETING</span><span class="scene-ko en">DOOGO AD</span><span class="scene-bar" aria-hidden="true"></span></button></li>
-          <li><button class="scene" type="button" data-start="17" data-end="20" aria-label="SALES DOOGOFOOD 장면 보기"><span class="scene-en en">SALES</span><span class="scene-ko en">DOOGOFOOD</span><span class="scene-bar" aria-hidden="true"></span></button></li>
-          <li><button class="scene" type="button" data-start="20" data-end="23" aria-label="SPACE DOOGO SPACE 장면 보기"><span class="scene-en en">SPACE</span><span class="scene-ko en">DOOGO SPACE</span><span class="scene-bar" aria-hidden="true"></span></button></li>
+          <li><button class="scene" type="button" data-start="11" data-end="18" aria-label="PRODUCT DOOGOBIO 장면 보기"><span class="scene-en en">PRODUCT</span><span class="scene-ko en">DOOGOBIO</span><span class="scene-bar" aria-hidden="true"></span></button></li>
+          <li><button class="scene" type="button" data-start="18" data-end="30" aria-label="BRAND DOOGO MAKERS 장면 보기"><span class="scene-en en">BRAND</span><span class="scene-ko en">DOOGO MAKERS</span><span class="scene-bar" aria-hidden="true"></span></button></li>
+          <li><button class="scene" type="button" data-start="30" data-end="35" aria-label="MARKETING DOOGO AD 장면 보기"><span class="scene-en en">MARKETING</span><span class="scene-ko en">DOOGO AD</span><span class="scene-bar" aria-hidden="true"></span></button></li>
+          <li><button class="scene" type="button" data-start="35" data-end="44" aria-label="SALES DOOGOFOOD 장면 보기"><span class="scene-en en">SALES</span><span class="scene-ko en">DOOGOFOOD</span><span class="scene-bar" aria-hidden="true"></span></button></li>
+          <li><button class="scene" type="button" data-start="44" data-end="54" aria-label="CONTENT DOOGO MEDIA 장면 보기"><span class="scene-en en">CONTENT</span><span class="scene-ko en">DOOGO MEDIA</span><span class="scene-bar" aria-hidden="true"></span></button></li>
+          <li><button class="scene" type="button" data-start="54" data-end="60" aria-label="EDUCATION DOOGO CLASS 장면 보기"><span class="scene-en en">EDUCATION</span><span class="scene-ko en">DOOGO CLASS</span><span class="scene-bar" aria-hidden="true"></span></button></li>
+          <li><button class="scene" type="button" data-start="60" data-end="71" aria-label="SPACE DOOGO SPACE 장면 보기"><span class="scene-en en">SPACE</span><span class="scene-ko en">DOOGO SPACE</span><span class="scene-bar" aria-hidden="true"></span></button></li>
         </ol>
         <div class="hero-ctrl">
           <button class="hero-toggle" type="button" data-video-toggle="#heroVideo" aria-label="배경 영상 정지">
@@ -1207,8 +1208,8 @@
       <p><strong id="film-title">두고그룹 영상</strong><span>DOOGO GROUP FILM</span></p>
       <button class="film-close" type="button" data-film-close aria-label="영상 닫기"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
     </div>
-    <video id="film-video" controls playsinline preload="none" data-film-poster="assets/video/group-film-poster.webp" data-src="assets/video/group-film.mp4">
-      <track kind="captions" srclang="ko" label="한국어" src="assets/video/group-film.ko.vtt" default>
+    <video id="film-video" controls playsinline preload="none" data-film-poster="assets/video/film-v2-poster.webp" data-src="assets/video/film-v2.mp4">
+      <track kind="captions" srclang="ko" label="한국어" src="assets/video/film-v2.ko.vtt">
     </video>
   </div>
 </div>
