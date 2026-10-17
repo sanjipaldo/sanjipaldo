@@ -33,6 +33,9 @@
     var video = $('#heroVideo');
     var items = $$('.scene[data-start]');
     if (!video || !items.length) return;
+    // 세로 화면은 세로 전용 영상(index.html <source media>)과 같은 구도의 포스터를 씁니다.
+    var pp = video.getAttribute('data-poster-portrait');
+    if (pp && window.matchMedia('(orientation: portrait) and (max-aspect-ratio: 3/4)').matches) video.poster = pp;
     var countEl = $('[data-scene-count]'), enEl = $('[data-scene-en]'), koEl = $('[data-scene-ko]');
     var ranges = items.map(function (b) {
       return { start: parseFloat(b.getAttribute('data-start')) || 0, end: parseFloat(b.getAttribute('data-end')) || 0, en: (b.querySelector('.scene-en') || {}).lastChild, ko: b.querySelector('.scene-ko') };

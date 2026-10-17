@@ -29,7 +29,8 @@
   <link rel="icon" href="assets/img/logo/favicon-d2-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/img/logo/apple-touch-icon-d2.png">
   <link rel="manifest" href="site.webmanifest">
-  <link rel="preload" as="image" href="assets/video/hero-v2-poster.webp" fetchpriority="high">
+  <link rel="preload" as="image" href="assets/video/hero-v2-poster.webp" fetchpriority="high" media="(orientation: landscape), (min-aspect-ratio: 3/4)">
+  <link rel="preload" as="image" href="assets/video/hero-v2-portrait-poster.webp" fetchpriority="high" media="(orientation: portrait) and (max-aspect-ratio: 3/4)">
   <link rel="alternate" type="application/rss+xml" title="두고그룹 그룹소식" href="https://www.doogogroup.com/rss.xml">
   <link rel="stylesheet" href="assets/fonts/pretendard/pretendardvariable-dynamic-subset.css?v=80e2dfd2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -220,8 +221,8 @@
        ========================================================= -->
   <section class="hero" id="top" aria-labelledby="hero-title" data-video-wrap>
     <div class="hero-media">
-      <video id="heroVideo" data-autoplay autoplay muted loop playsinline webkit-playsinline disablepictureinpicture preload="auto" poster="assets/video/hero-v2-poster.webp" aria-hidden="true" tabindex="-1">
-        <source src="assets/video/hero-v2-540.mp4" type="video/mp4" media="(max-width: 760px)">
+      <video id="heroVideo" data-autoplay autoplay muted loop playsinline webkit-playsinline disablepictureinpicture preload="auto" poster="assets/video/hero-v2-poster.webp" data-poster-portrait="assets/video/hero-v2-portrait-poster.webp" aria-hidden="true" tabindex="-1">
+        <source src="assets/video/hero-v2-portrait.mp4" type="video/mp4" media="(orientation: portrait) and (max-aspect-ratio: 3/4)">
         <source src="assets/video/hero-v2-1080.mp4" type="video/mp4">
       </video>
     </div>
@@ -1222,6 +1223,6 @@
 <!-- @footer:end -->
 <script src="assets/js/site.js?v=b201fefe" defer></script>
 <script src="assets/js/people-rail.js?v=c48e7d41" defer></script>
-<script src="assets/js/pages/home.js?v=0f6aed7b" defer></script>
+<script src="assets/js/pages/home.js?v=2571aa38" defer></script>
 </body>
 </html>
