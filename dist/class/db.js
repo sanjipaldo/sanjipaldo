@@ -528,6 +528,7 @@
       if (!data.content[ins.id]) data.content[ins.id] = template(Object.assign({ instructor: ins.displayName }, ins.brand || {}));
       if (ins.brand && ins.brand.theme) data.content[ins.id].brand.theme = ins.brand.theme;
       if (ins.brand && ins.brand.photo) data.content[ins.id].brand.photo = ins.brand.photo;
+      if (ins.brand && ins.brand.field) data.content[ins.id].brand.field = ins.brand.field;
       delete ins.brand;
       normalizeContent(data.content[ins.id]);
     });
@@ -806,6 +807,13 @@
       if (li && li.brand) renameWord(li.brand, /로직메이커/g, "부알남");
       if (lc) renameWord(lc, /로직메이커/g, "부알남");
       db.flags.bualnamV1 = true; save();
+    }
+    // 황금농부 → 갓농부 + 강의 분야 ‘귤 단 하나 팔아 월매출 10억’ (대표님 요청 · 이 브라우저 데이터 · 한 번만). 로그인 이름(name)은 그대로. 서버는 api/_lib/oneoff.js
+    if (!R.on && typeof document !== "undefined" && !db.flags.godFarmerV1) {
+      const fi = db.instructors.find((x) => x.id === "farmer"), fc = db.content.farmer;
+      if (fi && fi.displayName === "황금농부") fi.displayName = "갓농부";
+      if (fc) { renameWord(fc, /황금농부/g, "갓농부"); if (fc.brand && !fc.brand.field) fc.brand.field = "귤 단 하나 팔아 월매출 10억"; }
+      db.flags.godFarmerV1 = true; save();
     }
     // 빠른 이동 ‘두고푸드’ 설명 (대표님 요청 · 이 브라우저 데이터 · 한 번만, 예전 기본 문구일 때만)
     if (!R.on && typeof document !== "undefined" && !db.flags.foodDescV2) {

@@ -585,8 +585,9 @@ window.CLASS_SEED = {
     // 부알남(예전 이름 로직메이커) — 강사센터 로그인 이름은 예전 그대로 ‘로직메이커’
     { id: "logic", name: "로직메이커", phone4: "1111", displayName: "부알남", status: "active", createdAt: "2026-09-10",
       brand: { name: "부알남", courseTitle: "부알남 실전 클래스", theme: "airtable", photo: "assets/home/logic-profile.webp" } },
-    { id: "farmer", name: "황금농부", phone4: "3333", displayName: "황금농부", status: "active", createdAt: "2026-09-12",
-      brand: { name: "황금농부", courseTitle: "황금농부 실전 클래스", theme: "binance", photo: "assets/home/farmer-profile.webp" } },
+    // 갓농부(예전 이름 황금농부) — 강사센터 로그인 이름은 예전 그대로 ‘황금농부’
+    { id: "farmer", name: "황금농부", phone4: "3333", displayName: "갓농부", status: "active", createdAt: "2026-09-12",
+      brand: { name: "갓농부", courseTitle: "갓농부 실전 클래스", field: "귤 단 하나 팔아 월매출 10억", theme: "binance", photo: "assets/home/farmer-profile.webp" } },
     { id: "choi", name: "초이", phone4: "2222", displayName: "초이", status: "active", createdAt: "2026-09-20",
       brand: { name: "초이 클래스", courseTitle: "초이와 함께하는 실전 클래스", theme: "pink" },
       menu: { items: [{ key: "home", on: true }, { key: "curriculum", on: true }, { key: "missions", on: true }, { key: "schedule", on: true }, { key: "notices", on: true }, { key: "qna", on: true }, { key: "docs", on: false }, { key: "bot", on: true }, { key: "library", on: true }, { key: "motivation", on: false }, { key: "certificate", on: true }], library: { ebook: true, file: true, vod: true, senior: false } } }

@@ -269,6 +269,27 @@ function foodQuickLinkDesc(get, keys) {
   return { writes, result: changed.length ? { changed } : { skipped: "바꿀 칸 없음" } };
 }
 
+/* ---------- 황금농부 → 갓농부 (대표님 요청) ----------
+ * 강사 표시 이름이 아직 ‘황금농부’이면 ‘갓농부’로, 그 강사 콘텐츠의 ‘황금농부’ 글자도 ‘갓농부’로 (사진 · 파일 데이터 칸은 건너뜀).
+ * 첫 화면 강사 카드 · 수강생 로그인에 보이는 강의 분야가 비어 있으면 ‘귤 단 하나 팔아 월매출 10억’. 강사센터 로그인 이름(name)은 그대로 */
+function farmerToGodFarmer(get) {
+  const writes = {}, result = {};
+  const ins = get("ins:farmer");
+  if (isObj(ins)) {
+    let n = 0;
+    if (ins.displayName === "황금농부") { ins.displayName = "갓농부"; n++; }
+    if (isObj(ins.brand)) n += renameWordDeep(ins.brand, /황금농부/g, "갓농부");
+    if (n) { writes["ins:farmer"] = ins; result.ins = n; }
+  }
+  const c = get("content:farmer");
+  if (isObj(c)) {
+    let n = renameWordDeep(c, /황금농부/g, "갓농부");
+    if (isObj(c.brand) && !c.brand.field) { c.brand.field = "귤 단 하나 팔아 월매출 10억"; n++; }
+    if (n) { writes["content:farmer"] = c; result.content = n; }
+  }
+  return { writes, result: Object.keys(result).length ? result : { skipped: "이미 바뀜" } };
+}
+
 /* 위에서부터 차례로 (앞 작업 결과를 뒤 작업이 본다) */
 const OPS = [
   { id: "2026-10-08-docs-guide-6", note: "문대표 서류 준비 가이드를 6단계로", run: docsGuideSix },
@@ -279,7 +300,8 @@ const OPS = [
   { id: "2026-10-12-logic-farmer-photos", note: "로직메이커 · 황금농부 강사 프로필 사진 (사진이 비어 있을 때만)", run: logicFarmerPhotos },
   { id: "2026-10-13-menu-names-v15", note: "수강생 메뉴 이름 · AI 조교 이름 · 예전 메뉴 이름이 들어간 기본 문구를 새 이름으로 (기본값 그대로일 때만)", run: menuNamesV15 },
   { id: "2026-10-15-logic-to-bualnam", note: "강사 표시 이름 로직메이커 → 부알남 (로그인 이름은 그대로)", run: logicToBualnam },
-  { id: "2026-10-16-food-quicklink-desc", note: "빠른 이동 두고푸드 설명 → 전문 식품 도매몰 · 사업자 전용가 (기본 문구일 때만)", run: foodQuickLinkDesc }
+  { id: "2026-10-16-food-quicklink-desc", note: "빠른 이동 두고푸드 설명 → 전문 식품 도매몰 · 사업자 전용가 (기본 문구일 때만)", run: foodQuickLinkDesc },
+  { id: "2026-10-17-farmer-to-godfarmer", note: "강사 표시 이름 황금농부 → 갓농부 + 강의 분야 ‘귤 단 하나 팔아 월매출 10억’ (로그인 이름은 그대로)", run: farmerToGodFarmer }
 ];
 
-module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc };
+module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer };

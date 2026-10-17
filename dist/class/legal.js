@@ -234,6 +234,11 @@ ${CO}(이하 "회사")는 ${SITE}(이하 "서비스")를 운영하면서 「개�
 - 라이선스: SIL Open Font License 1.1
 - Copyright 2017 Adobe (http://www.adobe.com/), Google Fonts로 제공
 
+## Lilita One (글꼴 — 첫 화면 DOOGO CLASS 글자 로고의 바탕 글자 모양)
+- 라이선스: SIL Open Font License 1.1
+- Copyright (c) 2011 Juan Montoreano (juan@remolacha.biz), with Reserved Font Names "Lilita One"
+- 로고는 글꼴 파일을 쓰지 않고, 글자 모양을 기울이고 다듬은 그림으로만 넣었습니다.
+
 ## Lucide (아이콘)
 - 라이선스: ISC License (일부는 MIT License)
 - Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022. (https://lucide.dev)

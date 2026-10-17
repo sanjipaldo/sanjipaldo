@@ -10,7 +10,7 @@
  *  - PC에서 비어 보이지 않게 내용을 넉넉히: 운영 흐름 · 세 가지(세부 기능 6개씩) · 지금 방식과 비교 · 강사센터 메뉴 전체 · 기수 운영 방식 · 자주 묻는 질문 2단
  *  - 휴대폰 · 브라우저 틀 안은 실제 화면을 녹화한 영상(마우스 커서 · 클릭이 보임, 이름은 OOO). 보일 때만 받아서 재생하고,
  *    수강생 화면 · 강사센터 영상은 한 편을 장(chapter)으로 나눠 탭을 누르면 그 장면으로 넘어간다
- *  - 색 · 글꼴은 여기어때 디자인 시스템처럼: Lively red #F94239 하나 + 무채색 회색, Pretendard (home.css 맨 위)
+ *  - 색 · 글꼴은 스낵클(snackle.classhub.ai)처럼: 레드 #FF0037 하나 + 무채색 회색, Pretendard 하나 (home.css 맨 위)
  */
 (function () {
   "use strict";
@@ -162,8 +162,8 @@
 
   /* ---------- 조각 ---------- */
   const mark = (t) => '<mark class="hm-mark">' + t + "</mark>";
-  // 두고 원본 로고 — 두고 파랑 심볼 + 두 줄(doogo / CLASS) (icons.js 공용)
-  const brandLock = (cls) => window.doogoClassLock(cls);
+  // 첫 화면 로고 — 스낵클 느낌의 DOOGO CLASS 글자 로고 (icons.js doogoClassWord, 강사센터 · 로그인은 예전 doogo + CLASS 배지 그대로)
+  const brandLock = (cls) => window.doogoClassWord(cls);
   // 실제 화면 녹화 영상: 처음엔 첫 장면 사진만, 화면에 보이면 영상을 받아 소리 없이 반복 재생 (wireVideos)
   const PAUSE = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>';
   const video = (vid, alt, ch) => '<video class="hm-vid" muted playsinline loop preload="none" poster="' + IMG + vid + '.webp" data-src="' + IMG + vid + '"' + (ch ? " data-ch" : "") + ' aria-label="' + esc(alt || "") + ' (실제 화면 녹화)"></video>' +
@@ -264,7 +264,7 @@
       secHead("swap", "단톡방 · 드라이브로 운영할 때와 무엇이 다른가요", "강의 내용은 그대로, 운영하는 방식만 바뀌어요. 기수가 쌓일수록 차이가 커져요.", applyBtn("입점 문의" + arrow(), "hm-shead-link")) +
       // 줄마다 화면에 들어오면: 지금 방식 글자에 빨간 줄이 그어지고 → 두고 쪽 체크가 톡 튀어나오며 강조된다
       '<div class="hm-cmp" role="table" aria-label="운영 방식 비교">' +
-        '<div class="hm-cmp-row hm-cmp-head" role="row"><span role="columnheader">항목</span><span role="columnheader">지금 방식 <small>단톡방 · 드라이브 · 노션</small></span><span role="columnheader">' + brandLock("hm-lock-xs") + "</span></div>" +
+        '<div class="hm-cmp-row hm-cmp-head" role="row"><span role="columnheader">항목</span><span role="columnheader">지금 방식 <small>단톡방 · 드라이브 · 노션</small></span><span role="columnheader">' + brandLock("hm-word-xs") + "</span></div>" +
         COMPARE.map((r) => '<div class="hm-cmp-row hm-reveal" role="row"><b role="rowheader">' + r[0] + '</b><span role="cell" class="hm-cmp-old"><s class="hm-cmp-strike">' + r[1] + '</s></span><span role="cell" class="hm-cmp-new"><i class="hm-cmp-ok">' + icon("check", "xs") + "</i><span>" + r[2] + "</span></span></div>").join("") +
       "</div>" +
     "</div></section>";
@@ -342,7 +342,7 @@
   const SILHOUETTE = '<svg class="hm-tc-ph" viewBox="0 0 200 250" aria-hidden="true"><circle cx="100" cy="92" r="44"/><path d="M18 250c4-58 40-92 82-92s78 34 82 92Z"/></svg>';
   // doogo 심볼(링 · 기둥 · 재생 표시)을 크게 — 기능 칸 휴대폰 뒤 · 강사 카드 뒤 배경. 페이지에 한 번만 정의하고 <use> 로 (여러 겹 = 입체 두께)
   const DSYM_DEFS = '<svg class="hm-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>' +
-    '<linearGradient id="hm-dsym-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8378"/><stop offset=".5" stop-color="#f94239"/><stop offset="1" stop-color="#e0251a"/></linearGradient>' +
+    '<linearGradient id="hm-dsym-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6683"/><stop offset=".5" stop-color="#ff0037"/><stop offset="1" stop-color="#d60035"/></linearGradient>' +
     '<symbol id="hm-dsym" viewBox="0 0 364 380"><path fill-rule="evenodd" d="M148 88a145 145 0 1 0 .01 0Zm0 67a78 78 0 1 1-.01 0Z"/><rect x="232" width="58" height="272" rx="29"/><path d="M300 148L350 178Q364 190 350 202L300 232Z"/></symbol>' +
     "</defs></svg>";
   const DSYM = '<svg class="hm-tc-sym" viewBox="-4 -4 384 400" aria-hidden="true">' +
