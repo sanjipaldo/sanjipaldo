@@ -316,6 +316,9 @@ body[data-mode="landing"] { background: #fff; }
 .fc-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; max-width: 1120px; margin: 0 auto; padding: 28px 20px 40px; border-top: 1px solid var(--lp-line); font-size: 13px; color: var(--lp-mute); }
 .fc-modal { max-width: 520px; }
 .lp-empty-mark { width: 56px; height: auto; margin: 0 auto 18px; display: block; }
+/* 두고 클래스 글자 로고 (강의 둘러보기 머리띠 · 무료강의 준비 중 화면) */
+.lp-brand .lp-word { --wh: 22px; }
+.lp-empty-word { --wh: 26px; margin: 0 auto 22px; }
 @media (max-width: 900px) {
   .fc-gifts { grid-template-columns: minmax(0, 1fr); max-width: 420px; }
   .fc-live { grid-template-columns: minmax(0, 1fr); }

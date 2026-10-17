@@ -123,8 +123,8 @@
   document.addEventListener("contextmenu", fixCafe, true);
 
   const root = document.getElementById("root");
-  // 첫 로딩 화면: 흰 바탕 + doogo CLASS 로고 + 진행 막대 + ‘로딩중입니다’ (index.html 에 이미 있으면 그대로 — 다시 그리면 깜박인다)
-  const LOGO = '<span class="boot-logo"><img src="assets/brand/doogo-color.png" alt="doogo" width="342" height="96"><b>CLASS</b></span>';
+  // 첫 로딩 화면: 흰 바탕 + DOOGO CLASS 글자 로고 + 진행 막대 + ‘로딩중입니다’ (index.html 에 이미 있으면 그대로 — 다시 그리면 깜박인다)
+  const LOGO = '<img class="boot-logo" src="assets/brand/doogo-class-word.svg" alt="DOOGO CLASS" width="232" height="30">';
   if (!root.querySelector(".boot-wait")) root.innerHTML = '<div class="boot-wait" role="status" aria-live="polite">' + LOGO + '<span class="boot-bar" aria-hidden="true"><i></i></span><p class="boot-txt">로딩중입니다<span class="boot-dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p></div>';
   DB.remote.connect().then(start, (err) => {
     console.error(err);

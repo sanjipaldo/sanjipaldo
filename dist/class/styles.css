@@ -1364,24 +1364,22 @@ body.lib-gated #main > .page { filter: blur(6px); pointer-events: none; user-sel
 }
 
 /* ===== 서버 연결: 처음 불러오는 화면 ===== */
-/* 첫 로딩 화면 (서버에서 데이터를 받는 동안): 흰 바탕 + doogo CLASS 로고 + 빨간 진행 막대 + ‘로딩중입니다’.
+/* 첫 로딩 화면 (서버에서 데이터를 받는 동안): 흰 바탕 + DOOGO CLASS 글자 로고(스낵클 레드) + 빨간 진행 막대 + ‘로딩중입니다’.
    index.html 에 처음부터 들어 있어 화면이 뜨자마자 흰 바탕이 깔리고, 앱이 그려지면 사라진다. 로고 · 글자는 0.15초 뒤에 나타나 금방 끝나면 깜박이지 않는다 */
 .boot-wait { position: fixed; inset: 0; z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; background: #fff; text-align: center; font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
 .js .boot-wait { display: flex; }
 .boot-wait > * { animation: bootIn .3s ease .15s both; }
-.boot-logo { display: inline-flex; align-items: center; gap: 10px; }
-.boot-logo img { display: block; width: auto; height: 42px; }
-.boot-logo b { padding: 4px 9px; border-radius: 7px; background: #f94239; color: #fff; font-size: 15px; font-weight: 800; letter-spacing: .04em; line-height: 1.2; }
+.boot-logo { display: block; width: auto; height: 30px; }
 .boot-bar { position: relative; width: 168px; height: 4px; border-radius: 4px; background: #f2f3f5; overflow: hidden; }
-.boot-bar i { position: absolute; top: 0; bottom: 0; left: -40%; width: 40%; border-radius: 4px; background: #f94239; animation: bootBar 1.1s ease-in-out infinite; }
+.boot-bar i { position: absolute; top: 0; bottom: 0; left: -40%; width: 40%; border-radius: 4px; background: #ff0037; animation: bootBar 1.1s ease-in-out infinite; }
 .boot-txt { margin: 0; font-size: 15px; font-weight: 600; color: #6b7280; letter-spacing: -0.01em; }
 .boot-dots i { font-style: normal; animation: bootDot 1.2s infinite; }
 .boot-dots i:nth-child(2) { animation-delay: .2s; }
 .boot-dots i:nth-child(3) { animation-delay: .4s; }
 .boot-err > b { font-size: 18px; font-weight: 800; color: #111827; }
 .boot-err > span { margin-top: -12px; font-size: 14px; color: #6b7280; }
-.boot-err button { min-height: 46px; padding: 0 24px; border-radius: 999px; border: 0; background: #f94239; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
-.boot-err button:hover { background: #ea2013; }
+.boot-err button { min-height: 46px; padding: 0 24px; border-radius: 999px; border: 0; background: #ff0037; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.boot-err button:hover { background: #d60035; }
 @keyframes bootIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes bootBar { from { left: -40%; } to { left: 100%; } }
 @keyframes bootDot { 0%, 100% { opacity: .2; } 40% { opacity: 1; } }

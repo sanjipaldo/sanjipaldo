@@ -167,7 +167,7 @@
   function renderIndex() {
     const list = DB.activeInstructors().filter((x) => { const L = DB.landingOf(x.id); return L && L.published; });
     document.title = "강의 둘러보기 · 두고 클래스";
-    root.innerHTML = '<div class="lp"><header class="lp-nav"><div class="lp-wrap lp-nav-in"><span class="lp-brand">' + window.logoMark() + '<b>DOOGO CLASS</b></span><div class="lp-nav-r"><a class="lp-btn lp-btn-text" href="#/login">수강생 로그인</a></div></div></header>' +
+    root.innerHTML = '<div class="lp"><header class="lp-nav"><div class="lp-wrap lp-nav-in"><span class="lp-brand">' + window.doogoClassWord("lp-word") + '</span><div class="lp-nav-r"><a class="lp-btn lp-btn-text" href="#/login">수강생 로그인</a></div></div></header>' +
       '<main class="lp-sec"><div class="lp-wrap"><p class="lp-kicker">CLASSES</p><h2>강의 둘러보기</h2><div class="lp-index">' +
       list.map((x) => { const c = DB.content(x.id), t = DB.themeOf(c.brand.theme), co = recruiting(x.id); return '<a class="lp-index-card" href="#/p/' + x.id + '" style="--logo-accent:' + (t.accent || t.primary) + ";--lp-p:" + t.primary + ";--lp-on:" + (t.onPrimary || t.deep) + '"><span class="lp-index-top">' + window.logoMark() + "<b>" + esc(x.displayName) + "</b></span><h3>" + esc(c.brand.courseTitle) + "</h3><p>" + esc(c.brand.tagline || "") + "</p>" + (co ? cohortBadge(co) : "") + "</a>"; }).join("") +
       "</div></div></main></div>";
@@ -283,7 +283,7 @@
     const canSee = adm && (adm.role === "master" || adm.instructorId === id || adm.actingAs === id);
     if (!F || (!F.published && !canSee)) {
       document.title = "두고 클래스";
-      root.innerHTML = '<main class="lp lp-empty"><div>' + window.doogoLogo("mark", "lp-empty-mark") + "<h1>준비 중인 페이지예요</h1><p>곧 무료강의 안내가 올라와요.</p></div></main>";
+      root.innerHTML = '<main class="lp lp-empty"><div>' + window.doogoClassWord("lp-empty-word") + "<h1>준비 중인 페이지예요</h1><p>곧 무료강의 안내가 올라와요.</p></div></main>";
       return;
     }
     const c = DB.content(id), h = F.hero, lines = String(h.title || "").split("\n").filter(Boolean);

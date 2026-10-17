@@ -2,7 +2,7 @@
  * 여기어때 디자인 시스템(YDS)의 시각 언어를 따른다:
  *  - 색(첫 화면 · 입점 문의 팝업만): 스낵클(snackle.classhub.ai) 레드 #FF0037 하나로 강조 (누르면 #D60035), 연한 면 #FFF0F4 · #FFE5EB · #FFCCD7, 밝은 빨강 #FF6683.
  *    글자 검정은 #121418. 회색은 무채색 Neutral(#FAFAFA · #F5F5F5 · #E6E6E6 · #DCDCDC · #BBBBBB · #999999 · #707070 · #5C5C5C · #474747)
- *    수강생 첫 로그인 화면(.login-dc) · 공용 두고 클래스 로고(.hm-lock)는 예전 여기어때 레드 #F94239 그대로
+ *    수강생 첫 로그인 화면(.login-dc)은 예전 여기어때 레드 #F94239 그대로. 두고 클래스 로고(.hm-word · .hm-lock)는 어디서나 스낵클 레드
  *  - 글꼴: 스낵클과 똑같이 Pretendard 하나 (영문 · 숫자도 Pretendard), 자간 -0.035em(16px 에서 -0.56px), 큰 제목 -0.05em · 구역 제목 -0.0375em, 제목 굵기 700
  *  - 모서리 8 · 12 · 16 · 20px, 칩은 알약. 그림자는 역할별로 얕게 (flat · raised · float · sheet), 위 막대는 흰 바탕 + 내려가면 아주 옅은 그림자
  *  - 강조는 빨강으로만, 정보 표시는 Cyan, 성공은 Green */
@@ -62,16 +62,14 @@ body[data-mode="home"] { background: #fff; }
 .hm-top-in { display: flex; align-items: center; gap: 32px; height: 64px; }
 .hm-logo { display: flex; align-items: center; color: var(--g900); border-radius: 6px; }
 /* 첫 화면 글자 로고 (DOOGO CLASS, 스낵클 레드) — 높이로 크기 조절 (가로:세로 = 7.73:1) */
-.hm-word { display: block; flex: none; height: var(--wh, 26px); width: auto; aspect-ratio: 6005 / 777; color: var(--pri); overflow: visible; }
+.hm-word { display: block; flex: none; height: var(--wh, 26px); width: auto; aspect-ratio: 6005 / 777; color: var(--pri, #ff0037); overflow: visible; }
 .hm-foot-brand .hm-word { --wh: 28px; }
 .hm-modal-head .hm-word { --wh: 24px; }
 .hm-word-xs { --wh: 17px; display: inline-block; vertical-align: middle; }
-/* 두고 클래스 로고 — doogo 로고(레드 심볼 + 검정 글자) 그대로 + 오른쪽에 작은 빨간 CLASS 배지
- * --lh = doogo 로고 그림 높이(g 꼬리 포함). 배지는 로고 높이에 맞춰 같이 커지고 작아진다 */
-.hm-lock { --lh: 34px; display: inline-flex; align-items: center; gap: calc(var(--lh) * .24); line-height: 1; vertical-align: middle; }
-.hm-lock-logo { display: block; flex: none; height: var(--lh); width: auto; }
-.hm-lock-cls { display: block; flex: none; padding: calc(var(--lh) * .09) calc(var(--lh) * .2); border-radius: calc(var(--lh) * .15); background: #f94239; color: #fff;
-  font-family: var(--font); font-size: max(9px, calc(var(--lh) * .32)); font-weight: 700; font-style: normal; line-height: 1.05; letter-spacing: .06em; }
+/* 두고 클래스 로고 (로그인 · 강사센터 · 마스터) — 첫 화면과 같은 DOOGO CLASS 글자 로고, 스낵클 레드 한 색.
+ * --lh = 예전 doogo 로고 높이 자리. 글자 높이는 그 0.72배라 예전 로고와 가로 길이가 거의 같다 */
+.hm-lock { --lh: 34px; display: inline-flex; align-items: center; flex: none; line-height: 1; vertical-align: middle; color: #ff0037; }
+.hm-lock-word { display: block; flex: none; height: calc(var(--lh) * .72); width: auto; aspect-ratio: 6005 / 777; overflow: visible; }
 /* 다른 곳(문제 · 답 줄, 랜딩 미리보기)에서 쓰는 두고 심볼 하나 */
 .hm-sym { display: block; flex: none; height: var(--lh, 40px); width: calc(var(--lh, 40px) * .958); background: var(--logo, #f7323f);
   -webkit-mask: url(assets/brand/doogo-symbol.png) center / contain no-repeat; mask: url(assets/brand/doogo-symbol.png) center / contain no-repeat; }
