@@ -165,6 +165,7 @@ CLASS_SQLITE=/tmp/class.db MASTER_PASSWORD=test node scripts/dev-server.js 4400 
 
 - `index.html`: 제목 · 설명 · 키워드 · `robots index, follow` · 대표 주소(canonical) `https://www.doogoclass.com/` · 공유 미리보기(og · twitter, `assets/home/og.jpg` 1200×630) · 회사 정보 구조화 데이터(JSON-LD: WebSite + Organization).
 - **소유 확인 태그**: 네이버 서치어드바이저 `naver-site-verification`, 구글 서치 콘솔 `google-site-verification` (머리말 `<meta>`).
+- **첫 로딩 화면**: 서버에서 처음 데이터를 받는 동안(보통 1초 안팎) **흰 바탕 가운데 doogo 로고 + 빨간 CLASS 배지 · 빨간 진행 막대 · ‘로딩중입니다…’**(점 3개가 차례로 깜박임)가 보입니다. `index.html` 의 `#root` 맨 앞에 미리 들어 있어 페이지를 열자마자 흰 바탕이 깔리고(`main.js` 가 다시 그리지 않아 깜박임 없음), 로고 · 글자는 0.15초 뒤에 나타나 금방 끝나면 거의 보이지 않아요. 앱 화면이 그려지면 사라지고, 서버에 연결하지 못하면 같은 로고 아래 ‘서버에 연결하지 못했어요’ + ‘다시 시도’ 버튼. 자바스크립트가 꺼진 방문자 · 검색 로봇에게는 숨고 아래 안내 글만 보입니다. 모양은 `styles.css` 의 `.boot-*`.
 - **검색 로봇용 안내 글**: 화면은 자바스크립트로 그려지므로, 자바스크립트를 실행하지 않는 검색 로봇(네이버 등)도 읽을 수 있게 `#root` 안에 첫 화면 요약(제목 · 소개 · 세 가지 기능 · 수강생 강의실 · 강사센터 · 사업자 정보)을 글로 넣어 두었습니다. 화면이 뜨면 앱이 그 자리를 바로 바꾸고, 자바스크립트가 켜진 방문자에게는 보이지 않습니다.
 - `robots.txt`(전체 허용, `/api/`만 제외, 사이트맵 위치) · `sitemap.xml`(대표 주소 1개). `doogoclass.com` 은 `www.doogoclass.com` 으로 308 이동.
 - 대표 주소는 `https://www.doogoclass.com/` 하나 — 강사 소개 · 무료강의(`#/p/…` · `#/free/…`) 같은 `#` 주소는 검색엔진이 따로 모으지 않습니다.

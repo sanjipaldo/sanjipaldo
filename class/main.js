@@ -123,9 +123,11 @@
   document.addEventListener("contextmenu", fixCafe, true);
 
   const root = document.getElementById("root");
-  root.innerHTML = '<div class="boot-wait" role="status"><span class="boot-spin"></span>불러오는 중…</div>';
+  // 첫 로딩 화면: 흰 바탕 + doogo CLASS 로고 + 진행 막대 + ‘로딩중입니다’ (index.html 에 이미 있으면 그대로 — 다시 그리면 깜박인다)
+  const LOGO = '<span class="boot-logo"><img src="assets/brand/doogo-color.png" alt="doogo" width="342" height="96"><b>CLASS</b></span>';
+  if (!root.querySelector(".boot-wait")) root.innerHTML = '<div class="boot-wait" role="status" aria-live="polite">' + LOGO + '<span class="boot-bar" aria-hidden="true"><i></i></span><p class="boot-txt">로딩중입니다<span class="boot-dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p></div>';
   DB.remote.connect().then(start, (err) => {
     console.error(err);
-    root.innerHTML = '<div class="boot-wait boot-err" role="alert"><b>서버에 연결하지 못했어요</b><span>잠시 후 다시 시도해 주세요.</span><button type="button" onclick="location.reload()">다시 시도</button></div>';
+    root.innerHTML = '<div class="boot-wait boot-err" role="alert">' + LOGO + '<b>서버에 연결하지 못했어요</b><span>잠시 후 다시 시도해 주세요.</span><button type="button" onclick="location.reload()">다시 시도</button></div>';
   });
 })();
