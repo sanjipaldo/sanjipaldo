@@ -454,6 +454,10 @@ html.motion-off .gp-card:hover .gp-win, html.motion-off .gp-card:hover .gp-shot 
 .biz-ph { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.08); transition: opacity .6s var(--ease) .75s, transform 0s linear 1.4s; }
 .biz-ph.is-active { z-index: 1; opacity: 1; transform: scale(1); transition: opacity .9s var(--ease), transform 7.5s cubic-bezier(.16, .6, .2, 1); }
 .biz-frame.no-tr .biz-ph { transition: none !important; }
+/* 활성 사진 위 짧은 반복 영상(사업영역 소개와 같은 panel-*.mp4) — 실제로 재생되기 시작하면(.is-playing) 사진 위로 서서히 나타남 (home.js S4) */
+.biz-phv, .biz-vid { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; opacity: 0; transition: opacity .9s var(--ease); }
+.biz-phv { z-index: 1; }
+.biz-phv.is-active.is-playing, .biz-vid.is-playing { opacity: 1; }
 /* 프레임 왼쪽 아래: 큰 번호 + 영역명 + 운영 법인 */
 .biz-ovl { position: absolute; left: clamp(20px, 2.4vw, 32px); right: clamp(20px, 2.4vw, 32px); bottom: clamp(16px, 2vw, 26px); z-index: 3; display: grid; pointer-events: none; }
 .biz-ovl-i { grid-area: 1 / 1; display: flex; align-items: flex-end; gap: 16px; color: #fff; text-shadow: 0 2px 24px rgba(5, 12, 26, .45); opacity: 0; transform: translateY(14px); transition: opacity .5s var(--ease), transform .7s var(--ease); }
@@ -865,6 +869,7 @@ html.motion-off .facts .fact-rule i { transform: none; }
 html.motion-off .facts .fact-label, html.motion-off .facts .fact-sub { opacity: 1; transform: none; }
 html.motion-off .biz-more, html.motion-off .biz-more-in, html.motion-off .biz-ph, html.motion-off .biz-ph.is-active, html.motion-off .biz-ovl-i { transition: none !important; }
 html.motion-off .biz-ph, html.motion-off .biz-ph.is-active, html.motion-off .biz-row-media img { transform: none !important; }
+html.motion-off .biz-phv, html.motion-off .biz-vid { display: none; }
 html.motion-off .bs-media img, html.motion-off .cf-thumb img { transition: none; }
 /* OS '애니메이션 줄이기' 기기(html.soft-motion): 큰 확대 움직임만 덜어 냄 — 나머지 모션은 그대로 */
 html.soft-motion .hero-media video { animation-duration: 1.4s; transform: scale(1.03); }

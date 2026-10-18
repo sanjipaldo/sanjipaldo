@@ -340,6 +340,7 @@
     var ovls = $$('.biz-ovl-i', root);
     var frame = $('.biz-frame', root);
     var labelEl = $('[data-biz-label]', root);
+    var phvs = $$('.biz-phv', root), rowVids = $$('.biz-vid', root);
     var active = -1, centerIdx = -1, lastScroll = 0, px = null, py = null;
     var seen = !('IntersectionObserver' in window);
 
@@ -351,6 +352,8 @@
       caps.forEach(function (c, j) { c.classList.toggle('is-active', j === i); });
       dots.forEach(function (d, j) { d.classList.toggle('is-active', j === i); });
       ovls.forEach(function (o, j) { o.classList.toggle('is-active', j === i); });
+      phvs.forEach(function (v, j) { v.classList.toggle('is-active', j === i); });
+      syncVids();
       if (labelEl) labelEl.textContent = pad(i + 1) + ' / ' + pad(rows.length) + ' · ' + (rows[i].getAttribute('data-brand') || '');
     }
     // 화면 가운데 선에 걸린 행이 활성
@@ -406,7 +409,34 @@
       }, { rootMargin: '0px 0px -10% 0px' });
       medias.forEach(function (m) { mio.observe(m); });
     } else medias.forEach(function (m) { m.classList.add('is-in'); });
-    onMQ(desktopMQ, function () { seen = true; centerIdx = -1; if (desktopMQ.matches) update(window.innerHeight); });
+    // 사진 → 짧게 움직이는 영상(사업영역 소개와 같은 4초 반복). preload="none" — 처음 재생할 때 받기 시작.
+    // 데스크톱: 프레임이 보일 때 활성 사진의 영상만 · 1024px 이하: 화면에 걸린 카드의 영상만 재생, 나머지는 멈춤.
+    var frameIn = false, rowIn = [];
+    function playV(v, go) {
+      if (go) { if (v.paused) { var r = v.play(); if (r && r.catch) r.catch(function () {}); } }
+      else if (!v.paused) v.pause();
+    }
+    function syncVids() {
+      var ok = !motionOff() && document.visibilityState !== 'hidden', desk = desktopMQ.matches;
+      phvs.forEach(function (v, j) { playV(v, ok && desk && frameIn && seen && j === active); });
+      rowVids.forEach(function (v, j) { playV(v, ok && !desk && !!(rowIn && rowIn[j])); });
+    }
+    phvs.concat(rowVids).forEach(function (v) {
+      v.muted = true;
+      v.addEventListener('playing', function () { v.classList.add('is-playing'); });
+    });
+    if ('IntersectionObserver' in window) {
+      if (frame && phvs.length) new IntersectionObserver(function (es) { frameIn = es[0].isIntersecting; syncVids(); }, { rootMargin: '120px 0px' }).observe(frame);
+      var vio = new IntersectionObserver(function (es) {
+        es.forEach(function (en) { rowIn[rowVids.indexOf(en.target)] = en.isIntersecting; });
+        syncVids();
+      }, { rootMargin: '80px 0px' });
+      rowVids.forEach(function (v) { vio.observe(v); });
+    } else { frameIn = true; rowVids.forEach(function (v, j) { rowIn[j] = true; }); }
+    document.addEventListener('visibilitychange', syncVids);
+    document.addEventListener('doogo:motion', syncVids);
+    onMQ(desktopMQ, function () { seen = true; centerIdx = -1; if (desktopMQ.matches) update(window.innerHeight); syncVids(); });
+    syncVids();
     return update;
   }
 

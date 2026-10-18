@@ -180,7 +180,7 @@ const BIZ = [
     ask: '교육 상담하기',
     band: '{en}에서 배움을 시작해 보세요.', // 마무리 배너 제목 ({en} = 영문 브랜드)
     cta: { label: '교육 플랫폼 보기', ext: CLASS_URL },
-    web: web({ name: 'DOOGO CLASS', kind: '강의 플랫폼', host: 'doogoclass.com', url: CLASS_URL, shot: 'class', close: 'DOOGO CLASS 바로가기',
+    web: web({ name: 'DOOGO CLASS', kind: '강의 플랫폼', host: 'doogoclass.com', url: CLASS_URL, shot: 'class-2', close: 'DOOGO CLASS 바로가기',
       desc: '강의 소개 페이지부터 수강생 관리까지, 강사가 자기 이름으로 강의를 운영하는 강의 플랫폼입니다.' }),
     narration: '경험을 나누면, 또 다른 시작이 태어납니다.',
     hero: { f: 'campus', fx: '50%', fy: '42%', mx: '58%' },
