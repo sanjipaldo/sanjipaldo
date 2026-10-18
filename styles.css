@@ -2376,7 +2376,7 @@ button.cashflow-day:hover { z-index:1; background:#f8fbff; box-shadow:inset 0 0 
 .profile-gradient { height:112px; background:radial-gradient(circle at 80% 20%,rgba(255,255,255,.34),transparent 27%),linear-gradient(110deg,#2379f6,#427ff1 48%,#a882e8 74%,#f2a6c7); }
 .profile-identity { position:relative; margin-top:-46px; padding:0 28px 20px; display:grid; grid-template-columns:86px 1fr auto; align-items:end; gap:17px; }
 .profile-symbol { width:86px; height:86px; display:grid; place-items:center; overflow:hidden; background:white; border:5px solid white; border-radius:24px; box-shadow:0 10px 28px rgba(22,51,98,.16); }
-.profile-symbol img { width:72px; height:64px; object-fit:contain; }
+.profile-symbol img { width:44px; height:48px; object-fit:contain; }
 .profile-identity > div { padding-bottom:6px; }
 .profile-identity > div > span { color:#3182f6; font-size:13px; font-weight: 700; letter-spacing:.15em; }
 .profile-identity h2 { margin:5px 0 4px; font-size:24px; letter-spacing:-.04em; }
@@ -2432,7 +2432,7 @@ button.cashflow-day:hover { z-index:1; background:#f8fbff; box-shadow:inset 0 0 
   .profile-gradient { height:86px; }
   .profile-identity { margin-top:-31px; padding:0 16px 16px; grid-template-columns:64px 1fr; gap:12px; }
   .profile-symbol { width:64px; height:64px; border-radius:18px; }
-  .profile-symbol img { width:53px; height:48px; }
+  .profile-symbol img { width:31px; height:34px; }
   .profile-identity h2 { font-size:19px; }
   .profile-approved { grid-column:1/-1; justify-self:start; margin:0; }
   .profile-glance { padding:0 16px 17px; grid-template-columns:1fr 1fr; }
@@ -2464,10 +2464,8 @@ button.cashflow-day:hover { z-index:1; background:#f8fbff; box-shadow:inset 0 0 
 }
 .login-visual::after { content:""; position:absolute; z-index:-1; width:360px; height:360px; right:-130px; bottom:-80px; border:1px solid rgba(255,255,255,.14); border-radius:48% 52% 40% 60%; transform:rotate(24deg); }
 .login-visual > * { position:relative; z-index:1; }
-.login-market-brand .brand-mark { width:58px; height:58px; overflow:visible; background:transparent; border-radius:0; box-shadow:none; }
-.login-market-brand .brand-mark img { width:52px; height:52px; filter:brightness(0) invert(1); }
-.login-market-brand .brand-word b { font-size:23px; letter-spacing:-.035em; }
-.login-market-brand .brand-word small { color:rgba(255,255,255,.72); }
+.login-market-brand { max-width:100%; }
+.login-market-wordmark { display:block; height:clamp(22px, 2.2vw, 28px); width:auto; max-width:100%; }
 .login-message p { color:rgba(255,255,255,.80); }
 .sidebar-market-brand { width:auto; min-width:0; padding-right:0; }
 .sidebar-market-brand > img { width:138px; height:40px; object-fit:contain; object-position:left center; }
@@ -4244,12 +4242,12 @@ body { letter-spacing:-.012em; }
 /* --- 상품 판매중 요약 행: 평균 마진 강조 --- */
 .onsale-avg-margin em { color: #1761e8; font-size: 15px; font-weight: 600; font-style: normal; }
 
-/* --- 위탁셀러 로그인 비주얼: 신규 로고 + 태그라인, 텍스트 정리 --- */
+/* --- 로그인 비주얼: DOOGO MARKET 워드마크(흰색 SVG) + 태그라인, 텍스트 정리 --- */
 .login-visual-tagline { margin: 10px 0 0; color: rgba(255,255,255,.85); font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
-.login-visual-logo { display: block; width: max-content; }
-.login-visual-logo img { height: 56px; width: auto; max-width: 100%; display: block; filter: brightness(0) invert(1); }
+.login-visual-logo { display: block; width: max-content; max-width: 100%; }
+.login-visual-logo img { height: clamp(22px, 2.4vw, 30px); width: auto; max-width: 100%; display: block; }
 .login-panel-brand-logo.login-panel-brand { display: flex; }
-.login-panel-brand-logo > img { width: auto; height: 48px; object-fit: contain; }
+.login-panel-brand-logo > img { width: auto; height: 26px; object-fit: contain; }
 
 /* --- 상품승인: 마스터상품 수정 버튼 (노란색) --- */
 .master-edit-button { padding: 10px 15px; border-radius: 9999px; color: #8a6d0a; background: #fff6d9; border: 1px solid #f0dd9c; font-weight: 700; transition: .16s ease; }
@@ -4357,7 +4355,7 @@ body { letter-spacing:-.012em; }
 .brand-directory-card small { color: #8a96a3; font-size: 12px; }
 
 /* --- 로그인 화면: 로고 + 센터 배지 한 줄 배치 --- */
-.login-brand-row { display: flex; align-items: center; gap: 14px; }
+.login-brand-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
 .login-brand-row .partner-badge { margin-top: 0; }
 
 /* --- 가격 변경알림: 가로형 행 레이아웃 --- */
@@ -4770,7 +4768,8 @@ h4 { font-weight: 600; letter-spacing: -.01em; }
 @media (max-width: 720px) {
   .login-panel { padding: 20px 20px; }
   .login-box { padding: 20px 18px 18px; }
-  .login-panel-brand-logo > img { height: 36px; }
+  .login-panel-brand-logo.login-panel-brand { justify-content: center; }
+  .login-panel-brand-logo > img { width: min(232px, 100%); height: auto; }
   .login-panel-tagline { margin: 8px 0 18px; }
   .login-heading { margin-bottom: 20px; }
   .login-heading h2 { margin: 6px 0 6px; font-size: 20px; }
@@ -6308,9 +6307,12 @@ body.kakao-sheet-open { overflow: hidden; }
   .deposit-pill-label::after { content: ""; }
   .deposit-pill b { font-size: 12.5px; }
 }
-/* 사이드바 로고 1.5배 */
-.sidebar-market-brand > img { width: 186px; height: 54px; }
-@media (max-width: 720px) { .sidebar-market-brand > img { width: 160px; height: 47px; } }
+/* 사이드바 로고: DOOGO MARKET 워드마크 — 아래 태그라인 폭에 맞춘 크기.
+   예전 PNG 여백에 맞춘 .brand 안쪽 여백(왼쪽 7px·아래 26px)을 걷어 태그라인과 왼쪽 끝을 맞춘다 */
+#appSidebar .sidebar-market-brand { padding: 0 0 6px; }
+.sidebar-market-brand > img { width: 193px; height: 20px; max-width: 100%; }
+@media (max-width: 720px) { .sidebar-market-brand > img { width: 212px; height: 22px; } }
+@media (max-width: 359px) { .sidebar-market-brand > img { width: 193px; height: 20px; } }
 /* 상품 소싱 카테고리: 이모지 작게, 상품 수 숫자 숨김 */
 .cat-rail .cat-rail-item .cat-rail-icon { width: 28px; height: 28px; font-size: 17px !important; border-radius: 8px; }
 @media (max-width: 720px) { .cat-rail .cat-rail-item .cat-rail-icon { width: 26px; height: 26px; font-size: 16px !important; } }
@@ -8114,6 +8116,7 @@ body[data-role="supplier"] .signup-inline-btn { background: #111; }
 .kakao-preview-grid .text-button { justify-self: start; color: #fff !important; font-weight: 700; text-decoration: underline; }
 .kakao-preview-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .kp-avatar { width: 34px; height: 34px; display: grid; place-items: center; color: #fff; background: #111; border-radius: 12px; font-weight: 800; }
+.kp-avatar img { width: 46%; height: auto; }
 .kakao-preview-head b { font-size: 13.5px; color: #1d1d1d; }
 .kakao-preview-head small { margin-left: auto; color: #4b5563; font-size: 12px; }
 .kakao-preview-bubble { margin-left: 42px; overflow: hidden; background: #fff; border-radius: 4px 16px 16px 16px; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
@@ -8475,6 +8478,7 @@ body[data-role="supplier"] .signup-inline-btn { background: #111; }
 .talk-room-item.active { background: #f2f2f2; }
 .talk-room-item .talk-avatar { width: 52px; height: 52px; border-radius: 20px; font-size: 20px; font-weight: 700; background: var(--avatar-tone, #7fa7d9); }
 .talk-room-item .talk-avatar.channel { background: #191919; color: #fff; font-size: 24px; font-weight: 800; }
+.talk-room-item .talk-avatar.channel img { width: 46%; height: auto; }
 .talk-room-text { gap: 5px; }
 .talk-room-text b { display: flex; align-items: center; gap: 5px; font-size: 16.5px; color: #191919; }
 .talk-room-text b > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
