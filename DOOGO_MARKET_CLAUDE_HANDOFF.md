@@ -59,6 +59,8 @@ doogo-market-latest/
 ├── app.js                           # 상태, 렌더링, 이벤트, 업무 규칙 전체
 ├── styles.css                       # 데스크톱·태블릿·모바일 스타일
 ├── assets/
+│   ├── doogo-wordmark.svg           # 새 DOOGO 워드마크(두고 블루 #085CE0) — 랜딩 머리글
+│   ├── doogo-wordmark-white.svg     # 같은 워드마크 흰색 — 랜딩 푸터·푸터 배경 워터마크
 │   ├── doogomarket-symbol.png
 │   ├── doogomarket-wordmark.png
 │   ├── doogohub-app-icon.png
@@ -116,6 +118,7 @@ doogo-market-latest/
 - 공통 화면은 넉넉한 여백, 큰 카드, 명확한 숫자, 클릭 가능한 행/버튼을 우선한다.
 - 모바일 사용 비중이 높다는 전제다. 720px 이하에서 사이드바는 오버레이 메뉴로 열리고, 표는 모바일 카드 또는 가로 스크롤로 전환된다.
 - 로그인 헤드라인은 `startTyping()`으로 타이핑 모션을 제공하고 `prefers-reduced-motion`을 존중한다.
+- 랜딩 로고는 **DOOGO 워드마크**(참고: snackle.classhub.ai 로고 스타일 — 굵은 기울임 대문자). 글자 윤곽은 Lilita One(SIL OFL 1.1)을 SVG 패스로 바꾼 뒤 14° 기울임·자간 -30, 색은 기존 로고 블루 `#085CE0`(어두운 바탕은 흰색). 글꼴 파일 없이 그려지는 순수 SVG라 어디서나 같게 보인다. 'DOOGO MARKET'은 머리글 가운데 스위치를 밀어내서 'DOOGO'만 쓴다. 휴대폰 머리글은 스위치가 정가운데에 오도록 로고 높이를 폭별로 줄인다(≤520px 17px, ≤389px 16px, ≤374px 15px, ≤345px 14.5px — 머리글 그리드의 좌우 칸 = (내부폭 − 스위치 − 칸 사이 4px×2) ÷ 2 안에 로고+왼쪽 여백이 들어가야 함). 앱(로그인·사이드바)은 아직 예전 `doogo-logo-horizontal.png`.
 - 글꼴은 앱·랜딩 모두 **Pretendard 하나**다(참고: snackle.classhub.ai). 자체 호스팅 파일 `assets/fonts/pretendard/pretendardvariable-dynamic-subset.css`를 `app.html`·`index.html`이 같이 쓰고, 구글 폰트(Inter·Geist·Noto Sans KR)는 쓰지 않는다. 앱은 `--font-sans` 토큰, 본문 자간은 `-0.035rem`(= -0.56px, 휴대폰 본문 18px에서도 같은 값), 버튼·입력칸은 `letter-spacing: inherit`. 코드 편집칸(HTML 직접 편집)만 `--font-mono`.
 - Pretendard는 평균 글자 폭이 넓어서 **너비를 정하지 않은 입력칸의 기본 폭이 약 30% 크다**(16px 기준 234→306px). 입력칸을 `display:grid` 라벨·폼 안에 넣을 때는 열을 `grid-template-columns: minmax(0, 1fr)`로 두고 입력칸에 `width:100%; min-width:0`을 준다(안 그러면 칸이 부모 밖으로 밀려난다). 입력칸 전체에 기본 `width`를 주는 방식은 그리드·플렉스 늘이기(stretch)를 깨므로 쓰지 않는다.
 
