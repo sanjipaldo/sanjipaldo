@@ -116,6 +116,8 @@ doogo-market-latest/
 - 공통 화면은 넉넉한 여백, 큰 카드, 명확한 숫자, 클릭 가능한 행/버튼을 우선한다.
 - 모바일 사용 비중이 높다는 전제다. 720px 이하에서 사이드바는 오버레이 메뉴로 열리고, 표는 모바일 카드 또는 가로 스크롤로 전환된다.
 - 로그인 헤드라인은 `startTyping()`으로 타이핑 모션을 제공하고 `prefers-reduced-motion`을 존중한다.
+- 글꼴은 앱·랜딩 모두 **Pretendard 하나**다(참고: snackle.classhub.ai). 자체 호스팅 파일 `assets/fonts/pretendard/pretendardvariable-dynamic-subset.css`를 `app.html`·`index.html`이 같이 쓰고, 구글 폰트(Inter·Geist·Noto Sans KR)는 쓰지 않는다. 앱은 `--font-sans` 토큰, 본문 자간은 `-0.035rem`(= -0.56px, 휴대폰 본문 18px에서도 같은 값), 버튼·입력칸은 `letter-spacing: inherit`. 코드 편집칸(HTML 직접 편집)만 `--font-mono`.
+- Pretendard는 평균 글자 폭이 넓어서 **너비를 정하지 않은 입력칸의 기본 폭이 약 30% 크다**(16px 기준 234→306px). 입력칸을 `display:grid` 라벨·폼 안에 넣을 때는 열을 `grid-template-columns: minmax(0, 1fr)`로 두고 입력칸에 `width:100%; min-width:0`을 준다(안 그러면 칸이 부모 밖으로 밀려난다). 입력칸 전체에 기본 `width`를 주는 방식은 그리드·플렉스 늘이기(stretch)를 깨므로 쓰지 않는다.
 
 ## 6. 역할별 메뉴
 

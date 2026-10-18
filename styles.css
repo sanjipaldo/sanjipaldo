@@ -1,4 +1,6 @@
 :root {
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   --ink: #172232;
   --muted: #6f7d8e;
   --line: #dfe6ef;
@@ -697,7 +699,7 @@ body { max-width:100%; }
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; color: var(--ink); background: var(--canvas); font-family: "Inter", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-feature-settings: "ss03"; word-break: keep-all; overflow-wrap: break-word; }
+body { margin: 0; color: var(--ink); background: var(--canvas); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; word-break: keep-all; overflow-wrap: break-word; }
 [hidden] { display: none !important; }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
@@ -2625,7 +2627,7 @@ button.cashflow-day:hover { z-index:1; background:#f8fbff; box-shadow:inset 0 0 
 }
 
 /* v15 — marketplace operations refinement */
-body, button, input, select, textarea { font-family:"Inter", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-feature-settings: "ss03"; }
+body, button, input, select, textarea { font-family: var(--font-sans); }
 body { letter-spacing:-.012em; }
 .panel { border-color:#e4e9f0; box-shadow:0 8px 28px rgba(18,35,61,.045); }
 
@@ -2740,9 +2742,9 @@ body { letter-spacing:-.012em; }
 .email-master-switch input:checked + i { background:#3182f6; }
 .email-master-switch input:checked + i::after { transform:translateX(18px); }
 .email-recipient-row { margin:18px 0; padding:14px; display:grid; grid-template-columns:minmax(0,480px) 1fr; align-items:end; gap:15px; background:#f7f9fc; border-radius:12px; }
-.email-recipient-row label { display:grid; gap:6px; }
+.email-recipient-row label { display:grid; grid-template-columns:minmax(0,1fr); gap:6px; }
 .email-recipient-row label span { color:#667589; font-size:13px; font-weight: 600; }
-.email-recipient-row input { height:42px; padding:0 12px; background:#fff; border:1px solid #dce3ec; border-radius:9px; outline:none; }
+.email-recipient-row input { width:100%; min-width:0; height:42px; padding:0 12px; background:#fff; border:1px solid #dce3ec; border-radius:9px; outline:none; }
 .email-recipient-row small { padding-bottom:12px; color:#8995a3; font-size:13px; }
 .dropshipping-email-card fieldset { margin:0; padding:0; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; border:0; }
 .dropshipping-email-card legend { margin-bottom:9px; color:#566578; font-size:14px; font-weight: 700; }
@@ -4416,11 +4418,9 @@ body { letter-spacing:-.012em; }
    같은 선택자는 이 블록이 우선 적용된다.
    ============================================================ */
 
-/* 폰트 스택: Apple 기기에서는 실제 SF Pro Text/Display가 먼저 매칭되고,
-   그 외 플랫폼은 Inter(+ss03)로 근사한다. */
+/* 폰트 스택: 두고 공통 Pretendard (맨 아래 '글꼴' 블록 참고) */
 body, button, input, select, textarea {
-  font-family: "Inter", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-feature-settings: "ss03";
+  font-family: var(--font-sans);
 }
 body { letter-spacing: -.011em; line-height: 1.5; }
 
@@ -4682,9 +4682,9 @@ h4 { font-weight: 600; letter-spacing: -.01em; }
 .category-cascade-field .category-select-quad { margin-top: 6px; }
 
 /* ============================================================
-   전반적인 여백/자간 확대 (너무 붙어있어 답답하다는 피드백 반영)
+   전반적인 여백 확대 (너무 붙어있어 답답하다는 피드백 반영)
+   자간은 맨 아래 '글꼴' 블록에서 정한다
    ============================================================ */
-body { letter-spacing: normal; }
 .form-field { gap: 8px; }
 .form-grid { gap: 16px; }
 .editor-grid { gap: 18px; }
@@ -5510,10 +5510,10 @@ body { letter-spacing: normal; }
 .pick-option-price em, .pick-single-price em { color: #0a8a4a; font-size: 12.5px; font-style: normal; font-weight: 800; }
 .pick-option-price em.low, .pick-single-price em.low { color: #e5484d; }
 .sr-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.pick-single-price { padding: 12px; display: grid; gap: 6px; background: #f9fafb; border-radius: 14px; }
-.pick-single-price label { display: grid; gap: 6px; }
+.pick-single-price { padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; background: #f9fafb; border-radius: 14px; }
+.pick-single-price label { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .pick-single-price label span { color: #6b7684; font-size: 13px; font-weight: 700; }
-.pick-single-price input { height: 50px; padding: 0 12px; font-size: 18px; font-weight: 800; border: 1px solid #d1d6db; border-radius: 12px; }
+.pick-single-price input { width: 100%; min-width: 0; height: 50px; padding: 0 12px; font-size: 18px; font-weight: 800; border: 1px solid #d1d6db; border-radius: 12px; }
 .pick-single-price small { color: #8b95a1; font-size: 13px; }
 .pick-approval-note { margin: 14px 0 4px; padding: 12px 14px; display: grid; gap: 2px; background: #f2f4f6; border-radius: 12px; }
 .pick-approval-note b { color: #191f28; font-size: 14.5px; }
@@ -5666,7 +5666,7 @@ body { letter-spacing: normal; }
 .onsale-options .onsale-options-head { color: #8b95a1; font-size: 12px; font-weight: 700; background: #f9fafb; }
 .onsale-options span:first-child { min-width: 0; display: grid; gap: 2px; }
 .onsale-options b { overflow-wrap: anywhere; font-weight: 700; }
-.onsale-options code, .onsale-single code { color: #6b7684; font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.onsale-options code, .onsale-single code { color: #6b7684; font-size: 12px; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
 .onsale-options span:nth-child(2) { font-weight: 800; white-space: nowrap; }
 .onsale-options span:nth-child(3) { text-align: right; font-weight: 800; }
 .onsale-single { display: flex; flex-wrap: wrap; gap: 6px 16px; color: #6b7684; font-size: 14px; }
@@ -6028,7 +6028,7 @@ body.kakao-sheet-open { overflow: hidden; }
 .staff-perm-note { margin: 8px 0 0; color: #8b95a1; font-size: 12.5px; font-weight: 400; }
 .staff-invite-code { margin: 0 0 12px; padding: 18px; display: grid; justify-items: center; gap: 4px; background: #f5f9ff; border: 1px dashed #9cc2ff; border-radius: 14px; }
 .staff-invite-code small { color: #6b7684; }
-.staff-invite-code b { font-size: 32px; letter-spacing: .18em; color: #1b64da; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; }
+.staff-invite-code b { font-size: 32px; letter-spacing: .18em; color: #1b64da; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
 .staff-invite-code span { color: #4e5968; font-size: 13px; }
 .staff-invite-link { display: flex; gap: 8px; }
 .staff-invite-link input { flex: 1; min-width: 0; height: 42px; padding: 0 12px; color: #4e5968; background: #f7f8fa; border: 1px solid #e5e8eb; border-radius: 10px; font-size: 13px; }
@@ -6172,7 +6172,7 @@ body.kakao-sheet-open { overflow: hidden; }
 .deposit-section-head h3 { margin: 4px 0; font-size: 18px; }
 .deposit-section-head p { margin: 0; color: #6b7684; font-size: 13.5px; line-height: 1.5; }
 .deposit-charge-panel, .deposit-requests, .deposit-pay-guide, .deposit-recent, .deposit-history-panel, .deposit-withdraw { padding: 20px; }
-.deposit-charge-form { display: grid; gap: 12px; }
+.deposit-charge-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .deposit-charge-form label > span { display: block; margin-bottom: 6px; color: #4e5968; font-size: 13.5px; font-weight: 700; }
 .deposit-amount div { display: flex; align-items: center; gap: 8px; padding: 0 14px; height: 56px; border: 1.5px solid #dfe3e8; border-radius: 12px; background: #fff; }
 .deposit-amount div:focus-within { border-color: #3182f6; box-shadow: 0 0 0 3px rgba(49,130,246,.12); }
@@ -8491,8 +8491,8 @@ body[data-role="supplier"] .signup-inline-btn { background: #111; }
 .talk-connect-modal { display: grid; justify-items: center; gap: 10px; text-align: center; padding-top: 6px; }
 .talk-connect-modal h2 { margin: 4px 0 0; font-size: 21px; }
 .talk-connect-modal > p { margin: 0; color: #6b6b6b; font-size: 14.5px; line-height: 1.6; }
-.talk-connect-form { width: 100%; margin-top: 8px; display: grid; gap: 8px; }
-.talk-connect-form input { height: 50px; padding: 0 14px; border: 1px solid #e2e2e2; border-radius: 12px; font: inherit; font-size: 17px; font-weight: 700; letter-spacing: .04em; text-align: center; text-transform: uppercase; }
+.talk-connect-form { width: 100%; margin-top: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.talk-connect-form input { width: 100%; min-width: 0; height: 50px; padding: 0 14px; border: 1px solid #e2e2e2; border-radius: 12px; font: inherit; font-size: 17px; font-weight: 700; letter-spacing: .04em; text-align: center; text-transform: uppercase; }
 .talk-connect-form input:focus { outline: 0; border-color: #191919; }
 .talk-connect-form .primary-button { min-height: 50px; color: #191919; background: #fee500; border-color: #fee500; font-weight: 800; }
 .talk-invite-code { width: 100%; padding: 16px; background: #f6f6f6; border-radius: 14px; font-size: 24px; font-weight: 800; letter-spacing: .08em; }
@@ -8828,10 +8828,10 @@ body[data-role="supplier"] {
   --geist-whisper: 0 1px 1px rgba(0,0,0,.04);
   --geist-float: 0 0 0 1px rgba(0,0,0,.06), 0 2px 2px rgba(0,0,0,.04), 0 8px 16px -4px rgba(0,0,0,.08);
 }
-/* 글꼴: 영문·숫자는 Geist, 한글은 Noto Sans KR. 큰 제목은 자간을 좁게 */
-body[data-role="supplier"], body[data-role="supplier"] :is(button, input, select, textarea) { font-family: "Geist", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-feature-settings: normal; }
+/* 글꼴: 두고 공통 Pretendard. 큰 제목은 자간을 좁게 */
+body[data-role="supplier"], body[data-role="supplier"] :is(button, input, select, textarea) { font-family: var(--font-sans); font-feature-settings: normal; }
 body[data-role="supplier"] #appView :is(h1, h2) { letter-spacing: -.03em; }
-body[data-role="supplier"] :is(#pageContext, .eyebrow, .stl-kicker, .pg-kicker, .calendar-detail-head > span) { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important; font-size: 12px !important; font-weight: 500 !important; letter-spacing: 0 !important; text-transform: uppercase; color: var(--sup-mute) !important; background: none !important; padding: 0 !important; }
+body[data-role="supplier"] :is(#pageContext, .eyebrow, .stl-kicker, .pg-kicker, .calendar-detail-head > span) { font-family: var(--font-sans) !important; font-size: 12px !important; font-weight: 500 !important; letter-spacing: 0 !important; text-transform: uppercase; color: var(--sup-mute) !important; background: none !important; padding: 0 !important; }
 /* 사이드바: 역할 카드는 잉크, 선택 메뉴는 연회색 */
 body[data-role="supplier"] :is(#appView, #modal) .workspace-switcher-entry { color: #fff !important; background: var(--sup-ink) !important; border-color: var(--sup-ink) !important; box-shadow: var(--geist-float) !important; }
 body[data-role="supplier"] :is(#appView, #modal) .workspace-switcher-entry :is(b, strong, span:not(.role-icon), svg) { color: #fff !important; }
@@ -8932,7 +8932,7 @@ body[data-role="supplier"] :is(input[type="checkbox"], input[type="radio"]) { ac
 .hero-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .sup-launch { margin-bottom: 16px; padding: 20px 22px; }
 .sup-launch-head { display: grid; gap: 12px; }
-.sup-launch-head span { color: #8f8f8f; font: 500 12px/1.3 "Geist Mono", ui-monospace, monospace; letter-spacing: 0; }
+.sup-launch-head span { color: #8f8f8f; font: 500 12px/1.3 var(--font-sans); letter-spacing: 0; }
 .sup-launch-head h3 { margin: 4px 0 2px; font-size: 20px; }
 .sup-launch-head h3 b { margin-left: 6px; color: #8f8f8f; font-weight: 600; }
 .sup-launch-head p { margin: 0; color: #6b6b6b; font-size: 14px; }
@@ -8948,7 +8948,7 @@ body[data-role="supplier"] :is(input[type="checkbox"], input[type="radio"]) { ac
 .sup-launch-list li b { font-size: 14.5px; }
 .sup-launch-list li small { color: #8f8f8f; font-size: 12.5px; }
 .sup-launch-list li button { white-space: nowrap; padding: 8px 14px; font-size: 13.5px; }
-.sup-terms-head span, .bulk-head span { color: #8f8f8f; font: 500 12px/1.3 "Geist Mono", ui-monospace, monospace; }
+.sup-terms-head span, .bulk-head span { color: #8f8f8f; font: 500 12px/1.3 var(--font-sans); }
 .sup-terms-head h2, .bulk-head h2 { margin: 6px 0 4px; }
 .sup-terms-body { margin: 14px 0; max-height: 300px; overflow: auto; padding: 4px 14px; border: 1px solid #ebebeb; border-radius: 12px; background: #fafafa; }
 .sup-terms-body h4 { margin: 12px 0 4px; font-size: 14.5px; }
@@ -9085,7 +9085,7 @@ body[data-role="supplier"] .rde { --rde-accent: #171717; --rde-ink: #171717; --r
 .rde-video-thumb { position: relative; max-width: 360px; border-radius: 10px; overflow: hidden; }
 .rde-video-thumb img { display: block; width: 100%; }
 .rde-video-thumb span { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 34px; text-shadow: 0 2px 10px rgba(0,0,0,.5); }
-.rde-code-input { width: 100%; min-height: 140px; padding: 10px 12px; font: 13px/1.55 "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; color: #e5e7eb; background: #111827; border: 0; border-radius: 10px; resize: vertical; }
+.rde-code-input { width: 100%; min-height: 140px; padding: 10px 12px; font: 13px/1.55 var(--font-mono); color: #e5e7eb; background: #111827; border: 0; border-radius: 10px; resize: vertical; }
 .rde-html-preview { padding: 10px 12px; max-height: 320px; overflow: auto; background: #fff; border: 1px dashed var(--rde-line); border-radius: 10px; }
 .rde-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .rde-foot > span { color: #6b7684; font-size: 13px; font-weight: 600; }
@@ -9097,7 +9097,7 @@ body[data-role="supplier"] .rde { --rde-accent: #171717; --rde-ink: #171717; --r
 .rde-code[hidden] { display: none; }
 .rde-code p { margin: 0; color: #4e5968; font-size: 13px; }
 .rde-code code { padding: 1px 5px; background: #f2f4f6; border-radius: 4px; font-size: 12px; }
-.rde-code textarea { width: 100%; min-height: 280px; padding: 12px; font: 12.5px/1.55 "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; color: #e5e7eb; background: #111827; border: 0; border-radius: 10px; resize: vertical; }
+.rde-code textarea { width: 100%; min-height: 280px; padding: 12px; font: 12.5px/1.55 var(--font-mono); color: #e5e7eb; background: #111827; border: 0; border-radius: 10px; resize: vertical; }
 .rde-code-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .rde-code-actions button { min-height: 38px; padding: 0 14px; border: 1px solid var(--rde-line); background: #fff; border-radius: 9px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
 /* 상세페이지 본문 모양 (에디터·미리보기·상품 상세 공통) */
@@ -9319,7 +9319,7 @@ body[data-role="seller"] .ship-default { background: #3182f6; }
 .studio-code-pair { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .studio-code-pair span { display: grid; gap: 1px; padding: 6px 12px; background: #fff; border: 1px solid #d6e6ff; border-radius: 10px; }
 .studio-code-pair small { color: #6b7684; font-size: 11.5px; }
-.studio-code-pair b { font-size: 15px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -.01em; }
+.studio-code-pair b { font-size: 15px; font-family: var(--font-sans); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .studio-code-pair i { font-style: normal; font-size: 18px; color: #3182f6; font-weight: 700; }
 .studio-code-link p { margin: 0; display: grid; gap: 2px; color: #333d4b; font-size: 13.5px; line-height: 1.55; }
 .studio-code-link p small { color: #6b7684; font-size: 12px; }
@@ -9459,8 +9459,8 @@ body[data-role="supplier"] .sales-pager button.active { background: #171717; bor
 .xf-head h2 { margin: 4px 0 6px; font-size: 22px; }
 .xf-head p { margin: 0 0 14px; color: #4e5968; font-size: 14px; line-height: 1.6; }
 .xf-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-.xf-field { display: grid; gap: 5px; font-size: 13px; font-weight: 700; color: #4e5968; }
-.xf-field input, .xf-field select, .xf-pick select { height: 44px; padding: 0 12px; border: 1px solid #d1d6db; border-radius: 10px; font: inherit; font-size: 15px; font-weight: 600; color: #191f28; background: #fff; }
+.xf-field { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; font-size: 13px; font-weight: 700; color: #4e5968; }
+.xf-field input, .xf-field select, .xf-pick select { width: 100%; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid #d1d6db; border-radius: 10px; font: inherit; font-size: 15px; font-weight: 600; color: #191f28; background: #fff; }
 .xf-auto { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0; padding: 12px 14px; background: #f5f9ff; border: 1px dashed #b7d3fb; border-radius: 12px; }
 body[data-role="supplier"] .xf-auto { background: #fafafa; border-color: #cfcfcf; }
 .xf-auto small { flex: 1 1 220px; color: #4e5968; font-size: 12.5px; line-height: 1.5; }
@@ -11797,6 +11797,7 @@ body[data-role="supplier"] .home-todo.sup-todo .todo-count small { color: inheri
   .ofb2 .ofb2-group[style*="--n:1"] { grid-column: span 1; }
   .ofb2 .ofb2-group[style*="--n:2"] { grid-column: span 2; }
   .ofb2 .ofb2-group[style*="--n:3"] { grid-column: 1 / -1; }
+  .ofb2-head { gap: 4px; padding: 0; }
   .ofb2-head em { display: none; }
   .ofb2-head b { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; }
   .ofb2-no { width: 18px; height: 18px; font-size: 10.5px; }
@@ -11893,3 +11894,11 @@ body[data-role="supplier"] .modal-actions.confirm-actions button { border-radius
   .modal-actions.confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .modal-actions.confirm-actions button { width: 100%; min-width: 0; min-height: 50px; padding: 0 10px; font-size: 16px; }
 }
+/* ============================================================
+   글꼴 — 두고 공통 Pretendard (랜딩과 같은 자체 호스팅 파일)
+   자간은 참고 사이트(snackle.classhub.ai)와 같게 -0.56px. 휴대폰 본문은 18px이라
+   em 대신 rem으로 고정한다(-0.035rem = -0.56px).
+   버튼·입력칸은 브라우저 기본이 normal이라 같은 자간을 물려받게 한다.
+   ============================================================ */
+body { letter-spacing: -.035rem; }
+button, input, select, textarea { letter-spacing: inherit; }
