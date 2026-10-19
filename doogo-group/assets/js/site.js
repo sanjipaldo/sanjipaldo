@@ -319,11 +319,15 @@
     $$('.line', el).forEach(function (l, i) { l.style.setProperty('--i', i); });
   });
   if ('IntersectionObserver' in window && !window.DOOGO.motionOff()) {
+    // 넓이 기준이 아니라 '세로로 8% 이상 보이면' 등장: 화면보다 훨씬 넓은 줄(사람들 무한 루프 트랙 등)은
+    // 면적 비율이 8%에 못 미쳐 영영 안 나타날 수 있으므로, 세로로 보이는 비율로 판단합니다
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
-        if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target); }
+        var h = en.boundingClientRect.height;
+        var shown = en.isIntersecting && (en.intersectionRatio >= 0.08 || (h > 0 && en.intersectionRect.height / h >= 0.08));
+        if (shown) { en.target.classList.add('is-in'); io.unobserve(en.target); }
       });
-    }, { rootMargin: '0px 0px -10% 0px', threshold: 0.08 });
+    }, { rootMargin: '0px 0px -10% 0px', threshold: [0, 0.01, 0.02, 0.04, 0.06, 0.08] });
     revealEls.forEach(function (el) { io.observe(el); });
   } else {
     revealEls.forEach(function (el) { el.classList.add('is-in'); });
