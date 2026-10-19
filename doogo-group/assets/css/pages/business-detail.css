@@ -395,6 +395,7 @@
 .dt-leader-head .lead { margin-top: 20px; max-width: 30ch; }
 .dt-leader-head .link-arrow { margin-top: 26px; min-height: 44px; }
 .dt-leader-card { --pc-ph-w: 44%; --pc-r: var(--radius-lg); }
+.dt-leader-cards { display: grid; gap: clamp(18px, 2vw, 28px); min-width: 0; } /* 한 사업을 두 사람이 함께 이끌 때(corp.also) 카드 두 장을 세로로 */
 /* 본문이 사진보다 길어지는 폭에서도 사진 칸 아래가 비지 않게: 칸은 최소 3:4, 본문이 더 길면 그 높이까지 (사진은 아래 정렬 cover) */
 .dt-leader-card.pcard--row { align-items: stretch; }
 .dt-leader-card .pcard-body { padding: clamp(24px, 2.6vw, 40px) clamp(22px, 2.8vw, 44px) 14px; }

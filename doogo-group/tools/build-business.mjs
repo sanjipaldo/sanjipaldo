@@ -102,16 +102,17 @@ const HOLD = { en: 'DOOGO HOLDINGS', type: '지주회사', direct: true, role: '
 // 문원오 대표 주요 이력 (23차 · 사용자 확정본, 이 순서 그대로 맨 위에) — leadership.html 의 data-career 와 같게 유지
 const CEO_CAREER = [
   '뉴질랜드 AUT 대학교 비즈니스·마케팅 졸업',
-  '現 두고그룹 총괄 대표이사',
-  '前 (주) 키위몬 대표이사',
+  '(現) 두고그룹 총괄 대표이사',
+  '(前) (주) 키위몬 대표이사',
 ];
 // 그룹사 대표 · 총괄이사 주요 이력 (21차 · 사용자 확정본, 이 순서 그대로) — leadership.html 의 data-career 와 같게 유지
 const LEADER_CAREER = {
-  bio: ['現 DOOGOBIO NZ 대표이사', '前 NATURAL HONEY NZ 대표이사', '前 하이웰 대표이사'], // 백영호
-  ad: ['現 두고애드 대표', '前 히즈마케팅 대표', '前 제로커머스 대표'], // 김신용
-  space: ['現 NORA STAY 대표이사', '現 DOOGO SPACE 대표이사', '現 문득 F&amp;B 대표이사'], // 문성오
-  media: ['現 (주) 하이비주얼 대표이사', '現 라온프로덕션 대표', '現 국가무형유산 이수자'], // 김윤정
-  makers: ['건국대학교 경제학과 졸업', '現 마우리엔젯 B 총괄이사', '現 신나용 대표이사'], // 신동훈
+  bio: ['(現) DOOGOBIO NZ 대표이사', '(前) NATURAL HONEY NZ 대표이사', '(前) 하이웰 대표이사'], // 백영호
+  ad: ['(現) 두고애드 대표', '(前) 히즈마케팅 대표', '(前) 제로커머스 대표'], // 김신용
+  'ad-lee': ['(現) 두고애드 총괄이사', '(前) 마이파이 대표', '(前) 소망인테리어 총괄이사'], // 이현찬 (corp.also)
+  space: ['(現) NORA STAY 대표이사', '(現) DOOGO SPACE 대표이사', '(現) 문득 F&amp;B 대표이사'], // 문성오
+  media: ['(現) (주) 하이비주얼 대표이사', '(現) 라온프로덕션 대표', '(現) 국가무형유산 이수자'], // 김윤정
+  makers: ['건국대학교 경제학과 졸업', '(現) 마우리엔젯 B 총괄이사', '(現) 신나용 대표이사'], // 신동훈
 };
 const PHOTO = {
   campus: { w: 1280, h: 950, alt: '밝은 강의실에서 강사가 성인 수강생들 앞에서 강의하는 모습' },
@@ -295,7 +296,8 @@ const BIZ = [
   },
   {
     slug: 'ad', num: '05', area: '마케팅', en: 'DOOGO AD', chain: 'Marketing', icon: 'i-ad',
-    corp: { en: 'DOOGO AD', field: '온·오프라인 마케팅', ceo: '김신용', key: 'ad', photo: 'leader-kim-sinyong' },
+    corp: { en: 'DOOGO AD', field: '온·오프라인 마케팅', ceo: '김신용', key: 'ad', photo: 'leader-kim-sinyong',
+      also: { ceo: '이현찬', title: '총괄이사', key: 'ad-lee', photo: 'leader-lee-hyunchan', anchor: 'leader-ad-lee' } },
     scope: '네이버·쿠팡 광고 운영 · 소재 기획 · 성과 분석',
     defLabel: '퍼포먼스 광고', def: '네이버·쿠팡을 중심으로 브랜드를 더 멀리 알립니다.',
     role: '브랜드가 필요한 고객에게 닿도록 광고를 기획하고 운영합니다.',
@@ -648,7 +650,7 @@ function buildList() {
               <span class="bz-count en" aria-hidden="true">${b.num} / ${String(BIZ.length).padStart(2, '0')}</span>
             </div>
             <h3 class="bz-title" id="bz-t-${b.slug}"><span class="bz-area">${b.area}</span><span class="bz-brand en">${b.en}</span></h3>
-            <p class="bz-corp"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong>${corpChip(b.corp, b.area) ? `<span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp, b.area)}</span>` : ''}<span class="bz-corp-ceo">${ttl(b.corp)} <strong>${b.corp.ceo}</strong></span></p>
+            <p class="bz-corp"><span class="bz-corp-k">운영</span><strong class="bz-corp-n en">${b.corp.en}</strong>${corpChip(b.corp, b.area) ? `<span class="bz-corp-type${b.corp.direct ? ' is-hold' : ''}">${corpChip(b.corp, b.area)}</span>` : ''}<span class="bz-corp-ceo">${ttl(b.corp)} <strong>${b.corp.ceo}</strong></span>${b.corp.also ? `<span class="bz-corp-ceo">${b.corp.also.title} <strong>${b.corp.also.ceo}</strong></span>` : ''}</p>
             <p class="bz-def"><span class="bz-def-label">${b.defLabel}</span>${nw(b.def)}</p>
             <div class="bz-svc-box">
               <p class="bz-label">주요 서비스</p>
@@ -1091,7 +1093,7 @@ function buildDetail(b, idx) {
     : `<div class="pcard-ph is-empty" aria-hidden="true"><span class="pcard-sil"></span><span class="pcard-soon">사진 준비 중</span></div>`;
   const leaderLead = c.direct
     ? `지주회사 <span class="nowrap">${c.en}</span>의 대표이사로, ${nw(b.area)} 분야의 <span class="nowrap">${b.en}</span>를 운영하며 그룹 총괄 운영을 이끕니다.`
-    : `${nw(b.area)} 분야는 그룹사 <span class="nowrap">${c.en}</span>가 맡고, ${c.ceo} ${ttl(c)}가 이끌고 있습니다.`;
+    : `${nw(b.area)} 분야는 그룹사 <span class="nowrap">${c.en}</span>가 맡고, ${c.ceo} ${ttl(c)}${c.also ? `와 ${c.also.ceo} ${c.also.title}` : ''}가 이끌고 있습니다.`;
   // 회사 줄: 영문 회사명(공통 .pcard-co) + 지주회사 / 해외 거점 칩 — 분야는 그 아래 .pcard-field 한 줄
   const leaderTag = c.direct ? `<span class="dt-corp-type is-hold">${c.type}</span>` : c.place ? `<span class="dt-corp-type is-place">${c.place}</span>` : '';
   const leaderBody = `<h3 class="pcard-name" id="leader-name">${c.ceo} <small>${ttl(c)}</small></h3>
@@ -1112,6 +1114,28 @@ ${c.direct ? `              <div><dt>주요 이력</dt><dd><ul class="dt-career"
             <a class="pcard-link pcard-stretch" href="leadership.html#${c.anchor || `leader-${c.key}`}">자세히 보기<span class="sr-only"> (${c.en} ${c.ceo} ${ttl(c)} · 두고 사람들)</span> ${ico('i-arrow')}</a>
             ${c.direct || LEADER_CAREER[c.key] ? '' : `<p class="dt-leader-note"><i aria-hidden="true"></i>${c.photo ? '이력은 확정 후 게시합니다.' : '이력과 사진은 확정 후 게시합니다.'}</p>`}
           </div>`;
+
+  // 함께 이끄는 사람(corp.also · 예: DOOGO AD 이현찬 총괄이사): 같은 가로형 카드를 첫 카드 아래에 한 장 더
+  const a = c.also;
+  const alsoCard = a ? `
+      <article class="dt-leader-card pcard pcard--panel pcard--row" data-reveal style="--d:.2s" aria-labelledby="leader-name-2">
+        <div class="pcard-ph">
+          <img class="pcard-img" src="${PEOPLE}/${a.photo}-600.webp" srcset="${peopleSrcset(a.photo)}" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 1180px) 40vw, 380px" width="900" height="1200" alt="${a.ceo} ${c.en} ${a.title}" loading="lazy" decoding="async">
+        </div>
+        <div class="pcard-body">
+          <h3 class="pcard-name" id="leader-name-2">${a.ceo} <small>${a.title}</small></h3>
+          <p class="dt-leader-co"><span class="pcard-co en">${c.en}</span></p>
+          <p class="pcard-field"><span class="sr-only">분야 </span>${c.field}</p>
+          <div class="dt-leader-more">
+            <dl class="dt-leader-dl">
+              <div><dt>주요 이력</dt><dd><ul class="dt-career">${LEADER_CAREER[a.key].map(t => `<li>${t}</li>`).join('')}</ul></dd></div>
+            </dl>
+          </div>
+          <div class="pcard-foot dt-leader-foot">
+            <a class="pcard-link pcard-stretch" href="leadership.html#${a.anchor}">자세히 보기<span class="sr-only"> (${c.en} ${a.ceo} ${a.title} · 두고 사람들)</span> ${ico('i-arrow')}</a>
+          </div>
+        </div>
+      </article>` : '';
 
   const main = `${SPRITE}
 
@@ -1234,12 +1258,12 @@ ${REL[b.slug]()}
         <p class="lead" data-reveal style="--d:.15s">${leaderLead}</p>
         <a class="link-arrow" href="leadership.html#leaders" data-reveal style="--d:.2s">사업을 이끄는 사람들 전체 보기 ${ico('i-arrow')}</a>
       </div>
-      <article class="dt-leader-card pcard pcard--panel pcard--row" data-reveal style="--d:.1s" aria-labelledby="leader-name">
+      ${a ? '<div class="dt-leader-cards">' : ''}<article class="dt-leader-card pcard pcard--panel pcard--row" data-reveal style="--d:.1s" aria-labelledby="leader-name">
         ${leaderVisual}
         <div class="pcard-body">
           ${leaderBody}
         </div>
-      </article>
+      </article>${alsoCard}${a ? '\n      </div>' : ''}
     </div>
   </section>
 
@@ -1292,7 +1316,7 @@ ${bizBand(b)}`;
   return shell({
     title: `${b.area} · ${b.en}`,
     // 회사 이름은 한 번만: 직접 운영 사업은 '운영 회사 직접 운영', 그룹사 사업은 회사 이름이 곧 브랜드라 생략
-    desc: `${b.en} — 두고그룹 ${b.area} 분야 (${c.direct ? `${c.en} · ` : ''}${ttl(c)} ${c.ceo}). ${b.role} ${b.def}`,
+    desc: `${b.en} — 두고그룹 ${b.area} 분야 (${c.direct ? `${c.en} · ` : ''}${ttl(c)} ${c.ceo}${c.also ? ` · ${c.also.title} ${c.also.ceo}` : ''}). ${b.role} ${b.def}`,
     css: 'business-detail', js: 'business-detail',
     bodyAttrs: `data-page="business-${b.slug}"`,
     main,
