@@ -73,7 +73,7 @@
   const ADMIN_TABS = [
     { key: "dash", at: 0, title: "대시보드" },
     { key: "students", at: 9.84, title: "수강생 승인 · 진척도" },
-    { key: "review", at: 19.87, title: "과제 검수" }
+    { key: "review", at: 19.93, title: "과제 검수" }
   ];
   const ADMIN_FEATURES = [
     ["palette", "내 이름의 강의 플랫폼", "강의 이름 · 색상 · 메뉴 · 로그인 화면까지 강사님 브랜드로 운영해요."],
