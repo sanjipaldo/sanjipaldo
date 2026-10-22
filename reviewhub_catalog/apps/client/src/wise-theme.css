@@ -1282,3 +1282,11 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .sold-out-issue-card .sold-out-when time { flex-direction: row; align-items: baseline; gap: 8px; }
   .sold-out-issue-card .sold-out-when time b { font-size: 15px; }
 }
+
+/* 품절 뱃지 2차: 빨간 행과 겹치지 않게 차분한 슬레이트 회색 + 금지(⊘) 아이콘, 썸네일 띠도 같은 회색 */
+.product-cell em.supply-sold-out, .sold-out-issue-card .sold-out-status {
+  color: #fff !important; background: #475569 !important; border-color: #475569 !important;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.85), 0 2px 6px rgba(51,65,85,.25);
+}
+.product-cell em.supply-sold-out svg, .sold-out-issue-card .sold-out-status svg { color: #fff; }
+.thumb-sold-out, .sold-out-thumb > span { background: rgba(51, 65, 85, .88); }

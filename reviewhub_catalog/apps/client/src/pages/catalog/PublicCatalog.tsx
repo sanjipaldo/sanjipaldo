@@ -3,6 +3,7 @@ import { Link, NavLink } from "react-router-dom";
 import {
   ArrowDownRight,
   ArrowUpRight,
+  Ban,
   Bell,
   CalendarRange,
   Cloud,
@@ -1205,7 +1206,7 @@ function SoldOutIssueCard({ issue, product, categoryName, policy, when }: { issu
       </div>
       <div className="sold-out-when">
         <time dateTime={dayKey}><b>{dayKey ? dayTabLabel(dayKey) : formatDate(issue.createdAt)}</b>{when && <small>{when}</small>}</time>
-        <span className="sold-out-status"><PackageX size={14} aria-hidden="true" /> {issue.status}</span>
+        <span className="sold-out-status"><Ban size={14} strokeWidth={2.6} aria-hidden="true" /> {issue.status}</span>
       </div>
     </article>
   );
@@ -1599,7 +1600,7 @@ export function CatalogHome() {
                     <Fragment key={product.id}>
                       <tr className={`${expanded ? "expanded " : ""}${soldOutNow ? "sold-out order-unavailable" : availableNow ? "supply-active" : "season-waiting order-unavailable"}`.trim()}>
                         <td className="catalog-product-cell">
-                          <div className="product-cell"><button type="button" className="product-image-button" onClick={() => { const src = productImageSrc(product); if (src) setImagePreview({ src, alt: product.name }); }} aria-label={`${product.name} 이미지 크게 보기`}><ProductThumb product={product} />{soldOutNow && <span className="thumb-sold-out" aria-hidden="true">품절</span>}</button><div><span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><strong>{product.name}</strong>{product.origin && <small>{product.origin}</small>}<em className={soldOutNow ? "supply-sold-out" : availableNow ? "supply-on-sale" : "supply-season-waiting"}>{soldOutNow && <PackageX size={13} aria-hidden="true" />}{supplyLabel}</em>{options.length > 0 && <button className="option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />} 옵션 {options.length}개 {expanded ? "접기" : "보기"}</button>}</div></div>
+                          <div className="product-cell"><button type="button" className="product-image-button" onClick={() => { const src = productImageSrc(product); if (src) setImagePreview({ src, alt: product.name }); }} aria-label={`${product.name} 이미지 크게 보기`}><ProductThumb product={product} />{soldOutNow && <span className="thumb-sold-out" aria-hidden="true">품절</span>}</button><div><span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><strong>{product.name}</strong>{product.origin && <small>{product.origin}</small>}<em className={soldOutNow ? "supply-sold-out" : availableNow ? "supply-on-sale" : "supply-season-waiting"}>{soldOutNow && <Ban size={13} strokeWidth={2.6} aria-hidden="true" />}{supplyLabel}</em>{options.length > 0 && <button className="option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />} 옵션 {options.length}개 {expanded ? "접기" : "보기"}</button>}</div></div>
                           {expanded && options.length > 0 && <div className="mobile-inline-options"><PublicOptionList product={product} /></div>}
                         </td>
                         <td data-label="카테고리·판매기간"><div className="mobile-cell-value"><strong>{category?.name ?? "-"}</strong><button type="button" className={`shipping-fee-button ${shippingSummary.kind}`} onClick={() => setShippingInfo({ product, policy })} aria-label={`${product.name} 배송비 안내 보기`}><span className="shipping-fee-text">배송비 <b>{shippingSummary.text}</b></span><CircleHelp size={14} aria-hidden="true" /></button><span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, category?.name)}</span></div></td>
