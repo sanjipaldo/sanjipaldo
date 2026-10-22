@@ -893,6 +893,19 @@ function PartnerModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// 단가표의 "배송 / 카테고리 / 판매기간" 칸과 같은 정보 한 줄(가격변동·품절 이슈 카드 공통)
+function ProductInfoLine({ product, categoryName, policy }: { product: Product; categoryName?: string; policy?: PublicShippingPolicy }) {
+  const shippingSummary = shippingFeeSummary(product, policy);
+  return (
+    <div className="price-change-info" aria-label="배송 / 카테고리 / 판매기간">
+      <span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span>
+      {categoryName && <strong>{categoryName}</strong>}
+      <span className={`price-change-shipping ${shippingSummary.kind}`}>배송비 <b>{shippingSummary.text}</b></span>
+      <span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, categoryName)}</span>
+    </div>
+  );
+}
+
 function PriceChangeCard({
   history,
   product,
@@ -909,7 +922,6 @@ function PriceChangeCard({
   // 단가표와 같은 정보: 배송 / 카테고리 / 판매기간, 판매가(건강식품 등 지정 판매가 · 농수산물은 자율)
   const salePolicy = product ? salePriceLabel(product.salePriceMode, product.salePrice) : null;
   const saleChanged = history.changes.some((change) => change.field === "salePrice");
-  const shippingSummary = product ? shippingFeeSummary(product, policy) : null;
   const dayKey = historyDateKey(history.changedAt);
   const yesterdayKey = todayKey ? seoulDateKey(new Date(new Date(`${todayKey}T12:00:00+09:00`).getTime() - 24 * 60 * 60 * 1000)) : "";
   const dayLabel = todayKey && dayKey === todayKey ? "오늘" : yesterdayKey && dayKey === yesterdayKey ? "어제" : "";
@@ -933,14 +945,7 @@ function PriceChangeCard({
         </div>
         <strong>{history.productName}</strong>
         <small>{history.optionName ? `옵션 · ${history.optionName}` : "상품 기본가격"} · 한 번의 저장에서 변경됨</small>
-        {product && shippingSummary && (
-          <div className="price-change-info" aria-label="배송 / 카테고리 / 판매기간">
-            <span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span>
-            {categoryName && <strong>{categoryName}</strong>}
-            <span className={`price-change-shipping ${shippingSummary.kind}`}>배송비 <b>{shippingSummary.text}</b></span>
-            <span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, categoryName)}</span>
-          </div>
-        )}
+        {product && <ProductInfoLine product={product} categoryName={categoryName} policy={policy} />}
         <div className="price-change-fields">
           {history.changes.map((change) => {
             const changeIncreased = change.newPrice > change.oldPrice;
@@ -1118,9 +1123,33 @@ function PriceChangeBoard({
   );
 }
 
-function SoldOutIssueBoard({ issues: allIssues, query = "", products = [] }: { issues: SoldOutIssue[]; query?: string; products?: Product[] }) {
+function SoldOutIssueBoard({
+  issues: allIssues,
+  query = "",
+  products = [],
+  todayKey,
+  categories = [],
+  policies = []
+}: {
+  issues: SoldOutIssue[];
+  query?: string;
+  products?: Product[];
+  todayKey?: string;
+  categories?: CatalogData["categories"];
+  policies?: PublicShippingPolicy[];
+}) {
   const normalizedQuery = searchKey(query);
   const codeById = useMemo(() => new Map(products.map((product) => [product.id, product.productCode])), [products]);
+  const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
+  const categoryNameById = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
+  const policyById = useMemo(() => new Map(policies.map((policy) => [policy.id, policy])), [policies]);
+  // 품절된 날: "10.22(목)" + "오늘 품절 / 어제 품절 / N일 전 품절"(한국 날짜)
+  const whenLabel = (createdAt: string) => {
+    const dayKey = historyDateKey(createdAt);
+    if (!dayKey || !todayKey) return "";
+    const days = Math.round((new Date(`${todayKey}T12:00:00+09:00`).getTime() - new Date(`${dayKey}T12:00:00+09:00`).getTime()) / (24 * 60 * 60 * 1000));
+    return days <= 0 ? "오늘 품절" : days === 1 ? "어제 품절" : `${days}일 전 품절`;
+  };
   const issues = normalizedQuery
     ? allIssues.filter((issue) => [issue.productName, issue.optionName, codeById.get(issue.productId)].some((value) => searchKey(value).includes(normalizedQuery)))
     : allIssues;
@@ -1145,16 +1174,40 @@ function SoldOutIssueBoard({ issues: allIssues, query = "", products = [] }: { i
       ) : (
         <div className="sold-out-issue-list">
           {visibleIssues.map((issue) => (
-            <article className="sold-out-issue-card" key={issue.id}>
-              <img src={issue.productImageUrl || "/assets/products/placeholder.webp"} alt="" />
-              <div><strong>{issue.productName}</strong>{issue.optionName && <small>{issue.optionName}</small>}<time>{formatDate(issue.createdAt)}</time></div>
-              <span className="sold-out-status">{issue.status}</span>
-            </article>
+            <SoldOutIssueCard
+              key={issue.id}
+              issue={issue}
+              product={productById.get(issue.productId)}
+              categoryName={(() => { const categoryId = productById.get(issue.productId)?.categoryId; return categoryId ? categoryNameById.get(categoryId) : undefined; })()}
+              policy={(() => { const policyId = productById.get(issue.productId)?.shippingPolicyId; return policyId ? policyById.get(policyId) : undefined; })()}
+              when={whenLabel(issue.createdAt)}
+            />
           ))}
         </div>
       )}
       <PageNumbers page={currentPage} totalPages={totalPages} onChange={setPage} label="품절 이슈 페이지" />
     </section>
+  );
+}
+
+function SoldOutIssueCard({ issue, product, categoryName, policy, when }: { issue: SoldOutIssue; product?: Product; categoryName?: string; policy?: PublicShippingPolicy; when: string }) {
+  const dayKey = historyDateKey(issue.createdAt);
+  return (
+    <article className="sold-out-issue-card">
+      <div className="sold-out-thumb">
+        <img src={issue.productImageUrl || "/assets/products/placeholder.webp"} alt="" />
+        <span aria-hidden="true">품절</span>
+      </div>
+      <div className="sold-out-body">
+        <strong>{issue.productName}</strong>
+        {issue.optionName && <small>{issue.optionName}</small>}
+        {product && <ProductInfoLine product={product} categoryName={categoryName} policy={policy} />}
+      </div>
+      <div className="sold-out-when">
+        <time dateTime={dayKey}><b>{dayKey ? dayTabLabel(dayKey) : formatDate(issue.createdAt)}</b>{when && <small>{when}</small>}</time>
+        <span className="sold-out-status"><PackageX size={14} aria-hidden="true" /> {issue.status}</span>
+      </div>
+    </article>
   );
 }
 
@@ -1546,7 +1599,7 @@ export function CatalogHome() {
                     <Fragment key={product.id}>
                       <tr className={`${expanded ? "expanded " : ""}${soldOutNow ? "sold-out order-unavailable" : availableNow ? "supply-active" : "season-waiting order-unavailable"}`.trim()}>
                         <td className="catalog-product-cell">
-                          <div className="product-cell"><button type="button" className="product-image-button" onClick={() => { const src = productImageSrc(product); if (src) setImagePreview({ src, alt: product.name }); }} aria-label={`${product.name} 이미지 크게 보기`}><ProductThumb product={product} /></button><div><span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><strong>{product.name}</strong>{product.origin && <small>{product.origin}</small>}<em className={soldOutNow ? "supply-sold-out" : availableNow ? "supply-on-sale" : "supply-season-waiting"}>{supplyLabel}</em>{options.length > 0 && <button className="option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />} 옵션 {options.length}개 {expanded ? "접기" : "보기"}</button>}</div></div>
+                          <div className="product-cell"><button type="button" className="product-image-button" onClick={() => { const src = productImageSrc(product); if (src) setImagePreview({ src, alt: product.name }); }} aria-label={`${product.name} 이미지 크게 보기`}><ProductThumb product={product} />{soldOutNow && <span className="thumb-sold-out" aria-hidden="true">품절</span>}</button><div><span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><strong>{product.name}</strong>{product.origin && <small>{product.origin}</small>}<em className={soldOutNow ? "supply-sold-out" : availableNow ? "supply-on-sale" : "supply-season-waiting"}>{soldOutNow && <PackageX size={13} aria-hidden="true" />}{supplyLabel}</em>{options.length > 0 && <button className="option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />} 옵션 {options.length}개 {expanded ? "접기" : "보기"}</button>}</div></div>
                           {expanded && options.length > 0 && <div className="mobile-inline-options"><PublicOptionList product={product} /></div>}
                         </td>
                         <td data-label="카테고리·판매기간"><div className="mobile-cell-value"><strong>{category?.name ?? "-"}</strong><button type="button" className={`shipping-fee-button ${shippingSummary.kind}`} onClick={() => setShippingInfo({ product, policy })} aria-label={`${product.name} 배송비 안내 보기`}><span className="shipping-fee-text">배송비 <b>{shippingSummary.text}</b></span><CircleHelp size={14} aria-hidden="true" /></button><span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, category?.name)}</span></div></td>
@@ -1816,7 +1869,7 @@ export function NoticesPage() {
             <div className="search-field"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" aria-label="가격변동·품절 상품 검색" />{query && <button type="button" className="search-clear" onClick={() => setQuery("")} aria-label="검색어 지우기"><X size={15} /></button>}</div>
           </div>
           <PriceChangeBoard histories={data.priceHistory} products={data.products} pageSize={5} query={query} todayKey={todayKey} dayKeys={dayKeys} selectedDay={selectedDay} onSelectDay={setPickedDay} categories={data.categories} policies={data.shippingPolicies ?? []} />
-          <SoldOutIssueBoard issues={data.recentSoldOutIssues} query={query} products={data.products} />
+          <SoldOutIssueBoard issues={data.recentSoldOutIssues} query={query} products={data.products} todayKey={todayKey} categories={data.categories} policies={data.shippingPolicies ?? []} />
         </section>
       </main>
     </PageFrame>

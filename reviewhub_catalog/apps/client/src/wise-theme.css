@@ -1246,3 +1246,39 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .price-change-field.sale-static b { grid-column: 1; grid-row: 2; }
   .price-change-field.sale-static small { grid-column: 2 / span 2; grid-row: 2; align-self: center; }
 }
+
+/* 품절 표시: 빨간 행 위에서도 잘 보이도록 진한 빨강 바탕 + 흰 글씨 + 상자(X) 아이콘, 썸네일에 "품절" 띠 */
+.product-cell em.supply-sold-out, .sold-out-issue-card .sold-out-status {
+  display: inline-flex; align-items: center; gap: 4px; width: fit-content;
+  color: #fff !important; background: var(--w-negative-deep) !important; border: 1px solid var(--w-negative-deep) !important;
+  border-radius: 999px !important; box-shadow: 0 1px 0 rgba(255,255,255,.6), 0 2px 6px rgba(167,32,39,.28);
+}
+.product-cell em.supply-sold-out svg, .sold-out-issue-card .sold-out-status svg { flex: 0 0 auto; color: #ffd6d8; }
+.product-image-button { position: relative; overflow: hidden; border-radius: 14px; }
+.thumb-sold-out, .sold-out-thumb > span {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 4px 0; text-align: center;
+  color: #fff; background: rgba(167, 32, 39, .9); font-size: 12px; font-weight: 800; letter-spacing: .08em; pointer-events: none;
+}
+.catalog-table tr.sold-out .product-image-button .product-thumb, .sold-out-thumb img { filter: saturate(.55); }
+
+/* 최근 7일 품절 이슈 카드: 썸네일 · 상품명 + 배송/카테고리/판매기간 · 품절 날짜 */
+.sold-out-issue-card { grid-template-columns: 64px minmax(0, 1fr) auto !important; gap: 14px !important; padding: 12px 14px !important; }
+.sold-out-issue-card .sold-out-thumb { position: relative; display: block; overflow: hidden; width: 64px; height: 64px; border-radius: 12px; }
+.sold-out-issue-card .sold-out-thumb img { width: 64px; height: 64px; border-radius: 0; }
+.sold-out-issue-card .sold-out-thumb > span { padding: 2px 0; font-size: 10px; }
+.sold-out-issue-card .sold-out-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.sold-out-issue-card .sold-out-body > strong { font-size: 15px; }
+.sold-out-issue-card .sold-out-body .price-change-info { flex-direction: row; margin-top: 6px; }
+.sold-out-issue-card .sold-out-when { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.sold-out-issue-card .sold-out-when time { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 1.2; }
+.sold-out-issue-card .sold-out-when time b { color: var(--w-ink); font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+.sold-out-issue-card .sold-out-when time small { color: var(--w-negative-deep); font-size: 12px; font-weight: 700; }
+.sold-out-issue-card .sold-out-status { padding: 5px 10px; font-size: 12px; }
+@media (max-width: 720px) {
+  .sold-out-issue-card { grid-template-columns: 56px minmax(0, 1fr) !important; align-items: start !important; gap: 10px !important; padding: 11px !important; }
+  .sold-out-issue-card .sold-out-thumb, .sold-out-issue-card .sold-out-thumb img { width: 56px; height: 56px; }
+  .sold-out-issue-card .sold-out-body > strong { font-size: 14px; white-space: normal; }
+  .sold-out-issue-card .sold-out-when { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px dashed #f0d0d3; }
+  .sold-out-issue-card .sold-out-when time { flex-direction: row; align-items: baseline; gap: 8px; }
+  .sold-out-issue-card .sold-out-when time b { font-size: 15px; }
+}
