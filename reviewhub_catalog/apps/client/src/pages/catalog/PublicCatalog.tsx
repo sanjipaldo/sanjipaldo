@@ -896,12 +896,20 @@ function PartnerModal({ onClose }: { onClose: () => void }) {
 function PriceChangeCard({
   history,
   product,
-  todayKey
+  todayKey,
+  categoryName,
+  policy
 }: {
   history: PriceHistoryGroup;
   product?: Product;
   todayKey?: string;
+  categoryName?: string;
+  policy?: PublicShippingPolicy;
 }) {
+  // 단가표와 같은 정보: 배송 / 카테고리 / 판매기간, 판매가(건강식품 등 지정 판매가 · 농수산물은 자율)
+  const salePolicy = product ? salePriceLabel(product.salePriceMode, product.salePrice) : null;
+  const saleChanged = history.changes.some((change) => change.field === "salePrice");
+  const shippingSummary = product ? shippingFeeSummary(product, policy) : null;
   const dayKey = historyDateKey(history.changedAt);
   const yesterdayKey = todayKey ? seoulDateKey(new Date(new Date(`${todayKey}T12:00:00+09:00`).getTime() - 24 * 60 * 60 * 1000)) : "";
   const dayLabel = todayKey && dayKey === todayKey ? "오늘" : yesterdayKey && dayKey === yesterdayKey ? "어제" : "";
@@ -925,12 +933,23 @@ function PriceChangeCard({
         </div>
         <strong>{history.productName}</strong>
         <small>{history.optionName ? `옵션 · ${history.optionName}` : "상품 기본가격"} · 한 번의 저장에서 변경됨</small>
+        {product && shippingSummary && (
+          <div className="price-change-info" aria-label="배송 / 카테고리 / 판매기간">
+            <span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span>
+            {categoryName && <strong>{categoryName}</strong>}
+            <span className={`price-change-shipping ${shippingSummary.kind}`}>배송비 <b>{shippingSummary.text}</b></span>
+            <span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, categoryName)}</span>
+          </div>
+        )}
         <div className="price-change-fields">
           {history.changes.map((change) => {
             const changeIncreased = change.newPrice > change.oldPrice;
             const difference = Math.abs(change.newPrice - change.oldPrice);
             return <div className="price-change-field" key={change.id}><span>{priceFieldLabel(change.field)}</span><del>{formatPrice(change.oldPrice)}</del><ChevronRight size={14} /><b>{formatPrice(change.newPrice)}</b><em className={`change-difference ${changeIncreased ? "increase" : "decrease"}`}>{changeIncreased ? "+" : "-"}{formatPrice(difference)} 변동</em></div>;
           })}
+          {salePolicy && !saleChanged && product && (
+            <div className={`price-change-field sale-static sale-${product.salePriceMode}`}><span>판매가</span><b>{salePolicy.main}</b><small>{salePolicy.sub}</small></div>
+          )}
         </div>
       </div>
     </article>
@@ -979,7 +998,9 @@ function PriceChangeBoard({
   todayKey,
   dayKeys = [],
   selectedDay = "all",
-  onSelectDay
+  onSelectDay,
+  categories = [],
+  policies = []
 }: {
   histories: PriceHistory[];
   products: Product[];
@@ -989,7 +1010,11 @@ function PriceChangeBoard({
   dayKeys?: string[];
   selectedDay?: string;
   onSelectDay?: (day: string) => void;
+  categories?: CatalogData["categories"];
+  policies?: PublicShippingPolicy[];
 }) {
+  const categoryNameById = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
+  const policyById = useMemo(() => new Map(policies.map((policy) => [policy.id, policy])), [policies]);
   const [page, setPage] = useState(1);
   const [displayPageSize, setDisplayPageSize] = useState(pageSize);
   // 첫 화면은 미리 만든(prerender) 화면과 같게 그리고, 브라우저에 저장된 보기 개수는 그 뒤에 적용합니다.
@@ -1076,6 +1101,8 @@ function PriceChangeBoard({
               history={history}
               product={productById.get(history.productId)}
               todayKey={todayKey}
+              categoryName={(() => { const categoryId = productById.get(history.productId)?.categoryId; return categoryId ? categoryNameById.get(categoryId) : undefined; })()}
+              policy={(() => { const policyId = productById.get(history.productId)?.shippingPolicyId; return policyId ? policyById.get(policyId) : undefined; })()}
             />
           ))}
         </div>
@@ -1525,7 +1552,7 @@ export function CatalogHome() {
                         <td data-label="카테고리·판매기간"><div className="mobile-cell-value"><strong>{category?.name ?? "-"}</strong><button type="button" className={`shipping-fee-button ${shippingSummary.kind}`} onClick={() => setShippingInfo({ product, policy })} aria-label={`${product.name} 배송비 안내 보기`}><span className="shipping-fee-text">배송비 <b>{shippingSummary.text}</b></span><CircleHelp size={14} aria-hidden="true" /></button><span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, category?.name)}</span></div></td>
                         <td data-label="A단가"><div className="mobile-cell-value"><b className="price a-price">{formatPrice(minimumAPrice)}</b><small>{options.length > 1 ? "옵션 최저 A단가" : "A회원 공급가"}</small></div></td>
                         <td data-label="일반공급가"><div className="mobile-cell-value"><b className="price">{formatPrice(minimumGeneralPrice)}</b><small>{options.length > 1 ? "옵션 최저 일반공급가" : "일반 판매자"}</small></div></td>
-                        <td data-label="판매가"><div className="mobile-cell-value"><b className={`price sale-price ${product.salePriceMode}`}>{salePolicy.main}</b><small>{salePolicy.sub}</small></div></td>
+                        <td data-label="판매가"><div className="mobile-cell-value"><b className={`price sale-price sale-${product.salePriceMode}`}>{salePolicy.main}</b><small>{salePolicy.sub}</small></div></td>
                         <td data-label="상품 안내"><div className="mobile-cell-value"><p>{product.notes || "-"}</p>{product.packaging && <small>{product.packaging}</small>}</div></td>
                       </tr>
                       {expanded && options.length > 0 && (
@@ -1788,7 +1815,7 @@ export function NoticesPage() {
           <div className="history-search-bar">
             <div className="search-field"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" aria-label="가격변동·품절 상품 검색" />{query && <button type="button" className="search-clear" onClick={() => setQuery("")} aria-label="검색어 지우기"><X size={15} /></button>}</div>
           </div>
-          <PriceChangeBoard histories={data.priceHistory} products={data.products} pageSize={5} query={query} todayKey={todayKey} dayKeys={dayKeys} selectedDay={selectedDay} onSelectDay={setPickedDay} />
+          <PriceChangeBoard histories={data.priceHistory} products={data.products} pageSize={5} query={query} todayKey={todayKey} dayKeys={dayKeys} selectedDay={selectedDay} onSelectDay={setPickedDay} categories={data.categories} policies={data.shippingPolicies ?? []} />
           <SoldOutIssueBoard issues={data.recentSoldOutIssues} query={query} products={data.products} />
         </section>
       </main>

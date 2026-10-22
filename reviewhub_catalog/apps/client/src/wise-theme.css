@@ -1226,3 +1226,23 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .price-day-tabs::-webkit-scrollbar { display: none; }
   .price-day-tabs button { flex: 0 0 auto; min-width: 84px; }
 }
+
+/* 가격변동 카드: 배송 / 카테고리 / 판매기간 줄과 판매가(자율·지정) 칸 */
+.price-change-info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; font-size: 12px; }
+.price-change-info .delivery-badge { padding: 4px 8px; }
+.price-change-info strong { color: var(--w-ink); font-size: 13px; font-weight: 800; }
+.price-change-info .season-badge { margin-top: 0; padding: 4px 8px; }
+.price-change-shipping { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 9px; border: 1px solid var(--w-line); border-radius: 999px; background: #fff; color: var(--w-body); font-weight: 700; }
+.price-change-shipping b { color: var(--w-ink); }
+.price-change-card .price-change-field.sale-static b { color: var(--w-ink); font-size: 18px; }
+.price-change-card .price-change-field.sale-static.sale-autonomous b { color: var(--w-body); }
+.price-change-field.sale-static small { color: var(--w-mute); font-size: 12px; font-weight: 700; }
+@media (min-width: 721px) {
+  .price-change-card .price-change-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 30px; }
+  .price-change-card .price-change-field { flex-wrap: nowrap; white-space: nowrap; }
+}
+@media (max-width: 720px) {
+  .price-change-field.sale-static > span { grid-column: 1; grid-row: 1; }
+  .price-change-field.sale-static b { grid-column: 1; grid-row: 2; }
+  .price-change-field.sale-static small { grid-column: 2 / span 2; grid-row: 2; align-self: center; }
+}
