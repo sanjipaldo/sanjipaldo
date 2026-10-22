@@ -1177,3 +1177,22 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .new-code-fields > label { grid-template-columns: 1fr; gap: 6px; }
   .new-code-fields > label span { white-space: normal; }
 }
+
+/* 가격변동(/notices): 오늘 날짜 표시 · 상품 검색 */
+.today-date-badge { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; padding: 9px 14px; border: 1px solid var(--w-line); border-radius: 999px; background: #fff; color: var(--w-ink); font-size: 14px; white-space: nowrap; }
+.today-date-badge svg { color: var(--w-mute); }
+.today-date-badge span { color: var(--w-mute); font-weight: 600; }
+.today-date-badge strong { font-weight: 800; letter-spacing: -.01em; }
+.history-search-bar { margin: 0 0 14px; }
+.history-search-bar .search-field { width: min(440px, 100%); }
+.history-search-bar .search-field input::-webkit-search-cancel-button { display: none; }
+.history-search-bar .search-clear { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: #eef1f5; color: var(--w-mute); cursor: pointer; }
+.price-change-meta .price-change-day + .change-direction-badge { margin-left: auto; }
+.price-change-meta:has(.price-change-day) { justify-content: flex-start; }
+.price-change-day { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: #eef1f5; color: #4b5563; font-size: 12px; font-weight: 700; }
+.price-change-day.today { background: var(--w-ink); color: #fff; }
+@media (max-width: 720px) {
+  .history-page-panel .section-heading { flex-direction: column; gap: 10px; }
+  .today-date-badge { width: 100%; justify-content: center; padding: 10px 12px; font-size: 14px; }
+  .history-search-bar .search-field { width: 100%; }
+}

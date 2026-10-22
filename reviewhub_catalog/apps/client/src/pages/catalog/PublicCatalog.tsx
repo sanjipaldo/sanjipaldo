@@ -217,6 +217,24 @@ function formatDate(value: string) {
   return `${part("year")}.${part("month")}.${part("day")} (${part("weekday")})`;
 }
 
+// 한국 시간 기준 날짜 키(YYYY-MM-DD)와 "2026년 10월 22일 목요일" 표기
+function seoulDateKey(value: Date) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(value);
+}
+
+function seoulFullDate(value: Date) {
+  return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "long", day: "numeric", weekday: "long" }).format(value);
+}
+
+function historyDateKey(value: string) {
+  const normalized = value.length === 10 ? `${value}T00:00:00+09:00` : value.includes("T") ? value : `${value.replace(" ", "T")}Z`;
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? "" : seoulDateKey(date);
+}
+
+// 검색어는 띄어쓰기·대소문자를 무시하고 상품명·옵션명·상품코드에서 찾습니다.
+const searchKey = (value: string | null | undefined) => (value ?? "").replace(/\s+/g, "").toLowerCase();
+
 function parseGuideContent(value?: string): GuideContent {
   if (!value) return fallbackGuideContent;
   try {
@@ -849,11 +867,16 @@ function PartnerModal({ onClose }: { onClose: () => void }) {
 
 function PriceChangeCard({
   history,
-  product
+  product,
+  todayKey
 }: {
   history: PriceHistoryGroup;
   product?: Product;
+  todayKey?: string;
 }) {
+  const dayKey = historyDateKey(history.changedAt);
+  const yesterdayKey = todayKey ? seoulDateKey(new Date(new Date(`${todayKey}T12:00:00+09:00`).getTime() - 24 * 60 * 60 * 1000)) : "";
+  const dayLabel = todayKey && dayKey === todayKey ? "오늘" : yesterdayKey && dayKey === yesterdayKey ? "어제" : "";
   const increased = history.changes.some((change) => change.newPrice > change.oldPrice);
   const decreased = history.changes.some((change) => change.newPrice < change.oldPrice);
   return (
@@ -866,6 +889,7 @@ function PriceChangeCard({
       <div className="price-change-copy">
         <div className="price-change-meta">
           <time>{formatDate(history.changedAt)}</time>
+          {dayLabel && <span className={`price-change-day ${dayLabel === "오늘" ? "today" : ""}`}>{dayLabel}</span>}
           <span className={`change-direction-badge ${increased && !decreased ? "increase" : !increased && decreased ? "decrease" : "mixed"}`}>
             {increased && !decreased ? <ArrowUpRight size={13} /> : !increased && decreased ? <ArrowDownRight size={13} /> : <TrendingUp size={13} />}
             {increased && !decreased ? "인상" : !increased && decreased ? "인하" : "변동"}
@@ -922,18 +946,28 @@ function groupPriceHistories(histories: PriceHistory[]) {
 function PriceChangeBoard({
   histories,
   products,
-  pageSize = 5
+  pageSize = 5,
+  query = "",
+  todayKey
 }: {
   histories: PriceHistory[];
   products: Product[];
   pageSize?: number;
+  query?: string;
+  todayKey?: string;
 }) {
   const [page, setPage] = useState(1);
   const [displayPageSize, setDisplayPageSize] = useState(pageSize);
   // 첫 화면은 미리 만든(prerender) 화면과 같게 그리고, 브라우저에 저장된 보기 개수는 그 뒤에 적용합니다.
   useEffect(() => { setDisplayPageSize(readStoredPageSize("public-price-changes", pageSize, 200)); }, [pageSize]);
   const [direction, setDirection] = useState<"all" | "increase" | "decrease">("all");
-  const groupedHistories = useMemo(() => groupPriceHistories(histories), [histories]);
+  const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
+  const allGroupedHistories = useMemo(() => groupPriceHistories(histories), [histories]);
+  const normalizedQuery = searchKey(query);
+  const groupedHistories = useMemo(() => normalizedQuery
+    ? allGroupedHistories.filter((history) => [history.productName, history.optionName, productById.get(history.productId)?.productCode].some((value) => searchKey(value).includes(normalizedQuery)))
+    : allGroupedHistories, [allGroupedHistories, normalizedQuery, productById]);
+  useEffect(() => { setPage(1); }, [normalizedQuery]);
   const filteredHistories = useMemo(() => groupedHistories.filter((history) => {
     const hasIncrease = history.changes.some((change) => change.newPrice > change.oldPrice);
     const hasDecrease = history.changes.some((change) => change.newPrice < change.oldPrice);
@@ -957,7 +991,7 @@ function PriceChangeBoard({
       <div className="price-board-toolbar">
       <div className="price-direction-filter" aria-label="가격변동 방향 필터">
         <button className={direction === "all" ? "active" : ""} onClick={() => { setDirection("all"); setPage(1); }}>
-          전체 <small>{histories.length}</small>
+          전체 <small>{groupedHistories.length}</small>
         </button>
         <button className={`increase ${direction === "increase" ? "active" : ""}`} onClick={() => { setDirection("increase"); setPage(1); }}>
           <ArrowUpRight size={15} /> 인상 <small>{increaseCount}</small>
@@ -974,12 +1008,15 @@ function PriceChangeBoard({
             <PriceChangeCard
               key={history.key}
               history={history}
-              product={products.find((product) => product.id === history.productId)}
+              product={productById.get(history.productId)}
+              todayKey={todayKey}
             />
           ))}
         </div>
       ) : (
-        <div className="price-change-empty"><PackageCheck size={24} /><strong>선택한 가격변동이 없습니다.</strong><span>전체 버튼을 누르면 모든 가격변동을 확인할 수 있습니다.</span></div>
+        normalizedQuery
+          ? <div className="price-change-empty"><Search size={24} /><strong>“{query.trim()}” 검색 결과가 없습니다.</strong><span>최근 3일간 이 상품의 가격변동이 없거나 검색어가 다릅니다.</span></div>
+          : <div className="price-change-empty"><PackageCheck size={24} /><strong>선택한 가격변동이 없습니다.</strong><span>전체 버튼을 누르면 모든 가격변동을 확인할 수 있습니다.</span></div>
       )}
       {totalPages > 1 && (
         <nav className="price-change-pagination" aria-label="가격변동 페이지">
@@ -994,7 +1031,12 @@ function PriceChangeBoard({
   );
 }
 
-function SoldOutIssueBoard({ issues }: { issues: SoldOutIssue[] }) {
+function SoldOutIssueBoard({ issues: allIssues, query = "", products = [] }: { issues: SoldOutIssue[]; query?: string; products?: Product[] }) {
+  const normalizedQuery = searchKey(query);
+  const codeById = useMemo(() => new Map(products.map((product) => [product.id, product.productCode])), [products]);
+  const issues = normalizedQuery
+    ? allIssues.filter((issue) => [issue.productName, issue.optionName, codeById.get(issue.productId)].some((value) => searchKey(value).includes(normalizedQuery)))
+    : allIssues;
   return (
     <section className="sold-out-issue-board" aria-labelledby="sold-out-issue-title">
       <div className="sold-out-issue-heading">
@@ -1006,7 +1048,7 @@ function SoldOutIssueBoard({ issues }: { issues: SoldOutIssue[] }) {
         <span className="sold-out-retention">7일 후 자동 초기화</span>
       </div>
       {issues.length === 0 ? (
-        <div className="sold-out-issue-empty"><PackageCheck size={21} /><strong>최근 7일 품절 처리 상품이 없습니다.</strong><span>관리자에서 품절 처리된 상품이 이곳에 표시됩니다.</span></div>
+        <div className="sold-out-issue-empty"><PackageCheck size={21} /><strong>{normalizedQuery ? `“${query.trim()}” 품절 이슈가 없습니다.` : "최근 7일 품절 처리 상품이 없습니다."}</strong><span>관리자에서 품절 처리된 상품이 이곳에 표시됩니다.</span></div>
       ) : (
         <div className="sold-out-issue-list">
           {issues.map((issue) => (
@@ -1608,6 +1650,15 @@ export function GuidePage() {
 
 export function NoticesPage() {
   const [data, setData] = useState<CatalogData>(emptyCatalogData);
+  const [query, setQuery] = useState("");
+  // 오늘 날짜는 접속 기기 시계와 상관없이 한국 시간으로 표시하고, 자정이 지나면 바로 바뀝니다.
+  const [today, setToday] = useState<Date | null>(null);
+  useEffect(() => {
+    setToday(new Date());
+    const timer = window.setInterval(() => setToday(new Date()), 30 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const todayKey = today ? seoulDateKey(today) : undefined;
   useEffect(() => {
     let active = true;
     const reloadCatalog = () => {
@@ -1629,9 +1680,12 @@ export function NoticesPage() {
       <main className="content-page">
         <div className="content-hero"><span className="section-kicker">DAILY PRICE BOARD</span><h1>가격변동</h1><p>경매장 시세판처럼 최근 3일간 상품과 옵션별 변동 가격을 정확하게 확인할 수 있습니다.</p></div>
         <section className="history-page-panel">
-          <div className="section-heading"><div><span className="section-kicker">PRICE HISTORY</span><h2>최근 3일 가격변동</h2><p>상품 썸네일, 상품명, 옵션명과 변경 전후 금액을 함께 표시합니다.</p></div></div>
-          <PriceChangeBoard histories={data.priceHistory} products={data.products} pageSize={5} />
-          <SoldOutIssueBoard issues={data.recentSoldOutIssues} />
+          <div className="section-heading"><div><span className="section-kicker">PRICE HISTORY</span><h2>최근 3일 가격변동</h2><p>상품 썸네일, 상품명, 옵션명과 변경 전후 금액을 함께 표시합니다.</p></div>{today && <div className="today-date-badge" aria-live="polite"><CalendarRange size={16} /><span>오늘</span><strong>{seoulFullDate(today)}</strong></div>}</div>
+          <div className="history-search-bar">
+            <div className="search-field"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" aria-label="가격변동·품절 상품 검색" />{query && <button type="button" className="search-clear" onClick={() => setQuery("")} aria-label="검색어 지우기"><X size={15} /></button>}</div>
+          </div>
+          <PriceChangeBoard histories={data.priceHistory} products={data.products} pageSize={5} query={query} todayKey={todayKey} />
+          <SoldOutIssueBoard issues={data.recentSoldOutIssues} query={query} products={data.products} />
         </section>
       </main>
     </PageFrame>
