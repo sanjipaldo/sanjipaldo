@@ -947,7 +947,8 @@ function PriceChangeCard({
         <strong>{history.productName}</strong>
         <small>{history.optionName ? `옵션 · ${history.optionName}` : "상품 기본가격"} · 한 번의 저장에서 변경됨</small>
         {product && <ProductInfoLine product={product} categoryName={categoryName} policy={policy} />}
-        <div className="price-change-fields">
+      </div>
+      <div className="price-change-fields">
           {history.changes.map((change) => {
             const changeIncreased = change.newPrice > change.oldPrice;
             const difference = Math.abs(change.newPrice - change.oldPrice);
@@ -956,7 +957,6 @@ function PriceChangeCard({
           {salePolicy && !saleChanged && product && (
             <div className={`price-change-field sale-static sale-${product.salePriceMode}`}><span>판매가</span><b>{salePolicy.main}</b><small>{salePolicy.sub}</small></div>
           )}
-        </div>
       </div>
     </article>
   );

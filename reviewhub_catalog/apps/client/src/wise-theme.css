@@ -1290,3 +1290,30 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 }
 .product-cell em.supply-sold-out svg, .sold-out-issue-card .sold-out-status svg { color: #fff; }
 .thumb-sold-out, .sold-out-thumb > span { background: rgba(51, 65, 85, .88); }
+
+/* 가격변동 카드: 가격 칸을 카드 아래 줄로(PC는 썸네일 오른쪽, 모바일은 단가표 모바일 카드처럼 2칸 표) */
+.price-change-card { grid-template-rows: auto auto; row-gap: 10px; }
+.price-change-card > .history-thumb-wrap { grid-row: 1 / span 2; align-self: center; }
+.price-change-card > .price-change-fields { grid-column: 2; margin-top: 0; }
+@media (max-width: 720px) {
+  .price-change-card { row-gap: 12px; }
+  .price-change-card > .history-thumb-wrap { grid-row: 1; align-self: start; }
+  .price-change-card > .price-change-fields {
+    grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0;
+    margin: 0 -14px -14px; border-top: 1px solid var(--w-line);
+  }
+  .price-change-card .price-change-fields .price-change-field {
+    display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 4px 6px; min-width: 0;
+    padding: 12px 14px; border-bottom: 1px solid var(--w-line);
+  }
+  .price-change-card .price-change-fields .price-change-field:nth-child(odd) { border-right: 1px solid var(--w-line); }
+  .price-change-card .price-change-fields .price-change-field:last-child:nth-child(odd) { grid-column: 1 / -1; border-right: 0; }
+  .price-change-card .price-change-fields .price-change-field:last-child { border-bottom: 0; }
+  .price-change-card .price-change-fields .price-change-field:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
+  .price-change-card .price-change-field > span { order: 1; flex: 0 0 100%; color: var(--w-mute); font-size: 12px; font-weight: 700; }
+  .price-change-card .price-change-field b { order: 2; flex: 0 0 100%; font-size: 20px; line-height: 1.2; }
+  .price-change-card .price-change-field del { order: 3; font-size: 12px; }
+  .price-change-card .price-change-field > svg { display: none; }
+  .price-change-card .price-change-field .change-difference { order: 4; margin: 0; padding: 3px 8px; font-size: 12px; }
+  .price-change-card .price-change-field.sale-static small { order: 3; flex: 0 0 100%; font-size: 12px; }
+}
