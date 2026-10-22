@@ -43,6 +43,7 @@ import {
   updateShippingPolicy,
   updateSourcingStatus
 } from "../services/catalog";
+import { buildPriceChangeNoticeWorkbook } from "../services/price-notice-excel";
 import {
   applyBulkProductWorkbook,
   bulkUpdateProducts,
@@ -266,6 +267,18 @@ catalogRouter.get("/initial", publicRoute, async (c) => c.json(apiSuccess(await 
 catalogRouter.get("/guide", publicRoute, async (c) => c.json(apiSuccess(await getPublicGuideSettings())));
 catalogRouter.get("/notices", publicRoute, async (c) => c.json(apiSuccess(await getPublicNotices())));
 catalogRouter.get("/operations", publicRoute, async (c) => c.json(apiSuccess(await getCatalogOperationsOverview(c.req.header("x-forwarded-for") || c.req.header("x-real-ip")))));
+
+// 가격변동 공지 엑셀(누구나 받기): days=2026-10-22,2026-10-21 (한국 날짜, 오늘 포함 최근 4일만)
+catalogRouter.get("/price-changes/export", publicRoute, async (c) => {
+  const days = (c.req.query("days") || "").split(",").map((day) => day.trim()).filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day)).slice(0, 7);
+  if (days.length === 0) return c.json(apiFailure("INVALID_INPUT", "받을 날짜를 골라 주세요."), 400);
+  const { bytes, filename } = await buildPriceChangeNoticeWorkbook(days);
+  return c.body(bytes, 200, {
+    "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    "Cache-Control": "no-store"
+  });
+});
 
 catalogRouter.post("/sourcing", publicRoute, async (c) => {
   const parsed = SourcingSchema.safeParse(await c.req.json().catch(() => null));

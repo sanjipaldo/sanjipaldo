@@ -18,6 +18,7 @@ import {
   CircleHelp,
   CloudSun,
   Clock3,
+  Download,
   ExternalLink,
   Factory,
   ImageOff,
@@ -230,6 +231,33 @@ function historyDateKey(value: string) {
   const normalized = value.length === 10 ? `${value}T00:00:00+09:00` : value.includes("T") ? value : `${value.replace(" ", "T")}Z`;
   const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? "" : seoulDateKey(date);
+}
+
+// 공개 가격변동 날짜 탭: 오늘 + 지난 3일(한국 날짜). 예) 10/22 → 10/22·10/21·10/20·10/19
+function recentDayKeys(todayKey: string, pastDays = 3) {
+  const noon = new Date(`${todayKey}T12:00:00+09:00`).getTime();
+  return Array.from({ length: pastDays + 1 }, (_, index) => seoulDateKey(new Date(noon - index * 24 * 60 * 60 * 1000)));
+}
+
+function dayTabLabel(dayKey: string) {
+  const date = new Date(`${dayKey}T12:00:00+09:00`);
+  const weekday = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", weekday: "short" }).format(date);
+  return `${Number(dayKey.slice(5, 7))}.${Number(dayKey.slice(8, 10))}(${weekday})`;
+}
+
+function PageNumbers({ page, totalPages, onChange, label }: { page: number; totalPages: number; onChange: (page: number) => void; label: string }) {
+  if (totalPages <= 1) return null;
+  const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1)
+    .filter((value) => value === 1 || value === totalPages || Math.abs(value - page) <= 2);
+  return (
+    <nav className="price-change-pagination" aria-label={label}>
+      <button type="button" onClick={() => onChange(1)} disabled={page === 1} aria-label="첫 페이지"><ChevronsLeft size={16} /></button>
+      <button type="button" onClick={() => onChange(Math.max(1, page - 1))} disabled={page === 1} aria-label="이전 페이지"><ChevronLeft size={16} /></button>
+      {pageNumbers.map((value, index) => <Fragment key={value}>{index > 0 && pageNumbers[index - 1] !== value - 1 && <span>…</span>}<button type="button" className={value === page ? "active" : ""} onClick={() => onChange(value)} aria-current={value === page ? "page" : undefined}>{value}</button></Fragment>)}
+      <button type="button" onClick={() => onChange(Math.min(totalPages, page + 1))} disabled={page === totalPages} aria-label="다음 페이지"><ChevronRight size={16} /></button>
+      <button type="button" onClick={() => onChange(totalPages)} disabled={page === totalPages} aria-label="마지막 페이지"><ChevronsRight size={16} /></button>
+    </nav>
+  );
 }
 
 // 검색어는 띄어쓰기·대소문자를 무시하고 상품명·옵션명·상품코드에서 찾습니다.
@@ -948,13 +976,19 @@ function PriceChangeBoard({
   products,
   pageSize = 5,
   query = "",
-  todayKey
+  todayKey,
+  dayKeys = [],
+  selectedDay = "all",
+  onSelectDay
 }: {
   histories: PriceHistory[];
   products: Product[];
   pageSize?: number;
   query?: string;
   todayKey?: string;
+  dayKeys?: string[];
+  selectedDay?: string;
+  onSelectDay?: (day: string) => void;
 }) {
   const [page, setPage] = useState(1);
   const [displayPageSize, setDisplayPageSize] = useState(pageSize);
@@ -964,10 +998,22 @@ function PriceChangeBoard({
   const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
   const allGroupedHistories = useMemo(() => groupPriceHistories(histories), [histories]);
   const normalizedQuery = searchKey(query);
-  const groupedHistories = useMemo(() => normalizedQuery
+  const searchedHistories = useMemo(() => normalizedQuery
     ? allGroupedHistories.filter((history) => [history.productName, history.optionName, productById.get(history.productId)?.productCode].some((value) => searchKey(value).includes(normalizedQuery)))
     : allGroupedHistories, [allGroupedHistories, normalizedQuery, productById]);
-  useEffect(() => { setPage(1); }, [normalizedQuery]);
+  // 날짜 탭(한국 날짜)별 개수와 고른 날짜의 변동
+  const dayCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    searchedHistories.forEach((history) => {
+      const key = historyDateKey(history.changedAt);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return counts;
+  }, [searchedHistories]);
+  const groupedHistories = useMemo(() => selectedDay === "all"
+    ? searchedHistories
+    : searchedHistories.filter((history) => historyDateKey(history.changedAt) === selectedDay), [searchedHistories, selectedDay]);
+  useEffect(() => { setPage(1); }, [normalizedQuery, selectedDay]);
   const filteredHistories = useMemo(() => groupedHistories.filter((history) => {
     const hasIncrease = history.changes.some((change) => change.newPrice > change.oldPrice);
     const hasDecrease = history.changes.some((change) => change.newPrice < change.oldPrice);
@@ -976,18 +1022,38 @@ function PriceChangeBoard({
   const totalPages = Math.max(1, Math.ceil(filteredHistories.length / displayPageSize));
   const currentPage = Math.min(page, totalPages);
   const visible = filteredHistories.slice((currentPage - 1) * displayPageSize, currentPage * displayPageSize);
-  const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1)
-    .filter((value) => value === 1 || value === totalPages || Math.abs(value - currentPage) <= 2);
   const increaseCount = groupedHistories.filter((history) => history.changes.some((change) => change.newPrice > change.oldPrice)).length;
   const decreaseCount = groupedHistories.filter((history) => history.changes.some((change) => change.newPrice < change.oldPrice)).length;
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
-  if (histories.length === 0) {
-    return <div className="price-change-empty"><PackageCheck size={24} /><strong>최근 3일간 가격변동이 없습니다.</strong><span>가격이 변경되면 상품과 옵션 단위로 표시됩니다.</span></div>;
+  if (histories.length === 0 && dayKeys.length === 0) {
+    return <div className="price-change-empty"><PackageCheck size={24} /><strong>최근 가격변동이 없습니다.</strong><span>가격이 변경되면 상품과 옵션 단위로 표시됩니다.</span></div>;
   }
+  const selectedLabel = selectedDay === "all" ? "최근 4일" : selectedDay === todayKey ? "오늘" : dayTabLabel(selectedDay);
   return (
     <>
+      {dayKeys.length > 0 && (
+        <div className="price-day-tabs" role="tablist" aria-label="가격변동 날짜">
+          {dayKeys.map((day, index) => (
+            <button key={day} type="button" role="tab" aria-selected={selectedDay === day} className={selectedDay === day ? "active" : ""} onClick={() => onSelectDay?.(day)}>
+              <span>{index === 0 ? "오늘" : index === 1 ? "어제" : `${index}일 전`}</span>
+              <strong>{dayTabLabel(day)}</strong>
+              <small>{(dayCounts.get(day) ?? 0).toLocaleString("ko-KR")}건</small>
+            </button>
+          ))}
+          <button type="button" role="tab" aria-selected={selectedDay === "all"} className={selectedDay === "all" ? "active" : ""} onClick={() => onSelectDay?.("all")}>
+            <span>전체</span>
+            <strong>최근 4일</strong>
+            <small>{searchedHistories.length.toLocaleString("ko-KR")}건</small>
+          </button>
+        </div>
+      )}
+      {dayKeys.length > 0 && (
+        <p className="price-day-summary">
+          <b>{selectedLabel}</b> 가격변동 {groupedHistories.length.toLocaleString("ko-KR")}건 · <span className="increase">인상 {increaseCount.toLocaleString("ko-KR")}건</span> · <span className="decrease">인하 {decreaseCount.toLocaleString("ko-KR")}건</span>
+        </p>
+      )}
       <div className="price-board-toolbar">
       <div className="price-direction-filter" aria-label="가격변동 방향 필터">
         <button className={direction === "all" ? "active" : ""} onClick={() => { setDirection("all"); setPage(1); }}>
@@ -1016,17 +1082,11 @@ function PriceChangeBoard({
       ) : (
         normalizedQuery
           ? <div className="price-change-empty"><Search size={24} /><strong>“{query.trim()}” 검색 결과가 없습니다.</strong><span>최근 3일간 이 상품의 가격변동이 없거나 검색어가 다릅니다.</span></div>
-          : <div className="price-change-empty"><PackageCheck size={24} /><strong>선택한 가격변동이 없습니다.</strong><span>전체 버튼을 누르면 모든 가격변동을 확인할 수 있습니다.</span></div>
+          : selectedDay !== "all" && (dayCounts.get(selectedDay) ?? 0) === 0
+            ? <div className="price-change-empty"><PackageCheck size={24} /><strong>{selectedLabel} 가격변동이 없습니다.</strong><span>다른 날짜 탭을 눌러 확인해 주세요.</span></div>
+            : <div className="price-change-empty"><PackageCheck size={24} /><strong>선택한 가격변동이 없습니다.</strong><span>전체 버튼을 누르면 모든 가격변동을 확인할 수 있습니다.</span></div>
       )}
-      {totalPages > 1 && (
-        <nav className="price-change-pagination" aria-label="가격변동 페이지">
-          <button type="button" onClick={() => setPage(1)} disabled={currentPage === 1} aria-label="첫 가격변동 페이지"><ChevronsLeft size={16} /></button>
-          <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1} aria-label="이전 가격변동 페이지"><ChevronLeft size={16} /></button>
-          {pageNumbers.map((value, index) => <Fragment key={value}>{index > 0 && pageNumbers[index - 1] !== value - 1 && <span>…</span>}<button type="button" className={value === currentPage ? "active" : ""} onClick={() => setPage(value)} aria-current={value === currentPage ? "page" : undefined}>{value}</button></Fragment>)}
-          <button type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={currentPage === totalPages} aria-label="다음 가격변동 페이지"><ChevronRight size={16} /></button>
-          <button type="button" onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} aria-label="마지막 가격변동 페이지"><ChevronsRight size={16} /></button>
-        </nav>
-      )}
+      <PageNumbers page={currentPage} totalPages={totalPages} onChange={setPage} label="가격변동 페이지" />
     </>
   );
 }
@@ -1037,12 +1097,18 @@ function SoldOutIssueBoard({ issues: allIssues, query = "", products = [] }: { i
   const issues = normalizedQuery
     ? allIssues.filter((issue) => [issue.productName, issue.optionName, codeById.get(issue.productId)].some((value) => searchKey(value).includes(normalizedQuery)))
     : allIssues;
+  const [page, setPage] = useState(1);
+  const issuePageSize = 5;
+  const totalPages = Math.max(1, Math.ceil(issues.length / issuePageSize));
+  const currentPage = Math.min(page, totalPages);
+  const visibleIssues = issues.slice((currentPage - 1) * issuePageSize, currentPage * issuePageSize);
+  useEffect(() => { setPage(1); }, [normalizedQuery]);
   return (
     <section className="sold-out-issue-board" aria-labelledby="sold-out-issue-title">
       <div className="sold-out-issue-heading">
         <div>
           <span className="section-kicker">SUPPLY ALERT</span>
-          <h2 id="sold-out-issue-title">최근 7일 품절 이슈</h2>
+          <h2 id="sold-out-issue-title">최근 7일 품절 이슈 <span className="sold-out-count">{issues.length.toLocaleString("ko-KR")}건</span></h2>
           <p>공급처 사정으로 품절 처리된 상품을 처리일 기준 7일간 안내합니다.</p>
         </div>
         <span className="sold-out-retention">7일 후 자동 초기화</span>
@@ -1051,7 +1117,7 @@ function SoldOutIssueBoard({ issues: allIssues, query = "", products = [] }: { i
         <div className="sold-out-issue-empty"><PackageCheck size={21} /><strong>{normalizedQuery ? `“${query.trim()}” 품절 이슈가 없습니다.` : "최근 7일 품절 처리 상품이 없습니다."}</strong><span>관리자에서 품절 처리된 상품이 이곳에 표시됩니다.</span></div>
       ) : (
         <div className="sold-out-issue-list">
-          {issues.map((issue) => (
+          {visibleIssues.map((issue) => (
             <article className="sold-out-issue-card" key={issue.id}>
               <img src={issue.productImageUrl || "/assets/products/placeholder.webp"} alt="" />
               <div><strong>{issue.productName}</strong>{issue.optionName && <small>{issue.optionName}</small>}<time>{formatDate(issue.createdAt)}</time></div>
@@ -1060,6 +1126,7 @@ function SoldOutIssueBoard({ issues: allIssues, query = "", products = [] }: { i
           ))}
         </div>
       )}
+      <PageNumbers page={currentPage} totalPages={totalPages} onChange={setPage} label="품절 이슈 페이지" />
     </section>
   );
 }
@@ -1659,6 +1726,37 @@ export function NoticesPage() {
     return () => window.clearInterval(timer);
   }, []);
   const todayKey = today ? seoulDateKey(today) : undefined;
+  const dayKeys = useMemo(() => (todayKey ? recentDayKeys(todayKey) : []), [todayKey]);
+  // 처음에는 "오늘" 탭을 보여 줍니다. 고른 날짜가 범위를 벗어나면(자정 지남) 다시 오늘로 맞춥니다.
+  const [pickedDay, setPickedDay] = useState("");
+  const selectedDay = pickedDay === "all" || dayKeys.includes(pickedDay) ? pickedDay : todayKey ?? "all";
+  const [downloading, setDownloading] = useState(false);
+  const downloadNotice = async () => {
+    const days = selectedDay === "all" ? dayKeys : [selectedDay];
+    if (days.length === 0) return;
+    setDownloading(true);
+    try {
+      const response = await apiFetch(`/catalog/price-changes/export?days=${days.join(",")}`, { auth: false });
+      if (!response.ok) throw new Error("가격변동 엑셀을 만들지 못했습니다.");
+      const blob = await response.blob();
+      const short = (day: string) => day.slice(5).replace("-", "");
+      const filename = days.length === 1 ? `${short(days[0])} 가격변동 공지.xlsx` : `${short(days[days.length - 1])}-${short(days[0])} 가격변동 공지.xlsx`;
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast.success(`${filename}을 내려받았습니다.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "가격변동 엑셀을 내려받지 못했습니다.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+  const downloadLabel = selectedDay === "all" ? "최근 4일" : selectedDay === todayKey ? "오늘" : dayTabLabel(selectedDay);
   useEffect(() => {
     let active = true;
     const reloadCatalog = () => {
@@ -1678,13 +1776,19 @@ export function NoticesPage() {
   return (
     <PageFrame>
       <main className="content-page">
-        <div className="content-hero"><span className="section-kicker">DAILY PRICE BOARD</span><h1>가격변동</h1><p>경매장 시세판처럼 최근 3일간 상품과 옵션별 변동 가격을 정확하게 확인할 수 있습니다.</p></div>
+        <div className="content-hero notice-hero">
+          <div><span className="section-kicker">DAILY PRICE BOARD</span><h1>가격변동</h1><p>경매장 시세판처럼 오늘과 지난 3일간 상품별 변동 가격을 날짜별로 정확하게 확인할 수 있습니다.</p></div>
+          <div className="notice-hero-actions">
+            <button type="button" className="price-notice-download" onClick={() => void downloadNotice()} disabled={downloading || dayKeys.length === 0}><Download size={17} /> {downloading ? "만드는 중…" : "가격변동 엑셀 다운받기"}</button>
+            <small>{downloadLabel} 가격변동·품절을 카톡 공지용 표로 받습니다.</small>
+          </div>
+        </div>
         <section className="history-page-panel">
-          <div className="section-heading"><div><span className="section-kicker">PRICE HISTORY</span><h2>최근 3일 가격변동</h2><p>상품 썸네일, 상품명, 옵션명과 변경 전후 금액을 함께 표시합니다.</p></div>{today && <div className="today-date-badge" aria-live="polite"><CalendarRange size={16} /><span>오늘</span><strong>{seoulFullDate(today)}</strong></div>}</div>
+          <div className="section-heading"><div><span className="section-kicker">PRICE HISTORY</span><h2>날짜별 가격변동</h2><p>상품 썸네일, 상품명, 옵션명과 변경 전후 금액을 함께 표시합니다.</p></div>{today && <div className="today-date-badge" aria-live="polite"><CalendarRange size={16} /><span>오늘</span><strong>{seoulFullDate(today)}</strong></div>}</div>
           <div className="history-search-bar">
             <div className="search-field"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" aria-label="가격변동·품절 상품 검색" />{query && <button type="button" className="search-clear" onClick={() => setQuery("")} aria-label="검색어 지우기"><X size={15} /></button>}</div>
           </div>
-          <PriceChangeBoard histories={data.priceHistory} products={data.products} pageSize={5} query={query} todayKey={todayKey} />
+          <PriceChangeBoard histories={data.priceHistory} products={data.products} pageSize={5} query={query} todayKey={todayKey} dayKeys={dayKeys} selectedDay={selectedDay} onSelectDay={setPickedDay} />
           <SoldOutIssueBoard issues={data.recentSoldOutIssues} query={query} products={data.products} />
         </section>
       </main>

@@ -283,11 +283,41 @@ function effectivePublicAPrice(aPrice: number | null | undefined, generalPrice: 
   return typeof aPrice === "number" && aPrice > 0 ? aPrice : generalPrice;
 }
 
+const SEOUL_OFFSET_MS = 9 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+// 공개 가격변동은 한국 날짜 기준 오늘 + 지난 3일(예: 10/22이면 10/19~10/22)을 보여 줍니다.
+export const PUBLIC_PRICE_HISTORY_PAST_DAYS = 3;
+const PUBLIC_PRICE_HISTORY_LIMIT = 5000;
+
+export function seoulDayKey(value: number) {
+  return new Date(value + SEOUL_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+export function historyDayKey(changedAt: string) {
+  const value = timestampValue(changedAt);
+  return Number.isFinite(value) ? seoulDayKey(value) : "";
+}
+
+export function publicPriceHistoryDayKeys(now = Date.now()) {
+  const todayStart = Date.parse(`${seoulDayKey(now)}T00:00:00+09:00`);
+  return Array.from({ length: PUBLIC_PRICE_HISTORY_PAST_DAYS + 1 }, (_, index) => seoulDayKey(todayStart - index * DAY_MS + DAY_MS / 2));
+}
+
 export function isPublicPriceHistoryDate(changedAt: string, now = Date.now()) {
   const value = timestampValue(changedAt);
+  const since = Date.parse(`${seoulDayKey(now)}T00:00:00+09:00`) - PUBLIC_PRICE_HISTORY_PAST_DAYS * DAY_MS;
   return Number.isFinite(value)
-    && value >= now - (3 * 24 * 60 * 60 * 1000)
+    && value >= since
     && value <= now + (5 * 60 * 1000);
+}
+
+// changedAt은 ISO("…T…Z")와 "YYYY-MM-DD HH:MM:SS" 두 형식이 섞여 있어, SQL에서는 하루 앞 날짜로 넉넉히 거르고 정확한 범위는 isPublicPriceHistoryDate로 맞춥니다.
+function publicPriceHistoryQuery(now = Date.now()) {
+  const since = seoulDayKey(Date.parse(`${seoulDayKey(now)}T00:00:00+09:00`) - (PUBLIC_PRICE_HISTORY_PAST_DAYS + 1) * DAY_MS);
+  return getDb().select().from(priceHistories)
+    .where(and(sql`${priceHistories.changedAt} >= ${since}`, sql`${priceHistories.field} <> 'costPrice'`))
+    .orderBy(desc(priceHistories.changedAt))
+    .limit(PUBLIC_PRICE_HISTORY_LIMIT);
 }
 
 // 공개 단가표의 "배송비 ?" 안내에 쓰는 배송 정책(사용 중인 정책만, 운영용 정렬값 제외)
@@ -335,7 +365,7 @@ export async function getPublicCatalog() {
     db.select().from(products).where(and(eq(products.isVisible, true), sql`${products.deletedAt} IS NULL`)).orderBy(asc(products.displayOrder), desc(products.updatedAt)),
     db.select().from(productOptions).orderBy(asc(productOptions.productId), asc(productOptions.sortOrder)),
     db.select().from(notices).where(eq(notices.isActive, true)).orderBy(desc(notices.isPinned), desc(notices.updatedAt)),
-    db.select().from(priceHistories).orderBy(desc(priceHistories.changedAt)).limit(500),
+    publicPriceHistoryQuery(),
     db.select().from(catalogActivityLogs)
       .where(and(eq(catalogActivityLogs.eventType, "sold_out"), sql`${catalogActivityLogs.createdAt} >= ${soldOutSince}`))
       .orderBy(desc(catalogActivityLogs.createdAt))
@@ -373,6 +403,31 @@ export async function getPublicCatalog() {
       productCount: Number(totalProductRows[0]?.count ?? productRows.length),
       visibleProductCount: productRows.length
     }
+  };
+}
+
+// 가격변동 공지 엑셀용: 고른 한국 날짜(공개 범위 안)의 가격변동과 품절 이력. 공개 가격변동 화면과 같은 조건으로 고릅니다.
+export async function getPublicPriceChangeNoticeData(dayKeys: string[], now = Date.now()) {
+  const allowed = new Set(publicPriceHistoryDayKeys(now));
+  const days = dayKeys.filter((day) => allowed.has(day));
+  const db = getDb();
+  const soldOutSince = new Date(Date.parse(`${seoulDayKey(now)}T00:00:00+09:00`) - (PUBLIC_PRICE_HISTORY_PAST_DAYS + 1) * DAY_MS).toISOString();
+  const [historyRows, soldOutRows, productRows] = await Promise.all([
+    publicPriceHistoryQuery(now),
+    db.select().from(catalogActivityLogs)
+      .where(and(eq(catalogActivityLogs.eventType, "sold_out"), sql`${catalogActivityLogs.createdAt} >= ${soldOutSince}`))
+      .orderBy(desc(catalogActivityLogs.createdAt))
+      .limit(PUBLIC_PRICE_HISTORY_LIMIT),
+    db.select({ id: products.id, name: products.name, productCode: products.productCode })
+      .from(products).where(and(eq(products.isVisible, true), sql`${products.deletedAt} IS NULL`))
+  ]);
+  const daySet = new Set(days);
+  const visibleIds = new Set(productRows.map((product) => product.id));
+  return {
+    days,
+    histories: historyRows.filter((history) => isPublicPriceHistoryDate(history.changedAt, now) && daySet.has(historyDayKey(history.changedAt))),
+    soldOut: soldOutRows.filter((issue) => visibleIds.has(issue.productId) && daySet.has(historyDayKey(issue.createdAt))),
+    products: productRows
   };
 }
 

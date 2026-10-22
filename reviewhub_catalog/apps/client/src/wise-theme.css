@@ -1196,3 +1196,33 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .today-date-badge { width: 100%; justify-content: center; padding: 10px 12px; font-size: 14px; }
   .history-search-bar .search-field { width: 100%; }
 }
+
+/* 가격변동(/notices): 엑셀 다운받기 · 날짜 탭 · 품절 개수 */
+.notice-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.notice-hero-actions { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 7px; }
+.notice-hero-actions small { color: var(--w-mute); font-size: 12px; }
+.price-notice-download { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border: 0; border-radius: 999px; background: var(--w-primary); color: var(--w-ink-deep); font-size: 15px; font-weight: 800; cursor: pointer; }
+.price-notice-download:hover:not(:disabled) { background: var(--w-primary-active); }
+.price-notice-download:disabled { opacity: .55; cursor: default; }
+.price-day-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
+.price-day-tabs button { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 10px 6px; border: 1px solid var(--w-line); border-radius: 14px; background: #fff; color: var(--w-ink); cursor: pointer; }
+.price-day-tabs button span { color: var(--w-mute); font-size: 12px; font-weight: 700; }
+.price-day-tabs button strong { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+.price-day-tabs button small { color: var(--w-body); font-size: 12px; font-weight: 700; }
+.price-day-tabs button.active { border-color: var(--w-ink); background: var(--w-ink); color: #fff; }
+.price-day-tabs button.active span, .price-day-tabs button.active small { color: rgba(255,255,255,.78); }
+.price-day-summary { margin: 0 0 12px; color: var(--w-body); font-size: 14px; }
+.price-day-summary b { color: var(--w-ink); }
+.price-day-summary .increase { color: var(--w-negative); font-weight: 700; }
+.price-day-summary .decrease { color: #1d5fd0; font-weight: 700; }
+.sold-out-count { display: inline-flex; align-items: center; height: 24px; margin-left: 6px; padding: 0 10px; border-radius: 999px; background: var(--w-negative-row); color: var(--w-negative-deep); font-size: 13px; font-weight: 800; vertical-align: middle; }
+.sold-out-issue-board .price-change-pagination { margin-top: 14px; }
+@media (max-width: 720px) {
+  .notice-hero { flex-direction: column; align-items: stretch; gap: 16px; }
+  .notice-hero-actions { align-items: stretch; }
+  .notice-hero-actions small { text-align: center; }
+  .price-notice-download { justify-content: center; width: 100%; }
+  .price-day-tabs { display: flex; overflow-x: auto; scrollbar-width: none; margin-right: -2px; }
+  .price-day-tabs::-webkit-scrollbar { display: none; }
+  .price-day-tabs button { flex: 0 0 auto; min-width: 84px; }
+}
