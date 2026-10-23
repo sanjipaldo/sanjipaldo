@@ -1,0 +1,10 @@
+# never commit the baby's footage/photos or rendered output
+work/
+*.mp4
+*.mov
+*.wav
+*.jpg
+*.jpeg
+*.png
+*.heic
+__pycache__/
