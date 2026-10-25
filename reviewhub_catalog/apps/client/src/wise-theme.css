@@ -1367,3 +1367,11 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .new-products-admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .new-products-admin-link { width: 100%; justify-content: center; margin-top: 10px; }
 }
+
+/* 신규상품: 검정 대신 연두(브랜드 라임) — 선택한 날짜 탭·NEW 뱃지 */
+.new-product-day-tabs button.active { border-color: var(--w-primary); background: var(--w-primary); color: var(--w-ink-deep); box-shadow: 0 0 0 1px #7fcf4f inset; }
+.new-product-day-tabs button.active span, .new-product-day-tabs button.active small { color: var(--w-ink-deep); opacity: .8; }
+.new-product-day-tabs button.is-today:not(.active) { border-color: #9fe870; background: var(--w-primary-pale); }
+.new-product-badge { background: var(--w-primary) !important; color: var(--w-ink-deep) !important; border: 1px solid #86d65a; }
+.new-product-jump { margin-top: 12px; padding: 10px 16px; border: 0; border-radius: 999px; background: var(--w-primary); color: var(--w-ink-deep); font-size: 14px; font-weight: 800; cursor: pointer; }
+.new-product-jump:hover { background: var(--w-primary-active); }

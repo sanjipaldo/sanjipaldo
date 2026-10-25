@@ -1940,7 +1940,8 @@ export function NewProductsPage() {
   const [query, setQuery] = useState("");
   const [shippingType, setShippingType] = useState<"all" | ShippingType>("all");
   const [categoryId, setCategoryId] = useState("all");
-  const [pickedDay, setPickedDay] = useState("all");
+  // 처음 들어오면 "오늘" 탭(한국 날짜)을 엽니다.
+  const [pickedDay, setPickedDay] = useState("");
   const [pageSize, setPageSize] = useState(10);
   useEffect(() => { setPageSize(readStoredPageSize("public-new-products", 10, 200)); }, []);
   const [page, setPage] = useState(1);
@@ -1965,7 +1966,8 @@ export function NewProductsPage() {
     });
     return counts;
   }, [searched]);
-  const selectedDay = pickedDay === "all" || dayKeys.includes(pickedDay) ? pickedDay : "all";
+  const selectedDay = pickedDay === "all" || dayKeys.includes(pickedDay) ? pickedDay : todayKey || "all";
+  const latestDayWithProducts = dayKeys.find((day) => (dayCounts.get(day) ?? 0) > 0);
   const visibleProducts = useMemo(() => (selectedDay === "all" ? searched : searched.filter((product) => createdDayKey(product.createdAt) === selectedDay)), [searched, selectedDay]);
   // 신규상품이 있는 카테고리만 버튼으로 보여 줍니다(개수 포함).
   const categoryChips = useMemo(() => {
@@ -2016,14 +2018,14 @@ export function NewProductsPage() {
           </div>
           {dayKeys.length > 0 && (
             <div className="price-day-tabs new-product-day-tabs" role="tablist" aria-label="신규상품 등록일">
-              <button type="button" role="tab" aria-selected={selectedDay === "all"} className={selectedDay === "all" ? "active" : ""} onClick={() => setPickedDay("all")}>
-                <span>전체</span><strong>최근 {settings.days}일</strong><small>{searched.length.toLocaleString("ko-KR")}개</small>
-              </button>
               {dayKeys.map((day, index) => (
-                <button key={day} type="button" role="tab" aria-selected={selectedDay === day} className={selectedDay === day ? "active" : ""} onClick={() => setPickedDay(day)}>
+                <button key={day} type="button" role="tab" aria-selected={selectedDay === day} className={`${selectedDay === day ? "active" : ""} ${index === 0 ? "is-today" : ""}`.trim()} onClick={() => setPickedDay(day)}>
                   <span>{relativeDayName(index)}</span><strong>{shortDayLabel(day)}</strong><small>{(dayCounts.get(day) ?? 0).toLocaleString("ko-KR")}개</small>
                 </button>
               ))}
+              <button type="button" role="tab" aria-selected={selectedDay === "all"} className={selectedDay === "all" ? "active" : ""} onClick={() => setPickedDay("all")}>
+                <span>전체</span><strong>최근 {settings.days}일</strong><small>{searched.length.toLocaleString("ko-KR")}개</small>
+              </button>
             </div>
           )}
           {dayKeys.length > 0 && (
@@ -2067,7 +2069,7 @@ export function NewProductsPage() {
             />
             {loading ? <div className="catalog-loading-state"><div className="spinner" /><strong>신규상품을 불러오고 있습니다.</strong><span>잠시만 기다려 주세요.</span></div>
               : visibleProducts.length === 0 && (
-                <div className="empty-state"><PackageSearch size={30} /><strong>{normalizedQuery ? `“${query.trim()}” 신규상품이 없습니다.` : `${selectedLabel} 등록된 신규상품이 없습니다.`}</strong><span>다른 날짜 탭이나 카테고리를 눌러 확인해 주세요.</span></div>
+                <div className="empty-state"><PackageSearch size={30} /><strong>{normalizedQuery ? `“${query.trim()}” 신규상품이 없습니다.` : `${selectedLabel} 등록된 신규상품이 없습니다.`}</strong><span>다른 날짜 탭이나 카테고리를 눌러 확인해 주세요.</span>{!normalizedQuery && selectedDay !== "all" && latestDayWithProducts && latestDayWithProducts !== selectedDay && <button type="button" className="new-product-jump" onClick={() => setPickedDay(latestDayWithProducts)}>가장 최근 신규상품 보기 · {shortDayLabel(latestDayWithProducts)} {(dayCounts.get(latestDayWithProducts) ?? 0).toLocaleString("ko-KR")}개</button>}</div>
               )}
           </div>
           <PageNumbers page={currentPage} totalPages={totalPages} onChange={changePage} label="신규상품 페이지" />
