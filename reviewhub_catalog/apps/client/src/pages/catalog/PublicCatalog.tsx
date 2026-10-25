@@ -1434,6 +1434,81 @@ function CatalogProductTable({
   );
 }
 
+// 월별 제철상품(월 버튼 · SEASON TIP · "N월 제철" 품목 키워드). 단가표와 신규상품이 함께 씁니다.
+function SeasonMonthFilter({
+  products,
+  categories,
+  saleMonth,
+  onSaleMonth,
+  currentMonth,
+  query,
+  onQuery
+}: {
+  products: Product[];
+  categories: CatalogData["categories"];
+  saleMonth: number | "all";
+  onSaleMonth: (month: number | "all") => void;
+  currentMonth: number;
+  query: string;
+  onQuery: (value: string) => void;
+}) {
+  // 제철 정보: 선택한 달(전체면 이번 달)에 판매기간이 걸친 제철 상품을 품목명 기준으로 묶어 보여줍니다.
+  const highlightMonth = saleMonth === "all" ? currentMonth : saleMonth;
+  const seasonalHighlights = useMemo(() => {
+    if (!highlightMonth) return { total: 0, byCategory: [] as Array<{ name: string; count: number }>, keywords: [] as Array<{ keyword: string; count: number }> };
+    const inSeason = products.filter((product) => {
+      const category = categories.find((item) => item.id === product.categoryId);
+      if (!seasonApplies(product, category?.name) || product.isAlwaysOnSale) return false;
+      if (!product.saleStartMonth || !product.saleEndMonth) return false;
+      return isMonthInSeason(highlightMonth, product.saleStartMonth, product.saleEndMonth);
+    });
+    const categoryCounts = new Map<string, number>();
+    const keywordCounts = new Map<string, number>();
+    for (const product of inSeason) {
+      const category = categories.find((item) => item.id === product.categoryId);
+      const categoryName = category?.name ?? "기타";
+      categoryCounts.set(categoryName, (categoryCounts.get(categoryName) ?? 0) + 1);
+      const keyword = product.name.replace(/[[(].*?[\])]/g, " ").split(/\s+/).find((token) => /[가-힣A-Za-z]{2,}/.test(token))?.replace(/[^가-힣A-Za-z]/g, "") ?? "";
+      if (keyword.length >= 2) keywordCounts.set(keyword, (keywordCounts.get(keyword) ?? 0) + 1);
+    }
+    return {
+      total: inSeason.length,
+      byCategory: [...categoryCounts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+      keywords: [...keywordCounts.entries()].map(([keyword, count]) => ({ keyword, count })).sort((a, b) => b.count - a.count).slice(0, 12)
+    };
+  }, [products, categories, highlightMonth]);
+  return (
+    <div className="month-filter">
+      <span><CalendarRange size={15} /> 월별 제철상품</span>
+      <div>
+        <button className={saleMonth === "all" ? "active" : ""} onClick={() => onSaleMonth("all")}>전체</button>
+        {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
+          <button key={month} className={saleMonth === month ? "active" : month === currentMonth ? "current" : ""} onClick={() => onSaleMonth(month)}>{month}월</button>
+        ))}
+      </div>
+      <small>월을 고르면 그 달에 판매하는 제철 상품만 보입니다. 제철 월이 없는 상시 판매 상품은 '전체'에서 확인하세요.</small>
+      <strong className="season-prep-message"><span>SEASON TIP</span> 미리미리 제철 시즌이 되기 전에, 판매 상품을 준비해보세요!</strong>
+      {highlightMonth > 0 && (
+        <div className="season-highlight" aria-live="polite">
+          <div className="season-highlight-title">
+            <strong>{highlightMonth}월 제철</strong>
+            <span>{seasonalHighlights.total > 0 ? `${seasonalHighlights.total}개 상품 · ${seasonalHighlights.byCategory.map((item) => `${item.name} ${item.count}`).join(" · ")}` : "등록된 제철 상품이 없습니다."}</span>
+          </div>
+          {seasonalHighlights.keywords.length > 0 && (
+            <div className="season-highlight-keywords">
+              {seasonalHighlights.keywords.map((item) => (
+                <button type="button" key={item.keyword} className={query.trim() === item.keyword ? "active" : ""} onClick={() => onQuery(query.trim() === item.keyword ? "" : item.keyword)} aria-pressed={query.trim() === item.keyword}>
+                  {item.keyword}<small>{item.count}</small>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CatalogHome() {
   const [data, setData] = useState<CatalogData>(emptyCatalogData);
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -1550,31 +1625,6 @@ export function CatalogHome() {
   const catalogTotalCount = data.catalogTotals?.productCount ?? catalogItemCount;
   const recentChangeCount = data.priceHistory.length;
   const currentMonth = clock ? seoulMonth(clock) : 0;
-  // 제철 정보: 선택한 달(전체면 이번 달)에 판매기간이 걸친 제철 상품을 품목명 기준으로 묶어 보여줍니다.
-  const highlightMonth = saleMonth === "all" ? currentMonth : saleMonth;
-  const seasonalHighlights = useMemo(() => {
-    if (!highlightMonth) return { total: 0, byCategory: [] as Array<{ name: string; count: number }>, keywords: [] as Array<{ keyword: string; count: number }> };
-    const inSeason = data.products.filter((product) => {
-      const category = data.categories.find((item) => item.id === product.categoryId);
-      if (!seasonApplies(product, category?.name) || product.isAlwaysOnSale) return false;
-      if (!product.saleStartMonth || !product.saleEndMonth) return false;
-      return isMonthInSeason(highlightMonth, product.saleStartMonth, product.saleEndMonth);
-    });
-    const categoryCounts = new Map<string, number>();
-    const keywordCounts = new Map<string, number>();
-    for (const product of inSeason) {
-      const category = data.categories.find((item) => item.id === product.categoryId);
-      const categoryName = category?.name ?? "기타";
-      categoryCounts.set(categoryName, (categoryCounts.get(categoryName) ?? 0) + 1);
-      const keyword = product.name.replace(/[[(].*?[\])]/g, " ").split(/\s+/).find((token) => /[가-힣A-Za-z]{2,}/.test(token))?.replace(/[^가-힣A-Za-z]/g, "") ?? "";
-      if (keyword.length >= 2) keywordCounts.set(keyword, (keywordCounts.get(keyword) ?? 0) + 1);
-    }
-    return {
-      total: inSeason.length,
-      byCategory: [...categoryCounts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
-      keywords: [...keywordCounts.entries()].map(([keyword, count]) => ({ keyword, count })).sort((a, b) => b.count - a.count).slice(0, 12)
-    };
-  }, [data.products, data.categories, highlightMonth]);
   return (
     <PageFrame>
       <main className="catalog-main">
@@ -1614,34 +1664,7 @@ export function CatalogHome() {
             <button className={categoryId === "all" ? "active" : ""} onClick={() => setCategoryId("all")}>전체 카테고리</button>
             {visibleCategories.map((category) => <button key={category.id} className={categoryId === category.id ? "active" : ""} onClick={() => setCategoryId(category.id)}>{category.name}</button>)}
           </div>
-          <div className="month-filter">
-            <span><CalendarRange size={15} /> 월별 제철상품</span>
-            <div>
-              <button className={saleMonth === "all" ? "active" : ""} onClick={() => setSaleMonth("all")}>전체</button>
-              {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
-                <button key={month} className={saleMonth === month ? "active" : month === currentMonth ? "current" : ""} onClick={() => setSaleMonth(month)}>{month}월</button>
-              ))}
-            </div>
-            <small>월을 고르면 그 달에 판매하는 제철 상품만 보입니다. 제철 월이 없는 상시 판매 상품은 '전체'에서 확인하세요.</small>
-            <strong className="season-prep-message"><span>SEASON TIP</span> 미리미리 제철 시즌이 되기 전에, 판매 상품을 준비해보세요!</strong>
-            {highlightMonth > 0 && (
-              <div className="season-highlight" aria-live="polite">
-                <div className="season-highlight-title">
-                  <strong>{highlightMonth}월 제철</strong>
-                  <span>{seasonalHighlights.total > 0 ? `${seasonalHighlights.total}개 상품 · ${seasonalHighlights.byCategory.map((item) => `${item.name} ${item.count}`).join(" · ")}` : "등록된 제철 상품이 없습니다."}</span>
-                </div>
-                {seasonalHighlights.keywords.length > 0 && (
-                  <div className="season-highlight-keywords">
-                    {seasonalHighlights.keywords.map((item) => (
-                      <button type="button" key={item.keyword} className={query.trim() === item.keyword ? "active" : ""} onClick={() => setQuery(query.trim() === item.keyword ? "" : item.keyword)} aria-pressed={query.trim() === item.keyword}>
-                        {item.keyword}<small>{item.count}</small>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <SeasonMonthFilter products={data.products} categories={data.categories} saleMonth={saleMonth} onSaleMonth={setSaleMonth} currentMonth={currentMonth} query={query} onQuery={setQuery} />
           <div className="order-legend" aria-label="주문 가능 여부 안내">
             <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 행 · 판매중(지금 주문 가능)</span>
             <span className="order-legend-item unavailable"><i aria-hidden="true" /> 빨간색 행 · 품절 또는 시즌 종료(주문 불가)</span>
@@ -1942,6 +1965,7 @@ export function NewProductsPage() {
   const [categoryId, setCategoryId] = useState("all");
   // 처음 들어오면 "오늘" 탭(한국 날짜)을 엽니다.
   const [pickedDay, setPickedDay] = useState("");
+  const [saleMonth, setSaleMonth] = useState<number | "all">("all");
   const [pageSize, setPageSize] = useState(10);
   useEffect(() => { setPageSize(readStoredPageSize("public-new-products", 10, 200)); }, []);
   const [page, setPage] = useState(1);
@@ -1956,8 +1980,13 @@ export function NewProductsPage() {
   const searched = useMemo(() => newProducts.filter((product) => (
     (shippingType === "all" || product.shippingType === shippingType)
     && (categoryId === "all" || product.categoryId === categoryId)
+    // 월별 제철상품: 단가표와 같은 기준(제철 카테고리이면서 상시 판매이거나 고른 달이 판매기간 안)
+    && (saleMonth === "all" || (
+      seasonApplies(product, categoryNameById.get(product.categoryId ?? ""))
+      && (product.isAlwaysOnSale || isMonthInSeason(saleMonth, product.saleStartMonth, product.saleEndMonth))
+    ))
     && (!normalizedQuery || [product.name, product.productCode, product.origin, categoryNameById.get(product.categoryId ?? "")].some((value) => searchKey(value).includes(normalizedQuery)))
-  )), [categoryId, categoryNameById, newProducts, normalizedQuery, shippingType]);
+  )), [categoryId, categoryNameById, newProducts, normalizedQuery, saleMonth, shippingType]);
   const dayCounts = useMemo(() => {
     const counts = new Map<string, number>();
     searched.forEach((product) => {
@@ -1989,7 +2018,7 @@ export function NewProductsPage() {
   const totalPages = Math.max(1, Math.ceil(visibleProducts.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pagedProducts = useMemo(() => visibleProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize), [currentPage, pageSize, visibleProducts]);
-  useEffect(() => { setPage(1); }, [categoryId, normalizedQuery, pageSize, selectedDay, shippingType]);
+  useEffect(() => { setPage(1); }, [categoryId, normalizedQuery, pageSize, saleMonth, selectedDay, shippingType]);
   const currentMonth = today ? seoulMonth(today) : 0;
   const selectedLabel = selectedDay === "all" ? `최근 ${settings.days}일` : selectedDay === todayKey ? "오늘" : shortDayLabel(selectedDay);
   const changePage = (next: number) => {
@@ -2049,6 +2078,7 @@ export function NewProductsPage() {
               {categoryChips.map((category) => <button key={category.id} className={categoryId === category.id ? "active" : ""} onClick={() => setCategoryId(category.id)}>{category.name} <small>{category.count}</small></button>)}
             </div>
           )}
+          <SeasonMonthFilter products={newProducts} categories={data.categories} saleMonth={saleMonth} onSaleMonth={setSaleMonth} currentMonth={currentMonth} query={query} onQuery={setQuery} />
           <div className="order-legend" aria-label="주문 가능 여부 안내">
             <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 행 · 판매중(지금 주문 가능)</span>
             <span className="order-legend-item unavailable"><i aria-hidden="true" /> 빨간색 행 · 품절 또는 시즌 종료(주문 불가)</span>
