@@ -37,16 +37,21 @@ import {
   X,
   LayoutDashboard,
   DatabaseBackup,
-  ListOrdered
+  ListOrdered,
+  Sparkles,
+  Eye,
+  EyeOff,
+  ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 import { apiFetch } from "@/lib/api";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
 import { authClient, clearAuthToken } from "@/lib/auth";
+import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 import type { AdminCatalogData, AdminHomeData, AdminOverview, BaljuoraConnection, Category, CatalogSyncOutboxItem, CatalogSyncOverview, CatalogSyncRun, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, SalesOverview, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
-type AdminSection = "home" | "products" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "changes" | "transmissions" | "sales" | "notices" | "history" | "sourcing" | "sync" | "backup";
+type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "changes" | "transmissions" | "sales" | "notices" | "history" | "sourcing" | "sync" | "backup";
 type ProductOptionDraft = Pick<ProductOption, "id" | "name" | "costPrice" | "aPrice" | "generalPrice" | "salePrice" | "salePriceMode" | "isSoldOut" | "sortOrder">;
 type BulkWorkbookPreview = {
   totalRows: number;
@@ -516,6 +521,7 @@ export function AdminLoginPage() {
 const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes; group?: "product" | "transfer" | "openapi" }> = [
   { section: "home", label: "홈", icon: LayoutDashboard },
   { section: "products", label: "상품 리스트", icon: Boxes, group: "product" },
+  { section: "newProducts", label: "신규상품 관리", icon: Sparkles, group: "product" },
   { section: "sort", label: "상품 진열순서 설정", icon: ArrowDown, group: "product" },
   { section: "categories", label: "상품 카테고리", icon: Tags, group: "product" },
   { section: "shippingPolicies", label: "배송 정책", icon: Truck, group: "product" },
@@ -742,6 +748,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               {section === "home" && <AdminHome data={homeData} />}
               {section === "products" && <ProductsAdmin data={data} refresh={refresh} updateData={setData} />}
               {section === "bundles" && <BundlesAdmin data={data} />}
+              {section === "newProducts" && <NewProductsAdmin data={data} refresh={refresh} />}
               {section === "sort" && <ProductsAdmin data={data} refresh={refresh} updateData={setData} sortOnly />}
               {section === "changes" && <ChangeQueueAdmin mode="changes" />}
               {section === "transmissions" && <ChangeQueueAdmin mode="transmissions" />}
@@ -2209,6 +2216,110 @@ function NoticesAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () =
           </section>
         </div>
       </div>
+    </>
+  );
+}
+
+// 신규상품 관리: 공개 "신규상품" 메뉴에 보일 기간(최근 N일)과 제외할 상품을 정합니다.
+// 상품을 새로 등록하면(신규 상품 등록·엑셀 대량 업로드) 등록일 기준으로 자동으로 올라가고, 단가표에서 숨김인 상품은 노출을 켜야 보입니다.
+function NewProductsAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (silent?: boolean) => Promise<void> }) {
+  const saved = useMemo(() => parseNewProductSettings(data.settings?.[NEW_PRODUCT_SETTING_KEY]), [data.settings]);
+  const [days, setDays] = useState(saved.days);
+  const [hidden, setHidden] = useState<string[]>(saved.hidden);
+  const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
+  const [pickedDay, setPickedDay] = useState("all");
+  useEffect(() => { setDays(saved.days); setHidden(saved.hidden); }, [saved]);
+  const todayKey = seoulDayKey(new Date());
+  const dayKeys = useMemo(() => newProductDayKeys(todayKey, days), [days, todayKey]);
+  const hiddenSet = useMemo(() => new Set(hidden), [hidden]);
+  const categoryNameById = useMemo(() => new Map(data.categories.map((category) => [category.id, category.name])), [data.categories]);
+  const inWindow = useMemo(() => {
+    const daySet = new Set(dayKeys);
+    return data.products
+      .filter((product) => daySet.has(createdDayKey(product.createdAt)))
+      .sort((first, second) => (second.createdAt > first.createdAt ? 1 : second.createdAt < first.createdAt ? -1 : 0));
+  }, [data.products, dayKeys]);
+  const statusOf = (product: Product) => (hiddenSet.has(product.id) ? "excluded" : !product.isVisible ? "invisible" : "public");
+  const counts = {
+    total: inWindow.length,
+    public: inWindow.filter((product) => statusOf(product) === "public").length,
+    invisible: inWindow.filter((product) => statusOf(product) === "invisible").length,
+    excluded: inWindow.filter((product) => statusOf(product) === "excluded").length
+  };
+  const normalized = query.replace(/\s+/g, "").toLowerCase();
+  const selectedDay = pickedDay === "all" || dayKeys.includes(pickedDay) ? pickedDay : "all";
+  const rows = inWindow.filter((product) => (selectedDay === "all" || createdDayKey(product.createdAt) === selectedDay)
+    && (!normalized || `${product.name}${product.productCode ?? ""}`.replace(/\s+/g, "").toLowerCase().includes(normalized)));
+
+  const save = async (next: { days: number; hidden: string[] }, message: string) => {
+    // 기간이 지난 상품 id는 저장할 때 정리합니다(목록이 계속 쌓이지 않도록).
+    const keepIds = new Set(data.products.filter((product) => new Set(newProductDayKeys(todayKey, NEW_PRODUCT_MAX_DAYS)).has(createdDayKey(product.createdAt))).map((product) => product.id));
+    const value = JSON.stringify({ days: next.days, hidden: next.hidden.filter((id) => keepIds.has(id)) });
+    setSaving(true);
+    try {
+      const response = await apiFetch("/catalog/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: NEW_PRODUCT_SETTING_KEY, value }) });
+      if (!response.ok) return;
+      toast.success(message);
+      await refresh(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const toggleHidden = (product: Product) => {
+    const nextHidden = hiddenSet.has(product.id) ? hidden.filter((id) => id !== product.id) : [...hidden, product.id];
+    setHidden(nextHidden);
+    void save({ days: saved.days, hidden: nextHidden }, hiddenSet.has(product.id) ? `'${product.name}'을 신규상품에 다시 보이게 했습니다.` : `'${product.name}'을 신규상품에서 뺐습니다.`);
+  };
+  const statusLabel = { public: "신규상품에 보임", invisible: "단가표 숨김(안 보임)", excluded: "신규상품에서 제외" } as const;
+
+  return (
+    <>
+      <div className="admin-page-heading"><div><span>NEW ARRIVALS</span><h1>신규상품 관리</h1><p>공개 사이트 "신규상품" 메뉴에는 최근 {saved.days}일(오늘 포함, 한국 날짜) 안에 등록된 상품이 등록일별로 자동으로 보입니다. 기간을 바꾸거나 특정 상품을 뺄 수 있습니다.</p></div><a className="new-products-admin-link" href="/new-products" target="_blank" rel="noreferrer"><ExternalLink size={15} /> 공개 화면 보기</a></div>
+      <section className="admin-card new-products-admin-settings">
+        <div className="new-products-admin-stats">
+          <div><span>기간 안 신규 등록</span><strong>{counts.total.toLocaleString("ko-KR")}<small>개</small></strong></div>
+          <div className="public"><span>신규상품에 보임</span><strong>{counts.public.toLocaleString("ko-KR")}<small>개</small></strong></div>
+          <div><span>단가표 숨김(안 보임)</span><strong>{counts.invisible.toLocaleString("ko-KR")}<small>개</small></strong></div>
+          <div><span>신규상품에서 제외</span><strong>{counts.excluded.toLocaleString("ko-KR")}<small>개</small></strong></div>
+        </div>
+        <form className="new-products-admin-days" onSubmit={(event) => { event.preventDefault(); void save({ days, hidden }, `신규상품 노출 기간을 최근 ${days}일로 저장했습니다.`); }}>
+          <label>신규상품 노출 기간<span><input type="number" min={1} max={NEW_PRODUCT_MAX_DAYS} value={days} onChange={(event) => setDays(Math.min(NEW_PRODUCT_MAX_DAYS, Math.max(1, Math.round(Number(event.target.value) || NEW_PRODUCT_DEFAULT_DAYS))))} /> 일</span></label>
+          <button type="submit" className="primary-action" disabled={saving || days === saved.days}><Save size={15} /> {saving ? "저장 중…" : "기간 저장"}</button>
+          <small>1~{NEW_PRODUCT_MAX_DAYS}일, 기본 {NEW_PRODUCT_DEFAULT_DAYS}일. 등록일이 기간을 지나면 신규상품 메뉴에서 자동으로 빠집니다(단가표에는 그대로 있음).</small>
+        </form>
+      </section>
+      <section className="admin-card">
+        <div className="new-products-admin-tabs" role="tablist" aria-label="등록일">
+          <button type="button" className={selectedDay === "all" ? "active" : ""} onClick={() => setPickedDay("all")}>전체 <small>{inWindow.length}</small></button>
+          {dayKeys.map((day, index) => (
+            <button type="button" key={day} className={selectedDay === day ? "active" : ""} onClick={() => setPickedDay(day)}>{relativeDayName(index)} {shortDayLabel(day)} <small>{inWindow.filter((product) => createdDayKey(product.createdAt) === day).length}</small></button>
+          ))}
+        </div>
+        <div className="history-filter-toolbar"><div className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" /></div><span>{rows.length}개</span></div>
+        <div className="admin-table-wrap">
+          <table className="admin-table new-products-admin-table">
+            <thead><tr><th>등록일</th><th>상품</th><th>카테고리</th><th>A단가 / 일반공급가</th><th>공개 상태</th><th>신규상품 표시</th></tr></thead>
+            <tbody>
+              {rows.map((product) => {
+                const status = statusOf(product);
+                const day = createdDayKey(product.createdAt);
+                return (
+                  <tr key={product.id} className={`status-${status}`}>
+                    <td data-label="등록일"><strong>{shortDayLabel(day)}</strong><small>{formatDateTime(product.createdAt)}</small></td>
+                    <td data-label="상품" className="history-product-cell"><span className="history-product-image">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <Boxes size={16} />}</span><span><strong>{product.name}</strong><small>{product.productCode || "코드 없음"}</small></span></td>
+                    <td data-label="카테고리">{categoryNameById.get(product.categoryId ?? "") ?? "미분류"}</td>
+                    <td data-label="A단가 / 일반공급가">{formatPrice(product.aPrice || product.generalPrice)} / {formatPrice(product.generalPrice)}</td>
+                    <td data-label="공개 상태"><span className={`new-product-status is-${status}`}>{statusLabel[status]}</span>{status === "invisible" && <small className="new-product-status-hint">상품 리스트에서 노출을 켜면 보입니다.</small>}</td>
+                    <td data-label="신규상품 표시"><button type="button" className="new-product-toggle" onClick={() => toggleHidden(product)} disabled={saving}>{hiddenSet.has(product.id) ? <><Eye size={14} /> 다시 보이기</> : <><EyeOff size={14} /> 신규상품에서 빼기</>}</button></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {rows.length === 0 && <div className="empty-admin">이 기간에 등록된 상품이 없습니다.</div>}
+        </div>
+      </section>
     </>
   );
 }

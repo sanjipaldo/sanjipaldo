@@ -5,7 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import NotFound from "./pages/not-found/Index";
 import { AdminGuard } from "./components/auth/AdminGuard";
 import { AdminLoginPage, CatalogAdmin } from "./pages/admin/CatalogAdmin";
-import { CatalogHome, GuidePage, NoticesPage, SourcingPage } from "./pages/catalog/PublicCatalog";
+import { CatalogHome, GuidePage, NewProductsPage, NoticesPage, SourcingPage } from "./pages/catalog/PublicCatalog";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +17,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<CatalogHome />} />
           <Route path="/guide" element={<GuidePage />} />
+          <Route path="/new-products" element={<NewProductsPage />} />
           <Route path="/notices" element={<NoticesPage />} />
           <Route path="/sourcing" element={<SourcingPage />} />
           <Route path="/auth" element={<AdminLoginPage />} />
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/admin/home" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="home" /></AdminGuard>} />
           <Route path="/admin/products" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="products" /></AdminGuard>} />
           <Route path="/admin/bundles" element={<Navigate to="/admin/products" replace />} />
+          <Route path="/admin/newProducts" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="newProducts" /></AdminGuard>} />
           <Route path="/admin/sort" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sort" /></AdminGuard>} />
           <Route path="/admin/changes" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="changes" /></AdminGuard>} />
           <Route path="/admin/transmissions" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="transmissions" /></AdminGuard>} />

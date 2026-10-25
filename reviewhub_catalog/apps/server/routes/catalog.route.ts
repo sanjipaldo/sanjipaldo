@@ -167,9 +167,27 @@ const PartnerSchema = z.object({
   website: z.string().max(0).optional()
 });
 
+// 신규상품 설정(new_products): {"days": 1~30, "hidden": [신규상품에서 뺄 상품 id…]}
+const NewProductSettingSchema = z.object({
+  days: z.number().int().min(1).max(30),
+  hidden: z.array(z.string().trim().min(1).max(200)).max(5000)
+});
+
 const SettingSchema = z.object({
-  key: z.enum(["guide", "guide_sections", "sourcing_intro"]),
-  value: z.string().trim().min(1).max(30000)
+  key: z.enum(["guide", "guide_sections", "sourcing_intro", "new_products"]),
+  value: z.string().trim().min(1).max(300000)
+}).superRefine((input, context) => {
+  if (input.key !== "new_products") {
+    if (input.value.length > 30000) context.addIssue({ code: "custom", message: "설정 내용이 너무 깁니다.", path: ["value"] });
+    return;
+  }
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(input.value);
+  } catch {
+    parsed = null;
+  }
+  if (!NewProductSettingSchema.safeParse(parsed).success) context.addIssue({ code: "custom", message: "신규상품 설정값을 확인해 주세요.", path: ["value"] });
 });
 
 const StatusSchema = z.object({ status: z.enum(["received", "reviewing", "completed"]) });

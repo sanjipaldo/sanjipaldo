@@ -48,6 +48,7 @@ import { apiFetch } from "@/lib/api";
 import { RATE_TYPE_LABELS, effectiveRate, rateTierLines, representativeFee } from "@/lib/shipping-rates";
 import type { CatalogData, GuideContent, Notice, OperationsOverview, PriceHistory, Product, PublicShippingPolicy, ShippingType, SoldOutIssue } from "./types";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
+import { NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, selectNewProducts, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 
 
 const fallbackGuideContent: GuideContent = {
@@ -456,6 +457,7 @@ function BrandHeader() {
       </Link>
       <nav className="public-nav" aria-label="주요 메뉴">
         <NavLink to="/" end>단가표</NavLink>
+        <NavLink to="/new-products">신규상품</NavLink>
         <NavLink to="/notices">가격변동</NavLink>
         <NavLink to="/guide">공지사항</NavLink>
         <button className="sourcing-nav-button" type="button" onClick={() => window.dispatchEvent(new CustomEvent("doogo:sourcing-open"))}><PackageSearch size={14} /> 소싱해주세요!</button>
@@ -500,6 +502,7 @@ function PageFrame({ children }: { children: ReactNode }) {
           <div>
             <h3>상품 정보</h3>
             <Link to="/">상품 단가표</Link>
+            <Link to="/new-products">신규상품</Link>
             <Link to="/notices">가격변동</Link>
             <Link to="/guide">공지사항</Link>
           </div>
@@ -1345,6 +1348,92 @@ function OperationsBoard({
   );
 }
 
+// 단가표 표(상품 · 배송/카테고리/판매기간 · A단가 · 일반공급가 · 판매가 · 상품 안내). 단가표와 신규상품 화면이 함께 씁니다.
+function CatalogProductTable({
+  products,
+  categories,
+  policyById,
+  currentMonth,
+  onImage,
+  onShipping,
+  renderBadge
+}: {
+  products: Product[];
+  categories: CatalogData["categories"];
+  policyById: Map<string, PublicShippingPolicy>;
+  currentMonth: number;
+  onImage: (preview: { src: string; alt: string }) => void;
+  onShipping: (info: { product: Product; policy?: PublicShippingPolicy }) => void;
+  renderBadge?: (product: Product) => ReactNode;
+}) {
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  useEffect(() => { setExpandedProductId(null); }, [products]);
+  return (
+    <table className="catalog-table">
+      <colgroup>
+        <col className="catalog-col-product" />
+        <col className="catalog-col-category" />
+        <col className="catalog-col-price" />
+        <col className="catalog-col-price" />
+        <col className="catalog-col-sale" />
+        <col className="catalog-col-notes" />
+      </colgroup>
+      <thead><tr><th>상품</th><th>배송 / 카테고리 / 판매기간</th><th>A단가</th><th>일반공급가</th><th>판매가</th><th>상품 안내</th></tr></thead>
+      <tbody>
+        {products.map((product) => {
+          const category = categories.find((item) => item.id === product.categoryId);
+          const options = product.options ?? [];
+          const sortedOptions = sortedProductOptions(product);
+          const expanded = expandedProductId === product.id;
+          const minimumAPrice = options.length > 0
+            ? Math.min(...sortedOptions.map((option) => effectiveAPrice(option.aPrice, option.generalPrice)))
+            : effectiveAPrice(product.aPrice, product.generalPrice);
+          const minimumGeneralPrice = options.length > 0
+            ? Math.min(...sortedOptions.map((option) => option.generalPrice))
+            : product.generalPrice;
+          const salePolicy = salePriceLabel(product.salePriceMode, product.salePrice);
+          const allOptionsSoldOut = options.length > 0 && options.every((option) => option.isSoldOut);
+          const soldOutNow = Boolean(product.isSoldOut || allOptionsSoldOut);
+          const seasonConfigured = Boolean(product.saleStartMonth && product.saleEndMonth);
+          const availableNow = !product.isSoldOut && !allOptionsSoldOut && (
+            !seasonApplies(product, category?.name)
+            || product.isAlwaysOnSale
+            || (seasonConfigured && isMonthInSeason(currentMonth, product.saleStartMonth, product.saleEndMonth))
+          );
+          const supplyLabel = soldOutNow ? "품절" : availableNow ? "판매중" : "시즌 종료";
+          const policy = product.shippingPolicyId ? policyById.get(product.shippingPolicyId) : undefined;
+          const shippingSummary = shippingFeeSummary(product, policy);
+          return (
+            <Fragment key={product.id}>
+              <tr className={`${expanded ? "expanded " : ""}${soldOutNow ? "sold-out order-unavailable" : availableNow ? "supply-active" : "season-waiting order-unavailable"}`.trim()}>
+                <td className="catalog-product-cell">
+                  <div className="product-cell"><button type="button" className="product-image-button" onClick={() => { const src = productImageSrc(product); if (src) onImage({ src, alt: product.name }); }} aria-label={`${product.name} 이미지 크게 보기`}><ProductThumb product={product} />{soldOutNow && <span className="thumb-sold-out" aria-hidden="true">품절</span>}</button><div>{renderBadge?.(product)}<span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><strong>{product.name}</strong>{product.origin && <small>{product.origin}</small>}<em className={soldOutNow ? "supply-sold-out" : availableNow ? "supply-on-sale" : "supply-season-waiting"}>{soldOutNow && <Ban size={13} strokeWidth={2.6} aria-hidden="true" />}{supplyLabel}</em>{options.length > 0 && <button className="option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />} 옵션 {options.length}개 {expanded ? "접기" : "보기"}</button>}</div></div>
+                  {expanded && options.length > 0 && <div className="mobile-inline-options"><PublicOptionList product={product} /></div>}
+                </td>
+                <td data-label="카테고리·판매기간"><div className="mobile-cell-value"><strong>{category?.name ?? "-"}</strong><button type="button" className={`shipping-fee-button ${shippingSummary.kind}`} onClick={() => onShipping({ product, policy })} aria-label={`${product.name} 배송비 안내 보기`}><span className="shipping-fee-text">배송비 <b>{shippingSummary.text}</b></span><CircleHelp size={14} aria-hidden="true" /></button><span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, category?.name)}</span></div></td>
+                <td data-label="A단가"><div className="mobile-cell-value"><b className="price a-price">{formatPrice(minimumAPrice)}</b><small>{options.length > 1 ? "옵션 최저 A단가" : "A회원 공급가"}</small></div></td>
+                <td data-label="일반공급가"><div className="mobile-cell-value"><b className="price">{formatPrice(minimumGeneralPrice)}</b><small>{options.length > 1 ? "옵션 최저 일반공급가" : "일반 판매자"}</small></div></td>
+                <td data-label="판매가"><div className="mobile-cell-value"><b className={`price sale-price sale-${product.salePriceMode}`}>{salePolicy.main}</b><small>{salePolicy.sub}</small></div></td>
+                <td data-label="상품 안내"><div className="mobile-cell-value"><p>{product.notes || "-"}</p>{product.packaging && <small>{product.packaging}</small>}</div></td>
+              </tr>
+              {expanded && options.length > 0 && (
+                <tr className="option-detail-row">
+                  <td colSpan={6}>
+                    <div className="option-detail-panel">
+                      <div className="option-detail-heading"><div><span>OPTION PRICE</span><strong>{product.name} 옵션별 공급가</strong></div><small>사이즈와 구성에 따라 단가가 달라집니다.</small></div>
+                      <PublicOptionList product={product} />
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </Fragment>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
 export function CatalogHome() {
   const [data, setData] = useState<CatalogData>(emptyCatalogData);
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -1357,7 +1446,6 @@ export function CatalogHome() {
   const [catalogPageSize, setCatalogPageSize] = useState(5);
   useEffect(() => { setCatalogPageSize(readStoredPageSize("public-catalog", 5, 200)); }, []);
   const [currentPage, setCurrentPage] = useState(1);
-  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
   const [shippingInfo, setShippingInfo] = useState<{ product: Product; policy?: PublicShippingPolicy } | null>(null);
   const policyById = useMemo(() => new Map((data.shippingPolicies ?? []).map((policy) => [policy.id, policy])), [data.shippingPolicies]);
@@ -1438,20 +1526,17 @@ export function CatalogHome() {
 
   useEffect(() => {
     setCurrentPage(1);
-    setExpandedProductId(null);
   }, [categoryId, query, saleMonth, shippingType, catalogPageSize]);
 
   useEffect(() => {
     if (totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(totalPages);
-      setExpandedProductId(null);
     }
   }, [currentPage, totalPages]);
 
   const changeCatalogPage = (page: number) => {
     if (page < 1 || page > totalPages || page === currentPage) return;
     setCurrentPage(page);
-    setExpandedProductId(null);
     window.requestAnimationFrame(() => {
       document.querySelector("#price-table")?.scrollIntoView({
         behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
@@ -1562,68 +1647,14 @@ export function CatalogHome() {
             <span className="order-legend-item unavailable"><i aria-hidden="true" /> 빨간색 행 · 품절 또는 시즌 종료(주문 불가)</span>
           </div>
           <div className="catalog-table-wrap">
-            <table className="catalog-table">
-              <colgroup>
-                <col className="catalog-col-product" />
-                <col className="catalog-col-category" />
-                <col className="catalog-col-price" />
-                <col className="catalog-col-price" />
-                <col className="catalog-col-sale" />
-                <col className="catalog-col-notes" />
-              </colgroup>
-              <thead><tr><th>상품</th><th>배송 / 카테고리 / 판매기간</th><th>A단가</th><th>일반공급가</th><th>판매가</th><th>상품 안내</th></tr></thead>
-              <tbody>
-                {paginatedProducts.map((product) => {
-                  const category = data.categories.find((item) => item.id === product.categoryId);
-                  const options = product.options ?? [];
-                  const sortedOptions = sortedProductOptions(product);
-                  const expanded = expandedProductId === product.id;
-                  const minimumAPrice = options.length > 0
-                    ? Math.min(...sortedOptions.map((option) => effectiveAPrice(option.aPrice, option.generalPrice)))
-                    : effectiveAPrice(product.aPrice, product.generalPrice);
-                  const minimumGeneralPrice = options.length > 0
-                    ? Math.min(...sortedOptions.map((option) => option.generalPrice))
-                    : product.generalPrice;
-                  const salePolicy = salePriceLabel(product.salePriceMode, product.salePrice);
-                  const allOptionsSoldOut = options.length > 0 && options.every((option) => option.isSoldOut);
-                  const soldOutNow = Boolean(product.isSoldOut || allOptionsSoldOut);
-                  const seasonConfigured = Boolean(product.saleStartMonth && product.saleEndMonth);
-                  const availableNow = !product.isSoldOut && !allOptionsSoldOut && (
-                    !seasonApplies(product, category?.name)
-                    || product.isAlwaysOnSale
-                    || (seasonConfigured && isMonthInSeason(currentMonth, product.saleStartMonth, product.saleEndMonth))
-                  );
-                  const supplyLabel = soldOutNow ? "품절" : availableNow ? "판매중" : "시즌 종료";
-                  const policy = product.shippingPolicyId ? policyById.get(product.shippingPolicyId) : undefined;
-                  const shippingSummary = shippingFeeSummary(product, policy);
-                  return (
-                    <Fragment key={product.id}>
-                      <tr className={`${expanded ? "expanded " : ""}${soldOutNow ? "sold-out order-unavailable" : availableNow ? "supply-active" : "season-waiting order-unavailable"}`.trim()}>
-                        <td className="catalog-product-cell">
-                          <div className="product-cell"><button type="button" className="product-image-button" onClick={() => { const src = productImageSrc(product); if (src) setImagePreview({ src, alt: product.name }); }} aria-label={`${product.name} 이미지 크게 보기`}><ProductThumb product={product} />{soldOutNow && <span className="thumb-sold-out" aria-hidden="true">품절</span>}</button><div><span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><strong>{product.name}</strong>{product.origin && <small>{product.origin}</small>}<em className={soldOutNow ? "supply-sold-out" : availableNow ? "supply-on-sale" : "supply-season-waiting"}>{soldOutNow && <Ban size={13} strokeWidth={2.6} aria-hidden="true" />}{supplyLabel}</em>{options.length > 0 && <button className="option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />} 옵션 {options.length}개 {expanded ? "접기" : "보기"}</button>}</div></div>
-                          {expanded && options.length > 0 && <div className="mobile-inline-options"><PublicOptionList product={product} /></div>}
-                        </td>
-                        <td data-label="카테고리·판매기간"><div className="mobile-cell-value"><strong>{category?.name ?? "-"}</strong><button type="button" className={`shipping-fee-button ${shippingSummary.kind}`} onClick={() => setShippingInfo({ product, policy })} aria-label={`${product.name} 배송비 안내 보기`}><span className="shipping-fee-text">배송비 <b>{shippingSummary.text}</b></span><CircleHelp size={14} aria-hidden="true" /></button><span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, category?.name)}</span></div></td>
-                        <td data-label="A단가"><div className="mobile-cell-value"><b className="price a-price">{formatPrice(minimumAPrice)}</b><small>{options.length > 1 ? "옵션 최저 A단가" : "A회원 공급가"}</small></div></td>
-                        <td data-label="일반공급가"><div className="mobile-cell-value"><b className="price">{formatPrice(minimumGeneralPrice)}</b><small>{options.length > 1 ? "옵션 최저 일반공급가" : "일반 판매자"}</small></div></td>
-                        <td data-label="판매가"><div className="mobile-cell-value"><b className={`price sale-price sale-${product.salePriceMode}`}>{salePolicy.main}</b><small>{salePolicy.sub}</small></div></td>
-                        <td data-label="상품 안내"><div className="mobile-cell-value"><p>{product.notes || "-"}</p>{product.packaging && <small>{product.packaging}</small>}</div></td>
-                      </tr>
-                      {expanded && options.length > 0 && (
-                        <tr className="option-detail-row">
-                          <td colSpan={6}>
-                            <div className="option-detail-panel">
-                              <div className="option-detail-heading"><div><span>OPTION PRICE</span><strong>{product.name} 옵션별 공급가</strong></div><small>사이즈와 구성에 따라 단가가 달라집니다.</small></div>
-                              <PublicOptionList product={product} />
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+            <CatalogProductTable
+              products={paginatedProducts}
+              categories={data.categories}
+              policyById={policyById}
+              currentMonth={currentMonth}
+              onImage={setImagePreview}
+              onShipping={setShippingInfo}
+            />
             {catalogLoading ? <div className="catalog-loading-state"><div className="spinner" /><strong>최신 상품을 불러오고 있습니다.</strong><span>이전 상품 대신 현재 데이터만 표시합니다.</span></div> : filteredProducts.length === 0 && <div className="empty-state"><PackageSearch size={30} /><strong>조건에 맞는 상품이 없습니다.</strong><span>검색어나 카테고리를 변경해 주세요.</span></div>}
           </div>
           {totalPages > 1 && (
@@ -1873,6 +1904,177 @@ export function NoticesPage() {
           <SoldOutIssueBoard issues={data.recentSoldOutIssues} query={query} products={data.products} todayKey={todayKey} categories={data.categories} policies={data.shippingPolicies ?? []} />
         </section>
       </main>
+    </PageFrame>
+  );
+}
+
+export function NewProductsPage() {
+  const [data, setData] = useState<CatalogData>(emptyCatalogData);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    const reloadCatalog = () => {
+      void loadCatalog().then((next) => {
+        if (!active) return;
+        if (next) setData(next);
+        setLoading(false);
+      });
+    };
+    reloadCatalog();
+    const timer = window.setInterval(reloadCatalog, 60 * 1000);
+    const stopRefreshSignal = onCatalogRefreshSignal(reloadCatalog);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      stopRefreshSignal();
+    };
+  }, []);
+  // 오늘(한국 날짜)은 접속 기기 시간대와 상관없이 맞추고, 자정이 지나면 바로 바뀝니다.
+  const [today, setToday] = useState<Date | null>(null);
+  useEffect(() => {
+    setToday(new Date());
+    const timer = window.setInterval(() => setToday(new Date()), 30 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const todayKey = today ? seoulDayKey(today) : "";
+  const [query, setQuery] = useState("");
+  const [shippingType, setShippingType] = useState<"all" | ShippingType>("all");
+  const [categoryId, setCategoryId] = useState("all");
+  const [pickedDay, setPickedDay] = useState("all");
+  const [pageSize, setPageSize] = useState(10);
+  useEffect(() => { setPageSize(readStoredPageSize("public-new-products", 10, 200)); }, []);
+  const [page, setPage] = useState(1);
+  const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
+  const [shippingInfo, setShippingInfo] = useState<{ product: Product; policy?: PublicShippingPolicy } | null>(null);
+  const policyById = useMemo(() => new Map((data.shippingPolicies ?? []).map((policy) => [policy.id, policy])), [data.shippingPolicies]);
+  const categoryNameById = useMemo(() => new Map(data.categories.map((category) => [category.id, category.name])), [data.categories]);
+  const settings = useMemo(() => parseNewProductSettings(data.settings?.[NEW_PRODUCT_SETTING_KEY]), [data.settings]);
+  const dayKeys = useMemo(() => (todayKey ? newProductDayKeys(todayKey, settings.days) : []), [settings.days, todayKey]);
+  const newProducts = useMemo(() => (todayKey ? selectNewProducts(data.products, settings, todayKey) : []), [data.products, settings, todayKey]);
+  const normalizedQuery = searchKey(query);
+  const searched = useMemo(() => newProducts.filter((product) => (
+    (shippingType === "all" || product.shippingType === shippingType)
+    && (categoryId === "all" || product.categoryId === categoryId)
+    && (!normalizedQuery || [product.name, product.productCode, product.origin, categoryNameById.get(product.categoryId ?? "")].some((value) => searchKey(value).includes(normalizedQuery)))
+  )), [categoryId, categoryNameById, newProducts, normalizedQuery, shippingType]);
+  const dayCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    searched.forEach((product) => {
+      const key = createdDayKey(product.createdAt);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return counts;
+  }, [searched]);
+  const selectedDay = pickedDay === "all" || dayKeys.includes(pickedDay) ? pickedDay : "all";
+  const visibleProducts = useMemo(() => (selectedDay === "all" ? searched : searched.filter((product) => createdDayKey(product.createdAt) === selectedDay)), [searched, selectedDay]);
+  // 신규상품이 있는 카테고리만 버튼으로 보여 줍니다(개수 포함).
+  const categoryChips = useMemo(() => {
+    const counts = new Map<string, number>();
+    newProducts.forEach((product) => {
+      if (shippingType !== "all" && product.shippingType !== shippingType) return;
+      if (product.categoryId) counts.set(product.categoryId, (counts.get(product.categoryId) ?? 0) + 1);
+    });
+    return data.categories.filter((category) => counts.has(category.id)).map((category) => ({ id: category.id, name: category.name, count: counts.get(category.id) ?? 0 }));
+  }, [data.categories, newProducts, shippingType]);
+  const categorySummary = useMemo(() => {
+    const counts = new Map<string, number>();
+    visibleProducts.forEach((product) => {
+      const name = categoryNameById.get(product.categoryId ?? "") ?? "미분류";
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    });
+    return [...counts.entries()].sort((first, second) => second[1] - first[1]).slice(0, 6);
+  }, [categoryNameById, visibleProducts]);
+  const totalPages = Math.max(1, Math.ceil(visibleProducts.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedProducts = useMemo(() => visibleProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize), [currentPage, pageSize, visibleProducts]);
+  useEffect(() => { setPage(1); }, [categoryId, normalizedQuery, pageSize, selectedDay, shippingType]);
+  const currentMonth = today ? seoulMonth(today) : 0;
+  const selectedLabel = selectedDay === "all" ? `최근 ${settings.days}일` : selectedDay === todayKey ? "오늘" : shortDayLabel(selectedDay);
+  const changePage = (next: number) => {
+    setPage(next);
+    window.requestAnimationFrame(() => document.querySelector("#new-product-table")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
+  return (
+    <PageFrame>
+      <main className="content-page new-products-page">
+        <div className="content-hero notice-hero">
+          <div><span className="section-kicker">NEW ARRIVALS</span><h1>신규상품</h1><p>최근 {settings.days}일 동안 두고푸드에 새로 등록된 상품만 모았습니다. 등록일별로 확인하고 바로 판매를 준비해 보세요.</p></div>
+          {today && (
+            <div className="notice-hero-actions">
+              <div className="today-date-badge" aria-live="polite"><CalendarRange size={16} /><span>오늘</span><strong>{seoulFullDate(today)}</strong></div>
+              <small>최근 {settings.days}일 신규상품 {newProducts.length.toLocaleString("ko-KR")}개</small>
+            </div>
+          )}
+        </div>
+        <section className="catalog-panel" id="new-product-table">
+          <div className="section-heading table-heading">
+            <div><span className="section-kicker">NEW PRODUCTS</span><h2>날짜별 신규상품</h2><p>단가표와 같은 형식으로 보여 줍니다. 상품 이미지를 누르면 크게 확인할 수 있습니다.</p></div>
+            <div className="catalog-table-tools">
+              <span className="result-count">{selectedLabel} {visibleProducts.length.toLocaleString("ko-KR")}개</span>
+              <PageSizeInput value={pageSize} onChange={setPageSize} label="페이지당 상품 수" suffix="개" max={200} presets={[5, 10, 20, 30, 50, 100]} storageKey="public-new-products" className="page-size-control" />
+            </div>
+          </div>
+          {dayKeys.length > 0 && (
+            <div className="price-day-tabs new-product-day-tabs" role="tablist" aria-label="신규상품 등록일">
+              <button type="button" role="tab" aria-selected={selectedDay === "all"} className={selectedDay === "all" ? "active" : ""} onClick={() => setPickedDay("all")}>
+                <span>전체</span><strong>최근 {settings.days}일</strong><small>{searched.length.toLocaleString("ko-KR")}개</small>
+              </button>
+              {dayKeys.map((day, index) => (
+                <button key={day} type="button" role="tab" aria-selected={selectedDay === day} className={selectedDay === day ? "active" : ""} onClick={() => setPickedDay(day)}>
+                  <span>{relativeDayName(index)}</span><strong>{shortDayLabel(day)}</strong><small>{(dayCounts.get(day) ?? 0).toLocaleString("ko-KR")}개</small>
+                </button>
+              ))}
+            </div>
+          )}
+          {dayKeys.length > 0 && (
+            <p className="price-day-summary">
+              <b>{selectedLabel}</b> 신규상품 {visibleProducts.length.toLocaleString("ko-KR")}개{categorySummary.length > 0 && <> · {categorySummary.map(([name, count]) => `${name} ${count}`).join(" · ")}</>}
+            </p>
+          )}
+          <div className="filter-toolbar">
+            <div className="search-field"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드·원산지 검색" aria-label="신규상품 검색" />{query && <button type="button" className="search-clear" onClick={() => setQuery("")} aria-label="검색어 지우기"><X size={15} /></button>}</div>
+            <div className="segmented-control" aria-label="배송 유형">
+              {(["all", "domestic", "overseas"] as const).map((value) => (
+                <button key={value} className={shippingType === value ? "active" : ""} onClick={() => { setShippingType(value); setCategoryId("all"); }}>
+                  {value === "all" ? "전체" : value === "domestic" ? "국내배송" : "해외배송"}
+                </button>
+              ))}
+            </div>
+          </div>
+          {categoryChips.length > 0 && (
+            <div className="category-chips">
+              <button className={categoryId === "all" ? "active" : ""} onClick={() => setCategoryId("all")}>전체 카테고리</button>
+              {categoryChips.map((category) => <button key={category.id} className={categoryId === category.id ? "active" : ""} onClick={() => setCategoryId(category.id)}>{category.name} <small>{category.count}</small></button>)}
+            </div>
+          )}
+          <div className="order-legend" aria-label="주문 가능 여부 안내">
+            <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 행 · 판매중(지금 주문 가능)</span>
+            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 빨간색 행 · 품절 또는 시즌 종료(주문 불가)</span>
+          </div>
+          <div className="catalog-table-wrap">
+            <CatalogProductTable
+              products={pagedProducts}
+              categories={data.categories}
+              policyById={policyById}
+              currentMonth={currentMonth}
+              onImage={setImagePreview}
+              onShipping={setShippingInfo}
+              renderBadge={(product) => {
+                const day = createdDayKey(product.createdAt);
+                const index = dayKeys.indexOf(day);
+                return <span className="new-product-badge"><Sparkles size={12} aria-hidden="true" /> NEW · {day ? shortDayLabel(day) : ""} 등록{index >= 0 && index <= 1 ? ` (${relativeDayName(index)})` : ""}</span>;
+              }}
+            />
+            {loading ? <div className="catalog-loading-state"><div className="spinner" /><strong>신규상품을 불러오고 있습니다.</strong><span>잠시만 기다려 주세요.</span></div>
+              : visibleProducts.length === 0 && (
+                <div className="empty-state"><PackageSearch size={30} /><strong>{normalizedQuery ? `“${query.trim()}” 신규상품이 없습니다.` : `${selectedLabel} 등록된 신규상품이 없습니다.`}</strong><span>다른 날짜 탭이나 카테고리를 눌러 확인해 주세요.</span></div>
+              )}
+          </div>
+          <PageNumbers page={currentPage} totalPages={totalPages} onChange={changePage} label="신규상품 페이지" />
+        </section>
+      </main>
+      {imagePreview && <ImageModal src={imagePreview.src} alt={imagePreview.alt} onClose={() => setImagePreview(null)} />}
+      {shippingInfo && <ShippingInfoModal product={shippingInfo.product} policy={shippingInfo.policy} onClose={() => setShippingInfo(null)} />}
     </PageFrame>
   );
 }
