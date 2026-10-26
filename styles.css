@@ -2376,7 +2376,7 @@ button.cashflow-day:hover { z-index:1; background:#f8fbff; box-shadow:inset 0 0 
 .profile-gradient { height:112px; background:radial-gradient(circle at 80% 20%,rgba(255,255,255,.34),transparent 27%),linear-gradient(110deg,#2379f6,#427ff1 48%,#a882e8 74%,#f2a6c7); }
 .profile-identity { position:relative; margin-top:-46px; padding:0 28px 20px; display:grid; grid-template-columns:86px 1fr auto; align-items:end; gap:17px; }
 .profile-symbol { width:86px; height:86px; display:grid; place-items:center; overflow:hidden; background:white; border:5px solid white; border-radius:24px; box-shadow:0 10px 28px rgba(22,51,98,.16); }
-.profile-symbol img { width:44px; height:53px; object-fit:contain; }
+.profile-symbol img { width:44px; height:48px; object-fit:contain; }
 .profile-identity > div { padding-bottom:6px; }
 .profile-identity > div > span { color:#3182f6; font-size:13px; font-weight: 700; letter-spacing:.15em; }
 .profile-identity h2 { margin:5px 0 4px; font-size:24px; letter-spacing:-.04em; }
@@ -2432,7 +2432,7 @@ button.cashflow-day:hover { z-index:1; background:#f8fbff; box-shadow:inset 0 0 
   .profile-gradient { height:86px; }
   .profile-identity { margin-top:-31px; padding:0 16px 16px; grid-template-columns:64px 1fr; gap:12px; }
   .profile-symbol { width:64px; height:64px; border-radius:18px; }
-  .profile-symbol img { width:31px; height:37px; }
+  .profile-symbol img { width:31px; height:34px; }
   .profile-identity h2 { font-size:18px; }
   .profile-approved { grid-column:1/-1; justify-self:start; margin:0; }
   .profile-glance { padding:0 16px 17px; grid-template-columns:1fr 1fr; }
@@ -12014,21 +12014,3 @@ h1, h2, h3 { font-weight: 700; }
   .app-shell .market-product-body dl > div:first-child dd { font-size: 15px; }
   .app-shell .market-product-body dl > div:last-child dd { font-size: 12px; }
 }
-
-/* ============================================================
-   가격표 로고 크기 (v104) — 로고 그림에 끈 자리(위·왼쪽)가 생겨
-   viewBox가 7049×731 → 7134×988, D 마크 648×712 → 733×978로 커졌다.
-   글자·D 크기는 예전과 같게: 높이 ×1.352, 폭 ×1.012
-   ============================================================ */
-.login-visual-logo img { height: clamp(30px, 3.24vw, 41px); }
-.login-market-wordmark { height: clamp(30px, 2.97vw, 38px); }
-.login-panel-brand-logo > img { height: 35px; }
-.sidebar-market-brand > img { width: 195px; height: 27px; }
-.profile-symbol img { width: 50px; height: 66px; }
-.kp-avatar img, .talk-room-item .talk-avatar.channel img { width: 52%; }
-@media (max-width: 720px) {
-  .login-panel-brand-logo > img { width: min(235px, 100%); height: auto; }
-  .sidebar-market-brand > img { width: 215px; height: 30px; }
-  .profile-symbol img { width: 35px; height: 47px; }
-}
-@media (max-width: 359px) { .sidebar-market-brand > img { width: 195px; height: 27px; } }
