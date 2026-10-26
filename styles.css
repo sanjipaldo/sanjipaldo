@@ -12014,3 +12014,21 @@ h1, h2, h3 { font-weight: 700; }
   .app-shell .market-product-body dl > div:first-child dd { font-size: 15px; }
   .app-shell .market-product-body dl > div:last-child dd { font-size: 12px; }
 }
+
+/* ============================================================
+   가격표 로고 크기 (v104) — 로고 그림에 끈 자리(위·왼쪽)가 생겨
+   viewBox가 7049×731 → 7134×988, D 마크 648×712 → 733×978로 커졌다.
+   글자·D 크기는 예전과 같게: 높이 ×1.352, 폭 ×1.012
+   ============================================================ */
+.login-visual-logo img { height: clamp(30px, 3.24vw, 41px); }
+.login-market-wordmark { height: clamp(30px, 2.97vw, 38px); }
+.login-panel-brand-logo > img { height: 35px; }
+.sidebar-market-brand > img { width: 195px; height: 27px; }
+.profile-symbol img { width: 50px; height: 66px; }
+.kp-avatar img, .talk-room-item .talk-avatar.channel img { width: 52%; }
+@media (max-width: 720px) {
+  .login-panel-brand-logo > img { width: min(235px, 100%); height: auto; }
+  .sidebar-market-brand > img { width: 215px; height: 30px; }
+  .profile-symbol img { width: 35px; height: 47px; }
+}
+@media (max-width: 359px) { .sidebar-market-brand > img { width: 195px; height: 27px; } }
