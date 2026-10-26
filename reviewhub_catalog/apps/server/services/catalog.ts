@@ -312,12 +312,43 @@ export function isPublicPriceHistoryDate(changedAt: string, now = Date.now()) {
 }
 
 // changedAt은 ISO("…T…Z")와 "YYYY-MM-DD HH:MM:SS" 두 형식이 섞여 있어, SQL에서는 하루 앞 날짜로 넉넉히 거르고 정확한 범위는 isPublicPriceHistoryDate로 맞춥니다.
-function publicPriceHistoryQuery(now = Date.now()) {
+function publicPriceHistoryQuery(now = Date.now(), limit = PUBLIC_PRICE_HISTORY_LIMIT) {
   const since = seoulDayKey(Date.parse(`${seoulDayKey(now)}T00:00:00+09:00`) - (PUBLIC_PRICE_HISTORY_PAST_DAYS + 1) * DAY_MS);
   return getDb().select().from(priceHistories)
     .where(and(sql`${priceHistories.changedAt} >= ${since}`, sql`${priceHistories.field} <> 'costPrice'`))
     .orderBy(desc(priceHistories.changedAt))
-    .limit(PUBLIC_PRICE_HISTORY_LIMIT);
+    .limit(limit);
+}
+
+// 공개 응답용 가격변동 한 줄: 화면에 필요한 칸만 보냅니다(이미지는 상품 목록의 썸네일을 쓰고, 변경한 관리자 이름은 공개하지 않음).
+// Vercel 함수 응답은 4.5MB를 넘으면 실패하므로, 가격변동이 많은 날에도 단가표(/api/catalog)가 가볍게 유지되도록 합니다.
+type PriceHistoryRow = typeof priceHistories.$inferSelect;
+function publicHistoryRow(row: PriceHistoryRow) {
+  return {
+    id: row.id,
+    productId: row.productId,
+    productName: row.productName,
+    optionId: row.optionId,
+    optionName: row.optionName,
+    field: row.field,
+    oldPrice: row.oldPrice,
+    newPrice: row.newPrice,
+    changedBy: "",
+    changedAt: row.changedAt,
+    productImageUrl: null
+  };
+}
+
+// 단가표(/api/catalog)에는 최근 가격변동 일부만 싣고 전체 건수를 함께 보냅니다. 가격변동 화면은 /api/catalog/price-history로 따로 받습니다.
+const PUBLIC_CATALOG_HISTORY_PREVIEW = 300;
+
+export async function getPublicPriceHistory(now = Date.now()) {
+  const rows = (await publicPriceHistoryQuery(now)).filter((history) => isPublicPriceHistoryDate(history.changedAt, now));
+  return {
+    priceHistory: rows.map(publicHistoryRow),
+    priceHistoryCount: rows.length,
+    truncated: rows.length >= PUBLIC_PRICE_HISTORY_LIMIT
+  };
 }
 
 // 공개 단가표의 "배송비 ?" 안내에 쓰는 배송 정책(사용 중인 정책만, 운영용 정렬값 제외)
@@ -396,7 +427,8 @@ export async function getPublicCatalog() {
     shippingPolicies: policyRows,
     products: publicProducts,
     notices: noticeRows,
-    priceHistory: enrichPriceHistory(recentHistory, productRows),
+    priceHistory: recentHistory.slice(0, PUBLIC_CATALOG_HISTORY_PREVIEW).map(publicHistoryRow),
+    priceHistoryCount: recentHistory.length,
     recentSoldOutIssues,
     settings: Object.fromEntries(settingsRows.map((row) => [row.key, row.value])),
     catalogTotals: {

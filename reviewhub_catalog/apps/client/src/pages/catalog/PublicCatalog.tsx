@@ -1,4 +1,4 @@
-import { FormEvent, Fragment, type ReactNode, useEffect, useMemo, useState } from "react";
+import { FormEvent, Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import {
   ArrowDownRight,
@@ -325,11 +325,28 @@ function normalizeCatalogData(data: CatalogData) {
 }
 
 async function loadCatalog() {
-  const response = await apiFetch("/catalog", { auth: false, silent: true });
-  if (!response.ok) return null;
-  const payload = (await response.json()) as { ok?: boolean; data?: CatalogData };
-  if (!payload.ok || !payload.data) return null;
-  return normalizeCatalogData(payload.data);
+  try {
+    const response = await apiFetch("/catalog", { auth: false, silent: true });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { ok?: boolean; data?: CatalogData };
+    if (!payload.ok || !payload.data) return null;
+    return normalizeCatalogData(payload.data);
+  } catch {
+    return null;
+  }
+}
+
+// 가격변동 화면용 최근 4일 가격변동(단가표 응답과 분리해 단가표가 무거워지지 않게 합니다).
+async function loadPriceHistory() {
+  try {
+    const response = await apiFetch("/catalog/price-history", { auth: false, silent: true });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { ok?: boolean; data?: { priceHistory: PriceHistory[] } };
+    if (!payload.ok || !payload.data) return null;
+    return payload.data.priceHistory.map((history) => ({ ...history, productImageUrl: history.productImageUrl ?? null }));
+  } catch {
+    return null;
+  }
 }
 
 async function loadCatalogInitial() {
@@ -1512,6 +1529,8 @@ function SeasonMonthFilter({
 export function CatalogHome() {
   const [data, setData] = useState<CatalogData>(emptyCatalogData);
   const [catalogLoading, setCatalogLoading] = useState(true);
+  const [fullLoadFailed, setFullLoadFailed] = useState(false);
+  const retryFullLoad = useRef<() => void>(() => undefined);
   const [operations, setOperations] = useState<OperationsOverview | null>(null);
   const [clock, setClock] = useState<Date | null>(null);
   const [query, setQuery] = useState("");
@@ -1534,20 +1553,32 @@ export function CatalogHome() {
         setData(initial);
         setCatalogLoading(false);
       }
-      const next = await loadCatalog();
-      if (active && next) {
-        setData(next);
-        setCatalogLoading(false);
-      } else if (active && !initial) {
-        setCatalogLoading(false);
+      // 전체 상품을 못 받으면(일시 오류) 잠시 뒤 다시 시도하고, 그래도 안 되면 안내와 "다시 불러오기"를 보여 줍니다.
+      for (const wait of [0, 2000, 5000, 10000]) {
+        if (wait) await new Promise((resolve) => window.setTimeout(resolve, wait));
+        if (!active) return;
+        const next = await loadCatalog();
+        if (!active) return;
+        if (next) {
+          setData(next);
+          setCatalogLoading(false);
+          setFullLoadFailed(false);
+          return;
+        }
       }
+      setCatalogLoading(false);
+      setFullLoadFailed(true);
     };
     void refreshCatalog();
     const reloadCatalog = () => {
       void loadCatalog().then((next) => {
-        if (active && next) setData(next);
+        if (active && next) {
+          setData(next);
+          setFullLoadFailed(false);
+        }
       });
     };
+    retryFullLoad.current = reloadCatalog;
     const timer = window.setInterval(reloadCatalog, 60 * 1000);
     const stopRefreshSignal = onCatalogRefreshSignal(reloadCatalog);
     return () => {
@@ -1623,7 +1654,7 @@ export function CatalogHome() {
   const visibleCategories = data.categories.filter((category) => shippingType === "all" || category.shippingType === shippingType);
   const catalogItemCount = data.products.reduce((total, product) => total + Math.max(1, product.options?.length ?? 0), 0);
   const catalogTotalCount = data.catalogTotals?.productCount ?? catalogItemCount;
-  const recentChangeCount = data.priceHistory.length;
+  const recentChangeCount = data.priceHistoryCount ?? data.priceHistory.length;
   const currentMonth = clock ? seoulMonth(clock) : 0;
   return (
     <PageFrame>
@@ -1669,6 +1700,12 @@ export function CatalogHome() {
             <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 행 · 판매중(지금 주문 가능)</span>
             <span className="order-legend-item unavailable"><i aria-hidden="true" /> 빨간색 행 · 품절 또는 시즌 종료(주문 불가)</span>
           </div>
+          {fullLoadFailed && data.isPartial && (
+            <div className="catalog-partial-warning" role="status">
+              <strong>전체 상품을 아직 불러오지 못해 일부({data.products.length}개)만 보이고 있습니다.</strong>
+              <button type="button" onClick={() => { setFullLoadFailed(false); retryFullLoad.current(); }}>다시 불러오기</button>
+            </div>
+          )}
           <div className="catalog-table-wrap">
             <CatalogProductTable
               products={paginatedProducts}
@@ -1852,6 +1889,15 @@ export function GuidePage() {
 
 export function NoticesPage() {
   const [data, setData] = useState<CatalogData>(emptyCatalogData);
+  const [histories, setHistories] = useState<PriceHistory[] | null>(null);
+  useEffect(() => {
+    let active = true;
+    const reload = () => { void loadPriceHistory().then((next) => { if (active && next) setHistories(next); }); };
+    reload();
+    const timer = window.setInterval(reload, 60 * 1000);
+    const stop = onCatalogRefreshSignal(reload);
+    return () => { active = false; window.clearInterval(timer); stop(); };
+  }, []);
   const [query, setQuery] = useState("");
   // 오늘 날짜는 접속 기기 시계와 상관없이 한국 시간으로 표시하고, 자정이 지나면 바로 바뀝니다.
   const [today, setToday] = useState<Date | null>(null);
@@ -1923,7 +1969,7 @@ export function NoticesPage() {
           <div className="history-search-bar">
             <div className="search-field"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" aria-label="가격변동·품절 상품 검색" />{query && <button type="button" className="search-clear" onClick={() => setQuery("")} aria-label="검색어 지우기"><X size={15} /></button>}</div>
           </div>
-          <PriceChangeBoard histories={data.priceHistory} products={data.products} pageSize={5} query={query} todayKey={todayKey} dayKeys={dayKeys} selectedDay={selectedDay} onSelectDay={setPickedDay} categories={data.categories} policies={data.shippingPolicies ?? []} />
+          <PriceChangeBoard histories={histories ?? data.priceHistory} products={data.products} pageSize={5} query={query} todayKey={todayKey} dayKeys={dayKeys} selectedDay={selectedDay} onSelectDay={setPickedDay} categories={data.categories} policies={data.shippingPolicies ?? []} />
           <SoldOutIssueBoard issues={data.recentSoldOutIssues} query={query} products={data.products} todayKey={todayKey} categories={data.categories} policies={data.shippingPolicies ?? []} />
         </section>
       </main>

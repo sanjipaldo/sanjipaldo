@@ -1375,3 +1375,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .new-product-badge { background: var(--w-primary) !important; color: var(--w-ink-deep) !important; border: 1px solid #86d65a; }
 .new-product-jump { margin-top: 12px; padding: 10px 16px; border: 0; border-radius: 999px; background: var(--w-primary); color: var(--w-ink-deep); font-size: 14px; font-weight: 800; cursor: pointer; }
 .new-product-jump:hover { background: var(--w-primary-active); }
+
+/* 단가표: 전체 상품을 못 받았을 때 안내 + 다시 불러오기 */
+.catalog-partial-warning { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 14px; padding: 12px 16px; border: 1px solid #f3d27a; border-radius: 14px; background: var(--w-warning-pale); color: var(--w-warning-content); font-size: 14px; }
+.catalog-partial-warning button { height: 36px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--w-ink); color: #fff; font-weight: 700; cursor: pointer; }

@@ -242,6 +242,8 @@ export type CatalogData = {
   products: Product[];
   notices: Notice[];
   priceHistory: PriceHistory[];
+  // 공개 단가표 응답은 최근 가격변동 일부만 싣고, 기간 안 전체 건수는 여기에 담습니다.
+  priceHistoryCount?: number;
   recentSoldOutIssues: SoldOutIssue[];
   settings: Record<string, string>;
   isPartial?: boolean;

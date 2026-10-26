@@ -23,6 +23,7 @@ import {
   getSuppliers,
   getShippingPolicies,
   getPublicCatalog,
+  getPublicPriceHistory,
   getPublicCatalogInitial,
   getPublicGuideSettings,
   getPublicNotices,
@@ -281,6 +282,7 @@ function errorResponse(c: Context, error: unknown) {
 
 catalogRouter.get("", publicRoute, async (c) => c.json(apiSuccess(await getPublicCatalog())));
 catalogRouter.get("/", publicRoute, async (c) => c.json(apiSuccess(await getPublicCatalog())));
+catalogRouter.get("/price-history", publicRoute, async (c) => c.json(apiSuccess(await getPublicPriceHistory())));
 catalogRouter.get("/initial", publicRoute, async (c) => c.json(apiSuccess(await getPublicCatalogInitial())));
 catalogRouter.get("/guide", publicRoute, async (c) => c.json(apiSuccess(await getPublicGuideSettings())));
 catalogRouter.get("/notices", publicRoute, async (c) => c.json(apiSuccess(await getPublicNotices())));
