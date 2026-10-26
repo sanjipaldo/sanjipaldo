@@ -15,8 +15,6 @@
 .prail-anchor { height: 0; overflow: hidden; }
 .prail-anchor > span { display: block; height: 0; }
 .prail-view { overflow: hidden; padding-block: 6px 26px; touch-action: pan-y; }
-.prail.is-ready .prail-view { cursor: grab; }
-.prail.is-drag .prail-view { cursor: grabbing; }
 .prail-track { display: flex; gap: var(--gap); width: max-content; will-change: transform; transition: transform .85s cubic-bezier(.22, .8, .25, 1); }
 .prail-track.no-tr { transition: none; }
 .prail-item { flex: 0 0 var(--cw); display: flex; min-width: 0; }
@@ -52,8 +50,8 @@
 .prail-btn--next { right: max(12px, calc((100% - var(--container)) / 2 - var(--arw) - 18px)); }
 .prail-btn:hover { background: var(--blue); color: #fff; box-shadow: 0 18px 36px -14px rgba(10, 93, 226, .8); scale: 1.06; }
 .prail-btn:active { scale: .94; }
-/* 끝에 닿은 쪽 화살표는 흐리게(누를 수 없음) · 카드가 다 들어가는 넓은 화면(.is-static)은 화살표 없음 */
-.prail-btn[aria-disabled="true"] { opacity: .35; cursor: default; pointer-events: none; }
+/* 끝에 닿은 쪽 화살표는 감춤(누를 수 없음 · 28차) · 카드가 다 들어가는 넓은 화면(.is-static)은 화살표 없음 */
+.prail-btn[aria-disabled="true"] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .3s var(--ease), visibility 0s .3s; }
 .prail.is-static .prail-btn { display: none; }
 .prail.is-static .prail-view { cursor: auto; }
 .prail-btn:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }

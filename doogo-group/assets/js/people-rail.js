@@ -2,17 +2,17 @@
    DOOGO GROUP — people-rail.js (두고 사람들 줄 · 21차 → 27차)
    메인 #leaders · leadership.html #leaders 공통: 프로필 카드를 한 줄로 넘겨 보는 줄
    · 27차: 무한 루프(앞뒤 복제) 대신 끝이 있는 줄 — 같은 사람이 양쪽에 두 번 보이지 않음
-   · 첫 카드는 다른 섹션 제목과 같은 왼쪽 선(.container 안쪽)에서 시작 · 마지막 카드는 오른쪽 같은 선에서 멈춤
-     (카드가 다 들어가는 넓은 화면이면 움직이지 않고 화살표도 숨김 · .is-static)
-   · 양옆 화살표(data-prail-prev / next — 끝에 닿으면 흐려지고 aria-disabled) · 마우스 끌기 · 손가락 밀기 · ← → 키
-   · 자동 넘김 3.6초 — 마지막 카드에 닿으면 처음으로 돌아감 · 마우스를 올리거나 포커스 · 끄는 중 · 화면 밖 ·
-     탭이 가려졌을 때는 멈춤, '움직임 멈추기'면 자동 넘김 없음
+   · 28차: 넓은 화면은 화면 왼쪽 끝에서 시작해 마지막 카드가 오른쪽 끝에 닿으면 멈춤 (760px 이하는 좌우 여백 선)
+     (카드가 다 들어가는 넓은 화면이면 가운데 정렬 · 움직이지 않고 화살표도 숨김 · .is-static)
+   · 넘기기: 양옆 화살표(data-prail-prev / next — 끝에 닿으면 흐려지고 aria-disabled) · ← → 키 · 손가락 밀기
+     — 자동 넘김과 마우스 끌기는 없음(28차 · 화살표 버튼을 눌렀을 때만)
    · root._prail = { go(k, instant), count } — k 번째 카드가 보이도록 (첫 줄 자리로, 끝에서는 멈춤)
    ========================================================= */
 (function () {
   'use strict';
   var motionOff = function () { return !!(window.DOOGO && window.DOOGO.motionOff && window.DOOGO.motionOff()); };
   var AUTO_MS = 3600;
+  var AUTO = false; // 28차: 자동 넘김 끔 — 화살표 버튼을 눌렀을 때만 넘어감
 
   function init(root) {
     var view = root.querySelector('.prail-view'), track = root.querySelector('.prail-track');
@@ -35,11 +35,13 @@
       var a = items[0].getBoundingClientRect(), b = items[1].getBoundingClientRect();
       step = b.left - a.left || a.width;
       var vr = view.getBoundingClientRect();
-      start = anchor.firstChild.getBoundingClientRect().left - vr.left;
-      // 마지막 카드의 오른쪽 끝이 오른쪽 같은 선(view 폭 - start)에 닿는 자리
+      // 28차: 넓은 화면은 화면 왼쪽 끝에서 시작(첫 화면에 왼쪽 빈자리 없음) · 760px 이하는 .container 안쪽 선(좌우 여백)
+      var pad = window.innerWidth > 760 ? 0 : anchor.firstChild.getBoundingClientRect().left - vr.left;
       var last = items[n - 1].getBoundingClientRect(), first = items[0].getBoundingClientRect();
       var w = last.right - first.left;
-      minX = Math.min(start, vr.width - start - w);
+      // 카드가 다 들어가면 가운데 정렬 · 아니면 마지막 카드의 오른쪽 끝이 오른쪽 같은 선(view 폭 - pad)에 닿는 자리까지
+      start = w <= vr.width - 2 * pad ? (vr.width - w) / 2 : pad;
+      minX = Math.min(start, vr.width - pad - w);
       maxI = Math.max(0, Math.ceil((start - minX) / step - 0.01));
       root.classList.toggle('is-static', maxI === 0);
       if (idx > maxI) idx = maxI;
@@ -97,7 +99,7 @@
     // 끌기 · 밀기 (세로 스크롤은 브라우저에 맡김: touch-action: pan-y) — 양 끝 너머로는 고무줄처럼 조금만
     var drag = null, suppress = false;
     view.addEventListener('pointerdown', function (e) {
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (e.pointerType === 'mouse') return; // 28차: 마우스는 화살표 버튼으로만 넘김 (손가락 밀기는 그대로)
       if (maxI === 0) return;
       measure();
       var cx = currentX();
@@ -178,7 +180,7 @@
     root.classList.add('is-ready');
     refit();
     hold();
-    timer = setTimeout(tick, AUTO_MS);
+    if (AUTO) timer = setTimeout(tick, AUTO_MS);
 
     root._prail = {
       count: n,
