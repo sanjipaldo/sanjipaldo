@@ -1,7 +1,7 @@
 /* =========================================================
-   DOOGO GROUP — people-rail.css (두고 사람들 '타이탄' 줄 · 21차)
+   DOOGO GROUP — people-rail.css (두고 사람들 줄 · 21차 → 27차: 복제 없이 끝이 있는 줄)
    메인 #leaders · leadership.html #leaders 공통 — 동작은 assets/js/people-rail.js
-   · 카드(.pcard)가 화면 끝에서 끝까지 한 줄로 이어짐 (여백 없음) · 배경 없는 상반신 사진 뒤로 연한 두고 심볼
+   · 카드(.pcard) 한 줄 — 왼쪽 같은 선에서 시작해 마지막 카드에서 멈춤(같은 사람이 두 번 보이지 않음) · 배경 없는 상반신 사진 뒤로 연한 두고 심볼
    · 이름 → 회사(영문) → 분야 → 가는 선 → 링크 (카드는 테두리 · 그림자 없이 섹션 바탕 위에)
    · 양옆 큰 화살표: 사진 높이 가운데, 첫 카드 바깥쪽
    스크립트가 없으면 카드 줄을 가로로 넘겨 봅니다.
@@ -52,6 +52,10 @@
 .prail-btn--next { right: max(12px, calc((100% - var(--container)) / 2 - var(--arw) - 18px)); }
 .prail-btn:hover { background: var(--blue); color: #fff; box-shadow: 0 18px 36px -14px rgba(10, 93, 226, .8); scale: 1.06; }
 .prail-btn:active { scale: .94; }
+/* 끝에 닿은 쪽 화살표는 흐리게(누를 수 없음) · 카드가 다 들어가는 넓은 화면(.is-static)은 화살표 없음 */
+.prail-btn[aria-disabled="true"] { opacity: .35; cursor: default; pointer-events: none; }
+.prail.is-static .prail-btn { display: none; }
+.prail.is-static .prail-view { cursor: auto; }
 .prail-btn:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 /* 다음 쪽 화살표가 가끔 가리키는 쪽으로 툭 */
 .prail.is-seen .prail-btn--next svg { animation: prailNudge 3.2s 2s var(--ease) infinite; }
