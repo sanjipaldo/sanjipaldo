@@ -40,8 +40,6 @@ const roleMenuGroups = {
     { label: "설정", indexes: [8, 20, 13, 10] }
   ]
 };
-/* 위탁셀러 사이드바: 묶음마다 아이콘 색을 달리해 어디쯤인지 한눈에 (홈·주문 파랑, 상품 찾기 주황, 내 상품 초록, 샘플 보라, 돈 노랑, 기록 회색, 설정 청록) */
-const SELLER_MENU_TONES = { "홈": "blue", "상품 찾기": "orange", "내 상품 (순서대로)": "green", "주문 · 배송 (순서대로)": "blue", "샘플 구매": "violet", "돈 관리": "amber", "처리 기록": "slate", "설정": "teal" };
 /* 상품 등록 흐름(소싱 → 승인 대기 → 승인 완료 → 마스터 상품 → 판매중)을 사이드바에 번호로 보여준다. */
 const menuSteps = { seller: { 1: 1, 16: 1, 22: 1, 2: 2, 17: 3, 14: 4, 11: 5, 15: 2 }, supplier: { 1: 1, 9: 2, 3: 3, 7: 4 } };
 /* 메뉴 이름으로 인덱스를 찾는다 (메뉴 순서가 바뀌어도 이동 버튼이 깨지지 않게) */
@@ -2504,8 +2502,7 @@ function updateAccountUI() {
       const badgeTitle = productBadge ? ` title="${escapeHtml(productBadge.title)}" aria-label="${escapeHtml(productBadge.title)}"` : "";
       return `<button type="button" class="${index === activeMenuIndex ? "active" : ""}" data-menu-index="${index}"${index === activeMenuIndex ? ' aria-current="page"' : ""}><span class="menu-icon mi-${menuIcons[activeRole][index]}">${menuIcon(menuIcons[activeRole][index])}</span>${menuSteps[activeRole]?.[index] ? `<i class="menu-step">${menuSteps[activeRole][index]}</i>` : ""}<span class="menu-text">${escapeHtml(item)}</span>${badge ? `<b class="menu-badge${badgeTone}"${badgeTitle}>${badgeValue > 99 ? "99+" : badgeValue}</b>` : ""}</button>`;
     }).join("");
-    const tone = activeRole === "seller" ? SELLER_MENU_TONES[group.label] || "" : "";
-    return `<section class="workspace-menu-group"${tone ? ` data-tone="${tone}"` : ""}><p>${escapeHtml(group.label)}</p>${buttons}</section>`;
+    return `<section class="workspace-menu-group"><p>${escapeHtml(group.label)}</p>${buttons}</section>`;
   }).join("");
   renderNotificationDropdown();
   const resetContentButton = document.getElementById("resetContentButton");

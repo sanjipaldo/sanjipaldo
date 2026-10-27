@@ -12447,18 +12447,3 @@ h1, h2, h3 { font-weight: 700; }
 .address-popup-head { position: sticky; top: -22px; z-index: 5; margin: -22px -22px 14px; padding: 22px 22px 12px; background: #fff; border-radius: 18px 18px 0 0; }
 .wh-rank-table td b .wh-demo-chip { display: inline-flex; margin-left: 4px; padding: 1px 6px; font-size: 11px; vertical-align: 1px; }
 .wh-rank-basis .wh-demo-note { display: inline-block; margin-top: 4px; color: #b25e00; font-weight: 700; }
-
-/* ===== v115: 위탁셀러 사이드바 아이콘 색 — 묶음마다 은은한 색 (선택된 메뉴는 그 색으로 채움) ===== */
-.app-shell[data-role="seller"] .workspace-menu-group[data-tone="blue"] { --mi: #3182f6; --mi-bg: #eaf3ff; --mi-ink: #1b64da; }
-.app-shell[data-role="seller"] .workspace-menu-group[data-tone="orange"] { --mi: #f76707; --mi-bg: #fff1e3; --mi-ink: #c2410c; }
-.app-shell[data-role="seller"] .workspace-menu-group[data-tone="green"] { --mi: #0ca678; --mi-bg: #e3f8f0; --mi-ink: #087f5b; }
-.app-shell[data-role="seller"] .workspace-menu-group[data-tone="violet"] { --mi: #7048e8; --mi-bg: #f1edfe; --mi-ink: #5f3dc4; }
-.app-shell[data-role="seller"] .workspace-menu-group[data-tone="amber"] { --mi: #e67700; --mi-bg: #fff6d9; --mi-ink: #a85500; }
-.app-shell[data-role="seller"] .workspace-menu-group[data-tone="slate"] { --mi: #5c6b7a; --mi-bg: #eef1f4; --mi-ink: #3f4b57; }
-.app-shell[data-role="seller"] .workspace-menu-group[data-tone="teal"] { --mi: #0b8a99; --mi-bg: #e0f6f8; --mi-ink: #0b6e7a; }
-.app-shell[data-role="seller"] .workspace-menu .workspace-menu-group[data-tone] > p::before { background: var(--mi); }
-.app-shell[data-role="seller"] .workspace-menu .workspace-menu-group[data-tone] button .menu-icon { color: var(--mi) !important; background: var(--mi-bg) !important; border-color: transparent !important; }
-.app-shell[data-role="seller"] .workspace-menu .workspace-menu-group[data-tone] button .menu-step { color: var(--mi); background: var(--mi-bg); border-color: var(--mi); }
-.app-shell[data-role="seller"] .workspace-menu .workspace-menu-group[data-tone] button.active { color: var(--mi-ink) !important; background: var(--mi-bg) !important; }
-.app-shell[data-role="seller"] .workspace-menu .workspace-menu-group[data-tone] button.active .menu-icon { color: #fff !important; background: var(--mi) !important; border-color: var(--mi) !important; }
-.app-shell[data-role="seller"] .workspace-menu .workspace-menu-group[data-tone] button.active .menu-step { color: #fff; background: var(--mi); border-color: var(--mi); }
