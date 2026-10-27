@@ -69,6 +69,28 @@ async function registerListing(channel, creds, listing, options) {
   return { channel, externalId: sellerProductId, vendorItemIds, status: vendorItemIds.length ? "판매중" : "쿠팡 승인 대기" };
 }
 
+/* 상품 연결표용: 쿠팡에 올린 상품을 옵션(vendorItemId) 단위로 가져온다. 코드 = 등록상품ID:옵션ID (주문의 상품번호·옵션ID와 같은 값) */
+async function importListings(channel, creds, { limit = 200 } = {}, options) {
+  if (channel !== "coupang") throw new Error("지금은 쿠팡 상품만 불러올 수 있어요.");
+  const client = clientFor(channel, creds, options);
+  const rows = [];
+  let nextToken = "";
+  for (let page = 0; page < 20 && rows.length < limit; page += 1) {
+    const res = await client.listProducts({ nextToken, maxPerPage: 50 });
+    for (const product of res.data || []) {
+      if (rows.length >= limit) break;
+      const detail = await client.getProduct(product.sellerProductId);
+      (detail?.data?.items || []).filter(item => item.vendorItemId).forEach(item => rows.push({
+        code: `${product.sellerProductId}:${item.vendorItemId}`, title: String(product.sellerProductName || detail.data.sellerProductName || ""), option: String(item.itemName || ""),
+        salePrice: Number(item.salePrice || 0), status: /중지|삭제/.test(String(product.statusName || "")) ? "판매중지" : "판매중", sellerCode: String(item.externalVendorSku || "")
+      }));
+    }
+    nextToken = String(res.nextToken || "");
+    if (!nextToken) break;
+  }
+  return { channel, listings: rows };
+}
+
 async function coupangItems(client, externalId, known = []) {
   if (known.length) return known;
   const ids = vendorItemIdsOf(await client.getProduct(externalId));
@@ -165,4 +187,4 @@ async function syncPriceStock(channel, creds, { externalId, listing, vendorItemM
   return { channel, externalId, status: "동기화 완료" };
 }
 
-module.exports = { verifyChannel, registerListing, setListingStatus, removeListing, syncPriceStock, clientFor };
+module.exports = { verifyChannel, registerListing, setListingStatus, removeListing, syncPriceStock, importListings, clientFor };

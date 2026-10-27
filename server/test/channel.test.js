@@ -134,6 +134,14 @@ test("서버 전체 흐름: 연결 → 원클릭 등록 → 품절 → 삭제 (�
     const c1 = await call("POST", "/api/channels/coupang/connect", { sellerLoginId: "seller", credentials: { vendorId: "A00012345", accessKey: "AK-TEST", secretKey: "SK-TEST-SECRET", vendorUserId: "wing" } });
     assert.equal(c1.status, 200, JSON.stringify(c1.body));
     assert.equal(c1.body.saved.secretKey, "••••••••CRET");
+    /* 상품 연결표: 쿠팡 상품을 옵션 단위(등록상품ID:옵션ID)로 불러온다 */
+    const imported = await call("POST", "/api/listings/coupang/import", { sellerLoginId: "seller" });
+    assert.equal(imported.status, 200, JSON.stringify(imported.body));
+    assert.equal(imported.body.listings.length, 4);
+    assert.deepEqual(imported.body.listings[0], { code: "1320567890:7001", title: "사과 3kg", option: "3kg", salePrice: 29900, status: "판매중", sellerCode: "SP-1001:O1" });
+    assert.equal(imported.body.listings[2].status, "판매중지");
+    assert.ok(upstream.calls.some(entry => entry.method === "GET" && entry.path.endsWith("/seller-products") && /vendorId=A00012345/.test(entry.query)));
+    assert.equal((await call("POST", "/api/listings/cafe24/import", { sellerLoginId: "seller" })).status, 404);
     const c2 = await call("POST", "/api/channels/smartstore/connect", { sellerLoginId: "seller", credentials: { accountId: "doogo_store" } });
     assert.equal(c2.status, 200, JSON.stringify(c2.body));
     const tokenCall = upstream.calls.find(entry => entry.path === "/external/v1/oauth2/token");

@@ -57,6 +57,8 @@ function createCoupangClient(credentials, { baseUrl = process.env.COUPANG_API_BA
     listReturnCenters: () => call("GET", `/v2/providers/openapi/apis/api/v4/vendors/${vendorId}/returnShippingCenters`),
     createProduct: payload => call("POST", SELLER_PRODUCTS, { body: payload }),
     getProduct: sellerProductId => call("GET", `${SELLER_PRODUCTS}/${sellerProductId}`),
+    /* 상품 목록 페이징 조회: 셀러가 쿠팡에 올린 상품(두고에서 보내지 않은 것 포함) — 상품 연결표 ‘내 쇼핑몰 상품 불러오기’ */
+    listProducts: ({ nextToken = "", maxPerPage = 50 } = {}) => call("GET", SELLER_PRODUCTS, { query: `vendorId=${encodeURIComponent(vendorId)}&nextToken=${encodeURIComponent(nextToken)}&maxPerPage=${Math.min(100, Math.max(1, maxPerPage))}` }),
     deleteProduct: sellerProductId => call("DELETE", `${SELLER_PRODUCTS}/${sellerProductId}`),
     stopItem: vendorItemId => call("PUT", `${VENDOR_ITEMS}/${vendorItemId}/sales/stop`),
     resumeItem: vendorItemId => call("PUT", `${VENDOR_ITEMS}/${vendorItemId}/sales/resume`),

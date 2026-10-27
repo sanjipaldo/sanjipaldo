@@ -121,6 +121,10 @@ function createApp({ store = createCredentialStore(), token = process.env.DOOGO_
           if (!CHANNELS.includes(channel)) return send(res, 400, { error: "지원하지 않는 쇼핑몰이에요." }, origin);
           return send(res, 200, await listings.registerListing(channel, store.get(seller, channel), body.listing || {}, optsFor(seller, channel)), origin);
         }
+        if (parts.length === 4 && parts[3] === "import" && req.method === "POST") {
+          if (!CHANNELS.includes(parts[2])) return send(res, 400, { error: "지원하지 않는 쇼핑몰이에요." }, origin);
+          return send(res, 200, await listings.importListings(parts[2], store.get(seller, parts[2]), { limit: 200 }, optsFor(seller, parts[2])), origin);
+        }
         const [, , channel, externalId, verb] = parts;
         if (!CHANNELS.includes(channel) || !externalId) return send(res, 404, { error: "경로를 찾지 못했어요." }, origin);
         const creds = store.get(seller, channel);
