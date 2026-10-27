@@ -1769,7 +1769,7 @@ function eveningReportMessage(loginId = currentAccount?.loginId) {
   return { title: "🌙 오늘 마감 리포트", body: `${member?.company || "사장님"} 사장님, 오늘도 수고 많으셨어요.\n\n📦 오늘 주문 ${today.count}건 · 매출 ${money(today.amount)}\n${trend}\n✅ 결제·발주 ${paidToday}건 · 출고 ${shipped}건\n${leftover ? `⚠️ 내일 처리할 주문 ${leftover}건이 남았어요` : "✨ 남은 주문 없이 깔끔하게 마감했어요"}\n\n이번 달 누적 매출 ${money(monthSales)}`, button: "오늘 매출 자세히 보기" };
 }
 function kakaoBubble(message, time) {
-  return `<div class="kakao-preview"><div class="kakao-preview-head"><span class="kp-avatar"><img src="assets/doogo-monogram-white.svg?v=105" alt=""></span><b>두고</b><small>${escapeHtml(time)}</small></div><div class="kakao-preview-bubble"><div class="kp-top">알림톡 도착</div><b>${escapeHtml(message.title)}</b><p>${escapeHtml(message.body).replace(/\n/g, "<br>")}</p><span class="kp-btn">${escapeHtml(message.button)}</span></div></div>`;
+  return `<div class="kakao-preview"><div class="kakao-preview-head"><span class="kp-avatar"><img src="assets/doogo-monogram-white.svg?v=106" alt=""></span><b>두고</b><small>${escapeHtml(time)}</small></div><div class="kakao-preview-bubble"><div class="kp-top">알림톡 도착</div><b>${escapeHtml(message.title)}</b><p>${escapeHtml(message.body).replace(/\n/g, "<br>")}</p><span class="kp-btn">${escapeHtml(message.button)}</span></div></div>`;
 }
 function sellerProductChannelStatus(item, channel) {
   if (item.channelStatuses?.[channel.id]) return item.channelStatuses[channel.id];
@@ -2921,7 +2921,7 @@ function sellerAccountProfileTemplate() {
       : `<button class="profile-link-button accent" data-action="open-supplier-application"><span>＋</span><b>${application?.status === "rejected" ? "공급사 다시 요청하기" : "공급사 요청하기"}</b><small>자체 브랜드 상품을 두고 위탁셀러에게 공급</small><em>신청</em></button>`;
   return `<section class="seller-profile-hero">
       <div class="profile-gradient"></div>
-      <div class="profile-identity"><span class="profile-symbol"><img src="assets/doogo-monogram.svg?v=105" alt=""></span><div><span>SELLER BUSINESS PROFILE</span><h2>${escapeHtml(account.company || account.name)}</h2><p>${escapeHtml(account.representative)} 대표 · 위탁셀러 승인 계정</p></div><span class="profile-approved">✓ 사업자 승인 완료</span></div>
+      <div class="profile-identity"><span class="profile-symbol"><img src="assets/doogo-monogram.svg?v=106" alt=""></span><div><span>SELLER BUSINESS PROFILE</span><h2>${escapeHtml(account.company || account.name)}</h2><p>${escapeHtml(account.representative)} 대표 · 위탁셀러 승인 계정</p></div><span class="profile-approved">✓ 사업자 승인 완료</span></div>
       <div class="profile-glance"><div><span>판매 상품</span><strong>${currentSellerProducts().length}개</strong></div><div><span>연결 공급사</span><strong>${currentSellerConnections().length}곳</strong></div><div><span>연동 채널</span><strong>${connectedChannels}개</strong></div><div><span>이용 플랜</span><strong>${escapeHtml(subscription.plan)}</strong></div></div>
     </section>
     <div class="seller-profile-layout">
@@ -3028,7 +3028,7 @@ function talkNoticeRow(perspective) {
   const role = perspective === "seller" ? "seller" : "supplier";
   const index = menuIndexOf("공지사항", role);
   if (index < 0) return "";
-  return `<button type="button" class="talk-room-item talk-channel-row" data-action="open-talk-notice" data-index="${index}"><span class="talk-avatar channel"><img src="assets/doogo-monogram-white.svg?v=105" alt=""></span><span class="talk-room-text"><b><span>두고마켓 알림</span><i class="talk-channel-badge">채널</i></b><small>${escapeHtml(notice.title || "새 공지가 있어요")}</small></span><span class="talk-room-side"><em>${escapeHtml(notice.date || "")}</em></span></button>`;
+  return `<button type="button" class="talk-room-item talk-channel-row" data-action="open-talk-notice" data-index="${index}"><span class="talk-avatar channel"><img src="assets/doogo-monogram-white.svg?v=106" alt=""></span><span class="talk-room-text"><b><span>두고마켓 알림</span><i class="talk-channel-badge">채널</i></b><small>${escapeHtml(notice.title || "새 공지가 있어요")}</small></span><span class="talk-room-side"><em>${escapeHtml(notice.date || "")}</em></span></button>`;
 }
 function connectSupplierModal(perspective = "seller") {
   if (perspective !== "seller") {
