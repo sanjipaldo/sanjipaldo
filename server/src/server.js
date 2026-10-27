@@ -16,11 +16,21 @@
    POST   /api/reports/daily                        { title, text, kakao:[번호], email:[주소] }          일일 매출 보고 (알림톡·이메일)
    GET    /api/channels/cafe24/oauth/callback?code&state                              CAFE24 앱 설치(권한 동의) 뒤 돌아오는 곳 (토큰 받아 암호화 보관)
    GET    /api/address/search?keyword&page                                       도로명주소 검색 (행안부 검색 API, 승인키는 서버에만)
+   ── 어드민플러스 도매몰 (마스터 전용 · (주)두고홀딩스가 거래처로 가입한 도매몰 계정, 키는 도매몰마다 하나) ──
+   POST   /api/wholesale/adminplus/:mallId/connect          { clientId, clientSecret }    토큰 발급·잔액 조회로 확인 후 암호화 보관
+   DELETE /api/wholesale/adminplus/:mallId                                                연결 해제(키 삭제)
+   GET    /api/wholesale/adminplus/:mallId/balance                                        예치금·적립금 잔액, API 만료일·오늘 호출수
+   POST   /api/wholesale/adminplus/:mallId/products/sync    { since? }                    상품 목록(전체) 또는 변경분 → 두고 도매몰 상품 형식
+   POST   /api/wholesale/adminplus/:mallId/orders           { orders:[…] }               주문 등록 → 금액 확인 → 예치금 결제 (주문마다)
+   POST   /api/wholesale/adminplus/:mallId/orders/pay       { orderKey, maxAmount }       등록만 된 주문 예치금 결제
+   POST   /api/wholesale/adminplus/:mallId/orders/delete    { orderKey }                  결제 전 주문 삭제
+   POST   /api/wholesale/adminplus/:mallId/orders/changed   { since }                     주문 변경분 → 운송장·취소
    GET    /api/health */
 const http = require("node:http");
 const crypto = require("node:crypto");
 const cafe24 = require("./cafe24");
-const { createCredentialStore } = require("./store");
+const { createCredentialStore, mask } = require("./store");
+const adminplus = require("./adminplus");
 const listings = require("./listings");
 const orders = require("./orders");
 const ops = require("./ops");
@@ -28,6 +38,12 @@ const address = require("./address");
 
 const CHANNELS = ["coupang", "smartstore", "cafe24"];
 const REQUIRED = { coupang: ["vendorId", "accessKey", "secretKey", "vendorUserId"], smartstore: ["accountId"], cafe24: ["mallId"] };
+/* 도매몰 키는 셀러가 아니라 두고(마스터) 계정 것이라 한 주인 아래에 도매몰별로 둔다 */
+const WHOLESALE_OWNER = "doogo-holdings";
+
+function balanceView(data = {}) {
+  return { deposit: Number(data.deposit_balance) || 0, point: Number(data.point_balance) || 0, apiExpiresAt: data.api_expires_at || "", dailyCount: Number(data.api_daily_call_count) || 0, dailyLimit: Number(data.api_rate_per_day) || 10000 };
+}
 
 /* CAFE24 권한 동의 state: 누가(셀러)·어느 쇼핑몰을 연결하는지 + 만료 시각을 서명해 둔다 (콜백 위조 방지) */
 function signState(payload, secret) {
@@ -43,7 +59,7 @@ function readState(state, secret, now = Date.now()) {
   return payload.exp > now ? payload : null;
 }
 
-function createApp({ store = createCredentialStore(), token = process.env.DOOGO_SERVER_TOKEN, allowedOrigins = (process.env.DOOGO_ALLOWED_ORIGINS || "").split(",").filter(Boolean), clientOptions = {}, opsOptions = {} } = {}) {
+function createApp({ store = createCredentialStore(), token = process.env.DOOGO_SERVER_TOKEN, allowedOrigins = (process.env.DOOGO_ALLOWED_ORIGINS || "").split(",").filter(Boolean), clientOptions = {}, opsOptions = {}, adminplusOptions = {} } = {}) {
   if (!token) throw new Error("DOOGO_SERVER_TOKEN 환경변수가 필요해요.");
 
   async function readJson(req) {
@@ -68,13 +84,69 @@ function createApp({ store = createCredentialStore(), token = process.env.DOOGO_
     res.end(JSON.stringify(body));
   }
 
+  /* 어드민플러스 도매몰: 키 확인·보관, 상품 동기화, 발주(등록+예치금 결제), 운송장 가져오기 */
+  async function wholesaleRoute(method, mallId, verb, body) {
+    const fail = (status, message) => { throw Object.assign(new Error(message), { status }); };
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(mallId)) fail(400, "도매몰 ID가 올바르지 않아요.");
+    const key = `adminplus-${mallId}`;
+    if (method === "DELETE" && !verb) { store.remove(WHOLESALE_OWNER, key); return { ok: true }; }
+    if (method === "POST" && verb === "connect") {
+      const creds = { clientId: String(body.clientId || "").trim(), clientSecret: String(body.clientSecret || "").trim() };
+      if (!creds.clientId || !creds.clientSecret) fail(400, "client_id·client_secret을 모두 넣어 주세요.");
+      let issued = null;
+      const client = adminplus.createAdminPlusClient(creds, { ...adminplusOptions, onToken: tokenInfo => { issued = tokenInfo; } });
+      const balance = balanceView(await client.balance());
+      store.save(WHOLESALE_OWNER, key, { ...creds, accessToken: issued?.accessToken || "", tokenExpiresAt: issued?.expiresAt || 0 });
+      return { ok: true, clientId: mask(creds.clientId), balance, connectedAt: adminplus.kstStamp() };
+    }
+    let saved;
+    try { saved = store.get(WHOLESALE_OWNER, key); } catch { fail(409, "이 도매몰은 아직 어드민플러스 API로 연결되지 않았어요. 도매몰 관리에서 먼저 연결해 주세요."); }
+    const client = adminplus.createAdminPlusClient(saved, { ...adminplusOptions, onToken: tokenInfo => { store.save(WHOLESALE_OWNER, key, { ...saved, accessToken: tokenInfo.accessToken, tokenExpiresAt: tokenInfo.expiresAt }); } });
+    if (method === "GET" && verb === "balance") return { ok: true, balance: balanceView(await client.balance()) };
+    if (method !== "POST") fail(404, "경로를 찾지 못했어요.");
+    const since = String(body.since || "").trim();
+    if (since && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(since)) fail(400, "since는 YYYY-MM-DDTHH:ii:ss 형식이어야 해요.");
+    if (verb === "products/sync") {
+      const syncedAt = adminplus.kstStamp();
+      const { rows, complete } = since ? await client.changedProducts(since) : await client.listProducts();
+      return { ok: true, full: !since, complete, syncedAt, productCount: rows.length, items: rows.flatMap(product => adminplus.toWholesaleItems(mallId, product, syncedAt)) };
+    }
+    if (verb === "orders") {
+      const orders = Array.isArray(body.orders) ? body.orders.slice(0, 300) : [];
+      if (!orders.length) fail(400, "보낼 주문이 없어요.");
+      return { ok: true, results: await adminplus.placeOrders(client, orders) };
+    }
+    if (verb === "orders/pay") {
+      const orderKey = String(body.orderKey || "");
+      if (!orderKey) fail(400, "orderKey가 필요해요.");
+      const pending = await client.pendingPayment(orderKey);
+      const amount = Number((pending.datas || []).find(row => row.order_key === orderKey)?.total_amount || 0);
+      if (!amount) fail(409, "결제 대기 중인 주문을 찾지 못했어요. 이미 결제됐거나 삭제된 주문일 수 있어요.");
+      if (Number(body.maxAmount) > 0 && amount > Number(body.maxAmount)) fail(409, `도매몰 금액 ${amount.toLocaleString("ko-KR")}원이 결제 한도 ${Number(body.maxAmount).toLocaleString("ko-KR")}원보다 커요.`);
+      const paid = await client.payWithDeposit([orderKey], amount);
+      return { ok: true, amount, paymentKey: paid.payment_key || "" };
+    }
+    if (verb === "orders/delete") {
+      if (!body.orderKey) fail(400, "orderKey가 필요해요.");
+      await client.deleteOrder(String(body.orderKey));
+      return { ok: true };
+    }
+    if (verb === "orders/changed") {
+      if (!since) fail(400, "since가 필요해요.");
+      const syncedAt = adminplus.kstStamp();
+      const { rows, complete } = await client.changedOrders(since);
+      return { ok: true, complete, syncedAt, updates: adminplus.toTrackingUpdates(rows) };
+    }
+    return fail(404, "경로를 찾지 못했어요.");
+  }
+
   return http.createServer(async (req, res) => {
     const origin = req.headers.origin;
     if (req.method === "OPTIONS") return send(res, 204, {}, origin);
     const url = new URL(req.url, "http://localhost");
     const parts = url.pathname.split("/").filter(Boolean);
     try {
-      if (url.pathname === "/api/health") return send(res, 200, { ok: true, channels: CHANNELS, naverApp: Boolean(process.env.NAVER_CLIENT_ID), pg: Boolean(process.env.TOSS_SECRET_KEY), address: Boolean(process.env.JUSO_CONFM_KEY), kakaoReport: Boolean(process.env.SOLAPI_PFID), emailReport: Boolean(process.env.RESEND_API_KEY) }, origin);
+      if (url.pathname === "/api/health") return send(res, 200, { ok: true, channels: CHANNELS, naverApp: Boolean(process.env.NAVER_CLIENT_ID), pg: Boolean(process.env.TOSS_SECRET_KEY), address: Boolean(process.env.JUSO_CONFM_KEY), kakaoReport: Boolean(process.env.SOLAPI_PFID), emailReport: Boolean(process.env.RESEND_API_KEY), wholesale: ["adminplus"] }, origin);
       if (req.method === "GET" && url.pathname === "/api/channels/cafe24/oauth/callback") {
         const state = readState(url.searchParams.get("state"), token);
         if (!state) return sendHtml(res, 400, "연결 요청이 만료됐거나 올바르지 않아요. 두고에서 다시 연결해 주세요.");
@@ -88,6 +160,7 @@ function createApp({ store = createCredentialStore(), token = process.env.DOOGO_
       const body = req.method === "GET" ? {} : await readJson(req);
       if (req.method === "POST" && url.pathname === "/api/billing/refund") return send(res, 200, await ops.refundPayment(body, opsOptions), origin);
       if (req.method === "POST" && url.pathname === "/api/reports/daily") return send(res, 200, await ops.sendDailyReport({ title: body.title, text: body.text, kakao: Array.isArray(body.kakao) ? body.kakao : [], email: Array.isArray(body.email) ? body.email : [] }, opsOptions), origin);
+      if (parts[1] === "wholesale" && parts[2] === "adminplus") return send(res, 200, await wholesaleRoute(req.method, parts[3] || "", parts.slice(4).join("/"), body), origin);
       const seller = String(body.sellerLoginId || "");
       if (!seller) return send(res, 400, { error: "sellerLoginId가 필요해요." }, origin);
 
@@ -148,7 +221,7 @@ function createApp({ store = createCredentialStore(), token = process.env.DOOGO_
       }
       return send(res, 404, { error: "경로를 찾지 못했어요." }, origin);
     } catch (error) {
-      const upstream = ["CoupangError", "NaverError", "Cafe24Error"].includes(error.name);
+      const upstream = ["CoupangError", "NaverError", "Cafe24Error", "AdminPlusError"].includes(error.name);
       const status = upstream ? 502 : error instanceof SyntaxError ? 400 : error.status >= 400 && error.status < 600 ? error.status : 500;
       return send(res, status, { error: error.message, upstreamStatus: upstream ? error.status : undefined, detail: upstream ? error.body : undefined }, origin);
     }

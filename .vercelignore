@@ -1,0 +1,7 @@
+# 두고마켓 앱은 dist/ 정적 파일만 배포한다 (연동 서버 server/는 따로 띄운다)
+server
+.claude
+.openai
+*.md
+SOURCE_INFO.txt
+skills-lock.json

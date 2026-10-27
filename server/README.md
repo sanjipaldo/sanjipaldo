@@ -65,7 +65,7 @@ npm start            # 기본 포트 8787
 | `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | 두고가 네이버에 등록한 커머스API 애플리케이션 |
 | `CAFE24_CLIENT_ID` / `CAFE24_CLIENT_SECRET` | 두고가 CAFE24 개발자센터에 등록한 앱 |
 | `CAFE24_REDIRECT_URI` | CAFE24 권한 동의 뒤 돌아올 주소 (예: `https://api.doogo.kr/api/channels/cafe24/oauth/callback`) |
-| `COUPANG_API_BASE` / `NAVER_API_BASE` / `CAFE24_API_BASE` | 테스트용 주소 교체 (기본값은 실제 API 주소) |
+| `COUPANG_API_BASE` / `NAVER_API_BASE` / `CAFE24_API_BASE` / `ADMINPLUS_API_BASE` | 테스트용 주소 교체 (기본값은 실제 API 주소) |
 | `DOOGO_CREDENTIAL_FILE` | 암호화된 키 파일 경로 (기본 `server/data/credentials.enc.json`) |
 
 앱을 서버에 연결하려면 앱 페이지에서 `window.DOOGO_API_BASE`와 `window.DOOGO_API_TOKEN`을 설정합니다.
@@ -87,6 +87,32 @@ npm start            # 기본 포트 8787
 | POST | `/api/orders/:channel/dispatch` | `{ sellerLoginId, items: [{ refs, carrier, naverCode, tracking, update }] }` 송장 전송 (스마트스토어 발송처리 / 쿠팡 송장 업로드·수정). 주문마다 성공·실패 사유를 돌려줌 |
 
 `channel`은 `coupang` 또는 `smartstore`. 쇼핑몰 쪽 오류는 `502`와 함께 `upstreamStatus`, `detail`로 돌려줍니다.
+
+## 어드민플러스 도매몰 (v114)
+
+도매몰(파밍·늘푸른우리 같은 어드민플러스 운영사)마다 **(주)두고홀딩스가 거래처(협력사)로 가입**하고, 그 도매몰에 Open API 사용을 신청해 받은 `client_id`·`client_secret`을 마스터 화면(도매몰 관리 → 도매몰 · 상품 → API 연결)에서 넣습니다. 키는 이 서버에서만 AES-256-GCM으로 암호화해 보관하고, 브라우저에는 남기지 않습니다. 문서: Seller Open API (`https://api.adminplus.co.kr`).
+
+| 두고 동작 | 어드민플러스 |
+|---|---|
+| 연결 확인 | `POST /oauth/token` (form, 30일 토큰 · 서버에 캐시) → `GET /v1/seller/balance` |
+| 상품 동기화 | `GET /v1/seller/products` 전체(커서 끝까지) 또는 `GET /v1/seller/products/changed?updated_since` → 옵션마다 두고 도매몰 상품 한 줄 (`product_code`·`option_code` 보관) |
+| 발주 | `POST /v1/seller/orders` (`partial: true`, `customer_order_code` = 두고 주문번호) → `GET /v1/seller/payments/pending?order_key` 로 금액 확인 → `POST /v1/seller/payments` 예치금 전액 |
+| 금액이 선결제보다 큼 | 결제하지 않고 ‘금액 확인 필요’ → 마스터가 결제 진행(차액 두고 부담) 또는 `POST /v1/seller/orders/delete` |
+| 같은 주문 재전송 | ‘중복 주문 코드’ → `GET /v1/seller/orders?customer_order_code` 로 기존 주문을 찾아 이어 감 (두 번 결제하지 않음) |
+| 송장 · 취소 | `GET /v1/seller/orders/changed?updated_since` → 운송장(`tracking_number`)은 셀러 주문에 넣고 쇼핑몰 전송, 취소는 마스터에게 알림 |
+
+도매몰에 요청할 것: 권한(scope) `product.read` `order.read` `order.write` `order.delete` `payment.read` `balance.read`, 그리고 **이 서버의 고정 IP를 IP 화이트리스트에 등록**. 일 호출 한도는 기본 10,000회입니다.
+
+| 메서드 | 경로 | 본문 |
+|---|---|---|
+| POST | `/api/wholesale/adminplus/:mallId/connect` | `{ clientId, clientSecret }` |
+| DELETE | `/api/wholesale/adminplus/:mallId` | 키 삭제 |
+| GET | `/api/wholesale/adminplus/:mallId/balance` | 예치금·적립금·API 만료일·오늘 호출수 |
+| POST | `/api/wholesale/adminplus/:mallId/products/sync` | `{ since? }` |
+| POST | `/api/wholesale/adminplus/:mallId/orders` | `{ orders:[{ doogoOrderId, recipientName, phone, postalCode, address, addressDetail, deliveryMessage, items:[{ productCode, optionCode, qty }], maxAmount }] }` |
+| POST | `/api/wholesale/adminplus/:mallId/orders/pay` | `{ orderKey, maxAmount }` |
+| POST | `/api/wholesale/adminplus/:mallId/orders/delete` | `{ orderKey }` |
+| POST | `/api/wholesale/adminplus/:mallId/orders/changed` | `{ since }` (YYYY-MM-DDTHH:ii:ss) |
 
 ## 테스트
 

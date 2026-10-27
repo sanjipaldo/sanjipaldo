@@ -315,6 +315,10 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 .node:hover .ni, .node.hot .ni { transform: scale(1.08) rotate(-4deg); }
 .node .ni img { width: 100%; height: 100%; object-fit: cover; }
 .node .ni.kakao { background: #fee500; }
+/* 어드민플러스 도매몰: 로고가 가로로 길어서 흰 칩에 담는다 */
+.node .ni.ap { width: 72px; padding: 0 8px; background: #fff; }
+.node .ni.ap img { width: 100%; height: auto; object-fit: contain; }
+.node.ap-node { border-style: dashed; border-color: rgba(106, 166, 255, .45); }
 .node b { display: block; font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -.02em; line-height: 1.3; }
 .node small { display: block; font-size: 13px; color: var(--on-navy-2); line-height: 1.35; }
 .node .nb { position: absolute; top: -11px; right: 12px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; line-height: 1.4; color: #0a101d; background: var(--fc); box-shadow: 0 6px 16px -6px var(--fc); white-space: nowrap; opacity: 0; transform: translateY(4px) scale(.7); }
@@ -371,6 +375,10 @@ html[data-aud="supplier"] .eyebrow { color: var(--ink-3); }
 .step li { display: flex; gap: 10px; font-size: 15px; font-weight: 600; color: var(--ink-2); line-height: 1.5; }
 .step li::before { content: ""; flex: none; margin-top: 2px; width: 18px; height: 18px; border-radius: 6px; background: var(--blue-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5.5 10.4l2.9 2.8 6-6.3' fill='none' stroke='%231b64da' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat; }
 .step .step-media { display: none; }
+.ap-callout { margin-top: 22px; padding: 16px 18px; display: grid; gap: 10px; background: var(--bg-soft); border: 1px solid var(--line); border-radius: 16px; }
+.ap-callout img { width: 104px; height: auto; }
+.ap-callout p { margin: 0; font-size: 15px; line-height: 1.65; color: var(--ink-3); }
+.ap-callout b { display: block; margin-bottom: 2px; font-size: 16px; color: var(--ink); letter-spacing: -.02em; }
 .visual { position: sticky; top: max(84px, calc(50vh - 340px)); }
 .visual .browser-body, .step-media .browser-body { aspect-ratio: 880 / 651; }
 .screens img, .step-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
@@ -611,6 +619,7 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
   .hub-col { grid-template-columns: repeat(2, minmax(0, 1fr)); justify-items: stretch !important; gap: 16px 10px; }
   .hub-col .col-label { grid-column: 1 / -1; text-align: center; }
   .node { width: 100%; }
+  .hub-col .ap-node { grid-column: 1 / -1; }
   .flow-tabs { grid-template-columns: minmax(0, 1fr); }
   .story-grid { grid-template-columns: minmax(0, 1fr); }
   .visual { display: none; }
@@ -943,6 +952,7 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
         <div class="node" data-side="l"><span class="nb" style="--i:1"></span><span class="ni" aria-hidden="true">🏭</span><div><b>제조사</b><small>생활 · 건강 · 식품</small></div></div>
         <div class="node" data-side="l"><span class="nb" style="--i:2"></span><span class="ni" aria-hidden="true">🏷️</span><div><b>브랜드</b><small>브랜드관 입점</small></div></div>
         <div class="node" data-side="l"><span class="nb" style="--i:3"></span><span class="ni" aria-hidden="true">🌏</span><div><b>해외 소싱</b><small>나라별 직구 상품</small></div></div>
+        <div class="node ap-node" data-side="l" data-nb="자동 연결|자동 발주|송장 자동"><span class="nb" style="--i:4"></span><span class="ni ap" aria-hidden="true"><img src="assets/adminplus-logo.png" width="430" height="82" alt=""></span><div><b>어드민플러스</b><small>도매몰 · 발주처 그대로</small></div></div>
       </div>
       <div class="hub-core">
         <div class="core" data-core>
@@ -952,7 +962,7 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
           <small class="core-sub" aria-live="polite">원클릭 등록</small>
         </div>
         <ul class="core-tags" aria-label="두고가 자동으로 하는 일">
-          <li data-aud="seller">AI 상품 매핑</li><li data-aud="seller">아이템 위너</li><li data-aud="seller">예치금 결제</li><li data-aud="seller">자동 발주</li><li data-aud="seller">송장 중계</li><li data-aud="seller">가격·재고 동기화</li><li data-aud="supplier">PICK 자동 승인</li><li data-aud="supplier">결제된 주문만</li><li data-aud="supplier">송장 자동 출력</li><li data-aud="supplier">송장 중계</li><li data-aud="supplier">판매 현황</li><li data-aud="supplier">주간 정산</li>
+          <li data-aud="seller">AI 상품 매핑</li><li data-aud="seller">도매몰 자동 연결</li><li data-aud="seller">아이템 위너</li><li data-aud="seller">예치금 결제</li><li data-aud="seller">자동 발주</li><li data-aud="seller">송장 중계</li><li data-aud="seller">가격·재고 동기화</li><li data-aud="supplier">PICK 자동 승인</li><li data-aud="supplier">결제된 주문만</li><li data-aud="supplier">송장 자동 출력</li><li data-aud="supplier">송장 중계</li><li data-aud="supplier">판매 현황</li><li data-aud="supplier">주간 정산</li>
         </ul>
       </div>
       <div class="hub-col right">
@@ -987,6 +997,7 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
             <h3>마음에 드는 상품을 PICK, 판매가만 정하세요</h3>
             <p>네이버쇼핑과 같은 카테고리로 찾고, 내 판매가를 넣으면 마진이 바로 계산돼요. 공급사가 확인하면 내 상품이 돼요.</p>
             <ul><li>국내배송 · 해외소싱, 나라별로 골라 보기</li><li>공급가 · 지정판매가 · 발주 마감 시간까지 한눈에</li><li>팔기 전에 샘플 구매로 먼저 받아 보기</li></ul>
+            <div class="ap-callout"><img src="assets/adminplus-logo.png" width="430" height="82" alt="어드민플러스"><p><b>이미 발주하던 도매몰도 그대로 두고마켓에서</b>두고마켓 공급사 상품뿐 아니라, 원하는 어드민플러스 도매몰을 신청하면 지금 발주하고 있는 곳 그대로 두고마켓에서 상품 연결·발주·송장까지 전부 이용할 수 있어요.</p></div>
             <figure class="step-media"><div class="browser"><div class="browser-body"><img alt="상품 소싱에서 식품 카테고리를 고르고 성주 꿀참외를 PICK한 뒤 판매가 27,900원을 넣자 마진 36%가 계산되는 실제 화면" width="880" height="651"></div></div></figure>
           </article>
           <article class="step" data-gif="assets/landing/gif/send.gif" data-poster="assets/landing/gif/send.webp" data-label="마스터 상품">
@@ -1610,7 +1621,7 @@ html[data-aud="supplier"] .foot-badge { color: #eef0f3; background: rgba(255, 25
     hubPaths.forEach(({ fl }) => fl.classList.toggle("rev", f.rev));
     nodes.forEach(node => {
       const nb = node.querySelector(".nb");
-      nb.textContent = node.dataset.side === "l" ? f.left : f.right;
+      nb.textContent = node.dataset.nb ? node.dataset.nb.split("|")[flow] : node.dataset.side === "l" ? f.left : f.right;
       nb.classList.remove("pop"); void nb.offsetWidth; nb.classList.add("pop");
     });
     coreSub.textContent = f.core;
