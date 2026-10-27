@@ -40,6 +40,8 @@ const roleMenuGroups = {
     { label: "설정", indexes: [8, 20, 13, 10] }
   ]
 };
+/* 위탁셀러 사이드바: 묶음마다 아이콘 색을 달리해 어디쯤인지 한눈에 (홈·주문 파랑, 상품 찾기 주황, 내 상품 초록, 샘플 보라, 돈 노랑, 기록 회색, 설정 청록) */
+const SELLER_MENU_TONES = { "홈": "blue", "상품 찾기": "orange", "내 상품 (순서대로)": "green", "주문 · 배송 (순서대로)": "blue", "샘플 구매": "violet", "돈 관리": "amber", "처리 기록": "slate", "설정": "teal" };
 /* 상품 등록 흐름(소싱 → 승인 대기 → 승인 완료 → 마스터 상품 → 판매중)을 사이드바에 번호로 보여준다. */
 const menuSteps = { seller: { 1: 1, 16: 1, 22: 1, 2: 2, 17: 3, 14: 4, 11: 5, 15: 2 }, supplier: { 1: 1, 9: 2, 3: 3, 7: 4 } };
 /* 메뉴 이름으로 인덱스를 찾는다 (메뉴 순서가 바뀌어도 이동 버튼이 깨지지 않게) */
@@ -405,6 +407,22 @@ const CATEGORY_SAMPLE_PRODUCTS = CATEGORY_SAMPLE_SPECS.map(([id, supplierLoginId
   }
   return product;
 });
+/* 공급처 모아보기 화면 확인용 데모 발주 기록 (가상 도매몰 WM-01~07 · 가상 셀러). 실제 운영 기록이 아니라서
+   화면에 ‘데모 기록’으로 표시하고, 마스터가 ‘데모 기록 지우기’로 없앨 수 있다. 숫자는 실제 지표 계산식을 그대로 거친다. */
+function demoWholesaleLedger(now = Date.now()) {
+  let seed = 20261027;
+  const rand = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  const profiles = [["WM-01", 46, 7, 18, 1], ["WM-02", 38, 9, 26, 2], ["WM-03", 34, 11, 30, 2], ["WM-04", 31, 16, 42, 3], ["WM-05", 24, 20, 52, 3], ["WM-06", 41, 8, 22, 1], ["WM-07", 12, 12, 30, 1]];
+  const rows = [];
+  profiles.forEach(([mallId, count, fast, slow, problems]) => {
+    for (let i = 0; i < count; i += 1) {
+      const placedTs = now - Math.round((1 + rand() * 84) * 864e5);
+      const outcome = i < problems ? (i % 2 ? "soldout" : "cancelled") : "shipped";
+      rows.push({ id: `WL-D-${mallId}-${i}`, mallId, sellerLoginId: `demo-seller-${1 + Math.floor(rand() * 9)}`, placedTs, shippedTs: outcome === "shipped" ? placedTs + Math.round((fast + rand() * (slow - fast)) * 36e5) : null, outcome, demo: true });
+    }
+  });
+  return rows;
+}
 const initialState = {
   schemaVersion: 22,
   statsVersion: 1,
@@ -701,6 +719,7 @@ const initialState = {
     { id: "WR-26102401", sellerLoginId: "seller", name: "바다곳간수산", url: "", note: "굴비·멸치 선물세트를 같이 팔고 싶어요. 발주는 엑셀로 받는다고 들었어요.", status: "pending", createdAt: "10.24 17:30", createdTs: 2 },
     { id: "WR-26100901", sellerLoginId: "seller", name: "만물상회", url: "", note: "", status: "rejected", createdAt: "10.08 09:40", createdTs: 3, decidedAt: "10.09 11:00", reply: "위탁 판매를 허용하지 않는 공급처예요" }
   ],
+  wholesaleLedger: demoWholesaleLedger(),
   wholesaleSettings: { feePerOrder: 0, lastRuns: {}, batches: [
     { id: "WB-26102701", label: "00:05 마감 (1차)", manual: false, at: "10.27 00:05", ts: 0, sellers: 2, paid: 3, held: 0, amount: 51300, heldSellers: [] },
     { id: "WB-26102401", label: "08:30 (2차)", manual: false, at: "10.24 08:30", ts: 0, sellers: 1, paid: 1, held: 0, amount: 13900, heldSellers: [] }
@@ -969,7 +988,9 @@ function loadState() {
     }
     /* v114: 공급처 모아보기는 (주)두고홀딩스가 거래처로 가입한 도매몰만, 지표는 두고 발주 기록으로만 계산 (예전 데모 점수는 지운다) */
     if (Number(saved.wholesaleVersion || 0) < 2) (merged.wholesaleMalls || []).forEach(mall => { delete mall.metrics; if (mall.doogoJoined === undefined) mall.doogoJoined = mall.status === "연결됨"; });
-    merged.wholesaleVersion = 2;
+    /* v115: 지난 발주 기록(원장) — 화면 확인용 데모 기록을 넣는다 (‘데모 기록’ 표시 · 지울 수 있음) */
+    if (Number(saved.wholesaleVersion || 0) < 3) merged.wholesaleLedger = [...(saved.wholesaleLedger || []).filter(row => !row.demo), ...demoWholesaleLedger()];
+    merged.wholesaleVersion = 3;
     if (Number(saved.supplierVarietyVersion || 0) < 2) applySupplierVariety(merged);
     merged.supplierVarietyVersion = 2;
     if (Number(saved.depositHistoryVersion || 0) < 1) seedDepositHistory(merged);
@@ -2473,7 +2494,7 @@ function updateAccountUI() {
       if (typeof index === "object") {
         const active = activeMenuIndex === 4 && sellerMenuStageOf(sellerOrderStage) === index.stage;
         const badgeValue = sellerOrderMenuBadge(index.stage);
-        return `<button type="button" class="${active ? "active" : ""} ${index.stage === "self" ? "menu-self" : ""}" data-menu-index="4" data-order-stage="${index.stage}"${active ? ' aria-current="page"' : ""}><span class="menu-icon mi-${index.icon}">${menuIcon(index.icon)}${index.step ? `<i class="menu-step" aria-label="${index.step}단계">${index.step}</i>` : ""}</span><span class="menu-text">${escapeHtml(index.label)}</span>${badgeValue > 0 ? `<b class="menu-badge">${badgeValue}</b>` : ""}</button>`;
+        return `<button type="button" class="${active ? "active" : ""} ${index.stage === "self" ? "menu-self" : ""}" data-menu-index="4" data-order-stage="${index.stage}"${active ? ' aria-current="page"' : ""}><span class="menu-icon mi-${index.icon}">${menuIcon(index.icon)}</span>${index.step ? `<i class="menu-step">${index.step}</i>` : ""}<span class="menu-text">${escapeHtml(index.label)}</span>${badgeValue > 0 ? `<b class="menu-badge">${badgeValue}</b>` : ""}</button>`;
       }
       const item = roleMenus[activeRole][index];
       const productBadge = activeRole === "seller" ? sellerProductBadges[index] : null;
@@ -2481,9 +2502,10 @@ function updateAccountUI() {
       const badge = badgeValue > 0;
       const badgeTone = productBadge ? ` tone-${productBadge.tone}` : "";
       const badgeTitle = productBadge ? ` title="${escapeHtml(productBadge.title)}" aria-label="${escapeHtml(productBadge.title)}"` : "";
-      return `<button type="button" class="${index === activeMenuIndex ? "active" : ""}" data-menu-index="${index}"${index === activeMenuIndex ? ' aria-current="page"' : ""}><span class="menu-icon mi-${menuIcons[activeRole][index]}">${menuIcon(menuIcons[activeRole][index])}${menuSteps[activeRole]?.[index] ? `<i class="menu-step" aria-label="${menuSteps[activeRole][index]}단계">${menuSteps[activeRole][index]}</i>` : ""}</span><span class="menu-text">${escapeHtml(item)}</span>${badge ? `<b class="menu-badge${badgeTone}"${badgeTitle}>${badgeValue > 99 ? "99+" : badgeValue}</b>` : ""}</button>`;
+      return `<button type="button" class="${index === activeMenuIndex ? "active" : ""}" data-menu-index="${index}"${index === activeMenuIndex ? ' aria-current="page"' : ""}><span class="menu-icon mi-${menuIcons[activeRole][index]}">${menuIcon(menuIcons[activeRole][index])}</span>${menuSteps[activeRole]?.[index] ? `<i class="menu-step">${menuSteps[activeRole][index]}</i>` : ""}<span class="menu-text">${escapeHtml(item)}</span>${badge ? `<b class="menu-badge${badgeTone}"${badgeTitle}>${badgeValue > 99 ? "99+" : badgeValue}</b>` : ""}</button>`;
     }).join("");
-    return `<section class="workspace-menu-group"><p>${escapeHtml(group.label)}</p>${buttons}</section>`;
+    const tone = activeRole === "seller" ? SELLER_MENU_TONES[group.label] || "" : "";
+    return `<section class="workspace-menu-group"${tone ? ` data-tone="${tone}"` : ""}><p>${escapeHtml(group.label)}</p>${buttons}</section>`;
   }).join("");
   renderNotificationDropdown();
   const resetContentButton = document.getElementById("resetContentButton");
@@ -8817,14 +8839,17 @@ function wholesaleMallStats(mallId) {
     .filter(order => (placedTs(order.wholesale) || Date.now()) >= since);
   const failed = state.orders.filter(order => order.wholesaleFailedMallId === mallId && Number(order.wholesaleFailedTs || 0) >= since);
   const hours = live.filter(order => order.wholesale.state === "shipped").map(order => { const start = placedTs(order.wholesale), end = Number(order.wholesale.shippedTs) || wholesaleStampTs(order.wholesale.shippedAt); return start && end && end >= start ? (end - start) / 36e5 : null; }).filter(value => value !== null);
-  const problems = live.filter(order => order.wholesale.mallCancelled || order.wholesale.holdKind === "soldout").length + failed.length;
-  const attempted = live.length + failed.length;
+  /* 지난 발주 기록(원장): 운영에서는 연동 서버가 쌓고, 미리보기에는 ‘데모 기록’이 들어 있다 */
+  const ledger = (state.wholesaleLedger || []).filter(row => row.mallId === mallId && Number(row.placedTs || 0) >= since);
+  ledger.filter(row => row.outcome === "shipped" && row.shippedTs >= row.placedTs).forEach(row => hours.push((row.shippedTs - row.placedTs) / 36e5));
+  const problems = live.filter(order => order.wholesale.mallCancelled || order.wholesale.holdKind === "soldout").length + failed.length + ledger.filter(row => row.outcome !== "shipped").length;
+  const attempted = live.length + failed.length + ledger.length;
   const oneDay = hours.length ? hours.filter(value => value <= 24).length / hours.length * 100 : null;
   const invoiceHours = hours.length ? hours.reduce((sum, value) => sum + value, 0) / hours.length : null;
   const cancel = attempted ? problems / attempted * 100 : null;
   const enough = hours.length >= WH_RANK_MIN;
   const score = enough ? Math.round(oneDay * 0.5 + Math.max(0, 100 - cancel * 10) * 0.3 + Math.max(0, 100 - Math.max(0, invoiceHours - 12) * 2) * 0.2) : null;
-  return { score, oneDay, invoiceHours, cancel, orders: attempted, sellers: new Set([...live, ...failed].map(order => order.sellerLoginId)).size, shipped: hours.length, enough };
+  return { score, oneDay, invoiceHours, cancel, orders: attempted, sellers: new Set([...live, ...failed, ...ledger].map(order => order.sellerLoginId)).size, shipped: hours.length, enough, demo: ledger.some(row => row.demo) };
 }
 /* (주)두고홀딩스가 거래처로 가입한 도매몰만. 점수가 있는 곳(기록 30건 이상)이 먼저, 나머지는 발주 건수 순 */
 function wholesaleRanking(sort = whRankSort) {
@@ -8852,7 +8877,7 @@ function sellerWholesaleRequestTemplate() {
   const scored = ranking.filter(row => row.stats.enough).length;
   const rankRow = ({ mall, stats }, index) => {
     const connected = mine.malls.includes(mall.id);
-    return `<tr><td class="wh-rank-no">${stats.enough ? `<i class="${index < 3 ? `top${index + 1}` : ""}">${index + 1}</i>` : `<i class="none">–</i>`}</td><td><b>${escapeHtml(mall.name)}</b><small>${escapeHtml(wholesalePlatformLabel(mall))} · ${escapeHtml(mall.category || "")}${mall.benefit ? ` · <em>${escapeHtml(mall.benefit)}</em>` : ""}</small></td>${WHOLESALE_METRICS.map(([key]) => `<td class="num ${key === whRankSort ? "sorted" : ""}">${wholesaleMetricText(stats, key)}</td>`).join("")}<td>${connected ? `<span class="wh-chip green">연결됨</span>` : pendingNames.has(mall.name) ? `<span class="wh-chip orange">신청 중</span>` : `<button type="button" class="small-button approve" data-action="wh-request-mall" data-name="${escapeHtml(mall.name)}">연결 신청</button>`}</td></tr>`;
+    return `<tr><td class="wh-rank-no">${stats.enough ? `<i class="${index < 3 ? `top${index + 1}` : ""}">${index + 1}</i>` : `<i class="none">–</i>`}</td><td><b>${escapeHtml(mall.name)}${stats.demo ? ` <span class="wh-chip gray wh-demo-chip">데모 기록</span>` : ""}</b><small>${escapeHtml(wholesalePlatformLabel(mall))} · ${escapeHtml(mall.category || "")}${mall.benefit ? ` · <em>${escapeHtml(mall.benefit)}</em>` : ""}</small></td>${WHOLESALE_METRICS.map(([key]) => `<td class="num ${key === whRankSort ? "sorted" : ""}">${wholesaleMetricText(stats, key)}</td>`).join("")}<td>${connected ? `<span class="wh-chip green">연결됨</span>` : pendingNames.has(mall.name) ? `<span class="wh-chip orange">신청 중</span>` : `<button type="button" class="small-button approve" data-action="wh-request-mall" data-name="${escapeHtml(mall.name)}">연결 신청</button>`}</td></tr>`;
   };
   const top = ranking.slice(0, 10), rest = ranking.slice(10);
   const statusChip = status => ({ pending: `<span class="wh-chip orange">확인 중</span>`, approved: `<span class="wh-chip green">연결 완료</span>`, rejected: `<span class="wh-chip red">반려</span>` })[status] || "";
@@ -8872,7 +8897,7 @@ function sellerWholesaleRequestTemplate() {
       </section>
     </div>
     <section class="panel wh-panel wh-ranking"><div class="panel-head"><div><h3>공급처 모아보기 TOP 10</h3><p>${DOOGO_HOLDINGS}가 거래처로 가입한 도매몰이에요. 신청하면 두고가 바로 이어 드려요.</p></div><span class="chip">${ranking.length}곳</span></div>
-      <p class="wh-rank-basis">순위는 두고에서 실제로 발주한 기록(최근 ${WH_RANK_DAYS}일)으로만 매겨요 — 하루 안 송장 50% · 취소·품절 30% · 송장 속도 20%. 송장까지 끝난 발주가 ${WH_RANK_MIN}건 쌓이면 점수가 나와요.${scored ? "" : " 아직 점수가 나온 도매몰이 없어 발주 건수 순으로 보여 드려요."}</p>
+      <p class="wh-rank-basis">순위는 두고에서 실제로 발주한 기록(최근 ${WH_RANK_DAYS}일)으로만 매겨요 — 하루 안 송장 50% · 취소·품절 30% · 송장 속도 20%. 송장까지 끝난 발주가 ${WH_RANK_MIN}건 쌓이면 점수가 나와요.${scored ? "" : " 아직 점수가 나온 도매몰이 없어 발주 건수 순으로 보여 드려요."}${ranking.some(row => row.stats.demo) ? `<br><b class="wh-demo-note">‘데모 기록’ 표시가 있는 숫자는 화면 확인용 데모 발주 기록으로 계산한 값이에요. 실제 운영 기록이 아니에요.</b>` : ""}</p>
       <div class="wh-rank-sorts" role="group" aria-label="정렬 기준">${WHOLESALE_METRICS.map(([key, label]) => `<button type="button" class="${whRankSort === key ? "active" : ""}" data-action="wh-rank-sort" data-sort="${key}" aria-pressed="${whRankSort === key}">${label}</button>`).join("")}</div>
       <div class="table-wrap"><table class="wh-rank-table"><thead><tr><th>순위</th><th>공급처</th>${WHOLESALE_METRICS.map(([key, label]) => `<th class="num ${key === whRankSort ? "sorted" : ""}">${label}</th>`).join("")}<th></th></tr></thead><tbody>${top.map(rankRow).join("") || `<tr><td colspan="${WHOLESALE_METRICS.length + 3}" class="empty">아직 가입한 도매몰이 없어요.</td></tr>`}</tbody></table></div>
       ${rest.length ? `<details class="wh-rank-rest"><summary>11위 이하 ${rest.length}곳 보기</summary><div class="table-wrap"><table class="wh-rank-table"><tbody>${rest.map((mall, index) => rankRow(mall, index + 10)).join("")}</tbody></table></div></details>` : ""}
@@ -9048,7 +9073,7 @@ function masterWholesaleRequests() {
 function masterWholesaleMalls() {
   const malls = wholesaleMalls();
   const sellersOf = mallId => Object.entries(state.sellerWholesale || {}).filter(([, entry]) => (entry.malls || []).includes(mallId)).length;
-  return `<section class="panel wh-panel wh-panel"><div class="panel-head"><div><h3>도매몰 · 상품</h3><p>${DOOGO_HOLDINGS}가 거래처로 가입한 도매몰이에요. 어드민플러스 도매몰은 ‘API 연결’로 상품·발주·송장을 자동으로 주고받고, 아직 키가 없으면 상품(옵션)·공급가·배송비를 엑셀로 올려 두세요. 같은 상품코드는 새 값으로 바뀌어요.</p></div><div class="wh-queue-head-actions"><button type="button" class="secondary-button" data-action="wh-item-template">상품 엑셀 양식</button><button type="button" class="primary-button" data-action="wh-new-mall">도매몰 추가</button></div></div>
+  return `<section class="panel wh-panel wh-panel"><div class="panel-head"><div><h3>도매몰 · 상품</h3><p>${DOOGO_HOLDINGS}가 거래처로 가입한 도매몰이에요. 어드민플러스 도매몰은 ‘API 연결’로 상품·발주·송장을 자동으로 주고받고, 아직 키가 없으면 상품(옵션)·공급가·배송비를 엑셀로 올려 두세요. 같은 상품코드는 새 값으로 바뀌어요.</p></div><div class="wh-queue-head-actions">${(state.wholesaleLedger || []).some(row => row.demo) ? `<button type="button" class="text-button" data-action="whapi-clear-demo">데모 발주 기록 지우기</button>` : ""}<button type="button" class="secondary-button" data-action="wh-item-template">상품 엑셀 양식</button><button type="button" class="primary-button" data-action="wh-new-mall">도매몰 추가</button></div></div>
     <div class="table-wrap"><table class="wh-malls-table"><thead><tr><th>도매몰</th><th>결제 방식</th><th>상품·발주 연동</th><th class="num">상품</th><th class="num">연결 셀러</th><th>최근 등록</th><th></th></tr></thead><tbody>${malls.map(mall => `<tr><td><b>${escapeHtml(mall.name)}</b><small>${escapeHtml(wholesalePlatformLabel(mall))}${mall.mallCode ? ` · ${escapeHtml(mall.mallCode)}` : ""} · ${escapeHtml(mall.category || "")}${mall.demo ? " · 데모" : ""}</small>${apMallJoinChip(mall)}</td><td>${mall.payMode === "bank" ? "계좌이체 (1차만)" : "예치금 자동"}</td><td class="wh-sync-cell">${apMallStatusCell(mall)}</td><td class="num">${wholesaleMallItems(mall.id).length}</td><td class="num">${sellersOf(mall.id)}</td><td>${escapeHtml(mall.lastSyncAt || "-")}</td><td class="wh-mall-row-actions">${mall.platform === "adminplus" ? `<button type="button" class="text-button wh-api-link" data-action="whapi-open" data-id="${escapeHtml(mall.id)}">${mallApi(mall) ? "API 설정" : "API 연결"}</button>` : ""}<button type="button" class="text-button" data-action="wh-mall-items" data-id="${escapeHtml(mall.id)}">상품 보기</button><button type="button" class="text-button" data-action="wh-upload-items" data-id="${escapeHtml(mall.id)}">상품 엑셀 올리기</button><button type="button" class="text-button" data-action="wh-mall-pay" data-id="${escapeHtml(mall.id)}">${mall.payMode === "bank" ? "예치금 결제로" : "계좌이체로"}</button></td></tr>`).join("")}</tbody></table></div></section>
     <input type="file" id="whItemsFile" class="rde-file-input" accept=".xlsx,.csv" hidden>`;
 }
@@ -9956,6 +9981,14 @@ document.addEventListener("click", event => {
   if (!action.startsWith("whapi-") || currentAccount?.role !== "master") return;
   const mall = wholesaleMallOf(button.dataset.id) || wholesaleMallOf(state.orders.find(order => order.id === button.dataset.id)?.wholesale?.mallId);
   if (action === "whapi-open") return wholesaleApiModal(button.dataset.id);
+  if (action === "whapi-clear-demo") {
+    const count = (state.wholesaleLedger || []).filter(row => row.demo).length;
+    if (!count) return;
+    if (!button.dataset.confirmed) return openModal(`<div class="mapping-modal-head"><span>데모 발주 기록</span><h2>데모 기록 ${count}건을 지울까요?</h2><p>셀러 ‘공급처 모아보기’의 숫자가 실제 두고 발주 기록으로만 계산돼요. 실제 주문·발주에는 영향이 없어요.</p></div><div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="button" class="refund-button" data-action="whapi-clear-demo" data-confirmed="1">데모 기록 지우기</button></div>`);
+    state.wholesaleLedger = (state.wholesaleLedger || []).filter(row => !row.demo);
+    audit("도매몰 데모 발주 기록 삭제", `${count}건`, "done", "settings");
+    closeModal(); saveState(); render(); updateAccountUI(); return showToast("데모 발주 기록을 지웠어요. 이제 실제 기록으로만 순위를 매겨요.");
+  }
   if (!mall) return;
   if (action === "whapi-balance") return refreshAdminPlusBalance(mall).then(() => wholesaleApiModal(mall.id));
   if (action === "whapi-sync") { button.disabled = true; return syncAdminPlusProducts(mall, { full: Boolean(button.dataset.full) }).then(() => { if (document.querySelector(".wh-api-grid")) wholesaleApiModal(mall.id); }); }
