@@ -1150,7 +1150,9 @@ function orderSellerTitle(order) {
   return sellerProductTitle(item, orderSourceProduct(order));
 }
 function orderNeedsMapping(order) { return !["mapped", "self", "canceled", "wholesale"].includes(orderMappingStatus(order)); }
-function sellerMappingRequiredOrders() { return currentSellerOrders().filter(orderNeedsMapping); }
+function sellerMappingRequiredOrders() { return currentSellerOrders().filter(order => orderNeedsMapping(order) || wholesaleNeedsRemap(order)); }
+/* 도매몰 상품이 품절·판매중지라 발주하지 못한 주문 → 셀러가 다른 상품으로 연결해야 한다 */
+function wholesaleNeedsRemap(order) { return orderMappingStatus(order) === "wholesale" && order.wholesale?.state === "held" && order.wholesale.holdKind === "soldout"; }
 function sellerPaymentRequiredOrders() { return currentSellerOrders().filter(order => orderMappingStatus(order) === "mapped" && orderPaymentStatus(order) === "pending"); }
 function currentPriceAlerts() { const id = currentAccount?.loginId || "seller"; return state.priceAlerts.filter(alert => (alert.recipients || ["seller"]).includes(id)); }
 function currentSellerConnections() { const id = currentAccount?.loginId || "seller"; return state.connections.filter(connection => connection.sellerLoginId === id && connection.status === "connected"); }
@@ -3388,13 +3390,13 @@ function sellerOrderFlowBoard() {
 function sellerOrderSubset(stage = sellerOrderStage) {
   const orders = currentSellerOrders();
   if (["all", "overview"].includes(stage)) return orders;
-  if (stage === "mapping") return orders.filter(orderNeedsMapping);
+  if (stage === "mapping") return orders.filter(order => orderNeedsMapping(order) || wholesaleNeedsRemap(order));
   if (stage === "self") return orders.filter(order => orderMappingStatus(order) === "self");
   if (stage === "payment") return orders.filter(order => (orderMappingStatus(order) === "mapped" && orderPaymentStatus(order) === "pending") || (isWholesaleOrder(order) && (wholesaleNeedsPayment(order) || Boolean(order.bankChargeId))));
   if (stage === "ordered") return orders.filter(order => order.status === "발주완료");
   if (stage === "tracking-push") return orders.filter(orderNeedsTrackingPush);
   /* 메뉴 ④ 공급사 출고: 결제를 마치고 공급사가 확인·포장·송장 발급 중인 주문 */
-  if (stage === "supplier") return orders.filter(order => ["mapped", "wholesale"].includes(orderMappingStatus(order)) && (orderPaymentStatus(order) !== "pending" || (isWholesaleOrder(order) && !wholesaleNeedsPayment(order) && !order.bankChargeId)) && ["신규주문", "주문접수", "발주완료", "배송준비중", "주문확인필요"].includes(order.status));
+  if (stage === "supplier") return orders.filter(order => ["mapped", "wholesale"].includes(orderMappingStatus(order)) && (orderPaymentStatus(order) !== "pending" || (isWholesaleOrder(order) && !wholesaleNeedsPayment(order) && !wholesaleNeedsRemap(order) && !order.bankChargeId)) && ["신규주문", "주문접수", "발주완료", "배송준비중", "주문확인필요"].includes(order.status));
   /* 메뉴 ⑤ 송장 전송 · 배송: 쇼핑몰로 보낼 송장 + 배송중 + 배송완료. 직접 입력 송장도 배송중이면 함께 (칩으로 구분) */
   if (stage === "delivery") return orders.filter(order => orderNeedsTrackingPush(order) || ["배송중", "배송완료"].includes(order.status));
   const statuses = { waiting: ["주문대기"], received: ["신규주문", "주문접수"], preparing: ["배송준비중"], "needs-check": ["주문확인필요"], shipping: ["배송중"], delivered: ["배송완료"] }[stage] || [];
@@ -4433,6 +4435,7 @@ function renderSeller() {
     { count: mappingRequired.length, tone: "red", title: "두고 상품 연결이 필요한 주문", hint: "어떤 상품으로 보낼지 골라 주세요", button: "연결하기", action: "go-seller-menu", index: 15 },
     { count: selfTodoCount(), tone: "purple", title: "사장님이 직접 보낼 주문", hint: "포장 후 송장번호만 넣으면 쇼핑몰로 보내 드려요", button: "송장 넣기", action: "go-self-orders" },
     { count: paymentRequired.length, tone: "orange", title: "결제를 기다리는 주문", hint: "공급사별로 묶어 한 번에 결제하면 바로 전달돼요", button: "한 번에 결제", action: "bulk-pay-orders" },
+    { count: currentSellerOrders().filter(wholesaleNeedsPayment).length, tone: "orange", title: "예치금 결제를 기다리는 도매몰 주문", hint: "도매몰 주문은 예치금으로만 결제돼요 · 충전하면 바로 발주돼요", button: "결제하기", action: "dashboard-order-stage", stage: "payment" },
     { count: needsCheck, tone: "red", title: "쇼핑몰 확인이 필요한 주문", hint: "취소 여부를 확인해 주세요", button: "확인하기", action: "dashboard-order-stage", stage: "needs-check" },
     { count: rejectedPicks.length, tone: "red", title: "공급사가 거절한 PICK 상품", hint: "사유를 확인하고 다시 요청할 수 있어요", button: "확인하기", action: "go-seller-menu", index: 2 },
     { count: readyItems.length, tone: "purple", title: "승인 완료된 내 상품", hint: "상품명·사진을 꾸미고 마스터 상품으로 등록하세요", button: "꾸미기", action: "go-seller-menu", index: 17 },
@@ -8278,7 +8281,8 @@ function wholesaleSlotText(next = nextWholesaleSlot()) {
 
 /* ----- 주문을 도매몰 발주로 돌리기 ----- */
 function routeOrderToWholesale(order, mapping) {
-  const mall = wholesaleMallOf(mapping?.mallId), item = wholesaleItemOf(mapping?.wholesaleItemId);
+  /* 대용량 도매몰(API 동기화)은 상품 목록을 다 들고 있지 않으므로 연결할 때 저장한 상품 정보로도 발주 대기를 만든다 */
+  const mall = wholesaleMallOf(mapping?.mallId), item = wholesaleItemOf(mapping?.wholesaleItemId) || mapping?.itemSnapshot || null;
   if (!order || !mall || !item) return false;
   if (order.mappingStatus === "self" || order.status === "직접배송") {
     order.status = "신규주문"; order.fromSelfAt = new Date().toLocaleString("ko-KR"); delete order.selfConfirmedAt; delete order.trackingSource;
@@ -8333,20 +8337,42 @@ function reconcileSellerAutoOrders() {
 }
 
 /* ----- 발주 회차 실행 (예치금 차감 → 발주 대기열) ----- */
-function deductWholesaleOrders(sellerId, orders, { method = "deposit", reference = "", label = "" } = {}) {
-  const total = orders.reduce((sum, order) => sum + wholesaleOrderTotal(order), 0);
+/* 예치금에서 빼기 직전: 도매몰 상품의 지금 공급가·배송비·품절을 다시 확인한다 (셀리오처럼 확인 안 되는 상품은 발주하지 않고 보류)
+   목록에 없는 도매몰(대용량 · API 동기화 전)은 연결할 때 저장한 값을 그대로 쓴다 */
+function refreshWholesaleOrder(order) {
+  const w = order.wholesale;
+  const item = wholesaleItemOf(w.itemId);
+  if (!item) return wholesaleMallItems(w.mallId).length ? { ok: false, reason: "도매몰에서 판매를 멈춘 상품이에요" } : { ok: true };
+  if (item.soldOut) return { ok: false, reason: "도매몰 상품이 품절됐어요" };
+  const before = wholesaleOrderTotal(order);
+  Object.assign(w, { unitCost: Number(item.cost || 0), shipping: Number(item.shipping || 0), title: wholesaleItemLabel(item), itemCode: item.code || w.itemCode });
+  w.total = wholesaleOrderTotal(order);
+  if (w.total !== before) w.priceNote = `공급가가 바뀌어 ${money(before)} → ${money(w.total)}로 결제했어요`;
+  return { ok: true, changed: w.total !== before };
+}
+/* 도매몰(어드민플러스) 주문은 예치금으로만 결제한다. 품절·판매중지 상품은 빼고(보류 · 연결 변경 필요) 나머지를 한 번에 뺀다. */
+function deductWholesaleOrders(sellerId, orders, { reference = "", label = "" } = {}) {
+  const unavailable = [];
+  const payable = orders.filter(order => {
+    const check = refreshWholesaleOrder(order);
+    if (check.ok) return true;
+    Object.assign(order.wholesale, { state: "held", holdKind: "soldout", holdReason: `${check.reason} · 다른 상품으로 연결해 주세요`, heldAt: depositStamp() });
+    unavailable.push(order);
+    return false;
+  });
+  if (unavailable.length) pushNotification(sellerId, "seller", "order", "도매몰 상품을 확인해 주세요", `${unavailable.map(order => `${order.id} ${order.wholesale.title}`).join(" / ")} — 품절·판매중지라 발주하지 않았어요. ‘상품 연결’에서 다른 상품으로 바꿔 주세요.`, ["카카오 알림톡", "내부 알림"]);
+  const total = payable.reduce((sum, order) => sum + wholesaleOrderTotal(order), 0);
+  if (!payable.length) return { ok: true, total: 0, paid: [], unavailable };
   const wallet = sellerDeposit(sellerId);
-  if (method === "deposit") {
-    if (wallet.balance < total) return { ok: false, total, short: total - wallet.balance };
-    wallet.balance -= total;
-    wallet.transactions.unshift({ id: `DP-WH-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, type: orders.length > 1 ? `도매몰 발주 결제 (${orders.length}건)` : "도매몰 발주 결제", amount: -total, orders: orders.map(order => order.id), reference: reference || orders[0]?.id || "", createdAt: depositStamp(), at: Date.now() });
-  }
-  orders.forEach(order => {
-    Object.assign(order, { paymentStatus: "paid", paymentMethod: method, status: "주문접수", forwardedAt: label || "방금 전" });
-    Object.assign(order.wholesale, { state: "queued", deducted: method === "deposit" ? wholesaleOrderTotal(order) : 0, paidAmount: wholesaleOrderTotal(order), paidBy: method, paidAt: depositStamp(), paidTs: Date.now(), batchRef: reference, holdReason: "" });
+  if (wallet.balance < total) return { ok: false, total, short: total - wallet.balance, orders: payable, unavailable };
+  wallet.balance -= total;
+  wallet.transactions.unshift({ id: `DP-WH-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, type: payable.length > 1 ? `도매몰 발주 결제 (${payable.length}건)` : "도매몰 발주 결제", amount: -total, orders: payable.map(order => order.id), reference: reference || payable[0]?.id || "", createdAt: depositStamp(), at: Date.now() });
+  payable.forEach(order => {
+    Object.assign(order, { paymentStatus: "paid", paymentMethod: "deposit", status: "주문접수", forwardedAt: label || "방금 전" });
+    Object.assign(order.wholesale, { state: "queued", deducted: wholesaleOrderTotal(order), paidAmount: wholesaleOrderTotal(order), paidBy: "deposit", paidAt: depositStamp(), paidTs: Date.now(), batchRef: reference, holdReason: "", holdKind: "" });
     delete order.bankChargeId;
   });
-  return { ok: true, total };
+  return { ok: true, total, paid: payable, unavailable };
 }
 function runWholesaleBatch({ slot = null, cutoffTs = Date.now(), manual = false } = {}) {
   reconcileWholesaleOrders();
@@ -8365,24 +8391,51 @@ function runWholesaleBatch({ slot = null, cutoffTs = Date.now(), manual = false 
     if (!bySeller.has(order.sellerLoginId)) bySeller.set(order.sellerLoginId, []);
     bySeller.get(order.sellerLoginId).push(order);
   });
-  const batch = { id: batchId, label, manual, at: depositStamp(), ts: Date.now(), sellers: 0, paid: 0, held: 0, amount: 0, heldSellers: [] };
+  const batch = { id: batchId, label, manual, at: depositStamp(), ts: Date.now(), sellers: 0, paid: 0, held: 0, soldout: 0, amount: 0, heldSellers: [] };
   bySeller.forEach((orders, sellerId) => {
     batch.sellers += 1;
     const result = deductWholesaleOrders(sellerId, orders, { reference: batchId, label: `${label} 발주` });
+    batch.soldout += result.unavailable.length;
     if (!result.ok) {
-      orders.forEach(order => Object.assign(order.wholesale, { state: "held", holdReason: `예치금 ${money(result.short)} 부족`, heldAt: depositStamp() }));
-      batch.held += orders.length; batch.heldSellers.push(sellerId);
-      pushNotification(sellerId, "seller", "money", "예치금이 부족해 도매몰 발주를 보류했어요", `${label} · ${orders.length}건 ${money(result.total)} 중 ${money(result.short)} 부족 — 충전하면 다음 회차(${wholesaleSlotText()})에 발주돼요.`, ["카카오 알림톡", "내부 알림"]);
+      result.orders.forEach(order => Object.assign(order.wholesale, { state: "held", holdKind: "deposit", holdReason: `예치금 ${money(result.short)} 부족`, heldAt: depositStamp() }));
+      batch.held += result.orders.length; batch.heldSellers.push(sellerId);
+      pushNotification(sellerId, "seller", "money", "예치금이 부족해 도매몰 발주를 보류했어요", `${label} · ${result.orders.length}건 ${money(result.total)} 중 ${money(result.short)} 부족 — 예치금을 충전하면 바로 발주 대기열에 올라가요.`, ["카카오 알림톡", "내부 알림"]);
       return;
     }
-    batch.paid += orders.length; batch.amount += result.total;
-    pushNotification(sellerId, "seller", "order", "도매몰 발주를 넣었어요", `${label} · ${orders.length}건 · 예치금 ${money(result.total)} 차감`, ["내부 알림"]);
+    if (!result.paid.length) return;
+    batch.paid += result.paid.length; batch.amount += result.total;
+    const changed = result.paid.filter(order => order.wholesale.priceNote).length;
+    pushNotification(sellerId, "seller", "order", "도매몰 발주를 넣었어요", `${label} · ${result.paid.length}건 · 예치금 ${money(result.total)} 차감${changed ? ` · 공급가가 바뀐 상품 ${changed}건` : ""}`, ["내부 알림"]);
   });
   settings.batches.unshift(batch);
   if (settings.batches.length > 60) settings.batches.length = 60;
   if (batch.paid) pushNotification("admin", "master", "order", `도매몰 발주 ${batch.paid}건이 들어왔어요`, `${label} · ${money(batch.amount)} · ‘도매몰 관리 → 발주 처리’에서 도매몰에 넣어 주세요.`, ["운영센터"]);
-  audit("도매몰 발주 회차", `${batchId} · ${label}${manual ? " (수동)" : ""} · 셀러 ${batch.sellers}명 · 발주 ${batch.paid}건 ${money(batch.amount)}${batch.held ? ` · 예치금 부족 보류 ${batch.held}건` : ""}`, batch.held ? "pending" : "done", "order");
+  audit("도매몰 발주 회차", `${batchId} · ${label}${manual ? " (수동)" : ""} · 셀러 ${batch.sellers}명 · 발주 ${batch.paid}건 ${money(batch.amount)}${batch.held ? ` · 예치금 부족 보류 ${batch.held}건` : ""}${batch.soldout ? ` · 품절·판매중지 보류 ${batch.soldout}건` : ""}`, batch.held || batch.soldout ? "pending" : "done", "order");
   return batch;
+}
+/* 예치금이 들어오면(카드 충전 · 무통장 입금 확인) 예치금 부족으로 보류된 도매몰 주문을 바로 발주 대기열에 올린다 */
+function retryHeldWholesale(sellerId) {
+  if (!wholesaleAutoOn(sellerId)) return 0;
+  const held = state.orders.filter(order => order.sellerLoginId === sellerId && isWholesaleOrder(order) && order.wholesale.state === "held" && order.wholesale.holdKind !== "soldout" && orderPaymentStatus(order) === "pending" && !["주문취소", "출고취소"].includes(order.status));
+  if (!held.length) return 0;
+  /* 들어온 예치금으로 오래된 주문부터 낼 수 있는 만큼만 (남는 주문은 계속 보류) */
+  let budget = sellerDeposit(sellerId).balance;
+  const pick = [];
+  held.sort((a, b) => Number(a.wholesale.receivedTs || 0) - Number(b.wholesale.receivedTs || 0)).forEach(order => {
+    if (!refreshWholesaleOrder(order).ok) { pick.push(order); return; } /* 품절은 deduct에서 품절 보류로 바뀐다 */
+    const total = wholesaleOrderTotal(order);
+    if (total <= budget) { pick.push(order); budget -= total; }
+  });
+  if (!pick.length) return 0;
+  const result = deductWholesaleOrders(sellerId, pick, { reference: `WR-${String(Date.now()).slice(-8)}`, label: "충전 확인 · 발주" });
+  const rest = held.filter(order => order.wholesale.state === "held" && order.wholesale.holdKind !== "soldout");
+  const restTotal = rest.reduce((sum, order) => sum + wholesaleOrderTotal(order), 0);
+  rest.forEach(order => { order.wholesale.holdReason = `예치금 ${money(Math.max(0, restTotal - sellerDeposit(sellerId).balance))} 부족`; });
+  if (!result.ok || !result.paid.length) return 0;
+  pushNotification(sellerId, "seller", "order", "보류된 도매몰 주문을 발주했어요", `예치금이 들어와 ${result.paid.length}건 ${money(result.total)}을 결제했어요. 두고 발주팀이 도매몰에 넣어요.`, ["내부 알림"]);
+  pushNotification("admin", "master", "order", `도매몰 발주 ${result.paid.length}건 (보류 해제)`, `${memberByLogin(sellerId)?.company || sellerId} · ${money(result.total)}`, ["운영센터"]);
+  audit("도매몰 보류 해제 · 발주", `${sellerId} · ${result.paid.length}건 · ${money(result.total)} 예치금 차감`, "done", "order");
+  return result.paid.length;
 }
 /* 평일 00:05 · 08:30이 지나면 그 회차를 한 번 실행한다 (실서비스는 연동 서버 스케줄러가 같은 일을 한다) */
 function maybeRunWholesaleBatches() {
@@ -8406,26 +8459,28 @@ function maybeRunWholesaleBatches() {
 function sellerWholesalePayable(loginId = currentAccount?.loginId || "seller") {
   return state.orders.filter(order => order.sellerLoginId === loginId && wholesaleRemappable(order) && !order.bankChargeId && !["주문취소", "출고취소"].includes(order.status));
 }
-function wholesaleNeedsPayment(order) { return wholesaleRemappable(order) && !order.bankChargeId && (order.wholesale.state === "held" || !wholesaleAutoOn(order.sellerLoginId)); }
+/* 회차를 기다리지 않고 지금 예치금으로 결제할 수 있는 도매몰 주문 (품절 보류 제외) */
+function wholesaleCanPayNow(order) { return wholesaleRemappable(order) && !order.bankChargeId && order.wholesale.holdKind !== "soldout"; }
+function wholesaleNeedsPayment(order) { return wholesaleRemappable(order) && !order.bankChargeId && order.wholesale.holdKind !== "soldout" && (order.wholesale.state === "held" || !wholesaleAutoOn(order.sellerLoginId)); }
+/* 도매몰 주문 결제: 예치금으로만 (신용카드·무통장입금은 두고 공급사 상품만). 모자라면 충전하러 보낸다. */
 function wholesalePayModal(ids) {
-  const orders = ids.map(id => state.orders.find(order => order.id === id && order.sellerLoginId === currentAccount?.loginId)).filter(order => order && wholesaleRemappable(order) && !order.bankChargeId);
+  const orders = ids.map(id => state.orders.find(order => order.id === id && order.sellerLoginId === currentAccount?.loginId)).filter(order => order && wholesaleCanPayNow(order));
   if (!orders.length) return showToast("결제할 도매몰 주문이 없어요.");
+  orders.forEach(order => refreshWholesaleOrder(order));
   const total = orders.reduce((sum, order) => sum + wholesaleOrderTotal(order), 0);
   const deposit = sellerDeposit();
+  const short = Math.max(0, total - deposit.balance);
   const malls = new Set(orders.map(order => order.wholesale.mallName));
   openModal(`<div class="pay-confirm wh-pay">
     <span class="pay-confirm-icon" aria-hidden="true">₩</span>
-    <h2>${orders.length > 1 ? `도매몰 주문 ${orders.length}건을 결제할까요?` : "이 도매몰 주문을 결제할까요?"}</h2>
-    <p>결제하면 두고 발주팀이 도매몰 ${malls.size}곳에 발주를 넣어요. 도매몰 주문은 두고 수수료가 없어요.</p>
-    <div class="pay-confirm-list">${orders.map(order => `<div><span><b>${escapeHtml(order.wholesale.title)}</b><small>${escapeHtml(order.wholesale.mallName)} · ${escapeHtml(order.id)} · 쇼핑몰 ${order.qty}개 → 발주 ${order.wholesale.units}개</small><small class="pay-ship-line">공급가 ${money(order.wholesale.unitCost)} × ${order.wholesale.units} · ${order.wholesale.shipping ? `배송비 ${money(order.wholesale.shipping)}` : "무료배송"}${order.wholesale.fee ? ` · 대행 ${money(order.wholesale.fee)}` : ""}</small></span><strong>${money(wholesaleOrderTotal(order))}</strong></div>`).join("")}</div>
+    <h2>${orders.length > 1 ? `도매몰 주문 ${orders.length}건을 예치금으로 결제할까요?` : "이 도매몰 주문을 예치금으로 결제할까요?"}</h2>
+    <p>결제하면 두고 발주팀이 도매몰 ${malls.size}곳에 대신 발주하고, 도매몰 송장이 나오면 주문에 넣어 드려요. 도매몰 주문은 두고 수수료가 없어요.</p>
+    <div class="pay-confirm-list">${orders.map(order => `<div><span><b>${escapeHtml(order.wholesale.title)}</b><small>${escapeHtml(order.wholesale.mallName)} · ${escapeHtml(order.id)} · 쇼핑몰 ${order.qty}개 → 발주 ${order.wholesale.units}개</small><small class="pay-ship-line">공급가 ${money(order.wholesale.unitCost)} × ${order.wholesale.units} · ${order.wholesale.shipping ? `배송비 ${money(order.wholesale.shipping)}` : "무료배송"}${order.wholesale.fee ? ` · 대행 ${money(order.wholesale.fee)}` : ""}</small>${order.wholesale.priceNote ? `<small class="wh-held-note">${escapeHtml(order.wholesale.priceNote)}</small>` : ""}</span><strong>${money(wholesaleOrderTotal(order))}</strong></div>`).join("")}</div>
     <form id="whPayForm" class="pay-confirm-form" data-ids="${escapeHtml(orders.map(order => order.id).join(","))}" data-total="${total}" novalidate>
-      <div class="bulk-pay-methods wh-pay-methods">
-        <label><input type="radio" name="paymentMethod" value="deposit" ${deposit.balance >= total ? "checked" : ""}><span><b>예치금</b><small>잔액 ${money(deposit.balance)}${deposit.balance < total ? ` · ${money(total - deposit.balance)} 부족` : ""}</small></span></label>
-        <label class="${CARD_PAYMENT_READY ? "" : "pay-off"}"><input type="radio" name="paymentMethod" value="card" ${CARD_PAYMENT_READY ? "" : "disabled"}><span><b>신용카드</b><small>${CARD_PAYMENT_READY ? "카드로 바로 결제" : "PG 연결 후 사용"}</small></span></label>
-        <label><input type="radio" name="paymentMethod" value="bank" ${deposit.balance < total ? "checked" : ""}><span><b>무통장입금</b><small>입금 확인되면 발주</small></span></label>
-      </div>
+      <div class="wh-deposit-only"><b>예치금으로만 결제돼요</b><span>어드민플러스 도매몰 주문은 두고가 도매몰에 먼저 결제하는 선결제라 예치금만 쓸 수 있어요. 신용카드·무통장입금은 두고 공급사 상품에서 쓸 수 있어요.</span></div>
+      <dl class="wh-pay-wallet ${short ? "short" : ""}"><div><dt>예치금 잔액</dt><dd>${money(deposit.balance)}</dd></div><div><dt>결제 후 잔액</dt><dd>${short ? `<em>${money(short)} 부족</em>` : money(deposit.balance - total)}</dd></div></dl>
       <div class="pay-confirm-total"><span>결제 금액</span><strong>${money(total)}</strong></div>
-      <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>아니요</button><button type="submit" class="primary-button">결제할게요</button></div>
+      <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>아니요</button>${short ? `<button type="button" class="primary-button" data-action="deposit-view" data-view="charge">예치금 충전하러 가기</button>` : `<button type="submit" class="primary-button">예치금으로 결제</button>`}</div>
     </form>
   </div>`);
   document.querySelector("#modal .modal")?.classList.add("pay-confirm-modal");
@@ -8434,7 +8489,7 @@ function wholesalePayModal(ids) {
 function requestBankPaymentForOrders(ids) {
   const orders = ids.map(id => state.orders.find(order => order.id === id && order.sellerLoginId === currentAccount?.loginId)).filter(order => order && !order.bankChargeId);
   const rows = orders.map(order => {
-    if (isWholesaleOrder(order)) return wholesaleRemappable(order) ? { order, amount: wholesaleOrderTotal(order) } : null;
+    if (isWholesaleOrder(order)) return null; /* 도매몰 주문은 예치금으로만 */
     const check = orderPaymentCheck(order);
     return check.ok ? { order, amount: check.payTotal } : null;
   }).filter(Boolean);
@@ -8449,7 +8504,7 @@ function requestBankPaymentForOrders(ids) {
   pushNotification("admin", "master", "money", "주문 결제 무통장입금 신청", `${depositor} · ${money(amount)} · 주문 ${rows.length}건`, ["운영센터"]);
   audit("주문 무통장입금 신청", `${charge.id} · 주문 ${rows.length}건 · ${money(amount)} · 입금자 ${depositor}`, "pending", "money");
   saveState(); render(); updateAccountUI();
-  openModal(`<div class="bulk-pay-done wh-bank-done"><span class="complete-icon">₩</span><h2>아래 계좌로 입금해 주세요</h2><p>두고가 입금을 확인하면 주문 ${rows.length}건을 바로 결제하고 ${rows.some(row => isWholesaleOrder(row.order)) ? "도매몰·공급사에" : "공급사에"} 발주해요.</p>
+  openModal(`<div class="bulk-pay-done wh-bank-done"><span class="complete-icon">₩</span><h2>아래 계좌로 입금해 주세요</h2><p>두고가 입금을 확인하면 주문 ${rows.length}건을 바로 결제하고 공급사에 전달해요.</p>
     <dl class="wh-bank-box"><div><dt>입금 계좌</dt><dd>${escapeHtml(DEPOSIT_ACCOUNT.bank)} ${escapeHtml(DEPOSIT_ACCOUNT.number)}</dd></div><div><dt>예금주</dt><dd>${escapeHtml(DEPOSIT_ACCOUNT.holder)}</dd></div><div><dt>입금자명</dt><dd>${escapeHtml(depositor)}</dd></div><div><dt>입금할 금액</dt><dd><b>${money(amount)}</b></dd></div><div><dt>입금 기한</dt><dd>${escapeHtml(charge.dueAt)}까지</dd></div></dl>
     <div class="modal-actions"><button type="button" class="primary-button" data-close-modal>확인</button></div></div>`);
 }
@@ -8462,7 +8517,6 @@ function settleChargeOrders(sellerId, charge) {
     const order = state.orders.find(item => item.id === id && item.sellerLoginId === sellerId);
     if (!order || order.bankChargeId !== charge.id) return;
     delete order.bankChargeId;
-    if (isWholesaleOrder(order)) { if (wholesaleRemappable(order) && deductWholesaleOrders(sellerId, [order], { reference: charge.id, label: "무통장 확인 · 발주" }).ok) done += 1; return; }
     if (orderMappingStatus(order) === "mapped" && orderPaymentStatus(order) === "pending" && payOrderToSupplier(order, "deposit").ok) done += 1;
   });
   if (done) pushNotification(sellerId, "seller", "order", "입금 확인 · 주문을 결제했어요", `${charge.id} · 주문 ${done}건을 예치금으로 결제해 발주했어요.`, ["내부 알림"]);
@@ -8515,16 +8569,21 @@ const WH_CONN_CHIPS = { none: ["발주 안 함", "red"], auto: ["두고 자동 �
 /* 발주 방식 (두고 공급사 자동 결제 · 도매몰 자동 발주) */
 function wholesaleOrderModeStrip() {
   const loginId = currentAccount?.loginId || "seller";
-  const doogoOn = doogoAutoPayOn(loginId), whOn = wholesaleAutoOn(loginId);
+  const doogoOn = doogoAutoPayOn(loginId), whOn = wholesaleAutoOn(loginId), trackOn = autoTrackingPushEnabled(loginId);
   const waiting = state.orders.filter(order => order.sellerLoginId === loginId && wholesaleRemappable(order));
   const held = waiting.filter(order => order.wholesale.state === "held");
   const needAmount = waiting.reduce((sum, order) => sum + wholesaleOrderTotal(order), 0);
   const balance = sellerDeposit(loginId).balance;
-  const sw = (key, on) => `<button type="button" class="automation-switch ${on ? "on" : ""}" data-action="wh-toggle" data-key="${key}" aria-pressed="${on}"><i></i>${on ? "켜짐" : "꺼짐"}</button>`;
-  return `<section class="panel wh-panel wh-mode-x">
-    <div class="wh-mode-row"><span><b>두고 공급사 주문 자동 결제</b><small>${doogoOn ? "매핑된 주문을 예치금으로 바로 결제해 공급사에 넘겨요. 잔액이 모자라면 결제 대기에 남아요." : "꺼져 있어요. 주문마다 ‘결제 대기’에서 예치금·카드·무통장입금으로 직접 결제해요."}</small></span>${sw("autoPayDoogo", doogoOn)}</div>
-    <div class="wh-mode-row"><span><b>도매몰 주문 자동 발주</b><small>${whOn ? `평일 00:05·08:30 회차에 예치금에서 빼고 두고 발주팀이 도매몰에 넣어요. 다음 회차 <b>${escapeHtml(wholesaleSlotText())}</b>` : "꺼져 있어요. 도매몰 주문도 주문마다 직접 결제하면 발주돼요."}</small></span>${sw("wholesaleAutoOrder", whOn)}</div>
-    <div class="wh-mode-wallet ${balance < needAmount ? "short" : ""}"><span>예치금</span><b>${money(balance)}</b><small>${waiting.length ? `도매몰 발주 대기 ${waiting.length}건 · ${money(needAmount)}${held.length ? ` · <em>보류 ${held.length}건</em>` : ""}` : "도매몰 발주 대기 없음"}</small><div class="wh-mode-actions"><button type="button" class="text-button" data-action="deposit-view" data-view="charge">충전하기</button>${sellerWholesalePayable(loginId).filter(wholesaleNeedsPayment).length ? `<button type="button" class="small-button approve" data-action="wh-pay" data-ids="${escapeHtml(sellerWholesalePayable(loginId).filter(wholesaleNeedsPayment).map(order => order.id).join(","))}">지금 결제</button>` : ""}</div></div>
+  const payable = sellerWholesalePayable(loginId).filter(wholesaleNeedsPayment);
+  const sw = (on, attrs) => `<button type="button" class="automation-switch ${on ? "on" : ""}" ${attrs} aria-pressed="${on}"><i></i>${on ? "켜짐" : "꺼짐"}</button>`;
+  return `<section class="panel wh-mode" aria-label="발주 방식">
+    <div class="wh-mode-head"><b>발주 방식</b><span>도매몰(어드민플러스) 주문은 <em>예치금으로만</em> 결제돼요 · 두고 공급사 상품은 신용카드·무통장입금도 돼요</span></div>
+    <div class="wh-mode-grid">
+      <div class="wh-mode-row"><span><b>두고 공급사 주문 자동 결제</b><small>${doogoOn ? "매핑된 주문을 예치금으로 바로 결제해 공급사에 넘겨요." : "꺼짐 · 주문마다 예치금·신용카드·무통장입금으로 직접 결제해요."}</small></span>${sw(doogoOn, `data-action="wh-toggle" data-key="autoPayDoogo"`)}</div>
+      <div class="wh-mode-row"><span><b>도매몰 주문 자동 발주</b><small>${whOn ? `평일 00:05·08:30 회차에 예치금에서 빼고 두고가 대신 발주해요 · 다음 <b>${escapeHtml(wholesaleSlotText())}</b>` : "꺼짐 · 도매몰 주문마다 예치금으로 결제하면 발주돼요."}</small></span>${sw(whOn, `data-action="wh-toggle" data-key="wholesaleAutoOrder"`)}</div>
+      <div class="wh-mode-row"><span><b>송장 자동 쇼핑몰 전송</b><small>${trackOn ? "공급사·도매몰 송장이 들어오면 10분마다 쇼핑몰로 자동 전송해요." : "꺼짐 · 송장이 들어오면 ‘쇼핑몰 전송’을 눌러 보내요."}</small></span>${sw(trackOn, `data-action="toggle-auto-tracking"`)}</div>
+    </div>
+    <div class="wh-mode-wallet ${balance < needAmount ? "short" : ""}"><span>예치금</span><b>${money(balance)}</b><small>${waiting.length ? `도매몰 발주 대기 ${waiting.length}건 · ${money(needAmount)}${held.length ? ` · <em>보류 ${held.length}건</em>` : ""}${balance < needAmount ? ` · <em>${money(needAmount - balance)} 부족</em>` : ""}` : "도매몰 발주 대기 없음"}</small><div class="wh-mode-actions"><button type="button" class="secondary-button" data-action="deposit-view" data-view="charge">예치금 충전</button>${payable.length ? `<button type="button" class="small-button approve" data-action="wh-pay" data-ids="${escapeHtml(payable.map(order => order.id).join(","))}">보류 ${payable.length}건 결제</button>` : ""}</div></div>
   </section>`;
 }
 function wholesaleItemOptionsMarkup(mallId, query = "", selectedId = "") {
@@ -8580,7 +8639,7 @@ function shopConnectionPanel() {
   const pct = base.length ? Math.round(connected / base.length * 100) : 0;
   const listings = shopListings(loginId);
   return `<section class="panel wh-panel wh-table-panel" id="whTablePanel">
-    <div class="panel-head"><div><h3>상품 연결표</h3><p>쇼핑몰 옵션마다 공급처를 한 번 정해 두면, 주문이 들어올 때 그 공급처로 자동 발주돼요. <b>연결 안 된 옵션은 발주하지 않아요.</b></p></div><button type="button" class="secondary-button" data-action="wh-import-listings">내 쇼핑몰 상품 불러오기</button></div>
+    <div class="panel-head"><div><h3>상품 연결표</h3><p>쇼핑몰 옵션마다 공급처를 한 번 정해 두면, 주문이 들어올 때 그 공급처로 자동 발주돼요. <b>연결 안 된 옵션은 발주하지 않아요.</b> 도매몰 상품은 예치금으로 선결제하면 두고가 대신 발주하고 송장까지 넣어 드려요.</p></div><button type="button" class="secondary-button" data-action="wh-import-listings">내 쇼핑몰 상품 불러오기</button></div>
     <div class="wh-progress"><div><b>${connected}</b><span> / ${base.length} 연결됨</span>${listings.length ? `<small>쇼핑몰 상품 ${listings.length}개 불러옴 · ${escapeHtml(state.shopListingsAt?.[loginId] || "")}</small>` : `<small>‘내 쇼핑몰 상품 불러오기’를 누르면 아직 주문이 없는 옵션도 미리 연결할 수 있어요.</small>`}</div><span class="wh-bar" role="img" aria-label="연결 ${pct}%"><em style="width:${pct}%"></em></span></div>
     <div class="wh-table-tools"><label class="mapping-picker-search"><span>⌕</span><input type="search" data-wh-table-search placeholder="상품명·옵션·코드로 찾기" value="${escapeHtml(whTableFilter.query)}"></label>
       <label class="wh-check"><input type="checkbox" data-wh-filter="unmappedOnly" ${whTableFilter.unmappedOnly ? "checked" : ""}><span>연결 안 된 상품만 보기</span></label>
@@ -8667,6 +8726,7 @@ function saveWholesaleMapping({ code, mallId, itemId, qtyPer = 1, name = "", cha
     channel: mapping.channel || sample?.channel || listing?.channel || channel,
     target: "wholesale", status: "도매몰연결", productId: "", optionId: "", optionName: "", itemKey: "", followWinner: false,
     mallId, wholesaleItemId: itemId, qtyPer: per, supplier: mall.name, supplierLoginId: "", unitCost: Number(item.cost || 0), shippingCost: Number(item.shipping || 0),
+    itemSnapshot: { id: item.id, mallId, code: item.code || "", name: item.name, option: item.option || "", cost: Number(item.cost || 0), shipping: Number(item.shipping || 0) },
     mappedAt: stamp, confirmed: false, confirmedAt: "", via: "manual"
   });
   const settings = sellerAutomationSettings(loginId);
@@ -8745,7 +8805,7 @@ function sellerWholesaleRequestTemplate() {
   };
   const top = ranking.slice(0, 10), rest = ranking.slice(10);
   const statusChip = status => ({ pending: `<span class="wh-chip orange">확인 중</span>`, approved: `<span class="wh-chip green">연결 완료</span>`, rejected: `<span class="wh-chip red">반려</span>` })[status] || "";
-  return `${sectionHero("공급처 추가", "거래하고 싶은 도매몰(어드민플러스 등)을 신청하세요. 두고가 공급처와 발주 양식을 확인하고 내 계정에 연결해 드려요. 연결되면 ‘상품 연결’에서 쇼핑몰 옵션과 이어 주세요.")}
+  return `${sectionHero("공급처 추가", "거래하고 싶은 도매몰(어드민플러스 등)을 신청하세요. 두고가 공급처와 발주 양식을 확인하고 내 계정에 연결해 드려요. 연결되면 ‘상품 연결’에서 쇼핑몰 옵션과 이어 주세요. 도매몰 주문은 예치금으로 선결제하면 두고가 대신 발주하고 송장까지 받아 드려요.")}
     <div class="wh-request-grid">
       <section class="panel wh-panel wh-request-form"><div class="panel-head"><div><h3>공급처 신청</h3><p>보통 영업일 1~2일 안에 확인해요. 결과는 알림으로 알려 드려요.</p></div></div>
         <form id="whRequestForm" class="form-grid" novalidate>
@@ -8786,25 +8846,26 @@ function wholesaleOrderActions(order) {
   const cancel = sellerCanCancelOrder(order) ? `<button class="text-button refund-link" data-action="seller-cancel-order" data-id="${order.id}">주문 취소</button>` : "";
   const label = `<small class="status-sub">${escapeHtml(w.mallName || "도매몰")} · ${escapeHtml(w.title || "")} × ${Number(w.units || 0)} · ${money(wholesaleOrderTotal(order))}</small>`;
   if (charge && charge.status === "입금 대기") return `<span class="mapping-status payment">무통장 입금 확인 중</span><small class="status-sub">${money(charge.amount)} · 입금자 ${escapeHtml(charge.depositor || "")}</small>${detail}`;
-  if (w.state === "held") return `<span class="mapping-status unmapped">예치금 부족 · 발주 보류</span>${label}<button class="small-button approve" data-action="wh-pay" data-ids="${order.id}">지금 결제</button><button class="text-button" data-action="wh-goto-row" data-code="${escapeHtml(order.externalProductCode || "")}">연결 변경</button>${detail}${cancel}`;
+  if (w.state === "held" && w.holdKind === "soldout") return `<span class="mapping-status unmapped">품절 · 발주 보류</span><small class="status-sub">${escapeHtml(w.holdReason || "도매몰 상품을 확인해 주세요")}</small>${label}<button class="small-button approve" data-action="wh-goto-row" data-code="${escapeHtml(order.externalProductCode || "")}">다른 상품으로 연결</button>${detail}${cancel}`;
+  if (w.state === "held") return `<span class="mapping-status unmapped">예치금 부족 · 발주 보류</span><small class="status-sub">예치금을 충전하면 바로 발주 대기열에 올라가요</small>${label}<button class="small-button approve" data-action="wh-pay" data-ids="${order.id}">예치금으로 결제</button><button class="text-button" data-action="wh-goto-row" data-code="${escapeHtml(order.externalProductCode || "")}">연결 변경</button>${detail}${cancel}`;
   if (w.state === "waiting") return wholesaleAutoOn(order.sellerLoginId)
-    ? `<span class="mapping-status payment">도매몰 발주 대기</span><small class="status-sub">다음 회차 ${escapeHtml(wholesaleSlotText())}에 예치금 차감</small>${label}<button class="text-button" data-action="wh-pay" data-ids="${order.id}">지금 결제</button><button class="text-button" data-action="wh-goto-row" data-code="${escapeHtml(order.externalProductCode || "")}">연결 변경</button>${detail}${cancel}`
-    : `<span class="mapping-status payment">도매몰 결제 대기</span>${label}<button class="small-button approve" data-action="wh-pay" data-ids="${order.id}">결제 후 발주</button><button class="text-button" data-action="wh-goto-row" data-code="${escapeHtml(order.externalProductCode || "")}">연결 변경</button>${detail}${cancel}`;
+    ? `<span class="mapping-status payment">도매몰 발주 대기</span><small class="status-sub">다음 회차 ${escapeHtml(wholesaleSlotText())}에 예치금 차감 · 지금 결제하면 바로 발주</small>${label}<button class="text-button" data-action="wh-pay" data-ids="${order.id}">지금 결제</button><button class="text-button" data-action="wh-goto-row" data-code="${escapeHtml(order.externalProductCode || "")}">연결 변경</button>${detail}${cancel}`
+    : `<span class="mapping-status payment">도매몰 결제 대기</span>${label}<button class="small-button approve" data-action="wh-pay" data-ids="${order.id}">예치금으로 결제</button><button class="text-button" data-action="wh-goto-row" data-code="${escapeHtml(order.externalProductCode || "")}">연결 변경</button>${detail}${cancel}`;
   if (w.state === "queued") return `<span class="mapping-status payment">도매몰 발주 중</span><small class="status-sub">결제 완료 · 두고 발주팀이 ${escapeHtml(w.mallName || "도매몰")}에 넣고 있어요</small>${detail}${cancel}`;
   const ask = `<button class="text-button refund-link" data-action="open-support-chat">취소·반품 문의</button>`;
   if (!order.tracking) return `<span class="waiting-text">${escapeHtml(w.mallName || "도매몰")} 출고 준비 중</span>${w.mallOrderNo ? `<small class="status-sub">도매몰 주문번호 ${escapeHtml(w.mallOrderNo)}</small>` : ""}${detail}${ask}`;
   return `${trackingSourceChip(order)}<span class="tracking-inline">${escapeHtml(order.carrier)}<strong>${escapeHtml(order.tracking)}</strong></span>${orderNeedsTrackingPush(order) ? `${orderAutoTrackingHint(order)}<button class="small-button approve push-tracking-button" data-action="push-tracking" data-id="${order.id}">${orderWaitsAutoTracking(order) ? "지금 전송" : "쇼핑몰 전송"}</button>` : trackingSentMarkup(order)}${detail}${order.status === "배송완료" ? "" : ask}`;
 }
 /* 주문 관리 ③ 결제하기: 직접 결제해야 하는 도매몰 주문 (자동 발주를 껐거나 예치금 부족으로 보류) + 무통장 확인 중 */
-function wholesalePaymentRows() { return currentSellerOrders().filter(order => isWholesaleOrder(order) && (wholesaleNeedsPayment(order) || Boolean(order.bankChargeId))); }
+function wholesalePaymentRows() { return currentSellerOrders().filter(order => isWholesaleOrder(order) && (wholesaleNeedsPayment(order) || Boolean(order.bankChargeId) || (order.wholesale.state === "held" && order.wholesale.holdKind === "soldout"))); }
 function wholesalePaymentPanel() {
   const rows = wholesalePaymentRows();
   if (!rows.length) return "";
   const payable = rows.filter(wholesaleNeedsPayment);
   const total = payable.reduce((sum, order) => sum + wholesaleOrderTotal(order), 0);
-  return `<section class="panel wh-panel wh-pay-panel"><div class="panel-head"><div><h3>도매몰 주문 결제</h3><p>${wholesaleAutoOn() ? "예치금이 모자라 보류된 도매몰 주문이에요. 충전하면 다음 회차에 자동으로 발주되고, 지금 결제하면 바로 발주 대기열에 올라가요." : "도매몰 자동 발주가 꺼져 있어요. 결제하면 두고 발주팀이 도매몰에 넣어요."} 도매몰 주문은 두고 수수료가 없어요.</p></div><span class="chip purple">${rows.length}건</span></div>
-    <div class="wh-pay-list">${rows.map(order => `<article class="wh-queue-row"><div class="wh-queue-main"><b>${escapeHtml(order.wholesale.title)} × ${order.wholesale.units}</b><small>${escapeHtml(order.wholesale.mallName)} · ${escapeHtml(order.channel || "")} · ${escapeHtml(order.id)} · ${escapeHtml(order.recipientName || "")}</small>${order.wholesale.state === "held" ? `<small class="wh-held-note">${escapeHtml(order.wholesale.holdReason || "예치금 부족")} · 보류</small>` : ""}</div><div class="wh-queue-amount"><span>${order.bankChargeId ? "무통장 확인 중" : "결제 금액"}</span><strong>${money(wholesaleOrderTotal(order))}</strong></div><div class="wh-queue-actions">${order.bankChargeId ? "" : `<button type="button" class="text-button" data-action="wh-pay" data-ids="${order.id}">이것만 결제</button>`}<button type="button" class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button></div></article>`).join("")}</div>
-    ${payable.length ? `<div class="pay-select-bar"><div><span>결제할 도매몰 주문 <b>${payable.length}건</b></span><strong>${money(total)}</strong></div><button type="button" class="primary-button" data-action="wh-pay" data-ids="${escapeHtml(payable.map(order => order.id).join(","))}">${payable.length}건 결제하기</button></div>` : ""}
+  return `<section class="panel wh-panel wh-pay-panel"><div class="panel-head"><div><h3>도매몰 주문 결제</h3><p>${wholesaleAutoOn() ? "예치금이 모자라 보류된 도매몰 주문이에요. 예치금을 충전하면 바로 발주 대기열에 올라가요." : "도매몰 자동 발주가 꺼져 있어요. 예치금으로 결제하면 두고 발주팀이 도매몰에 넣어요."} 도매몰(어드민플러스) 주문은 <b>예치금으로만</b> 결제돼요.</p></div><span class="chip purple">${rows.length}건</span></div>
+    <div class="wh-pay-list">${rows.map(order => `<article class="wh-queue-row"><div class="wh-queue-main"><b>${escapeHtml(order.wholesale.title)} × ${order.wholesale.units}</b><small>${escapeHtml(order.wholesale.mallName)} · ${escapeHtml(order.channel || "")} · ${escapeHtml(order.id)} · ${escapeHtml(order.recipientName || "")}</small>${order.wholesale.state === "held" ? `<small class="wh-held-note">${escapeHtml(order.wholesale.holdReason || "예치금 부족")} · 보류</small>` : ""}</div><div class="wh-queue-amount"><span>${order.bankChargeId ? "무통장 확인 중" : "결제 금액"}</span><strong>${money(wholesaleOrderTotal(order))}</strong></div><div class="wh-queue-actions">${order.bankChargeId || !wholesaleNeedsPayment(order) ? `<button type="button" class="text-button" data-action="wh-goto-row" data-code="${escapeHtml(order.externalProductCode || "")}">연결 변경</button>` : `<button type="button" class="text-button" data-action="wh-pay" data-ids="${order.id}">이것만 결제</button>`}<button type="button" class="text-button" data-action="order-detail" data-id="${order.id}">주문 상세</button></div></article>`).join("")}</div>
+    ${payable.length ? `<div class="pay-select-bar"><div><span>결제할 도매몰 주문 <b>${payable.length}건</b></span><strong>${money(total)}</strong></div><button type="button" class="primary-button" data-action="wh-pay" data-ids="${escapeHtml(payable.map(order => order.id).join(","))}">${payable.length}건 예치금으로 결제</button></div>` : ""}
   </section>`;
 }
 /* 도매몰 주문 상세: 쇼핑몰 주문 → 예치금 차감(회차) → 두고 발주팀이 도매몰에 발주 → 도매몰 송장 → 쇼핑몰 전송 */
@@ -8818,7 +8879,7 @@ function wholesaleOrderDetailModal(order) {
   const payText = order.bankChargeId ? "무통장 입금 확인 중" : orderPaymentStatus(order) === "paid" ? `결제 완료 · ${w.paidBy === "card" ? "신용카드" : w.paidBy === "bank" ? "무통장입금" : "예치금"}${w.paidAt ? ` · ${escapeHtml(w.paidAt)}` : ""}` : w.state === "held" ? `보류 · ${escapeHtml(w.holdReason || "예치금 부족")}` : wholesaleAutoOn(order.sellerLoginId) ? `회차 대기 · ${escapeHtml(wholesaleSlotText())}` : "직접 결제 대기";
   const seller = activeRole === "seller";
   const actions = seller
-    ? `${wholesaleNeedsPayment(order) ? `<button class="primary-button" data-action="wh-pay" data-ids="${order.id}">결제 후 발주</button>` : ""}${wholesaleRemappable(order) && !order.bankChargeId ? `<button class="secondary-button" data-action="wh-goto-row" data-code="${escapeHtml(order.externalProductCode || "")}">연결 변경</button>` : ""}${orderNeedsTrackingPush(order) ? `<button class="primary-button" data-action="push-tracking" data-id="${order.id}">쇼핑몰에 송장 보내기</button>` : ""}${sellerCanCancelOrder(order) ? `<button class="refund-button" data-action="seller-cancel-order" data-id="${order.id}">주문 취소</button>` : !canceled && order.status !== "배송완료" ? `<button class="secondary-button" data-action="open-support-chat">취소·반품 문의</button>` : ""}`
+    ? `${wholesaleCanPayNow(order) ? `<button class="primary-button" data-action="wh-pay" data-ids="${order.id}">예치금으로 결제</button>` : ""}${wholesaleRemappable(order) && !order.bankChargeId ? `<button class="secondary-button" data-action="wh-goto-row" data-code="${escapeHtml(order.externalProductCode || "")}">연결 변경</button>` : ""}${orderNeedsTrackingPush(order) ? `<button class="primary-button" data-action="push-tracking" data-id="${order.id}">쇼핑몰에 송장 보내기</button>` : ""}${sellerCanCancelOrder(order) ? `<button class="refund-button" data-action="seller-cancel-order" data-id="${order.id}">주문 취소</button>` : !canceled && order.status !== "배송완료" ? `<button class="secondary-button" data-action="open-support-chat">취소·반품 문의</button>` : ""}`
     : activeRole === "master" ? `${w.state === "queued" ? `<button class="primary-button" data-action="wh-mark-placed" data-id="${order.id}">발주 완료</button>` : ""}${w.state === "placed" && !order.tracking ? `<button class="primary-button" data-action="wh-tracking" data-id="${order.id}">송장 입력</button>` : ""}` : "";
   openModal(`<div class="order-detail-head"><div><span>DOOGO ORDER · 도매몰</span><h2>${escapeHtml(order.id)}</h2><p>${escapeHtml(order.createdAt || "")} · ${channelMark(channelIdFromName(order.channel), true)} ${escapeHtml(order.channel || "")}${order.channelOrderNo ? ` · ${escapeHtml(order.channelOrderNo)}` : ""}</p></div>${statusChip(order.status)}</div>
     ${canceled ? "" : `<div class="order-status-timeline">${timeline}</div>`}
@@ -8833,7 +8894,7 @@ function wholesaleOrderDetailModal(order) {
 function wholesaleProgressLabel(order) {
   const w = order.wholesale || {};
   if (order.bankChargeId) return "무통장 입금 확인 중";
-  if (w.state === "held") return "도매몰 발주 보류 (예치금 부족)";
+  if (w.state === "held") return w.holdKind === "soldout" ? "도매몰 품절 · 연결 변경 필요" : "도매몰 발주 보류 (예치금 부족)";
   if (w.state === "waiting") return wholesaleAutoOn(order.sellerLoginId) ? `도매몰 발주 대기 · ${wholesaleSlotText()}` : "도매몰 결제 대기";
   if (w.state === "queued") return "도매몰 발주 중";
   if (order.status === "배송중" || order.status === "배송완료") return "도매몰 송장 등록 완료";
@@ -8871,13 +8932,14 @@ function masterWholesaleTemplate() {
   const settings = wholesaleSettings();
   const queued = state.orders.filter(order => order.wholesale?.state === "queued");
   const placed = state.orders.filter(order => order.wholesale?.state === "placed" && !order.tracking);
-  const held = state.orders.filter(order => order.wholesale?.state === "held");
-  const waiting = state.orders.filter(order => order.wholesale?.state === "waiting");
+  const held = state.orders.filter(order => order.wholesale?.state === "held" && order.wholesale.holdKind !== "soldout" && orderMappingStatus(order) === "wholesale");
+  const soldout = state.orders.filter(order => orderMappingStatus(order) === "wholesale" && order.wholesale?.state === "held" && order.wholesale.holdKind === "soldout");
+  const waiting = state.orders.filter(order => order.wholesale?.state === "waiting" && orderMappingStatus(order) === "wholesale");
   const pendingRequests = wholesaleRequests().filter(request => request.status === "pending");
   const month = wholesaleMonthStats();
   const tabs = [["queue", "발주 처리", queued.length + placed.length], ["requests", "공급처 신청", pendingRequests.length], ["malls", "도매몰 · 상품", wholesaleMalls().length], ["batches", "회차 기록", settings.batches.length], ["fee", "수수료 · 전환", 0]];
   let body = "";
-  if (whMasterTab === "queue") body = masterWholesaleQueue(queued, placed, held, waiting);
+  if (whMasterTab === "queue") body = masterWholesaleQueue(queued, placed, held, waiting, soldout);
   if (whMasterTab === "requests") body = masterWholesaleRequests();
   if (whMasterTab === "malls") body = masterWholesaleMalls();
   if (whMasterTab === "batches") body = `<section class="panel wh-panel wh-panel"><div class="panel-head"><div><h3>발주 회차 기록</h3><p>평일 00:05(1차) · 08:30(2차)마다 셀러 예치금에서 공급가×수량+배송비를 빼고 발주 대기열에 올려요. 잔액이 모자란 셀러는 그 회차 전체를 보류해요.</p></div></div>
@@ -8887,7 +8949,7 @@ function masterWholesaleTemplate() {
     <div class="wh-master-kpis">
       <div><span>이번 달 도매몰 거래액</span><b>${money(month.gmv)}</b><small>${month.count}건 · 셀러 ${month.sellers}명 · 도매몰 ${month.malls}곳</small></div>
       <div class="${queued.length ? "warn" : ""}"><span>도매몰에 넣을 발주</span><b>${queued.length}건</b><small>송장 기다리는 발주 ${placed.length}건</small></div>
-      <div class="${held.length ? "bad" : ""}"><span>예치금 부족 보류</span><b>${held.length}건</b><small>셀러 ${new Set(held.map(order => order.sellerLoginId)).size}명 · 충전하면 다음 회차</small></div>
+      <div class="${held.length ? "bad" : ""}"><span>예치금 부족 보류</span><b>${held.length}건</b><small>셀러 ${new Set(held.map(order => order.sellerLoginId)).size}명 · 충전하면 바로 발주${soldout.length ? ` · 품절 보류 ${soldout.length}건` : ""}</small></div>
       <div><span>다음 회차</span><b>${escapeHtml(wholesaleSlotText())}</b><small>회차 전 발주 대기 ${waiting.length}건</small></div>
     </div>
     <div class="wh-api-note"><b>어드민플러스 API 연동 준비 중</b><span>API 문서 확인 뒤 연동 서버에서 상품·가격 자동 확인과 발주 자동 등록을 붙여요. 지금은 도매몰 상품을 엑셀로 등록하고, 회차마다 ‘발주서 내려받기’로 도매몰에 올려 주세요.</span></div>
@@ -8902,15 +8964,25 @@ function masterWholesaleOrderLine(order, mode) {
     : mode === "placed" ? `<button type="button" class="small-button approve" data-action="wh-tracking" data-id="${order.id}">송장 입력</button>` : "";
   return `<article class="wh-queue-row"><div class="wh-queue-main"><b>${escapeHtml(w.title)} × ${w.units}</b><small>${escapeHtml(order.id)} · ${escapeHtml(seller)} · ${escapeHtml(order.channel || "")} ${escapeHtml(order.channelOrderNo || "")}</small><small>받는 분 ${escapeHtml(order.recipientName || order.customer || "")} · ${escapeHtml(String(order.address || "").slice(0, 28))}${String(order.address || "").length > 28 ? "…" : ""}</small>${w.mallOrderNo ? `<small>도매몰 주문번호 ${escapeHtml(w.mallOrderNo)}</small>` : ""}</div><div class="wh-queue-amount"><span>${escapeHtml(w.paidBy === "card" ? "신용카드" : w.paidBy === "bank" ? "무통장" : "예치금")} 결제</span><strong>${money(Number(w.paidAmount || wholesaleOrderTotal(order)))}</strong></div><div class="wh-queue-actions">${actions}</div></article>`;
 }
-function masterWholesaleQueue(queued, placed, held, waiting) {
+function masterWholesaleQueue(queued, placed, held, waiting, soldout = []) {
   const groups = new Map();
   [...queued, ...placed].forEach(order => { const key = order.wholesale.mallId; if (!groups.has(key)) groups.set(key, { mall: wholesaleMallOf(key), queued: [], placed: [] }); groups.get(key)[order.wholesale.state === "queued" ? "queued" : "placed"].push(order); });
   const heldBySeller = [...held.reduce((map, order) => { const list = map.get(order.sellerLoginId) || []; list.push(order); map.set(order.sellerLoginId, list); return map; }, new Map())];
-  return `${groups.size ? [...groups.values()].map(group => `<section class="panel wh-panel wh-queue-mall"><div class="panel-head"><div><h3>${escapeHtml(group.mall?.name || "도매몰")}</h3><p>${escapeHtml(wholesalePlatformLabel(group.mall))} · ${group.mall?.payMode === "bank" ? "계좌이체 결제 도매몰" : "예치금 결제 도매몰"}${group.mall?.siteUrl && /^https:\/\//.test(group.mall.siteUrl) ? ` · <a href="${escapeHtml(group.mall.siteUrl)}" target="_blank" rel="noopener noreferrer">파트너 페이지 ↗</a>` : ""}</p></div><div class="wh-queue-head-actions">${group.queued.length ? `<button type="button" class="secondary-button" data-action="wh-export-po" data-id="${escapeHtml(group.mall?.id || "")}">발주서 내려받기 (${group.queued.length}건)</button><button type="button" class="primary-button" data-action="wh-mark-placed-all" data-id="${escapeHtml(group.mall?.id || "")}">모두 발주 완료</button>` : ""}</div></div>
+  const trackingTargets = wholesaleTrackingTargets().length;
+  const steps = `<section class="panel wh-panel wh-steps"><ol>
+      <li class="${queued.length ? "now" : ""}"><b>1</b><span><strong>발주서 내려받기</strong><small>도매몰별 CSV · 받는 분·주소·수량</small></span></li>
+      <li class="${queued.length ? "now" : ""}"><b>2</b><span><strong>도매몰에 발주</strong><small>어드민플러스 도매몰 관리자에 엑셀 올리기 · 예치금 결제</small></span></li>
+      <li class="${queued.length ? "now" : ""}"><b>3</b><span><strong>‘발주 완료’ 표시</strong><small>도매몰 주문번호를 적어 두면 송장 찾기 쉬워요</small></span></li>
+      <li class="${placed.length ? "now" : ""}"><b>4</b><span><strong>송장 엑셀 올리기</strong><small>셀러 주문에 송장 → 10분마다 쇼핑몰로 자동 전송</small></span></li>
+    </ol>
+    <div class="wh-steps-actions"><span>송장 넣을 도매몰 발주 <b>${trackingTargets}건</b> <small>(발주 완료 ${placed.length}건 · 발주 중 ${queued.length}건)</small></span><button type="button" class="secondary-button" data-action="wh-tracking-template">송장 양식 받기</button><button type="button" class="primary-button" data-action="wh-tracking-upload">송장 엑셀 올리기</button></div>
+    <input type="file" id="whTrackingFile" accept=".xlsx,.csv" hidden></section>`;
+  return `${steps}${groups.size ? [...groups.values()].map(group => `<section class="panel wh-panel wh-queue-mall"><div class="panel-head"><div><h3>${escapeHtml(group.mall?.name || "도매몰")}</h3><p>${escapeHtml(wholesalePlatformLabel(group.mall))} · ${group.mall?.payMode === "bank" ? "계좌이체 결제 도매몰" : "예치금 결제 도매몰"}${group.mall?.siteUrl && /^https:\/\//.test(group.mall.siteUrl) ? ` · <a href="${escapeHtml(group.mall.siteUrl)}" target="_blank" rel="noopener noreferrer">파트너 페이지 ↗</a>` : ""}</p></div><div class="wh-queue-head-actions">${group.queued.length ? `<button type="button" class="secondary-button" data-action="wh-export-po" data-id="${escapeHtml(group.mall?.id || "")}">발주서 내려받기 (${group.queued.length}건)</button><button type="button" class="primary-button" data-action="wh-mark-placed-all" data-id="${escapeHtml(group.mall?.id || "")}">모두 발주 완료</button>` : ""}</div></div>
       ${group.queued.length ? `<h4 class="wh-sub">도매몰에 넣을 발주 ${group.queued.length}건</h4>${group.queued.map(order => masterWholesaleOrderLine(order, "queued")).join("")}` : ""}
       ${group.placed.length ? `<h4 class="wh-sub">송장 기다리는 발주 ${group.placed.length}건</h4>${group.placed.map(order => masterWholesaleOrderLine(order, "placed")).join("")}` : ""}
     </section>`).join("") : `<section class="panel wh-panel wh-panel"><div class="empty">지금 도매몰에 넣을 발주가 없어요. 회차가 돌면 여기에 모여요.</div></section>`}
-    ${heldBySeller.length ? `<section class="panel wh-panel wh-held"><div class="panel-head"><div><h3>예치금 부족으로 보류</h3><p>셀러가 충전하면 다음 회차에 자동으로 다시 시도해요. 셀러에게는 알림이 갔어요.</p></div></div>${heldBySeller.map(([sellerId, orders]) => { const need = orders.reduce((sum, order) => sum + wholesaleOrderTotal(order), 0); const balance = sellerDeposit(sellerId).balance; return `<article class="wh-queue-row"><div class="wh-queue-main"><b>${escapeHtml(memberByLogin(sellerId)?.company || sellerId)}</b><small>보류 ${orders.length}건 · 필요 ${money(need)} · 잔액 ${money(balance)} · ${money(Math.max(0, need - balance))} 부족</small></div></article>`; }).join("")}</section>` : ""}`;
+    ${soldout.length ? `<section class="panel wh-panel wh-held"><div class="panel-head"><div><h3>품절·판매중지로 보류</h3><p>도매몰 상품이 품절됐거나 판매를 멈춰 예치금을 빼지 않았어요. 셀러가 다른 상품으로 연결하면 다시 발주 대기로 가요.</p></div><span class="chip red">${soldout.length}건</span></div>${soldout.map(order => `<article class="wh-queue-row"><div class="wh-queue-main"><b>${escapeHtml(order.wholesale.title)} × ${order.wholesale.units}</b><small>${escapeHtml(order.id)} · ${escapeHtml(memberByLogin(order.sellerLoginId)?.company || order.sellerLoginId)} · ${escapeHtml(order.wholesale.mallName)}</small><small class="wh-held-note">${escapeHtml(order.wholesale.holdReason || "")}</small></div></article>`).join("")}</section>` : ""}
+    ${heldBySeller.length ? `<section class="panel wh-panel wh-held"><div class="panel-head"><div><h3>예치금 부족으로 보류</h3><p>셀러가 예치금을 충전하면(카드 즉시 · 무통장은 입금 확인 때) 바로 발주 대기열로 올라와요. 셀러에게는 알림이 갔어요.</p></div></div>${heldBySeller.map(([sellerId, orders]) => { const need = orders.reduce((sum, order) => sum + wholesaleOrderTotal(order), 0); const balance = sellerDeposit(sellerId).balance; return `<article class="wh-queue-row"><div class="wh-queue-main"><b>${escapeHtml(memberByLogin(sellerId)?.company || sellerId)}</b><small>보류 ${orders.length}건 · 필요 ${money(need)} · 잔액 ${money(balance)} · ${money(Math.max(0, need - balance))} 부족</small></div></article>`; }).join("")}</section>` : ""}`;
 }
 function masterWholesaleRequests() {
   const requests = [...wholesaleRequests()].sort((a, b) => Number(b.status === "pending") - Number(a.status === "pending") || Number(b.createdTs || 0) - Number(a.createdTs || 0));
@@ -8925,7 +8997,7 @@ function masterWholesaleMalls() {
   const malls = wholesaleMalls();
   const sellersOf = mallId => Object.entries(state.sellerWholesale || {}).filter(([, entry]) => (entry.malls || []).includes(mallId)).length;
   return `<section class="panel wh-panel wh-panel"><div class="panel-head"><div><h3>도매몰 · 상품</h3><p>도매몰마다 상품(옵션)·공급가·배송비를 엑셀로 올려 두면 셀러가 ‘상품 연결’에서 검색해 연결해요. 같은 상품코드는 새 값으로 바뀌어요.</p></div><div class="wh-queue-head-actions"><button type="button" class="secondary-button" data-action="wh-item-template">상품 엑셀 양식</button><button type="button" class="primary-button" data-action="wh-new-mall">도매몰 추가</button></div></div>
-    <div class="table-wrap"><table class="wh-malls-table"><thead><tr><th>도매몰</th><th>결제 방식</th><th class="num">상품</th><th class="num">연결 셀러</th><th>최근 등록</th><th></th></tr></thead><tbody>${malls.map(mall => `<tr><td><b>${escapeHtml(mall.name)}</b><small>${escapeHtml(wholesalePlatformLabel(mall))}${mall.mallCode ? ` · ${escapeHtml(mall.mallCode)}` : ""} · ${escapeHtml(mall.category || "")}${mall.demo ? " · 데모" : ""}</small></td><td>${mall.payMode === "bank" ? "계좌이체 (1차만)" : "예치금 자동"}</td><td class="num">${wholesaleMallItems(mall.id).length}</td><td class="num">${sellersOf(mall.id)}</td><td>${escapeHtml(mall.lastSyncAt || "-")}</td><td class="wh-mall-row-actions"><button type="button" class="text-button" data-action="wh-mall-items" data-id="${escapeHtml(mall.id)}">상품 보기</button><button type="button" class="text-button" data-action="wh-upload-items" data-id="${escapeHtml(mall.id)}">상품 엑셀 올리기</button><button type="button" class="text-button" data-action="wh-mall-pay" data-id="${escapeHtml(mall.id)}">${mall.payMode === "bank" ? "예치금 결제로" : "계좌이체로"}</button></td></tr>`).join("")}</tbody></table></div></section>
+    <div class="table-wrap"><table class="wh-malls-table"><thead><tr><th>도매몰</th><th>결제 방식</th><th>상품·발주 연동</th><th class="num">상품</th><th class="num">연결 셀러</th><th>최근 등록</th><th></th></tr></thead><tbody>${malls.map(mall => `<tr><td><b>${escapeHtml(mall.name)}</b><small>${escapeHtml(wholesalePlatformLabel(mall))}${mall.mallCode ? ` · ${escapeHtml(mall.mallCode)}` : ""} · ${escapeHtml(mall.category || "")}${mall.demo ? " · 데모" : ""}</small></td><td>${mall.payMode === "bank" ? "계좌이체 (1차만)" : "예치금 자동"}</td><td>${mall.sync === "api" ? `<span class="wh-chip green">API 자동</span>` : `<span class="wh-chip gray">엑셀</span><small>API 준비 중</small>`}</td><td class="num">${wholesaleMallItems(mall.id).length}</td><td class="num">${sellersOf(mall.id)}</td><td>${escapeHtml(mall.lastSyncAt || "-")}</td><td class="wh-mall-row-actions"><button type="button" class="text-button" data-action="wh-mall-items" data-id="${escapeHtml(mall.id)}">상품 보기</button><button type="button" class="text-button" data-action="wh-upload-items" data-id="${escapeHtml(mall.id)}">상품 엑셀 올리기</button><button type="button" class="text-button" data-action="wh-mall-pay" data-id="${escapeHtml(mall.id)}">${mall.payMode === "bank" ? "예치금 결제로" : "계좌이체로"}</button></td></tr>`).join("")}</tbody></table></div></section>
     <input type="file" id="whItemsFile" class="rde-file-input" accept=".xlsx,.csv" hidden>`;
 }
 function masterWholesaleFee(month) {
@@ -8991,6 +9063,67 @@ async function importWholesaleItemsFile(mallId, file) {
   showToast(`${mall.name}: 새 상품 ${added}개 · 바뀐 상품 ${updated}개${skipped ? ` · ${skipped}줄은 상품명·공급가가 없어 건너뛰었어요` : ""}`);
 }
 
+/* ----- 도매몰 송장 받기: 도매몰(어드민플러스) 관리자에서 내려받은 송장 엑셀을 올리면 두고 주문에 송장이 들어가고,
+   셀러 화면에 보이면서 ‘송장 자동 쇼핑몰 전송’(10분)으로 쿠팡 등에 넘어간다. API 연동 뒤에는 서버가 같은 일을 자동으로 한다. ----- */
+const WH_TRACKING_COLUMNS = ["두고주문번호", "도매몰", "도매몰주문번호", "받는분", "연락처", "상품", "수량", "택배사", "송장번호"];
+function wholesaleTrackingTargets() { return state.orders.filter(order => order.wholesale && ["queued", "placed"].includes(order.wholesale.state) && !order.tracking && !["주문취소", "출고취소"].includes(order.status)); }
+function exportWholesaleTrackingTemplate() {
+  const orders = wholesaleTrackingTargets();
+  if (!orders.length) return showToast("송장을 기다리는 도매몰 발주가 없어요.");
+  const lines = orders.map(order => [order.id, order.wholesale.mallName, order.wholesale.mallOrderNo || "", order.recipientName || order.customer || "", order.phone || "", order.wholesale.title, order.wholesale.units, "", ""]);
+  downloadCsv("\uFEFF" + [WH_TRACKING_COLUMNS, ...lines].map(row => row.map(csvEscape).join(",")).join("\r\n"), `두고_도매몰송장_${ymd(new Date())}.csv`);
+}
+function wholesaleTrackingMatch(cells, columns, targets) {
+  const text = cells.map(cell => String(cell ?? "").trim());
+  const doogoId = (columns.doogo >= 0 && /^DO-/i.test(text[columns.doogo]) ? text[columns.doogo] : text.find(value => /^DO-\d{6}-[A-Z0-9]+$/i.test(value)) || "").toUpperCase();
+  if (doogoId) { const order = targets.find(item => item.id.toUpperCase() === doogoId); return order ? { order } : { error: `${doogoId} — 송장을 기다리는 도매몰 발주가 아니에요` }; }
+  const mallNo = columns.mallNo >= 0 ? text[columns.mallNo] : "";
+  if (mallNo) { const order = targets.find(item => item.wholesale.mallOrderNo && item.wholesale.mallOrderNo === mallNo); if (order) return { order }; }
+  const name = columns.name >= 0 ? text[columns.name] : "", phone = columns.phone >= 0 ? text[columns.phone].replace(/\D/g, "") : "";
+  if (name && phone.length >= 4) {
+    const found = targets.filter(item => (item.recipientName || item.customer) === name && String(item.phone || "").replace(/\D/g, "").endsWith(phone.slice(-4)));
+    if (found.length === 1) return { order: found[0] };
+    if (found.length > 1) return { error: `${name} — 같은 받는 분 주문이 여러 건이라 두고주문번호가 필요해요` };
+  }
+  return { error: `${mallNo || name || "빈 줄"} — 맞는 주문을 찾지 못했어요` };
+}
+async function importWholesaleTrackingFile(file) {
+  let rows;
+  try { rows = await readSheetFile(file); } catch (error) { return showToast(error.message || "파일을 읽지 못했어요."); }
+  const header = (rows[0] || []).map(cell => String(cell || "").replace(/\s/g, ""));
+  const find = test => header.findIndex(test);
+  const columns = { doogo: find(h => h.includes("두고")), mallNo: find(h => h.includes("주문번호") && !h.includes("두고")), name: find(h => /받는|수령|수취/.test(h)), phone: find(h => /연락|전화|휴대/.test(h)), carrier: find(h => /택배/.test(h) && !/송장/.test(h)), tracking: find(h => /송장번호|운송장/.test(h)) };
+  if (columns.tracking < 0) columns.tracking = find(h => h.includes("송장"));
+  if (columns.tracking < 0 || columns.carrier < 0) return showToast("‘택배사’·‘송장번호’ 칸이 있는 엑셀을 올려 주세요. (송장 양식 받기 참고)");
+  const targets = wholesaleTrackingTargets();
+  const result = { applied: [], errors: [], skipped: 0 };
+  rows.slice(1).forEach((cells, index) => {
+    if (!cells.some(cell => String(cell ?? "").trim())) return;
+    const tracking = normalizeTracking(cells[columns.tracking]);
+    if (tracking.empty) { result.skipped += 1; return; }
+    const line = `${index + 2}번째 줄`;
+    if (tracking.error) return result.errors.push(`${line} · ${tracking.error}`);
+    const carrier = resolveCarrierName(cells[columns.carrier]);
+    if (!carrier) return result.errors.push(`${line} · 택배사 ‘${String(cells[columns.carrier] || "")}’를 찾지 못했어요`);
+    const match = wholesaleTrackingMatch(cells, columns, targets.filter(order => !result.applied.includes(order)));
+    if (!match.order) return result.errors.push(`${line} · ${match.error}`);
+    const order = match.order, w = order.wholesale;
+    if (w.state === "queued") Object.assign(w, { state: "placed", placedAt: depositStamp(), mallOrderNo: w.mallOrderNo || (columns.mallNo >= 0 ? String(cells[columns.mallNo] || "").trim().slice(0, 40) : "") });
+    applyTrackingToOrder(order, carrier, tracking.value);
+    order.trackingSource = "wholesale";
+    Object.assign(w, { state: "shipped", shippedAt: depositStamp() });
+    result.applied.push(order);
+  });
+  if (result.applied.length) audit("도매몰 송장 엑셀 등록", `${result.applied.length}건 · ${[...new Set(result.applied.map(order => order.wholesale.mallName))].join(", ")}${result.errors.length ? ` · 확인 필요 ${result.errors.length}줄` : ""}`, result.errors.length ? "pending" : "done", "order");
+  saveState(); render(); updateAccountUI();
+  const autoSellers = new Set(result.applied.filter(order => Object.values(order.channelTrackingStatuses || {}).includes("10분 자동전송 대기")).map(order => order.id));
+  openModal(`<div class="bulk-pay-done wh-track-done"><span class="complete-icon">${result.applied.length ? "✓" : "!"}</span><h2>${result.applied.length ? `송장 ${result.applied.length}건을 넣었어요` : "넣은 송장이 없어요"}</h2>
+    <p>${result.applied.length ? `셀러 주문이 ‘배송중’이 됐어요. ${autoSellers.size ? `${autoSellers.size}건은 셀러의 ‘송장 자동 쇼핑몰 전송’으로 10분 안에 쇼핑몰에 넘어가요.` : ""}${result.applied.length - autoSellers.size ? ` ${result.applied.length - autoSellers.size}건은 셀러가 ‘쇼핑몰 전송’을 누르면 넘어가요.` : ""}` : "두고주문번호(또는 도매몰 주문번호, 받는 분+연락처)와 택배사·송장번호를 확인해 주세요."}</p>
+    ${result.applied.length ? `<div class="bulk-pay-result">${result.applied.slice(0, 8).map(order => `<div><b>${escapeHtml(order.id)}</b><span>${escapeHtml(order.wholesale.mallName)} · ${escapeHtml(order.carrier)} ${escapeHtml(order.tracking)}</span></div>`).join("")}${result.applied.length > 8 ? `<div><span>외 ${result.applied.length - 8}건</span></div>` : ""}</div>` : ""}
+    ${result.errors.length ? `<ul class="wh-track-errors">${result.errors.slice(0, 12).map(error => `<li>${escapeHtml(error)}</li>`).join("")}${result.errors.length > 12 ? `<li>외 ${result.errors.length - 12}줄</li>` : ""}</ul>` : ""}
+    ${result.skipped ? `<p class="wh-track-skip">송장번호가 빈 ${result.skipped}줄은 건너뛰었어요 (아직 출고 전).</p>` : ""}
+    <div class="modal-actions"><button type="button" class="primary-button" data-close-modal>확인</button></div></div>`);
+}
 /* ----- 화면 동작 ----- */
 function whRowUpdateCost(form) {
   const item = wholesaleItemOf(form.querySelector('[name="itemId"]')?.value);
@@ -9018,6 +9151,7 @@ document.addEventListener("change", event => {
     return;
   }
   if (target.matches?.("[data-wh-filter]")) { whTableFilter[target.dataset.whFilter] = target.checked; whTableFilter.page = 1; render(); updateAccountUI(); return; }
+  if (target.id === "whTrackingFile") { const file = target.files?.[0]; target.value = ""; if (file) importWholesaleTrackingFile(file); return; }
   if (target.id === "whItemsFile") { const file = target.files?.[0]; const mallId = target.dataset.mall; target.value = ""; if (file && mallId) importWholesaleItemsFile(mallId, file); return; }
   if (target.matches?.('[data-wh-row] [name="qtyPer"]')) whRowUpdateCost(target.closest("[data-wh-row]"));
 });
@@ -9115,6 +9249,8 @@ document.addEventListener("click", event => {
     saveState(); return;
   }
   if (action === "wh-mark-placed") { wholesaleMarkPlacedModal([id]); return; }
+  if (action === "wh-tracking-template") { exportWholesaleTrackingTemplate(); return; }
+  if (action === "wh-tracking-upload") { document.getElementById("whTrackingFile")?.click(); return; }
   if (action === "wh-mark-placed-all") { wholesaleMarkPlacedModal(state.orders.filter(order => order.wholesale?.state === "queued" && order.wholesale.mallId === id).map(order => order.id)); return; }
   if (action === "wh-tracking") { wholesaleTrackingModal(id); return; }
   if (action === "wh-mark-failed") {
@@ -9200,15 +9336,16 @@ document.addEventListener("submit", event => {
   }
   if (form.id === "whPayForm") {
     const ids = String(form.dataset.ids || "").split(",").filter(Boolean);
-    const method = form.querySelector('input[name="paymentMethod"]:checked')?.value || "deposit";
-    if (method === "bank") { closeModal(); return requestBankPaymentForOrders(ids); }
-    const orders = ids.map(orderId => state.orders.find(order => order.id === orderId && order.sellerLoginId === currentAccount.loginId)).filter(order => order && wholesaleRemappable(order) && !order.bankChargeId);
+    const orders = ids.map(orderId => state.orders.find(order => order.id === orderId && order.sellerLoginId === currentAccount.loginId)).filter(order => order && wholesaleCanPayNow(order));
     if (!orders.length) { closeModal(); return showToast("이미 결제된 주문이에요."); }
-    const result = deductWholesaleOrders(currentAccount.loginId, orders, { method, reference: orders.length > 1 ? `WP-${String(Date.now()).slice(-8)}` : orders[0].id, label: "직접 결제 · 발주" });
-    if (!result.ok) return showToast(`예치금이 ${money(result.short)} 부족해요. 충전하거나 무통장입금을 골라 주세요.`);
-    pushNotification("admin", "master", "order", `도매몰 발주 ${orders.length}건 (직접 결제)`, `${memberByLogin(currentAccount.loginId)?.company || currentAccount.loginId} · ${money(result.total)}`, ["운영센터"]);
-    audit("도매몰 주문 직접 결제", `${orders.map(order => order.id).join(", ")} · ${money(result.total)} · ${method === "card" ? "신용카드" : "예치금"}`, "done", "order");
-    saveState(); closeModal(); render(); updateAccountUI(); return showToast(`${orders.length}건 ${money(result.total)} 결제 완료! 두고 발주팀이 도매몰에 넣어요.`);
+    const result = deductWholesaleOrders(currentAccount.loginId, orders, { reference: orders.length > 1 ? `WP-${String(Date.now()).slice(-8)}` : orders[0].id, label: "직접 결제 · 발주" });
+    if (!result.ok) { saveState(); return showToast(`예치금이 ${money(result.short)} 부족해요. 예치금을 충전한 뒤 결제해 주세요.`); }
+    if (result.paid.length) {
+      pushNotification("admin", "master", "order", `도매몰 발주 ${result.paid.length}건 (직접 결제)`, `${memberByLogin(currentAccount.loginId)?.company || currentAccount.loginId} · ${money(result.total)}`, ["운영센터"]);
+      audit("도매몰 주문 예치금 결제", `${result.paid.map(order => order.id).join(", ")} · ${money(result.total)}`, "done", "order");
+    }
+    saveState(); closeModal(); render(); updateAccountUI();
+    return showToast(result.paid.length ? `${result.paid.length}건 ${money(result.total)} 결제 완료! 두고 발주팀이 도매몰에 넣어요.${result.unavailable.length ? ` 품절된 ${result.unavailable.length}건은 다른 상품으로 연결해 주세요.` : ""}` : "품절·판매중지된 상품이라 결제하지 않았어요. 다른 상품으로 연결해 주세요.");
   }
   if (form.id === "whUnlinkForm") {
     const code = form.dataset.code;
@@ -9285,7 +9422,7 @@ function orderPaymentModal(orderId) {
       ${productNeedsCustoms(product) ? `<div class="payment-customs"><b>해외직구 상품이라 개인통관고유부호가 필요해요.</b>${customsInputMarkup(order.personalCustomsCode || "")}</div>` : ""}
       <div class="pay-confirm-sum"><div><span>상품 공급가</span><b>${money(supplyOnly)}</b></div><div><span>배송비</span><b>${ship.fee ? `+ ${money(ship.fee)}` : "0원 (무료·착불)"}</b></div></div>
       <div class="payment-total"><span>결제 금액</span><strong>${money(supplyTotal)}</strong></div>
-      <div class="api-safe-notice"><b>결제 안내</b><span>예치금으로 결제하면 공급사에 바로 주문이 전달돼요. 무통장입금은 두고가 입금을 확인한 뒤 전달돼요. 자주 결제한다면 ‘상품 연결’에서 자동 결제를 켜 두세요.</span></div>
+      <div class="api-safe-notice"><b>결제 안내</b><span>두고 공급사 상품은 예치금·신용카드·무통장입금으로 결제할 수 있어요. 예치금은 바로, 무통장입금은 두고가 입금을 확인한 뒤 공급사에 전달돼요. (도매몰 주문은 예치금으로만 결제돼요)</span></div>
       <div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>취소</button><button type="submit" class="primary-button">결제하고 공급사에 전달</button></div>
     </form>`);
   document.querySelector("#modal .modal")?.classList.add("pay-confirm-modal");
@@ -12128,6 +12265,7 @@ document.addEventListener("click", event => {
     audit("예치금 충전 완료", `${sellerId} · ${charge.id} · ${money(charge.amount)} · 무통장입금 확인 (${currentAccount.name || "관리자"})`, "done", "money");
     const settledOrders = settleChargeOrders(sellerId, charge);
     if (settledOrders) audit("무통장 입금으로 주문 결제", `${sellerId} · ${charge.id} · 주문 ${settledOrders}건 결제·발주`, "done", "order");
+    retryHeldWholesale(sellerId);
     saveState(); render(); updateAccountUI(); showToast(`${memberByLogin(sellerId)?.company || sellerId} 예치금에 ${money(charge.amount)} 충전했어요. (잔액 ${money(wallet.balance)})`); return;
   }
   if (action === "open-doogo-money-history") { doogoMoneyHistoryModal(); return; }
@@ -13682,8 +13820,9 @@ document.addEventListener("submit", event => {
       wallet.balance += amount;
       wallet.transactions.unshift({ id: `DP-${Date.now()}`, type: "신용카드 충전", amount, reference: `${charge.id} · ${card} 일시불`, createdAt: depositStamp(), at: Date.now(), method: "card", cardCompany: card, approvalNo: approval });
       audit("예치금 카드 충전", `${charge.id} · ${money(amount)} · ${card} 일시불 · 승인 ${approval}`, "done", "money");
+      const released = retryHeldWholesale(currentAccount.loginId);
       saveState(); render(); updateAccountUI();
-      return showToast(`${card}로 ${money(amount)} 충전했어요. 바로 쓸 수 있어요.`);
+      return showToast(`${card}로 ${money(amount)} 충전했어요. 바로 쓸 수 있어요.${released ? ` 보류된 도매몰 주문 ${released}건도 바로 발주했어요.` : ""}`);
     }
     if (!depositor) return showToast("입금자명을 입력해 주세요.");
     const due = new Date(Date.now() + 3 * 24 * 3600 * 1000);
