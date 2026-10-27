@@ -2308,7 +2308,7 @@ function NewProductsAdmin({ data, refresh }: { data: AdminCatalogData; refresh: 
                   <tr key={product.id} className={`status-${status}`}>
                     <td data-label="등록일"><strong>{shortDayLabel(day)}</strong><small>{formatDateTime(product.createdAt)}</small></td>
                     <td data-label="상품" className="history-product-cell"><span className="history-product-image">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <Boxes size={16} />}</span><span><strong>{product.name}</strong><small>{product.productCode || "코드 없음"}</small></span></td>
-                    <td data-label="카테고리">{categoryNameById.get(product.categoryId ?? "") ?? "미분류"}</td>
+                    <td data-label="카테고리">{categoryNameById.get(product.categoryId ?? "") ?? "📦 기타"}</td>
                     <td data-label="A단가 / 일반공급가">{formatPrice(product.aPrice || product.generalPrice)} / {formatPrice(product.generalPrice)}</td>
                     <td data-label="공개 상태"><span className={`new-product-status is-${status}`}>{statusLabel[status]}</span>{status === "invisible" && <small className="new-product-status-hint">상품 리스트에서 노출을 켜면 보입니다.</small>}</td>
                     <td data-label="신규상품 표시"><button type="button" className="new-product-toggle" onClick={() => toggleHidden(product)} disabled={saving}>{hiddenSet.has(product.id) ? <><Eye size={14} /> 다시 보이기</> : <><EyeOff size={14} /> 신규상품에서 빼기</>}</button></td>

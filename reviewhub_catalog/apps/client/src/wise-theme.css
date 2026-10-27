@@ -1379,3 +1379,36 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 /* 단가표: 전체 상품을 못 받았을 때 안내 + 다시 불러오기 */
 .catalog-partial-warning { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 14px; padding: 12px 16px; border: 1px solid #f3d27a; border-radius: 14px; background: var(--w-warning-pale); color: var(--w-warning-content); font-size: 14px; }
 .catalog-partial-warning button { height: 36px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--w-ink); color: #fff; font-weight: 700; cursor: pointer; }
+
+/* 월별 제철상품: 품목 키워드를 한 줄로, 많으면 좌우 화살표·스와이프로 밀어서 보기 */
+.season-keyword-slider { position: relative; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.season-keyword-slider .season-highlight-keywords { flex: 1 1 auto; flex-wrap: nowrap; min-width: 0; overflow-x: auto; scroll-behavior: smooth; scroll-snap-type: x proximity; scrollbar-width: none; padding: 2px 0; }
+.season-keyword-slider .season-highlight-keywords::-webkit-scrollbar { display: none; }
+.season-keyword-slider .season-highlight-keywords button { flex: 0 0 auto; scroll-snap-align: start; white-space: nowrap; }
+.season-keyword-arrow { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--w-line); border-radius: 50%; background: #fff; color: var(--w-ink); cursor: pointer; }
+.season-keyword-arrow:hover { border-color: var(--w-ink); }
+@media (max-width: 720px) {
+  .season-keyword-arrow { width: 28px; height: 28px; }
+}
+
+/* 공지사항: 가장 최근 운영 공지 강조(★ 최신) */
+.notice-row-button.is-latest { border-color: #86d65a !important; background: linear-gradient(135deg, #fff, var(--w-primary-pale)) !important; box-shadow: 0 0 0 1px #9fe870 inset, 0 6px 18px rgba(46, 173, 75, .12) !important; }
+.notice-row-button > span { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.notice-latest-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; background: var(--w-primary); color: var(--w-ink-deep); font-size: 11px; font-style: normal; font-weight: 800; }
+.notice-latest-badge svg { fill: currentColor; }
+
+/* 자주 묻는 질문 검색 */
+.faq-title { flex-wrap: wrap; }
+.faq-title .faq-search { width: min(360px, 100%); height: 42px; margin-left: auto; }
+.faq-title .faq-search input::-webkit-search-cancel-button { display: none; }
+.faq-title .faq-search .search-clear { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: #eef1f5; color: var(--w-mute); cursor: pointer; }
+.faq-search-result { margin: 0 0 10px; color: var(--w-body); font-size: 13px; }
+.faq-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px 12px; border: 1px dashed var(--w-line); border-radius: 14px; color: var(--w-body); text-align: center; }
+.faq-empty strong { color: var(--w-ink); }
+.faq-empty span { font-size: 13px; }
+@media (max-width: 720px) {
+  .faq-title .faq-search { width: 100%; margin: 10px 0 0; }
+}
+.season-keyword-arrow:disabled { opacity: .3; cursor: default; border-color: var(--w-line); }
+.card-title.faq-title .faq-search { display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 0 12px; }
+.card-title.faq-title .faq-search input { flex: 1 1 auto; min-width: 0; width: auto; }

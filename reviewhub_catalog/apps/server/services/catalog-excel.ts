@@ -85,7 +85,9 @@ export type BulkWorkbookPreview = {
 };
 
 // 신규 상품은 발주오라 파일에 카테고리 열이 없어 이 카테고리로 등록하고, 관리자가 나중에 지정합니다.
-const UNCATEGORIZED_NAME = "미분류";
+// migration 027에서 '미분류' → '📦 기타'로 이름을 바꿨습니다(예전 이름도 함께 찾습니다).
+const UNCATEGORIZED_NAME = "📦 기타";
+const UNCATEGORIZED_NAMES = new Set([UNCATEGORIZED_NAME, "미분류"]);
 
 function styleWorksheet(worksheet: ExcelJS.Worksheet, widths: number[]) {
   worksheet.getRow(1).height = 34;
@@ -1044,7 +1046,7 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
     warnings: [
       `공급사 단가표(계약 마진) 양식으로 읽었습니다. 반영 항목: ${ALL_PRICE_FIELDS.filter((field) => fields.has(field)).map((field) => fieldLabels[field]).join(", ") || "없음"}. 가격 변경은 가격변동 이력에 기록됩니다.`,
       `계산: A급 단가 = 원가 ÷ (1 − ${contract.aMargin}%), 일반공급가 = 원가 ÷ (1 − ${contract.generalMargin}%)를 끝자리 00원으로 올립니다(100원 단위로 올리면 마진이 ${CONTRACT_ROUNDING_TOLERANCE_PERCENT}%p 넘게 커지는 저가 상품만 50원 단위). 그래서 실제 마진은 입력값보다 조금 높을 수 있습니다. 예) 원가 ${example.toLocaleString("ko-KR")}원 → A급 단가 ${priceWithMargin(example, contract.aMargin).toLocaleString("ko-KR")}원 · 일반공급가 ${priceWithMargin(example, contract.generalMargin).toLocaleString("ko-KR")}원. "변경" 칸에 값이 있으면 변경 값을 씁니다.`,
-      ...(newProducts.length > 0 ? [`데이터센터에 없는 ${newProducts.length.toLocaleString("ko-KR")}개 상품은 신규 등록합니다(미분류 카테고리 · 숨김 상태 · 원가·A급 단가·일반공급가 모두 입력). 카테고리·이미지·배송 정책을 채운 뒤 "일괄 변경"으로 노출해 주세요.`] : []),
+      ...(newProducts.length > 0 ? [`데이터센터에 없는 ${newProducts.length.toLocaleString("ko-KR")}개 상품은 신규 등록합니다(📦 기타 카테고리 · 숨김 상태 · 원가·A급 단가·일반공급가 모두 입력). 카테고리·이미지·배송 정책을 채운 뒤 "일괄 변경"으로 노출해 주세요.`] : []),
       ...(aPriceBased > 0 ? [`A급단가 칸에 값이 있는 ${aPriceBased.toLocaleString("ko-KR")}개 행은 A급단가를 원가로 썼습니다.`] : []),
       `기존 상품은 ${columns.has("상품코드") ? "상품코드" : "상품명(띄어쓰기 차이 무시)"}으로 찾아 가격만 바꿉니다. 판매가·품절·노출·카테고리 등 다른 값은 바꾸지 않습니다.${contract.createMissing ? "" : " 없는 상품은 신규 등록하지 않습니다."}`,
       ...(missing.length > 0 ? [`데이터센터에서 찾지 못한 ${missing.length.toLocaleString("ko-KR")}개 행은 건너뜁니다(신규 등록 꺼짐): ${list(missing)}`] : []),
@@ -1091,10 +1093,10 @@ export async function applyBulkProductWorkbook(bytes: Uint8Array, changedBy: str
       const draft = item.draft!;
       const shippingType = draft.input.shippingType;
       let categoryId = categoryIds.get(shippingType)
-        ?? data.categories.find((category) => category.name === UNCATEGORIZED_NAME && category.shippingType === shippingType)?.id;
+        ?? data.categories.find((category) => UNCATEGORIZED_NAMES.has(category.name) && category.shippingType === shippingType)?.id;
       if (!categoryId) {
-        const created = await createCategory({ name: UNCATEGORIZED_NAME, shippingType, sortOrder: 9999 });
-        if (!created) throw new DatabaseError("DATABASE_QUERY_FAILED", "미분류 카테고리를 만들지 못했습니다.", 502);
+        const created = await createCategory({ name: UNCATEGORIZED_NAME, shippingType, sortOrder: 99999 });
+        if (!created) throw new DatabaseError("DATABASE_QUERY_FAILED", "기타 카테고리를 만들지 못했습니다.", 502);
         categoryId = created.id;
       }
       categoryIds.set(shippingType, categoryId);

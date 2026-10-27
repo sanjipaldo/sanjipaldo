@@ -32,6 +32,7 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  Star,
   Sun,
   Sunrise,
   ThermometerSun,
@@ -297,9 +298,40 @@ function BrandLogo({ light = false }: { light?: boolean }) {
   );
 }
 
+// "미분류"(migration 027부터 "📦 기타") 카테고리는 이름을 "📦 기타"로 보여 주고 목록 맨 뒤(해외 건강식품 다음)에 둡니다.
+const ETC_CATEGORY_NAME = "📦 기타";
+function isEtcCategory(name: string) {
+  const plain = name.replace(/^[^\p{L}\p{N}]+\s*/u, "").trim();
+  return plain === "기타" || plain === "미분류";
+}
+
+type CategoryChip = { key: string; name: string; ids: string[] };
+// 카테고리 버튼: 같은 이름은 하나로 묶고(국내·해외 "기타"가 둘이어도 버튼 하나), "기타"는 항상 마지막.
+function buildCategoryChips(categories: CatalogData["categories"], shippingType: "all" | ShippingType): CategoryChip[] {
+  const chips: CategoryChip[] = [];
+  const etcIds: string[] = [];
+  for (const category of categories) {
+    if (shippingType !== "all" && category.shippingType !== shippingType) continue;
+    if (isEtcCategory(category.name)) {
+      etcIds.push(category.id);
+      continue;
+    }
+    const same = chips.find((chip) => chip.name === category.name);
+    if (same) same.ids.push(category.id);
+    else chips.push({ key: category.id, name: category.name, ids: [category.id] });
+  }
+  if (etcIds.length > 0) chips.push({ key: "etc", name: ETC_CATEGORY_NAME, ids: etcIds });
+  return chips;
+}
+
 function normalizeCatalogData(data: CatalogData) {
+  const categories = [
+    ...data.categories.filter((category) => !isEtcCategory(category.name)),
+    ...data.categories.filter((category) => isEtcCategory(category.name)).map((category) => ({ ...category, name: ETC_CATEGORY_NAME }))
+  ];
   return {
     ...data,
+    categories,
     products: data.products.map((product) => ({
       ...product,
       salePrice: product.salePrice ?? null,
@@ -1471,6 +1503,22 @@ function SeasonMonthFilter({
 }) {
   // 제철 정보: 선택한 달(전체면 이번 달)에 판매기간이 걸친 제철 상품을 품목명 기준으로 묶어 보여줍니다.
   const highlightMonth = saleMonth === "all" ? currentMonth : saleMonth;
+  const keywordRowRef = useRef<HTMLDivElement>(null);
+  // 좌우로 더 밀 수 있을 때만 화살표를 켭니다.
+  const [keywordScroll, setKeywordScroll] = useState({ left: false, right: false });
+  useEffect(() => {
+    const row = keywordRowRef.current;
+    if (!row) return;
+    const update = () => {
+      const next = { left: row.scrollLeft > 2, right: row.scrollLeft + row.clientWidth < row.scrollWidth - 2 };
+      setKeywordScroll((current) => (current.left === next.left && current.right === next.right ? current : next));
+    };
+    update();
+    row.addEventListener("scroll", update, { passive: true });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(row);
+    return () => { row.removeEventListener("scroll", update); observer?.disconnect(); };
+  }, [highlightMonth, products]);
   const seasonalHighlights = useMemo(() => {
     if (!highlightMonth) return { total: 0, byCategory: [] as Array<{ name: string; count: number }>, keywords: [] as Array<{ keyword: string; count: number }> };
     const inSeason = products.filter((product) => {
@@ -1491,7 +1539,8 @@ function SeasonMonthFilter({
     return {
       total: inSeason.length,
       byCategory: [...categoryCounts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
-      keywords: [...keywordCounts.entries()].map(([keyword, count]) => ({ keyword, count })).sort((a, b) => b.count - a.count).slice(0, 12)
+      // 품목 키워드는 모두 보여 주고(많으면 좌우로 밀어서 봄), 너무 많을 때만 상위 80개로 자릅니다.
+      keywords: [...keywordCounts.entries()].map(([keyword, count]) => ({ keyword, count })).sort((a, b) => b.count - a.count).slice(0, 80)
     };
   }, [products, categories, highlightMonth]);
   return (
@@ -1512,12 +1561,16 @@ function SeasonMonthFilter({
             <span>{seasonalHighlights.total > 0 ? `${seasonalHighlights.total}개 상품 · ${seasonalHighlights.byCategory.map((item) => `${item.name} ${item.count}`).join(" · ")}` : "등록된 제철 상품이 없습니다."}</span>
           </div>
           {seasonalHighlights.keywords.length > 0 && (
-            <div className="season-highlight-keywords">
+            <div className="season-keyword-slider">
+            <button type="button" className="season-keyword-arrow prev" disabled={!keywordScroll.left} onClick={() => keywordRowRef.current?.scrollBy({ left: -Math.max(240, (keywordRowRef.current?.clientWidth ?? 600) * 0.8), behavior: "smooth" })} aria-label="제철 품목 왼쪽으로"><ChevronLeft size={18} /></button>
+            <div className="season-highlight-keywords" ref={keywordRowRef}>
               {seasonalHighlights.keywords.map((item) => (
                 <button type="button" key={item.keyword} className={query.trim() === item.keyword ? "active" : ""} onClick={() => onQuery(query.trim() === item.keyword ? "" : item.keyword)} aria-pressed={query.trim() === item.keyword}>
                   {item.keyword}<small>{item.count}</small>
                 </button>
               ))}
+            </div>
+            <button type="button" className="season-keyword-arrow next" disabled={!keywordScroll.right} onClick={() => keywordRowRef.current?.scrollBy({ left: Math.max(240, (keywordRowRef.current?.clientWidth ?? 600) * 0.8), behavior: "smooth" })} aria-label="제철 품목 오른쪽으로"><ChevronRight size={18} /></button>
             </div>
           )}
         </div>
@@ -1606,17 +1659,19 @@ export function CatalogHome() {
     };
   }, []);
 
+  const visibleCategories = useMemo(() => buildCategoryChips(data.categories, shippingType), [data.categories, shippingType]);
+  const selectedChip = categoryId === "all" ? null : visibleCategories.find((chip) => chip.key === categoryId) ?? null;
   const filteredProducts = useMemo(() => data.products.filter((product) => {
     const normalized = query.trim().toLowerCase();
     const category = data.categories.find((item) => item.id === product.categoryId)?.name ?? "";
     return (shippingType === "all" || product.shippingType === shippingType)
-      && (categoryId === "all" || product.categoryId === categoryId)
+      && (!selectedChip || selectedChip.ids.includes(product.categoryId ?? ""))
       && (saleMonth === "all" || (
         seasonApplies(product, category)
         && (product.isAlwaysOnSale || isMonthInSeason(saleMonth, product.saleStartMonth, product.saleEndMonth))
       ))
       && (!normalized || `${product.name} ${product.origin ?? ""} ${category}`.toLowerCase().includes(normalized));
-  }), [categoryId, data.categories, data.products, query, saleMonth, shippingType]);
+  }), [data.categories, data.products, query, saleMonth, selectedChip, shippingType]);
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / catalogPageSize));
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * catalogPageSize;
@@ -1651,7 +1706,7 @@ export function CatalogHome() {
     });
   };
 
-  const visibleCategories = data.categories.filter((category) => shippingType === "all" || category.shippingType === shippingType);
+
   const catalogItemCount = data.products.reduce((total, product) => total + Math.max(1, product.options?.length ?? 0), 0);
   const catalogTotalCount = data.catalogTotals?.productCount ?? catalogItemCount;
   const recentChangeCount = data.priceHistoryCount ?? data.priceHistory.length;
@@ -1693,7 +1748,7 @@ export function CatalogHome() {
           </div>
           <div className="category-chips">
             <button className={categoryId === "all" ? "active" : ""} onClick={() => setCategoryId("all")}>전체 카테고리</button>
-            {visibleCategories.map((category) => <button key={category.id} className={categoryId === category.id ? "active" : ""} onClick={() => setCategoryId(category.id)}>{category.name}</button>)}
+            {visibleCategories.map((chip) => <button key={chip.key} className={categoryId === chip.key ? "active" : ""} onClick={() => setCategoryId(chip.key)}>{chip.name}</button>)}
           </div>
           <SeasonMonthFilter products={data.products} categories={data.categories} saleMonth={saleMonth} onSaleMonth={setSaleMonth} currentMonth={currentMonth} query={query} onQuery={setQuery} />
           <div className="order-legend" aria-label="주문 가능 여부 안내">
@@ -1792,6 +1847,7 @@ export function GuidePage() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [faqPage, setFaqPage] = useState(1);
+  const [faqQuery, setFaqQuery] = useState("");
   const [noticePage, setNoticePage] = useState(1);
   const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
   useEffect(() => {
@@ -1803,10 +1859,20 @@ export function GuidePage() {
   }, [notices.length]);
   const guide = settings ? parseGuideContent(settings.guide_sections) : { ...fallbackGuideContent, faq: [] };
   const faqPageSize = 5;
-  const faqPageCount = Math.max(1, Math.ceil(guide.faq.length / faqPageSize));
-  const visibleFaq = guide.faq.slice((faqPage - 1) * faqPageSize, faqPage * faqPageSize);
+  // FAQ 검색: 질문·답변에서 띄어쓰기·대소문자 무시하고 찾습니다.
+  const normalizedFaqQuery = searchKey(faqQuery);
+  const matchedFaq = normalizedFaqQuery ? guide.faq.filter((item) => searchKey(`${item.q} ${item.a}`).includes(normalizedFaqQuery)) : guide.faq;
+  const faqPageCount = Math.max(1, Math.ceil(matchedFaq.length / faqPageSize));
+  const visibleFaq = matchedFaq.slice((faqPage - 1) * faqPageSize, faqPage * faqPageSize);
   const pinnedNotice = notices.find((notice) => notice.isPinned);
-  const generalNotices = notices.filter((notice) => notice.id !== pinnedNotice?.id);
+  // 운영 공지는 날짜(표시하는 수정일) 기준 최신순, 가장 최근 공지는 "★ 최신"으로 강조합니다.
+  const noticeTime = (notice: Notice) => {
+    const value = notice.updatedAt.includes("T") ? notice.updatedAt : `${notice.updatedAt.replace(" ", "T")}Z`;
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? 0 : time;
+  };
+  const generalNotices = notices.filter((notice) => notice.id !== pinnedNotice?.id).sort((first, second) => noticeTime(second) - noticeTime(first));
+  const latestNoticeId = generalNotices[0]?.id;
   const noticePageSize = 3;
   const noticePageCount = Math.max(1, Math.ceil(generalNotices.length / noticePageSize));
   const visibleGeneralNotices = generalNotices.slice((noticePage - 1) * noticePageSize, noticePage * noticePageSize);
@@ -1825,8 +1891,8 @@ export function GuidePage() {
           <section className="notice-list general-notices guide-notice-list">
             <div className="section-heading"><div><span className="section-kicker">NOTICE</span><h2>운영 공지</h2><p>공지 제목을 누르면 이미지와 영상이 포함된 전체 내용을 확인할 수 있습니다.</p></div></div>
             {visibleGeneralNotices.map((notice, index) => (
-              <button className={`notice-row-button notice-accent-${(index % 3) + 1}`} type="button" key={notice.id} onClick={() => setSelectedNotice(notice)}>
-                <span>{formatDate(notice.updatedAt)}</span>
+              <button className={`notice-row-button notice-accent-${(index % 3) + 1}${notice.id === latestNoticeId ? " is-latest" : ""}`} type="button" key={notice.id} onClick={() => setSelectedNotice(notice)}>
+                <span>{notice.id === latestNoticeId && <em className="notice-latest-badge"><Star size={12} aria-hidden="true" /> 최신</em>}{formatDate(notice.updatedAt)}</span>
                 <div><h2>{notice.title}</h2><p>{notice.content}</p></div>
                 <ChevronRight size={18} />
               </button>
@@ -1862,7 +1928,10 @@ export function GuidePage() {
             <div className="guide-etc-grid">{guide.etc.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}</div>
           </section>
           <section className="guide-section-card faq-section">
-            <div className="card-title"><CircleHelp size={20} /><div><span>FAQ</span><h2>자주 묻는 질문</h2></div></div>
+            <div className="card-title faq-title"><CircleHelp size={20} /><div><span>FAQ</span><h2>자주 묻는 질문</h2></div>
+              <div className="search-field faq-search"><Search size={16} /><input type="search" value={faqQuery} onChange={(event) => { setFaqQuery(event.target.value); setFaqPage(1); setOpenFaq(null); }} placeholder="궁금한 내용 검색 (예: 세금계산서, 반품)" aria-label="자주 묻는 질문 검색" />{faqQuery && <button type="button" className="search-clear" onClick={() => { setFaqQuery(""); setFaqPage(1); }} aria-label="검색어 지우기"><X size={15} /></button>}</div>
+            </div>
+            {normalizedFaqQuery && <p className="faq-search-result">“{faqQuery.trim()}” 검색 결과 {matchedFaq.length}개</p>}
             <div className="faq-list">
               {visibleFaq.map((item, index) => {
                 const absoluteIndex = (faqPage - 1) * faqPageSize + index;
@@ -1877,6 +1946,7 @@ export function GuidePage() {
                 );
               })}
             </div>
+            {settings && normalizedFaqQuery && matchedFaq.length === 0 && <div className="faq-empty"><Search size={20} /><strong>“{faqQuery.trim()}”에 맞는 질문이 없습니다.</strong><span>다른 단어로 찾거나 1:1 상담으로 문의해 주세요.</span></div>}
             {!settings && <div className="faq-loading"><div className="spinner" /><span>최신 FAQ를 불러오는 중입니다.</span></div>}
             {faqPageCount > 1 && <nav className="faq-pagination" aria-label="FAQ 페이지">{Array.from({ length: faqPageCount }, (_, index) => index + 1).map((value) => <button type="button" key={value} className={faqPage === value ? "active" : ""} onClick={() => { setFaqPage(value); setOpenFaq(null); }} aria-current={faqPage === value ? "page" : undefined}>{value}</button>)}</nav>}
           </section>
@@ -2023,16 +2093,17 @@ export function NewProductsPage() {
   const dayKeys = useMemo(() => (todayKey ? newProductDayKeys(todayKey, settings.days) : []), [settings.days, todayKey]);
   const newProducts = useMemo(() => (todayKey ? selectNewProducts(data.products, settings, todayKey) : []), [data.products, settings, todayKey]);
   const normalizedQuery = searchKey(query);
+  const allChipIds = useMemo(() => new Map(buildCategoryChips(data.categories, "all").concat(buildCategoryChips(data.categories, "domestic"), buildCategoryChips(data.categories, "overseas")).map((chip) => [chip.key, chip.ids] as const)), [data.categories]);
   const searched = useMemo(() => newProducts.filter((product) => (
     (shippingType === "all" || product.shippingType === shippingType)
-    && (categoryId === "all" || product.categoryId === categoryId)
+    && (categoryId === "all" || (allChipIds.get(categoryId) ?? [categoryId]).includes(product.categoryId ?? ""))
     // 월별 제철상품: 단가표와 같은 기준(제철 카테고리이면서 상시 판매이거나 고른 달이 판매기간 안)
     && (saleMonth === "all" || (
       seasonApplies(product, categoryNameById.get(product.categoryId ?? ""))
       && (product.isAlwaysOnSale || isMonthInSeason(saleMonth, product.saleStartMonth, product.saleEndMonth))
     ))
     && (!normalizedQuery || [product.name, product.productCode, product.origin, categoryNameById.get(product.categoryId ?? "")].some((value) => searchKey(value).includes(normalizedQuery)))
-  )), [categoryId, categoryNameById, newProducts, normalizedQuery, saleMonth, shippingType]);
+  )), [allChipIds, categoryId, categoryNameById, newProducts, normalizedQuery, saleMonth, shippingType]);
   const dayCounts = useMemo(() => {
     const counts = new Map<string, number>();
     searched.forEach((product) => {
@@ -2051,12 +2122,14 @@ export function NewProductsPage() {
       if (shippingType !== "all" && product.shippingType !== shippingType) return;
       if (product.categoryId) counts.set(product.categoryId, (counts.get(product.categoryId) ?? 0) + 1);
     });
-    return data.categories.filter((category) => counts.has(category.id)).map((category) => ({ id: category.id, name: category.name, count: counts.get(category.id) ?? 0 }));
+    return buildCategoryChips(data.categories, shippingType)
+      .map((chip) => ({ ...chip, count: chip.ids.reduce((total, id) => total + (counts.get(id) ?? 0), 0) }))
+      .filter((chip) => chip.count > 0);
   }, [data.categories, newProducts, shippingType]);
   const categorySummary = useMemo(() => {
     const counts = new Map<string, number>();
     visibleProducts.forEach((product) => {
-      const name = categoryNameById.get(product.categoryId ?? "") ?? "미분류";
+      const name = categoryNameById.get(product.categoryId ?? "") ?? ETC_CATEGORY_NAME;
       counts.set(name, (counts.get(name) ?? 0) + 1);
     });
     return [...counts.entries()].sort((first, second) => second[1] - first[1]).slice(0, 6);
@@ -2121,7 +2194,7 @@ export function NewProductsPage() {
           {categoryChips.length > 0 && (
             <div className="category-chips">
               <button className={categoryId === "all" ? "active" : ""} onClick={() => setCategoryId("all")}>전체 카테고리</button>
-              {categoryChips.map((category) => <button key={category.id} className={categoryId === category.id ? "active" : ""} onClick={() => setCategoryId(category.id)}>{category.name} <small>{category.count}</small></button>)}
+              {categoryChips.map((chip) => <button key={chip.key} className={categoryId === chip.key ? "active" : ""} onClick={() => setCategoryId(chip.key)}>{chip.name} <small>{chip.count}</small></button>)}
             </div>
           )}
           <SeasonMonthFilter products={newProducts} categories={data.categories} saleMonth={saleMonth} onSaleMonth={setSaleMonth} currentMonth={currentMonth} query={query} onQuery={setQuery} />
