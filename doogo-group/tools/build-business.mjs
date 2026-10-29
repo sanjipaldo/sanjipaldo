@@ -112,6 +112,7 @@ const LEADER_CAREER = {
   'ad-lee': ['[現] 두고애드 총괄이사', '[前] 마이파이 대표', '[前] 소망인테리어 총괄이사'], // 이현찬 (corp.also)
   space: ['[現] NORA STAY 대표이사', '[現] DOOGO SPACE 대표이사', '[現] 문득 F&amp;B 대표이사'], // 문성오
   media: ['[現] (주) 하이비주얼 대표이사', '[現] 라온프로덕션 대표', '[現] 국가무형유산 이수자'], // 김윤정
+  'media-park': ['[現] 모아이프로덕션 대표이사', '[前] 영화 두바퀴자전거 감독', '[前] 용인대 회화학과 졸업'], // 박영균 (corp.also)
   makers: ['건국대학교 경제학과 졸업', '[現] 마우리엔젯 B 총괄이사', '[現] 신나용 대표이사'], // 신동훈
 };
 const PHOTO = {
@@ -265,7 +266,8 @@ const BIZ = [
   },
   {
     slug: 'media', num: '04', area: '미디어 &amp; 콘텐츠', en: 'DOOGO MEDIA', chain: 'Owned Media', icon: 'i-media',
-    corp: { en: 'DOOGO MEDIA', field: '미디어 &amp; 콘텐츠', ceo: '김윤정', title: '총괄이사', key: 'media', photo: 'leader-kim-yunjung' },
+    corp: { en: 'DOOGO MEDIA', field: '미디어 &amp; 콘텐츠', ceo: '김윤정', title: '총괄이사', key: 'media', photo: 'leader-kim-yunjung',
+      also: { ceo: '박영균', title: '총괄이사', key: 'media-park', photo: 'leader-park-younggyun', anchor: 'leader-media-park' } },
     // 8차: DOOGO MEDIA = 온드미디어(브랜드가 직접 소유·운영하는 채널) 전문 — 분야 이름은 '미디어 & 콘텐츠' 그대로, 설명 문구만 온드미디어로
     scope: '온드미디어 촬영 · 유튜브 채널 운영 · 숏폼·라이브 콘텐츠',
     defLabel: '온드미디어 제작', def: '광고비에 기대지 않고, 브랜드의 자산으로 쌓이는 채널을 만듭니다.',
