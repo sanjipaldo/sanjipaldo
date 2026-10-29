@@ -11,7 +11,8 @@ async function insertAll(map) {
   const now = Date.now();
   const stmts = [], files = [];
   Object.keys(map).forEach((k, i) => {
-    const ex = extractFiles(JSON.parse(JSON.stringify(map[k])), (p) => access.fileScope(k, p));
+    const v0 = JSON.parse(JSON.stringify(map[k]));
+    const ex = extractFiles(v0, (p) => access.fileScope(k, p, v0));
     ex.files.forEach((f) => files.push(f));
     stmts.push({ sql: "INSERT INTO docs (k, v, ver, updated, created) VALUES (?, ?, 1, ?, ?) ON CONFLICT(k) DO NOTHING", args: [k, JSON.stringify(ex.value), now, i] });
   });
@@ -67,7 +68,8 @@ async function runPendingOps(log) {
     for (const k of Object.keys(writes)) {
       let v = writes[k];
       if (v != null) {
-        const ex = extractFiles(v, (p) => access.fileScope(k, p));
+        const v0 = v;
+        const ex = extractFiles(v, (p) => access.fileScope(k, p, v0));
         for (const f of ex.files) await store.putFile(f.h, f.mime, f.b64, f.scope);
         v = ex.value;
       }
@@ -93,7 +95,8 @@ async function migrate() {
   rows.forEach((r) => { ver[r.k] = r.ver; });
   const done = [];
   for (const k of Object.keys(changed)) {
-    const ex = extractFiles(changed[k], (p) => access.fileScope(k, p));
+    const v0 = changed[k];
+    const ex = extractFiles(v0, (p) => access.fileScope(k, p, v0));
     for (const f of ex.files) await store.putFile(f.h, f.mime, f.b64, f.scope);
     const ok = await store.writeDoc(k, ex.value, ver[k] == null ? null : ver[k]);
     done.push(k + (ok === false ? " (다른 변경과 겹쳐 건너뜀)" : ""));

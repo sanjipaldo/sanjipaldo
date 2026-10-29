@@ -1,4 +1,4 @@
-/* 두고 클래스 — 강사 홍보 랜딩페이지 (#/p/<강사 id>)
+/* 두잉고 — 강사 홍보 랜딩페이지 (#/p/<강사 id>)
  *
  *  - 로그인 없이 누구나 보는 강사 소개 · 강의 판매 페이지
  *  - 배경은 모든 강사 공통 흰색, 버튼·강조만 강사가 고른 색
@@ -61,14 +61,15 @@
       : [{ value: c.weeks.length + "주", label: "완성 커리큘럼" }, { value: lessons + "개", label: "강의 영상" }, { value: missions + "개", label: "실습 과제" }, { value: "24시", label: "AI 조교 답변" }];
     return '<section class="lp-stats"><div class="lp-wrap lp-stats-grid">' + items.map((x) => '<div><b>' + esc(x.value) + "</b><span>" + esc(x.label) + "</span></div>").join("") + "</div></section>";
   };
-  S.about = (L) => {
-    const a = L.about;
-    if (!a.body && !(a.career || []).length && !a.photo) return "";
-    return '<section class="lp-sec" id="lp-about"><div class="lp-wrap lp-about">' +
-      '<div class="lp-about-photo">' + (a.photo ? '<img src="' + esc(a.photo) + '" alt="' + esc(a.name) + '">' : '<span class="lp-avatar">' + esc((a.name || "강").slice(0, 1)) + "</span>") + "</div>" +
+  S.about = (L, c) => {
+    const a = L.about, ph = a.photo || ((c && c.brand) || {}).photo || "", yt = ((c && c.brand) || {}).youtubeChannel || (L.contact || {}).youtube || "";
+    if (!a.body && !(a.career || []).length && !ph) return "";
+    return '<section class="lp-sec" id="lp-about">' + (c && c.__id ? '<div class="lp-wrap">' + introBlock(c.__id, c) + "</div>" : "") + '<div class="lp-wrap lp-about">' +
+      '<div class="lp-about-photo' + (ph ? " has-photo" : "") + '">' + (ph ? '<img src="' + esc(ph) + '" alt="' + esc(a.name) + ' 강사 프로필" decoding="async">' : '<span class="lp-avatar">' + esc((a.name || "강").slice(0, 1)) + "</span>") + "</div>" +
       '<div><p class="lp-kicker">' + esc(a.title || "강사 소개") + "</p><h2>" + esc(a.name) + "</h2>" + (a.role ? '<p class="lp-role">' + esc(a.role) + "</p>" : "") +
         (a.body ? '<p class="lp-body">' + nl(a.body) + "</p>" : "") +
         ((a.career || []).length ? '<ul class="lp-career">' + a.career.map((x) => "<li>" + icon("check", "sm") + esc(x) + "</li>").join("") + "</ul>" : "") +
+        (yt ? '<a class="lp-yt" href="' + esc(yt) + '" target="_blank" rel="noopener"><span class="lp-yt-ic" aria-hidden="true"><svg viewBox="0 0 28 20"><rect width="28" height="20" rx="6" fill="#ff0033"/><path d="M11.2 6.1v7.8l6.6-3.9z" fill="#fff"/></svg></span><span class="lp-yt-t"><b>유튜브 채널 바로가기</b><small>' + esc((c.brand || {}).name || a.name || "") + " 채널에서 영상 보기</small></span>" + icon("arrowUpRight", "sm") + "</a>" : "") +
       "</div></div></section>";
   };
   S.points = (L) => {
@@ -79,13 +80,21 @@
       ((p.forWho || []).length ? '<div class="lp-forwho"><h3>이런 분께 추천해요</h3><ul>' + p.forWho.map((x) => "<li>" + icon("check", "sm") + esc(x) + "</li>").join("") + "</ul></div>" : "") +
       "</div></section>";
   };
+  // 커리큘럼: 주차별 로드맵 (큰 주차 번호 + 목표 + 강의 목록, 시간은 감춤) → 맨 끝 수료
   S.curriculum = (L, c) => {
     if (!c.weeks.length) return "";
-    return '<section class="lp-sec" id="lp-curriculum"><div class="lp-wrap"><p class="lp-kicker">CURRICULUM</p><h2>' + esc(L.curriculum.title) + "</h2>" + (L.curriculum.sub ? '<p class="lp-lead">' + esc(L.curriculum.sub) + "</p>" : "") +
-      '<ol class="lp-weeks">' + c.weeks.map((w) => '<li><details' + (w.no === 1 ? " open" : "") + '><summary><span class="lp-wk">' + w.no + "주차</span><b>" + esc(w.title) + "</b><small>강의 " + w.lessons.length + " · 과제 " + w.missions.length + "</small>" + icon("chevDown", "sm") + "</summary>" +
-        (w.summary ? '<p class="lp-wk-sum">' + esc(w.summary) + "</p>" : "") +
-        (w.lessons.length ? '<ul class="lp-lessons">' + w.lessons.map((l) => "<li>" + icon("circlePlay", "sm") + esc(l.title) + (l.minutes ? "<small>" + esc(l.minutes) + "분</small>" : "") + "</li>").join("") + "</ul>" : "") +
-        "</details></li>").join("") + "</ol></div></section>";
+    const n2 = (n) => String(n).padStart(2, "0");
+    const lessons = c.weeks.reduce((a, w) => a + w.lessons.length, 0), missions = c.weeks.reduce((a, w) => a + w.missions.length, 0);
+    return '<section class="lp-sec lp-cur" id="lp-curriculum"><div class="lp-wrap">' +
+      '<div class="lp-cur-head"><div><p class="lp-kicker">CURRICULUM</p><h2>' + esc(L.curriculum.title) + "</h2>" + (L.curriculum.sub ? '<p class="lp-lead">' + esc(L.curriculum.sub) + "</p>" : "") + "</div>" +
+        '<ul class="lp-cur-sum"><li><b>' + c.weeks.length + "</b><span>주 완성</span></li><li><b>" + lessons + "</b><span>개 강의</span></li><li><b>" + missions + "</b><span>개 실습 과제</span></li></ul></div>" +
+      '<ol class="lp-road">' + c.weeks.map((w) => '<li class="lp-road-i"><div class="lp-road-no"><small>WEEK</small><b>' + n2(w.no) + "</b></div>" +
+        '<div class="lp-road-card"><div class="lp-road-top"><h3>' + esc(w.title) + '</h3><span class="lp-road-meta">강의 ' + w.lessons.length + " · 과제 " + w.missions.length + "</span></div>" +
+          (w.summary ? '<p class="lp-road-goal">' + icon("target", "sm") + "<span>" + esc(w.summary) + "</span></p>" : "") +
+          (w.lessons.length ? '<ol class="lp-road-ls">' + w.lessons.map((l, j) => "<li><span>" + n2(j + 1) + "</span>" + esc(l.title) + "</li>").join("") + "</ol>" : "") +
+        "</div></li>").join("") +
+        '<li class="lp-road-i lp-road-end"><div class="lp-road-no"><small>FINISH</small><b>' + icon("award") + '</b></div><div class="lp-road-card"><div class="lp-road-top"><h3>수료 · 이제 혼자서도 해요</h3></div><p class="lp-road-goal">' + icon("check", "sm") + "<span>필수 과제를 마치면 수료증이 바로 발급되고, 수료한 뒤에도 강의실은 그대로 남아요.</span></p></div></li>" +
+      "</ol></div></section>";
   };
   S.platform = (L, c, ins) => {
     const P = L.platform;
@@ -101,17 +110,29 @@
       items.map((x) => '<figure>' + (x.sample ? '<span class="lp-sample">예시 후기</span>' : "") + '<blockquote>“' + nl(x.text) + '”</blockquote><figcaption><span class="lp-avatar sm">' + esc((x.name || "수").slice(0, 1)) + "</span><b>" + esc(x.name || "수강생") + "</b>" + (x.meta ? "<small>" + esc(x.meta) + "</small>" : "") + "</figcaption></figure>").join("") +
       "</div></div></section>";
   };
+  // 수강 안내: 개강 D-day + 신청부터 수료까지 4단계 + 검정 신청 카드
   S.pricing = (L, c, ins, co) => {
     const p = L.pricing;
-    return '<section class="lp-sec" id="lp-pricing"><div class="lp-wrap lp-price-wrap"><div><p class="lp-kicker">ENROLL</p><h2>' + esc(p.title) + "</h2>" +
-        (co ? '<ul class="lp-sched"><li><span>모집 기수</span><b>' + esc(co.name) + "</b></li><li><span>수업 기간</span><b>" + fmtFull(co.startDate) + " ~ " + fmtFull(DB.cohortEnd(co)) + "</b></li><li><span>진행 방식</span><b>" + esc(p.period || "온라인 · 주차별 강의 + 과제") + "</b></li></ul>" : '<p class="lp-lead">다음 기수 모집 일정은 곧 안내해 드려요.</p>') +
+    const lessons = c.weeks.reduce((a, w) => a + w.lessons.length, 0), missions = c.weeks.reduce((a, w) => a + w.missions.length, 0);
+    const d = co ? diffDays(co.startDate, todayStr()) : null;
+    const flow = co ? [["수강 신청", "이 화면에서 바로 · 1분"], ["강사님 승인", "확인되면 로그인 열림"], [fmtMD(co.startDate) + " 개강", "주차별 강의 · 과제 시작"], [fmtMD(DB.cohortEnd(co)) + " 수료", "수료증 발급"]] : [];
+    return '<section class="lp-sec lp-enroll" id="lp-pricing"><div class="lp-wrap lp-enroll-grid"><div class="lp-enroll-l"><p class="lp-kicker">ENROLL</p><h2>' + esc(p.title) + "</h2>" +
+        (co
+          ? '<p class="lp-lead">지금 신청하면 <b>' + esc(co.name) + "</b>로 함께 시작해요.</p>" +
+            '<div class="lp-dday"><div><small>' + esc(co.name) + ' 개강까지</small><b>' + (d > 0 ? "D-" + d : "D-DAY") + "</b></div><span>" + fmtFull(co.startDate) + " 시작<br>" + fmtFull(DB.cohortEnd(co)) + " 수료</span></div>" +
+            '<ol class="lp-flow">' + flow.map((x, i) => "<li><em>" + String(i + 1).padStart(2, "0") + "</em><b>" + esc(x[0]) + "</b><small>" + esc(x[1]) + "</small></li>").join("") + "</ol>" +
+            '<ul class="lp-sched"><li><span>모집 기수</span><b>' + esc(co.name) + "</b></li><li><span>수업 기간</span><b>" + fmtFull(co.startDate) + " ~ " + fmtFull(DB.cohortEnd(co)) + "</b></li><li><span>진행 방식</span><b>" + esc(p.period || "온라인 · 주차별 강의 + 과제") + "</b></li></ul>"
+          : '<p class="lp-lead">다음 기수 모집 일정은 곧 안내해 드려요.</p>') +
       "</div>" +
-      '<div class="lp-price-card">' +
-        (p.price ? '<div class="lp-price">' + (p.original ? "<s>" + esc(p.original) + "</s>" : "") + "<b>" + esc(p.price) + "</b></div>" : '<div class="lp-price"><b class="sm">' + esc(c.brand.courseTitle) + "</b></div>") +
+      '<div class="lp-price-card lp-enroll-card">' +
+        '<p class="lp-ec-k">' + (co ? esc(co.name) + " 모집 중" : "수강 신청") + "</p>" +
+        '<h3 class="lp-ec-t">' + esc(c.brand.courseTitle) + "</h3>" +
+        (p.price ? '<div class="lp-price">' + (p.original ? "<s>" + esc(p.original) + "</s>" : "") + "<b>" + esc(p.price) + "</b></div>" : "") +
+        '<ul class="lp-ec-nums"><li><b>' + c.weeks.length + "주</b><span>커리큘럼</span></li><li><b>" + lessons + "개</b><span>강의</span></li><li><b>" + missions + "개</b><span>과제</span></li></ul>" +
         ((p.includes || []).length ? '<ul class="lp-incl">' + p.includes.map((x) => "<li>" + icon("check", "sm") + esc(x) + "</li>").join("") + "</ul>" : "") +
-        '<a class="lp-btn lp-btn-primary lp-btn-lg lp-btn-block" href="' + esc(applyHref(p.ctaUrl, ins.id)) + '"' + linkAttrs(p.ctaUrl) + ">" + esc(p.ctaLabel || "수강 신청하기") + "</a>" +
+        '<a class="lp-btn lp-btn-primary lp-btn-lg lp-btn-block" href="' + esc(applyHref(p.ctaUrl, ins.id)) + '"' + linkAttrs(p.ctaUrl) + ">" + esc(p.ctaLabel || "수강 신청하기") + icon("arrowRight", "sm") + "</a>" +
         (p.note ? '<p class="lp-note">' + nl(p.note) + "</p>" : "") +
-      "</div></div></section>";
+      "</div></div>" + calBlock(ins.id, co) + "</section>";
   };
   S.faq = (L, c) => {
     const items = (L.faq.items || []).filter((x) => x.q).length ? L.faq.items.filter((x) => x.q) : c.faqs.slice(0, 6);
@@ -140,13 +161,13 @@
     const adm = DB.session.admin();
     const canSee = adm && (adm.role === "master" || adm.instructorId === id);
     if (!L || (!L.published && !canSee)) {
-      document.title = "두고 클래스";
+      document.title = "두잉고";
       root.innerHTML = '<main class="lp lp-empty"><div>' + window.logoMark() + "<h1>준비 중인 페이지예요</h1><p>곧 강의 소개가 올라와요.</p><a class=\"lp-btn lp-btn-ghost\" href=\"#/p\">다른 강의 보기</a></div></main>";
       return;
     }
     const co = recruiting(id);
     // 커리큘럼·숫자는 모집 중인 기수가 쓰는 커리큘럼 기준
-    const c = Object.assign({}, DB.content(id), co ? { weeks: DB.weeksOf(co) } : {}), t = DB.themeOf(c.brand.theme);
+    const c = Object.assign({}, DB.content(id), co ? { weeks: DB.weeksOf(co) } : {}, { __id: id }), t = DB.themeOf(c.brand.theme);
     document.title = c.brand.courseTitle + " · " + c.brand.name;
     const tv = t.vars || {};
     const vars = "--logo-accent:" + (t.accent || t.primary) + ";--lp-p:" + t.primary + ";--lp-pa:" + t.active + ";--lp-on:" + (t.onPrimary || t.deep) + ";--lp-pd:" + t.deep + ";--lp-pale:" + t.pale + ";--lp-rgb:" + t.rgb + ";--lp-ac:" + (t.accent || t.primary) + ";--lp-soft:" + (tv["--canvas-soft"] || "#e8ebe6") + ";--lp-ink:" + (tv["--ink"] || "#0e0f0c");
@@ -155,18 +176,19 @@
     const href = applyHref(L.hero.ctaUrl, id);
     root.innerHTML = '<div class="lp" style="' + vars + '">' +
       (!L.published ? '<div class="lp-draft">' + icon("eyeOff", "sm") + "비공개 상태예요. 강사센터 ‘홍보 랜딩페이지’에서 공개로 바꾸면 누구나 볼 수 있어요.</div>" : "") +
-      '<header class="lp-nav"><div class="lp-wrap lp-nav-in"><a class="lp-brand" href="#/p/' + esc(id) + '" data-lp-scroll="top">' + window.logoMark() + "<b>" + esc(c.brand.name) + "</b></a>" +
+      '<header class="lp-nav"><div class="lp-wrap lp-nav-in"><a class="lp-back" href="#/doinggo" aria-label="두잉고 홈으로">' + icon("arrowLeft", "sm") + window.doinggoB("black", "lp-back-dg") + '<span>홈</span></a><span class="lp-back-div" aria-hidden="true"></span><a class="lp-brand" href="#/p/' + esc(id) + '" data-lp-scroll="top">' + window.logoMark() + "<b>" + esc(c.brand.name) + "</b></a>" +
         '<nav class="lp-links">' + navs.map((n) => '<a href="#' + n[0] + '" data-lp-scroll="' + n[0] + '">' + n[1] + "</a>").join("") + "</nav>" +
         '<div class="lp-nav-r"><a class="lp-btn lp-btn-text" href="#/login?ins=' + esc(id) + '">수강생 로그인</a><a class="lp-btn lp-btn-primary" href="' + esc(href) + '"' + linkAttrs(L.hero.ctaUrl) + ">신청하기</a></div></div></header>" +
       "<main>" + sections + "</main>" + footer(L, c, ins) +
       '<div class="lp-sticky"><div>' + (co ? "<b>" + esc(co.name) + " 모집 중</b><small>" + fmtMD(co.startDate) + " 시작</small>" : "<b>" + esc(c.brand.courseTitle) + "</b>") + '</div><a class="lp-btn lp-btn-primary" href="' + esc(href) + '"' + linkAttrs(L.hero.ctaUrl) + ">신청하기</a></div>" +
       "</div>";
+    lpMotion();
   }
 
   // #/p — 공개된 강사 랜딩페이지 모음
   function renderIndex() {
     const list = DB.activeInstructors().filter((x) => { const L = DB.landingOf(x.id); return L && L.published; });
-    document.title = "강의 둘러보기 · 두고 클래스";
+    document.title = "강의 둘러보기 · 두잉고";
     root.innerHTML = '<div class="lp"><header class="lp-nav"><div class="lp-wrap lp-nav-in"><span class="lp-brand">' + window.doogoClassWord("lp-word") + '</span><div class="lp-nav-r"><a class="lp-btn lp-btn-text" href="#/login">수강생 로그인</a></div></div></header>' +
       '<main class="lp-sec"><div class="lp-wrap"><p class="lp-kicker">CLASSES</p><h2>강의 둘러보기</h2><div class="lp-index">' +
       list.map((x) => { const c = DB.content(x.id), t = DB.themeOf(c.brand.theme), co = recruiting(x.id); return '<a class="lp-index-card" href="#/p/' + x.id + '" style="--logo-accent:' + (t.accent || t.primary) + ";--lp-p:" + t.primary + ";--lp-on:" + (t.onPrimary || t.deep) + '"><span class="lp-index-top">' + window.logoMark() + "<b>" + esc(x.displayName) + "</b></span><h3>" + esc(c.brand.courseTitle) + "</h3><p>" + esc(c.brand.tagline || "") + "</p>" + (co ? cohortBadge(co) : "") + "</a>"; }).join("") +
@@ -204,13 +226,18 @@
     if (!box || !isActive()) { clearInterval(tick); tick = null; return; }
     const c = countdownParts(box.dataset.at);
     [["d", c.d], ["h", c.h], ["m", c.m], ["s", c.s]].forEach((x) => { const el = box.querySelector('[data-u="' + x[0] + '"]'); if (el) el.textContent = pad(x[1]); });
-    const st = box.querySelector(".countdown-eyebrow strong"); if (st) st.textContent = c.expired ? "LIVE" : "D-" + Math.max(0, Math.ceil((at(box.dataset.at) - Date.now()) / 864e5));
+    const st = box.querySelector(".countdown-eyebrow strong"); if (st) st.textContent = c.expired ? "지금 LIVE 중" : "D-" + Math.max(0, Math.ceil((at(box.dataset.at) - Date.now()) / 864e5));
+    if (c.expired && at(box.dataset.at) + 3 * 36e5 < Date.now()) { renderFree(insIdFromHash()); return; }
     // 날짜가 된 전자책은 새로고침 없이 바로 열린다
     const now = Date.now();
     document.querySelectorAll(".gift-card[data-open-at]").forEach((g) => { if (!g.classList.contains("is-unlocked") && now >= at(g.dataset.openAt)) renderFree(insIdFromHash()); });
   }
   const FC = {};
+  const freeEnded = (F) => !!F.liveAt && at(F.liveAt) + 3 * 36e5 < Date.now();
   FC.countdown = (F) => {
+    if (freeEnded(F)) return '<section class="countdown-card is-ended" aria-label="무료강의 종료"><p class="countdown-eyebrow"><span>무료강의가 끝났어요</span><strong>종료</strong></p>' +
+      '<p class="fc-ended-t">' + esc(longWhen(F.liveAt)) + "에 진행했어요. 다음 무료강의는 DOOGO CLASS에서 가장 먼저 알려 드려요.</p>" +
+      '<div class="fc-ended-cta"><a class="primary-cta" href="#/vod/c/all?tab=free">다음 무료강의 보기</a><a class="fc-ended-link" href="#/vod/c/all?tab=vod">강사님 VOD 클래스 보기 →</a></div></section>';
     const c = countdownParts(F.liveAt);
     const w = whenParts(F.liveAt);
     return '<section class="countdown-card" id="fc-count" data-at="' + esc(F.liveAt) + '" aria-label="강의 시작 카운트다운"><p class="countdown-eyebrow"><span>강의 시작까지</span><strong>' + (c.expired ? "LIVE" : "D-" + Math.ceil((at(F.liveAt) - Date.now()) / 864e5)) + "</strong></p>" +
@@ -267,7 +294,7 @@
           '<span class="upcoming-date">' + SV(IC.cal, 17) + esc(longWhen(F.liveAt)) + "</span>" +
           '<p class="upcoming-instructor">강사 <strong>' + esc(F.hero.instructor) + "</strong></p><h3>" + title.split("\n").map((x) => "<span>" + esc(x) + "<br></span>").join("") + "</h3>" +
           (L.summary ? '<p class="upcoming-description">' + esc(L.summary) + "</p>" : "") + ((L.points || []).length ? "<ul>" + L.points.map((x) => "<li>" + SV(IC.check, 17) + esc(x) + "</li>").join("") + "</ul>" : "") +
-          '<a class="upcoming-course-cta" href="' + esc(L.url || "#") + '"' + (L.url ? ' target="_blank" rel="noreferrer"' : ' data-fc="nolink"') + ">" + esc(L.label) + SV(IC.ext, 18) + "</a>" + (L.note ? "<small>" + esc(L.note) + "</small>" : "") +
+          (freeEnded(F) ? '<span class="upcoming-course-cta is-off" aria-disabled="true">신청이 마감됐어요</span>' : '<a class="upcoming-course-cta" href="' + esc(L.url || "#") + '"' + (L.url ? ' target="_blank" rel="noreferrer"' : ' data-fc="nolink"') + ">" + esc(L.label) + SV(IC.ext, 18) + "</a>") + (L.note ? "<small>" + esc(L.note) + "</small>" : "") +
         "</div></article></section>";
   };
   FC.faq = (F, c) => {
@@ -276,13 +303,15 @@
     return '<section class="fc-faq" aria-label="자주 묻는 질문"><div class="section-heading"><span>' + esc(q.kicker) + "</span><h2>" + esc(q.title) + "</h2></div>" +
       '<div class="fc-faq-list">' + items.map((x) => "<details><summary>" + esc(x.q) + SV(IC.chev, 18) + "</summary><p>" + nl(x.a) + "</p></details>").join("") + "</div></section>";
   };
+  // 스토어에서 들어왔으면 보던 스토어 화면으로, 아니면 DOOGO CLASS 첫 화면으로
+  function dcBack() { try { const h = sessionStorage.getItem("dc:last") || ""; return /^#\/vod(\/|\?|$)/.test(h) ? h : "#/vod"; } catch (e) { return "#/vod"; } }
   function renderFree(id) {
     const ins = DB.instructor(id);
     const F = ins && ins.status === "active" ? DB.freeOf(id) : null;
     const adm = DB.session.admin();
     const canSee = adm && (adm.role === "master" || adm.instructorId === id || adm.actingAs === id);
     if (!F || (!F.published && !canSee)) {
-      document.title = "두고 클래스";
+      document.title = "두잉고";
       root.innerHTML = '<main class="lp lp-empty"><div>' + window.doogoClassWord("lp-empty-word") + "<h1>준비 중인 페이지예요</h1><p>곧 무료강의 안내가 올라와요.</p></div></main>";
       return;
     }
@@ -299,7 +328,10 @@
         '<span class="bk-tile t1">' + SV(IC.play, 26) + '</span><span class="bk-tile t2">' + SV(IC.msg, 24) + '</span><span class="bk-tile t3">' + SV(IC.cal, 22) + "</span></div>";
     root.innerHTML = '<div class="dg bk" style="' + vars + '"><div class="landing-page">' +
       (!F.published ? '<div class="fc-draft">' + icon("eyeOff", "sm") + "비공개 상태예요. 강사센터 ‘무료강의 페이지’에서 ‘공개 중’으로 바꾸면 누구나 볼 수 있어요.</div>" : "") +
-      '<section class="bk-hero"><span class="bk-glow" aria-hidden="true"></span><span class="bk-floor" aria-hidden="true"></span><div class="bk-hero-in">' +
+      '<section class="bk-hero"><span class="bk-glow" aria-hidden="true"></span><span class="bk-floor" aria-hidden="true"></span>' +
+      '<nav class="bk-nav" aria-label="사이트 이동"><a class="bk-nav-a bk-nav-dc" href="' + esc(dcBack()) + '">' + SV(IC.left, 16) + '<img src="assets/brand/doogo-class-word.svg" alt="DOOGO CLASS"><span>바로가기</span></a>' +
+        '<a class="bk-nav-a bk-nav-dg" href="#/doinggo" aria-label="두잉고 홈으로">' + window.doinggoB("white", "bk-nav-dgl") + "<span>홈</span></a></nav>" +
+      '<div class="bk-hero-in">' +
         '<header class="hero bk-hero-txt">' + (h.badge ? '<span class="top-badge"><i aria-hidden="true"></i>' + esc(h.badge) + "</span>" : "") +
           '<p class="instructor">강사 · <strong>' + esc(h.instructor) + "</strong></p><h1>" + lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? "<em>" + esc(l) + "</em>" : "<span>" + esc(l) + "</span>")).join("") + "</h1>" +
           (h.sub ? '<p class="hero-copy">' + nl(h.sub) + "</p>" : "") + (h.note ? '<small class="disclaimer">' + esc(h.note) + "</small>" : "") + "</header>" +
@@ -320,6 +352,158 @@
       '<button class="btn btn-primary btn-block" type="submit">질문 남기기</button></form></div></div>';
     document.getElementById("fcq-text").focus();
   }
+  /* ---------- 강사 소개 페이지 모션: 첫 화면 등장 · 스크롤하면 하나씩 떠오르기 · 숫자 올라가기 · 로드맵 선 그리기 ---------- */
+  let lpIO = null;
+  function countUp(el) {
+    const m = String(el.textContent).match(/^(\d+)(.*)$/); if (!m || el.dataset.counted) return;
+    el.dataset.counted = "1";
+    const to = +m[1], tail = m[2], t0 = performance.now(), dur = 1100;
+    const tick = (t) => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(to * e) + tail; if (k < 1) requestAnimationFrame(tick); };
+    el.textContent = "0" + tail; requestAnimationFrame(tick);
+  }
+  function lpMotion() {
+    const lp = document.querySelector(".lp"); if (!lp) return;
+    if (lpIO) lpIO.disconnect();
+    lp.classList.add("lp-motion");
+    // 같은 줄(부모) 안에서 순서대로 조금씩 늦게
+    const mark = (sel, step) => lp.querySelectorAll(sel).forEach((el) => {
+      if (el.closest(".lp-hero")) return;
+      const sib = Array.from(el.parentElement.children).filter((x) => x.matches(sel));
+      el.classList.add("lp-rv"); el.style.setProperty("--d", String(Math.min(sib.indexOf(el), 6) * (step || 1)));
+    });
+    mark(".lp-sec .lp-kicker, .lp-sec h2, .lp-sec .lp-lead, .lp-cur-sum, .lp-stats-grid > div, .lp-about-photo, .lp-about > div:last-child, .lp-points article, .lp-forwho, .lp-road-i, .lp-feats > div, .lp-reviews figure, .lp-faq details, .lp-dday, .lp-flow li, .lp-sched, .lp-enroll-card, .lp-iv-copy, .lp-iv-v, .lp-cal-m, .lp-cta h2, .lp-cta p, .lp-cta .lp-btn, .lp-cta-co");
+    lp.querySelectorAll(".lp-road, .lp-career li, .lp-incl li").forEach((el) => el.classList.add("lp-rv-k"));
+    lpIO = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return;
+      const el = e.target; el.classList.add("in"); lpIO.unobserve(el);
+      if (el.matches(".lp-stats-grid > div")) { const b = el.querySelector("b"); if (b) countUp(b); }
+      if (el.matches(".lp-cur-sum")) el.querySelectorAll("b").forEach(countUp);
+    }), { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+    lp.querySelectorAll(".lp-rv, .lp-rv-k").forEach((el) => lpIO.observe(el));
+    // 첫 화면은 바로 등장
+    requestAnimationFrame(() => requestAnimationFrame(() => lp.classList.add("lp-ready")));
+  }
+  /* ---------- 수강 신청 팝업 (강사 소개 화면에서 바로 신청) ---------- */
+  function closeApply() { document.querySelectorAll(".lp-ap").forEach((x) => x.remove()); document.documentElement.style.overflow = ""; }
+  function applyModal(id) {
+    const ins = DB.instructor(id); if (!ins) return;
+    const b = (DB.content(id) || {}).brand || {};
+    const cos = DB.cohortsOf(id).filter((x) => x.recruiting && DB.cohortStatus(x) !== "ended");
+    closeApply();
+    const av = b.photo ? '<img src="' + esc(b.photo) + '" alt="">' : esc((ins.displayName || "강").slice(0, 1));
+    const body = !cos.length
+      ? '<div class="lp-ap-empty">' + icon("calendar") + "<b>지금 모집 중인 기수가 없어요</b><p>다음 기수 모집이 열리면 다시 신청해 주세요.</p>" + '<button type="button" class="lp-btn lp-btn-dark lp-btn-lg lp-btn-block" data-lp-ap-close>확인</button></div>'
+      : '<form class="lp-ap-form" novalidate>' +
+          '<label class="lp-ap-f"><span>기수</span><select name="cohort">' + cos.map((x) => '<option value="' + x.id + '">' + esc(x.name) + " · " + fmtMD(x.startDate) + " 시작</option>").join("") + "</select></label>" +
+          '<label class="lp-ap-f"><span>이름</span><input name="nm" autocomplete="name" placeholder="입금자명과 같게 적어 주세요"></label>' +
+          '<label class="lp-ap-f"><span>전화번호 뒷자리</span><input name="p4" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리 · 로그인 비밀번호로 써요"></label>' +
+          '<label class="lp-ap-agree"><input type="checkbox" name="agree"><span>수강생 확인을 위한 이름 · 전화번호 뒷자리 수집에 동의해요</span></label>' +
+          '<p class="lp-ap-err" role="alert"></p>' +
+          '<button type="submit" class="lp-btn lp-btn-primary lp-btn-lg lp-btn-block">신청하기' + icon("arrowRight", "sm") + "</button>" +
+          '<p class="lp-ap-note">신청 후 강사님이 확인하고 승인하면, 이름과 전화번호 뒷자리로 바로 로그인할 수 있어요.</p></form>';
+    const el = document.createElement("div");
+    el.className = "lp-ap"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "수강 신청");
+    el.innerHTML = '<div class="lp-ap-card"><button type="button" class="lp-ap-x" data-lp-ap-close aria-label="닫기">' + icon("x", "sm") + "</button>" +
+      '<div class="lp-ap-head"><span class="lp-ap-av' + (b.photo ? " has-photo" : "") + '">' + av + "</span><div><small>" + esc(b.name || ins.displayName) + " · 수강 신청</small><b>" + esc(b.courseTitle || "") + "</b>" +
+        (cos[0] ? "<em>" + esc(cos[0].name) + " 모집 중 · " + fmtMD(cos[0].startDate) + " 시작</em>" : "") + "</div></div>" + body + "</div>";
+    (document.querySelector(".lp") || document.body).appendChild(el); // .lp 안에 넣어야 버튼 색(--lp-ink 등)이 그대로 적용됨
+    document.documentElement.style.overflow = "hidden";
+    requestAnimationFrame(() => el.classList.add("on"));
+    const f = el.querySelector("form");
+    if (f) { setTimeout(() => f.elements.nm.focus(), 60); f.addEventListener("submit", (e) => { e.preventDefault(); submitApply(ins, f, el); }); }
+    el.addEventListener("click", (e) => { if (e.target === el || e.target.closest("[data-lp-ap-close]")) closeApply(); });
+  }
+  function submitApply(ins, f, el) {
+    const err = f.querySelector(".lp-ap-err"), E = f.elements;
+    const name = E.nm.value.trim(), phone4 = E.p4.value.trim(), cohortId = E.cohort.value;
+    if (!name) { err.textContent = "이름을 입력해 주세요."; E.nm.focus(); return; }
+    if (!/^\d{4}$/.test(phone4)) { err.textContent = "전화번호 뒷자리 숫자 4자리를 입력해 주세요."; E.p4.focus(); return; }
+    if (!E.agree.checked) { err.textContent = "정보 수집에 동의해 주세요."; return; }
+    const done = () => {
+      el.querySelector(".lp-ap-card").innerHTML = '<button type="button" class="lp-ap-x" data-lp-ap-close aria-label="닫기">' + icon("x", "sm") + "</button>" +
+        '<div class="lp-ap-done"><span>' + icon("check") + "</span><b>신청이 접수됐어요</b><p>" + esc(name) + "님, " + esc(ins.displayName) + " 강사님이 확인 후 승인해 드릴게요.<br>승인되면 이름과 전화번호 뒷자리로 로그인할 수 있어요.</p>" +
+        '<button type="button" class="lp-btn lp-btn-dark lp-btn-lg lp-btn-block" data-lp-ap-close>확인</button><a class="lp-ap-login" href="#/login?ins=' + esc(ins.id) + '">수강생 로그인 화면으로 ' + icon("arrowRight", "xs") + "</a></div>";
+    };
+    const MSG = { "dup-approved": "이미 승인된 수강생이에요. 바로 로그인해 주세요.", "dup-pending": "이미 신청이 접수돼 있어요. 승인을 기다려 주세요.", cohort: "이 기수는 지금 신청을 받지 않아요. 다른 기수를 골라 주세요." };
+    if (DB.remote && DB.remote.on) {
+      const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
+      DB.remote.call("public", { action: "signup", iid: ins.id, cohortId, name, phone4 })
+        .then((r) => { if (r.error) err.textContent = MSG[r.error] || "신청하지 못했어요. 입력 내용을 확인해 주세요."; else done(); })
+        .catch(() => { err.textContent = "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."; }).then(() => { btn.disabled = false; });
+      return;
+    }
+    const dup = DB.studentsOf(ins.id).find((x) => x.name.replace(/\s+/g, "") === name.replace(/\s+/g, "") && x.phone4 === phone4 && x.cohortId === cohortId && (x.status === "pending" || x.status === "approved"));
+    if (dup) { err.textContent = dup.status === "approved" ? MSG["dup-approved"] : MSG["dup-pending"]; return; }
+    DB.data.students.push({ id: DB.uid("s"), instructorId: ins.id, cohortId, name, phone4, status: "pending", appliedAt: todayStr() });
+    DB.save();
+    done();
+  }
+  // 강사 소개 화면의 ‘수강 신청하기 · 신청하기’ 버튼(외부 결제 주소가 아닐 때)은 이 화면에서 팝업으로
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest && e.target.closest('.lp a[href*="signup=1"]'); if (!a) return;
+    e.preventDefault(); applyModal(insIdFromHash());
+  }, true);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.querySelector(".lp-ap")) closeApply(); });
+  window.addEventListener("hashchange", closeApply);
+  /* ---------- 강사 소개 영상 (무료강의 영상 중 ‘강사 이야기’에 맞는 것 하나) ---------- */
+  function introVideo(id) {
+    const items = ((DB.freeOf(id) || {}).videos || {}).items || [];
+    const vids = items.filter((x) => DB.youtubeId(x.youtube));
+    if (!vids.length) return null;
+    return vids.find((x) => /인생|이야기|스토리|창업|시작/.test(x.title || "")) || vids[0];
+  }
+  function introBlock(id, c) {
+    const v = introVideo(id); if (!v) return "";
+    const y = DB.youtubeId(v.youtube);
+    return '<div class="lp-iv">' +
+      '<div class="lp-iv-copy"><p class="lp-kicker">MEET THE INSTRUCTOR</p><h3>' + esc(c.brand.name) + "를<br>영상으로 먼저 만나보세요</h3>" +
+        '<p class="lp-iv-t">“' + esc(v.title) + "”</p>" +
+        '<p class="lp-iv-s">어떤 사람이 어떻게 해냈는지, 강의를 듣기 전에 직접 확인해 보세요.</p></div>' +
+      '<div class="lp-iv-v"><button type="button" class="lp-iv-play" data-lp-yt="' + esc(ytEmbed(v.youtube)) + '" aria-label="' + esc(v.title) + ' 영상 재생">' +
+        '<img src="https://i.ytimg.com/vi/' + esc(y) + '/hqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">' +
+        '<span class="lp-iv-shade"></span><span class="lp-iv-btn">' + SV('<path d="M8 5.5v13l11-6.5z" fill="currentColor" stroke="none"/>', 30) + "</span>" +
+        '<span class="lp-iv-cap"><b>' + esc(v.title) + "</b><small>" + esc(c.brand.name) + " · 유튜브</small></span></button></div>" +
+    "</div>";
+  }
+  /* ---------- 수업 캘린더 (기수 일정: 개강 · 주차 강의 · 라이브 · 과제 마감 · 수료) ---------- */
+  function calBlock(id, co) {
+    if (!co) return "";
+    const D = DB.date, start = co.startDate, end = DB.cohortEnd(co), today = D.todayStr();
+    const byDate = {};
+    const add = (date, type, label) => { (byDate[date] = byDate[date] || []).push({ type, label }); };
+    add(start, "start", "개강");
+    DB.events(id, co).forEach((e) => {
+      const short = e.type === "open" ? e.week + "주차 강의" : e.type === "deadline" ? e.week + "주 마감" : e.type === "qna" ? "라이브" : (e.title || "").slice(0, 6);
+      add(e.date, e.type === "open" || e.type === "deadline" || e.type === "qna" ? e.type : "etc", short);
+    });
+    add(end, "end", "수료");
+    const s = D.parseDate(start), e2 = D.parseDate(end), months = [];
+    for (let y = s.getFullYear(), m = s.getMonth(); y < e2.getFullYear() || (y === e2.getFullYear() && m <= e2.getMonth()); m === 11 ? (y++, m = 0) : m++) months.push([y, m]);
+    const month = ([y, m]) => {
+      const off = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate(), cells = [];
+      for (let i = 0; i < Math.ceil((off + days) / 7) * 7; i++) cells.push(new Date(y, m, 1 - off + i));
+      return '<div class="lp-cal-m"><h4>' + y + "년 " + (m + 1) + "월</h4>" +
+        '<div class="lp-cal-g">' + ["일", "월", "화", "수", "목", "금", "토"].map((d, i) => '<span class="lp-cal-dow' + (i === 0 ? " sun" : "") + '">' + d + "</span>").join("") +
+        cells.map((d) => {
+          const k = D.toStr(d), ev = byDate[k] || [], inMonth = d.getMonth() === m, inRange = k >= start && k <= end;
+          const cls = ["lp-cal-d", inMonth ? "" : "out", inRange && inMonth ? "on" : "", k === today ? "today" : "", inMonth && ev.some((x) => x.type === "start") ? "is-start" : "", inMonth && ev.some((x) => x.type === "end") ? "is-end" : ""].filter(Boolean).join(" ");
+          return '<div class="' + cls + '"' + (ev.length && inMonth ? ' title="' + esc(ev.map((x) => x.label).join(" · ")) + '"' : "") + "><b>" + d.getDate() + "</b>" +
+            (inMonth ? ev.map((x) => '<i class="lp-ev ' + x.type + '"><em>' + esc(x.label) + "</em></i>").join("") : "") + "</div>";
+        }).join("") + "</div></div>";
+    };
+    const legend = [["start", "개강"], ["open", "주차 강의"], ["qna", "라이브 Q&A"], ["deadline", "과제 마감"], ["end", "수료"]];
+    return '<div class="lp-wrap"><div class="lp-cal lp-rv"><div class="lp-cal-h"><div><b>' + esc(co.name) + ' 수업 캘린더</b><span>' + D.fmtFull(start) + " ~ " + D.fmtFull(end) + " · 매주 이렇게 진행돼요</span></div>" +
+      '<ul class="lp-cal-lg">' + legend.map((x) => '<li><i class="lp-ev ' + x[0] + '"></i>' + x[1] + "</li>").join("") + "</ul></div>" +
+      '<div class="lp-cal-ms">' + months.map(month).join("") + "</div></div></div>";
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest && e.target.closest("[data-lp-yt]"); if (!b) return;
+    const src = b.getAttribute("data-lp-yt"); if (!src) return;
+    const f = document.createElement("iframe");
+    f.src = src + (src.indexOf("?") > -1 ? "&" : "?") + "autoplay=1";
+    f.title = b.getAttribute("aria-label") || "강사 소개 영상"; f.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen"; f.allowFullscreen = true;
+    b.replaceWith(f);
+  });
   function render() {
     window.applyStudentTheme(null);
     const id = insIdFromHash();

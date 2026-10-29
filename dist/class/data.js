@@ -22,11 +22,16 @@ const MOON_CONTENT = {
     kakaoChannel: "",
     worldClock: true,
     liveUrl: "",
-    loginEyebrow: "DOOGO CLASS · 해외 건기식 브랜드",
+    loginEyebrow: "DOINGGO · 해외 건기식 브랜드",
     loginHeadline: "내 해외 건기식\n브랜드 만들기",
     loginSub: "나만의 해외 건강식품 만들기, 함께 성장하는 실전 클래스. 매주 과제를 하나씩 해내다 보면, 5주 뒤엔 내 이름의 브랜드의 사장님이 되어있으실거에요.",
     liveTime: "20:00",
-    theme: "lime"
+    // 메인 강의는 외부 강의 플랫폼(아이비클래스)에서 — 두잉고에는 버튼 하나로 연결 (강사센터 › 기본 정보에서 링크 수정)
+    mainLec: { on: true, platform: "아이비클래스", label: "메인 강의 들으러 가기", url: "https://www.ivyclass.co.kr", note: "라이브 강의와 녹화본은 아이비클래스에서 봐요. 두잉고에는 주차별 따라하기 영상 · 과제 · 보충 강의가 있어요." },
+    lessonLabel: "따라하기 영상",
+    // 수업 캘린더: 문대표가 실제로 쓰는 일정 종류 (주차 강의 = 오프라인 강의, 녹화본은 강의 다음 날 자동)
+    cal: { types: ["open", "replay", "deadline", "challenge", "bonus"], labels: { open: "오프라인 강의", challenge: "챌린지 강의" }, short: "오프라인", replayAfter: 1 },
+    theme: "doinggo"
   },
 
 
@@ -34,6 +39,7 @@ const MOON_CONTENT = {
   weeks: [
     {
       no: 1, title: "사업 준비 · 판매자 세팅",
+      howto: "1. 아이비클래스에서 이번 주 **메인 강의**를 먼저 들어요.\n2. 아래 **따라하기 영상**을 보면서 사업자등록 → 통신판매업 신고 → 위생교육 → 구매대행업 영업등록 순서로 그대로 따라 해요.\n3. 하나 끝낼 때마다 **과제**에 증빙(사진 · 캡처)을 올려요. 막히면 ‘질문 · 요청’이나 AI 조교에게 바로 물어보세요.",
       summary: "사업자등록부터 수입식품 구매대행업 등록, 판매 채널 가입까지 판매를 시작할 수 있는 몸을 만듭니다.",
       lessons: [
         { id: "l1-1", title: "OT · 뉴질랜드 건강식품, 왜 지금인가", minutes: 38, youtubeId: "", desc: "시장 규모, 수강 로드맵, 5주 동안 해야 할 일 한눈에 보기" },
@@ -229,13 +235,10 @@ const MOON_CONTENT = {
   //  scope "all"   : 모든 기수에 반복 — week 주차의 dow 요일 (0=일 … 6=토)
   //  scope "cohort": 특정 기수 하루 — date
   schedule: [
-    { id: "e1", type: "qna", title: "1주차 Q&A 라이브", time: "21:00", scope: "all", week: 1, dow: 2 },
-    { id: "e2", type: "qna", title: "2주차 Q&A 라이브", time: "21:00", scope: "all", week: 2, dow: 2 },
-    { id: "e3", type: "qna", title: "3주차 Q&A · 상세페이지 첨삭", time: "21:00", scope: "all", week: 3, dow: 2 },
-    { id: "e4", type: "qna", title: "4주차 Q&A 라이브", time: "21:00", scope: "all", week: 4, dow: 2 },
-    { id: "e5", type: "challenge", title: "첫 상품 등록 7일 챌린지 시작", time: "", scope: "all", week: 2, dow: 5 },
-    { id: "e6", type: "event", title: "수료식 · 성과 발표", time: "20:00", scope: "all", week: 6, dow: 4 },
-    { id: "e7", type: "notice", title: "수입식품 위생교육 신청 안내", time: "", scope: "cohort", cohortId: "c3", date: "2026-10-03" }
+    { id: "e5", type: "challenge", title: "첫 상품 등록 7일 챌린지 강의", time: "", scope: "all", week: 2, dow: 5 },
+    { id: "b1", type: "bonus", title: "보너스 강의 · 해외 도매몰 실전 발주 따라하기", time: "21:00", scope: "all", week: 2, dow: 6 },
+    { id: "b2", type: "challenge", title: "광고 ROAS 3일 챌린지 강의", time: "", scope: "all", week: 4, dow: 1 },
+    { id: "b3", type: "bonus", title: "보너스 강의 · 상세페이지 첨삭 모음", time: "21:00", scope: "all", week: 4, dow: 6 }
   ],
 
   notices: [
@@ -327,7 +330,7 @@ const MOON_CONTENT = {
     hero: {
       eyebrow: "두고보는 문대표 · 해외 건기식 브랜드 클래스",
       title: "뉴질랜드 건강식품으로\n내 브랜드 만들기",
-      sub: "상품 고르기부터 사업자·통관 서류, 상세페이지, 첫 판매까지. 5주 동안 매주 과제를 하나씩 해내면 내 이름의 건강식품 브랜드가 생겨요.",
+      sub: "상품 고르기부터 사업자·통관 서류, 상세페이지, 첫 판매까지. 4주 동안 매주 과제를 하나씩 해내면 내 이름의 건강식품 브랜드가 생겨요.",
       ctaLabel: "4기 수강 신청하기", ctaUrl: "", image: ""
     },
     about: {
@@ -336,12 +339,12 @@ const MOON_CONTENT = {
       photo: "", career: ["뉴질랜드 건강식품 수입·판매", "유튜브 ‘두고보는 문대표’ 운영", "해외 건기식 브랜드 클래스 1~3기 운영"]
     },
     points: {
-      title: "5주 동안 이렇게 바뀌어요",
+      title: "4주 동안 이렇게 바뀌어요",
       items: [
         { title: "1주차 · 사업 준비", desc: "사업자등록, 통신판매업 신고, 수입식품 영업등록까지 서류를 끝내요." },
         { title: "2주차 · 상품 고르기", desc: "뉴질랜드 건강식품 중 팔리는 상품을 고르는 기준과 마진 계산을 배워요." },
         { title: "3주차 · 통관과 첫 입고", desc: "수입 신고와 검사 절차를 따라 하며 첫 물건을 들여와요." },
-        { title: "4~5주차 · 판매 시작", desc: "상세페이지와 스마트스토어를 열고 첫 주문을 받아요." }
+        { title: "4주차 · 판매 시작", desc: "상세페이지와 스마트스토어를 열고 첫 주문을 받아요." }
       ],
       forWho: ["해외 건강식품을 직접 팔아 보고 싶은 분", "서류·통관이 어려워서 시작을 미루고 있던 분", "퇴근 후·주말에 부업으로 브랜드를 만들고 싶은 분", "혼자 하다 막혀서 같이 끝까지 갈 사람이 필요한 분"]
     },
@@ -354,7 +357,7 @@ const MOON_CONTENT = {
       ]
     },
     pricing: {
-      title: "수강 안내", price: "", original: "", period: "5주 과정 + 다시보기",
+      title: "수강 안내", price: "", original: "", period: "4주 과정 + 다시보기",
       includes: ["주차별 강의 영상", "34개 실습 과제와 자동 검수", "매주 라이브 Q&A", "실무 체크리스트 · 마진 계산기", "문대표 AI 조교 (24시간 답변)", "수료증 발급"],
       ctaLabel: "4기 수강 신청하기", ctaUrl: "", note: "결제 후 수강생 전용 학습 플랫폼 계정을 열어 드려요."
     },
@@ -363,7 +366,7 @@ const MOON_CONTENT = {
   },
   // 처음 들어온 수강생이 홈에서 하나씩 체크하는 시작 가이드
   guide: [
-    { id: "g-1", title: "수업 캘린더 확인하기", desc: "라이브 Q&A와 과제 마감일을 먼저 확인해 두세요.", url: "#/schedule" },
+    { id: "g-1", title: "수업 캘린더 확인하기", desc: "오프라인 강의일과 과제 마감일을 먼저 확인해 두세요.", url: "#/schedule" },
     { id: "g-2", title: "[필독] 공지 읽기", desc: "수강 방법과 5주 일정이 정리돼 있어요.", url: "#/notices" },
     { id: "g-3", title: "1주차 첫 강의 보기", desc: "다 본 강의는 ‘시청 완료’로 표시해 주세요.", url: "#/curriculum" },
     { id: "g-4", title: "AI 조교에게 궁금한 점 물어보기", desc: "과제·서류·일정을 24시간 답해 드려요.", url: "#/bot" }
@@ -432,9 +435,9 @@ const MOON_CONTENT = {
 
   // 라이브 다시보기 (체험용 예시 — 강사센터 ‘라이브 다시보기’에서 유튜브 주소를 넣어 올린다)
   replays: [
-    { id: "rp-2", week: 2, date: "2026-10-13", title: "2주차 라이브 Q&A · 주력 상품 고르기와 마진 계산", youtubeId: "", minutes: "1:04:20",
+    { id: "rp-2", week: 2, date: "2026-10-13", title: "2주차 보충 · 마진 계산기로 주력 상품 고르기", youtubeId: "", minutes: "9:20",
       summary: "· 현지가 · 환율 · 배송비 · 수수료 · 광고비를 모두 넣어야 진짜 마진이 보여요\n· 판매가 기준 순이익 20~30%가 나오는 상품만 주력으로\n· 자주 나온 질문: 마누카꿀은 등급(MGO)마다 따로 등록하나요? → 등급별로 옵션을 나눠요", attachments: [] },
-    { id: "rp-1", week: 1, date: "2026-10-06", title: "1주차 라이브 Q&A · 사업자등록부터 영업등록까지", youtubeId: "", minutes: "1:12:40",
+    { id: "rp-1", week: 1, date: "2026-10-06", title: "1주차 보충 · 사업자등록 · 영업등록, 가장 헷갈리는 부분만", youtubeId: "", minutes: "12:40",
       summary: "· 사업자등록 → 통신판매업 신고 → 위생교육 → 구매대행업 영업등록 순서 꼭 지키기\n· 업태는 도소매, 종목은 전자상거래 소매업으로\n· 자주 나온 질문: 간이과세자로 시작해도 되나요? → 처음엔 간이과세로 시작하는 분이 많아요", attachments: [] }
   ],
 
@@ -589,7 +592,7 @@ window.CLASS_SEED = {
     { id: "farmer", name: "황금농부", phone4: "3333", displayName: "갓농부", status: "active", createdAt: "2026-09-12",
       brand: { name: "갓농부", courseTitle: "갓농부 실전 클래스", field: "귤 단 하나 팔아 월매출 10억", theme: "binance", photo: "assets/home/farmer-profile.webp" } },
     { id: "choi", name: "초이", phone4: "2222", displayName: "초이", status: "active", createdAt: "2026-09-20",
-      brand: { name: "초이 클래스", courseTitle: "초이와 함께하는 실전 클래스", theme: "pink" },
+      brand: { name: "초이 클래스", courseTitle: "초이와 함께하는 실전 클래스", theme: "pink", photo: "assets/home/choi-profile.webp" },
       menu: { items: [{ key: "home", on: true }, { key: "curriculum", on: true }, { key: "missions", on: true }, { key: "schedule", on: true }, { key: "notices", on: true }, { key: "qna", on: true }, { key: "docs", on: false }, { key: "bot", on: true }, { key: "library", on: true }, { key: "motivation", on: false }, { key: "certificate", on: true }], library: { ebook: true, file: true, vod: true, senior: false } } }
   ],
   content: { moon: MOON_CONTENT },

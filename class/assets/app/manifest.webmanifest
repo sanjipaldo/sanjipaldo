@@ -1,0 +1,16 @@
+{
+  "name": "두잉고",
+  "short_name": "두잉고",
+  "description": "강의는 강사님이, 운영은 두잉고가 · 강사님 이름으로 된 강의 플랫폼",
+  "lang": "ko",
+  "start_url": "./#/login",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#FF0037",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

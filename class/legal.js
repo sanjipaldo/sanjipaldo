@@ -239,6 +239,11 @@ ${CO}(이하 "회사")는 ${SITE}(이하 "서비스")를 운영하면서 「개�
 - Copyright (c) 2011 Juan Montoreano (juan@remolacha.biz), with Reserved Font Names "Lilita One"
 - 로고는 글꼴 파일을 쓰지 않고, 글자 모양을 기울이고 다듬은 그림으로만 넣었습니다.
 
+## QR Code Generator for JavaScript (파트너센터 추천 링크 QR)
+- 라이선스: MIT License
+- Copyright (c) 2009 Kazuhiko Arase (https://github.com/kazuhikoarase/qrcode-generator)
+- ‘QR Code’는 DENSO WAVE INCORPORATED의 등록 상표입니다.
+
 ## Lucide (아이콘)
 - 라이선스: ISC License (일부는 MIT License)
 - Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022. (https://lucide.dev)

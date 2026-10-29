@@ -10,8 +10,10 @@
  *  inq:<id>             강사 입점 문의 (마스터만)
  *  bill:<강사>:<id>     기수 이용료 신청 · 정산 (마스터 + 그 강사만. 강사는 '다음 기수 열어 주세요' 신청만,
  *                       입금 · 세금계산서 · 기수 열기는 마스터만)
+ *  vm: · vo: · vr: · vpl: · vq: · vpo: · vstat   두고클래스(VOD) 회원 · 주문 · 후기 · 문의 · 정산 → vodaccess.js
  */
 "use strict";
+const VA = require("./vodaccess");
 
 const clone = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
 const mask = (n) => { n = String(n || ""); return n ? n.slice(0, 1) + "OO" : "익명"; };
@@ -25,7 +27,8 @@ function parseKey(k) {
   if (p[0] === "bill") return p.length === 3 && p[1] && p[2] ? { type: "bill", iid: p[1], bid: p[2] } : null;
   // 강사 입점 문의 (방문자가 남기고 마스터만 본다)
   if (p[0] === "inq") return p.length === 2 && p[1] ? { type: "inq", id: p[1] } : null;
-  return null;
+  const v = VA.parse(p);
+  return v ? Object.assign(v, { vod: true }) : null;
 }
 
 const isMaster = (ids) => !!(ids.admin && ids.admin.role === "master");
@@ -68,6 +71,7 @@ function questionsOnly(p) {
 function view(k, v, ids) {
   const K = parseKey(k);
   if (!K) return undefined;
+  if (K.vod) return VA.view(K, v, ids);
   if (isMaster(ids)) return v;
   if (K.type === "inq") return undefined;
   // 이용료 신청은 그 강사 본인만 (마스터 메모는 빼고)
@@ -75,8 +79,10 @@ function view(k, v, ids) {
   if (v == null) return memberOf(ids, K.iid) || K.type === "ins" || K.type === "content" || K.type === "cohorts" || K.type === "meta" ? null : undefined;
   switch (K.type) {
     case "meta": {
-      if (ids.admin) return v;
-      const o = clone(v); delete o.announcements; delete o.billing; return o;
+      const o = clone(v);
+      if (!ids.admin) { delete o.announcements; delete o.billing; delete o.contracts; }
+      if (o.vod) o.vod = VA.publicVod(o.vod, ids);
+      return o;
     }
     case "ins":
       if (instructorOf(ids, K.iid)) return v;
@@ -104,7 +110,7 @@ function prefixesFor(ids) {
   if (ids.student) iids.add(ids.student.iid);
   iids.forEach((iid) => { p.push("stu:" + iid + ":%", "prog:" + iid + ":%"); });
   if (ids.admin && ids.admin.role === "instructor" && ids.admin.iid) p.push("bill:" + ids.admin.iid + ":%");
-  return p;
+  return p.concat(VA.prefixes(ids));
 }
 
 /* ---------------- 쓰기 권한 ---------------- */
@@ -113,10 +119,14 @@ const ANSWER_KEYS = ["answer", "answeredAt", "answeredBy", "answeredById"];
 function writer(k, ids, creating) {
   const K = parseKey(k);
   if (!K) return null;
+  if (K.vod) return VA.writer(K, ids, creating);
   const same = (o, n) => n;
   if (isMaster(ids)) return { fix: same };
   switch (K.type) {
-    case "meta": return null;
+    case "meta":
+      // 강사: 자기 VOD 클래스 커리큘럼 · 자기 제출 서류만 (나머지는 서버 값 그대로)
+      if (!creating && ids.admin && ids.admin.role === "instructor") return { fix: (o, n) => VA.fixInstructorMeta(o, n, ids.admin.iid) };
+      return null;
     case "inq": return null;
     case "ins":
       if (creating) return null;
@@ -187,16 +197,20 @@ function keepStaffFields(o, n) {
   return n;
 }
 
-/* 파일을 누가 볼 수 있는지: 공개 페이지 사진은 pub, 나머지는 문서 범위 */
-function fileScope(k, path) {
+/* 파일을 누가 볼 수 있는지: 공개 페이지 사진은 pub, 나머지는 문서 범위
+ * (meta 의 두고클래스 사진은 공개, 유료 강의 자료는 그 클래스를 산 회원만 — doc 은 파일이 들어 있는 문서 값) */
+function fileScope(k, path, doc) {
   const K = parseKey(k);
   if (K && K.type === "content" && /^(landing|freeClass|brand)$/.test(String(path[0]))) return "pub";
+  if (k === "meta") return VA.metaFileScope(path, doc) || k;
   return k;
 }
 function canReadFile(scopes, ids) {
   if (isMaster(ids)) return true;
   return scopes.some((s) => {
     if (s === "pub") return true;
+    const vr = VA.canReadFile(s, ids);
+    if (vr !== null) return vr;
     const K = parseKey(s);
     if (!K) return false;
     if (K.type === "content" || K.type === "cohorts" || K.type === "ins") return memberOf(ids, K.iid);

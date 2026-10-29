@@ -5,6 +5,10 @@
     book: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
     checks: '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
     calendar: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+    monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>',
+    smartphone: '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
+    gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/>',
     megaphone: '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
     help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
     clipboard: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
@@ -56,6 +60,7 @@
     target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
     printer: '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
     message: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+    bell: '<path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/>',
     search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
     coins: '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>',
     mapPin: '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
@@ -107,6 +112,9 @@
     const r = document.documentElement.style;
     THEME_VARS.concat(extraVars).forEach((k) => r.removeProperty(k));
     extraVars = [];
+    // 색상별 추가 디자인(예: 두잉고 레드 = th-doinggo)은 html 에 class 로
+    const H = document.documentElement; Array.from(H.classList).filter((c) => c.indexOf("th-") === 0).forEach((c) => H.classList.remove(c));
+    if (t && t.cls) H.classList.add(t.cls);
     if (!t) return;
     r.setProperty("--primary", t.primary); r.setProperty("--primary-active", t.active); r.setProperty("--primary-pale", t.pale);
     r.setProperty("--ink-deep", t.deep); r.setProperty("--theme-rgb", t.rgb);
@@ -138,4 +146,22 @@
     : '<svg class="bmark ' + (cls || "") + '" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#fee500"/><path d="M52 15c19.9 0 36 13.7 36 30.5S71.9 76 52 76c-3.4 0-6.7-.4-9.8-1.1L26 86l3.6-16.7C21 63.8 16 55.1 16 45.5 16 28.7 32.1 15 52 15z" fill="#231815"/>' +
       '<text x="52" y="56.5" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="29" font-weight="800" fill="#fee500" letter-spacing="-1">Ch</text></svg>';
   window.icon = (name, cls) => '<svg class="icon ' + (cls || "") + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
+})();
+
+  /* ---------- 배우고 시안: 로고를 배우고(BAEUGO)로 ---------- */
+(function () {
+  const STACK = '<svg viewBox="-6 -6 268.6 110" aria-hidden="true" focusable="false"><g transform="matrix(1 0 -0.2 1 16.2 0)"><path d="M20.8 23.4V15.9H70.2V0.8H2V38.4H70.2V23.4ZM72.2 45.9H0V61H26.7V76H45.4V61H72.2Z" fill="currentColor"/><path d="M84.2 19.5Q84.2 10.3 90.2 5.1Q96.1 0 106.7 0Q117.3 0 123.2 5.1Q129.2 10.3 129.2 19.5V23Q129.2 32.2 123.2 37.3Q117.3 42.5 106.7 42.5Q96.1 42.5 90.2 37.3Q84.2 32.2 84.2 23ZM154.4 0H135.6V42.2H154.4ZM103.2 24Q103.2 25.6 104.2 26.5Q105.1 27.5 106.7 27.5Q108.4 27.5 109.3 26.5Q110.2 25.6 110.2 24V18.5Q110.2 16.8 109.3 15.9Q108.4 15 106.7 15Q105.1 15 104.2 15.9Q103.2 16.8 103.2 18.5ZM154.4 60.6Q154.4 53.9 149.9 49.5Q145.5 45.2 138.7 45.2H102.1Q95.3 45.2 90.9 49.5Q86.4 53.9 86.4 60.6Q86.4 67.3 90.9 71.7Q95.3 76 102.1 76H138.7Q145.5 76 149.9 71.7Q154.4 67.3 154.4 60.6ZM133.7 58.7Q134.5 58.7 135.1 59.2Q135.6 59.8 135.6 60.6Q135.6 61.4 135.1 62Q134.5 62.5 133.7 62.5H107.1Q106.3 62.5 105.8 62Q105.2 61.4 105.2 60.6Q105.2 59.8 105.8 59.2Q106.3 58.7 107.1 58.7Z" fill="currentColor"/><path d="M217.6 16V46H235.4L236.4 1H168.4V16ZM204.5 58V31H185.7V58H166.4V73H238.4V58Z" fill="currentColor"/><path d="M4.8 94 Q119.2 82 238.4 88" fill="none" stroke="#FF0037" stroke-width="13" stroke-linecap="round"/></g></svg>';
+  const WORD = '<svg viewBox="-6 -6 268.6 110" aria-hidden="true" focusable="false"><g transform="matrix(1 0 -0.2 1 16.2 0)"><path d="M20.8 23.4V15.9H70.2V0.8H2V38.4H70.2V23.4ZM72.2 45.9H0V61H26.7V76H45.4V61H72.2Z" fill="currentColor"/><path d="M84.2 19.5Q84.2 10.3 90.2 5.1Q96.1 0 106.7 0Q117.3 0 123.2 5.1Q129.2 10.3 129.2 19.5V23Q129.2 32.2 123.2 37.3Q117.3 42.5 106.7 42.5Q96.1 42.5 90.2 37.3Q84.2 32.2 84.2 23ZM154.4 0H135.6V42.2H154.4ZM103.2 24Q103.2 25.6 104.2 26.5Q105.1 27.5 106.7 27.5Q108.4 27.5 109.3 26.5Q110.2 25.6 110.2 24V18.5Q110.2 16.8 109.3 15.9Q108.4 15 106.7 15Q105.1 15 104.2 15.9Q103.2 16.8 103.2 18.5ZM154.4 60.6Q154.4 53.9 149.9 49.5Q145.5 45.2 138.7 45.2H102.1Q95.3 45.2 90.9 49.5Q86.4 53.9 86.4 60.6Q86.4 67.3 90.9 71.7Q95.3 76 102.1 76H138.7Q145.5 76 149.9 71.7Q154.4 67.3 154.4 60.6ZM133.7 58.7Q134.5 58.7 135.1 59.2Q135.6 59.8 135.6 60.6Q135.6 61.4 135.1 62Q134.5 62.5 133.7 62.5H107.1Q106.3 62.5 105.8 62Q105.2 61.4 105.2 60.6Q105.2 59.8 105.8 59.2Q106.3 58.7 107.1 58.7Z" fill="currentColor"/><path d="M217.6 16V46H235.4L236.4 1H168.4V16ZM204.5 58V31H185.7V58H166.4V73H238.4V58Z" fill="currentColor"/><path d="M4.8 94 Q119.2 82 238.4 88" fill="none" stroke="#FF0037" stroke-width="13" stroke-linecap="round"/></g></svg>';
+  const mk = (svg, cls) => svg.replace('<svg ', '<svg class="' + cls + '" ');
+  const TAG = '<span class="bw-tag" aria-hidden="true">DOING <b>+</b> GO<i>하나씩 해보는 재미</i></span>';
+  window.doogoClassWord = (cls) => '<span class="hm-word bg-logo ' + (cls || "") + '" role="img" aria-label="두잉고 — Doing + GO">' + mk(/xs/.test(cls || "") ? WORD : STACK, "bg-logo-svg") + (/xs/.test(cls || "") ? "" : TAG) + "</span>";
+  window.doogoClassLock = (cls) => '<span class="hm-lock bg-lock ' + (cls || "") + '" role="img" aria-label="배우고">' + mk(STACK, "bg-lock-svg") + "</span>";
+})();
+
+/* ---------- 두잉고 B 로고 (doinggo · 체크 점) — black: 검정 글자 + 빨간 체크 / white: 흰 글자 + 흰 체크 (어두운 바탕) ---------- */
+(function () {
+  const SVG = '<svg viewBox="-8 -14 370.7 110.2" aria-hidden="true" focusable="false"><g transform="matrix(1 0 -0.2 1 19.2 0)"><path d="M27.2 1.5Q27.2 0 35.1 0Q37.8 0 41.4 0.4Q44.9 0.7 44.9 1.3V54H48.4Q50.9 54 51.7 58.5Q51.9 59.8 51.9 62.1Q51.9 64.3 50.5 67.5Q48.5 71.9 44.1 71.9Q40.8 71.9 38.2 70.6Q35.7 69.3 34.8 67.9L33.9 66.6Q28.4 71.9 20.1 71.9Q11.8 71.9 5.9 65Q0 58.1 0 45.8Q0 33.4 6.2 26.7Q12.4 19.9 21.7 19.9Q24.4 19.9 27.2 20.5ZM23.9 35.9Q18.3 35.9 18.3 46Q18.3 51.1 19.9 53.4Q21.5 55.6 23.4 55.6Q25.4 55.6 27.2 53.9V36.9Q25.5 35.9 23.9 35.9Z" fill="currentColor"/><path d="M60.8 65Q54.5 58.1 54.5 45.9Q54.5 33.7 60.8 26.8Q67 19.9 77.6 19.9Q88.2 19.9 94.4 26.8Q100.6 33.7 100.6 45.9Q100.6 58.1 94.4 65Q88.2 71.9 77.6 71.9Q67 71.9 60.8 65ZM77.7 36.6Q72 36.6 72 45.8Q72 55 77.7 55Q83.3 55 83.3 45.8Q83.3 36.6 77.7 36.6Z" fill="currentColor"/><path d="M124 70.3Q124 71.1 114.9 71.1Q105.7 71.1 105.7 70.4V21.3Q105.7 20.6 114.9 20.6Q124 20.6 124 21.2Z" fill="currentColor"/><path d="M104.8 8L112.6 15.3L128.6 -3" fill="none" class="bw-pen" stroke="currentColor" stroke-width="5.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M151.9 70.3Q151.9 71 144.7 71Q134.7 70.7 134.7 69.9V37.5H132.1Q129.5 37.5 128.7 33.1Q128.5 31.8 128.5 30.5Q128.5 27.4 129.7 24.3Q131.5 19.9 135.3 19.9Q139.1 19.9 142.1 21.7Q145.1 23.5 146.1 25.3Q152.4 19.9 161.1 19.9Q169.8 19.9 173.7 24.6Q177.6 29.3 177.6 40V70Q177.6 71.2 169.1 71.2Q160.5 71.2 160.5 70V41.1Q160.5 36.1 157 36.1Q156 36.1 154.2 37Q152.4 37.8 151.9 38.2Z" fill="currentColor"/><path d="M202.5 70.9Q192.8 70.9 187.5 64.7Q182.2 58.4 182.2 46.2Q182.2 33.9 189.2 27Q196.1 20 207.7 20Q219.2 20 226.7 25.1V74.9Q226.7 82.3 220.7 86.2Q214.7 90.2 205.3 90.2Q195.9 90.2 188.5 87.8Q187.5 85.4 187.5 83.5Q187.5 77.1 189.6 74.1Q196.3 77 203.9 77Q209.4 77 209.4 73.1V70.1Q205.1 70.9 202.5 70.9ZM207.1 36.3Q200.4 36.3 200.4 46.4Q200.4 52.7 203 54.6Q204.7 55.9 206.4 55.9Q208.1 55.9 209.4 55.6V36.6Q208.2 36.3 207.1 36.3Z" fill="currentColor"/><path d="M252.1 70.9Q242.4 70.9 237.1 64.7Q231.8 58.4 231.8 46.2Q231.8 33.9 238.8 27Q245.7 20 257.2 20Q268.8 20 276.3 25.1V74.9Q276.3 82.3 270.3 86.2Q264.3 90.2 254.9 90.2Q245.5 90.2 238.1 87.8Q237.1 85.4 237.1 83.5Q237.1 77.1 239.2 74.1Q245.9 77 253.5 77Q259 77 259 73.1V70.1Q254.7 70.9 252.1 70.9ZM256.7 36.3Q250 36.3 250 46.4Q250 52.7 252.6 54.6Q254.3 55.9 256 55.9Q257.7 55.9 259 55.6V36.6Q257.8 36.3 256.7 36.3Z" fill="currentColor"/><path d="M287.7 65Q281.4 58.1 281.4 45.9Q281.4 33.7 287.7 26.8Q293.9 19.9 304.5 19.9Q315.1 19.9 321.3 26.8Q327.5 33.7 327.5 45.9Q327.5 58.1 321.3 65Q315.1 71.9 304.5 71.9Q293.9 71.9 287.7 65ZM304.6 36.6Q298.9 36.6 298.9 45.8Q298.9 55 304.6 55Q310.2 55 310.2 45.8Q310.2 36.6 304.6 36.6Z" fill="currentColor"/></g></svg>';
+  window.doinggoB = (variant, cls) => '<span class="dg-b dg-b-' + (variant || "black") + " " + (cls || "") + '" role="img" aria-label="doinggo">' + SVG + "</span>";
+  // ‘Powered by’ 도 예전 doogo 대신 doinggo 로 (어두운 바탕은 흰색)
+  window.poweredBy = (variant, cls) => '<span class="powered ' + (cls || "") + '"><span>Powered by</span>' + window.doinggoB(variant === "white" ? "white" : "black") + "</span>";
 })();

@@ -97,9 +97,55 @@
     red: { label: "레드", primary: "#f94239", active: "#ea2013", pale: "#ffedea", deep: "#ea2013", onPrimary: "#ffffff", accent: "#ff6158", accentActive: "#fb7f79", swRing: "#f94239",
       rgb: "249,66,57", bg: ["#2a1311", "#140908", "#1d0d0b"], sub: "#d9bcb6",
       vars: { "--ink": "#222222", "--body": "#474747", "--mute": "#707070", "--line": "#e6e6e6", "--line-soft": "#f0f0f0", "--canvas-soft": "#f5f5f5", "--canvas-softer": "#fafafa", "--primary-neutral": "#fedfde" } },
+    // 두잉고 레드 — 두잉고 첫 화면과 같은 색: 흰 바탕 + 빨강(#FF0037) 포인트, 로그인 왼쪽 패널은 검정
+    doinggo: { label: "두잉고 레드", cls: "th-doinggo", primary: "#ff5c70", active: "#f0435a", pale: "#fff1f3", deep: "#e8445a", onPrimary: "#ffffff", accent: "#ff5c70", accentActive: "#ff8293", swRing: "#ff5c70",
+      rgb: "255,92,112", bg: ["#ffffff", "#fffbfc", "#fff5f7"], sub: "#5c5c66",
+      vars: { "--ink": "#111111", "--body": "#474747", "--mute": "#707070", "--line": "#ececee", "--line-soft": "#f3f3f4", "--canvas-soft": "#f6f6f7", "--canvas-softer": "#fafafa", "--primary-neutral": "#ffe3e8" } },
     airtable: { label: "에어테이블", primary: "#181d26", active: "#0d1218", pale: "#f5e9d4", deep: "#181d26", onPrimary: "#ffffff", accent: "#fcab79", accentActive: "#f4d35e", swRing: "#fcab79",
       rgb: "170,45,0", bg: ["#2a1d17", "#181d26", "#0d1218"], sub: "#c9c4bc",
       vars: { "--ink": "#181d26", "--body": "#333840", "--line": "#dddddd", "--line-soft": "#ececec", "--canvas-soft": "#f2f0eb", "--canvas-softer": "#f8f7f4", "--positive-deep": "#0a2e0e", "--warning": "#f4d35e" } }
+,
+    // ↓ 추가 색상 (밝은 세트: 흰 바탕 + 색 포인트 · 어두운 세트: 로그인 왼쪽이 짙은 색)
+    blue: { label: "블루", cls: "th-light", primary: "#3b82f6", active: "#2563eb", pale: "#eaf2ff", deep: "#1d4ed8", onPrimary: "#ffffff", accent: "#3b82f6", accentActive: "#2563eb", swRing: "#3b82f6",
+      rgb: "59,130,246", bg: ["#ffffff", "#fcfcfd", "#f8f8fa"], sub: "#5c5c66",
+      vars: { "--ink": "#111111", "--body": "#474747", "--mute": "#707070", "--line": "#ececee", "--line-soft": "#f3f3f4", "--canvas-soft": "#f6f6f7", "--canvas-softer": "#fafafa", "--primary-neutral": "#dbe8ff" } },
+    indigo: { label: "인디고", cls: "th-light", primary: "#6366f1", active: "#4f46e5", pale: "#eef0ff", deep: "#4338ca", onPrimary: "#ffffff", accent: "#6366f1", accentActive: "#4f46e5", swRing: "#6366f1",
+      rgb: "99,102,241", bg: ["#ffffff", "#fcfcfd", "#f8f8fa"], sub: "#5c5c66",
+      vars: { "--ink": "#111111", "--body": "#474747", "--mute": "#707070", "--line": "#ececee", "--line-soft": "#f3f3f4", "--canvas-soft": "#f6f6f7", "--canvas-softer": "#fafafa", "--primary-neutral": "#e0e2ff" } },
+    green: { label: "그린", cls: "th-light", primary: "#16a34a", active: "#15803d", pale: "#e9f9ef", deep: "#15803d", onPrimary: "#ffffff", accent: "#16a34a", accentActive: "#15803d", swRing: "#16a34a",
+      rgb: "22,163,74", bg: ["#ffffff", "#fcfcfd", "#f8f8fa"], sub: "#5c5c66",
+      vars: { "--ink": "#111111", "--body": "#474747", "--mute": "#707070", "--line": "#ececee", "--line-soft": "#f3f3f4", "--canvas-soft": "#f6f6f7", "--canvas-softer": "#fafafa", "--primary-neutral": "#d3f3df" } },
+    teal: { label: "틸", cls: "th-light", primary: "#0d9488", active: "#0f766e", pale: "#e6f7f5", deep: "#0f766e", onPrimary: "#ffffff", accent: "#0d9488", accentActive: "#0f766e", swRing: "#0d9488",
+      rgb: "13,148,136", bg: ["#ffffff", "#fcfcfd", "#f8f8fa"], sub: "#5c5c66",
+      vars: { "--ink": "#111111", "--body": "#474747", "--mute": "#707070", "--line": "#ececee", "--line-soft": "#f3f3f4", "--canvas-soft": "#f6f6f7", "--canvas-softer": "#fafafa", "--primary-neutral": "#cfeeea" } },
+    purple: { label: "퍼플", cls: "th-light", primary: "#9333ea", active: "#7e22ce", pale: "#f5ecff", deep: "#7e22ce", onPrimary: "#ffffff", accent: "#9333ea", accentActive: "#7e22ce", swRing: "#9333ea",
+      rgb: "147,51,234", bg: ["#ffffff", "#fcfcfd", "#f8f8fa"], sub: "#5c5c66",
+      vars: { "--ink": "#111111", "--body": "#474747", "--mute": "#707070", "--line": "#ececee", "--line-soft": "#f3f3f4", "--canvas-soft": "#f6f6f7", "--canvas-softer": "#fafafa", "--primary-neutral": "#ead9ff" } },
+    rose: { label: "로즈", cls: "th-light", primary: "#ec4899", active: "#db2777", pale: "#fdecf5", deep: "#be185d", onPrimary: "#ffffff", accent: "#ec4899", accentActive: "#db2777", swRing: "#ec4899",
+      rgb: "236,72,153", bg: ["#ffffff", "#fcfcfd", "#f8f8fa"], sub: "#5c5c66",
+      vars: { "--ink": "#111111", "--body": "#474747", "--mute": "#707070", "--line": "#ececee", "--line-soft": "#f3f3f4", "--canvas-soft": "#f6f6f7", "--canvas-softer": "#fafafa", "--primary-neutral": "#fbd5e9" } },
+    tangerine: { label: "탠저린", cls: "th-light", primary: "#f97316", active: "#ea580c", pale: "#fff1e6", deep: "#c2410c", onPrimary: "#ffffff", accent: "#f97316", accentActive: "#ea580c", swRing: "#f97316",
+      rgb: "249,115,22", bg: ["#ffffff", "#fcfcfd", "#f8f8fa"], sub: "#5c5c66",
+      vars: { "--ink": "#111111", "--body": "#474747", "--mute": "#707070", "--line": "#ececee", "--line-soft": "#f3f3f4", "--canvas-soft": "#f6f6f7", "--canvas-softer": "#fafafa", "--primary-neutral": "#ffe0c7" } },
+    mono: { label: "모노 블랙", cls: "th-light", primary: "#222222", active: "#000000", pale: "#f2f2f2", deep: "#111111", onPrimary: "#ffffff", accent: "#222222", accentActive: "#000000", swRing: "#222222",
+      rgb: "34,34,34", bg: ["#ffffff", "#fcfcfd", "#f8f8fa"], sub: "#5c5c66",
+      vars: { "--ink": "#111111", "--body": "#474747", "--mute": "#707070", "--line": "#ececee", "--line-soft": "#f3f3f4", "--canvas-soft": "#f6f6f7", "--canvas-softer": "#fafafa", "--primary-neutral": "#e6e6e6" } },
+    gold: { label: "블랙 골드", primary: "#d4af37", active: "#e8c860", pale: "#f8f0d6", deep: "#2a2108", rgb: "212,175,55", bg: ["#1c1a14", "#0d0c09", "#141209"], sub: "#c9c0a8" },
+    navy: { label: "네이비", primary: "#5b8cff", active: "#a3bfff", pale: "#e8efff", deep: "#0b1d4d", onPrimary: "#ffffff", rgb: "91,140,255", bg: ["#0f1d3d", "#081127", "#0b1733"], sub: "#aebbd6" },
+    wine: { label: "와인", primary: "#e0577f", active: "#f29bb4", pale: "#fde8ee", deep: "#4a0d20", onPrimary: "#ffffff", rgb: "224,87,127", bg: ["#2a0f19", "#14070c", "#1f0b13"], sub: "#d6b6c0" },
+    olive: { label: "올리브", primary: "#b5c74a", active: "#d4e283", pale: "#f2f6d9", deep: "#253000", rgb: "181,199,74", bg: ["#1e2410", "#0e1108", "#161b0b"], sub: "#c3c8aa" },
+    // 클린 화이트 — 흰 바탕 + 검정 포인트. VOD 두잉고는 강사 색과 상관없이 이 색 (강사도 고를 수 있어요)
+    white: { label: "클린 화이트", cls: "th-light", primary: "#111111", active: "#000000", pale: "#f1f1f3", deep: "#111111", onPrimary: "#ffffff", accent: "#111111", accentActive: "#333333", swRing: "#111111",
+      rgb: "17,17,17", bg: ["#ffffff", "#fcfcfd", "#f8f8fa"], sub: "#5c5c66",
+      vars: { "--ink": "#111111", "--body": "#4a4a50", "--mute": "#76767d", "--line": "#e8e8eb", "--line-soft": "#f1f1f3", "--canvas-soft": "#f5f5f7", "--canvas-softer": "#fafafb", "--primary-neutral": "#e6e6e9" } },
+    // 뉴질랜드 — 문대표 전용. 국기 네이비 · 레드(남십자성) · 실버 펀(고사리) 마크. 흰 바탕 학습 화면 + 네이비 로그인 패널
+    nz: { label: "뉴질랜드", only: ["moon"], cls: "th-nz", primary: "#0b2a5b", active: "#071d42", pale: "#e9eef7", deep: "#0b2a5b", onPrimary: "#ffffff", accent: "#2f74c0", accentActive: "#1f5fa8", swRing: "#0b2a5b",
+      rgb: "11,42,91", bg: ["#0b2a5b", "#061833", "#0a2550"], sub: "#bcc7da",
+      vars: { "--ink": "#0d1428", "--body": "#3d4559", "--mute": "#6b7489", "--line": "#e2e7ef", "--line-soft": "#eef1f6", "--canvas-soft": "#f3f5f9", "--canvas-softer": "#f8f9fc", "--primary-neutral": "#dde5f2" } },
+    // 블랙 — VOD 두잉고 다크 모드 (수강생이 오른쪽 위 버튼으로 바꿔요 · 강사 색 목록에는 안 보여요)
+    night: { label: "블랙", hidden: true, cls: "th-night", primary: "#f4f4f5", active: "#ffffff", pale: "#26272c", deep: "#f4f4f5", onPrimary: "#111111", accent: "#f4f4f5", accentActive: "#ffffff", swRing: "#f4f4f5",
+      rgb: "244,244,245", bg: ["#0f1012", "#0b0c0e", "#141518"], sub: "#a1a1aa",
+      vars: { "--canvas": "#17181c", "--canvas-soft": "#0d0e10", "--canvas-softer": "#1d1e23", "--ink": "#f4f4f5", "--body": "#c6c7cc", "--mute": "#8e9098", "--line": "#2c2e34", "--line-soft": "#222328", "--primary-neutral": "#2a2b31", "--warning-bg": "#2a2414", "--negative-pale": "#3a1c20", "--shadow-pop": "0 24px 60px -20px rgba(0, 0, 0, .7), 0 2px 8px rgba(0, 0, 0, .4)" } }
   };
   const themeOf = (key) => THEMES[key] || THEMES.lime;
 
@@ -173,7 +219,32 @@
     { key: "vod", label: "이커머스 실전 VOD" }, { key: "senior", label: "시니어 기초 가이드" }
   ];
   const CUSTOM_ICONS = ["file", "video", "link", "book", "star", "image", "coins", "store", "users", "calendar", "sparkles", "award"];
+  /* ---------------- 두잉고 VOD 버전 ----------------
+   * 강사 한 명의 두잉고는 두 가지 버전: LIVE · 오프라인(기수 · 주차 · 과제) / VOD(DOOGO CLASS에서 내 VOD를 산 수강생용, 주차 · 과제 없이 바로 공부)
+   * 메뉴 구성은 ins.menuVod, 콘텐츠는 content.vod 에 따로 둔다 (기본 정보 · 색상 · AI 조교 이름은 LIVE와 함께 쓴다)
+   * 메뉴 함수에는 "강사ID@vod" 를 넘기면 VOD 버전 메뉴를 다룬다
+   * v15: VOD 상품마다 두잉고 강의실이 따로 — "강사ID@vod:상품ID" · content.vodBy[상품ID] · ins.menuVodBy[상품ID]
+   *      (강사센터에서 그 VOD를 처음 고를 때 공통 VOD 버전을 복사해 만들어요. 만들기 전에는 공통 VOD 버전을 보여 줘요) */
+  const VOD_MENUS = [
+    { key: "home", label: "내 강의실", icon: "home", locked: true },
+    { key: "vodclass", label: "VOD 강의", icon: "circlePlay", desc: "구매한 VOD 강의 · 이어 보기 · 진도" },
+    { key: "notices", label: "업데이트 소식", icon: "megaphone", desc: "강의 업데이트 · 새 자료 소식" },
+    { key: "library", label: "강의 자료함", icon: "library", desc: "전자책 · 교재 · 보충 영상" },
+    { key: "docs", label: "실습 체크리스트", icon: "clipboard", desc: "숙제 대신 스스로 점검하는 실습 단계" },
+    { key: "qna", label: "FAQ · 1:1 코칭", icon: "help", desc: "FAQ로 먼저 찾고, 1:1 코칭권이 있으면 강사에게 직접 질문해요" },
+    { key: "bot", label: "AI 조교", icon: "bot" },
+    { key: "glossary", label: "용어 사전", icon: "bookA", needs: "glossary" },
+    { key: "partners", label: "제휴 혜택", icon: "handshake" },
+    { key: "motivation", label: "응원 영상", icon: "flame", off: true },
+    { key: "notes", label: "학습 노트", icon: "notebookPen", off: true, desc: "강의를 보며 남기는 내 메모" }
+  ];
+  const VOD_LIVE_ONLY = ["curriculum", "replays", "missions", "showcase", "schedule", "certificate"];
+  // VOD 강의는 실시간 케어(1:1 대화 · 1:1 상담)가 없어요 — 가격이 기수 강의의 몇 분의 1이라 FAQ · AI 조교로 안내
+  const VOD_LABEL = { notices: "업데이트 소식", docs: "실습 체크리스트", qna: "FAQ · 1:1 코칭" };
+  const splitMid = (id) => { const t = String(id == null ? "" : id).split("@"), v = t[1] || ""; return { iid: t[0], vod: v === "vod" || v.indexOf("vod:") === 0, pid: v.indexOf("vod:") === 0 ? v.slice(4) : "" }; };
   function menuConfig(insId) {
+    const mid = splitMid(insId);
+    if (mid.vod) return vodMenuConfig(mid.iid, mid.pid);
     const ins = instructor(insId);
     if (!ins) return { items: [], library: {} };
     const m = ins.menu = ins.menu || {};
@@ -186,6 +257,22 @@
       m.items.splice(at, 0, { key: d.key, on: true });
     });
     m.items.forEach((x) => { if (x.key === "home") x.on = true; if (x.label && OLD_MENU_LABELS[x.key] === x.label) delete x.label; });
+    m.library = Object.assign({ ebook: true, file: true, vod: true, senior: true }, m.library || {});
+    return m;
+  }
+  function vodMenuConfig(iid, pid) {
+    const ins = instructor(iid);
+    if (!ins) return { items: [], library: {} };
+    const by = pid && ins.menuVodBy && ins.menuVodBy[pid];
+    const m = by || (ins.menuVod = ins.menuVod || {});
+    m.items = (Array.isArray(m.items) ? m.items : []).filter((x) => isCustom(x.key) || VOD_MENUS.some((d) => d.key === x.key));
+    VOD_MENUS.forEach((d, i) => {
+      if (m.items.some((x) => x.key === d.key)) return;
+      let at = m.items.length;
+      for (let j = i - 1; j >= 0; j--) { const k = m.items.findIndex((x) => x.key === VOD_MENUS[j].key); if (k !== -1) { at = k + 1; break; } }
+      m.items.splice(at, 0, Object.assign({ key: d.key, on: !d.off }, VOD_LABEL[d.key] ? { label: VOD_LABEL[d.key] } : {}));
+    });
+    m.items.forEach((x) => { if (x.key === "home") x.on = true; if (x.key === "qna" && (!x.label || x.label === "질문 · 요청" || x.label === "자주 묻는 질문")) x.label = VOD_LABEL.qna; });
     m.library = Object.assign({ ebook: true, file: true, vod: true, senior: true }, m.library || {});
     return m;
   }
@@ -207,7 +294,7 @@
         tagline: "함께 성장하는 실전 클래스",
         botName: botNameOf(inst),
         youtubeChannel: "", freeCourseUrl: "", kakaoChannel: "",
-        loginEyebrow: "DOOGO CLASS",
+        loginEyebrow: "DOINGGO",
         loginHeadline: name + "\n함께 시작해요",
         loginSub: "매주 과제를 하나씩 해내다 보면, 어느새 내 이름의 비즈니스가 움직이고 있을 거예요.",
         liveTime: "20:00", liveUrl: "",
@@ -256,7 +343,7 @@
     const c = JSON.parse(JSON.stringify(src).replace(/두고보는 문대표/g, name).replace(/문대표/g, inst));
     const t = template(brand).brand;
     Object.assign(c.brand, { name, instructor: inst, courseTitle: t.courseTitle, shortTitle: t.shortTitle, botName: t.botName,
-      loginEyebrow: "DOOGO CLASS", loginHeadline: t.loginHeadline, loginSub: t.loginSub, theme: t.theme, themeSet: true,
+      loginEyebrow: "DOINGGO", loginHeadline: t.loginHeadline, loginSub: t.loginSub, theme: t.theme, themeSet: true,
       youtubeChannel: "", freeCourseUrl: "", kakaoChannel: "", liveUrl: "", worldClock: false, photo: "", field: "", instagram: "" });
     c.channels = defaultChannels();
     c.weeks.forEach((w) => w.lessons.forEach((l) => { l.youtubeId = ""; l.attachments = []; }));
@@ -289,7 +376,7 @@
     const def = {
       published: true,
       order: LANDING_SECTIONS.map((x) => x.key), off: {},
-      hero: { eyebrow: b.loginEyebrow || "DOOGO CLASS", title: b.loginHeadline || b.courseTitle, sub: b.loginSub || b.tagline || "", ctaLabel: "수강 신청하기", ctaUrl: "", image: "" },
+      hero: { eyebrow: b.loginEyebrow || "DOINGGO", title: b.loginHeadline || b.courseTitle, sub: b.loginSub || b.tagline || "", ctaLabel: "수강 신청하기", ctaUrl: "", image: "" },
       stats: [],
       about: { title: "강사 소개", name: b.instructor || ins.displayName, role: b.courseTitle, body: "", photo: "", career: [] },
       points: { title: "이 강의에서 얻어 가는 것", items: [
@@ -403,6 +490,108 @@
     ];
   }
   const quickLinksOf = (c) => (Array.isArray(c.quickLinks) ? c.quickLinks : defaultQuickLinks(c));
+  const VOD_KEYS = ["notices", "faqs", "guide", "docsGuide", "resources", "motivation", "glossary", "quotes", "channels", "partners", "pages", "libNotice", "quickLinks", "notePrompts"];
+  const vodQuickLinks = (c) => [
+    { id: "vq1", title: "VOD 강의 이어 보기", desc: "멈춘 강의부터 바로 다시 보기", url: "#/vodclass", icon: "play" },
+    { id: "vq2", title: "강의 자료함", desc: "전자책 · 교재 · 보충 영상", url: "#/library", icon: "library" },
+    { id: "vq3", title: "업데이트 소식", desc: "강의 업데이트 · 새 자료 안내", url: "#/notices", icon: "megaphone" },
+    { id: "vq4", title: "FAQ · 1:1 코칭", desc: "FAQ로 찾고, 코칭권으로 직접 질문", url: "#/qna", icon: "help" },
+    { id: "vq5", title: "DOOGO CLASS 내 강의실", desc: "구매 내역 · 다른 강의 둘러보기", url: "#/vod/my/classes", icon: "store" }
+  ].concat(defaultQuickLinks(c).filter((l) => /^https?:/.test(l.url || "")));
+  /** VOD 버전 콘텐츠 처음 만들기: 자료 · 체크리스트 · 용어 · 상담 · 제휴는 LIVE에서 복사해 시작하고, 소식 · FAQ · 시작 가이드는 VOD용으로 */
+  function vodInit(c) {
+    const cp = (k) => (c[k] == null ? undefined : clone(c[k]));
+    const ins = (c.brand && c.brand.instructor) || "강사";
+    const td = todayStr();
+    const liveWord = /주차|과제|기수|라이브|수료|출석|미션/;
+    return {
+      notices: [
+        { id: "vn1", title: "VOD 수강생 전용 두잉고에 오신 걸 환영해요", date: td, pinned: true, body: "VOD 강의를 1강부터 차례대로 보면서, 필요할 때마다 이곳에 들어와 주세요.\n- 강의 자료함: 전자책 · 교재 · 보충 영상\n- 업데이트 소식: 강의가 새로 업데이트되면 여기서 먼저 알려 드려요\n- 자주 묻는 질문 · AI 조교: 막히는 부분은 먼저 여기서 찾아보세요", images: [] },
+        { id: "vn2", title: "VOD에는 숙제가 없어요 · 대신 실습 체크리스트로 점검해요", date: td, body: "VOD는 정해진 주차나 과제 마감이 없어요. 내 속도대로 공부하고, ‘실습 체크리스트’로 실제로 해 봤는지 스스로 점검해 보세요.", images: [] }
+      ],
+      faqs: [
+        { id: "vf1", category: "수강", q: "VOD는 언제까지 볼 수 있나요?", a: "결제할 때 고른 수강권 기간(180일 · 365일 · 3년) 동안 볼 수 있어요. 남은 기간은 DOOGO CLASS 마이페이지 › 내 강의실에서 확인하고, 기간이 끝나면 1년 연장권으로 진도 그대로 이어서 들을 수 있어요.", tags: [] },
+        { id: "vf2", category: "수강", q: "강의는 어디서 보나요?", a: "이 두잉고 강의실 왼쪽 ‘VOD 강의’ 메뉴에서 바로 재생돼요. 멈춘 강의부터 이어 볼 수 있고, 진도는 DOOGO CLASS 마이페이지에도 똑같이 반영돼요.", tags: [] },
+        { id: "vf3", category: "자료", q: "교재 · 자료는 어디서 받나요?", a: "‘강의 자료함’에 전자책 · 교재 · 보충 영상을 모아 두었어요. 강사님이 새 자료를 올리면 ‘업데이트 소식’에서 알려 드려요.", tags: [] },
+        { id: "vf4", category: "질문", q: "모르는 부분은 어떻게 물어보나요?", a: "먼저 이 자주 묻는 질문과 AI 조교에서 찾아보세요. 강사에게 직접 묻고 싶다면 DOOGO CLASS에서 1:1 코칭권을 사서 ‘1:1 코칭 질문’에 남기면 " + ins + "님이 직접 답해 드려요. 많이 나오는 질문은 " + ins + "님이 업데이트 소식과 FAQ에 계속 더해 드려요. 결제 · 환불 문의는 DOOGO CLASS 고객센터로 남겨 주세요.", tags: [] },
+        { id: "vf5", category: "수강", q: "숙제나 마감이 있나요?", a: "VOD에는 숙제와 마감이 없어요. 내 속도대로 공부하고, ‘실습 체크리스트’로 스스로 점검해 보세요.", tags: [] }
+      ].concat((c.faqs || []).filter((f) => !liveWord.test((f.q || "") + (f.a || ""))).map((f) => clone(f))),
+      guide: [
+        { id: "vg1", title: "VOD 강의 1강부터 보기", desc: "왼쪽 ‘VOD 강의’에서 첫 강의를 열어요", url: "#/vodclass" },
+        { id: "vg2", title: "강의 자료함에서 교재 받기", desc: "전자책 · 교재를 먼저 받아 두면 따라 하기 쉬워요", url: "#/library" },
+        { id: "vg3", title: "실습 체크리스트 확인", desc: "강의를 보며 실제로 해 볼 단계를 체크해요", url: "#/docs" },
+        { id: "vg4", title: "막히면 자주 묻는 질문 보기", desc: "많이 나오는 질문과 답을 모아 두었어요", url: "#/qna" }
+      ],
+      docsGuide: cp("docsGuide"), resources: cp("resources"), motivation: cp("motivation"), glossary: cp("glossary"), quotes: cp("quotes"),
+      channels: cp("channels"), partners: cp("partners"), pages: {}, libNotice: cp("libNotice"), quickLinks: vodQuickLinks(c), notePrompts: [], createdAt: td
+    };
+  }
+  // 예전(1:1 요청이 있던) VOD 시작 문구를 FAQ 안내로 한 번만 바꾼다 (강사가 고친 문구는 그대로)
+  function vodFix(v) {
+    if (v.fixQna) return vodFix8(v);
+    (v.guide || []).forEach((g) => { if (g.id === "vg4" && g.url === "#/qna/requests/new") Object.assign(g, { title: "막히면 자주 묻는 질문 보기", desc: "많이 나오는 질문과 답을 모아 두었어요", url: "#/qna" }); });
+    (v.quickLinks || []).forEach((l) => { if (l.id === "vq4" && l.url === "#/qna/requests/new") Object.assign(l, { title: "자주 묻는 질문", desc: "막히는 부분은 여기서 먼저", url: "#/qna" }); });
+    if (Array.isArray(v.quickLinks) && !v.quickLinks.some((l) => l.id === "vq5")) v.quickLinks.splice(4, 0, { id: "vq5", title: "DOOGO CLASS 내 강의실", desc: "구매 내역 · 다른 강의 둘러보기", url: "#/vod/my/classes", icon: "store" });
+    (v.faqs || []).forEach((f) => { if (f.id === "vf4" && /1:1 요청/.test(f.a || "")) f.a = "VOD 강의는 1:1 답변 대신 이 자주 묻는 질문과 AI 조교로 도와드려요. 많이 나오는 질문은 강사님이 업데이트 소식과 FAQ에 계속 더해 드려요. 결제 · 환불 문의는 DOOGO CLASS 고객센터로 남겨 주세요."; if (f.id === "vf2" && /DOOGO CLASS 강의장/.test(f.a || "")) f.a = "이 두잉고 강의실 왼쪽 ‘VOD 강의’ 메뉴에서 바로 재생돼요. 멈춘 강의부터 이어 볼 수 있고, 진도는 DOOGO CLASS 마이페이지에도 똑같이 반영돼요."; });
+    (v.notices || []).forEach((n) => { if (n.id === "vn1" && /질문 · 요청/.test(n.body || "")) n.body = n.body.replace(/- 질문 · 요청:[^\n]*/, "- 자주 묻는 질문 · AI 조교: 막히는 부분은 먼저 여기서 찾아보세요"); });
+    v.fixQna = true;
+    return vodFix8(v);
+  }
+  // v8: VOD도 1:1 코칭권이 있으면 강사에게 직접 질문 (강사가 고친 문구는 그대로)
+  function vodFix8(v) {
+    if (v.fixCoach) return v;
+    (v.quickLinks || []).forEach((l) => { if (l.id === "vq4" && l.title === "자주 묻는 질문") Object.assign(l, { title: "FAQ · 1:1 코칭", desc: "FAQ로 찾고, 코칭권으로 직접 질문" }); });
+    (v.faqs || []).forEach((f) => { if (f.id === "vf1" && /평생 소장 강의는 기간 없이/.test(f.a || "")) f.a = "결제할 때 고른 수강권 기간(180일 · 365일 · 3년) 동안 볼 수 있어요. 남은 기간은 DOOGO CLASS 마이페이지 › 내 강의실에서 확인하고, 기간이 끝나면 1년 연장권으로 진도 그대로 이어서 들을 수 있어요."; });
+    (v.faqs || []).forEach((f) => { if (f.id === "vf4" && /1:1 답변 대신/.test(f.a || "")) f.a = f.a.replace(/VOD 강의는 1:1 답변 대신 이 자주 묻는 질문과 AI 조교로 도와드려요\./, "먼저 이 자주 묻는 질문과 AI 조교에서 찾아보세요. 강사에게 직접 묻고 싶다면 DOOGO CLASS에서 1:1 코칭권을 사서 ‘1:1 코칭 질문’에 남기면 강사님이 직접 답해 드려요."); });
+    v.fixCoach = true;
+    return v;
+  }
+  const vodPart = (c, pid) => { if (!c.vod || typeof c.vod !== "object") c.vod = vodInit(c); vodFix(c.vod); return pid && c.vodBy && c.vodBy[pid] ? vodFix(c.vodBy[pid]) : c.vod; };
+  /** 이 VOD 상품만의 두잉고 강의실이 있는지 */
+  const vodOwn = (iid, pid) => { const c = content(iid), ins = instructor(iid); return !!(pid && c && c.vodBy && c.vodBy[pid] && ins && ins.menuVodBy && ins.menuVodBy[pid]); };
+  /** VOD 강의실 만들기: 없으면 공통 VOD 버전(또는 from 강의실)을 복사해 이 VOD 전용으로 (콘텐츠 + 메뉴) */
+  function vodEnsure(iid, pid, from) {
+    const c = content(iid), ins = instructor(iid); if (!pid || !c || !ins) return false;
+    const src = from && c.vodBy && c.vodBy[from] ? c.vodBy[from] : vodPart(c);
+    let made = false;
+    c.vodBy = c.vodBy || {}; ins.menuVodBy = ins.menuVodBy || {};
+    if (!c.vodBy[pid]) { c.vodBy[pid] = clone(src); made = true; }
+    if (!ins.menuVodBy[pid]) { vodMenuConfig(iid); ins.menuVodBy[pid] = clone(from && ins.menuVodBy[from] ? ins.menuVodBy[from] : ins.menuVod || {}); made = true; }
+    if (made) { delete VOD_PX[iid + ":" + pid]; save(); }
+    return made;
+  }
+  /** 다른 VOD 강의실의 콘텐츠 · 메뉴를 그대로 가져오기 (지금 강의실 내용은 바뀌어요) */
+  function vodCopy(iid, pid, from) {
+    const c = content(iid), ins = instructor(iid); if (!pid || !c || !ins || pid === from) return false;
+    vodEnsure(iid, from); vodEnsure(iid, pid);
+    c.vodBy[pid] = clone(from ? c.vodBy[from] : vodPart(c)); ins.menuVodBy[pid] = clone(from ? ins.menuVodBy[from] : ins.menuVod || {});
+    delete VOD_PX[iid + ":" + pid]; save(); return true;
+  }
+  const VOD_PX = {};
+  /** 강사센터: VOD 버전을 고칠 때 쓰는 콘텐츠 (VOD 칸은 content.vod 로, 나머지는 LIVE와 같은 content 로 읽고 쓴다) */
+  function vodContent(iid, pid) {
+    const c = content(iid); if (!c) return null;
+    if (pid) vodEnsure(iid, pid);
+    vodPart(c, pid);
+    const key = iid + ":" + (pid || ""), px = VOD_PX[key];
+    if (px && px.c === c) return px.p;
+    const isV = (k) => VOD_KEYS.indexOf(k) >= 0;
+    const p = new Proxy(c, {
+      get: (t, k) => (isV(k) ? vodPart(t, pid)[k] : k === "weeks" ? [] : t[k]),
+      set: (t, k, v) => { if (isV(k)) vodPart(t, pid)[k] = v; else t[k] = v; return true; },
+      deleteProperty: (t, k) => { if (isV(k)) delete vodPart(t, pid)[k]; else delete t[k]; return true; },
+      has: (t, k) => (isV(k) ? k in vodPart(t, pid) : k in t)
+    });
+    VOD_PX[key] = { c, p };
+    return p;
+  }
+  /** 수강생 화면(VOD 버전)에서 읽는 콘텐츠 */
+  function vodView(iid, pid) {
+    const c = content(iid); if (!c) return null;
+    const v = vodPart(c, pid), out = Object.assign({}, c, { weeks: [], curricula: [], schedule: [], replays: [], showcase: [] });
+    VOD_KEYS.forEach((k) => { if (v[k] !== undefined) out[k] = v[k]; else delete out[k]; });
+    return out;
+  }
   /** 엑셀에서 바로 열리는 CSV 양식 (data: 주소) */
   const csvData = (rows) => "data:text/csv;charset=utf-8," + encodeURIComponent("\uFEFF" + rows.map((r) => r.map((v) => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v).join(",")).join("\n"));
 
@@ -638,6 +827,12 @@
       Object.keys(db.content).forEach((id) => { const c = db.content[id], sc = window.CLASS_SEED.content[id]; if (!c.guide.length) c.guide = clone(sc && sc.guide ? sc.guide : template({}).guide); if (c.brand.liveUrl === undefined) c.brand.liveUrl = ""; });
       db.flags.guideSeeded = true; save();
     }
+    // 문대표 4기 홍보 페이지 문구를 4주 과정에 맞추기 (한 번만 · 강사가 고친 문구는 그대로)
+    if (!db.flags.lp4w) {
+      const L = db.content.moon && db.content.moon.landing, rep = (o, k, x, y) => { if (o && typeof o[k] === "string" && o[k].indexOf(x) >= 0) o[k] = o[k].replace(x, y); };
+      if (L) { rep(L.hero, "sub", "첫 판매까지. 5주 동안", "첫 판매까지. 4주 동안"); rep(L.points, "title", "5주 동안 이렇게 바뀌어요", "4주 동안 이렇게 바뀌어요"); ((L.points || {}).items || []).forEach((it) => rep(it, "title", "4~5주차 · 판매 시작", "4주차 · 판매 시작")); rep(L.pricing, "period", "5주 과정 + 다시보기", "4주 과정 + 다시보기"); }
+      db.flags.lp4w = true; save();
+    }
     // 기수별 커리큘럼·강의 요일 예시 (한 번만): 문대표 4기 = 4주 압축 과정 · 매주 토 12:00
     if (!db.flags.curriculaSeeded) {
       const mc = db.content.moon, sm = window.CLASS_SEED.content.moon;
@@ -735,6 +930,39 @@
       }
       db.flags.channelsV3 = true; save();
     }
+    // 문대표: 메인 강의는 아이비클래스 · 두잉고는 따라하기 영상 + 보충 강의 (시드 그대로인 것만 바꿈)
+    if (!db.flags.mainLecV1) {
+      const mc = db.content.moon, sc = window.CLASS_SEED.content.moon;
+      if (mc && mc.brand && sc) {
+        if (!mc.brand.mainLec && sc.brand.mainLec) mc.brand.mainLec = clone(sc.brand.mainLec);
+        if (!mc.brand.lessonLabel && sc.brand.lessonLabel) mc.brand.lessonLabel = sc.brand.lessonLabel;
+        const sw = (sc.weeks || [])[0];
+        if (sw && sw.howto) [mc.weeks].concat((mc.curricula || []).map((x) => x.weeks)).forEach((ws) => { const w = (ws || []).find((x) => x.no === 1); if (w && !w.howto && w.title === sw.title) w.howto = sw.howto; });
+        const RP = { "rp-1": "1주차 라이브 Q&A · 사업자등록부터 영업등록까지", "rp-2": "2주차 라이브 Q&A · 주력 상품 고르기와 마진 계산" };
+        (mc.replays || []).forEach((x) => { const s0 = (sc.replays || []).find((y) => y.id === x.id); if (s0 && RP[x.id] === x.title) { x.title = s0.title; x.minutes = s0.minutes; } });
+        const g1 = (mc.guide || []).find((x) => x.id === "g-1" && x.desc === "라이브 Q&A와 과제 마감일을 먼저 확인해 두세요.");
+        if (g1) g1.desc = "오프라인 강의일과 과제 마감일을 먼저 확인해 두세요.";
+        if (db.instructors.some((x) => x.id === "moon")) { const it = menuConfig("moon").items.find((x) => x.key === "replays"); if (it && !it.label) it.label = "보충 강의"; }
+      }
+      db.flags.mainLecV1 = true; save();
+    }
+    if (!db.flags.calMoonV1) {
+      const mc = db.content.moon, sc = window.CLASS_SEED.content.moon;
+      if (mc && mc.brand && sc) {
+        if (!mc.brand.cal && sc.brand.cal) mc.brand.cal = clone(sc.brand.cal);
+        const OLD = { e1: "1주차 Q&A 라이브", e2: "2주차 Q&A 라이브", e3: "3주차 Q&A · 상세페이지 첨삭", e4: "4주차 Q&A 라이브", e6: "수료식 · 성과 발표", e7: "수입식품 위생교육 신청 안내" };
+        mc.schedule = (mc.schedule || []).filter((e) => !(OLD[e.id] && OLD[e.id] === e.title));
+        const e5 = mc.schedule.find((e) => e.id === "e5" && e.title === "첫 상품 등록 7일 챌린지 시작");
+        if (e5) e5.title = "첫 상품 등록 7일 챌린지 강의";
+        (sc.schedule || []).forEach((x) => { if (/^b\d$/.test(x.id) && !mc.schedule.some((e) => e.id === x.id)) mc.schedule.push(clone(x)); });
+      }
+      db.flags.calMoonV1 = true; save();
+    }
+    if (!db.flags.nzTheme) {
+      const mb = db.content.moon && db.content.moon.brand;
+      if (mb) mb.theme = "nz";
+      db.flags.nzTheme = true; save();
+    }
     // 코치 예시 (한 번만): 시드에 코치가 있는 강사(문대표)에 코치가 없으면 넣는다
     if (!db.flags.coachesSeeded) {
       window.CLASS_SEED.instructors.forEach((si) => { const ins = db.instructors.find((x) => x.id === si.id); if (ins && si.coaches && !(ins.coaches || []).length) ins.coaches = clone(si.coaches); });
@@ -777,7 +1005,7 @@
     let renamed = false;
     Object.keys(db.content).forEach((id) => {
       const b = db.content[id].brand;
-      if (b.loginEyebrow && /^DOOGO CAMPUS/.test(b.loginEyebrow)) { b.loginEyebrow = b.loginEyebrow.replace(/^DOOGO CAMPUS/, "DOOGO CLASS"); renamed = true; }
+      if (b.loginEyebrow && /^DOOGO CAMPUS/.test(b.loginEyebrow)) { b.loginEyebrow = b.loginEyebrow.replace(/^DOOGO CAMPUS/, "DOINGGO"); renamed = true; }
     });
     if (renamed) save();
     // 강사 프로필 사진 · 강의 분야(첫 화면 강사 카드)가 생기기 전에 저장된 브라우저는 기본값을 채운다 (한 번만 · 서버는 일회성 작업이 맡음)
@@ -827,9 +1055,20 @@
       });
       db.flags.profileSeeded2 = true; save();
     }
+    // 초이 프로필 사진 추가 (이미 위 단계를 지난 브라우저에도 한 번만 · 비어 있을 때만)
+    if (!R.on && !db.flags.profileSeeded3) {
+      (window.CLASS_SEED.instructors || []).forEach((si) => {
+        const c = db.content[si.id];
+        if (c && c.brand && si.brand && si.brand.photo && !c.brand.photo) c.brand.photo = si.brand.photo;
+      });
+      db.flags.profileSeeded3 = true; save();
+    }
     return db;
   }
+  const saveHooks = [];
+  const onSave = (fn) => { saveHooks.push(fn); };
   function save() {
+    saveHooks.forEach((fn) => { try { fn(); } catch (e) { console.warn(e); } });
     if (R.on) { if (!R.loading) schedule(); return true; }
     if (!store.set(KEY_DB, db)) { console.warn("저장 공간이 부족합니다"); return false; }
     return true;
@@ -844,9 +1083,15 @@
   const instructor = (id) => db.instructors.find((x) => x.id === id) || null;
   const activeInstructors = () => db.instructors.filter((x) => x.status === "active");
   const content = (id) => db.content[id] || null;
-  const cohort = (id) => db.cohorts.find((x) => x.id === id) || null;
+  const VOD_CO = {};
+  const vodCohortId = (iid) => "vod:" + iid;
+  /** VOD 수강생의 ‘기수’: 날짜 · 주차가 없는 가상 기수 (기수 목록 · 정산에는 안 잡힌다) */
+  const cohort = (id) => { if (/^vod:/.test(String(id))) { const iid = String(id).slice(4); return instructor(iid) ? (VOD_CO[id] = VOD_CO[id] || { id, instructorId: iid, name: "VOD 수강생", kind: "vod", startDate: "2026-01-01", curriculumId: "vod" }) : null; } return db.cohorts.find((x) => x.id === id) || null; };
   const cohortsOf = (instId) => db.cohorts.filter((x) => x.instructorId === instId).sort((a, b) => a.startDate.localeCompare(b.startDate));
-  const studentsOf = (instId) => db.students.filter((x) => x.instructorId === instId);
+  const isVodStudent = (s) => !!s && (s.track === "vod" || /^vod:/.test(String(s.cohortId)));
+  /** 강사의 수강생 — 기본은 LIVE · 오프라인(기수) 수강생만, all=true 면 VOD 수강생까지 */
+  const studentsOf = (instId, all) => db.students.filter((x) => x.instructorId === instId && (all || !isVodStudent(x)));
+  const vodStudentsOf = (instId) => db.students.filter((x) => x.instructorId === instId && isVodStudent(x));
   const student = (id) => db.students.find((x) => x.id === id) || null;
 
   /* ---------------- 기수 · 일정 계산 ---------------- */
@@ -859,7 +1104,7 @@
   }
   const curriculum = (instId, curId) => { const list = curricula(instId); return list.find((x) => x.id === (curId || "main")) || list[0] || null; };
   const curriculumOf = (co) => curriculum(co.instructorId, co.curriculumId);
-  const weeksOf = (co) => { const cu = co && curriculumOf(co); return cu ? cu.weeks : []; };
+  const weeksOf = (co) => { if (co && co.kind === "vod") return []; const cu = co && curriculumOf(co); return cu ? cu.weeks : []; };
   const weekCount = (instId) => { const c = content(instId); return c ? c.weeks.length : 0; };
   const cohortWeeks = (co) => weeksOf(co).length;
   const weekOpen = (co, no) => addDays(co.startDate, (no - 1) * 7);
@@ -921,8 +1166,18 @@
     qna: { label: "라이브 Q&A", cls: "qna" },
     notice: { label: "공지", cls: "notice" },
     challenge: { label: "챌린지", cls: "challenge" },
-    event: { label: "행사", cls: "event" }
+    event: { label: "행사", cls: "event" },
+    replay: { label: "강의 녹화본 업로드", cls: "replay" },
+    bonus: { label: "보너스 강의", cls: "bonus" }
   };
+  /* 강사마다 쓰는 일정 종류 · 이름 (brand.cal). 없으면 기본(강의 오픈 · 과제 마감 · 라이브 Q&A · 공지 · 챌린지) */
+  const CAL_DEF = ["open", "deadline", "qna", "notice", "challenge"];
+  function calCfg(instId) { const c = content(instId); return (c && c.brand && c.brand.cal) || null; }
+  function evLabel(instId, type) { const g = calCfg(instId), l = g && g.labels && g.labels[type]; return l || (EVENT_TYPES[type] || {}).label || type; }
+  function calTypes(instId) { const g = calCfg(instId); return (g && g.types && g.types.length ? g.types : CAL_DEF).filter((k) => EVENT_TYPES[k]); }
+  /* 강사가 직접 넣는 종류 (과제 마감 · 자동 녹화본은 빼고) */
+  function calManual(instId) { const g = calCfg(instId); return g && g.types ? g.types.filter((k) => k !== "deadline" && !(k === "replay" && g.replayAfter != null)) : ["qna", "notice", "challenge", "event"]; }
+  function calShort(instId) { const g = calCfg(instId); return (g && g.short) || "강의"; }
   /** 기수 하나의 전체 일정 (자동 일정 + 강사가 추가한 일정), 날짜순 */
   function events(instId, co) {
     const c = content(instId);
@@ -931,9 +1186,11 @@
     // 주차 강의 날짜: 기수에 ‘매주 무슨 요일’을 정했으면 그 주의 그 요일, 아니면 주차 시작일
     const time = co.classTime || c.brand.liveTime || "";
     const url = co.classUrl || c.brand.liveUrl || "";
+    const g = calCfg(instId), openWord = (g && g.labels && g.labels.open) || "강의", rpAfter = g && g.types && g.types.indexOf("replay") >= 0 && g.replayAfter != null ? Number(g.replayAfter) : null;
     weeksOf(co).forEach((w) => {
       const date = classDate(co, w.no);
-      out.push({ date, time, type: "open", week: w.no, title: w.no + "주차 강의 — " + w.title + (time ? " (" + time + ")" : ""), url, auto: true });
+      out.push({ date, time, type: "open", week: w.no, title: w.no + "주차 " + openWord + " — " + w.title + (time ? " (" + time + ")" : ""), url, auto: true });
+      if (rpAfter != null) out.push({ date: addDays(date, rpAfter), time: "", type: "replay", week: w.no, title: w.no + "주차 강의 녹화본 업로드", auto: true });
       out.push({ date: weekDeadline(co, w.no), time: "", type: "deadline", week: w.no, title: w.no + "주차 과제 마감", auto: true });
     });
     c.schedule.forEach((e) => {
@@ -997,6 +1254,7 @@
     company: "(주)두고홀딩스", ceo: "문원오", bizNo: "726-87-03167", mailOrderNo: "제 2024-세종아름-0878 호",
     address: "세종특별자치시 갈매로 353 에비뉴힐 5층 5023호", zip: "30121", phone: "", email: "doogobiz@gmail.com",
     hours: "평일 오전 10시 ~ 오후 6시 · 점심시간 1시 ~ 2시 제외 · 주말 · 공휴일 제외", privacyOfficer: "", hosting: "",
+    kakaoCh: "https://pf.kakao.com/_xgxkiWX",
     notice: "(주)두고홀딩스는 통신판매중개자로서 통신판매의 당사자가 아니며, 입점 강사가 등록한 강의 정보 및 거래에 대하여 책임을 지지 않습니다.",
     terms: "", privacy: "",
     group: [
@@ -1013,6 +1271,13 @@
     return out;
   }
   function saveSite(next) { db.site = next; return save(); }
+  /** 두잉고 · 두고클래스 운영 상담 카카오톡 채널 — home: 채널 홈, chat: 바로 1:1 채팅 (http 주소도 https 로) */
+  function opsKakao() {
+    let u = String(siteInfo().kakaoCh || SITE_DEFAULT.kakaoCh).trim().replace(/^http:\/\//i, "https://").replace(/\/+$/, "");
+    if (!/^https:\/\/pf\.kakao\.com\/_[A-Za-z0-9]+(\/chat)?$/.test(u)) u = SITE_DEFAULT.kakaoCh;
+    const home = u.replace(/\/chat$/, "");
+    return { home, chat: home + "/chat" };
+  }
 
   const KEY_INQ = "moonclass:inquiries";
   const inqMap = () => (R.on ? R.inq : store.get(KEY_INQ, {}));
@@ -1025,7 +1290,12 @@
     if (R.on) { delete R.inq[id]; schedule(); return true; }
     const m = store.get(KEY_INQ, {}); delete m[id]; return store.set(KEY_INQ, m);
   }
+  // 파트너 추천 코드: 주소에 ?ref=코드 가 있으면 기억 (입점 문의에 함께 남김)
+  const catchRef = () => { try { const m = (location.hash + location.search).match(/[?&]ref=([A-Za-z0-9_.-]{2,30})/); if (m) localStorage.setItem("doinggo:ref", m[1]); } catch (e) {} };
+  // 서버(정식 API)도 이 파일을 읽어서 시드를 만들어요 — 브라우저에서만 주소 변화를 들어요
+  catchRef(); if (typeof window.addEventListener === "function") window.addEventListener("hashchange", catchRef);
   async function applyPartner(a) {
+    try { const ref = localStorage.getItem("doinggo:ref"); if (ref && !a.ref) a = Object.assign({}, a, { ref }); } catch (e) {}
     if (R.on) return call("public", Object.assign({ action: "partner-apply" }, a));
     const x = Object.assign({ id: uid("inq"), at: Date.now(), status: "new", memo: "" }, a);
     delete x.agree;
@@ -1072,10 +1342,16 @@
   const REQUEST_CATEGORIES = ["로그인 · 접속", "과제 제출", "영상 재생", "화면 깨짐", "기타"];
   const maskName = (n) => { n = String(n || ""); return n ? n.slice(0, 1) + "OO" : "익명"; };
   /** 강사 한 명의 전체 요청사항, 오래된 순으로 번호를 매기고 최신순으로 돌려준다 */
+  // 수료증 번호: 강사 · 기수 · 학생 ID로 만든 고정 번호 (다른 학생이 빠지거나 순서가 바뀌어도 그대로 · 강사끼리 겹치지 않아요)
+  function certNo(s) {
+    const co = s && cohort(s.cohortId); if (!co) return "";
+    const al = (v, n) => String(v || "").replace(/[^a-z0-9]/gi, "").slice(-n).toUpperCase();
+    return "DG-" + al(s.instructorId || co.instructorId, 4) + "-" + (parseInt(co.name, 10) || 0) + "-" + al(s.id, 5);
+  }
   function requests(instId, extra) {
     const list = [];
     const add = (s) => progress(s.id).questions.forEach((q) => list.push({ s, q }));
-    studentsOf(instId).forEach(add);
+    studentsOf(instId, true).forEach(add);
     if (extra) add(extra);
     list.sort((a, b) => a.q.at - b.q.at).forEach((x, i) => { x.no = i + 1; });
     return list.reverse();
@@ -1088,7 +1364,7 @@
    * 로그인한 사람이 볼 수 있는 문서만 내려온다. */
   const R = { on: false, fresh: null, loading: false, me: { student: null, admin: null }, epoch: null, now: 0, ver: {}, snap: {}, prog: {}, inq: {}, bill: {}, timer: null, busy: false, again: false, fails: 0, polling: false, lastPoll: 0, listeners: [] };
   const COLLS = ["instructors", "content", "cohorts", "students"];
-  const CONTENT_PERMS = ["brand", "guide", "curriculum", "missions", "schedule", "notices", "faq", "docs", "library", "motivation", "channels", "partners", "pages", "free", "landing"];
+  const CONTENT_PERMS = ["brand", "guide", "curriculum", "missions", "schedule", "notices", "faq", "docs", "library", "motivation", "channels", "partners", "pages", "free", "landing", "replays", "showcase", "notes", "glossary"];
   const isObj = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
   const emit = (type, info) => R.listeners.forEach((fn) => { try { fn(type, info); } catch (e) { console.error(e); } });
 
@@ -1136,8 +1412,70 @@
     return load();
   }
 
-  /* 데이터 한 덩어리 ↔ 문서 */
-  function metaOf(d) { const m = {}; Object.keys(d).forEach((k) => { if (COLLS.indexOf(k) === -1) m[k] = d[k]; }); return m; }
+  /* 데이터 한 덩어리 ↔ 문서
+   * 두고클래스(d.vod): 공개 정보는 meta 에, 회원 · 주문 · 후기 · 다짐 · 문의 · 정산은 각각 서버 문서로 (서버 access · vodaccess 가 누가 보고 고칠지 정해요) */
+  const VOD_PRIV = ["members", "orders", "memberCoupons", "likes", "progress", "studyLog", "reviews", "pledges", "inquiries", "payouts", "stat"];
+  function metaOf(d) {
+    const m = {};
+    Object.keys(d).forEach((k) => { if (COLLS.indexOf(k) === -1) m[k] = d[k]; });
+    if (m.vod && typeof m.vod === "object") { const v = {}; Object.keys(m.vod).forEach((k) => { if (VOD_PRIV.indexOf(k) === -1) v[k] = m.vod[k]; }); m.vod = v; }
+    return m;
+  }
+  const vmDoc = (v, m) => Object.assign({}, m, { coupons: (v.memberCoupons || {})[m.id] || [], likes: (v.likes || {})[m.id] || [], prog: (v.progress || {})[m.id] || {}, study: (v.studyLog || {})[m.id] || {} });
+  const vpoKey = (key) => "vpo:" + encodeURIComponent(key);
+  function splitVod(v, out) {
+    if (!v || typeof v !== "object") return;
+    (v.members || []).forEach((m) => { if (m && m.id) out["vm:" + m.id] = vmDoc(v, m); });
+    (v.orders || []).forEach((o) => { if (o && o.no) out["vo:" + o.no] = o; });
+    (v.reviews || []).forEach((r) => { if (r && r.id) out["vr:" + r.id] = r; });
+    (v.pledges || []).forEach((x) => { if (x && x.id) out["vpl:" + x.id] = x; });
+    (v.inquiries || []).forEach((q) => { if (q && q.id && q.mid) out["vq:" + q.mid + ":" + q.id] = q; });
+    const po = {};
+    (v.payouts || []).forEach((x) => { if (x && x.key) (po[x.key] = po[x.key] || []).push(x); });
+    Object.keys(po).forEach((key) => { out[vpoKey(key)] = po[key]; });
+    if (v.stat) out.vstat = v.stat;
+  }
+  function vodDocOf(v, k, p) {
+    if (!v || typeof v !== "object") return undefined;
+    const find = (list, key, id) => (list || []).find((x) => x && x[key] === id);
+    if (p[0] === "vm") { const m = find(v.members, "id", p[1]); return m ? vmDoc(v, m) : undefined; }
+    if (p[0] === "vo") return find(v.orders, "no", p[1]);
+    if (p[0] === "vr") return find(v.reviews, "id", p[1]);
+    if (p[0] === "vpl") return find(v.pledges, "id", p[1]);
+    if (p[0] === "vq") { const q = find(v.inquiries, "id", p[2]); return q && q.mid === p[1] ? q : undefined; }
+    if (p[0] === "vpo") { const key = decodeURIComponent(p[1] || ""), l = (v.payouts || []).filter((x) => x && x.key === key); return l.length ? l : undefined; }
+    if (p[0] === "vstat") return v.stat || undefined;
+    return undefined;
+  }
+  function vodOf(d) {
+    if (!d.vod || typeof d.vod !== "object") d.vod = {};
+    const v = d.vod;
+    ["members", "orders", "reviews", "pledges", "inquiries", "payouts"].forEach((x) => { if (!Array.isArray(v[x])) v[x] = []; });
+    ["memberCoupons", "likes", "progress", "studyLog"].forEach((x) => { if (!v[x] || typeof v[x] !== "object") v[x] = {}; });
+    return v;
+  }
+  function upsertBy(list, key, id, val) {
+    const i = list.findIndex((x) => x && x[key] === id);
+    if (val == null) { if (i >= 0) list.splice(i, 1); return; }
+    if (i >= 0) replaceIn(list[i], val); else list.push(val);
+  }
+  function placeVod(d, p, val) {
+    const v = vodOf(d);
+    if (p[0] === "vm") {
+      const id = p[1];
+      if (val == null) { upsertBy(v.members, "id", id, null); ["memberCoupons", "likes", "progress", "studyLog"].forEach((x) => { delete v[x][id]; }); return; }
+      const m = Object.assign({}, val);
+      v.memberCoupons[id] = m.coupons || []; v.likes[id] = m.likes || []; v.progress[id] = m.prog || {}; v.studyLog[id] = m.study || {};
+      delete m.coupons; delete m.likes; delete m.prog; delete m.study;
+      upsertBy(v.members, "id", id, m);
+    } else if (p[0] === "vo") upsertBy(v.orders, "no", p[1], val);
+    else if (p[0] === "vr") upsertBy(v.reviews, "id", p[1], val);
+    else if (p[0] === "vpl") upsertBy(v.pledges, "id", p[1], val);
+    else if (p[0] === "vq") upsertBy(v.inquiries, "id", p[2], val);
+    else if (p[0] === "vpo") { const key = decodeURIComponent(p[1] || ""); v.payouts = v.payouts.filter((x) => !x || x.key !== key).concat(val || []); }
+    else if (p[0] === "vstat") v.stat = val || null;
+  }
+  const VOD_KEY = /^(vm|vo|vr|vpl|vq|vpo|vstat)$/;
   function splitDb(d) {
     const out = { meta: metaOf(d) };
     d.instructors.forEach((i) => { out["ins:" + i.id] = i; });
@@ -1150,6 +1488,7 @@
     Object.keys(R.prog).forEach((sid) => { if (sIns[sid]) out["prog:" + sIns[sid] + ":" + sid] = R.prog[sid]; });
     Object.keys(R.inq).forEach((id) => { out["inq:" + id] = R.inq[id]; });
     Object.keys(R.bill).forEach((id) => { const b = R.bill[id]; if (b && b.instructorId) out["bill:" + b.instructorId + ":" + id] = b; });
+    splitVod(d.vod, out);
     return out;
   }
   function docOf(k) {
@@ -1162,14 +1501,20 @@
     if (p[0] === "prog") return R.prog[p[2]];
     if (p[0] === "inq") return R.inq[p[1]];
     if (p[0] === "bill") return R.bill[p[2]];
+    if (VOD_KEY.test(p[0])) return vodDocOf(db.vod, k, p);
     return undefined;
   }
   const replaceIn = (t, src) => { Object.keys(t).forEach((k) => { delete t[k]; }); Object.assign(t, src); };
   function placeIn(d, k, v) {
     const p = k.split(":");
     if (k === "meta") {
+      // 회원 · 주문 등 두고클래스 문서는 meta 와 따로 오니까 meta 를 바꿀 때도 그대로 둔다
+      const keep = d.vod && typeof d.vod === "object" ? d.vod : null;
       Object.keys(d).forEach((x) => { if (COLLS.indexOf(x) === -1) delete d[x]; });
       if (v) Object.keys(v).forEach((x) => { if (COLLS.indexOf(x) === -1) d[x] = v[x]; });
+      if (keep) { const nv = d.vod && typeof d.vod === "object" ? d.vod : (d.vod = {}); VOD_PRIV.forEach((x) => { if (keep[x] !== undefined) nv[x] = keep[x]; }); }
+    } else if (VOD_KEY.test(p[0])) {
+      placeVod(d, p, v);
     } else if (p[0] === "ins" || p[0] === "stu") {
       const list = p[0] === "ins" ? d.instructors : d.students, id = p[0] === "ins" ? p[1] : p[2];
       const i = list.findIndex((x) => x.id === id);
@@ -1225,8 +1570,19 @@
   /** 이 사람이 서버에 저장할 수 있는 문서인지 (서버도 똑같이 다시 확인한다) */
   function canWrite(k) {
     const a = R.me.admin, st = R.me.student, p = k.split(":");
+    if (p[0] === "vstat") return false;
+    if (VOD_KEY.test(p[0]) && !(a && a.role === "master")) {
+      const me = R.me.vod && R.me.vod.mid;
+      if (p[0] === "vm") return !!me && me === p[1];
+      if (p[0] === "vo") { const o = docOf(k); return !!me && !!o && o.mid === me; }
+      if (p[0] === "vr" || p[0] === "vpl") return !!me;
+      if (p[0] === "vq") return !!me && me === p[1];
+      if (p[0] === "vpo") return !!(a && a.role === "instructor" && "vpo:" + encodeURIComponent(a.iid) === k);
+      return false;
+    }
     if (a && a.role === "master") return true;
-    if (k === "meta") return false;
+    // 강사는 meta 를 보내도 서버가 자기 VOD 커리큘럼 · 자기 제출 서류만 받아요 (나머지는 되돌림)
+    if (k === "meta") return !!(a && a.role === "instructor");
     // 이용료 신청은 강사 본인만 (코치 · 수강생은 못 봄)
     if (p[0] === "bill") return !!(a && a.role === "instructor" && a.iid === p[1]);
     if (a && a.iid === p[1]) {
@@ -1239,7 +1595,7 @@
       if (p[0] === "content") return any(CONTENT_PERMS);
       if (p[0] === "cohorts") return any(["cohorts"]);
       if (p[0] === "stu") return any(["students"]);
-      if (p[0] === "prog") return any(["reviews", "questions", "students"]);
+      if (p[0] === "prog") return any(["reviews", "questions", "students", "coaching"]);
     }
     return !!(st && p[0] === "prog" && p[1] === st.iid && p[2] === st.sid);
   }
@@ -1352,15 +1708,16 @@
   window.DB = {
     load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, CHANNEL_TYPES, CHANNEL_ICONS, CHANNEL_COLORS, channelType, channelLook, defaultChannels, channelsOf, PARTNER_GROUPS, PARTNER_ICONS, defaultPartners, partnersOf, inkOn, coachesOf, coach, findCoachLogin, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
     get data() { return db; },
-    instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student,
+    instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student, certNo,
+    VOD_MENUS, VOD_LIVE_ONLY, VOD_KEYS, vodContent, vodView, vodOwn, vodEnsure, vodCopy, vodCohortId, vodStudentsOf, isVodStudent, splitMid,
     curricula, curriculum, curriculumOf, weeksOf, cohortWeeks,
     weekOpen, weekDeadline, cohortEnd, cohortStatus, STATUS_LABEL, currentWeek, LEVEL_SET, levelSteps, level, currentCohort, nextCohortName,
-    EVENT_TYPES, events, ruleText,
-    REQUEST_CATEGORIES, maskName, requests, inquiries, saveInquiry, removeInquiry, applyPartner, siteInfo, saveSite, SITE_DEFAULT,
+    EVENT_TYPES, events, ruleText, evLabel, calTypes, calManual, calShort,
+    REQUEST_CATEGORIES, maskName, requests, inquiries, saveInquiry, removeInquiry, applyPartner, siteInfo, saveSite, SITE_DEFAULT, opsKakao,
     BILLING_DEFAULT, BILL_VAT, BILL_STATE, billingInfo, saveBilling, bills, saveBill, removeBill, billMoney, billState, won,
     THEMES, themeOf, STUDENT_MENUS, LIB_MENUS, CUSTOM_ICONS, menuConfig, menuOn, libOn, isCustom, NOTE_PROMPTS, botNameOf,
     emptyProgress, progress, saveProgress, allProgress, lastSub, subState, stats,
-    session, remote,
+    session, remote, onSave,
     date: { DOW, todayStr, parseDate, addDays, diffDays, fmtMD, fmtFull, fmtKo, fmtStamp, toStr }
   };
 })();

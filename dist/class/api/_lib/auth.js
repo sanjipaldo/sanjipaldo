@@ -43,8 +43,8 @@ const norm = (s) => String(s || "").replace(/\s+/g, "");
 /** 쿠키 → 지금 유효한 신원 { student, admin } (없으면 null) */
 async function identify(req) {
   const c = cookies(req);
-  const ps = verify(c[COOKIE.student]), pa = verify(c[COOKIE.admin]);
-  const ids = { student: null, admin: null };
+  const ps = verify(c[COOKIE.student]), pa = verify(c[COOKIE.admin]), pv = verify(c.dc_v);
+  const ids = { student: null, admin: null, vod: null };
   const keys = [];
   if (ps && ps.r === "student") keys.push("ins:" + ps.iid, "stu:" + ps.iid + ":" + ps.sid);
   if (pa && pa.r !== "master") keys.push("ins:" + pa.iid);
@@ -52,8 +52,11 @@ async function identify(req) {
   const ins = (iid) => (docs["ins:" + iid] || {}).v;
   if (ps && ps.r === "student") {
     const i = ins(ps.iid), s = (docs["stu:" + ps.iid + ":" + ps.sid] || {}).v;
-    if (i && i.status === "active" && s && s.status === "approved") ids.student = { sid: ps.sid, iid: ps.iid };
+    if (i && i.status === "active" && s && s.status === "approved") ids.student = { sid: ps.sid, iid: ps.iid, vodMid: s.vodMid || "" };
   }
+  // 두고클래스 회원 (dc_v) — 없으면 두잉고 강의실에 들어온 VOD 구매자(수강생 계정에 vodMid)로
+  const vmid = pv && pv.r === "vod" && pv.mid ? pv.mid : ids.student && ids.student.vodMid ? ids.student.vodMid : "";
+  if (vmid) ids.vod = await require("./vodaccess").identity(vmid);
   if (pa) {
     if (pa.r === "master") ids.admin = { role: "master" };
     else {
@@ -71,7 +74,8 @@ async function identify(req) {
 }
 const publicMe = (ids) => ({
   student: ids.student ? { sid: ids.student.sid, iid: ids.student.iid } : null,
-  admin: ids.admin ? { role: ids.admin.role, iid: ids.admin.iid || null, cid: ids.admin.cid || null } : null
+  admin: ids.admin ? { role: ids.admin.role, iid: ids.admin.iid || null, cid: ids.admin.cid || null } : null,
+  vod: ids.vod ? { mid: ids.vod.mid } : null
 });
 
 module.exports = { sign, verify, identify, setCookie, publicMe, norm };

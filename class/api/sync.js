@@ -7,6 +7,7 @@ const store = require("./_lib/store");
 const auth = require("./_lib/auth");
 const access = require("./_lib/access");
 const { applyOps, extractFiles } = require("./_lib/ops");
+const VA = require("./_lib/vodaccess");
 
 const clone = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
 const MAX_DOC = 2 * 1024 * 1024;
@@ -27,7 +28,8 @@ async function applyChange(ch, ids) {
     let next = w.fix(exists ? clone(row.v) : null, clone(naive));
     let modified = (Number(ch.base) || 0) !== (row ? row.ver : 0) || JSON.stringify(next) !== JSON.stringify(naive);
     if (next != null) {
-      const ex = extractFiles(next, (p) => access.fileScope(k, p));
+      const doc = next;
+      const ex = extractFiles(next, (p) => access.fileScope(k, p, doc));
       next = ex.value;
       if (ex.files.length) {
         modified = true;
@@ -37,6 +39,8 @@ async function applyChange(ch, ids) {
     }
     const ver = await store.writeDoc(k, next, row ? row.ver : null);
     if (ver === false) continue;
+    const K = access.parseKey(k);
+    if (K.vod) await VA.after(K, exists ? row.v : null, next, ids).catch((e) => console.error("[sync] vod after", k, e && e.message));
     const out = { k, ver };
     if (modified) out.doc = next == null ? null : access.view(k, next, ids);
     return out;

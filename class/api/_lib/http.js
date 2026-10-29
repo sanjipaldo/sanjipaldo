@@ -31,6 +31,7 @@ function handler(methods, fn) {
     }
   };
 }
-const ip = (req) => String(req.headers["x-forwarded-for"] || req.headers["x-real-ip"] || (req.socket && req.socket.remoteAddress) || "").split(",")[0].trim();
+// Cloudflare 앞단이면 진짜 방문자 IP 는 CF-Connecting-IP (edge.js) — 로그인 실패 제한이 Cloudflare IP 로 묶이지 않게
+const ip = (req) => require("./edge").clientIp(req);
 
 module.exports = { send, body, query, handler, ip, APP };
