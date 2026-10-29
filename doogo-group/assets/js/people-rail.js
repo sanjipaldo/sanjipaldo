@@ -1,196 +1,150 @@
 /* =========================================================
-   DOOGO GROUP — people-rail.js (두고 사람들 줄 · 21차 → 27차)
+   DOOGO GROUP — people-rail.js (두고 사람들 줄 · 21차 → 30차)
    메인 #leaders · leadership.html #leaders 공통: 프로필 카드를 한 줄로 넘겨 보는 줄
-   · 27차: 무한 루프(앞뒤 복제) 대신 끝이 있는 줄 — 같은 사람이 양쪽에 두 번 보이지 않음
-   · 28차: 넓은 화면은 화면 왼쪽 끝 가까이(29차: 3vw · 24~56px 여백)에서 시작해 마지막 카드가 오른쪽 같은 여백에 닿으면 멈춤 (760px 이하는 좌우 여백 선)
-     (카드가 다 들어가는 넓은 화면이면 가운데 정렬 · 움직이지 않고 화살표도 숨김 · .is-static)
-   · 넘기기: 양옆 화살표(data-prail-prev / next — 끝에 닿으면 흐려지고 aria-disabled) · ← → 키 · 손가락 밀기
-     — 자동 넘김과 마우스 끌기는 없음(28차 · 화살표 버튼을 눌렀을 때만)
-   · root._prail = { go(k, instant), count } — k 번째 카드가 보이도록 (첫 줄 자리로, 끝에서는 멈춤)
+   · 30차: 브라우저 가로 스크롤(.prail-view overflow-x) 위에서 움직임 — 양 끝 너머로 밀리거나 빈자리가 생기지 않음
+     처음에는 항상 첫 카드(문원오)부터 (주소에 카드 #id 가 있으면 leadership.js 가 그 카드를 보여 줌)
+   · 마우스: 줄을 잡고 끌기 → 놓으면 관성으로 미끄러지다 가까운 카드 앞에서 부드럽게 멈춤
+   · 손가락: 브라우저 기본 밀기 (+ 카드 앞에 붙는 scroll-snap · people-rail.css)
+   · 트랙패드 가로 스크롤 · ← → 키(줄 안에 포커스가 있을 때 한 장씩) · 아래 가는 진행 막대
+   · 같은 사람은 한 번씩만 (복제 없음)
+   · root._prail = { go(k, instant), count } — k 번째 카드가 맨 앞(왼쪽 여백 선)에 오도록
    ========================================================= */
 (function () {
   'use strict';
   var motionOff = function () { return !!(window.DOOGO && window.DOOGO.motionOff && window.DOOGO.motionOff()); };
-  var AUTO_MS = 3600;
-  var AUTO = false; // 28차: 자동 넘김 끔 — 화살표 버튼을 눌렀을 때만 넘어감
+  var raf = window.requestAnimationFrame || function (f) { return setTimeout(function () { f(Date.now()); }, 16); };
+  var caf = window.cancelAnimationFrame || clearTimeout;
+  var now = function () { return (window.performance && performance.now) ? performance.now() : Date.now(); };
 
   function init(root) {
     var view = root.querySelector('.prail-view'), track = root.querySelector('.prail-track');
     if (!view || !track) return;
-    var items = Array.prototype.slice.call(track.children);
+    var items = Array.prototype.slice.call(track.querySelectorAll('.prail-item'));
     var n = items.length;
-    if (n < 2) return;
+    if (!n) return;
 
-    // 첫 카드 자리: .container 안쪽 왼쪽 선
-    var anchor = document.createElement('div');
-    anchor.className = 'container prail-anchor';
-    anchor.setAttribute('aria-hidden', 'true');
-    anchor.innerHTML = '<span></span>';
-    root.insertBefore(anchor, root.firstChild);
+    // 진행 막대 (줄 아래 · 보이는 범위만큼 채움)
+    var bar = document.createElement('div');
+    bar.className = 'container prail-bar';
+    bar.setAttribute('aria-hidden', 'true');
+    bar.innerHTML = '<span class="prail-bar-line"><i></i></span>';
+    view.parentNode.insertBefore(bar, view.nextSibling);
+    var fill = bar.querySelector('i');
 
-    var idx = 0, step = 0, start = 0, minX = 0, maxI = 0, x = 0;
-    var prevBtn = root.querySelector('[data-prail-prev]'), nextBtn = root.querySelector('[data-prail-next]');
+    function maxScroll() { return Math.max(0, view.scrollWidth - view.clientWidth); }
+    function pad() { return parseFloat(getComputedStyle(track).paddingLeft) || 0; }
+    // k 번째 카드를 맨 앞(왼쪽 여백 선)에 두는 스크롤 위치
+    function targetOf(k) {
+      var it = items[Math.max(0, Math.min(n - 1, k))];
+      return Math.max(0, Math.min(maxScroll(), view.scrollLeft + it.getBoundingClientRect().left - view.getBoundingClientRect().left - pad()));
+    }
+    function nearest() {
+      var best = 0, bd = Infinity, x = view.scrollLeft;
+      for (var i = 0; i < n; i++) { var d = Math.abs(targetOf(i) - x); if (d < bd) { bd = d; best = i; } }
+      return best;
+    }
+    function paint() {
+      var m = maxScroll();
+      root.classList.toggle('is-static', m < 2);
+      root.classList.toggle('is-start', view.scrollLeft <= 1);
+      root.classList.toggle('is-end', view.scrollLeft >= m - 1);
+      var vw = view.clientWidth, sw = view.scrollWidth || 1;
+      fill.style.width = (Math.min(1, vw / sw) * 100).toFixed(2) + '%';
+      fill.style.transform = 'translateX(' + (m ? (view.scrollLeft / m) * (sw - vw) / vw * 100 : 0).toFixed(2) + '%)';
+    }
+    view.addEventListener('scroll', function () { paint(); }, { passive: true });
 
-    function measure() {
-      var a = items[0].getBoundingClientRect(), b = items[1].getBoundingClientRect();
-      step = b.left - a.left || a.width;
-      var vr = view.getBoundingClientRect();
-      // 28차: 넓은 화면은 화면 왼쪽 끝 가까이에서 시작(첫 화면에 왼쪽 빈자리 없음 · 29차: 끝에 붙지 않게 3vw, 24~56px 여백)
-      //       760px 이하는 .container 안쪽 선(좌우 여백)
-      var vw = window.innerWidth;
-      var pad = vw > 760 ? Math.round(Math.min(56, Math.max(24, vw * 0.03))) : anchor.firstChild.getBoundingClientRect().left - vr.left;
-      var last = items[n - 1].getBoundingClientRect(), first = items[0].getBoundingClientRect();
-      var w = last.right - first.left;
-      // 카드가 다 들어가면 가운데 정렬 · 아니면 마지막 카드의 오른쪽 끝이 오른쪽 같은 선(view 폭 - pad)에 닿는 자리까지
-      start = w <= vr.width - 2 * pad ? (vr.width - w) / 2 : pad;
-      minX = Math.min(start, vr.width - pad - w);
-      maxI = Math.max(0, Math.ceil((start - minX) / step - 0.01));
-      root.classList.toggle('is-static', maxI === 0);
-      if (idx > maxI) idx = maxI;
-    }
-    function pos(i) { return Math.max(minX, start - i * step); }
-    function setX(px, anim) {
-      x = px;
-      track.classList.toggle('no-tr', !anim);
-      track.style.transform = 'translate3d(' + px.toFixed(2) + 'px,0,0)';
-      if (!anim) void track.offsetWidth;
-    }
-    function ends() {
-      var atStart = idx <= 0, atEnd = idx >= maxI;
-      root.classList.toggle('is-start', atStart);
-      root.classList.toggle('is-end', atEnd);
-      if (prevBtn) prevBtn.setAttribute('aria-disabled', atStart ? 'true' : 'false');
-      if (nextBtn) nextBtn.setAttribute('aria-disabled', atEnd ? 'true' : 'false');
-    }
-    function render(anim) { setX(pos(idx), anim && !motionOff()); ends(); }
-    function go(d) {
-      var to = Math.max(0, Math.min(maxI, idx + d));
-      if (to === idx) return false;
-      idx = to;
-      render(true);
-      return true;
-    }
-    function currentX() {
-      var m = getComputedStyle(track).transform;
-      if (!m || m === 'none') return x;
-      var v = m.match(/matrix(3d)?\(([^)]+)\)/);
-      if (!v) return x;
-      var p = v[2].split(',').map(parseFloat);
-      return v[1] ? p[12] : p[4];
+    // 부드럽게 옮기기 (관성 뒤 카드 맞춤 · 키 · go)
+    var anim = 0;
+    function stop() { if (anim) { caf(anim); anim = 0; } root.classList.remove('is-gliding'); }
+    function glideTo(x, ms) {
+      stop();
+      x = Math.max(0, Math.min(maxScroll(), x));
+      var x0 = view.scrollLeft, dx = x - x0;
+      if (Math.abs(dx) < 1 || motionOff()) { view.scrollLeft = x; return; }
+      var t0 = now(), dur = ms || 520;
+      root.classList.add('is-gliding'); // 움직이는 동안 snap 끔
+      (function stepFn() {
+        anim = raf(function () {
+          var p = Math.min(1, (now() - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+          view.scrollLeft = x0 + dx * e;
+          if (p < 1) stepFn(); else { anim = 0; root.classList.remove('is-gliding'); }
+        });
+      })();
     }
 
-    // 화살표
-    if (prevBtn) prevBtn.addEventListener('click', function () { go(-1); hold(); });
-    if (nextBtn) nextBtn.addEventListener('click', function () { go(1); hold(); });
-    root.addEventListener('keydown', function (e) {
-      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-      if (e.target.closest && e.target.closest('input, textarea, select')) return;
-      e.preventDefault();
-      go(e.key === 'ArrowRight' ? 1 : -1); hold();
-    });
-    // 키보드로 카드에 들어오면 그 카드가 보이도록
-    track.addEventListener('focusin', function (e) {
-      var it = e.target.closest('.prail-item');
-      var k = items.indexOf(it);
-      if (k < 0) return;
-      view.scrollLeft = 0; // 브라우저가 포커스 따라 옆으로 밀어 둔 것을 되돌림
-      var to = Math.min(maxI, k);
-      if (to !== idx) { idx = to; render(true); }
-    });
-
-    // 끌기 · 밀기 (세로 스크롤은 브라우저에 맡김: touch-action: pan-y) — 양 끝 너머로는 고무줄처럼 조금만
+    // 마우스로 끌기 → 관성 → 가까운 카드 앞에서 멈춤 (손가락 · 펜은 브라우저 기본 스크롤)
     var drag = null, suppress = false;
     view.addEventListener('pointerdown', function (e) {
-      if (e.pointerType === 'mouse') return; // 28차: 마우스는 화살표 버튼으로만 넘김 (손가락 밀기는 그대로)
-      if (maxI === 0) return;
-      measure();
-      var cx = currentX();
-      setX(cx, false);
-      drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, base: cx, on: false, lx: e.clientX, lt: e.timeStamp, v: 0 };
+      if (e.pointerType !== 'mouse' || e.button !== 0 || maxScroll() < 2) return;
+      stop();
+      drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, s0: view.scrollLeft, on: false, samples: [{ x: e.clientX, t: e.timeStamp }] };
     });
     view.addEventListener('pointermove', function (e) {
       if (!drag || e.pointerId !== drag.id) return;
-      var dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+      var dx = e.clientX - drag.x0;
       if (!drag.on) {
-        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
-        if (Math.abs(dy) > Math.abs(dx)) { drag = null; return; }
+        if (Math.abs(dx) < 5) return;
+        if (Math.abs(e.clientY - drag.y0) > Math.abs(dx)) { drag = null; return; }
         drag.on = true;
         root.classList.add('is-drag');
         try { view.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
       }
-      var px = drag.base + dx;
-      if (px > start) px = start + (px - start) * 0.3;
-      else if (px < minX) px = minX + (px - minX) * 0.3;
-      var dt = e.timeStamp - drag.lt;
-      if (dt > 0) drag.v = (e.clientX - drag.lx) / dt;
-      drag.lx = e.clientX; drag.lt = e.timeStamp;
-      setX(px, false);
+      e.preventDefault();
+      view.scrollLeft = drag.s0 - dx;
+      drag.samples.push({ x: e.clientX, t: e.timeStamp });
+      if (drag.samples.length > 6) drag.samples.shift();
     });
     function endDrag(e) {
       if (!drag || (e && e.pointerId !== drag.id)) return;
-      var was = drag.on, v = drag.v;
-      drag = null;
+      var d = drag; drag = null;
+      if (!d.on) return;
       root.classList.remove('is-drag');
-      if (!was) return;
       suppress = true;
       setTimeout(function () { suppress = false; }, 0);
-      var f = (start - x) / step - Math.max(-1, Math.min(1, v * 0.9));
-      idx = Math.max(0, Math.min(maxI, Math.round(f)));
-      render(true);
-      hold();
+      // 마지막 약 100ms 의 속도(px/ms) → 관성 거리 → 가까운 카드 앞으로
+      var a = d.samples[0], b = d.samples[d.samples.length - 1], v = 0;
+      for (var i = d.samples.length - 1; i >= 0; i--) { if (b.t - d.samples[i].t > 100) { a = d.samples[i]; break; } a = d.samples[i]; }
+      if (b.t > a.t) v = (b.x - a.x) / (b.t - a.t);
+      v = Math.max(-4, Math.min(4, v));
+      var land = view.scrollLeft - v * 260; // 관성으로 더 가는 거리
+      var best = 0, bd = Infinity;
+      for (var k = 0; k < n; k++) { var dd = Math.abs(targetOf(k) - land); if (dd < bd) { bd = dd; best = k; } }
+      var to = targetOf(best);
+      if (land >= maxScroll() - 4) to = maxScroll();
+      glideTo(to, 560 + Math.min(320, Math.abs(v) * 120));
     }
     view.addEventListener('pointerup', endDrag);
-    view.addEventListener('pointercancel', function (e) { if (drag && e.pointerId === drag.id) { var on = drag.on; drag = null; root.classList.remove('is-drag'); if (on) render(true); } });
+    view.addEventListener('pointercancel', function (e) { if (drag && e.pointerId === drag.id) { drag = null; root.classList.remove('is-drag'); } });
     view.addEventListener('click', function (e) { if (suppress) { e.preventDefault(); e.stopPropagation(); suppress = false; } }, true);
     view.addEventListener('dragstart', function (e) { e.preventDefault(); });
 
-    // 자동 넘김 — 끝에 닿으면 처음으로
-    var timer = 0, inView = false, hover = false, focusIn = false, holdUntil = 0;
-    function hold() { holdUntil = Date.now() + 6000; }
-    function canRun() { return maxI > 0 && inView && !hover && !focusIn && !drag && !motionOff() && document.visibilityState !== 'hidden'; }
-    function tick() {
-      timer = setTimeout(tick, AUTO_MS);
-      if (!canRun() || Date.now() < holdUntil) return;
-      if (!go(1)) { idx = 0; render(true); }
-    }
-    root.addEventListener('mouseenter', function () { hover = true; });
-    root.addEventListener('mouseleave', function () { hover = false; hold(); });
-    root.addEventListener('focusin', function () { focusIn = true; });
-    root.addEventListener('focusout', function (e) { if (!root.contains(e.relatedTarget)) focusIn = false; });
-    // 줄이 화면에 거의 다 들어온 뒤에만 자동 넘김 — 처음 보일 때는 항상 첫 카드(문원오)부터, 들어올 때마다 6초 쉬었다가
-    var seenOnce = false;
-    if ('IntersectionObserver' in window) {
-      new IntersectionObserver(function (en) {
-        var e = en[0], was = inView;
-        if (e.isIntersecting && !seenOnce) {
-          seenOnce = true;
-          if (idx !== 0) { idx = 0; render(false); }
-          root.classList.add('is-seen');
-          hold();
-        }
-        inView = e.isIntersecting && e.intersectionRatio >= 0.6;
-        if (inView && !was) hold();
-      }, { threshold: [0, 0.6] }).observe(root);
-    } else { inView = true; root.classList.add('is-seen'); }
+    // ← → 키: 한 장씩
+    root.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      if (e.target.closest && e.target.closest('input, textarea, select')) return;
+      e.preventDefault();
+      glideTo(targetOf(nearest() + (e.key === 'ArrowRight' ? 1 : -1)));
+    });
 
-    function refit() { measure(); render(false); }
-    window.addEventListener('resize', refit);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
-    window.addEventListener('load', refit);
-    document.addEventListener('doogo:motion', function () { render(false); });
+    // 처음엔 항상 첫 카드부터 (브라우저가 이전 가로 위치를 되살리지 않게)
+    view.scrollLeft = 0;
+    window.addEventListener('pageshow', function (e) { if (e.persisted) { view.scrollLeft = 0; paint(); } });
+    window.addEventListener('resize', paint);
+    window.addEventListener('load', paint);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(paint);
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (en) { if (en[0].isIntersecting) { root.classList.add('is-seen'); paint(); } }, { threshold: 0 }).observe(root);
+    } else root.classList.add('is-seen');
 
     root.classList.add('is-ready');
-    refit();
-    hold();
-    if (AUTO) timer = setTimeout(tick, AUTO_MS);
+    paint();
 
     root._prail = {
       count: n,
       go: function (k, instant) {
-        if (!step) measure();
-        idx = Math.max(0, Math.min(maxI, ((k % n) + n) % n));
-        render(!instant);
-        hold();
+        var x = targetOf(((k % n) + n) % n);
+        if (instant) { stop(); view.scrollLeft = x; paint(); } else glideTo(x);
       }
     };
   }

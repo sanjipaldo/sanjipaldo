@@ -236,13 +236,6 @@
     var btn = $('[data-leader-open]', card);
     if (btn) btn.addEventListener('click', function () { open(i, btn); });
   });
-  // 줄 양옆을 채우는 복제 카드(people-rail.js · data-prail-src = 원본 번호)를 눌러도 같은 사람 상세
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest && e.target.closest('[data-prail-src] [data-leader-open]');
-    if (!btn) return;
-    var k = parseInt(btn.closest('[data-prail-src]').getAttribute('data-prail-src'), 10);
-    if (k >= 0 && k < cards.length) open(k, $('[data-leader-open]', cards[k]));
-  });
   modal.addEventListener('close', function () {
     html.classList.remove('is-locked');
     if (opener && opener.focus) opener.focus();
