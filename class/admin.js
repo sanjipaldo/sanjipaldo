@@ -1703,7 +1703,7 @@
     };
     return (own
       ? head(isV ? "VOD 버전 메뉴 구성" : "메뉴 구성", isV ? "DOOGO CLASS에서 VOD를 산 수강생이 보는 왼쪽 메뉴예요. 꼭 필요한 메뉴만 켜 두세요. 주차별 강의 · 라이브 다시보기 · 과제 · 모범 과제 · 수업 캘린더 · 수료증은 VOD 버전에 없어요." : "수강생 화면 왼쪽 메뉴를 더하고(＋) 빼고(−), 이름과 순서를 바꿔요. 필요한 페이지나 링크 메뉴도 새로 만들 수 있어요. 바꾸면 바로 저장돼요.", btn(icon("eye", "sm") + (isV ? "VOD 수강생 화면 보기" : "수강생 화면 보기"), "preview", "a-btn-outline"))
-      : head("메뉴 · 색상 설정", "강사와 협의한 대로 수강생 화면의 메뉴를 더하고(＋) 빼고(−), 이름과 순서, 화면 색상을 정해요. 바꾸면 바로 저장돼요.") +
+      : head("메뉴 · 색상 설정", "강사와 협의한 대로 수강생 화면의 메뉴를 더하고(＋) 빼고(−), 이름과 순서, 화면 색상을 정해요. 바꾸면 바로 저장돼요. 오른쪽 미리보기로 바뀐 강의실을 바로 확인해요.", dgSplitBtn("room:" + ins.id, "강의실 미리보기")) +
       '<section class="a-card a-menu-top"><label class="a-label" for="m-menu-ins">강사 플랫폼</label><select class="a-input" id="m-menu-ins">' + list.map((x) => '<option value="' + x.id + '"' + (x.id === ins.id ? " selected" : "") + ">" + esc(x.displayName) + " · " + esc(x.name) + "</option>").join("") + "</select>" +
         btn(icon("eye", "sm") + "수강생 화면 보기", "m-preview", "a-btn-outline a-btn-sm", ' data-id="' + ins.id + '"') + "</section>") +
       '<div class="a-menu-grid">' +
@@ -2376,7 +2376,7 @@
   function pageMasterSite() {
     const s = DB.siteInfo();
     const fld = (x) => '<div class="a-field' + (x[3] ? " a-span2" : "") + '"><label for="site-' + x[0] + '">' + x[1] + '</label><input class="a-input" id="site-' + x[0] + '" name="' + x[0] + '" value="' + esc(s[x[0]] || "") + '" placeholder="' + esc(x[2]) + '" maxlength="' + (x[0] === "notice" ? 300 : 200) + '"></div>';
-    return head("첫 화면 · 사업자 정보", "두잉고 첫 화면 맨 아래(바닥)에 보이는 사업자 정보 · 사업제휴 문의예요. 채운 칸만 보이고, 기본 사업자 정보(두고홀딩스)가 들어 있는 칸은 비워 두면 기본값이 보여요.", '<a class="a-btn a-btn-outline a-btn-sm" href="#/about" target="_blank" rel="noopener">' + icon("arrowUpRight", "sm") + "첫 화면 열기</a>") +
+    return head("첫 화면 · 사업자 정보", "두잉고 첫 화면 맨 아래(바닥)에 보이는 사업자 정보 · 사업제휴 문의예요. 채운 칸만 보이고, 기본 사업자 정보(두고홀딩스)가 들어 있는 칸은 비워 두면 기본값이 보여요.", dgSplitBtn("home", "첫 화면 미리보기")) +
       '<form id="site-form" class="a-site-form" novalidate>' +
         '<section class="a-card"><div class="a-card-head"><h2>사업자 정보</h2><span class="a-muted">전자상거래법에 따라 사이트 바닥에 표시하는 정보예요</span></div>' +
           '<div class="a-site-grid">' + SITE_FIELDS.map(fld).join("") + "</div></section>" +
@@ -2398,20 +2398,35 @@
       (DB.remote.on ? serverBackups() : "") +
       '<section class="a-card"><div class="a-card-head"><h2>체험 데이터 처음으로</h2></div><p class="a-muted" style="margin:0 0 12px">모든 강사·수강생·제출 기록을 지우고 처음 체험 상태로 되돌려요. ' + (DB.remote.on ? "지금 상태는 서버 자동 백업에 먼저 남겨요." : "되돌릴 수 없으니 먼저 백업하세요.") + "</p>" + btn(icon("trash", "sm") + "처음 상태로 초기화", "data-reset", "a-btn-ghost a-btn-sm danger") + "</section>";
   }
-  // 서버 자동 백업: 배포할 때마다 · 초기화나 되돌리기 전에 서버가 스스로 만든다 (최근 40개)
+  /* 번호로 넘기는 목록 — ‹ 1 2 3 4 5 › (지금 쪽은 ui.pg[key] · 글이 많아도 번호는 5개만 보여요) */
+  function pageSlice(key, list, per) {
+    const n = Math.max(1, Math.ceil(list.length / per)), p = Math.min(Math.max(1, (ui.pg && ui.pg[key]) || 1), n);
+    return { items: list.slice((p - 1) * per, p * per), p, n, from: list.length ? (p - 1) * per + 1 : 0, to: Math.min(list.length, p * per), total: list.length };
+  }
+  function numPager(key, pg) {
+    if (pg.n <= 1) return "";
+    const a = Math.max(1, Math.min(pg.p - 2, pg.n - 4)), b = Math.min(pg.n, a + 4), nums = [];
+    for (let i = a; i <= b; i++) nums.push(i);
+    const go = (p, label, cls, dis, aria) => '<button type="button" class="a-pg-b' + (cls ? " " + cls : "") + '" data-action="pg" data-k="' + key + '" data-p="' + p + '"' + (dis ? " disabled" : "") + (aria ? ' aria-label="' + aria + '"' : "") + (p === pg.p && !aria ? ' aria-current="page"' : "") + ">" + label + "</button>";
+    return '<nav class="a-pg" aria-label="쪽 넘기기"><span class="a-pg-info">' + pg.from + "–" + pg.to + " / " + pg.total + "개</span><span class=\"a-pg-nums\">" +
+      go(pg.p - 1, icon("chevLeft", "sm"), "a-pg-arr", pg.p <= 1, "이전 쪽") + (a > 1 ? go(1, "1") + (a > 2 ? '<span class="a-pg-gap">…</span>' : "") : "") +
+      nums.map((i) => go(i, String(i), i === pg.p ? "on" : "")).join("") +
+      (b < pg.n ? (b < pg.n - 1 ? '<span class="a-pg-gap">…</span>' : "") + go(pg.n, String(pg.n)) : "") + go(pg.p + 1, icon("chevRight", "sm"), "a-pg-arr", pg.p >= pg.n, "다음 쪽") + "</span></nav>";
+  }
+  // 서버 자동 백업: 배포할 때마다 · 초기화나 되돌리기 전에 서버가 스스로 만든다 (최근 40개 · 5개씩 번호로 넘김)
   function serverBackups() {
     if (!ui.backups && !ui.backupsLoading) {
       ui.backupsLoading = true;
       DB.remote.call("admin", { action: "backups" }).then((r) => { ui.backups = r.backups || []; }, () => { ui.backups = []; ui.backupsErr = true; })
         .then(() => { ui.backupsLoading = false; if (/^#\/center\/master\/data/.test(ROUTE.hash)) render(); });
     }
-    const list = ui.backups || [];
-    return '<section class="a-card"><div class="a-card-head"><h2>서버 자동 백업</h2><span class="a-muted">배포할 때마다 · 초기화나 되돌리기 전에 자동으로 남아요 (최근 40개)</span></div>' +
+    const list = ui.backups || [], pg = pageSlice("bk", list, 5);
+    return '<section class="a-card" data-pg-card="bk"><div class="a-card-head"><h2>서버 자동 백업</h2><span class="a-muted">배포할 때마다 · 초기화나 되돌리기 전에 자동으로 남아요 (최근 40개)</span></div>' +
       '<p class="a-muted" style="margin:0 0 12px">새 기능을 배포해도 강사센터에서 올린 공지 · 영상 · 전자책 · 수강생 기록은 그대로 유지돼요. 지우기는 강사센터 · 마스터에서 직접 지울 때만 일어나요. 혹시 잘못 지웠다면 아래에서 그 전 시점으로 되돌릴 수 있어요.</p>' +
       (!ui.backups ? '<p class="a-muted" style="margin:0">불러오는 중…</p>'
-        : list.length ? '<ul class="a-list">' + list.map((b) => '<li><div class="a-who"><span class="a-avatar">' + icon("database", "sm") + "</span><div><b>#" + b.id + " " + esc(b.reason || "백업") + "</b><small>" + fmtStamp(b.at) + " · 문서 " + b.docs + "개 · " + Math.max(1, Math.round((b.size || 0) / 1024)) + "KB</small></div></div>" + btn(icon("refresh", "sm") + "이 시점으로", "server-restore", "a-btn-outline a-btn-sm", ' data-id="' + b.id + '" data-at="' + b.at + '"') + "</li>").join("") + "</ul>"
+        : list.length ? '<ul class="a-list">' + pg.items.map((b) => '<li><div class="a-who"><span class="a-avatar">' + icon("database", "sm") + "</span><div><b>#" + b.id + " " + esc(b.reason || "백업") + "</b><small>" + fmtStamp(b.at) + " · 문서 " + b.docs + "개 · " + Math.max(1, Math.round((b.size || 0) / 1024)) + "KB</small></div></div>" + btn(icon("refresh", "sm") + "이 시점으로", "server-restore", "a-btn-outline a-btn-sm", ' data-id="' + b.id + '" data-at="' + b.at + '"') + "</li>").join("") + "</ul>"
         : '<p class="a-muted" style="margin:0">' + (ui.backupsErr ? "백업 목록을 불러오지 못했어요." : "아직 백업이 없어요.") + "</p>") +
-      '<div class="a-card-foot">' + btn(icon("download", "sm") + "지금 백업", "server-backup", "a-btn-primary a-btn-sm") + "</div></section>";
+      numPager("bk", pg) + '<div class="a-card-foot">' + btn(icon("download", "sm") + "지금 백업", "server-backup", "a-btn-primary a-btn-sm") + "</div></section>";
   }
 
   /* ---------------- 강사: 추가 메뉴 내용 ---------------- */
@@ -2468,7 +2483,7 @@
     const running = DB.data.cohorts.filter((c) => DB.cohortStatus(c) === "running").length;
     const newInq = DB.inquiries().filter((x) => (x.status || "new") === "new").length;
     const newBills = DB.bills().filter((b) => DB.billState(b) === "requested");
-    return head("마스터 대시보드", "강사 플랫폼을 만들어 분양하고, 전체 운영 현황을 봐요.", btn(icon("plus", "sm") + "새 강사 플랫폼", "ins-add", "a-btn-primary")) +
+    return head("마스터 대시보드", "강사 플랫폼을 만들어 분양하고, 전체 운영 현황을 봐요.", dgSplitBtn("home") + btn(icon("plus", "sm") + "새 강사 플랫폼", "ins-add", "a-btn-primary")) +
       (newBills.length ? '<a class="a-inq-alert a-bill-alert" href="#/center/master/billing?tab=todo">' + icon("coins", "sm") + "<b>다음 기수 신청 " + newBills.length + "건</b><span>" + esc(newBills.slice(0, 2).map((b) => insName(b.instructorId) + " " + b.cohortName).join(", ")) + " · 전화 후 입금을 확인해 주세요</span>" + icon("arrowRight", "sm") + "</a>" : "") +
       (newInq ? '<a class="a-inq-alert" href="#/center/master/partners">' + icon("handshake", "sm") + "<b>새 강사 입점 문의 " + newInq + "건</b><span>확인하고 연락해 주세요</span>" + icon("arrowRight", "sm") + "</a>" : "") +
       '<div class="a-kpis">' +
@@ -2505,7 +2520,7 @@
         }).join("") + "</tbody></table></div>" : emptyBox("store", "강사 플랫폼이 없어요.")) + "</section>";
   }
   function pageMasterInstructors() {
-    return head("강사 플랫폼 관리", "새 강사에게 플랫폼을 만들어 주면 문대표 플랫폼 구성(메뉴·커리큘럼·과제·FAQ 등)이 들어간 상태로 시작해요. 강사는 이름 + 전화번호 뒷자리로 강사센터에 로그인해요.", btn(icon("plus", "sm") + "새 강사 플랫폼", "ins-add", "a-btn-primary")) + insTable();
+    return head("강사 플랫폼 관리", "새 강사에게 플랫폼을 만들어 주면 문대표 플랫폼 구성(메뉴·커리큘럼·과제·FAQ 등)이 들어간 상태로 시작해요. 강사는 이름 + 전화번호 뒷자리로 강사센터에 로그인해요.", dgSplitBtn((DB.data.instructors.find((i) => i.status === "active") || {}).id ? "room:" + DB.data.instructors.find((i) => i.status === "active").id : "home", "강의실 미리보기") + btn(icon("plus", "sm") + "새 강사 플랫폼", "ins-add", "a-btn-primary")) + insTable();
   }
   function pageMasterStudents() {
     const ins = DB.data.instructors;
@@ -3278,22 +3293,44 @@
           : emptyBox("check", f === "open" ? "답변을 기다리는 문의가 없어요." : "문의가 없어요.")) + "</section>";
   }
   /* ---------- 스토어 미리보기: 마스터 화면을 떠나지 않고 오른쪽 분할 화면으로 ---------- */
-  function storeSplit(href) {
+  function storeSplit(href) { openSplit(href || "#/vod", "DOOGO CLASS 미리보기"); }
+  /** 오른쪽 분할 미리보기 — title · 볼 곳 고르기(targets: [[값, 이름]] · 고르면 dgSplit) */
+  function openSplit(href, title, targets, cur) {
     let box = document.getElementById("a-split");
-    const url = ROUTE.abs(href || "#/vod");
+    const url = ROUTE.abs(href);
     if (!box) {
-      box = document.createElement("aside"); box.id = "a-split"; box.className = "a-split"; box.setAttribute("aria-label", "DOOGO CLASS 미리보기");
+      box = document.createElement("aside"); box.id = "a-split"; box.className = "a-split";
       document.body.appendChild(box);
     }
-    box.innerHTML = '<div class="a-split-h"><span class="a-split-t">' + icon("layers", "sm") + '<b>DOOGO CLASS 미리보기</b><small id="a-split-u"></small></span>' +
+    box.setAttribute("aria-label", title);
+    box.innerHTML = '<div class="a-split-h"><span class="a-split-t">' + icon("layers", "sm") + "<b>" + esc(title) + '</b><small id="a-split-u"></small></span>' +
+      (targets ? '<select class="a-input a-sm a-split-sel" data-split-sel aria-label="미리 볼 화면">' + targets.map((t) => '<option value="' + esc(t[0]) + '"' + (t[0] === cur ? " selected" : "") + ">" + esc(t[1]) + "</option>").join("") + "</select>" : "") +
       '<button type="button" class="a-icon-btn sm" data-action="split-reload" title="새로고침" aria-label="새로고침">' + icon("refresh", "sm") + "</button>" +
       '<a class="a-icon-btn sm" id="a-split-new" target="_blank" rel="noopener" title="새 창으로 열기" aria-label="새 창으로 열기">' + icon("arrowUpRight", "sm") + "</a>" +
       '<button type="button" class="a-icon-btn sm" data-action="split-close" title="닫기" aria-label="미리보기 닫기">' + icon("x", "sm") + "</button></div>" +
-      '<iframe id="a-split-f" title="DOOGO CLASS 미리보기" src="' + esc(url) + '"></iframe>';
-    box.querySelector("#a-split-u").textContent = (href || "#/vod").replace(/^#/, "");
+      '<iframe id="a-split-f" title="' + esc(title) + '" src="' + esc(url) + '"></iframe>';
+    box.querySelector("#a-split-u").textContent = href.replace(/^#/, "");
     box.querySelector("#a-split-new").href = url;
     document.body.classList.add("a-split-on");
   }
+  /* 두잉고 미리보기 — 마스터 화면을 떠나지 않고 두잉고 소개 · 수강생 로그인 · 강사별 수강생 강의실 · 강의 소개 · 무료강의를 오른쪽에서 봐요 */
+  function dgTargets() {
+    const out = [["home", "두잉고 소개 페이지"], ["login", "수강생 로그인 화면"]];
+    DB.data.instructors.filter((i) => i.status === "active").forEach((i) => { out.push(["room:" + i.id, i.displayName + " · 수강생 강의실"], ["p:" + i.id, i.displayName + " · 강의 소개 페이지"], ["free:" + i.id, i.displayName + " · 무료강의 페이지"]); });
+    return out;
+  }
+  function dgSplit(t) {
+    const k = String(t || "home").split(":")[0], id = String(t || "").split(":")[1] || "";
+    let href = k === "p" ? "#/p/" + id : k === "free" ? "#/free/" + id : k === "login" ? "#/login" : "#/doinggo";
+    if (k === "room") {
+      // 강사센터 ‘수강생 화면 미리보기’와 같은 미리보기 세션 (이 브라우저에만 · 실제 수강생 기록은 안 바뀜)
+      const co = DB.currentCohort(id);
+      if (!co) { toast("기수가 없어 강의실을 미리볼 수 없어요.", "warn"); return; }
+      DB.session.setStudent({ preview: true, instructorId: id, cohortId: co.id, at: Date.now() }); href = "#/home";
+    } else if (k === "login") { const st = DB.session.student(); if (st && st.preview) DB.session.setStudent(null); }
+    openSplit(href, "두잉고 미리보기", dgTargets(), t || "home");
+  }
+  const dgSplitBtn = (t, label) => '<button type="button" class="a-btn a-btn-ghost" data-action="dg-split" data-t="' + esc(t || "home") + '">' + icon("layers", "sm") + esc(label || "두잉고 미리보기") + "</button>";
   const splitClose = () => { const b = document.getElementById("a-split"); if (b) b.remove(); document.body.classList.remove("a-split-on"); };
 
   /* ---------- 4) VOD 전시 · 설정 (배너 · 카테고리 · 정산 · 입금 계좌) ---------- */
@@ -4407,6 +4444,21 @@
 
   /* ---------- 4) 메시지 · 자동화 ---------- */
   const CRM_CH = { alim: ["카카오 알림톡", false, "정보성만 · 결제 · 수강 · 일정 안내 · 템플릿 심사 후 발송"], brand: ["카카오 브랜드 메시지", true, "광고 · 소식 받기(카카오톡) 동의 회원 · 08:00~20:50에만"], sms: ["문자 (LMS)", true, "광고 · 소식 받기(문자) 동의 회원 · 밤 9시~아침 8시는 야간 동의자만"], email: ["이메일", true, "광고 · 소식 받기(이메일) 동의 회원 · 제목에 (광고)"] };
+  /* 실제 발송 (서버 /api/vod-msg · 솔라피 · Resend) — 연결 상태는 서버가 알려 줘요. 서버가 없거나 키가 없으면 예전처럼 기록 · 쿠폰만 */
+  const crmSendCfg = () => { const c = CRM(); c.send = Object.assign({ optout: "", targeting: "I", tpls: [] }, c.send || {}); if (!Array.isArray(c.send.tpls)) c.send.tpls = []; return c.send; };
+  function crmCfg() {
+    if (!(DB.remote && DB.remote.on)) return null;
+    if (!ui.msgCfg && !ui.msgCfgLoading) { ui.msgCfgLoading = true; DB.remote.call("vod-msg", { action: "status" }).then((r) => { ui.msgCfg = (r && r.cfg) || {}; }, () => { ui.msgCfg = {}; }).then(() => { ui.msgCfgLoading = false; if (/vod-msg/.test(ROUTE.hash)) render(); if (document.getElementById("crm-camp")) crmCampPaint(); }); }
+    return ui.msgCfg || null;
+  }
+  const crmLive = (ch) => { const c = crmCfg(); return !!(c && c[ch]); };
+  // 채널마다 연결 순서 (가입 → 키를 Vercel 환경 변수에 → 여기서 확인)
+  const CRM_LINK = {
+    sms: ["솔라피", "https://solapi.com", [["솔라피(solapi.com) 가입 · 사업자 인증", ""], ["발신번호 등록 (회사 대표번호 · 통신서비스 이용증명원)", ""], ["API Key 만들기 → Vercel 환경 변수", "SOLAPI_API_KEY · SOLAPI_API_SECRET · SOLAPI_SENDER"], ["광고 문자: 080 무료 수신거부 번호 신청 → 아래 칸에 입력", ""]]],
+    alim: ["솔라피 + 카카오톡 채널", "https://business.kakao.com", [["카카오톡 채널 만들기 · 비즈니스 채널 인증", ""], ["솔라피 › 카카오 채널 연동 → pfId 를 환경 변수에", "SOLAPI_PFID"], ["알림톡 템플릿 등록 → 카카오 심사(영업일 1~3일)", ""], ["승인된 템플릿 ID · 내용을 아래 ‘알림톡 템플릿’에 추가", ""]]],
+    brand: ["솔라피 + 카카오톡 채널", "https://solapi.com", [["알림톡과 같은 카카오톡 채널 · pfId 를 써요", "SOLAPI_PFID"], ["솔라피에서 브랜드 메시지 사용 신청", ""], ["보낼 대상(채널 친구 등)을 아래에서 고르기", ""]]],
+    email: ["Resend", "https://resend.com", [["Resend(resend.com) 가입", ""], ["도메인 doogoclass.com 추가 → 가비아 DNS에 안내된 레코드(SPF · DKIM) 넣기", ""], ["API Key · 보내는 주소 → Vercel 환경 변수", "RESEND_API_KEY · MAIL_FROM"]]]
+  };
   const crmNight = (ms, ch) => { const d = new Date(ms), h = d.getHours() + d.getMinutes() / 60; return ch === "brand" ? h >= 20 + 50 / 60 || h < 8 : ch === "sms" ? h >= 21 || h < 8 : false; };
   // 보낼 대상 → 보낼 수 있는 회원 / 못 보내는 이유
   function crmReach(pfs, ch, at) {
@@ -4448,13 +4500,20 @@
     let body;
     if (tab === "auto") {
       body = '<div class="crm-autos">' + CRM_AUTO.map((x) => { const tg = x[5](all), r = crmReach(tg, x[3], Date.parse(todayStr() + "T10:00:00")), on = !!A[x[0]]; return '<div class="crm-auto' + (on ? " on" : "") + '"><button type="button" class="a-switch' + (on ? " on" : "") + '" data-action="crm-auto" data-k="' + x[0] + '" role="switch" aria-checked="' + on + '" aria-label="' + esc(x[1]) + ' 켜기"><i></i></button><div class="crm-auto-t"><b>' + esc(x[1]) + "</b><small>" + esc(x[2]) + " · " + esc(CRM_CH[x[3]][0]) + (CRM_CH[x[3]][1] ? " · 광고" : " · 정보성") + "</small><p>" + esc(x[4]) + '</p></div><div class="crm-auto-n"><b class="num">' + r.ok.length + "명</b><small>오늘 보낼 대상" + (tg.length !== r.ok.length ? " (" + (tg.length - r.ok.length) + "명은 미동의로 빠짐)" : "") + "</small>" + (tg.length ? btn("대상 보기", "crm-auto-who", "a-btn-text a-btn-sm", ' data-k="' + x[0] + '"') : "") + "</div></div>"; }).join("") + "</div>" +
-        '<p class="a-muted p-small crm-foot">' + icon("alert", "xs") + " 시안이라 실제로 보내지는 않아요. 카카오 알림톡 · 브랜드 메시지 · 문자 발송사와 연동하면 켜 둔 자동 메시지가 정해진 때에 나가요.</p>";
+        '<p class="a-muted p-small crm-foot">' + icon("alert", "xs") + " 자동 메시지는 아직 켜 둔 기록만 남아요. ‘채널 · 발송 규칙’에서 채널을 연결하고 알림톡 템플릿 승인이 끝나면, 정해진 때에 서버가 보내도록 이어서 연결해요.</p>";
     } else if (tab === "rule") {
-      body = '<div class="crm-rulecards">' + Object.keys(CRM_CH).map((k) => '<div class="crm-rulecard"><b>' + esc(CRM_CH[k][0]) + "</b>" + pill(CRM_CH[k][1] ? "광고 가능" : "정보성만", CRM_CH[k][1] ? "warn" : "info") + "<p>" + esc(CRM_CH[k][2]) + "</p></div>").join("") + "</div>" +
+      const cfg = crmCfg(), S2 = crmSendCfg(), srv = !!(DB.remote && DB.remote.on), order = ["sms", "alim", "brand", "email"];
+      body = '<div class="crm-link-h"><b>발송 채널 연결</b><span class="a-muted">' + (!srv ? "지금은 서버가 없는 시안 화면이라 기록만 남아요." : !cfg ? "연결 상태를 불러오는 중…" : "가입 → 키를 Vercel 환경 변수에 넣고 다시 배포하면 ‘연결됨’으로 바뀌고 캠페인이 실제로 나가요.") + '</span></div><div class="crm-links">' +
+        order.map((k, i) => { const L = CRM_LINK[k], live = crmLive(k); return '<div class="crm-link' + (live ? " on" : "") + '"><div class="crm-link-t"><span class="crm-link-n">' + (i + 1) + "</span><b>" + esc(CRM_CH[k][0]) + "</b>" + pill(live ? "연결됨 · 실제 발송" : "연결 전 · 기록만", live ? "ok" : "") + '</div><small class="a-muted">' + esc(L[0]) + (k === "sms" && cfg && cfg.sender ? " · 발신번호 " + esc(cfg.sender) : "") + (k === "email" && cfg && cfg.from ? " · " + esc(cfg.from) : "") + '</small><ol class="crm-link-s">' + L[2].map((s) => "<li>" + esc(s[0]) + (s[1] ? " <code>" + esc(s[1]) + "</code>" : "") + "</li>").join("") + '</ol><a class="crm-link-go" href="' + L[1] + '" target="_blank" rel="noopener">' + esc(L[0].split(" + ")[0]) + " 열기 " + icon("arrowUpRight", "xs") + "</a></div>"; }).join("") + "</div>" +
+        '<form class="crm-sendf" id="crm-sendf" novalidate><div class="a-form-row"><div class="a-field"><label for="crm-s-080">080 무료 수신거부 번호 <small>(광고 문자에 꼭 필요)</small></label><input class="a-input" id="crm-s-080" name="optout" maxlength="14" placeholder="080-000-0000" value="' + esc(S2.optout) + '"></div><div class="a-field"><label for="crm-s-tg">브랜드 메시지 보낼 대상</label><select class="a-input" id="crm-s-tg" name="targeting">' + [["I", "I · 카카오톡 채널 친구 (기본)"], ["M", "M · 솔라피 안내의 M 대상"], ["N", "N · 솔라피 안내의 N 대상"]].map((x) => '<option value="' + x[0] + '"' + (S2.targeting === x[0] ? " selected" : "") + ">" + x[1] + "</option>").join("") + "</select></div></div>" +
+          '<div class="a-field"><label>알림톡 템플릿 <small>(카카오가 승인한 것만 · 내용은 승인된 글 그대로 · 이름 자리는 #{이름})</small></label><div class="crm-tpls">' + (S2.tpls.length ? S2.tpls.map((t, i) => '<div class="crm-tpl"><div><b>' + esc(t.name) + "</b> <code>" + esc(t.id) + "</code><p>" + esc(t.text) + "</p></div>" + btn(icon("trash", "sm"), "crm-tpl-del", "a-icon-btn sm", ' data-i="' + i + '" aria-label="템플릿 지우기"') + "</div>").join("") : '<p class="a-muted p-small">아직 등록한 템플릿이 없어요.</p>') + "</div>" +
+          '<div class="crm-tpl-add"><input class="a-input a-sm" name="tName" maxlength="30" placeholder="이름 (예: 결제 완료 안내)"><input class="a-input a-sm" name="tId" maxlength="80" placeholder="템플릿 ID (솔라피 › 알림톡 템플릿)"><textarea class="a-input a-sm" name="tText" rows="2" maxlength="1000" placeholder="승인된 템플릿 내용 그대로 (예: #{이름}님, 결제가 완료됐어요…)"></textarea>' + btn(icon("plus", "sm") + "템플릿 추가", "crm-tpl-add", "a-btn-outline a-btn-sm") + "</div></div>" +
+          btn(icon("check", "sm") + "발송 설정 저장", "crm-send-save", "a-btn-dark a-btn-sm") + "</form>" +
+        '<div class="crm-rulecards">' + Object.keys(CRM_CH).map((k) => '<div class="crm-rulecard"><b>' + esc(CRM_CH[k][0]) + "</b>" + pill(CRM_CH[k][1] ? "광고 가능" : "정보성만", CRM_CH[k][1] ? "warn" : "info") + "<p>" + esc(CRM_CH[k][2]) + "</p></div>").join("") + "</div>" +
         '<ul class="crm-law">' + [["광고는 동의한 회원에게만", "소식 받기(광고성 정보)에 동의하고, 그 채널(문자 · 이메일 · 카카오톡)을 고른 회원에게만 보내요. 동의 안 한 회원은 자동으로 빠져요."], ["(광고) 표기 · 무료 수신거부", "광고 메시지는 맨 앞에 (광고)를 붙이고, 끝에 수신 거부 방법을 자동으로 넣어요."], ["야간 광고 제한", "카카오 브랜드 메시지는 08:00~20:50에만 보낼 수 있어요. 문자는 밤 9시~아침 8시에 야간 수신 동의한 회원에게만 가요."], ["동의 2년마다 다시 확인", "동의한 날부터 2년마다 동의 여부를 알려야 해요. ‘동의 재확인 필요’ 세그먼트와 자동 메시지로 챙겨요."], ["알림톡은 정보성만", "결제 · 수강 · 일정처럼 회원이 꼭 알아야 할 내용만 보내요. 2026년부터 회사가 준 쿠폰 · 적립금 사용을 권하는 알림톡은 막혀서 쿠폰 소식은 브랜드 메시지로 보내요."], ["개인정보 열람 · 내려받기 기록", "회원 DB에서 개인정보를 보거나 내려받으면 누가 · 언제 · 왜 봤는지 남겨요. 기록은 1년 이상 보관해요."]].map((x) => "<li>" + icon("shieldCheck", "sm") + "<div><b>" + x[0] + "</b><p>" + x[1] + "</p></div></li>").join("") + "</ul>";
     } else {
       body = '<div class="crm-camp-top">' + btn(icon("plus", "sm") + "새 캠페인", "crm-camp-new", "a-btn-primary", ' data-seg="sub"') + '<p class="a-muted">세그먼트를 골라 한 번에 보내요. 7일 안 구매는 받은 회원의 실제 결제로 계산해요.</p></div>' +
-        (camps.length ? '<div class="a-table-wrap"><table class="a-table crm-camps"><thead><tr><th>보낸 날</th><th>캠페인</th><th>채널</th><th>대상</th><th class="right">보냄 · 빠짐</th><th class="right">7일 안 구매</th></tr></thead><tbody>' + camps.map((c) => { const cv = crmConv(c), n = (c.to || []).length; return '<tr><td class="vda-nw">' + esc(crmStamp(c.at)) + (c.at > Date.now() ? '<small class="a-memo">' + pill("예약", "warn") + "</small>" : "") + "</td><td><b>" + esc(c.name) + '</b><small class="a-memo">' + esc(String(c.text || "").slice(0, 60)) + (c.coupon ? " · 쿠폰 " + esc(((VD().coupons || []).find((x) => x.id === c.coupon) || {}).name || "") : "") + '</small></td><td class="vda-nw">' + esc((CRM_CH[c.ch] || [c.ch])[0]) + (c.ad ? '<small class="a-memo">광고</small>' : '<small class="a-memo">정보성</small>') + '</td><td class="vda-nw">' + esc(c.segName || crmChipName(c.seg)) + '</td><td class="right num">' + n + "명 · " + (c.skip || 0) + '명</td><td class="right num">' + (cv ? "<b>" + cv.n + "명</b> " + (n ? "(" + Math.round(cv.n / n * 100) + "%)" : "") + '<small class="a-memo">' + won(cv.amt) + "</small>" : "-") + "</td></tr>"; }).join("") + "</tbody></table></div>" : emptyBox("send", "아직 보낸 캠페인이 없어요."));
+        (camps.length ? '<div class="a-table-wrap"><table class="a-table crm-camps"><thead><tr><th>보낸 날</th><th>캠페인</th><th>채널</th><th>대상</th><th class="right">보냄 · 빠짐</th><th class="right">7일 안 구매</th></tr></thead><tbody>' + camps.map((c) => { const cv = crmConv(c), n = (c.to || []).length; return '<tr><td class="vda-nw">' + esc(crmStamp(c.at)) + (c.at > Date.now() ? '<small class="a-memo">' + pill("예약", "warn") + "</small>" : "") + "</td><td><b>" + esc(c.name) + "</b>" + (c.real ? " " + pill("실제 발송" + (c.failed ? " · 실패 " + c.failed : ""), c.failed ? "warn" : "ok") : "") + '<small class="a-memo">' + esc(String(c.text || "").slice(0, 60)) + (c.coupon ? " · 쿠폰 " + esc(((VD().coupons || []).find((x) => x.id === c.coupon) || {}).name || "") : "") + '</small></td><td class="vda-nw">' + esc((CRM_CH[c.ch] || [c.ch])[0]) + (c.ad ? '<small class="a-memo">광고</small>' : '<small class="a-memo">정보성</small>') + '</td><td class="vda-nw">' + esc(c.segName || crmChipName(c.seg)) + '</td><td class="right num">' + n + "명 · " + (c.skip || 0) + '명</td><td class="right num">' + (cv ? "<b>" + cv.n + "명</b> " + (n ? "(" + Math.round(cv.n / n * 100) + "%)" : "") + '<small class="a-memo">' + won(cv.amt) + "</small>" : "-") + "</td></tr>"; }).join("") + "</tbody></table></div>" : emptyBox("send", "아직 보낸 캠페인이 없어요."));
     }
     return head("메시지 · 자동화", "세그먼트에 카카오 알림톡 · 브랜드 메시지 · 문자 · 이메일을 보내고, 가입 · 찜 · 결제 · 만료 같은 때에 자동으로 나가는 메시지를 켜고 꺼요. 동의 · 야간 · (광고) 표기 규칙은 자동으로 지켜요.", "") + crmNav("vod-msg") + '<section class="a-card crm-card">' + tabs + body + "</section>";
   }
@@ -4464,6 +4523,7 @@
     openModal("새 캠페인 보내기", '<form id="crm-camp" class="a-form crm-campf" data-one="' + esc(one || "") + '" novalidate>' +
       '<div class="a-field"><label for="crm-c-name">캠페인 이름</label><input class="a-input" id="crm-c-name" name="name" maxlength="40" placeholder="예) 11월 열성팬 감사 쿠폰" value=""></div>' +
       '<div class="a-form-row"><div class="a-field"><label for="crm-c-seg">보낼 대상</label><select class="a-input" id="crm-c-seg" name="seg">' + pre.concat(segs).map((s) => '<option value="' + esc(s[0]) + '"' + (s[0] === seg ? " selected" : "") + ">" + esc(s[1]) + "</option>").join("") + '</select></div><div class="a-field"><label for="crm-c-ch">채널</label><select class="a-input" id="crm-c-ch" name="ch">' + Object.keys(CRM_CH).map((k) => '<option value="' + k + '"' + (k === "brand" ? " selected" : "") + ">" + esc(CRM_CH[k][0]) + (CRM_CH[k][1] ? " (광고 가능)" : " (정보성만)") + "</option>").join("") + "</select></div></div>" +
+      '<div class="a-form-row crm-c-extra"><div class="a-field" data-crm-only="alim"><label for="crm-c-tpl">알림톡 템플릿</label><select class="a-input" id="crm-c-tpl" name="tpl"><option value="">템플릿 고르기</option>' + crmSendCfg().tpls.map((t, i) => '<option value="' + i + '">' + esc(t.name) + "</option>").join("") + '</select></div><div class="a-field" data-crm-only="email"><label for="crm-c-subj">메일 제목</label><input class="a-input" id="crm-c-subj" name="subject" maxlength="80" placeholder="예) {이름}님만을 위한 1만 원 쿠폰"></div></div>' +
       '<div class="a-field"><label for="crm-c-text">내용 <small>({이름}은 받는 사람 이름으로 바뀌어요)</small></label><textarea class="a-input" id="crm-c-text" name="text" rows="3" maxlength="400">{이름}님, 이번 주만 쓰는 1만 원 할인 쿠폰을 넣어 드렸어요. 마이페이지 › 쿠폰에서 확인해 보세요.</textarea></div>' +
       '<div class="a-form-row"><div class="a-field"><label for="crm-c-cp">쿠폰 함께 넣기 <small>(광고 채널만)</small></label><select class="a-input" id="crm-c-cp" name="coupon"><option value="">넣지 않아요</option>' + cps.map((c) => '<option value="' + esc(c.id) + '">' + esc(c.name) + "</option>").join("") + '</select></div><div class="a-field"><label for="crm-c-at">보낼 때</label><select class="a-input" id="crm-c-when" name="when"><option value="now">지금 바로</option><option value="later">예약</option></select><input class="a-input" id="crm-c-at" name="at" type="datetime-local" hidden></div></div>' +
       '<div id="crm-c-prev" class="crm-c-prev"></div></form>', btn("취소", "modal-close") + btn(icon("send", "sm") + "보내기", "crm-camp-send", "a-btn-primary"), "lg");
@@ -4473,18 +4533,21 @@
     const f = document.getElementById("crm-camp"); if (!f) return null;
     const ch = f.ch.value, seg = f.seg.value, later = f.when.value === "later", at = later && f.at.value ? Date.parse(f.at.value) : Date.now();
     const tg = crmTarget(seg, f.dataset.one), r = crmReach(tg, ch, at);
-    return { f, ch, seg, later, at, tg, r, ad: !!(CRM_CH[ch] || [])[1], coupon: (CRM_CH[ch] || [])[1] ? f.coupon.value : "", name: f.name.value.trim(), text: f.text.value.trim() };
+    const tpl = ch === "alim" && f.tpl.value !== "" ? crmSendCfg().tpls[Number(f.tpl.value)] || null : null;
+    return { f, ch, seg, later, at, tg, r, tpl, live: crmLive(ch), subject: ch === "email" ? f.subject.value.trim() : "", ad: !!(CRM_CH[ch] || [])[1], coupon: (CRM_CH[ch] || [])[1] ? f.coupon.value : "", name: f.name.value.trim(), text: tpl ? tpl.text : f.text.value.trim() };
   }
   function crmCampPaint() {
     const c = crmCampVals(), box = document.getElementById("crm-c-prev"); if (!c || !box) return;
     c.f.at.hidden = !c.later; c.f.coupon.disabled = !c.ad; if (!c.ad) c.f.coupon.value = "";
+    c.f.querySelectorAll("[data-crm-only]").forEach((el) => { el.hidden = el.dataset.crmOnly !== c.ch; });
+    if (c.tpl) { c.f.text.value = c.tpl.text; c.f.text.readOnly = true; } else if (c.f.text.readOnly) { c.f.text.readOnly = false; }
     const sk = Object.keys(c.r.skip), first = c.r.ok[0];
     box.innerHTML = '<div class="crm-c-n"><b class="num">' + c.r.ok.length + "명</b>에게 보내요" + (c.tg.length !== c.r.ok.length ? " · 대상 " + c.tg.length + "명 중 " + (c.tg.length - c.r.ok.length) + "명 빠짐" : "") + "</div>" +
       (sk.length ? '<ul class="crm-c-skip">' + sk.map((k) => "<li>" + esc(k) + " <b>" + c.r.skip[k] + "명</b></li>").join("") + "</ul>" : "") +
       (c.r.blocked ? '<p class="crm-c-warn">' + icon("alert", "xs") + " 카카오 브랜드 메시지는 밤 8시 50분 ~ 아침 8시에는 보낼 수 없어요. ‘예약’으로 아침 8시 이후를 골라 주세요.</p>" : "") +
       (c.ch === "alim" ? '<p class="crm-c-note">' + icon("alert", "xs") + " 알림톡은 정보성 안내만 보낼 수 있어요. 할인 · 쿠폰 소식은 브랜드 메시지나 문자로 보내 주세요.</p>" : "") +
       '<div class="crm-c-bubble"><small>' + esc(CRM_CH[c.ch][0]) + " 미리보기</small><p>" + esc(crmMsgTxt(c.text, c.ch, first ? first.m.name : "회원")).replace(/\n/g, "<br>") + "</p></div>" +
-      '<p class="a-muted p-small">시안이라 실제로 보내지는 않고, 보낸 기록 · 쿠폰 지급만 남아요.</p>';
+      (c.live ? '<p class="crm-c-live">' + icon("send", "xs") + " 실제로 보내요 — " + (c.ch === "email" ? "Resend" : "솔라피") + "로 나가고, 동의 · 야간 · 연락처는 서버가 한 번 더 확인해요." + (c.ch === "alim" && !c.tpl ? " 알림톡은 승인된 템플릿을 골라 주세요." : "") + "</p>" : '<p class="a-muted p-small">' + (DB.remote && DB.remote.on ? "이 채널은 아직 연결 전이라 실제로 보내지는 않고, 보낸 기록 · 쿠폰 지급만 남아요. 연결은 ‘채널 · 발송 규칙’ 탭에서 확인해요." : "시안이라 실제로 보내지는 않고, 보낸 기록 · 쿠폰 지급만 남아요.") + "</p>");
   }
   function crmCampSend() {
     const c = crmCampVals(); if (!c) return;
@@ -4493,14 +4556,24 @@
     if (c.later && (!c.f.at.value || c.at < Date.now())) { toast("예약 시간을 지금 이후로 골라 주세요.", "warn"); return; }
     if (c.r.blocked) { toast("밤 8시 50분 ~ 아침 8시에는 브랜드 메시지를 보낼 수 없어요. 예약으로 골라 주세요.", "warn"); return; }
     if (!c.r.ok.length) { toast("보낼 수 있는 회원이 없어요. 대상이나 채널을 바꿔 주세요.", "warn"); return; }
+    if (c.live && c.ch === "alim" && !c.tpl) { toast("알림톡은 카카오가 승인한 템플릿을 골라야 보낼 수 있어요.", "warn"); return; }
+    if (c.live && c.ch === "email" && !c.subject) { toast("메일 제목을 적어 주세요.", "warn"); return; }
+    if (!c.live) return crmRecord(c, c.r.ok.map((pf) => pf.m.id), null);
+    const b = document.querySelector('[data-action="crm-camp-send"]'); if (b) b.disabled = true;
+    DB.remote.call("vod-msg", { action: "send", ch: c.ch, mids: c.r.ok.map((pf) => pf.m.id), text: c.text, subject: c.subject, templateId: c.tpl ? c.tpl.id : "", at: c.later ? c.at : 0 })
+      .then((r) => { if (!r || !r.ok) { if (b) b.disabled = false; toast((r && r.message) || "보내지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"); return; } crmRecord(c, r.to || [], r); })
+      .catch(() => { if (b) b.disabled = false; toast("서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"); });
+  }
+  /** 캠페인 기록 · 쿠폰 지급 (r: 서버 실제 발송 결과 · 없으면 시안 기록) */
+  function crmRecord(c, toIds, r) {
     const cp = c.coupon && (VD().coupons || []).find((x) => x.id === c.coupon), who = whoAmI(), id = DB.uid("cm");
     let given = 0;
-    if (cp && !c.later) c.r.ok.forEach((pf) => { if (VX().issueCoupon(pf.m.id, cp)) given++; });
-    CRM().camps.push({ id, name: c.name, ch: c.ch, ad: c.ad, seg: c.seg, segName: c.seg === "sel" ? "선택한 회원" : c.seg === "one" ? (c.r.ok[0] || c.tg[0] || { m: {} }).m.name + " 님" : crmChipName(c.seg), text: crmMsgTxt(c.text, c.ch, "{이름}"), coupon: cp ? cp.id : "", at: c.at, by: who, to: c.r.ok.map((pf) => pf.m.id), skip: c.tg.length - c.r.ok.length });
-    if (!c.later) c.r.ok.forEach((pf) => CRM().msgs.push({ at: c.at, mid: pf.m.id, ch: c.ch, name: c.name, camp: id }));
+    if (cp && !c.later) toIds.forEach((mid) => { if (VX().issueCoupon(mid, cp)) given++; });
+    CRM().camps.push({ id, name: c.name, ch: c.ch, ad: c.ad, seg: c.seg, segName: c.seg === "sel" ? "선택한 회원" : c.seg === "one" ? (c.r.ok[0] || c.tg[0] || { m: {} }).m.name + " 님" : crmChipName(c.seg), text: c.subject ? "[" + c.subject + "] " + crmMsgTxt(c.text, c.ch, "{이름}") : crmMsgTxt(c.text, c.ch, "{이름}"), coupon: cp ? cp.id : "", at: c.at, by: who, to: toIds, skip: c.tg.length - toIds.length, real: !!r, sent: r ? r.sent : undefined, failed: r ? r.failed : undefined });
+    if (!c.later) toIds.forEach((mid) => CRM().msgs.push({ at: c.at, mid, ch: c.ch, name: c.name, camp: id }));
     if (CRM().msgs.length > 3000) CRM().msgs.splice(0, CRM().msgs.length - 3000);
     ui.crmMt = "camp";
-    commit("‘" + c.name + "’ " + (c.later ? "예약했어요" : "캠페인을 " + c.r.ok.length + "명에게 보냈어요") + (given ? " · 쿠폰 " + given + "장 지급" : "") + ". (시안 · 실제 발송 없음)");
+    commit("‘" + c.name + "’ " + (c.later ? (r ? r.sent + "명에게 예약했어요" : "예약했어요") : "캠페인을 " + (r ? r.sent : toIds.length) + "명에게 보냈어요") + (r && r.failed ? " · 실패 " + r.failed + "명" : "") + (given ? " · 쿠폰 " + given + "장 지급" : "") + (r ? "." : ". (시안 · 실제 발송 없음)"));
     if (ROUTE.hash.indexOf("vod-msg") < 0 && !/vod-crm\//.test(ROUTE.hash)) ROUTE.hash = "#/center/master/vod-msg";
   }
 
@@ -4587,6 +4660,9 @@
       case "crm-note-del": { const m = M(); if (!m) break; confirmModal("메모 지우기", "이 메모를 지울까요?", "지우기", true, () => { m.notes = (m.notes || []).filter((x) => x.id !== d.n); commit("메모를 지웠어요."); }); break; }
       case "crm-camp-new": crmCampModal(d.seg || "sub", d.id || ""); break;
       case "crm-camp-send": crmCampSend(); break;
+      case "crm-send-save": { const f = document.getElementById("crm-sendf"), S2 = crmSendCfg(), o = f.optout.value.trim(); if (o && !/^080-?\d{3,4}-?\d{4}$/.test(o)) { toast("080 수신거부 번호는 080-000-0000 모양으로 적어 주세요.", "warn"); break; } S2.optout = o; S2.targeting = f.targeting.value; commit("메시지 발송 설정을 저장했어요."); break; }
+      case "crm-tpl-add": { const f = document.getElementById("crm-sendf"), n = f.tName.value.trim(), tid = f.tId.value.trim(), tx = f.tText.value.trim(); if (!n || !tid || tx.length < 5) { toast("템플릿 이름 · ID · 내용을 모두 적어 주세요.", "warn"); break; } crmSendCfg().tpls.push({ id: tid, name: n, text: tx }); commit("알림톡 템플릿 ‘" + n + "’을 추가했어요."); break; }
+      case "crm-tpl-del": { const S2 = crmSendCfg(), t = S2.tpls[Number(d.i)]; if (!t) break; S2.tpls.splice(Number(d.i), 1); commit("알림톡 템플릿 ‘" + t.name + "’을 지웠어요."); break; }
       case "crm-mt": ui.crmMt = d.k; render(); break;
       case "crm-auto": { const A = CRM().auto, x = CRM_AUTO.find((y) => y[0] === d.k); A[d.k] = !A[d.k]; commit("‘" + (x ? x[1] : d.k) + "’ 자동 메시지를 " + (A[d.k] ? "켰어요." : "껐어요.")); break; }
       case "crm-auto-who": { const x = CRM_AUTO.find((y) => y[0] === d.k); if (!x) break; const tg = x[5](crmAll()), r = crmReach(tg, x[3], Date.parse(todayStr() + "T10:00:00")), okIds = r.ok.map((pf) => pf.m.id); openModal(x[1] + " · 오늘 대상", '<ul class="crm-mini">' + tg.map((pf) => '<li><b><a class="a-link" href="#/center/master/vod-crm/' + esc(pf.m.id) + '">' + esc(pf.m.name) + "</a> " + pill(crmStage(pf.stage)[0], crmStage(pf.stage)[1]) + "</b><small>" + (okIds.indexOf(pf.m.id) >= 0 ? "보낼 수 있어요" : "빠짐 · 소식 받기 미동의") + "</small></li>").join("") + "</ul>", btn("닫기", "modal-close")); break; }
@@ -4866,6 +4942,40 @@
 
   /* ---------- 4) 강사 계약 · 서류 ---------- */
   const DOCS = [["contract", "이용 계약서"], ["biz", "사업자등록증"], ["bank", "정산 통장 사본"], ["privacy", "개인정보 처리 위탁 동의"]];
+  // 계약서 양식 (글은 contract-forms.js · Word 파일은 assets/docs) — 이용 계약서 · 개인정보 처리 위탁 동의 줄에 양식 버튼
+  const CT_FORM = { contract: "service", privacy: "privacy" };
+  window.DG_FORMS_FILES = { service: "assets/docs/doinggo-service-agreement.docx", privacy: "assets/docs/doinggo-privacy-entrustment.docx" };
+  const ctTplBtns = (k, iid) => '<span class="ct-tpl-btns"><a class="ct-tpl-a" href="' + esc(window.DG_FORMS_FILES[k]) + '" download>' + icon("download", "xs") + 'Word 양식</a><button type="button" class="ct-tpl-a" data-action="ct-print" data-k="' + k + '" data-id="' + esc(iid) + '">' + icon("printer", "xs") + "채워서 인쇄 · PDF</button></span>";
+  /** 이 강사 정보(창에 적힌 값 그대로 · 저장 전이어도)로 채운 계약서를 새 창에 열고 인쇄 · PDF 저장 */
+  function ctPrint(k, iid) {
+    const f = document.getElementById("ct-form"), v = (n) => (f && f[n] ? f[n].value.trim() : ""), ins = DB.instructor(iid) || {}, S = DB.siteInfo ? DB.siteInfo() : {};
+    const go = () => {
+      const G = window.DG_FORMS, F = G && G.FORMS[k];
+      if (!F) { toast("계약서 양식을 불러오지 못했어요. Word 양식을 내려받아 주세요.", "warn"); return; }
+      const md = (d) => d ? d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (m, y, mo, da) => y + "년 " + Number(mo) + "월 " + Number(da) + "일") : "";
+      const vals = Object.assign({}, G.COMPANY, { 회사: S.company && /두고/.test(S.company) ? S.company.replace(/^\(주\)/, "주식회사 ") : G.COMPANY.회사, 대표: S.ceo || G.COMPANY.대표, 사업자번호: S.bizNo || G.COMPANY.사업자번호, 주소: S.address || G.COMPANY.주소,
+        강사명: ins.displayName || "", 강사성명: ins.name || v("contact"), 시작일: md(v("start")), 종료일: md(v("end")), 이용료: v("feeNote"), 연락처: v("phone"), 이메일: v("email"), 담당자: v("contact") });
+      const e = (x) => esc(G.fill(x, vals)), lines = String(F.body).split("\n"), out = [];
+      let ul = null; const flush = () => { if (ul) { out.push("<ul>" + ul.join("") + "</ul>"); ul = null; } };
+      lines.forEach((l) => { const t = l.trim(); if (!t) { flush(); return; } if (t.indexOf("## ") === 0) { flush(); out.push("<h2>" + e(t.slice(3)) + "</h2>"); } else if (t.indexOf("- ") === 0) (ul = ul || []).push("<li>" + e(t.slice(2)) + "</li>"); else { flush(); out.push("<p>" + e(t) + "</p>"); } });
+      flush();
+      const today = new Date(), party = (p) => '<div class="pt"><h3>' + esc(p[0]) + "</h3>" + p[1].map((r) => "<p><span>" + esc(r[0]) + "</span><b>" + (G.fill(r[1], vals) === "__________" || !r[1] ? "______________________" : e(r[1])) + "</b></p>").join("") + '<p class="sg"><span>서명 · 날인</span><b>______________________ (인)</b></p></div>';
+      const html = '<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>' + esc(F.title + " - " + (ins.displayName || "")) + '</title><style>' +
+        '@page{size:A4;margin:18mm 17mm}*{box-sizing:border-box}body{margin:0;font-family:"Pretendard","Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#111;font-size:10.5pt;line-height:1.75;word-break:keep-all}' +
+        '.wrap{max-width:180mm;margin:0 auto;padding:12mm 0}h1{text-align:center;font-size:19pt;margin:0 0 2mm;letter-spacing:-.02em}.sub{text-align:center;color:#888;font-size:9pt;margin:0 0 9mm}h2{font-size:11.5pt;margin:6mm 0 1.5mm;break-after:avoid}p{margin:0 0 2mm}ul{margin:0 0 2mm;padding-left:5mm}li{margin:.6mm 0}' +
+        '.lead{margin-bottom:4mm}.close{margin-top:8mm}.date{text-align:center;font-weight:700;font-size:12pt;margin:8mm 0}.pts{display:grid;grid-template-columns:1fr 1fr;gap:8mm;break-inside:avoid}.pt{border-top:2px solid #222;padding-top:3mm}.pt h3{margin:0 0 3mm;font-size:11.5pt}.pt p{display:grid;grid-template-columns:28mm 1fr;margin:0 0 2.2mm}.pt span{color:#666;font-size:9.5pt}.pt .sg{margin-top:5mm}' +
+        '.bar{position:sticky;top:0;display:flex;gap:8px;justify-content:center;padding:10px;background:#f4f4f5;border-bottom:1px solid #e5e5e5}.bar button{font:inherit;font-weight:700;padding:8px 16px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer}.bar button.p{background:#f94239;border-color:#f94239;color:#fff}@media print{.bar{display:none}.wrap{padding:0}}' +
+        '</style></head><body><div class="bar"><button class="p" onclick="print()">인쇄 · PDF로 저장</button><button onclick="close()">닫기</button></div><div class="wrap"><h1>' + esc(F.title) + '</h1><p class="sub">두잉고 · www.doogoclass.com/doinggo</p><p class="lead">' + e(F.lead) + "</p>" + out.join("") +
+        '<p class="close">' + esc(F.close) + '</p><p class="date">계약일 ' + today.getFullYear() + "년 " + (today.getMonth() + 1) + "월 " + today.getDate() + '일</p><div class="pts">' + F.parties.map(party).join("") + "</div></div></body></html>";
+      const w = window.open("", "_blank");
+      if (w && w.document) { w.document.open(); w.document.write(html); w.document.close(); w.focus(); return; }
+      // 새 창이 막힌 곳(미리보기 등): HTML 파일로 내려받기 → 열어서 인쇄
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" })); a.download = F.title + " - " + (ins.displayName || "강사") + ".html"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      toast("새 창이 막혀 계약서 파일로 내려받았어요. 열어서 인쇄 · PDF로 저장해 주세요.");
+    };
+    if (window.DG_FORMS) return go();
+    const s = document.createElement("script"); s.src = "contract-forms.js"; s.onload = go; s.onerror = () => toast("계약서 양식을 불러오지 못했어요. Word 양식을 내려받아 주세요.", "warn"); document.head.appendChild(s);
+  }
   function CONTRACTS() {
     const d = DB.data;
     if (!d.contracts || typeof d.contracts !== "object") {
@@ -4898,6 +5008,9 @@
         kpi("서류 미비", list.filter((x) => x.c && docMissing(x.c)).length + "명", "4종 중 빠진 서류가 있어요", "#/center/master/contracts", list.some((x) => x.c && docMissing(x.c)) ? "warn" : "") +
         kpi("계약 미등록", list.filter((x) => x.s[2] === 9).length + "명", "계약 정보를 넣어 주세요", "#/center/master/contracts") +
       "</div>" +
+      '<section class="a-card ct-tpl-card"><div class="a-card-head"><h2>두잉고 계약서 양식</h2><span class="a-muted">한 번 계약하면 계약 기간 동안 여는 모든 기수에 적용돼요 · 기수마다 다시 쓰지 않아요</span></div><div class="ct-tpl-grid">' +
+        [["service", "두잉고 서비스 이용 계약서", "계약 기간 · 이용료 · 환불 · 두고클래스 판매 정산 · 해지"], ["privacy", "개인정보 처리업무 위탁 계약서", "수강생 개인정보 처리 위탁 (개인정보 보호법 제26조) · 재위탁 · 안전 조치"]].map((x) => '<div class="ct-tpl-item"><span class="ct-tpl-ic">' + icon("file", "sm") + "</span><div><b>" + x[1] + "</b><small>" + x[2] + '</small></div><a class="a-btn a-btn-sm" href="' + esc(window.DG_FORMS_FILES[x[0]]) + '" download>' + icon("download", "sm") + "Word 양식</a></div>").join("") +
+      "</div><p class=\"a-muted p-small\">강사님 정보로 채운 계약서는 강사별 ‘계약 등록 · 수정’ 창의 ‘채워서 인쇄 · PDF’ 로 만들어요. 서명한 파일을 받으면 같은 창에서 올려 주세요.</p></section>" +
       '<section class="a-card"><div class="a-card-head"><h2>강사별 계약</h2><span class="a-muted">서류 4종: ' + DOCS.map((x) => x[1]).join(" · ") + "</span></div>" + '<div class="a-table-wrap"><table class="a-table ct-table"><thead><tr><th>강사</th><th>계약 기간</th><th>상태</th><th>이용료 기준</th><th>서류</th><th>담당자</th><th class="right"></th></tr></thead><tbody>' +
         list.map(({ ins, c, s }) => '<tr><td><span class="mc-dot" style="--c:' + insTheme(ins.id) + '"></span><b>' + esc(ins.displayName) + '</b><small class="a-memo">' + esc(ins.name) + "</small></td><td>" + (c && c.start ? fmtFull(c.start) + " ~ " + fmtFull(c.end) : '<span class="a-muted">-</span>') + "</td><td>" + pill(s[0], s[1]) + "</td><td><small>" + esc((c && c.feeNote) || "-") + "</small></td><td>" + docChips(c) + "</td><td>" + esc((c && c.contact) || "-") + (c && c.phone ? '<small class="a-memo">' + esc(c.phone) + "</small>" : "") + '</td><td class="right">' + btn(c ? "수정" : "계약 등록", "ct-edit", c ? "a-btn-ghost a-btn-sm" : "a-btn-primary a-btn-sm", ' data-id="' + esc(ins.id) + '"') + "</td></tr>").join("") +
         "</tbody></table></div></section>" +
@@ -4912,7 +5025,7 @@
         fld("feeNote", "이용료 기준", c.feeNote, ' maxlength="80"') +
         '<div class="a-form-row">' + fld("contact", "담당자", c.contact, ' maxlength="20"') + fld("phone", "연락처", c.phone, ' maxlength="20" inputmode="tel"') + "</div>" +
         fld("email", "이메일 (세금계산서)", c.email, ' maxlength="80" type="email"') +
-        '<div class="a-field"><label>서류</label><div class="ct-up">' + DOCS.map((x) => { const f = c.docs && c.docs[x[0]]; return '<div class="ct-up-row"><label class="a-check"><input type="checkbox" name="doc-' + x[0] + '"' + (f ? " checked" : "") + "><span>" + x[1] + "</span></label>" + (f ? '<small class="a-muted">' + (f.data ? '<a href="' + f.data + '" download="' + esc(f.name) + '">' + esc(f.name) + "</a>" : esc(f.name)) + " · " + esc(f.at || "") + "</small>" : '<small class="a-muted">미제출</small>') + '<input type="file" name="file-' + x[0] + '" accept=".pdf,.jpg,.jpeg,.png" aria-label="' + x[1] + ' 파일"></div>'; }).join("") + '</div><small class="a-muted">파일을 올리면 자동으로 ‘받음’ 표시돼요. (2MB 이하 · PDF · 이미지)</small></div>' +
+        '<div class="a-field"><label>서류</label><div class="ct-up">' + DOCS.map((x) => { const f = c.docs && c.docs[x[0]]; return '<div class="ct-up-row"><label class="a-check"><input type="checkbox" name="doc-' + x[0] + '"' + (f ? " checked" : "") + "><span>" + x[1] + "</span></label>" + (f ? '<small class="a-muted">' + (f.data ? '<a href="' + f.data + '" download="' + esc(f.name) + '">' + esc(f.name) + "</a>" : esc(f.name)) + " · " + esc(f.at || "") + "</small>" : '<small class="a-muted">미제출</small>') + '<input type="file" name="file-' + x[0] + '" accept=".pdf,.jpg,.jpeg,.png" aria-label="' + x[1] + ' 파일">' + (CT_FORM[x[0]] ? ctTplBtns(CT_FORM[x[0]], iid) : "") + "</div>"; }).join("") + '</div><small class="a-muted">파일을 올리면 자동으로 ‘받음’ 표시돼요. (2MB 이하 · PDF · 이미지) · 이용 계약서와 개인정보 처리 위탁 계약서는 한 번만 받으면 계약 기간 동안 여는 모든 기수(2기 · 3기 …)에 적용돼요.</small></div>' +
         '<div class="a-field"><label for="ct-memo">메모</label><textarea class="a-input" id="ct-memo" name="memo" rows="2" maxlength="500">' + esc(c.memo || "") + "</textarea></div>" +
         '<p class="a-error" id="ct-error"></p></form>',
       btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="ct-form">저장</button>', "md");
@@ -4938,15 +5051,15 @@
   /* ---------- 5) 운영자 계정 · 활동 기록 ---------- */
   function pageMasterStaff() {
     const list = STAFF(), logs = DB.data.adminLog || [], f = ui.logWho || "all";
-    const shown = logs.filter((l) => f === "all" || l.staffId === f).slice(0, 80);
+    const shown = logs.filter((l) => f === "all" || l.staffId === f), lp = pageSlice("log", shown, 10);
     const menuName = {}; masterNavRaw().concat(masterDcNavRaw()).forEach((g) => g[1].forEach((it) => { menuName[it[0]] = it[1]; }));
     return head("운영자 계정 · 활동 기록", "두잉고 운영을 함께하는 직원 계정을 만들고, 맡은 일에 맞게 메뉴 권한을 나눠요. 누가 언제 무엇을 바꿨는지 활동 기록이 자동으로 남아요.", btn(icon("userPlus", "sm") + "운영자 추가", "st-new", "a-btn-primary")) +
       '<section class="a-card"><div class="a-card-head"><h2>운영자</h2><span class="a-muted">' + (list.length + 1) + "명 · ‘마스터 · 파트너’ 탭에서 로그인해요</span></div>" + '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>이름</th><th>아이디</th><th>역할</th><th>열린 메뉴</th><th>최근 로그인</th><th>상태</th><th class="right"></th></tr></thead><tbody>' +
         '<tr class="st-owner"><td><span class="st-av ms">' + icon("shieldCheck", "xs") + "</span><b>최고 관리자</b></td><td><code>ADMIN</code></td><td>" + pill("최고 관리자", "info") + '</td><td><small class="a-muted">모든 메뉴 · 운영자 관리</small></td><td>-</td><td>' + pill("사용 중", "ok") + '</td><td class="right"></td></tr>' +
         list.map((st) => '<tr><td><span class="st-av">' + esc(st.name.slice(0, 1)) + "</span><b>" + esc(st.name) + "</b></td><td><code>" + esc(st.loginId) + "</code></td><td>" + esc(staffRoleName(st)) + '</td><td><span class="ct-docs">' + (st.perms || []).slice(0, 4).map((k) => '<span class="ct-doc on">' + esc(menuName[k] || k) + "</span>").join("") + ((st.perms || []).length > 4 ? '<span class="ct-doc">+' + ((st.perms || []).length - 4) + "</span>" : "") + "</span></td><td>" + (st.lastLoginAt ? fmtStamp(st.lastLoginAt) : "-") + "</td><td>" + pill(st.status === "active" ? "사용 중" : "중지", st.status === "active" ? "ok" : "mute") + '</td><td class="right">' + btn("수정", "st-edit", "a-btn-ghost a-btn-sm", ' data-id="' + esc(st.id) + '"') + btn(st.status === "active" ? "중지" : "재개", "st-toggle", "a-btn-text a-btn-sm", ' data-id="' + esc(st.id) + '"') + "</td></tr>").join("") +
         "</tbody></table></div></section>" +
-      '<section class="a-card"><div class="a-card-head"><h2>활동 기록</h2><select class="a-input a-sm cert-sel" data-log-who="1"><option value="all">모든 사람</option><option value="admin"' + (f === "admin" ? " selected" : "") + ">ADMIN</option>" + list.map((st) => '<option value="' + esc(st.id) + '"' + (f === st.id ? " selected" : "") + ">" + esc(st.name) + "</option>").join("") + "</select></div>" +
-        (shown.length ? '<ol class="st-log">' + shown.map((l) => "<li><time>" + fmtStamp(l.at) + "</time><b>" + esc(l.who) + "</b><span>" + esc(l.msg) + "</span></li>").join("") + "</ol>" : emptyBox("activity", "아직 활동 기록이 없어요.")) + "</section>";
+      '<section class="a-card" data-pg-card="log"><div class="a-card-head"><h2>활동 기록</h2><select class="a-input a-sm cert-sel" data-log-who="1"><option value="all">모든 사람</option><option value="admin"' + (f === "admin" ? " selected" : "") + ">ADMIN</option>" + list.map((st) => '<option value="' + esc(st.id) + '"' + (f === st.id ? " selected" : "") + ">" + esc(st.name) + "</option>").join("") + "</select></div>" +
+        (shown.length ? '<ol class="st-log">' + lp.items.map((l) => "<li><time>" + fmtStamp(l.at) + "</time><b>" + esc(l.who) + "</b><span>" + esc(l.msg) + "</span></li>").join("") + "</ol>" + numPager("log", lp) : emptyBox("activity", "아직 활동 기록이 없어요.")) + "</section>";
   }
   function staffForm(st) {
     const isNew = !st;
@@ -5565,6 +5678,7 @@
       case "cert-co": ui.certCo = d.k; render(); setTimeout(() => { const el = document.querySelector("[data-cert-co]"); if (el) el.closest(".a-card").scrollIntoView({ behavior: "smooth", block: "start" }); }, 30); break;
       case "cert-check": { const q = document.getElementById("cert-q"); ui.certQ = q ? q.value.trim() : ""; render(); break; }
       case "ct-edit": contractForm(d.id); break;
+      case "ct-print": ctPrint(d.k, d.id); break;
       case "st-new": staffForm(); break;
       case "st-edit": staffForm(staffOf(d.id)); break;
       case "st-toggle": { const st = staffOf(d.id); if (!st) break; st.status = st.status === "active" ? "stopped" : "active"; commit(st.name + " 운영자 계정을 " + (st.status === "active" ? "다시 열었어요." : "중지했어요.")); break; }
@@ -5614,6 +5728,7 @@
       case "mtab": { const k = d.k === "dc" ? "dc" : "dg"; ui.mtab = k; ROUTE.hash = k === "dc" ? "#/center/master/dc" : "#/center/master"; break; }
       case "vd-iqf": ui.vdIqF = d.k; render(); break;
       case "store-split": e.preventDefault(); storeSplit(d.href); break;
+      case "dg-split": e.preventDefault(); dgSplit(d.t); break;
       case "split-close": splitClose(); break;
       case "split-reload": { const fr = document.getElementById("a-split-f"); if (fr) { try { fr.contentWindow.location.reload(); } catch (e2) { fr.src = fr.src; } } break; }
       case "vs-t": ui.vsT = d.k; render(); break;
@@ -5779,6 +5894,7 @@
       case "inq-memo": { const x = findInq(d.id), ta = document.querySelector('[data-inq-memo="' + d.id + '"]'); if (x && ta) { x.memo = ta.value.trim(); DB.saveInquiry(x); toast("메모를 저장했어요."); } break; }
       case "inq-del": { const x = findInq(d.id); if (!x) break; confirmModal("입점 문의 삭제", "‘" + esc(x.name) + "’ 님의 입점 문의를 삭제할까요?<br>삭제하면 되돌릴 수 없어요.", "삭제", true, () => { DB.removeInquiry(x.id); closeModal(); render(); toast("입점 문의를 삭제했어요."); }); break; }
       case "brand-photo-del": if (C().brand.photo) setBrandPhoto(""); break;
+      case "pg": { (ui.pg = ui.pg || {})[d.k] = Number(d.p) || 1; render(); const c = document.querySelector('[data-pg-card="' + d.k + '"]'); if (c && c.getBoundingClientRect().top < 70) c.scrollIntoView({ block: "start" }); break; }
       case "server-backup":
         DB.remote.call("admin", { action: "backup" }).then((r) => { if (r.error) throw new Error(r.error); ui.backups = null; render(); toast("지금 상태를 서버에 백업했어요."); }).catch(() => toast("백업하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"));
         break;
@@ -5932,7 +6048,8 @@
     else if (t.id === "img-file") { addImgFiles(t.files); t.value = ""; }
     else if (t.dataset && t.dataset.inqStatus) { const x = findInq(t.dataset.inqStatus); if (x) { setInqStatus(x, t.value); DB.saveInquiry(x); actLog(x.name + " 님 입점 문의를 ‘" + inqStatus(x)[1] + "’" + josa(inqStatus(x)[1], "으로", "로").slice(inqStatus(x)[1].length) + " 바꿨어요."); DB.save(); render(); toast("‘" + inqStatus(x)[1] + "’" + josa(inqStatus(x)[1], "으로", "로").slice(inqStatus(x)[1].length) + " 바꿨어요." + (inqAff(x) ? " 파트너센터에도 보여요." : "")); } }
     else if (t.dataset && t.dataset.certCo) { ui.certCo = t.value; render(); }
-    else if (t.dataset && t.dataset.logWho) { ui.logWho = t.value; render(); }
+    else if (t.matches && t.matches("[data-split-sel]")) dgSplit(t.value);
+    else if (t.dataset && t.dataset.logWho) { ui.logWho = t.value; (ui.pg = ui.pg || {}).log = 1; render(); }
     else if (t.dataset && t.dataset.stRole) { const p = (STAFF_ROLES[t.value] || {}).perms || []; if (t.value !== "custom") t.form.querySelectorAll('input[name="perm"]').forEach((c) => { c.checked = p.indexOf(c.value) >= 0; }); }
     else if (t.dataset && t.dataset.inqAff) { const x = findInq(t.dataset.inqAff); if (x) { x.affId = t.value; DB.saveInquiry(x); render(); toast(t.value === "none" ? "소개 파트너를 지웠어요." : "소개 파트너를 지정했어요. 그 파트너센터에 이 문의가 보여요."); } }
     else if (t.id === "brand-photo-file") { const f = t.files && t.files[0]; t.value = ""; if (f) brandPhotoCompress(f, setBrandPhoto); }

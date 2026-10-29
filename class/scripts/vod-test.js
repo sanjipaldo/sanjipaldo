@@ -13,7 +13,7 @@ const API = (n) => require(path.join(TMP, "class/api", n + ".js"));
 const auth = require(path.join(TMP, "class/api/_lib/auth.js"));
 
 // ---------- 가짜 외부 서버 ----------
-const PG = {}, calls = [], PAY = [], AI = { reqs: [], next: null };
+const PG = {}, calls = [], PAY = [], AI = { reqs: [], next: null }, SOL = [], RES = [];
 let kakaoUser = null;
 global.fetch = async (url, opt) => {
   opt = opt || {}; const u = new URL(url); calls.push(opt.method === "POST" ? "POST " + u.host + u.pathname : "GET " + u.host + u.pathname);
@@ -32,6 +32,8 @@ global.fetch = async (url, opt) => {
     if (u.pathname === "/v1/user/unlink") return J(200, { id: 1 });
   }
   if (u.host === "challenges.cloudflare.com") return J(200, { success: /ts=ok|response=ok/.test(opt.body) });
+  if (u.host === "api.solapi.com") { const h = opt.headers || {}, b = JSON.parse(opt.body || "{}"); SOL.push({ path: u.pathname, auth: h.Authorization || "", body: b }); return J(200, { groupInfo: { _id: "G" + SOL.length }, failedMessageList: [] }); }
+  if (u.host === "api.resend.com") { const h = opt.headers || {}, b = JSON.parse(opt.body || "[]"); RES.push({ path: u.pathname, auth: h.Authorization || "", body: b }); return J(200, { data: b.map((x, i) => ({ id: "em" + i })) }); }
   if (u.host === "api.anthropic.com") {
     const h = opt.headers instanceof Headers ? Object.fromEntries(opt.headers.entries()) : opt.headers || {};
     AI.reqs.push({ path: u.pathname, h, body: JSON.parse(opt.body || "{}") });
@@ -539,6 +541,46 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
   let n429 = 0;
   for (let i = 0; i < 26; i++) { r = await call("ai-tutor", { body: { iid: "moon", q: "운송료" } }); if (r.status === 429) n429++; }
   ok(n429 === 1 && r.status === 429, "한 사람당 15분에 30번까지", { n429, last: r.status });
+
+  console.log("18) CRM 실제 발송 (솔라피 · Resend)");
+  const st18 = require(path.join(TMP, "class/api/_lib/store.js"));
+  const mkM = (id, o) => st18.writeDoc("vm:" + id, Object.assign({ id, name: "회원" + id, email: id + "@ex.com", phone: "010-1234-" + id.slice(-4), marketing: true, consent: { mkt: true, ch: ["sms", "email", "kakao"], night: false, at: Date.now() } }, o));
+  await mkM("cm-0001", {}); await mkM("cm-0002", { consent: { mkt: false, ch: [], at: Date.now() }, marketing: false }); await mkM("cm-0003", { consent: { mkt: true, ch: ["email"], at: Date.now() } }); await mkM("cm-0004", { phone: "" });
+  const MIDS = ["cm-0001", "cm-0002", "cm-0003", "cm-0004"];
+  useJar({});
+  r = await call("vod-msg", { body: { action: "status" } });
+  ok(r.status === 403, "발송: 마스터만", r.json);
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  r = await call("vod-msg", { body: { action: "status" } });
+  ok(r.json.ok && !r.json.cfg.sms && !r.json.cfg.email && !r.json.cfg.alim, "키가 없으면 모든 채널 ‘연결 전’", r.json.cfg);
+  r = await call("vod-msg", { body: { action: "send", ch: "sms", mids: MIDS, text: "{이름}님 쿠폰 드려요" } });
+  ok(r.status === 409 && !SOL.length, "연결 전 채널로는 보내지 않아요", r.json);
+  Object.assign(process.env, { SOLAPI_API_KEY: "sk-sol", SOLAPI_API_SECRET: "sec-sol", SOLAPI_SENDER: "0212345678", SOLAPI_PFID: "KA01PF-test", RESEND_API_KEY: "re-test", MAIL_FROM: "두고클래스 <hello@doogoclass.com>" });
+  r = await call("vod-msg", { body: { action: "status" } });
+  ok(r.json.cfg.sms && r.json.cfg.alim && r.json.cfg.brand && r.json.cfg.email && r.json.cfg.sender === "02-****-5678" && !JSON.stringify(r.json).includes("sec-sol") && !JSON.stringify(r.json).includes("re-test"), "키를 넣으면 연결됨 (비밀 값 · 발신번호는 가림)", r.json.cfg);
+  r = await call("vod-msg", { body: { action: "send", ch: "sms", mids: MIDS, text: "{이름}님 이번 주 쿠폰 드려요" } });
+  ok(r.status === 409 && /080/.test(r.json.message), "광고 문자는 080 수신거부 번호가 있어야 보내요", r.json);
+  const mt18 = await st18.getDoc("meta"); const mv = mt18.v; mv.vod = mv.vod || {}; mv.vod.crm = Object.assign({}, mv.vod.crm, { send: { optout: "080-123-4567", targeting: "I" } }); await st18.writeDoc("meta", mv, mt18.ver);
+  const KST = (h) => { const d = new Date(); d.setUTCHours(h - 9, 0, 0, 0); return d.getTime() + 864e5; }; // 내일 한국 시간 h시
+  r = await call("vod-msg", { body: { action: "send", ch: "sms", mids: MIDS, text: "{이름}님 이번 주 쿠폰 드려요", at: KST(11) } });
+  const sm = (SOL[SOL.length - 1] || { body: { messages: [] } }), m1 = sm.body.messages[0] || {};
+  ok(r.json.ok && r.json.sent === 1 && sm.body.messages.length === 1 && m1.to === "01012340001" && m1.from === "0212345678" && /^\(광고\) 회원cm-0001님/.test(m1.text) && /080-123-4567/.test(m1.text) && !!sm.body.scheduledDate, "문자: 동의한 회원만 · (광고) · 080 수신거부 · 예약", { r: r.json, m1, sd: sm.body.scheduledDate });
+  ok(r.json.skip["소식 받기 미동의"] === 1 && r.json.skip["이 채널 미동의"] === 1 && r.json.skip["휴대폰 번호 없음"] === 1, "못 보낸 이유를 서버가 다시 세요", r.json.skip);
+  ok(/^HMAC-SHA256 apiKey=sk-sol, date=[^,]+, salt=[0-9a-f]+, signature=[0-9a-f]{64}$/.test(sm.auth), "솔라피 인증 헤더 (HMAC-SHA256)", sm.auth.replace(/signature=.*/, "signature=…"));
+  r = await call("vod-msg", { body: { action: "send", ch: "brand", mids: MIDS, text: "{이름}님 소식", at: KST(22) } });
+  ok(r.status === 409 && /08:00/.test(r.json.message), "브랜드 메시지: 밤 8시 50분 ~ 아침 8시는 막아요", r.json);
+  r = await call("vod-msg", { body: { action: "send", ch: "brand", mids: MIDS, text: "{이름}님 소식", at: KST(10) } });
+  const bm = (SOL[SOL.length - 1].body.messages || [])[0] || {};
+  ok(r.json.sent === 1 && bm.type === "BMS_TEXT" && bm.kakaoOptions.pfId === "KA01PF-test" && bm.kakaoOptions.bms.targeting === "I", "브랜드 메시지: BMS_TEXT · 채널 pfId · 대상 I", bm);
+  r = await call("vod-msg", { body: { action: "send", ch: "alim", mids: MIDS, text: "#{이름}님, 결제가 완료됐어요." } });
+  ok(r.status === 409 && /템플릿/.test(r.json.message), "알림톡은 템플릿 ID 없이 못 보내요", r.json);
+  r = await call("vod-msg", { body: { action: "send", ch: "alim", mids: MIDS, text: "#{이름}님, 결제가 완료됐어요.", templateId: "TPL01" } });
+  const am = (SOL[SOL.length - 1].body.messages || []);
+  ok(r.json.sent === 3 && am.length === 3 && am[0].type === "ATA" && am[0].kakaoOptions.templateId === "TPL01" && am[0].kakaoOptions.variables["#{이름}"] === "회원cm-0001" && !/광고/.test(am[0].text), "알림톡: 정보성이라 동의와 상관없이 · 템플릿 변수 채움", am[0]);
+  r = await call("vod-msg", { body: { action: "send", ch: "email", mids: MIDS, text: "{이름}님 새 강의 소식", subject: "{이름}님 새 강의" } });
+  const em = (RES[RES.length - 1] || { body: [] }).body;
+  ok(r.json.sent === 3 && em.length === 3 && /^\(광고\) 회원cm-0001님 새 강의$/.test(em[0].subject) && em[0].from === "두고클래스 <hello@doogoclass.com>" && /수신 거부|소식 받기/.test(em[0].html) && RES[RES.length - 1].auth === "Bearer re-test", "이메일: 이메일 동의 회원 3명(휴대폰 없어도) · 제목 (광고) · 수신 거부 안내", { n: em.length, s: em[0] && em[0].subject });
+  ["SOLAPI_API_KEY", "SOLAPI_API_SECRET", "SOLAPI_SENDER", "SOLAPI_PFID", "RESEND_API_KEY", "MAIL_FROM"].forEach((k) => delete process.env[k]);
 
   console.log("\n결과: " + pass + "개 통과 · " + failN + "개 실패");
   fs.rmSync(TMP, { recursive: true, force: true });

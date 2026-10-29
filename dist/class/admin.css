@@ -1240,6 +1240,17 @@ body[data-mode="admin"] { background: #fdfbfb; }
 .ct-up { display: grid; gap: 8px; }
 .ct-up-row { display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #eee; border-radius: 12px; }
 .ct-up-row input[type=file] { font-size: 12px; max-width: 210px; }
+.ct-tpl-btns { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: -2px; }
+.ct-tpl-a { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border-radius: 8px; background: #fff3f2; color: #d92d20; font-size: 12px; font-weight: 700; border: 1px solid #ffd9d5; cursor: pointer; text-decoration: none; }
+.ct-tpl-a:hover { background: #ffe7e4; }
+.ct-tpl-a .icon { width: 13px; height: 13px; }
+.ct-tpl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ct-tpl-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid #eee; border-radius: 14px; background: #fff; }
+.ct-tpl-item b { display: block; font-size: 14.5px; }
+.ct-tpl-item small { display: block; margin-top: 2px; font-size: 12px; color: #8a8a92; line-height: 1.45; }
+.ct-tpl-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #fff3f2; color: #f94239; }
+.ct-tpl-card .p-small { margin-top: 10px; }
+@media (max-width: 760px) { .ct-tpl-grid { grid-template-columns: minmax(0, 1fr); } .ct-tpl-item { grid-template-columns: auto minmax(0, 1fr); } .ct-tpl-item .a-btn { grid-column: 1 / -1; justify-self: start; } }
 .st-av { display: inline-grid; place-items: center; width: 28px; height: 28px; margin-right: 8px; border-radius: 50%; background: linear-gradient(135deg, #ff9aa7, #f6566f); color: #fff; font-size: 12.5px; font-weight: 800; vertical-align: middle; }
 .st-av.ms { background: linear-gradient(135deg, #3a3a3a, #111); }
 .st-owner td { background: #fcfcfc; }
@@ -2454,3 +2465,55 @@ a.a-noperm, a.a-noperm * { color: var(--m-stone, #9a9aa3) !important; cursor: no
 .vda-cph-prev img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; }
 .vda-cph-prev em { font-style: normal; font-size: 11px; color: #9ca3af; }
 .vda-cph-row .a-input[type=file] { max-width: 320px; }
+
+/* 번호로 넘기는 목록 (서버 백업 · 활동 기록) */
+.a-pg { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #f0f0f2; }
+.a-pg-info { font-size: 12.5px; color: #8a8a92; }
+.a-pg-nums { display: inline-flex; align-items: center; gap: 4px; }
+.a-pg-b { display: inline-grid; place-items: center; min-width: 34px; height: 34px; padding: 0 8px; border-radius: 10px; border: 1px solid #e6e6ea; background: #fff; font-size: 13.5px; font-weight: 700; color: #4a4a52; cursor: pointer; font-variant-numeric: tabular-nums; }
+.a-pg-b:hover:not(:disabled) { border-color: #f94239; color: #f94239; }
+.a-pg-b.on { background: #f94239; border-color: #f94239; color: #fff; }
+.a-pg-b:disabled { opacity: .35; cursor: default; }
+.a-pg-b .icon { width: 15px; height: 15px; }
+.a-pg-gap { padding: 0 2px; color: #b0b0b8; font-size: 13px; }
+.a-pg-b:focus-visible { outline: 2px solid #f94239; outline-offset: 2px; }
+@media (max-width: 560px) { .a-pg { justify-content: center; } .a-pg-info { width: 100%; text-align: center; } .a-pg-b { min-width: 32px; height: 32px; } }
+
+/* CRM 발송 채널 연결 (채널 · 발송 규칙 탭) */
+.crm-link-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin: 4px 0 12px; }
+.crm-link-h b { font-size: 15px; }
+.crm-links { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.crm-link { display: grid; align-content: start; gap: 6px; padding: 14px; border: 1px solid #ececf0; border-radius: 14px; background: #fff; }
+.crm-link.on { border-color: #cdeedb; background: #f6fdf9; }
+.crm-link-t { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.crm-link-t b { font-size: 14px; }
+.crm-link-n { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #111; color: #fff; font-size: 12px; font-weight: 800; }
+.crm-link.on .crm-link-n { background: #15965a; }
+.crm-link-s { margin: 2px 0 0; padding-left: 18px; font-size: 12.5px; line-height: 1.55; color: #4a4a52; }
+.crm-link-s li { margin: 3px 0; }
+.crm-link-s code { font-size: 11px; padding: 1px 5px; border-radius: 6px; background: #f2f2f5; color: #333; word-break: break-all; }
+.crm-link-go { justify-self: start; display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 12.5px; font-weight: 700; color: #f94239; }
+.crm-sendf { display: grid; gap: 10px; padding: 16px; margin-bottom: 18px; border-radius: 14px; background: #f8f8fa; }
+.crm-tpls { display: grid; gap: 8px; }
+.crm-tpl { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px solid #ececf0; }
+.crm-tpl p { margin: 4px 0 0; font-size: 12.5px; color: #6a6a72; white-space: pre-line; }
+.crm-tpl code { font-size: 11px; color: #8a8a92; }
+.crm-tpl-add { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.crm-tpl-add textarea { grid-column: 1 / -1; }
+.crm-tpl-add .a-btn { justify-self: start; }
+.crm-c-live { display: flex; align-items: flex-start; gap: 6px; margin: 8px 0 0; padding: 10px 12px; border-radius: 10px; background: #effbf4; color: #11734a; font-size: 13px; font-weight: 600; line-height: 1.5; }
+.crm-c-extra [hidden] { display: none !important; }
+@media (max-width: 1100px) { .crm-links { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .crm-links { grid-template-columns: minmax(0, 1fr); } .crm-tpl-add { grid-template-columns: minmax(0, 1fr); } }
+
+/* 분할 미리보기: 볼 화면 고르기 (두잉고) */
+.a-split-sel { width: auto; max-width: 220px; height: 32px; margin-left: auto; font-size: 13px; }
+.a-split-h .a-split-sel + .a-icon-btn { margin-left: 0; }
+/* 분할 미리보기를 켜면 왼쪽이 좁아져요 — 숫자 카드를 2 · 3칸으로 접어 글자가 세로로 깨지지 않게 */
+@media (min-width: 901px) {
+  body.a-split-on .a-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.a-split-on .a-kpis-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1500px) {
+  body.a-split-on .a-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
