@@ -47,10 +47,21 @@
   }
 
   // 다른 사람이 바꾼 내용이 들어오면 다시 그린다. 입력 중이거나 팝업이 열려 있으면 다음 화면 이동 때까지 미룬다
-  let typing = false, waiting = false;
+  // 휴대폰 메뉴가 열려 있으면 닫힐 때까지 미루고(다시 그리면 메뉴가 닫힘), 다시 그려도 보던 스크롤 자리는 그대로
+  let typing = false, waiting = false, retry = 0;
   document.addEventListener("input", () => { typing = true; }, true);
   document.addEventListener("submit", () => { setTimeout(() => { typing = false; }, 0); }, true);
   const busy = () => typing || !!document.querySelector("#modal-root > *") || (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName));
+  const navOpen = () => !!document.querySelector(".nav-open");
+  function later() {
+    clearTimeout(retry);
+    retry = setTimeout(() => { if (!waiting) return; if (busy() || navOpen()) return later(); waiting = false; redraw(); }, 2000);
+  }
+  function redraw() {
+    const h = ROUTE.hash, y = window.scrollY;
+    go();
+    if (ROUTE.hash === h && y) window.scrollTo(0, y);
+  }
   function onRemote(type, info) {
     if (type === "reset") { location.reload(); return; }
     if (type === "error") { notify(info, "warn"); return; }
@@ -59,7 +70,8 @@
     if (type !== "change") return;
     reconcile();
     if (busy()) { waiting = true; return; }
-    go();
+    if (navOpen()) { waiting = true; later(); return; }
+    redraw();
   }
   function notify(msg, kind, key) {
     const box = document.getElementById("toast-root");

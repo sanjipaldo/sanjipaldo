@@ -934,6 +934,13 @@ body[data-coach="1"] .a-logo-role { color: #00866b; }
 
 /* ---------- 두고 클래스 로고 (강사센터 · 코치센터 · 마스터) — 모양은 home.css .hm-lock ---------- */
 .a-logo .hm-lock { --lh: 26px; }
+.a-logo > a { display: inline-flex; align-items: center; color: inherit; text-decoration: none; }
+.a-logo-home, .a-login-home-logo { border-radius: 8px; }
+.a-login-home-logo { display: inline-flex; color: inherit; }
+a.a-logo-doogo { color: inherit; text-decoration: none; }
+.a-logo-home:hover { opacity: .8; }
+.a-logo-home:focus-visible, a.a-logo-role:focus-visible { outline: 2px solid var(--m-primary); outline-offset: 3px; }
+a.a-logo-role:hover { color: var(--m-primary); }
 .a-logo-role { flex: none; padding-left: 12px; border-left: 1px solid var(--m-hairline); font-size: 16px; font-weight: 700; line-height: 22px; white-space: nowrap; color: var(--m-ink); }
 .a-logo-doogo .hm-lock { --lh: 34px; }
 .a-login-label { align-items: center; color: var(--m-primary); }

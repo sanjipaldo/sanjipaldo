@@ -1362,7 +1362,7 @@
    * /api 가 없으면(로컬 정적 서버 · 미리보기) 예전처럼 이 브라우저(localStorage)에 저장한다.
    * 서버에서는 문서 단위(강사 · 콘텐츠 · 기수 · 수강생 · 진행 기록)로 나눠 보관하고,
    * 로그인한 사람이 볼 수 있는 문서만 내려온다. */
-  const R = { on: false, fresh: null, loading: false, me: { student: null, admin: null }, epoch: null, now: 0, ver: {}, snap: {}, prog: {}, inq: {}, bill: {}, timer: null, busy: false, again: false, fails: 0, polling: false, lastPoll: 0, listeners: [] };
+  const R = { on: false, fresh: null, loading: false, me: { student: null, admin: null }, epoch: null, now: 0, ver: {}, snap: {}, nope: {}, rej: {}, prog: {}, inq: {}, bill: {}, timer: null, busy: false, again: false, fails: 0, polling: false, lastPoll: 0, listeners: [] };
   const COLLS = ["instructors", "content", "cohorts", "students"];
   const CONTENT_PERMS = ["brand", "guide", "curriculum", "missions", "schedule", "notices", "faq", "docs", "library", "motivation", "channels", "partners", "pages", "free", "landing", "replays", "showcase", "notes", "glossary"];
   const isObj = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
@@ -1609,12 +1609,16 @@
     clearTimeout(R.timer); R.timer = null;
     if (R.busy) { R.again = true; return; }
     const cur = splitDb(db), changes = [], sent = {};
+    const prev = {};
     Object.keys(cur).concat(Object.keys(R.snap).filter((k) => !(k in cur))).forEach((k) => {
       const js = cur[k] === undefined ? undefined : JSON.stringify(cur[k]);
       if (js === R.snap[k]) return;
+      // 서버가 지난번에 통째로 받지 않은 변경(예: 강사 화면이 채운 스토어 기본값)과 똑같으면 다시 보내지 않아요
+      // — 보내고 · 되돌려 받고 · 다시 그리고 · 또 보내는 고리가 돌면 휴대폰 메뉴가 저절로 닫히고 스크롤이 맨 위로 튀었어요
+      if (js !== undefined && R.nope[k] === js) return;
       // 고칠 권한이 없는 문서(예: 화면용 기본값 채우기)는 서버에 보내지 않고 그대로 둔다
       if (!canWrite(k)) { if (js === undefined) delete R.snap[k]; else R.snap[k] = js; return; }
-      sent[k] = js;
+      sent[k] = js; prev[k] = R.snap[k];
       const base = R.ver[k] || 0;
       if (js === undefined) changes.push({ k, base, del: true });
       else if (R.snap[k] === undefined) changes.push({ k, base, put: cur[k] });
@@ -1635,6 +1639,15 @@
           return;
         }
         R.ver[x.k] = x.ver;
+        const got = x.doc != null ? JSON.stringify(x.doc) : undefined;
+        // 서버가 내 변경을 하나도 받지 않았으면(권한 밖 칸만 고쳤을 때) 그 내용은 기억해 두고 화면은 다시 그리지 않아요
+        if (got !== undefined && prev[x.k] !== undefined && sent[x.k] !== undefined && got === prev[x.k]) { R.nope[x.k] = sent[x.k]; delete R.rej[x.k]; return; }
+        delete R.nope[x.k];
+        // 똑같은 내용을 또 보냈는데 서버가 또 다르게 돌려주면(일부만 받거나 순서만 바꿔서) 그 내용은 더 보내지 않아요 — 보내기 · 되돌려 받기 고리를 끊음
+        if (got !== undefined && sent[x.k] !== undefined && got !== sent[x.k]) {
+          const r = R.rej[x.k];
+          if (r && r.js === sent[x.k]) { if (++r.n >= 2) R.nope[x.k] = sent[x.k]; } else R.rej[x.k] = { js: sent[x.k], n: 1 };
+        } else delete R.rej[x.k];
         if (x.doc === undefined) { if (sent[x.k] === undefined) delete R.snap[x.k]; else R.snap[x.k] = sent[x.k]; return; }
         // 서버에서 합쳐진 결과(다른 사람 변경 · 사진 주소)를 받는다. 그 사이 또 고친 내용은 그 위에 다시 얹는다
         const now = snapOf(x.k);
@@ -1659,8 +1672,10 @@
   }
   /** 다른 기기 · 다른 사람이 바꾼 내용 받기 (30초마다, 그리고 이 창으로 돌아올 때) */
   async function poll(force) {
-    if (!R.on || !db || R.polling || R.busy || R.timer) return;
+    if (!R.on || !db || R.polling || R.busy) return;
     if (!force && Date.now() - R.lastPoll < 5000) return;
+    // 보낼 변경이 기다리는 중이면 먼저 보내고 받는다 (그냥 건너뛰면 다른 사람 변경이 30초 더 늦게 보였어요)
+    if (R.timer) { await flush(); if (R.busy || R.timer) return; }
     R.polling = true;
     try {
       const j = await call("bootstrap?since=" + Math.max(0, R.now - 15000), undefined, "GET");
@@ -1672,7 +1687,7 @@
       (j.docs || []).forEach(([k, v, ver]) => {
         if (ver <= (R.ver[k] || 0)) return;
         // 내가 고치는 중인 문서는 건너뛴다 (저장할 때 서버에서 합쳐져 돌아온다)
-        if (canWrite(k) && snapOf(k) !== R.snap[k]) return;
+        if (canWrite(k) && snapOf(k) !== R.snap[k] && snapOf(k) !== R.nope[k]) return;
         placeIn(db, k, v);
         R.ver[k] = ver;
         R.snap[k] = snapOf(k);

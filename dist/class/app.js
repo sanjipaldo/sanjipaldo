@@ -341,7 +341,7 @@
           '<div class="login-topright"><a class="login-home-big" href="#/doinggo">' + icon("arrowLeft", "sm") + "<span>두잉고 홈페이지 이동하기</span></a><span>강사님이신가요?</span><a class=\"btn btn-dark btn-sm\" href=\"#/center\">강사센터</a></div>" +
           '<div class="login-stack">' +
             '<div class="login-card">' + svcTabs("dg") +
-              '<p class="login-label">' + (window.doogoClassLock ? window.doogoClassLock() : window.doogoLogo("color")) + "</p>" +
+              '<p class="login-label"><a href="#/doinggo" title="두잉고 홈으로" aria-label="두잉고 홈으로">' + (window.doogoClassLock ? window.doogoClassLock() : window.doogoLogo("color")) + "</a></p>" +
               "<h1>" + esc(ins ? B.name : "두잉고") + " 시작하기</h1>" +
               '<p class="lead">수강 신청할 때 등록한 정보로 로그인하세요.</p>' +
               '<form class="login-form" id="login-form" novalidate>' + picker +

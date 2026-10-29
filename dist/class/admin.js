@@ -180,7 +180,7 @@
     root.innerHTML =
       '<main class="adm a-login a-login-' + L.theme + '">' +
         '<section class="a-login-brand">' + window.loginArt(L.theme, L.icons) +
-          '<span class="a-logo a-logo-doogo">' + window.doogoClassLock() + "<em>" + L.tag + "</em></span>" +
+          '<a class="a-logo a-logo-doogo" href="#/doinggo" title="두잉고 홈으로" aria-label="두잉고 홈으로">' + window.doogoClassLock() + "<em>" + L.tag + "</em></a>" +
           '<div class="a-login-hero"><p class="a-eyebrow">' + L.eyebrow + "</p><h2>" + L.h + "</h2><p>" + L.sub + "</p></div>" +
           // 왼쪽 아래: 두잉고 첫 화면(강의 플랫폼 소개)으로 가는 링크
           '<div class="a-login-foot"><a class="a-login-home" href="#/doinggo">' + icon("home", "sm") + "두잉고 페이지 바로가기" + icon("arrowRight", "xs") + "</a><span>© 2026 (주)두고홀딩스</span></div>" +
@@ -188,7 +188,7 @@
         '<section class="a-login-panel">' +
           '<div class="a-login-topright"><span>수강생이신가요?</span><a class="a-btn a-btn-primary a-btn-sm" href="#/login" data-action="to-student">바로가기</a></div>' +
           '<div class="a-login-stack"><div class="a-login-card">' +
-            '<p class="a-login-label">' + window.doogoClassLock() + '<em class="a-login-role">' + L.label + "</em></p>" +
+            '<p class="a-login-label"><a class="a-login-home-logo" href="#/doinggo" title="두잉고 홈으로" aria-label="두잉고 홈으로">' + window.doogoClassLock() + '</a><em class="a-login-role">' + L.label + "</em></p>" +
             "<h1>" + L.title + '</h1><p class="a-muted a-center">' + L.lead + "</p>" +
             '<div class="a-seg" role="tablist">' +
               '<button type="button" role="tab" aria-selected="' + (ins && !coachTab) + '" class="' + (ins && !coachTab ? "on" : "") + '" data-action="login-tab" data-tab="instructor">' + icon("user", "sm") + "강사</button>" +
@@ -378,7 +378,8 @@
         (S.role === "master" && S.actingAs ? '<div class="a-acting">' + icon("shieldCheck", "sm") + "<span>마스터 권한으로 <b>" + esc(ins.name) + "</b> 강사센터를 보고 있어요.</span>" + btn("마스터로 돌아가기", "stop-acting", "a-btn-light a-btn-sm") + "</div>" : "") +
         '<header class="a-top">' +
           '<button class="a-icon-btn a-menu" type="button" data-action="toggle-nav" aria-label="메뉴">' + icon("menu") + "</button>" +
-          '<a class="a-logo" href="#/center' + (partner ? "/partner" : master ? "/master" : "") + '">' + window.doogoClassLock("hm-lock-xs") + '<b class="a-logo-role">' + (partner ? "파트너센터" : master ? (MT() === "dc" ? "DOOGO CLASS 관리" : "마스터 관리자") : isCoach() ? "코치센터" : "강사센터") + "</b>" + (ins ? '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>" : "") + "</a>" +
+          // 로고는 두잉고 첫 화면(/doinggo)으로, 옆의 ‘강사센터’ 글자는 이 센터 첫 화면으로
+          '<span class="a-logo"><a class="a-logo-home" href="#/doinggo" title="두잉고 홈으로" aria-label="두잉고 홈으로">' + window.doogoClassLock("hm-lock-xs") + '</a><a class="a-logo-role" href="#/center' + (partner ? "/partner" : master ? "/master" : "") + '">' + (partner ? "파트너센터" : master ? (MT() === "dc" ? "DOOGO CLASS 관리" : "마스터 관리자") : isCoach() ? "코치센터" : "강사센터") + "</a>" + (ins ? '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>" : "") + "</span>" +
           '<div class="a-top-right">' +
             (ins ? '<span class="a-chip a-hide-sm' + (TRK() === "vod" ? " a-chip-vod" : "") + '">' + (TRK() === "vod" ? "DOOGO CLASS · VOD 수강생 " + VX().buyersOf(ins.id).filter((b) => b.active).length + "명" : co ? esc(co.name) + " · " + DB.STATUS_LABEL[DB.cohortStatus(co)] : "기수 없음") + "</span>" +
               btn(icon("eye", "sm") + '<span class="a-hide-sm">수강생 화면 보기</span>', "preview", "a-btn-outline a-btn-sm") : "") +
@@ -592,6 +593,9 @@
     if (dup && (f.status.value === "approved" || f.status.value === "pending")) { err.textContent = "같은 이름·뒷자리의 수강생이 이미 있어요 (" + cohortName(dup.cohortId) + ")."; return; }
     if (id) Object.assign(DB.student(id), { name, phone4, cohortId: f.cohortId.value, status: f.status.value, memo: f.memo.value.trim() });
     else DB.data.students.push({ id: DB.uid("s"), instructorId: iid, cohortId: f.cohortId.value, name, phone4, status: f.status.value, memo: f.memo.value.trim(), appliedAt: todayStr() });
+    // 저장한 수강생이 목록에 바로 보이게: 지금 탭 · 기수 필터에 안 맞으면 그 수강생 상태 · 기수로 옮김
+    if (ui.stuStatus !== "all" && ui.stuStatus !== f.status.value) ui.stuStatus = f.status.value;
+    if (ui.stuCohort !== "all" && ui.stuCohort !== f.cohortId.value) ui.stuCohort = f.cohortId.value;
     commit(id ? "수강생 정보를 저장했어요." : name + " 수강생을 추가했어요.");
   }
 
@@ -5072,6 +5076,7 @@
         '<div class="a-form-row">' + fld("loginId", "로그인 아이디", st.loginId, ' maxlength="30" placeholder="예: manager"') + fld("pw", "비밀번호", st.pw, ' maxlength="40"') + "</div>" +
         '<div class="a-field"><label>열어 줄 메뉴</label><div class="st-perms">' + menus.map((g) => '<div class="st-perm-g"><b>' + esc(g[0]) + "</b>" + g[1].map((it) => '<label class="a-check"><input type="checkbox" name="perm" value="' + esc(it[0]) + '"' + ((st.perms || []).indexOf(it[0]) >= 0 ? " checked" : "") + "><span>" + esc(it[1]) + "</span></label>").join("") + "</div>").join("") + '</div><small class="a-muted">대시보드는 늘 보여요. ‘운영자 계정’ 메뉴는 최고 관리자만 써요.</small></div>' +
         '<p class="a-error" id="sf-error"></p></form>',
+      (isNew ? "" : btn(icon("trash", "sm") + "삭제", "st-del", "a-btn-ghost danger", ' data-id="' + esc(st.id) + '"') + '<span class="a-spacer"></span>') +
       btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="st-form">' + (isNew ? "운영자 만들기" : "저장") + "</button>", "md");
   }
   function saveStaff(f) {
@@ -5550,6 +5555,7 @@
         '<div class="a-field"><label for="af-tax">정산 유형</label><select class="a-input" id="af-tax" name="taxType">' + Object.keys(TAX).map((k) => '<option value="' + k + '"' + (affTaxKey(p) === k ? " selected" : "") + ">" + TAX[k].label + "</option>").join("") + '</select><small class="a-muted">개인은 지급할 때 3.3%를 떼고, 사업자는 세금계산서를 받고 전액 지급해요.</small></div>' +
         '<div class="a-field"><label for="af-memo">메모</label><textarea class="a-input" id="af-memo" name="memo" rows="2" maxlength="500">' + esc(p.memo || "") + "</textarea></div>" +
         '<p class="a-error" id="af-error"></p></form>',
+      (isNew ? "" : btn(icon("trash", "sm") + "삭제", "aff-del", "a-btn-ghost danger", ' data-id="' + esc(p.id) + '"') + '<span class="a-spacer"></span>') +
       btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="aff-form">' + (isNew ? "파트너 만들기" : "저장") + "</button>", "md");
   }
   function saveAff(f) {
@@ -5660,6 +5666,14 @@
       case "logout": logout(); break;
       case "aff-new": affForm(); break;
       case "aff-edit": affForm(affOf(d.id)); break;
+      case "aff-del": {
+        const p = affOf(d.id); if (!p) break;
+        // 정산(RS) 기록이 있는 파트너는 지우면 지급 내역이 사라지므로 ‘중지’만 — 기록이 없을 때만 지움
+        const paid = Object.keys(AFF().affPayouts || {}).some((k) => k.indexOf(p.id + ":") === 0), rs = affMonths(p).some((g) => g.total > 0);
+        if (paid || rs) { confirmModal("파트너 삭제", esc(p.name) + " 파트너는 RS 정산 기록이 있어 지울 수 없어요.<br>더 이상 쓰지 않으면 ‘중지’해 주세요. 로그인이 막히고 기록은 그대로 남아요.", p.status === "active" ? "중지하기" : "닫기", false, () => { if (p.status === "active") { p.status = "stopped"; commit(p.name + " 파트너를 중지했어요. 로그인할 수 없게 돼요."); } else closeModal(); }); break; }
+        confirmModal("파트너 삭제", esc(p.name) + " 파트너 계정을 지울까요?<br>바로 로그인할 수 없게 되고, 담당 강사 연결도 풀려요.", "삭제", true, () => { const L = affList(), i = L.findIndex((x) => x.id === p.id); if (i >= 0) L.splice(i, 1); commit(p.name + " 파트너를 지웠어요."); });
+        break;
+      }
       case "aff-toggle": { const p = affOf(d.id); if (!p) break; const go = () => { p.status = p.status === "active" ? "stopped" : "active"; commit(p.name + (p.status === "active" ? " 파트너를 다시 활성화했어요." : " 파트너를 중지했어요. 로그인할 수 없게 돼요.")); }; if (p.status === "active") confirmModal("파트너 중지", esc(p.name) + " 파트너를 중지할까요? 바로 로그인할 수 없게 되고, 이미 생긴 RS는 그대로 지급해요.", "중지", true, go); else go(); break; }
       case "aff-pay": { const p = affOf(d.id); if (!p) break; const g = affMonths(p).find((x) => x.month === d.m); const nt = affNet(p, g ? g.total : 0); confirmModal("지급 완료 처리", esc(p.name) + " 파트너 · " + esc(d.m.slice(0, 4) + "년 " + Number(d.m.slice(5, 7)) + "월") + " 확정분<br>RS " + won(g ? g.total : 0) + (nt.tax ? " − 원천징수 3.3% " + won(nt.tax) : "") + " = <b>보낼 금액 " + won(nt.net) + "</b><br>보냈나요? 지급 완료로 기록하면 이 달 금액이 고정되고, 파트너센터에도 ‘지급 완료’로 보여요.", "지급 완료", false, () => { AFF().affPayouts[p.id + ":" + d.m] = { paidAt: todayStr(), by: "master", amount: g ? g.total : 0, net: nt.net, tax: nt.tax, rows: g ? g.rows.map((x) => ({ bid: x.b.id, rate: x.rate, amt: x.amt })) : [] }; commit("지급 완료로 기록했어요. 이 달 RS 금액이 고정됐어요."); }); break; }
       case "aff-unpay": { const p = affOf(d.id); if (!p) break; confirmModal("지급 완료 취소", esc(p.name) + " 파트너 " + esc(d.m) + " 지급 완료 기록을 취소할까요? (실제로 보내지 않았을 때)", "취소하기", true, () => { delete AFF().affPayouts[p.id + ":" + d.m]; commit("지급 완료 기록을 취소했어요."); }); break; }
@@ -5681,6 +5695,7 @@
       case "ct-print": ctPrint(d.k, d.id); break;
       case "st-new": staffForm(); break;
       case "st-edit": staffForm(staffOf(d.id)); break;
+      case "st-del": { const st = staffOf(d.id); if (!st) break; confirmModal("운영자 삭제", esc(st.name) + " 운영자 계정을 지울까요?<br>바로 로그인할 수 없게 되고, 지금까지의 활동 기록은 그대로 남아요.", "삭제", true, () => { const L = STAFF(), i = L.findIndex((x) => x.id === st.id); if (i >= 0) L.splice(i, 1); commit(st.name + " 운영자 계정을 지웠어요."); }); break; }
       case "st-toggle": { const st = staffOf(d.id); if (!st) break; st.status = st.status === "active" ? "stopped" : "active"; commit(st.name + " 운영자 계정을 " + (st.status === "active" ? "다시 열었어요." : "중지했어요.")); break; }
       case "sw-page": {
         const w = a.closest(".a-sw-wrap"); if (!w) break;
