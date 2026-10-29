@@ -267,7 +267,7 @@ const BIZ = [
   {
     slug: 'media', num: '04', area: '미디어 &amp; 콘텐츠', en: 'DOOGO MEDIA', chain: 'Owned Media', icon: 'i-media',
     corp: { en: 'DOOGO MEDIA', field: '미디어 &amp; 콘텐츠', ceo: '김윤정', title: '총괄이사', key: 'media', photo: 'leader-kim-yunjung',
-      also: { ceo: '박영균', title: '총괄이사', key: 'media-park', photo: 'leader-park-younggyun', anchor: 'leader-media-park' } },
+      also: { ceo: '박영균', title: '총괄이사', key: 'media-park', photo: 'leader-park-younggyun-2', anchor: 'leader-media-park' } },
     // 8차: DOOGO MEDIA = 온드미디어(브랜드가 직접 소유·운영하는 채널) 전문 — 분야 이름은 '미디어 & 콘텐츠' 그대로, 설명 문구만 온드미디어로
     scope: '온드미디어 촬영 · 유튜브 채널 운영 · 숏폼·라이브 콘텐츠',
     defLabel: '온드미디어 제작', def: '광고비에 기대지 않고, 브랜드의 자산으로 쌓이는 채널을 만듭니다.',
