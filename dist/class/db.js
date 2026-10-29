@@ -78,6 +78,88 @@
     return m ? m[1] : "";
   }
 
+  /* ---------------- 영상 길이 (비메오 · 유튜브 실제 재생 시간) ----------------
+   * 영상 링크로 실제 길이를 서버(/api/public · vdur)에서 받아 24:30 처럼 보여 줘요. 받은 길이는 이 브라우저에 기억하고,
+   * 강의를 고칠 수 있는 사람의 화면에서는 강의 데이터(durSec)에도 남겨 모두에게 바로 보여요. 길이를 모르면 적어 둔 값 그대로 */
+  const VD_LS = "dc:vdur", VD_TTL = 30 * 864e5, VD_RETRY = 864e5;
+  function vidKey(u) {
+    const s = String(u || "").trim();
+    const vm = s.match(/vimeo\.com\/(?:video\/|channels\/[\w-]+\/|groups\/[\w-]+\/videos\/|manage\/videos\/)?(\d{5,12})(?:\/([0-9a-f]{6,}))?/i);
+    if (vm) { const h = vm[2] || (s.match(/[?&]h=([0-9a-f]{6,})/i) || [])[1] || ""; return "vm:" + vm[1] + (h ? ":" + h : ""); }
+    const yt = youtubeId(s);
+    return yt ? "yt:" + yt : "";
+  }
+  let vdMem = null, vdT = 0, vdBusy = false;
+  const vdQ = new Set(), vdPend = new Set(), vdSubs = [];
+  const vdAll = () => { if (!vdMem) { try { vdMem = JSON.parse(localStorage.getItem(VD_LS) || "{}") || {}; } catch (e) { vdMem = {}; } } return vdMem; };
+  /** 초 → 24:30 · 1:02:03 */
+  const vdFmt = (sec) => { const t = Math.round(Number(sec) || 0), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), x = String(t % 60).padStart(2, "0"); return h ? h + ":" + String(m).padStart(2, "0") + ":" + x : m + ":" + x; };
+  /** 기억해 둔 실제 길이(초) — 모르면 0 */
+  function vdKnown(u) { const k = vidKey(u), x = k && vdAll()[k]; return x && x[0] > 0 ? x[0] : 0; }
+  /** 서버에 물어볼 영상 (잠깐 모았다가 한 번에) — 물어보는 중이면 true */
+  function vdAsk(u) {
+    const k = vidKey(u);
+    if (!k || !R.on) return false;
+    if (vdQ.has(u) || vdPend.has(u)) return true;
+    const x = vdAll()[k];
+    if (x && Date.now() - x[1] < (x[0] > 0 ? VD_TTL : VD_RETRY)) return false;
+    vdQ.add(u); clearTimeout(vdT); vdT = setTimeout(vdFlush, 300);
+    return true;
+  }
+  async function vdFlush() {
+    if (vdBusy) { vdT = setTimeout(vdFlush, 500); return; }
+    const urls = Array.from(vdQ).slice(0, 40);
+    urls.forEach((u) => { vdQ.delete(u); vdPend.add(u); });
+    if (!urls.length) return;
+    vdBusy = true;
+    let d = null;
+    try { const j = await call("public", { action: "vdur", urls }); d = j && j.ok ? j.d || {} : null; } catch (e) {}
+    vdBusy = false;
+    // 못 받으면(서버 연결 문제) 5분 뒤 다시 · 영상을 못 찾으면 하루 뒤 다시
+    const m = vdAll(), now = Date.now(), got = {};
+    urls.forEach((u) => { vdPend.delete(u); const k = vidKey(u), sec = d ? Number(d[u]) || 0 : 0; if (d) m[k] = [sec, now]; else if (!m[k]) m[k] = [0, now - VD_RETRY + 3e5]; if (sec > 0) got[k] = sec; });
+    try { localStorage.setItem(VD_LS, JSON.stringify(m)); } catch (e) {}
+    vdPaint();
+    if (Object.keys(got).length) vdSubs.slice().forEach((fn) => { try { fn(got); } catch (e) { console.error(e); } });
+    if (vdQ.size) vdT = setTimeout(vdFlush, 300);
+  }
+  /** 화면에 그려 둔 길이 칸(data-vdur)을 실제 길이로 — 화면을 다시 그리지 않고 글자만 바꿔요 */
+  function vdPaint(root) {
+    if (typeof document === "undefined") return;
+    (root || document).querySelectorAll("[data-vdur]").forEach((el) => { const x = vdAll()[el.dataset.vdur]; if (x && x[0] > 0) { el.textContent = vdFmt(x[0]); el.removeAttribute("data-vdur"); el.classList.add("is-real"); } });
+  }
+  /** 강의 길이 글자: 실제 길이(durSec · 기억한 값)면 24:30, 모르면 적어 둔 값(fb)을 보여 주고 받아 오는 대로 바꿔요 */
+  function vdLabel(url, durSec, fb, cls) {
+    const c = "vdur" + (cls ? " " + cls : ""), sec = Number(durSec) > 0 ? Number(durSec) : vdKnown(url);
+    if (sec > 0) return '<span class="' + c + ' is-real">' + vdFmt(sec) + "</span>";
+    const k = vidKey(url);
+    if (k) vdAsk(url);
+    return fb || k ? '<span class="' + c + '"' + (k ? ' data-vdur="' + k + '"' : "") + ">" + esc(fb || "") + "</span>" : "";
+  }
+  /** 강의 길이(초): 실제 길이 → 없으면 적어 둔 분 × 60 (총 시간 · 남은 시간 계산) */
+  function vdSec(url, durSec, min) { const sec = Number(durSec) > 0 ? Number(durSec) : vdKnown(url); return sec > 0 ? sec : Math.max(0, Number(min) || 0) * 60; }
+  /** 고칠 수 있는 사람 화면에서: 영상은 있는데 길이(durSec)가 없거나 영상이 바뀐 강의에 실제 길이를 넣어요.
+   * 넣은 게 있으면 done(개수) — 저장은 부르는 쪽에서. setMin(it, 초)로 적어 둔 분 칸도 같이 맞춰요 */
+  function vdFill(items, urlOf, done, setMin) {
+    const todo = (items || []).filter((it) => { const k = it && vidKey(urlOf(it)); return k && (!(Number(it.durSec) > 0) || it.durKey !== k); });
+    if (!todo.length) return 0;
+    const apply = () => {
+      let n = 0;
+      todo.forEach((it) => { const u = urlOf(it), k = vidKey(u), sec = vdKnown(u); if (k && sec > 0 && (it.durSec !== sec || it.durKey !== k)) { it.durSec = sec; it.durKey = k; if (setMin) setMin(it, sec); n++; } });
+      return n;
+    };
+    const n = apply();
+    if (n) done(n);
+    // 물어보는 중인 영상이 있을 때만 답을 기다려요 (못 찾은 영상은 하루 뒤에 다시)
+    const rest = todo.filter((it) => it.durKey !== vidKey(urlOf(it))).filter((it) => vdAsk(urlOf(it)));
+    if (!rest.length) return n;
+    const fn = () => { const m = apply(); if (m) done(m); if (rest.every((it) => it.durKey === vidKey(urlOf(it)) || !vdAsk(urlOf(it)))) off(); };
+    const off = () => { const i = vdSubs.indexOf(fn); if (i >= 0) vdSubs.splice(i, 1); };
+    vdSubs.push(fn); setTimeout(off, 60000);
+    return n;
+  }
+  const vdur = { key: vidKey, fmt: vdFmt, known: vdKnown, ask: vdAsk, paint: vdPaint, label: vdLabel, sec: vdSec, fill: vdFill };
+
   /* ---------------- 수강생 화면 색상 (강사별) ---------------- */
   // 대표색 + 그 위에 올라가는 글자색. 로그인 왼쪽 패널 배경(bg)도 같은 계열로 맞춘다.
   const THEMES = {
@@ -1362,7 +1444,7 @@
    * /api 가 없으면(로컬 정적 서버 · 미리보기) 예전처럼 이 브라우저(localStorage)에 저장한다.
    * 서버에서는 문서 단위(강사 · 콘텐츠 · 기수 · 수강생 · 진행 기록)로 나눠 보관하고,
    * 로그인한 사람이 볼 수 있는 문서만 내려온다. */
-  const R = { on: false, fresh: null, loading: false, me: { student: null, admin: null }, epoch: null, now: 0, ver: {}, snap: {}, nope: {}, rej: {}, prog: {}, inq: {}, bill: {}, timer: null, busy: false, again: false, fails: 0, polling: false, lastPoll: 0, listeners: [] };
+  const R = { on: false, fresh: null, loading: false, me: { student: null, admin: null }, epoch: null, now: 0, ver: {}, snap: {}, last: {}, nope: {}, rej: {}, prog: {}, inq: {}, bill: {}, timer: null, busy: false, again: false, fails: 0, polling: false, lastPoll: 0, listeners: [] };
   const COLLS = ["instructors", "content", "cohorts", "students"];
   const CONTENT_PERMS = ["brand", "guide", "curriculum", "missions", "schedule", "notices", "faq", "docs", "library", "motivation", "channels", "partners", "pages", "free", "landing", "replays", "showcase", "notes", "glossary"];
   const isObj = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
@@ -1398,9 +1480,9 @@
     R.me = j.me || { student: null, admin: null };
     R.epoch = j.epoch || R.epoch;
     R.now = j.now;
-    R.ver = {}; R.prog = {}; R.inq = {}; R.bill = {};
+    R.ver = {}; R.last = {}; R.prog = {}; R.inq = {}; R.bill = {};
     const d = { instructors: [], content: {}, cohorts: [], students: [] };
-    (j.docs || []).forEach((x) => { R.ver[x[0]] = x[2]; placeIn(d, x[0], x[1]); });
+    (j.docs || []).forEach((x) => { R.ver[x[0]] = x[2]; R.last[x[0]] = JSON.stringify(x[1]); placeIn(d, x[0], x[1]); });
     R.fresh = d;
   }
   /** 로그인 · 로그아웃 뒤에 볼 수 있는 데이터가 바뀌므로 처음부터 다시 받는다 */
@@ -1419,6 +1501,8 @@
     const m = {};
     Object.keys(d).forEach((k) => { if (COLLS.indexOf(k) === -1) m[k] = d[k]; });
     if (m.vod && typeof m.vod === "object") { const v = {}; Object.keys(m.vod).forEach((k) => { if (VOD_PRIV.indexOf(k) === -1) v[k] = m.vod[k]; }); m.vod = v; }
+    // 서버에 아직 스토어(vod)가 없으면 빈 칸도 넣지 않아요 — 서버 문서와 똑같아야 ‘서버가 안 받은 변경’을 알아채요
+    if (m.vod && typeof m.vod === "object" && !Object.keys(m.vod).length) delete m.vod;
     return m;
   }
   const vmDoc = (v, m) => Object.assign({}, m, { coupons: (v.memberCoupons || {})[m.id] || [], likes: (v.likes || {})[m.id] || [], prog: (v.progress || {})[m.id] || {}, study: (v.studyLog || {})[m.id] || {} });
@@ -1641,14 +1725,16 @@
         R.ver[x.k] = x.ver;
         const got = x.doc != null ? JSON.stringify(x.doc) : undefined;
         // 서버가 내 변경을 하나도 받지 않았으면(권한 밖 칸만 고쳤을 때) 그 내용은 기억해 두고 화면은 다시 그리지 않아요
-        if (got !== undefined && prev[x.k] !== undefined && sent[x.k] !== undefined && got === prev[x.k]) { R.nope[x.k] = sent[x.k]; delete R.rej[x.k]; return; }
+        // (보내기 전 모습 그대로이거나, 서버가 지난번에 준 문서와 글자 하나 다르지 않을 때)
+        if (got !== undefined && prev[x.k] !== undefined && sent[x.k] !== undefined && (got === prev[x.k] || got === R.last[x.k])) { R.nope[x.k] = sent[x.k]; delete R.rej[x.k]; return; }
+        if (got !== undefined) R.last[x.k] = got; else if (x.doc === null) delete R.last[x.k];
         delete R.nope[x.k];
         // 똑같은 내용을 또 보냈는데 서버가 또 다르게 돌려주면(일부만 받거나 순서만 바꿔서) 그 내용은 더 보내지 않아요 — 보내기 · 되돌려 받기 고리를 끊음
         if (got !== undefined && sent[x.k] !== undefined && got !== sent[x.k]) {
           const r = R.rej[x.k];
           if (r && r.js === sent[x.k]) { if (++r.n >= 2) R.nope[x.k] = sent[x.k]; } else R.rej[x.k] = { js: sent[x.k], n: 1 };
         } else delete R.rej[x.k];
-        if (x.doc === undefined) { if (sent[x.k] === undefined) delete R.snap[x.k]; else R.snap[x.k] = sent[x.k]; return; }
+        if (x.doc === undefined) { if (sent[x.k] === undefined) { delete R.snap[x.k]; delete R.last[x.k]; } else R.snap[x.k] = R.last[x.k] = sent[x.k]; return; }
         // 서버에서 합쳐진 결과(다른 사람 변경 · 사진 주소)를 받는다. 그 사이 또 고친 내용은 그 위에 다시 얹는다
         const now = snapOf(x.k);
         if (x.doc != null && now !== undefined && sent[x.k] !== undefined && now !== sent[x.k]) {
@@ -1686,10 +1772,12 @@
       const changed = [];
       (j.docs || []).forEach(([k, v, ver]) => {
         if (ver <= (R.ver[k] || 0)) return;
+        // 판 번호만 올라가고 내용은 그대로면 다시 그리지 않아요
+        if (R.last[k] !== undefined && JSON.stringify(v) === R.last[k]) { R.ver[k] = ver; return; }
         // 내가 고치는 중인 문서는 건너뛴다 (저장할 때 서버에서 합쳐져 돌아온다)
         if (canWrite(k) && snapOf(k) !== R.snap[k] && snapOf(k) !== R.nope[k]) return;
         placeIn(db, k, v);
-        R.ver[k] = ver;
+        R.ver[k] = ver; R.last[k] = JSON.stringify(v);
         R.snap[k] = snapOf(k);
         changed.push(k);
       });
@@ -1723,7 +1811,7 @@
   };
 
   window.DB = {
-    load, save, reset, store, clone, uid, esc, youtubeId, rich, libNoticeOf, CHANNEL_TYPES, CHANNEL_ICONS, CHANNEL_COLORS, channelType, channelLook, defaultChannels, channelsOf, PARTNER_GROUPS, PARTNER_ICONS, defaultPartners, partnersOf, inkOn, coachesOf, coach, findCoachLogin, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
+    load, save, reset, store, clone, uid, esc, youtubeId, vdur, rich, libNoticeOf, CHANNEL_TYPES, CHANNEL_ICONS, CHANNEL_COLORS, channelType, channelLook, defaultChannels, channelsOf, PARTNER_GROUPS, PARTNER_ICONS, defaultPartners, partnersOf, inkOn, coachesOf, coach, findCoachLogin, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student, certNo,
     VOD_MENUS, VOD_LIVE_ONLY, VOD_KEYS, vodContent, vodView, vodOwn, vodEnsure, vodCopy, vodCohortId, vodStudentsOf, isVodStudent, splitMid,

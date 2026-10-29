@@ -310,7 +310,7 @@
     if (vod) content.splice(2, 0, ["vodlink", "VOD 강의 연결", "circlePlay"], ["vodlessons", "VOD 강의 · 수업 자료", "paperclip"]);
     if (customPages(MID()).length) content.push(["pages", "추가 메뉴", "star"]);
     const vodN = vod && window.VOD ? window.VOD.buyersOf(iid).filter((b) => b.active && !b.st).length : 0;
-    const sales = isCoach() ? [] : [["DOOGO CLASS 판매", [["vod", "VOD 판매 내역", "monitorPlay"], ["vod-live", "무료 LIVE · 온/오프라인 판매", "calendar"], ["vod-settle", "판매 정산", "coins"]]]];
+    const sales = isCoach() ? [] : [["DOOGO CLASS 판매", [["vod", "VOD 판매 내역", "monitorPlay"], ["vod-live", "무료 LIVE · 온/오프라인 판매", "calendar"], ["vod-settle", "판매 정산", "coins"], ["vod-cal", "정산 달력", "calendar"]]]];
     const groups = (vod ? [
       ["운영 · DOOGO CLASS", [["", "DOOGO CLASS 대시보드", "grid"], ["vod-students", "VOD 수강생", "users", vodN || ""], ["coaching", "1:1 코칭 답변", "message", n.coaching || ""], ["teatime", "TEA TIME 신청", "calendar", window.VOD ? window.VOD.teasOf(null, iid).filter((o) => o.status === "paid" && (o.tea || {}).st === "req").length || "" : ""]].concat(isCoach() ? [] : [["coaches", "코치 관리", "shieldCheck", DB.coachesOf(iid).length || 0]])],
       ["VOD 강의실 꾸미기", content]
@@ -806,7 +806,7 @@
       F("topics", "강의 내용 (한 줄에 하나)", "lines", { rows: 7, hint: "수강생 커리큘럼에 두 줄로 나눠 점 목록으로 보여요." }),
       F("summary", "한 줄 소개 (과제 화면 위에 보여요)", "textarea", { rows: 2 })],
       init: () => ({ lessons: [], missions: [], topics: [] }), after: () => CUR().weeks.forEach((w, i) => { w.no = i + 1; }) },
-    lesson: { name: "강의", list: (c, ctx) => weekOf(c, ctx).lessons, fields: [F("title", "강의 제목"), F("youtubeId", "유튜브 주소", "youtube"), F("minutes", "길이(분)", "number"), F("desc", "강의 설명", "textarea", { rows: 4, rich: true }), F("attachments", "강의 자료 (교재·PDF·엑셀 등, 영상 아래에 보여요)", "attachments")], idp: "l", init: () => ({ attachments: [] }) },
+    lesson: { name: "강의", list: (c, ctx) => weekOf(c, ctx).lessons, fields: [F("title", "강의 제목"), F("youtubeId", "유튜브 주소", "youtube"), F("minutes", "길이(분)", "number", { hint: "유튜브 주소를 넣으면 실제 영상 길이로 자동으로 채워져요. 수강생 화면에는 24:30처럼 보여요." }), F("desc", "강의 설명", "textarea", { rows: 4, rich: true }), F("attachments", "강의 자료 (교재·PDF·엑셀 등, 영상 아래에 보여요)", "attachments")], idp: "l", init: () => ({ attachments: [] }) },
     mission: { name: "과제", list: (c, ctx) => weekOf(c, ctx).missions, idp: "m",
       init: () => ({ required: true, kind: "required", type: "image", steps: [], check: { image: true } }),
       fields: [
@@ -880,7 +880,7 @@
     replay: { name: "라이브 다시보기", prepend: true, list: (c) => c.replays || (c.replays = []), idp: "rp", init: () => ({ date: todayStr(), attachments: [] }),
       fields: [F("title", "영상 제목", "text", { hint: "예: 2주차 라이브 Q&A · 상세페이지 첨삭" }), F("youtubeId", "유튜브 주소", "youtube", { hint: "일부 공개(링크가 있는 사람만)로 올린 영상도 돼요." }),
         F("week", "주차", "select", { options: () => weekOpts("주차 없음"), get: (x) => (x.week ? String(x.week) : ""), set: (x, v) => { x.week = v ? Number(v) : ""; } }),
-        F("date", "라이브 날짜", "date"), F("minutes", "영상 길이 (선택 · 예: 1:12:30)"),
+        F("date", "라이브 날짜", "date"), F("minutes", "영상 길이 (선택 · 예: 1:12:30)", "text", { hint: "유튜브 주소를 넣으면 실제 영상 길이로 자동으로 채워져요." }),
         F("summary", "핵심 정리 (영상 아래에 보여요)", "textarea", { rows: 6, rich: true, hint: "라이브에서 나온 핵심 내용, 자주 나온 질문을 짧게 정리해 두면 수강생이 다시 찾기 쉬워요." }),
         F("attachments", "라이브 자료 (선택)", "attachments")] },
     showcase: { name: "모범 과제", list: (c) => c.showcase || (c.showcase = []), idp: "sc", init: (ctx, seed) => Object.assign({ images: [] }, seed || {}),
@@ -897,7 +897,7 @@
       fields: [F("q", "질문", "text", { hint: "예: 이번 주 경쟁 상품을 보며 내 상품에 적용할 점은?" }),
         F("week", "주차", "select", { options: () => weekOpts(), get: (x) => String(x.week || 1), set: (x, v) => { x.week = Number(v) || 1; } })] },
     mv: { name: "응원 영상", prepend: true, list: (c) => c.motivation, idp: "mv", init: () => ({ date: todayStr() }),
-      fields: [F("title", "영상 제목"), F("youtubeId", "유튜브 주소", "youtube"), F("minutes", "영상 길이 (예: 31:57)"), F("date", "올린 날", "date")] }
+      fields: [F("title", "영상 제목"), F("youtubeId", "유튜브 주소", "youtube"), F("minutes", "영상 길이 (예: 31:57)", "text", { hint: "유튜브 주소를 넣으면 실제 영상 길이로 자동으로 채워져요." }), F("date", "올린 날", "date")] }
   };
   ["ebook", "file"].forEach((k) => { COLL["res-" + k] = { name: "자료", list: (c) => c.resources[k], idp: k[0], fields: [F("title", "자료 이름"), F("meta", "형식 (예: 전자책 · 86쪽)"), F("desc", "한 줄 설명"), F("url", "열람·다운로드 주소 (구글 드라이브 등)", "url")] }; });
   ["vod", "senior"].forEach((k) => { COLL["res-" + k] = { name: "영상", list: (c) => c.resources[k], idp: k[0], init: () => ({ body: "", attachments: [] }),
@@ -1218,7 +1218,7 @@
         '<section class="a-card"><div class="a-card-head"><span class="a-weekno">' + w.no + "주차</span><div class=\"a-grow\"><h2>" + esc(w.title) + '</h2><p class="a-muted">' + esc(w.subtitle || w.summary || "") + (co ? " · 강의일 " + fmtMD(DB.classDate(co, w.no)) : "") + "</p></div>" + rowTools("week", String(w.no), "", wi, c.weeks.length) + "</div>" +
           (w.goal || (w.topics || []).length ? '<div class="a-cw-info">' + (w.goal ? "<p><b>핵심 목표</b>" + esc(w.goal) + "</p>" : "") + ((w.topics || []).length ? "<p><b>강의 내용 " + w.topics.length + "</b>" + esc(w.topics.join(" · ")) + "</p>" : "") + "</div>"
             : '<p class="a-cw-empty">' + icon("alert", "xs") + " 핵심 목표와 강의 내용을 적으면 수강생 커리큘럼에 보여요. ‘수정’을 눌러 채워 주세요.</p>") +
-          (w.lessons.length ? '<ul class="a-items">' + w.lessons.map((l, i) => '<li><div class="a-item-main"><b>' + esc(l.title) + "</b><small>" + (l.minutes ? l.minutes + "분 · " : "") + esc(l.desc || "") + "</small></div>" + ytBadge(l) + rowTools("lesson", l.id, w.no, i, w.lessons.length) + "</li>").join("") + "</ul>" : '<p class="a-muted a-pad">아직 강의가 없어요.</p>') +
+          (w.lessons.length ? '<ul class="a-items">' + w.lessons.map((l, i) => '<li><div class="a-item-main"><b>' + esc(l.title) + "</b><small>" + (l.minutes || l.durSec ? DB.vdur.label(l.youtubeId, l.durSec, l.minutes ? l.minutes + "분" : "") + " · " : "") + esc(l.desc || "") + "</small></div>" + ytBadge(l) + rowTools("lesson", l.id, w.no, i, w.lessons.length) + "</li>").join("") + "</ul>" : '<p class="a-muted a-pad">아직 강의가 없어요.</p>') +
           '<div class="a-card-foot">' + addBtn("lesson", "강의 추가", w.no, "a-btn-ghost a-btn-sm") + '<a class="a-link" href="#/center/missions">이 주차 과제 ' + w.missions.length + "개 " + icon("arrowRight", "xs") + "</a></div></section>").join("") + "</div>"
         : '<section class="a-card">' + emptyBox("book", "주차를 추가해서 커리큘럼을 만들어 주세요.", addBtn("week", "주차 추가")) + "</section>");
   }
@@ -2622,7 +2622,8 @@
   const vdMember = (id) => VD().members.find((m) => m.id === id) || vdBuyer(id);
   const vdBuyer = (id) => { const o = id && VD().orders.find((x) => x.mid === id && x.buyer && x.buyer.name); return o ? { id, name: o.buyer.name, phone: o.buyer.phone || "", email: "", masked: true } : null; };
   const vdMask = (n) => { const s = String(n || ""); return s ? s.slice(0, 1) + "O".repeat(Math.max(1, s.length - 1)) : "-"; };
-  const vdShare = (o) => (o.share != null ? Number(o.share) : VX().shareOf(vdP(o.pid) || {}));
+  // 주문 정산 비율 (주문 종류별: 수강권 · 전자책 · LIVE · 코칭권 · TEA TIME — 결제한 때의 강사 비율)
+  const vdShare = (o) => VX().shareVal(o);
   // 부분 환불된 주문은 남은 금액 비율만큼 매출 · 강사 정산에 남겨요
   const vdKeep = (o) => (o.status === "refunded" ? Math.max(0, 1 - (o.amount > 0 && o.refundAmount != null ? o.refundAmount / o.amount : 1)) : o.status === "paid" ? 1 : 0);
   const vdLive = (o) => !!o.paidAt && vdKeep(o) > 0;
@@ -2677,7 +2678,7 @@
     const mon = vdPaidIn(ym), all = v.orders.filter(vdLive), pend = vdPending();
     const newM = v.members.filter((m) => vdYM(m.createdAt) === ym).length;
     const careN = vdCare().co.length + vdCare().tea.length;
-    const tabs = [["orders", "주문", v.orders.length], ["months", "월별 매출"], ["settle", "강사 정산"], ["rates", "정산 비율 · 광고비"], ["care", "코칭 · TEA TIME", careN || null]];
+    const tabs = [["orders", "주문", v.orders.length], ["months", "월별 매출"], ["settle", "강사 정산"], ["rates", "강사별 비율 · 가격"], ["care", "코칭 · TEA TIME", careN || null]];
     const body = tab === "months" ? vdMonths() : tab === "settle" ? vdSettle() : tab === "rates" ? vdRates() : tab === "care" ? vdCarePage() : vdBankCard() + vdOrders();
     return head("VOD 매출 · 주문", "DOOGO CLASS에서 팔린 VOD 클래스의 결제 · 무통장 입금 확인 · 환불과 강사 정산을 한곳에서 관리해요.", vdStoreBtn() + btn(icon("download", "sm") + "주문 CSV", "vda-csv", "a-btn-ghost")) +
       '<div class="a-kpis">' +
@@ -2758,8 +2759,12 @@
     const ratio = (o) => (o.amount > 0 && o.refundAmount != null ? Math.min(1, o.refundAmount / o.amount) : 1);
     const ads = /^ext:/.test(key) ? [] : X.adOf(key, ym), adCost = ads.reduce((a, x) => a + (Number(x.amount) || 0), 0), adPct = X.adSplitOf(key), adDed = Math.round(adCost * adPct / 100 / 10) * 10;
     const carry = vdCarry(key, ym), ins = vdSum(os, insK), ded = dl.reduce((a, o) => a + Math.round(X.insAmt(o) * ratio(o) / 10) * 10, 0), net = ins - ded - adDed - carry, pf = vdProf(key), biz = pf.type === "biz";
-    const wh = !biz && net > 0 ? Math.floor(net * 0.033 / 10) * 10 : 0, vat = biz && net > 0 ? Math.round(net * 0.1) : 0;
-    return { key, ym, name: vdKeyName(key), n: os.length, base: vdSum(os, baseK), paid: vdSum(os, (o) => Math.round(o.amount * keep(o))), supply: vdSum(os, (o) => Math.round(X.supplyOf(o) * keep(o))), ch, ins, dedN: dl.length, ded, dedIds: dl.map((o) => o.id), adCost, adPct, adDed, adN: ads.length, carry, next: net < 0 ? -net : 0, net, biz, wh, vat, pay: Math.max(0, net - wh + vat), ids: os.map((o) => o.id), rec };
+    // 사업자 부가세: 예전 방식(공급가액 기준)만 정산액에 10%를 더해요. 판매가 기준(기본)은 정산액에 부가세가 들어 있어요
+    const mode = X.taxMode(), wh = !biz && net > 0 ? Math.floor(net * 0.033 / 10) * 10 : 0, vat = biz && net > 0 && mode === "supply" ? Math.round(net * 0.1) : 0;
+    const base0 = vdSum(os, baseK), pay0 = Math.max(0, net - wh + vat);
+    // 세금계산서 (사업자 강사): gross 강사 → 두고홀딩스 판매가 합계 · 두고홀딩스 → 강사 나머지(수수료 · 광고비 분담 · 차감) / net 정산액 / supply 정산액 + 부가세
+    const invIns = !biz || net <= 0 ? 0 : mode === "gross" ? base0 : mode === "net" ? pay0 : net + vat, invPf = biz && net > 0 && mode === "gross" ? Math.max(0, base0 - pay0) : 0;
+    return { key, ym, name: vdKeyName(key), mode, invIns, invPf, n: os.length, base: vdSum(os, baseK), paid: vdSum(os, (o) => Math.round(o.amount * keep(o))), supply: vdSum(os, (o) => Math.round(X.supplyOf(o) * keep(o))), ch, ins, dedN: dl.length, ded, dedIds: dl.map((o) => o.id), adCost, adPct, adDed, adN: ads.length, carry, next: net < 0 ? -net : 0, net, biz, wh, vat, pay: Math.max(0, net - wh + vat), ids: os.map((o) => o.id), rec };
   }
   const vdAdCell = (r) => (r.adDed ? "- " + won(r.adDed) : r.carry ? "" : "0원") + (r.carry ? '<small class="a-memo">지난달 이월 - ' + won(r.carry) + "</small>" : "");
   const vdNextTxt = (r) => (r.next ? '<small class="a-memo vs-next">다음 달 이월 ' + won(r.next) + "</small>" : "");
@@ -2797,7 +2802,7 @@
     return '<section class="a-card"><div class="a-card-head a-cal-head"><button type="button" class="a-icon-btn" data-action="vda-ym" data-dir="-1" aria-label="이전 달">' + icon("chevLeft") + "</button><h2>" + vdYMtxt(ym) + " 판매분 정산</h2>" + '<button type="button" class="a-icon-btn" data-action="vda-ym" data-dir="1" aria-label="다음 달">' + icon("chevRight") + "</button>" +
         '<span class="a-cal-sum">지급일 <b>' + fmtFull(vdPayDate(ym)) + "</b> · 지급 합계 <b>" + won(tot.pay) + "</b></span>" + (rows.length ? btn(icon("download", "sm") + "명세 CSV", "vda-stcsv", "a-btn-ghost a-btn-sm vda-ml", ' data-m="' + esc(ym) + '"') : "") + "</div>" +
       '<div class="vs-steps">' + [["확정 대기", cnt(["ready"]), "warn"], ["세금계산서 대기", cnt(["invreq"]) + rows.filter((r) => r.s.k === "confirmed" && r.biz).length, "warn"], ["지급 대기", rows.filter((r) => (r.s.k === "confirmed" && !r.biz) || r.s.k === "invoiced").length, "info"], ["지급 완료", cnt(["paid"]), "ok"]].map((x) => '<div class="vs-step ' + x[2] + '"><small>' + x[0] + "</small><b>" + x[1] + "명</b></div>").join("") + "</div>" +
-      '<p class="a-muted p-small vda-note">' + icon("alert", "xs") + " 정산액 = 할인 전 판매가 ÷ 1.1(공급가액) × 강사별 정산 비율(기본 VOD " + X.shSet("share") + "% · 1:1 코칭 · TEA TIME " + X.addonShare() + "%) − 그 달 광고비 × 강사 분담(기본 " + X.adSplitOf() + "%). 비율 · 광고비는 ‘정산 비율 · 광고비’ 탭에서 정해요. 쿠폰 · 포인트 · 결제 수수료는 플랫폼 부담, 확정 뒤 환불은 다음 명세에서 차감. 개인은 3.3% 원천징수, 사업자는 부가세 10%를 더해 세금계산서를 받고 지급해요.</p>" +
+      '<p class="a-muted p-small vda-note">' + icon("alert", "xs") + " " + vdRuleTxt() + " 비율 · 기준 · 광고비는 ‘강사별 비율 · 가격’ 탭에서 정해요.</p>" +
       (rows.length ? '<div class="a-table-wrap"><table class="a-table vda-table vs-table"><thead><tr><th>강사 · 크리에이터</th><th>판매</th><th class="right">판매가 합계</th><th class="right">정산액</th><th class="right">차감</th><th class="right">광고비 분담</th><th class="right">세금</th><th class="right">지급액</th><th>정산 정보</th><th>상태</th><th class="right">관리</th></tr></thead><tbody>' +
         rows.map((r) => "<tr><td><b>" + esc(r.name) + '</b><div class="vs-chs">' + vdChTags(r) + '</div></td><td class="num">' + r.n + '건</td><td class="right num">' + won(r.base) + '</td><td class="right num">' + won(r.ins) + '</td><td class="right num">' + (r.ded ? "- " + won(r.ded) : "0원") + '</td><td class="right num">' + vdAdCell(r) + '</td><td class="right num">' + (r.biz ? "+ " + won(r.vat) : r.wh ? "- " + won(r.wh) : "0원") + '</td><td class="right num"><b>' + won(r.pay) + "</b>" + vdNextTxt(r) + "</td><td>" + vdProfPill(r.key) + "</td><td>" + pill(r.s.t, r.s.c) + (r.rec && r.rec.invNo ? '<small class="a-memo">승인번호 ' + esc(r.rec.invNo) + "</small>" : "") + '</td><td class="right vs-acts">' + act(r) + "</td></tr>").join("") +
         '<tr class="a-rev-total"><td><b>합계</b></td><td class="num"><b>' + tot.n + '건</b></td><td class="right num"><b>' + won(tot.base) + '</b></td><td class="right num"><b>' + won(tot.net) + '</b></td><td></td><td></td><td></td><td class="right num"><b>' + won(tot.pay) + "</b></td><td></td><td></td><td></td></tr>" +
@@ -2805,21 +2810,60 @@
   }
   /* 정산 비율 · 광고비 (마스터): 기본 강사 5 : 플랫폼 5 · 광고비도 5 : 5. 강사와 조율한 비율을 확정하면 강사센터 › 판매 정산에 바로 보여요 */
   const vdRateIns = () => { const v = VD(); return DB.data.instructors.filter((x) => v.products.some((p) => p.iid === x.id && VX().typeOf(p) === "vod")); };
-  const pct2 = (n) => "강사 " + n + " : 플랫폼 " + (100 - n);
+  // 비율 표 대상: 클래스를 가진 모든 강사 (두잉고 계정이 없으면 ext:이름)
+  const vdRateKeys = () => { const X = VX(), map = {}; VD().products.forEach((p) => { const k = X.tkey(p); if (!k || map[k]) return; map[k] = { id: k, name: /^ext:/.test(k) ? k.slice(4) : insName(p.iid) || p.creator || k }; }); return Object.keys(map).map((k) => map[k]); };
+  /** 정산 기준 한 줄 설명 (마스터 · 강사 화면 공용) */
+  function vdRuleTxt() {
+    const X = VX(), m = X.taxMode();
+    const base = m === "supply" ? "정산액 = 할인 전 판매가 ÷ 1.1(공급가액) × 정산 비율" : "정산액 = 할인 전 판매가(부가세 포함) × 정산 비율 (예: 100만 원 · 60% → 60만 원)";
+    const biz = m === "gross" ? "사업자 강사는 판매가 합계로 두고홀딩스에 세금계산서를 발행하고, 두고홀딩스는 수수료분 세금계산서를 발행해요." : m === "net" ? "사업자 강사는 정산액(부가세 포함)으로 두고홀딩스에 세금계산서를 발행해요." : "사업자 강사는 정산액에 부가세 10%를 더해 세금계산서를 발행해요.";
+    return base + " − 그 달 광고비 × 강사 분담. 쿠폰 · 포인트 · 결제 수수료는 플랫폼 부담, 확정 뒤 환불은 다음 명세에서 차감. 개인 강사는 3.3% 원천징수 후 지급. " + biz;
+  }
+  // 표 칸은 짧게: 강사 몫 % + 플랫폼 몫 (자세한 강사 : 플랫폼은 비율 정하기 창에서)
+  const vdRateCell = (n) => '<td class="right vda-rc"><b class="num">' + n + '%</b><small class="a-memo">플랫폼 ' + (100 - n) + "</small></td>";
+  /* 정산 · 세금계산서 기준 + 기본 비율 (마스터) */
+  function vdTaxCard() {
+    const X = VX(), st = VD().settings, mode = X.taxMode(), d = st.rates || {};
+    const ex = (m) => (m === "gross" ? "100만 원 · 강사 60% → 정산 60만 원 지급. 강사님이 두고홀딩스에 100만 원 세금계산서, 두고홀딩스가 강사님께 수수료 40만 원 세금계산서" : m === "net" ? "100만 원 · 강사 60% → 정산 60만 원 지급. 강사님이 두고홀딩스에 60만 원(부가세 포함) 세금계산서" : "100만 원 · 강사 60% → 공급가액 90만 9,090원 × 60% = 54만 5,450원 + 부가세 → 60만 원 지급 (개인 강사는 54만 5,450원에서 3.3%)");
+    return '<section class="a-card"><div class="a-card-head"><h2>정산 · 세금계산서 기준</h2><span class="a-muted">강사 · 종류별 비율은 아래 표에서 정해요. 바꾸면 아직 확정하지 않은 명세서부터 새 기준으로 계산하고, 확정한 명세서는 그대로예요.</span></div>' +
+      '<form id="vda-tax-form" class="a-form" novalidate><div class="vda-radios vda-tax">' + Object.keys(X.TAX_MODES).map((m) => '<label class="vda-radio"><input type="radio" name="taxMode" value="' + m + '"' + (mode === m ? " checked" : "") + "><span><b>" + esc(X.TAX_MODES[m]) + "</b><small>" + esc(ex(m)) + "</small></span></label>").join("") + "</div>" +
+      '<p class="a-label">기본 비율 <small class="a-muted">강사별로 따로 정하지 않은 강사에게 써요 · 숫자는 강사 몫(%)</small></p><div class="a-form-row vda-defr">' +
+        X.RATE_KEYS.map((x) => '<div class="a-field"><label for="vdt-' + x[0] + '">' + esc(x[1]) + '</label><div class="vda-pct"><input class="a-input" id="vdt-' + x[0] + '" name="r-' + x[0] + '" type="number" min="0" max="100" inputmode="numeric" value="' + esc(d[x[0]] != null && d[x[0]] !== "" ? d[x[0]] : X.rateDef(x[0])) + '"><span>%</span></div></div>').join("") + "</div>" +
+      '<p class="a-muted p-small">' + icon("alert", "xs") + " 세금계산서는 사업자 강사만 해당해요. 개인 강사는 정산액에서 사업소득 3.3%를 떼고 지급해요. 기준은 세무사와 한 번 확인해 주세요.</p>" +
+      '<div class="a-form-actions"><button class="a-btn a-btn-primary" type="submit">기준 저장</button></div></form></section>';
+  }
+  /* 강사별 가격 (마스터): 강의 정가 · 판매가 · 1:1 코칭권 · TEA TIME 을 한 표에서 바로 고쳐요 */
+  function vdPriceCard() {
+    const X = VX(), keys = vdRateKeys(), k = ui.vdPriceKey && keys.some((x) => x.id === ui.vdPriceKey) ? ui.vdPriceKey : (keys[0] || {}).id;
+    if (!k) return "";
+    const ps = VD().products.filter((p) => X.tkey(p) === k).sort((a, b) => (a.status === "hidden") - (b.status === "hidden") || b.createdAt - a.createdAt), st = VD().settings, dc = st.coach || {}, dt = st.tea || {};
+    const inp = (n, v, ph, w) => '<input class="a-input a-sm vda-pin" name="' + n + '" type="number" min="0" step="' + (w || 1000) + '" inputmode="numeric" value="' + esc(v == null ? "" : v) + '" placeholder="' + esc(ph == null ? "" : ph) + '">';
+    return '<section class="a-card"><div class="a-card-head"><h2>강사별 가격</h2><span class="a-muted">강의 · 1:1 코칭권 · TEA TIME 가격을 강사별로 바로 고쳐요. 저장하면 스토어에 바로 반영돼요. 수강권 기간별 가격 · 할인 마감은 클래스 수정에서 정해요.</span>' +
+        '<select class="a-input a-sm vda-ml" id="vda-price-key" aria-label="강사 고르기">' + keys.map((x) => '<option value="' + esc(x.id) + '"' + (x.id === k ? " selected" : "") + ">" + esc(x.name) + "</option>").join("") + "</select></div>" +
+      (ps.length ? '<div class="vda-prices">' + ps.map((p) => {
+        const t = X.typeOf(p), vod = t === "vod" && X.priceOf(p) > 0, c = p.coach || {}, te = p.tea || {}, co = X.coachOf(p), tt = X.teaOf(p);
+        return '<form class="vda-price" data-id="' + esc(p.id) + '" novalidate><div class="vda-price-h">' + vdThumb(p, "sm") + "<div><b>" + esc(p.title) + '</b><small class="a-memo">' + esc(X.TYPE[t] ? X.TYPE[t][0] : t) + " · " + esc((VD_ST[p.status] || VD_ST.hidden)[0]) + " · 지금 판매가 " + won(X.priceOf(p)) + "</small></div></div>" +
+          '<div class="vda-price-f"><label><span>정가</span>' + inp("price", p.price, "", 1000) + "</label><label><span>판매가 <small>(비우면 정가)</small></span>" + inp("sale", p.sale, "", 1000) + "</label>" +
+            (vod ? '<label><span>1:1 코칭권 가격</span>' + inp("coachPrice", c.price, co ? co.price : dc.price, 1000) + '</label><label><span>코칭 횟수</span>' + inp("coachN", c.n, co ? co.n : dc.n || 5, 1) + "</label>" +
+              '<label><span>TEA TIME 가격 <small>(Zoom)</small></span>' + inp("teaPrice", te.price, tt ? tt.price : dt.price, 1000) + '</label><label><span>TEA TIME 시간(분)</span>' + inp("teaMin", te.min, tt ? tt.min : dt.min || 60, 10) + "</label>" : "") +
+            '<button class="a-btn a-btn-primary a-btn-sm" type="submit">저장</button></div></form>'; }).join("") + "</div>" : emptyBox("monitorPlay", "이 강사의 클래스가 없어요.")) + "</section>";
+  }
   function vdRates() {
-    const v = VD(), X = VX(), ym = ui.vdYM || vdYMadd(todayStr().slice(0, 7), -1), list = vdRateIns();
+    const v = VD(), X = VX(), ym = ui.vdYM || vdYMadd(todayStr().slice(0, 7), -1), list = vdRateIns(), keys = vdRateKeys();
     const ads = (v.adSpend || []).filter((x) => x.ym === ym).sort((a, b) => (a.iid > b.iid ? 1 : -1));
     const tot = ads.reduce((a, x) => a + (Number(x.amount) || 0), 0), insPart = ads.reduce((a, x) => a + Math.round((Number(x.amount) || 0) * X.adSplitOf(x.iid) / 100 / 10) * 10, 0);
     const vodPs = v.products.filter((p) => X.typeOf(p) === "vod" && p.status !== "hidden");
-    return '<section class="a-card"><div class="a-card-head"><h2>강사별 정산 비율</h2><span class="a-muted">기본은 강사 5 : 플랫폼 5예요. DOOGO CLASS가 촬영 · 편집 · 스튜디오 · 장비 · 운영을 모두 맡고, 강사님은 강의 자료(PPT)만 준비해요. 강사와 따로 조율하면 여기서 확정해 주세요.</span></div>' +
-        '<div class="a-table-wrap"><table class="a-table vda-rates"><thead><tr><th>강사</th><th class="right">VOD 판매</th><th class="right">1:1 코칭 · TEA TIME</th><th class="right">광고비 분담</th><th>강의별 예외</th><th>계약 메모 · 확정</th><th class="right">관리</th></tr></thead><tbody>' +
-          list.map((x) => { const r = X.rateOf(x.id), ex = v.products.filter((p) => p.iid === x.id && p.share != null && p.share !== "");
-            return "<tr><td><b>" + esc(x.displayName) + "</b></td>" + [r.vod, r.addon, r.ad].map((n) => '<td class="right"><b class="num">' + n + '%</b><small class="a-memo">' + pct2(n) + "</small></td>").join("") +
+    return vdTaxCard() +
+      '<section class="a-card"><div class="a-card-head"><h2>강사별 정산 비율</h2><span class="a-muted">숫자는 강사 몫이에요 (기본 강사 5 : 플랫폼 5). 강사와 따로 조율하면 종류마다 따로 정할 수 있어요 — 예: TEA TIME 100%는 TEA TIME 매출을 모두 강사님께.</span></div>' +
+        '<div class="a-table-wrap"><table class="a-table vda-rates"><thead><tr><th>강사</th>' + X.RATE_KEYS.map((x) => '<th class="right">' + esc(x[1]) + "</th>").join("") + '<th class="right">광고비 분담</th><th>강의별 예외</th><th>계약 메모 · 확정</th><th class="right">관리</th></tr></thead><tbody>' +
+          keys.map((x) => { const r = X.rateOf(x.id), ex = v.products.filter((p) => X.tkey(p) === x.id && p.share != null && p.share !== "");
+            return "<tr><td><b>" + esc(x.name) + "</b>" + (/^ext:/.test(x.id) ? '<small class="a-memo">두잉고 계정 없는 강사</small>' : "") + "</td>" + X.RATE_KEYS.map((k) => vdRateCell(r[k[0]])).join("") + vdRateCell(r.ad) +
               "<td>" + (ex.length ? ex.map((p) => '<span class="vda-ex">' + esc(p.title.slice(0, 14)) + " " + p.share + "%</span>").join("") : '<span class="a-muted">없음</span>') + "</td>" +
-              "<td>" + (r.memo ? "<span>" + esc(r.memo) + "</span>" : '<span class="a-muted">기본 계약</span>') + (r.at ? '<small class="a-memo">' + esc(fmtFull(DB.date.toStr(new Date(r.at)))) + " " + esc(r.by || "마스터") + " 확정</small>" : "") + "</td>" +
+              '<td class="vda-memo">' + (r.memo ? '<span title="' + esc(r.memo) + '">' + esc(r.memo) + "</span>" : '<span class="a-muted">기본 계약</span>') + (r.next ? '<small class="a-memo vda-next">' + icon("clock", "xs") + " 예정 · " + esc(vdRateNextTxt(r)) + "</small>" : r.at ? '<small class="a-memo">' + esc(fmtFull(DB.date.toStr(new Date(r.from || r.at)))) + "부터 · " + esc(r.by || "마스터") + " 확정</small>" : "") + "</td>" +
               '<td class="right">' + btn("비율 정하기", "vda-rate-edit", "a-btn-ghost a-btn-sm", ' data-k="' + esc(x.id) + '"') + "</td></tr>"; }).join("") +
         "</tbody></table></div>" +
-        '<p class="a-muted p-small">' + icon("alert", "xs") + " 비율은 결제할 때 주문에 남아요. 바꾸면 그 뒤 결제부터 새 비율로 정산해요(이미 결제한 주문은 그대로). 강의 하나만 따로 정할 때는 VOD 클래스 관리 › 클래스 수정 › ‘강사 정산 비율’을 쓰면 그 강의가 먼저예요.</p></section>" +
+        '<p class="a-muted p-small">' + icon("alert", "xs") + " 비율에는 ‘적용 시작일’이 있어요. 그날부터 결제한 주문은 새 비율, 그 전에 결제한 주문은 그때 비율로 정산해요. 강의 하나만 따로 정할 때는 VOD 클래스 관리 › 클래스 수정 › ‘강사 정산 비율’을 쓰면 그 강의가 먼저예요.</p></section>" +
+      vdPriceCard() +
       '<section class="a-card"><div class="a-card-head a-cal-head"><button type="button" class="a-icon-btn" data-action="vda-ym" data-dir="-1" aria-label="이전 달">' + icon("chevLeft") + "</button><h2>" + vdYMtxt(ym) + ' 광고비</h2><button type="button" class="a-icon-btn" data-action="vda-ym" data-dir="1" aria-label="다음 달">' + icon("chevRight") + "</button>" +
         '<span class="a-cal-sum">집행 <b>' + won(tot) + "</b> · 강사 분담 <b>" + won(insPart) + "</b> · 플랫폼 분담 <b>" + won(tot - insPart) + "</b></span></div>" +
         '<p class="a-muted p-small">VOD를 알리려고 실제로 쓴 광고비를 달마다 적어 주세요. 강사 분담분(기본 50%)은 그 달 강사 정산에서 빠지고, 강사센터 › 판매 정산에 내역이 그대로 보여요.</p>' +
@@ -2834,24 +2878,56 @@
             return "<tr><td><b>" + esc(ins ? ins.displayName : x.iid) + "</b></td><td>" + (p ? esc(p.title) : '<span class="a-muted">전체 VOD</span>') + '</td><td class="right num">' + won(x.amount) + '</td><td class="right num">' + won(me2) + '<small class="a-memo">' + sp + '%</small></td><td class="right num">' + won((Number(x.amount) || 0) - me2) + "</td><td>" + esc(x.memo || "") + '</td><td class="right"><button type="button" class="a-icon-btn" data-action="vda-ad-del" data-id="' + esc(x.id) + '" aria-label="광고비 지우기">' + icon("trash", "sm") + "</button></td></tr>"; }).join("") +
           "</tbody></table></div>" : emptyBox("coins", vdYMtxt(ym) + "에 적은 광고비가 없어요.")) + "</section>";
   }
-  function vdRateModal(iid) {
-    const X = VX(), r = X.rateOf(iid), ins = DB.instructor(iid); if (!ins) return;
+  // 예정 비율 (적용 시작일이 아직 안 온 마스터 확정)
+  const vdRateNextTxt = (r) => (r.next ? fmtFull(DB.date.toStr(new Date(r.next.from))) + "부터 " + VX().RATE_KEYS.map((x) => x[1] + " " + r.next[x[0]] + "%").join(" · ") : "");
+  function vdRateModal(key) {
+    const X = VX(), r = X.rateOf(key), name = /^ext:/.test(key) ? key.slice(4) : insName(key);
+    if (!name) return;
     const fi = (k, label, n, hint) => '<div class="a-field"><label for="vr-' + k + '">' + label + '</label><div class="vda-pct"><input class="a-input" id="vr-' + k + '" name="' + k + '" type="number" min="0" max="100" value="' + n + '" inputmode="numeric"><span>%</span></div><small class="a-muted">' + hint + "</small></div>";
-    openModal(ins.displayName + " 강사 정산 비율", '<form id="vda-rate-form" class="a-form" novalidate><input type="hidden" name="iid" value="' + esc(iid) + '">' +
-      '<p class="a-muted">숫자는 <b>강사 몫</b>이에요. 기본은 강사 50 : 플랫폼 50. 확정하면 강사센터 › 판매 정산에 바로 보이고, 그 뒤 결제부터 이 비율로 정산해요.</p>' +
-      '<div class="a-form-row">' + fi("vod", "VOD 판매", r.vod, "수강권 · 연장권 판매") + fi("addon", "1:1 코칭 · TEA TIME", r.addon, "강사님 시간을 쓰는 상품") + fi("ad", "광고비 분담", r.ad, "그 달 광고비 중 강사 부담") + "</div>" +
-      '<div class="a-field"><label for="vr-memo">계약 메모 <small>(강사에게도 보여요)</small></label><input class="a-input" id="vr-memo" name="memo" maxlength="80" value="' + esc(r.memo) + '" placeholder="예) 2027년 1월부터 VOD 60% · 촬영은 강사 스튜디오"></div>' +
-      (r.hist.length ? '<div class="vda-rhist"><small>지난 확정</small>' + r.hist.slice(-4).reverse().map((h) => "<span>" + esc(fmtFull(DB.date.toStr(new Date(h.at)))) + " · VOD " + h.vod + "% · 코칭 " + h.addon + "% · 광고비 " + h.ad + "%</span>").join("") + "</div>" : "") +
+    const hs = (h) => X.RATE_KEYS.map((x) => { const n = h[x[0]] != null && h[x[0]] !== "" ? h[x[0]] : x[0] === "coach" || x[0] === "tea" ? h.addon : h.vod; return x[1] + " " + (n == null || n === "" ? "-" : n + "%"); }).join(" · ") + " · 광고비 " + h.ad + "%";
+    openModal(name + " 강사 정산 비율", '<form id="vda-rate-form" class="a-form" novalidate><input type="hidden" name="key" value="' + esc(key) + '">' +
+      '<p class="a-muted">숫자는 <b>강사 몫</b>이에요. 기본은 강사 50 : 플랫폼 50. 확정하면 강사센터 › 판매 정산 · 대시보드에 바로 보이고, <b>적용 시작일</b>부터 결제한 주문을 이 비율로 정산해요.</p>' +
+      '<div class="a-form-row vda-rgrid">' + X.RATE_KEYS.map((x) => fi(x[0], x[1], r[x[0]], x[2])).join("") + fi("ad", "광고비 분담", r.ad, "그 달 광고비 중 강사 부담") + "</div>" +
+      '<div class="a-form-row"><div class="a-field"><label for="vr-from">적용 시작일</label><input class="a-input" id="vr-from" name="from" type="date" value="' + esc(todayStr()) + '"><small class="a-muted">이날 0시부터 결제한 주문에 적용 · 그 전 주문은 예전 비율</small></div>' +
+        '<div class="a-field"><label for="vr-memo">계약 메모 <small>(강사에게도 보여요)</small></label><input class="a-input" id="vr-memo" name="memo" maxlength="80" value="' + esc(r.memo) + '" placeholder="예) 2027년 1월부터 VOD 60% · TEA TIME 100%"></div></div>' +
+      (r.hist.length ? '<div class="vda-rhist"><small>지난 확정</small>' + r.hist.slice(-5).reverse().map((h) => "<span>" + esc(fmtFull(DB.date.toStr(new Date(h.from || h.at)))) + "부터 · " + esc(hs(h)) + "</span>").join("") + "</div>" : "") +
       '<p class="a-error" id="vr-error"></p></form>', btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="vda-rate-form">이 비율로 확정</button>', "md");
   }
   function saveVodRate(f) {
-    const v = VD(), iid = f.iid.value, pc = (x) => { const n = Math.round(Number(x)); return x !== "" && n >= 0 && n <= 100 ? n : null; };
-    const vod = pc(f.vod.value), addon = pc(f.addon.value), ad = pc(f.ad.value), err = document.getElementById("vr-error");
-    if (vod == null || addon == null || ad == null) { err.textContent = "비율은 0~100 사이 숫자로 적어 주세요."; return; }
+    const v = VD(), X = VX(), key = f.key.value, pc = (x) => { const n = Math.round(Number(x)); return x !== "" && n >= 0 && n <= 100 ? n : null; };
+    const err = document.getElementById("vr-error"), vals = {};
+    for (const x of X.RATE_KEYS.map((y) => y[0]).concat(["ad"])) { const n = pc(f[x].value); if (n == null) { err.textContent = "비율은 0~100 사이 숫자로 적어 주세요."; return; } vals[x] = n; }
+    // 오늘을 고르면 바로 (해외에서 날짜가 한국보다 앞서도 지금부터)
+    const from = f.from.value ? Math.min(Date.parse(f.from.value + "T00:00:00+09:00"), f.from.value <= todayStr() ? Date.now() : Infinity) : Date.now();
+    if (!from) { err.textContent = "적용 시작일을 확인해 주세요."; return; }
     v.insRates = v.insRates || {};
-    const prev = v.insRates[iid] || {}, hist = (prev.hist || []).concat(prev.at ? [{ vod: prev.vod, addon: prev.addon, ad: prev.ad, at: prev.at, by: prev.by }] : []).slice(-10);
-    v.insRates[iid] = { vod, addon, ad, memo: f.memo.value.trim(), at: Date.now(), by: "마스터", hist };
-    commit((DB.instructor(iid) || {}).displayName + " 강사 정산 비율을 확정했어요 (VOD " + vod + "% · 광고비 분담 " + ad + "%). 강사센터 › 판매 정산에 바로 보여요.");
+    const prev = v.insRates[key] || {}, keep = (e) => { const o = {}; ["vod", "ebook", "live", "coach", "tea", "addon", "ad", "at", "from", "by"].forEach((k) => { if (e[k] != null) o[k] = e[k]; }); return o; };
+    const hist = (prev.hist || []).concat(prev.at ? [keep(prev)] : []).slice(-50);
+    v.insRates[key] = Object.assign(vals, { addon: vals.coach, memo: f.memo.value.trim(), at: Date.now(), from, by: S && S.staffId ? (staffOf(S.staffId) || {}).name || "운영자" : "마스터", hist });
+    const name = /^ext:/.test(key) ? key.slice(4) : insName(key);
+    commit(name + " 강사 정산 비율을 확정했어요 (" + X.RATE_KEYS.map((x) => x[1] + " " + vals[x[0]] + "%").join(" · ") + " · " + fmtFull(DB.date.toStr(new Date(from))) + "부터).");
+  }
+  function saveVodTax(f) {
+    const v = VD(), X = VX(), st = v.settings, pc = (x) => { const n = Math.round(Number(x)); return x !== "" && n >= 0 && n <= 100 ? n : null; }, rates = {};
+    for (const x of X.RATE_KEYS) { const n = pc(f["r-" + x[0]].value); if (n == null) { toast("기본 비율은 0~100 사이 숫자로 적어 주세요.", "warn"); return; } rates[x[0]] = n; }
+    const m = f.taxMode.value;
+    st.taxMode = X.TAX_MODES[m] ? m : "gross";
+    st.rates = rates;
+    st.share = rates.vod; st.addonShare = rates.coach;
+    commit("정산 · 세금계산서 기준을 저장했어요 (" + X.TAX_MODES[st.taxMode] + ").");
+  }
+  function saveVodPrice(f) {
+    const p = vdP(f.dataset.id); if (!p) return;
+    const num = (n) => { const x = f[n]; if (!x) return undefined; const t = String(x.value).trim(); if (t === "") return null; const v = Math.round(Number(t)); return v >= 0 ? v : NaN; };
+    const price = num("price"), sale = num("sale"), cp = num("coachPrice"), cn = num("coachN"), tp = num("teaPrice"), tm = num("teaMin");
+    if ([price, sale, cp, cn, tp, tm].some((x) => Number.isNaN(x))) { toast("가격은 0 이상 숫자로 적어 주세요.", "warn"); return; }
+    if (price == null) { toast("정가를 적어 주세요.", "warn"); return; }
+    if (sale != null && sale > price) { toast("판매가가 정가보다 비싸요. 확인해 주세요.", "warn"); return; }
+    p.price = price; p.sale = sale;
+    if (cp !== undefined) p.coach = Object.assign({}, p.coach || {}, { price: cp, n: cn || null });
+    if (tp !== undefined) p.tea = Object.assign({}, p.tea || {}, { price: tp, min: tm || null, mode: "online" });
+    p.updatedAt0 = Date.now();
+    commit("‘" + p.title + "’ 가격을 저장했어요. 스토어에 바로 반영돼요.");
   }
   function saveVodAd(f) {
     const v = VD(), amt = Math.round(Number(f.amount.value));
@@ -2860,6 +2936,16 @@
     commit(vdYMtxt(f.ym.value) + " 광고비 " + won(amt) + "을 적었어요. 강사 분담분은 그 달 정산에서 빠져요.");
   }
   // 정산 명세서 (마스터 · 강사 같은 화면)
+  /** 세금계산서 안내: 누가 누구에게 얼마로 (공급가액 + 부가세) — 사업자 강사만 */
+  const vat10 = (n) => { const sup = Math.round(n / 1.1); return "공급가액 " + won(sup) + " + 부가세 " + won(n - sup); };
+  function vdInvBox(st) {
+    if (!st.biz || !(st.invIns > 0)) return "";
+    const mode = st.mode || VX().taxMode();
+    return '<div class="vs-inv"><b>' + icon("file", "xs") + " 세금계산서</b>" +
+      '<div class="vs-inv-r"><span>강사님 → (주)두고홀딩스</span><strong>' + won(st.invIns) + "</strong><small>" + (mode === "gross" ? "판매가 합계(부가세 포함)로 발행 · " : mode === "net" ? "정산 금액(부가세 포함)으로 발행 · " : "정산 금액 + 부가세 10% · ") + vat10(st.invIns) + "</small></div>" +
+      (st.invPf > 0 ? '<div class="vs-inv-r"><span>(주)두고홀딩스 → 강사님</span><strong>' + won(st.invPf) + "</strong><small>플랫폼 수수료" + (st.adDed ? " · 광고비 분담" : "") + (st.ded || st.carry ? " · 환불 · 이월 차감" : "") + " · " + vat10(st.invPf) + " · 두고홀딩스가 발행해요</small></div>" : "") +
+      (st.invPf > 0 ? '<p class="a-muted p-small">' + won(st.invIns) + " − " + won(st.invPf) + " = 지급액 " + won(st.pay) + "</p>" : "") + "</div>";
+  }
   function vdStmtModal(key, ym) {
     const st = vdStmt(key, ym), s = vdStState(st), X = VX(), pf = vdProf(key);
     const os = VD().orders.filter((o) => st.ids.indexOf(o.id) >= 0).sort((a, b) => a.paidAt - b.paidAt);
@@ -2870,7 +2956,8 @@
         '<dl class="vs-dl">' + row("판매", st.n + "건") + row("판매가 합계 (할인 전)", won(st.base)) + row("고객 결제액", won(st.paid)) + (st.base - st.paid > 0 ? row("플랫폼 부담 할인 (쿠폰 · 포인트)", won(st.base - st.paid)) : "") + row("공급가액 (판매가 ÷ 1.1)", won(st.supply)) + "</dl>" +
         '<div class="a-table-wrap"><table class="a-table vs-ch-table"><thead><tr><th>유입 · 상품</th><th class="right">건수</th><th class="right">판매가</th><th class="right">정산액</th></tr></thead><tbody>' +
           (Object.keys(st.ch).length ? Object.keys(st.ch).map((k) => "<tr><td>" + esc(X.CH_TXT[k] || k) + '</td><td class="right num">' + st.ch[k].n + '건</td><td class="right num">' + won(st.ch[k].base) + '</td><td class="right num">' + won(st.ch[k].ins) + "</td></tr>").join("") : '<tr><td colspan="4" class="a-muted">이 달 판매 없음</td></tr>') + "</tbody></table></div>" +
-        '<dl class="vs-dl vs-dl-sum">' + row("강사 정산액", won(st.ins)) + (st.ded ? row("확정 뒤 환불 차감 (" + st.dedN + "건)", "- " + won(st.ded)) : "") + (st.adDed ? row("광고비 분담 (집행 " + won(st.adCost) + " × 강사 " + st.adPct + "%)", "- " + won(st.adDed)) : "") + (st.carry ? row("지난달에서 이월된 차감", "- " + won(st.carry)) : "") + row("정산 금액", won(st.net), "b") + (st.biz ? row("부가세 10%", "+ " + won(st.vat)) : row("원천징수 3.3% (소득세 3% · 지방세 0.3%)", "- " + won(st.wh))) + row("지급액", won(st.pay), "big") + (st.next ? row("다음 달 정산으로 이월", won(st.next) + " (다음 달 정산액에서 이어서 빼요)") : "") + "</dl>" +
+        '<dl class="vs-dl vs-dl-sum">' + row("강사 정산액", won(st.ins)) + (st.ded ? row("확정 뒤 환불 차감 (" + st.dedN + "건)", "- " + won(st.ded)) : "") + (st.adDed ? row("광고비 분담 (집행 " + won(st.adCost) + " × 강사 " + st.adPct + "%)", "- " + won(st.adDed)) : "") + (st.carry ? row("지난달에서 이월된 차감", "- " + won(st.carry)) : "") + row("정산 금액", won(st.net) + (st.biz && st.mode !== "supply" ? " (부가세 포함)" : ""), "b") + (st.biz ? (st.mode === "supply" ? row("부가세 10%", "+ " + won(st.vat)) : "") : row("원천징수 3.3% (소득세 3% · 지방세 0.3%)", "- " + won(st.wh))) + row("지급액", won(st.pay), "big") + (st.next ? row("다음 달 정산으로 이월", won(st.next) + " (다음 달 정산액에서 이어서 빼요)") : "") + "</dl>" +
+        vdInvBox(st) +
         (os.length ? '<details class="vs-orders"><summary>주문 ' + os.length + "건 보기</summary>" + '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>결제일</th><th>주문번호</th><th>상품</th><th>구분</th><th class="right">판매가</th><th class="right">비율</th><th class="right">정산액</th></tr></thead><tbody>' +
           os.map((o) => "<tr><td>" + esc(fmtMD(DB.date.toStr(new Date(o.paidAt)))) + '</td><td><small class="num">' + esc(o.no) + "</small></td><td>" + esc(o.title) + (X.optTxt(o) ? '<small class="a-memo">' + esc(X.optTxt(o)) + "</small>" : "") + "</td><td>" + esc(X.CH_TXT[X.isAccess(o) ? o.ch || "web" : "addon"]) + '</td><td class="right num">' + won(X.baseOf(o)) + '</td><td class="right num">' + (o.share != null ? o.share : "-") + '%</td><td class="right num">' + won(X.insAmt(o)) + "</td></tr>").join("") + "</tbody></table></div></details>" : "") +
         '<ol class="vs-time">' + [["판매 월 마감", vdYMadd(ym, 1) + "-01" <= todayStr()], ["정산 확정", r.confirmedAt], [st.biz ? "세금계산서 " + (r.invoiceAt ? "수취" : r.invReqAt ? "발행 신고" : "") : "원천징수 처리", st.biz ? r.invoiceAt || r.invReqAt : r.confirmedAt], ["지급", r.st === "paid" || (!r.st && r.at) ? r.at : null]].map((x) => '<li class="' + (x[1] ? "on" : "") + '"><b>' + esc(x[0]) + "</b><small>" + (x[1] === true ? "완료" : x[1] ? esc(typeof x[1] === "number" ? DB.date.toStr(new Date(x[1])) : x[1]) : "대기") + "</small></li>").join("") + "</ol>" +
@@ -2970,6 +3057,7 @@
   }
   function vdEditor(id) {
     const d = vdDraft(id);
+    const cph = !d ? "" : d.creatorPhoto === "none" ? "" : d.creatorPhoto || (VX() && VX().extPh ? VX().extPh(d.creator) : "");
     if (!d) return head("클래스를 찾을 수 없어요", "", '<a class="a-btn a-btn-ghost" href="#/center/master/vod-classes">목록으로</a>');
     const isNew = id === "new", f = (n, label, val, attrs, help) => '<div class="a-field"><label for="vda-' + n + '">' + label + "</label><input class=\"a-input\" id=\"vda-" + n + '" name="' + n + '" value="' + esc(val == null ? "" : val) + '"' + (attrs || "") + ">" + (help ? '<small class="a-muted">' + help + "</small>" : "") + "</div>";
     const ta = (n, label, val, rows, help, ph) => '<div class="a-field"><label for="vda-' + n + '">' + label + '</label><textarea class="a-input" id="vda-' + n + '" name="' + n + '" rows="' + (rows || 3) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : "") + ">" + esc(val || "") + "</textarea>" + (help ? '<small class="a-muted">' + help + "</small>" : "") + "</div>";
@@ -2989,7 +3077,7 @@
             f("level", "난이도", d.level, ' maxlength="20" placeholder="입문 · 초급 · 중급"') + "</div>" +
           '<div class="a-form-row"><div class="a-field"><label for="vda-iid">강사 (정산 받는 사람)</label><select class="a-input" id="vda-iid" name="iid">' + vdInsOpts(d.iid) + '</select><small class="a-muted">두잉고 강사를 고르면 그 강사센터 ‘내 VOD 판매’에 판매 · 정산이 보여요.</small></div>' +
             f("creator", "크리에이터 표시 이름", d.creator, ' maxlength="20" placeholder="비우면 강사 이름"') + "</div>" +
-          '<div class="a-field vda-cph"><label for="vda-cph-file">강사 사진 <small>두잉고 계정이 없는 강사(예: 셀러훈)용 · 강사진 · 썸네일 · 강사 소개에 나와요. 두잉고 강사는 강사센터 브랜드 사진을 써요</small></label><div class="vda-cph-row"><span class="vda-cph-prev">' + (d.creatorPhoto ? '<img src="' + esc(d.creatorPhoto) + '" alt="">' : "<em>사진 없음</em>") + '</span><input class="a-input" id="vda-cph-file" type="file" accept="image/jpeg,image/png,image/webp" data-vda-img="creatorPhoto">' + (d.creatorPhoto ? btn(icon("trash", "sm") + "사진 지우기", "vda-cph-del", "a-btn-ghost a-btn-sm") : "") + "</div></div>" +
+          '<div class="a-field vda-cph"><label for="vda-cph-file">강사 사진 <small>두잉고 계정이 없는 강사(예: 셀러훈)용 · 강사진 · 썸네일 · 강사 소개에 나와요. 두잉고 강사는 강사센터 브랜드 사진을 써요</small></label><div class="vda-cph-row"><span class="vda-cph-prev">' + (cph ? '<img src="' + esc(cph) + '" alt="">' : "<em>사진 없음</em>") + '</span><input class="a-input" id="vda-cph-file" type="file" accept="image/jpeg,image/png,image/webp" data-vda-img="creatorPhoto">' + (cph ? btn(icon("trash", "sm") + "사진 지우기", "vda-cph-del", "a-btn-ghost a-btn-sm") : "") + (cph && !d.creatorPhoto ? '<small class="a-muted">두고클래스가 넣어 둔 기본 사진이에요. 새 사진을 올리면 바뀌어요.</small>' : "") + "</div></div>" +
           '<div class="a-field"><span class="a-label">판매 상태</span><div class="vda-radios">' + [["on", "판매 중", "스토어에 보이고 바로 살 수 있어요"], ["soon", "오픈 예정", "보이지만 아직 살 수 없어요"], ["hidden", "숨김", "스토어에 안 보여요 (준비 중)"]].map((x) => '<label class="vda-radio"><input type="radio" name="status" value="' + x[0] + '"' + (d.status === x[0] ? " checked" : "") + "><span><b>" + x[1] + "</b><small>" + x[2] + "</small></span></label>").join("") + "</div></div>" +
           f("openAt", "오픈 예정일 <small>(‘오픈 예정’일 때 썸네일 · 카드에 보여요)</small>", d.openAt, ' type="date"') +
           '<div class="a-field"><span class="a-label">배지 <small>(카드 · 상세 가격 아래 · BEST 파랑 · NEW 주황 · 업데이트 레드)</small></span><div class="vda-checks">' + [["BEST", "BEST"], ["NEW", "NEW"], ["UPDATE", "업데이트"], ["HOT", "HOT"], ["NICE", "추천"]].map((b) => '<label class="a-check"><input type="checkbox" name="badge" value="' + b[0] + '"' + ((d.badges || []).indexOf(b[0]) >= 0 ? " checked" : "") + "><span>" + b[1] + "</span></label>").join("") + "</div></div>" +
@@ -3037,7 +3125,7 @@
             '<button type="button" class="a-icon-btn" data-action="vda-ch-move" data-ci="' + ci + '" data-dir="-1" aria-label="챕터 위로"' + (ci === 0 ? " disabled" : "") + ">" + icon("arrowUp", "sm") + '</button><button type="button" class="a-icon-btn" data-action="vda-ch-move" data-ci="' + ci + '" data-dir="1" aria-label="챕터 아래로"' + (ci === d.curriculum.length - 1 ? " disabled" : "") + ">" + icon("arrowDown", "sm") + '</button><button type="button" class="a-icon-btn" data-action="vda-ch-del" data-ci="' + ci + '" aria-label="챕터 지우기">' + icon("trash", "sm") + "</button></div>" +
             '<div class="vda-ls-head" aria-hidden="true"><span>강의 이름</span><span>분</span><span>영상 주소</span><span>미리보기</span><span></span></div>' +
             (c.lessons || []).map((l, li) => { const k = ci + "-" + li; return '<div class="vda-ls"><input class="a-input" name="ls-' + k + '-t" value="' + esc(l.title) + '" maxlength="80" placeholder="강의 이름" aria-label="강의 이름"><input class="a-input" name="ls-' + k + '-m" value="' + esc(l.min || "") + '" type="number" min="0" max="600" inputmode="numeric" placeholder="분" aria-label="길이(분)"><input class="a-input" name="ls-' + k + '-v" value="' + esc(l.video || "") + '" maxlength="300" placeholder="유튜브 · 비메오 · mp4 주소" aria-label="영상 주소"><label class="vda-pv"><input type="checkbox" name="ls-' + k + '-p"' + (l.preview ? " checked" : "") + '><span>미리보기</span></label><button type="button" class="a-icon-btn" data-action="vda-ls-del" data-ci="' + ci + '" data-li="' + li + '" aria-label="강의 지우기">' + icon("x", "sm") + "</button>" +
-              '<div class="vda-ls-x"><input class="a-input" name="ls-' + k + '-d" value="' + esc(l.desc || "") + '" maxlength="500" placeholder="강의 노트 (선택 · 강의 영상 아래에 보여요)" aria-label="강의 노트"></div><div class="vda-mat"><ul class="a-vl-fl">' + (l.files || []).map((x, fi) => matChip(x, ' data-action="vda-fdel" data-ci="' + ci + '" data-li="' + li + '" data-fi="' + fi + '"')).join("") + '</ul><div class="a-vl-add"><label class="a-btn a-btn-ghost a-btn-sm">' + icon("paperclip", "sm") + '수업 자료 올리기<input type="file" class="sr-only" multiple data-vda-up data-ci="' + ci + '" data-li="' + li + '" accept=".pdf,.xlsx,.xls,.csv,.docx,.doc,.hwp,.hwpx,.pptx,.ppt,.zip,.png,.jpg,.jpeg"></label><input class="a-input a-sm" name="ls-' + k + '-ln" placeholder="링크 자료 이름" aria-label="링크 자료 이름"><input class="a-input a-sm" name="ls-' + k + '-lu" type="url" placeholder="https://… (구글 드라이브 등)" aria-label="링크 주소">' + btn("링크 추가", "vda-flink", "a-btn-ghost a-btn-sm", ' data-ci="' + ci + '" data-li="' + li + '"') + "</div></div></div>"; }).join("") +
+              '<div class="vda-ls-x">' + DB.vdur.label(l.video, l.durSec, "", "vda-dur") + '<input class="a-input" name="ls-' + k + '-d" value="' + esc(l.desc || "") + '" maxlength="500" placeholder="강의 노트 (선택 · 강의 영상 아래에 보여요)" aria-label="강의 노트"></div><div class="vda-mat"><ul class="a-vl-fl">' + (l.files || []).map((x, fi) => matChip(x, ' data-action="vda-fdel" data-ci="' + ci + '" data-li="' + li + '" data-fi="' + fi + '"')).join("") + '</ul><div class="a-vl-add"><label class="a-btn a-btn-ghost a-btn-sm">' + icon("paperclip", "sm") + '수업 자료 올리기<input type="file" class="sr-only" multiple data-vda-up data-ci="' + ci + '" data-li="' + li + '" accept=".pdf,.xlsx,.xls,.csv,.docx,.doc,.hwp,.hwpx,.pptx,.ppt,.zip,.png,.jpg,.jpeg"></label><input class="a-input a-sm" name="ls-' + k + '-ln" placeholder="링크 자료 이름" aria-label="링크 자료 이름"><input class="a-input a-sm" name="ls-' + k + '-lu" type="url" placeholder="https://… (구글 드라이브 등)" aria-label="링크 주소">' + btn("링크 추가", "vda-flink", "a-btn-ghost a-btn-sm", ' data-ci="' + ci + '" data-li="' + li + '"') + "</div></div></div>"; }).join("") +
             btn(icon("plus", "sm") + "강의 추가", "vda-ls-add", "a-btn-ghost a-btn-sm vda-add", ' data-ci="' + ci + '"') + "</div>").join("") +
           btn(icon("plus", "sm") + "챕터 추가", "vda-ch-add", "a-btn-outline a-btn-block")) +
         sec(6, "자주 묻는 질문", "비워 두면 수강 기간 · 기기 안내가 기본으로 보여요.",
@@ -3062,7 +3150,7 @@
       '<small class="a-muted">비우면 180일 = 판매가, 365일 = × 1.1, 3년 = × 1.2 (천 원 단위). 상세 페이지에서 365일이 ‘추천’으로 먼저 골라지고, 하루 가격이 함께 보여요. 기간이 끝난 수강생은 1년 연장권(365일 가격의 ' + X.extendPct() + '%)으로 진도 그대로 이어서 들어요.</small>' +
       '<div class="vda-addon-f">' + ck("co-on", co.on !== false, "<b>1:1 코칭권</b> 판매") + '<div class="a-form-row">' + f("co-n", "횟수", co.n || "", ' type="number" min="1" max="50" inputmode="numeric" placeholder="' + (sc.n || 5) + '"') + f("co-days", "사용 기간 (일)", co.days || "", ' type="number" min="7" max="730" inputmode="numeric" placeholder="' + (sc.days || 180) + '"') + f("co-price", "가격 (원)", co.price == null ? "" : co.price, ' type="number" min="0" step="1000" inputmode="numeric" placeholder="' + (sc.price || 150000) + '"') + "</div></div>" +
       '<div class="vda-addon-f">' + ck("tea-on", te.on !== false, "<b>강사님과 TEA TIME</b> 판매") + '<div class="a-form-row">' + f("tea-min", "시간 (분)", te.min || "", ' type="number" min="15" max="240" step="15" inputmode="numeric" placeholder="' + (stt.min || 60) + '"') + f("tea-price", "가격 (원)", te.price == null ? "" : te.price, ' type="number" min="0" step="1000" inputmode="numeric" placeholder="' + (stt.price || 99000) + '"') +
-        '<div class="a-field"><label for="vda-tea-mode">진행 방식</label><select class="a-input" id="vda-tea-mode" name="tea-mode">' + [["both", "온라인 · 오프라인 중 선택"], ["online", "온라인 화상 (Zoom)"], ["offline", "오프라인 만남"]].map((m) => '<option value="' + m[0] + '"' + ((te.mode || stt.mode || "both") === m[0] ? " selected" : "") + ">" + m[1] + "</option>").join("") + "</select></div></div></div>" +
+        '<div class="a-field"><span class="a-label">진행 방식</span><p class="a-fixed">' + icon("video", "xs") + ' Zoom 온라인 화상으로만 진행해요 · 강사님이 일정을 확정할 때 Zoom 링크를 보내요</p><input type="hidden" name="tea-mode" value="online"></div></div></div>' +
       '<small class="a-muted">빈칸은 ‘전시 · 쿠폰 · 설정 › 수강권 · 부가 상품 기본값’을 따라요. 코칭권 · TEA TIME은 두잉고 VOD 버전이 열린 강의에서만 팔리고, 쿠폰은 수강권에만 적용돼요.</small></div>';
   }
   /* 무료 LIVE → 이어 팔기: 0원 LIVE · 설명회가 끝나면 고른 유료 강의를 얼리버드 가격으로 열어요 (스토어 쪽 규칙은 vod.js funnelOf) */
@@ -3100,7 +3188,7 @@
     if (f.next) Object.assign(d, { next: v("next"), ebPrice: num("ebPrice") || "", ebDays: Math.max(1, Math.min(60, num("ebDays") || 3)), gate: !!(f.gate && f.gate.checked) });
     if (f["pl-180"]) { const pl = {}; VX().PLAN_DAYS.forEach((x) => { pl[x[0]] = { on: !!f["pl-" + x[0] + "-on"].checked, price: v("pl-" + x[0]) === "" ? null : num("pl-" + x[0]) }; }); d.plans = pl; }
     if (f["co-n"]) d.coach = { on: !!f["co-on"].checked, n: num("co-n") || null, days: num("co-days") || null, price: v("co-price") === "" ? null : num("co-price") };
-    if (f["tea-min"]) d.tea = { on: !!f["tea-on"].checked, min: num("tea-min") || null, price: v("tea-price") === "" ? null : num("tea-price"), mode: v("tea-mode") || "both" };
+    if (f["tea-min"]) d.tea = { on: !!f["tea-on"].checked, min: num("tea-min") || null, price: v("tea-price") === "" ? null : num("tea-price"), mode: "online" };
     (d.curriculum || []).forEach((c, ci) => { if (f["ch-" + ci]) c.title = f["ch-" + ci].value.trim(); (c.lessons || []).forEach((l, li) => { const k = "ls-" + ci + "-" + li; if (!f[k + "-t"]) return; l.title = f[k + "-t"].value.trim(); l.min = Math.max(0, Number(f[k + "-m"].value) || 0); l.video = f[k + "-v"].value.trim(); l.preview = f[k + "-p"].checked; if (f[k + "-d"]) { l.desc = f[k + "-d"].value.trim(); if (f[k + "-f"]) l.files = f[k + "-f"].value.split(",").map((x) => x.trim()).filter(Boolean).map((x) => { const i = x.indexOf("|"); return i > 0 ? { name: x.slice(0, i).trim(), url: x.slice(i + 1).trim() } : { name: x, url: "" }; }); } }); });
     (d.faq || []).forEach((q, i) => { if (f["fq-" + i + "-q"]) { q[0] = f["fq-" + i + "-q"].value.trim(); q[1] = f["fq-" + i + "-a"].value.trim(); } });
     return d;
@@ -3483,7 +3571,8 @@
   }
   function vdInvForm(ym) {
     const st = vdStmt(IID(), ym);
-    openModal("세금계산서 발행 완료 알리기", '<form id="vs-inv-form" class="a-form" data-m="' + esc(ym) + '" novalidate><p class="a-muted">' + esc(vdYMtxt(ym)) + " 판매분 · 공급가액 <b>" + won(st.net) + "</b> + 부가세 <b>" + won(st.vat) + "</b> = <b>" + won(st.net + st.vat) + "</b>으로 (주)두고홀딩스에 전자세금계산서를 발행한 뒤 승인번호를 적어 주세요.</p>" +
+    const inv = st.invIns || st.net + st.vat, sup = Math.round(inv / 1.1);
+    openModal("세금계산서 발행 완료 알리기", '<form id="vs-inv-form" class="a-form" data-m="' + esc(ym) + '" novalidate><p class="a-muted">' + esc(vdYMtxt(ym)) + " 판매분 · " + (st.mode === "gross" ? "판매가 합계 " : st.mode === "net" ? "정산 금액 " : "") + "공급가액 <b>" + won(sup) + "</b> + 부가세 <b>" + won(inv - sup) + "</b> = <b>" + won(inv) + "</b>으로 (주)두고홀딩스에 전자세금계산서를 발행한 뒤 승인번호를 적어 주세요." + (st.invPf ? " 두고홀딩스는 플랫폼 수수료 <b>" + won(st.invPf) + "</b> 세금계산서를 강사님께 발행하고, 차액 <b>" + won(st.pay) + "</b>을 지급해요." : "") + "</p>" +
       '<div class="a-field"><label for="vs-invno">승인번호</label><input class="a-input" id="vs-invno" name="invNo" maxlength="40" placeholder="20261103-41000000-00000000"></div><p class="a-error" id="vs-inv-error"></p></form>',
       btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="vs-inv-form">발행 완료 알리기</button>', "md");
   }
@@ -3730,6 +3819,15 @@
   /* ---------- VOD 버전: 대시보드 · VOD 수강생 · VOD 강의 연결 ---------- */
   const vdOnline = (p) => ["vod", "ebook"].indexOf(VX().typeOf(p)) >= 0;
   const vbName = (b) => (b.st ? b.m.name : vdMask(b.m.name));
+  /** 강사 대시보드: 내 수익 쉐어(종류별 강사 몫) · 이번 달 정산 예정 · 정산 달력 바로 가기 */
+  function vdShareStrip(iid) {
+    const X = VX(), r = X.rateOf(iid), ym = todayStr().slice(0, 7), st = vdStmt(iid, ym);
+    return '<section class="a-card vs-strip"><div class="a-card-head"><h2>' + icon("coins", "sm") + ' 내 수익 쉐어</h2><span class="a-muted">숫자는 강사님 몫이에요 · ' + (r.next ? "지금 비율 · 다음 비율 " + esc(vdRateNextTxt(r)) : r.at ? esc(fmtFull(DB.date.toStr(new Date(r.from || r.at)))) + "부터 마스터 확정" : "기본 계약 (강사 5 : 플랫폼 5)") + "</span>" +
+      '<a class="a-link vda-ml" href="#/center/vod-cal">정산 달력 ' + icon("arrowRight", "xs") + '</a><a class="a-link" href="#/center/vod-settle">판매 정산 ' + icon("arrowRight", "xs") + "</a></div>" +
+      '<div class="vs-strip-g">' + X.RATE_KEYS.map((x) => '<div class="vs-strip-i"><small>' + esc(x[1]) + "</small><b>" + r[x[0]] + "<em>%</em></b><span>강사 " + r[x[0]] + " : 플랫폼 " + (100 - r[x[0]]) + "</span></div>").join("") +
+        '<div class="vs-strip-i vs-strip-now"><small>이번 달 정산 예정</small><b>' + won(Math.max(0, st.net)) + "</b><span>" + st.n + "건 판매 · " + esc(fmtFull(vdPayDate(ym))) + " 지급</span></div></div>" +
+      '<p class="a-muted p-small">' + icon("alert", "xs") + " " + (X.taxMode() === "supply" ? "공급가액(판매가 ÷ 1.1)" : "판매가(부가세 포함)") + " × 비율로 정산해요. 예: 100만 원 · " + r.vod + "% → " + won(Math.round((X.taxMode() === "supply" ? 1000000 / 1.1 : 1000000) * r.vod / 100 / 10) * 10) + ".</p></section>";
+  }
   function pageVodDash() {
     const iid = IID(), ins = INS(), c = C(), X = VX(), v = VD();
     const buyers = X.buyersOf(iid), act = buyers.filter((b) => b.active), joined = act.filter((b) => b.st), ym = todayStr().slice(0, 7);
@@ -3753,6 +3851,7 @@
         (isCoach() ? kpi("연결된 VOD", prods.filter((p) => p.dg !== false).length + "개", "DOOGO CLASS VOD 클래스", "#/center") : kpi("이번 달 VOD 판매", mon.filter(X.isAccess).length + "건", won(vdSum(mon)) + " (부가 " + won(vdSum(mon.filter((o) => !X.isAccess(o)))) + ") · 정산 " + won(vdSum(mon, vdInsAmt)), "#/center/vod", mon.length ? "ok" : "")) +
         kpi("완강한 수강생", act.filter((b) => b.pct >= 100).length + "명", "진도 100% · 후기 요청 대상", "#/center/vod-students") +
       "</div>" +
+      (isCoach() ? "" : vdShareStrip(iid)) +
       '<section class="a-card a-vsteps"><div class="a-card-head"><h2>' + icon("sparkles", "sm") + " VOD 버전 세팅 순서</h2><span class=\"a-muted\">" + steps.filter((x) => x[3]).length + " / " + steps.length + " 완료 · 원하는 대로 바꿀 수 있어요</span></div><ol class=\"a-vstep-list\">" +
         steps.map((x, i) => '<li class="' + (x[3] ? "ok" : "") + '"><span class="a-vstep-n">' + (x[3] ? icon("check", "xs") : i + 1) + '</span><div><b>' + esc(x[1]) + "</b><small>" + esc(x[2]) + '</small></div><a class="a-link" href="#/center/' + x[0] + '">' + (x[3] ? "고치기" : "하러 가기") + " " + icon("arrowRight", "xs") + "</a></li>").join("") +
         '<li><span class="a-vstep-n">' + (steps.length + 1) + "</span><div><b>수강생 화면 미리보기</b><small>VOD 수강생 눈으로 한 번 둘러보기</small></div>" + btn("미리보기 " + icon("arrowRight", "xs"), "preview", "a-btn-ghost a-btn-sm") + "</li></ol></section>" + vodAddonTodo(iid, ids) +
@@ -3862,13 +3961,56 @@
     const X = VX(), r = X.rateOf(iid), ex = mine.filter((p) => p.share != null && p.share !== ""), ym = todayStr().slice(0, 7);
     const ads = (VD().adSpend || []).filter((x) => x.iid === iid).sort((a, b) => (a.ym < b.ym ? 1 : -1)).slice(0, 6);
     const big = (t, n, d) => '<div class="vs-rate2"><small>' + t + "</small><b>" + n + '<em>%</em></b><span class="vs-rbar"><i style="width:' + n + '%"></i></span><span class="vs-rlab"><span>강사 ' + n + "</span><span>플랫폼 " + (100 - n) + "</span></span><p>" + d + "</p></div>";
-    return '<section class="a-card vs-rate-card"><div class="a-card-head"><h2>내 정산 비율</h2>' + (r.at ? pill(fmtFull(DB.date.toStr(new Date(r.at))) + " 마스터 확정", "ok") : pill("기본 계약", "info")) + '<span class="a-muted">공급가액(판매가 ÷ 1.1) 기준 · 쿠폰 · 포인트 · 결제 수수료는 플랫폼 부담</span></div>' +
-      '<div class="vs-rates2">' + big("VOD 판매", r.vod, "수강권 · 연장권이 팔릴 때마다") + big("1:1 코칭 · TEA TIME", r.addon, "강사님 시간을 쓰는 상품") + big("광고비 분담", r.ad, "플랫폼이 쓴 광고비 중 강사님 몫 · 그 달 정산에서 빠져요") + "</div>" +
+    return '<section class="a-card vs-rate-card"><div class="a-card-head"><h2>내 정산 비율</h2>' + (r.next ? pill("다음 비율 예정 · " + fmtFull(DB.date.toStr(new Date(r.next.from))) + "부터", "warn") : r.at ? pill(fmtFull(DB.date.toStr(new Date(r.from || r.at))) + "부터 · 마스터 확정", "ok") : pill("기본 계약", "info")) + '<span class="a-muted">' + (X.taxMode() === "supply" ? "공급가액(판매가 ÷ 1.1) 기준" : "판매가(부가세 포함) 기준") + " · 쿠폰 · 포인트 · 결제 수수료는 플랫폼 부담</span></div>" +
+      '<div class="vs-rates2">' + X.RATE_KEYS.map((x) => big(x[1], r[x[0]], x[2])).join("") + big("광고비 분담", r.ad, "플랫폼이 쓴 광고비 중 강사님 몫 · 그 달 정산에서 빠져요") + "</div>" +
+      (r.next ? '<p class="vs-rmemo">' + icon("clock", "xs") + " 다음 비율 · " + esc(vdRateNextTxt(r)) + " (그 전에 결제한 주문은 지금 비율)</p>" : "") +
       (r.memo ? '<p class="vs-rmemo">' + icon("file", "xs") + " 계약 메모 · " + esc(r.memo) + "</p>" : "") +
       (ex.length ? '<p class="vs-rmemo">' + icon("alert", "xs") + " 따로 정한 강의 · " + ex.map((p) => esc(p.title) + " " + p.share + "%").join(" · ") + "</p>" : "") +
       '<div class="vs-why"><b>왜 5 : 5인가요?</b><span>DOOGO CLASS 스튜디오에서 촬영하고, 편집 · 썸네일 · 상세페이지 · 장소 · 장비 · 판매 운영까지 플랫폼이 맡아요. 강사님은 강의 자료(PPT)만 준비하면 돼요. 비율은 강사님과 조율해 마스터가 확정하면 여기에 바로 보여요.</span></div>' +
       '<h3 class="vs-sub">광고비 내역 <small>마스터가 실제 집행액을 적어요 · 강사 분담 ' + r.ad + "%</small></h3>" +
       (ads.length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>월</th><th>강의</th><th class="right">광고비</th><th class="right">내 분담</th><th>메모</th></tr></thead><tbody>' + ads.map((x) => { const p = x.pid ? vdP(x.pid) : null, mine2 = Math.round((Number(x.amount) || 0) * X.adSplitOf(iid) / 100 / 10) * 10; return "<tr><td>" + vdYMtxt(x.ym) + (x.ym === ym ? " " + pill("이번 달", "info") : "") + "</td><td>" + (p ? esc(p.title) : "전체 VOD") + '</td><td class="right num">' + won(x.amount) + '</td><td class="right num"><b>- ' + won(mine2) + "</b></td><td>" + esc(x.memo || "") + "</td></tr>"; }).join("") + "</tbody></table></div>" : '<p class="a-muted p-small">아직 광고비 기록이 없어요.</p>') + "</section>";
+  }
+  /* ---------- 정산 달력 (강사): 며칠에 무엇이 몇 개 팔려 얼마를 벌었는지 ---------- */
+  const VC_KIND = [["vod", "VOD", "monitorPlay"], ["ebook", "전자책", "book"], ["live", "LIVE", "video"], ["coach", "코칭권", "message"], ["tea", "TEA TIME", "coffee"]];
+  // 달력 칸이 좁은 휴대폰에서는 만 원 단위로 (174,000원 → 17.4만)
+  const vcMan = (n) => (n >= 1e6 ? Math.round(n / 1e4) + "만" : n >= 1e4 ? Math.round(n / 1e3) / 10 + "만" : won(n));
+  function pageInsVodCal() {
+    const iid = IID(), X = VX(), ym = ui.vcYM || todayStr().slice(0, 7), t0 = todayStr();
+    const os = VD().orders.filter((o) => vdKey(o) === iid && vdLive(o) && vdYM(o.paidAt) === ym).sort((a, b) => a.paidAt - b.paidAt);
+    const day = {}, tot = { n: 0, base: 0, ins: 0 }, byK = {};
+    VC_KIND.forEach((k) => { byK[k[0]] = { n: 0, base: 0, ins: 0 }; });
+    os.forEach((o) => {
+      const d = DB.date.toStr(new Date(o.paidAt)), k = X.rateKeyOf(o), ins = vdInsAmt(o), base = Math.round(X.baseOf(o) * vdKeep(o));
+      const x = (day[d] = day[d] || { n: 0, ins: 0, base: 0, k: {}, os: [] });
+      x.n++; x.ins += ins; x.base += base; x.k[k] = (x.k[k] || 0) + 1; x.os.push(o);
+      tot.n++; tot.base += base; tot.ins += ins; if (byK[k]) { byK[k].n++; byK[k].base += base; byK[k].ins += ins; }
+    });
+    const y = Number(ym.slice(0, 4)), mo = Number(ym.slice(5, 7)) - 1, first = new Date(y, mo, 1).getDay(), days = new Date(y, mo + 1, 0).getDate();
+    const sel = ui.vcDay && ui.vcDay.slice(0, 7) === ym ? ui.vcDay : day[t0] ? t0 : (Object.keys(day).sort().pop() || "");
+    const st = vdStmt(iid, ym), ss = vdStState(st), r = X.rateOf(iid);
+    const cells = [];
+    for (let i = 0; i < first; i++) cells.push('<div class="vc-d vc-pad" aria-hidden="true"></div>');
+    for (let dd = 1; dd <= days; dd++) {
+      const d = ym + "-" + String(dd).padStart(2, "0"), x = day[d], dow = (first + dd - 1) % 7;
+      cells.push('<button type="button" class="vc-d' + (x ? " has" : "") + (d === t0 ? " today" : "") + (d === sel ? " on" : "") + (dow === 0 ? " sun" : dow === 6 ? " sat" : "") + '" data-action="vc-day" data-d="' + d + '"' + (x ? ' aria-label="' + dd + "일 판매 " + x.n + "건 · 정산 " + won(x.ins) + '"' : "") + ">" +
+        '<span class="vc-dn">' + dd + "</span>" +
+        (x ? '<b class="vc-amt"><span class="vc-full">' + won(x.ins) + '</span><span class="vc-short">' + vcMan(x.ins) + '</span></b><span class="vc-ks">' + VC_KIND.filter((k) => x.k[k[0]]).map((k) => '<i class="vc-k vc-k-' + k[0] + '">' + k[1] + " " + x.k[k[0]] + "</i>").join("") + "</span>" : "") + "</button>");
+    }
+    const sx = sel && day[sel];
+    const detail = sel ? '<section class="a-card vc-detail"><div class="a-card-head"><h2>' + esc(fmtFull(sel)) + " 판매</h2>" + (sx ? '<span class="a-muted">' + sx.n + "건 · 판매가 " + won(sx.base) + " · 정산 <b>" + won(sx.ins) + "</b></span>" : "") + "</div>" +
+      (sx ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>시각</th><th>상품</th><th>종류</th><th class="right">판매가</th><th class="right">비율</th><th class="right">정산액</th></tr></thead><tbody>' +
+        sx.os.map((o) => {
+          const k = X.rateKeyOf(o), kk = VC_KIND.find((z) => z[0] === k) || VC_KIND[0], dt = new Date(o.paidAt), sh = X.shareVal ? X.shareVal(o) : null;
+          return '<tr><td class="num">' + String(dt.getHours()).padStart(2, "0") + ":" + String(dt.getMinutes()).padStart(2, "0") + "</td><td>" + esc(o.title) + (X.optTxt(o) ? '<small class="a-memo">' + esc(X.optTxt(o)) + "</small>" : "") + (o.status === "refunded" ? '<small class="a-memo">부분 환불</small>' : "") +
+            '</td><td><span class="vc-k vc-k-' + k + '">' + kk[1] + '</span></td><td class="right num">' + won(Math.round(X.baseOf(o) * vdKeep(o))) + '</td><td class="right num">' + (sh == null ? "-" : sh + "%") + '</td><td class="right num"><b>' + won(vdInsAmt(o)) + "</b></td></tr>";
+        }).join("") + "</tbody></table></div>" : emptyBox("calendar", "이날은 판매가 없어요.")) + "</section>" : "";
+    return head("정산 달력", "날짜마다 무엇이 몇 개 팔렸고, 정산으로 얼마를 받는지 한눈에 봐요. 정산은 매달 1일~말일 판매분을 다음 달 10일에 지급해요.", vdStoreBtn()) +
+      '<section class="a-card vc-card"><div class="a-card-head a-cal-head"><button type="button" class="a-icon-btn" data-action="vc-ym" data-dir="-1" aria-label="이전 달">' + icon("chevLeft") + "</button><h2>" + vdYMtxt(ym) + '</h2><button type="button" class="a-icon-btn" data-action="vc-ym" data-dir="1" aria-label="다음 달">' + icon("chevRight") + "</button>" +
+        '<span class="a-cal-sum">판매 <b>' + tot.n + "건</b> · 판매가 <b>" + won(tot.base) + "</b> · 정산 예정 <b>" + won(tot.ins) + "</b></span>" + pill(ss.t, ss.c) + "</div>" +
+        '<div class="vc-sum">' + VC_KIND.map((k) => '<div class="vc-sum-i vc-k-' + k[0] + '"><span>' + (k[2] === "coffee" ? X.icx("coffee", "xs") : icon(k[2], "xs")) + k[1] + "</span><b>" + byK[k[0]].n + "건</b><small>" + won(byK[k[0]].ins) + '</small><small class="vc-my">내 몫 ' + r[k[0]] + "%</small></div>").join("") + "</div>" +
+        '<div class="vc-grid" role="grid" aria-label="' + esc(vdYMtxt(ym)) + ' 정산 달력">' + ["일", "월", "화", "수", "목", "금", "토"].map((w, i) => '<div class="vc-w' + (i === 0 ? " sun" : i === 6 ? " sat" : "") + '">' + w + "</div>").join("") + cells.join("") + "</div>" +
+        '<p class="a-muted p-small">' + icon("coins", "xs") + " 정산 예정 금액은 " + (X.taxMode() === "supply" ? "공급가액(판매가 ÷ 1.1)" : "판매가(부가세 포함)") + " × 내 비율이에요. 광고비 분담 · 확정 뒤 환불 차감은 월 명세서에서 빠져요 (" + vdYMtxt(ym) + " 지급 예정 " + won(st.pay) + " · " + fmtFull(vdPayDate(ym)) + ').</p></section>' +
+      detail;
   }
   function pageInsVodSettle() {
     const iid = IID(), v = VD(), X = VX(), mine = v.products.filter((p) => p.iid === iid), ym = todayStr().slice(0, 7), last = vdYMadd(ym, -1);
@@ -3891,19 +4033,19 @@
         months.map((x) => { const at = ' data-k="' + esc(iid) + '" data-m="' + esc(x.ym) + '"'; return "<tr" + ((x.n || x.rec || x.adDed || x.carry) ? "" : ' class="a-dim"') + "><td><b>" + vdYMtxt(x.ym) + '</b><div class="vs-chs">' + vdChTags(x) + '</div></td><td class="num">' + x.n + '건</td><td class="right num">' + won(x.base) + '</td><td class="right num">' + won(x.ins) + '</td><td class="right num">' + (x.ded ? "- " + won(x.ded) : "0원") + '</td><td class="right num">' + vdAdCell(x) + '</td><td class="right num">' + (x.biz ? "+ " + won(x.vat) : x.wh ? "- " + won(x.wh) : "0원") + '</td><td class="right num"><b>' + won(x.pay) + "</b>" + vdNextTxt(x) + "</td><td>" + ((x.n || x.rec || x.adDed || x.carry) ? pill(x.s.t, x.s.c) : '<span class="a-muted">-</span>') + '</td><td class="right vs-acts">' + ((x.n || x.rec || x.adDed || x.carry) ? btn("명세서", "vda-stm", "a-btn-ghost a-btn-sm", at) : "") + (x.s.k === "confirmed" && x.biz ? btn("세금계산서 발행 완료", "vda-inv", "a-btn-primary a-btn-sm", ' data-m="' + esc(x.ym) + '"') : "") + "</td></tr>"; }).join("") +
       "</tbody></table></div></section>" +
       '<section class="a-card"><div class="a-card-head"><h2>정산 받을 정보</h2><span class="a-muted">마스터에게만 보여요</span></div><form id="vs-prof-form" class="a-form" novalidate>' +
-        '<div class="vs-type">' + [["person", "개인 (프리랜서)", "사업소득 3.3%를 떼고 지급해요"], ["biz", "사업자", "정산 금액 + 부가세 10% · 세금계산서를 발행해 주세요"]].map((t) => '<label class="vb-kind-o"><input type="radio" name="type" value="' + t[0] + '"' + ((pf.type || "person") === t[0] ? " checked" : "") + "><span><b>" + t[1] + "</b><small>" + t[2] + "</small></span></label>").join("") + "</div>" +
+        '<div class="vs-type">' + [["person", "개인 (프리랜서)", "사업소득 3.3%를 떼고 지급해요"], ["biz", "사업자", X.taxMode() === "gross" ? "판매가 합계로 세금계산서를 발행해 주세요 · 수수료분은 두고홀딩스가 발행" : X.taxMode() === "net" ? "정산 금액(부가세 포함)으로 세금계산서를 발행해 주세요" : "정산 금액 + 부가세 10% · 세금계산서를 발행해 주세요"]].map((t) => '<label class="vb-kind-o"><input type="radio" name="type" value="' + t[0] + '"' + ((pf.type || "person") === t[0] ? " checked" : "") + "><span><b>" + t[1] + "</b><small>" + t[2] + "</small></span></label>").join("") + "</div>" +
         '<div class="a-form-row"><div class="a-field"><label for="vs-name">이름 · 상호</label><input class="a-input" id="vs-name" name="name" value="' + esc(pf.name || "") + '" maxlength="40"></div><div class="a-field"><label for="vs-biz">사업자등록번호 <small>(사업자만)</small></label><input class="a-input" id="vs-biz" name="bizNo" value="' + esc(pf.bizNo || "") + '" maxlength="12" inputmode="numeric" placeholder="000-00-00000"></div></div>' +
         '<div class="a-form-row"><div class="a-field"><label for="vs-bank">은행</label><input class="a-input" id="vs-bank" name="bank" value="' + esc(pf.bank || "") + '" maxlength="20" placeholder="국민은행"></div><div class="a-field"><label for="vs-acc">계좌번호</label><input class="a-input" id="vs-acc" name="account" value="' + esc(pf.account || "") + '" maxlength="30" inputmode="numeric"></div><div class="a-field"><label for="vs-hold">예금주</label><input class="a-input" id="vs-hold" name="holder" value="' + esc(pf.holder || "") + '" maxlength="30"></div></div>' +
         '<div class="a-field"><label for="vs-mail">정산 · 세금계산서 이메일</label><input class="a-input" id="vs-mail" name="email" type="email" value="' + esc(pf.email || "") + '" maxlength="80"></div>' +
         '<p class="a-muted p-small">' + icon("shieldCheck", "xs") + " 주민등록번호 같은 원천징수 신고 정보는 화면에 저장하지 않고, 첫 지급 전에 마스터가 따로 안전하게 받아요.</p>" +
         '<p class="a-error" id="vs-error"></p><div class="a-form-actions"><button class="a-btn a-btn-primary" type="submit">정산 정보 저장</button></div></form></section>' +
       '<section class="a-card a-settle-note"><h2>' + icon("shieldCheck", "sm") + " 정산 기준</h2><ul>" +
-        "<li>정산액 = 할인 전 판매가 ÷ 1.1(부가세를 뺀 공급가액) × 정산 비율. 플랫폼이 발행한 쿠폰 · 포인트 할인과 카드 결제 수수료는 플랫폼이 부담해요.</li>" +
-        "<li>정산 비율은 마스터가 강사님과 조율해 확정한 비율이에요(기본 강사 5 : 플랫폼 5). 결제할 때 주문에 남아서, 비율이 바뀌어도 이미 결제한 주문은 그대로예요.</li>" +
+        "<li>" + (X.taxMode() === "supply" ? "정산액 = 할인 전 판매가 ÷ 1.1(부가세를 뺀 공급가액) × 정산 비율." : "정산액 = 할인 전 판매가(부가세 포함) × 정산 비율. 예: 100만 원어치 팔리고 비율이 60%면 60만 원이에요.") + " 플랫폼이 발행한 쿠폰 · 포인트 할인과 카드 결제 수수료는 플랫폼이 부담해요.</li>" +
+        "<li>정산 비율은 마스터가 강사님과 조율해 확정한 비율이에요(기본 강사 5 : 플랫폼 5). VOD 강의 · 전자책 · LIVE · 1:1 코칭권 · TEA TIME마다 따로 정할 수 있고, 적용 시작일 전에 결제한 주문은 그때 비율 그대로예요.</li>" +
         "<li>광고비는 마스터가 달마다 실제 집행액을 적고, 강사 분담분(기본 50%)을 그 달 정산에서 빼요. 내역은 위 ‘광고비 내역’에서 볼 수 있어요.</li>" +
         "<li>매달 1일 ~ 말일 판매분을 다음 달 초에 마스터가 확정하고, 다음 달 10일에 등록한 계좌로 지급해요. 10일이 주말 · 공휴일이면 다음 영업일이에요.</li>" +
         "<li>확정 전에 환불된 주문은 빠지고, 확정한 뒤 환불되면 다음 정산에서 차감해요.</li>" +
-        "<li>개인 강사는 사업소득 3.3%(소득세 3% + 지방소득세 0.3%)를 떼고 지급해요. 사업자 강사는 정산 금액에 부가세 10%를 더해 세금계산서를 발행해 주시면 지급해요.</li></ul></section>";
+        "<li>개인 강사는 사업소득 3.3%(소득세 3% + 지방소득세 0.3%)를 떼고 지급해요. " + (X.taxMode() === "gross" ? "사업자 강사는 그 달 판매가 합계로 (주)두고홀딩스에 세금계산서를 발행하고, 두고홀딩스가 수수료 · 광고비 분담분 세금계산서를 발행한 뒤 차액(정산 금액)을 지급해요." : X.taxMode() === "net" ? "사업자 강사는 정산 금액(부가세 포함)으로 (주)두고홀딩스에 세금계산서를 발행해 주시면 지급해요." : "사업자 강사는 정산 금액에 부가세 10%를 더해 세금계산서를 발행해 주시면 지급해요.") + " 월별 명세서에 발행할 금액이 나와요.</li></ul></section>";
   }
 
   /* ---------- VOD 부가 상품: 1:1 코칭 답변 · TEA TIME 신청 (DOOGO CLASS에서 결제) ---------- */
@@ -3937,7 +4079,7 @@
             ((x.q.images || []).length ? '<div class="a-shots a-q-shots">' + x.q.images.map((im) => '<a class="a-shot" href="' + im.data + '" target="_blank" rel="noopener"><img src="' + im.data + '" alt="' + esc(im.name) + '"></a>').join("") + "</div>" : "") +
             '<form class="a-q-form" data-sid="' + x.s.id + '" data-qid="' + x.q.id + '"><textarea class="a-input" name="answer" rows="4" placeholder="예: 샘플 요청 메일에 단가를 같이 물어봐도 괜찮아요. ‘검토용’이라고 밝혀 두면 답장이 더 빨라요." aria-label="답변">' + esc(x.q.answer || "") + '</textarea><button class="a-btn a-btn-primary a-btn-sm" type="submit">' + (x.q.answer ? "답변 수정" : "답변 등록") + "</button></form></article>"; }).join("") + "</div>"
           : emptyBox("message", f === "open" ? "답변을 기다리는 코칭 질문이 없어요." : "코칭 질문이 없어요.")) + "</section>" +
-      '<p class="a-hint">' + icon("coins", "xs") + " 코칭권 매출은 부가 상품 정산 비율(기본 " + X.addonShare() + "%)로 정산돼요. 사용 기간이 끝난 코칭권의 남은 횟수는 사라져요.</p>";
+      '<p class="a-hint">' + icon("coins", "xs") + " 코칭권 매출은 내 코칭권 정산 비율(" + X.addonShare(IID()) + "%)로 정산돼요. 사용 기간이 끝난 코칭권의 남은 횟수는 사라져요.</p>";
   }
   const slotStart = (s) => (/오전/.test(s || "") ? "10:00" : /저녁/.test(s || "") ? "19:00" : "14:00");
   function teaItem(o) {
@@ -3946,7 +4088,7 @@
     return '<article class="a-q a-tea"><div class="a-q-head"><span class="a-avatar">' + esc(String(m.name || "?").slice(0, 1)) + "</span><div><b>" + esc(m.name || "회원") + " · " + (t.min || 60) + "분 · " + esc(X.TEA_MODE[t.mode] || "") + "</b><small>" + esc(p.title || o.title) + " · 신청 " + fmtStamp(o.at) + " · 연락처 뒷자리 " + esc(X.last4(vdPhoneOf(o, m)) || "-") + "</small></div>" + (PL[k] || "") + "</div>" +
       '<p class="a-q-body">' + esc(t.topic || "") + "</p>" +
       '<p class="a-tea-want">' + icon("calendar", "xs") + "희망 " + esc([t.d1, t.d2].filter(Boolean).join(" / ")) + " · " + esc(t.slot || "") + ((k === "ok" || k === "done") && t.when ? "<br>" + icon("check", "xs") + "확정 <b>" + esc(X.teaWhen(t)) + "</b>" + (t.where ? " · " + esc(t.where) : "") : "") + "</p>" +
-      (k === "req" ? '<form class="a-tea-form" data-id="' + esc(o.id) + '"><input class="a-input" type="datetime-local" name="when" value="' + esc(t.d1 ? t.d1 + "T" + slotStart(t.slot) : "") + '" aria-label="확정 일시"><input class="a-input" name="where" maxlength="120" value="' + esc(t.where || "") + '" placeholder="' + (t.mode === "offline" ? "장소 (예: 강남역 ○○카페 2층)" : "Zoom 링크 또는 안내 (예: 하루 전 문자로 링크)") + '" aria-label="장소 또는 링크"><button class="a-btn a-btn-primary a-btn-sm" type="submit">일정 확정</button></form>' + (isCoach() ? "" : '<div class="a-q-acts">' + btn("취소 · 환불 요청", "tea-cancel", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') + "</div>")
+      (k === "req" ? '<form class="a-tea-form" data-id="' + esc(o.id) + '"><input class="a-input" type="datetime-local" name="when" value="' + esc(t.d1 ? t.d1 + "T" + slotStart(t.slot) : "") + '" aria-label="확정 일시"><input class="a-input" name="where" maxlength="120" value="' + esc(t.where || "") + '" placeholder="Zoom 링크 (예: https://zoom.us/j/…)" aria-label="Zoom 링크"><button class="a-btn a-btn-primary a-btn-sm" type="submit">일정 확정</button></form>' + (isCoach() ? "" : '<div class="a-q-acts">' + btn("취소 · 환불 요청", "tea-cancel", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') + "</div>")
         : k === "ok" ? '<div class="a-q-acts">' + (t.when && new Date(t.when).getTime() > Date.now() ? '<span class="a-muted p-small">시작 시간이 지나면 ‘진행 완료’를 누를 수 있어요.</span>' : btn(icon("check", "sm") + "진행 완료", "tea-done", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"')) + btn("일정 다시 잡기", "tea-reopen", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') + "</div>" : "") +
       "</article>";
   }
@@ -4009,7 +4151,7 @@
       '<section class="a-card a-vl-howto"><b>' + icon("circlePlay", "sm") + " 비메오 링크 넣는 법</b><ol><li>비메오(vimeo.com)에 강의 영상을 올려요.</li><li>공개 범위는 ‘링크가 있는 사람만’ 또는 ‘숨김’, 퍼가기 허용 도메인에 doogoclass.com을 넣어요.</li><li>‘공유 → 링크 복사’로 받은 주소(예: https://vimeo.com/76979871)를 아래 ‘영상 링크’ 칸에 붙여 넣고 저장해요.</li></ol></section>" +
       (p.curriculum || []).map((c, ci) => '<section class="a-card a-vl-ch"><div class="a-card-head"><h2><span class="a-vl-no">' + String(ci + 1).padStart(2, "0") + "</span>" + esc(c.title || "파트 " + (ci + 1)) + '</h2><span class="a-muted">강의 ' + (c.lessons || []).length + "개</span></div>" +
         (c.lessons || []).map((l, li) => { const vk = vidKind(l.video), at = ' data-p="' + esc(p.id) + '" data-ci="' + ci + '" data-li="' + li + '"';
-          return '<form class="a-vl"' + at + ' novalidate><div class="a-vl-h"><span class="a-vl-n">' + (ci + 1) + "-" + (li + 1) + '</span><input class="a-input" name="title" value="' + esc(l.title) + '" maxlength="80" aria-label="강의 이름" placeholder="강의 이름"><span class="a-vl-mw"><input class="a-input" name="min" type="number" min="0" max="600" inputmode="numeric" value="' + esc(l.min || "") + '" aria-label="길이(분)"><small>분</small></span>' + pill(vk[0], vk[1]) + "</div>" +
+          return '<form class="a-vl"' + at + ' novalidate><div class="a-vl-h"><span class="a-vl-n">' + (ci + 1) + "-" + (li + 1) + '</span><input class="a-input" name="title" value="' + esc(l.title) + '" maxlength="80" aria-label="강의 이름" placeholder="강의 이름"><span class="a-vl-mw"><input class="a-input" name="min" type="number" min="0" max="600" inputmode="numeric" value="' + esc(l.min || "") + '" aria-label="길이(분)"><small>분</small></span>' + DB.vdur.label(l.video, l.durSec, "", "vda-dur") + pill(vk[0], vk[1]) + "</div>" +
             '<div class="a-field"><label>영상 링크 <small>비메오 추천 · 유튜브 · mp4</small></label><input class="a-input" name="video" value="' + esc(l.video || "") + '" maxlength="300" placeholder="https://vimeo.com/123456789"></div>' +
             '<div class="a-field"><label>강의 노트 <small>영상 아래에 보여요</small></label><textarea class="a-input" name="desc" rows="2" maxlength="1000" placeholder="이 강의에서 꼭 기억할 내용, 실습 순서를 적어 주세요.">' + esc(l.desc || "") + "</textarea></div>" +
             '<div class="a-field"><span class="a-label">수업 자료 <small>' + (l.files || []).length + "개 · 수강생이 강의실 ‘수업 자료’에서 미리보기 · 내려받기</small></span>" +
@@ -4072,7 +4214,7 @@
   /* ---------- VOD 버튼 · 입력 ---------- */
   document.addEventListener("click", (e) => {
     if (!isActive()) return;
-    const a = e.target.closest("[data-action^='vda-']"); if (!a || a.disabled) return;
+    const a = e.target.closest("[data-action^='vda-'], [data-action^='vc-']"); if (!a || a.disabled) return;
     const d = a.dataset, v = VD(), form = document.getElementById("vda-form");
     const O = () => v.orders.find((o) => o.id === d.id);
     const edit = (fn) => { vdSync(form); fn(ui.vdDraft); render(); };
@@ -4083,6 +4225,8 @@
       case "vda-year": ui.vdYear = (ui.vdYear || Number(todayStr().slice(0, 4))) + Number(d.dir); render(); break;
       case "vda-rate-edit": vdRateModal(d.k); break;
       case "vda-ad-del": { const v = VD(), i = (v.adSpend || []).findIndex((x) => x.id === d.id); if (i < 0) break; confirmModal("광고비 지우기", won(v.adSpend[i].amount) + " 광고비 기록을 지울까요? 확정 전 정산에서 다시 빠져요.", "지우기", true, () => { v.adSpend.splice(i, 1); commit("광고비 기록을 지웠어요."); }); break; }
+      case "vc-ym": ui.vcYM = vdYMadd(ui.vcYM || todayStr().slice(0, 7), Number(d.dir)); ui.vcDay = ""; render(); break;
+      case "vc-day": ui.vcDay = d.d; { const y0 = window.scrollY; render(); window.scrollTo(0, y0); const el = document.querySelector(".vc-detail"); if (el && window.innerWidth < 720) el.scrollIntoView({ behavior: "smooth", block: "start" }); } break;
       case "vda-ym": ui.vdYM = vdYMadd(ui.vdYM || vdYMadd(todayStr().slice(0, 7), -1), Number(d.dir)); render(); break;
       case "vda-paid": { const o = O(); if (!o) break; confirmModal("입금 확인", esc((vdMember(o.mid) || {}).name || "") + " 님 · " + esc(o.title) + "<br>입금자명 <b>" + esc(vdDep(o)) + "</b> · <b>" + won(vdGrpAmt(o)) + "</b> 입금을 확인했나요? 확인하면 바로 수강할 수 있어요.", "입금 확인", false, () => { if (vdSrv()) { vdBankAct("bankOk", o.grp || o.no, (o.grp || o.no) + " 입금을 확인했어요. 회원이 바로 수강할 수 있어요."); return; } o.status = "paid"; o.paidAt = Date.now(); o.depositBy = (staffMe() || {}).name || "ADMIN"; if (o.share == null) o.share = vdShare(o); v.orders.filter((x) => x.grp === o.no && x.status === "pending").forEach((x) => { x.status = "paid"; x.paidAt = o.paidAt; }); commit(o.no + " 입금을 확인했어요. 회원이 바로 수강할 수 있어요."); }); break; }
       case "vda-cancel": { const o = O(); if (!o) break; confirmModal("주문 취소", esc(o.no) + " 주문을 취소할까요? (입금 기한이 지났을 때)" + (o.mcid || o.pointOff ? "<br>쓴 쿠폰 · 포인트는 회원에게 돌려줘요." : ""), "주문 취소", true, () => { if (vdSrv()) { vdBankAct("bankCancel", o.grp || o.no, (o.grp || o.no) + " 주문을 취소했어요. 쓴 쿠폰 · 포인트는 회원에게 돌려줬어요."); return; } if (VX().restoreOrder) VX().restoreOrder(o); if (o.tea) o.tea.st = "cancel"; Object.assign(o, { status: "canceled", canceledAt: Date.now(), canceledBy: (S && (S.name || S.role)) || "master" }); v.orders.filter((x) => x.grp === o.no && x.status === "pending").forEach((x) => { if (VX().restoreOrder) VX().restoreOrder(x); Object.assign(x, { status: "canceled", canceledAt: Date.now() }); }); commit(o.no + " 주문을 취소했어요. 주문 내역에 ‘취소’로 남아요."); }); break; }
@@ -4138,7 +4282,7 @@
       case "vda-insoff": { const v = VD(), k = d.k, nm = d.n || k; v.insOff = Array.isArray(v.insOff) ? v.insOff : []; const i = v.insOff.indexOf(k);
         if (i >= 0) { v.insOff.splice(i, 1); commit(nm + " 강사 클래스를 스토어에 다시 보여 줘요."); break; }
         confirmModal("스토어에서 숨기기", "<b>" + esc(nm) + "</b> 강사의 클래스 · 배너 · 강사진 카드를 스토어에서 숨길까요?<br>클래스는 지우지 않아요. 새로 살 수만 없고, 이미 산 회원은 계속 들을 수 있어요. 언제든 다시 켤 수 있어요.", "숨기기", true, () => { v.insOff.push(k); commit(nm + " 강사 클래스를 스토어에서 숨겼어요. 클래스는 그대로 남아 있어요."); }); break; }
-      case "vda-cph-del": if (ui.vdDraft) { ui.vdDraft.creatorPhoto = ""; render(); toast("강사 사진을 지웠어요. 저장을 눌러야 반영돼요."); } break;
+      case "vda-cph-del": if (ui.vdDraft) { ui.vdDraft.creatorPhoto = "none"; render(); toast("강사 사진을 지웠어요. 저장을 눌러야 반영돼요."); } break;
       case "vda-cancel-exp": { const ex = vdExpired(); confirmModal("기한 지난 주문 취소", "입금 기한(" + (Number(VD().settings.payDays) || 3) + "일)이 지난 무통장 주문 " + ex.length + "건을 한 번에 취소할까요?<br>쓴 쿠폰 · 포인트는 회원에게 돌려주고, 잡아 둔 자리도 다시 열려요.", "모두 취소", true, () => { if (vdSrv()) { vdBankAct("bankCancel", ex.filter((o) => !o.grp).map((o) => o.no), "입금 기한 지난 주문 " + ex.filter((o) => !o.grp).length + "건을 취소했어요."); return; } const at = Date.now(); ex.forEach((o) => { if (VX().restoreOrder) VX().restoreOrder(o); if (o.tea) o.tea.st = "cancel"; Object.assign(o, { status: "canceled", canceledAt: at, canceledBy: "기한 지남" }); }); commit("기한 지난 주문 " + ex.length + "건을 취소했어요."); }); break; }
       case "vda-mem": vdMemberModal(d.id); break;
       case "vda-pt": { const m = vdMember(d.id), amt = Math.round(Number((document.getElementById("vda-pt-amt") || {}).value) || 0), why = ((document.getElementById("vda-pt-why") || {}).value || "").trim(); if (!m) break; if (!amt) { toast("더하거나 뺄 포인트를 적어 주세요. (빼려면 -500처럼)", "warn"); break; } if (!why) { toast("사유를 적어 주세요. 회원 포인트 내역에 보여요.", "warn"); break; } if ((Number(m.points) || 0) + amt < 0) { toast("포인트가 0보다 작아질 수 없어요.", "warn"); break; } VX().addPoint(m, amt, why + " (운영자)"); DB.save(); actLog(m.name + " 포인트 " + (amt > 0 ? "+" : "") + amt); vdMemberModal(d.id); toast("포인트를 " + (amt > 0 ? "더했어요." : "뺐어요.")); break; }
@@ -4750,7 +4894,7 @@
   Object.assign(MPAGES, { "vod-crm": pageCrm, "vod-seg": pageCrmSeg, "vod-msg": pageCrmMsg, "vod-crm-rp": pageCrmReport });
   Object.assign(MPAGES, { vod: pageMasterVod, "vod-classes": pageMasterVodClasses, "vod-members": pageMasterVodMembers, "vod-display": pageMasterVodDisplay, dc: pageMasterDc, "vod-inquiries": pageMasterVodInquiries, "vod-recruit": (r) => { ui.inqFilter = "vod"; return pageMasterPartners(r).replace("<h1>강사 입점 문의</h1>", "<h1>DOOGO CLASS 강사 모집 지원</h1>"); } });
   Object.assign(PAGES, { "ops-notices": pageOpsNotices, contract: pageInsContract });
-  Object.assign(PAGES, { vod: pageInsVod, "vod-live": pageInsVodLive, "vod-settle": pageInsVodSettle, "vod-students": pageVodStudents, vodlink: pageVodLink, vodlessons: pageVodLessons, coaching: pageCoaching, teatime: pageTeaTime });
+  Object.assign(PAGES, { vod: pageInsVod, "vod-live": pageInsVodLive, "vod-settle": pageInsVodSettle, "vod-cal": pageInsVodCal, "vod-students": pageVodStudents, vodlink: pageVodLink, vodlessons: pageVodLessons, coaching: pageCoaching, teatime: pageTeaTime });
   /* ================= 마스터: 학사 · 운영 메뉴 =================
    * 두잉고 = 강사(교수) ↔ 수강생(학생)을 잇는 튜토리얼 플랫폼. 대학 학사 운영처럼
    * 전체 기수 일정(학사 일정) · 과제 검수 · 응답 관리 · 수료 관리 · 강사 계약 · 서류 · 운영자 계정 · 활동 기록을 마스터가 본다.
@@ -5627,7 +5771,24 @@
     labelTables(main); ktInit(main);
     if (window.VOD && VOD.hydrate) VOD.hydrate(main);
     if (master) { staffStrip(main); notifyBills(); notifyPartnerMsgs(); }
+    vdurFill(master);
     document.title = (master ? "마스터" : isCoach() ? "코치센터" : "강사센터") + " · 두잉고";
+  }
+  /* 영상 길이 자동 채우기 — 고칠 수 있는 강의 중 영상은 있는데 실제 길이(durSec)가 없거나 영상이 바뀐 것은
+   * 서버에서 실제 길이를 받아 조용히 저장해요 (분 칸도 맞춰요). 마스터: DOOGO CLASS 모든 클래스 ·
+   * 강사 · 코치: 자기 VOD 클래스 + 두잉고 강의 · 다시보기 · 응원 영상 · 영상 자료 */
+  let vdurT = 0;
+  function vdurFill(master) {
+    if (!DB.remote.on) return;
+    // 저장만 하고 다시 그리지 않아요 (열린 창 · 입력 중인 칸이 닫히지 않게) — 화면의 길이 글자는 DB.vdur 가 바로 바꿔요
+    const X = window.VOD, later = () => { clearTimeout(vdurT); vdurT = setTimeout(() => DB.save(), 600); };
+    if (X && (master || !isCoach() || can("vodlessons"))) DB.vdur.fill(VD().products.filter((p) => master || p.iid === IID()).flatMap((p) => X.lessons(p)), (l) => l.video, later, (l, sec) => { l.min = Math.max(1, Math.round(sec / 60)); });
+    if (master || (isCoach() && !can("curriculum"))) return;
+    const c = C(); if (!c) return;
+    const weeks = (c.weeks || []).concat((c.curricula || []).flatMap((cu) => cu.weeks || []));
+    DB.vdur.fill(weeks.flatMap((w) => w.lessons || []), (l) => l.youtubeId, later, (l, sec) => { l.minutes = Math.max(1, Math.round(sec / 60)); });
+    DB.vdur.fill((c.replays || []).concat(c.motivation || []), (x) => x.youtubeId, later, (x, sec) => { x.minutes = DB.vdur.fmt(sec); });
+    DB.vdur.fill(["vod", "senior"].flatMap((k) => ((c.resources || {})[k] || [])), (x) => x.youtubeId, later);
   }
   // 모바일에서 표를 카드로 바꿀 때 쓰는 칸 이름(data-label)을 표 머리글에서 채운다
   function labelTables(scope) {
@@ -6019,8 +6180,9 @@
       render(); toast("입금 계좌 · 부가세 설정을 저장했어요.");
       return;
     }
-    const forms = { "vda-form": saveVodClass, "vda-ban-form": saveVodBanner, "vda-tile-form": saveVodTiles, "vda-rails-form": saveVodRails, "vda-cat-form": saveVodCats, "vda-topic-form": saveVodTopics, "vda-set-form": saveVodSettings, "vp-copy-form": saveVpCopy, "vda-rate-form": saveVodRate, "vda-ad-form": saveVodAd, "vs-prof-form": saveVsProfile, "vda-ref-form": saveVodRefund, "vs-inv-form": saveVsInvoice, "vda-cp-form": saveVodCoupon, "vda-iq-form": saveVodAnswer, "aff-lead-form": saveAffLead, "an-form": saveAffNotice, "sla-form": saveSla, "ct-form": saveContract, "st-form": saveStaff, "aff-form": saveAff, "aff-set-form": saveAffSet, "aff-pw-form": saveAffPw, "aff-bank-form": saveAffBank, "bill-form": saveBillForm, "pay-form": saveBillStep, "inv-form": saveBillStep, "open-form": saveBillStep, "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote, "coach-form": saveCoach };
+    const forms = { "vda-form": saveVodClass, "vda-ban-form": saveVodBanner, "vda-tile-form": saveVodTiles, "vda-rails-form": saveVodRails, "vda-cat-form": saveVodCats, "vda-topic-form": saveVodTopics, "vda-set-form": saveVodSettings, "vp-copy-form": saveVpCopy, "vda-rate-form": saveVodRate, "vda-tax-form": saveVodTax, "vda-ad-form": saveVodAd, "vs-prof-form": saveVsProfile, "vda-ref-form": saveVodRefund, "vs-inv-form": saveVsInvoice, "vda-cp-form": saveVodCoupon, "vda-iq-form": saveVodAnswer, "aff-lead-form": saveAffLead, "an-form": saveAffNotice, "sla-form": saveSla, "ct-form": saveContract, "st-form": saveStaff, "aff-form": saveAff, "aff-set-form": saveAffSet, "aff-pw-form": saveAffPw, "aff-bank-form": saveAffBank, "bill-form": saveBillForm, "pay-form": saveBillStep, "inv-form": saveBillStep, "open-form": saveBillStep, "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote, "coach-form": saveCoach };
     if (forms[f.id]) { e.preventDefault(); forms[f.id](f); return; }
+    if (f.classList.contains("vda-price")) { e.preventDefault(); saveVodPrice(f); return; }
     if (f.classList.contains("a-q-form")) {
       e.preventDefault();
       const ans = f.answer.value.trim();
@@ -6035,6 +6197,7 @@
   document.addEventListener("change", (e) => {
     if (!isActive()) return;
     const t = e.target;
+    if (t.id === "vda-price-key") { ui.vdPriceKey = t.value; render(); return; }
     if (t.id === "stu-cohort") { ui.stuCohort = t.value; ui.picked.clear(); if (ROUTE.hash.indexOf("?") > -1) ROUTE.hash = "#/center/students"; else render(); }
     else if (t.id === "rev-cohort") { ui.revCohort = t.value; ui.revPicked.clear(); render(); }
     else if (t.id === "rev-week") { ui.revWeek = t.value; ui.revPicked.clear(); render(); }

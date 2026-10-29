@@ -184,20 +184,27 @@
   function video(item, opts) {
     opts = opts || {};
     const yid = DB.youtubeId(item.youtubeId);
-    const minutes = item.minutes ? (typeof item.minutes === "number" ? item.minutes + "분" : item.minutes) : "";
+    const minutes = DB.vdur.label(item.youtubeId, item.durSec, item.minutes ? (typeof item.minutes === "number" || /^\d+$/.test(item.minutes) ? item.minutes + "분" : item.minutes) : "", "vp-time");
     if (yid) {
       return '<div class="video" data-yid="' + esc(yid) + '"><div class="video-ph" role="button" tabindex="0" data-action="video-play" aria-label="' + esc(item.title) + ' 재생">' +
         '<img class="vp-img" src="https://i.ytimg.com/vi/' + esc(yid) + '/hqdefault.jpg" alt="" loading="lazy">' +
         '<span class="vp-title">' + esc(opts.headline || item.title) + '</span><span class="vp-play">' + icon("play") + "</span>" +
         '<span class="vp-foot"><a href="https://www.youtube.com/watch?v=' + esc(yid) + '" target="_blank" rel="noopener" class="vp-ext">유튜브에서 보기 ' + icon("arrowUpRight", "xs") + "</a>" +
-        (minutes ? '<span class="vp-time">' + esc(minutes) + "</span>" : "") + "</span></div></div>";
+        minutes + "</span></div></div>";
     }
     const ch = D.brand.youtubeChannel;
     const tag = ch ? 'a class="video-ph" href="' + esc(ch) + '" target="_blank" rel="noopener"' : 'div class="video-ph"';
     return '<div class="video"><' + tag + ">" +
       '<span class="vp-title">' + esc(opts.headline || item.title) + '</span><span class="vp-play">' + icon("play") + "</span>" +
       '<span class="vp-foot"><span>영상 준비 중' + (ch ? " · " + esc(D.brand.name) + " 채널에서 보기" : "") + "</span>" +
-      (minutes ? '<span class="vp-time">' + esc(minutes) + "</span>" : "") + "</span></" + (ch ? "a" : "div") + "></div>";
+      minutes + "</span></" + (ch ? "a" : "div") + "></div>";
+  }
+  // 제목 줄처럼 글자로만 쓸 때: 실제 영상 길이(24:30)를 알면 그것, 모르면 적어 둔 값 (분 숫자면 ‘분’을 붙여요)
+  function lenTxt(it, pre) {
+    const s = Number(it.durSec) > 0 ? Number(it.durSec) : DB.vdur.known(it.youtubeId);
+    if (!s) DB.vdur.ask(it.youtubeId);
+    const t = s ? DB.vdur.fmt(s) : it.minutes ? (typeof it.minutes === "number" || /^\d+$/.test(it.minutes) ? it.minutes + "분" : String(it.minutes)) : "";
+    return t ? (pre || "") + t : "";
   }
   function thumb(item) {
     const yid = DB.youtubeId(item.youtubeId);
@@ -804,12 +811,12 @@
     const today = todayStr(), quote = D.quotes && D.quotes.length ? D.quotes[parseDate(today).getDate() % D.quotes.length] : "";
     const notices = (D.notices || []).slice().sort((a, b) => (b.pinned - a.pinned) || b.date.localeCompare(a.date)).slice(0, 4);
     const main = list.find((x) => vodPctOf(x) < 100) || list[0], nx = main ? vodNext(main) : null;
-    const mp = main ? vodPctOf(main) : 0, mLeft = main ? nx.lz.filter((l) => !nx.pr.done[l.id]).reduce((a, l) => a + (Number(l.min) || 0), 0) : 0;
+    const mp = main ? vodPctOf(main) : 0, mLeft = main ? Math.round(nx.lz.filter((l) => !nx.pr.done[l.id]).reduce((a, l) => a + X.lSec(l), 0) / 60) : 0;
     const hero = main
       ? '<section class="vh2"><a class="vh2-th" href="' + learnHref(main.p.id, nx.cur ? nx.cur.id : "") + '">' + X.thumbArt(main.p) + '<i class="vh2-play">' + icon("play") + "</i></a>" +
           '<div class="vh2-b"><span class="vh2-tag">' + (mp >= 100 ? "수강 완료" : nx.doneN ? "이어서 학습 중" : "학습 시작 전") + (list.length > 1 ? " · 강의 " + list.length + "개" : "") + "</span><h2>" + esc(main.p.title) + '</h2><small class="vh2-cr">' + esc(main.p.creator) + " 강사님</small>" +
             '<div class="vh2-pg"><div class="vh2-pg-t"><b>' + mp + '<em>%</em></b><span>' + nx.doneN + " / " + nx.lz.length + "강 완료" + (mLeft ? " · 남은 시간 약 " + (mLeft >= 60 ? Math.floor(mLeft / 60) + "시간 " + (mLeft % 60 ? (mLeft % 60) + "분" : "") : mLeft + "분") : "") + '</span></div><div class="vh2-bar"><i style="width:' + mp + '%"></i></div></div>' +
-            '<p class="vh2-next">' + (nx.cur ? "<small>" + (nx.doneN ? "이어서 볼 강의" : "첫 강의") + "</small><b>" + esc(nx.cur.title) + "</b><span>" + (Number(nx.cur.min) || 0) + "분</span>" : "<small>완강</small><b>모든 강의를 다 봤어요! 필요할 때마다 다시 보세요.</b>") + "</p>" +
+            '<p class="vh2-next">' + (nx.cur ? "<small>" + (nx.doneN ? "이어서 볼 강의" : "첫 강의") + "</small><b>" + esc(nx.cur.title) + "</b><span>" + X.lLen(nx.cur) + "</span>" : "<small>완강</small><b>모든 강의를 다 봤어요! 필요할 때마다 다시 보세요.</b>") + "</p>" +
             '<div class="vh2-btns"><a class="btn vh2-go" href="' + learnHref(main.p.id, nx.cur ? nx.cur.id : "") + '">' + icon("play", "sm") + (nx.cur ? (nx.doneN ? "이어 보기" : "1강부터 보기") : "다시 보기") + "</a>" +
             '<a class="btn vh2-sub" href="#/vodclass">' + esc(ML("vodclass")) + "</a></div>" + (pc !== mp && list.length > 1 ? '<span class="vh2-all">전체 강의 평균 진도 ' + pc + "%</span>" : "") + "</div></section>"
       : '<section class="card">' + empty("circlePlay", "DOOGO CLASS에 올라간 VOD가 아직 없어요.") + "</section>";
@@ -930,14 +937,14 @@
     vtLast = { t: 0, at: 0 };
     const tabs = '<div class="vt-tabs" role="tablist">' + [["toc", "목차", n.doneN + "/" + lz.length], ["note", "내 노트", ns.length ? String(ns.length) : ""], ["files", "자료", nFiles ? String(nFiles) : ""]].map((t) => '<button type="button" role="tab" class="' + (tab === t[0] ? "on" : "") + '" data-action="vt-tab" data-k="' + t[0] + '">' + t[1] + "<small" + (t[0] === "note" ? " data-ncount" : "") + ">" + t[2] + "</small></button>").join("") + "</div>";
     const toc = (x.p.curriculum || []).map((c, ci) => '<div class="vt-sch"><p class="vt-sch-h"><span>' + String(ci + 1).padStart(2, "0") + "</span>" + esc(c.title) + "</p>" + (c.lessons || []).map((l) => { const d = !!n.pr.done[l.id], on = l.id === cur.id, nc = notesOf(pid, l.id).length;
-      return '<a href="' + learnHref(pid, l.id) + '" class="vt-ls' + (on ? " on" : "") + (d ? " done" : "") + '"><i>' + (d ? icon("check", "xs") : on ? icon("play", "xs") : "") + "</i><span>" + esc(l.title) + '</span><em><span data-lnc>' + (nc ? icon("pen", "xs") + nc : "") + "</span>" + ((l.files || []).length ? icon("paperclip", "xs") : "") + "</em><small>" + (Number(l.min) || 0) + "분</small></a>"; }).join("") + "</div>").join("");
+      return '<a href="' + learnHref(pid, l.id) + '" class="vt-ls' + (on ? " on" : "") + (d ? " done" : "") + '"><i>' + (d ? icon("check", "xs") : on ? icon("play", "xs") : "") + "</i><span>" + esc(l.title) + '</span><em><span data-lnc>' + (nc ? icon("pen", "xs") + nc : "") + "</span>" + ((l.files || []).length ? icon("paperclip", "xs") : "") + "</em><small>" + X.lLen(l) + "</small></a>"; }).join("") + "</div>").join("");
     const notePane = '<div class="vt-nn"><div class="vt-tags" role="radiogroup" aria-label="노트 종류">' + NOTE_TAGS.map((t, k) => '<label class="vt-tagr t-' + t[0] + '"><input type="radio" name="vt-tag" value="' + t[0] + '"' + (k === 0 ? " checked" : "") + "><span>" + t[1] + "</span></label>").join("") + "</div>" +
       '<textarea class="textarea vt-ta" id="vt-note-text" rows="4" maxlength="2000" placeholder="강의를 들으며 기억할 내용 · 궁금한 점 · 할 일을 적어 보세요 (Ctrl + Enter 저장)">' + esc(draftGet(pid, cur.id)) + "</textarea>" +
       '<div class="vt-nn-f"><label class="vt-tc" title="영상 시간 · 비우면 시간 없이 저장">' + icon("clock", "xs") + '<input id="vt-note-t" inputmode="numeric" autocomplete="off" placeholder="0:00" aria-label="영상 시간"></label><button type="button" class="link-btn vt-now" data-action="vt-now">지금 시간</button><button type="button" class="btn btn-primary btn-sm vt-save" data-action="vt-note-save">' + icon("check", "sm") + "저장</button></div></div>" +
       '<div class="vt-nf" id="vt-nf">' + noteFilterHtml(ns) + '</div><ul class="vt-nl" id="vt-nl">' + noteListHtml(pid, cur.id) + "</ul>" +
       '<div class="vt-nfoot"><a href="#/vodclass/notes">' + icon("book", "xs") + '전체 노트 보기</a><button type="button" data-action="vt-note-dl" data-p="' + esc(pid) + '">' + icon("download", "xs") + "이 강의 노트 내려받기</button></div>";
     const filePane = withFiles.length ? withFiles.map((l) => '<div class="vt-fg"><a class="vt-fg-h' + (l.id === cur.id ? " on" : "") + '" href="' + learnHref(pid, l.id) + '">' + icon("circlePlay", "xs") + esc(l.title) + "</a>" + vtFiles(l.files) + "</div>").join("") : '<p class="vt-empty">이 강의에는 아직 수업 자료가 없어요.</p>';
-    const leftMin = lz.filter((l) => !n.pr.done[l.id]).reduce((a, l) => a + (Number(l.min) || 0), 0), allDone = lz.length > 0 && n.doneN >= lz.length;
+    const leftMin = Math.round(lz.filter((l) => !n.pr.done[l.id]).reduce((a, l) => a + X.lSec(l), 0) / 60), allDone = lz.length > 0 && n.doneN >= lz.length;
     const progCard = allDone
       ? '<div class="vt-fin"><span class="vt-fin-ic">' + icon("award", "lg") + '</span><small>COURSE COMPLETE</small><b>강의를 모두 들었어요!</b><p>' + esc(x.p.title) + " · " + lz.length + "강 완강. 끝까지 해낸 " + esc(me.name || "") + "님, 정말 멋져요.</p>" +
           '<div class="vt-fin-a"><a class="btn btn-primary btn-sm" href="#/vod/my/reviews">' + icon("star", "sm") + "수강 후기 남기기</a><a class=\"btn btn-secondary btn-sm\" href=\"" + learnHref(pid, lz[0].id) + "\">처음부터 다시 보기</a></div></div>"
@@ -947,7 +954,7 @@
     return '<div class="vt' + (allDone ? " is-fin" : "") + '" data-p="' + esc(pid) + '" data-l="' + esc(cur.id) + '">' +
       '<div class="vt-bar"><a class="vt-back" href="#/vodclass">' + icon("arrowLeft", "sm") + "<span>" + esc(ML("vodclass")) + '</span></a><div class="vt-tt"><small>' + esc(x.p.creator) + " · " + (i + 1) + " / " + lz.length + "강</small><b>" + esc(x.p.title) + '</b></div><div class="vt-pc" title="전체 진도"><span class="vt-pcbar"><i style="width:' + pc + '%"></i></span><b>' + pc + "%</b></div>" + opsKkBtn("vt-kk") + "</div>" +
       '<div class="vt-grid"><div class="vt-main"><div class="vt-stage" id="vt-stage">' + vtVideo(cur, tq) + vtWatermark() + '<button type="button" class="vt-fs" data-action="vt-fs" aria-label="전체 화면">' + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>' + "</button></div>" +
-        '<section class="vt-info"><div class="vt-info-h"><div class="vt-info-t"><small class="vt-ch">' + esc(ch.title || "") + "</small><h1>" + esc(cur.title) + '</h1><span class="vt-meta">' + (Number(cur.min) || 0) + "분 · " + (i + 1) + " / " + lz.length + "강" + (fl.length ? " · 수업 자료 " + fl.length + "개" : "") + "</span></div>" +
+        '<section class="vt-info"><div class="vt-info-h"><div class="vt-info-t"><small class="vt-ch">' + esc(ch.title || "") + "</small><h1>" + esc(cur.title) + '</h1><span class="vt-meta">' + X.lLen(cur) + " · " + (i + 1) + " / " + lz.length + "강" + (fl.length ? " · 수업 자료 " + fl.length + "개" : "") + "</span></div>" +
           '<button type="button" class="vt-memo" data-action="vt-tab" data-k="note">' + icon("pen", "sm") + "메모하기<b data-ncount>" + (ns.length || "") + "</b></button></div>" +
           (done ? '<div class="vt-donebar">' + icon("check", "sm") + "<b>이 강의를 다 들었어요</b><span>" + esc(fmtStamp(Date.now())).split(" ")[0] + " 기준 · 진도에 반영됐어요</span></div>" : "") +
           '<div class="vt-btns">' + (done ? '<span class="vp-done">' + icon("check", "sm") + "완료한 강의</span>" : preview ? '<span class="vp-done off">' + icon("eye", "sm") + "미리보기라 완료 기록은 남지 않아요</span>" : '<button type="button" class="btn btn-primary" data-action="vod-done" data-p="' + esc(pid) + '" data-l="' + esc(cur.id) + '">' + icon("check", "sm") + (next ? "완료하고 다음 강의" : "완료하기") + "</button>") +
@@ -990,7 +997,7 @@
           return '<div class="vc-ch"><h3>' + esc(c.title) + "<small>" + dn + " / " + ls.length + "</small></h3><ol>" + ls.map((l) => {
             const dd = !!n.pr.done[l.id], now = n.cur && n.cur.id === l.id;
             return '<li class="' + (dd ? "done" : "") + (now ? " now" : "") + '"><a href="' + learnHref(x.p.id, l.id) + '"><i>' + (dd ? icon("check", "xs") : icon("play", "xs")) + "</i><span>" + esc(l.title) + (now ? '<em class="vc-now">' + (n.doneN ? "이어 보기" : "여기부터") + "</em>" : "") + "</span>" +
-              ((l.files || []).length ? '<small class="vc-att">' + icon("paperclip", "xs") + (l.files || []).length + "</small>" : "") + "<small>" + (Number(l.min) || 0) + "분</small></a></li>";
+              ((l.files || []).length ? '<small class="vc-att">' + icon("paperclip", "xs") + (l.files || []).length + "</small>" : "") + "<small>" + X.lLen(l) + "</small></a></li>";
           }).join("") + "</ol></div>"; }).join("") +
         "</section>";
     }).join("") + '<p class="tiny vc-foot">' + icon("store", "xs") + ' 구매 내역 · 영수증 · 다른 강의는 <a href="#/vod/my/classes">DOOGO CLASS 내 강의실</a>에서 볼 수 있어요.</p></div>';
@@ -1041,7 +1048,7 @@
       (w.howto ? '<div class="cw-sec cw-howto"><h3>' + icon("checks", "sm") + "이번 주 진행 방법</h3>" + DB.rich(w.howto) + "</div>" : "") +
       (w.lessons.length ? '<details class="cw-lessons"' + " open" + '><summary>' + icon("play", "sm") + esc(lessonWord()) + " " + w.lessons.length + '개 <span class="tiny">' + watched + "개 시청 완료</span>" + icon("chevDown", "sm") + "</summary>" +
         w.lessons.map((l) => '<a class="lesson" href="#/curriculum/' + l.id + '">' + thumb(l) + '<div><div class="lesson-title">' + esc(l.title) + '</div><div class="lesson-desc">' + esc(l.desc) + "</div></div>" +
-          (P.watched[l.id] ? '<span class="badge badge-positive">' + icon("check", "xs") + "시청 완료</span>" : '<span class="tiny">' + (l.minutes ? esc(l.minutes) + "분" : "") + "</span>") + "</a>").join("") + "</details>" : "") +
+          (P.watched[l.id] ? '<span class="badge badge-positive">' + icon("check", "xs") + "시청 완료</span>" : '<span class="tiny">' + DB.vdur.label(l.youtubeId, l.durSec, l.minutes ? l.minutes + "분" : "") + "</span>") + "</a>").join("") + "</details>" : "") +
       ((w.topics || []).length ? '<div class="cw-sec"><h3>' + (mainLec() ? "메인 강의에서 다루는 내용" : "강의 내용") + '</h3><ul class="cw-topics">' + w.topics.map((t) => "<li>" + esc(t) + "</li>").join("") + "</ul></div>" : "") +
       (w.missions.length ? '<div class="cw-sec"><div class="cw-sec-head"><h3>과제</h3><span class="cw-period">' + icon("clock", "xs") + "과제 제출 기간 · " + fmtMD(openOf(w)) + " ~ " + fmtMD(deadlineOf(w)) + "</span>" +
           '<span class="cw-progress">' + st.done + "/" + st.total + " 완료</span></div>" +
@@ -1057,7 +1064,7 @@
     const i = all.findIndex((l) => l.id === id);
     const l = all[i], prev = all[i - 1], next = all[i + 1];
     const done = !!P.watched[id];
-    return '<div class="page">' + pageHead(l.title, w.no + "주차 · " + w.title + (l.minutes ? " · " + l.minutes + "분" : ""), crumb([[ML("curriculum"), "#/curriculum"], [w.no + "주차", "#/curriculum"], [l.title]])) +
+    return '<div class="page">' + pageHead(l.title, w.no + "주차 · " + w.title + lenTxt(l, " · "), crumb([[ML("curriculum"), "#/curriculum"], [w.no + "주차", "#/curriculum"], [l.title]])) +
       '<section class="card">' + video(l) +
         (l.desc ? '<div class="lesson-body">' + DB.rich(l.desc) + "</div>" : "") + attachmentList(l.attachments) +
         '<div class="guide-actions" style="margin-top:20px">' +
@@ -1718,7 +1725,7 @@
         '<a class="vod-card" href="#/library/' + cat + "/" + it.id + '">' + resThumb(it) +
           '<span class="vod-info"><span class="vod-no">' + (cat === "senior" ? "가이드 " : "VOD ") + (i + 1) + '</span><span class="vod-title">' + esc(it.title) + "</span>" +
           (it.desc ? '<span class="vod-desc">' + esc(it.desc) + "</span>" : "") +
-          '<span class="vod-meta">' + (it.meta ? "<span>" + esc(it.meta) + "</span>" : "") + ((it.images || []).length ? "<span>" + icon("image", "xs") + "사진 " + it.images.length + "</span>" : "") +
+          '<span class="vod-meta">' + (it.youtubeId ? DB.vdur.label(it.youtubeId, it.durSec, "", "vod-len") : "") + (it.meta ? "<span>" + esc(it.meta) + "</span>" : "") + ((it.images || []).length ? "<span>" + icon("image", "xs") + "사진 " + it.images.length + "</span>" : "") +
           ((it.attachments || []).length ? "<span>" + icon("paperclip", "xs") + "첨부 " + it.attachments.length + "</span>" : "") + "</span></span></a>").join("") + "</div>";
     } else {
       body = items.map((it) => {
@@ -1867,7 +1874,7 @@
     const list = D.motivation;
     const cur = list.find((x) => x.id === mvSel) || list[0];
     return '<div class="page mv-page">' + pageHead(ML("motivation"), "지칠 때 다시 힘을 내도록 " + D.brand.instructor + "님이 고른 영상이에요.") +
-      (cur ? '<section class="mv-stage" id="mv-stage">' + mvPlayer(cur) + '<div class="mv-now"><b>' + esc(cur.title) + "</b>" + (cur.minutes || cur.date ? '<span class="tiny">' + esc([cur.minutes, cur.date ? fmtMD(cur.date) : ""].filter(Boolean).join(" · ")) + "</span>" : "") + "</div></section>" +
+      (cur ? '<section class="mv-stage" id="mv-stage">' + mvPlayer(cur) + '<div class="mv-now"><b>' + esc(cur.title) + "</b>" + (cur.minutes || cur.durSec || cur.date ? '<span class="tiny">' + esc([lenTxt(cur), cur.date ? fmtMD(cur.date) : ""].filter(Boolean).join(" · ")) + "</span>" : "") + "</div></section>" +
         '<div class="section-head"><h2>오늘의 응원 영상</h2>' + (D.brand.youtubeChannel ? '<a class="link-btn" href="' + esc(D.brand.youtubeChannel) + '" target="_blank" rel="noopener">유튜브 채널 ' + icon("arrowUpRight", "sm") + "</a>" : "") + "</div>" +
         '<div class="mv-tiles">' + list.map((it, i) => {
           const yid = DB.youtubeId(it.youtubeId);
@@ -2020,7 +2027,7 @@
         (weeks.length > 1 ? weekChips(weeks, rpWeek, "rp-week", all.length) : "") +
         '<div class="rp-grid">' + list.map((x) => {
           const yid = DB.youtubeId(x.youtubeId);
-          return '<a class="card rp-card plain-link" href="#/replays/' + esc(x.id) + '"><span class="rp-thumb">' + (yid ? '<img src="https://i.ytimg.com/vi/' + esc(yid) + '/mqdefault.jpg" alt="" loading="lazy">' : "") + '<span class="rp-play">' + icon("play") + "</span>" + (x.minutes ? '<span class="rp-len">' + esc(x.minutes) + "</span>" : "") + "</span>" +
+          return '<a class="card rp-card plain-link" href="#/replays/' + esc(x.id) + '"><span class="rp-thumb">' + (yid ? '<img src="https://i.ytimg.com/vi/' + esc(yid) + '/mqdefault.jpg" alt="" loading="lazy">' : "") + '<span class="rp-play">' + icon("play") + "</span>" + DB.vdur.label(x.youtubeId, x.durSec, x.minutes || "", "rp-len") + "</span>" +
             '<span class="rp-body"><span class="rp-meta">' + (x.week ? '<span class="badge badge-neutral">' + Number(x.week) + "주차</span>" : "") + (x.date ? "<span>" + fmtMD(x.date) + (mainLec() ? " 업로드" : " 라이브") + "</span>" : "") + (seen[x.id] ? '<span class="badge badge-positive">' + icon("check", "xs") + "다 봤어요</span>" : "") + "</span>" +
             "<b>" + esc(x.title) + "</b>" + (x.summary ? '<span class="rp-sum">' + esc(String(x.summary).replace(/\s+/g, " ").slice(0, 90)) + "</span>" : "") + "</span></a>";
         }).join("") + "</div>"
@@ -2030,7 +2037,7 @@
     const all = replaysSorted(), i = all.findIndex((x) => x.id === id), x = all[i];
     if (!x) return notFound();
     const seen = !!(P.replays || {})[id], newer = all[i - 1], older = all[i + 1];
-    return '<div class="page">' + pageHead(x.title, [x.week ? Number(x.week) + "주차" : "", x.date ? fmtFull(x.date) + (mainLec() ? " 업로드" : " 라이브") : "", x.minutes || ""].filter(Boolean).join(" · "), crumb([[ML("replays"), "#/replays"], [x.title]])) +
+    return '<div class="page">' + pageHead(x.title, [x.week ? Number(x.week) + "주차" : "", x.date ? fmtFull(x.date) + (mainLec() ? " 업로드" : " 라이브") : "", lenTxt(x)].filter(Boolean).join(" · "), crumb([[ML("replays"), "#/replays"], [x.title]])) +
       '<section class="card">' + video(x) +
         (x.summary ? '<div class="rp-notes"><p class="side-label">' + icon("pin", "xs") + " 이번 라이브 핵심 정리</p>" + DB.rich(x.summary) + "</div>" : "") + attachmentList(x.attachments) +
         '<div class="guide-actions" style="margin-top:20px"><button class="btn ' + (seen ? "btn-secondary" : "btn-primary") + '" data-action="toggle-replay" data-id="' + esc(id) + '">' + icon("check", "sm") + (seen ? "다 봤어요 · 취소" : "다 봤어요") + "</button>" +

@@ -37,6 +37,8 @@ async function applyChange(ch, ids) {
       }
       if (JSON.stringify(next).length > MAX_DOC) return { k, error: "too-large" };
     }
+    // 고친 결과가 지금 저장된 것과 똑같으면(권한 밖 칸만 바꿨을 때 등) 새 판을 만들지 않아요 — 다른 기기에 괜한 ‘바뀜’이 가서 화면이 다시 그려지지 않게
+    if (exists && next != null && JSON.stringify(next) === JSON.stringify(row.v)) { const out = { k, ver: row.ver }; if (modified) out.doc = access.view(k, row.v, ids); return out; }
     const ver = await store.writeDoc(k, next, row ? row.ver : null);
     if (ver === false) continue;
     const K = access.parseKey(k);

@@ -43,7 +43,7 @@ const studentOf = (ids, iid) => !!(ids.student && ids.student.iid === iid);
 const memberOf = (ids, iid) => adminOf(ids, iid) || studentOf(ids, iid);
 
 /* ---------------- 공개용으로 줄이기 ---------------- */
-const LESSON_KEEP = ["id", "title", "minutes", "desc"];
+const LESSON_KEEP = ["id", "title", "minutes", "durSec", "desc"];
 const MISSION_KEEP = ["id", "title", "kind", "required", "type", "desc"];
 const pick = (o, keys) => { const r = {}; keys.forEach((k) => { if (o && o[k] !== undefined) r[k] = o[k]; }); return r; };
 function weeksSkeleton(weeks) {

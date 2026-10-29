@@ -13,7 +13,7 @@ const API = (n) => require(path.join(TMP, "class/api", n + ".js"));
 const auth = require(path.join(TMP, "class/api/_lib/auth.js"));
 
 // ---------- 가짜 외부 서버 ----------
-const PG = {}, calls = [], PAY = [], AI = { reqs: [], next: null }, SOL = [], RES = [];
+const PG = {}, calls = [], PAY = [], AI = { reqs: [], next: null }, SOL = [], RES = [], VDC = [];
 let kakaoUser = null;
 global.fetch = async (url, opt) => {
   opt = opt || {}; const u = new URL(url); calls.push(opt.method === "POST" ? "POST " + u.host + u.pathname : "GET " + u.host + u.pathname);
@@ -31,6 +31,10 @@ global.fetch = async (url, opt) => {
     if (u.pathname === "/v2/api/talk/channels") return J(200, { channels: [{ relation: "ADDED" }] });
     if (u.pathname === "/v1/user/unlink") return J(200, { id: 1 });
   }
+  // 영상 길이: 비메오 oEmbed · 유튜브 영상 페이지 · 유튜브 Data API
+  if (u.host === "vimeo.com" && u.pathname === "/api/oembed.json") { const id = ((u.searchParams.get("url") || "").match(/vimeo\.com\/(\d+)/) || [])[1]; VDC.push("vm " + id + " " + ((opt.headers || {}).Referer || "")); return id === "111111111" ? J(404, {}) : J(200, { type: "video", duration: 1470 }); }
+  if (u.host === "www.youtube.com" && u.pathname === "/watch") { const id = u.searchParams.get("v"); VDC.push("yt " + id); return { ok: true, status: 200, text: async () => '<script>var a={"videoDetails":{"videoId":"' + id + '","lengthSeconds":"212"}}</script>' }; }
+  if (u.host === "www.googleapis.com") { VDC.push("api " + u.searchParams.get("id")); return J(200, { items: u.searchParams.get("id").split(",").map((id) => ({ id, contentDetails: { duration: "PT1H2M3S" } })) }); }
   if (u.host === "challenges.cloudflare.com") return J(200, { success: /ts=ok|response=ok/.test(opt.body) });
   if (u.host === "api.solapi.com") { const h = opt.headers || {}, b = JSON.parse(opt.body || "{}"); SOL.push({ path: u.pathname, auth: h.Authorization || "", body: b }); return J(200, { groupInfo: { _id: "G" + SOL.length }, failedMessageList: [] }); }
   if (u.host === "api.resend.com") { const h = opt.headers || {}, b = JSON.parse(opt.body || "[]"); RES.push({ path: u.pathname, auth: h.Authorization || "", body: b }); return J(200, { data: b.map((x, i) => ({ id: "em" + i })) }); }
@@ -581,6 +585,18 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
   const em = (RES[RES.length - 1] || { body: [] }).body;
   ok(r.json.sent === 3 && em.length === 3 && /^\(광고\) 회원cm-0001님 새 강의$/.test(em[0].subject) && em[0].from === "두고클래스 <hello@doogoclass.com>" && /수신 거부|소식 받기/.test(em[0].html) && RES[RES.length - 1].auth === "Bearer re-test", "이메일: 이메일 동의 회원 3명(휴대폰 없어도) · 제목 (광고) · 수신 거부 안내", { n: em.length, s: em[0] && em[0].subject });
   ["SOLAPI_API_KEY", "SOLAPI_API_SECRET", "SOLAPI_SENDER", "SOLAPI_PFID", "RESEND_API_KEY", "MAIL_FROM"].forEach((k) => delete process.env[k]);
+
+  console.log("\n영상 길이 (비메오 · 유튜브 실제 재생 시간)");
+  r = await call("public", { body: { action: "vdur", urls: ["https://vimeo.com/76979871", "https://youtu.be/dQw4w9WgXcQ", "https://vimeo.com/111111111", "https://example.com/a.mp4"] } });
+  ok(r.json.ok && r.json.d["https://vimeo.com/76979871"] === 1470 && r.json.d["https://youtu.be/dQw4w9WgXcQ"] === 212 && r.json.d["https://vimeo.com/111111111"] === 0 && !("https://example.com/a.mp4" in r.json.d), "비메오 oEmbed · 유튜브 영상 페이지로 실제 길이 (못 찾으면 0 · 영상 아닌 주소는 빼요)", r.json);
+  ok(VDC.some((x) => x === "vm 76979871 https://www.doogoclass.com/"), "비메오에는 우리 도메인(Referer)으로 물어요 — 퍼가기 도메인을 막아 둔 영상도", VDC);
+  const vc = VDC.length;
+  r = await call("public", { body: { action: "vdur", urls: ["https://player.vimeo.com/video/76979871", "https://youtu.be/dQw4w9WgXcQ", "https://vimeo.com/111111111"] } });
+  ok(r.json.d["https://player.vimeo.com/video/76979871"] === 1470 && VDC.length === vc, "같은 영상은 서버가 기억한 값 · 못 찾은 영상도 하루는 다시 안 물어요", { d: r.json.d, calls: VDC.slice(vc) });
+  process.env.YOUTUBE_API_KEY = "yt-key";
+  r = await call("public", { body: { action: "vdur", urls: ["https://www.youtube.com/watch?v=abcdefghijk"] } });
+  ok(r.json.d["https://www.youtube.com/watch?v=abcdefghijk"] === 3723 && VDC[VDC.length - 1] === "api abcdefghijk", "YOUTUBE_API_KEY 가 있으면 유튜브 Data API (PT1H2M3S → 3723초)", { d: r.json.d, last: VDC[VDC.length - 1] });
+  delete process.env.YOUTUBE_API_KEY;
 
   console.log("\n결과: " + pass + "개 통과 · " + failN + "개 실패");
   fs.rmSync(TMP, { recursive: true, force: true });

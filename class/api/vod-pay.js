@@ -94,7 +94,7 @@ async function prepare(res, m, b) {
     let no = V.newNo(); const it = q.items[i];
     const ch = ["web", "ins", "ad"].indexOf(b.ch) >= 0 ? b.ch : "web";
     const o = Object.assign({ id: "", no, mid: m.id, method: q.total > 0 ? method.slice(0, 12) : q.points ? "point" : "free", status: bank ? "pending" : "ready", createdAt: at, at, paymentId, ch }, it, i ? { grp: nos[0] } : {}, buyer ? { buyer } : {}, bank ? { pg: { st: "bank" }, depositor, dueAt: at + bk.days * 864e5, bankTo: { bank: bk.bank, account: bk.account, holder: bk.holder } } : {});
-    if (i === 0 && it.kind === "tea" && b.tea && typeof b.tea === "object") o.tea = { d1: String(b.tea.d1 || "").slice(0, 10), d2: String(b.tea.d2 || "").slice(0, 10), slot: String(b.tea.slot || "").slice(0, 30), mode: String(b.tea.mode || "").slice(0, 10), topic: String(b.tea.topic || "").slice(0, 500), st: "req" };
+    if (i === 0 && it.kind === "tea" && b.tea && typeof b.tea === "object") o.tea = { d1: String(b.tea.d1 || "").slice(0, 10), d2: String(b.tea.d2 || "").slice(0, 10), slot: String(b.tea.slot || "").slice(0, 30), mode: "online", topic: String(b.tea.topic || "").slice(0, 500), st: "req" };
     // id: 마스터 화면이 주문을 찾는 칸 (주문 번호와 같게)
     for (let t = 0; t < 4 && !(await V.create(V.K.order(no), Object.assign(o, { id: "vo-" + no, no }))); t++) no = V.newNo();
     nos.push(no);

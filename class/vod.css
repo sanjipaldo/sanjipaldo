@@ -123,6 +123,38 @@ body[data-mode="vod"] {
 .vd-login:hover { background: var(--s1); }
 .vd-me-av { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--on1); color: #fff; font-size: 13px; font-weight: 700; flex: none; }
 .vd-me-av.lg { width: 52px; height: 52px; font-size: 20px; }
+/* 로그인한 회원: 머리글 오른쪽 ‘안녕하세요 OOO님’ 버튼 → 내 계정 메뉴 · 로그아웃 */
+.vd-acct { display: inline-flex; align-items: center; gap: 8px; height: 44px; margin-left: 6px; padding: 0 10px 0 6px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--lnb); background: #fff; color: var(--on1); font-family: var(--vd-font); cursor: pointer; transition: background .15s ease, box-shadow .15s ease; }
+.vd-acct:hover { background: var(--s1); }
+.vd-acct:focus-visible { outline: 2px solid var(--vd-pri); outline-offset: 2px; }
+.vd-acct .vd-me-av { width: 32px; height: 32px; background: var(--vd-pri); }
+.vd-acct-n { display: grid; min-width: 0; text-align: left; line-height: 1.15; }
+.vd-acct-n small { font-size: 11px; font-weight: 500; color: var(--on3); }
+.vd-acct-n b { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 700; }
+.vd-acct > .icon { width: 14px !important; height: 14px !important; color: var(--on3); flex: none; }
+.vd-m-only { display: none; }
+.vd-modal-acct { place-items: start end; padding: 76px 24px 24px; background: rgba(0, 0, 0, .2); }
+.vd-modal-acct .vd-modal { width: 340px; }
+.vd-acct-in { display: grid; gap: 14px; padding: 18px 18px 20px; }
+.vd-acct-hd { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.vd-acct-hd .vd-me-av { background: var(--vd-pri); }
+.vd-acct-hd div { min-width: 0; }
+.vd-acct-hd b { display: block; font-size: 17px; font-weight: 800; color: var(--on1); }
+.vd-acct-hd small { display: block; margin-top: 2px; font-size: 13px; color: var(--on3); overflow-wrap: anywhere; }
+.vd-acct-st { display: grid; grid-template-columns: repeat(3, 1fr); border-radius: 10px; background: var(--s1); }
+.vd-acct-st a { display: grid; justify-items: center; gap: 2px; padding: 12px 4px; color: var(--on1) !important; }
+.vd-acct-st a + a { box-shadow: inset 1px 0 0 var(--ln10); }
+.vd-acct-st b { font-size: 16px; font-weight: 800; }
+.vd-acct-st small { font-size: 12px; color: var(--on3); }
+.vd-acct-ls { display: grid; }
+.vd-acct-ls a { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 6px; border-radius: 8px; font-size: 15px; font-weight: 600; color: var(--on1) !important; }
+.vd-acct-ls a:hover { background: var(--s1); }
+.vd-acct-ls a span { flex: 1; }
+.vd-acct-ls a em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--vd-pri); }
+.vd-acct-ls a > .icon:last-child { color: var(--on3); }
+.vd-acct-out { display: flex; align-items: center; justify-content: center; gap: 8px; height: 50px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--lnb); background: #fff; font: 700 15px/1 var(--vd-font); color: var(--on1); cursor: pointer; }
+.vd-acct-out:hover { background: #fff3f4; color: var(--vd-pri); box-shadow: inset 0 0 0 1px var(--vd-pri); }
+.vd-dr-search { max-width: none; margin: 4px 0 6px; height: 46px; }
 .vd-nav-in { display: flex; justify-content: space-between; align-items: stretch; gap: 16px; height: 48px; overflow-x: auto; scrollbar-width: none; }
 .vd-nav-in::-webkit-scrollbar { display: none; }
 .vd-nav-l, .vd-nav-r { display: flex; align-items: stretch; gap: 24px; flex: none; }
@@ -1093,6 +1125,21 @@ body[data-mode="vod"]:has(.vd-player) { background: #0c0c0c; }
   .vd-tabbar a { display: grid; justify-items: center; align-content: center; gap: 3px; height: 56px; font-size: 11px; font-weight: 500; color: var(--on3); }
   .vd-tabbar a .icon { width: 22px; height: 22px; }
   .vd-tabbar a.on { color: var(--on1); font-weight: 700; }
+  .vd-tabbar button { display: grid; justify-items: center; align-content: center; gap: 3px; height: 56px; padding: 0; border: 0; background: none; font: 500 11px/1.2 var(--vd-font); color: var(--on3); cursor: pointer; }
+  .vd-tabbar button .icon { width: 22px; height: 22px; }
+  /* 가운데 홈: 동그란 빨간 버튼 */
+  .vd-tab-home .vd-tab-hc { display: grid; place-items: center; width: 42px; height: 42px; margin-top: -20px; border-radius: 50%; background: var(--vd-pri); color: #fff; box-shadow: 0 6px 16px rgba(252, 28, 73, .32), 0 0 0 4px #fff; }
+  .vd-tab-home .vd-tab-hc .icon { width: 20px !important; height: 20px !important; }
+  .vd-tabbar a.vd-tab-home.on { color: var(--vd-pri); }
+  .vd-m-only { display: inline; }
+  .vd-acct { height: 40px; gap: 6px; margin-left: 2px; padding: 0 8px 0 4px; }
+  .vd-acct .vd-me-av { width: 30px; height: 30px; font-size: 12px; }
+  .vd-acct-n small { font-size: 10px; }
+  .vd-acct-n b { max-width: 5.5em; font-size: 13px; }
+  .vd-login { height: 34px; margin-left: 2px; padding: 0 12px; font-size: 13px; }
+  .vd-modal-acct { place-items: end stretch; padding: 0; background: rgba(0, 0, 0, .55); }
+  .vd-modal-acct .vd-modal { width: 100%; }
+  .vd-acct-in { padding: 16px 16px calc(20px + env(safe-area-inset-bottom)); }
   .vd-hero { padding-top: 12px; }
   .vd-hero-vp, .vd-hero-track { --sw: calc(100cqw - 32px); --gap: 8px; }
   .vd-slide { aspect-ratio: 343 / 200; align-items: flex-end; }
@@ -3221,3 +3268,8 @@ a.vd-fln:not(.is-after):hover { border-color: #e2c050; }
   .vd-lg-grid { display: block; }
   .vd-lg-doc { box-shadow: none; padding: 0; }
 }
+/* TEA TIME 은 Zoom 으로만: 고정 안내 */
+.vd-fixed { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 10px 12px; border-radius: 8px; background: var(--s1); font-size: 14px; font-weight: 600; color: var(--on1); }
+/* 영상 실제 길이 (비메오 · 유튜브에서 자동으로 받아 와요) */
+.vdur:empty { display: none; }
+.vdur.is-real { font-variant-numeric: tabular-nums; }

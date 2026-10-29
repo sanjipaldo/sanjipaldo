@@ -182,7 +182,20 @@
         landing: !!(L && L.published), free: !!(F && F.published),
         plat: PLATFORMS[b.platform] || PLATFORMS[PLATFORM_OF[x.id]] || PLATFORMS.doogo
       };
+    }).concat(vodOnly());
+  }
+  // 두잉고 기수 계정 없이 DOOGO CLASS 에서 VOD 를 파는 강사(예: 셀러훈) — 수강생은 두잉고 VOD 강의실에서 들어요. 사진 · 클래스로 가는 카드
+  function vodOnly() {
+    const X = window.VOD;
+    if (!X || !X.V) return [];
+    const v = X.V(), off = Array.isArray(v.insOff) ? v.insOff : [], seen = {}, out = [];
+    (v.products || []).filter((p) => !p.iid && p.creator && (p.status === "on" || p.status === "soon") && off.indexOf("ext:" + p.creator) < 0).forEach((p) => {
+      if (seen[p.creator]) return;
+      seen[p.creator] = 1;
+      out.push({ id: p.id, vod: "#/vod/p/" + p.id, name: p.creator, who: p.creator, title: p.title, t: null, photo: X.phOf ? X.phOf(p) : p.creatorPhoto || "", field: p.tagline || "",
+        yt: "", ig: "", kakao: "", weeks: 0, missions: 0, landing: false, free: false, plat: PLATFORMS.doogo });
     });
+    return out;
   }
 
   /* ---------- 조각 ---------- */
@@ -518,16 +531,19 @@
       // 액자(연한 바탕 + 큰 빨간 3D doogo 심볼) 위로 누끼 사진(허리 위까지)의 머리가 살짝 튀어나오게
       const photo = '<span class="hm-tc-frame">' + DSYM + (x.photo ? "" : SILHOUETTE) + "</span>" +
         (x.photo ? '<span class="hm-tc-cut"><img src="' + esc(x.photo) + '" alt="' + esc(x.who) + ' 강사" decoding="async"></span>' : "") +
-        '<span class="hm-tc-tag">' + x.weeks + "주 과정</span>";
+        '<span class="hm-tc-tag">' + (x.vod ? "VOD 클래스" : x.weeks + "주 과정") + "</span>";
       return '<article class="hm-tc hm-reveal" style="--i:' + i + '">' +
-        (x.landing ? '<a class="hm-tc-photo" href="#/p/' + esc(x.id) + '" aria-label="' + esc(x.who) + ' 강의 소개">' + photo + "</a>" : '<div class="hm-tc-photo">' + photo + "</div>") +
+        (x.vod ? '<a class="hm-tc-photo" href="' + esc(x.vod) + '" aria-label="' + esc(x.who) + ' 클래스 보기">' + photo + "</a>" : x.landing ? '<a class="hm-tc-photo" href="#/p/' + esc(x.id) + '" aria-label="' + esc(x.who) + ' 강의 소개">' + photo + "</a>" : '<div class="hm-tc-photo">' + photo + "</div>") +
         '<div class="hm-tc-body"><div class="hm-tc-head"><h3>' + esc(x.who) + '</h3>' + '<div class="hm-tc-sns">' + plat(x) + sns(x) + "</div>" + '</div><p class="hm-tc-field">' + esc(x.field) + '</p><p class="hm-tc-course">' + esc(x.title) + "</p></div>" +
         // 이름 옆: 강사 유튜브 표시 · 아래: 강의 소개 · 무료 강의 두 버튼 → 수강생 로그인 (한 줄 전체) — 카드끼리 버튼 높이가 맞게
-        '<div class="hm-tc-foot">' +
-          '<div class="hm-tc-links' + (x.landing && x.free ? "" : " one") + '">' +
+        '<div class="hm-tc-foot">' + (x.vod
+          // DOOGO CLASS VOD 강사: 미리보기 · 클래스 보기
+          ? '<div class="hm-tc-links one"><a class="hm-tc-a" href="' + esc(x.vod) + '">' + icon("circlePlay", "xs") + "무료 미리보기</a>" +
+            '<a class="hm-tc-login" href="' + esc(x.vod) + '">DOOGO CLASS에서 보기' + icon("arrowRight", "xs") + "</a></div>"
+          : '<div class="hm-tc-links' + (x.landing && x.free ? "" : " one") + '">' +
             (x.landing ? '<a class="hm-tc-a" href="#/p/' + esc(x.id) + '">' + icon("file", "xs") + "강의 소개</a>" : "") +
             (x.free ? '<a class="hm-tc-a" href="#/free/' + esc(x.id) + '">' + icon("circlePlay", "xs") + "무료 강의</a>" : "") +
-            '<a class="hm-tc-login" href="#/login?ins=' + esc(x.id) + '">수강생 로그인' + icon("arrowRight", "xs") + "</a></div></div>" +
+            '<a class="hm-tc-login" href="#/login?ins=' + esc(x.id) + '">수강생 로그인' + icon("arrowRight", "xs") + "</a></div>") + "</div>" +
       "</article>";
     };
     return '<section class="hm-sec" id="hm-classes"><div class="hm-wrap">' +

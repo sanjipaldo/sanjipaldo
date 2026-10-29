@@ -2385,3 +2385,6 @@ a.login-vod:hover { filter: brightness(.97); }
 .hc-ops b { font-size: 13px; }
 .hc-ops small { font-size: 11px; color: #6b5f00; }
 @media (max-width: 720px) { .vt-kk span { display: none; } .vt-kk { width: 34px; padding: 0; justify-content: center; } }
+/* 영상 실제 길이 (비메오 · 유튜브에서 자동으로 받아 와요) */
+.vdur:empty { display: none; }
+.vdur.is-real { font-variant-numeric: tabular-nums; }
