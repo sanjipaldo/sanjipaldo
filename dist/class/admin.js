@@ -4444,11 +4444,11 @@
 
   /* ---------- 4) 메시지 · 자동화 ---------- */
   const CRM_CH = { alim: ["카카오 알림톡", false, "정보성만 · 결제 · 수강 · 일정 안내 · 템플릿 심사 후 발송"], brand: ["카카오 브랜드 메시지", true, "광고 · 소식 받기(카카오톡) 동의 회원 · 08:00~20:50에만"], sms: ["문자 (LMS)", true, "광고 · 소식 받기(문자) 동의 회원 · 밤 9시~아침 8시는 야간 동의자만"], email: ["이메일", true, "광고 · 소식 받기(이메일) 동의 회원 · 제목에 (광고)"] };
-  /* 실제 발송 (서버 /api/vod-msg · 솔라피 · Resend) — 연결 상태는 서버가 알려 줘요. 서버가 없거나 키가 없으면 예전처럼 기록 · 쿠폰만 */
+  /* 실제 발송 (서버 /api/admin msg-send · 솔라피 · Resend) — 연결 상태는 서버가 알려 줘요. 서버가 없거나 키가 없으면 예전처럼 기록 · 쿠폰만 */
   const crmSendCfg = () => { const c = CRM(); c.send = Object.assign({ optout: "", targeting: "I", tpls: [] }, c.send || {}); if (!Array.isArray(c.send.tpls)) c.send.tpls = []; return c.send; };
   function crmCfg() {
     if (!(DB.remote && DB.remote.on)) return null;
-    if (!ui.msgCfg && !ui.msgCfgLoading) { ui.msgCfgLoading = true; DB.remote.call("vod-msg", { action: "status" }).then((r) => { ui.msgCfg = (r && r.cfg) || {}; }, () => { ui.msgCfg = {}; }).then(() => { ui.msgCfgLoading = false; if (/vod-msg/.test(ROUTE.hash)) render(); if (document.getElementById("crm-camp")) crmCampPaint(); }); }
+    if (!ui.msgCfg && !ui.msgCfgLoading) { ui.msgCfgLoading = true; DB.remote.call("admin", { action: "msg-status" }).then((r) => { ui.msgCfg = (r && r.cfg) || {}; }, () => { ui.msgCfg = {}; }).then(() => { ui.msgCfgLoading = false; if (/vod-msg/.test(ROUTE.hash)) render(); if (document.getElementById("crm-camp")) crmCampPaint(); }); }
     return ui.msgCfg || null;
   }
   const crmLive = (ch) => { const c = crmCfg(); return !!(c && c[ch]); };
@@ -4560,7 +4560,7 @@
     if (c.live && c.ch === "email" && !c.subject) { toast("메일 제목을 적어 주세요.", "warn"); return; }
     if (!c.live) return crmRecord(c, c.r.ok.map((pf) => pf.m.id), null);
     const b = document.querySelector('[data-action="crm-camp-send"]'); if (b) b.disabled = true;
-    DB.remote.call("vod-msg", { action: "send", ch: c.ch, mids: c.r.ok.map((pf) => pf.m.id), text: c.text, subject: c.subject, templateId: c.tpl ? c.tpl.id : "", at: c.later ? c.at : 0 })
+    DB.remote.call("admin", { action: "msg-send", ch: c.ch, mids: c.r.ok.map((pf) => pf.m.id), text: c.text, subject: c.subject, templateId: c.tpl ? c.tpl.id : "", at: c.later ? c.at : 0 })
       .then((r) => { if (!r || !r.ok) { if (b) b.disabled = false; toast((r && r.message) || "보내지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"); return; } crmRecord(c, r.to || [], r); })
       .catch(() => { if (b) b.disabled = false; toast("서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"); });
   }

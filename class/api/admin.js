@@ -4,6 +4,7 @@
  *  { action: "backups" }                   서버 자동 백업 목록
  *  { action: "backup" }                    지금 상태를 서버에 백업
  *  { action: "restore-backup", id }        서버 백업으로 되돌리기
+ *  { action: "msg-status" | "msg-send" }   CRM 메시지 실제 발송 (문자 · 알림톡 · 브랜드 메시지 · 이메일) — _lib/msgapi.js
  * 초기화 · 되돌리기 전에는 지금 상태를 서버 백업에 먼저 남긴다 */
 "use strict";
 const { send, body, handler } = require("./_lib/http");
@@ -26,6 +27,7 @@ module.exports = handler(["POST"], async (req, res) => {
     (Array.isArray(b.bills) ? b.bills : []).forEach((x) => { if (x && x.id && x.instructorId) map["bill:" + safe(x.instructorId) + ":" + safe(x.id)] = x; });
     return send(res, 200, { ok: true, docs: await init.replaceAll(map, "백업 파일 불러오기 전 자동 백업") });
   }
+  if (b.action === "msg-status" || b.action === "msg-send") { const r = await require("./_lib/msgapi").run(ids, b); return send(res, r.status, r.json); }
   if (b.action === "backups") return send(res, 200, { ok: true, backups: await store.listBackups() });
   if (b.action === "backup") return send(res, 200, { ok: true, backup: await store.backup("마스터가 직접 백업") });
   if (b.action === "restore-backup") {
