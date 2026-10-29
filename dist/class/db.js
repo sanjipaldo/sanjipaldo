@@ -1291,7 +1291,7 @@
     const m = store.get(KEY_INQ, {}); delete m[id]; return store.set(KEY_INQ, m);
   }
   // 파트너 추천 코드: 주소에 ?ref=코드 가 있으면 기억 (입점 문의에 함께 남김)
-  const catchRef = () => { try { const m = (location.hash + location.search).match(/[?&]ref=([A-Za-z0-9_.-]{2,30})/); if (m) localStorage.setItem("doinggo:ref", m[1]); } catch (e) {} };
+  const catchRef = () => { try { const m = (ROUTE.hash + location.search).match(/[?&]ref=([A-Za-z0-9_.-]{2,30})/); if (m) localStorage.setItem("doinggo:ref", m[1]); } catch (e) {} };
   // 서버(정식 API)도 이 파일을 읽어서 시드를 만들어요 — 브라우저에서만 주소 변화를 들어요
   catchRef(); if (typeof window.addEventListener === "function") window.addEventListener("hashchange", catchRef);
   async function applyPartner(a) {
@@ -1582,7 +1582,9 @@
     }
     if (a && a.role === "master") return true;
     // 강사는 meta 를 보내도 서버가 자기 VOD 커리큘럼 · 자기 제출 서류만 받아요 (나머지는 되돌림)
-    if (k === "meta") return !!(a && a.role === "instructor");
+    // 파트너도 meta 를 보내면 서버가 자기 계정 칸(연락처 · 계좌 · 비밀번호)만 받아요
+    if (k === "meta") return !!(a && (a.role === "instructor" || a.role === "partner"));
+    if (p[0] === "inq") return !!(a && a.role === "partner");
     // 이용료 신청은 강사 본인만 (코치 · 수강생은 못 봄)
     if (p[0] === "bill") return !!(a && a.role === "instructor" && a.iid === p[1]);
     if (a && a.iid === p[1]) {

@@ -33,7 +33,7 @@
 
   /* ---------------- 공통 ---------------- */
   function route() {
-    const h = (location.hash || "").replace(/^#\/?center\/?/, "");
+    const h = (ROUTE.hash || "").replace(/^#\/?center\/?/, "");
     const [path, query] = h.split("?");
     return { parts: path.split("/").filter(Boolean), params: new URLSearchParams(query || "") };
   }
@@ -215,7 +215,8 @@
     const err = document.getElementById("al-error");
     err.textContent = "";
     // 파트너: ‘마스터 · 파트너’ 탭에서 아이디 + 비밀번호
-    if (loginTab === "partner" || (loginTab === "master" && id.toUpperCase() !== "ADMIN")) {
+    // 정식 서버에서는 파트너 · 운영자 계정도 서버가 확인해요 (이 브라우저에는 계정 목록이 없어요)
+    if (!DB.remote.on && (loginTab === "partner" || (loginTab === "master" && id.toUpperCase() !== "ADMIN"))) {
       const pp = findPartnerLogin(id, pw);
       if (pp) { partnerSignIn(pp, err); return; }
       if (loginTab === "partner") { err.textContent = "등록된 파트너 정보와 일치하지 않아요. 아이디와 비밀번호를 확인해 주세요."; return; }
@@ -223,8 +224,8 @@
     if (DB.remote.on) { serverLogin(f, id, pw, err); return; }
     if (loginTab === "master") {
       const stf = id.toUpperCase() !== "ADMIN" ? findStaffLogin(id, pw) : null;
-      if (stf) { if (stf.status !== "active") { err.textContent = "사용이 중지된 운영자 계정이에요. 최고 관리자에게 문의해 주세요."; return; } S = { role: "master", staffId: stf.id }; DB.session.setAdmin(S); DB.store.remove("moonclass:after-login"); stf.lastLoginAt = Date.now(); actLog("로그인"); DB.save(); location.hash = "#/center/master"; toast(stf.name + " 님, 환영합니다! (" + staffRoleName(stf) + ")"); return; }
-      if (id.toUpperCase() === "ADMIN" && pw.toUpperCase() === "ADMIN") { S = { role: "master" }; DB.session.setAdmin(S); DB.store.remove("moonclass:after-login"); location.hash = "#/center/master"; toast("마스터 관리자로 로그인했어요."); }
+      if (stf) { if (stf.status !== "active") { err.textContent = "사용이 중지된 운영자 계정이에요. 최고 관리자에게 문의해 주세요."; return; } S = { role: "master", staffId: stf.id }; DB.session.setAdmin(S); DB.store.remove("moonclass:after-login"); stf.lastLoginAt = Date.now(); actLog("로그인"); DB.save(); ROUTE.hash = "#/center/master"; toast(stf.name + " 님, 환영합니다! (" + staffRoleName(stf) + ")"); return; }
+      if (id.toUpperCase() === "ADMIN" && pw.toUpperCase() === "ADMIN") { S = { role: "master" }; DB.session.setAdmin(S); DB.store.remove("moonclass:after-login"); ROUTE.hash = "#/center/master"; toast("마스터 관리자로 로그인했어요."); }
       else err.textContent = "아이디 또는 비밀번호가 맞지 않아요.";
       return;
     }
@@ -235,7 +236,7 @@
       S = { role: "coach", instructorId: hit.ins.id, coachId: hit.coach.id };
       DB.session.setAdmin(S); DB.store.remove("moonclass:after-login");
       hit.coach.lastLoginAt = Date.now(); DB.save();
-      location.hash = "#/center"; toast(hit.coach.name + " 코치님, 환영합니다!");
+      ROUTE.hash = "#/center"; toast(hit.coach.name + " 코치님, 환영합니다!");
       return true;
     };
     const ins = DB.data.instructors.find((x) => x.name.replace(/\s+/g, "") === id.replace(/\s+/g, "") && x.phone4 === pw);
@@ -249,7 +250,7 @@
     S = { role: "instructor", instructorId: ins.id };
     DB.session.setAdmin(S);
     const next = DB.store.get("moonclass:after-login", ""); DB.store.remove("moonclass:after-login");
-    location.hash = next && /^#\/center\/(?!master)/.test(next) ? next : "#/center";
+    ROUTE.hash = next && /^#\/center\/(?!master)/.test(next) ? next : "#/center";
     toast(ins.name + " 강사님, 환영합니다!");
   }
   // 서버 모드: 이름·뒷자리·마스터 비밀번호는 서버에서만 확인한다
@@ -258,6 +259,8 @@
     "paused-coach": "사용이 중지된 코치 계정이에요. 강사님께 문의해 주세요.",
     locked: "여러 번 틀려서 잠시 로그인이 막혔어요. 15분 뒤에 다시 시도해 주세요.",
     "master-disabled": "마스터 비밀번호가 아직 설정되지 않았어요. Vercel 환경변수 MASTER_PASSWORD 를 설정해 주세요.",
+    "paused-staff": "사용이 중지된 운영자 계정이에요. 최고 관리자에게 문의해 주세요.",
+    "paused-partner": "사용이 중지된 파트너 계정이에요. 두잉고 담당자에게 문의해 주세요.",
     input: "이름과 전화번호 뒷자리 4자리를 확인해 주세요."
   };
   function serverLogin(f, id, pw, err) {
@@ -265,20 +268,20 @@
     if (btn) btn.disabled = true;
     DB.remote.login({ action: "admin", tab: loginTab, id, pw }).then((r) => {
       if (r.error) {
-        err.textContent = LOGIN_ERR[r.error] || (loginTab === "master" ? "아이디 또는 비밀번호가 맞지 않아요." : loginTab === "coach" ? "등록된 코치 정보와 일치하지 않아요. 이름과 뒷자리를 확인해 주세요." : "등록된 강사 정보와 일치하지 않아요. 이름과 뒷자리를 확인해 주세요. (코치는 ‘코치’ 탭)");
+        err.textContent = LOGIN_ERR[r.error] || (loginTab === "master" ? "아이디 또는 비밀번호가 맞지 않아요." : loginTab === "partner" ? "등록된 파트너 정보와 일치하지 않아요. 아이디와 비밀번호를 확인해 주세요." : loginTab === "coach" ? "등록된 코치 정보와 일치하지 않아요. 이름과 뒷자리를 확인해 주세요." : "등록된 강사 정보와 일치하지 않아요. 이름과 뒷자리를 확인해 주세요. (코치는 ‘코치’ 탭)");
         return;
       }
       return DB.remote.refresh().then(() => {
-        S = r.role === "master" ? { role: "master" } : r.role === "coach" ? { role: "coach", instructorId: r.iid, coachId: r.cid } : { role: "instructor", instructorId: r.iid };
+        S = r.role === "master" ? (r.staffId ? { role: "master", staffId: r.staffId } : { role: "master" }) : r.role === "partner" ? { role: "partner", partnerId: r.pid } : r.role === "coach" ? { role: "coach", instructorId: r.iid, coachId: r.cid } : { role: "instructor", instructorId: r.iid };
         DB.session.setAdmin(S);
         const next = DB.store.get("moonclass:after-login", ""); DB.store.remove("moonclass:after-login");
-        location.hash = r.role === "master" ? "#/center/master" : r.role === "instructor" && next && /^#\/center\/(?!master)/.test(next) ? next : "#/center";
-        toast(r.role === "master" ? "마스터 관리자로 로그인했어요." : r.name + (r.role === "coach" ? " 코치님, 환영합니다!" : " 강사님, 환영합니다!"));
+        ROUTE.hash = r.role === "master" ? "#/center/master" : r.role === "partner" ? "#/center/partner" : r.role === "instructor" && next && /^#\/center\/(?!master)/.test(next) ? next : "#/center";
+        toast(r.role === "master" ? (r.staffId ? r.name + "님, 운영자로 로그인했어요." : "마스터 관리자로 로그인했어요.") : r.role === "partner" ? r.name + " 파트너님, 환영합니다!" : r.name + (r.role === "coach" ? " 코치님, 환영합니다!" : " 강사님, 환영합니다!"));
       });
     }).catch(() => { err.textContent = "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."; }).then(() => { if (btn) btn.disabled = false; });
   }
   function logout() {
-    S = null; DB.session.setAdmin(null); location.hash = "#/center/login";
+    S = null; DB.session.setAdmin(null); ROUTE.hash = "#/center/login";
     if (DB.remote.on) DB.remote.logout("admin").catch(() => {}).then(() => location.reload());
   }
 
@@ -1606,9 +1609,9 @@
     return "";
   }
   function pageFree() {
-    ui.lpKind = "free"; ui.lpHash = location.hash;
+    ui.lpKind = "free"; ui.lpHash = ROUTE.hash;
     const F = lpDraft(), iid = IID(), c = C();
-    const url = location.href.split("#")[0] + "#/free/" + iid;
+    const url = ROUTE.abs("#/free/" + iid);
     if (!FREE_TABS.some((x) => x.id === ui.fcTab)) ui.fcTab = "schedule";
     const tab = FREE_TABS.find((x) => x.id === ui.fcTab);
     const nq = (c.freeQuestions || []).length;
@@ -1628,9 +1631,9 @@
       '<div class="a-lp-savebar">' + (ui.lpDirty ? '<span class="a-muted">저장하지 않은 변경이 있어요</span>' : '<span class="a-muted">저장된 상태예요</span>') + btn("변경 취소", "lp-revert", "a-btn-ghost a-btn-sm") + btn(icon("check", "sm") + "저장", "lp-save", "a-btn-primary") + "</div>";
   }
   function pageLanding() {
-    ui.lpKind = "landing"; ui.lpHash = location.hash;
+    ui.lpKind = "landing"; ui.lpHash = ROUTE.hash;
     const L = lpDraft(), iid = IID();
-    const url = location.href.split("#")[0] + "#/p/" + iid;
+    const url = ROUTE.abs("#/p/" + iid);
     const secs = lpSecCards(L, DB.LANDING_SECTIONS, lpSectionBody, LP_HINT);
     return head("강의 소개 페이지", "강사님과 강의를 소개하는 공개 페이지예요. 결제 전 수강생이 보고, 신청 버튼을 누르면 수강 신청이나 결제 페이지로 이어져요. 배경은 흰색, 버튼과 강조는 수강생 화면 색상을 따라가요.",
         '<a class="a-btn a-btn-outline" href="#/p/' + iid + '">' + icon("eye", "sm") + "페이지 보기</a>" + btn(icon("check", "sm") + "저장", "lp-save", "a-btn-primary")) +
@@ -2178,7 +2181,7 @@
   const BILL_TABS = [["todo", "처리할 일"], ["cal", "달력"], ["sales", "매출표"], ["all", "전체 내역"], ["set", "입금 계좌 · 설정"]];
   function pageMasterBilling(r) {
     const tq = r && r.params.get("tab");
-    if (tq && BILL_TABS.some((t) => t[0] === tq)) { ui.billTab = tq; history.replaceState(null, "", "#/center/master/billing"); }
+    if (tq && BILL_TABS.some((t) => t[0] === tq)) { ui.billTab = tq; ROUTE.replace("#/center/master/billing"); }
     const all = DB.bills(), tab = ui.billTab || "todo";
     DB.store.set("moonclass:bill-seen", all.map((b) => b.id).slice(-300));
     const n = { todo: all.filter(billTodo).length, all: all.length };
@@ -2400,7 +2403,7 @@
     if (!ui.backups && !ui.backupsLoading) {
       ui.backupsLoading = true;
       DB.remote.call("admin", { action: "backups" }).then((r) => { ui.backups = r.backups || []; }, () => { ui.backups = []; ui.backupsErr = true; })
-        .then(() => { ui.backupsLoading = false; if (/^#\/center\/master\/data/.test(location.hash)) render(); });
+        .then(() => { ui.backupsLoading = false; if (/^#\/center\/master\/data/.test(ROUTE.hash)) render(); });
     }
     const list = ui.backups || [];
     return '<section class="a-card"><div class="a-card-head"><h2>서버 자동 백업</h2><span class="a-muted">배포할 때마다 · 초기화나 되돌리기 전에 자동으로 남아요 (최근 40개)</span></div>' +
@@ -2611,7 +2614,38 @@
   const vdPending = () => VD().orders.filter((o) => o.status === "pending").length;
   // 환불 요청: 회원이 마이페이지에서 요청(refundReq 객체) · 강사가 TEA TIME 취소(숫자) → 마스터가 처리할 때까지 남아요
   const vdRefReqs = () => VD().orders.filter((o) => o.status === "paid" && o.refundReq);
-  const vdExpired = () => VD().orders.filter((o) => o.status === "pending" && Date.now() - o.at > (Number(VD().settings.payDays) || 3) * 864e5);
+  const vdDue = (o) => o.dueAt || o.at + (Number(VD().settings.payDays) || 3) * 864e5;
+  const vdExpired = () => VD().orders.filter((o) => o.status === "pending" && Date.now() > vdDue(o));
+  /* 무통장 입금 — 정식 서버에서는 입금 확인 · 취소를 서버가 해요 (확인하는 순간 회원 수강이 열려요) */
+  const vdSrv = () => !!(DB.remote && DB.remote.on);
+  const vdDep = (o) => o.depositor || (o.buyer && o.buyer.name) || (vdMember(o.mid) || {}).name || "";
+  const vdGrpAmt = (o) => o.amount + VD().orders.filter((x) => x.grp === o.no && x.status === o.status).reduce((a, x) => a + (Number(x.amount) || 0), 0);
+  const vdWhen = (t) => { const d = new Date(t); return DB.date.toStr(d).slice(5).replace("-", ".") + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  function vdBankAct(action, nos, okMsg) {
+    const list = [].concat(nos); let ok = 0, fail = "";
+    return list.reduce((pr, no) => pr.then(() => VX().payApi(action, { no }).then((r) => { if (r && r.ok) ok++; else fail = (r && r.message) || "처리하지 못했어요."; }, () => { fail = "서버에 닿지 못했어요."; })), Promise.resolve())
+      .then(() => DB.remote.refresh()).then(() => { ui.vdBankLog = undefined; closeModal(); render(); if (ok) { actLog(okMsg); toast(okMsg + (fail ? " · " + (list.length - ok) + "건은 못 했어요: " + fail : "")); } else toast(fail || "처리하지 못했어요.", "warn"); });
+  }
+  function vdBankLoad() {
+    if (!vdSrv() || ui.vdBankLog !== undefined || ui.vdBankBusy) return;
+    ui.vdBankBusy = true;
+    VX().payApi("bankLog").then((r) => { ui.vdBankBusy = false; ui.vdBankLog = r && r.ok ? r.recent || [] : []; render(); }, () => { ui.vdBankBusy = false; ui.vdBankLog = []; });
+  }
+  /** 무통장 입금 확인 카드: 입금 대기 주문(입금자명 · 합계 금액 · 기한) + 자동 입금 확인이 못 맞춘 입금 */
+  function vdBankCard() {
+    const v = VD(), pend = v.orders.filter((o) => o.status === "pending" && !o.grp).sort((a, b) => a.at - b.at), auto = !!(VX().bankAuto && VX().bankAuto());
+    vdBankLoad();
+    const log = ui.vdBankLog || [], miss = log.filter((e) => e.st === "none" || e.st === "many" || e.st === "fail"), okN = log.filter((e) => e.st === "ok").length;
+    const WHY = { none: "같은 이름 · 금액 주문 없음", many: "같은 이름 · 금액 주문이 여럿", fail: "확인 실패" };
+    return '<section class="a-card vda-bank"><div class="a-card-head"><h2>무통장 입금 확인</h2>' + (vdSrv() ? (auto ? pill("자동 입금 확인 켜짐 · 24시간", "ok") : pill("자동 입금 확인 연결 전 · 직접 확인", "mute")) : "") +
+        '<span class="a-muted">입금자명 · 금액을 통장과 맞춰 보고 ‘입금 확인’을 눌러 주세요. 누르는 순간 회원이 바로 수강해요.' + (auto && okN ? " 최근 자동 확인 " + okN + "건" : "") + "</span></div>" +
+      (pend.length ? '<div class="a-table-wrap"><table class="a-table vda-bank-t"><thead><tr><th>주문</th><th>입금자명</th><th class="right">입금할 금액</th><th>클래스</th><th>입금 기한</th><th class="right">관리</th></tr></thead><tbody>' +
+        pend.map((o) => { const late = Date.now() > vdDue(o); return '<tr><td class="vda-nw">' + esc(vdWhen(o.at)) + '<small class="a-memo num">' + esc(o.no) + '</small></td><td class="vda-nw"><b>' + esc(vdDep(o)) + "</b>" + ((vdMember(o.mid) || {}).name && (vdMember(o.mid) || {}).name !== vdDep(o) ? '<small class="a-memo">회원 ' + esc(vdMember(o.mid).name) + "</small>" : "") + '</td><td class="right num"><b>' + won(vdGrpAmt(o)) + "</b></td><td>" + esc(o.title) + (VX().optTxt(o) ? '<small class="a-memo">' + esc(VX().optTxt(o)) + "</small>" : "") + '</td><td class="vda-nw">' + (late ? pill("기한 지남", "warn") : esc(vdWhen(vdDue(o)) + "까지")) + '</td><td class="right vda-nw">' + btn(icon("check", "sm") + "입금 확인", "vda-paid", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"') + btn("취소", "vda-cancel", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') + "</td></tr>"; }).join("") + "</tbody></table></div>"
+        : '<p class="a-muted vda-bank-empty">' + icon("check", "sm") + " 입금을 기다리는 주문이 없어요.</p>") +
+      (miss.length ? '<h3 class="vda-bank-h">자동으로 못 맞춘 입금 <small>입금자명이 다르거나 금액이 다를 때 여기 남아요 · 맞는 주문을 골라 연결하면 바로 수강이 열려요</small></h3><div class="a-table-wrap"><table class="a-table"><thead><tr><th>입금 시각</th><th>입금자명</th><th class="right">금액</th><th>사유</th><th>주문 연결</th></tr></thead><tbody>' +
+        miss.map((e) => '<tr><td class="vda-nw">' + esc(vdWhen(e.at)) + "</td><td><b>" + esc(e.name) + "</b>" + (e.bank ? '<small class="a-memo">' + esc(e.bank) + "</small>" : "") + '</td><td class="right num">' + won(e.amount) + "</td><td>" + pill(WHY[e.st] || e.st, "warn") + '</td><td class="vda-nw"><select class="a-input a-sm" data-blink="' + esc(e.id) + '"><option value="">주문 고르기</option>' + pend.map((o) => '<option value="' + esc(o.no) + '"' + (vdGrpAmt(o) === e.amount ? "" : "") + ">" + esc(vdDep(o) + " · " + won(vdGrpAmt(o)) + " · " + o.no) + "</option>").join("") + "</select> " + btn("연결 · 입금 확인", "vda-blink", "a-btn-ghost a-btn-sm", ' data-id="' + esc(e.id) + '"') + "</td></tr>").join("") + "</tbody></table></div>" : "") +
+      "</section>";
+  }
   const vdRqTxt = (o) => (o.refundReq && typeof o.refundReq === "object" ? "회원 환불 요청 · " + o.refundReq.why + (o.refundReq.text ? " · " + o.refundReq.text : "") : "강사 취소 · 환불 필요");
   const vdThumb = (p, cls) => '<span class="vda-th ' + (cls || "") + '">' + VX().thumbArt(p) + "</span>";
   const vdInsOpts = (sel) => '<option value="">외부 크리에이터 (강사 플랫폼 없음)</option>' + DB.data.instructors.map((x) => '<option value="' + esc(x.id) + '"' + (x.id === sel ? " selected" : "") + ">" + esc(x.displayName) + " (" + esc(x.name) + ")</option>").join("");
@@ -2619,13 +2653,13 @@
 
   /* ---------- 1) VOD 매출 · 주문 · 강사 정산 ---------- */
   function pageMasterVod() {
-    const qs = location.hash.split("?")[1] || "", qt = qs.match(/(?:^|&)tab=(\w+)/), qo = qs.match(/(?:^|&)of=(\w+)/); if (qt || qo) { if (qt) ui.vdTab = qt[1]; if (qo) { ui.vdTab = "orders"; ui.vdOf = qo[1]; } history.replaceState(null, "", "#/center/master/vod"); }
+    const qs = ROUTE.hash.split("?")[1] || "", qt = qs.match(/(?:^|&)tab=(\w+)/), qo = qs.match(/(?:^|&)of=(\w+)/); if (qt || qo) { if (qt) ui.vdTab = qt[1]; if (qo) { ui.vdTab = "orders"; ui.vdOf = qo[1]; } ROUTE.replace("#/center/master/vod"); }
     const v = VD(), tab = ui.vdTab || "orders", ym = todayStr().slice(0, 7);
     const mon = vdPaidIn(ym), all = v.orders.filter(vdLive), pend = vdPending();
     const newM = v.members.filter((m) => vdYM(m.createdAt) === ym).length;
     const careN = vdCare().co.length + vdCare().tea.length;
     const tabs = [["orders", "주문", v.orders.length], ["months", "월별 매출"], ["settle", "강사 정산"], ["rates", "정산 비율 · 광고비"], ["care", "코칭 · TEA TIME", careN || null]];
-    const body = tab === "months" ? vdMonths() : tab === "settle" ? vdSettle() : tab === "rates" ? vdRates() : tab === "care" ? vdCarePage() : vdOrders();
+    const body = tab === "months" ? vdMonths() : tab === "settle" ? vdSettle() : tab === "rates" ? vdRates() : tab === "care" ? vdCarePage() : vdBankCard() + vdOrders();
     return head("VOD 매출 · 주문", "DOOGO CLASS에서 팔린 VOD 클래스의 결제 · 무통장 입금 확인 · 환불과 강사 정산을 한곳에서 관리해요.", vdStoreBtn() + btn(icon("download", "sm") + "주문 CSV", "vda-csv", "a-btn-ghost")) +
       '<div class="a-kpis">' +
         kpi("이번 달 매출", won(vdSum(mon)), mon.length + "건 결제 · " + vdYMtxt(ym), "#/center/master/vod", "ok") +
@@ -2657,7 +2691,7 @@
         '<div class="a-filters"><div class="a-search">' + icon("search", "sm") + '<input class="a-input a-sm" id="vda-oq" type="search" placeholder="주문번호 · 회원 · 클래스" value="' + esc(ui.vdOq || "") + '"></div></div></div>' +
       (list.length ? '<div class="a-table-wrap"><table class="a-table vda-table"><thead><tr><th>주문일</th><th>주문번호</th><th>회원</th><th>클래스</th><th>결제</th><th class="right">금액</th><th>상태</th><th class="right">관리</th></tr></thead><tbody>' +
         list.map((o) => { const m = vdMember(o.mid) || {}, st = VD_OST[o.status] || VD_OST.paid; return '<tr><td class="vda-nw">' + esc(DB.date.fmtStamp ? DB.date.fmtStamp(o.at) : new Date(o.at).toLocaleString("ko-KR")) + '</td><td class="vda-nw"><small class="num">' + esc(o.no) + '</small></td><td class="vda-nw"><b>' + esc(m.name || "탈퇴 회원") + '</b><small class="a-memo">' + esc(m.email || "") + "</small></td><td>" + esc(o.title) + (VX().optTxt(o) ? '<small class="a-memo">' + esc(VX().optTxt(o)) + (o.grp ? " · " + esc(o.grp) + " 함께 결제" : "") + "</small>" : "") + (o.refundReq && o.status === "paid" ? '<small class="a-memo a-memo-red">' + esc(vdRqTxt(o)) + "</small>" : "") + (o.canceledBy === "member" && o.status === "canceled" ? '<small class="a-memo">회원이 직접 취소</small>' : "") + '</td><td class="vda-nw">' + esc(VD_PAY[o.method] || o.method) + '</td><td class="right num"><b>' + won(o.amount) + "</b>" + (o.couponOff || o.pointOff ? '<small class="a-memo">' + (o.couponOff ? "쿠폰 -" + won(o.couponOff) : "") + (o.couponOff && o.pointOff ? " · " : "") + (o.pointOff ? "포인트 -" + won(o.pointOff) : "") + "</small>" : "") + "</td><td>" + pill(st[0], st[1]) + (o.refundedAt ? '<small class="a-memo">' + esc(DB.date.toStr(new Date(o.refundedAt))) + "</small>" : "") + '</td><td class="right">' +
-          (o.status === "pending" && Date.now() - o.at > (Number(VD().settings.payDays) || 3) * 864e5 ? pill("입금 기한 지남", "warn") + " " : "") + (o.status === "pending" ? btn("입금 확인", "vda-paid", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"') + btn("주문 취소", "vda-cancel", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') : o.status === "paid" && o.amount > 0 ? btn(o.refundReq ? "환불 처리" : "환불", "vda-refund", o.refundReq ? "a-btn-primary a-btn-sm" : "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') : o.status === "paid" ? btn("신청 취소", "vda-cancel0", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') : "") + "</td></tr>"; }).join("") +
+          (o.status === "pending" && Date.now() > vdDue(o) ? pill("입금 기한 지남", "warn") + " " : "") + (o.status === "pending" ? btn("입금 확인", "vda-paid", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"') + btn("주문 취소", "vda-cancel", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') : o.status === "paid" && o.amount > 0 ? btn(o.refundReq ? "환불 처리" : "환불", "vda-refund", o.refundReq ? "a-btn-primary a-btn-sm" : "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') : o.status === "paid" ? btn("신청 취소", "vda-cancel0", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') : "") + "</td></tr>"; }).join("") +
         "</tbody></table></div>" : emptyBox("inbox", "조건에 맞는 주문이 없어요.")) + "</section>";
   }
   function vdMonths() {
@@ -2833,6 +2867,16 @@
   }
 
   /* ---------- 2) VOD 클래스 관리 (목록 + 1~6단계 세팅) ---------- */
+  /** 강사 스토어 노출: 끄면 그 강사의 클래스 · 배너 · 강사진 카드가 스토어에서 빠지고 새로 살 수 없어요 (클래스는 지우지 않아요) */
+  function vdInsCard() {
+    const X = VX(); if (!X.tkey) return "";
+    const off = X.insOff(), map = {};
+    VD().products.forEach((p) => { const k = X.tkey(p); if (!k) return; const t = (map[k] = map[k] || { k, name: p.creator || insName(p.iid), n: 0, live: 0, ph: "" }); t.n++; if (p.status === "on" || p.status === "soon") t.live++; if (!t.ph) t.ph = X.phOf(p); });
+    const list = Object.keys(map).map((k) => map[k]).sort((a, b) => (off.indexOf(a.k) >= 0) - (off.indexOf(b.k) >= 0) || b.n - a.n);
+    if (!list.length) return "";
+    return '<section class="a-card vda-ins"><div class="a-card-head"><h2>강사 스토어 노출</h2><span class="a-muted">끄면 그 강사의 클래스 · 배너 · 강사진 카드가 스토어에서 빠지고 새로 살 수 없어요. 클래스는 지우지 않아서 다시 켜면 그대로 돌아와요. 이미 산 회원은 내 강의실에서 계속 들어요.</span></div><div class="vda-ins-g">' +
+      list.map((t) => { const on = off.indexOf(t.k) < 0; return '<div class="vda-ins-i' + (on ? "" : " off") + '"><span class="vda-ins-ph">' + (t.ph ? '<img src="' + esc(t.ph) + '" alt="">' : "<em>" + esc((t.name || "?").slice(0, 1)) + "</em>") + "</span><div><b>" + esc(t.name) + "</b><small>" + (/^ext:/.test(t.k) ? "두잉고 계정 없는 강사 · " : "") + "클래스 " + t.n + "개" + (t.live ? " · 판매 · 오픈 예정 " + t.live + "개" : "") + "</small></div>" + (on ? pill("노출", "ok") : pill("미노출", "mute")) + '<button type="button" class="a-switch' + (on ? " on" : "") + '" data-action="vda-insoff" data-k="' + esc(t.k) + '" data-n="' + esc(t.name) + '" role="switch" aria-checked="' + on + '" aria-label="' + esc(t.name) + ' 스토어 노출"><i></i></button></div>'; }).join("") + "</div></section>";
+  }
   function pageMasterVodClasses(r) {
     const id = r && r.parts[2];
     if (id) return vdEditor(id);
@@ -2845,9 +2889,9 @@
         kpi("오픈 예정", ps.filter((p) => p.status === "soon").length + "개", "스토어에 ‘오픈 예정’으로 보여요", "#/center/master/vod-classes") +
         kpi("숨김", ps.filter((p) => p.status === "hidden").length + "개", "스토어에 안 보여요", "#/center/master/vod-classes") +
         kpi("할인 중", ps.filter((p) => VX().pctOf(p) > 0).length + "개", "마감일이 지나면 정가로 돌아가요", "#/center/master/vod-classes") +
-      "</div>" +
+      "</div>" + vdInsCard() +
       '<section class="a-card">' + (ps.length ? '<div class="a-table-wrap"><table class="a-table vda-table"><thead><tr><th>클래스</th><th>가격</th><th>상태</th><th>강의</th><th>판매</th><th class="right">매출</th><th>후기</th><th class="right">관리</th></tr></thead><tbody>' +
-        ps.map((p) => { const st = VD_ST[p.status] || VD_ST.hidden, pr = VX().priceOf(p), pc = VX().pctOf(p), rt = VX().ratingOf(p.id), so = sold(p); return '<tr><td><div class="vda-cl">' + vdThumb(p) + '<div><b>' + esc(p.title) + '</b><small class="a-memo">' + esc(adTypeName(p)) + " · " + esc(p.creator || "-") + " · " + esc(VX().catOf(p.cat).label) + "</small>" + vdFunMemo(p) + (p.status === "soon" ? '<button type="button" class="vda-chip-btn" data-action="vda-alarm" data-id="' + esc(p.id) + '">' + icon("bell", "xs") + " 오픈 알림 " + vdAlarmOf(p.id).length + "명</button>" : "") + (VX().isEvent(p) ? '<button type="button" class="vda-chip-btn" data-action="vda-roster" data-id="' + esc(p.id) + '">' + icon("users", "xs") + " 신청자 명단 " + vdRoster(p.id).length + "명</button>" : "") + "</div></div></td><td>" + (pr === 0 ? "<b>무료</b>" : "<b>" + won(pr) + "</b>" + (pc ? '<small class="a-memo">' + (VX().ebOf(p) ? "얼리버드 · " : "") + pc + "% 할인 · 정가 " + won(p.price) + "</small>" : "")) + "</td><td>" + pill(st[0], st[1]) + '</td><td class="num">' + VX().lessons(p).length + '개</td><td class="num">' + so.length + "건" + (p.base ? '<small class="a-memo">표시 수강생 ' + VX().soldOf(p).toLocaleString() + "명</small>" : "") + '</td><td class="right num">' + won(vdSum(so)) + "</td><td>" + (rt.n ? "★ " + rt.avg.toFixed(1) + " (" + rt.n + ")" : '<span class="a-muted">-</span>') + '</td><td class="right"><button type="button" class="a-btn a-btn-ghost a-btn-sm" data-action="store-split" data-href="#/vod/p/' + esc(p.id) + '">보기</button><button type="button" class="a-btn a-btn-ghost a-btn-sm" data-action="vda-dup" data-id="' + esc(p.id) + '" title="이 클래스를 복사해서 새로 만들어요">' + icon("layers", "sm") + '복제</button><a class="a-btn a-btn-primary a-btn-sm" href="#/center/master/vod-classes/' + esc(p.id) + '">세팅</a></td></tr>'; }).join("") +
+        ps.map((p) => { const st = VD_ST[p.status] || VD_ST.hidden, pr = VX().priceOf(p), pc = VX().pctOf(p), rt = VX().ratingOf(p.id), so = sold(p); return '<tr><td><div class="vda-cl">' + vdThumb(p) + '<div><b>' + esc(p.title) + '</b><small class="a-memo">' + esc(adTypeName(p)) + " · " + esc(p.creator || "-") + " · " + esc(VX().catOf(p.cat).label) + "</small>" + vdFunMemo(p) + (p.status === "soon" ? '<button type="button" class="vda-chip-btn" data-action="vda-alarm" data-id="' + esc(p.id) + '">' + icon("bell", "xs") + " 오픈 알림 " + vdAlarmOf(p.id).length + "명</button>" : "") + (VX().isEvent(p) ? '<button type="button" class="vda-chip-btn" data-action="vda-roster" data-id="' + esc(p.id) + '">' + icon("users", "xs") + " 신청자 명단 " + vdRoster(p.id).length + "명</button>" : "") + "</div></div></td><td>" + (pr === 0 ? "<b>무료</b>" : "<b>" + won(pr) + "</b>" + (pc ? '<small class="a-memo">' + (VX().ebOf(p) ? "얼리버드 · " : "") + pc + "% 할인 · 정가 " + won(p.price) + "</small>" : "")) + "</td><td>" + pill(st[0], st[1]) + (VX().insShown && !VX().insShown(p) ? '<small class="a-memo">' + pill("강사 미노출", "mute") + "</small>" : "") + '</td><td class="num">' + VX().lessons(p).length + '개</td><td class="num">' + so.length + "건" + (p.base ? '<small class="a-memo">표시 수강생 ' + VX().soldOf(p).toLocaleString() + "명</small>" : "") + '</td><td class="right num">' + won(vdSum(so)) + "</td><td>" + (rt.n ? "★ " + rt.avg.toFixed(1) + " (" + rt.n + ")" : '<span class="a-muted">-</span>') + '</td><td class="right"><button type="button" class="a-btn a-btn-ghost a-btn-sm" data-action="store-split" data-href="#/vod/p/' + esc(p.id) + '">보기</button><button type="button" class="a-btn a-btn-ghost a-btn-sm" data-action="vda-dup" data-id="' + esc(p.id) + '" title="이 클래스를 복사해서 새로 만들어요">' + icon("layers", "sm") + '복제</button><a class="a-btn a-btn-primary a-btn-sm" href="#/center/master/vod-classes/' + esc(p.id) + '">세팅</a></td></tr>'; }).join("") +
         "</tbody></table></div>" : emptyBox("monitorPlay", "아직 클래스가 없어요.", btn(icon("plus", "sm") + "새 클래스 만들기", "vda-new", "a-btn-primary"))) + "</section>";
   }
   /* 관리자 화면에서 부르는 상품 종류 (데이터는 그대로: live · offline)
@@ -2926,6 +2970,7 @@
             f("level", "난이도", d.level, ' maxlength="20" placeholder="입문 · 초급 · 중급"') + "</div>" +
           '<div class="a-form-row"><div class="a-field"><label for="vda-iid">강사 (정산 받는 사람)</label><select class="a-input" id="vda-iid" name="iid">' + vdInsOpts(d.iid) + '</select><small class="a-muted">두잉고 강사를 고르면 그 강사센터 ‘내 VOD 판매’에 판매 · 정산이 보여요.</small></div>' +
             f("creator", "크리에이터 표시 이름", d.creator, ' maxlength="20" placeholder="비우면 강사 이름"') + "</div>" +
+          '<div class="a-field vda-cph"><label for="vda-cph-file">강사 사진 <small>두잉고 계정이 없는 강사(예: 셀러훈)용 · 강사진 · 썸네일 · 강사 소개에 나와요. 두잉고 강사는 강사센터 브랜드 사진을 써요</small></label><div class="vda-cph-row"><span class="vda-cph-prev">' + (d.creatorPhoto ? '<img src="' + esc(d.creatorPhoto) + '" alt="">' : "<em>사진 없음</em>") + '</span><input class="a-input" id="vda-cph-file" type="file" accept="image/jpeg,image/png,image/webp" data-vda-img="creatorPhoto">' + (d.creatorPhoto ? btn(icon("trash", "sm") + "사진 지우기", "vda-cph-del", "a-btn-ghost a-btn-sm") : "") + "</div></div>" +
           '<div class="a-field"><span class="a-label">판매 상태</span><div class="vda-radios">' + [["on", "판매 중", "스토어에 보이고 바로 살 수 있어요"], ["soon", "오픈 예정", "보이지만 아직 살 수 없어요"], ["hidden", "숨김", "스토어에 안 보여요 (준비 중)"]].map((x) => '<label class="vda-radio"><input type="radio" name="status" value="' + x[0] + '"' + (d.status === x[0] ? " checked" : "") + "><span><b>" + x[1] + "</b><small>" + x[2] + "</small></span></label>").join("") + "</div></div>" +
           f("openAt", "오픈 예정일 <small>(‘오픈 예정’일 때 썸네일 · 카드에 보여요)</small>", d.openAt, ' type="date"') +
           '<div class="a-field"><span class="a-label">배지 <small>(카드 · 상세 가격 아래 · BEST 파랑 · NEW 주황 · 업데이트 레드)</small></span><div class="vda-checks">' + [["BEST", "BEST"], ["NEW", "NEW"], ["UPDATE", "업데이트"], ["HOT", "HOT"], ["NICE", "추천"]].map((b) => '<label class="a-check"><input type="checkbox" name="badge" value="' + b[0] + '"' + ((d.badges || []).indexOf(b[0]) >= 0 ? " checked" : "") + "><span>" + b[1] + "</span></label>").join("") + "</div></div>" +
@@ -3067,7 +3112,7 @@
     if (id === "new") { clean.id = pid; clean.createdAt = Date.now(); if (clean.status === "on") clean.openedAt = Date.now(); list.unshift(clean); }
     else { const i = list.findIndex((x) => x.id === id); if (i < 0) return fail("클래스를 찾을 수 없어요."); const was = list[i].status; list[i] = Object.assign({}, list[i], clean, { id }); if (clean.status === "on" && was !== "on" && !list[i].openedAt) list[i].openedAt = Date.now(); }
     ui.vdDraft = null;
-    if (id === "new") history.replaceState(null, "", "#/center/master/vod-classes/" + pid);
+    if (id === "new") ROUTE.replace("#/center/master/vod-classes/" + pid);
     commit("‘" + clean.title + "’ 클래스를 " + (id === "new" ? "만들었어요." : "저장했어요."));
   }
   /* 상세페이지 이미지 (JPG · PNG 여러 장): 올린 순서대로 위에서 아래로 이어 붙여 보여요. 시안은 이 브라우저(IndexedDB)에 저장 · 정식 서버는 파일 저장소 */
@@ -3124,6 +3169,19 @@
     if (!file || !ui.vdDraft) return;
     if (!/^image\//.test(file.type)) { toast("이미지 파일만 올릴 수 있어요.", "warn"); return; }
     vdSync(form);
+    if (k === "creatorPhoto") {
+      input.value = "";
+      try {
+        // 배경을 뺀 PNG(누끼)는 그대로 PNG로, 나머지는 JPG로 — 가로 900px 안으로 줄여요
+        const png = file.type === "image/png", bmp = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = URL.createObjectURL(file); });
+        const sc = Math.min(1, 900 / bmp.width), cv = document.createElement("canvas"); cv.width = Math.round(bmp.width * sc); cv.height = Math.round(bmp.height * sc); cv.getContext("2d").drawImage(bmp, 0, 0, cv.width, cv.height);
+        const blob = await new Promise((ok) => cv.toBlob(ok, png ? "image/png" : "image/jpeg", 0.86));
+        // 정식 서버: 파일 저장소 주소 · 시안: 그림 그대로(data URL) — 화면이 바로 <img> 로 보여요
+        ui.vdDraft.creatorPhoto = DB.remote && DB.remote.on ? (await VX().matPut(new File([blob], png ? "creator.png" : "creator.jpg", { type: blob.type }))).url : cv.toDataURL(png ? "image/png" : "image/jpeg", 0.86);
+        render(); toast("강사 사진을 올렸어요. 저장을 눌러야 반영돼요.");
+      } catch (e) { toast("사진을 올리지 못했어요. JPG · PNG로 다시 올려 주세요.", "warn"); }
+      return;
+    }
     if (k === "thumb") {
       const sp = IMG_SPEC.thumb; input.value = "";
       if (file.size > VX().MAT_MAX) { toast("20MB 이하 이미지만 올릴 수 있어요.", "warn"); return; }
@@ -3222,7 +3280,7 @@
   /* ---------- 스토어 미리보기: 마스터 화면을 떠나지 않고 오른쪽 분할 화면으로 ---------- */
   function storeSplit(href) {
     let box = document.getElementById("a-split");
-    const base = location.href.split("#")[0], url = base + (href || "#/vod");
+    const url = ROUTE.abs(href || "#/vod");
     if (!box) {
       box = document.createElement("aside"); box.id = "a-split"; box.className = "a-split"; box.setAttribute("aria-label", "DOOGO CLASS 미리보기");
       document.body.appendChild(box);
@@ -3321,12 +3379,13 @@
             '<div class="a-field"><label for="vda-adsp">광고비 강사 분담 (%)</label><input class="a-input" id="vda-adsp" name="adSplit" type="number" min="0" max="100" value="' + esc(VX().adSplitOf()) + '"><small class="a-muted">기본 50 · 달마다 적은 광고비 중 강사 몫 (VOD 매출 · 주문 › 정산 비율 · 광고비)</small></div></div>' +
           '<div class="a-form-row"><div class="a-field"><label for="vda-bank">무통장 은행</label><input class="a-input" id="vda-bank" name="bank" value="' + esc(s.bank || "") + '" maxlength="20" placeholder="' + esc(b.bank || "비우면 기수 입금 계좌") + '"></div><div class="a-field"><label for="vda-holder">예금주</label><input class="a-input" id="vda-holder" name="holder" value="' + esc(s.holder || "") + '" maxlength="30" placeholder="' + esc(b.holder || "(주)두고홀딩스") + '"></div></div>' +
           '<div class="a-field"><label for="vda-account">계좌번호</label><input class="a-input" id="vda-account" name="account" value="' + esc(s.account || "") + '" maxlength="40" placeholder="' + esc(b.account || "비우면 기수 입금 계좌") + '"></div>' +
+          '<label class="a-check vda-demo"><input type="checkbox" name="demoLogin"' + (s.demoLogin === false ? "" : " checked") + '><span><b>체험 계정 쓰기</b> · vod@gmail.com / vod <small class="a-muted">로그인 화면에 안내가 보이고 누구나 이 계정으로 들어와 산 강의 6개를 볼 수 있어요. 정식 오픈 전에 끄면 안내가 사라지고 로그인이 막혀요.</small></span></label>' +
           '<div class="a-form-row"><div class="a-field"><label for="vda-days">입금 기한 (일)</label><input class="a-input" id="vda-days" name="payDays" type="number" min="1" max="14" value="' + esc(s.payDays || 3) + '"></div><div class="a-field"><label for="vda-rp">후기 작성 포인트 (P)</label><input class="a-input" id="vda-rp" name="reviewPoint" type="number" min="0" max="100000" step="100" value="' + esc(s.reviewPoint == null ? 500 : s.reviewPoint) + '"><small class="a-muted">수강 후기를 쓴 회원에게 주는 포인트 · 1P = 1원</small></div></div>' +
           '<h3 class="vda-set-h">수강권 · 부가 상품 기본값 <small>클래스에서 비워 둔 칸은 이 값을 써요</small></h3>' +
           '<div class="a-form-row"><div class="a-field"><label for="vda-ext">1년 연장권 가격 (365일 수강권의 %)</label><input class="a-input" id="vda-ext" name="extendPct" type="number" min="1" max="100" value="' + esc(s.extendPct == null ? 50 : s.extendPct) + '"><small class="a-muted">기간이 끝난(또는 30일 이내로 남은) 수강생이 진도 그대로 1년 더 들을 때</small></div><div class="a-field"><label for="vda-ash">부가 상품 강사 정산 비율 (%)</label><input class="a-input" id="vda-ash" name="addonShare" type="number" min="0" max="100" value="' + esc(s.addonShare == null ? 50 : s.addonShare) + '"><small class="a-muted">1:1 코칭권 · TEA TIME (강사가 직접 시간을 쓰는 상품)</small></div></div>' +
           '<div class="a-form-row"><div class="a-field"><label for="vda-cn">1:1 코칭권 횟수</label><input class="a-input" id="vda-cn" name="coachN" type="number" min="1" max="50" value="' + esc((s.coach || {}).n || 5) + '"></div><div class="a-field"><label for="vda-cd">코칭권 사용 기간 (일)</label><input class="a-input" id="vda-cd" name="coachDays" type="number" min="7" max="730" value="' + esc((s.coach || {}).days || 180) + '"></div><div class="a-field"><label for="vda-cp">코칭권 가격 (원)</label><input class="a-input" id="vda-cp" name="coachPrice" type="number" min="0" step="1000" value="' + esc((s.coach || {}).price || 150000) + '"></div></div>' +
           '<div class="a-form-row"><div class="a-field"><label for="vda-tm">TEA TIME 시간 (분)</label><input class="a-input" id="vda-tm" name="teaMin" type="number" min="15" max="240" step="15" value="' + esc((s.tea || {}).min || 60) + '"></div><div class="a-field"><label for="vda-tp">TEA TIME 가격 (원)</label><input class="a-input" id="vda-tp" name="teaPrice" type="number" min="0" step="1000" value="' + esc((s.tea || {}).price || 99000) + '"></div></div>' +
-          '<p class="a-muted p-small">' + icon("alert", "xs") + " 시안이라 카드 · 간편결제는 바로 ‘결제 완료’로 기록돼요. 정식 오픈 때 PG(토스페이먼츠 등)를 연결하면 실제 결제 · 자동 환불이 돼요.</p>" +
+          '<p class="a-muted p-small">' + icon("alert", "xs") + (vdSrv() ? " 무통장 입금은 계좌를 넣고 저장하면 바로 결제 화면에 열려요 (비우면 기수 입금 계좌). 카드 · 간편결제는 PG 심사가 끝나고 포트원 키를 넣으면 열려요." : " 시안이라 카드 · 간편결제는 바로 ‘결제 완료’로 기록돼요. 정식 오픈 때 PG(토스페이먼츠 등)를 연결하면 실제 결제 · 자동 환불이 돼요.") + "</p>" +
           '<div class="a-form-actions"><button class="a-btn a-btn-primary" type="submit">설정 저장</button></div></form></section></div>' + vdHelpCard();
   }
   /* 고객센터 FAQ · 공지: 스토어 마이페이지 › 고객센터에 보여요 (FAQ를 처음 고치면 기본 FAQ를 복사해서 시작해요) */
@@ -3604,6 +3663,7 @@
     if (!(n >= 0 && n <= 100)) { toast("정산 비율은 0~100 사이로 적어 주세요.", "warn"); return; }
     const pc = (x, dv) => { const n3 = Math.round(Number(x)); return x !== "" && n3 >= 0 && n3 <= 100 ? n3 : dv; };
     if (f.adSplit) s.adSplit = pc(f.adSplit.value, 50);
+    if (f.demoLogin) s.demoLogin = !!f.demoLogin.checked;
     Object.assign(s, { share: Math.round(n), bank: f.bank.value.trim(), account: f.account.value.trim(), holder: f.holder.value.trim(), payDays: Math.min(14, Math.max(1, Number(f.payDays.value) || 3)), reviewPoint: f.reviewPoint ? Math.max(0, Math.round(Number(f.reviewPoint.value) || 0)) : s.reviewPoint });
     if (f.extendPct) {
       const cl = (x, lo, hi, dv) => { const n2 = Math.round(Number(x)); return n2 >= lo && n2 <= hi ? n2 : dv; };
@@ -3773,7 +3833,7 @@
     const iid = IID(), v = VD(), X = VX(), mine = v.products.filter((p) => p.iid === iid), ym = todayStr().slice(0, 7), last = vdYMadd(ym, -1);
     const months = Array.from({ length: 6 }, (_, i) => vdYMadd(ym, -i)).map((m) => { const st = vdStmt(iid, m); st.s = vdStState(st); return st; });
     const paidOut = v.payouts.filter((x) => x.key === iid && (x.st === "paid" || (!x.st && x.at))).reduce((a, x) => a + (Number(x.amount) || (x.snap ? x.snap.pay : 0)), 0);
-    const pf = vdProf(iid), base = location.href.split("#")[0], lm = months[1];
+    const pf = vdProf(iid), lm = months[1];
     const rate = (t, n, d, cls) => '<div class="vs-rate ' + (cls || "") + '"><b>' + n + "%</b><span>" + t + "</span><small>" + d + "</small></div>";
     const links = mine.filter((p) => p.status !== "hidden");
     return head("판매 정산", "DOOGO CLASS에서 판매한 VOD · 전자책 · LIVE · 오프라인 강의의 정산이에요. 매달 1일~말일 판매분을 다음 달 10일에 지급해요.", vdStoreBtn()) +
@@ -3785,7 +3845,7 @@
       "</div>" +
       vsRateCard(iid, mine) +
       (links.length ? '<section class="a-card"><div class="a-card-head"><h2>내 강의 전용 링크</h2><span class="a-muted">SNS · 블로그 · 카톡에 이 링크를 쓰면 ‘강사 링크’ 판매로 따로 집계돼요 (정산 비율은 같아요)</span></div>' +
-        '<div class="vs-links">' + links.map((p) => { const u = base + "#/vod/p/" + p.id + "?by=" + iid; return '<div class="vs-link"><span class="vs-link-t">' + vdThumb(p, "sm") + "<b>" + esc(p.title) + '</b></span><input class="a-input a-sm" value="' + esc(u) + '" readonly aria-label="' + esc(p.title) + ' 전용 링크">' + btn(icon("link", "sm") + "복사", "vda-copy", "a-btn-ghost a-btn-sm", ' data-u="' + esc(u) + '"') + "</div>"; }).join("") + "</div></section>" : "") +
+        '<div class="vs-links">' + links.map((p) => { const u = ROUTE.abs("#/vod/p/" + p.id + "?by=" + iid); return '<div class="vs-link"><span class="vs-link-t">' + vdThumb(p, "sm") + "<b>" + esc(p.title) + '</b></span><input class="a-input a-sm" value="' + esc(u) + '" readonly aria-label="' + esc(p.title) + ' 전용 링크">' + btn(icon("link", "sm") + "복사", "vda-copy", "a-btn-ghost a-btn-sm", ' data-u="' + esc(u) + '"') + "</div>"; }).join("") + "</div></section>" : "") +
       '<section class="a-card"><div class="a-card-head"><h2>월별 정산 명세</h2><span class="a-muted">마스터가 확정하면 명세서가 고정돼요</span></div><div class="a-table-wrap"><table class="a-table vs-table"><thead><tr><th>판매 월</th><th>판매</th><th class="right">판매가 합계</th><th class="right">정산액</th><th class="right">차감</th><th class="right">광고비 분담</th><th class="right">세금</th><th class="right">지급액</th><th>상태</th><th class="right"></th></tr></thead><tbody>' +
         months.map((x) => { const at = ' data-k="' + esc(iid) + '" data-m="' + esc(x.ym) + '"'; return "<tr" + ((x.n || x.rec || x.adDed || x.carry) ? "" : ' class="a-dim"') + "><td><b>" + vdYMtxt(x.ym) + '</b><div class="vs-chs">' + vdChTags(x) + '</div></td><td class="num">' + x.n + '건</td><td class="right num">' + won(x.base) + '</td><td class="right num">' + won(x.ins) + '</td><td class="right num">' + (x.ded ? "- " + won(x.ded) : "0원") + '</td><td class="right num">' + vdAdCell(x) + '</td><td class="right num">' + (x.biz ? "+ " + won(x.vat) : x.wh ? "- " + won(x.wh) : "0원") + '</td><td class="right num"><b>' + won(x.pay) + "</b>" + vdNextTxt(x) + "</td><td>" + ((x.n || x.rec || x.adDed || x.carry) ? pill(x.s.t, x.s.c) : '<span class="a-muted">-</span>') + '</td><td class="right vs-acts">' + ((x.n || x.rec || x.adDed || x.carry) ? btn("명세서", "vda-stm", "a-btn-ghost a-btn-sm", at) : "") + (x.s.k === "confirmed" && x.biz ? btn("세금계산서 발행 완료", "vda-inv", "a-btn-primary a-btn-sm", ' data-m="' + esc(x.ym) + '"') : "") + "</td></tr>"; }).join("") +
       "</tbody></table></div></section>" +
@@ -3983,8 +4043,8 @@
       case "vda-rate-edit": vdRateModal(d.k); break;
       case "vda-ad-del": { const v = VD(), i = (v.adSpend || []).findIndex((x) => x.id === d.id); if (i < 0) break; confirmModal("광고비 지우기", won(v.adSpend[i].amount) + " 광고비 기록을 지울까요? 확정 전 정산에서 다시 빠져요.", "지우기", true, () => { v.adSpend.splice(i, 1); commit("광고비 기록을 지웠어요."); }); break; }
       case "vda-ym": ui.vdYM = vdYMadd(ui.vdYM || vdYMadd(todayStr().slice(0, 7), -1), Number(d.dir)); render(); break;
-      case "vda-paid": { const o = O(); if (!o) break; confirmModal("입금 확인", esc((vdMember(o.mid) || {}).name || "") + " 님 · " + esc(o.title) + "<br><b>" + won(o.amount) + "</b> 입금을 확인했나요? 확인하면 바로 수강할 수 있어요.", "입금 확인", false, () => { o.status = "paid"; o.paidAt = Date.now(); o.depositBy = (staffMe() || {}).name || "ADMIN"; if (o.share == null) o.share = vdShare(o); v.orders.filter((x) => x.grp === o.no && x.status === "pending").forEach((x) => { x.status = "paid"; x.paidAt = o.paidAt; }); commit(o.no + " 입금을 확인했어요. 회원이 바로 수강할 수 있어요."); }); break; }
-      case "vda-cancel": { const o = O(); if (!o) break; confirmModal("주문 취소", esc(o.no) + " 주문을 취소할까요? (입금 기한이 지났을 때)" + (o.mcid || o.pointOff ? "<br>쓴 쿠폰 · 포인트는 회원에게 돌려줘요." : ""), "주문 취소", true, () => { if (VX().restoreOrder) VX().restoreOrder(o); if (o.tea) o.tea.st = "cancel"; Object.assign(o, { status: "canceled", canceledAt: Date.now(), canceledBy: (S && (S.name || S.role)) || "master" }); v.orders.filter((x) => x.grp === o.no && x.status === "pending").forEach((x) => { if (VX().restoreOrder) VX().restoreOrder(x); Object.assign(x, { status: "canceled", canceledAt: Date.now() }); }); commit(o.no + " 주문을 취소했어요. 주문 내역에 ‘취소’로 남아요."); }); break; }
+      case "vda-paid": { const o = O(); if (!o) break; confirmModal("입금 확인", esc((vdMember(o.mid) || {}).name || "") + " 님 · " + esc(o.title) + "<br>입금자명 <b>" + esc(vdDep(o)) + "</b> · <b>" + won(vdGrpAmt(o)) + "</b> 입금을 확인했나요? 확인하면 바로 수강할 수 있어요.", "입금 확인", false, () => { if (vdSrv()) { vdBankAct("bankOk", o.grp || o.no, (o.grp || o.no) + " 입금을 확인했어요. 회원이 바로 수강할 수 있어요."); return; } o.status = "paid"; o.paidAt = Date.now(); o.depositBy = (staffMe() || {}).name || "ADMIN"; if (o.share == null) o.share = vdShare(o); v.orders.filter((x) => x.grp === o.no && x.status === "pending").forEach((x) => { x.status = "paid"; x.paidAt = o.paidAt; }); commit(o.no + " 입금을 확인했어요. 회원이 바로 수강할 수 있어요."); }); break; }
+      case "vda-cancel": { const o = O(); if (!o) break; confirmModal("주문 취소", esc(o.no) + " 주문을 취소할까요? (입금 기한이 지났을 때)" + (o.mcid || o.pointOff ? "<br>쓴 쿠폰 · 포인트는 회원에게 돌려줘요." : ""), "주문 취소", true, () => { if (vdSrv()) { vdBankAct("bankCancel", o.grp || o.no, (o.grp || o.no) + " 주문을 취소했어요. 쓴 쿠폰 · 포인트는 회원에게 돌려줬어요."); return; } if (VX().restoreOrder) VX().restoreOrder(o); if (o.tea) o.tea.st = "cancel"; Object.assign(o, { status: "canceled", canceledAt: Date.now(), canceledBy: (S && (S.name || S.role)) || "master" }); v.orders.filter((x) => x.grp === o.no && x.status === "pending").forEach((x) => { if (VX().restoreOrder) VX().restoreOrder(x); Object.assign(x, { status: "canceled", canceledAt: Date.now() }); }); commit(o.no + " 주문을 취소했어요. 주문 내역에 ‘취소’로 남아요."); }); break; }
       case "vda-refund": { const X = VX(), o = O(); if (!o) break; const done = X.usedOf ? X.usedOf(o.mid, o.pid) : 0, days = Math.floor((Date.now() - o.paidAt) / 864e5), k = X.kindOf(o), rf = X.rfSet ? X.rfSet() : { days: 7, maxUsed: 0 }, inRule = days < rf.days && done <= rf.maxUsed;
         const cu = o.coach ? Number(o.coach.used) || 0 : 0, cl = o.coach ? Math.max(0, (Number(o.coach.n) || 0) - cu) : 0, per = o.coach && o.coach.n ? Math.round(o.amount / o.coach.n) : 0;
         const why = k === "coach" ? "코칭권 " + o.coach.n + "회 중 " + cu + "회 사용 · 결제 " + days + "일째 · " + (!cu && days <= 7 ? "전액 환불 대상이에요." : "남은 " + cl + "회 × 1회 " + won(per) + " = " + won(cl * per) + " 환불 대상이에요.") + "<br>환불하면 남은 코칭권이 바로 사라져요."
@@ -4010,7 +4070,7 @@
       case "vda-copy": { const u = d.u; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast("링크를 복사했어요. 이 링크로 들어와 7일 안에 결제하면 강사 링크 비율로 정산돼요."), () => { const t = a.closest(".vs-link"); const inp = t && t.querySelector("input"); if (inp) { inp.select(); document.execCommand && document.execCommand("copy"); } toast("링크를 복사했어요."); }); break; }
       case "vda-csv": { const X = VX(), rows = [["주문일", "주문번호", "회원", "이메일", "클래스", "상품", "강사", "유입", "결제수단", "판매가", "쿠폰", "포인트", "결제 금액", "상태", "결제일", "환불일", "환불 금액", "정산 비율", "강사 정산"]].concat(v.orders.slice().sort((a, b) => b.at - a.at).map((o) => { const m = vdMember(o.mid) || {}, p = vdP(o.pid) || {}; return [DB.date.toStr(new Date(o.at)), o.no, m.name || "", m.email || "", o.title, X.optTxt(o) || "", p.creator || "", X.CH_TXT[X.isAccess(o) ? o.ch || "web" : "addon"], VD_PAY[o.method] || o.method, X.baseOf(o), o.couponOff || 0, o.pointOff || 0, o.amount, (VD_OST[o.status] || [""])[0], o.paidAt ? DB.date.toStr(new Date(o.paidAt)) : "", o.refundedAt ? DB.date.toStr(new Date(o.refundedAt)) : "", o.refundAmount || "", o.share != null ? o.share : "", o.status === "paid" ? vdInsAmt(o) : 0]; }));
         const csv = "﻿" + rows.map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(",")).join("\n"), l = document.createElement("a"); l.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); l.download = "doogoclass-vod-orders-" + todayStr() + ".csv"; l.click(); break; }
-      case "vda-new": ui.vdDraft = null; location.hash = "#/center/master/vod-classes/new"; break;
+      case "vda-new": ui.vdDraft = null; ROUTE.hash = "#/center/master/vod-classes/new"; break;
       case "vda-alarm": vdAlarmModal(d.id); break;
       case "vda-faq-edit": { const f = d.i != null ? VX().helpFaq()[Number(d.i)] : null, cats = HELP_CATS.concat(f && HELP_CATS.indexOf(f[0]) < 0 ? [f[0]] : []);
         openModal(f ? "FAQ 고치기" : "FAQ 추가", '<div class="a-form"><div class="a-field"><label for="vf-cat">분류</label><select class="a-input" id="vf-cat">' + cats.map((c) => "<option" + (f && f[0] === c ? " selected" : "") + ">" + esc(c) + "</option>").join("") + '</select></div><div class="a-field"><label for="vf-q">질문</label><input class="a-input" id="vf-q" maxlength="80" value="' + esc(f ? f[1] : "") + '"></div><div class="a-field"><label for="vf-a">답변</label><textarea class="a-input" id="vf-a" rows="5" maxlength="800">' + esc(f ? f[2] : "") + '</textarea></div><p class="a-error" id="vf-err"></p></div>', btn("취소", "modal-close") + btn("저장", "vda-faq-save", "a-btn-primary", d.i != null ? ' data-i="' + esc(d.i) + '"' : "")); break; }
@@ -4029,7 +4089,16 @@
       case "vda-roster-csv": { const p = vdP(d.id); vdCsvDl("roster-" + d.id, [["클래스", "일시", "번호", "이름", "휴대폰", "이메일", "신청일", "결제", "금액", "출석"]].concat(vdRoster(d.id).map((o, i) => { const m = vdMember(o.mid) || {}; return [p ? p.title : "", p ? p.eventAt : "", i + 1, (o.buyer && o.buyer.name) || m.name || "", vdPhoneOf(o, m), m.email || "", DB.date.toStr(new Date(o.at)), o.status === "pending" ? "입금 대기" : "완료", o.amount, o.attend ? "O" : ""]; }))); break; }
       case "vda-attend": { const o = VD().orders.find((x) => x.id === d.id); if (!o) break; o.attend = !o.attend; DB.save(); a.classList.toggle("on", o.attend); a.setAttribute("aria-checked", String(o.attend)); break; }
       case "vda-cancel0": { const o = O(); if (!o) break; confirmModal("신청 취소", esc((vdMember(o.mid) || {}).name || "") + " 님의 ‘" + esc(o.title) + "’ 신청을 취소할까요?" + (o.mcid || o.pointOff ? "<br>쓴 쿠폰 · 포인트는 회원에게 돌려줘요." : "") + "<br>LIVE · 온/오프라인 자리는 다시 열려요.", "신청 취소", true, () => { if (VX().restoreOrder) VX().restoreOrder(o); Object.assign(o, { status: "canceled", canceledAt: Date.now(), canceledBy: (S && (S.name || S.role)) || "master" }); commit(o.no + " 신청을 취소했어요."); }); break; }
-      case "vda-cancel-exp": { const ex = vdExpired(); confirmModal("기한 지난 주문 취소", "입금 기한(" + (Number(VD().settings.payDays) || 3) + "일)이 지난 무통장 주문 " + ex.length + "건을 한 번에 취소할까요?<br>쓴 쿠폰 · 포인트는 회원에게 돌려주고, 잡아 둔 자리도 다시 열려요.", "모두 취소", true, () => { const at = Date.now(); ex.forEach((o) => { if (VX().restoreOrder) VX().restoreOrder(o); if (o.tea) o.tea.st = "cancel"; Object.assign(o, { status: "canceled", canceledAt: at, canceledBy: "기한 지남" }); }); commit("기한 지난 주문 " + ex.length + "건을 취소했어요."); }); break; }
+      case "vda-blink": { const sel = document.querySelector('[data-blink="' + (window.CSS && CSS.escape ? CSS.escape(d.id) : d.id) + '"]'), no = sel && sel.value; if (!no) { toast("연결할 주문을 골라 주세요.", "warn"); break; }
+        const o = VD().orders.find((x) => x.no === no), e = (ui.vdBankLog || []).find((x) => x.id === d.id) || {};
+        confirmModal("입금 연결", esc(e.name || "") + " · " + won(e.amount || 0) + " 입금을<br><b>" + esc(o ? vdDep(o) + " · " + o.title : no) + "</b> 주문에 연결할까요? 연결하면 바로 수강이 열려요." + (o && vdGrpAmt(o) !== e.amount ? '<br><small class="a-memo-red">금액이 달라요 (주문 ' + won(vdGrpAmt(o)) + ")</small>" : ""), "연결 · 입금 확인", false, () => {
+          VX().payApi("bankLink", { id: d.id, no }).then((r) => DB.remote.refresh().then(() => { ui.vdBankLog = undefined; closeModal(); render(); if (r && r.ok) { actLog(no + " 입금을 연결했어요."); toast(no + " 입금을 연결했어요. 회원이 바로 수강할 수 있어요."); } else toast((r && r.message) || "연결하지 못했어요.", "warn"); }));
+        }); break; }
+      case "vda-insoff": { const v = VD(), k = d.k, nm = d.n || k; v.insOff = Array.isArray(v.insOff) ? v.insOff : []; const i = v.insOff.indexOf(k);
+        if (i >= 0) { v.insOff.splice(i, 1); commit(nm + " 강사 클래스를 스토어에 다시 보여 줘요."); break; }
+        confirmModal("스토어에서 숨기기", "<b>" + esc(nm) + "</b> 강사의 클래스 · 배너 · 강사진 카드를 스토어에서 숨길까요?<br>클래스는 지우지 않아요. 새로 살 수만 없고, 이미 산 회원은 계속 들을 수 있어요. 언제든 다시 켤 수 있어요.", "숨기기", true, () => { v.insOff.push(k); commit(nm + " 강사 클래스를 스토어에서 숨겼어요. 클래스는 그대로 남아 있어요."); }); break; }
+      case "vda-cph-del": if (ui.vdDraft) { ui.vdDraft.creatorPhoto = ""; render(); toast("강사 사진을 지웠어요. 저장을 눌러야 반영돼요."); } break;
+      case "vda-cancel-exp": { const ex = vdExpired(); confirmModal("기한 지난 주문 취소", "입금 기한(" + (Number(VD().settings.payDays) || 3) + "일)이 지난 무통장 주문 " + ex.length + "건을 한 번에 취소할까요?<br>쓴 쿠폰 · 포인트는 회원에게 돌려주고, 잡아 둔 자리도 다시 열려요.", "모두 취소", true, () => { if (vdSrv()) { vdBankAct("bankCancel", ex.filter((o) => !o.grp).map((o) => o.no), "입금 기한 지난 주문 " + ex.filter((o) => !o.grp).length + "건을 취소했어요."); return; } const at = Date.now(); ex.forEach((o) => { if (VX().restoreOrder) VX().restoreOrder(o); if (o.tea) o.tea.st = "cancel"; Object.assign(o, { status: "canceled", canceledAt: at, canceledBy: "기한 지남" }); }); commit("기한 지난 주문 " + ex.length + "건을 취소했어요."); }); break; }
       case "vda-mem": vdMemberModal(d.id); break;
       case "vda-pt": { const m = vdMember(d.id), amt = Math.round(Number((document.getElementById("vda-pt-amt") || {}).value) || 0), why = ((document.getElementById("vda-pt-why") || {}).value || "").trim(); if (!m) break; if (!amt) { toast("더하거나 뺄 포인트를 적어 주세요. (빼려면 -500처럼)", "warn"); break; } if (!why) { toast("사유를 적어 주세요. 회원 포인트 내역에 보여요.", "warn"); break; } if ((Number(m.points) || 0) + amt < 0) { toast("포인트가 0보다 작아질 수 없어요.", "warn"); break; } VX().addPoint(m, amt, why + " (운영자)"); DB.save(); actLog(m.name + " 포인트 " + (amt > 0 ? "+" : "") + amt); vdMemberModal(d.id); toast("포인트를 " + (amt > 0 ? "더했어요." : "뺐어요.")); break; }
       case "vda-mc-add": { const c = (VD().coupons || []).find((x) => x.id === (document.getElementById("vda-mc-cid") || {}).value); if (!c) { toast("쿠폰을 골라 주세요.", "warn"); break; } if (!VX().issueCoupon(d.id, c)) { toast("이미 받은 쿠폰이에요.", "warn"); break; } DB.save(); vdMemberModal(d.id); toast("‘" + c.name + "’ 쿠폰을 넣었어요."); break; }
@@ -4040,8 +4109,8 @@
         Object.assign(c, { __id: "new", dupOf: src.id, title: (src.title + " (복사본)").slice(0, 60), status: "hidden", base: 0, likeBase: 0, badges: (src.badges || []).filter((b) => b !== "BEST" && b !== "HOT"), faq: (src.faq || []).map((x) => x.slice()) });
         (c.curriculum || []).forEach((ch) => { ch.id = ""; (ch.lessons || []).forEach((l) => { l.id = ""; }); });
         if (VX().isEvent(src)) c.eventAt = "";
-        ui.vdDraft = c; location.hash = "#/center/master/vod-classes/new"; toast("‘" + src.title + "’을 복사했어요. 이름 · 날짜 · 링크를 바꾸고 ‘클래스 만들기’를 누르면 새로 생겨요."); break; }
-      case "vda-new-fl": ui.vdDraft = Object.assign(vdBlank(), { __id: "new", type: "live", price: 0, accessDays: null, via: "youtube", eventMin: 90, kakao: "", ytLive: "", hook: "LIVE 무료 특강", ebDays: 3, next: "", gate: false, curriculum: [{ id: "", title: "LIVE 진행 순서", lessons: [{ id: "", title: "오프닝 · 오늘 배울 것", min: 10, video: "", preview: false }, { id: "", title: "핵심 강의", min: 60, video: "", preview: false }, { id: "", title: "실시간 Q&A · LIVE 참여자 혜택 안내", min: 20, video: "", preview: false }] }] }); location.hash = "#/center/master/vod-classes/new"; break;
+        ui.vdDraft = c; ROUTE.hash = "#/center/master/vod-classes/new"; toast("‘" + src.title + "’을 복사했어요. 이름 · 날짜 · 링크를 바꾸고 ‘클래스 만들기’를 누르면 새로 생겨요."); break; }
+      case "vda-new-fl": ui.vdDraft = Object.assign(vdBlank(), { __id: "new", type: "live", price: 0, accessDays: null, via: "youtube", eventMin: 90, kakao: "", ytLive: "", hook: "LIVE 무료 특강", ebDays: 3, next: "", gate: false, curriculum: [{ id: "", title: "LIVE 진행 순서", lessons: [{ id: "", title: "오프닝 · 오늘 배울 것", min: 10, video: "", preview: false }, { id: "", title: "핵심 강의", min: 60, video: "", preview: false }, { id: "", title: "실시간 Q&A · LIVE 참여자 혜택 안내", min: 20, video: "", preview: false }] }] }); ROUTE.hash = "#/center/master/vod-classes/new"; break;
       case "vda-jump": { e.preventDefault(); const s = document.getElementById(d.to); if (s) window.scrollTo({ top: s.getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" }); break; }
       case "vda-ch-add": edit((x) => { x.curriculum.push({ id: "", title: "", lessons: [{ id: "", title: "", min: 10, video: "", preview: false }] }); }); setTimeout(() => { const ins = document.querySelectorAll(".vda-ch-h input"); if (ins.length) ins[ins.length - 1].focus(); }, 30); break;
       case "vda-ch-del": { const ci = Number(d.ci); vdSync(form); const c = ui.vdDraft.curriculum[ci]; if (!c) break; confirmModal("챕터 지우기", "‘" + esc(c.title || (ci + 1) + "번째 챕터") + "’와 안의 강의 " + (c.lessons || []).length + "개를 지울까요? (저장해야 반영돼요)", "지우기", true, () => { ui.vdDraft.curriculum.splice(ci, 1); closeModal(); render(); }); break; }
@@ -4058,7 +4127,7 @@
       case "vda-flink": { const k = "ls-" + d.ci + "-" + d.li, nm = (form[k + "-ln"] || {}).value || "", u = ((form[k + "-lu"] || {}).value || "").trim(); if (!/^https?:\/\//.test(u)) { toast("https:// 로 시작하는 주소를 넣어 주세요.", "warn"); break; } edit((x) => { const l = x.curriculum[Number(d.ci)].lessons[Number(d.li)]; (l.files = l.files || []).push({ name: nm.trim() || "링크 자료", url: u }); }); break; }
       case "vda-del": { const p = vdP(d.id); if (!p) break; const n = v.orders.filter((o) => o.pid === p.id && o.status !== "refunded").length;
         if (n) { confirmModal("클래스 삭제", "이 클래스는 구매한 회원이 " + n + "명 있어서 지울 수 없어요. 대신 ‘숨김’으로 바꾸면 새로 팔리지 않고, 이미 산 회원은 계속 볼 수 있어요.", "숨김으로 바꾸기", false, () => { p.status = "hidden"; ui.vdDraft = null; commit("‘" + p.title + "’ 클래스를 숨겼어요."); }); break; }
-        confirmModal("클래스 삭제", "‘" + esc(p.title) + "’ 클래스를 지울까요? 되돌릴 수 없어요.", "삭제", true, () => { v.products.splice(v.products.indexOf(p), 1); v.banners.forEach((b) => { if (b.pid === p.id) b.pid = ""; }); ui.vdDraft = null; history.replaceState(null, "", "#/center/master/vod-classes"); commit("‘" + p.title + "’ 클래스를 지웠어요."); }); break; }
+        confirmModal("클래스 삭제", "‘" + esc(p.title) + "’ 클래스를 지울까요? 되돌릴 수 없어요.", "삭제", true, () => { v.products.splice(v.products.indexOf(p), 1); v.banners.forEach((b) => { if (b.pid === p.id) b.pid = ""; }); ui.vdDraft = null; ROUTE.replace("#/center/master/vod-classes"); commit("‘" + p.title + "’ 클래스를 지웠어요."); }); break; }
       case "vda-block": { const m = vdMember(d.id); if (!m) break; m.blocked = !m.blocked; commit(m.name + " 님을 " + (m.blocked ? "이용 중지했어요. 로그인할 수 없어요." : "다시 이용할 수 있게 했어요.")); break; }
       case "vda-pl-hide": { const x = (v.pledges || []).find((y) => y.id === d.id); if (!x) break; x.hidden = !x.hidden; commit(x.hidden ? "다짐 한마디를 숨겼어요. 스토어에 안 보여요." : "다짐 한마디를 다시 보이게 했어요."); break; }
       case "vda-acc": { const c2 = document.getElementById("vda-c2"); if (c2) { c2.value = d.c; c2.dispatchEvent(new Event("input", { bubbles: true })); } break; }
@@ -4432,7 +4501,7 @@
     if (CRM().msgs.length > 3000) CRM().msgs.splice(0, CRM().msgs.length - 3000);
     ui.crmMt = "camp";
     commit("‘" + c.name + "’ " + (c.later ? "예약했어요" : "캠페인을 " + c.r.ok.length + "명에게 보냈어요") + (given ? " · 쿠폰 " + given + "장 지급" : "") + ". (시안 · 실제 발송 없음)");
-    if (location.hash.indexOf("vod-msg") < 0 && !/vod-crm\//.test(location.hash)) location.hash = "#/center/master/vod-msg";
+    if (ROUTE.hash.indexOf("vod-msg") < 0 && !/vod-crm\//.test(ROUTE.hash)) ROUTE.hash = "#/center/master/vod-msg";
   }
 
   /* ---------- 5) 회원 분석 ---------- */
@@ -4481,12 +4550,12 @@
     if (!isActive()) return;
     const a = e.target.closest("[data-action^='crm-']"); if (!a || a.disabled) return;
     const d = a.dataset, v = VD();
-    if (d.action === "crm-open") { if (e.target.closest("[data-stop]")) return; location.hash = "#/center/master/vod-crm/" + encodeURIComponent(d.id); return; }
+    if (d.action === "crm-open") { if (e.target.closest("[data-stop]")) return; ROUTE.hash = "#/center/master/vod-crm/" + encodeURIComponent(d.id); return; }
     if (staffDeny("master/vod-crm")) return;
     const M = () => vdMember(d.id);
     switch (d.action) {
       case "crm-seg": crmF().seg = d.k; ui.crmN = 50; render(); break;
-      case "crm-seg-go": crmF().seg = d.k; ui.crmN = 50; location.hash = "#/center/master/vod-crm"; break;
+      case "crm-seg-go": crmF().seg = d.k; ui.crmN = 50; ROUTE.hash = "#/center/master/vod-crm"; break;
       case "crm-reset": ui.crmF = null; ui.crmN = 50; render(); break;
       case "crm-more": ui.crmN = (ui.crmN || 50) + 50; render(); break;
       case "crm-sel-clear": ui.crmSel = {}; render(); break;
@@ -5012,7 +5081,7 @@
     ex.forEach((x) => { if (!DB.inquiries().some((q) => q.id === x.id)) DB.saveInquiry(Object.assign({ memo: "", thread: [], log: [] }, x)); });
     DB.save();
   }
-  const refUrl = (p) => location.origin + location.pathname + "#/partner?ref=" + encodeURIComponent(p.code || p.loginId);
+  const refUrl = (p) => ROUTE.abs("#/partner?ref=" + encodeURIComponent(p.code || p.loginId));
 
   /* ---------- 파트너 로그인 ---------- */
   function findPartnerLogin(id, pw) {
@@ -5024,7 +5093,7 @@
     S = { role: "partner", partnerId: p.id };
     DB.session.setAdmin(S); DB.store.remove("moonclass:after-login");
     p.lastLoginAt = Date.now(); DB.save();
-    location.hash = "#/center/partner"; toast(p.name + " 파트너님, 환영합니다!");
+    ROUTE.hash = "#/center/partner"; toast(p.name + " 파트너님, 환영합니다!");
   }
   const partnerNav = () => { const p = affMe(), ni = p ? affInqNew(p) : 0, nn = p ? affNoticeNew(p) : 0; return [
     ["파트너센터", [["partner", "대시보드", "grid"], ["partner/inquiries", "입점 문의", "handshake", ni || ""], ["partner/refer", "강사 추천하기", "userPlus"], ["partner/instructors", "내 강사", "users"]]],
@@ -5206,7 +5275,7 @@
     const q = { id: DB.uid("inq"), at: Date.now(), status: "new", memo: "", name: v("name"), phone: v("phone"), email: v("email"), where: v("where"), course: v("course"), link: v("link"), message: "", ref: p.code || p.loginId, affId: p.id, byPartner: true, log: [], thread: [], pSeen: Date.now() };
     if (v("message")) q.thread.push({ by: "partner", name: p.name, text: v("message"), at: Date.now() });
     DB.saveInquiry(q);
-    location.hash = "#/center/partner/inquiries"; toast(q.name + " 강사님을 추천했어요. 두잉고 담당자가 연락드릴게요.");
+    ROUTE.hash = "#/center/partner/inquiries"; toast(q.name + " 강사님을 추천했어요. 두잉고 담당자가 연락드릴게요.");
   }
 
   /* 홍보 자료: 추천 링크 · QR · 문구 · 이미지 */
@@ -5404,15 +5473,15 @@
     if (!S) {
       document.body.dataset.master = loginTab === "master" ? "1" : "";
       // 로그인 후 원래 가려던 화면(예: 무료강의 페이지 편집)으로 돌아간다
-      if (r.parts[0] !== "login" && r.parts.length) DB.store.set("moonclass:after-login", location.hash);
-      if (r.parts[0] !== "login") history.replaceState(null, "", "#/center/login");
+      if (r.parts[0] !== "login" && r.parts.length) DB.store.set("moonclass:after-login", ROUTE.hash);
+      if (r.parts[0] !== "login") ROUTE.replace("#/center/login");
       renderLogin();
       return;
     }
     if (S.role === "partner") {
       const me = affOf(S.partnerId);
       if (!me || me.status !== "active") { S = null; DB.session.setAdmin(null); return render(); }
-      if (r.parts[0] !== "partner") { history.replaceState(null, "", "#/center/partner"); return render(); }
+      if (r.parts[0] !== "partner") { ROUTE.replace("#/center/partner"); return render(); }
       document.body.dataset.master = ""; document.body.dataset.coach = "";
       renderShell(r);
       const pm = document.getElementById("a-main");
@@ -5422,13 +5491,13 @@
       document.title = "파트너센터 · 두잉고";
       return;
     }
-    if (r.parts[0] === "login") { history.replaceState(null, "", S.role === "master" && !S.actingAs ? "#/center/master" : "#/center"); return render(); }
+    if (r.parts[0] === "login") { ROUTE.replace(S.role === "master" && !S.actingAs ? "#/center/master" : "#/center"); return render(); }
     const master = S.role === "master" && !S.actingAs;
-    if (master && r.parts[0] !== "master") { history.replaceState(null, "", "#/center/master"); return render(); }
+    if (master && r.parts[0] !== "master") { ROUTE.replace("#/center/master"); return render(); }
     if (master) { const k1 = r.parts[1] || ""; if (DC_ROUTES.indexOf(k1) >= 0) ui.mtab = "dc"; else ui.mtab = "dg"; if (k1 === "partners" && ui.inqFilter === "vod") ui.inqFilter = "all"; }
-    if (!master && r.parts[0] === "master") { history.replaceState(null, "", "#/center"); return render(); }
-    if (master && r.parts[1] && (r.parts[1] === "staff" ? !!staffMe() : !staffCan("master/" + r.parts[1]))) { history.replaceState(null, "", "#/center/master"); toast("이 메뉴는 내 운영자 계정에 열려 있지 않아요. 최고 관리자에게 요청해 주세요.", "warn"); return render(); }
-    if (!master && !can(r.parts[0] || "")) { history.replaceState(null, "", "#/center"); toast("이 메뉴는 코치 계정에 열려 있지 않아요. 필요하면 강사님께 요청해 주세요.", "warn"); return render(); }
+    if (!master && r.parts[0] === "master") { ROUTE.replace("#/center"); return render(); }
+    if (master && r.parts[1] && (r.parts[1] === "staff" ? !!staffMe() : !staffCan("master/" + r.parts[1]))) { ROUTE.replace("#/center/master"); toast("이 메뉴는 내 운영자 계정에 열려 있지 않아요. 최고 관리자에게 요청해 주세요.", "warn"); return render(); }
+    if (!master && !can(r.parts[0] || "")) { ROUTE.replace("#/center"); toast("이 메뉴는 코치 계정에 열려 있지 않아요. 필요하면 강사님께 요청해 주세요.", "warn"); return render(); }
     document.body.dataset.master = master ? "1" : "";
     document.body.dataset.coach = isCoach() ? "1" : "";
     renderShell(r);
@@ -5458,11 +5527,11 @@
 
   function openPreview(cohortId) {
     const iid = IID();
-    if (TRK() === "vod") { DB.session.setStudent({ preview: true, track: "vod", by: isCoach() ? "coach" : "instructor", instructorId: iid, cohortId: DB.vodCohortId(iid), vpid: VPID(), at: Date.now() }); location.hash = "#/home"; return; }
+    if (TRK() === "vod") { DB.session.setStudent({ preview: true, track: "vod", by: isCoach() ? "coach" : "instructor", instructorId: iid, cohortId: DB.vodCohortId(iid), vpid: VPID(), at: Date.now() }); ROUTE.hash = "#/home"; return; }
     const co = DB.cohort(cohortId) || DB.currentCohort(iid);
     if (!co) { toast("기수를 먼저 만들어 주세요.", "warn"); return; }
     DB.session.setStudent({ preview: true, by: isCoach() ? "coach" : "instructor", instructorId: iid, cohortId: co.id, at: Date.now() });
-    location.hash = "#/home";
+    ROUTE.hash = "#/home";
   }
 
   /* ---------------- 이벤트 ---------------- */
@@ -5490,7 +5559,7 @@
       case "an-del": { const list = AFFN(), i = list.findIndex((x) => x.id === d.id); if (i < 0) break; confirmModal("파트너 공지 삭제", "‘" + esc(list[i].title) + "’ 공지를 삭제할까요?", "삭제", true, () => { list.splice(i, 1); commit("파트너 공지를 삭제했어요."); }); break; }
       case "aff-copy": { const ok = () => toast(d.msg || "추천 링크를 복사했어요."), no = () => toast("복사하지 못했어요. 링크를 길게 눌러 복사해 주세요.", "warn"); if (navigator.clipboard) navigator.clipboard.writeText(d.v).then(ok, no); else no(); break; }
       case "p-inq-tab": ui.pInqTab = d.k; render(); break;
-      case "bell-go": e.preventDefault(); if (masterInqAlerts().msg) ui.inqFilter = "msg"; location.hash = "#/center/master/partners"; render(); break;
+      case "bell-go": e.preventDefault(); if (masterInqAlerts().msg) ui.inqFilter = "msg"; ROUTE.hash = "#/center/master/partners"; render(); break;
       case "inq-jump": { const el = document.querySelector('.a-inq[data-inq="' + d.id + '"]'); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1600); const ta = el.querySelector("[data-inq-say]"); if (ta) setTimeout(() => { ktInit(el); ta.focus({ preventScroll: true }); }, 500); } break; }
       case "cal-m": { const t = todayStr().slice(0, 7); if (d.dir === "0") ui.calMonth = t; else { const cur = ui.calMonth || t, y = Number(cur.slice(0, 4)), m = Number(cur.slice(5, 7)) - 1 + Number(d.dir), dt = new Date(y, m, 1); ui.calMonth = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0"); } render(); break; }
       case "cert-co": ui.certCo = d.k; render(); setTimeout(() => { const el = document.querySelector("[data-cert-co]"); if (el) el.closest(".a-card").scrollIntoView({ behavior: "smooth", block: "start" }); }, 30); break;
@@ -5527,22 +5596,22 @@
         break;
       }
       case "kt-down": { const l = a.closest(".kt").querySelector(".kt-list"); l.scrollTo({ top: l.scrollHeight, behavior: "smooth" }); break; }
-      case "aff-go-settings": location.hash = "#/center/partner/settings"; break;
+      case "aff-go-settings": ROUTE.hash = "#/center/partner/settings"; break;
       case "toggle-nav": document.getElementById("a-app").classList.toggle("nav-open"); break;
       case "modal-close": closeModal(); break;
       case "modal-bg": if (e.target === a) closeModal(); break;
       case "confirm-ok": { const fn = confirmFn; confirmFn = null; if (fn) fn(); break; }
       case "preview": openPreview(d.cohort); break;
-      case "vp-go": setVpid(d.id); location.hash = "#/center/menus"; toast("‘" + ((vdP(d.id) || {}).title || "") + "’ 강의실을 꾸며요."); break;
+      case "vp-go": setVpid(d.id); ROUTE.hash = "#/center/menus"; toast("‘" + ((vdP(d.id) || {}).title || "") + "’ 강의실을 꾸며요."); break;
       case "trk": {
         const k = d.k === "vod" ? "vod" : "live"; ui.track = k; ui.trackKey = trkKey(); try { sessionStorage.setItem(trkKey(), k); } catch (e2) { /* 저장 못 해도 이번 화면에서는 바뀐다 */ }
         const k0 = route().parts[0] || "", off = (k === "vod" && LIVE_ONLY_PAGES.indexOf(k0) >= 0) || (k !== "vod" && VOD_ONLY_PAGES.indexOf(k0) >= 0);
-        if (off && !d.stay) location.hash = "#/center"; else render();
+        if (off && !d.stay) ROUTE.hash = "#/center"; else render();
         toast(k === "vod" ? "DOOGO CLASS 영역이에요. VOD 판매 · 정산 · VOD 수강생 강의실을 관리해요." : "두잉고 영역이에요. 기수 · 수강생 · 과제를 관리해요.");
         break;
       }
       case "vs-f": ui.vsF = d.k; render(); break;
-      case "mtab": { const k = d.k === "dc" ? "dc" : "dg"; ui.mtab = k; location.hash = k === "dc" ? "#/center/master/dc" : "#/center/master"; break; }
+      case "mtab": { const k = d.k === "dc" ? "dc" : "dg"; ui.mtab = k; ROUTE.hash = k === "dc" ? "#/center/master/dc" : "#/center/master"; break; }
       case "vd-iqf": ui.vdIqF = d.k; render(); break;
       case "store-split": e.preventDefault(); storeSplit(d.href); break;
       case "split-close": splitClose(); break;
@@ -5555,9 +5624,9 @@
         if (left) { confirmModal("두잉고 닫기", "이 강의에 아직 쓰지 않은 1:1 코칭권이 " + left + "건 있어요.<br>두잉고를 닫으면 수강생이 남은 코칭 질문을 할 수 없어요. 그래도 닫을까요?", "닫기", true, go); break; }
         go(); break; }
       case "to-student": { const st = DB.session.student(); if (st && st.preview) DB.session.setStudent(null); break; }
-      case "stop-acting": S.actingAs = null; DB.session.setAdmin(S); location.hash = "#/center/master"; break;
+      case "stop-acting": S.actingAs = null; DB.session.setAdmin(S); ROUTE.hash = "#/center/master"; break;
       // 수강생
-      case "stu-tab": ui.stuStatus = d.k; ui.picked.clear(); if (location.hash.indexOf("?") > -1) location.hash = "#/center/students"; else render(); break;
+      case "stu-tab": ui.stuStatus = d.k; ui.picked.clear(); if (ROUTE.hash.indexOf("?") > -1) ROUTE.hash = "#/center/students"; else render(); break;
       case "stu-approve": { const s = DB.student(d.id); setStatus([d.id], "approved", s.name + "님을 승인했어요."); break; }
       case "stu-reject": { const s = DB.student(d.id); confirmModal("수강 신청 거절", esc(s.name) + "님의 신청을 거절할까요?<br>거절하면 로그인할 수 없어요.", "거절", true, () => setStatus([d.id], "rejected", s.name + "님의 신청을 거절했어요.")); break; }
       case "stu-withdraw": { const s = DB.student(d.id); confirmModal("탈퇴 처리", esc(s.name) + "님을 탈퇴 처리할까요?<br>탈퇴하면 로그인할 수 없고, 진행 기록은 남아 있어 복구할 수 있어요.", "탈퇴 처리", true, () => setStatus([d.id], "withdrawn", s.name + "님을 탈퇴 처리했어요.")); break; }
@@ -5661,7 +5730,7 @@
         const co = DB.currentCohort(d.id);
         if (!co) { toast("기수가 없어 미리볼 수 없어요.", "warn"); break; }
         DB.session.setStudent({ preview: true, instructorId: d.id, cohortId: co.id, at: Date.now() });
-        location.hash = "#/home";
+        ROUTE.hash = "#/home";
         break;
       }
       case "page-edit": pageForm(d.key); break;
@@ -5760,7 +5829,7 @@
       // 마스터
       case "ins-add": if (staffDeny("master/instructors")) break; insForm(null); break;
       case "ins-edit": if (staffDeny("master/instructors")) break; insForm(DB.instructor(d.id)); break;
-      case "ins-enter": if (staffDeny("master/instructors")) break; S.actingAs = d.id; DB.session.setAdmin(S); location.hash = "#/center"; toast(DB.instructor(d.id).displayName + " 강사센터로 들어왔어요."); break;
+      case "ins-enter": if (staffDeny("master/instructors")) break; S.actingAs = d.id; DB.session.setAdmin(S); ROUTE.hash = "#/center"; toast(DB.instructor(d.id).displayName + " 강사센터로 들어왔어요."); break;
       case "ins-delete": {
         if (staffDeny("master/instructors")) break;
         const x = DB.instructor(d.id);
@@ -5835,7 +5904,7 @@
   document.addEventListener("change", (e) => {
     if (!isActive()) return;
     const t = e.target;
-    if (t.id === "stu-cohort") { ui.stuCohort = t.value; ui.picked.clear(); if (location.hash.indexOf("?") > -1) location.hash = "#/center/students"; else render(); }
+    if (t.id === "stu-cohort") { ui.stuCohort = t.value; ui.picked.clear(); if (ROUTE.hash.indexOf("?") > -1) ROUTE.hash = "#/center/students"; else render(); }
     else if (t.id === "rev-cohort") { ui.revCohort = t.value; ui.revPicked.clear(); render(); }
     else if (t.id === "rev-week") { ui.revWeek = t.value; ui.revPicked.clear(); render(); }
     else if (t.id === "sched-cohort") { ui.schedCohort = t.value; render(); }
@@ -5844,7 +5913,7 @@
     else if (t.name === "base" && t.closest("#cur-form")) { const b = document.querySelector("[data-show-blank]"); if (b) b.hidden = t.value !== "blank"; }
     else if (t.id === "m-ins") { ui.mIns = t.value; render(); }
     else if (t.id === "a-vpid" || t.id === "a-vpid2") { setVpid(t.value); render(); toast("‘" + ((vdP(t.value) || {}).title || "") + "’ 강의실을 꾸며요. 바꾼 내용은 이 VOD 수강생에게만 보여요."); }
-    else if (t.id === "m-menu-ins") { ui.mMenuIns = t.value; if (location.hash.indexOf("?") > -1) location.hash = "#/center/master/menus"; else render(); }
+    else if (t.id === "m-menu-ins") { ui.mMenuIns = t.value; if (ROUTE.hash.indexOf("?") > -1) ROUTE.hash = "#/center/master/menus"; else render(); }
     else if (t.id === "m-rep-ins") { ui.mRepIns = t.value; render(); }
     else if (t.classList.contains("a-menu-label")) { const it = DB.menuConfig(ui.mMenuIns).items.find((x) => x.key === t.dataset.key); it.label = t.value.trim(); DB.save(); render(); toast("메뉴 이름을 저장했어요."); }
     else if (t.name === "mtheme") { const c = DB.content(DB.splitMid(ui.mMenuIns).iid); c.brand.theme = t.value; c.brand.themeSet = true; DB.save(); render(); toast(DB.themeOf(t.value).label + " 색으로 바꿨어요."); }

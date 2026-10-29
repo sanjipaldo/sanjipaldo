@@ -488,12 +488,40 @@
     const P = (id) => v.products.find((p) => p.id === id), T = (d, h) => Date.parse(DB.date.addDays(today(), d) + "T" + (h || "10:00") + ":00");
     if (P("v4") && v.members.some((m) => m.id === "vm-c16") && !v.orders.some((o) => o.no === "DC261017390")) { const p = P("v4"), b0 = basePrice(p), sale = r1k(b0 * 1.1); v.orders.push({ id: "vo-261017390", no: "DC261017390", kind: "course", days: 365, mid: "vm-c16", pid: "v4", title: p.title, list: Math.max(sale, r1k(Number(p.price) * 1.1)), sale, amount: sale, method: "card", ch: "web", share: 50, status: "refunded", at: T(-12, "21:30"), paidAt: T(-12, "21:30"), refundedAt: T(-11, "09:05"), refundAmount: sale, refundKind: "instant", refundWhy: "회원 바로 취소 (1일째 · 들은 강의 0개)", refundBy: "회원", pg: { st: "mock", at: T(-11, "09:05") }, seed: "crm" }); }
   }
+  /* v20: 문대표 강의는 스토어에서 미노출 (다른 플랫폼 계약 · 지우지 않음, 마스터 › VOD 클래스 관리 › 강사 노출에서 다시 켤 수 있어요)
+   * + 셀러훈(중국 구매대행) VOD 클래스 · 첫 화면 배너. 셀러훈은 두잉고 계정이 없는 강사라 사진은 클래스의 ‘강사 사진’ 칸에 올려요 */
+  function seedV20(v) {
+    v.insOff = Array.isArray(v.insOff) ? v.insOff : [];
+    if (v.insOff.indexOf("moon") < 0) v.insOff.push("moon");
+    if (!v.products.some((p) => p.id === "v14")) v.products.push(sellerHoon());
+    if (Array.isArray(v.banners) && !v.banners.some((b) => b.id === "vb-seller")) {
+      const at = v.banners.findIndex((b) => b.pid === "v1");
+      v.banners.splice(at >= 0 ? at : Math.min(1, v.banners.length), 0, { id: "vb-seller", eyebrow: "NEW · 셀러훈", title: "중국 구매대행,\n상품 찾기부터 첫 판매까지", sub: "타오바오 · 1688 소싱 · 스마트스토어 판매", pid: "v14", color: ["#2b0d0d", "#ff4d2e"], on: true });
+    }
+  }
+  function sellerHoon() {
+    return ids({ id: "v14", status: "on", type: "vod", title: "중국 구매대행, 상품 찾기부터 첫 판매까지", sub: "타오바오 · 1688 소싱 · 스마트스토어 등록 · 배송 · CS까지 한 번에", cat: "commerce", iid: "", creator: "셀러훈", creatorPhoto: "",
+      price: 249000, sale: 179000, saleEnd: "", accessDays: 365, level: "입문 · 초급", thumbText: "중국 구매대행\n첫 판매까지", base: 0, likeBase: 0, createdAt: now(), share: null,
+      color: ["#1c1c1e", "#ff4d2e"], hook: "재고 없이 시작하는 구매대행", tagline: "중국 구매대행 셀러", headline: "중국 구매대행,\n상품 찾기부터 첫 판매까지.", badges: ["NEW"],
+      creatorBio: "셀러훈은 중국 구매대행으로 직접 상품을 찾고 팔아 온 셀러예요. 타오바오 · 1688에서 상품을 고르는 기준부터 스마트스토어 등록 · 배송 · CS까지 실제로 쓰는 방법을 강의로 정리했어요.",
+      who: ["재고 부담 없이 온라인 판매를 시작하고 싶은 분", "중국 구매대행이 궁금하지만 어디서부터 해야 할지 모르는 분", "스마트스토어를 열었는데 올릴 상품이 없는 분"],
+      learn: ["타오바오 · 1688에서 팔릴 상품을 고르는 기준", "원가 · 배송비 · 관부가세를 넣은 판매가 계산", "스마트스토어 상품 등록과 상세페이지 만들기", "배송 대행지 · 통관 · 반품 · CS 처리"],
+      intro: "중국 구매대행은 주문이 들어온 뒤에 상품을 사서 보내는 방식이라, 재고 없이 시작할 수 있어요.\n\n이 클래스는 ‘무엇을 팔지’부터 ‘주문이 들어온 뒤 무엇을 할지’까지 순서대로 따라 할 수 있게 만들었어요. 수입은 보장하지 않으며, 결과는 실행과 시장 상황에 따라 달라져요.",
+      pains: ["구매대행, 무슨 상품을 올려야 팔릴까?", "판매가를 얼마로 해야 남는지 계산이 안 된다.", "주문이 들어오면 배송 · 통관 · 반품은 어떻게 하지?"],
+      pitch: "그런 분들을 위해 중국 구매대행으로 직접 판매해 온 셀러훈이, 상품 찾기부터 스마트스토어 등록 · 배송 · CS까지 실제로 쓰는 방법을 순서대로 알려 드립니다! 타오바오 · 1688에서 상품을 고르는 기준, 원가 · 배송비 · 관부가세까지 넣은 가격 계산, 배송 대행지 고르기와 통관, 반품 · 교환 응대까지. 재고 없이 시작해서 첫 주문을 받는 데 필요한 것만 담았어요.",
+      tags: ["구매대행", "중국소싱", "타오바오", "1688", "스마트스토어"],
+      faq: [["완전 초보도 들을 수 있나요?", "네. 사업자 등록 · 통신판매업 신고 같은 시작 준비부터 설명해요."], ["강의는 언제까지 볼 수 있나요?", "결제할 때 고른 수강권 기간(180일 · 365일 · 3년) 동안 횟수 제한 없이 볼 수 있어요. 기간이 끝나면 1년 연장권으로 진도 그대로 이어서 들을 수 있어요."], ["클래스를 들으면 수입이 보장되나요?", "수입은 보장하지 않아요. 시작에 필요한 방법과 준비 과정을 다루며, 실제 결과는 실행과 시장 조건에 따라 달라져요."]],
+      curriculum: [CH("시작하기 전에", [L("중국 구매대행은 어떻게 돈이 남을까", 12, { preview: true }), L("사업자 · 통신판매업 · 판매 채널 준비", 15)]),
+        CH("상품 찾기", [L("타오바오 · 1688에서 팔릴 상품 고르는 기준", 20), L("판매 금지 · 인증이 필요한 상품 거르기", 14), L("원가 · 배송비 · 관부가세 넣은 가격 계산", 18)]),
+        CH("판매 시작", [L("스마트스토어 상품 등록 · 상세페이지", 22), L("배송 대행지 고르기와 통관", 16)]),
+        CH("주문 이후", [L("주문 처리 · 배송 조회 루틴", 14), L("반품 · 교환 · CS 응대 문구", 15)])] });
+  }
   // 두잉고 무료강의 날짜가 바뀌면 스토어 무료 LIVE 날짜도 따라가요
   function syncFreeLive() {
     if (!DB.freeOf) return;
     V().products.forEach((p) => { if (!p.fromFree) return; const f = DB.freeOf(p.fromFree); if (f && f.liveAt && p.eventAt !== f.liveAt) { p.eventAt = f.liveAt; save(); } });
   }
-  function V() { const d = DB.data, fresh = !d.vod || !Array.isArray(d.vod.products), keep = fresh && d.vod && typeof d.vod === "object" ? d.vod : null; if (fresh) { d.vod = seed(); DB.save(); } else if (d.vod.ver !== 4) { migrate(d.vod); DB.save(); } if (!d.vod.v8) { d.vod.v8 = 1; seedV8(d.vod); DB.save(); } if (!d.vod.v9) { d.vod.v9 = 1; seedV9(d.vod); DB.save(); } if (!d.vod.v10) { d.vod.v10 = 1; seedV10(d.vod); DB.save(); } if (!d.vod.v11) { d.vod.v11 = 1; seedV11(d.vod); DB.save(); } if (!d.vod.v12) { d.vod.v12 = 1; seedV12(d.vod); DB.save(); } if (!d.vod.v13) { d.vod.v13 = 1; seedV13(d.vod); DB.save(); } if (!d.vod.v14) { d.vod.v14 = 1; seedV14(d.vod); DB.save(); } if (!d.vod.v15) { d.vod.v15 = 1; seedV15(d.vod); DB.save(); } if (!d.vod.v16) { d.vod.v16 = 1; seedV16(d.vod); DB.save(); } if (!d.vod.v17) { d.vod.v17 = 1; seedV17(d.vod); DB.save(); } if (!d.vod.v18) { d.vod.v18 = 1; seedV18(d.vod); DB.save(); } if (!d.vod.v19) { d.vod.v19 = 1; seedV19(d.vod); DB.save(); } if (fresh && SRV()) srvClean(d.vod, keep); if (SRV()) srvShape(d.vod); return d.vod; }
+  function V() { const d = DB.data, fresh = !d.vod || !Array.isArray(d.vod.products), keep = fresh && d.vod && typeof d.vod === "object" ? d.vod : null; if (fresh) { d.vod = seed(); DB.save(); } else if (d.vod.ver !== 4) { migrate(d.vod); DB.save(); } if (!d.vod.v8) { d.vod.v8 = 1; seedV8(d.vod); DB.save(); } if (!d.vod.v9) { d.vod.v9 = 1; seedV9(d.vod); DB.save(); } if (!d.vod.v10) { d.vod.v10 = 1; seedV10(d.vod); DB.save(); } if (!d.vod.v11) { d.vod.v11 = 1; seedV11(d.vod); DB.save(); } if (!d.vod.v12) { d.vod.v12 = 1; seedV12(d.vod); DB.save(); } if (!d.vod.v13) { d.vod.v13 = 1; seedV13(d.vod); DB.save(); } if (!d.vod.v14) { d.vod.v14 = 1; seedV14(d.vod); DB.save(); } if (!d.vod.v15) { d.vod.v15 = 1; seedV15(d.vod); DB.save(); } if (!d.vod.v16) { d.vod.v16 = 1; seedV16(d.vod); DB.save(); } if (!d.vod.v17) { d.vod.v17 = 1; seedV17(d.vod); DB.save(); } if (!d.vod.v18) { d.vod.v18 = 1; seedV18(d.vod); DB.save(); } if (!d.vod.v19) { d.vod.v19 = 1; seedV19(d.vod); DB.save(); } if (!d.vod.v20) { d.vod.v20 = 1; seedV20(d.vod); DB.save(); } if (fresh && SRV()) srvClean(d.vod, keep); if (SRV()) srvShape(d.vod); return d.vod; }
   /** 정식 서버: 회원 · 주문 · 후기 등은 따로 와서(볼 수 있는 것만) 비어 있을 수 있어요 → 빈 목록으로 */
   function srvShape(v) {
     if (!Array.isArray(v.members)) v.members = []; if (!Array.isArray(v.orders)) v.orders = []; if (!Array.isArray(v.reviews)) v.reviews = []; if (!Array.isArray(v.pledges)) v.pledges = []; if (!Array.isArray(v.inquiries)) v.inquiries = []; if (!Array.isArray(v.payouts)) v.payouts = [];
@@ -546,7 +574,7 @@
   // ‘무료 LIVE가 끝날 때까지 숨기기’를 켠 유료 강의는 LIVE가 끝나야 목록에 보여요
   const gatedBy = (p) => { const fn = funnelTo(p); return fn && fn.phase === "before" && fn.f.gate ? fn : null; };
   const bizKey = (p) => (isFreeEv(p) ? "flive" : isEvent(p) ? "live" : typeOf(p) === "ebook" ? "ebook" : p.status !== "soon" && basePrice(p) === 0 ? "free" : "");
-  const bizShow = (p) => !!p && (!bizKey(p) || bizOn(bizKey(p))) && !gatedBy(p);
+  const bizShow = (p) => !!p && (!bizKey(p) || bizOn(bizKey(p))) && !gatedBy(p) && insShown(p);
   const listed = () => onSale().filter(bizShow);
   const product = (id) => V().products.find((p) => p.id === id) || null;
   const priceOf = (p) => { const e = ebOf(p); return e ? e.price : basePrice(p); };
@@ -565,6 +593,14 @@
   const soldOf = (p) => (Number(p.base) || 0) + (SRV() ? Number((stat().sold || {})[p.id]) || 0 : paidOrders(p.id).length);
   const seatsLeft = (p) => (isEvent(p) && Number(p.seats) > 0 ? Math.max(0, Number(p.seats) - (SRV() ? Number((stat().sold || {})[p.id]) || 0 : V().orders.filter((o) => o.pid === p.id && (o.status === "paid" || o.status === "pending")).length)) : null);
   const insPhoto = (iid) => { const c = DB.content && iid ? DB.content(iid) : null; return (c && c.brand && c.brand.photo) || ""; };
+  /** 강사 키: 두잉고 강사는 iid, 두잉고 계정이 없는 강사(예: 셀러훈)는 "ext:이름" — 강사진 · 스토어 노출 스위치가 이 키를 써요 */
+  const tkey = (p) => (p ? p.iid || (p.creator ? "ext:" + p.creator : "") : "");
+  /** 강사 사진: 두잉고 강사 브랜드 사진 → 클래스에 넣은 강사 사진(두잉고 계정 없는 강사) */
+  const phOf = (p) => (p ? insPhoto(p.iid) || p.creatorPhoto || "" : "");
+  /* 강사 스토어 노출 (마스터 › VOD 클래스 관리 › 강사 노출): 끈 강사의 클래스 · 배너 · 강사진 카드는 스토어에서 빠지고 새로 살 수 없어요.
+   * 클래스는 지우지 않고 판매 상태도 그대로라 다시 켜면 돌아와요. 이미 산 회원은 내 강의실에서 그대로 들어요 */
+  const insOff = () => (Array.isArray(V().insOff) ? V().insOff : []);
+  const insShown = (p) => !p || insOff().indexOf(tkey(p)) < 0;
   /** 강사별 정산 비율 (마스터 › VOD 매출 · 주문 › 정산 비율 · 광고비에서 강사와 조율해 확정) */
   const insRate = (iid) => (iid && V().insRates && V().insRates[iid]) || null;
   const rateNum = (r, k) => (r && r[k] != null && r[k] !== "" && Number(r[k]) >= 0 ? Number(r[k]) : null);
@@ -640,7 +676,7 @@
   const shSet = (k) => { const v = STG()[k], n = Number(v); return v != null && v !== "" && n >= 0 ? n : SH_DEF[k]; };
   const ATTR = "dc:attr", ATTR_DAYS = 7;
   function catchAttr() {
-    const qs = new URLSearchParams(location.hash.split("?")[1] || ""), by = qs.get("by"), um = String(qs.get("utm_medium") || "").toLowerCase();
+    const qs = new URLSearchParams(ROUTE.hash.split("?")[1] || ""), by = qs.get("by"), um = String(qs.get("utm_medium") || "").toLowerCase();
     try {
       if (by && /^[\w-]{1,40}$/.test(by)) localStorage.setItem(ATTR, JSON.stringify({ ch: "ins", iid: by, at: now() }));
       else if (/^(ad|ads|paid|cpc|cpm|display|paid_social)$/.test(um)) localStorage.setItem(ATTR, JSON.stringify({ ch: "ad", at: now() }));
@@ -776,14 +812,14 @@
     if (SRV()) {
       payApi("dg", { iid: p.iid }).then((r) => {
         if (!r || !r.ok) { toast((r && r.message) || "강의실에 들어가지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"); return; }
-        return DB.remote.refresh().then(() => { DB.session.setInstructorPick(p.iid); DB.session.setStudent({ id: r.sid, at: now(), vpid: p.id }); location.hash = to && /^#\/(qna|home|vodclass)/.test(to) ? to : "#/vodclass/" + encodeURIComponent(pid) + (lid ? "/" + encodeURIComponent(lid) : ""); });
+        return DB.remote.refresh().then(() => { DB.session.setInstructorPick(p.iid); DB.session.setStudent({ id: r.sid, at: now(), vpid: p.id }); ROUTE.hash = to && /^#\/(qna|home|vodclass)/.test(to) ? to : "#/vodclass/" + encodeURIComponent(pid) + (lid ? "/" + encodeURIComponent(lid) : ""); });
       });
       return;
     }
     const s = dgStudent(m, p.iid);
     if (s.status === "withdrawn") { toast("강사님이 두잉고 이용을 멈춘 계정이에요. 고객센터로 문의해 주세요.", "warn"); return; }
     DB.session.setInstructorPick(p.iid); DB.session.setStudent({ id: s.id, at: now(), vpid: p.id });
-    location.hash = to && /^#\/(qna|home|vodclass)/.test(to) ? to : "#/vodclass/" + encodeURIComponent(pid) + (lid ? "/" + encodeURIComponent(lid) : "");
+    ROUTE.hash = to && /^#\/(qna|home|vodclass)/.test(to) ? to : "#/vodclass/" + encodeURIComponent(pid) + (lid ? "/" + encodeURIComponent(lid) : "");
   }
   /** 스토어 화면에 넣는 ‘강사 두잉고’ 안내 카드 */
   function dgCard(p, cls) {
@@ -800,10 +836,20 @@
   function payOpts() {
     const L = [["card", "coins", "신용 · 체크카드"], ["kakao", "message", "카카오페이"], ["toss", "coins", "토스페이"], ["bank", "building", "무통장 입금"]];
     if (!SRV()) return L;
-    const ch = (CFG && CFG.portone && CFG.portone.channels) || {}, st = V().settings || {};
-    return L.map((z) => z[0] === "bank" ? (st.bank && st.account ? z : z.concat("준비 중")) : ch[z[0]] ? z : z.concat("PG 심사 중")).filter((z) => !(z[3] && z[0] !== "card" && z[0] !== "bank"));
+    const ch = (CFG && CFG.portone && CFG.portone.channels) || {}, bk = bankInfo().real;
+    return L.map((z) => z[0] === "bank" ? (bk ? z : z.concat("준비 중")) : ch[z[0]] ? z : z.concat("PG 심사 중")).filter((z) => !(z[3] && z[0] !== "card" && z[0] !== "bank"));
   }
-  const bankInfo = () => { const s = V().settings, b = DB.billingInfo ? DB.billingInfo() : {}; return { bank: s.bank || b.bank || "국민은행", account: s.account || b.account || "000000-00-000000", holder: s.holder || b.holder || "(주)두고홀딩스" }; };
+  /** 무통장 계좌: VOD 설정 → 비어 있으면 기수 입금 계좌. real = 실제로 넣은 계좌 (정식 서버는 이때만 무통장을 열어요) */
+  const bankInfo = () => {
+    const s = V().settings || {}, b = DB.billingInfo ? DB.billingInfo() : {}, x = s.bank && s.account ? s : b.bank && b.account ? b : null;
+    if (x) return { bank: x.bank, account: x.account, holder: x.holder || s.holder || b.holder || "(주)두고홀딩스", real: true };
+    return SRV() ? { bank: "", account: "", holder: "", real: false } : { bank: "국민은행", account: "000000-00-000000", holder: "(주)두고홀딩스", real: false };
+  };
+  /** 주문에 남긴 계좌(주문할 때 안내한 그대로) → 없으면 지금 계좌 · 입금 기한 */
+  const bankOf = (o) => (o && o.bankTo && o.bankTo.account ? Object.assign({ real: true }, o.bankTo) : bankInfo());
+  const dueOf = (o) => (o && o.dueAt) || (o ? o.at + (Number(V().settings.payDays) || 3) * 864e5 : 0);
+  const bankAuto = () => !!(CFG && CFG.bankAuto);
+  const fmtDue = (t) => { const d = new Date(t); return DB.date.fmtFull(DB.date.toStr(d)) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
   // 쿠폰: 회원이 가진 쿠폰(memberCoupons) → 원본(coupons). 상태는 쓸 수 있음 · 사용 완료 · 기간 만료
   /* ---------- 수업 자료 파일 저장 ----------
    * 시안: 강사 · 마스터가 올린 파일을 이 브라우저(IndexedDB)에 저장하고 lesson.files 에 { name, url: "idb:아이디", size(KB) } 로 남겨요.
@@ -852,7 +898,8 @@
   /* 첫 화면 배너: 켜져 있고 노출 기간 안에 있는 것만 (이미지 배너는 이미지가 있어야) */
   const banLive = (b) => b.on !== false && (!b.from || today() >= b.from) && (!b.to || today() <= b.to) && (b.kind !== "img" || !!(b.pc || b.m));
   // 첫 화면 배너: 꺼진 판매 영역(LIVE · 오프라인 / 무료 강의)으로 이어지는 배너는 쉬어요
-  const liveBanners = () => V().banners.filter((b) => banLive(b) && (!b.pid || bizShow(product(b.pid))) && tileBiz({ href: b.href }));
+  const hrefPid = (h) => { const m = String(h || "").match(/^#\/vod\/(?:p|checkout)\/([^/?#]+)/); return m ? decodeURIComponent(m[1]) : ""; };
+  const liveBanners = () => V().banners.filter((b) => banLive(b) && (!b.pid || bizShow(product(b.pid))) && (!hrefPid(b.href) || bizShow(product(hrefPid(b.href)))) && tileBiz({ href: b.href }));
   const couponOf = (cid) => (V().coupons || []).find((c) => c.id === cid) || null;
   function myCoupons(mid) {
     return ((V().memberCoupons || {})[mid] || []).map((x) => { const c = couponOf(x.cid); if (!c) return null; const st = x.usedAt ? "used" : x.exp && x.exp < today() ? "exp" : c.on === false ? "off" : "ok"; return { x, c, st }; }).filter(Boolean).sort((a, b) => (a.st === "ok" ? 0 : 1) - (b.st === "ok" ? 0 : 1) || b.x.at - a.x.at);
@@ -920,7 +967,7 @@
   const artLines = (p) => esc(p.thumbText || twoLines(p.title)).split("\n");
   const artTitle = (lines) => lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? "<em>" + l + "</em>" : l)).join("<br>");
   const artSize = (lines) => { const mx = Math.max.apply(null, lines.map((l) => l.replace(/&[a-z#0-9]+;/g, "x").length)); return mx > 11 ? " sm" : mx > 8 ? " md" : ""; };
-  const artPh = (p, cls) => { const ph = insPhoto(p.iid); return ph ? '<img class="' + cls + '" src="' + esc(ph) + '" alt="" loading="lazy">' : '<i class="vd-art-ini">' + esc((p.creator || "D").slice(0, 1)) + "</i>"; };
+  const artPh = (p, cls) => { const ph = phOf(p); return ph ? '<img class="' + cls + '" src="' + esc(ph) + '" alt="" loading="lazy">' : '<i class="vd-art-ini">' + esc((p.creator || "D").slice(0, 1)) + "</i>"; };
   const EN_DOW = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const evParts = (v) => { const d = new Date(v); return isNaN(d) ? null : { md: (d.getMonth() + 1) + "." + String(d.getDate()).padStart(2, "0"), dow: EN_DOW[d.getDay()], hm: String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") }; };
   function thumbArt(p, cls) {
@@ -992,7 +1039,8 @@
   /* ================= 화면 ================= */
   const root = document.getElementById("root");
   const ui = { slide: 0, timer: null, paused: false };
-  const route = () => { const h = location.hash.replace(/^#\/vod\/?/, ""), q = h.indexOf("?"); const path = (q >= 0 ? h.slice(0, q) : h).split("/").filter(Boolean), qs = new URLSearchParams(q >= 0 ? h.slice(q + 1) : ""); return { path, qs }; };
+  // 약관 주소(/terms · /privacy · /refund)는 스토어 안 legal 화면으로
+  const route = () => { const h = ROUTE.hash.replace(/^#\/(?=(terms|privacy|refund)(\/|\?|$))/, "#/vod/legal/").replace(/^#\/vod\/?/, ""), q = h.indexOf("?"); const path = (q >= 0 ? h.slice(0, q) : h).split("/").filter(Boolean), qs = new URLSearchParams(q >= 0 ? h.slice(q + 1) : ""); return { path, qs }; };
   const toast = (msg, kind) => { const t = document.createElement("div"); t.className = "toast" + (kind === "warn" ? " warn" : ""); t.innerHTML = icon(kind === "warn" ? "alert" : "check", "sm") + "<span>" + esc(msg) + "</span>"; const box = document.getElementById("toast-root"); box.appendChild(t); const all = box.querySelectorAll(".toast"); for (let i = 0; i < all.length - 1; i++) all[i].remove(); setTimeout(() => t.remove(), 2600); };
   const logoImg = '<img class="vd-logo-img" src="assets/brand/doogo-class-word.svg" alt="DOOGO CLASS">';
   // 두잉고 | DOOGO CLASS 바꾸기: 둥근 알약 + 미끄러지는 손잡이 (지난번에 있던 쪽에서 지금 쪽으로 움직여요)
@@ -1054,7 +1102,9 @@
     const col = (t, items) => '<div class="vd-gf-col"><b>' + t + "</b>" + items.map((x) => (x[0] === "recruit" ? '<button type="button" data-v="recruit">' + x[1] + "</button>" : '<a href="' + x[0] + '">' + x[1] + "</a>")).join("") + "</div>";
     const mq = '<span>YOUR SUCCESS</span><i>✳</i><span class="o">DOOGO CLASS</span><i>✳</i>', kinds = ["VOD", bizOn("ebook") && "전자책", (bizOn("live") || bizOn("flive")) && "LIVE"].filter(Boolean).join(" · ");
     return '<footer class="vd-gf"><div class="vd-gf-mq" aria-hidden="true"><div class="vd-gf-mq-t">' + mq + mq + mq + mq + mq + mq + "</div></div>" +
-      '<div class="vd-wrap"><div class="vd-gf-top"><div class="vd-gf-brand">' + logoImg + "<p>돈 되는 노하우를 " + kinds + (/책$/.test(kinds) ? "으로" : "로") + ".<br>직접 해서 번 사람에게 배워요.</p></div>" +
+      '<div class="vd-wrap"><div class="vd-gf-top"><div class="vd-gf-brand">' + logoImg + "<p>돈 되는 노하우를 " + kinds + (/책$/.test(kinds) ? "으로" : "로") + ".<br>직접 해서 번 사람에게 배워요.</p>" +
+        // 로그인 바로가기: 강사센터(강사 · 코치) · 두잉고 수강생 강의실
+        '<div class="vd-gf-login" aria-label="로그인 바로가기"><small>로그인 바로가기</small>' + [["#/center/login", "monitorPlay", "강사센터 로그인", "강사 · 코치 · 파트너"], ["#/login", "users", "수강생 로그인", "두잉고 기수 강의실"]].map((x) => '<a class="vd-gf-lg" href="' + x[0] + '"><span class="vd-gf-lg-ic">' + icon(x[1], "sm") + "</span><span><b>" + x[2] + "</b><em>" + x[3] + "</em></span>" + icon("arrowUpRight", "xs") + "</a>").join("") + "</div></div>" +
         '<nav class="vd-gf-grid" aria-label="바로가기">' +
           col("클래스", [["#/vod", "돈되는 클래스"], ["#/vod/c/all?tab=vod", "VOD 강의"], bizOn("ebook") && ["#/vod/c/all?tab=ebook", "전자책"], bizOn("flive") && ["#/vod/c/all?tab=flive", "무료 LIVE"], bizOn("live") && ["#/vod/c/all?tab=premium", "LIVE · 오프라인 강의"], bizOn("free") && ["#/vod/c/all?tab=free", "무료강의"], ["#/vod/teachers", "강사진"], ["#/vod/c/soon", "오픈 예정"]].filter(Boolean)) +
           col("마이페이지", [["#/vod/my/classes", "내 강의실"], ["#/vod/my/coupons", "쿠폰"], ["#/vod/my/orders", "주문 · 결제 내역"], ["#/vod/my/account", "회원 정보 수정"]]) +
@@ -1063,14 +1113,14 @@
         '<div class="vd-gf-help"><b>도움이 필요하신가요?</b><p>수강 · 결제 · 환불 문의를 남겨 주시면<br>영업일 기준 하루 안에 답해 드려요.</p><div class="vd-gf-hbtn"><a class="vd-btn vd-btn-p" href="#/vod/my/help">1:1 문의하기 ' + icon("arrowRight", "xs") + "</a>" + kkBtn("vd-btn vd-btn-kakao", "카카오톡 상담") + "</div>" +
           (S.phone || S.hours ? '<p class="vd-gf-cs">' + (S.phone ? "<b>" + tel(S.phone) + "</b>" : "") + (S.hours ? "<small>" + esc(S.hours) + "</small>" : "") + "</p>" : "") + "</div></div>" +
       '<div class="vd-gf-bot"><div class="vd-gf-biz"><strong>' + esc(S.company || "(주)두고홀딩스") + "</strong><dl>" + biz.map((x) => "<div><dt>" + x[0] + "</dt><dd>" + x[1] + "</dd></div>").join("") + "</dl>" + (S.notice ? "<p>" + esc(S.notice) + "</p>" : "") + '<p class="vd-gf-copy">© 2026 ' + esc(S.company || "(주)두고홀딩스") + ". All rights reserved.</p></div>" +
-        '<nav class="vd-gf-links" aria-label="약관">' + lg("terms", "이용약관") + lg("privacy", "<strong>개인정보처리방침</strong>") + '<button type="button" data-v="refund">환불 정책</button>' + lg("oss", "오픈소스 라이선스") + (bizDigits.length === 10 ? ext("https://www.ftc.go.kr/bizCommPop.do?wrkr_no=" + bizDigits, "사업자정보확인") : "") + '<button type="button" data-v="recruit">강사 모집 · 입점 문의</button></nav></div></div></footer>';
+        '<nav class="vd-gf-links" aria-label="약관">' + '<a href="#/terms">이용약관</a><a href="#/privacy"><strong>개인정보처리방침</strong></a><a href="#/refund">환불정책</a>' + lg("oss", "오픈소스 라이선스") + (bizDigits.length === 10 ? ext("https://www.ftc.go.kr/bizCommPop.do?wrkr_no=" + bizDigits, "사업자정보확인") : "") + '<button type="button" data-v="recruit">강사 모집 · 입점 문의</button></nav></div></div></footer>';
   }
   const tabbar = (on) => '<nav class="vd-tabbar" aria-label="아래 메뉴">' + [["home", "#/vod", "home", "홈"], ["all", "#/vod/c/all", "layers", "카테고리"], ["likes", "#/vod/my/likes", "heart", "찜"], ["cls", "#/vod/my/classes", "monitorPlay", "내 강의실"], ["my", "#/vod/my", "user", "마이"]].map((t) => '<a href="' + t[1] + '" class="' + (on === t[0] ? "on" : "") + '">' + icon(t[2], "sm") + "<span>" + t[3] + "</span></a>").join("") + "</nav>";
   const shell = (nav, body, tab, cls) => '<div class="vd' + (cls ? " " + cls : "") + '">' + header(nav) + '<main class="vd-main">' + body + "</main>" + footer() + tabbar(tab || "") + "</div>";
 
   /* ---------- 카드 (스낵클형 · 둥근 썸네일) ---------- */
   // 강사 이름은 사진 + 진한 글씨로 (회색이면 안 보여서)
-  const crName = (p) => { const ph = insPhoto(p.iid); return '<span class="vd-crn">' + (ph ? '<img src="' + esc(ph) + '" alt="" loading="lazy">' : '<i>' + esc((p.creator || "D").slice(0, 1)) + "</i>") + "<b>" + esc(p.creator || "") + "</b></span>"; };
+  const crName = (p) => { const ph = phOf(p); return '<span class="vd-crn">' + (ph ? '<img src="' + esc(ph) + '" alt="" loading="lazy">' : '<i>' + esc((p.creator || "D").slice(0, 1)) + "</i>") + "<b>" + esc(p.creator || "") + "</b></span>"; };
   const BADGE = { BEST: ["BEST", "best"], NEW: ["NEW", "new"], UPDATE: ["업데이트", "upd"], HOT: ["HOT", "hot"], NICE: ["추천", "nice"] };
   function badgesOf(p) {
     const list = ["BEST", "NEW", "UPDATE", "HOT", "NICE"].filter((b) => (p.badges || []).indexOf(b) >= 0 || (b === "UPDATE" && isUpd(p))).map((b) => BADGE[b]);
@@ -1198,7 +1248,7 @@
     const tp = V().topics || [], mine = myTopics(), rows = [0, 1, 2].map((i) => tp.filter((_, j) => j % 3 === i));
     const loop = bs.length > 1 ? [bs[bs.length - 1]].concat(bs, [bs[0]]) : bs, off = bs.length > 1 ? 1 : 0;
     const hero = bs.length ? '<section class="vd-hero"><div class="vd-hero-vp"><div class="vd-hero-track" id="vd-hero" style="--i:' + (ui.slide + off) + '">' +
-      loop.map((b, j) => { const i = j - off, clone = i < 0 || i >= bs.length; const p = b.pid ? product(b.pid) : null, ph = b.img || (p ? insPhoto(p.iid) : ""), href = b.href || (p ? "#/vod/p/" + p.id : "#/vod/c/all");
+      loop.map((b, j) => { const i = j - off, clone = i < 0 || i >= bs.length; const p = b.pid ? product(b.pid) : null, ph = b.img || (p ? phOf(p) : ""), href = b.href || (p ? "#/vod/p/" + p.id : "#/vod/c/all");
         if (b.kind === "img") return imgSlide(b, i, clone, href);
         const st = String(b.sticker || "").split("\n");
         return '<a class="vd-slide' + (b.dark ? " dark" : "") + (i === ui.slide ? " on" : "") + '" href="' + esc(href) + '" style="--a:' + esc((b.color || [])[0] || "#111") + ";--b:" + esc((b.color || [])[1] || (b.color || [])[0] || "#333") + '" data-i="' + (clone ? "" : i) + '" tabindex="' + (i === ui.slide ? 0 : -1) + '"' + (clone ? ' aria-hidden="true"' : "") + '><div class="vd-slide-t">' + (b.eyebrow ? "<small>" + esc(b.eyebrow) + "</small>" : "") + "<b>" + esc(b.title || "").replace(/\n/g, "<br>") + "</b>" + (b.sub ? "<p>" + esc(b.sub) + " " + icon("arrowRight", "xs") + "</p>" : "") + "</div>" +
@@ -1231,7 +1281,7 @@
     if (k === "files") return '<div class="mk-win">' + mkBar("수업 자료") + '<div class="mk-files">' + [["PDF", "실전 교재", "42쪽"], ["XLSX", "마진 · ROAS 계산기", "엑셀"], ["PDF", "첫 주문 체크리스트", "12항목"], ["ZIP", "상세페이지 템플릿", "5종"]].map((x, i) => '<p style="--k:' + i + '"><em class="t-' + x[0].toLowerCase() + '">' + x[0] + "</em><b>" + x[1] + "</b><small>" + x[2] + '</small><span class="mk-dl"></span></p>').join("") + "</div></div>";
     if (k === "note") return '<div class="mk-win">' + mkBar("강의 노트") + '<div class="mk-notes">' + [["03:12", "재고 없이 시작 → 위탁 · 구매대행부터"], ["12:40", "마진 30% 아래는 광고비에 다 먹혀요"], ["21:05", "첫 주문은 리뷰 체험단으로"]].map((x, i) => '<p style="--k:' + i + '"><time>' + x[0] + "</time><span>" + x[1] + "</span></p>").join("") + '<span class="mk-pen">+ 메모하기</span></div></div>';
     if (k === "ai") return '<div class="mk-win">' + mkBar("AI 조교 · 24시간") + '<div class="mk-chat"><p class="me">첫 상품은 어떻게 골라야 해요?</p><p class="bot">강의에서 말한 기준 세 가지를 먼저 보세요. ① 마진 30% 이상 ② 재구매가 되는 상품 ③ 배송이 쉬운 상품이에요.</p><p class="me">마진 계산은 어디서 해요?</p><p class="bot typing"><i></i><i></i><i></i></p></div></div>';
-    if (k === "coach") return '<div class="mk-win">' + mkBar("1:1 코칭 · TEA TIME") + '<div class="mk-coach"><p class="q"><small>내 코칭 질문 · 남은 코칭 2회</small>마진 22%인데 광고를 시작해도 될까요?</p><p class="a"><i class="mk-av">문</i><span><b>문대표 강사님 답변</b>광고보다 리뷰 체험단부터 해 보세요. 마진이 30%를 넘으면 그때 시작해요.</span></p><p class="tea"><em>TEA TIME</em><span>11/12 (수) 19:00 · 강남</span><u>확정</u></p></div></div>';
+    if (k === "coach") return '<div class="mk-win">' + mkBar("1:1 코칭 · TEA TIME") + '<div class="mk-coach"><p class="q"><small>내 코칭 질문 · 남은 코칭 2회</small>마진 22%인데 광고를 시작해도 될까요?</p><p class="a"><i class="mk-av">강</i><span><b>강사님 답변</b>광고보다 리뷰 체험단부터 해 보세요. 마진이 30%를 넘으면 그때 시작해요.</span></p><p class="tea"><em>TEA TIME</em><span>11/12 (수) 19:00 · 강남</span><u>확정</u></p></div></div>';
     if (k === "cert") return '<div class="mk-cert"><small>CERTIFICATE OF COMPLETION</small><b>수료증</b><span class="mk-cert-n">김OO</span><p>위 사람은 DOOGO CLASS 클래스를<br>끝까지 수료했기에 이 증서를 드려요.</p><span class="mk-seal">DOOGO<br>CLASS</span></div><div class="mk-badges"><span>첫 수강</span><span>3일 연속</span><span class="on">첫 완강</span></div>';
     return "";
   }
@@ -1257,8 +1307,9 @@
   // 지금 DOOGO CLASS에서 판매 중(또는 오픈 예정)인 강의가 있는 강사만
   function teacherList() {
     const map = {};
-    V().products.filter((p) => p.iid && (p.status === "soon" || (p.status === "on" && !eventPast(p))) && bizShow(p)).forEach((p) => {
-      const t = (map[p.iid] = map[p.iid] || { iid: p.iid, name: p.creator, tag: p.tagline || "", cats: [], ps: [], sold: 0 });
+    V().products.filter((p) => tkey(p) && (p.status === "soon" || (p.status === "on" && !eventPast(p))) && bizShow(p)).forEach((p) => {
+      const k = tkey(p), t = (map[k] = map[k] || { iid: k, name: p.creator, tag: p.tagline || "", cats: [], ps: [], sold: 0, ph: "" });
+      if (!t.ph) t.ph = phOf(p);
       const cl = catOf(p.cat).label; if (t.cats.indexOf(cl) < 0) t.cats.push(cl); t.ps.push(p); t.sold += soldOf(p);
       if (!t.tag && p.tagline) t.tag = p.tagline;
     });
@@ -1269,7 +1320,7 @@
   const snsOf = (iid) => { const b = ((DB.content && DB.content(iid)) || {}).brand || {}, url = (v, base) => (!v ? "" : /^https?:\/\//.test(v) ? v : base + String(v).replace(/^@/, "")); return [[url(b.instagram, "https://instagram.com/"), "camera", "인스타그램"], [url(b.youtubeChannel, "https://youtube.com/"), "video", "유튜브"], [url(b.kakaoChannel, "https://pf.kakao.com/"), "message", "카카오톡 채널"]].filter((x) => x[0]); };
   const tHref = (iid) => "#/vod/teachers/" + encodeURIComponent(iid);
   function tcCard(t, i) {
-    const ph = insPhoto(t.iid), sns = snsOf(t.iid);
+    const ph = t.ph || insPhoto(t.iid), sns = snsOf(t.iid);
     return '<div class="vd-tc" style="--c:' + ACC[(i + 1) % ACC.length] + '"><a class="vd-tc-main" href="' + tHref(t.iid) + '"><span class="vd-tc-ph vd-tc-s' + (i % 4) + '"><i class="vd-tc-bg" aria-hidden="true"></i>' + (ph ? '<img src="' + esc(ph) + '" alt="" loading="lazy">' : "<em>" + esc((t.name || "D").slice(0, 1)) + "</em>") + '<span class="vd-tc-n">클래스 ' + t.ps.length + "</span></span>" +
       "<b>" + esc(t.name || "") + "</b><small>" + esc(t.tag || t.cats.join(" · ")) + '</small><span class="vd-tc-cat">' + esc(t.cats.slice(0, 2).join(" · ")) + "</span></a>" +
       '<span class="vd-tc-sns">' + sns.map((x) => '<a href="' + esc(x[0]) + '" target="_blank" rel="noopener" aria-label="' + esc(t.name) + " " + x[2] + '">' + icon(x[1], "xs") + "</a>").join("") + '<a href="' + tHref(t.iid) + '" aria-label="' + esc(t.name) + ' 강사 페이지">' + icon("arrowUpRight", "xs") + "</a></span></div>";
@@ -1288,7 +1339,7 @@
   function pageTeacher(iid) {
     const list = teacherList(), i = list.findIndex((x) => x.iid === iid), t = list[i];
     if (!t) return shell("teachers", '<div class="vd-wrap vd-tpg">' + emptyBox("users", "찾는 강사님이 없어요", "지금 DOOGO CLASS에서 강의하는 강사님을 확인해 보세요.", '<a class="vd-btn vd-btn-p" href="#/vod/teachers">강사진 보기</a>') + "</div>", "");
-    const b = ((DB.content && DB.content(iid)) || {}).brand || {}, ph = insPhoto(iid), sns = snsOf(iid), lp = DB.landingOf && DB.landingOf(iid);
+    const b = ((DB.content && DB.content(iid)) || {}).brand || {}, ph = t.ph || insPhoto(iid), sns = snsOf(iid), lp = DB.landingOf && DB.landingOf(iid);
     const career = lp && lp.about && Array.isArray(lp.about.career) ? lp.about.career.slice(0, 5).map((x) => (typeof x === "string" ? x : x.text || x.title || "")).filter(Boolean) : [];
     const rv = t.ps.reduce((a, p) => { const r = ratingOf(p.id); return { n: a.n + r.n, s: a.s + r.avg * r.n }; }, { n: 0, s: 0 });
     const bio = (t.ps.find((p) => p.creatorBio) || {}).creatorBio || (t.name + "님은 직접 해서 번 경험을 DOOGO CLASS 강의로 나누고 있어요. 강의를 누르면 커리큘럼 · 미리보기 · 수강 후기를 볼 수 있어요.");
@@ -1393,6 +1444,14 @@
         "<p data-rv>유튜브에도, 블로그에도 ‘월 1000 버는 법’은 넘쳐나요.<br>그런데 막상 따라 해 보면, 어디서 막히는지는 아무도 알려주지 않죠.</p>" +
         '<ul class="ab2-pain" data-rv><li style="--sd:.15s"><span>듣고 나면 끝나는 강의</span></li><li style="--sd:.45s"><span>막혀도 물어볼 곳이 없는 강의</span></li><li style="--sd:.75s"><span>자료는 알아서 찾아야 하는 강의</span></li></ul>' +
         "<p data-rv>DOOGO CLASS는 이 세 가지를 <b>시스템으로</b> 풀었어요.<br>직접 해서 번 사람이 가르치고, 끝까지 가도록 강의실이 함께 움직여요.</p></div></section>" +
+      // 3-1) 만드는 팀 · 현장 사진 (세미나 · 수강생 · 귤밭 산지 · 실습) — 이전 소개 페이지에서 다시 가져왔어요
+      '<section class="ab-sec ab-gray ab-field"><div class="vd-wrap"><div class="ab-team-h"><div><p class="ab-team-k"><b>DOOGO</b><span>DOOGO CLASS를 만드는 팀</span></p><h2 data-eg>혼자 공부하면 멈추지만,<br>함께 하면 끝까지 가니까.</h2></div>' +
+          "<p data-rv>(주)두고홀딩스는 두잉고를 운영하며<br>강사님과 수강생이 기수로 함께 달리는<br>과제 · 피드백 · 라이브 Q&A를 이어왔어요.<br>온라인에서 시작한 배움이 실제 매출로 이어지는 현장에도 함께 갔어요.</p></div>" +
+        '<div class="ab-feat" data-rv><div class="ab-feat-t"><small>DOOGO CLASS의 원칙</small><b>“배움은 결국<br>실행으로 증명된다.”</b><p>강의를 듣는 데서 끝나지 않도록, 강의실에 자료 · AI 조교 · 1:1 코칭을 붙인 이유예요.</p><a href="#/doinggo">두잉고 기수 강의 알아보기 ↗</a></div><div class="ab-feat-ph"><img src="assets/vod/intro-speaker.webp" alt="오프라인 세미나에서 강의하는 모습 (AI 예시 이미지)" loading="lazy"><span>DOOGO CLASS 오프라인 세미나</span></div></div>' +
+        '<figure class="ab-wide" data-rv><img src="assets/vod/intro-audience.webp" alt="강의를 듣는 수강생들 (AI 예시 이미지)" loading="lazy"><figcaption><span>함께 듣고, 서로의 실행을 응원하는 자리</span><span>DOOGO CLASS Alumni</span></figcaption></figure>' +
+        '<div class="ab-trio" data-rv-kids>' + [["panel", "경험을 나누는 대화", "현장에서 직접 묻고, 바로 답을 들었어요."], ["field", "직접 찾아간 산지", "귤밭에서 생산부터 출고까지 함께 봤어요."], ["workshop", "같이 하는 실습", "상세페이지를 그 자리에서 함께 고쳐 봤어요."]].map((x) => '<figure><img src="assets/vod/intro-' + x[0] + '.webp" alt="' + x[1] + ' (AI 예시 이미지)" loading="lazy"><b>' + x[1] + "</b><span>" + x[2] + "</span></figure>").join("") + "</div>" +
+        '<div class="ab-story" data-rv><p>첫 주문의 설렘도, 해 보고 나서야 알게 된 실수도.<br>누군가의 경험이 다른 사람의 첫걸음이 되길 바랐어요.</p><h3>이제 그 노하우를,<br>누구나 언제든 볼 수 있게.</h3><p>기수 강의를 기다리지 않아도, 큰 결심을 하지 않아도.<br>궁금한 분야 하나부터 원하는 기간 동안 몇 번이든 볼 수 있는 곳.</p><b>그래서, DOOGO CLASS를 만들었어요.</b><small>사진은 서비스 이해를 돕기 위한 AI 예시 이미지예요.</small></div>' +
+      "</div></section>" +
       // 4) 세 가지 원칙 (검정)
       '<section class="ab2-pr"><div class="vd-wrap"><p class="ab2-k" data-rv="fade">WHY DOOGO CLASS</p><h2 data-eg>돈을 내고 들을 이유,<br><span data-accent>세 가지</span>로 증명해요.</h2>' +
         '<div class="ab2-pr-g" data-rv-kids>' + [["01", "검증된 강사", "직접 해서 번 사람만 가르쳐요.", "이론만 아는 사람이 아니라, 지금도 그 일로 돈을 버는 사람이에요. 강의를 열기 전에 실제 경험과 결과를 함께 확인해요."], ["02", "단계별 커리큘럼", "처음부터 첫 매출까지, 순서대로.", "준비 → 실행 → 판매 → 확장. 무엇부터 해야 할지 고민하지 않도록, 해 본 순서 그대로 Part를 나눴어요."], ["03", "끝까지 가는 시스템", "듣고 끝나지 않게, 끝까지.", "진도 · 강의 노트 · 수업 자료 · AI 조교 · 강사님 1:1 코칭까지. 혼자 멈추지 않도록 강의실이 같이 움직여요."]].map((x) => '<article class="ab2-pc"><span class="ab2-pc-n">' + x[0] + "</span><small>" + x[1] + "</small><b>" + x[2] + "</b><p>" + x[3] + "</p></article>").join("") + "</div></div></section>" +
@@ -1509,6 +1568,33 @@
   const refundKey = (p) => (priceOf(p) === 0 ? "free" : isEvent(p) ? "event" : typeOf(p) === "ebook" ? "ebook" : "vod");
   const refundTable = (p) => '<table class="vd-rf"><thead><tr><th>신청 시점</th><th>환불 금액</th></tr></thead><tbody>' + refundTbl()[refundKey(p)].map((r) => "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>").join("") + "</tbody></table>";
   const refundHtml = () => '<div class="vd-rf-all">' + [["VOD 강의 (수강권 · 1년 연장권)", "vod"], ["1:1 코칭권", "coach"], ["강사님과 TEA TIME", "tea"], ["전자책", "ebook"], ["LIVE · 오프라인 강의", "event"]].map((x) => "<h4>" + x[0] + '</h4><table class="vd-rf"><tbody>' + refundTbl()[x[1]].map((r) => "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>").join("") + "</tbody></table>").join("") + '<p class="vd-muted">VOD ‘정상 수강기간’은 결제할 때 고른 수강권 기간(180일 · 365일 · 3년, 연장권은 365일)이에요. 환불 금액은 정가가 아닌 실제 결제 금액 기준이고, 결제에 쓴 쿠폰은 다시 돌려드리지 않아요. 환불 문의: 마이페이지 › 주문 · 결제 내역 또는 고객센터 1:1 문의.</p></div>';
+  /* 약관 및 정책 — 이용약관 /terms · 개인정보처리방침 /privacy · 환불정책 /refund (PG 심사 · 공유용으로 탭마다 따로 주소)
+   * 글은 legal.js, 환불정책의 상품별 표 · 쿠폰 문구는 마스터 › 환불 · 취소 관리 설정을 그대로 보여 줘요 */
+  const LEGAL_TABS = [["terms", "이용약관", "file"], ["privacy", "개인정보처리방침", "shieldCheck"], ["refund", "환불정책", "refresh"]];
+  function legalBody(k, text) {
+    const H = window.CLASS_LEGAL_HTML || ((x) => "<p>" + esc(x) + "</p>");
+    if (k !== "refund") return H(text);
+    const r = rfSet(), T = refundTbl();
+    const tables = '<div class="vd-rf-all vd-lg-rf">' + [["VOD 강의 (수강권 · 1년 연장권)", "vod"], ["1:1 코칭권", "coach"], ["강사님과 TEA TIME", "tea"], ["전자책", "ebook"], ["LIVE · 오프라인 강의", "event"]].filter((x) => T[x[1]]).map((x) => "<h5>" + x[0] + '</h5><table class="vd-rf"><thead><tr><th>신청 시점</th><th>환불 금액</th></tr></thead><tbody>' + T[x[1]].map((row) => "<tr><td>" + row[0] + "</td><td>" + row[1] + "</td></tr>").join("") + "</tbody></table>").join("") +
+      '<p class="vd-muted">VOD ‘정상 수강기간’은 결제할 때 고른 수강권 기간(180일 · 365일 · 3년, 연장권은 365일)이에요. 무료 클래스는 결제 금액이 없어 환불 대상이 아니며, 신청은 언제든 취소할 수 있어요.</p></div>';
+    const cp = '<div class="legal-doc"><ul><li>입금 전에 취소한 주문: 쓴 쿠폰 · 포인트를 모두 돌려드려요.</li><li>' + (r.restore ? "전액 환불(바로 취소 포함): 주문에 쓴 쿠폰 · 포인트를 돌려드려요. 사용 기한이 지난 쿠폰은 돌려드리지 않아요." : "전액 환불(바로 취소 포함): 주문에 쓴 쿠폰 · 포인트는 돌려드리지 않아요.") + "</li><li>일부 환불: 실제 결제 금액을 기준으로 계산하며, 쓴 쿠폰 · 포인트는 돌려드리지 않아요.</li><li>쿠폰 · 포인트는 현금으로 바꾸거나 다른 사람에게 넘길 수 없어요.</li></ul></div>";
+    return text.split(/\[\[(환불표|쿠폰)\]\]/).map((x, i) => (i % 2 ? (x === "환불표" ? tables : cp) : x.trim() ? H(x) : "")).join("");
+  }
+  function pageLegal(k) {
+    if (!LEGAL_TABS.some((x) => x[0] === k)) k = "terms";
+    const L = (window.CLASS_LEGAL || {})[k] || ["", ""], tab = LEGAL_TABS.find((x) => x[0] === k);
+    const lines = String(L[1] || "").split("\n"), m = /^시행일:\s*(.+)$/.exec(lines[0] || ""), text = m ? lines.slice(1).join("\n") : L[1] || "";
+    let n = 0; const doc = legalBody(k, text).replace(/<h4>/g, () => '<h4 id="lg-s' + (++n) + '">');
+    const heads = text.split("\n").filter((x) => x.indexOf("## ") === 0).map((x) => x.slice(3).trim());
+    const S = DB.siteInfo ? DB.siteInfo() : {}, url = "www.doogoclass.com/" + k;
+    const biz = [["상호", S.company || "(주)두고홀딩스"], S.ceo && ["대표", S.ceo], S.bizNo && ["사업자등록번호", S.bizNo], S.mailOrderNo && ["통신판매업신고", S.mailOrderNo], S.address && ["주소", S.address], S.phone && ["고객센터", S.phone], ["이메일", S.email || "doogobiz@gmail.com"], S.privacyOfficer && ["개인정보 보호책임자", S.privacyOfficer]].filter(Boolean);
+    return shell("legal", '<div class="vd-wrap vd-lg">' +
+      '<header class="vd-lg-h"><p class="vd-tpg-k">DOOGO CLASS POLICY</p><h1 class="vd-h1">약관 및 정책</h1><p>두고클래스를 이용하기 전에 꼭 확인해 주세요. 탭마다 주소가 따로 있어 그대로 공유할 수 있어요.</p></header>' +
+      '<nav class="vd-lg-tabs" aria-label="약관 및 정책">' + LEGAL_TABS.map((x) => '<a href="#/' + x[0] + '" class="' + (x[0] === k ? "on" : "") + '"' + (x[0] === k ? ' aria-current="page"' : "") + ">" + icon(x[2], "sm") + "<span>" + x[1] + "</span></a>").join("") + "</nav>" +
+      '<div class="vd-lg-grid"><article class="vd-lg-doc" aria-labelledby="vd-lg-t"><div class="vd-lg-top"><h2 id="vd-lg-t">' + esc(tab[1]) + '</h2><div class="vd-lg-meta">' + (m ? "<span>" + icon("calendar", "xs") + "시행일 " + esc(m[1]) + "</span>" : "") + "<span>" + icon("link", "xs") + esc(url) + '</span><button type="button" class="vd-lg-print" data-v="print">' + icon("printer", "xs") + "인쇄</button></div></div>" + doc + "</article>" +
+        '<aside class="vd-lg-side">' + (heads.length > 2 ? '<div class="vd-lg-toc"><b>목차</b>' + heads.map((h, i) => '<button type="button" data-v="jump" data-to="lg-s' + (i + 1) + '">' + esc(h) + "</button>").join("") + "</div>" : "") +
+          '<div class="vd-lg-biz"><b>사업자 정보</b><dl>' + biz.map((x) => "<dt>" + x[0] + "</dt><dd>" + esc(x[1]) + "</dd>").join("") + "</dl></div></aside></div></div>", "");
+  }
   const cdTxt = (end) => { const d = new Date(end).getTime() - now(); if (!(d > 0)) return "마감"; const dd = Math.floor(d / 864e5), h = Math.floor(d % 864e5 / 36e5), mi = Math.floor(d % 36e5 / 6e4), s = Math.floor(d % 6e4 / 1e3), p2 = (n) => String(n).padStart(2, "0"); return (dd ? dd + "일 " : "") + p2(h) + ":" + p2(mi) + ":" + p2(s); };
   function infoRows(p) {
     const t = typeOf(p), lz = lessons(p), left = seatsLeft(p);
@@ -1616,7 +1702,7 @@
     return it.length ? '<ul class="vd-crd-st">' + it.map((x) => "<li><b>" + x[0] + "</b><span>" + x[1] + "</span></li>").join("") + "</ul>" : "";
   }
   function pageProduct(id) {
-    const p = product(id); if (!p || p.status === "hidden") return shell("", '<div class="vd-wrap">' + emptyBox("alert", "판매 중인 클래스가 아니에요", "", '<a class="vd-btn vd-btn-o" href="#/vod">홈으로</a>') + "</div>");
+    const p = product(id); if (!p || p.status === "hidden" || !insShown(p)) return shell("", '<div class="vd-wrap">' + emptyBox("alert", "판매 중인 클래스가 아니에요", "", '<a class="vd-btn vd-btn-o" href="#/vod">홈으로</a>') + "</div>");
     const m = me(), own = m && owns(m.id, p.id), rt = ratingOf(p.id), rs = reviewsOf(p.id), lz = lessons(p), cat = catOf(p.cat), pls = pledgesOf(p.id), t = typeOf(p), ev = isEvent(p), pvs = previewsOf(p);
     const ins = p.iid && DB.instructor ? DB.instructor(p.iid) : null, insB = p.iid && DB.content ? ((DB.content(p.iid) || {}).brand || {}) : {}, lp = p.iid && DB.landingOf ? DB.landingOf(p.iid) : null;
     const career = lp && lp.about && Array.isArray(lp.about.career) ? lp.about.career.slice(0, 5).map((x) => (typeof x === "string" ? x : x.text || x.title || "")).filter(Boolean) : [];
@@ -1656,7 +1742,7 @@
           (p.curriculum || []).map((ch, ci) => '<details class="vd-ch"' + (ci === 0 ? " open" : "") + '><summary><b class="vd-ch-no">' + (t === "ebook" ? "" : "Part " + (ci + 1) + ".") + "</b><span>" + esc(ch.title) + "</span><small>" + (t === "ebook" ? (ch.lessons || []).reduce((a, l) => a + (Number(l.min) || 0), 0) + "쪽" : (ch.lessons || []).length + "개 · " + durTxt((ch.lessons || []).reduce((a, l) => a + (Number(l.min) || 0), 0))) + "</small>" + icon("chevDown", "sm") + "</summary><ul>" +
             (ch.lessons || []).map((l, li) => "<li>" + icon(own || l.preview ? (t === "ebook" ? "file" : "play") : "lock", "xs") + "<span>" + (ci + 1) + "-" + (li + 1) + ". " + esc(l.title) + "</span>" + (l.preview && !own && !ev ? '<button type="button" class="vd-pv" data-v="pv-open" data-p="' + esc(p.id) + '" data-l="' + esc(l.id) + '">미리보기</button>' : "") + "<small>" + unit(l) + "</small></li>").join("") + "</ul></details>").join("")) +
         // 강사 소개: 강사 얼굴이 먼저 크게 보이게 (PC 왼쪽 큰 세로 사진 · 모바일 위쪽 전체 폭) + 클래스 · 수강생 숫자
-        sec("creator", "강사 소개", '<div class="vd-crd vd-crd2" data-rv><div class="vd-crd-ph' + (insPhoto(p.iid) ? "" : " no") + '">' + (insPhoto(p.iid) ? '<img src="' + esc(insPhoto(p.iid)) + '" alt="' + esc(p.creator) + ' 강사">' : "<i>" + esc((p.creator || "?").slice(0, 1)) + "</i>") + '<span class="vd-crd-cap"><small>CREATOR</small><b>' + esc(p.creator) + "</b></span></div><div class=\"vd-crd-body\"><small>" + esc(p.tagline || insB.field || "크리에이터") + "</small><b>" + esc(p.creator) + " <em>강사</em></b>" + crdStats(p) + "<p>" + esc(p.creatorBio || (p.creator + "님은 두잉고에서 기수를 운영하며 수강생과 함께 결과를 만들고 있어요. 이 클래스는 기수 강의의 핵심만 골라 언제든 볼 수 있게 만든 " + TYPE[t][0] + "예요.")) + "</p>" +
+        sec("creator", "강사 소개", '<div class="vd-crd vd-crd2" data-rv><div class="vd-crd-ph' + (phOf(p) ? "" : " no") + '">' + (phOf(p) ? '<img src="' + esc(phOf(p)) + '" alt="' + esc(p.creator) + ' 강사">' : "<i>" + esc((p.creator || "?").slice(0, 1)) + "</i>") + '<span class="vd-crd-cap"><small>CREATOR</small><b>' + esc(p.creator) + "</b></span></div><div class=\"vd-crd-body\"><small>" + esc(p.tagline || insB.field || "크리에이터") + "</small><b>" + esc(p.creator) + " <em>강사</em></b>" + crdStats(p) + "<p>" + esc(p.creatorBio || (p.creator + "님은 두잉고에서 기수를 운영하며 수강생과 함께 결과를 만들고 있어요. 이 클래스는 기수 강의의 핵심만 골라 언제든 볼 수 있게 만든 " + TYPE[t][0] + "예요.")) + "</p>" +
           (career.length ? '<ul class="vd-crd-car">' + career.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>" : "") + '<a class="vd-tl-btn" href="' + (p.iid ? tHref(p.iid) : "#/vod/search?q=" + encodeURIComponent(p.creator || "")) + '">' + esc(p.creator) + " 강사 페이지 · 다른 클래스" + icon("chevRight", "xs") + "</a></div></div>") +
         sec("reviews", "수강 후기", (rs.length ? '<div class="vd-rv-sum"><div class="vd-rv-big"><b>' + rt.avg.toFixed(1) + '</b><span class="vd-stars">' + stars(rt.avg) + "</span><small>후기 " + rs.length + "개</small></div><ul>" + dist.map((n, i) => "<li><span>" + (5 - i) + "점</span><i><u style=\"width:" + Math.round(n / rs.length * 100) + '%"></u></i><small>' + n + "</small></li>").join("") + "</ul></div>" : "") +
           (canReview ? '<form class="vd-rv-form" data-vd-review="' + esc(p.id) + '"><b>후기를 남겨 주세요 <small>후기를 쓰면 ' + (Number(V().settings.reviewPoint) || 0).toLocaleString() + "P를 드려요</small></b><div class=\"vd-rate\" role=\"radiogroup\" aria-label=\"별점\">" + [5, 4, 3, 2, 1].map((s) => '<label><input type="radio" name="rating" value="' + s + '"' + (s === 5 ? " checked" : "") + ">" + icon("star", "sm") + "</label>").join("") + '</div><textarea name="text" rows="3" maxlength="500" placeholder="강의를 듣고 좋았던 점을 적어 주세요 (10자 이상)"></textarea><button class="vd-btn vd-btn-p" type="submit">후기 등록</button></form>' : "") +
@@ -1681,7 +1767,7 @@
     const c = p.color || ["#1c1c1e", ACC[0]], t = typeOf(p), lines = artLines(p);
     const lb = p.label || (p.status === "soon" ? "오픈 예정" : priceOf(p) === 0 ? "무료특강" : t === "ebook" ? "전자책" : t === "live" ? "LIVE 클래스" : t === "offline" ? "오프라인 클래스" : "VOD클래스");
     const lbs = isEvent(p) ? fmtEvent(p.eventAt) : t === "ebook" ? (Number(p.pages) || 0) + "쪽 · " + (p.format || "PDF") : accessTxt(p);
-    const ph = insPhoto(p.iid);
+    const ph = phOf(p);
     return '<span class="vd-bn" style="--bg:' + esc(c[0] || "#1c1c1e") + ";--acc:" + esc(c[1] || ACC[0]) + '">' +
       '<i class="vd-bn-glow" aria-hidden="true"></i><i class="vd-bn-ring" aria-hidden="true"></i><i class="vd-bn-dots" aria-hidden="true"></i>' +
       (p.thumb ? '<img class="vd-bn-thumb" ' + imgAttr(p.thumb, "src") + ' alt="">' : "") +
@@ -1855,7 +1941,7 @@
         "<label>비밀번호" + pwField("pw", signup ? "new-password" : "current-password", signup ? "영문 · 숫자 섞어 8자 이상" : "비밀번호를 입력해 주세요") + "</label>" +
         (signup ? "<label>비밀번호 확인" + pwField("pw2", "new-password", "비밀번호를 한 번 더 입력해 주세요") + '</label><div class="vd-agrees"><label class="vd-agree vd-agree-all"><input type="checkbox" data-v="agree-all"><span>전체 동의</span></label><label class="vd-agree"><input type="checkbox" name="agree"><span>(필수) 만 14세 이상이며, 이용약관 · 개인정보 수집 · 이용에 동의해요</span></label><label class="vd-agree"><input type="checkbox" name="mkt"><span>(선택) 할인 · 새 클래스 소식 받기 (문자 · 이메일 · 카카오톡)</span></label></div>' : '<div class="vd-find"><button type="button" class="vd-tl-btn" data-v="pw-find">비밀번호 찾기</button></div>') +
         '<div class="vd-ts" data-ts></div><p class="vd-err" id="vd-auth-err" role="alert"></p><button class="vd-btn vd-btn-p vd-btn-xl" type="submit" disabled>' + (signup ? "가입하기" : "로그인") + "</button></form>" +
-      (signup ? '<p class="vd-auth-alt">이미 회원이신가요? <a href="#/vod/login' + nx + '">로그인</a></p>' : '<a class="vd-btn vd-btn-line vd-btn-xl" href="#/vod/signup' + nx + '">이메일로 회원가입</a><p class="vd-auth-demo">시안 체험 계정 · vod@gmail.com / vod</p>') +
+      (signup ? '<p class="vd-auth-alt">이미 회원이신가요? <a href="#/vod/login' + nx + '">로그인</a></p>' : '<a class="vd-btn vd-btn-line vd-btn-xl" href="#/vod/signup' + nx + '">이메일로 회원가입</a>' + (V().settings.demoLogin === false ? "" : '<p class="vd-auth-demo">체험 계정 · vod@gmail.com / vod</p>') + '') +
       (signup ? '<p class="vd-auth-gift"><span class="vd-ag-ic">' + icon("gift", "sm") + '</span><span class="vd-ag-t"><b>가입하면 5,000원 할인 쿠폰을 바로 드려요</b><small>가입일부터 30일 동안 쓸 수 있어요</small></span></p>' : "") +
       '</div><p class="vd-auth-faq">로그인 · 가입에 문제가 있나요? <button type="button" data-v="auth-faq">자주 묻는 질문</button></p>' +
       '<p class="vd-auth-note">' + icon("alert", "xs") + "두잉고 기수 수강생 계정과는 따로예요. 기수 수강생은 <a href=\"#/login\">두잉고 로그인</a>을 이용해 주세요.</p></div>");
@@ -1885,7 +1971,7 @@
   let catT = null, catLast = "";
   function catalogSnap() {
     const v = V(), s = v.settings || {};
-    return { products: v.products.map((p) => Object.assign(pickK(p, CAT_P), { dg: dgOpen(p) })), coupons: (v.coupons || []).map((c) => pickK(c, CAT_C)), settings: pickK(s, ["coach", "tea", "extendPct", "refund"]), biz: v.biz || {} };
+    return { products: v.products.map((p) => Object.assign(pickK(p, CAT_P), { dg: dgOpen(p) }, insShown(p) ? {} : { status: "hidden" })), coupons: (v.coupons || []).map((c) => pickK(c, CAT_C)), settings: pickK(s, ["coach", "tea", "extendPct", "refund"]), biz: v.biz || {} };
   }
   function catSoon() {
     const a = DB.session && DB.session.admin(); if (!remoteOn() || !a || a.role !== "master") return;
@@ -1947,7 +2033,7 @@
   /** 휴대폰 결제(다른 창으로 갔다 돌아옴): 주소의 ?pay= 를 보고 서버에 결제 확인을 마저 해요 */
   function pgReturn() {
     const q = new URLSearchParams(location.search), pid = q.get("pay"); if (!pid || !remoteOn()) return;
-    history.replaceState(null, "", location.pathname + location.hash);
+    ROUTE.dropQuery(["pay", "paymentId", "code", "message", "pgCode", "pgMessage", "transactionType", "txId"]); // 포트원이 붙여 보내는 값
     if (q.get("code")) { payApi("abort", { paymentId: pid, code: q.get("code") }); toast("결제를 마치지 못했어요. 다시 시도해 주세요.", "warn"); return; }
     payApi("complete", { paymentId: pid }).then((d) => { if (d && d.ok) { DB.remote.refresh().then(() => { render(); toast("결제를 확인했어요."); }); } else toast((d && d.message) || "결제를 확인하지 못했어요. 고객센터로 알려 주세요.", "warn"); });
   }
@@ -1961,8 +2047,8 @@
   };
   function kkReturn() {
     const q = new URLSearchParams(location.search), st = q.get("vodlogin"); if (!st || !remoteOn()) return;
-    history.replaceState(null, "", location.pathname + location.hash);
-    if (st !== "ok") { toast(KK_BACK[st] || KK_BACK.fail, "warn"); if (st === "dup" && route().path[0] !== "login") location.hash = "#/vod/login"; return; }
+    ROUTE.dropQuery(["vodlogin"]);
+    if (st !== "ok") { toast(KK_BACK[st] || KK_BACK.fail, "warn"); if (st === "dup" && route().path[0] !== "login") ROUTE.hash = "#/vod/login"; return; }
     DB.remote.refresh().then(() => { const mm = me(); render(); if (mm) toast((mm.name || "회원") + "님, 반가워요!"); });
   }
   /** Cloudflare Turnstile (사람 확인): 서버에 사이트 키가 있을 때만 가입 · 로그인 · 문의 양식에 붙여요 */
@@ -1971,7 +2057,7 @@
     (scope || document).querySelectorAll("[data-ts]:not([data-ts-on])").forEach((el) => { el.dataset.tsOn = "1"; loadJs("https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit").then(() => { if (window.turnstile) el.dataset.tsId = window.turnstile.render(el, { sitekey: k, size: "flexible" }); }, () => {}); });
   }
   const tsToken = (f) => { const el = f && f.querySelector("[data-ts]"); return el && window.turnstile && el.dataset.tsId != null ? window.turnstile.getResponse(el.dataset.tsId) || "" : ""; };
-  Object.assign(window.VOD, { loadCfg, payServer, kakaoServer, payApi, authApi, upsertMember, catalogSnap, catSoon, srvTrack });
+  Object.assign(window.VOD, { loadCfg, payServer, kakaoServer, payApi, authApi, upsertMember, catalogSnap, catSoon, srvTrack, bankAuto, bankOf, tkey, phOf, insOff, insShown });
   /* ---------- 카카오로 1초 가입 (시안) ----------
    * 실제 서비스: 카카오싱크 동의 화면(카카오가 띄움) → 인가 코드 → 서버에서 토큰 · 사용자 정보 → 회원 DB에 via:"kakao" · 카카오 회원번호로 저장
    * 시안: 같은 동의 항목을 보여 주고, 체험용 카카오 계정으로 가입 · 로그인해요 (이 브라우저에 기억 → 다음부터는 바로 로그인) */
@@ -1991,7 +2077,7 @@
       '<p class="vd-err" id="vd-kk-err" role="alert"></p><button type="button" class="vd-btn vd-kk-ok vd-btn-xl" data-v="kk-ok">' + KAKAO + "동의하고 계속하기</button>" +
       '<button type="button" class="vd-tl-btn vd-kk-demo" data-v="kk-demo">체험 계정(vod@gmail.com)으로 로그인할게요</button></div>', "vd-kk-modal");
   }
-  function kakaoIn(m, msg) { setMe(m.id); m.lastLoginAt = now(); m.seenAt = now(); m.loginN = (m.loginN || 0) + 1; save(); closeModal(); toast(msg); const f = document.querySelector("[data-vd-auth]"); location.hash = (f && f.dataset.next) || "#/vod"; }
+  function kakaoIn(m, msg) { setMe(m.id); m.lastLoginAt = now(); m.seenAt = now(); m.loginN = (m.loginN || 0) + 1; save(); closeModal(); toast(msg); const f = document.querySelector("[data-vd-auth]"); ROUTE.hash = (f && f.dataset.next) || "#/vod"; }
   function kakaoOk() {
     const q = (k) => { const x = document.querySelector('[data-kk="' + k + '"]'); return !!(x && x.checked); }, err = document.getElementById("vd-kk-err");
     if (!q("prof") || !q("terms") || !q("pi")) { if (err) err.textContent = "필수 항목 3가지에 동의해 주세요."; return; }
@@ -2010,7 +2096,7 @@
   }
   function pageDg() {
     const m = me();
-    if (!m) { location.replace("#/vod/login?next=" + encodeURIComponent("#/vod/dg")); return ""; }
+    if (!m) { ROUTE.redirect("#/vod/login?next=" + encodeURIComponent("#/vod/dg")); return ""; }
     const list = dgList(m);
     if (list.length === 1) { setTimeout(() => enterDg(list[0].id), 0); return shell("", '<div class="vd-wrap vd-dgp"><p class="vd-dgp-wait">' + esc(list[0].title) + " 강의실로 들어가는 중…</p></div>"); }
     return shell("", '<div class="vd-wrap vd-dgp"><div class="vd-dgp-h"><span class="vd-dg-ic">' + (window.doinggoB ? window.doinggoB("black", "vd-dg-logo") : "두잉고") + "</span><h1>" + esc(m.name) + "님, 어느 강의실로 들어갈까요?</h1><p>VOD마다 두잉고 강의실이 따로 있어요. 강의 영상 · 자료 · 업데이트 소식 · FAQ가 강의별로 정리돼 있어요.</p></div>" +
@@ -2022,11 +2108,12 @@
   function pageCheckout(id) {
     const p = product(id), m = me(), qs = route().qs, k = CO_KINDS.indexOf(qs.get("item")) >= 0 ? qs.get("item") : "course";
     if (!p) return pageProduct(id);
-    if (!m) { location.replace("#/vod/login?next=" + encodeURIComponent(location.hash)); return ""; }
-    const back = (msg) => { if (msg) toast(msg, "warn"); location.replace("#/vod/p/" + id); return ""; };
+    if (!m) { ROUTE.redirect("#/vod/login?next=" + encodeURIComponent(ROUTE.hash)); return ""; }
+    const back = (msg) => { if (msg) toast(msg, "warn"); ROUTE.redirect("#/vod/p/" + id); return ""; };
+    if (!insShown(p)) { ROUTE.redirect("#/vod"); toast("지금은 판매하지 않는 클래스예요.", "warn"); return ""; }
     if (k === "course") {
       if (p.status !== "on" || eventPast(p)) return back();
-      if (owns(m.id, p.id)) { location.replace("#/vod/learn/" + p.id); return ""; }
+      if (owns(m.id, p.id)) { ROUTE.redirect("#/vod/learn/" + p.id); return ""; }
       if (seatsLeft(p) === 0) return back("자리가 모두 찼어요.");
     } else if (k === "extend" && !canExtend(m.id, p.id)) return back(owns(m.id, p.id) ? "수강 기간이 30일 넘게 남아 있어요. 끝나기 30일 전부터 연장할 수 있어요." : "이 강의를 수강한 회원만 연장할 수 있어요.");
     else if (k === "coach" && !(coachOf(p) && owns(m.id, p.id))) return back("이 강의를 수강 중인 회원만 1:1 코칭권을 살 수 있어요.");
@@ -2055,7 +2142,7 @@
       (pr > 0 ? '<section class="vd-co-box"><h2>할인 · 쿠폰</h2><div class="vd-co-f">' + (k === "course" ? '<label class="w">쿠폰 <small>사용 가능 ' + cps.length + "장 · 보유 " + all + '장</small><select name="coupon"><option value="">쿠폰 쓰지 않기</option>' + cps.map((y, i) => '<option value="' + esc(y.x.id) + '"' + (i === 0 ? " selected" : "") + ">" + esc(y.c.name) + " (-" + won(y.off) + ")</option>").join("") + "</select></label>" : "") +
           '<label class="w">포인트 <small>보유 ' + pts.toLocaleString() + 'P · 1P = 1원</small><span class="vd-co-pt"><input name="points" type="number" min="0" max="' + pts + '" step="100" inputmode="numeric" value="0"' + (pts ? "" : " disabled") + '><button type="button" class="vd-btn vd-btn-o vd-btn-sm" data-v="pt-all"' + (pts ? "" : " disabled") + ">전액 사용</button></span></label></div>" +
           (k !== "course" ? '<p class="vd-muted vd-co-hint">연장권 · 1:1 코칭권 · TEA TIME에는 쿠폰을 쓸 수 없어요. 포인트는 쓸 수 있어요.</p>' : !cps.length ? '<p class="vd-muted vd-co-hint">이 상품에 쓸 수 있는 쿠폰이 없어요. <a class="vd-link" href="#/vod/my/coupons">쿠폰 등록하기</a></p>' : coachOn || c ? '<p class="vd-muted vd-co-hint">쿠폰은 수강권 금액에만 적용돼요.</p>' : "") + "</section>" +
-        '<section class="vd-co-box" data-co-pay><h2>결제 수단</h2><div class="vd-pay-opts">' + payOpts().map((z, i, all) => '<label class="vd-pay-opt' + (z[3] ? " off" : "") + '"><input type="radio" name="method" value="' + z[0] + '"' + (z[3] ? " disabled" : "") + (z[0] === (all.find((y) => !y[3]) || [])[0] ? " checked" : "") + "><span>" + icon(z[1], "sm") + z[2] + (z[3] ? "<em>" + z[3] + "</em>" : "") + "</span></label>").join("") + '</div>' + (payOpts().every((z) => z[3]) ? '<p class="vd-co-bank vd-co-wait">' + icon("alert", "xs") + "<span>결제 준비 중이에요. 곧 카드 · 간편결제 · 무통장 입금으로 결제할 수 있어요.</span></p>" : "") + '<p class="vd-co-bank" data-bank-note>무통장 입금: ' + esc(b.bank + " " + b.account + " (" + b.holder + ")") + " · 주문 후 " + (V().settings.payDays || 3) + "일 안에 입금해 주세요. 입금이 확인되면 바로 " + (k === "tea" ? "강사님께 신청이 전달돼요." : "이용할 수 있어요.") + "</p></section>" : "") +
+        '<section class="vd-co-box" data-co-pay><h2>결제 수단</h2><div class="vd-pay-opts">' + payOpts().map((z, i, all) => '<label class="vd-pay-opt' + (z[3] ? " off" : "") + '"><input type="radio" name="method" value="' + z[0] + '"' + (z[3] ? " disabled" : "") + (z[0] === (all.find((y) => !y[3]) || [])[0] ? " checked" : "") + "><span>" + icon(z[1], "sm") + z[2] + (z[3] ? "<em>" + z[3] + "</em>" : "") + "</span></label>").join("") + '</div>' + (payOpts().every((z) => z[3]) ? '<p class="vd-co-bank vd-co-wait">' + icon("alert", "xs") + "<span>결제 준비 중이에요. 곧 카드 · 간편결제 · 무통장 입금으로 결제할 수 있어요.</span></p>" : "") + bankBox(b, m, k) + "</section>" : "") +
       '<div class="vd-co-agrees"><label class="vd-agree vd-agree-all"><input type="checkbox" data-agree-all><span><b>아래 내용을 모두 확인했고 동의해요</b></span></label>' +
         '<label class="vd-agree"><input type="checkbox" name="agree" data-agree-req><span>(필수) 주문 상품 · ' + agree1 + " · 결제 금액을 확인했어요</span></label>" +
         '<label class="vd-agree"><input type="checkbox" name="agree2" data-agree-req><span>(필수) <button type="button" class="vd-link" data-v="refund">환불 규정</button>을 확인했어요. ' + agree2 + "<small>전자상거래법 제17조 제2항 제5호 · 디지털 콘텐츠 제공이 시작되면 청약철회가 제한될 수 있어요</small></span></label>" +
@@ -2064,7 +2151,14 @@
         '<div data-co-disc-row' + (list > pr ? "" : " hidden") + '><dt>할인</dt><dd class="minus" data-co-disc>-' + won(list - pr) + "</dd></div>" +
         (k === "course" && c && sel ? '<div data-co-coach-row' + (coachOn ? "" : " hidden") + "><dt>1:1 코칭권 " + c.n + '회</dt><dd data-co-coach>+' + won(c.price) + "</dd></div>" : "") +
         (pr > 0 ? (k === "course" ? '<div><dt>쿠폰 할인</dt><dd class="minus" data-co-cp>-0원</dd></div>' : "") + '<div><dt>포인트 사용</dt><dd class="minus" data-co-pt>-0원</dd></div>' : "") + '<div class="tot"><dt>최종 결제 금액</dt><dd data-co-tot>' + won(pr + (coachOn ? c.price : 0)) + "</dd></div></dl>" +
-        '<p class="vd-err" id="vd-pay-err" role="alert"></p><button class="vd-btn vd-btn-p vd-btn-xl" type="submit" data-co-btn>' + (pr === 0 ? (isEvent(p) ? "무료 LIVE 신청하기" : "무료로 수강 시작") : won(pr + (coachOn ? c.price : 0)) + " 결제하기") + '</button><p class="vd-co-test">' + icon("alert", "xs") + "시안 화면이라 실제 결제는 되지 않아요. 정식 오픈 때 결제 대행사(PG)를 연결해요.</p></div></aside></form></div>");
+        '<p class="vd-err" id="vd-pay-err" role="alert"></p><button class="vd-btn vd-btn-p vd-btn-xl" type="submit" data-co-btn>' + (pr === 0 ? (isEvent(p) ? "무료 LIVE 신청하기" : "무료로 수강 시작") : won(pr + (coachOn ? c.price : 0)) + " 결제하기") + "</button>" + (SRV() ? "" : '<p class="vd-co-test">' + icon("alert", "xs") + "시안 화면이라 실제 결제는 되지 않아요. 정식 오픈 때 결제 대행사(PG)를 연결해요.</p>") + "</div></aside></form></div>");
+  }
+  /** 결제 화면 무통장 안내: 계좌(복사) · 예금주 · 입금 기한 · 입금자명 — 무통장을 고르면 펼쳐져요 */
+  function bankBox(b, m, k) {
+    const first = (payOpts().find((y) => !y[3]) || [])[0] === "bank", days = Number(V().settings.payDays) || 3;
+    return '<div class="vd-co-bank' + (first ? " on" : "") + '" data-bank-note><dl class="vd-bank-dl"><div><dt>입금 계좌</dt><dd><b>' + esc(b.bank + " " + b.account) + '</b><button type="button" class="vd-copy" data-v="copy" data-t="' + esc(String(b.account).replace(/[^0-9-]/g, "")) + '">계좌 복사</button></dd></div><div><dt>예금주</dt><dd>' + esc(b.holder) + "</dd></div><div><dt>입금 기한</dt><dd>주문 후 " + days + "일 안</dd></div></dl>" +
+      '<label class="vd-co-dep">입금자명 <small>통장에 찍히는 이름</small><input name="depositor" value="' + esc(String(m.name || "").replace(/\s+/g, "")) + '" maxlength="20" autocomplete="off"></label>' +
+      "<p>" + icon("check", "xs") + "<span>입금자명과 금액이 주문과 같으면 " + (bankAuto() ? "<b>24시간 자동으로 확인</b>돼서" : "확인되는 대로") + " 바로 " + (k === "tea" ? "강사님께 신청이 전달돼요." : "수강할 수 있어요.") + " 이름이 다르면 확인이 늦어질 수 있어요.</span></p></div>";
   }
   // 수강권 · 코칭권 · 쿠폰(수강권에만) · 포인트를 반영한 결제 금액
   function coCalc(f) {
@@ -2092,18 +2186,20 @@
     if (q("[data-co-pt]")) q("[data-co-pt]").textContent = "-" + won(r.pt);
     if (f.points && document.activeElement !== f.points && f.points.value !== "" && Number(f.points.value) !== r.pt) f.points.value = r.pt ? String(r.pt) : "";
     q("[data-co-tot]").textContent = won(r.tot);
-    q("[data-co-btn]").textContent = r.pr + r.coach === 0 ? (isEvent(r.p) ? "무료 LIVE 신청하기" : "무료로 수강 시작") : r.tot === 0 ? "0원 결제하기" : won(r.tot) + (r.k === "tea" ? " 결제하고 신청하기" : " 결제하기");
+    const shut = SRV() && r.tot > 0 && payOpts().every((z) => z[3]), cb = q("[data-co-btn]");
+    cb.textContent = shut ? "결제 준비 중" : r.pr + r.coach === 0 ? (isEvent(r.p) ? "무료 LIVE 신청하기" : "무료로 수강 시작") : r.tot === 0 ? "0원 결제하기" : won(r.tot) + (r.k === "tea" ? " 결제하고 신청하기" : " 결제하기");
+    cb.disabled = shut;
     const pay = q("[data-co-pay]"); if (pay) pay.classList.toggle("is-off", r.tot === 0);
   }
   function pageOrder(no) {
     const o = V().orders.find((x) => x.no === no), m = me();
     if (!o || !m || o.mid !== m.id) return shell("", '<div class="vd-wrap">' + emptyBox("alert", "주문을 찾을 수 없어요", "", '<a class="vd-btn vd-btn-o" href="#/vod/my/orders">주문 · 결제 내역</a>') + "</div>");
-    const b = bankInfo(), pend = o.status === "pending", p = product(o.pid), t = typeOf(p), k = kindOf(o), sibs = V().orders.filter((x) => x.grp === o.no), total = o.amount + sibs.reduce((a, x) => a + (Number(x.amount) || 0), 0), ptAll = (o.pointOff || 0) + sibs.reduce((a, x) => a + (Number(x.pointOff) || 0), 0);
+    const b = bankOf(o), pend = o.status === "pending", p = product(o.pid), t = typeOf(p), k = kindOf(o), sibs = V().orders.filter((x) => x.grp === o.no), total = o.amount + sibs.reduce((a, x) => a + (Number(x.amount) || 0), 0), ptAll = (o.pointOff || 0) + sibs.reduce((a, x) => a + (Number(x.pointOff) || 0), 0);
     const go = !p ? "" : k === "coach" ? ["dg", "message", "1:1 코칭 질문하러 가기"] : k === "tea" ? ["#/vod/my/addons", "calendar", "신청 내역 보기"] : k === "extend" ? ["#/vod/learn/" + p.id, "play", "다시 이어서 듣기"] : t === "ebook" ? ["#/vod/my/ebooks", "book", "전자책 내려받기"] : isEvent(p) ? ["#/vod/learn/" + p.id, "calendar", "입장 안내 보기"] : ["#/vod/learn/" + p.id, "play", "강의 시작하기"];
     const h = pend ? "주문이 접수됐어요" : k === "extend" ? "연장이 완료됐어요" : k === "coach" ? "1:1 코칭권이 준비됐어요" : k === "tea" ? "TEA TIME 신청이 접수됐어요" : o.amount === 0 && !o.couponOff && !o.pointOff ? (p && isFreeEv(p) ? "무료 LIVE 신청이 완료됐어요" : "수강신청이 완료됐어요") : "결제가 완료됐어요";
-    const sub = pend ? "아래 계좌로 입금하면 확인 후 바로 이용할 수 있어요." : k === "extend" ? DB.date.fmtFull(DB.date.toStr(new Date(accessEnd(o.mid, o.pid)))) + "까지 다시 들을 수 있어요. 진도 · 노트는 그대로예요." : k === "coach" ? "두잉고 강의실 › 1:1 코칭 질문에서 바로 질문할 수 있어요." : k === "tea" ? "강사님이 희망 날짜를 보고 일정을 확정하면 마이페이지와 문자로 알려 드려요." : t === "ebook" ? "마이페이지 › 전자책에서 바로 내려받을 수 있어요." : isEvent(p) ? "마이페이지 › LIVE · 오프라인에서 입장 안내를 확인할 수 있어요." : "내 강의실에서 바로 시작할 수 있어요." + (sibs.some((x) => kindOf(x) === "coach") ? " 1:1 코칭권도 함께 준비됐어요." : "");
+    const sub = pend ? (bankAuto() ? "아래 계좌로 입금하면 24시간 자동으로 확인돼 바로 이용할 수 있어요." : "아래 계좌로 입금하면 확인되는 대로 바로 이용할 수 있어요.") : k === "extend" ? DB.date.fmtFull(DB.date.toStr(new Date(accessEnd(o.mid, o.pid)))) + "까지 다시 들을 수 있어요. 진도 · 노트는 그대로예요." : k === "coach" ? "두잉고 강의실 › 1:1 코칭 질문에서 바로 질문할 수 있어요." : k === "tea" ? "강사님이 희망 날짜를 보고 일정을 확정하면 마이페이지와 문자로 알려 드려요." : t === "ebook" ? "마이페이지 › 전자책에서 바로 내려받을 수 있어요." : isEvent(p) ? "마이페이지 › LIVE · 오프라인에서 입장 안내를 확인할 수 있어요." : "내 강의실에서 바로 시작할 수 있어요." + (sibs.some((x) => kindOf(x) === "coach") ? " 1:1 코칭권도 함께 준비됐어요." : "");
     return shell("", '<div class="vd-wrap vd-done"><span class="vd-done-ic' + (pend ? " pend" : "") + '">' + icon(pend ? "clock" : "check") + "</span><h1>" + h + "</h1><p>" + sub + "</p>" +
-      '<dl class="vd-done-dl"><div><dt>주문 번호</dt><dd>' + esc(o.no) + "</dd></div><div><dt>상품</dt><dd>" + esc(o.title) + (optTxt(o) ? "<br><small>" + esc(optTxt(o)) + "</small>" : "") + "</dd></div>" + sibs.map((x) => "<div><dt>함께 산 상품</dt><dd>" + esc(optTxt(x)) + " <small>" + won(x.amount) + "</small></dd></div>").join("") + (o.couponOff ? "<div><dt>쿠폰 할인</dt><dd>-" + won(o.couponOff) + " <small>" + esc(o.couponName || "") + "</small></dd></div>" : "") + (ptAll ? "<div><dt>포인트</dt><dd>-" + won(ptAll) + "</dd></div>" : "") + "<div><dt>결제 금액</dt><dd><b>" + won(total) + "</b></dd></div>" + (pend ? "<div><dt>입금 계좌</dt><dd>" + esc(b.bank + " " + b.account) + "<br><small>예금주 " + esc(b.holder) + " · 입금자명은 주문자 이름으로</small></dd></div>" : "") + "</dl>" +
+      '<dl class="vd-done-dl"><div><dt>주문 번호</dt><dd>' + esc(o.no) + "</dd></div><div><dt>상품</dt><dd>" + esc(o.title) + (optTxt(o) ? "<br><small>" + esc(optTxt(o)) + "</small>" : "") + "</dd></div>" + sibs.map((x) => "<div><dt>함께 산 상품</dt><dd>" + esc(optTxt(x)) + " <small>" + won(x.amount) + "</small></dd></div>").join("") + (o.couponOff ? "<div><dt>쿠폰 할인</dt><dd>-" + won(o.couponOff) + " <small>" + esc(o.couponName || "") + "</small></dd></div>" : "") + (ptAll ? "<div><dt>포인트</dt><dd>-" + won(ptAll) + "</dd></div>" : "") + "<div><dt>결제 금액</dt><dd><b>" + won(total) + "</b></dd></div>" + (pend ? '<div class="vd-done-bank"><dt>입금 계좌</dt><dd><b>' + esc(b.bank + " " + b.account) + '</b> <button type="button" class="vd-copy" data-v="copy" data-t="' + esc(String(b.account).replace(/[^0-9-]/g, "")) + '">계좌 복사</button><br><small>예금주 ' + esc(b.holder) + "</small></dd></div><div><dt>입금자명</dt><dd><b>" + esc(o.depositor || (o.buyer && o.buyer.name) || m.name) + "</b><br><small>이 이름 · 이 금액으로 입금해 주세요</small></dd></div><div><dt>입금 기한</dt><dd>" + esc(fmtDue(dueOf(o))) + "까지</dd></div>" : "") + "</dl>" +
       (!pend && p && dgOpen(p) ? dgCard(p, "vd-dg-done") : "") +
       '<div class="vd-done-btns">' + (!pend && p && isEvent(p) && p.kakao ? '<a class="vd-btn vd-btn-kakao" href="' + esc(p.kakao) + '" target="_blank" rel="noopener">' + icon("message", "sm") + "카카오톡 오픈채팅방 입장하기</a>" : "") + (pend ? '<a class="vd-btn vd-btn-o" href="#/vod/my/pending">결제 대기 보기</a>' : go && go[0] === "dg" ? '<button type="button" class="vd-btn vd-btn-p" data-v="dg" data-p="' + esc(p.id) + '" data-to="#/qna/requests/new">' + icon(go[1], "sm") + go[2] + "</button>" : go ? '<a class="vd-btn vd-btn-p" href="' + go[0] + '">' + icon(go[1], "sm") + go[2] + "</a>" : "") + '<a class="vd-btn vd-btn-o" href="#/vod">다른 클래스 둘러보기</a></div></div>');
   }
@@ -2186,7 +2282,7 @@
   const rcSt = (t, k) => '<span class="vd-sroom-st' + (k ? " " + k : "") + '">' + t + "</span>";
   const cpTicket = (y) => '<div class="vd-cp vd-cp-' + y.st + '"><div class="vd-cp-l"><b>' + (y.c.kind === "pct" ? y.c.value + "<small>%</small>" : (Number(y.c.value) / 10000 >= 1 ? Number(y.c.value) / 10000 + "<small>만 원</small>" : Number(y.c.value).toLocaleString() + "<small>원</small>")) + "</b></div><div class=\"vd-cp-r\"><strong>" + esc(y.c.name) + "</strong><span>" + esc(couponTxt(y.c)) + " · " + esc(couponCond(y.c)) + "</span><small>" + (y.st === "used" ? "사용 완료" + (y.x.orderNo ? " · " + esc(y.x.orderNo) : "") : y.st === "exp" ? "기간 만료" : y.st === "off" ? "사용 중지된 쿠폰" : (y.x.exp ? DB.date.fmtFull(y.x.exp) + "까지 · D-" + Math.max(0, DB.date.diffDays(y.x.exp, today())) : "기한 없음")) + "</small></div></div>";
   function pageMy(sub) {
-    const m = me(); if (!m) { location.replace("#/vod/login?next=" + encodeURIComponent(location.hash)); return ""; }
+    const m = me(); if (!m) { ROUTE.redirect("#/vod/login?next=" + encodeURIComponent(ROUTE.hash)); return ""; }
     const legacy = route().qs.get("tab"); if (legacy) sub = { classes: "classes", likes: "likes", orders: "orders", account: "account" }[legacy] || "";
     sub = MYT[sub] != null ? sub : ""; const v = V(), d = myData(m), ST = { paid: ["결제 완료", "ok"], pending: ["입금 대기", "warn"], refunded: ["환불 완료", "mute"], canceled: ["주문 취소", "mute"] };
     const cnt = { addons: d.addN, classes: d.ing.length, free: d.free.length, vod: d.paidV.length, ebooks: d.ebooks.length, live: d.live.length, alarm: d.alarm.length, likes: d.likes.length, pending: d.pending.length, coupons: d.cpOk.length, reviews: d.rv.length, posts: d.pl.length, help: (v.inquiries || []).filter((x) => x.mid === m.id && x.answer && !x.seenAt).length };
@@ -2250,7 +2346,7 @@
       const ot = sub === "orders" && route().qs.get("t") === "refund" ? "refund" : "pay", isRf = (o) => o.status === "refunded" || o.status === "canceled";
       const list = sub === "pending" ? d.pending : d.orders.filter((o) => (ot === "refund") === isRf(o)), b = bankInfo();
       const otabs = sub === "orders" ? '<div class="vd-wtabs"><a href="#/vod/my/orders" class="' + (ot === "pay" ? "on" : "") + '">결제 내역 <small>' + d.orders.filter((o) => !isRf(o)).length + '</small></a><a href="#/vod/my/orders?t=refund" class="' + (ot === "refund" ? "on" : "") + '">환불 · 취소 내역 <small>' + d.orders.filter(isRf).length + "</small></a></div>" : "";
-      body = list.length ? '<ul class="vd-orders">' + list.map((o) => { const st = ST[o.status] || ST.paid, dl = DB.date.addDays(DB.date.toStr(new Date(o.at)), Number(V().settings.payDays) || 3); return '<li class="has-th"><a class="vd-o-th" href="#/vod/p/' + esc(o.pid) + '">' + (product(o.pid) ? thumbArt(product(o.pid)) : "") + "</a><div><small>" + DB.date.fmtFull(DB.date.toStr(new Date(o.at))) + " · " + esc(o.no) + "</small><b>" + esc(o.title) + "</b>" + (optTxt(o) ? '<span class="vd-o-opt">' + esc(optTxt(o)) + "</span>" : "") + (o.couponOff || o.pointOff ? '<span class="vd-muted">' + (o.couponOff ? "쿠폰 -" + won(o.couponOff) : "") + (o.couponOff && o.pointOff ? " · " : "") + (o.pointOff ? "포인트 -" + won(o.pointOff) : "") + "</span>" : "") + (o.status === "pending" ? '<span class="vd-muted">' + esc(b.bank + " " + b.account + " (" + b.holder + ")") + " · " + DB.date.fmtFull(dl) + "까지 입금</span>" : "") + "</div><strong>" + won(o.amount) + '</strong><span class="vd-st vd-st-' + st[1] + '">' + st[0] + "</span>" + (o.status === "pending" ? '<button type="button" class="vd-btn vd-btn-o vd-btn-sm" data-v="ord-cancel" data-no="' + esc(o.no) + '">주문 취소</button>' : (o.status === "paid" || o.status === "refunded") && o.amount > 0 ? '<button type="button" class="vd-btn vd-btn-o vd-btn-sm" data-v="receipt" data-no="' + esc(o.no) + '">영수증</button>' : "") +
+      body = list.length ? '<ul class="vd-orders">' + list.map((o) => { const st = ST[o.status] || ST.paid, ob = bankOf(o); return '<li class="has-th"><a class="vd-o-th" href="#/vod/p/' + esc(o.pid) + '">' + (product(o.pid) ? thumbArt(product(o.pid)) : "") + "</a><div><small>" + DB.date.fmtFull(DB.date.toStr(new Date(o.at))) + " · " + esc(o.no) + "</small><b>" + esc(o.title) + "</b>" + (optTxt(o) ? '<span class="vd-o-opt">' + esc(optTxt(o)) + "</span>" : "") + (o.couponOff || o.pointOff ? '<span class="vd-muted">' + (o.couponOff ? "쿠폰 -" + won(o.couponOff) : "") + (o.couponOff && o.pointOff ? " · " : "") + (o.pointOff ? "포인트 -" + won(o.pointOff) : "") + "</span>" : "") + (o.status === "pending" ? '<span class="vd-muted">' + esc(ob.bank + " " + ob.account + " (" + ob.holder + ")") + " · 입금자명 " + esc(o.depositor || (o.buyer && o.buyer.name) || m.name || "") + " · " + esc(fmtDue(dueOf(o))) + "까지 입금</span>" : "") + "</div><strong>" + won(o.amount) + '</strong><span class="vd-st vd-st-' + st[1] + '">' + st[0] + "</span>" + (o.status === "pending" ? '<button type="button" class="vd-btn vd-btn-o vd-btn-sm" data-v="ord-cancel" data-no="' + esc(o.no) + '">주문 취소</button>' : (o.status === "paid" || o.status === "refunded") && o.amount > 0 ? '<button type="button" class="vd-btn vd-btn-o vd-btn-sm" data-v="receipt" data-no="' + esc(o.no) + '">영수증</button>' : "") +
         (o.status === "paid" && o.amount > 0 ? (o.refundReq && typeof o.refundReq === "object" ? '<span class="vd-st vd-st-wait vd-o-rq">환불 요청 중</span><button type="button" class="vd-btn vd-btn-line vd-btn-sm" data-v="rf-undo" data-no="' + esc(o.no) + '">요청 취소</button>' : o.refundReq ? '<span class="vd-st vd-st-wait vd-o-rq">환불 처리 중</span>' : instantOf(o).ok ? '<button type="button" class="vd-btn vd-btn-p vd-btn-sm vd-rf-now" data-v="rf-now" data-no="' + esc(o.no) + '">결제 취소 · 100% 환불</button><small class="vd-rf-left">' + instantOf(o).left + "일 남음 · 바로 환불</small>" : '<button type="button" class="vd-btn vd-btn-line vd-btn-sm" data-v="rf-req" data-no="' + esc(o.no) + '">환불 요청</button>') : "") +
         (o.status === "refunded" && o.refundKind === "instant" ? '<small class="vd-rf-left">바로 취소 · ' + won(o.refundAmount || o.amount) + " 환불" + (o.pg && o.pg.st === "mock" ? " (시안)" : "") + "</small>" : "") +
         (o.status === "paid" && o.amount === 0 && product(o.pid) && isEvent(product(o.pid)) && !eventPast(product(o.pid)) ? '<button type="button" class="vd-btn vd-btn-line vd-btn-sm" data-v="ord-cancel0" data-no="' + esc(o.no) + '">신청 취소</button>' : "") +
@@ -2380,8 +2476,8 @@
   function pageLearn(pid, lid) {
     const p = product(pid), m = me();
     if (!p) return pageProduct(pid);
-    if (!m) { location.replace("#/vod/login?next=" + encodeURIComponent("#/vod/learn/" + pid)); return ""; }
-    if (!owns(m.id, pid)) { location.replace("#/vod/p/" + pid); return ""; }
+    if (!m) { ROUTE.redirect("#/vod/login?next=" + encodeURIComponent("#/vod/learn/" + pid)); return ""; }
+    if (!owns(m.id, pid)) { ROUTE.redirect("#/vod/p/" + pid); return ""; }
     if (typeOf(p) === "vod" && dgOpen(p)) { setTimeout(() => enterDg(pid, lid), 30); return shell("", '<div class="vd-wrap vd-go-dg"><span class="vd-dg-ic">' + (window.doinggoB ? window.doinggoB("black", "vd-dg-logo") : "두잉고") + "</span><b>" + esc(p.creator) + " 강사 두잉고 강의실로 이동하고 있어요</b><p>강의 영상 · 교재 · 업데이트 소식을 두잉고 강의실에서 한 번에 볼 수 있어요.</p></div>"); }
     if (typeOf(p) === "ebook") return pageEbook(p, m);
     if (isEvent(p)) return pageTicket(p, m);
@@ -2535,6 +2631,7 @@
     else if (a === "search") html = listPage(null, r.qs.get("q") || "");
     else if (a === "p") html = pageProduct(b);
     else if (a === "about") html = pageAbout();
+    else if (a === "legal") html = pageLegal(b);
     else if (a === "checkout") html = pageCheckout(b);
     else if (a === "order") html = pageOrder(b);
     else if (a === "login") html = pageAuth(false);
@@ -2543,17 +2640,17 @@
     else if (a === "learn") html = pageLearn(b, c);
     else html = pageHome();
     if (html === "") return;
-    try { sessionStorage.setItem("dc:last", location.hash); } catch (e) {}
+    try { sessionStorage.setItem("dc:last", ROUTE.hash); } catch (e) {}
     catchAttr(); touchSeen();
     root.innerHTML = html;
-    document.title = !a ? "두고클래스 DOOGO CLASS | 실전 강사님의 자기계발 VOD 클래스" : (a === "p" && product(b) ? product(b).title + " | " : "") + "DOOGO CLASS — 돈 되는 클래스"; // 대표 주소 = index.html <title> (SEO)
+    document.title = !a ? "두고클래스 DOOGO CLASS | 실전 강사님의 자기계발 VOD 클래스" : a === "legal" ? ((LEGAL_TABS.find((x) => x[0] === b) || LEGAL_TABS[0])[1] + " | 두고클래스 DOOGO CLASS") : (a === "p" && product(b) ? product(b).title + " | " : "") + "DOOGO CLASS — 돈 되는 클래스"; // 대표 주소 = index.html <title> (SEO)
     window.applyStudentTheme && window.applyStudentTheme(null);
     if (!a && !ui.paused && liveBanners().length > 1) ui.timer = setInterval(() => slide(1), 5000);
     if (document.querySelector("[data-cd]")) ui.cd = setInterval(() => document.querySelectorAll("[data-cd]").forEach((x) => { x.textContent = cdTxt(x.dataset.cd); }), 1000);
     const co = document.querySelector("[data-vd-pay]"); if (co) coPaint(co);
     document.querySelectorAll("[data-vd-auth]").forEach(authReady);
     syncTabs(); wireRails(); motion(); wireCounts(); wireFbar(); hydrate(root); wireSwipe();
-    if (a === "recruit") { history.replaceState(null, "", "#/vod"); setTimeout(recruit, 80); }
+    if (a === "recruit") { ROUTE.replace("#/vod"); setTimeout(recruit, 80); }
   }
   function wireSwipe() {
     const t = document.getElementById("vd-hero"); if (!t) return;
@@ -2658,12 +2755,12 @@
     if (v === "fbar") { const fb = document.getElementById("vd-fbar"); if (fb) { fb.classList.add("on"); fb.classList.toggle("open"); } return; }
     if (v === "like") {
       e.preventDefault(); e.stopPropagation();
-      if (!m) { toast("로그인하면 찜할 수 있어요.", "warn"); location.hash = "#/vod/login?next=" + encodeURIComponent(location.hash); return; }
+      if (!m) { toast("로그인하면 찜할 수 있어요.", "warn"); ROUTE.hash = "#/vod/login?next=" + encodeURIComponent(ROUTE.hash); return; }
       const L2 = (V().likes[m.id] = V().likes[m.id] || []), i = L2.indexOf(t.dataset.id), p = product(t.dataset.id);
       if (i >= 0) L2.splice(i, 1); else L2.push(t.dataset.id);
       save(); const soon = p && p.status === "soon";
       if (i < 0) document.querySelectorAll('[data-v="like"][data-id="' + t.dataset.id + '"]').forEach((x) => { x.classList.remove("pop"); void x.offsetWidth; x.classList.add("pop"); });
-      if (/^#\/vod\/(p|my)\b/.test(location.hash)) keepScroll();
+      if (/^#\/vod\/(p|my)\b/.test(ROUTE.hash)) keepScroll();
       else document.querySelectorAll('[data-v="like"][data-id="' + t.dataset.id + '"]').forEach((x) => { x.classList.toggle("on", i < 0); const n = x.querySelector("span"); if (n && p) n.textContent = likeTxt(likeCount(p)); });
       toast(i >= 0 ? (soon ? "오픈 알림을 껐어요." : "찜을 풀었어요.") : soon ? "오픈하면 가장 먼저 알려 드릴게요." : "찜한 강의에 담았어요.");
       return;
@@ -2684,10 +2781,12 @@
     if (v === "hcat") { ui.hcat = t.dataset.k; const box = document.getElementById("vd-hcat"); if (box) { box.innerHTML = catSecBody(); hydrate(box); wireRails(); wireCounts(); } return; }
     if (v === "ab-slide") { ui.abSlide = ((ui.abSlide || 0) + Number(t.dataset.d) + AB_SLIDES.length) % AB_SLIDES.length; const sl = ui.abSlide, c = document.querySelector(".ab-card"), n = document.querySelector(".ab-car-ctl small"); if (c) { c.innerHTML = "<small>" + String(sl + 1).padStart(2, "0") + " / 03</small><b>" + AB_SLIDES[sl][0] + "<br>" + AB_SLIDES[sl][1] + "</b><p>" + AB_SLIDES[sl][2].replace(/\n/g, "<br>") + "</p>"; c.classList.remove("in"); void c.offsetWidth; c.classList.add("in"); } if (n) n.textContent = String(sl + 1).padStart(2, "0") + " / 03"; return; }
     if (v === "logout") {
-      if (SRV()) { closeModal(); authApi("logout").then(() => DB.remote.logout("student")).catch(() => {}).then(() => { try { DB.session.setStudent(null); } catch (e) {} return DB.remote.refresh(); }).then(() => { toast("로그아웃했어요."); location.hash = "#/vod"; render(); }); return; }
-      setMe(null); closeModal(); toast("로그아웃했어요."); location.hash = "#/vod"; render(); return;
+      if (SRV()) { closeModal(); authApi("logout").then(() => DB.remote.logout("student")).catch(() => {}).then(() => { try { DB.session.setStudent(null); } catch (e) {} return DB.remote.refresh(); }).then(() => { toast("로그아웃했어요."); ROUTE.hash = "#/vod"; render(); }); return; }
+      setMe(null); closeModal(); toast("로그아웃했어요."); ROUTE.hash = "#/vod"; render(); return;
     }
+    if (v === "print") { window.print(); return; }
     if (v === "jump") { const s = document.getElementById(t.dataset.to); if (s) window.scrollTo({ top: s.getBoundingClientRect().top + window.scrollY - 130, behavior: "smooth" }); return; }
+    if (v === "copy") { const tx = t.dataset.t || ""; (navigator.clipboard ? navigator.clipboard.writeText(tx) : Promise.reject()).then(() => toast("계좌번호를 복사했어요. " + tx), () => toast("계좌번호: " + tx)); return; }
     if (v === "share") { const u = location.href; if (navigator.clipboard) navigator.clipboard.writeText(u).then(() => toast("주소를 복사했어요."), () => toast("주소: " + u)); else toast("주소: " + u); return; }
     if (v === "refund") { modal("환불 규정", '<div class="vd-modal-b">' + refundHtml() + "</div>"); return; }
     if (v === "legal") { const S = DB.siteInfo ? DB.siteInfo() : {}, k = t.dataset.k, href = k === "terms" ? S.terms : k === "privacy" ? S.privacy : ""; if (/^https?:\/\//i.test(href || "")) { window.open(href, "_blank", "noopener"); return; } const Lg = (window.CLASS_LEGAL || {})[k]; modal(Lg ? Lg[0] : "약관", '<div class="vd-modal-b vd-legal">' + (Lg ? (window.CLASS_LEGAL_HTML ? window.CLASS_LEGAL_HTML(Lg[1]) : esc(Lg[1])) : "정식 오픈 때 올려요.") + "</div>"); return; }
@@ -2736,7 +2835,7 @@
       if (!m) return;
       const p = product(t.dataset.p), pr = prog(m.id, t.dataset.p); pr.done[t.dataset.l] = true; logStudy(m.id); save();
       const lz = lessons(p), i = lz.findIndex((x) => x.id === t.dataset.l), next = lz[i + 1];
-      if (next) location.hash = "#/vod/learn/" + p.id + "/" + next.id; else { render(); toast(pctDone(m.id, p.id) === 100 ? "모든 강의를 완료했어요! 후기도 남겨 주세요." : "완료했어요."); }
+      if (next) ROUTE.hash = "#/vod/learn/" + p.id + "/" + next.id; else { render(); toast(pctDone(m.id, p.id) === 100 ? "모든 강의를 완료했어요! 후기도 남겨 주세요." : "완료했어요."); }
     }
   });
   document.addEventListener("keydown", (e) => { if (isActive() && e.key === "Escape" && document.querySelector("#modal-root .vd-modal-bg")) closeModal(); });
@@ -2749,7 +2848,7 @@
   document.addEventListener("submit", (e) => {
     if (!isActive()) return;
     const f = e.target;
-    if (f.matches("[data-vd-search]")) { e.preventDefault(); location.hash = "#/vod/search?q=" + encodeURIComponent(f.q.value.trim()); return; }
+    if (f.matches("[data-vd-search]")) { e.preventDefault(); ROUTE.hash = "#/vod/search?q=" + encodeURIComponent(f.q.value.trim()); return; }
     if (f.matches("[data-vd-auth]")) { e.preventDefault(); doAuth(f); return; }
     if (f.matches("[data-vd-pay]")) { e.preventDefault(); doPay(f); return; }
     if (f.matches("[data-vd-review]")) { e.preventDefault(); doReview(f); return; }
@@ -2782,14 +2881,14 @@
     if (remoteOn() && CFG && CFG.auth) {
       const b = { email, pw: f.pw.value, ts: tsToken(f) };
       if (mode !== "login") Object.assign(b, { name: v("name"), phone: v("phone"), mkt: !!(f.mkt && f.mkt.checked), agree: !!(f.agree && f.agree.checked), pw2: f.pw2 ? f.pw2.value : "", src: takeSrc() });
-      authApi(mode === "login" ? "login" : "signup", b).then((r) => { if (!r || !r.ok) { err.textContent = (r && r.message) || "다시 시도해 주세요."; return; } const nm = (r.member && r.member.name) || "회원", cps = (r.member && r.member.coupons) || []; DB.remote.refresh().then(() => { toast(mode === "login" ? (nm + "님, 반가워요!") : "가입을 환영해요, " + nm + "님!" + (cps.length ? " 가입 쿠폰을 넣어 드렸어요." : "")); location.hash = f.dataset.next || "#/vod"; render(); }); });
+      authApi(mode === "login" ? "login" : "signup", b).then((r) => { if (!r || !r.ok) { err.textContent = (r && r.message) || "다시 시도해 주세요."; return; } const nm = (r.member && r.member.name) || "회원", cps = (r.member && r.member.coupons) || []; DB.remote.refresh().then(() => { toast(mode === "login" ? (nm + "님, 반가워요!") : "가입을 환영해요, " + nm + "님!" + (cps.length ? " 가입 쿠폰을 넣어 드렸어요." : "")); ROUTE.hash = f.dataset.next || "#/vod"; render(); }); });
       return;
     }
     if (mode === "login") {
       const hit = list.find((x) => x.email.toLowerCase() === email && x.pw === f.pw.value);
       if (!hit) { err.textContent = "이메일 또는 비밀번호가 맞지 않아요. 다시 확인해 주세요."; return; }
       if (hit.blocked) { err.textContent = "이용이 중지된 계정이에요. 고객센터로 문의해 주세요."; return; }
-      setMe(hit.id); hit.lastLoginAt = now(); hit.loginN = (hit.loginN || 0) + 1; save(); toast(hit.name + "님, 반가워요!"); location.hash = f.dataset.next || "#/vod"; return;
+      setMe(hit.id); hit.lastLoginAt = now(); hit.loginN = (hit.loginN || 0) + 1; save(); toast(hit.name + "님, 반가워요!"); ROUTE.hash = f.dataset.next || "#/vod"; return;
     }
     if (!v("name")) { err.textContent = "이름을 적어 주세요."; return; }
     if (list.some((x) => x.email.toLowerCase() === email)) { err.textContent = "이미 가입한 이메일이에요. 로그인해 주세요."; return; }
@@ -2799,7 +2898,7 @@
     if (!f.agree.checked) { err.textContent = "필수 약관에 동의해 주세요."; return; }
     const mb = { id: DB.uid("vm"), via: "email", email, pw: f.pw.value, name: v("name"), phone: v("phone"), marketing: f.mkt.checked, consent: consentOf(f.mkt.checked), src: takeSrc(), kakaoCh: false, tags: [], notes: [], createdAt: now(), seenAt: now(), loginN: 1, points: 0, pointLog: [] };
     list.push(mb); (V().coupons || []).filter((c) => c.auto === "signup" && c.on !== false).forEach((c) => issueCoupon(mb.id, c));
-    setMe(mb.id); save(); toast("가입을 환영해요, " + mb.name + "님! 5,000원 할인 쿠폰(30일)을 넣어 드렸어요."); location.hash = f.dataset.next || "#/vod";
+    setMe(mb.id); save(); toast("가입을 환영해요, " + mb.name + "님! 5,000원 할인 쿠폰(30일)을 넣어 드렸어요."); ROUTE.hash = f.dataset.next || "#/vod";
   }
   function doPay(f) {
     const m = me(), err = document.getElementById("vd-pay-err"), r = coCalc(f);
@@ -2808,7 +2907,8 @@
     if (k === "tea") { if (!f.d1.value) { err.textContent = "희망 날짜를 하나 이상 골라 주세요."; return; } if (f.topic.value.trim().length < 5) { err.textContent = "이야기하고 싶은 주제를 5자 이상 적어 주세요."; return; } }
     if (!f.agree.checked || (f.agree2 && !f.agree2.checked) || (f.agree3 && !f.agree3.checked)) { err.textContent = "필수 동의 3가지에 모두 체크해 주세요."; return; }
     if (k === "course" && seatsLeft(p) === 0) { err.textContent = "방금 자리가 모두 찼어요."; return; }
-    const method = r.pr + r.coach === 0 ? "free" : r.tot === 0 ? "point" : (f.method && f.method.value) || "card";
+    const method = r.pr + r.coach === 0 ? "free" : r.tot === 0 ? "point" : (f.method && f.method.value) || (SRV() ? "" : "card");
+    if (!method) { err.textContent = payOpts().every((z) => z[3]) ? "결제를 준비하고 있어요. 문의하기로 알려 주시면 바로 도와드릴게요." : "결제 수단을 골라 주세요."; return; }
     const bn = f.name.value.trim(), bp = f.phone.value.trim().replace(/\s/g, ""), needTel = (k === "course" && /^(live|offline)$/.test(typeOf(p))) || k === "tea";
     if (needTel && (!bn || !/^01[016789]-?\d{3,4}-?\d{4}$/.test(bp))) { err.textContent = "주문자 이름과 휴대폰 번호(010-0000-0000)를 정확히 적어 주세요. 입장 · 일정 안내를 보내 드려요."; return; }
     if (bp && !/^[0-9-]{9,14}$/.test(bp)) { err.textContent = "휴대폰 번호를 숫자로 확인해 주세요."; return; }
@@ -2831,6 +2931,7 @@
     const no = (pgr && pgr.server && pgr.server.no) || nextNo(), at = now(), status = method === "bank" ? "pending" : "paid", paidAt = status === "paid" ? at : null, ptMain = Math.min(r.pt, r.pr - r.cp), ch = chOf(p);
     const o = { id: DB.uid("vo"), no, kind: k, mid: m.id, pid: p.id, title: p.title, list: r.list, sale: r.pr, amount: r.pr - r.cp - ptMain, method, ch, share: shareFor(p, ch, !(k === "course" || k === "extend")), status, at, paidAt };
     if (bn || bp) o.buyer = { name: bn || m.name, phone: bp || m.phone || "" };
+    if (status === "pending") { const bk = bankInfo(); Object.assign(o, { depositor: (f.depositor && f.depositor.value.replace(/\s+/g, "")) || m.name || "", dueAt: at + (Number(V().settings.payDays) || 3) * 864e5, bankTo: { bank: bk.bank, account: bk.account, holder: bk.holder } }); }
     if (k === "course" && r.plan) o.days = r.plan.d;
     if (k === "extend") o.days = 365;
     if (k === "coach") o.coach = { n: r.c.n, days: r.c.days, price: r.c.price, used: 0, qs: [] };
@@ -2843,7 +2944,7 @@
     const scNo = pgr && pgr.server && Array.isArray(pgr.server.orders) ? (pgr.server.orders.find((x) => x.kind === "coach") || {}).no : "";
     if (r.coach) { const ptC = r.pt - ptMain, oc = { id: DB.uid("vo"), no: scNo || nextNo(), grp: no, kind: "coach", mid: m.id, pid: p.id, title: p.title, coach: { n: r.c.n, days: r.c.days, price: r.c.price, used: 0, qs: [] }, list: r.coach, sale: r.coach, amount: r.coach - ptC, method, ch, share: shareFor(p, ch, true), status, at, paidAt }; if (ptC) oc.pointOff = ptC; if (o.pg) oc.pg = o.pg; V().orders.push(oc); }
     save();
-    location.hash = "#/vod/order/" + o.no;
+    ROUTE.hash = "#/vod/order/" + o.no;
   }
   /** 정식 서버 결제: 금액 · 쿠폰 · 포인트는 서버가 다시 계산 → 카드 · 간편결제는 포트원 결제창, 무통장 · 0원은 바로 주문 → 서버 데이터 다시 받기 */
   function srvPay(f, x) {
@@ -2851,15 +2952,16 @@
     if (!(CFG && CFG.auth)) { err.textContent = "결제를 잠시 준비 중이에요. 운영 상담 채널로 문의해 주세요."; return; }
     const card = /^(card|kakao|toss|naver)$/.test(method) && r.tot > 0;
     if (card && !payServer()) { err.textContent = "카드 · 간편결제는 PG 심사가 끝나면 열려요. 지금은 무통장 입금으로 결제해 주세요."; return; }
-    const buyer = { name: bn || m.name, phone: bp || m.phone || "" };
-    const req = { pid: p.id, kind: k, plan: r.plan ? r.plan.d : null, coach: !!r.coach, mcid: r.y && r.cp ? r.y.x.id : "", points: r.pt || 0, method, ch: chOf(p), buyer, tea: k === "tea" ? { d1: f.d1.value, d2: f.d2.value, slot: f.slot.value, mode: f.mode.value, topic: f.topic.value.trim().slice(0, 500) } : null, expect: r.tot };
+    const buyer = { name: bn || m.name, phone: bp || m.phone || "" }, depositor = method === "bank" && f.depositor ? f.depositor.value.replace(/\s+/g, "") : "";
+    if (method === "bank" && r.tot > 0 && !depositor) { err.textContent = "입금자명을 적어 주세요. 통장에 찍히는 이름이에요."; if (f.depositor) f.depositor.focus(); return; }
+    const req = { pid: p.id, depositor, kind: k, plan: r.plan ? r.plan.d : null, coach: !!r.coach, mcid: r.y && r.cp ? r.y.x.id : "", points: r.pt || 0, method, ch: chOf(p), buyer, tea: k === "tea" ? { d1: f.d1.value, d2: f.d2.value, slot: f.slot.value, mode: f.mode.value, topic: f.topic.value.trim().slice(0, 500) } : null, expect: r.tot };
     if (btn) btn.disabled = true; err.textContent = "";
     const run = card ? pgOpen({ title: p.title + (r.plan ? " · " + r.plan.label + " 수강권" : ""), amount: r.tot, method, buyer: Object.assign({ email: m.email || "" }, buyer), req })
       : payApi("prepare", req).then((j) => { if (!j || !j.ok) throw new Error((j && j.message) || "주문을 만들지 못했어요."); return { server: j }; });
     run.then((res) => {
       if (!res) { if (btn) btn.disabled = false; err.textContent = "결제를 취소했어요. 주문은 만들어지지 않았어요."; return; }
       const no = (res.server && res.server.no) || "";
-      return DB.remote.refresh().then(() => { if (btn) btn.disabled = false; location.hash = "#/vod/order/" + no; render(); if (res.server && res.server.bank) toast("주문을 받았어요. 입금이 확인되면 바로 이용할 수 있어요."); });
+      return DB.remote.refresh().then(() => { if (btn) btn.disabled = false; ROUTE.hash = "#/vod/order/" + no; render(); if (res.server && res.server.bank) toast("주문을 받았어요. 입금이 확인되면 바로 이용할 수 있어요."); });
     }, (er) => { if (btn) btn.disabled = false; err.textContent = String((er && er.message) || "결제하지 못했어요. 잠시 후 다시 시도해 주세요."); });
   }
   function doCoupon(f) {
@@ -2878,7 +2980,7 @@
     if (f.text.value.trim().length < 5) { err.textContent = "내용을 5자 이상 적어 주세요."; f.text.focus(); return; }
     const cat = (f.querySelector("input[name=cat]:checked") || {}).value || "기타";
     (V().inquiries = V().inquiries || []).push({ id: DB.uid("vq"), mid: m.id, cat, order: f.order ? f.order.value : "", title: f.title.value.trim(), text: f.text.value.trim().slice(0, 1000), at: now(), answer: "", answeredAt: null });
-    save(); location.hash = "#/vod/my/help?t=list"; render(); toast("문의를 남겼어요. 영업일 기준 하루 안에 답해 드릴게요.");
+    save(); ROUTE.hash = "#/vod/my/help?t=list"; render(); toast("문의를 남겼어요. 영업일 기준 하루 안에 답해 드릴게요.");
   }
   function doReview(f) {
     const m = me(), pid = f.dataset.vdReview, text = f.text.value.trim();
@@ -2892,7 +2994,7 @@
   }
   function doPledge(f) {
     const m = me(), text = f.text.value.trim();
-    if (!m) { toast("로그인하면 다짐을 남길 수 있어요.", "warn"); location.hash = "#/vod/login?next=" + encodeURIComponent(location.hash); return; }
+    if (!m) { toast("로그인하면 다짐을 남길 수 있어요.", "warn"); ROUTE.hash = "#/vod/login?next=" + encodeURIComponent(ROUTE.hash); return; }
     if (text.length < 2) { toast("다짐을 한 줄 적어 주세요.", "warn"); f.text.focus(); return; }
     V().pledges.push({ id: DB.uid("vp"), pid: f.dataset.vdPledge, mid: m.id, nick: nickOf(m.id), text: text.slice(0, 500), at: now(), up: 0, upBy: [] });
     save(); render(); toast("다짐을 남겼어요. 끝까지 응원할게요!");
@@ -2916,7 +3018,7 @@
   // 파일 크기 한도: 정식 서버는 3MB (Vercel 요청 한도), 시안은 20MB
   Object.defineProperty(window.VOD, "MAT_MAX", { get: () => (SRV() ? SRV_MAT_MAX : MAT_MAX), configurable: true });
   // 주소(경로)가 바뀌면 언제나 맨 위에서 시작 — 같은 화면 안에서 ?정렬 · 탭만 바뀔 때는 보던 자리 그대로
-  const pathOf = () => location.hash.split("?")[0];
+  const pathOf = () => ROUTE.hash.split("?")[0];
   pgDone = () => { render(); };
   window.VodApp = { mount() { loadCfg().then(() => { kkReturn(); pgReturn(); tsMount(); }); root.innerHTML = ""; ui.anim = true; ui.path = pathOf(); render(); if (ui.booted) toTop(); else window.scrollTo(0, 0); ui.booted = true; }, render() { const p = pathOf(), moved = p !== ui.path; ui.path = p; ui.anim = true; render(); if (moved) toTop(); if (CFG) tsMount(); } };
 })();

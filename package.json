@@ -1,0 +1,8 @@
+{
+  "name": "doogo-class",
+  "private": true,
+  "description": "두고클래스 · 두잉고 서버 함수 의존성 (강의실 AI 조교: Anthropic 공식 SDK)",
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.3.0"
+  }
+}

@@ -32,6 +32,8 @@ function parseKey(k) {
 }
 
 const isMaster = (ids) => !!(ids.admin && ids.admin.role === "master");
+/* meta 에서 마스터만 보는 칸 (운영자 · 파트너 계정에는 비밀번호가 들어 있어요) */
+const MASTER_META = ["staff", "affiliates", "affPayouts", "adminLog"];
 const adminOf = (ids, iid) => !!(ids.admin && (ids.admin.role === "master" || ids.admin.iid === iid));
 const instructorOf = (ids, iid) => !!(ids.admin && (ids.admin.role === "master" || (ids.admin.role === "instructor" && ids.admin.iid === iid)));
 const coachOf = (ids, iid) => !!(ids.admin && ids.admin.role === "coach" && ids.admin.iid === iid);
@@ -73,14 +75,35 @@ function view(k, v, ids) {
   if (!K) return undefined;
   if (K.vod) return VA.view(K, v, ids);
   if (isMaster(ids)) return v;
-  if (K.type === "inq") return undefined;
-  // 이용료 신청은 그 강사 본인만 (마스터 메모는 빼고)
-  if (K.type === "bill") { if (!ownerOf(ids, K.iid)) return undefined; if (v == null) return null; const o = clone(v); delete o.masterMemo; return o; }
+  // 강사 입점 문의: 마스터만 · 파트너는 자기가 추천한 문의만 (운영 메모 · 처리 기록은 빼고)
+  if (K.type === "inq") { if (!(ids.partner && v && v.affId === ids.partner.pid)) return undefined; const o = clone(v); delete o.memo; delete o.log; return o; }
+  // 이용료 신청은 그 강사 본인만 (마스터 메모는 빼고) · 파트너는 연결된 강사 것만 수익 계산용으로 (연락처는 빼고)
+  if (K.type === "bill") {
+    const pt = ids.partner && ids.partner.iids.indexOf(K.iid) >= 0;
+    if (!ownerOf(ids, K.iid) && !pt) return undefined; if (v == null) return null;
+    const o = clone(v); delete o.masterMemo; if (pt && !ownerOf(ids, K.iid)) ["contactName", "phone", "email", "bizNo", "memo"].forEach((x) => delete o[x]); return o;
+  }
   if (v == null) return memberOf(ids, K.iid) || K.type === "ins" || K.type === "content" || K.type === "cohorts" || K.type === "meta" ? null : undefined;
   switch (K.type) {
     case "meta": {
       const o = clone(v);
-      if (!ids.admin) { delete o.announcements; delete o.billing; delete o.contracts; }
+      // 운영자 · 파트너 계정(비밀번호) · 파트너 지급 기록 · 운영 기록은 마스터만 — 파트너는 자기 계정 · 자기 지급 기록만
+      MASTER_META.forEach((x) => delete o[x]);
+      if (ids.partner) {
+        const me = (v.affiliates || []).find((x) => x && x.id === ids.partner.pid), po = {};
+        o.affiliates = me ? [clone(me)] : [];
+        Object.keys(v.affPayouts || {}).forEach((x) => { if (x.indexOf(ids.partner.pid + ":") === 0) po[x] = clone(v.affPayouts[x]); });
+        o.affPayouts = po;
+      } else { delete o.affSettings; delete o.affNotices; }
+      if (ids.admin && ids.admin.iid && o.contracts) { const c = o.contracts[ids.admin.iid]; o.contracts = c ? { [ids.admin.iid]: c } : {}; }
+      if (!ids.admin) {
+        // 두고클래스 무통장 계좌를 비워 두면 기수 입금 계좌로 받아요 (마스터 설정 화면 안내 그대로) — 결제 화면에 보일 칸만 옮겨 줘요
+        const bl = o.billing || {}, st = (o.vod && o.vod.settings) || null;
+        if (st && !(st.bank && st.account) && bl.bank && bl.account) o.vod.settings = Object.assign({}, st, { bank: bl.bank, account: bl.account, holder: st.holder || bl.holder || "" });
+        const vat = (o.billing || {}).vat;
+        delete o.announcements; delete o.billing; delete o.contracts;
+        if (ids.partner && vat) o.billing = { vat };
+      }
       if (o.vod) o.vod = VA.publicVod(o.vod, ids);
       return o;
     }
@@ -110,6 +133,7 @@ function prefixesFor(ids) {
   if (ids.student) iids.add(ids.student.iid);
   iids.forEach((iid) => { p.push("stu:" + iid + ":%", "prog:" + iid + ":%"); });
   if (ids.admin && ids.admin.role === "instructor" && ids.admin.iid) p.push("bill:" + ids.admin.iid + ":%");
+  if (ids.partner) { p.push("inq:%"); ids.partner.iids.forEach((iid) => p.push("bill:" + iid + ":%")); }
   return p.concat(VA.prefixes(ids));
 }
 
@@ -126,8 +150,12 @@ function writer(k, ids, creating) {
     case "meta":
       // 강사: 자기 VOD 클래스 커리큘럼 · 자기 제출 서류만 (나머지는 서버 값 그대로)
       if (!creating && ids.admin && ids.admin.role === "instructor") return { fix: (o, n) => VA.fixInstructorMeta(o, n, ids.admin.iid) };
+      if (!creating && ids.partner) return { fix: (o, n) => fixPartnerMeta(o, n, ids.partner.pid) };
       return null;
-    case "inq": return null;
+    case "inq":
+      // 파트너: 강사 추천(새 문의) · 자기 추천 문의에 대화 남기기만
+      if (ids.partner) return { fix: (o, n) => fixPartnerInq(o, n, ids.partner.pid, K.id) };
+      return null;
     case "ins":
       if (creating) return null;
       if (instructorOf(ids, K.iid)) return { fix: (o, n) => (n == null ? clone(o) : Object.assign(n, { id: K.iid, status: o.status, createdAt: o.createdAt })) };
@@ -153,6 +181,31 @@ function writer(k, ids, creating) {
       return null;
   }
   return null;
+}
+/* 파트너가 고칠 수 있는 자기 계정 칸 (RS · 담당 강사 · 상태는 마스터만) */
+const AFF_SELF = ["phone", "bank", "holder", "account", "noticeSeen", "lastLoginAt", "pwChangedAt"];
+function fixPartnerMeta(o, n, pid) {
+  const out = clone(o), mine = (out.affiliates || []).find((x) => x && x.id === pid), sent = n && Array.isArray(n.affiliates) ? n.affiliates.find((x) => x && x.id === pid) : null;
+  if (!mine || !sent) return out;
+  AFF_SELF.forEach((k) => { if (sent[k] !== undefined) mine[k] = typeof sent[k] === "string" ? sent[k].slice(0, 60) : sent[k]; });
+  if (typeof sent.pw === "string" && sent.pw !== mine.pw && sent.pw.length >= 4 && sent.pw.length <= 40 && !/\s/.test(sent.pw)) { mine.pw = sent.pw; mine.pwChangedAt = Date.now(); }
+  return out;
+}
+const INQ_IN = ["name", "phone", "email", "where", "course", "link"];
+function fixPartnerInq(o, n, pid, id) {
+  if (!n) return o ? clone(o) : null;
+  const str = (x, m) => String(x == null ? "" : x).slice(0, m);
+  if (!o) {
+    const q = { id, at: Date.now(), status: "new", memo: "", message: "", ref: str(n.ref, 40), affId: pid, byPartner: true, log: [], thread: [], pSeen: Date.now() };
+    INQ_IN.forEach((k) => { q[k] = str(n[k], k === "link" ? 300 : 80); });
+    (Array.isArray(n.thread) ? n.thread : []).slice(0, 1).forEach((t) => q.thread.push({ by: "partner", name: str(t.name, 30), text: str(t.text, 2000), at: Date.now() }));
+    return q.name && q.phone ? q : null;
+  }
+  if (o.affId !== pid) return clone(o);
+  const out = clone(o), have = (o.thread || []).length, add = Array.isArray(n.thread) ? n.thread.slice(have, have + 5) : [];
+  out.thread = (out.thread || []).concat(add.filter((t) => t && t.text).map((t) => ({ by: "partner", name: str(t.name, 30), text: str(t.text, 2000), at: Date.now() })));
+  if (n.pSeen) out.pSeen = Date.now();
+  return out;
 }
 /** 강사 · 코치가 보낸 기수 목록: 이미 있는 기수만 고치고, 새 기수는 빼고, 지운 기수는 되살린다 */
 function keepCohortSet(o, n, iid) {

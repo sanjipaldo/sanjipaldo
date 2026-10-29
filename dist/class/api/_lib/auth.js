@@ -44,10 +44,12 @@ const norm = (s) => String(s || "").replace(/\s+/g, "");
 async function identify(req) {
   const c = cookies(req);
   const ps = verify(c[COOKIE.student]), pa = verify(c[COOKIE.admin]), pv = verify(c.dc_v);
-  const ids = { student: null, admin: null, vod: null };
+  const ids = { student: null, admin: null, vod: null, partner: null };
   const keys = [];
   if (ps && ps.r === "student") keys.push("ins:" + ps.iid, "stu:" + ps.iid + ":" + ps.sid);
-  if (pa && pa.r !== "master") keys.push("ins:" + pa.iid);
+  if (pa && (pa.r === "instructor" || pa.r === "coach")) keys.push("ins:" + pa.iid);
+  // 파트너 · 운영자 계정은 meta(affiliates · staff)에 있어요 — 멈춘 계정이면 바로 막혀요
+  if (pa && (pa.r === "partner" || (pa.r === "master" && pa.staffId))) keys.push("meta");
   const docs = keys.length ? await store.getDocs(keys) : {};
   const ins = (iid) => (docs["ins:" + iid] || {}).v;
   if (ps && ps.r === "student") {
@@ -57,8 +59,11 @@ async function identify(req) {
   // 두고클래스 회원 (dc_v) — 없으면 두잉고 강의실에 들어온 VOD 구매자(수강생 계정에 vodMid)로
   const vmid = pv && pv.r === "vod" && pv.mid ? pv.mid : ids.student && ids.student.vodMid ? ids.student.vodMid : "";
   if (vmid) ids.vod = await require("./vodaccess").identity(vmid);
+  const meta = (docs.meta || {}).v || {};
   if (pa) {
-    if (pa.r === "master") ids.admin = { role: "master" };
+    if (pa.r === "master" && !pa.staffId) ids.admin = { role: "master" };
+    else if (pa.r === "master") { const st = (meta.staff || []).find((x) => x && x.id === pa.staffId); if (st && st.status === "active") ids.admin = { role: "master", staffId: st.id }; }
+    else if (pa.r === "partner") { const pt = (meta.affiliates || []).find((x) => x && x.id === pa.pid); if (pt && pt.status === "active") ids.partner = { pid: pt.id, iids: (pt.instructors || []).map((x) => x && x.iid).filter(Boolean) }; }
     else {
       const i = ins(pa.iid);
       if (i && i.status === "active") {
@@ -74,7 +79,7 @@ async function identify(req) {
 }
 const publicMe = (ids) => ({
   student: ids.student ? { sid: ids.student.sid, iid: ids.student.iid } : null,
-  admin: ids.admin ? { role: ids.admin.role, iid: ids.admin.iid || null, cid: ids.admin.cid || null } : null,
+  admin: ids.admin ? { role: ids.admin.role, iid: ids.admin.iid || null, cid: ids.admin.cid || null, staffId: ids.admin.staffId || null } : ids.partner ? { role: "partner", pid: ids.partner.pid } : null,
   vod: ids.vod ? { mid: ids.vod.mid } : null
 });
 

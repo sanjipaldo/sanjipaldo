@@ -200,7 +200,7 @@
     (c.ic ? icon(c.ic, "sm" + (c.ok ? " ok" : "")) + "<span><b>" + c.b + "</b><small>" + c.s + "</small></span>"
       : "<span><small>" + c.s + "</small><b" + (c.count ? ' data-hm-count="' + c.count + '"' : "") + ">" + c.b + "</b></span>" + (c.bar ? '<i class="hm-chip-bar"><i style="width:' + c.bar + '%"></i></i>' : "")) + "</div>";
   const stage3d = (f) => '<div class="hm-3d"><div class="hm-3d-stage"><span class="hm-3d-sym" aria-hidden="true">' +
-    [6, 5, 4, 3, 2, 1, 0].map((k) => '<svg viewBox="0 0 364 380" style="--k:' + k + '"><use href="#hm-dsym"/></svg>').join("") + "</span>" +
+    [6, 5, 4, 3, 2, 1, 0].map((k) => '<svg viewBox="0 0 364 380" style="--k:' + k + (k ? "" : ";fill:url(#hm-dsym-g)") + '"><use href="#hm-dsym"/></svg>').join("") + "</span>" +
     phone(f.vid, "hm-frow-phone", f.title + " 화면") + '<i class="hm-3d-glare" aria-hidden="true"></i>' +
     f.chips.map((c, k) => fchip(c, k ? "b" : "a")).join("") + '</div><i class="hm-3d-floor" aria-hidden="true"></i></div>';
   const browser = (vid, cls, alt, ch) => '<div class="hm-browser ' + (cls || "") + '"><div class="hm-browser-bar"><i></i><i></i><i></i><span>www.doinggo.co.kr</span></div><div class="hm-browser-scr">' + video(vid, alt, ch) + "</div></div>";
@@ -500,9 +500,11 @@
     '<linearGradient id="hm-dsym-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ee5a64"/><stop offset=".5" stop-color="#d21021"/><stop offset="1" stop-color="#a50b18"/></linearGradient>' +
     '<symbol id="hm-dsym" viewBox="0 0 364 380"><path d="M265 333.8L276.8 326.2L288 317.7L298.4 308.3L308 298.1L316.7 287.1L324.4 275.3L331.1 263L336.7 250.2L341.2 236.9L344.6 223.3L346.9 209.4L347.9 195.4L347.8 181.4L346.5 167.4L344 153.6L340.3 140.1L335.5 126.9L329.7 114.2L322.7 102L314.8 90.4L305.9 79.5L296.1 69.5L285.5 60.3L274.2 52L262.2 44.7L249.7 38.4L236.6 33.3L223.2 29.2L209.5 26.3L195.6 24.6L181.5 24L167.5 24.6L153.6 26.4L139.9 29.4L126.5 33.6L113.5 38.8L101 45.1L89 52.5L77.7 60.8L67.2 70.1L57.5 80.2L48.7 91.1L40.8 102.7L33.9 115L28.1 127.7L23.4 140.9L19.8 154.5L17.4 168.3L16.2 182.3L16.1 196.3L17.2 210.3L19.6 224.2L23 237.8L27.6 251L33.3 263.8L40.1 276.1L47.9 287.8L56.6 298.8L66.2 309L76.7 318.3L87.9 326.8L99.8 334.2L112.3 340.6L125.2 346L125.2 346L131.9 347.5L138.6 347.2L145.1 345.1L150.8 341.5L155.4 336.5L158.5 330.4L160 323.8L159.7 317L157.7 310.6L154 304.8L149 300.3L143 297.1L143 297.1L134.1 293.5L125.5 289L117.4 283.9L109.7 278.1L102.5 271.7L95.9 264.7L89.9 257.2L84.5 249.1L79.9 240.7L76 231.9L72.8 222.8L70.4 213.5L68.9 204L68.1 194.4L68.1 184.7L69 175.1L70.6 165.6L73.1 156.3L76.3 147.2L80.3 138.5L85 130.1L90.4 122.1L96.5 114.6L103.2 107.7L110.4 101.3L118.1 95.6L126.4 90.5L135 86.2L143.9 82.6L153.1 79.7L162.5 77.7L172.1 76.4L181.7 76L191.3 76.4L200.9 77.6L210.3 79.6L219.5 82.4L228.5 85.9L237.1 90.2L245.3 95.2L253.1 100.9L260.4 107.2L267.1 114.1L273.2 121.6L278.6 129.5L283.4 137.9L287.4 146.7L290.7 155.7L293.2 165L294.9 174.5L295.8 184.1L295.9 193.7L295.2 203.3L293.7 212.8L291.4 222.2L288.2 231.3L284.4 240.1L279.8 248.6L274.5 256.7L268.5 264.2L261.9 271.3L254.8 277.7L247.1 283.6L239 288.7L265 333.8L258.7 336.4L252 337.2L245.3 336.4L239 333.8L233.6 329.6L229.5 324.2L226.9 318L226 311.2L226.9 304.5L229.5 298.2L233.6 292.9L239 288.7ZM94.9 192.8L169 266.9L274.6 146.1L244.5 119.8L167 208.3L123.2 164.5Z"/></symbol>' +
     "</defs></svg>";
+  // 깨끗한 주소(/doinggo)에서는 <base href="/"> 가 있어 #아이디 그림 참조를 이 문서 주소로 바꿔 줘요 (Safari 가 다른 문서로 읽지 않게)
+  const fragFix = (h) => (ROUTE.clean ? h.replace(/(href="|url\()#(hm-[\w-]+)/g, (m, a, id) => a + ROUTE.frag(id)) : h);
   const DSYM = '<svg class="hm-tc-sym" viewBox="-4 -4 384 400" aria-hidden="true">' +
     [6, 5, 4, 3, 2, 1].map((k) => '<use href="#hm-dsym" class="hm-tc-ex" x="' + (k * 1.6).toFixed(1) + '" y="' + (k * 2).toFixed(1) + '"/>').join("") +
-    '<use href="#hm-dsym" class="hm-tc-face"/></svg>';
+    '<use href="#hm-dsym" class="hm-tc-face" style="fill:url(#hm-dsym-g)"/></svg>';
   function classList(list) {
     // 강사 유튜브 · 인스타그램 · 카카오톡: 서비스 마크 + 이름표 (무엇으로 가는 링크인지 바로 보이게)
     const sns = (x) => [["youtube", x.yt, "강사 유튜브"], ["instagram", x.ig, "인스타그램"], ["kakao", x.kakao, "카카오톡 채널"]]
@@ -669,7 +671,7 @@
   function closeApply() {
     document.getElementById("modal-root").innerHTML = "";
     document.documentElement.classList.remove("hm-noscroll");
-    if (/^#\/partner/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search + "#/doinggo");
+    if (/^#\/partner/.test(ROUTE.hash)) ROUTE.replace("#/doinggo");
   }
   async function submitApply(f) {
     const err = document.getElementById("hm-ap-err");
@@ -709,14 +711,14 @@
     document.title = "두잉고 | 강의는 강사님이, 운영은 두잉고가"; // index.html <title> 과 같게 (SEO)
     dark = null;
     const list = classes();
-    root.innerHTML = '<div class="hm">' + DSYM_DEFS + header() + "<main>" + hero() + bwPaths() + bwMarquee() + problem() + flow() + features() + compare() + students() + teachers() + pricing() + lifelong() + classList(list) + journey() + faq() + finalCta() + "</main>" + footer() + bwDock() + "</div>";
+    root.innerHTML = fragFix('<div class="hm">' + DSYM_DEFS + header() + "<main>" + hero() + bwPaths() + bwMarquee() + problem() + flow() + features() + compare() + students() + teachers() + pricing() + lifelong() + classList(list) + journey() + faq() + finalCta() + "</main>" + footer() + bwDock() + "</div>");
     onScroll();
     reveal();
     wireVideos();
     wire3d();
     wireTcs();
     bwStage();
-    if (/^#\/partner/.test(location.hash)) openApply();
+    if (/^#\/partner/.test(ROUTE.hash)) openApply();
   }
   function mount() { root.innerHTML = ""; render(); window.scrollTo(0, 0); }
 

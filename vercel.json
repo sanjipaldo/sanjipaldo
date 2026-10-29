@@ -1,26 +1,19 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": null,
+  "installCommand": "npm ci --no-audit --no-fund",
   "buildCommand": "node class/scripts/db-build.js && node class/scripts/site.js",
   "outputDirectory": "class/.site",
-  "ignoreCommand": "test -f class/scripts/db-build.js || exit 0; git diff --quiet \"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\" HEAD -- class api vercel.json .vercelignore",
+  "ignoreCommand": "test -f class/scripts/db-build.js || exit 0; git diff --quiet \"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\" HEAD -- class api vercel.json .vercelignore package.json package-lock.json",
   "functions": {
     "api/*.js": {
-      "includeFiles": "class/{data.js,db.js}"
+      "includeFiles": "class/{data.js,db.js,api/_lib/tutor/*.md}",
+      "maxDuration": 60
     }
   },
   "rewrites": [
     {
-      "source": "/doinggo",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/doinggo/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/vod",
+      "source": "/((?!api/)[^.]*)",
       "destination": "/index.html"
     }
   ],

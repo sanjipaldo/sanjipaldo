@@ -109,7 +109,7 @@
 
   /* ---------------- 라우터 ---------------- */
   function route() {
-    const h = (location.hash || "#/home").replace(/^#\/?/, "");
+    const h = (ROUTE.hash || "#/home").replace(/^#\/?/, "");
     const [path, query] = h.split("?");
     const parts = path.split("/").filter(Boolean);
     return { parts: parts.length ? parts : ["home"], params: new URLSearchParams(query || "") };
@@ -393,7 +393,7 @@
     DB.session.setInstructorPick(ins.id);
     DB.session.setStudent({ id: s.id, at: Date.now() });
     startSession();
-    location.hash = "#/home";
+    ROUTE.hash = "#/home";
     toast(s.name + "님, 환영합니다!");
   }
 
@@ -414,7 +414,7 @@
         DB.session.setInstructorPick(ins.id);
         DB.session.setStudent({ id: r.sid, at: Date.now() });
         startSession();
-        location.hash = "#/home";
+        ROUTE.hash = "#/home";
         toast(r.name + "님, 환영합니다!");
       });
     }).catch(() => { err.textContent = "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."; }).then(() => { if (btn) btn.disabled = false; });
@@ -472,7 +472,7 @@
     const wasVod = TRACK === "vod";
     DB.session.setStudent(null);
     me = null; P = null;
-    location.hash = wasVod ? "#/vod/my/classes" : "#/login";
+    ROUTE.hash = wasVod ? "#/vod/my/classes" : "#/login";
     // 서버 모드: 로그인 쿠키를 지우고 내 정보가 남지 않게 새로 불러온다
     if (DB.remote.on) DB.remote.logout("student").catch(() => {}).then(() => location.reload());
   }
@@ -509,7 +509,7 @@
     const id = "fnz" + (++flagSeq);
     const star = (cx, cy, r) => { const pts = []; for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * 0.4 : r, an = -Math.PI / 2 + i * Math.PI / 5; pts.push((cx + rr * Math.cos(an)).toFixed(1) + "," + (cy + rr * Math.sin(an)).toFixed(1)); } return '<polygon points="' + pts.join(" ") + '" fill="#c8102e" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/>'; };
     return '<svg viewBox="0 0 100 100" aria-hidden="true"><defs><clipPath id="' + id + '"><rect width="50" height="50"/></clipPath></defs><rect width="100" height="100" fill="#012169"/>' +
-      '<g clip-path="url(#' + id + ')"><path d="M0 0L50 50M50 0L0 50" stroke="#fff" stroke-width="10"/><path d="M0 0L50 50M50 0L0 50" stroke="#c8102e" stroke-width="3.4"/>' +
+      '<g clip-path="url(' + ROUTE.frag(id) + ')"><path d="M0 0L50 50M50 0L0 50" stroke="#fff" stroke-width="10"/><path d="M0 0L50 50M50 0L0 50" stroke="#c8102e" stroke-width="3.4"/>' +
       '<path d="M25 0V50M0 25H50" stroke="#fff" stroke-width="16"/><path d="M25 0V50M0 25H50" stroke="#c8102e" stroke-width="9"/></g>' +
       star(75, 24, 9.5) + star(62, 50, 9) + star(87, 46, 7.5) + star(74, 75, 11) + "</svg>";
   }
@@ -1396,8 +1396,8 @@
     '<a role="tab" href="#/qna" class="' + (on === "faq" ? "on" : "") + '" aria-selected="' + (on === "faq") + '">' + icon("search", "xs") + "FAQ 검색</a>" +
     '<a role="tab" href="#/qna/requests" class="' + (on === "req" ? "on" : "") + '" aria-selected="' + (on === "req") + '">' + icon("message", "xs") + (TRACK === "vod" ? "1:1 코칭 질문" : "1:1 요청") + "</a></div>";
   function pageQna(r) {
-    if (TRACK === "vod" && (r.parts[1] === "requests" || r.params.get("tab") === "request") && !(coachN() > 0 || (r.parts[2] !== "new" && myCoachQs().length))) { history.replaceState(null, "", "#/qna"); r = route(); }
-    if (r.params.get("tab") === "request") { history.replaceState(null, "", "#/qna/requests"); r = route(); }
+    if (TRACK === "vod" && (r.parts[1] === "requests" || r.params.get("tab") === "request") && !(coachN() > 0 || (r.parts[2] !== "new" && myCoachQs().length))) { ROUTE.replace("#/qna"); r = route(); }
+    if (r.params.get("tab") === "request") { ROUTE.replace("#/qna/requests"); r = route(); }
     const sub = r.parts[1];
     if (sub === "requests") {
       const id = r.parts[2];
@@ -1511,7 +1511,9 @@
   }
 
   /* ---------------- AI 봇 ---------------- */
-  // 강의 데이터(FAQ·서류 가이드·과제·일정)를 찾아서 답하는 규칙형 봇. 서버가 붙으면 askBot() 안쪽만 LLM 호출로 바꾸면 된다.
+  // 내 진도 · 마감 · 일정 · 용어처럼 이 화면 데이터로 정확히 답할 수 있는 건 바로 답하고,
+  // 그 밖의 질문(kb: FAQ · 서류 가이드 · 과제에서 찾은 답, weak: 못 찾음)은 서버가 붙어 있으면 /api/ai-tutor 에 물어본다.
+  // 서버 AI 조교는 강사가 보낸 학습 자료 + 이 강의 자료로 답하고, 연결이 안 되면 여기서 찾은 답을 그대로 보여 준다.
   // 받침 있는 말이면 a, 없으면 b (예: 조교 → 예요 · 봇 → 이에요)
   const josa = (w, a, b) => { const c = String(w || "").trim().slice(-1).charCodeAt(0); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 ? a : b; };
   // 바로 물어볼 질문: 켜진 메뉴 · 올라온 내용에 맞춰 바뀐다
@@ -1613,9 +1615,17 @@
       cands.push({ s: similarity(t, m.title) * 1.8, text: "‘" + m.title + "’ 과제는 이렇게 하면 돼요.\n" + (m.steps || []).map((x, i) => (i + 1) + ". " + x).join("\n"), links: [[m.weekNo + "주차 과제로 이동", "#/missions/" + m.weekNo + "/" + m.id]] });
     });
     cands.sort((a, b) => b.s - a.s);
-    if (cands[0] && cands[0].s >= 0.9) return cands[0];
+    if (cands[0] && cands[0].s >= 0.9) return Object.assign({ kb: true }, cands[0]);
     if (/(오류|버그|안\s*눌|안\s*돼|안\s*되|깨져|멈춰|에러|고장)/.test(t)) return { text: "화면이 이상하게 동작하나요? ‘" + ML("qna") + " → 1:1 요청’에 어떤 화면에서 무엇을 눌렀는지 적고 스크린샷을 올려 주시면 강사님이 확인 후 고쳐 드려요.", links: [["1:1 요청 남기기", "#/qna/requests/new"]] };
-    return { text: "그 부분은 제가 정확히 답하기 어려워요. FAQ 검색에서 먼저 찾아보시고, 수업 내용은 라이브 시간에 " + D.brand.instructor + "님께 직접 물어봐 주세요.", links: [["FAQ 검색", "#/qna"], [ML("schedule"), "#/schedule"]] };
+    return { weak: true, text: "그 부분은 제가 정확히 답하기 어려워요. FAQ 검색에서 먼저 찾아보시고, 수업 내용은 라이브 시간에 " + D.brand.instructor + "님께 직접 물어봐 주세요.", links: [["FAQ 검색", "#/qna"], [ML("schedule"), "#/schedule"]] };
+  }
+  // 서버 AI 조교에게 묻기 (1분 가까이 답이 없으면 포기) → { src, text } 또는 null
+  function askTutor(q, history) {
+    const late = new Promise((ok) => setTimeout(() => ok(null), 58000));
+    // 개인정보처리방침대로 이름은 보내지 않아요 (조교 답에 들어간 ‘OOO님’도 ‘수강생님’으로)
+    const nm = String((me && me.name) || "").trim(), scrub = (t) => (nm.length > 1 ? String(t || "").split(nm).join("수강생") : String(t || ""));
+    const ask = DB.remote.call("ai-tutor", { iid: INS.id, q, history: history.map((m) => ({ from: m.from, text: scrub(m.text) })) }).then((r) => (r && r.ok && r.text ? r : null)).catch(() => null);
+    return Promise.race([ask, late]);
   }
   // 꺼진 메뉴로 가는 봇 답변 링크는 숨긴다
   function linkOk(l) {
@@ -1636,13 +1646,19 @@
     if (P.chat.length > 60) P.chat = P.chat.slice(-60);
     botThinking = true;
     saveProgress(); refreshChats();
-    setTimeout(() => {
+    const a = askBot(text), history = P.chat.slice(-9, -1), sid = me && me.id;
+    const reply = (x) => {
       botThinking = false;
-      if (!me) return;
-      const a = askBot(text);
-      P.chat.push({ from: "bot", text: a.text, links: a.links || [], at: Date.now() });
+      if (!me || me.id !== sid) return;
+      P.chat.push({ from: "bot", text: x.text, links: x.links || [], at: Date.now() });
       saveProgress(); refreshChats();
-    }, 550);
+    };
+    if (!(DB.remote.on && (a.kb || a.weak))) { setTimeout(() => reply(a), 550); return; }
+    askTutor(text, history).then((r) => {
+      // 서버에 AI 키가 없을 때(src kb): 화면에서 찾은 FAQ 답이 있으면 그걸, 못 찾았으면 서버 학습 자료에서 찾은 답을
+      if (!r || (r.src !== "ai" && a.kb)) return reply(a);
+      reply({ text: r.text, links: a.kb ? a.links : [[ML("qna") + " · 1:1 요청", "#/qna"]] });
+    });
   }
   function refreshChats() { document.querySelectorAll("[data-chat-log]").forEach((el) => { el.innerHTML = chatLog(); el.scrollTop = el.scrollHeight; }); }
   const chatForm = (id) => '<form class="chat-form" data-chat-form><input class="input" name="q" id="' + id + '" autocomplete="off" placeholder="궁금한 걸 편하게 적어 보세요" aria-label="질문 입력"><button class="btn btn-primary chat-send" type="submit" aria-label="보내기">' + icon("send", "sm") + "<span>보내기</span></button></form>";
@@ -1930,7 +1946,7 @@
   function certRosette() {
     // 메달은 테마와 상관없이 금색
     return '<svg class="cert-rosette" viewBox="0 0 120 150" aria-hidden="true"><defs><linearGradient id="cert-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7e08a"/><stop offset=".45" stop-color="#d9a930"/><stop offset="1" stop-color="#a87412"/></linearGradient></defs><path d="M38 86 26 146l20-12 14 16 8-58zM82 86l12 60-20-12-14 16-8-58z" fill="var(--ink)"/>' +
-      '<circle cx="60" cy="60" r="50" fill="url(#cert-gold)"/><circle cx="60" cy="60" r="50" fill="none" stroke="#8a5e0c" stroke-width="2" stroke-dasharray="3 4"/><circle cx="60" cy="60" r="38" fill="none" stroke="#8a5e0c" stroke-width="1.5"/>' +
+      '<circle cx="60" cy="60" r="50" fill="url(' + ROUTE.frag("cert-gold") + ')"/><circle cx="60" cy="60" r="50" fill="none" stroke="#8a5e0c" stroke-width="2" stroke-dasharray="3 4"/><circle cx="60" cy="60" r="38" fill="none" stroke="#8a5e0c" stroke-width="1.5"/>' +
       '<text x="60" y="56" text-anchor="middle" font-size="12" font-weight="900" letter-spacing="2" fill="#5a3d05">COMPLETE</text><text x="60" y="76" text-anchor="middle" font-size="18" font-weight="900" fill="#5a3d05">수 료</text></svg>';
   }
   const certNumber = () => DB.certNo(me);
@@ -2029,7 +2045,7 @@
   let scWeek = "all";
   const showcaseOf = (missionId) => (D.showcase || []).filter((x) => x.missionId && x.missionId === missionId);
   function pageShowcase(r) {
-    if (r && r.params.get("w")) { scWeek = r.params.get("w"); history.replaceState(null, "", "#/showcase"); }
+    if (r && r.params.get("w")) { scWeek = r.params.get("w"); ROUTE.replace("#/showcase"); }
     const all = (D.showcase || []).slice().sort((a, b) => (Number(a.week) || 99) - (Number(b.week) || 99));
     const weeks = all.map((x) => Number(x.week) || 0).filter((n, i, a) => n && a.indexOf(n) === i).sort((a, b) => a - b);
     if (scWeek !== "all" && weeks.indexOf(Number(scWeek)) === -1) scWeek = "all";
@@ -2267,18 +2283,18 @@
       const want = r.params.get("ins");
       if (want && DB.activeInstructors().some((x) => x.id === want)) { loginPick = want; DB.session.setInstructorPick(want); }
       const openSign = r.params.get("signup") === "1" && loginInstructor();
-      if (r.parts[0] !== "login" || want) history.replaceState(null, "", "#/login");
+      if (r.parts[0] !== "login" || want) ROUTE.replace("#/login");
       renderLogin();
       if (openSign) openSignup();
       return;
     }
-    if (r.parts[0] === "login") { history.replaceState(null, "", "#/home"); return render(); }
+    if (r.parts[0] === "login") { ROUTE.replace("#/home"); return render(); }
     if (TRACK === "vod" && r.parts[0] === "vodclass" && r.parts[1] && r.parts[1] !== "notes") setVp(decodeURIComponent(r.parts[1]));
     applyTheme();
     // 꺼진 메뉴로 들어오면 홈으로
     const top = r.parts[0];
     const allowed = top === "home" || (top === "page" ? DB.menuConfig(MID()).items.some((x) => x.key === r.parts[1] && x.on) : NAV_DEFS.some((n) => n.id === top) ? on(top) : true);
-    if (!allowed) { history.replaceState(null, "", "#/home"); return render(); }
+    if (!allowed) { ROUTE.replace("#/home"); return render(); }
     if (!document.getElementById("app") || root.dataset.who !== me.id) { renderShell(); root.dataset.who = me.id; }
     document.getElementById("app").classList.remove("nav-open");
     document.getElementById("app").classList.toggle("vt-focus", TRACK === "vod" && top === "vodclass" && !!r.parts[1] && r.parts[1] !== "notes");
@@ -2286,7 +2302,7 @@
     const pages = { home: (rr) => (TRACK === "vod" ? pageVodHome(rr) : pageHome(rr)), vodclass: pageVodClass, curriculum: pageCurriculum, replays: pageReplays, showcase: pageShowcase, notes: pageNotes, glossary: pageGlossary, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, qna: pageQna, docs: pageDocs, bot: pageBot, library: pageLibrary, motivation: pageMotivation, channels: pageChannels, partners: pagePartners, certificate: pageCertificate, page: pageCustom };
     const fn = pages[r.parts[0]] || notFound;
     const main = document.getElementById("main");
-    const prevKey = main.dataset.key, key = location.hash;
+    const prevKey = main.dataset.key, key = ROUTE.hash;
     if (prevKey && prevKey !== key) scrollMemo[prevKey] = { y: window.scrollY, to: key };
     // 휴대폰에서는 화면을 옮기면 AI봇 창을 닫는다 (반쯤 가린 채로 따라다니지 않게)
     if (prevKey !== key && window.matchMedia("(max-width: 720px)").matches) botOpen = false;
@@ -2342,7 +2358,7 @@
       case "modal-close": closeModal(); break;
       case "modal-close-bg": if (e.target === a) closeModal(); break;
       case "logout": logout(); break;
-      case "exit-preview": if (INS) { loginPick = INS.id; DB.session.setInstructorPick(INS.id); } DB.session.setStudent(null); me = null; location.hash = "#/login"; break;
+      case "exit-preview": if (INS) { loginPick = INS.id; DB.session.setInstructorPick(INS.id); } DB.session.setStudent(null); me = null; ROUTE.hash = "#/login"; break;
       case "toggle-nav": document.getElementById("app").classList.toggle("nav-open"); break;
       case "toggle-watched": {
         const id = a.dataset.id;
@@ -2363,7 +2379,7 @@
       }
       case "faq-cat": faqCat = a.dataset.cat; render(); break;
       case "req-open":
-        if (a.dataset.mine === "1") location.hash = "#/qna/requests/" + a.dataset.id;
+        if (a.dataset.mine === "1") ROUTE.hash = "#/qna/requests/" + a.dataset.id;
         else toast("비공개 글은 작성자와 강사님만 볼 수 있어요.", "warn");
         break;
       case "req-remove": reqDraft.splice(Number(a.dataset.i), 1); { const t = document.getElementById("req-thumbs"); if (t) t.innerHTML = reqThumbs(); } break;
@@ -2435,9 +2451,9 @@
         const f = findNote(a.dataset.id); if (!f) break;
         const x = vodList().find((v) => v.p.id === f.pid), l = x ? VX().lessons(x.p).find((y) => y.id === f.n.lid) : null;
         const ref = (x ? x.p.title : "") + (l ? " · " + l.title : "") + (f.n.t != null ? " (" + fmtT(f.n.t) + ")" : "");
-        if (!preview && coachN() <= 0) { const cp = addPid("coachOf"); toast("1:1 코칭권이 있으면 이 노트를 강사님께 바로 보낼 수 있어요.", "warn"); if (cp) location.hash = "#/vod/checkout/" + cp + "?item=coach"; break; }
+        if (!preview && coachN() <= 0) { const cp = addPid("coachOf"); toast("1:1 코칭권이 있으면 이 노트를 강사님께 바로 보낼 수 있어요.", "warn"); if (cp) ROUTE.hash = "#/vod/checkout/" + cp + "?item=coach"; break; }
         try { sessionStorage.setItem("vt-ask", JSON.stringify({ title: f.n.text.split("\n")[0].slice(0, 70), body: "[강의] " + ref + "\n\n" + f.n.text, nid: f.n.id })); } catch (e2) {}
-        location.hash = "#/qna/requests/new"; break;
+        ROUTE.hash = "#/qna/requests/new"; break;
       }
       case "vt-note-dl": {
         const txt = notesText(a.dataset.p || "all");
@@ -2447,8 +2463,8 @@
       }
       case "vt-note-copy": { const txt = notesText("all"); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => toast("노트를 복사했어요. 메모장 · 카톡에 붙여 넣어 보세요."), () => toast("복사가 막혀 있어요. ‘내려받기’를 이용해 주세요.", "warn")); else toast("복사가 막혀 있어요. ‘내려받기’를 이용해 주세요.", "warn"); break; }
       case "vt-print": { const el = document.querySelector(".page.vn") || document.querySelector(".page"); if (window.DGFILE && el) window.DGFILE.pdfBtn(a, el, "내노트_" + todayStr() + ".pdf", { width: 820, title: "내 노트" }, (msg) => toast(msg)); else window.print(); break; }
-      case "req-cancel": { const i = (P.questions || []).findIndex((x) => x.id === a.dataset.id && !x.answer); if (i < 0) break; if (a.dataset.arm !== "1") { a.dataset.arm = "1"; a.textContent = "한 번 더 누르면 취소돼요"; setTimeout(() => { if (a.isConnected) { a.dataset.arm = ""; a.textContent = "취소하기"; } }, 3000); break; } const qq = P.questions[i]; P.questions.splice(i, 1); saveProgress(); if (qq.coach && me.vodMid && VX() && VX().giveBackCoach) VX().giveBackCoach(me.vodMid, qq.id); location.hash = "#/qna/requests"; toast(qq.coach ? "질문을 취소했어요. 코칭권 1회를 돌려드렸어요." : "요청을 취소했어요."); break; }
-      case "vt-mat": if (a.dataset.m === "dl") { const st = DB.session.student(), vm = (me && me.vodMid) || (st && st.vodMid), mp = /^#\/vodclass\/([^/?]+)/.exec(location.hash); if (vm && mp && VX().markMat) VX().markMat(vm, decodeURIComponent(mp[1])); } VX().matOpen({ url: a.dataset.u, name: a.dataset.n }, a.dataset.m).then((ok) => { if (!ok) toast("이 브라우저에 저장된 파일이 아니에요. 강사님이 다시 올리면 받을 수 있어요.", "warn"); else if (a.dataset.m === "dl") toast("수업 자료를 내려받았어요."); }); break;
+      case "req-cancel": { const i = (P.questions || []).findIndex((x) => x.id === a.dataset.id && !x.answer); if (i < 0) break; if (a.dataset.arm !== "1") { a.dataset.arm = "1"; a.textContent = "한 번 더 누르면 취소돼요"; setTimeout(() => { if (a.isConnected) { a.dataset.arm = ""; a.textContent = "취소하기"; } }, 3000); break; } const qq = P.questions[i]; P.questions.splice(i, 1); saveProgress(); if (qq.coach && me.vodMid && VX() && VX().giveBackCoach) VX().giveBackCoach(me.vodMid, qq.id); ROUTE.hash = "#/qna/requests"; toast(qq.coach ? "질문을 취소했어요. 코칭권 1회를 돌려드렸어요." : "요청을 취소했어요."); break; }
+      case "vt-mat": if (a.dataset.m === "dl") { const st = DB.session.student(), vm = (me && me.vodMid) || (st && st.vodMid), mp = /^#\/vodclass\/([^/?]+)/.exec(ROUTE.hash); if (vm && mp && VX().markMat) VX().markMat(vm, decodeURIComponent(mp[1])); } VX().matOpen({ url: a.dataset.u, name: a.dataset.n }, a.dataset.m).then((ok) => { if (!ok) toast("이 브라우저에 저장된 파일이 아니에요. 강사님이 다시 올리면 받을 수 있어요.", "warn"); else if (a.dataset.m === "dl") toast("수업 자료를 내려받았어요."); }); break;
       case "vt-dl": toast("수업 자료를 내려받고 있어요. 안 열리면 ‘미리보기’에서 저장할 수 있어요."); break;
       case "vt-fs": { const st = document.getElementById("vt-stage"); if (!st) break; const d = document; if (d.fullscreenElement) d.exitFullscreen && d.exitFullscreen(); else if (st.requestFullscreen) st.requestFullscreen().catch(() => toast("이 화면에서는 전체 화면을 쓸 수 없어요.", "warn")); else if (st.webkitRequestFullscreen) st.webkitRequestFullscreen(); break; }
       case "vod-done": {
@@ -2456,7 +2472,7 @@
         if (!X.markDone(me.vodMid, a.dataset.p, a.dataset.l)) { toast("수강 기간이 끝난 강의예요.", "warn"); break; }
         const x = vodList().find((v) => v.p.id === a.dataset.p), lz = x ? X.lessons(x.p) : [], k = lz.findIndex((l) => l.id === a.dataset.l), nx = lz[k + 1];
         checkLevelUp();
-        if (nx) location.hash = learnHref(a.dataset.p, nx.id); else { render(); toast(vodPctOf(x) >= 100 ? "모든 강의를 끝까지 봤어요! DOOGO CLASS 클래스 페이지에서 후기를 남겨 주세요." : "완료했어요."); }
+        if (nx) ROUTE.hash = learnHref(a.dataset.p, nx.id); else { render(); toast(vodPctOf(x) >= 100 ? "모든 강의를 끝까지 봤어요! DOOGO CLASS 클래스 페이지에서 후기를 남겨 주세요." : "완료했어요."); }
         break;
       }
       case "calc-new": calcEdit = ""; render(); { const n = document.getElementById("c-name"); if (n) n.focus(); } break;
@@ -2493,7 +2509,7 @@
       const title = f.title.value.trim(), body = f.body.value.trim();
       if (!title || !body) { toast("제목과 내용을 모두 적어 주세요.", "warn"); return; }
       const vod = TRACK === "vod";
-      if (vod && !preview && coachN() <= 0) { toast("남은 1:1 코칭권이 없어요. DOOGO CLASS에서 코칭권을 사면 질문할 수 있어요.", "warn"); location.hash = "#/qna"; return; }
+      if (vod && !preview && coachN() <= 0) { toast("남은 1:1 코칭권이 없어요. DOOGO CLASS에서 코칭권을 사면 질문할 수 있어요.", "warn"); ROUTE.hash = "#/qna"; return; }
       const q = { id: DB.uid("q"), category: f.category.value, title, body, images: reqDraft.slice(), at: Date.now(), answer: "", answeredAt: 0 };
       if (vod) q.coach = true;
       P.questions.push(q);
@@ -2501,7 +2517,7 @@
       if (vod && !preview && me.vodMid) VX().useCoach(me.vodMid, INS.id, q.id);
       if (vod) vtAskDone(q.id);
       reqDraft = [];
-      location.hash = "#/qna/requests/" + q.id;
+      ROUTE.hash = "#/qna/requests/" + q.id;
       toast(vod ? "코칭 질문을 남겼어요. 코칭권 1회가 차감됐어요" + (preview ? "" : " (남은 " + coachN() + "회)") + "." : "1:1 요청을 남겼어요. 강사님 답변이 달리면 여기서 확인할 수 있어요.");
       return;
     }
@@ -2548,7 +2564,7 @@
     if (!isActive()) return;
     if (e.target.id === "file-input") { addFiles(e.target.files); e.target.value = ""; }
     if (e.target.id === "req-file") { addReqFiles(e.target.files); e.target.value = ""; }
-    if (e.target.id === "vp-pick") { setVp(e.target.value); if (location.hash === "#/home") render(); else location.hash = "#/home"; toast("‘" + (VX().product(VP) || {}).title + "’ 강의실로 바꿨어요."); }
+    if (e.target.id === "vp-pick") { setVp(e.target.value); if (ROUTE.hash === "#/home") render(); else ROUTE.hash = "#/home"; toast("‘" + (VX().product(VP) || {}).title + "’ 강의실로 바꿨어요."); }
   });
   ["dragover", "dragenter"].forEach((ev) => document.addEventListener(ev, (e) => {
     const z = isActive() && e.target.closest && e.target.closest("#dropzone, #req-drop");
@@ -2579,7 +2595,7 @@
 
 /* 두잉고 시안: 아래 탭 막대 — 지금 화면에 맞는 탭 표시 */
 (function () {
-  function mark() { var h = location.hash || "#/home", best = null, bl = -1; document.querySelectorAll(".bw-tab[href]").forEach(function (a) { var k = a.getAttribute("href"); a.classList.remove("on"); if ((h === k || (!/^#\/center(\/master)?$/.test(k) && (h.indexOf(k + "/") === 0 || h.indexOf(k + "?") === 0))) && k.length > bl) { best = a; bl = k.length; } }); if (best) best.classList.add("on"); }
+  function mark() { var h = ROUTE.hash || "#/home", best = null, bl = -1; document.querySelectorAll(".bw-tab[href]").forEach(function (a) { var k = a.getAttribute("href"); a.classList.remove("on"); if ((h === k || (!/^#\/center(\/master)?$/.test(k) && (h.indexOf(k + "/") === 0 || h.indexOf(k + "?") === 0))) && k.length > bl) { best = a; bl = k.length; } }); if (best) best.classList.add("on"); }
   window.addEventListener("hashchange", function () { setTimeout(mark, 0); });
   new MutationObserver(function () { if (document.querySelector(".bw-tabbar")) mark(); }).observe(document.getElementById("root") || document.body, { childList: true });
   mark();

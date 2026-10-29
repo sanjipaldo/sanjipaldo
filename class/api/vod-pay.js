@@ -5,7 +5,7 @@
  *        → 서버가 금액을 계산해 ‘결제 대기’ 주문을 만들고 { paymentId, amount, orderName, no } 를 돌려줘요 (0원이면 바로 완료)
  *   { action: "complete", paymentId }   포트원에 결제를 다시 물어 PAID · 금액 · 통화가 맞을 때만 결제 완료
  *   { action: "abort", paymentId }      결제창을 닫았거나 실패 → 결제 대기 주문을 실패로
- *        method: card · kakao · toss · naver (포트원) | bank (무통장 입금 → 마스터가 입금 확인) — 0원은 바로 완료
+ *        method: card · kakao · toss · naver (포트원) | bank (무통장 입금 · depositor 입금자명 → 자동 입금 확인 또는 마스터 확인) — 0원은 바로 완료
  *   { action: "cancel", no }            환불 규정에 맞으면 바로 100% 취소 (포트원 결제 취소까지)
  *   { action: "cancelPending", no }     입금 전 무통장 주문 취소 (쓴 쿠폰 · 포인트 돌려받기)
  *   { action: "dg", iid }               산 VOD 의 두잉고 강의실 들어가기 — 서버가 두잉고 수강생 계정을 만들고 로그인시켜요
@@ -15,6 +15,10 @@
  *  마스터 (dc_a 마스터 로그인)
  *   { action: "refund", no, amount, reason }   부분 · 전액 환불 (포트원 결제 취소)
  *   { action: "catalog", catalog }             클래스 가격 · 쿠폰 · 설정 · 환불 규정 올리기
+ *   { action: "bankOk", no }                   무통장 입금 확인 → 바로 수강 (같은 결제로 산 코칭권도 같이)
+ *   { action: "bankCancel", no }               입금 전 무통장 주문 취소 (쿠폰 · 포인트 돌려주기)
+ *   { action: "bankLog" }                      최근 입금 알림(자동 입금 확인) · 못 맞춘 입금
+ *   { action: "bankLink", id, no }             못 맞춘 입금을 주문에 직접 연결 → 입금 확인
  *  포트원 웹훅 (webhook-id · webhook-signature 헤더)  결제 완료 · 취소 알림 → 같은 확인 과정을 한 번 더 */
 "use strict";
 const { send, body, handler } = require("./_lib/http");
@@ -25,6 +29,8 @@ const V = require("./_lib/vod");
 const VA = require("./_lib/vodaccess");
 const store = require("./_lib/store");
 const { kstDay, addDays } = require("./_lib/vodprice");
+const BM = require("./_lib/bank");
+const PA = require("./_lib/payaction");
 
 const fail = (res, status, message) => send(res, status, { ok: false, message });
 
@@ -63,17 +69,11 @@ async function markRefunded(o, amount, info, restore) {
 }
 
 const PG_METHODS = { card: "PORTONE_CHANNEL_CARD", kakao: "PORTONE_CHANNEL_KAKAOPAY", toss: "PORTONE_CHANNEL_TOSSPAY", naver: "PORTONE_CHANNEL_NAVERPAY" };
-async function bankInfo() { const r = await store.getDoc("meta"), s = ((((r && r.v) || {}).vod) || {}).settings || {}; return s.bank && s.account ? s : null; }
 /** 쿠폰 사용 · 포인트 차감 (결제가 확인됐거나 무통장 주문을 받았을 때 한 번만) */
 async function useCouponPoints(mid, orders, key, no) {
   const pts = orders.reduce((a, o) => a + (o.pointOff || 0), 0), mcid = (orders.find((o) => o.mcid) || {}).mcid, at = Date.now();
   if (!mid || !(pts || mcid)) return;
   await V.update(V.K.member(mid), (m) => { if (!m || (m.paidPays || []).indexOf(key) >= 0) return undefined; if (pts) { m.points = Math.max(0, (Number(m.points) || 0) - pts); (m.pointLog = m.pointLog || []).push({ at, amt: -pts, why: "결제에 사용 (" + no + ")" }); } if (mcid) { const c = (m.coupons || []).find((x) => x.id === mcid); if (c) { c.usedAt = at; c.orderNo = no; } } m.paidPays = (m.paidPays || []).concat(key).slice(-50); return m; });
-}
-async function giveBack(o) {
-  if (!(o.pointOff || o.mcid)) return;
-  const at = Date.now();
-  await V.update(V.K.member(o.mid), (m) => { if (!m) return undefined; if (o.pointOff) { m.points = (Number(m.points) || 0) + o.pointOff; (m.pointLog = m.pointLog || []).push({ at, amt: o.pointOff, why: "주문 취소 · 포인트 돌려받음 (" + o.no + ")" }); } if (o.mcid) { const c = (m.coupons || []).find((x) => x.id === o.mcid); if (c) { c.usedAt = null; c.orderNo = ""; } } return m; });
 }
 async function prepare(res, m, b) {
   const orders = await V.ordersOf(m.id), q = await V.quote(m, b, orders);
@@ -81,16 +81,19 @@ async function prepare(res, m, b) {
   const method = String(b.method || "card");
   if (q.total > 0) {
     if (PG_METHODS[method] && !(portone.on() && process.env[PG_METHODS[method]])) return fail(res, 409, method === "card" ? "카드 결제는 PG 심사가 끝나면 열려요. 지금은 무통장 입금으로 결제해 주세요." : "이 간편결제는 아직 준비 중이에요. 다른 결제 방법을 골라 주세요.");
-    if (method === "bank" && !(await bankInfo())) return fail(res, 409, "무통장 입금 계좌가 아직 준비되지 않았어요. 고객센터로 문의해 주세요.");
     if (!PG_METHODS[method] && method !== "bank") return fail(res, 400, "결제 방법을 골라 주세요.");
   }
-  const bank = q.total > 0 && method === "bank";
+  const bank = q.total > 0 && method === "bank", bk = bank ? await BM.info() : null;
+  if (bank && !bk) return fail(res, 409, "무통장 입금 계좌가 아직 준비되지 않았어요. 고객센터로 문의해 주세요.");
+  // 입금자명: 자동 입금 확인이 이 이름 + 금액으로 주문을 찾아요 (비우면 주문자 이름)
+  const depositor = bank ? String(b.depositor || (b.buyer && b.buyer.name) || m.name || "").replace(/\s+/g, "").slice(0, 20) : "";
+  if (bank && !depositor) return fail(res, 400, "입금자명을 적어 주세요.");
   const paymentId = "pay_" + Date.now().toString(36) + V.uid("_").slice(1), at = Date.now(), nos = [];
   const buyer = b.buyer && typeof b.buyer === "object" ? { name: String(b.buyer.name || m.name || "").slice(0, 20), phone: String(b.buyer.phone || m.phone || "").replace(/\s/g, "").slice(0, 14) } : null;
   for (let i = 0; i < q.items.length; i++) {
     let no = V.newNo(); const it = q.items[i];
     const ch = ["web", "ins", "ad"].indexOf(b.ch) >= 0 ? b.ch : "web";
-    const o = Object.assign({ id: "", no, mid: m.id, method: q.total > 0 ? method.slice(0, 12) : q.points ? "point" : "free", status: bank ? "pending" : "ready", createdAt: at, at, paymentId, ch }, it, i ? { grp: nos[0] } : {}, buyer ? { buyer } : {}, bank ? { pg: { st: "bank" } } : {});
+    const o = Object.assign({ id: "", no, mid: m.id, method: q.total > 0 ? method.slice(0, 12) : q.points ? "point" : "free", status: bank ? "pending" : "ready", createdAt: at, at, paymentId, ch }, it, i ? { grp: nos[0] } : {}, buyer ? { buyer } : {}, bank ? { pg: { st: "bank" }, depositor, dueAt: at + bk.days * 864e5, bankTo: { bank: bk.bank, account: bk.account, holder: bk.holder } } : {});
     if (i === 0 && it.kind === "tea" && b.tea && typeof b.tea === "object") o.tea = { d1: String(b.tea.d1 || "").slice(0, 10), d2: String(b.tea.d2 || "").slice(0, 10), slot: String(b.tea.slot || "").slice(0, 30), mode: String(b.tea.mode || "").slice(0, 10), topic: String(b.tea.topic || "").slice(0, 500), st: "req" };
     // id: 마스터 화면이 주문을 찾는 칸 (주문 번호와 같게)
     for (let t = 0; t < 4 && !(await V.create(V.K.order(no), Object.assign(o, { id: "vo-" + no, no }))); t++) no = V.newNo();
@@ -100,9 +103,15 @@ async function prepare(res, m, b) {
   await V.addOrderNos(m.id, nos);
   if (q.total === 0) { const r = await finalize(paymentId); return send(res, 200, Object.assign({ free: true }, r)); }
   if (bank) {
-    const made = (await Promise.all(nos.map((n) => V.get(V.K.order(n))))).filter(Boolean);
+    let made = (await Promise.all(nos.map((n) => V.get(V.K.order(n))))).filter(Boolean);
     await useCouponPoints(m.id, made, paymentId, nos[0]);
-    return send(res, 200, { ok: true, bank: true, no: nos[0], orders: made, amount: q.total });
+    // 자동 입금 확인(페이액션): 입금보다 먼저 주문을 등록해 둬요 (실패해도 주문은 그대로 · 마스터가 직접 확인)
+    if (PA.on()) {
+      const r = await PA.register(made[0], q.total, depositor, buyer, m.email).then(() => "ok", (e) => { console.error("[vod-pay] payaction register", nos[0], e.message); return "fail"; });
+      await V.update(V.K.order(nos[0]), (x) => (x ? Object.assign(x, { pg: Object.assign({}, x.pg || {}, { pa: r }) }) : undefined));
+      made = (await Promise.all(nos.map((n) => V.get(V.K.order(n))))).filter(Boolean);
+    }
+    return send(res, 200, { ok: true, bank: true, no: nos[0], orders: made, amount: q.total, to: bk, depositor });
   }
   send(res, 200, { ok: true, paymentId, amount: q.total, orderName: q.orderName, no: nos[0] });
 }
@@ -124,13 +133,10 @@ async function cancelPending(res, m, b) {
   const o = await V.get(V.K.order(String(b.no || "")));
   if (!o || o.mid !== m.id) return fail(res, 404, "주문을 찾지 못했어요.");
   if (o.status !== "pending") return fail(res, 409, "입금 전 주문만 취소할 수 있어요.");
-  const all = [o].concat((await V.ordersOf(m.id)).filter((x) => x.grp === o.no && x.status === "pending"));
-  for (const x of all) {
-    const done = await V.update(V.K.order(x.no), (y) => (y && y.status === "pending" ? Object.assign(y, { status: "canceled", canceledAt: Date.now(), cancelBy: "회원" }) : undefined));
-    if (done && done.status === "canceled") await giveBack(x);
-  }
+  await BM.drop(o, "회원");
   send(res, 200, { ok: true });
 }
+
 /** 산 VOD 의 두잉고 강의실: 이 회원의 두잉고 수강생 계정(없으면 만들기) → 수강생 로그인 쿠키 */
 async function enterDg(req, res, m, b) {
   const iid = String(b.iid || ""), cat = (await V.catalog()) || {};
@@ -224,9 +230,14 @@ module.exports = handler(["POST"], async (req, res) => {
   if (!edge.originOk(req)) return fail(res, 403, "forbidden");
   if (process.env.VOD_SERVER_AUTH !== "1") return fail(res, 404, "서버 결제가 아직 꺼져 있어요.");
   const b = await body(req), a = String(b.action || "");
-  if (a === "refund" || a === "catalog") {
+  if (a === "refund" || a === "catalog" || a === "bankOk" || a === "bankCancel" || a === "bankLog" || a === "bankLink") {
     const ids = await auth.identify(req);
     if (!(ids.admin && ids.admin.role === "master")) return fail(res, 403, "마스터만 할 수 있어요.");
+    const by = String((ids.admin && (ids.admin.name || ids.admin.id)) || "마스터").slice(0, 20);
+    if (a === "bankOk") { const r = await BM.confirm(b.no, by, { okHow: "manual" }); return send(res, r.ok ? 200 : 409, r); }
+    if (a === "bankCancel") { const o = await V.get(V.K.order(String(b.no || ""))); if (!o || o.status !== "pending") return fail(res, 409, "입금 대기 주문만 취소할 수 있어요."); await BM.drop(o, by); return send(res, 200, { ok: true }); }
+    if (a === "bankLog") return send(res, 200, Object.assign({ ok: true }, await BM.log()));
+    if (a === "bankLink") return send(res, 200, await BM.link(String(b.id || ""), String(b.no || ""), by));
     return a === "refund" ? refund(res, b) : saveCatalog(res, b);
   }
   const m = await V.current(req);

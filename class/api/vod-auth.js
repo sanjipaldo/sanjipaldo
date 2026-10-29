@@ -35,6 +35,8 @@ async function signup(req, res, b, ip) {
   V.login(req, res, m.id);
   send(res, 200, { ok: true, member: V.pub(m) });
 }
+/** 체험 계정(vod@gmail.com): 마스터가 VOD 설정에서 끄면 로그인 막기 */
+async function demoOff() { const r = await store.getDoc("meta"); return ((((r && r.v) || {}).vod || {}).settings || {}).demoLogin === false; }
 async function login(req, res, b, ip) {
   const email = String(b.email || "").trim().toLowerCase(), keys = ["vip:" + ip, "vem:" + email];
   if ((await store.rlCheck(["vip:" + ip], 40)) || (await store.rlCheck(["vem:" + email], 8))) return send(res, 429, { ok: false, message: "여러 번 틀려서 15분 동안 잠시 막았어요. 잠시 후 다시 시도해 주세요." });
@@ -42,6 +44,7 @@ async function login(req, res, b, ip) {
   const idx = EMAIL.test(email) ? await V.get(V.K.email(email)) : null, m = idx ? await V.get(V.K.member(idx.id)) : null;
   if (!m || !m.pwHash || !V.checkPw(String(b.pw || ""), m.pwHash)) { await store.rlFail(keys); return send(res, 401, { ok: false, message: m && !m.pwHash && m.via === "kakao" ? "카카오로 가입한 계정이에요. ‘카카오로 1초 만에 시작하기’로 로그인해 주세요." : "이메일 또는 비밀번호가 맞지 않아요. 다시 확인해 주세요." }); }
   if (m.blocked || m.withdrawnAt) return send(res, 403, { ok: false, message: "이용이 중지된 계정이에요. 고객센터로 문의해 주세요." });
+  if (m.demo && (await demoOff())) return send(res, 403, { ok: false, message: "체험 계정은 지금 쉬고 있어요. 이메일로 회원가입해 주세요." });
   await store.rlClear(["vem:" + email]);
   const next = await V.update(V.K.member(m.id), (cur) => cur && Object.assign(cur, { lastLoginAt: Date.now(), loginN: (cur.loginN || 0) + 1 }));
   V.login(req, res, m.id);
@@ -50,6 +53,7 @@ async function login(req, res, b, ip) {
 async function changePw(req, res, b) {
   const m = await V.current(req); if (!m) return send(res, 401, { ok: false, message: "로그인이 필요해요." });
   if (!m.pwHash) return send(res, 400, { ok: false, message: "카카오로 가입한 계정은 비밀번호가 없어요." });
+  if (m.demo) return send(res, 403, { ok: false, message: "체험 계정은 비밀번호를 바꿀 수 없어요." });
   if (await store.rlCheck(["vpw:" + m.id], 8)) return send(res, 429, { ok: false, message: "여러 번 틀려서 15분 동안 잠시 막았어요." });
   if (!V.checkPw(String(b.pw0 || ""), m.pwHash)) { await store.rlFail(["vpw:" + m.id]); return send(res, 401, { ok: false, message: "지금 비밀번호가 맞지 않아요." }); }
   if (!pwOk(b.pw1)) return send(res, 400, { ok: false, message: "새 비밀번호는 영문과 숫자를 섞어 8자 이상으로 정해 주세요." });
@@ -59,6 +63,7 @@ async function changePw(req, res, b) {
 }
 async function withdraw(req, res, b) {
   const m = await V.current(req); if (!m) return send(res, 401, { ok: false, message: "로그인이 필요해요." });
+  if (m.demo) return send(res, 403, { ok: false, message: "체험 계정은 탈퇴할 수 없어요." });
   if (m.pwHash && !V.checkPw(String(b.pw || ""), m.pwHash)) return send(res, 401, { ok: false, message: "비밀번호가 맞지 않아요." });
   if (m.kakaoId && process.env.KAKAO_ADMIN_KEY) { try { await kakao.unlink(m.kakaoId); } catch (e) { console.error("[vod-auth] kakao unlink", e.message); } }
   // 결제 · 환불 기록은 전자상거래법에 따라 5년 보관 — 회원 정보만 지우고 주문의 회원번호는 남겨요

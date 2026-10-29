@@ -6,13 +6,14 @@ const fs = require("fs"), path = require("path"), os = require("os"), crypto = r
 const ROOT = path.join(__dirname, ".."), TMP = fs.mkdtempSync(path.join(os.tmpdir(), "vodtest-"));
 fs.cpSync(path.join(ROOT, "api"), path.join(TMP, "class/api"), { recursive: true });
 fs.cpSync(path.join(ROOT, "data.js"), path.join(TMP, "class/data.js")); fs.cpSync(path.join(ROOT, "db.js"), path.join(TMP, "class/db.js"));
+fs.symlinkSync(path.join(ROOT, "..", "node_modules"), path.join(TMP, "node_modules"), "dir"); // 공식 SDK (저장소 맨 위 npm install)
 const WH = crypto.randomBytes(24).toString("base64");
 Object.assign(process.env, { CLASS_SQLITE: path.join(TMP, "t.db"), SESSION_SECRET: "test-session", VOD_SERVER_AUTH: "1", PORTONE_STORE_ID: "store-test", PORTONE_API_SECRET: "ps-test", PORTONE_CHANNEL_CARD: "channel-key-card", PORTONE_CHANNEL_KAKAOPAY: "channel-key-kp", PORTONE_WEBHOOK_SECRET: "whsec_" + WH, KAKAO_REST_KEY: "rest-test", KAKAO_CLIENT_SECRET: "cs-test", KAKAO_REDIRECT_URI: "https://www.doogoclass.com/api/vod-kakao", KAKAO_ADMIN_KEY: "admin-test" });
 const API = (n) => require(path.join(TMP, "class/api", n + ".js"));
 const auth = require(path.join(TMP, "class/api/_lib/auth.js"));
 
 // ---------- 가짜 외부 서버 ----------
-const PG = {}, calls = [];
+const PG = {}, calls = [], PAY = [], AI = { reqs: [], next: null };
 let kakaoUser = null;
 global.fetch = async (url, opt) => {
   opt = opt || {}; const u = new URL(url); calls.push(opt.method === "POST" ? "POST " + u.host + u.pathname : "GET " + u.host + u.pathname);
@@ -31,6 +32,13 @@ global.fetch = async (url, opt) => {
     if (u.pathname === "/v1/user/unlink") return J(200, { id: 1 });
   }
   if (u.host === "challenges.cloudflare.com") return J(200, { success: /ts=ok|response=ok/.test(opt.body) });
+  if (u.host === "api.anthropic.com") {
+    const h = opt.headers instanceof Headers ? Object.fromEntries(opt.headers.entries()) : opt.headers || {};
+    AI.reqs.push({ path: u.pathname, h, body: JSON.parse(opt.body || "{}") });
+    const n = AI.next || { status: 200, body: { id: "msg_t", type: "message", role: "assistant", content: [{ type: "text", text: "운송료는 1kg까지 $16이에요." }], stop_reason: "end_turn", usage: { input_tokens: 10, output_tokens: 5 } } };
+    return new Response(JSON.stringify(n.body), { status: n.status, headers: { "content-type": "application/json" } });
+  }
+  if (u.host === "api.payaction.app") { const h = opt.headers || {}; PAY.push({ path: u.pathname, body: JSON.parse(opt.body || "{}"), key: h["x-api-key"], mall: h["x-mall-id"] }); return J(200, h["x-api-key"] === "pa-key" ? { status: "success", response: {} } : { status: "error", response: { message: "bad key" } }); }
   return J(404, {});
 };
 // ---------- 가짜 요청 · 응답 ----------
@@ -324,6 +332,213 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
   useJar({});
   j = await boot();
   ok(!("contracts" in docOf(j, "meta")), "방문자: 강사 제출 서류(연락처 · 메모)는 안 보임");
+
+  console.log("13) 무통장 입금: 기수 계좌로 받기 · 입금자명 · 마스터 확인 · 자동 입금 확인");
+  const BK = require(path.join(TMP, "class/api/_lib/bank.js"));
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  j = await boot();
+  const mt = docOf(j, "meta");
+  mt.vod.settings = Object.assign({}, mt.vod.settings, { bank: "", account: "", holder: "" });
+  mt.billing = Object.assign({}, mt.billing || {}, { bank: "신한은행", account: "140-000-111111", holder: "(주)두고홀딩스" });
+  r = await sync([{ k: "meta", base: verOf(j, "meta"), put: mt }]);
+  ok(r.results && !r.results[0].error, "마스터: VOD 계좌는 비우고 기수 입금 계좌만", r);
+  useJar(jarB);
+  j = await boot();
+  const pst = docOf(j, "meta").vod.settings;
+  ok(pst.bank === "신한은행" && pst.account === "140-000-111111" && !("billing" in docOf(j, "meta")), "회원: 결제 화면에 기수 입금 계좌가 보임 (기수 정산 정보는 그대로 숨김)", pst);
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v6", kind: "course", plan: 365, method: "bank", depositor: "나 OO", buyer: { name: "나OO2" } } });
+  const b13 = r.json.no, amt13 = r.json.amount, o13 = r.json.orders && r.json.orders[0];
+  ok(r.json.ok && o13.depositor === "나OO" && o13.bankTo.account === "140-000-111111" && o13.dueAt > Date.now() + 2 * 864e5, "무통장 주문: 입금자명 · 안내 계좌 · 입금 기한이 주문에 남음", o13);
+  r = await call("vod-pay", { body: { action: "bankOk", no: b13 } });
+  ok(r.status === 403, "회원은 입금 확인 못 함", r.json);
+  // 자동 입금 확인: 이름이 다르면 맞추지 않고 남겨 둬요
+  let mr = await BK.match({ id: "dep-1", name: "김OO", amount: amt13, at: Date.now(), bank: "신한" });
+  ok(mr.ok && mr.st === "none", "입금자명이 다르면 자동 확인 안 함 (못 맞춘 입금으로 남김)", mr);
+  mr = await BK.match({ id: "dep-2", name: "나OO", amount: amt13 - 1000 });
+  ok(mr.st === "none", "금액이 다르면 자동 확인 안 함", mr);
+  mr = await BK.match({ id: "dep-3", name: "(나 OO)", amount: amt13 });
+  ok(mr.st === "ok" && mr.no === b13, "입금자명 · 금액이 맞으면 자동 입금 확인 (띄어쓰기 · 괄호 무시)", mr);
+  mr = await BK.match({ id: "dep-3", name: "나OO", amount: amt13 });
+  ok(mr.dup, "같은 입금 알림이 두 번 와도 한 번만", mr);
+  j = await boot();
+  pv = docOf(j, "meta").vod;
+  ok(docOf(j, "vo:" + b13).status === "paid" && docOf(j, "vo:" + b13).pg.okHow === "auto" && !pv.products.find((x) => x.id === "v6").locked, "자동 확인 → 결제 완료 · 바로 수강 열림", docOf(j, "vo:" + b13));
+  // 마스터: 못 맞춘 입금 보기 · 주문에 연결 · 입금 확인 버튼 · 취소
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v5", kind: "extend", method: "bank", depositor: "나OO" } });
+  const ext = r.json.ok ? r.json.no : "";
+  const pts0 = docOf(j, "vm:" + mB).points || 0;
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v6", kind: "course", plan: 180, method: "bank", points: Math.min(500, pts0) } });
+  const b14 = r.json.no;
+  j = await boot();
+  ok(docOf(j, "vm:" + mB).points === pts0 - Math.min(500, pts0), "무통장 주문: 쓴 포인트는 주문할 때 빠짐", docOf(j, "vm:" + mB).points);
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  r = await call("vod-pay", { body: { action: "bankLog" } });
+  ok(r.json.ok && r.json.recent.filter((e) => e.st === "none").length === 2 && r.json.recent.some((e) => e.st === "ok" && e.no === b13), "마스터: 최근 입금 알림 (자동 확인 1 · 못 맞춘 입금 2)", r.json.recent.map((e) => e.st));
+  if (ext) {
+    r = await call("vod-pay", { body: { action: "bankLink", id: "dep-1", no: ext } });
+    ok(r.ok !== false && r.json.ok, "마스터: 못 맞춘 입금을 주문에 연결 → 입금 확인", r.json);
+    r = await call("vod-pay", { body: { action: "bankLink", id: "dep-1", no: ext } });
+    ok(!r.json.ok, "이미 연결한 입금은 다시 연결 안 됨", r.json);
+  }
+  r = await call("vod-pay", { body: { action: "bankCancel", no: b14 } });
+  ok(r.json.ok, "마스터: 입금 전 주문 취소", r.json);
+  r = await call("vod-pay", { body: { action: "bankOk", no: b14 } });
+  ok(r.status === 409, "취소한 주문은 입금 확인 안 됨", r.json);
+  useJar(jarB);
+  j = await boot();
+  ok(docOf(j, "vo:" + b14).status === "canceled" && docOf(j, "vm:" + mB).points === pts0, "취소하면 쓴 포인트를 돌려받음", { st: docOf(j, "vo:" + b14).status, p: docOf(j, "vm:" + mB).points });
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v6", kind: "course", plan: 180, method: "bank", depositor: "나OO" } });
+  const b15 = r.json.no;
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  r = await call("vod-pay", { body: { action: "bankOk", no: b15 } });
+  const r2 = await call("vod-pay", { body: { action: "bankOk", no: b15 } });
+  ok(r.json.ok && r.json.orders.length === 1 && r2.json.ok && r2.json.already, "마스터 ‘입금 확인’ → 결제 완료 (두 번 눌러도 한 번만)", [r.json, r2.json]);
+  j = await boot();
+  ok(docOf(j, "vo:" + b15).status === "paid" && docOf(j, "vo:" + b15).pg.okHow === "manual", "입금 확인한 사람 · 방법이 주문에 남음", docOf(j, "vo:" + b15).pg);
+  // 계좌가 하나도 없으면 무통장도 막아요
+  const mt2 = docOf(j, "meta"); mt2.billing = Object.assign({}, mt2.billing, { bank: "", account: "" });
+  await sync([{ k: "meta", base: verOf(j, "meta"), put: mt2 }]);
+  useJar(jarB);
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v6", kind: "course", plan: 180, method: "bank" } });
+  ok(r.status === 409 && /계좌/.test(r.json.message), "받을 계좌가 없으면 무통장 주문 막기", r.json);
+
+  console.log("14) 체험 계정 vod@gmail.com (일회성 작업)");
+  const ran = await require(path.join(TMP, "class/api/_lib/init.js")).runPendingOps();
+  ok(ran.some((x) => x.id === "2026-10-29-vod-demo-member" && x.ok), "배포 때 체험 계정 작업이 한 번 돌아요", ran.map((x) => x.id + ":" + x.ok));
+  useJar({});
+  r = await call("vod-auth", { body: { action: "login", email: "vod@gmail.com", pw: "vod" } });
+  ok(r.json.ok && r.json.member.email === "vod@gmail.com", "체험 계정 로그인", r.json);
+  j = await boot();
+  const dOrders = (j.docs || []).filter((d) => /^vo:/.test(d[0])).map((d) => d[1]);
+  ok(dOrders.length === 6 && dOrders.every((o) => o.status === "paid" && o.amount === 0 && o.demo) && j.me.vod && docOf(j, "meta").vod.products.find((x) => x.id === "v5") && !docOf(j, "meta").vod.products.find((x) => x.id === "v5").locked, "산 강의 6개 (0원 체험 주문) · 강의 열림", dOrders.map((o) => o.pid));
+  ok(!((docOf(j, "vstat") || {}).sold || {}).v4, "체험 주문은 수강생 수에 안 잡혀요", docOf(j, "vstat"));
+  r = await call("vod-auth", { body: { action: "pw", pw0: "vod", pw1: "abcd12345" } });
+  ok(r.status === 403, "체험 계정 비밀번호는 못 바꿔요", r.json);
+  r = await call("vod-auth", { body: { action: "withdraw", pw: "vod" } });
+  ok(r.status === 403, "체험 계정은 탈퇴 못 해요", r.json);
+  const ran2 = await require(path.join(TMP, "class/api/_lib/init.js")).runPendingOps();
+  ok(!ran2.length, "다음 배포 때는 다시 돌지 않아요", ran2);
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  j = await boot();
+  const mt3 = docOf(j, "meta"); mt3.vod.settings.demoLogin = false;
+  await sync([{ k: "meta", base: verOf(j, "meta"), put: mt3 }]);
+  useJar({});
+  r = await call("vod-auth", { body: { action: "login", email: "vod@gmail.com", pw: "vod" } });
+  ok(r.status === 403 && /쉬고/.test(r.json.message), "마스터가 체험 계정을 끄면 로그인 막힘", r.json);
+
+  console.log("15) 자동 입금 확인 (페이액션 웹훅)");
+  Object.assign(process.env, { PAYACTION_API_KEY: "pa-key", PAYACTION_MALL_ID: "mall-1", PAYACTION_WEBHOOK_KEY: "wh-key-123" });
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  j = await boot();
+  const mt4 = docOf(j, "meta"); mt4.vod.settings = Object.assign({}, mt4.vod.settings, { bank: "국민은행", account: "123-456", holder: "(주)두고홀딩스" });
+  await sync([{ k: "meta", base: verOf(j, "meta"), put: mt4 }]);
+  r = await call("vod-config", { method: "GET" });
+  ok(r.json.cfg.bankAuto === true && !JSON.stringify(r.json).includes("pa-key") && !JSON.stringify(r.json).includes("wh-key"), "config: 자동 입금 확인 켜짐 (키는 안 보냄)", r.json.cfg);
+  useJar(jarB);
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v6", kind: "course", plan: 365, method: "bank", depositor: "나OO" } });
+  const b16 = r.json.no, reg = PAY.find((x) => x.path === "/order" && x.body.order_number === b16);
+  ok(r.json.ok && reg && reg.body.order_amount === r.json.amount && reg.body.billing_name === "나OO" && reg.mall === "mall-1" && /\+09:00$/.test(reg.body.order_date), "무통장 주문 → 페이액션에 주문 등록 (입금자명 · 금액)", reg);
+  r = await call("vod-bank", { body: { order_number: b16, order_status: "매칭완료" }, headers: { "x-webhook-key": "nope" } });
+  ok(r.status === 401, "웹훅 키가 틀리면 거절", r.json);
+  r = await call("vod-bank", { body: { order_number: b16, order_status: "매칭완료", processing_date: "2026-10-29T03:00:00+09:00" }, headers: { "x-webhook-key": "wh-key-123" } });
+  ok(r.status === 200 && r.json.status === "success", "매칭완료 웹훅 → { status: success }", r.json);
+  r = await call("vod-bank", { body: { order_number: b16, order_status: "매칭완료" }, headers: { "x-api-key": "wh-key-123" } });
+  ok(r.json.status === "success", "같은 알림이 또 와도 success (한 번만 확인)", r.json);
+  j = await boot();
+  ok(docOf(j, "vo:" + b16).status === "paid" && docOf(j, "vo:" + b16).pg.via === "payaction", "새벽 입금도 자동으로 결제 완료 → 바로 수강", docOf(j, "vo:" + b16).pg);
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v6", kind: "course", plan: 180, method: "bank", depositor: "나OO" } });
+  const b17 = r.json.no;
+  r = await call("vod-pay", { body: { action: "cancelPending", no: b17 } });
+  ok(r.json.ok && PAY.some((x) => x.path === "/order-exclude" && x.body.order_number === b17), "입금 전 취소하면 페이액션 맞추기에서도 빼요", PAY.map((x) => x.path));
+  process.env.PAYACTION_API_KEY = "wrong";
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v6", kind: "course", plan: 180, method: "bank", depositor: "나OO" } });
+  j = await boot();
+  ok(r.json.ok && docOf(j, "vo:" + r.json.no).status === "pending" && docOf(j, "vo:" + r.json.no).pg.pa === "fail", "페이액션 등록이 실패해도 주문은 받고 표시만 (마스터가 직접 확인)", docOf(j, "vo:" + r.json.no).pg);
+  ["PAYACTION_API_KEY", "PAYACTION_MALL_ID", "PAYACTION_WEBHOOK_KEY"].forEach((k) => delete process.env[k]);
+
+  console.log("16) 계정 보안 · 파트너 · 운영자 로그인");
+  process.env.MASTER_PASSWORD = "Test-master9@";
+  useJar({});
+  r = await call("auth", { body: { action: "admin", tab: "master", id: "DOOGOBIZ", pw: "Test-master9@" } });
+  ok(r.json.ok && r.json.role === "master", "마스터: doogobiz + 환경변수 비밀번호 (대소문자 무관 아이디)", r.json);
+  useJar({});
+  r = await call("auth", { body: { action: "admin", tab: "master", id: "doogobiz", pw: "wrong" } });
+  ok(r.json.error === "notfound", "마스터: 비밀번호가 틀리면 거절", r.json);
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  j = await boot();
+  const mt5 = docOf(j, "meta");
+  Object.assign(mt5, { staff: [{ id: "st1", name: "매니저", loginId: "mgr", pw: "mgr-pw1", status: "active", perms: ["master/vod"] }, { id: "st2", name: "멈춘", loginId: "old", pw: "old-pw1", status: "paused" }],
+    affiliates: [{ id: "aff-t", name: "테스트파트너", loginId: "ptest", pw: "pt-pw1", status: "active", rs: 20, instructors: [{ iid: "moon", rs: null }] }, { id: "aff-x", name: "다른파트너", loginId: "other", pw: "ot-pw1", status: "active", instructors: [] }],
+    affPayouts: { "aff-t:2026-09": { paidAt: "2026-10-10" }, "aff-x:2026-09": { paidAt: "2026-10-10" } }, affSettings: { rs: 20, payDay: 10 }, adminLog: [{ at: 1, msg: "비밀 기록" }], contracts: { moon: { docs: { biz: { name: "문.pdf" } } }, choi: { docs: { biz: { name: "초이.pdf" } } } } });
+  await sync([{ k: "meta", base: verOf(j, "meta"), put: mt5 }]);
+  await sync([{ k: "bill:moon:b1", base: 0, put: { id: "b1", instructorId: "moon", cohortName: "5기", fee: 1000000, phone: "010-1111-2222", contactName: "문OO", masterMemo: "메모", requestedAt: Date.now(), paidAt: "2026-10-01" } }]);
+  useJar({});
+  j = await boot();
+  const pubM = docOf(j, "meta");
+  ok(!("staff" in pubM) && !("affiliates" in pubM) && !("affPayouts" in pubM) && !("adminLog" in pubM) && !("affSettings" in pubM) && !JSON.stringify(j).includes("pt-pw1") && !JSON.stringify(j).includes("mgr-pw1"), "방문자: 운영자 · 파트너 계정(비밀번호)과 지급 · 운영 기록이 안 보임", Object.keys(pubM));
+  useJar({ dc_a: auth.sign({ r: "instructor", iid: "choi" }) });
+  j = await boot();
+  const insM = docOf(j, "meta");
+  ok(!("staff" in insM) && !("affiliates" in insM) && Object.keys(insM.contracts || {}).join() === "choi", "강사: 운영자 · 파트너 계정은 안 보이고 서류는 자기 것만", { k: Object.keys(insM), c: Object.keys(insM.contracts || {}) });
+  useJar({});
+  r = await call("auth", { body: { action: "admin", tab: "partner", id: "ptest", pw: "nope" } });
+  ok(r.json.error === "notfound", "파트너: 비밀번호가 틀리면 거절", r.json);
+  r = await call("auth", { body: { action: "admin", tab: "partner", id: "PTEST", pw: "pt-pw1" } });
+  ok(r.json.ok && r.json.role === "partner" && r.json.pid === "aff-t", "파트너 로그인 (서버에서 확인)", r.json);
+  j = await boot();
+  const ptM = docOf(j, "meta"), bl = docOf(j, "bill:moon:b1");
+  ok(j.me.admin && j.me.admin.role === "partner" && ptM.affiliates.length === 1 && ptM.affiliates[0].id === "aff-t" && Object.keys(ptM.affPayouts).join() === "aff-t:2026-09" && !("staff" in ptM), "파트너: 내 계정 · 내 지급 기록만", { me: j.me.admin, a: ptM.affiliates.map((x) => x.id), p: Object.keys(ptM.affPayouts || {}) });
+  ok(bl && bl.fee === 1000000 && !bl.phone && !bl.contactName && !bl.masterMemo, "파트너: 연결된 강사의 이용료 신청은 금액만 (연락처 · 메모 빼고)", bl);
+  ptM.affiliates[0].bank = "카카오뱅크"; ptM.affiliates[0].rs = 99; ptM.affiliates[0].status = "active"; ptM.affiliates[0].instructors = [{ iid: "moon" }, { iid: "choi" }]; ptM.flags = { hacked: true };
+  await sync([{ k: "meta", base: verOf(j, "meta"), put: ptM }]);
+  await sync([{ k: "inq:pq1", base: 0, put: { name: "추천 강사", phone: "010-3333-4444", course: "쇼핑몰", affId: "aff-x", byPartner: true, status: "won", thread: [{ by: "master", text: "가짜", name: "x" }] } }]);
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  j = await boot();
+  const afT = docOf(j, "meta").affiliates.find((x) => x.id === "aff-t"), q1 = docOf(j, "inq:pq1");
+  ok(afT.bank === "카카오뱅크" && afT.rs === 20 && afT.instructors.length === 1 && !(docOf(j, "meta").flags || {}).hacked, "파트너: 계좌는 고쳐지고 RS · 담당 강사 · 다른 설정은 그대로", afT);
+  ok(q1 && q1.affId === "aff-t" && q1.status === "new" && q1.thread[0].by === "partner", "파트너 추천: 내 추천으로만 · 상태는 ‘새 문의’", q1);
+  useJar({});
+  r = await call("auth", { body: { action: "admin", tab: "master", id: "mgr", pw: "mgr-pw1" } });
+  ok(r.json.ok && r.json.role === "master" && r.json.staffId === "st1", "운영자 계정 로그인 (마스터 탭)", r.json);
+  j = await boot();
+  ok(j.me.admin && j.me.admin.staffId === "st1", "운영자 세션", j.me.admin);
+  useJar({});
+  r = await call("auth", { body: { action: "admin", tab: "master", id: "old", pw: "old-pw1" } });
+  ok(r.json.error === "paused-staff", "멈춘 운영자 계정은 거절", r.json);
+  delete process.env.MASTER_PASSWORD;
+
+  console.log("17) AI 조교 (문대표 학습 자료 + Claude)");
+  useJar({});
+  r = await call("ai-tutor", { body: { iid: "moon", q: "운송료 얼마예요?" } });
+  ok(r.status === 403, "AI 조교: 로그인 안 하면 못 써요", r.json);
+  useJar({ dc_a: auth.sign({ r: "instructor", iid: "choi" }) });
+  r = await call("ai-tutor", { body: { iid: "moon", q: "운송료 얼마예요?" } });
+  ok(r.status === 403, "AI 조교: 다른 강사는 문대표 조교를 못 써요", r.json);
+  useJar({ dc_s: auth.sign({ r: "student", sid: "s1", iid: "moon" }) });
+  r = await call("ai-tutor", { body: { iid: "moon", q: "1kg 넘으면 국제 운송료 얼마예요?" } });
+  ok(r.json.ok && r.json.src === "kb" && /\$16/.test(r.json.text) && !AI.reqs.length, "키가 없으면: 학습 자료에서 찾은 답 (운송료 $16)", r.json);
+  r = await call("ai-tutor", { body: { iid: "moon", q: "화성 날씨 알려줘" } });
+  ok(r.json.ok && r.json.src === "kb" && /1:1 요청/.test(r.json.text), "학습 자료에 없으면 지어내지 않고 1:1 요청 안내", r.json);
+  Object.assign(process.env, { ANTHROPIC_API_KEY: "sk-test", AI_TUTOR_MODEL: "tutor-test-model" });
+  r = await call("ai-tutor", { body: { iid: "moon", q: "운송료 얼마예요?", history: [{ from: "bot", text: "반가워요" }, { from: "me", text: "안녕" }, { from: "bot", text: "안녕하세요!" }, { from: "me", text: "질문 있어요" }] } });
+  const aq = AI.reqs[AI.reqs.length - 1] || { h: {}, body: {} }, sys = ((aq.body.system || [])[0]) || {};
+  ok(r.json.ok && r.json.src === "ai" && /\$16/.test(r.json.text), "키가 있으면 Claude가 답해요", r.json);
+  ok(aq.body.model === "tutor-test-model" && aq.body.fallbacks === "default" && /server-side-fallback-2026-07-01/.test(aq.h["anthropic-beta"] || "") && aq.body.output_config && aq.body.output_config.effort === "low", "모델은 환경 변수 · 거절 대비(fallbacks) · effort low", { m: aq.body.model, b: aq.h["anthropic-beta"], f: aq.body.fallbacks, o: aq.body.output_config });
+  ok(sys.cache_control && sys.cache_control.type === "ephemeral" && /06-0145-0847640-00/.test(sys.text) && /언더밸류/.test(sys.text) && /자주 묻는 질문/.test(sys.text), "시스템 프롬프트: 문대표 학습 자료 + 강의 FAQ + 법 지키는 규칙 (캐시)", (sys.text || "").length);
+  const ms = aq.body.messages || [];
+  ok(ms.length === 3 && ms[0].role === "user" && ms[1].role === "assistant" && ms[2].role === "user" && ms[2].content === "운송료 얼마예요?" && /질문 있어요/.test(ms[0].content) === false, "대화: 사용자부터 · 번갈아 · 마지막은 지금 질문", ms);
+  AI.next = { status: 200, body: { id: "msg_r", type: "message", role: "assistant", content: [], stop_reason: "refusal", usage: { input_tokens: 1, output_tokens: 0 } } };
+  r = await call("ai-tutor", { body: { iid: "moon", q: "운송료" } });
+  ok(r.json.ok && /답하기 어려워요/.test(r.json.text), "Claude가 거절하면 1:1 요청 안내", r.json);
+  AI.next = { status: 401, body: { type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } } };
+  const errLog = console.error; console.error = () => {};
+  r = await call("ai-tutor", { body: { iid: "moon", q: "국제 운송료 1kg 얼마예요?" } });
+  console.error = errLog;
+  ok(r.json.ok && r.json.src === "kb" && /\$16/.test(r.json.text), "키가 틀리면(401) 학습 자료 답으로", r.json);
+  AI.next = null; delete process.env.ANTHROPIC_API_KEY; delete process.env.AI_TUTOR_MODEL;
+  let n429 = 0;
+  for (let i = 0; i < 26; i++) { r = await call("ai-tutor", { body: { iid: "moon", q: "운송료" } }); if (r.status === 429) n429++; }
+  ok(n429 === 1 && r.status === 429, "한 사람당 15분에 30번까지", { n429, last: r.status });
 
   console.log("\n결과: " + pass + "개 통과 · " + failN + "개 실패");
   fs.rmSync(TMP, { recursive: true, force: true });

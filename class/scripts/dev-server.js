@@ -30,10 +30,13 @@ http.createServer(async (req, res) => {
   }
   let p = decodeURIComponent(u.pathname);
   if (p.endsWith("/")) p += "index.html";
+  // vercel.json 처럼: 점(.)이 없는 경로(/vod/p/v5 · /doinggo · /terms)는 화면(index.html)으로 — 깨끗한 주소 시험용
+  else if (!/\.[^/]*$/.test(p) && !fs.existsSync(path.join(ROOT, p))) p = "/index.html";
   const file = path.join(ROOT, p);
   if (!file.startsWith(ROOT) || /[\\/](api|scripts)[\\/]|[\\/]\./.test(path.relative(ROOT, file) ? "/" + path.relative(ROOT, file) : "")) { res.statusCode = 404; return res.end("not found"); }
   fs.readFile(file, (err, buf) => {
     if (err) { res.statusCode = 404; return res.end("not found"); }
+    if (p === "/index.html") buf = Buffer.from(require("./index-abs")(buf.toString("utf8"))); // 배포(site.js)와 같게
     res.setHeader("Content-Type", TYPES[path.extname(file)] || "application/octet-stream");
     res.end(buf);
   });

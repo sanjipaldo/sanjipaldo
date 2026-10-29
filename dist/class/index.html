@@ -2,6 +2,9 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
+  <!-- 정식 주소(www.doogoclass.com · *.vercel.app)는 ‘#’ 없는 주소(/vod · /doinggo · /terms …)를 써요 — route.js
+       어느 경로에서 열어도 그림 · 화면 파일을 맨 위(/)에서 찾게 <base> 를 둬요. 미리보기 · 정적 서버는 예전처럼 #주소 -->
+  <script>(function () { try { if (/(^|\.)doogoclass\.com$|\.vercel\.app$/i.test(location.hostname) || localStorage.getItem("dc:clean") === "1") { window.__dcClean = true; var b = document.createElement("base"); b.href = "/"; document.head.appendChild(b); } } catch (e) {} })();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#ffffff" />
   <!-- 검색 · 공유(SEO) — 제목 · 설명 · 공유 이미지(1200×630). 이미지를 바꾸면 ?v= 숫자도 바꿔야 카카오톡 · 페이스북이 새 이미지를 가져가요 -->
@@ -62,7 +65,8 @@
         <p>두고클래스에서 산 강의는 두잉고 강의실에서 봅니다. 진도율 · 학습 노트 · 수업 자료 · 업데이트 소식 · 24시간 AI 조교 · 1:1 코칭 질문까지 한 곳에서 이어집니다.</p>
         <h2>강사님이라면 — 두잉고</h2>
         <p>두잉고(<a href="https://www.doogoclass.com/doinggo">www.doogoclass.com/doinggo</a>)는 기수 · 주차 · 과제로 운영하는 강사님을 위한 강의 운영 시스템입니다. 강의 소개 페이지 · 무료강의 페이지 · 수강생 승인 · 과제 검수 · 수료증까지 강사센터에서 직접 운영합니다. 두고클래스에 VOD를 올리면 판매 · 정산도 강사센터에서 확인합니다.</p>
-        <p><a href="#/vod/c/all">클래스 둘러보기</a> · <a href="#/vod/login">두고클래스 로그인</a> · <a href="#/login">두잉고 수강생 로그인</a> · <a href="#/center">강사센터</a> · <a href="#/doinggo">두잉고 소개</a></p>
+        <p><a href="https://www.doogoclass.com/vod/c/all">클래스 둘러보기</a> · <a href="https://www.doogoclass.com/vod/login">두고클래스 로그인</a> · <a href="https://www.doogoclass.com/login">두잉고 수강생 로그인</a> · <a href="https://www.doogoclass.com/center">강사센터</a> · <a href="https://www.doogoclass.com/doinggo">두잉고 소개</a></p>
+        <p><a href="https://www.doogoclass.com/terms">이용약관</a> · <a href="https://www.doogoclass.com/privacy">개인정보처리방침</a> · <a href="https://www.doogoclass.com/refund">환불정책</a></p>
       </main>
       <footer>
         <p>(주)두고홀딩스 · 대표 문원오 · 사업자등록번호 726-87-03167 · 통신판매업 신고 제 2024-세종아름-0878 호</p>
@@ -72,6 +76,7 @@
   </div>
   <div id="modal-root"></div>
   <div id="toast-root" aria-live="polite"></div>
+  <script src="route.js"></script>
   <script src="files.js"></script>
   <script src="data.js"></script>
   <script src="db.js"></script>

@@ -290,6 +290,25 @@ function farmerToGodFarmer(get) {
   return { writes, result: Object.keys(result).length ? result : { skipped: "이미 바뀜" } };
 }
 
+/* ---------- 두고클래스 체험 계정 vod@gmail.com / vod (서버 회원 + 산 강의 몇 개) ----------
+ * 마스터가 VOD · 결제 · 강의실 흐름을 직접 확인하려고 만든 계정이에요. 주문은 0원 · demo 표시라 매출 · 수강생 수에는 안 잡혀요.
+ * 문대표 강의는 스토어에서 미노출이라 넣지 않아요. 마스터 › VOD 전시 · 쿠폰 · 설정에서 ‘체험 계정’을 끄면 로그인이 막혀요. */
+const DEMO_EMAIL = "vod@gmail.com";
+const DEMO_BUYS = [["v5", "챗GPT로 블로그 수익화, 하루 1시간 루틴"], ["v2", "AI로 그림 그리고 굿즈로 파는 법"], ["v3", "귤 하나로 월매출 10억, 농산물 온라인 판매 실전"], ["v4", "스마트스토어 상세페이지, 전환율 2배 만드는 구조"], ["v14", "중국 구매대행, 상품 찾기부터 첫 판매까지"], ["v11", "농산물 상세페이지 문장 템플릿 100"]];
+function vodDemoMember(get) {
+  if (get("vme:" + DEMO_EMAIL)) return { writes: {}, result: { skipped: "이미 있는 계정" } };
+  const V = require("./vod"), at = Date.now(), mid = "vm-demo-srv", writes = {}, nos = [];
+  const titles = {}; ((((get("meta") || {}).vod || {}).products) || []).forEach((p) => { if (p && p.id) titles[p.id] = p.title; });
+  DEMO_BUYS.forEach((b, i) => {
+    const no = "DC261029" + String(900 + i), ebook = b[0] === "v11";
+    nos.push(no);
+    writes["vo:" + no] = { id: "vo-" + no, no, kind: "course", days: ebook ? null : 365, mid, pid: b[0], title: titles[b[0]] || b[1], list: 0, sale: 0, amount: 0, method: "free", ch: "web", share: null, status: "paid", createdAt: at, at: at - (i + 1) * 36e5, paidAt: at - (i + 1) * 36e5, pg: { st: "free" }, demo: true, buyer: { name: "체험회원", phone: "" } };
+  });
+  writes["vm:" + mid] = { id: mid, via: "email", email: DEMO_EMAIL, name: "체험회원", phone: "010-0000-0000", pwHash: V.hashPw("vod"), demo: true, marketing: false, consent: { mkt: false, ch: [], night: false, at, log: [{ at, on: false, how: "체험 계정" }] }, src: { s: "direct", at }, kakaoCh: false, tags: ["체험 계정"], notes: [], createdAt: at, points: 5000, pointLog: [{ at, amt: 5000, why: "체험 계정 포인트" }], coupons: [], orderNos: nos, loginN: 0 };
+  writes["vme:" + DEMO_EMAIL] = { id: mid };
+  return { writes, result: { member: mid, orders: nos.length } };
+}
+
 /* 위에서부터 차례로 (앞 작업 결과를 뒤 작업이 본다) */
 const OPS = [
   { id: "2026-10-08-docs-guide-6", note: "문대표 서류 준비 가이드를 6단계로", run: docsGuideSix },
@@ -301,7 +320,8 @@ const OPS = [
   { id: "2026-10-13-menu-names-v15", note: "수강생 메뉴 이름 · AI 조교 이름 · 예전 메뉴 이름이 들어간 기본 문구를 새 이름으로 (기본값 그대로일 때만)", run: menuNamesV15 },
   { id: "2026-10-15-logic-to-bualnam", note: "강사 표시 이름 로직메이커 → 부알남 (로그인 이름은 그대로)", run: logicToBualnam },
   { id: "2026-10-16-food-quicklink-desc", note: "빠른 이동 두고푸드 설명 → 전문 식품 도매몰 · 사업자 전용가 (기본 문구일 때만)", run: foodQuickLinkDesc },
-  { id: "2026-10-17-farmer-to-godfarmer", note: "강사 표시 이름 황금농부 → 갓농부 + 강의 분야 ‘귤 단 하나 팔아 월매출 10억’ (로그인 이름은 그대로)", run: farmerToGodFarmer }
+  { id: "2026-10-17-farmer-to-godfarmer", note: "강사 표시 이름 황금농부 → 갓농부 + 강의 분야 ‘귤 단 하나 팔아 월매출 10억’ (로그인 이름은 그대로)", run: farmerToGodFarmer },
+  { id: "2026-10-29-vod-demo-member", note: "두고클래스 체험 계정 vod@gmail.com / vod + 산 강의 6개 (0원 체험 주문)", run: vodDemoMember }
 ];
 
-module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer };
+module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer, vodDemoMember };

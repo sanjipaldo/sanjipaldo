@@ -19,4 +19,7 @@ let n = 0;
     else if (e.isFile()) { fs.copyFileSync(from, to); n++; }
   });
 })(ROOT, OUT);
+// 첫 화면 파일의 CSS · JS · 그림 주소를 맨 위(/) 기준으로 (깨끗한 주소에서 바로 열어도 헛요청 없게)
+const IDX = path.join(OUT, "index.html");
+fs.writeFileSync(IDX, require("./index-abs")(fs.readFileSync(IDX, "utf8")));
 console.log("[site] 화면 파일 " + n + "개 → class/.site");

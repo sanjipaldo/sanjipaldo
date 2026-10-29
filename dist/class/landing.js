@@ -16,7 +16,7 @@
   const linkAttrs = (u) => (isExt(u) ? ' target="_blank" rel="noopener"' : "");
   const nl = (t) => esc(t || "").replace(/\n/g, "<br>");
 
-  function insIdFromHash() { return (location.hash.replace(/^#\/?(p|free)\/?/, "").split(/[/?]/)[0] || "").trim(); }
+  function insIdFromHash() { return (ROUTE.hash.replace(/^#\/?(p|free)\/?/, "").split(/[/?]/)[0] || "").trim(); }
 
   // 신청 버튼: 강사가 결제 페이지 주소를 넣었으면 그곳으로, 아니면 이 플랫폼의 수강 신청 창으로
   const applyHref = (url, id) => url || "#/login?ins=" + encodeURIComponent(id) + "&signup=1";
@@ -507,7 +507,7 @@
   function render() {
     window.applyStudentTheme(null);
     const id = insIdFromHash();
-    if (/^#\/free/.test(location.hash)) { if (id) renderFree(id); else { root.innerHTML = ""; location.hash = "#/p"; } return; }
+    if (/^#\/free/.test(ROUTE.hash)) { if (id) renderFree(id); else { root.innerHTML = ""; ROUTE.hash = "#/p"; } return; }
     if (id) renderPage(id); else renderIndex();
   }
   function mount() { root.innerHTML = ""; render(); window.scrollTo(0, 0); }

@@ -9,18 +9,18 @@
   // 저장하지 않은 편집이 있으면 화면을 옮기기 전에 한 번 묻기 (강사센터 페이지 편집기가 정해 둠)
   window.addEventListener("beforeunload", (e) => { if (window.__dirty && window.__dirty()) { e.preventDefault(); e.returnValue = ""; } });
   function go() {
-    if (window.__leaveGuard && !window.__leaveGuard(location.hash)) return;
-    let h = location.hash;
+    if (window.__leaveGuard && !window.__leaveGuard(ROUTE.hash)) return;
+    let h = ROUTE.hash;
     // 정식 서버가 /doinggo 주소를 이 화면으로 넘겨 주면(rewrite) 두잉고 소개로
     if (isRoot(h) && /^\/doinggo(\/|$)/.test(location.pathname)) h = "#/doinggo";
     // 예전 두잉고 소개 주소(#/about)는 #/doinggo 로
-    if (/^#\/about(\?|$)/.test(h)) { history.replaceState(null, "", location.pathname + location.search + "#/doinggo"); h = "#/doinggo"; }
+    if (/^#\/about(\?|$)/.test(h)) { ROUTE.replace("#/doinggo"); h = "#/doinggo"; }
     // 빈 해시(# · #/)는 대표 주소(/)로 깨끗하게
-    if (h === "#" || h === "#/") { history.replaceState(null, "", location.pathname + location.search); h = ""; }
+    if (h === "#" || h === "#/") { ROUTE.replace(""); h = ""; }
     // 서버가 /vod 주소를 이 화면으로 넘겨 주면 두고클래스 스토어로
     if (isRoot(h) && /^\/vod\/?$/.test(location.pathname)) h = "#/vod";
     // 대표 주소는 두고클래스 스토어가 먼저 (두고클래스가 메인 · 두잉고는 /doinggo)
-    const next = /^#\/center/.test(h) ? "admin" : isRoot(h) || /^#\/vod(\/|\?|$)/.test(h) ? "vod" : /^#\/(p|free)(\/|\?|$)/.test(h) ? "landing" : isDg(h) ? "home" : "student";
+    const next = /^#\/center/.test(h) ? "admin" : isRoot(h) || /^#\/(vod|terms|privacy|refund)(\/|\?|$)/.test(h) ? "vod" : /^#\/(p|free)(\/|\?|$)/.test(h) ? "landing" : isDg(h) ? "home" : "student";
     const changed = next !== mode;
     mode = next;
     document.body.dataset.mode = next;
@@ -41,7 +41,7 @@
     const ad = DB.session.admin();
     if (ad) {
       const a = me.admin;
-      const ok = a && a.role === ad.role && (a.role === "master" || (a.iid === ad.instructorId && (a.role !== "coach" || a.cid === ad.coachId)));
+      const ok = a && a.role === ad.role && (a.role === "master" ? (a.staffId || null) === (ad.staffId || null) : a.role === "partner" ? a.pid === ad.partnerId : a.iid === ad.instructorId && (a.role !== "coach" || a.cid === ad.coachId));
       if (!ok) DB.session.setAdmin(null);
     }
   }

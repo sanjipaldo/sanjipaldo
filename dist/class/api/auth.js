@@ -64,16 +64,43 @@ async function touchCoach(iid, cid) {
   }
 }
 
+/** 운영자(마스터가 만든 직원 계정) · 파트너 계정: meta 의 staff · affiliates (아이디 + 비밀번호) */
+async function accountLogin(req, res, tab, id, pw) {
+  const nameKey = "acc:" + koToKeys(id).toLowerCase();
+  if (await limited(req, nameKey)) return send(res, 429, { error: "locked" });
+  const meta = ((await store.getDoc("meta")) || {}).v || {}, n = (v) => koToKeys(String(v || "").replace(/\s+/g, "")).toLowerCase(), want = n(id);
+  const same = (x) => typeof x.pw === "string" && x.pw && eq(koToKeys(pw), koToKeys(String(x.pw).trim()));
+  if (tab === "master") {
+    const st = (meta.staff || []).find((x) => x && n(x.loginId) === want && same(x));
+    if (st) {
+      if (st.status !== "active") return send(res, 200, { error: "paused-staff" });
+      await store.rlClear([nameKey]);
+      auth.setCookie(req, res, "admin", auth.sign({ r: "master", staffId: st.id }));
+      return send(res, 200, { ok: true, role: "master", staffId: st.id, name: st.name || "" });
+    }
+  }
+  const pt = (meta.affiliates || []).find((x) => x && (n(x.loginId) === want || n(x.name) === want) && same(x));
+  if (pt) {
+    if (pt.status !== "active") return send(res, 200, { error: "paused-partner" });
+    await store.rlClear([nameKey]);
+    auth.setCookie(req, res, "admin", auth.sign({ r: "partner", pid: pt.id }));
+    return send(res, 200, { ok: true, role: "partner", pid: pt.id, name: pt.name || "" });
+  }
+  await fail(req, nameKey);
+  return send(res, 200, { error: "notfound" });
+}
 async function adminLogin(req, res, b) {
   const tab = String(b.tab || "instructor"), id = String(b.id || "").trim(), pw = String(b.pw || "").trim();
+  if (tab === "partner") return accountLogin(req, res, tab, id, pw);
   if (tab === "master") {
+    // 마스터 아이디는 MASTER_ID(없으면 doogobiz, 대소문자 무관), 비밀번호는 Vercel 환경변수 MASTER_PASSWORD — 코드에는 비밀번호를 두지 않는다
+    const wantId = String(process.env.MASTER_ID || "doogobiz").trim().toLowerCase();
+    if (koToKeys(id).toLowerCase() !== wantId) return accountLogin(req, res, tab, id, pw);
     const nameKey = "master";
     if (await limited(req, nameKey)) return send(res, 429, { error: "locked" });
-    // 마스터 아이디는 MASTER_ID(없으면 doogobiz, 대소문자 무관), 비밀번호는 Vercel 환경변수 MASTER_PASSWORD — 코드에는 비밀번호를 두지 않는다
     const want = process.env.MASTER_PASSWORD;
     if (!want) return send(res, 200, { error: "master-disabled" });
-    const wantId = String(process.env.MASTER_ID || "doogobiz").trim().toLowerCase();
-    if (koToKeys(id).toLowerCase() !== wantId || !eq(koToKeys(pw), koToKeys(want))) { await fail(req, nameKey); return send(res, 200, { error: "notfound" }); }
+    if (!eq(koToKeys(pw), koToKeys(want))) { await fail(req, nameKey); return send(res, 200, { error: "notfound" }); }
     await store.rlClear([nameKey]);
     auth.setCookie(req, res, "admin", auth.sign({ r: "master" }));
     return send(res, 200, { ok: true, role: "master" });
