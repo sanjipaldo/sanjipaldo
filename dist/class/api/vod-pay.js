@@ -109,12 +109,16 @@ async function prepare(res, m, b) {
   // 입금자명: 자동 입금 확인이 이 이름 + 금액으로 주문을 찾아요 (비우면 주문자 이름)
   const depositor = bank ? String(b.depositor || (b.buyer && b.buyer.name) || m.name || "").replace(/\s+/g, "").slice(0, 20) : "";
   if (bank && !depositor) return fail(res, 400, "입금자명을 적어 주세요.");
+  // 현금영수증 (무통장만): 소득공제용 휴대폰 번호 · 지출증빙용 사업자등록번호 — 입금 확인 뒤 마스터가 발급해요
+  const cr = bank && b.cashRcpt && typeof b.cashRcpt === "object" ? b.cashRcpt : null, crNo = cr ? String(cr.no || "").replace(/[^0-9]/g, "") : "";
+  if (cr && !((cr.type === "p" && /^01[016789]\d{7,8}$/.test(crNo)) || (cr.type === "b" && /^\d{10}$/.test(crNo)))) return fail(res, 400, cr.type === "b" ? "사업자등록번호 10자리를 확인해 주세요." : "현금영수증 휴대폰 번호를 확인해 주세요.");
   const paymentId = "pay_" + Date.now().toString(36) + V.uid("_").slice(1), at = Date.now(), nos = [];
   const buyer = b.buyer && typeof b.buyer === "object" ? { name: String(b.buyer.name || m.name || "").slice(0, 20), phone: String(b.buyer.phone || m.phone || "").replace(/\s/g, "").slice(0, 14) } : null;
   for (let i = 0; i < q.items.length; i++) {
     let no = V.newNo(); const it = q.items[i];
     const ch = ["web", "ins", "ad"].indexOf(b.ch) >= 0 ? b.ch : "web";
     const o = Object.assign({ id: "", no, mid: m.id, method: q.total > 0 ? method.slice(0, 12) : q.points ? "point" : "free", status: bank ? "pending" : "ready", createdAt: at, at, paymentId, ch }, it, i ? { grp: nos[0] } : {}, buyer ? { buyer } : {}, bank ? { pg: { st: "bank" }, depositor, dueAt: at + bk.days * 864e5, bankTo: { bank: bk.bank, account: bk.account, holder: bk.holder } } : {});
+    if (i === 0 && cr) o.cashRcpt = { type: cr.type, no: crNo };
     if (i === 0 && it.kind === "tea" && b.tea && typeof b.tea === "object") o.tea = { d1: String(b.tea.d1 || "").slice(0, 10), d2: String(b.tea.d2 || "").slice(0, 10), slot: String(b.tea.slot || "").slice(0, 30), mode: "online", topic: String(b.tea.topic || "").slice(0, 500), st: "req" };
     // id: 마스터 화면이 주문을 찾는 칸 (주문 번호와 같게)
     for (let t = 0; t < 4 && !(await V.create(V.K.order(no), Object.assign(o, { id: "vo-" + no, no }))); t++) no = V.newNo();

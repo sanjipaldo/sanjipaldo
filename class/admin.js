@@ -420,7 +420,7 @@
   const vdIqOpen = () => (VD().inquiries || []).filter((x) => !x.answer).length;
   const vdRecruitNew = () => DB.inquiries().filter((x) => (x.source === "doogoclass" || /^\[DOOGO CLASS/.test(x.where || "")) && (x.status || "new") === "new").length;
   const masterDcNavRaw = () => [
-    ["DOOGO CLASS 운영", [["master/dc", "DOOGO CLASS 대시보드", "grid"], ["master/vod", "주문 · 결제", "coins", vdPending() || ""], ["master/vod-ship", "종이책 배송 관리", "truck", vdShipTodo() || ""], ["master/vod-refund", "환불 · 취소 관리", "refresh", (vdRefReqs().length + vdRefWait().length) || ""], ["master/vod-inquiries", "고객센터 1:1 문의", "headset", vdIqOpen() || ""], ["master/vod-members", "후기 · 다짐", "star"]]],
+    ["DOOGO CLASS 운영", [["master/dc", "DOOGO CLASS 대시보드", "grid"], ["master/vod", "주문 · 결제", "coins", vdPending() || ""], ["master/vod-ship", "종이책 주문 · 배송", "truck", vdShipTodo() || ""], ["master/vod-refund", "환불 · 취소 관리", "refresh", (vdRefReqs().length + vdRefWait().length) || ""], ["master/vod-inquiries", "고객센터 1:1 문의", "headset", vdIqOpen() || ""], ["master/vod-members", "후기 · 다짐", "star"]]],
     ["매출 · 정산", [["master/vod-sales", "매출 리포트", "activity"], ["master/vod-rank", "판매 순위", "trophy"], ["master/vod-ads", "광고비 · ROAS", "megaphone"], ["master/vod-settle", "강사 정산", "calculator", vdSettleTodo() || ""], ["master/vod-rates", "정산 비율 · 가격", "sliders"]]],
     ["회원 · CRM", [["master/vod-crm", "회원 DB", "users"], ["master/vod-seg", "세그먼트", "target"], ["master/vod-msg", "메시지 · 자동화", "send"], ["master/vod-crm-rp", "회원 분석", "activity"]]],
     ["클래스 · 전시", [["master/vod-classes", "VOD 클래스 관리", "monitorPlay"], ["master/vod-display", "전시 · 쿠폰 · 설정", "layers"]]],
@@ -2806,7 +2806,7 @@
   const vdSum = (list, f) => list.reduce((a, o) => a + (f ? f(o) : Math.round(o.amount * vdKeep(o))), 0);
   const vdPending = () => VD().orders.filter((o) => o.status === "pending" && o.method !== "vbank").length;
   // 환불 요청: 회원이 마이페이지에서 요청(refundReq 객체) · 강사가 TEA TIME 취소(숫자) → 마스터가 처리할 때까지 남아요
-  const vdRefReqs = () => VD().orders.filter((o) => o.status === "paid" && o.refundReq);
+  const vdRefReqs = () => VD().orders.filter((o) => o.status === "paid" && o.refundReq && !o.ship); // 종이책 취소 · 반품 · 교환은 ‘종이책 주문 · 배송’에서
   // 무통장 · 계좌로 돌려줘야 하는 환불 (마스터가 송금하고 ‘송금 완료’를 눌러야 끝나요)
   const vdRefWait = () => VD().orders.filter((o) => o.status === "refunded" && o.refundPay && o.refundPay.st === "wait");
   const vdSettleTodo = () => { try { return vdStmtKeys(vdYMadd(todayStr().slice(0, 7), -1)).filter((st) => ["ready", "confirmed", "invreq", "invoiced"].indexOf(vdStState(st).k) >= 0).length; } catch (e) { return 0; } };
@@ -2912,7 +2912,7 @@
           (grp.length ? row("함께 결제", grp.map((x) => '<span class="num">' + esc(x.no) + "</span> " + esc(X.optTxt(x) || x.title) + " " + won(x.amount)).join("<br>")) : "") + "</table></section>" +
         '<section><h4>금액</h4><table class="od-t">' + (o.list ? row("정가", won(o.list)) : "") + row("판매가", won(X.baseOf(o))) + (o.couponOff ? row("쿠폰", "- " + won(o.couponOff) + (o.couponName ? "<br><small>" + esc(o.couponName) + "</small>" : "")) : "") + (o.pointOff ? row("포인트", "- " + won(o.pointOff)) : "") + row("결제 금액", "<b>" + won(o.amount) + "</b>") +
           (sh != null ? row("정산", sh + "% · 강사 몫 " + won(vdInsAmt(o))) : "") + (o.amount > 0 && (o.status === "paid" || o.status === "refunded") ? row("PG 수수료 (추정)", won(vdFee(o))) : "") + "</table></section>" +
-        (o.ship ? '<section><h4>종이책 배송</h4><table class="od-t">' + row("배송 상태", pill((X.SHIP_ST[X.shipStOf(o)] || X.SHIP_ST.ready)[0], vsTone(X.shipStOf(o)))) + row("수량", (Number(o.qty) || 1) + "권") + row("배송비", o.shipFee ? won(o.shipFee) : "무료") + row("받는 분", esc(o.ship.name || "") + " · " + esc(o.ship.phone || "")) + row("주소", (o.ship.zip ? "(" + esc(o.ship.zip) + ") " : "") + esc((o.ship.addr1 || "") + " " + (o.ship.addr2 || ""))) + row("요청사항", esc(o.ship.memo || "")) + row("송장", o.ship.inv ? esc(o.ship.carrier || "") + ' <span class="num">' + esc(o.ship.inv) + "</span>" + (X.trackUrl(o) ? ' <a class="a-link" href="' + esc(X.trackUrl(o)) + '" target="_blank" rel="noopener">배송 조회</a>' : "") : "") + row("보낸 날", t(o.ship.shipAt)) + row("배송 완료", t(X.shipDoneAt(o)) + (X.shipStOf(o) === "done" && !o.ship.doneAt ? " (자동)" : "")) + "</table></section>" : "") +
+        (o.ship ? '<section><h4>종이책 배송</h4><table class="od-t">' + row("배송 상태", pill((X.SHIP_ST[X.shipStOf(o)] || X.SHIP_ST.ready)[0], vsTone(X.shipStOf(o)))) + row("수량", (Number(o.qty) || 1) + "권") + row("배송비", o.shipFee ? won(o.shipFee) : "무료") + row("받는 분", esc(o.ship.name || "") + " · " + esc(o.ship.phone || "")) + row("주소", (o.ship.zip ? "(" + esc(o.ship.zip) + ") " : "") + esc((o.ship.addr1 || "") + " " + (o.ship.addr2 || ""))) + row("요청사항", esc(o.ship.memo || "")) + row("송장", o.ship.inv ? esc(o.ship.carrier || "") + ' <span class="num">' + esc(o.ship.inv) + "</span>" + (X.trackUrl(o) ? ' <a class="a-link" href="' + esc(X.trackUrl(o)) + '" target="_blank" rel="noopener">배송 조회</a>' : "") : "") + row("보낸 날", t(o.ship.shipAt)) + row("배송 완료", t(X.shipDoneAt(o)) + (X.shipStOf(o) === "done" && !o.ship.doneAt ? " (자동)" : "")) + (X.claimOf(o) ? row("취소 · 반품 · 교환", pill(X.claimTxt(X.claimOf(o)), X.claimOf(o).st === "req" ? "bad" : "mute") + " " + esc(X.claimOf(o).why || "") + (X.claimOf(o).note ? "<br><small>반려 · " + esc(X.claimOf(o).note) + "</small>" : "")) : "") + (boCash(o) ? row("현금영수증", esc(boCash(o))) : "") + "</table></section>" : "") +
         '<section><h4>결제</h4><table class="od-t">' + row("결제수단", esc(VD_PAY[o.method] || o.method)) + row("결제 일시", t(o.paidAt)) + (pid ? row("포트원 결제 ID", '<span class="num od-id">' + esc(pid) + "</span>") : "") + (pg.txId ? row("거래 ID", '<span class="num od-id">' + esc(pg.txId) + "</span>") : "") +
           (pg.receiptUrl ? row("영수증", '<a class="a-link" href="' + esc(pg.receiptUrl) + '" target="_blank" rel="noopener">영수증 열기</a>') : "") +
           (o.method === "bank" ? row("입금자명", esc(vdDep(o))) + (o.bankTo ? row("입금 계좌", esc([o.bankTo.bank, o.bankTo.account, o.bankTo.holder].filter(Boolean).join(" "))) : "") + (o.status === "pending" ? row("입금 기한", t(vdDue(o))) : "") + (o.depositBy ? row("입금 확인", esc(o.depositBy)) : "") : "") +
@@ -3834,7 +3834,7 @@
     const coOpen = DB.data.instructors.reduce((a, ins) => a + DB.requests(ins.id).filter((x) => DB.isVodStudent(x.s) && !x.q.answer).length, 0), teaReq = X.teasOf(null, null).filter((o) => o.status === "paid" && (o.tea || {}).st === "req").length;
     const mix = [["180일 수강권", (o) => X.kindOf(o) === "course" && Number(o.days) === 180], ["365일 수강권", (o) => X.kindOf(o) === "course" && Number(o.days) === 365], ["3년 수강권", (o) => X.kindOf(o) === "course" && Number(o.days) === 1095], ["1년 연장권", (o) => X.kindOf(o) === "extend"], ["1:1 코칭권", (o) => X.kindOf(o) === "coach"], ["TEA TIME", (o) => X.kindOf(o) === "tea"]].map((x) => { const os = mon.filter(x[1]); return [x[0], os.length, vdSum(os)]; });
     const alarmN = v.products.filter((p) => p.status === "soon").reduce((s, p) => s + vdAlarmOf(p.id).length, 0);
-    const todo = [[pend.length, "입금 확인 대기", "무통장 주문 입금을 확인해 주세요", "#/center/master/vod"], [vdRefReqs().length, "환불 요청", "회원 · 강사가 요청한 환불을 처리해 주세요", "#/center/master/vod?of=refreq"], [alarmN, "오픈 알림 신청", "오픈 예정 클래스 알림 신청자에게 오픈 소식 · 쿠폰을 보내요", "#/center/master/vod-classes"], [coOpen, "답변 대기 1:1 코칭 질문", "강사별 코칭 질문 답변이 밀리지 않았는지 확인해요", "#/center/master/vod?tab=care"], [teaReq, "TEA TIME 일정 확정 대기", "강사가 희망 날짜를 보고 확정해야 해요", "#/center/master/vod?tab=care"], [iqOpen.length, "답변 대기 1:1 문의", "고객센터 문의에 답해 주세요", "#/center/master/vod-inquiries"], [rec, "새 강사 모집 지원", "DOOGO CLASS 강사 지원서를 확인해 주세요", "#/center/master/vod-recruit"], [v.products.filter((p) => p.status === "soon").length, "오픈 예정 클래스", "오픈 일정 · 알림 신청 수를 확인해요", "#/center/master/vod-classes"]];
+    const todo = [[pend.length, "입금 확인 대기", "무통장 주문 입금을 확인해 주세요", "#/center/master/vod"], [vdRefReqs().length, "환불 요청", "회원 · 강사가 요청한 환불을 처리해 주세요", "#/center/master/vod?of=refreq"], [vdShipAll().filter((o) => o.status === "paid" && ["ready", "prep"].indexOf(VX().shipStOf(o)) >= 0).length, "보낼 종이책", "신규 주문 · 배송 준비 중인 종이책을 보내 주세요", "#/center/master/vod-ship"], [vdShipAll().filter(boClaimOn).length, "종이책 취소 · 반품 · 교환", "회원 요청을 승인 · 환불 · 반려해 주세요", "#/center/master/vod-ship"], [alarmN, "오픈 알림 신청", "오픈 예정 클래스 알림 신청자에게 오픈 소식 · 쿠폰을 보내요", "#/center/master/vod-classes"], [coOpen, "답변 대기 1:1 코칭 질문", "강사별 코칭 질문 답변이 밀리지 않았는지 확인해요", "#/center/master/vod?tab=care"], [teaReq, "TEA TIME 일정 확정 대기", "강사가 희망 날짜를 보고 확정해야 해요", "#/center/master/vod?tab=care"], [iqOpen.length, "답변 대기 1:1 문의", "고객센터 문의에 답해 주세요", "#/center/master/vod-inquiries"], [rec, "새 강사 모집 지원", "DOOGO CLASS 강사 지원서를 확인해 주세요", "#/center/master/vod-recruit"], [v.products.filter((p) => p.status === "soon").length, "오픈 예정 클래스", "오픈 일정 · 알림 신청 수를 확인해요", "#/center/master/vod-classes"]];
     return head("DOOGO CLASS 대시보드", "VOD 스토어의 주문 · 매출 · 회원 · 1:1 문의를 한눈에 봐요. 두잉고(강사 플랫폼) 운영은 왼쪽 위 ‘두잉고’ 탭에서 해요.", vdStoreBtn("#/vod", "스토어 미리보기")) +
       '<div class="a-kpis">' +
         kpi("오늘 결제", todayO.length + "건", won(vdSum(todayO)), "#/center/master/vod", todayO.length ? "ok" : "") +
@@ -4024,11 +4024,31 @@
   const vdFaqMine = () => { const v = VD(); if (!Array.isArray(v.helpFaq) || !v.helpFaq.length) v.helpFaq = DB.clone(VX().HELP_FAQ_DEF); return v.helpFaq; };
   /** 환불 창 안내: 어떻게 돌려주는지 (포트원 결제 취소 · 가상계좌 계좌 환불 · 무통장 직접 송금) */
   function vdRefHow(o) {
-    const X = VX(), acct = (o.refundReq && o.refundReq.acct) || null;
+    const X = VX(), acct = (o.refundReq && o.refundReq.acct) || (o.claim && o.claim.acct) || null;
     if (vdPgReal(o) && o.method !== "vbank") return '<p class="vr-how ok">' + icon("shieldCheck", "xs") + " <span><b>포트원으로 바로 결제 취소돼요.</b> 포트원 사이트에 들어가지 않아도 돼요. 카드는 카드사에 따라 3~7영업일, 간편결제 · 계좌이체는 보통 바로 돌아가요.</span></p>";
     if (o.method === "vbank") return '<div class="vr-how">' + icon("coins", "xs") + " <span><b>가상계좌 결제는 회원 계좌로 돌려줘요.</b> " + (vdPgReal(o) ? "포트원이 아래 계좌로 환불해요 (영업일 1~2일 · PG 가상계좌 환불 서비스 필요)." : "아래 계좌로 직접 송금해 주세요.") + "</span></div>" + '<div class="a-field"><label>환불 계좌' + (acct ? " <small>(회원이 요청에 적은 계좌)</small>" : "") + "</label>" + X.acctFields(acct) + "</div>";
     if (o.method === "bank") return '<div class="vr-how">' + icon("coins", "xs") + " <span><b>무통장 입금은 아래 계좌로 직접 송금해 주세요.</b> 환불 처리 뒤 ‘환불 · 취소 관리 › 계좌 송금 대기’에서 송금 완료를 눌러요.</span></div>" + '<div class="a-field"><label>환불 계좌' + (acct ? " <small>(회원이 요청에 적은 계좌)</small>" : "") + "</label>" + X.acctFields(acct) + "</div>";
     return '<p class="vr-how">' + icon("alert", "xs") + " <span>결제(PG) 연결 전이라 환불 기록만 남아요. 실제 돈은 따로 돌려줘야 해요.</span></p>";
+  }
+  /** 종이책 환불 창: 취소 · 반품 요청이면 단순 변심 왕복 배송비를 뺀 금액을 추천해요 */
+  function vdBookRefund(o) {
+    const X = VX(), c = X.claimOf(o), st = X.shipStOf(o), fee = X.claimFee(o, c), sug = Math.max(0, o.amount - fee), k = c ? c.k : st === "ship" || st === "done" ? "return" : "cancel";
+    const WHY = ["주문 취소 (보내기 전)", "단순 변심 반품", "파손 · 파본", "잘못 보낸 책", "배송 사고 · 분실", "기타"], pre = k === "cancel" ? WHY[0] : /변심/.test((c && c.why) || "") ? WHY[1] : /파손|파본/.test((c && c.why) || "") ? WHY[2] : /잘못/.test((c && c.why) || "") ? WHY[3] : /오지|분실/.test((c && c.why) || "") ? WHY[4] : WHY[5];
+    openModal(k === "cancel" ? "주문 취소 · 환불" : "반품 환불", '<form id="vda-ref-form" class="a-form" data-id="' + esc(o.id) + '" novalidate><p>' + esc(o.title) + " · " + (Number(o.qty) || 1) + "권 · 결제 <b>" + won(o.amount) + "</b>" + (o.shipFee ? " (배송비 " + won(o.shipFee) + " 포함)" : "") + "</p>" +
+      '<p class="a-muted p-small">' + (c ? esc(X.claimTxt(c)) + " · " + esc(c.why || "") + (c.text ? " — " + esc(c.text) : "") + "<br>" : "") + (k === "cancel" ? "보내기 전 취소는 전액 환불해요." : fee ? "단순 변심 반품이라 왕복 배송비 " + won(fee) + "을 빼고 환불해요. 책이 돌아와 상태를 확인한 뒤 환불해 주세요." : "파손 · 파본 · 잘못 보낸 책 · 배송 사고는 전액 환불해요.") + "</p>" +
+      '<div class="a-form-row"><div class="a-field"><label for="vr-amt">환불 금액 (원)</label><input class="a-input" id="vr-amt" name="amt" type="number" min="0" max="' + o.amount + '" step="10" value="' + sug + '"><small class="a-muted">추천 ' + won(sug) + "</small></div>" +
+      '<div class="a-field"><label for="vr-why">환불 사유</label><select class="a-input" id="vr-why" name="why">' + WHY.map((w) => "<option" + (w === pre ? " selected" : "") + ">" + w + "</option>").join("") + "</select></div></div>" +
+      '<div class="a-field"><label for="vr-memo">메모 <small>(선택)</small></label><input class="a-input" id="vr-memo" name="memo" maxlength="120"' + (c ? ' value="' + esc(X.claimTxt(c) + " · " + (c.why || "")) + '"' : "") + "></div>" +
+      vdRefHow(o) + '<p class="a-error" id="vr-error"></p></form>',
+      btn("취소", "modal-close") + '<button class="a-btn a-btn-danger" type="submit" form="vda-ref-form">' + (vdPgReal(o) ? "포트원으로 환불하기" : o.method === "bank" ? "환불 처리 (송금 대기로)" : "환불 완료로 바꾸기") + "</button>", "md");
+  }
+  /** 반려: 요청을 claim(no)로 옮기고 사유를 남겨요 — 회원이 다시 요청할 수 있어요 */
+  function saveBoNo(f) {
+    const o = VD().orders.find((x) => x.id === f.dataset.id), X = VX(), c = o && X.claimOf(o); if (!c) { closeModal(); return; }
+    const note = [f.pre.value, f.note.value.trim()].filter(Boolean).join(" · ").slice(0, 160);
+    if (!note) { toast("반려 사유를 골라 주세요.", "warn"); return; }
+    o.claim = { k: c.k, st: "no", why: c.why, text: c.text, at: c.at, note, noAt: Date.now(), by: (staffMe() || {}).name || "마스터" }; delete o.refundReq;
+    commit("‘" + o.no + "’ " + X.CLAIM_K[c.k] + " 요청을 반려했어요. 회원 화면에 사유가 보여요.");
   }
   function saveVodRefund(f) {
     const v = VD(), o = v.orders.find((x) => x.id === f.dataset.id), amt = Math.round(Number(f.amt.value)), errEl = document.getElementById("vr-error");
@@ -4046,9 +4066,11 @@
       const done = (x) => !okNos || okNos.indexOf(x.no) >= 0;
       let extra = 0;
       if (done(o)) {
+        const cl0 = o.ship ? VX().claimOf(o) : null; // 환불로 바꾸기 전에 읽어요 (바꾼 뒤엔 요청이 안 보여요)
         if (o.tea) o.tea.st = "cancel";
         Object.assign(o, { status: "refunded", refundedAt: Date.now(), refundAmount: amt, refundKind: amt < o.amount ? "partial" : "master", refundWhy: f.why.value, refundMemo: f.memo.value.trim(), refundBy: by, pg: Object.assign({}, o.pg || {}, { st: real ? "done" : o.method === "bank" ? o.pg && o.pg.st || "bank" : "mock", at: Date.now() }) });
         if (amt === o.amount && VX().restoreOrder) VX().restoreOrder(o);
+        if (cl0) { o.claim = { k: cl0.k, st: "pick", why: cl0.why, text: cl0.text, at: cl0.at, okAt: (o.claim && o.claim.okAt) || Date.now(), by }; if (cl0.rinv) Object.assign(o.claim, { rinv: cl0.rinv, rcar: cl0.rcar }); if (cl0.acct) o.claim.acct = cl0.acct; }
         delete o.refundReq;
       }
       grp.filter(done).forEach((x) => { const ra = grpAmt(x); Object.assign(x, { status: "refunded", refundedAt: Date.now(), refundAmount: ra, refundWhy: "함께 결제한 강의 환불", refundBy: by }, real ? { pg: Object.assign({}, x.pg || {}, { st: "done", at: Date.now() }) } : {}); extra += ra; });
@@ -4758,7 +4780,7 @@
   /* ---------- VOD 버튼 · 입력 ---------- */
   document.addEventListener("click", (e) => {
     if (!isActive()) return;
-    const a = e.target.closest("[data-action^='vda-'], [data-action^='vc-'], [data-action^='fin-'], [data-action='rk-per'], [data-action='ad-ym']"); if (!a || a.disabled) return;
+    const a = e.target.closest("[data-action^='vda-'], [data-action^='vc-'], [data-action^='fin-'], [data-action^='bo-'], [data-action='rk-per'], [data-action='ad-ym']"); if (!a || a.disabled) return;
     const d = a.dataset, v = VD(), form = document.getElementById("vda-form");
     const O = () => v.orders.find((o) => o.id === d.id);
     const edit = (fn) => { vdSync(form); fn(ui.vdDraft); render(); };
@@ -4779,27 +4801,53 @@
       case "vc-day": ui.vcDay = d.d; { const y0 = window.scrollY; render(); window.scrollTo(0, y0); const el = document.querySelector(".vc-detail"); if (el && window.innerWidth < 720) el.scrollIntoView({ behavior: "smooth", block: "start" }); } break;
       case "vda-ym": ui.vdYM = vdYMadd(ui.vdYM || vdYMadd(todayStr().slice(0, 7), -1), Number(d.dir)); render(); break;
       case "vda-od": { e.preventDefault(); const o = O(); if (o) vdOrderModal(o); break; }
-      /* 종이책 배송 관리 */
-      case "vda-ship-tab": ui.vsTab = d.k; ui.vsEdit = ""; (ui.vsPick || new Set()).clear(); render(); break;
+      /* 종이책 주문 · 배송 */
+      case "vda-ship-tab": ui.vsTab = d.k; ui.vsEdit = ""; (ui.vsPick || new Set()).clear(); render(); { const on = document.querySelector(".bo-tabs button.on"); if (on && on.scrollIntoView) on.scrollIntoView({ inline: "center", block: "nearest" }); } break;
       case "vda-ship-pick": { const pk = ui.vsPick || (ui.vsPick = new Set()); if (pk.has(d.id)) pk.delete(d.id); else pk.add(d.id); render(); break; }
-      case "vda-ship-all": { const pk = ui.vsPick || (ui.vsPick = new Set()), X = VX(), todo = vdShipAll().filter((o) => o.status === "paid" && ["ready", "prep"].indexOf(X.shipStOf(o)) >= 0); if (todo.length && todo.every((o) => pk.has(o.id))) pk.clear(); else todo.forEach((o) => pk.add(o.id)); render(); break; }
-      case "vda-ship-prep": { const o = O(); if (!o || !o.ship || VX().shipStOf(o) !== "ready") break; Object.assign(o.ship, { st: "prep", prepAt: Date.now() }); commit("‘" + o.no + "’ 주문을 상품 준비 중으로 바꿨어요. 이제 회원이 바로 취소할 수 없고 취소 요청으로 받아요."); break; }
-      case "vda-ship-bprep": { const pk = ui.vsPick || new Set(), X = VX(), list = vdShipAll().filter((o) => pk.has(o.id) && o.status === "paid" && X.shipStOf(o) === "ready" && !o.refundReq); if (!list.length) { toast("상품 준비 중으로 바꿀 ‘결제 완료’ 주문을 골라 주세요.", "warn"); break; } list.forEach((o) => Object.assign(o.ship, { st: "prep", prepAt: Date.now() })); pk.clear(); commit(list.length + "건을 상품 준비 중으로 바꿨어요."); break; }
+      case "vda-ship-all": { const pk = ui.vsPick || (ui.vsPick = new Set()), tab = boTab(), list = vdShipAll().filter((o) => boIn(tab, o)); if (list.length && list.every((o) => pk.has(o.id))) pk.clear(); else list.forEach((o) => pk.add(o.id)); render(); break; }
+      case "vda-ship-prep": { const o = O(), X = VX(); if (!o || !o.ship || X.shipStOf(o) !== "ready") break; if (X.claimOf(o)) { toast("회원의 요청이 있어요. 아래 요청부터 처리해 주세요.", "warn"); break; } Object.assign(o.ship, { st: "prep", prepAt: Date.now() }); commit("‘" + o.no + "’ 주문을 배송 준비로 옮겼어요. 이제 회원은 바로 취소하지 못하고 취소 요청으로 받아요."); break; }
+      case "vda-ship-bprep": { const pk = ui.vsPick || new Set(), X = VX(), list = vdShipAll().filter((o) => pk.has(o.id) && o.status === "paid" && X.shipStOf(o) === "ready" && !X.claimOf(o)); if (!list.length) { toast("배송 준비로 옮길 ‘신규 주문’을 골라 주세요.", "warn"); break; } const at = Date.now(); list.forEach((o) => Object.assign(o.ship, { st: "prep", prepAt: at })); pk.clear(); commit(list.length + "건을 배송 준비로 옮겼어요."); break; }
       case "vda-ship-send": {
         const o = O(), X = VX(); if (!o || !o.ship || o.status !== "paid") break;
-        const st = X.shipStOf(o), car = document.querySelector('[data-ship-car="' + d.id + '"]'), inv = document.querySelector('[data-ship-inv="' + d.id + '"]'), no = inv ? inv.value.trim() : "";
-        if (o.refundReq) { toast("회원의 취소 · 반품 요청이 있어요. 환불 · 취소 관리에서 먼저 처리해 주세요.", "warn"); break; }
+        const st = X.shipStOf(o), c = X.claimOf(o), car = document.querySelector('[data-ship-car="' + d.id + '"]'), inv = document.querySelector('[data-ship-inv="' + d.id + '"]'), no = inv ? boInv(inv.value) : "";
+        if (c && c.st === "req") { toast("회원의 " + X.CLAIM_K[c.k] + " 요청이 있어요. 요청부터 처리해 주세요.", "warn"); break; }
         if (!vsInvOk(no)) { toast("송장 번호를 확인해 주세요 (숫자 · 영문 6~20자).", "warn"); if (inv) inv.focus(); break; }
         if (["ready", "prep", "ship"].indexOf(st) < 0) break;
-        Object.assign(o.ship, { st: st === "done" ? "done" : "ship", carrier: car ? car.value : X.shipSet().carrier, inv: no, prepAt: o.ship.prepAt || Date.now(), shipAt: st === "ship" && o.ship.shipAt ? o.ship.shipAt : Date.now(), by: (staffMe() || {}).name || "마스터" });
+        Object.assign(o.ship, { st: "ship", carrier: car ? car.value : X.shipSet().carrier, inv: no, prepAt: o.ship.prepAt || Date.now(), shipAt: st === "ship" && o.ship.shipAt ? o.ship.shipAt : Date.now(), by: (staffMe() || {}).name || "마스터" });
         ui.vsEdit = ""; (ui.vsPick || new Set()).delete(o.id);
         commit(st === "ship" ? "‘" + o.no + "’ 송장을 고쳤어요." : "‘" + o.no + "’ 주문을 보냈어요. 회원 마이페이지에 배송 조회가 열려요."); break;
       }
       case "vda-ship-edit": ui.vsEdit = d.id || ""; render(); break;
       case "vda-ship-done": { const o = O(); if (!o || !o.ship || VX().shipStOf(o) !== "ship") break; Object.assign(o.ship, { st: "done", doneAt: Date.now(), doneBy: (staffMe() || {}).name || "마스터" }); commit("‘" + o.no + "’ 주문을 배송 완료로 바꿨어요."); break; }
+      case "bo-bdone": { const pk = ui.vsPick || new Set(), X = VX(), list = vdShipAll().filter((o) => pk.has(o.id) && X.shipStOf(o) === "ship"); if (!list.length) break; const at = Date.now(), by = (staffMe() || {}).name || "마스터"; list.forEach((o) => Object.assign(o.ship, { st: "done", doneAt: at, doneBy: by })); pk.clear(); commit(list.length + "건을 배송 완료로 바꿨어요."); break; }
+      case "bo-bpaid": {
+        const pk = ui.vsPick || new Set(), list = vdShipAll().filter((o) => pk.has(o.id) && o.status === "pending" && o.method !== "vbank"); if (!list.length) { toast("입금을 확인할 주문을 골라 주세요.", "warn"); break; }
+        confirmModal("입금 확인 " + list.length + "건", list.map((o) => "<b>" + esc(vdDep(o)) + "</b> · " + won(vdGrpAmt(o)) + " · " + esc(o.no)).join("<br>") + "<br><br>통장에서 위 입금을 모두 확인했나요? 확인하면 ‘신규 주문’으로 넘어가요.", "입금 확인", false, () => {
+          pk.clear(); const nos = list.map((o) => o.grp || o.no);
+          if (vdSrv()) { vdBankAct("bankOk", nos, "입금 " + list.length + "건을 확인했어요. 신규 주문으로 넘어갔어요."); return; }
+          const at = Date.now(), by = (staffMe() || {}).name || "ADMIN"; list.forEach((o) => { Object.assign(o, { status: "paid", paidAt: at, depositBy: by }); if (o.share == null) o.share = vdShare(o); });
+          commit("입금 " + list.length + "건을 확인했어요. 신규 주문으로 넘어갔어요."); }); break; }
       case "vda-ship-copy": { const o = O(); if (!o || !o.ship) break; const t = [o.ship.name, o.ship.phone, (o.ship.zip ? "(" + o.ship.zip + ") " : "") + o.ship.addr1 + " " + (o.ship.addr2 || ""), o.ship.memo || ""].filter(Boolean).join(" / "); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("받는 분 · 주소를 복사했어요."), () => toast(t)); break; }
-      case "vda-ship-csv": { const pk = ui.vsPick || new Set(), X = VX(), tab = VS_TABS.find((x) => x[0] === ui.vsTab) || VS_TABS[0], list = vdShipAll().filter((o) => (pk.size ? pk.has(o.id) : tab[2](X.shipStOf(o), o))); if (list.length) vsCsv(list); break; }
+      case "vda-ship-csv": { const pk = ui.vsPick || new Set(), X = VX(), tab = boTab(), list = vdShipAll().filter((o) => boIn(tab, o) && (!pk.size || pk.has(o.id))).filter((o) => ["ready", "prep"].indexOf(X.shipStOf(o)) >= 0); if (list.length) vsCsv(list); else toast("택배 접수용으로 내려받을 신규 · 배송 준비 주문이 없어요.", "warn"); break; }
+      case "bo-xl-orders": { const pk = ui.vsPick || new Set(), tab = boTab(), list = vdShipAll().filter((o) => boIn(tab, o) && (!pk.size || pk.has(o.id))); if (list.length) boXlOrders(list); break; }
       case "vda-ship-bulk": vsBulkModal(); break;
+      case "bo-up-paste": { const f = document.getElementById("vda-shipbulk-form"); if (!f) break; ui.boRows = String(f.lines.value || "").split(/\n+/).map((l) => l.trim()).filter(Boolean).map((l) => l.split(/[\s,\t]+/)); boUpPreview(ui.boRows); break; }
+      case "bo-cash-done": { const o = O(); if (!o || !o.cashRcpt) break; o.cashRcpt.done = Date.now(); commit("‘" + o.no + "’ 현금영수증을 발급 완료로 표시했어요."); break; }
+      case "bo-cl-ok": {
+        const o = O(), X = VX(), c = o && X.claimOf(o); if (!c || c.st !== "req" || c.k === "cancel") break;
+        confirmModal(X.CLAIM_K[c.k] + " 승인", esc(o.no) + " · " + esc(c.why) + "<br>택배사에 <b>반품(회수) 접수</b>를 하면 기사님이 회원 주소에서 책을 가져와요." + (c.k === "exchange" ? "<br>책이 돌아오면 ‘교환 상품 보내기’로 새 송장을 넣어요." : "<br>책이 돌아와 상태를 확인하면 ‘책이 도착했어요 · 환불’을 눌러요." + (X.claimFee(o, c) ? " 단순 변심이라 왕복 배송비 " + won(X.claimFee(o, c)) + "을 빼고 환불해요." : "")), "승인 · 수거 요청", false, () => {
+          o.claim = { k: c.k, st: "pick", why: c.why, text: c.text, at: c.at, okAt: Date.now(), by: (staffMe() || {}).name || "마스터" }; if (c.acct) o.claim.acct = c.acct; delete o.refundReq;
+          commit("‘" + o.no + "’ " + X.CLAIM_K[c.k] + " 요청을 승인했어요. 회원 화면에 ‘수거 중’으로 보여요."); }); break; }
+      case "bo-cl-no": {
+        const o = O(), X = VX(), c = o && X.claimOf(o); if (!c || (c.st !== "req" && c.st !== "pick")) break;
+        openModal(X.CLAIM_K[c.k] + " 요청 반려", '<form id="bo-no-form" class="a-form" data-id="' + esc(o.id) + '" novalidate><p class="a-muted p-small">반려 사유는 회원 배송 조회 화면에 그대로 보여요.</p><div class="a-field"><label for="bo-no-t">반려 사유</label><select class="a-input" id="bo-no-t" name="pre"><option>이미 책을 보냈어요</option><option>반품 기간(받은 날부터 7일)이 지났어요</option><option>책을 사용해 다시 팔 수 없어요</option><option>요청한 내용과 책 상태가 달라요</option><option value="">직접 적기</option></select></div><div class="a-field"><input class="a-input" name="note" maxlength="120" placeholder="더 적을 말 (선택)"></div></form>', btn("취소", "modal-close") + '<button class="a-btn a-btn-danger" type="submit" form="bo-no-form">반려하기</button>'); break; }
+      case "bo-cl-rinv": { const o = O(), car = document.querySelector('[data-cl-car="' + d.id + '"]'), inv = document.querySelector('[data-cl-inv="' + d.id + '"]'); if (!o || !o.claim || o.claim.st !== "pick") break; const no = inv ? boInv(inv.value) : ""; if (no && !vsInvOk(no)) { toast("회수 송장 번호를 확인해 주세요.", "warn"); break; } Object.assign(o.claim, { rcar: car ? car.value : "", rinv: no }); commit(no ? "회수 송장을 저장했어요. 회원 화면에도 보여요." : "회수 송장을 지웠어요."); break; }
+      case "bo-cl-xsend": {
+        const o = O(), X = VX(); if (!o || !o.claim || o.claim.st !== "pick" || o.claim.k !== "exchange") break;
+        const car = document.querySelector('[data-ship-car="' + d.id + '"]'), inv = document.querySelector('[data-ship-inv="' + d.id + '"]'), no = inv ? boInv(inv.value) : "";
+        if (!vsInvOk(no)) { toast("교환 상품 송장 번호를 확인해 주세요.", "warn"); if (inv) inv.focus(); break; }
+        const at = Date.now(); Object.assign(o.claim, { st: "done", xAt: at, oinv: o.ship.inv || "", ocar: o.ship.carrier || "" }); Object.assign(o.ship, { st: "ship", carrier: car ? car.value : X.shipSet().carrier, inv: no, shipAt: at, doneAt: 0, by: (staffMe() || {}).name || "마스터" });
+        commit("‘" + o.no + "’ 교환 상품을 보냈어요. 회원 배송 조회에 새 송장이 보여요."); break; }
       case "vda-ship-save": {
         const f = document.getElementById("vda-ship-form"); if (!f) break; const n = (k, lo, hi, dv) => { const x = Math.round(Number(f[k].value)); return x >= lo && x <= hi ? x : dv; };
         v.settings.ship = { autoDays: n("autoDays", 1, 14, 3), outDays: n("outDays", 1, 14, 2), carrier: f.carrier.value, returnFee: n("returnFee", 0, 100000, 6000), returnAddr: f.returnAddr.value.trim().slice(0, 120) };
@@ -4808,9 +4856,10 @@
       case "vda-pginfo": { const o = O(); if (!o) break; const box = document.getElementById("od-pg"); if (box) box.innerHTML = '<p class="a-muted">포트원에 결제 상태를 물어보는 중…</p>';
         VX().payApi("pgInfo", { no: o.no }).then((r) => { const b = document.getElementById("od-pg"); if (!r || !r.ok) { if (b) b.innerHTML = '<p class="a-error">' + esc((r && r.message) || "조회하지 못했어요.") + "</p>"; return; } if (b) b.innerHTML = vdPgInfoHtml(r.pay); if (r.synced) DB.remote.refresh().then(() => { toast(r.synced); render(); }); }, () => { const b = document.getElementById("od-pg"); if (b) b.innerHTML = '<p class="a-error">서버에 닿지 못했어요.</p>'; }); break; }
       case "vda-rfsent": { const o = O(); if (!o || !o.refundPay || o.refundPay.st !== "wait") break; confirmModal("계좌 송금 완료", esc((vdMember(o.mid) || {}).name || "") + " 님께 <b>" + won(o.refundPay.amount || vdRefAmt(o)) + "</b>을<br>" + esc(vdAcctTxt(o.refundPay)) + " 계좌로 송금했나요?", "송금 완료", false, () => { Object.assign(o.refundPay, { st: "done", doneAt: Date.now(), by: (staffMe() || {}).name || "ADMIN" }); commit(o.no + " 환불 송금을 완료로 기록했어요."); }); break; }
-      case "vda-paid": { const o = O(); if (!o) break; if (o.method === "vbank") { toast("가상계좌는 회원이 입금하면 포트원이 알려 줘서 자동으로 확인돼요.", "warn"); break; } confirmModal("입금 확인", esc((vdMember(o.mid) || {}).name || "") + " 님 · " + esc(o.title) + "<br>입금자명 <b>" + esc(vdDep(o)) + "</b> · <b>" + won(vdGrpAmt(o)) + "</b> 입금을 확인했나요? 확인하면 바로 수강할 수 있어요.", "입금 확인", false, () => { if (vdSrv()) { vdBankAct("bankOk", o.grp || o.no, (o.grp || o.no) + " 입금을 확인했어요. 회원이 바로 수강할 수 있어요."); return; } o.status = "paid"; o.paidAt = Date.now(); o.depositBy = (staffMe() || {}).name || "ADMIN"; if (o.share == null) o.share = vdShare(o); v.orders.filter((x) => x.grp === o.no && x.status === "pending").forEach((x) => { x.status = "paid"; x.paidAt = o.paidAt; }); commit(o.no + " 입금을 확인했어요. 회원이 바로 수강할 수 있어요."); }); break; }
+      case "vda-paid": { const o = O(); if (!o) break; if (o.method === "vbank") { toast("가상계좌는 회원이 입금하면 포트원이 알려 줘서 자동으로 확인돼요.", "warn"); break; } confirmModal("입금 확인", esc((vdMember(o.mid) || {}).name || "") + " 님 · " + esc(o.title) + "<br>입금자명 <b>" + esc(vdDep(o)) + "</b> · <b>" + won(vdGrpAmt(o)) + "</b> 입금을 확인했나요? " + (o.ship ? "확인하면 ‘신규 주문’으로 넘어가요." : "확인하면 바로 수강할 수 있어요."), "입금 확인", false, () => { if (vdSrv()) { vdBankAct("bankOk", o.grp || o.no, (o.grp || o.no) + (o.ship ? " 입금을 확인했어요. 신규 주문으로 넘어갔어요." : " 입금을 확인했어요. 회원이 바로 수강할 수 있어요.")); return; } o.status = "paid"; o.paidAt = Date.now(); o.depositBy = (staffMe() || {}).name || "ADMIN"; if (o.share == null) o.share = vdShare(o); v.orders.filter((x) => x.grp === o.no && x.status === "pending").forEach((x) => { x.status = "paid"; x.paidAt = o.paidAt; }); commit(o.no + (o.ship ? " 입금을 확인했어요. 신규 주문으로 넘어갔어요." : " 입금을 확인했어요. 회원이 바로 수강할 수 있어요.")); }); break; }
       case "vda-cancel": { const o = O(); if (!o) break; confirmModal("주문 취소", esc(o.no) + " 주문을 취소할까요? (입금 기한이 지났을 때)" + (o.mcid || o.pointOff ? "<br>쓴 쿠폰 · 포인트는 회원에게 돌려줘요." : ""), "주문 취소", true, () => { if (vdSrv()) { vdBankAct("bankCancel", o.grp || o.no, (o.grp || o.no) + " 주문을 취소했어요. 쓴 쿠폰 · 포인트는 회원에게 돌려줬어요."); return; } if (VX().restoreOrder) VX().restoreOrder(o); if (o.tea) o.tea.st = "cancel"; Object.assign(o, { status: "canceled", canceledAt: Date.now(), canceledBy: (S && (S.name || S.role)) || "master" }); v.orders.filter((x) => x.grp === o.no && x.status === "pending").forEach((x) => { if (VX().restoreOrder) VX().restoreOrder(x); Object.assign(x, { status: "canceled", canceledAt: Date.now() }); }); commit(o.no + " 주문을 취소했어요. 주문 내역에 ‘취소’로 남아요."); }); break; }
-      case "vda-refund": { const X = VX(), o = O(); if (!o) break; const done = X.usedOf ? X.usedOf(o.mid, o.pid) : 0, days = Math.floor((Date.now() - o.paidAt) / 864e5), k = X.kindOf(o), rf = X.rfSet ? X.rfSet() : { days: 7, maxUsed: 0 }, inRule = days < rf.days && done <= rf.maxUsed;
+      case "bo-cl-refund":
+      case "vda-refund": { const X = VX(), o = O(); if (!o) break; if (o.ship) { vdBookRefund(o); break; } const done = X.usedOf ? X.usedOf(o.mid, o.pid) : 0, days = Math.floor((Date.now() - o.paidAt) / 864e5), k = X.kindOf(o), rf = X.rfSet ? X.rfSet() : { days: 7, maxUsed: 0 }, inRule = days < rf.days && done <= rf.maxUsed;
         const cu = o.coach ? Number(o.coach.used) || 0 : 0, cl = o.coach ? Math.max(0, (Number(o.coach.n) || 0) - cu) : 0, per = o.coach && o.coach.n ? Math.round(o.amount / o.coach.n) : 0;
         const why = k === "coach" ? "코칭권 " + o.coach.n + "회 중 " + cu + "회 사용 · 결제 " + days + "일째 · " + (!cu && days <= 7 ? "전액 환불 대상이에요." : "남은 " + cl + "회 × 1회 " + won(per) + " = " + won(cl * per) + " 환불 대상이에요.") + "<br>환불하면 남은 코칭권이 바로 사라져요."
           : k === "tea" ? "TEA TIME · " + esc((X.TEA_ST[(o.tea || {}).st] || ["확정 대기"])[0]) + (o.tea && o.tea.when ? " · " + esc(X.teaWhen(o.tea)) : "") + "<br>확정 전 · 3일 전까지 전액, 1~2일 전 50%, 당일 · 불참은 환불 불가예요. 환불하면 신청이 취소돼요."
@@ -4925,6 +4974,12 @@
       case "vda-ban-move": { const i = Number(d.i), j = i + Number(d.dir); if (j < 0 || j >= v.banners.length) break; const t = v.banners[i]; v.banners[i] = v.banners[j]; v.banners[j] = t; commit("배너 순서를 바꿨어요."); break; }
       case "vda-ban-del": confirmModal("배너 지우기", "이 배너를 지울까요?", "지우기", true, () => { v.banners.splice(Number(d.i), 1); commit("배너를 지웠어요."); }); break;
     }
+  });
+  // 송장 엑셀 올리기: 파일을 읽어 미리보기 · 택배사를 바꾸면 다시 맞춰요
+  document.addEventListener("change", (e) => {
+    const t = e.target; if (!isActive() || !t.closest || !t.closest("#vda-shipbulk-form")) return;
+    if (t.matches("[data-bo-file]") && t.files && t.files[0]) { const err = document.getElementById("vsb-err"), lab = t.closest(".bo-drop"); if (lab) lab.querySelector("b").textContent = t.files[0].name; XL.read(t.files[0]).then((rows) => { ui.boRows = rows; boUpPreview(rows); }, (er) => { if (err) err.textContent = String((er && er.message) || "파일을 읽지 못했어요."); }); }
+    else if (t.name === "carrier" && ui.boRows) boUpPreview(ui.boRows);
   });
   document.addEventListener("change", (e) => { if (isActive() && e.target.matches("[data-vda-img]")) vdImg(e.target); if (isActive() && e.target.matches("[data-vda-dimg]")) vdDimgAdd(e.target); if (isActive() && e.target.matches("[data-vda-pdf]")) vdPdf(e.target); });
   /** 전자책 PDF 올리기: 정식 서버는 그 클래스를 산 회원만 받는 파일(vodp:클래스)로, 시안은 이 브라우저에 — 주소를 ‘내려받기 파일 주소’ 칸에 넣어요 */
@@ -5439,84 +5494,248 @@
   const RF_KIND = { instant: ["회원 바로 취소", "ok"], partial: ["부분 환불", "warn"], master: ["마스터 환불", "info"] };
   const rfKindOf = (o) => (o.refundKind ? o.refundKind : o.refundAmount != null && o.refundAmount < o.amount ? "partial" : "master");
   const rfPg = (o) => (o.refundPay ? (o.refundPay.st === "done" ? pill("계좌 송금 완료", "ok") : pill("계좌 송금 대기", "warn")) : o.method === "bank" ? pill("계좌 환불 · 기록만", "mute") : !o.pg ? pill("수동 처리", "mute") : o.pg.st === "done" || (o.pg.cancel && o.pg.cancel.id) ? pill(o.method === "vbank" ? "가상계좌 환불 완료" : "포트원 취소 완료", "ok") : o.pg.st === "fail" ? pill("포트원 취소 실패", "bad") : pill("시안 · 실제 취소 없음", "mute"));
-  /* ---------- 종이책 배송 관리 ----------
-   * 결제 완료 → 상품 준비 중 → 배송 중(택배사 + 송장 번호) → 배송 완료(직접 누르거나, 보낸 뒤 정한 날이 지나면 자동)
+  /* ---------- 종이책 주문 · 배송 관리 ----------
+   * 입금 대기(무통장) → 신규 주문(결제 완료) → 배송 준비(발주 확인) → 배송 중(택배사 + 송장) → 배송 완료(직접 누르거나, 보낸 뒤 정한 날이 지나면 자동)
+   * 취소 · 반품 · 교환: 회원 요청 → 승인(수거 중) → 환불(반품 · 취소) 또는 교환 상품 발송 · 반려 (교보문고처럼 책이 돌아와 확인한 뒤 환불)
+   * 엑셀: 주문 목록 · 택배 접수용(.xlsx) 내려받기 → 택배사에서 받은 송장 파일(.xlsx · .csv)을 올리면 주문번호로 맞춰 한 번에 발송 처리
    * 바꾼 상태 · 송장은 회원 마이페이지 › 종이책 · 배송 조회에 바로 보여요 (정식 서버는 주문 문서로 동기화) */
   const vdShipAll = () => VD().orders.filter((o) => o.ship && o.status !== "failed");
-  const vdShipTodo = () => VD().orders.filter((o) => o.ship && o.status === "paid" && ["ready", "prep"].indexOf(VX().shipStOf(o)) >= 0).length;
-  const vsTone = (st) => (st === "ready" ? "warn" : st === "prep" ? "info" : st === "ship" ? "info" : st === "done" ? "ok" : "");
-  const VS_TABS = [["todo", "보낼 주문", (st) => st === "ready" || st === "prep"], ["ship", "배송 중", (st) => st === "ship"], ["done", "배송 완료", (st) => st === "done"], ["cancel", "취소 · 반품", (st, o) => st === "cancel" || !!o.refundReq], ["wait", "입금 대기", (st) => st === "wait"], ["all", "전체", () => true]];
-  const vsCarrierSel = (o, cls) => { const X = VX(), cur = (o.ship && o.ship.carrier) || X.shipSet().carrier; return '<select class="a-input a-sm ' + (cls || "") + '" data-ship-car="' + esc(o.id) + '" aria-label="택배사">' + X.CARRIERS.map((c) => "<option" + (c[0] === cur ? " selected" : "") + ">" + c[0] + "</option>").join("") + "</select>"; };
+  const boClaimOn = (o) => { const c = VX().claimOf(o); return !!c && o.status === "paid" && (c.st === "req" || c.st === "pick"); };
+  const vdShipTodo = () => VD().orders.filter((o) => o.ship && (o.status === "pending" || boClaimOn(o) || (o.status === "paid" && ["ready", "prep"].indexOf(VX().shipStOf(o)) >= 0))).length;
+  const BO_ST = { wait: ["입금 대기", "warn"], ready: ["신규 주문", "bad"], prep: ["배송 준비", "info"], ship: ["배송 중", "info"], done: ["배송 완료", "ok"], cancel: ["취소", "mute"] };
+  const vsTone = (st) => (BO_ST[st] || ["", ""])[1];
+  const BO_TABS = [["wait", "입금 대기"], ["ready", "신규 주문"], ["prep", "배송 준비"], ["ship", "배송 중"], ["done", "배송 완료"], ["claim", "취소 · 반품 · 교환"], ["all", "전체"]];
+  const boIn = (k, o) => { const X = VX(), st = X.shipStOf(o); return k === "all" || (k === "claim" ? !!X.claimOf(o) || st === "cancel" : st === k); };
+  const boTab = () => { if (ui.vsTab && BO_TABS.some((x) => x[0] === ui.vsTab)) return ui.vsTab; const all = vdShipAll(); return ["ready", "prep", "wait"].find((k) => all.some((o) => boIn(k, o))) || (all.some(boClaimOn) ? "claim" : "ready"); };
+  const boPickable = (k) => ["wait", "ready", "prep", "ship"].indexOf(k) >= 0;
+  const vsCarrierSel = (o, attr, cur) => { const X = VX(); cur = cur || (o.ship && o.ship.carrier) || X.shipSet().carrier; return '<select class="a-input a-sm" ' + (attr || 'data-ship-car="' + esc(o.id) + '"') + ' aria-label="택배사">' + X.CARRIERS.map((c) => "<option" + (c[0] === cur ? " selected" : "") + ">" + c[0] + "</option>").join("") + "</select>"; };
+  const vsInvOk = (x) => /^[0-9A-Za-z-]{6,20}$/.test(String(x || "").trim());
+  const boInv = (x) => String(x == null ? "" : x).replace(/\.0+$/, "").replace(/[\s-]/g, "");
+  const boWhen = (t) => (t ? (DB.date.fmtStamp ? DB.date.fmtStamp(t) : DB.date.toStr(new Date(t))) : "");
+  const boPayTxt = (o) => (o.method === "bank" ? "무통장" : o.method === "vbank" ? "가상계좌" : VD_PAY[o.method] || o.method || "");
+  const boCash = (o) => (o.cashRcpt && o.cashRcpt.no ? (o.cashRcpt.type === "b" ? "지출증빙 " : "소득공제 ") + o.cashRcpt.no + (o.cashRcpt.done ? " · 발급 완료" : "") : "");
+  /** 송장 입력 칸 (택배사 · 송장 번호 · 버튼) */
+  const boSend = (o, label, act) => '<div class="bo-send">' + vsCarrierSel(o) + '<input class="a-input a-sm num" data-ship-inv="' + esc(o.id) + '" value="' + esc(ui.vsEdit === o.id ? o.ship.inv || "" : "") + '" placeholder="송장 번호" inputmode="numeric" maxlength="24" aria-label="송장 번호">' + btn(icon("truck", "sm") + label, act || "vda-ship-send", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"') + "</div>";
+  /** 취소 · 반품 · 교환 상자: 요청 내용 · 환불 예정 · 회수 송장 · 처리 버튼 */
+  function boClaimBox(o, c) {
+    const X = VX(), fee = X.claimFee(o, c), st = c.st, k = c.k, tone = st === "req" ? "req" : st === "pick" ? "pick" : st === "no" ? "no" : "end";
+    const acct = c.acct ? vdAcctTxt(c.acct) : "", ra = X.shipSet().returnAddr;
+    const acts = st === "req" ? (k === "cancel" ? btn(icon("coins", "sm") + "취소 승인 · 환불", "bo-cl-refund", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"') : btn(icon("check", "sm") + (k === "exchange" ? "교환 승인 · 수거 요청" : "반품 승인 · 수거 요청"), "bo-cl-ok", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"') + (k === "return" ? btn("수거 없이 바로 환불", "bo-cl-refund", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') : "")) + btn("반려", "bo-cl-no", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"')
+      : st === "pick" ? (k === "exchange" ? boSend(o, "교환 상품 보내기", "bo-cl-xsend") : btn(icon("coins", "sm") + "책이 도착했어요 · 환불", "bo-cl-refund", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"')) : "";
+    return '<div class="bo-claim bo-claim-' + tone + '"><p class="bo-claim-h">' + icon(st === "req" ? "alert" : st === "pick" ? "truck" : st === "no" ? "x" : "check", "xs") + "<b>" + esc(X.claimTxt(c)) + "</b><small>" + esc(boWhen(c.at)) + "</small></p>" +
+      '<p class="bo-claim-t">사유 · ' + esc(c.why || "기타") + (c.text ? " — " + esc(c.text) : "") + "</p>" +
+      (k !== "exchange" && (st === "req" || st === "pick") ? '<p class="bo-claim-t">환불 예정 <b>' + won(Math.max(0, o.amount - fee)) + "</b>" + (fee ? " (결제 " + won(o.amount) + " − 단순 변심 왕복 배송비 " + won(fee) + ")" : " (전액)") + (acct ? " · 환불 계좌 " + esc(acct) : "") + "</p>" : "") +
+      (st === "pick" ? '<p class="bo-claim-t">' + (c.rinv ? "회수 송장 " + esc(c.rcar || "") + ' <b class="num">' + esc(c.rinv) + "</b> · " : "") + "택배사에 반품(회수) 접수를 하면 기사님이 회원 주소에서 책을 가져와요" + (ra ? " → " + esc(ra) : "") + '.</p><div class="bo-send bo-rinv">' + vsCarrierSel(o, 'data-cl-car="' + esc(o.id) + '"', c.rcar) + '<input class="a-input a-sm num" data-cl-inv="' + esc(o.id) + '" value="' + esc(c.rinv || "") + '" placeholder="회수 송장 번호 (선택)" maxlength="24" aria-label="회수 송장 번호">' + btn("회수 송장 저장", "bo-cl-rinv", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') + "</div>" : "") +
+      (st === "no" ? '<p class="bo-claim-t">반려 사유 · ' + esc(c.note || "") + "</p>" : "") +
+      (st === "done" && k === "exchange" ? '<p class="bo-claim-t">' + esc(boWhen(c.xAt)) + " 교환 상품을 보냈어요 (아래 송장)" + (c.oinv ? " · 처음 송장 " + esc(c.oinv) : "") + "</p>" : "") +
+      (st === "refunded" ? '<p class="bo-claim-t">' + won(o.refundAmount != null ? o.refundAmount : o.amount) + " 환불 · " + esc(boWhen(o.refundedAt)) + "</p>" : "") +
+      (acts ? '<div class="bo-claim-a">' + acts + "</div>" : "") + "</div>";
+  }
+  function boCard(o, tab, pick) {
+    const X = VX(), s = o.ship, st = X.shipStOf(o), lab = st === "cancel" && o.status === "refunded" ? ["환불", "mute"] : BO_ST[st] || BO_ST.ready, c = X.claimOf(o), tu = X.trackUrl(o), edit = ui.vsEdit === o.id, sh = X.shipSet();
+    const nm = (vdMember(o.mid) || {}).name || (o.buyer && o.buyer.name) || "회원", hold = !!c && c.st === "req", late = st === "wait" && Date.now() > vdDue(o);
+    const sel = boPickable(tab) && st === tab ? '<label class="a-check bo-pick"><input type="checkbox" data-action="vda-ship-pick" data-id="' + esc(o.id) + '"' + (pick.has(o.id) ? " checked" : "") + '><span class="sr-only">선택</span></label>' : "";
+    const act = st === "wait" ? (o.method === "vbank" ? pill("가상계좌 · 입금하면 자동 확인", "info") : btn(icon("check", "sm") + "입금 확인", "vda-paid", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"')) + btn("주문 취소", "vda-cancel", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"')
+      : st === "ready" ? (hold ? "" : btn(icon("package", "sm") + "배송 준비로", "vda-ship-prep", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') + boSend(o, "발송 처리"))
+      : st === "prep" ? (hold ? "" : boSend(o, "발송 처리"))
+      : st === "ship" ? (edit ? boSend(o, "송장 저장") + btn("닫기", "vda-ship-edit", "a-btn-ghost a-btn-sm") : '<span class="bo-trk">' + icon("truck", "sm") + esc(s.carrier || "") + ' <b class="num">' + esc(s.inv || "") + "</b>" + (tu ? ' <a class="a-link" href="' + esc(tu) + '" target="_blank" rel="noopener">배송 조회</a>' : "") + "<small>" + esc(DB.date.toStr(new Date(s.shipAt))) + " 보냄 · " + esc(DB.date.toStr(new Date(s.shipAt + (Number(sh.autoDays) || 3) * 864e5))) + " 자동 완료</small></span>" + btn("송장 수정", "vda-ship-edit", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') + btn(icon("check", "sm") + "배송 완료", "vda-ship-done", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"'))
+      : st === "done" ? '<span class="bo-trk">' + icon("check", "sm") + esc(DB.date.toStr(new Date(X.shipDoneAt(o)))) + " 배송 완료" + (s.doneAt ? "" : " (자동)") + (s.inv ? " · " + esc(s.carrier || "") + ' <b class="num">' + esc(s.inv) + "</b>" + (tu ? ' <a class="a-link" href="' + esc(tu) + '" target="_blank" rel="noopener">배송 조회</a>' : "") : "") + "</span>"
+      : c ? (o.refundPay && o.refundPay.st === "wait" ? '<span class="bo-trk">' + icon("coins", "sm") + '계좌 송금 대기 · <a class="a-link" href="#/center/master/vod-refund">환불 · 취소 관리에서 송금 완료</a></span>' : "")
+      : '<span class="bo-trk">' + icon("x", "sm") + (o.status === "refunded" ? won(o.refundAmount != null ? o.refundAmount : o.amount) + " 환불 · " + esc(DB.date.toStr(new Date(o.refundedAt || o.at))) + (o.refundPay && o.refundPay.st === "wait" ? " · 계좌 송금 대기" : "") : (o.canceledBy === "기한 지남" ? "입금 기한이 지나 취소" : "취소된 주문") + " · " + esc(DB.date.toStr(new Date(o.canceledAt || o.at)))) + "</span>";
+    return '<article class="bo-card bo-' + st + (pick.has(o.id) ? " on" : "") + '">' + sel +
+      '<div class="bo-b"><div class="bo-meta">' + pill(lab[0], lab[1]) + (c ? pill(X.claimTxt(c), c.st === "req" ? "bad" : c.st === "pick" ? "warn" : "mute") : "") + (late ? pill("입금 기한 지남", "warn") : "") + '<small>' + esc(boWhen(st === "wait" ? o.at : o.paidAt || o.at)) + ' · <a class="a-link num" href="#" data-action="vda-od" data-id="' + esc(o.id) + '">' + esc(o.no) + "</a></small></div>" +
+        '<p class="bo-t"><b>' + esc(o.title) + "</b><em>" + (Number(o.qty) || 1) + "권</em></p>" +
+        '<p class="bo-sum">' + won(o.amount) + (o.shipFee ? " · 배송비 " + won(o.shipFee) + " 포함" : " · 무료배송") + " · " + esc(boPayTxt(o)) + " · 주문 " + esc(nm) + "</p>" +
+        (st === "wait" && o.method !== "vbank" ? '<p class="bo-dep">' + icon("coins", "xs") + "<span>입금자명 <b>" + esc(vdDep(o)) + "</b> · <b>" + won(vdGrpAmt(o)) + "</b> · " + esc(boWhen(vdDue(o))) + "까지</span></p>" : "") +
+        '<dl class="bo-addr"><div><dt>받는 분</dt><dd><b>' + esc(s.name || "") + "</b> · " + esc(s.phone || "") + "</dd></div><div><dt>주소</dt><dd>" + (s.zip ? "(" + esc(s.zip) + ") " : "") + esc((s.addr1 || "") + " " + (s.addr2 || "")) + ' <button type="button" class="a-link bo-copy" data-action="vda-ship-copy" data-id="' + esc(o.id) + '">복사</button></dd></div>' + (s.memo ? "<div><dt>요청</dt><dd>" + esc(s.memo) + "</dd></div>" : "") + (boCash(o) ? "<div><dt>현금영수증</dt><dd>" + esc(boCash(o)) + (o.cashRcpt.done ? "" : ' <button type="button" class="a-link" data-action="bo-cash-done" data-id="' + esc(o.id) + '">발급 완료로 표시</button>') + "</dd></div>" : "") + "</dl>" +
+        (c ? boClaimBox(o, c) : "") +
+        (act ? '<div class="bo-act">' + act + "</div>" : "") + "</div></article>";
+  }
   function pageVodShip() {
-    const X = VX(), sh = X.shipSet(), all = vdShipAll().sort((a, b) => (b.paidAt || b.at || 0) - (a.paidAt || a.at || 0)), stOf = (o) => X.shipStOf(o);
-    const tab = VS_TABS.find((x) => x[0] === ui.vsTab) || VS_TABS[0], list = all.filter((o) => tab[2](stOf(o), o)), today = todayStr(), ym = today.slice(0, 7);
-    const cnt = (k) => all.filter((o) => VS_TABS.find((x) => x[0] === k)[2](stOf(o), o)).length, pick = ui.vsPick || (ui.vsPick = new Set());
-    const sentToday = all.filter((o) => o.ship.shipAt && DB.date.toStr(new Date(o.ship.shipAt)) === today).length, doneMon = all.filter((o) => stOf(o) === "done" && X.shipDoneAt(o) && vdYM(X.shipDoneAt(o)) === ym).length;
-    const nm = (o) => (vdMember(o.mid) || {}).name || (o.buyer && o.buyer.name) || "회원";
-    const card = (o) => {
-      const s = o.ship, st = stOf(o), lab = X.SHIP_ST[st] || X.SHIP_ST.ready, tu = X.trackUrl(o), edit = ui.vsEdit === o.id, rq = o.refundReq && typeof o.refundReq === "object";
-      const send = '<div class="vs-inv">' + vsCarrierSel(o) + '<input class="a-input a-sm num" data-ship-inv="' + esc(o.id) + '" value="' + esc(s.inv || "") + '" placeholder="송장 번호" inputmode="numeric" maxlength="20" aria-label="송장 번호">' + btn(icon("truck", "sm") + (edit ? "송장 저장" : "발송 처리"), "vda-ship-send", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"' + (rq ? " disabled" : "")) + (edit ? btn("닫기", "vda-ship-edit", "a-btn-ghost a-btn-sm", ' data-id=""') : "") + "</div>";
-      return '<article class="vs-card vs-' + st + (pick.has(o.id) ? " on" : "") + '">' +
-        '<div class="vs-top">' + (st === "ready" || st === "prep" ? '<label class="a-check vs-pick"><input type="checkbox" data-action="vda-ship-pick" data-id="' + esc(o.id) + '"' + (pick.has(o.id) ? " checked" : "") + '><span class="sr-only">선택</span></label>' : "") +
-          '<div class="vs-h"><b>' + esc(o.title) + ' <em>× ' + (Number(o.qty) || 1) + "권</em></b><small>" + esc(DB.date.fmtStamp ? DB.date.fmtStamp(o.paidAt || o.at) : DB.date.toStr(new Date(o.paidAt || o.at))) + ' · <a class="a-link num" href="#" data-action="vda-od" data-id="' + esc(o.id) + '">' + esc(o.no) + "</a> · " + won(o.amount) + (o.shipFee ? " (배송비 " + won(o.shipFee) + ")" : " · 무료배송") + "</small></div>" +
-          pill(lab[0], vsTone(st)) + (rq ? pill(st === "ship" || st === "done" ? "반품 요청" : "취소 요청", "bad") : "") + "</div>" +
-        '<dl class="vs-addr"><div><dt>받는 분</dt><dd><b>' + esc(s.name || "") + "</b> · " + esc(s.phone || "") + (nm(o) !== s.name ? ' <small class="a-muted">(주문 ' + esc(nm(o)) + ")</small>" : "") + "</dd></div><div><dt>주소</dt><dd>" + (s.zip ? "(" + esc(s.zip) + ") " : "") + esc((s.addr1 || "") + " " + (s.addr2 || "")) + ' <button type="button" class="a-link vs-copy" data-action="vda-ship-copy" data-id="' + esc(o.id) + '">주소 복사</button></dd></div>' + (s.memo ? "<div><dt>요청</dt><dd>" + esc(s.memo) + "</dd></div>" : "") + "</dl>" +
-        (rq ? '<p class="vs-rq">' + icon("alert", "xs") + "<span>회원 요청: " + esc(o.refundReq.why || "") + (o.refundReq.text ? " — " + esc(o.refundReq.text) : "") + ' · <a class="a-link" href="#/center/master/vod-refund">환불 · 취소 관리에서 처리</a></span></p>' : "") +
-        '<div class="vs-act">' + (st === "ready" ? btn(icon("package", "sm") + "상품 준비 중", "vda-ship-prep", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"' + (rq ? " disabled" : "")) + send
-          : st === "prep" ? send
-          : st === "ship" ? (edit ? send : '<span class="vs-inv-t">' + icon("truck", "sm") + esc(s.carrier || "") + ' <b class="num">' + esc(s.inv || "") + "</b>" + (tu ? ' <a class="a-link" href="' + esc(tu) + '" target="_blank" rel="noopener">배송 조회</a>' : "") + "<small>" + esc(DB.date.toStr(new Date(s.shipAt))) + " 보냄 · " + esc(DB.date.toStr(new Date(s.shipAt + (Number(sh.autoDays) || 3) * 864e5))) + " 자동 완료</small></span>" + btn("송장 수정", "vda-ship-edit", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') + btn(icon("check", "sm") + "배송 완료", "vda-ship-done", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"'))
-          : st === "done" ? '<span class="vs-inv-t">' + icon("check", "sm") + esc(DB.date.toStr(new Date(X.shipDoneAt(o)))) + " 배송 완료" + (s.doneAt ? "" : " (자동)") + (s.inv ? " · " + esc(s.carrier || "") + ' <b class="num">' + esc(s.inv) + "</b>" + (tu ? ' <a class="a-link" href="' + esc(tu) + '" target="_blank" rel="noopener">배송 조회</a>' : "") : "") + "</span>"
-          : st === "wait" ? '<span class="vs-inv-t">' + icon("clock", "sm") + "입금이 확인되면 보낼 주문으로 넘어와요</span>"
-          : '<span class="vs-inv-t">' + icon("x", "sm") + (o.status === "refunded" ? won(o.refundAmount != null ? o.refundAmount : o.amount) + " 환불 · " + esc(DB.date.toStr(new Date(o.refundedAt || o.at))) : "취소된 주문") + "</span>") + "</div></article>";
-    };
-    return head("종이책 배송 관리", "종이책 주문을 보내고 송장을 남겨요. 송장을 넣으면 회원 마이페이지에 배송 조회가 열리고, 보낸 날부터 " + (Number(sh.autoDays) || 3) + "일이 지나면 자동으로 배송 완료가 돼요.", vdStoreBtn("#/vod/my/ship", "회원 화면 보기")) +
+    const X = VX(), sh = X.shipSet(), all = vdShipAll(), tab = boTab(), pick = ui.vsPick || (ui.vsPick = new Set()), today = todayStr(), ym = today.slice(0, 7);
+    const by = (k) => all.filter((o) => boIn(k, o)), cntOf = (k) => (k === "claim" ? all.filter(boClaimOn).length : by(k).length);
+    const asc = ["wait", "ready", "prep"].indexOf(tab) >= 0, list = by(tab).sort((a, b) => (tab === "claim" ? (boClaimOn(b) ? 1 : 0) - (boClaimOn(a) ? 1 : 0) : 0) || (asc ? 1 : -1) * ((a.paidAt || a.at || 0) - (b.paidAt || b.at || 0)));
+    const wait = by("wait"), late = wait.filter((o) => Date.now() > vdDue(o)), sendN = by("ready").length + by("prep").length, sentToday = all.filter((o) => o.ship.shipAt && DB.date.toStr(new Date(o.ship.shipAt)) === today).length, doneMon = all.filter((o) => X.shipStOf(o) === "done" && X.shipDoneAt(o) && vdYM(X.shipDoneAt(o)) === ym).length;
+    const picked = list.filter((o) => pick.has(o.id)), selAll = boPickable(tab) && list.length ? btn(picked.length && picked.length === list.length ? "선택 풀기" : "모두 선택", "vda-ship-all", "a-btn-ghost a-btn-sm") : "";
+    const bulk = tab === "wait" ? btn(icon("check", "sm") + "선택 입금 확인", "bo-bpaid", "a-btn-ghost a-btn-sm", picked.length ? "" : " disabled") + (late.length ? btn(icon("x", "sm") + "기한 지난 " + late.length + "건 취소", "vda-cancel-exp", "a-btn-ghost a-btn-sm") : "")
+      : tab === "ready" ? btn(icon("package", "sm") + "선택 배송 준비로", "vda-ship-bprep", "a-btn-ghost a-btn-sm", picked.length ? "" : " disabled")
+      : tab === "ship" ? btn(icon("check", "sm") + "선택 배송 완료", "bo-bdone", "a-btn-ghost a-btn-sm", picked.length ? "" : " disabled") : "";
+    const n = picked.length ? " (" + picked.length + "건)" : "";
+    return head("종이책 주문 · 배송", "입금 대기 → 신규 주문 → 배송 준비 → 배송 중 → 배송 완료 순서로 처리해요. 송장을 넣으면 회원 마이페이지에 배송 조회가 열리고, 보낸 날부터 " + (Number(sh.autoDays) || 3) + "일이 지나면 자동으로 배송 완료가 돼요.", vdStoreBtn("#/vod/my/ship", "회원 화면 보기")) +
       '<div class="a-kpis crm-kpis crm-kpis-4">' +
-        kpi("보낼 주문", cnt("todo") + "건", cnt("todo") ? "결제 후 " + (Number(sh.outDays) || 2) + "일 안에 보내요" : "모두 보냈어요", "#/center/master/vod-ship", cnt("todo") ? "warn" : "ok") +
-        kpi("오늘 보낸 책", sentToday + "건", "송장을 넣은 주문", "#/center/master/vod-ship") +
-        kpi("배송 중", cnt("ship") + "건", (Number(sh.autoDays) || 3) + "일 뒤 자동 완료", "#/center/master/vod-ship") +
-        kpi("이번 달 배송 완료", doneMon + "건", cnt("cancel") ? "취소 · 반품 " + cnt("cancel") + "건" : "취소 · 반품 없음", "#/center/master/vod-ship") +
+        kpi("입금 대기", wait.length + "건", wait.length ? won(wait.reduce((a, o) => a + vdGrpAmt(o), 0)) + (late.length ? " · 기한 지남 " + late.length + "건" : " · 통장 입금을 확인해 주세요") : "기다리는 입금이 없어요", "#/center/master/vod-ship", wait.length ? "warn" : "") +
+        kpi("보낼 주문", sendN + "건", sendN ? "결제 후 " + (Number(sh.outDays) || 2) + "일 안에 보내요 · 오늘 보냄 " + sentToday + "건" : "모두 보냈어요 · 오늘 보냄 " + sentToday + "건", "#/center/master/vod-ship", sendN ? "warn" : "ok") +
+        kpi("배송 중", by("ship").length + "건", (Number(sh.autoDays) || 3) + "일 뒤 자동 완료 · 이번 달 완료 " + doneMon + "건", "#/center/master/vod-ship") +
+        kpi("취소 · 반품 · 교환", cntOf("claim") + "건", cntOf("claim") ? "처리할 요청이 있어요" : "처리할 요청 없음", "#/center/master/vod-ship", cntOf("claim") ? "warn" : "") +
       "</div>" +
-      '<section class="a-card crm-card"><div class="a-card-head vs-head"><div class="a-seg vs-tabs">' + VS_TABS.map((x) => '<button type="button" class="' + (x[0] === tab[0] ? "on" : "") + '" data-action="vda-ship-tab" data-k="' + x[0] + '">' + x[1] + " <small>" + cnt(x[0]) + "</small></button>").join("") + "</div>" +
-        '<div class="vs-tools">' + (tab[0] === "todo" && list.length ? btn(pick.size && list.every((o) => pick.has(o.id)) ? "선택 풀기" : "모두 선택", "vda-ship-all", "a-btn-ghost a-btn-sm") + btn(icon("package", "sm") + "선택한 주문 상품 준비 중", "vda-ship-bprep", "a-btn-ghost a-btn-sm", pick.size ? "" : " disabled") : "") +
-          btn(icon("download", "sm") + "택배 접수용 엑셀" + (pick.size ? " (" + pick.size + "건)" : ""), "vda-ship-csv", "a-btn-ghost a-btn-sm", list.length || pick.size ? "" : " disabled") + btn(icon("upload", "sm") + "송장 한 번에 넣기", "vda-ship-bulk", "a-btn-outline a-btn-sm", cnt("todo") ? "" : " disabled") + "</div></div>" +
-        (list.length ? '<div class="vs-list">' + list.map(card).join("") + "</div>" : '<div class="vs-empty">' + emptyBox("truck", tab[0] === "todo" ? "보낼 종이책 주문이 없어요." : "이 상태의 주문이 없어요.") + "</div>") + "</section>" +
-      '<section class="a-card crm-card"><div class="a-card-head"><h2>배송 설정</h2><p class="a-muted">상세 페이지 · 결제 화면 · 교환 · 반품 규정 문구에 함께 쓰여요.</p></div>' +
+      '<section class="a-card crm-card bo-box"><div class="bo-tabs" role="tablist">' + BO_TABS.map((x, i) => (i === 5 ? '<span class="bo-tab-gap" aria-hidden="true"></span>' : "") + '<button type="button" role="tab" aria-selected="' + (x[0] === tab) + '" class="' + (x[0] === tab ? "on" : "") + (x[0] === "claim" && cntOf("claim") ? " hot" : "") + '" data-action="vda-ship-tab" data-k="' + x[0] + '">' + (i < 5 ? "<i>" + (i + 1) + "</i>" : "") + "<span>" + x[1] + "</span><small>" + cntOf(x[0]) + "</small></button>").join("") + "</div>" +
+        '<div class="bo-tools"><div class="bo-tools-l">' + selAll + bulk + "</div>" +
+          '<div class="bo-tools-r">' + btn(icon("download", "sm") + "주문 엑셀" + n, "bo-xl-orders", "a-btn-ghost a-btn-sm", list.length ? "" : " disabled") +
+            (tab === "ready" || tab === "prep" ? btn(icon("download", "sm") + "택배 접수용 엑셀" + n, "vda-ship-csv", "a-btn-ghost a-btn-sm", list.length ? "" : " disabled") : "") +
+            btn(icon("upload", "sm") + "송장 엑셀 올리기", "vda-ship-bulk", "a-btn-outline a-btn-sm", sendN ? "" : " disabled") + "</div></div>" +
+        (tab === "wait" ? '<p class="bo-hint">' + icon("alert", "xs") + "<span>통장에 들어온 <b>입금자명 · 금액</b>을 확인하고 <b>입금 확인</b>을 눌러요. 확인하면 ‘신규 주문’으로 넘어가요." + (X.bankAuto && X.bankAuto() ? " 자동 입금 확인(페이액션)이 켜져 있어서 이름 · 금액이 맞으면 저절로 넘어가요." : " 자동 입금 확인(페이액션)을 연결하면 24시간 저절로 넘어가요.") + "</span></p>" : tab === "ready" ? '<p class="bo-hint">' + icon("alert", "xs") + "<span><b>택배 접수용 엑셀</b>을 내려받아 택배사에 올리고, 받은 송장 파일을 <b>송장 엑셀 올리기</b>로 넣으면 한 번에 ‘배송 중’이 돼요. 한 건씩 보낼 때는 카드에 송장을 적어요.</span></p>" : "") +
+        (list.length ? '<div class="bo-list">' + list.map((o) => boCard(o, tab, pick)).join("") + "</div>" : '<div class="bo-empty">' + emptyBox("truck", tab === "wait" ? "입금을 기다리는 주문이 없어요." : tab === "ready" ? "새로 들어온 주문이 없어요." : tab === "claim" ? "취소 · 반품 · 교환 요청이 없어요." : "이 상태의 주문이 없어요.") + "</div>") + "</section>" +
+      '<section class="a-card crm-card"><div class="a-card-head"><h2>배송 · 반품 설정</h2><p class="a-muted">상세 페이지 · 결제 화면 · 교환 · 반품 규정 문구에 함께 쓰여요.</p></div>' +
         '<form id="vda-ship-form" class="a-form vs-set" novalidate><div class="a-form-row">' +
           '<div class="a-field"><label for="vs-auto">자동 배송 완료</label><span class="crm-unit"><input class="a-input" id="vs-auto" name="autoDays" type="number" min="1" max="14" value="' + esc(sh.autoDays) + '"><em>일 뒤 (송장 넣은 날부터)</em></span></div>' +
           '<div class="a-field"><label for="vs-out">출고 기간</label><span class="crm-unit"><input class="a-input" id="vs-out" name="outDays" type="number" min="1" max="14" value="' + esc(sh.outDays) + '"><em>일 안 (주말 · 공휴일 빼고)</em></span></div></div>' +
           '<div class="a-form-row"><div class="a-field"><label for="vs-car">기본 택배사</label><select class="a-input" id="vs-car" name="carrier">' + X.CARRIERS.map((c) => "<option" + (c[0] === sh.carrier ? " selected" : "") + ">" + c[0] + "</option>").join("") + "</select></div>" +
-          '<div class="a-field"><label for="vs-rf">반품 왕복 배송비</label><span class="crm-unit"><input class="a-input" id="vs-rf" name="returnFee" type="number" min="0" step="500" value="' + esc(sh.returnFee) + '"><em>원 (단순 변심 반품)</em></span></div></div>' +
-          '<div class="a-field"><label for="vs-ra">반품 받을 주소</label><input class="a-input" id="vs-ra" name="returnAddr" maxlength="120" value="' + esc(sh.returnAddr || "") + '" placeholder="예) 서울 강남구 … 두고홀딩스 물류팀 (비우면 안내 문구에서 빠져요)"></div>' +
-          '<div class="vs-set-foot">' + btn(icon("check", "sm") + "배송 설정 저장", "vda-ship-save", "a-btn-primary") + "</div></form></section>";
+          '<div class="a-field"><label for="vs-rf">반품 왕복 배송비</label><span class="crm-unit"><input class="a-input" id="vs-rf" name="returnFee" type="number" min="0" step="500" value="' + esc(sh.returnFee) + '"><em>원 (단순 변심 반품 · 환불금에서 빼요)</em></span></div></div>' +
+          '<div class="a-field"><label for="vs-ra">반품 받을 주소</label><input class="a-input" id="vs-ra" name="returnAddr" maxlength="120" value="' + esc(sh.returnAddr || "") + '" placeholder="예) 세종특별자치시 갈매로 353 5층 두고홀딩스 (비우면 안내 문구에서 빠져요)"></div>' +
+          '<div class="vs-set-foot">' + btn(icon("check", "sm") + "설정 저장", "vda-ship-save", "a-btn-primary") + "</div></form></section>";
   }
-  /** 송장 한 줄씩: "주문번호 송장번호" (쉼표 · 탭 · 공백으로 나눠요) */
+  /* ---------- 엑셀(.xlsx) 쓰기 · 읽기 — 라이브러리 없이: 쓰기는 압축 없는 zip, 읽기는 브라우저 압축 해제(DecompressionStream) ---------- */
+  const XL = (() => {
+    const enc = new TextEncoder(), CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+    const crc32 = (b) => { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+    const xe = (s) => String(s).replace(/[&<>"]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m])).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "");
+    const colName = (i) => { let s = ""; i++; while (i) { const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; };
+    function zip(files) {
+      const parts = [], cent = []; let off = 0;
+      files.forEach((f) => {
+        const name = enc.encode(f.name), data = enc.encode(f.data), crc = crc32(data), h = new DataView(new ArrayBuffer(30));
+        h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true);
+        parts.push(new Uint8Array(h.buffer), name, data);
+        const c = new DataView(new ArrayBuffer(46)); c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+        cent.push(new Uint8Array(c.buffer), name); off += 30 + name.length + data.length;
+      });
+      const csz = cent.reduce((a, x) => a + x.length, 0), e = new DataView(new ArrayBuffer(22));
+      e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, csz, true); e.setUint32(16, off, true);
+      return new Blob(parts.concat(cent, [new Uint8Array(e.buffer)]), { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    }
+    /** rows: [[머리글…], [값…]] · text: 글자로 둘 칸(0부터, 앞자리 0 · 긴 숫자 지키기) · widths: 칸 너비 */
+    function write(sheet, rows, opt) {
+      opt = opt || {}; const txt = opt.text || [], w = opt.widths || [];
+      const cell = (v, r, ci) => { const ref = colName(ci) + (r + 1), s = r === 0 ? ' s="1"' : ""; if (v == null || v === "") return r === 0 ? '<c r="' + ref + '"' + s + "/>" : ""; return typeof v === "number" && isFinite(v) && txt.indexOf(ci) < 0 && r > 0 ? '<c r="' + ref + '"' + s + "><v>" + v + "</v></c>" : '<c r="' + ref + '" t="inlineStr"' + s + '><is><t xml:space="preserve">' + xe(v) + "</t></is></c>"; };
+      const cols = rows[0].map((_, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + (w[i] || 14) + '" customWidth="1"/>').join("");
+      const sx = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>' + cols + "</cols><sheetData>" + rows.map((r, ri) => '<row r="' + (ri + 1) + '">' + r.map((v, ci) => cell(v, ri, ci)).join("") + "</row>").join("") + "</sheetData></worksheet>";
+      return zip([
+        { name: "[Content_Types].xml", data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
+        { name: "_rels/.rels", data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+        { name: "xl/workbook.xml", data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="' + xe(sheet).slice(0, 31) + '" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+        { name: "xl/_rels/workbook.xml.rels", data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
+        { name: "xl/styles.xml", data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><name val="맑은 고딕"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF1F1F3"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs></styleSheet>' },
+        { name: "xl/worksheets/sheet1.xml", data: sx }
+      ]);
+    }
+    async function inflate(u8) {
+      if (typeof DecompressionStream === "undefined") throw new Error("이 브라우저는 엑셀 파일을 읽지 못해요. 크롬 · 엣지 최신 버전을 쓰거나 CSV로 저장해서 올려 주세요.");
+      return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+    }
+    async function unzip(buf) {
+      const u = new Uint8Array(buf), dv = new DataView(buf), out = {};
+      let e = -1; for (let i = u.length - 22; i >= Math.max(0, u.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+      if (e < 0) throw new Error("엑셀(.xlsx) 파일이 아니에요.");
+      let p = dv.getUint32(e + 16, true); const n = dv.getUint16(e + 10, true), dec = new TextDecoder();
+      for (let k = 0; k < n; k++) {
+        if (dv.getUint32(p, true) !== 0x02014b50) break;
+        const method = dv.getUint16(p + 10, true), csz = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true), name = dec.decode(u.subarray(p + 46, p + 46 + nl));
+        const ds = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true), raw = u.subarray(ds, ds + csz);
+        out[name] = { method, raw }; p += 46 + nl + xl + cl;
+      }
+      return { async text(name) { const f = out[name]; if (!f) return null; return dec.decode(f.method === 8 ? await inflate(f.raw) : f.raw); }, has: (name) => !!out[name] };
+    }
+    const tags = (el, tag) => Array.prototype.filter.call(el.getElementsByTagName("*"), (x) => x.localName === tag);
+    const kids = (el, tag) => Array.prototype.filter.call(el.childNodes, (x) => x.localName === tag);
+    async function readXlsx(buf) {
+      const z = await unzip(buf), P = (t) => new DOMParser().parseFromString(t, "application/xml");
+      const wb = P(await z.text("xl/workbook.xml") || ""), sh0 = tags(wb, "sheet")[0];
+      if (!sh0) throw new Error("엑셀 시트를 찾지 못했어요.");
+      const rid = sh0.getAttribute("r:id") || sh0.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+      const rels = P(await z.text("xl/_rels/workbook.xml.rels") || ""), rel = tags(rels, "Relationship").find((r) => r.getAttribute("Id") === rid);
+      let path = rel ? rel.getAttribute("Target") : "worksheets/sheet1.xml"; path = path.charAt(0) === "/" ? path.slice(1) : "xl/" + path.replace(/^\.\//, "");
+      const ss = z.has("xl/sharedStrings.xml") ? tags(P(await z.text("xl/sharedStrings.xml")), "si").map((si) => kids(si, "t").concat(...kids(si, "r").map((r) => kids(r, "t"))).map((t) => t.textContent).join("")) : [];
+      const ws = P(await z.text(path) || ""), rows = [];
+      tags(ws, "row").forEach((row) => {
+        const ri = Number(row.getAttribute("r")) - 1, r = [];
+        kids(row, "c").forEach((c, j) => {
+          const ref = c.getAttribute("r") || "", m = /^([A-Z]+)/.exec(ref), ci = m ? m[1].split("").reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0) - 1 : j, t = c.getAttribute("t"), v = kids(c, "v")[0];
+          r[ci] = t === "s" ? ss[Number(v && v.textContent)] || "" : t === "inlineStr" ? tags(c, "t").map((x) => x.textContent).join("") : v ? v.textContent : "";
+        });
+        rows[isFinite(ri) && ri >= 0 ? ri : rows.length] = Array.from(r, (x) => (x == null ? "" : String(x)));
+      });
+      return Array.from(rows, (r) => r || []);
+    }
+    function readCsv(text) {
+      const rows = []; let row = [], cur = "", q = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (q) { if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+        else if (ch === '"') q = true; else if (ch === "," || ch === "\t") { row.push(cur); cur = ""; } else if (ch === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; } else if (ch !== "\r") cur += ch;
+      }
+      if (cur || row.length) { row.push(cur); rows.push(row); }
+      return rows;
+    }
+    /** 올린 파일 → 표(행 배열). .xlsx · .csv(UTF-8 또는 엑셀 한글 CSV) · .txt */
+    async function read(file) {
+      const buf = await file.arrayBuffer(), u = new Uint8Array(buf);
+      if (u[0] === 0x50 && u[1] === 0x4b) return readXlsx(buf);
+      if (u[0] === 0xd0 && u[1] === 0xcf) throw new Error("예전 엑셀(.xls) 파일이에요. 엑셀에서 ‘다른 이름으로 저장 › Excel 통합 문서(.xlsx)’로 저장해서 올려 주세요.");
+      let t = new TextDecoder("utf-8").decode(buf);
+      if (t.indexOf("�") >= 0) { try { t = new TextDecoder("euc-kr").decode(buf); } catch (e) { /* 그대로 */ } }
+      return readCsv(t.replace(/^﻿/, ""));
+    }
+    function download(blob, name) { const l = document.createElement("a"); l.href = URL.createObjectURL(blob); l.download = name; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(l.href), 3e4); }
+    return { write, read, download, readCsv };
+  })();
+  /** 주문 엑셀: 지금 탭(또는 고른 주문)의 모든 칸 */
+  function boXlOrders(list) {
+    const X = VX(), head = ["주문번호", "주문 일시", "결제 일시", "상태", "취소 · 반품 · 교환", "결제 수단", "입금자명", "주문자", "주문자 휴대폰", "상품", "수량", "상품 금액", "배송비", "결제 금액", "받는 분", "받는 분 휴대폰", "우편번호", "주소", "상세 주소", "배송 요청사항", "택배사", "송장번호", "보낸 날", "배송 완료", "환불 금액", "현금영수증"];
+    const rows = [head].concat(list.map((o) => { const s = o.ship || {}, m = vdMember(o.mid) || {}, c = X.claimOf(o), st = X.shipStOf(o); return [o.no, boWhen(o.at), o.paidAt ? boWhen(o.paidAt) : "", (BO_ST[st] || [""])[0], c ? X.claimTxt(c) : "", boPayTxt(o), o.method === "bank" ? vdDep(o) : "", (o.buyer && o.buyer.name) || m.name || "", (o.buyer && o.buyer.phone) || m.phone || "", o.title, Number(o.qty) || 1, (Number(o.amount) || 0) - (Number(o.shipFee) || 0), Number(o.shipFee) || 0, Number(o.amount) || 0, s.name || "", s.phone || "", s.zip || "", s.addr1 || "", s.addr2 || "", s.memo || "", s.carrier || "", s.inv || "", s.shipAt ? DB.date.toStr(new Date(s.shipAt)) : "", X.shipDoneAt(o) ? DB.date.toStr(new Date(X.shipDoneAt(o))) : "", o.status === "refunded" ? (o.refundAmount != null ? o.refundAmount : o.amount) : "", boCash(o)]; }));
+    XL.download(XL.write("주문", rows, { text: [0, 8, 15, 16, 21], widths: [18, 17, 17, 10, 14, 9, 10, 10, 15, 30, 6, 11, 8, 11, 10, 15, 9, 34, 18, 22, 11, 16, 11, 11, 10, 22] }), "doogoclass-book-orders-" + todayStr() + ".xlsx");
+    toast("주문 " + list.length + "건을 엑셀로 내려받았어요.");
+  }
+  /** 택배 접수용 엑셀: 택배사 대량 접수에 그대로 올리는 칸 + 끝에 택배사 · 송장번호 빈칸 (채워서 다시 올리면 한 번에 발송 처리) */
+  function vsCsv(list) {
+    const X = VX(), sh = X.shipSet(), head = ["주문번호", "받는분성명", "받는분전화번호", "받는분우편번호", "받는분주소", "받는분상세주소", "품목명", "수량", "배송메세지", "택배사", "송장번호"];
+    const rows = [head].concat(list.map((o) => { const s = o.ship || {}; return [o.no, s.name || "", s.phone || "", s.zip || "", s.addr1 || "", s.addr2 || "", o.title, Number(o.qty) || 1, s.memo || "", s.carrier || sh.carrier, s.inv || ""]; }));
+    XL.download(XL.write("택배접수", rows, { text: [0, 2, 3, 10], widths: [18, 10, 15, 10, 36, 20, 30, 6, 24, 12, 16] }), "doogoclass-courier-" + todayStr() + ".xlsx");
+    const rd = list.filter((o) => o.status === "paid" && X.shipStOf(o) === "ready" && !X.claimOf(o));
+    if (rd.length) confirmModal("배송 준비로 옮길까요?", "택배 접수용 엑셀 " + list.length + "건을 내려받았어요.<br>그중 <b>신규 주문 " + rd.length + "건</b>을 ‘배송 준비’로 옮길까요? 옮기면 회원이 바로 취소하지 못하고 취소 요청으로 받아요.", "배송 준비로 옮기기", false, () => { const at = Date.now(); rd.forEach((o) => Object.assign(o.ship, { st: "prep", prepAt: at })); (ui.vsPick || new Set()).clear(); commit(rd.length + "건을 배송 준비로 옮겼어요."); });
+    else toast("택배 접수용 엑셀 " + list.length + "건을 내려받았어요.");
+  }
+  /** 송장 올리기: 엑셀 · CSV 파일 또는 붙여 넣기 → 미리보기 → 반영 */
   function vsBulkModal() {
     const X = VX();
-    openModal("송장 한 번에 넣기", '<form id="vda-shipbulk-form" class="a-form" novalidate><p class="a-muted p-small">택배사 프로그램에서 받은 목록을 붙여 넣어요. 한 줄에 <b>주문번호 송장번호</b> (쉼표 · 탭 · 공백 어느 것이든 돼요). 보낼 주문(결제 완료 · 상품 준비 중)만 바뀌어요.</p>' +
-      '<div class="a-field"><label for="vsb-car">택배사</label><select class="a-input" id="vsb-car" name="carrier">' + X.CARRIERS.map((c) => "<option" + (c[0] === X.shipSet().carrier ? " selected" : "") + ">" + c[0] + "</option>").join("") + "</select></div>" +
-      '<div class="a-field"><label for="vsb-t">주문번호 · 송장번호</label><textarea class="a-input num" id="vsb-t" name="lines" rows="7" placeholder="DC261030123456 640012345678&#10;DC261030654321, 640012345679"></textarea></div><p class="a-error" id="vsb-err"></p></form>',
-      '<button type="button" class="a-btn a-btn-ghost" data-action="modal-close">취소</button><button type="submit" form="vda-shipbulk-form" class="a-btn a-btn-primary">' + icon("truck", "sm") + "발송 처리</button>");
+    ui.boUp = null;
+    openModal("송장 엑셀 올리기", '<form id="vda-shipbulk-form" class="a-form bo-up" novalidate><p class="a-muted p-small">택배사에서 받은 송장 파일(.xlsx · .csv)을 올리거나, 우리가 내려받은 <b>택배 접수용 엑셀</b>의 ‘송장번호’ 칸을 채워서 올려요. <b>주문번호</b>(또는 고객주문번호)와 <b>송장번호</b>(운송장번호) 칸을 찾아 맞춰요.</p>' +
+      '<label class="bo-drop"><input type="file" accept=".xlsx,.csv,.txt" data-bo-file class="sr-only">' + icon("upload", "sm") + "<b>엑셀 파일 고르기</b><small>.xlsx · .csv</small></label>" +
+      '<details class="bo-paste"><summary>파일 없이 붙여 넣기</summary><textarea class="a-input num" name="lines" rows="5" placeholder="DC261030123456 640012345678&#10;DC261030654321, 640012345679"></textarea>' + btn("붙여 넣은 내용 확인", "bo-up-paste", "a-btn-ghost a-btn-sm") + "</details>" +
+      '<div class="a-field"><label for="vsb-car">택배사 <small>(파일에 택배사 칸이 없을 때)</small></label><select class="a-input" id="vsb-car" name="carrier">' + X.CARRIERS.map((c) => "<option" + (c[0] === X.shipSet().carrier ? " selected" : "") + ">" + c[0] + "</option>").join("") + "</select></div>" +
+      '<div id="bo-up-pre"></div><p class="a-error" id="vsb-err"></p></form>',
+      '<button type="button" class="a-btn a-btn-ghost" data-action="modal-close">취소</button><button type="submit" form="vda-shipbulk-form" class="a-btn a-btn-primary" id="bo-up-go" disabled>' + icon("truck", "sm") + "발송 처리</button>", "md");
   }
-  const vsInvOk = (x) => /^[0-9A-Za-z-]{6,20}$/.test(String(x || "").trim());
-  function saveShipBulk(f) {
-    const X = VX(), err = document.getElementById("vsb-err"), car = f.carrier.value, rows = String(f.lines.value || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
-    if (!rows.length) { err.textContent = "주문번호와 송장번호를 한 줄에 하나씩 붙여 넣어 주세요."; return; }
-    let ok = 0; const bad = [];
-    rows.forEach((l) => {
-      const [no, inv] = l.split(/[\s,\t]+/), o = VD().orders.find((x) => x.no === no && x.ship && x.status === "paid");
-      if (!o || ["ready", "prep"].indexOf(X.shipStOf(o)) < 0 || !vsInvOk(inv) || o.refundReq) { bad.push(no || l); return; }
-      Object.assign(o.ship, { st: "ship", carrier: car, inv: inv.trim(), prepAt: o.ship.prepAt || Date.now(), shipAt: Date.now(), by: (staffMe() || {}).name || "마스터" }); ok++;
+  const BO_CAR = [[/cj|대한통운/i, "CJ대한통운"], [/우체국|epost/i, "우체국택배"], [/한진/, "한진택배"], [/롯데/, "롯데택배"], [/로젠/, "로젠택배"], [/경동/, "경동택배"], [/대신/, "대신택배"], [/일양/, "일양로지스"], [/쿠팡|cls/i, "쿠팡로지스틱스"]];
+  const boCarOf = (x) => { x = String(x || "").trim(); if (!x) return ""; const C = VX().CARRIERS.map((c) => c[0]); if (C.indexOf(x) >= 0) return x; const m = BO_CAR.find((r) => r[0].test(x)); return m && C.indexOf(m[1]) >= 0 ? m[1] : ""; };
+  /** 표 → 맞춘 결과 [{ no, inv, car, o, ok, why }] */
+  function boMatch(rows, defCar) {
+    const X = VX(), norm = (x) => String(x || "").replace(/\s/g, "");
+    let hi = rows.findIndex((r) => (r || []).some((c) => /주문\s*번호|order/i.test(c)) && (r || []).some((c) => /송장|운송장|invoice|tracking/i.test(c)));
+    let cNo = 0, cInv = 1, cCar = -1;
+    if (hi >= 0) { const h = rows[hi].map(norm); cNo = h.findIndex((c) => /고객주문번호/.test(c)); if (cNo < 0) cNo = h.findIndex((c) => /주문번호|order/i.test(c)); cInv = h.findIndex((c) => /운송장번호|송장번호/.test(c)); if (cInv < 0) cInv = h.findIndex((c) => /송장|invoice|tracking/i.test(c)); cCar = h.findIndex((c) => /택배사|carrier/i.test(c)); }
+    else { const r0 = rows.find((r) => (r || []).some((c) => /^DC\d{6,}/.test(String(c).trim()))); if (r0) { cNo = r0.findIndex((c) => /^DC\d{6,}/.test(String(c).trim())); cInv = r0.findIndex((c, i) => i !== cNo && /^[0-9-]{8,}$/.test(boInv(c))); } }
+    const seen = {};
+    return rows.slice(hi + 1).filter((r) => r && String(r[cNo] || "").trim()).map((r) => {
+      const no = String(r[cNo] || "").trim(), inv = boInv(r[cInv]), car = (cCar >= 0 && boCarOf(r[cCar])) || defCar, o = VD().orders.find((x) => x.no === no && x.ship), st = o ? X.shipStOf(o) : "", c = o ? X.claimOf(o) : null;
+      const why = seen[no] ? "같은 주문이 두 번 있어요" : !o ? "없는 주문번호" : !inv ? "송장번호 없음" : !vsInvOk(inv) ? "송장번호 형식 확인" : st === "ship" || st === "done" ? (o.ship.inv === inv ? "이미 보냄 (같은 송장)" : "이미 보낸 주문") : st === "wait" ? "입금 대기 주문" : st === "cancel" ? "취소된 주문" : c && c.st === "req" ? "취소 요청 처리 중" : "";
+      seen[no] = 1;
+      return { no, inv, car, o, ok: !why, why, name: o ? o.ship.name : String(r[1] || "") };
     });
-    if (!ok) { err.textContent = "바꾼 주문이 없어요. 주문번호 · 송장번호를 확인해 주세요." + (bad.length ? " (" + bad.slice(0, 5).join(", ") + ")" : ""); return; }
-    (ui.vsPick || new Set()).clear();
-    commit("종이책 " + ok + "건을 발송 처리했어요." + (bad.length ? " " + bad.length + "건은 확인이 필요해요: " + bad.slice(0, 5).join(", ") : ""));
   }
-  function vsCsv(list) {
-    const X = VX(), head = ["주문번호", "결제일", "받는 분", "받는 분 휴대폰", "우편번호", "주소", "상세 주소", "배송 요청사항", "상품", "수량", "결제 금액", "배송 상태", "택배사", "송장 번호"];
-    const rows = [head].concat(list.map((o) => { const s = o.ship || {}; return [o.no, o.paidAt ? DB.date.toStr(new Date(o.paidAt)) : "", s.name || "", s.phone || "", s.zip || "", s.addr1 || "", s.addr2 || "", s.memo || "", o.title, Number(o.qty) || 1, o.amount, (X.SHIP_ST[X.shipStOf(o)] || [""])[0], s.carrier || "", s.inv || ""]; }));
-    const csv = "\ufeff" + rows.map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(",")).join("\n"), l = document.createElement("a");
-    l.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); l.download = "doogoclass-books-" + todayStr() + ".csv"; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(l.href), 3e4);
-    toast("택배 접수용 목록 " + list.length + "건을 내려받았어요.");
+  function boUpPreview(rows) {
+    const f = document.getElementById("vda-shipbulk-form"), box = document.getElementById("bo-up-pre"), go = document.getElementById("bo-up-go"), err = document.getElementById("vsb-err"); if (!f || !box) return;
+    const res = boMatch(rows, f.carrier.value), ok = res.filter((x) => x.ok);
+    ui.boUp = res; err.textContent = res.length ? "" : "주문번호 · 송장번호가 들어 있는 줄을 찾지 못했어요. 첫 줄에 ‘주문번호’ · ‘송장번호’ 머리글이 있는지 확인해 주세요.";
+    box.innerHTML = res.length ? '<p class="bo-up-sum"><b>' + ok.length + "건 발송 처리</b> · " + (res.length - ok.length) + "건 건너뜀</p>" + '<div class="a-table-wrap bo-up-t"><table class="a-table"><thead><tr><th>주문번호</th><th>받는 분</th><th>택배사 · 송장</th><th>결과</th></tr></thead><tbody>' + res.slice(0, 200).map((x) => '<tr class="' + (x.ok ? "" : "off") + '"><td class="num">' + esc(x.no) + "</td><td>" + esc(x.name || "") + '</td><td class="num">' + esc(x.car) + " " + esc(x.inv) + "</td><td>" + (x.ok ? pill("반영", "ok") : pill(x.why, "mute")) + "</td></tr>").join("") + "</tbody></table></div>" : "";
+    if (go) { go.disabled = !ok.length; go.innerHTML = icon("truck", "sm") + (ok.length ? ok.length + "건 발송 처리" : "발송 처리"); }
+  }
+  function saveShipBulk(f) {
+    const err = document.getElementById("vsb-err"), res = (ui.boUp || []).filter((x) => x.ok);
+    if (!res.length) { err.textContent = "반영할 송장이 없어요. 파일을 고르거나 붙여 넣은 내용을 확인해 주세요."; return; }
+    const at = Date.now(), by = (staffMe() || {}).name || "마스터"; let n = 0;
+    res.forEach((x) => { const o = VD().orders.find((y) => y.no === x.no && y.ship && y.status === "paid"); if (!o || ["ready", "prep"].indexOf(VX().shipStOf(o)) < 0) return; Object.assign(o.ship, { st: "ship", carrier: x.car, inv: x.inv, prepAt: o.ship.prepAt || at, shipAt: at, by }); n++; });
+    ui.boUp = null; (ui.vsPick || new Set()).clear();
+    commit("종이책 " + n + "건을 발송 처리했어요. 회원 마이페이지에 배송 조회가 열려요.");
   }
   function pageVodRefund() {
     const v = VD(), X = VX(), r = X.rfSet(), ym = todayStr().slice(0, 7), reqs = vdRefReqs().sort((a, b) => (b.refundReq.at || 0) - (a.refundReq.at || 0));
@@ -6881,7 +7100,7 @@
       render(); toast("입금 계좌 · 부가세 설정을 저장했어요.");
       return;
     }
-    const forms = { "vda-shipbulk-form": saveShipBulk, "fin-fee-form": saveFinFee, "vda-form": saveVodClass, "vda-ban-form": saveVodBanner, "vda-tile-form": saveVodTiles, "vda-rails-form": saveVodRails, "vda-cat-form": saveVodCats, "vda-topic-form": saveVodTopics, "vda-set-form": saveVodSettings, "vp-copy-form": saveVpCopy, "vda-rate-form": saveVodRate, "vda-tax-form": saveVodTax, "vda-ad-form": saveVodAd, "vs-prof-form": saveVsProfile, "vda-ref-form": saveVodRefund, "vs-inv-form": saveVsInvoice, "vda-cp-form": saveVodCoupon, "vda-iq-form": saveVodAnswer, "aff-lead-form": saveAffLead, "an-form": saveAffNotice, "sla-form": saveSla, "ct-form": saveContract, "st-form": saveStaff, "aff-form": saveAff, "aff-set-form": saveAffSet, "aff-pw-form": saveAffPw, "aff-bank-form": saveAffBank, "bill-form": saveBillForm, "pay-form": saveBillStep, "inv-form": saveBillStep, "open-form": saveBillStep, "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "plan-form": savePlan, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote, "coach-form": saveCoach };
+    const forms = { "vda-shipbulk-form": saveShipBulk, "bo-no-form": saveBoNo, "fin-fee-form": saveFinFee, "vda-form": saveVodClass, "vda-ban-form": saveVodBanner, "vda-tile-form": saveVodTiles, "vda-rails-form": saveVodRails, "vda-cat-form": saveVodCats, "vda-topic-form": saveVodTopics, "vda-set-form": saveVodSettings, "vp-copy-form": saveVpCopy, "vda-rate-form": saveVodRate, "vda-tax-form": saveVodTax, "vda-ad-form": saveVodAd, "vs-prof-form": saveVsProfile, "vda-ref-form": saveVodRefund, "vs-inv-form": saveVsInvoice, "vda-cp-form": saveVodCoupon, "vda-iq-form": saveVodAnswer, "aff-lead-form": saveAffLead, "an-form": saveAffNotice, "sla-form": saveSla, "ct-form": saveContract, "st-form": saveStaff, "aff-form": saveAff, "aff-set-form": saveAffSet, "aff-pw-form": saveAffPw, "aff-bank-form": saveAffBank, "bill-form": saveBillForm, "pay-form": saveBillStep, "inv-form": saveBillStep, "open-form": saveBillStep, "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "plan-form": savePlan, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote, "coach-form": saveCoach };
     if (forms[f.id]) { e.preventDefault(); forms[f.id](f); return; }
     if (f.classList.contains("vda-price")) { e.preventDefault(); saveVodPrice(f); return; }
     if (f.classList.contains("a-q-form")) {

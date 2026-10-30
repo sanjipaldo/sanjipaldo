@@ -149,8 +149,10 @@ function fixSelfOrder(o, n) {
     ["d1", "d2", "slot", "mode", "topic"].forEach((k) => { if (n.tea[k] !== undefined) out.tea[k] = str(n.tea[k], k === "topic" ? 500 : 30); });
     if (n.tea.st === "cancel") out.tea.st = "cancel";
   }
-  if (out.status === "paid" && n.refundReq && !out.refundReq) {
+  // 종이책: 보내기 전(결제 완료 · 상품 준비 중)은 취소 요청, 보낸 뒤는 반품 · 교환 — 마스터가 승인해 수거 중이면 새 요청을 받지 않아요
+  if (out.status === "paid" && n.refundReq && !out.refundReq && !(out.claim && out.claim.st === "pick")) {
     out.refundReq = { at: Date.now(), why: str(n.refundReq.why, 40), text: str(n.refundReq.text, 1000) };
+    if (out.ship) { const st = out.ship.st || "ready", pre = st === "ready" || st === "prep"; out.refundReq.kind = pre ? "cancel" : n.refundReq.kind === "exchange" ? "exchange" : "return"; }
     const a = n.refundReq.acct;
     if ((out.method === "bank" || out.method === "vbank") && a && typeof a === "object" && /^[A-Z_]{2,40}$/.test(String(a.bank || ""))) out.refundReq.acct = { bank: String(a.bank), number: str(a.number, 30).replace(/[^0-9]/g, ""), holder: str(a.holder, 20).trim() };
   }

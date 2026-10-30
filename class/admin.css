@@ -2924,3 +2924,74 @@ a.a-noperm, a.a-noperm * { color: var(--m-stone, #9a9aa3) !important; cursor: no
   .vs-inv .a-btn { flex: 1 1 100%; justify-content: center; }
   .vs-card { padding: 12px; }
 }
+
+/* ---------- 종이책 주문 · 배송 (bo-) : 단계 탭 · 주문 카드 · 취소 · 반품 · 교환 · 송장 엑셀 ---------- */
+.bo-box { display: grid; gap: 12px; }
+.bo-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; margin: -2px -2px 0; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+.bo-tabs button { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--m-hairline-soft, #e5e7eb); background: #fff; color: var(--m-slate, #475569); font-size: 13.5px; font-weight: 700; white-space: nowrap; }
+.bo-tabs button i { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #f1f1f3; color: #66666e; font-style: normal; font-size: 11px; font-weight: 800; }
+.bo-tabs button small { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: #f1f1f3; color: #55555d; font-size: 12px; font-weight: 800; text-align: center; }
+.bo-tabs button.on { background: #141414; border-color: #141414; color: #fff; }
+.bo-tabs button.on i, .bo-tabs button.on small { background: rgba(255, 255, 255, .18); color: #fff; }
+.bo-tabs button.hot small { background: #e0103a; color: #fff; }
+.bo-tab-gap { flex: none; width: 1px; margin: 8px 2px; background: var(--m-hairline-soft, #e5e7eb); }
+.bo-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.bo-tools-l, .bo-tools-r { display: flex; flex-wrap: wrap; gap: 6px; }
+.bo-tools .a-btn { gap: 4px; }
+.bo-hint { display: flex; gap: 6px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 10px; background: #f6f7f9; color: var(--m-slate, #475569); font-size: 13px; line-height: 1.55; }
+.bo-hint .icon { flex: none; margin-top: 3px; }
+.bo-list { display: grid; gap: 10px; }
+.bo-card { display: flex; gap: 10px; padding: 14px 16px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px var(--m-hairline-soft, #e5e7eb); }
+.bo-card.on { box-shadow: inset 0 0 0 2px #141414; }
+.bo-card.bo-cancel { background: #fafafa; }
+.bo-pick { flex: none; margin-top: 3px; }
+.bo-b { flex: 1; min-width: 0; display: grid; gap: 8px; }
+.bo-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bo-meta small { font-size: 12px; color: var(--m-muted, #6b7280); }
+.bo-t { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin: 0; }
+.bo-t b { font-size: 15.5px; font-weight: 800; line-height: 1.4; letter-spacing: -0.01em; }
+.bo-t em { flex: none; padding: 1px 7px; border-radius: 6px; background: #fff4e5; color: #b45309; font-style: normal; font-size: 12.5px; font-weight: 800; }
+.bo-sum { margin: -4px 0 0; font-size: 13px; color: var(--m-slate, #475569); }
+.bo-dep { display: flex; gap: 6px; align-items: flex-start; margin: 0; padding: 8px 10px; border-radius: 10px; background: #fff8eb; color: #7c4a03; font-size: 13px; line-height: 1.5; }
+.bo-dep .icon { flex: none; margin-top: 3px; }
+.bo-addr { display: grid; gap: 4px; margin: 0; font-size: 13px; }
+.bo-addr > div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; }
+.bo-addr dt { color: var(--m-muted, #6b7280); }
+.bo-addr dd { margin: 0; overflow-wrap: anywhere; }
+.bo-copy { margin-left: 4px; font-size: 12px; }
+.bo-claim { display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: #f6f7f9; font-size: 13px; line-height: 1.55; }
+.bo-claim p { margin: 0; }
+.bo-claim-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bo-claim-h b { font-size: 14px; }
+.bo-claim-h small { color: var(--m-muted, #6b7280); font-size: 12px; }
+.bo-claim-req { background: #fff1f3; color: #8a1230; }
+.bo-claim-pick { background: #fff8eb; color: #7c4a03; }
+.bo-claim-no { background: #f3f4f6; color: #4b5563; }
+.bo-claim-a { display: flex; flex-wrap: wrap; gap: 6px; }
+.bo-send { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bo-send select { width: auto; min-width: 120px; }
+.bo-send input { width: 180px; }
+.bo-act { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px dashed var(--m-hairline-soft, #e5e7eb); }
+.bo-act .a-btn { gap: 4px; }
+.bo-trk { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; flex: 1 1 auto; }
+.bo-trk small { flex-basis: 100%; color: var(--m-muted, #6b7280); font-size: 12px; }
+.bo-empty { padding: 8px 0; }
+.bo-up { display: grid; gap: 12px; }
+.bo-drop { display: grid; justify-items: center; gap: 4px; padding: 18px; border-radius: 12px; border: 1.5px dashed #c9ccd3; background: #fafafa; cursor: pointer; text-align: center; }
+.bo-drop:hover { border-color: #141414; }
+.bo-drop b { font-size: 14px; overflow-wrap: anywhere; }
+.bo-drop small { color: var(--m-muted, #6b7280); }
+.bo-paste summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--m-slate, #475569); }
+.bo-paste textarea { margin: 8px 0; }
+.bo-up-sum { margin: 0; font-size: 14px; }
+.bo-up-t { max-height: 280px; overflow: auto; }
+.bo-up-t tr.off td { color: #9ca3af; }
+@media (max-width: 720px) {
+  .bo-card { padding: 12px; gap: 8px; }
+  .bo-tools { justify-content: flex-start; }
+  .bo-tools-r { width: 100%; }
+  .bo-send { width: 100%; }
+  .bo-send select, .bo-send input { flex: 1 1 140px; width: auto; min-width: 0; }
+  .bo-send .a-btn { flex: 1 1 100%; justify-content: center; }
+  .bo-addr > div { grid-template-columns: 64px minmax(0, 1fr); }
+}

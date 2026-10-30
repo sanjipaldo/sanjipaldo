@@ -3394,3 +3394,59 @@ a.vd-fln:not(.is-after):hover { border-color: #e2c050; }
   .vd-addr-r input { width: 100px; }
   .vd-addr-pop { height: 460px; }
 }
+
+/* ---------- 종이책 주문 · 배송 조회 (교보문고처럼 단계별 건수) · 입금 안내 · 취소 · 반품 · 교환 ---------- */
+.vd-my-stat:has(> a:nth-child(4)) { grid-template-columns: repeat(4, 1fr); }
+.vd-shs { display: flex; align-items: stretch; gap: 2px; padding: 14px 8px; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px var(--ln10); }
+.vd-shs > a { flex: 1; min-width: 0; display: grid; justify-items: center; gap: 4px; padding: 4px 2px; border-radius: 8px; color: var(--on3); text-align: center; }
+.vd-shs > a b { font-size: 22px; font-weight: 800; line-height: 1.1; color: #c4c4cc; font-variant-numeric: tabular-nums; }
+.vd-shs > a.has b { color: var(--on1); }
+.vd-shs > a span { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.vd-shs > a.on { background: #fff6cc; }
+.vd-shs > a:hover { background: var(--s1); }
+.vd-shs > i { flex: none; align-self: center; color: #c4c4cc; font-style: normal; }
+.vd-shs-c { display: flex; justify-content: space-between; gap: 8px; margin: 8px 2px 16px !important; font-size: 13px; }
+.vd-shs-c a { color: var(--on2); }
+.vd-shs-c a.on, .vd-shs-c a:hover { color: var(--on1); text-decoration: underline; }
+.vd-shs-c b { margin-left: 4px; color: var(--on1); }
+.vd-shc-chips { display: flex !important; flex-wrap: wrap; gap: 4px; }
+.vd-shc-steps.s5 { grid-template-columns: repeat(5, 1fr); }
+.vd-shc-bank { display: grid; gap: 6px; padding: 14px; border-radius: 10px; background: #fff8eb; box-shadow: inset 0 0 0 1px rgba(180, 83, 9, .14); font-size: 13px; }
+.vd-shc-bank p { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 !important; }
+.vd-shc-bank small { width: 64px; flex: none; color: #9a5b00; font-size: 12px; font-weight: 600; }
+.vd-shc-bank b { font-weight: 800; }
+.vd-shc-bank em { font-style: normal; font-size: 12px; color: #7c4a03; }
+.vd-shc-cl { display: grid; gap: 4px; padding: 12px 14px; border-radius: 10px; background: var(--s1); font-size: 13px; color: var(--on2); }
+.vd-shc-cl > b { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--on1); }
+.vd-shc-cl p { margin: 0 !important; line-height: 1.55; }
+.vd-shc-cl a { text-decoration: underline; }
+.vd-shc-cl-req, .vd-shc-cl-pick { background: #fff4e0; }
+.vd-shc-cl-no { background: #fff1f3; }
+.vd-shc-cl-refunded, .vd-shc-cl-done { background: var(--gr); }
+.vd-rfq-kind { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vd-rfq-kind label { cursor: pointer; }
+.vd-rfq-kind input { position: absolute; opacity: 0; pointer-events: none; }
+.vd-rfq-kind span { display: grid; gap: 2px; height: 100%; padding: 12px; border-radius: 10px; box-shadow: inset 0 0 0 1px #dfe2e7; }
+.vd-rfq-kind b { font-size: 14px; }
+.vd-rfq-kind small { font-size: 12px; color: var(--on3); }
+.vd-rfq-kind input:checked + span { box-shadow: inset 0 0 0 2px #111; }
+.vd-co-cash { display: grid; gap: 8px; margin-top: 14px; font-size: 13px; }
+.vd-co-cash > b { font-weight: 600; color: var(--on1); }
+.vd-co-cash-o { display: flex; flex-wrap: wrap; gap: 6px; }
+.vd-co-cash-o label { cursor: pointer; }
+.vd-co-cash-o input { position: absolute; opacity: 0; pointer-events: none; }
+.vd-co-cash-o span { display: inline-flex; padding: 7px 12px; border-radius: 999px; border: 1px solid #dfe2e7; background: #fff; font-size: 13px; font-weight: 600; }
+.vd-co-cash-o input:checked + span { border-color: #111; background: #111; color: #fff; }
+.vd-co-cash input[name=cashNo] { width: 100%; max-width: 280px; height: 44px; padding: 0 14px; border: 0; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--lnb); font: 400 15px/1.5 var(--vd-font); background: #fff; }
+.vd-co-cash small { color: var(--on3); line-height: 1.5; }
+.vd-co-priv { display: flex; gap: 6px; align-items: flex-start; margin: 10px 0 0 !important; font-size: 12px; color: var(--on3); line-height: 1.5; }
+.vd-co-priv .icon { flex: none; margin-top: 2px; }
+@media (max-width: 720px) {
+  .vd-shs { padding: 12px 4px; }
+  .vd-shs > a b { font-size: 19px; }
+  .vd-shs > a span { font-size: 11px; letter-spacing: -0.04em; }
+  .vd-shs > i { display: none; }
+  .vd-shc-steps.s5 b { font-size: 11px; letter-spacing: -0.04em; }
+  .vd-shc-steps.s5 small { font-size: 10px; }
+  .vd-rfq-kind { grid-template-columns: 1fr; }
+}

@@ -841,6 +841,36 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
   bo = (await store.getDoc("vo:" + bkN)).v;
   ok(r.json.ok && bo.status === "paid" && bo.paidAt > 0 && bo.ship.st === "ready", "마스터 입금 확인 → 결제 완료 · 보낼 주문으로", bo);
   useJar(memJar);
+  // 현금영수증 (무통장만): 번호를 확인하고 주문에 남겨요 — 회원은 ‘발급 완료’ · 처리 상태를 바꿀 수 없어요
+  r = await call("vod-pay", { body: { action: "prepare", pid: "b2", kind: "course", qty: 1, method: "bank", depositor: "책OO", ship: SHIP, cashRcpt: { type: "p", no: "0101234" }, expect: 13800 } });
+  ok(r.status === 400 && /현금영수증/.test(r.json.message), "현금영수증 휴대폰 번호가 이상하면 막기", r.json);
+  r = await call("vod-pay", { body: { action: "prepare", pid: "b2", kind: "course", qty: 1, method: "bank", depositor: "책OO", ship: SHIP, cashRcpt: { type: "b", no: "123-45-67890" }, expect: 13800 } });
+  const crN = r.json.no; bo = (await store.getDoc("vo:" + crN)).v;
+  ok(r.json.ok && bo.cashRcpt && bo.cashRcpt.type === "b" && bo.cashRcpt.no === "1234567890", "현금영수증 지출증빙(사업자등록번호 10자리)이 주문에 남아요", bo.cashRcpt);
+  j = await boot();
+  r = await sync([{ k: "vo:" + crN, base: verOf(j, "vo:" + crN), ops: [{ p: ["cashRcpt", "done"], v: 1 }, { p: ["claim"], v: { k: "return", st: "done" } }] }]);
+  bo = (await store.getDoc("vo:" + crN)).v;
+  ok(!bo.cashRcpt.done && !bo.claim, "회원은 현금영수증 발급 표시 · 요청 처리 상태를 못 바꿔요", bo);
+  // 취소 · 반품 · 교환 요청 종류: 보내기 전은 취소, 보낸 뒤는 반품 · 교환 — 승인(수거 중)이면 새 요청을 받지 않아요
+  j = await boot();
+  r = await sync([{ k: "vo:" + bkN, base: verOf(j, "vo:" + bkN), ops: [{ p: ["refundReq"], v: { why: "단순 변심", kind: "exchange" } }] }]);
+  ok(((await store.getDoc("vo:" + bkN)).v.refundReq || {}).kind === "cancel", "보내기 전(결제 완료)이면 요청 종류는 ‘취소’로", (await store.getDoc("vo:" + bkN)).v.refundReq);
+  j = await boot();
+  await sync([{ k: "vo:" + bkN, base: verOf(j, "vo:" + bkN), ops: [{ p: ["refundReq"], d: 1 }] }]);
+  ok(!(await store.getDoc("vo:" + bkN)).v.refundReq, "회원이 요청을 거둬들여요");
+  useJar({ dc_a: auth.sign({ r: "master" }) }); j = await boot();
+  await sync([{ k: "vo:" + bkN, base: verOf(j, "vo:" + bkN), ops: [{ p: ["ship", "st"], v: "done" }, { p: ["ship", "inv"], v: "640012340000" }, { p: ["ship", "shipAt"], v: Date.now() - 864e5 }, { p: ["ship", "doneAt"], v: Date.now() }] }]);
+  useJar(memJar); j = await boot();
+  await sync([{ k: "vo:" + bkN, base: verOf(j, "vo:" + bkN), ops: [{ p: ["refundReq"], v: { why: "파손 · 파본", kind: "exchange", text: "표지 찢어짐" } }] }]);
+  ok(((await store.getDoc("vo:" + bkN)).v.refundReq || {}).kind === "exchange", "받은 뒤에는 교환 요청", (await store.getDoc("vo:" + bkN)).v.refundReq);
+  useJar({ dc_a: auth.sign({ r: "master" }) }); j = await boot();
+  await sync([{ k: "vo:" + bkN, base: verOf(j, "vo:" + bkN), ops: [{ p: ["claim"], v: { k: "exchange", st: "pick", why: "파손 · 파본", at: Date.now() } }, { p: ["refundReq"], d: 1 }] }]);
+  bo = (await store.getDoc("vo:" + bkN)).v;
+  ok(bo.claim && bo.claim.st === "pick" && !bo.refundReq, "마스터 승인: 요청이 ‘수거 중’ 처리로 옮겨가요", bo.claim);
+  useJar(memJar); j = await boot();
+  await sync([{ k: "vo:" + bkN, base: verOf(j, "vo:" + bkN), ops: [{ p: ["refundReq"], v: { why: "단순 변심", kind: "return" } }, { p: ["claim", "st"], v: "done" }] }]);
+  bo = (await store.getDoc("vo:" + bkN)).v;
+  ok(!bo.refundReq && bo.claim.st === "pick", "수거 중에는 회원이 새 요청을 넣거나 처리 상태를 바꿀 수 없어요", { rq: bo.refundReq, c: bo.claim });
   // 일회성 작업: 문대표 종이책을 스토어 · 가격표에 (없을 때만)
   const OO = require(path.join(TMP, "class/api/_lib/oneoff.js")), BOOKS = require(path.join(TMP, "class/api/_lib/books.js"));
   const fakeMeta = { vod: { products: [{ id: "v1", title: "x" }], settings: {} }, other: 1 }, fakeCat = { at: 1, products: [{ id: "v1" }] };
