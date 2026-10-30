@@ -1,6 +1,7 @@
 /* GET /api/file?h=해시 — 사진·첨부 파일. 볼 수 있는 사람에게만 (공개 페이지 사진은 누구나)
  * POST /api/file { data: "data:…;base64,…", scope }  운영자(마스터 · 강사 · 코치)가 파일 하나 올리기 → { url }
- *   scope: pub (클래스 사진 · 배너 — 누구나) · adm (제출 서류 — 운영자만) · vodp:<클래스> (수업 자료 — 그 클래스를 산 회원 · 운영자만) */
+ *   scope: pub (클래스 사진 · 배너 — 누구나) · adm (제출 서류 — 운영자만) · vodp:<클래스> (수업 자료 · 전자책 — 그 클래스를 산 회원 · 운영자만)
+ *   전자책 파일을 산 회원이 받아 가면 그 주문에 내려받은 때(dlAt)를 남겨요 → 바로 취소(100% 환불) 판단 */
 "use strict";
 const crypto = require("crypto");
 const { send, query, body, handler } = require("./_lib/http");
@@ -30,8 +31,10 @@ module.exports = handler(["GET", "POST"], async (req, res) => {
   if (!/^[0-9a-f]{16,64}$/.test(h)) return send(res, 400, { error: "input" });
   const f = await store.getFile(h);
   if (!f) return send(res, 404, { error: "notfound" });
-  const pub = f.scopes.indexOf("pub") !== -1;
-  if (!pub && !access.canReadFile(f.scopes, await auth.identify(req))) return send(res, 403, { error: "forbidden" });
+  const pub = f.scopes.indexOf("pub") !== -1, ids = pub ? null : await auth.identify(req);
+  if (!pub && !access.canReadFile(f.scopes, ids)) return send(res, 403, { error: "forbidden" });
+  // 산 회원이 전자책 파일을 받아 가면 주문에 내려받은 때를 남겨요 (바로 취소 판단)
+  if (!pub && ids && ids.vod && !ids.admin) for (const sc of f.scopes) if (/^vodp:/.test(sc)) await require("./_lib/vodaccess").markEbookDl(ids, sc.slice(5)).catch((e) => console.error("[file] ebook dl", e && e.message));
   const buf = Buffer.from(f.b64, "base64");
   res.statusCode = 200;
   res.setHeader("Content-Type", f.mime);

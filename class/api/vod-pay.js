@@ -1,7 +1,8 @@
 /* /api/vod-pay — 두고클래스 결제 · 취소 · 환불 (포트원 V2)
  *
  *  회원 (dc_v 로그인)
- *   { action: "prepare", pid, kind, plan, coach, mcid, points, method, buyer, tea, expect }
+ *   { action: "prepare", pid, kind, plan, coach, mcid, points, method, buyer, tea, expect, qty, ship }
+ *        종이책: qty(1~10권) · ship { name, phone, zip, addr1, addr2, memo } → 주문에 배송지 · 배송 상태(ship.st ready → prep → ship → done)를 남겨요
  *        → 서버가 금액을 계산해 ‘결제 대기’ 주문을 만들고 { paymentId, amount, orderName, no } 를 돌려줘요 (0원이면 바로 완료)
  *   { action: "complete", paymentId }   포트원에 결제를 다시 물어 PAID · 금액 · 통화가 맞을 때만 결제 완료
  *   { action: "abort", paymentId }      결제창을 닫았거나 실패 → 결제 대기 주문을 실패로
@@ -249,7 +250,7 @@ async function track(res, m, b) {
   send(res, 200, { ok: true });
 }
 /** 카탈로그: 가격 계산에 필요한 칸만 받아요 */
-const P_KEYS = ["id", "title", "type", "status", "price", "sale", "saleEnd", "plans", "accessDays", "eventAt", "eventMin", "seats", "next", "ebPrice", "ebDays", "coach", "tea", "dg", "iid", "share"];
+const P_KEYS = ["id", "title", "type", "status", "price", "sale", "saleEnd", "plans", "accessDays", "eventAt", "eventMin", "seats", "next", "ebPrice", "ebDays", "coach", "tea", "dg", "iid", "share", "shipFee", "stock"];
 const C_KEYS = ["id", "code", "name", "kind", "value", "max", "min", "days", "endAt", "types", "auto", "dl", "on"];
 const pick = (o, ks) => { const r = {}; ks.forEach((k) => { if (o && o[k] !== undefined) r[k] = o[k]; }); return r; };
 async function saveCatalog(res, b) {

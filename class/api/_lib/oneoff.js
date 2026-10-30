@@ -321,6 +321,27 @@ function hanaSecondCourse(get) {
   return { writes: { "ins:choi": Object.assign({}, c, { coaches: (Array.isArray(c.coaches) ? c.coaches : []).concat([add]) }) }, result: { added: "ins:choi coach-hana" } };
 }
 
+/* ---------- 문대표 종이책 『내 인생의 추월차선은 내가 만든다』 — 두고클래스 전자책 메뉴 (택배 배송) ----------
+ * 스토어 상품(meta.vod.products)과 결제 가격표(vcat)에 없을 때만 넣어요. 문대표 강의는 스토어에서 숨겨 두었지만(insOff) 이 책은 보여요(showOff).
+ * 배송 설정 기본값(settings.ship)도 비어 있을 때만 채워요. v21 표시를 남겨 화면이 같은 책을 또 넣지 않게 해요 */
+function moonBook(get) {
+  const { MOON_BOOK, SHIP_DEF } = require("./books");
+  const meta = get("meta");
+  if (!isObj(meta) || !isObj(meta.vod) || !Array.isArray(meta.vod.products)) return { writes: {}, result: { skipped: "두고클래스 상품 없음" } };
+  const writes = {}, v = clone(meta.vod), has = v.products.some((p) => p && p.id === MOON_BOOK.id);
+  if (!has) v.products.push(clone(MOON_BOOK));
+  v.settings = isObj(v.settings) ? v.settings : {};
+  if (!isObj(v.settings.ship)) v.settings.ship = clone(SHIP_DEF);
+  v.v21 = 1;
+  writes.meta = Object.assign({}, meta, { vod: v });
+  const cat = get("vcat"), P_KEYS = ["id", "title", "type", "status", "price", "sale", "saleEnd", "plans", "accessDays", "eventAt", "eventMin", "seats", "next", "ebPrice", "ebDays", "coach", "tea", "dg", "iid", "share", "shipFee", "stock"];
+  if (isObj(cat) && Array.isArray(cat.products) && !cat.products.some((p) => p && p.id === MOON_BOOK.id)) {
+    const row = {}; P_KEYS.forEach((k) => { if (MOON_BOOK[k] !== undefined) row[k] = MOON_BOOK[k]; }); row.dg = false;
+    writes.vcat = Object.assign({}, cat, { products: cat.products.concat([row]) });
+  }
+  return { writes, result: { book: has ? "이미 있음" : "추가", vcat: writes.vcat ? "추가" : "그대로" } };
+}
+
 /* 위에서부터 차례로 (앞 작업 결과를 뒤 작업이 본다) */
 const OPS = [
   { id: "2026-10-08-docs-guide-6", note: "문대표 서류 준비 가이드를 6단계로", run: docsGuideSix },
@@ -334,7 +355,8 @@ const OPS = [
   { id: "2026-10-16-food-quicklink-desc", note: "빠른 이동 두고푸드 설명 → 전문 식품 도매몰 · 사업자 전용가 (기본 문구일 때만)", run: foodQuickLinkDesc },
   { id: "2026-10-17-farmer-to-godfarmer", note: "강사 표시 이름 황금농부 → 갓농부 + 강의 분야 ‘귤 단 하나 팔아 월매출 10억’ (로그인 이름은 그대로)", run: farmerToGodFarmer },
   { id: "2026-10-29-vod-demo-member", note: "두고클래스 체험 계정 vod@gmail.com / vod + 산 강의 6개 (0원 체험 주문)", run: vodDemoMember },
-  { id: "2026-10-30-hana-second-course", note: "테스트 코치 김하나(1004)가 초이 강의 코치도 맡기 (여러 강의 코치 로그인 확인용)", run: hanaSecondCourse }
+  { id: "2026-10-30-hana-second-course", note: "테스트 코치 김하나(1004)가 초이 강의 코치도 맡기 (여러 강의 코치 로그인 확인용)", run: hanaSecondCourse },
+  { id: "2026-10-30-moon-paper-book", note: "문대표 종이책 『내 인생의 추월차선은 내가 만든다』를 두고클래스 전자책 메뉴에 (택배 배송 · 15,900원)", run: moonBook }
 ];
 
-module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer, vodDemoMember, hanaSecondCourse };
+module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer, vodDemoMember, hanaSecondCourse, moonBook };

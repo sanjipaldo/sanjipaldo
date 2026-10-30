@@ -12,7 +12,7 @@
 const crypto = require("crypto");
 const store = require("./store");
 const auth = require("./auth");
-const { pricer, kstDay, addDays } = require("./vodprice");
+const { pricer, kstDay, addDays, BOOK_MAX } = require("./vodprice");
 
 const K = { member: (id) => "vm:" + id, email: (e) => "vme:" + String(e).toLowerCase(), kakao: (k) => "vmk:" + k, order: (no) => "vo:" + no, pay: (p) => "vpay:" + p, prog: (mid) => "vp:" + mid, cat: "vcat" };
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -85,8 +85,20 @@ async function quote(m, req, orders) {
   const kind = ["course", "extend", "coach", "tea"].indexOf(req.kind) >= 0 ? req.kind : "course";
   const mine = (orders || []).filter((o) => o.pid === p.id && o.status === "paid");
   const hasCourse = mine.some((o) => (o.kind || "course") === "course");
+  // 종이책: 수량 · 배송지 · 재고 (배송비는 주문마다 한 번)
+  const book = X.typeOf(p) === "book";
+  let qty = 1, ship = null;
+  if (book) {
+    if (kind !== "course") return { ok: false, message: "종이책은 따로 살 추가 상품이 없어요." };
+    qty = Math.floor(Number(req.qty) || 1);
+    if (!(qty >= 1 && qty <= BOOK_MAX)) return { ok: false, message: "수량은 1~" + BOOK_MAX + "권까지 고를 수 있어요." };
+    ship = shipAddr(req.ship);
+    if (!ship) return { ok: false, message: "받는 분 · 휴대폰 번호 · 주소를 확인해 주세요." };
+    if (p.stock != null && p.stock !== "") { const left = Math.max(0, Number(p.stock) - (await soldQty(p.id))); if (left < qty) return { ok: false, message: left ? "남은 재고가 " + left + "권이에요. 수량을 줄여 주세요." : "품절됐어요. 재입고되면 다시 열려요." }; }
+  }
   let pr = 0, list = 0, days = null, coach = 0, c = null;
-  if (kind === "course") {
+  if (book) { pr = X.priceOf(p) * qty; list = Math.max(Number(p.price) || 0, X.priceOf(p)) * qty; }
+  else if (kind === "course") {
     if (X.isEvent(p) && p.seats) { const sold = await soldCount(p.id); if (sold >= Number(p.seats)) return { ok: false, message: "자리가 모두 찼어요." }; }
     const plan = X.plansOf(p).length ? X.planOf(p, req.plan) : null;
     pr = plan ? plan.sale : X.priceOf(p); list = plan ? plan.list : Number(p.price) || pr; days = plan ? plan.d : null;
@@ -104,13 +116,27 @@ async function quote(m, req, orders) {
     cp = def ? X.couponOff(def, p, pr) : 0;
     if (!cp) mc = null;
   }
-  const sum = pr + coach, pt = Math.max(0, Math.min(Math.floor(Number(req.points) || 0), Number(m.points) || 0, sum - cp)), ptMain = Math.min(pt, pr - cp), ptC = pt - ptMain;
+  const fee = book ? X.shipOf(p) : 0;
+  const sum = pr + coach + fee, pt = Math.max(0, Math.min(Math.floor(Number(req.points) || 0), Number(m.points) || 0, sum - cp)), ptMain = Math.min(pt, pr + fee - cp), ptC = pt - ptMain;
   const total = Math.max(0, sum - cp - pt);
   if (req.expect != null && Number(req.expect) !== total) return { ok: false, message: "가격이 방금 바뀌었어요. 새로고침한 뒤 다시 결제해 주세요.", total };
-  const items = [{ kind, pid: p.id, title: p.title, list, sale: pr, amount: pr - cp - ptMain, days, couponOff: cp || 0, mcid: mc ? mc.id : "", pointOff: ptMain || 0, iid: p.iid || "", share: p.share }];
+  const items = [Object.assign({ kind, pid: p.id, title: p.title, list, sale: pr, amount: pr + fee - cp - ptMain, days, couponOff: cp || 0, mcid: mc ? mc.id : "", pointOff: ptMain || 0, iid: p.iid || "", share: p.share }, book ? { qty, unit: X.priceOf(p), shipFee: fee, ship: Object.assign(ship, { st: "ready" }) } : {})];
   if (coach) items.push({ kind: "coach", pid: p.id, title: p.title, list: coach, sale: coach, amount: coach - ptC, days: null, couponOff: 0, mcid: "", pointOff: ptC || 0, coach: { n: c.n, days: c.days, price: c.price, used: 0 }, iid: p.iid || "" });
   if (kind === "coach" && c) items[0].coach = { n: c.n, days: c.days, price: c.price, used: 0 };
-  return { ok: true, items, total, points: pt, orderName: (p.title.length > 40 ? p.title.slice(0, 40) + "…" : p.title) + (days && kind === "course" ? " · " + (days === 1095 ? "3년" : days + "일") + " 수강권" : "") + (coach ? " + 1:1 코칭권" : "") };
+  return { ok: true, items, total, points: pt, orderName: (p.title.length > 40 ? p.title.slice(0, 40) + "…" : p.title) + (book && qty > 1 ? " " + qty + "권" : "") + (days && kind === "course" ? " · " + (days === 1095 ? "3년" : days + "일") + " 수강권" : "") + (coach ? " + 1:1 코칭권" : "") };
+}
+/** 배송지 (받는 분 · 휴대폰 · 우편번호 · 주소 · 상세 주소 · 배송 요청) → 깨끗한 값 | null */
+function shipAddr(x) {
+  if (!x || typeof x !== "object") return null;
+  const s = (v, n) => String(v == null ? "" : v).replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
+  const out = { name: s(x.name, 20), phone: s(x.phone, 14).replace(/[^0-9-]/g, ""), zip: String(x.zip == null ? "" : x.zip).replace(/\D/g, "").slice(0, 6), addr1: s(x.addr1, 120), addr2: s(x.addr2, 80), memo: s(x.memo, 100) };
+  if (!out.name || !/^0\d{1,2}-?\d{3,4}-?\d{4}$/.test(out.phone) || out.addr1.length < 5 || (out.zip && out.zip.length !== 5)) return null;
+  return out;
+}
+/** 종이책 팔린 권수 (결제 완료 · 입금 대기 · 15분 안의 결제 대기) — 재고 확인 */
+async function soldQty(pid) {
+  const rows = await store.listDocs({ prefixes: ["vo:%"] });
+  return rows.filter((r) => r.v && r.v.pid === pid && (r.v.kind || "course") === "course" && (r.v.status === "paid" || r.v.status === "pending" || (r.v.status === "ready" && Date.now() - r.v.createdAt < 15 * 6e4))).reduce((a, r) => a + (Number(r.v.qty) || 1), 0);
 }
 async function soldCount(pid) {
   const rows = await store.listDocs({ prefixes: ["vo:%"] });
@@ -142,10 +168,12 @@ async function instantOf(o) {
   if (o.method === "vbank") return { ok: false, why: "가상계좌 결제는 환불 요청으로 처리해요. 환불 받을 계좌로 돌려드려요." };
   const t = X.typeOf(p), paid = o.paidAt || o.createdAt, lim = (t === "ebook" ? rf.ebookDays : rf.days) * 864e5;
   if (X.isEvent(p)) { const ev = X.kst(p.eventAt); return ev && ev - Date.now() >= rf.eventDays * 864e5 ? { ok: true } : { ok: false, why: "강의 " + rf.eventDays + "일 전이 지나 환불 요청으로 처리해요." }; }
+  // 종이책: 보내기 전(결제 완료 · 상품 준비 전)이면 기간 없이 바로 취소 · 그 뒤는 취소 · 반품 요청
+  if (t === "book") { const st = (o.ship && o.ship.st) || "ready"; return st === "ready" ? { ok: true } : { ok: false, why: st === "prep" ? "상품을 준비하고 있어 취소 요청으로 처리해요." : "이미 보낸 책이라 반품 요청으로 처리해요." }; }
   if (Date.now() - paid > lim) return { ok: false, why: "결제 후 " + (t === "ebook" ? rf.ebookDays : rf.days) + "일이 지나 환불 요청으로 처리해요." };
   if (t === "ebook") return o.dlAt ? { ok: false, why: "전자책을 내려받아 바로 취소할 수 없어요." } : { ok: true };
   const used = await usedOf(o.mid, o.pid, rf);
   return used > rf.maxUsed ? { ok: false, why: "강의를 " + used + "개 들어 환불 요청으로 처리해요." } : { ok: true, used };
 }
 
-module.exports = { K, get, update, create, uid, clone, current, login, logout, setCookie, cookies, hashPw, checkPw, pub, newMember, consentOf, catalog, rfSet, quote, ordersOf, addOrderNos, newNo, instantOf, usedOf };
+module.exports = { K, get, update, create, uid, clone, current, login, logout, setCookie, cookies, hashPw, checkPw, pub, newMember, consentOf, catalog, rfSet, quote, shipAddr, soldQty, ordersOf, addOrderNos, newNo, instantOf, usedOf };

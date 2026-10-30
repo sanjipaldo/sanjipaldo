@@ -34,7 +34,7 @@
     "PDF 전자책", "공동구매 · 공구", "라이브커머스", "와디즈 펀딩", "아마존 셀링", "틱톡샵 판매", "쿠팡파트너스", "네이버 블로그 애드포스트", "디지털 굿즈 판매", "온라인 클래스 만들기", "퍼스널 브랜딩", "유료 커뮤니티 운영",
     "카카오 이모티콘", "노션 템플릿 판매", "Etsy 디지털 파일", "스톡 사진 · 영상", "영상 편집 외주", "썸네일 디자인", "번역 · 로컬라이징", "AI 자동화 외주", "중고 리셀", "핸드메이드 판매", "체험단 · 리뷰", "1:1 컨설팅"];
   // 상품 종류: [짧은 이름, 카드 배지, 상세 안내]
-  const TYPE = { vod: ["VOD 강의", "온라인", "온라인 녹화 영상"], ebook: ["전자책", "전자책", "PDF 전자책"], live: ["LIVE 강의", "LIVE", "실시간 온라인 강의"], offline: ["오프라인 강의", "오프라인", "현장 강의"] };
+  const TYPE = { vod: ["VOD 강의", "온라인", "온라인 녹화 영상"], ebook: ["전자책", "전자책", "PDF 전자책"], book: ["종이책", "종이책", "택배로 받는 종이책"], live: ["LIVE 강의", "LIVE", "실시간 온라인 강의"], offline: ["오프라인 강의", "오프라인", "현장 강의"] };
   const L = (t, min, o) => Object.assign({ id: "", title: t, min, video: "", preview: false, desc: "", files: [] }, o || {});
   const CH = (title, lessons) => ({ id: "", title, lessons });
   // 상품 v2 필드: color = [썸네일 바탕색, 포인트 색], hook(강조 띠) · tagline(강사 한 줄) · headline(소개 큰 제목 2줄) · likeBase(기존 찜 수) · openAt(오픈 예정일)
@@ -499,6 +499,12 @@
       v.banners.splice(at >= 0 ? at : Math.min(1, v.banners.length), 0, { id: "vb-seller", eyebrow: "NEW · 셀러훈", title: "중국 구매대행,\n상품 찾기부터 첫 판매까지", sub: "타오바오 · 1688 소싱 · 스마트스토어 판매", pid: "v14", color: ["#2b0d0d", "#ff4d2e"], on: true });
     }
   }
+  /* v21: 문대표 종이책 (전자책 메뉴 · 택배 배송) + 배송 설정 기본값 — 정식 서버는 배포 때 일회성 작업(api/_lib/books.js · oneoff.js)이 같은 책을 넣어요 */
+  const MOON_BOOK = {"id": "b1", "type": "book", "status": "on", "showOff": true, "title": "내 인생의 추월차선은 내가 만든다", "sub": "0원에서 시작한 사람이 건네는 4단계 차선 변경법 · 문대표 첫 책", "cat": "biz", "iid": "moon", "creator": "문대표", "author": "문원오", "publisher": "청춘미디어", "price": 15900, "sale": null, "saleEnd": "", "pages": null, "size": "", "isbn": "", "pubDate": "", "shipFee": 0, "stock": "", "share": null, "level": "입문", "base": 0, "likeBase": 0, "cover": "assets/vod/book/moon-cover.webp", "detailImgs": [{"url": "assets/vod/book/moon-mock.webp", "name": "앞표지 · 뒤표지"}, {"url": "assets/vod/book/moon-spread.webp", "name": "표지 펼침면 · 저자 소개"}], "detailMode": "img-text", "color": ["#141414", "#ffd400"], "hook": "문대표 첫 책", "tagline": "두고홀딩스 대표 · 청춘미디어", "thumbText": "내 인생의 추월차선은\n내가 만든다", "headline": "열심히 사는데\n왜 통장은 늘 제자리일까?", "badges": ["NEW"], "pains": ["열심히 사는데 왜 통장은 늘 제자리일까?", "부자를 부러워만 하고, 무엇부터 해야 할지 모르겠다.", "한 번 크게 실패하고 나니 다시 시작할 엄두가 안 난다."], "pitch": "스무 개의 직업 끝에 통장 잔고 0원. 그의 차선을 바꾼 건 블로그 글 하나로 번 첫 5,000원이었어요. 그 첫 돈은 10개의 유통 브랜드사와 제조부터 IT 개발까지 아우르는 두고홀딩스, 뉴질랜드 아시아 최초의 건강식품 제조 인허가, 500명이 넘는 수강생으로 이어졌습니다. 아무것도 없이 시작한 사람이 실제로 밟은 네 단계, MOON 공식을 그대로 담았어요. 읽고 끝나는 책이 아니라 꼭지마다 저자의 실제 답을 보고 내 답을 쓰는 90일 차선 변경 워크북이에요.", "tags": ["문대표", "첫5000원", "MOON공식", "90일워크북", "부업", "창업"], "learn": ["M · 모르는 사람에게서 첫 돈을 받아라 — 1억짜리 계획보다 5,000원짜리 첫 판매", "O · 한 번 더 팔리게 만들어라 — 첫 주문은 마케팅이, 두 번째 주문은 신뢰가 만든다", "O · 내 손을 떠나도 돌아가게 하라 — 70%면 넘기고, 일을 문서로 만들어라", "N · 다음 층으로 올라가라 — 유통 → 브랜드 → 제조 → 교육, 천장을 알아채는 감각"], "who": ["열심히 사는데 통장은 늘 제자리인 분", "부자를 부러워만 하다 이제는 직접 시작하고 싶은 분", "첫 5,000원을 벌어 보고 싶은 부업 · 창업 준비생", "한 번 실패하고 다시 일어설 방법을 찾는 분"], "comment": "“하나의 시도가 실패한 것이지, 당신이라는 사람이 실패한 게 아니다.” 7억을 잃고 다시 일어서며 붙든 문장이에요. 꼭지마다 제 실제 답을 먼저 적어 두었으니, 그 아래에 여러분의 답을 써 보세요. 90일 뒤에는 나만의 차선 변경 계획이 완성돼 있을 거예요.", "intro": "내일은 당연히 오는 것이 아니다. 그래서 나는 ‘언젠가’라는 말을 버렸다.\n\n모르는 사람에게서 첫 돈을 받고(M), 한 번 더 팔리게 만들고(O), 내 손을 떠나도 돌아가게 하고(O), 다음 층으로 올라가라(N). 아무것도 없이 시작한 사람이 실제로 밟은 순서, MOON 공식이에요.\n\n이 책의 사용법 — 꼭지마다 저자의 실제 답(EX)을 먼저 보고, 그 아래에 당신의 답을 쓰세요. 90일 동안 한 꼭지씩, 당신만의 차선 변경 계획이 완성됩니다.\n\n· 7억을 잃고 다시 일어선 실패 읽는 법\n· 2,000개 말고 50개부터, 내 브랜드 시작법\n· 저자가 먼저 답한 질문 25개 · 90일 실천 계획", "creatorBio": "두고홀딩스 창업자이자 그룹 총괄 대표. 제조 · 유통 · 브랜딩 · 마케팅 · 교육 · 호텔 F&B · IT 개발을 아우르는 계열사와 10개의 유통 브랜드사를 이끌고 있어요. 농장 · 호텔 · 이삿짐 등 스무 개가 넘는 일을 거쳐 2019년 마누카꿀 하나로 이커머스를 독학해 첫 이익 5,000원을 남겼고, 2025년 뉴질랜드에서 아시아 최초로 건강식품 제조 인허가를 받았어요. 500명이 넘는 수강생에게 ‘모르는 사람에게서 첫 돈을 받는 법’을 가르치고 있어요.", "faq": [], "curriculum": [], "createdAt": 1793318400000};
+  function seedV21(v) {
+    if (!v.products.some((p) => p.id === MOON_BOOK.id)) v.products.push(JSON.parse(JSON.stringify(MOON_BOOK)));
+    v.settings = v.settings || {}; if (!v.settings.ship) v.settings.ship = Object.assign({}, SHIP_DEF);
+  }
   function sellerHoon() {
     return ids({ id: "v14", status: "on", type: "vod", title: "중국 구매대행, 상품 찾기부터 첫 판매까지", sub: "타오바오 · 1688 소싱 · 스마트스토어 등록 · 배송 · CS까지 한 번에", cat: "commerce", iid: "", creator: "셀러훈", creatorPhoto: "assets/home/sellerhoon-profile.webp",
       price: 249000, sale: 179000, saleEnd: "", accessDays: 365, level: "입문 · 초급", thumbText: "중국 구매대행\n첫 판매까지", base: 0, likeBase: 0, createdAt: now(), share: null,
@@ -521,7 +527,7 @@
     if (!DB.freeOf) return;
     V().products.forEach((p) => { if (!p.fromFree) return; const f = DB.freeOf(p.fromFree); if (f && f.liveAt && p.eventAt !== f.liveAt) { p.eventAt = f.liveAt; save(); } });
   }
-  function V() { const d = DB.data, fresh = !d.vod || !Array.isArray(d.vod.products), keep = fresh && d.vod && typeof d.vod === "object" ? d.vod : null; if (fresh) { d.vod = seed(); DB.save(); } else if (d.vod.ver !== 4) { migrate(d.vod); DB.save(); } if (!d.vod.v8) { d.vod.v8 = 1; seedV8(d.vod); DB.save(); } if (!d.vod.v9) { d.vod.v9 = 1; seedV9(d.vod); DB.save(); } if (!d.vod.v10) { d.vod.v10 = 1; seedV10(d.vod); DB.save(); } if (!d.vod.v11) { d.vod.v11 = 1; seedV11(d.vod); DB.save(); } if (!d.vod.v12) { d.vod.v12 = 1; seedV12(d.vod); DB.save(); } if (!d.vod.v13) { d.vod.v13 = 1; seedV13(d.vod); DB.save(); } if (!d.vod.v14) { d.vod.v14 = 1; seedV14(d.vod); DB.save(); } if (!d.vod.v15) { d.vod.v15 = 1; seedV15(d.vod); DB.save(); } if (!d.vod.v16) { d.vod.v16 = 1; seedV16(d.vod); DB.save(); } if (!d.vod.v17) { d.vod.v17 = 1; seedV17(d.vod); DB.save(); } if (!d.vod.v18) { d.vod.v18 = 1; seedV18(d.vod); DB.save(); } if (!d.vod.v19) { d.vod.v19 = 1; seedV19(d.vod); DB.save(); } if (!d.vod.v20) { d.vod.v20 = 1; seedV20(d.vod); DB.save(); } if (fresh && SRV()) srvClean(d.vod, keep); if (SRV()) srvShape(d.vod); return d.vod; }
+  function V() { const d = DB.data, fresh = !d.vod || !Array.isArray(d.vod.products), keep = fresh && d.vod && typeof d.vod === "object" ? d.vod : null; if (fresh) { d.vod = seed(); DB.save(); } else if (d.vod.ver !== 4) { migrate(d.vod); DB.save(); } if (!d.vod.v8) { d.vod.v8 = 1; seedV8(d.vod); DB.save(); } if (!d.vod.v9) { d.vod.v9 = 1; seedV9(d.vod); DB.save(); } if (!d.vod.v10) { d.vod.v10 = 1; seedV10(d.vod); DB.save(); } if (!d.vod.v11) { d.vod.v11 = 1; seedV11(d.vod); DB.save(); } if (!d.vod.v12) { d.vod.v12 = 1; seedV12(d.vod); DB.save(); } if (!d.vod.v13) { d.vod.v13 = 1; seedV13(d.vod); DB.save(); } if (!d.vod.v14) { d.vod.v14 = 1; seedV14(d.vod); DB.save(); } if (!d.vod.v15) { d.vod.v15 = 1; seedV15(d.vod); DB.save(); } if (!d.vod.v16) { d.vod.v16 = 1; seedV16(d.vod); DB.save(); } if (!d.vod.v17) { d.vod.v17 = 1; seedV17(d.vod); DB.save(); } if (!d.vod.v18) { d.vod.v18 = 1; seedV18(d.vod); DB.save(); } if (!d.vod.v19) { d.vod.v19 = 1; seedV19(d.vod); DB.save(); } if (!d.vod.v20) { d.vod.v20 = 1; seedV20(d.vod); DB.save(); } if (!d.vod.v21) { d.vod.v21 = 1; seedV21(d.vod); DB.save(); } if (fresh && SRV()) srvClean(d.vod, keep); if (SRV()) srvShape(d.vod); return d.vod; }
   /** 정식 서버: 회원 · 주문 · 후기 등은 따로 와서(볼 수 있는 것만) 비어 있을 수 있어요 → 빈 목록으로 */
   function srvShape(v) {
     if (!Array.isArray(v.members)) v.members = []; if (!Array.isArray(v.orders)) v.orders = []; if (!Array.isArray(v.reviews)) v.reviews = []; if (!Array.isArray(v.pledges)) v.pledges = []; if (!Array.isArray(v.inquiries)) v.inquiries = []; if (!Array.isArray(v.payouts)) v.payouts = [];
@@ -542,6 +548,38 @@
   const catOf = (k) => V().cats.find((c) => c.key === k) || { key: k, label: k, icon: "layers" };
   const typeOf = (p) => (p && TYPE[p.type] ? p.type : "vod");
   const isEvent = (p) => typeOf(p) === "live" || typeOf(p) === "offline";
+  /* ---------- 종이책 (택배 배송) ----------
+   * 전자책 메뉴에서 함께 팔아요. 주문마다 수량(1~10권) · 배송지 · 배송비(주문마다 한 번)를 남기고, 마스터가 배송 관리에서
+   * 결제 완료(ready) → 상품 준비 중(prep) → 배송 중(ship · 택배사 + 송장 번호) → 배송 완료(done)로 바꿔요.
+   * 배송 중이 된 뒤 정한 날(기본 3일)이 지나면 자동으로 배송 완료로 봐요. 보내기 전이면 회원이 바로 취소, 그 뒤는 취소 · 반품 요청.
+   * 도서정가제: 쿠폰은 쓰지 않고, 할인가는 정가의 90% 이상으로만 정해요 (포인트는 결제 수단이라 써요) */
+  const isBook = (p) => typeOf(p) === "book";
+  const BOOK_MAX = 10;
+  const shipFeeOf = (p) => (isBook(p) ? Math.max(0, Math.round(Number(p.shipFee) || 0)) : 0);
+  const shipFeeTxt = (p) => (shipFeeOf(p) ? "배송비 " + won(shipFeeOf(p)) : "무료배송");
+  const SHIP_DEF = { autoDays: 3, outDays: 2, carrier: "CJ대한통운", returnFee: 6000, returnAddr: "" };
+  const shipSet = () => Object.assign({}, SHIP_DEF, (V().settings || {}).ship || {});
+  // 택배사 · 배송 조회 주소 (송장 번호를 붙여요)
+  const CARRIERS = [["CJ대한통운", "https://trace.cjlogistics.com/next/tracking.html?wblNo="], ["우체국택배", "https://service.epost.go.kr/trace.RetrieveDomRigiTraceList.comm?sid1="], ["한진택배", "https://www.hanjin.com/kor/CMS/DeliveryMgr/WaybillResult.do?mCode=MN038&schLang=KR&wblnumText2="], ["롯데택배", "https://www.lotteglogis.com/home/reservation/tracking/linkView?InvNo="], ["로젠택배", "https://www.ilogen.com/web/personal/trace/"], ["경동택배", "https://kdexp.com/service/delivery/etc/delivery.do?barcode="], ["CU 편의점택배", "https://www.cupost.co.kr/postbox/delivery/localResult.cupost?invoice_no="], ["GS25 편의점택배", "https://www.cvsnet.co.kr/invoice/tracking.do?invoice_no="]];
+  const trackUrl = (o) => { const s = (o && o.ship) || {}, c = CARRIERS.find((x) => x[0] === s.carrier), no = String(s.inv || "").replace(/[^0-9A-Za-z]/g, ""); return c && no ? c[1] + encodeURIComponent(no) : ""; };
+  const SHIP_ST = { wait: ["입금 대기", "wait"], ready: ["결제 완료", "ok"], prep: ["상품 준비 중", "prep"], ship: ["배송 중", "ship"], done: ["배송 완료", "done"], cancel: ["주문 취소", "off"] };
+  /** 주문의 지금 배송 상태 (배송 중으로 바꾼 뒤 정한 날이 지나면 배송 완료로 봐요) */
+  function shipStOf(o) {
+    if (!o || !o.ship) return "";
+    if (o.status === "refunded" || o.status === "canceled" || o.status === "failed") return "cancel";
+    if (o.status === "pending" || o.status === "ready") return "wait";
+    const st = o.ship.st || "ready";
+    if (st === "ship" && o.ship.shipAt && now() >= o.ship.shipAt + (Number(shipSet().autoDays) || 3) * 864e5) return "done";
+    return SHIP_ST[st] ? st : "ready";
+  }
+  /** 배송 완료 시각 (직접 바꿨으면 그때, 자동이면 보낸 날 + 정한 날) */
+  const shipDoneAt = (o) => (!o || !o.ship ? 0 : o.ship.doneAt || (shipStOf(o) === "done" && o.ship.shipAt ? o.ship.shipAt + (Number(shipSet().autoDays) || 3) * 864e5 : 0));
+  /** 남은 재고 (재고를 안 적었으면 null = 제한 없음) */
+  function stockLeft(p) {
+    if (!isBook(p) || p.stock == null || p.stock === "") return null;
+    const sold = SRV() ? Number((stat().sold || {})[p.id]) || 0 : V().orders.filter((o) => o.pid === p.id && kindOf(o) === "course" && (o.status === "paid" || o.status === "pending")).reduce((a, o) => a + (Number(o.qty) || 1), 0);
+    return Math.max(0, Number(p.stock) - sold);
+  }
   const viaOf = (p) => (p && p.via === "zoom" ? "Zoom" : "유튜브 LIVE");
   const eventTime = (p) => { const t = p && p.eventAt ? new Date(p.eventAt).getTime() : NaN; return isNaN(t) ? 0 : t; };
   const eventPast = (p) => isEvent(p) && eventTime(p) > 0 && now() > eventTime(p) + (Number(p.eventMin) || 60) * 6e4;
@@ -573,7 +611,7 @@
   function ebOf(p) { const fn = funnelTo(p); return fn && fn.phase === "eb" && fn.ebPrice > 0 && fn.ebPrice < basePrice(p) ? Object.assign({ price: fn.ebPrice }, fn) : null; }
   // ‘무료 LIVE가 끝날 때까지 숨기기’를 켠 유료 강의는 LIVE가 끝나야 목록에 보여요
   const gatedBy = (p) => { const fn = funnelTo(p); return fn && fn.phase === "before" && fn.f.gate ? fn : null; };
-  const bizKey = (p) => (isFreeEv(p) ? "flive" : isEvent(p) ? "live" : typeOf(p) === "ebook" ? "ebook" : p.status !== "soon" && basePrice(p) === 0 ? "free" : "");
+  const bizKey = (p) => (isFreeEv(p) ? "flive" : isEvent(p) ? "live" : typeOf(p) === "ebook" || isBook(p) ? "ebook" : p.status !== "soon" && basePrice(p) === 0 ? "free" : "");
   const bizShow = (p) => !!p && (!bizKey(p) || bizOn(bizKey(p))) && !gatedBy(p) && insShown(p);
   const listed = () => onSale().filter(bizShow);
   const product = (id) => V().products.find((p) => p.id === id) || null;
@@ -606,12 +644,13 @@
   /* 강사 스토어 노출 (마스터 › VOD 클래스 관리 › 강사 노출): 끈 강사의 클래스 · 배너 · 강사진 카드는 스토어에서 빠지고 새로 살 수 없어요.
    * 클래스는 지우지 않고 판매 상태도 그대로라 다시 켜면 돌아와요. 이미 산 회원은 내 강의실에서 그대로 들어요 */
   const insOff = () => (Array.isArray(V().insOff) ? V().insOff : []);
-  const insShown = (p) => !p || insOff().indexOf(tkey(p)) < 0;
+  // showOff: 강사 노출을 꺼 둔 강사라도 이 상품만은 스토어에 보여요 (예: 강의는 다른 플랫폼 계약이라 숨기고, 종이책은 팔 때)
+  const insShown = (p) => !p || !!p.showOff || insOff().indexOf(tkey(p)) < 0;
   /** 강사별 정산 비율 (마스터 › 주문 · 매출 · 정산 › 강사별 비율 · 가격에서 강사와 조율해 확정) — 키는 두잉고 강사 iid, 두잉고 계정이 없으면 "ext:이름" */
   const insRate = (key) => (key && V().insRates && V().insRates[key]) || null;
   const rateNum = (r, k) => (r && r[k] != null && r[k] !== "" && Number(r[k]) >= 0 ? Number(r[k]) : null);
   /* 정산 비율 종류: 강사별 · 종류별로 마스터가 정해요 (기본 강사 5 : 플랫폼 5). 1년 연장권은 VOD 강의 비율 */
-  const RATE_KEYS = [["vod", "VOD 강의", "수강권 · 1년 연장권"], ["ebook", "전자책", "PDF 전자책"], ["live", "LIVE · 오프라인", "유료 LIVE · 오프라인 강의"], ["coach", "1:1 코칭권", "강사님이 직접 답하는 코칭권"], ["tea", "TEA TIME", "강사님과 Zoom 만남"]];
+  const RATE_KEYS = [["vod", "VOD 강의", "수강권 · 1년 연장권"], ["ebook", "전자책", "PDF 전자책"], ["book", "종이책", "택배로 보내는 종이책 (배송비 제외)"], ["live", "LIVE · 오프라인", "유료 LIVE · 오프라인 강의"], ["coach", "1:1 코칭권", "강사님이 직접 답하는 코칭권"], ["tea", "TEA TIME", "강사님과 Zoom 만남"]];
   const pct01 = (v) => (v != null && v !== "" && Number(v) >= 0 && Number(v) <= 100 ? Number(v) : null);
   /** 기본 비율 (마스터 설정 · 비우면 VOD 50 · 코칭 · TEA TIME 은 예전 ‘부가 상품’ 칸) */
   function rateDef(k) {
@@ -625,7 +664,8 @@
   function entryRate(e, k) {
     if (!e) return null;
     let n = pct01(e[k]);
-    if (n == null && (k === "ebook" || k === "live")) n = pct01(e.vod);
+    if (n == null && k === "book") n = pct01(e.ebook);
+    if (n == null && (k === "ebook" || k === "live" || k === "book")) n = pct01(e.vod);
     if (n == null && (k === "coach" || k === "tea")) n = pct01(e.addon);
     return n;
   }
@@ -651,11 +691,11 @@
     return o;
   }
   /** 클래스 종류 → 비율 종류 */
-  const rateKeyOfP = (p) => (typeOf(p) === "ebook" ? "ebook" : isEvent(p) ? "live" : "vod");
+  const rateKeyOfP = (p) => (typeOf(p) === "ebook" ? "ebook" : isBook(p) ? "book" : isEvent(p) ? "live" : "vod");
   /** 강의 판매 비율: 강의별 계약 → 강사 · 종류별 비율 → 기본(강사 50%) */
   const shareOf = (p) => { if (p.share != null && p.share !== "") return Number(p.share); return rateAt(tkey(p), rateKeyOfP(p), 0); };
   const monthsTxt = (d) => (d % 365 === 0 ? (d / 365 * 12) + "개월" : d % 30 === 0 ? (d / 30) + "개월" : d + "일");
-  const accessTxt = (p) => (typeOf(p) === "ebook" ? "평생 소장" : isEvent(p) ? (p.replayDays ? "다시보기 " + p.replayDays + "일" : "1회 진행") : plansOf(p).length ? plansOf(p).map((x) => x.label).join(" · ") + " 수강권" : p.accessDays ? monthsTxt(p.accessDays) + " 시청" : "평생 소장");
+  const accessTxt = (p) => (typeOf(p) === "ebook" ? "평생 소장" : isBook(p) ? "택배 배송 · " + shipFeeTxt(p) : isEvent(p) ? (p.replayDays ? "다시보기 " + p.replayDays + "일" : "1회 진행") : plansOf(p).length ? plansOf(p).map((x) => x.label).join(" · ") + " 수강권" : p.accessDays ? monthsTxt(p.accessDays) + " 시청" : "평생 소장");
   const accOf = (p) => (p.color && p.color[1]) || ACC[0];
   const pledgesOf = (pid) => V().pledges.filter((x) => x.pid === pid && !x.hidden).sort((a, b) => b.at - a.at);
   const isNewP = (p) => now() - (p.createdAt || 0) < 21 * 864e5;
@@ -791,6 +831,7 @@
     if (k === "coach") return "1:1 코칭권 " + ((o.coach || {}).n || 0) + "회 · " + ((o.coach || {}).days || 0) + "일";
     if (k === "tea") return "강사님과 TEA TIME " + ((o.tea || {}).min || 60) + "분";
     if (k === "extend") return "1년 연장권 · 365일";
+    if (o.ship) return "종이책 " + (Number(o.qty) || 1) + "권" + (o.shipFee ? " · 배송비 " + won(o.shipFee) : " · 무료배송");
     return o.days ? planLabel(o.days) + " 수강권" : "";
   }
   /** 이 회원이 이 강의를 볼 수 있는 마지막 시각: 수강권 + 연장권을 이어 붙여 계산 (기간 없는 강의 Infinity · 산 적 없으면 0) */
@@ -998,7 +1039,7 @@
   const couponTxt = (c) => (c.kind === "pct" ? c.value + "% 할인" + (c.max ? " (최대 " + won(c.max) + ")" : "") : won(c.value) + " 할인");
   const couponCond = (c) => [c.min ? won(c.min) + " 이상 결제 시" : "금액 제한 없음", (c.types || []).length ? c.types.map((t) => TYPE[t] ? TYPE[t][0] : t).join(" · ") + "만" : "모든 클래스"].join(" · ");
   function couponOff(c, p, amount) {
-    if (!c || amount <= 0) return 0;
+    if (!c || amount <= 0 || isBook(p)) return 0;
     if ((c.types || []).length && c.types.indexOf(typeOf(p)) < 0) return 0;
     if (c.min && amount < c.min) return 0;
     const off = c.kind === "pct" ? Math.floor(amount * c.value / 100 / 10) * 10 : Number(c.value) || 0;
@@ -1045,6 +1086,7 @@
     const t = typeOf(p), left = seatsLeft(p);
     if (p.status === "soon") return [p.openAt ? fmtOpen(p.openAt) : "오픈 예정", aboutTxt(totalMin(p)), "알림 신청 시 오픈 할인"];
     if (t === "ebook") return [(p.format || "PDF") + " 전자책", (Number(p.pages) || lessons(p).reduce((a, l) => a + (Number(l.min) || 0), 0)) + "쪽", "평생 소장"];
+    if (t === "book") { const sl = stockLeft(p); return ["종이책" + (Number(p.pages) ? " · " + Number(p.pages) + "쪽" : ""), shipFeeTxt(p), sl === 0 ? "품절" : sl != null && sl <= 10 ? sl + "권 남음" : (Number(shipSet().outDays) || 2) + "일 안에 출고"]; }
     if (t === "live") return [fmtEvent(p.eventAt), viaOf(p) + " " + durTxt(Number(p.eventMin) || totalMin(p)), left == null ? "인원 제한 없음" : left ? "잔여 " + left + "석" : "마감"];
     if (t === "offline") return [fmtEvent(p.eventAt), placeShort(p.place) || "오프라인", left == null ? "현장 강의" : left ? "잔여 " + left + "석" : "마감"];
     return [accessTxt(p).replace(" 시청", ""), aboutTxt(totalMin(p)), String(p.level || "입문").split(/\s*·\s*/)[0]];
@@ -1064,6 +1106,15 @@
   function thumbArt(p, cls) {
     if (p.thumb) return '<span class="vd-art ' + (cls || "") + '"><img class="vd-art-img" ' + imgAttr(p.thumb, "src") + ' alt="" loading="lazy"></span>';
     const c = p.color || ["#1c1c1e", ACC[0]], acc = c[1] || ACC[0], t = typeOf(p), lines = artLines(p), sty = ' style="--bg:' + esc(c[0] || "#1c1c1e") + ";--acc:" + esc(acc) + '"';
+    if (t === "book" && !p.label) {
+      const pages = Number(p.pages) || 0;
+      return '<span class="vd-art vd-art-eb vd-art-bk ' + (cls || "") + '"' + sty + '><i class="vd-eb-glow" aria-hidden="true"></i>' +
+        '<span class="vd-eb-lb"><b>BOOK</b>' + esc("종이책 · " + (pages ? pages + "쪽 · " : "") + shipFeeTxt(p)) + "</span>" +
+        (p.hook ? '<span class="vd-eb-hk">' + esc(p.hook) + "</span>" : "") +
+        '<b class="vd-eb-t' + artSize(lines) + '">' + artTitle(lines) + "</b>" +
+        '<small class="vd-eb-c"><em>' + esc(p.author || p.creator || "") + "</em> 지음" + (p.publisher ? " · " + esc(p.publisher) : "") + "</small>" +
+        '<span class="vd-eb-book" aria-hidden="true"><i class="vd-eb-pages"></i><span class="vd-eb-cover' + (p.cover ? " has-img" : "") + '">' + (p.cover ? "<img " + imgAttr(p.cover, "src") + ' alt="" loading="lazy">' : "<small>DOOGO CLASS<br>BOOK</small><b>" + lines.join("<br>") + "</b><i>" + esc(p.author || p.creator || "") + "</i>") + "</span></span></span>";
+    }
     if (t === "ebook" && !p.label) {
       const pages = Number(p.pages) || lessons(p).reduce((a, l) => a + (Number(l.min) || 0), 0);
       return '<span class="vd-art vd-art-eb ' + (cls || "") + '"' + sty + '><i class="vd-eb-glow" aria-hidden="true"></i>' +
@@ -1125,7 +1176,8 @@
   // 얼리버드 할인중: 무료 LIVE가 끝나고 얼리버드 기간인 유료 강의 · 마감 가까운 순
   const ebItems = () => listed().filter((p) => ebOf(p)).sort((a, b) => ebOf(a).ebEnd - ebOf(b).ebEnd).map((p) => ({ href: "#/vod/p/" + p.id, p }));
   const vodItems = (free) => listed().filter((p) => typeOf(p) === "vod" && (priceOf(p) === 0) === !!free).sort((a, b) => soldOf(b) - soldOf(a)).map((p) => ({ href: "#/vod/p/" + p.id, p }));
-  const typeItems = (t) => listed().filter((p) => (t === "event" ? isEvent(p) && !isFreeEv(p) : typeOf(p) === t)).sort((a, b) => (t === "event" ? eventTime(a) - eventTime(b) : soldOf(b) - soldOf(a))).map((p) => ({ href: "#/vod/p/" + p.id, p }));
+  // 전자책 묶음(메뉴 · 홈 줄)에는 종이책도 함께 — 종이책을 먼저 보여요
+  const typeItems = (t) => listed().filter((p) => (t === "event" ? isEvent(p) && !isFreeEv(p) : t === "ebook" ? typeOf(p) === "ebook" || isBook(p) : typeOf(p) === t)).sort((a, b) => (t === "event" ? eventTime(a) - eventTime(b) : t === "ebook" && isBook(a) !== isBook(b) ? isBook(b) - isBook(a) : soldOf(b) - soldOf(a))).map((p) => ({ href: "#/vod/p/" + p.id, p }));
 
   /* ================= 화면 ================= */
   const root = document.getElementById("root");
@@ -1228,16 +1280,18 @@
     const t = typeOf(p), pr = priceOf(p), mo = cardMonth(p), left = seatsLeft(p);
     if (p.status === "soon") return (p.openAt ? fmtOpen(p.openAt) : "오픈 예정") + " · 알림 받으면 오픈 할인";
     if (t === "ebook") return "전자책 · " + (p.format || "PDF") + " " + (Number(p.pages) || 0) + "쪽 · 평생 소장";
+    if (t === "book") return "종이책 · " + (Number(p.pages) ? Number(p.pages) + "쪽 · " : "") + shipFeeTxt(p) + (stockLeft(p) === 0 ? " · 품절" : "");
     if (t === "live") return "LIVE 클래스 · " + fmtLive(p.eventAt) + (p.replayDays ? " · 다시보기 포함" : "") + " · 라이브 " + durTxt(Number(p.eventMin) || totalMin(p)) + (left != null ? " · 잔여 " + left + "석" : "");
     if (t === "offline") return "오프라인 클래스 · " + fmtLive(p.eventAt) + " · " + (placeShort(p.place) || "현장") + (left != null ? " · 잔여 " + left + "석" : "");
     return (pr === 0 ? "무료 특강 · " : "VOD 클래스 · ") + accessTxt(p) + (mo ? (y365(p) ? " · 365일 총 " + won(y365(p).sale) : " · 총 " + won(pr)) : "");
   }
-  const CHIP = { vod: "VOD 클래스", ebook: "전자책", live: "LIVE 클래스", offline: "오프라인 클래스" };
+  const CHIP = { vod: "VOD 클래스", ebook: "전자책", book: "종이책", live: "LIVE 클래스", offline: "오프라인 클래스" };
   function cardMetaHtml(p) {
     const t = typeOf(p), pr = priceOf(p), left = seatsLeft(p);
     const chip = p.status === "soon" ? ["오픈 예정", "soon"] : pr === 0 ? [t === "live" ? "무료 LIVE" : "무료 특강", "free"] : [CHIP[t] || "클래스", t];
     const parts = p.status === "soon" ? [p.openAt ? fmtOpen(p.openAt) : "오픈 예정", "알림 받으면 오픈 할인"]
       : t === "ebook" ? [(p.format || "PDF") + " " + (Number(p.pages) || 0) + "쪽", "평생 소장"]
+      : t === "book" ? [Number(p.pages) ? Number(p.pages) + "쪽" : "", shipFeeTxt(p), stockLeft(p) === 0 ? "품절" : ""]
       : t === "live" ? [fmtLive(p.eventAt), viaOf(p) + " " + durTxt(Number(p.eventMin) || totalMin(p))].concat(p.replayDays ? ["다시보기"] : []).concat(left != null ? ["잔여 " + left + "석"] : pr === 0 ? ["누구나"] : [])
       : t === "offline" ? [fmtLive(p.eventAt), placeShort(p.place) || "현장"].concat(left != null ? ["잔여 " + left + "석"] : [])
       : [y365(p) ? "365일 수강권" : accessTxt(p).replace(" 시청", ""), aboutTxt(totalMin(p)), String(p.level || "입문").split(/\s*·\s*/)[0]];
@@ -1248,7 +1302,7 @@
   function card(p, o) {
     o = o || {}; const m = me(), rt = ratingOf(p.id), pr = priceOf(p), mo = cardMonth(p), pct = pctOf(p), lk = likersOf(p), left = seatsLeft(p);
     const se = saleEndOf(p), eb = ebOf(p), dleft = se ? DB.date.diffDays(se.slice(0, 10), today()) : null;
-    const ov = o.rank ? '<span class="vd-rank">BEST ' + o.rank + "</span>" : left === 0 ? '<span class="vd-ov">마감</span>' : eb ? '<span class="vd-ov vd-ov-eb">얼리버드 ' + (dleft ? "D-" + dleft : "오늘 마감") + "</span>" : dleft != null && dleft >= 0 && dleft <= 7 ? '<span class="vd-ov vd-ov-dd">할인 ' + (dleft ? "D-" + dleft : "오늘 마감") + "</span>" : "";
+    const ov = o.rank ? '<span class="vd-rank">BEST ' + o.rank + "</span>" : left === 0 ? '<span class="vd-ov">마감</span>' : stockLeft(p) === 0 ? '<span class="vd-ov">품절</span>' : eb ? '<span class="vd-ov vd-ov-eb">얼리버드 ' + (dleft ? "D-" + dleft : "오늘 마감") + "</span>" : dleft != null && dleft >= 0 && dleft <= 7 ? '<span class="vd-ov vd-ov-dd">할인 ' + (dleft ? "D-" + dleft : "오늘 마감") + "</span>" : "";
     const cnt = o.rank && soldOf(p) >= 100 ? '<span class="vd-cnt">' + icon("users", "xs") + '<b><i data-count="' + soldOf(p) + '" data-cid="' + esc(p.id) + '">' + soldOf(p).toLocaleString() + "</i>+</b></span>" : "";
     return '<a class="vd-card" href="#/vod/p/' + esc(p.id) + '"><div class="vd-thumb vd-th-' + typeOf(p) + (ov ? " has-ov" : "") + '">' + thumbArt(p) + (ov || cnt ? '<span class="vd-ovs">' + ov + cnt + "</span>" : "") + likeBtn(p, m) + "</div>" +
       '<div class="vd-card-b"><b class="vd-title">' + esc(p.title) + "</b>" +
@@ -1321,7 +1375,7 @@
   function railAuto(k) {
     if (k === "best") return listed().filter((p) => typeOf(p) === "vod" && priceOf(p) > 0).sort((a, b) => soldOf(b) - soldOf(a)).map((p) => ({ href: "#/vod/p/" + p.id, p }));
     if (k === "ebook") return typeItems("ebook");
-    if (k === "new") return listed().filter((p) => typeOf(p) === "vod" || typeOf(p) === "ebook").sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0)).map((p) => ({ href: "#/vod/p/" + p.id, p }));
+    if (k === "new") return listed().filter((p) => typeOf(p) === "vod" || typeOf(p) === "ebook" || isBook(p)).sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0)).map((p) => ({ href: "#/vod/p/" + p.id, p }));
     if (k === "prem") return bizOn("live") ? typeItems("event").concat(premiumItems()) : [];
     if (k === "free") return bizOn("free") ? vodItems(true) : [];
     if (k === "flive") return bizOn("flive") ? freeLives().concat(liveItems()) : [];
@@ -1437,7 +1491,7 @@
     const career = lp && lp.about && Array.isArray(lp.about.career) ? lp.about.career.slice(0, 5).map((x) => (typeof x === "string" ? x : x.text || x.title || "")).filter(Boolean) : [];
     const rv = t.ps.reduce((a, p) => { const r = ratingOf(p.id); return { n: a.n + r.n, s: a.s + r.avg * r.n }; }, { n: 0, s: 0 });
     const bio = (t.ps.find((p) => p.creatorBio) || {}).creatorBio || (t.name + "님은 직접 해서 번 경험을 DOOGO CLASS 강의로 나누고 있어요. 강의를 누르면 커리큘럼 · 미리보기 · 수강 후기를 볼 수 있어요.");
-    const G = [["vod", "VOD 강의", (p) => p.status === "on" && typeOf(p) === "vod"], ["ebook", "전자책", (p) => p.status === "on" && typeOf(p) === "ebook"], ["event", "LIVE · 오프라인", (p) => p.status === "on" && isEvent(p)], ["soon", "오픈 예정", (p) => p.status === "soon"]];
+    const G = [["vod", "VOD 강의", (p) => p.status === "on" && typeOf(p) === "vod"], ["ebook", "전자책 · 종이책", (p) => p.status === "on" && (typeOf(p) === "ebook" || isBook(p))], ["event", "LIVE · 오프라인", (p) => p.status === "on" && isEvent(p)], ["soon", "오픈 예정", (p) => p.status === "soon"]];
     const groups = G.map((g) => [g, t.ps.filter(g[2]).sort((a, c) => soldOf(c) - soldOf(a))]).filter((x) => x[1].length);
     const others = list.filter((x) => x !== t);
     return shell("teachers", '<div class="vd-tp">' +
@@ -1587,6 +1641,7 @@
   const REFUND = {
     vod: [["결제 후 7일 이내 · 강의를 재생하지 않았을 때", "전액 환불"], ["결제 후 7일 이내 · 강의를 재생했을 때", "들은 강의 수만큼 빼고 환불 (자료 내려받기 · 실습도 1강으로 계산)"], ["7일이 지난 뒤 · 정상 수강기간의 1/3이 지나기 전", "실 결제 금액의 2/3 환불"], ["정상 수강기간의 1/2이 지나기 전", "실 결제 금액의 1/2 환불"], ["정상 수강기간의 1/2이 지난 뒤", "환불 불가"]],
     ebook: [["결제 후 7일 이내 · 내려받기 전", "전액 환불"], ["한 번이라도 내려받은 뒤", "디지털 콘텐츠 특성상 환불 불가"]],
+    book: [["보내기 전 (결제 완료)", "전액 환불 · 마이페이지에서 바로 취소"], ["상품 준비 중", "취소 요청 → 보내기 전이면 전액 환불"], ["받은 날부터 7일 이내 · 단순 변심", "반품 후 환불 (왕복 배송비는 구매자 부담)"], ["파손 · 파본 · 잘못 보낸 책", "받은 날부터 3개월 이내 교환 또는 전액 환불 (배송비는 판매자 부담)"], ["책에 낙서 · 훼손 · 비닐 포장을 뜯은 경우", "단순 변심 반품 불가"]],
     event: [["강의 3일 전까지 취소", "전액 환불"], ["강의 1~2일 전 취소", "결제 금액의 50% 환불"], ["강의 당일 · 불참", "환불 불가"]],
     free: [["무료 강의", "결제 금액이 없어 환불 대상이 아니에요"]],
     coach: [["결제 후 7일 이내 · 코칭권을 쓰지 않았을 때", "전액 환불"], ["한 번이라도 질문을 남긴 뒤", "남은 횟수 × 1회 가격만큼 환불"], ["사용 기간이 끝난 뒤", "환불 불가 (남은 횟수는 사라져요)"]],
@@ -1614,6 +1669,7 @@
     if (!r.instant) return { ok: false, why: "바로 취소는 지금 쉬고 있어요. 환불 요청을 남겨 주세요." };
     if (o.refundReq) return { ok: false, why: "환불 요청을 처리하고 있어요." };
     const t = typeOf(p), paid = o.paidAt || o.at, left = Math.ceil((paid + (t === "ebook" ? r.ebookDays : r.days) * 864e5 - now()) / 864e5);
+    if (t === "book") { const st = shipStOf(o); return st === "ready" ? { ok: true, why: "책을 보내기 전이라 바로 전액 취소돼요.", left: null, used: 0 } : { ok: false, why: st === "prep" ? "상품을 준비하고 있어 취소 요청으로 처리해요." : "이미 보낸 책이라 반품 요청으로 처리해요." }; }
     if (isEvent(p)) { const ev = p.eventAt ? Date.parse(p.eventAt) : 0, dl = Math.floor((ev - now()) / 864e5); return ev && dl >= r.eventDays ? { ok: true, why: "강의 " + r.eventDays + "일 전까지는 바로 전액 취소돼요.", left: dl - r.eventDays + 1, used: 0 } : { ok: false, why: "강의 " + r.eventDays + "일 전이 지나 환불 요청으로 처리해요." }; }
     if (left <= 0) return { ok: false, why: "결제 후 " + (t === "ebook" ? r.ebookDays : r.days) + "일이 지나 환불 요청으로 처리해요." };
     if (t === "ebook") return o.dlAt ? { ok: false, why: "전자책을 내려받아 바로 취소할 수 없어요." } : { ok: true, why: "내려받기 전이라 바로 전액 취소돼요.", left, used: 0 };
@@ -1638,6 +1694,7 @@
     t.vod = [["결제 후 " + r.days + "일 이내 · " + (r.maxUsed ? "강의를 " + r.maxUsed + "개 이하로 들었을 때" : "강의를 하나도 듣지 않았을 때"), "100% 전액 환불" + (r.instant ? " · 마이페이지에서 바로 취소" : "")], ["결제 후 " + r.days + "일 이내 · 그보다 많이 들었을 때", REFUND.vod[1][1]]].concat(REFUND.vod.slice(2));
     t.ebook = [["결제 후 " + r.ebookDays + "일 이내 · 내려받기 전", "전액 환불" + (r.instant ? " · 마이페이지에서 바로 취소" : "")]].concat(REFUND.ebook.slice(1));
     t.event = [["강의 " + r.eventDays + "일 전까지 취소", "전액 환불" + (r.instant ? " · 마이페이지에서 바로 취소" : "")]].concat(REFUND.event.slice(1));
+    const sh = shipSet(); t.book = REFUND.book.map((x, i) => (i === 2 ? [x[0], "반품 후 환불 (왕복 배송비 " + won(Number(sh.returnFee) || 0) + " 구매자 부담)"] : x));
     return t;
   }
   /** 환불 계산 기준이 되는 ‘정상 수강기간’: 기간제는 그 기간, 평생 소장은 최초 30일 (31일차부터는 무료 수강기간 · 패스트캠퍼스와 같은 방식) */
@@ -1648,6 +1705,7 @@
   function useNotes(p) {
     const t = typeOf(p), ev = isEvent(p);
     if (ev) return ["강의 일정 · 장소 · 입장 방법은 마이페이지 › LIVE · 오프라인과 문자로 안내해요.", "강의 내용은 녹화 · 촬영 · 녹음하거나 다른 곳에 올릴 수 없어요.", "강사 사정으로 일정이 바뀌면 미리 알려 드리고, 참석이 어려우면 전액 환불해 드려요.", "천재지변 등 불가피한 사유로 진행이 어려우면 일정을 옮기거나 전액 환불해 드려요."];
+    if (t === "book") return ["종이책은 택배로 보내 드려요. 결제 후 " + (Number(shipSet().outDays) || 2) + "일 안에(주말 · 공휴일 빼고) 출고하고, 보낸 날 송장 번호를 마이페이지 › 종이책 · 배송 조회에 올려 드려요.", "배송지는 책을 보내기 전까지 마이페이지에서 바꿀 수 있어요. 보낸 뒤에는 택배사로 바로 연락해 주세요.", "도서정가제에 따라 종이책에는 쿠폰을 쓸 수 없어요. 포인트는 쓸 수 있어요.", "교환 · 반품은 마이페이지 › 주문 · 결제 내역에서 요청하거나 고객센터로 알려 주세요." + (shipSet().returnAddr ? " 반품 주소: " + esc(shipSet().returnAddr) : "")];
     if (t === "ebook") return ["전자책은 결제 후 마이페이지 › 전자책에서 내려받아요. 한 번 내려받으면 디지털 콘텐츠 특성상 청약철회가 제한돼요 (전자상거래법 제17조 제2항 제5호).", "전자책은 구매한 본인만 볼 수 있어요. 무단 복제 · 배포 · 판매 · 공유는 저작권법에 따라 처벌될 수 있어요.", "내용은 더 좋은 자료로 업데이트될 수 있고, 업데이트된 파일도 다시 내려받을 수 있어요."];
     return [
       "수강 기간: " + periodTxt(p) + ". 수강 시작일은 결제일 기준이며, 회사 사정으로 시작이 늦어지면 그만큼 연장돼요.",
@@ -1660,9 +1718,9 @@
       .concat(coachOf(p) ? ["강사에게 직접 묻는 1:1 질문은 1:1 코칭권(" + coachOf(p).n + "회 · " + coachOf(p).days + "일 · " + won(coachOf(p).price) + ")으로 해요. 수강 중인 회원만 살 수 있고, 두잉고 강의실 ‘1:1 코칭 질문’에서 쓰면 1회씩 차감돼요. 그 밖의 궁금증은 자주 묻는 질문 · AI 조교로 도와드려요."] : [])
       .concat(teaOf(p) ? ["강사님과 TEA TIME(" + teaOf(p).min + "분 · " + won(teaOf(p).price) + ")은 수강 중인 회원만 신청할 수 있어요. 희망 날짜를 남기면 강사님이 일정을 확정하고, 확정 전에는 언제든 전액 환불돼요."] : []);
   }
-  const refundKey = (p) => (priceOf(p) === 0 ? "free" : isEvent(p) ? "event" : typeOf(p) === "ebook" ? "ebook" : "vod");
+  const refundKey = (p) => (priceOf(p) === 0 ? "free" : isEvent(p) ? "event" : typeOf(p) === "ebook" ? "ebook" : isBook(p) ? "book" : "vod");
   const refundTable = (p) => '<table class="vd-rf"><thead><tr><th>신청 시점</th><th>환불 금액</th></tr></thead><tbody>' + refundTbl()[refundKey(p)].map((r) => "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>").join("") + "</tbody></table>";
-  const refundHtml = () => '<div class="vd-rf-all">' + [["VOD 강의 (수강권 · 1년 연장권)", "vod"], ["1:1 코칭권", "coach"], ["강사님과 TEA TIME", "tea"], ["전자책", "ebook"], ["LIVE · 오프라인 강의", "event"]].map((x) => "<h4>" + x[0] + '</h4><table class="vd-rf"><tbody>' + refundTbl()[x[1]].map((r) => "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>").join("") + "</tbody></table>").join("") + '<p class="vd-muted">VOD ‘정상 수강기간’은 결제할 때 고른 수강권 기간(180일 · 365일 · 3년, 연장권은 365일)이에요. 환불 금액은 정가가 아닌 실제 결제 금액 기준이고, 결제에 쓴 쿠폰은 다시 돌려드리지 않아요. 환불 문의: 마이페이지 › 주문 · 결제 내역 또는 고객센터 1:1 문의.</p></div>';
+  const refundHtml = () => '<div class="vd-rf-all">' + [["VOD 강의 (수강권 · 1년 연장권)", "vod"], ["1:1 코칭권", "coach"], ["강사님과 TEA TIME", "tea"], ["전자책", "ebook"], ["종이책 (택배 배송)", "book"], ["LIVE · 오프라인 강의", "event"]].map((x) => "<h4>" + x[0] + '</h4><table class="vd-rf"><tbody>' + refundTbl()[x[1]].map((r) => "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>").join("") + "</tbody></table>").join("") + '<p class="vd-muted">VOD ‘정상 수강기간’은 결제할 때 고른 수강권 기간(180일 · 365일 · 3년, 연장권은 365일)이에요. 환불 금액은 정가가 아닌 실제 결제 금액 기준이고, 결제에 쓴 쿠폰은 다시 돌려드리지 않아요. 환불 문의: 마이페이지 › 주문 · 결제 내역 또는 고객센터 1:1 문의.</p></div>';
   /* 약관 및 정책 — 이용약관 /terms · 개인정보처리방침 /privacy · 환불정책 /refund (PG 심사 · 공유용으로 탭마다 따로 주소)
    * 글은 legal.js, 환불정책의 상품별 표 · 쿠폰 문구는 마스터 › 환불 · 취소 관리 설정을 그대로 보여 줘요 */
   const LEGAL_TABS = [["terms", "이용약관", "file"], ["privacy", "개인정보처리방침", "shieldCheck"], ["refund", "환불정책", "refresh"]];
@@ -1670,7 +1728,7 @@
     const H = window.CLASS_LEGAL_HTML || ((x) => "<p>" + esc(x) + "</p>");
     if (k !== "refund") return H(text);
     const r = rfSet(), T = refundTbl();
-    const tables = '<div class="vd-rf-all vd-lg-rf">' + [["VOD 강의 (수강권 · 1년 연장권)", "vod"], ["1:1 코칭권", "coach"], ["강사님과 TEA TIME", "tea"], ["전자책", "ebook"], ["LIVE · 오프라인 강의", "event"]].filter((x) => T[x[1]]).map((x) => "<h5>" + x[0] + '</h5><table class="vd-rf"><thead><tr><th>신청 시점</th><th>환불 금액</th></tr></thead><tbody>' + T[x[1]].map((row) => "<tr><td>" + row[0] + "</td><td>" + row[1] + "</td></tr>").join("") + "</tbody></table>").join("") +
+    const tables = '<div class="vd-rf-all vd-lg-rf">' + [["VOD 강의 (수강권 · 1년 연장권)", "vod"], ["1:1 코칭권", "coach"], ["강사님과 TEA TIME", "tea"], ["전자책", "ebook"], ["종이책 (택배 배송)", "book"], ["LIVE · 오프라인 강의", "event"]].filter((x) => T[x[1]]).map((x) => "<h5>" + x[0] + '</h5><table class="vd-rf"><thead><tr><th>신청 시점</th><th>환불 금액</th></tr></thead><tbody>' + T[x[1]].map((row) => "<tr><td>" + row[0] + "</td><td>" + row[1] + "</td></tr>").join("") + "</tbody></table>").join("") +
       '<p class="vd-muted">VOD ‘정상 수강기간’은 결제할 때 고른 수강권 기간(180일 · 365일 · 3년, 연장권은 365일)이에요. 무료 클래스는 결제 금액이 없어 환불 대상이 아니며, 신청은 언제든 취소할 수 있어요.</p></div>';
     const cp = '<div class="legal-doc"><ul><li>입금 전에 취소한 주문: 쓴 쿠폰 · 포인트를 모두 돌려드려요.</li><li>' + (r.restore ? "전액 환불(바로 취소 포함): 주문에 쓴 쿠폰 · 포인트를 돌려드려요. 사용 기한이 지난 쿠폰은 돌려드리지 않아요." : "전액 환불(바로 취소 포함): 주문에 쓴 쿠폰 · 포인트는 돌려드리지 않아요.") + "</li><li>일부 환불: 실제 결제 금액을 기준으로 계산하며, 쓴 쿠폰 · 포인트는 돌려드리지 않아요.</li><li>쿠폰 · 포인트는 현금으로 바꾸거나 다른 사람에게 넘길 수 없어요.</li></ul></div>";
     return text.split(/\[\[(환불표|쿠폰)\]\]/).map((x, i) => (i % 2 ? (x === "환불표" ? tables : cp) : x.trim() ? H(x) : "")).join("");
@@ -1694,15 +1752,23 @@
   function infoRows(p) {
     const t = typeOf(p), lz = lessons(p), left = seatsLeft(p);
     if (t === "ebook") return [["분량", (Number(p.pages) || 0) + "쪽 · " + (p.curriculum || []).length + "장"], ["형식", (p.format || "PDF") + " 파일"], ["이용", "결제 후 바로 내려받기 · 평생 소장"], ["난이도", p.level || "입문"]];
+    if (t === "book") return bookRows(p);
     if (t === "live") return [["일시", fmtEvent(p.eventAt, true)], ["진행", viaOf(p) + " · " + durTxt(Number(p.eventMin) || totalMin(p))], ["정원", p.seats ? p.seats + "명 · 잔여 " + left + "석" : "제한 없음"], ["다시보기", p.replayDays ? "끝난 뒤 " + p.replayDays + "일" : "없음"]];
     if (t === "offline") return [["일시", fmtEvent(p.eventAt, true)], ["장소", p.place || "신청 후 안내"], ["정원", p.seats ? p.seats + "명 · 잔여 " + left + "석" : "제한 없음"], ["진행", durTxt(Number(p.eventMin) || totalMin(p))]];
     return [["수강 기간", accessTxt(p)], ["강의 구성", "강의 " + lz.length + "개 · 총 " + durTxt(totalMin(p))], ["난이도", p.level || "입문"], ["수강 방법", "PC · 모바일 스트리밍 · 기기 4대"]];
+  }
+  /** 종이책 정보: 저자 · 출판사 · 쪽수 · 판형 · 출간일 · ISBN · 배송 (적은 것만) */
+  function bookRows(p) {
+    const sl = stockLeft(p), pg = Number(p.pages);
+    return [["저자", p.author || p.creator || "-"], ["출판사", p.publisher || "-"]].concat(pg || p.size ? [["쪽수 · 판형", [pg ? pg + "쪽" : "", p.size || ""].filter(Boolean).join(" · ")]] : []).concat(p.pubDate ? [["출간일", DB.date.fmtFull(p.pubDate)]] : []).concat(p.isbn ? [["ISBN", p.isbn]] : [])
+      .concat([["배송", "결제 후 " + (Number(shipSet().outDays) || 2) + "일 안에 출고 (주말 · 공휴일 빼고) · " + shipFeeTxt(p)]]).concat(sl != null ? [["재고", sl ? sl + "권" : "품절"]] : []);
   }
   function ctaOf(p, m) {
     const own = m && owns(m.id, p.id), pend = !own && pendOrder(m && m.id, p.id), pr = priceOf(p), left = seatsLeft(p), t = typeOf(p), isLiked = liked(m && m.id, p.id);
     // 끝난 무료 LIVE: 신청자도 · 처음 온 사람도 이어지는 유료 강의(얼리버드)로 보내요
     const fn = isFreeEv(p) && eventPast(p) && bizOn("flive") ? funnelOf(p) : null, nx = fn && product(fn.next);
     if (nx && nx.status === "on" && !(m && owns(m.id, nx.id))) return { href: "#/vod/p/" + nx.id, txt: ebOf(nx) ? "얼리버드로 이어 듣기" : "이어지는 강의 보기", ic: "arrowRight" };
+    if (t === "book" && p.status !== "soon") return stockLeft(p) === 0 ? { off: true, txt: "품절됐어요" } : { href: "#/vod/checkout/" + p.id, txt: own ? "한 권 더 사기" : "구매하기", ic: "truck" };
     if (own) return { href: "#/vod/learn/" + p.id, txt: t === "ebook" ? "전자책 열기" : isEvent(p) ? "신청 내역 · 입장 안내" : "강의실에서 이어 보기", ic: t === "ebook" ? "book" : isEvent(p) ? "calendar" : "play" };
     if (pend) return { href: "#/vod/order/" + pend.no, txt: "입금 대기 중 · 주문 보기", ic: "clock", dark: true };
     if (m && plansOf(p).length && hadCourse(m.id, p.id)) return { href: "#/vod/checkout/" + p.id + "?item=extend", txt: "1년 연장권으로 다시 이어서 듣기", ic: "refresh" };
@@ -1750,7 +1816,7 @@
       badgeHtml(badgesOf(p)) +
       '<div class="vd-buy-top"><h1>' + esc(p.title) + "</h1></div>" +
       (p.sub ? '<p class="vd-pdt-sub">' + esc(p.sub) + "</p>" : "") +
-      '<div class="vd-pdt-rate">' + (rt.n ? '<button type="button" data-v="jump" data-to="vd-s-reviews"><span class="vd-stars sm">' + stars(rt.avg) + "</span><b>" + rt.avg.toFixed(1) + "</b><small>(" + rt.n + ")</small></button><i></i>" : "") + "<span>수강생 <b>" + soldOf(p).toLocaleString() + "명+</b></span><i></i><span>" + icon("heart", "xs") + likeCount(p) + "</span>" + (lk.length ? '<i></i><span class="vd-avs">' + lk.map((n) => av(n)).join("") + "</span>" : "") + "</div>" +
+      '<div class="vd-pdt-rate">' + (rt.n ? '<button type="button" data-v="jump" data-to="vd-s-reviews"><span class="vd-stars sm">' + stars(rt.avg) + "</span><b>" + rt.avg.toFixed(1) + "</b><small>(" + rt.n + ")</small></button><i></i>" : "") + (isBook(p) ? (soldOf(p) ? "<span>판매 <b>" + soldOf(p).toLocaleString() + "권+</b></span><i></i>" : "") : "<span>수강생 <b>" + soldOf(p).toLocaleString() + "명+</b></span><i></i>") + "<span>" + icon("heart", "xs") + likeCount(p) + "</span>" + (lk.length ? '<i></i><span class="vd-avs">' + lk.map((n) => av(n)).join("") + "</span>" : "") + "</div>" +
       '<dl class="vd-buy-info">' + infoRows(p).map((r) => "<div><dt>" + r[0] + "</dt><dd>" + esc(r[1]) + "</dd></div>").join("") + "</dl>" +
       (isEvent(p) && left != null ? '<div class="vd-seat"><div><span>신청 현황</span><b>' + (p.seats - left) + " / " + p.seats + "명</b></div><i><u style=\"width:" + Math.round((p.seats - left) / p.seats * 100) + '%"></u></i>' + (left && left <= 5 ? "<small>마감까지 " + left + "자리 남았어요</small>" : "") + "</div>" : "") +
       '<div class="vd-buy-price">' + (p.status === "soon" ? '<div class="vd-bp-tot"><span>오픈 예정가</span><strong>' + (pr ? won(pr) : "무료") + "</strong></div>" + (p.openAt ? '<p class="vd-buy-mo">' + fmtOpen(p.openAt) + " · 알림 신청하면 오픈 할인을 알려 드려요</p>" : "")
@@ -1759,10 +1825,10 @@
           '<div class="vd-bp-tot"><span>' + (pct ? "할인가" : "판매가") + "</span>" + (pct ? "<em>" + pct + "%</em>" : "") + "<strong>" + won(pr) + "</strong></div>" +
           (mo ? '<p class="vd-buy-mo">12개월 할부 시 월 <b>' + won(mo) + "</b></p>" : "") +
           (end && !own ? '<div class="vd-cd">' + icon("clock", "xs") + '<span>할인 마감까지</span><b data-cd="' + esc(end) + '">' + cdTxt(end) + "</b><span>남음</span></div>" : "") +
-          (own ? "" : best ? '<p class="vd-buy-cp"><span class="vd-tag vd-tag-red">쿠폰</span>내 쿠폰 쓰면 <b>' + won(pr - best.off) + "</b>에 살 수 있어요</p>" : !m ? '<p class="vd-buy-cp"><span class="vd-tag vd-tag-red">쿠폰</span>가입하면 바로 쓰는 5,000원 할인 쿠폰을 드려요</p>' : "")) + "</div>" +
+          (own ? "" : best ? '<p class="vd-buy-cp"><span class="vd-tag vd-tag-red">쿠폰</span>내 쿠폰 쓰면 <b>' + won(pr - best.off) + "</b>에 살 수 있어요</p>" : !m && !isBook(p) ? '<p class="vd-buy-cp"><span class="vd-tag vd-tag-red">쿠폰</span>가입하면 바로 쓰는 5,000원 할인 쿠폰을 드려요</p>' : "")) + "</div>" +
       '<div class="vd-pdt-btns"><button type="button" class="vd-likebtn' + (isLiked ? " on" : "") + '" data-v="like" data-id="' + esc(p.id) + '" aria-label="찜하기">' + icon("heart", "sm") + "<small>" + likeTxt(likeCount(p)) + '</small></button><button type="button" class="vd-likebtn vd-sharebtn" data-v="share" aria-label="공유하기">' + icon("link", "sm") + "<small>공유</small></button>" +
         (pvs.length && !own ? '<button type="button" class="vd-btn vd-btn-o vd-btn-xl vd-pdt-pv" data-v="pv-open" data-p="' + esc(p.id) + '" data-l="' + esc(pvs[0].id) + '">' + icon("play", "sm") + "미리보기</button>" : "") + ctaHtml(p, ctaOf(p, m), "vd-btn-xl") + "</div>" +
-      '<p class="vd-buy-note">' + icon("shieldCheck", "xs") + (refundKey(p) === "vod" ? "결제 후 " + rfSet().days + "일 이내 · 강의를 듣기 전이면 100% 환불" : refundKey(p) === "ebook" ? "내려받기 전 7일 이내 전액 환불" : refundKey(p) === "event" ? "강의 3일 전까지 전액 환불" : "무료 강의 · 신청 즉시 수강") + ' <button type="button" class="vd-link" data-v="jump" data-to="vd-s-refund">환불 규정</button></p></div>';
+      '<p class="vd-buy-note">' + icon("shieldCheck", "xs") + (refundKey(p) === "vod" ? "결제 후 " + rfSet().days + "일 이내 · 강의를 듣기 전이면 100% 환불" : refundKey(p) === "ebook" ? "내려받기 전 7일 이내 전액 환불" : refundKey(p) === "book" ? "보내기 전이면 바로 취소 · 받은 날부터 7일 안 반품" : refundKey(p) === "event" ? "강의 3일 전까지 전액 환불" : "무료 강의 · 신청 즉시 수강") + ' <button type="button" class="vd-link" data-v="jump" data-to="vd-s-refund">환불 규정</button></p></div>';
   }
   // 아래로 내리면 따라오는 결제 막대 + 누르면 위로 열리는 옵션 창 (패스트캠퍼스 하단 구매 박스)
   function fbarHtml(p) {
@@ -1810,13 +1876,14 @@
     const dist = [5, 4, 3, 2, 1].map((s) => rs.filter((r) => r.rating === s).length), canReview = own && !(V().reviews || []).some((r) => r.pid === p.id && r.mid === m.id);
     const hl = String(p.headline || p.sub || p.title).split("\n"), myNick = m ? nickOf(m.id) : "익명";
     const sec = (k, ttl, body, cls) => '<section class="vd-pd-sec' + (cls ? " " + cls : "") + '" id="vd-s-' + k + '"><h2 data-eg>' + ttl + "</h2>" + body + "</section>";
-    const curName = t === "ebook" ? "목차" : ev ? "진행 순서" : "커리큘럼", unit = (l) => (t === "ebook" ? (Number(l.min) || 0) + "쪽" : lLen(l));
-    const faq = ((p.faq || []).length ? p.faq : t === "ebook" ? [["전자책은 어떻게 받나요?", "결제하면 마이페이지 › 전자책에서 바로 내려받을 수 있어요."], ["휴대폰에서도 볼 수 있나요?", "PDF라서 휴대폰 · 태블릿 · PC 어디서든 볼 수 있어요."]] : ev ? [["입장 링크 · 주소는 언제 오나요?", "신청하면 마이페이지 › LIVE · 오프라인에서 바로 확인할 수 있고, 강의 하루 전에 문자로도 보내 드려요."], ["못 가게 되면 어떻게 하나요?", "강의 3일 전까지 취소하면 전액 환불해 드려요."]] : [["처음 시작하는 사람도 들을 수 있나요?", "처음 접하는 분이 전체 흐름을 이해하도록 구성했어요."], ["수업은 어떻게 듣나요?", "구매하면 바로 ‘내 강의실’에서 볼 수 있어요. " + accessTxt(p) + "이에요."]]);
-    const tabs = [["intro", "강의 소개"]].concat(plansOf(p).length ? [["plans", "수강권 · 코칭"]] : []).concat(pvs.length ? [["preview", "미리보기 " + pvs.length]] : []).concat([["curri", curName], ["creator", "강사 소개"], ["reviews", "수강 후기" + (rs.length ? " " + rs.length : "")], ["pledge", "다짐 한마디"], ["info", "강의 정보"], ["faq", "FAQ"], ["refund", "환불 · 이용 안내"]]);
+    const bk = t === "book", noCur = bk && !(p.curriculum || []).length;
+    const curName = t === "ebook" || bk ? "목차" : ev ? "진행 순서" : "커리큘럼", unit = (l) => (t === "ebook" || bk ? (Number(l.min) || 0) + "쪽" : lLen(l));
+    const faq = ((p.faq || []).length ? p.faq : bk ? [["언제 받을 수 있나요?", "결제 후 " + (Number(shipSet().outDays) || 2) + "일 안에(주말 · 공휴일 빼고) 보내 드리고, 보통 보낸 다음 날 도착해요. 송장 번호는 마이페이지 › 종이책 · 배송 조회에 올라가요."], ["배송지를 바꿀 수 있나요?", "책을 보내기 전(결제 완료)이면 마이페이지에서 바로 바꿀 수 있어요."], ["여러 권을 살 수 있나요?", "한 번에 " + BOOK_MAX + "권까지 살 수 있어요. 배송비는 주문마다 한 번만 내요."], ["쿠폰을 쓸 수 있나요?", "도서정가제에 따라 종이책에는 쿠폰을 쓸 수 없어요. 포인트는 쓸 수 있어요."]] : t === "ebook" ? [["전자책은 어떻게 받나요?", "결제하면 마이페이지 › 전자책에서 바로 내려받을 수 있어요."], ["휴대폰에서도 볼 수 있나요?", "PDF라서 휴대폰 · 태블릿 · PC 어디서든 볼 수 있어요."]] : ev ? [["입장 링크 · 주소는 언제 오나요?", "신청하면 마이페이지 › LIVE · 오프라인에서 바로 확인할 수 있고, 강의 하루 전에 문자로도 보내 드려요."], ["못 가게 되면 어떻게 하나요?", "강의 3일 전까지 취소하면 전액 환불해 드려요."]] : [["처음 시작하는 사람도 들을 수 있나요?", "처음 접하는 분이 전체 흐름을 이해하도록 구성했어요."], ["수업은 어떻게 듣나요?", "구매하면 바로 ‘내 강의실’에서 볼 수 있어요. " + accessTxt(p) + "이에요."]]);
+    const tabs = [["intro", bk ? "책 소개" : "강의 소개"]].concat(plansOf(p).length ? [["plans", "수강권 · 코칭"]] : []).concat(pvs.length ? [["preview", "미리보기 " + pvs.length]] : []).concat(noCur ? [] : [["curri", curName]]).concat([["creator", bk ? "저자 소개" : "강사 소개"], ["reviews", (bk ? "독자 후기" : "수강 후기") + (rs.length ? " " + rs.length : "")], ["pledge", "다짐 한마디"], ["info", bk ? "도서 정보" : "강의 정보"], ["faq", "FAQ"], ["refund", bk ? "교환 · 반품 · 배송" : "환불 · 이용 안내"]]);
     const pains = pdText(p, "pains"), before = pdText(p, "before"), after = pdText(p, "after"), dm = detailModeOf(p), dimg = detailImgsHtml(p);
-    const info = [["강의명", p.title], ["크리에이터", p.creator + (p.tagline ? " · " + p.tagline : "")], ["강의 종류", TYPE[t][0] + " (" + TYPE[t][2] + ")"]].concat(infoRows(p)).concat([["강의 자료", lz.some((l) => (l.files || []).length) ? "강의 노트 · 첨부 자료 제공" : t === "ebook" ? "PDF 파일" : "강의 노트 제공"], ["수강 기기", "PC · 모바일 · 태블릿 (스트리밍 · 기기 4대)"]].concat(t === "vod" ? [["수강 기간", periodTxt(p)]] : []).concat(dgOpen(p) ? [["강의실", p.creator + " 강사 두잉고 강의실 (강의 영상 · 교재 · 업데이트 소식)"]] : []).concat([["환불", refundTbl()[refundKey(p)][0][0] + " " + refundTbl()[refundKey(p)][0][1]]]));
+    const info = bk ? [["도서명", p.title], ["종류", "종이책 (택배 배송)"]].concat(bookRows(p)).concat([["교환 · 반품", "받은 날부터 7일 이내 (파손 · 파본은 3개월 이내)"]]) : [["강의명", p.title], ["크리에이터", p.creator + (p.tagline ? " · " + p.tagline : "")], ["강의 종류", TYPE[t][0] + " (" + TYPE[t][2] + ")"]].concat(infoRows(p)).concat([["강의 자료", lz.some((l) => (l.files || []).length) ? "강의 노트 · 첨부 자료 제공" : t === "ebook" ? "PDF 파일" : "강의 노트 제공"], ["수강 기기", "PC · 모바일 · 태블릿 (스트리밍 · 기기 4대)"]].concat(t === "vod" ? [["수강 기간", periodTxt(p)]] : []).concat(dgOpen(p) ? [["강의실", p.creator + " 강사 두잉고 강의실 (강의 영상 · 교재 · 업데이트 소식)"]] : []).concat([["환불", refundTbl()[refundKey(p)][0][0] + " " + refundTbl()[refundKey(p)][0][1]]]));
     return shell("", '<div class="vd-pd5">' +
-      '<section class="vd-pdt vd-pdt7"><div class="vd-wrap"><nav class="vd-crumbs"><a href="#/vod">홈</a>' + icon("chevRight", "xs") + '<a href="#/vod/c/' + esc(p.cat) + '">' + esc(cat.label) + "</a>" + icon("chevRight", "xs") + '<a href="#/vod/c/all?tab=' + (ev ? "premium" : t) + '">' + esc(TYPE[t][0]) + "</a></nav>" +
+      '<section class="vd-pdt vd-pdt7"><div class="vd-wrap"><nav class="vd-crumbs"><a href="#/vod">홈</a>' + icon("chevRight", "xs") + '<a href="#/vod/c/' + esc(p.cat) + '">' + esc(cat.label) + "</a>" + icon("chevRight", "xs") + '<a href="#/vod/c/all?tab=' + (ev ? "premium" : bk ? "ebook" : t) + '">' + esc(TYPE[t][0]) + "</a></nav>" +
         '<div class="vd-pdt-banner vd-th-' + t + '">' + bannerArt(p) + (pvs.length ? '<button type="button" class="vd-pdt-play" data-v="pv-open" data-p="' + esc(p.id) + '" data-l="' + esc(pvs[0].id) + '"><i>' + icon("play") + "</i><span>미리보기 <b>" + pvs.length + "개</b></span></button>" : "") + "</div>" +
         '<div class="vd-pdt-g7">' + pdtMain(p) + buyCard(p) + "</div></div></section>" +
       '<nav class="vd-pd-tabs"><div class="vd-wrap vd-pd-tabs-in">' + tabs.map((x, i) => '<button type="button" data-v="jump" data-to="vd-s-' + x[0] + '" class="' + (i === 0 ? "on" : "") + '">' + x[1] + "</button>").join("") + "</div></nav>" +
@@ -1833,24 +1900,24 @@
         (pvs.length ? sec("preview", "구매 전에 <span data-accent>미리보기</span>", '<p class="vd-curri-sum">강의 ' + lz.length + "개 중 " + pvs.length + "개를 결제 전에 먼저 볼 수 있어요. 나에게 맞는지 확인하고 시작하세요.</p>" +
           '<div class="vd-pvs" data-rv-kids>' + pvs.map((l) => '<button type="button" class="vd-pv-card" data-v="pv-open" data-p="' + esc(p.id) + '" data-l="' + esc(l.id) + '">' + pvThumb(p, l) + "<b>" + esc(l.title) + "</b><span>" + esc(l.desc || (chapOf(p, l).ch || {}).title || "") + "</span></button>").join("") + "</div>", "vd-pd-pv") : "") +
         plansSec(p, sec) +
-        sec("curri", curName, '<p class="vd-curri-sum">' + (t === "ebook" ? (p.curriculum || []).length + "장 · 총 " + (Number(p.pages) || 0) + "쪽" : ev ? "총 " + durTxt(Number(p.eventMin) || totalMin(p)) + " 진행" : "파트 " + (p.curriculum || []).length + "개 · 클립 " + lz.length + "개 · 총 " + durTxt(totalMin(p))) + "</p>" +
+        (noCur ? "" : sec("curri", curName, '<p class="vd-curri-sum">' + (t === "ebook" || bk ? (p.curriculum || []).length + "장 · 총 " + (Number(p.pages) || 0) + "쪽" : ev ? "총 " + durTxt(Number(p.eventMin) || totalMin(p)) + " 진행" : "파트 " + (p.curriculum || []).length + "개 · 클립 " + lz.length + "개 · 총 " + durTxt(totalMin(p))) + "</p>" +
           (p.curriculum || []).map((ch, ci) => '<details class="vd-ch"' + (ci === 0 ? " open" : "") + '><summary><b class="vd-ch-no">' + (t === "ebook" ? "" : "Part " + (ci + 1) + ".") + "</b><span>" + esc(ch.title) + "</span><small>" + (t === "ebook" ? (ch.lessons || []).reduce((a, l) => a + (Number(l.min) || 0), 0) + "쪽" : (ch.lessons || []).length + "개 · " + durTxt(Math.round((ch.lessons || []).reduce((a, l) => a + lSec(l), 0) / 60))) + "</small>" + icon("chevDown", "sm") + "</summary><ul>" +
-            (ch.lessons || []).map((l, li) => "<li>" + icon(own || l.preview ? (t === "ebook" ? "file" : "play") : "lock", "xs") + "<span>" + (ci + 1) + "-" + (li + 1) + ". " + esc(l.title) + "</span>" + (l.preview && !own && !ev ? '<button type="button" class="vd-pv" data-v="pv-open" data-p="' + esc(p.id) + '" data-l="' + esc(l.id) + '">미리보기</button>' : "") + "<small>" + unit(l) + "</small></li>").join("") + "</ul></details>").join("")) +
+            (ch.lessons || []).map((l, li) => "<li>" + icon(own || l.preview ? (t === "ebook" ? "file" : "play") : "lock", "xs") + "<span>" + (ci + 1) + "-" + (li + 1) + ". " + esc(l.title) + "</span>" + (l.preview && !own && !ev ? '<button type="button" class="vd-pv" data-v="pv-open" data-p="' + esc(p.id) + '" data-l="' + esc(l.id) + '">미리보기</button>' : "") + "<small>" + unit(l) + "</small></li>").join("") + "</ul></details>").join(""))) +
         // 강사 소개: 강사 얼굴이 먼저 크게 보이게 (PC 왼쪽 큰 세로 사진 · 모바일 위쪽 전체 폭) + 클래스 · 수강생 숫자
-        sec("creator", "강사 소개", '<div class="vd-crd vd-crd2" data-rv><div class="vd-crd-ph' + (phOf(p) ? "" : " no") + '">' + (phOf(p) ? '<img src="' + esc(phOf(p)) + '" alt="' + esc(p.creator) + ' 강사">' : "<i>" + esc((p.creator || "?").slice(0, 1)) + "</i>") + '<span class="vd-crd-cap"><small>CREATOR</small><b>' + esc(p.creator) + "</b></span></div><div class=\"vd-crd-body\"><small>" + esc(p.tagline || insB.field || "크리에이터") + "</small><b>" + esc(p.creator) + " <em>강사</em></b>" + crdStats(p) + "<p>" + esc(p.creatorBio || (p.creator + "님은 두잉고에서 기수를 운영하며 수강생과 함께 결과를 만들고 있어요. 이 클래스는 기수 강의의 핵심만 골라 언제든 볼 수 있게 만든 " + TYPE[t][0] + "예요.")) + "</p>" +
+        sec("creator", bk ? "저자 소개" : "강사 소개", '<div class="vd-crd vd-crd2" data-rv><div class="vd-crd-ph' + (phOf(p) ? "" : " no") + '">' + (phOf(p) ? '<img src="' + esc(phOf(p)) + '" alt="' + esc(p.creator) + ' 강사">' : "<i>" + esc((p.creator || "?").slice(0, 1)) + "</i>") + '<span class="vd-crd-cap"><small>CREATOR</small><b>' + esc(p.creator) + "</b></span></div><div class=\"vd-crd-body\"><small>" + esc(p.tagline || insB.field || "크리에이터") + "</small><b>" + esc(p.creator) + " <em>강사</em></b>" + crdStats(p) + "<p>" + esc(p.creatorBio || (p.creator + "님은 두잉고에서 기수를 운영하며 수강생과 함께 결과를 만들고 있어요. 이 클래스는 기수 강의의 핵심만 골라 언제든 볼 수 있게 만든 " + TYPE[t][0] + "예요.")) + "</p>" +
           (career.length ? '<ul class="vd-crd-car">' + career.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>" : "") + '<a class="vd-tl-btn" href="' + (p.iid ? tHref(p.iid) : "#/vod/search?q=" + encodeURIComponent(p.creator || "")) + '">' + esc(p.creator) + " 강사 페이지 · 다른 클래스" + icon("chevRight", "xs") + "</a></div></div>") +
-        sec("reviews", "수강 후기", (rs.length ? '<div class="vd-rv-sum"><div class="vd-rv-big"><b>' + rt.avg.toFixed(1) + '</b><span class="vd-stars">' + stars(rt.avg) + "</span><small>후기 " + rs.length + "개</small></div><ul>" + dist.map((n, i) => "<li><span>" + (5 - i) + "점</span><i><u style=\"width:" + Math.round(n / rs.length * 100) + '%"></u></i><small>' + n + "</small></li>").join("") + "</ul></div>" : "") +
+        sec("reviews", bk ? "독자 후기" : "수강 후기", (rs.length ? '<div class="vd-rv-sum"><div class="vd-rv-big"><b>' + rt.avg.toFixed(1) + '</b><span class="vd-stars">' + stars(rt.avg) + "</span><small>후기 " + rs.length + "개</small></div><ul>" + dist.map((n, i) => "<li><span>" + (5 - i) + "점</span><i><u style=\"width:" + Math.round(n / rs.length * 100) + '%"></u></i><small>' + n + "</small></li>").join("") + "</ul></div>" : "") +
           (canReview ? '<form class="vd-rv-form" data-vd-review="' + esc(p.id) + '"><b>후기를 남겨 주세요 <small>후기를 쓰면 ' + (Number(V().settings.reviewPoint) || 0).toLocaleString() + "P를 드려요</small></b><div class=\"vd-rate\" role=\"radiogroup\" aria-label=\"별점\">" + [5, 4, 3, 2, 1].map((s) => '<label><input type="radio" name="rating" value="' + s + '"' + (s === 5 ? " checked" : "") + ">" + icon("star", "sm") + "</label>").join("") + '</div><textarea name="text" rows="3" maxlength="500" placeholder="강의를 듣고 좋았던 점을 적어 주세요 (10자 이상)"></textarea><button class="vd-btn vd-btn-p" type="submit">후기 등록</button></form>' : "") +
-          (rs.length ? '<ul class="vd-rv-list">' + rs.map((r) => '<li><div class="vd-rv-h">' + av(r.name) + "<b>" + esc(r.name) + '</b><span class="vd-stars sm">' + stars(r.rating) + "</span><time>" + DB.date.fmtFull(DB.date.toStr(new Date(r.at))) + "</time></div><p>" + esc(r.text) + "</p></li>").join("") + "</ul>" : '<p class="vd-muted">아직 후기가 없어요. 수강한 분만 남길 수 있어요.</p>')) +
+          (rs.length ? '<ul class="vd-rv-list">' + rs.map((r) => '<li><div class="vd-rv-h">' + av(r.name) + "<b>" + esc(r.name) + '</b><span class="vd-stars sm">' + stars(r.rating) + "</span><time>" + DB.date.fmtFull(DB.date.toStr(new Date(r.at))) + "</time></div><p>" + esc(r.text) + "</p></li>").join("") + "</ul>" : '<p class="vd-muted">아직 후기가 없어요. ' + (bk ? "구매한" : "수강한") + ' 분만 남길 수 있어요.</p>')) +
         sec("pledge", "나의 다짐 한마디", '<form class="vd-plform" data-vd-pledge="' + esc(p.id) + '"><label><span>' + esc(myNick) + ' · 나의 다짐 한마디</span><textarea name="text" rows="2" maxlength="500" placeholder="첫 단계부터 미루지 않고 따라가 볼게요."></textarea></label><div class="vd-plform-f"><small><b data-pl-n>0</b>/500 · 익명</small><button type="submit" class="vd-btn vd-btn-p vd-btn-sm">다짐 남기기</button></div></form>' +
           (pls.length ? '<ul class="vd-pls">' + pls.map((x) => "<li>" + av(x.nick, "lg") + "<div><b>" + esc(x.nick) + "</b><small>한마디 · " + esc(DB.date.toStr(new Date(x.at))) + "</small><p>" + esc(x.text) + '</p><div class="vd-pl-a"><button type="button" data-v="pl-up" data-id="' + esc(x.id) + '" class="' + (m && (x.upBy || []).indexOf(m.id) >= 0 ? "on" : "") + '">' + icon("heart", "xs") + "공감 " + (x.up || 0) + "</button>" + (m && x.mid === m.id ? '<button type="button" data-v="pl-del" data-id="' + esc(x.id) + '">삭제</button>' : "") + "</div></div></li>").join("") + "</ul>" : '<p class="vd-muted">아직 다짐이 없어요. 첫 다짐을 남겨 주세요.</p>')) +
-        sec("info", "강의 정보", '<table class="vd-info-t"><tbody>' + info.map((r) => "<tr><th>" + esc(r[0]) + "</th><td>" + esc(r[1]) + "</td></tr>").join("") + "</tbody></table>") +
+        sec("info", bk ? "도서 정보" : "강의 정보", '<table class="vd-info-t"><tbody>' + info.map((r) => "<tr><th>" + esc(r[0]) + "</th><td>" + esc(r[1]) + "</td></tr>").join("") + "</tbody></table>") +
         sec("faq", "자주 묻는 질문", faq.map((f) => '<details class="vd-faq"><summary><b>Q</b><span>' + esc(f[0]) + "</span>" + icon("chevDown", "sm") + "</summary><p>" + esc(f[1]) + "</p></details>").join("")) +
-        sec("refund", "환불 규정", (t === "vod" && priceOf(p) > 0 ? '<p class="vd-rf-base">' + icon("calendar", "xs") + "<span>이 강의의 정상 수강기간: <b>" + (plansOf(p).length ? plansOf(p).map((x) => x.label).join(" · ") + " 중 고른 수강권 기간" : normalDays(p) + "일") + "</b>" + (isLifetime(p) ? " (평생 소장 · 31일차부터 무료 수강기간)" : "") + "</span></p>" : "") + refundTable(p) +
+        sec("refund", bk ? "교환 · 반품 규정" : "환불 규정", (t === "vod" && priceOf(p) > 0 ? '<p class="vd-rf-base">' + icon("calendar", "xs") + "<span>이 강의의 정상 수강기간: <b>" + (plansOf(p).length ? plansOf(p).map((x) => x.label).join(" · ") + " 중 고른 수강권 기간" : normalDays(p) + "일") + "</b>" + (isLifetime(p) ? " (평생 소장 · 31일차부터 무료 수강기간)" : "") + "</span></p>" : "") + refundTable(p) +
           (coachOf(p) ? '<h4 class="vd-rf-h4">1:1 코칭권</h4><table class="vd-rf"><tbody>' + refundTbl().coach.map((r) => "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>").join("") + "</tbody></table>" : "") +
           (teaOf(p) ? '<h4 class="vd-rf-h4">강사님과 TEA TIME</h4><table class="vd-rf"><tbody>' + refundTbl().tea.map((r) => "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>").join("") + "</tbody></table>" : "") +
           '<ul class="vd-notes"><li>환불 금액은 정가가 아닌 실제 결제 금액 기준이에요. 결제에 쓴 쿠폰은 다시 돌려드리지 않고, 쓴 포인트는 다시 넣어 드려요.</li><li>환불 신청은 마이페이지 › 주문 · 결제 내역 또는 고객센터 1:1 문의로 해 주세요. 영업일 기준 3일 안에 처리해요.</li><li>강의 내용 · 일정은 강사 사정에 따라 바뀔 수 있고, 바뀌면 미리 알려 드려요.</li></ul>' +
-          '<h3 class="vd-use-h">수강 기간 · 콘텐츠 이용 안내</h3><ul class="vd-notes vd-use">' + useNotes(p).map((x) => "<li>" + x + "</li>").join("") + "</ul>") +
+          '<h3 class="vd-use-h">' + (bk ? "배송 · 이용 안내" : "수강 기간 · 콘텐츠 이용 안내") + '</h3><ul class="vd-notes vd-use">' + useNotes(p).map((x) => "<li>" + x + "</li>").join("") + "</ul>") +
       "</div>" +
       (related.length ? '<section class="vd-pd-sec vd-pd-rel"><h2 data-eg>함께 많이 보는 <span data-accent>클래스</span></h2><div class="vd-grid vd-grid-3" data-rv-kids>' + related.map((x) => card(x)).join("") + "</div></section>" : "") +
       "</div></div>" + fbarHtml(p), "", "vd-has-mbuy");
@@ -1860,17 +1927,17 @@
   function bannerArt(p) {
     if (p.banner) return '<span class="vd-bn vd-bn-img"><img src="' + esc(p.banner) + '" alt=""></span>';
     const c = p.color || ["#1c1c1e", ACC[0]], t = typeOf(p), lines = artLines(p);
-    const lb = p.label || (p.status === "soon" ? "오픈 예정" : priceOf(p) === 0 ? "무료특강" : t === "ebook" ? "전자책" : t === "live" ? "LIVE 클래스" : t === "offline" ? "오프라인 클래스" : "VOD클래스");
-    const lbs = isEvent(p) ? fmtEvent(p.eventAt) : t === "ebook" ? (Number(p.pages) || 0) + "쪽 · " + (p.format || "PDF") : accessTxt(p);
-    const ph = phOf(p);
-    return '<span class="vd-bn" style="--bg:' + esc(c[0] || "#1c1c1e") + ";--acc:" + esc(c[1] || ACC[0]) + '">' +
+    const lb = p.label || (p.status === "soon" ? "오픈 예정" : priceOf(p) === 0 ? "무료특강" : t === "ebook" ? "전자책" : t === "book" ? "종이책" : t === "live" ? "LIVE 클래스" : t === "offline" ? "오프라인 클래스" : "VOD클래스");
+    const lbs = isEvent(p) ? fmtEvent(p.eventAt) : t === "ebook" ? (Number(p.pages) || 0) + "쪽 · " + (p.format || "PDF") : t === "book" ? shipFeeTxt(p) : accessTxt(p);
+    const ph = phOf(p), cv = isBook(p) && p.cover ? '<span class="vd-bn-cv"><i class="vd-eb-pages" aria-hidden="true"></i><img ' + imgAttr(p.cover, "src") + ' alt="' + esc(p.title) + ' 표지"></span>' : "";
+    return '<span class="vd-bn' + (cv ? " vd-bn-bk" : "") + '" style="--bg:' + esc(c[0] || "#1c1c1e") + ";--acc:" + esc(c[1] || ACC[0]) + '">' +
       '<i class="vd-bn-glow" aria-hidden="true"></i><i class="vd-bn-ring" aria-hidden="true"></i><i class="vd-bn-dots" aria-hidden="true"></i>' +
       (p.thumb ? '<img class="vd-bn-thumb" ' + imgAttr(p.thumb, "src") + ' alt="">' : "") +
       '<span class="vd-bn-txt"><span class="vd-bn-lb"><b>' + esc(lb) + "</b>" + esc(lbs || "") + "</span>" +
         (p.hook ? '<span class="vd-bn-hk">' + esc(p.hook) + "</span>" : "") +
         '<b class="vd-bn-t">' + artTitle(lines) + "</b>" +
         '<small class="vd-bn-c">' + esc(p.tagline || catOf(p.cat).label) + (p.creator ? " <em>" + esc(p.creator) + "</em>" : "") + "</small></span>" +
-      (ph ? '<span class="vd-bn-ph"><i class="vd-bn-sw" aria-hidden="true"></i><img src="' + esc(ph) + '" alt=""></span>' : '<span class="vd-bn-ph"><i class="vd-bn-sw" aria-hidden="true"></i></span>') +
+      (cv || (ph ? '<span class="vd-bn-ph"><i class="vd-bn-sw" aria-hidden="true"></i><img src="' + esc(ph) + '" alt=""></span>' : '<span class="vd-bn-ph"><i class="vd-bn-sw" aria-hidden="true"></i></span>')) +
       "</span>";
   }
   // 강의 소개 글: “고민” 따옴표 → 해결 문단 → 해시태그 (패스트캠퍼스 강의 설명처럼 제목 바로 아래)
@@ -1882,15 +1949,15 @@
   function pdtMain(p) {
     const t = typeOf(p), lz = lessons(p), rt = ratingOf(p.id), lk = likersOf(p);
     const desc = p.sub || String(p.intro || "").split(/\n\n+/)[0];
-    const rows = infoRows(p).concat(t === "vod" ? [["강의 자료", lz.some((l) => (l.files || []).length) ? "강의 노트 · 첨부 자료" : "강의 노트"]] : []).concat([["크리에이터", p.creator || "-"]]);
+    const rows = infoRows(p).concat(t === "vod" ? [["강의 자료", lz.some((l) => (l.files || []).length) ? "강의 노트 · 첨부 자료" : "강의 노트"]] : []).concat(t === "book" ? [] : [["크리에이터", p.creator || "-"]]);
     return '<div class="vd-pdt-main">' +
       '<div class="vd-buy-cat"><a href="#/vod/c/' + esc(p.cat) + '">' + esc(catOf(p.cat).label) + "</a>" + icon("chevRight", "xs") + "<span>" + esc(TYPE[t][0]) + "</span></div>" +
       badgeHtml(badgesOf(p)) +
       '<h1 class="vd-pdt-h1">' + esc(p.title) + "</h1>" +
-      '<div class="vd-pdt-rate">' + (rt.n ? '<button type="button" data-v="jump" data-to="vd-s-reviews"><span class="vd-stars sm">' + stars(rt.avg) + "</span><b>" + rt.avg.toFixed(1) + "</b><small>(" + rt.n + ")</small></button><i></i>" : "") + "<span>수강생 <b>" + soldOf(p).toLocaleString() + "명+</b></span><i></i><span>" + icon("heart", "xs") + likeCount(p) + "</span>" + (lk.length ? '<i></i><span class="vd-avs">' + lk.map((n) => av(n)).join("") + "</span>" : "") + "</div>" +
+      '<div class="vd-pdt-rate">' + (rt.n ? '<button type="button" data-v="jump" data-to="vd-s-reviews"><span class="vd-stars sm">' + stars(rt.avg) + "</span><b>" + rt.avg.toFixed(1) + "</b><small>(" + rt.n + ")</small></button><i></i>" : "") + (isBook(p) ? (soldOf(p) ? "<span>판매 <b>" + soldOf(p).toLocaleString() + "권+</b></span><i></i>" : "") : "<span>수강생 <b>" + soldOf(p).toLocaleString() + "명+</b></span><i></i>") + "<span>" + icon("heart", "xs") + likeCount(p) + "</span>" + (lk.length ? '<i></i><span class="vd-avs">' + lk.map((n) => av(n)).join("") + "</span>" : "") + "</div>" +
       (p.pitch ? pitchTop(p) : desc ? '<p class="vd-pdt-desc">' + esc(desc) + "</p>" : "") +
       (p.fromFree ? '<a class="vd-pdt-free" href="#/free/' + esc(p.fromFree) + '">' + icon("sparkles", "sm") + "<span><b>신청자 전용 선물 자료 · 사전 질문</b>은 무료강의 안내 페이지에서 받아요</span>" + icon("chevRight", "xs") + "</a>" : "") +
-      '<div class="vd-pdt-box"><b class="vd-pdt-box-h">강의 정보</b><dl>' + rows.map((r) => "<div><dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd></div>").join("") + "</dl></div>" +
+      '<div class="vd-pdt-box"><b class="vd-pdt-box-h">' + (t === "book" ? "도서 정보" : "강의 정보") + "</b><dl>" + rows.map((r) => "<div><dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd></div>").join("") + "</dl></div>" +
       (dgOpen(p) ? '<div class="vd-pdt-dg"><span class="vd-dg-ic">' + (window.doinggoB ? window.doinggoB("black", "vd-dg-logo") : "두잉고") + '</span><div><b>구매하면 <em>' + esc(p.creator) + " 강사 두잉고 강의실</em>이 열려요</b><small>강의 영상 · 교재 · 업데이트 소식 · 실습 체크리스트를 한 곳에서 보고, 원하면 1:1 코칭 · 강사님과 TEA TIME까지</small></div></div>" : "") +
       recoBox(p) + "</div>";
   }
@@ -1957,7 +2024,7 @@
   const dlCoupons = (p) => (V().coupons || []).filter((c) => c.on !== false && (c.dl || c.auto === "signup") && (!c.endAt || c.endAt >= today()) && couponOff(c, p, cpAmt(p)) > 0);
   const hasCp = (mid, c) => ((V().memberCoupons || {})[mid] || []).some((x) => x.cid === c.id);
   function cpDlBtn(p, m) {
-    if (!(priceOf(p) > 0) || p.status !== "on" || (m && owns(m.id, p.id))) return "";
+    if (!(priceOf(p) > 0) || p.status !== "on" || isBook(p) || (m && owns(m.id, p.id))) return "";
     const cs = dlCoupons(p), left = m ? cs.filter((c) => !hasCp(m.id, c)).length : cs.length;
     if (!cs.length) return "";
     return '<button type="button" class="vd-cpdl' + (left ? "" : " got") + '" data-v="cp-open" data-p="' + esc(p.id) + '">' + icon(left ? "download" : "check", "xs") + (left ? "사용 가능한 쿠폰이 있어요!" : "받은 쿠폰 " + cs.length + "장 · 결제할 때 적용돼요") + "</button>";
@@ -1983,17 +2050,17 @@
       : pr === 0 ? '<div class="vd-pc-top"><span class="vd-pc-lab">수강료</span><strong class="free">무료</strong></div>'
       : own && ps.length ? ownBox(p, m)
       : ext ? '<div class="vd-pc-top"><span class="vd-pc-lab">1년 연장권</span><strong>' + won(ext.sale) + '</strong></div><p class="vd-pc-exp">' + icon("clock", "xs") + "<span>" + DB.date.fmtFull(DB.date.toStr(new Date(accessEnd(m.id, p.id)))) + "에 수강 기간이 끝났어요. 연장하면 진도 · 노트 그대로 <b>다시 이어서 들을 수 있어요</b> (365일 가격의 " + extendPct() + "%).</span></p>"
-      : ps.length && p.status === "on" ? planBox(p, "a") + cd + (best ? '<p class="vd-buy-cp"><span class="vd-tag vd-tag-red">쿠폰</span>‘' + esc(best.c.name) + "’ 쿠폰은 결제 화면에서 수강권에 적용돼요</p>" : !m ? '<p class="vd-buy-cp"><span class="vd-tag vd-tag-red">쿠폰</span>가입하면 바로 쓰는 5,000원 할인 쿠폰을 드려요</p>' : "")
+      : ps.length && p.status === "on" ? planBox(p, "a") + cd + (best ? '<p class="vd-buy-cp"><span class="vd-tag vd-tag-red">쿠폰</span>‘' + esc(best.c.name) + "’ 쿠폰은 결제 화면에서 수강권에 적용돼요</p>" : !m && !isBook(p) ? '<p class="vd-buy-cp"><span class="vd-tag vd-tag-red">쿠폰</span>가입하면 바로 쓰는 5,000원 할인 쿠폰을 드려요</p>' : "")
       : '<div class="vd-pc-top">' + (eb ? '<span class="vd-pc-lab vd-pc-eb">얼리버드가</span>' : "") + (pct ? "<em>" + pct + "%</em>" : '<span class="vd-pc-lab">판매가</span>') + "<strong>" + won(pr) + "</strong></div>" +
         '<dl class="vd-pc-rows">' + (pct ? "<div><dt>정가</dt><dd><s>" + won(p.price) + "</s></dd></div><div><dt>할인 금액</dt><dd class=\"red\">-" + won(p.price - pr) + "</dd></div>" : "") +
           (best && !own ? "<div><dt>쿠폰 적용가</dt><dd><b>" + won(pr - best.off) + "</b></dd></div>" : "") + (mo ? "<div><dt>12개월 할부 시</dt><dd>월 " + won(mo) + "</dd></div>" : "") + "</dl>" + cd +
-        (own || best ? "" : !m ? '<p class="vd-buy-cp"><span class="vd-tag vd-tag-red">쿠폰</span>가입하면 바로 쓰는 5,000원 할인 쿠폰을 드려요</p>' : "");
+        (own || best ? "" : !m && !isBook(p) ? '<p class="vd-buy-cp"><span class="vd-tag vd-tag-red">쿠폰</span>가입하면 바로 쓰는 5,000원 할인 쿠폰을 드려요</p>' : "");
     return '<aside class="vd-pc' + (ps.length ? " vd-pc-plans" : "") + '" id="vd-pdt-info">' + flNote(p) + price +
       (isEvent(p) && left != null ? '<div class="vd-seat"><div><span>신청 현황</span><b>' + (p.seats - left) + " / " + p.seats + "명</b></div><i><u style=\"width:" + Math.round((p.seats - left) / p.seats * 100) + '%"></u></i>' + (left && left <= 5 ? "<small>마감까지 " + left + "자리 남았어요</small>" : "") + "</div>" : "") +
       cpDlBtn(p, m) +
       '<div class="vd-pc-btns">' + ctaHtml(p, ctaOf(p, m), "vd-btn-xl") + (own ? addonBtns(p, m) : "") + (pvs.length && !own ? '<button type="button" class="vd-btn vd-btn-o vd-btn-xl" data-v="pv-open" data-p="' + esc(p.id) + '" data-l="' + esc(pvs[0].id) + '">' + icon("play", "sm") + "무료 미리보기 " + pvs.length + "개</button>" : "") + "</div>" +
       '<div class="vd-pc-sub"><button type="button" class="vd-pc-like' + (isLiked ? " on" : "") + '" data-v="like" data-id="' + esc(p.id) + '">' + icon("heart", "sm") + "찜 " + likeTxt(likeCount(p)) + '</button><button type="button" class="vd-pc-like" data-v="share">' + icon("link", "sm") + "공유하기</button></div>" +
-      '<p class="vd-buy-note">' + icon("shieldCheck", "xs") + (refundKey(p) === "vod" ? "결제 후 " + rfSet().days + "일 이내 · 강의를 듣기 전이면 100% 환불" : refundKey(p) === "ebook" ? "내려받기 전 7일 이내 전액 환불" : refundKey(p) === "event" ? "강의 3일 전까지 전액 환불" : "무료 강의 · 신청 즉시 수강") + ' <button type="button" class="vd-link" data-v="jump" data-to="vd-s-refund">환불 규정</button></p></aside>';
+      '<p class="vd-buy-note">' + icon("shieldCheck", "xs") + (refundKey(p) === "vod" ? "결제 후 " + rfSet().days + "일 이내 · 강의를 듣기 전이면 100% 환불" : refundKey(p) === "ebook" ? "내려받기 전 7일 이내 전액 환불" : refundKey(p) === "book" ? "보내기 전이면 바로 취소 · 받은 날부터 7일 안 반품" : refundKey(p) === "event" ? "강의 3일 전까지 전액 환불" : "무료 강의 · 신청 즉시 수강") + ' <button type="button" class="vd-link" data-v="jump" data-to="vd-s-refund">환불 규정</button></p></aside>';
   }
   /** 이미 수강 중일 때 가격 자리: 남은 기간 · 진도 · 남은 코칭 */
   function ownBox(p, m) {
@@ -2012,6 +2079,7 @@
     const t = typeOf(p), ev = isEvent(p), lz = lessons(p);
     const stat = ev ? [["calendar", "일시", fmtEvent(p.eventAt) || "-"], [t === "offline" ? "mapPin" : "video", t === "offline" ? "장소" : "진행", t === "offline" ? placeShort(p.place) || "신청 후 안내" : viaOf(p)], ["users", "정원", p.seats ? p.seats + "명" : "제한 없음"], ["clock", "진행 시간", durTxt(Number(p.eventMin) || totalMin(p))]]
       : t === "ebook" ? [["book", "분량", (Number(p.pages) || 0) + "쪽"], ["layers", "구성", (p.curriculum || []).length + "장"], ["file", "형식", (p.format || "PDF")], ["award", "이용", "평생 소장"]]
+      : t === "book" ? [["book", "쪽수", Number(p.pages) ? Number(p.pages) + "쪽" : "-"], ["pen", "저자", p.author || p.creator || "-"], ["truck", "배송", shipFeeTxt(p)], ["clock", "출고", (Number(shipSet().outDays) || 2) + "일 안"]]
       : [["play", "강의 수", lz.length + "개"], ["clock", "총 시간", durTxt(totalMin(p))], ["calendar", "수강 기간", accessTxt(p)], ["sliders", "난이도", p.level || "입문"]];
     const learn = (p.learn || []).slice(0, 3);
     return '<div class="vd-pdt-sum"><ul class="vd-pdt-stat">' + stat.map((x) => "<li>" + icon(x[0], "sm") + "<small>" + x[1] + "</small><b>" + esc(x[2]) + "</b></li>").join("") + "</ul>" +
@@ -2108,7 +2176,7 @@
   const srvOn = () => !!(remoteOn() && CFG && CFG.auth);
   function srvTrack(pid, lid, ev) { if (srvOn() && pid) payApi("track", { pid, lid: lid || "", ev }).catch(() => {}); }
   /* 마스터가 가격 · 쿠폰 · 환불 규정을 바꾸면 결제 서버에도 같은 가격표를 올려요 (서버가 이 가격표로 금액을 다시 계산해요) */
-  const CAT_P = ["id", "title", "type", "status", "price", "sale", "saleEnd", "plans", "accessDays", "eventAt", "eventMin", "seats", "next", "ebPrice", "ebDays", "coach", "tea", "iid", "share"];
+  const CAT_P = ["id", "title", "type", "status", "price", "sale", "saleEnd", "plans", "accessDays", "eventAt", "eventMin", "seats", "next", "ebPrice", "ebDays", "coach", "tea", "iid", "share", "shipFee", "stock"];
   const CAT_C = ["id", "code", "name", "kind", "value", "max", "min", "days", "endAt", "types", "auto", "dl", "on"];
   const pickK = (o, ks) => { const r = {}; ks.forEach((k) => { if (o && o[k] !== undefined) r[k] = o[k]; }); return r; };
   let catT = null, catLast = "";
@@ -2288,7 +2356,8 @@
     if (!insShown(p)) { ROUTE.redirect("#/vod"); toast("지금은 판매하지 않는 클래스예요.", "warn"); return ""; }
     if (k === "course") {
       if (p.status !== "on" || eventPast(p)) return back();
-      if (owns(m.id, p.id)) { ROUTE.redirect("#/vod/learn/" + p.id); return ""; }
+      if (isBook(p) && stockLeft(p) === 0) return back("품절됐어요. 재입고되면 다시 열려요.");
+      if (owns(m.id, p.id) && !isBook(p)) { ROUTE.redirect("#/vod/learn/" + p.id); return ""; }
       if (seatsLeft(p) === 0) return back("자리가 모두 찼어요.");
     } else if (k === "extend" && !canExtend(m.id, p.id)) return back(owns(m.id, p.id) ? "수강 기간이 30일 넘게 남아 있어요. 끝나기 30일 전부터 연장할 수 있어요." : "이 강의를 수강한 회원만 연장할 수 있어요.");
     else if (k === "coach" && !(coachOf(p) && owns(m.id, p.id))) return back("이 강의를 수강 중인 회원만 1:1 코칭권을 살 수 있어요.");
@@ -2297,36 +2366,84 @@
     const coachOn = k === "course" && !!c && !!sel && (qs.get("coach") === "1" || (!qs.get("plan") && !!s.coach));
     const pr = k === "course" ? (sel ? sel.sale : priceOf(p)) : k === "extend" ? x.sale : k === "coach" ? c.price : t.price;
     const list = k === "course" ? (sel ? sel.list : Number(p.price) || 0) : pr, b = bankInfo(), cps = k === "course" && pr > 0 ? couponsFor(m.id, p, pr) : [], pts = Number(m.points) || 0, all = myCoupons(m.id).filter((y) => y.st === "ok").length;
+    const bk = isBook(p), sf = shipFeeOf(p), qmax = Math.max(1, Math.min(BOOK_MAX, stockLeft(p) == null ? BOOK_MAX : stockLeft(p)));
     const e0 = accessEnd(m.id, p.id), newEnd = DB.date.toStr(new Date(Math.max(now(), e0 === Infinity ? now() : e0) + 365 * 864e5)), left = c ? coachLeft(m.id, p.iid) : 0;
-    const h1 = k === "extend" ? "1년 연장권 결제" : k === "coach" ? "1:1 코칭권 결제" : k === "tea" ? "TEA TIME 신청 · 결제" : pr === 0 ? "무료 수강신청" : "주문 · 결제";
+    const h1 = k === "extend" ? "1년 연장권 결제" : k === "coach" ? "1:1 코칭권 결제" : k === "tea" ? "TEA TIME 신청 · 결제" : bk ? "종이책 주문 · 결제" : pr === 0 ? "무료 수강신청" : "주문 · 결제";
     const kindNote = k === "extend" ? icon("refresh", "xs") + "<span><b>1년 연장권 · 365일</b> 결제하면 <b>" + DB.date.fmtFull(newEnd) + "</b>까지 다시 들을 수 있어요. 진도 · 노트는 그대로 이어져요.</span>"
       : k === "coach" ? icon("message", "xs") + "<span><b>1:1 코칭권 " + c.n + "회 · " + c.days + "일</b> (" + DB.date.fmtFull(DB.date.addDays(today(), c.days)) + "까지) · 두잉고 강의실 ‘1:1 코칭 질문’에서 써요." + (left ? " 지금 남은 코칭 " + left + "회" : "") + "</span>"
       : k === "tea" ? icx("coffee", "xs") + "<span><b>강사님과 TEA TIME " + t.min + "분</b> · " + TEA_MODE[t.mode] + " · 강사님이 일정을 확정하면 알려 드려요.</span>" : "";
-    const agree1 = k === "course" ? (isEvent(p) ? "일정 · 장소" : "수강 기간 (" + (sel ? '<span data-co-plan>' + sel.label + "</span> 수강권" : esc(accessTxt(p))) + ")") : k === "extend" ? "연장 기간 (365일 · " + DB.date.fmtFull(newEnd) + "까지)" : k === "coach" ? "코칭권 횟수 (" + c.n + "회) · 사용 기간 (" + c.days + "일)" : "TEA TIME은 강사님 확정 후 일정이 정해지는 것";
-    const agree2 = k === "coach" ? "질문을 남기기 전 7일 이내는 전액, 쓴 뒤에는 남은 횟수만큼 환불돼요." : k === "tea" ? "확정 전 · 확정 3일 전까지 전액, 1~2일 전 50% 환불되고 당일 · 불참은 환불되지 않아요." : typeOf(p) === "ebook" ? "전자책을 내려받으면 청약철회가 제한돼요." : isEvent(p) ? "강의 " + rfSet().eventDays + "일 전까지는 전액, 1~2일 전은 50% 환불되고 당일 · 불참은 환불되지 않아요." : "결제 후 " + rfSet().days + "일 이내 · 강의를 듣기 전이면 마이페이지에서 바로 100% 취소돼요. 강의를 재생하거나 자료를 내려받으면 그 부분은 청약철회가 제한될 수 있어요.";
+    const agree1 = bk ? "수량 · 배송지" : k === "course" ? (isEvent(p) ? "일정 · 장소" : "수강 기간 (" + (sel ? '<span data-co-plan>' + sel.label + "</span> 수강권" : esc(accessTxt(p))) + ")") : k === "extend" ? "연장 기간 (365일 · " + DB.date.fmtFull(newEnd) + "까지)" : k === "coach" ? "코칭권 횟수 (" + c.n + "회) · 사용 기간 (" + c.days + "일)" : "TEA TIME은 강사님 확정 후 일정이 정해지는 것";
+    const agree2 = bk ? "보내기 전에는 바로 취소되고, 받은 날부터 7일 안에 반품할 수 있어요 (단순 변심은 왕복 배송비 구매자 부담)." : k === "coach" ? "질문을 남기기 전 7일 이내는 전액, 쓴 뒤에는 남은 횟수만큼 환불돼요." : k === "tea" ? "확정 전 · 확정 3일 전까지 전액, 1~2일 전 50% 환불되고 당일 · 불참은 환불되지 않아요." : typeOf(p) === "ebook" ? "전자책을 내려받으면 청약철회가 제한돼요." : isEvent(p) ? "강의 " + rfSet().eventDays + "일 전까지는 전액, 1~2일 전은 50% 환불되고 당일 · 불참은 환불되지 않아요." : "결제 후 " + rfSet().days + "일 이내 · 강의를 듣기 전이면 마이페이지에서 바로 100% 취소돼요. 강의를 재생하거나 자료를 내려받으면 그 부분은 청약철회가 제한될 수 있어요.";
     return shell("", '<div class="vd-wrap vd-co"><h1 class="vd-h1">' + h1 + '</h1><form class="vd-co-grid" data-vd-pay="' + esc(p.id) + '" data-kind="' + k + '" novalidate><div class="vd-co-main">' +
       '<section class="vd-co-box"><h2>주문 상품</h2><div class="vd-co-item"><span class="vd-co-th">' + thumbArt(p) + "</span><div><small>" + esc(TYPE[typeOf(p)][0]) + " · " + esc(p.creator) + "</small><b>" + esc(p.title) + "</b><span>" + metaOf(p).map(esc).join(" · ") + "</span></div></div>" +
         (kindNote ? '<p class="vd-co-kind">' + kindNote + "</p>" : "") +
-        (isEvent(p) ? '<p class="vd-co-ev">' + icon("calendar", "xs") + fmtEvent(p.eventAt, true) + (typeOf(p) === "offline" ? " · " + esc(p.place || "") : " · Zoom LIVE") + "</p>" : "") + "</section>" +
+        (isEvent(p) ? '<p class="vd-co-ev">' + icon("calendar", "xs") + fmtEvent(p.eventAt, true) + (typeOf(p) === "offline" ? " · " + esc(p.place || "") : " · Zoom LIVE") + "</p>" : "") +
+        (bk ? '<div class="vd-co-qty"><span>수량 <small>한 번에 ' + qmax + "권까지" + (stockLeft(p) != null ? " · 남은 재고 " + stockLeft(p) + "권" : "") + '</small></span><div class="vd-qty"><button type="button" data-v="qty" data-d="-1" aria-label="한 권 빼기">' + icon("minus", "xs") + '</button><input name="qty" type="number" min="1" max="' + qmax + '" value="' + Math.min(qmax, Math.max(1, Number(qs.get("qty")) || 1)) + '" inputmode="numeric" aria-label="수량"><button type="button" data-v="qty" data-d="1" aria-label="한 권 더하기">' + icon("plus", "xs") + "</button></div></div>" : "") + "</section>" +
+      (bk ? shipBox(m) : "") +
       (sel ? '<section class="vd-co-box"><h2>수강권 선택</h2><div class="vd-plans vd-co-plans">' + ps.map((y) => '<label class="vd-plan' + (y.d === sel.d ? " on" : "") + '"><input type="radio" name="plan" value="' + y.d + '"' + (y.d === sel.d ? " checked" : "") + '><span class="vd-plan-t"><b>' + y.label + " 수강권</b>" + (y.d === 365 ? "<em>추천</em>" : "") + "<small>하루 " + won(y.day) + " · " + DB.date.fmtFull(DB.date.addDays(today(), y.d)) + "까지</small></span><span class=\"vd-plan-p\">" + (y.list > y.sale ? "<s>" + won(y.list) + "</s>" : "") + "<strong>" + won(y.sale) + "</strong></span></label>").join("") + "</div>" +
           (c ? '<label class="vd-addon' + (coachOn ? " on" : "") + '"><input type="checkbox" name="coach" value="1"' + (coachOn ? " checked" : "") + '><span class="vd-addon-t"><b>1:1 코칭권 ' + c.n + "회 함께 사기</b><small>" + c.days + "일 동안 강사에게 직접 질문 · 1회 " + won(c.per) + " · 쿠폰 적용 제외</small></span><strong>+" + won(c.price) + "</strong></label>" : "") + "</section>" : "") +
       (k === "tea" ? '<section class="vd-co-box"><h2>TEA TIME 신청 정보</h2><div class="vd-co-f"><label>희망 날짜 1<input type="date" name="d1" min="' + DB.date.addDays(today(), 2) + '"></label><label>희망 날짜 2 <small>(선택)</small><input type="date" name="d2" min="' + DB.date.addDays(today(), 2) + '"></label>' +
           '<label>희망 시간대<select name="slot"><option>오전 (10~12시)</option><option selected>오후 (14~17시)</option><option>저녁 (19~21시)</option></select></label><label>진행 방식<span class="vd-fixed">' + icon("video", "xs") + ' Zoom 온라인 화상 · 링크는 강사님이 일정 확정 때 보내 드려요</span><input type="hidden" name="mode" value="online"></label>' +
           '<label class="w">이야기하고 싶은 주제<textarea name="topic" rows="4" maxlength="500" placeholder="예: 지금 스마트스토어 월 매출이 300만 원인데, 해외 소싱 상품을 추가해도 될지 상담받고 싶어요."></textarea></label></div><p class="vd-muted vd-co-hint">강사님이 희망 날짜를 보고 일정을 확정하면 마이페이지 › 1:1 코칭 · TEA TIME과 문자로 알려 드려요. 확정 전에는 언제든 전액 환불돼요.</p></section>' : "") +
       '<section class="vd-co-box"><h2>주문자 정보</h2><div class="vd-co-f"><label>이름<input name="name" value="' + esc(m.name) + '" maxlength="20"></label><label>휴대폰<input name="phone" value="' + esc(m.phone || "") + '" maxlength="20"></label><label class="w">이메일<input name="email" value="' + esc(m.email) + '" readonly></label></div></section>' +
-      (pr > 0 ? '<section class="vd-co-box"><h2>할인 · 쿠폰</h2><div class="vd-co-f">' + (k === "course" ? '<label class="w">쿠폰 <small>사용 가능 ' + cps.length + "장 · 보유 " + all + '장</small><select name="coupon"><option value="">쿠폰 쓰지 않기</option>' + cps.map((y, i) => '<option value="' + esc(y.x.id) + '"' + (i === 0 ? " selected" : "") + ">" + esc(y.c.name) + " (-" + won(y.off) + ")</option>").join("") + "</select></label>" : "") +
+      (pr > 0 ? '<section class="vd-co-box"><h2>' + (bk ? "포인트" : "할인 · 쿠폰") + '</h2><div class="vd-co-f">' + (k === "course" && !bk ? '<label class="w">쿠폰 <small>사용 가능 ' + cps.length + "장 · 보유 " + all + '장</small><select name="coupon"><option value="">쿠폰 쓰지 않기</option>' + cps.map((y, i) => '<option value="' + esc(y.x.id) + '"' + (i === 0 ? " selected" : "") + ">" + esc(y.c.name) + " (-" + won(y.off) + ")</option>").join("") + "</select></label>" : "") +
           '<label class="w">포인트 <small>보유 ' + pts.toLocaleString() + 'P · 1P = 1원</small><span class="vd-co-pt"><input name="points" type="number" min="0" max="' + pts + '" step="100" inputmode="numeric" value="0"' + (pts ? "" : " disabled") + '><button type="button" class="vd-btn vd-btn-o vd-btn-sm" data-v="pt-all"' + (pts ? "" : " disabled") + ">전액 사용</button></span></label></div>" +
-          (k !== "course" ? '<p class="vd-muted vd-co-hint">연장권 · 1:1 코칭권 · TEA TIME에는 쿠폰을 쓸 수 없어요. 포인트는 쓸 수 있어요.</p>' : !cps.length ? '<p class="vd-muted vd-co-hint">이 상품에 쓸 수 있는 쿠폰이 없어요. <a class="vd-link" href="#/vod/my/coupons">쿠폰 등록하기</a></p>' : coachOn || c ? '<p class="vd-muted vd-co-hint">쿠폰은 수강권 금액에만 적용돼요.</p>' : "") + "</section>" +
+          (bk ? '<p class="vd-muted vd-co-hint">도서정가제에 따라 종이책에는 쿠폰을 쓸 수 없어요. 포인트는 쓸 수 있어요.</p>' : k !== "course" ? '<p class="vd-muted vd-co-hint">연장권 · 1:1 코칭권 · TEA TIME에는 쿠폰을 쓸 수 없어요. 포인트는 쓸 수 있어요.</p>' : !cps.length ? '<p class="vd-muted vd-co-hint">이 상품에 쓸 수 있는 쿠폰이 없어요. <a class="vd-link" href="#/vod/my/coupons">쿠폰 등록하기</a></p>' : coachOn || c ? '<p class="vd-muted vd-co-hint">쿠폰은 수강권 금액에만 적용돼요.</p>' : "") + "</section>" +
         '<section class="vd-co-box" data-co-pay><h2>결제 수단</h2><div class="vd-pay-opts">' + payOpts().map((z, i, all) => '<label class="vd-pay-opt' + (z[3] ? " off" : "") + '"><input type="radio" name="method" value="' + z[0] + '"' + (z[3] ? " disabled" : "") + (z[0] === (all.find((y) => !y[3]) || [])[0] ? " checked" : "") + "><span>" + icon(z[1], "sm") + z[2] + (z[3] ? "<em>" + z[3] + "</em>" : "") + "</span></label>").join("") + '</div>' + (payOpts().every((z) => z[3]) ? '<p class="vd-co-bank vd-co-wait">' + icon("alert", "xs") + "<span>결제 준비 중이에요. 곧 카드 · 간편결제 · 무통장 입금으로 결제할 수 있어요.</span></p>" : "") + bankBox(b, m, k) + "</section>" : "") +
       '<div class="vd-co-agrees"><label class="vd-agree vd-agree-all"><input type="checkbox" data-agree-all><span><b>아래 내용을 모두 확인했고 동의해요</b></span></label>' +
         '<label class="vd-agree"><input type="checkbox" name="agree" data-agree-req><span>(필수) 주문 상품 · ' + agree1 + " · 결제 금액을 확인했어요</span></label>" +
-        '<label class="vd-agree"><input type="checkbox" name="agree2" data-agree-req><span>(필수) <button type="button" class="vd-link" data-v="refund">환불 규정</button>을 확인했어요. ' + agree2 + "<small>전자상거래법 제17조 제2항 제5호 · 디지털 콘텐츠 제공이 시작되면 청약철회가 제한될 수 있어요</small></span></label>" +
-        '<label class="vd-agree"><input type="checkbox" name="agree3" data-agree-req><span>(필수) 콘텐츠 이용 안내에 동의해요<small>' + (isEvent(p) ? "강의 녹화 · 촬영 · 녹음 금지 · 일정 안내 문자 받기" : k === "tea" || k === "coach" ? "코칭 · TEA TIME 내용 녹음 · 녹화 · 무단 공개 금지 · 안내 문자 받기" : "계정 공유 금지 · 기기 4대까지 · 녹화 · 캡처 · 배포 · 판매 금지 (저작권법)") + "</small></span></label></div>" +
-      '</div><aside class="vd-co-side"><div class="vd-co-sum"><h2>결제 금액</h2><dl><div><dt>' + (k === "course" ? (sel ? '수강권 (<span data-co-plan>' + sel.label + "</span>)" : "상품 금액") : KIND[k]) + '</dt><dd data-co-list>' + won(list) + "</dd></div>" +
+        '<label class="vd-agree"><input type="checkbox" name="agree2" data-agree-req><span>(필수) <button type="button" class="vd-link" data-v="refund">환불 규정</button>을 확인했어요. ' + agree2 + "<small>" + (bk ? "전자상거래법 제17조 · 받은 날부터 7일 이내 청약철회 (책을 훼손하면 제한돼요)" : "전자상거래법 제17조 제2항 제5호 · 디지털 콘텐츠 제공이 시작되면 청약철회가 제한될 수 있어요") + "</small></span></label>" +
+        '<label class="vd-agree"><input type="checkbox" name="agree3" data-agree-req><span>' + (bk ? "(필수) 배송을 위해 받는 분 이름 · 연락처 · 주소를 택배사에 제공하는 데 동의해요<small>배송이 끝나면 택배사는 법령에 따른 기간 뒤 파기해요" : "(필수) 콘텐츠 이용 안내에 동의해요<small>" + (isEvent(p) ? "강의 녹화 · 촬영 · 녹음 금지 · 일정 안내 문자 받기" : k === "tea" || k === "coach" ? "코칭 · TEA TIME 내용 녹음 · 녹화 · 무단 공개 금지 · 안내 문자 받기" : "계정 공유 금지 · 기기 4대까지 · 녹화 · 캡처 · 배포 · 판매 금지 (저작권법)")) + "</small></span></label></div>" +
+      '</div><aside class="vd-co-side"><div class="vd-co-sum"><h2>결제 금액</h2><dl><div><dt>' + (bk ? '상품 금액 (<span data-co-qty>1</span>권)' : k === "course" ? (sel ? '수강권 (<span data-co-plan>' + sel.label + "</span>)" : "상품 금액") : KIND[k]) + '</dt><dd data-co-list>' + won(list) + "</dd></div>" +
         '<div data-co-disc-row' + (list > pr ? "" : " hidden") + '><dt>할인</dt><dd class="minus" data-co-disc>-' + won(list - pr) + "</dd></div>" +
         (k === "course" && c && sel ? '<div data-co-coach-row' + (coachOn ? "" : " hidden") + "><dt>1:1 코칭권 " + c.n + '회</dt><dd data-co-coach>+' + won(c.price) + "</dd></div>" : "") +
-        (pr > 0 ? (k === "course" ? '<div><dt>쿠폰 할인</dt><dd class="minus" data-co-cp>-0원</dd></div>' : "") + '<div><dt>포인트 사용</dt><dd class="minus" data-co-pt>-0원</dd></div>' : "") + '<div class="tot"><dt>최종 결제 금액</dt><dd data-co-tot>' + won(pr + (coachOn ? c.price : 0)) + "</dd></div></dl>" +
-        '<p class="vd-err" id="vd-pay-err" role="alert"></p><button class="vd-btn vd-btn-p vd-btn-xl" type="submit" data-co-btn>' + (pr === 0 ? (isEvent(p) ? "무료 LIVE 신청하기" : "무료로 수강 시작") : won(pr + (coachOn ? c.price : 0)) + " 결제하기") + "</button>" + (SRV() ? "" : '<p class="vd-co-test">' + icon("alert", "xs") + "시안 화면이라 실제 결제는 되지 않아요. 정식 오픈 때 결제 대행사(PG)를 연결해요.</p>") + "</div></aside></form></div>");
+        (bk ? '<div><dt>배송비</dt><dd data-co-ship>' + (sf ? "+" + won(sf) : "무료") + "</dd></div>" : "") +
+        (pr > 0 ? (k === "course" && !bk ? '<div><dt>쿠폰 할인</dt><dd class="minus" data-co-cp>-0원</dd></div>' : "") + '<div><dt>포인트 사용</dt><dd class="minus" data-co-pt>-0원</dd></div>' : "") + '<div class="tot"><dt>최종 결제 금액</dt><dd data-co-tot>' + won(pr + (coachOn ? c.price : 0) + (bk ? sf : 0)) + "</dd></div></dl>" +
+        '<p class="vd-err" id="vd-pay-err" role="alert"></p><button class="vd-btn vd-btn-p vd-btn-xl" type="submit" data-co-btn>' + (pr === 0 ? (isEvent(p) ? "무료 LIVE 신청하기" : "무료로 수강 시작") : won(pr + (coachOn ? c.price : 0) + (bk ? sf : 0)) + " 결제하기") + "</button>" + (SRV() ? "" : '<p class="vd-co-test">' + icon("alert", "xs") + "시안 화면이라 실제 결제는 되지 않아요. 정식 오픈 때 결제 대행사(PG)를 연결해요.</p>") + "</div></aside></form></div>");
+  }
+  /* ---------- 종이책 배송지 (결제 화면 · 배송지 바꾸기) ----------
+   * 주소 찾기: 다음(카카오) 우편번호 서비스를 화면 안에 열어요. 불러오지 못하면 주소를 직접 적어요 */
+  const MEMOS = ["문 앞에 놓아 주세요", "경비실에 맡겨 주세요", "택배함에 넣어 주세요", "배송 전에 연락 주세요"];
+  function shipFields(a, pre) {
+    a = a || {}; const n = (k) => (pre || "s") + k, memo = a.memo || "", known = !memo || MEMOS.indexOf(memo) >= 0;
+    return '<div class="vd-co-f vd-ship-f"><label>받는 분<input name="' + n("name") + '" value="' + esc(a.name || "") + '" maxlength="20" autocomplete="name"></label><label>휴대폰<input name="' + n("phone") + '" value="' + esc(a.phone || "") + '" maxlength="14" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000"></label>' +
+      '<label class="w">주소<span class="vd-addr-r"><input name="' + n("zip") + '" value="' + esc(a.zip || "") + '" maxlength="5" inputmode="numeric" placeholder="우편번호" aria-label="우편번호" autocomplete="postal-code"><button type="button" class="vd-btn vd-btn-dark vd-btn-sm" data-v="addr-find" data-pre="' + (pre || "s") + '">' + icon("search", "xs") + '주소 찾기</button></span></label>' +
+      '<div class="vd-addr-pop w" data-addr-pop hidden></div>' +
+      '<label class="w"><input name="' + n("addr1") + '" value="' + esc(a.addr1 || "") + '" maxlength="120" placeholder="도로명 주소 (주소 찾기로 넣거나 직접 적어요)" aria-label="주소" autocomplete="address-line1"></label>' +
+      '<label class="w">상세 주소<input name="' + n("addr2") + '" value="' + esc(a.addr2 || "") + '" maxlength="80" placeholder="동 · 호수 · 건물 이름" autocomplete="address-line2"></label>' +
+      '<label class="w">배송 요청사항<select name="' + n("memo") + '" data-v-memo><option value="">선택 안 함</option>' + MEMOS.map((x) => "<option" + (x === memo ? " selected" : "") + ">" + x + "</option>").join("") + '<option value="__"' + (known ? "" : " selected") + '>직접 적기</option></select><input name="' + n("memo2") + '" value="' + esc(known ? "" : memo) + '" maxlength="100" placeholder="요청사항을 적어 주세요"' + (known ? " hidden" : "") + "></label></div>";
+  }
+  function shipBox(m) {
+    const a = m.addr || { name: m.name, phone: m.phone || "" };
+    return '<section class="vd-co-box vd-co-ship"><h2>' + icon("truck", "sm") + "배송지</h2>" + (m.addr ? '<p class="vd-co-saved">' + icon("check", "xs") + "지난번에 쓴 배송지를 넣어 뒀어요</p>" : "") + shipFields(a) +
+      '<label class="vd-co-keep"><input type="checkbox" name="ssave" checked><span>다음에도 이 배송지 쓰기</span></label></section>';
+  }
+  /** 배송지 칸 읽기 → { ok, a: {name, phone, zip, addr1, addr2, memo} } | { ok:false, msg, el } */
+  function shipRead(f, pre) {
+    const g = (k) => f.elements[(pre || "s") + k], memoSel = g("memo") ? g("memo").value : "";
+    const a = { name: g("name").value.trim(), phone: g("phone").value.trim().replace(/\s/g, ""), zip: g("zip").value.replace(/\D/g, ""), addr1: g("addr1").value.trim(), addr2: g("addr2").value.trim(), memo: (memoSel === "__" ? (g("memo2").value || "") : memoSel).trim().slice(0, 100) };
+    if (!a.name) return { ok: false, msg: "받는 분 이름을 적어 주세요.", el: g("name") };
+    if (!/^0\d{1,2}-?\d{3,4}-?\d{4}$/.test(a.phone)) return { ok: false, msg: "받는 분 휴대폰 번호를 010-0000-0000처럼 적어 주세요.", el: g("phone") };
+    if (a.zip && a.zip.length !== 5) return { ok: false, msg: "우편번호 5자리를 확인해 주세요.", el: g("zip") };
+    if (a.addr1.length < 5) return { ok: false, msg: "주소를 찾거나 적어 주세요.", el: g("addr1") };
+    if (!a.addr2) return { ok: false, msg: "상세 주소(동 · 호수)를 적어 주세요. 없으면 ‘없음’이라고 적어 주세요.", el: g("addr2") };
+    return { ok: true, a };
+  }
+  const POSTCODE = "https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+  function addrFind(btn) {
+    const f = btn.closest("form"), pre = btn.dataset.pre || "s", box = f && f.querySelector("[data-addr-pop]"); if (!f || !box) return;
+    if (!box.hidden) { box.hidden = true; box.innerHTML = ""; return; }
+    const fail = () => { box.hidden = true; toast("주소 검색을 불러오지 못했어요. 주소를 직접 적어 주세요.", "warn"); const x = f.elements[pre + "addr1"]; if (x) x.focus(); };
+    loadJs(POSTCODE).then(() => {
+      const D = window.daum || window.kakao; if (!D || !D.Postcode) return fail();
+      box.hidden = false; box.innerHTML = "";
+      new D.Postcode({ width: "100%", height: "100%", oncomplete: (d) => {
+        const extra = [d.bname && /[동로가]$/.test(d.bname) ? d.bname : "", d.buildingName && d.apartment === "Y" ? d.buildingName : ""].filter(Boolean).join(", ");
+        f.elements[pre + "zip"].value = d.zonecode || "";
+        f.elements[pre + "addr1"].value = (d.roadAddress || d.address || "") + (extra ? " (" + extra + ")" : "");
+        box.hidden = true; box.innerHTML = ""; const x = f.elements[pre + "addr2"]; if (x) x.focus();
+      } }).embed(box);
+    }, fail);
   }
   /** 결제 화면 무통장 안내: 계좌(복사) · 예금주 · 입금 기한 · 입금자명 — 무통장을 고르면 펼쳐져요 */
   function bankBox(b, m, k) {
@@ -2339,19 +2456,22 @@
   function coCalc(f) {
     const p = product(f.dataset.vdPay), m = me(); if (!p || !m) return null;
     const k = f.dataset.kind || "course", c = coachOf(p), el = f.elements;
-    let plan = null, list, pr, coach = 0;
-    if (k === "course") { plan = plansOf(p).length ? planOf(p, el.plan ? el.plan.value : 0) : null; pr = plan ? plan.sale : priceOf(p); list = plan ? plan.list : Number(p.price) || 0; coach = c && el.coach && el.coach.checked ? c.price : 0; }
+    let plan = null, list, pr, coach = 0, qty = 1, ship = 0;
+    if (k === "course" && isBook(p)) { const sl = stockLeft(p), mx = Math.max(1, Math.min(BOOK_MAX, sl == null ? BOOK_MAX : sl)); qty = Math.max(1, Math.min(mx, Math.floor(Number(el.qty && el.qty.value) || 1))); pr = priceOf(p) * qty; list = Math.max(Number(p.price) || 0, priceOf(p)) * qty; ship = shipFeeOf(p); }
+    else if (k === "course") { plan = plansOf(p).length ? planOf(p, el.plan ? el.plan.value : 0) : null; pr = plan ? plan.sale : priceOf(p); list = plan ? plan.list : Number(p.price) || 0; coach = c && el.coach && el.coach.checked ? c.price : 0; }
     else { pr = k === "extend" ? ((extendOf(p) || {}).sale || 0) : k === "coach" ? ((c || {}).price || 0) : ((teaOf(p) || {}).price || 0); list = pr; }
     const sel = k === "course" && f.coupon ? f.coupon.value : "", y = sel ? myCoupons(m.id).find((z) => z.x.id === sel && z.st === "ok") : null;
-    const cp = y ? couponOff(y.c, p, pr) : 0, sum = pr + coach, maxPt = Math.max(0, Math.min(Number(m.points) || 0, sum - cp));
+    const cp = y ? couponOff(y.c, p, pr) : 0, sum = pr + coach + ship, maxPt = Math.max(0, Math.min(Number(m.points) || 0, sum - cp));
     let pt = f.points ? Math.floor(Number(f.points.value) || 0) : 0; pt = Math.max(0, Math.min(pt, maxPt));
-    return { p, k, plan, c, list, pr, coach, y, cp, pt, maxPt, tot: Math.max(0, sum - cp - pt) };
+    return { p, k, plan, c, list, pr, coach, y, cp, pt, maxPt, qty, ship, tot: Math.max(0, sum - cp - pt) };
   }
   function coPaint(f) {
     const r = coCalc(f); if (!r) return;
     const q = (s) => f.querySelector(s);
     f.querySelectorAll("[data-co-plan]").forEach((x) => { x.textContent = r.plan ? r.plan.label : ""; });
     if (q("[data-co-list]")) q("[data-co-list]").textContent = won(r.list);
+    if (q("[data-co-qty]")) q("[data-co-qty]").textContent = r.qty;
+    if (f.qty && document.activeElement !== f.qty && Number(f.qty.value) !== r.qty) f.qty.value = String(r.qty);
     if (q("[data-co-disc]")) { q("[data-co-disc]").textContent = "-" + won(r.list - r.pr); q("[data-co-disc-row]").hidden = !(r.list > r.pr); }
     if (q("[data-co-coach-row]")) q("[data-co-coach-row]").hidden = !r.coach;
     f.querySelectorAll(".vd-co-plans .vd-plan").forEach((x) => x.classList.toggle("on", x.querySelector("input").checked));
@@ -2362,7 +2482,7 @@
     if (f.points && document.activeElement !== f.points && f.points.value !== "" && Number(f.points.value) !== r.pt) f.points.value = r.pt ? String(r.pt) : "";
     q("[data-co-tot]").textContent = won(r.tot);
     const shut = SRV() && r.tot > 0 && payOpts().every((z) => z[3]), cb = q("[data-co-btn]");
-    cb.textContent = shut ? "결제 준비 중" : r.pr + r.coach === 0 ? (isEvent(r.p) ? "무료 LIVE 신청하기" : "무료로 수강 시작") : r.tot === 0 ? "0원 결제하기" : won(r.tot) + (r.k === "tea" ? " 결제하고 신청하기" : " 결제하기");
+    cb.textContent = shut ? "결제 준비 중" : r.pr + r.coach + r.ship === 0 ? (isEvent(r.p) ? "무료 LIVE 신청하기" : "무료로 수강 시작") : r.tot === 0 ? "0원 결제하기" : won(r.tot) + (r.k === "tea" ? " 결제하고 신청하기" : " 결제하기");
     cb.disabled = shut;
     const pay = q("[data-co-pay]"); if (pay) pay.classList.toggle("is-off", r.tot === 0);
   }
@@ -2370,17 +2490,17 @@
     const o = V().orders.find((x) => x.no === no), m = me();
     if (!o || !m || o.mid !== m.id) return shell("", '<div class="vd-wrap">' + emptyBox("alert", "주문을 찾을 수 없어요", "", '<a class="vd-btn vd-btn-o" href="#/vod/my/orders">주문 · 결제 내역</a>') + "</div>");
     const b = bankOf(o), pend = o.status === "pending", p = product(o.pid), t = typeOf(p), k = kindOf(o), sibs = V().orders.filter((x) => x.grp === o.no), total = o.amount + sibs.reduce((a, x) => a + (Number(x.amount) || 0), 0), ptAll = (o.pointOff || 0) + sibs.reduce((a, x) => a + (Number(x.pointOff) || 0), 0);
-    const go = !p ? "" : k === "coach" ? ["dg", "message", "1:1 코칭 질문하러 가기"] : k === "tea" ? ["#/vod/my/addons", "calendar", "신청 내역 보기"] : k === "extend" ? ["#/vod/learn/" + p.id, "play", "다시 이어서 듣기"] : t === "ebook" ? ["#/vod/my/ebooks", "book", "전자책 내려받기"] : isEvent(p) ? ["#/vod/learn/" + p.id, "calendar", "입장 안내 보기"] : ["#/vod/learn/" + p.id, "play", "강의 시작하기"];
+    const go = !p ? "" : k === "coach" ? ["dg", "message", "1:1 코칭 질문하러 가기"] : k === "tea" ? ["#/vod/my/addons", "calendar", "신청 내역 보기"] : k === "extend" ? ["#/vod/learn/" + p.id, "play", "다시 이어서 듣기"] : t === "book" ? ["#/vod/my/ship", "truck", "배송 조회하기"] : t === "ebook" ? ["#/vod/my/ebooks", "book", "전자책 내려받기"] : isEvent(p) ? ["#/vod/learn/" + p.id, "calendar", "입장 안내 보기"] : ["#/vod/learn/" + p.id, "play", "강의 시작하기"];
     const h = pend ? "주문이 접수됐어요" : k === "extend" ? "연장이 완료됐어요" : k === "coach" ? "1:1 코칭권이 준비됐어요" : k === "tea" ? "TEA TIME 신청이 접수됐어요" : o.amount === 0 && !o.couponOff && !o.pointOff ? (p && isFreeEv(p) ? "무료 LIVE 신청이 완료됐어요" : "수강신청이 완료됐어요") : "결제가 완료됐어요";
-    const sub = pend ? (o.method === "vbank" ? "아래 가상계좌로 입금하면 자동으로 확인돼 바로 이용할 수 있어요." : bankAuto() ? "아래 계좌로 입금하면 24시간 자동으로 확인돼 바로 이용할 수 있어요." : "아래 계좌로 입금하면 확인되는 대로 바로 이용할 수 있어요.") : k === "extend" ? DB.date.fmtFull(DB.date.toStr(new Date(accessEnd(o.mid, o.pid)))) + "까지 다시 들을 수 있어요. 진도 · 노트는 그대로예요." : k === "coach" ? "두잉고 강의실 › 1:1 코칭 질문에서 바로 질문할 수 있어요." : k === "tea" ? "강사님이 희망 날짜를 보고 일정을 확정하면 마이페이지와 문자로 알려 드려요." : t === "ebook" ? "마이페이지 › 전자책에서 바로 내려받을 수 있어요." : isEvent(p) ? "마이페이지 › LIVE · 오프라인에서 입장 안내를 확인할 수 있어요." : "내 강의실에서 바로 시작할 수 있어요." + (sibs.some((x) => kindOf(x) === "coach") ? " 1:1 코칭권도 함께 준비됐어요." : "");
+    const sub = pend && o.ship ? "입금이 확인되면 책을 준비해서 보내 드려요. 아래 " + (o.method === "vbank" ? "가상계좌" : "계좌") + "로 입금해 주세요." : !pend && o.ship ? "결제 후 " + (Number(shipSet().outDays) || 2) + "일 안에(주말 · 공휴일 빼고) 책을 보내 드려요. 보내면 송장 번호를 마이페이지 › 종이책 · 배송 조회에 올려 드려요." : pend ? (o.method === "vbank" ? "아래 가상계좌로 입금하면 자동으로 확인돼 바로 이용할 수 있어요." : bankAuto() ? "아래 계좌로 입금하면 24시간 자동으로 확인돼 바로 이용할 수 있어요." : "아래 계좌로 입금하면 확인되는 대로 바로 이용할 수 있어요.") : k === "extend" ? DB.date.fmtFull(DB.date.toStr(new Date(accessEnd(o.mid, o.pid)))) + "까지 다시 들을 수 있어요. 진도 · 노트는 그대로예요." : k === "coach" ? "두잉고 강의실 › 1:1 코칭 질문에서 바로 질문할 수 있어요." : k === "tea" ? "강사님이 희망 날짜를 보고 일정을 확정하면 마이페이지와 문자로 알려 드려요." : t === "ebook" ? "마이페이지 › 전자책에서 바로 내려받을 수 있어요." : isEvent(p) ? "마이페이지 › LIVE · 오프라인에서 입장 안내를 확인할 수 있어요." : "내 강의실에서 바로 시작할 수 있어요." + (sibs.some((x) => kindOf(x) === "coach") ? " 1:1 코칭권도 함께 준비됐어요." : "");
     return shell("", '<div class="vd-wrap vd-done"><span class="vd-done-ic' + (pend ? " pend" : "") + '">' + icon(pend ? "clock" : "check") + "</span><h1>" + h + "</h1><p>" + sub + "</p>" +
-      '<dl class="vd-done-dl"><div><dt>주문 번호</dt><dd>' + esc(o.no) + "</dd></div><div><dt>상품</dt><dd>" + esc(o.title) + (optTxt(o) ? "<br><small>" + esc(optTxt(o)) + "</small>" : "") + "</dd></div>" + sibs.map((x) => "<div><dt>함께 산 상품</dt><dd>" + esc(optTxt(x)) + " <small>" + won(x.amount) + "</small></dd></div>").join("") + (o.couponOff ? "<div><dt>쿠폰 할인</dt><dd>-" + won(o.couponOff) + " <small>" + esc(o.couponName || "") + "</small></dd></div>" : "") + (ptAll ? "<div><dt>포인트</dt><dd>-" + won(ptAll) + "</dd></div>" : "") + "<div><dt>결제 금액</dt><dd><b>" + won(total) + "</b></dd></div>" + (pend ? '<div class="vd-done-bank"><dt>입금 계좌</dt><dd><b>' + esc(b.bank + " " + b.account) + '</b> <button type="button" class="vd-copy" data-v="copy" data-t="' + esc(String(b.account).replace(/[^0-9-]/g, "")) + '">계좌 복사</button><br><small>' + (b.vbank ? "가상계좌 · 이 주문 전용 계좌예요" : "예금주 " + esc(b.holder)) + "</small></dd></div>" + (b.vbank ? "" : "<div><dt>입금자명</dt><dd><b>" + esc(o.depositor || (o.buyer && o.buyer.name) || m.name) + "</b><br><small>이 이름 · 이 금액으로 입금해 주세요</small></dd></div>") + "<div><dt>입금 기한</dt><dd>" + esc(fmtDue(dueOf(o))) + "까지</dd></div>" : "") + "</dl>" +
+      '<dl class="vd-done-dl"><div><dt>주문 번호</dt><dd>' + esc(o.no) + "</dd></div><div><dt>상품</dt><dd>" + esc(o.title) + (optTxt(o) ? "<br><small>" + esc(optTxt(o)) + "</small>" : "") + "</dd></div>" + sibs.map((x) => "<div><dt>함께 산 상품</dt><dd>" + esc(optTxt(x)) + " <small>" + won(x.amount) + "</small></dd></div>").join("") + (o.couponOff ? "<div><dt>쿠폰 할인</dt><dd>-" + won(o.couponOff) + " <small>" + esc(o.couponName || "") + "</small></dd></div>" : "") + (o.ship ? "<div><dt>배송지</dt><dd>" + esc(o.ship.name || "") + " · " + esc(o.ship.phone || "") + "<br><small>" + (o.ship.zip ? "(" + esc(o.ship.zip) + ") " : "") + esc((o.ship.addr1 || "") + " " + (o.ship.addr2 || "")) + "</small></dd></div>" : "") + (ptAll ? "<div><dt>포인트</dt><dd>-" + won(ptAll) + "</dd></div>" : "") + "<div><dt>결제 금액</dt><dd><b>" + won(total) + "</b></dd></div>" + (pend ? '<div class="vd-done-bank"><dt>입금 계좌</dt><dd><b>' + esc(b.bank + " " + b.account) + '</b> <button type="button" class="vd-copy" data-v="copy" data-t="' + esc(String(b.account).replace(/[^0-9-]/g, "")) + '">계좌 복사</button><br><small>' + (b.vbank ? "가상계좌 · 이 주문 전용 계좌예요" : "예금주 " + esc(b.holder)) + "</small></dd></div>" + (b.vbank ? "" : "<div><dt>입금자명</dt><dd><b>" + esc(o.depositor || (o.buyer && o.buyer.name) || m.name) + "</b><br><small>이 이름 · 이 금액으로 입금해 주세요</small></dd></div>") + "<div><dt>입금 기한</dt><dd>" + esc(fmtDue(dueOf(o))) + "까지</dd></div>" : "") + "</dl>" +
       (!pend && p && dgOpen(p) ? dgCard(p, "vd-dg-done") : "") +
       '<div class="vd-done-btns">' + (!pend && p && isEvent(p) && p.kakao ? '<a class="vd-btn vd-btn-kakao" href="' + esc(p.kakao) + '" target="_blank" rel="noopener">' + icon("message", "sm") + "카카오톡 오픈채팅방 입장하기</a>" : "") + (pend ? '<a class="vd-btn vd-btn-o" href="#/vod/my/pending">결제 대기 보기</a>' : go && go[0] === "dg" ? '<button type="button" class="vd-btn vd-btn-p" data-v="dg" data-p="' + esc(p.id) + '" data-to="#/qna/requests/new">' + icon(go[1], "sm") + go[2] + "</button>" : go ? '<a class="vd-btn vd-btn-p" href="' + go[0] + '">' + icon(go[1], "sm") + go[2] + "</a>" : "") + '<a class="vd-btn vd-btn-o" href="#/vod">다른 클래스 둘러보기</a></div></div>');
   }
   /* ---------- 마이페이지 (패스트캠퍼스 me/home: 왼쪽 프로필 · 묶음 메뉴 / 오른쪽 홈 · 긱스쿨 9개 메뉴) ---------- */
   const MYNAV = [["강의장", [["classes", "내 강의실", "monitorPlay"], ["free", "무료강의", "sparkles"], ["vod", "VOD 강의", "video"], ["addons", "1:1 코칭 · TEA TIME", "message"], ["ebooks", "전자책", "book"], ["live", "LIVE · 오프라인", "calendar"], ["alarm", "오픈 알림", "bell"], ["likes", "찜 · 관심 부업", "heart"]]],
-    ["구매", [["pending", "결제 대기", "clock"], ["orders", "주문 · 결제 내역", "file"], ["coupons", "쿠폰", "coins"], ["points", "포인트", "award"]]],
+    ["구매", [["pending", "결제 대기", "clock"], ["orders", "주문 · 결제 내역", "file"], ["ship", "종이책 · 배송 조회", "truck"], ["coupons", "쿠폰", "coins"], ["points", "포인트", "award"]]],
     ["활동", [["reviews", "내 수강 후기", "star"], ["posts", "다짐 한마디", "message"], ["badges", "내 배지", "trophy"]]],
     ["계정", [["account", "회원 정보 수정", "user"], ["devices", "기기 관리", "monitorPlay"], ["help", "고객센터 · 1:1 문의", "headset"]]]];
   const MYT = { "": "홈" }; MYNAV.forEach((g) => g[1].forEach((x) => { MYT[x[0]] = x[1]; }));
@@ -2456,11 +2576,36 @@
     (o.act ? '<div class="vd-rc-act">' + o.act + "</div>" : "") + "</article>";
   const rcSt = (t, k) => '<span class="vd-sroom-st' + (k ? " " + k : "") + '">' + t + "</span>";
   const cpTicket = (y) => '<div class="vd-cp vd-cp-' + y.st + '"><div class="vd-cp-l"><b>' + (y.c.kind === "pct" ? y.c.value + "<small>%</small>" : (Number(y.c.value) / 10000 >= 1 ? Number(y.c.value) / 10000 + "<small>만 원</small>" : Number(y.c.value).toLocaleString() + "<small>원</small>")) + "</b></div><div class=\"vd-cp-r\"><strong>" + esc(y.c.name) + "</strong><span>" + esc(couponTxt(y.c)) + " · " + esc(couponCond(y.c)) + "</span><small>" + (y.st === "used" ? "사용 완료" + (y.x.orderNo ? " · " + esc(y.x.orderNo) : "") : y.st === "exp" ? "기간 만료" : y.st === "off" ? "사용 중지된 쿠폰" : (y.x.exp ? DB.date.fmtFull(y.x.exp) + "까지 · D-" + Math.max(0, DB.date.diffDays(y.x.exp, today())) : "기한 없음")) + "</small></div></div>";
+  /** 주문의 취소 · 환불 버튼 (주문 · 결제 내역 · 배송 조회가 같이 써요) */
+  function rfBtns(o) {
+    if (o.refundReq && typeof o.refundReq === "object") return '<span class="vd-st vd-st-wait vd-o-rq">' + (o.ship ? "요청 처리 중" : "환불 요청 중") + '</span><button type="button" class="vd-btn vd-btn-line vd-btn-sm" data-v="rf-undo" data-no="' + esc(o.no) + '">요청 취소</button>';
+    if (o.refundReq) return '<span class="vd-st vd-st-wait vd-o-rq">환불 처리 중</span>';
+    const q = instantOf(o), bk = !!o.ship, st = bk ? shipStOf(o) : "";
+    if (q.ok) return '<button type="button" class="vd-btn vd-btn-p vd-btn-sm vd-rf-now" data-v="rf-now" data-no="' + esc(o.no) + '">' + (bk ? "주문 취소 · 전액 환불" : "결제 취소 · 100% 환불") + '</button><small class="vd-rf-left">' + (bk ? "보내기 전이라 바로 취소돼요" : q.left + "일 남음 · 바로 환불") + "</small>";
+    if (bk && st === "done" && shipDoneAt(o) && now() - shipDoneAt(o) > 90 * 864e5) return "";
+    return '<button type="button" class="vd-btn vd-btn-line vd-btn-sm" data-v="rf-req" data-no="' + esc(o.no) + '">' + (bk ? (st === "ready" || st === "prep" ? "취소 요청" : "반품 · 교환 요청") : "환불 요청") + "</button>";
+  }
+  const fmtDT = (t) => { const d = new Date(t); return (d.getMonth() + 1) + "." + d.getDate() + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  /** 마이페이지 › 종이책 · 배송 조회 카드: 단계(결제 완료 → 상품 준비 중 → 배송 중 → 배송 완료) · 송장 · 배송지 · 버튼 */
+  function shipCard(o) {
+    const p = product(o.pid) || {}, s = o.ship || {}, st = shipStOf(o), steps = ["ready", "prep", "ship", "done"], idx = steps.indexOf(st), auto = st === "done" && !s.doneAt;
+    const when = { ready: o.paidAt, prep: s.prepAt, ship: s.shipAt, done: shipDoneAt(o) }, tu = trackUrl(o), chip = SHIP_ST[st] || SHIP_ST.ready;
+    return '<article class="vd-shc vd-shc-' + st + '" data-no="' + esc(o.no) + '"><div class="vd-shc-h"><a class="vd-shc-th" href="#/vod/p/' + esc(o.pid) + '">' + (p.id ? thumbArt(p) : "") + '</a><div><span class="vd-st vd-st-' + chip[1] + '">' + chip[0] + "</span><small>" + DB.date.fmtFull(DB.date.toStr(new Date(o.at))) + " · " + esc(o.no) + "</small><b>" + esc(o.title) + "</b><span>" + (Number(o.qty) || 1) + "권 · " + won(o.amount) + (o.shipFee ? " (배송비 " + won(o.shipFee) + " 포함)" : " · 무료배송") + "</span></div></div>" +
+      (st === "cancel" ? '<p class="vd-shc-note">' + icon("alert", "xs") + "<span>" + (o.status === "refunded" ? "주문을 취소하고 " + won(o.refundAmount != null ? o.refundAmount : o.amount) + "을 돌려드렸어요." : "취소된 주문이에요.") + "</span></p>"
+        : st === "wait" ? '<p class="vd-shc-note">' + icon("clock", "xs") + "<span>입금이 확인되면 책을 준비해서 보내 드려요.</span></p>"
+        : '<ol class="vd-shc-steps" aria-label="배송 단계">' + steps.map((k, i) => '<li class="' + (i < idx ? "done" : i === idx ? "on" : "") + '"><i>' + icon(i < idx || (i === idx && k === "done") ? "check" : k === "ship" ? "truck" : k === "prep" ? "package" : k === "done" ? "home" : "check", "xs") + "</i><b>" + SHIP_ST[k][0] + "</b><small>" + (when[k] && i <= idx ? fmtDT(when[k]) + (k === "done" && auto ? " (자동)" : "") : "") + "</small></li>").join("") + "</ol>") +
+      (s.inv ? '<div class="vd-shc-inv">' + icon("truck", "sm") + "<span><small>" + esc(s.carrier || "택배") + "</small><b>" + esc(s.inv) + '</b></span><button type="button" class="vd-copy" data-v="copy" data-t="' + esc(s.inv) + '">복사</button>' + (tu ? '<a class="vd-btn vd-btn-dark vd-btn-sm" href="' + esc(tu) + '" target="_blank" rel="noopener">배송 조회</a>' : "") + "</div>" : "") +
+      '<dl class="vd-shc-addr"><div><dt>받는 분</dt><dd>' + esc(s.name || "") + " · " + esc(s.phone || "") + "</dd></div><div><dt>주소</dt><dd>" + (s.zip ? "(" + esc(s.zip) + ") " : "") + esc(s.addr1 || "") + " " + esc(s.addr2 || "") + "</dd></div>" + (s.memo ? "<div><dt>요청사항</dt><dd>" + esc(s.memo) + "</dd></div>" : "") + "</dl>" +
+      '<div class="vd-shc-a">' + (st === "ready" || st === "wait" ? '<button type="button" class="vd-btn vd-btn-o vd-btn-sm" data-v="ship-edit" data-no="' + esc(o.no) + '">' + icon("mapPin", "xs") + "배송지 바꾸기</button>" : "") +
+        (o.status === "pending" ? '<button type="button" class="vd-btn vd-btn-o vd-btn-sm" data-v="ord-cancel" data-no="' + esc(o.no) + '">주문 취소</button>' : o.status === "paid" && o.amount > 0 ? rfBtns(o) : "") +
+        (st === "done" && p.id && !(V().reviews || []).some((r) => r.pid === p.id && r.mid === o.mid) ? '<a class="vd-btn vd-btn-line vd-btn-sm" href="#/vod/p/' + esc(p.id) + '#vd-s-reviews">' + icon("star", "xs") + "후기 남기기</a>" : "") + "</div></article>";
+  }
   function pageMy(sub) {
     const m = me(); if (!m) { ROUTE.redirect("#/vod/login?next=" + encodeURIComponent(ROUTE.hash)); return ""; }
     const legacy = route().qs.get("tab"); if (legacy) sub = { classes: "classes", likes: "likes", orders: "orders", account: "account" }[legacy] || "";
     sub = MYT[sub] != null ? sub : ""; const v = V(), d = myData(m), ST = { paid: ["결제 완료", "ok"], pending: ["입금 대기", "warn"], refunded: ["환불 완료", "mute"], canceled: ["주문 취소", "mute"] };
-    const cnt = { addons: d.addN, classes: d.ing.length, free: d.free.length, vod: d.paidV.length, ebooks: d.ebooks.length, live: d.live.length, alarm: d.alarm.length, likes: d.likes.length, pending: d.pending.length, coupons: d.cpOk.length, reviews: d.rv.length, posts: d.pl.length, help: (v.inquiries || []).filter((x) => x.mid === m.id && x.answer && !x.seenAt).length };
+    const shipN = d.orders.filter((o) => o.ship && ["wait", "ready", "prep", "ship"].indexOf(shipStOf(o)) >= 0).length;
+    const cnt = { ship: shipN, addons: d.addN, classes: d.ing.length, free: d.free.length, vod: d.paidV.length, ebooks: d.ebooks.length, live: d.live.length, alarm: d.alarm.length, likes: d.likes.length, pending: d.pending.length, coupons: d.cpOk.length, reviews: d.rv.length, posts: d.pl.length, help: (v.inquiries || []).filter((x) => x.mid === m.id && x.answer && !x.seenAt).length };
     let body = "";
     if (sub === "") {
       const last = d.ing.find((x) => prog(m.id, x.p.id).last) || d.ing[0], mins = Math.round(d.doneL.reduce((a, l) => a + lSec(l), 0) / 60), allL = d.vods.reduce((a, x) => a + lessons(x.p).length, 0);
@@ -2490,6 +2635,10 @@
         '<h3 class="vd-my-sub">강사님과 TEA TIME</h3>' + (d.teas.length ? '<div class="vd-rcs">' + d.teas.map((o) => { const p = product(o.pid) || {}, tt = o.tea || {}, st = TEA_ST[tt.st] || TEA_ST.req, pend = o.status === "pending";
             return rcCard({ cls: tt.st === "done" || tt.st === "cancel" ? "exp" : "", th: p.id ? thumbArt(p) : "", href: "#/vod/p/" + esc(o.pid), chips: '<span class="vd-kchip vd-kchip-live">TEA TIME ' + (tt.min || 60) + "분</span>" + rcSt(pend ? "입금 대기" : st[0], pend ? "warn" : st[1] === "ok" ? "ok" : st[1] === "mute" ? "end" : ""), title: esc(teaStTxt(o)), sub: esc(p.creator || "") + " 강사 · " + esc(TEA_MODE[tt.mode] || ""), extra: tt.topic ? '<p class="vd-rc-q">“' + esc(tt.topic) + "”</p>" : "",
               act: '<a class="vd-btn vd-btn-o" href="#/vod/p/' + esc(o.pid) + '">강의 상세</a>' }); }).join("") + "</div>" : myEmpty("신청한 TEA TIME이 없어요. 수강 중인 강의 상세 페이지에서 신청할 수 있어요.", "", ""));
+    } else if (sub === "ship") {
+      const bo = d.orders.filter((o) => o.ship && o.status !== "failed");
+      body = '<p class="vd-my-lead">주문한 <b>종이책</b>의 배송 상태를 봐요. 결제 후 ' + (Number(shipSet().outDays) || 2) + "일 안에(주말 · 공휴일 빼고) 보내 드리고, 보내면 송장 번호가 여기에 올라와요.</p>" +
+        (bo.length ? '<div class="vd-shcs">' + bo.map((o) => shipCard(o)).join("") + "</div>" : myEmpty("주문한 종이책이 없어요.", "책 둘러보기", "#/vod/c/all?tab=ebook"));
     } else if (sub === "ebooks") {
       const gifts = d.mine.filter((x) => (x.p.gifts || []).length);
       body = (d.ebooks.length ? '<div class="vd-rcs">' + d.ebooks.map(({ o, p }) => rcCard({ cls: "eb", th: thumbArt(p), href: "#/vod/learn/" + esc(p.id), chips: '<span class="vd-kchip vd-kchip-ebook">전자책</span>' + rcSt("평생 소장", "ok"), title: esc(p.title), sub: esc(p.creator) + " · " + esc(p.format || "PDF") + " " + (Number(p.pages) || 0) + "쪽 · " + DB.date.fmtFull(DB.date.toStr(new Date(o.paidAt))) + " 구매",
@@ -2505,7 +2654,7 @@
     } else if (sub === "alarm") body = d.alarm.length ? '<div class="vd-rcs">' + d.alarm.map((p) => rcCard({ th: thumbArt(p), href: "#/vod/p/" + esc(p.id), chips: '<span class="vd-kchip vd-kchip-soon">오픈 예정</span>' + rcSt(p.openAt ? fmtOpen(p.openAt) : "날짜 미정", "warn"), title: esc(p.title), sub: esc(p.creator || "") + " · " + esc(catOf(p.cat).label), extra: '<span class="vd-rc-s2">' + icon("bell", "xs") + " 오픈하면 할인가로 가장 먼저 알려 드려요</span>",
       act: '<a class="vd-btn vd-btn-o" href="#/vod/p/' + esc(p.id) + '">미리 보기</a><button type="button" class="vd-btn vd-btn-o" data-v="like" data-id="' + esc(p.id) + '">' + icon("bell", "xs") + "알림 끄기</button>" })).join("") + "</div>" : myEmpty("오픈 알림을 신청한 강의가 없어요. 곧 열리는 강의에서 알림을 받아 보세요.", "오픈 예정 보기", "#/vod/c/soon");
     else if (sub === "likes") {
-      const LT = [["all", "전체", () => true], ["paid", "유료 강의", (p) => typeOf(p) === "vod" && priceOf(p) > 0], ["free", "무료 강의", (p) => priceOf(p) === 0, "free"], ["ebook", "전자책", (p) => typeOf(p) === "ebook", "ebook"], ["event", "LIVE · 오프라인", (p) => isEvent(p) && priceOf(p) > 0, "live"]].filter((x) => !x[3] || bizOn(x[3]) || d.likes.some(x[2]));
+      const LT = [["all", "전체", () => true], ["paid", "유료 강의", (p) => typeOf(p) === "vod" && priceOf(p) > 0], ["free", "무료 강의", (p) => priceOf(p) === 0, "free"], ["ebook", "전자책 · 종이책", (p) => typeOf(p) === "ebook" || isBook(p), "ebook"], ["event", "LIVE · 오프라인", (p) => isEvent(p) && priceOf(p) > 0, "live"]].filter((x) => !x[3] || bizOn(x[3]) || d.likes.some(x[2]));
       const tps = myTopics(), qt = route().qs.get("t"), lt = LT.find((x) => x[0] === qt) || LT[0], ls = d.likes.filter(lt[2]);
       body = '<div class="vd-wtabs">' + LT.map((x) => '<a href="#/vod/my/likes' + (x[0] === "all" ? "" : "?t=" + x[0]) + '" class="' + (x === lt && qt !== "topics" ? "on" : "") + '">' + x[1] + " <small>" + d.likes.filter(x[2]).length + "</small></a>").join("") + '<a href="#/vod/my/likes?t=topics" class="' + (qt === "topics" ? "on" : "") + '">관심 부업 <small>' + tps.length + "</small></a></div>" +
         (qt === "topics" ? myTopicsBody(tps) : ls.length ? '<div class="vd-grid vd-grid-3">' + ls.map((p) => card(p)).join("") + "</div>" : '<div class="vd-wempty">' + icon("heart") + "<b>" + (lt[0] === "all" ? "찜한 강의가 아직 없어요" : lt[1] + " 중 찜한 강의가 없어요") + '</b><p>마음에 드는 강의의 ♡를 누르면 여기에 모여요.</p><a class="vd-btn vd-btn-o" href="#/vod/c/all">강의 둘러보기</a></div>');
@@ -2521,8 +2670,8 @@
       const ot = sub === "orders" && route().qs.get("t") === "refund" ? "refund" : "pay", isRf = (o) => o.status === "refunded" || o.status === "canceled";
       const list = sub === "pending" ? d.pending : d.orders.filter((o) => (ot === "refund") === isRf(o)), b = bankInfo();
       const otabs = sub === "orders" ? '<div class="vd-wtabs"><a href="#/vod/my/orders" class="' + (ot === "pay" ? "on" : "") + '">결제 내역 <small>' + d.orders.filter((o) => !isRf(o)).length + '</small></a><a href="#/vod/my/orders?t=refund" class="' + (ot === "refund" ? "on" : "") + '">환불 · 취소 내역 <small>' + d.orders.filter(isRf).length + "</small></a></div>" : "";
-      body = list.length ? '<ul class="vd-orders">' + list.map((o) => { const st = ST[o.status] || ST.paid, ob = bankOf(o); return '<li class="has-th"><a class="vd-o-th" href="#/vod/p/' + esc(o.pid) + '">' + (product(o.pid) ? thumbArt(product(o.pid)) : "") + "</a><div><small>" + DB.date.fmtFull(DB.date.toStr(new Date(o.at))) + " · " + esc(o.no) + "</small><b>" + esc(o.title) + "</b>" + (optTxt(o) ? '<span class="vd-o-opt">' + esc(optTxt(o)) + "</span>" : "") + (o.couponOff || o.pointOff ? '<span class="vd-muted">' + (o.couponOff ? "쿠폰 -" + won(o.couponOff) : "") + (o.couponOff && o.pointOff ? " · " : "") + (o.pointOff ? "포인트 -" + won(o.pointOff) : "") + "</span>" : "") + (o.status === "pending" ? '<span class="vd-muted">' + (ob.vbank ? "가상계좌 " + esc(ob.bank + " " + ob.account) : esc(ob.bank + " " + ob.account + " (" + ob.holder + ")") + " · 입금자명 " + esc(o.depositor || (o.buyer && o.buyer.name) || m.name || "")) + " · " + esc(fmtDue(dueOf(o))) + "까지 입금</span>" : "") + "</div><strong>" + won(o.amount) + '</strong><span class="vd-st vd-st-' + st[1] + '">' + st[0] + "</span>" + (o.status === "pending" ? '<button type="button" class="vd-btn vd-btn-o vd-btn-sm" data-v="ord-cancel" data-no="' + esc(o.no) + '">주문 취소</button>' : (o.status === "paid" || o.status === "refunded") && o.amount > 0 ? '<button type="button" class="vd-btn vd-btn-o vd-btn-sm" data-v="receipt" data-no="' + esc(o.no) + '">영수증</button>' : "") +
-        (o.status === "paid" && o.amount > 0 ? (o.refundReq && typeof o.refundReq === "object" ? '<span class="vd-st vd-st-wait vd-o-rq">환불 요청 중</span><button type="button" class="vd-btn vd-btn-line vd-btn-sm" data-v="rf-undo" data-no="' + esc(o.no) + '">요청 취소</button>' : o.refundReq ? '<span class="vd-st vd-st-wait vd-o-rq">환불 처리 중</span>' : instantOf(o).ok ? '<button type="button" class="vd-btn vd-btn-p vd-btn-sm vd-rf-now" data-v="rf-now" data-no="' + esc(o.no) + '">결제 취소 · 100% 환불</button><small class="vd-rf-left">' + instantOf(o).left + "일 남음 · 바로 환불</small>" : '<button type="button" class="vd-btn vd-btn-line vd-btn-sm" data-v="rf-req" data-no="' + esc(o.no) + '">환불 요청</button>') : "") +
+      body = list.length ? '<ul class="vd-orders">' + list.map((o) => { const st = o.ship && SHIP_ST[shipStOf(o)] && o.status === "paid" ? SHIP_ST[shipStOf(o)] : ST[o.status] || ST.paid, ob = bankOf(o); return '<li class="has-th"><a class="vd-o-th" href="#/vod/p/' + esc(o.pid) + '">' + (product(o.pid) ? thumbArt(product(o.pid)) : "") + "</a><div><small>" + DB.date.fmtFull(DB.date.toStr(new Date(o.at))) + " · " + esc(o.no) + "</small><b>" + esc(o.title) + "</b>" + (optTxt(o) ? '<span class="vd-o-opt">' + esc(optTxt(o)) + "</span>" : "") + (o.ship ? '<a class="vd-o-ship" href="#/vod/my/ship">' + icon("truck", "xs") + "종이책 " + (Number(o.qty) || 1) + "권" + (o.shipFee ? " · 배송비 " + won(o.shipFee) : " · 무료배송") + (o.ship.inv ? " · " + esc(o.ship.carrier || "") + " " + esc(o.ship.inv) : "") + "</a>" : "") + (o.couponOff || o.pointOff ? '<span class="vd-muted">' + (o.couponOff ? "쿠폰 -" + won(o.couponOff) : "") + (o.couponOff && o.pointOff ? " · " : "") + (o.pointOff ? "포인트 -" + won(o.pointOff) : "") + "</span>" : "") + (o.status === "pending" ? '<span class="vd-muted">' + (ob.vbank ? "가상계좌 " + esc(ob.bank + " " + ob.account) : esc(ob.bank + " " + ob.account + " (" + ob.holder + ")") + " · 입금자명 " + esc(o.depositor || (o.buyer && o.buyer.name) || m.name || "")) + " · " + esc(fmtDue(dueOf(o))) + "까지 입금</span>" : "") + "</div><strong>" + won(o.amount) + '</strong><span class="vd-st vd-st-' + st[1] + '">' + st[0] + "</span>" + (o.status === "pending" ? '<button type="button" class="vd-btn vd-btn-o vd-btn-sm" data-v="ord-cancel" data-no="' + esc(o.no) + '">주문 취소</button>' : (o.status === "paid" || o.status === "refunded") && o.amount > 0 ? '<button type="button" class="vd-btn vd-btn-o vd-btn-sm" data-v="receipt" data-no="' + esc(o.no) + '">영수증</button>' : "") +
+        (o.status === "paid" && o.amount > 0 ? (o.refundReq && typeof o.refundReq === "object" ? '<span class="vd-st vd-st-wait vd-o-rq">환불 요청 중</span><button type="button" class="vd-btn vd-btn-line vd-btn-sm" data-v="rf-undo" data-no="' + esc(o.no) + '">요청 취소</button>' : o.refundReq ? '<span class="vd-st vd-st-wait vd-o-rq">환불 처리 중</span>' : rfBtns(o)) : "") +
         (o.status === "refunded" && o.refundKind === "instant" ? '<small class="vd-rf-left">바로 취소 · ' + won(o.refundAmount || o.amount) + " 환불" + (o.pg && o.pg.st === "mock" ? " (시안)" : "") + "</small>" : "") +
         (o.status === "paid" && o.amount === 0 && product(o.pid) && isEvent(product(o.pid)) && !eventPast(product(o.pid)) ? '<button type="button" class="vd-btn vd-btn-line vd-btn-sm" data-v="ord-cancel0" data-no="' + esc(o.no) + '">신청 취소</button>' : "") +
         (o.status === "canceled" && o.canceledBy === "member" ? '<span class="vd-muted vd-o-by">내가 취소</span>' : "") + "</li>"; }).join("") + '</ul><p class="vd-muted vd-my-note">' + icon("alert", "xs") + " 환불은 상품 종류마다 기준이 달라요. <button type=\"button\" class=\"vd-link\" data-v=\"refund\">환불 규정</button></p>" : myEmpty(sub === "pending" ? "입금을 기다리는 주문이 없어요." : ot === "refund" ? "환불 · 취소한 주문이 없어요." : "아직 주문 내역이 없어요.", "강의 둘러보기", "#/vod/c/all"); body = otabs + body;
@@ -2653,6 +2802,7 @@
     if (!p) return pageProduct(pid);
     if (!m) { ROUTE.redirect("#/vod/login?next=" + encodeURIComponent("#/vod/learn/" + pid)); return ""; }
     if (!owns(m.id, pid)) { ROUTE.redirect("#/vod/p/" + pid); return ""; }
+    if (isBook(p)) { ROUTE.redirect("#/vod/my/ship"); return ""; }
     if (typeOf(p) === "vod" && dgOpen(p)) { setTimeout(() => enterDg(pid, lid), 30); return shell("", '<div class="vd-wrap vd-go-dg"><span class="vd-dg-ic">' + (window.doinggoB ? window.doinggoB("black", "vd-dg-logo") : "두잉고") + "</span><b>" + esc(p.creator) + " 강사 두잉고 강의실로 이동하고 있어요</b><p>강의 영상 · 교재 · 업데이트 소식을 두잉고 강의실에서 한 번에 볼 수 있어요.</p></div>"); }
     if (typeOf(p) === "ebook") return pageEbook(p, m);
     if (isEvent(p)) return pageTicket(p, m);
@@ -2907,7 +3057,13 @@
   window.VOD.restoreOrder = restoreOrder;
   function download(p, gi) {
     const f = gi != null ? ((p.gifts || [])[gi] || {}).file : p.file;
-    if (f) { const nm = (gi != null ? ((p.gifts || [])[gi] || {}).title || p.title : p.title).replace(/[\\/:*?"<>|]/g, " ").trim() + ".pdf"; if (window.DGFILE) window.DGFILE.saveUrl(f, nm).then((r) => { if (r === "saved") toast("PDF를 내려받았어요."); }, () => window.open(f, "_blank", "noopener")); else window.open(f, "_blank", "noopener"); return; }
+    if (f) {
+      const nm = (gi != null ? ((p.gifts || [])[gi] || {}).title || p.title : p.title).replace(/[\\/:*?"<>|]/g, " ").trim() + ".pdf";
+      // 마스터가 시안에서 올린 파일(이 브라우저 저장소)은 matOpen 으로, 서버 · 외부 주소는 내려받기 → 안 되면 새 창
+      if (/^idb:/.test(f)) { matOpen({ url: f, name: nm }, "dl").then((ok) => toast(ok ? "PDF를 내려받았어요." : "이 브라우저에 저장된 파일이 아니에요. 운영팀에 알려 주세요.", ok ? "" : "warn")); return; }
+      if (window.DGFILE) window.DGFILE.saveUrl(f, nm).then((r) => { if (r === "saved") toast("PDF를 내려받았어요."); }, () => window.open(f, "_blank", "noopener")); else window.open(f, "_blank", "noopener");
+      return;
+    }
     toast("시안이라 실제 PDF 파일은 정식 오픈 때 연결돼요.");
   }
   document.addEventListener("click", (e) => {
@@ -3000,6 +3156,10 @@
     if (v === "auth-faq") { modal("로그인 · 가입 자주 묻는 질문", '<div class="vd-modal-b">' + [["두잉고 계정으로 로그인할 수 있나요?", "아니요. DOOGO CLASS는 VOD 수강생 계정을 따로 써요. 두잉고 기수 수강생은 두잉고 로그인을 이용해 주세요."], ["카카오로 가입했는데 이메일 로그인이 안 돼요.", "카카오로 가입한 계정은 ‘카카오로 1초 만에 시작하기’로 로그인해 주세요."], ["비밀번호를 잊었어요.", "로그인 화면의 ‘비밀번호 찾기’에서 가입한 이메일로 재설정 링크를 받을 수 있어요."]].map((f) => '<details class="vd-faq"><summary><b>Q</b><span>' + f[0] + "</span>" + icon("chevDown", "sm") + "</summary><p>" + f[1] + "</p></details>").join("") + "</div>"); return; }
     if (v === "agree-all") { const f = t.closest("form"); if (f) { f.agree.checked = t.checked; f.mkt.checked = t.checked; authReady(f); } return; }
     if (v === "pt-all") { const f = t.closest("form"), r = f && coCalc(f); if (r) { f.points.value = Math.floor(r.maxPt / 1) || 0; coPaint(f); } return; }
+    if (v === "qty") { const f = t.closest("form"), q = f && f.qty; if (q) { q.value = String(Math.max(1, Math.min(Number(q.max) || BOOK_MAX, (Number(q.value) || 1) + Number(t.dataset.d || 0)))); coPaint(f); } return; }
+    if (v === "addr-find") { e.preventDefault(); addrFind(t); return; }
+    if (v === "ship-edit") { const o = V().orders.find((x) => x.no === t.dataset.no); if (!o || !m || o.mid !== m.id || !o.ship) return; if (["ready", "wait"].indexOf(shipStOf(o)) < 0) { toast("이미 책을 준비하고 있어 배송지를 바꿀 수 없어요. 고객센터로 알려 주세요.", "warn"); return; }
+      modal("배송지 바꾸기", '<form class="vd-modal-b vd-shipedit" data-vd-shipedit="' + esc(o.no) + '"><p class="vd-muted">책을 보내기 전까지 바꿀 수 있어요.</p>' + shipFields(o.ship, "e") + '<label class="vd-co-keep"><input type="checkbox" name="esave" checked><span>다음 주문에도 이 배송지 쓰기</span></label><p class="vd-err" data-se-err role="alert"></p><button type="submit" class="vd-btn vd-btn-p vd-btn-xl">배송지 저장</button></form>', "vd-modal-sm"); return; }
     if (v === "dl") { const p = product(t.dataset.p); if (p && m && owns(m.id, p.id)) { const o = ownOrder(m.id, p.id); if (o && !o.dlAt && typeOf(p) === "ebook") { o.dlAt = now(); save(); } download(p, t.dataset.g != null ? Number(t.dataset.g) : null); } return; }
     if (v === "dl-none") { e.preventDefault(); toast("시안이라 첨부 파일은 정식 오픈 때 연결돼요."); return; }
     if (v === "ord-cancel" && SRV()) { const o = V().orders.find((x) => x.no === t.dataset.no); if (!o || !m || o.mid !== m.id || o.status !== "pending") return; t.disabled = true; payApi("cancelPending", { no: o.no }).then((r) => { if (!r || !r.ok) { t.disabled = false; toast((r && r.message) || "취소하지 못했어요.", "warn"); return; } return DB.remote.refresh().then(() => { keepScroll(); toast("주문을 취소했어요." + (o.mcid || o.pointOff ? " 쓴 쿠폰 · 포인트를 돌려드렸어요." : "") + " 환불 · 취소 내역에 남아요."); }); }); return; }
@@ -3012,12 +3172,13 @@
         '<div class="vd-rfnow-box"><b>' + won(tot) + "</b><span>전액 돌려드려요</span></div><ul class=\"vd-rfnow-l\">" + "<li>" + icon("check", "xs") + esc(q.why) + "</li>" + (adds.length ? "<li>" + icon("check", "xs") + "함께 결제한 " + adds.map((x) => esc(optTxt(x) || x.title)).join(", ") + "도 같이 취소돼요.</li>" : "") + (r.restore && (o.mcid || o.pointOff) ? "<li>" + icon("check", "xs") + "결제에 쓴 쿠폰 · 포인트도 돌려드려요.</li>" : "") + "<li>" + icon("check", "xs") + "취소하면 수강 권한이 바로 사라져요.</li><li>" + icon("clock", "xs") + "카드 승인 취소는 카드사에 따라 3~5영업일 걸려요.</li></ul>" +
         '<div class="vd-rfnow-a"><button type="button" class="vd-btn vd-btn-o" data-v="close">그만두기</button><button type="button" class="vd-btn vd-btn-p" data-v="rf-now-ok" data-no="' + esc(o.no) + '">결제 취소하고 환불받기</button></div></div>'); return; }
     if (v === "rf-now-ok") { const o = V().orders.find((x) => x.no === t.dataset.no); if (!o || !m || o.mid !== m.id || !instantOf(o).ok) { closeModal(); return; } t.disabled = true; t.textContent = "취소하는 중…"; rfCancel(o).then((amt) => { closeModal(); render(); toast(won(amt) + "을 환불했어요. 카드사에 따라 3~5영업일 안에 돌아와요." + (o.pg && o.pg.st === "mock" ? " (시안 · 실제 카드 취소 없음)" : "")); }, (er) => { t.disabled = false; t.textContent = "결제 취소하고 환불받기"; toast(String((er && er.message) || "취소하지 못했어요. 고객센터로 문의해 주세요."), "warn"); }); return; }
-    if (v === "rf-req") { const o = V().orders.find((x) => x.no === t.dataset.no); if (!o || !m || o.mid !== m.id || o.status !== "paid") return; modal("환불 요청", '<form class="vd-modal-b vd-rfq" data-vd-rfreq data-no="' + esc(o.no) + '"><p class="vd-rfq-t"><b>' + esc(o.title) + "</b>" + (optTxt(o) ? "<small>" + esc(optTxt(o)) + "</small>" : "") + "<span>결제 " + won(o.amount) + " · " + esc(DB.date.fmtFull(DB.date.toStr(new Date(o.paidAt || o.at)))) + "</span></p>" +
-      '<div class="vd-rfq-why">' + ["단순 변심", "생각한 내용과 달라요", "중복 결제", "강의 재생 · 오류", "기타"].map((x, i) => '<label><input type="radio" name="why" value="' + x + '"' + (i === 0 ? " checked" : "") + "><span>" + x + "</span></label>").join("") + "</div>" +
+    if (v === "rf-req") { const o = V().orders.find((x) => x.no === t.dataset.no); if (!o || !m || o.mid !== m.id || o.status !== "paid") return; modal(o.ship ? (shipStOf(o) === "prep" ? "주문 취소 요청" : "반품 · 교환 요청") : "환불 요청", '<form class="vd-modal-b vd-rfq" data-vd-rfreq data-no="' + esc(o.no) + '"><p class="vd-rfq-t"><b>' + esc(o.title) + "</b>" + (optTxt(o) ? "<small>" + esc(optTxt(o)) + "</small>" : "") + "<span>결제 " + won(o.amount) + " · " + esc(DB.date.fmtFull(DB.date.toStr(new Date(o.paidAt || o.at)))) + "</span></p>" +
+      (o.ship ? '<p class="vd-rfq-bk">' + icon("truck", "xs") + "<span>" + (shipStOf(o) === "prep" ? "책을 준비하고 있어요. 보내기 전이면 전액 환불해 드려요." : "받은 날부터 7일 안에 반품할 수 있어요. 단순 변심은 왕복 배송비(" + won(Number(shipSet().returnFee) || 0) + ")를 빼고, 파손 · 파본 · 잘못 보낸 책은 전액 환불하거나 바꿔 드려요.") + "</span></p>" : "") +
+      '<div class="vd-rfq-why">' + (o.ship ? (shipStOf(o) === "prep" ? ["단순 변심", "다른 책으로 다시 주문", "배송지를 잘못 적었어요", "기타"] : ["단순 변심 (반품)", "파손 · 파본", "잘못 보낸 책", "배송이 오지 않았어요", "기타"]) : ["단순 변심", "생각한 내용과 달라요", "중복 결제", "강의 재생 · 오류", "기타"]).map((x, i) => '<label><input type="radio" name="why" value="' + x + '"' + (i === 0 ? " checked" : "") + "><span>" + x + "</span></label>").join("") + "</div>" +
       '<textarea name="text" rows="3" maxlength="300" placeholder="자세한 사유를 적어 주시면 더 빨리 처리돼요 (선택)"></textarea>' +
       (o.method === "bank" || o.method === "vbank" ? '<div class="vd-rfq-acct"><b>환불 받을 계좌</b><small>' + (o.method === "vbank" ? "가상계좌" : "무통장 입금") + " 결제는 이 계좌로 돌려드려요. 본인 명의 계좌를 적어 주세요.</small>" + acctFields((o.refundReq && o.refundReq.acct) || null) + "</div>" : "") +
       '<p class="vd-err" data-rfq-err></p><p class="vd-muted">' + icon("alert", "xs") + " 환불 금액은 환불 규정(결제일 · 들은 강의 수)에 따라 정해져요. 영업일 1~3일 안에 처리하고 결과를 알려 드려요.</p>" +
-      '<button type="submit" class="vd-btn vd-btn-p vd-btn-xl">환불 요청 보내기</button></form>', "vd-modal-sm"); return; }
+      '<button type="submit" class="vd-btn vd-btn-p vd-btn-xl">' + (o.ship ? "요청 보내기" : "환불 요청 보내기") + "</button></form>", "vd-modal-sm"); return; }
     if (v === "rf-undo") { const o = V().orders.find((x) => x.no === t.dataset.no); if (!o || !m || o.mid !== m.id || !o.refundReq || typeof o.refundReq !== "object") return; delete o.refundReq; save(); keepScroll(); toast("환불 요청을 거둬들였어요."); return; }
     if (v === "rv-edit") { const rv = V().reviews.find((x) => x.id === t.dataset.id && x.mid === (me() || {}).id); if (!rv) return; modal("후기 고치기", '<form class="vd-modal-b vd-rv-edit" data-vd-rvedit="' + esc(rv.id) + '"><div class="vd-rv-stars" role="radiogroup" aria-label="별점">' + [5, 4, 3, 2, 1].map((n) => '<label><input type="radio" name="rating" value="' + n + '"' + (rv.rating === n ? " checked" : "") + "><span>" + n + "점</span></label>").join("") + '</div><textarea name="text" rows="5" maxlength="1000" aria-label="후기">' + esc(rv.text) + '</textarea><button type="submit" class="vd-btn vd-btn-p">저장</button></form>'); return; }
     if (v === "rv-del") { const rv = V().reviews.find((x) => x.id === t.dataset.id && x.mid === (me() || {}).id); if (!rv) return; if (t.dataset.arm !== "1") { t.dataset.arm = "1"; t.textContent = "한 번 더 누르면 지워요"; setTimeout(() => { if (t.isConnected) { t.dataset.arm = ""; t.textContent = "지우기"; } }, 3000); return; } V().reviews.splice(V().reviews.indexOf(rv), 1); save(); render(); toast("후기를 지웠어요. 받은 포인트는 그대로예요 (다시 써도 추가 적립은 없어요)."); return; }
@@ -3042,7 +3203,7 @@
     if (!isActive()) return;
     const f = e.target.closest && e.target.closest("[data-vd-pledge]"); if (f) { const n = f.querySelector("[data-pl-n]"); if (n) n.textContent = e.target.value.length; return; }
     const a = e.target.closest && e.target.closest("[data-vd-auth]"); if (a) { authReady(a); return; }
-    const co = e.target.closest && e.target.closest("[data-vd-pay]"); if (co && e.target.name === "points") coPaint(co);
+    const co = e.target.closest && e.target.closest("[data-vd-pay]"); if (co && (e.target.name === "points" || e.target.name === "qty")) coPaint(co);
   });
   document.addEventListener("submit", (e) => {
     if (!isActive()) return;
@@ -3051,6 +3212,7 @@
     if (f.matches("[data-vd-auth]")) { e.preventDefault(); doAuth(f); return; }
     if (f.matches("[data-vd-dgl]")) { e.preventDefault(); doDgLogin(f); return; }
     if (f.matches("[data-vd-pay]")) { e.preventDefault(); doPay(f); return; }
+    if (f.matches("[data-vd-shipedit]")) { e.preventDefault(); doShipEdit(f); return; }
     if (f.matches("[data-vd-review]")) { e.preventDefault(); doReview(f); return; }
     if (f.matches("[data-vd-pledge]")) { e.preventDefault(); doPledge(f); return; }
     if (f.matches("[data-vd-coupon]")) { e.preventDefault(); doCoupon(f); return; }
@@ -3065,7 +3227,9 @@
   document.addEventListener("change", (e) => {
     if (!isActive()) return;
     if (e.target.name === "method") { const n = document.querySelector("[data-bank-note]"); if (n) n.classList.toggle("on", e.target.value === "bank"); }
-    if (e.target.name === "coupon" || e.target.name === "points" || e.target.name === "plan" || e.target.name === "coach") { const f = e.target.closest("[data-vd-pay]"); if (f) coPaint(f); }
+    if (e.target.name === "coupon" || e.target.name === "points" || e.target.name === "plan" || e.target.name === "coach" || e.target.name === "qty") { const f = e.target.closest("[data-vd-pay]"); if (f) coPaint(f); }
+    // 배송 요청사항 ‘직접 적기’를 고르면 입력 칸이 열려요
+    if (e.target.matches && e.target.matches("[data-v-memo]")) { const x = e.target.form && e.target.form.elements[e.target.name + "2"]; if (x) { x.hidden = e.target.value !== "__"; if (!x.hidden) x.focus(); } }
     if (e.target.hasAttribute && (e.target.hasAttribute("data-plan") || e.target.hasAttribute("data-plan-coach"))) planSync(e.target);
     const a = e.target.closest && e.target.closest("[data-vd-auth]"); if (a) authReady(a);
     // 결제 동의: 전체 동의 ↔ 필수 3개
@@ -3107,20 +3271,27 @@
     if (k === "tea") { if (!f.d1.value) { err.textContent = "희망 날짜를 하나 이상 골라 주세요."; return; } if (f.topic.value.trim().length < 5) { err.textContent = "이야기하고 싶은 주제를 5자 이상 적어 주세요."; return; } }
     if (!f.agree.checked || (f.agree2 && !f.agree2.checked) || (f.agree3 && !f.agree3.checked)) { err.textContent = "필수 동의 3가지에 모두 체크해 주세요."; return; }
     if (k === "course" && seatsLeft(p) === 0) { err.textContent = "방금 자리가 모두 찼어요."; return; }
-    const method = r.pr + r.coach === 0 ? "free" : r.tot === 0 ? "point" : (f.method && f.method.value) || (SRV() ? "" : "card");
+    let ship = null;
+    if (isBook(p)) {
+      const sr = shipRead(f, "s"); if (!sr.ok) { err.textContent = sr.msg; if (sr.el) sr.el.focus(); return; }
+      ship = sr.a; const sl = stockLeft(p);
+      if (sl != null && r.qty > sl) { err.textContent = sl ? "남은 재고가 " + sl + "권이에요. 수량을 줄여 주세요." : "방금 품절됐어요."; return; }
+      if (f.ssave && f.ssave.checked) m.addr = Object.assign({}, ship);
+    }
+    const method = r.pr + r.coach + r.ship === 0 ? "free" : r.tot === 0 ? "point" : (f.method && f.method.value) || (SRV() ? "" : "card");
     if (!method) { err.textContent = payOpts().every((z) => z[3]) ? "결제를 준비하고 있어요. 문의하기로 알려 주시면 바로 도와드릴게요." : "결제 수단을 골라 주세요."; return; }
     const bn = f.name.value.trim(), bp = f.phone.value.trim().replace(/\s/g, ""), needTel = (k === "course" && /^(live|offline)$/.test(typeOf(p))) || k === "tea";
     if (needTel && (!bn || !/^01[016789]-?\d{3,4}-?\d{4}$/.test(bp))) { err.textContent = "주문자 이름과 휴대폰 번호(010-0000-0000)를 정확히 적어 주세요. 입장 · 일정 안내를 보내 드려요."; return; }
     if (bp && !/^[0-9-]{9,14}$/.test(bp)) { err.textContent = "휴대폰 번호를 숫자로 확인해 주세요."; return; }
-    if (SRV()) { srvPay(f, { p, k, r, method, bn, bp, m }); return; }
+    if (SRV()) { if (ship && f.ssave && f.ssave.checked) save(); srvPay(f, { p, k, r, method, bn, bp, m, ship }); return; }
     if (!m.name && bn) m.name = bn;
     if (!m.phone && bp) m.phone = bp;
     // 카드 · 간편결제는 결제창(포트원)을 먼저 — 결제가 끝난 뒤에만 주문을 만들어요 (창을 닫으면 주문 없음)
     if (!f.__pg && /^(card|kakao|toss|naver)$/.test(method) && r.tot > 0) {
       const btn = f.querySelector("button[type=submit]");
       if (btn) btn.disabled = true;
-      const req = { pid: p.id, kind: k, plan: r.plan ? r.plan.d : null, coach: !!r.coach, mcid: r.y && r.cp ? r.y.x.id : "", points: r.pt || 0, method, buyer: { name: bn || m.name, phone: bp || m.phone || "" }, tea: k === "tea" ? { d1: f.d1.value, d2: f.d2.value, slot: f.slot.value, mode: f.mode.value, topic: f.topic.value.trim().slice(0, 500) } : null, expect: r.tot };
-      pgOpen({ title: p.title + (r.plan ? " · " + r.plan.label + " 수강권" : ""), amount: r.tot, method, buyer: { name: bn || m.name, phone: bp || m.phone || "", email: m.email || "" }, req }).then((res) => {
+      const req = { pid: p.id, kind: k, plan: r.plan ? r.plan.d : null, coach: !!r.coach, mcid: r.y && r.cp ? r.y.x.id : "", points: r.pt || 0, method, qty: r.qty, ship, buyer: { name: bn || m.name, phone: bp || m.phone || "" }, tea: k === "tea" ? { d1: f.d1.value, d2: f.d2.value, slot: f.slot.value, mode: f.mode.value, topic: f.topic.value.trim().slice(0, 500) } : null, expect: r.tot };
+      pgOpen({ title: p.title + (r.plan ? " · " + r.plan.label + " 수강권" : "") + (ship && r.qty > 1 ? " " + r.qty + "권" : ""), amount: r.tot, method, buyer: { name: bn || m.name, phone: bp || m.phone || "", email: m.email || "" }, req }).then((res) => {
         if (btn) btn.disabled = false;
         if (!res) { err.textContent = "결제를 취소했어요. 주문은 만들어지지 않았어요."; return; }
         f.__pg = res; doPay(f);
@@ -3128,8 +3299,9 @@
       return;
     }
     const pgr = f.__pg || null; f.__pg = null;
-    const no = (pgr && pgr.server && pgr.server.no) || nextNo(), at = now(), status = method === "bank" ? "pending" : "paid", paidAt = status === "paid" ? at : null, ptMain = Math.min(r.pt, r.pr - r.cp), ch = chOf(p);
-    const o = { id: DB.uid("vo"), no, kind: k, mid: m.id, pid: p.id, title: p.title, list: r.list, sale: r.pr, amount: r.pr - r.cp - ptMain, method, ch, share: shareFor(p, ch, !(k === "course" || k === "extend")), status, at, paidAt };
+    const no = (pgr && pgr.server && pgr.server.no) || nextNo(), at = now(), status = method === "bank" ? "pending" : "paid", paidAt = status === "paid" ? at : null, ptMain = Math.min(r.pt, r.pr + r.ship - r.cp), ch = chOf(p);
+    const o = { id: DB.uid("vo"), no, kind: k, mid: m.id, pid: p.id, title: p.title, list: r.list, sale: r.pr, amount: r.pr + r.ship - r.cp - ptMain, method, ch, share: shareFor(p, ch, !(k === "course" || k === "extend")), status, at, paidAt };
+    if (ship) Object.assign(o, { qty: r.qty, unit: priceOf(p), shipFee: r.ship, ship: Object.assign({}, ship, { st: "ready" }) });
     if (bn || bp) o.buyer = { name: bn || m.name, phone: bp || m.phone || "" };
     if (status === "pending") { const bk = bankInfo(); Object.assign(o, { depositor: (f.depositor && f.depositor.value.replace(/\s+/g, "")) || m.name || "", dueAt: at + (Number(V().settings.payDays) || 3) * 864e5, bankTo: { bank: bk.bank, account: bk.account, holder: bk.holder } }); }
     if (k === "course" && r.plan) o.days = r.plan.d;
@@ -3148,21 +3320,30 @@
   }
   /** 정식 서버 결제: 금액 · 쿠폰 · 포인트는 서버가 다시 계산 → 카드 · 간편결제는 포트원 결제창, 무통장 · 0원은 바로 주문 → 서버 데이터 다시 받기 */
   function srvPay(f, x) {
-    const { p, k, r, method, bn, bp, m } = x, err = document.getElementById("vd-pay-err"), btn = f.querySelector("button[type=submit]");
+    const { p, k, r, method, bn, bp, m, ship } = x, err = document.getElementById("vd-pay-err"), btn = f.querySelector("button[type=submit]");
     if (!(CFG && CFG.auth)) { err.textContent = "결제를 잠시 준비 중이에요. 운영 상담 채널로 문의해 주세요."; return; }
     const card = /^(card|kakao|toss|naver|transfer|vbank)$/.test(method) && r.tot > 0;
     if (card && !payServer()) { err.textContent = "카드 · 간편결제는 PG 심사가 끝나면 열려요. 지금은 무통장 입금으로 결제해 주세요."; return; }
     const buyer = { name: bn || m.name, phone: bp || m.phone || "" }, depositor = method === "bank" && f.depositor ? f.depositor.value.replace(/\s+/g, "") : "";
     if (method === "bank" && r.tot > 0 && !depositor) { err.textContent = "입금자명을 적어 주세요. 통장에 찍히는 이름이에요."; if (f.depositor) f.depositor.focus(); return; }
-    const req = { pid: p.id, depositor, kind: k, plan: r.plan ? r.plan.d : null, coach: !!r.coach, mcid: r.y && r.cp ? r.y.x.id : "", points: r.pt || 0, method, ch: chOf(p), buyer, tea: k === "tea" ? { d1: f.d1.value, d2: f.d2.value, slot: f.slot.value, mode: f.mode.value, topic: f.topic.value.trim().slice(0, 500) } : null, expect: r.tot };
+    const req = { pid: p.id, depositor, kind: k, plan: r.plan ? r.plan.d : null, coach: !!r.coach, mcid: r.y && r.cp ? r.y.x.id : "", points: r.pt || 0, method, ch: chOf(p), buyer, qty: r.qty, ship: ship || null, tea: k === "tea" ? { d1: f.d1.value, d2: f.d2.value, slot: f.slot.value, mode: f.mode.value, topic: f.topic.value.trim().slice(0, 500) } : null, expect: r.tot };
     if (btn) btn.disabled = true; err.textContent = "";
-    const run = card ? pgOpen({ title: p.title + (r.plan ? " · " + r.plan.label + " 수강권" : ""), amount: r.tot, method, buyer: Object.assign({ email: m.email || "" }, buyer), req })
+    const run = card ? pgOpen({ title: p.title + (r.plan ? " · " + r.plan.label + " 수강권" : "") + (ship && r.qty > 1 ? " " + r.qty + "권" : ""), amount: r.tot, method, buyer: Object.assign({ email: m.email || "" }, buyer), req })
       : payApi("prepare", req).then((j) => { if (!j || !j.ok) throw new Error((j && j.message) || "주문을 만들지 못했어요."); return { server: j }; });
     run.then((res) => {
       if (!res) { if (btn) btn.disabled = false; err.textContent = "결제를 취소했어요. 주문은 만들어지지 않았어요."; return; }
       const no = (res.server && res.server.no) || "";
       return DB.remote.refresh().then(() => { if (btn) btn.disabled = false; ROUTE.hash = "#/vod/order/" + no; render(); if (res.server && res.server.bank) toast("주문을 받았어요. 입금이 확인되면 바로 이용할 수 있어요."); else if (res.server && res.server.vbank) toast("가상계좌가 발급됐어요. 입금하면 바로 이용할 수 있어요."); });
     }, (er) => { if (btn) btn.disabled = false; err.textContent = String((er && er.message) || "결제하지 못했어요. 잠시 후 다시 시도해 주세요."); });
+  }
+  /** 배송지 바꾸기 (보내기 전만 · 서버는 결제 완료 · 입금 대기 · 상품 준비 전인 주문만 받아요) */
+  function doShipEdit(f) {
+    const m = me(), o = m && V().orders.find((x) => x.no === f.dataset.vdShipedit), err = f.querySelector("[data-se-err]");
+    if (!o || o.mid !== m.id || !o.ship) return;
+    if (["ready", "wait"].indexOf(shipStOf(o)) < 0) { err.textContent = "이미 책을 준비하고 있어 바꿀 수 없어요. 고객센터로 알려 주세요."; return; }
+    const r = shipRead(f, "e"); if (!r.ok) { err.textContent = r.msg; if (r.el) r.el.focus(); return; }
+    Object.assign(o.ship, r.a, { editAt: now() }); if (f.esave && f.esave.checked) m.addr = Object.assign({}, r.a);
+    save(); closeModal(); render(); toast("배송지를 바꿨어요.");
   }
   function doCoupon(f) {
     const m = me(), code = f.code.value.trim().toUpperCase(); if (!m) return;
@@ -3214,7 +3395,7 @@
   /** 두잉고 강의실(VOD 버전)에서 쓰는 강의장 기능: 같은 진도 기록을 쓰므로 DOOGO CLASS 마이페이지 · 환불 계산과 진도가 맞아요 */
   function markDone(mid, pid, lid) { if (!mid || !owns(mid, pid)) return false; const pr = prog(mid, pid); pr.done[lid] = true; pr.last = lid; pr.seen = pr.seen || {}; if (!pr.seen[lid]) pr.seen[lid] = now(); logStudy(mid); save(); srvTrack(pid, lid, "done"); return true; }
   function markLast(mid, pid, lid) { if (!mid || !owns(mid, pid)) return; const pr = prog(mid, pid); pr.seen = pr.seen || {}; const fresh = !pr.seen[lid]; if (fresh) { pr.seen[lid] = now(); srvTrack(pid, lid, "seen"); } if (pr.last !== lid || fresh) { pr.last = lid; logStudy(mid); save(); } }
-  Object.assign(window.VOD, { RF_DEF, rfSet, usedOf, markMat, instantOf, rfApply, rfCancel, refundTbl, consentOf, CH3, chOn, HELP_FAQ_DEF, helpFaq, issueCoupon, addPoint, replayOk, isFreeEv, funnelOf, funnelTo, ebOf, gatedBy, basePrice, evEnd, eventPast, ebDayTxt, detailImgsOf, detailModeOf, insRate, rateOf, adSplitOf, adOf, shareOf, bizOn, bizShow, BIZ_DEF, teacherList, RAIL_DEF, homeRails, railAuto, railItems, viaOf, shareFor, chOf, CH_TXT, insAmt, supplyOf, baseOf, lSec, lLen, shSet, SH_DEF, launchOn, seedTiles, tileImg, imgAttr, hydrate, liveBanners, banLive, cmtOf, matPut, matOpen, markDone, markLast, videoHtml, fileList, chapOf, plansOf, defPlan, coachOf, teaOf, extendOf, extendPct, addonShare, accessEnd, daysLeft, canExtend, hadCourse, coachPasses, coachLeft, useCoach, giveBackCoach, teasOf, teaWhen, teaStTxt, TEA_MODE, TEA_ST, KIND, kindOf, isAccess, optTxt, icx, PLAN_DAYS, r1k });
+  Object.assign(window.VOD, { isBook, BOOK_MAX, shipFeeOf, shipSet, SHIP_DEF, CARRIERS, trackUrl, SHIP_ST, shipStOf, shipDoneAt, stockLeft, MOON_BOOK, RF_DEF, rfSet, usedOf, markMat, instantOf, rfApply, rfCancel, refundTbl, consentOf, CH3, chOn, HELP_FAQ_DEF, helpFaq, issueCoupon, addPoint, replayOk, isFreeEv, funnelOf, funnelTo, ebOf, gatedBy, basePrice, evEnd, eventPast, ebDayTxt, detailImgsOf, detailModeOf, insRate, rateOf, adSplitOf, adOf, shareOf, bizOn, bizShow, BIZ_DEF, teacherList, RAIL_DEF, homeRails, railAuto, railItems, viaOf, shareFor, chOf, CH_TXT, insAmt, supplyOf, baseOf, lSec, lLen, shSet, SH_DEF, launchOn, seedTiles, tileImg, imgAttr, hydrate, liveBanners, banLive, cmtOf, matPut, matOpen, markDone, markLast, videoHtml, fileList, chapOf, plansOf, defPlan, coachOf, teaOf, extendOf, extendPct, addonShare, accessEnd, daysLeft, canExtend, hadCourse, coachPasses, coachLeft, useCoach, giveBackCoach, teasOf, teaWhen, teaStTxt, TEA_MODE, TEA_ST, KIND, kindOf, isAccess, optTxt, icx, PLAN_DAYS, r1k });
   // 파일 크기 한도: 정식 서버는 3MB (Vercel 요청 한도), 시안은 20MB
   Object.defineProperty(window.VOD, "MAT_MAX", { get: () => (SRV() ? SRV_MAT_MAX : MAT_MAX), configurable: true });
   // 주소(경로)가 바뀌면 언제나 맨 위에서 시작 — 같은 화면 안에서 ?정렬 · 탭만 바뀔 때는 보던 자리 그대로

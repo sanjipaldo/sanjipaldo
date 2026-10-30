@@ -5,7 +5,9 @@
 
 const PLAN_DAYS = [[180, "180일", 1], [365, "365일", 1.1], [1095, "3년", 1.2]];
 const BIZ_DEF = { ebook: true, live: false, free: false, flive: false };
-const TYPES = { vod: 1, ebook: 1, live: 1, offline: 1 };
+const TYPES = { vod: 1, ebook: 1, live: 1, offline: 1, book: 1 };
+/** 종이책: 한 주문에 몇 권까지 · 배송비(주문마다 한 번) */
+const BOOK_MAX = 10;
 const r1k = (n) => Math.round(n / 1000) * 1000;
 const KST = 9 * 3600e3;
 const kstDay = (ms) => new Date(ms + KST).toISOString().slice(0, 10);
@@ -56,14 +58,16 @@ function pricer(cat, nowMs) {
   }
   const extendPct = () => { const n = Number(S.extendPct); return n > 0 && n <= 100 ? n : 50; };
   function extendOf(p) { const y = plansOf(p).find((x) => x.d === 365) || defPlan(p); return y ? { d: 365, sale: r1k(y.sale * extendPct() / 100), list: y.sale } : null; }
+  // 종이책은 도서정가제(정가의 10% 안 할인)라 쿠폰을 쓰지 않아요 — 할인가는 마스터가 정가의 90% 이상으로 정해요
+  const shipOf = (p) => (typeOf(p) === "book" ? Math.max(0, Math.round(Number(p.shipFee) || 0)) : 0);
   function couponOff(c, p, amount) {
-    if (!c || amount <= 0) return 0;
+    if (!c || amount <= 0 || typeOf(p) === "book") return 0;
     if ((c.types || []).length && c.types.indexOf(typeOf(p)) < 0) return 0;
     if (c.min && amount < c.min) return 0;
     const off = c.kind === "pct" ? Math.floor(amount * c.value / 100 / 10) * 10 : Number(c.value) || 0;
     return Math.min(amount, c.kind === "pct" && c.max ? Math.min(off, c.max) : off);
   }
-  return { now, today, product, typeOf, isEvent, isFreeEv, basePrice, priceOf, plansOf, planOf, coachOf, teaOf, extendOf, couponOff, evEnd, kst };
+  return { now, today, product, typeOf, isEvent, isFreeEv, basePrice, priceOf, plansOf, planOf, coachOf, teaOf, extendOf, couponOff, shipOf, evEnd, kst };
 }
 
-module.exports = { pricer, PLAN_DAYS, r1k, kst, kstDay, addDays };
+module.exports = { pricer, PLAN_DAYS, BOOK_MAX, r1k, kst, kstDay, addDays };

@@ -742,6 +742,106 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
   ok(r.status === 403, "결제 조회는 마스터만");
   delete process.env.PORTONE_VBANK; delete process.env.PORTONE_TRANSFER;
 
+  console.log("\n19) 종이책 (택배 배송) · 전자책 내려받기 기록");
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  r = await call("vod-pay", { body: { action: "catalog", catalog: { products: [
+    { id: "b1", title: "내 인생의 추월차선은 내가 만든다", type: "book", status: "on", price: 15900, sale: null, iid: "moon", shipFee: 0, stock: 3 },
+    { id: "b2", title: "배송비 있는 책", type: "book", status: "on", price: 12000, sale: 10800, shipFee: 3000 },
+    { id: "v10", title: "전자책", type: "ebook", status: "on", price: 39000, sale: 29000 }],
+    coupons: [{ id: "cp-welcome", code: "WELCOME", name: "신규 5천", kind: "won", value: 5000, days: 30, auto: "signup", on: true }], settings: { refund: { instant: true, days: 7, maxUsed: 0 } }, biz: {} } } });
+  ok(r.json.ok && r.json.n === 3, "카탈로그: 종이책 (배송비 · 재고 칸 포함)", r.json);
+  const catDoc = (await store.getDoc("vcat")).v;
+  ok(catDoc.products[0].shipFee === 0 && catDoc.products[0].stock === 3 && catDoc.products[1].shipFee === 3000, "가격표에 배송비 · 재고가 남아요", catDoc.products);
+  useJar({});
+  r = await call("vod-auth", { body: { action: "signup", email: "book@example.com", pw: "book1234a", pw2: "book1234a", name: "책OO", phone: "010-1234-5678", agree: true } });
+  ok(r.json.ok && jar.dc_v, "종이책 회원 가입", r.json);
+  const bkMid = r.json.member.id, bkCp = r.json.member.coupons[0].id;
+  const SHIP = { name: "책OO", phone: "010-1234-5678", zip: "06234", addr1: "서울 강남구 테헤란로 123", addr2: "4층", memo: "문 앞에 놓아 주세요" };
+  r = await call("vod-pay", { body: { action: "prepare", pid: "b1", kind: "course", qty: 1, method: "card" } });
+  ok(r.status === 409 && /주소/.test(r.json.message), "배송지 없이 주문 막기", r.json);
+  r = await call("vod-pay", { body: { action: "prepare", pid: "b1", kind: "course", qty: 1, method: "card", ship: Object.assign({}, SHIP, { phone: "123" }) } });
+  ok(r.status === 409, "휴대폰 번호가 이상하면 막기", r.json);
+  r = await call("vod-pay", { body: { action: "prepare", pid: "b1", kind: "course", qty: 11, method: "card", ship: SHIP } });
+  ok(r.status === 409 && /10권/.test(r.json.message), "한 번에 10권까지", r.json);
+  r = await call("vod-pay", { body: { action: "prepare", pid: "b1", kind: "coach", method: "card", ship: SHIP } });
+  ok(r.status === 409, "종이책에는 추가 상품(코칭권 등) 없음", r.json);
+  r = await call("vod-pay", { body: { action: "prepare", pid: "b1", kind: "course", qty: 2, method: "card", mcid: bkCp, ship: SHIP, expect: 31800 } });
+  ok(r.json.ok && r.json.amount === 31800 && /2권/.test(r.json.orderName), "15,900원 × 2권 · 무료배송 · 쿠폰은 안 써요(도서정가제) = 31,800원", r.json);
+  const bp1 = r.json.paymentId, bno1 = r.json.no;
+  paidLike(bp1, 31800);
+  r = await call("vod-pay", { body: { action: "complete", paymentId: bp1 } });
+  let bo = (await store.getDoc("vo:" + bno1)).v;
+  ok(r.json.ok && bo.status === "paid" && bo.qty === 2 && bo.unit === 15900 && bo.sale === 31800 && bo.shipFee === 0 && bo.ship.st === "ready" && bo.ship.addr1 === SHIP.addr1 && !bo.mcid && !bo.couponOff, "결제 완료: 수량 · 배송지 · 배송 상태(결제 완료) 저장 · 쿠폰 안 씀", bo);
+  ok(((await store.getDoc("vm:" + bkMid)).v.coupons[0] || {}).usedAt == null, "쓰지 않은 쿠폰은 그대로", (await store.getDoc("vm:" + bkMid)).v.coupons);
+  ok((((await store.getDoc("vstat")).v.sold) || {}).b1 === 2, "판매 수는 권수만큼 (2권)", (await store.getDoc("vstat")).v.sold);
+  r = await call("vod-pay", { body: { action: "prepare", pid: "b2", kind: "course", qty: 1, method: "card", ship: SHIP, points: 0, expect: 13800 } });
+  ok(r.json.ok && r.json.amount === 13800, "할인가 10,800원 + 배송비 3,000원 = 13,800원", r.json);
+  r = await call("vod-pay", { body: { action: "prepare", pid: "b1", kind: "course", qty: 2, method: "card", ship: SHIP } });
+  ok(r.status === 409 && /1권/.test(r.json.message), "재고 3권 · 2권 팔림 → 2권은 막고 남은 권수를 알려 줘요", r.json);
+  // 배송지 바꾸기: 보내기 전에는 회원이 바꿀 수 있고, 배송 상태 · 송장은 못 바꿔요
+  j = await boot();
+  r = await sync([{ k: "vo:" + bno1, base: verOf(j, "vo:" + bno1), ops: [{ p: ["ship", "addr1"], v: "서울 서초구 강남대로 1" }, { p: ["ship", "st"], v: "done" }, { p: ["ship", "inv"], v: "999" }] }]);
+  bo = (await store.getDoc("vo:" + bno1)).v;
+  ok(bo.ship.addr1 === "서울 서초구 강남대로 1" && bo.ship.st === "ready" && !bo.ship.inv, "회원: 보내기 전 배송지만 바꿈 (상태 · 송장은 못 바꿈)", bo.ship);
+  // 회원이 기본 배송지를 저장
+  r = await sync([{ k: "vm:" + bkMid, base: verOf(j, "vm:" + bkMid), ops: [{ p: ["addr"], v: Object.assign({}, SHIP, { extra: "x" }) }] }]);
+  ok(((await store.getDoc("vm:" + bkMid)).v.addr || {}).addr1 === SHIP.addr1 && !("extra" in ((await store.getDoc("vm:" + bkMid)).v.addr || {})), "회원: 다음 주문용 배송지 저장 (정해진 칸만)", (await store.getDoc("vm:" + bkMid)).v.addr);
+  // 보내기 전: 바로 취소 (전액)
+  r = await call("vod-pay", { body: { action: "cancel", no: bno1 } });
+  bo = (await store.getDoc("vo:" + bno1)).v;
+  ok(r.json.ok && r.json.amount === 31800 && bo.status === "refunded" && PG[bp1].status === "CANCELLED", "보내기 전이면 회원이 바로 전액 취소 (포트원 결제 취소)", r.json);
+  ok((((await store.getDoc("vstat")).v.sold) || {}).b1 === 0, "취소하면 판매 권수도 빠져요", (await store.getDoc("vstat")).v.sold);
+  // 다시 주문 → 마스터가 상품 준비 중 → 회원 바로 취소 막기 · 배송지 못 바꿈
+  r = await call("vod-pay", { body: { action: "prepare", pid: "b1", kind: "course", qty: 1, method: "card", ship: SHIP, expect: 15900 } });
+  const bp2 = r.json.paymentId, bno2 = r.json.no; paidLike(bp2, 15900); await call("vod-pay", { body: { action: "complete", paymentId: bp2 } });
+  const memJar = saveJar();
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  j = await boot();
+  r = await sync([{ k: "vo:" + bno2, base: verOf(j, "vo:" + bno2), ops: [{ p: ["ship", "st"], v: "prep" }, { p: ["ship", "prepAt"], v: Date.now() }] }]);
+  ok(((await store.getDoc("vo:" + bno2)).v.ship || {}).st === "prep", "마스터: 상품 준비 중으로", r.results);
+  useJar(memJar);
+  r = await call("vod-pay", { body: { action: "cancel", no: bno2 } });
+  ok(r.status === 409 && /준비/.test(r.json.message), "상품 준비 중이면 바로 취소 막기 (취소 요청으로)", r.json);
+  j = await boot();
+  r = await sync([{ k: "vo:" + bno2, base: verOf(j, "vo:" + bno2), ops: [{ p: ["ship", "addr1"], v: "바꾸면 안 되는 주소" }] }]);
+  ok((await store.getDoc("vo:" + bno2)).v.ship.addr1 === SHIP.addr1, "상품 준비 중이면 회원이 배송지를 못 바꿈", (await store.getDoc("vo:" + bno2)).v.ship);
+  // 마스터 발송 → 반품 요청만
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  j = await boot();
+  r = await sync([{ k: "vo:" + bno2, base: verOf(j, "vo:" + bno2), ops: [{ p: ["ship", "st"], v: "ship" }, { p: ["ship", "carrier"], v: "CJ대한통운" }, { p: ["ship", "inv"], v: "640012345678" }, { p: ["ship", "shipAt"], v: Date.now() }] }]);
+  bo = (await store.getDoc("vo:" + bno2)).v;
+  ok(bo.ship.st === "ship" && bo.ship.inv === "640012345678", "마스터: 택배사 · 송장 넣고 배송 중으로", bo.ship);
+  useJar(memJar);
+  r = await call("vod-pay", { body: { action: "cancel", no: bno2 } });
+  ok(r.status === 409 && /반품/.test(r.json.message), "보낸 뒤에는 바로 취소 막기 (반품 요청으로)", r.json);
+  j = await boot();
+  r = await sync([{ k: "vo:" + bno2, base: verOf(j, "vo:" + bno2), ops: [{ p: ["refundReq"], v: { why: "파손 · 파본", text: "표지가 찢어져 왔어요" } }] }]);
+  bo = (await store.getDoc("vo:" + bno2)).v;
+  ok(bo.refundReq && bo.refundReq.why === "파손 · 파본" && bo.status === "paid", "회원: 반품 · 교환 요청 남기기", bo.refundReq);
+  // 전자책: 서버 파일을 받아 가면 주문에 내려받은 때가 남아 바로 취소가 막혀요
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v10", kind: "course", method: "card", expect: 29000 } });
+  const ep = r.json.paymentId, eno = r.json.no; paidLike(ep, 29000); await call("vod-pay", { body: { action: "complete", paymentId: ep } });
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  r = await call("file", { body: { data: "data:application/pdf;base64," + Buffer.from("%PDF-1.4 전자책 본문 " + "y".repeat(300)).toString("base64"), scope: "vodp:v10" } });
+  const eh = new URL("http://x" + r.json.url).searchParams.get("h");
+  useJar(memJar);
+  ok(!(await store.getDoc("vo:" + eno)).v.dlAt, "전자책: 받기 전에는 내려받은 기록 없음");
+  r = await call("file", { method: "GET", query: { h: eh } });
+  ok(r.status === 200, "산 회원은 전자책 파일을 받아요", r.status);
+  ok(!!(await store.getDoc("vo:" + eno)).v.dlAt, "전자책: 파일 주소로 받아도 서버가 주문에 내려받은 때를 남겨요");
+  r = await call("vod-pay", { body: { action: "cancel", no: eno } });
+  ok(r.status === 409 && /내려받/.test(r.json.message), "내려받은 전자책은 바로 취소 막기", r.json);
+  // 일회성 작업: 문대표 종이책을 스토어 · 가격표에 (없을 때만)
+  const OO = require(path.join(TMP, "class/api/_lib/oneoff.js")), BOOKS = require(path.join(TMP, "class/api/_lib/books.js"));
+  const fakeMeta = { vod: { products: [{ id: "v1", title: "x" }], settings: {} }, other: 1 }, fakeCat = { at: 1, products: [{ id: "v1" }] };
+  let w = OO.moonBook((k) => (k === "meta" ? fakeMeta : k === "vcat" ? fakeCat : null));
+  ok(w.writes.meta.vod.products.length === 2 && w.writes.meta.vod.products[1].id === "b1" && w.writes.meta.vod.products[1].showOff && w.writes.meta.vod.v21 === 1 && w.writes.meta.vod.settings.ship.autoDays === 3 && w.writes.meta.other === 1, "일회성 작업: 종이책 · 배송 설정을 스토어에 (다른 칸은 그대로)", w.result);
+  ok(w.writes.vcat.products.length === 2 && w.writes.vcat.products[1].price === 15900 && w.writes.vcat.products[1].type === "book" && !("pitch" in w.writes.vcat.products[1]), "일회성 작업: 가격표에는 가격 칸만", w.writes.vcat.products[1]);
+  w = OO.moonBook((k) => (k === "meta" ? w.writes.meta : k === "vcat" ? w.writes.vcat : null));
+  ok(w.writes.meta.vod.products.length === 2 && !w.writes.vcat && w.result.book === "이미 있음", "일회성 작업: 이미 있으면 또 넣지 않아요", w.result);
+  ok(BOOKS.MOON_BOOK.price === 15900 && BOOKS.MOON_BOOK.type === "book" && OO.OPS.some((x) => x.id === "2026-10-30-moon-paper-book"), "종이책 상품 · 작업 목록 등록", null);
+  delete jar.dc_v;
+
   console.log("\n영상 길이 (비메오 · 유튜브 실제 재생 시간)");
   r = await call("public", { body: { action: "vdur", urls: ["https://vimeo.com/76979871", "https://youtu.be/dQw4w9WgXcQ", "https://vimeo.com/111111111", "https://example.com/a.mp4"] } });
   ok(r.json.ok && r.json.d["https://vimeo.com/76979871"] === 1470 && r.json.d["https://youtu.be/dQw4w9WgXcQ"] === 212 && r.json.d["https://vimeo.com/111111111"] === 0 && !("https://example.com/a.mp4" in r.json.d), "비메오 oEmbed · 유튜브 영상 페이지로 실제 길이 (못 찾으면 0 · 영상 아닌 주소는 빼요)", r.json);

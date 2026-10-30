@@ -2875,3 +2875,52 @@ a.a-noperm, a.a-noperm * { color: var(--m-stone, #9a9aa3) !important; cursor: no
   .a-top.has-csw .a-logo-div, .a-top.has-csw .a-logo > i { display: none; }
   .a-top.has-csw .a-coach-sw { max-width: 30vw; }
 }
+
+/* ---------- 종이책 (클래스 편집 · 배송 관리) ---------- */
+.vda-form[data-type="book"] .vda-tf-book { display: grid; }
+.vda-tf-book { gap: 12px; padding: 16px; border-radius: 12px; background: #fffbea; border: 1px dashed #e8cf6a; }
+.vda-pdf { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.vda-pdf .a-btn { gap: 6px; }
+.vda-pdf small { flex: 1 1 260px; line-height: 1.5; }
+.vda-cover-prev { display: grid; place-items: center; width: 72px; height: 104px; border-radius: 6px; overflow: hidden; background: #f3f4f6; flex: none; box-shadow: 0 4px 12px rgba(0, 0, 0, .12); }
+.vda-cover-prev img { width: 100%; height: 100%; object-fit: cover; }
+.vda-cover-prev em { font-size: 11px; font-style: normal; color: #9ca3af; text-align: center; }
+.vda-book-law { display: flex; gap: 6px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 10px; background: #fff; font-size: 13px; line-height: 1.55; color: #5c4b14; box-shadow: inset 0 0 0 1px #f2df9a; }
+.vda-showoff { padding: 10px 12px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1px #f2df9a; }
+.vs-head { flex-wrap: wrap; gap: 10px; }
+.vs-tabs { flex-wrap: wrap; }
+.vs-tabs small { margin-left: 2px; opacity: .7; font-weight: 700; }
+.vs-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.vs-tools .a-btn { gap: 4px; }
+.vs-list { display: grid; gap: 10px; }
+.vs-card { display: grid; gap: 10px; padding: 14px 16px; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px var(--m-hairline-soft, #e5e7eb); }
+.vs-card.on { box-shadow: inset 0 0 0 2px #111; }
+.vs-card.vs-cancel { opacity: .7; }
+.vs-top { display: flex; align-items: flex-start; gap: 10px; }
+.vs-pick { margin-top: 2px; }
+.vs-h { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.vs-h b { font-size: 15px; font-weight: 800; line-height: 1.4; }
+.vs-h b em { font-style: normal; color: #b45309; }
+.vs-h small { font-size: 12px; color: var(--m-muted, #6b7280); }
+.vs-top .a-pill { flex: none; }
+.vs-addr { display: grid; gap: 4px; margin: 0; font-size: 13px; }
+.vs-addr > div { display: grid; grid-template-columns: 56px 1fr; gap: 8px; }
+.vs-addr dt { color: var(--m-muted, #6b7280); }
+.vs-addr dd { margin: 0; overflow-wrap: anywhere; }
+.vs-copy { margin-left: 4px; font-size: 12px; border: 0; background: none; padding: 0; cursor: pointer; }
+.vs-rq { display: flex; gap: 6px; align-items: flex-start; margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--m-critical-soft, #fee2e2); color: var(--m-critical-strong, #991b1b); font-size: 13px; line-height: 1.5; }
+.vs-act { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px dashed var(--m-hairline-soft, #e5e7eb); }
+.vs-act .a-btn { gap: 4px; }
+.vs-inv { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1 1 auto; }
+.vs-inv select { width: auto; min-width: 120px; }
+.vs-inv input { width: 170px; }
+.vs-inv-t { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; flex: 1 1 auto; }
+.vs-inv-t small { flex-basis: 100%; color: var(--m-muted, #6b7280); font-size: 12px; }
+.vs-empty { padding: 8px 0; }
+.vs-set .vs-set-foot { display: flex; justify-content: flex-end; }
+@media (max-width: 720px) {
+  .vs-tools { margin-left: 0; width: 100%; }
+  .vs-inv select, .vs-inv input { flex: 1 1 140px; width: auto; min-width: 0; }
+  .vs-inv .a-btn { flex: 1 1 100%; justify-content: center; }
+  .vs-card { padding: 12px; }
+}

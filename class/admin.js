@@ -415,12 +415,12 @@
     ["시스템", [["master/staff", "운영자 · 활동 기록", "shieldCheck"], ["master/data", "데이터 관리", "database"]]]
   ];
   /* 마스터 관리 영역: 두잉고(강사 플랫폼 · 기수 운영) / DOOGO CLASS(VOD 스토어 · 회원 · 주문) — 왼쪽 위 탭으로 오가요 */
-  const DC_ROUTES = ["dc", "vod", "vod-classes", "vod-members", "vod-display", "vod-inquiries", "vod-recruit", "vod-crm", "vod-seg", "vod-msg", "vod-crm-rp", "vod-refund", "vod-sales", "vod-rank", "vod-ads", "vod-settle", "vod-rates"];
+  const DC_ROUTES = ["dc", "vod", "vod-classes", "vod-members", "vod-display", "vod-inquiries", "vod-recruit", "vod-crm", "vod-seg", "vod-msg", "vod-crm-rp", "vod-refund", "vod-ship", "vod-sales", "vod-rank", "vod-ads", "vod-settle", "vod-rates"];
   const MT = () => (ui.mtab === "dc" ? "dc" : "dg");
   const vdIqOpen = () => (VD().inquiries || []).filter((x) => !x.answer).length;
   const vdRecruitNew = () => DB.inquiries().filter((x) => (x.source === "doogoclass" || /^\[DOOGO CLASS/.test(x.where || "")) && (x.status || "new") === "new").length;
   const masterDcNavRaw = () => [
-    ["DOOGO CLASS 운영", [["master/dc", "DOOGO CLASS 대시보드", "grid"], ["master/vod", "주문 · 결제", "coins", vdPending() || ""], ["master/vod-refund", "환불 · 취소 관리", "refresh", (vdRefReqs().length + vdRefWait().length) || ""], ["master/vod-inquiries", "고객센터 1:1 문의", "headset", vdIqOpen() || ""], ["master/vod-members", "후기 · 다짐", "star"]]],
+    ["DOOGO CLASS 운영", [["master/dc", "DOOGO CLASS 대시보드", "grid"], ["master/vod", "주문 · 결제", "coins", vdPending() || ""], ["master/vod-ship", "종이책 배송 관리", "truck", vdShipTodo() || ""], ["master/vod-refund", "환불 · 취소 관리", "refresh", (vdRefReqs().length + vdRefWait().length) || ""], ["master/vod-inquiries", "고객센터 1:1 문의", "headset", vdIqOpen() || ""], ["master/vod-members", "후기 · 다짐", "star"]]],
     ["매출 · 정산", [["master/vod-sales", "매출 리포트", "activity"], ["master/vod-rank", "판매 순위", "trophy"], ["master/vod-ads", "광고비 · ROAS", "megaphone"], ["master/vod-settle", "강사 정산", "calculator", vdSettleTodo() || ""], ["master/vod-rates", "정산 비율 · 가격", "sliders"]]],
     ["회원 · CRM", [["master/vod-crm", "회원 DB", "users"], ["master/vod-seg", "세그먼트", "target"], ["master/vod-msg", "메시지 · 자동화", "send"], ["master/vod-crm-rp", "회원 분석", "activity"]]],
     ["클래스 · 전시", [["master/vod-classes", "VOD 클래스 관리", "monitorPlay"], ["master/vod-display", "전시 · 쿠폰 · 설정", "layers"]]],
@@ -2912,6 +2912,7 @@
           (grp.length ? row("함께 결제", grp.map((x) => '<span class="num">' + esc(x.no) + "</span> " + esc(X.optTxt(x) || x.title) + " " + won(x.amount)).join("<br>")) : "") + "</table></section>" +
         '<section><h4>금액</h4><table class="od-t">' + (o.list ? row("정가", won(o.list)) : "") + row("판매가", won(X.baseOf(o))) + (o.couponOff ? row("쿠폰", "- " + won(o.couponOff) + (o.couponName ? "<br><small>" + esc(o.couponName) + "</small>" : "")) : "") + (o.pointOff ? row("포인트", "- " + won(o.pointOff)) : "") + row("결제 금액", "<b>" + won(o.amount) + "</b>") +
           (sh != null ? row("정산", sh + "% · 강사 몫 " + won(vdInsAmt(o))) : "") + (o.amount > 0 && (o.status === "paid" || o.status === "refunded") ? row("PG 수수료 (추정)", won(vdFee(o))) : "") + "</table></section>" +
+        (o.ship ? '<section><h4>종이책 배송</h4><table class="od-t">' + row("배송 상태", pill((X.SHIP_ST[X.shipStOf(o)] || X.SHIP_ST.ready)[0], vsTone(X.shipStOf(o)))) + row("수량", (Number(o.qty) || 1) + "권") + row("배송비", o.shipFee ? won(o.shipFee) : "무료") + row("받는 분", esc(o.ship.name || "") + " · " + esc(o.ship.phone || "")) + row("주소", (o.ship.zip ? "(" + esc(o.ship.zip) + ") " : "") + esc((o.ship.addr1 || "") + " " + (o.ship.addr2 || ""))) + row("요청사항", esc(o.ship.memo || "")) + row("송장", o.ship.inv ? esc(o.ship.carrier || "") + ' <span class="num">' + esc(o.ship.inv) + "</span>" + (X.trackUrl(o) ? ' <a class="a-link" href="' + esc(X.trackUrl(o)) + '" target="_blank" rel="noopener">배송 조회</a>' : "") : "") + row("보낸 날", t(o.ship.shipAt)) + row("배송 완료", t(X.shipDoneAt(o)) + (X.shipStOf(o) === "done" && !o.ship.doneAt ? " (자동)" : "")) + "</table></section>" : "") +
         '<section><h4>결제</h4><table class="od-t">' + row("결제수단", esc(VD_PAY[o.method] || o.method)) + row("결제 일시", t(o.paidAt)) + (pid ? row("포트원 결제 ID", '<span class="num od-id">' + esc(pid) + "</span>") : "") + (pg.txId ? row("거래 ID", '<span class="num od-id">' + esc(pg.txId) + "</span>") : "") +
           (pg.receiptUrl ? row("영수증", '<a class="a-link" href="' + esc(pg.receiptUrl) + '" target="_blank" rel="noopener">영수증 열기</a>') : "") +
           (o.method === "bank" ? row("입금자명", esc(vdDep(o))) + (o.bankTo ? row("입금 계좌", esc([o.bankTo.bank, o.bankTo.account, o.bankTo.holder].filter(Boolean).join(" "))) : "") + (o.status === "pending" ? row("입금 기한", t(vdDue(o))) : "") + (o.depositBy ? row("입금 확인", esc(o.depositBy)) : "") : "") +
@@ -3111,7 +3112,7 @@
   const finShort = (n) => { const a = Math.abs(n), s = n < 0 ? "-" : ""; return a >= 1e8 ? s + (Math.round(a / 1e7) / 10) + "억" : a >= 1e4 ? s + Math.round(a / 1e4).toLocaleString("ko-KR") + "만" : s + a.toLocaleString("ko-KR"); };
   const finNav = (act, label, cls) => '<div class="a-card-head a-cal-head ' + (cls || "") + '"><button type="button" class="a-icon-btn" data-action="' + act + '" data-dir="-1" aria-label="이전">' + icon("chevLeft") + "</button><h2>" + label + '</h2><button type="button" class="a-icon-btn" data-action="' + act + '" data-dir="1" aria-label="다음">' + icon("chevRight") + "</button>";
   // 상품 종류 (매출 리포트 · 판매 순위)
-  const FIN_KIND = [["vod", "VOD 수강권"], ["extend", "1년 연장권"], ["ebook", "전자책"], ["live", "LIVE · 오프라인"], ["coach", "1:1 코칭권"], ["tea", "TEA TIME"]];
+  const FIN_KIND = [["vod", "VOD 수강권"], ["extend", "1년 연장권"], ["ebook", "전자책"], ["book", "종이책"], ["live", "LIVE · 오프라인"], ["coach", "1:1 코칭권"], ["tea", "TEA TIME"]];
   const vdKindKey = (o) => (VX().kindOf(o) === "extend" ? "extend" : VX().rateKeyOf(o));
 
   function pageVodSales() {
@@ -3266,7 +3267,7 @@
     const podium = list.slice(0, 3);
     return head("판매 순위", "어떤 강의가 가장 잘 팔렸는지 기간 · 종류별로 봐요. 금액은 환불을 뺀 순매출이에요.", '<a class="a-btn a-btn-ghost" href="#/center/master/vod-sales">' + icon("activity", "sm") + "매출 리포트</a>") +
       '<section class="a-card rk-bar"><div class="a-tabs">' + RK_PER.map((x) => '<button type="button" class="a-tab' + (per === x[0] ? " on" : "") + '" data-action="rk-per" data-k="' + x[0] + '">' + x[1] + "</button>").join("") + "</div>" +
-        '<div class="rk-f"><select class="a-input a-sm" id="rk-type" aria-label="종류"><option value="all">모든 종류</option>' + [["vod", "VOD 강의"], ["ebook", "전자책"], ["event", "LIVE · 오프라인"]].map((x) => '<option value="' + x[0] + '"' + (type === x[0] ? " selected" : "") + ">" + x[1] + "</option>").join("") + "</select>" +
+        '<div class="rk-f"><select class="a-input a-sm" id="rk-type" aria-label="종류"><option value="all">모든 종류</option>' + [["vod", "VOD 강의"], ["ebook", "전자책"], ["book", "종이책"], ["event", "LIVE · 오프라인"]].map((x) => '<option value="' + x[0] + '"' + (type === x[0] ? " selected" : "") + ">" + x[1] + "</option>").join("") + "</select>" +
         '<select class="a-input a-sm" id="rk-sort" aria-label="정렬"><option value="amt"' + (sort === "amt" ? " selected" : "") + '>매출 많은 순</option><option value="n"' + (sort === "n" ? " selected" : "") + ">판매 많은 순</option></select></div>" +
         '<p class="a-muted p-small">' + esc(span) + " · 판매 " + totN + "건 · 순매출 " + won(tot) + (prev ? " · 순위 변동은 바로 앞 같은 길이 기간과 비교" : "") + "</p></section>" +
       (podium.length ? '<div class="rk-pod">' + podium.map((x, i) => '<a class="rk-p rk-p' + (i + 1) + '" href="#/center/master/vod-classes"><span class="rk-no">' + (i === 0 ? icon("trophy", "sm") : "") + (i + 1) + '위</span>' + vdThumb(x.p, "card rk-th") + "<b>" + esc(x.p.title) + "</b><small>" + esc(x.p.creator || insName(x.p.iid) || "") + '</small><span class="rk-amt num">' + won(x.amt) + "</span><small>" + x.n + "건 · " + (tot ? Math.round(x.amt / tot * 100) : 0) + "% " + move(x, i) + "</small></a>").join("") + "</div>" : "") +
@@ -3356,7 +3357,7 @@
     const from = f.from.value ? Math.min(Date.parse(f.from.value + "T00:00:00+09:00"), f.from.value <= todayStr() ? Date.now() : Infinity) : Date.now();
     if (!from) { err.textContent = "적용 시작일을 확인해 주세요."; return; }
     v.insRates = v.insRates || {};
-    const prev = v.insRates[key] || {}, keep = (e) => { const o = {}; ["vod", "ebook", "live", "coach", "tea", "addon", "ad", "at", "from", "by"].forEach((k) => { if (e[k] != null) o[k] = e[k]; }); return o; };
+    const prev = v.insRates[key] || {}, keep = (e) => { const o = {}; ["vod", "ebook", "book", "live", "coach", "tea", "addon", "ad", "at", "from", "by"].forEach((k) => { if (e[k] != null) o[k] = e[k]; }); return o; };
     const hist = (prev.hist || []).concat(prev.at ? [keep(prev)] : []).slice(-50);
     v.insRates[key] = Object.assign(vals, { addon: vals.coach, memo: f.memo.value.trim(), at: Date.now(), from, by: S && S.staffId ? (staffOf(S.staffId) || {}).name || "운영자" : "마스터", hist });
     const name = /^ext:/.test(key) ? key.slice(4) : insName(key);
@@ -3468,7 +3469,7 @@
    * LIVE 무료강의 = live + 0원 (유튜브 LIVE + 카톡 오픈채팅) · 온/오프라인 강의 = offline(현장) 또는 live + 유료(Zoom 온라인) */
   const adKind = (p) => { const t = VX().typeOf(p); return t === "live" ? (Number(p.price) > 0 ? "onoff" : "flive") : t === "offline" ? "onoff" : t; };
   const adWhere = (p) => (VX().typeOf(p) === "live" ? "online" : "offline");
-  const AD_KIND = { vod: ["VOD 강의", "VOD"], ebook: ["전자책", "전자책"], flive: ["LIVE 무료강의", "무료 LIVE"], onoff: ["온/오프라인 강의", "온/오프"] };
+  const AD_KIND = { vod: ["VOD 강의", "VOD"], ebook: ["전자책", "전자책"], book: ["종이책", "종이책"], flive: ["LIVE 무료강의", "무료 LIVE"], onoff: ["온/오프라인 강의", "온/오프"] };
   const adTypeName = (p) => (adKind(p) === "onoff" ? "온/오프라인 강의 · " + (adWhere(p) === "online" ? "온라인 Zoom" : "오프라인 현장") : AD_KIND[adKind(p)][0]);
   const adTypeShort = (p) => AD_KIND[adKind(p)][1];
   /* 오픈 알림 신청자 (오픈 예정 클래스에 ♡ 알림을 누른 회원) · LIVE · 온/오프라인 신청자 명단 · CSV */
@@ -3536,7 +3537,7 @@
         sec(1, "기본 정보", "스토어 카드와 상세 페이지 맨 위에 보여요.",
           f("title", "클래스 이름 <small>(필수)</small>", d.title, ' maxlength="60" placeholder="예) 해외 건기식 브랜드, 재고 없이 0원으로 런칭하는 법"') +
           f("sub", "한 줄 소개", d.sub, ' maxlength="80" placeholder="상세 페이지 소개 첫 줄 · 검색에도 쓰여요"') +
-          '<div class="a-field"><span class="a-label">상품 종류</span><div class="vda-radios vda-types">' + [["vod", "VOD 강의", "녹화 영상 · 수강 기간"], ["ebook", "전자책", "PDF 내려받기 · 평생 소장"], ["flive", "LIVE 무료강의", "0원 · 유튜브 LIVE + 카톡 오픈채팅 · 끝나면 유료 강의로 이어 팔기"], ["onoff", "온/오프라인 강의", "유료 · 현장 강의 또는 Zoom 온라인 · 정원"]].map((x) => '<label class="vda-radio"><input type="radio" name="type" value="' + x[0] + '"' + (adKind(d) === x[0] ? " checked" : "") + "><span><b>" + x[1] + "</b><small>" + x[2] + "</small></span></label>").join("") + '</div><small class="a-muted">DOOGO CLASS는 VOD · 전자책이 중심이에요. LIVE 무료강의는 스토어 ‘무료 LIVE’에, 온/오프라인 강의는 ‘프리미엄 강의’에 보여요 (판매 영역을 켰을 때).</small></div>' +
+          '<div class="a-field"><span class="a-label">상품 종류</span><div class="vda-radios vda-types">' + [["vod", "VOD 강의", "녹화 영상 · 수강 기간"], ["ebook", "전자책", "PDF 내려받기 · 평생 소장"], ["book", "종이책", "택배 배송 · 수량 · 배송지 · 송장 (전자책 메뉴에 보여요)"], ["flive", "LIVE 무료강의", "0원 · 유튜브 LIVE + 카톡 오픈채팅 · 끝나면 유료 강의로 이어 팔기"], ["onoff", "온/오프라인 강의", "유료 · 현장 강의 또는 Zoom 온라인 · 정원"]].map((x) => '<label class="vda-radio"><input type="radio" name="type" value="' + x[0] + '"' + (adKind(d) === x[0] ? " checked" : "") + "><span><b>" + x[1] + "</b><small>" + x[2] + "</small></span></label>").join("") + '</div><small class="a-muted">DOOGO CLASS는 VOD · 전자책이 중심이에요. LIVE 무료강의는 스토어 ‘무료 LIVE’에, 온/오프라인 강의는 ‘프리미엄 강의’에 보여요 (판매 영역을 켰을 때).</small></div>' +
           '<div class="a-form-row"><div class="a-field"><label for="vda-cat">카테고리</label><select class="a-input" id="vda-cat" name="cat">' + VD().cats.map((c) => '<option value="' + esc(c.key) + '"' + (c.key === d.cat ? " selected" : "") + ">" + esc(c.label) + (c.on === false ? " (숨김)" : "") + "</option>").join("") + "</select></div>" +
             f("level", "난이도", d.level, ' maxlength="20" placeholder="입문 · 초급 · 중급"') + "</div>" +
           '<div class="a-form-row"><div class="a-field"><label for="vda-iid">강사 (정산 받는 사람)</label><select class="a-input" id="vda-iid" name="iid">' + vdInsOpts(d.iid) + '</select><small class="a-muted">두잉고 강사를 고르면 그 강사센터 ‘내 VOD 판매’에 판매 · 정산이 보여요.</small></div>' +
@@ -3550,7 +3551,16 @@
           '<p class="vda-tf vda-tf-free">' + icon("video", "sm") + " LIVE 무료강의는 0원이에요. 가격은 아래 ‘LIVE가 끝나면 → 유료 강의로 이어 팔기’에서 얼리버드로 정해요.</p>" +
           '<div class="a-form-row vda-paid">' + f("price", "정가 (원)", d.price, ' type="number" min="0" step="1000" inputmode="numeric"') + f("sale", "할인가 (원)", d.sale == null ? "" : d.sale, ' type="number" min="0" step="1000" inputmode="numeric" placeholder="할인 없으면 비워 두세요"') + "</div>" +
           '<div class="a-form-row vda-paid">' + f("saleEnd", "할인 마감일", d.saleEnd, ' type="date"', "비우면 할인이 계속돼요") + f("accessDays", "무료 특강 수강 기간 (일) <small>VOD · 0원일 때만</small>", d.accessDays == null ? "" : d.accessDays, ' type="number" min="1" max="3650" inputmode="numeric" placeholder="비우면 기간 제한 없음"', "유료 VOD는 아래 수강권(180일 · 365일 · 3년)으로 팔고, 이 칸은 무료 특강에만 써요. 예전 주문(수강권 선택 전)도 이 기간으로 계산해요.") + "</div>" + vodPlanFields(d, f) +
-          '<div class="vda-tf vda-tf-ebook"><div class="a-form-row">' + f("pages", "전자책 분량 (쪽)", d.pages, ' type="number" min="1" max="2000" inputmode="numeric"') + f("format", "파일 형식", d.format || "PDF", ' maxlength="10"') + "</div>" + f("file", "내려받기 파일 주소", d.file, ' maxlength="400" placeholder="https://… (구글 드라이브 · 드롭박스 공유 링크 등)"', "구매한 회원에게만 마이페이지 › 전자책에 보여요. 비우면 ‘준비 중’ 안내가 떠요.") + "</div>" +
+          '<div class="vda-tf vda-tf-ebook"><div class="a-form-row">' + f("pages", "전자책 분량 (쪽)", d.pages, ' type="number" min="1" max="2000" inputmode="numeric"') + f("format", "파일 형식", d.format || "PDF", ' maxlength="10"') + "</div>" + f("file", "내려받기 파일 주소", d.file, ' maxlength="400" placeholder="https://… (구글 드라이브 · 드롭박스 공유 링크 등)"', "구매한 회원에게만 마이페이지 › 전자책에 보여요. 비우면 ‘준비 중’ 안내가 떠요.") +
+            '<div class="vda-pdf">' + (isNew ? '<small class="a-muted">' + icon("alert", "xs") + " PDF 파일은 클래스를 한 번 저장한 뒤에 올릴 수 있어요 (산 회원만 받게 클래스에 묶어 둬요).</small>" : '<label class="a-btn a-btn-ghost a-btn-sm">' + icon("upload", "sm") + 'PDF 파일 올리기<input type="file" class="sr-only" accept="application/pdf,.pdf" data-vda-pdf="' + esc(id) + '"></label><small class="a-muted">' + (DB.remote && DB.remote.on ? "3MB" : "20MB") + " 이하 PDF는 여기서 바로 올려요. 올린 파일은 산 회원만 받을 수 있고, 내려받으면 주문에 ‘내려받음’이 남아 바로 취소가 막혀요. 더 큰 파일은 공유 링크를 위 칸에 넣어 주세요.</small>") + "</div></div>" +
+          '<div class="vda-tf vda-tf-book"><p class="vda-tf-h">' + icon("truck", "sm") + "종이책 정보 <small>택배로 보내는 실물 도서 · 스토어 ‘전자책’ 메뉴에 함께 보여요</small></p>" +
+            '<div class="a-form-row">' + f("author", "저자", d.author || "", ' maxlength="30" placeholder="비우면 크리에이터 이름"') + f("publisher", "출판사", d.publisher || "", ' maxlength="30"') + "</div>" +
+            '<div class="a-form-row">' + f("bpages", "쪽수", d.type === "book" ? d.pages || "" : "", ' type="number" min="1" max="3000" inputmode="numeric" placeholder="예) 280"') + f("bsize", "판형", d.size || "", ' maxlength="30" placeholder="예) 152 × 225mm"') + "</div>" +
+            '<div class="a-form-row">' + f("bpubDate", "출간일", d.pubDate || "", ' type="date"') + f("bisbn", "ISBN", d.isbn || "", ' maxlength="20" inputmode="numeric" placeholder="출판사에서 받으면 적어요"') + "</div>" +
+            '<div class="a-form-row">' + f("shipFee", "배송비 (원 · 주문마다 한 번)", d.shipFee == null ? 0 : d.shipFee, ' type="number" min="0" step="500" inputmode="numeric"', "0원이면 ‘무료배송’으로 보여요") + f("stock", "재고 (권)", d.stock == null ? "" : d.stock, ' type="number" min="0" inputmode="numeric" placeholder="비우면 제한 없음"', "남은 권수가 0이 되면 ‘품절’로 바뀌고 살 수 없어요 (입금 대기 주문도 1권으로 세요)") + "</div>" +
+            '<div class="a-field vda-cover"><label for="vda-cover-file">표지 이미지 <small>스토어 카드 · 상세 맨 위에 책으로 세워 보여요 (세로 표지 그대로)</small></label><div class="vda-cph-row"><span class="vda-cover-prev">' + (d.cover ? "<img " + VX().imgAttr(d.cover, "src") + ' alt="">' : "<em>표지 없음</em>") + '</span><input class="a-input" id="vda-cover-file" type="file" accept="image/jpeg,image/png,image/webp" data-vda-img="cover">' + (d.cover ? btn(icon("trash", "sm") + "표지 지우기", "vda-img-del", "a-btn-ghost a-btn-sm", ' data-k="cover"') : "") + "</div></div>" +
+            '<p class="vda-book-law">' + icon("alert", "xs") + "<span><b>도서정가제</b> 할인가는 정가의 90% 이상으로만 정할 수 있고(최대 10% 할인), 종이책에는 쿠폰이 적용되지 않아요. 포인트는 쓸 수 있어요.</span></p>" +
+            (d.iid && VX().insOff().indexOf(d.iid) >= 0 || (!d.iid && d.creator && VX().insOff().indexOf("ext:" + d.creator) >= 0) ? '<label class="a-check vda-showoff"><input type="checkbox" name="showOff"' + (d.showOff ? " checked" : "") + "><span>이 강사는 스토어 노출이 꺼져 있어요. 이 상품만은 스토어에 보이기</span></label>" : "") + "</div>" +
           '<div class="vda-tf vda-tf-event"><div class="a-form-row">' + f("eventAt", "강의 일시", d.eventAt, ' type="datetime-local"') + f("eventMin", "진행 시간 (분)", d.eventMin, ' type="number" min="10" max="1440" inputmode="numeric"') + '</div><div class="a-form-row">' + f("seats", "정원 (명)", d.seats, ' type="number" min="0" max="10000" inputmode="numeric" placeholder="비우면 제한 없음"', "입금 대기 주문도 자리를 차지해요.") + f("replayDays", "다시보기 제공 (일)", d.replayDays, ' type="number" min="0" max="365" inputmode="numeric" placeholder="없으면 비워 두세요"') + "</div>" +
             '<div class="vda-tf vda-tf-onoff"><span class="a-label">진행 방식</span><div class="vda-radios">' + [["offline", "오프라인 (현장)", "장소 · 준비물 안내 · 현장 출석"], ["online", "온라인 (Zoom)", "Zoom 링크 · 시작 10분 전부터 입장"]].map((x) => '<label class="vda-radio"><input type="radio" name="where" value="' + x[0] + '"' + (adWhere(d) === x[0] ? " checked" : "") + "><span><b>" + x[1] + "</b><small>" + x[2] + "</small></span></label>").join("") + "</div></div>" +
             '<div class="vda-tf vda-tf-live"><div class="a-field"><label for="vda-via">진행 방식</label><select class="a-input" id="vda-via" name="via"><option value="youtube"' + (d.via !== "zoom" ? " selected" : "") + '>유튜브 라이브 (오픈채팅방으로 모아서 진행 · 추천)</option><option value="zoom"' + (d.via === "zoom" ? " selected" : "") + ">Zoom 실시간</option></select></div>" +
@@ -3645,6 +3655,7 @@
       badges: Array.from(f.querySelectorAll("input[name=badge]:checked")).map((x) => x.value), price: num("price") == null ? 0 : num("price"), sale: num("sale"), saleEnd: v("saleEnd"), accessDays: num("accessDays") || null, share: v("share") === "" ? null : Math.min(100, num("share")), base: num("base") || 0,
       color: [v("c1") || "#1c1c1e", v("c2") || "#ff3b3b"], openAt: v("openAt"), hook: v("hook"), tagline: v("tagline"), headline: f.headline ? f.headline.value.replace(/\r/g, "").trim() : d.headline, thumbText: f.thumbText ? f.thumbText.value.replace(/\r/g, "").trim() : d.thumbText, who: vdLines(v("who")), comment: f.comment ? f.comment.value.replace(/\r/g, "").trim() : d.comment, updNote: f.updNote ? v("updNote") : d.updNote, learn: vdLines(v("learn")), pains: vdLines(v("pains")), pitch: f.pitch ? f.pitch.value.replace(/\r/g, "").trim() : d.pitch, tags: f.tags ? v("tags").split(/[,，]/).map((x) => x.trim().replace(/^#/, "")).filter(Boolean).slice(0, 6) : d.tags, before: vdLines(v("before")), after: vdLines(v("after")), intro: f.intro ? f.intro.value.replace(/\r/g, "").trim() : d.intro, creatorBio: v("creatorBio"),
       type: (f.querySelector("input[name=type]:checked") || {}).value || "vod", pages: num("pages") || "", format: v("format") || "PDF", file: v("file"), eventAt: v("eventAt"), eventMin: num("eventMin") || 120, seats: num("seats") || "", place: v("place"), link: v("link"), via: v("via") || "youtube", ytLive: v("ytLive"), replayUrl: v("replayUrl"), kakao: v("kakao"), replayDays: num("replayDays") || "", updatedAt: v("updatedAt") });
+    if (d.type === "book") Object.assign(d, { author: v("author"), publisher: v("publisher"), pages: num("bpages") || "", size: v("bsize"), pubDate: v("bpubDate"), isbn: v("bisbn"), shipFee: num("shipFee") || 0, stock: v("stock") === "" ? "" : num("stock"), showOff: f.showOff ? !!f.showOff.checked : !!d.showOff });
     { const kind = d.type, where = (f.querySelector("input[name=where]:checked") || {}).value || "offline";
       d.type = kind === "flive" ? "live" : kind === "onoff" ? (where === "online" ? "live" : "offline") : kind;
       if (kind === "flive") Object.assign(d, { price: 0, sale: null, saleEnd: "" });
@@ -3663,7 +3674,9 @@
     if (d.type === "vod" && (Number(d.price) || 0) > 0 && d.plans && !VX().PLAN_DAYS.some((x) => (d.plans[x[0]] || {}).on !== false)) return fail("수강권(180일 · 365일 · 3년)을 하나 이상 켜 주세요.", "[name=pl-365-on]");
     if (!d.title) return fail("클래스 이름을 적어 주세요.", "[name=title]");
     if (d.sale != null && d.sale >= d.price) return fail("할인가는 정가보다 낮아야 해요. 할인이 없으면 비워 주세요.", "[name=sale]");
-    if (d.status === "on" && !(d.curriculum || []).some((c) => (c.lessons || []).length)) return fail("‘판매 중’으로 열려면 강의(목차 · 진행 순서)를 1개 이상 넣어 주세요.", "#vda-s5");
+    if (d.type === "book" && !(Number(d.price) > 0)) return fail("종이책은 정가를 적어 주세요.", "[name=price]");
+    if (d.type === "book" && d.sale != null && d.sale < Math.ceil(d.price * 0.9 / 10) * 10) return fail("도서정가제에 따라 종이책 할인가는 정가의 90%(" + won(Math.ceil(d.price * 0.9 / 10) * 10) + ") 이상이어야 해요.", "[name=sale]");
+    if (d.status === "on" && d.type !== "book" && !(d.curriculum || []).some((c) => (c.lessons || []).length)) return fail("‘판매 중’으로 열려면 강의(목차 · 진행 순서)를 1개 이상 넣어 주세요.", "#vda-s5");
     if ((d.type === "live" || d.type === "offline") && !d.eventAt) return fail("LIVE 무료강의 · 온/오프라인 강의는 강의 일시를 정해 주세요.", "[name=eventAt]");
     if (d.type === "offline" && !d.place) return fail("오프라인 강의 장소를 적어 주세요.", "[name=place]");
     if ((d.type === "live" || d.type === "offline") && d.next) {
@@ -3690,7 +3703,7 @@
   const DM_OPTS = [["img-text", "이미지 → 기본 상세", "상세 이미지를 먼저, 아래에 지금 같은 소개(고민 · POINT · 추천 대상)"], ["img", "이미지만", "긴 상세페이지 이미지(JPG)만 보여요"], ["text-img", "기본 상세 → 이미지", "지금 소개 아래에 상세 이미지"], ["text", "기본 상세만", "이미지는 올려 둔 채 숨겨요"]];
   function vdDimgs(d) { if (!d.detailImgs) { d.detailImgs = d.introImg ? [{ url: d.introImg, name: "상세 이미지" }] : []; d.introImg = ""; } return d.detailImgs; }
   /* 이미지 최적화 규격: 스토어에서 보이는 크기의 2배로 맞춰 줄이고(썸네일은 16:9로 자르고) JPG로 압축해 IndexedDB(정식 서버는 파일 저장소)에 둬요 */
-  const IMG_SPEC = { thumb: { w: 1280, h: 720, q: 0.86, min: [960, 540] }, dimg: { w: 860, slice: 3000, q: 0.9 } };
+  const IMG_SPEC = { thumb: { w: 1280, h: 720, q: 0.86, min: [960, 540] }, dimg: { w: 860, slice: 3000, q: 0.9 }, cover: { w: 640, q: 0.88 } };
   const kbTxt = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + "MB" : Math.max(1, Math.round(n / 1024)) + "KB");
   const imgLoad = (file) => new Promise((ok, no) => { const u = URL.createObjectURL(file), im = new Image(); im.onload = () => ok({ im, u }); im.onerror = () => { URL.revokeObjectURL(u); no(new Error("img")); }; im.src = u; });
   const cvBlob = (cv, q) => new Promise((ok) => cv.toBlob((b) => ok(b), "image/jpeg", q));
@@ -3751,6 +3764,16 @@
         ui.vdDraft.creatorPhoto = DB.remote && DB.remote.on ? (await VX().matPut(new File([blob], png ? "creator.png" : "creator.jpg", { type: blob.type }))).url : cv.toDataURL(png ? "image/png" : "image/jpeg", 0.86);
         render(); toast("강사 사진을 올렸어요. 저장을 눌러야 반영돼요.");
       } catch (e) { toast("사진을 올리지 못했어요. JPG · PNG로 다시 올려 주세요.", "warn"); }
+      return;
+    }
+    if (k === "cover") {
+      input.value = "";
+      if (file.size > VX().MAT_MAX) { toast("20MB 이하 이미지만 올릴 수 있어요.", "warn"); return; }
+      try {
+        // 세로 표지: 자르지 않고 가로 640px 안으로 줄여 JPG로
+        const o = await optImg(file, IMG_SPEC.cover), x = o.parts[0], r = await VX().matPut(new File([x.blob], jpgName(file.name, 0, 1), { type: "image/jpeg" }));
+        ui.vdDraft.cover = r.url; render(); toast("표지를 올렸어요 (" + x.w + " × " + x.h + "px). 저장을 눌러야 반영돼요.");
+      } catch (e) { toast("표지를 올리지 못했어요. JPG · PNG로 다시 올려 주세요.", "warn"); }
       return;
     }
     if (k === "thumb") {
@@ -3815,7 +3838,7 @@
     return head("DOOGO CLASS 대시보드", "VOD 스토어의 주문 · 매출 · 회원 · 1:1 문의를 한눈에 봐요. 두잉고(강사 플랫폼) 운영은 왼쪽 위 ‘두잉고’ 탭에서 해요.", vdStoreBtn("#/vod", "스토어 미리보기")) +
       '<div class="a-kpis">' +
         kpi("오늘 결제", todayO.length + "건", won(vdSum(todayO)), "#/center/master/vod", todayO.length ? "ok" : "") +
-        kpi("이번 달 매출", won(vdSum(mon)), "VOD " + won(byT("vod")) + " (부가 " + won(vdSum(mon.filter((o) => !X.isAccess(o)))) + ") · 전자책 " + won(byT("ebook")) + " · LIVE · 오프 " + won(byT("event")), "#/center/master/vod-sales") +
+        kpi("이번 달 매출", won(vdSum(mon)), "VOD " + won(byT("vod")) + " (부가 " + won(vdSum(mon.filter((o) => !X.isAccess(o)))) + ") · 전자책 " + won(byT("ebook")) + (byT("book") ? " · 종이책 " + won(byT("book")) : "") + " · LIVE · 오프 " + won(byT("event")), "#/center/master/vod-sales") +
         kpi("입금 대기", pend.length + "건", won(vdSum(pend)), "#/center/master/vod", pend.length ? "warn" : "") +
         kpi("1:1 문의 대기", iqOpen.length + "건", "이번 달 가입 " + newM + "명", "#/center/master/vod-inquiries", iqOpen.length ? "warn" : "") +
       "</div>" +
@@ -4486,7 +4509,7 @@
       (ads.length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>월</th><th>강의</th><th class="right">광고비</th><th class="right">내 분담</th><th>메모</th></tr></thead><tbody>' + ads.map((x) => { const p = x.pid ? vdP(x.pid) : null, mine2 = Math.round((Number(x.amount) || 0) * X.adSplitOf(iid) / 100 / 10) * 10; return "<tr><td>" + (x.day ? esc(fmtFull(x.day)) : vdYMtxt(x.ym)) + (x.ym === ym ? " " + pill("이번 달", "info") : "") + "</td><td>" + (p ? esc(p.title) : "전체 VOD") + '</td><td class="right num">' + won(x.amount) + '</td><td class="right num"><b>- ' + won(mine2) + "</b></td><td>" + esc([x.ch ? adChName(x.ch) : "", x.memo || ""].filter(Boolean).join(" · ")) + "</td></tr>"; }).join("") + "</tbody></table></div>" : '<p class="a-muted p-small">아직 광고비 기록이 없어요.</p>') + "</section>";
   }
   /* ---------- 정산 달력 (강사): 며칠에 무엇이 몇 개 팔려 얼마를 벌었는지 ---------- */
-  const VC_KIND = [["vod", "VOD", "monitorPlay"], ["ebook", "전자책", "book"], ["live", "LIVE", "video"], ["coach", "코칭권", "message"], ["tea", "TEA TIME", "coffee"]];
+  const VC_KIND = [["vod", "VOD", "monitorPlay"], ["ebook", "전자책", "book"], ["book", "종이책", "truck"], ["live", "LIVE", "video"], ["coach", "코칭권", "message"], ["tea", "TEA TIME", "coffee"]];
   // 달력 칸이 좁은 휴대폰에서는 만 원 단위로 (174,000원 → 17.4만)
   const vcMan = (n) => (n >= 1e6 ? Math.round(n / 1e4) + "만" : n >= 1e4 ? Math.round(n / 1e3) / 10 + "만" : won(n));
   function pageInsVodCal() {
@@ -4755,7 +4778,33 @@
       case "vc-ym": ui.vcYM = vdYMadd(ui.vcYM || todayStr().slice(0, 7), Number(d.dir)); ui.vcDay = ""; render(); break;
       case "vc-day": ui.vcDay = d.d; { const y0 = window.scrollY; render(); window.scrollTo(0, y0); const el = document.querySelector(".vc-detail"); if (el && window.innerWidth < 720) el.scrollIntoView({ behavior: "smooth", block: "start" }); } break;
       case "vda-ym": ui.vdYM = vdYMadd(ui.vdYM || vdYMadd(todayStr().slice(0, 7), -1), Number(d.dir)); render(); break;
-      case "vda-od": { const o = O(); if (o) vdOrderModal(o); break; }
+      case "vda-od": { e.preventDefault(); const o = O(); if (o) vdOrderModal(o); break; }
+      /* 종이책 배송 관리 */
+      case "vda-ship-tab": ui.vsTab = d.k; ui.vsEdit = ""; (ui.vsPick || new Set()).clear(); render(); break;
+      case "vda-ship-pick": { const pk = ui.vsPick || (ui.vsPick = new Set()); if (pk.has(d.id)) pk.delete(d.id); else pk.add(d.id); render(); break; }
+      case "vda-ship-all": { const pk = ui.vsPick || (ui.vsPick = new Set()), X = VX(), todo = vdShipAll().filter((o) => o.status === "paid" && ["ready", "prep"].indexOf(X.shipStOf(o)) >= 0); if (todo.length && todo.every((o) => pk.has(o.id))) pk.clear(); else todo.forEach((o) => pk.add(o.id)); render(); break; }
+      case "vda-ship-prep": { const o = O(); if (!o || !o.ship || VX().shipStOf(o) !== "ready") break; Object.assign(o.ship, { st: "prep", prepAt: Date.now() }); commit("‘" + o.no + "’ 주문을 상품 준비 중으로 바꿨어요. 이제 회원이 바로 취소할 수 없고 취소 요청으로 받아요."); break; }
+      case "vda-ship-bprep": { const pk = ui.vsPick || new Set(), X = VX(), list = vdShipAll().filter((o) => pk.has(o.id) && o.status === "paid" && X.shipStOf(o) === "ready" && !o.refundReq); if (!list.length) { toast("상품 준비 중으로 바꿀 ‘결제 완료’ 주문을 골라 주세요.", "warn"); break; } list.forEach((o) => Object.assign(o.ship, { st: "prep", prepAt: Date.now() })); pk.clear(); commit(list.length + "건을 상품 준비 중으로 바꿨어요."); break; }
+      case "vda-ship-send": {
+        const o = O(), X = VX(); if (!o || !o.ship || o.status !== "paid") break;
+        const st = X.shipStOf(o), car = document.querySelector('[data-ship-car="' + d.id + '"]'), inv = document.querySelector('[data-ship-inv="' + d.id + '"]'), no = inv ? inv.value.trim() : "";
+        if (o.refundReq) { toast("회원의 취소 · 반품 요청이 있어요. 환불 · 취소 관리에서 먼저 처리해 주세요.", "warn"); break; }
+        if (!vsInvOk(no)) { toast("송장 번호를 확인해 주세요 (숫자 · 영문 6~20자).", "warn"); if (inv) inv.focus(); break; }
+        if (["ready", "prep", "ship"].indexOf(st) < 0) break;
+        Object.assign(o.ship, { st: st === "done" ? "done" : "ship", carrier: car ? car.value : X.shipSet().carrier, inv: no, prepAt: o.ship.prepAt || Date.now(), shipAt: st === "ship" && o.ship.shipAt ? o.ship.shipAt : Date.now(), by: (staffMe() || {}).name || "마스터" });
+        ui.vsEdit = ""; (ui.vsPick || new Set()).delete(o.id);
+        commit(st === "ship" ? "‘" + o.no + "’ 송장을 고쳤어요." : "‘" + o.no + "’ 주문을 보냈어요. 회원 마이페이지에 배송 조회가 열려요."); break;
+      }
+      case "vda-ship-edit": ui.vsEdit = d.id || ""; render(); break;
+      case "vda-ship-done": { const o = O(); if (!o || !o.ship || VX().shipStOf(o) !== "ship") break; Object.assign(o.ship, { st: "done", doneAt: Date.now(), doneBy: (staffMe() || {}).name || "마스터" }); commit("‘" + o.no + "’ 주문을 배송 완료로 바꿨어요."); break; }
+      case "vda-ship-copy": { const o = O(); if (!o || !o.ship) break; const t = [o.ship.name, o.ship.phone, (o.ship.zip ? "(" + o.ship.zip + ") " : "") + o.ship.addr1 + " " + (o.ship.addr2 || ""), o.ship.memo || ""].filter(Boolean).join(" / "); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("받는 분 · 주소를 복사했어요."), () => toast(t)); break; }
+      case "vda-ship-csv": { const pk = ui.vsPick || new Set(), X = VX(), tab = VS_TABS.find((x) => x[0] === ui.vsTab) || VS_TABS[0], list = vdShipAll().filter((o) => (pk.size ? pk.has(o.id) : tab[2](X.shipStOf(o), o))); if (list.length) vsCsv(list); break; }
+      case "vda-ship-bulk": vsBulkModal(); break;
+      case "vda-ship-save": {
+        const f = document.getElementById("vda-ship-form"); if (!f) break; const n = (k, lo, hi, dv) => { const x = Math.round(Number(f[k].value)); return x >= lo && x <= hi ? x : dv; };
+        v.settings.ship = { autoDays: n("autoDays", 1, 14, 3), outDays: n("outDays", 1, 14, 2), carrier: f.carrier.value, returnFee: n("returnFee", 0, 100000, 6000), returnAddr: f.returnAddr.value.trim().slice(0, 120) };
+        commit("배송 설정을 저장했어요."); break;
+      }
       case "vda-pginfo": { const o = O(); if (!o) break; const box = document.getElementById("od-pg"); if (box) box.innerHTML = '<p class="a-muted">포트원에 결제 상태를 물어보는 중…</p>';
         VX().payApi("pgInfo", { no: o.no }).then((r) => { const b = document.getElementById("od-pg"); if (!r || !r.ok) { if (b) b.innerHTML = '<p class="a-error">' + esc((r && r.message) || "조회하지 못했어요.") + "</p>"; return; } if (b) b.innerHTML = vdPgInfoHtml(r.pay); if (r.synced) DB.remote.refresh().then(() => { toast(r.synced); render(); }); }, () => { const b = document.getElementById("od-pg"); if (b) b.innerHTML = '<p class="a-error">서버에 닿지 못했어요.</p>'; }); break; }
       case "vda-rfsent": { const o = O(); if (!o || !o.refundPay || o.refundPay.st !== "wait") break; confirmModal("계좌 송금 완료", esc((vdMember(o.mid) || {}).name || "") + " 님께 <b>" + won(o.refundPay.amount || vdRefAmt(o)) + "</b>을<br>" + esc(vdAcctTxt(o.refundPay)) + " 계좌로 송금했나요?", "송금 완료", false, () => { Object.assign(o.refundPay, { st: "done", doneAt: Date.now(), by: (staffMe() || {}).name || "ADMIN" }); commit(o.no + " 환불 송금을 완료로 기록했어요."); }); break; }
@@ -4877,7 +4926,19 @@
       case "vda-ban-del": confirmModal("배너 지우기", "이 배너를 지울까요?", "지우기", true, () => { v.banners.splice(Number(d.i), 1); commit("배너를 지웠어요."); }); break;
     }
   });
-  document.addEventListener("change", (e) => { if (isActive() && e.target.matches("[data-vda-img]")) vdImg(e.target); if (isActive() && e.target.matches("[data-vda-dimg]")) vdDimgAdd(e.target); });
+  document.addEventListener("change", (e) => { if (isActive() && e.target.matches("[data-vda-img]")) vdImg(e.target); if (isActive() && e.target.matches("[data-vda-dimg]")) vdDimgAdd(e.target); if (isActive() && e.target.matches("[data-vda-pdf]")) vdPdf(e.target); });
+  /** 전자책 PDF 올리기: 정식 서버는 그 클래스를 산 회원만 받는 파일(vodp:클래스)로, 시안은 이 브라우저에 — 주소를 ‘내려받기 파일 주소’ 칸에 넣어요 */
+  async function vdPdf(input) {
+    const file = input.files && input.files[0], pid = input.dataset.vdaPdf, form = document.getElementById("vda-form"); input.value = "";
+    if (!file || !form || !ui.vdDraft) return;
+    if (!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)) { toast("PDF 파일만 올릴 수 있어요.", "warn"); return; }
+    if (file.size > VX().MAT_MAX) { toast((DB.remote && DB.remote.on ? "3MB" : "20MB") + "를 넘는 PDF는 구글 드라이브 · 드롭박스 공유 링크로 넣어 주세요.", "warn"); return; }
+    try {
+      const r = await VX().matPut(file, "vodp:" + pid);
+      vdSync(form); ui.vdDraft.file = r.url; if (form.file) form.file.value = r.url;
+      toast("PDF를 올렸어요 (" + kbTxt(file.size) + "). 저장을 눌러야 반영돼요.");
+    } catch (e) { toast("PDF를 올리지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"); }
+  }
   let vdT = null;
   document.addEventListener("input", (e) => {
     if (!isActive()) return;
@@ -5378,6 +5439,85 @@
   const RF_KIND = { instant: ["회원 바로 취소", "ok"], partial: ["부분 환불", "warn"], master: ["마스터 환불", "info"] };
   const rfKindOf = (o) => (o.refundKind ? o.refundKind : o.refundAmount != null && o.refundAmount < o.amount ? "partial" : "master");
   const rfPg = (o) => (o.refundPay ? (o.refundPay.st === "done" ? pill("계좌 송금 완료", "ok") : pill("계좌 송금 대기", "warn")) : o.method === "bank" ? pill("계좌 환불 · 기록만", "mute") : !o.pg ? pill("수동 처리", "mute") : o.pg.st === "done" || (o.pg.cancel && o.pg.cancel.id) ? pill(o.method === "vbank" ? "가상계좌 환불 완료" : "포트원 취소 완료", "ok") : o.pg.st === "fail" ? pill("포트원 취소 실패", "bad") : pill("시안 · 실제 취소 없음", "mute"));
+  /* ---------- 종이책 배송 관리 ----------
+   * 결제 완료 → 상품 준비 중 → 배송 중(택배사 + 송장 번호) → 배송 완료(직접 누르거나, 보낸 뒤 정한 날이 지나면 자동)
+   * 바꾼 상태 · 송장은 회원 마이페이지 › 종이책 · 배송 조회에 바로 보여요 (정식 서버는 주문 문서로 동기화) */
+  const vdShipAll = () => VD().orders.filter((o) => o.ship && o.status !== "failed");
+  const vdShipTodo = () => VD().orders.filter((o) => o.ship && o.status === "paid" && ["ready", "prep"].indexOf(VX().shipStOf(o)) >= 0).length;
+  const vsTone = (st) => (st === "ready" ? "warn" : st === "prep" ? "info" : st === "ship" ? "info" : st === "done" ? "ok" : "");
+  const VS_TABS = [["todo", "보낼 주문", (st) => st === "ready" || st === "prep"], ["ship", "배송 중", (st) => st === "ship"], ["done", "배송 완료", (st) => st === "done"], ["cancel", "취소 · 반품", (st, o) => st === "cancel" || !!o.refundReq], ["wait", "입금 대기", (st) => st === "wait"], ["all", "전체", () => true]];
+  const vsCarrierSel = (o, cls) => { const X = VX(), cur = (o.ship && o.ship.carrier) || X.shipSet().carrier; return '<select class="a-input a-sm ' + (cls || "") + '" data-ship-car="' + esc(o.id) + '" aria-label="택배사">' + X.CARRIERS.map((c) => "<option" + (c[0] === cur ? " selected" : "") + ">" + c[0] + "</option>").join("") + "</select>"; };
+  function pageVodShip() {
+    const X = VX(), sh = X.shipSet(), all = vdShipAll().sort((a, b) => (b.paidAt || b.at || 0) - (a.paidAt || a.at || 0)), stOf = (o) => X.shipStOf(o);
+    const tab = VS_TABS.find((x) => x[0] === ui.vsTab) || VS_TABS[0], list = all.filter((o) => tab[2](stOf(o), o)), today = todayStr(), ym = today.slice(0, 7);
+    const cnt = (k) => all.filter((o) => VS_TABS.find((x) => x[0] === k)[2](stOf(o), o)).length, pick = ui.vsPick || (ui.vsPick = new Set());
+    const sentToday = all.filter((o) => o.ship.shipAt && DB.date.toStr(new Date(o.ship.shipAt)) === today).length, doneMon = all.filter((o) => stOf(o) === "done" && X.shipDoneAt(o) && vdYM(X.shipDoneAt(o)) === ym).length;
+    const nm = (o) => (vdMember(o.mid) || {}).name || (o.buyer && o.buyer.name) || "회원";
+    const card = (o) => {
+      const s = o.ship, st = stOf(o), lab = X.SHIP_ST[st] || X.SHIP_ST.ready, tu = X.trackUrl(o), edit = ui.vsEdit === o.id, rq = o.refundReq && typeof o.refundReq === "object";
+      const send = '<div class="vs-inv">' + vsCarrierSel(o) + '<input class="a-input a-sm num" data-ship-inv="' + esc(o.id) + '" value="' + esc(s.inv || "") + '" placeholder="송장 번호" inputmode="numeric" maxlength="20" aria-label="송장 번호">' + btn(icon("truck", "sm") + (edit ? "송장 저장" : "발송 처리"), "vda-ship-send", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"' + (rq ? " disabled" : "")) + (edit ? btn("닫기", "vda-ship-edit", "a-btn-ghost a-btn-sm", ' data-id=""') : "") + "</div>";
+      return '<article class="vs-card vs-' + st + (pick.has(o.id) ? " on" : "") + '">' +
+        '<div class="vs-top">' + (st === "ready" || st === "prep" ? '<label class="a-check vs-pick"><input type="checkbox" data-action="vda-ship-pick" data-id="' + esc(o.id) + '"' + (pick.has(o.id) ? " checked" : "") + '><span class="sr-only">선택</span></label>' : "") +
+          '<div class="vs-h"><b>' + esc(o.title) + ' <em>× ' + (Number(o.qty) || 1) + "권</em></b><small>" + esc(DB.date.fmtStamp ? DB.date.fmtStamp(o.paidAt || o.at) : DB.date.toStr(new Date(o.paidAt || o.at))) + ' · <a class="a-link num" href="#" data-action="vda-od" data-id="' + esc(o.id) + '">' + esc(o.no) + "</a> · " + won(o.amount) + (o.shipFee ? " (배송비 " + won(o.shipFee) + ")" : " · 무료배송") + "</small></div>" +
+          pill(lab[0], vsTone(st)) + (rq ? pill(st === "ship" || st === "done" ? "반품 요청" : "취소 요청", "bad") : "") + "</div>" +
+        '<dl class="vs-addr"><div><dt>받는 분</dt><dd><b>' + esc(s.name || "") + "</b> · " + esc(s.phone || "") + (nm(o) !== s.name ? ' <small class="a-muted">(주문 ' + esc(nm(o)) + ")</small>" : "") + "</dd></div><div><dt>주소</dt><dd>" + (s.zip ? "(" + esc(s.zip) + ") " : "") + esc((s.addr1 || "") + " " + (s.addr2 || "")) + ' <button type="button" class="a-link vs-copy" data-action="vda-ship-copy" data-id="' + esc(o.id) + '">주소 복사</button></dd></div>' + (s.memo ? "<div><dt>요청</dt><dd>" + esc(s.memo) + "</dd></div>" : "") + "</dl>" +
+        (rq ? '<p class="vs-rq">' + icon("alert", "xs") + "<span>회원 요청: " + esc(o.refundReq.why || "") + (o.refundReq.text ? " — " + esc(o.refundReq.text) : "") + ' · <a class="a-link" href="#/center/master/vod-refund">환불 · 취소 관리에서 처리</a></span></p>' : "") +
+        '<div class="vs-act">' + (st === "ready" ? btn(icon("package", "sm") + "상품 준비 중", "vda-ship-prep", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"' + (rq ? " disabled" : "")) + send
+          : st === "prep" ? send
+          : st === "ship" ? (edit ? send : '<span class="vs-inv-t">' + icon("truck", "sm") + esc(s.carrier || "") + ' <b class="num">' + esc(s.inv || "") + "</b>" + (tu ? ' <a class="a-link" href="' + esc(tu) + '" target="_blank" rel="noopener">배송 조회</a>' : "") + "<small>" + esc(DB.date.toStr(new Date(s.shipAt))) + " 보냄 · " + esc(DB.date.toStr(new Date(s.shipAt + (Number(sh.autoDays) || 3) * 864e5))) + " 자동 완료</small></span>" + btn("송장 수정", "vda-ship-edit", "a-btn-ghost a-btn-sm", ' data-id="' + esc(o.id) + '"') + btn(icon("check", "sm") + "배송 완료", "vda-ship-done", "a-btn-primary a-btn-sm", ' data-id="' + esc(o.id) + '"'))
+          : st === "done" ? '<span class="vs-inv-t">' + icon("check", "sm") + esc(DB.date.toStr(new Date(X.shipDoneAt(o)))) + " 배송 완료" + (s.doneAt ? "" : " (자동)") + (s.inv ? " · " + esc(s.carrier || "") + ' <b class="num">' + esc(s.inv) + "</b>" + (tu ? ' <a class="a-link" href="' + esc(tu) + '" target="_blank" rel="noopener">배송 조회</a>' : "") : "") + "</span>"
+          : st === "wait" ? '<span class="vs-inv-t">' + icon("clock", "sm") + "입금이 확인되면 보낼 주문으로 넘어와요</span>"
+          : '<span class="vs-inv-t">' + icon("x", "sm") + (o.status === "refunded" ? won(o.refundAmount != null ? o.refundAmount : o.amount) + " 환불 · " + esc(DB.date.toStr(new Date(o.refundedAt || o.at))) : "취소된 주문") + "</span>") + "</div></article>";
+    };
+    return head("종이책 배송 관리", "종이책 주문을 보내고 송장을 남겨요. 송장을 넣으면 회원 마이페이지에 배송 조회가 열리고, 보낸 날부터 " + (Number(sh.autoDays) || 3) + "일이 지나면 자동으로 배송 완료가 돼요.", vdStoreBtn("#/vod/my/ship", "회원 화면 보기")) +
+      '<div class="a-kpis crm-kpis crm-kpis-4">' +
+        kpi("보낼 주문", cnt("todo") + "건", cnt("todo") ? "결제 후 " + (Number(sh.outDays) || 2) + "일 안에 보내요" : "모두 보냈어요", "#/center/master/vod-ship", cnt("todo") ? "warn" : "ok") +
+        kpi("오늘 보낸 책", sentToday + "건", "송장을 넣은 주문", "#/center/master/vod-ship") +
+        kpi("배송 중", cnt("ship") + "건", (Number(sh.autoDays) || 3) + "일 뒤 자동 완료", "#/center/master/vod-ship") +
+        kpi("이번 달 배송 완료", doneMon + "건", cnt("cancel") ? "취소 · 반품 " + cnt("cancel") + "건" : "취소 · 반품 없음", "#/center/master/vod-ship") +
+      "</div>" +
+      '<section class="a-card crm-card"><div class="a-card-head vs-head"><div class="a-seg vs-tabs">' + VS_TABS.map((x) => '<button type="button" class="' + (x[0] === tab[0] ? "on" : "") + '" data-action="vda-ship-tab" data-k="' + x[0] + '">' + x[1] + " <small>" + cnt(x[0]) + "</small></button>").join("") + "</div>" +
+        '<div class="vs-tools">' + (tab[0] === "todo" && list.length ? btn(pick.size && list.every((o) => pick.has(o.id)) ? "선택 풀기" : "모두 선택", "vda-ship-all", "a-btn-ghost a-btn-sm") + btn(icon("package", "sm") + "선택한 주문 상품 준비 중", "vda-ship-bprep", "a-btn-ghost a-btn-sm", pick.size ? "" : " disabled") : "") +
+          btn(icon("download", "sm") + "택배 접수용 엑셀" + (pick.size ? " (" + pick.size + "건)" : ""), "vda-ship-csv", "a-btn-ghost a-btn-sm", list.length || pick.size ? "" : " disabled") + btn(icon("upload", "sm") + "송장 한 번에 넣기", "vda-ship-bulk", "a-btn-outline a-btn-sm", cnt("todo") ? "" : " disabled") + "</div></div>" +
+        (list.length ? '<div class="vs-list">' + list.map(card).join("") + "</div>" : '<div class="vs-empty">' + emptyBox("truck", tab[0] === "todo" ? "보낼 종이책 주문이 없어요." : "이 상태의 주문이 없어요.") + "</div>") + "</section>" +
+      '<section class="a-card crm-card"><div class="a-card-head"><h2>배송 설정</h2><p class="a-muted">상세 페이지 · 결제 화면 · 교환 · 반품 규정 문구에 함께 쓰여요.</p></div>' +
+        '<form id="vda-ship-form" class="a-form vs-set" novalidate><div class="a-form-row">' +
+          '<div class="a-field"><label for="vs-auto">자동 배송 완료</label><span class="crm-unit"><input class="a-input" id="vs-auto" name="autoDays" type="number" min="1" max="14" value="' + esc(sh.autoDays) + '"><em>일 뒤 (송장 넣은 날부터)</em></span></div>' +
+          '<div class="a-field"><label for="vs-out">출고 기간</label><span class="crm-unit"><input class="a-input" id="vs-out" name="outDays" type="number" min="1" max="14" value="' + esc(sh.outDays) + '"><em>일 안 (주말 · 공휴일 빼고)</em></span></div></div>' +
+          '<div class="a-form-row"><div class="a-field"><label for="vs-car">기본 택배사</label><select class="a-input" id="vs-car" name="carrier">' + X.CARRIERS.map((c) => "<option" + (c[0] === sh.carrier ? " selected" : "") + ">" + c[0] + "</option>").join("") + "</select></div>" +
+          '<div class="a-field"><label for="vs-rf">반품 왕복 배송비</label><span class="crm-unit"><input class="a-input" id="vs-rf" name="returnFee" type="number" min="0" step="500" value="' + esc(sh.returnFee) + '"><em>원 (단순 변심 반품)</em></span></div></div>' +
+          '<div class="a-field"><label for="vs-ra">반품 받을 주소</label><input class="a-input" id="vs-ra" name="returnAddr" maxlength="120" value="' + esc(sh.returnAddr || "") + '" placeholder="예) 서울 강남구 … 두고홀딩스 물류팀 (비우면 안내 문구에서 빠져요)"></div>' +
+          '<div class="vs-set-foot">' + btn(icon("check", "sm") + "배송 설정 저장", "vda-ship-save", "a-btn-primary") + "</div></form></section>";
+  }
+  /** 송장 한 줄씩: "주문번호 송장번호" (쉼표 · 탭 · 공백으로 나눠요) */
+  function vsBulkModal() {
+    const X = VX();
+    openModal("송장 한 번에 넣기", '<form id="vda-shipbulk-form" class="a-form" novalidate><p class="a-muted p-small">택배사 프로그램에서 받은 목록을 붙여 넣어요. 한 줄에 <b>주문번호 송장번호</b> (쉼표 · 탭 · 공백 어느 것이든 돼요). 보낼 주문(결제 완료 · 상품 준비 중)만 바뀌어요.</p>' +
+      '<div class="a-field"><label for="vsb-car">택배사</label><select class="a-input" id="vsb-car" name="carrier">' + X.CARRIERS.map((c) => "<option" + (c[0] === X.shipSet().carrier ? " selected" : "") + ">" + c[0] + "</option>").join("") + "</select></div>" +
+      '<div class="a-field"><label for="vsb-t">주문번호 · 송장번호</label><textarea class="a-input num" id="vsb-t" name="lines" rows="7" placeholder="DC261030123456 640012345678&#10;DC261030654321, 640012345679"></textarea></div><p class="a-error" id="vsb-err"></p></form>',
+      '<button type="button" class="a-btn a-btn-ghost" data-action="modal-close">취소</button><button type="submit" form="vda-shipbulk-form" class="a-btn a-btn-primary">' + icon("truck", "sm") + "발송 처리</button>");
+  }
+  const vsInvOk = (x) => /^[0-9A-Za-z-]{6,20}$/.test(String(x || "").trim());
+  function saveShipBulk(f) {
+    const X = VX(), err = document.getElementById("vsb-err"), car = f.carrier.value, rows = String(f.lines.value || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    if (!rows.length) { err.textContent = "주문번호와 송장번호를 한 줄에 하나씩 붙여 넣어 주세요."; return; }
+    let ok = 0; const bad = [];
+    rows.forEach((l) => {
+      const [no, inv] = l.split(/[\s,\t]+/), o = VD().orders.find((x) => x.no === no && x.ship && x.status === "paid");
+      if (!o || ["ready", "prep"].indexOf(X.shipStOf(o)) < 0 || !vsInvOk(inv) || o.refundReq) { bad.push(no || l); return; }
+      Object.assign(o.ship, { st: "ship", carrier: car, inv: inv.trim(), prepAt: o.ship.prepAt || Date.now(), shipAt: Date.now(), by: (staffMe() || {}).name || "마스터" }); ok++;
+    });
+    if (!ok) { err.textContent = "바꾼 주문이 없어요. 주문번호 · 송장번호를 확인해 주세요." + (bad.length ? " (" + bad.slice(0, 5).join(", ") + ")" : ""); return; }
+    (ui.vsPick || new Set()).clear();
+    commit("종이책 " + ok + "건을 발송 처리했어요." + (bad.length ? " " + bad.length + "건은 확인이 필요해요: " + bad.slice(0, 5).join(", ") : ""));
+  }
+  function vsCsv(list) {
+    const X = VX(), head = ["주문번호", "결제일", "받는 분", "받는 분 휴대폰", "우편번호", "주소", "상세 주소", "배송 요청사항", "상품", "수량", "결제 금액", "배송 상태", "택배사", "송장 번호"];
+    const rows = [head].concat(list.map((o) => { const s = o.ship || {}; return [o.no, o.paidAt ? DB.date.toStr(new Date(o.paidAt)) : "", s.name || "", s.phone || "", s.zip || "", s.addr1 || "", s.addr2 || "", s.memo || "", o.title, Number(o.qty) || 1, o.amount, (X.SHIP_ST[X.shipStOf(o)] || [""])[0], s.carrier || "", s.inv || ""]; }));
+    const csv = "\ufeff" + rows.map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(",")).join("\n"), l = document.createElement("a");
+    l.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); l.download = "doogoclass-books-" + todayStr() + ".csv"; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(l.href), 3e4);
+    toast("택배 접수용 목록 " + list.length + "건을 내려받았어요.");
+  }
   function pageVodRefund() {
     const v = VD(), X = VX(), r = X.rfSet(), ym = todayStr().slice(0, 7), reqs = vdRefReqs().sort((a, b) => (b.refundReq.at || 0) - (a.refundReq.at || 0));
     const refd = v.orders.filter((o) => o.status === "refunded").sort((a, b) => (b.refundedAt || 0) - (a.refundedAt || 0)), mon = refd.filter((o) => o.refundedAt && vdYM(o.refundedAt) === ym);
@@ -5424,7 +5564,7 @@
     if (a.dataset.action === "vda-rf-inst") { const on = !a.classList.contains("on"); a.classList.toggle("on", on); a.setAttribute("aria-checked", on); const h = document.querySelector('#vda-rf-form [name="instant"]'); if (h) h.value = on ? "1" : ""; return; }
     saveVodRfPolicy();
   });
-  Object.assign(MPAGES, { "vod-refund": pageVodRefund, "vod-sales": pageVodSales, "vod-rank": pageVodRank, "vod-ads": pageVodAds, "vod-settle": pageVodSettle, "vod-rates": pageVodRates });
+  Object.assign(MPAGES, { "vod-ship": pageVodShip, "vod-refund": pageVodRefund, "vod-sales": pageVodSales, "vod-rank": pageVodRank, "vod-ads": pageVodAds, "vod-settle": pageVodSettle, "vod-rates": pageVodRates });
   Object.assign(MPAGES, { "vod-crm": pageCrm, "vod-seg": pageCrmSeg, "vod-msg": pageCrmMsg, "vod-crm-rp": pageCrmReport });
   Object.assign(MPAGES, { vod: pageMasterVod, "vod-classes": pageMasterVodClasses, "vod-members": pageMasterVodMembers, "vod-display": pageMasterVodDisplay, dc: pageMasterDc, "vod-inquiries": pageMasterVodInquiries, "vod-recruit": (r) => { ui.inqFilter = "vod"; return pageMasterPartners(r).replace("<h1>강사 입점 문의</h1>", "<h1>DOOGO CLASS 강사 모집 지원</h1>"); } });
   Object.assign(PAGES, { "ops-notices": pageOpsNotices, contract: pageInsContract });
@@ -5483,7 +5623,7 @@
   const staffMe = () => (S && S.role === "master" && S.staffId ? staffOf(S.staffId) : null);
   const staffRoleName = (st) => (STAFF_ROLES[st.role] || STAFF_ROLES.custom).label;
   // 새로 생긴 DOOGO CLASS 메뉴는 원래 맡던 메뉴 권한을 따라가요 (대시보드 ← 주문 · 매출, 1:1 문의 ← 회원 · 후기, 강사 모집 ← 입점 문의)
-  const STAFF_ALIAS = { "master/vod-sales": "master/vod", "master/vod-rank": "master/vod", "master/vod-ads": "master/vod", "master/vod-settle": "master/vod", "master/vod-rates": "master/vod", "master/plan": "master/calendar", "master/dc": "master/vod", "master/vod-inquiries": "master/vod-members", "master/vod-recruit": "master/partners", "master/vod-crm": "master/vod-members", "master/vod-seg": "master/vod-members", "master/vod-msg": "master/vod-members", "master/vod-crm-rp": "master/vod-members", "master/vod-refund": "master/vod" };
+  const STAFF_ALIAS = { "master/vod-sales": "master/vod", "master/vod-rank": "master/vod", "master/vod-ads": "master/vod", "master/vod-settle": "master/vod", "master/vod-rates": "master/vod", "master/plan": "master/calendar", "master/dc": "master/vod", "master/vod-inquiries": "master/vod-members", "master/vod-recruit": "master/partners", "master/vod-crm": "master/vod-members", "master/vod-seg": "master/vod-members", "master/vod-msg": "master/vod-members", "master/vod-crm-rp": "master/vod-members", "master/vod-refund": "master/vod", "master/vod-ship": "master/vod" };
   const staffCan = (key) => { const st = staffMe(); if (!st || key === "master") return true; if (key === "master/data") return false; const pm = st.perms || []; return pm.indexOf(key) >= 0 || (!!STAFF_ALIAS[key] && pm.indexOf(STAFF_ALIAS[key]) >= 0); };
   function staffStrip(root) {
     if (!staffMe() || !root) return;
@@ -6741,7 +6881,7 @@
       render(); toast("입금 계좌 · 부가세 설정을 저장했어요.");
       return;
     }
-    const forms = { "fin-fee-form": saveFinFee, "vda-form": saveVodClass, "vda-ban-form": saveVodBanner, "vda-tile-form": saveVodTiles, "vda-rails-form": saveVodRails, "vda-cat-form": saveVodCats, "vda-topic-form": saveVodTopics, "vda-set-form": saveVodSettings, "vp-copy-form": saveVpCopy, "vda-rate-form": saveVodRate, "vda-tax-form": saveVodTax, "vda-ad-form": saveVodAd, "vs-prof-form": saveVsProfile, "vda-ref-form": saveVodRefund, "vs-inv-form": saveVsInvoice, "vda-cp-form": saveVodCoupon, "vda-iq-form": saveVodAnswer, "aff-lead-form": saveAffLead, "an-form": saveAffNotice, "sla-form": saveSla, "ct-form": saveContract, "st-form": saveStaff, "aff-form": saveAff, "aff-set-form": saveAffSet, "aff-pw-form": saveAffPw, "aff-bank-form": saveAffBank, "bill-form": saveBillForm, "pay-form": saveBillStep, "inv-form": saveBillStep, "open-form": saveBillStep, "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "plan-form": savePlan, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote, "coach-form": saveCoach };
+    const forms = { "vda-shipbulk-form": saveShipBulk, "fin-fee-form": saveFinFee, "vda-form": saveVodClass, "vda-ban-form": saveVodBanner, "vda-tile-form": saveVodTiles, "vda-rails-form": saveVodRails, "vda-cat-form": saveVodCats, "vda-topic-form": saveVodTopics, "vda-set-form": saveVodSettings, "vp-copy-form": saveVpCopy, "vda-rate-form": saveVodRate, "vda-tax-form": saveVodTax, "vda-ad-form": saveVodAd, "vs-prof-form": saveVsProfile, "vda-ref-form": saveVodRefund, "vs-inv-form": saveVsInvoice, "vda-cp-form": saveVodCoupon, "vda-iq-form": saveVodAnswer, "aff-lead-form": saveAffLead, "an-form": saveAffNotice, "sla-form": saveSla, "ct-form": saveContract, "st-form": saveStaff, "aff-form": saveAff, "aff-set-form": saveAffSet, "aff-pw-form": saveAffPw, "aff-bank-form": saveAffBank, "bill-form": saveBillForm, "pay-form": saveBillStep, "inv-form": saveBillStep, "open-form": saveBillStep, "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "plan-form": savePlan, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote, "coach-form": saveCoach };
     if (forms[f.id]) { e.preventDefault(); forms[f.id](f); return; }
     if (f.classList.contains("vda-price")) { e.preventDefault(); saveVodPrice(f); return; }
     if (f.classList.contains("a-q-form")) {

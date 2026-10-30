@@ -127,7 +127,7 @@ function prefixes(ids) {
 
 /* ---------------- 쓰기 ---------------- */
 const str = (x, n) => String(x == null ? "" : x).slice(0, n);
-const M_SELF = { name: (x) => str(x, 20).trim(), phone: (x) => str(x, 14).replace(/\s/g, ""), marketing: (x) => !!x, consent: (x) => (x && typeof x === "object" ? clone(x) : undefined), devices: (x) => (Array.isArray(x) ? clone(x).slice(0, 10) : []), seenAt: (x) => Math.min(Date.now() + 6e4, Number(x) || 0), topics: (x) => (Array.isArray(x) ? x.map((t) => str(t, 40)).slice(0, 30) : []), likes: (x) => (Array.isArray(x) ? x.map((t) => str(t, 40)).slice(0, 300) : []), prog: (x) => (x && typeof x === "object" ? clone(x) : {}), study: (x) => (x && typeof x === "object" ? clone(x) : {}) };
+const M_SELF = { name: (x) => str(x, 20).trim(), phone: (x) => str(x, 14).replace(/\s/g, ""), marketing: (x) => !!x, consent: (x) => (x && typeof x === "object" ? clone(x) : undefined), devices: (x) => (Array.isArray(x) ? clone(x).slice(0, 10) : []), seenAt: (x) => Math.min(Date.now() + 6e4, Number(x) || 0), topics: (x) => (Array.isArray(x) ? x.map((t) => str(t, 40)).slice(0, 30) : []), likes: (x) => (Array.isArray(x) ? x.map((t) => str(t, 40)).slice(0, 300) : []), prog: (x) => (x && typeof x === "object" ? clone(x) : {}), study: (x) => (x && typeof x === "object" ? clone(x) : {}), addr: (x) => require("./vod").shipAddr(x) || undefined };
 function fixSelfMember(o, n) {
   if (!o) return null;
   const out = clone(o);
@@ -136,7 +136,7 @@ function fixSelfMember(o, n) {
   return out;
 }
 const keepServer = (o, n, keys) => { if (n == null || !o) return n; keys.forEach((k) => { if (o[k] !== undefined) n[k] = o[k]; else delete n[k]; }); return n; };
-/** 회원이 자기 주문에서 고칠 수 있는 칸: 코칭 질문 목록 · TEA TIME 신청(확정 전) · 환불 요청 · 전자책 내려받은 때 */
+/** 회원이 자기 주문에서 고칠 수 있는 칸: 코칭 질문 목록 · TEA TIME 신청(확정 전) · 환불 요청 · 전자책 내려받은 때 · 종이책 배송지(보내기 전) */
 function fixSelfOrder(o, n) {
   const out = clone(o);
   if (!n) return out;
@@ -155,6 +155,8 @@ function fixSelfOrder(o, n) {
     if ((out.method === "bank" || out.method === "vbank") && a && typeof a === "object" && /^[A-Z_]{2,40}$/.test(String(a.bank || ""))) out.refundReq.acct = { bank: String(a.bank), number: str(a.number, 30).replace(/[^0-9]/g, ""), holder: str(a.holder, 20).trim() };
   }
   if (out.status === "paid" && out.refundReq && n.refundReq === undefined) delete out.refundReq;
+  // 종이책 배송지: 보내기 전(결제 완료 · 입금 대기 · 상품 준비 전)이면 회원이 바꿀 수 있어요 — 배송 상태 · 송장은 마스터만
+  if (out.ship && n.ship && (out.ship.st || "ready") === "ready" && (out.status === "paid" || out.status === "pending")) { const a = require("./vod").shipAddr(n.ship); if (a) Object.assign(out.ship, a, { editAt: Date.now() }); }
   if (n.dlAt && !out.dlAt) out.dlAt = Date.now();
   return out;
 }
@@ -249,6 +251,18 @@ function canReadFile(s, ids) {
   return !!(ids.vod && (ids.vod.owns || []).indexOf(String(s).slice(5)) >= 0);
 }
 
+/** 전자책 파일을 서버에서 받아 가면 그 주문에 ‘내려받은 때’(dlAt)를 남겨요 — 화면 버튼을 거치지 않고 파일 주소로 받아도 바로 취소 판단에 써요 */
+async function markEbookDl(ids, pid) {
+  if (!ids || !ids.vod || ids.admin || !pid) return;
+  const cat = ((await store.getDoc("vcat")) || {}).v, p = ((cat && cat.products) || []).find((x) => x && x.id === pid);
+  if (!p || p.type !== "ebook") return;
+  const nos = ids.vod.nos || [], d = nos.length ? await store.getDocs(nos.map((n) => "vo:" + n)) : {};
+  for (const n of nos) {
+    const o = (d["vo:" + n] || {}).v;
+    if (o && o.mid === ids.vod.mid && o.pid === pid && o.status === "paid" && (o.kind || "course") === "course" && !o.dlAt) await updateDoc("vo:" + n, (x) => (x && !x.dlAt ? Object.assign(x, { dlAt: Date.now(), dlBy: "file" }) : undefined));
+  }
+}
+
 /* ---------------- 저장 뒤에 서버가 하는 일 ---------------- */
 async function updateDoc(k, fn) {
   for (let i = 0; i < 8; i++) {
@@ -265,7 +279,8 @@ async function bumpStat(fn) { return updateDoc("vstat", (s) => { const v = s || 
 const inc = (map, k, d) => { map[k] = Math.max(0, (Number(map[k]) || 0) + d); };
 function soldDelta(prev, next) {
   const was = isCourse(prev) && prev.status === "paid", now = isCourse(next) && next.status === "paid";
-  return was === now ? null : { pid: (next || prev).pid, d: now ? 1 : -1 };
+  // 종이책은 권수만큼 (재고 · ‘N권 판매’ 표시)
+  return was === now ? null : { pid: (next || prev).pid, d: (now ? 1 : -1) * Math.max(1, Number((next || prev).qty) || 1) };
 }
 async function afterOrder(prev, next) {
   const s = soldDelta(prev, next);
@@ -292,4 +307,4 @@ async function after(K, prev, next, ids) {
   }
 }
 
-module.exports = { parse, identity, ownsOf, publicVod, lockedProduct, view, prefixes, writer, metaFileScope, canReadFile, fixInstructorMeta, after, afterOrder, bumpStat, PRIV };
+module.exports = { parse, identity, ownsOf, publicVod, lockedProduct, view, prefixes, writer, metaFileScope, canReadFile, fixInstructorMeta, after, afterOrder, bumpStat, markEbookDl, PRIV };
