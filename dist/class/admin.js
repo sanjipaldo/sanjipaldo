@@ -5135,7 +5135,11 @@
   const crmMaskP = (p) => { const s = String(p || ""); return s ? s.replace(/^(\d{3})-?(\d{3,4})-?(\d{4})$/, "$1-****-$3") : "-"; };
   const crmE = (m) => (ui.crmPii ? m.email || "-" : crmMaskE(m.email));
   const crmPh = (m) => (ui.crmPii ? m.phone || "-" : crmMaskP(m.phone));
-  const crmVia = (m) => (m.via === "kakao" ? '<span class="crm-via k">카카오</span>' : '<span class="crm-via">이메일</span>');
+  // 가입 방식: 카카오 1초 가입(노란 말풍선) · 이메일 가입 (+ 나중에 카카오를 연결한 이메일 회원 · 카카오 쪽에서 연결을 끊은 회원)
+  const KK_IC = () => VX().KAKAO_ICON || "";
+  const crmVia = (m) => (m.via === "kakao" ? '<span class="crm-via k" title="카카오로 1초 만에 가입한 회원">' + KK_IC() + "카카오 1초 가입</span>" : '<span class="crm-via">이메일 가입</span>' + (m.kakaoId ? '<span class="crm-via kl" title="이메일로 가입한 뒤 카카오를 연결했어요">' + KK_IC() + "카카오 연결</span>" : "")) +
+    (m.kakaoUnlinkedAt && !m.kakaoId ? '<span class="crm-via ku" title="카카오 쪽에서 연결을 끊었어요">카카오 연결 끊김</span>' : "");
+  const crmAv = (m, cls) => '<span class="a-avatar' + (cls ? " " + cls : "") + (m.via === "kakao" ? " crm-av-k" : "") + '">' + esc(String(m.name || "?").slice(0, 1)) + (m.via === "kakao" ? '<i class="crm-av-kk" aria-label="카카오 가입">' + KK_IC() + "</i>" : "") + "</span>";
   const crmIns = () => { const s = {}; VD().products.forEach((p) => { if (p.iid) s[p.iid] = 1; }); return Object.keys(s); };
   // 회원 한 명의 CRM 지표 (화면마다 새로 계산 — 주문 · 진도 · 쿠폰이 바뀌면 바로 반영)
   function crmProf(m) {
@@ -5208,7 +5212,7 @@
       const m = pf.m, st = crmStage(pf.stage), chs = crmChs(m), on = !!(ui.crmSel || {})[m.id];
       return '<tr class="clickable' + (m.blocked ? " a-dim" : "") + (on ? " crm-on" : "") + '" data-action="crm-open" data-id="' + esc(m.id) + '">' +
         '<td class="w-check" data-stop><input type="checkbox" data-crm-sel="' + esc(m.id) + '"' + (on ? " checked" : "") + ' aria-label="' + esc(m.name) + ' 선택"></td>' +
-        '<td><div class="crm-who"><span class="a-avatar">' + esc(String(m.name || "?").slice(0, 1)) + "</span><div><b>" + esc(m.name || "-") + "</b><small>" + esc(crmE(m)) + "</small>" + ((m.tags || []).length ? '<span class="crm-tags">' + m.tags.slice(0, 2).map((t) => "<i>" + esc(t) + "</i>").join("") + (m.tags.length > 2 ? "<i>+" + (m.tags.length - 2) + "</i>" : "") + "</span>" : "") + "</div></div></td>" +
+        '<td><div class="crm-who">' + crmAv(m) + "<div><b>" + esc(m.name || "-") + "</b><small>" + esc(crmE(m)) + "</small>" + ((m.tags || []).length ? '<span class="crm-tags">' + m.tags.slice(0, 2).map((t) => "<i>" + esc(t) + "</i>").join("") + (m.tags.length > 2 ? "<i>+" + (m.tags.length - 2) + "</i>" : "") + "</span>" : "") + "</div></div></td>" +
         '<td class="vda-nw">' + crmVia(m) + "<small class=\"a-memo\">" + crmDate(m.createdAt) + " · " + esc(CRM_SRC[crmSrcK(m)] || crmSrcK(m)) + "</small></td>" +
         "<td>" + pill(st[0], st[1]) + '<small class="a-memo">RFM ' + pf.rfm.join("·") + "</small></td>" +
         '<td class="vda-nw num"><b>' + pf.paid.length + "건</b> " + (pf.ltv ? won(pf.ltv) : "") + (pf.free.length ? '<small class="a-memo">무료 신청 ' + pf.free.length + "건</small>" : "") + "</td>" +
@@ -5231,6 +5235,7 @@
       "</div>" +
       '<section class="a-card crm-card">' +
         '<div class="crm-chips" role="tablist" aria-label="회원 단계">' + CRM_CHIPS().map((c) => { const n = cnt(c[0]); return '<button type="button" role="tab" aria-selected="' + (F.seg === c[0]) + '" class="crm-chip' + (F.seg === c[0] ? " on" : "") + (c[0].indexOf("sg:") === 0 ? " sg" : "") + '" data-action="crm-seg" data-k="' + esc(c[0]) + '">' + (c[0].indexOf("sg:") === 0 ? icon("target", "xs") : "") + esc(c[1]) + ' <span class="num">' + n + "</span></button>"; }).join("") + '<a class="crm-chip add" href="#/center/master/vod-seg">' + icon("plus", "xs") + "세그먼트 만들기</a></div>" +
+        '<div class="crm-vias" role="tablist" aria-label="가입 방식">' + [["", "전체", all.length], ["kakao", "카카오 1초 가입", kk], ["email", "이메일 가입", all.length - kk]].map((x) => '<button type="button" role="tab" aria-selected="' + (F.via === x[0]) + '" class="crm-vbtn' + (x[0] === "kakao" ? " k" : "") + (F.via === x[0] ? " on" : "") + '" data-action="crm-via" data-k="' + x[0] + '">' + (x[0] === "kakao" ? KK_IC() : x[0] === "email" ? icon("mail", "xs") : icon("users", "xs")) + esc(x[1]) + ' <span class="num">' + x[2] + "</span></button>").join("") + "</div>" +
         '<div class="crm-filters"><div class="a-search">' + icon("search", "sm") + '<input class="a-input a-sm" id="crm-q" type="search" placeholder="이름 · 이메일 · 휴대폰 · 태그 · 회원번호" value="' + esc(F.q) + '" aria-label="회원 찾기"></div>' +
           '<select class="a-input a-sm" data-crm-f="via" aria-label="가입 방식"><option value="">가입 방식 전체</option>' + opt(F.via, [["kakao", "카카오 가입"], ["email", "이메일 가입"]]) + "</select>" +
           '<select class="a-input a-sm" data-crm-f="sub" aria-label="소식 받기"><option value="">소식 받기 전체</option>' + opt(F.sub, [["yes", "동의"], ["no", "안 함"]]) + "</select>" +
@@ -5272,7 +5277,7 @@
     const kp = (l, val, sub) => '<div class="a-kpi"><span>' + l + "</span><b>" + val + "</b><small>" + sub + "</small></div>";
     const tagsAll = CRM().tags.filter((t) => (m.tags || []).indexOf(t) < 0);
     return '<div class="vda-top">' + crmSubTitle + "</div>" +
-      '<section class="a-card crm-hero"><div class="crm-hero-l"><span class="a-avatar lg">' + esc(String(m.name || "?").slice(0, 1)) + '</span><div><h1>' + esc(m.name || "-") + " " + pill(st[0], st[1]) + (pf.sub ? " " + pill("구독자", "info") : "") + (m.kakaoCh ? " " + pill("카톡 채널 친구", "mute") : "") + "</h1>" +
+      '<section class="a-card crm-hero"><div class="crm-hero-l">' + crmAv(m, "lg") + '<div><h1>' + esc(m.name || "-") + " " + pill(st[0], st[1]) + (pf.sub ? " " + pill("구독자", "info") : "") + (m.kakaoCh ? " " + pill("카톡 채널 친구", "mute") : "") + "</h1>" +
         '<p class="crm-hero-sub">' + crmVia(m) + " <span>" + esc(crmE(m)) + "</span><span>" + esc(crmPh(m)) + "</span><span>가입 " + crmDate(m.createdAt) + "</span><span>마지막 활동 " + crmAgo(pf.last) + '</span><span class="a-muted">회원번호 ' + esc(m.id) + "</span></p>" +
         ((m.tags || []).length || fan.length ? '<p class="crm-tags lg">' + fan.map((t) => '<i class="auto">' + esc(t) + "</i>").join("") + (m.tags || []).map((t) => "<i>" + esc(t) + '<button type="button" data-action="crm-tag-del" data-id="' + esc(m.id) + '" data-t="' + esc(t) + '" aria-label="' + esc(t) + ' 태그 빼기">' + icon("x", "xs") + "</button></i>").join("") + "</p>" : "") + "</div></div>" +
         '<div class="crm-hero-a">' + btn(icon(ui.crmPii ? "eyeOff" : "eye", "sm") + (ui.crmPii ? "가리기" : "개인정보 보기"), "crm-pii", "a-btn-ghost a-btn-sm", ' data-id="' + esc(m.id) + '"') + btn(icon("gift", "sm") + "쿠폰 지급", "crm-1-cp", "a-btn-ghost a-btn-sm", ' data-id="' + esc(m.id) + '"') + btn(icon("coins", "sm") + "포인트 조정", "crm-1-pt", "a-btn-ghost a-btn-sm", ' data-id="' + esc(m.id) + '"') + btn(icon("send", "sm") + "메시지 보내기", "crm-camp-new", "a-btn-primary a-btn-sm", ' data-seg="one" data-id="' + esc(m.id) + '"') + btn(m.blocked ? "이용 중지 풀기" : "이용 중지", "crm-block", "a-btn-ghost a-btn-sm" + (m.blocked ? "" : " danger"), ' data-id="' + esc(m.id) + '"') + "</div></section>" +
@@ -5501,6 +5506,7 @@
     const M = () => vdMember(d.id);
     switch (d.action) {
       case "crm-seg": crmF().seg = d.k; ui.crmN = 50; render(); break;
+      case "crm-via": crmF().via = d.k || ""; ui.crmN = 50; render(); break;
       case "crm-seg-go": crmF().seg = d.k; ui.crmN = 50; ROUTE.hash = "#/center/master/vod-crm"; break;
       case "crm-reset": ui.crmF = null; ui.crmN = 50; render(); break;
       case "crm-more": ui.crmN = (ui.crmN || 50) + 50; render(); break;

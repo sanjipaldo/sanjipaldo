@@ -3062,3 +3062,21 @@ a.a-noperm, a.a-noperm * { color: var(--m-stone, #9a9aa3) !important; cursor: no
   .hk-act { width: 100%; justify-content: flex-end; padding-top: 6px; border-top: 1px solid #f1f1f4; }
   .hk-th { width: 64px; }
 }
+
+/* 회원 DB: 카카오 1초 가입 표시 · 가입 방식 바로 거르기 */
+.crm-via { align-items: center; gap: 4px; }
+.crm-via .vd-kk-ic { width: 13px; height: 13px; flex: none; }
+.crm-via + .crm-via { margin-left: 4px; }
+.crm-via.kl { background: #fff8c2; color: #3c3200; }
+.crm-via.ku { background: #f3f4f6; color: #8a8f98; text-decoration: line-through; }
+.a-avatar.crm-av-k { position: relative; overflow: visible; }
+.crm-av-kk { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: #fee500; color: #191919; box-shadow: 0 0 0 2px #fff; }
+.crm-av-kk .vd-kk-ic { width: 10px; height: 10px; }
+.crm-vias { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.crm-vbtn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid #e6e6ea; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #3b4048; cursor: pointer; }
+.crm-vbtn .icon, .crm-vbtn .vd-kk-ic { width: 14px; height: 14px; }
+.crm-vbtn .num { color: #8a8f98; font-weight: 800; }
+.crm-vbtn.on { background: #111; border-color: #111; color: #fff; }
+.crm-vbtn.on .num { color: #fff; opacity: .8; }
+.crm-vbtn.k.on { background: #fee500; border-color: #fee500; color: #191919; }
+.crm-vbtn.k.on .num { color: #191919; }
