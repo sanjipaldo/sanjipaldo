@@ -457,13 +457,14 @@
     root.innerHTML =
       '<div class="adm a-app" id="a-app">' +
         (S.role === "master" && S.actingAs ? '<div class="a-acting">' + icon("shieldCheck", "sm") + "<span>마스터 권한으로 <b>" + esc(ins.name) + "</b> 강사센터를 보고 있어요.</span>" + btn("마스터로 돌아가기", "stop-acting", "a-btn-light a-btn-sm") + "</div>" : "") +
-        '<header class="a-top">' +
+        '<header class="a-top' + (ins && isCoach() && myCoachCourses().length > 1 ? " has-csw" : "") + '">' +
           '<button class="a-icon-btn a-menu" type="button" data-action="toggle-nav" aria-label="메뉴">' + icon("menu") + "</button>" +
           // 로고는 두잉고 첫 화면(/doinggo)으로, 옆의 ‘강사센터’ 글자는 이 센터 첫 화면으로
           '<span class="a-logo"><a class="a-logo-home" href="#/doinggo" title="두잉고 홈으로" aria-label="두잉고 홈으로">' + window.doogoClassLock("hm-lock-xs") + '</a><a class="a-logo-role" href="#/center' + (partner ? "/partner" : master ? "/master" : "") + '">' + (partner ? "파트너센터" : master ? (MT() === "dc" ? "DOOGO CLASS 관리" : "마스터 관리자") : isCoach() ? "코치센터" : "강사센터") + "</a>" + (ins ? (isCoach() && myCoachCourses().length > 1 ? '<button type="button" class="a-coach-sw" data-action="coach-switch" title="맡은 다른 강의로 옮기기">' + icon("swap", "xs") + "<span>" + esc(ins.displayName) + "</span>" + icon("chevDown", "xs") + "</button>" : '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>") : "") + "</span>" +
           '<div class="a-top-right">' +
             (ins ? '<span class="a-chip a-hide-sm' + (TRK() === "vod" ? " a-chip-vod" : "") + '">' + (TRK() === "vod" ? "DOOGO CLASS · VOD 수강생 " + VX().buyersOf(ins.id).filter((b) => b.active).length + "명" : co ? esc(co.name) + " · " + DB.STATUS_LABEL[DB.cohortStatus(co)] : "기수 없음") + "</span>" +
-              btn(icon("eye", "sm") + '<span class="a-hide-sm">수강생 화면 보기</span>', "preview", "a-btn-outline a-btn-sm") : "") +
+              // 수강생 화면 미리보기 — 휴대폰에서는 짧게 ‘미리보기’ (눈 아이콘만 있으면 뭔지 몰라서)
+              btn(icon("eye", "sm") + '<span class="a-hide-sm">' + (TRK() === "vod" ? "VOD 수강생 화면 보기" : "수강생 화면 보기") + '</span><span class="a-only-sm">미리보기</span>', "preview", "a-btn-outline a-btn-sm a-pv-btn", ' title="수강생에게 보이는 화면을 미리 봐요 (수강생 기록은 바뀌지 않아요)" aria-label="수강생 화면 미리보기"') : "") +
             (() => {
               let n = 0, href = "", tip = "";
               if (partner) { const ni = affInqNew(PM), nn = affNoticeNew(PM); n = ni + nn; href = ni || !nn ? "#/center/partner/inquiries" : "#/center/partner/notices"; tip = n ? "입점 문의 새 소식 " + ni + "건 · 새 공지 " + nn + "건" : "새 알림이 없어요"; }

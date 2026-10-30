@@ -2861,3 +2861,17 @@ a.a-noperm, a.a-noperm * { color: var(--m-stone, #9a9aa3) !important; cursor: no
 @media (max-width: 720px) {
   .a-coach-sw { height: 28px; padding: 0 8px; font-size: 12px; max-width: 34vw; }
 }
+
+/* 강사센터 위쪽 ‘수강생 화면 미리보기’ — 휴대폰에서는 아이콘 + ‘미리보기’ */
+.a-only-sm { display: none; }
+@media (max-width: 720px) {
+  .a-only-sm { display: inline; }
+  .a-pv-btn { gap: 4px; padding: 0 10px; white-space: nowrap; font-size: 13px; }
+}
+/* 여러 강의 코치: 좁은 휴대폰에서는 ‘코치센터’ 글자를 빼고 강의 바꾸기 알약(⇄ 초이)만 — 미리보기 버튼과 겹치지 않게 */
+.a-top.has-csw .a-logo { min-width: 0; }
+@media (max-width: 480px) {
+  .a-top.has-csw .a-logo-role { display: none; }
+  .a-top.has-csw .a-logo-div, .a-top.has-csw .a-logo > i { display: none; }
+  .a-top.has-csw .a-coach-sw { max-width: 30vw; }
+}
