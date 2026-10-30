@@ -309,6 +309,18 @@ function vodDemoMember(get) {
   return { writes, result: { member: mid, orders: nos.length } };
 }
 
+/* ---------- 테스트 코치 김하나: 초이 강의 코치도 맡기 (대표님 요청 · 여러 강의 코치 로그인 확인용) ----------
+ * 문대표 강의에 김하나(1004) 코치가 있고, 초이 강의에 같은 이름의 코치가 아직 없을 때만 더해요. 강사센터 › 코치 관리에서 지우면 끝이에요 */
+function hanaSecondCourse(get) {
+  const m = get("ins:moon"), c = get("ins:choi");
+  if (!isObj(m) || !isObj(c)) return { writes: {}, result: { skipped: "강사 없음" } };
+  const hana = (m.coaches || []).find((x) => x && String(x.name || "").replace(/\s+/g, "") === "김하나" && x.phone4 === "1004");
+  if (!hana) return { writes: {}, result: { skipped: "문대표 강의에 김하나 코치 없음" } };
+  if ((c.coaches || []).some((x) => x && String(x.name || "").replace(/\s+/g, "") === "김하나")) return { writes: {}, result: { skipped: "이미 있음" } };
+  const add = { id: "coach-hana", name: "김하나", phone4: "1004", status: "active", perms: ["reviews", "questions"], memo: "테스트 코치 · 여러 강의 코치 확인용", createdAt: "2026-10-30" };
+  return { writes: { "ins:choi": Object.assign({}, c, { coaches: (Array.isArray(c.coaches) ? c.coaches : []).concat([add]) }) }, result: { added: "ins:choi coach-hana" } };
+}
+
 /* 위에서부터 차례로 (앞 작업 결과를 뒤 작업이 본다) */
 const OPS = [
   { id: "2026-10-08-docs-guide-6", note: "문대표 서류 준비 가이드를 6단계로", run: docsGuideSix },
@@ -321,7 +333,8 @@ const OPS = [
   { id: "2026-10-15-logic-to-bualnam", note: "강사 표시 이름 로직메이커 → 부알남 (로그인 이름은 그대로)", run: logicToBualnam },
   { id: "2026-10-16-food-quicklink-desc", note: "빠른 이동 두고푸드 설명 → 전문 식품 도매몰 · 사업자 전용가 (기본 문구일 때만)", run: foodQuickLinkDesc },
   { id: "2026-10-17-farmer-to-godfarmer", note: "강사 표시 이름 황금농부 → 갓농부 + 강의 분야 ‘귤 단 하나 팔아 월매출 10억’ (로그인 이름은 그대로)", run: farmerToGodFarmer },
-  { id: "2026-10-29-vod-demo-member", note: "두고클래스 체험 계정 vod@gmail.com / vod + 산 강의 6개 (0원 체험 주문)", run: vodDemoMember }
+  { id: "2026-10-29-vod-demo-member", note: "두고클래스 체험 계정 vod@gmail.com / vod + 산 강의 6개 (0원 체험 주문)", run: vodDemoMember },
+  { id: "2026-10-30-hana-second-course", note: "테스트 코치 김하나(1004)가 초이 강의 코치도 맡기 (여러 강의 코치 로그인 확인용)", run: hanaSecondCourse }
 ];
 
-module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer, vodDemoMember };
+module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer, vodDemoMember, hanaSecondCourse };

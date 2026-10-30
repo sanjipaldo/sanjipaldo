@@ -1,6 +1,8 @@
 /* POST /api/auth
  *  { action: "student", iid, name, phone4 }        수강생 로그인
- *  { action: "admin", tab, id, pw }                 강사 · 코치 · 마스터 로그인 (tab: instructor | coach | master)
+ *  { action: "admin", tab, id, pw, iid? }           강사 · 코치 · 마스터 로그인 (tab: instructor | coach | master)
+ *        코치가 여러 강사님 강의를 맡고 있으면(같은 이름 + 뒷자리) 로그인 대신 { choose, courses } 를 돌려주고, iid 를 골라 다시 보내면 그 강의로 들어가요
+ *  { action: "coachSwitch", iid? }                  로그인한 코치가 맡은 다른 강의로 옮기기 (iid 없으면 맡은 강의 목록)
  *  { action: "logout", which: "student"|"admin" }
  * 비밀번호(전화번호 뒷자리)는 서버에서만 확인하고, 15분에 여러 번 틀리면 잠시 막는다. */
 "use strict";
@@ -111,14 +113,7 @@ async function adminLogin(req, res, b) {
   if (await limited(req, nameKey)) return send(res, 429, { error: "locked" });
   const all = (await store.listDocs({ prefixes: ["ins:%"] })).map((r) => r.v);
   const ins = all.find((x) => norm(x.name) === name && x.phone4 === pw);
-  const findCoach = () => {
-    for (const i of all) {
-      if (i.status !== "active") continue;
-      const c = (i.coaches || []).find((x) => norm(x.name) === name && x.phone4 === pw);
-      if (c) return { i, c };
-    }
-    return null;
-  };
+  const hits = coachHits(all, name, pw), live = hits.filter((h) => h.c.status === "active");
   const okIns = async () => {
     if (ins.status !== "active") return send(res, 200, { error: "paused-platform" });
     await store.rlClear([nameKey]);
@@ -132,19 +127,62 @@ async function adminLogin(req, res, b) {
     auth.setCookie(req, res, "admin", auth.sign({ r: "coach", iid: hit.i.id, cid: hit.c.id }));
     return send(res, 200, { ok: true, role: "coach", iid: hit.i.id, cid: hit.c.id, name: hit.c.name });
   };
+  // 코치: 맡은 강의가 하나면 바로, 여럿이면 고르게 해요 (고른 강의 iid 를 다시 보내면 그 강의로)
+  const asCoach = async () => {
+    if (!live.length) return okCoach(hits[0]); // 모두 멈춘 코치 자리 → paused-coach
+    const want = String(b.iid || "");
+    if (want) { const h = live.find((x) => x.i.id === want); if (h) return okCoach(h); return send(res, 200, { error: "notfound" }); }
+    if (live.length === 1) return okCoach(live[0]);
+    await store.rlClear([nameKey]);
+    return send(res, 200, { choose: true, role: "coach", name: live[0].c.name, courses: await courseList(live) });
+  };
   // 코치 탭은 코치를 먼저, 강사 탭은 강사를 먼저 찾는다 (탭을 잘못 골라도 들어갈 수 있게)
-  const hit = findCoach();
-  if (tab === "coach" && hit) return okCoach(hit);
+  if (tab === "coach" && hits.length) return asCoach();
   if (ins) return okIns();
-  if (hit) return okCoach(hit);
+  if (hits.length) return asCoach();
   await fail(req, nameKey);
   return send(res, 200, { error: "notfound" });
+}
+/** 같은 이름 + 뒷자리로 등록된 코치 자리 (운영 중인 강사만) — 한 사람이 여러 강사님 강의의 코치일 수 있어요 */
+function coachHits(all, name, pw) {
+  const out = [];
+  for (const i of all) {
+    if (!i || i.status !== "active") continue;
+    const c = (i.coaches || []).find((x) => norm(x.name) === name && x.phone4 === pw);
+    if (c) out.push({ i, c });
+  }
+  return out;
+}
+/** 코치가 고를 강의 목록: 강사 이름 · 강의 이름 · 사진(주소일 때만) · 맡은 메뉴 수 */
+async function courseList(hits) {
+  const docs = await store.getDocs(hits.map((h) => "content:" + h.i.id));
+  return hits.map((h) => {
+    const b = Object.assign({}, h.i.brand || {}, ((docs["content:" + h.i.id] || {}).v || {}).brand || {}), ph = String(b.photo || "");
+    return { iid: h.i.id, ins: String(h.i.displayName || h.i.name || ""), title: String(b.courseTitle || b.name || ""), photo: /^(assets\/|https:\/\/)/.test(ph) && ph.length < 300 ? ph : "", perms: (h.c.perms || []).length };
+  });
+}
+/** 로그인한 코치 → 맡은 다른 강의로 옮기기 (지금 쿠키의 코치 자리와 같은 이름 + 뒷자리인 자리만) */
+async function coachSwitch(req, res, b) {
+  const ids = await auth.identify(req), a = ids.admin;
+  if (!a || a.role !== "coach") return send(res, 403, { error: "coach" });
+  const cur = ((await store.getDoc("ins:" + a.iid)) || {}).v, me = cur && (cur.coaches || []).find((x) => x.id === a.cid);
+  if (!me) return send(res, 403, { error: "coach" });
+  const all = (await store.listDocs({ prefixes: ["ins:%"] })).map((r) => r.v);
+  const live = coachHits(all, norm(me.name), me.phone4).filter((h) => h.c.status === "active");
+  const want = String(b.iid || "");
+  if (!want) return send(res, 200, { ok: true, cur: a.iid, courses: await courseList(live) });
+  const h = live.find((x) => x.i.id === want);
+  if (!h) return send(res, 200, { error: "notfound" });
+  await touchCoach(h.i.id, h.c.id).catch(() => {});
+  auth.setCookie(req, res, "admin", auth.sign({ r: "coach", iid: h.i.id, cid: h.c.id }));
+  return send(res, 200, { ok: true, role: "coach", iid: h.i.id, cid: h.c.id, name: h.c.name });
 }
 
 module.exports = handler(["POST"], async (req, res) => {
   const b = await body(req);
   if (b.action === "student") return studentLogin(req, res, b);
   if (b.action === "admin") return adminLogin(req, res, b);
+  if (b.action === "coachSwitch") return coachSwitch(req, res, b);
   if (b.action === "logout") {
     const w = b.which === "admin" ? ["admin"] : b.which === "student" ? ["student"] : ["student", "admin"];
     w.forEach((x) => auth.setCookie(req, res, x, ""));

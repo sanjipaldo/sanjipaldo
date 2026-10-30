@@ -20,6 +20,7 @@
 
   let S = null; // 관리자 세션 { role: "instructor"|"coach"|"master", instructorId?, coachId?, actingAs? }
   let loginTab = "instructor";
+  let coachPick = null; // 코치 로그인 중 강의 고르기 { id, pw, tab, name, courses }
   let confirmFn = null;
   const ui = { stuCohort: "all", stuStatus: "pending", stuQuery: "", picked: new Set(), revCohort: null, revWeek: "all", revFilter: "pending", revPicked: new Set(), qFilter: "open", libTab: "ebook", schedCohort: null, mIns: "all", mStatus: "all", mMenuIns: null, mRepIns: "all" };
 
@@ -229,14 +230,13 @@
       else err.textContent = "아이디 또는 비밀번호가 맞지 않아요.";
       return;
     }
+    // 코치: 같은 이름 + 뒷자리로 여러 강사님 강의를 맡았으면 고르게 해요
     const coachLogin = () => {
-      const hit = DB.findCoachLogin(id, pw);
-      if (!hit) return false;
-      if (hit.coach.status !== "active") { err.textContent = "사용이 중지된 코치 계정이에요. 강사님께 문의해 주세요."; return true; }
-      S = { role: "coach", instructorId: hit.ins.id, coachId: hit.coach.id };
-      DB.session.setAdmin(S); DB.store.remove("moonclass:after-login");
-      hit.coach.lastLoginAt = Date.now(); DB.save();
-      ROUTE.hash = "#/center"; toast(hit.coach.name + " 코치님, 환영합니다!");
+      const hits = DB.findCoachLogins(id, pw), live = hits.filter((h) => h.coach.status === "active");
+      if (!hits.length) return false;
+      if (!live.length) { err.textContent = "사용이 중지된 코치 계정이에요. 강사님께 문의해 주세요."; return true; }
+      if (live.length > 1) { coachPick = { id, pw, tab: loginTab, name: live[0].coach.name, courses: coachCoursesLocal(id, pw) }; coachPickModal(coachPick.courses, "", coachPick.name); return true; }
+      coachIn(live[0].ins, live[0].coach);
       return true;
     };
     const ins = DB.data.instructors.find((x) => x.name.replace(/\s+/g, "") === id.replace(/\s+/g, "") && x.phone4 === pw);
@@ -263,22 +263,103 @@
     "paused-partner": "사용이 중지된 파트너 계정이에요. 두잉고 담당자에게 문의해 주세요.",
     input: "이름과 전화번호 뒷자리 4자리를 확인해 주세요."
   };
-  function serverLogin(f, id, pw, err) {
-    const btn = f.querySelector("button[type=submit]");
+  function serverLogin(f, id, pw, err, iid) {
+    const btn = f && f.querySelector("button[type=submit]");
     if (btn) btn.disabled = true;
-    DB.remote.login({ action: "admin", tab: loginTab, id, pw }).then((r) => {
+    DB.remote.login({ action: "admin", tab: loginTab, id, pw, iid: iid || undefined }).then((r) => {
+      if (r.choose && Array.isArray(r.courses) && r.courses.length) { coachPick = { id, pw, tab: loginTab, name: r.name || "", courses: r.courses }; coachPickModal(r.courses, "", coachPick.name); return; }
       if (r.error) {
         err.textContent = LOGIN_ERR[r.error] || (loginTab === "master" ? "아이디 또는 비밀번호가 맞지 않아요." : loginTab === "partner" ? "등록된 파트너 정보와 일치하지 않아요. 아이디와 비밀번호를 확인해 주세요." : loginTab === "coach" ? "등록된 코치 정보와 일치하지 않아요. 이름과 뒷자리를 확인해 주세요." : "등록된 강사 정보와 일치하지 않아요. 이름과 뒷자리를 확인해 주세요. (코치는 ‘코치’ 탭)");
         return;
       }
       return DB.remote.refresh().then(() => {
-        S = r.role === "master" ? (r.staffId ? { role: "master", staffId: r.staffId } : { role: "master" }) : r.role === "partner" ? { role: "partner", partnerId: r.pid } : r.role === "coach" ? { role: "coach", instructorId: r.iid, coachId: r.cid } : { role: "instructor", instructorId: r.iid };
+        S = r.role === "master" ? (r.staffId ? { role: "master", staffId: r.staffId } : { role: "master" }) : r.role === "partner" ? { role: "partner", partnerId: r.pid } : r.role === "coach" ? Object.assign({ role: "coach", instructorId: r.iid, coachId: r.cid }, coachPick ? { courses: coachPick.courses } : {}) : { role: "instructor", instructorId: r.iid };
+        const picked = r.role === "coach" && coachPick ? (coachPick.courses.find((x) => x.iid === r.iid) || {}).ins : "";
+        coachPick = null;
         DB.session.setAdmin(S);
         const next = DB.store.get("moonclass:after-login", ""); DB.store.remove("moonclass:after-login");
         ROUTE.hash = r.role === "master" ? "#/center/master" : r.role === "partner" ? "#/center/partner" : r.role === "instructor" && next && /^#\/center\/(?!master)/.test(next) ? next : "#/center";
-        toast(r.role === "master" ? (r.staffId ? r.name + "님, 운영자로 로그인했어요." : "마스터 관리자로 로그인했어요.") : r.role === "partner" ? r.name + " 파트너님, 환영합니다!" : r.name + (r.role === "coach" ? " 코치님, 환영합니다!" : " 강사님, 환영합니다!"));
+        toast(r.role === "master" ? (r.staffId ? r.name + "님, 운영자로 로그인했어요." : "마스터 관리자로 로그인했어요.") : r.role === "partner" ? r.name + " 파트너님, 환영합니다!" : r.name + (r.role === "coach" ? " 코치님, 환영합니다!" + (picked ? " · " + picked + " 강사님 강의" : "") : " 강사님, 환영합니다!"));
       });
     }).catch(() => { err.textContent = "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."; }).then(() => { if (btn) btn.disabled = false; });
+  }
+  /* ---------- 코치가 여러 강사님 강의를 맡았을 때: 로그인할 때 고르고, 코치센터에서 바꾸기 ---------- */
+  // 같은 이름 + 뒷자리로 등록된 코치 자리 중 사용 중인 것 → 고르기 목록 (로컬 · 체험 모드)
+  function coachCoursesLocal(name, phone4) {
+    return DB.findCoachLogins(name, phone4).filter((h) => h.coach.status === "active").map((h) => {
+      const b = Object.assign({}, h.ins.brand || {}, (DB.content(h.ins.id) || {}).brand || {}), ph = String(b.photo || "");
+      return { iid: h.ins.id, ins: h.ins.displayName || h.ins.name, title: b.courseTitle || b.name || "", photo: /^(assets\/|https:\/\/)/.test(ph) ? ph : "", perms: (h.coach.perms || []).length };
+    });
+  }
+  // 지금 코치가 맡은 강의 (서버: 로그인 · 확인 때 받은 목록 / 로컬: 바로 계산)
+  function myCoachCourses() {
+    if (!isCoach()) return [];
+    if (!DB.remote.on) { const me = ME_COACH(); return me ? coachCoursesLocal(me.name, me.phone4) : []; }
+    return Array.isArray(S.courses) ? S.courses : [];
+  }
+  let coachListAsked = false;
+  // 서버 모드: 코치센터를 열 때 한 번 맡은 강의 목록을 다시 물어요 (그 사이 다른 강의 코치가 됐을 수도 있어서)
+  function coachListCheck() {
+    if (coachListAsked || !isCoach() || !DB.remote.on) return;
+    coachListAsked = true;
+    DB.remote.login({ action: "coachSwitch" }).then((r) => {
+      if (!r || !r.ok || !Array.isArray(r.courses) || !isCoach()) return;
+      const was = JSON.stringify(S.courses || []), now = JSON.stringify(r.courses);
+      if (was === now) return;
+      S.courses = r.courses; DB.session.setAdmin(S);
+      if (!document.querySelector("#modal-root .a-modal")) render();
+    }, () => {});
+  }
+  function coachPickModal(list, cur, name) {
+    openModal(cur ? "다른 강의 코치센터로 옮기기" : "어느 강의 코치센터로 들어갈까요?",
+      '<p class="a-muted cp-lead">' + (name ? "<b>" + esc(name) + "</b> 코치님은 " : "") + "<b>" + list.length + "개</b> 강의의 코치예요. " + (cur ? "옮겨 갈 강의를 골라 주세요." : "들어갈 강의를 골라 주세요. 들어간 뒤에도 위쪽 강사님 이름을 누르면 언제든 옮겨 갈 수 있어요.") + "</p>" +
+      '<div class="cp-list">' + list.map((x) => {
+        const on = x.iid === cur;
+        return '<button type="button" class="cp-it' + (on ? " on" : "") + '" data-action="coach-go" data-iid="' + esc(x.iid) + '"' + (on ? " disabled" : "") + '><span class="cp-av' + (x.photo ? " ph" : "") + '">' + (x.photo ? '<img src="' + esc(x.photo) + '" alt="" decoding="async">' : esc(String(x.ins || "?").slice(0, 1))) + "</span>" +
+          '<span class="cp-t"><b>' + esc(x.ins) + " 강사님</b><small>" + esc(x.title || "강의") + " · 맡은 메뉴 " + (Number(x.perms) || 0) + "개</small></span>" + (on ? pill("지금 여기", "ok") : icon("chevRight", "sm")) + "</button>";
+      }).join("") + "</div>" + '<p class="a-error" id="cp-err" role="alert"></p>', "", "md");
+  }
+  function coachIn(ins, coach, many) {
+    S = { role: "coach", instructorId: ins.id, coachId: coach.id };
+    DB.session.setAdmin(S); DB.store.remove("moonclass:after-login");
+    coach.lastLoginAt = Date.now(); DB.save(); coachPick = null;
+    ROUTE.hash = "#/center"; render();
+    toast(coach.name + " 코치님, 환영합니다!" + (many ? " · " + ins.displayName + " 강사님 강의" : ""));
+  }
+  // 강의 고르기 목록에서 하나를 누르면: 로그인 중이면 그 강의로 로그인, 코치센터 안이면 그 강의로 옮기기
+  function coachGo(iid, el) {
+    const err = document.getElementById("cp-err"), say = (m) => { if (err) err.textContent = m; if (el) el.disabled = false; };
+    if (el) el.disabled = true;
+    if (!S && coachPick) {
+      if (!DB.remote.on) { const h = DB.findCoachLogins(coachPick.id, coachPick.pw).find((x) => x.ins.id === iid && x.coach.status === "active"); if (!h) return say("이 강의의 코치 자리가 멈췄거나 지워졌어요. 강사님께 문의해 주세요."); return coachIn(h.ins, h.coach, true); }
+      loginTab = coachPick.tab;
+      serverLogin(document.getElementById("a-login-form"), coachPick.id, coachPick.pw, err || document.getElementById("al-error"), iid);
+      return;
+    }
+    if (!isCoach()) return;
+    if (!DB.remote.on) {
+      const me = ME_COACH(), h = me && DB.findCoachLogins(me.name, me.phone4).find((x) => x.ins.id === iid && x.coach.status === "active");
+      if (!h) return say("이 강의의 코치 자리가 멈췄거나 지워졌어요. 강사님께 문의해 주세요.");
+      S = { role: "coach", instructorId: h.ins.id, coachId: h.coach.id }; DB.session.setAdmin(S); h.coach.lastLoginAt = Date.now(); DB.save();
+      ROUTE.hash = "#/center"; render(); toast(h.ins.displayName + " 강사님 강의 코치센터로 옮겼어요."); return;
+    }
+    DB.remote.login({ action: "coachSwitch", iid }).then((r) => {
+      if (!r || !r.ok) return say("옮겨 가지 못했어요. 그 강의의 코치 자리가 멈췄거나 지워졌을 수 있어요.");
+      // 새 강의 자료를 처음부터 다시 받도록 새로고침해요 (예전 강의 화면이 섞이지 않게)
+      S = Object.assign({ role: "coach", instructorId: r.iid, coachId: r.cid }, S && S.courses ? { courses: S.courses } : {}); DB.session.setAdmin(S);
+      ROUTE.replace("#/center"); location.reload();
+    }, () => say("서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."));
+  }
+  function coachSwitchOpen() {
+    if (!isCoach()) return;
+    const me = ME_COACH() || {};
+    if (!DB.remote.on) { coachPickModal(myCoachCourses(), IID(), me.name); return; }
+    DB.remote.login({ action: "coachSwitch" }).then((r) => {
+      const list = r && r.ok && Array.isArray(r.courses) ? r.courses : myCoachCourses();
+      if (r && r.ok) { S.courses = list; DB.session.setAdmin(S); }
+      if (list.length < 2) { toast("지금은 이 강의 하나만 맡고 있어요.", "warn"); return; }
+      coachPickModal(list, IID(), me.name);
+    }, () => toast("서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"));
   }
   function logout() {
     S = null; DB.session.setAdmin(null); ROUTE.hash = "#/center/login";
@@ -379,7 +460,7 @@
         '<header class="a-top">' +
           '<button class="a-icon-btn a-menu" type="button" data-action="toggle-nav" aria-label="메뉴">' + icon("menu") + "</button>" +
           // 로고는 두잉고 첫 화면(/doinggo)으로, 옆의 ‘강사센터’ 글자는 이 센터 첫 화면으로
-          '<span class="a-logo"><a class="a-logo-home" href="#/doinggo" title="두잉고 홈으로" aria-label="두잉고 홈으로">' + window.doogoClassLock("hm-lock-xs") + '</a><a class="a-logo-role" href="#/center' + (partner ? "/partner" : master ? "/master" : "") + '">' + (partner ? "파트너센터" : master ? (MT() === "dc" ? "DOOGO CLASS 관리" : "마스터 관리자") : isCoach() ? "코치센터" : "강사센터") + "</a>" + (ins ? '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>" : "") + "</span>" +
+          '<span class="a-logo"><a class="a-logo-home" href="#/doinggo" title="두잉고 홈으로" aria-label="두잉고 홈으로">' + window.doogoClassLock("hm-lock-xs") + '</a><a class="a-logo-role" href="#/center' + (partner ? "/partner" : master ? "/master" : "") + '">' + (partner ? "파트너센터" : master ? (MT() === "dc" ? "DOOGO CLASS 관리" : "마스터 관리자") : isCoach() ? "코치센터" : "강사센터") + "</a>" + (ins ? (isCoach() && myCoachCourses().length > 1 ? '<button type="button" class="a-coach-sw" data-action="coach-switch" title="맡은 다른 강의로 옮기기">' + icon("swap", "xs") + "<span>" + esc(ins.displayName) + "</span>" + icon("chevDown", "xs") + "</button>" : '<em class="a-hide-sm">' + esc(ins.displayName) + "</em>") : "") + "</span>" +
           '<div class="a-top-right">' +
             (ins ? '<span class="a-chip a-hide-sm' + (TRK() === "vod" ? " a-chip-vod" : "") + '">' + (TRK() === "vod" ? "DOOGO CLASS · VOD 수강생 " + VX().buyersOf(ins.id).filter((b) => b.active).length + "명" : co ? esc(co.name) + " · " + DB.STATUS_LABEL[DB.cohortStatus(co)] : "기수 없음") + "</span>" +
               btn(icon("eye", "sm") + '<span class="a-hide-sm">수강생 화면 보기</span>', "preview", "a-btn-outline a-btn-sm") : "") +
@@ -425,7 +506,8 @@
     if (can("questions")) kpis.push(kpi("답변 대기 문의", n.questions + "건", "1:1 요청 · 오류 신고", "#/center/questions", n.questions ? "warn" : ""));
     if (can("students")) kpis.push(kpi("승인 대기 수강생", n.pending + "명", "새 수강 신청", "#/center/students?status=pending", n.pending ? "warn" : ""));
     kpis.push(kpi("진행 중 기수", co ? co.name : "-", co ? (DB.cohortStatus(co) === "running" ? wk + "주차 진행 중" : fmtMD(co.startDate) + " 시작") : "기수 없음", can("cohorts") ? "#/center/cohorts" : "#/center"));
-    return head(esc(me.name || "") + " 코치님, 안녕하세요", esc(ins.displayName) + " · " + esc(c.brand.courseTitle) + " 코치" + (me.memo ? " · " + esc(me.memo) : "")) +
+    const many = myCoachCourses();
+    return head((me.name || "") + " 코치님, 안녕하세요", esc(ins.displayName) + " · " + esc(c.brand.courseTitle) + " 코치" + (me.memo ? " · " + esc(me.memo) : ""), many.length > 1 ? btn(icon("swap", "sm") + "다른 강의 코치센터 (" + many.length + "개)", "coach-switch", "a-btn-outline") : "") +
       '<div class="a-kpis">' + kpis.join("") + "</div>" +
       '<section class="a-card a-coach-menus"><div class="a-card-head"><h2>' + icon("shieldCheck", "sm") + ' 내가 맡은 메뉴</h2><span class="a-muted">강사님이 열어 준 메뉴예요. 더 필요하면 강사님께 요청해 주세요.</span></div>' +
         (myMenus.length ? '<div class="a-coach-chips">' + myMenus.map((x) => '<a class="a-coach-chip" href="#/center/' + x[0] + '">' + esc(x[1]) + icon("arrowRight", "xs") + "</a>").join("") + "</div>" : '<p class="a-muted" style="margin:0">아직 열린 메뉴가 없어요. 강사님께 요청해 주세요.</p>') + "</section>" +
@@ -6213,6 +6295,7 @@
     if (master && r.parts[1] && (r.parts[1] === "staff" ? !!staffMe() : !staffCan("master/" + r.parts[1]))) { ROUTE.replace("#/center/master"); toast("이 메뉴는 내 운영자 계정에 열려 있지 않아요. 최고 관리자에게 요청해 주세요.", "warn"); return render(); }
     if (!master && !can(r.parts[0] || "")) { ROUTE.replace("#/center"); toast("이 메뉴는 코치 계정에 열려 있지 않아요. 필요하면 강사님께 요청해 주세요.", "warn"); return render(); }
     document.body.dataset.master = master ? "1" : "";
+    if (isCoach()) coachListCheck();
     document.body.dataset.coach = isCoach() ? "1" : "";
     renderShell(r);
     const main = document.getElementById("a-main");
@@ -6276,6 +6359,8 @@
       case "login-tab": loginTab = d.tab; document.body.dataset.master = loginTab === "master" ? "1" : ""; renderLogin(); break;
       case "toggle-pw": { const inp = document.getElementById("al-pw"); const show = inp.type === "password"; inp.type = show ? "text" : "password"; a.innerHTML = icon(show ? "eyeOff" : "eye", "sm"); break; }
       case "logout": logout(); break;
+      case "coach-go": coachGo(d.iid, a); break;
+      case "coach-switch": coachSwitchOpen(); break;
       case "aff-new": affForm(); break;
       case "aff-edit": affForm(affOf(d.id)); break;
       case "aff-del": {

@@ -592,6 +592,8 @@ window.CLASS_SEED = {
     { id: "farmer", name: "황금농부", phone4: "3333", displayName: "갓농부", status: "active", createdAt: "2026-09-12",
       brand: { name: "갓농부", courseTitle: "갓농부 실전 클래스", field: "귤 단 하나 팔아 월매출 10억", theme: "binance", photo: "assets/home/farmer-profile.webp" } },
     { id: "choi", name: "초이", phone4: "2222", displayName: "초이", status: "active", createdAt: "2026-09-20",
+      // 테스트 코치 김하나는 문대표 · 초이 두 강의를 맡아요 (코치 로그인 때 강의 고르기 확인용)
+      coaches: [{ id: "coach-hana", name: "김하나", phone4: "1004", status: "active", perms: ["reviews", "questions"], memo: "테스트 코치 · 여러 강의 코치 확인용", createdAt: "2026-10-30" }],
       brand: { name: "초이 클래스", courseTitle: "초이와 함께하는 실전 클래스", theme: "pink", photo: "assets/home/choi-profile.webp" },
       menu: { items: [{ key: "home", on: true }, { key: "curriculum", on: true }, { key: "missions", on: true }, { key: "schedule", on: true }, { key: "notices", on: true }, { key: "qna", on: true }, { key: "docs", on: false }, { key: "bot", on: true }, { key: "library", on: true }, { key: "motivation", on: false }, { key: "certificate", on: true }], library: { ebook: true, file: true, vod: true, senior: false } } }
   ],

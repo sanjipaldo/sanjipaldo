@@ -720,6 +720,16 @@
   const coachesOf = (insId) => { const ins = instructor(insId); return ins ? (ins.coaches = Array.isArray(ins.coaches) ? ins.coaches : []) : []; };
   const coach = (insId, coachId) => coachesOf(insId).find((x) => x.id === coachId) || null;
   /** 이름 + 뒷자리로 코치 찾기 (운영 중인 강사의 코치 · 중지 여부는 부르는 쪽에서 확인) */
+  /** 같은 이름 + 뒷자리로 등록된 코치 자리 모두 (운영 중인 강사만) — 한 사람이 여러 강사님 강의의 코치일 수 있어요 */
+  function findCoachLogins(name, phone4) {
+    const nm = String(name || "").replace(/\s+/g, ""), out = [];
+    for (const ins of db.instructors) {
+      if (ins.status !== "active") continue;
+      const c = (ins.coaches || []).find((x) => x.name.replace(/\s+/g, "") === nm && x.phone4 === phone4);
+      if (c) out.push({ ins, coach: c });
+    }
+    return out;
+  }
   function findCoachLogin(name, phone4) {
     const nm = String(name || "").replace(/\s+/g, "");
     for (const ins of db.instructors) {
@@ -1814,7 +1824,7 @@
   };
 
   window.DB = {
-    load, save, reset, store, clone, uid, esc, youtubeId, vdur, rich, libNoticeOf, CHANNEL_TYPES, CHANNEL_ICONS, CHANNEL_COLORS, channelType, channelLook, defaultChannels, channelsOf, PARTNER_GROUPS, PARTNER_ICONS, defaultPartners, partnersOf, inkOn, coachesOf, coach, findCoachLogin, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
+    load, save, reset, store, clone, uid, esc, youtubeId, vdur, rich, libNoticeOf, CHANNEL_TYPES, CHANNEL_ICONS, CHANNEL_COLORS, channelType, channelLook, defaultChannels, channelsOf, PARTNER_GROUPS, PARTNER_ICONS, defaultPartners, partnersOf, inkOn, coachesOf, coach, findCoachLogin, findCoachLogins, QL_ICONS, defaultQuickLinks, quickLinksOf, csvData, MISSION_KINDS, missionKind, classDate, template, templateFromMoon, moonMenu, normalizeContent, LANDING_SECTIONS, landingOf, FREE_SECTIONS, freeOf,
     get data() { return db; },
     instructor, activeInstructors, content, cohort, cohortsOf, studentsOf, student, certNo,
     VOD_MENUS, VOD_LIVE_ONLY, VOD_KEYS, vodContent, vodView, vodOwn, vodEnsure, vodCopy, vodCohortId, vodStudentsOf, isVodStudent, splitMid,

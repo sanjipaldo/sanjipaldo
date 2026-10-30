@@ -2393,3 +2393,23 @@ a.login-vod:hover { filter: brightness(.97); }
 /* 영상 실제 길이 (비메오 · 유튜브에서 자동으로 받아 와요) */
 .vdur:empty { display: none; }
 .vdur.is-real { font-variant-numeric: tabular-nums; }
+
+/* ---------- 로그인 카드 탭: 그 자리에서 바뀌는 ‘두고클래스’(VOD 회원) 칸 ---------- */
+.lg-pane[hidden] { display: none !important; }
+.lg-vod { display: grid; gap: 12px; }
+.lg-vod .lg-vod-logo { margin: 4px 0 0; text-align: center; }
+.lg-vod .lg-vod-logo img { height: 22px; }
+.lg-vod h1 { margin: 6px 0 0; }
+.lg-vod .lead { margin: 0 0 6px; }
+.lg-kakao { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 52px; border: 0; border-radius: 12px; background: #fee500; color: #191919; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+.lg-kakao:hover { background: #fada0a; }
+.lg-kakao svg { width: 20px; height: 20px; }
+.lg-or { display: flex; align-items: center; gap: 12px; margin: 4px 0 0; font-size: 13px; color: var(--mute, #8a8f98); }
+.lg-or::before, .lg-or::after { content: ""; flex: 1; height: 1px; background: var(--hairline, #e6e8eb); }
+.lg-vod .login-form { display: grid; gap: 14px; }
+.lg-vod .lg-ts:empty { display: none; }
+.lg-vod-links { display: flex; justify-content: center; gap: 8px; margin: 2px 0 0; font-size: 14px; }
+.lg-vod-links a { color: var(--body, #4b5563); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.lg-vod-demo { margin: 0; text-align: center; font-size: 12.5px; color: var(--mute, #8a8f98); }
+.lg-vod .login-help { margin: 0; text-align: center; }
+.login-stack.svc-vod > .login-alt, .login-stack.svc-vod > .login-intro { display: none; }

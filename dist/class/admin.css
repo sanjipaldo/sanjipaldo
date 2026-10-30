@@ -2841,3 +2841,23 @@ a.a-noperm, a.a-noperm * { color: var(--m-stone, #9a9aa3) !important; cursor: no
   .vs-pay-top { grid-template-columns: 1fr auto; }
   .vs-pay-top small { grid-column: 1 / -1; }
 }
+
+/* ---------- 코치: 여러 강의 고르기 · 바꾸기 ---------- */
+.a-coach-sw { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px; border: 1px solid var(--m-primary-200, #fbd0d9); border-radius: 100px; background: #fff; color: var(--m-ink, #111); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; max-width: 46vw; }
+.a-coach-sw span { overflow: hidden; text-overflow: ellipsis; }
+.a-coach-sw svg { flex: 0 0 auto; color: var(--m-primary, #fc1c49); }
+.a-coach-sw:hover { background: var(--m-primary-50, #fff1f4); }
+.cp-lead { margin: 0 0 14px; line-height: 1.6; }
+.cp-list { display: grid; gap: 8px; }
+.cp-it { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 1px solid var(--m-line, #e5e7eb); border-radius: 14px; background: #fff; font: inherit; text-align: left; cursor: pointer; transition: border-color .15s, box-shadow .15s, background .15s; }
+.cp-it:hover:not(:disabled) { border-color: var(--m-primary, #fc1c49); box-shadow: 0 6px 18px -10px rgba(252, 28, 73, .45); }
+.cp-it:disabled { cursor: default; background: var(--m-surface, #f7f7f8); }
+.cp-it.on { border-color: var(--m-primary-200, #fbd0d9); }
+.cp-av { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: var(--m-primary-50, #fff1f4); color: var(--m-primary, #fc1c49); font-weight: 800; font-size: 17px; }
+.cp-av img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
+.cp-t { display: grid; gap: 2px; min-width: 0; }
+.cp-t b { font-size: 15px; font-weight: 800; letter-spacing: -0.02em; }
+.cp-t small { color: var(--m-slate, #6b7280); font-size: 12.5px; line-height: 1.4; }
+@media (max-width: 720px) {
+  .a-coach-sw { height: 28px; padding: 0 8px; font-size: 12px; max-width: 34vw; }
+}

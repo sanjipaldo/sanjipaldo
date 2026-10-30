@@ -2021,10 +2021,58 @@
   }
   /* ---------- 로그인 · 회원가입 (패스트캠퍼스 로그인 화면 구성) ---------- */
   const pwField = (name, ac, ph) => '<span class="vd-pw"><input name="' + name + '" type="password" autocomplete="' + ac + '" maxlength="40" placeholder="' + ph + '"><button type="button" data-v="pw-eye" aria-label="비밀번호 보기">' + icon("eye", "sm") + "</button></span>";
+  /* 로그인 카드 위 탭 [두잉고 | 두고클래스] — 누르면 페이지를 옮기지 않고 그 자리에서 카드 내용만 바꿔요 (주소는 ?tab=dg 로 기억) */
+  const svcTabsHtml = (dg, page) => '<div class="lg-svc" role="tablist" aria-label="로그인할 곳 고르기"><a role="tab" class="lg-svc-dg' + (dg ? " on" : "") + '" href="#/vod/' + page + '?tab=dg" data-v="svc" data-k="dg" aria-selected="' + dg + '"><b>두잉고</b><small>기수 수강생 · 강사 강의실</small></a><a role="tab" class="lg-svc-vod' + (dg ? "" : " on") + '" href="#/vod/' + page + '" data-v="svc" data-k="vod" aria-selected="' + !dg + '"><b>두고클래스</b><small>VOD 구매 회원 · 이메일 로그인</small></a></div>';
+  /** ‘두잉고’ 탭 내용: 강사 고르기 → 이름 · 뒷자리 (로그인은 두잉고 화면과 같은 app.js 의 DG_LOGIN 으로) */
+  function dgPaneHtml() {
+    const L = window.DG_LOGIN;
+    if (!L) return '<p class="vd-dgl-lead">두잉고 로그인을 불러오지 못했어요. <a href="#/login">두잉고 로그인 화면</a>에서 로그인해 주세요.</p>';
+    const list = L.list(), ins = list.find((x) => x.id === L.pick());
+    const av = (x) => '<span class="vd-dgl-av' + (x.photo ? " ph" : "") + '">' + (x.photo ? '<img src="' + esc(x.photo) + '" alt="" decoding="async">' : esc(String(x.name || "?").slice(0, 1))) + "</span>";
+    return '<div class="vd-dgl-logo">' + (window.doinggoB ? window.doinggoB("black", "vd-dg-logo") : "<b>두잉고</b>") + "</div>" +
+      "<h1>두잉고 강의실<br>로그인</h1>" +
+      '<p class="vd-dgl-lead">기수 수강생은 수강 신청할 때 적은 <b>이름 · 전화번호 뒷자리</b>로 들어가요.</p>' +
+      (ins
+        ? '<div class="vd-dgl-picked">' + av(ins) + '<span class="vd-dgl-t"><small>수강 중인 강의</small><b>' + esc(ins.name) + "</b>" + (ins.title ? "<em>" + esc(ins.title) + "</em>" : "") + '</span><button type="button" class="vd-tl-btn" data-v="dgl-change">변경</button></div>' +
+          '<form class="vd-form" data-vd-dgl="' + esc(ins.id) + '" novalidate>' +
+            '<label>이름<input name="name" autocomplete="name" maxlength="20" placeholder="예: 홍길동"></label>' +
+            '<label>전화번호 뒷자리<span class="vd-pw"><input name="phone4" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리"><button type="button" data-v="pw-eye" aria-label="번호 보기">' + icon("eye", "sm") + "</button></span></label>" +
+            '<p class="vd-err" id="vd-dgl-err" role="alert"></p><button class="vd-btn vd-btn-p vd-btn-xl" type="submit">두잉고 강의실 로그인</button></form>'
+        : '<p class="vd-dgl-q">어떤 강사님의 강의를 듣고 계신가요?</p><div class="vd-dgl-list">' + list.map((x) => '<button type="button" class="vd-dgl-ins" data-v="dgl-pick" data-id="' + esc(x.id) + '">' + av(x) + '<span class="vd-dgl-t"><b>' + esc(x.name) + "</b>" + (x.field ? "<small>" + esc(x.field) + "</small>" : "") + "</span>" + icon("chevRight", "sm") + "</button>").join("") + "</div>") +
+      '<p class="vd-dgl-foot">' + icon("alert", "xs") + "<span>두고클래스(VOD) 회원 계정과는 따로예요. DOOGO CLASS에서 VOD를 샀다면 위 <b>‘두고클래스’</b> 탭에서 로그인해 주세요.</span></p>";
+  }
+  function dglPaint(focus) {
+    const p = document.querySelector('.vd-svc-pane[data-pane="dg"]'); if (!p) return;
+    p.innerHTML = dgPaneHtml();
+    const n = focus && p.querySelector("[data-vd-dgl] input[name=name]"); if (n) n.focus({ preventScroll: true });
+  }
+  function svcSwitch(k) {
+    const card = document.querySelector(".vd-auth-card[data-svc]"); if (!card) return;
+    const dg = k === "dg", page = route().path[0] === "signup" ? "signup" : "login";
+    card.dataset.svc = dg ? "dg" : "vod";
+    card.querySelectorAll(".lg-svc [data-k]").forEach((a) => { const on = a.dataset.k === card.dataset.svc; a.classList.toggle("on", on); a.setAttribute("aria-selected", String(on)); });
+    card.querySelectorAll(".vd-svc-pane").forEach((x) => { x.hidden = x.dataset.pane !== card.dataset.svc; });
+    const qs = new URLSearchParams(route().qs.toString()); if (dg) qs.set("tab", "dg"); else qs.delete("tab");
+    ROUTE.replace("#/vod/" + page + (qs.toString() ? "?" + qs.toString() : ""));
+    if (dg) dglPaint(false); else tsMount(card);
+  }
+  function doDgLogin(f) {
+    const L = window.DG_LOGIN, err = f.querySelector("#vd-dgl-err"), b = f.querySelector("button[type=submit]");
+    if (!L) return;
+    if (b) b.disabled = true;
+    L.login(f.dataset.vdDgl, f.elements.namedItem("name").value, f.elements.namedItem("phone4").value).then((r) => {
+      if (b) b.disabled = false;
+      if (r && r.ok) return;
+      if (err) { if (r && r.html) err.innerHTML = r.msg; else err.textContent = (r && r.msg) || "로그인하지 못했어요."; }
+      const fe = r && r.field && f.elements.namedItem(r.field); if (fe) fe.focus();
+    });
+  }
   function pageAuth(signup) {
-    const ret = route().qs.get("next") || "", nx = ret ? "?next=" + encodeURIComponent(ret) : "", toDg = ret === "#/vod/dg";
-    if (!signup && toDg && me()) return pageDg();
-    return shell("", '<div class="vd-auth"><div class="vd-auth-card">' + '<div class="lg-svc" role="tablist" aria-label="로그인할 곳 고르기"><a role="tab" class="lg-svc-dg" href="#/login" aria-selected="false"><b>두잉고</b><small>기수 수강생 · 강사 강의실</small></a><a role="tab" class="lg-svc-vod on" href="#/vod/' + (signup ? "signup" : "login") + '" aria-selected="true"><b>두고클래스</b><small>VOD 구매 회원 · 이메일 로그인</small></a></div>' + logoImg +
+    const q = route().qs, ret = q.get("next") || "", nx = ret ? "?next=" + encodeURIComponent(ret) : "", toDg = ret === "#/vod/dg", dgTab = q.get("tab") === "dg";
+    if (!signup && toDg && me() && !dgTab) return pageDg();
+    return shell("", '<div class="vd-auth"><div class="vd-auth-card" data-svc="' + (dgTab ? "dg" : "vod") + '">' + svcTabsHtml(dgTab, signup ? "signup" : "login") +
+      '<div class="vd-svc-pane" data-pane="dg"' + (dgTab ? "" : " hidden") + ">" + (dgTab ? dgPaneHtml() : "") + "</div>" +
+      '<div class="vd-svc-pane" data-pane="vod"' + (dgTab ? " hidden" : "") + ">" + logoImg +
       (toDg ? '<div class="vd-auth-dg"><span class="vd-dg-ic">' + (window.doinggoB ? window.doinggoB("black", "vd-dg-logo") : "두잉고") + "</span><div><b>로그인하면 두잉고 VOD 강의실로 바로 들어가요</b><small>DOOGO CLASS에서 VOD를 살 때 가입한 이메일 · 비밀번호(또는 카카오)로 로그인해 주세요. 두잉고 기수 수강생은 왼쪽 ‘두잉고’ 탭이에요.</small></div></div>" : "") +
       "<h1>" + (signup ? "돈 되는 배움의 시작,<br>DOOGO CLASS 회원가입" : "돈 되는 배움,<br>DOOGO CLASS.") + "</h1>" +
       '<button type="button" class="vd-kakao" data-v="kakao">' + KAKAO + "카카오로 1초 만에 " + (signup ? "가입하기" : "시작하기") + "</button>" +
@@ -2038,8 +2086,8 @@
         '<div class="vd-ts" data-ts></div><p class="vd-err" id="vd-auth-err" role="alert"></p><button class="vd-btn vd-btn-p vd-btn-xl" type="submit" disabled>' + (signup ? "가입하기" : "로그인") + "</button></form>" +
       (signup ? '<p class="vd-auth-alt">이미 회원이신가요? <a href="#/vod/login' + nx + '">로그인</a></p>' : '<a class="vd-btn vd-btn-line vd-btn-xl" href="#/vod/signup' + nx + '">이메일로 회원가입</a>' + (V().settings.demoLogin === false ? "" : '<p class="vd-auth-demo">체험 계정 · vod@gmail.com / vod</p>') + '') +
       (signup ? '<p class="vd-auth-gift"><span class="vd-ag-ic">' + icon("gift", "sm") + '</span><span class="vd-ag-t"><b>가입하면 5,000원 할인 쿠폰을 바로 드려요</b><small>가입일부터 30일 동안 쓸 수 있어요</small></span></p>' : "") +
-      '</div><p class="vd-auth-faq">로그인 · 가입에 문제가 있나요? <button type="button" data-v="auth-faq">자주 묻는 질문</button></p>' +
-      '<p class="vd-auth-note">' + icon("alert", "xs") + "두잉고 기수 수강생 계정과는 따로예요. 기수 수강생은 <a href=\"#/login\">두잉고 로그인</a>을 이용해 주세요.</p></div>");
+      '</div></div><p class="vd-auth-faq">로그인 · 가입에 문제가 있나요? <button type="button" data-v="auth-faq">자주 묻는 질문</button></p>' +
+      '<p class="vd-auth-note">' + icon("alert", "xs") + "두잉고 기수 수강생 계정과는 따로예요. 기수 수강생은 위 <a href=\"#/vod/" + (signup ? "signup" : "login") + "?tab=dg\" data-v=\"svc\" data-k=\"dg\">‘두잉고’ 탭</a>에서 로그인해 주세요.</p></div>");
   }
 
   /* ================= v19 외부 연결: 포트원(PG) 결제 · 카카오 로그인 · Cloudflare Turnstile =================
@@ -2160,6 +2208,35 @@
    * 실제 서비스: 카카오싱크 동의 화면(카카오가 띄움) → 인가 코드 → 서버에서 토큰 · 사용자 정보 → 회원 DB에 via:"kakao" · 카카오 회원번호로 저장
    * 시안: 같은 동의 항목을 보여 주고, 체험용 카카오 계정으로 가입 · 로그인해요 (이 브라우저에 기억 → 다음부터는 바로 로그인) */
   const KK_NAMES = ["정OO", "최OO", "한OO", "윤OO", "장OO", "임OO", "오OO", "서OO"];
+  /** 두잉고 로그인 화면의 ‘두고클래스’ 탭: 카카오 로그인 (서버에 카카오가 연결돼 있으면 바로 · 시안은 두고클래스 로그인 화면에서) */
+  function kakaoGo(next) {
+    if (kakaoServer()) { location.href = "/api/vod-auth?action=kakao&next=" + encodeURIComponent(next || "#/vod"); return "go"; }
+    return SRV() ? "off" : "demo";
+  }
+  /** 이메일 로그인만 (두잉고 로그인 화면의 ‘두고클래스’ 탭이 써요) → Promise<{ ok, name } | { ok:false, message }> · 화면 이동은 부른 쪽에서 */
+  function authLogin(email, pw, ts) {
+    // 두잉고 화면으로 바로 들어오면 서버 설정(vod-config)을 아직 안 받았을 수 있어서 먼저 받아요
+    return loadCfg().then(() => authLoginNow(email, pw, ts));
+  }
+  function authLoginNow(email, pw, ts) {
+    email = String(email || "").trim().toLowerCase(); pw = String(pw || "");
+    const no = (message) => Promise.resolve({ ok: false, message });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return no("이메일 형식이 올바르지 않아요. 다시 확인해 주세요.");
+    if (!pw) return no("비밀번호를 입력해 주세요.");
+    if (SRV() && !(CFG && CFG.auth)) return no("회원가입 · 로그인을 잠시 준비 중이에요. 운영 상담 채널로 문의해 주세요.");
+    if (remoteOn() && CFG && CFG.auth) {
+      return authApi("login", { email, pw, ts: ts || "" }).then((r) => {
+        if (!r || !r.ok) return { ok: false, message: (r && r.message) || "다시 시도해 주세요." };
+        return DB.remote.refresh().then(() => ({ ok: true, name: (r.member && r.member.name) || "회원" }));
+      }, () => ({ ok: false, message: "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요." }));
+    }
+    const hit = V().members.find((x) => String(x.email || "").toLowerCase() === email && x.pw === pw);
+    if (!hit) return no("이메일 또는 비밀번호가 맞지 않아요. 다시 확인해 주세요.");
+    if (hit.blocked) return no("이용이 중지된 계정이에요. 고객센터로 문의해 주세요.");
+    setMe(hit.id); hit.lastLoginAt = now(); hit.loginN = (hit.loginN || 0) + 1; save();
+    return Promise.resolve({ ok: true, name: hit.name });
+  }
+  Object.assign(window.VOD, { authLogin, kakaoGo, tsMount, tsToken, tsOn: () => !!tsKey(), KAKAO_ICON: KAKAO });
   function kakaoStart() {
     if (SRV() && !kakaoServer()) { toast("카카오로 1초 가입은 곧 열려요. 지금은 이메일로 가입해 주세요.", "warn"); return; }
     if (kakaoServer()) { const f = document.querySelector("[data-vd-auth]"), nx = (f && f.dataset.next) || "#/vod"; location.href = "/api/vod-auth?action=kakao&next=" + encodeURIComponent(nx); return; }
@@ -2911,6 +2988,9 @@
     if (v === "pl-del") { const x = V().pledges.find((y) => y.id === t.dataset.id); if (!x || !m || x.mid !== m.id) return; V().pledges.splice(V().pledges.indexOf(x), 1); save(); keepScroll(); toast("다짐을 지웠어요."); return; }
     if (v === "pw-eye") { const inp = t.parentNode.querySelector("input"); if (!inp) return; const show = inp.type === "password"; inp.type = show ? "text" : "password"; t.innerHTML = icon(show ? "eyeOff" : "eye", "sm"); t.setAttribute("aria-label", show ? "비밀번호 숨기기" : "비밀번호 보기"); return; }
     if (v === "kakao") { kakaoStart(); return; }
+    if (v === "svc") { e.preventDefault(); svcSwitch(t.dataset.k); return; }
+    if (v === "dgl-pick") { if (window.DG_LOGIN) window.DG_LOGIN.setPick(t.dataset.id); dglPaint(true); return; }
+    if (v === "dgl-change") { if (window.DG_LOGIN) window.DG_LOGIN.setPick(""); dglPaint(false); return; }
     if (v === "pg-ok" || v === "pg-no") { if (pgWait) pgWait(v === "pg-ok"); return; }
     if (v === "kk-all") { document.querySelectorAll("[data-kk]").forEach((x) => { x.checked = t.checked; }); return; }
     if (v === "kk-ok") { kakaoOk(); return; }
@@ -2969,6 +3049,7 @@
     const f = e.target;
     if (f.matches("[data-vd-search]")) { e.preventDefault(); ROUTE.hash = "#/vod/search?q=" + encodeURIComponent(f.q.value.trim()); return; }
     if (f.matches("[data-vd-auth]")) { e.preventDefault(); doAuth(f); return; }
+    if (f.matches("[data-vd-dgl]")) { e.preventDefault(); doDgLogin(f); return; }
     if (f.matches("[data-vd-pay]")) { e.preventDefault(); doPay(f); return; }
     if (f.matches("[data-vd-review]")) { e.preventDefault(); doReview(f); return; }
     if (f.matches("[data-vd-pledge]")) { e.preventDefault(); doPledge(f); return; }

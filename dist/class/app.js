@@ -263,8 +263,8 @@
         "</section>" +
         '<section class="login-panel dc-panel">' +
           '<div class="login-topright"><a class="login-home-big" href="#/doinggo">' + icon("arrowLeft", "sm") + "<span>두잉고 홈페이지 이동하기</span></a><span>강사님이신가요?</span><a class=\"dc-center\" href=\"#/center\">강사센터</a></div>" +
-          '<div class="login-stack">' +
-            '<div class="login-card dc-card">' + svcTabs("dg") +
+          '<div class="login-stack' + (svcIsVod() ? " svc-vod" : "") + '">' +
+            '<div class="login-card dc-card">' + svcTabs() + dgPaneOpen() +
               '<div class="dc-card-logo">' + lock() + "</div>" +
               "<h1>두잉고 시작하기</h1>" +
               '<p class="lead">수강 신청할 때 등록한 정보로 로그인하세요.</p>' +
@@ -275,7 +275,7 @@
                 '<div class="dc-ins-list" id="dc-ins-list" role="radiogroup">' + list.map(opt).join("") + "</div>" +
                 '<div class="dc-empty" id="dc-empty" hidden>' + icon("search") + "<b>찾는 강사님이 없어요</b><span>이름을 다시 확인하거나, 강사님께 받은 수강 안내 링크로 들어와 주세요.</span></div>" +
                 '<span class="tiny">한 번 고르면 다음부터는 바로 로그인 화면이 열려요.</span></div>' +
-            "</div>" +
+            "</div>" + vodPane() + "</div>" +
             '<a class="dc-partner" href="#/partner">' + icon("handshake", "sm") + "<span><b>강사님이신가요?</b> 두잉고 입점을 문의해 보세요</span>" + icon("arrowRight", "xs") + "</a>" +
             '<nav class="login-legal" aria-label="약관">' +
               '<button type="button" data-action="legal" data-doc="terms">이용약관</button>' +
@@ -286,6 +286,7 @@
         "</section>" +
       "</main>";
     bindInsSearch(list.length);
+    if (svcIsVod()) vodPaneReady();
   }
   // 강사 검색: 이름 · 강의 분야 · 초성(ㅁㄷㅍ)으로 바로 찾기
   const INS_CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
@@ -313,7 +314,58 @@
   // 강사 고르기 순서: 첫 화면 강사진과 같게 (문대표 → 초이 → 나머지)
   const PICK_ORDER = ["moon", "choi"];
   /** 로그인 카드 위 ‘어디로 들어갈까요?’ — 두잉고(기수 · 강사 강의실) / 두고클래스(VOD · 전자책 구매 회원) */
-  const svcTabs = (on) => '<div class="lg-svc" role="tablist" aria-label="로그인할 곳 고르기"><a role="tab" class="lg-svc-dg' + (on === "dg" ? " on" : "") + '" href="#/login" aria-selected="' + (on === "dg") + '"><b>두잉고</b><small>기수 수강생 · 강사 강의실</small></a><a role="tab" class="lg-svc-vod' + (on === "vod" ? " on" : "") + '" href="#/vod/login?next=%23%2Fvod%2Fdg" aria-selected="' + (on === "vod") + '"><b>두고클래스</b><small>VOD 구매 회원 · 이메일 로그인</small></a></div>';
+  // 탭은 그 자리에서 바뀌어요: ‘두잉고’ = 기수 수강생 로그인 · ‘두고클래스’ = VOD 구매 회원 이메일 로그인 (주소 ?tab=vod 로 기억)
+  const svcIsVod = () => /[?&]tab=vod(&|$)/.test(ROUTE.hash);
+  const svcTabs = () => { const v = svcIsVod(); return '<div class="lg-svc" role="tablist" aria-label="로그인할 곳 고르기"><a role="tab" class="lg-svc-dg' + (v ? "" : " on") + '" href="#/login" data-action="svc-tab" data-k="dg" aria-selected="' + !v + '"><b>두잉고</b><small>기수 수강생 · 강사 강의실</small></a><a role="tab" class="lg-svc-vod' + (v ? " on" : "") + '" href="#/login?tab=vod" data-action="svc-tab" data-k="vod" aria-selected="' + v + '"><b>두고클래스</b><small>VOD 구매 회원 · 이메일 로그인</small></a></div>'; };
+  const dgPaneOpen = () => '<div class="lg-pane" data-pane="dg"' + (svcIsVod() ? " hidden" : "") + ">";
+  /** ‘두고클래스’ 탭 내용: DOOGO CLASS VOD 회원 이메일 · 카카오 로그인 → 두잉고 VOD 강의실로 (로그인은 vod.js 의 VOD.authLogin) */
+  function vodPane() {
+    const X = window.VOD || {}, demo = X.V && X.V().settings && X.V().settings.demoLogin !== false;
+    return '<div class="lg-pane lg-vod" data-pane="vod"' + (svcIsVod() ? "" : " hidden") + ">" +
+      '<p class="lg-vod-logo"><img src="assets/brand/doogo-class-word.svg" alt="DOOGO CLASS"></p>' +
+      "<h1>VOD 회원 로그인</h1>" +
+      '<p class="lead">DOOGO CLASS에서 VOD를 살 때 가입한 <b>이메일 · 비밀번호</b>(또는 카카오)로 로그인하면 두잉고 VOD 강의실로 바로 들어가요.</p>' +
+      '<button type="button" class="lg-kakao" data-action="vod-kakao">' + (X.KAKAO_ICON || icon("message", "sm")) + "카카오로 1초 만에 시작하기</button>" +
+      '<div class="lg-or"><span>또는 이메일로 로그인</span></div>' +
+      '<form class="login-form" id="vod-login-form" novalidate>' +
+        '<div class="field"><label for="lg-vemail">이메일</label><div class="input-icon">' + icon("mail", "sm") + '<input class="input" id="lg-vemail" name="email" type="email" autocomplete="email" maxlength="80" placeholder="example@doogoclass.com"></div></div>' +
+        '<div class="field"><label for="lg-vpw">비밀번호</label><div class="input-icon input-wrap">' + icon("lock", "sm") + '<input class="input" id="lg-vpw" name="pw" type="password" autocomplete="current-password" maxlength="40" placeholder="비밀번호를 입력해 주세요">' +
+          '<button type="button" class="input-addon" data-action="toggle-pw" data-for="lg-vpw" aria-label="번호 보기">' + icon("eye", "sm") + "</button></div></div>" +
+        '<div class="lg-ts" data-ts></div>' +
+        '<p class="field-error" id="lg-vod-error" role="alert"></p>' +
+        '<button class="btn btn-primary btn-block" type="submit">로그인하고 VOD 강의실로</button>' +
+      "</form>" +
+      '<p class="lg-vod-links"><a href="#/vod/signup?next=%23%2Fvod%2Fdg">이메일로 회원가입</a><span aria-hidden="true">·</span><a href="#/vod/login?next=%23%2Fvod%2Fdg">비밀번호 찾기</a></p>' +
+      (demo ? '<p class="lg-vod-demo">체험 계정 · vod@gmail.com / vod</p>' : "") +
+      '<p class="login-help">두잉고 기수 수강생 계정과는 따로예요. 기수 수강생은 왼쪽 ‘두잉고’ 탭이에요.</p>' +
+    "</div>";
+  }
+  function svcSwitch(k) {
+    const card = document.querySelector(".login-card"); if (!card) return;
+    const vod = k === "vod", r = route(), qs = new URLSearchParams(r.params.toString());
+    if (vod) qs.set("tab", "vod"); else qs.delete("tab");
+    ROUTE.replace("#/" + (r.parts.join("/") || "login") + (qs.toString() ? "?" + qs.toString() : ""));
+    card.querySelectorAll(".lg-svc [data-k]").forEach((a) => { const on = a.dataset.k === (vod ? "vod" : "dg"); a.classList.toggle("on", on); a.setAttribute("aria-selected", String(on)); });
+    card.querySelectorAll(".lg-pane").forEach((p) => { p.hidden = p.dataset.pane !== (vod ? "vod" : "dg"); });
+    const stack = card.closest(".login-stack"); if (stack) stack.classList.toggle("svc-vod", vod);
+    if (vod) vodPaneReady(card);
+  }
+  // ‘두고클래스’ 칸을 열 때: 서버 설정(카카오 · 사람 확인)을 받아 두고 사람 확인 칸을 붙여요
+  function vodPaneReady(scope) {
+    const X = window.VOD; if (!X || !X.loadCfg) return;
+    X.loadCfg().then(() => { if (X.tsMount) X.tsMount(scope || document); });
+  }
+  function doVodLogin(f) {
+    const err = document.getElementById("lg-vod-error"), b = f.querySelector("button[type=submit]"), X = window.VOD;
+    if (!X || !X.authLogin) { err.textContent = "DOOGO CLASS 로그인을 불러오지 못했어요. 새로고침해 주세요."; return; }
+    if (b) b.disabled = true;
+    X.authLogin(f.elements.namedItem("email").value, f.elements.namedItem("pw").value, X.tsToken ? X.tsToken(f) : "").then((r) => {
+      if (b) b.disabled = false;
+      if (!r || !r.ok) { err.textContent = (r && r.message) || "로그인하지 못했어요."; return; }
+      toast((r.name || "회원") + "님, 반가워요!");
+      ROUTE.hash = "#/vod/dg";
+    });
+  }
   function renderLogin() {
     const rank = (id) => { const i = PICK_ORDER.indexOf(id); return i < 0 ? 99 : i; };
     const list = DB.activeInstructors().slice().sort((a, b) => rank(a.id) - rank(b.id));
@@ -346,8 +398,8 @@
         "</section>" +
         '<section class="login-panel">' +
           '<div class="login-topright"><a class="login-home-big" href="#/doinggo">' + icon("arrowLeft", "sm") + "<span>두잉고 홈페이지 이동하기</span></a><span>강사님이신가요?</span><a class=\"btn btn-dark btn-sm\" href=\"#/center\">강사센터</a></div>" +
-          '<div class="login-stack">' +
-            '<div class="login-card">' + svcTabs("dg") +
+          '<div class="login-stack' + (svcIsVod() ? " svc-vod" : "") + '">' +
+            '<div class="login-card">' + svcTabs() + dgPaneOpen() +
               '<p class="login-label"><a href="#/doinggo" title="두잉고 홈으로" aria-label="두잉고 홈으로">' + (window.doogoClassLock ? window.doogoClassLock() : window.doogoLogo("color")) + "</a></p>" +
               "<h1>" + esc(ins ? B.name : "두잉고") + " 시작하기</h1>" +
               '<p class="lead">수강 신청할 때 등록한 정보로 로그인하세요.</p>' +
@@ -361,11 +413,11 @@
                     '<p class="field-error" id="lg-error" role="alert"></p>' +
                     '<button class="btn btn-primary btn-block" type="submit">로그인</button>' +
                     '<p class="login-help">휴대폰 번호 뒷자리 4자리가 비밀번호 대신 사용됩니다.</p>' +
-                    (window.VOD && window.VOD.products && window.VOD.products().some((p) => p.iid === ins.id && window.VOD.dgOpen(p)) ? '<a class="login-help login-vod" href="#/vod/login?next=%23%2Fvod%2Fdg">' + icon("circlePlay", "xs") + "<span>DOOGO CLASS에서 " + esc(ins.displayName) + " 강사님 VOD를 사셨나요? 위 <b>‘두고클래스’ 탭</b>에서 가입한 <b>이메일 · 비밀번호</b>(또는 카카오)로 로그인하면 VOD 강의실로 바로 들어가요.</span>" + icon("chevRight", "xs") + "</a>" : "") +
+                    (window.VOD && window.VOD.products && window.VOD.products().some((p) => p.iid === ins.id && window.VOD.dgOpen(p)) ? '<a class="login-help login-vod" href="#/login?tab=vod" data-action="svc-tab" data-k="vod">' + icon("circlePlay", "xs") + "<span>DOOGO CLASS에서 " + esc(ins.displayName) + " 강사님 VOD를 사셨나요? 위 <b>‘두고클래스’ 탭</b>에서 가입한 <b>이메일 · 비밀번호</b>(또는 카카오)로 로그인하면 VOD 강의실로 바로 들어가요.</span>" + icon("chevRight", "xs") + "</a>" : "") +
                     (vodClosed ? '<p class="field-error">VOD 수강 기간이 끝나 두잉고 VOD 버전이 닫혔어요.</p>' : "")
                   : "") +
               "</form>" +
-            "</div>" +
+            "</div>" + vodPane() + "</div>" +
             (ins ? '<button type="button" class="login-alt" data-action="signup">' + icon("userPlus", "sm") + "아직 수강 신청 전이신가요? 수강 신청하기</button>" +
               ((DB.landingOf(ins.id) || {}).published ? '<a class="login-intro" href="#/p/' + esc(ins.id) + '">' + icon("book", "sm") + "강의 소개 보기 " + icon("arrowRight", "xs") + "</a>" : "") +
               "" : "") +
@@ -377,31 +429,18 @@
           "</div>" +
         "</section>" +
       "</main>";
+    if (svcIsVod()) vodPaneReady();
   }
 
   function doLogin(form) {
-    const ins = loginInstructor();
-    const err = document.getElementById("lg-error");
-    const name = form.name.value.replace(/\s+/g, "");
-    const phone4 = form.phone4.value.trim();
-    if (!name) { err.textContent = "이름을 입력해 주세요."; form.name.focus(); return; }
-    if (!/^\d{4}$/.test(phone4)) { err.textContent = "전화번호 뒷자리 숫자 4자리를 입력해 주세요."; form.phone4.focus(); return; }
-    if (DB.remote.on) { serverLogin(ins, name, phone4, err, form); return; }
-    const matches = DB.studentsOf(ins.id).filter((x) => x.name.replace(/\s+/g, "") === name && x.phone4 === phone4);
-    const newest = (a, b) => String((DB.cohort(b.cohortId) || {}).start || b.appliedAt || "").localeCompare(String((DB.cohort(a.cohortId) || {}).start || a.appliedAt || ""));
-    const pick = (st) => matches.filter((x) => x.status === st).sort(newest)[0];
-    let s = pick("approved") || pick("pending") || matches.slice().sort(newest)[0];
-    // DOOGO CLASS VOD 구매 회원은 이 칸(기수 수강생용)이 아니라 ‘두고클래스’ 탭의 이메일 로그인으로 들어와요
-    if (!s && window.VOD && window.VOD.findBuyer && window.VOD.findBuyer(ins.id, name, phone4)) { err.innerHTML = "DOOGO CLASS에서 VOD를 사신 회원이시네요. 위 <b>‘두고클래스’ 탭</b>에서 가입한 이메일 · 비밀번호로 로그인하면 VOD 강의실로 바로 들어가요."; return; }
-    if (!s) { err.textContent = "등록된 수강생 정보와 일치하지 않아요. 이름과 뒷자리를 다시 확인해 주세요."; return; }
-    if (s.status === "pending") { err.textContent = "수강 신청이 접수됐어요. " + ins.displayName + " 강사님이 승인하면 로그인할 수 있어요."; return; }
-    if (s.status === "rejected") { err.textContent = "수강 신청이 승인되지 않았어요. 강사님께 문의해 주세요."; return; }
-    if (s.status === "withdrawn") { err.textContent = "탈퇴 처리된 계정이에요. 다시 수강하려면 강사님께 문의해 주세요."; return; }
-    DB.session.setInstructorPick(ins.id);
-    DB.session.setStudent({ id: s.id, at: Date.now() });
-    startSession();
-    ROUTE.hash = "#/home";
-    toast(s.name + "님, 환영합니다!");
+    const err = document.getElementById("lg-error"), btn = form.querySelector("button[type=submit]");
+    if (btn) btn.disabled = true;
+    dgLoginCore(loginInstructor(), form.elements.namedItem("name").value, form.elements.namedItem("phone4").value).then((r) => {
+      if (btn) btn.disabled = false;
+      if (r.ok) return;
+      if (r.html) err.innerHTML = r.msg; else err.textContent = r.msg;
+      const fe = r.field && form.elements.namedItem(r.field); if (fe) fe.focus();
+    });
   }
 
   // 서버 모드: 이름·뒷자리는 서버에서만 확인한다 (다른 수강생 정보는 이 브라우저에 내려오지 않음)
@@ -412,20 +451,53 @@
     locked: "여러 번 틀려서 잠시 로그인이 막혔어요. 15분 뒤에 다시 시도해 주세요.",
     input: "이름과 전화번호 뒷자리 4자리를 확인해 주세요."
   };
-  function serverLogin(ins, name, phone4, err, form) {
-    const btn = form.querySelector("button[type=submit]");
-    if (btn) btn.disabled = true;
-    DB.remote.login({ action: "student", iid: ins.id, name, phone4 }).then((r) => {
-      if (r.error) { err.textContent = r.error === "pending" ? "수강 신청이 접수됐어요. " + ins.displayName + " 강사님이 승인하면 로그인할 수 있어요." : LOGIN_ERR[r.error] || LOGIN_ERR.notfound; return; }
-      return DB.remote.refresh().then(() => {
-        DB.session.setInstructorPick(ins.id);
-        DB.session.setStudent({ id: r.sid, at: Date.now() });
-        startSession();
-        ROUTE.hash = "#/home";
-        toast(r.name + "님, 환영합니다!");
-      });
-    }).catch(() => { err.textContent = "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."; }).then(() => { if (btn) btn.disabled = false; });
+  /** 두잉고 수강생 로그인 (이 화면 · 두고클래스 로그인 카드의 ‘두잉고’ 탭이 같이 써요) → Promise<{ ok } | { ok:false, msg, html?, field? }>
+   *  성공하면 세션을 열고 수강생 홈으로 가요 */
+  function dgLoginCore(ins, name, phone4) {
+    name = String(name || "").replace(/\s+/g, ""); phone4 = String(phone4 || "").trim();
+    const no = (msg, extra) => Promise.resolve(Object.assign({ ok: false, msg }, extra || {}));
+    if (!ins) return no("강사님을 먼저 골라 주세요.");
+    if (!name) return no("이름을 입력해 주세요.", { field: "name" });
+    if (!/^\d{4}$/.test(phone4)) return no("전화번호 뒷자리 숫자 4자리를 입력해 주세요.", { field: "phone4" });
+    const done = (sid, nm) => {
+      DB.session.setInstructorPick(ins.id);
+      DB.session.setStudent({ id: sid, at: Date.now() });
+      startSession();
+      ROUTE.hash = "#/home";
+      toast(nm + "님, 환영합니다!");
+      return { ok: true };
+    };
+    if (DB.remote.on) {
+      return DB.remote.login({ action: "student", iid: ins.id, name, phone4 }).then((r) => {
+        if (r.error) return { ok: false, msg: r.error === "pending" ? "수강 신청이 접수됐어요. " + ins.displayName + " 강사님이 승인하면 로그인할 수 있어요." : LOGIN_ERR[r.error] || LOGIN_ERR.notfound };
+        return DB.remote.refresh().then(() => done(r.sid, r.name));
+      }).catch(() => ({ ok: false, msg: "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요." }));
+    }
+    const matches = DB.studentsOf(ins.id).filter((x) => x.name.replace(/\s+/g, "") === name && x.phone4 === phone4);
+    const newest = (a, b) => String((DB.cohort(b.cohortId) || {}).start || b.appliedAt || "").localeCompare(String((DB.cohort(a.cohortId) || {}).start || a.appliedAt || ""));
+    const pick = (st) => matches.filter((x) => x.status === st).sort(newest)[0];
+    const s = pick("approved") || pick("pending") || matches.slice().sort(newest)[0];
+    // DOOGO CLASS VOD 구매 회원은 이 칸(기수 수강생용)이 아니라 ‘두고클래스’ 탭의 이메일 로그인으로 들어와요
+    if (!s && window.VOD && window.VOD.findBuyer && window.VOD.findBuyer(ins.id, name, phone4)) return no("DOOGO CLASS에서 VOD를 사신 회원이시네요. 위 <b>‘두고클래스’ 탭</b>에서 가입한 이메일 · 비밀번호로 로그인하면 VOD 강의실로 바로 들어가요.", { html: true });
+    if (!s) return no(LOGIN_ERR.notfound);
+    if (s.status === "pending") return no("수강 신청이 접수됐어요. " + ins.displayName + " 강사님이 승인하면 로그인할 수 있어요.");
+    if (s.status === "rejected") return no(LOGIN_ERR.rejected);
+    if (s.status === "withdrawn") return no(LOGIN_ERR.withdrawn);
+    return Promise.resolve(done(s.id, s.name));
   }
+  /* 두고클래스 로그인 카드의 ‘두잉고’ 탭이 쓰는 창구 — 강사 고르기 · 로그인은 이 화면과 똑같이 */
+  window.DG_LOGIN = {
+    list() {
+      const rank = (id) => { const i = PICK_ORDER.indexOf(id); return i < 0 ? 99 : i; };
+      return DB.activeInstructors().slice().sort((a, b) => rank(a.id) - rank(b.id)).map((x) => {
+        const b = (DB.content(x.id) || {}).brand || {}, ph = String(b.photo || "");
+        return { id: x.id, name: x.displayName, title: b.shortTitle || b.courseTitle || "", field: b.field || b.shortTitle || b.courseTitle || "", photo: ph };
+      });
+    },
+    pick() { const ins = loginInstructor(); return ins ? ins.id : ""; },
+    setPick(id) { if (id && DB.activeInstructors().some((x) => x.id === id)) { loginPick = id; DB.session.setInstructorPick(id); } else { loginPick = null; DB.store.remove("moonclass:instructor"); } },
+    login(iid, name, phone4) { return dgLoginCore(DB.activeInstructors().find((x) => x.id === iid) || null, name, phone4); }
+  };
 
   // 강의 내용 중 커리큘럼(주차·강의·과제)만 내 기수가 고른 커리큘럼으로 바꿔 끼운다
   const cohortContent = (insId, co) => Object.assign({}, DB.content(insId), { weeks: DB.weeksOf(co) });
@@ -2347,6 +2419,8 @@
       return;
     }
     switch (a.dataset.action) {
+      case "svc-tab": e.preventDefault(); svcSwitch(a.dataset.k); break;
+      case "vod-kakao": { const X = window.VOD; if (!X || !X.kakaoGo) { ROUTE.hash = "#/vod/login?next=%23%2Fvod%2Fdg"; break; } (X.loadCfg ? X.loadCfg() : Promise.resolve()).then(() => { const r = X.kakaoGo("#/vod/dg"); if (r === "off") toast("카카오로 1초 가입은 곧 열려요. 지금은 이메일로 로그인해 주세요."); else if (r === "demo") ROUTE.hash = "#/vod/login?next=%23%2Fvod%2Fdg"; }); break; }
       case "toggle-pw": {
         const inp = document.getElementById(a.dataset.for);
         const show = inp.type === "password";
@@ -2508,6 +2582,7 @@
     if (!isActive()) return;
     const f = e.target;
     if (f.id === "login-form") { e.preventDefault(); if (f.name) doLogin(f); return; }
+    if (f.id === "vod-login-form") { e.preventDefault(); doVodLogin(f); return; }
     if (f.id === "signup-form") { e.preventDefault(); doSignup(f); return; }
     if (f.id === "submit-form") { e.preventDefault(); submitMission(f); return; }
     if (f.id === "calc-save") { e.preventDefault(); saveCalc(f); return; }
