@@ -139,6 +139,7 @@ async function instantOf(o) {
   const cat = await catalog(), rf = rfSet(cat), X = pricer(cat || {}), p = X.product(o.pid);
   if (!o || o.status !== "paid" || !(o.amount > 0) || (o.kind || "course") !== "course" || !p) return { ok: false, why: "바로 취소할 수 없는 주문이에요." };
   if (!rf.instant) return { ok: false, why: "바로 취소는 지금 쉬고 있어요. 환불 요청을 남겨 주세요." };
+  if (o.method === "vbank") return { ok: false, why: "가상계좌 결제는 환불 요청으로 처리해요. 환불 받을 계좌로 돌려드려요." };
   const t = X.typeOf(p), paid = o.paidAt || o.createdAt, lim = (t === "ebook" ? rf.ebookDays : rf.days) * 864e5;
   if (X.isEvent(p)) { const ev = X.kst(p.eventAt); return ev && ev - Date.now() >= rf.eventDays * 864e5 ? { ok: true } : { ok: false, why: "강의 " + rf.eventDays + "일 전이 지나 환불 요청으로 처리해요." }; }
   if (Date.now() - paid > lim) return { ok: false, why: "결제 후 " + (t === "ebook" ? rf.ebookDays : rf.days) + "일이 지나 환불 요청으로 처리해요." };

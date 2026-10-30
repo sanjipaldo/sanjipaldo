@@ -3273,3 +3273,11 @@ a.vd-fln:not(.is-after):hover { border-color: #e2c050; }
 /* 영상 실제 길이 (비메오 · 유튜브에서 자동으로 받아 와요) */
 .vdur:empty { display: none; }
 .vdur.is-real { font-variant-numeric: tabular-nums; }
+
+/* 환불 요청 · 환불 받을 계좌 (무통장 · 가상계좌) */
+.vd-rfq-acct { display: grid; gap: 6px; padding: 12px; border-radius: 12px; background: #f6f7f9; }
+.vd-rfq-acct b { font-size: 14px; }
+.vd-rfq-acct small { font-size: 12.5px; color: #6b7280; line-height: 1.5; }
+.ra-f { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 6px; }
+.ra-f select, .ra-f input { min-width: 0; height: 42px; padding: 0 10px; border: 1px solid #dfe2e7; border-radius: 10px; background: #fff; font: inherit; font-size: 14px; color: inherit; }
+@media (max-width: 560px) { .ra-f { grid-template-columns: 1fr 1fr; } .ra-f input[name$="No"] { grid-column: 1 / -1; order: 3; } }

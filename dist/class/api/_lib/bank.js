@@ -32,11 +32,23 @@ async function giveBack(o) {
 /** 입금 전 주문 취소 (회원 · 마스터) — 자동 입금 확인(페이액션)에 등록한 주문이면 맞추기에서도 빼요 */
 async function drop(o, by) {
   if (o.pg && o.pg.pa === "ok") await require("./payaction").exclude(o.no).catch((e) => console.error("[bank] payaction exclude", o.no, e.message));
+  // 가상계좌는 발급 계좌를 닫아요. 닫히지 않으면 그 사이 입금됐는지 포트원에 물어 — 입금됐으면 취소하지 않고 결제 완료로 돌려요
+  if (o.method === "vbank" && o.paymentId && o.pg && o.pg.st === "issued") {
+    const po = require("./portone");
+    if (po.on()) {
+      try { await po.closeVirtualAccount(o.paymentId); } catch (e) {
+        console.error("[bank] vbank close", o.no, e.message);
+        const pay = await po.getPayment(o.paymentId).catch(() => null);
+        if (pay && pay.status === "PAID") return { ok: false, paid: true, message: "방금 가상계좌 입금이 확인돼 주문을 취소하지 않았어요." };
+      }
+    }
+  }
   for (const no of await groupNos(o)) {
     const x = await V.get(V.K.order(no));
     const done = x && (await V.update(V.K.order(no), (y) => (y && y.status === "pending" ? Object.assign(y, { status: "canceled", canceledAt: Date.now(), cancelBy: by }) : undefined)));
     if (done && done.status === "canceled" && x.status === "pending") await giveBack(x);
   }
+  return { ok: true };
 }
 /** 입금 확인 → 바로 수강. 두 번 와도 한 번만 (이미 결제 완료면 already) */
 async function confirm(no, by, extra) {
@@ -44,6 +56,7 @@ async function confirm(no, by, extra) {
   if (!o) return { ok: false, message: "주문을 찾지 못했어요." };
   if (o.status === "paid") return { ok: true, already: true, no: o.no, orders: [] };
   if (o.status !== "pending") return { ok: false, message: "입금 대기 주문이 아니에요. (" + o.status + ")" };
+  if (o.method === "vbank") return { ok: false, message: "가상계좌는 회원이 입금하면 포트원이 알려 줘서 자동으로 확인돼요." };
   const at = Date.now(), done = [];
   for (const n of await groupNos(o)) {
     const prev = await V.get(V.K.order(n));

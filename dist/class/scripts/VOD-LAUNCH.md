@@ -34,6 +34,9 @@
 | `PORTONE_STORE_ID` | 포트원 관리자콘솔 › 연동 정보 › 상점 아이디 (`store-…`) | 공개 |
 | `PORTONE_CHANNEL_CARD` | 채널 관리 › 카드 결제 채널의 채널 키 | 공개 |
 | `PORTONE_CHANNEL_KAKAOPAY` · `_TOSSPAY` · `_NAVERPAY` | 간편결제 채널 키 (계약한 것만) | 공개 |
+| `PORTONE_TRANSFER` · `PORTONE_VBANK` | 실시간 계좌이체 · 가상계좌를 카드 채널로 열 때 그냥 `1` (PG 계약에 포함돼 있을 때만) | 공개 |
+| `PORTONE_CHANNEL_TRANSFER` · `PORTONE_CHANNEL_VBANK` | 계좌이체 · 가상계좌를 따로 계약한 채널 키 (있으면 위 `1` 대신) | 공개 |
+| `PORTONE_VBANK_HOURS` | 가상계좌 입금 기한(시간, 기본 72) | 공개 |
 | `PORTONE_API_SECRET` | 연동 정보 › **V2 API Secret** | **비밀** |
 | `PORTONE_WEBHOOK_SECRET` | 웹훅 관리(V2) › 웹훅 시크릿 (`whsec_…`) | **비밀** |
 | `TURNSTILE_SITE_KEY` | Cloudflare › Turnstile › 사이트 추가 › 사이트 키 | 공개 |
@@ -65,11 +68,16 @@ doogostudio.co.kr 계약이 있어도 **새 사이트(doogoclass.com) · 디지�
 
 결제 흐름:
 1. 결제 버튼 → `vod-pay prepare` — 서버가 가격표로 금액을 다시 계산 (화면 금액과 다르면 "가격이 방금 바뀌었어요" 로 막음 → 위변조 방지), 쿠폰 · 포인트 · 정원 확인, 결제 번호 발급
-2. 포트원 결제창 (`PortOne.requestPayment`) — 카드 · 카카오페이 · 토스페이 · 네이버페이
+2. 포트원 결제창 (`PortOne.requestPayment`) — 카드 · 카카오페이 · 토스페이 · 네이버페이 · 실시간 계좌이체 · 가상계좌(켠 것만)
 3. `vod-pay complete` — 서버가 포트원 API 에 결제를 직접 조회해서 **상태 PAID · 금액 · 통화 · 상점**이 맞을 때만 주문 완료, 쿠폰 · 포인트는 이때 사용 처리
 4. 휴대폰에서 결제창을 닫아 버려도 **포트원 웹훅**(`https://www.doogoclass.com/api/vod-pay`, V2 · 서명 확인)으로 주문이 완료돼요
 
 포트원 콘솔에 등록할 것: 웹훅 URL `https://www.doogoclass.com/api/vod-pay` (V2), 결제 허용 도메인 `www.doogoclass.com`.
+
+가상계좌 · 계좌이체 (선택):
+- 가상계좌는 발급(`Transaction.VirtualAccountIssued`)과 입금(`Transaction.Paid`) 모두 **웹훅**으로 알려 와요 — 웹훅 URL 이 꼭 등록돼 있어야 입금이 자동으로 확인돼요.
+- 가상계좌 환불은 포트원이 회원 계좌로 돌려보내요. PG사의 **가상계좌 환불 서비스**가 켜져 있어야 해요(계약 때 확인). 입금 전 취소는 발급 계좌를 닫아요.
+- 켜기 전에는 결제 화면에 두 수단이 아예 안 보여요.
 
 ## 4. 환불 (마스터에서 조절)
 

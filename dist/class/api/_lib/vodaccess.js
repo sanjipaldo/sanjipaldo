@@ -149,7 +149,11 @@ function fixSelfOrder(o, n) {
     ["d1", "d2", "slot", "mode", "topic"].forEach((k) => { if (n.tea[k] !== undefined) out.tea[k] = str(n.tea[k], k === "topic" ? 500 : 30); });
     if (n.tea.st === "cancel") out.tea.st = "cancel";
   }
-  if (out.status === "paid" && n.refundReq && !out.refundReq) out.refundReq = { at: Date.now(), why: str(n.refundReq.why, 40), text: str(n.refundReq.text, 1000) };
+  if (out.status === "paid" && n.refundReq && !out.refundReq) {
+    out.refundReq = { at: Date.now(), why: str(n.refundReq.why, 40), text: str(n.refundReq.text, 1000) };
+    const a = n.refundReq.acct;
+    if ((out.method === "bank" || out.method === "vbank") && a && typeof a === "object" && /^[A-Z_]{2,40}$/.test(String(a.bank || ""))) out.refundReq.acct = { bank: String(a.bank), number: str(a.number, 30).replace(/[^0-9]/g, ""), holder: str(a.holder, 20).trim() };
+  }
   if (out.status === "paid" && out.refundReq && n.refundReq === undefined) delete out.refundReq;
   if (n.dlAt && !out.dlAt) out.dlAt = Date.now();
   return out;

@@ -20,7 +20,8 @@ global.fetch = async (url, opt) => {
   const J = (status, j) => ({ ok: status < 300, status, json: async () => j, text: async () => JSON.stringify(j) });
   if (u.host === "api.portone.io") {
     if (!/^PortOne ps-test$/.test((opt.headers || {}).Authorization || "")) return J(401, { type: "UNAUTHORIZED" });
-    const m = u.pathname.match(/^\/payments\/([^/]+)(\/cancel)?$/); const id = decodeURIComponent(m[1]);
+    const m = u.pathname.match(/^\/payments\/([^/]+)(\/cancel|\/virtual-account\/close)?$/); const id = decodeURIComponent(m[1]);
+    if (m[2] === "/virtual-account/close") { if (PG[id] && PG[id].status === "PAID") return J(409, { type: "PAYMENT_ALREADY_PAID", message: "이미 입금된 결제예요" }); if (PG[id]) PG[id].closed = true; return J(200, { closedAt: new Date().toISOString() }); }
     if (m[2]) { const b = JSON.parse(opt.body); const p = PG[id]; const amt = b.amount != null ? b.amount : p.amount.total - (p.amount.cancelled || 0); p.amount.cancelled = (p.amount.cancelled || 0) + amt; p.status = p.amount.cancelled >= p.amount.total ? "CANCELLED" : "PARTIAL_CANCELLED"; p.lastCancel = b; return J(200, { cancellation: { id: "cx_" + calls.length, status: "SUCCEEDED", totalAmount: amt } }); }
     return PG[id] ? J(200, PG[id]) : J(404, { type: "PAYMENT_NOT_FOUND" });
   }
@@ -585,6 +586,113 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
   const em = (RES[RES.length - 1] || { body: [] }).body;
   ok(r.json.sent === 3 && em.length === 3 && /^\(광고\) 회원cm-0001님 새 강의$/.test(em[0].subject) && em[0].from === "두고클래스 <hello@doogoclass.com>" && /수신 거부|소식 받기/.test(em[0].html) && RES[RES.length - 1].auth === "Bearer re-test", "이메일: 이메일 동의 회원 3명(휴대폰 없어도) · 제목 (광고) · 수신 거부 안내", { n: em.length, s: em[0] && em[0].subject });
   ["SOLAPI_API_KEY", "SOLAPI_API_SECRET", "SOLAPI_SENDER", "SOLAPI_PFID", "RESEND_API_KEY", "MAIL_FROM"].forEach((k) => delete process.env[k]);
+
+  console.log("\n가상계좌 · 계좌이체 · 환불 계좌 · 포트원 결제 조회");
+  const MASTER = auth.sign({ r: "master" });
+  process.env.PORTONE_VBANK = "1"; process.env.PORTONE_TRANSFER = "1";
+  r = await call("vod-config", { method: "GET" });
+  ok(r.json.cfg.portone.channels.vbank === "channel-key-card" && r.json.cfg.portone.channels.transfer === "channel-key-card" && r.json.cfg.portone.vbankHours === 72, "설정: PORTONE_VBANK · PORTONE_TRANSFER=1 → 카드 채널로 가상계좌 · 계좌이체", r.json.cfg.portone);
+  delete process.env.PORTONE_VBANK;
+  r = await call("vod-config", { method: "GET" });
+  ok(!r.json.cfg.portone.channels.vbank, "설정을 빼면 가상계좌는 다시 닫혀요");
+  delete jar.dc_v; delete jar.dc_a;
+  await store.rlClear(["vip:1.2.3.4"]); // 같은 IP 로 가입을 여러 번 해서
+  r = await call("vod-auth", { body: { action: "signup", email: "va@example.com", pw: "test1234a", pw2: "test1234a", name: "가상OO", phone: "010-0000-7777", agree: true } });
+  ok(r.json.ok && r.json.member, "가상계좌 테스트 회원 가입", r.json);
+  const vaMid = r.json.member.id;
+  { const vc = jar.dc_v; delete jar.dc_v; jar.dc_a = MASTER; const jm = await boot(); await sync([{ k: "vm:" + vaMid, base: verOf(jm, "vm:" + vaMid), ops: [{ p: ["points"], v: 3000 }] }]); delete jar.dc_a; jar.dc_v = vc; }
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v5", kind: "course", plan: 365, points: 1000, method: "vbank" } });
+  ok(r.status === 409, "가상계좌가 닫혀 있으면 결제 준비 거절", r.json);
+  process.env.PORTONE_VBANK = "1";
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v5", kind: "course", plan: 365, points: 1000, method: "vbank" } });
+  ok(r.json.ok && r.json.paymentId && r.json.amount > 0, "가상계좌 결제 준비 (포인트 1,000 사용)", r.json);
+  const vaP = r.json.paymentId, vaN = r.json.no, vaAmt = r.json.amount, VA_EXP = "2026-11-02T23:59:59+09:00";
+  PG[vaP] = { id: vaP, status: "VIRTUAL_ACCOUNT_ISSUED", storeId: "store-test", transactionId: "tx_" + vaP, currency: "KRW", amount: { total: vaAmt, paid: 0, cancelled: 0 }, method: { type: "PaymentMethodVirtualAccount", bank: "SHINHAN", accountNumber: "56211234567890", remitteeName: "(주)두고홀딩스", expiredAt: VA_EXP } };
+  r = await call("vod-pay", { body: { action: "complete", paymentId: vaP } });
+  const vaO0 = (r.json.orders || [])[0] || {};
+  ok(r.json.ok && r.json.vbank && vaO0.status === "pending" && vaO0.method === "vbank" && vaO0.vbank.account === "56211234567890" && vaO0.vbank.bank === "SHINHAN" && vaO0.dueAt === Date.parse(VA_EXP), "발급 → 입금 대기 · 은행 · 계좌 · 입금 기한(포트원 만료 시각)", r.json);
+  r = await call("vod-auth", { body: { action: "me" } });
+  ok(r.json.member.points === 2000, "발급 때 포인트를 써 둬요 (다른 주문에 또 못 써요)", r.json.member.points);
+  r = await call("vod-pay", { body: { action: "complete", paymentId: vaP } });
+  ok(r.json.ok && r.json.vbank, "발급 확인이 두 번 와도 그대로");
+  jar.dc_a = MASTER;
+  r = await call("vod-pay", { body: { action: "bankOk", no: vaN } });
+  ok(r.status === 409 && /자동/.test(r.json.message), "가상계좌는 마스터가 직접 입금 확인 못 해요 (포트원이 알려 줘요)", r.json);
+  delete jar.dc_a;
+  const vaWi = JSON.stringify({ type: "Transaction.VirtualAccountIssued", data: { paymentId: vaP, storeId: "store-test" } });
+  r = await call("vod-pay", { raw: vaWi, headers: sign(vaWi) });
+  ok(r.status === 200, "가상계좌 발급 웹훅 받기");
+  Object.assign(PG[vaP], { status: "PAID", receiptUrl: "https://r/" + vaP }); PG[vaP].amount.paid = vaAmt;
+  const vaWp = JSON.stringify({ type: "Transaction.Paid", data: { paymentId: vaP, storeId: "store-test" } });
+  r = await call("vod-pay", { raw: vaWp, headers: sign(vaWp) });
+  r = await call("vod-pay", { body: { action: "orders" } });
+  const vaO = r.json.orders.find((o) => o.no === vaN);
+  ok(vaO.status === "paid" && vaO.pg.st === "paid" && vaO.vbank && vaO.paidAt > 0 && vaO.pg.receiptUrl === "https://r/" + vaP, "입금 웹훅 → 결제 완료 (계좌 정보 · 영수증 남김)", vaO);
+  r = await call("vod-auth", { body: { action: "me" } });
+  ok(r.json.member.points === 2000, "입금돼도 포인트는 한 번만 빠져요", r.json.member.points);
+  r = await call("vod-pay", { body: { action: "cancel", no: vaN } });
+  ok(r.status === 409 && /가상계좌/.test(r.json.message), "가상계좌 결제는 바로 취소 대신 환불 요청 (환불 계좌 필요)", r.json);
+  let vaJ = await boot();
+  r = await sync([{ k: "vo:" + vaN, base: verOf(vaJ, "vo:" + vaN), ops: [{ p: ["refundReq"], v: { why: "단순 변심", text: "", acct: { bank: "KOOKMIN", number: "123-456-78901", holder: "가상OO", evil: "x" } } }] }]);
+  vaJ = await boot();
+  const vaRq = (docOf(vaJ, "vo:" + vaN) || {}).refundReq || {};
+  ok(vaRq.acct && vaRq.acct.bank === "KOOKMIN" && vaRq.acct.number === "12345678901" && vaRq.acct.holder === "가상OO" && !vaRq.acct.evil, "회원 환불 요청: 돌려받을 계좌 (숫자만 · 다른 칸은 버림)", vaRq);
+  jar.dc_a = MASTER;
+  r = await call("vod-pay", { body: { action: "refund", no: vaN, amount: vaAmt, reason: "단순 변심" } });
+  ok(r.status === 400 && /계좌/.test(r.json.message), "가상계좌 환불: 환불 계좌가 없으면 거절", r.json);
+  r = await call("vod-pay", { body: { action: "refund", no: vaN, amount: vaAmt, reason: "단순 변심", refundAccount: { bank: "NOPE", number: "123", holder: "" } } });
+  ok(r.status === 400, "가상계좌 환불: 이상한 계좌는 거절");
+  r = await call("vod-pay", { body: { action: "refund", no: vaN, amount: vaAmt, reason: "단순 변심", refundAccount: vaRq.acct } });
+  const vaLc = PG[vaP].lastCancel || {};
+  ok(r.json.ok && vaLc.amount === vaAmt && vaLc.refundAccount && vaLc.refundAccount.bank === "KOOKMIN" && vaLc.refundAccount.number === "12345678901" && vaLc.refundAccount.holderName === "가상OO" && r.json.order.status === "refunded", "가상계좌 환불: 포트원에 환불 계좌(표준 은행 코드 · 예금주)로 원클릭 취소", { r: r.json, vaLc });
+  r = await call("vod-pay", { body: { action: "pgInfo", no: vaN } });
+  ok(r.json.ok && r.json.pay.status === "CANCELLED" && r.json.pay.method.type === "vbank" && r.json.pay.method.account === "56211234567890" && r.json.pay.amount.cancelled === vaAmt && r.json.pay.receiptUrl, "포트원 결제 조회: 상태 · 결제수단(가상계좌) · 취소 금액 · 영수증", r.json);
+  delete jar.dc_a;
+  // 입금 전 주문 취소 → 포트원 가상계좌 말소
+  r = await call("vod-auth", { body: { action: "me" } });
+  const vaPt0 = r.json.member.points;
+  ok(vaPt0 === 3000, "가상계좌 전액 환불 → 써 둔 포인트 1,000을 돌려받아요 (환불 규정)", vaPt0);
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v6", kind: "course", plan: 180, points: 500, method: "vbank" } });
+  const vaP2 = r.json.paymentId, vaN2 = r.json.no;
+  PG[vaP2] = { id: vaP2, status: "VIRTUAL_ACCOUNT_ISSUED", storeId: "store-test", transactionId: "tx_" + vaP2, currency: "KRW", amount: { total: r.json.amount, paid: 0, cancelled: 0 }, method: { type: "PaymentMethodVirtualAccount", bank: "WOORI", accountNumber: "1002000000001", remitteeName: "두고", expiredAt: VA_EXP } };
+  r = await call("vod-pay", { body: { action: "complete", paymentId: vaP2 } });
+  r = await call("vod-auth", { body: { action: "me" } });
+  ok(r.json.member.points === vaPt0 - 500, "두 번째 가상계좌: 발급 때 포인트 500을 써 둬요", r.json.member.points);
+  r = await call("vod-pay", { body: { action: "cancelPending", no: vaN2 } });
+  r = await call("vod-pay", { body: { action: "orders" } });
+  ok(r.json.orders.find((o) => o.no === vaN2).status === "canceled" && PG[vaP2].closed && calls.indexOf("POST api.portone.io/payments/" + vaP2 + "/virtual-account/close") >= 0, "입금 전 취소 → 주문 취소 · 포트원 가상계좌 말소 (취소 뒤 입금 안 되게)");
+  r = await call("vod-auth", { body: { action: "me" } });
+  ok(r.json.member.points === vaPt0, "입금 전 취소하면 써 둔 포인트 500을 돌려받아요", r.json.member.points);
+  // 실시간 계좌이체: 카드처럼 바로 결제 완료
+  r = await call("vod-pay", { body: { action: "prepare", pid: "v6", kind: "course", plan: 180, method: "transfer" } });
+  const vaPt = r.json.paymentId, vaNt = r.json.no; paidLike(vaPt, r.json.amount); PG[vaPt].method = { type: "PaymentMethodTransfer", bank: "KAKAO" };
+  r = await call("vod-pay", { body: { action: "complete", paymentId: vaPt } });
+  ok(r.json.ok && r.json.orders[0].status === "paid" && r.json.orders[0].method === "transfer", "실시간 계좌이체 → 바로 결제 완료", r.json);
+  // 포트원 콘솔에서 직접 취소한 결제 (웹훅을 놓친 경우) → 결제 조회로 맞춰요
+  PG[vaPt].status = "CANCELLED"; PG[vaPt].amount.cancelled = PG[vaPt].amount.total;
+  jar.dc_a = MASTER;
+  r = await call("vod-pay", { body: { action: "pgInfo", no: vaNt } });
+  ok(r.json.ok && /환불로 맞췄어요/.test(r.json.synced) && r.json.pay.method.type === "transfer", "결제 조회: 포트원은 취소인데 주문이 결제 완료면 환불로 맞춰요", r.json);
+  r = await call("vod-pay", { body: { action: "pgInfo", no: vaN2 } });
+  ok(r.json.ok && r.json.pay.status === "VIRTUAL_ACCOUNT_ISSUED" && !r.json.synced, "결제 조회: 취소한 가상계좌 주문은 그대로", r.json);
+  // 취소를 누른 순간 이미 입금됐으면 (가상계좌 말소가 거절돼요) 취소하지 않고 결제 완료로 — 회원 취소 · 마스터 취소 둘 다
+  const vaRace = async (pid, how) => {
+    let q = await call("vod-pay", { body: { action: "prepare", pid, kind: "course", plan: 180, method: "vbank" } });
+    const p = q.json.paymentId, no = q.json.no, amt = q.json.amount;
+    PG[p] = { id: p, status: "VIRTUAL_ACCOUNT_ISSUED", storeId: "store-test", transactionId: "tx_" + p, currency: "KRW", amount: { total: amt, paid: 0, cancelled: 0 }, method: { type: "PaymentMethodVirtualAccount", bank: "KAKAO", accountNumber: "7979000000001", remitteeName: "두고", expiredAt: VA_EXP } };
+    await call("vod-pay", { body: { action: "complete", paymentId: p } });
+    Object.assign(PG[p], { status: "PAID", amount: { total: amt, paid: amt, cancelled: 0 } }); // 웹훅이 오기 전에 입금
+    q = how === "member" ? await call("vod-pay", { body: { action: "cancelPending", no } }) : await call("vod-pay", { body: { action: "bankCancel", no } });
+    const d = await store.getDoc("vo:" + no); return { q, o: (d && d.v) || {} };
+  };
+  let vr = await vaRace("v6", "member");
+  ok(vr.q.status === 409 && /입금이 확인돼/.test(vr.q.json.message) && vr.o.status === "paid" && !PG[vr.o.paymentId].closed, "회원 입금 전 취소 · 그 사이 입금됨 → 취소하지 않고 결제 완료로 (수강 열림)", { q: vr.q.json, st: vr.o.status });
+  vr = await vaRace("v5", "master");
+  ok(vr.q.status === 409 && /입금이 확인돼/.test(vr.q.json.message) && vr.o.status === "paid", "마스터 입금 전 취소 · 그 사이 입금됨 → 취소하지 않고 결제 완료로", { q: vr.q.json, st: vr.o.status });
+  delete jar.dc_a; delete jar.dc_v;
+  r = await call("vod-pay", { body: { action: "pgInfo", no: vaN } });
+  ok(r.status === 403, "결제 조회는 마스터만");
+  delete process.env.PORTONE_VBANK; delete process.env.PORTONE_TRANSFER;
 
   console.log("\n영상 길이 (비메오 · 유튜브 실제 재생 시간)");
   r = await call("public", { body: { action: "vdur", urls: ["https://vimeo.com/76979871", "https://youtu.be/dQw4w9WgXcQ", "https://vimeo.com/111111111", "https://example.com/a.mp4"] } });

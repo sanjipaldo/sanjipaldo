@@ -5,7 +5,8 @@
  *        → 서버가 금액을 계산해 ‘결제 대기’ 주문을 만들고 { paymentId, amount, orderName, no } 를 돌려줘요 (0원이면 바로 완료)
  *   { action: "complete", paymentId }   포트원에 결제를 다시 물어 PAID · 금액 · 통화가 맞을 때만 결제 완료
  *   { action: "abort", paymentId }      결제창을 닫았거나 실패 → 결제 대기 주문을 실패로
- *        method: card · kakao · toss · naver (포트원) | bank (무통장 입금 · depositor 입금자명 → 자동 입금 확인 또는 마스터 확인) — 0원은 바로 완료
+ *        method: card · kakao · toss · naver · transfer(실시간 계좌이체) · vbank(가상계좌) (포트원) | bank (무통장 입금 · depositor 입금자명 → 자동 입금 확인 또는 마스터 확인) — 0원은 바로 완료
+ *        가상계좌: 발급되면 ‘입금 대기’(계좌 · 기한) → 회원이 입금하면 포트원 웹훅(Transaction.Paid)으로 결제 완료. 쿠폰 · 포인트는 발급 때 써 두고 취소하면 돌려줘요
  *   { action: "cancel", no }            환불 규정에 맞으면 바로 100% 취소 (포트원 결제 취소까지)
  *   { action: "cancelPending", no }     입금 전 무통장 주문 취소 (쓴 쿠폰 · 포인트 돌려받기)
  *   { action: "dg", iid }               산 VOD 의 두잉고 강의실 들어가기 — 서버가 두잉고 수강생 계정을 만들고 로그인시켜요
@@ -13,7 +14,8 @@
  *   { action: "track", pid, lid, ev }   강의 열기(seen) · 완료(done) · 자료 내려받기(mat) 기록 — 바로 취소 판단에 써요
  *   { action: "orders" }                내 주문
  *  마스터 (dc_a 마스터 로그인)
- *   { action: "refund", no, amount, reason }   부분 · 전액 환불 (포트원 결제 취소)
+ *   { action: "refund", no, amount, reason, refundAccount }   부분 · 전액 환불 (포트원 결제 취소 · 가상계좌는 refundAccount { bank, number, holder } 로 계좌 환불)
+ *   { action: "pgInfo", no }                   포트원에 결제 상태를 다시 물어봐요 (결제수단 · 승인 번호 · 영수증 · 취소 내역). 웹훅을 놓쳐 어긋났으면 맞춰요
  *   { action: "catalog", catalog }             클래스 가격 · 쿠폰 · 설정 · 환불 규정 올리기
  *   { action: "bankOk", no }                   무통장 입금 확인 → 바로 수강 (같은 결제로 산 코칭권도 같이)
  *   { action: "bankCancel", no }               입금 전 무통장 주문 취소 (쿠폰 · 포인트 돌려주기)
@@ -44,6 +46,7 @@ async function finalize(paymentId) {
   let pay = null;
   if (total > 0) {
     pay = await portone.getPayment(paymentId);
+    if (pay.status === "VIRTUAL_ACCOUNT_ISSUED") return vbankIssued(paymentId, idx, orders, pay, total);
     if (pay.status !== "PAID") return { ok: false, message: "결제가 끝나지 않았어요. (" + pay.status + ")" };
     if (!pay.amount || Number(pay.amount.total) !== total) { console.error("[vod-pay] amount mismatch", paymentId, pay.amount && pay.amount.total, total); return { ok: false, message: "결제 금액이 주문과 달라요. 고객센터로 알려 주세요." }; }
     if (pay.currency && pay.currency !== "KRW" && pay.currency !== "CURRENCY_KRW") return { ok: false, message: "결제 통화가 달라요." };
@@ -59,6 +62,23 @@ async function finalize(paymentId) {
   await useCouponPoints(orders[0] && orders[0].mid, orders, paymentId, idx.nos[0]);
   return { ok: true, no: idx.nos[0], orders: done };
 }
+/** 가상계좌 발급: 주문을 ‘입금 대기’로 (계좌 · 은행 · 입금 기한) — 두 번 와도 한 번만. 입금되면 포트원이 PAID 웹훅을 보내 finalize 가 결제 완료로 바꿔요 */
+async function vbankIssued(paymentId, idx, orders, pay, total) {
+  if (!pay.amount || Number(pay.amount.total) !== total) { console.error("[vod-pay] vbank amount mismatch", paymentId); return { ok: false, message: "결제 금액이 주문과 달라요. 고객센터로 알려 주세요." }; }
+  if (process.env.PORTONE_STORE_ID && pay.storeId && pay.storeId !== process.env.PORTONE_STORE_ID) return { ok: false, message: "다른 상점의 결제예요." };
+  const m = pay.method || {};
+  if (m.type !== "PaymentMethodVirtualAccount" || !m.accountNumber) return { ok: false, message: "가상계좌 정보를 받지 못했어요. 고객센터로 알려 주세요." };
+  const due = Date.parse(m.expiredAt || "") || Date.now() + portone.vbankHours() * 36e5;
+  const vb = { bank: String(m.bank || ""), account: String(m.accountNumber), holder: String(m.remitteeName || ""), dueAt: due };
+  const out = [];
+  for (const o0 of orders) {
+    const o = await V.update(V.K.order(o0.no), (o) => (o && o.status === "ready" ? Object.assign(o, { status: "pending", vbank: vb, dueAt: due, pg: Object.assign({}, o.pg || {}, { st: "issued", paymentId, txId: pay.transactionId || "" }) }) : undefined));
+    out.push(o || (await V.get(V.K.order(o0.no))) || o0);
+  }
+  // 쿠폰 · 포인트는 무통장처럼 발급 때 써 두고, 입금 전에 취소하면 돌려줘요 (같은 결제로 두 번 쓰지 않아요)
+  await useCouponPoints(orders[0] && orders[0].mid, orders, paymentId, idx.nos[0]);
+  return { ok: true, vbank: true, no: idx.nos[0], orders: out };
+}
 /** 환불 반영: 주문 refunded + 쿠폰 · 포인트 돌려주기(전액 환불이고 규정이 켜져 있을 때) */
 async function markRefunded(o, amount, info, restore) {
   const at = Date.now();
@@ -68,7 +88,7 @@ async function markRefunded(o, amount, info, restore) {
   return next;
 }
 
-const PG_METHODS = { card: "PORTONE_CHANNEL_CARD", kakao: "PORTONE_CHANNEL_KAKAOPAY", toss: "PORTONE_CHANNEL_TOSSPAY", naver: "PORTONE_CHANNEL_NAVERPAY" };
+const isPgMethod = (m) => portone.PG_METHOD_KEYS.indexOf(m) >= 0;
 /** 쿠폰 사용 · 포인트 차감 (결제가 확인됐거나 무통장 주문을 받았을 때 한 번만) */
 async function useCouponPoints(mid, orders, key, no) {
   const pts = orders.reduce((a, o) => a + (o.pointOff || 0), 0), mcid = (orders.find((o) => o.mcid) || {}).mcid, at = Date.now();
@@ -80,8 +100,8 @@ async function prepare(res, m, b) {
   if (!q.ok) return fail(res, 409, q.message);
   const method = String(b.method || "card");
   if (q.total > 0) {
-    if (PG_METHODS[method] && !(portone.on() && process.env[PG_METHODS[method]])) return fail(res, 409, method === "card" ? "카드 결제는 PG 심사가 끝나면 열려요. 지금은 무통장 입금으로 결제해 주세요." : "이 간편결제는 아직 준비 중이에요. 다른 결제 방법을 골라 주세요.");
-    if (!PG_METHODS[method] && method !== "bank") return fail(res, 400, "결제 방법을 골라 주세요.");
+    if (isPgMethod(method) && !(portone.on() && portone.channel(method))) return fail(res, 409, method === "card" ? "카드 결제는 PG 심사가 끝나면 열려요. 지금은 무통장 입금으로 결제해 주세요." : "이 간편결제는 아직 준비 중이에요. 다른 결제 방법을 골라 주세요.");
+    if (!isPgMethod(method) && method !== "bank") return fail(res, 400, "결제 방법을 골라 주세요.");
   }
   const bank = q.total > 0 && method === "bank", bk = bank ? await BM.info() : null;
   if (bank && !bk) return fail(res, 409, "무통장 입금 계좌가 아직 준비되지 않았어요. 고객센터로 문의해 주세요.");
@@ -133,7 +153,8 @@ async function cancelPending(res, m, b) {
   const o = await V.get(V.K.order(String(b.no || "")));
   if (!o || o.mid !== m.id) return fail(res, 404, "주문을 찾지 못했어요.");
   if (o.status !== "pending") return fail(res, 409, "입금 전 주문만 취소할 수 있어요.");
-  await BM.drop(o, "회원");
+  const r = await BM.drop(o, "회원");
+  if (r && r.paid) { await finalize(o.paymentId).catch((e) => console.error("[vod-pay] vbank paid on cancel", o.no, e.message)); return fail(res, 409, r.message); }
   send(res, 200, { ok: true });
 }
 
@@ -156,17 +177,50 @@ async function enterDg(req, res, m, b) {
   auth.setCookie(req, res, "student", auth.sign({ r: "student", iid, sid: s.id }));
   send(res, 200, { ok: true, sid: s.id, iid });
 }
+/* 환불 계좌 (포트원 표준 은행 코드) — 가상계좌 환불에 꼭 필요해요 */
+const BANK_CODES = ["KOOKMIN", "SHINHAN", "WOORI", "HANA", "NONGHYUP", "LOCAL_NONGHYUP", "IBK", "KAKAO", "TOSS", "K_BANK", "KDB", "SUHYUP", "POST", "KFCC", "SHINHYUP", "SAVINGS_BANK", "BUSAN", "KYONGNAM", "DAEGU", "KWANGJU", "JEONBUK", "JEJU", "STANDARD_CHARTERED", "CITI", "NFCF"];
+function refundAcct(a) {
+  if (!a || typeof a !== "object") return null;
+  const bank = String(a.bank || ""), number = String(a.number || "").replace(/[^0-9]/g, ""), holder = String(a.holder || a.holderName || "").trim().slice(0, 20);
+  return BANK_CODES.indexOf(bank) >= 0 && number.length >= 8 && number.length <= 20 && holder ? { bank, number, holder } : null;
+}
 async function refund(res, b) {
   const o = await V.get(V.K.order(String(b.no || "")));
   if (!o || o.status !== "paid") return fail(res, 404, "환불할 수 있는 주문이 아니에요.");
   const amount = Math.round(Number(b.amount));
   if (!(amount >= 0 && amount <= o.amount)) return fail(res, 400, "환불 금액은 0원 ~ 결제 금액 사이로 적어 주세요.");
+  const acct = refundAcct(b.refundAccount);
+  if (o.method === "vbank" && amount > 0 && !acct) return fail(res, 400, "가상계좌 환불은 환불 받을 계좌(은행 · 계좌번호 · 예금주)가 필요해요.");
   let cancelId = "";
   // 포트원으로 결제한 주문만 포트원 취소 — 무통장 입금은 마스터가 계좌로 돌려줘요 (기록만)
-  if (o.pg && o.pg.st === "paid" && amount > 0) { const r = await portone.cancelPayment(o.paymentId, amount, String(b.reason || "운영자 환불")); cancelId = (r && r.cancellation && r.cancellation.id) || ""; }
+  if (o.pg && o.pg.st === "paid" && amount > 0) { const r = await portone.cancelPayment(o.paymentId, amount, String(b.reason || "운영자 환불"), o.method === "vbank" ? { bank: acct.bank, number: acct.number, holderName: acct.holder } : null); cancelId = (r && r.cancellation && r.cancellation.id) || ""; }
   const rf = V.rfSet(await V.catalog());
   const next = await markRefunded(o, amount, { kind: amount < o.amount ? "partial" : "master", why: String(b.reason || "운영자 환불").slice(0, 100), by: "마스터", cancel: { id: cancelId, at: Date.now() } }, rf.restore);
   send(res, 200, { ok: true, cancelId, order: next });
+}
+/** 포트원 결제 조회 (마스터): 결제수단 · 금액 · 영수증 · 취소 내역. 포트원은 결제 완료인데 주문이 대기면 결제 완료로, 포트원은 전액 취소인데 주문이 결제 완료면 환불로 맞춰요 */
+function payView(pay) {
+  const m = pay.method || {}, a = pay.amount || {}, c = m.card || {};
+  const method = m.type === "PaymentMethodCard" ? { type: "card", name: c.name || c.issuer || c.publisher || "", number: c.number || "", approval: m.approvalNumber || "", months: (m.installment && m.installment.month) || 0 }
+    : m.type === "PaymentMethodEasyPay" ? { type: "easy", provider: m.provider || "", sub: (m.easyPayMethod && m.easyPayMethod.type) || "" }
+    : m.type === "PaymentMethodTransfer" ? { type: "transfer", bank: m.bank || "" }
+    : m.type === "PaymentMethodVirtualAccount" ? { type: "vbank", bank: m.bank || "", account: m.accountNumber || "", holder: m.remitteeName || "", expiredAt: m.expiredAt || "" }
+    : { type: m.type || "" };
+  return { status: pay.status || "", method, amount: { total: Number(a.total) || 0, paid: Number(a.paid) || 0, cancelled: Number(a.cancelled) || 0 }, receiptUrl: pay.receiptUrl || "", paidAt: pay.paidAt || "",
+    cancellations: (pay.cancellations || []).map((x) => ({ amount: Number(x.totalAmount) || 0, reason: String(x.reason || "").slice(0, 100), at: x.cancelledAt || x.requestedAt || "", status: x.status || "" })) };
+}
+async function pgInfo(res, b) {
+  const o = await V.get(V.K.order(String(b.no || "")));
+  if (!o || !o.paymentId || !(o.pg && (o.pg.paymentId || o.pg.st === "paid" || o.pg.st === "issued"))) return fail(res, 404, "포트원으로 결제한 주문이 아니에요.");
+  const pay = await portone.getPayment(o.paymentId);
+  let synced = "";
+  if (pay.status === "PAID" && o.status === "pending") { const r = await finalize(o.paymentId); if (r.ok) synced = "포트원에서 입금이 확인돼 결제 완료로 바꿨어요."; }
+  else if (pay.status === "CANCELLED" && o.status === "paid") {
+    const idx = await V.get(V.K.pay(o.paymentId));
+    for (const no of (idx && idx.nos) || [o.no]) { const x = await V.get(V.K.order(no)); if (x && x.status === "paid") await markRefunded(x, x.amount, { kind: "master", why: "포트원에서 취소됨", by: "포트원", cancel: { id: "", at: Date.now() } }, false); }
+    synced = "포트원에서 이미 취소된 결제라 환불로 맞췄어요.";
+  }
+  send(res, 200, { ok: true, pay: payView(pay), synced });
 }
 /** 쿠폰 받기: 쿠폰 코드 등록(code) · 상세 페이지 "쿠폰 받기"(cid, 내려받기 쿠폰만) */
 async function claim(res, m, b) {
@@ -217,6 +271,8 @@ async function webhook(req, res) {
   let ev = {}; try { ev = JSON.parse(raw); } catch (e) { return send(res, 400, { ok: false }); }
   const pid = ev && ev.data && ev.data.paymentId;
   if (pid && /Paid$/.test(ev.type || "")) { const r = await finalize(pid).catch((e) => ({ ok: false, message: e.message })); if (!r.ok) console.error("[vod-pay webhook] paid", pid, r.message); }
+  // 가상계좌 발급: 회원이 창을 닫았어도 주문에 계좌 · 기한을 남겨요
+  else if (pid && /VirtualAccountIssued$/.test(ev.type || "")) { const r = await finalize(pid).catch((e) => ({ ok: false, message: e.message })); if (!r.ok) console.error("[vod-pay webhook] vbank", pid, r.message); }
   else if (pid && /Cancel/.test(ev.type || "")) {
     // 포트원 콘솔에서 직접 취소한 경우도 주문에 맞춰요
     const idx = await V.get(V.K.pay(pid)), pay = idx ? await portone.getPayment(pid).catch(() => null) : null;
@@ -230,15 +286,21 @@ module.exports = handler(["POST"], async (req, res) => {
   if (!edge.originOk(req)) return fail(res, 403, "forbidden");
   if (process.env.VOD_SERVER_AUTH !== "1") return fail(res, 404, "서버 결제가 아직 꺼져 있어요.");
   const b = await body(req), a = String(b.action || "");
-  if (a === "refund" || a === "catalog" || a === "bankOk" || a === "bankCancel" || a === "bankLog" || a === "bankLink") {
+  if (a === "refund" || a === "pgInfo" || a === "catalog" || a === "bankOk" || a === "bankCancel" || a === "bankLog" || a === "bankLink") {
     const ids = await auth.identify(req);
     if (!(ids.admin && ids.admin.role === "master")) return fail(res, 403, "마스터만 할 수 있어요.");
     const by = String((ids.admin && (ids.admin.name || ids.admin.id)) || "마스터").slice(0, 20);
-    if (a === "bankOk") { const r = await BM.confirm(b.no, by, { okHow: "manual" }); return send(res, r.ok ? 200 : 409, r); }
-    if (a === "bankCancel") { const o = await V.get(V.K.order(String(b.no || ""))); if (!o || o.status !== "pending") return fail(res, 409, "입금 대기 주문만 취소할 수 있어요."); await BM.drop(o, by); return send(res, 200, { ok: true }); }
-    if (a === "bankLog") return send(res, 200, Object.assign({ ok: true }, await BM.log()));
-    if (a === "bankLink") return send(res, 200, await BM.link(String(b.id || ""), String(b.no || ""), by));
-    return a === "refund" ? refund(res, b) : saveCatalog(res, b);
+    try {
+      if (a === "bankOk") { const r = await BM.confirm(b.no, by, { okHow: "manual" }); return send(res, r.ok ? 200 : 409, r); }
+      if (a === "bankCancel") { const o = await V.get(V.K.order(String(b.no || ""))); if (!o || o.status !== "pending") return fail(res, 409, "입금 대기 주문만 취소할 수 있어요."); const r = await BM.drop(o, by); if (r && r.paid) { await finalize(o.paymentId).catch((e) => console.error("[vod-pay] vbank paid on cancel", o.no, e.message)); return fail(res, 409, r.message); } return send(res, 200, { ok: true }); }
+      if (a === "bankLog") return send(res, 200, Object.assign({ ok: true }, await BM.log()));
+      if (a === "bankLink") return send(res, 200, await BM.link(String(b.id || ""), String(b.no || ""), by));
+      if (a === "pgInfo") return await pgInfo(res, b);
+      return a === "refund" ? await refund(res, b) : await saveCatalog(res, b);
+    } catch (e) {
+      console.error("[vod-pay] master", a, e.status || "", e.message);
+      return fail(res, 502, e.status ? "포트원 응답: " + String(e.message || "").slice(0, 160) + " — 포트원 콘솔에서 결제 상태를 확인해 주세요." : "처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
+    }
   }
   const m = await V.current(req);
   if (!m) return fail(res, 401, "로그인이 필요해요.");
