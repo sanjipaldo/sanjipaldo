@@ -1481,9 +1481,28 @@
   }
   const snsOf = (iid) => { const b = ((DB.content && DB.content(iid)) || {}).brand || {}, url = (v, base) => (!v ? "" : /^https?:\/\//.test(v) ? v : base + String(v).replace(/^@/, "")); return [[url(b.instagram, "https://instagram.com/"), "camera", "인스타그램"], [url(b.youtubeChannel, "https://youtube.com/"), "video", "유튜브"], [url(b.kakaoChannel, "https://pf.kakao.com/"), "message", "카카오톡 채널"]].filter((x) => x[0]); };
   const tHref = (iid) => "#/vod/teachers/" + encodeURIComponent(iid);
+  /* 강사진 검색: 이름 · 소개 · 분야로 찾고, 초성(ㅁㄷㅍ → 문대표)도 맞춰요. 고른 분야 · 검색어는 다시 그려도 남아요 */
+  const CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+  const choOf = (s) => String(s || "").replace(/[가-힣]/g, (c) => CHO[Math.floor((c.charCodeAt(0) - 0xac00) / 588)]);
+  const tqNorm = (s) => String(s || "").toLowerCase().replace(/\s+/g, "");
+  const tqHay = (t) => tqNorm([t.name, t.tag, t.cats.join(" ")].join(" ")) + "|" + choOf(tqNorm(t.name));
+  let tpgQ = "", tpgC = "";
+  const tpgOn = () => route().path[0] === "teachers" && !route().path[1];
+  const tpgHit = (t) => !tpgOn() || ((!tpgC || t.cats.indexOf(tpgC) >= 0) && (!tpgQ || tqHay(t).indexOf(tqNorm(tpgQ)) >= 0));
+  // 검색어 · 분야가 바뀌면 카드만 숨기고 보여요 (입력 중인 글자 · 커서를 그대로 두려고 다시 그리지 않아요)
+  function tpgApply() {
+    const g = document.querySelector("[data-tpg-g]"); if (!g) return;
+    const q = tqNorm(tpgQ); let n = 0;
+    g.querySelectorAll(".vd-tc").forEach((el) => { const hit = (!tpgC || ("|" + el.dataset.tc + "|").indexOf("|" + tpgC + "|") >= 0) && (!q || el.dataset.tq.indexOf(q) >= 0); el.hidden = !hit; if (hit) n++; });
+    document.querySelectorAll("[data-tpg-cat]").forEach((b) => { const on = b.dataset.tpgCat === tpgC; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
+    const x = document.querySelector(".vd-tpg-x"); if (x) x.hidden = !tpgQ;
+    const none = document.querySelector("[data-tpg-none]"); if (none) none.hidden = n > 0;
+    const c = document.querySelector("[data-tpg-cnt]"); if (c) { c.hidden = !q && !tpgC; c.innerHTML = tpgCntTxt(n); }
+  }
+  const tpgCntTxt = (n) => (tpgC ? "<em>" + esc(tpgC) + "</em> " : "") + (tpgQ ? "‘" + esc(tpgQ.trim()) + "’ " : "") + "강사님 <b>" + n + "명</b>";
   function tcCard(t, i) {
     const ph = t.ph || insPhoto(t.iid), sns = snsOf(t.iid);
-    return '<div class="vd-tc" style="--c:' + ACC[(i + 1) % ACC.length] + '"><a class="vd-tc-main" href="' + tHref(t.iid) + '"><span class="vd-tc-ph vd-tc-s' + (i % 4) + '"><i class="vd-tc-bg" aria-hidden="true"></i>' + (ph ? '<img src="' + esc(ph) + '" alt="" loading="lazy">' : "<em>" + esc((t.name || "D").slice(0, 1)) + "</em>") + '<span class="vd-tc-n">클래스 ' + t.ps.length + "</span></span>" +
+    return '<div class="vd-tc" style="--c:' + ACC[(i + 1) % ACC.length] + '" data-tq="' + esc(tqHay(t)) + '" data-tc="' + esc(t.cats.join("|")) + '"' + (tpgHit(t) ? "" : " hidden") + '><a class="vd-tc-main" href="' + tHref(t.iid) + '"><span class="vd-tc-ph vd-tc-s' + (i % 4) + '"><i class="vd-tc-bg" aria-hidden="true"></i>' + (ph ? '<img src="' + esc(ph) + '" alt="" loading="lazy">' : "<em>" + esc((t.name || "D").slice(0, 1)) + "</em>") + '<span class="vd-tc-n">클래스 ' + t.ps.length + "</span></span>" +
       "<b>" + esc(t.name || "") + "</b><small>" + esc(t.tag || t.cats.join(" · ")) + '</small><span class="vd-tc-cat">' + esc(t.cats.slice(0, 2).join(" · ")) + "</span></a>" +
       '<span class="vd-tc-sns">' + sns.map((x) => '<a href="' + esc(x[0]) + '" target="_blank" rel="noopener" aria-label="' + esc(t.name) + " " + x[2] + '">' + icon(x[1], "xs") + "</a>").join("") + '<a href="' + tHref(t.iid) + '" aria-label="' + esc(t.name) + ' 강사 페이지">' + icon("arrowUpRight", "xs") + "</a></span></div>";
   }
@@ -1491,12 +1510,20 @@
   function teachers() {
     const list = teacherList().slice(0, 8);
     if (!list.length) return "";
-    return '<section class="vd-sec vd-teach"><div class="vd-teach-h"><a class="vd-teach-link" href="#/vod/teachers"><h2 data-eg>강사진</h2><span data-rv="fade">Teachers</span>' + icon("chevRight", "sm") + '</a><p data-rv="fade">직접 해서 번 사람만 가르쳐요.</p><a class="vd-more vd-teach-more" href="#/vod/teachers">강사진 전체보기' + icon("chevRight", "xs") + '</a></div><div class="vd-teach-g" data-rv-kids>' + list.map(tcCard).join("") + "</div></section>";
+    return '<section class="vd-sec vd-teach"><div class="vd-teach-h"><a class="vd-teach-link" href="#/vod/teachers"><h2 data-eg>강사진</h2><span data-rv="fade">Teachers</span>' + icon("chevRight", "sm") + '</a><p data-rv="fade">직접 해서 번 사람만 가르쳐요.</p><a class="vd-more vd-teach-more" href="#/vod/teachers">강사진 전체보기' + icon("chevRight", "xs") + '</a></div><div class="vd-teach-g vd-teach-rail" data-rv-kids>' + list.map(tcCard).join("") + "</div></section>";
   }
   function pageTeachers() {
-    const list = teacherList(), n = list.reduce((a, t) => a + t.ps.length, 0);
+    const list = teacherList(), n = list.reduce((a, t) => a + t.ps.length, 0), cats = [];
+    list.forEach((t) => t.cats.forEach((c) => { if (cats.indexOf(c) < 0) cats.push(c); }));
+    if (tpgC && cats.indexOf(tpgC) < 0) tpgC = "";
+    const hits = list.filter(tpgHit).length, filtered = !!(tpgC || tqNorm(tpgQ));
+    const bar = '<div class="vd-tpg-bar"><label class="vd-search vd-tpg-q">' + icon("search", "sm") + '<input type="search" data-tpg-q value="' + esc(tpgQ) + '" placeholder="강사 이름 · 분야로 찾기 (초성도 돼요)" aria-label="강사 검색" autocomplete="off" enterkeyhint="search"><button type="button" class="vd-tpg-x" data-v="tpg-clear" aria-label="검색어 지우기"' + (tpgQ ? "" : " hidden") + ">" + icon("x", "xs") + "</button></label>" +
+      (cats.length > 1 ? '<nav class="vd-pills vd-tpg-cats" aria-label="분야">' + [["", "전체"]].concat(cats.map((c) => [c, c])).map((c) => '<button type="button" class="vd-pill' + (c[0] === tpgC ? " on" : "") + '" data-v="tpg-cat" data-tpg-cat="' + esc(c[0]) + '" aria-pressed="' + (c[0] === tpgC) + '">' + esc(c[1]) + "</button>").join("") + "</nav>" : "") + "</div>";
     return shell("teachers", '<div class="vd-wrap vd-tpg"><div class="vd-tpg-h"><p class="vd-tpg-k" data-rv="fade">DOOGO CLASS TEACHERS</p><h1 class="vd-h1">강사진 <small>' + list.length + "명 · 클래스 " + n + "개</small></h1><p data-rv=\"fade\">직접 해서 번 사람만 가르쳐요. 강사님을 누르면 그 강사님이 DOOGO CLASS에서 여는 강의만 모아 볼 수 있어요.</p></div>" +
-      (list.length ? '<div class="vd-teach-g vd-tpg-g" data-rv-kids>' + list.map(tcCard).join("") + "</div>" : emptyBox("users", "강사진을 준비하고 있어요", "곧 새로운 강사님이 찾아와요.", "")) + "</div>", "");
+      (list.length ? bar + '<p class="vd-tpg-cnt" data-tpg-cnt aria-live="polite"' + (filtered ? "" : " hidden") + ">" + tpgCntTxt(hits) + "</p>" +
+        '<div class="vd-teach-g vd-tpg-g" data-tpg-g data-rv-kids>' + list.map(tcCard).join("") + "</div>" +
+        '<div data-tpg-none' + (hits ? " hidden" : "") + ">" + emptyBox("search", "찾는 강사님이 없어요", "이름이나 분야를 다시 확인해 보세요.", '<button type="button" class="vd-btn vd-btn-line" data-v="tpg-reset">강사진 전체 보기</button>') + "</div>"
+        : emptyBox("users", "강사진을 준비하고 있어요", "곧 새로운 강사님이 찾아와요.", "")) + "</div>", "");
   }
   function pageTeacher(iid) {
     const list = teacherList(), i = list.findIndex((x) => x.iid === iid), t = list[i];
@@ -2749,7 +2776,7 @@
             : myEmpty("아직 남긴 문의가 없어요. 궁금한 점이 있으면 편하게 물어보세요.", "1:1 문의하기", "#/vod/my/help")));
     } else {
       sub = "account";
-      body = '<form class="vd-acct vd-form" data-vd-acct novalidate><label>이메일 (아이디)<input value="' + esc(m.email) + '" readonly></label><label>이름<input name="name" value="' + esc(m.name) + '" maxlength="20"></label><label>휴대폰<input name="phone" value="' + esc(m.phone || "") + '" maxlength="20"></label><label class="vd-agree"><input type="checkbox" name="mkt"' + (m.marketing ? " checked" : "") + "><span>할인 · 새 클래스 소식 받기 (선택)</span></label>" +
+      body = '<form class="vd-acctf vd-form" data-vd-acct novalidate><label>이메일 (아이디)<input value="' + esc(m.email) + '" readonly></label><label>이름<input name="name" value="' + esc(m.name) + '" maxlength="20"></label><label>휴대폰<input name="phone" value="' + esc(m.phone || "") + '" maxlength="20"></label><label class="vd-agree"><input type="checkbox" name="mkt"' + (m.marketing ? " checked" : "") + "><span>할인 · 새 클래스 소식 받기 (선택)</span></label>" +
         '<div class="vd-acct-ch"><span>받을 곳</span>' + CH3.map((c) => '<label><input type="checkbox" name="ch_' + c[0] + '"' + (chOn(m, c[0]) ? " checked" : "") + "><span>" + c[1] + "</span></label>").join("") + '<label><input type="checkbox" name="night"' + (m.consent && m.consent.night ? " checked" : "") + "><span>밤 9시 ~ 아침 8시에도 받기</span></label></div>" +
         (m.consent && m.consent.mkt ? '<p class="vd-muted vd-acct-cs">' + DB.date.fmtFull(DB.date.toStr(new Date(m.consent.at))) + "에 소식 받기에 동의했어요. 2년마다 한 번 동의 여부를 다시 알려 드려요.</p>" : "") +
         (m.via === "kakao" ? '<p class="vd-acct-kk">' + KAKAO + "카카오 계정으로 가입했어요. 로그인은 ‘카카오로 1초 만에 시작하기’로 해요.</p>" : "") +
@@ -3110,6 +3137,8 @@
     const v = t.dataset.v, m = me();
     if (v === "close") { if (e.target === t || t.tagName === "BUTTON" || t.tagName === "A") closeModal(); return; }
     if (v === "recruit") { e.preventDefault(); recruit(); return; }
+    if (v === "tpg-cat") { tpgC = t.dataset.tpgCat || ""; tpgApply(); return; }
+    if (v === "tpg-clear" || v === "tpg-reset") { tpgQ = ""; if (v === "tpg-reset") tpgC = ""; const q = document.querySelector("[data-tpg-q]"); if (q) { q.value = ""; if (v === "tpg-clear") q.focus(); } tpgApply(); return; }
     if (v === "dg") { e.preventDefault(); enterDg(t.dataset.p, "", t.dataset.to); return; }
     if (v === "mat") { e.preventDefault(); { const rp = route().path; if (rp[0] === "learn" && m) markMat(m.id, rp[1]); } matOpen({ url: t.dataset.u, name: t.dataset.n }, "dl").then((ok) => { if (!ok) toast("이 브라우저에 저장된 파일이 아니에요. 강사님께 다시 올려 달라고 요청해 주세요.", "warn"); }); return; }
     if (v === "dev-del") { const m = me(); if (!m || !Array.isArray(m.devices)) return; if (t.dataset.arm !== "1") { t.dataset.arm = "1"; t.textContent = "한 번 더 누르면 해제"; return; } m.devices = m.devices.filter((x) => x.id !== t.dataset.id); save(); render(); toast("기기를 해제했어요."); return; }
@@ -3244,6 +3273,7 @@
     const f = e.target.closest && e.target.closest("[data-vd-pledge]"); if (f) { const n = f.querySelector("[data-pl-n]"); if (n) n.textContent = e.target.value.length; return; }
     const a = e.target.closest && e.target.closest("[data-vd-auth]"); if (a) { authReady(a); return; }
     const co = e.target.closest && e.target.closest("[data-vd-pay]"); if (co && (e.target.name === "points" || e.target.name === "qty")) coPaint(co);
+    if (e.target.matches && e.target.matches("[data-tpg-q]")) { tpgQ = e.target.value; tpgApply(); }
   });
   document.addEventListener("submit", (e) => {
     if (!isActive()) return;

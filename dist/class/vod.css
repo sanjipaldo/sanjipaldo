@@ -874,7 +874,7 @@ div.vd-co-bank { padding: 16px 18px; }
 .vd-iqs p { font-size: 14px; line-height: 1.6; color: var(--on2); }
 .vd-iq-a { padding: 12px 14px; border-radius: 4px; background: var(--s1); }
 .vd-iq-a b { font-size: 13px; color: var(--vd-pri); }
-.vd-acct { max-width: 480px; }
+.vd-acctf { max-width: 480px; } /* 회원 정보 수정 폼 (.vd-acct 는 머리글 계정 버튼) */
 .vd-pwbox { border-radius: 4px; box-shadow: inset 0 0 0 1px var(--ln10); padding: 0 16px; }
 .vd-pwbox summary { height: 48px; display: flex; align-items: center; font-size: 14px; font-weight: 700; cursor: pointer; list-style: none; }
 .vd-pwbox summary::-webkit-details-marker { display: none; }
@@ -1089,8 +1089,11 @@ body[data-mode="vod"]:has(.vd-player) { background: #0c0c0c; }
   .vd-my-side { position: static; }
   .vd-my-prof { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; }
   .vd-my-me, .vd-my-stat { grid-column: 1 / -1; }
-  .vd-my-pt { grid-column: 1; }
-  .vd-my-pf { grid-column: 2; height: 44px; }
+  .vd-my-me { grid-row: 1; }
+  .vd-my-stat { grid-row: 3; }
+  /* 포인트 · 내 프로필은 같은 줄에 나란히 (마크업 순서는 포인트 → 숫자 → 내 프로필) */
+  .vd-my-pt { grid-column: 1; grid-row: 2; height: 44px; }
+  .vd-my-pf { grid-column: 2; grid-row: 2; height: 44px; }
   .vd-my-nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -24px; padding: 0 24px; }
   .vd-my-nav::-webkit-scrollbar { display: none; }
   .vd-my-nav p { display: none; }
@@ -3449,4 +3452,37 @@ a.vd-fln:not(.is-after):hover { border-color: #e2c050; }
   .vd-shc-steps.s5 b { font-size: 11px; letter-spacing: -0.04em; }
   .vd-shc-steps.s5 small { font-size: 10px; }
   .vd-rfq-kind { grid-template-columns: 1fr; }
+}
+
+/* ---------- 강사진: 홈은 휴대폰에서 옆으로 넘기는 줄(세 번째 카드가 살짝 보여 ‘넘기면 더 있다’를 알려요) · 강사진 페이지는 검색 · 분야 ---------- */
+.vd-tc[hidden] { display: none; }
+@media (max-width: 860px) {
+  .vd-teach-g.vd-teach-rail { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: calc((100% - 24px) / 3.3); gap: 12px; margin: 0 -24px; padding: 0 24px 4px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding: 0 24px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .vd-teach-g.vd-teach-rail::-webkit-scrollbar { display: none; }
+  .vd-teach-rail > .vd-tc { scroll-snap-align: start; }
+}
+@media (max-width: 639px) {
+  .vd-teach-g.vd-teach-rail { grid-auto-columns: calc((100% - 12px) / 2.28); margin: 0 -16px; padding: 0 16px 4px; scroll-padding: 0 16px; }
+  .vd-teach-rail .vd-tc small { white-space: nowrap; }
+}
+.vd-tpg-bar { display: grid; gap: 14px; margin: -8px 0 28px; }
+.vd-tpg-q { flex: none; width: 100%; max-width: 560px; height: 52px; margin: 0; padding: 0 6px 0 16px; border-radius: 12px; background: var(--s1); box-shadow: none; }
+.vd-tpg-q:focus-within { background: #fff; box-shadow: inset 0 0 0 1.5px var(--onh); }
+.vd-tpg-q > .icon { flex: none; width: 18px !important; height: 18px !important; color: var(--on3); }
+.vd-tpg-q input { padding-left: 10px; font-size: 16px; }
+.vd-search .vd-tpg-x { width: 32px; height: 32px; margin-right: 4px; border-radius: 50%; color: var(--on3); }
+.vd-search .vd-tpg-x:hover { background: var(--ln10); color: var(--on1); }
+.vd-tpg-x[hidden] { display: none; }
+.vd-tpg-cats { margin-top: 0; }
+.vd-tpg-cats .vd-pill { border: 0; font-family: inherit; cursor: pointer; }
+.vd-tpg-cnt { margin: -12px 0 20px; font-size: 14px; color: var(--on3); }
+.vd-tpg-cnt[hidden] { display: none; }
+.vd-tpg-cnt em { font-style: normal; font-weight: 700; color: var(--on1); }
+.vd-tpg-cnt b { color: var(--vd-pri); }
+[data-tpg-none][hidden] { display: none; }
+[data-tpg-none] .vd-empty { padding: 56px 16px; }
+@media (max-width: 639px) {
+  .vd-tpg-bar { gap: 10px; margin: -14px 0 22px; }
+  .vd-tpg-q { height: 48px; }
+  .vd-tpg-cats { margin: 0 -16px; padding: 0 16px; }
 }

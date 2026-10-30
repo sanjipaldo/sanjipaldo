@@ -2995,3 +2995,15 @@ a.a-noperm, a.a-noperm * { color: var(--m-stone, #9a9aa3) !important; cursor: no
   .bo-send .a-btn { flex: 1 1 100%; justify-content: center; }
   .bo-addr > div { grid-template-columns: 64px minmax(0, 1fr); }
 }
+
+/* 강사별 정산 비율 — 휴대폰: 종류마다 이름표가 보이는 작은 칸 3개씩 (VOD 강의 · 전자책 · 종이책 …) */
+@media (max-width: 760px) {
+  .vda-rates tr { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .vda-rates td.vda-rc { padding: 8px 10px; border-radius: 10px; background: #f7f7f9; }
+  .vda-rates td.vda-rc::before { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vda-rates td.vda-rc b { font-size: 16px; }
+  .vda-rates td:not(.vda-rc):not(.cell-main) { grid-column: 1 / -1; }
+  .vda-rates td.vda-memo { min-width: 0; max-width: none; }
+}
+/* 번호로 넘긴 목록으로 돌아올 때 위쪽 머리글에 가리지 않게 */
+[data-pg-card] { scroll-margin-top: 84px; }

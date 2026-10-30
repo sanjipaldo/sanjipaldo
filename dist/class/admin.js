@@ -3030,7 +3030,7 @@
     return base + " − 그 달 광고비 × 강사 분담. 쿠폰 · 포인트 · 결제 수수료는 플랫폼 부담, 확정 뒤 환불은 다음 명세에서 차감. 개인 강사는 3.3% 원천징수 후 지급. " + biz;
   }
   // 표 칸은 짧게: 강사 몫 % + 플랫폼 몫 (자세한 강사 : 플랫폼은 비율 정하기 창에서)
-  const vdRateCell = (n) => '<td class="right vda-rc"><b class="num">' + n + '%</b><small class="a-memo">플랫폼 ' + (100 - n) + "</small></td>";
+  const vdRateCell = (n) => '<td class="right num vda-rc"><b class="num">' + n + '%</b><small class="a-memo">플랫폼 ' + (100 - n) + "</small></td>";
   /* 정산 · 세금계산서 기준 + 기본 비율 (마스터) */
   function vdTaxCard() {
     const X = VX(), st = VD().settings, mode = X.taxMode(), d = st.rates || {};
@@ -3048,27 +3048,28 @@
     if (!k) return "";
     const ps = VD().products.filter((p) => X.tkey(p) === k).sort((a, b) => (a.status === "hidden") - (b.status === "hidden") || b.createdAt - a.createdAt), st = VD().settings, dc = st.coach || {}, dt = st.tea || {};
     const inp = (n, v, ph, w) => '<input class="a-input a-sm vda-pin" name="' + n + '" type="number" min="0" step="' + (w || 1000) + '" inputmode="numeric" value="' + esc(v == null ? "" : v) + '" placeholder="' + esc(ph == null ? "" : ph) + '">';
-    return '<section class="a-card"><div class="a-card-head"><h2>강사별 가격</h2><span class="a-muted">강의 · 1:1 코칭권 · TEA TIME 가격을 강사별로 바로 고쳐요. 저장하면 스토어에 바로 반영돼요. 수강권 기간별 가격 · 할인 마감은 클래스 수정에서 정해요.</span>' +
+    const pg = pageSlice("vdPrice", ps, 5);
+    return '<section class="a-card" data-pg-card="vdPrice"><div class="a-card-head"><h2>강사별 가격</h2><span class="a-muted">강의 · 1:1 코칭권 · TEA TIME 가격을 강사별로 바로 고쳐요. 저장하면 스토어에 바로 반영돼요. 수강권 기간별 가격 · 할인 마감은 클래스 수정에서 정해요.</span>' +
         '<select class="a-input a-sm vda-ml" id="vda-price-key" aria-label="강사 고르기">' + keys.map((x) => '<option value="' + esc(x.id) + '"' + (x.id === k ? " selected" : "") + ">" + esc(x.name) + "</option>").join("") + "</select></div>" +
-      (ps.length ? '<div class="vda-prices">' + ps.map((p) => {
+      (ps.length ? '<div class="vda-prices">' + pg.items.map((p) => {
         const t = X.typeOf(p), vod = t === "vod" && X.priceOf(p) > 0, c = p.coach || {}, te = p.tea || {}, co = X.coachOf(p), tt = X.teaOf(p);
         return '<form class="vda-price" data-id="' + esc(p.id) + '" novalidate><div class="vda-price-h">' + vdThumb(p, "sm") + "<div><b>" + esc(p.title) + '</b><small class="a-memo">' + esc(X.TYPE[t] ? X.TYPE[t][0] : t) + " · " + esc((VD_ST[p.status] || VD_ST.hidden)[0]) + " · 지금 판매가 " + won(X.priceOf(p)) + "</small></div></div>" +
           '<div class="vda-price-f"><label><span>정가</span>' + inp("price", p.price, "", 1000) + "</label><label><span>판매가 <small>(비우면 정가)</small></span>" + inp("sale", p.sale, "", 1000) + "</label>" +
             (vod ? '<label><span>1:1 코칭권 가격</span>' + inp("coachPrice", c.price, co ? co.price : dc.price, 1000) + '</label><label><span>코칭 횟수</span>' + inp("coachN", c.n, co ? co.n : dc.n || 5, 1) + "</label>" +
               '<label><span>TEA TIME 가격 <small>(Zoom)</small></span>' + inp("teaPrice", te.price, tt ? tt.price : dt.price, 1000) + '</label><label><span>TEA TIME 시간(분)</span>' + inp("teaMin", te.min, tt ? tt.min : dt.min || 60, 10) + "</label>" : "") +
-            '<button class="a-btn a-btn-primary a-btn-sm" type="submit">저장</button></div></form>'; }).join("") + "</div>" : emptyBox("monitorPlay", "이 강사의 클래스가 없어요.")) + "</section>";
+            '<button class="a-btn a-btn-primary a-btn-sm" type="submit">저장</button></div></form>'; }).join("") + "</div>" + numPager("vdPrice", pg) : emptyBox("monitorPlay", "이 강사의 클래스가 없어요.")) + "</section>";
   }
   function vdRates() {
-    const v = VD(), X = VX(), keys = vdRateKeys();
+    const v = VD(), X = VX(), keys = vdRateKeys(), pg = pageSlice("vdRate", keys, 5);
     return vdTaxCard() +
-      '<section class="a-card"><div class="a-card-head"><h2>강사별 정산 비율</h2><span class="a-muted">숫자는 강사 몫이에요 (기본 강사 5 : 플랫폼 5). 강사와 따로 조율하면 종류마다 따로 정할 수 있어요 — 예: TEA TIME 100%는 TEA TIME 매출을 모두 강사님께.</span></div>' +
+      '<section class="a-card" data-pg-card="vdRate"><div class="a-card-head"><h2>강사별 정산 비율</h2><span class="a-muted">숫자는 강사 몫이에요 (기본 강사 5 : 플랫폼 5). 강사와 따로 조율하면 종류마다 따로 정할 수 있어요 — 예: TEA TIME 100%는 TEA TIME 매출을 모두 강사님께.</span></div>' +
         '<div class="a-table-wrap"><table class="a-table vda-rates"><thead><tr><th>강사</th>' + X.RATE_KEYS.map((x) => '<th class="right">' + esc(x[1]) + "</th>").join("") + '<th class="right">광고비 분담</th><th>강의별 예외</th><th>계약 메모 · 확정</th><th class="right">관리</th></tr></thead><tbody>' +
-          keys.map((x) => { const r = X.rateOf(x.id), ex = v.products.filter((p) => X.tkey(p) === x.id && p.share != null && p.share !== "");
+          pg.items.map((x) => { const r = X.rateOf(x.id), ex = v.products.filter((p) => X.tkey(p) === x.id && p.share != null && p.share !== "");
             return "<tr><td><b>" + esc(x.name) + "</b>" + (/^ext:/.test(x.id) ? '<small class="a-memo">두잉고 계정 없는 강사</small>' : "") + "</td>" + X.RATE_KEYS.map((k) => vdRateCell(r[k[0]])).join("") + vdRateCell(r.ad) +
               "<td>" + (ex.length ? ex.map((p) => '<span class="vda-ex">' + esc(p.title.slice(0, 14)) + " " + p.share + "%</span>").join("") : '<span class="a-muted">없음</span>') + "</td>" +
               '<td class="vda-memo">' + (r.memo ? '<span title="' + esc(r.memo) + '">' + esc(r.memo) + "</span>" : '<span class="a-muted">기본 계약</span>') + (r.next ? '<small class="a-memo vda-next">' + icon("clock", "xs") + " 예정 · " + esc(vdRateNextTxt(r)) + "</small>" : r.at ? '<small class="a-memo">' + esc(fmtFull(DB.date.toStr(new Date(r.from || r.at)))) + "부터 · " + esc(r.by || "마스터") + " 확정</small>" : "") + "</td>" +
               '<td class="right">' + btn("비율 정하기", "vda-rate-edit", "a-btn-ghost a-btn-sm", ' data-k="' + esc(x.id) + '"') + "</td></tr>"; }).join("") +
-        "</tbody></table></div>" +
+        "</tbody></table></div>" + numPager("vdRate", pg) +
         '<p class="a-muted p-small">' + icon("alert", "xs") + " 비율에는 ‘적용 시작일’이 있어요. 그날부터 결제한 주문은 새 비율, 그 전에 결제한 주문은 그때 비율로 정산해요. 강의 하나만 따로 정할 때는 VOD 클래스 관리 › 클래스 수정 › ‘강사 정산 비율’을 쓰면 그 강의가 먼저예요.</p></section>" +
       vdPriceCard();
   }
@@ -6990,7 +6991,8 @@
       case "inq-memo": { const x = findInq(d.id), ta = document.querySelector('[data-inq-memo="' + d.id + '"]'); if (x && ta) { x.memo = ta.value.trim(); DB.saveInquiry(x); toast("메모를 저장했어요."); } break; }
       case "inq-del": { const x = findInq(d.id); if (!x) break; confirmModal("입점 문의 삭제", "‘" + esc(x.name) + "’ 님의 입점 문의를 삭제할까요?<br>삭제하면 되돌릴 수 없어요.", "삭제", true, () => { DB.removeInquiry(x.id); closeModal(); render(); toast("입점 문의를 삭제했어요."); }); break; }
       case "brand-photo-del": if (C().brand.photo) setBrandPhoto(""); break;
-      case "pg": { (ui.pg = ui.pg || {})[d.k] = Number(d.p) || 1; render(); const c = document.querySelector('[data-pg-card="' + d.k + '"]'); if (c && c.getBoundingClientRect().top < 70) c.scrollIntoView({ block: "start" }); break; }
+      // 쪽을 넘기면 그 목록 맨 위가 보이게 (다시 그리는 동안 화면이 맨 위로 튀어도 목록으로 돌아와요)
+      case "pg": { (ui.pg = ui.pg || {})[d.k] = Number(d.p) || 1; render(); const c = document.querySelector('[data-pg-card="' + d.k + '"]'), t = c ? c.getBoundingClientRect().top : 0; if (c && (t < 70 || t > window.innerHeight / 2)) c.scrollIntoView({ block: "start" }); break; }
       case "server-backup":
         DB.remote.call("admin", { action: "backup" }).then((r) => { if (r.error) throw new Error(r.error); ui.backups = null; render(); toast("지금 상태를 서버에 백업했어요."); }).catch(() => toast("백업하지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"));
         break;
@@ -7117,7 +7119,7 @@
   document.addEventListener("change", (e) => {
     if (!isActive()) return;
     const t = e.target;
-    if (t.id === "vda-price-key") { ui.vdPriceKey = t.value; render(); return; }
+    if (t.id === "vda-price-key") { ui.vdPriceKey = t.value; (ui.pg = ui.pg || {}).vdPrice = 1; render(); return; }
     if (t.id === "rk-type") { ui.rkType = t.value; render(); return; }
     if (t.id === "rk-sort") { ui.rkSort = t.value; render(); return; }
     if (t.id === "vda-om") { ui.vdOm = t.value; render(); return; }
