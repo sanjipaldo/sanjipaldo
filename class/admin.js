@@ -309,17 +309,16 @@
     ].filter((x) => !x[3] || on(x[3])).filter((x) => !vod || LIVE_ONLY_PAGES.indexOf(x[0]) < 0).map((x) => (vod && VOD_NAV_LABEL[x[0]] ? [x[0], VOD_NAV_LABEL[x[0]], x[2]] : x.slice(0, 3)));
     if (vod) content.splice(2, 0, ["vodlink", "VOD 강의 연결", "circlePlay"], ["vodlessons", "VOD 강의 · 수업 자료", "paperclip"]);
     if (customPages(MID()).length) content.push(["pages", "추가 메뉴", "star"]);
-    const vodN = vod && window.VOD ? window.VOD.buyersOf(iid).filter((b) => b.active && !b.st).length : 0;
     const sales = isCoach() ? [] : [["DOOGO CLASS 판매", [["vod", "VOD 판매 내역", "monitorPlay"], ["vod-live", "무료 LIVE · 온/오프라인 판매", "calendar"], ["vod-settle", "판매 정산", "coins"], ["vod-cal", "정산 달력", "calendar"]]]];
     const groups = (vod ? [
-      ["운영 · DOOGO CLASS", [["", "DOOGO CLASS 대시보드", "grid"], ["vod-students", "VOD 수강생", "users", vodN || ""], ["coaching", "1:1 코칭 답변", "message", n.coaching || ""], ["teatime", "TEA TIME 신청", "calendar", window.VOD ? window.VOD.teasOf(null, iid).filter((o) => o.status === "paid" && (o.tea || {}).st === "req").length || "" : ""]].concat(isCoach() ? [] : [["coaches", "코치 관리", "shieldCheck", DB.coachesOf(iid).length || 0]])],
+      ["운영 · DOOGO CLASS", [["", "DOOGO CLASS 대시보드", "grid"], ["vod-students", "VOD 수강생", "users"], ["coaching", "1:1 코칭 답변", "message", n.coaching || ""], ["teatime", "TEA TIME 신청", "calendar", window.VOD ? window.VOD.teasOf(null, iid).filter((o) => o.status === "paid" && (o.tea || {}).st === "req").length || "" : ""]].concat(isCoach() ? [] : [["coaches", "코치 관리", "shieldCheck"]])],
       ["VOD 강의실 꾸미기", content]
     ] : [
       ["운영 · 두잉고", [
         ["", "두잉고 대시보드", "grid"],
         ["students", "수강생 관리", "users", n.pending],
         ["cohorts", "기수 관리", "layers"]
-      ].concat(isCoach() ? [] : [["billing", "다음 기수 신청", "coins", DB.bills(iid).filter((b) => !b.canceledAt && !b.cohortId).length]]).concat(on("missions") ? [["reviews", "과제 검수", "checks", n.review]] : []).concat(on("qna") ? [["questions", "1:1 요청 답변", "bug", n.questions]] : []).concat(isCoach() ? [] : [["coaches", "코치 관리", "shieldCheck", DB.coachesOf(iid).length || 0]])],
+      ].concat(isCoach() ? [] : [["billing", "다음 기수 신청", "coins"]]).concat(on("missions") ? [["reviews", "과제 검수", "checks", n.review]] : []).concat(on("qna") ? [["questions", "1:1 요청 답변", "bug", n.questions]] : []).concat(isCoach() ? [] : [["coaches", "코치 관리", "shieldCheck"]])],
       ["수강생 화면 콘텐츠", content],
       ["홍보", [["free", "무료강의 페이지", "video"], ["landing", "강의 소개 페이지", "store"]]]
     ]).concat(vod ? sales : []).concat([["두잉고 운영팀", [["ops-notices", "운영팀 공지", "megaphone", annUnread(iid) || ""], ["contract", "계약 · 서류", "file", insDocMissing(iid) || ""]]]]);
