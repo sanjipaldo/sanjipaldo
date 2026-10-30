@@ -727,7 +727,7 @@
     return '<section class="card"><div class="home-video-head"><h2>' + icon("calendar") + '다가오는 일정</h2><a class="link-btn" href="#/schedule">전체 일정 ' + icon("arrowRight", "sm") + "</a></div>" +
       (upcoming.length ? upcoming.map((e) => {
         const d = parseDate(e.date);
-        return '<div class="list-row"><span class="date-pill' + (e.date === today ? " today" : "") + '"><small>' + (d.getMonth() + 1) + "월</small><b>" + d.getDate() + '</b></span><span class="lr-title"><i class="ev-dot ' + e.type + '"></i> ' + esc(e.title) + '</span><span class="lr-date">' + DOW[d.getDay()] + (e.time ? " " + esc(e.time) : "") + "</span></div>";
+        return '<div class="list-row"><span class="date-pill' + (e.date === today ? " today" : "") + '"><small>' + (d.getMonth() + 1) + "월</small><b>" + d.getDate() + '</b></span><span class="lr-title"><i class="ev-dot ' + e.type + '"></i> ' + esc(e.title) + (e.place ? '<small class="lr-place">' + icon("mapPin", "xs") + esc(e.place) + "</small>" : "") + '</span><span class="lr-date">' + DOW[d.getDay()] + (e.time ? " " + esc(e.time) : "") + "</span></div>";
       }).join("") : '<p class="muted" style="margin:0">예정된 일정이 없습니다.</p>') + "</section>";
   }
 
@@ -1348,7 +1348,7 @@
       "</section>" +
       '<section class="card" style="margin-top:14px"><div class="home-video-head"><h2>' + fmtKo(calSel) + '</h2><span class="tiny">' + sel.length + "건</span></div>" +
         (sel.length ? '<div class="stack">' + sel.map((e) =>
-          '<div class="ev-card"><i class="ev-dot ' + e.type + '"></i><div style="flex:1;min-width:0"><div class="tiny">' + esc(L(e.type)) + (e.week ? " · " + e.week + "주차" : "") + (e.time && e.type !== "open" ? " · " + esc(e.time) : "") + '</div><div class="ev-title">' + esc(e.title) + "</div></div>" +
+          '<div class="ev-card"><i class="ev-dot ' + e.type + '"></i><div style="flex:1;min-width:0"><div class="tiny">' + esc(L(e.type)) + (e.week ? " · " + e.week + "주차" : "") + (e.time && e.type !== "open" ? " · " + esc(e.time) : "") + '</div><div class="ev-title">' + esc(e.title) + "</div>" + (e.place ? '<div class="tiny ev-place">' + icon("mapPin", "xs") + esc(e.place) + "</div>" : "") + "</div>" +
           (e.url && e.date >= today ? liveBtn(e, true) : "") +
           (e.type === "replay" && e.date <= today ? (mainLec() ? '<span class="ev-acts">' + mainBtn("", "btn-secondary btn-sm", (mainLec().platform || "메인 강의실") + "에서 녹화본 보기") + "</span>" : on("replays") ? '<span class="ev-acts"><a class="btn btn-secondary btn-sm" href="#/replays">' + icon("play", "sm") + esc(ML("replays")) + "</a></span>" : "") : "") +
           ((e.type === "open" || e.type === "deadline") && e.week && findWeek(e.week) ? '<span class="ev-acts">' + (on("curriculum") ? '<a class="btn btn-secondary btn-sm" href="#/curriculum">' + icon("book", "sm") + esc(ML("curriculum")) + " 보기</a>" : "") +

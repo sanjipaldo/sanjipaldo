@@ -650,6 +650,11 @@ a.res-card:hover { border-color: var(--ink); transform: translateY(-2px); }
 .ev-dot.notice { background: #6b7280; }
 .ev-dot.challenge { background: var(--positive); }
 .ev-dot.event { background: var(--ink); }
+.ev-dot.free { background: #f76707; }
+.ev-dot.offline { background: #0f766e; }
+.lr-title .lr-place { display: block; margin-top: 2px; font-size: 12.5px; font-weight: 500; color: var(--mute); overflow: hidden; text-overflow: ellipsis; }
+.lr-place .icon, .ev-place .icon { width: 12px; height: 12px; margin-right: 3px; vertical-align: -1px; }
+.ev-place { margin-top: 2px; color: var(--mute); }
 .icon-btn.ghost { background: transparent; }
 .icon-btn.ghost:hover { background: var(--canvas-soft); }
 .cal-card .cal-nav { align-items: center; }

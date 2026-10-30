@@ -329,7 +329,7 @@
   const allRequests = () => DB.data.instructors.flatMap((ins) => DB.requests(ins.id).filter((x) => !DB.isVodStudent(x.s)).map((x) => Object.assign({ ins }, x))).sort((a, b) => b.q.at - a.q.at);
   const masterNavRaw = () => [
     ["운영", [["master", "대시보드", "grid"], ["master/billing", "기수 신청 · 매출", "coins", DB.bills().filter((b) => DB.billState(b) === "requested").length], ["master/rs", "파트너스 관리", "link", (() => { let n = 0; affList().forEach((p) => affMonths(p).forEach((g) => { if (!g.po && todayStr() >= g.payDate) n++; })); return n; })()], ["master/instructors", "강사 플랫폼 관리", "store"], ["master/contracts", "강사 계약 · 서류", "file", contractAlerts() || ""], ["master/menus", "메뉴 · 색상 설정", "sliders"], ["master/site", "첫 화면 · 사업자 정보", "building"]]],
-    ["학사 관리", [["master/calendar", "전체 기수 일정", "calendar"], ["master/health", "플랫폼 현황", "activity"], ["master/sla", "과제 검수 · 응답", "clock", slaRows().reduce((a, r) => a + r.late.length, 0) || ""], ["master/certs", "수료 관리", "award"], ["master/students", "전체 수강생", "users"]]],
+    ["학사 관리", [["master/plan", "기수 · 일정 설계", "layers"], ["master/calendar", "전체 기수 일정", "calendar"], ["master/health", "플랫폼 현황", "activity"], ["master/sla", "과제 검수 · 응답", "clock", slaRows().reduce((a, r) => a + r.late.length, 0) || ""], ["master/certs", "수료 관리", "award"], ["master/students", "전체 수강생", "users"]]],
     ["지원", [["master/partners", "강사 입점 문의", "handshake", (() => { const a = masterInqAlerts(); return a.inq + a.msg || ""; })()], ["master/reports", "오류 신고 모아보기", "bug", allRequests().filter((x) => !x.q.answer).length], ["master/notices", "강사 공지", "megaphone"]]],
     ["시스템", [["master/staff", "운영자 · 활동 기록", "shieldCheck"], ["master/data", "데이터 관리", "database"]]]
   ];
@@ -602,7 +602,7 @@
   function pageCohorts() {
     const iid = IID();
     const cos = DB.cohortsOf(iid).slice().reverse();
-    return head("기수 관리", "기수마다 1주차 시작일만 정하면 주차별 공개일과 과제 마감일이 자동으로 계산돼요." + (S.role === "master" ? "" : " 새 기수는 ‘다음 기수 신청’ 후 이용료 입금이 확인되면 두잉고가 열어 드려요."), newCohortBtn()) +
+    return head("기수 관리", "기수마다 1주차 강의일 · 진행 주차 · 무료 강의 · 오프라인 강의 · 챌린지 날짜를 정하면 주차별 공개일과 과제 마감일이 자동으로 계산되고, 수강생 대시보드에 바로 보여요." + (S.role === "master" ? "" : " 새 기수는 ‘다음 기수 신청’ 후 이용료 입금이 확인되면 두잉고가 열어 드려요."), newCohortBtn()) +
       (cos.length ? '<div class="a-stack">' + cos.map((co) => {
         const st = DB.cohortStatus(co);
         const ss = DB.studentsOf(iid).filter((s) => s.cohortId === co.id);
@@ -610,42 +610,144 @@
         return '<section class="a-card a-cohort"><div class="a-card-head"><h2>' + esc(co.name) + "</h2>" + pill(DB.STATUS_LABEL[st], COHORT_CLS[st]) + (co.recruiting && st !== "ended" ? pill("신청 받는 중", "info") : "") +
           '<span class="a-muted">' + fmtFull(co.startDate) + " ~ " + fmtFull(DB.cohortEnd(co)) + (st === "running" ? " · " + DB.currentWeek(co) + "주차" : "") + "</span>" +
           '<span class="a-cur-chip">' + icon("book", "xs") + esc(DB.curriculumOf(co).name) + " · " + DB.cohortWeeks(co) + "주</span>" + '<span class="a-cur-chip">' + icon("calendar", "xs") + esc(classText(co)) + "</span>" +
-          '<div class="a-row-actions">' + btn(icon("eye", "sm") + "미리보기", "preview", "a-btn-ghost a-btn-sm", ' data-cohort="' + co.id + '"') + btn("수정", "cohort-edit", "a-btn-ghost a-btn-sm", ' data-id="' + co.id + '"') + "</div></div>" +
+          '<div class="a-row-actions">' + btn(icon("eye", "sm") + "미리보기", "plan-pv", "a-btn-ghost a-btn-sm", ' data-iid="' + esc(iid) + '" data-id="' + co.id + '"') + btn(icon("pen", "sm") + "일정 설계 · 수정", "cohort-edit", "a-btn-primary a-btn-sm", ' data-id="' + co.id + '"') + "</div></div>" +
+          planChips(iid, co) +
           '<div class="a-cohort-stats"><a href="#/center/students?cohort=' + co.id + '&status=approved"><b class="num">' + ap + "</b><span>수강 중</span></a><a href=\"#/center/students?cohort=" + co.id + '&status=pending"><b class="num">' + pe + "</b><span>승인 대기</span></a><div><b class=\"num\">" + ss.length + "</b><span>전체 신청</span></div></div>" +
           weekStrip(co) + "</section>";
       }).join("") + "</div>" : '<section class="a-card">' + emptyBox("layers", S.role === "master" ? "아직 기수가 없어요. 첫 기수를 열어 주세요." : "아직 기수가 없어요. ‘다음 기수 신청’을 남겨 주시면 연락드릴게요.", newCohortBtn()) + "</section>");
   }
-  function cohortForm(co) {
-    const iid = IID();
-    const isNew = !co;
-    const last = DB.cohortsOf(iid).slice(-1)[0];
-    co = co || { name: DB.nextCohortName(iid), classDow: last ? last.classDow : undefined, classTime: last ? last.classTime : undefined, startDate: last ? addDays(DB.cohortEnd(last), 1 + ((4 - parseDate(addDays(DB.cohortEnd(last), 1)).getDay() + 7) % 7)) : todayStr(), recruiting: true };
-    const n = (DB.studentsOf(iid).filter((s) => s.cohortId === co.id)).length;
-    openModal(isNew ? "새 기수 만들기" : co.name + " 수정",
-      '<form id="cohort-form" class="a-form" data-id="' + (isNew ? "" : co.id) + '" novalidate>' +
-        '<div class="a-form-row"><div class="a-field"><label for="cf-name">기수 이름</label><input class="a-input" id="cf-name" name="name" value="' + esc(co.name) + '"></div>' +
-        '<div class="a-field"><label for="cf-start">1주차 시작일</label><input class="a-input" id="cf-start" name="startDate" type="date" value="' + esc(co.startDate) + '"></div></div>' +
-        '<div class="a-field"><label for="cf-cur">커리큘럼</label><select class="a-input" id="cf-cur" name="curriculumId">' + DB.curricula(iid).map((x) => '<option value="' + x.id + '"' + (x.id === (co.curriculumId || (isNew && last ? last.curriculumId || "main" : "main")) ? " selected" : "") + ">" + esc(x.name) + " · " + x.weeks.length + "주</option>").join("") + "</select>" +
-          '<small class="a-muted">커리큘럼은 ‘커리큘럼’ 메뉴에서 새로 만들 수 있어요. 진행 중인 기수의 커리큘럼을 바꾸면, 새 커리큘럼에 없는 과제 기록은 진행률에서 빠져요.</small></div>' +
-        '<div class="a-form-row"><div class="a-field"><label for="cf-dow">주차 강의 요일</label><select class="a-input" id="cf-dow" name="classDow"><option value="">주차 시작일에 맞춤</option>' + DOW.map((d, i) => '<option value="' + i + '"' + (String(co.classDow) === String(i) ? " selected" : "") + ">매주 " + d + "요일</option>").join("") + "</select></div>" +
-          '<div class="a-field"><label for="cf-time">강의 시간</label><input class="a-input" id="cf-time" name="classTime" type="time" value="' + esc(co.classTime || C().brand.liveTime || "") + '"></div></div>' +
-        '<div class="a-field"><label for="cf-url">강의 입장 링크 <small>(줌 등, 비우면 기본 정보의 링크)</small></label><input class="a-input" id="cf-url" name="classUrl" type="url" value="' + esc(co.classUrl || "") + '" placeholder="https://zoom.us/j/…"></div>' +
-        '<label class="a-check"><input type="checkbox" name="recruiting"' + (co.recruiting ? " checked" : "") + "><span>수강생 로그인 화면에서 이 기수로 수강 신청 받기</span></label>" +
-        '<div class="a-field"><span class="a-label">주차 일정 미리보기</span><div id="cf-preview" class="a-preview-weeks">' + weekPreview(co.startDate, co.curriculumId || (isNew && last ? last.curriculumId : ""), co.classDow, co.classTime || C().brand.liveTime) + "</div></div>" +
-        '<p class="a-error" id="cf-error"></p>' +
-      "</form>",
-      (isNew || S.role !== "master" ? "" : btn("기수 삭제", "cohort-delete", "a-btn-ghost danger", ' data-id="' + co.id + '"' + (n ? ' disabled title="수강생이 있는 기수는 삭제할 수 없어요"' : ""))) + '<span class="a-spacer"></span>' + btn("취소", "modal-close") + '<button class="a-btn a-btn-primary" type="submit" form="cohort-form">' + (isNew ? "만들기" : "저장") + "</button>", "md");
+  /* ---------------- 기수 · 일정 설계 (마스터 › 기수 · 일정 설계 · 강사센터 › 기수 관리 같은 창) ----------------
+   * 기수 이름 · 1주차 강의일 · 커리큘럼 · 진행 주차(기수마다 · 예: 1기 5주 · 2기 4주) · 매주 강의 요일 · 시간 · 입장 링크 +
+   * 이 기수만의 특별 일정(무료 강의 · 오프라인 강의 · 챌린지 · 라이브 Q&A · 보너스 강의 · 행사 · 공지)을 한 창에서 정해요.
+   * 특별 일정은 content.schedule 에 scope: "cohort" 로 저장 → 수강생 대시보드 ‘다가오는 일정’ · 수업 캘린더에 그대로 보여요 */
+  const PLAN_KINDS = ["free", "offline", "challenge", "qna", "bonus", "event", "notice"];
+  const planEvs = (iid, coId) => ((DB.content(iid) || {}).schedule || []).filter((e) => e.scope === "cohort" && e.cohortId === coId).sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")));
+  const mdDow = (d) => fmtMD(d).replace(" (", "(");
+  const planMaster = () => !!S && S.role === "master";
+  function planRow(iid, e) {
+    e = e || {};
+    return '<div class="pl-ev" data-id="' + esc(e.id || "") + '">' +
+      '<select class="a-input a-sm" name="ev-type" aria-label="종류">' + PLAN_KINDS.map((k) => '<option value="' + k + '"' + ((e.type || "free") === k ? " selected" : "") + ">" + esc(DB.evLabel(iid, k)) + "</option>").join("") + "</select>" +
+      '<input class="a-input a-sm" name="ev-date" type="date" value="' + esc(e.date || "") + '" aria-label="날짜">' +
+      '<input class="a-input a-sm" name="ev-time" type="time" value="' + esc(e.time || "") + '" aria-label="시간">' +
+      '<input class="a-input a-sm" name="ev-title" maxlength="80" value="' + esc(e.title || "") + '" placeholder="일정 이름 (비우면 종류 이름)" aria-label="일정 이름">' +
+      '<input class="a-input a-sm" name="ev-place" maxlength="300" value="' + esc(e.url || e.place || "") + '" placeholder="장소 또는 입장 링크 (선택)" aria-label="장소 또는 링크">' +
+      '<button type="button" class="a-icon-btn sm" data-action="plan-ev-del" aria-label="이 일정 지우기">' + icon("x", "sm") + "</button></div>";
   }
-  function weekPreview(start, curId, dow, time) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(start || "")) return '<span class="a-muted">날짜를 고르면 주차 일정이 보여요.</span>';
-    const fake = { id: "_preview", startDate: start, instructorId: IID(), curriculumId: curId, classDow: dow, classTime: time };
-    const lect = DB.events(IID(), fake).filter((e) => e.type === "open");
-    return DB.weeksOf(fake).map((w, i) => "<span><b>" + w.no + "주차</b> " + (lect[i] ? "강의 " + fmtMD(lect[i].date) + (lect[i].time ? " " + esc(lect[i].time) : "") + " · " : "") + fmtMD(DB.weekDeadline(fake, w.no)) + " 과제 마감</span>").join("") +
-      '<span class="a-muted">총 ' + DB.weeksOf(fake).length + "주 · " + fmtMD(start) + " ~ " + fmtMD(DB.cohortEnd(fake)) + "</span>";
+  /** 설계 창 — iid 강사 · co 기수 (없으면 새 기수: 마스터만) */
+  function planForm(iid, co) {
+    const isNew = !co, last = DB.cohortsOf(iid).slice(-1)[0], brand = (DB.content(iid) || {}).brand || {};
+    if (isNew && !planMaster()) return;
+    if (isNew) {
+      const after = last ? addDays(DB.cohortEnd(last), 1) : todayStr(), dow = last && last.classDow != null && last.classDow !== "" ? Number(last.classDow) : 6;
+      co = { name: DB.nextCohortName(iid), startDate: addDays(after, (dow - parseDate(after).getDay() + 7) % 7), classDow: last ? last.classDow : dow, classTime: last ? last.classTime : brand.liveTime, curriculumId: last ? last.curriculumId : undefined, recruiting: true };
+    }
+    const curs = DB.curricula(iid), curId = co.curriculumId || "main", n = (DB.studentsOf(iid).filter((s) => s.cohortId === co.id)).length;
+    openModal(isNew ? "새 기수 설계 · " + insName(iid) : insName(iid) + " " + co.name + " 설계",
+      '<form id="plan-form" class="a-form pl-form" data-iid="' + esc(iid) + '" data-id="' + (isNew ? "" : esc(co.id)) + '" novalidate>' +
+        '<div class="pl-cols"><div class="pl-left">' +
+          '<h3 class="pl-h">' + icon("layers", "sm") + " 기수 기본</h3>" +
+          '<div class="a-form-row"><div class="a-field"><label for="pl-name">기수 이름</label><input class="a-input" id="pl-name" name="pl-name" maxlength="30" value="' + esc(co.name) + '"></div>' +
+            '<div class="a-field"><label for="pl-start">1주차 강의일</label><input class="a-input" id="pl-start" name="pl-start" type="date" value="' + esc(co.startDate) + '"></div></div>' +
+          '<div class="a-form-row"><div class="a-field"><label for="pl-cur">커리큘럼</label><select class="a-input" id="pl-cur" name="pl-cur">' + curs.map((x) => '<option value="' + x.id + '"' + (x.id === curId ? " selected" : "") + ">" + esc(x.name) + " · " + x.weeks.length + "주</option>").join("") + "</select></div>" +
+            '<div class="a-field"><label for="pl-weeks">진행 주차</label><select class="a-input" id="pl-weeks" name="pl-weeks" data-cur="' + esc(curId) + '">' + planWeekOpts(iid, curId, co.weeks) + "</select></div></div>" +
+          '<div class="a-form-row"><div class="a-field"><label for="pl-dow">매주 강의 요일</label><select class="a-input" id="pl-dow" name="pl-dow"><option value="">1주차 강의일과 같은 요일</option>' + DOW.map((d, i) => '<option value="' + i + '"' + (co.classDow !== undefined && co.classDow !== null && co.classDow !== "" && Number(co.classDow) === i ? " selected" : "") + ">매주 " + d + "요일</option>").join("") + "</select></div>" +
+            '<div class="a-field"><label for="pl-time">강의 시간</label><input class="a-input" id="pl-time" name="pl-time" type="time" value="' + esc(co.classTime || brand.liveTime || "") + '"></div></div>' +
+          '<p class="a-muted p-small pl-hint">1주차 강의일부터 일주일씩 주차가 열리고, 진행 주차는 커리큘럼 앞에서부터 그만큼만 진행해요. 매주 강의 요일을 고르면 그 주의 그 요일이 강의일이에요.</p>' +
+          '<div class="a-field"><label for="pl-url">강의 입장 링크 <small>(줌 등 · 비우면 기본 정보의 링크)</small></label><input class="a-input" id="pl-url" name="pl-url" type="url" value="' + esc(co.classUrl || "") + '" placeholder="https://zoom.us/j/…"></div>' +
+          '<label class="a-check"><input type="checkbox" name="pl-rec"' + (co.recruiting ? " checked" : "") + "><span>수강생 로그인 화면에서 이 기수로 수강 신청 받기</span></label>" +
+          '<h3 class="pl-h">' + icon("calendar", "sm") + " 이 기수 특별 일정 <small>무료 강의 · 오프라인 강의 · 챌린지 · 라이브 등</small></h3>" +
+          '<div class="pl-evs" id="pl-evs">' + planEvs(iid, co.id).map((e) => planRow(iid, e)).join("") + "</div>" +
+          '<div class="pl-add">' + ["free", "offline", "challenge", "qna"].map((k) => btn(icon("plus", "xs") + esc(DB.evLabel(iid, k)), "plan-ev-add", "a-btn-ghost a-btn-sm", ' data-k="' + k + '"')).join("") + btn(icon("plus", "xs") + "기타 일정", "plan-ev-add", "a-btn-ghost a-btn-sm", ' data-k="event"') + "</div>" +
+        '</div><div class="pl-right"><h3 class="pl-h">' + icon("eye", "sm") + ' 수강생에게 보일 일정</h3><div id="pl-pv" class="pl-pv">' + planPreviewHtml(iid, planDraftOf(co, planEvs(iid, co.id))) + "</div></div></div>" +
+        '<p class="a-error" id="pl-error"></p></form>',
+      (!isNew && planMaster() ? btn(icon("trash", "sm") + "기수 삭제", "plan-del", "a-btn-ghost danger", ' data-iid="' + esc(iid) + '" data-id="' + esc(co.id) + '"' + (n ? ' title="수강생 ' + n + '명"' : "")) : "") + '<span class="a-spacer"></span>' +
+      btn("취소", "modal-close") + '<button class="a-btn a-btn-outline" type="submit" form="plan-form" data-action="plan-then">' + icon("eye", "sm") + "저장하고 미리보기</button>" + '<button class="a-btn a-btn-primary" type="submit" form="plan-form">' + (isNew ? "기수 만들기" : "저장") + "</button>", "xl");
   }
-  function refreshWeekPreview() {
-    const f = document.getElementById("cohort-form"), p = document.getElementById("cf-preview");
-    if (f && p) p.innerHTML = weekPreview(f.startDate.value, f.curriculumId.value, f.classDow.value, f.classTime.value);
+  function planWeekOpts(iid, curId, sel) {
+    const cu = DB.curriculum(iid, curId), max = cu ? cu.weeks.length : 0, v = Number(sel) > 0 && Number(sel) < max ? Number(sel) : max;
+    return Array.from({ length: max }, (_, i) => i + 1).map((k) => '<option value="' + k + '"' + (k === v ? " selected" : "") + ">" + k + "주" + (k === max ? " (전체)" : "") + "</option>").join("");
+  }
+  const planDraftOf = (co, evs) => ({ co: { id: co.id, name: co.name, startDate: co.startDate, curriculumId: co.curriculumId || "main", weeks: Number(co.weeks) || 0, classDow: co.classDow == null ? "" : String(co.classDow), classTime: co.classTime || "", classUrl: co.classUrl || "", recruiting: !!co.recruiting }, evs: (evs || []).map((e) => ({ id: e.id, type: e.type, date: e.date, time: e.time || "", title: e.title || "", place: e.url || e.place || "" })) });
+  function planRead(f) {
+    const g = (n) => { const x = f.elements.namedItem(n); return x ? String(x.value || "").trim() : ""; };
+    return { co: { id: f.dataset.id, name: g("pl-name"), startDate: g("pl-start"), curriculumId: g("pl-cur") || "main", weeks: Number(g("pl-weeks")) || 0, classDow: g("pl-dow"), classTime: g("pl-time"), classUrl: g("pl-url"), recruiting: !!(f.elements.namedItem("pl-rec") || {}).checked },
+      evs: Array.from(f.querySelectorAll(".pl-ev")).map((r) => { const v = (n) => String((r.querySelector('[name="' + n + '"]') || {}).value || "").trim(); return { id: r.dataset.id || "", type: v("ev-type"), date: v("ev-date"), time: v("ev-time"), title: v("ev-title"), place: v("ev-place") }; }) };
+  }
+  /** 저장 전 미리보기 — 주차 강의 · 과제 마감 · 모든 기수 반복 일정 + 이 기수 특별 일정을 날짜순으로 */
+  function planPreviewHtml(iid, d) {
+    const c = d.co;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(c.startDate || "")) return '<p class="a-muted">1주차 강의일을 고르면 일정이 보여요.</p>';
+    const fake = { id: "_plan", instructorId: iid, startDate: c.startDate, curriculumId: c.curriculumId === "main" ? undefined : c.curriculumId, weeks: c.weeks, classDow: c.classDow === "" ? undefined : Number(c.classDow), classTime: c.classTime };
+    const L = (t) => DB.evLabel(iid, t), wk = DB.weeksOf(fake), first = DB.classDate(fake, 1), lastD = DB.classDate(fake, wk.length);
+    const list = DB.events(iid, fake).concat(d.evs.filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.date)).map((e) => ({ date: e.date, time: e.time, type: e.type, title: e.title || L(e.type), place: e.place, special: true })))
+      .sort((a, b) => (a.date + (a.time || "99")).localeCompare(b.date + (b.time || "99")));
+    const cls = { open: "info", deadline: "bad", free: "warn", offline: "dark", challenge: "ok", qna: "warn", bonus: "warn", event: "dark", notice: "mute", replay: "info" };
+    return '<div class="pl-sum"><b>' + wk.length + "주 과정</b><span>1주차 " + mdDow(first) + " → " + wk.length + "주차 " + mdDow(lastD) + "</span><small>마지막 과제 마감 " + mdDow(DB.cohortEnd(fake)) + "</small></div>" +
+      '<ul class="pl-list">' + list.map((e) => '<li class="' + (e.special ? "sp" : e.type === "deadline" ? "dl" : "") + '"><span class="pl-d">' + mdDow(e.date) + (e.time ? " " + esc(e.time) : "") + "</span>" + pill(L(e.type), cls[e.type] || "mute") + "<span class=\"pl-t\">" + esc(e.title) + (e.place && !/^https?:/i.test(e.place) ? ' <small class="a-muted">· ' + esc(e.place) + "</small>" : "") + "</span></li>").join("") + "</ul>";
+  }
+  function refreshPlanPv() {
+    const f = document.getElementById("plan-form"), box = document.getElementById("pl-pv");
+    if (!f || !box) return;
+    const iid = f.dataset.iid, d = planRead(f), ws = f.elements.namedItem("pl-weeks");
+    // 커리큘럼을 바꾸면 진행 주차 칸도 그 커리큘럼 길이에 맞게
+    if (ws && ws.dataset.cur !== d.co.curriculumId) { const keep = ws.selectedIndex === ws.options.length - 1 ? 0 : Number(ws.value); ws.innerHTML = planWeekOpts(iid, d.co.curriculumId, keep); ws.dataset.cur = d.co.curriculumId; d.co.weeks = Number(ws.value) || 0; }
+    box.innerHTML = planPreviewHtml(iid, d);
+  }
+  function savePlan(f) {
+    const iid = f.dataset.iid, d = planRead(f), c = d.co, err = document.getElementById("pl-error"), then = f.dataset.then;
+    delete f.dataset.then;
+    if (!c.name) { err.textContent = "기수 이름을 적어 주세요."; return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(c.startDate)) { err.textContent = "1주차 강의일을 골라 주세요."; return; }
+    if (c.classUrl && !/^https?:\/\//i.test(c.classUrl)) { err.textContent = "입장 링크는 http:// 또는 https:// 로 시작해야 해요."; return; }
+    const evs = d.evs.filter((e) => e.date || e.title || e.place);
+    const bad = evs.find((e) => !/^\d{4}-\d{2}-\d{2}$/.test(e.date));
+    if (bad) { err.textContent = "‘" + (bad.title || DB.evLabel(iid, bad.type)) + "’ 일정의 날짜를 골라 주세요."; return; }
+    if (!c.id && DB.cohortsOf(iid).some((x) => x.name === c.name)) { err.textContent = "같은 이름의 기수가 이미 있어요."; return; }
+    const cu = DB.curriculum(iid, c.curriculumId), full = cu ? cu.weeks.length : 0;
+    const fields = { name: c.name, startDate: c.startDate, recruiting: c.recruiting, curriculumId: c.curriculumId === "main" ? undefined : c.curriculumId, weeks: c.weeks > 0 && c.weeks < full ? c.weeks : undefined, classDow: c.classDow === "" ? undefined : Number(c.classDow), classTime: c.classTime || undefined, classUrl: c.classUrl || undefined };
+    let co = c.id ? DB.cohort(c.id) : null;
+    if (c.id && !co) { err.textContent = "기수를 찾지 못했어요. 새로고침해 주세요."; return; }
+    if (!co) { if (!planMaster()) return; co = { id: DB.uid("c"), instructorId: iid }; DB.data.cohorts.push(co); }
+    Object.keys(fields).forEach((k) => { if (fields[k] === undefined) delete co[k]; else co[k] = fields[k]; });
+    const ct = DB.content(iid);
+    ct.schedule = ct.schedule.filter((e) => !(e.scope === "cohort" && e.cohortId === co.id)).concat(evs.map((e) => {
+      const o = { id: e.id || DB.uid("e"), type: PLAN_KINDS.indexOf(e.type) >= 0 ? e.type : "event", title: e.title || DB.evLabel(iid, e.type), time: e.time || "", scope: "cohort", cohortId: co.id, date: e.date };
+      if (/^https?:\/\//i.test(e.place)) o.url = e.place; else if (e.place) o.place = e.place;
+      return o;
+    }));
+    commit(insName(iid) + " " + co.name + " 일정을 저장했어요. 수강생 대시보드 · 수업 캘린더에 바로 보여요.");
+    if (then === "pv") planSplit(iid, co.id);
+  }
+  /** 수강생 화면 미리보기 (오른쪽 분할) — 그 기수 수강생처럼 대시보드 · 수업 캘린더를 봐요 (이 브라우저의 미리보기 세션) */
+  const planSplit = (iid, coId, page) => dgSplit("plan:" + (page || "home") + ":" + iid + ":" + coId);
+  function planChips(iid, co) {
+    const sp = planEvs(iid, co.id), L = (t) => DB.evLabel(iid, t);
+    return sp.length ? '<div class="pl-chips">' + sp.map((e) => '<span class="pl-chip ' + esc(e.type) + '"><b>' + esc(L(e.type)) + "</b>" + mdDow(e.date) + (e.time ? " " + esc(e.time) : "") + (e.title && e.title !== L(e.type) ? " · " + esc(e.title) : "") + "</span>").join("") + "</div>" : "";
+  }
+  /** 기수 카드 (마스터 설계 화면) */
+  function planCard(iid, co) {
+    const st = DB.cohortStatus(co), wk = DB.weeksOf(co), sp = planEvs(iid, co.id);
+    const ss = DB.studentsOf(iid).filter((s) => s.cohortId === co.id), ap = ss.filter((s) => s.status === "approved").length;
+    return '<section class="a-card pl-card"><div class="a-card-head"><h2>' + esc(co.name) + "</h2>" + pill(DB.STATUS_LABEL[st], COHORT_CLS[st]) + (co.recruiting && st !== "ended" ? pill("신청 받는 중", "info") : "") +
+        '<span class="a-muted">수강생 ' + ap + "명" + (ss.length > ap ? " · 대기 " + (ss.length - ap) + "명" : "") + "</span>" +
+        '<div class="a-row-actions">' + btn(icon("eye", "sm") + "미리보기", "plan-pv", "a-btn-ghost a-btn-sm", ' data-iid="' + esc(iid) + '" data-id="' + esc(co.id) + '"') + btn(icon("pen", "sm") + "설계 · 수정", "plan-edit", "a-btn-primary a-btn-sm", ' data-iid="' + esc(iid) + '" data-id="' + esc(co.id) + '"') + "</div></div>" +
+      '<p class="pl-when">' + icon("calendar", "xs") + " 1주차 <b>" + mdDow(DB.classDate(co, 1)) + "</b> → " + wk.length + "주차 <b>" + mdDow(DB.classDate(co, wk.length)) + "</b> · " + wk.length + "주 · " + esc(classText(co)) + ' <span class="a-cur-chip">' + icon("book", "xs") + esc(DB.curriculumOf(co).name) + "</span></p>" +
+      (sp.length ? planChips(iid, co) : '<p class="a-muted p-small">특별 일정 없음 · ‘설계 · 수정’에서 무료 강의 · 오프라인 강의 · 챌린지 날짜를 넣을 수 있어요.</p>') +
+      weekStrip(co) + "</section>";
+  }
+  function pageMasterPlan(r) {
+    const list = DB.data.instructors.filter((i) => i.status === "active" && DB.content(i.id));
+    const want = (r && r.params && r.params.get("ins")) || ui.planIns;
+    const ins = list.find((i) => i.id === want) || list[0];
+    if (!ins) return head("기수 · 일정 설계", "") + '<section class="a-card">' + emptyBox("layers", "아직 운영 중인 강사 플랫폼이 없어요.") + "</section>";
+    ui.planIns = ins.id;
+    const iid = ins.id, cos = DB.cohortsOf(iid), rules = ((DB.content(iid) || {}).schedule || []).filter((e) => e.scope !== "cohort");
+    return head("기수 · 일정 설계", "강사님마다 기수를 열고 1주차 강의일 · 진행 주차 · 무료 강의 · 오프라인 강의 · 챌린지 날짜를 정해요. 저장하면 그 기수 수강생 대시보드 · 수업 캘린더에 바로 보여요.", btn(icon("plus", "sm") + "새 기수 설계", "plan-new", "a-btn-primary", ' data-iid="' + esc(iid) + '"')) +
+      '<div class="pl-ins" role="tablist" aria-label="강사">' + list.map((i) => '<button type="button" role="tab" class="pl-ins-b' + (i.id === iid ? " on" : "") + '" aria-selected="' + (i.id === iid) + '" data-action="plan-ins" data-id="' + esc(i.id) + '"><b>' + esc(i.displayName) + "</b><small>" + DB.cohortsOf(i.id).length + "개 기수</small></button>").join("") + "</div>" +
+      (cos.length ? '<div class="a-stack">' + cos.map((co) => planCard(iid, co)).join("") + "</div>" : '<section class="a-card">' + emptyBox("layers", esc(ins.displayName) + " 강사님은 아직 기수가 없어요. ‘새 기수 설계’로 첫 기수를 열어 주세요.", btn(icon("plus", "sm") + "새 기수 설계", "plan-new", "a-btn-primary a-btn-sm", ' data-iid="' + esc(iid) + '"')) + "</section>") +
+      '<section class="a-card"><div class="a-card-head"><h2>모든 기수에 반복되는 일정</h2><span class="a-muted">주차 · 요일로 정해 기수마다 같은 날 보여요</span>' + btn("강사센터 수업 캘린더에서 고치기", "ins-enter", "a-btn-ghost a-btn-sm", ' data-id="' + esc(iid) + '" data-to="#/center/schedule"') + "</div>" +
+        (rules.length ? '<ul class="a-items">' + rules.map((e) => '<li><div class="a-item-main"><b>' + esc(e.title) + "</b><small>" + esc(DB.ruleText(e)) + (e.time ? " · " + esc(e.time) : "") + "</small></div>" + pill(DB.evLabel(iid, e.type), "mute") + "</li>").join("") + "</ul>" : '<p class="a-muted">반복 일정이 없어요.</p>') + "</section>";
   }
   function curForm(mode) {
     const cur = CUR();
@@ -680,19 +782,6 @@
     ui.curId = id;
     commit("‘" + name + "’ 커리큘럼을 만들었어요. 이제 바꿀 부분을 고쳐 주세요.");
   }
-  function saveCohort(f) {
-    const name = f.name.value.trim(), start = f.startDate.value;
-    const err = document.getElementById("cf-error");
-    if (!name) { err.textContent = "기수 이름을 입력해 주세요."; return; }
-    if (!start) { err.textContent = "1주차 시작일을 골라 주세요."; return; }
-    const id = f.dataset.id;
-    const extra = { curriculumId: f.curriculumId.value === "main" ? undefined : f.curriculumId.value, classDow: f.classDow.value === "" ? undefined : Number(f.classDow.value), classTime: f.classTime.value || undefined, classUrl: f.classUrl.value.trim() || undefined };
-    if (extra.classUrl && !/^https?:\/\//i.test(extra.classUrl)) { err.textContent = "입장 링크는 http:// 또는 https:// 로 시작해야 해요."; return; }
-    if (id) Object.assign(DB.cohort(id), { name, startDate: start, recruiting: f.recruiting.checked }, extra);
-    else DB.data.cohorts.push(Object.assign({ id: DB.uid("c"), instructorId: IID(), name, startDate: start, recruiting: f.recruiting.checked }, extra));
-    commit(id ? name + " 일정을 저장했어요." : name + "를 만들었어요.");
-  }
-
   /* ---------------- 강사: 과제 검수 ---------------- */
   function pageReviews() {
     const iid = IID(), c = C();
@@ -825,9 +914,10 @@
     event: { name: "일정", list: (c) => c.schedule, idp: "e",
       init: () => ({ type: DB.calManual(IID())[0] || "qna", scope: "all", week: 1, dow: 2, time: "21:00", cohortId: (DB.currentCohort(IID()) || {}).id, date: todayStr() }),
       fields: [
-        F("type", "종류", "select", { options: () => DB.calManual(IID()).map((k) => [k, DB.evLabel(IID(), k) + (k === "open" ? " (추가 강의일)" : "")]) }),
+        F("type", "종류", "select", { options: () => DB.calManual(IID()).concat(PLAN_KINDS.filter((k) => DB.calManual(IID()).indexOf(k) < 0)).map((k) => [k, DB.evLabel(IID(), k) + (k === "open" ? " (추가 강의일)" : "")]) }),
         F("title", "일정 이름"),
         F("time", "시간 (비워도 돼요)", "time"),
+        F("place", "장소 (오프라인 강의 등, 선택)", "text", { hint: "예: 강남 OO스튜디오 3층 — 수강생 일정에 함께 보여요." }),
         F("url", "입장 링크 (줌·유튜브 라이브 등, 선택)", "url", { hint: "넣으면 수강생 일정과 홈에 ‘입장하기’ 버튼이 생겨요." }),
         F("scope", "반복", "select", { options: [["all", "모든 기수에 반복 (주차·요일로 지정)"], ["cohort", "특정 기수 하루만"]] }),
         F("week", "주차", "number", { showIf: "scope=all", min: 1 }),
@@ -1239,13 +1329,13 @@
     if (!ui.schedCohort || !cos.some((x) => x.id === ui.schedCohort)) ui.schedCohort = (DB.currentCohort(iid) || {}).id;
     const co = DB.cohort(ui.schedCohort);
     const T = DB.EVENT_TYPES;
-    const cls = { qna: "warn", notice: "mute", challenge: "ok", event: "dark", open: "info", deadline: "bad", replay: "info", bonus: "warn" }, L = (t) => DB.evLabel(iid, t);
+    const cls = { qna: "warn", notice: "mute", challenge: "ok", event: "dark", open: "info", deadline: "bad", replay: "info", bonus: "warn", free: "warn", offline: "dark" }, L = (t) => DB.evLabel(iid, t);
     const auto = ["open", "deadline"].concat(DB.calTypes(iid).indexOf("replay") >= 0 && DB.calManual(iid).indexOf("replay") < 0 ? ["replay"] : []).map((k) => "‘" + L(k) + "’").join(" · ");
-    return head("수업 캘린더", auto + "은 기수 시작일로 자동 계산돼요. " + DB.calManual(iid).filter((k) => k !== "open").map(L).join(" · ") + " 같은 일정만 추가하세요.", addBtn("event", "일정 추가")) +
+    return head("수업 캘린더", auto + "은 기수 시작일로 자동 계산돼요. " + DB.calManual(iid).filter((k) => k !== "open").map(L).join(" · ") + " 같은 일정만 추가하세요. 기수 하나의 무료 강의 · 오프라인 강의 · 챌린지 날짜는 ‘기수 관리 › 일정 설계’에서 한 번에 정할 수도 있어요.", addBtn("event", "일정 추가")) +
       '<section class="a-card"><div class="a-card-head"><h2>추가한 일정</h2><span class="a-muted">' + c.schedule.length + "개</span></div>" +
-        simpleList("event", c.schedule, (e) => '<div class="a-item-main"><b>' + esc(e.title) + "</b><small>" + esc(DB.ruleText(e)) + (e.time ? " · " + esc(e.time) : "") + "</small></div>" + pill(L(e.type), cls[e.type]), "추가한 일정이 없어요.") + "</section>" +
-      '<section class="a-card"><div class="a-card-head"><h2>기수별 전체 일정 미리보기</h2><select class="a-input a-sm" id="sched-cohort" aria-label="기수">' + cos.map((x) => '<option value="' + x.id + '"' + (x.id === ui.schedCohort ? " selected" : "") + ">" + esc(x.name) + "</option>").join("") + "</select></div>" +
-        (co ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>날짜</th><th>종류</th><th>일정</th></tr></thead><tbody>' + DB.events(iid, co).map((e) => '<tr><td class="num">' + fmtMD(e.date) + (e.time ? " " + esc(e.time) : "") + "</td><td>" + pill(L(e.type), cls[e.type]) + "</td><td>" + esc(e.title) + (e.auto ? ' <small class="a-muted">자동</small>' : "") + "</td></tr>").join("") + "</tbody></table></div>" : emptyBox("calendar", "기수를 먼저 만들어 주세요.")) +
+        simpleList("event", c.schedule, (e) => '<div class="a-item-main"><b>' + esc(e.title) + "</b><small>" + esc(DB.ruleText(e)) + (e.time ? " · " + esc(e.time) : "") + (e.place ? " · " + esc(e.place) : "") + "</small></div>" + pill(L(e.type), cls[e.type]), "추가한 일정이 없어요.") + "</section>" +
+      '<section class="a-card"><div class="a-card-head"><h2>기수별 전체 일정 미리보기</h2><select class="a-input a-sm" id="sched-cohort" aria-label="기수">' + cos.map((x) => '<option value="' + x.id + '"' + (x.id === ui.schedCohort ? " selected" : "") + ">" + esc(x.name) + "</option>").join("") + "</select>" + (co ? btn(icon("eye", "sm") + "수강생 화면 미리보기", "plan-pv", "a-btn-ghost a-btn-sm", ' data-iid="' + esc(iid) + '" data-id="' + esc(co.id) + '" data-pg="schedule"') : "") + "</div>" +
+        (co ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>날짜</th><th>종류</th><th>일정</th></tr></thead><tbody>' + DB.events(iid, co).map((e) => '<tr><td class="num">' + fmtMD(e.date) + (e.time ? " " + esc(e.time) : "") + "</td><td>" + pill(L(e.type), cls[e.type]) + "</td><td>" + esc(e.title) + (e.place ? ' <small class="a-muted">· ' + esc(e.place) + "</small>" : "") + (e.auto ? ' <small class="a-muted">자동</small>' : "") + "</td></tr>").join("") + "</tbody></table></div>" : emptyBox("calendar", "기수를 먼저 만들어 주세요.")) +
       "</section>";
   }
   function pageNotices() {
@@ -2519,7 +2609,7 @@
             "<td>" + cos.length + "개" + (cur ? ' <small class="a-memo">' + esc(cur.name) + " " + DB.STATUS_LABEL[DB.cohortStatus(cur)] + "</small>" : "") + '</td><td class="num">' + ss.filter((s) => s.status === "approved").length + "명" + (ss.filter((s) => s.status === "pending").length ? ' <small class="a-memo">대기 ' + ss.filter((s) => s.status === "pending").length + "</small>" : "") + "</td>" +
             '<td class="num">' + (!staffCan("master/billing") ? '<span class="a-muted">-</span>' : paid.length ? won(sumMoney(paid, "supply")) + ' <small class="a-memo">' + paid.length + "개 기수</small>" : '<span class="a-muted">-</span>') + "</td>" +
             "<td>" + (x.status === "active" ? pill("운영 중", "ok") : pill("중지", "mute")) + '</td><td class="right"><div class="a-row-actions">' +
-            btn("강사센터 접속", "ins-enter", "a-btn-primary a-btn-sm", ' data-id="' + x.id + '"') + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/center/master/menus?ins=' + x.id + '">' + icon("sliders", "sm") + "메뉴·색상</a>" + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/free/' + x.id + '">' + icon("video", "sm") + "무료강의</a>" + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/p/' + x.id + '">' + icon("store", "sm") + "소개</a>" + btn("수정", "ins-edit", "a-btn-ghost a-btn-sm", ' data-id="' + x.id + '"') + "</div></td></tr>";
+            btn("강사센터 접속", "ins-enter", "a-btn-primary a-btn-sm", ' data-id="' + x.id + '"') + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/center/master/plan?ins=' + x.id + '">' + icon("layers", "sm") + "기수 · 일정</a>" + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/center/master/menus?ins=' + x.id + '">' + icon("sliders", "sm") + "메뉴·색상</a>" + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/free/' + x.id + '">' + icon("video", "sm") + "무료강의</a>" + '<a class="a-btn a-btn-ghost a-btn-sm" href="#/p/' + x.id + '">' + icon("store", "sm") + "소개</a>" + btn("수정", "ins-edit", "a-btn-ghost a-btn-sm", ' data-id="' + x.id + '"') + "</div></td></tr>";
         }).join("") + "</tbody></table></div>" : emptyBox("store", "강사 플랫폼이 없어요.")) + "</section>";
   }
   function pageMasterInstructors() {
@@ -3412,6 +3502,15 @@
   }
   function dgSplit(t) {
     const k = String(t || "home").split(":")[0], id = String(t || "").split(":")[1] || "";
+    if (k === "plan") {
+      // 기수 · 일정 설계 미리보기 — 그 기수 수강생처럼 대시보드 · 수업 캘린더 (이 브라우저의 미리보기 세션 · 실제 수강생 기록은 안 바뀜)
+      const pp = String(t).split(":"), iid = pp[2], co = DB.cohort(pp[3]);
+      if (!co || co.instructorId !== iid) { toast("기수를 찾지 못했어요.", "warn"); return; }
+      DB.session.setStudent({ preview: true, by: S.role === "master" ? "master" : isCoach() ? "coach" : "instructor", instructorId: iid, cohortId: co.id, at: Date.now() });
+      const tg = []; DB.cohortsOf(iid).forEach((c) => { tg.push(["plan:home:" + iid + ":" + c.id, c.name + " · 수강생 대시보드"], ["plan:schedule:" + iid + ":" + c.id, c.name + " · 수업 캘린더"]); });
+      openSplit(id === "schedule" ? "#/schedule" : "#/home", "수강생 화면 미리보기 · " + insName(iid), tg, t);
+      return;
+    }
     let href = k === "p" ? "#/p/" + id : k === "free" ? "#/free/" + id : k === "login" ? "#/login" : "#/doinggo";
     if (k === "room") {
       // 강사센터 ‘수강생 화면 미리보기’와 같은 미리보기 세션 (이 브라우저에만 · 실제 수강생 기록은 안 바뀜)
@@ -4386,7 +4485,7 @@
   const PAGES = { "": pageDashboard, students: pageStudents, cohorts: pageCohorts, reviews: pageReviews, questions: pageQuestions, brand: pageBrand, menus: pageMenus, guide: pageGuide, landing: pageLanding, free: pageFree, curriculum: pageCurriculum, missions: pageMissions, schedule: pageSchedule, notices: pageNotices, faq: pageFaq, docs: pageDocs, library: pageLibrary, motivation: pageMotivation, replays: pageReplays, showcase: pageShowcase, glossary: pageGlossary, notes: pageNotePrompts, channels: pageChannels, partners: pagePartners, coaches: pageCoaches, pages: pageCustomPages, billing: pageBilling };
   const MPAGES = { "": pageMasterHome, partners: pageMasterPartners, instructors: pageMasterInstructors, students: pageMasterStudents, menus: pageMasterMenus, health: pageMasterHealth, reports: pageMasterReports, notices: pageMasterNotices, data: pageMasterData, site: pageMasterSite, billing: pageMasterBilling };
   MPAGES.rs = pageMasterRS;
-  Object.assign(MPAGES, { calendar: pageMasterCalendar, sla: pageMasterSla, certs: pageMasterCerts, contracts: pageMasterContracts, staff: pageMasterStaff });
+  Object.assign(MPAGES, { plan: pageMasterPlan, calendar: pageMasterCalendar, sla: pageMasterSla, certs: pageMasterCerts, contracts: pageMasterContracts, staff: pageMasterStaff });
   /* ================= v18: DOOGO CLASS 회원 DB · CRM (마스터) =================
    * 회원 DB: 단계 칩 · 상세 필터 · 일괄 작업(쿠폰 · 포인트 · 태그 · 메시지 · 내려받기) → 회원 상세(구매 · 진도 · 쿠폰 · 포인트 · 수신 동의 · 활동 기록 · 상담 메모)
    * 세그먼트(조건 조합 저장) · 메시지 · 자동화(캠페인 기록 · 7일 안 구매 전환 · 자동 메시지 켜기/끄기) · 회원 분석(가입 추이 · 퍼널 · 단계 · 유입)
@@ -4922,9 +5021,9 @@
 
   /* ---------- 운영자 계정 (메뉴 권한) ---------- */
   const STAFF_ROLES = {
-    ops: { label: "운영 매니저", perms: ["master/vod", "master/vod-classes", "master/vod-members", "master/vod-display", "master/billing", "master/rs", "master/instructors", "master/contracts", "master/menus", "master/site", "master/calendar", "master/health", "master/sla", "master/certs", "master/students", "master/partners", "master/reports", "master/notices"] },
+    ops: { label: "운영 매니저", perms: ["master/vod", "master/vod-classes", "master/vod-members", "master/vod-display", "master/billing", "master/rs", "master/instructors", "master/contracts", "master/menus", "master/site", "master/plan", "master/calendar", "master/health", "master/sla", "master/certs", "master/students", "master/partners", "master/reports", "master/notices"] },
     finance: { label: "정산 담당", perms: ["master/vod", "master/billing", "master/rs", "master/contracts"] },
-    academic: { label: "학사 · 상담 담당", perms: ["master/calendar", "master/health", "master/sla", "master/certs", "master/students", "master/partners", "master/reports", "master/notices"] },
+    academic: { label: "학사 · 상담 담당", perms: ["master/plan", "master/calendar", "master/health", "master/sla", "master/certs", "master/students", "master/partners", "master/reports", "master/notices"] },
     custom: { label: "직접 선택", perms: [] }
   };
   function STAFF() {
@@ -4948,7 +5047,7 @@
   const staffMe = () => (S && S.role === "master" && S.staffId ? staffOf(S.staffId) : null);
   const staffRoleName = (st) => (STAFF_ROLES[st.role] || STAFF_ROLES.custom).label;
   // 새로 생긴 DOOGO CLASS 메뉴는 원래 맡던 메뉴 권한을 따라가요 (대시보드 ← 주문 · 매출, 1:1 문의 ← 회원 · 후기, 강사 모집 ← 입점 문의)
-  const STAFF_ALIAS = { "master/dc": "master/vod", "master/vod-inquiries": "master/vod-members", "master/vod-recruit": "master/partners", "master/vod-crm": "master/vod-members", "master/vod-seg": "master/vod-members", "master/vod-msg": "master/vod-members", "master/vod-crm-rp": "master/vod-members", "master/vod-refund": "master/vod" };
+  const STAFF_ALIAS = { "master/plan": "master/calendar", "master/dc": "master/vod", "master/vod-inquiries": "master/vod-members", "master/vod-recruit": "master/partners", "master/vod-crm": "master/vod-members", "master/vod-seg": "master/vod-members", "master/vod-msg": "master/vod-members", "master/vod-crm-rp": "master/vod-members", "master/vod-refund": "master/vod" };
   const staffCan = (key) => { const st = staffMe(); if (!st || key === "master") return true; if (key === "master/data") return false; const pm = st.perms || []; return pm.indexOf(key) >= 0 || (!!STAFF_ALIAS[key] && pm.indexOf(STAFF_ALIAS[key]) >= 0); };
   function staffStrip(root) {
     if (!staffMe() || !root) return;
@@ -4982,7 +5081,7 @@
     const startM = cos.filter((x) => inM(x.start)), endM = cos.filter((x) => inM(x.end));
     const list = cos.slice().sort((a, b) => b.start.localeCompare(a.start));
     const stPill = (s) => pill(DB.STATUS_LABEL[s], s === "running" ? "ok" : s === "upcoming" ? "info" : "mute");
-    return head("전체 기수 일정", "모든 강사 플랫폼의 기수 시작 · 종료(수료) 날짜를 한 달력에서 봐요. 대학의 학사 일정처럼, 겹치는 기수와 다가오는 개강을 미리 챙길 수 있어요.") +
+    return head("전체 기수 일정", "모든 강사 플랫폼의 기수 시작 · 종료(수료) 날짜를 한 달력에서 봐요. 대학의 학사 일정처럼, 겹치는 기수와 다가오는 개강을 미리 챙길 수 있어요.", '<a class="a-btn a-btn-primary" href="#/center/master/plan">' + icon("layers", "sm") + "기수 · 일정 설계</a>") +
       '<div class="a-kpis">' +
         kpi("모집 중 기수", cos.filter((x) => x.st === "upcoming").length + "개", "개강 전", "#/center/master/calendar") +
         kpi("진행 중 기수", cos.filter((x) => x.st === "running").length + "개", "수강생 " + cos.filter((x) => x.st === "running").reduce((a, x) => a + x.n, 0) + "명 학습 중", "#/center/master/calendar", "ok") +
@@ -4993,7 +5092,7 @@
         '<span class="mc-legend"><span class="mc-chip s"><i></i>개강</span><span class="mc-chip e"><i></i>종료 · 수료</span></span></div>' +
         '<div class="mc-grid">' + ["일", "월", "화", "수", "목", "금", "토"].map((w, i) => '<div class="mc-w' + (i === 0 ? " sun" : i === 6 ? " sat" : "") + '">' + w + "</div>").join("") + cells + "</div></section>" +
       '<section class="a-card"><div class="a-card-head"><h2>기수 목록</h2><span class="a-muted">' + list.length + "개 · 최근 개강 순</span></div>" + (list.length ? '<div class="a-table-wrap"><table class="a-table"><thead><tr><th>강사</th><th>기수</th><th>기간</th><th class="num">주차</th><th class="num">수강생</th><th>상태</th><th class="right"></th></tr></thead><tbody>' +
-        list.map((x) => '<tr><td><span class="mc-dot" style="--c:' + x.color + '"></span><b>' + esc(x.ins.displayName) + "</b></td><td>" + esc(x.co.name) + "</td><td>" + fmtFull(x.start) + " ~ " + fmtFull(x.end) + (x.st === "upcoming" ? ' <small class="a-muted">개강 ' + dLeft(x.start) + "</small>" : "") + '</td><td class="num">' + x.weeks + '주</td><td class="num">' + x.n + "명</td><td>" + stPill(x.st) + '</td><td class="right">' + btn("강사센터 접속", "ins-enter", "a-btn-ghost a-btn-sm", ' data-id="' + esc(x.ins.id) + '"') + "</td></tr>").join("") +
+        list.map((x) => '<tr><td><span class="mc-dot" style="--c:' + x.color + '"></span><b>' + esc(x.ins.displayName) + "</b></td><td>" + esc(x.co.name) + "</td><td>" + fmtFull(x.start) + " ~ " + fmtFull(x.end) + (x.st === "upcoming" ? ' <small class="a-muted">개강 ' + dLeft(x.start) + "</small>" : "") + '</td><td class="num">' + x.weeks + '주</td><td class="num">' + x.n + "명</td><td>" + stPill(x.st) + '</td><td class="right"><div class="a-row-actions">' + btn("설계 · 수정", "plan-edit", "a-btn-ghost a-btn-sm", ' data-id="' + esc(x.co.id) + '"') + btn("강사센터 접속", "ins-enter", "a-btn-ghost a-btn-sm", ' data-id="' + esc(x.ins.id) + '"') + "</div></td></tr>").join("") +
         "</tbody></table></div>" : emptyBox("calendar", "아직 열린 기수가 없어요.")) + "</section>";
   }
 
@@ -5926,7 +6025,7 @@
       case "student-add": studentForm(null); break;
       case "student-open": studentForm(DB.student(d.id)); break;
       // 기수
-      case "cohort-add": if (S.role !== "master") { if (!isCoach()) billForm(null, false); break; } cohortForm(null); break;
+      case "cohort-add": if (S.role !== "master") { if (!isCoach()) billForm(null, false); break; } planForm(IID(), null); break;
       case "bill-request": billForm(null, false); break;
       case "bill-add": billForm(null, true); break;
       case "bill-edit": { const b = findBill(d.id); if (b) billForm(b, S.role === "master" && !S.actingAs); break; }
@@ -5946,7 +6045,31 @@
       case "cal-day": ui.calDay = d.d && d.d !== ui.calDay ? d.d : null; render(); break;
       case "rev-year": ui.revYear = (ui.revYear || Number(todayStr().slice(0, 4))) + Number(d.dir); render(); break;
       case "rev-year-set": ui.revYear = Number(d.y); render(); break;
-      case "cohort-edit": cohortForm(DB.cohort(d.id)); break;
+      case "cohort-edit": { const co = DB.cohort(d.id); if (co) planForm(co.instructorId, co); break; }
+      case "plan-new": if (S.role !== "master" || staffDeny("master/plan")) break; planForm(d.iid, null); break;
+      case "plan-edit": { const co = DB.cohort(d.id); if (co) planForm(co.instructorId, co); break; }
+      case "plan-pv": planSplit(d.iid, d.id, d.pg); break;
+      case "plan-ins": ui.planIns = d.id; if (ROUTE.hash.indexOf("?") >= 0) ROUTE.hash = "#/center/master/plan"; else render(); break;
+      case "plan-ev-add": { const box = document.getElementById("pl-evs"), f = document.getElementById("plan-form"); if (!box || !f) break; box.insertAdjacentHTML("beforeend", planRow(f.dataset.iid, { type: d.k })); const r = box.lastElementChild; const di = r.querySelector('[name="ev-date"]'); if (di) di.focus(); refreshPlanPv(); break; }
+      case "plan-ev-del": { const r = t.closest(".pl-ev"); if (r) r.remove(); refreshPlanPv(); break; }
+      case "plan-then": { const f = document.getElementById("plan-form"); if (f) f.dataset.then = "pv"; break; }
+      case "plan-del": {
+        if (S.role !== "master" || staffDeny("master/plan")) break;
+        const co = DB.cohort(d.id); if (!co) break;
+        const iid = co.instructorId, ss = DB.studentsOf(iid).filter((x) => x.cohortId === co.id), real = ss.filter((x) => !x.demo);
+        if (real.length) { toast("수강생 " + real.length + "명이 있는 기수는 지울 수 없어요. 수강생을 다른 기수로 옮긴 뒤 지워 주세요.", "warn"); break; }
+        // 체험용 수강생(이수진 등)은 지우지 않고 남은 기수 중 가장 최근 기수로 옮겨요 — 체험 계정은 계속 들어갈 수 있게
+        const to = DB.cohortsOf(iid).filter((x) => x.id !== co.id).slice(-1)[0];
+        confirmModal(insName(iid) + " " + co.name + "을 지울까요?", "기수와 이 기수 특별 일정이 지워져요." + (ss.length ? (to ? " 체험용 수강생 " + ss.length + "명은 " + esc(to.name) + "로 옮겨요." : " 체험용 수강생 " + ss.length + "명도 함께 지워져요.") : "") + " 되돌릴 수 없어요.", "지우기", true, () => {
+          const ct = DB.content(iid);
+          if (to) ss.forEach((x) => { x.cohortId = to.id; }); else { const ids = new Set(ss.map((x) => x.id)); DB.data.students = DB.data.students.filter((x) => !ids.has(x.id)); }
+          DB.data.cohorts = DB.data.cohorts.filter((x) => x.id !== co.id);
+          if (ct) ct.schedule = ct.schedule.filter((e) => !(e.scope === "cohort" && e.cohortId === co.id));
+          DB.bills().filter((x) => x.cohortId === co.id).forEach((x) => { delete x.cohortId; x.cohortDeletedAt = todayStr(); DB.saveBill(x); });
+          commit(insName(iid) + " " + co.name + "을 지웠어요.");
+        });
+        break;
+      }
       case "cohort-delete": { const co = DB.cohort(d.id); confirmModal("기수 삭제", esc(co.name) + "를 삭제할까요?", "삭제", true, () => { DB.data.cohorts = DB.data.cohorts.filter((x) => x.id !== d.id); DB.bills().filter((b) => b.cohortId === d.id).forEach((b) => { delete b.cohortId; b.cohortDeletedAt = todayStr(); DB.saveBill(b); }); commit("기수를 삭제했어요. 연결된 이용료 기록은 ‘기수 열기’를 다시 할 수 있어요."); }); break; }
       // 검수 · 문의
       case "rev-tab": ui.revFilter = d.k; ui.revPicked.clear(); render(); break;
@@ -6120,7 +6243,7 @@
       // 마스터
       case "ins-add": if (staffDeny("master/instructors")) break; insForm(null); break;
       case "ins-edit": if (staffDeny("master/instructors")) break; insForm(DB.instructor(d.id)); break;
-      case "ins-enter": if (staffDeny("master/instructors")) break; S.actingAs = d.id; DB.session.setAdmin(S); ROUTE.hash = "#/center"; toast(DB.instructor(d.id).displayName + " 강사센터로 들어왔어요."); break;
+      case "ins-enter": if (staffDeny("master/instructors")) break; S.actingAs = d.id; DB.session.setAdmin(S); ROUTE.hash = /^#\/center\/[a-z-]+$/.test(d.to || "") ? d.to : "#/center"; toast(DB.instructor(d.id).displayName + " 강사센터로 들어왔어요."); break;
       case "ins-delete": {
         if (staffDeny("master/instructors")) break;
         const x = DB.instructor(d.id);
@@ -6179,7 +6302,7 @@
       render(); toast("입금 계좌 · 부가세 설정을 저장했어요.");
       return;
     }
-    const forms = { "vda-form": saveVodClass, "vda-ban-form": saveVodBanner, "vda-tile-form": saveVodTiles, "vda-rails-form": saveVodRails, "vda-cat-form": saveVodCats, "vda-topic-form": saveVodTopics, "vda-set-form": saveVodSettings, "vp-copy-form": saveVpCopy, "vda-rate-form": saveVodRate, "vda-tax-form": saveVodTax, "vda-ad-form": saveVodAd, "vs-prof-form": saveVsProfile, "vda-ref-form": saveVodRefund, "vs-inv-form": saveVsInvoice, "vda-cp-form": saveVodCoupon, "vda-iq-form": saveVodAnswer, "aff-lead-form": saveAffLead, "an-form": saveAffNotice, "sla-form": saveSla, "ct-form": saveContract, "st-form": saveStaff, "aff-form": saveAff, "aff-set-form": saveAffSet, "aff-pw-form": saveAffPw, "aff-bank-form": saveAffBank, "bill-form": saveBillForm, "pay-form": saveBillStep, "inv-form": saveBillStep, "open-form": saveBillStep, "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "cohort-form": saveCohort, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote, "coach-form": saveCoach };
+    const forms = { "vda-form": saveVodClass, "vda-ban-form": saveVodBanner, "vda-tile-form": saveVodTiles, "vda-rails-form": saveVodRails, "vda-cat-form": saveVodCats, "vda-topic-form": saveVodTopics, "vda-set-form": saveVodSettings, "vp-copy-form": saveVpCopy, "vda-rate-form": saveVodRate, "vda-tax-form": saveVodTax, "vda-ad-form": saveVodAd, "vs-prof-form": saveVsProfile, "vda-ref-form": saveVodRefund, "vs-inv-form": saveVsInvoice, "vda-cp-form": saveVodCoupon, "vda-iq-form": saveVodAnswer, "aff-lead-form": saveAffLead, "an-form": saveAffNotice, "sla-form": saveSla, "ct-form": saveContract, "st-form": saveStaff, "aff-form": saveAff, "aff-set-form": saveAffSet, "aff-pw-form": saveAffPw, "aff-bank-form": saveAffBank, "bill-form": saveBillForm, "pay-form": saveBillStep, "inv-form": saveBillStep, "open-form": saveBillStep, "cur-form": saveCur, "a-login-form": doLogin, "student-form": saveStudent, "plan-form": savePlan, "coll-form": saveItem, "brand-form": saveBrand, "ins-form": saveIns, "menu-item-form": saveMenuItem, "page-form": savePage, "libnote-form": saveLibNote, "coach-form": saveCoach };
     if (forms[f.id]) { e.preventDefault(); forms[f.id](f); return; }
     if (f.classList.contains("vda-price")) { e.preventDefault(); saveVodPrice(f); return; }
     if (f.classList.contains("a-q-form")) {
@@ -6202,7 +6325,7 @@
     else if (t.id === "rev-week") { ui.revWeek = t.value; ui.revPicked.clear(); render(); }
     else if (t.id === "sched-cohort") { ui.schedCohort = t.value; render(); }
     else if (t.id === "cur-pick") { ui.curId = t.value; render(); }
-    else if (t.id === "cf-cur" || t.id === "cf-dow") refreshWeekPreview();
+    else if (t.closest && t.closest("#plan-form")) refreshPlanPv();
     else if (t.name === "base" && t.closest("#cur-form")) { const b = document.querySelector("[data-show-blank]"); if (b) b.hidden = t.value !== "blank"; }
     else if (t.id === "m-ins") { ui.mIns = t.value; render(); }
     else if (t.id === "a-vpid" || t.id === "a-vpid2") { setVpid(t.value); render(); toast("‘" + ((vdP(t.value) || {}).title || "") + "’ 강의실을 꾸며요. 바꾼 내용은 이 VOD 수강생에게만 보여요."); }
@@ -6264,7 +6387,7 @@
     if (t.dataset && t.dataset.lpLines) { lpSet(lpDraft(), t.dataset.lpLines, LINES(t.value)); lpChanged(); return; }
     if (t.id === "gb-text") { const n = parseGlossaryText(t.value).length; const el = document.getElementById("gb-count"); if (el) el.textContent = n + "개 인식됨"; }
     if (t.id === "fb-text") { const n = parseFaqText(t.value).length; const el = document.getElementById("fb-count"); if (el) el.textContent = n + "개 인식됨"; }
-    if (t.id === "cf-start" || t.id === "cf-time") refreshWeekPreview();
+    if (t.closest && t.closest("#plan-form")) refreshPlanPv();
     if (t.id === "bf-fee" || t.id === "bf-amount") refreshBillCalc();
     if (t.id === "al-pw" && loginTab === "instructor") t.value = t.value.replace(/\D/g, "").slice(0, 4);
     if (t.id === "sf-phone" || t.id === "if-phone") t.value = t.value.replace(/\D/g, "").slice(0, 4);

@@ -1186,7 +1186,8 @@
   }
   const curriculum = (instId, curId) => { const list = curricula(instId); return list.find((x) => x.id === (curId || "main")) || list[0] || null; };
   const curriculumOf = (co) => curriculum(co.instructorId, co.curriculumId);
-  const weeksOf = (co) => { if (co && co.kind === "vod") return []; const cu = co && curriculumOf(co); return cu ? cu.weeks : []; };
+  // 기수마다 진행 주차 수를 정할 수 있어요 (co.weeks · 비우면 커리큘럼 전체) — 예: 같은 커리큘럼으로 1기 5주 · 2기 4주
+  const weeksOf = (co) => { if (co && co.kind === "vod") return []; const cu = co && curriculumOf(co); if (!cu) return []; const n = Number(co.weeks) || 0; return n > 0 && n < cu.weeks.length ? cu.weeks.slice(0, n) : cu.weeks; };
   const weekCount = (instId) => { const c = content(instId); return c ? c.weeks.length : 0; };
   const cohortWeeks = (co) => weeksOf(co).length;
   const weekOpen = (co, no) => addDays(co.startDate, (no - 1) * 7);
@@ -1244,6 +1245,8 @@
 
   const EVENT_TYPES = {
     open: { label: "강의 오픈", cls: "open" },
+    free: { label: "무료 강의", cls: "free" },
+    offline: { label: "오프라인 강의", cls: "offline" },
     deadline: { label: "과제 마감", cls: "deadline" },
     qna: { label: "라이브 Q&A", cls: "qna" },
     notice: { label: "공지", cls: "notice" },
@@ -1283,7 +1286,7 @@
         const d = parseDate(open).getDay();
         date = addDays(open, ((Number(e.dow) - d) + 7) % 7);
       }
-      if (date) out.push({ date, time: e.time || "", type: e.type, week: e.scope === "cohort" ? null : Number(e.week), title: e.title, url: e.url || "", id: e.id });
+      if (date) out.push({ date, time: e.time || "", type: e.type, week: e.scope === "cohort" ? null : Number(e.week), title: e.title, url: e.url || "", place: e.place || "", id: e.id });
     });
     return out.sort((a, b) => (a.date + (a.time || "99")).localeCompare(b.date + (b.time || "99")));
   }
