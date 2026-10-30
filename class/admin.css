@@ -3007,3 +3007,58 @@ a.a-noperm, a.a-noperm * { color: var(--m-stone, #9a9aa3) !important; cursor: no
 }
 /* 번호로 넘긴 목록으로 돌아올 때 위쪽 머리글에 가리지 않게 */
 [data-pg-card] { scroll-margin-top: 84px; }
+
+/* ---------- 홈 꾸미기 (마스터 › DOOGO CLASS › 클래스 · 전시) — PC: 왼쪽 섹션 순서 · 오른쪽 편집 / 휴대폰: 위아래 ---------- */
+.hk-grid { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.hk-grid > .a-card { margin: 0; }
+.hk-secs { position: sticky; top: 84px; }
+.hk-list, .hk-items, .hk-tabs { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.hk-list li, .hk-tabs li { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 4px; border-radius: 12px; background: #f7f7f8; box-shadow: inset 0 0 0 1px transparent; transition: background .15s, box-shadow .15s; }
+.hk-list li.on, .hk-tabs li.on { background: #fff; box-shadow: inset 0 0 0 1.5px #111; }
+.hk-list li.off .hk-tx b, .hk-tabs li.off b { color: #a0a0a8; text-decoration: line-through; text-decoration-color: rgba(0, 0, 0, .25); }
+.hk-pick, .hk-tab { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 6px 4px; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+.hk-no { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 8px; background: #111; color: #fff; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.hk-tx { display: grid; gap: 1px; min-width: 0; flex: 1; }
+.hk-tx b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hk-tx small { font-size: 12px; color: var(--m-steel, #77777f); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hk-tx small em { font-style: normal; font-weight: 800; color: #e0103a; }
+.hk-tab b { font-size: 14px; }
+.hk-tab small { margin-left: auto; font-size: 12px; color: var(--m-steel, #77777f); white-space: nowrap; }
+.hk-ed .a-card-head h2 small { font-size: 13px; font-weight: 600; }
+.hk-tt { margin: 4px 0 14px; padding: 12px 14px; border-radius: 12px; background: #fafafb; }
+.hk-tt .a-form-actions { margin-top: 8px; }
+.hk-ctl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px; }
+.hk-note, .hk-fx { margin: 8px 0 10px; }
+.hk-warn { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: #fff6e0; color: #8a5a00; font-size: 13px; }
+.hk-sub { margin: 18px 0 8px; font-size: 15px; }
+.hk-it { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 6px; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px #ececf0; }
+.hk-it.pin { box-shadow: inset 3px 0 0 #e0103a, inset 0 0 0 1px #ececf0; }
+.hk-it .hk-no { background: #f1f1f4; color: #111; }
+.hk-it.pin .hk-no { background: #e0103a; color: #fff; }
+.hk-th { position: relative; flex: none; width: 72px; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: #1c1c1e; display: grid; place-items: center; color: #fff; }
+.hk-th .vd-art { position: absolute; inset: 0; font-size: 4px; }
+.hk-th.hk-av { width: 44px; aspect-ratio: 1; border-radius: 50%; background: #f1f1f4; color: #111; font-weight: 800; }
+.hk-th.hk-av img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.hk-tx .a-pill { justify-self: start; margin-top: 2px; }
+.hk-act { display: flex; align-items: center; gap: 2px; flex: none; }
+.hk-top { padding: 0 8px; }
+.hk-del { color: #b4232a; }
+.hk-cut { padding: 6px 10px; border-radius: 8px; background: repeating-linear-gradient(-45deg, #fafafb 0 6px, #f1f1f4 6px 12px); font-size: 12px; font-weight: 700; color: #6b6b74; text-align: center; }
+.hk-empty { display: flex; align-items: center; gap: 6px; padding: 14px; border-radius: 12px; background: #fafafb; color: #8a5a00; font-size: 13px; }
+.hk-hid { margin-top: 12px; padding: 12px 14px; border-radius: 12px; border: 1px dashed #e0e0e6; }
+.hk-hid p { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 8px; }
+.hk-hid p small { font-size: 12px; color: var(--m-steel, #77777f); }
+.hk-hid > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.hk-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 4px 4px 10px; border-radius: 999px; background: #f4f4f6; font-size: 12.5px; }
+.hk-chip button { flex: none; padding: 3px 9px; border-radius: 999px; border: 0; background: #111; color: #fff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+@media (max-width: 900px) {
+  .hk-grid { grid-template-columns: minmax(0, 1fr); }
+  .hk-secs { position: static; }
+}
+@media (max-width: 640px) {
+  .hk-ctl { grid-template-columns: minmax(0, 1fr); }
+  .hk-it { flex-wrap: wrap; gap: 8px; }
+  .hk-it .hk-tx { flex-basis: calc(100% - 120px); }
+  .hk-act { width: 100%; justify-content: flex-end; padding-top: 6px; border-top: 1px solid #f1f1f4; }
+  .hk-th { width: 64px; }
+}

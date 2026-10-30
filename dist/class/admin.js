@@ -415,7 +415,7 @@
     ["시스템", [["master/staff", "운영자 · 활동 기록", "shieldCheck"], ["master/data", "데이터 관리", "database"]]]
   ];
   /* 마스터 관리 영역: 두잉고(강사 플랫폼 · 기수 운영) / DOOGO CLASS(VOD 스토어 · 회원 · 주문) — 왼쪽 위 탭으로 오가요 */
-  const DC_ROUTES = ["dc", "vod", "vod-classes", "vod-members", "vod-display", "vod-inquiries", "vod-recruit", "vod-crm", "vod-seg", "vod-msg", "vod-crm-rp", "vod-refund", "vod-ship", "vod-sales", "vod-rank", "vod-ads", "vod-settle", "vod-rates"];
+  const DC_ROUTES = ["dc", "vod", "vod-classes", "vod-members", "vod-display", "vod-inquiries", "vod-recruit", "vod-crm", "vod-seg", "vod-msg", "vod-crm-rp", "vod-refund", "vod-ship", "vod-sales", "vod-rank", "vod-ads", "vod-settle", "vod-rates", "vod-home"];
   const MT = () => (ui.mtab === "dc" ? "dc" : "dg");
   const vdIqOpen = () => (VD().inquiries || []).filter((x) => !x.answer).length;
   const vdRecruitNew = () => DB.inquiries().filter((x) => (x.source === "doogoclass" || /^\[DOOGO CLASS/.test(x.where || "")) && (x.status || "new") === "new").length;
@@ -423,7 +423,7 @@
     ["DOOGO CLASS 운영", [["master/dc", "DOOGO CLASS 대시보드", "grid"], ["master/vod", "주문 · 결제", "coins", vdPending() || ""], ["master/vod-ship", "종이책 주문 · 배송", "truck", vdShipTodo() || ""], ["master/vod-refund", "환불 · 취소 관리", "refresh", (vdRefReqs().length + vdRefWait().length) || ""], ["master/vod-inquiries", "고객센터 1:1 문의", "headset", vdIqOpen() || ""], ["master/vod-members", "후기 · 다짐", "star"]]],
     ["매출 · 정산", [["master/vod-sales", "매출 리포트", "activity"], ["master/vod-rank", "판매 순위", "trophy"], ["master/vod-ads", "광고비 · ROAS", "megaphone"], ["master/vod-settle", "강사 정산", "calculator", vdSettleTodo() || ""], ["master/vod-rates", "정산 비율 · 가격", "sliders"]]],
     ["회원 · CRM", [["master/vod-crm", "회원 DB", "users"], ["master/vod-seg", "세그먼트", "target"], ["master/vod-msg", "메시지 · 자동화", "send"], ["master/vod-crm-rp", "회원 분석", "activity"]]],
-    ["클래스 · 전시", [["master/vod-classes", "VOD 클래스 관리", "monitorPlay"], ["master/vod-display", "전시 · 쿠폰 · 설정", "layers"]]],
+    ["클래스 · 전시", [["master/vod-classes", "VOD 클래스 관리", "monitorPlay"], ["master/vod-home", "홈 꾸미기", "home"], ["master/vod-display", "전시 · 쿠폰 · 설정", "layers"]]],
     ["크리에이터", [["master/vod-recruit", "강사 모집 지원", "handshake", vdRecruitNew() || ""]]]
   ];
   const masterNav = () => { const g = staffNav(MT() === "dc" ? masterDcNavRaw() : masterNavRaw()); return staffMe() ? g.map((x) => [x[0], x[1].filter((it) => it[0] !== "master/staff")]).filter((x) => x[1].length) : g; };
@@ -3924,35 +3924,104 @@
 
   /* ---------- 4) VOD 전시 · 설정 (배너 · 카테고리 · 정산 · 입금 계좌) ---------- */
 
-  /* 홈 화면 섹션: 켜고 끄기 · 순서 · 제목 · 강의 고르기 (자동 / 고른 강의 맨 앞 / 고른 강의만) */
-  const RAIL_MODE = [["auto", "자동 (기본 규칙)"], ["pin", "고른 강의를 맨 앞에 + 나머지 자동"], ["only", "고른 강의만"]];
-  function railState() { const v = VD(), X = VX(); v.homeRails = X.homeRails().map((r) => ({ k: r.k, on: r.on, tag: r.tag, t: r.t.slice(), mode: r.mode, picks: r.picks.slice() })); return v.homeRails; }
+  /* ---------- 홈 꾸미기 (마스터 › DOOGO CLASS › 클래스 · 전시 › 홈 꾸미기) ----------
+   * 스토어 첫 화면의 섹션 순서 · 켜기 · 제목, 섹션마다 보이는 강의 순서 · 추가 · 빼기, 분야별 탭 순서 · 탭마다 강의 순서, 강사진 순서를 정해요.
+   * 저장은 VOD.homeRails 하나: { k, on, tag, t, mode: auto|pin|only, picks: 앞에 고정할 id, hide: 뺀 id, cats: [{ k: 분야, on, picks, hide }] }
+   * 순서를 바꾸면 바꾼 자리까지 picks 로 고정하고 나머지는 원래 규칙대로 뒤에 붙어요. 빼면 hide 에 남아 자동 규칙이 다시 넣지 않아요.
+   * 이름 · 제목 말고는 누르는 즉시 저장돼요 (commit). */
+  const RAIL_MODE = [["auto", "자동 (기본 규칙대로)"], ["pin", "고정한 강의 먼저 + 나머지 자동"], ["only", "고른 강의만"]];
+  const HM_CUT = { cat: 6, teach: 8 };
+  const railCopy = (r) => ({ k: r.k, on: r.on, tag: r.tag, t: r.t.slice(), mode: r.mode, picks: r.picks.slice(), hide: r.hide.slice(), cats: r.cats.map((c) => ({ k: c.k, on: c.on, picks: c.picks.slice(), hide: c.hide.slice() })) });
+  function railState() { const v = VD(); v.homeRails = VX().homeRails().map(railCopy); return v.homeRails; }
   function railSync() {
     const f = document.getElementById("vda-rails-form"); if (!f) return railState();
     const rs = railState();
-    rs.forEach((r) => { const g = (n) => (f[r.k + "-" + n] ? f[r.k + "-" + n].value : null); if (g("tag") != null) r.tag = g("tag").trim(); if (g("t0") != null) r.t = [g("t0"), g("t1"), g("t2")]; if (g("mode")) r.mode = g("mode"); });
+    rs.forEach((r) => { const g = (n) => (f[r.k + "-" + n] ? f[r.k + "-" + n].value : null); if (g("tag") != null) r.tag = g("tag").trim(); if (g("t0") != null) r.t = [g("t0"), g("t1"), g("t2")]; });
     return rs;
   }
-  function vdRailCard() {
-    const X = VX(), rs = X.homeRails(), all = VD().products.filter((p) => p.status !== "hidden");
-    const opts = (r) => all.filter((p) => r.picks.indexOf(p.id) < 0).map((p) => '<option value="' + esc(p.id) + '">[' + esc(adTypeShort(p)) + "] " + esc(p.title) + (p.status === "soon" ? " (오픈 예정)" : "") + "</option>").join("");
-    return '<section class="a-card"><div class="a-card-head"><h2>홈 화면 섹션</h2><span class="a-muted">스토어 첫 화면의 줄(섹션)마다 보일 강의 · 순서 · 제목을 정하고, 끄면 숨겨요. 위에서부터 이 순서대로 보여요.</span>' + btn("기본값으로", "vda-rail-reset", "a-btn-ghost a-btn-sm vda-ml") + "</div>" +
-      '<form id="vda-rails-form" class="a-form vda-rails" novalidate>' + rs.map((r, i) => { const items = X.railItems(r);
-        return '<div class="vda-rail' + (r.on ? "" : " off") + '"><div class="vda-rail-h"><span class="vda-rail-no">' + (i + 1) + "</span><b>" + esc(r.t.join("")) + '</b><small class="a-muted">' + esc(r.rule) + "</small>" + (r.biz && !X.bizOn(r.biz) ? pill("판매 영역 꺼짐 · 안 보여요", "mute") + btn("판매 영역 켜기", "vda-biz", "a-btn-ghost a-btn-sm", ' data-k="' + r.biz + '"') : "") +
-          '<button type="button" class="a-switch' + (r.on ? " on" : "") + '" data-action="vda-rail-on" data-k="' + r.k + '" role="switch" aria-checked="' + r.on + '" aria-label="섹션 보이기"><i></i></button>' +
-          '<button type="button" class="a-icon-btn" data-action="vda-rail-move" data-k="' + r.k + '" data-dir="-1" aria-label="위로"' + (i === 0 ? " disabled" : "") + ">" + icon("arrowUp", "sm") + '</button><button type="button" class="a-icon-btn" data-action="vda-rail-move" data-k="' + r.k + '" data-dir="1" aria-label="아래로"' + (i === rs.length - 1 ? " disabled" : "") + ">" + icon("arrowDown", "sm") + "</button></div>" +
-          '<div class="vda-rail-g"><div class="a-form-row"><div class="a-field"><label>작은 이름표</label><input class="a-input" name="' + r.k + '-tag" value="' + esc(r.tag) + '" maxlength="16" placeholder="비우면 숨겨요"></div>' +
-            '<div class="a-field vda-rail-tt"><label>제목 <small>(앞 · <b style="color:#e0103a">빨간 강조</b> · 뒤)</small></label><div class="vda-rail-t3"><input class="a-input" name="' + r.k + '-t0" value="' + esc(r.t[0] || "") + '" maxlength="30"><input class="a-input vda-rail-acc" name="' + r.k + '-t1" value="' + esc(r.t[1] || "") + '" maxlength="20"><input class="a-input" name="' + r.k + '-t2" value="' + esc(r.t[2] || "") + '" maxlength="20"></div></div></div>' +
-            (r.fixed ? '<p class="a-muted p-small vda-rail-fx">' + icon("lock", "xs") + " 고정 섹션이에요 (" + esc(r.rule) + "). 이름표 · 제목 · 켜기 · 순서만 바꿀 수 있어요.</p></div></div>" :
-            '<div class="a-form-row"><div class="a-field"><label>강의 고르는 방법</label><select class="a-input" name="' + r.k + '-mode" data-action-change="rail-mode">' + RAIL_MODE.map((x) => '<option value="' + x[0] + '"' + (r.mode === x[0] ? " selected" : "") + ">" + x[1] + "</option>").join("") + "</select></div>" +
-            '<div class="a-field"><label>강의 추가</label><div class="vda-rail-add"><select class="a-input" name="' + r.k + '-add"><option value="">강의를 골라 주세요</option>' + opts(r) + "</select>" + btn(icon("plus", "sm") + "추가", "vda-rail-add", "a-btn-ghost a-btn-sm", ' data-k="' + r.k + '"') + "</div></div></div>" +
-            (r.picks.length ? '<ol class="vda-rail-picks">' + r.picks.map((id, pi) => { const p = X.product(id); return "<li><span class=\"vda-rail-pn\">" + (pi + 1) + '</span><span class="vda-rail-pt">' + (p ? X.thumbArt(p) : "") + "</span><b>" + esc(p ? p.title : "지워진 강의") + "</b>" + (p && p.status !== "on" && p.status !== "soon" ? pill("숨김", "mute") : "") +
-                '<button type="button" class="a-icon-btn" data-action="vda-rail-pmove" data-k="' + r.k + '" data-i="' + pi + '" data-dir="-1" aria-label="앞으로"' + (pi === 0 ? " disabled" : "") + ">" + icon("arrowUp", "sm") + '</button><button type="button" class="a-icon-btn" data-action="vda-rail-pmove" data-k="' + r.k + '" data-i="' + pi + '" data-dir="1" aria-label="뒤로"' + (pi === r.picks.length - 1 ? " disabled" : "") + ">" + icon("arrowDown", "sm") + '</button><button type="button" class="a-icon-btn" data-action="vda-rail-pdel" data-k="' + r.k + '" data-i="' + pi + '" aria-label="빼기">' + icon("x", "sm") + "</button></li>"; }).join("") + "</ol>"
-              : '<p class="a-muted p-small">' + (r.mode === "auto" ? "자동이에요. 강의를 추가하면 ‘맨 앞에’ 방식으로 바뀌어요." : "고른 강의가 없어요. 위에서 강의를 추가해 주세요.") + "</p>") +
-            '<div class="vda-rail-prev"><small>지금 첫 화면에 보이는 순서 · ' + items.length + "개</small><div>" + items.slice(0, 6).map((it) => '<span title="' + esc(it.p.title) + '">' + esc(it.p.title) + "</span>").join("") + (items.length > 6 ? "<span>+" + (items.length - 6) + "</span>" : "") + (items.length ? "" : '<span class="none">보일 강의가 없어서 이 섹션은 숨겨져요</span>') + "</div></div></div></div>"); }).join("") +
-      '<div class="a-form-actions"><button class="a-btn a-btn-primary" type="submit">제목 · 방법 저장</button></div></form></section>';
+  // 분야별 탭 설정을 모든 분야로 펼쳐 둬요 (탭 순서를 그대로 저장)
+  const hmCats = (r) => { r.cats = VX().catTabs(r).map((t) => ({ k: t.k, on: t.on, picks: t.picks.slice(), hide: t.hide.slice() })); return r.cats; };
+  // 지금 보이는 순서(ids)에서 from → to 로 옮기고, 옮긴 자리까지 고정 (‘고른 강의만’은 전부) · 지금 안 보이는 고른 강의는 뒤에 그대로
+  function hmPin(o, ids, from, to, all) {
+    const a = ids.slice(), x = a.splice(from, 1)[0]; a.splice(to, 0, x);
+    const n = all ? a.length : Math.max(o.picks.filter((id) => ids.indexOf(id) >= 0).length, Math.max(from, to) + 1);
+    o.picks = a.slice(0, n).concat(o.picks.filter((id) => ids.indexOf(id) < 0));
   }
-  function saveVodRails() { railSync(); commit("홈 화면 섹션을 저장했어요. 스토어 첫 화면에 바로 보여요."); }
+  const hmHide = (o, id) => { o.picks = o.picks.filter((x) => x !== id); if (o.hide.indexOf(id) < 0) o.hide.push(id); };
+  const hmShow = (o, id, add) => { o.hide = o.hide.filter((x) => x !== id); if (add && o.picks.indexOf(id) < 0) o.picks.push(id); };
+  /* 어떤 목록을 고치는지: 섹션 강의 · 분야 탭 강의 · 강사진 */
+  function hmTarget(rs, k, c) {
+    const X = VX(), r = rs.find((x) => x.k === k); if (!r) return null;
+    if (k === "teach") return { o: r, ids: X.teachHome(r).map((t) => t.iid), all: false, done: () => {} };
+    if (k === "cat") { const cs = hmCats(r), cf = cs.find((x) => x.k === c), t = X.catTabs(r).find((x) => x.k === c); return cf && t ? { o: cf, ids: t.items.map((p) => p.id), all: false, done: () => {} } : null; }
+    return { o: r, ids: X.railItems(r).map((it) => it.p.id), all: r.mode === "only", done: () => { if (r.mode === "auto") r.mode = "pin"; } };
+  }
+  const hmName = (r) => r.t.join("").trim() || r.k;
+  const hmSt = (p) => (!p ? "" : p.status === "soon" ? pill("오픈 예정", "info") : p.status !== "on" ? pill("숨김", "mute") : "");
+  // o: 강사 줄처럼 사진 · 설명을 따로 줄 때 { th, sub }
+  function hmRow(it, i, n, k, c, fixed, o) {
+    const X = VX(), p = it.p, real = o ? null : X.product(p.id), d = ' data-k="' + k + '"' + (c ? ' data-c="' + esc(c) + '"' : "") + ' data-i="' + i + '"';
+    const mv = (to, ic, lab, dis) => '<button type="button" class="a-icon-btn" data-action="hk-mv"' + d + ' data-to="' + to + '" aria-label="' + lab + '"' + (dis ? " disabled" : "") + ">" + icon(ic, "sm") + "</button>";
+    return '<li class="hk-it' + (fixed ? " pin" : "") + '"><span class="hk-no">' + (i + 1) + '</span><span class="hk-th' + (o ? " hk-av" : "") + '">' + (o ? o.th : real ? X.thumbArt(real) : icon("layers", "sm")) + '</span><span class="hk-tx"><b>' + esc(p.title || "") + "</b><small>" + (o ? esc(o.sub) : esc(real ? adTypeShort(real) : "두잉고 기수 강의") + (p.creator ? " · " + esc(p.creator) : "")) + " · " + (fixed ? "<em>고정</em>" : "자동") + "</small>" + hmSt(real) + "</span>" +
+      '<span class="hk-act">' + '<button type="button" class="a-btn a-btn-ghost a-btn-sm hk-top" data-action="hk-mv"' + d + ' data-to="0"' + (i === 0 ? " disabled" : "") + ">맨 앞</button>" + mv(i - 1, "arrowUp", "앞으로", i === 0) + mv(i + 1, "arrowDown", "뒤로", i === n - 1) +
+      '<button type="button" class="a-icon-btn hk-del" data-action="hk-hide" data-k="' + k + '"' + (c ? ' data-c="' + esc(c) + '"' : "") + ' data-id="' + esc(p.id) + '" aria-label="이 섹션에서 빼기" title="빼기">' + icon("x", "sm") + "</button></span></li>";
+  }
+  function hmHidden(o, k, c, nameOf) {
+    if (!o.hide.length) return "";
+    return '<div class="hk-hid"><p><b>뺀 ' + (k === "teach" ? "강사" : "강의") + " " + o.hide.length + '</b><small>첫 화면 이 자리에 안 보여요 · 다시 넣으면 원래 자리로</small></p><div>' + o.hide.map((id) => '<span class="hk-chip">' + esc(nameOf(id)) + '<button type="button" data-action="hk-show" data-k="' + k + '"' + (c ? ' data-c="' + esc(c) + '"' : "") + ' data-id="' + esc(id) + '">다시 넣기</button></span>').join("") + "</div></div>";
+  }
+  const hmPName = (id) => { const p = VX().product(id); return p ? p.title : "지워진 강의"; };
+  function hmList(items, k, c, pinN, cut, cutTxt) {
+    if (!items.length) return '<p class="hk-empty">' + icon("alert", "xs") + " 보일 강의가 없어서 첫 화면에서 이 자리는 숨겨져요.</p>";
+    return '<ol class="hk-items">' + items.map((it, i) => (cut && i === cut ? '<li class="hk-cut">' + cutTxt + "</li>" : "") + hmRow(it, i, items.length, k, c, i < pinN)).join("") + "</ol>";
+  }
+  function hmEditor(r) {
+    const X = VX(), off = r.biz && !X.bizOn(r.biz);
+    const title = r.k === "teach" ? "" : '<form id="vda-rails-form" class="a-form hk-tt" novalidate><div class="a-form-row">' + (r.k === "topics" ? "" : '<div class="a-field"><label>작은 이름표</label><input class="a-input" name="' + r.k + '-tag" value="' + esc(r.tag) + '" maxlength="16" placeholder="비우면 숨겨요"></div>') +
+      '<div class="a-field vda-rail-tt"><label>제목 <small>(앞 · <b style="color:#e0103a">빨간 강조</b> · 뒤)</small></label><div class="vda-rail-t3"><input class="a-input" name="' + r.k + '-t0" value="' + esc(r.t[0] || "") + '" maxlength="30" aria-label="제목 앞"><input class="a-input vda-rail-acc" name="' + r.k + '-t1" value="' + esc(r.t[1] || "") + '" maxlength="20" aria-label="빨간 강조"><input class="a-input" name="' + r.k + '-t2" value="' + esc(r.t[2] || "") + '" maxlength="20" aria-label="제목 뒤"></div></div></div>' +
+      '<div class="a-form-actions"><button class="a-btn a-btn-primary a-btn-sm" type="submit">이름표 · 제목 저장</button></div></form>';
+    let body = "";
+    if (r.k === "why" || r.k === "topics") body = '<p class="a-muted p-small hk-fx">' + icon("lock", "xs") + " 고정 섹션이에요 (" + esc(r.rule) + "). " + (r.k === "topics" ? "칩은 ‘전시 · 쿠폰 · 설정 › 다루는 부업’에서 고쳐요." : "켜기 · 순서 · 제목만 바꿔요.") + "</p>";
+    else if (r.k === "teach") {
+      const list = X.teachHome(r), pk = r.picks.filter((k) => list.some((t) => t.iid === k)).length;
+      body = '<p class="a-muted p-small hk-note">강사 순서는 첫 화면과 강사진 메뉴에 같이 써요. 빼면 첫 화면에서만 숨겨요 (강사진 메뉴 · 강사 페이지는 그대로).</p>' +
+        (list.length ? '<ol class="hk-items">' + list.map((t, i) => (i === HM_CUT.teach ? '<li class="hk-cut">여기까지 첫 화면에 보여요 (' + HM_CUT.teach + "명) · 아래는 강사진 메뉴에서만</li>" : "") + hmRow({ p: { id: t.iid, title: t.name } }, i, list.length, "teach", "", i < pk, { th: t.ph || X.insPhoto(t.iid) ? '<img src="' + esc(t.ph || X.insPhoto(t.iid)) + '" alt="">' : esc((t.name || "?").slice(0, 1)), sub: "클래스 " + t.ps.length + "개 · " + t.cats.slice(0, 2).join(" · ") })).join("") + "</ol>" : '<p class="hk-empty">판매 중인 강의가 있는 강사가 없어요.</p>') +
+        hmHidden(r, "teach", "", (id) => { const t = X.teacherList().find((x) => x.iid === id); return t ? t.name : id; });
+    } else if (r.k === "cat") {
+      const tabs = X.catTabs(r), cur = tabs.find((t) => t.k === ui.hmCat) || tabs[0];
+      if (cur) ui.hmCat = cur.k;
+      body = '<p class="a-muted p-small hk-note">분야 탭 순서 · 켜기를 정하고, 탭을 골라 그 안의 강의 순서를 바꿔요. 첫 화면 탭에는 ' + HM_CUT.cat + "개까지 보이고 나머지는 ‘전체보기’에서 봐요.</p>" +
+        '<ul class="hk-tabs">' + tabs.map((t, i) => '<li class="' + (t === cur ? "on" : "") + (t.on && t.items.length ? "" : " off") + '"><button type="button" class="hk-tab" data-action="hk-cat" data-c="' + esc(t.k) + '"><span class="hk-no">' + (i + 1) + "</span><b>" + esc(t.c.label) + "</b><small>" + t.items.length + "개" + (!t.items.length ? " · 강의 없음" : "") + "</small></button>" +
+          '<button type="button" class="a-switch' + (t.on ? " on" : "") + '" data-action="hk-cat-on" data-c="' + esc(t.k) + '" role="switch" aria-checked="' + t.on + '" aria-label="' + esc(t.c.label) + ' 탭 보이기"><i></i></button>' +
+          '<button type="button" class="a-icon-btn" data-action="hk-cat-mv" data-c="' + esc(t.k) + '" data-dir="-1" aria-label="앞으로"' + (i === 0 ? " disabled" : "") + ">" + icon("arrowUp", "sm") + '</button><button type="button" class="a-icon-btn" data-action="hk-cat-mv" data-c="' + esc(t.k) + '" data-dir="1" aria-label="뒤로"' + (i === tabs.length - 1 ? " disabled" : "") + ">" + icon("arrowDown", "sm") + "</button></li>").join("") + "</ul>" +
+        (cur ? '<h3 class="hk-sub">' + esc(cur.c.label) + " 탭 강의 순서</h3>" + hmList(cur.items.map((p) => ({ p })), "cat", cur.k, cur.picks.filter((id) => cur.items.some((p) => p.id === id)).length, HM_CUT.cat, "여기까지 첫 화면 탭에 보여요 (" + HM_CUT.cat + "개) · 나머지는 ‘전체보기’에서") + hmHidden({ hide: cur.hide }, "cat", cur.k, hmPName) +
+          '<p class="a-muted p-small">다른 분야 강의를 넣으려면 VOD 클래스 관리 › 클래스 수정에서 분야를 바꿔요.</p>' : '<p class="hk-empty">켜진 분야가 없어요.</p>');
+    } else {
+      const items = X.railItems(r), vis = items.map((it) => it.p.id), pinN = r.mode === "auto" ? 0 : r.mode === "only" ? items.length : r.picks.filter((id) => vis.indexOf(id) >= 0).length;
+      // 넣을 수 있는 강의: 스토어에 실제로 보일 수 있는 것만 (숨김 · 지난 LIVE · 꺼진 판매 영역은 빼요)
+      const cand = VD().products.filter((p) => X.railShowable(p) && vis.indexOf(p.id) < 0).sort((a, b) => adTypeShort(a).localeCompare(adTypeShort(b)) || String(a.title).localeCompare(String(b.title)));
+      body = '<div class="hk-ctl"><div class="a-field"><label for="hk-mode">강의 고르는 방법</label><select class="a-input" id="hk-mode" data-hk-mode="' + r.k + '">' + RAIL_MODE.map((x) => '<option value="' + x[0] + '"' + (r.mode === x[0] ? " selected" : "") + ">" + x[1] + "</option>").join("") + "</select></div>" +
+          '<div class="a-field"><label for="hk-add">강의 추가</label><div class="vda-rail-add"><select class="a-input" id="hk-add"><option value="">넣을 강의를 골라 주세요</option>' + cand.map((p) => '<option value="' + esc(p.id) + '">[' + esc(adTypeShort(p)) + "] " + esc(p.title) + (p.status === "soon" ? " (오픈 예정)" : "") + (r.hide.indexOf(p.id) >= 0 ? " · 뺀 강의" : "") + "</option>").join("") + "</select>" + btn(icon("plus", "sm") + "추가", "hk-add", "a-btn-ghost a-btn-sm", ' data-k="' + r.k + '"') + "</div></div></div>" +
+        '<p class="a-muted p-small hk-note">규칙: ' + esc(r.rule) + ". " + (r.mode === "only" ? "고른 강의만 이 순서대로 보여요." : "‘맨 앞’ · ↑ ↓로 옮기면 그 자리까지 고정되고, 새로 올라오는 강의는 규칙대로 뒤에 붙어요.") + "</p>" +
+        hmList(items, r.k, "", pinN) + hmHidden(r, r.k, "", hmPName);
+    }
+    const resettable = r.k !== "why" && r.k !== "topics";
+    return '<div class="a-card-head"><h2>' + esc(hmName(r)) + ' <small class="a-muted">섹션 편집</small></h2>' + (resettable ? btn("이 섹션 처음 규칙으로", "hk-reset", "a-btn-ghost a-btn-sm vda-ml", ' data-k="' + r.k + '"') : "") + "</div>" +
+      (off ? '<p class="hk-warn">' + icon("alert", "xs") + " 판매 영역이 꺼져 있어서 첫 화면에 안 보여요. " + btn("판매 영역 켜기", "vda-biz", "a-btn-ghost a-btn-sm", ' data-k="' + r.biz + '"') + "</p>" : !r.on ? '<p class="hk-warn">' + icon("eyeOff", "xs") + " 꺼 둔 섹션이에요. 왼쪽(휴대폰은 위) 스위치를 켜면 보여요.</p>" : "") + title + body;
+  }
+  function pageVodHome() {
+    const X = VX(), rs = X.homeRails(), sel = rs.find((r) => r.k === ui.hmSel) || rs[0];
+    ui.hmSel = sel.k;
+    const shown = (r) => r.on && (!r.biz || X.bizOn(r.biz));
+    const cnt = (r) => (r.k === "cat" ? X.catTabs(r).filter((t) => t.on && t.items.length).length + "개 분야" : r.k === "teach" ? Math.min(HM_CUT.teach, X.teachHome(r).length) + "명" : r.k === "why" || r.k === "topics" ? "고정" : X.railItems(r).length + "개");
+    return head("홈 꾸미기", "스토어 첫 화면(PC · 휴대폰 같은 순서)에 보이는 섹션 순서와, 섹션마다 들어갈 강의 · 순서를 정해요. 누르는 즉시 저장되고 스토어 홈에 바로 보여요.", vdStoreBtn("#/vod", "스토어 홈 미리보기")) +
+      '<div class="hk-grid"><section class="a-card hk-secs"><div class="a-card-head"><h2>섹션 순서</h2><span class="a-muted">배너 · 카테고리 아이콘 아래에 위에서부터 이 순서대로 보여요. 끄면 숨겨요.</span>' + btn("전체 처음 상태로", "vda-rail-reset", "a-btn-ghost a-btn-sm vda-ml") + "</div>" +
+        '<ol class="hk-list">' + rs.map((r, i) => '<li class="' + (r.k === sel.k ? "on" : "") + (shown(r) ? "" : " off") + '"><button type="button" class="hk-pick" data-action="hk-sel" data-k="' + r.k + '"><span class="hk-no">' + (i + 1) + "</span><span class=\"hk-tx\"><b>" + esc(hmName(r)) + "</b><small>" + (r.biz && !X.bizOn(r.biz) ? "판매 영역 꺼짐" : !r.on ? "꺼짐" : cnt(r)) + (r.mode && r.mode !== "auto" && !r.fixed ? " · " + (r.mode === "only" ? "고른 강의만" : "순서 고정") : "") + "</small></span></button>" +
+          '<button type="button" class="a-switch' + (r.on ? " on" : "") + '" data-action="vda-rail-on" data-k="' + r.k + '" role="switch" aria-checked="' + r.on + '" aria-label="' + esc(hmName(r)) + ' 보이기"><i></i></button>' +
+          '<button type="button" class="a-icon-btn" data-action="vda-rail-move" data-k="' + r.k + '" data-dir="-1" aria-label="위로"' + (i === 0 ? " disabled" : "") + ">" + icon("arrowUp", "sm") + '</button><button type="button" class="a-icon-btn" data-action="vda-rail-move" data-k="' + r.k + '" data-dir="1" aria-label="아래로"' + (i === rs.length - 1 ? " disabled" : "") + ">" + icon("arrowDown", "sm") + "</button></li>").join("") + "</ol></section>" +
+        '<section class="a-card hk-ed" id="hk-ed">' + hmEditor(sel) + "</section></div>";
+  }
+  function saveVodRails() { railSync(); commit("이름표 · 제목을 저장했어요. 스토어 첫 화면에 바로 보여요."); }
   /* 판매 영역: 지금 운영하는 사업만 켜요. 끄면 스토어 메뉴 · 홈 · 카테고리 아이콘 · 전체 클래스 · 검색 · 강사 페이지에서 숨겨요 (이미 산 수강생은 그대로) */
   const BIZ_NAME = { ebook: "전자책", flive: "LIVE 무료강의 → 얼리버드", live: "온/오프라인 강의 (유료)", free: "무료 VOD 특강" };
   function vdBizCard(v) {
@@ -3991,7 +4060,7 @@
           '<button type="button" class="a-switch' + (x.on !== false ? " on" : "") + '" data-action="vda-ban-on" data-i="' + i + '" role="switch" aria-checked="' + (x.on !== false) + '" aria-label="배너 켜기"><i></i></button>' +
           '<button type="button" class="a-icon-btn" data-action="vda-ban-move" data-i="' + i + '" data-dir="-1" aria-label="위로"' + (i === 0 ? " disabled" : "") + ">" + icon("arrowUp", "sm") + '</button><button type="button" class="a-icon-btn" data-action="vda-ban-move" data-i="' + i + '" data-dir="1" aria-label="아래로"' + (i === v.banners.length - 1 ? " disabled" : "") + ">" + icon("arrowDown", "sm") + "</button>" +
           btn("수정", "vda-ban-edit", "a-btn-ghost a-btn-sm", ' data-i="' + i + '"') + '<button type="button" class="a-icon-btn" data-action="vda-ban-del" data-i="' + i + '" aria-label="배너 지우기">' + icon("trash", "sm") + "</button></div></div>"; }).join("") + "</div>" : emptyBox("image", "배너가 없어요. 배너가 없으면 첫 화면은 카테고리부터 보여요.")) + "</section>" +
-      vdRailCard() +
+      '<section class="a-card"><div class="a-card-head"><h2>홈 화면 섹션</h2><span class="a-muted">섹션 순서 · 섹션마다 강의 순서 · 추가 · 빼기 · 분야별 탭 · 강사진 순서는 ‘홈 꾸미기’ 메뉴에서 해요.</span><a class="a-btn a-btn-primary a-btn-sm vda-ml" href="#/center/master/vod-home">' + icon("home", "sm") + "홈 꾸미기 열기</a></div></section>" +
       vdTileCard(v) +
       vdCouponCard(v) +
       '<div class="a-grid-2"><section class="a-card"><div class="a-card-head"><h2>카테고리</h2><span class="a-muted">끄면 스토어 메뉴에서 숨겨요.</span></div><form id="vda-cat-form" class="a-form" novalidate>' +
@@ -4781,7 +4850,7 @@
   /* ---------- VOD 버튼 · 입력 ---------- */
   document.addEventListener("click", (e) => {
     if (!isActive()) return;
-    const a = e.target.closest("[data-action^='vda-'], [data-action^='vc-'], [data-action^='fin-'], [data-action^='bo-'], [data-action='rk-per'], [data-action='ad-ym']"); if (!a || a.disabled) return;
+    const a = e.target.closest("[data-action^='vda-'], [data-action^='vc-'], [data-action^='fin-'], [data-action^='bo-'], [data-action^='hk-'], [data-action='rk-per'], [data-action='ad-ym']"); if (!a || a.disabled) return;
     const d = a.dataset, v = VD(), form = document.getElementById("vda-form");
     const O = () => v.orders.find((o) => o.id === d.id);
     const edit = (fn) => { vdSync(form); fn(ui.vdDraft); render(); };
@@ -4951,12 +5020,19 @@
       case "vda-ban-add": vdBanForm(null); break;
       case "vda-tile-add": vtSync(); v.tiles.push({ id: DB.uid("vt"), key: "", label: "새 아이콘", href: "#/vod/c/all", img: "", badge: "", on: true }); commit("아이콘을 추가했어요. 이름 · 링크를 적고 아이콘 이미지를 올려 주세요."); break;
       case "vda-biz": { const v = VD(); v.biz = Object.assign({}, VX().BIZ_DEF, v.biz || {}); v.biz[d.k] = !v.biz[d.k]; commit(BIZ_NAME[d.k] + (v.biz[d.k] ? " 판매 영역을 켰어요. 스토어 메뉴 · 홈에 다시 보여요." : " 판매 영역을 껐어요. 스토어 메뉴 · 홈 · 목록에서 숨겨요.")); break; }
-      case "vda-rail-on": { const rs = railSync(), r = rs.find((x) => x.k === d.k); if (!r) break; r.on = !r.on; commit(r.on ? "섹션을 보이게 했어요." : "섹션을 숨겼어요. 첫 화면에서 안 보여요."); break; }
+      case "vda-rail-on": { const rs = railSync(), r = rs.find((x) => x.k === d.k); if (!r) break; r.on = !r.on; commit(r.on ? "‘" + hmName(r) + "’ 섹션을 보이게 했어요." : "‘" + hmName(r) + "’ 섹션을 숨겼어요. 첫 화면에서 안 보여요."); break; }
       case "vda-rail-move": { const rs = railSync(), i = rs.findIndex((x) => x.k === d.k), j = i + Number(d.dir); if (i < 0 || j < 0 || j >= rs.length) break; const t = rs[i]; rs[i] = rs[j]; rs[j] = t; commit("섹션 순서를 바꿨어요."); break; }
-      case "vda-rail-add": { const f = document.getElementById("vda-rails-form"), id = f && f[d.k + "-add"] ? f[d.k + "-add"].value : ""; if (!id) { toast("추가할 강의를 골라 주세요.", "warn"); break; } const rs = railSync(), r = rs.find((x) => x.k === d.k); if (!r || r.picks.indexOf(id) >= 0) break; r.picks.push(id); if (r.mode === "auto") r.mode = "pin"; commit("강의를 넣었어요."); break; }
-      case "vda-rail-pmove": { const rs = railSync(), r = rs.find((x) => x.k === d.k), i = Number(d.i), j = i + Number(d.dir); if (!r || j < 0 || j >= r.picks.length) break; const t = r.picks[i]; r.picks[i] = r.picks[j]; r.picks[j] = t; commit("순서를 바꿨어요."); break; }
-      case "vda-rail-pdel": { const rs = railSync(), r = rs.find((x) => x.k === d.k); if (!r) break; r.picks.splice(Number(d.i), 1); commit("강의를 뺐어요."); break; }
-      case "vda-rail-reset": confirmModal("홈 화면 섹션 기본값", "제목 · 순서 · 고른 강의를 처음 상태로 되돌릴까요?", "되돌리기", true, () => { VD().homeRails = VX().RAIL_DEF.map((r) => ({ k: r.k, on: true, tag: r.tag, t: r.t.slice(), mode: "auto", picks: [] })); commit("기본값으로 되돌렸어요."); }); break;
+      case "vda-rail-reset": confirmModal("홈 첫 화면 처음 상태로", "섹션 순서 · 켜기 · 제목 · 고정한 강의 · 뺀 강의 · 분야 탭 · 강사 순서를 모두 처음 상태로 되돌릴까요?", "되돌리기", true, () => { VD().homeRails = VX().RAIL_DEF.map((r) => ({ k: r.k, on: true, tag: r.tag, t: r.t.slice(), mode: "auto", picks: [], hide: [], cats: [] })); commit("홈 첫 화면을 처음 상태로 되돌렸어요."); }); break;
+      /* 홈 꾸미기 */
+      case "hk-sel": { railSync(); ui.hmSel = d.k; render(); const ed = document.getElementById("hk-ed"); if (ed && window.innerWidth < 900) ed.scrollIntoView({ block: "start" }); break; }
+      case "hk-cat": { railSync(); ui.hmCat = d.c; render(); break; }
+      case "hk-mv": { const rs = railSync(), tg = hmTarget(rs, d.k, d.c), i = Number(d.i), to = Number(d.to); if (!tg || i < 0 || i >= tg.ids.length || to < 0 || to >= tg.ids.length || i === to) break; hmPin(tg.o, tg.ids, i, to, tg.all); tg.done(); commit(to === 0 ? "맨 앞으로 옮겼어요." : "순서를 바꿨어요."); break; }
+      case "hk-hide": { const rs = railSync(), tg = hmTarget(rs, d.k, d.c); if (!tg) break; hmHide(tg.o, d.id); commit("이 자리에서 뺐어요. 아래 ‘뺀 " + (d.k === "teach" ? "강사" : "강의") + "’에서 다시 넣을 수 있어요."); break; }
+      case "hk-show": { const rs = railSync(), tg = hmTarget(rs, d.k, d.c); if (!tg) break; hmShow(tg.o, d.id, tg.all); commit("다시 넣었어요."); break; }
+      case "hk-add": { const sel = document.getElementById("hk-add"), id = sel ? sel.value : ""; if (!id) { toast("넣을 강의를 골라 주세요.", "warn"); break; } const rs = railSync(), r = rs.find((x) => x.k === d.k); if (!r) break; hmShow(r, id, true); if (r.mode === "auto") r.mode = "pin"; commit("‘" + hmPName(id) + "’ 강의를 넣었어요. ‘맨 앞’ · ↑ ↓로 자리를 옮겨요."); break; }
+      case "hk-reset": { const rs = railSync(), r = rs.find((x) => x.k === d.k); if (!r) break; confirmModal("이 섹션 처음 규칙으로", "‘" + hmName(r) + "’의 고정한 순서 · 뺀 " + (d.k === "teach" ? "강사" : "강의") + (d.k === "cat" ? " · 탭 순서" : "") + "를 지우고 기본 규칙대로 보여 줄까요? (이름표 · 제목 · 켜기는 그대로)", "처음 규칙으로", true, () => { const r2 = railState().find((x) => x.k === d.k); Object.assign(r2, { mode: "auto", picks: [], hide: [], cats: [] }); commit("‘" + hmName(r2) + "’을 기본 규칙으로 되돌렸어요."); }); break; }
+      case "hk-cat-on": { const rs = railSync(), r = rs.find((x) => x.k === "cat"); if (!r) break; const c = hmCats(r).find((x) => x.k === d.c); if (!c) break; c.on = !c.on; commit(c.on ? "분야 탭을 보이게 했어요." : "분야 탭을 숨겼어요."); break; }
+      case "hk-cat-mv": { const rs = railSync(), r = rs.find((x) => x.k === "cat"); if (!r) break; const cs = hmCats(r), i = cs.findIndex((x) => x.k === d.c), j = i + Number(d.dir); if (i < 0 || j < 0 || j >= cs.length) break; const t = cs[i]; cs[i] = cs[j]; cs[j] = t; commit("분야 탭 순서를 바꿨어요."); break; }
       case "vda-tile-on": { vtSync(); const x = v.tiles[Number(d.i)]; if (!x) break; x.on = x.on === false; commit(x.on ? "아이콘을 보이게 했어요." : "아이콘을 숨겼어요."); break; }
       case "vda-tile-move": { vtSync(); const i = Number(d.i), j = i + Number(d.dir); if (j < 0 || j >= v.tiles.length) break; const t = v.tiles[i]; v.tiles[i] = v.tiles[j]; v.tiles[j] = t; commit("아이콘 순서를 바꿨어요."); break; }
       case "vda-tile-reimg": { vtSync(); const x = v.tiles[Number(d.i)]; if (x && x.key) { x.img = VX().tileImg(x.key); commit("기본 아이콘으로 되돌렸어요."); } break; }
@@ -5784,7 +5860,7 @@
     if (a.dataset.action === "vda-rf-inst") { const on = !a.classList.contains("on"); a.classList.toggle("on", on); a.setAttribute("aria-checked", on); const h = document.querySelector('#vda-rf-form [name="instant"]'); if (h) h.value = on ? "1" : ""; return; }
     saveVodRfPolicy();
   });
-  Object.assign(MPAGES, { "vod-ship": pageVodShip, "vod-refund": pageVodRefund, "vod-sales": pageVodSales, "vod-rank": pageVodRank, "vod-ads": pageVodAds, "vod-settle": pageVodSettle, "vod-rates": pageVodRates });
+  Object.assign(MPAGES, { "vod-home": pageVodHome, "vod-ship": pageVodShip, "vod-refund": pageVodRefund, "vod-sales": pageVodSales, "vod-rank": pageVodRank, "vod-ads": pageVodAds, "vod-settle": pageVodSettle, "vod-rates": pageVodRates });
   Object.assign(MPAGES, { "vod-crm": pageCrm, "vod-seg": pageCrmSeg, "vod-msg": pageCrmMsg, "vod-crm-rp": pageCrmReport });
   Object.assign(MPAGES, { vod: pageMasterVod, "vod-classes": pageMasterVodClasses, "vod-members": pageMasterVodMembers, "vod-display": pageMasterVodDisplay, dc: pageMasterDc, "vod-inquiries": pageMasterVodInquiries, "vod-recruit": (r) => { ui.inqFilter = "vod"; return pageMasterPartners(r).replace("<h1>강사 입점 문의</h1>", "<h1>DOOGO CLASS 강사 모집 지원</h1>"); } });
   Object.assign(PAGES, { "ops-notices": pageOpsNotices, contract: pageInsContract });
@@ -5843,7 +5919,7 @@
   const staffMe = () => (S && S.role === "master" && S.staffId ? staffOf(S.staffId) : null);
   const staffRoleName = (st) => (STAFF_ROLES[st.role] || STAFF_ROLES.custom).label;
   // 새로 생긴 DOOGO CLASS 메뉴는 원래 맡던 메뉴 권한을 따라가요 (대시보드 ← 주문 · 매출, 1:1 문의 ← 회원 · 후기, 강사 모집 ← 입점 문의)
-  const STAFF_ALIAS = { "master/vod-sales": "master/vod", "master/vod-rank": "master/vod", "master/vod-ads": "master/vod", "master/vod-settle": "master/vod", "master/vod-rates": "master/vod", "master/plan": "master/calendar", "master/dc": "master/vod", "master/vod-inquiries": "master/vod-members", "master/vod-recruit": "master/partners", "master/vod-crm": "master/vod-members", "master/vod-seg": "master/vod-members", "master/vod-msg": "master/vod-members", "master/vod-crm-rp": "master/vod-members", "master/vod-refund": "master/vod", "master/vod-ship": "master/vod" };
+  const STAFF_ALIAS = { "master/vod-home": "master/vod-display", "master/vod-sales": "master/vod", "master/vod-rank": "master/vod", "master/vod-ads": "master/vod", "master/vod-settle": "master/vod", "master/vod-rates": "master/vod", "master/plan": "master/calendar", "master/dc": "master/vod", "master/vod-inquiries": "master/vod-members", "master/vod-recruit": "master/partners", "master/vod-crm": "master/vod-members", "master/vod-seg": "master/vod-members", "master/vod-msg": "master/vod-members", "master/vod-crm-rp": "master/vod-members", "master/vod-refund": "master/vod", "master/vod-ship": "master/vod" };
   const staffCan = (key) => { const st = staffMe(); if (!st || key === "master") return true; if (key === "master/data") return false; const pm = st.perms || []; return pm.indexOf(key) >= 0 || (!!STAFF_ALIAS[key] && pm.indexOf(STAFF_ALIAS[key]) >= 0); };
   function staffStrip(root) {
     if (!staffMe() || !root) return;
@@ -7119,6 +7195,14 @@
   document.addEventListener("change", (e) => {
     if (!isActive()) return;
     const t = e.target;
+    if (t.matches && t.matches("[data-hk-mode]")) {
+      const rs = railSync(), r = rs.find((x) => x.k === t.dataset.hkMode); if (!r) return;
+      const vis = VX().railItems(r).map((it) => it.p.id), m = t.value;
+      // ‘고른 강의만’으로 바꾸면 지금 보이는 강의를 그대로 고르고, ‘자동’이면 고정만 풀어요 (뺀 강의는 그대로)
+      if (m === "only") r.picks = vis.concat(r.picks.filter((id) => vis.indexOf(id) < 0)); else if (m === "auto") r.picks = [];
+      r.mode = m; commit(m === "auto" ? "자동으로 바꿨어요. 규칙대로 보여요." : m === "only" ? "고른 강의만 보여요. 지금 보이던 강의를 그대로 골라 뒀어요." : "고정한 강의 먼저, 나머지는 자동이에요.");
+      return;
+    }
     if (t.id === "vda-price-key") { ui.vdPriceKey = t.value; (ui.pg = ui.pg || {}).vdPrice = 1; render(); return; }
     if (t.id === "rk-type") { ui.rkType = t.value; render(); return; }
     if (t.id === "rk-sort") { ui.rkSort = t.value; render(); return; }

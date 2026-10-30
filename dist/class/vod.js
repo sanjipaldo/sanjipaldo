@@ -1378,12 +1378,18 @@
     { k: "eb", tag: "얼리버드", color: "red", t: ["지금만 이 가격, ", "얼리버드 할인중", ""], more: "#/vod/c/all?tab=eb", rule: "무료 LIVE가 끝난 뒤 얼리버드 기간인 강의 · 마감 가까운 순", biz: "flive" },
     { k: "prem", tag: "LIVE · 오프라인", color: "pink", t: ["직접 만나 배우는 ", "프리미엄 강의", ""], more: "#/vod/c/all?tab=premium", rule: "유료 LIVE · 오프라인 · 날짜 가까운 순 + 두잉고 기수 강의", biz: "live" },
     { k: "free", tag: "", color: "yellow", t: ["무료로 ", "먼저 들어", " 보세요"], more: "#/vod/c/all?tab=free", rule: "무료 VOD 특강 · 많이 들은 순", biz: "free" },
-    { k: "soon", tag: "오픈 예정", color: "orange", t: ["곧 열리는 클래스, ", "알림 받고 할인", ""], more: "#/vod/c/soon", rule: "오픈 예정 클래스" }
+    { k: "soon", tag: "오픈 예정", color: "orange", t: ["곧 열리는 클래스, ", "알림 받고 할인", ""], more: "#/vod/c/soon", rule: "오픈 예정 클래스" },
+    { k: "topics", tag: "", color: "red", t: ["DOOGO CLASS에서 다루는 ", "부업", ""], rule: "‘다루는 부업’ 칩 · 찜이 많은 부업부터 클래스를 열어요", fixed: true },
+    { k: "teach", tag: "", color: "red", t: ["강사진", "", ""], rule: "판매 중인 강의가 있는 강사 · 첫 화면에는 8명까지", fixed: true }
   ];
+  // 저장 모양: { k, on, tag, t, mode, picks: 앞에 고정할 id, hide: 뺀 id, cats: [{ k: 분야, on, picks, hide }] } (마스터 › 홈 꾸미기)
+  const railIds = (a) => (Array.isArray(a) ? a.filter((x) => typeof x === "string" && x) : []);
   function homeRails() {
     const saved = Array.isArray(V().homeRails) ? V().homeRails : [], out = [];
-    saved.forEach((x) => { const d = RAIL_DEF.find((r) => r.k === x.k); if (d && !out.some((y) => y.k === x.k)) out.push(Object.assign({}, d, { on: x.on !== false, tag: x.tag != null ? x.tag : d.tag, t: Array.isArray(x.t) && x.t.length ? x.t : d.t, mode: x.mode || "auto", picks: Array.isArray(x.picks) ? x.picks : [] })); });
-    RAIL_DEF.forEach((d) => { if (!out.some((y) => y.k === d.k)) out.push(Object.assign({}, d, { on: true, mode: "auto", picks: [] })); });
+    const one = (d, x) => Object.assign({}, d, { on: x.on !== false, tag: x.tag != null ? x.tag : d.tag, t: Array.isArray(x.t) && x.t.length ? x.t : d.t, mode: x.mode || "auto", picks: railIds(x.picks), hide: railIds(x.hide),
+      cats: Array.isArray(x.cats) ? x.cats.filter((c) => c && c.k).map((c) => ({ k: String(c.k), on: c.on !== false, picks: railIds(c.picks), hide: railIds(c.hide) })) : [] });
+    saved.forEach((x) => { const d = x && RAIL_DEF.find((r) => r.k === x.k); if (d && !out.some((y) => y.k === x.k)) out.push(one(d, x)); });
+    RAIL_DEF.forEach((d) => { if (!out.some((y) => y.k === d.k)) out.push(one(d, {})); });
     return out;
   }
   function railAuto(k) {
@@ -1399,15 +1405,27 @@
   }
   const railShowable = (p) => p && p.status !== "hidden" && (p.status === "soon" || (p.status === "on" && !eventPast(p))) && bizShow(p);
   function railItems(r) {
-    const picks = (r.picks || []).map(product).filter(railShowable).map((p) => ({ href: "#/vod/p/" + p.id, p }));
-    if (r.mode === "only") return picks;
-    if (r.mode === "pin") { const ids = picks.map((x) => x.p.id); return picks.concat(railAuto(r.k).filter((x) => ids.indexOf(x.p.id) < 0)); }
-    return railAuto(r.k);
+    const hide = r.hide || [], auto = railAuto(r.k), byId = {}, seen = {};
+    auto.forEach((x) => { if (x.p) byId[x.p.id] = x; });
+    const fresh = (x) => { if (!x || !x.p || seen[x.p.id] || hide.indexOf(x.p.id) >= 0) return false; seen[x.p.id] = true; return true; };
+    const picks = r.mode === "auto" ? [] : (r.picks || []).map((id) => byId[id] || (railShowable(product(id)) ? { href: "#/vod/p/" + id, p: product(id) } : null)).filter(fresh);
+    return r.mode === "only" ? picks : picks.concat(auto.filter(fresh));
+  }
+  // 분야별 탭: 탭 순서 · 켜기와 탭마다 고정 순서 · 뺀 강의 (설정이 없으면 분야 순서 · 많이 팔린 순)
+  function catTabs(r) {
+    const conf = (r && r.cats) || [], keys = cats().map((c) => c.key);
+    const order = conf.map((c) => c.k).filter((k) => keys.indexOf(k) >= 0).concat(keys.filter((k) => !conf.some((c) => c.k === k)));
+    return order.map((k) => {
+      const cf = conf.find((c) => c.k === k) || { k, on: true, picks: [], hide: [] }, hide = cf.hide || [], seen = {};
+      const all = listed().filter((p) => p.cat === k).sort((a, b) => soldOf(b) - soldOf(a));
+      const fresh = (p) => { if (!p || seen[p.id] || hide.indexOf(p.id) >= 0) return false; seen[p.id] = true; return true; };
+      const items = (cf.picks || []).map((id) => all.find((p) => p.id === id)).filter(fresh).concat(all.filter(fresh));
+      return { k, c: catOf(k), on: cf.on !== false, items, all, picks: cf.picks || [], hide };
+    });
   }
   function pageHome() {
     const bs = liveBanners();
     ui.slide = Math.min(ui.slide, Math.max(0, bs.length - 1));
-    const tp = V().topics || [], mine = myTopics(), rows = [0, 1, 2].map((i) => tp.filter((_, j) => j % 3 === i));
     const loop = bs.length > 1 ? [bs[bs.length - 1]].concat(bs, [bs[0]]) : bs, off = bs.length > 1 ? 1 : 0;
     const hero = bs.length ? '<section class="vd-hero"><div class="vd-hero-vp"><div class="vd-hero-track" id="vd-hero" style="--i:' + (ui.slide + off) + '">' +
       loop.map((b, j) => { const i = j - off, clone = i < 0 || i >= bs.length; const p = b.pid ? product(b.pid) : null, ph = b.img || (p ? phOf(p) : ""), href = b.href || (p ? "#/vod/p/" + p.id : "#/vod/c/all");
@@ -1419,13 +1437,15 @@
     const tl = (V().tiles || []).filter((t) => t.on !== false && t.label && tileBiz(t));
     const tiles = '<nav class="vd-tiles" aria-label="카테고리 바로가기" style="--n:' + Math.min(12, Math.max(6, tl.length)) + ";--c:" + Math.max(4, Math.ceil(tl.length / 2)) + '">' + tl.map((t, i) => '<a class="vd-tile" href="' + esc(t.href || "#/vod/c/all") + '" style="--d:' + (i * 0.035).toFixed(3) + 's"><span class="vd-tile-ic">' + (t.img ? "<img " + imgAttr(t.img, "src") + ' alt="" width="56" height="56" draggable="false">' : icon("grid")) + (t.badge ? "<em>" + esc(t.badge) + "</em>" : "") + "</span><b>" + esc(t.label) + "</b></a>").join("") + "</nav>";
     const pills = tl.length ? tiles : '<nav class="vd-pills" aria-label="분야" data-rv-kids><a class="vd-pill on" href="#/vod/c/all">전체</a>' + cats().map((c) => '<a class="vd-pill" href="#/vod/c/' + esc(c.key) + '">' + esc(c.label) + "</a>").join("") + '' + (bizOn("ebook") ? '<a class="vd-pill" href="#/vod/c/all?tab=ebook">전자책</a>' : "") + (bizOn("live") ? '<a class="vd-pill" href="#/vod/c/all?tab=premium">LIVE · 오프라인 강의</a>' : "") + '<a></nav>';
-    const best = listed().filter((p) => typeOf(p) === "vod" && priceOf(p) > 0).sort((a, b) => soldOf(b) - soldOf(a)).map((p) => ({ p }));
-    const chip = topicChip;
     return shell("home", hero + '<div class="vd-wrap">' + pills +
-      homeRails().filter((r) => r.on && (!r.biz || bizOn(r.biz))).map((r) => (r.k === "why" ? whyBand(r) : r.k === "cat" ? catSec(r) : rail("vd-r-" + (r.k === "best" ? "now" : r.k), r.tag, r.color, r.t, r.more, railItems(r), r.rank ? { rank: true } : null))).join("") +
-      '<section class="vd-sec vd-topics"><div class="vd-topics-h"><h2 data-eg>DOOGO CLASS에서 다루는 <span data-accent>부업</span></h2><p data-rv>다음에 열 부업은 찜으로 골라요. <b>찜이 많은 부업부터 클래스를 열어요.</b><small>마우스를 올리면 멈춰요 · <a href="#/vod/my/likes?t=topics">내가 찜한 부업 보기 ›</a></small></p></div>' +
-        rows.map((r, ri) => '<div class="vd-chiprow' + (ri % 2 ? " rev" : "") + '" data-rv="fade" style="--d:' + (ri * 0.12) + 's"><div class="vd-chipmq" style="--dur:' + (48 + ri * 8) + 's">' + r.map((t) => chip(t)).join("") + r.map((t) => chip(t, true)).join("") + "</div></div>").join("") + "</section>" +
-      teachers() + "</div>", "home");
+      homeRails().filter((r) => r.on && (!r.biz || bizOn(r.biz))).map((r) => (r.k === "why" ? whyBand(r) : r.k === "cat" ? catSec(r) : r.k === "topics" ? topicsSec(r) : r.k === "teach" ? teachers(r) : rail("vd-r-" + (r.k === "best" ? "now" : r.k), r.tag, r.color, r.t, r.more, railItems(r), r.rank ? { rank: true } : null))).join("") +
+      "</div>", "home");
+  }
+  function topicsSec(r) {
+    const tp = V().topics || [], rows = [0, 1, 2].map((i) => tp.filter((_, j) => j % 3 === i));
+    if (!tp.length) return "";
+    return '<section class="vd-sec vd-topics"><div class="vd-topics-h"><h2 data-eg>' + egTitle(r.t) + '</h2><p data-rv>다음에 열 부업은 찜으로 골라요. <b>찜이 많은 부업부터 클래스를 열어요.</b><small>마우스를 올리면 멈춰요 · <a href="#/vod/my/likes?t=topics">내가 찜한 부업 보기 ›</a></small></p></div>' +
+      rows.map((x, ri) => '<div class="vd-chiprow' + (ri % 2 ? " rev" : "") + '" data-rv="fade" style="--d:' + (ri * 0.12) + 's"><div class="vd-chipmq" style="--dur:' + (48 + ri * 8) + 's">' + x.map((t) => topicChip(t)).join("") + x.map((t) => topicChip(t, true)).join("") + "</div></div>").join("") + "</section>";
   }
   // 카테고리 아이콘: 꺼진 판매 영역으로 가는 아이콘은 숨겨요
   const tileBiz = (t) => { const h = String(t.href || ""); return !(/tab=premium/.test(h) && !bizOn("live")) && !(/tab=free|\/c\/free/.test(h) && !bizOn("free")) && !(/tab=ebook/.test(h) && !bizOn("ebook")) && !(/tab=(flive|eb)\b/.test(h) && !bizOn("flive")); };
@@ -1452,8 +1472,8 @@
       '<div class="vd-why-g" data-rv-kids>' + SYS.map((x, i) => '<div class="vd-why-c"><div class="vd-mk vd-mk-' + x[0] + '" aria-hidden="true">' + sysMock(x[0]) + "</div><small>0" + (i + 1) + "</small><b>" + x[1] + "</b><p>" + x[2] + "</p></div>").join("") + "</div></div></section>";
   }
   // 분야별: 분야 탭을 누르면 그 분야의 판매 중인 클래스만 (판매 영역을 따라요)
-  function catSecBody() {
-    const cs = cats().map((c) => [c, listed().filter((p) => p.cat === c.key).sort((a, b) => soldOf(b) - soldOf(a))]).filter((x) => x[1].length);
+  function catSecBody(r) {
+    const cs = catTabs(r || homeRails().find((x) => x.k === "cat")).filter((t) => t.on && t.items.length).map((t) => [t.c, t.items]);
     if (!cs.length) return "";
     const cur = cs.find((x) => x[0].key === ui.hcat) || cs[0]; ui.hcat = cur[0].key;
     return '<div class="vd-hcat-tabs" role="tablist" aria-label="분야">' + cs.map((x) => '<button type="button" role="tab" aria-selected="' + (x === cur) + '" class="' + (x === cur ? "on" : "") + '" data-v="hcat" data-k="' + esc(x[0].key) + '">' + esc(x[0].label) + "<small>" + x[1].length + "</small></button>").join("") + "</div>" +
@@ -1461,7 +1481,7 @@
       '<div class="vd-hcat-f"><a class="vd-hcat-all" href="#/vod/c/' + esc(cur[0].key) + '">' + esc(cur[0].label) + " 클래스 전체보기 <b>" + cur[1].length + "</b>" + icon("chevRight", "xs") + "</a>" + pager("vd-r-cat") + "</div>";
   }
   function catSec(r) {
-    const b = catSecBody(); if (!b) return "";
+    const b = catSecBody(r); if (!b) return "";
     return '<section class="vd-sec vd-hcat"><div class="vd-sec-h"><div class="vd-sec-t">' + (r.tag ? '<span class="vd-tag vd-tag-' + TAGC[r.color] + '" data-rv="fade">' + esc(r.tag) + "</span>" : "") + "<h2 data-eg>" + egTitle(r.t) + '</h2></div><div class="vd-sec-r"><a class="vd-more" href="' + esc(r.more || "#/vod/c/all") + '">전체 클래스' + icon("chevRight", "xs") + '</a></div></div><div id="vd-hcat">' + b + "</div></section>";
   }
 
@@ -1477,8 +1497,11 @@
     });
     // 순서: 첫 화면 강사진과 같게 문대표 → 초이 → 나머지(강의 많은 순 → 수강생 많은 순)
     const pri = (t) => { const i = ["moon", "choi"].indexOf(t.iid); return i < 0 ? 9 : i; };
-    return Object.keys(map).map((k) => map[k]).sort((a, b) => pri(a) - pri(b) || b.ps.length - a.ps.length || b.sold - a.sold);
+    const list = Object.keys(map).map((k) => map[k]).sort((a, b) => pri(a) - pri(b) || b.ps.length - a.ps.length || b.sold - a.sold);
+    const pk = (homeRails().find((r) => r.k === "teach") || {}).picks || [];
+    return pk.map((k) => list.find((t) => t.iid === k)).filter(Boolean).concat(list.filter((t) => pk.indexOf(t.iid) < 0));
   }
+  const teachHome = (r) => { const h = (r && r.hide) || []; return teacherList().filter((t) => h.indexOf(t.iid) < 0); };
   const snsOf = (iid) => { const b = ((DB.content && DB.content(iid)) || {}).brand || {}, url = (v, base) => (!v ? "" : /^https?:\/\//.test(v) ? v : base + String(v).replace(/^@/, "")); return [[url(b.instagram, "https://instagram.com/"), "camera", "인스타그램"], [url(b.youtubeChannel, "https://youtube.com/"), "video", "유튜브"], [url(b.kakaoChannel, "https://pf.kakao.com/"), "message", "카카오톡 채널"]].filter((x) => x[0]); };
   const tHref = (iid) => "#/vod/teachers/" + encodeURIComponent(iid);
   /* 강사진 검색: 이름 · 소개 · 분야로 찾고, 초성(ㅁㄷㅍ → 문대표)도 맞춰요. 고른 분야 · 검색어는 다시 그려도 남아요 */
@@ -1507,8 +1530,8 @@
       '<span class="vd-tc-sns">' + sns.map((x) => '<a href="' + esc(x[0]) + '" target="_blank" rel="noopener" aria-label="' + esc(t.name) + " " + x[2] + '">' + icon(x[1], "xs") + "</a>").join("") + '<a href="' + tHref(t.iid) + '" aria-label="' + esc(t.name) + ' 강사 페이지">' + icon("arrowUpRight", "xs") + "</a></span></div>";
   }
   // 홈 강사진: ‘강사진’ 글씨를 누르면 강사진 페이지로
-  function teachers() {
-    const list = teacherList().slice(0, 8);
+  function teachers(r) {
+    const list = teachHome(r || homeRails().find((x) => x.k === "teach")).slice(0, 8);
     if (!list.length) return "";
     return '<section class="vd-sec vd-teach"><div class="vd-teach-h"><a class="vd-teach-link" href="#/vod/teachers"><h2 data-eg>강사진</h2><span data-rv="fade">Teachers</span>' + icon("chevRight", "sm") + '</a><p data-rv="fade">직접 해서 번 사람만 가르쳐요.</p><a class="vd-more vd-teach-more" href="#/vod/teachers">강사진 전체보기' + icon("chevRight", "xs") + '</a></div><div class="vd-teach-g vd-teach-rail" data-rv-kids>' + list.map(tcCard).join("") + "</div></section>";
   }
@@ -3482,7 +3505,7 @@
   /** 두잉고 강의실(VOD 버전)에서 쓰는 강의장 기능: 같은 진도 기록을 쓰므로 DOOGO CLASS 마이페이지 · 환불 계산과 진도가 맞아요 */
   function markDone(mid, pid, lid) { if (!mid || !owns(mid, pid)) return false; const pr = prog(mid, pid); pr.done[lid] = true; pr.last = lid; pr.seen = pr.seen || {}; if (!pr.seen[lid]) pr.seen[lid] = now(); logStudy(mid); save(); srvTrack(pid, lid, "done"); return true; }
   function markLast(mid, pid, lid) { if (!mid || !owns(mid, pid)) return; const pr = prog(mid, pid); pr.seen = pr.seen || {}; const fresh = !pr.seen[lid]; if (fresh) { pr.seen[lid] = now(); srvTrack(pid, lid, "seen"); } if (pr.last !== lid || fresh) { pr.last = lid; logStudy(mid); save(); } }
-  Object.assign(window.VOD, { isBook, BOOK_MAX, shipFeeOf, shipSet, SHIP_DEF, CARRIERS, trackUrl, SHIP_ST, shipStOf, shipDoneAt, stockLeft, CLAIM_K, claimOf, claimTxt, claimFee, MOON_BOOK, RF_DEF, rfSet, usedOf, markMat, instantOf, rfApply, rfCancel, refundTbl, consentOf, CH3, chOn, HELP_FAQ_DEF, helpFaq, issueCoupon, addPoint, replayOk, isFreeEv, funnelOf, funnelTo, ebOf, gatedBy, basePrice, evEnd, eventPast, ebDayTxt, detailImgsOf, detailModeOf, insRate, rateOf, adSplitOf, adOf, shareOf, bizOn, bizShow, BIZ_DEF, teacherList, RAIL_DEF, homeRails, railAuto, railItems, viaOf, shareFor, chOf, CH_TXT, insAmt, supplyOf, baseOf, lSec, lLen, shSet, SH_DEF, launchOn, seedTiles, tileImg, imgAttr, hydrate, liveBanners, banLive, cmtOf, matPut, matOpen, markDone, markLast, videoHtml, fileList, chapOf, plansOf, defPlan, coachOf, teaOf, extendOf, extendPct, addonShare, accessEnd, daysLeft, canExtend, hadCourse, coachPasses, coachLeft, useCoach, giveBackCoach, teasOf, teaWhen, teaStTxt, TEA_MODE, TEA_ST, KIND, kindOf, isAccess, optTxt, icx, PLAN_DAYS, r1k });
+  Object.assign(window.VOD, { isBook, BOOK_MAX, shipFeeOf, shipSet, SHIP_DEF, CARRIERS, trackUrl, SHIP_ST, shipStOf, shipDoneAt, stockLeft, CLAIM_K, claimOf, claimTxt, claimFee, MOON_BOOK, RF_DEF, rfSet, usedOf, markMat, instantOf, rfApply, rfCancel, refundTbl, consentOf, CH3, chOn, HELP_FAQ_DEF, helpFaq, issueCoupon, addPoint, replayOk, isFreeEv, funnelOf, funnelTo, ebOf, gatedBy, basePrice, evEnd, eventPast, ebDayTxt, detailImgsOf, detailModeOf, insRate, rateOf, adSplitOf, adOf, shareOf, bizOn, bizShow, BIZ_DEF, teacherList, teachHome, catTabs, railShowable, RAIL_DEF, homeRails, railAuto, railItems, viaOf, shareFor, chOf, CH_TXT, insAmt, supplyOf, baseOf, lSec, lLen, shSet, SH_DEF, launchOn, seedTiles, tileImg, imgAttr, hydrate, liveBanners, banLive, cmtOf, matPut, matOpen, markDone, markLast, videoHtml, fileList, chapOf, plansOf, defPlan, coachOf, teaOf, extendOf, extendPct, addonShare, accessEnd, daysLeft, canExtend, hadCourse, coachPasses, coachLeft, useCoach, giveBackCoach, teasOf, teaWhen, teaStTxt, TEA_MODE, TEA_ST, KIND, kindOf, isAccess, optTxt, icx, PLAN_DAYS, r1k });
   // 파일 크기 한도: 정식 서버는 3MB (Vercel 요청 한도), 시안은 20MB
   Object.defineProperty(window.VOD, "MAT_MAX", { get: () => (SRV() ? SRV_MAT_MAX : MAT_MAX), configurable: true });
   // 주소(경로)가 바뀌면 언제나 맨 위에서 시작 — 같은 화면 안에서 ?정렬 · 탭만 바뀔 때는 보던 자리 그대로
