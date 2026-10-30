@@ -831,6 +831,16 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
   ok(!!(await store.getDoc("vo:" + eno)).v.dlAt, "전자책: 파일 주소로 받아도 서버가 주문에 내려받은 때를 남겨요");
   r = await call("vod-pay", { body: { action: "cancel", no: eno } });
   ok(r.status === 409 && /내려받/.test(r.json.message), "내려받은 전자책은 바로 취소 막기", r.json);
+  // 무통장 입금으로 종이책 주문 → 입금 대기 → 마스터 입금 확인 → 결제 완료 · 보낼 주문
+  r = await call("vod-pay", { body: { action: "prepare", pid: "b2", kind: "course", qty: 1, method: "bank", depositor: "책 OO", ship: SHIP, expect: 13800 } });
+  const bkN = r.json.no;
+  bo = (await store.getDoc("vo:" + bkN)).v;
+  ok(r.json.ok && r.json.bank && r.json.amount === 13800 && bo.status === "pending" && bo.method === "bank" && bo.depositor === "책OO" && !!(bo.bankTo && bo.bankTo.account) && bo.ship.st === "ready" && bo.shipFee === 3000 && bo.dueAt > Date.now(), "종이책 무통장 주문: 입금 대기 · 안내 계좌 · 입금 기한 · 배송지 · 배송비가 주문에 남음", bo);
+  useJar({ dc_a: auth.sign({ r: "master" }) });
+  r = await call("vod-pay", { body: { action: "bankOk", no: bkN } });
+  bo = (await store.getDoc("vo:" + bkN)).v;
+  ok(r.json.ok && bo.status === "paid" && bo.paidAt > 0 && bo.ship.st === "ready", "마스터 입금 확인 → 결제 완료 · 보낼 주문으로", bo);
+  useJar(memJar);
   // 일회성 작업: 문대표 종이책을 스토어 · 가격표에 (없을 때만)
   const OO = require(path.join(TMP, "class/api/_lib/oneoff.js")), BOOKS = require(path.join(TMP, "class/api/_lib/books.js"));
   const fakeMeta = { vod: { products: [{ id: "v1", title: "x" }], settings: {} }, other: 1 }, fakeCat = { at: 1, products: [{ id: "v1" }] };
@@ -839,6 +849,16 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
   ok(w.writes.vcat.products.length === 2 && w.writes.vcat.products[1].price === 15900 && w.writes.vcat.products[1].type === "book" && !("pitch" in w.writes.vcat.products[1]), "일회성 작업: 가격표에는 가격 칸만", w.writes.vcat.products[1]);
   w = OO.moonBook((k) => (k === "meta" ? w.writes.meta : k === "vcat" ? w.writes.vcat : null));
   ok(w.writes.meta.vod.products.length === 2 && !w.writes.vcat && w.result.book === "이미 있음", "일회성 작업: 이미 있으면 또 넣지 않아요", w.result);
+  // 일회성 작업: 두고클래스 무통장 입금 계좌 (비어 있을 때만)
+  const bankMeta = { vod: { products: [], settings: { share: 70, bank: "", account: "", holder: "", payDays: 3 } }, other: 1 };
+  w = OO.storeBank((k) => (k === "meta" ? bankMeta : null));
+  const bs = w.writes.meta.vod.settings;
+  ok(bs.bank === "IBK기업은행" && bs.account === "940-057282-04-017" && bs.holder === "(주)두고홀딩스" && bs.payDays === 3 && bs.share === 70 && w.writes.meta.other === 1 && bankMeta.vod.settings.bank === "", "일회성 작업: 비어 있던 무통장 계좌에 IBK기업은행 (주)두고홀딩스 (다른 설정은 그대로)", bs);
+  w = OO.storeBank((k) => (k === "meta" ? w.writes.meta : null));
+  ok(!w.writes.meta && w.result.bank === "이미 있음", "일회성 작업: 계좌가 있으면 다시 쓰지 않아요", w.result);
+  w = OO.storeBank((k) => (k === "meta" ? { vod: { settings: { bank: "국민은행", account: "123-45", holder: "마스터" } } } : null));
+  ok(!w.writes.meta, "마스터가 넣은 계좌는 그대로", w.result);
+  ok(OO.OPS.some((x) => x.id === "2026-10-30-store-bank-account" && x.run === OO.storeBank), "무통장 계좌 작업 목록 등록", null);
   ok(BOOKS.MOON_BOOK.price === 15900 && BOOKS.MOON_BOOK.type === "book" && OO.OPS.some((x) => x.id === "2026-10-30-moon-paper-book"), "종이책 상품 · 작업 목록 등록", null);
   delete jar.dc_v;
 

@@ -342,6 +342,18 @@ function moonBook(get) {
   return { writes, result: { book: has ? "이미 있음" : "추가", vcat: writes.vcat ? "추가" : "그대로" } };
 }
 
+/* 두고클래스 무통장 입금 계좌 — 통장 사본 기준 (IBK기업은행 · 주식회사 두고홀딩스). 계좌가 비어 있을 때만 넣어요 (마스터가 넣은 계좌는 그대로) */
+const STORE_BANK = { bank: "IBK기업은행", account: "940-057282-04-017", holder: "(주)두고홀딩스" };
+function storeBank(get) {
+  const meta = get("meta");
+  if (!isObj(meta) || !isObj(meta.vod)) return { writes: {}, result: { skipped: "두고클래스 데이터 없음" } };
+  const s = isObj(meta.vod.settings) ? meta.vod.settings : {};
+  if (s.bank && s.account) return { writes: {}, result: { bank: "이미 있음" } };
+  const v = clone(meta.vod);
+  v.settings = Object.assign({}, s, { bank: STORE_BANK.bank, account: STORE_BANK.account, holder: s.holder || STORE_BANK.holder });
+  return { writes: { meta: Object.assign({}, meta, { vod: v }) }, result: { bank: "넣음" } };
+}
+
 /* 위에서부터 차례로 (앞 작업 결과를 뒤 작업이 본다) */
 const OPS = [
   { id: "2026-10-08-docs-guide-6", note: "문대표 서류 준비 가이드를 6단계로", run: docsGuideSix },
@@ -356,7 +368,8 @@ const OPS = [
   { id: "2026-10-17-farmer-to-godfarmer", note: "강사 표시 이름 황금농부 → 갓농부 + 강의 분야 ‘귤 단 하나 팔아 월매출 10억’ (로그인 이름은 그대로)", run: farmerToGodFarmer },
   { id: "2026-10-29-vod-demo-member", note: "두고클래스 체험 계정 vod@gmail.com / vod + 산 강의 6개 (0원 체험 주문)", run: vodDemoMember },
   { id: "2026-10-30-hana-second-course", note: "테스트 코치 김하나(1004)가 초이 강의 코치도 맡기 (여러 강의 코치 로그인 확인용)", run: hanaSecondCourse },
-  { id: "2026-10-30-moon-paper-book", note: "문대표 종이책 『내 인생의 추월차선은 내가 만든다』를 두고클래스 전자책 메뉴에 (택배 배송 · 15,900원)", run: moonBook }
+  { id: "2026-10-30-moon-paper-book", note: "문대표 종이책 『내 인생의 추월차선은 내가 만든다』를 두고클래스 전자책 메뉴에 (택배 배송 · 15,900원)", run: moonBook },
+  { id: "2026-10-30-store-bank-account", note: "두고클래스 무통장 입금 계좌 IBK기업은행 (주)두고홀딩스 (비어 있을 때만)", run: storeBank }
 ];
 
-module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer, vodDemoMember, hanaSecondCourse, moonBook };
+module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer, vodDemoMember, hanaSecondCourse, moonBook, storeBank, STORE_BANK };
