@@ -412,6 +412,35 @@ function moonApplyLink(get) {
   return { writes: { [k]: Object.assign({}, c, { landing: L }) }, result };
 }
 
+/* 문대표 무료강의 11/17(화) 저녁 7시 30분 — 대표 영상 · 오픈채팅(네이버 링크) · 선물 전자책 1편 지금 · 2편 11/9 · 3편 11/17 저녁 7시 · 포스터 날짜 · 자주 묻는 질문
+ * 날짜 · 링크는 요청받은 값으로 바꾸고, 강사가 직접 넣은 대표 영상 · 썸네일 · 질문은 그대로 둬요 */
+const MOON_FREE = {
+  liveAt: "2026-11-17T19:30", intro: "https://www.youtube.com/watch?v=mPFHz1JQj3U", kakao: "https://m.site.naver.com/2iZFQ",
+  gifts: [{ forceOpen: true, url: "https://book01.notion.site/VOD-28ed6f9dec6780f3901ad401c88019da?source=copy_link" }, { openAt: "2026-11-09T19:00", forceOpen: false, url: "https://book01.notion.site/VOD-28ed6f9dec6780f3901ad401c88019da?pvs=74" }, { openAt: "2026-11-17T19:00", forceOpen: false, url: "https://book01.notion.site/VOD-2c5d6f9dec6781caa41bf90cdab36f96" }],
+  oldImage: "assets/landing/moon-thumb.jpg", image: "assets/landing/moon-thumb-1117.jpg",
+  faq: { q: "무료강의는 언제 시작되나요?", a: "11월 17일(화) 저녁 7시 30분에 시작해요. 아시아 최초로 뉴질랜드 공장 승인을 받은 해외 건강식품 소량 제조 비법을, 이날 처음부터 끝까지 모두 공개해요. 저녁 7시에는 마지막 선물 전자책(3편)도 함께 열려요." }
+};
+function moonFree1117(get) {
+  const k = "content:moon", c = get(k);
+  if (!isObj(c) || !isObj(c.freeClass)) return { writes: {}, result: { skipped: "문대표 무료강의 페이지 없음" } };
+  const F = clone(c.freeClass), M = MOON_FREE, result = {};
+  F.liveAt = M.liveAt; result.liveAt = M.liveAt;
+  const it = isObj(F.intro) ? F.intro : {};
+  if (!it.youtube) { F.intro = Object.assign({ title: "영상으로 먼저 만나보세요", desc: "무료강의 전에, 문대표가 직접 들려주는 이야기를 먼저 확인해 보세요." }, it, { youtube: M.intro }); result.intro = "대표 영상 넣음"; } else result.intro = "이미 있음";
+  F.kakao = Object.assign({}, isObj(F.kakao) ? F.kakao : {}, { url: M.kakao }); result.kakao = M.kakao;
+  const g = isObj(F.gifts) ? F.gifts : {}, items = Array.isArray(g.items) ? g.items.map((x) => (isObj(x) ? x : {})) : [];
+  M.gifts.forEach((x, i) => { items[i] = Object.assign({}, items[i] || { title: (i + 1) + "번 선물", color: ["blue", "cyan", "ice"][i] }, x); });
+  F.gifts = Object.assign({}, g, { items }); result.gifts = items.map((x) => (x.forceOpen ? "지금" : x.openAt));
+  const L = isObj(F.live) ? Object.assign({}, F.live) : {};
+  if (!L.image || L.image === M.oldImage) { L.image = M.image; result.image = "11/17 포스터"; } else result.image = "강사 썸네일 그대로";
+  F.live = L;
+  const fq = isObj(F.faq) ? Object.assign({}, F.faq) : {}, qs = (Array.isArray(fq.items) ? fq.items : []).map((x) => (isObj(x) ? Object.assign({}, x, { a: String(x.a || "").replace("5주 실전 클래스", "4주 실전 클래스") }) : x));
+  if (!qs.some((x) => isObj(x) && /언제\s*시작/.test(String(x.q || "")))) { qs.unshift(Object.assign({}, M.faq)); result.faq = "‘언제 시작되나요?’ 맨 위에"; } else result.faq = "이미 있음";
+  F.faq = Object.assign(fq, { items: qs });
+  if (isObj(F.apply) && Array.isArray(F.apply.includes)) F.apply = Object.assign({}, F.apply, { includes: F.apply.includes.map((x) => String(x).replace("10/27(화) 오후 7시 30분", "11/17(화) 오후 7시 30분")) });
+  return { writes: { [k]: Object.assign({}, c, { freeClass: F }) }, result };
+}
+
 /* 위에서부터 차례로 (앞 작업 결과를 뒤 작업이 본다) */
 const OPS = [
   { id: "2026-10-08-docs-guide-6", note: "문대표 서류 준비 가이드를 6단계로", run: docsGuideSix },
@@ -430,7 +459,8 @@ const OPS = [
   { id: "2026-10-30-store-bank-account", note: "두고클래스 무통장 입금 계좌 IBK기업은행 (주)두고홀딩스 (비어 있을 때만)", run: storeBank },
   { id: "2026-10-31-launch-reset-bills", note: "실제 운영 시작: 문대표 것을 뺀 기수 신청 · 매출 예시 기록 지우기 (계정은 그대로)", run: launchReset },
   { id: "2026-10-31-moon-4th-cohort", note: "문대표 4기를 11월 21일(토)부터 4주로", run: moon4th },
-  { id: "2026-10-31-moon-apply-link", note: "문대표 강사 소개 페이지 신청하기 링크(네이버) · 마지막 안내 4주", run: moonApplyLink }
+  { id: "2026-10-31-moon-apply-link", note: "문대표 강사 소개 페이지 신청하기 링크(네이버) · 마지막 안내 4주", run: moonApplyLink },
+  { id: "2026-11-01-moon-free-1117", note: "문대표 무료강의 11/17(화) 19:30 · 대표 영상 · 오픈채팅(네이버) · 선물 전자책 공개일(1편 지금 · 2편 11/9 · 3편 11/17 저녁 7시) · 포스터 날짜 · 자주 묻는 질문", run: moonFree1117 }
 ];
 
-module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer, vodDemoMember, hanaSecondCourse, moonBook, storeBank, STORE_BANK, launchReset, moon4th, moonApplyLink, MOON_APPLY };
+module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer, vodDemoMember, hanaSecondCourse, moonBook, storeBank, STORE_BANK, launchReset, moon4th, moonApplyLink, MOON_APPLY, moonFree1117, MOON_FREE };

@@ -2319,14 +2319,23 @@
   /** 카카오: 서버 로그인에서 돌아오면(?vodlogin=ok) 서버의 회원 정보로 로그인 */
   const KK_BACK = {
     deny: "카카오 동의를 취소했어요. 이메일로도 가입할 수 있어요.",
-    dup: "같은 이메일로 이미 가입한 계정이 있어요. 이메일로 로그인한 뒤 마이페이지 › 계정 설정에서 카카오를 연결해 주세요.",
+    dup: "같은 이메일로 가입한 계정이 있어요. 이메일로 로그인하면 바로 카카오를 연결할 수 있어요. (마이페이지 › 회원 정보 수정 › 카카오 연결하기)",
+    taken: "이 카카오 계정은 이미 다른 두고클래스 계정에 연결돼 있어요. 그 계정으로 로그인해 주세요.",
+    other: "이 계정에는 이미 다른 카카오 계정이 연결돼 있어요. 연결을 끊은 뒤 다시 시도해 주세요.",
     blocked: "이용이 중지된 계정이에요. 문의하기(카카오톡 상담)로 알려 주세요.",
     fail: "카카오 로그인을 마치지 못했어요. 잠시 후 다시 시도해 주세요."
   };
   function kkReturn() {
     const q = new URLSearchParams(location.search), st = q.get("vodlogin"); if (!st || !remoteOn()) return;
     ROUTE.dropQuery(["vodlogin"]);
-    if (st !== "ok") { toast(KK_BACK[st] || KK_BACK.fail, "warn"); if (st === "dup" && route().path[0] !== "login") ROUTE.hash = "#/vod/login"; return; }
+    if (st === "linked") { DB.remote.refresh().then(() => { render(); toast("카카오를 연결했어요. 다음부터 ‘카카오로 1초 만에 시작하기’로 바로 로그인할 수 있어요."); }); return; }
+    if (st !== "ok") {
+      toast(KK_BACK[st] || KK_BACK.fail, "warn");
+      // 같은 이메일 계정이 있으면: 이메일로 로그인한 뒤 바로 ‘카카오 연결할까요?’를 물어봐요
+      if (st === "dup") { kkLater(true); if (route().path[0] !== "login") ROUTE.hash = "#/vod/login"; }
+      if (st === "taken" || st === "other") DB.remote.refresh().then(() => render());
+      return;
+    }
     DB.remote.refresh().then(() => { const mm = me(); render(); if (mm) toast((mm.name || "회원") + "님, 반가워요!"); });
   }
   /** Cloudflare Turnstile (사람 확인): 서버에 사이트 키가 있을 때만 가입 · 로그인 · 문의 양식에 붙여요 */
@@ -2383,6 +2392,37 @@
       row("birth", false, "생일 · 성별 · 연령대 제공", "생일 쿠폰 · 맞춤 클래스 추천에 써요") + row("ch", false, "DOOGO CLASS 카카오톡 채널 추가", "새 클래스 · 쿠폰 소식을 채널로 받아요") + row("mkt", false, "할인 · 새 클래스 소식 받기 (광고성 정보)", "문자 · 이메일 · 카카오톡으로 받아요") +
       '<p class="vd-err" id="vd-kk-err" role="alert"></p><button type="button" class="vd-btn vd-kk-ok vd-btn-xl" data-v="kk-ok">' + KAKAO + "동의하고 계속하기</button>" +
       '<button type="button" class="vd-tl-btn vd-kk-demo" data-v="kk-demo">체험 계정(vod@gmail.com)으로 로그인할게요</button></div>', "vd-kk-modal");
+  }
+  /* ---------- 이메일 회원에 카카오 연결 (마이페이지 › 회원 정보 수정) ---------- */
+  const KK_LATER = "dc:kklink";
+  function kkLater(on) { try { if (on === true) sessionStorage.setItem(KK_LATER, "1"); else if (on === false) sessionStorage.removeItem(KK_LATER); return sessionStorage.getItem(KK_LATER) === "1"; } catch (e) { return false; } }
+  function kakaoLink() {
+    const m = me(); if (!m) return;
+    if (SRV() && !kakaoServer()) { toast("카카오 연결은 곧 열려요.", "warn"); return; }
+    if (kakaoServer()) { location.href = "/api/vod-auth?action=kakao&link=1&next=" + encodeURIComponent("#/vod/my/account"); return; }
+    // 시안: 체험용 카카오 회원번호로 연결
+    m.kakaoId = "4" + String(now()).slice(-9); m.kakaoLinkedAt = now(); save(); closeModal(); keepScroll();
+    toast("카카오를 연결했어요. 다음부터 ‘카카오로 1초 만에 시작하기’로 바로 로그인할 수 있어요. (시안)");
+  }
+  function kakaoUnlink(t) {
+    const m = me(); if (!m || !m.kakaoId || m.via === "kakao") return;
+    if (t.dataset.arm !== "1") { t.dataset.arm = "1"; t.textContent = "한 번 더 누르면 연결을 끊어요"; return; }
+    const done = () => { keepScroll(); toast("카카오 연결을 끊었어요. 이메일과 비밀번호로 로그인해 주세요."); };
+    if (!remoteOn()) { m.kakaoId = ""; m.kakaoUnlinkedAt = now(); save(); done(); return; }
+    t.disabled = true;
+    authApi("kakao-off").then((r) => { if (!r || !r.ok) { t.disabled = false; toast((r && r.message) || "연결을 끊지 못했어요. 잠시 후 다시 시도해 주세요.", "warn"); return; } return DB.remote.refresh().then(done); });
+  }
+  /** 이메일 로그인 직후: 같은 이메일의 카카오로 왔다가 막혔던 사람에게 바로 연결을 권해요 */
+  function kkAsk() {
+    modal("카카오 연결", '<div class="vd-kkask"><span class="vd-kkask-ic">' + KAKAO + "</span><b>카카오도 연결할까요?</b>" +
+      "<p>연결하면 다음부터 비밀번호 없이 ‘카카오로 1초 만에 시작하기’로 바로 로그인돼요. 지금 계정의 강의 · 주문 · 쿠폰 · 포인트는 그대로예요.</p>" +
+      '<button type="button" class="vd-btn vd-btn-kakao vd-btn-xl" data-v="kk-link">' + KAKAO + '카카오 연결하기</button><button type="button" class="vd-tl-btn" data-v="close">나중에 할게요</button></div>', "vd-kkask-modal");
+  }
+  /** 회원 정보 수정 맨 위: 로그인 방법(이메일 · 카카오) 카드 */
+  function kkCard(m) {
+    if (m.via === "kakao") return '<div class="vd-kkc on"><span class="vd-kkc-ic">' + KAKAO + '</span><div><b>카카오 계정으로 가입했어요</b><small>로그인은 ‘카카오로 1초 만에 시작하기’로 해요.</small></div><span class="vd-st vd-st-ok">연결됨</span></div>';
+    if (m.kakaoId) return '<div class="vd-kkc on"><span class="vd-kkc-ic">' + KAKAO + '</span><div><b>카카오 연결됨</b><small>이메일 · 비밀번호와 카카오, 둘 다로 로그인할 수 있어요.' + (m.kakaoLinkedAt ? " · " + esc(DB.date.fmtFull(DB.date.toStr(new Date(m.kakaoLinkedAt)))) + " 연결" : "") + '</small></div><button type="button" class="vd-btn vd-btn-line vd-btn-sm" data-v="kk-off">연결 끊기</button></div>';
+    return '<div class="vd-kkc"><span class="vd-kkc-ic">' + KAKAO + '</span><div><b>카카오 계정 연결</b><small>연결하면 다음부터 비밀번호 없이 카카오로 1초 만에 로그인해요. 강의 · 주문 · 쿠폰은 그대로예요.</small></div><button type="button" class="vd-btn vd-btn-kakao vd-btn-sm" data-v="kk-link">카카오 연결하기</button></div>';
   }
   function kakaoIn(m, msg) { setMe(m.id); m.lastLoginAt = now(); m.seenAt = now(); m.loginN = (m.loginN || 0) + 1; save(); closeModal(); toast(msg); const f = document.querySelector("[data-vd-auth]"); ROUTE.hash = (f && f.dataset.next) || "#/vod"; }
   function kakaoOk() {
@@ -2799,10 +2839,9 @@
             : myEmpty("아직 남긴 문의가 없어요. 궁금한 점이 있으면 편하게 물어보세요.", "1:1 문의하기", "#/vod/my/help")));
     } else {
       sub = "account";
-      body = '<form class="vd-acctf vd-form" data-vd-acct novalidate><label>이메일 (아이디)<input value="' + esc(m.email) + '" readonly></label><label>이름<input name="name" value="' + esc(m.name) + '" maxlength="20"></label><label>휴대폰<input name="phone" value="' + esc(m.phone || "") + '" maxlength="20"></label><label class="vd-agree"><input type="checkbox" name="mkt"' + (m.marketing ? " checked" : "") + "><span>할인 · 새 클래스 소식 받기 (선택)</span></label>" +
+      body = kkCard(m) + '<form class="vd-acctf vd-form" data-vd-acct novalidate><label>이메일 (아이디)<input value="' + esc(m.email) + '" readonly></label><label>이름<input name="name" value="' + esc(m.name) + '" maxlength="20"></label><label>휴대폰<input name="phone" value="' + esc(m.phone || "") + '" maxlength="20"></label><label class="vd-agree"><input type="checkbox" name="mkt"' + (m.marketing ? " checked" : "") + "><span>할인 · 새 클래스 소식 받기 (선택)</span></label>" +
         '<div class="vd-acct-ch"><span>받을 곳</span>' + CH3.map((c) => '<label><input type="checkbox" name="ch_' + c[0] + '"' + (chOn(m, c[0]) ? " checked" : "") + "><span>" + c[1] + "</span></label>").join("") + '<label><input type="checkbox" name="night"' + (m.consent && m.consent.night ? " checked" : "") + "><span>밤 9시 ~ 아침 8시에도 받기</span></label></div>" +
         (m.consent && m.consent.mkt ? '<p class="vd-muted vd-acct-cs">' + DB.date.fmtFull(DB.date.toStr(new Date(m.consent.at))) + "에 소식 받기에 동의했어요. 2년마다 한 번 동의 여부를 다시 알려 드려요.</p>" : "") +
-        (m.via === "kakao" ? '<p class="vd-acct-kk">' + KAKAO + "카카오 계정으로 가입했어요. 로그인은 ‘카카오로 1초 만에 시작하기’로 해요.</p>" : "") +
         '<details class="vd-pwbox"' + (m.via === "kakao" && !m.pw ? " hidden" : "") + '><summary>비밀번호 바꾸기</summary><label>지금 비밀번호' + pwField("pw0", "current-password", "지금 비밀번호") + "</label><label>새 비밀번호" + pwField("pw1", "new-password", "영문 · 숫자 8자 이상") + "</label></details>" +
         '<p class="vd-err" id="vd-acct-err" role="alert"></p><div class="vd-acct-f"><button type="submit" class="vd-btn vd-btn-p">저장</button><button type="button" class="vd-btn vd-btn-o" data-v="logout">로그아웃</button></div><p class="vd-muted">가입일 ' + DB.date.fmtFull(DB.date.toStr(new Date(m.createdAt))) + "</p></form>";
     }
@@ -3029,7 +3068,11 @@
     ui.fb = new IntersectionObserver((ens) => { const en = ens[0]; const on = !en.isIntersecting && en.boundingClientRect.top < 0; fb.classList.toggle("on", on); if (!on) fb.classList.remove("open"); }, { threshold: 0 });
     ui.fb.observe(info);
   }
-  window.addEventListener("scroll", () => { if (!isActive()) return; const t = document.querySelector(".vd-top"); if (t) t.classList.toggle("is-sc", window.scrollY > 8); }, { passive: true });
+  window.addEventListener("scroll", () => {
+    if (!isActive()) return; const t = document.querySelector(".vd-top"); if (t) t.classList.toggle("is-sc", window.scrollY > 8);
+    // 마이페이지 메뉴 줄이 헤더 아래에 붙으면 아래쪽 그림자
+    const n = document.querySelector(".vd-my-nav"); if (n && t) n.classList.toggle("stuck", n.scrollWidth > n.clientWidth + 1 && Math.abs(n.getBoundingClientRect().top - t.getBoundingClientRect().bottom) < 2 && window.scrollY > 8);
+  }, { passive: true });
 
   /* ================= 그리기 · 이벤트 ================= */
   function render() {
@@ -3247,6 +3290,8 @@
     if (v === "ab-mq") { ui.abPaused = !ui.abPaused; const mq = document.querySelector(".ab-mq"), tr = mq && mq.querySelector(".ab-mq-track"); if (mq) mq.classList.toggle("paused", ui.abPaused); if (tr) tr.style.animationPlayState = ui.abPaused ? "paused" : "running"; t.textContent = ui.abPaused ? "움직임 다시 켜기" : "움직임 멈추기"; t.setAttribute("aria-pressed", String(ui.abPaused)); return; }
     if (v === "hcat") { ui.hcat = t.dataset.k; const box = document.getElementById("vd-hcat"); if (box) { box.innerHTML = catSecBody(); hydrate(box); wireRails(); wireCounts(); } return; }
     if (v === "ab-slide") { ui.abSlide = ((ui.abSlide || 0) + Number(t.dataset.d) + AB_SLIDES.length) % AB_SLIDES.length; const sl = ui.abSlide, c = document.querySelector(".ab-card"), n = document.querySelector(".ab-car-ctl small"); if (c) { c.innerHTML = "<small>" + String(sl + 1).padStart(2, "0") + " / 03</small><b>" + AB_SLIDES[sl][0] + "<br>" + AB_SLIDES[sl][1] + "</b><p>" + AB_SLIDES[sl][2].replace(/\n/g, "<br>") + "</p>"; c.classList.remove("in"); void c.offsetWidth; c.classList.add("in"); } if (n) n.textContent = String(sl + 1).padStart(2, "0") + " / 03"; return; }
+    if (v === "kk-link") { kakaoLink(); return; }
+    if (v === "kk-off") { kakaoUnlink(t); return; }
     if (v === "logout") {
       if (SRV()) { closeModal(); authApi("logout").then(() => DB.remote.logout("student")).catch(() => {}).then(() => { try { DB.session.setStudent(null); } catch (e) {} return DB.remote.refresh(); }).then(() => { toast("로그아웃했어요."); ROUTE.hash = "#/vod"; render(); }); return; }
       setMe(null); closeModal(); toast("로그아웃했어요."); ROUTE.hash = "#/vod"; render(); return;
@@ -3372,7 +3417,7 @@
     if (remoteOn() && CFG && CFG.auth) {
       const b = { email, pw: f.pw.value, ts: tsToken(f) };
       if (mode !== "login") Object.assign(b, { name: v("name"), phone: v("phone"), mkt: !!(f.mkt && f.mkt.checked), agree: !!(f.agree && f.agree.checked), pw2: f.pw2 ? f.pw2.value : "", src: takeSrc() });
-      authApi(mode === "login" ? "login" : "signup", b).then((r) => { if (!r || !r.ok) { err.textContent = (r && r.message) || "다시 시도해 주세요."; return; } const nm = (r.member && r.member.name) || "회원", cps = (r.member && r.member.coupons) || []; DB.remote.refresh().then(() => { toast(mode === "login" ? (nm + "님, 반가워요!") : "가입을 환영해요, " + nm + "님!" + (cps.length ? " 가입 쿠폰을 넣어 드렸어요." : "")); ROUTE.hash = f.dataset.next || "#/vod"; render(); }); });
+      authApi(mode === "login" ? "login" : "signup", b).then((r) => { if (!r || !r.ok) { err.textContent = (r && r.message) || "다시 시도해 주세요."; return; } const nm = (r.member && r.member.name) || "회원", cps = (r.member && r.member.coupons) || [], ask = mode === "login" && kkLater() && kakaoServer() && !(r.member && r.member.kakaoId); kkLater(false); DB.remote.refresh().then(() => { if (!ask) toast(mode === "login" ? (nm + "님, 반가워요!") : "가입을 환영해요, " + nm + "님!" + (cps.length ? " 가입 쿠폰을 넣어 드렸어요." : "")); ROUTE.hash = f.dataset.next || "#/vod"; render(); if (ask) setTimeout(kkAsk, 150); }); }); // 화면 이동(hashchange)이 팝업을 비우니 이동 뒤에 띄워요
       return;
     }
     if (mode === "login") {
@@ -3538,5 +3583,20 @@
   // 주소(경로)가 바뀌면 언제나 맨 위에서 시작 — 같은 화면 안에서 ?정렬 · 탭만 바뀔 때는 보던 자리 그대로
   const pathOf = () => ROUTE.hash.split("?")[0];
   pgDone = () => { render(); };
-  window.VodApp = { mount() { loadCfg().then(() => { kkReturn(); pgReturn(); tsMount(); }); root.innerHTML = ""; ui.anim = true; ui.path = pathOf(); render(); if (ui.booted) toTop(); else window.scrollTo(0, 0); ui.booted = true; }, render() { const p = pathOf(), moved = p !== ui.path; ui.path = p; ui.anim = true; render(); if (moved) toTop(); if (CFG) tsMount(); } };
+  // 마이페이지 안에서 메뉴(회원 정보 수정 → 기기 관리 → 고객센터 …)만 바꿀 때는 맨 위로 올리지 않아요:
+  // 메뉴 줄은 보던 자리 · 가로 위치 그대로 두고, 새 내용이 화면 위로 지나가 있으면 메뉴 바로 아래부터 보이게
+  const isMy = (p) => /^#\/vod\/my(\/|$)/.test(p || "");
+  function myKeep() { const nav = root.querySelector(".vd-my-nav"); return nav ? { y: window.scrollY, left: nav.scrollLeft } : null; }
+  function myRestore(k) {
+    const nav = root.querySelector(".vd-my-nav"), main = root.querySelector(".vd-my-main"); if (!nav || !main) { toTop(); return; }
+    window.scrollTo(0, k.y); nav.scrollLeft = k.left;
+    const strip = nav.scrollWidth > nav.clientWidth + 1, on = nav.querySelector("a.on");
+    if (strip && on) { const nr = nav.getBoundingClientRect(), or = on.getBoundingClientRect(); if (or.left < nr.left + 16) nav.scrollLeft -= nr.left + 16 - or.left; else if (or.right > nr.right - 16) nav.scrollLeft += or.right - nr.right + 16; }
+    const top = root.querySelector(".vd-top"), hb = top ? Math.max(0, top.getBoundingClientRect().bottom) : 0;
+    const want = (strip ? Math.max(hb, nav.getBoundingClientRect().bottom) : hb) + 12, at = main.getBoundingClientRect().top;
+    if (at < want) window.scrollTo(0, Math.max(0, window.scrollY + at - want));
+  }
+  // 마이페이지에 처음 들어오면(다른 화면 · 계정 메뉴에서) 고른 메뉴가 휴대폰 메뉴 줄 안에 보이게 가운데로
+  function myNavFocus() { const n = root.querySelector(".vd-my-nav"), on = n && n.querySelector("a.on"); if (!on || n.scrollWidth <= n.clientWidth + 1) return; n.scrollLeft = Math.max(0, on.offsetLeft - (n.clientWidth - on.offsetWidth) / 2); }
+  window.VodApp = { mount() { loadCfg().then(() => { kkReturn(); pgReturn(); tsMount(); }); root.innerHTML = ""; ui.anim = true; ui.path = pathOf(); render(); if (ui.booted) toTop(); else window.scrollTo(0, 0); ui.booted = true; if (isMy(ui.path)) myNavFocus(); }, render() { const p = pathOf(), moved = p !== ui.path, keep = moved && isMy(p) && isMy(ui.path) ? myKeep() : null; ui.path = p; ui.anim = true; render(); if (keep) myRestore(keep); else { if (moved) toTop(); if (moved && isMy(p)) myNavFocus(); } if (CFG) tsMount(); } };
 })();

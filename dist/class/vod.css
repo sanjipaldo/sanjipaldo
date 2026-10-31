@@ -3491,3 +3491,37 @@ a.vd-fln:not(.is-after):hover { border-color: #e2c050; }
 .vd-teach-prog { position: relative; height: 2px; margin-top: 18px; background: #ececf0; overflow: hidden; }
 .vd-teach-prog i { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--vd-pri); transition: left .2s ease, width .2s ease; }
 .vd-teach-prog.one { display: none; }
+
+/* ---------- 마이페이지 메뉴 줄 (휴대폰 · 태블릿): 아래로 내려도 헤더 바로 아래에 붙어 있어요 ---------- */
+@media (max-width: 860px) {
+  /* 격자 칸 안에서는 sticky 가 칸 밖으로 못 나가서, 휴대폰에서는 위에서 아래로 쌓는 배치로 (간격은 그대로 20px) */
+  .vd-my-grid { display: block; }
+  .vd-my-side { display: contents; }
+  .vd-my-prof { margin-bottom: 20px; }
+  .vd-my-main { margin-top: 20px; }
+  .vd-my-nav { position: sticky; top: var(--vd-top); z-index: 15; padding-top: 10px; padding-bottom: 10px; margin-top: -10px; margin-bottom: -10px; background: #fff; transition: box-shadow .2s ease; }
+  .vd-my-nav.stuck { box-shadow: 0 10px 18px -16px rgba(0, 0, 0, .4); }
+}
+
+/* ---------- 회원 정보 수정: 카카오 계정 연결 카드 · 로그인 뒤 ‘카카오도 연결할까요?’ ---------- */
+.vd-kkc { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px 14px; max-width: 480px; padding: 16px 18px; border: 1px solid #f1e3a0; border-radius: 12px; background: #fffbe6; }
+.vd-kkc.on { border-color: #e6e8ee; background: #f8f9fb; }
+.vd-kkc-ic { width: 40px; height: 40px; border-radius: 12px; background: #fee500; color: #191600; display: grid; place-items: center; }
+.vd-kkc-ic .vd-kk-ic { width: 22px; height: 22px; }
+.vd-kkc b { display: block; font-size: 15px; font-weight: 800; color: #111; letter-spacing: -0.02em; }
+.vd-kkc small { display: block; margin-top: 3px; font-size: 13px; line-height: 1.5; color: #5d6170; }
+.vd-kkc .vd-btn { white-space: nowrap; }
+.vd-kkc .vd-btn-kakao .vd-kk-ic { width: 16px; height: 16px; }
+@media (max-width: 520px) {
+  .vd-kkc { grid-template-columns: auto minmax(0, 1fr); }
+  .vd-kkc > .vd-btn, .vd-kkc > .vd-st { grid-column: 1 / -1; justify-self: stretch; height: 44px; }
+  .vd-kkc > .vd-st { justify-self: start; height: auto; }
+}
+.vd-kkask { display: grid; justify-items: center; gap: 10px; padding: 8px 4px 4px; text-align: center; }
+.vd-kkask-ic { width: 56px; height: 56px; border-radius: 18px; background: #fee500; color: #191600; display: grid; place-items: center; }
+.vd-kkask-ic .vd-kk-ic { width: 30px; height: 30px; }
+.vd-kkask b { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; color: #111; }
+.vd-kkask p { margin: 0 0 6px; font-size: 14px; line-height: 1.6; color: #5d6170; }
+.vd-kkask .vd-btn-kakao { width: 100%; gap: 8px; }
+.vd-kkask .vd-btn-kakao .vd-kk-ic { width: 18px; height: 18px; }
+.vd-kkask .vd-tl-btn { font-size: 14px; color: #6b6f7b; }

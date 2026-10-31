@@ -282,7 +282,8 @@ const MOON_CONTENT = {
   freeClass: {
     published: true,
     hero: { badge: "무료강의 신청자 전용 선물 제공", instructor: "문대표", title: "마진 50%, 경쟁 X\n내 해외 건기식 브랜드 만들기", sub: "강의 시작 전, 신청자에게만 실전 자료 3권을 순서대로 열어드립니다.", note: "본 강의는 교육 목적이며 결과는 실행 환경과 노력에 따라 달라질 수 있습니다." },
-    liveAt: "2026-10-27T19:30",
+    liveAt: "2026-11-17T19:30",
+    intro: { title: "영상으로 먼저 만나보세요", desc: "무료강의 전에, 문대표가 직접 들려주는 이야기를 먼저 확인해 보세요.", youtube: "https://www.youtube.com/watch?v=mPFHz1JQj3U" },
     videos: {
       title: "강의 전에, 문대표의 실전 이야기를 먼저 만나보세요",
       items: [
@@ -296,11 +297,11 @@ const MOON_CONTENT = {
       kicker: "BEFORE THE CLASS", title: "강의 전, 선물 전자책 3권", desc: "공개일이 되면 잠금이 자동으로 풀리고, 표지를 누르면 전자책이 열려요.",
       items: [
         { title: "해외 건기식 브랜드, 왜 지금인가", desc: "국내 시장의 경쟁을 벗어나 뉴질랜드 건강기능식품 브랜드를 시작해야 하는 이유를 정리했습니다.", openAt: "2026-10-01T19:30", forceOpen: true, url: "https://book01.notion.site/VOD-28ed6f9dec6780f3901ad401c88019da?source=copy_link", color: "blue" },
-        { title: "[전자책 & VOD 강의 1편]", desc: "온라인 쇼핑몰 시작에 필요한 사업자 준비부터 쇼핑몰 입점까지 핵심 과정을 정리했습니다.", openAt: "2026-10-20T19:30", url: "https://www.ivyclass.co.kr/free-courses/c8f31bf5-1781-43cb-a4cc-5e713016ba88", color: "cyan" },
-        { title: "[전자책 & VOD 강의 2편]", desc: "CAFE24 자사몰 구축부터 해외건강식품 CS까지, 실전 운영에 필요한 핵심 내용을 VOD로 정리했습니다.", openAt: "2026-10-26T19:30", url: "https://www.ivyclass.co.kr/free-courses/c8f31bf5-1781-43cb-a4cc-5e713016ba88", color: "ice" }
+        { title: "[전자책 & VOD 강의 1편]", desc: "온라인 쇼핑몰 시작에 필요한 사업자 준비부터 쇼핑몰 입점까지 핵심 과정을 정리했습니다.", openAt: "2026-11-09T19:00", url: "https://book01.notion.site/VOD-28ed6f9dec6780f3901ad401c88019da?pvs=74", color: "cyan" },
+        { title: "[전자책 & VOD 강의 2편]", desc: "CAFE24 자사몰 구축부터 해외건강식품 CS까지, 실전 운영에 필요한 핵심 내용을 VOD로 정리했습니다.", openAt: "2026-11-17T19:00", url: "https://book01.notion.site/VOD-2c5d6f9dec6781caa41bf90cdab36f96", color: "ice" }
       ]
     },
-    kakao: { url: "https://open.kakao.com/o/gF68BQDi" },
+    kakao: { url: "https://m.site.naver.com/2iZFQ" },
     about: {
       title: "강사 소개", name: "문대표", role: "두고보는 문대표 · 뉴질랜드 건강식품 브랜드 대표",
       body: "뉴질랜드 현지에서 건강식품을 직접 소싱해 한국에 판매하고 있어요. 처음 시작하는 분들이 서류와 통관에서 막혀 포기하지 않도록, 제가 겪은 시행착오를 순서대로 정리해 알려 드립니다.",
@@ -308,20 +309,21 @@ const MOON_CONTENT = {
     },
     live: {
       desc: "무료강의 신청을 완료하고, 문대표의 실제 브랜드 운영 노하우를 라이브로 확인하세요.",
-      platform: "아이비클래스", platformLogo: "assets/landing/ivy-logo.png", image: "assets/landing/moon-thumb.jpg",
+      platform: "아이비클래스", platformLogo: "assets/landing/ivy-logo.png", image: "assets/landing/moon-thumb-1117.jpg",
       liveTitle: "마진 50%, 경쟁 X\n해외 건강식품 브랜딩 시작",
       summary: "가격 경쟁을 피하면서 나만의 뉴질랜드 건기식 브랜드를 시작하는 구조를 실제 사례와 함께 알려드립니다.",
       points: ["초보도 이해할 수 있는 브랜드 시작 구조", "마진을 지키는 상품 설계와 판매 흐름", "제조부터 판매까지 이어지는 실전 로드맵"],
       url: "https://www.ivyclass.co.kr/free-courses/c8f31bf5-1781-43cb-a4cc-5e713016ba88"
     },
     faq: { items: [
+      { q: "무료강의는 언제 시작되나요?", a: "11월 17일(화) 저녁 7시 30분에 시작해요. 아시아 최초로 뉴질랜드 공장 승인을 받은 해외 건강식품 소량 제조 비법을, 이날 처음부터 끝까지 모두 공개해요. 저녁 7시에는 마지막 선물 전자책(3편)도 함께 열려요." },
       { q: "무료강의는 어디서 듣나요?", a: "아이비클래스에서 라이브로 진행해요. ‘무료강의 신청하기’로 신청하면 강의 당일 입장 안내를 받을 수 있어요." },
       { q: "선물 전자책 3권은 어떻게 받나요?", a: "이 페이지에서 공개일이 되면 잠금이 자동으로 풀려요. 표지를 누르면 전자책이 열려요. 1번 선물은 지금 바로 볼 수 있어요." },
       { q: "사업 경험이 없어도 들을 수 있나요?", a: "네. 사업자등록부터 통관, 첫 판매까지 처음 시작하는 분 기준으로 순서대로 설명해 드려요." },
       { q: "강의 전에 질문해도 되나요?", a: "‘내 질문 남기러 가기’로 미리 남겨 주시면 강의에서 다뤄 드려요. 간단한 질문은 카카오톡 오픈채팅방에서 편하게 물어보세요." },
-      { q: "무료강의 다음에는 어떻게 이어지나요?", a: "무료강의에서 전체 흐름을 보고, 직접 브랜드를 만들고 싶은 분은 5주 실전 클래스로 이어서 함께해요. 수강생에게는 전용 학습 플랫폼이 열려요." }
+      { q: "무료강의 다음에는 어떻게 이어지나요?", a: "무료강의에서 전체 흐름을 보고, 직접 브랜드를 만들고 싶은 분은 4주 실전 클래스로 이어서 함께해요. 수강생에게는 전용 학습 플랫폼이 열려요." }
     ] },
-    apply: { badge: "신청자 전용 선물 3권", title: "무료강의, 지금 신청하세요", desc: "신청한 분께만 라이브 강의 링크와 선물 전자책을 순서대로 열어 드려요.", includes: ["10/27(화) 오후 7시 30분 무료 라이브", "선물 전자책 3권 (공개일에 자동 오픈)", "카카오톡 오픈채팅 질문 답변"], label: "무료강의 신청하기", url: "", note: "신청 페이지는 새 창에서 열립니다." },
+    apply: { badge: "신청자 전용 선물 3권", title: "무료강의, 지금 신청하세요", desc: "신청한 분께만 라이브 강의 링크와 선물 전자책을 순서대로 열어 드려요.", includes: ["11/17(화) 오후 7시 30분 무료 라이브", "선물 전자책 3권 (공개일에 자동 오픈)", "카카오톡 오픈채팅 질문 답변"], label: "무료강의 신청하기", url: "", note: "신청 페이지는 새 창에서 열립니다." },
     company: "(주) 두고홀딩스"
   },
   // 홍보 랜딩페이지 (강사센터 ‘홍보 랜딩페이지’에서 모두 고칠 수 있다)

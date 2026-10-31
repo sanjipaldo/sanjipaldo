@@ -61,6 +61,17 @@ async function changePw(req, res, b) {
   await store.rlClear(["vpw:" + m.id]);
   send(res, 200, { ok: true });
 }
+/** 카카오 연결 끊기 (이메일로 가입한 뒤 카카오를 붙인 회원만 — 카카오로 가입한 회원은 끊으면 로그인할 방법이 없어요) */
+async function kakaoOff(req, res) {
+  const m = await V.current(req); if (!m) return send(res, 401, { ok: false, message: "로그인이 필요해요." });
+  if (m.demo) return send(res, 403, { ok: false, message: "체험 계정은 바꿀 수 없어요." });
+  if (!m.kakaoId) return send(res, 400, { ok: false, message: "연결된 카카오 계정이 없어요." });
+  if (!m.pwHash) return send(res, 400, { ok: false, message: "카카오로 가입한 계정은 연결을 끊으면 로그인할 수 없어요." });
+  if (process.env.KAKAO_ADMIN_KEY) { try { await kakao.unlink(m.kakaoId); } catch (e) { console.error("[vod-auth] kakao unlink", e.message); } }
+  await V.update(V.K.kakao(m.kakaoId), () => null);
+  const next = await V.update(V.K.member(m.id), (cur) => cur && Object.assign(cur, { kakaoId: "", kakaoUnlinkedAt: Date.now(), kakaoUnlinkWhy: "member" }));
+  send(res, 200, { ok: true, member: V.pub(next || m) });
+}
 async function withdraw(req, res, b) {
   const m = await V.current(req); if (!m) return send(res, 401, { ok: false, message: "로그인이 필요해요." });
   if (m.demo) return send(res, 403, { ok: false, message: "체험 계정은 탈퇴할 수 없어요." });
@@ -96,6 +107,7 @@ module.exports = handler(["GET", "POST"], async (req, res) => {
   if (a === "logout") { V.logout(req, res); return send(res, 200, { ok: true }); }
   if (a === "withdraw") return withdraw(req, res, b);
   if (a === "pw") return changePw(req, res, b);
+  if (a === "kakao-off") return kakaoOff(req, res);
   if (a === "me") { const m = await V.current(req); return send(res, 200, { ok: !!m, member: m ? V.pub(m) : null }); }
   send(res, 400, { ok: false, message: "action" });
 });

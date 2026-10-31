@@ -27,6 +27,24 @@
   const NZ_FLAG = '<svg viewBox="0 0 60 30" aria-hidden="true"><rect width="60" height="30" fill="#012169"/><path d="M0 0l30 15M30 0L0 15" stroke="#fff" stroke-width="3"/><path d="M0 0l30 15M30 0L0 15" stroke="#c8102e" stroke-width="1.4"/><path d="M15 0v15M0 7.5h30" stroke="#fff" stroke-width="5"/><path d="M15 0v15M0 7.5h30" stroke="#c8102e" stroke-width="3"/>' +
     [[45, 6, 2.2], [40, 13, 2.2], [50, 12, 1.9], [45, 24, 2.5]].map((x) => { const pts = []; for (let i = 0; i < 10; i++) { const r = i % 2 ? x[2] * 0.42 : x[2], a = -Math.PI / 2 + i * Math.PI / 5; pts.push((x[0] + r * Math.cos(a)).toFixed(2) + "," + (x[1] + r * Math.sin(a)).toFixed(2)); } return '<polygon points="' + pts.join(" ") + '" fill="#c8102e" stroke="#fff" stroke-width=".7"/>'; }).join("") + "</svg>";
 
+  /* 뉴질랜드 그림 — 직접 그린 고사리 잎(실버펀 느낌, 상표 로고 아님) · 남알프스 산 · 초록 언덕 */
+  const FERN = (() => {
+    let g = '<path d="M100 396C97 300 105 170 100 18" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>';
+    for (let i = 0; i < 19; i++) {
+      const t = i / 19, y = 384 - t * 352, len = 92 * (1 - t * 0.82), w = 15 * (1 - t * 0.55);
+      [-1, 1].forEach((d) => {
+        const a = d * (64 - t * 22), r = a * Math.PI / 180, cx = 100 + (len / 2) * Math.sin(r), cy = y - (len / 2) * Math.cos(r);
+        g += '<ellipse cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" rx="' + (w / 2).toFixed(1) + '" ry="' + (len / 2).toFixed(1) + '" transform="rotate(' + a.toFixed(1) + " " + cx.toFixed(1) + " " + cy.toFixed(1) + ')"/>';
+      });
+    }
+    return '<svg viewBox="0 0 200 400" fill="currentColor" aria-hidden="true" focusable="false">' + g + '<ellipse cx="100" cy="22" rx="6" ry="14"/></svg>';
+  })();
+  const NZ_SCENE = '<svg class="nz-scene" viewBox="0 0 1440 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">' +
+    '<path fill="#b9d3e6" d="M0 205L110 128L180 162L300 66L388 132L470 96L560 152L662 54L762 140L860 102L962 160L1064 76L1164 140L1262 96L1362 150L1440 118V260H0Z"/>' +
+    '<path fill="#fff" d="M300 66L326 88L312 86L300 98L288 86L274 89ZM662 54L690 80L674 77L662 90L650 77L634 81ZM1064 76L1090 98L1076 95L1064 107L1052 95L1038 98ZM470 96L488 110L470 108L456 112Z"/>' +
+    '<path fill="#8fb3d1" d="M0 232L150 166L262 204L384 152L522 212L644 168L784 216L924 172L1082 222L1222 178L1440 228V260H0Z"/>' +
+    '<path fill="#3f9b6b" d="M0 240C200 204 362 252 562 226S902 196 1102 232S1342 214 1440 236V260H0Z"/>' +
+    '<path fill="#1f7049" d="M0 254C240 236 520 262 760 248S1200 236 1440 252V260H0Z"/></svg>';
   function headline(text) {
     const lines = String(text || "").split("\n").filter(Boolean);
     return lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? '<span class="lp-mark">' + esc(l) + "</span>" : esc(l))).join("<br>");
@@ -169,13 +187,16 @@
   const DOWK = ["일", "월", "화", "수", "목", "금", "토"];
   const DOWL = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
   const pad = (n) => String(n).padStart(2, "0");
-  const at = (v) => { if (!v) return NaN; const d = new Date(/T/.test(v) ? v : v + "T00:00"); return d.getTime(); };
-  const ampm = (d) => (d.getHours() < 12 ? "오전 " : "오후 ") + ((d.getHours() % 12) || 12) + "시";
+  // 강의 · 전자책 시간은 언제나 한국 시간(KST)으로 읽고 보여 줘요 — 뉴질랜드 · 해외에서 열어도 카운트다운 · 공개 시각이 어긋나지 않게
+  const KST = 9 * 36e5;
+  const at = (v) => { if (!v) return NaN; let s = String(v).trim(); if (!/T/.test(s)) s += "T00:00"; if (/T\d\d:\d\d$/.test(s)) s += ":00"; return new Date(/(Z|[+-]\d\d:?\d\d)$/.test(s) ? s : s + "+09:00").getTime(); };
+  const kd = (v) => { const t = at(v); if (isNaN(t)) return null; const d = new Date(t + KST); return { y: d.getUTCFullYear(), mo: d.getUTCMonth(), dt: d.getUTCDate(), dw: d.getUTCDay(), h: d.getUTCHours(), mi: d.getUTCMinutes() }; };
+  const ampm = (k) => (k.h < 12 ? "오전 " : "오후 ") + ((k.h % 12) || 12) + "시";
   // 예: 10월 27일 (화) / 오후 07시 30분
-  const whenParts = (v) => { const d = new Date(at(v)); return isNaN(d) ? null : { day: (d.getMonth() + 1) + "월 " + d.getDate() + "일 (" + DOWK[d.getDay()] + ")", time: (d.getHours() < 12 ? "오전 " : "오후 ") + pad((d.getHours() % 12) || 12) + "시" + (d.getMinutes() ? " " + pad(d.getMinutes()) + "분" : "") }; };
+  const whenParts = (v) => { const k = kd(v); return !k ? null : { day: (k.mo + 1) + "월 " + k.dt + "일 (" + DOWK[k.dw] + ")", time: (k.h < 12 ? "오전 " : "오후 ") + pad((k.h % 12) || 12) + "시" + (k.mi ? " " + pad(k.mi) + "분" : "") }; };
   const shortWhen = (v) => { const w = whenParts(v); return w ? w.day + " " + w.time : ""; };
-  const longWhen = (v) => { const d = new Date(at(v)); return isNaN(d) ? "" : d.getFullYear() + "년 " + (d.getMonth() + 1) + "월 " + d.getDate() + "일 " + DOWL[d.getDay()] + " " + ampm(d) + " " + pad(d.getMinutes()) + "분"; };
-  const lockWhen = (v) => { const d = new Date(at(v)); return isNaN(d) ? "공개일 확인 필요" : d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + (d.getHours() < 12 ? "오전" : "오후") + " " + ((d.getHours() % 12) || 12) + ":" + pad(d.getMinutes()); };
+  const longWhen = (v) => { const k = kd(v); return !k ? "" : k.y + "년 " + (k.mo + 1) + "월 " + k.dt + "일 " + DOWL[k.dw] + " " + ampm(k) + " " + pad(k.mi) + "분"; };
+  const lockWhen = (v) => { const k = kd(v); return !k ? "공개일 확인 필요" : k.y + "-" + pad(k.mo + 1) + "-" + pad(k.dt) + " " + (k.h < 12 ? "오전" : "오후") + " " + ((k.h % 12) || 12) + ":" + pad(k.mi); };
   const dayLabel = (v, now) => { const n = Math.max(0, at(v) - now); return n <= 0 || Math.floor(n / 864e5) <= 0 ? "D-DAY" : "D-" + Math.floor(n / 864e5); };
   const leftLabel = (v, now) => { const n = Math.max(0, at(v) - now); return n <= 0 ? "공개됨" : "공개까지 " + Math.floor(n / 864e5) + "일 " + Math.floor(n % 864e5 / 36e5) + "시간 남음"; };
   const giftOpen = (g, now) => !!g.forceOpen || (g.openAt && now >= at(g.openAt));
@@ -229,6 +250,15 @@
       '<div class="carousel-pagination" aria-label="영상 선택">' + items.map((x, i) => '<button type="button" class="' + (i === vIdx ? "is-active" : "") + '" data-fc="v-go" data-i="' + i + '" aria-label="' + (i + 1) + '번째 영상 보기"></button>').join("") + "</div>" +
       '<a class="fc-yt-out" href="https://www.youtube.com/watch?v=' + esc(DB.youtubeId(items[vIdx].youtube)) + '" target="_blank" rel="noopener">재생이 안 되면 유튜브에서 보기 ↗</a></section>';
   };
+  // 대표 영상: 첫 화면 바로 아래 크게 (썸네일을 누르면 그 자리에서 재생 — 처음부터 유튜브 창을 띄우지 않아 빠르게 열려요)
+  FC.intro = (F) => {
+    const v = F.intro || {}, y = DB.youtubeId(v.youtube || "");
+    if (!y || (F.off || {}).videos) return ""; // 강사센터 ‘YouTube 영상’ 탭의 보임 스위치가 대표 영상 · 좌우 영상을 함께 켜고 꺼요
+    return '<section class="fc-intro" aria-labelledby="fc-intro-t"><div class="section-heading"><span>' + esc(v.kicker || "WATCH FIRST") + '</span><h2 id="fc-intro-t">' + esc(v.title || "영상으로 먼저 만나보세요") + "</h2>" + (v.desc ? "<p>" + esc(v.desc) + "</p>" : "") + "</div>" +
+      '<div class="fc-intro-frame" data-y="' + esc(y) + '"><button type="button" class="fc-intro-play" data-fc="intro-play" aria-label="' + esc(v.title || "대표 영상") + ' 재생"><img src="https://i.ytimg.com/vi/' + esc(y) + '/maxresdefault.jpg" data-alt="https://i.ytimg.com/vi/' + esc(y) + '/hqdefault.jpg" alt="" decoding="async">' +
+        '<span class="fc-intro-btn" aria-hidden="true">' + SV(IC.play, 30) + "</span>" + (v.caption ? '<span class="fc-intro-cap">' + esc(v.caption) + "</span>" : "") + "</button></div>" +
+      '<a class="fc-yt-out" href="https://www.youtube.com/watch?v=' + esc(y) + '" target="_blank" rel="noopener">유튜브에서 보기 ↗</a></section>';
+  };
   FC.question = (F) => { const q = F.question; return '<section class="question-cta"><span class="micro-badge"><i aria-hidden="true"></i>' + esc(q.badge) + "</span><h2>" + esc(q.title) + "</h2>" + (q.desc ? "<p>" + nl(q.desc) + "</p>" : "") +
       (q.promise ? '<p class="q-promise">' + SV(IC.check, 18) + "<span>" + nl(q.promise) + "</span></p>" : "") +
       (q.url ? '<a class="primary-cta" href="' + esc(q.url) + '" target="_blank" rel="noreferrer">' : '<a class="primary-cta" href="#" data-fc="question">') + SV(IC.msg) + esc(q.label) + "</a>" + (q.note ? "<small>" + esc(q.note) + "</small>" : "") + "</section>"; };
@@ -273,9 +303,18 @@
     return '<section class="fc-faq" aria-label="자주 묻는 질문"><div class="section-heading"><span>' + esc(q.kicker) + "</span><h2>" + esc(q.title) + "</h2></div>" +
       '<div class="fc-faq-list">' + items.map((x) => "<details><summary>" + esc(x.q) + SV(IC.chev, 18) + "</summary><p>" + nl(x.a) + "</p></details>").join("") + "</div></section>";
   };
+  function nzFreeBand(F) {
+    const w = whenParts(F.liveAt), day = w ? w.day.replace(/ \(.\)$/, "") : "무료강의";
+    const tiles = [["sprout", "청정 자연에서 온 원료", "남반구 청정 섬나라의 자연에서 자란 원료로 만들어요."], ["shieldCheck", "까다로운 식품 안전 기준", "뉴질랜드 1차산업부(MPI)의 기준 아래 관리되는 제품이에요."],
+      ["sparkles", "한국에서 사랑받는 품목", "마누카꿀 · 프로폴리스 · 초록입홍합 · 초유처럼 찾는 사람이 많아요."], ["factory", "아시아 최초 공장 승인 · 소량 제조", "적은 수량으로 내 브랜드 제품을 만드는 방법, " + day + " 무료강의에서 모두 공개해요."]];
+    return '<section class="nz-why" aria-labelledby="nz-why-t"><span class="nz-why-fern f1" aria-hidden="true">' + FERN + '</span><span class="nz-why-fern f2" aria-hidden="true">' + FERN + "</span>" +
+      '<div class="nz-why-in"><p class="nz-why-k"><span class="nz-flag">' + NZ_FLAG + "</span>WHY NEW ZEALAND · AOTEAROA</p>" +
+      '<h2 id="nz-why-t">왜 지금, <em>뉴질랜드</em> 건강식품일까요?</h2><p class="nz-why-d">‘길고 흰 구름의 나라’ 아오테아로아(Aotearoa). 청정 자연과 까다로운 기준이 만든 뉴질랜드 건강식품은 한국에서도 오래 사랑받아 왔어요.</p>' +
+      '<div class="nz-why-g">' + tiles.map((x, i) => '<div class="nz-why-t' + (i === 3 ? " hot" : "") + '"><span class="nz-why-i">' + icon(x[0]) + "</span><small>0" + (i + 1) + "</small><b>" + x[1] + "</b><p>" + esc(x[2]) + "</p></div>").join("") + "</div></div></section>";
+  }
   // 스토어에서 들어왔으면 보던 스토어 화면으로, 아니면 DOOGO CLASS 첫 화면으로
   function dcBack() { try { const h = sessionStorage.getItem("dc:last") || ""; return /^#\/vod(\/|\?|$)/.test(h) ? h : "#/vod"; } catch (e) { return "#/vod"; } }
-  function renderFree(id) {
+  function renderFree(id, force) {
     const ins = DB.instructor(id);
     const F = ins && ins.status === "active" ? DB.freeOf(id) : null;
     const adm = DB.session.admin();
@@ -285,33 +324,43 @@
       root.innerHTML = '<main class="lp lp-empty"><div>' + window.doogoClassWord("lp-empty-word") + "<h1>준비 중인 페이지예요</h1><p>곧 무료강의 안내가 올라와요.</p></div></main>";
       return;
     }
-    const c = DB.content(id), h = F.hero, lines = String(h.title || "").split("\n").filter(Boolean);
+    const c = DB.content(id), h = F.hero, lines = String(h.title || "").split("\n").filter(Boolean), nz = isNz(c);
+    // 내용이 그대로면 다시 그리지 않아요 — 서버 새 소식 · 1초 카운트다운 때문에 보던 영상이 끊기지 않게 (영상 넘기기 · 공개일 · 종료는 다시 그려요)
+    const now0 = Date.now(), sig = JSON.stringify([id, F, vIdx, !!canSee, freeEnded(F), countdownParts(F.liveAt).expired, (F.gifts.items || []).map((x) => giftOpen(x, now0))]);
+    if (!force && root.__fcSig === sig && root.querySelector(".dg.bk")) return;
+    root.__fcSig = sig;
     document.title = lines.join(" ") + " · " + h.instructor + " 무료강의";
-    // 올블랙 바탕 + 강사 색 포인트. 강사마다 다른 건 색 · 썸네일 · 문구
+    // 올블랙 바탕 + 강사 색 포인트. 강사마다 다른 건 색 · 썸네일 · 문구 — 뉴질랜드 테마(문대표)는 하늘 · 산 · 고사리 초록의 밝은 화면
     const t = DB.themeOf(c.brand.theme);
-    const vars = "--p:" + t.primary + ";--pa:" + t.active + ";--on:" + (t.onPrimary || t.deep) + ";--pale:" + t.pale + ";--deep:" + t.deep + ";--ac:" + (t.accent || t.primary) + ";--rgb:" + t.rgb;
+    const vars = nz ? "--p:#0e7a4b;--pa:#0b6a41;--on:#fff;--pale:#e6f4ec;--deep:#075234;--ac:#0e7a4b;--rgb:14,122,75"
+      : "--p:" + t.primary + ";--pa:" + t.active + ";--on:" + (t.onPrimary || t.deep) + ";--pale:" + t.pale + ";--deep:" + t.deep + ";--ac:" + (t.accent || t.primary) + ";--rgb:" + t.rgb;
     const rest = F.order.filter((k) => k !== "countdown" && !F.off[k] && FC[k]).map((k) => FC[k](F, c)).join("");
     const L = F.live, thumb = L.image;
     const art = '<div class="bk-art" aria-hidden="true"><div class="bk-frame">' +
         (thumb ? '<img src="' + esc(thumb) + '" alt="">' : '<div class="fc-poster-auto"><b>' + esc(shortWhen(F.liveAt)) + " 무료강의</b><strong>" + esc(L.liveTitle || h.title).replace(/\n/g, "<br>") + "</strong><small>강사 " + esc(h.instructor) + "</small></div>") +
         '<span class="bk-shine"></span></div><span class="bk-frame-shadow"></span>' +
+        (nz ? '<span class="nz-stamp"><span class="nz-flag">' + NZ_FLAG + "</span><b>NEW ZEALAND</b><small>Aotearoa</small></span>" : "") +
         '<span class="bk-tile t1">' + SV(IC.play, 26) + '</span><span class="bk-tile t2">' + SV(IC.msg, 24) + '</span><span class="bk-tile t3">' + SV(IC.cal, 22) + "</span></div>";
-    root.innerHTML = '<div class="dg bk" style="' + vars + '"><div class="landing-page">' +
+    root.innerHTML = '<div class="dg bk' + (nz ? " nz" : "") + '" style="' + vars + '"><div class="landing-page">' +
       (!F.published ? '<div class="fc-draft">' + icon("eyeOff", "sm") + "비공개 상태예요. 강사센터 ‘무료강의 페이지’에서 ‘공개 중’으로 바꾸면 누구나 볼 수 있어요.</div>" : "") +
       '<section class="bk-hero"><span class="bk-glow" aria-hidden="true"></span><span class="bk-floor" aria-hidden="true"></span>' +
+      (nz ? '<span class="nz-sky" aria-hidden="true"><i class="nz-cloud c1"></i><i class="nz-cloud c2"></i><i class="nz-cloud c3"></i></span><span class="nz-hero-fern" aria-hidden="true">' + FERN + "</span>" + NZ_SCENE : "") +
       '<nav class="bk-nav" aria-label="사이트 이동"><a class="bk-nav-a bk-nav-dc" href="' + esc(dcBack()) + '">' + SV(IC.left, 16) + '<img src="assets/brand/doogo-class-word.svg" alt="DOOGO CLASS"><span>바로가기</span></a>' +
-        '<a class="bk-nav-a bk-nav-dg" href="#/doinggo" aria-label="두잉고 홈으로">' + window.doinggoB("white", "bk-nav-dgl") + "<span>홈</span></a></nav>" +
+        '<a class="bk-nav-a bk-nav-dg" href="#/doinggo" aria-label="두잉고 홈으로">' + window.doinggoB(nz ? "black" : "white", "bk-nav-dgl") + "<span>홈</span></a></nav>" +
       '<div class="bk-hero-in">' +
-        '<header class="hero bk-hero-txt">' + (h.badge ? '<span class="top-badge"><i aria-hidden="true"></i>' + esc(h.badge) + "</span>" : "") +
+        '<header class="hero bk-hero-txt">' + (nz ? '<p class="nz-hi"><span class="nz-flag">' + NZ_FLAG + '</span><b lang="mi">Kia ora!</b><span>뉴질랜드에서 인사드려요</span></p>' : "") + (h.badge ? '<span class="top-badge"><i aria-hidden="true"></i>' + esc(h.badge) + "</span>" : "") +
           '<p class="instructor">강사 · <strong>' + esc(h.instructor) + "</strong></p><h1>" + lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? "<em>" + esc(l) + "</em>" : "<span>" + esc(l) + "</span>")).join("") + "</h1>" +
           (h.sub ? '<p class="hero-copy">' + nl(h.sub) + "</p>" : "") + (h.note ? '<small class="disclaimer">' + esc(h.note) + "</small>" : "") + "</header>" +
         art + (!F.off.countdown ? '<div class="bk-hero-count">' + FC.countdown(F, c) + "</div>" : "") +
-      "</div></section>" +
+      "</div></section>" + (nz ? nzFreeBand(F) : "") +
       "<main>" + rest + "</main>" +
+      (nz ? (() => { const w = whenParts(F.liveAt); return '<div class="nz-bye"><span class="nz-bye-fern" aria-hidden="true">' + FERN + '</span><p><span class="nz-flag">' + NZ_FLAG + '</span><b lang="mi">Ka kite anō!</b></p><span>' + (w && !freeEnded(F) ? esc(w.day + " " + w.time) + ", 라이브에서 만나요" : "다음 무료강의에서 또 만나요") + "</span><small>‘다음에 또 만나요’라는 뜻의 마오리어 인사예요</small></div>"; })() : "") +
       // 맨 아래 상호를 누르면 강사센터의 무료강의 페이지 편집으로
       '<footer><a href="#/center/free" aria-label="강사센터 무료강의 페이지 편집으로 이동">© 2026 ' + esc(F.company || c.brand.name) + "</a></footer>" +
       '<div class="fc-powered-row">' + window.poweredBy("white") + "</div>" +
       "</div></div>";
+    // 대표 영상 썸네일: 큰 그림(maxres)이 없는 영상은 기본 그림으로
+    root.querySelectorAll(".fc-intro-play img[data-alt]").forEach((im) => im.addEventListener("error", function fb() { if (im.dataset.alt) { im.src = im.dataset.alt; im.removeAttribute("data-alt"); } else { im.style.visibility = "hidden"; im.removeEventListener("error", fb); } }));
     clearInterval(tick); tick = setInterval(updateCountdown, 1000);
   }
   function questionModal(id) {
@@ -406,10 +455,15 @@
       else if (k === "close" || (k === "close-bg" && e.target === f)) mr.innerHTML = "";
       else if (k === "gift") { e.preventDefault(); fcToast(f.dataset.open === "1" ? "공개됐어요. 전자책 링크가 곧 올라와요." : lockWhen(f.dataset.date) + "에 자동으로 열려요. 조금만 기다려 주세요!"); }
       else if (k === "nolink") { e.preventDefault(); fcToast("신청 페이지가 곧 열려요."); }
+      else if (k === "intro-play") {
+        const box = f.closest(".fc-intro-frame"), y = box && box.dataset.y; if (!y) return;
+        box.innerHTML = '<iframe src="https://www.youtube.com/embed/' + esc(y) + '?rel=0&playsinline=1&autoplay=1" title="대표 영상" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
+        box.classList.add("on");
+      }
       else if (k === "v-prev" || k === "v-next" || k === "v-go") {
         const n = (DB.freeOf(insIdFromHash()).videos.items || []).filter((x) => DB.youtubeId(x.youtube)).length || 1;
         vIdx = k === "v-go" ? Number(f.dataset.i) : (vIdx + (k === "v-next" ? 1 : -1) + n) % n;
-        const y = window.scrollY; renderFree(insIdFromHash()); window.scrollTo(0, y);
+        const y = window.scrollY; renderFree(insIdFromHash(), true); window.scrollTo(0, y);
       }
       return;
     }

@@ -59,7 +59,7 @@ function checkPw(pw, h) { const t = String(h || "").split("$"); if (t[0] !== "s1
 const consentOf = (on, at, how) => ({ mkt: !!on, ch: on ? ["sms", "email", "kakao"] : [], night: false, at, log: [{ at, on: !!on, how }] });
 /** 화면으로 보낼 회원 모양 (비밀번호 · 내부 칸 빼고) */
 /** 회원 본인에게 보내는 정보 — 비밀번호 · 운영 메모 · 태그(CRM)는 빼요 */
-function pub(m) { const o = clone(m); ["pwHash", "withdrawnAt", "notes", "tags", "paidPays", "kakaoUnlinkWhy"].forEach((k) => delete o[k]); return o; }
+function pub(m) { const o = clone(m); o.hasPw = !!(m && m.pwHash); ["pwHash", "withdrawnAt", "notes", "tags", "paidPays", "kakaoUnlinkWhy"].forEach((k) => delete o[k]); return o; }
 async function newMember(fields, how) {
   const at = Date.now(), cat = await catalog(), id = uid("vm");
   const m = Object.assign({ id, via: "email", email: "", name: "", phone: "", marketing: false, consent: consentOf(false, at, how), src: { s: "direct", at }, kakaoCh: false, tags: [], notes: [], createdAt: at, points: 0, pointLog: [], coupons: [] }, fields);

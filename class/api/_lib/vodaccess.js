@@ -81,6 +81,8 @@ function publicVod(v, ids) {
 const M_HIDE = ["pwHash", "paidPays"];
 const M_HIDE_SELF = M_HIDE.concat(["notes", "tags", "kakaoUnlinkWhy", "withdrawnAt"]);
 const omit = (v, keys) => { const o = clone(v); keys.forEach((k) => delete o[k]); return o; };
+/** 회원 문서: 비밀번호는 빼고 ‘비밀번호가 있는지’만 (카카오 연결 끊기 · 비밀번호 바꾸기 버튼에 써요) */
+const memberOut = (v, keys) => Object.assign(omit(v, keys), { hasPw: !!v.pwHash });
 function maskOrder(o) {
   const x = clone(o);
   if (x.buyer) x.buyer = { name: mask(x.buyer.name) };
@@ -92,8 +94,8 @@ function view(K, v, ids) {
   const me = vodMid(ids), master = isMaster(ids);
   switch (K.type) {
     case "vm":
-      if (master) return v == null ? null : omit(v, M_HIDE);
-      if (me && me === K.id) return v == null ? null : omit(v, M_HIDE_SELF);
+      if (master) return v == null ? null : memberOut(v, M_HIDE);
+      if (me && me === K.id) return v == null ? null : memberOut(v, M_HIDE_SELF);
       return undefined;
     case "vo":
       if (v == null) return master ? null : undefined;

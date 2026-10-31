@@ -536,3 +536,233 @@
 .dg.bk .fc-ended-link{color:#fff;font-weight:700;font-size:14px;text-decoration:none;opacity:.85}
 .dg.bk .fc-ended-link:hover{opacity:1;text-decoration:underline}
 .dg.bk .upcoming-course-cta.is-off{background:#2a2a30;color:#9a9aa3;cursor:not-allowed;box-shadow:none}
+
+/* ================= 대표 영상 (모든 강사 공통): 첫 화면 바로 아래 크게 ================= */
+.dg .fc-intro{margin:0 auto;padding-top:8px;width:min(100%,900px)}
+.dg .fc-intro-frame{position:relative;margin-top:30px;aspect-ratio:16/9;border-radius:24px;overflow:hidden;background:#0b0b0d;box-shadow:0 30px 70px -30px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.08)}
+.dg .fc-intro-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.dg .fc-intro-play{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;cursor:pointer;background:#000;display:block}
+.dg .fc-intro-play img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s ease,filter .3s}
+.dg .fc-intro-play:hover img{transform:scale(1.025);filter:brightness(.92)}
+.dg .fc-intro-play:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 55%,rgba(0,0,0,.5))}
+.dg .fc-intro-btn{position:absolute;z-index:1;left:50%;top:50%;width:88px;height:88px;margin:-44px 0 0 -44px;border-radius:50%;display:grid;place-items:center;background:var(--p);color:var(--on);box-shadow:0 0 0 10px rgba(255,255,255,.22),0 18px 40px -10px rgba(0,0,0,.7);transition:transform .2s}
+.dg .fc-intro-btn svg{margin-left:5px}
+.dg .fc-intro-play:hover .fc-intro-btn{transform:scale(1.06)}
+.dg .fc-intro-cap{position:absolute;z-index:1;left:50%;bottom:22px;transform:translateX(-50%);padding:8px 14px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:13px;font-weight:750;white-space:nowrap;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.dg .fc-intro-play:focus-visible{outline:3px solid var(--ac);outline-offset:-3px}
+@media (max-width:640px){.dg .fc-intro-frame{border-radius:16px;margin-top:22px}.dg .fc-intro-btn{width:68px;height:68px;margin:-34px 0 0 -34px;box-shadow:0 0 0 7px rgba(255,255,255,.22),0 14px 30px -8px rgba(0,0,0,.7)}.dg .fc-intro-btn svg{width:24px;height:24px}.dg .fc-intro-cap{bottom:12px;font-size:11.5px;padding:6px 11px}}
+
+/* ================= 뉴질랜드 테마 (문대표 · brand.theme = nz) — 하늘 · 남알프스 · 고사리 초록 · 국기 =================
+   검정 대신 밝은 하늘색 바탕. 직접 그린 고사리 잎 · 산 그림과 국기만 써요 (관광청 로고 · 상표 문구는 쓰지 않아요) */
+.dg.bk.nz{--bk:#f3faff;--card:#fff;--card2:#f6fafc;--line:#d9e6ee;--txt:#0b2a5b;--sub:#47596c;--mute:#7a8a9b;--nz-navy:#0b2a5b;--nz-fern:#0e7a4b;--nz-fern2:#12a06a;--nz-sky:#cfe8f8;--nz-mist:#eef7f2;background:#f3faff;color:#14263b}
+.dg.bk.nz .landing-page{background:linear-gradient(180deg,#f3faff 0%,#fff 36%,#f2f8f4 100%)}
+.dg.bk.nz h1,.dg.bk.nz h2,.dg.bk.nz h3{color:var(--txt)}
+.dg.bk.nz .nz-flag{display:inline-block;flex:none;width:30px;height:15px;border-radius:3px;overflow:hidden;box-shadow:0 0 0 1px rgba(11,42,91,.15),0 2px 6px rgba(11,42,91,.18)}
+.dg.bk.nz .nz-flag svg{display:block;width:100%;height:100%}
+/* 첫 화면: 하늘 → 구름 → 산 → 초록 언덕 */
+.dg.bk.nz .bk-hero{background:linear-gradient(180deg,#bfe0f5 0%,#dcf0fb 38%,#eef8fd 70%,#f3faff 100%);padding-bottom:190px}
+.dg.bk.nz .bk-glow{inset:-40% -10% auto auto;width:70%;height:90%;background:radial-gradient(closest-side,rgba(255,255,255,.95),rgba(255,255,255,0));opacity:.9}
+.dg.bk.nz .bk-floor{display:none}
+.dg.bk.nz .nz-scene{position:absolute;z-index:-1;left:0;right:0;bottom:0;width:100%;height:230px;display:block}
+.dg.bk.nz .nz-sky{position:absolute;z-index:-1;inset:0;overflow:hidden;pointer-events:none}
+.dg.bk.nz .nz-cloud{position:absolute;display:block;height:46px;border-radius:999px;background:#fff;opacity:.85;filter:blur(1px);box-shadow:40px -14px 0 6px #fff,90px 0 0 0 #fff,-36px 4px 0 -4px #fff}
+.dg.bk.nz .nz-cloud.c1{top:12%;left:-8%;width:300px;animation:nz-drift 70s linear infinite}
+.dg.bk.nz .nz-cloud.c2{top:30%;left:34%;width:420px;height:38px;opacity:.7;animation:nz-drift 95s linear infinite -30s}
+.dg.bk.nz .nz-cloud.c3{top:56%;left:70%;width:260px;height:34px;opacity:.65;animation:nz-drift 80s linear infinite -50s}
+@keyframes nz-drift{from{transform:translateX(-30vw)}to{transform:translateX(110vw)}}
+.dg.bk.nz .nz-hero-fern{position:absolute;z-index:-1;left:-34px;bottom:120px;width:190px;color:#0e7a4b;opacity:.1;transform:rotate(-16deg);pointer-events:none}
+.dg.bk.nz .nz-hero-fern svg{display:block;width:100%;height:auto}
+/* 맨 위 이동 */
+.dg.bk.nz .bk-nav-a{background:rgba(255,255,255,.75);border:1px solid #d3e4ef;color:var(--nz-navy);box-shadow:0 6px 16px -10px rgba(11,42,91,.4)}
+.dg.bk.nz .bk-nav-a:hover{background:#fff;border-color:#bcd6e6}
+.dg.bk.nz .bk-nav-dc{background:#fff;border-color:#fff}
+.dg.bk.nz .bk-nav-dg span{color:var(--sub)}
+.dg.bk.nz .bk-nav-a:focus-visible{outline-color:var(--nz-navy)}
+/* 인사 · 배지 · 제목 */
+.dg.bk.nz .nz-hi{display:inline-flex;align-items:center;gap:10px;margin:0 0 14px;padding:8px 16px 8px 10px;border-radius:999px;background:#fff;box-shadow:0 10px 24px -14px rgba(11,42,91,.45),0 0 0 1px #d9e6ee;font-size:15px;color:var(--sub)}
+.dg.bk.nz .nz-hi b{font-size:18px;font-weight:900;letter-spacing:-.01em;color:var(--nz-navy)}
+.dg.bk.nz .nz-hi span:last-child{font-weight:700}
+.dg.bk.nz .bk-hero-txt .top-badge{display:flex;width:max-content;max-width:100%}
+.dg.bk.nz .top-badge{color:#0b5a37;background:#e3f4ea;border:1px solid #bfe3cd;box-shadow:none}
+.dg.bk.nz .top-badge i,.dg.bk.nz .micro-badge i{background:var(--nz-fern);box-shadow:none}
+.dg.bk.nz .instructor{color:var(--sub)}
+.dg.bk.nz .instructor strong{color:var(--nz-navy)}
+.dg.bk.nz .hero h1 span{color:var(--nz-navy);text-shadow:0 2px 0 rgba(255,255,255,.7)}
+.dg.bk.nz .hero h1 em{background:linear-gradient(95deg,#0e7a4b,#0f9a8f 60%,#1479b8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;text-shadow:none;filter:drop-shadow(0 2px 0 rgba(255,255,255,.8))}
+.dg.bk.nz .hero-copy{color:var(--sub)}
+.dg.bk.nz .disclaimer{color:var(--mute)}
+/* 포스터: 엽서처럼 흰 테두리 + 뉴질랜드 우표 */
+.dg.bk.nz .bk-frame,.dg.bk.nz .bk-art:hover .bk-frame{border-color:#fff;background:#fff;box-shadow:0 0 0 8px #fff,0 40px 70px -34px rgba(11,42,91,.55),0 0 0 9px #d9e6ee}
+.dg.bk.nz .bk-frame-shadow{background:rgba(11,42,91,.22)}
+.dg.bk.nz .bk-tile{background:#fff;color:var(--nz-fern);border:1px solid #d9e6ee;box-shadow:0 16px 30px -16px rgba(11,42,91,.45)}
+.dg.bk.nz .bk-tile svg{filter:none}
+.dg.bk.nz .bk-tile.t3{display:none}
+.dg.bk.nz .nz-stamp{position:absolute;z-index:3;right:-16px;bottom:22px;display:grid;justify-items:center;gap:5px;padding:13px 15px 11px;border-radius:6px;background:#fff;transform:rotate(7deg);outline:2px dashed #c3d5e1;outline-offset:-6px;box-shadow:0 14px 26px -12px rgba(11,42,91,.45)}
+.dg.bk.nz .nz-stamp .nz-flag{width:52px;height:26px;border-radius:2px}
+.dg.bk.nz .nz-stamp b{font-size:11px;font-weight:900;letter-spacing:.14em;color:var(--nz-navy)}
+.dg.bk.nz .nz-stamp small{margin-top:-3px;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--nz-fern)}
+/* 카운트다운: 흰 카드 */
+.dg.bk.nz .countdown-card{background:#fff;border:1px solid #d9e6ee;box-shadow:0 30px 60px -36px rgba(11,42,91,.45)}
+.dg.bk.nz .countdown-eyebrow{color:var(--nz-navy)}
+.dg.bk.nz .countdown-eyebrow strong{color:var(--nz-fern);text-shadow:none}
+.dg.bk.nz .countdown-unit{background:linear-gradient(180deg,#f6fbfe,#e8f2f8);border:1px solid #d3e3ee;box-shadow:inset 0 -3px 0 #d3e3ee,0 8px 16px -12px rgba(11,42,91,.35)}
+.dg.bk.nz .countdown-unit strong{color:var(--nz-navy);text-shadow:none}
+.dg.bk.nz .countdown-unit span{color:var(--mute)}
+.dg.bk.nz .countdown-colon{color:#a7bccb}
+.dg.bk.nz .event-date{background:#eef7f2;border:1px solid #cfe7d8;color:var(--nz-navy);box-shadow:none}
+.dg.bk.nz .event-date .ed-dot{background:var(--nz-fern);box-shadow:0 0 0 4px rgba(14,122,75,.15)}
+.dg.bk.nz .event-date .ed-time{color:var(--nz-fern)}
+.dg.bk.nz .event-date em{background:var(--nz-fern);color:#fff}
+.dg.bk.nz .countdown-card.is-ended .countdown-eyebrow strong{color:var(--mute)}
+.dg.bk.nz .fc-ended-link{color:var(--nz-navy)}
+/* 왜 뉴질랜드: 짙은 숲 초록 띠 + 은빛 고사리 */
+.dg.bk.nz .nz-why{position:relative;overflow:hidden;isolation:isolate;margin-top:-1px;padding:74px 0 82px;background:radial-gradient(60% 80% at 85% 0%,rgba(18,160,106,.35),transparent 70%),linear-gradient(170deg,#1f7049 0%,#0d4f34 46%,#08372a 100%);color:#e8f5ee}
+.dg.bk.nz .nz-why-fern{position:absolute;z-index:-1;color:#fff;opacity:.09;pointer-events:none}
+.dg.bk.nz .nz-why-fern svg{display:block;width:100%;height:auto}
+.dg.bk.nz .nz-why-fern.f1{width:260px;right:-40px;top:-30px;transform:rotate(24deg)}
+.dg.bk.nz .nz-why-fern.f2{width:200px;left:-50px;bottom:-60px;transform:rotate(-150deg)}
+.dg.bk.nz .nz-why-in{width:min(100% - 40px,1120px);margin:0 auto;text-align:center}
+.dg.bk.nz .nz-why-k{display:inline-flex;align-items:center;gap:10px;margin:0;padding:7px 14px 7px 8px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);font-family:Inter,Pretendard,sans-serif;font-size:12px;font-weight:850;letter-spacing:.16em;color:#bfe8d2}
+.dg.bk.nz .nz-why-k .nz-flag{width:26px;height:13px}
+.dg.bk.nz .nz-why h2{margin:18px 0 0;color:#fff;font-size:clamp(28px,3.4vw,42px);font-weight:900;letter-spacing:-.045em;line-height:1.25}
+.dg.bk.nz .nz-why h2 em{font-style:normal;color:#9ff0c4}
+.dg.bk.nz .nz-why-d{max-width:640px;margin:14px auto 0;color:#cfe7da;font-size:16px;line-height:1.75}
+.dg.bk.nz .nz-why-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:40px;text-align:left}
+.dg.bk.nz .nz-why-t{position:relative;padding:22px 20px 22px;border-radius:20px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.dg.bk.nz .nz-why-t.hot{background:linear-gradient(160deg,#fff,#eef8f2);border-color:#fff;color:#0b2a5b;box-shadow:0 24px 50px -24px rgba(0,0,0,.6)}
+.dg.bk.nz .nz-why-i{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.14);color:#aef3cd}
+.dg.bk.nz .nz-why-t.hot .nz-why-i{background:#0e7a4b;color:#fff}
+.dg.bk.nz .nz-why-i .icon{width:22px;height:22px}
+.dg.bk.nz .nz-why-t small{position:absolute;top:22px;right:20px;font-family:Inter,Pretendard,sans-serif;font-size:13px;font-weight:900;color:rgba(255,255,255,.35)}
+.dg.bk.nz .nz-why-t.hot small{color:#0e7a4b}
+.dg.bk.nz .nz-why-t b{display:block;margin-top:16px;color:#fff;font-size:17px;font-weight:900;letter-spacing:-.03em;line-height:1.4}
+.dg.bk.nz .nz-why-t.hot b{color:#0b2a5b}
+.dg.bk.nz .nz-why-t p{margin:8px 0 0;color:#cfe7da;font-size:14px;line-height:1.65}
+.dg.bk.nz .nz-why-t.hot p{color:#3c5466}
+/* 아래 칸 공통: 밝은 바탕 위 흰 카드 */
+.dg.bk.nz main{padding-top:72px;padding-bottom:28px}
+.dg.bk.nz .youtube-heading>span,.dg.bk.nz .section-heading>span,.dg.bk.nz .upcoming-course-heading>span,.dg.bk.nz .fc-faq .section-heading>span{color:var(--nz-fern)}
+.dg.bk.nz .youtube-heading h2,.dg.bk.nz .section-heading h2,.dg.bk.nz .upcoming-course-heading h2,.dg.bk.nz .fc-faq .section-heading h2{color:var(--nz-navy)}
+.dg.bk.nz .youtube-heading p,.dg.bk.nz .section-heading p,.dg.bk.nz .upcoming-course-heading>p{color:var(--sub)}
+.dg.bk.nz .fc-intro-play{background:radial-gradient(60% 80% at 80% 20%,rgba(18,160,106,.55),transparent 70%),linear-gradient(135deg,#0b2a5b,#0d4f34)}
+.dg.bk.nz .fc-intro-frame{box-shadow:0 0 0 8px #fff,0 0 0 9px #d9e6ee,0 40px 80px -40px rgba(11,42,91,.6)}
+.dg.bk.nz .fc-yt-out{color:var(--mute)}
+.dg.bk.nz .fc-yt-out:hover{color:var(--nz-fern)}
+/* 좌우 영상 */
+.dg.bk.nz .video-frame{background:#e6eef4;border:1px solid #d9e6ee;box-shadow:0 30px 60px -34px rgba(11,42,91,.5)}
+.dg.bk.nz .video-slide--active .video-frame{border-color:#bfe3cd;box-shadow:0 0 0 6px #fff,0 34px 70px -34px rgba(11,42,91,.6)}
+.dg.bk.nz .video-slide--left,.dg.bk.nz .video-slide--right{opacity:.55;filter:saturate(.7)}
+.dg.bk.nz .video-select-overlay{background:rgba(255,255,255,.12)}
+.dg.bk.nz .video-select-overlay svg{background:var(--nz-fern);color:#fff;border:0}
+.dg.bk.nz .video-meta span{color:#0b5a37;background:#e3f4ea;border:1px solid #bfe3cd}
+.dg.bk.nz .video-meta strong{color:var(--nz-navy)}
+.dg.bk.nz .carousel-control{background:#fff;color:var(--nz-navy);border:1px solid #d9e6ee;box-shadow:0 12px 26px -14px rgba(11,42,91,.5)}
+.dg.bk.nz .carousel-control:hover{background:var(--nz-fern);color:#fff;border-color:var(--nz-fern)}
+.dg.bk.nz .carousel-pagination button{background:#c6d6e1}
+.dg.bk.nz .carousel-pagination button.is-active{background:var(--nz-fern)}
+/* 카드 (질문 · 전자책 · 진행 예정 강의 · FAQ) */
+.dg.bk.nz .question-cta,.dg.bk.nz .question-cta--compact,.dg.bk.nz .gift-card,.dg.bk.nz .upcoming-course-card,.dg.bk.nz .fc-faq-list details{background:#fff;border:1px solid #d9e6ee;box-shadow:0 26px 54px -38px rgba(11,42,91,.45)}
+.dg.bk.nz .question-cta{background:radial-gradient(70% 90% at 50% 0%,rgba(14,122,75,.09),transparent 70%),#fff}
+.dg.bk.nz .question-cta:after{background:rgba(14,122,75,.16)}
+.dg.bk.nz .question-cta h2{color:var(--nz-navy)}
+.dg.bk.nz .question-cta p{color:var(--sub)}
+.dg.bk.nz .question-cta small,.dg.bk.nz .question-cta>small,.dg.bk.nz .question-cta--compact>small{color:var(--mute)}
+.dg.bk.nz .micro-badge{color:#0b5a37;background:#e3f4ea;border:1px solid #bfe3cd}
+.dg.bk.nz .micro-badge--kakao{color:#191600;background:#fee500;border:0}
+.dg.bk.nz .q-promise{background:#eef7f2;border:1px solid #cfe7d8;color:#1c3a2c}
+.dg.bk.nz .q-promise svg{color:var(--nz-fern)}
+.dg.bk.nz .question-cta--compact{background:radial-gradient(70% 90% at 50% 0%,rgba(254,229,0,.16),transparent 70%),#fff}
+.dg.bk.nz .question-cta--compact p{color:var(--sub)}
+.dg.bk.nz .question-cta--compact:after{background:rgba(254,229,0,.3)}
+/* 버튼: 고사리 초록 3D */
+.dg.bk.nz .primary-cta,.dg.bk.nz .upcoming-course-cta{background:var(--nz-fern);color:#fff;box-shadow:inset 0 1px rgba(255,255,255,.35),0 6px 0 #075234,0 20px 34px -14px rgba(7,82,52,.55)}
+.dg.bk.nz .primary-cta:hover,.dg.bk.nz .upcoming-course-cta:hover{background:#0b6a41;box-shadow:inset 0 1px rgba(255,255,255,.35),0 5px 0 #075234,0 22px 36px -14px rgba(7,82,52,.6)}
+.dg.bk.nz .primary-cta:active,.dg.bk.nz .upcoming-course-cta:active{box-shadow:inset 0 1px rgba(255,255,255,.35),0 1px 0 #075234}
+.dg.bk.nz .kakao-cta{box-shadow:inset 0 1px rgba(255,255,255,.6),0 6px 0 #c9b300,0 20px 34px -14px rgba(160,140,0,.5)}
+.dg.bk.nz .upcoming-course-cta.is-off{background:#e3e9ee;color:#7a8a9b;box-shadow:none}
+/* 선물 전자책: 남색 · 고사리 초록 · 은빛 표지 */
+.dg.bk.nz .gift-card h3{color:var(--nz-navy)}
+.dg.bk.nz .gift-card p{color:var(--sub)}
+.dg.bk.nz .gift-status{color:var(--mute)}
+.dg.bk.nz .gift-status.is-open{color:var(--nz-fern)}
+.dg.bk.nz .gift-day{background:#fff;color:var(--nz-fern);border:1px solid #d9e6ee;box-shadow:0 8px 18px -10px rgba(11,42,91,.45)}
+.dg.bk.nz .gift-card.is-unlocked{border-color:#bfe3cd;box-shadow:0 0 0 1px #e3f4ea,0 30px 60px -36px rgba(7,82,52,.5)}
+.dg.bk.nz .gift-card.is-unlocked .gift-day{background:var(--nz-fern);color:#fff;border:0}
+.dg.bk.nz .gift-card--blue .gift-cover,.dg.bk.nz .gift-card--blue.is-unlocked .gift-cover{background:linear-gradient(150deg,#123f7d,#0b2a5b);color:#fff}
+.dg.bk.nz .gift-card--cyan .gift-cover,.dg.bk.nz .gift-card--cyan.is-unlocked .gift-cover{background:linear-gradient(150deg,#13a06a,#0b5a37);color:#fff}
+.dg.bk.nz .gift-card--ice .gift-cover,.dg.bk.nz .gift-card--ice.is-unlocked .gift-cover{background:linear-gradient(150deg,#ffffff,#d6e2ea);color:#0b2a5b}
+.dg.bk.nz .gift-card--blue .open-hint{color:#9ff0c4}
+.dg.bk.nz .gift-card--blue .gift-rule{background:#9ff0c4}
+.dg.bk.nz .gift-book .gift-cover{box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 22px 38px -16px rgba(11,42,91,.55)}
+.dg.bk.nz .gift-book:after{background:radial-gradient(closest-side,rgba(11,42,91,.22),transparent)}
+.dg.bk.nz .gift-book .lock-ic{background:var(--nz-fern);color:#fff}
+.dg.bk.nz .gift-book .lock-state b{color:#9ff0c4}
+.dg.bk.nz .gift-card--ice .lock-state b{color:#0e7a4b}
+.dg.bk.nz .gift-card--ice:not(.is-unlocked) .gift-cover-overlay{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(11,42,91,.18))}
+.dg.bk.nz .gift-card--ice .gift-book .lock-state{background:rgba(255,255,255,.92);border-color:#0e7a4b;box-shadow:0 12px 26px -10px rgba(11,42,91,.4)}
+.dg.bk.nz .gift-card--ice .gift-book .lock-state em{color:#0b2a5b}
+.dg.bk.nz .gift-timeline{border-top-color:#d9e6ee}
+.dg.bk.nz .gift-timeline span{background:#fff;border:1px solid #d9e6ee;color:var(--sub)}
+.dg.bk.nz .gift-timeline strong{color:var(--nz-fern)}
+/* 진행 예정 강의 */
+.dg.bk.nz .upcoming-course-card{background:radial-gradient(60% 80% at 100% 0%,rgba(14,122,75,.08),transparent 70%),#fff}
+.dg.bk.nz .upcoming-course-image{background:linear-gradient(160deg,#eaf5fb,#f3f9f5)}
+.dg.bk.nz .upcoming-course-image img{box-shadow:0 0 0 6px #fff,0 26px 50px -26px rgba(11,42,91,.55)}
+.dg.bk.nz .upcoming-course-image>span{background:#fff;color:var(--nz-fern);border:1px solid #bfe3cd}
+.dg.bk.nz .bk-live-chip{background:#e3f4ea;border-color:#bfe3cd;color:#0b5a37}
+.dg.bk.nz .upcoming-platform>strong,.dg.bk.nz .upcoming-instructor strong,.dg.bk.nz .upcoming-course-content h3{color:var(--nz-navy)}
+.dg.bk.nz .upcoming-date{color:var(--nz-fern)}
+.dg.bk.nz .upcoming-instructor,.dg.bk.nz .upcoming-course-content>small{color:var(--mute)}
+.dg.bk.nz .upcoming-description{color:var(--sub)}
+.dg.bk.nz .upcoming-course-content li{color:#1f3346}
+.dg.bk.nz .upcoming-course-content li svg{color:var(--nz-fern)}
+.dg.bk.nz .bk-plat-hero-tag{background:#fff;border:1px solid #d9e6ee;color:var(--nz-navy)}
+.dg.bk.nz .bk-plat-hero-logo{box-shadow:0 0 0 6px #fff,0 28px 50px -28px rgba(11,42,91,.6)}
+/* 자주 묻는 질문 */
+.dg.bk.nz .fc-faq-list details[open]{border-color:#bfe3cd;box-shadow:0 0 0 3px #e3f4ea,0 26px 54px -38px rgba(11,42,91,.45)}
+.dg.bk.nz .fc-faq-list summary{color:var(--nz-navy)}
+.dg.bk.nz .fc-faq-list summary svg{color:var(--nz-fern)}
+.dg.bk.nz .fc-faq-list p{color:var(--sub)}
+/* 맨 아래: 밤하늘 남색 */
+.dg.bk.nz footer{background:#0b2a5b;border-top:0;color:#c9d6e6}
+.dg.bk.nz footer>a{color:#c9d6e6}
+.dg.bk.nz footer>a:hover{color:#9ff0c4}
+.dg.bk.nz .fc-powered-row{background:#0b2a5b}
+.dg.bk.nz .fc-powered-row .powered{color:#9fb3cc}
+.dg.bk.nz .fc-draft{background:#fff4d6;color:#5b4300}
+@media (prefers-reduced-motion:reduce){.dg.bk.nz .nz-cloud{animation:none}}
+@media (max-width:1024px){.dg.bk.nz .nz-why-g{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:860px){
+  .dg.bk.nz .bk-hero{padding-bottom:120px}
+  .dg.bk.nz .nz-scene{height:140px}
+  .dg.bk.nz .nz-hi{margin-bottom:12px;font-size:13px;padding:7px 14px 7px 8px}
+  .dg.bk.nz .nz-hi b{font-size:16px}
+  .dg.bk.nz .bk-hero-txt .top-badge{margin:0 auto}
+  .dg.bk.nz .nz-stamp{right:-4px;bottom:14px;padding:9px 10px 8px;transform:rotate(6deg)}
+  .dg.bk.nz .nz-stamp .nz-flag{width:40px;height:20px}
+  .dg.bk.nz .nz-stamp b{font-size:9.5px}
+  .dg.bk.nz .nz-stamp small{font-size:9px}
+  .dg.bk.nz .nz-hero-fern{width:120px;bottom:70px;left:-30px}
+  .dg.bk.nz .nz-why{padding:56px 0 60px}
+  .dg.bk.nz .nz-why-in{width:min(100% - 32px,600px)}
+  .dg.bk.nz main{padding-top:56px}
+}
+@media (max-width:560px){
+  .dg.bk.nz .nz-why-g{grid-template-columns:minmax(0,1fr);gap:12px;margin-top:28px}
+  .dg.bk.nz .nz-why-t{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:14px;align-items:start;padding:18px 16px}
+  .dg.bk.nz .nz-why-i{grid-row:1 / span 2;width:42px;height:42px}
+  .dg.bk.nz .nz-why-t b{margin-top:0;font-size:16px;padding-right:26px}
+  .dg.bk.nz .nz-why-t p{margin-top:4px}
+  .dg.bk.nz .nz-why-t small{top:18px;right:16px}
+  .dg.bk.nz .nz-why-d{font-size:15px}
+}
+/* 맨 아래 인사: Ka kite anō (다음에 또 만나요) */
+.dg.bk.nz .nz-bye{position:relative;overflow:hidden;display:grid;justify-items:center;gap:6px;padding:46px 20px 50px;text-align:center;background:linear-gradient(180deg,rgba(14,122,75,0),rgba(14,122,75,.08))}
+.dg.bk.nz .nz-bye p{display:inline-flex;align-items:center;gap:10px;margin:0}
+.dg.bk.nz .nz-bye b{font-size:clamp(26px,3vw,34px);font-weight:900;letter-spacing:-.02em;color:var(--nz-navy)}
+.dg.bk.nz .nz-bye>span:not(.nz-bye-fern){font-size:17px;font-weight:800;color:var(--nz-fern)}
+.dg.bk.nz .nz-bye small{font-size:12.5px;color:var(--mute)}
+.dg.bk.nz .nz-bye-fern{position:absolute;z-index:0;right:8%;bottom:-70px;width:150px;color:var(--nz-fern);opacity:.1;transform:rotate(28deg);pointer-events:none}
+.dg.bk.nz .nz-bye-fern svg{display:block;width:100%;height:auto}
+.dg.bk.nz .nz-bye>:not(.nz-bye-fern){position:relative;z-index:1}
+@media (max-width:560px){.dg.bk.nz .nz-bye{padding:36px 16px 40px}.dg.bk.nz .nz-bye>span:not(.nz-bye-fern){font-size:15px}.dg.bk.nz .nz-bye-fern{right:-20px;width:110px}}

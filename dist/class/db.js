@@ -489,7 +489,7 @@
 
   /* ---------------- 무료강의 페이지 (doogo.site 형식: 카운트다운 · 사전 질문 · 선물 전자책 · 오픈채팅 · 강의 안내) ---------------- */
   const FREE_SECTIONS = [
-    { key: "countdown", label: "강의 일정 · 카운트다운" }, { key: "videos", label: "YouTube 영상 (좌 · 가운데 · 우)" }, { key: "question", label: "질문 남기기 버튼" },
+    { key: "countdown", label: "강의 일정 · 카운트다운" }, { key: "intro", label: "대표 영상 (첫 화면 바로 아래 크게)" }, { key: "videos", label: "YouTube 영상 (좌 · 가운데 · 우)" }, { key: "question", label: "질문 남기기 버튼" },
     { key: "gifts", label: "선물 전자책 (공개일에 자동으로 열림)" }, { key: "kakao", label: "카카오톡 오픈채팅" },
     { key: "live", label: "진행 예정 강의 (썸네일 · 신청 링크)" }, { key: "faq", label: "자주 묻는 질문" }
   ];
@@ -524,6 +524,7 @@
       question: { badge: "강의 전 필수 · 1분 소요", title: (b.instructor || "강사") + "에게 직접 묻고 싶은 게 있으신가요?", desc: "강의 전에 궁금한 내용을 미리 정리해 보세요. 지금 남겨두시면 내 상황에 맞는 질문을 놓치지 않을 수 있어요.", promise: "지금 남겨 주시면 무료강의 때 그 질문을 토대로 최대한 답변해 드릴 수 있도록 하겠습니다.", label: "내 질문 남기러 가기", url: "", note: "질문을 남긴 뒤 무료강의 신청 페이지로 이동할 수 있어요" },
       gifts: { kicker: "BEFORE THE CLASS", title: "강의 전, 선물 전자책", desc: "공개일이 되면 잠금이 자동으로 풀리고, 표지를 누르면 전자책이 열려요.", items: [] },
       videos: { kicker: "WATCH BEFORE THE CLASS", title: "강의 전에, " + (b.instructor || "강사") + "의 실전 이야기를 먼저 만나보세요", desc: "좌우 영상을 넘기면 다양한 인터뷰와 실제 운영 이야기를 볼 수 있어요.", items: [] },
+      intro: { kicker: "WATCH FIRST", title: "영상으로 먼저 만나보세요", desc: "", youtube: "", caption: "눌러서 바로 재생 · 소리를 켜고 들어 보세요" },
       about: { title: "강사 소개", name: b.instructor || ins.displayName, role: b.courseTitle, body: "", photo: "", career: [] },
       faq: { kicker: "FAQ", title: "자주 묻는 질문", items: [
         { q: "무료강의는 어디서 듣나요?", a: "‘진행 예정 강의’의 신청 버튼으로 신청하면, 강의 날짜에 맞춰 라이브 입장 안내를 보내 드려요." },
@@ -537,11 +538,13 @@
       company: ""
     };
     const out = Object.assign({}, def, F);
-    ["hero", "question", "gifts", "videos", "kakao", "about", "live", "faq", "apply"].forEach((k) => { out[k] = Object.assign({}, def[k], F[k] || {}); });
+    ["hero", "question", "gifts", "videos", "intro", "kakao", "about", "live", "faq", "apply"].forEach((k) => { out[k] = Object.assign({}, def[k], F[k] || {}); });
     out.off = Object.assign({}, F.off || def.off);
     // 강사 소개는 ‘강의 소개 페이지’에 적어 둔 내용을 기본으로 가져온다
     if (!F.about && c.landing && c.landing.about) out.about = Object.assign({}, def.about, c.landing.about);
     out.order = (F.order || []).filter((k) => FREE_SECTIONS.some((x) => x.key === k));
+    // 예전에 순서를 저장해 둔 페이지: 새 ‘대표 영상’ 칸은 맨 위(카운트다운 바로 다음)에 넣어요
+    if (out.order.length && out.order.indexOf("intro") === -1) { const c0 = out.order.indexOf("countdown"); out.order.splice(c0 < 0 ? 0 : c0 + 1, 0, "intro"); }
     FREE_SECTIONS.forEach((x) => { if (out.order.indexOf(x.key) === -1) out.order.push(x.key); });
     return out;
   }

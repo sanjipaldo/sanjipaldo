@@ -195,6 +195,62 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
   kakaoUser = { id: 999, kakao_account: { email: "a@example.com", is_email_valid: true, is_email_verified: true, name: "가OO" } };
   r = await call("vod-kakao", { method: "GET", query: { code: "c4", state: new URL(r.location).searchParams.get("state") } });
   ok(/vodlogin=dup/.test(r.location), "이메일 가입 회원과 같은 이메일 → 자동으로 합치지 않고 안내", r.location);
+  // 마이페이지 › 회원 정보 수정 › 카카오 연결하기 (이메일 회원 a@example.com 에 카카오 999 붙이기)
+  r = await call("vod-auth", { body: { action: "login", email: "a@example.com", pw: "test1234a" } });
+  const aId = r.json.member.id;
+  ok(r.json.member.hasPw === true && !r.json.member.kakaoId, "이메일 회원: 비밀번호 있음 표시 · 카카오 없음", r.json.member);
+  r = await call("vod-auth", { method: "GET", query: { action: "kakao", link: "1", next: "#/vod/my/account" } });
+  r = await call("vod-kakao", { method: "GET", query: { code: "c5", state: new URL(r.location).searchParams.get("state") } });
+  ok(r.location === "/?vodlogin=linked#/vod/my/account", "카카오 연결 → 회원 정보 수정으로 돌아가요", r.location);
+  r = await call("vod-auth", { body: { action: "me" } });
+  ok(r.json.member.id === aId && r.json.member.kakaoId === "999" && r.json.member.via === "email" && r.json.member.kakaoLinkedAt, "연결한 계정 그대로 · 카카오 회원번호 붙음", r.json.member);
+  delete jar.dc_v;
+  r = await call("vod-auth", { method: "GET", query: { action: "kakao" } });
+  r = await call("vod-kakao", { method: "GET", query: { code: "c6", state: new URL(r.location).searchParams.get("state") } });
+  r = await call("vod-auth", { body: { action: "me" } });
+  ok(r.json.member && r.json.member.id === aId, "이제 카카오로 로그인하면 이메일 계정으로 들어가요", r.json.member);
+  r = await call("vod-auth", { method: "GET", query: { action: "kakao", link: "1", next: "#/vod/my/account" } });
+  r = await call("vod-kakao", { method: "GET", query: { code: "c7", state: new URL(r.location).searchParams.get("state") } });
+  ok(/vodlogin=linked/.test(r.location), "이미 연결된 카카오로 다시 연결 → 그대로 연결됨", r.location);
+  kakaoUser = { id: 555, kakao_account: { email: "other@example.com", is_email_valid: true, name: "마OO" } };
+  r = await call("vod-auth", { method: "GET", query: { action: "kakao", link: "1", next: "#/vod/my/account" } });
+  r = await call("vod-kakao", { method: "GET", query: { code: "c7b", state: new URL(r.location).searchParams.get("state") } });
+  ok(r.location === "/?vodlogin=other#/vod/my/account", "이미 다른 카카오가 붙은 계정에 또 연결 → 안내 (덮어쓰지 않음)", r.location);
+  r = await call("vod-auth", { body: { action: "me" } });
+  ok(r.json.member.id === aId && r.json.member.kakaoId === "999", "원래 연결(999)은 그대로", r.json.member);
+  kakaoUser = { id: 999, kakao_account: { email: "a@example.com", is_email_valid: true, is_email_verified: true, name: "가OO" } };
+  // 다른 회원이 쓰는 카카오(4123456789 는 카카오 가입 회원)로 연결하려 하면: 그 회원으로 바꿔 로그인하지 않고 안내
+  { await call("vod-auth", { body: { action: "logout" } }); delete jar.dc_v;
+    r = await call("vod-auth", { body: { action: "signup", email: "c@example.com", pw: "test1234c", name: "다OO", phone: "010-0000-3333", agree: true } });
+    const cId = r.json.member.id;
+    kakaoUser = { id: 4123456700, kakao_account: { email: "kk2@example.com", is_email_valid: true, is_email_verified: true, name: "라OO" } };
+    r = await call("vod-auth", { method: "GET", query: { action: "kakao", next: "#/vod" } });
+    const keepV = jar.dc_v;
+    r = await call("vod-kakao", { method: "GET", query: { code: "c8", state: new URL(r.location).searchParams.get("state") } }); // 새 카카오 회원 가입(로그인 바뀜)
+    jar.dc_v = keepV; // 다시 c@example.com 으로
+    r = await call("vod-auth", { method: "GET", query: { action: "kakao", link: "1", next: "#/vod/my/account" } });
+    r = await call("vod-kakao", { method: "GET", query: { code: "c9", state: new URL(r.location).searchParams.get("state") } });
+    ok(r.location === "/?vodlogin=taken#/vod/my/account", "다른 계정이 쓰는 카카오 → 연결 안 하고 안내", r.location);
+    r = await call("vod-auth", { body: { action: "me" } });
+    ok(r.json.member.id === cId && !r.json.member.kakaoId, "로그인은 원래 계정 그대로 (다른 사람 계정으로 안 바뀜)", r.json.member);
+    r = await call("vod-auth", { body: { action: "kakao-off" } });
+    ok(r.status === 400, "연결된 카카오가 없으면 끊기 거절", r.json); }
+  // 연결 끊기: 이메일 회원은 끊을 수 있고, 카카오로 가입한 회원은 못 끊어요
+  delete jar.dc_v; kakaoUser = { id: 999, kakao_account: { email: "a@example.com", is_email_valid: true, is_email_verified: true, name: "가OO" } };
+  r = await call("vod-auth", { body: { action: "login", email: "a@example.com", pw: "test1234a" } });
+  r = await call("vod-auth", { body: { action: "kakao-off" } });
+  ok(r.json.ok && r.json.member.kakaoId === "" && r.json.member.id === aId, "이메일 회원: 카카오 연결 끊기", r.json);
+  r = await call("vod-auth", { method: "GET", query: { action: "kakao" } }); delete jar.dc_v;
+  r = await call("vod-kakao", { method: "GET", query: { code: "c10", state: new URL(r.location).searchParams.get("state") } });
+  ok(/vodlogin=dup/.test(r.location), "끊은 뒤 그 카카오로 오면 다시 ‘같은 이메일 계정 있음’ 안내", r.location);
+  r = await call("vod-auth", { method: "GET", query: { action: "kakao", next: "#/vod" } });
+  kakaoUser = { id: 4123456789, kakao_account: { email: "kk@example.com", is_email_valid: true, is_email_verified: true, name: "카OO" } };
+  r = await call("vod-kakao", { method: "GET", query: { code: "c11", state: new URL(r.location).searchParams.get("state") } });
+  r = await call("vod-auth", { body: { action: "kakao-off" } });
+  ok(r.status === 400 && /카카오로 가입한/.test(r.json.message), "카카오로 가입한 회원은 연결 끊기 거절 (로그인할 방법이 없어져요)", r.json);
+  r = await call("vod-auth", { body: { action: "me" } });
+  ok(r.json.member.hasPw === false && r.json.member.kakaoId === "4123456789", "카카오 회원: 비밀번호 없음 표시", r.json.member);
+  delete jar.dc_v;
   r = await call("vod-kakao", { method: "POST", query: { user_id: "4123456789", referrer_type: "UNLINK_FROM_APPS" }, headers: { authorization: "KakaoAK wrong" } });
   ok(r.status === 401, "연결 끊기 알림: Admin 키가 틀리면 거절");
   r = await call("vod-kakao", { method: "POST", query: { user_id: "4123456789", referrer_type: "UNLINK_FROM_APPS" }, headers: { authorization: "KakaoAK admin-test" } });
@@ -928,6 +984,23 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
   w = OO.moonApplyLink((k) => (k === "content:moon" ? { landing: { applyUrl: "https://open.kakao.com/o/x", cta: { title: "직접 쓴 제목" } } } : null));
   ok(w.writes["content:moon"].landing.applyUrl === "https://open.kakao.com/o/x" && w.writes["content:moon"].landing.cta.title === "직접 쓴 제목", "강사가 이미 넣은 링크 · 직접 쓴 제목은 그대로", w.result);
   ok(["2026-10-31-launch-reset-bills", "2026-10-31-moon-4th-cohort", "2026-10-31-moon-apply-link"].every((id) => OO.OPS.some((x) => x.id === id)), "운영 시작 작업 3개 목록 등록", null);
+  { // 문대표 무료강의 11/17 (운영 DB 와 같은 모양: 처음 넣은 값 그대로)
+    const prodFree = { published: true, liveAt: "2026-10-27T19:30", kakao: { url: "https://open.kakao.com/o/gF68BQDi" }, videos: { items: [{ youtube: "https://youtu.be/S43tftq_ZT4" }] },
+      gifts: { title: "강의 전, 선물 전자책 3권", items: [{ title: "1편", openAt: "2026-10-01T19:30", forceOpen: true, url: "https://book01.notion.site/VOD-28ed6f9dec6780f3901ad401c88019da?source=copy_link", color: "blue" }, { title: "2편", openAt: "2026-10-20T19:30", url: "https://www.ivyclass.co.kr/x", color: "cyan" }, { title: "3편", openAt: "2026-10-26T19:30", url: "https://www.ivyclass.co.kr/x", color: "ice" }] },
+      live: { image: "assets/landing/moon-thumb.jpg", url: "https://www.ivyclass.co.kr/x" }, faq: { items: [{ q: "무료강의는 어디서 듣나요?", a: "아이비클래스" }, { q: "다음에는?", a: "직접 브랜드를 만들고 싶은 분은 5주 실전 클래스로 이어서 함께해요." }] },
+      apply: { includes: ["10/27(화) 오후 7시 30분 무료 라이브", "선물 전자책 3권"] } };
+    let w = OO.moonFree1117((k) => (k === "content:moon" ? { brand: { theme: "nz" }, freeClass: prodFree, landing: { applyUrl: "x" } } : null));
+    const F = w.writes["content:moon"].freeClass;
+    ok(F.liveAt === "2026-11-17T19:30" && F.intro.youtube === "https://www.youtube.com/watch?v=mPFHz1JQj3U" && F.kakao.url === "https://m.site.naver.com/2iZFQ", "문대표 무료강의: 11/17 저녁 7시 30분 · 대표 영상 · 오픈채팅(네이버)", F);
+    ok(F.gifts.items[0].forceOpen === true && F.gifts.items[1].openAt === "2026-11-09T19:00" && F.gifts.items[1].url.endsWith("?pvs=74") && !F.gifts.items[1].forceOpen && F.gifts.items[2].openAt === "2026-11-17T19:00" && F.gifts.items[2].url.endsWith("2c5d6f9dec6781caa41bf90cdab36f96") && F.gifts.items[2].title === "3편" && F.gifts.title === "강의 전, 선물 전자책 3권", "선물 전자책: 1편 지금 · 2편 11/9 · 3편 11/17 저녁 7시 (제목 · 칸 제목은 그대로)", F.gifts);
+    ok(F.live.image === "assets/landing/moon-thumb-1117.jpg" && F.live.url === "https://www.ivyclass.co.kr/x" && F.faq.items[0].q === "무료강의는 언제 시작되나요?" && /11월 17일\(화\) 저녁 7시 30분/.test(F.faq.items[0].a) && /아시아 최초/.test(F.faq.items[0].a) && /4주 실전 클래스/.test(F.faq.items[2].a) && F.apply.includes[0] === "11/17(화) 오후 7시 30분 무료 라이브", "포스터 11/17 · FAQ ‘언제 시작되나요?’ 맨 위 · 4주 · 신청 안내 날짜", F);
+    ok(w.writes["content:moon"].landing.applyUrl === "x" && F.videos.items.length === 1, "다른 칸(강사 소개 · 영상)은 그대로", null);
+    w = OO.moonFree1117((k) => (k === "content:moon" ? { freeClass: Object.assign({}, F, { intro: { youtube: "https://youtu.be/MINE" }, live: { image: "assets/mine.jpg" } }) } : null));
+    const F2 = w.writes["content:moon"].freeClass;
+    ok(F2.intro.youtube === "https://youtu.be/MINE" && F2.live.image === "assets/mine.jpg" && F2.faq.items.filter((x) => /언제\s*시작/.test(x.q)).length === 1, "강사가 직접 넣은 대표 영상 · 썸네일은 그대로 · 질문은 한 번만", F2);
+    ok(OO.moonFree1117(() => null).result.skipped, "문대표 페이지가 없으면 건너뛰기", null);
+    ok(OO.OPS.some((x) => x.id === "2026-11-01-moon-free-1117" && x.run === OO.moonFree1117), "무료강의 11/17 작업 목록 등록", null);
+  }
   delete jar.dc_v;
 
   console.log("\n영상 길이 (비메오 · 유튜브 실제 재생 시간)");

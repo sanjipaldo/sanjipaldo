@@ -1,5 +1,6 @@
 /* /api/vod-kakao — 카카오가 돌아오는 주소 (Kakao Developers 의 리다이렉트 URI 와 연결 끊기 웹훅 둘 다 여기)
  *  GET ?code=…&state=…          로그인 · 가입 마치기 → /?vodlogin=ok#/vod… 로 돌아가요
+ *                               (마이페이지에서 연결하기: linked 연결됨 · taken 다른 계정이 쓰는 카카오 · other 이미 다른 카카오가 붙어 있음)
  *  GET ?error=access_denied     동의 취소 → /?vodlogin=deny
  *  GET|POST ?user_id=…&referrer_type=…  (Authorization: KakaoAK <Admin 키>)  사용자가 카카오 쪽에서 연결을 끊었을 때 */
 "use strict";
@@ -36,11 +37,16 @@ module.exports = handler(["GET", "POST"], async (req, res) => {
     const pf = kakao.profileOf(await kakao.me(at)), terms = await kakao.terms(at), chAdded = await kakao.channelAdded(at);
     const tag = process.env.KAKAO_MKT_TAG || "marketing", mt = terms ? terms.find((t) => t.tag === tag) : null, mkt = !!(mt && (mt.agreed === true || mt.agreed_at));
     const known = await V.get(V.K.kakao(pf.kakaoId));
-    // 1) 이메일 회원에 카카오 연결 (마이페이지에서 ‘카카오 연결’)
-    if (ck.link && !known) {
-      if (!(await V.create(V.K.kakao(pf.kakaoId), { id: ck.link }))) return back(res, "fail");
-      await V.update(V.K.member(ck.link), (m) => m && Object.assign(m, { kakaoId: pf.kakaoId, kakaoCh: chAdded == null ? m.kakaoCh : chAdded, kakaoLinkedAt: Date.now() }));
-      V.login(req, res, ck.link); return back(res, "ok", ck.next || "#/vod/my/account");
+    // 1) 이메일 회원에 카카오 연결 (마이페이지 › 회원 정보 수정 › ‘카카오 연결하기’) — 로그인한 그 계정에만 붙이고, 다른 계정으로 바꿔 로그인하지 않아요
+    if (ck.link) {
+      const to = ck.next || "#/vod/my/account", cur = await V.get(V.K.member(ck.link));
+      if (!cur || cur.blocked || cur.withdrawnAt) return back(res, "fail");
+      if (known && known.id === ck.link) { V.login(req, res, ck.link); return back(res, "linked", to); } // 이미 이 계정에 연결돼 있어요
+      if (known) return back(res, "taken", to); // 이 카카오는 다른 두고클래스 계정이 쓰고 있어요
+      if (cur.kakaoId && cur.kakaoId !== pf.kakaoId) return back(res, "other", to); // 이 계정에는 다른 카카오가 이미 붙어 있어요
+      if (!(await V.create(V.K.kakao(pf.kakaoId), { id: ck.link }))) return back(res, "fail", to);
+      await V.update(V.K.member(ck.link), (m) => m && Object.assign(m, { kakaoId: pf.kakaoId, kakaoCh: chAdded == null ? m.kakaoCh : chAdded, kakaoLinkedAt: Date.now(), phone: m.phone || pf.phone || "" }));
+      V.login(req, res, ck.link); return back(res, "linked", to);
     }
     // 2) 이미 카카오로 가입한 회원 → 로그인
     if (known) {
