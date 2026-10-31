@@ -1001,6 +1001,20 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
     ok(OO.moonFree1117(() => null).result.skipped, "문대표 페이지가 없으면 건너뛰기", null);
     ok(OO.OPS.some((x) => x.id === "2026-11-01-moon-free-1117" && x.run === OO.moonFree1117), "무료강의 11/17 작업 목록 등록", null);
   }
+  { // 문대표 무료강의 2차: 좌우 영상 끄기 · 사전 미션 · 증정 혜택 (1차 작업 뒤 운영 DB 모양)
+    const base = { liveAt: "2026-11-17T19:30", off: {}, intro: { youtube: "https://www.youtube.com/watch?v=mPFHz1JQj3U" }, videos: { items: [{ youtube: "x" }] },
+      question: { title: "문대표에게 직접 묻고 싶은 게 있으신가요?", url: "https://forms.gle/fJ4sELiTBhnjAeRHA", note: "질문 메모 후", promise: "지금 남겨 주시면" }, kakao: { url: "https://m.site.naver.com/2iZFQ" } };
+    let w = OO.moonFreeMission((k) => (k === "content:moon" ? { brand: { theme: "nz" }, freeClass: base } : null));
+    const F = w.writes["content:moon"].freeClass;
+    ok(F.off.videos === true && !F.off.intro && F.intro.youtube.endsWith("mPFHz1JQj3U") && F.videos.items.length === 1, "좌우 영상 3개만 끄고 대표 영상은 그대로 (영상 목록은 지우지 않음)", F.off);
+    ok(F.question.url === "https://docs.google.com/forms/d/e/1FAIpQLSfMZBEB9Z5_RjKYqeeldP2vYBxW5fC-krFqzhxxGiHQz7F5Xg/viewform?usp=send_form" && F.question.title === "문대표의 *사전 미션*" && F.question.label === "사전 미션 하러 가기" && F.question.promise === "" && /1분/.test(F.question.desc) && /구글폼/.test(F.question.note), "사전 미션: 새 구글폼 · 제목 · 버튼 · 안내 (초록 강조 상자는 숨김)", F.question);
+    ok(F.bonus.items.length === 8 && F.bonus.items.every((x) => x.title) && /톡방 참여자 전원/.test(F.bonus.badge) && /전원 증정/.test(F.bonus.title), "참여자 전원 증정 혜택 01~08 · 톡방 배지", F.bonus);
+    ok(F.liveAt === "2026-11-17T19:30" && F.kakao.url === "https://m.site.naver.com/2iZFQ", "다른 칸(일정 · 오픈채팅)은 그대로", null);
+    w = OO.moonFreeMission((k) => (k === "content:moon" ? { freeClass: Object.assign({}, F, { bonus: { items: [{ title: "내가 쓴 자료" }] }, off: { intro: true } }) } : null));
+    const F2 = w.writes["content:moon"].freeClass;
+    ok(F2.bonus.items.length === 1 && F2.bonus.items[0].title === "내가 쓴 자료" && !F2.off.intro, "강사가 넣은 증정 항목은 그대로 · 꺼져 있던 대표 영상은 다시 켬", F2);
+    ok(OO.OPS.findIndex((x) => x.id === "2026-11-01-moon-free-mission") > OO.OPS.findIndex((x) => x.id === "2026-11-01-moon-free-1117"), "2차 작업은 1차 뒤에 실행", null);
+  }
   delete jar.dc_v;
 
   console.log("\n영상 길이 (비메오 · 유튜브 실제 재생 시간)");

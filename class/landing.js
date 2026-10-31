@@ -27,24 +27,7 @@
   const NZ_FLAG = '<svg viewBox="0 0 60 30" aria-hidden="true"><rect width="60" height="30" fill="#012169"/><path d="M0 0l30 15M30 0L0 15" stroke="#fff" stroke-width="3"/><path d="M0 0l30 15M30 0L0 15" stroke="#c8102e" stroke-width="1.4"/><path d="M15 0v15M0 7.5h30" stroke="#fff" stroke-width="5"/><path d="M15 0v15M0 7.5h30" stroke="#c8102e" stroke-width="3"/>' +
     [[45, 6, 2.2], [40, 13, 2.2], [50, 12, 1.9], [45, 24, 2.5]].map((x) => { const pts = []; for (let i = 0; i < 10; i++) { const r = i % 2 ? x[2] * 0.42 : x[2], a = -Math.PI / 2 + i * Math.PI / 5; pts.push((x[0] + r * Math.cos(a)).toFixed(2) + "," + (x[1] + r * Math.sin(a)).toFixed(2)); } return '<polygon points="' + pts.join(" ") + '" fill="#c8102e" stroke="#fff" stroke-width=".7"/>'; }).join("") + "</svg>";
 
-  /* 뉴질랜드 그림 — 직접 그린 고사리 잎(실버펀 느낌, 상표 로고 아님) · 남알프스 산 · 초록 언덕 */
-  const FERN = (() => {
-    let g = '<path d="M100 396C97 300 105 170 100 18" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>';
-    for (let i = 0; i < 19; i++) {
-      const t = i / 19, y = 384 - t * 352, len = 92 * (1 - t * 0.82), w = 15 * (1 - t * 0.55);
-      [-1, 1].forEach((d) => {
-        const a = d * (64 - t * 22), r = a * Math.PI / 180, cx = 100 + (len / 2) * Math.sin(r), cy = y - (len / 2) * Math.cos(r);
-        g += '<ellipse cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" rx="' + (w / 2).toFixed(1) + '" ry="' + (len / 2).toFixed(1) + '" transform="rotate(' + a.toFixed(1) + " " + cx.toFixed(1) + " " + cy.toFixed(1) + ')"/>';
-      });
-    }
-    return '<svg viewBox="0 0 200 400" fill="currentColor" aria-hidden="true" focusable="false">' + g + '<ellipse cx="100" cy="22" rx="6" ry="14"/></svg>';
-  })();
-  const NZ_SCENE = '<svg class="nz-scene" viewBox="0 0 1440 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">' +
-    '<path fill="#b9d3e6" d="M0 205L110 128L180 162L300 66L388 132L470 96L560 152L662 54L762 140L860 102L962 160L1064 76L1164 140L1262 96L1362 150L1440 118V260H0Z"/>' +
-    '<path fill="#fff" d="M300 66L326 88L312 86L300 98L288 86L274 89ZM662 54L690 80L674 77L662 90L650 77L634 81ZM1064 76L1090 98L1076 95L1064 107L1052 95L1038 98ZM470 96L488 110L470 108L456 112Z"/>' +
-    '<path fill="#8fb3d1" d="M0 232L150 166L262 204L384 152L522 212L644 168L784 216L924 172L1082 222L1222 178L1440 228V260H0Z"/>' +
-    '<path fill="#3f9b6b" d="M0 240C200 204 362 252 562 226S902 196 1102 232S1342 214 1440 236V260H0Z"/>' +
-    '<path fill="#1f7049" d="M0 254C240 236 520 262 760 248S1200 236 1440 252V260H0Z"/></svg>';
+  // 뉴질랜드 테마 배경은 실제 풍경 사진 (assets/landing/nz-hero*.jpg · nz-forest.jpg · nz-milford.jpg, CSS 에서 깔아요)
   function headline(text) {
     const lines = String(text || "").split("\n").filter(Boolean);
     return lines.map((l, i) => (i === lines.length - 1 && lines.length > 1 ? '<span class="lp-mark">' + esc(l) + "</span>" : esc(l))).join("<br>");
@@ -253,19 +236,21 @@
   // 대표 영상: 첫 화면 바로 아래 크게 (썸네일을 누르면 그 자리에서 재생 — 처음부터 유튜브 창을 띄우지 않아 빠르게 열려요)
   FC.intro = (F) => {
     const v = F.intro || {}, y = DB.youtubeId(v.youtube || "");
-    if (!y || (F.off || {}).videos) return ""; // 강사센터 ‘YouTube 영상’ 탭의 보임 스위치가 대표 영상 · 좌우 영상을 함께 켜고 꺼요
+    if (!y) return "";
     return '<section class="fc-intro" aria-labelledby="fc-intro-t"><div class="section-heading"><span>' + esc(v.kicker || "WATCH FIRST") + '</span><h2 id="fc-intro-t">' + esc(v.title || "영상으로 먼저 만나보세요") + "</h2>" + (v.desc ? "<p>" + esc(v.desc) + "</p>" : "") + "</div>" +
       '<div class="fc-intro-frame" data-y="' + esc(y) + '"><button type="button" class="fc-intro-play" data-fc="intro-play" aria-label="' + esc(v.title || "대표 영상") + ' 재생"><img src="https://i.ytimg.com/vi/' + esc(y) + '/maxresdefault.jpg" data-alt="https://i.ytimg.com/vi/' + esc(y) + '/hqdefault.jpg" alt="" decoding="async">' +
         '<span class="fc-intro-btn" aria-hidden="true">' + SV(IC.play, 30) + "</span>" + (v.caption ? '<span class="fc-intro-cap">' + esc(v.caption) + "</span>" : "") + "</button></div>" +
       '<a class="fc-yt-out" href="https://www.youtube.com/watch?v=' + esc(y) + '" target="_blank" rel="noopener">유튜브에서 보기 ↗</a></section>';
   };
-  FC.question = (F) => { const q = F.question; return '<section class="question-cta"><span class="micro-badge"><i aria-hidden="true"></i>' + esc(q.badge) + "</span><h2>" + esc(q.title) + "</h2>" + (q.desc ? "<p>" + nl(q.desc) + "</p>" : "") +
+  // 제목의 *별표*로 감싼 글자는 강조색 (예: 문대표의 *사전 미션*)
+  const emText = (t) => esc(t || "").replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
+  FC.question = (F) => { const q = F.question; return '<section class="question-cta">' + (q.badge ? '<span class="micro-badge"><i aria-hidden="true"></i>' + esc(q.badge) + "</span>" : "") + "<h2>" + emText(q.title) + "</h2>" + (q.desc ? "<p>" + nl(q.desc) + "</p>" : "") +
       (q.promise ? '<p class="q-promise">' + SV(IC.check, 18) + "<span>" + nl(q.promise) + "</span></p>" : "") +
-      (q.url ? '<a class="primary-cta" href="' + esc(q.url) + '" target="_blank" rel="noreferrer">' : '<a class="primary-cta" href="#" data-fc="question">') + SV(IC.msg) + esc(q.label) + "</a>" + (q.note ? "<small>" + esc(q.note) + "</small>" : "") + "</section>"; };
+      (q.url ? '<a class="primary-cta" href="' + esc(q.url) + '" target="_blank" rel="noreferrer">' : '<a class="primary-cta" href="#" data-fc="question">') + SV(IC.msg) + esc(q.label) + '<span class="cta-arrow" aria-hidden="true">→</span></a>' + (q.note ? "<small>" + esc(q.note) + "</small>" : "") + "</section>"; };
   FC.gifts = (F) => {
     const g = F.gifts, items = (g.items || []).filter((x) => x.title), now = Date.now();
     if (!items.length) return "";
-    return '<section class="gift-section"><div class="section-heading"><span>' + esc(g.kicker) + "</span><h2>" + esc(g.title) + "</h2><p>" + items.map((x) => giftOpen(x, now) ? "D-DAY" : dayLabel(x.openAt, now)).join(" · ") + "에 한 권씩 순차 오픈됩니다.<br>" + esc(g.desc || "") + "</p></div>" +
+    return '<section class="gift-section"><div class="section-heading"><span>' + esc(g.kicker) + "</span><h2>" + esc(g.title) + "</h2><p>" + items.map((x) => giftOpen(x, now) ? "D-DAY" : dayLabel(x.openAt, now)).join(" · ") + "에 한 권씩 순차 오픈됩니다. <br>" + esc(g.desc || "") + "</p></div>" +
       '<div class="gift-grid">' + items.map((x, i) => {
         const open = giftOpen(x, now), n = i + 1;
         return '<article class="gift-card gift-card--' + (ACCENT[x.color] || "blue") + (open ? " is-unlocked" : "") + '"' + (open ? "" : ' data-open-at="' + esc(x.openAt || "") + '"') + '><span class="gift-day">' + (open ? "D-DAY" : dayLabel(x.openAt, now)) + "</span>" +
@@ -279,6 +264,14 @@
           '<span class="gift-status' + (open ? " is-open" : "") + '">' + SV(open ? IC.down : IC.lock, open ? 15 : 14) + (open ? "공개됨 · 표지를 눌러 열기" : esc(leftLabel(x.openAt, now))) + "</span></article>";
       }).join("") + "</div>" +
       '<div class="gift-timeline" aria-label="선물 공개 일정">' + items.map((x, i) => "<span><strong>" + (giftOpen(x, now) ? "D-DAY" : dayLabel(x.openAt, now)) + "</strong>" + (i + 1) + "번째 선물 오픈</span>").join("") + "</div></section>";
+  };
+  FC.bonus = (F) => {
+    const B = F.bonus || {}, items = (B.items || []).filter((x) => x && x.title);
+    if (!items.length) return "";
+    return '<section class="fc-bonus" aria-labelledby="fc-bonus-t"><div class="section-heading">' + (B.kicker ? "<span>" + esc(B.kicker) + "</span>" : "") + '<h2 id="fc-bonus-t">' + emText(B.title) + "</h2>" + (B.desc ? "<p>" + nl(B.desc) + "</p>" : "") + "</div>" +
+      '<div class="fc-bonus-card">' + (B.badge ? '<p class="fc-bonus-badge">' + esc(B.badge) + "</p>" : "") +
+      '<ol class="fc-bonus-list">' + items.map((x, i) => '<li><b>' + String(i + 1).padStart(2, "0") + "</b><span><strong>" + esc(x.title) + "</strong>" + (x.desc ? "<small>" + esc(x.desc) + "</small>" : "") + "</span></li>").join("") + "</ol>" +
+      (B.note ? '<p class="fc-bonus-note">' + esc(B.note) + "</p>" : "") + "</div></section>";
   };
   FC.kakao = (F) => { const k = F.kakao; if (!k.url) return ""; return '<section class="question-cta question-cta--compact"><span class="micro-badge micro-badge--kakao">' + esc(k.badge) + "</span><h2>" + esc(k.title) + "</h2>" + (k.desc ? "<p>" + nl(k.desc) + "</p>" : "") +
       '<a class="kakao-cta" href="' + esc(k.url) + '" target="_blank" rel="noreferrer">' + esc(k.label) + '<span aria-hidden="true">→</span></a>' + (k.note ? "<small>" + esc(k.note) + "</small>" : "") + "</section>"; };
@@ -307,7 +300,7 @@
     const w = whenParts(F.liveAt), day = w ? w.day.replace(/ \(.\)$/, "") : "무료강의";
     const tiles = [["sprout", "청정 자연에서 온 원료", "남반구 청정 섬나라의 자연에서 자란 원료로 만들어요."], ["shieldCheck", "까다로운 식품 안전 기준", "뉴질랜드 1차산업부(MPI)의 기준 아래 관리되는 제품이에요."],
       ["sparkles", "한국에서 사랑받는 품목", "마누카꿀 · 프로폴리스 · 초록입홍합 · 초유처럼 찾는 사람이 많아요."], ["factory", "아시아 최초 공장 승인 · 소량 제조", "적은 수량으로 내 브랜드 제품을 만드는 방법, " + day + " 무료강의에서 모두 공개해요."]];
-    return '<section class="nz-why" aria-labelledby="nz-why-t"><span class="nz-why-fern f1" aria-hidden="true">' + FERN + '</span><span class="nz-why-fern f2" aria-hidden="true">' + FERN + "</span>" +
+    return '<section class="nz-why" aria-labelledby="nz-why-t">' +
       '<div class="nz-why-in"><p class="nz-why-k"><span class="nz-flag">' + NZ_FLAG + "</span>WHY NEW ZEALAND · AOTEAROA</p>" +
       '<h2 id="nz-why-t">왜 지금, <em>뉴질랜드</em> 건강식품일까요?</h2><p class="nz-why-d">‘길고 흰 구름의 나라’ 아오테아로아(Aotearoa). 청정 자연과 까다로운 기준이 만든 뉴질랜드 건강식품은 한국에서도 오래 사랑받아 왔어요.</p>' +
       '<div class="nz-why-g">' + tiles.map((x, i) => '<div class="nz-why-t' + (i === 3 ? " hot" : "") + '"><span class="nz-why-i">' + icon(x[0]) + "</span><small>0" + (i + 1) + "</small><b>" + x[1] + "</b><p>" + esc(x[2]) + "</p></div>").join("") + "</div></div></section>";
@@ -344,7 +337,7 @@
     root.innerHTML = '<div class="dg bk' + (nz ? " nz" : "") + '" style="' + vars + '"><div class="landing-page">' +
       (!F.published ? '<div class="fc-draft">' + icon("eyeOff", "sm") + "비공개 상태예요. 강사센터 ‘무료강의 페이지’에서 ‘공개 중’으로 바꾸면 누구나 볼 수 있어요.</div>" : "") +
       '<section class="bk-hero"><span class="bk-glow" aria-hidden="true"></span><span class="bk-floor" aria-hidden="true"></span>' +
-      (nz ? '<span class="nz-sky" aria-hidden="true"><i class="nz-cloud c1"></i><i class="nz-cloud c2"></i><i class="nz-cloud c3"></i></span><span class="nz-hero-fern" aria-hidden="true">' + FERN + "</span>" + NZ_SCENE : "") +
+      (nz ? '<span class="nz-photo" aria-hidden="true"></span>' : "") +
       '<nav class="bk-nav" aria-label="사이트 이동"><a class="bk-nav-a bk-nav-dc" href="' + esc(dcBack()) + '">' + SV(IC.left, 16) + '<img src="assets/brand/doogo-class-word.svg" alt="DOOGO CLASS"><span>바로가기</span></a>' +
         '<a class="bk-nav-a bk-nav-dg" href="#/doinggo" aria-label="두잉고 홈으로">' + window.doinggoB(nz ? "black" : "white", "bk-nav-dgl") + "<span>홈</span></a></nav>" +
       '<div class="bk-hero-in">' +
@@ -354,7 +347,7 @@
         art + (!F.off.countdown ? '<div class="bk-hero-count">' + FC.countdown(F, c) + "</div>" : "") +
       "</div></section>" + (nz ? nzFreeBand(F) : "") +
       "<main>" + rest + "</main>" +
-      (nz ? (() => { const w = whenParts(F.liveAt); return '<div class="nz-bye"><span class="nz-bye-fern" aria-hidden="true">' + FERN + '</span><p><span class="nz-flag">' + NZ_FLAG + '</span><b lang="mi">Ka kite anō!</b></p><span>' + (w && !freeEnded(F) ? esc(w.day + " " + w.time) + ", 라이브에서 만나요" : "다음 무료강의에서 또 만나요") + "</span><small>‘다음에 또 만나요’라는 뜻의 마오리어 인사예요</small></div>"; })() : "") +
+      (nz ? (() => { const w = whenParts(F.liveAt); return '<div class="nz-bye"><p><span class="nz-flag">' + NZ_FLAG + '</span><b lang="mi">Ka kite anō!</b></p><span>' + (w && !freeEnded(F) ? esc(w.day + " " + w.time) + ", 라이브에서 만나요" : "다음 무료강의에서 또 만나요") + "</span><small>‘다음에 또 만나요’라는 뜻의 마오리어 인사예요</small></div>"; })() : "") +
       // 맨 아래 상호를 누르면 강사센터의 무료강의 페이지 편집으로
       '<footer><a href="#/center/free" aria-label="강사센터 무료강의 페이지 편집으로 이동">© 2026 ' + esc(F.company || c.brand.name) + "</a></footer>" +
       '<div class="fc-powered-row">' + window.poweredBy("white") + "</div>" +

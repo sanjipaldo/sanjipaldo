@@ -292,7 +292,21 @@ const MOON_CONTENT = {
         { title: "경쟁 없이 돈 버는 역대급 시니어 부업", channel: "배워야산다", youtube: "https://www.youtube.com/watch?v=2HwP51YQtpI&t=304s" }
       ]
     },
-    question: { title: "문대표에게 직접 묻고 싶은 게 있으신가요?", url: "https://forms.gle/fJ4sELiTBhnjAeRHA", note: "질문 메모 후 무료강의 신청 페이지로 이동할 수 있어요" },
+    off: { videos: true }, // 좌우 영상 3개는 끄고 위 대표 영상 하나로
+    question: { badge: "강의 전 필수 · 1분 소요", title: "문대표의 *사전 미션*", desc: "강의 전에 딱 1분만 내주세요.\n사전 미션을 완료하면 강의가 나에게 맞는 이야기로 바뀝니다.", promise: "", label: "사전 미션 하러 가기", url: "https://docs.google.com/forms/d/e/1FAIpQLSfMZBEB9Z5_RjKYqeeldP2vYBxW5fC-krFqzhxxGiHQz7F5Xg/viewform?usp=send_form", note: "구글폼으로 연결됩니다 · 약 1분 소요" },
+    bonus: {
+      kicker: "FOR EVERYONE", title: "무료강의 참여자 *전원 증정* 혜택", desc: "뉴질랜드 해외 건강식품의 모든 것, 강의에 참여하시면 아래 자료를 전부 받아 가실 수 있어요.", badge: "🎁 톡방 참여자 전원 공개 예정 🎁", note: "위 자료는 무료강의 당일, 톡방 참여자 전원에게 공개됩니다.",
+      items: [
+        { title: "1편_해외 건기식 브랜드, 왜 지금인가", desc: "국내 경쟁을 벗어나 뉴질랜드 건강식품 브랜드를 시작해야 하는 이유" },
+        { title: "2편_사업자 준비부터 쇼핑몰 입점까지 (전자책 & VOD)", desc: "사업자 · 통신판매업 신고부터 스마트스토어 · 쿠팡 입점 순서" },
+        { title: "3편_CAFE24 자사몰 구축 · 해외건강식품 CS (전자책 & VOD)", desc: "내 쇼핑몰 만들기부터 고객 응대까지 실전 운영" },
+        { title: "수입식품 영업등록 · 통관 서류 체크리스트", desc: "위생교육 · 영업등록 · 통관에 필요한 서류를 한 장으로" },
+        { title: "뉴질랜드 건강식품 마진 계산기", desc: "현지가 · 환율 · 배송비 · 수수료를 넣으면 순이익이 바로" },
+        { title: "소량 제조로 시작하는 내 브랜드 제품 만들기", desc: "아시아 최초 공장 승인 · 적은 수량으로 시작하는 방법" },
+        { title: "상세페이지 · 광고 표현 주의 문구 정리", desc: "건강식품 표시 · 광고에서 쓰면 안 되는 표현" },
+        { title: "첫 판매부터 재구매까지 운영 로드맵", desc: "첫 주문 · 후기 · 재구매로 이어지는 브랜드 운영 루틴" }
+      ]
+    },
     gifts: {
       kicker: "BEFORE THE CLASS", title: "강의 전, 선물 전자책 3권", desc: "공개일이 되면 잠금이 자동으로 풀리고, 표지를 누르면 전자책이 열려요.",
       items: [
