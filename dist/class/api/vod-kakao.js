@@ -56,7 +56,9 @@ module.exports = handler(["GET", "POST"], async (req, res) => {
     if (pf.email) await V.create(V.K.email(pf.email), { id: m.id });
     V.login(req, res, m.id); return back(res, "ok", ck.next);
   } catch (e) {
-    console.error("[vod-kakao]", e.status || "", e.message);
+    // 카카오 에러 코드(KOE…)까지 남겨요 — Vercel 런타임 로그에서 원인을 바로 찾게 (비밀 값은 남기지 않아요)
+    const kb = e.body || {};
+    console.error("[vod-kakao]", e.status || "", kb.error_code || kb.code || kb.error || "", e.message);
     return back(res, "fail");
   }
 });

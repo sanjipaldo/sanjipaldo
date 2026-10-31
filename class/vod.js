@@ -1526,14 +1526,14 @@
   function tcCard(t, i) {
     const ph = t.ph || insPhoto(t.iid), sns = snsOf(t.iid);
     return '<div class="vd-tc" style="--c:' + ACC[(i + 1) % ACC.length] + '" data-tq="' + esc(tqHay(t)) + '" data-tc="' + esc(t.cats.join("|")) + '"' + (tpgHit(t) ? "" : " hidden") + '><a class="vd-tc-main" href="' + tHref(t.iid) + '"><span class="vd-tc-ph vd-tc-s' + (i % 4) + '"><i class="vd-tc-bg" aria-hidden="true"></i>' + (ph ? '<img src="' + esc(ph) + '" alt="" loading="lazy">' : "<em>" + esc((t.name || "D").slice(0, 1)) + "</em>") + '<span class="vd-tc-n">클래스 ' + t.ps.length + "</span></span>" +
-      "<b>" + esc(t.name || "") + "</b><small>" + esc(t.tag || t.cats.join(" · ")) + '</small><span class="vd-tc-cat">' + esc(t.cats.slice(0, 2).join(" · ")) + "</span></a>" +
+      "<b>" + esc(t.name || "") + "</b><small>" + esc(t.tag || t.cats.join(" · ")) + '</small><span class="vd-tc-cat">' + esc(t.cats.slice(0, 2).join(" · ")) + '</span><span class="vd-tc-more">자세히 보기' + icon("arrowRight", "xs") + "</span></a>" +
       '<span class="vd-tc-sns">' + sns.map((x) => '<a href="' + esc(x[0]) + '" target="_blank" rel="noopener" aria-label="' + esc(t.name) + " " + x[2] + '">' + icon(x[1], "xs") + "</a>").join("") + '<a href="' + tHref(t.iid) + '" aria-label="' + esc(t.name) + ' 강사 페이지">' + icon("arrowUpRight", "xs") + "</a></span></div>";
   }
   // 홈 강사진: ‘강사진’ 글씨를 누르면 강사진 페이지로
   function teachers(r) {
     const list = teachHome(r || homeRails().find((x) => x.k === "teach")).slice(0, 8);
     if (!list.length) return "";
-    return '<section class="vd-sec vd-teach"><div class="vd-teach-h"><a class="vd-teach-link" href="#/vod/teachers"><h2 data-eg>강사진</h2><span data-rv="fade">Teachers</span>' + icon("chevRight", "sm") + '</a><p data-rv="fade">직접 해서 번 사람만 가르쳐요.</p><a class="vd-more vd-teach-more" href="#/vod/teachers">강사진 전체보기' + icon("chevRight", "xs") + '</a></div><div class="vd-teach-g vd-teach-rail" data-rv-kids>' + list.map(tcCard).join("") + "</div></section>";
+    return '<section class="vd-sec vd-teach"><div class="vd-teach-h"><a class="vd-teach-link" href="#/vod/teachers"><h2 data-eg>강사진</h2><span data-rv="fade">Teachers</span>' + icon("chevRight", "sm") + '</a><p data-rv="fade">직접 해서 번 사람만 가르쳐요.</p><a class="vd-more vd-teach-more" href="#/vod/teachers">강사진 전체보기' + icon("chevRight", "xs") + '</a>' + pager("vd-r-teach") + '</div><div class="vd-teach-g vd-teach-rail" id="vd-r-teach" data-drag data-rv-kids>' + list.map(tcCard).join("") + '</div><div class="vd-teach-prog" data-prog="vd-r-teach" aria-hidden="true"><i></i></div></section>';
   }
   function pageTeachers() {
     const list = teacherList(), n = list.reduce((a, t) => a + t.ps.length, 0), cats = [];
@@ -3088,7 +3088,34 @@
   // 가로 줄: 화살표로 한 화면씩 넘기고, ‘지금 / 전체’ 쪽수를 맞춘다
   function railStep(el) { const a = el.children[0], b = el.children[1]; if (!a) return { step: el.clientWidth, per: 1, n: 0 }; const step = b ? b.offsetLeft - a.offsetLeft : a.offsetWidth; const per = Math.max(1, Math.round((el.clientWidth + step - a.offsetWidth) / step)); return { step, per, n: el.children.length }; }
   function railInfo(el) { const r = railStep(el), total = Math.max(1, Math.ceil(r.n / r.per)), cur = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? total : Math.min(total, Math.round(el.scrollLeft / (r.step * r.per)) + 1); return { cur, total }; }
+  // 마우스로 끌어 넘기기 (PC 강사진 슬라이드) — 끈 뒤의 클릭은 막고, 놓으면 카드 한 장 단위로 맞춰요
+  let railDrag = null;
+  function dragEnd() {
+    const d = railDrag; railDrag = null; if (!d || !d.moved) return;
+    d.el.classList.remove("drag"); d.el.__moved = true; setTimeout(() => { d.el.__moved = false; }, 0);
+    const r = railStep(d.el); if (r.step) d.el.scrollTo({ left: Math.round(d.el.scrollLeft / r.step) * r.step, behavior: "smooth" });
+  }
+  function wireDrag() {
+    if (!window.__vdDrag) {
+      window.__vdDrag = true;
+      window.addEventListener("pointermove", (e) => { const d = railDrag; if (!d) return; const dx = e.clientX - d.x0; if (!d.moved && Math.abs(dx) > 6) { d.moved = true; d.el.classList.add("drag"); } if (d.moved) d.el.scrollLeft = d.s0 - dx; });
+      window.addEventListener("pointerup", dragEnd); window.addEventListener("pointercancel", dragEnd);
+    }
+    document.querySelectorAll("[data-drag]").forEach((el) => {
+      if (el.__drag) return; el.__drag = true;
+      el.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse" || e.button !== 0 || el.scrollWidth <= el.clientWidth) return; railDrag = { el, x0: e.clientX, s0: el.scrollLeft, moved: false }; });
+      el.addEventListener("click", (e) => { if (el.__moved) { e.preventDefault(); e.stopPropagation(); el.__moved = false; } }, true);
+      el.addEventListener("dragstart", (e) => e.preventDefault());
+    });
+  }
   function wireRails() {
+    wireDrag();
+    document.querySelectorAll("[data-prog]").forEach((bar) => {
+      const el = document.getElementById(bar.dataset.prog), i = bar.firstElementChild; if (!el || !i) return;
+      const upd = () => { const sw = el.scrollWidth, cw = el.clientWidth, w = sw > cw + 2 ? cw / sw : 1; bar.classList.toggle("one", w >= 1); i.style.width = (w * 100).toFixed(2) + "%"; i.style.left = (sw > cw ? (el.scrollLeft / sw) * 100 : 0).toFixed(2) + "%"; };
+      el.addEventListener("scroll", upd, { passive: true }); upd();
+      if (!bar.__ro && "ResizeObserver" in window) { bar.__ro = new ResizeObserver(upd); bar.__ro.observe(el); }
+    });
     document.querySelectorAll("[data-pager]").forEach((pg) => {
       const el = document.getElementById(pg.dataset.pager); if (!el) return;
       const upd = () => { const i = railInfo(el), n = pg.querySelector(".vd-pager-n"); if (n) n.innerHTML = "<b>" + i.cur + "</b> / " + i.total; const bs = pg.querySelectorAll("button"); bs[0].disabled = i.cur <= 1; bs[1].disabled = i.cur >= i.total; pg.classList.toggle("one", i.total <= 1); };
