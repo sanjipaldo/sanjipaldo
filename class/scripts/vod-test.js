@@ -171,6 +171,13 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
   r = await call("vod-auth", { method: "GET", query: { action: "kakao", next: "#/vod/checkout/v5" } });
   const st = new URL(r.location).searchParams.get("state");
   ok(r.status === 302 && /kauth\.kakao\.com\/oauth\/authorize/.test(r.location) && /redirect_uri=https%3A%2F%2Fwww\.doogoclass\.com%2Fapi%2Fvod-kakao/.test(r.location) && st && jar.dc_ks, "카카오 동의 화면으로 (state 쿠키)", r.location);
+  { const ks = jar.dc_ks;
+    for (const h of ["doinggo.doogoclass.com", "doogo-class.vercel.app"]) {
+      r = await call("vod-auth", { method: "GET", query: { action: "kakao", next: "#/vod/checkout/v5" }, headers: { host: h } });
+      ok(r.status === 302 && r.location === "https://www.doogoclass.com/api/vod-auth?action=kakao&next=%23%2Fvod%2Fcheckout%2Fv5" && jar.dc_ks === ks, "다른 주소(" + h + ")에서 누르면 www 로 먼저 옮겨요 (state 쿠키 안 붙임)", r.location);
+    }
+    r = await call("vod-auth", { method: "GET", query: { action: "kakao" }, headers: { host: "localhost:4491" } });
+    ok(r.status === 302 && /kauth\.kakao\.com/.test(r.location), "로컬 개발 주소는 그대로 카카오로", r.location); }
   r = await call("vod-kakao", { method: "GET", query: { code: "c1", state: "wrong" } });
   ok(r.status === 302 && /vodlogin=fail/.test(r.location), "state 가 다르면 거절 (CSRF 막기)");
   r = await call("vod-auth", { method: "GET", query: { action: "kakao", next: "#/vod/checkout/v5" } });

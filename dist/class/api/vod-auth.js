@@ -81,6 +81,9 @@ module.exports = handler(["GET", "POST"], async (req, res) => {
   if (req.method === "GET") {
     const q = query(req);
     if (q.action !== "kakao" || !kakao.on()) { res.statusCode = 302; res.setHeader("Location", "/?vodlogin=fail#/vod/login"); return res.end(); }
+    // state 쿠키는 누른 주소에만 붙어요 — 카카오가 돌아오는 주소(www)가 아닌 곳(doinggo. · vercel.app · www 없는 주소)에서 눌렀으면 그 주소로 먼저 옮겨요
+    const home = kakao.home(), here = String(req.headers.host || "").toLowerCase();
+    if (home && here && here !== home && !/^(localhost|127\.0\.0\.1)(:|$)/.test(here)) { res.statusCode = 302; res.setHeader("Location", "https://" + home + "/api/vod-auth?" + new URLSearchParams(q).toString()); return res.end(); }
     const st = crypto.randomBytes(16).toString("hex"), cur = q.link === "1" ? await V.current(req) : null;
     const next = /^#\/vod[\w\-/?=&%.]*$/.test(String(q.next || "")) ? String(q.next) : "#/vod";
     // 카카오 다녀오기는 10분 안에 (쿠키도 토큰도 10분)

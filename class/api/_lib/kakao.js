@@ -10,6 +10,8 @@
 const AUTH = "https://kauth.kakao.com", API = "https://kapi.kakao.com";
 const env = (k) => process.env[k] || "";
 const on = () => !!(env("KAKAO_REST_KEY") && env("KAKAO_CLIENT_SECRET") && env("KAKAO_REDIRECT_URI"));
+/** 카카오가 돌아오는 주소의 호스트 (www.doogoclass.com) — 로그인은 이 주소에서 시작해야 state 쿠키가 맞아요 */
+const home = () => { try { return new URL(env("KAKAO_REDIRECT_URI")).host.toLowerCase(); } catch (e) { return ""; } };
 
 function authorizeUrl(state) {
   const q = new URLSearchParams({ client_id: env("KAKAO_REST_KEY"), redirect_uri: env("KAKAO_REDIRECT_URI"), response_type: "code", state });
@@ -53,4 +55,4 @@ function profileOf(j) {
   };
 }
 
-module.exports = { on, authorizeUrl, token, me, terms, channelAdded, unlink, profileOf, localPhone };
+module.exports = { on, home, authorizeUrl, token, me, terms, channelAdded, unlink, profileOf, localPhone };
