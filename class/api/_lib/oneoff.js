@@ -354,6 +354,64 @@ function storeBank(get) {
   return { writes: { meta: Object.assign({}, meta, { vod: v }) }, result: { bank: "넣음" } };
 }
 
+/* ---------- 실제 운영 시작: ‘기수 신청 · 매출’ 예시 기록 정리 (대표님 요청 2026-10-31) ----------
+ * 파트너센터를 처음 열 때 만들어진 예시 이용료 기록(부알남 · 초이 1기 · 2기, demo)처럼 문대표 것이 아닌 이용료 기록은 모두 지워 매출을 0원에서 시작.
+ * 문대표 기록은 예시(demo)만 지워요. 지운 기록으로 새로 열린 기수가 수강생 없이 남아 있으면 그 기수도 지워요.
+ * 처음부터 있던 기수 · 수강생 · 강사 · 파트너 계정(예시 파트너 · 김나영)은 그대로. 지운 기록으로만 계산된 파트너 지급 기록(예시)도 지워요 */
+const SEED_COHORTS = ["c1", "c2", "c3", "c4", "lc1", "fc1", "cc1"];
+function launchReset(get, keys) {
+  const writes = {}, result = { bills: [], cohorts: [], payouts: [] }, opened = {}, gone = new Set();
+  keys("bill:").forEach((k) => {
+    const b = get(k), iid = k.split(":")[1];
+    if (!isObj(b) || (iid === "moon" && b.demo !== true)) return;
+    writes[k] = null; result.bills.push(iid + " " + (b.cohortName || "") + (b.demo ? " (예시)" : ""));
+    gone.add(b.id || k.split(":")[2]);
+    if (b.cohortId && iid !== "moon" && SEED_COHORTS.indexOf(b.cohortId) < 0) (opened[iid] = opened[iid] || []).push(b.cohortId);
+  });
+  Object.keys(opened).forEach((iid) => {
+    const ck = "cohorts:" + iid, list = get(ck);
+    if (!Array.isArray(list)) return;
+    const used = new Set(keys("stu:" + iid + ":").map((k) => (get(k) || {}).cohortId));
+    const keep = list.filter((co) => !(isObj(co) && opened[iid].indexOf(co.id) >= 0 && !used.has(co.id)));
+    if (keep.length === list.length) return;
+    writes[ck] = keep;
+    list.filter((co) => keep.indexOf(co) < 0).forEach((co) => result.cohorts.push(iid + " " + co.name));
+  });
+  const meta = get("meta");
+  if (isObj(meta) && isObj(meta.affPayouts)) {
+    const po = clone(meta.affPayouts);
+    Object.keys(po).forEach((k) => {
+      const r = isObj(po[k]) ? po[k] : {}, rows = Array.isArray(r.rows) ? r.rows : [];
+      const demo = k.indexOf("aff-demo:") === 0 && !rows.length && !r.amount;
+      if (demo || (rows.length && rows.every((x) => gone.has(x.bid)))) { delete po[k]; result.payouts.push(k); }
+    });
+    if (result.payouts.length) writes.meta = Object.assign({}, meta, { affPayouts: po });
+  }
+  return { writes, result };
+}
+
+/* ---------- 문대표 4기: 11월 21일(토)부터 4주 (대표님 요청 2026-10-31) ---------- */
+function moon4th(get) {
+  const k = "cohorts:moon", list = get(k);
+  if (!Array.isArray(list)) return { writes: {}, result: { skipped: "문대표 기수 없음" } };
+  const co = list.find((x) => isObj(x) && x.id === "c4") || list.find((x) => isObj(x) && x.name === "4기");
+  if (!co) return { writes: {}, result: { skipped: "4기 없음" } };
+  const before = { startDate: co.startDate, weeks: co.weeks || "", classDow: co.classDow };
+  const next = Object.assign({}, co, { startDate: "2026-11-21", weeks: 4, classDow: 6, recruiting: true });
+  return { writes: { [k]: list.map((x) => (x === co ? next : x)) }, result: { cohort: co.name, before, after: { startDate: next.startDate, weeks: 4, classDow: 6 } } };
+}
+
+/* ---------- 문대표 강사 소개 페이지: 신청하기 링크 (새 창) · 마지막 안내 ‘5주’ → ‘4주’ (대표님 요청 2026-10-31) ---------- */
+const MOON_APPLY = "https://m.site.naver.com/2iZFQ";
+function moonApplyLink(get) {
+  const k = "content:moon", c = get(k);
+  if (!isObj(c)) return { writes: {}, result: { skipped: "문대표 콘텐츠 없음" } };
+  const L = isObj(c.landing) ? clone(c.landing) : {}, result = {};
+  if (!L.applyUrl) { L.applyUrl = MOON_APPLY; result.applyUrl = "넣음"; } else result.applyUrl = "이미 있음";
+  if (isObj(L.cta) && L.cta.title === "5주 뒤, 내 이름의 브랜드 사장님이 되어 있을 거예요") { L.cta = Object.assign({}, L.cta, { title: "4주 뒤, 내 이름의 브랜드 사장님이 되어 있을 거예요" }); result.cta = "4주로"; }
+  return { writes: { [k]: Object.assign({}, c, { landing: L }) }, result };
+}
+
 /* 위에서부터 차례로 (앞 작업 결과를 뒤 작업이 본다) */
 const OPS = [
   { id: "2026-10-08-docs-guide-6", note: "문대표 서류 준비 가이드를 6단계로", run: docsGuideSix },
@@ -369,7 +427,10 @@ const OPS = [
   { id: "2026-10-29-vod-demo-member", note: "두고클래스 체험 계정 vod@gmail.com / vod + 산 강의 6개 (0원 체험 주문)", run: vodDemoMember },
   { id: "2026-10-30-hana-second-course", note: "테스트 코치 김하나(1004)가 초이 강의 코치도 맡기 (여러 강의 코치 로그인 확인용)", run: hanaSecondCourse },
   { id: "2026-10-30-moon-paper-book", note: "문대표 종이책 『내 인생의 추월차선은 내가 만든다』를 두고클래스 전자책 메뉴에 (택배 배송 · 15,900원)", run: moonBook },
-  { id: "2026-10-30-store-bank-account", note: "두고클래스 무통장 입금 계좌 IBK기업은행 (주)두고홀딩스 (비어 있을 때만)", run: storeBank }
+  { id: "2026-10-30-store-bank-account", note: "두고클래스 무통장 입금 계좌 IBK기업은행 (주)두고홀딩스 (비어 있을 때만)", run: storeBank },
+  { id: "2026-10-31-launch-reset-bills", note: "실제 운영 시작: 문대표 것을 뺀 기수 신청 · 매출 예시 기록 지우기 (계정은 그대로)", run: launchReset },
+  { id: "2026-10-31-moon-4th-cohort", note: "문대표 4기를 11월 21일(토)부터 4주로", run: moon4th },
+  { id: "2026-10-31-moon-apply-link", note: "문대표 강사 소개 페이지 신청하기 링크(네이버) · 마지막 안내 4주", run: moonApplyLink }
 ];
 
-module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer, vodDemoMember, hanaSecondCourse, moonBook, storeBank, STORE_BANK };
+module.exports = { OPS, fullProgress, docsGuideSix, motivationVideos, moonDemoAccounts, moonProfile, billingVatIncluded, menuNamesV15, logicToBualnam, foodQuickLinkDesc, farmerToGodFarmer, vodDemoMember, hanaSecondCourse, moonBook, storeBank, STORE_BANK, launchReset, moon4th, moonApplyLink, MOON_APPLY };

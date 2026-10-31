@@ -1526,14 +1526,14 @@
   function tcCard(t, i) {
     const ph = t.ph || insPhoto(t.iid), sns = snsOf(t.iid);
     return '<div class="vd-tc" style="--c:' + ACC[(i + 1) % ACC.length] + '" data-tq="' + esc(tqHay(t)) + '" data-tc="' + esc(t.cats.join("|")) + '"' + (tpgHit(t) ? "" : " hidden") + '><a class="vd-tc-main" href="' + tHref(t.iid) + '"><span class="vd-tc-ph vd-tc-s' + (i % 4) + '"><i class="vd-tc-bg" aria-hidden="true"></i>' + (ph ? '<img src="' + esc(ph) + '" alt="" loading="lazy">' : "<em>" + esc((t.name || "D").slice(0, 1)) + "</em>") + '<span class="vd-tc-n">클래스 ' + t.ps.length + "</span></span>" +
-      "<b>" + esc(t.name || "") + "</b><small>" + esc(t.tag || t.cats.join(" · ")) + '</small><span class="vd-tc-cat">' + esc(t.cats.slice(0, 2).join(" · ")) + '</span><span class="vd-tc-more">자세히 보기' + icon("arrowRight", "xs") + "</span></a>" +
+      "<b>" + esc(t.name || "") + "</b><small>" + esc(t.tag || t.cats.join(" · ")) + '</small><span class="vd-tc-cat">' + esc(t.cats.slice(0, 2).join(" · ")) + "</span></a>" +
       '<span class="vd-tc-sns">' + sns.map((x) => '<a href="' + esc(x[0]) + '" target="_blank" rel="noopener" aria-label="' + esc(t.name) + " " + x[2] + '">' + icon(x[1], "xs") + "</a>").join("") + '<a href="' + tHref(t.iid) + '" aria-label="' + esc(t.name) + ' 강사 페이지">' + icon("arrowUpRight", "xs") + "</a></span></div>";
   }
   // 홈 강사진: ‘강사진’ 글씨를 누르면 강사진 페이지로
   function teachers(r) {
     const list = teachHome(r || homeRails().find((x) => x.k === "teach")).slice(0, 8);
     if (!list.length) return "";
-    return '<section class="vd-sec vd-teach"><div class="vd-teach-h"><a class="vd-teach-link" href="#/vod/teachers"><h2 data-eg>강사진</h2><span data-rv="fade">Teachers</span>' + icon("chevRight", "sm") + '</a><p data-rv="fade">직접 해서 번 사람만 가르쳐요.</p><a class="vd-more vd-teach-more" href="#/vod/teachers">강사진 전체보기' + icon("chevRight", "xs") + '</a>' + pager("vd-r-teach") + '</div><div class="vd-teach-g vd-teach-rail" id="vd-r-teach" data-drag data-rv-kids>' + list.map(tcCard).join("") + '</div><div class="vd-teach-prog" data-prog="vd-r-teach" aria-hidden="true"><i></i></div></section>';
+    return '<section class="vd-sec vd-teach"><div class="vd-teach-h"><a class="vd-teach-link" href="#/vod/teachers"><h2 data-eg>강사진</h2><span data-rv="fade">Teachers</span>' + icon("chevRight", "sm") + '</a><p data-rv="fade">직접 해서 번 사람만 가르쳐요.</p><a class="vd-more vd-teach-more" href="#/vod/teachers">강사진 전체보기' + icon("chevRight", "xs") + '</a></div><div class="vd-teach-g vd-teach-rail" id="vd-r-teach" data-rv-kids>' + list.map(tcCard).join("") + '</div><div class="vd-teach-prog" data-prog="vd-r-teach" aria-hidden="true"><i></i></div></section>';
   }
   function pageTeachers() {
     const list = teacherList(), n = list.reduce((a, t) => a + t.ps.length, 0), cats = [];

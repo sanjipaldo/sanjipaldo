@@ -327,6 +327,7 @@ const MOON_CONTENT = {
   // 홍보 랜딩페이지 (강사센터 ‘홍보 랜딩페이지’에서 모두 고칠 수 있다)
   landing: {
     published: true,
+    applyUrl: "https://m.site.naver.com/2iZFQ",
     hero: {
       eyebrow: "두고보는 문대표 · 해외 건기식 브랜드 클래스",
       title: "뉴질랜드 건강식품으로\n내 브랜드 만들기",
@@ -361,7 +362,7 @@ const MOON_CONTENT = {
       includes: ["주차별 강의 영상", "34개 실습 과제와 자동 검수", "매주 라이브 Q&A", "실무 체크리스트 · 마진 계산기", "문대표 AI 조교 (24시간 답변)", "수료증 발급"],
       ctaLabel: "4기 수강 신청하기", ctaUrl: "", note: "결제 후 수강생 전용 학습 플랫폼 계정을 열어 드려요."
     },
-    cta: { title: "5주 뒤, 내 이름의 브랜드 사장님이 되어 있을 거예요", sub: "매주 하나씩, 같이 끝까지 가요.", label: "지금 신청하기", url: "" },
+    cta: { title: "4주 뒤, 내 이름의 브랜드 사장님이 되어 있을 거예요", sub: "매주 하나씩, 같이 끝까지 가요.", label: "지금 신청하기", url: "" },
     contact: { instagram: "", email: "", phone: "", company: "두고보는 문대표" }
   },
   // 처음 들어온 수강생이 홈에서 하나씩 체크하는 시작 가이드
@@ -602,7 +603,7 @@ window.CLASS_SEED = {
     { id: "c1", instructorId: "moon", name: "1기", startDate: "2026-08-06", recruiting: false, classDow: 4, classTime: "20:00" },
     { id: "c2", instructorId: "moon", name: "2기", startDate: "2026-09-03", recruiting: false, classDow: 4, classTime: "20:00" },
     { id: "c3", instructorId: "moon", name: "3기", startDate: "2026-10-01", recruiting: false, classDow: 4, classTime: "20:00" },
-    { id: "c4", instructorId: "moon", name: "4기", startDate: "2026-11-05", recruiting: true, curriculumId: "cur-4w", classDow: 6, classTime: "12:00" },
+    { id: "c4", instructorId: "moon", name: "4기", startDate: "2026-11-21", recruiting: true, curriculumId: "cur-4w", classDow: 6, classTime: "12:00" },
     { id: "lc1", instructorId: "logic", name: "1기", startDate: "2026-10-08", recruiting: true },
     { id: "fc1", instructorId: "farmer", name: "1기", startDate: "2026-10-01", recruiting: true },
     { id: "cc1", instructorId: "choi", name: "1기", startDate: "2026-10-15", recruiting: true }

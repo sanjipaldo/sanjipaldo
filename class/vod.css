@@ -3487,37 +3487,7 @@ a.vd-fln:not(.is-after):hover { border-color: #e2c050; }
   .vd-tpg-cats { margin: 0 -16px; padding: 0 16px; }
 }
 
-/* ---------- PC 홈 강사진: 두고그룹처럼 크게 · 옆으로 넘기는 슬라이드 (오른쪽 끝까지 이어지고 · 화살표 · 끌기 · 아래 진행 막대) ---------- */
-.vd-tc-more { display: none; }
+/* ---------- 홈 강사진 아래 진행 막대 (휴대폰 · 태블릿 가로 슬라이드) — PC 는 처음처럼 4칸 카드 ---------- */
 .vd-teach-prog { position: relative; height: 2px; margin-top: 18px; background: #ececf0; overflow: hidden; }
 .vd-teach-prog i { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--vd-pri); transition: left .2s ease, width .2s ease; }
-.vd-teach-prog.one { visibility: hidden; }
-.vd-teach-h .vd-pager { margin-left: 4px; }
-@media (max-width: 860px) {
-  .vd-teach-h .vd-pager { display: none; }
-}
-@media (min-width: 861px) {
-  .vd-teach-h { align-items: center; }
-  .vd-teach-g.vd-teach-rail { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: clamp(290px, 26vw, 372px); gap: 32px; margin-right: calc(50% - 50vw); padding: 0 calc(50vw - 50%) 4px 0; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; cursor: grab; }
-  .vd-teach-g.vd-teach-rail::-webkit-scrollbar { display: none; }
-  .vd-teach-rail.drag { cursor: grabbing; scroll-snap-type: none; user-select: none; }
-  .vd-teach-rail.drag .vd-tc { pointer-events: none; }
-  .vd-teach-rail > .vd-tc { scroll-snap-align: start; gap: 0; }
-  .vd-teach-rail .vd-tc-main { gap: 0; }
-  /* 사진: 흰 바탕 + 옅은 색 모양 + 아래 가는 줄 — 얼굴이 크게 */
-  .vd-teach-rail .vd-tc-ph { aspect-ratio: 4 / 4.85; border-radius: 0; background: #fff; box-shadow: inset 0 -1px 0 #e6e6ec; margin-bottom: 20px; }
-  .vd-teach-rail .vd-tc-bg { opacity: .18; left: 4%; right: 4%; }
-  .vd-teach-rail .vd-tc-ph img { top: 3%; height: 126%; }
-  .vd-teach-rail .vd-tc:hover .vd-tc-bg { opacity: .3; }
-  .vd-teach-rail .vd-tc-n { left: 0; bottom: 14px; border-radius: 0 999px 999px 0; padding: 0 12px 0 10px; }
-  /* 글: 이름 → 분야(빨강) → 소개 → 줄 → 자세히 보기 */
-  .vd-teach-rail .vd-tc-main > b { order: 1; font-size: 25px; letter-spacing: -0.04em; }
-  .vd-teach-rail .vd-tc-cat { order: 2; margin-top: 6px; font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--vd-pri); }
-  .vd-teach-rail .vd-tc-main > small { order: 3; margin-top: 4px; font-size: 14.5px; color: var(--on3); }
-  .vd-teach-rail .vd-tc-more { order: 4; display: flex; align-items: center; gap: 8px; margin-top: 18px; padding-top: 16px; border-top: 1px solid #ececf0; font-size: 15px; font-weight: 700; color: var(--on1); }
-  .vd-teach-rail .vd-tc-more .icon { width: 16px !important; height: 16px !important; transition: transform .2s ease; }
-  .vd-teach-rail .vd-tc:hover .vd-tc-more .icon { transform: translateX(4px); }
-  .vd-teach-rail .vd-tc-sns { position: absolute; right: 0; bottom: 0; margin: 0; }
-  .vd-teach-rail .vd-tc-sns a:last-child { display: none; }
-  .vd-teach-prog { margin-top: 40px; }
-}
+.vd-teach-prog.one { display: none; }

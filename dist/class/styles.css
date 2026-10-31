@@ -2413,3 +2413,66 @@ a.login-vod:hover { filter: brightness(.97); }
 .lg-vod-demo { margin: 0; text-align: center; font-size: 12.5px; color: var(--mute, #8a8f98); }
 .lg-vod .login-help { margin: 0; text-align: center; }
 .login-stack.svc-vod > .login-alt, .login-stack.svc-vod > .login-intro { display: none; }
+
+/* ===== 수업 캘린더 v2: 칸 안에 점 대신 글씨 (휴대폰은 짧게 · PC 는 길게) + 이번 달 일정 목록 =====
+ * 강의 날은 칸을 통째로 칠하지 않고 옅은 강사 색 + 진한 ‘N주차’ 표시로 — 칸 높이는 줄마다 내용만큼 */
+.cal2 { --cal-main: var(--primary); --cal-on: var(--on-primary, var(--ink)); }
+.th-nz .cal2, .th-nz .cal-agenda, .th-nz .cal-selday { --cal-main: #0b2a5b; --cal-on: #fff; }
+.cal2 .cal { gap: 6px; align-content: start; grid-auto-rows: auto; height: auto; }
+.cal2 .cal-dow { padding: 4px 0 8px; font-size: 12.5px; font-weight: 800; }
+.cal2 .cal-dow.sat { color: #2f6fdb; }
+.cal2 .cal .cal-day { min-height: 104px; height: auto; padding: 8px 6px 8px; align-items: stretch; justify-content: flex-start; gap: 4px; background: var(--canvas); border: 1px solid var(--line-soft); border-radius: 12px; box-shadow: none; opacity: 1; text-align: left; }
+.cal2 .cal .cal-day:hover { border-color: color-mix(in srgb, var(--ink) 45%, transparent); }
+.cal2 .cal .cal-day .d { align-self: flex-start; min-width: 24px; height: 24px; padding: 0 6px; display: inline-grid; place-items: center; border-radius: 999px; font-size: 14px; font-weight: 800; line-height: 1; color: var(--ink); }
+.cal2 .cal .cal-day.sun .d { color: var(--negative); }
+.cal2 .cal .cal-day.sat .d { color: #2f6fdb; }
+.cal2 .cal .cal-day.other { background: var(--canvas-softer); opacity: .5; }
+.cal2 .cal .cal-day.other .d { color: var(--mute); }
+.cal2 .cal .cal-day.main, .cal2 .cal .cal-day.main.sel, .cal2 .cal .cal-day.main.today { background: color-mix(in srgb, var(--cal-main) 7%, var(--canvas)); border-color: color-mix(in srgb, var(--cal-main) 30%, var(--canvas)); box-shadow: none; }
+.cal2 .cal .cal-day.main .d, .cal2 .cal .cal-day.main.sun .d { color: var(--ink); }
+.cal2 .cal .cal-day.today .d, .cal2 .cal .cal-day.main.today .d { background: var(--ink); color: #fff; }
+.cal2 .cal .cal-day.sel, .cal2 .cal .cal-day.main.sel { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.cal-evs { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cal-chip { --c: #6b7280; display: block; min-width: 0; padding: 2px 6px; border-radius: 6px; background: color-mix(in srgb, var(--c) 12%, #fff); color: color-mix(in srgb, var(--c) 80%, #000); font-size: 11.5px; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* PC 달력 칸: 긴 이름은 두 줄까지 (예: 1주차 오프라인 강의) */
+.cal2 .cal-evs .cal-chip { white-space: normal; word-break: keep-all; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.cal-chip b { font-weight: 800; }
+.cal-chip .s { display: none; }
+.cal-chip.t-open { background: var(--cal-main, var(--primary)); color: var(--cal-on, var(--ink)); }
+.cal-chip.t-offline { --c: #0f766e; } .cal-chip.t-free { --c: #f76707; } .cal-chip.t-replay { --c: #7c5cff; } .cal-chip.t-deadline { --c: #e5484d; }
+.cal-chip.t-qna { --c: #c2410c; } .cal-chip.t-challenge { --c: #16a34a; } .cal-chip.t-bonus { --c: #b8860b; } .cal-chip.t-event { --c: #111827; } .cal-chip.t-notice { --c: #6b7280; }
+.cal-more { padding: 0 4px; font-size: 11px; font-weight: 800; color: var(--mute); }
+.cal-legend { gap: 8px 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.cal2 .cal-legend i.cal-sw { display: inline-block; width: 12px; height: 12px; border-radius: 4px; background: color-mix(in srgb, var(--c, #6b7280) 55%, #fff); }
+.cal2 .cal-legend i.cal-sw.t-open { background: var(--cal-main, var(--primary)); }
+.cal-legend .cal-sw.t-offline { --c: #0f766e; } .cal-legend .cal-sw.t-free { --c: #f76707; } .cal-legend .cal-sw.t-replay { --c: #7c5cff; } .cal-legend .cal-sw.t-deadline { --c: #e5484d; }
+.cal-legend .cal-sw.t-qna { --c: #c2410c; } .cal-legend .cal-sw.t-challenge { --c: #16a34a; } .cal-legend .cal-sw.t-bonus { --c: #b8860b; } .cal-legend .cal-sw.t-event { --c: #111827; } .cal-legend .cal-sw.t-notice { --c: #6b7280; }
+.cal-selday, .cal-agenda { margin-top: 14px; }
+.ag-list { margin: 0; padding: 0; list-style: none; display: grid; }
+.ag-day { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-top: 1px solid var(--line-soft); }
+.ag-day:first-child { border-top: 0; padding-top: 2px; }
+.ag-day.past { opacity: .5; }
+.ag-date { display: grid; justify-items: center; align-content: start; gap: 2px; padding-top: 2px; }
+.ag-date b { font-size: 20px; font-weight: 900; line-height: 1; letter-spacing: -0.03em; color: var(--ink); }
+.ag-date small { font-size: 11.5px; font-weight: 700; color: var(--mute); white-space: nowrap; }
+.ag-date.sun b { color: var(--negative); } .ag-date.sat b { color: #2f6fdb; }
+.ag-day.today .ag-date small { color: var(--ink); font-weight: 800; }
+.ag-evs { display: grid; gap: 7px; min-width: 0; }
+.ag-ev { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.ag-ev .cal-chip { flex: none; max-width: 46%; font-size: 11px; }
+.ag-t { min-width: 0; font-size: 14px; font-weight: 600; line-height: 1.45; color: var(--ink); word-break: keep-all; overflow-wrap: anywhere; }
+@media (max-width: 720px) {
+  .cal2 { padding: 16px 12px; }
+  .cal2 .cal { gap: 3px; }
+  .cal2 .cal-dow { font-size: 11.5px; padding-bottom: 6px; }
+  .cal2 .cal .cal-day { min-height: 62px; padding: 5px 3px 5px; gap: 3px; border-radius: 9px; }
+  .cal2 .cal .cal-day .d { min-width: 20px; height: 20px; padding: 0 5px; font-size: 12px; align-self: center; }
+  .cal-evs { gap: 2px; }
+  .cal2 .cal-chip, .cal2 .cal-evs .cal-chip { display: block; padding: 1px 2px; border-radius: 4px; font-size: 9.5px; line-height: 1.35; letter-spacing: -0.04em; text-align: center; white-space: nowrap; text-overflow: clip; }
+  .cal2 .cal-chip .s { display: inline; }
+  .cal2 .cal-chip .l { display: none; }
+  .cal-more { padding: 0; font-size: 9.5px; text-align: center; }
+  .cal-legend { font-size: 12px; gap: 6px 12px; }
+  .ag-day { grid-template-columns: 44px minmax(0, 1fr); gap: 10px; }
+  .ag-t { font-size: 13.5px; }
+}

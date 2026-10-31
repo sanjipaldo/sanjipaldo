@@ -678,3 +678,62 @@ body[data-mode="landing"] { background: #fff; }
   .lp-cal-d .lp-ev.deadline { background: #f97316; }
   .lp-cal-d.is-start .lp-ev.open, .lp-cal-d.is-end .lp-ev.open { background: #fff; }
 }
+
+/* ===== 강사 소개 페이지: 첫 화면 오른쪽 강사 사진 판 · 강사 영상 · 뉴질랜드 이야기 ===== */
+.lp-pf { position: relative; aspect-ratio: 4 / 4.6; max-width: 480px; margin-left: auto; border-radius: 32px; isolation: isolate; }
+.lp-pf-bg { position: absolute; inset: 9% 0 0; z-index: -1; overflow: hidden; border-radius: 32px; background: radial-gradient(90% 80% at 80% 10%, rgba(var(--lp-rgb), .55), transparent 70%), linear-gradient(160deg, var(--lp-pale, #eef2f7), #fff 75%); box-shadow: 0 40px 80px -42px rgba(17, 19, 18, .45); }
+.lp-pf-img { position: absolute; left: 50%; bottom: 0; width: 92%; height: 100%; object-fit: contain; object-position: bottom center; transform: translateX(-50%); filter: drop-shadow(0 18px 30px rgba(10, 20, 40, .22)); }
+.lp-pf.photo .lp-pf-bg { inset: 0; }
+.lp-pf.photo .lp-pf-img { width: 100%; object-fit: cover; border-radius: 32px; filter: none; }
+.lp-pf-av { position: absolute; inset: 22% 22% 18%; display: grid; place-items: center; border-radius: 50%; background: var(--lp-p); color: var(--lp-on); font-size: 96px; font-weight: 900; }
+.lp-pf-card { position: absolute; left: -18px; bottom: 26px; display: grid; gap: 2px; max-width: 74%; padding: 14px 18px; border-radius: 18px; background: rgba(255, 255, 255, .96); box-shadow: 0 18px 40px -18px rgba(10, 20, 40, .35); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.lp-pf-card b { font-size: 20px; font-weight: 900; letter-spacing: -0.04em; color: var(--lp-ink); }
+.lp-pf-card small { font-size: 13px; font-weight: 700; line-height: 1.45; color: var(--lp-body); }
+/* 뉴질랜드 테마: 남색 판 + 은고사리 + 남십자성 + 국기 이름표 */
+.lp-pf.nz .lp-pf-bg { background: radial-gradient(70% 60% at 85% 12%, rgba(47, 116, 192, .55), transparent 70%), linear-gradient(165deg, #0b2a5b 0%, #123c7a 60%, #0b2a5b 100%); }
+.lp-pf-fern { position: absolute; right: -6%; bottom: -8%; width: 58%; height: 108%; background: url("assets/brand/nz-fern-real.svg") no-repeat center bottom / contain; opacity: .2; transform: rotate(-14deg); }
+.lp-pf-stars { position: absolute; left: 8%; top: 10%; width: 22%; aspect-ratio: 2 / 3; background: url("assets/brand/nz-stars.svg") no-repeat center / contain; opacity: .9; }
+.lp-pf-nz { display: inline-flex; align-items: center; gap: 7px; width: fit-content; margin-bottom: 6px; padding: 4px 10px 4px 5px; border-radius: 999px; background: #0b2a5b; color: #fff; font-size: 11px; font-weight: 800; letter-spacing: .02em; }
+.lp-flag { display: inline-block; flex: none; width: 26px; height: 13px; border-radius: 2px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255, 255, 255, .5); }
+.lp-flag svg { display: block; width: 100%; height: 100%; }
+.lp-nz-pill { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 6px 14px 6px 8px; border-radius: 999px; background: #0b2a5b; color: #fff; font-size: 13px; font-weight: 800; }
+.lp-hero-nz .lp-eyebrow { display: block; width: fit-content; }
+.lp:not(.fc) .lp-hero.lp-hero-nz { position: relative; overflow: hidden; background: radial-gradient(60% 55% at 90% 8%, rgba(47, 116, 192, .2), transparent 70%), linear-gradient(180deg, #f3f6fb 0%, #fff 100%); }
+.lp-hero.lp-hero-nz::before { content: ""; position: absolute; left: -60px; bottom: -80px; width: 300px; height: 520px; background: url("assets/brand/nz-fern-h.svg") no-repeat center / contain; opacity: .35; transform: rotate(90deg); pointer-events: none; }
+.lp-hero-nz .lp-wrap { position: relative; }
+/* 뉴질랜드 이야기 띠 */
+.lp-nzb { position: relative; overflow: hidden; padding: 72px 0; background: linear-gradient(160deg, #0b2a5b 0%, #0f3570 55%, #0b2a5b 100%); color: #fff; }
+.lp-nzb-deco i { position: absolute; right: -40px; top: -60px; width: 340px; height: 640px; background: url("assets/brand/nz-fern-real.svg") no-repeat center / contain; opacity: .1; transform: rotate(18deg); pointer-events: none; }
+.lp-nzb .lp-kicker { color: #8fb6ea; }
+.lp-nzb h2 { margin: 0; color: #fff; font-size: clamp(26px, 3.2vw, 38px); font-weight: 900; letter-spacing: -0.045em; }
+.lp-nzb h2 em { font-style: normal; color: #fff; background: linear-gradient(transparent 62%, rgba(200, 16, 46, .75) 62%, rgba(200, 16, 46, .75) 90%, transparent 90%); }
+.lp-nzb-g { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 32px; }
+.lp-nzb-t { display: grid; align-content: start; gap: 8px; padding: 22px 20px; border-radius: 20px; background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .14); }
+.lp-nzb-i { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: rgba(255, 255, 255, .12); color: #fff; }
+.lp-nzb-i .icon { width: 22px; height: 22px; }
+.lp-nzb-t small { font-size: 12px; font-weight: 900; letter-spacing: .08em; color: #8fb6ea; }
+.lp-nzb-t b { font-size: 17px; font-weight: 900; letter-spacing: -0.03em; }
+.lp-nzb-t p { margin: 0; font-size: 14px; line-height: 1.65; color: rgba(255, 255, 255, .78); }
+/* 강사 영상 */
+.lp-vsec .lp-iv { margin-bottom: 0; }
+.lp-vsec .lp-iv h2 { margin: 0; font-size: clamp(28px, 3vw, 40px); font-weight: 900; line-height: 1.25; letter-spacing: -0.045em; }
+.lp-vsec .lp-yt { margin-top: 22px; }
+.lp-nz .lp-iv-v::before { background: linear-gradient(135deg, #0b2a5b, #2f74c0); }
+@media (max-width: 900px) {
+  .lp-pf { max-width: 420px; margin: 0 auto; }
+  .lp-nzb-g { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .lp-pf { max-width: 340px; border-radius: 26px; }
+  .lp-pf-bg { border-radius: 26px; }
+  .lp-pf-card { left: -6px; bottom: 16px; padding: 11px 14px; border-radius: 14px; }
+  .lp-pf-card b { font-size: 17px; }
+  .lp-pf-card small { font-size: 12px; }
+  .lp-pf-nz { font-size: 10.5px; padding: 3px 9px 3px 4px; }
+  .lp-nz-pill { font-size: 12px; }
+  .lp-nzb { padding: 52px 0; }
+  .lp-nzb-g { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 24px; }
+  .lp-nzb-t { grid-template-columns: 44px minmax(0, 1fr); column-gap: 14px; row-gap: 4px; padding: 16px; }
+  .lp-nzb-i { grid-row: span 3; }
+  .lp-hero.lp-hero-nz::before { width: 200px; height: 360px; left: -70px; opacity: .25; }
+}

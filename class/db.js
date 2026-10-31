@@ -444,11 +444,13 @@
     return { items: m.items.filter((x) => !isCustom(x.key)).map((x) => Object.assign({}, x)), library: Object.assign({}, m.library) };
   }
 
-  /* ---------------- 홍보 랜딩페이지 ---------------- */
+  /* ---------------- 강사 소개 페이지 (#/p/<강사>) ----------------
+   * 어떤 강사가 어떤 강의를 하는지 궁금하게 만드는 페이지. ‘신청하기’는 모두 applyUrl(오픈채팅 · 신청 폼) 하나로 새 창.
+   * 예전 커리큘럼 · 수강 안내(가격 카드 + 수업 캘린더) 칸은 없앴고, 저장돼 있어도 보이지 않아요 */
   const LANDING_SECTIONS = [
-    { key: "hero", label: "첫 화면 (헤드라인)" }, { key: "stats", label: "숫자로 보는 강의" }, { key: "about", label: "강사 소개" },
-    { key: "points", label: "배우는 것 · 추천 대상" }, { key: "curriculum", label: "커리큘럼" }, { key: "platform", label: "수강생 전용 플랫폼" },
-    { key: "reviews", label: "수강 후기" }, { key: "pricing", label: "수강 안내 · 가격" }, { key: "faq", label: "자주 묻는 질문" }, { key: "cta", label: "마지막 신청 안내" }
+    { key: "hero", label: "첫 화면 (헤드라인)" }, { key: "video", label: "강사 영상 (유튜브)" }, { key: "about", label: "강사 소개" }, { key: "stats", label: "숫자로 보는 강사" },
+    { key: "points", label: "배우는 것 · 추천 대상" }, { key: "platform", label: "수강생 전용 플랫폼" },
+    { key: "reviews", label: "수강 후기" }, { key: "faq", label: "자주 묻는 질문" }, { key: "cta", label: "마지막 신청 안내" }
   ];
   /** 저장된 랜딩 내용 + 비어 있는 칸은 강의 정보로 채운 기본값 */
   function landingOf(insId) {
@@ -456,11 +458,11 @@
     if (!c || !ins) return null;
     const b = c.brand, L = clone(c.landing || {});
     const def = {
-      published: true,
+      published: true, applyUrl: "",
       order: LANDING_SECTIONS.map((x) => x.key), off: {},
       hero: { eyebrow: b.loginEyebrow || "DOINGGO", title: b.loginHeadline || b.courseTitle, sub: b.loginSub || b.tagline || "", ctaLabel: "수강 신청하기", ctaUrl: "", image: "" },
       stats: [],
-      about: { title: "강사 소개", name: b.instructor || ins.displayName, role: b.courseTitle, body: "", photo: "", career: [] },
+      about: { title: "강사 소개", name: b.instructor || ins.displayName, role: b.courseTitle, body: "", photo: "", career: [], video: "", videoTitle: "" },
       points: { title: "이 강의에서 얻어 가는 것", items: [
         { title: "매주 하나씩, 실습 과제", desc: "강의를 듣고 끝나는 게 아니라 매주 과제를 직접 해내며 결과를 만들어요." },
         { title: "제출 즉시 자동 검수", desc: "과제를 올리면 바로 확인 결과가 나오고, 강사가 한 번 더 봐 드려요." },
@@ -479,6 +481,8 @@
     ["hero", "about", "points", "curriculum", "platform", "reviews", "pricing", "faq", "cta", "contact"].forEach((k) => { out[k] = Object.assign({}, def[k], L[k] || {}); });
     out.off = Object.assign({}, L.off || {});
     out.order = (L.order || []).filter((k) => LANDING_SECTIONS.some((x) => x.key === k));
+    // 새로 생긴 ‘강사 영상’은 저장된 순서가 있어도 첫 화면 바로 아래로
+    if (out.order.length && out.order.indexOf("video") === -1) { const h = out.order.indexOf("hero"); out.order.splice(h < 0 ? 0 : h + 1, 0, "video"); }
     LANDING_SECTIONS.forEach((x) => { if (out.order.indexOf(x.key) === -1) out.order.push(x.key); });
     return out;
   }

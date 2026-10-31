@@ -43,7 +43,7 @@
   const COACH_PERMS = [
     ["운영", [["vod-students", "VOD 수강생", "VOD 구매자 진도 · 두잉고 입장 (VOD 버전)"], ["students", "수강생 관리", "승인 · 기수 이동 · 탈퇴"], ["cohorts", "기수 관리", "기수 만들기 · 일정"], ["reviews", "과제 검수", "과제 피드백 · 승인 · 보완 요청"], ["questions", "1:1 요청 답변", "수강생 1:1 요청 · 오류 신고 답변"], ["coaching", "1:1 코칭 답변", "VOD 수강생 1:1 코칭 질문 답변 (코칭권)"], ["teatime", "TEA TIME 신청", "VOD 수강생 TEA TIME 일정 확정"]]],
     ["수강생 화면 콘텐츠", [["vodlessons", "VOD 강의 · 수업 자료 (비메오 링크 · PDF)"], ["brand", "기본 정보 · 색상 · AI 조교"], ["menus", "메뉴 구성"], ["guide", "시작 가이드 · 빠른 이동"], ["curriculum", "주차별 강의 (커리큘럼)"], ["replays", "라이브 다시보기"], ["missions", "과제 · 미션"], ["showcase", "모범 과제"], ["notes", "학습 노트 질문"], ["schedule", "수업 캘린더"], ["notices", "클래스 소식 (공지)"], ["faq", "FAQ · 자주 묻는 질문"], ["docs", "실무 체크리스트"], ["glossary", "용어 사전"], ["library", "강의 자료함"], ["motivation", "응원 영상"], ["channels", "1:1 상담 채널"], ["partners", "제휴 혜택"], ["pages", "추가 메뉴"]]],
-    ["홍보", [["free", "무료강의 페이지"], ["landing", "강의 소개 페이지"]]]
+    ["홍보", [["free", "무료강의 페이지"], ["landing", "강사 소개 페이지"]]]
   ];
   const COACH_DEFAULT = ["reviews", "questions"];
   const isCoach = () => !!S && S.role === "coach";
@@ -401,7 +401,7 @@
         ["cohorts", "기수 관리", "layers"]
       ].concat(isCoach() ? [] : [["billing", "다음 기수 신청", "coins"]]).concat(on("missions") ? [["reviews", "과제 검수", "checks", n.review]] : []).concat(on("qna") ? [["questions", "1:1 요청 답변", "bug", n.questions]] : []).concat(isCoach() ? [] : [["coaches", "코치 관리", "shieldCheck"]])],
       ["수강생 화면 콘텐츠", content],
-      ["홍보", [["free", "무료강의 페이지", "video"], ["landing", "강의 소개 페이지", "store"]]]
+      ["홍보", [["free", "무료강의 페이지", "video"], ["landing", "강사 소개 페이지", "store"]]]
     ]).concat(vod ? sales : []).concat([["두잉고 운영팀", [["ops-notices", "운영팀 공지", "megaphone", annUnread(iid) || ""], ["contract", "계약 · 서류", "file", insDocMissing(iid) || ""]]]]);
     // 코치는 강사가 열어 준 메뉴만
     return groups.map((g) => [g[0], g[1].filter((it) => can(it[0]))]).filter((g) => g[1].length);
@@ -1639,13 +1639,13 @@
   // 편집 중인 내용은 ui.lp 에 두고, ‘저장’을 눌러야 공개 페이지에 반영된다
   function lpGet(obj, path) { return path.split(".").reduce((o, k) => (o == null ? o : o[k]), obj); }
   function lpSet(obj, path, v) { const ks = path.split("."); const last = ks.pop(); const o = ks.reduce((a, k) => (a[k] = a[k] == null ? {} : a[k]), obj); o[last] = v; }
-  // ui.lpKind: "landing"(강의 소개) | "free"(무료강의 페이지) — 같은 편집 도구를 같이 쓴다
+  // ui.lpKind: "landing"(강사 소개) | "free"(무료강의 페이지) — 같은 편집 도구를 같이 쓴다
   function lpDraft() {
     const key = IID() + ":" + (ui.lpKind || "landing");
     if (!ui.lp || ui.lpFor !== key) { ui.lp = ui.lpKind === "free" ? DB.freeOf(IID()) : DB.landingOf(IID()); ui.lpFor = key; ui.lpDirty = false; ui.lpOpen = ui.lpOpen || { hero: true }; }
     return ui.lp;
   }
-  const LP_HINT = { stats: "비워 두면 커리큘럼 기준으로 자동 표시 (주차·강의·과제 수)", curriculum: "주차와 강의 목록은 ‘커리큘럼’ 메뉴 내용이 그대로 나와요.", faq: "비워 두면 ‘Q&A 자주 묻는 질문’ 앞의 6개가 나와요.", platform: "결제 후 열리는 이 학습 플랫폼의 기능을 소개해요. (기능 목록은 자동)", reviews: "후기가 없으면 이 칸은 보이지 않아요. ‘예시 표시’를 켜 두면 카드에 ‘예시 후기’ 표시가 붙어요." };
+  const LP_HINT = { stats: "넣은 숫자만 보여요. 비워 두면 이 칸은 보이지 않아요. (예: 유튜브 구독자 · 누적 수강생)", video: "유튜브 영상으로 강사님이 어떤 사람인지 먼저 보여 줘요. 비워 두면 무료강의 페이지의 영상 중 하나가 나와요.", faq: "비워 두면 ‘Q&A 자주 묻는 질문’ 앞의 6개가 나와요.", platform: "결제 후 열리는 이 학습 플랫폼의 기능을 소개해요. (기능 목록은 자동)", reviews: "후기가 없으면 이 칸은 보이지 않아요. ‘예시 표시’를 켜 두면 카드에 ‘예시 후기’ 표시가 붙어요." };
   function lpField(path, label, type, hint) {
     const v = lpGet(ui.lp, path);
     const id = "lp-" + path.replace(/\./g, "-");
@@ -1676,17 +1676,15 @@
   function lpSectionBody(k) {
     switch (k) {
       case "hero": return lpField("hero.eyebrow", "헤드라인 위 작은 글씨") + lpField("hero.title", "헤드라인 (줄바꿈 가능, 마지막 줄은 강조)", "textarea") + lpField("hero.sub", "설명", "textarea") +
-        '<div class="a-form-row">' + lpField("hero.ctaLabel", "버튼 글자") + lpField("hero.ctaUrl", "버튼 연결 주소 (결제 페이지 등)", "url", "비워 두면 이 플랫폼의 ‘수강 신청’ 창이 열려요") + "</div>" + lpField("hero.image", "오른쪽 사진 (없으면 학습 화면 모형이 보여요)", "image");
+        lpField("hero.ctaLabel", "신청 버튼 글자", "", "버튼을 누르면 위 ‘신청하기 링크’가 새 창으로 열려요") + lpField("hero.image", "오른쪽 사진 (없으면 ‘강사 소개’의 강사 사진)", "image");
+      case "video": return lpField("about.video", "강사 소개 영상 (유튜브 주소)", "url", "예: https://www.youtube.com/watch?v=… · 비워 두면 무료강의 페이지의 영상 중 하나가 나와요") + lpField("about.videoTitle", "영상 제목 (비워 두면 ‘강사 소개 영상’)");
       case "stats": return lpRows("stats", [["value", "숫자 (예: 1,200명)"], ["label", "설명 (예: 누적 수강생)"]], "숫자 추가");
       case "about": return '<div class="a-form-row">' + lpField("about.name", "이름") + lpField("about.role", "한 줄 소개") + "</div>" + lpField("about.body", "소개 글", "textarea") + lpField("about.career", "경력 · 이력 (한 줄에 하나)", "lines") + lpField("about.photo", "강사 사진", "image") + lpField("about.title", "작은 제목");
       case "points": return lpField("points.title", "제목") + lpRows("points.items", [["title", "제목"], ["desc", "설명", "textarea"]], "항목 추가") + lpField("points.forWho", "이런 분께 추천해요 (한 줄에 하나)", "lines");
-      case "curriculum": return lpField("curriculum.title", "제목") + lpField("curriculum.sub", "설명");
       case "platform": return lpField("platform.title", "제목") + lpField("platform.sub", "설명");
       case "reviews": return lpField("reviews.title", "제목") + lpRows("reviews.items", [["name", "이름 (예: 김*진)"], ["meta", "기수 · 결과 (예: 2기 수료)"], ["text", "후기 내용", "textarea"], ["sample", "예시 표시", "check"]], "후기 추가");
-      case "pricing": return lpField("pricing.title", "제목") + '<div class="a-form-row">' + lpField("pricing.price", "가격 (예: 590,000원)", "", "비워 두면 강의 이름이 크게 보여요") + lpField("pricing.original", "원래 가격 (취소선)") + "</div>" + lpField("pricing.period", "진행 방식 (예: 5주 과정 + 다시보기)") +
-        lpField("pricing.includes", "포함 내용 (한 줄에 하나)", "lines") + '<div class="a-form-row">' + lpField("pricing.ctaLabel", "버튼 글자") + lpField("pricing.ctaUrl", "버튼 연결 주소", "url", "비워 두면 ‘수강 신청’ 창") + "</div>" + lpField("pricing.note", "버튼 아래 안내");
       case "faq": return lpField("faq.title", "제목") + lpRows("faq.items", [["q", "질문"], ["a", "답변", "textarea"]], "질문 추가") + btn(icon("clipboard", "sm") + "Q&A 자주 묻는 질문에서 6개 가져오기", "lp-faq-import", "a-btn-ghost a-btn-sm");
-      case "cta": return lpField("cta.title", "제목") + lpField("cta.sub", "설명") + '<div class="a-form-row">' + lpField("cta.label", "버튼 글자") + lpField("cta.url", "버튼 연결 주소", "url", "비워 두면 ‘수강 신청’ 창") + "</div>";
+      case "cta": return lpField("cta.title", "제목") + lpField("cta.sub", "설명") + lpField("cta.label", "버튼 글자", "", "버튼을 누르면 위 ‘신청하기 링크’가 새 창으로 열려요");
     }
     return "";
   }
@@ -1707,7 +1705,7 @@
     question: "‘질문 받는 주소’에 구글폼 같은 링크를 넣으면 버튼이 그 주소로 바로 열려요. 비워 두면 이 페이지에서 질문을 받아 아래 ‘받은 사전 질문’에 모아요.",
     gifts: "선물마다 공개 날짜·시간을 정하면 그때 자동으로 잠금이 풀리고 표지를 누르면 전자책 주소가 열려요. ‘지금 공개’를 켜면 날짜와 상관없이 바로 열려요.",
     kakao: "강사님 오픈채팅방 주소를 넣으면 노란 ‘입장하기’ 버튼이 생겨요. 주소가 없으면 이 칸은 보이지 않아요.",
-    about: "비워 두면 ‘강의 소개 페이지’의 강사 소개를 가져와요.",
+    about: "비워 두면 ‘강사 소개 페이지’의 강사 소개를 가져와요.",
     live: "썸네일·플랫폼 로고·문구·신청 링크를 언제든 바꿀 수 있어요. 썸네일이 없으면 날짜와 제목으로 자동으로 만들어요. 썸네일은 가로 16:9 (예: 1920×1067)가 가장 잘 맞아요.",
     faq: "무료강의를 신청하려는 분들이 궁금해할 질문을 적어요. 질문이 하나도 없으면 이 칸은 보이지 않아요.",
     apply: "신청 링크를 비워 두면 ‘진행 예정 강의’의 신청 링크로 연결돼요."
@@ -1812,11 +1810,14 @@
     const L = lpDraft(), iid = IID();
     const url = ROUTE.abs("#/p/" + iid);
     const secs = lpSecCards(L, DB.LANDING_SECTIONS, lpSectionBody, LP_HINT);
-    return head("강의 소개 페이지", "강사님과 강의를 소개하는 공개 페이지예요. 결제 전 수강생이 보고, 신청 버튼을 누르면 수강 신청이나 결제 페이지로 이어져요. 배경은 흰색, 버튼과 강조는 수강생 화면 색상을 따라가요.",
+    return head("강사 소개 페이지", "강사님이 어떤 사람이고 어떤 강의를 하는지 궁금하게 만드는 공개 페이지예요. ‘신청하기’ 버튼은 모두 아래 ‘신청하기 링크’(오픈채팅 · 신청 폼)로 새 창에서 열려요. 배경은 흰색, 버튼과 강조는 수강생 화면 색상을 따라가요.",
         '<a class="a-btn a-btn-outline" href="#/p/' + iid + '">' + icon("eye", "sm") + "페이지 보기</a>" + btn(icon("check", "sm") + "저장", "lp-save", "a-btn-primary")) +
       '<section class="a-card a-lp-top">' + pubSwitch(L.published) +
         '<div class="a-lp-url"><input class="a-input a-sm a-mono" id="lp-url" value="' + esc(url) + '" readonly aria-label="페이지 주소">' + btn(icon("clipboard", "sm") + "주소 복사", "lp-copy", "a-btn-ghost a-btn-sm") + "</div>" +
         (ui.lpDirty ? '<p class="a-lp-dirty">' + icon("alert", "xs") + " 저장하지 않은 변경이 있어요.</p>" : "") + "</section>" +
+      // 신청하기 링크 하나 — 첫 화면 · 위 막대 · 마지막 안내 · 휴대폰 아래 막대의 ‘신청하기’가 모두 이 주소를 새 창으로 열어요
+      '<section class="a-card a-lp-apply"><div class="a-card-head"><h2>' + icon("send", "sm") + " 신청하기 링크</h2><p class=\"a-muted\">오픈채팅방 · 네이버 폼 · 결제 페이지 등 원하는 주소를 넣으면 페이지의 ‘신청하기’ 버튼이 모두 이 주소로 새 창에서 열려요. 언제든 바꿀 수 있어요.</p></div>" +
+        lpField("applyUrl", "신청하기 링크", "url", "비워 두면 카카오톡 문의 주소로 연결되고, 그것도 없으면 신청 버튼이 숨겨져요") + "</section>" +
       '<div class="a-stack">' + secs + "</div>" +
       '<section class="a-card"><div class="a-card-head"><h2>연락처 · 페이지 맨 아래</h2></div><div class="a-form-row">' + lpField("contact.kakao", "카카오톡 문의 주소", "url") + lpField("contact.instagram", "인스타그램 주소", "url") + "</div>" +
         '<div class="a-form-row">' + lpField("contact.youtube", "유튜브 주소", "url") + lpField("contact.company", "상호 (맨 아래 © 표시)") + "</div>" +
@@ -3896,7 +3897,7 @@
   /* 두잉고 미리보기 — 마스터 화면을 떠나지 않고 두잉고 소개 · 수강생 로그인 · 강사별 수강생 강의실 · 강의 소개 · 무료강의를 오른쪽에서 봐요 */
   function dgTargets() {
     const out = [["home", "두잉고 소개 페이지"], ["login", "수강생 로그인 화면"]];
-    DB.data.instructors.filter((i) => i.status === "active").forEach((i) => { out.push(["room:" + i.id, i.displayName + " · 수강생 강의실"], ["p:" + i.id, i.displayName + " · 강의 소개 페이지"], ["free:" + i.id, i.displayName + " · 무료강의 페이지"]); });
+    DB.data.instructors.filter((i) => i.status === "active").forEach((i) => { out.push(["room:" + i.id, i.displayName + " · 수강생 강의실"], ["p:" + i.id, i.displayName + " · 강사 소개 페이지"], ["free:" + i.id, i.displayName + " · 무료강의 페이지"]); });
     return out;
   }
   function dgSplit(t) {
@@ -7102,7 +7103,7 @@
         const c = C(), field = ui.lpKind === "free" ? "freeClass" : "landing", prev = c[field];
         c[field] = DB.clone(lpDraft());
         if (!DB.save()) { c[field] = prev; toast("저장 공간이 부족해요. 사진 크기를 줄여 주세요.", "warn"); break; }
-        ui.lpDirty = false; render(); toast((ui.lpKind === "free" ? "무료강의 페이지" : "강의 소개 페이지") + "를 저장했어요. ‘페이지 보기’로 확인해 보세요.");
+        ui.lpDirty = false; render(); toast((ui.lpKind === "free" ? "무료강의 페이지" : "강사 소개 페이지") + "를 저장했어요. ‘페이지 보기’로 확인해 보세요.");
         break;
       }
       case "fc-tab": ui.fcTab = d.k; render(); window.scrollTo(0, 0); break;

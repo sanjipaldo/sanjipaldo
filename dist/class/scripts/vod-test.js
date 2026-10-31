@@ -897,6 +897,37 @@ const paidLike = (pid, total) => { PG[pid] = { id: pid, status: "PAID", storeId:
   ok(!w.writes.meta, "마스터가 넣은 계좌는 그대로", w.result);
   ok(OO.OPS.some((x) => x.id === "2026-10-30-store-bank-account" && x.run === OO.storeBank), "무통장 계좌 작업 목록 등록", null);
   ok(BOOKS.MOON_BOOK.price === 15900 && BOOKS.MOON_BOOK.type === "book" && OO.OPS.some((x) => x.id === "2026-10-30-moon-paper-book"), "종이책 상품 · 작업 목록 등록", null);
+  // 일회성 작업: 실제 운영 시작 — 문대표 것을 뺀 기수 신청 · 매출 기록 지우기
+  const RD = {
+    "bill:logic:b1": { id: "b1", instructorId: "logic", cohortName: "1기", cohortId: "lc1", paidAt: "2026-09-25", demo: true },
+    "bill:logic:b2": { id: "b2", instructorId: "logic", cohortName: "2기", cohortId: "lc2", paidAt: "2026-10-20", demo: true },
+    "bill:choi:b3": { id: "b3", instructorId: "choi", cohortName: "2기", demo: true },
+    "bill:choi:b4": { id: "b4", instructorId: "choi", cohortName: "3기", cohortId: "cc3", paidAt: "2026-10-28" },
+    "bill:moon:b5": { id: "b5", instructorId: "moon", cohortName: "5기", paidAt: "2026-10-30" },
+    "bill:moon:b6": { id: "b6", instructorId: "moon", cohortName: "4기", demo: true },
+    "cohorts:logic": [{ id: "lc1", name: "1기" }, { id: "lc2", name: "2기" }],
+    "cohorts:choi": [{ id: "cc1", name: "1기" }, { id: "cc3", name: "3기" }],
+    "stu:logic:s13": { id: "s13", cohortId: "lc1" }, "stu:choi:s99": { id: "s99", cohortId: "cc3" },
+    meta: { affiliates: [{ id: "aff-demo" }, { id: "aff-kny", name: "김나영" }], affPayouts: { "aff-demo:2026-09": { paidAt: "2026-10-10", by: "master" }, "aff-kny:2026-10": { paidAt: "2026-10-31", amount: 1000, rows: [{ bid: "b5" }] } }, other: 1 }
+  };
+  const rdGet = (k) => (RD[k] === undefined ? null : JSON.parse(JSON.stringify(RD[k]))), rdKeys = (pre) => Object.keys(RD).filter((k) => k.indexOf(pre) === 0).sort();
+  w = OO.launchReset(rdGet, rdKeys);
+  ok(w.writes["bill:logic:b1"] === null && w.writes["bill:logic:b2"] === null && w.writes["bill:choi:b3"] === null && w.writes["bill:choi:b4"] === null && w.writes["bill:moon:b6"] === null && !("bill:moon:b5" in w.writes), "운영 시작: 문대표 것이 아닌 기수 신청 · 매출 기록은 모두, 문대표는 예시만 지워요", w.result);
+  ok(JSON.stringify(w.writes["cohorts:logic"]) === JSON.stringify([{ id: "lc1", name: "1기" }]) && !("cohorts:choi" in w.writes), "운영 시작: 지운 기록으로 열린 기수는 수강생이 없을 때만 같이 지워요 (처음 기수 · 수강생 있는 기수는 그대로)", w.writes["cohorts:logic"]);
+  ok(w.writes.meta && !w.writes.meta.affPayouts["aff-demo:2026-09"] && w.writes.meta.affPayouts["aff-kny:2026-10"] && w.writes.meta.affiliates.length === 2 && w.writes.meta.other === 1, "운영 시작: 예시 파트너 지급 기록만 지우고 파트너 계정(김나영 포함)은 그대로", w.writes.meta && w.writes.meta.affPayouts);
+  Object.keys(w.writes).forEach((k) => { if (w.writes[k] === null) delete RD[k]; else RD[k] = w.writes[k]; });
+  w = OO.launchReset(rdGet, rdKeys);
+  ok(!Object.keys(w.writes).length, "운영 시작: 다시 돌려도 더 지우지 않아요", w.result);
+  // 일회성 작업: 문대표 4기 11/21(토) 4주
+  w = OO.moon4th((k) => (k === "cohorts:moon" ? [{ id: "c3", name: "3기", startDate: "2026-10-01" }, { id: "c4", name: "4기", startDate: "2026-11-05", recruiting: true, curriculumId: "cur-4w", classDow: 6, classTime: "12:00" }] : null));
+  const c4 = w.writes["cohorts:moon"][1];
+  ok(c4.startDate === "2026-11-21" && c4.weeks === 4 && c4.classDow === 6 && c4.classTime === "12:00" && c4.curriculumId === "cur-4w" && w.writes["cohorts:moon"][0].startDate === "2026-10-01" && new Date(c4.startDate + "T00:00:00").getDay() === 6, "문대표 4기: 11월 21일 토요일부터 4주 (다른 기수 · 시간은 그대로)", c4);
+  // 일회성 작업: 문대표 강사 소개 페이지 신청하기 링크
+  w = OO.moonApplyLink((k) => (k === "content:moon" ? { brand: { name: "두고보는 문대표" }, landing: { applyUrl: "", cta: { title: "5주 뒤, 내 이름의 브랜드 사장님이 되어 있을 거예요", sub: "s" } } } : null));
+  ok(w.writes["content:moon"].landing.applyUrl === "https://m.site.naver.com/2iZFQ" && /^4주 뒤/.test(w.writes["content:moon"].landing.cta.title) && w.writes["content:moon"].brand.name === "두고보는 문대표", "문대표 강사 소개: 신청하기 링크(네이버) · 마지막 안내 4주", w.result);
+  w = OO.moonApplyLink((k) => (k === "content:moon" ? { landing: { applyUrl: "https://open.kakao.com/o/x", cta: { title: "직접 쓴 제목" } } } : null));
+  ok(w.writes["content:moon"].landing.applyUrl === "https://open.kakao.com/o/x" && w.writes["content:moon"].landing.cta.title === "직접 쓴 제목", "강사가 이미 넣은 링크 · 직접 쓴 제목은 그대로", w.result);
+  ok(["2026-10-31-launch-reset-bills", "2026-10-31-moon-4th-cohort", "2026-10-31-moon-apply-link"].every((id) => OO.OPS.some((x) => x.id === id)), "운영 시작 작업 3개 목록 등록", null);
   delete jar.dc_v;
 
   console.log("\n영상 길이 (비메오 · 유튜브 실제 재생 시간)");

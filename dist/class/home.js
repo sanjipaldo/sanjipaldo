@@ -174,11 +174,13 @@
       const L = DB.landingOf ? DB.landingOf(x.id) : null;
       const F = DB.freeOf ? DB.freeOf(x.id) : null;
       const ct = (L && L.contact) || {};
+      const co = (DB.cohortsOf ? DB.cohortsOf(x.id) : []).filter((k) => k.recruiting && DB.cohortStatus(k) !== "ended").sort((p, q) => String(p.startDate).localeCompare(String(q.startDate)))[0] || null;
       return {
         id: x.id, name: b.name || x.displayName, who: b.instructor || x.displayName, title: b.courseTitle || "", t,
         photo: b.photo || "", field: b.field || b.shortTitle || "",
         yt: b.youtubeChannel || ct.youtube || "", ig: b.instagram || ct.instagram || "", kakao: b.kakaoChannel || ct.kakao || "",
-        weeks: weeks.length, missions: weeks.reduce((n, w) => n + (w.missions || []).length, 0),
+        // ‘N주 과정’은 지금 모집 중인 기수 기준 (예: 문대표 4기 4주) — 모집 중인 기수가 없으면 커리큘럼 주차 수
+        weeks: (co && DB.cohortWeeks(co)) || weeks.length, missions: weeks.reduce((n, w) => n + (w.missions || []).length, 0),
         landing: !!(L && L.published), free: !!(F && F.published),
         plat: PLATFORMS[b.platform] || PLATFORMS[PLATFORM_OF[x.id]] || PLATFORMS.doogo
       };
@@ -541,7 +543,7 @@
           ? '<div class="hm-tc-links one"><a class="hm-tc-a" href="' + esc(x.vod) + '">' + icon("circlePlay", "xs") + "무료 미리보기</a>" +
             '<a class="hm-tc-login" href="' + esc(x.vod) + '">DOOGO CLASS에서 보기' + icon("arrowRight", "xs") + "</a></div>"
           : '<div class="hm-tc-links' + (x.landing && x.free ? "" : " one") + '">' +
-            (x.landing ? '<a class="hm-tc-a" href="#/p/' + esc(x.id) + '">' + icon("file", "xs") + "강의 소개</a>" : "") +
+            (x.landing ? '<a class="hm-tc-a" href="#/p/' + esc(x.id) + '">' + icon("user", "xs") + "강사 소개</a>" : "") +
             (x.free ? '<a class="hm-tc-a" href="#/free/' + esc(x.id) + '">' + icon("circlePlay", "xs") + "무료 강의</a>" : "") +
             '<a class="hm-tc-login" href="#/login?ins=' + esc(x.id) + '">수강생 로그인' + icon("arrowRight", "xs") + "</a></div>") + "</div>" +
       "</article>";
