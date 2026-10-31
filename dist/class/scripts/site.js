@@ -21,5 +21,8 @@ let n = 0;
 })(ROOT, OUT);
 // 첫 화면 파일의 CSS · JS · 그림 주소를 맨 위(/) 기준으로 (깨끗한 주소에서 바로 열어도 헛요청 없게)
 const IDX = path.join(OUT, "index.html");
-fs.writeFileSync(IDX, require("./index-abs")(fs.readFileSync(IDX, "utf8")));
+// 배포마다 CSS · JS 주소 끝에 ?v=<커밋> — 휴대폰 · 앱 안 브라우저가 예전 파일을 다시 쓰지 않고 새로 받게
+const VER = (process.env.VERCEL_GIT_COMMIT_SHA || Date.now().toString(36)).slice(0, 8);
+const ver = (html) => html.replace(/(\s(?:src|href)="\/[^"?#]+\.(?:js|css))"/g, "$1?v=" + VER + '"');
+fs.writeFileSync(IDX, ver(require("./index-abs")(fs.readFileSync(IDX, "utf8"))));
 console.log("[site] 화면 파일 " + n + "개 → class/.site");

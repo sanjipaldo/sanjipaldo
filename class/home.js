@@ -535,9 +535,9 @@
         (x.photo ? '<span class="hm-tc-cut"><img src="' + esc(x.photo) + '" alt="' + esc(x.who) + ' 강사" decoding="async"></span>' : "") +
         '<span class="hm-tc-tag">' + (x.vod ? "VOD 클래스" : x.weeks + "주 과정") + "</span>";
       return '<article class="hm-tc hm-reveal" style="--i:' + i + '">' +
-        (x.vod ? '<a class="hm-tc-photo" href="' + esc(x.vod) + '" aria-label="' + esc(x.who) + ' 클래스 보기">' + photo + "</a>" : x.landing ? '<a class="hm-tc-photo" href="#/p/' + esc(x.id) + '" aria-label="' + esc(x.who) + ' 강의 소개">' + photo + "</a>" : '<div class="hm-tc-photo">' + photo + "</div>") +
+        (x.vod ? '<a class="hm-tc-photo" href="' + esc(x.vod) + '" aria-label="' + esc(x.who) + ' 클래스 보기">' + photo + "</a>" : x.landing ? '<a class="hm-tc-photo" href="#/p/' + esc(x.id) + '" aria-label="' + esc(x.who) + ' 강사 소개">' + photo + "</a>" : '<div class="hm-tc-photo">' + photo + "</div>") +
         '<div class="hm-tc-body"><div class="hm-tc-head"><h3>' + esc(x.who) + '</h3>' + '<div class="hm-tc-sns">' + plat(x) + sns(x) + "</div>" + '</div><p class="hm-tc-field">' + esc(x.field) + '</p><p class="hm-tc-course">' + esc(x.title) + "</p></div>" +
-        // 이름 옆: 강사 유튜브 표시 · 아래: 강의 소개 · 무료 강의 두 버튼 → 수강생 로그인 (한 줄 전체) — 카드끼리 버튼 높이가 맞게
+        // 이름 옆: 강사 유튜브 표시 · 아래: 강사 소개 · 무료 강의 두 버튼 → 수강생 로그인 (한 줄 전체) — 카드끼리 버튼 높이가 맞게
         '<div class="hm-tc-foot">' + (x.vod
           // DOOGO CLASS VOD 강사: 미리보기 · 클래스 보기
           ? '<div class="hm-tc-links one"><a class="hm-tc-a" href="' + esc(x.vod) + '">' + icon("circlePlay", "xs") + "무료 미리보기</a>" +
@@ -549,7 +549,7 @@
       "</article>";
     };
     return '<section class="hm-sec" id="hm-classes"><div class="hm-wrap">' +
-      secHead("award", "지금 두잉고로 강의하는 강사님", "강사님마다 자기 이름 · 색 · 커리큘럼으로 운영하고 있어요. 강의 소개와 무료 강의 페이지도 직접 눌러 보세요.", applyBtn("입점 문의" + arrow(), "hm-shead-link")) +
+      secHead("award", "지금 두잉고로 강의하는 강사님", "강사님마다 자기 이름 · 색 · 커리큘럼으로 운영하고 있어요. 강사 소개와 무료 강의 페이지도 직접 눌러 보세요.", applyBtn("입점 문의" + arrow(), "hm-shead-link")) +
       // 강사진 슬라이드: 좌우 화살표 · 끌어서 넘기기 · 진행 막대 (강사님이 늘어나면 그대로 이어져요)
       '<div class="hm-tcs-wrap" data-hm-tcs>' +
         '<button type="button" class="hm-tcs-arrow prev" data-hm-tc="-1" aria-label="이전 강사님">' + icon("chevLeft") + "</button>" +
