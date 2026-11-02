@@ -423,9 +423,10 @@ function head({ title, desc, css }) {
   <meta property="og:title" content="${title} | 두고그룹">
   <meta property="og:description" content="${desc}">
   <meta property="og:image" content="assets/img/og/og-default.jpg">
-  <link rel="icon" href="favicon.ico" sizes="48x48">
-  <link rel="icon" href="assets/img/logo/favicon-d2.svg" type="image/svg+xml">
-  <link rel="icon" href="assets/img/logo/favicon-d2-32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="favicon.ico?v=dgh" sizes="48x48">
+  <link rel="icon" href="assets/img/logo/favicon-dgh.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/img/logo/favicon-dgh-32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="assets/img/logo/app-icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/img/logo/apple-touch-icon-app.png">
   <meta name="apple-mobile-web-app-title" content="두고그룹">
   <link rel="manifest" href="site.webmanifest">
