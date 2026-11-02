@@ -1,12 +1,17 @@
 {
+  "id": "/",
   "name": "두고그룹 DOOGO GROUP",
   "short_name": "두고그룹",
+  "description": "사람과 브랜드, 세상을 연결하는 두고홀딩스 · 두고그룹",
+  "lang": "ko",
   "start_url": "/",
+  "scope": "/",
   "display": "browser",
   "background_color": "#FFFFFF",
   "theme_color": "#0A1426",
   "icons": [
-    { "src": "/assets/img/logo/icon-d2-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/assets/img/logo/icon-d2-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/assets/img/logo/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/img/logo/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/img/logo/app-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
