@@ -103,17 +103,20 @@
 
   /* ---------- 스타일 ---------- */
   var CSS = [
-    '.dgc-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.62);display:flex;align-items:center;justify-content:center;padding:20px;font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;color:#0f172a;word-break:keep-all;overflow-wrap:anywhere;animation:dgc-fade .16s ease-out}',
+    '.dgc-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.62);display:flex;align-items:stretch;justify-content:stretch;padding:0;font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;color:#0f172a;word-break:keep-all;overflow-wrap:anywhere;animation:dgc-fade .16s ease-out}',
     '.dgc-overlay *{box-sizing:border-box}',
     '@keyframes dgc-fade{from{opacity:0}to{opacity:1}}',
     '@keyframes dgc-up{from{transform:translateY(12px);opacity:.4}to{transform:none;opacity:1}}',
-    '.dgc-modal{width:min(760px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 30px 80px rgba(2,6,23,.45);overflow:hidden;animation:dgc-up .2s ease-out}',
-    '.dgc-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;background:#1e293b;color:#fff}',
+    /* 화면 전체를 쓰는 팝업 */
+    '.dgc-modal{width:100%;height:100vh;height:100dvh;display:flex;flex-direction:column;background:#fff;overflow:hidden;animation:dgc-up .2s ease-out}',
+    '.dgc-head{flex:none;padding:14px 28px;background:#1e293b;color:#fff}',
+    '.dgc-head-in,.dgc-foot-in,.dgc-wrap{width:100%;max-width:1360px;margin:0 auto}',
+    '.dgc-head-in{display:flex;align-items:center;justify-content:space-between;gap:12px}',
     '.dgc-eyebrow{margin:0;font-size:12px;font-weight:600;color:#93c5fd;letter-spacing:.02em}',
     '.dgc-head h2{margin:2px 0 0;font-size:18px;font-weight:800;letter-spacing:-.01em}',
     '.dgc-x{flex:none;width:36px;height:36px;border:0;border-radius:10px;background:transparent;color:#cbd5e1;font-size:24px;line-height:1;cursor:pointer}',
     '.dgc-x:hover{background:rgba(255,255,255,.1);color:#fff}',
-    '.dgc-body{padding:18px 20px 8px;overflow:auto;-webkit-overflow-scrolling:touch}',
+    '.dgc-body{flex:1;min-height:0;padding:18px 28px 8px;overflow:auto;-webkit-overflow-scrolling:touch;background:#fff}',
     '.dgc-alert{border:1px solid #fecaca;background:#fef2f2;border-radius:12px;padding:12px 14px}',
     '.dgc-alert strong{display:block;font-size:15px;font-weight:800;color:#991b1b}',
     '.dgc-alert p{margin:4px 0 0;font-size:13.5px;line-height:1.6;color:#3f3f46}',
@@ -131,7 +134,7 @@
     '.dgc-sec-title small{font-size:12px;font-weight:700;color:#64748b}',
     '.dgc-read{font-size:12px;font-weight:800;padding:3px 9px;border-radius:999px;background:#fef3c7;color:#92400e;white-space:nowrap}',
     '.dgc-read.is-done{background:#dcfce7;color:#166534}',
-    '.dgc-doc{height:230px;overflow:auto;border:1px solid #cbd5e1;border-radius:12px;padding:12px 14px;background:#f8fafc;font-size:13px;line-height:1.65;color:#1e293b;outline:none}',
+    '.dgc-doc{height:clamp(280px,48vh,560px);overflow:auto;border:1px solid #cbd5e1;border-radius:12px;padding:12px 14px;background:#f8fafc;font-size:13px;line-height:1.65;color:#1e293b;outline:none}',
     '.dgc-doc:focus-visible{box-shadow:0 0 0 3px rgba(59,130,246,.35)}',
     '.dgc-doc h4{margin:10px 0 2px;font-size:13.5px;font-weight:800}',
     '.dgc-doc h4:first-child{margin-top:0}',
@@ -159,7 +162,8 @@
     '.dgc-phrase p b{color:#0f172a;background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:1px 6px;user-select:none;-webkit-user-select:none}',
     '.dgc-note{margin:12px 0 6px;font-size:12px;line-height:1.6;color:#64748b}',
     '.dgc-error{margin:8px 0 0;font-size:13px;font-weight:700;color:#b91c1c}',
-    '.dgc-foot{display:flex;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid #e2e8f0;background:#fff}',
+    '.dgc-foot{flex:none;padding:12px 28px;border-top:1px solid #e2e8f0;background:#fff;box-shadow:0 -6px 18px rgba(15,23,42,.06)}',
+    '.dgc-foot-in{display:flex;align-items:center;gap:8px}',
     '.dgc-progress{margin-right:auto;font-size:12.5px;font-weight:700;color:#64748b}',
     '.dgc-progress b{color:#2563eb}',
     '.dgc-btn{height:44px;border-radius:10px;padding:0 16px;font:inherit;font-size:14px;font-weight:800;cursor:pointer;border:1px solid transparent;white-space:nowrap}',
@@ -168,14 +172,27 @@
     '.dgc-btn-primary{background:#3b82f6;color:#fff}',
     '.dgc-btn-primary:hover{background:#2563eb}',
     '.dgc-btn-primary[disabled]{background:#cbd5e1;color:#fff;cursor:not-allowed}',
+    /* 넓은 화면: 위쪽 요약 한 줄 + 왼쪽 확인서 전문 / 오른쪽 동의·입력 (각각 따로 스크롤) */
+    '@media (min-width:1100px) and (min-height:700px){',
+    '.dgc-body{display:flex;flex-direction:column;overflow:hidden;padding:16px 28px 0}',
+    '.dgc-wrap{flex:1;min-height:0;display:flex;flex-direction:column}',
+    '.dgc-intro{flex:none;display:grid;grid-template-columns:1.35fr 1fr 1fr 1fr;gap:10px}',
+    '.dgc-intro .dgc-keys{display:contents}',
+    '.dgc-intro .dgc-flow{grid-column:1/-1;margin:0}',
+    '.dgc-intro .dgc-key b{display:inline;margin:0 0 0 6px;vertical-align:middle}',
+    '.dgc-intro .dgc-key span{margin-top:6px}',
+    '.dgc-main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px;margin-top:4px}',
+    '.dgc-col-doc{display:flex;flex-direction:column;min-height:0;padding-bottom:16px}',
+    '.dgc-col-doc .dgc-doc{flex:1;height:auto;min-height:0;font-size:13.5px}',
+    '.dgc-col-form{min-height:0;overflow:auto;padding:0 6px 16px 2px}',
+    '}',
     '@media (max-width:640px){',
-    '.dgc-overlay{padding:0;align-items:stretch}',
-    '.dgc-modal{max-height:none;height:100%;border-radius:0}',
+    '.dgc-head,.dgc-body,.dgc-foot{padding-left:16px;padding-right:16px}',
     '.dgc-keys{grid-template-columns:1fr}',
     '.dgc-flow{grid-template-columns:1fr}',
     '.dgc-grid{grid-template-columns:1fr}',
-    '.dgc-doc{height:260px}',
-    '.dgc-foot{flex-wrap:wrap}',
+    '.dgc-doc{height:clamp(240px,45vh,420px)}',
+    '.dgc-foot-in{flex-wrap:wrap}',
     '.dgc-progress{width:100%}',
     '.dgc-btn{flex:1}',
     '}'
@@ -211,10 +228,11 @@
 
     return '' +
       '<div class="dgc-modal" role="dialog" aria-modal="true" aria-labelledby="dgc-title">' +
-        '<header class="dgc-head"><div><p class="dgc-eyebrow">인보이스 PDF 다운로드 전 확인' + (opts.orderNo ? ' · ' + esc(opts.orderNo) : '') + '</p>' +
+        '<header class="dgc-head"><div class="dgc-head-in"><div><p class="dgc-eyebrow">인보이스 PDF 다운로드 전 확인' + (opts.orderNo ? ' · ' + esc(opts.orderNo) : '') + '</p>' +
           '<h2 id="dgc-title">거래 구조 확인 및 동의</h2></div>' +
-          '<button type="button" class="dgc-x" data-act="cancel" aria-label="닫기">×</button></header>' +
-        '<div class="dgc-body">' +
+          '<button type="button" class="dgc-x" data-act="cancel" aria-label="닫기">×</button></div></header>' +
+        '<div class="dgc-body"><div class="dgc-wrap">' +
+          '<div class="dgc-intro">' +
           '<div class="dgc-alert"><strong>이 인보이스는 OEM 제조 계약서가 아닙니다.</strong>' +
             '<p>의뢰하신 브랜드 제품을 <b>해외구매대행</b>으로 합법적으로 판매하실 수 있도록, ' + f('{supplierName}') +
             '가 제조 · 보관 · 발송과 품질 책임을 맡는 구조입니다. 아래 확인서를 끝까지 읽고 항목마다 직접 동의해 주세요.</p></div>' +
@@ -224,11 +242,16 @@
             '<div class="dgc-key"><i>3</i><b>의뢰자는 구매대행업자</b><span>구매대행업 영업등록 · 통신판매업 신고 · 표시광고 기준은 직접 지켜 주셔야 해요.</span></div>' +
           '</div>' +
           '<ol class="dgc-flow">' + flow + '</ol>' +
+          '</div>' +
 
+          '<div class="dgc-main">' +
+          '<section class="dgc-col-doc">' +
           '<div class="dgc-sec-title"><span>' + esc(A.title) + ' <small>v' + esc(A.version) + '</small></span><span class="dgc-read" data-read>끝까지 읽어 주세요 ↓</span></div>' +
           '<div class="dgc-doc" tabindex="0" data-doc aria-label="거래 구조 확인서 전문">' + clauses +
             '<p class="dgc-doc-end">— 확인서 끝 · 이 내용은 내려받는 인보이스 PDF 2페이지에 그대로 인쇄됩니다 —</p></div>' +
+          '</section>' +
 
+          '<section class="dgc-col-form">' +
           '<div class="dgc-sec-title"><span>항목별 동의 <small>모두 필수 · 확인서를 끝까지 읽으면 체크할 수 있어요</small></span></div>' +
           '<fieldset class="dgc-checks" data-checks disabled><legend style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">항목별 동의</legend>' + checks + '</fieldset>' +
 
@@ -247,10 +270,12 @@
           '<p class="dgc-note">「동의하고 PDF 다운로드」를 누르면 동의 일시 · 계정 · 입력하신 정보 · 문서 버전과 지문(SHA-256)이 기록되고, 내려받는 인보이스 PDF 2페이지에 함께 인쇄됩니다. ' +
             '동의하지 않으시면 인보이스를 내려받을 수 없고 생산 준비도 진행되지 않습니다.</p>' +
           '<p class="dgc-error" data-error hidden></p>' +
-        '</div>' +
-        '<footer class="dgc-foot"><span class="dgc-progress" data-progress>항목 동의 <b>0</b>/' + A.checks.length + '</span>' +
+          '</section>' +
+          '</div>' +
+        '</div></div>' +
+        '<footer class="dgc-foot"><div class="dgc-foot-in"><span class="dgc-progress" data-progress>항목 동의 <b>0</b>/' + A.checks.length + '</span>' +
           '<button type="button" class="dgc-btn dgc-btn-ghost" data-act="cancel">동의하지 않음</button>' +
-          '<button type="button" class="dgc-btn dgc-btn-primary" data-act="agree" disabled>' + esc(opts.agreeLabel || '동의하고 PDF 다운로드') + '</button></footer>' +
+          '<button type="button" class="dgc-btn dgc-btn-primary" data-act="agree" disabled>' + esc(opts.agreeLabel || '동의하고 PDF 다운로드') + '</button></div></footer>' +
       '</div>';
   }
 
@@ -409,7 +434,7 @@
         });
       });
 
-      setTimeout(function () { try { docEl.focus(); } catch (e) { /* 무시 */ } }, 30);
+      setTimeout(function () { try { docEl.focus({ preventScroll: true }); } catch (e) { /* 무시 */ } }, 30); // 맨 위 안내부터 보이게
     });
   }
 
