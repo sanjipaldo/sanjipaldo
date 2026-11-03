@@ -11,7 +11,7 @@ doogoconnect.com 의뢰자 센터의 「견적서 미리보기 → 견적서 PDF
 | `assets/doogobio-logo.png` | 기존 견적서 PDF에서 뽑은 DOOGOBIO 로고 (투명 배경) |
 | `demo.html` | 기존 「견적서 미리보기」 창을 흉내 낸 데모 |
 
-데모 실행: 저장소 맨 위 폴더에서 `python3 -m http.server 4173` → `http://localhost:4173/doogo-connect/invoice-consent/demo.html`
+데모 실행: 이 폴더의 `demo.html`을 크롬에서 바로 열거나(더블클릭), 이 폴더에서 `python3 -m http.server 4173` → `http://localhost:4173/demo.html`
 
 ---
 
