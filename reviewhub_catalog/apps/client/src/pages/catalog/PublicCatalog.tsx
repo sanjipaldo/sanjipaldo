@@ -49,6 +49,7 @@ import { apiFetch } from "@/lib/api";
 import { RATE_TYPE_LABELS, effectiveRate, rateTierLines, representativeFee } from "@/lib/shipping-rates";
 import type { CatalogData, GuideContent, Notice, OperationsOverview, PriceHistory, Product, PublicShippingPolicy, ShippingType, SoldOutIssue } from "./types";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
+import { SUPPLY_STATUS_LABELS, supplyStatus } from "@/lib/supply-status";
 import { NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, selectNewProducts, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 
 
@@ -1508,15 +1509,11 @@ function CatalogProductTable({
             ? Math.min(...sortedOptions.map((option) => option.generalPrice))
             : product.generalPrice;
           const salePolicy = salePriceLabel(product.salePriceMode, product.salePrice);
-          const allOptionsSoldOut = options.length > 0 && options.every((option) => option.isSoldOut);
-          const soldOutNow = Boolean(product.isSoldOut || allOptionsSoldOut);
-          const seasonConfigured = Boolean(product.saleStartMonth && product.saleEndMonth);
-          const availableNow = !product.isSoldOut && !allOptionsSoldOut && (
-            !seasonApplies(product, category?.name)
-            || product.isAlwaysOnSale
-            || (seasonConfigured && isMonthInSeason(currentMonth, product.saleStartMonth, product.saleEndMonth))
-          );
-          const supplyLabel = soldOutNow ? "품절" : availableNow ? "판매중" : "시즌 종료";
+          // 판매 상태(판매중·품절·시즌 종료)는 관리자 상품 리스트와 같은 규칙(lib/supply-status)으로 정합니다.
+          const status = supplyStatus(product, seasonApplies(product, category?.name), currentMonth);
+          const soldOutNow = status === "sold_out";
+          const availableNow = status === "on_sale";
+          const supplyLabel = SUPPLY_STATUS_LABELS[status];
           const policy = product.shippingPolicyId ? policyById.get(product.shippingPolicyId) : undefined;
           const shippingSummary = shippingFeeSummary(product, policy);
           return (

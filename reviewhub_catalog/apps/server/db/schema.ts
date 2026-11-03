@@ -220,6 +220,8 @@ export const products = sqliteTable(
     displayOrder: integer("displayOrder").notNull().default(1000000),
     isVisible: integer("isVisible", { mode: "boolean" }).notNull().default(true),
     isSoldOut: integer("isSoldOut", { mode: "boolean" }).notNull().default(false),
+    // migration 028: 관리자가 직접 지정한 "시즌종료"(판매기간과 상관없이 시즌 종료로 표시)
+    isSeasonEnded: integer("isSeasonEnded", { mode: "boolean" }).notNull().default(false),
     deletedAt: text("deletedAt"),
     createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)

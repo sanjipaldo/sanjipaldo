@@ -1448,3 +1448,68 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .operation-detail-link > strong { font-size: 28px; }
 .operation-detail-link > strong small { margin-left: 2px; font-size: 12px; }
 .operation-detail-link > small { color: var(--w-body); font-size: 12px; }
+
+/* 관리자 상품 리스트: 품절·시즌 종료는 공개 단가표처럼 빨간 행 */
+.product-admin-table tbody tr.is-unavailable > td { background: var(--w-negative-row) !important; border-top-color: #f5cfd0; }
+.product-admin-table tbody tr.is-unavailable:hover > td { background: var(--w-negative-row-hover) !important; }
+.product-admin-table tbody tr.is-unavailable > td:first-child { box-shadow: inset 4px 0 0 var(--w-negative); }
+.product-admin-table tbody tr.is-unavailable .status-pill.danger { color: #fff !important; background: var(--w-negative) !important; }
+.product-admin-table tbody tr.is-sold_out .status-pill.danger { background: #475569 !important; }
+@media (max-width: 720px) {
+  .product-admin-table tbody tr.is-unavailable { border-color: #f2b8ba !important; background: var(--w-negative-row) !important; box-shadow: inset 4px 0 0 var(--w-negative) !important; }
+  .product-admin-table tbody tr.is-unavailable > td:first-child { box-shadow: none; }
+}
+
+/* 상품 수정 창 맨 위: 판매 상태(판매중·품절·시즌종료) + 공개 노출 */
+.editor-status-panel { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; gap: 12px; padding: 14px 16px; border: 1px solid var(--w-line); border-radius: 16px; background: var(--w-soft-2); }
+.editor-status-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.editor-status-group > span { color: var(--w-ink); font-size: 13px; font-weight: 800; }
+.editor-status-group > small { color: var(--w-body); font-size: 12px; }
+.editor-status-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.editor-status-option { display: inline-flex !important; flex-direction: row !important; align-items: center; gap: 6px !important; height: 40px; padding: 0 16px; border: 1px solid var(--w-line); border-radius: 999px; background: #fff; color: var(--w-ink); font-size: 14px !important; font-weight: 800; cursor: pointer; }
+.editor-status-option input { width: 16px !important; height: 16px !important; margin: 0; accent-color: var(--w-ink); }
+.editor-status-option.active.is-on_sale { border-color: var(--w-ink); background: #fff; box-shadow: inset 0 0 0 1px var(--w-ink); }
+.editor-status-option.active.is-sold_out { border-color: #475569; background: #475569; color: #fff; }
+.editor-status-option.active.is-season_ended { border-color: var(--w-negative); background: var(--w-negative-row); color: var(--w-negative-deep); box-shadow: inset 0 0 0 1px var(--w-negative); }
+.editor-status-option.active.is-sold_out input { accent-color: #fff; }
+.editor-visible-toggle { display: flex !important; flex-direction: row !important; align-items: center; gap: 10px !important; min-width: 190px; padding: 10px 14px; border: 1px solid var(--w-line); border-radius: 14px; background: #fff; cursor: pointer; }
+.editor-visible-toggle.active { border-color: var(--w-primary); background: var(--w-primary-pale); }
+.editor-visible-toggle input { width: 18px !important; height: 18px !important; margin: 0; accent-color: var(--w-positive-deep); }
+.editor-visible-toggle span { display: flex; flex-direction: column; gap: 2px; }
+.editor-visible-toggle b { color: var(--w-ink); font-size: 14px; }
+.editor-visible-toggle small { color: var(--w-body); font-size: 12px !important; }
+@media (max-width: 720px) {
+  .editor-status-panel { grid-template-columns: 1fr; padding: 12px; }
+  .editor-status-option { flex: 1 1 0; justify-content: center; padding: 0 8px; }
+}
+
+/* 팝업(수정·등록·미리보기 창): 스크롤을 내려도 위쪽 제목 + 닫기(X)가 따라오고, 아래 저장·취소 버튼도 항상 보이게 */
+@media (min-width: 721px) {
+  .editor-panel:not(.bulk-edit-panel):not(.bundle-sort-panel) > .editor-header,
+  .excel-preview-panel > .editor-header,
+  .request-detail-modal > .editor-header,
+  .operation-detail-modal > .editor-header {
+    position: sticky; top: -30px; z-index: 8;
+    margin: -30px -30px 20px; padding: 26px 30px 14px;
+    border-bottom: 1px solid var(--w-line); background: #fff;
+  }
+  .editor-panel:not(.bulk-edit-panel):not(.bundle-sort-panel) > .editor-footer,
+  .editor-panel:not(.bulk-edit-panel):not(.bundle-sort-panel) > .editor-actions:not(.bundle-editor-actions),
+  .excel-preview-panel > .editor-footer {
+    position: sticky; bottom: -30px; z-index: 8;
+    margin: 24px -30px -30px; padding: 14px 30px 24px;
+    border-top: 1px solid var(--w-line); background: #fff; box-shadow: 0 -8px 20px rgba(28, 58, 46, .06);
+  }
+}
+@media (max-width: 720px) {
+  .excel-preview-panel > .editor-header, .request-detail-modal > .editor-header {
+    position: sticky; top: -21px; z-index: 8;
+    margin: -21px -21px 16px; padding: 18px 21px 12px;
+    border-bottom: 1px solid var(--w-line); background: #fff;
+  }
+  .excel-preview-panel > .editor-footer {
+    position: sticky; bottom: -21px; z-index: 8;
+    margin: 18px -21px -21px; padding: 12px 21px max(14px, env(safe-area-inset-bottom));
+    background: #fff; box-shadow: 0 -8px 20px rgba(28, 58, 46, .08);
+  }
+}

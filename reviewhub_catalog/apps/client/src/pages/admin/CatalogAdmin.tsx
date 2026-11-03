@@ -48,6 +48,7 @@ import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 import { apiFetch } from "@/lib/api";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
 import { authClient, clearAuthToken } from "@/lib/auth";
+import { SUPPLY_STATUS_LABELS, supplyStatus, type SupplyStatus } from "@/lib/supply-status";
 import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 import type { AdminCatalogData, AdminHomeData, AdminOverview, BaljuoraConnection, Category, CatalogSyncOutboxItem, CatalogSyncOverview, CatalogSyncRun, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, SalesOverview, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
@@ -235,7 +236,8 @@ type BulkField = "isVisible" | "isSoldOut" | "categoryId" | "shippingPolicyId" |
 function BulkEditModal({ ids, categories, shippingPolicies, suppliers, preset, onClose, onDone }: { ids: string[]; categories: Category[]; shippingPolicies: ShippingPolicy[]; suppliers: Supplier[]; preset?: "seasonInfo"; onClose: () => void; onDone: () => void }) {
   const [enabled, setEnabled] = useState<Record<BulkField, boolean>>({ isVisible: false, isSoldOut: false, categoryId: false, shippingPolicyId: false, courier: false, supplierName: false, season: preset === "seasonInfo", imageUrl: false, notes: preset === "seasonInfo", packaging: false });
   const [isVisible, setIsVisible] = useState(true);
-  const [isSoldOut, setIsSoldOut] = useState(false);
+  // 판매 상태: 판매중 / 품절 / 시즌종료(관리자 지정)
+  const [saleStatus, setSaleStatus] = useState<SupplyStatus>("on_sale");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [shippingPolicyId, setShippingPolicyId] = useState("");
   const [courier, setCourier] = useState("");
@@ -278,7 +280,10 @@ function BulkEditModal({ ids, categories, shippingPolicies, suppliers, preset, o
     if (selectedCount === 0 || busy) return;
     const changes: Record<string, unknown> = {};
     if (enabled.isVisible) changes.isVisible = isVisible;
-    if (enabled.isSoldOut) changes.isSoldOut = isSoldOut;
+    if (enabled.isSoldOut) {
+      changes.isSoldOut = saleStatus === "sold_out";
+      changes.isSeasonEnded = saleStatus === "season_ended";
+    }
     if (enabled.categoryId) changes.categoryId = categoryId;
     if (enabled.shippingPolicyId) changes.shippingPolicyId = shippingPolicyId || null;
     if (enabled.courier) changes.courier = courier.trim() || null;
@@ -343,7 +348,7 @@ function BulkEditModal({ ids, categories, shippingPolicies, suppliers, preset, o
           {row("packaging", "포장 안내", <input value={packaging} onChange={(event) => setPackaging(event.target.value)} placeholder="예: 전용박스, 선물박스 + 외피박스 (비우면 삭제)" />)}
           {row("imageUrl", "상품 이미지", <div className="bulk-edit-image"><input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://... 또는 업로드 (비우면 이미지 삭제)" /><button type="button" onClick={() => imageRef.current?.click()} disabled={uploading}><Upload size={14} /> {uploading ? "업로드 중…" : "JPEG/PNG 업로드"}</button><input ref={imageRef} type="file" accept="image/jpeg,image/png" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }} />{imageUrl && <img src={imageUrl} alt="일괄 변경 이미지 미리보기" />}</div>)}
           {row("isVisible", "노출설정", <div className="bulk-edit-choices"><label><input type="radio" checked={isVisible} onChange={() => setIsVisible(true)} /> 노출</label><label><input type="radio" checked={!isVisible} onChange={() => setIsVisible(false)} /> 미노출</label></div>)}
-          {row("isSoldOut", "품절여부", <div className="bulk-edit-choices"><label><input type="radio" checked={!isSoldOut} onChange={() => setIsSoldOut(false)} /> 판매중</label><label><input type="radio" checked={isSoldOut} onChange={() => setIsSoldOut(true)} /> 품절</label></div>)}
+          {row("isSoldOut", "판매 상태", <div className="bulk-edit-choices">{(["on_sale", "sold_out", "season_ended"] as const).map((value) => <label key={value}><input type="radio" checked={saleStatus === value} onChange={() => setSaleStatus(value)} /> {value === "season_ended" ? "시즌종료" : SUPPLY_STATUS_LABELS[value]}</label>)}</div>)}
           {row("categoryId", "카테고리", <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>{categories.map((category) => <option key={category.id} value={category.id}>{category.shippingType === "overseas" ? "[해외] " : ""}{category.name}</option>)}</select>)}
           {row("shippingPolicyId", "배송정책", <select value={shippingPolicyId} onChange={(event) => setShippingPolicyId(event.target.value)}><option value="">정책 연결 해제(직접 입력)</option>{shippingPolicies.map((policy) => <option key={policy.id} value={policy.id}>{policy.shippingType === "overseas" ? "[해외] " : ""}{policy.name}</option>)}</select>)}
           {row("courier", "택배사", <input value={courier} onChange={(event) => setCourier(event.target.value)} placeholder="비우면 택배사 삭제" />)}
@@ -562,6 +567,7 @@ const blankProduct = {
   categoryId: "",
   isVisible: true,
   isSoldOut: false,
+  isSeasonEnded: false,
   options: [] as ProductOptionDraft[]
 };
 
@@ -582,6 +588,11 @@ function isSeasonalCategory(category?: Category) {
 }
 
 // 제철 적용 여부: 제철 카테고리이거나, 카테고리와 상관없이 상품에 제철 월이 지정된 경우
+// 이번 달(한국 시간) — 판매기간으로 시즌 종료를 판단할 때 씁니다.
+function seoulCurrentMonth() {
+  return Number(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Seoul", month: "numeric" }).format(new Date()));
+}
+
 function seasonApplies(product: Pick<Product, "isAlwaysOnSale" | "saleStartMonth" | "saleEndMonth">, category?: Category) {
   return isSeasonalCategory(category) || Boolean(!product.isAlwaysOnSale && product.saleStartMonth && product.saleEndMonth);
 }
@@ -859,11 +870,12 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const [month, setMonth] = useState("all");
   const [shippingFilter, setShippingFilter] = useState<"all" | ShippingType>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const currentMonth = seoulCurrentMonth();
   // 오늘 운영 팝업의 "품절 전환" 링크(/admin/products?status=soldout)로 들어오면 품절 상품만 보여 줍니다.
-  const [statusFilter, setStatusFilter] = useState<"all" | "visible" | "soldout">(() => {
+  const [statusFilter, setStatusFilter] = useState<"all" | "visible" | "soldout" | "seasonended">(() => {
     try {
       const status = new URLSearchParams(window.location.search).get("status");
-      return status === "soldout" || status === "visible" ? status : "all";
+      return status === "soldout" || status === "visible" || status === "seasonended" ? status : "all";
     } catch {
       return "all";
     }
@@ -936,10 +948,11 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       const matchesMonth = month === "all" || !seasonApplies(product, category) || product.isAlwaysOnSale || (product.saleStartMonth !== null && product.saleEndMonth !== null && (product.saleStartMonth <= product.saleEndMonth ? Number(month) >= product.saleStartMonth && Number(month) <= product.saleEndMonth : Number(month) >= product.saleStartMonth || Number(month) <= product.saleEndMonth));
       const matchesStatus = statusFilter === "all"
         || (statusFilter === "visible" && product.isVisible)
-        || (statusFilter === "soldout" && (product.isSoldOut || product.options?.some((option) => option.isSoldOut)));
+        || (statusFilter === "soldout" && (product.isSoldOut || product.options?.some((option) => option.isSoldOut)))
+        || (statusFilter === "seasonended" && supplyStatus(product, seasonApplies(product, category), currentMonth) === "season_ended");
       return matchesQuery && matchesShipping && matchesCategory && matchesMonth && matchesStatus;
     });
-  }, [categoryFilter, data.categories, data.products, month, query, shippingFilter, statusFilter]);
+  }, [categoryFilter, currentMonth, data.categories, data.products, month, query, shippingFilter, statusFilter]);
   const pageCount = Math.max(1, Math.ceil(products.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const pagedProducts = products.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -962,7 +975,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     if (page > pageCount) setPage(pageCount);
   }, [page, pageCount]);
   const visibleCategories = data.categories.filter((category) => shippingFilter === "all" || category.shippingType === shippingFilter);
-  const showProductStatus = (status: "all" | "visible" | "soldout") => {
+  const showProductStatus = (status: "all" | "visible" | "soldout" | "seasonended") => {
     setQuery("");
     setMonth("all");
     setShippingFilter("all");
@@ -991,7 +1004,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   };
   const [quickBusy, setQuickBusy] = useState(false);
   // 선택 바의 빠른 변경(품절/판매중/노출/숨김): 확인 한 번으로 바로 적용
-  const quickBulkUpdate = async (changes: { isSoldOut?: boolean; isVisible?: boolean }, label: string) => {
+  const quickBulkUpdate = async (changes: { isSoldOut?: boolean; isSeasonEnded?: boolean; isVisible?: boolean }, label: string) => {
     const ids = Array.from(selectedProductIds);
     if (ids.length === 0 || quickBusy) return;
     if (!window.confirm(`선택한 ${ids.length.toLocaleString("ko-KR")}개 상품을 '${label}'(으)로 변경할까요?`)) return;
@@ -1194,6 +1207,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     categoryId: product.categoryId,
     isVisible: product.isVisible,
     isSoldOut: product.isSoldOut,
+    isSeasonEnded: product.isSeasonEnded ?? false,
     options: (product.options ?? []).map((option) => ({
       id: option.id,
       name: option.name,
@@ -1493,7 +1507,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
           <select value={shippingFilter} onChange={(event) => { setShippingFilter(event.target.value as "all" | ShippingType); setCategoryFilter("all"); }}><option value="all">전체 배송</option><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select>
           <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="all">전체 카테고리</option>{visibleCategories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select>
           <select className="admin-month-filter" value={month} onChange={(event) => setMonth(event.target.value)}><option value="all">전체 판매월</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((value) => <option key={value} value={String(value)}>{value}월 상품</option>)}</select>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "visible" | "soldout")}><option value="all">전체 상태</option><option value="visible">노출 상품</option><option value="soldout">품절 상품</option></select>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "visible" | "soldout" | "seasonended")}><option value="all">전체 상태</option><option value="visible">노출 상품</option><option value="soldout">품절 상품</option><option value="seasonended">시즌종료 상품</option></select>
           <PageSizeInput value={pageSize} onChange={setPageSize} label="페이지당 상품 수" suffix="개씩 보기" storageKey="admin-products" />
           <button type="button" className="filter-reset" onClick={() => { setQuery(""); setShippingFilter("all"); setCategoryFilter("all"); setMonth("all"); setStatusFilter("all"); }}>초기화</button>
           <span>총 {(data.isPartial ? data.catalogTotals?.productCount ?? products.length : products.length).toLocaleString("ko-KR")}개{hydrating ? " · 전체 목록 준비 중" : ""}</span>
@@ -1504,8 +1518,9 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         {selectedProductIds.size > 0 && !bulkEditOpen && <div className="bulk-selection-bar" role="region" aria-label="선택한 상품 일괄 작업">
           <strong>{selectedProductIds.size.toLocaleString("ko-KR")}개 선택됨</strong>
           <div className="bulk-quick-actions" aria-label="빠른 변경">
-            <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isSoldOut: true }, "품절")}>품절</button>
-            <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isSoldOut: false }, "판매중")}>판매중</button>
+            <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isSoldOut: false, isSeasonEnded: false }, "판매중")}>판매중</button>
+            <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isSoldOut: true, isSeasonEnded: false }, "품절")}>품절</button>
+            <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isSoldOut: false, isSeasonEnded: true }, "시즌종료")}>시즌종료</button>
             <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isVisible: true }, "노출")}>노출</button>
             <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isVisible: false }, "숨김")}>숨김</button>
             <button type="button" className="bulk-season-quick" disabled={quickBusy} onClick={() => setBulkEditOpen("seasonInfo")}><CalendarDays size={15} /> 제철 월·상품 안내</button>
@@ -1521,6 +1536,8 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             const minimumAPrice = lowestProductAPrice(product);
             const minimumGeneralPrice = lowestProductGeneralPrice(product);
             const category = data.categories.find((item) => item.id === product.categoryId);
+            // 공개 단가표와 같은 규칙으로 판매 상태를 정하고, 품절·시즌 종료는 빨간 행으로 보여 줍니다.
+            const rowStatus = supplyStatus(product, seasonApplies(product, category), currentMonth);
             const costPrice = representativeOption?.costPrice ?? product.costPrice ?? 0;
             const margin = marginRate(minimumAPrice, costPrice);
             const marginWon = marginAmount(minimumAPrice, costPrice);
@@ -1539,7 +1556,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             ) : null;
             return (
               <Fragment key={product.id}>
-                <tr className={expanded ? "expanded" : ""}>
+                <tr className={`${expanded ? "expanded " : ""}${rowStatus !== "on_sale" ? `is-unavailable is-${rowStatus}` : ""}`.trim()}>
                   <td className="product-select-cell" data-label="선택"><label className="product-select-control"><input type="checkbox" checked={selectedProductIds.has(product.id)} onChange={() => toggleProductSelection(product.id)} aria-label={`${product.name} 선택`} /><span>선택</span></label></td>
                   <td className="admin-product-primary"><div className="admin-product-cell">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={20} /></span>}<div className="admin-product-copy"><strong>{product.name}</strong><small>{product.productCode || product.id} · {product.origin || "-"}</small>{options.length > 0 && <button type="button" className="admin-option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? "옵션 접기" : `옵션 ${options.length}개 보기`} <ChevronRight size={14} /></button>}</div></div>{optionPanel && <div className="admin-inline-options">{optionPanel}</div>}</td>
                   <td data-label="노출순서"><strong className="display-order-number">{productOrderMap.get(product.id) ?? "-"}</strong></td>
@@ -1551,7 +1568,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
                   <td data-label="일반공급가"><b className="admin-general-price">{formatPrice(minimumGeneralPrice)}</b><small>{options.length > 0 ? "옵션 최저가" : "기본가"}</small></td>
                   <td data-label="판매가"><b className="admin-sale-price">{product.salePriceMode === "fixed" ? product.salePrice === null ? "미설정" : formatPrice(product.salePrice) : "자율"}</b><small>{product.salePriceMode === "fixed" ? "지정 판매가" : "판매자 자율"}</small></td>
                   <td data-label="마진(1개)">{margin !== null && marginWon !== null ? <div className="margin-cell"><strong className="margin-rate prominent">{Math.round(margin)}%</strong><span className={`margin-amount ${marginWon < 0 ? "negative" : ""}`}>개당 {formatSignedPrice(marginWon)}</span></div> : <small>계산 대기</small>}</td>
-                  <td data-label="상태"><span className={`status-pill ${product.isVisible ? "active" : ""}`}>{product.isVisible ? "노출" : "숨김"}</span><span className={`status-pill ${product.isSoldOut ? "danger" : ""}`}>{product.isSoldOut ? "품절" : "판매중"}</span></td>
+                  <td data-label="상태"><span className={`status-pill ${product.isVisible ? "active" : ""}`}>{product.isVisible ? "노출" : "숨김"}</span><span className={`status-pill ${rowStatus !== "on_sale" ? "danger" : ""}`}>{rowStatus === "season_ended" ? "시즌종료" : SUPPLY_STATUS_LABELS[rowStatus]}</span></td>
                   <td data-label="관리"><div className="row-actions product-row-actions"><button type="button" onClick={() => startEdit(product)}><Pencil size={15} /> 수정</button><button type="button" className="danger" onClick={() => void remove(product)} aria-label={`${product.name} 삭제`}><Trash2 size={15} /> 삭제</button></div></td>
                 </tr>
                 {expanded && options.length > 0 && (
@@ -1590,6 +1607,32 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         </div>
       )}
       {editing && <div className="editor-overlay"><form className="editor-panel" onSubmit={save}><div className="editor-header"><div><span>PRODUCT EDITOR</span><h2>{editing.id ? "상품 수정" : "신규 상품 등록"}</h2></div><button type="button" onClick={() => setEditing(null)} disabled={saving} aria-label="닫기"><X size={21} /></button></div><div className="editor-grid">
+        {(() => {
+          // 판매 상태·공개 노출은 맨 위에서 바로 고릅니다. 시즌종료를 고르면 공개 단가표에 "시즌 종료"(빨간 행)로 보입니다.
+          const current: SupplyStatus = editing.isSoldOut ? "sold_out" : editing.isSeasonEnded ? "season_ended" : "on_sale";
+          const autoSeasonEnded = current === "on_sale" && supplyStatus({ ...editing, isSoldOut: false, isSeasonEnded: false }, seasonApplies(editing, editingCategory), seoulCurrentMonth()) === "season_ended";
+          const pick = (value: SupplyStatus) => setEditing({ ...editing, isSoldOut: value === "sold_out", isSeasonEnded: value === "season_ended" });
+          return (
+            <div className="full editor-status-panel">
+              <div className="editor-status-group">
+                <span>판매 상태</span>
+                <div className="editor-status-options" role="radiogroup" aria-label="판매 상태">
+                  {(["on_sale", "sold_out", "season_ended"] as const).map((value) => (
+                    <label key={value} className={`editor-status-option is-${value}${current === value ? " active" : ""}`}>
+                      <input type="radio" name="product-sale-status" checked={current === value} onChange={() => pick(value)} />
+                      {value === "season_ended" ? "시즌종료" : SUPPLY_STATUS_LABELS[value]}
+                    </label>
+                  ))}
+                </div>
+                <small>{current === "sold_out" ? "공개 단가표·관리자 리스트에 빨간 행 + 품절로 보이고, 최근 7일 품절 이슈에 올라갑니다." : current === "season_ended" ? "판매기간과 상관없이 공개 단가표·관리자 리스트에 빨간 행 + 시즌 종료로 보입니다." : autoSeasonEnded ? "판매중으로 저장해도 이번 달이 판매기간 밖이라 공개 화면에는 시즌 종료(빨간 행)로 보입니다." : "흰색 행 · 판매중으로 보입니다."}</small>
+              </div>
+              <label className={`editor-visible-toggle${editing.isVisible ? " active" : ""}`}>
+                <input type="checkbox" checked={editing.isVisible} onChange={(event) => setEditing({ ...editing, isVisible: event.target.checked })} />
+                <span><b>공개 노출</b><small>{editing.isVisible ? "공개 단가표에 보입니다." : "숨김 · 공개 단가표에 보이지 않습니다."}</small></span>
+              </label>
+            </div>
+          );
+        })()}
         <label>상품코드<input value={editing.productCode} onChange={(event) => setEditing({ ...editing, productCode: event.target.value })} placeholder="예: ass00057 (필수)" required={!editing.id} /></label>
         <label className="full">상품명<input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} required /></label>
         <label>배송유형<select value={editing.shippingType} onChange={(event) => { const shippingType = event.target.value as ShippingType; const category = data.categories.find((item) => item.shippingType === shippingType); const health = isHealthCategory(category); setEditing({ ...editing, shippingType, categoryId: category?.id || "", shippingPolicyId: null, salePriceMode: health ? "fixed" : editing.salePriceMode, options: editing.options.map((option) => ({ ...option, salePriceMode: health ? "fixed" : option.salePriceMode })) }); }}><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select></label>
@@ -1619,8 +1662,6 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <label>택배사<input value={editing.courier} onChange={(event) => setEditing({ ...editing, courier: event.target.value })} /></label>
         <label>포장방법<input value={editing.packaging} onChange={(event) => setEditing({ ...editing, packaging: event.target.value })} /></label>
         <label className="full">참고사항<textarea rows={4} value={editing.notes} onChange={(event) => setEditing({ ...editing, notes: event.target.value })} /></label>
-        <label className="check-label"><input type="checkbox" checked={editing.isVisible} onChange={(event) => setEditing({ ...editing, isVisible: event.target.checked })} /> 공개 노출</label>
-        <label className="check-label"><input type="checkbox" checked={editing.isSoldOut} onChange={(event) => setEditing({ ...editing, isSoldOut: event.target.checked })} /> 품절/준비중 표시 (노출 유지)</label>
       </div><div className="editor-footer"><button type="button" onClick={() => setEditing(null)} disabled={saving}>취소</button><button className="primary-action" type="submit" disabled={saving}><Save size={16} /> {saving ? "빠르게 저장 중…" : "저장하기"}</button></div></form></div>}
       {bulkEditOpen && <BulkEditModal ids={Array.from(selectedProductIds)} categories={data.categories} shippingPolicies={shippingPolicies} suppliers={suppliers} preset={bulkEditOpen === "seasonInfo" ? "seasonInfo" : undefined} onClose={() => setBulkEditOpen(false)} onDone={() => { setBulkEditOpen(false); setSelectedProductIds(new Set()); void refresh(true); }} />}
       {bulkPreview && <div className="editor-overlay"><section className="excel-preview-panel"><div className="editor-header"><div><span>EXCEL PREVIEW</span><h2>상품 일괄변경 미리보기</h2></div><button type="button" onClick={() => { setBulkPreview(null); setBulkFile(null); }} aria-label="닫기"><X size={21} /></button></div>

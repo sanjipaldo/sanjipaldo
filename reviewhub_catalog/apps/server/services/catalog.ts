@@ -55,6 +55,8 @@ export type ProductInput = {
   categoryId: string;
   isVisible?: boolean;
   isSoldOut?: boolean;
+  // 관리자가 직접 지정한 시즌종료. 품절과 동시에 쓰지 않습니다(품절이면 시즌종료는 끕니다). 값을 안 보내면 기존 값을 유지합니다.
+  isSeasonEnded?: boolean;
   options?: ProductOptionInput[];
 };
 
@@ -1054,6 +1056,7 @@ export async function createProduct(input: ProductInput) {
         courier: selectedShippingPolicy?.courier || input.courier || null,
         isVisible: input.isVisible ?? true,
         isSoldOut: input.isSoldOut ?? false,
+        isSeasonEnded: !(input.isSoldOut ?? false) && Boolean(input.isSeasonEnded),
         updatedAt
       })
       .returning();
@@ -1189,6 +1192,8 @@ export async function updateProduct(id: string, input: ProductInput, changedBy: 
         courier: selectedShippingPolicy?.courier || input.courier || null,
         isVisible: input.isVisible ?? true,
         isSoldOut: input.isSoldOut ?? false,
+        // 시즌종료: 값을 보내지 않은 저장(엑셀·일괄 변경 등)은 기존 값을 그대로 두고, 품절이면 끕니다.
+        isSeasonEnded: !(input.isSoldOut ?? false) && (input.isSeasonEnded ?? previous[0].isSeasonEnded ?? false),
         updatedAt: changedAt
       })
       .where(eq(products.id, id))

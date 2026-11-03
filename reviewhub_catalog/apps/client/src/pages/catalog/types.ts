@@ -97,6 +97,8 @@ export type Product = {
   displayOrder?: number;
   isVisible: boolean;
   isSoldOut: boolean;
+  // 관리자가 직접 지정한 시즌종료(migration 028)
+  isSeasonEnded?: boolean;
   createdAt: string;
   updatedAt: string;
   options: ProductOption[];

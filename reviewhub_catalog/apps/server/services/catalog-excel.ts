@@ -401,6 +401,7 @@ function asProductInput(product: ProductDraft): ProductInput {
     categoryId: product.categoryId,
     isVisible: product.isVisible,
     isSoldOut: product.isSoldOut,
+    isSeasonEnded: product.isSeasonEnded ?? false,
     options: product.options.map((option) => ({
       id: option.id,
       name: option.name,
@@ -1115,6 +1116,7 @@ export async function applyBulkProductWorkbook(bytes: Uint8Array, changedBy: str
 export type BulkProductChanges = {
   isVisible?: boolean;
   isSoldOut?: boolean;
+  isSeasonEnded?: boolean;
   categoryId?: string;
   shippingPolicyId?: string | null;
   courier?: string | null;
@@ -1144,6 +1146,7 @@ export async function bulkUpdateProducts(ids: string[], changes: BulkProductChan
     const product: ProductDraft = { ...source, options: source.options.map((option) => ({ ...option })) };
     if (changes.isVisible !== undefined) product.isVisible = changes.isVisible;
     if (changes.isSoldOut !== undefined) product.isSoldOut = changes.isSoldOut;
+    if (changes.isSeasonEnded !== undefined) product.isSeasonEnded = changes.isSeasonEnded;
     if (category) {
       product.categoryId = category.id;
       if (product.shippingType !== category.shippingType) {

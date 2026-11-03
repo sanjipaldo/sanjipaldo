@@ -101,6 +101,7 @@ const ProductSchema = z.object({
   categoryId: z.string().trim().min(1),
   isVisible: z.boolean().optional(),
   isSoldOut: z.boolean().optional(),
+  isSeasonEnded: z.boolean().optional(),
   // 옵션 기능은 사용하지 않습니다(발주오라 일반상품처럼 규격마다 상품을 따로 등록).
   options: z.array(ProductOptionSchema).max(0, "옵션 대신 규격마다 상품을 따로 등록해 주세요.").optional()
 }).refine(
@@ -685,6 +686,7 @@ const BulkUpdateSchema = z.object({
   changes: z.object({
     isVisible: z.boolean().optional(),
     isSoldOut: z.boolean().optional(),
+    isSeasonEnded: z.boolean().optional(),
     categoryId: z.string().trim().min(1).optional(),
     shippingPolicyId: z.string().trim().min(1).nullable().optional(),
     courier: z.string().trim().max(100).nullable().optional(),
