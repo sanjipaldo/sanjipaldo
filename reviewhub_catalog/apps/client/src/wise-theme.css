@@ -1513,3 +1513,28 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
     background: #fff; box-shadow: 0 -8px 20px rgba(28, 58, 46, .08);
   }
 }
+
+/* 품절이슈 메뉴(/sold-out): 가격변동과 같은 레이아웃 · 카드는 가격변동 카드 모양에 품절(연한 빨강 바탕 + 슬레이트 품절 뱃지) */
+.sold-out-retention-chip { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 999px; background: #475569; color: #fff; font-size: 15px; font-weight: 800; white-space: nowrap; }
+.price-change-card.sold-out { border-color: #f0d0d3; background: linear-gradient(135deg, #fff, #fff4f5); }
+.sold-out-thumb-wrap { position: relative; overflow: hidden; width: fit-content; border-radius: 12px; }
+.sold-out-thumb-wrap .product-thumb { display: block; filter: saturate(.55); object-fit: cover; }
+.sold-out-thumb-wrap .thumb-sold-out { padding: 3px 0; font-size: 11px; }
+.change-direction-badge.sold-out { color: #fff; border-color: #475569; background: #475569; }
+.price-change-card.sold-out .price-change-field.sale-static b { color: var(--w-ink); }
+.price-change-card.sold-out .price-change-field.sold-out-field.is-status b { color: var(--w-negative-deep); }
+.sold-out-shortcut { display: flex; align-items: center; gap: 14px; margin-top: 18px; padding: 18px 22px; border: 1px solid #f0d0d3; border-radius: 18px; background: linear-gradient(135deg, #fff, #fff4f5); color: var(--w-ink); text-decoration: none; transition: border-color .15s ease, box-shadow .15s ease; }
+.sold-out-shortcut:hover { border-color: #e7b3b8; box-shadow: 0 6px 18px rgba(167, 32, 39, .08); }
+.sold-out-shortcut-icon { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 14px; background: #475569; color: #fff; }
+.sold-out-shortcut-copy { display: flex; flex: 1 1 auto; flex-direction: column; gap: 3px; min-width: 0; }
+.sold-out-shortcut-copy strong { font-size: 18px; font-weight: 800; }
+.sold-out-shortcut-copy strong b { color: var(--w-negative-deep); }
+.sold-out-shortcut-copy small { color: var(--w-mute); font-size: 13px; }
+.sold-out-shortcut-go { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; height: 40px; padding: 0 16px; border-radius: 999px; background: var(--w-ink); color: #fff; font-size: 14px; font-weight: 800; white-space: nowrap; }
+@media (max-width: 720px) {
+  .sold-out-retention-chip { justify-content: center; width: 100%; }
+  .sold-out-thumb-wrap .product-thumb { width: 64px; height: 64px; }
+  .sold-out-shortcut { flex-wrap: wrap; padding: 16px; }
+  .sold-out-shortcut-copy strong { font-size: 16px; }
+  .sold-out-shortcut-go { justify-content: center; width: 100%; }
+}

@@ -5,7 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import NotFound from "./pages/not-found/Index";
 import { AdminGuard } from "./components/auth/AdminGuard";
 import { AdminLoginPage, CatalogAdmin } from "./pages/admin/CatalogAdmin";
-import { CatalogHome, GuidePage, NewProductsPage, NoticesPage, SourcingPage } from "./pages/catalog/PublicCatalog";
+import { CatalogHome, GuidePage, NewProductsPage, NoticesPage, SoldOutIssuesPage, SourcingPage } from "./pages/catalog/PublicCatalog";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +19,7 @@ const App = () => (
           <Route path="/guide" element={<GuidePage />} />
           <Route path="/new-products" element={<NewProductsPage />} />
           <Route path="/notices" element={<NoticesPage />} />
+          <Route path="/sold-out" element={<SoldOutIssuesPage />} />
           <Route path="/sourcing" element={<SourcingPage />} />
           <Route path="/auth" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminLoginPage />} />

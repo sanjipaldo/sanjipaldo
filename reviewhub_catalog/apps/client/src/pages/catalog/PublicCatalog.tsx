@@ -509,6 +509,7 @@ function BrandHeader() {
         <NavLink to="/" end>단가표</NavLink>
         <NavLink to="/new-products">신규상품</NavLink>
         <NavLink to="/notices">가격변동</NavLink>
+        <NavLink to="/sold-out">품절이슈</NavLink>
         <NavLink to="/guide">공지사항</NavLink>
         <button className="sourcing-nav-button" type="button" onClick={() => window.dispatchEvent(new CustomEvent("doogo:sourcing-open"))}><PackageSearch size={14} /> 소싱해주세요!</button>
         <a href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer"><MessageCircle size={14} /> 1:1 상담</a>
@@ -554,6 +555,7 @@ function PageFrame({ children }: { children: ReactNode }) {
             <Link to="/">상품 단가표</Link>
             <Link to="/new-products">신규상품</Link>
             <Link to="/notices">가격변동</Link>
+            <Link to="/sold-out">품절이슈</Link>
             <Link to="/guide">공지사항</Link>
           </div>
           <div>
@@ -1177,89 +1179,196 @@ function PriceChangeBoard({
   );
 }
 
+// 품절이슈 날짜 탭: 오늘 + 지난 7일(한국 날짜). 품절 기록은 7일(168시간) 동안 보이므로 7일 전 탭은 기록이 있을 때만 보여 줍니다.
+const SOLD_OUT_PAST_DAYS = 7;
+
+function seoulTimeLabel(value: string) {
+  const normalized = value.includes("T") ? value : `${value.replace(" ", "T")}Z`;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+}
+
+function soldOutDaysAgo(dayKey: string, todayKey?: string) {
+  if (!dayKey || !todayKey) return null;
+  return Math.round((new Date(`${todayKey}T12:00:00+09:00`).getTime() - new Date(`${dayKey}T12:00:00+09:00`).getTime()) / (24 * 60 * 60 * 1000));
+}
+
+// 단가표에서 숨긴 상품도 "배송 · 카테고리 · 배송비 · 판매기간" 줄을 보여 주도록, 품절 기록에 실린 상품 정보로 채웁니다.
+function issueInfoProduct(issue: SoldOutIssue): Product | undefined {
+  if (!issue.shippingType) return undefined;
+  return {
+    id: issue.productId,
+    productCode: issue.productCode ?? null,
+    name: issue.productName,
+    imageUrl: issue.productImageUrl,
+    shippingType: issue.shippingType,
+    categoryId: issue.categoryId ?? null,
+    shippingPolicyId: issue.shippingPolicyId ?? null,
+    saleStartMonth: issue.saleStartMonth ?? null,
+    saleEndMonth: issue.saleEndMonth ?? null,
+    isAlwaysOnSale: issue.isAlwaysOnSale ?? false,
+    isSoldOut: true,
+    options: []
+  } as unknown as Product;
+}
+
 function SoldOutIssueBoard({
   issues: allIssues,
-  query = "",
   products = [],
+  pageSize = 5,
+  query = "",
   todayKey,
+  dayKeys = [],
+  selectedDay = "all",
+  onSelectDay,
   categories = [],
-  policies = []
+  policies = [],
+  loading = false
 }: {
   issues: SoldOutIssue[];
-  query?: string;
   products?: Product[];
+  pageSize?: number;
+  query?: string;
   todayKey?: string;
+  dayKeys?: string[];
+  selectedDay?: string;
+  onSelectDay?: (day: string) => void;
   categories?: CatalogData["categories"];
   policies?: PublicShippingPolicy[];
+  loading?: boolean;
 }) {
-  const normalizedQuery = searchKey(query);
-  const codeById = useMemo(() => new Map(products.map((product) => [product.id, product.productCode])), [products]);
   const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
   const categoryNameById = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
   const policyById = useMemo(() => new Map(policies.map((policy) => [policy.id, policy])), [policies]);
-  // 품절된 날: "10.22(목)" + "오늘 품절 / 어제 품절 / N일 전 품절"(한국 날짜)
-  const whenLabel = (createdAt: string) => {
-    const dayKey = historyDateKey(createdAt);
-    if (!dayKey || !todayKey) return "";
-    const days = Math.round((new Date(`${todayKey}T12:00:00+09:00`).getTime() - new Date(`${dayKey}T12:00:00+09:00`).getTime()) / (24 * 60 * 60 * 1000));
-    return days <= 0 ? "오늘 품절" : days === 1 ? "어제 품절" : `${days}일 전 품절`;
-  };
-  const issues = normalizedQuery
-    ? allIssues.filter((issue) => [issue.productName, issue.optionName, codeById.get(issue.productId)].some((value) => searchKey(value).includes(normalizedQuery)))
-    : allIssues;
   const [page, setPage] = useState(1);
-  const issuePageSize = 5;
-  const totalPages = Math.max(1, Math.ceil(issues.length / issuePageSize));
+  const [displayPageSize, setDisplayPageSize] = useState(pageSize);
+  useEffect(() => { setDisplayPageSize(readStoredPageSize("public-sold-out-issues", pageSize, 200)); }, [pageSize]);
+  const [shipping, setShipping] = useState<"all" | ShippingType>("all");
+  const shippingOf = (issue: SoldOutIssue) => productById.get(issue.productId)?.shippingType ?? issue.shippingType;
+  const normalizedQuery = searchKey(query);
+  const searchedIssues = useMemo(() => normalizedQuery
+    ? allIssues.filter((issue) => [issue.productName, issue.optionName, issue.productCode ?? productById.get(issue.productId)?.productCode].some((value) => searchKey(value).includes(normalizedQuery)))
+    : allIssues, [allIssues, normalizedQuery, productById]);
+  const countByDay = (list: SoldOutIssue[]) => {
+    const counts = new Map<string, number>();
+    list.forEach((issue) => { const key = historyDateKey(issue.createdAt); counts.set(key, (counts.get(key) ?? 0) + 1); });
+    return counts;
+  };
+  const dayCounts = useMemo(() => countByDay(searchedIssues), [searchedIssues]);
+  const allDayCounts = useMemo(() => countByDay(allIssues), [allIssues]);
+  const visibleDayKeys = dayKeys.filter((day, index) => index < SOLD_OUT_PAST_DAYS || (allDayCounts.get(day) ?? 0) > 0);
+  const dayIssues = useMemo(() => selectedDay === "all"
+    ? searchedIssues
+    : searchedIssues.filter((issue) => historyDateKey(issue.createdAt) === selectedDay), [searchedIssues, selectedDay]);
+  useEffect(() => { setPage(1); }, [normalizedQuery, selectedDay]);
+  const domesticCount = dayIssues.filter((issue) => shippingOf(issue) === "domestic").length;
+  const overseasCount = dayIssues.filter((issue) => shippingOf(issue) === "overseas").length;
+  const filteredIssues = shipping === "all" ? dayIssues : dayIssues.filter((issue) => shippingOf(issue) === shipping);
+  const totalPages = Math.max(1, Math.ceil(filteredIssues.length / displayPageSize));
   const currentPage = Math.min(page, totalPages);
-  const visibleIssues = issues.slice((currentPage - 1) * issuePageSize, currentPage * issuePageSize);
-  useEffect(() => { setPage(1); }, [normalizedQuery]);
+  const visible = filteredIssues.slice((currentPage - 1) * displayPageSize, currentPage * displayPageSize);
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+  const selectedLabel = selectedDay === "all" ? "최근 7일" : selectedDay === todayKey ? "오늘" : dayTabLabel(selectedDay);
   return (
-    <section className="sold-out-issue-board" aria-labelledby="sold-out-issue-title">
-      <div className="sold-out-issue-heading">
-        <div>
-          <span className="section-kicker">SUPPLY ALERT</span>
-          <h2 id="sold-out-issue-title">최근 7일 품절 이슈 <span className="sold-out-count">{issues.length.toLocaleString("ko-KR")}건</span></h2>
-          <p>공급처 사정으로 품절 처리된 상품을 처리일 기준 7일간 안내합니다.</p>
-        </div>
-        <span className="sold-out-retention">7일 후 자동 초기화</span>
-      </div>
-      {issues.length === 0 ? (
-        <div className="sold-out-issue-empty"><PackageCheck size={21} /><strong>{normalizedQuery ? `“${query.trim()}” 품절 이슈가 없습니다.` : "최근 7일 품절 처리 상품이 없습니다."}</strong><span>관리자에서 품절 처리된 상품이 이곳에 표시됩니다.</span></div>
-      ) : (
-        <div className="sold-out-issue-list">
-          {visibleIssues.map((issue) => (
-            <SoldOutIssueCard
-              key={issue.id}
-              issue={issue}
-              product={productById.get(issue.productId)}
-              categoryName={(() => { const categoryId = productById.get(issue.productId)?.categoryId; return categoryId ? categoryNameById.get(categoryId) : undefined; })()}
-              policy={(() => { const policyId = productById.get(issue.productId)?.shippingPolicyId; return policyId ? policyById.get(policyId) : undefined; })()}
-              when={whenLabel(issue.createdAt)}
-            />
+    <>
+      {visibleDayKeys.length > 0 && (
+        <div className="price-day-tabs sold-out-day-tabs" role="tablist" aria-label="품절 날짜" style={{ gridTemplateColumns: `repeat(${visibleDayKeys.length + 1}, minmax(0, 1fr))` }}>
+          {visibleDayKeys.map((day, index) => (
+            <button key={day} type="button" role="tab" aria-selected={selectedDay === day} className={selectedDay === day ? "active" : ""} onClick={() => onSelectDay?.(day)}>
+              <span>{index === 0 ? "오늘" : index === 1 ? "어제" : `${index}일 전`}</span>
+              <strong>{dayTabLabel(day)}</strong>
+              <small>{(dayCounts.get(day) ?? 0).toLocaleString("ko-KR")}건</small>
+            </button>
           ))}
+          <button type="button" role="tab" aria-selected={selectedDay === "all"} className={selectedDay === "all" ? "active" : ""} onClick={() => onSelectDay?.("all")}>
+            <span>전체</span>
+            <strong>최근 7일</strong>
+            <small>{searchedIssues.length.toLocaleString("ko-KR")}건</small>
+          </button>
         </div>
       )}
-      <PageNumbers page={currentPage} totalPages={totalPages} onChange={setPage} label="품절 이슈 페이지" />
-    </section>
+      {visibleDayKeys.length > 0 && (
+        <p className="price-day-summary">
+          <b>{selectedLabel}</b> 품절 {dayIssues.length.toLocaleString("ko-KR")}건 · 국내배송 {domesticCount.toLocaleString("ko-KR")}건 · 해외배송 {overseasCount.toLocaleString("ko-KR")}건
+        </p>
+      )}
+      <div className="price-board-toolbar">
+        <div className="price-direction-filter sold-out-shipping-filter" aria-label="품절이슈 배송유형 필터">
+          <button type="button" className={shipping === "all" ? "active" : ""} onClick={() => { setShipping("all"); setPage(1); }}>전체 <small>{dayIssues.length}</small></button>
+          <button type="button" className={`domestic ${shipping === "domestic" ? "active" : ""}`} onClick={() => { setShipping("domestic"); setPage(1); }}>국내배송 <small>{domesticCount}</small></button>
+          <button type="button" className={`overseas ${shipping === "overseas" ? "active" : ""}`} onClick={() => { setShipping("overseas"); setPage(1); }}>해외배송 <small>{overseasCount}</small></button>
+        </div>
+        <PageSizeInput value={displayPageSize} onChange={(value) => { setDisplayPageSize(value); setPage(1); }} label="품절이슈 페이지당 표시 수" suffix="개" max={200} storageKey="public-sold-out-issues" />
+      </div>
+      {visible.length > 0 ? (
+        <div className="price-change-list sold-out-change-list">
+          {visible.map((issue) => {
+            const product = productById.get(issue.productId);
+            const categoryId = product?.categoryId ?? issue.categoryId ?? undefined;
+            const policyId = product?.shippingPolicyId ?? issue.shippingPolicyId ?? undefined;
+            return (
+              <SoldOutIssueCard
+                key={issue.id}
+                issue={issue}
+                product={product}
+                todayKey={todayKey}
+                categoryName={categoryId ? categoryNameById.get(categoryId) : undefined}
+                policy={policyId ? policyById.get(policyId) : undefined}
+              />
+            );
+          })}
+        </div>
+      ) : loading ? (
+        <div className="price-change-empty"><div className="spinner" /><strong>품절이슈를 불러오는 중입니다…</strong><span>잠시만 기다려 주세요.</span></div>
+      ) : (
+        normalizedQuery
+          ? <div className="price-change-empty"><Search size={24} /><strong>“{query.trim()}” 품절이슈가 없습니다.</strong><span>최근 7일간 이 상품이 품절되지 않았거나 검색어가 다릅니다.</span></div>
+          : allIssues.length === 0
+            ? <div className="price-change-empty"><PackageCheck size={24} /><strong>최근 7일 품절 처리 상품이 없습니다.</strong><span>관리자에서 품절 처리된 상품이 이곳에 표시됩니다.</span></div>
+            : selectedDay !== "all" && (dayCounts.get(selectedDay) ?? 0) === 0
+              ? <div className="price-change-empty"><PackageCheck size={24} /><strong>{selectedLabel} 품절이슈가 없습니다.</strong><span>다른 날짜 탭을 눌러 확인해 주세요.</span></div>
+              : <div className="price-change-empty"><PackageCheck size={24} /><strong>선택한 품절이슈가 없습니다.</strong><span>전체 버튼을 누르면 모든 품절이슈를 확인할 수 있습니다.</span></div>
+      )}
+      <PageNumbers page={currentPage} totalPages={totalPages} onChange={setPage} label="품절이슈 페이지" />
+    </>
   );
 }
 
-function SoldOutIssueCard({ issue, product, categoryName, policy, when }: { issue: SoldOutIssue; product?: Product; categoryName?: string; policy?: PublicShippingPolicy; when: string }) {
+// 가격변동 카드와 같은 모양: 썸네일(품절 띠) · 날짜/오늘/품절 뱃지 · 상품명 · 배송/카테고리/판매기간 줄 · 아래 줄에 품절 처리일·현재 상태
+function SoldOutIssueCard({ issue, product, todayKey, categoryName, policy }: { issue: SoldOutIssue; product?: Product; todayKey?: string; categoryName?: string; policy?: PublicShippingPolicy }) {
   const dayKey = historyDateKey(issue.createdAt);
+  const daysAgo = soldOutDaysAgo(dayKey, todayKey);
+  const dayLabel = daysAgo === 0 ? "오늘" : daysAgo === 1 ? "어제" : "";
+  const when = daysAgo === null ? "" : daysAgo <= 0 ? "오늘 품절" : daysAgo === 1 ? "어제 품절" : `${daysAgo}일 전 품절`;
+  const time = seoulTimeLabel(issue.createdAt);
+  const infoProduct = product ?? issueInfoProduct(issue);
+  const code = issue.productCode ?? product?.productCode;
   return (
-    <article className="sold-out-issue-card">
-      <div className="sold-out-thumb">
-        <img src={issue.productImageUrl || "/assets/products/placeholder.webp"} alt="" />
-        <span aria-hidden="true">품절</span>
+    <article className="price-change-card sold-out">
+      <div className="history-thumb-wrap sold-out-thumb-wrap">
+        {product
+          ? <ProductThumb product={product} />
+          : issue.productImageUrl
+            ? <img className="product-thumb" src={issue.productImageUrl} alt={issue.productName} width="112" height="112" />
+            : <div className="product-thumb product-thumb-empty"><ImageOff size={22} /><span>이미지 준비중</span></div>}
+        <span className="thumb-sold-out" aria-hidden="true">품절</span>
       </div>
-      <div className="sold-out-body">
+      <div className="price-change-copy">
+        <div className="price-change-meta">
+          <time dateTime={dayKey}>{formatDate(issue.createdAt)}</time>
+          {dayLabel && <span className={`price-change-day ${dayLabel === "오늘" ? "today" : ""}`}>{dayLabel}</span>}
+          <span className="change-direction-badge sold-out"><Ban size={13} strokeWidth={2.6} aria-hidden="true" /> {issue.status}</span>
+        </div>
         <strong>{issue.productName}</strong>
-        {issue.optionName && <small>{issue.optionName}</small>}
-        {product && <ProductInfoLine product={product} categoryName={categoryName} policy={policy} />}
+        <small>{issue.optionName ? `옵션 · ${issue.optionName}` : code ? `상품코드 ${code}` : "상품 전체"} · 공급처 사정으로 품절 처리</small>
+        {infoProduct && <ProductInfoLine product={infoProduct} categoryName={categoryName} policy={policy} />}
       </div>
-      <div className="sold-out-when">
-        <time dateTime={dayKey}><b>{dayKey ? dayTabLabel(dayKey) : formatDate(issue.createdAt)}</b>{when && <small>{when}</small>}</time>
-        <span className="sold-out-status"><Ban size={14} strokeWidth={2.6} aria-hidden="true" /> {issue.status}</span>
+      <div className="price-change-fields">
+        <div className="price-change-field sale-static sold-out-field"><span>품절 처리</span><b>{dayKey ? dayTabLabel(dayKey) : formatDate(issue.createdAt)}{time ? ` ${time}` : ""}</b><small>{when}</small></div>
+        <div className="price-change-field sale-static sold-out-field is-status"><span>현재 상태</span><b>품절</b><small>판매중으로 바뀌면 바로 빠집니다</small></div>
       </div>
     </article>
   );
@@ -1321,7 +1430,7 @@ function MonthlyActivityModal({ type, monthLabel, onClose, onPick }: { type: Mon
             })}
           </ul>
         )}
-        <Link className="monthly-activity-link" to={isNew ? "/new-products" : "/notices"} onClick={onClose}>{isNew ? "신규상품 메뉴에서 날짜별로 보기" : "가격변동 · 최근 7일 품절 이슈 보기"} <ChevronRight size={15} /></Link>
+        <Link className="monthly-activity-link" to={isNew ? "/new-products" : "/sold-out"} onClick={onClose}>{isNew ? "신규상품 메뉴에서 날짜별로 보기" : "품절이슈 메뉴에서 날짜별로 보기"} <ChevronRight size={15} /></Link>
       </section>
     </div>
   );
@@ -2108,10 +2217,70 @@ export function NoticesPage() {
         <section className="history-page-panel">
           <div className="section-heading"><div><span className="section-kicker">PRICE HISTORY</span><h2>날짜별 가격변동</h2><p>상품 썸네일, 상품명, 옵션명과 변경 전후 금액을 함께 표시합니다.</p></div>{today && <div className="today-date-badge" aria-live="polite"><CalendarRange size={16} /><span>오늘</span><strong>{seoulFullDate(today)}</strong></div>}</div>
           <div className="history-search-bar">
-            <div className="search-field"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" aria-label="가격변동·품절 상품 검색" />{query && <button type="button" className="search-clear" onClick={() => setQuery("")} aria-label="검색어 지우기"><X size={15} /></button>}</div>
+            <div className="search-field"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" aria-label="가격변동 상품 검색" />{query && <button type="button" className="search-clear" onClick={() => setQuery("")} aria-label="검색어 지우기"><X size={15} /></button>}</div>
           </div>
           <PriceChangeBoard histories={histories ?? data.priceHistory} products={data.products} pageSize={5} query={query} todayKey={todayKey} dayKeys={dayKeys} selectedDay={selectedDay} onSelectDay={setPickedDay} categories={data.categories} policies={data.shippingPolicies ?? []} />
-          <SoldOutIssueBoard issues={data.recentSoldOutIssues} query={query} products={data.products} todayKey={todayKey} categories={data.categories} policies={data.shippingPolicies ?? []} />
+        </section>
+        <Link className="sold-out-shortcut" to="/sold-out">
+          <span className="sold-out-shortcut-icon"><Ban size={20} strokeWidth={2.4} aria-hidden="true" /></span>
+          <span className="sold-out-shortcut-copy"><span className="section-kicker">SUPPLY ALERT</span><strong>최근 7일 품절이슈 <b>{data.recentSoldOutIssues.length.toLocaleString("ko-KR")}건</b></strong><small>품절된 상품은 "품절이슈" 메뉴에서 날짜별로 확인할 수 있습니다.</small></span>
+          <span className="sold-out-shortcut-go">품절이슈 보기 <ChevronRight size={16} /></span>
+        </Link>
+      </main>
+    </PageFrame>
+  );
+}
+
+export function SoldOutIssuesPage() {
+  const [data, setData] = useState<CatalogData>(emptyCatalogData);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    const reloadCatalog = () => {
+      void loadCatalog().then((next) => {
+        if (!active) return;
+        if (next) setData(next);
+        setLoading(false);
+      });
+    };
+    reloadCatalog();
+    const timer = window.setInterval(reloadCatalog, 60 * 1000);
+    const stopRefreshSignal = onCatalogRefreshSignal(reloadCatalog);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      stopRefreshSignal();
+    };
+  }, []);
+  const [query, setQuery] = useState("");
+  // 오늘 날짜는 접속 기기 시계와 상관없이 한국 시간으로 표시하고, 자정이 지나면 바로 바뀝니다.
+  const [today, setToday] = useState<Date | null>(null);
+  useEffect(() => {
+    setToday(new Date());
+    const timer = window.setInterval(() => setToday(new Date()), 30 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const todayKey = today ? seoulDateKey(today) : undefined;
+  const dayKeys = useMemo(() => (todayKey ? recentDayKeys(todayKey, SOLD_OUT_PAST_DAYS) : []), [todayKey]);
+  // 처음에는 "오늘" 탭을 보여 줍니다. 고른 날짜가 범위를 벗어나면(자정 지남) 다시 오늘로 맞춥니다.
+  const [pickedDay, setPickedDay] = useState("");
+  const selectedDay = pickedDay === "all" || dayKeys.includes(pickedDay) ? pickedDay : todayKey ?? "all";
+  return (
+    <PageFrame>
+      <main className="content-page">
+        <div className="content-hero notice-hero sold-out-hero">
+          <div><span className="section-kicker">SUPPLY ALERT</span><h1>품절이슈</h1><p>공급처 사정으로 품절 처리된 상품을 처리일 기준 최근 7일간 날짜별로 정확하게 확인할 수 있습니다.</p></div>
+          <div className="notice-hero-actions">
+            <span className="sold-out-retention-chip"><Ban size={16} strokeWidth={2.4} aria-hidden="true" /> 최근 7일 품절 {data.recentSoldOutIssues.length.toLocaleString("ko-KR")}건</span>
+            <small>다시 판매중이 되면 바로 빠지고, 7일이 지나면 자동으로 정리됩니다.</small>
+          </div>
+        </div>
+        <section className="history-page-panel">
+          <div className="section-heading"><div><span className="section-kicker">SOLD OUT HISTORY</span><h2>날짜별 품절이슈</h2><p>상품 썸네일, 상품명과 품절 처리된 날짜·시간을 함께 표시합니다.</p></div>{today && <div className="today-date-badge" aria-live="polite"><CalendarRange size={16} /><span>오늘</span><strong>{seoulFullDate(today)}</strong></div>}</div>
+          <div className="history-search-bar">
+            <div className="search-field"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" aria-label="품절 상품 검색" />{query && <button type="button" className="search-clear" onClick={() => setQuery("")} aria-label="검색어 지우기"><X size={15} /></button>}</div>
+          </div>
+          <SoldOutIssueBoard issues={data.recentSoldOutIssues} products={data.products} pageSize={5} query={query} todayKey={todayKey} dayKeys={dayKeys} selectedDay={selectedDay} onSelectDay={setPickedDay} categories={data.categories} policies={data.shippingPolicies ?? []} loading={loading} />
         </section>
       </main>
     </PageFrame>

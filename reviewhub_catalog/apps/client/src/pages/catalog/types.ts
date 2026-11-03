@@ -159,6 +159,14 @@ export type SoldOutIssue = {
   optionName: string | null;
   createdAt: string;
   status: "품절";
+  // 품절이슈 카드의 배송·카테고리·판매기간 줄(단가표에서 숨긴 상품도 표시)
+  productCode?: string | null;
+  shippingType?: ShippingType;
+  categoryId?: string | null;
+  shippingPolicyId?: string | null;
+  saleStartMonth?: number | null;
+  saleEndMonth?: number | null;
+  isAlwaysOnSale?: boolean;
 };
 
 export type OperationsOverview = {

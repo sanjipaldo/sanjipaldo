@@ -398,7 +398,13 @@ async function publicSoldOutIssues(rows: ActivityRow[]) {
   const ids = [...new Set(rows.map((row) => row.productId))];
   if (ids.length === 0) return [];
   const productRows = await getDb()
-    .select({ id: products.id, name: products.name, imageUrl: products.imageUrl, isSoldOut: products.isSoldOut })
+    .select({
+      id: products.id, name: products.name, imageUrl: products.imageUrl, isSoldOut: products.isSoldOut,
+      // 품절이슈 카드의 "배송 · 카테고리 · 배송비 · 판매기간" 줄(단가표에서 숨긴 상품도 보여 주기 위해 함께 보냅니다)
+      productCode: products.productCode, shippingType: products.shippingType, categoryId: products.categoryId,
+      shippingPolicyId: products.shippingPolicyId, saleStartMonth: products.saleStartMonth, saleEndMonth: products.saleEndMonth,
+      isAlwaysOnSale: products.isAlwaysOnSale
+    })
     .from(products)
     .where(and(inArray(products.id, ids), sql`${products.deletedAt} IS NULL`));
   const byId = new Map(productRows.map((product) => [product.id, product]));
@@ -419,7 +425,14 @@ async function publicSoldOutIssues(rows: ActivityRow[]) {
       optionId: issue.optionId,
       optionName: issue.optionName,
       createdAt: issue.createdAt,
-      status: "품절" as const
+      status: "품절" as const,
+      productCode: product.productCode ?? null,
+      shippingType: product.shippingType,
+      categoryId: product.categoryId ?? null,
+      shippingPolicyId: product.shippingPolicyId ?? null,
+      saleStartMonth: product.saleStartMonth ?? null,
+      saleEndMonth: product.saleEndMonth ?? null,
+      isAlwaysOnSale: product.isAlwaysOnSale ?? false
     });
   }
   return issues;
