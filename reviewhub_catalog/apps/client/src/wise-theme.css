@@ -1412,3 +1412,39 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .season-keyword-arrow:disabled { opacity: .3; cursor: default; border-color: var(--w-line); }
 .card-title.faq-title .faq-search { display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 0 12px; }
 .card-title.faq-title .faq-search input { flex: 1 1 auto; min-width: 0; width: auto; }
+
+/* 운영 현황 "이번 달 상품 현황": 숫자를 눌러 상품 목록 보기 */
+.monthly-stat-list > button { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 3px 7px; align-items: center; padding: 10px; border: 1px solid transparent; border-radius: var(--w-radius-lg); background: var(--w-soft-2); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+.monthly-stat-list > button:hover, .monthly-stat-list > button:focus-visible { border-color: var(--w-primary); background: var(--w-primary-pale); }
+.monthly-stat-list > button .monthly-stat-more { position: absolute; top: 10px; right: 10px; color: var(--w-mute); }
+.monthly-stat-hint { display: block; margin-top: 8px; color: var(--w-mute); font-size: 11px; }
+.monthly-activity-modal { width: min(560px, calc(100vw - 32px)); max-height: min(80vh, 720px); display: flex; flex-direction: column; }
+.monthly-activity-modal h2 small { margin-left: 6px; color: var(--w-positive-deep); font-size: 15px; }
+.monthly-activity-list { flex: 1 1 auto; min-height: 0; margin: 4px 0 12px; padding: 0; overflow-y: auto; list-style: none; }
+.monthly-activity-list li + li { border-top: 1px solid var(--w-line); }
+.monthly-activity-list li > button, .monthly-activity-list li > div { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; width: 100%; padding: 9px 4px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; }
+.monthly-activity-list li > div { grid-template-columns: 44px minmax(0, 1fr) auto; opacity: .75; }
+.monthly-activity-list li > button { cursor: pointer; border-radius: 10px; }
+.monthly-activity-list li > button:hover { background: var(--w-primary-pale); }
+.monthly-activity-list img { width: 44px; height: 44px; border-radius: 9px; object-fit: cover; background: var(--w-soft-2); }
+.monthly-activity-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.monthly-activity-name strong { overflow: hidden; color: var(--w-ink); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.monthly-activity-name small { color: var(--w-mute); font-size: 12px; }
+.monthly-activity-status { padding: 3px 9px; border-radius: 999px; font-size: 11px; font-style: normal; font-weight: 800; white-space: nowrap; }
+.monthly-activity-status.is-on { background: var(--w-primary-pale); color: var(--w-positive-deep); }
+.monthly-activity-status.is-soldout { background: #475569; color: #fff; }
+.monthly-activity-status.is-muted { background: #eef1f5; color: #475569; }
+.monthly-activity-loading, .monthly-activity-empty { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 28px 8px; color: var(--w-body); font-size: 14px; }
+.monthly-activity-link { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 42px; border-radius: 999px; background: var(--w-primary); color: var(--w-ink-deep); font-weight: 800; text-decoration: none; }
+@media (max-width: 720px) {
+  .monthly-activity-modal { max-height: 86vh; }
+  .monthly-activity-name strong { white-space: normal; }
+}
+
+/* 관리자 오늘 운영 팝업: 신규·품절 숫자 카드를 눌러 해당 화면으로 이동 */
+.operation-detail-link { display: flex; flex-direction: column; gap: 7px; min-height: 135px; padding: 18px; border: 1px solid #dfe9e4; border-radius: 14px; background: #f8fbf9; color: inherit; text-decoration: none; transition: border-color .15s ease, background .15s ease; }
+.operation-detail-link:hover, .operation-detail-link:focus-visible { border-color: var(--w-primary); background: var(--w-primary-pale); }
+.operation-detail-link > span { color: #7d8c85; font-size: 10px; font-weight: 900; }
+.operation-detail-link > strong { font-size: 28px; }
+.operation-detail-link > strong small { margin-left: 2px; font-size: 12px; }
+.operation-detail-link > small { color: var(--w-body); font-size: 12px; }

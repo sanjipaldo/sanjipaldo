@@ -779,16 +779,16 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
                 <strong>{operations?.operation.status ?? "운영정보 확인 중"}</strong>
                 <small>{operations?.operation.reason ?? "대한민국 공휴일 여부를 확인하고 있습니다."}</small>
               </article>
-              <article>
+              <Link className="operation-detail-link" to="/admin/newProducts" onClick={() => setOperationsOpen(false)}>
                 <span>이번 달 신규 상품</span>
                 <strong>{operations?.monthlyStats.newProducts ?? 0}<small>개</small></strong>
-                <small>현재 월에 추가된 상품</small>
-              </article>
-              <article>
+                <small>현재 월에 추가된 상품 · 눌러서 신규상품 관리 보기</small>
+              </Link>
+              <Link className="operation-detail-link" to="/admin/products?status=soldout" onClick={() => setOperationsOpen(false)}>
                 <span>이번 달 품절 전환 (시즌완료)</span>
                 <strong>{operations?.monthlyStats.soldOutChanges ?? 0}<small>개</small></strong>
-                <small>현재 월에 품절 처리된 상품·옵션</small>
-              </article>
+                <small>현재 월에 품절로 바뀐 상품 · 눌러서 품절 상품 보기</small>
+              </Link>
             </div>
             <button className="operation-modal-close" type="button" onClick={() => setOperationsOpen(false)}>확인</button>
           </section>
@@ -859,7 +859,15 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const [month, setMonth] = useState("all");
   const [shippingFilter, setShippingFilter] = useState<"all" | ShippingType>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "visible" | "soldout">("all");
+  // 오늘 운영 팝업의 "품절 전환" 링크(/admin/products?status=soldout)로 들어오면 품절 상품만 보여 줍니다.
+  const [statusFilter, setStatusFilter] = useState<"all" | "visible" | "soldout">(() => {
+    try {
+      const status = new URLSearchParams(window.location.search).get("status");
+      return status === "soldout" || status === "visible" ? status : "all";
+    } catch {
+      return "all";
+    }
+  });
   const [pageSize, setPageSize] = useState(() => readStoredPageSize("admin-products", 10));
   const [page, setPage] = useState(1);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(() => new Set());

@@ -388,6 +388,41 @@ function publicPolicyLegacyColumns() {
   };
 }
 
+// 최근 품절 이슈: 품절 기록(catalog_activity_logs sold_out) 중 아직 품절인 상품만, 상품마다 가장 최근 1건.
+// 단가표에서 숨김인 상품도 품절 안내는 보여 줍니다(관리자가 품절과 함께 숨김 처리하는 경우가 많아, 숨김 상품을 빼면 품절 안내가 비어 버림).
+// 삭제한 상품과 다시 판매중으로 돌린(재입고) 상품은 뺍니다.
+type ActivityRow = typeof catalogActivityLogs.$inferSelect;
+async function publicSoldOutIssues(rows: ActivityRow[]) {
+  const ids = [...new Set(rows.map((row) => row.productId))];
+  if (ids.length === 0) return [];
+  const productRows = await getDb()
+    .select({ id: products.id, name: products.name, imageUrl: products.imageUrl, isSoldOut: products.isSoldOut })
+    .from(products)
+    .where(and(inArray(products.id, ids), sql`${products.deletedAt} IS NULL`));
+  const byId = new Map(productRows.map((product) => [product.id, product]));
+  const seen = new Set<string>();
+  const issues = [];
+  for (const issue of rows) {
+    const product = byId.get(issue.productId);
+    if (!product) continue;
+    if (!issue.optionId && !product.isSoldOut) continue;
+    const key = `${issue.productId}|${issue.optionId ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    issues.push({
+      id: issue.id,
+      productId: issue.productId,
+      productName: product.name,
+      productImageUrl: product.imageUrl ?? null,
+      optionId: issue.optionId,
+      optionName: issue.optionName,
+      createdAt: issue.createdAt,
+      status: "품절" as const
+    });
+  }
+  return issues;
+}
+
 export async function getPublicCatalog() {
   const db = getDb();
   const soldOutSince = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)).toISOString();
@@ -408,19 +443,7 @@ export async function getPublicCatalog() {
 
   const recentHistory = historyRows.filter((history) => history.field !== "costPrice" && isPublicPriceHistoryDate(history.changedAt));
   const publicProducts = publicProductView(productRows, optionRows);
-  const productImageById = new Map(productRows.map((product) => [product.id, product.imageUrl]));
-  const recentSoldOutIssues = soldOutRows
-    .filter((issue) => productRows.some((product) => product.id === issue.productId))
-    .map((issue) => ({
-      id: issue.id,
-      productId: issue.productId,
-      productName: issue.productName,
-      productImageUrl: productImageById.get(issue.productId) ?? null,
-      optionId: issue.optionId,
-      optionName: issue.optionName,
-      createdAt: issue.createdAt,
-      status: "품절" as const
-    }));
+  const recentSoldOutIssues = await publicSoldOutIssues(soldOutRows);
 
   return {
     categories: categoryRows,
@@ -454,11 +477,11 @@ export async function getPublicPriceChangeNoticeData(dayKeys: string[], now = Da
       .from(products).where(and(eq(products.isVisible, true), sql`${products.deletedAt} IS NULL`))
   ]);
   const daySet = new Set(days);
-  const visibleIds = new Set(productRows.map((product) => product.id));
+  const soldOut = (await publicSoldOutIssues(soldOutRows)).filter((issue) => daySet.has(historyDayKey(issue.createdAt)));
   return {
     days,
     histories: historyRows.filter((history) => isPublicPriceHistoryDate(history.changedAt, now) && daySet.has(historyDayKey(history.changedAt))),
-    soldOut: soldOutRows.filter((issue) => visibleIds.has(issue.productId) && daySet.has(historyDayKey(issue.createdAt))),
+    soldOut,
     products: productRows
   };
 }
@@ -487,19 +510,7 @@ export async function getPublicCatalogInitial() {
     ? await db.select().from(productOptions).where(inArray(productOptions.productId, visibleProductIds)).orderBy(asc(productOptions.productId), asc(productOptions.sortOrder))
     : [];
   const recentHistory = historyRows.filter((history) => history.field !== "costPrice" && isPublicPriceHistoryDate(history.changedAt));
-  const productImageById = new Map(productRows.map((product) => [product.id, product.imageUrl]));
-  const recentSoldOutIssues = soldOutRows
-    .filter((issue) => productRows.some((product) => product.id === issue.productId))
-    .map((issue) => ({
-      id: issue.id,
-      productId: issue.productId,
-      productName: issue.productName,
-      productImageUrl: productImageById.get(issue.productId) ?? null,
-      optionId: issue.optionId,
-      optionName: issue.optionName,
-      createdAt: issue.createdAt,
-      status: "품절" as const
-    }));
+  const recentSoldOutIssues = await publicSoldOutIssues(soldOutRows);
   return {
     categories: categoryRows,
     shippingPolicies: policyRows,
@@ -1612,27 +1623,67 @@ export async function updateSourcingStatus(id: string, status: "received" | "rev
   return rows[0];
 }
 
+function seoulMonthStartIso(now = Date.now()) {
+  const seoulNow = new Date(now + (9 * 60 * 60 * 1000));
+  return new Date(Date.UTC(seoulNow.getUTCFullYear(), seoulNow.getUTCMonth(), 1) - (9 * 60 * 60 * 1000)).toISOString();
+}
+
+// 이번 달(한국 날짜) 신규 상품: 공개(노출) 상품 중 이번 달에 등록된 것, 최근 등록 순.
+async function monthlyNewProducts(monthStartIso: string) {
+  return getDb()
+    .select({ productId: products.id, name: products.name, productCode: products.productCode, imageUrl: products.imageUrl, isVisible: products.isVisible, isSoldOut: products.isSoldOut, createdAt: products.createdAt })
+    .from(products)
+    .where(and(eq(products.isVisible, true), sql`${products.deletedAt} IS NULL`, sql`datetime(${products.createdAt}) >= datetime(${monthStartIso})`))
+    .orderBy(desc(products.createdAt));
+}
+
+// 이번 달 품절 전환: 이번 달에 품절로 바뀐 상품을 상품마다 1번(가장 최근 품절 시각)만 셉니다. 삭제한 상품은 뺍니다.
+async function monthlySoldOutProducts(monthStartIso: string) {
+  const db = getDb();
+  const logs = await db.select().from(catalogActivityLogs)
+    .where(and(eq(catalogActivityLogs.eventType, "sold_out"), sql`datetime(${catalogActivityLogs.createdAt}) >= datetime(${monthStartIso})`))
+    .orderBy(desc(catalogActivityLogs.createdAt));
+  const ids = [...new Set(logs.map((log) => log.productId))];
+  if (ids.length === 0) return [];
+  const productRows = await db
+    .select({ id: products.id, name: products.name, productCode: products.productCode, imageUrl: products.imageUrl, isVisible: products.isVisible, isSoldOut: products.isSoldOut })
+    .from(products)
+    .where(and(inArray(products.id, ids), sql`${products.deletedAt} IS NULL`));
+  const byId = new Map(productRows.map((product) => [product.id, product]));
+  const seen = new Set<string>();
+  const items = [];
+  for (const log of logs) {
+    const product = byId.get(log.productId);
+    if (!product) continue;
+    const key = `${log.productId}|${log.optionId ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    items.push({
+      productId: product.id,
+      name: log.optionName ? `${product.name} · ${log.optionName}` : product.name,
+      productCode: product.productCode,
+      imageUrl: product.imageUrl,
+      isVisible: product.isVisible,
+      isSoldOut: product.isSoldOut,
+      createdAt: log.createdAt
+    });
+  }
+  return items;
+}
+
 export async function getMonthlyCatalogStats() {
-  const seoulNow = new Date(Date.now() + (9 * 60 * 60 * 1000));
-  const monthStartIso = new Date(
-    Date.UTC(seoulNow.getUTCFullYear(), seoulNow.getUTCMonth(), 1) - (9 * 60 * 60 * 1000)
-  ).toISOString();
-  const [newProducts, activityChanges] = await Promise.all([
-    getDb()
-      .select({ id: products.id })
-      .from(products)
-      .where(and(
-        eq(products.isVisible, true),
-        sql`datetime(${products.createdAt}) >= datetime(${monthStartIso})`
-      )),
-    getDb()
-      .select({ id: catalogActivityLogs.id, eventType: catalogActivityLogs.eventType })
-      .from(catalogActivityLogs)
-      .where(sql`datetime(${catalogActivityLogs.createdAt}) >= datetime(${monthStartIso})`)
-  ]);
+  const monthStartIso = seoulMonthStartIso();
+  const [newProducts, soldOutProducts] = await Promise.all([monthlyNewProducts(monthStartIso), monthlySoldOutProducts(monthStartIso)]);
   return {
     newProducts: newProducts.length,
-    soldOutChanges: activityChanges.filter((item) => item.eventType === "sold_out").length,
-    activityChanges: activityChanges.length
+    soldOutChanges: soldOutProducts.length,
+    activityChanges: newProducts.length + soldOutProducts.length
   };
+}
+
+// 운영 현황 "이번 달 상품 현황" 숫자를 눌렀을 때 보여 줄 상품 목록(숫자와 같은 기준).
+export async function getMonthlyActivity(type: "new_product" | "sold_out") {
+  const monthStartIso = seoulMonthStartIso();
+  const items = type === "new_product" ? await monthlyNewProducts(monthStartIso) : await monthlySoldOutProducts(monthStartIso);
+  return { type, monthStart: monthStartIso, count: items.length, items };
 }

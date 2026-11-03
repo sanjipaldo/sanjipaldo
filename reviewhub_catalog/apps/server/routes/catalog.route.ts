@@ -24,6 +24,7 @@ import {
   getShippingPolicies,
   getPublicCatalog,
   getPublicPriceHistory,
+  getMonthlyActivity,
   getPublicCatalogInitial,
   getPublicGuideSettings,
   getPublicNotices,
@@ -282,6 +283,10 @@ function errorResponse(c: Context, error: unknown) {
 
 catalogRouter.get("", publicRoute, async (c) => c.json(apiSuccess(await getPublicCatalog())));
 catalogRouter.get("/", publicRoute, async (c) => c.json(apiSuccess(await getPublicCatalog())));
+catalogRouter.get("/monthly-activity", publicRoute, async (c) => {
+  const type = c.req.query("type") === "sold_out" ? "sold_out" : "new_product";
+  return c.json(apiSuccess(await getMonthlyActivity(type)));
+});
 catalogRouter.get("/price-history", publicRoute, async (c) => c.json(apiSuccess(await getPublicPriceHistory())));
 catalogRouter.get("/initial", publicRoute, async (c) => c.json(apiSuccess(await getPublicCatalogInitial())));
 catalogRouter.get("/guide", publicRoute, async (c) => c.json(apiSuccess(await getPublicGuideSettings())));

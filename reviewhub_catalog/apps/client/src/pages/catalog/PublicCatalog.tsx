@@ -1264,13 +1264,78 @@ function SoldOutIssueCard({ issue, product, categoryName, policy, when }: { issu
   );
 }
 
+// 운영 현황 "이번 달 상품 현황" 숫자를 누르면 그 숫자에 들어간 상품 목록을 보여 줍니다(숫자와 같은 기준).
+type MonthlyActivityType = "new_product" | "sold_out";
+type MonthlyActivityItem = { productId: string; name: string; productCode: string | null; imageUrl: string | null; isVisible: boolean; isSoldOut: boolean; createdAt: string };
+
+function MonthlyActivityModal({ type, monthLabel, onClose, onPick }: { type: MonthlyActivityType; monthLabel: string; onClose: () => void; onPick: (name: string) => void }) {
+  const [items, setItems] = useState<MonthlyActivityItem[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  // 운영 현황은 1초마다 다시 그려지므로, 닫기 함수가 바뀌어도 목록을 다시 받지 않도록 ref로 둡니다.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    let active = true;
+    void apiFetch(`/catalog/monthly-activity?type=${type}`, { auth: false, silent: true })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("load");
+        const payload = (await response.json()) as { ok?: boolean; data?: { items: MonthlyActivityItem[] } };
+        if (active) setItems(payload.data?.items ?? []);
+      })
+      .catch(() => { if (active) setFailed(true); });
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onCloseRef.current(); };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => { active = false; window.removeEventListener("keydown", closeOnEscape); };
+  }, [type]);
+  const isNew = type === "new_product";
+  const title = `${monthLabel} ${isNew ? "신규 상품" : "품절 전환 (시즌완료)"}`;
+  return (
+    <div className="public-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="shipping-info-modal monthly-activity-modal" role="dialog" aria-modal="true" aria-labelledby="monthly-activity-title" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="public-modal-close" onClick={onClose} aria-label="닫기"><X size={20} /></button>
+        <span className="section-kicker">{isNew ? "NEW PRODUCTS" : "SOLD OUT"}</span>
+        <h2 id="monthly-activity-title">{title} {items && <small>{items.length.toLocaleString("ko-KR")}개</small>}</h2>
+        <p className="shipping-info-product">{isNew ? "이번 달에 새로 등록된 상품입니다. 상품을 누르면 단가표에서 바로 보여 드립니다." : "이번 달에 품절로 바뀐 상품입니다(상품마다 가장 최근 품절 시각). 판매중인 상품을 누르면 단가표에서 바로 보여 드립니다."}</p>
+        {!items && !failed && <div className="monthly-activity-loading"><div className="spinner" /><span>불러오는 중…</span></div>}
+        {failed && <div className="monthly-activity-empty">목록을 불러오지 못했습니다. 잠시 뒤 다시 눌러 주세요.</div>}
+        {items && items.length === 0 && <div className="monthly-activity-empty">이번 달 {isNew ? "신규 상품" : "품절 전환 상품"}이 없습니다.</div>}
+        {items && items.length > 0 && (
+          <ul className="monthly-activity-list">
+            {items.map((item) => {
+              const status = !item.isVisible ? { label: "단가표 숨김", tone: "muted" } : item.isSoldOut ? { label: "품절", tone: "soldout" } : isNew ? { label: "판매중", tone: "on" } : { label: "재입고(판매중)", tone: "on" };
+              const content = (
+                <>
+                  <img src={item.imageUrl || "/assets/products/placeholder.webp"} alt="" loading="lazy" />
+                  <span className="monthly-activity-name"><strong>{item.name}</strong><small>{formatDate(item.createdAt)} {isNew ? "등록" : "품절"}{item.productCode ? ` · ${item.productCode}` : ""}</small></span>
+                  <em className={`monthly-activity-status is-${status.tone}`}>{status.label}</em>
+                </>
+              );
+              return (
+                <li key={`${item.productId}-${item.createdAt}`}>
+                  {item.isVisible
+                    ? <button type="button" onClick={() => { onPick(item.name); onClose(); }} aria-label={`${item.name} 단가표에서 보기`}>{content}<ChevronRight size={16} aria-hidden="true" /></button>
+                    : <div className="is-disabled">{content}</div>}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <Link className="monthly-activity-link" to={isNew ? "/new-products" : "/notices"} onClick={onClose}>{isNew ? "신규상품 메뉴에서 날짜별로 보기" : "가격변동 · 최근 7일 품절 이슈 보기"} <ChevronRight size={15} /></Link>
+      </section>
+    </div>
+  );
+}
+
 function OperationsBoard({
   operations,
-  clock
+  clock,
+  onPickProduct
 }: {
   operations: OperationsOverview | null;
   clock: Date | null;
+  onPickProduct?: (name: string) => void;
 }) {
+  const [activityType, setActivityType] = useState<MonthlyActivityType | null>(null);
   // 사용자가 고른 지역을 기억합니다(우선순위: 직접 고른 지역 > 접속 IP 위치 > 서울).
   const [selectedRegion, setSelectedRegionState] = useState<string | null>(null);
   useEffect(() => {
@@ -1389,10 +1454,12 @@ function OperationsBoard({
       <article className="operations-card monthly-card">
         <div className="operations-card-heading"><CalendarRange size={18} /><div><span>이번 달 상품 현황</span><strong>{clock ? `${seoulMonth(clock)}월 실시간 집계` : "월간 현황 확인 중"}</strong></div></div>
         <div className="monthly-stat-list">
-          <div><PackageCheck size={18} /><span>신규 상품</span><strong>{operations?.monthlyStats.newProducts ?? 0}<small>개</small></strong></div>
-          <div><PackageX size={18} /><span>품절 전환 (시즌완료)</span><strong>{operations?.monthlyStats.soldOutChanges ?? 0}<small>개</small></strong></div>
+          <button type="button" onClick={() => setActivityType("new_product")} aria-label="이번 달 신규 상품 목록 보기"><PackageCheck size={18} /><span>신규 상품</span><strong>{operations?.monthlyStats.newProducts ?? 0}<small>개</small></strong><ChevronRight className="monthly-stat-more" size={15} aria-hidden="true" /></button>
+          <button type="button" onClick={() => setActivityType("sold_out")} aria-label="이번 달 품절 전환 상품 목록 보기"><PackageX size={18} /><span>품절 전환 (시즌완료)</span><strong>{operations?.monthlyStats.soldOutChanges ?? 0}<small>개</small></strong><ChevronRight className="monthly-stat-more" size={15} aria-hidden="true" /></button>
         </div>
+        <small className="monthly-stat-hint">숫자를 누르면 해당 상품을 볼 수 있습니다.</small>
       </article>
+      {activityType && <MonthlyActivityModal type={activityType} monthLabel={clock ? `${seoulMonth(clock)}월` : "이번 달"} onClose={() => setActivityType(null)} onPick={(name) => onPickProduct?.(name)} />}
     </section>
   );
 }
@@ -1714,7 +1781,14 @@ export function CatalogHome() {
   return (
     <PageFrame>
       <main className="catalog-main">
-        <OperationsBoard operations={operations} clock={clock} />
+        <OperationsBoard operations={operations} clock={clock} onPickProduct={(name) => {
+          // 고른 상품만 보이도록 필터를 풀고 상품명으로 찾은 뒤 단가표로 이동합니다.
+          setShippingType("all");
+          setCategoryId("all");
+          setSaleMonth("all");
+          setQuery(name);
+          window.requestAnimationFrame(() => document.querySelector("#price-table")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+        }} />
         <PartnerBanner />
         <section className="catalog-hero">
           <div>
