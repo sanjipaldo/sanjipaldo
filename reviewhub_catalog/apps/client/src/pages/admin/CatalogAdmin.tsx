@@ -1536,7 +1536,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             const minimumAPrice = lowestProductAPrice(product);
             const minimumGeneralPrice = lowestProductGeneralPrice(product);
             const category = data.categories.find((item) => item.id === product.categoryId);
-            // 공개 단가표와 같은 규칙으로 판매 상태를 정하고, 품절·시즌 종료는 빨간 행으로 보여 줍니다.
+            // 공개 단가표와 같은 규칙으로 판매 상태를 정하고, 품절·시즌 종료는 분홍색 그라데이션 행으로 보여 줍니다.
             const rowStatus = supplyStatus(product, seasonApplies(product, category), currentMonth);
             const costPrice = representativeOption?.costPrice ?? product.costPrice ?? 0;
             const margin = marginRate(minimumAPrice, costPrice);
@@ -1608,7 +1608,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       )}
       {editing && <div className="editor-overlay"><form className="editor-panel" onSubmit={save}><div className="editor-header"><div><span>PRODUCT EDITOR</span><h2>{editing.id ? "상품 수정" : "신규 상품 등록"}</h2></div><button type="button" onClick={() => setEditing(null)} disabled={saving} aria-label="닫기"><X size={21} /></button></div><div className="editor-grid">
         {(() => {
-          // 판매 상태·공개 노출은 맨 위에서 바로 고릅니다. 시즌종료를 고르면 공개 단가표에 "시즌 종료"(빨간 행)로 보입니다.
+          // 판매 상태·공개 노출은 맨 위에서 바로 고릅니다. 시즌종료를 고르면 공개 단가표에 "시즌 종료"(분홍색 행)로 보입니다.
           const current: SupplyStatus = editing.isSoldOut ? "sold_out" : editing.isSeasonEnded ? "season_ended" : "on_sale";
           const autoSeasonEnded = current === "on_sale" && supplyStatus({ ...editing, isSoldOut: false, isSeasonEnded: false }, seasonApplies(editing, editingCategory), seoulCurrentMonth()) === "season_ended";
           const pick = (value: SupplyStatus) => setEditing({ ...editing, isSoldOut: value === "sold_out", isSeasonEnded: value === "season_ended" });
@@ -1624,7 +1624,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
                     </label>
                   ))}
                 </div>
-                <small>{current === "sold_out" ? "공개 단가표·관리자 리스트에 빨간 행 + 품절로 보이고, 최근 7일 품절 이슈에 올라갑니다." : current === "season_ended" ? "판매기간과 상관없이 공개 단가표·관리자 리스트에 빨간 행 + 시즌 종료로 보입니다." : autoSeasonEnded ? "판매중으로 저장해도 이번 달이 판매기간 밖이라 공개 화면에는 시즌 종료(빨간 행)로 보입니다." : "흰색 행 · 판매중으로 보입니다."}</small>
+                <small>{current === "sold_out" ? "공개 단가표·관리자 리스트에 분홍색 행 + 품절로 보이고, 품절이슈 메뉴에 올라갑니다." : current === "season_ended" ? "판매기간과 상관없이 공개 단가표·관리자 리스트에 분홍색 행 + 시즌 종료로 보입니다." : autoSeasonEnded ? "판매중으로 저장해도 이번 달이 판매기간 밖이라 공개 화면에는 시즌 종료(분홍색 행)로 보입니다." : "흰색 행 · 판매중으로 보입니다."}</small>
               </div>
               <label className={`editor-visible-toggle${editing.isVisible ? " active" : ""}`}>
                 <input type="checkbox" checked={editing.isVisible} onChange={(event) => setEditing({ ...editing, isVisible: event.target.checked })} />

@@ -1933,7 +1933,7 @@ export function CatalogHome() {
           <SeasonMonthFilter products={data.products} categories={data.categories} saleMonth={saleMonth} onSaleMonth={setSaleMonth} currentMonth={currentMonth} query={query} onQuery={setQuery} />
           <div className="order-legend" aria-label="주문 가능 여부 안내">
             <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 행 · 판매중(지금 주문 가능)</span>
-            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 빨간색 행 · 품절 또는 시즌 종료(주문 불가)</span>
+            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 분홍색 행 · 품절 또는 시즌 종료(주문 불가)</span>
           </div>
           {fullLoadFailed && data.isPartial && (
             <div className="catalog-partial-warning" role="status">
@@ -2440,7 +2440,7 @@ export function NewProductsPage() {
           <SeasonMonthFilter products={newProducts} categories={data.categories} saleMonth={saleMonth} onSaleMonth={setSaleMonth} currentMonth={currentMonth} query={query} onQuery={setQuery} />
           <div className="order-legend" aria-label="주문 가능 여부 안내">
             <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 행 · 판매중(지금 주문 가능)</span>
-            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 빨간색 행 · 품절 또는 시즌 종료(주문 불가)</span>
+            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 분홍색 행 · 품절 또는 시즌 종료(주문 불가)</span>
           </div>
           <div className="catalog-table-wrap">
             <CatalogProductTable

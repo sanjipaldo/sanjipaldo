@@ -1538,3 +1538,43 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .sold-out-shortcut-copy strong { font-size: 16px; }
   .sold-out-shortcut-go { justify-content: center; width: 100%; }
 }
+
+/* 품절·시즌 종료 행 3차: 품절이슈 카드와 같은 흰색 → 연분홍 그라데이션(단가표·신규상품·관리자 상품 리스트 공통, 진한 빨간 띠 없음) */
+:root {
+  --w-unavailable-gradient: linear-gradient(135deg, #fff 0%, #fff4f5 100%);
+  --w-unavailable-gradient-hover: linear-gradient(135deg, #fff 0%, #ffeef0 100%);
+  --w-unavailable-border: #f0d0d3;
+  --w-unavailable-end: #fff4f5;
+  --w-unavailable-end-hover: #ffeef0;
+}
+.order-legend-item.unavailable i { border: 1px solid var(--w-unavailable-border); background: linear-gradient(135deg, #fff 0%, #fde4e7 100%); box-shadow: none; }
+/* 공개 단가표·신규상품(PC 표): 줄 전체에 그라데이션, 칸은 투명 */
+.catalog-table tbody tr.order-unavailable { background: var(--w-unavailable-gradient); }
+.catalog-table tbody tr.order-unavailable:hover { background: var(--w-unavailable-gradient-hover); }
+.catalog-table tbody tr.order-unavailable td,
+.catalog-table tbody tr.order-unavailable:hover td,
+.catalog-table tbody tr.order-unavailable > .catalog-product-cell { background: transparent !important; }
+.catalog-table tbody tr.order-unavailable > td:first-child { box-shadow: none; }
+.catalog-table tbody tr.order-unavailable td { border-top-color: var(--w-unavailable-border); }
+.catalog-table tbody tr.order-unavailable + tr td { border-top-color: var(--w-unavailable-border); }
+.option-price-list article.sold-out { background: var(--w-unavailable-gradient); box-shadow: none; }
+/* 관리자 상품 리스트(PC 표): 같은 그라데이션, 오른쪽 고정 "관리" 칸은 그라데이션 끝 색으로 채워 가로 스크롤 시 겹침 방지 */
+.product-admin-table tbody tr.is-unavailable { background: var(--w-unavailable-gradient); }
+.product-admin-table tbody tr.is-unavailable:hover { background: var(--w-unavailable-gradient-hover); }
+.product-admin-table tbody tr.is-unavailable > td,
+.product-admin-table tbody tr.is-unavailable:hover > td { background: transparent !important; border-top-color: var(--w-unavailable-border); }
+.product-admin-table tbody tr.is-unavailable > td:first-child { box-shadow: none; }
+.product-admin-table tbody tr.is-unavailable + tr > td { border-top-color: var(--w-unavailable-border); }
+@media (min-width: 721px) {
+  .product-admin-table tbody tr.is-unavailable > td:last-child { background: var(--w-unavailable-end) !important; }
+  .product-admin-table tbody tr.is-unavailable:hover > td:last-child { background: var(--w-unavailable-end-hover) !important; }
+}
+/* 모바일 카드(단가표·신규상품·관리자): 카드 전체 그라데이션 + 연분홍 테두리 */
+@media (max-width: 720px) {
+  .catalog-table tbody > tr.order-unavailable:not(.option-detail-row) { border-color: var(--w-unavailable-border) !important; background: var(--w-unavailable-gradient) !important; box-shadow: none !important; }
+  .catalog-table tbody > tr.order-unavailable:not(.option-detail-row) > td,
+  .catalog-table tbody > tr.order-unavailable:not(.option-detail-row) > .catalog-product-cell,
+  .catalog-table tbody > tr.order-unavailable:hover:not(.option-detail-row) > td,
+  .catalog-table tbody > tr.order-unavailable:hover:not(.option-detail-row) > .catalog-product-cell { background: transparent !important; }
+  .product-admin-table tbody tr.is-unavailable { border-color: var(--w-unavailable-border) !important; background: var(--w-unavailable-gradient) !important; box-shadow: none !important; }
+}
