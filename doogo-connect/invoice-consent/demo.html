@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인보이스 미리보기 데모</title>
+<link rel="stylesheet" href="../../assets/fonts/pretendard/pretendardvariable-dynamic-subset.css">
+<style>
+  :root{--navy:#1e293b;--blue:#3b82f6;--bg:#f1f5f9;--line:#e2e8f0;--ink:#0f172a;--muted:#64748b}
+  *{box-sizing:border-box}
+  body{margin:0;background:#6b7280;font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:var(--ink)}
+  .shade{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px}
+  .pv{width:min(1140px,100%);height:min(100%,1200px);background:#fff;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(2,6,23,.35)}
+  .pv-head{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--navy);color:#fff}
+  .pv-head h1{margin:0;font-size:16px;font-weight:800;margin-right:auto}
+  .pv-btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border:0;border-radius:10px;background:var(--blue);color:#fff;font:inherit;font-size:14px;font-weight:800;cursor:pointer}
+  .pv-btn:hover{background:#2563eb}
+  .pv-x{width:36px;height:36px;border:0;border-radius:10px;background:transparent;color:#cbd5e1;font-size:24px;cursor:pointer}
+  .pv-sub{padding:16px 22px;border-bottom:1px solid var(--line)}
+  .pv-sub h2{margin:0;font-size:20px;font-weight:800}
+  .pv-sub p{margin:6px 0 0;font-size:13px;color:var(--muted)}
+  .pv-state{display:inline-flex;align-items:center;gap:6px;margin-left:8px;font-size:12px;font-weight:800;padding:2px 9px;border-radius:999px;background:#fef3c7;color:#92400e}
+  .pv-state.ok{background:#dcfce7;color:#166534}
+  .pv-body{flex:1;overflow:auto;background:var(--bg);padding:22px 16px}
+  .pv-foot{display:flex;justify-content:space-between;gap:12px;padding:10px 20px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+  .pv-foot button{border:0;background:none;color:var(--blue);font:inherit;font-weight:700;cursor:pointer;text-decoration:underline}
+  @media (max-width:640px){.shade{padding:0}.pv{border-radius:0;height:100%}.pv-btn span{display:none}.pv-sub h2{font-size:16px}}
+</style>
+</head>
+<body>
+<div class="shade">
+  <div class="pv" role="dialog" aria-modal="true" aria-labelledby="pv-title">
+    <header class="pv-head">
+      <h1 id="pv-title">인보이스 미리보기</h1>
+      <button type="button" class="pv-btn" id="dl">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+        <span>인보이스 PDF 다운로드</span>
+      </button>
+      <button type="button" class="pv-x" aria-label="닫기">×</button>
+    </header>
+    <div class="pv-sub">
+      <h2 id="pv-product"></h2>
+      <p><span id="pv-meta"></span><span class="pv-state" id="pv-state">거래 구조 동의 전</span></p>
+    </div>
+    <div class="pv-body" id="preview"></div>
+    <div class="pv-foot">
+      <span>위 양식은 브랜드 개발 컨설팅 인보이스(2페이지: 거래 구조 확인서 포함)로 출력됩니다.</span>
+      <button type="button" id="reset">데모: 동의 기록 지우기</button>
+    </div>
+  </div>
+</div>
+
+<script src="agreement.js"></script>
+<script src="invoice.js"></script>
+<script src="consent.js"></script>
+<script>
+  /* 데모 데이터 — 실제 사이트에서는 주문(견적) 데이터를 이 모양으로 넘기면 됩니다 */
+  var invoice = {
+    orderNo: 'ORD-159765485267',
+    issueDate: '2026-11-03',
+    validDays: 7,
+    currency: 'NZD',
+    productTitle: '100% 뉴질랜드 프로폴리스 익스트렉트 리퀴드 (알콜프리) 25ml',
+    supplier: {
+      name: 'DOOGOBIO NZ', manager: 'DOOGO CONNECT', role: '해외 제조·판매원',
+      address: '3F, 10 Piermark Drive, Auckland', email: 'doogobio.bill@gmail.com',
+      note: '브랜드 개발 컨설팅 · On-Demand 해외 공급'
+    },
+    client: { company: '산지팔도', representative: '문원오', bizNo: '' },
+    logistics: { threePL: 'ACI EXPRESS' },
+    items: [
+      { kind: 'service',  name: '[일반] 전체 디자인 패키지_알뜰패키지 A', sub: '브랜드 디자인 · 패키지 · 라벨 디자인 (컨설팅 용역)', qty: 1, unit: 'SET', price: 600 },
+      { kind: 'supply',   name: '100% 뉴질랜드 프로폴리스 익스트렉트 리퀴드 (알콜프리) 25ml', sub: 'DOOGOBIO NZ 명의 제조 · 뉴질랜드 보관 · 전용 생산 준비분', qty: 100, unit: 'EA', price: 9.41 },
+      { kind: 'supply',   name: '라벨 + 단상자 (3.50)', sub: '브랜드 포장재 · DOOGOBIO NZ 보관', qty: 100, unit: 'EA', price: 3.50 },
+      { kind: 'discount', name: '수강생 할인', sub: '제품, 용기, 디자인 포함 전체 10% 할인', qty: 1, unit: 'SET', price: -189.10 }
+    ]
+  };
+
+  var printOpt = { fontCssUrl: '../../assets/fonts/pretendard/pretendardvariable-dynamic-subset.css' };
+  var preview = document.getElementById('preview');
+  var stateEl = document.getElementById('pv-state');
+
+  document.getElementById('pv-product').textContent = invoice.productTitle;
+  document.getElementById('pv-meta').textContent = invoice.client.company + ' | ' + invoice.supplier.name + ' | 2026. 11. 3.';
+
+  function refresh() {
+    var rec = DoogoConsent.getLocalRecord(invoice.orderNo);
+    DoogoInvoice.renderInto(preview, invoice, { consent: rec });
+    stateEl.textContent = rec ? '거래 구조 동의 완료 · ' + rec.agreedAtKST : '거래 구조 동의 전';
+    stateEl.classList.toggle('ok', !!rec);
+  }
+  refresh();
+
+  document.getElementById('dl').addEventListener('click', function () {
+    DoogoConsent.downloadInvoice(invoice, {
+      account: { id: 'demo-seller', email: 'seller@example.com' },
+      print: printOpt,
+      // 실제 사이트: onRecord 로 서버에 저장하세요 (README 참고)
+      onDone: refresh
+    });
+  });
+  document.getElementById('reset').addEventListener('click', function () {
+    DoogoConsent.clearLocalRecords();
+    refresh();
+  });
+</script>
+</body>
+</html>
