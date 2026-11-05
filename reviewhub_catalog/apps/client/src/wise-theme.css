@@ -1578,3 +1578,23 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .catalog-table tbody > tr.order-unavailable:hover:not(.option-detail-row) > .catalog-product-cell { background: transparent !important; }
   .product-admin-table tbody tr.is-unavailable { border-color: var(--w-unavailable-border) !important; background: var(--w-unavailable-gradient) !important; box-shadow: none !important; }
 }
+
+/* 상품 복사: 리스트 "복사" 버튼 · 복사 등록 안내 · 수정 창 아래 "복사" 버튼 */
+.product-row-actions button.copy-action { color: #1d5fd0; border-color: #c8daf5; background: #f6f9ff; }
+.product-row-actions button.copy-action:hover { border-color: #9fc0f0; background: #eaf2ff; }
+/* 버튼이 3개(수정·복사·삭제)라 넓은 화면(1700px~)은 관리 칸을 조금 넓혀 한 줄로, 노트북(1051~1699)·태블릿(721~1050)은 위아래로 쌓습니다(상품정보 칸 폭 유지). */
+@media (min-width: 1700px) {
+  .product-admin-table th:last-child { width: 196px; }
+}
+@media (min-width: 721px) and (max-width: 1050px) {
+  .product-admin-table .product-row-actions { flex-direction: column; gap: 5px; }
+  .product-admin-table .product-row-actions button { width: 100%; justify-content: center; height: 30px; }
+}
+.editor-copy-notice { display: flex; align-items: flex-start; gap: 10px; padding: 13px 16px; border: 1px solid #c8daf5; border-radius: 14px; background: linear-gradient(135deg, #fff, #f2f7ff); color: var(--w-ink); }
+.editor-copy-notice > svg { flex: 0 0 auto; margin-top: 2px; color: #1d5fd0; }
+.editor-copy-notice div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.editor-copy-notice strong { font-size: 14px; font-weight: 800; word-break: keep-all; }
+.editor-copy-notice span { color: var(--w-body); font-size: 13px; line-height: 1.5; word-break: keep-all; }
+.editor-footer .editor-copy-button { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; color: #1d5fd0 !important; border-color: #c8daf5 !important; background: #f6f9ff !important; }
+.editor-footer .editor-copy-button:hover:not(:disabled) { background: #eaf2ff !important; }
+.editor-footer > .editor-copy-button + button { height: 42px; padding: 0 16px; border: 1px solid #dce4ed; border-radius: 10px; color: #647286; background: #fff; font-weight: 700; }

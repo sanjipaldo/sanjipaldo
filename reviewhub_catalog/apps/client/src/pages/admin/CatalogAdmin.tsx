@@ -22,6 +22,7 @@ import {
   Menu,
   PackagePlus,
   Pencil,
+  Copy,
   Plus,
   Save,
   Send,
@@ -886,6 +887,8 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const [bulkEditOpen, setBulkEditOpen] = useState<false | "all" | "seasonInfo">(false);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [editing, setEditing] = useState<ProductDraft | null>(null);
+  // "복사"로 연 신규 등록 창이면 원본 상품명·상품코드를 기억해 안내합니다.
+  const [copySource, setCopySource] = useState<{ name: string; productCode: string } | null>(null);
   const [sortOpen, setSortOpen] = useState(false);
   const [sortItems, setSortItems] = useState<Product[]>([]);
   const [sortOriginalOrder, setSortOriginalOrder] = useState<Record<string, number>>({});
@@ -1181,7 +1184,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
     }
   };
 
-  const startEdit = (product?: Product) => setEditing(product ? {
+  const productDraft = (product: Product): ProductDraft => ({
     id: product.id,
     productCode: product.productCode || "",
     name: product.name,
@@ -1219,7 +1222,38 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       isSoldOut: option.isSoldOut,
       sortOrder: option.sortOrder
     }))
-  } : { ...blankProduct, categoryId: data.categories[0]?.id || "" });
+  });
+  const startEdit = (product?: Product) => {
+    setCopySource(null);
+    setEditing(product ? productDraft(product) : { ...blankProduct, categoryId: data.categories[0]?.id || "" });
+  };
+  // 복사: 원본 값을 그대로 채운 "신규 상품 등록" 창을 엽니다. 상품코드는 중복될 수 없어 "원본코드-1"(비어 있는 번호)을 제안합니다.
+  const suggestCopyCode = (code: string) => {
+    const base = code.trim();
+    if (!base) return "";
+    const used = new Set(data.products.map((product) => (product.productCode || "").trim()));
+    let index = 1;
+    while (used.has(`${base}-${index}`)) index += 1;
+    return `${base}-${index}`;
+  };
+  const toCopyDraft = (draft: ProductDraft): ProductDraft => ({
+    ...draft,
+    id: "",
+    productCode: suggestCopyCode(draft.productCode),
+    options: []
+  });
+  const startCopy = (product: Product) => {
+    setCopySource({ name: product.name, productCode: product.productCode || "" });
+    setEditing(toCopyDraft(productDraft(product)));
+  };
+  const copyEditing = () => {
+    if (!editing) return;
+    setCopySource({ name: editing.name, productCode: editing.productCode });
+    setEditing(toCopyDraft(editing));
+    toast.success("복사본을 만들었습니다. 상품코드를 확인한 뒤 저장하면 새 상품으로 등록됩니다.");
+    window.requestAnimationFrame(() => document.querySelector(".editor-panel")?.scrollTo({ top: 0, behavior: "smooth" }));
+  };
+  const closeEditor = () => { setEditing(null); setCopySource(null); };
 
   const editingCategory = editing ? data.categories.find((category) => category.id === editing.categoryId) : undefined;
   const editingHealthProduct = isHealthCategory(editingCategory);
@@ -1244,8 +1278,8 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         products.sort((first, second) => (first.displayOrder ?? Number.MAX_SAFE_INTEGER) - (second.displayOrder ?? Number.MAX_SAFE_INTEGER));
         return { ...current, products };
       });
-      toast.success(editingId ? "상품과 가격 이력이 저장되었습니다." : "신규 상품이 등록되었습니다.");
-      setEditing(null);
+      toast.success(editingId ? "상품과 가격 이력이 저장되었습니다." : copySource ? "복사한 상품을 새로 등록했습니다. 상품 리스트 맨 위에 있습니다." : "신규 상품이 등록되었습니다.");
+      closeEditor();
       void refresh(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "상품을 저장하지 못했습니다.");
@@ -1569,7 +1603,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
                   <td data-label="판매가"><b className="admin-sale-price">{product.salePriceMode === "fixed" ? product.salePrice === null ? "미설정" : formatPrice(product.salePrice) : "자율"}</b><small>{product.salePriceMode === "fixed" ? "지정 판매가" : "판매자 자율"}</small></td>
                   <td data-label="마진(1개)">{margin !== null && marginWon !== null ? <div className="margin-cell"><strong className="margin-rate prominent">{Math.round(margin)}%</strong><span className={`margin-amount ${marginWon < 0 ? "negative" : ""}`}>개당 {formatSignedPrice(marginWon)}</span></div> : <small>계산 대기</small>}</td>
                   <td data-label="상태"><span className={`status-pill ${product.isVisible ? "active" : ""}`}>{product.isVisible ? "노출" : "숨김"}</span><span className={`status-pill ${rowStatus !== "on_sale" ? "danger" : ""}`}>{rowStatus === "season_ended" ? "시즌종료" : SUPPLY_STATUS_LABELS[rowStatus]}</span></td>
-                  <td data-label="관리"><div className="row-actions product-row-actions"><button type="button" onClick={() => startEdit(product)}><Pencil size={15} /> 수정</button><button type="button" className="danger" onClick={() => void remove(product)} aria-label={`${product.name} 삭제`}><Trash2 size={15} /> 삭제</button></div></td>
+                  <td data-label="관리"><div className="row-actions product-row-actions"><button type="button" onClick={() => startEdit(product)}><Pencil size={15} /> 수정</button><button type="button" className="copy-action" onClick={() => startCopy(product)} aria-label={`${product.name} 복사`}><Copy size={15} /> 복사</button><button type="button" className="danger" onClick={() => void remove(product)} aria-label={`${product.name} 삭제`}><Trash2 size={15} /> 삭제</button></div></td>
                 </tr>
                 {expanded && options.length > 0 && (
                   <tr className="admin-option-detail-row">
@@ -1606,7 +1640,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
           </section>
         </div>
       )}
-      {editing && <div className="editor-overlay"><form className="editor-panel" onSubmit={save}><div className="editor-header"><div><span>PRODUCT EDITOR</span><h2>{editing.id ? "상품 수정" : "신규 상품 등록"}</h2></div><button type="button" onClick={() => setEditing(null)} disabled={saving} aria-label="닫기"><X size={21} /></button></div><div className="editor-grid">
+      {editing && <div className="editor-overlay"><form className="editor-panel" onSubmit={save}><div className="editor-header"><div><span>PRODUCT EDITOR</span><h2>{editing.id ? "상품 수정" : copySource ? "상품 복사 등록" : "신규 상품 등록"}</h2></div><button type="button" onClick={closeEditor} disabled={saving} aria-label="닫기"><X size={21} /></button></div><div className="editor-grid">
         {(() => {
           // 판매 상태·공개 노출은 맨 위에서 바로 고릅니다. 시즌종료를 고르면 공개 단가표에 "시즌 종료"(분홍색 행)로 보입니다.
           const current: SupplyStatus = editing.isSoldOut ? "sold_out" : editing.isSeasonEnded ? "season_ended" : "on_sale";
@@ -1633,6 +1667,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             </div>
           );
         })()}
+        {copySource && !editing.id && <div className="full editor-copy-notice"><Copy size={16} /><div><strong>‘{copySource.name}’ 상품을 그대로 복사했습니다.</strong><span>상품코드는 중복될 수 없어 {editing.productCode ? <>“{editing.productCode}”로 바꿔 두었습니다</> : "비워 두었습니다"}. 발주오라 상품코드와 맞게 확인한 뒤 저장하면 새 상품으로 등록됩니다{copySource.productCode ? ` (원본 코드 ${copySource.productCode})` : ""}.</span></div></div>}
         <label>상품코드<input value={editing.productCode} onChange={(event) => setEditing({ ...editing, productCode: event.target.value })} placeholder="예: ass00057 (필수)" required={!editing.id} /></label>
         <label className="full">상품명<input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} required /></label>
         <label>배송유형<select value={editing.shippingType} onChange={(event) => { const shippingType = event.target.value as ShippingType; const category = data.categories.find((item) => item.shippingType === shippingType); const health = isHealthCategory(category); setEditing({ ...editing, shippingType, categoryId: category?.id || "", shippingPolicyId: null, salePriceMode: health ? "fixed" : editing.salePriceMode, options: editing.options.map((option) => ({ ...option, salePriceMode: health ? "fixed" : option.salePriceMode })) }); }}><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select></label>
@@ -1662,7 +1697,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <label>택배사<input value={editing.courier} onChange={(event) => setEditing({ ...editing, courier: event.target.value })} /></label>
         <label>포장방법<input value={editing.packaging} onChange={(event) => setEditing({ ...editing, packaging: event.target.value })} /></label>
         <label className="full">참고사항<textarea rows={4} value={editing.notes} onChange={(event) => setEditing({ ...editing, notes: event.target.value })} /></label>
-      </div><div className="editor-footer"><button type="button" onClick={() => setEditing(null)} disabled={saving}>취소</button><button className="primary-action" type="submit" disabled={saving}><Save size={16} /> {saving ? "빠르게 저장 중…" : "저장하기"}</button></div></form></div>}
+      </div><div className="editor-footer">{editing.id && <button type="button" className="editor-copy-button" onClick={copyEditing} disabled={saving} title="지금 입력한 값 그대로 새 상품으로 복사합니다(원본은 바뀌지 않음)"><Copy size={16} /> 복사</button>}<button type="button" onClick={closeEditor} disabled={saving}>취소</button><button className="primary-action" type="submit" disabled={saving}><Save size={16} /> {saving ? "빠르게 저장 중…" : copySource && !editing.id ? "복사본 저장하기" : "저장하기"}</button></div></form></div>}
       {bulkEditOpen && <BulkEditModal ids={Array.from(selectedProductIds)} categories={data.categories} shippingPolicies={shippingPolicies} suppliers={suppliers} preset={bulkEditOpen === "seasonInfo" ? "seasonInfo" : undefined} onClose={() => setBulkEditOpen(false)} onDone={() => { setBulkEditOpen(false); setSelectedProductIds(new Set()); void refresh(true); }} />}
       {bulkPreview && <div className="editor-overlay"><section className="excel-preview-panel"><div className="editor-header"><div><span>EXCEL PREVIEW</span><h2>상품 일괄변경 미리보기</h2></div><button type="button" onClick={() => { setBulkPreview(null); setBulkFile(null); }} aria-label="닫기"><X size={21} /></button></div>
         <div className="excel-preview-summary"><article><span>읽은 행</span><strong>{bulkPreview.totalRows}</strong></article><article><span>매칭 행</span><strong>{bulkPreview.matchedRows}</strong></article><article><span>변경 상품</span><strong>{bulkPreview.affectedProducts}</strong></article><article><span>변경 항목</span><strong>{bulkPreview.changes.length}</strong></article>{bulkPreview.newProducts ? <article><span>신규 상품</span><strong>{bulkPreview.newProducts}</strong></article> : null}{bulkPreview.restoredProducts ? <article><span>복원 상품</span><strong>{bulkPreview.restoredProducts}</strong></article> : null}</div>
