@@ -6,6 +6,7 @@ import NotFound from "./pages/not-found/Index";
 import { AdminGuard } from "./components/auth/AdminGuard";
 import { AdminLoginPage, CatalogAdmin } from "./pages/admin/CatalogAdmin";
 import { CatalogHome, GuidePage, NewProductsPage, NoticesPage, SoldOutIssuesPage, SourcingPage } from "./pages/catalog/PublicCatalog";
+import { SellerGuidePage, SupplierGuidePage } from "./pages/catalog/UsageGuide";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,9 @@ const App = () => (
           <Route path="/new-products" element={<NewProductsPage />} />
           <Route path="/notices" element={<NoticesPage />} />
           <Route path="/sold-out" element={<SoldOutIssuesPage />} />
+          <Route path="/how-to" element={<Navigate to="/how-to/supplier" replace />} />
+          <Route path="/how-to/supplier" element={<SupplierGuidePage />} />
+          <Route path="/how-to/seller" element={<SellerGuidePage />} />
           <Route path="/sourcing" element={<SourcingPage />} />
           <Route path="/auth" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminLoginPage />} />
@@ -35,6 +39,7 @@ const App = () => (
           <Route path="/admin/suppliers" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="suppliers" /></AdminGuard>} />
           <Route path="/admin/sales" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sales" /></AdminGuard>} />
           <Route path="/admin/notices" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="notices" /></AdminGuard>} />
+          <Route path="/admin/usageGuide" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="usageGuide" /></AdminGuard>} />
           <Route path="/admin/history" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="history" /></AdminGuard>} />
           <Route path="/admin/sourcing" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sourcing" /></AdminGuard>} />
           <Route path="/admin/sync" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sync" /></AdminGuard>} />

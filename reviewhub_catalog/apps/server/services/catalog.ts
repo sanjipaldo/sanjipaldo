@@ -1,6 +1,8 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { DatabaseError, getDb } from "../_core/db";
-import { sendPartnerReceivedMail } from "./partner-mail";
+import { sendPartnerProposalMail, sendPartnerReceivedMail, type MailAttachment } from "./partner-mail";
+import { buildPartnerProposalPdf, proposalFileName } from "./partner-proposal";
+import { SUPPLIER_GUIDE_SETTING_KEY, parseSupplierGuide } from "@repo/shared/supplier-guide";
 import {
   catalogActivityLogs,
   categories,
@@ -1600,6 +1602,45 @@ export async function createSourcingRequest(input: {
 }
 
 // 입점 신청(농가·수산·브랜드사): 소싱 요청과 같은 테이블에 requestType="partner"로 저장하고 접수 안내 메일을 보냅니다.
+// 공급사 사용방법·입점 제안서가 함께 쓰는 운영 기준(관리자 > 사용방법 관리, 빈 칸은 기본값)
+export async function getSupplierGuide() {
+  const rows = await getDb().select().from(contentSettings).where(eq(contentSettings.key, SUPPLIER_GUIDE_SETTING_KEY)).limit(1);
+  return parseSupplierGuide(rows[0]?.value);
+}
+
+async function visibleProductCount() {
+  const rows = await getDb().select({ count: sql<number>`count(*)` }).from(products).where(and(eq(products.isVisible, true), sql`${products.deletedAt} IS NULL`));
+  return Number(rows[0]?.count ?? 0);
+}
+
+// 입점 제안서 PDF: 업체명이 있으면 표지에 "OO 귀하"를 넣습니다.
+export async function buildPartnerProposal(companyName?: string | null) {
+  const [guide, productCount] = await Promise.all([getSupplierGuide(), visibleProductCount().catch(() => 0)]);
+  const bytes = await buildPartnerProposalPdf({ companyName, guide, productCount });
+  return { bytes, filename: proposalFileName(companyName) };
+}
+
+const PARTNER_PROFILE_LABELS = {
+  representative: "대표자",
+  businessNumber: "사업자등록번호",
+  shipFrom: "출고지",
+  monthlyVolume: "월 공급 가능 물량",
+  salesChannels: "현재 판매 채널"
+} as const;
+
+type PartnerProfile = Partial<Record<keyof typeof PARTNER_PROFILE_LABELS, string | null>>;
+
+// 추가 업체 정보(대표자·사업자번호·출고지 등)는 마이그레이션 없이 details 앞부분에 "[업체 정보]"로 함께 저장합니다.
+function partnerDetails(profile: PartnerProfile, details?: string | null) {
+  const lines = (Object.keys(PARTNER_PROFILE_LABELS) as Array<keyof typeof PARTNER_PROFILE_LABELS>)
+    .map((key) => [PARTNER_PROFILE_LABELS[key], profile[key]?.trim()] as const)
+    .filter(([, value]) => Boolean(value))
+    .map(([label, value]) => `${label}: ${value}`);
+  const intro = details?.trim();
+  if (lines.length === 0) return intro || null;
+  return [`[업체 정보]`, ...lines, ...(intro ? ["", "[업체·상품 소개]", intro] : [])].join("\n");
+}
+
 export async function createPartnerRequest(input: {
   companyName: string;
   businessType: string;
@@ -1609,7 +1650,7 @@ export async function createPartnerRequest(input: {
   email: string;
   referenceUrl?: string | null;
   details?: string | null;
-}) {
+} & PartnerProfile) {
   const db = getDb();
   const email = input.email.trim().toLowerCase();
   // 같은 이메일로 10분 안에 다시 신청하면 메일은 다시 보내지 않습니다(자동 메일 남용 방지).
@@ -1619,16 +1660,64 @@ export async function createPartnerRequest(input: {
     .from(sourcingRequests)
     .where(and(eq(sourcingRequests.requestType, "partner"), eq(sourcingRequests.email, email), sql`${sourcingRequests.createdAt} >= ${tenMinutesAgo}`))
     .limit(1);
-  const rows = await db.insert(sourcingRequests).values({ ...input, email, requestType: "partner", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }).returning();
+  const { representative, businessNumber, shipFrom, monthlyVolume, salesChannels, details, ...base } = input;
+  const now = new Date().toISOString();
+  const rows = await db.insert(sourcingRequests).values({
+    ...base,
+    details: partnerDetails({ representative, businessNumber, shipFrom, monthlyVolume, salesChannels }, details),
+    email,
+    requestType: "partner",
+    createdAt: now,
+    updatedAt: now
+  }).returning();
   const request = rows[0];
   if (!request) throw new DatabaseError("DATABASE_QUERY_FAILED", "입점 신청을 저장하지 못했습니다.", 502);
-  const emailStatus = recent.length > 0 ? "skipped" : await sendPartnerReceivedMail({ ...input, email });
+  let emailStatus: "sent" | "failed" | "skipped" = "skipped";
+  if (recent.length === 0) {
+    // 제안서 PDF를 만들지 못해도 접수 안내 메일은 보냅니다.
+    let proposal: MailAttachment | null = null;
+    try {
+      const built = await buildPartnerProposal(base.companyName);
+      proposal = { filename: built.filename, content: built.bytes };
+    } catch (error) {
+      console.error("[partner] proposal pdf failed", error instanceof Error ? error.message : error);
+    }
+    emailStatus = await sendPartnerReceivedMail({ ...base, email }, proposal);
+  }
   const updated = await db
     .update(sourcingRequests)
     .set({ emailStatus, emailSentAt: emailStatus === "sent" ? new Date().toISOString() : null })
     .where(eq(sourcingRequests.id, request.id))
     .returning();
   return updated[0] ?? request;
+}
+
+async function partnerRequestById(id: string) {
+  const rows = await getDb().select().from(sourcingRequests).where(and(eq(sourcingRequests.id, id), eq(sourcingRequests.requestType, "partner"))).limit(1);
+  if (!rows[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "입점 신청을 찾을 수 없습니다.", 404);
+  return rows[0];
+}
+
+export async function getPartnerProposalForRequest(id: string) {
+  const request = await partnerRequestById(id);
+  return buildPartnerProposal(request.companyName || request.productName);
+}
+
+// 관리자 "제안서 메일 보내기": 신청서의 이메일로 제안서 PDF를 다시 보내고 결과를 기록합니다.
+export async function resendPartnerProposal(id: string) {
+  const request = await partnerRequestById(id);
+  if (!request.email) throw new DatabaseError("DATABASE_QUERY_FAILED", "신청서에 이메일이 없습니다.", 400);
+  const built = await buildPartnerProposal(request.companyName || request.productName);
+  const emailStatus = await sendPartnerProposalMail(
+    { companyName: request.companyName || request.productName, requesterName: request.requesterName, email: request.email },
+    { filename: built.filename, content: built.bytes }
+  );
+  const rows = await getDb()
+    .update(sourcingRequests)
+    .set({ emailStatus, emailSentAt: emailStatus === "sent" ? new Date().toISOString() : request.emailSentAt, updatedAt: new Date().toISOString() })
+    .where(eq(sourcingRequests.id, id))
+    .returning();
+  return rows[0] ?? request;
 }
 
 export async function updateSourcingStatus(id: string, status: "received" | "reviewing" | "completed") {

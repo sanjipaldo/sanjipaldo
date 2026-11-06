@@ -42,7 +42,11 @@ import {
   Sparkles,
   Eye,
   EyeOff,
-  ExternalLink
+  ExternalLink,
+  BookOpen,
+  FileText,
+  Mail,
+  Video
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
@@ -50,10 +54,11 @@ import { apiFetch } from "@/lib/api";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
 import { authClient, clearAuthToken } from "@/lib/auth";
 import { SUPPLY_STATUS_LABELS, supplyStatus, type SupplyStatus } from "@/lib/supply-status";
+import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_GUIDE_SETTING_KEY, SUPPLIER_TERM_LABELS, SUPPLIER_VIDEO_GROUPS, parseSupplierGuide, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideTerms, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
 import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 import type { AdminCatalogData, AdminHomeData, AdminOverview, BaljuoraConnection, Category, CatalogSyncOutboxItem, CatalogSyncOverview, CatalogSyncRun, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, SalesOverview, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
-type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "changes" | "transmissions" | "sales" | "notices" | "history" | "sourcing" | "sync" | "backup";
+type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "changes" | "transmissions" | "sales" | "notices" | "usageGuide" | "history" | "sourcing" | "sync" | "backup";
 type ProductOptionDraft = Pick<ProductOption, "id" | "name" | "costPrice" | "aPrice" | "generalPrice" | "salePrice" | "salePriceMode" | "isSoldOut" | "sortOrder">;
 type BulkWorkbookPreview = {
   totalRows: number;
@@ -536,6 +541,7 @@ const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes
   { section: "transmissions", label: "상품 변경완료", icon: Send, group: "transfer" },
   { section: "sales", label: "통계", icon: CalendarDays },
   { section: "notices", label: "공지·필독", icon: Bell },
+  { section: "usageGuide", label: "사용방법 관리", icon: BookOpen },
   { section: "history", label: "가격변동 이력", icon: History },
   { section: "sourcing", label: "입점·소싱 요청", icon: ClipboardList },
   { section: "backup", label: "DB 백업", icon: DatabaseBackup },
@@ -643,7 +649,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
           ? "/catalog/admin/products"
           : section === "categories"
             ? "/catalog/admin/categories/summary"
-        : section === "notices"
+        : section === "notices" || section === "usageGuide"
           ? "/catalog/admin/notices"
           : section === "home"
             ? "/catalog/admin/overview"
@@ -769,6 +775,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               {section === "suppliers" && <SuppliersAdmin />}
               {section === "sales" && <SalesAdmin />}
               {section === "notices" && <NoticesAdmin data={data} refresh={refresh} />}
+              {section === "usageGuide" && <UsageGuideAdmin data={data} refresh={refresh} />}
               {section === "history" && <HistoryAdmin data={data} />}
               {section === "sourcing" && <SourcingAdmin data={data} refresh={refresh} />}
               {section === "sync" && <CatalogSyncAdmin />}
@@ -2602,7 +2609,45 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
     sourcing: sourcingData.sourcingRequests.filter((request) => typeOf(request) === "sourcing").length,
     partner: sourcingData.sourcingRequests.filter((request) => typeOf(request) === "partner").length
   };
-  const mailLabel = (value: SourcingRequest["emailStatus"]) => value === "sent" ? "안내 메일 발송" : value === "failed" ? "메일 발송 실패" : value === "skipped" ? "메일 미발송" : "-";
+  const mailLabel = (value: SourcingRequest["emailStatus"]) => value === "sent" ? "제안서 메일 발송" : value === "failed" ? "메일 발송 실패" : value === "skipped" ? "메일 미발송" : "-";
+  const [proposalBusy, setProposalBusy] = useState<"" | "pdf" | "mail">("");
+  // 신청서 업체명이 들어간 입점 제안서 PDF를 내려받습니다.
+  const downloadProposal = async (request: SourcingRequest) => {
+    setProposalBusy("pdf");
+    try {
+      const response = await apiFetch(`/catalog/admin/partner/${request.id}/proposal`);
+      if (!response.ok) throw new Error("제안서 PDF를 만들지 못했습니다.");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `두고푸드_입점제안서_${(request.companyName || request.productName).replace(/[\\/:*?"<>|]+/g, " ").slice(0, 40)}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "제안서 PDF를 받지 못했습니다.");
+    } finally {
+      setProposalBusy("");
+    }
+  };
+  const mailProposal = async (request: SourcingRequest) => {
+    setProposalBusy("mail");
+    try {
+      const response = await apiFetch(`/catalog/admin/partner/${request.id}/proposal-mail`, { method: "POST" });
+      const payload = await readData<{ request: SourcingRequest }>(response);
+      setSelectedRequest(payload.request);
+      if (payload.request.emailStatus === "sent") toast.success(`${payload.request.email}(으)로 입점 제안서를 보냈습니다.`);
+      else if (payload.request.emailStatus === "skipped") toast.error("메일 발송 설정(RESEND_API_KEY)이 없어 보내지 못했습니다. 제안서 PDF를 받아 직접 보내 주세요.");
+      else toast.error("메일 발송에 실패했습니다. 잠시 뒤 다시 시도하거나 PDF를 받아 직접 보내 주세요.");
+      await loadSourcing();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "제안서 메일을 보내지 못했습니다.");
+    } finally {
+      setProposalBusy("");
+    }
+  };
   const isPartner = kind === "partner";
 
   const update = async (request: SourcingRequest, status: SourcingRequest["status"]) => {
@@ -2698,6 +2743,13 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
               </>}
             </dl>
             <p className="request-detail-note">{selectedRequest.details || (typeOf(selectedRequest) === "partner" ? "업체·상품 소개가 입력되지 않았습니다." : "상세 요청이 입력되지 않았습니다.")}</p>
+            {typeOf(selectedRequest) === "partner" && (
+              <div className="request-proposal-actions">
+                <div><strong><FileText size={16} /> 입점 제안서</strong><small>신청 업체명이 들어간 PDF(주문 처리·정산 안내)입니다. 운영 기준은 사용방법 관리에서 바꿉니다.</small></div>
+                <button type="button" onClick={() => void downloadProposal(selectedRequest)} disabled={proposalBusy !== ""}><Download size={15} /> {proposalBusy === "pdf" ? "만드는 중…" : "제안서 PDF 받기"}</button>
+                <button type="button" className="primary" onClick={() => void mailProposal(selectedRequest)} disabled={proposalBusy !== "" || !selectedRequest.email}><Mail size={15} /> {proposalBusy === "mail" ? "보내는 중…" : selectedRequest.emailStatus === "sent" ? "제안서 메일 다시 보내기" : "제안서 메일 보내기"}</button>
+              </div>
+            )}
             <div className="request-detail-actions">
               {([
                 ["received", "접수"],
@@ -2710,6 +2762,108 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
           </section>
         </div>
       )}
+    </>
+  );
+}
+
+// 관리자 > 사용방법 관리: 공급사 사용방법 화면·입점 제안서 PDF가 함께 쓰는 운영 기준과 사용법 영상 목록(content_settings "supplier_guide").
+function UsageGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (silent?: boolean) => Promise<void> }) {
+  const savedValue = data.settings?.[SUPPLIER_GUIDE_SETTING_KEY];
+  const [draft, setDraft] = useState<SupplierGuideSettings>(() => parseSupplierGuide(savedValue));
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => {
+    if (!dirty) setDraft(parseSupplierGuide(savedValue));
+  }, [savedValue, dirty]);
+  const termKeys = Object.keys(SUPPLIER_TERM_LABELS) as Array<keyof SupplierGuideTerms>;
+  const setTerm = (key: keyof SupplierGuideTerms, value: string) => { setDirty(true); setDraft((current) => ({ ...current, [key]: value })); };
+  const setVideo = (index: number, patch: Partial<SupplierGuideVideo>) => { setDirty(true); setDraft((current) => ({ ...current, videos: current.videos.map((video, position) => position === index ? { ...video, ...patch } : video) })); };
+  const moveVideo = (index: number, offset: number) => {
+    setDirty(true);
+    setDraft((current) => {
+      const videos = [...current.videos];
+      const target = index + offset;
+      if (target < 0 || target >= videos.length) return current;
+      [videos[index], videos[target]] = [videos[target], videos[index]];
+      return { ...current, videos };
+    });
+  };
+  const removeVideo = (index: number) => { setDirty(true); setDraft((current) => ({ ...current, videos: current.videos.filter((_, position) => position !== index) })); };
+  const addVideo = () => {
+    setDirty(true);
+    setDraft((current) => ({ ...current, videos: [...current.videos, { id: `video-${Date.now().toString(36)}`, group: SUPPLIER_VIDEO_GROUPS[1], title: "새 영상", description: "", url: "", duration: "" }].slice(0, 30) }));
+  };
+  const embedLabel = (url: string) => {
+    if (!url.trim()) return { text: "주소 없음 · 준비 중으로 보임", tone: "muted" };
+    const kind = supplierVideoEmbed(url).kind;
+    return kind === "youtube" ? { text: "YouTube 영상", tone: "ok" } : kind === "vimeo" ? { text: "Vimeo 영상", tone: "ok" } : kind === "file" ? { text: "영상 파일", tone: "ok" } : kind === "link" ? { text: "링크(새 창으로 열림)", tone: "warn" } : { text: "https:// 주소를 확인해 주세요", tone: "bad" };
+  };
+  const save = async () => {
+    setSaving(true);
+    try {
+      const value: SupplierGuideSettings = {
+        ...draft,
+        videos: draft.videos.filter((video) => video.title.trim()).map((video) => ({ ...video, title: video.title.trim(), url: video.url.trim() }))
+      };
+      const response = await apiFetch("/catalog/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: SUPPLIER_GUIDE_SETTING_KEY, value: JSON.stringify(value) }) });
+      await readData(response);
+      setDirty(false);
+      toast.success("사용방법·입점 제안서 설정을 저장했습니다.");
+      await refresh(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "설정을 저장하지 못했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <>
+      <div className="admin-page-heading"><div><span>USAGE GUIDE</span><h1>사용방법 관리</h1><p>공개 사이트 "사용방법 &gt; 공급사" 화면과 입점 신청 때 메일로 보내는 입점 제안서(PDF)가 아래 운영 기준을 그대로 씁니다. 비워 두면 기본 문구가 들어갑니다.</p></div>
+        <div className="usage-admin-links"><a href="/how-to/supplier" target="_blank" rel="noreferrer"><ExternalLink size={15} /> 공개 화면 보기</a><a href="/api/catalog/partner-proposal" target="_blank" rel="noreferrer"><FileText size={15} /> 제안서 PDF 보기</a></div>
+      </div>
+      <section className="admin-card usage-admin-card">
+        <div className="card-heading"><ClipboardList size={19} /><div><h2>운영 기준(주문 처리·정산)</h2><p>마감 시간·정산 주기·지급일 등을 실제 계약 조건에 맞게 확인해 주세요. 저장하면 사용방법 화면과 새로 만드는 제안서 PDF에 바로 반영됩니다.</p></div></div>
+        <div className="usage-admin-terms">
+          {termKeys.map((key) => (
+            <label key={key} className={key === "taxInvoice" || key === "deductions" || key === "returnPolicy" || key === "settlementBasis" ? "is-wide" : ""}>
+              <span>{SUPPLIER_TERM_LABELS[key]}</span>
+              {key === "taxInvoice" || key === "deductions" || key === "returnPolicy"
+                ? <textarea rows={2} maxLength={300} value={draft[key]} placeholder={DEFAULT_SUPPLIER_GUIDE[key]} onChange={(event) => setTerm(key, event.target.value)} />
+                : <input maxLength={300} value={draft[key]} placeholder={DEFAULT_SUPPLIER_GUIDE[key]} onChange={(event) => setTerm(key, event.target.value)} />}
+            </label>
+          ))}
+        </div>
+      </section>
+      <section className="admin-card usage-admin-card">
+        <div className="card-heading"><Video size={19} /><div><h2>사용법 영상 ({draft.videos.length}/30)</h2><p>YouTube(일부 공개 가능)·Vimeo 주소나 mp4 영상 주소를 넣으면 공급사 화면에서 바로 재생됩니다. 주소가 없으면 "영상 준비 중"으로 보입니다.</p></div></div>
+        <div className="usage-admin-videos">
+          {draft.videos.map((video, index) => {
+            const status = embedLabel(video.url);
+            return (
+              <article key={video.id} className="usage-admin-video">
+                <span className="usage-admin-video-no">{index + 1}</span>
+                <div className="usage-admin-video-fields">
+                  <label><span>묶음</span><select value={video.group} onChange={(event) => setVideo(index, { group: event.target.value })}>{[...SUPPLIER_VIDEO_GROUPS, ...(SUPPLIER_VIDEO_GROUPS.includes(video.group as typeof SUPPLIER_VIDEO_GROUPS[number]) ? [] : [video.group])].map((group) => <option key={group} value={group}>{group}</option>)}</select></label>
+                  <label><span>제목</span><input maxLength={80} value={video.title} onChange={(event) => setVideo(index, { title: event.target.value })} /></label>
+                  <label><span>길이</span><input maxLength={10} value={video.duration} placeholder="0:35" onChange={(event) => setVideo(index, { duration: event.target.value })} /></label>
+                  <label className="is-wide"><span>설명</span><input maxLength={160} value={video.description} onChange={(event) => setVideo(index, { description: event.target.value })} /></label>
+                  <label className="is-wide"><span>영상 주소</span><input maxLength={500} value={video.url} placeholder="https://youtu.be/… 또는 https://…/guide.mp4" onChange={(event) => setVideo(index, { url: event.target.value })} /><small className={`usage-embed-${status.tone}`}>{status.text}</small></label>
+                </div>
+                <div className="usage-admin-video-actions">
+                  <button type="button" onClick={() => moveVideo(index, -1)} disabled={index === 0} aria-label={`${video.title} 위로`}><ArrowUp size={14} /></button>
+                  <button type="button" onClick={() => moveVideo(index, 1)} disabled={index === draft.videos.length - 1} aria-label={`${video.title} 아래로`}><ArrowDown size={14} /></button>
+                  <button type="button" className="danger" onClick={() => removeVideo(index)} aria-label={`${video.title} 삭제`}><Trash2 size={14} /></button>
+                </div>
+              </article>
+            );
+          })}
+          <button type="button" className="usage-admin-add" onClick={addVideo} disabled={draft.videos.length >= 30}><Plus size={15} /> 영상 추가</button>
+        </div>
+      </section>
+      <div className="usage-admin-savebar">
+        <button type="button" onClick={() => { setDirty(true); setDraft({ ...DEFAULT_SUPPLIER_GUIDE, videos: draft.videos }); }}>운영 기준 기본값으로</button>
+        <button type="button" className="primary-action" onClick={() => void save()} disabled={saving}><Save size={16} /> {saving ? "저장 중…" : dirty ? "변경 내용 저장" : "저장하기"}</button>
+      </div>
     </>
   );
 }

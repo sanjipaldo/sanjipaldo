@@ -10,6 +10,10 @@ import {
   createProductGroup,
   createShippingPolicy,
   createPartnerRequest,
+  buildPartnerProposal,
+  getPartnerProposalForRequest,
+  getSupplierGuide,
+  resendPartnerProposal,
   createSourcingRequest,
   createSupplier,
   getAdminCatalog,
@@ -158,13 +162,19 @@ const SourcingSchema = z.object({
 
 const PartnerSchema = z.object({
   companyName: z.string().trim().min(1).max(120),
-  businessType: z.enum(["농가", "수산", "축산", "가공식품", "브랜드사", "기타"]),
+  businessType: z.enum(["농가", "수산", "축산", "가공식품", "건강식품", "브랜드사", "기타"]),
   productName: z.string().trim().min(1).max(200),
   requesterName: z.string().trim().min(1).max(80),
   contact: z.string().trim().min(8).max(40),
   email: z.string().trim().email().max(160),
   referenceUrl: z.union([z.literal(""), z.string().url()]).nullable().optional(),
   details: z.string().trim().max(3000).nullable().optional(),
+  // 추가 업체 정보(선택): 관리자 화면에서 [업체 정보]로 보입니다.
+  representative: z.string().trim().max(60).nullable().optional(),
+  businessNumber: z.string().trim().max(20).regex(/^[0-9-\s]*$/).nullable().optional(),
+  shipFrom: z.string().trim().max(120).nullable().optional(),
+  monthlyVolume: z.string().trim().max(120).nullable().optional(),
+  salesChannels: z.string().trim().max(200).nullable().optional(),
   agreePrivacy: z.literal(true),
   // 봇 차단용 숨은 칸: 사람이 입력하면 비어 있어야 합니다.
   website: z.string().max(0).optional()
@@ -177,9 +187,20 @@ const NewProductSettingSchema = z.object({
 });
 
 const SettingSchema = z.object({
-  key: z.enum(["guide", "guide_sections", "sourcing_intro", "new_products"]),
+  key: z.enum(["guide", "guide_sections", "sourcing_intro", "new_products", "supplier_guide"]),
   value: z.string().trim().min(1).max(300000)
 }).superRefine((input, context) => {
+  if (input.key === "supplier_guide") {
+    // 공급사 사용방법 운영 기준·영상 목록(JSON 객체)
+    let guide: unknown = null;
+    try {
+      guide = JSON.parse(input.value);
+    } catch {
+      guide = null;
+    }
+    if (input.value.length > 60000 || !guide || typeof guide !== "object" || Array.isArray(guide)) context.addIssue({ code: "custom", message: "사용방법 설정값을 확인해 주세요.", path: ["value"] });
+    return;
+  }
   if (input.key !== "new_products") {
     if (input.value.length > 30000) context.addIssue({ code: "custom", message: "설정 내용이 너무 깁니다.", path: ["value"] });
     return;
@@ -304,6 +325,25 @@ catalogRouter.get("/price-changes/export", publicRoute, async (c) => {
     "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
     "Cache-Control": "no-store"
   });
+});
+
+// 공급사 사용방법 화면: 운영 기준·영상 목록(관리자 > 사용방법 관리, 빈 칸은 기본값)
+catalogRouter.get("/supplier-guide", publicRoute, async (c) => c.json(apiSuccess({ guide: await getSupplierGuide() })));
+
+const pdfHeaders = (filename: string, download: boolean) => ({
+  "Content-Type": "application/pdf",
+  "Content-Disposition": `${download ? "attachment" : "inline"}; filename="proposal.pdf"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+  "Cache-Control": "no-store"
+});
+
+// 누구나 받을 수 있는 공급사 입점 제안서(업체명 없이 "공급사 담당자님께")
+catalogRouter.get("/partner-proposal", publicRoute, async (c) => {
+  try {
+    const { bytes, filename } = await buildPartnerProposal(null);
+    return c.body(bytes as unknown as ArrayBuffer, 200, pdfHeaders(filename, c.req.query("download") === "1"));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
 });
 
 catalogRouter.post("/sourcing", publicRoute, async (c) => {
@@ -788,6 +828,23 @@ catalogRouter.put("/admin/settings", adminRoute, async (c) => {
   const parsed = SettingSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "설정 입력값을 확인해 주세요."), 400);
   return c.json(apiSuccess({ setting: await saveSetting(parsed.data.key, parsed.data.value) }));
+});
+
+catalogRouter.get("/admin/partner/:id/proposal", adminRoute, async (c) => {
+  try {
+    const { bytes, filename } = await getPartnerProposalForRequest(c.req.param("id"));
+    return c.body(bytes as unknown as ArrayBuffer, 200, pdfHeaders(filename, true));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+catalogRouter.post("/admin/partner/:id/proposal-mail", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess({ request: await resendPartnerProposal(c.req.param("id")) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
 });
 
 catalogRouter.put("/admin/sourcing/:id", adminRoute, async (c) => {

@@ -510,6 +510,7 @@ function BrandHeader() {
         <NavLink to="/new-products">신규상품</NavLink>
         <NavLink to="/notices">가격변동</NavLink>
         <NavLink to="/sold-out">품절이슈</NavLink>
+        <NavLink to="/how-to">사용방법</NavLink>
         <NavLink to="/guide">공지사항</NavLink>
         <button className="sourcing-nav-button" type="button" onClick={() => window.dispatchEvent(new CustomEvent("doogo:sourcing-open"))}><PackageSearch size={14} /> 소싱해주세요!</button>
         <a href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer"><MessageCircle size={14} /> 1:1 상담</a>
@@ -526,7 +527,7 @@ function BrandHeader() {
   );
 }
 
-function PageFrame({ children }: { children: ReactNode }) {
+export function PageFrame({ children }: { children: ReactNode }) {
   const [sourcingOpen, setSourcingOpen] = useState(false);
   useEffect(() => {
     const open = () => setSourcingOpen(true);
@@ -556,6 +557,7 @@ function PageFrame({ children }: { children: ReactNode }) {
             <Link to="/new-products">신규상품</Link>
             <Link to="/notices">가격변동</Link>
             <Link to="/sold-out">품절이슈</Link>
+            <Link to="/how-to/supplier">사용방법(공급사)</Link>
             <Link to="/guide">공지사항</Link>
           </div>
           <div>
@@ -861,9 +863,9 @@ function PartnerBanner() {
   );
 }
 
-const PARTNER_TYPES = ["농가", "수산", "축산", "가공식품", "브랜드사", "기타"] as const;
+const PARTNER_TYPES = ["농가", "수산", "축산", "가공식품", "건강식품", "브랜드사", "기타"] as const;
 
-// 입점 신청서(소싱 요청과 같은 관리자 게시판에 "입점"으로 쌓이고, 입력한 이메일로 접수 안내 메일이 발송됩니다).
+// 입점 신청서(소싱 요청과 같은 관리자 게시판에 "입점"으로 쌓이고, 입력한 이메일로 접수 안내 + 공급사 입점 제안서 PDF가 발송됩니다).
 function PartnerModal({ onClose }: { onClose: () => void }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState<{ email: string; mailed: boolean } | null>(null);
@@ -906,14 +908,18 @@ function PartnerModal({ onClose }: { onClose: () => void }) {
           <div>
             <span className="section-kicker">PARTNER APPLICATION</span>
             <h2 id="partner-modal-title">입점 신청</h2>
-            <p>농가·수산·축산·가공식품·브랜드사 누구나 신청할 수 있습니다. 담당 MD가 검토 후 연락드립니다.</p>
+            <p>농가·수산·축산·가공식품·건강식품·브랜드사 누구나 신청할 수 있습니다. 신청하면 주문 처리·정산 방법을 정리한 <b>입점 제안서(PDF)</b>를 이메일로 보내 드리고, 담당 MD가 검토 후 연락드립니다.</p>
           </div>
         </header>
         {submitted ? (
           <div className="modal-submitted sourcing-done">
             <span className="sourcing-done-icon"><Mail size={24} /></span>
             <strong>입점 신청이 접수되었습니다.</strong>
-            <p>{submitted.mailed ? <>접수 안내 메일을 <b>{submitted.email}</b>(으)로 보내드렸습니다. </> : null}담당 MD가 검토 후 영업일 기준 2~3일 안에 연락드립니다.</p>
+            <p>{submitted.mailed ? <>입점 제안서(PDF)와 접수 안내를 <b>{submitted.email}</b>(으)로 보내드렸습니다. </> : <>입점 제안서(PDF)는 아래 버튼으로 바로 받아 보실 수 있습니다. </>}담당 MD가 검토 후 영업일 기준 2~3일 안에 연락드립니다.</p>
+            <div className="partner-done-actions">
+              <a className="partner-proposal-download" href="/api/catalog/partner-proposal?download=1" download="두고푸드_공급사_입점제안서.pdf"><Download size={16} /> 입점 제안서 PDF 받기</a>
+              <Link className="partner-guide-link" to="/how-to/supplier" onClick={onClose}>공급사 사용방법 보기 <ChevronRight size={15} /></Link>
+            </div>
             <button className="modal-confirm" onClick={onClose}>닫기</button>
           </div>
         ) : (
@@ -926,6 +932,15 @@ function PartnerModal({ onClose }: { onClose: () => void }) {
                 <label><span className="field-label">업종 <em aria-hidden="true">필수</em></span><select name="businessType" required defaultValue=""><option value="" disabled>선택해 주세요</option>{PARTNER_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
               </div>
               <label><span className="field-label">주요 상품 <em aria-hidden="true">필수</em></span><input name="productName" required maxLength={200} placeholder="예: 영동 곶감 반건시, 샤인머스캣 2kg" /></label>
+              <div className="form-two">
+                <label><span className="field-label">대표자명</span><input name="representative" maxLength={60} autoComplete="off" /></label>
+                <label><span className="field-label">사업자등록번호</span><input name="businessNumber" maxLength={20} inputMode="numeric" placeholder="000-00-00000" /></label>
+              </div>
+              <div className="form-two">
+                <label><span className="field-label">출고지(지역)</span><input name="shipFrom" maxLength={120} placeholder="예: 충북 영동군" /></label>
+                <label><span className="field-label">월 공급 가능 물량</span><input name="monthlyVolume" maxLength={120} placeholder="예: 하루 200박스 / 월 3,000kg" /></label>
+              </div>
+              <label><span className="field-label">현재 판매 채널</span><input name="salesChannels" maxLength={200} placeholder="예: 스마트스토어, 쿠팡, 자사몰, 오프라인 납품" /></label>
               <label><span className="field-label">홈페이지·스토어 주소</span><input name="referenceUrl" type="url" inputMode="url" placeholder="https://" /></label>
               <label><span className="field-label">업체·상품 소개</span><textarea name="details" rows={3} maxLength={3000} placeholder="생산 규모, 월 공급 가능 물량, 인증(GAP·HACCP 등), 희망 공급가 등을 적어 주세요." /></label>
             </fieldset>
@@ -935,7 +950,7 @@ function PartnerModal({ onClose }: { onClose: () => void }) {
                 <label><span className="field-label">담당자명 <em aria-hidden="true">필수</em></span><input name="requesterName" required maxLength={80} autoComplete="name" /></label>
                 <label><span className="field-label">휴대폰 번호 <em aria-hidden="true">필수</em></span><input name="contact" required inputMode="tel" maxLength={40} placeholder="010-0000-0000" autoComplete="tel" /></label>
               </div>
-              <label><span className="field-label">이메일 <em aria-hidden="true">필수</em></span><input name="email" type="email" required maxLength={160} placeholder="접수 안내 메일을 받을 주소" autoComplete="email" /></label>
+              <label><span className="field-label">이메일 <em aria-hidden="true">필수</em></span><input name="email" type="email" required maxLength={160} placeholder="입점 제안서(PDF)를 받을 주소" autoComplete="email" /></label>
               <input className="partner-honeypot" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
               <label className="partner-agree"><input type="checkbox" name="agreePrivacy" required /> <span>입점 상담을 위해 업체명·담당자명·연락처·이메일을 수집·이용하는 데 동의합니다. (상담 완료 후 1년 보관)</span></label>
             </fieldset>
