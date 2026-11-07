@@ -32,15 +32,16 @@ function loadPlaywright() {
 
 function startEncoder(file) {
   const ffmpeg = spawn("ffmpeg", ["-v", "error", "-y", "-f", "image2pipe", "-framerate", String(fps), "-i", "-", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-preset", "medium", "-movflags", "+faststart", file], { stdio: ["pipe", "inherit", "inherit"] });
+  let pipeError = null;
+  ffmpeg.stdin.on("error", (error) => { pipeError = error; });
   const done = new Promise((resolve, reject) => {
     ffmpeg.on("error", reject);
     ffmpeg.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg 종료 코드 ${code}`))));
   });
-  const write = (buffer) => new Promise((resolve, reject) => {
-    if (ffmpeg.stdin.write(buffer)) resolve();
-    else ffmpeg.stdin.once("drain", resolve);
-    ffmpeg.stdin.once("error", reject);
-  });
+  const write = (buffer) => {
+    if (pipeError) return Promise.reject(pipeError);
+    return ffmpeg.stdin.write(buffer) ? Promise.resolve() : new Promise((resolve) => ffmpeg.stdin.once("drain", resolve));
+  };
   return { write, finish: async () => { ffmpeg.stdin.end(); await done; } };
 }
 
