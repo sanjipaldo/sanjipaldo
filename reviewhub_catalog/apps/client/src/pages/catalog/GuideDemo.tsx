@@ -4,9 +4,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "react-router-dom";
-import { Check, ChevronRight, FileSpreadsheet, FileText, Minus, Paperclip, Pause, Play, RotateCcw, Send } from "lucide-react";
+import { Check, ChevronRight, Clock3, FileSpreadsheet, FileText, Minus, Paperclip, Pause, Play, RotateCcw, Send } from "lucide-react";
+import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_DEMO_VIDEO_IDS } from "@repo/shared/supplier-guide";
 import "./guide-demo.css";
-import { DEMO_SHEET_ROWS, SUPPLIER_DEMO_SCRIPTS, demoDuration, formatDemoTime, plainCaption, type DemoActor, type DemoScript, type DemoTimed, type DemoView } from "./guide-demo-scripts";
+import { DEMO_SHEET_ROWS, SUPPLIER_DEMO_SCRIPTS, demoDuration, formatDemoTime, isChapterScene, plainCaption, type DemoActor, type DemoScript, type DemoTimed, type DemoView } from "./guide-demo-scripts";
 
 export const DEMO_W = 360;
 export const DEMO_H = 640;
@@ -55,6 +56,8 @@ function lines(text: string) {
 function highlight(title: string) {
   return title.split("**").map((part, index) => (index % 2 === 1 ? <em key={index}>{part}</em> : <span key={index}>{part}</span>));
 }
+
+const defaultTitle = (id: string) => DEFAULT_SUPPLIER_GUIDE.videos.find((video) => video.id === id)?.title ?? "두고푸드 공급사 사용법";
 
 export function locateScene(script: DemoScript, time: number) {
   let start = 0;
@@ -563,6 +566,29 @@ function DoneView({ view, t }: { view: ViewOf<"done">; t: number }) {
   );
 }
 
+// 표지 카드: "이 영상에서 볼 내용"(장면 목록). t=0에도 모두 보이고(재생 전 화면), 재생하면 위에서부터 차례로 강조합니다.
+function CoverView({ script, t, duration }: { script: DemoScript; t: number; duration: number }) {
+  const chapters = script.scenes.filter(isChapterScene);
+  const step = (duration - 0.5) / Math.max(1, chapters.length);
+  const current = t >= 0.3 ? Math.floor((t - 0.3) / step) : -1;
+  return (
+    <div className="gd-cover">
+      <div className="gd-cover-head">
+        <strong>이 영상에서 볼 내용</strong>
+        <span><Clock3 size={12} /> {formatDemoTime(demoDuration(script))}</span>
+      </div>
+      <ol className={chapters.length > 6 ? "is-dense" : ""}>
+        {chapters.map((scene, index) => (
+          <li key={`${scene.caption.title}-${index}`} className={index === current ? "is-on" : index < current ? "is-past" : ""}>
+            <span className="gd-num">{index + 1}</span>
+            <span className="gd-li-text"><small>{scene.caption.kicker}</small><b>{plainCaption(scene.caption.title)}</b></span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 function EndCard({ view, t }: { view: ViewOf<"end">; t: number }) {
   return (
     <div className="gd-end">
@@ -604,11 +630,27 @@ function SceneView({ view, t, duration, actor }: { view: DemoView; t: number; du
 }
 
 // 영상 한 프레임(360×640). time은 영상 처음부터의 초.
-export function DemoStage({ script, time }: { script: DemoScript; time: number }) {
+export function DemoStage({ script, time, title, number }: { script: DemoScript; time: number; title?: string; number?: number }) {
   const { scene, index, t } = locateScene(script, time);
   const actor = timed(scene.actor, t) ?? "doogo";
   if (scene.view.kind === "end") {
     return <div className="gd-stage is-end"><EndCard view={scene.view} t={t} /></div>;
+  }
+  if (scene.view.kind === "cover") {
+    const coverTitle = title?.trim() || defaultTitle(script.id);
+    const coverLength = Array.from(coverTitle).length;
+    return (
+      <div className="gd-stage is-cover">
+        <div className="gd-cover-caption">
+          <span>공급사 사용법{number ? ` ${String(number).padStart(2, "0")}` : ""}</span>
+          <strong style={{ fontSize: coverLength > 14 ? 23 : 27 }}>{coverTitle}</strong>
+        </div>
+        <div className="gd-card is-app is-cover">
+          <div className="gd-view"><CoverView script={script} t={t} duration={scene.duration} /></div>
+        </div>
+        <p className="gd-foot">이해를 돕기 위한 예시 화면이에요</p>
+      </div>
+    );
   }
   const prev = index > 0 ? script.scenes[index - 1] : undefined;
   const sameCaption = prev && prev.caption.title === scene.caption.title && prev.caption.kicker === scene.caption.kicker;
@@ -645,9 +687,10 @@ const prefersReducedMotion = () => {
 };
 
 // 화면에 보이면 자동 재생(동작 줄이기 설정이면 직접 눌러 재생), 화면 밖·다른 탭이면 멈춤.
-export function GuideDemoPlayer({ script, label, seek, onScene, next }: {
+export function GuideDemoPlayer({ script, label, number, seek, onScene, next }: {
   script: DemoScript;
   label: string;
+  number?: number;
   seek?: { time: number; key: number };
   onScene?: (index: number) => void;
   next?: { title: string; onClick: () => void };
@@ -752,9 +795,9 @@ export function GuideDemoPlayer({ script, label, seek, onScene, next }: {
     <div className="gd-player">
       <div className="gd-screen" ref={screenRef} onClick={toggle} role="group" aria-label={`${label} 안내 영상 (${playing ? "재생 중, 누르면 일시정지" : "누르면 재생"})`}>
         <div className="gd-scaler" style={{ transform: `scale(${scale})` }} aria-hidden="true">
-          <DemoStage script={script} time={time} />
+          <DemoStage script={script} time={time} title={label} number={number} />
         </div>
-        {!playing && !ended && <span className="gd-bigplay" aria-hidden="true"><Play size={30} fill="currentColor" /></span>}
+        {!playing && !ended && <span className="gd-bigplay" aria-hidden="true"><Play size={16} fill="currentColor" /> {time > 0 ? "이어 보기" : "영상 보기"} <small>{formatDemoTime(duration)}</small></span>}
         {ended && (
           <div className="gd-ended" onClick={(event) => event.stopPropagation()}>
             <button type="button" onClick={toggle}><RotateCcw size={16} /> 다시 보기</button>
@@ -771,7 +814,7 @@ export function GuideDemoPlayer({ script, label, seek, onScene, next }: {
             const start = sceneStart;
             sceneStart += scene.duration;
             const fill = clamp((time - start) / scene.duration);
-            const name = scene.view.kind === "end" ? "마무리" : plainCaption(scene.caption.title);
+            const name = scene.view.kind === "end" ? "마무리" : scene.view.kind === "cover" ? "영상 제목·볼 내용" : plainCaption(scene.caption.title);
             return (
               <button key={index} type="button" style={{ flexGrow: scene.duration }} onClick={() => seekScene(index)} aria-label={`${index + 1}번째 장면: ${name}`} title={name}>
                 <i style={{ transform: `scaleX(${fill.toFixed(4)})` }} />
@@ -804,7 +847,7 @@ export function GuideDemoRender() {
   if (!script) return <p>없는 영상입니다: {id}</p>;
   return (
     <div className="gd-render" style={{ width: DEMO_W, height: DEMO_H }}>
-      <DemoStage script={script} time={time} />
+      <DemoStage script={script} time={time} number={SUPPLIER_DEMO_VIDEO_IDS.indexOf(id as (typeof SUPPLIER_DEMO_VIDEO_IDS)[number]) + 1 || undefined} />
     </div>
   );
 }

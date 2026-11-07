@@ -1877,8 +1877,10 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .usage-video-layout.is-demo { grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 24px; }
 .usage-video-layout.is-demo .usage-video-list { max-height: none; }
 .usage-video-layout.is-demo .usage-video-caption { padding-top: 14px; }
-.usage-video-chapters { display: grid; gap: 2px; margin: 6px 0 6px; padding: 0 0 0 30px; list-style: none; }
-.usage-video-chapters button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 10px; border: 0; border-radius: 10px; color: var(--w-body); background: transparent; text-align: left; cursor: pointer; }
+/* 지금 영상의 장면 목록: 영상 제목(대제목) 아래로 간격을 두고 들여 써서 하위 목록으로 보이게(.usage-video-group ol 기본값보다 우선) */
+.usage-video-group .usage-video-chapters { position: relative; display: grid; gap: 6px; margin: 14px 0 18px; padding: 0 0 0 30px; list-style: none; }
+.usage-video-group .usage-video-chapters::before { content: ""; position: absolute; top: 6px; bottom: 6px; left: 14px; width: 2px; border-radius: 2px; background: var(--u-line-soft); }
+.usage-video-chapters button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border: 0; border-radius: 10px; color: var(--w-body); background: transparent; text-align: left; cursor: pointer; }
 .usage-video-chapters button:hover { background: #fff; }
 .usage-chapter-no { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 999px; color: var(--w-mute); background: #fff; font-size: 11px; font-weight: 800; box-shadow: inset 0 0 0 1px var(--w-line); }
 .usage-chapter-text { min-width: 0; }
@@ -1893,5 +1895,6 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 @media (max-width: 720px) {
   .usage-video-layout.is-demo { grid-template-columns: 1fr; }
   .usage-video-layout.is-demo .usage-video-stage { width: 100%; max-width: 400px; margin: 0 auto; scroll-margin-top: 132px; }
-  .usage-video-chapters { padding-left: 8px; }
+  .usage-video-group .usage-video-chapters { margin: 12px 0 16px; padding-left: 22px; }
+  .usage-video-group .usage-video-chapters::before { left: 10px; }
 }

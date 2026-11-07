@@ -47,6 +47,7 @@ export type DemoView =
     message?: string;
     toggle?: string;
   }
+  | { kind: "cover" }
   | { kind: "end"; line?: string; big?: string };
 
 export type DemoScene = {
@@ -76,12 +77,15 @@ const YESTERDAY: DemoMail[] = [
   { from: "두고푸드 발주", subject: "[두고푸드] 11/5(목) 오전 발주서 · 15건", time: "어제", attach: true, tag: "회신 완료", tone: "done", read: true }
 ];
 
+// 첫 장면(표지): 영상 제목과 "이 영상에서 볼 내용"(장면 목록). 재생 전 화면도 이 표지가 보입니다.
+const cover: DemoScene = { caption: { kicker: "", title: "" }, duration: 2.6, actor: "doogo", view: { kind: "cover" } };
 const end: DemoScene = { caption: { kicker: "", title: "" }, duration: 3.6, actor: "doogo", view: { kind: "end" } };
 
 export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
   overview: {
     id: "overview",
     scenes: [
+      cover,
       {
         caption: { kicker: "두고푸드 공급사라면", title: "**메일 두 번**이면 끝나요" },
         duration: 4.8,
@@ -178,6 +182,7 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
   apply: {
     id: "apply",
     scenes: [
+      cover,
       {
         caption: { kicker: "두고푸드에 입점하려면", title: "**신청서 한 장**이면 돼요" },
         duration: 4.8,
@@ -280,6 +285,7 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
   "order-sheet": {
     id: "order-sheet",
     scenes: [
+      cover,
       {
         caption: { kicker: "주문이 들어오면", title: "**하루 2번** 메일로 보내요" },
         duration: 4.8,
@@ -366,6 +372,7 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
   invoice: {
     id: "invoice",
     scenes: [
+      cover,
       {
         caption: { kicker: "출고했다면", title: "**송장번호만** 보내 주세요" },
         duration: 4.8,
@@ -456,6 +463,7 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
   cs: {
     id: "cs",
     scenes: [
+      cover,
       {
         caption: { kicker: "취소·반품이 생기면 두고푸드가", title: "**먼저 알려** 드려요" },
         duration: 4.8,
@@ -533,6 +541,7 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
   settlement: {
     id: "settlement",
     scenes: [
+      cover,
       {
         caption: { kicker: "정산은", title: "**매월 1일**에 받아요" },
         duration: 4.8,
@@ -625,3 +634,6 @@ export function formatDemoTime(seconds: number) {
 
 // 자막 강조 표시(**…**)를 뺀 글자(장면 목록·접근성 문구용)
 export const plainCaption = (title: string) => title.replace(/\*\*/g, "");
+
+// 표지·마무리 화면을 뺀 본 장면(장면 목록에 보여 줄 것)
+export const isChapterScene = (scene: DemoScene) => scene.view.kind !== "cover" && scene.view.kind !== "end";

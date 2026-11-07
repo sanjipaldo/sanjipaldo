@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_VIDEO_GROUPS, hasSupplierDemo, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
 import { GuideDemoPlayer } from "./GuideDemo";
-import { SUPPLIER_DEMO_SCRIPTS, demoDuration, formatDemoTime, plainCaption } from "./guide-demo-scripts";
+import { SUPPLIER_DEMO_SCRIPTS, demoDuration, formatDemoTime, isChapterScene, plainCaption } from "./guide-demo-scripts";
 import { apiFetch } from "@/lib/api";
 import { PageFrame } from "./PublicCatalog";
 
@@ -123,7 +123,8 @@ function VideoGuide({ videos }: { videos: SupplierGuideVideo[] }) {
   const script = demoScriptFor(selected);
   const readyCount = videos.filter(isPlayable).length;
   const ordered = groups.flatMap((entry) => entry.items);
-  const nextVideo = ordered.slice(ordered.findIndex((video) => video.id === selected.id) + 1).find(isPlayable);
+  const selectedIndex = ordered.findIndex((video) => video.id === selected.id);
+  const nextVideo = ordered.slice(selectedIndex + 1).find(isPlayable);
   const sceneStart = (index: number) => (script ? script.scenes.slice(0, index).reduce((sum, scene) => sum + scene.duration, 0) : 0);
   const metaFor = (video: SupplierGuideVideo) => {
     const demo = demoScriptFor(video);
@@ -138,6 +139,7 @@ function VideoGuide({ videos }: { videos: SupplierGuideVideo[] }) {
           <GuideDemoPlayer
             script={script}
             label={selected.title}
+            number={selectedIndex + 1}
             seek={seek}
             onScene={setSceneIndex}
             next={nextVideo ? { title: nextVideo.title, onClick: () => pick(nextVideo.id) } : undefined}
@@ -183,7 +185,7 @@ function VideoGuide({ videos }: { videos: SupplierGuideVideo[] }) {
                     </button>
                     {active && script && (
                       <ol className="usage-video-chapters" aria-label={`${video.title} 장면`}>
-                        {script.scenes.map((scene, index) => (scene.view.kind === "end" ? null : (
+                        {script.scenes.map((scene, index) => (isChapterScene(scene) ? (
                           <li key={`${scene.caption.title}-${index}`}>
                             <button
                               type="button"
@@ -191,11 +193,11 @@ function VideoGuide({ videos }: { videos: SupplierGuideVideo[] }) {
                               aria-current={index === sceneIndex ? "step" : undefined}
                               onClick={() => { setSeek({ time: sceneStart(index), key: Date.now() }); revealStage(); }}
                             >
-                              <span className="usage-chapter-no">{index + 1}</span>
+                              <span className="usage-chapter-no">{script.scenes.slice(0, index + 1).filter(isChapterScene).length}</span>
                               <span className="usage-chapter-text"><small>{scene.caption.kicker}</small><b>{plainCaption(scene.caption.title)}</b></span>
                             </button>
                           </li>
-                        )))}
+                        ) : null))}
                       </ol>
                     )}
                   </li>
