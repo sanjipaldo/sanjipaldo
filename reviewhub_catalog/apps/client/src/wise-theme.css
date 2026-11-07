@@ -1898,3 +1898,5 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .usage-video-group .usage-video-chapters { margin: 12px 0 16px; padding-left: 22px; }
   .usage-video-group .usage-video-chapters::before { left: 10px; }
 }
+.usage-calc-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; color: var(--u-strong); font-size: 13px; font-weight: 800; text-decoration: none; }
+.usage-calc-link:hover { text-decoration: underline; }

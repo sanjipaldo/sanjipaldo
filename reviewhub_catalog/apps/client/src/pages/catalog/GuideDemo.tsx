@@ -142,6 +142,33 @@ function StepsView({ view, t }: { view: ViewOf<"steps">; t: number }) {
   );
 }
 
+// 카카오톡 단톡방처럼 보이는 대화(두고푸드 팀 ↔ 공급사). 공급사 화면 기준이라 공급사 말은 오른쪽.
+function GroupView({ view, t }: { view: ViewOf<"group">; t: number }) {
+  return (
+    <div className="gd-group">
+      <div className="gd-group-head"><b>{view.title}</b><span>{view.members}</span></div>
+      <div className="gd-group-body">
+        <span className="gd-group-day">11월 6일 금요일</span>
+        {view.messages.map((message, index) => {
+          if (t < message.at - 0.35) return null;
+          const typing = t < message.at;
+          const mine = message.who === "supplier";
+          return (
+            <div key={index} className={`gd-group-msg${mine ? " is-me" : ""}`} style={appear(t, message.at - 0.35, 0.3, 8)}>
+              {!mine && <Avatar size={28} />}
+              <div>
+                <small>{message.name}</small>
+                <p>{typing ? <span className="gd-dots"><i /><i /><i /></span> : message.text}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="gd-group-input">메시지 입력</div>
+    </div>
+  );
+}
+
 function ChecksView({ view, t }: { view: ViewOf<"checks">; t: number }) {
   return (
     <div className="gd-list-view">
@@ -505,7 +532,7 @@ function ConfirmView({ view, t }: { view: ViewOf<"confirm">; t: number }) {
     <div className="gd-view-root">
       {view.base === "sheet"
         ? <SheetGrid file="두고푸드_발주서_1106_오전.xlsx" cell="A2" formula="김민지" cells={(row, key) => ({ value: key === "courier" || key === "invoice" ? "" : rowValue(row, key) })} />
-        : <div className="gd-read is-base"><strong className="gd-read-subject">[두고푸드] 10월 정산 내역 안내 · 290,000원</strong><div className="gd-read-from"><span className="gd-mail-avatar">두</span><b>두고푸드 정산</b><time>11월 1일</time></div><div className="gd-read-body"><p>10월 1일~31일 주문분 정산 내역입니다.</p><p>확인 후 정산 금액으로 세금계산서를 발행해 주세요.</p></div></div>}
+        : <div className="gd-read is-base"><strong className="gd-read-subject">[두고푸드] 11월 정산 내역 · 판매 대금 2,000,000원</strong><div className="gd-read-from"><span className="gd-mail-avatar">두</span><b>두고푸드 정산</b><time>12월 1일</time></div><div className="gd-read-body"><p>11월 1일~30일 주문분 정산 내역입니다.</p><p>확인 후 물품 세금계산서(면세 상품은 계산서)를 발행해 주세요.</p></div></div>}
       <div className="gd-dim" style={{ opacity: dim }} />
       <div className="gd-modal" style={appear(t, 0.15, 0.35, 16)}>
         <strong>{view.title}</strong>
@@ -619,6 +646,7 @@ function SceneView({ view, t, duration, actor }: { view: DemoView; t: number; du
     case "chat": return <ChatView view={view} t={t} />;
     case "steps": return <StepsView view={view} t={t} />;
     case "checks": return <ChecksView view={view} t={t} />;
+    case "group": return <GroupView view={view} t={t} />;
     case "inbox": return <InboxView view={view} t={t} actor={actor} />;
     case "mail": return <MailView view={view} t={t} actor={actor} />;
     case "sheet": return <SheetView view={view} t={t} duration={duration} actor={actor} />;

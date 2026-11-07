@@ -2,6 +2,7 @@ import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_DEMO_VIDEO_IDS, hasSupplierDemo, parseSupplierGuide, supplierVideoEmbed } from "@repo/shared/supplier-guide";
 import { buildPartnerProposalPdf, proposalFileName } from "../services/partner-proposal";
+import { SUPPLIER_PROPOSAL_PAGES } from "../services/proposal-pdf-data";
 
 describe("supplier guide settings", () => {
   it("falls back to defaults for empty or broken values", () => {
@@ -60,13 +61,23 @@ describe("supplier guide settings", () => {
 });
 
 describe("partner proposal pdf", () => {
-  it("builds a Korean A4 proposal with the company name", async () => {
-    const bytes = await buildPartnerProposalPdf({ companyName: "영동 햇살농원", guide: DEFAULT_SUPPLIER_GUIDE, productCount: 1866 });
-    expect(Buffer.from(bytes.slice(0, 5)).toString()).toBe("%PDF-");
-    const doc = await PDFDocument.load(bytes);
-    expect(doc.getPageCount()).toBeGreaterThanOrEqual(4);
+  it("serves the designed A4 landscape proposal and stamps the company name on the cover", async () => {
+    const generic = await buildPartnerProposalPdf({});
+    expect(Buffer.from(generic.slice(0, 5)).toString()).toBe("%PDF-");
+    const genericDoc = await PDFDocument.load(generic);
+    expect(genericDoc.getPageCount()).toBe(SUPPLIER_PROPOSAL_PAGES);
+    const size = genericDoc.getPage(0).getSize();
+    expect(Math.round(size.width)).toBe(842);
+    expect(Math.round(size.height)).toBe(595);
+
+    const stamped = await buildPartnerProposalPdf({ companyName: "영동 햇살농원", date: new Date("2026-11-07T03:00:00Z") });
+    const doc = await PDFDocument.load(stamped);
+    expect(doc.getPageCount()).toBe(SUPPLIER_PROPOSAL_PAGES);
     expect(doc.getTitle()).toContain("영동 햇살농원");
-  }, 20000);
+    expect(stamped.length).toBeGreaterThan(generic.length);
+    // Vercel 함수 응답 한도(4.5MB) 안이어야 내려받기·메일 첨부가 됩니다.
+    expect(stamped.length).toBeLessThan(4.5 * 1024 * 1024);
+  }, 30000);
 
   it("makes safe file names", () => {
     expect(proposalFileName(null)).toBe("두고푸드_공급사_입점제안서.pdf");

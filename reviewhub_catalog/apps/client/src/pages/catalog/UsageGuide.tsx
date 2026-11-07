@@ -234,8 +234,8 @@ export function SupplierGuidePage() {
   const guide = useSupplierGuide();
   const onboarding = [
     { icon: <Handshake size={20} />, title: "입점 신청", body: "아래 ‘입점 신청하기’에서 업체 정보를 남기면 입점 제안서(PDF)를 메일로 보내 드립니다." },
-    { icon: <ClipboardCheck size={20} />, title: "MD 검토·상담", body: "담당 MD가 영업일 기준 2~3일 안에 연락드려 상품과 조건을 상담합니다." },
-    { icon: <FileSpreadsheet size={20} />, title: "상품 등록·메일 시간 정하기", body: "상품명·규격·공급가·이미지를 받아 등록하고, 발주서를 받을 메일 주소와 발송 시간(오전 1회·오후 1회)을 정합니다." },
+    { icon: <ClipboardCheck size={20} />, title: "MD 검토·상담", body: "담당 MD가 영업일 기준 2~3일 안에 연락드려 상품·도매 공급가·판매 수수료(10%)를 상담합니다." },
+    { icon: <FileSpreadsheet size={20} />, title: "상품 등록·메일 시간 정하기", body: "상세페이지·썸네일·도매 공급가(정산받을 금액)를 받아 등록하고, 발주서를 받을 메일 주소와 발송 시간(오전 1회·오후 1회)을 정합니다." },
     { icon: <BadgeCheck size={20} />, title: "판매 시작", body: "단가표·신규상품에 노출되고, 위탁셀러 주문이 정한 시간에 발주서 메일로 들어옵니다." }
   ];
   const orderSteps = [
@@ -243,7 +243,7 @@ export function SupplierGuidePage() {
     { icon: <Mail size={20} />, title: "발주서 메일 받기", body: `두고푸드가 정한 시간에 공급사별 발주서(엑셀)를 메일로 보내 드립니다. 발송: ${guide.orderSendTime}. 수령인·연락처·주소·상품·수량이 담겨 있습니다.` },
     { icon: <PackageCheck size={20} />, title: "포장·출고", body: `발주서대로 포장해 출고합니다. 출고: ${guide.shipLeadTime}. 보내는 사람은 발주서에 적힌 발송인(셀러 상호)으로 표기해 주세요.` },
     { icon: <Truck size={20} />, title: "송장 회신", body: `발주서 엑셀에 택배사·송장번호를 입력해 받은 발주 메일에 그대로 회신해 주세요. 회신 마감: ${guide.invoiceDeadline}. 두고푸드가 등록해 위탁셀러에게 전달합니다.` },
-    { icon: <Undo2 size={20} />, title: "취소·반품·교환", body: `출고 전 취소 요청이 오면 바로 메일·전화로 알려 드립니다. ${guide.returnPolicy}` }
+    { icon: <Undo2 size={20} />, title: "취소·반품·교환", body: `출고 전 취소 요청은 바로 알려 드립니다. ${guide.returnPolicy}` }
   ];
   const timeline = [
     { label: "발주서 메일", value: guide.orderSendTime },
@@ -252,23 +252,26 @@ export function SupplierGuidePage() {
     { label: "송장 회신", value: guide.invoiceDeadline }
   ];
   const settlementRows = [
+    { label: "판매 수수료", value: guide.commission },
     { label: "정산 기준", value: guide.settlementBasis },
     { label: "정산 주기", value: guide.settlementCycle },
     { label: "지급일", value: guide.settlementPayDay },
-    { label: "주 단위 정산", value: guide.settlementOption },
+    { label: "주 정산", value: guide.settlementOption },
     { label: "세금계산서", value: guide.taxInvoice },
     { label: "정산 제외·차감", value: guide.deductions }
   ];
-  const settlementFlow = ["주문 접수·출고", "월말 마감(주문 건 합산)", "정산 내역 확인", "세금계산서 발행", "매월 1일 지급"];
+  const settlementFlow = ["1일~말일 주문 합계 확인(양사)", "물품 세금계산서 발행(공급사)", "판매 대금 100% 입금(두고푸드)", "수수료 10% 입금(공급사)", "수수료 세금계산서 발행(두고푸드)"];
   const faq = [
-    { q: "입점 비용이나 판매 수수료가 있나요?", a: "공급사는 두고푸드에 공급가로 상품을 공급하고, 위탁셀러 판매가는 셀러가 정합니다. 구체적인 조건은 상품과 협의해 입점 상담 때 안내드립니다." },
+    { q: "판매 수수료가 있나요?", a: "쿠팡·네이버 스마트스토어의 판매자 수수료처럼, 판매 대금의 10%를 판매·마케팅 대행 수수료로 받습니다(마케팅·세일즈·CS·품절 안내 등 운영 비용). 팔린 만큼만 내며, 예를 들어 도매 공급가 10,000원 상품이 1개 팔리면 10,000원을 먼저 입금해 드리고 수수료 1,000원을 받습니다." },
+    { q: "수수료는 언제, 어떻게 내나요?", a: `판매 대금 100%를 먼저 받으신 뒤, 매월 초(1일) 지난달 총 거래 금액의 10%를 두고푸드에 입금해 주세요. 두고푸드는 수수료 세금계산서를 발행합니다. 도매 공급가를 정할 때 이 10%를 생각해 주세요.` },
     { q: "공급사용 관리자 사이트나 프로그램을 써야 하나요?", a: "아니요. 별도 계정이나 프로그램 없이 메일로만 주고받습니다. 정한 시간에 발주서 메일을 받고, 출고한 뒤 그 메일에 송장을 회신하면 됩니다." },
     { q: "발주서는 언제, 어떻게 받나요?", a: `공급사별 발주서(엑셀)를 정한 시간에 메일로 보내 드립니다. 발송: ${guide.orderSendTime}. 메일 시간과 받는 주소는 입점 때 공급사와 함께 정하며, 주문 마감은 ${guide.orderCutoff}입니다.` },
     { q: "송장은 어떻게 보내나요?", a: `받은 발주서 엑셀에 택배사와 송장번호를 입력해 그 발주 메일에 회신해 주세요. 회신 마감: ${guide.invoiceDeadline}. 오전·오후 메일마다 한 번씩 회신하면 되고, 두고푸드가 등록해 위탁셀러에게 전달합니다.` },
-    { q: "정산은 언제 받나요?", a: `${guide.settlementCycle} 기준으로, ${guide.settlementPayDay}. 정산 금액은 ${guide.settlementBasis}입니다. ${guide.settlementOption}` },
+    { q: "정산은 언제 받나요?", a: `${guide.settlementCycle} 기준으로 ${guide.settlementPayDay}합니다. 예) 11월 1일~30일 주문분 → 12월 1~3일 입금. ${guide.settlementOption}` },
     { q: "세금계산서는 어떻게 발행하나요?", a: guide.taxInvoice },
     { q: "취소·반품·교환은 어떻게 처리하나요?", a: `출고 전 취소 요청은 바로 알려 드립니다. ${guide.returnPolicy} ${guide.deductions}` },
-    { q: "공급가가 바뀌거나 품절되면요?", a: "담당 MD에게 알려 주시면 단가표에 바로 반영되고, 가격변동·품절이슈 메뉴로 위탁셀러에게 안내됩니다." }
+    { q: "반품·CS는 어떻게 소통하나요?", a: "계약하면 두고푸드 팀원과 함께하는 카카오톡 단톡방이 만들어지고, 반품·CS·배송 문의를 그 방에서 함께 바로 처리합니다. 농수산물처럼 반품이 많은 품목은 변질·품질 저하로 생긴 반품을 공급사가 책임지며, 두고푸드와 적극 협의해 해결합니다." },
+    { q: "공급가가 바뀌거나 품절되면요?", a: "단톡방이나 담당 MD에게 알려 주시면 단가표에 바로 반영되고, 가격변동·품절이슈 메뉴로 위탁셀러에게 안내됩니다." }
   ];
   return (
     <PageFrame>
@@ -320,17 +323,19 @@ export function SupplierGuidePage() {
         </section>
 
         <section className="usage-section" id="settlement">
-          <SectionHeading kicker="SETTLEMENT" title="정산 안내" lead="한 달 동안 실제로 접수된 주문 건을 모두 합산해 다음 달 1일에 정산합니다. 물량이 많으면 주 단위 정산도 가능합니다." icon={<Wallet size={22} />} />
+          <SectionHeading kicker="SETTLEMENT" title="정산 안내" lead="판매 수수료는 판매 대금의 10%입니다. 판매 대금은 다음 달 1~3일에 100% 먼저 입금하고, 수수료 10%는 받으신 뒤에 입금합니다. 거래 금액이 커지면 주 정산도 가능합니다." icon={<Wallet size={22} />} />
           <div className="usage-settlement-grid">
             <dl className="usage-terms">
               {settlementRows.map((row) => <div key={row.label}><dt>{row.label}</dt><dd>{row.value}</dd></div>)}
             </dl>
             <div className="usage-calc-card">
-              <span className="usage-calc-title"><Receipt size={17} /> 정산 예시</span>
-              <div className="usage-calc-row"><span>10월 주문 접수 30건 × 공급가 10,000원</span><b>300,000원</b></div>
-              <div className="usage-calc-row is-minus"><span>공급사 사유 반품 1건 차감</span><b>-10,000원</b></div>
-              <div className="usage-calc-total"><span>11월 1일 정산 금액</span><strong>290,000원</strong></div>
-              <small>세금계산서는 확정된 정산 금액으로 발행합니다.</small>
+              <span className="usage-calc-title"><Receipt size={17} /> 정산 예시 · 11월 판매 200만원</span>
+              <div className="usage-calc-row"><span>11월 판매 대금(11/1~11/30 주문)</span><b>2,000,000원</b></div>
+              <div className="usage-calc-row"><span>12/1~12/3 두고푸드 → 공급사 100% 입금</span><b>2,000,000원</b></div>
+              <div className="usage-calc-row is-minus"><span>수수료 10% · 공급사 → 두고푸드(입금 확인 후)</span><b>-200,000원</b></div>
+              <div className="usage-calc-total"><span>공급사 실수령</span><strong>1,800,000원</strong></div>
+              <small>판매 대금은 물품 세금계산서(면세 상품은 계산서)로, 수수료는 두고푸드가 세금계산서를 발행합니다.</small>
+              <a className="usage-calc-link" href={PROPOSAL_URL} target="_blank" rel="noreferrer"><CalendarClock size={15} /> 월·주 정산 달력 보기(입점 제안서 PDF)</a>
             </div>
           </div>
           <ol className="usage-chip-flow" aria-label="정산 흐름">

@@ -343,17 +343,17 @@ catalogRouter.get("/price-changes/export", publicRoute, async (c) => {
 // 공급사 사용방법 화면: 운영 기준·영상 목록(관리자 > 사용방법 관리, 빈 칸은 기본값)
 catalogRouter.get("/supplier-guide", publicRoute, async (c) => c.json(apiSuccess({ guide: await getSupplierGuide() })));
 
-const pdfHeaders = (filename: string, download: boolean) => ({
+const pdfHeaders = (filename: string, download: boolean, cache = "no-store") => ({
   "Content-Type": "application/pdf",
   "Content-Disposition": `${download ? "attachment" : "inline"}; filename="proposal.pdf"; filename*=UTF-8''${encodeURIComponent(filename)}`,
-  "Cache-Control": "no-store"
+  "Cache-Control": cache
 });
 
-// 누구나 받을 수 있는 공급사 입점 제안서(업체명 없이 "공급사 담당자님께")
+// 누구나 받을 수 있는 공급사 입점 제안서(업체명 없는 인쇄용 원본, 배포마다 같은 파일이라 잠시 캐시)
 catalogRouter.get("/partner-proposal", publicRoute, async (c) => {
   try {
     const { bytes, filename } = await buildPartnerProposal(null);
-    return c.body(bytes as unknown as ArrayBuffer, 200, pdfHeaders(filename, c.req.query("download") === "1"));
+    return c.body(bytes as unknown as ArrayBuffer, 200, pdfHeaders(filename, c.req.query("download") === "1", "public, max-age=300, s-maxage=3600"));
   } catch (error) {
     return errorResponse(c, error);
   }

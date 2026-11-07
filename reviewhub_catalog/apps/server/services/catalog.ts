@@ -1694,15 +1694,9 @@ export async function getSupplierGuide() {
   return parseSupplierGuide(rows[0]?.value);
 }
 
-async function visibleProductCount() {
-  const rows = await getDb().select({ count: sql<number>`count(*)` }).from(products).where(and(eq(products.isVisible, true), sql`${products.deletedAt} IS NULL`));
-  return Number(rows[0]?.count ?? 0);
-}
-
-// 입점 제안서 PDF: 업체명이 있으면 표지에 "OO 귀하"를 넣습니다.
+// 입점 제안서 PDF(디자인된 고정 문서): 업체명이 있으면 표지에 "OO 귀하"를 찍습니다.
 export async function buildPartnerProposal(companyName?: string | null) {
-  const [guide, productCount] = await Promise.all([getSupplierGuide(), visibleProductCount().catch(() => 0)]);
-  const bytes = await buildPartnerProposalPdf({ companyName, guide, productCount });
+  const bytes = await buildPartnerProposalPdf({ companyName });
   return { bytes, filename: proposalFileName(companyName) };
 }
 

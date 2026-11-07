@@ -2786,7 +2786,7 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
             <p className="request-detail-note">{selectedRequest.details || (typeOf(selectedRequest) === "partner" ? "업체·상품 소개가 입력되지 않았습니다." : "상세 요청이 입력되지 않았습니다.")}</p>
             {typeOf(selectedRequest) === "partner" && (
               <div className="request-proposal-actions">
-                <div><strong><FileText size={16} /> 입점 제안서</strong><small>신청 업체명이 들어간 PDF(주문 처리·정산 안내)입니다. 운영 기준은 사용방법 관리에서 바꿉니다.</small></div>
+                <div><strong><FileText size={16} /> 입점 제안서</strong><small>인쇄용 입점 제안서(A4 가로 13쪽: 판매 수수료 10%·정산 달력·주문 처리·CS) 표지에 신청 업체명이 들어갑니다.</small></div>
                 <button type="button" onClick={() => void downloadProposal(selectedRequest)} disabled={proposalBusy !== ""}><Download size={15} /> {proposalBusy === "pdf" ? "만드는 중…" : "제안서 PDF 받기"}</button>
                 <button type="button" className="primary" onClick={() => void mailProposal(selectedRequest)} disabled={proposalBusy !== "" || !selectedRequest.email}><Mail size={15} /> {proposalBusy === "mail" ? "보내는 중…" : selectedRequest.emailStatus === "sent" ? "제안서 메일 다시 보내기" : "제안서 메일 보내기"}</button>
               </div>
@@ -2897,7 +2897,7 @@ function PartnerDealEditor({ request, onSaved }: { request: SourcingRequest; onS
   );
 }
 
-// 관리자 > 사용방법 관리: 공급사 사용방법 화면·입점 제안서 PDF가 함께 쓰는 운영 기준과 사용법 영상 목록(content_settings "supplier_guide").
+// 관리자 > 사용방법 관리: 공급사 사용방법 화면이 쓰는 운영 기준과 사용법 영상 목록(content_settings "supplier_guide"). 입점 제안서 PDF는 디자인된 고정 문서입니다.
 function UsageGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (silent?: boolean) => Promise<void> }) {
   const savedValue = data.settings?.[SUPPLIER_GUIDE_SETTING_KEY];
   const [draft, setDraft] = useState<SupplierGuideSettings>(() => parseSupplierGuide(savedValue));
@@ -2939,7 +2939,7 @@ function UsageGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (
       const response = await apiFetch("/catalog/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: SUPPLIER_GUIDE_SETTING_KEY, value: JSON.stringify(value) }) });
       await readData(response);
       setDirty(false);
-      toast.success("사용방법·입점 제안서 설정을 저장했습니다.");
+      toast.success("사용방법 설정을 저장했습니다.");
       await refresh(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "설정을 저장하지 못했습니다.");
@@ -2949,16 +2949,16 @@ function UsageGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (
   };
   return (
     <>
-      <div className="admin-page-heading"><div><span>USAGE GUIDE</span><h1>사용방법 관리</h1><p>공개 사이트 "사용방법 &gt; 공급사" 화면과 입점 신청 때 메일로 보내는 입점 제안서(PDF)가 아래 운영 기준을 그대로 씁니다. 비워 두면 기본 문구가 들어갑니다.</p></div>
+      <div className="admin-page-heading"><div><span>USAGE GUIDE</span><h1>사용방법 관리</h1><p>공개 사이트 "사용방법 &gt; 공급사" 화면이 아래 운영 기준을 그대로 씁니다. 비워 두면 기본 문구가 들어갑니다. 입점 제안서 PDF(인쇄용 13쪽)는 디자인된 고정 문서라 여기 값이 들어가지 않으니, 내용을 바꾸려면 개발 요청으로 다시 만들어 주세요.</p></div>
         <div className="usage-admin-links"><a href="/how-to/supplier" target="_blank" rel="noreferrer"><ExternalLink size={15} /> 공개 화면 보기</a><a href="/api/catalog/partner-proposal" target="_blank" rel="noreferrer"><FileText size={15} /> 제안서 PDF 보기</a></div>
       </div>
       <section className="admin-card usage-admin-card">
-        <div className="card-heading"><ClipboardList size={19} /><div><h2>운영 기준(주문 처리·정산)</h2><p>마감 시간·정산 주기·지급일 등을 실제 계약 조건에 맞게 확인해 주세요. 저장하면 사용방법 화면과 새로 만드는 제안서 PDF에 바로 반영됩니다.</p></div></div>
+        <div className="card-heading"><ClipboardList size={19} /><div><h2>운영 기준(주문 처리·정산)</h2><p>마감 시간·정산 주기·지급일·판매 수수료 등을 실제 계약 조건에 맞게 확인해 주세요. 저장하면 사용방법 화면에 바로 반영됩니다.</p></div></div>
         <div className="usage-admin-terms">
           {termKeys.map((key) => (
-            <label key={key} className={key === "taxInvoice" || key === "deductions" || key === "returnPolicy" || key === "settlementBasis" || key === "settlementOption" ? "is-wide" : ""}>
+            <label key={key} className={key === "taxInvoice" || key === "deductions" || key === "returnPolicy" || key === "settlementBasis" || key === "settlementOption" || key === "commission" || key === "settlementPayDay" ? "is-wide" : ""}>
               <span>{SUPPLIER_TERM_LABELS[key]}</span>
-              {key === "taxInvoice" || key === "deductions" || key === "returnPolicy"
+              {key === "taxInvoice" || key === "deductions" || key === "returnPolicy" || key === "commission" || key === "settlementOption"
                 ? <textarea rows={2} maxLength={300} value={draft[key]} placeholder={DEFAULT_SUPPLIER_GUIDE[key]} onChange={(event) => setTerm(key, event.target.value)} />
                 : <input maxLength={300} value={draft[key]} placeholder={DEFAULT_SUPPLIER_GUIDE[key]} onChange={(event) => setTerm(key, event.target.value)} />}
             </label>

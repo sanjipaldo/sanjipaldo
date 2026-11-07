@@ -47,6 +47,7 @@ export type DemoView =
     message?: string;
     toggle?: string;
   }
+  | { kind: "group"; title: string; members: string; messages: Array<{ who: DemoActor; name: string; text: string; at: number }> }
   | { kind: "cover" }
   | { kind: "end"; line?: string; big?: string };
 
@@ -108,7 +109,7 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
             { title: "발주서대로 포장·출고", sub: "메일로 받은 엑셀 그대로", who: "supplier" },
             { title: "송장번호 회신", sub: "받은 메일에 답장으로", who: "supplier" },
             { title: "송장 등록·셀러 전달", sub: "위탁셀러 주문에 반영", who: "doogo" },
-            { title: "매월 1일 정산", sub: "지난달 주문 합산", who: "doogo" }
+            { title: "판매 대금 100% 입금", sub: "다음 달 1~3일 · 수수료 10%는 그 뒤", who: "doogo" }
           ]
         }
       },
@@ -171,7 +172,7 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
             { label: "오전 발주서 12건", value: "송장 회신 완료" },
             { label: "오후 발주서 7건", value: "송장 회신 완료" }
           ],
-          message: "송장은 위탁셀러에게 바로 전달했어요.\n이번 달 주문은 다음 달 1일에 정산해 드려요.",
+          message: "송장은 위탁셀러에게 바로 전달했어요.\n이번 달 판매 대금은 다음 달 1~3일에\n100% 먼저 입금해 드려요.",
           toggle: "정산 내역 메일로 받기"
         }
       },
@@ -202,7 +203,7 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
             { title: "입점 신청서 작성", sub: "doogofood.site · 5분이면 끝", who: "supplier" },
             { title: "입점 제안서 메일", sub: "신청하면 바로 PDF로", who: "doogo" },
             { title: "담당 MD 상담", sub: "영업일 2~3일 안에 연락", who: "doogo" },
-            { title: "상품 정보·메일 시간 정하기", sub: "공급가·이미지, 오전/오후 발송 시간", who: "supplier" },
+            { title: "상품 자료·메일 시간 정하기", sub: "상세페이지·썸네일·도매 공급가", who: "supplier" },
             { title: "판매 시작", sub: "단가표·신규상품에 노출", who: "doogo" }
           ]
         }
@@ -257,7 +258,7 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
             { title: "두고푸드 소개 · 입점 혜택", sub: "재고 부담 없는 위탁 판매" },
             { title: "입점 절차", sub: "신청부터 판매 시작까지 1~2주" },
             { title: "주문 처리 방법", sub: "발주서 메일 받고 송장 회신" },
-            { title: "정산 안내", sub: "매월 1일, 지난달 주문분" },
+            { title: "판매 수수료 · 정산", sub: "판매 대금 100% 먼저, 수수료 10%" },
             { title: "준비 서류 · 문의", sub: "사업자등록증 · 통장 사본 등" }
           ]
         }
@@ -272,7 +273,7 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
           title: "봄날농원 입점 상담",
           rows: [
             { label: "담당 MD 연락", value: "영업일 2~3일 안" },
-            { label: "함께 정할 것", value: "공급가 · 상품 구성" },
+            { label: "함께 정할 것", value: "도매 공급가 · 수수료 10%" },
             { label: "발주서 메일 시간", value: "오전 1회 · 오후 1회" }
           ],
           message: "상품 정보만 보내 주시면\n등록부터 판매까지 두고푸드가 챙길게요."
@@ -465,39 +466,39 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
     scenes: [
       cover,
       {
-        caption: { kicker: "취소·반품이 생기면 두고푸드가", title: "**먼저 알려** 드려요" },
+        caption: { kicker: "취소·반품이 생기면", title: "**단톡방**에서 바로 처리해요" },
         duration: 4.8,
         actor: [[0, "supplier"], [1.2, "doogo"]],
-        view: { kind: "chat", date: "11월 6일 (금) 오전 11:05", ask: "주문 취소나 반품은\n어떻게 해요?", reply: "출고 전 취소는 바로\n메일·전화로 알려 드려요.\n반품·교환은 확인한 뒤\n주소와 방법을 안내해 드릴게요.", replyAt: 1.2 }
+        view: { kind: "chat", date: "11월 6일 (금) 오전 11:05", ask: "주문 취소나 반품은\n어떻게 해요?", reply: "계약하면 두고푸드 팀과\n카카오톡 단톡방이 열려요.\n반품·CS·배송 문의를 그 방에서\n함께 바로 이야기해요.", replyAt: 1.2 }
       },
       {
-        caption: { kicker: "출고 전 취소는", title: "**바로 메일로** 알려 드려요" },
-        duration: 3.9,
-        actor: [[0, "doogo"], [1.8, "supplier"]],
+        caption: { kicker: "출고 전 취소는", title: "**바로 알려** 드려요" },
+        duration: 4.4,
+        actor: [[0, "doogo"], [1.7, "supplier"], [3.0, "doogo"]],
         view: {
-          kind: "inbox",
-          openAt: 2.6,
-          status: [[0, "두고푸드가 취소 요청을 보냈어요"], [1.8, "공급사가 메일을 확인하고 있어요"]],
-          mails: [
-            { from: "두고푸드 발주", subject: "[취소 요청] 11/6 오전 발주 · 김민지 사과 5kg", time: "오전 11:20", tag: "취소 요청", tone: "alert", at: 0.5 },
-            { from: "두고푸드 발주", subject: AM_SUBJECT, time: "오전 10:00", attach: true, tag: "출고 준비", tone: "muted", read: true },
-            ...YESTERDAY
+          kind: "group",
+          title: "두고푸드 × 봄날농원",
+          members: "단톡방 · 5명",
+          messages: [
+            { who: "doogo", name: "두고푸드 CS", text: "김○○ 고객님 사과 5kg 주문 취소 요청이에요. 출고 전이면 빼 주세요.", at: 0.4 },
+            { who: "supplier", name: "봄날농원", text: "아직 출고 전이라 이번 발주에서 뺐습니다.", at: 1.8 },
+            { who: "doogo", name: "두고푸드 CS", text: "확인했습니다. 감사합니다!", at: 3.1 }
           ]
         }
       },
       {
-        caption: { kicker: "출고 전이라면", title: "**빼고 회신**만 해 주세요" },
-        duration: 4.0,
-        actor: "supplier",
+        caption: { kicker: "변질·품질 저하 반품은", title: "**공급사가 책임**져요" },
+        duration: 4.6,
+        actor: [[0, "doogo"], [1.8, "supplier"], [3.1, "doogo"]],
         view: {
-          kind: "mail",
-          mode: "reply",
-          to: "두고푸드 발주",
-          subject: "RE: [취소 요청] 11/6 오전 발주 · 김민지 사과 5kg",
-          quote: "아직 출고 전이면 빼 주시고, 이미 출고했다면 송장번호를 알려 주세요.",
-          reply: "출고 전이라 이번 발주에서 뺐습니다.",
-          clickAt: 2.6,
-          status: "공급사가 회신하고 있어요"
+          kind: "group",
+          title: "두고푸드 × 봄날농원",
+          members: "단톡방 · 5명",
+          messages: [
+            { who: "doogo", name: "두고푸드 CS", text: "이○○ 고객님 사과 일부가 상했다고 사진 보내 주셨어요. 확인 부탁드려요.", at: 0.4 },
+            { who: "supplier", name: "봄날농원", text: "확인했습니다. 교환 상품 내일 다시 보내 드릴게요.", at: 1.9 },
+            { who: "doogo", name: "두고푸드 CS", text: "네, 회수 주소와 방법은 제가 안내드릴게요.", at: 3.2 }
+          ]
         }
       },
       {
@@ -511,8 +512,8 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
           title: "반품·교환 순서",
           items: [
             { title: "반품·교환 요청 접수", sub: "셀러·고객 요청을 받아요", who: "doogo" },
-            { title: "사유·사진 확인", sub: "두고푸드가 먼저 확인", who: "doogo" },
-            { title: "회수 주소·방법 안내", sub: "메일로 안내드려요", who: "doogo" },
+            { title: "사유·사진 확인", sub: "단톡방에서 함께 확인", who: "doogo" },
+            { title: "회수 주소·방법 안내", sub: "두고푸드가 안내드려요", who: "doogo" },
             { title: "회수 상품 확인", sub: "상태 확인 후 회신", who: "supplier" },
             { title: "교환 출고 또는 반품 완료", sub: "교환이면 다시 출고", who: "supplier" }
           ]
@@ -529,8 +530,8 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
           title: "취소·반품 정산 기준",
           items: [
             { title: "출고 전 취소", sub: "정산에서 빠져요", mark: "ok" },
-            { title: "공급사 사유 반품·교환", sub: "오배송·파손·품질 → 비용 차감", mark: "minus" },
-            { title: "그 밖의 사유", sub: "입점 계약 조건에 따라 안내", mark: "ok" }
+            { title: "변질·품질 저하 반품", sub: "공급사 책임 · 두고푸드와 협의해 해결", mark: "minus" },
+            { title: "반품 사진·내용", sub: "단톡방에서 함께 확인해요", mark: "ok" }
           ]
         }
       },
@@ -543,10 +544,10 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
     scenes: [
       cover,
       {
-        caption: { kicker: "정산은", title: "**매월 1일**에 받아요" },
+        caption: { kicker: "정산은", title: "**100% 먼저** 입금해요" },
         duration: 4.8,
         actor: [[0, "supplier"], [1.2, "doogo"]],
-        view: { kind: "chat", date: "10월 30일 (금) 오후 4:10", ask: "정산은 언제\n받아요?", reply: "한 달 동안 실제로 접수된 주문을\n모두 합쳐 다음 달 1일에 정산해요.\n물량이 많으면 주 단위로도\n바꿀 수 있어요.", replyAt: 1.2 }
+        view: { kind: "chat", date: "11월 30일 (월) 오후 4:10", ask: "정산은 언제\n받아요?", reply: "한 달 판매 대금을 다음 달 1~3일에\n100% 먼저 입금해 드려요.\n수수료 10%는 받으신 뒤에\n입금해 주시면 돼요.", replyAt: 1.2 }
       },
       {
         caption: { kicker: "매달", title: "**이 순서로** 정산해요" },
@@ -558,28 +559,28 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
           intro: "매달 이렇게 진행돼요.",
           title: "월 정산 순서",
           items: [
-            { title: "한 달 동안 주문 출고", sub: "발주 메일대로 출고", who: "supplier" },
-            { title: "월말 마감·주문 합산", sub: "실제로 접수된 주문만", who: "doogo" },
-            { title: "정산 내역 메일", sub: "주문 건별 내역 첨부", who: "doogo" },
-            { title: "세금계산서 발행", sub: "정산 금액으로", who: "supplier" },
-            { title: "매월 1일 지급", sub: "지난달 주문분", who: "doogo" }
+            { title: "1일~말일 주문 합계 확인", sub: "두고푸드와 공급사가 함께", who: "doogo" },
+            { title: "물품 세금계산서 발행", sub: "판매 대금 전액 · 면세는 계산서", who: "supplier" },
+            { title: "판매 대금 100% 입금", sub: "다음 달 1~3일 이내", who: "doogo" },
+            { title: "수수료 10% 입금", sub: "판매 대금을 받은 뒤", who: "supplier" },
+            { title: "수수료 세금계산서 발행", sub: "판매·마케팅 대행 수수료", who: "doogo" }
           ]
         }
       },
       {
-        caption: { kicker: "정산 금액은", title: "**실제 접수된 주문** 합계" },
+        caption: { kicker: "11월 판매 200만원이면", title: "**200만원** 먼저 입금" },
         duration: 4.4,
         actor: "doogo",
         view: {
           kind: "done",
-          badge: "10월 정산 내역",
-          title: "봄날농원 · 10월 1일~31일",
+          badge: "11월 정산 예시",
+          title: "봄날농원 · 11월 1일~30일",
           rows: [
-            { label: "10월 주문 접수", value: "30건" },
-            { label: "공급가 합계", value: "300,000원" },
-            { label: "공급사 사유 반품 1건", value: "-10,000원", tone: "minus" }
+            { label: "11월 판매 대금", value: "2,000,000원" },
+            { label: "12/1~12/3 두고푸드 입금", value: "2,000,000원" },
+            { label: "수수료 10% · 공급사 입금", value: "-200,000원", tone: "minus" }
           ],
-          total: { label: "11월 1일 정산 금액", value: 290000, suffix: "원" }
+          total: { label: "공급사 실수령", value: 1800000, suffix: "원" }
         }
       },
       {
@@ -590,34 +591,35 @@ export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
           kind: "mail",
           mode: "read",
           from: "두고푸드 정산",
-          time: "11월 1일",
-          subject: "[두고푸드] 10월 정산 내역 안내 · 290,000원",
-          body: ["10월 1일~31일 주문분 정산 내역입니다.", "확인 후 정산 금액으로 세금계산서를 발행해 주세요.", "정산 금액은 11월 1일에 지급됩니다."],
-          attachment: { name: "두고푸드_정산내역_2026-10.xlsx", meta: "엑셀 · 30건", type: "xlsx" },
+          time: "12월 1일",
+          subject: "[두고푸드] 11월 정산 내역 · 판매 대금 2,000,000원",
+          body: ["11월 1일~30일 주문분 정산 내역입니다.", "확인 후 물품 세금계산서(면세 상품은 계산서)를 발행해 주세요.", "판매 대금 2,000,000원은 12월 1~3일에 100% 입금됩니다."],
+          attachment: { name: "두고푸드_정산내역_2026-11.xlsx", meta: "엑셀 · 주문 건별 내역", type: "xlsx" },
           clickAt: 2.5,
           status: [[0, "두고푸드가 정산 내역을 보냈어요"], [1.8, "공급사가 메일을 확인하고 있어요"]]
         }
       },
       {
-        caption: { kicker: "세금계산서는", title: "**공급사가 발행**해요" },
+        caption: { kicker: "물품 세금계산서는", title: "**공급사가 발행**해요" },
         duration: 3.8,
         actor: "supplier",
-        view: { kind: "confirm", base: "mail", title: "세금계산서 발행", sub: "정산 내역을 확인하고 발행해 주세요", items: ["공급받는 자: 두고푸드", "금액: 정산 금액 290,000원", "면세 상품은 계산서로 발행"], pill: "발행하면 정산이 마무리돼요" }
+        view: { kind: "confirm", base: "mail", title: "물품 세금계산서 발행", sub: "정산 내역을 확인하고 발행해 주세요", items: ["공급받는 자: 두고푸드", "금액: 판매 대금 2,000,000원", "면세 상품은 계산서로 발행"], pill: "발행하면 판매 대금이 입금돼요" }
       },
       {
-        caption: { kicker: "매월 1일", title: "**정산 금액 입금**" },
-        duration: 4.2,
+        caption: { kicker: "수수료 10%는", title: "**받은 뒤에** 입금해요" },
+        duration: 4.4,
         actor: "doogo",
         view: {
           kind: "done",
-          badge: "10월 정산 완료",
-          title: "11월 1일 정산",
+          badge: "11월 정산 완료",
+          title: "12월 초 정산",
           rows: [
-            { label: "10월 주문분", value: "290,000원 입금" },
-            { label: "다음 정산", value: "12월 1일 · 11월 주문분" }
+            { label: "판매 대금 100% 입금", value: "2,000,000원" },
+            { label: "수수료 10% 입금(공급사)", value: "200,000원" },
+            { label: "수수료 세금계산서", value: "두고푸드 발행" }
           ],
-          message: "물량이 많아지면\n주 단위 정산으로 바꿔 드릴 수 있어요.",
-          toggle: "정산되면 메일로 알려 드릴게요"
+          message: "거래가 커지면 주 정산으로 바꿀 수 있어요.\n수수료는 매월 1일에 한 번만 내시면 돼요.",
+          toggle: "정산 내역 메일로 받기"
         }
       },
       end
