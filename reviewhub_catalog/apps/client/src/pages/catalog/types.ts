@@ -1,3 +1,4 @@
+import type { PartnerDeal } from "@repo/shared/partner-deal";
 export type ShippingType = "domestic" | "overseas";
 
 export type Category = {
@@ -241,6 +242,8 @@ export type SourcingRequest = {
   emailSentAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  // 입점 신청 진행 단계·계약 조건(partner_deals, 입점 신청만)
+  deal?: PartnerDeal | null;
 };
 
 // 공개 단가표에 내려오는 배송 정책(관리용 필드 제외)

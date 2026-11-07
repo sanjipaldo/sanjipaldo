@@ -14,6 +14,7 @@ import {
   getPartnerProposalForRequest,
   getSupplierGuide,
   resendPartnerProposal,
+  updatePartnerDeal,
   createSourcingRequest,
   createSupplier,
   getAdminCatalog,
@@ -215,6 +216,18 @@ const SettingSchema = z.object({
 });
 
 const StatusSchema = z.object({ status: z.enum(["received", "reviewing", "completed"]) });
+// 입점 신청 진행 단계·계약 조건: 계약 완료면 계약 형태 필수, 수수료 위탁이면 수수료율(0 초과 100 이하, % 단위) 필수
+const PartnerDealSchema = z.object({
+  stage: z.enum(["received", "contacted", "negotiating", "contracted", "declined"]),
+  contractType: z.enum(["commission", "wholesale", "other"]).nullable().optional(),
+  commissionRate: z.coerce.number().gt(0).max(100).nullable().optional(),
+  contractMemo: z.string().trim().max(2000).nullable().optional(),
+  note: z.string().trim().max(300).nullable().optional()
+}).superRefine((input, context) => {
+  if (input.stage !== "contracted") return;
+  if (!input.contractType) context.addIssue({ code: "custom", message: "계약 형태(수수료 위탁·일반 도소매·기타)를 골라 주세요.", path: ["contractType"] });
+  if (input.contractType === "commission" && input.commissionRate == null) context.addIssue({ code: "custom", message: "수수료율(%)을 입력해 주세요.", path: ["commissionRate"] });
+});
 const ProductDisplayOrderSchema = z.object({
   items: z.array(z.object({
     id: z.string().trim().min(1),
@@ -834,6 +847,16 @@ catalogRouter.get("/admin/partner/:id/proposal", adminRoute, async (c) => {
   try {
     const { bytes, filename } = await getPartnerProposalForRequest(c.req.param("id"));
     return c.body(bytes as unknown as ArrayBuffer, 200, pdfHeaders(filename, true));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+catalogRouter.put("/admin/partner/:id/deal", adminRoute, async (c) => {
+  const parsed = PartnerDealSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", parsed.error.issues[0]?.message || "진행 단계 입력값을 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess({ request: await updatePartnerDeal(c.req.param("id"), parsed.data) }));
   } catch (error) {
     return errorResponse(c, error);
   }

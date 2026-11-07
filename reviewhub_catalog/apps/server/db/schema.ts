@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -485,6 +485,25 @@ export type ProductGroupItem = typeof productGroupItems.$inferSelect;
 export type Notice = typeof notices.$inferSelect;
 export type PriceHistory = typeof priceHistories.$inferSelect;
 export type CatalogActivityLog = typeof catalogActivityLogs.$inferSelect;
+// 입점 신청(공급사) 진행 단계·계약 조건(migration 030). requestId = sourcing_requests.id(requestType partner)
+export const partnerDeals = sqliteTable(
+  "partner_deals",
+  {
+    requestId: text("requestId").primaryKey(),
+    stage: text("stage", { enum: ["received", "contacted", "negotiating", "contracted", "declined"] }).notNull().default("received"),
+    contractType: text("contractType", { enum: ["commission", "wholesale", "other"] }),
+    commissionRate: real("commissionRate"),
+    contractMemo: text("contractMemo"),
+    contactedAt: text("contactedAt"),
+    closedAt: text("closedAt"),
+    // 단계 변경 기록 JSON 배열: [{ at, stage, contractType, commissionRate, memo }]
+    history: text("history"),
+    createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [index("idx_partner_deals_stage").on(table.stage, table.updatedAt)]
+);
+
 export type SourcingRequest = typeof sourcingRequests.$inferSelect;
 export type ExternalProductLink = typeof externalProductLinks.$inferSelect;
 // 발주오라 오픈 API 연결 설정(provider당 1행). 비밀번호는 저장하지 않고, API 키는 암호문만 보관합니다.

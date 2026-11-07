@@ -54,6 +54,7 @@ import { apiFetch } from "@/lib/api";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
 import { authClient, clearAuthToken } from "@/lib/auth";
 import { SUPPLY_STATUS_LABELS, supplyStatus, type SupplyStatus } from "@/lib/supply-status";
+import { PARTNER_CONTRACT_LABELS, PARTNER_CONTRACT_TYPES, PARTNER_STAGES, PARTNER_STAGE_LABELS, partnerContractSummary, type PartnerContractType, type PartnerStage } from "@repo/shared/partner-deal";
 import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_GUIDE_SETTING_KEY, SUPPLIER_TERM_LABELS, SUPPLIER_VIDEO_GROUPS, parseSupplierGuide, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideTerms, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
 import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 import type { AdminCatalogData, AdminHomeData, AdminOverview, BaljuoraConnection, Category, CatalogSyncOutboxItem, CatalogSyncOverview, CatalogSyncRun, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, SalesOverview, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
@@ -2563,6 +2564,8 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
   const [kind, setKind] = useState<"sourcing" | "partner">("sourcing");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | SourcingRequest["status"]>("all");
+  // 입점 신청은 진행 단계(접수 → 연락 완료 → 상담·협의 중 → 계약 완료/불발)로 나눠 봅니다.
+  const [stageFilter, setStageFilter] = useState<"all" | PartnerStage>("all");
   const [selectedRequest, setSelectedRequest] = useState<SourcingRequest | null>(null);
   const [pageSize, setPageSize] = useState(() => readStoredPageSize("admin-requests", 5));
   const [page, setPage] = useState(1);
@@ -2582,19 +2585,21 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
   );
 
   const typeOf = (request: SourcingRequest) => request.requestType ?? "sourcing";
+  const stageOf = (request: SourcingRequest): PartnerStage => request.deal?.stage ?? "received";
   const kindRequests = useMemo(() => sourcingData.sourcingRequests.filter((request) => typeOf(request) === kind), [sourcingData.sourcingRequests, kind]);
   const requestNumber = useMemo(() => new Map(kindRequests.map((request, index) => [request.id, `${kind === "partner" ? "PT" : "SR"}-${String(kindRequests.length - index).padStart(4, "0")}`])), [kindRequests, kind]);
   const filtered = useMemo(() => kindRequests.filter((request) => {
     const keyword = query.trim().toLowerCase();
-    const matchesQuery = !keyword || `${request.productName} ${request.requesterName} ${request.contact} ${request.desiredPrice || ""} ${request.details || ""} ${request.companyName || ""} ${request.email || ""} ${request.businessType || ""}`.toLowerCase().includes(keyword);
-    return matchesQuery && (status === "all" || request.status === status);
-  }), [kindRequests, query, status]);
+    const matchesQuery = !keyword || `${request.productName} ${request.requesterName} ${request.contact} ${request.desiredPrice || ""} ${request.details || ""} ${request.companyName || ""} ${request.email || ""} ${request.businessType || ""} ${request.deal?.contractMemo || ""}`.toLowerCase().includes(keyword);
+    const matchesStatus = kind === "partner" ? stageFilter === "all" || stageOf(request) === stageFilter : status === "all" || request.status === status;
+    return matchesQuery && matchesStatus;
+  }), [kindRequests, query, status, stageFilter, kind]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const pagedRequests = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   useEffect(() => {
     setPage(1);
-  }, [query, status, pageSize, kind]);
+  }, [query, status, stageFilter, pageSize, kind]);
   useEffect(() => {
     if (page > pageCount) setPage(pageCount);
   }, [page, pageCount]);
@@ -2604,6 +2609,29 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
     received: kindRequests.filter((request) => request.status === "received").length,
     reviewing: kindRequests.filter((request) => request.status === "reviewing").length,
     completed: kindRequests.filter((request) => request.status === "completed").length
+  };
+  const stageCounts = Object.fromEntries([["all", kindRequests.length], ...PARTNER_STAGES.map((stage) => [stage, kindRequests.filter((request) => stageOf(request) === stage).length])]) as Record<"all" | PartnerStage, number>;
+  // 입점 신청 DB를 엑셀(CSV, 한글 깨짐 방지 BOM)로 내려받습니다: 진행 단계·계약 조건·상담 메모 포함
+  const exportPartnersCsv = () => {
+    const cell = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const header = ["접수번호", "접수일", "업체명", "업종", "주요 상품", "담당자", "연락처", "이메일", "진행 단계", "계약 형태", "수수료율(%)", "연락일", "종료일", "상담 메모", "업체 정보·소개", "홈페이지"];
+    const rows = filtered.map((request) => {
+      const deal = request.deal;
+      return [
+        requestNumber.get(request.id), request.createdAt.slice(0, 10), request.companyName, request.businessType, request.productName, request.requesterName, request.contact, request.email,
+        PARTNER_STAGE_LABELS[stageOf(request)], deal?.stage === "contracted" && deal.contractType ? PARTNER_CONTRACT_LABELS[deal.contractType] : "", deal?.stage === "contracted" && deal.contractType === "commission" ? deal.commissionRate ?? "" : "",
+        deal?.contactedAt?.slice(0, 10), deal?.closedAt?.slice(0, 10), deal?.contractMemo, request.details, request.referenceUrl
+      ].map(cell).join(",");
+    });
+    const blob = new Blob([`\uFEFF${[header.map(cell).join(","), ...rows].join("\r\n")}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `두고푸드_입점신청_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   const kindCounts = {
     sourcing: sourcingData.sourcingRequests.filter((request) => typeOf(request) === "sourcing").length,
@@ -2637,7 +2665,7 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
     try {
       const response = await apiFetch(`/catalog/admin/partner/${request.id}/proposal-mail`, { method: "POST" });
       const payload = await readData<{ request: SourcingRequest }>(response);
-      setSelectedRequest(payload.request);
+      setSelectedRequest((current) => ({ ...payload.request, deal: current?.deal ?? payload.request.deal ?? null }));
       if (payload.request.emailStatus === "sent") toast.success(`${payload.request.email}(으)로 입점 제안서를 보냈습니다.`);
       else if (payload.request.emailStatus === "skipped") toast.error("메일 발송 설정(RESEND_API_KEY)이 없어 보내지 못했습니다. 제안서 PDF를 받아 직접 보내 주세요.");
       else toast.error("메일 발송에 실패했습니다. 잠시 뒤 다시 시도하거나 PDF를 받아 직접 보내 주세요.");
@@ -2661,24 +2689,34 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
     <>
       <div className="admin-page-heading"><div><span>PARTNER & SOURCING</span><h1>입점·소싱 요청</h1><p>소싱 요청과 입점 신청을 탭으로 나눠 확인하고, 상세 팝업에서 처리 상태를 관리합니다.</p></div></div>
       <div className="request-kind-tabs" role="tablist" aria-label="요청 종류">
-        <button type="button" role="tab" aria-selected={kind === "sourcing"} className={kind === "sourcing" ? "active" : ""} onClick={() => { setKind("sourcing"); setStatus("all"); }}><PackagePlus size={17} /> 소싱 요청 <small>{kindCounts.sourcing}</small></button>
-        <button type="button" role="tab" aria-selected={kind === "partner"} className={kind === "partner" ? "active" : ""} onClick={() => { setKind("partner"); setStatus("all"); }}><Store size={17} /> 입점 신청 <small>{kindCounts.partner}</small></button>
+        <button type="button" role="tab" aria-selected={kind === "sourcing"} className={kind === "sourcing" ? "active" : ""} onClick={() => { setKind("sourcing"); setStatus("all"); setStageFilter("all"); }}><PackagePlus size={17} /> 소싱 요청 <small>{kindCounts.sourcing}</small></button>
+        <button type="button" role="tab" aria-selected={kind === "partner"} className={kind === "partner" ? "active" : ""} onClick={() => { setKind("partner"); setStatus("all"); setStageFilter("all"); }}><Store size={17} /> 입점 신청 <small>{kindCounts.partner}</small></button>
       </div>
       <section className="admin-card request-board-card">
         <div className="request-board-toolbar">
-          <div className="request-status-tabs" aria-label="소싱 요청 상태 필터">
-            {([
-              ["all", "전체"],
-              ["received", "접수"],
-              ["reviewing", "검토중"],
-              ["completed", "완료"]
-            ] as const).map(([value, label]) => (
-              <button className={status === value ? "active" : ""} key={value} onClick={() => setStatus(value)}>
-                {label}<small>{counts[value]}</small>
-              </button>
-            ))}
-          </div>
-          <div className="request-board-controls"><div className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isPartner ? "업체명·상품·담당자·이메일 검색" : "상품명·요청자·연락처 검색"} /></div><PageSizeInput value={pageSize} onChange={setPageSize} label="입점·소싱 요청 페이지당 표시 수" suffix="개" storageKey="admin-requests" /></div>
+          {isPartner ? (
+            <div className="request-status-tabs partner-stage-tabs" aria-label="입점 신청 진행 단계 필터">
+              {(["all", ...PARTNER_STAGES] as const).map((value) => (
+                <button className={`${stageFilter === value ? "active" : ""} ${value === "all" ? "" : `is-${value}`}`} key={value} onClick={() => setStageFilter(value)}>
+                  {value === "all" ? "전체" : PARTNER_STAGE_LABELS[value]}<small>{stageCounts[value]}</small>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="request-status-tabs" aria-label="소싱 요청 상태 필터">
+              {([
+                ["all", "전체"],
+                ["received", "접수"],
+                ["reviewing", "검토중"],
+                ["completed", "완료"]
+              ] as const).map(([value, label]) => (
+                <button className={status === value ? "active" : ""} key={value} onClick={() => setStatus(value)}>
+                  {label}<small>{counts[value]}</small>
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="request-board-controls"><div className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isPartner ? "업체명·상품·담당자·이메일 검색" : "상품명·요청자·연락처 검색"} /></div><PageSizeInput value={pageSize} onChange={setPageSize} label="입점·소싱 요청 페이지당 표시 수" suffix="개" storageKey="admin-requests" />{isPartner && <button type="button" className="request-export-button" onClick={exportPartnersCsv} disabled={filtered.length === 0}><Download size={15} /> 엑셀(CSV) 받기</button>}</div>
         </div>
         {sourcingLoading ? <div className="admin-loading inline compact"><div className="spinner" /><span>소싱 요청을 불러오는 중…</span></div> : kindRequests.length === 0 ? (
           <div className="empty-admin"><ClipboardList size={28} /><strong>{isPartner ? "접수된 입점 신청이 없습니다." : "접수된 소싱 요청이 없습니다."}</strong></div>
@@ -2688,16 +2726,19 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
           <div className="request-board-scroll">
             <table className="request-board-table">
               {isPartner
-                ? <thead><tr><th>접수번호</th><th>상태</th><th>업체·주요 상품</th><th>업종</th><th>담당자</th><th>핸드폰 번호</th><th>이메일</th><th>접수일</th><th>관리</th></tr></thead>
+                ? <thead><tr><th>접수번호</th><th>진행 단계</th><th>업체·주요 상품</th><th>업종</th><th>계약 조건</th><th>담당자</th><th>핸드폰 번호</th><th>이메일</th><th>접수일</th><th>관리</th></tr></thead>
                 : <thead><tr><th>접수번호</th><th>상태</th><th>요청 상품·내용</th><th>요청자</th><th>핸드폰 번호</th><th>희망가</th><th>접수일</th><th>관리</th></tr></thead>}
               <tbody>
                 {pagedRequests.map((request, index) => (
                   <tr key={request.id} tabIndex={0} onClick={() => setSelectedRequest(request)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setSelectedRequest(request); }}>
                     <td data-label="접수번호"><span className="request-number">{requestNumber.get(request.id)}</span></td>
-                    <td data-label="상태"><span className={`request-status ${request.status}`}>{statusLabel(request.status)}</span></td>
+                    {isPartner
+                      ? <td data-label="진행 단계"><span className={`partner-stage-pill is-${stageOf(request)}`}>{PARTNER_STAGE_LABELS[stageOf(request)]}</span></td>
+                      : <td data-label="상태"><span className={`request-status ${request.status}`}>{statusLabel(request.status)}</span></td>}
                     {isPartner ? <>
                       <td data-label="업체·주요 상품"><div className="request-product"><strong>{request.companyName || "-"}</strong><small>{request.productName}</small></div></td>
                       <td data-label="업종"><span className="request-type-chip">{request.businessType || "-"}</span></td>
+                      <td data-label="계약 조건">{partnerContractSummary(request.deal) ? <strong className="partner-contract-summary">{partnerContractSummary(request.deal)}</strong> : <span className="partner-contract-empty">-</span>}</td>
                       <td data-label="담당자"><strong>{request.requesterName}</strong></td>
                       <td data-label="핸드폰 번호"><a className="request-contact" href={`tel:${request.contact.replace(/[^0-9+]/g, "")}`} onClick={(event) => event.stopPropagation()}>{request.contact}</a></td>
                       <td data-label="이메일"><div className="request-email"><a href={`mailto:${request.email ?? ""}`} onClick={(event) => event.stopPropagation()}>{request.email || "-"}</a><small className={`mail-status ${request.emailStatus ?? ""}`}>{mailLabel(request.emailStatus)}</small></div></td>
@@ -2750,19 +2791,109 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
                 <button type="button" className="primary" onClick={() => void mailProposal(selectedRequest)} disabled={proposalBusy !== "" || !selectedRequest.email}><Mail size={15} /> {proposalBusy === "mail" ? "보내는 중…" : selectedRequest.emailStatus === "sent" ? "제안서 메일 다시 보내기" : "제안서 메일 보내기"}</button>
               </div>
             )}
-            <div className="request-detail-actions">
-              {([
-                ["received", "접수"],
-                ["reviewing", "검토중"],
-                ["completed", "완료"]
-              ] as const).map(([value, label]) => (
-                <button className={selectedRequest.status === value ? "active" : ""} key={value} onClick={() => void update(selectedRequest, value)}>{label}</button>
-              ))}
-            </div>
+            {typeOf(selectedRequest) === "partner" ? (
+              <PartnerDealEditor
+                key={`${selectedRequest.id}-${selectedRequest.deal?.updatedAt ?? "new"}`}
+                request={selectedRequest}
+                onSaved={async (next) => { setSelectedRequest(next); await loadSourcing(); }}
+              />
+            ) : (
+              <div className="request-detail-actions">
+                {([
+                  ["received", "접수"],
+                  ["reviewing", "검토중"],
+                  ["completed", "완료"]
+                ] as const).map(([value, label]) => (
+                  <button className={selectedRequest.status === value ? "active" : ""} key={value} onClick={() => void update(selectedRequest, value)}>{label}</button>
+                ))}
+              </div>
+            )}
           </section>
         </div>
       )}
     </>
+  );
+}
+
+// 입점 신청 진행 단계·계약 조건 편집: 접수 → 연락 완료 → 상담·협의 중 → 계약 완료(수수료 % / 일반 도소매 / 기타) 또는 계약 불발
+function PartnerDealEditor({ request, onSaved }: { request: SourcingRequest; onSaved: (request: SourcingRequest) => Promise<void> }) {
+  const deal = request.deal ?? null;
+  const [stage, setStage] = useState<PartnerStage>(deal?.stage ?? "received");
+  const [contractType, setContractType] = useState<PartnerContractType | "">(deal?.contractType ?? "");
+  const [rate, setRate] = useState(deal?.commissionRate != null ? String(deal.commissionRate) : "");
+  const [memo, setMemo] = useState(deal?.contractMemo ?? "");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const stepIndex = PARTNER_STAGES.indexOf(stage);
+  const formatAt = (value?: string | null) => (value ? value.slice(0, 16).replace("T", " ") : "-");
+  const save = async () => {
+    if (stage === "contracted" && !contractType) { toast.error("계약 형태(수수료 위탁·일반 도소매·기타)를 골라 주세요."); return; }
+    const rateNumber = Number(rate);
+    if (stage === "contracted" && contractType === "commission" && (!rate.trim() || !Number.isFinite(rateNumber) || rateNumber <= 0 || rateNumber > 100)) { toast.error("수수료율을 0보다 크고 100 이하인 %로 입력해 주세요."); return; }
+    setSaving(true);
+    try {
+      const response = await apiFetch(`/catalog/admin/partner/${request.id}/deal`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stage,
+          contractType: stage === "contracted" ? contractType || null : null,
+          commissionRate: stage === "contracted" && contractType === "commission" ? rateNumber : null,
+          contractMemo: memo.trim() || null,
+          note: note.trim() || null
+        })
+      });
+      const payload = await readData<{ request: SourcingRequest }>(response);
+      toast.success(`진행 단계를 "${PARTNER_STAGE_LABELS[stage]}"(으)로 저장했습니다.`);
+      setNote("");
+      await onSaved(payload.request);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "진행 단계를 저장하지 못했습니다. 운영 배포(migration 030) 전 미리보기에서는 저장할 수 없습니다.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const history = [...(deal?.history ?? [])].reverse();
+  return (
+    <section className="partner-deal-editor" aria-label="입점 진행 단계">
+      <div className="partner-deal-head"><strong>진행 단계</strong><small>연락·상담·계약 결과를 단계별로 기록합니다. 계약 완료면 계약 형태와 수수료율을 꼭 넣어 주세요.</small></div>
+      <ol className="partner-stage-stepper">
+        {PARTNER_STAGES.map((value, index) => (
+          <li key={value}>
+            <button type="button" className={`is-${value}${stage === value ? " is-current" : ""}${value !== "declined" && stage !== "declined" && index < stepIndex ? " is-done" : ""}`} onClick={() => setStage(value)} aria-pressed={stage === value}>
+              <b>{value === "declined" ? "×" : index + 1}</b>{PARTNER_STAGE_LABELS[value]}
+            </button>
+          </li>
+        ))}
+      </ol>
+      {stage === "contracted" && (
+        <div className="partner-contract-form">
+          <span className="partner-contract-label">계약 형태</span>
+          <div className="partner-contract-types" role="radiogroup" aria-label="계약 형태">
+            {PARTNER_CONTRACT_TYPES.map((type) => (
+              <label key={type} className={contractType === type ? "is-active" : ""}><input type="radio" name="partner-contract-type" checked={contractType === type} onChange={() => setContractType(type)} /> {PARTNER_CONTRACT_LABELS[type]}</label>
+            ))}
+          </div>
+          {contractType === "commission" && (
+            <label className="partner-rate-field">수수료율
+              <span><input type="number" inputMode="decimal" min="0.1" max="100" step="0.1" value={rate} onChange={(event) => setRate(event.target.value)} placeholder="예: 10" /> %</span>
+              <span className="partner-rate-presets">{[5, 7, 10, 12, 15].map((value) => <button type="button" key={value} className={Number(rate) === value ? "is-active" : ""} onClick={() => setRate(String(value))}>{value}%</button>)}</span>
+            </label>
+          )}
+        </div>
+      )}
+      <label className="partner-memo-field">상담·계약 메모<textarea rows={3} maxLength={2000} value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="통화 내용, 계약 조건 협의 내용, 불발 사유 등" /></label>
+      <label className="partner-memo-field">이번 변경 기록(선택)<input maxLength={300} value={note} onChange={(event) => setNote(event.target.value)} placeholder="예: 11/7 대표님과 통화, 다음 주 샘플 발송" /></label>
+      <div className="partner-deal-dates"><span>연락일 <b>{formatAt(deal?.contactedAt)}</b></span><span>계약 완료·불발일 <b>{formatAt(deal?.closedAt)}</b></span><span>현재 <b>{partnerContractSummary(deal) || PARTNER_STAGE_LABELS[deal?.stage ?? "received"]}</b></span></div>
+      <div className="partner-deal-save"><button type="button" className="primary-action" onClick={() => void save()} disabled={saving}><Save size={16} /> {saving ? "저장 중…" : "진행 상황 저장"}</button></div>
+      {history.length > 0 && (
+        <ol className="partner-deal-history" aria-label="진행 기록">
+          {history.map((item, index) => (
+            <li key={`${item.at}-${index}`}><time>{formatAt(item.at)}</time><span className={`partner-stage-pill is-${item.stage}`}>{PARTNER_STAGE_LABELS[item.stage]}</span>{item.stage === "contracted" && item.contractType ? <b>{partnerContractSummary({ stage: "contracted", contractType: item.contractType, commissionRate: item.commissionRate ?? null })}</b> : null}{item.memo ? <small>{item.memo}</small> : null}</li>
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }
 
@@ -2825,7 +2956,7 @@ function UsageGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (
         <div className="card-heading"><ClipboardList size={19} /><div><h2>운영 기준(주문 처리·정산)</h2><p>마감 시간·정산 주기·지급일 등을 실제 계약 조건에 맞게 확인해 주세요. 저장하면 사용방법 화면과 새로 만드는 제안서 PDF에 바로 반영됩니다.</p></div></div>
         <div className="usage-admin-terms">
           {termKeys.map((key) => (
-            <label key={key} className={key === "taxInvoice" || key === "deductions" || key === "returnPolicy" || key === "settlementBasis" ? "is-wide" : ""}>
+            <label key={key} className={key === "taxInvoice" || key === "deductions" || key === "returnPolicy" || key === "settlementBasis" || key === "settlementOption" ? "is-wide" : ""}>
               <span>{SUPPLIER_TERM_LABELS[key]}</span>
               {key === "taxInvoice" || key === "deductions" || key === "returnPolicy"
                 ? <textarea rows={2} maxLength={300} value={draft[key]} placeholder={DEFAULT_SUPPLIER_GUIDE[key]} onChange={(event) => setTerm(key, event.target.value)} />

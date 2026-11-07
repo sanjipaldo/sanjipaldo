@@ -20,6 +20,7 @@ export type SupplierGuideTerms = {
   settlementBasis: string;
   settlementCycle: string;
   settlementPayDay: string;
+  settlementOption: string;
   taxInvoice: string;
   deductions: string;
   returnPolicy: string;
@@ -35,6 +36,7 @@ export const SUPPLIER_TERM_LABELS: Record<keyof SupplierGuideTerms, string> = {
   settlementBasis: "정산 기준",
   settlementCycle: "정산 주기",
   settlementPayDay: "지급일",
+  settlementOption: "주 단위 정산",
   taxInvoice: "세금계산서",
   deductions: "정산 제외·차감",
   returnPolicy: "반품·교환"
@@ -47,9 +49,10 @@ export const DEFAULT_SUPPLIER_GUIDE: SupplierGuideSettings = {
   orderSendTime: "평일 오전 10시 전후",
   shipLeadTime: "발주서를 받은 날 출고(늦어도 2일 이내)",
   invoiceDeadline: "출고 당일 오후 6시까지",
-  settlementBasis: "출고 완료(송장 등록)된 주문의 공급가 합계",
-  settlementCycle: "월 1회 · 매월 1일~말일 출고분",
-  settlementPayDay: "익월 10일 지급(주말·공휴일이면 다음 영업일)",
+  settlementBasis: "한 달 동안 실제로 접수된 주문 건의 공급가를 모두 합산한 금액",
+  settlementCycle: "월 1회 · 지난달 1일~말일 주문분",
+  settlementPayDay: "매월 1일, 지난달 주문분을 정산해 드립니다",
+  settlementOption: "물량이 크거나 주문 건이 많으면 주 단위 정산으로 바꿀 수 있습니다.",
   taxInvoice: "정산 금액으로 공급사가 두고푸드 앞으로 세금계산서(면세 상품은 계산서)를 발행합니다.",
   deductions: "출고 전 취소된 주문은 정산에서 빠지고, 공급사 사유(오배송·파손·품질)로 생긴 반품·교환 비용은 차감합니다.",
   returnPolicy: "반품·교환은 두고푸드가 확인한 뒤 안내드린 주소와 방법으로 진행합니다.",

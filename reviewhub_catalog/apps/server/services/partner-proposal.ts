@@ -258,7 +258,7 @@ function drawCover(doc: PDFDocument, fonts: Fonts, whiteLogo: PDFImage, input: P
   const cards: Array<[string, string]> = [
     ["재고 부담 없는 판매", "위탁셀러가 판매한 주문만 출고합니다. 미리 사입하지 않습니다."],
     ["발주·송장 자동화", "발주오라로 공급사별 발주서가 메일로 오고, 송장은 엑셀로 회신합니다."],
-    ["투명한 월 정산", `${input.guide.settlementCycle}, ${input.guide.settlementPayDay}`]
+    ["매월 1일 정산", `${input.guide.settlementPayDay}. ${input.guide.settlementOption}`]
   ];
   const gap = 10;
   const cardW = (CONTENT_W - gap * 2) / 3;
@@ -315,7 +315,7 @@ export async function buildPartnerProposalPdf(input: ProposalInput) {
     ["판로 확대", "단가표·신규상품·월별 제철상품 메뉴로 전국 위탁셀러에게 바로 노출됩니다."],
     ["재고 부담 없음", "사입이 아니라 위탁 판매라서, 셀러가 판매한 주문 수량만큼만 출고합니다."],
     ["주문 업무 자동화", "발주오라(B2B 수발주 자동화)로 공급사별 발주서가 정해진 시간에 메일로 발송되고, 송장은 엑셀로 한 번에 회신합니다."],
-    ["투명한 정산", `${g.settlementCycle} 정산 · ${g.settlementPayDay}. 정산 기준은 "${g.settlementBasis}"입니다.`]
+    ["투명한 월 정산", `${g.settlementCycle} · ${g.settlementPayDay}. 정산 금액은 ${g.settlementBasis}입니다. ${g.settlementOption}`]
   ]);
 
   writer.sectionTitle("2", "입점 절차", "신청부터 판매 시작까지 보통 1~2주 정도 걸립니다(상품 수와 준비 상황에 따라 달라집니다).");
@@ -341,22 +341,23 @@ export async function buildPartnerProposalPdf(input: ProposalInput) {
     ["송장 회신 마감", g.invoiceDeadline]
   ]);
 
-  writer.sectionTitle("4", "정산 안내", "출고가 끝난 주문만 정산합니다. 정산 내역은 출고 건별로 확인할 수 있습니다.");
+  writer.sectionTitle("4", "정산 안내", "한 달 동안 실제로 접수된 주문 건을 모두 합산해 다음 달 1일에 정산합니다. 물량이 많으면 주 단위 정산도 가능합니다.");
   writer.table([
     ["정산 기준", g.settlementBasis],
     ["정산 주기", g.settlementCycle],
     ["지급일", g.settlementPayDay],
+    ["주 단위 정산", g.settlementOption],
     ["세금계산서", g.taxInvoice],
     ["정산 제외·차감", g.deductions]
   ]);
   writer.stepBoxes([
-    ["출고·송장 등록", "송장이 등록된 주문이 정산 대상이 됩니다."],
-    ["정산 마감", g.settlementCycle],
-    ["정산 내역 확인", "출고 건별 공급가·차감 내역을 확인합니다."],
+    ["주문 접수·출고", "한 달 동안 접수된 주문을 발주서대로 출고합니다."],
+    ["월말 마감", "지난달 1일~말일 주문 건의 공급가를 합산합니다."],
+    ["정산 내역 확인", "주문 건별 공급가·차감 내역을 확인합니다."],
     ["세금계산서 발행", "확정된 정산 금액으로 발행합니다."],
-    ["대금 지급", g.settlementPayDay]
+    ["매월 1일 지급", "물량이 많으면 주 단위로도 정산합니다."]
   ], { height: 104 });
-  writer.callout("정산 예시", "공급가 10,000원 상품 30건 출고 → 300,000원\n공급사 사유 반품 1건 차감 -10,000원 → 정산 금액 290,000원(세금계산서 발행 기준)");
+  writer.callout("정산 예시", "10월 주문 접수 30건 × 공급가 10,000원 → 300,000원\n공급사 사유 반품 1건 차감 -10,000원 → 11월 1일 정산 금액 290,000원(세금계산서 발행 기준)");
 
   writer.sectionTitle("5", "준비 서류 · 문의");
   writer.bullets([

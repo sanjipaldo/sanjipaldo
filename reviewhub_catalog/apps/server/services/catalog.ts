@@ -3,6 +3,7 @@ import { DatabaseError, getDb } from "../_core/db";
 import { sendPartnerProposalMail, sendPartnerReceivedMail, type MailAttachment } from "./partner-mail";
 import { buildPartnerProposalPdf, proposalFileName } from "./partner-proposal";
 import { SUPPLIER_GUIDE_SETTING_KEY, parseSupplierGuide } from "@repo/shared/supplier-guide";
+import { partnerStageToStatus, type PartnerContractType, type PartnerDeal, type PartnerDealHistory, type PartnerStage } from "@repo/shared/partner-deal";
 import {
   catalogActivityLogs,
   categories,
@@ -15,7 +16,8 @@ import {
   products,
   shippingPolicies,
   suppliers,
-  sourcingRequests
+  sourcingRequests,
+  partnerDeals
 } from "../db/schema";
 import { enqueueProductSync } from "./catalog-sync";
 import { legacyFeeFields, parseRateTiers, rateSummaryLabel, type ShippingRateTiers, type ShippingRateType } from "./shipping-rates";
@@ -973,20 +975,104 @@ export async function getAdminHistoryCatalog() {
   };
 }
 
+type PartnerDealRow = typeof partnerDeals.$inferSelect;
+
+function toPartnerDeal(row: PartnerDealRow): PartnerDeal {
+  let history: PartnerDealHistory[] = [];
+  try {
+    const parsed = row.history ? JSON.parse(row.history) as unknown : [];
+    if (Array.isArray(parsed)) history = parsed as PartnerDealHistory[];
+  } catch {
+    history = [];
+  }
+  return {
+    requestId: row.requestId,
+    stage: row.stage,
+    contractType: row.contractType ?? null,
+    commissionRate: row.commissionRate ?? null,
+    contractMemo: row.contractMemo ?? null,
+    contactedAt: row.contactedAt ?? null,
+    closedAt: row.closedAt ?? null,
+    history,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt
+  };
+}
+
+// 진행 단계 표(partner_deals)는 migration 030 전 DB(운영 DB를 쓰는 미리보기)에는 없으므로, 읽지 못하면 비워 둡니다.
+async function partnerDealsFor(ids: string[]) {
+  if (ids.length === 0) return new Map<string, PartnerDeal>();
+  try {
+    const rows: PartnerDealRow[] = [];
+    for (let index = 0; index < ids.length; index += 400) {
+      rows.push(...await getDb().select().from(partnerDeals).where(inArray(partnerDeals.requestId, ids.slice(index, index + 400))));
+    }
+    return new Map(rows.map((row) => [row.requestId, toPartnerDeal(row)]));
+  } catch {
+    return new Map<string, PartnerDeal>();
+  }
+}
+
 export async function getAdminSourcingCatalog() {
+  // 입점 신청이 차곡차곡 쌓이도록 최근 2,000건까지 모두 보여 줍니다(예전 200건).
   const rows = await getDb()
     .select()
     .from(sourcingRequests)
     .orderBy(desc(sourcingRequests.createdAt))
-    .limit(200);
+    .limit(2000);
+  const deals = await partnerDealsFor(rows.filter((row) => row.requestType === "partner").map((row) => row.id));
   return {
     categories: [],
     products: [],
     notices: [],
     priceHistory: [],
-    sourcingRequests: rows,
+    sourcingRequests: rows.map((row) => (row.requestType === "partner" ? { ...row, deal: deals.get(row.id) ?? null } : row)),
     settings: {}
   };
+}
+
+export type PartnerDealInput = {
+  stage: PartnerStage;
+  contractType?: PartnerContractType | null;
+  commissionRate?: number | null;
+  contractMemo?: string | null;
+  note?: string | null;
+};
+
+// 진행 단계·계약 조건 저장: 단계가 바뀌거나 계약 조건이 바뀌면 기록(history)에 남기고, 기존 처리 상태(접수/검토중/완료)도 맞춥니다.
+export async function updatePartnerDeal(id: string, input: PartnerDealInput) {
+  const request = await partnerRequestById(id);
+  const db = getDb();
+  const now = new Date().toISOString();
+  const previousRows = await db.select().from(partnerDeals).where(eq(partnerDeals.requestId, id)).limit(1);
+  const previous = previousRows[0] ? toPartnerDeal(previousRows[0]) : null;
+  const contracted = input.stage === "contracted";
+  const contractType = contracted ? input.contractType ?? null : null;
+  const commissionRate = contracted && contractType === "commission" && input.commissionRate != null ? Math.round(input.commissionRate * 100) / 100 : null;
+  const contractMemo = input.contractMemo?.trim() || null;
+  const changed = !previous
+    || previous.stage !== input.stage
+    || previous.contractType !== contractType
+    || previous.commissionRate !== commissionRate
+    || Boolean(input.note?.trim());
+  const history = [...(previous?.history ?? [])];
+  if (changed) history.push({ at: now, stage: input.stage, contractType, commissionRate, memo: input.note?.trim() || null });
+  const reachedContact = input.stage !== "received";
+  const values = {
+    stage: input.stage,
+    contractType,
+    commissionRate,
+    contractMemo,
+    contactedAt: reachedContact ? previous?.contactedAt ?? now : null,
+    closedAt: input.stage === "contracted" || input.stage === "declined" ? (previous && previous.stage === input.stage ? previous.closedAt ?? now : now) : null,
+    history: JSON.stringify(history.slice(-100)),
+    updatedAt: now
+  };
+  await db.insert(partnerDeals).values({ requestId: id, createdAt: now, ...values }).onConflictDoUpdate({ target: partnerDeals.requestId, set: values });
+  await db.update(sourcingRequests).set({ status: partnerStageToStatus(input.stage), updatedAt: now }).where(eq(sourcingRequests.id, request.id));
+  const saved = await db.select().from(partnerDeals).where(eq(partnerDeals.requestId, id)).limit(1);
+  const updatedRequest = await partnerRequestById(id);
+  return { ...updatedRequest, deal: saved[0] ? toPartnerDeal(saved[0]) : null };
 }
 
 export async function getAdminOverview() {

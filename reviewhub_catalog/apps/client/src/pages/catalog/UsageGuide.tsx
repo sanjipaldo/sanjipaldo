@@ -194,22 +194,23 @@ export function SupplierGuidePage() {
     { label: "정산 기준", value: guide.settlementBasis },
     { label: "정산 주기", value: guide.settlementCycle },
     { label: "지급일", value: guide.settlementPayDay },
+    { label: "주 단위 정산", value: guide.settlementOption },
     { label: "세금계산서", value: guide.taxInvoice },
     { label: "정산 제외·차감", value: guide.deductions }
   ];
-  const settlementFlow = ["출고·송장 등록", "정산 마감", "정산 내역 확인", "세금계산서 발행", "대금 지급"];
+  const settlementFlow = ["주문 접수·출고", "월말 마감(주문 건 합산)", "정산 내역 확인", "세금계산서 발행", "매월 1일 지급"];
   const faq = [
     { q: "입점 비용이나 판매 수수료가 있나요?", a: "공급사는 두고푸드에 공급가로 상품을 공급하고, 위탁셀러 판매가는 셀러가 정합니다. 구체적인 조건은 상품과 협의해 입점 상담 때 안내드립니다." },
     { q: "발주서는 언제, 어떻게 받나요?", a: `${guide.orderSendTime}에 발주오라에서 공급사별 발주서(엑셀)를 메일로 보내 드립니다. ${guide.orderCutoff}까지 들어온 주문이 그날 발주서에 담깁니다.` },
     { q: "송장은 어떻게 등록하나요?", a: `받은 발주서 엑셀에 택배사와 송장번호를 입력해 ${guide.invoiceDeadline} 회신해 주세요. 두고푸드가 등록하면 위탁셀러에게 자동으로 전달됩니다.` },
-    { q: "정산은 언제 받나요?", a: `${guide.settlementCycle} 기준으로 정산하고 ${guide.settlementPayDay}합니다. 정산 기준은 "${guide.settlementBasis}"입니다.` },
+    { q: "정산은 언제 받나요?", a: `${guide.settlementCycle} 기준으로, ${guide.settlementPayDay}. 정산 금액은 ${guide.settlementBasis}입니다. ${guide.settlementOption}` },
     { q: "세금계산서는 어떻게 발행하나요?", a: guide.taxInvoice },
     { q: "취소·반품·교환은 어떻게 처리하나요?", a: `출고 전 취소 요청은 바로 알려 드립니다. ${guide.returnPolicy} ${guide.deductions}` },
     { q: "공급가가 바뀌거나 품절되면요?", a: "담당 MD에게 알려 주시면 단가표에 바로 반영되고, 가격변동·품절이슈 메뉴로 위탁셀러에게 안내됩니다." }
   ];
   return (
     <PageFrame>
-      <main className="content-page usage-page">
+      <main className="content-page usage-page is-supplier">
         <AudienceTabs />
         <section className="usage-hero">
           <div className="usage-hero-copy">
@@ -257,16 +258,16 @@ export function SupplierGuidePage() {
         </section>
 
         <section className="usage-section" id="settlement">
-          <SectionHeading kicker="SETTLEMENT" title="정산 안내" lead="출고가 끝난 주문만 정산합니다. 정산 내역은 출고 건별로 확인할 수 있습니다." icon={<Wallet size={22} />} />
+          <SectionHeading kicker="SETTLEMENT" title="정산 안내" lead="한 달 동안 실제로 접수된 주문 건을 모두 합산해 다음 달 1일에 정산합니다. 물량이 많으면 주 단위 정산도 가능합니다." icon={<Wallet size={22} />} />
           <div className="usage-settlement-grid">
             <dl className="usage-terms">
               {settlementRows.map((row) => <div key={row.label}><dt>{row.label}</dt><dd>{row.value}</dd></div>)}
             </dl>
             <div className="usage-calc-card">
               <span className="usage-calc-title"><Receipt size={17} /> 정산 예시</span>
-              <div className="usage-calc-row"><span>공급가 10,000원 × 30건 출고</span><b>300,000원</b></div>
+              <div className="usage-calc-row"><span>10월 주문 접수 30건 × 공급가 10,000원</span><b>300,000원</b></div>
               <div className="usage-calc-row is-minus"><span>공급사 사유 반품 1건 차감</span><b>-10,000원</b></div>
-              <div className="usage-calc-total"><span>정산 금액</span><strong>290,000원</strong></div>
+              <div className="usage-calc-total"><span>11월 1일 정산 금액</span><strong>290,000원</strong></div>
               <small>세금계산서는 확정된 정산 금액으로 발행합니다.</small>
             </div>
           </div>
@@ -311,7 +312,7 @@ export function SellerGuidePage() {
   ];
   return (
     <PageFrame>
-      <main className="content-page usage-page">
+      <main className="content-page usage-page is-seller">
         <AudienceTabs />
         <section className="usage-hero is-seller">
           <div className="usage-hero-copy">
