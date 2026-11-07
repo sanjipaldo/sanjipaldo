@@ -1699,14 +1699,14 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .usage-video-count { display: inline-flex; align-items: center; gap: 6px; color: var(--w-body); font-size: 13px; font-weight: 700; }
 .usage-video-group h3 { margin: 0 0 6px; color: var(--w-mute); font-size: 12px; font-weight: 800; letter-spacing: .04em; }
 .usage-video-group ol { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.usage-video-group button { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; border: 1px solid transparent; border-radius: 12px; color: var(--w-ink); background: #fff; text-align: left; cursor: pointer; }
-.usage-video-group button:hover { border-color: var(--w-line); }
-.usage-video-group button.is-active { border-color: var(--w-ink); box-shadow: inset 0 0 0 1px var(--w-ink); }
+.usage-video-item { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; border: 1px solid transparent; border-radius: 12px; color: var(--w-ink); background: #fff; text-align: left; cursor: pointer; }
+.usage-video-item:hover { border-color: var(--w-line); }
+.usage-video-item.is-active { border-color: var(--w-ink); box-shadow: inset 0 0 0 1px var(--w-ink); }
 .usage-video-no { color: var(--w-mute); font-size: 12px; font-weight: 800; }
 .usage-video-name b { display: block; overflow: hidden; font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .usage-video-name small { display: block; overflow: hidden; color: var(--w-mute); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .usage-video-meta { color: var(--u-strong); font-size: 12px; font-weight: 800; white-space: nowrap; }
-.usage-video-group button.is-pending .usage-video-meta { color: var(--w-mute); font-weight: 700; }
+.usage-video-item.is-pending .usage-video-meta { color: var(--w-mute); font-weight: 700; }
 .usage-faq-list { display: grid; gap: 8px; }
 .usage-faq-list article { border: 1px solid #e4e8e1; border-radius: var(--w-radius-md); background: #fff; }
 .usage-faq-list article.is-open { border-color: var(--w-ink); }
@@ -1871,4 +1871,27 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .partner-stage-stepper { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .partner-deal-editor { padding: 14px; }
   .partner-deal-save .primary-action { width: 100%; }
+}
+
+/* 사용법 영상 — 기본 안내 영상(세로 9:16 애니메이션)일 때: 왼쪽 세로 화면 + 오른쪽 목록(지금 영상은 장면 목록을 펼침) */
+.usage-video-layout.is-demo { grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 24px; }
+.usage-video-layout.is-demo .usage-video-list { max-height: none; }
+.usage-video-layout.is-demo .usage-video-caption { padding-top: 14px; }
+.usage-video-chapters { display: grid; gap: 2px; margin: 6px 0 6px; padding: 0 0 0 30px; list-style: none; }
+.usage-video-chapters button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 10px; border: 0; border-radius: 10px; color: var(--w-body); background: transparent; text-align: left; cursor: pointer; }
+.usage-video-chapters button:hover { background: #fff; }
+.usage-chapter-no { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 999px; color: var(--w-mute); background: #fff; font-size: 11px; font-weight: 800; box-shadow: inset 0 0 0 1px var(--w-line); }
+.usage-chapter-text { min-width: 0; }
+.usage-chapter-text small { display: block; overflow: hidden; color: var(--w-mute); font-size: 11px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.usage-chapter-text b { display: block; overflow: hidden; color: var(--w-ink); font-size: 13px; font-weight: 700; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.usage-video-chapters button.is-past .usage-chapter-no { color: var(--u-strong); background: var(--u-pale); box-shadow: none; }
+.usage-video-chapters button.is-current { background: #fff; box-shadow: inset 0 0 0 1.5px var(--u-strong); }
+.usage-video-chapters button.is-current .usage-chapter-no { color: #fff; background: var(--u-strong); box-shadow: none; }
+@media (min-width: 721px) and (max-width: 1050px) {
+  .usage-video-layout.is-demo { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 18px; }
+}
+@media (max-width: 720px) {
+  .usage-video-layout.is-demo { grid-template-columns: 1fr; }
+  .usage-video-layout.is-demo .usage-video-stage { width: 100%; max-width: 400px; margin: 0 auto; scroll-margin-top: 132px; }
+  .usage-video-chapters { padding-left: 8px; }
 }

@@ -7,6 +7,7 @@ import { AdminGuard } from "./components/auth/AdminGuard";
 import { AdminLoginPage, CatalogAdmin } from "./pages/admin/CatalogAdmin";
 import { CatalogHome, GuidePage, NewProductsPage, NoticesPage, SoldOutIssuesPage, SourcingPage } from "./pages/catalog/PublicCatalog";
 import { SellerGuidePage, SupplierGuidePage } from "./pages/catalog/UsageGuide";
+import { GuideDemoRender } from "./pages/catalog/GuideDemo";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,8 @@ const App = () => (
           <Route path="/admin/sourcing" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sourcing" /></AdminGuard>} />
           <Route path="/admin/sync" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sync" /></AdminGuard>} />
           <Route path="/admin/backup" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="backup" /></AdminGuard>} />
+          {/* 개발 서버 전용: 사용법 안내 영상을 mp4로 뽑을 때 쓰는 화면(scripts/render-guide-videos.mjs) */}
+          {import.meta.env.DEV && <Route path="/dev/guide-demo/:id" element={<GuideDemoRender />} />}
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

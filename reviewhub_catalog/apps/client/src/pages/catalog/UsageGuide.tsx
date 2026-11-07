@@ -1,6 +1,7 @@
-// 사용방법(/how-to): 위탁셀러 · 공급사 랜딩페이지. 공급사 화면은 입점 절차 · 주문 처리(발주오라) · 정산 · 사용법 영상 · FAQ · 입점 신청을 보여 줍니다.
+// 사용방법(/how-to): 위탁셀러 · 공급사 랜딩페이지. 공급사 화면은 입점 절차 · 주문 처리(메일 발주 · 송장 회신) · 정산 · 사용법 영상 · FAQ · 입점 신청을 보여 줍니다.
+// 공급사에게는 별도 관리자 사이트·프로그램을 주지 않습니다: 정한 시간(오전 1회·오후 1회)에 발주서 메일을 받고, 출고 후 그 메일에 송장을 회신합니다.
 // 운영 기준과 영상 목록은 관리자 > 사용방법 관리(content_settings "supplier_guide")에서 바꾸며, 입점 제안서 PDF도 같은 값을 씁니다.
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import {
   BadgeCheck,
@@ -12,6 +13,7 @@ import {
   FileSpreadsheet,
   FileText,
   Handshake,
+  Mail,
   MessageCircle,
   PackageCheck,
   PlayCircle,
@@ -23,7 +25,9 @@ import {
   Video,
   Wallet
 } from "lucide-react";
-import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_VIDEO_GROUPS, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
+import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_VIDEO_GROUPS, hasSupplierDemo, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
+import { GuideDemoPlayer } from "./GuideDemo";
+import { SUPPLIER_DEMO_SCRIPTS, demoDuration, formatDemoTime, plainCaption } from "./guide-demo-scripts";
 import { apiFetch } from "@/lib/api";
 import { PageFrame } from "./PublicCatalog";
 
@@ -69,9 +73,17 @@ function useSupplierGuide() {
   return guide;
 }
 
-// 사용법 영상: 큰 화면 1개 + 묶음별 영상 목록(주소 ?clip=영상id로 바로 열 수 있음). 주소가 없는 영상은 "영상 준비 중"으로 보여 줍니다.
+// 사용법 영상: 화면 1개 + 묶음별 영상 목록(주소 ?clip=영상id로 바로 열 수 있음).
+// 영상 주소(YouTube·Vimeo·mp4)가 있으면 그 영상을, 없으면 기본 안내 영상(애니메이션, guide-demo-scripts.ts)을 재생합니다.
+// 둘 다 없는 영상은 "영상 준비 중"으로 보여 줍니다.
+const demoScriptFor = (video: SupplierGuideVideo) => (!video.url.trim() && hasSupplierDemo(video.id) ? SUPPLIER_DEMO_SCRIPTS[video.id] : undefined);
+const isPlayable = (video: SupplierGuideVideo) => supplierVideoEmbed(video.url).kind !== "none" || Boolean(demoScriptFor(video));
+
 function VideoGuide({ videos }: { videos: SupplierGuideVideo[] }) {
   const [selectedId, setSelectedId] = useState<string>("");
+  const [sceneIndex, setSceneIndex] = useState(0);
+  const [seek, setSeek] = useState<{ time: number; key: number }>();
+  const stageRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     try {
       const clip = new URLSearchParams(window.location.search).get("clip");
@@ -80,13 +92,23 @@ function VideoGuide({ videos }: { videos: SupplierGuideVideo[] }) {
       // 주소를 읽지 못해도 첫 영상을 보여 줍니다.
     }
   }, []);
-  const selected = videos.find((video) => video.id === selectedId) ?? videos.find((video) => supplierVideoEmbed(video.url).kind !== "none") ?? videos[0];
+  const selected = videos.find((video) => video.id === selectedId) ?? videos.find(isPlayable) ?? videos[0];
   const groups = useMemo(() => {
     const order = [...SUPPLIER_VIDEO_GROUPS, ...videos.map((video) => video.group)].filter((group, index, list) => list.indexOf(group) === index);
     return order.map((group) => ({ group, items: videos.filter((video) => video.group === group) })).filter((entry) => entry.items.length > 0);
   }, [videos]);
-  const pick = (id: string) => {
+  // 좁은 화면에서는 목록이 영상 아래에 있으므로, 고른 뒤 영상이 보이게 올려 줍니다.
+  const revealStage = () => {
+    try {
+      if (window.matchMedia("(max-width: 720px)").matches) stageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch {
+      // 스크롤 실패는 무시합니다.
+    }
+  };
+  const pick = (id: string, reveal = false) => {
     setSelectedId(id);
+    setSceneIndex(0);
+    setSeek(undefined);
     try {
       const url = new URL(window.location.href);
       url.searchParams.set("clip", id);
@@ -94,28 +116,48 @@ function VideoGuide({ videos }: { videos: SupplierGuideVideo[] }) {
     } catch {
       // 주소 갱신 실패는 무시합니다.
     }
+    if (reveal) revealStage();
   };
   if (!selected) return null;
   const embed = supplierVideoEmbed(selected.url);
-  const readyCount = videos.filter((video) => supplierVideoEmbed(video.url).kind !== "none").length;
+  const script = demoScriptFor(selected);
+  const readyCount = videos.filter(isPlayable).length;
+  const ordered = groups.flatMap((entry) => entry.items);
+  const nextVideo = ordered.slice(ordered.findIndex((video) => video.id === selected.id) + 1).find(isPlayable);
+  const sceneStart = (index: number) => (script ? script.scenes.slice(0, index).reduce((sum, scene) => sum + scene.duration, 0) : 0);
+  const metaFor = (video: SupplierGuideVideo) => {
+    const demo = demoScriptFor(video);
+    if (demo) return video.duration || formatDemoTime(demoDuration(demo));
+    return supplierVideoEmbed(video.url).kind !== "none" ? (video.duration || <PlayCircle size={15} />) : "준비 중";
+  };
   let number = 0;
   return (
-    <div className="usage-video-layout">
-      <div className="usage-video-stage">
-        <div className="usage-video-frame">
-          {embed.kind === "youtube" || embed.kind === "vimeo" ? (
-            <iframe key={embed.src} src={embed.src} title={selected.title} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
-          ) : embed.kind === "file" ? (
-            <video key={embed.src} src={embed.src} controls playsInline preload="metadata" />
-          ) : (
-            <div className="usage-video-placeholder">
-              <PlayCircle size={46} strokeWidth={1.6} aria-hidden="true" />
-              <strong>{embed.kind === "link" ? "새 창에서 영상을 열어 주세요" : "영상 준비 중입니다"}</strong>
-              <span>{embed.kind === "link" ? "이 영상은 외부 사이트에서 재생됩니다." : "곧 사용법 영상이 올라옵니다. 그동안 아래 안내를 참고해 주세요."}</span>
-              {embed.kind === "link" && <a className="usage-video-open" href={embed.src} target="_blank" rel="noreferrer">영상 보기 <ExternalLink size={14} /></a>}
-            </div>
-          )}
-        </div>
+    <div className={`usage-video-layout${script ? " is-demo" : ""}`}>
+      <div className="usage-video-stage" ref={stageRef}>
+        {script ? (
+          <GuideDemoPlayer
+            script={script}
+            label={selected.title}
+            seek={seek}
+            onScene={setSceneIndex}
+            next={nextVideo ? { title: nextVideo.title, onClick: () => pick(nextVideo.id) } : undefined}
+          />
+        ) : (
+          <div className="usage-video-frame">
+            {embed.kind === "youtube" || embed.kind === "vimeo" ? (
+              <iframe key={embed.src} src={embed.src} title={selected.title} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
+            ) : embed.kind === "file" ? (
+              <video key={embed.src} src={embed.src} controls playsInline preload="metadata" />
+            ) : (
+              <div className="usage-video-placeholder">
+                <PlayCircle size={46} strokeWidth={1.6} aria-hidden="true" />
+                <strong>{embed.kind === "link" ? "새 창에서 영상을 열어 주세요" : "영상 준비 중입니다"}</strong>
+                <span>{embed.kind === "link" ? "이 영상은 외부 사이트에서 재생됩니다." : "곧 사용법 영상이 올라옵니다. 그동안 아래 안내를 참고해 주세요."}</span>
+                {embed.kind === "link" && <a className="usage-video-open" href={embed.src} target="_blank" rel="noreferrer">영상 보기 <ExternalLink size={14} /></a>}
+              </div>
+            )}
+          </div>
+        )}
         <div className="usage-video-caption">
           <span>{selected.group}</span>
           <strong>{selected.title}</strong>
@@ -130,15 +172,32 @@ function VideoGuide({ videos }: { videos: SupplierGuideVideo[] }) {
             <ol>
               {items.map((video) => {
                 number += 1;
-                const ready = supplierVideoEmbed(video.url).kind !== "none";
+                const ready = isPlayable(video);
                 const active = video.id === selected.id;
                 return (
                   <li key={video.id}>
-                    <button type="button" className={`${active ? "is-active" : ""}${ready ? "" : " is-pending"}`} onClick={() => pick(video.id)} aria-current={active ? "true" : undefined}>
+                    <button type="button" className={`usage-video-item${active ? " is-active" : ""}${ready ? "" : " is-pending"}`} onClick={() => pick(video.id, true)} aria-current={active ? "true" : undefined}>
                       <span className="usage-video-no">{String(number).padStart(2, "0")}</span>
                       <span className="usage-video-name"><b>{video.title}</b>{video.description && <small>{video.description}</small>}</span>
-                      <span className="usage-video-meta">{ready ? (video.duration || <PlayCircle size={15} />) : "준비 중"}</span>
+                      <span className="usage-video-meta">{metaFor(video)}</span>
                     </button>
+                    {active && script && (
+                      <ol className="usage-video-chapters" aria-label={`${video.title} 장면`}>
+                        {script.scenes.map((scene, index) => (scene.view.kind === "end" ? null : (
+                          <li key={`${scene.caption.title}-${index}`}>
+                            <button
+                              type="button"
+                              className={index === sceneIndex ? "is-current" : index < sceneIndex ? "is-past" : ""}
+                              aria-current={index === sceneIndex ? "step" : undefined}
+                              onClick={() => { setSeek({ time: sceneStart(index), key: Date.now() }); revealStage(); }}
+                            >
+                              <span className="usage-chapter-no">{index + 1}</span>
+                              <span className="usage-chapter-text"><small>{scene.caption.kicker}</small><b>{plainCaption(scene.caption.title)}</b></span>
+                            </button>
+                          </li>
+                        )))}
+                      </ol>
+                    )}
                   </li>
                 );
               })}
@@ -174,19 +233,19 @@ export function SupplierGuidePage() {
   const onboarding = [
     { icon: <Handshake size={20} />, title: "입점 신청", body: "아래 ‘입점 신청하기’에서 업체 정보를 남기면 입점 제안서(PDF)를 메일로 보내 드립니다." },
     { icon: <ClipboardCheck size={20} />, title: "MD 검토·상담", body: "담당 MD가 영업일 기준 2~3일 안에 연락드려 상품과 조건을 상담합니다." },
-    { icon: <FileSpreadsheet size={20} />, title: "상품·공급가 등록", body: "상품명·규격·공급가·이미지를 받아 상품코드로 등록하고 발주오라와 연결합니다." },
-    { icon: <BadgeCheck size={20} />, title: "판매 시작", body: "단가표·신규상품에 노출되고, 위탁셀러 주문이 발주서로 들어옵니다." }
+    { icon: <FileSpreadsheet size={20} />, title: "상품 등록·메일 시간 정하기", body: "상품명·규격·공급가·이미지를 받아 등록하고, 발주서를 받을 메일 주소와 발송 시간(오전 1회·오후 1회)을 정합니다." },
+    { icon: <BadgeCheck size={20} />, title: "판매 시작", body: "단가표·신규상품에 노출되고, 위탁셀러 주문이 정한 시간에 발주서 메일로 들어옵니다." }
   ];
   const orderSteps = [
-    { icon: <ShoppingCart size={20} />, title: "위탁셀러 주문 접수", body: `위탁셀러가 두고푸드 도매몰에서 주문합니다. ${guide.orderCutoff}까지 들어온 주문이 그날 발주 대상입니다.` },
-    { icon: <FileSpreadsheet size={20} />, title: "발주서 받기", body: `${guide.orderSendTime}, 발주오라에서 공급사별 발주서(엑셀)가 메일로 자동 발송됩니다. 수령인·연락처·주소·상품·수량이 담겨 있습니다.` },
-    { icon: <PackageCheck size={20} />, title: "포장·출고", body: `발주서대로 포장해 ${guide.shipLeadTime}합니다. 보내는 사람은 발주서에 적힌 발송인(셀러 상호)으로 표기해 주세요.` },
-    { icon: <Truck size={20} />, title: "송장 회신", body: `발주서 엑셀에 택배사·송장번호를 입력해 ${guide.invoiceDeadline} 회신하면, 두고푸드가 등록해 위탁셀러에게 자동으로 전달됩니다.` },
-    { icon: <Undo2 size={20} />, title: "취소·반품·교환", body: `출고 전 취소 요청이 오면 바로 알려 드립니다. ${guide.returnPolicy}` }
+    { icon: <ShoppingCart size={20} />, title: "위탁셀러 주문 접수", body: `위탁셀러가 두고푸드 도매몰에서 주문하면 두고푸드가 공급사별로 모읍니다. 공급사가 따로 접속하거나 입력할 것은 없습니다. 주문 마감: ${guide.orderCutoff}.` },
+    { icon: <Mail size={20} />, title: "발주서 메일 받기", body: `두고푸드가 정한 시간에 공급사별 발주서(엑셀)를 메일로 보내 드립니다. 발송: ${guide.orderSendTime}. 수령인·연락처·주소·상품·수량이 담겨 있습니다.` },
+    { icon: <PackageCheck size={20} />, title: "포장·출고", body: `발주서대로 포장해 출고합니다. 출고: ${guide.shipLeadTime}. 보내는 사람은 발주서에 적힌 발송인(셀러 상호)으로 표기해 주세요.` },
+    { icon: <Truck size={20} />, title: "송장 회신", body: `발주서 엑셀에 택배사·송장번호를 입력해 받은 발주 메일에 그대로 회신해 주세요. 회신 마감: ${guide.invoiceDeadline}. 두고푸드가 등록해 위탁셀러에게 전달합니다.` },
+    { icon: <Undo2 size={20} />, title: "취소·반품·교환", body: `출고 전 취소 요청이 오면 바로 메일·전화로 알려 드립니다. ${guide.returnPolicy}` }
   ];
   const timeline = [
+    { label: "발주서 메일", value: guide.orderSendTime },
     { label: "주문(발주) 마감", value: guide.orderCutoff },
-    { label: "발주서 발송", value: guide.orderSendTime },
     { label: "출고", value: guide.shipLeadTime },
     { label: "송장 회신", value: guide.invoiceDeadline }
   ];
@@ -201,8 +260,9 @@ export function SupplierGuidePage() {
   const settlementFlow = ["주문 접수·출고", "월말 마감(주문 건 합산)", "정산 내역 확인", "세금계산서 발행", "매월 1일 지급"];
   const faq = [
     { q: "입점 비용이나 판매 수수료가 있나요?", a: "공급사는 두고푸드에 공급가로 상품을 공급하고, 위탁셀러 판매가는 셀러가 정합니다. 구체적인 조건은 상품과 협의해 입점 상담 때 안내드립니다." },
-    { q: "발주서는 언제, 어떻게 받나요?", a: `${guide.orderSendTime}에 발주오라에서 공급사별 발주서(엑셀)를 메일로 보내 드립니다. ${guide.orderCutoff}까지 들어온 주문이 그날 발주서에 담깁니다.` },
-    { q: "송장은 어떻게 등록하나요?", a: `받은 발주서 엑셀에 택배사와 송장번호를 입력해 ${guide.invoiceDeadline} 회신해 주세요. 두고푸드가 등록하면 위탁셀러에게 자동으로 전달됩니다.` },
+    { q: "공급사용 관리자 사이트나 프로그램을 써야 하나요?", a: "아니요. 별도 계정이나 프로그램 없이 메일로만 주고받습니다. 정한 시간에 발주서 메일을 받고, 출고한 뒤 그 메일에 송장을 회신하면 됩니다." },
+    { q: "발주서는 언제, 어떻게 받나요?", a: `공급사별 발주서(엑셀)를 정한 시간에 메일로 보내 드립니다. 발송: ${guide.orderSendTime}. 메일 시간과 받는 주소는 입점 때 공급사와 함께 정하며, 주문 마감은 ${guide.orderCutoff}입니다.` },
+    { q: "송장은 어떻게 보내나요?", a: `받은 발주서 엑셀에 택배사와 송장번호를 입력해 그 발주 메일에 회신해 주세요. 회신 마감: ${guide.invoiceDeadline}. 오전·오후 메일마다 한 번씩 회신하면 되고, 두고푸드가 등록해 위탁셀러에게 전달합니다.` },
     { q: "정산은 언제 받나요?", a: `${guide.settlementCycle} 기준으로, ${guide.settlementPayDay}. 정산 금액은 ${guide.settlementBasis}입니다. ${guide.settlementOption}` },
     { q: "세금계산서는 어떻게 발행하나요?", a: guide.taxInvoice },
     { q: "취소·반품·교환은 어떻게 처리하나요?", a: `출고 전 취소 요청은 바로 알려 드립니다. ${guide.returnPolicy} ${guide.deductions}` },
@@ -216,7 +276,7 @@ export function SupplierGuidePage() {
           <div className="usage-hero-copy">
             <span className="section-kicker">SUPPLIER GUIDE</span>
             <h1>공급사 사용방법</h1>
-            <p>두고푸드 입점부터 주문 처리, 정산까지 한 번에 확인하세요. 주문은 <b>발주오라</b>로 공급사별 발주서가 자동으로 오고, 공급사는 발주서대로 출고한 뒤 송장만 회신하면 됩니다.</p>
+            <p>두고푸드 입점부터 주문 처리, 정산까지 한 번에 확인하세요. 별도 관리자 사이트 없이, 정한 시간(<b>오전 1회 · 오후 1회</b>)에 오는 발주서 메일을 확인하고 출고한 뒤 <b>송장만 회신</b>하면 됩니다.</p>
             <div className="usage-hero-actions">
               <button type="button" className="usage-primary-cta" onClick={openPartnerForm}><Handshake size={18} /> 입점 신청하기</button>
               <a className="usage-secondary-cta" href={PROPOSAL_URL} target="_blank" rel="noreferrer"><FileText size={17} /> 입점 제안서 PDF 보기</a>
@@ -245,7 +305,7 @@ export function SupplierGuidePage() {
         </section>
 
         <section className="usage-section" id="orders">
-          <SectionHeading kicker="ORDER PROCESS" title="주문 처리 방법" lead={<>두고푸드는 <b>발주오라(B2B 수발주 자동화)</b>로 주문을 모아 공급사별 발주서를 보내 드립니다.</>} icon={<FileSpreadsheet size={22} />} />
+          <SectionHeading kicker="ORDER PROCESS" title="주문 처리 방법" lead={<>별도 관리자 사이트 없이 <b>메일로</b> 주고받습니다. 두고푸드가 정한 시간(오전 1회 · 오후 1회)에 발주서 메일을 보내면, 공급사는 출고 후 그 메일에 송장만 회신합니다.</>} icon={<FileSpreadsheet size={22} />} />
           <ol className="usage-flow">
             {orderSteps.map((step, index) => (
               <li key={step.title}>
@@ -254,7 +314,7 @@ export function SupplierGuidePage() {
               </li>
             ))}
           </ol>
-          <div className="usage-note"><FileSpreadsheet size={17} /><p>발주서·송장 회신 양식은 입점 상담 때 공급사별로 맞춰 드립니다. 하루 주문이 많아도 발주서 한 번, 송장 회신 한 번이면 끝납니다.</p></div>
+          <div className="usage-note"><FileSpreadsheet size={17} /><p>하루 주문이 많아도 <b>오전·오후 메일 두 번</b>만 확인하고, 메일마다 송장을 한 번씩 회신하면 끝납니다. 메일 시간·받는 주소·발주서 양식은 입점 상담 때 공급사별로 맞춰 드립니다.</p></div>
         </section>
 
         <section className="usage-section" id="settlement">
@@ -277,7 +337,7 @@ export function SupplierGuidePage() {
         </section>
 
         <section className="usage-section" id="videos">
-          <SectionHeading kicker="VIDEO GUIDE" title="사용법 영상" lead="짧은 영상으로 입점 준비부터 주문 처리, 정산까지 따라 해 보세요." icon={<Video size={22} />} />
+          <SectionHeading kicker="VIDEO GUIDE" title="사용법 영상" lead="짧은 영상으로 입점부터 발주 메일 받기, 송장 회신, 정산까지 한눈에 보세요." icon={<Video size={22} />} />
           <VideoGuide videos={guide.videos} />
         </section>
 

@@ -1,5 +1,7 @@
 // 공급사 사용방법(주문 처리·정산 안내)과 입점 제안서 PDF가 함께 쓰는 운영 기준·영상 목록입니다.
 // 관리자 > 사용방법 관리에서 content_settings "supplier_guide"(JSON)로 저장하며, 비어 있는 칸은 아래 기본값을 씁니다.
+// 공급사 거래 방식: 별도 공급사 관리자(사이트·프로그램) 없이, 두고푸드가 정한 시간(오전 1회·오후 1회)에 발주서 메일을 보내고
+// 공급사는 출고 후 그 메일에 송장을 회신합니다.
 
 export const SUPPLIER_GUIDE_SETTING_KEY = "supplier_guide";
 
@@ -30,7 +32,7 @@ export type SupplierGuideSettings = SupplierGuideTerms & { videos: SupplierGuide
 
 export const SUPPLIER_TERM_LABELS: Record<keyof SupplierGuideTerms, string> = {
   orderCutoff: "주문(발주) 마감",
-  orderSendTime: "발주서 발송",
+  orderSendTime: "발주서 메일 발송",
   shipLeadTime: "출고 기한",
   invoiceDeadline: "송장 회신 마감",
   settlementBasis: "정산 기준",
@@ -42,12 +44,16 @@ export const SUPPLIER_TERM_LABELS: Record<keyof SupplierGuideTerms, string> = {
   returnPolicy: "반품·교환"
 };
 
-export const SUPPLIER_VIDEO_GROUPS = ["입점 준비", "주문 처리", "정산"] as const;
+export const SUPPLIER_VIDEO_GROUPS = ["한눈에 보기", "입점 준비", "주문 처리", "정산"] as const;
+
+// 화면에 기본으로 들어 있는 안내 영상(애니메이션)의 id. 영상 주소가 비어 있으면 이 안내 영상을 재생합니다.
+export const SUPPLIER_DEMO_VIDEO_IDS = ["overview", "apply", "order-sheet", "invoice", "cs", "settlement"] as const;
+export const hasSupplierDemo = (id: string) => (SUPPLIER_DEMO_VIDEO_IDS as readonly string[]).includes(id);
 
 export const DEFAULT_SUPPLIER_GUIDE: SupplierGuideSettings = {
-  orderCutoff: "평일 오전 9시 30분",
-  orderSendTime: "평일 오전 10시 전후",
-  shipLeadTime: "발주서를 받은 날 출고(늦어도 2일 이내)",
+  orderCutoff: "각 메일 발송 직전까지 들어온 주문",
+  orderSendTime: "평일 오전 1회 · 오후 1회 (입점 때 정한 시간)",
+  shipLeadTime: "발주 메일을 받은 날 출고(늦어도 2일 이내)",
   invoiceDeadline: "출고 당일 오후 6시까지",
   settlementBasis: "한 달 동안 실제로 접수된 주문 건의 공급가를 모두 합산한 금액",
   settlementCycle: "월 1회 · 지난달 1일~말일 주문분",
@@ -57,14 +63,23 @@ export const DEFAULT_SUPPLIER_GUIDE: SupplierGuideSettings = {
   deductions: "출고 전 취소된 주문은 정산에서 빠지고, 공급사 사유(오배송·파손·품질)로 생긴 반품·교환 비용은 차감합니다.",
   returnPolicy: "반품·교환은 두고푸드가 확인한 뒤 안내드린 주소와 방법으로 진행합니다.",
   videos: [
-    { id: "apply", group: "입점 준비", title: "입점 신청하기", description: "신청서 작성부터 제안서 메일 확인까지", url: "", duration: "" },
-    { id: "product-info", group: "입점 준비", title: "상품 정보 보내기", description: "상품명·규격·공급가·이미지 정리 방법", url: "", duration: "" },
-    { id: "order-sheet", group: "주문 처리", title: "발주서 확인하기", description: "메일로 받은 공급사별 발주서(엑셀) 보는 법", url: "", duration: "" },
-    { id: "invoice", group: "주문 처리", title: "송장 등록·회신하기", description: "발주서 엑셀에 송장번호를 넣어 회신하는 법", url: "", duration: "" },
-    { id: "cs", group: "주문 처리", title: "취소·반품·교환 처리", description: "출고 전 취소 확인과 반품 회수 진행", url: "", duration: "" },
-    { id: "settlement", group: "정산", title: "정산 내역 확인·세금계산서", description: "월 정산 내역 확인과 세금계산서 발행", url: "", duration: "" }
+    { id: "overview", group: "한눈에 보기", title: "두고푸드와 거래하는 방법", description: "발주 메일 받고, 출고하고, 송장만 회신하면 끝", url: "", duration: "" },
+    { id: "apply", group: "입점 준비", title: "입점 신청하기", description: "신청서 작성 → 제안서 메일 → 담당 MD 상담", url: "", duration: "" },
+    { id: "order-sheet", group: "주문 처리", title: "발주서 메일 받기", description: "오전·오후 정해진 시간에 오는 발주서 확인", url: "", duration: "" },
+    { id: "invoice", group: "주문 처리", title: "송장 회신하기", description: "발주서 엑셀에 송장번호를 넣어 그 메일에 회신", url: "", duration: "" },
+    { id: "cs", group: "주문 처리", title: "취소·반품·교환 처리", description: "취소 요청은 메일로 바로, 반품은 확인 후 안내", url: "", duration: "" },
+    { id: "settlement", group: "정산", title: "매월 정산 받기", description: "지난달 주문 합산 → 매월 1일 정산", url: "", duration: "" }
   ]
 };
+
+// 예전 기본 문구(발주오라 자동 발송 · 오전 10시 1회 기준). 저장된 값이 예전 기본 문구 그대로면 새 기본 문구로 바꿔 보여 줍니다
+// (관리자가 직접 고친 문구는 그대로 둡니다).
+const LEGACY_TERM_DEFAULTS: Partial<Record<keyof SupplierGuideTerms, string[]>> = {
+  orderCutoff: ["평일 오전 9시 30분"],
+  orderSendTime: ["평일 오전 10시 전후"],
+  shipLeadTime: ["발주서를 받은 날 출고(늦어도 2일 이내)"]
+};
+const LEGACY_VIDEO_IDS = ["apply", "product-info", "order-sheet", "invoice", "cs", "settlement"];
 
 const clean = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max) : "");
 
@@ -80,9 +95,16 @@ export function parseSupplierGuide(value?: string | null): SupplierGuideSettings
     }
   }
   const terms = Object.fromEntries(
-    (Object.keys(SUPPLIER_TERM_LABELS) as Array<keyof SupplierGuideTerms>).map((key) => [key, clean(raw[key], 300) || DEFAULT_SUPPLIER_GUIDE[key]])
+    (Object.keys(SUPPLIER_TERM_LABELS) as Array<keyof SupplierGuideTerms>).map((key) => {
+      const value = clean(raw[key], 300);
+      return [key, !value || LEGACY_TERM_DEFAULTS[key]?.includes(value) ? DEFAULT_SUPPLIER_GUIDE[key] : value];
+    })
   ) as SupplierGuideTerms;
-  const videos = Array.isArray(raw.videos)
+  // 예전 기본 영상 목록(주소 없이 그대로 저장된 경우)은 새 기본 목록(안내 영상 6편)으로 보여 줍니다.
+  const legacyVideos = Array.isArray(raw.videos)
+    && raw.videos.length === LEGACY_VIDEO_IDS.length
+    && raw.videos.every((item, index) => Boolean(item) && typeof item === "object" && (item as Record<string, unknown>).id === LEGACY_VIDEO_IDS[index] && !clean((item as Record<string, unknown>).url, 500));
+  const videos = Array.isArray(raw.videos) && !legacyVideos
     ? raw.videos.slice(0, 30).flatMap((item, index) => {
       if (!item || typeof item !== "object") return [];
       const video = item as Record<string, unknown>;

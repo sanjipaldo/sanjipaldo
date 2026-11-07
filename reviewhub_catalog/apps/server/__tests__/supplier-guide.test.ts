@@ -1,6 +1,6 @@
 import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SUPPLIER_GUIDE, parseSupplierGuide, supplierVideoEmbed } from "@repo/shared/supplier-guide";
+import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_DEMO_VIDEO_IDS, hasSupplierDemo, parseSupplierGuide, supplierVideoEmbed } from "@repo/shared/supplier-guide";
 import { buildPartnerProposalPdf, proposalFileName } from "../services/partner-proposal";
 
 describe("supplier guide settings", () => {
@@ -20,6 +20,31 @@ describe("supplier guide settings", () => {
     expect(guide.settlementCycle).toBe(DEFAULT_SUPPLIER_GUIDE.settlementCycle);
     expect(guide.videos).toHaveLength(1);
     expect(guide.videos[0]).toMatchObject({ id: "a", title: "송장 회신", description: "", duration: "" });
+  });
+
+  it("describes the email-based order flow (AM/PM order mails, no supplier admin)", () => {
+    expect(DEFAULT_SUPPLIER_GUIDE.orderSendTime).toContain("오전 1회");
+    expect(DEFAULT_SUPPLIER_GUIDE.orderSendTime).toContain("오후 1회");
+    expect(JSON.stringify(DEFAULT_SUPPLIER_GUIDE)).not.toContain("발주오라");
+  });
+
+  it("upgrades untouched old default texts and the old default video list", () => {
+    const legacyVideos = ["apply", "product-info", "order-sheet", "invoice", "cs", "settlement"].map((id) => ({ id, group: "주문 처리", title: id, description: "", url: "", duration: "" }));
+    const guide = parseSupplierGuide(JSON.stringify({ orderCutoff: "평일 오전 9시 30분", orderSendTime: "평일 오전 10시 전후", shipLeadTime: "발주서를 받은 날 출고(늦어도 2일 이내)", videos: legacyVideos }));
+    expect(guide.orderCutoff).toBe(DEFAULT_SUPPLIER_GUIDE.orderCutoff);
+    expect(guide.orderSendTime).toBe(DEFAULT_SUPPLIER_GUIDE.orderSendTime);
+    expect(guide.shipLeadTime).toBe(DEFAULT_SUPPLIER_GUIDE.shipLeadTime);
+    expect(guide.videos.map((video) => video.id)).toEqual(DEFAULT_SUPPLIER_GUIDE.videos.map((video) => video.id));
+    // 관리자가 직접 고친 문구·주소를 넣은 영상 목록은 그대로 둡니다.
+    const custom = parseSupplierGuide(JSON.stringify({ orderSendTime: "평일 오전 11시 · 오후 3시", videos: legacyVideos.map((video, index) => (index === 0 ? { ...video, url: "https://youtu.be/dQw4w9WgXcQ" } : video)) }));
+    expect(custom.orderSendTime).toBe("평일 오전 11시 · 오후 3시");
+    expect(custom.videos.map((video) => video.id)).toEqual(legacyVideos.map((video) => video.id));
+  });
+
+  it("ships a built-in demo for every default video", () => {
+    expect(DEFAULT_SUPPLIER_GUIDE.videos.every((video) => hasSupplierDemo(video.id) && !video.url)).toBe(true);
+    expect(SUPPLIER_DEMO_VIDEO_IDS).toHaveLength(6);
+    expect(hasSupplierDemo("product-info")).toBe(false);
   });
 
   it("turns video links into embeds", () => {

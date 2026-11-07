@@ -55,7 +55,7 @@ import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRat
 import { authClient, clearAuthToken } from "@/lib/auth";
 import { SUPPLY_STATUS_LABELS, supplyStatus, type SupplyStatus } from "@/lib/supply-status";
 import { PARTNER_CONTRACT_LABELS, PARTNER_CONTRACT_TYPES, PARTNER_STAGES, PARTNER_STAGE_LABELS, partnerContractSummary, type PartnerContractType, type PartnerStage } from "@repo/shared/partner-deal";
-import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_GUIDE_SETTING_KEY, SUPPLIER_TERM_LABELS, SUPPLIER_VIDEO_GROUPS, parseSupplierGuide, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideTerms, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
+import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_GUIDE_SETTING_KEY, SUPPLIER_TERM_LABELS, SUPPLIER_VIDEO_GROUPS, hasSupplierDemo, parseSupplierGuide, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideTerms, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
 import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 import type { AdminCatalogData, AdminHomeData, AdminOverview, BaljuoraConnection, Category, CatalogSyncOutboxItem, CatalogSyncOverview, CatalogSyncRun, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, SalesOverview, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
@@ -2922,10 +2922,10 @@ function UsageGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (
   const removeVideo = (index: number) => { setDirty(true); setDraft((current) => ({ ...current, videos: current.videos.filter((_, position) => position !== index) })); };
   const addVideo = () => {
     setDirty(true);
-    setDraft((current) => ({ ...current, videos: [...current.videos, { id: `video-${Date.now().toString(36)}`, group: SUPPLIER_VIDEO_GROUPS[1], title: "새 영상", description: "", url: "", duration: "" }].slice(0, 30) }));
+    setDraft((current) => ({ ...current, videos: [...current.videos, { id: `video-${Date.now().toString(36)}`, group: "주문 처리", title: "새 영상", description: "", url: "", duration: "" }].slice(0, 30) }));
   };
-  const embedLabel = (url: string) => {
-    if (!url.trim()) return { text: "주소 없음 · 준비 중으로 보임", tone: "muted" };
+  const embedLabel = (url: string, id: string) => {
+    if (!url.trim()) return hasSupplierDemo(id) ? { text: "주소 없음 · 기본 안내 영상(애니메이션) 재생", tone: "ok" } : { text: "주소 없음 · 준비 중으로 보임", tone: "muted" };
     const kind = supplierVideoEmbed(url).kind;
     return kind === "youtube" ? { text: "YouTube 영상", tone: "ok" } : kind === "vimeo" ? { text: "Vimeo 영상", tone: "ok" } : kind === "file" ? { text: "영상 파일", tone: "ok" } : kind === "link" ? { text: "링크(새 창으로 열림)", tone: "warn" } : { text: "https:// 주소를 확인해 주세요", tone: "bad" };
   };
@@ -2966,10 +2966,10 @@ function UsageGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (
         </div>
       </section>
       <section className="admin-card usage-admin-card">
-        <div className="card-heading"><Video size={19} /><div><h2>사용법 영상 ({draft.videos.length}/30)</h2><p>YouTube(일부 공개 가능)·Vimeo 주소나 mp4 영상 주소를 넣으면 공급사 화면에서 바로 재생됩니다. 주소가 없으면 "영상 준비 중"으로 보입니다.</p></div></div>
+        <div className="card-heading"><Video size={19} /><div><h2>사용법 영상 ({draft.videos.length}/30)</h2><p>YouTube(일부 공개 가능)·Vimeo 주소나 mp4 영상 주소를 넣으면 공급사 화면에서 바로 재생됩니다. 주소가 없으면 기본 안내 영상 6편(메일 발주·송장 회신·정산 애니메이션)이 재생되고, 기본 영상이 없는 항목은 "영상 준비 중"으로 보입니다.</p></div></div>
         <div className="usage-admin-videos">
           {draft.videos.map((video, index) => {
-            const status = embedLabel(video.url);
+            const status = embedLabel(video.url, video.id);
             return (
               <article key={video.id} className="usage-admin-video">
                 <span className="usage-admin-video-no">{index + 1}</span>
