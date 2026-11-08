@@ -114,6 +114,8 @@ function VideoGuide({ videos, groups: groupOrder, scripts }: { videos: SupplierG
   const isPlayable = (video: SupplierGuideVideo) => supplierVideoEmbed(video.url).kind !== "none" || Boolean(demoScriptFor(video));
   const [selectedId, setSelectedId] = useState<string>("");
   const [sceneIndex, setSceneIndex] = useState(0);
+  // 장면 목록은 재생 전에는 접어 두고, 영상을 재생하면 펼칩니다(공급사·위탁셀러 공통).
+  const [engaged, setEngaged] = useState(false);
   const [seek, setSeek] = useState<{ time: number; key: number }>();
   const stageRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -174,6 +176,7 @@ function VideoGuide({ videos, groups: groupOrder, scripts }: { videos: SupplierG
             number={selectedIndex + 1}
             seek={seek}
             onScene={setSceneIndex}
+            onEngagedChange={setEngaged}
             next={nextVideo ? { title: nextVideo.title, onClick: () => pick(nextVideo.id) } : undefined}
           />
         ) : (
@@ -210,27 +213,31 @@ function VideoGuide({ videos, groups: groupOrder, scripts }: { videos: SupplierG
                 const active = video.id === selected.id;
                 return (
                   <li key={video.id}>
-                    <button type="button" className={`usage-video-item${active ? " is-active" : ""}${ready ? "" : " is-pending"}`} onClick={() => pick(video.id, true)} aria-current={active ? "true" : undefined}>
+                    <button type="button" className={`usage-video-item${active ? " is-active" : ""}${ready ? "" : " is-pending"}`} onClick={() => pick(video.id, true)} aria-current={active ? "true" : undefined} aria-expanded={active && script ? engaged : undefined}>
                       <span className="usage-video-no">{String(number).padStart(2, "0")}</span>
                       <span className="usage-video-name"><b>{video.title}</b>{video.description && <small>{video.description}</small>}</span>
                       <span className="usage-video-meta">{metaFor(video)}</span>
                     </button>
                     {active && script && (
-                      <ol className="usage-video-chapters" aria-label={`${video.title} 장면`}>
-                        {script.scenes.map((scene, index) => (isChapterScene(scene) ? (
-                          <li key={`${scene.caption.title}-${index}`}>
-                            <button
-                              type="button"
-                              className={index === sceneIndex ? "is-current" : index < sceneIndex ? "is-past" : ""}
-                              aria-current={index === sceneIndex ? "step" : undefined}
-                              onClick={() => { setSeek({ time: sceneStart(index), key: Date.now() }); revealStage(); }}
-                            >
-                              <span className="usage-chapter-no">{script.scenes.slice(0, index + 1).filter(isChapterScene).length}</span>
-                              <span className="usage-chapter-text"><small>{scene.caption.kicker}</small><b>{plainCaption(scene.caption.title)}</b></span>
-                            </button>
-                          </li>
-                        ) : null))}
-                      </ol>
+                      <div className={`usage-video-chapters-wrap${engaged ? " is-open" : ""}`} inert={!engaged}>
+                        <div className="usage-video-chapters-clip">
+                          <ol className="usage-video-chapters" aria-label={`${video.title} 장면`}>
+                            {script.scenes.map((scene, index) => (isChapterScene(scene) ? (
+                              <li key={`${scene.caption.title}-${index}`}>
+                                <button
+                                  type="button"
+                                  className={index === sceneIndex ? "is-current" : index < sceneIndex ? "is-past" : ""}
+                                  aria-current={index === sceneIndex ? "step" : undefined}
+                                  onClick={() => { setSeek({ time: sceneStart(index), key: Date.now() }); revealStage(); }}
+                                >
+                                  <span className="usage-chapter-no">{script.scenes.slice(0, index + 1).filter(isChapterScene).length}</span>
+                                  <span className="usage-chapter-text"><small>{scene.caption.kicker}</small><b>{plainCaption(scene.caption.title)}</b></span>
+                                </button>
+                              </li>
+                            ) : null))}
+                          </ol>
+                        </div>
+                      </div>
                     )}
                   </li>
                 );

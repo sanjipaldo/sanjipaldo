@@ -675,17 +675,26 @@ const prefersReducedMotion = () => {
 };
 
 // 화면에 보이면 자동 재생(동작 줄이기 설정이면 직접 눌러 재생), 화면 밖·다른 탭이면 멈춤.
-export function GuideDemoPlayer({ script, label, number, seek, onScene, next }: {
+// onEngagedChange: 재생을 시작했는지(재생 중이거나 0초보다 진행됨)가 바뀔 때 알려 줍니다. 영상 목록은 이때 장면 목록을 펼칩니다.
+export function GuideDemoPlayer({ script, label, number, seek, onScene, onEngagedChange, next }: {
   script: DemoScript;
   label: string;
   number?: number;
   seek?: { time: number; key: number };
   onScene?: (index: number) => void;
+  onEngagedChange?: (engaged: boolean) => void;
   next?: { title: string; onClick: () => void };
 }) {
   const duration = useMemo(() => demoDuration(script), [script]);
   const [time, setTime] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlayingState] = useState(false);
+  // 재생 상태를 ref에도 바로 적어 둡니다: 영상을 바꾸거나 멈춘 직후 이미 예약된 애니메이션 프레임이
+  // 한 번 더 돌아 시간이 0초에서 살짝 넘어가지 않게(tick이 이 값을 보고 멈춤).
+  const playingRef = useRef(false);
+  const setPlaying = useCallback((value: boolean) => {
+    playingRef.current = value;
+    setPlayingState(value);
+  }, []);
   const [scale, setScale] = useState(1);
   const timeRef = useRef(0);
   const screenRef = useRef<HTMLDivElement>(null);
@@ -702,7 +711,7 @@ export function GuideDemoPlayer({ script, label, number, seek, onScene, next }: 
     setBoth(0);
     userPausedRef.current = false;
     setPlaying(visibleRef.current && !prefersReducedMotion());
-  }, [script.id, setBoth]);
+  }, [script.id, setBoth, setPlaying]);
 
   useEffect(() => {
     if (!seek) return;
@@ -731,19 +740,20 @@ export function GuideDemoPlayer({ script, label, number, seek, onScene, next }: 
     }, { threshold: [0, 0.45, 0.8] });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [duration]);
+  }, [duration, setPlaying]);
 
   useEffect(() => {
     const onVisibility = () => { if (document.hidden) setPlaying(false); };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, []);
+  }, [setPlaying]);
 
   useEffect(() => {
     if (!playing) return;
     let frame = 0;
     let last = performance.now();
     const tick = (now: number) => {
+      if (!playingRef.current) return;
       const delta = Math.min(0.1, (now - last) / 1000);
       last = now;
       const value = timeRef.current + delta;
@@ -757,10 +767,13 @@ export function GuideDemoPlayer({ script, label, number, seek, onScene, next }: 
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playing, duration, setBoth]);
+  }, [playing, duration, setBoth, setPlaying]);
 
   const sceneIndex = locateScene(script, time).index;
   useEffect(() => { onScene?.(sceneIndex); }, [sceneIndex, onScene]);
+  // 재생 전(0초·멈춤)에는 false, 재생을 시작하면 true. 다른 영상으로 바꾸면 다시 0초부터 계산합니다.
+  const engaged = playing || time > 0.0001;
+  useEffect(() => { onEngagedChange?.(engaged); }, [engaged, onEngagedChange]);
 
   const toggle = () => {
     if (ended) {
