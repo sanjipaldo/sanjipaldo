@@ -217,7 +217,7 @@ const SettingSchema = z.object({
 });
 
 const StatusSchema = z.object({ status: z.enum(["received", "reviewing", "completed"]) });
-// 입점 신청 진행 단계·계약 조건: 계약 완료면 계약 형태 필수, 수수료 위탁이면 수수료율(0 초과 100 이하, % 단위) 필수
+// 입점 신청 진행 단계·계약 조건: 입점 성공(contracted)이면 계약 형태 필수, 수수료 위탁이면 수수료율(0 초과 100 이하, % 단위) 필수
 const PartnerDealSchema = z.object({
   stage: z.enum(["received", "contacted", "negotiating", "contracted", "declined"]),
   contractType: z.enum(["commission", "wholesale", "other"]).nullable().optional(),
@@ -376,7 +376,7 @@ catalogRouter.post("/partner", publicRoute, async (c) => {
   }
   const { agreePrivacy: _agree, website: _website, ...input } = parsed.data;
   const request = await createPartnerRequest({ ...input, referenceUrl: input.referenceUrl || null });
-  return c.json(apiSuccess({ request: { id: request.id, emailStatus: request.emailStatus } }), 201);
+  return c.json(apiSuccess({ request: { id: request.id, emailStatus: request.emailStatus, notifyStatus: request.notifyStatus } }), 201);
 });
 
 catalogRouter.get("/admin", adminRoute, async (c) => c.json(apiSuccess(await getAdminCatalog())));

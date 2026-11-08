@@ -1032,8 +1032,12 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .request-board-table { min-width: 0; }
   .request-board-table th, .request-board-table td { padding-left: 12px; padding-right: 12px; }
   .request-board-table td { white-space: nowrap; }
-  .request-board-table td:nth-child(3) { width: 100%; max-width: 0; white-space: normal; }
-  .request-board-table .request-product { min-width: 160px; }
+  .request-board-table td:nth-child(3) { width: 100%; min-width: 140px; max-width: 0; white-space: normal; }
+  /* 업체명 칸이 좁아져도 옆 칸(업종)을 덮지 않게: 칸 안에서 줄을 바꿉니다 */
+  .request-board-table .request-product { min-width: 0; }
+  .request-board-table .request-product strong { line-height: 1.4; overflow-wrap: anywhere; }
+  /* 긴 이메일은 …으로 줄여 업체명 칸에 자리를 내줍니다(마우스를 올리면 전체 주소) */
+  .request-board-table .request-email a { display: block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; word-break: normal; }
   .request-board-table .request-product small { max-width: 100%; }
 }
 /* 배송 정책 수정(모바일): 저장 버튼이 화면 왼쪽 끝에 붙지 않게 다른 편집 창의 하단 바와 같은 여백 */
@@ -1812,7 +1816,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .company-profile-link, .wholesale-mall-link { padding-left: 10px; padding-right: 10px; font-size: 12.5px; }
 }
 
-/* 입점 신청 진행 단계(관리자): 접수 회색 · 연락 완료 파랑 · 상담 노랑 · 계약 완료 초록 · 불발 빨강 */
+/* 입점 신청 진행 단계(관리자): 접수 회색 · 연락 완료 파랑 · 상담 노랑 · 입점 성공 초록 · 거래 실패 빨강 */
 .partner-stage-pill { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 800; white-space: nowrap; }
 .partner-stage-pill.is-received { color: #4b5563; background: #eef1f5; }
 .partner-stage-pill.is-contacted { color: #1d5fd0; background: #e8f1ff; }
@@ -1969,4 +1973,30 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .usage-video-chapters-clip { min-height: 0; overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .usage-video-chapters-wrap { transition: none; }
+}
+
+/* 관리자 > 입점·소싱 요청 > 입점 신청: 공급사 DB 요약 카드(새 신청 · 진행 중 · 입점 성공 · 거래 실패). 누르면 그 묶음만 보여 줍니다. */
+.partner-db-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 14px; }
+.partner-db-card { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; padding: 14px 16px; border: 1px solid var(--w-card-border, #e4e8e1); border-radius: var(--w-radius-lg, 16px); color: var(--w-ink); background: var(--w-canvas, #fff); box-shadow: var(--w-card-shadow, none); text-align: left; cursor: pointer; }
+.partner-db-card > span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; }
+.partner-db-card > span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #9ca3af; }
+.partner-db-card strong { font-size: 28px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.partner-db-card strong small { margin-left: 3px; color: var(--w-mute); font-size: 14px; font-weight: 700; }
+.partner-db-card em { min-width: 0; overflow: hidden; color: var(--w-mute); font-size: 12px; font-style: normal; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.partner-db-card em span { white-space: nowrap; }
+.partner-db-card:hover { border-color: var(--w-ink); }
+.partner-db-card.is-active > span::before { background: #1d5fd0; }
+.partner-db-card.is-contracted > span::before { background: #16a34a; }
+.partner-db-card.is-declined > span::before { background: #dc2626; }
+.partner-db-card.is-received > span::before { background: #f59e0b; }
+.partner-db-card.active { border-color: var(--w-ink); box-shadow: inset 0 0 0 1.5px var(--w-ink); }
+.partner-db-card.is-contracted.active { border-color: #16a34a; box-shadow: inset 0 0 0 1.5px #16a34a; background: #f3fbef; }
+.partner-db-card.is-declined.active { border-color: #dc2626; box-shadow: inset 0 0 0 1.5px #dc2626; background: #fff6f6; }
+@media (max-width: 1050px) {
+  .partner-db-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .partner-db-card { padding: 12px 14px; }
+  .partner-db-card strong { font-size: 24px; }
+  .partner-db-card em { white-space: normal; }
 }

@@ -8,6 +8,7 @@ afterEach(() => {
   document.body.innerHTML = "";
   window.history.replaceState({}, "", "/");
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("history routing", () => {
@@ -40,6 +41,8 @@ describe("history routing", () => {
   it("emits route messages through the BrowserRouter bridge", async () => {
     vi.resetModules();
     window.history.replaceState({}, "", "/");
+    // 첫 화면(상품 목록)이 /api 데이터를 부르므로, 없는 서버(localhost:3000) 대신 "잠시 쓸 수 없음" 응답을 돌려줍니다.
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: false }), { status: 503, headers: { "Content-Type": "application/json" } })));
 
     const postedMessages: unknown[] = [];
     Object.defineProperty(window, "top", {

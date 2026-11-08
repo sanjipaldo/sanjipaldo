@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { DatabaseError, getDb } from "../_core/db";
-import { sendPartnerProposalMail, sendPartnerReceivedMail, type MailAttachment } from "./partner-mail";
+import { sendPartnerNotifyMail, sendPartnerProposalMail, sendPartnerReceivedMail, type MailAttachment, type MailResult } from "./partner-mail";
 import { buildPartnerProposalPdf, proposalFileName } from "./partner-proposal";
 import { SUPPLIER_GUIDE_SETTING_KEY, parseSupplierGuide } from "@repo/shared/supplier-guide";
 import { SELLER_GUIDE_SETTING_KEY, parseSellerGuide } from "@repo/shared/seller-guide";
@@ -1759,7 +1759,8 @@ export async function createPartnerRequest(input: {
   }).returning();
   const request = rows[0];
   if (!request) throw new DatabaseError("DATABASE_QUERY_FAILED", "입점 신청을 저장하지 못했습니다.", 502);
-  let emailStatus: "sent" | "failed" | "skipped" = "skipped";
+  let emailStatus: MailResult = "skipped";
+  let notifyStatus: MailResult = "skipped";
   if (recent.length === 0) {
     // 제안서 PDF를 만들지 못해도 접수 안내 메일은 보냅니다.
     let proposal: MailAttachment | null = null;
@@ -1769,14 +1770,19 @@ export async function createPartnerRequest(input: {
     } catch (error) {
       console.error("[partner] proposal pdf failed", error instanceof Error ? error.message : error);
     }
-    emailStatus = await sendPartnerReceivedMail({ ...base, email }, proposal);
+    // 신청자 안내 메일과 두고푸드 알림 메일(cs.doogo@gmail.com)은 따로 보냅니다(하나가 실패해도 다른 하나는 갑니다).
+    [emailStatus, notifyStatus] = await Promise.all([
+      sendPartnerReceivedMail({ ...base, email }, proposal),
+      sendPartnerNotifyMail({ id: request.id, createdAt: now, ...base, email, representative, businessNumber, shipFrom, monthlyVolume, salesChannels, intro: details })
+    ]);
+    console.info(`[partner] ${request.id} applicant mail ${emailStatus}, notify mail ${notifyStatus}`);
   }
   const updated = await db
     .update(sourcingRequests)
     .set({ emailStatus, emailSentAt: emailStatus === "sent" ? new Date().toISOString() : null })
     .where(eq(sourcingRequests.id, request.id))
     .returning();
-  return updated[0] ?? request;
+  return { ...(updated[0] ?? request), notifyStatus };
 }
 
 async function partnerRequestById(id: string) {

@@ -16,6 +16,8 @@ describe("partner deal helpers", () => {
     expect(partnerStageToStatus("negotiating")).toBe("reviewing");
     expect(partnerStageToStatus("contracted")).toBe("completed");
     expect(partnerStageToStatus("declined")).toBe("completed");
-    expect(PARTNER_STAGE_LABELS.declined).toBe("계약 불발");
+    // 관리자 공급사 DB 이름(저장 값 contracted·declined는 그대로)
+    expect(PARTNER_STAGE_LABELS.contracted).toBe("입점 성공");
+    expect(PARTNER_STAGE_LABELS.declined).toBe("거래 실패");
   });
 });

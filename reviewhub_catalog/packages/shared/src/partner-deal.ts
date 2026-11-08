@@ -1,4 +1,6 @@
 // 입점 신청(공급사) 진행 단계·계약 조건: 관리자 > 입점·소싱 요청 > 입점 신청에서 단계별로 관리합니다(partner_deals 표).
+// 접수 → 연락 완료 → 상담·협의 중 → 입점 성공(계약, 저장 값 "contracted") 또는 거래 실패(저장 값 "declined").
+// 입점 성공·거래 실패로 끝난 신청이 공급사 DB(관리자 화면 요약 카드·탭·엑셀)로 쌓입니다.
 export const PARTNER_STAGES = ["received", "contacted", "negotiating", "contracted", "declined"] as const;
 export type PartnerStage = (typeof PARTNER_STAGES)[number];
 
@@ -6,8 +8,8 @@ export const PARTNER_STAGE_LABELS: Record<PartnerStage, string> = {
   received: "접수",
   contacted: "연락 완료",
   negotiating: "상담·협의 중",
-  contracted: "계약 완료",
-  declined: "계약 불발"
+  contracted: "입점 성공",
+  declined: "거래 실패"
 };
 
 export const PARTNER_CONTRACT_TYPES = ["commission", "wholesale", "other"] as const;

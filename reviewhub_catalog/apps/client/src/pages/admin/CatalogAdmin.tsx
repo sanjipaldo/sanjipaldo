@@ -1,5 +1,5 @@
 import { FormEvent, Fragment, type Dispatch, type PointerEvent as ReactPointerEvent, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowDown,
   ArrowUp,
@@ -463,6 +463,10 @@ function DoogoLogo({ light = false }: { light?: boolean }) {
 
 export function AdminLoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // 로그인 전에 열려던 관리자 화면(예: 입점 신청 알림 메일의 "관리자에서 보기")으로 돌아갑니다. 관리자 주소만 허용.
+  const from = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
+  const returnTo = from?.pathname && /^\/admin\/[A-Za-z]/.test(from.pathname) ? `${from.pathname}${from.search ?? ""}` : "/admin/home";
   const { data: session, isPending, refetch: refetchSession } = authClient.useSession();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -470,7 +474,7 @@ export function AdminLoginPage() {
   const [redirecting, setRedirecting] = useState(false);
 
   if (isPending) return <div className="admin-loading"><div className="spinner" /><span>보안 세션 확인 중…</span></div>;
-  if (session?.user && !redirecting) return <Navigate to="/admin/home" replace />;
+  if (session?.user && !redirecting) return <Navigate to={returnTo} replace />;
   if (redirecting) return <div className="admin-loading"><div className="spinner" /><span>대시보드로 이동 중…</span></div>;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -496,7 +500,7 @@ export function AdminLoginPage() {
       }
 
       toast.success("마스터 관리자로 로그인했습니다.");
-      navigate("/admin/home", { replace: true });
+      navigate(returnTo, { replace: true });
     } catch (error) {
       setRedirecting(false);
       toast.error(error instanceof Error ? error.message : "로그인에 실패했습니다.");
@@ -2560,14 +2564,26 @@ type HistoryAdminGroup = {
   changes: PriceHistory[];
 };
 
+// 입점 신청 진행 단계 필터: "active" = 연락 완료 + 상담·협의 중(공급사 DB 요약의 "진행 중")
+const matchesStage = (stage: PartnerStage, filter: "all" | "active" | PartnerStage) => filter === "all" || (filter === "active" ? stage === "contacted" || stage === "negotiating" : stage === filter);
+
 function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () => Promise<void> }) {
   const [sourcingData, setSourcingData] = useState<AdminCatalogData>(data);
   const [sourcingLoading, setSourcingLoading] = useState(data.sourcingRequests.length === 0);
-  const [kind, setKind] = useState<"sourcing" | "partner">("sourcing");
+  // 알림 메일의 "관리자에서 보기"(/admin/sourcing?partner=신청 id)로 오면 입점 신청 탭에서 그 신청 상세를 엽니다.
+  const [deepLinkId] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get("partner");
+    } catch {
+      return null;
+    }
+  });
+  const deepLinkHandled = useRef(false);
+  const [kind, setKind] = useState<"sourcing" | "partner">(() => (deepLinkId ? "partner" : "sourcing"));
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | SourcingRequest["status"]>("all");
-  // 입점 신청은 진행 단계(접수 → 연락 완료 → 상담·협의 중 → 계약 완료/불발)로 나눠 봅니다.
-  const [stageFilter, setStageFilter] = useState<"all" | PartnerStage>("all");
+  // 입점 신청은 진행 단계(접수 → 연락 완료 → 상담·협의 중 → 입점 성공/거래 실패)로 나눠 봅니다. "active" = 연락 완료 + 상담·협의 중
+  const [stageFilter, setStageFilter] = useState<"all" | "active" | PartnerStage>("all");
   const [selectedRequest, setSelectedRequest] = useState<SourcingRequest | null>(null);
   const [pageSize, setPageSize] = useState(() => readStoredPageSize("admin-requests", 5));
   const [page, setPage] = useState(1);
@@ -2581,6 +2597,20 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
     }
   };
   useEffect(() => { void loadSourcing(); }, []);
+  useEffect(() => {
+    if (!deepLinkId || deepLinkHandled.current || sourcingLoading) return;
+    const target = sourcingData.sourcingRequests.find((request) => request.id === deepLinkId);
+    if (!target) return;
+    deepLinkHandled.current = true;
+    setSelectedRequest(target);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("partner");
+      window.history.replaceState(window.history.state, "", url.toString());
+    } catch {
+      // 주소 정리는 못 해도 상세는 열립니다.
+    }
+  }, [deepLinkId, sourcingLoading, sourcingData.sourcingRequests]);
 
   const statusLabel = (value: SourcingRequest["status"]) => (
     value === "received" ? "접수" : value === "reviewing" ? "검토중" : "완료"
@@ -2593,7 +2623,7 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
   const filtered = useMemo(() => kindRequests.filter((request) => {
     const keyword = query.trim().toLowerCase();
     const matchesQuery = !keyword || `${request.productName} ${request.requesterName} ${request.contact} ${request.desiredPrice || ""} ${request.details || ""} ${request.companyName || ""} ${request.email || ""} ${request.businessType || ""} ${request.deal?.contractMemo || ""}`.toLowerCase().includes(keyword);
-    const matchesStatus = kind === "partner" ? stageFilter === "all" || stageOf(request) === stageFilter : status === "all" || request.status === status;
+    const matchesStatus = kind === "partner" ? matchesStage(stageOf(request), stageFilter) : status === "all" || request.status === status;
     return matchesQuery && matchesStatus;
   }), [kindRequests, query, status, stageFilter, kind]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -2613,6 +2643,14 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
     completed: kindRequests.filter((request) => request.status === "completed").length
   };
   const stageCounts = Object.fromEntries([["all", kindRequests.length], ...PARTNER_STAGES.map((stage) => [stage, kindRequests.filter((request) => stageOf(request) === stage).length])]) as Record<"all" | PartnerStage, number>;
+  // 공급사 DB 요약: 새 신청(연락 전) · 진행 중 · 입점 성공 · 거래 실패. 누르면 그 묶음만 보여 줍니다.
+  const partnerContracts = kindRequests.filter((request) => request.deal?.stage === "contracted");
+  const partnerGroups = [
+    { key: "received", filter: "received" as const, label: "새 신청", count: stageCounts.received, unit: "건", hint: "연락 전 · 알림 메일로 먼저 확인" },
+    { key: "active", filter: "active" as const, label: "진행 중", count: stageCounts.contacted + stageCounts.negotiating, unit: "곳", hint: [`연락 완료 ${stageCounts.contacted}`, `상담·협의 중 ${stageCounts.negotiating}`] },
+    { key: "contracted", filter: "contracted" as const, label: "입점 성공", count: stageCounts.contracted, unit: "곳", hint: [`수수료 위탁 ${partnerContracts.filter((request) => request.deal?.contractType === "commission").length}`, `매입 ${partnerContracts.filter((request) => request.deal?.contractType === "wholesale").length}`, `기타 ${partnerContracts.filter((request) => request.deal?.contractType === "other").length}`] },
+    { key: "declined", filter: "declined" as const, label: "거래 실패", count: stageCounts.declined, unit: "곳", hint: "실패 사유는 상담·계약 메모에" }
+  ];
   // 입점 신청 DB를 엑셀(CSV, 한글 깨짐 방지 BOM)로 내려받습니다: 진행 단계·계약 조건·상담 메모 포함
   const exportPartnersCsv = () => {
     const cell = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
@@ -2669,7 +2707,7 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
       const payload = await readData<{ request: SourcingRequest }>(response);
       setSelectedRequest((current) => ({ ...payload.request, deal: current?.deal ?? payload.request.deal ?? null }));
       if (payload.request.emailStatus === "sent") toast.success(`${payload.request.email}(으)로 입점 제안서를 보냈습니다.`);
-      else if (payload.request.emailStatus === "skipped") toast.error("메일 발송 설정(RESEND_API_KEY)이 없어 보내지 못했습니다. 제안서 PDF를 받아 직접 보내 주세요.");
+      else if (payload.request.emailStatus === "skipped") toast.error("메일 발송 설정(Gmail 앱 비밀번호 SMTP_USER·SMTP_PASS 또는 RESEND_API_KEY)이 없어 보내지 못했습니다. 제안서 PDF를 받아 직접 보내 주세요.");
       else toast.error("메일 발송에 실패했습니다. 잠시 뒤 다시 시도하거나 PDF를 받아 직접 보내 주세요.");
       await loadSourcing();
     } catch (error) {
@@ -2694,6 +2732,18 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
         <button type="button" role="tab" aria-selected={kind === "sourcing"} className={kind === "sourcing" ? "active" : ""} onClick={() => { setKind("sourcing"); setStatus("all"); setStageFilter("all"); }}><PackagePlus size={17} /> 소싱 요청 <small>{kindCounts.sourcing}</small></button>
         <button type="button" role="tab" aria-selected={kind === "partner"} className={kind === "partner" ? "active" : ""} onClick={() => { setKind("partner"); setStatus("all"); setStageFilter("all"); }}><Store size={17} /> 입점 신청 <small>{kindCounts.partner}</small></button>
       </div>
+      {isPartner && kindRequests.length > 0 && (
+        <div className="partner-db-summary" aria-label="공급사 DB 요약">
+          {partnerGroups.map((group) => (
+            <button key={group.key} type="button" className={`partner-db-card is-${group.key}${stageFilter === group.filter ? " active" : ""}`} onClick={() => setStageFilter(stageFilter === group.filter ? "all" : group.filter)} aria-pressed={stageFilter === group.filter}>
+              <span>{group.label}</span>
+              <strong>{group.count.toLocaleString("ko-KR")}<small>{group.unit}</small></strong>
+              {/* 숫자 항목("기타 0")은 줄이 바뀌어도 이름과 숫자가 떨어지지 않게 묶습니다 */}
+              <em>{Array.isArray(group.hint) ? group.hint.flatMap((part, index) => index > 0 ? [" · ", <span key={part}>{part}</span>] : [<span key={part}>{part}</span>]) : group.hint}</em>
+            </button>
+          ))}
+        </div>
+      )}
       <section className="admin-card request-board-card">
         <div className="request-board-toolbar">
           {isPartner ? (
@@ -2743,7 +2793,7 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
                       <td data-label="계약 조건">{partnerContractSummary(request.deal) ? <strong className="partner-contract-summary">{partnerContractSummary(request.deal)}</strong> : <span className="partner-contract-empty">-</span>}</td>
                       <td data-label="담당자"><strong>{request.requesterName}</strong></td>
                       <td data-label="핸드폰 번호"><a className="request-contact" href={`tel:${request.contact.replace(/[^0-9+]/g, "")}`} onClick={(event) => event.stopPropagation()}>{request.contact}</a></td>
-                      <td data-label="이메일"><div className="request-email"><a href={`mailto:${request.email ?? ""}`} onClick={(event) => event.stopPropagation()}>{request.email || "-"}</a><small className={`mail-status ${request.emailStatus ?? ""}`}>{mailLabel(request.emailStatus)}</small></div></td>
+                      <td data-label="이메일"><div className="request-email"><a href={`mailto:${request.email ?? ""}`} title={request.email ?? undefined} onClick={(event) => event.stopPropagation()}>{request.email || "-"}</a><small className={`mail-status ${request.emailStatus ?? ""}`}>{mailLabel(request.emailStatus)}</small></div></td>
                     </> : <>
                       <td data-label="요청 상품"><div className="request-product"><strong>{request.productName}</strong><small>{request.details || "상세 요청 없음"}</small></div></td>
                       <td data-label="요청자"><strong>{request.requesterName}</strong></td>
@@ -2817,7 +2867,7 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
   );
 }
 
-// 입점 신청 진행 단계·계약 조건 편집: 접수 → 연락 완료 → 상담·협의 중 → 계약 완료(수수료 % / 일반 도소매 / 기타) 또는 계약 불발
+// 입점 신청 진행 단계·계약 조건 편집: 접수 → 연락 완료 → 상담·협의 중 → 입점 성공(수수료 % / 일반 도소매 / 기타) 또는 거래 실패
 function PartnerDealEditor({ request, onSaved }: { request: SourcingRequest; onSaved: (request: SourcingRequest) => Promise<void> }) {
   const deal = request.deal ?? null;
   const [stage, setStage] = useState<PartnerStage>(deal?.stage ?? "received");
@@ -2858,7 +2908,7 @@ function PartnerDealEditor({ request, onSaved }: { request: SourcingRequest; onS
   const history = [...(deal?.history ?? [])].reverse();
   return (
     <section className="partner-deal-editor" aria-label="입점 진행 단계">
-      <div className="partner-deal-head"><strong>진행 단계</strong><small>연락·상담·계약 결과를 단계별로 기록합니다. 계약 완료면 계약 형태와 수수료율을 꼭 넣어 주세요.</small></div>
+      <div className="partner-deal-head"><strong>진행 단계</strong><small>연락·상담·계약 결과를 단계별로 기록합니다. 입점 성공이면 계약 형태와 수수료율을, 거래 실패면 사유를 메모에 남겨 주세요.</small></div>
       <ol className="partner-stage-stepper">
         {PARTNER_STAGES.map((value, index) => (
           <li key={value}>
@@ -2884,9 +2934,9 @@ function PartnerDealEditor({ request, onSaved }: { request: SourcingRequest; onS
           )}
         </div>
       )}
-      <label className="partner-memo-field">상담·계약 메모<textarea rows={3} maxLength={2000} value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="통화 내용, 계약 조건 협의 내용, 불발 사유 등" /></label>
+      <label className="partner-memo-field">상담·계약 메모<textarea rows={3} maxLength={2000} value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="통화 내용, 계약 조건 협의 내용, 거래 실패 사유 등" /></label>
       <label className="partner-memo-field">이번 변경 기록(선택)<input maxLength={300} value={note} onChange={(event) => setNote(event.target.value)} placeholder="예: 11/7 대표님과 통화, 다음 주 샘플 발송" /></label>
-      <div className="partner-deal-dates"><span>연락일 <b>{formatAt(deal?.contactedAt)}</b></span><span>계약 완료·불발일 <b>{formatAt(deal?.closedAt)}</b></span><span>현재 <b>{partnerContractSummary(deal) || PARTNER_STAGE_LABELS[deal?.stage ?? "received"]}</b></span></div>
+      <div className="partner-deal-dates"><span>연락일 <b>{formatAt(deal?.contactedAt)}</b></span><span>입점 성공·거래 실패일 <b>{formatAt(deal?.closedAt)}</b></span><span>현재 <b>{partnerContractSummary(deal) || PARTNER_STAGE_LABELS[deal?.stage ?? "received"]}</b></span></div>
       <div className="partner-deal-save"><button type="button" className="primary-action" onClick={() => void save()} disabled={saving}><Save size={16} /> {saving ? "저장 중…" : "진행 상황 저장"}</button></div>
       {history.length > 0 && (
         <ol className="partner-deal-history" aria-label="진행 기록">
