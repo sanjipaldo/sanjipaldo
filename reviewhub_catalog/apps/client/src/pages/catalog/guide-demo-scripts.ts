@@ -1,8 +1,10 @@
-// 공급사 사용법 안내 영상(애니메이션) 대본. 영상마다 장면(scene) 목록이며, 장면은 위 자막 + "공급사 | 두고푸드" 표시 + 아래 화면(view)으로 그립니다.
-// 거래 방식: 별도 공급사 관리자 없이, 두고푸드가 정한 시간(오전 1회·오후 1회)에 발주서 메일을 보내고 공급사는 그 메일에 송장을 회신합니다.
+// 사용법 안내 영상(애니메이션) 대본. 영상마다 장면(scene) 목록이며, 장면은 위 자막 + "공급사|위탁셀러 · 두고푸드" 표시 + 아래 화면(view)으로 그립니다.
+// 공급사 영상(이 파일): 별도 공급사 관리자 없이, 두고푸드가 정한 시간(오전 1회·오후 1회)에 발주서 메일을 보내고 공급사는 그 메일에 송장을 회신합니다.
+// 위탁셀러 영상(guide-demo-seller-scripts.ts): 단가표에서 상품을 고르고 두고푸드 도매몰(발주오라)에 주문을 넣습니다.
 // 자막 title의 **글자**는 강조색으로 보입니다. 업체명·주문·금액은 모두 예시입니다.
 
-export type DemoActor = "supplier" | "doogo";
+export type DemoAudience = "supplier" | "seller";
+export type DemoActor = "supplier" | "seller" | "doogo";
 export type DemoTimed<T> = T | Array<[number, T]>;
 
 export type DemoMail = {
@@ -35,7 +37,7 @@ export type DemoView =
     clickAt?: number;
     status?: DemoTimed<string>;
   }
-  | { kind: "sheet"; mode: "view" | "type" | "register"; file: string; status?: string; total?: number }
+  | { kind: "sheet"; mode: "view" | "type" | "register"; file: string; tab?: string; status?: string; total?: number }
   | { kind: "form"; url: string; heading: string; sub: string; fields: Array<{ label: string; value: string }>; submit?: string; done?: string; status?: string }
   | { kind: "confirm"; title: string; sub: string; items: string[]; pill: string; base: "sheet" | "mail" }
   | {
@@ -48,8 +50,45 @@ export type DemoView =
     toggle?: string;
   }
   | { kind: "group"; title: string; members: string; messages: Array<{ who: DemoActor; name: string; text: string; at: number }> }
+  // 위탁셀러 영상: 두고푸드 도매몰(발주오라) 메뉴 · 주문 목록 · 엑셀 주문 올리기, 두고푸드 DB센터 단가표 · 가격변동/품절이슈
+  | { kind: "menu"; open: string; target: string; openAt?: number; clickAt: number; status?: DemoTimed<string> }
+  | {
+    kind: "orders";
+    page: string;
+    rows: DemoOrderRow[];
+    actions?: string[];
+    select?: { rows: number[] | "all"; at: number };
+    action?: { label: string; at: number };
+    dialog?: DemoOrderDialog;
+    changes?: Array<{ at: number; rows: number[] | "all"; status: DemoOrderStatus }>;
+    toast?: { at: number; text: string };
+    status?: DemoTimed<string>;
+  }
+  | { kind: "upload"; file: string; orders: number; rows: Array<{ mine: string; product: string; auto: boolean }>; dropAt: number; matchAt?: number; registerAt: number; status?: DemoTimed<string> }
+  | { kind: "catalog"; query: string; typeAt?: number; rows: DemoCatalogRow[]; focus?: Array<{ at: number; row: number; field: "price" | "sale" | "ship" | "status"; note: string }>; status?: DemoTimed<string> }
+  | { kind: "feed"; mode: "price" | "soldout"; items: DemoFeedItem[]; download?: { at: number; file: string }; status?: DemoTimed<string> }
   | { kind: "cover" }
   | { kind: "end"; line?: string; big?: string };
+
+// 도매몰 주문 상태(발주오라 도매몰과 같은 이름)
+export type DemoOrderStatus = "주문대기" | "주문접수" | "발주완료" | "배송준비중" | "배송중" | "배송완료" | "취소완료" | "반품접수" | "교환접수";
+export type DemoOrderRow = { no: string; name: string; item: string; qty: number; status: DemoOrderStatus; invoice?: string; at?: number };
+// 주문 목록에서 버튼을 누르면 뜨는 확인 창(취소: 확인만, 반품·교환: 사유 · 상세 내용 · 사진)
+export type DemoOrderDialog = {
+  at: number;
+  title: string;
+  sub?: string;
+  options?: string[];
+  pick?: string;
+  pickAt?: number;
+  detail?: string;
+  photos?: number;
+  confirm: string;
+  confirmAt: number;
+  tone?: "danger" | "primary";
+};
+export type DemoCatalogRow = { name: string; code: string; emoji: string; a: number; general: number; sale: string; ship: string; status: "판매중" | "품절" | "시즌종료" };
+export type DemoFeedItem = { name: string; code: string; emoji: string; from?: number; to?: number; when?: string };
 
 export type DemoScene = {
   caption: { kicker: string; title: string };
@@ -58,7 +97,7 @@ export type DemoScene = {
   view: DemoView;
 };
 
-export type DemoScript = { id: string; scenes: DemoScene[] };
+export type DemoScript = { id: string; audience?: DemoAudience; scenes: DemoScene[] };
 
 // 예시 발주서(엑셀) 줄: 수령인 · 주소 · 상품 · 수량 · 택배사 · 송장번호
 export const DEMO_SHEET_ROWS = [
@@ -79,8 +118,10 @@ const YESTERDAY: DemoMail[] = [
 ];
 
 // 첫 장면(표지): 영상 제목과 "이 영상에서 볼 내용"(장면 목록). 재생 전 화면도 이 표지가 보입니다.
-const cover: DemoScene = { caption: { kicker: "", title: "" }, duration: 2.6, actor: "doogo", view: { kind: "cover" } };
-const end: DemoScene = { caption: { kicker: "", title: "" }, duration: 3.6, actor: "doogo", view: { kind: "end" } };
+export const DEMO_COVER_SCENE: DemoScene = { caption: { kicker: "", title: "" }, duration: 2.6, actor: "doogo", view: { kind: "cover" } };
+export const DEMO_END_SCENE: DemoScene = { caption: { kicker: "", title: "" }, duration: 3.6, actor: "doogo", view: { kind: "end" } };
+const cover = DEMO_COVER_SCENE;
+const end = DEMO_END_SCENE;
 
 export const SUPPLIER_DEMO_SCRIPTS: Record<string, DemoScript> = {
   overview: {

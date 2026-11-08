@@ -115,23 +115,28 @@ export function parseSupplierGuide(value?: string | null): SupplierGuideSettings
   const legacyVideos = Array.isArray(raw.videos)
     && raw.videos.length === LEGACY_VIDEO_IDS.length
     && raw.videos.every((item, index) => Boolean(item) && typeof item === "object" && (item as Record<string, unknown>).id === LEGACY_VIDEO_IDS[index] && !clean((item as Record<string, unknown>).url, 500));
-  const videos = Array.isArray(raw.videos) && !legacyVideos
-    ? raw.videos.slice(0, 30).flatMap((item, index) => {
-      if (!item || typeof item !== "object") return [];
-      const video = item as Record<string, unknown>;
-      const title = clean(video.title, 80);
-      if (!title) return [];
-      return [{
-        id: clean(video.id, 40) || `video-${index + 1}`,
-        group: clean(video.group, 30) || SUPPLIER_VIDEO_GROUPS[0],
-        title,
-        description: clean(video.description, 160),
-        url: clean(video.url, 500),
-        duration: clean(video.duration, 10)
-      }];
-    })
-    : DEFAULT_SUPPLIER_GUIDE.videos;
+  const videos = (!legacyVideos && parseGuideVideoList(raw.videos, SUPPLIER_VIDEO_GROUPS[0])) || DEFAULT_SUPPLIER_GUIDE.videos;
   return { ...terms, videos };
+}
+
+// 저장된 영상 목록(JSON 배열)을 정리합니다: 최대 30개, 제목 없는 항목은 빼고, 빈 묶음은 defaultGroup. 배열이 아니면 null(기본 목록 사용).
+// 공급사·위탁셀러 사용법 영상 목록이 함께 씁니다.
+export function parseGuideVideoList(value: unknown, defaultGroup: string): SupplierGuideVideo[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.slice(0, 30).flatMap((item, index) => {
+    if (!item || typeof item !== "object") return [];
+    const video = item as Record<string, unknown>;
+    const title = clean(video.title, 80);
+    if (!title) return [];
+    return [{
+      id: clean(video.id, 40) || `video-${index + 1}`,
+      group: clean(video.group, 30) || defaultGroup,
+      title,
+      description: clean(video.description, 160),
+      url: clean(video.url, 500),
+      duration: clean(video.duration, 10)
+    }];
+  });
 }
 
 export type VideoEmbed =

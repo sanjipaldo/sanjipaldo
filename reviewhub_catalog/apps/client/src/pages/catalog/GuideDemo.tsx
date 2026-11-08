@@ -1,63 +1,28 @@
-// 공급사 사용법 안내 영상(애니메이션 플레이어). 장면 대본(guide-demo-scripts.ts)을 시간(초)에 따라 그립니다.
+// 사용법 안내 영상(애니메이션 플레이어, 공급사·위탁셀러 공용). 장면 대본(guide-demo-scripts.ts · guide-demo-seller-scripts.ts)을 시간(초)에 따라 그립니다.
 // 모든 움직임은 time 값으로 계산하므로(CSS 애니메이션 없음) 같은 시간이면 같은 화면이 나오고, 영상 파일(mp4)로도 그대로 뽑을 수 있습니다.
-// 무대는 360×640(9:16) 고정 크기로 그리고 화면 폭에 맞춰 확대·축소합니다.
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+// 무대는 360×640(9:16) 고정 크기로 그리고 화면 폭에 맞춰 확대·축소합니다. 위탁셀러 영상은 초록 테마(.gd-stage.is-seller)입니다.
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "react-router-dom";
 import { Check, ChevronRight, Clock3, FileSpreadsheet, FileText, Minus, Paperclip, Pause, Play, RotateCcw, Send } from "lucide-react";
+import { DEFAULT_SELLER_GUIDE, SELLER_DEMO_VIDEO_IDS } from "@repo/shared/seller-guide";
 import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_DEMO_VIDEO_IDS } from "@repo/shared/supplier-guide";
 import "./guide-demo.css";
-import { DEMO_SHEET_ROWS, SUPPLIER_DEMO_SCRIPTS, demoDuration, formatDemoTime, isChapterScene, plainCaption, type DemoActor, type DemoScript, type DemoTimed, type DemoView } from "./guide-demo-scripts";
+import { Avatar, Cursor, StatusStrip, appear, clamp, clickPulse, easeInOut, easeOut, highlight, lerp, lines, moveCursor, prog, timed, typeTime, typed, whoName } from "./guide-demo-kit";
+import { CatalogView, FeedView, MenuView, OrdersView, UploadView } from "./guide-demo-shop";
+import { DEMO_SHEET_ROWS, SUPPLIER_DEMO_SCRIPTS, demoDuration, formatDemoTime, isChapterScene, plainCaption, type DemoActor, type DemoAudience, type DemoScript, type DemoView } from "./guide-demo-scripts";
+import { SELLER_DEMO_SCRIPTS } from "./guide-demo-seller-scripts";
 
 export const DEMO_W = 360;
 export const DEMO_H = 640;
 
 type ViewOf<K extends DemoView["kind"]> = Extract<DemoView, { kind: K }>;
 
-const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
-const prog = (t: number, start: number, duration: number) => (duration <= 0 ? (t >= start ? 1 : 0) : clamp((t - start) / duration));
-const easeOut = (p: number) => 1 - (1 - p) ** 3;
-const easeInOut = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2);
-const lerp = (from: number, to: number, p: number) => from + (to - from) * p;
-
-function appear(t: number, at: number, duration = 0.35, dy = 10): CSSProperties {
-  const p = easeOut(prog(t, at, duration));
-  return { opacity: p, transform: `translateY(${((1 - p) * dy).toFixed(2)}px)` };
-}
-
-function typed(text: string, t: number, start: number, cps = 16) {
-  const chars = Array.from(text);
-  return chars.slice(0, Math.floor(Math.max(0, t - start) * cps)).join("");
-}
-const typeTime = (text: string, cps = 16) => Array.from(text).length / cps;
-
-function timed<T>(value: DemoTimed<T> | undefined, t: number): T | undefined {
-  if (value === undefined) return undefined;
-  if (!Array.isArray(value)) return value as T;
-  const entries = value as Array<[number, T]>;
-  let current = entries[0]?.[1];
-  for (const [at, item] of entries) if (t >= at) current = item;
-  return current;
-}
-
-// 클릭 효과(0~1). 클릭 전·후에는 0
-const clickPulse = (t: number, at: number | undefined, duration = 0.4) => (at === undefined || t < at || t > at + duration ? 0 : prog(t, at, duration));
-
-function moveCursor(t: number, from: [number, number], to: [number, number], start: number, duration = 0.6): [number, number] {
-  const p = easeInOut(prog(t, start, duration));
-  return [lerp(from[0], to[0], p), lerp(from[1], to[1], p)];
-}
-
-function lines(text: string) {
-  const parts = text.split("\n");
-  return parts.map((part, index) => <span key={index}>{part}{index < parts.length - 1 && <br />}</span>);
-}
-
-function highlight(title: string) {
-  return title.split("**").map((part, index) => (index % 2 === 1 ? <em key={index}>{part}</em> : <span key={index}>{part}</span>));
-}
-
-const defaultTitle = (id: string) => DEFAULT_SUPPLIER_GUIDE.videos.find((video) => video.id === id)?.title ?? "두고푸드 공급사 사용법";
+const ALL_DEFAULT_VIDEOS = [...DEFAULT_SUPPLIER_GUIDE.videos, ...DEFAULT_SELLER_GUIDE.videos];
+const defaultTitle = (id: string) => ALL_DEFAULT_VIDEOS.find((video) => video.id === id)?.title ?? "두고푸드 사용법";
+export const demoAudience = (script: DemoScript): DemoAudience => script.audience ?? "supplier";
+const partyOf = (audience: DemoAudience): DemoActor => (audience === "seller" ? "seller" : "supplier");
+const audienceLabel = (audience: DemoAudience) => (audience === "seller" ? "위탁셀러" : "공급사");
 
 export function locateScene(script: DemoScript, time: number) {
   let start = 0;
@@ -67,31 +32,6 @@ export function locateScene(script: DemoScript, time: number) {
     start += scene.duration;
   }
   return { scene: script.scenes[0], index: 0, t: 0, start: 0 };
-}
-
-const whoName = (who: DemoActor) => (who === "supplier" ? "공급사" : "두고푸드");
-
-function Avatar({ size = 24 }: { size?: number }) {
-  return <span className="gd-avatar" style={{ width: size, height: size }}><img src="/icon-192.png" alt="" draggable={false} /></span>;
-}
-
-function Cursor({ x, y, who, click = 0 }: { x: number; y: number; who: DemoActor; click?: number }) {
-  const pressed = click > 0 && click < 1;
-  const scale = pressed ? 1 - 0.2 * Math.sin(click * Math.PI) : 1;
-  return (
-    <span className={`gd-cursor is-${who}`} style={{ transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)` }}>
-      {pressed && <span className="gd-ripple" style={{ opacity: 1 - click, transform: `translate(-50%, -50%) scale(${(0.4 + click * 1.6).toFixed(2)})` }} />}
-      <svg width="16" height="19" viewBox="0 0 16 19" style={{ transform: `scale(${scale.toFixed(3)})` }}>
-        <path d="M1.5 1.2 L1.5 15.4 L5.3 12 L8.2 17.6 L10.8 16.4 L7.9 10.9 L13.4 10.9 Z" fill="#111827" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
-      </svg>
-      <b>{whoName(who)}</b>
-    </span>
-  );
-}
-
-function StatusStrip({ who, text, count }: { who: DemoActor; text?: string; count?: string }) {
-  if (!text) return null;
-  return <div className={`gd-status is-${who}`}><i />{text}{count && <b>{count}</b>}</div>;
 }
 
 /* ───────── 장면 화면 ───────── */
@@ -142,7 +82,7 @@ function StepsView({ view, t }: { view: ViewOf<"steps">; t: number }) {
   );
 }
 
-// 카카오톡 단톡방처럼 보이는 대화(두고푸드 팀 ↔ 공급사). 공급사 화면 기준이라 공급사 말은 오른쪽.
+// 카카오톡 단톡방처럼 보이는 대화(두고푸드 팀 ↔ 공급사·셀러). 공급사·셀러 화면 기준이라 그쪽 말이 오른쪽.
 function GroupView({ view, t }: { view: ViewOf<"group">; t: number }) {
   return (
     <div className="gd-group">
@@ -152,7 +92,7 @@ function GroupView({ view, t }: { view: ViewOf<"group">; t: number }) {
         {view.messages.map((message, index) => {
           if (t < message.at - 0.35) return null;
           const typing = t < message.at;
-          const mine = message.who === "supplier";
+          const mine = message.who !== "doogo";
           return (
             <div key={index} className={`gd-group-msg${mine ? " is-me" : ""}`} style={appear(t, message.at - 0.35, 0.3, 8)}>
               {!mine && <Avatar size={28} />}
@@ -199,7 +139,7 @@ function ChecksView({ view, t }: { view: ViewOf<"checks">; t: number }) {
 const INBOX_TOP = 70;
 const INBOX_ROW = 64;
 
-function InboxView({ view, t, actor }: { view: ViewOf<"inbox">; t: number; actor: DemoActor }) {
+function InboxView({ view, t, actor, party }: { view: ViewOf<"inbox">; t: number; actor: DemoActor; party: DemoActor }) {
   let offset = 0;
   const rows = view.mails.map((mail) => {
     const p = mail.at === undefined ? 1 : easeOut(prog(t, mail.at, 0.45));
@@ -212,7 +152,7 @@ function InboxView({ view, t, actor }: { view: ViewOf<"inbox">; t: number; actor
   let cursor: ReactNode = null;
   if (view.openAt !== undefined && t >= view.openAt - 1.0) {
     const [x, y] = moveCursor(t, [250, 330], [190, INBOX_TOP + 34], view.openAt - 0.9, 0.75);
-    cursor = <Cursor x={x} y={y} who="supplier" click={clickPulse(t, view.openAt)} />;
+    cursor = <Cursor x={x} y={y} who={party} click={clickPulse(t, view.openAt)} />;
   }
   return (
     <div className="gd-view-root">
@@ -248,7 +188,7 @@ function AttachmentCard({ attachment, active }: { attachment: NonNullable<ViewOf
   );
 }
 
-function MailView({ view, t, actor }: { view: ViewOf<"mail">; t: number; actor: DemoActor }) {
+function MailView({ view, t, actor, party }: { view: ViewOf<"mail">; t: number; actor: DemoActor; party: DemoActor }) {
   const status = timed(view.status, t);
   if (view.mode === "reply") {
     const clickAt = view.clickAt ?? 2.4;
@@ -257,7 +197,7 @@ function MailView({ view, t, actor }: { view: ViewOf<"mail">; t: number; actor: 
     let cursor: ReactNode = null;
     if (t >= clickAt - 1.0 && t < clickAt + 1.2) {
       const [x, y] = moveCursor(t, [150, 260], [262, 378], clickAt - 0.9, 0.75);
-      cursor = <Cursor x={x} y={y} who="supplier" click={clickPulse(t, clickAt)} />;
+      cursor = <Cursor x={x} y={y} who={party} click={clickPulse(t, clickAt)} />;
     }
     return (
       <div className="gd-view-root">
@@ -280,7 +220,7 @@ function MailView({ view, t, actor }: { view: ViewOf<"mail">; t: number; actor: 
   let cursor: ReactNode = null;
   if (view.attachment && clickAt !== undefined && t >= clickAt - 1.0) {
     const [x, y] = moveCursor(t, [250, 200], [150, 366], clickAt - 0.9, 0.75);
-    cursor = <Cursor x={x} y={y} who="supplier" click={clickPulse(t, clickAt)} />;
+    cursor = <Cursor x={x} y={y} who={party} click={clickPulse(t, clickAt)} />;
   }
   return (
     <div className="gd-view-root">
@@ -331,8 +271,9 @@ const TYPE_ROW_TIME = 1.15;
 
 type SheetCell = { value: string; active?: boolean; caret?: boolean; done?: boolean };
 
-function SheetGrid({ file, cells, focusCol, cell: cellRef, formula, registered = -1 }: {
+function SheetGrid({ file, tab = "발주서", cells, focusCol, cell: cellRef, formula, registered = -1 }: {
   file: string;
+  tab?: string;
   cells: (row: number, key: SheetKey) => SheetCell;
   focusCol?: SheetKey;
   cell?: string;
@@ -366,7 +307,7 @@ function SheetGrid({ file, cells, focusCol, cell: cellRef, formula, registered =
           {[0, 1, 2].map((index) => <tr key={`empty-${index}`} className="is-empty">{SHEET_COLS.map((col) => <td key={col.key} className={col.key === "no" ? "gd-sheet-no" : ""}>{col.key === "no" ? DEMO_SHEET_ROWS.length + 2 + index : ""}</td>)}</tr>)}
         </tbody>
       </table>
-      <div className="gd-sheet-tabs"><span className="is-on">발주서</span><span>안내</span></div>
+      <div className="gd-sheet-tabs"><span className="is-on">{tab}</span><span>안내</span></div>
     </div>
   );
 }
@@ -377,7 +318,7 @@ const rowValue = (row: number, key: SheetKey) => {
   return data[key];
 };
 
-function SheetView({ view, t, duration, actor }: { view: ViewOf<"sheet">; t: number; duration: number; actor: DemoActor }) {
+function SheetView({ view, t, duration, actor, party }: { view: ViewOf<"sheet">; t: number; duration: number; actor: DemoActor; party: DemoActor }) {
   if (view.mode === "view") {
     const slotRaw = Math.floor((t - 0.45) / 0.68);
     const slot = clamp(slotRaw, 0, VIEW_FOCUS.length - 1);
@@ -392,12 +333,13 @@ function SheetView({ view, t, duration, actor }: { view: ViewOf<"sheet">; t: num
         <StatusStrip who={actor} text={view.status} />
         <SheetGrid
           file={view.file}
+          tab={view.tab}
           focusCol={focusCol}
           cell={focusCol ? `${COL_LETTER[focusCol]}${focusRow + 2}` : "A2"}
           formula={focusCol ? rowValue(focusRow, focusCol) : rowValue(0, "name")}
           cells={(row, key) => ({ value: key === "courier" || key === "invoice" ? "" : rowValue(row, key) })}
         />
-        <Cursor x={x} y={y} who="supplier" />
+        <Cursor x={x} y={y} who={party} />
       </div>
     );
   }
@@ -425,11 +367,12 @@ function SheetView({ view, t, duration, actor }: { view: ViewOf<"sheet">; t: num
         <StatusStrip who={actor} text={view.status} count={`${done}/${TYPE_ROWS}`} />
         <SheetGrid
           file={view.file}
+          tab={view.tab}
           cell={`${COL_LETTER[key]}${row + 2}`}
           formula={cellText(row, key).value}
           cells={cellText}
         />
-        <Cursor x={x} y={y} who="supplier" />
+        <Cursor x={x} y={y} who={party} />
       </div>
     );
   }
@@ -440,7 +383,7 @@ function SheetView({ view, t, duration, actor }: { view: ViewOf<"sheet">; t: num
   return (
     <div className="gd-view-root">
       <StatusStrip who={actor} text={view.status} count={`${count}/${total}`} />
-      <SheetGrid file={view.file} cell="F2" formula={rowValue(0, "invoice")} registered={Math.min(DEMO_SHEET_ROWS.length - 1, registered)} cells={(row, key) => ({ value: rowValue(row, key) })} />
+      <SheetGrid file={view.file} tab={view.tab} cell="F2" formula={rowValue(0, "invoice")} registered={Math.min(DEMO_SHEET_ROWS.length - 1, registered)} cells={(row, key) => ({ value: rowValue(row, key) })} />
     </div>
   );
 }
@@ -518,7 +461,7 @@ const CONFIRM_ITEMS_TOP = 110 + 16 + 20 + 16 + 12;
 const CONFIRM_ITEM = 34;
 const CONFIRM_MARK_X = 24 + 16 + 8;
 
-function ConfirmView({ view, t }: { view: ViewOf<"confirm">; t: number }) {
+function ConfirmView({ view, t, party }: { view: ViewOf<"confirm">; t: number; party: DemoActor }) {
   const dim = easeOut(prog(t, 0, 0.3));
   const checkAt = (index: number) => 0.75 + index * 0.62;
   const current = view.items.findIndex((_, index) => t < checkAt(index));
@@ -550,7 +493,7 @@ function ConfirmView({ view, t }: { view: ViewOf<"confirm">; t: number }) {
         </ul>
       </div>
       <div className="gd-pill-wrap"><span className="gd-pill" style={appear(t, 0.5)}>{view.pill}</span></div>
-      <Cursor x={x} y={y} who="supplier" click={pulseIndex >= 0 ? clickPulse(t, checkAt(pulseIndex)) : 0} />
+      <Cursor x={x} y={y} who={party} click={pulseIndex >= 0 ? clickPulse(t, checkAt(pulseIndex)) : 0} />
     </div>
   );
 }
@@ -616,43 +559,58 @@ function CoverView({ script, t, duration }: { script: DemoScript; t: number; dur
   );
 }
 
-function EndCard({ view, t }: { view: ViewOf<"end">; t: number }) {
+// 마무리 화면 문구(공급사: 입점 신청 / 위탁셀러: 단가표·도매몰)
+const END_COPY: Record<DemoAudience, { chip: string; line: string; big: string; small: string; cta: string; ctaSub: string }> = {
+  supplier: { chip: "공급사 입점 모집 중", line: "메일 두 번이면 끝나는", big: "두고푸드 공급사", small: "입점 신청하면 제안서를 메일로 바로 보내 드려요", cta: "doogofood.site에서 입점 신청", ctaSub: "사용방법 › 공급사 › 입점 신청하기" },
+  seller: { chip: "재고 없이 시작하는 위탁 판매", line: "주문만 넣으면 출고는 두고푸드가", big: "두고푸드 위탁셀러", small: "단가표에서 상품을 고르고 도매몰에서 주문하세요", cta: "doogofood.site 단가표 보기", ctaSub: "주문은 두고푸드 도매몰(shop.baljuora.com/doogofood)" }
+};
+
+function EndCard({ view, t, audience }: { view: ViewOf<"end">; t: number; audience: DemoAudience }) {
+  const copy = END_COPY[audience];
   return (
     <div className="gd-end">
       <img className="gd-end-logo" style={appear(t, 0.05)} src="/assets/brand/doogo-food-logo-white.png" alt="" draggable={false} />
       <p className="gd-end-tagline" style={appear(t, 0.2)}>식품 전문 도매 데이터 플랫폼</p>
-      <span className="gd-end-chip" style={appear(t, 0.35)}>공급사 입점 모집 중</span>
-      <p className="gd-end-line" style={appear(t, 0.55)}>{view.line ?? "메일 두 번이면 끝나는"}</p>
-      <strong className="gd-end-big" style={appear(t, 0.7, 0.4, 14)}>{view.big ?? "두고푸드 공급사"}</strong>
-      <p className="gd-end-small" style={appear(t, 0.9)}>입점 신청하면 제안서를 메일로 바로 보내 드려요</p>
-      <span className="gd-end-cta" style={appear(t, 1.1, 0.4, 14)}><b>doogofood.site에서 입점 신청</b><small>사용방법 › 공급사 › 입점 신청하기</small></span>
+      <span className="gd-end-chip" style={appear(t, 0.35)}>{copy.chip}</span>
+      <p className="gd-end-line" style={appear(t, 0.55)}>{view.line ?? copy.line}</p>
+      <strong className="gd-end-big" style={appear(t, 0.7, 0.4, 14)}>{view.big ?? copy.big}</strong>
+      <p className="gd-end-small" style={appear(t, 0.9)}>{copy.small}</p>
+      <span className="gd-end-cta" style={appear(t, 1.1, 0.4, 14)}><b>{copy.cta}</b><small>{copy.ctaSub}</small></span>
     </div>
   );
 }
 
-const BROWSER_URL: Partial<Record<DemoView["kind"], string>> = { inbox: "메일 · 받은편지함", mail: "메일", sheet: "엑셀", confirm: "엑셀" };
+const BROWSER_URL: Partial<Record<DemoView["kind"], string>> = { inbox: "메일 · 받은편지함", mail: "메일", sheet: "엑셀", confirm: "엑셀", menu: "shop.baljuora.com/doogofood", upload: "shop.baljuora.com/doogofood › 대량 주문 입력(엑셀)", catalog: "doogofood.site › 상품 단가표" };
 
 function browserUrl(view: DemoView) {
   if (view.kind === "form") return view.url;
   if (view.kind === "mail") return view.mode === "reply" ? "메일 · 답장 쓰기" : "메일 · 받은편지함";
   if (view.kind === "confirm") return view.base === "mail" ? "메일 · 받은편지함" : "엑셀";
+  if (view.kind === "orders") return `shop.baljuora.com/doogofood › ${view.page}`;
+  if (view.kind === "feed") return view.mode === "price" ? "doogofood.site › 가격변동" : "doogofood.site › 품절이슈";
   return BROWSER_URL[view.kind] ?? "";
 }
 
-const isBrowserView = (kind: DemoView["kind"]) => kind === "inbox" || kind === "mail" || kind === "sheet" || kind === "form" || kind === "confirm";
+const BROWSER_KINDS = new Set<DemoView["kind"]>(["inbox", "mail", "sheet", "form", "confirm", "menu", "orders", "upload", "catalog", "feed"]);
+const isBrowserView = (kind: DemoView["kind"]) => BROWSER_KINDS.has(kind);
 
-function SceneView({ view, t, duration, actor }: { view: DemoView; t: number; duration: number; actor: DemoActor }) {
+function SceneView({ view, t, duration, actor, party }: { view: DemoView; t: number; duration: number; actor: DemoActor; party: DemoActor }) {
   switch (view.kind) {
     case "chat": return <ChatView view={view} t={t} />;
     case "steps": return <StepsView view={view} t={t} />;
     case "checks": return <ChecksView view={view} t={t} />;
     case "group": return <GroupView view={view} t={t} />;
-    case "inbox": return <InboxView view={view} t={t} actor={actor} />;
-    case "mail": return <MailView view={view} t={t} actor={actor} />;
-    case "sheet": return <SheetView view={view} t={t} duration={duration} actor={actor} />;
+    case "inbox": return <InboxView view={view} t={t} actor={actor} party={party} />;
+    case "mail": return <MailView view={view} t={t} actor={actor} party={party} />;
+    case "sheet": return <SheetView view={view} t={t} duration={duration} actor={actor} party={party} />;
     case "form": return <FormView view={view} t={t} actor={actor} />;
-    case "confirm": return <ConfirmView view={view} t={t} />;
+    case "confirm": return <ConfirmView view={view} t={t} party={party} />;
     case "done": return <DoneView view={view} t={t} />;
+    case "menu": return <MenuView view={view} t={t} actor={actor} party={party} />;
+    case "orders": return <OrdersView view={view} t={t} actor={actor} party={party} />;
+    case "upload": return <UploadView view={view} t={t} actor={actor} party={party} />;
+    case "catalog": return <CatalogView view={view} t={t} actor={actor} party={party} />;
+    case "feed": return <FeedView view={view} t={t} actor={actor} party={party} />;
     default: return null;
   }
 }
@@ -661,16 +619,18 @@ function SceneView({ view, t, duration, actor }: { view: DemoView; t: number; du
 export function DemoStage({ script, time, title, number }: { script: DemoScript; time: number; title?: string; number?: number }) {
   const { scene, index, t } = locateScene(script, time);
   const actor = timed(scene.actor, t) ?? "doogo";
+  const audience = demoAudience(script);
+  const party = partyOf(audience);
   if (scene.view.kind === "end") {
-    return <div className="gd-stage is-end"><EndCard view={scene.view} t={t} /></div>;
+    return <div className={`gd-stage is-${audience} is-end`}><EndCard view={scene.view} t={t} audience={audience} /></div>;
   }
   if (scene.view.kind === "cover") {
     const coverTitle = title?.trim() || defaultTitle(script.id);
     const coverLength = Array.from(coverTitle).length;
     return (
-      <div className="gd-stage is-cover">
+      <div className={`gd-stage is-${audience} is-cover`}>
         <div className="gd-cover-caption">
-          <span>공급사 사용법{number ? ` ${String(number).padStart(2, "0")}` : ""}</span>
+          <span>{audienceLabel(audience)} 사용법{number ? ` ${String(number).padStart(2, "0")}` : ""}</span>
           <strong style={{ fontSize: coverLength > 14 ? 23 : 27 }}>{coverTitle}</strong>
         </div>
         <div className="gd-card is-app is-cover">
@@ -686,19 +646,19 @@ export function DemoStage({ script, time, title, number }: { script: DemoScript;
   const titleLength = Array.from(plainCaption(scene.caption.title)).length;
   const fade = easeOut(prog(t, 0, 0.25));
   return (
-    <div className="gd-stage">
+    <div className={`gd-stage is-${audience}`}>
       <div className="gd-caption" style={sameCaption ? undefined : appear(t, 0, 0.35, 8)}>
         <span>{scene.caption.kicker}</span>
         <strong style={{ fontSize: titleLength > 12 ? 24 : 27 }}>{highlight(scene.caption.title)}</strong>
       </div>
       <div className="gd-actors">
-        <span className={actor === "supplier" ? "is-on is-supplier" : ""}>공급사</span>
+        <span className={actor === party ? `is-on is-${party}` : ""}>{audienceLabel(audience)}</span>
         <span className={actor === "doogo" ? "is-on is-doogo" : ""}>두고푸드</span>
       </div>
       <div className={`gd-card ${browser ? "is-browser" : "is-app"} is-by-${actor}`}>
         {browser && <div className="gd-browser-bar"><i /><i /><i /><span>{browserUrl(scene.view)}</span></div>}
         <div className="gd-view" style={{ opacity: lerp(0.35, 1, fade) }}>
-          <SceneView view={scene.view} t={t} duration={scene.duration} actor={actor} />
+          <SceneView view={scene.view} t={t} duration={scene.duration} actor={actor} party={party} />
         </div>
       </div>
       <p className="gd-foot">이해를 돕기 위한 예시 화면이에요</p>
@@ -820,7 +780,7 @@ export function GuideDemoPlayer({ script, label, number, seek, onScene, next }: 
   };
   let sceneStart = 0;
   return (
-    <div className="gd-player">
+    <div className={`gd-player is-${demoAudience(script)}`}>
       <div className="gd-screen" ref={screenRef} onClick={toggle} role="group" aria-label={`${label} 안내 영상 (${playing ? "재생 중, 누르면 일시정지" : "누르면 재생"})`}>
         <div className="gd-scaler" style={{ transform: `scale(${scale})` }} aria-hidden="true">
           <DemoStage script={script} time={time} title={label} number={number} />
@@ -856,10 +816,18 @@ export function GuideDemoPlayer({ script, label, number, seek, onScene, next }: 
   );
 }
 
+// 기본 영상 목록에서 몇 번째 영상인지(표지의 "사용법 0N")
+const demoNumber = (id: string) => {
+  const supplier = (SUPPLIER_DEMO_VIDEO_IDS as readonly string[]).indexOf(id);
+  if (supplier >= 0) return supplier + 1;
+  const seller = (SELLER_DEMO_VIDEO_IDS as readonly string[]).indexOf(id);
+  return seller >= 0 ? seller + 1 : undefined;
+};
+
 // 개발용: 영상 파일(mp4)로 뽑을 때 쓰는 한 프레임 화면(/dev/guide-demo/:id, 개발 서버에서만 연결)
 export function GuideDemoRender() {
   const { id = "overview" } = useParams();
-  const script = SUPPLIER_DEMO_SCRIPTS[id];
+  const script = SUPPLIER_DEMO_SCRIPTS[id] ?? SELLER_DEMO_SCRIPTS[id];
   const [time, setTime] = useState(0);
   useEffect(() => {
     if (!script) return;
@@ -875,7 +843,7 @@ export function GuideDemoRender() {
   if (!script) return <p>없는 영상입니다: {id}</p>;
   return (
     <div className="gd-render" style={{ width: DEMO_W, height: DEMO_H }}>
-      <DemoStage script={script} time={time} number={SUPPLIER_DEMO_VIDEO_IDS.indexOf(id as (typeof SUPPLIER_DEMO_VIDEO_IDS)[number]) + 1 || undefined} />
+      <DemoStage script={script} time={time} number={demoNumber(id)} />
     </div>
   );
 }

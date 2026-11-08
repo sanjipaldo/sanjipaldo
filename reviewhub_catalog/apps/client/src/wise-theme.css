@@ -1912,3 +1912,50 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .public-modal-backdrop.is-sheet .sourcing-modal-head .modal-icon { width: 42px; height: 42px; }
   .public-modal-backdrop.is-sheet .sourcing-modal-head p { font-size: 14.5px; }
 }
+
+/* 위탁셀러 사용방법(/how-to/seller): 메뉴 6개 · 가격 보는 법 · 주문 상태 표 · 취소/반품 카드 · 발주오라 공식 영상 링크 */
+.usage-link-grid.usage-link-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.usage-price-terms { margin-top: 14px; }
+.usage-official { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-top: 12px; padding: 14px 16px; border: 1px solid var(--u-line-soft); border-radius: var(--w-radius-md); background: #fff; }
+.usage-official > span { display: inline-flex; align-items: center; gap: 7px; color: var(--w-ink); font-size: 14px; font-weight: 700; word-break: keep-all; }
+.usage-official > span svg { flex: 0 0 auto; color: #dc2626; }
+.usage-official > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.usage-official a { display: inline-grid; grid-template-columns: auto auto; align-items: center; column-gap: 8px; min-height: 48px; padding: 6px 14px; border: 1px solid var(--w-line); border-radius: 12px; color: var(--w-ink); background: var(--w-soft-2); text-decoration: none; }
+.usage-official a b { font-size: 14px; font-weight: 800; }
+.usage-official a small { grid-column: 1; color: var(--w-mute); font-size: 11.5px; font-weight: 600; }
+.usage-official a svg { grid-column: 2; grid-row: 1 / span 2; color: var(--w-mute); }
+.usage-official a:hover { border-color: var(--w-ink); }
+.usage-status-list { display: grid; margin: 0 0 4px; padding: 0; overflow: hidden; border: 1px solid #e4e8e1; border-radius: var(--w-radius-lg); list-style: none; }
+.usage-status-list li { display: grid; grid-template-columns: 112px minmax(0, 1fr) minmax(0, 1.15fr); gap: 14px; align-items: center; padding: 13px 16px; border-top: 1px solid #e4e8e1; }
+.usage-status-list li:first-child { border-top: 0; }
+.usage-status-list li span { color: var(--w-body); font-size: 14px; line-height: 1.55; word-break: keep-all; }
+.usage-status-list li b { color: var(--w-ink); font-size: 14px; font-weight: 700; line-height: 1.55; word-break: keep-all; }
+.usage-status-chip { display: inline-flex; width: fit-content; align-items: center; height: 28px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-style: normal; font-weight: 800; white-space: nowrap; }
+.usage-status-chip.is-wait { color: #92400e; background: #fef3c7; }
+.usage-status-chip.is-accept { color: #1d4ed8; background: #dbeafe; }
+.usage-status-chip.is-ready { color: #6d28d9; background: #ede9fe; }
+.usage-status-chip.is-ship { color: #fff; background: #16a34a; }
+.usage-status-chip.is-done { color: #fff; background: var(--w-ink-deep); }
+.usage-cs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.usage-cs-grid article { padding: 18px; border: 1px solid #e4e8e1; border-radius: var(--w-radius-lg); background: var(--w-soft-2); }
+.usage-cs-grid strong { display: inline-flex; align-items: center; gap: 7px; color: var(--w-ink); font-size: 16px; font-weight: 800; }
+.usage-cs-grid strong svg { color: var(--u-strong); }
+.usage-cs-grid ul { display: grid; gap: 8px; margin: 12px 0 0; padding-left: 18px; color: var(--w-body); font-size: 14px; line-height: 1.6; word-break: keep-all; }
+.usage-cs-grid li b { color: var(--w-ink); }
+.usage-cs-rules { margin-top: 12px; padding: 14px 16px; border: 1px solid #f0d0d3; border-radius: var(--w-radius-md); background: linear-gradient(135deg, #fff, #fff4f5); }
+.usage-cs-rules > span { display: inline-flex; align-items: center; gap: 6px; color: #b42318; font-size: 14px; font-weight: 800; }
+.usage-cs-rules ul { display: grid; gap: 6px; margin: 10px 0 0; padding-left: 18px; color: var(--w-body); font-size: 14px; line-height: 1.55; word-break: keep-all; }
+.usage-disclaimer a { color: var(--u-strong); font-weight: 700; }
+@media (max-width: 1050px) {
+  .usage-link-grid.usage-link-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .usage-status-list li { grid-template-columns: 104px minmax(0, 1fr); }
+  .usage-status-list li b { grid-column: 2; }
+}
+@media (max-width: 720px) {
+  .usage-link-grid.usage-link-grid-3, .usage-cs-grid { grid-template-columns: 1fr; }
+  .usage-status-list li { grid-template-columns: 1fr; gap: 6px; padding: 12px 14px; }
+  .usage-status-list li b { grid-column: auto; }
+  .usage-official { padding: 14px; }
+  .usage-official > div, .usage-official a { width: 100%; }
+  .usage-cs-grid article { padding: 16px 14px; }
+}

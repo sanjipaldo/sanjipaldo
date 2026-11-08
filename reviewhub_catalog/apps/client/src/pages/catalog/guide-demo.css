@@ -255,3 +255,219 @@
 .gd-segments button i { position: absolute; top: 7px; left: 0; right: 0; height: 4px; border-radius: 999px; background: var(--u-strong, #1d4f91); transform-origin: 0 50%; }
 .gd-time { flex: 0 0 auto; color: var(--w-mute, #8a94a3); font-size: 12px; font-variant-numeric: tabular-nums; }
 .gd-render { position: relative; overflow: hidden; }
+
+/* ───────── 위탁셀러 영상: 초록 테마(위탁셀러 사용방법 화면의 딥그린·연두와 같은 색) ───────── */
+.gd-stage.is-seller { background: radial-gradient(130% 75% at 50% -5%, #2b5a1d 0%, #11250b 52%, #091405 100%); }
+.gd-stage.is-seller .gd-caption > span { color: #b5c9a8; }
+.gd-stage.is-seller .gd-caption em { color: #9fe870; }
+.gd-stage.is-seller .gd-actors span { color: #8fa585; }
+.gd-stage.is-seller .gd-actors span.is-on.is-seller { color: #0f1d08; background: #fff; }
+.gd-stage.is-seller .gd-actors span.is-on.is-doogo { color: #163300; background: #9fe870; }
+.gd-stage.is-seller .gd-card.is-browser.is-by-doogo { border-color: #9fe870; }
+.gd-stage.is-seller .gd-card.is-browser.is-by-seller { border-color: #4b9a2f; }
+.gd-stage.is-seller .gd-foot { color: #6f8a62; }
+.gd-stage.is-seller .gd-status { background: #163300; }
+.gd-stage.is-seller .gd-status i { background: #9fe870; box-shadow: 0 0 0 3px rgba(159, 232, 112, .25); }
+.gd-stage.is-seller .gd-status b { color: #9fe870; }
+.gd-stage.is-seller .gd-status.is-seller { background: #3d7d27; }
+.gd-stage.is-seller .gd-status.is-seller i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .25); }
+.gd-stage.is-seller .gd-status.is-seller b { color: #e3f7cf; }
+.gd-cursor.is-seller b { color: #fff; background: #3d8a26; }
+.gd-cursor.is-seller .gd-ripple { background: rgba(61, 138, 38, .35); }
+.gd-stage.is-seller .gd-cursor.is-doogo b { color: #163300; background: #9fe870; }
+.gd-stage.is-seller .gd-cursor.is-doogo .gd-ripple { background: rgba(159, 232, 112, .55); }
+.gd-stage.is-seller .gd-caret { background: #3d8a26; }
+.gd-stage.is-seller .gd-tag { color: #1f5c12; background: #ecf9e1; }
+.gd-stage.is-seller .gd-tag i { background: #4b9a2f; }
+.gd-stage.is-seller .gd-box { border-color: #b5e48f; }
+.gd-stage.is-seller .gd-box li.is-focus { background: #f1fbe9; }
+.gd-stage.is-seller .gd-who.is-doogo { color: #9fe870; background: #163300; }
+.gd-who.is-seller { color: #334155; background: #fff; box-shadow: inset 0 0 0 1px #cbd5e1; }
+.gd-stage.is-seller .gd-done-card { border-color: #b5e48f; background: linear-gradient(180deg, #f5fdf0, #fff); }
+.gd-stage.is-seller .gd-done-card li { border-top-color: #dcebd0; }
+.gd-stage.is-seller .gd-done-card li b { color: #163300; }
+.gd-stage.is-seller .gd-done-total { border-top-color: #163300; }
+.gd-stage.is-seller .gd-done-total span, .gd-stage.is-seller .gd-done-total b { color: #163300; }
+.gd-stage.is-seller .gd-done-toggle { color: #1f5c12; background: #eefbe5; }
+.gd-stage.is-seller .gd-cover-caption span { color: #163300; background: #9fe870; }
+.gd-stage.is-seller .gd-cover-head span { color: #1f5c12; background: #ecf9e1; }
+.gd-stage.is-seller .gd-cover li .gd-num { background: #163300; }
+.gd-stage.is-seller .gd-cover li.is-on { background: #f1fbe9; box-shadow: inset 0 0 0 1.5px #b5e48f; }
+.gd-stage.is-seller .gd-cover li.is-on .gd-num, .gd-stage.is-seller .gd-cover li.is-past .gd-num { color: #163300; background: #9fe870; }
+.gd-stage.is-seller.is-end { background: radial-gradient(120% 70% at 50% 30%, #23481a 0%, #0f1f09 60%, #081104 100%); }
+.gd-stage.is-seller .gd-end-tagline, .gd-stage.is-seller .gd-end-small { color: #b5c9a8; }
+.gd-stage.is-seller .gd-end-big { color: #9fe870; }
+.gd-stage.is-seller .gd-end-cta { color: #163300; background: #9fe870; }
+.gd-stage.is-seller .gd-end-cta small { color: #2c5a1c; }
+.gd-stage.is-seller .gd-form-submit { color: #163300; background: #9fe870; }
+.gd-stage.is-seller .gd-form-submit.is-done { color: #fff; background: #16a34a; }
+.gd-field.is-active.is-seller b { border-color: #4b9a2f; box-shadow: 0 0 0 3px rgba(75, 154, 47, .18); }
+.gd-stage.is-seller .gd-field.is-active.is-doogo b { border-color: #7fd34e; box-shadow: 0 0 0 3px rgba(159, 232, 112, .3); }
+.gd-stage.is-seller .gd-sheet th.is-focus { color: #163300; background: #e3f6d6; }
+.gd-stage.is-seller .gd-sheet td.is-focus { background: #f1fbe9; }
+.gd-stage.is-seller .gd-sheet td.is-active { box-shadow: inset 0 0 0 2px #3d8a26; }
+.gd-player.is-seller .gd-screen { background: #0f1f09; }
+.gd-player.is-seller .gd-bigplay { color: #163300; background: #9fe870; }
+.gd-player.is-seller .gd-bigplay small { color: #2c5a1c; }
+.gd-player.is-seller .gd-ended { background: linear-gradient(180deg, rgba(15, 31, 9, 0) 55%, rgba(15, 31, 9, .85)); }
+.gd-player.is-seller .gd-ended button.is-next { border-color: #9fe870; color: #163300; background: #9fe870; }
+
+/* ───────── 두고푸드 도매몰(발주오라) 화면 ───────── */
+.gd-shop-head { position: absolute; top: 26px; left: 0; right: 0; display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-bottom: 1px solid #eef1f5; background: #fff; }
+.gd-shop-logo { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; color: #fff; background: #4b9a2f; font-size: 10px; font-weight: 800; }
+.gd-shop-head b { font-size: 11.5px; font-weight: 800; }
+.gd-shop-head em { margin-left: auto; padding: 2px 8px; border-radius: 999px; color: #475569; background: #f1f5f9; font-size: 9.5px; font-style: normal; font-weight: 700; }
+.gd-shop-toast { position: absolute; left: 0; right: 0; bottom: 14px; z-index: 15; display: flex; justify-content: center; pointer-events: none; }
+.gd-shop-toast span { display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px; border-radius: 999px; color: #fff; background: rgba(17, 24, 39, .92); font-size: 12px; font-weight: 700; white-space: nowrap; }
+
+/* 메뉴(왼쪽 메뉴를 펼쳐 하위 메뉴 누르기) */
+.gd-menu-group { position: absolute; left: 10px; right: 10px; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 8px; color: #334155; font-size: 12px; }
+.gd-menu-group b { flex: 1; font-weight: 700; }
+.gd-menu-group svg { flex: 0 0 auto; color: #64748b; }
+.gd-menu-group.is-open { color: #163300; background: #f1fbe9; }
+.gd-menu-group.is-open svg { color: #3d8a26; }
+.gd-menu-children { position: absolute; left: 10px; right: 10px; overflow: hidden; }
+.gd-menu-child { position: absolute; display: flex; align-items: center; width: 149px; height: 24px; padding: 0 10px; border-radius: 7px; color: #475569; background: #f8fafc; font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+.gd-menu-child.is-target { color: #163300; background: #eaf7df; box-shadow: inset 0 0 0 1px #c9eab0; }
+.gd-menu-child.is-on { color: #163300; background: #9fe870; box-shadow: none; font-weight: 800; }
+
+/* 주문 목록(주문 등록 현황 · 전체 주문 리스트 · 배송중 · 배송완료) */
+.gd-ord-title { position: absolute; left: 10px; right: 10px; display: flex; align-items: center; gap: 6px; height: 34px; }
+.gd-ord-title strong { font-size: 13.5px; font-weight: 800; }
+.gd-ord-title span { padding: 1px 7px; border-radius: 999px; color: #1f5c12; background: #ecf9e1; font-size: 10px; font-weight: 800; }
+.gd-ord-btn { position: absolute; display: inline-flex; align-items: center; justify-content: center; gap: 3px; height: 24px; padding: 0 9px; border: 1px solid #dbe2ea; border-radius: 7px; color: #334155; background: #fff; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.gd-ord-btn.is-main { border-color: #3d8a26; color: #1f5c12; }
+.gd-ord-btn.is-main.is-danger { border-color: #dc2626; color: #b91c1c; }
+.gd-ord-btn.is-pressed { border-color: #3d8a26; color: #fff; background: #3d8a26; }
+.gd-ord-btn.is-pressed.is-danger { border-color: #dc2626; background: #dc2626; }
+.gd-ord-btn.is-muted { color: #64748b; background: #f8fafc; }
+.gd-ord-btn.is-excel { border-color: #1f8a4c; color: #1f8a4c; }
+.gd-ord-btn.is-excel.is-pressed { color: #fff; background: #1f8a4c; }
+.gd-ord-head { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 10px; height: 22px; padding: 0 10px 0 12px; border-top: 1px solid #eef1f5; border-bottom: 1px solid #eef1f5; color: #64748b; background: #f8fafc; font-size: 9.5px; }
+.gd-ord-head b { font-weight: 800; }
+.gd-ord-head b:last-child { margin-left: auto; margin-right: 18px; }
+.gd-check { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 14px; height: 14px; border: 1.5px solid #cbd5e1; border-radius: 4px; color: #fff; background: #fff; }
+.gd-check.is-on { border-color: #3d8a26; background: #3d8a26; }
+.gd-ord-row { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 10px 0 12px; border-bottom: 1px solid #f1f3f6; background: #fff; }
+.gd-ord-row.is-selected { background: #f1fbe9; }
+.gd-ord-info { flex: 1; min-width: 0; }
+.gd-stage .gd-ord-info p { margin: 0; overflow: hidden; color: #334155; font-size: 10.5px; line-height: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.gd-ord-info p b { margin-right: 5px; color: #111827; font-size: 12px; font-weight: 800; }
+.gd-ord-info p small { color: #94a3b8; font-size: 9.5px; }
+.gd-stage .gd-ord-info p.gd-ord-invoice { color: #15803d; font-size: 9.5px; font-weight: 700; }
+.gd-ord-status { display: inline-flex; flex: 0 0 auto; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 10px; font-style: normal; font-weight: 800; }
+.gd-ord-status.is-wait { color: #92400e; background: #fef3c7; }
+.gd-ord-status.is-accept { color: #1d4ed8; background: #dbeafe; }
+.gd-ord-status.is-ready { color: #6d28d9; background: #ede9fe; }
+.gd-ord-status.is-ship { color: #fff; background: #16a34a; }
+.gd-ord-status.is-done { color: #fff; background: #163300; }
+.gd-ord-status.is-cancel { color: #b91c1c; background: #fee2e2; }
+.gd-ord-status.is-cs { color: #c2410c; background: #ffedd5; }
+/* 확인 창(즉시 취소 · 반품 신청): 칸마다 위치를 GuideDemo 상수로 정합니다 */
+.gd-ord-dialog { position: absolute; left: 22px; right: 22px; z-index: 12; border-radius: 14px; background: #fff; box-shadow: 0 16px 36px rgba(0, 0, 0, .3); }
+.gd-ord-dialog > * { position: absolute; }
+.gd-ord-dialog > strong { left: 16px; right: 16px; font-size: 14.5px; font-weight: 800; line-height: 20px; }
+.gd-ord-dialog > small { left: 16px; right: 16px; overflow: hidden; color: #8a94a3; font-size: 10.5px; line-height: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.gd-ord-dialog > label { left: 16px; color: #64748b; font-size: 10px; font-weight: 800; line-height: 14px; }
+.gd-dlg-option { display: inline-flex; align-items: center; justify-content: center; height: 26px; border: 1px solid #dbe2ea; border-radius: 8px; color: #334155; font-size: 11px; font-weight: 700; }
+.gd-dlg-option.is-on { border-color: #3d8a26; color: #fff; background: #3d8a26; }
+.gd-stage .gd-dlg-detail { left: 16px; right: 16px; height: 44px; margin: 0; padding: 7px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; color: #111827; font-size: 11.5px; line-height: 1.45; }
+.gd-dlg-photos { left: 16px; right: 16px; display: flex; align-items: center; gap: 6px; height: 30px; }
+.gd-dlg-photos span { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 7px; color: #3d8a26; background: #eaf7df; }
+.gd-dlg-photos small { margin-left: 2px; color: #475569; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.gd-dlg-btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; border-radius: 9px; color: #334155; background: #f1f5f9; font-size: 12px; font-weight: 800; }
+.gd-dlg-btn.is-confirm.is-primary { color: #163300; background: #9fe870; }
+.gd-dlg-btn.is-confirm.is-danger { color: #fff; background: #dc2626; }
+.gd-dlg-btn.is-pressed { filter: brightness(.9); }
+
+/* 대량 주문 입력(엑셀): 파일 끌어 놓기 → 상품 매칭 → 등록 */
+.gd-up-drop { position: absolute; left: 10px; right: 10px; display: flex; align-items: center; justify-content: center; border: 1.5px dashed #b5e48f; border-radius: 12px; background: #f7fdf2; }
+.gd-up-drop.is-dropped { border-style: solid; border-color: #c9eab0; background: #fff; }
+.gd-up-empty { display: flex; flex-direction: column; align-items: center; gap: 2px; color: #3d8a26; }
+.gd-up-empty b { color: #334155; font-size: 11.5px; font-weight: 800; }
+.gd-up-empty small { color: #94a3b8; font-size: 9.5px; }
+.gd-up-file { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0 12px; }
+.gd-up-file > span:nth-child(2) { flex: 1; min-width: 0; }
+.gd-up-file b { display: block; overflow: hidden; font-size: 11.5px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.gd-up-file small { color: #15803d; font-size: 10px; font-weight: 700; }
+.gd-up-file em { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; color: #fff; background: #16a34a; }
+.gd-up-list-head { position: absolute; left: 10px; right: 10px; display: flex; align-items: center; gap: 8px; height: 18px; font-size: 10px; }
+.gd-up-list-head b { font-size: 11.5px; font-weight: 800; }
+.gd-up-list-head span { color: #94a3b8; }
+.gd-up-row { position: absolute; left: 10px; right: 10px; height: 36px; border: 1px solid #eef1f5; border-radius: 9px; background: #fff; }
+.gd-up-row > * { position: absolute; top: 50%; transform: translateY(-50%); }
+.gd-up-mine { left: 8px; width: 98px; overflow: hidden; color: #64748b; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.gd-up-arrow { left: 108px; color: #94a3b8; font-size: 11px; }
+.gd-up-product { left: 124px; width: 118px; overflow: hidden; color: #111827; font-size: 10.5px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.gd-up-pick { left: 124px; display: inline-flex; align-items: center; justify-content: center; width: 76px; height: 22px; border: 1px dashed #f59e0b; border-radius: 6px; color: #b45309; background: #fffbeb; font-size: 10px; font-weight: 800; }
+.gd-up-badge { right: 6px; padding: 2px 6px; border-radius: 6px; font-size: 9px; font-style: normal; font-weight: 800; white-space: nowrap; }
+.gd-up-badge.is-auto { color: #15803d; background: #dcfce7; }
+.gd-up-badge.is-matched { color: #fff; background: #16a34a; }
+.gd-up-badge.is-need { color: #b45309; background: #fef3c7; }
+.gd-up-submit { position: absolute; left: 10px; right: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; border-radius: 10px; color: #94a3b8; background: #eef1f5; font-size: 12.5px; font-weight: 800; }
+.gd-up-submit.is-ready { color: #163300; background: #9fe870; }
+.gd-up-submit.is-done { color: #fff; background: #16a34a; }
+.gd-up-ghost { position: absolute; top: 0; left: 0; z-index: 19; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid #c9eab0; border-radius: 7px; color: #1f5c12; background: #fff; box-shadow: 0 6px 16px rgba(0, 0, 0, .18); font-size: 9.5px; font-weight: 800; white-space: nowrap; pointer-events: none; }
+
+/* 두고푸드 DB센터 단가표(검색 → 상품 카드 → 칸 설명 말풍선) */
+.gd-cat-title { position: absolute; left: 10px; right: 10px; display: flex; align-items: center; justify-content: space-between; height: 38px; }
+.gd-cat-title strong { font-size: 14.5px; font-weight: 800; }
+.gd-cat-title span { color: #94a3b8; font-size: 10px; }
+.gd-cat-search { position: absolute; left: 10px; right: 10px; display: flex; align-items: center; gap: 7px; padding: 0 11px; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #94a3b8; font-size: 12px; }
+.gd-cat-search.is-active { border-color: #4b9a2f; box-shadow: 0 0 0 3px rgba(75, 154, 47, .16); }
+.gd-cat-search b { color: #111827; font-weight: 700; }
+.gd-cat-chips { position: absolute; left: 10px; right: 10px; display: flex; gap: 5px; height: 22px; overflow: hidden; }
+.gd-cat-chips span { display: inline-flex; flex: 0 0 auto; align-items: center; padding: 0 9px; border: 1px solid #e2e8f0; border-radius: 999px; color: #475569; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.gd-cat-chips span.is-on { border-color: #163300; color: #fff; background: #163300; }
+.gd-cat-label { position: absolute; left: 12px; color: #64748b; font-size: 10px; font-weight: 700; }
+.gd-cat-card, .gd-feed-card { position: absolute; left: 10px; width: 304px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; }
+.gd-cat-card { height: 70px; }
+.gd-cat-card.is-unavailable, .gd-feed-card.is-soldout { border-color: #f0d0d3; background: linear-gradient(135deg, #fff, #fff4f5); }
+.gd-cat-card > *, .gd-feed-card > * { position: absolute; }
+.gd-cat-thumb { top: 8px; left: 8px; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; overflow: hidden; border-radius: 9px; background: #f4f7ef; font-size: 22px; }
+.gd-cat-thumb i { position: absolute; left: 0; right: 0; bottom: 0; color: #fff; background: #475569; font-size: 8.5px; font-style: normal; font-weight: 800; line-height: 13px; text-align: center; }
+.gd-cat-name { top: 7px; left: 56px; right: 62px; overflow: hidden; color: #111827; font-size: 12px; font-weight: 800; line-height: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.gd-cat-name mark { padding: 0 1px; border-radius: 3px; color: inherit; background: #e3f7cf; }
+.gd-cat-status { top: 7px; right: 8px; display: inline-flex; align-items: center; gap: 2px; height: 18px; padding: 0 7px; border-radius: 999px; font-size: 9.5px; font-style: normal; font-weight: 800; }
+.gd-cat-status.is-on { color: #fff; background: #111827; }
+.gd-cat-status.is-sold { color: #fff; background: #475569; }
+.gd-cat-status.is-season { color: #fff; background: #dc2626; }
+.gd-cat-code { top: 29px; left: 56px; color: #94a3b8; font-size: 9.5px; }
+.gd-cat-pill { top: 27px; display: inline-flex; align-items: center; justify-content: center; height: 17px; padding: 0 6px; border-radius: 6px; font-size: 9.5px; font-weight: 800; white-space: nowrap; }
+.gd-cat-pill.is-sale { left: 116px; width: 82px; color: #1f5c12; background: #ecf9e1; }
+.gd-cat-pill.is-sale.is-fixed { color: #9a3412; background: #ffedd5; }
+.gd-cat-pill.is-ship { left: 204px; width: 90px; color: #475569; background: #f1f5f9; }
+.gd-cat-pill.is-ship.is-free { color: #1d4ed8; background: #e0ecff; }
+.gd-cat-price { top: 48px; left: 56px; display: inline-flex; align-items: baseline; gap: 4px; }
+.gd-cat-price.is-general { left: 170px; }
+.gd-cat-price small { color: #64748b; font-size: 9.5px; font-weight: 700; }
+.gd-cat-price b { color: #111827; font-size: 11.5px; font-weight: 800; }
+.gd-cat-ring { position: absolute; z-index: 6; border: 2px solid #4b9a2f; border-radius: 8px; box-shadow: 0 0 0 4px rgba(75, 154, 47, .18); pointer-events: none; }
+.gd-cat-callout { position: absolute; left: 18px; right: 18px; z-index: 7; display: flex; flex-direction: column; gap: 1px; padding: 8px 12px; border-radius: 10px; color: #fff; background: #111827; box-shadow: 0 10px 24px rgba(0, 0, 0, .25); font-size: 11px; font-weight: 700; line-height: 1.45; }
+.gd-cat-callout i { position: absolute; width: 12px; height: 12px; background: #111827; transform: rotate(45deg); }
+.gd-cat-callout.is-below i { top: -5px; }
+.gd-cat-callout.is-above i { bottom: -5px; }
+
+/* 가격변동 · 품절이슈 */
+.gd-feed-title { position: absolute; left: 10px; right: 10px; display: flex; flex-direction: column; justify-content: center; height: 40px; }
+.gd-feed-title strong { font-size: 14.5px; font-weight: 800; line-height: 18px; }
+.gd-feed-title span { color: #94a3b8; font-size: 9.5px; line-height: 13px; }
+.gd-feed-tabs { position: absolute; left: 10px; right: 10px; display: flex; gap: 4px; height: 24px; }
+.gd-feed-tabs span { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 3px; padding: 0 8px; border: 1px solid #e2e8f0; border-radius: 999px; color: #475569; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.gd-feed-tabs span b { color: #94a3b8; font-weight: 800; }
+.gd-feed-tabs span.is-on { border-color: #9fe870; color: #163300; background: #9fe870; }
+.gd-feed-tabs span.is-on b { color: #163300; }
+.gd-feed-sum { position: absolute; left: 10px; right: 10px; display: flex; align-items: center; gap: 3px; height: 28px; padding: 0 10px; border-radius: 9px; color: #334155; background: #f6f8f4; font-size: 10.5px; white-space: nowrap; }
+.gd-feed-sum b { color: #111827; font-weight: 800; }
+.gd-feed-sum b.is-up { color: #dc2626; }
+.gd-feed-sum b.is-down { color: #2563eb; }
+.gd-feed-name { top: 9px; left: 56px; right: 10px; overflow: hidden; font-size: 12px; font-weight: 800; line-height: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.gd-feed-code { top: 27px; left: 56px; color: #94a3b8; font-size: 9.5px; }
+.gd-feed-change { top: 46px; left: 56px; right: 8px; display: flex; align-items: center; gap: 4px; height: 20px; font-size: 10.5px; white-space: nowrap; }
+.gd-feed-label { padding: 1px 5px; border-radius: 5px; color: #475569; background: #f1f5f9; font-size: 9px; font-weight: 800; }
+.gd-feed-change s { color: #94a3b8; }
+.gd-feed-change b { color: #111827; font-weight: 800; }
+.gd-feed-change em { margin-left: auto; padding: 2px 6px; border-radius: 6px; font-size: 9.5px; font-style: normal; font-weight: 800; }
+.gd-feed-change em.is-up { color: #dc2626; background: #fee2e2; }
+.gd-feed-change em.is-down { color: #2563eb; background: #dbeafe; }
+.gd-feed-change em.is-sold { display: inline-flex; align-items: center; gap: 2px; color: #fff; background: #475569; }

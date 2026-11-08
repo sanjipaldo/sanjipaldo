@@ -3,6 +3,7 @@ import { DatabaseError, getDb } from "../_core/db";
 import { sendPartnerProposalMail, sendPartnerReceivedMail, type MailAttachment } from "./partner-mail";
 import { buildPartnerProposalPdf, proposalFileName } from "./partner-proposal";
 import { SUPPLIER_GUIDE_SETTING_KEY, parseSupplierGuide } from "@repo/shared/supplier-guide";
+import { SELLER_GUIDE_SETTING_KEY, parseSellerGuide } from "@repo/shared/seller-guide";
 import { partnerStageToStatus, type PartnerContractType, type PartnerDeal, type PartnerDealHistory, type PartnerStage } from "@repo/shared/partner-deal";
 import {
   catalogActivityLogs,
@@ -1692,6 +1693,12 @@ export async function createSourcingRequest(input: {
 export async function getSupplierGuide() {
   const rows = await getDb().select().from(contentSettings).where(eq(contentSettings.key, SUPPLIER_GUIDE_SETTING_KEY)).limit(1);
   return parseSupplierGuide(rows[0]?.value);
+}
+
+// 위탁셀러 사용방법의 사용법 영상 목록(관리자 > 사용방법 관리 > 위탁셀러, 저장한 적이 없으면 기본 안내 영상 8편)
+export async function getSellerGuide() {
+  const rows = await getDb().select().from(contentSettings).where(eq(contentSettings.key, SELLER_GUIDE_SETTING_KEY)).limit(1);
+  return parseSellerGuide(rows[0]?.value);
 }
 
 // 입점 제안서 PDF(디자인된 고정 문서): 업체명이 있으면 표지에 "OO 귀하"를 찍습니다.

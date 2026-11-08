@@ -267,7 +267,7 @@ function PageNumbers({ page, totalPages, onChange, label }: { page: number; tota
 // 검색어는 띄어쓰기·대소문자를 무시하고 상품명·옵션명·상품코드에서 찾습니다.
 const searchKey = (value: string | null | undefined) => (value ?? "").replace(/\s+/g, "").toLowerCase();
 
-function parseGuideContent(value?: string): GuideContent {
+export function parseGuideContent(value?: string): GuideContent {
   if (!value) return fallbackGuideContent;
   try {
     const parsed = JSON.parse(value) as Partial<GuideContent>;
@@ -397,7 +397,7 @@ async function loadOperations() {
   return payload.ok ? payload.data ?? null : null;
 }
 
-async function loadGuideSettings() {
+export async function loadGuideSettings() {
   const response = await apiFetch("/catalog/guide", { auth: false, silent: true });
   if (!response.ok) return null;
   const payload = (await response.json()) as { ok?: boolean; data?: { settings?: CatalogData["settings"] } };

@@ -12,6 +12,7 @@ import {
   createPartnerRequest,
   buildPartnerProposal,
   getPartnerProposalForRequest,
+  getSellerGuide,
   getSupplierGuide,
   resendPartnerProposal,
   updatePartnerDeal,
@@ -188,11 +189,11 @@ const NewProductSettingSchema = z.object({
 });
 
 const SettingSchema = z.object({
-  key: z.enum(["guide", "guide_sections", "sourcing_intro", "new_products", "supplier_guide"]),
+  key: z.enum(["guide", "guide_sections", "sourcing_intro", "new_products", "supplier_guide", "seller_guide"]),
   value: z.string().trim().min(1).max(300000)
 }).superRefine((input, context) => {
-  if (input.key === "supplier_guide") {
-    // 공급사 사용방법 운영 기준·영상 목록(JSON 객체)
+  if (input.key === "supplier_guide" || input.key === "seller_guide") {
+    // 공급사 사용방법 운영 기준·영상 목록 / 위탁셀러 사용법 영상 목록(JSON 객체)
     let guide: unknown = null;
     try {
       guide = JSON.parse(input.value);
@@ -342,6 +343,7 @@ catalogRouter.get("/price-changes/export", publicRoute, async (c) => {
 
 // 공급사 사용방법 화면: 운영 기준·영상 목록(관리자 > 사용방법 관리, 빈 칸은 기본값)
 catalogRouter.get("/supplier-guide", publicRoute, async (c) => c.json(apiSuccess({ guide: await getSupplierGuide() })));
+catalogRouter.get("/seller-guide", publicRoute, async (c) => c.json(apiSuccess({ guide: await getSellerGuide() })));
 
 const pdfHeaders = (filename: string, download: boolean, cache = "no-store") => ({
   "Content-Type": "application/pdf",

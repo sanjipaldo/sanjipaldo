@@ -28,6 +28,7 @@ import {
   Send,
   Search,
   ShieldCheck,
+  ShoppingCart,
   Store,
   Tags,
   TrendingUp,
@@ -56,6 +57,7 @@ import { authClient, clearAuthToken } from "@/lib/auth";
 import { SUPPLY_STATUS_LABELS, supplyStatus, type SupplyStatus } from "@/lib/supply-status";
 import { PARTNER_CONTRACT_LABELS, PARTNER_CONTRACT_TYPES, PARTNER_STAGES, PARTNER_STAGE_LABELS, partnerContractSummary, type PartnerContractType, type PartnerStage } from "@repo/shared/partner-deal";
 import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_GUIDE_SETTING_KEY, SUPPLIER_TERM_LABELS, SUPPLIER_VIDEO_GROUPS, hasSupplierDemo, parseSupplierGuide, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideTerms, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
+import { SELLER_GUIDE_SETTING_KEY, SELLER_VIDEO_GROUPS, hasSellerDemo, parseSellerGuide, type SellerGuideSettings } from "@repo/shared/seller-guide";
 import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 import type { AdminCatalogData, AdminHomeData, AdminOverview, BaljuoraConnection, Category, CatalogSyncOutboxItem, CatalogSyncOverview, CatalogSyncRun, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, SalesOverview, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
@@ -2898,7 +2900,85 @@ function PartnerDealEditor({ request, onSaved }: { request: SourcingRequest; onS
 }
 
 // 관리자 > 사용방법 관리: 공급사 사용방법 화면이 쓰는 운영 기준과 사용법 영상 목록(content_settings "supplier_guide"). 입점 제안서 PDF는 디자인된 고정 문서입니다.
+// 사용방법 관리: 공급사(운영 기준 + 사용법 영상) · 위탁셀러(사용법 영상) 탭. 공개 "사용방법" 화면이 이 값을 씁니다.
 function UsageGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (silent?: boolean) => Promise<void> }) {
+  const [audience, setAudience] = useState<"supplier" | "seller">("supplier");
+  const supplier = audience === "supplier";
+  return (
+    <>
+      <div className="admin-page-heading"><div><span>USAGE GUIDE</span><h1>사용방법 관리</h1><p>{supplier ? <>공개 사이트 "사용방법 &gt; 공급사" 화면이 아래 운영 기준을 그대로 씁니다. 비워 두면 기본 문구가 들어갑니다. 입점 제안서 PDF(인쇄용 13쪽)는 디자인된 고정 문서라 여기 값이 들어가지 않으니, 내용을 바꾸려면 개발 요청으로 다시 만들어 주세요.</> : <>공개 사이트 "사용방법 &gt; 위탁셀러" 화면의 사용법 영상 목록입니다. 발주 마감·송장 안내·CS 기준 문구는 "공지·필독" 메뉴의 공지사항 설정(발주 안내·CS 기준)을 함께 씁니다.</>}</p></div>
+        <div className="usage-admin-links"><a href={supplier ? "/how-to/supplier" : "/how-to/seller"} target="_blank" rel="noreferrer"><ExternalLink size={15} /> 공개 화면 보기</a>{supplier && <a href="/api/catalog/partner-proposal" target="_blank" rel="noreferrer"><FileText size={15} /> 제안서 PDF 보기</a>}</div>
+      </div>
+      <div className="request-kind-tabs usage-admin-tabs" role="tablist" aria-label="사용방법 대상">
+        <button type="button" role="tab" aria-selected={supplier} className={supplier ? "active" : ""} onClick={() => setAudience("supplier")}><Store size={17} /> 공급사</button>
+        <button type="button" role="tab" aria-selected={!supplier} className={!supplier ? "active" : ""} onClick={() => setAudience("seller")}><ShoppingCart size={17} /> 위탁셀러</button>
+      </div>
+      {supplier ? <SupplierGuideAdmin data={data} refresh={refresh} /> : <SellerGuideAdmin data={data} refresh={refresh} />}
+    </>
+  );
+}
+
+// 사용법 영상 목록 편집(공급사·위탁셀러 공용): 묶음·제목·길이·설명·영상 주소, 순서 바꾸기·삭제·추가(최대 30개)
+function GuideVideoEditor({ videos, groups, hasDemo, demoNote, onChange }: {
+  videos: SupplierGuideVideo[];
+  groups: readonly string[];
+  hasDemo: (id: string) => boolean;
+  demoNote: string;
+  onChange: (videos: SupplierGuideVideo[]) => void;
+}) {
+  const setVideo = (index: number, patch: Partial<SupplierGuideVideo>) => onChange(videos.map((video, position) => position === index ? { ...video, ...patch } : video));
+  const moveVideo = (index: number, offset: number) => {
+    const target = index + offset;
+    if (target < 0 || target >= videos.length) return;
+    const next = [...videos];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(next);
+  };
+  const removeVideo = (index: number) => onChange(videos.filter((_, position) => position !== index));
+  const addVideo = () => onChange([...videos, { id: `video-${Date.now().toString(36)}`, group: groups[Math.min(2, groups.length - 1)] ?? "", title: "새 영상", description: "", url: "", duration: "" }].slice(0, 30));
+  const embedLabel = (url: string, id: string) => {
+    if (!url.trim()) return hasDemo(id) ? { text: "주소 없음 · 기본 안내 영상(애니메이션) 재생", tone: "ok" } : { text: "주소 없음 · 준비 중으로 보임", tone: "muted" };
+    const kind = supplierVideoEmbed(url).kind;
+    return kind === "youtube" ? { text: "YouTube 영상", tone: "ok" } : kind === "vimeo" ? { text: "Vimeo 영상", tone: "ok" } : kind === "file" ? { text: "영상 파일", tone: "ok" } : kind === "link" ? { text: "링크(새 창으로 열림)", tone: "warn" } : { text: "https:// 주소를 확인해 주세요", tone: "bad" };
+  };
+  return (
+    <section className="admin-card usage-admin-card">
+      <div className="card-heading"><Video size={19} /><div><h2>사용법 영상 ({videos.length}/30)</h2><p>{demoNote}</p></div></div>
+      <div className="usage-admin-videos">
+        {videos.map((video, index) => {
+          const status = embedLabel(video.url, video.id);
+          return (
+            <article key={video.id} className="usage-admin-video">
+              <span className="usage-admin-video-no">{index + 1}</span>
+              <div className="usage-admin-video-fields">
+                <label><span>묶음</span><select value={video.group} onChange={(event) => setVideo(index, { group: event.target.value })}>{[...groups, ...(groups.includes(video.group) ? [] : [video.group])].map((group) => <option key={group} value={group}>{group}</option>)}</select></label>
+                <label><span>제목</span><input maxLength={80} value={video.title} onChange={(event) => setVideo(index, { title: event.target.value })} /></label>
+                <label><span>길이</span><input maxLength={10} value={video.duration} placeholder="0:35" onChange={(event) => setVideo(index, { duration: event.target.value })} /></label>
+                <label className="is-wide"><span>설명</span><input maxLength={160} value={video.description} onChange={(event) => setVideo(index, { description: event.target.value })} /></label>
+                <label className="is-wide"><span>영상 주소</span><input maxLength={500} value={video.url} placeholder="https://youtu.be/… 또는 https://…/guide.mp4" onChange={(event) => setVideo(index, { url: event.target.value })} /><small className={`usage-embed-${status.tone}`}>{status.text}</small></label>
+              </div>
+              <div className="usage-admin-video-actions">
+                <button type="button" onClick={() => moveVideo(index, -1)} disabled={index === 0} aria-label={`${video.title} 위로`}><ArrowUp size={14} /></button>
+                <button type="button" onClick={() => moveVideo(index, 1)} disabled={index === videos.length - 1} aria-label={`${video.title} 아래로`}><ArrowDown size={14} /></button>
+                <button type="button" className="danger" onClick={() => removeVideo(index)} aria-label={`${video.title} 삭제`}><Trash2 size={14} /></button>
+              </div>
+            </article>
+          );
+        })}
+        <button type="button" className="usage-admin-add" onClick={addVideo} disabled={videos.length >= 30}><Plus size={15} /> 영상 추가</button>
+      </div>
+    </section>
+  );
+}
+
+const cleanGuideVideos = (videos: SupplierGuideVideo[]) => videos.filter((video) => video.title.trim()).map((video) => ({ ...video, title: video.title.trim(), url: video.url.trim() }));
+
+async function saveGuideSetting(key: string, value: unknown) {
+  const response = await apiFetch("/catalog/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key, value: JSON.stringify(value) }) });
+  await readData(response);
+}
+
+function SupplierGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (silent?: boolean) => Promise<void> }) {
   const savedValue = data.settings?.[SUPPLIER_GUIDE_SETTING_KEY];
   const [draft, setDraft] = useState<SupplierGuideSettings>(() => parseSupplierGuide(savedValue));
   const [saving, setSaving] = useState(false);
@@ -2908,38 +2988,12 @@ function UsageGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (
   }, [savedValue, dirty]);
   const termKeys = Object.keys(SUPPLIER_TERM_LABELS) as Array<keyof SupplierGuideTerms>;
   const setTerm = (key: keyof SupplierGuideTerms, value: string) => { setDirty(true); setDraft((current) => ({ ...current, [key]: value })); };
-  const setVideo = (index: number, patch: Partial<SupplierGuideVideo>) => { setDirty(true); setDraft((current) => ({ ...current, videos: current.videos.map((video, position) => position === index ? { ...video, ...patch } : video) })); };
-  const moveVideo = (index: number, offset: number) => {
-    setDirty(true);
-    setDraft((current) => {
-      const videos = [...current.videos];
-      const target = index + offset;
-      if (target < 0 || target >= videos.length) return current;
-      [videos[index], videos[target]] = [videos[target], videos[index]];
-      return { ...current, videos };
-    });
-  };
-  const removeVideo = (index: number) => { setDirty(true); setDraft((current) => ({ ...current, videos: current.videos.filter((_, position) => position !== index) })); };
-  const addVideo = () => {
-    setDirty(true);
-    setDraft((current) => ({ ...current, videos: [...current.videos, { id: `video-${Date.now().toString(36)}`, group: "주문 처리", title: "새 영상", description: "", url: "", duration: "" }].slice(0, 30) }));
-  };
-  const embedLabel = (url: string, id: string) => {
-    if (!url.trim()) return hasSupplierDemo(id) ? { text: "주소 없음 · 기본 안내 영상(애니메이션) 재생", tone: "ok" } : { text: "주소 없음 · 준비 중으로 보임", tone: "muted" };
-    const kind = supplierVideoEmbed(url).kind;
-    return kind === "youtube" ? { text: "YouTube 영상", tone: "ok" } : kind === "vimeo" ? { text: "Vimeo 영상", tone: "ok" } : kind === "file" ? { text: "영상 파일", tone: "ok" } : kind === "link" ? { text: "링크(새 창으로 열림)", tone: "warn" } : { text: "https:// 주소를 확인해 주세요", tone: "bad" };
-  };
   const save = async () => {
     setSaving(true);
     try {
-      const value: SupplierGuideSettings = {
-        ...draft,
-        videos: draft.videos.filter((video) => video.title.trim()).map((video) => ({ ...video, title: video.title.trim(), url: video.url.trim() }))
-      };
-      const response = await apiFetch("/catalog/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: SUPPLIER_GUIDE_SETTING_KEY, value: JSON.stringify(value) }) });
-      await readData(response);
+      await saveGuideSetting(SUPPLIER_GUIDE_SETTING_KEY, { ...draft, videos: cleanGuideVideos(draft.videos) } satisfies SupplierGuideSettings);
       setDirty(false);
-      toast.success("사용방법 설정을 저장했습니다.");
+      toast.success("공급사 사용방법 설정을 저장했습니다.");
       await refresh(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "설정을 저장하지 못했습니다.");
@@ -2949,9 +3003,6 @@ function UsageGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (
   };
   return (
     <>
-      <div className="admin-page-heading"><div><span>USAGE GUIDE</span><h1>사용방법 관리</h1><p>공개 사이트 "사용방법 &gt; 공급사" 화면이 아래 운영 기준을 그대로 씁니다. 비워 두면 기본 문구가 들어갑니다. 입점 제안서 PDF(인쇄용 13쪽)는 디자인된 고정 문서라 여기 값이 들어가지 않으니, 내용을 바꾸려면 개발 요청으로 다시 만들어 주세요.</p></div>
-        <div className="usage-admin-links"><a href="/how-to/supplier" target="_blank" rel="noreferrer"><ExternalLink size={15} /> 공개 화면 보기</a><a href="/api/catalog/partner-proposal" target="_blank" rel="noreferrer"><FileText size={15} /> 제안서 PDF 보기</a></div>
-      </div>
       <section className="admin-card usage-admin-card">
         <div className="card-heading"><ClipboardList size={19} /><div><h2>운영 기준(주문 처리·정산)</h2><p>마감 시간·정산 주기·지급일·판매 수수료 등을 실제 계약 조건에 맞게 확인해 주세요. 저장하면 사용방법 화면에 바로 반영됩니다.</p></div></div>
         <div className="usage-admin-terms">
@@ -2965,34 +3016,53 @@ function UsageGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (
           ))}
         </div>
       </section>
-      <section className="admin-card usage-admin-card">
-        <div className="card-heading"><Video size={19} /><div><h2>사용법 영상 ({draft.videos.length}/30)</h2><p>YouTube(일부 공개 가능)·Vimeo 주소나 mp4 영상 주소를 넣으면 공급사 화면에서 바로 재생됩니다. 주소가 없으면 기본 안내 영상 6편(메일 발주·송장 회신·정산 애니메이션)이 재생되고, 기본 영상이 없는 항목은 "영상 준비 중"으로 보입니다.</p></div></div>
-        <div className="usage-admin-videos">
-          {draft.videos.map((video, index) => {
-            const status = embedLabel(video.url, video.id);
-            return (
-              <article key={video.id} className="usage-admin-video">
-                <span className="usage-admin-video-no">{index + 1}</span>
-                <div className="usage-admin-video-fields">
-                  <label><span>묶음</span><select value={video.group} onChange={(event) => setVideo(index, { group: event.target.value })}>{[...SUPPLIER_VIDEO_GROUPS, ...(SUPPLIER_VIDEO_GROUPS.includes(video.group as typeof SUPPLIER_VIDEO_GROUPS[number]) ? [] : [video.group])].map((group) => <option key={group} value={group}>{group}</option>)}</select></label>
-                  <label><span>제목</span><input maxLength={80} value={video.title} onChange={(event) => setVideo(index, { title: event.target.value })} /></label>
-                  <label><span>길이</span><input maxLength={10} value={video.duration} placeholder="0:35" onChange={(event) => setVideo(index, { duration: event.target.value })} /></label>
-                  <label className="is-wide"><span>설명</span><input maxLength={160} value={video.description} onChange={(event) => setVideo(index, { description: event.target.value })} /></label>
-                  <label className="is-wide"><span>영상 주소</span><input maxLength={500} value={video.url} placeholder="https://youtu.be/… 또는 https://…/guide.mp4" onChange={(event) => setVideo(index, { url: event.target.value })} /><small className={`usage-embed-${status.tone}`}>{status.text}</small></label>
-                </div>
-                <div className="usage-admin-video-actions">
-                  <button type="button" onClick={() => moveVideo(index, -1)} disabled={index === 0} aria-label={`${video.title} 위로`}><ArrowUp size={14} /></button>
-                  <button type="button" onClick={() => moveVideo(index, 1)} disabled={index === draft.videos.length - 1} aria-label={`${video.title} 아래로`}><ArrowDown size={14} /></button>
-                  <button type="button" className="danger" onClick={() => removeVideo(index)} aria-label={`${video.title} 삭제`}><Trash2 size={14} /></button>
-                </div>
-              </article>
-            );
-          })}
-          <button type="button" className="usage-admin-add" onClick={addVideo} disabled={draft.videos.length >= 30}><Plus size={15} /> 영상 추가</button>
-        </div>
-      </section>
+      <GuideVideoEditor
+        videos={draft.videos}
+        groups={SUPPLIER_VIDEO_GROUPS}
+        hasDemo={hasSupplierDemo}
+        demoNote="YouTube(일부 공개 가능)·Vimeo 주소나 mp4 영상 주소를 넣으면 공급사 화면에서 바로 재생됩니다. 주소가 없으면 기본 안내 영상 6편(메일 발주·송장 회신·정산 애니메이션)이 재생되고, 기본 영상이 없는 항목은 ‘영상 준비 중’으로 보입니다."
+        onChange={(videos) => { setDirty(true); setDraft((current) => ({ ...current, videos })); }}
+      />
       <div className="usage-admin-savebar">
         <button type="button" onClick={() => { setDirty(true); setDraft({ ...DEFAULT_SUPPLIER_GUIDE, videos: draft.videos }); }}>운영 기준 기본값으로</button>
+        <button type="button" className="primary-action" onClick={() => void save()} disabled={saving}><Save size={16} /> {saving ? "저장 중…" : dirty ? "변경 내용 저장" : "저장하기"}</button>
+      </div>
+    </>
+  );
+}
+
+function SellerGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: (silent?: boolean) => Promise<void> }) {
+  const savedValue = data.settings?.[SELLER_GUIDE_SETTING_KEY];
+  const [draft, setDraft] = useState<SellerGuideSettings>(() => parseSellerGuide(savedValue));
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => {
+    if (!dirty) setDraft(parseSellerGuide(savedValue));
+  }, [savedValue, dirty]);
+  const save = async () => {
+    setSaving(true);
+    try {
+      await saveGuideSetting(SELLER_GUIDE_SETTING_KEY, { videos: cleanGuideVideos(draft.videos) } satisfies SellerGuideSettings);
+      setDirty(false);
+      toast.success("위탁셀러 사용법 영상을 저장했습니다.");
+      await refresh(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "설정을 저장하지 못했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <>
+      <GuideVideoEditor
+        videos={draft.videos}
+        groups={SELLER_VIDEO_GROUPS}
+        hasDemo={hasSellerDemo}
+        demoNote="YouTube·Vimeo 주소나 mp4 영상 주소를 넣으면 위탁셀러 화면에서 바로 재생됩니다. 주소가 없으면 기본 안내 영상 8편(단가표·도매몰 주문 입력·엑셀 주문·송장·취소·반품 애니메이션)이 재생되고, 기본 영상이 없는 항목은 ‘영상 준비 중’으로 보입니다."
+        onChange={(videos) => { setDirty(true); setDraft({ videos }); }}
+      />
+      <div className="usage-admin-savebar">
+        <button type="button" onClick={() => { setDirty(true); setDraft(parseSellerGuide(null)); }}>기본 영상 목록으로</button>
         <button type="button" className="primary-action" onClick={() => void save()} disabled={saving}><Save size={16} /> {saving ? "저장 중…" : dirty ? "변경 내용 저장" : "저장하기"}</button>
       </div>
     </>
