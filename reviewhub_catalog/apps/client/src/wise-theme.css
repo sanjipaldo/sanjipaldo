@@ -191,7 +191,7 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 .change-direction-badge, .history-difference { border-radius: 999px !important; }
 
 /* 소싱 요청 팝업·페이지 */
-.sourcing-modal { width: min(720px, 100%); max-height: min(92vh, 900px); padding: 0 !important; border: 0; border-radius: var(--w-radius-xl) !important; background: var(--w-canvas); overflow-y: auto; overscroll-behavior: contain; }
+.sourcing-modal { width: min(720px, 100%); max-height: min(92vh, 900px); max-height: min(92dvh, 900px); padding: 0 !important; border: 0; border-radius: var(--w-radius-xl) !important; background: var(--w-canvas); overflow-y: auto; overscroll-behavior: contain; }
 .sourcing-modal .public-modal-close { top: 18px; right: 18px; width: 44px; height: 44px; border: 0; border-radius: 999px; background: var(--w-soft-2); box-shadow: none; }
 .sourcing-modal-head { display: flex; align-items: flex-start; gap: 14px; padding: 28px 76px 8px 28px; }
 .sourcing-modal-head .modal-icon { flex: 0 0 auto; width: 48px; height: 48px; margin: 0; border-radius: var(--w-radius-lg); color: var(--w-positive-deep); background: var(--w-primary-pale); }
@@ -1900,3 +1900,15 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 }
 .usage-calc-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; color: var(--u-strong); font-size: 13px; font-weight: 800; text-decoration: none; }
 .usage-calc-link:hover { text-decoration: underline; }
+
+/* 입점 신청·소싱 요청 팝업(모바일): 브라우저 주소창·아래 도구막대가 보여도 잘리지 않게 보이는 화면(dvh) 전체를 쓰는 시트로 띄웁니다.
+   위 데스크톱 규칙(max-height 92vh)이 catalog.css의 모바일 규칙보다 뒤에 있어 덮어쓰던 문제(위가 잘리고 보내기 버튼이 가려짐)를 바로잡습니다. */
+.public-modal-backdrop.is-sheet .public-modal-close { position: sticky; top: 14px; z-index: 6; display: grid; margin: 18px 18px -62px auto; }
+@media (max-width: 720px) {
+  .public-modal-backdrop.is-sheet { place-items: stretch; height: 100vh; height: 100dvh; padding: 0; }
+  .public-modal-backdrop.is-sheet > .sourcing-modal { width: 100%; height: 100%; max-height: none; border-radius: 0 !important; padding-top: env(safe-area-inset-top) !important; }
+  .public-modal-backdrop.is-sheet .public-modal-close { position: sticky; top: 10px; z-index: 6; display: grid; margin: 10px 12px -54px auto; border: 1px solid var(--w-line); background: var(--w-canvas); box-shadow: 0 4px 14px rgba(0, 0, 0, .1); }
+  .public-modal-backdrop.is-sheet .sourcing-modal-head { padding: 18px 68px 4px 20px; }
+  .public-modal-backdrop.is-sheet .sourcing-modal-head .modal-icon { width: 42px; height: 42px; }
+  .public-modal-backdrop.is-sheet .sourcing-modal-head p { font-size: 14.5px; }
+}

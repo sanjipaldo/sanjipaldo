@@ -816,7 +816,7 @@ function SourcingModal({ onClose }: { onClose: () => void }) {
     }
   };
   return (
-    <div className="public-modal-backdrop" role="presentation" onMouseDown={onClose}>
+    <div className="public-modal-backdrop is-sheet" role="presentation" onMouseDown={onClose}>
       <section className="public-modal sourcing-modal" role="dialog" aria-modal="true" aria-labelledby="sourcing-modal-title" onMouseDown={(event) => event.stopPropagation()}>
         <button type="button" className="public-modal-close" onClick={onClose} aria-label="소싱 요청 닫기"><X size={20} /></button>
         <header className="sourcing-modal-head">
@@ -900,7 +900,7 @@ function PartnerModal({ onClose }: { onClose: () => void }) {
     }
   };
   return (
-    <div className="public-modal-backdrop" role="presentation" onMouseDown={onClose}>
+    <div className="public-modal-backdrop is-sheet" role="presentation" onMouseDown={onClose}>
       <section className="public-modal sourcing-modal partner-modal" role="dialog" aria-modal="true" aria-labelledby="partner-modal-title" onMouseDown={(event) => event.stopPropagation()}>
         <button type="button" className="public-modal-close" onClick={onClose} aria-label="입점 신청 닫기"><X size={20} /></button>
         <header className="sourcing-modal-head">
