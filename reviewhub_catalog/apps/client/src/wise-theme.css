@@ -1865,6 +1865,14 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .partner-deal-dates { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--w-mute); font-size: 12.5px; }
 .partner-deal-dates b { margin-left: 4px; color: var(--w-ink); font-weight: 700; }
 .partner-deal-save { display: flex; justify-content: flex-end; }
+/* 입점·소싱 요청 상세 맨 아래 "삭제": 자주 쓰는 버튼과 떨어뜨리고 빨간 테두리로 구분(누르면 확인 창) */
+.request-delete-zone { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; margin-top: 22px; padding: 14px 16px; border: 1px solid #f3d4d6; border-radius: 14px; background: #fff8f8; }
+.request-delete-zone > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.request-delete-zone strong { color: #b42318; font-size: 14px; font-weight: 800; }
+.request-delete-zone small { color: var(--w-body); font-size: 12.5px; line-height: 1.5; }
+.request-delete-button { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 16px; border: 1px solid #e5484d; border-radius: 999px; color: #c62828; background: #fff; font-size: 13.5px; font-weight: 800; cursor: pointer; }
+.request-delete-button:hover:not(:disabled) { color: #fff; border-color: #c62828; background: #c62828; }
+.request-delete-button:disabled { opacity: .5; cursor: not-allowed; }
 .partner-deal-history { display: grid; gap: 6px; margin: 0; padding: 12px 0 0; border-top: 1px dashed var(--w-line); list-style: none; }
 .partner-deal-history li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12.5px; }
 .partner-deal-history time { color: var(--w-mute); font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -1877,6 +1885,8 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .partner-stage-stepper { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .partner-deal-editor { padding: 14px; }
   .partner-deal-save .primary-action { width: 100%; }
+  .request-delete-zone { flex-direction: column; align-items: stretch; }
+  .request-delete-button { width: 100%; height: 44px; }
 }
 
 /* 사용법 영상 — 기본 안내 영상(세로 9:16 애니메이션)일 때: 왼쪽 세로 화면 + 오른쪽 목록(지금 영상은 장면 목록을 펼침) */

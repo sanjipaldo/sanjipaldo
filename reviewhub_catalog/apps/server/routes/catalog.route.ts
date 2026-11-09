@@ -18,6 +18,7 @@ import {
   updatePartnerDeal,
   createSourcingRequest,
   createSupplier,
+  deleteSourcingRequest,
   getAdminCatalog,
   getAdminNoticesCatalog,
   getAdminHistoryCatalog,
@@ -877,6 +878,15 @@ catalogRouter.put("/admin/sourcing/:id", adminRoute, async (c) => {
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "처리 상태를 확인해 주세요."), 400);
   try {
     return c.json(apiSuccess({ request: await updateSourcingStatus(c.req.param("id"), parsed.data.status) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 입점 신청·소싱 요청 완전 삭제(관리자 전용, 되돌릴 수 없음): 입점 신청이면 진행 단계 기록도 함께 지웁니다.
+catalogRouter.delete("/admin/sourcing/:id", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess({ deleted: await deleteSourcingRequest(c.req.param("id")) }));
   } catch (error) {
     return errorResponse(c, error);
   }

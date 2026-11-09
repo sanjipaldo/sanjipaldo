@@ -2591,7 +2591,12 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
     setSourcingLoading(true);
     try {
       const response = await apiFetch("/catalog/admin/sourcing", { silent: true });
-      if (response.ok) setSourcingData(await readData<AdminCatalogData>(response));
+      if (response.ok) {
+        const next = await readData<AdminCatalogData>(response);
+        // 다른 메뉴에 갔다 돌아올 때 지운·바뀐 신청이 잠깐 예전 값으로 보이지 않게 캐시도 맞춥니다.
+        adminDataCache.set("sourcing", next);
+        setSourcingData(next);
+      }
     } finally {
       setSourcingLoading(false);
     }
@@ -2679,6 +2684,7 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
   };
   const mailLabel = (value: SourcingRequest["emailStatus"]) => value === "sent" ? "제안서 메일 발송" : value === "failed" ? "메일 발송 실패" : value === "skipped" ? "메일 미발송" : "-";
   const [proposalBusy, setProposalBusy] = useState<"" | "pdf" | "mail">("");
+  const [deleteBusy, setDeleteBusy] = useState(false);
   // 신청서 업체명이 들어간 입점 제안서 PDF를 내려받습니다.
   const downloadProposal = async (request: SourcingRequest) => {
     setProposalBusy("pdf");
@@ -2715,6 +2721,30 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
     } finally {
       setProposalBusy("");
     }
+  };
+  // 테스트로 넣은 신청 등 필요 없는 요청을 완전히 지웁니다(관리자 전용 API, 입점 신청이면 진행 단계·상담 메모도 함께 삭제, 되돌릴 수 없음).
+  const removeRequest = async (request: SourcingRequest) => {
+    const partner = typeOf(request) === "partner";
+    const name = partner ? request.companyName || request.productName : request.productName;
+    const kindLabel = partner ? "입점 신청" : "소싱 요청";
+    const detail = partner ? "진행 단계·계약 조건·상담 메모까지 모두 지워지고 되돌릴 수 없습니다." : "삭제하면 되돌릴 수 없습니다.";
+    if (!window.confirm(`'${name}' ${kindLabel}을 삭제할까요?\n\n${detail}`)) return;
+    setDeleteBusy(true);
+    let deleted = false;
+    try {
+      const response = await apiFetch(`/catalog/admin/sourcing/${encodeURIComponent(request.id)}`, { method: "DELETE" });
+      await readData<{ deleted: { id: string } }>(response);
+      deleted = true;
+      toast.success(`'${name}' ${kindLabel}을 삭제했습니다.`);
+      setSelectedRequest(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "삭제하지 못했습니다. 잠시 뒤 다시 시도해 주세요.");
+    } finally {
+      setDeleteBusy(false);
+    }
+    // 화면 전체 새로고침(refresh)은 로딩 화면을 거치며 탭이 "소싱 요청"으로 돌아가므로, 목록만 다시 불러와 보던 탭·필터를 유지합니다.
+    // (목록을 못 불러와도 삭제는 이미 끝났으므로 실패 안내를 띄우지 않습니다.)
+    if (deleted) await loadSourcing().catch(() => undefined);
   };
   const isPartner = kind === "partner";
 
@@ -2860,6 +2890,13 @@ function SourcingAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () 
                 ))}
               </div>
             )}
+            <div className="request-delete-zone">
+              <div>
+                <strong>{typeOf(selectedRequest) === "partner" ? "이 입점 신청 삭제" : "이 소싱 요청 삭제"}</strong>
+                <small>{typeOf(selectedRequest) === "partner" ? "테스트로 넣은 신청처럼 필요 없는 기록을 완전히 지웁니다. 진행 단계·상담 메모도 함께 지워지고 되돌릴 수 없습니다." : "테스트로 넣은 요청처럼 필요 없는 기록을 완전히 지웁니다. 되돌릴 수 없습니다."}</small>
+              </div>
+              <button type="button" className="request-delete-button" onClick={() => void removeRequest(selectedRequest)} disabled={deleteBusy}><Trash2 size={15} /> {deleteBusy ? "삭제 중…" : "삭제하기"}</button>
+            </div>
           </section>
         </div>
       )}

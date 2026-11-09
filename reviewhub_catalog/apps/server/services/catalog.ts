@@ -1823,6 +1823,32 @@ export async function updateSourcingStatus(id: string, status: "received" | "rev
   return rows[0];
 }
 
+// 입점 신청·소싱 요청 완전 삭제(관리자 전용): 테스트로 넣은 신청 등을 지웁니다.
+// 입점 신청이면 진행 단계·계약 조건(partner_deals)도 함께 지웁니다. 되돌릴 수 없고, 지운 뒤에는 매일 새벽 DB 백업에만 남습니다.
+export async function deleteSourcingRequest(id: string) {
+  const db = getDb();
+  const rows = await db
+    .select({ id: sourcingRequests.id, requestType: sourcingRequests.requestType })
+    .from(sourcingRequests)
+    .where(eq(sourcingRequests.id, id))
+    .limit(1);
+  const request = rows[0];
+  if (!request) throw new DatabaseError("DATABASE_QUERY_FAILED", "삭제할 요청을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.", 404);
+  if (request.requestType === "partner") {
+    try {
+      await db.delete(partnerDeals).where(eq(partnerDeals.requestId, id));
+    } catch (error) {
+      // migration 030 전 DB에는 partner_deals 표가 없습니다(그때는 지울 진행 기록도 없음).
+      const texts = [error instanceof Error ? error.message : String(error), (error as { cause?: { message?: string } })?.cause?.message ?? ""];
+      if (!texts.some((text) => text.includes("no such table"))) throw error;
+    }
+  }
+  await db.delete(sourcingRequests).where(eq(sourcingRequests.id, id));
+  // 개인정보(이름·연락처·이메일)는 로그에 남기지 않습니다.
+  console.info(`[sourcing] deleted ${request.requestType} request ${id}`);
+  return { id: request.id, requestType: request.requestType };
+}
+
 function seoulMonthStartIso(now = Date.now()) {
   const seoulNow = new Date(now + (9 * 60 * 60 * 1000));
   return new Date(Date.UTC(seoulNow.getUTCFullYear(), seoulNow.getUTCMonth(), 1) - (9 * 60 * 60 * 1000)).toISOString();
