@@ -650,7 +650,8 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 }
 /* 입점 신청서 */
 .partner-modal select { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--w-line); border-radius: var(--w-radius-md); background: var(--w-canvas); color: var(--w-ink); font-size: 16px; }
-.partner-honeypot { position: absolute !important; left: -9999px !important; width: 1px !important; height: 1px !important; opacity: 0 !important; }
+/* 봇 차단용 숨은 칸: display:none이어야 브라우저 자동 완성이 건드리지 않습니다(화면 밖으로 밀어 둔 칸은 자동 완성이 채움) */
+.partner-honeypot { display: none !important; }
 .partner-agree { display: flex !important; flex-direction: row !important; align-items: flex-start; gap: 10px !important; margin-top: 4px; color: var(--w-body) !important; font-size: 13px !important; font-weight: 400 !important; line-height: 1.5; }
 .partner-agree input { flex: none; width: 18px !important; height: 18px !important; margin-top: 1px; accent-color: var(--w-ink); }
 /* 관리자: 소싱/입점 탭 */

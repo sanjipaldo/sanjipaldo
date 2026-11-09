@@ -170,18 +170,52 @@ const PartnerSchema = z.object({
   requesterName: z.string().trim().min(1).max(80),
   contact: z.string().trim().min(8).max(40),
   email: z.string().trim().email().max(160),
-  referenceUrl: z.union([z.literal(""), z.string().url()]).nullable().optional(),
+  // 홈페이지는 "auranz.com"처럼 https:// 없이 써도 받습니다(주소가 아니면 소개 칸에 입력값 그대로 남김).
+  referenceUrl: z.string().trim().max(500).nullable().optional(),
   details: z.string().trim().max(3000).nullable().optional(),
-  // 추가 업체 정보(선택): 관리자 화면에서 [업체 정보]로 보입니다.
+  // 추가 업체 정보(선택): 관리자 화면에서 [업체 정보]로 보입니다. 형식을 따지지 않습니다(신청을 막지 않게).
   representative: z.string().trim().max(60).nullable().optional(),
-  businessNumber: z.string().trim().max(20).regex(/^[0-9-\s]*$/).nullable().optional(),
+  businessNumber: z.string().trim().max(40).nullable().optional(),
   shipFrom: z.string().trim().max(120).nullable().optional(),
   monthlyVolume: z.string().trim().max(120).nullable().optional(),
   salesChannels: z.string().trim().max(200).nullable().optional(),
   agreePrivacy: z.literal(true),
-  // 봇 차단용 숨은 칸: 사람이 입력하면 비어 있어야 합니다.
-  website: z.string().max(0).optional()
+  // 봇 차단용 숨은 칸(지금 hp_extra, 예전 화면은 website). 브라우저 자동 완성이 채우는 일이 있어 채워져도 막지 않고,
+  // 접수는 하되 신청자 안내 메일만 보내지 않습니다(두고푸드 알림 메일은 "[확인 필요]"로 보냄).
+  website: z.string().max(2000).optional(),
+  hp_extra: z.string().max(2000).optional()
 });
+
+// 입력값 오류 안내: 어느 칸을 고쳐야 하는지 알려 줍니다(예전에는 모두 "필수 입력값을 확인해 주세요").
+const PARTNER_FIELD_LABELS: Record<string, string> = {
+  companyName: "업체명(상호)",
+  businessType: "업종",
+  productName: "주요 상품",
+  requesterName: "담당자명",
+  contact: "휴대폰 번호",
+  email: "이메일",
+  referenceUrl: "홈페이지·스토어 주소",
+  details: "업체·상품 소개",
+  representative: "대표자명",
+  businessNumber: "사업자등록번호",
+  shipFrom: "출고지(지역)",
+  monthlyVolume: "월 공급 가능 물량",
+  salesChannels: "현재 판매 채널"
+};
+
+// "auranz.com" → "https://auranz.com/". http(s) 주소가 아니면 null
+function normalizeHomepage(value?: string | null) {
+  const raw = value?.trim();
+  if (!raw) return null;
+  const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const url = new URL(candidate);
+    if ((url.protocol !== "http:" && url.protocol !== "https:") || !url.hostname.includes(".") || /\s/.test(raw)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
 
 // 신규상품 설정(new_products): {"days": 1~30, "hidden": [신규상품에서 뺄 상품 id…]}
 const NewProductSettingSchema = z.object({
@@ -372,11 +406,19 @@ catalogRouter.post("/partner", publicRoute, async (c) => {
   const parsed = PartnerSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) {
     const field = String(parsed.error.issues[0]?.path[0] ?? "");
-    const message = field === "email" ? "이메일 주소를 확인해 주세요." : field === "agreePrivacy" ? "개인정보 수집·이용에 동의해 주세요." : field === "contact" ? "연락처를 확인해 주세요." : "필수 입력값을 확인해 주세요.";
+    const label = PARTNER_FIELD_LABELS[field];
+    const message = field === "email" ? "이메일 주소를 확인해 주세요." : field === "agreePrivacy" ? "개인정보 수집·이용에 동의해 주세요." : field === "contact" ? "휴대폰 번호를 확인해 주세요(8자 이상)." : label ? `'${label}' 칸을 확인해 주세요.` : "필수 입력값을 확인해 주세요.";
+    // 막힌 신청을 나중에 확인할 수 있게 어느 칸이 문제였는지만 남깁니다(입력값·개인정보는 남기지 않음).
+    console.warn(`[partner] rejected: invalid ${field || "body"}`);
     return c.json(apiFailure("INVALID_INPUT", message), 400);
   }
-  const { agreePrivacy: _agree, website: _website, ...input } = parsed.data;
-  const request = await createPartnerRequest({ ...input, referenceUrl: input.referenceUrl || null });
+  const { agreePrivacy: _agree, website, hp_extra: hiddenExtra, referenceUrl: rawHomepage, details, ...input } = parsed.data;
+  const homepage = normalizeHomepage(rawHomepage);
+  const keptDetails = rawHomepage?.trim() && !homepage ? [details?.trim(), `홈페이지·스토어(입력값): ${rawHomepage.trim()}`].filter(Boolean).join("\n\n") : details;
+  const request = await createPartnerRequest(
+    { ...input, details: keptDetails, referenceUrl: homepage },
+    { hiddenFieldFilled: Boolean(website?.trim() || hiddenExtra?.trim()) }
+  );
   return c.json(apiSuccess({ request: { id: request.id, emailStatus: request.emailStatus, notifyStatus: request.notifyStatus } }), 201);
 });
 

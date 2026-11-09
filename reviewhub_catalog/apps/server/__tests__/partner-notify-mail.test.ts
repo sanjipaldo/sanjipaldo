@@ -64,6 +64,14 @@ describe("입점 신청 알림 메일(두고푸드 → cs.doogo@gmail.com)", () 
     expect(mail.html).toContain("word-break:break-all");
   });
 
+  it("숨은 칸이 채워진 신청은 제목 앞에 [확인 필요]와 안내를 붙입니다", () => {
+    const mail = buildPartnerNotifyMail({ ...sample, flagged: true });
+    expect(mail.subject.startsWith("[확인 필요] [두고푸드 입점 신청]")).toBe(true);
+    expect(mail.text).toContain("신청자 안내 메일은 보내지 않았습니다");
+    expect(mail.html).toContain("확인 필요");
+    expect(buildPartnerNotifyMail(sample).subject.startsWith("[두고푸드 입점 신청]")).toBe(true);
+  });
+
   it("발송 방법: 설정 없음 → 보내지 않음, Gmail(SMTP) 앱 비밀번호, Resend 키가 있으면 Resend", async () => {
     expect(mailTransport()).toBe("none");
     expect(await sendPartnerNotifyMail(sample)).toBe("skipped");

@@ -880,7 +880,17 @@ function PartnerModal({ onClose }: { onClose: () => void }) {
     event.preventDefault();
     setSubmitting(true);
     try {
-      const form = new FormData(event.currentTarget);
+      const formElement = event.currentTarget;
+      // 브라우저 자동 완성이 봇 차단용 숨은 칸까지 채웠으면 비웁니다(사람의 자동 완성은 :autofill로 표시되고, 봇이 스크립트로 넣은 값은 그대로 둡니다).
+      const trap = formElement.elements.namedItem("hp_extra");
+      if (trap instanceof HTMLInputElement && trap.value && [":autofill", ":-webkit-autofill"].some((selector) => {
+        try {
+          return trap.matches(selector);
+        } catch {
+          return false;
+        }
+      })) trap.value = "";
+      const form = new FormData(formElement);
       const body = { ...Object.fromEntries(form.entries()), agreePrivacy: form.get("agreePrivacy") === "on" };
       const response = await apiFetch("/catalog/partner", {
         method: "POST",
@@ -941,7 +951,7 @@ function PartnerModal({ onClose }: { onClose: () => void }) {
                 <label><span className="field-label">월 공급 가능 물량</span><input name="monthlyVolume" maxLength={120} placeholder="예: 하루 200박스 / 월 3,000kg" /></label>
               </div>
               <label><span className="field-label">현재 판매 채널</span><input name="salesChannels" maxLength={200} placeholder="예: 스마트스토어, 쿠팡, 자사몰, 오프라인 납품" /></label>
-              <label><span className="field-label">홈페이지·스토어 주소</span><input name="referenceUrl" type="url" inputMode="url" placeholder="https://" /></label>
+              <label><span className="field-label">홈페이지·스토어 주소</span><input name="referenceUrl" type="text" inputMode="url" maxLength={500} placeholder="https:// (예: smartstore.naver.com/…)" /></label>
               <label><span className="field-label">업체·상품 소개</span><textarea name="details" rows={3} maxLength={3000} placeholder="생산 규모, 월 공급 가능 물량, 인증(GAP·HACCP 등), 희망 공급가 등을 적어 주세요." /></label>
             </fieldset>
             <fieldset className="sourcing-group">
@@ -951,7 +961,8 @@ function PartnerModal({ onClose }: { onClose: () => void }) {
                 <label><span className="field-label">휴대폰 번호 <em aria-hidden="true">필수</em></span><input name="contact" required inputMode="tel" maxLength={40} placeholder="010-0000-0000" autoComplete="tel" /></label>
               </div>
               <label><span className="field-label">이메일 <em aria-hidden="true">필수</em></span><input name="email" type="email" required maxLength={160} placeholder="입점 제안서(PDF)를 받을 주소" autoComplete="email" /></label>
-              <input className="partner-honeypot" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+              {/* 봇 차단용 숨은 칸: 화면에서 완전히 숨겨(display:none) 브라우저 자동 완성이 채우지 않게 합니다(예전 이름 website는 자동 완성이 채워 신청이 막혔음). */}
+              <div className="partner-honeypot" aria-hidden="true"><input name="hp_extra" tabIndex={-1} autoComplete="off" /></div>
               <label className="partner-agree"><input type="checkbox" name="agreePrivacy" required /> <span>입점 상담을 위해 업체명·담당자명·연락처·이메일을 수집·이용하는 데 동의합니다. (상담 완료 후 1년 보관)</span></label>
             </fieldset>
             <div className="sourcing-submit-bar">

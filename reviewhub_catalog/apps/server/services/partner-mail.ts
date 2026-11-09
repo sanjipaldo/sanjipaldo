@@ -184,6 +184,8 @@ export type PartnerNotifyInput = {
   monthlyVolume?: string | null;
   salesChannels?: string | null;
   intro?: string | null;
+  // 봇 차단용 숨은 칸이 채워진 신청(봇이거나 브라우저 자동 완성): 제목 앞 "[확인 필요]" + 본문 안내
+  flagged?: boolean;
 };
 
 // 알림 받을 주소: MAIL_NOTIFY_TO(쉼표·세미콜론·띄어쓰기로 여러 개), 비었거나 잘못되면 cs.doogo@gmail.com
@@ -228,9 +230,11 @@ export function buildPartnerNotifyMail(input: PartnerNotifyInput) {
   const intro = input.intro?.trim() ?? "";
   const when = seoulDateTime(input.createdAt);
   const adminUrl = partnerAdminUrl(input.id);
-  const subject = `[두고푸드 입점 신청] ${shorten(input.companyName, 30)} · ${input.businessType} · ${shorten(input.productName, 30)}`;
+  const subject = `${input.flagged ? "[확인 필요] " : ""}[두고푸드 입점 신청] ${shorten(input.companyName, 30)} · ${input.businessType} · ${shorten(input.productName, 30)}`;
+  const flaggedNote = "자동 입력 방지 칸이 채워진 신청입니다(봇이거나 브라우저 자동 완성). 신청자 안내 메일은 보내지 않았습니다. 진짜 신청이면 관리자에서 '제안서 메일 보내기'를 눌러 주세요.";
   const text = [
     `새 입점 신청이 접수되었습니다 (${when}).`,
+    ...(input.flagged ? ["", `[확인 필요] ${flaggedNote}`] : []),
     "",
     ...filled.map(([label, value]) => `${label}: ${value}`),
     ...(intro ? ["", "[업체·상품 소개]", intro] : []),
@@ -253,7 +257,7 @@ export function buildPartnerNotifyMail(input: PartnerNotifyInput) {
 <table role="presentation" width="100%" style="max-width:600px;margin:0 auto;background:#fff;border:1px solid #e4e8e1;border-radius:20px">
 <tr><td style="padding:26px 24px 6px"><div style="display:inline-block;padding:4px 10px;border-radius:999px;background:#163300;color:#9fe870;font-size:12px;font-weight:700">새 입점 신청</div>
 <h1 style="margin:14px 0 6px;font-size:21px;line-height:1.4;word-break:keep-all;overflow-wrap:anywhere">${escapeHtml(input.companyName)} 입점 신청이 들어왔어요</h1>
-<p style="margin:0;color:#6a6c6a;font-size:13.5px;word-break:keep-all">${escapeHtml(when)} 접수 · ${escapeHtml(input.businessType)}</p></td></tr>
+<p style="margin:0;color:#6a6c6a;font-size:13.5px;word-break:keep-all">${escapeHtml(when)} 접수 · ${escapeHtml(input.businessType)}</p>${input.flagged ? `<p style="margin:12px 0 0;padding:10px 12px;border-radius:12px;background:#fff4e5;color:#8a4b00;font-size:13px;line-height:1.6;word-break:keep-all"><b>확인 필요</b> · ${escapeHtml(flaggedNote)}</p>` : ""}</td></tr>
 <tr><td style="padding:14px 24px 4px"><table role="presentation" width="100%" style="border-collapse:collapse;font-size:14px;line-height:1.6">
 ${filled.map(([label, value]) => `<tr><td style="width:30%;padding:9px 10px;border-top:1px solid #edf0ea;color:#6a6c6a;font-weight:700;vertical-align:top;word-break:keep-all">${escapeHtml(label)}</td><td style="padding:9px 10px;border-top:1px solid #edf0ea;color:#0e0f0c;vertical-align:top">${link(label, value)}</td></tr>`).join("\n")}
 </table></td></tr>

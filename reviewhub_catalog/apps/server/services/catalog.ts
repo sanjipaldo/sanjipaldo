@@ -1717,6 +1717,9 @@ const PARTNER_PROFILE_LABELS = {
 
 type PartnerProfile = Partial<Record<keyof typeof PARTNER_PROFILE_LABELS, string | null>>;
 
+// 숨은 칸이 채워진 신청은 관리자 상세 맨 위에 이 안내를 붙입니다.
+const PARTNER_FLAGGED_NOTE = "[확인 필요] 자동 입력 방지 칸이 채워진 채 접수되었습니다(봇이거나 브라우저 자동 완성). 신청자 안내 메일은 보내지 않았습니다 — 진짜 신청이면 아래 '제안서 메일 보내기'를 눌러 주세요.";
+
 // 추가 업체 정보(대표자·사업자번호·출고지 등)는 마이그레이션 없이 details 앞부분에 "[업체 정보]"로 함께 저장합니다.
 function partnerDetails(profile: PartnerProfile, details?: string | null) {
   const lines = (Object.keys(PARTNER_PROFILE_LABELS) as Array<keyof typeof PARTNER_PROFILE_LABELS>)
@@ -1737,9 +1740,12 @@ export async function createPartnerRequest(input: {
   email: string;
   referenceUrl?: string | null;
   details?: string | null;
-} & PartnerProfile) {
+} & PartnerProfile, options: { hiddenFieldFilled?: boolean } = {}) {
   const db = getDb();
   const email = input.email.trim().toLowerCase();
+  // 봇 차단용 숨은 칸이 채워진 신청(봇 또는 브라우저 자동 완성): 진짜 신청을 놓치지 않게 저장하고 두고푸드 알림은 보내되,
+  // 남의 주소로 메일이 나가는 남용을 막으려고 신청자 안내 메일(제안서 PDF)만 보내지 않습니다.
+  const flagged = Boolean(options.hiddenFieldFilled);
   // 같은 이메일로 10분 안에 다시 신청하면 메일은 다시 보내지 않습니다(자동 메일 남용 방지).
   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const recent = await db
@@ -1749,9 +1755,10 @@ export async function createPartnerRequest(input: {
     .limit(1);
   const { representative, businessNumber, shipFrom, monthlyVolume, salesChannels, details, ...base } = input;
   const now = new Date().toISOString();
+  const storedDetails = partnerDetails({ representative, businessNumber, shipFrom, monthlyVolume, salesChannels }, details);
   const rows = await db.insert(sourcingRequests).values({
     ...base,
-    details: partnerDetails({ representative, businessNumber, shipFrom, monthlyVolume, salesChannels }, details),
+    details: flagged ? [PARTNER_FLAGGED_NOTE, storedDetails].filter(Boolean).join("\n\n") : storedDetails,
     email,
     requestType: "partner",
     createdAt: now,
@@ -1764,18 +1771,20 @@ export async function createPartnerRequest(input: {
   if (recent.length === 0) {
     // 제안서 PDF를 만들지 못해도 접수 안내 메일은 보냅니다.
     let proposal: MailAttachment | null = null;
-    try {
-      const built = await buildPartnerProposal(base.companyName);
-      proposal = { filename: built.filename, content: built.bytes };
-    } catch (error) {
-      console.error("[partner] proposal pdf failed", error instanceof Error ? error.message : error);
+    if (!flagged) {
+      try {
+        const built = await buildPartnerProposal(base.companyName);
+        proposal = { filename: built.filename, content: built.bytes };
+      } catch (error) {
+        console.error("[partner] proposal pdf failed", error instanceof Error ? error.message : error);
+      }
     }
     // 신청자 안내 메일과 두고푸드 알림 메일(cs.doogo@gmail.com)은 따로 보냅니다(하나가 실패해도 다른 하나는 갑니다).
     [emailStatus, notifyStatus] = await Promise.all([
-      sendPartnerReceivedMail({ ...base, email }, proposal),
-      sendPartnerNotifyMail({ id: request.id, createdAt: now, ...base, email, representative, businessNumber, shipFrom, monthlyVolume, salesChannels, intro: details })
+      flagged ? Promise.resolve<MailResult>("skipped") : sendPartnerReceivedMail({ ...base, email }, proposal),
+      sendPartnerNotifyMail({ id: request.id, createdAt: now, ...base, email, representative, businessNumber, shipFrom, monthlyVolume, salesChannels, intro: details, flagged })
     ]);
-    console.info(`[partner] ${request.id} applicant mail ${emailStatus}, notify mail ${notifyStatus}`);
+    console.info(`[partner] ${request.id} applicant mail ${emailStatus}, notify mail ${notifyStatus}${flagged ? ", hidden field filled (bot or browser autofill)" : ""}`);
   }
   const updated = await db
     .update(sourcingRequests)
