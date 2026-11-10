@@ -1,5 +1,5 @@
 import { FormEvent, Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -42,6 +42,7 @@ import {
   X,
   MoonStar,
   Handshake,
+  Megaphone,
   Mail
 } from "lucide-react";
 import { toast } from "sonner";
@@ -410,6 +411,23 @@ async function loadNotices() {
   const payload = (await response.json()) as { ok?: boolean; data?: { notices?: Notice[] } };
   return payload.ok ? payload.data?.notices ?? null : null;
 }
+
+// 공지 정렬 기준: 날짜(표시하는 수정일) 최신순. 공지사항 화면(/guide)과 메인 홈 공지가 같은 기준을 씁니다.
+function noticeTime(notice: Notice) {
+  const value = notice.updatedAt.includes("T") ? notice.updatedAt : `${notice.updatedAt.replace(" ", "T")}Z`;
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+// 필독 공지 1개 + 나머지 운영 공지(최신순, 가장 최근 공지 = "★ 최신")
+function splitNotices(notices: Notice[]) {
+  const pinnedNotice = notices.find((notice) => notice.isPinned);
+  const generalNotices = notices.filter((notice) => notice.id !== pinnedNotice?.id).sort((first, second) => noticeTime(second) - noticeTime(first));
+  return { pinnedNotice, generalNotices, latestNoticeId: generalNotices[0]?.id };
+}
+
+// 메인 홈에서 공지를 누르면 공지사항 탭으로 넘어가 그 공지를 바로 엽니다(/guide?notice=공지 id).
+const noticeLink = (notice: Notice) => `/guide?notice=${encodeURIComponent(notice.id)}`;
 
 // 관리자가 상품·가격을 바꾸면 공개 화면이 곧바로 다시 불러오도록: 창 포커스·탭 복귀·데이터 변경 알림(doogo:catalog-changed)에 반응합니다.
 const CATALOG_CHANGED_EVENT = "doogo:catalog-changed";
@@ -849,6 +867,42 @@ function SourcingModal({ onClose }: { onClose: () => void }) {
 }
 
 // 홈 입점 안내 배너: 농가·수산·브랜드사 입점 신청 창을 엽니다.
+// 메인 홈(단가표) 맨 위 운영 현황 바로 아래 공지사항: 공지사항 화면(/guide)과 같은 모양(필독 공지 + 최신 운영 공지 3개, 가장 최근은 "★ 최신").
+// 공지를 누르면 공지사항 탭으로 넘어가 그 공지가 바로 열리고, "공지사항 바로보기"는 공지사항 탭으로 갑니다.
+function HomeNoticeBoard({ notices }: { notices: Notice[] }) {
+  const { pinnedNotice, generalNotices, latestNoticeId } = useMemo(() => splitNotices(notices), [notices]);
+  if (!pinnedNotice && generalNotices.length === 0) return null;
+  return (
+    <section className="home-notice-board" aria-labelledby="home-notice-title">
+      <div className="home-notice-head">
+        <div className="home-notice-title">
+          <span className="home-notice-icon" aria-hidden="true"><Megaphone size={22} /></span>
+          <div><span className="section-kicker">NOTICE</span><h2 id="home-notice-title">공지사항</h2><p>주문 전에 두고푸드 운영 공지를 먼저 확인해 주세요.</p></div>
+        </div>
+        <Link className="home-notice-more" to="/guide" aria-label="공지사항 바로보기"><span className="home-notice-more-label">공지사항 </span>바로보기 <ChevronRight size={17} /></Link>
+      </div>
+      {pinnedNotice && (
+        <Link className="must-read-banner page" to={noticeLink(pinnedNotice)}>
+          <span><Bell size={17} /><b>필독 공지</b></span>
+          <div><strong>{pinnedNotice.title}</strong><small>누르면 공지사항에서 전체 내용을 확인합니다.</small></div>
+          <ChevronRight size={18} />
+        </Link>
+      )}
+      {generalNotices.length > 0 && (
+        <div className="notice-list home-notice-list">
+          {generalNotices.slice(0, 3).map((notice, index) => (
+            <Link className={`notice-row-button notice-accent-${(index % 3) + 1}${notice.id === latestNoticeId ? " is-latest" : ""}`} to={noticeLink(notice)} key={notice.id}>
+              <span>{notice.id === latestNoticeId && <em className="notice-latest-badge"><Star size={12} aria-hidden="true" /> 최신</em>}{formatDate(notice.updatedAt)}</span>
+              <div><h3>{notice.title}</h3><p>{notice.content}</p></div>
+              <ChevronRight size={18} />
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function PartnerBanner() {
   return (
     <section className="partner-banner" aria-label="입점 신청 안내">
@@ -1921,6 +1975,7 @@ export function CatalogHome() {
           setQuery(name);
           window.requestAnimationFrame(() => document.querySelector("#price-table")?.scrollIntoView({ behavior: "smooth", block: "start" }));
         }} />
+        <HomeNoticeBoard notices={data.notices} />
         <PartnerBanner />
         <section className="catalog-hero">
           <div>
@@ -2056,10 +2111,20 @@ export function GuidePage() {
   const [faqQuery, setFaqQuery] = useState("");
   const [noticePage, setNoticePage] = useState(1);
   const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
   useEffect(() => {
     void loadGuideSettings().then((next) => next && setSettings(next));
     void loadNotices().then((next) => next && setNotices(next));
   }, []);
+  // 메인 홈 공지에서 넘어오면(?notice=공지 id) 그 공지를 바로 열고, 주소의 notice는 지웁니다(뒤로 가기는 홈으로).
+  const requestedNoticeId = new URLSearchParams(location.search).get("notice");
+  useEffect(() => {
+    if (!requestedNoticeId || notices.length === 0) return;
+    const target = notices.find((notice) => notice.id === requestedNoticeId);
+    if (target) setSelectedNotice(target);
+    navigate({ pathname: location.pathname, search: "" }, { replace: true });
+  }, [requestedNoticeId, notices, navigate, location.pathname]);
   useEffect(() => {
     setNoticePage(1);
   }, [notices.length]);
@@ -2070,15 +2135,8 @@ export function GuidePage() {
   const matchedFaq = normalizedFaqQuery ? guide.faq.filter((item) => searchKey(`${item.q} ${item.a}`).includes(normalizedFaqQuery)) : guide.faq;
   const faqPageCount = Math.max(1, Math.ceil(matchedFaq.length / faqPageSize));
   const visibleFaq = matchedFaq.slice((faqPage - 1) * faqPageSize, faqPage * faqPageSize);
-  const pinnedNotice = notices.find((notice) => notice.isPinned);
   // 운영 공지는 날짜(표시하는 수정일) 기준 최신순, 가장 최근 공지는 "★ 최신"으로 강조합니다.
-  const noticeTime = (notice: Notice) => {
-    const value = notice.updatedAt.includes("T") ? notice.updatedAt : `${notice.updatedAt.replace(" ", "T")}Z`;
-    const time = new Date(value).getTime();
-    return Number.isNaN(time) ? 0 : time;
-  };
-  const generalNotices = notices.filter((notice) => notice.id !== pinnedNotice?.id).sort((first, second) => noticeTime(second) - noticeTime(first));
-  const latestNoticeId = generalNotices[0]?.id;
+  const { pinnedNotice, generalNotices, latestNoticeId } = splitNotices(notices);
   const noticePageSize = 3;
   const noticePageCount = Math.max(1, Math.ceil(generalNotices.length / noticePageSize));
   const visibleGeneralNotices = generalNotices.slice((noticePage - 1) * noticePageSize, noticePage * noticePageSize);

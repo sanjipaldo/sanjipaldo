@@ -641,6 +641,42 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .partner-banner-cta { display: inline-flex; align-items: center; gap: 6px; min-height: 50px; padding: 0 24px; border: 0; border-radius: 999px; color: var(--w-canvas); background: var(--w-ink); font-size: 16px; font-weight: 700; white-space: nowrap; }
 .partner-banner-cta:hover { background: var(--w-ink-deep); }
 .partner-banner-cta:focus-visible { outline: 3px solid var(--w-primary); outline-offset: 3px; }
+/* 메인 홈 공지사항(운영 현황 바로 아래, 입점 배너 위): 공지사항 화면(/guide)과 같은 필독 공지·운영 공지 줄 + 눈에 띄는 연두 아이콘·진한 "공지사항 바로보기" 버튼 */
+.home-notice-board { margin: 16px 0; padding: 22px 26px 24px; border: 1px solid var(--w-card-border); border-radius: var(--w-radius-xl); background: linear-gradient(145deg, #fff 0%, #fbfef8 55%, #f1fbe9 100%); box-shadow: 0 12px 30px rgba(22, 51, 0, .07); }
+.home-notice-board a { color: inherit; text-decoration: none; }
+.home-notice-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.home-notice-title { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.home-notice-icon { display: grid; flex: 0 0 auto; place-items: center; width: 52px; height: 52px; border-radius: 16px; color: var(--w-ink-deep); background: var(--w-primary); }
+.home-notice-title > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.home-notice-title .section-kicker { color: var(--w-positive-deep); font-size: 12px; font-weight: 800; letter-spacing: .12em; }
+.home-notice-title h2 { margin: 0; color: var(--w-ink); font-size: 22px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
+.home-notice-title p { margin: 0; color: var(--w-body); font-size: 14px; line-height: 1.5; }
+.home-notice-board .home-notice-more { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; min-height: 46px; padding: 0 20px; border-radius: 999px; color: var(--w-canvas); background: var(--w-ink); font-size: 15px; font-weight: 700; white-space: nowrap; }
+.home-notice-board .home-notice-more:hover { background: var(--w-ink-deep); }
+.home-notice-board .home-notice-more:focus-visible { outline: 3px solid var(--w-primary); outline-offset: 3px; }
+.home-notice-board .must-read-banner { margin: 0 0 12px; }
+.home-notice-list .notice-row-button { padding: 16px 22px; }
+.home-notice-list .notice-row-button > span { flex: 0 0 auto; min-width: 132px; white-space: nowrap; }
+.home-notice-list .notice-row-button > div { flex: 1 1 auto; min-width: 0; }
+.home-notice-list h3 { margin: 0 0 5px; color: var(--w-ink); font-size: 16px; font-weight: 800; }
+/* 홈에서는 공지 내용을 한 줄(휴대폰 두 줄)만 보여 주고, 전체 내용은 공지사항 탭에서 봅니다 */
+.home-notice-list p { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+@media (max-width: 720px) {
+  .home-notice-board { margin: 12px 0; padding: 18px 16px; }
+  .home-notice-head { gap: 10px; margin-bottom: 12px; }
+  .home-notice-title { gap: 10px; }
+  .home-notice-icon { width: 42px; height: 42px; border-radius: 13px; }
+  .home-notice-title h2 { font-size: 19px; }
+  .home-notice-title p { display: none; }
+  .home-notice-board .home-notice-more { min-height: 38px; padding: 0 14px; font-size: 13px; }
+  .home-notice-list .notice-row-button { gap: 8px; padding: 14px 16px; }
+  .home-notice-list .notice-row-button > span { min-width: 0; }
+  .home-notice-list p { -webkit-line-clamp: 2; }
+}
+/* 아주 좁은 휴대폰(320px 등): 버튼은 "바로보기"만 보여 제목 "공지사항"이 한 줄에 남게 */
+@media (max-width: 359px) {
+  .home-notice-more-label { display: none; }
+}
 @media (max-width: 720px) {
   .partner-banner { grid-template-columns: auto minmax(0, 1fr); gap: 14px; margin: 12px 0; padding: 18px; }
   .partner-banner-icon { width: 46px; height: 46px; border-radius: 14px; }
@@ -1400,7 +1436,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 
 /* 공지사항: 가장 최근 운영 공지 강조(★ 최신) */
 .notice-row-button.is-latest { border-color: #86d65a !important; background: linear-gradient(135deg, #fff, var(--w-primary-pale)) !important; box-shadow: 0 0 0 1px #9fe870 inset, 0 6px 18px rgba(46, 173, 75, .12) !important; }
-.notice-row-button > span { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.notice-row-button > span { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-start; gap: 4px; white-space: nowrap; }
 .notice-latest-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; background: var(--w-primary); color: var(--w-ink-deep); font-size: 11px; font-style: normal; font-weight: 800; }
 .notice-latest-badge svg { fill: currentColor; }
 
