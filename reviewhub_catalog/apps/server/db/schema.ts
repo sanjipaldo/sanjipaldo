@@ -485,6 +485,13 @@ export type ProductGroupItem = typeof productGroupItems.$inferSelect;
 export type Notice = typeof notices.$inferSelect;
 export type PriceHistory = typeof priceHistories.$inferSelect;
 export type CatalogActivityLog = typeof catalogActivityLogs.$inferSelect;
+// 농수산물 백과사전 기기 옮기기 코드(migration 031): 코드 → 내 후보·체크리스트 JSON(개인정보 없음)
+export const encyclopediaSaves = sqliteTable("encyclopedia_saves", {
+  code: text("code").primaryKey(),
+  payload: text("payload").notNull(),
+  createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+});
 // 입점 신청(공급사) 진행 단계·계약 조건(migration 030). requestId = sourcing_requests.id(requestType partner)
 export const partnerDeals = sqliteTable(
   "partner_deals",

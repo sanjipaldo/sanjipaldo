@@ -13,8 +13,11 @@ import { GuideDemoRender } from "./pages/catalog/GuideDemo";
 const queryClient = new QueryClient();
 
 // 백과사전은 품목 데이터가 커서 들어갈 때 따로 불러옵니다.
-const EncyclopediaPage = lazy(() => import("./pages/catalog/Encyclopedia").then((module) => ({ default: module.EncyclopediaPage })));
+const EncyclopediaHomePage = lazy(() => import("./pages/catalog/Encyclopedia").then((module) => ({ default: module.EncyclopediaHomePage })));
+const EncyclopediaCalendarPage = lazy(() => import("./pages/catalog/Encyclopedia").then((module) => ({ default: module.EncyclopediaCalendarPage })));
+const EncyclopediaFavoritesPage = lazy(() => import("./pages/catalog/Encyclopedia").then((module) => ({ default: module.EncyclopediaFavoritesPage })));
 const EncyclopediaDetailPage = lazy(() => import("./pages/catalog/Encyclopedia").then((module) => ({ default: module.EncyclopediaDetailPage })));
+const EncyclopediaFinderPage = lazy(() => import("./pages/catalog/EncyclopediaFinder").then((module) => ({ default: module.EncyclopediaFinderPage })));
 
 function LazyPage({ children }: { children: ReactNode }) {
   return (
@@ -35,7 +38,10 @@ const App = () => (
           <Route path="/new-products" element={<NewProductsPage />} />
           <Route path="/notices" element={<NoticesPage />} />
           <Route path="/sold-out" element={<SoldOutIssuesPage />} />
-          <Route path="/encyclopedia" element={<LazyPage><EncyclopediaPage /></LazyPage>} />
+          <Route path="/encyclopedia" element={<LazyPage><EncyclopediaHomePage /></LazyPage>} />
+          <Route path="/encyclopedia/calendar" element={<LazyPage><EncyclopediaCalendarPage /></LazyPage>} />
+          <Route path="/encyclopedia/finder" element={<LazyPage><EncyclopediaFinderPage /></LazyPage>} />
+          <Route path="/encyclopedia/favorites" element={<LazyPage><EncyclopediaFavoritesPage /></LazyPage>} />
           <Route path="/encyclopedia/:id" element={<LazyPage><EncyclopediaDetailPage /></LazyPage>} />
           <Route path="/how-to" element={<Navigate to="/how-to/supplier" replace />} />
           <Route path="/how-to/supplier" element={<SupplierGuidePage />} />
@@ -56,6 +62,7 @@ const App = () => (
           <Route path="/admin/sales" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sales" /></AdminGuard>} />
           <Route path="/admin/notices" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="notices" /></AdminGuard>} />
           <Route path="/admin/usageGuide" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="usageGuide" /></AdminGuard>} />
+          <Route path="/admin/encyclopedia" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="encyclopedia" /></AdminGuard>} />
           <Route path="/admin/history" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="history" /></AdminGuard>} />
           <Route path="/admin/sourcing" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sourcing" /></AdminGuard>} />
           <Route path="/admin/sync" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sync" /></AdminGuard>} />

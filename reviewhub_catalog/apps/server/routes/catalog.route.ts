@@ -70,6 +70,8 @@ import { SHIPPING_RATE_TYPES, SHIPPING_UNIT_LABELS, validateRateTiers } from "..
 import { getSalesOverview } from "../services/catalog-sales";
 import { disconnectConnection, getCatalogSyncOverview, listSyncOutbox, listSyncRuns, saveConnection, setAutoSync, verifyConnection } from "../services/catalog-sync";
 import { StorageError, storagePut } from "../services/s3_storage";
+import { allowSyncCreate, createEncyclopediaSave, getEncyclopediaSave, isMissingSyncTable, normalizeSyncCode, updateEncyclopediaSave } from "../services/encyclopedia-sync";
+import { NAVER_SEARCH_ENV, NaverSearchError, naverSearchConfig, readProduceSearchStats, refreshProduceSearch } from "../services/naver-search";
 
 const ProductOptionSchema = z.object({
   id: z.string().trim().min(1).optional(),
@@ -379,6 +381,92 @@ catalogRouter.get("/price-changes/export", publicRoute, async (c) => {
 // 공급사 사용방법 화면: 운영 기준·영상 목록(관리자 > 사용방법 관리, 빈 칸은 기본값)
 catalogRouter.get("/supplier-guide", publicRoute, async (c) => c.json(apiSuccess({ guide: await getSupplierGuide() })));
 catalogRouter.get("/seller-guide", publicRoute, async (c) => c.json(apiSuccess({ guide: await getSellerGuide() })));
+
+// 농수산물 백과사전 기기 옮기기 코드(migration 031): 내 후보·체크리스트를 코드로 저장·불러오기. 로그인 없이 쓰고 개인정보는 받지 않습니다.
+const PRODUCE_ID = z.string().regex(/^[a-z0-9-]{1,60}$/);
+const EncyclopediaSaveSchema = z.object({
+  favorites: z.array(PRODUCE_ID).max(400),
+  checks: z.record(PRODUCE_ID, z.array(z.boolean()).max(12)).refine((value) => Object.keys(value).length <= 400)
+});
+
+// 저장 표가 없거나(DB 준비 전) DB가 실패하면 내부 오류 문구를 그대로 보내지 않고 안내만 돌려줍니다.
+const syncStorageFailure = (c: Context, error: unknown, action: string) => {
+  if (isMissingSyncTable(error)) {
+    return c.json(apiFailure("SYNC_NOT_READY", "기기 옮기기 코드는 운영 배포 후 쓸 수 있어요. 내 후보는 이 기기에 그대로 저장돼요."), 503);
+  }
+  console.error(`[encyclopedia-sync] ${action} failed: ${error instanceof Error ? error.name : "error"}`);
+  return c.json(apiFailure("SYNC_FAILED", "저장 서버에 잠시 문제가 있어요. 잠시 뒤 다시 시도해 주세요."), 500);
+};
+
+catalogRouter.post("/encyclopedia/sync", publicRoute, async (c) => {
+  const parsed = EncyclopediaSaveSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "저장할 내용을 확인해 주세요."), 400);
+  const clientKey = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || c.req.header("x-real-ip") || "local";
+  if (!allowSyncCreate(clientKey)) return c.json(apiFailure("TOO_MANY_REQUESTS", "코드를 너무 많이 만들었어요. 잠시 뒤 다시 시도해 주세요."), 429);
+  try {
+    const save = await createEncyclopediaSave(parsed.data);
+    return c.json(apiSuccess(save), 201);
+  } catch (error) {
+    return syncStorageFailure(c, error, "create");
+  }
+});
+
+catalogRouter.get("/encyclopedia/sync/:code", publicRoute, async (c) => {
+  const code = normalizeSyncCode(c.req.param("code"));
+  if (!code) return c.json(apiFailure("INVALID_CODE", "코드 6자리를 확인해 주세요."), 400);
+  c.header("Cache-Control", "no-store");
+  try {
+    const save = await getEncyclopediaSave(code);
+    if (!save) return c.json(apiFailure("NOT_FOUND", "그 코드로 저장된 후보가 없어요."), 404);
+    return c.json(apiSuccess(save));
+  } catch (error) {
+    return syncStorageFailure(c, error, "load");
+  }
+});
+
+// 백과사전 네이버 검색량(관리자가 모아 둔 값). 없으면 빈 목록입니다.
+catalogRouter.get("/produce-search", publicRoute, async (c) => {
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json(apiSuccess(await readProduceSearchStats()));
+});
+
+catalogRouter.get("/admin/produce-search/status", adminRoute, async (c) => {
+  const config = naverSearchConfig();
+  const stats = await readProduceSearchStats();
+  return c.json(apiSuccess({
+    searchAd: Boolean(config.searchAd),
+    datalab: Boolean(config.datalab),
+    envNames: NAVER_SEARCH_ENV,
+    updatedAt: stats.updatedAt,
+    keywordCount: Object.keys(stats.keywords).length
+  }));
+});
+
+const ProduceSearchRefreshSchema = z.object({ keywords: z.array(z.string().trim().min(1).max(40)).min(1).max(25) });
+catalogRouter.post("/admin/produce-search/refresh", adminRoute, async (c) => {
+  const parsed = ProduceSearchRefreshSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "검색어는 한 번에 1~25개까지 보낼 수 있어요."), 400);
+  try {
+    return c.json(apiSuccess(await refreshProduceSearch(parsed.data.keywords)));
+  } catch (error) {
+    if (error instanceof NaverSearchError) return c.json(apiFailure("NAVER_SEARCH_FAILED", error.message), error.status as 409 | 502);
+    throw error;
+  }
+});
+
+catalogRouter.put("/encyclopedia/sync/:code", publicRoute, async (c) => {
+  const code = normalizeSyncCode(c.req.param("code"));
+  if (!code) return c.json(apiFailure("INVALID_CODE", "코드 6자리를 확인해 주세요."), 400);
+  const parsed = EncyclopediaSaveSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "저장할 내용을 확인해 주세요."), 400);
+  try {
+    const save = await updateEncyclopediaSave(code, parsed.data);
+    if (!save) return c.json(apiFailure("NOT_FOUND", "그 코드로 저장된 후보가 없어요."), 404);
+    return c.json(apiSuccess(save));
+  } catch (error) {
+    return syncStorageFailure(c, error, "save");
+  }
+});
 
 const pdfHeaders = (filename: string, download: boolean, cache = "no-store") => ({
   "Content-Type": "application/pdf",

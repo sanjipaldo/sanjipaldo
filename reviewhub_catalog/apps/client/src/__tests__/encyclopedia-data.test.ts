@@ -34,8 +34,11 @@ describe("백과사전 품목 데이터", () => {
       expect(item.level).toBeLessThanOrEqual(5);
       expect(produceCs(item).length, item.id).toBeGreaterThanOrEqual(3);
       if (item.pattern) expect(() => new RegExp(item.pattern ?? "")).not.toThrow();
+      expect(item.grow, item.id).toBeTruthy();
+      expect(item.tags?.length, item.id).toBeGreaterThan(0);
     }
-    expect(produceItems.length).toBeGreaterThanOrEqual(100);
+    expect(produceItems.length).toBeGreaterThanOrEqual(200);
+    expect(PRODUCE_CATEGORIES).toContain("가공·김장");
   });
 
   it("달 범위를 글자로: 해를 넘기는 구간·두 구간·연중", () => {
@@ -83,6 +86,37 @@ describe("백과사전 품목 데이터", () => {
     expect(pick("[본] 정품 가지 1kg (4-8개입)")).toEqual(["eggplant"]);
     expect(pick("[본] 사과 두 가지 맛 세트")).not.toContain("eggplant");
     expect(pick("석류콜라겐젤리스틱 15포")).toEqual([]);
+    // 추가 품목과 겹치지 않게
+    expect(pick("[제] 하우스감귤 2kg")).toEqual(["house-mandarin"]);
+    expect(pick("[본] 노지감귤 대과(L-2L) 3kg")).toEqual(["mandarin"]);
+    expect(pick("함안 산딸기 500g")).toEqual(["raspberry"]);
+    expect(pick("[본] 신비복숭아 2kg")).toEqual(["peach-sinbi"]);
+    expect(pick("나주배 원황 7.5kg")).toEqual(["pear-wonhwang"]);
+    expect(pick("[본] 여주 꿀고구마말랭이 500g")).toEqual(["sweetpotato-chips"]);
+    expect(pick("햇찹쌀 4kg")).toEqual(["glutinous-rice"]);
+    expect(pick("영광 보리굴비 10미")).toEqual(["gulbi"]);
+    expect(pick("여수 돌산갓김치 2kg")).toEqual(["kimchi"]);
+    expect(pick("통영 도다리쑥국 세트")).toEqual(["doddari"]);
+    expect(pick("[본] 새송이버섯 2kg")).toEqual(["king-oyster"]);
+    expect(pick("양송이버섯 1kg")).toEqual(["button-mushroom"]);
+    expect(pick("[본] 해남 호박고구마 3kg")).toEqual(["sweet-potato-pumpkin"]);
+    expect(pick("안동 마 2kg")).toEqual(["yam"]);
+    expect(pick("생마늘 1kg")).toEqual(["garlic"]);
+    expect(pick("대구 사과 5kg")).toEqual([]);
+    expect(pick("손질 대구 2kg")).toEqual(["cod"]);
+    expect(pick("[제] 수입산 백용과 / 1kg")).toEqual(["dragonfruit"]);
+    expect(pick("금산 수삼 750g")).toEqual(["ginseng"]);
+  });
+
+  it("가공품 품목은 식품 카테고리 상품과도 잇고, 신선 품목은 신선 카테고리 상품만 잇습니다", () => {
+    const categories = new Map([["farm", "🥕 농산"], ["food", "🥫 식품"]]);
+    const grouped = groupProductsByProduce([
+      { name: "프리미엄 포기김치 5kg", categoryId: "food" },
+      { name: "부사 사과칩 30g", categoryId: "food" },
+      { name: "부사 특품 5kg", categoryId: "farm" }
+    ], categories);
+    expect(grouped.get("kimchi")?.map((product) => product.name)).toEqual(["프리미엄 포기김치 5kg"]);
+    expect(grouped.get("apple-fuji")?.map((product) => product.name)).toEqual(["부사 특품 5kg"]);
   });
 
   it("신선 카테고리만 잇고, 상품을 품목별로 묶습니다", () => {

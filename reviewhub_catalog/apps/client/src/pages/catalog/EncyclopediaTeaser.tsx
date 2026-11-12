@@ -4,11 +4,11 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen, ChevronRight, Store } from "lucide-react";
 import { PHASE_META, formatMonthRange, groupProductsByProduce, itemsForMonth, phaseOf, salesMonths, type ProduceItem } from "@/lib/encyclopedia";
-import { ProduceThumb, freshProducts, phaseClass, useSeoulMonth } from "./encyclopedia-ui";
+import { ProduceThumb, phaseClass, useSeoulMonth } from "./encyclopedia-ui";
 
 export default function EncyclopediaTeaser({ products, categories }: { products: Array<{ name: string; categoryId: string }>; categories: Array<{ id: string; name: string }> }) {
   const month = useSeoulMonth();
-  const grouped = useMemo(() => groupProductsByProduce(freshProducts(products, categories)), [products, categories]);
+  const grouped = useMemo(() => groupProductsByProduce(products, new Map(categories.map((category) => [category.id, category.name]))), [products, categories]);
   const picks = useMemo(() => {
     const groups = itemsForMonth(month);
     const rank = (list: ProduceItem[]) =>
@@ -41,7 +41,7 @@ export default function EncyclopediaTeaser({ products, categories }: { products:
               <div>
                 <strong>{item.name}</strong>
                 <small><span className={`phase-text phase-${phaseClass(phase)}`}>{PHASE_META[phase].label}</span> · 판매 {formatMonthRange(salesMonths(item))}</small>
-                {count > 0 && <em><Store size={12} aria-hidden="true" /> 두고푸드 {count}개</em>}
+                {count > 0 && <em><Store size={12} aria-hidden="true" /> 두고푸드 보유 {count}개</em>}
               </div>
             </Link>
           );

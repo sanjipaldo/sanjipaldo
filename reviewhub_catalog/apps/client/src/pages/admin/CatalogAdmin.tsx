@@ -52,6 +52,7 @@ import {
 import { toast } from "sonner";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 import { apiFetch } from "@/lib/api";
+import { EncyclopediaSearchAdmin } from "./EncyclopediaSearchAdmin";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
 import { authClient, clearAuthToken } from "@/lib/auth";
 import { SUPPLY_STATUS_LABELS, supplyStatus, type SupplyStatus } from "@/lib/supply-status";
@@ -61,7 +62,7 @@ import { SELLER_GUIDE_SETTING_KEY, SELLER_VIDEO_GROUPS, hasSellerDemo, parseSell
 import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 import type { AdminCatalogData, AdminHomeData, AdminOverview, BaljuoraConnection, Category, CatalogSyncOutboxItem, CatalogSyncOverview, CatalogSyncRun, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, SalesOverview, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
-type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "changes" | "transmissions" | "sales" | "notices" | "usageGuide" | "history" | "sourcing" | "sync" | "backup";
+type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "changes" | "transmissions" | "sales" | "notices" | "usageGuide" | "encyclopedia" | "history" | "sourcing" | "sync" | "backup";
 type ProductOptionDraft = Pick<ProductOption, "id" | "name" | "costPrice" | "aPrice" | "generalPrice" | "salePrice" | "salePriceMode" | "isSoldOut" | "sortOrder">;
 type BulkWorkbookPreview = {
   totalRows: number;
@@ -549,6 +550,7 @@ const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes
   { section: "sales", label: "통계", icon: CalendarDays },
   { section: "notices", label: "공지·필독", icon: Bell },
   { section: "usageGuide", label: "사용방법 관리", icon: BookOpen },
+  { section: "encyclopedia", label: "백과사전 검색량", icon: Search },
   { section: "history", label: "가격변동 이력", icon: History },
   { section: "sourcing", label: "입점·소싱 요청", icon: ClipboardList },
   { section: "backup", label: "DB 백업", icon: DatabaseBackup },
@@ -644,7 +646,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
     // Bundles load only their group payload on demand. Fetching the complete
     // 2,347-product catalog here made the bundle list wait for data it never
     // renders.
-    const childOwnsData = new Set<AdminSection>(["bundles", "shippingPolicies", "suppliers", "sales", "changes", "transmissions", "sync", "backup"]);
+    const childOwnsData = new Set<AdminSection>(["bundles", "shippingPolicies", "suppliers", "sales", "changes", "transmissions", "sync", "backup", "encyclopedia"]);
     if (childOwnsData.has(section)) {
       if (!silent) setLoading(false);
       return;
@@ -783,6 +785,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               {section === "sales" && <SalesAdmin />}
               {section === "notices" && <NoticesAdmin data={data} refresh={refresh} />}
               {section === "usageGuide" && <UsageGuideAdmin data={data} refresh={refresh} />}
+              {section === "encyclopedia" && <EncyclopediaSearchAdmin />}
               {section === "history" && <HistoryAdmin data={data} />}
               {section === "sourcing" && <SourcingAdmin data={data} refresh={refresh} />}
               {section === "sync" && <CatalogSyncAdmin />}
