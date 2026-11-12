@@ -1,24 +1,27 @@
-"""EP06 audio (the clip itself is silent): the EP01 ukulele/glockenspiel BGM with first-apple beats -- crunchy
-'아삭' bites, a slow-motion 'whoom', a comedic music stop with a sour slide-whistle + wobble on the pucker,
+"""EP06 audio: the EP01 ukulele/glockenspiel BGM with first-apple beats -- the REAL '사각사각' of his two lower
+teeth on the apple (tiny in the clip: band-passed, gated and lifted, music dipped under it and nearly muted for the
+ASMR close-up), a slow-motion 'whoom', a comedic music stop with a sour slide-whistle + wobble on the pucker,
 a '뿅' + rising glock each time he opens his mouth for more, gauge blips, a success chime, review-card dings +
 the stamp, and the EP01 ending.
 
-usage: audio_ep06.py OUT_RAW.wav
+usage: audio_ep06.py SRC.mp4 OUT_RAW.wav
 """
-import sys, wave
+import subprocess, sys, wave
 import numpy as np
 from scipy.signal import butter, sosfilt
 
-OUT = sys.argv[1]
+SRC, OUT = sys.argv[1], sys.argv[2]
 SR = 48000
-MAIN_T, TOTAL = 24.4, 27.2
+MAIN_T, TOTAL = 25.8, 28.6
 N = int(TOTAL * SR)
 BPM = 120; BEAT = 60 / BPM; BAR = 4 * BEAT
 rng = np.random.default_rng(6)
-SOUR_T, DONE, CARD = 6.6, 20.75, 21.6
+SOUR_T, DONE, CARD = 6.6, 22.1, 23.0
 SLOW = [(0.0, 2.0), (5.4, 7.4)]
-WANT = [9.9, 14.65, 18.4, DONE]
-BITES = [2.3, 4.2, 10.65, 11.95, 14.9, 18.45, 20.95]
+WANT = [9.9, 14.8, 17.5, DONE]
+ASMR = (17.9, 20.05)
+# clip pieces where the teeth scrape the apple: (src_start, src_end, out - src)
+SCRAPE = [(1.5, 2.05, 2.0), (2.8, 3.4, 2.0), (9.0, 9.9, 1.4), (20.0, 22.2, -2.15)]
 
 def note_hz(name):
     names = {'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11}
@@ -116,6 +119,11 @@ g = np.minimum(g, 0.75 + 0.25 * np.clip((t - 1.9) / 0.15, 0, 1))          # hook
 k = np.clip(np.minimum((t - 5.35) / 0.1, (SOUR_T - t) / 0.02), 0, 1)
 g = np.minimum(g, 1 - 0.6 * k)                                           # slow motion: music drops back
 g = np.minimum(g, np.clip(np.maximum((SOUR_T - 0.02 - t) / 0.02, (t - 7.35) / 0.12), 0, 1))   # comedic stop
+for a, b, off in SCRAPE[:3]:           # dip under the early scrapes
+    k = np.clip(np.minimum((t - (a + off) + 0.1) / 0.1, ((b + off) - t) / 0.15), 0, 1)
+    g = np.minimum(g, 1 - 0.55 * k)
+k = np.clip(np.minimum((t - ASMR[0] + 0.15) / 0.2, (ASMR[1] - t) / 0.2), 0, 1)
+g = np.minimum(g, 1 - 0.88 * k)        # ASMR close-up: music almost gone
 g *= np.clip(t / 0.05, 0, 1) * np.clip((MAIN_T - t) / 0.3, 0, 1)
 mus.L *= g; mus.R *= g
 
@@ -191,10 +199,8 @@ for i, nm in enumerate(['G5', 'C6', 'E6']):
     sfx.add(0.05 + i * 0.07, glock(note_hz(nm), 1.0), 0.13)
 sfx.add(1.05, slide_whistle(0.5), 0.07); sfx.add(1.1, wobble(0.5), 0.12)      # hook pucker
 sfx.add(1.85, whoosh(0.4), 0.18)
-for tc in (4.0, 7.4, 9.0, 11.0, 13.0, 14.4, 15.4, 17.0, 18.6, 19.6):
+for tc in (4.0, 7.4, 9.0, 11.3, 13.15, 14.55, 15.55, 17.15, 20.05, 21.05):
     sfx.add(tc - 0.12, whoosh(0.28), 0.08)
-for tb in BITES:
-    sfx.add(tb, crunch(), 0.22, pan=0.15)
 sfx.add(5.35, sweep(0.7, down=True), 0.15)
 sfx.add(SOUR_T, slide_whistle(0.55), 0.10); sfx.add(SOUR_T + 0.05, wobble(0.7), 0.20); sfx.add(SOUR_T, pop(), 0.25)
 sfx.add(7.0, sweep(0.45, down=False), 0.10)
@@ -202,7 +208,7 @@ for k_, tw in enumerate(WANT):
     sfx.add(tw, bloop(600 + 120 * k_), 0.16, pan=-0.2)
     for j, nm in enumerate(['C6', 'E6', 'G6'][:1 + min(2, k_)]):
         sfx.add(tw + 0.05 + 0.07 * j, glock(note_hz(nm), 0.8), 0.11, pan=0.3)
-for tp in (6.5, 9.9, 14.65, 18.4):                    # gauges move
+for tp in (6.5, 9.9, 14.8, 17.5):                     # gauges move
     sfx.add(tp, blip(1500), 0.07, pan=-0.4)
 sfx.add(DONE, pop(), 0.26)
 for i, nm in enumerate(['C6', 'E6', 'G6', 'C7', 'E7']):
@@ -210,11 +216,40 @@ for i, nm in enumerate(['C6', 'E6', 'G6', 'C7', 'E7']):
 sfx.add(CARD - 0.15, whoosh(0.35), 0.14)
 for k_, nm in enumerate(['E6', 'G6', 'C7']):
     sfx.add(CARD + 0.35 + 0.3 * k_, glock(note_hz(nm), 0.8), 0.11)
-sfx.add(CARD + 1.6, thump(), 0.55); sfx.add(CARD + 1.6, pop(), 0.15)
+for k_, nm in enumerate(['E7']):
+    sfx.add(CARD + 1.25, glock(note_hz(nm), 0.8), 0.11)
+sfx.add(CARD + 1.75, thump(), 0.55); sfx.add(CARD + 1.75, pop(), 0.15)
 sfx.add(MAIN_T - 0.15, whoosh(0.5), 0.2)
 sfx.add(MAIN_T + 1.4, click(), 0.6); sfx.add(MAIN_T + 1.4, pop(), 0.25)
 
-L_ = mus.L + end.L + sfx.L; R_ = mus.R + end.R + sfx.R
+# the real scrapes: band-pass, gate the hiss between them, lift them up
+raw = subprocess.run(["ffmpeg", "-v", "error", "-i", SRC, "-vn", "-ac", "1", "-ar", str(SR), "-f", "s16le", "-"],
+                     capture_output=True, check=True).stdout
+clip = np.frombuffer(raw, np.int16).astype(float) / 32768
+band = sosfilt(butter(4, [900, 12000], 'bp', fs=SR, output='sos'), clip)
+envf = np.sqrt(sosfilt(butter(1, 120, 'lp', fs=SR, output='sos'), band ** 2).clip(0))
+edb = 20 * np.log10(envf + 1e-12)
+floor = np.median(edb)
+gate = np.clip((edb - (floor + 9)) / 8, 0, 1)
+att, rel = np.exp(-1 / (0.002 * SR)), np.exp(-1 / (0.04 * SR))
+sm = np.zeros_like(gate); acc = 0.0
+for i, v in enumerate(gate):           # fast attack, slower release
+    acc = (att if v > acc else rel) * acc + (1 - (att if v > acc else rel)) * v
+    sm[i] = acc
+scr = band * sm
+teeth = Track()
+for a, b, off in SCRAPE:
+    piece = scr[int(a * SR):int(b * SR)].copy()
+    m = len(piece); piece *= np.minimum(1, np.minimum(np.arange(m) / (0.02 * SR), (m - np.arange(m)) / (0.05 * SR)))
+    teeth.add(a + off, piece, 1.0)
+act = teeth.L[int(ASMR[0] * SR):int(ASMR[1] * SR)]
+act = act[np.abs(act) > 1e-7]
+mus_rms = np.sqrt(np.mean(((mus.L + mus.R) / 2)[int(10 * SR):int(12 * SR)] ** 2)) / 1.0
+gt = mus_rms * 2.2 / (np.sqrt(np.mean(act ** 2)) + 1e-12) / np.sqrt(0.5)
+teeth.L *= gt; teeth.R *= gt
+print("scrape gain", round(20 * np.log10(gt), 1), "dB")
+
+L_ = mus.L + end.L + sfx.L + teeth.L; R_ = mus.R + end.R + sfx.R + teeth.R
 hp2 = butter(2, 45, 'hp', fs=SR, output='sos'); L_ = sosfilt(hp2, L_); R_ = sosfilt(hp2, R_)
 x = np.stack([L_, R_], 1)
 x *= np.clip((TOTAL - t) / 0.6, 0, 1)[:, None]

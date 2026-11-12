@@ -1,4 +1,5 @@
 """EP06 '첫 사과' Short in the EP01 style, edited from a 26.4 s vertical clip (8 months, first apple ever):
+the real '사각사각' of his two lower teeth is a running point (pops on every scrape, ASMR close-up),
 hook (slow-mo sour face) -> first bite -> slow-mo pucker '셔!!' -> recovering -> 'give me more' -> eats again ->
 'don't take it away' pout -> more '아~' -> one more bite -> first-apple review card. Two gauges (신맛 / 또 먹고 싶음).
 
@@ -30,45 +31,49 @@ EDL = [
     (4.0, 5.4, 2.0, 1, "crop", [(4.0, 540, 960, 1.2), (5.4, 530, 940, 1.25)]),
     (5.4, 7.4, 3.4, 0.5, "crop", [(5.4, 520, 920, 1.3), (6.6, 510, 900, 1.75), (7.4, 510, 900, 1.8)]),
     (7.4, 9.0, 4.4, 2, "crop", [(7.4, 520, 880, 1.1), (9.0, 500, 860, 1.12)]),
-    (9.0, 11.0, 7.6, 1, "crop", [(9.0, 470, 820, 1.2), (11.0, 480, 820, 1.25)]),
-    (11.0, 13.0, 9.6, 2, "crop", [(11.0, 500, 820, 1.15), (13.0, 520, 820, 1.15)]),
-    (13.0, 14.4, 13.6, 1, "crop", [(13.0, 540, 800, 1.2), (14.4, 540, 800, 1.32)]),
-    (14.4, 15.4, 15.0, 1, "crop", [(14.4, 540, 820, 1.25), (15.4, 540, 820, 1.25)]),
-    (15.4, 17.0, 16.0, 2, "crop", [(15.4, 520, 820, 1.15), (17.0, 520, 820, 1.15)]),
-    (17.0, 18.6, 19.3, 1, "crop", [(17.0, 520, 820, 1.2), (18.6, 520, 820, 1.25)]),
-    (18.6, 19.6, 23.0, 1, "crop", [(18.6, 470, 840, 1.25), (19.6, 460, 840, 1.32)]),
-    (19.6, 21.6, 24.4, 1, "crop", [(19.6, 400, 880, 1.2), (21.6, 400, 880, 1.28)]),
-    (21.6, 24.4, 25.4, 0, "card", None),
+    (9.0, 11.3, 7.6, 1, "crop", [(9.0, 470, 820, 1.2), (11.3, 480, 820, 1.26)]),
+    (11.3, 13.15, 9.9, 2, "crop", [(11.3, 500, 820, 1.15), (13.15, 520, 820, 1.15)]),
+    (13.15, 14.55, 13.6, 1, "crop", [(13.15, 540, 800, 1.2), (14.55, 540, 800, 1.32)]),
+    (14.55, 15.55, 15.0, 1, "crop", [(14.55, 540, 820, 1.25), (15.55, 540, 820, 1.25)]),
+    (15.55, 17.15, 16.0, 2, "crop", [(15.55, 520, 820, 1.15), (17.15, 520, 820, 1.15)]),
+    (17.15, 20.05, 19.3, 1, "crop", [(17.15, 520, 820, 1.2), (17.9, 520, 880, 1.25), (18.5, 505, 960, 1.8), (20.05, 490, 990, 1.85)]),
+    (20.05, 21.05, 23.0, 1, "crop", [(20.05, 470, 840, 1.25), (21.05, 460, 840, 1.32)]),
+    (21.05, 23.0, 24.4, 1, "crop", [(21.05, 400, 880, 1.2), (23.0, 400, 880, 1.28)]),
+    (23.0, 25.8, 25.4, 0, "card", None),
 ]
-MAIN_T = 24.4
+MAIN_T = 25.8
 OUTRO_T = MAIN_T
 TOTAL_N = int(round((MAIN_T + 2.8) * FPS))
 SLOW = [(0.0, 2.0), (5.4, 7.4)]
 SOUR_T = 6.6                           # the pucker (src 4.0)
-DONE_T = 20.75                         # 'one more bite' + confetti
-WANT = [9.9, 14.65, 18.4, DONE_T]      # mouth-open '아~' moments (src 8.5, 15.25, 20.7, 25.45)
+DONE_T = 22.1                          # 'one more bite' + confetti
+WANT = [9.9, 14.8, 17.5, DONE_T]       # mouth-open '아~' moments (src 8.5, 15.25, 19.65, 25.45)
+ASMR = (17.9, 20.05)                   # the two lower teeth scraping the apple (src 20.05-22.2): music down, real sound up
+# a '사각' pops on each real scrape transient (out times, found in the clip audio)
+SAKAK = [3.86, 4.85, 5.09, 10.45, 10.81, 11.18, 18.09, 18.47, 18.92, 19.3, 19.57, 19.91]
 PHOTO_SOUR, PHOTO_WANT = 4.0, 25.4
 
 BURSTS = [(SOUR_T, "셔!!", (840, 660)), (9.9, "또 줘!", (850, 1180)), (DONE_T, "한 입 더!", (840, 1180))]
 CAPTIONS = [
     (2.0, 4.0, "생애 첫 [사과] 도전! 🍎"),
-    (4.0, 5.4, "아삭아삭~ 맛있…? 😋"),
+    (4.0, 5.4, "사각사각~ 맛있…? 😋"),
     (5.4, 6.6, "어…? 🤔"),
     (6.6, 7.4, "으…! [셔]!!! 😖"),
     (7.4, 9.0, "잠시 정신 수습 중… 😵"),
     (9.0, 9.9, "근데 이상하다…?"),
-    (9.9, 11.0, "[또] 주세요! 아~ 😮"),
-    (11.0, 13.0, "셔도 멈출 수 없는 맛 🍎"),
-    (13.0, 14.4, "앗… 가져가지 마요 🥺"),
-    (14.4, 15.4, "한 입만 더! 아~ 😮"),
-    (15.4, 17.0, "오물오물~ 또 냠냠 😋"),
-    (17.0, 18.6, "더 주세요~ 👅"),
-    (18.6, 19.6, "시큼… 그래도… 🥺"),
-    (19.6, 21.6, "결국 [한 입 더]! 😆"),
+    (9.9, 11.3, "[또] 주세요! 아~ 😮"),
+    (11.3, 13.15, "셔도 멈출 수 없는 맛 🍎"),
+    (13.15, 14.55, "앗… 가져가지 마요 🥺"),
+    (14.55, 15.55, "한 입만 더! 아~ 😮"),
+    (15.55, 17.15, "오물오물~ 또 냠냠 😋"),
+    (17.15, 17.9, "더 주세요~ 👅"),
+    (17.9, 20.05, "아랫니 2개로 [사각사각] 🦷🦷"),
+    (20.05, 21.05, "시큼… 그래도… 🥺"),
+    (21.05, 23.0, "결국 [한 입 더]! 😆"),
 ]
 # gauge values (%) reached at each moment: sourness, wanting-more
 SOUR_P = [(5.4, 0), (6.5, 40), (SOUR_T, 100)]
-WANT_P = [(9.0, 0), (9.9, 35), (14.65, 60), (18.4, 80), (DONE_T, 100)]
+WANT_P = [(9.0, 0), (9.9, 35), (14.8, 60), (17.5, 80), (DONE_T, 100)]
 
 
 # ---------------------------------------------------------------- helpers
@@ -230,6 +235,9 @@ def title_pill():
 TITLE, TITLE_TAG = title_pill()
 SPEED = pill("⏩ 2배속", 40, (20, 36, 96, 220), WHITE, 72)
 SLOWMO = pill("🐢 슬로우 모션", 40, (255, 77, 109, 230), WHITE, 72)
+ASMR_PILL = pill("🔊 소리 켜고 들어보세요", 40, (255, 77, 109, 230), WHITE, 72)
+SAKAK_TXT = text_line("사각", 66, fill=WHITE, stroke=(70, 170, 160), sw=9)
+TOOTH = emoji_img("🦷", 64)
 
 def burst(label):
     R = 210
@@ -327,8 +335,8 @@ INK = (52, 58, 84)
 CARD_HEAD = text_line("🍎 승유의 첫 사과 리뷰", 62, fill=NAVY, stroke=WHITE, sw=0, shadow=False)
 LAB_SOUR = text_line("첫 입 😖", 54, fill=INK, stroke=WHITE, sw=0, path=PEN, shadow=False)
 LAB_WANT = text_line("그래도 또! 😮", 54, fill=INK, stroke=WHITE, sw=0, path=PEN, shadow=False)
-CARD_ROWS = [text_line(c, 60, fill=INK, stroke=WHITE, sw=0, path=PEN, shadow=False) for c in
-             ["맛: ⭐⭐⭐⭐⭐", "신맛: 🍋🍋🍋🍋🍋 (MAX)", "한 줄 평: 셔도 또 먹을래요!"]]
+CARD_ROWS = [text_line(c, 56, fill=INK, stroke=WHITE, sw=0, path=PEN, shadow=False) for c in
+             ["맛: ⭐⭐⭐⭐⭐", "신맛: 🍋🍋🍋🍋🍋 (MAX)", "식감: 아랫니로 사각사각 🦷🦷", "한 줄 평: 셔도 또 먹을래요!"]]
 CARD_DATE = text_line("2026.11.12 · 승유 8개월", 40, fill=(140, 140, 160), stroke=WHITE, sw=0, path=PEN, shadow=False)
 
 def stamp():
@@ -401,6 +409,16 @@ def overlays(img, t):
                 x = 540 + (k - 1) * 150 + 20 * math.sin(kt * 8)
                 put(img, scaled(APPLE if k != 1 else HEARTY, 0.5 + 0.5 * ease_out_back(kt / 0.3), 1 - clamp01((kt - 0.6) / 0.3)),
                     x, 1180 - 300 * ease_out(kt / 0.8))
+    for k, ts in enumerate(SAKAK):       # '사각' + a tooth pop on every real scrape
+        dt = t - ts
+        if 0 <= dt <= 0.55:
+            left = k % 2 == 0
+            y0 = 860 if ASMR[0] <= ts < ASMR[1] else 1000
+            x, y = (250, y0 + 40 * (k % 3)) if left else (830, y0 - 30 + 40 * (k % 3))
+            s = 0.3 + 0.7 * ease_out_back(dt / 0.16)
+            a = 1 - clamp01((dt - 0.38) / 0.17)
+            put(img, scaled(SAKAK_TXT, s, a, rot=10 if left else -10), x, y - 60 * dt)
+            put(img, scaled(TOOTH, s, a), x + (120 if left else -120), y - 50 - 60 * dt)
     for tb, label, (bx, by) in BURSTS:
         dt = t - tb
         if -0.02 <= dt <= 0.95:
@@ -438,14 +456,17 @@ def chrome(img, t, seg, captions=True):
         k = ease_out_back((t - 1.7) / 0.45)
         put(img, TITLE, 540, -120 + (250 + 120) * k)
         put(img, scaled(TITLE_TAG, 1, clamp01((t - 2.0) / 0.3)), 540, 358)
-    if 5.4 <= t < 21.6:
-        a = clamp01((t - 5.4) / 0.25) * clamp01((21.6 - t) / 0.2)
+    if 5.4 <= t < 23.0:
+        a = clamp01((t - 5.4) / 0.25) * clamp01((23.0 - t) / 0.2)
         ps, pw = level(SOUR_P, t), level(WANT_P, t)
         bump = 1 + 0.1 * max([math.exp(-((t - tp) / 0.12) ** 2) for tp, _ in SOUR_P[1:] + WANT_P[1:]])
         put(img, scaled(gauges(ps, pw), bump, a), 240, 520)
     if seg[3] == 2:
         a = clamp01((t - seg[0]) / 0.2) * clamp01((seg[1] - t) / 0.15)
         put(img, scaled(SPEED, 1, a), 920, 470)
+    if ASMR[0] <= t < ASMR[1]:
+        a = clamp01((t - ASMR[0]) / 0.2) * clamp01((ASMR[1] - t) / 0.15)
+        put(img, scaled(ASMR_PILL, 1 + 0.04 * math.sin(t * 6), a), 760, 470)
     if in_slow(t) and t >= 2.0:
         a = clamp01((t - seg[0]) / 0.2) * clamp01((seg[1] - t) / 0.15)
         put(img, scaled(SLOWMO, 1, a), 880, 470)
@@ -500,8 +521,8 @@ def draw_card(frame, sour, want, t, seg):
             ph = Image.new("RGBA", (360, 430), WHITE); ph.paste(fr.resize((340, 410), Image.LANCZOS, box=box), (10, 10))
             card.alpha_composite(with_shadow(ph.rotate(rot, resample=Image.BICUBIC, expand=True), 6, 8, 110), (x, 140))
             card.alpha_composite(lab, (x + 200 - lab.width // 2, 600))
-        for k in range(3):
-            y = 760 + 80 * k
+        for k in range(4):
+            y = 748 + 68 * k
             d.line([(60, y), (880, y)], fill=(230, 226, 210), width=3)
         card.alpha_composite(CARD_DATE, (940 - CARD_DATE.width - 40, 970))
         _card["card"] = card
@@ -512,12 +533,12 @@ def draw_card(frame, sour, want, t, seg):
         if rt > 0:
             s = 0.4 + 0.6 * ease_out_back(rt / 0.22)
             r = scaled(row, s)
-            card.alpha_composite(r, (int(70 + row.width * (1 - s) / 2), int(688 + 80 * k + row.height * (1 - s) / 2)))
-    st = lt - 1.6
+            card.alpha_composite(r, (int(70 + row.width * (1 - s) / 2), int(678 + 68 * k + row.height * (1 - s) / 2)))
+    st = lt - 1.75
     if st > 0:
         s = 2.2 - 1.2 * ease_out(st / 0.16)
         sp = scaled(STAMP, s, clamp01(st / 0.08), rot=-12)
-        card.alpha_composite(sp, (int(760 - sp.width / 2), int(780 - sp.height / 2)))
+        card.alpha_composite(sp, (int(790 - sp.width / 2), int(850 - sp.height / 2)))
     cs = 1.18 - 0.18 * ease_out_back(lt / 0.35)
     shake_y = 10 * math.exp(-max(0, st) / 0.08) * math.sin(st * 60) if st > 0 else 0
     put(img, scaled(with_shadow(card, 16, 20, 170), cs, rot=-2 + 2 * (1 - smooth(lt / 0.5))), 540, 1040 + shake_y)
