@@ -1,4 +1,4 @@
-import { FormEvent, Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, Fragment, type ReactNode, Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowDownRight,
@@ -53,6 +53,9 @@ import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 import { SUPPLY_STATUS_LABELS, supplyStatus } from "@/lib/supply-status";
 import { NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, selectNewProducts, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 
+
+// 메인 홈 "이번 달 제철 백과사전" 미리보기(품목 데이터는 따로 불러와 단가표 첫 화면을 무겁게 하지 않습니다)
+const EncyclopediaTeaser = lazy(() => import("./EncyclopediaTeaser"));
 
 const fallbackGuideContent: GuideContent = {
   highlights: [
@@ -175,7 +178,7 @@ const fallbackData: CatalogData = {
   }
 };
 
-const emptyCatalogData: CatalogData = {
+export const emptyCatalogData: CatalogData = {
   ...fallbackData,
   products: [],
   notices: [],
@@ -358,7 +361,7 @@ function normalizeCatalogData(data: CatalogData) {
   };
 }
 
-async function loadCatalog() {
+export async function loadCatalog() {
   try {
     const response = await apiFetch("/catalog", { auth: false, silent: true });
     if (!response.ok) return null;
@@ -464,7 +467,7 @@ function isSeasonalCategory(categoryName?: string) {
 }
 
 // 제철 적용 여부: 제철 카테고리이거나, 카테고리와 상관없이 상품에 제철 월이 지정된 경우
-function seasonApplies(product: Pick<Product, "isAlwaysOnSale" | "saleStartMonth" | "saleEndMonth">, categoryName?: string) {
+export function seasonApplies(product: Pick<Product, "isAlwaysOnSale" | "saleStartMonth" | "saleEndMonth">, categoryName?: string) {
   return isSeasonalCategory(categoryName) || Boolean(!product.isAlwaysOnSale && product.saleStartMonth && product.saleEndMonth);
 }
 
@@ -510,14 +513,19 @@ function seoulClock(value: Date) {
   }).format(value);
 }
 
-function seoulMonth(value: Date) {
+export function seoulMonth(value: Date) {
   return Number(new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Seoul",
     month: "numeric"
   }).format(value));
 }
 
+// 상단 메뉴: 가격변동·품절이슈는 "가격·품절" 하나로 묶고(두 화면 위 탭으로 오감), 백과사전은 사용방법 왼쪽에 둡니다.
+const PRICE_ALERT_PATHS = ["/notices", "/sold-out"];
+
 function BrandHeader() {
+  const location = useLocation();
+  const priceAlertActive = PRICE_ALERT_PATHS.some((path) => location.pathname.startsWith(path));
   return (
     <header className="public-header">
       <Link to="/" className="public-brand" aria-label="두고푸드 상품 DB 홈">
@@ -526,8 +534,8 @@ function BrandHeader() {
       <nav className="public-nav" aria-label="주요 메뉴">
         <NavLink to="/" end>단가표</NavLink>
         <NavLink to="/new-products">신규상품</NavLink>
-        <NavLink to="/notices">가격변동</NavLink>
-        <NavLink to="/sold-out">품절이슈</NavLink>
+        <NavLink to="/notices" className={() => (priceAlertActive ? "active" : "")} aria-current={priceAlertActive ? "page" : undefined}>가격·품절</NavLink>
+        <NavLink to="/encyclopedia">백과사전</NavLink>
         <NavLink to="/how-to">사용방법</NavLink>
         <NavLink to="/guide">공지사항</NavLink>
         <button className="sourcing-nav-button" type="button" onClick={() => window.dispatchEvent(new CustomEvent("doogo:sourcing-open"))}><PackageSearch size={14} /> 소싱해주세요!</button>
@@ -542,6 +550,16 @@ function BrandHeader() {
         </a>
       </div>
     </header>
+  );
+}
+
+// "가격·품절" 메뉴 안의 두 화면(가격변동 · 품절이슈)을 오가는 탭
+function PriceAlertTabs({ active, soldOutCount }: { active: "price" | "soldout"; soldOutCount?: number }) {
+  return (
+    <nav className="price-alert-tabs" aria-label="가격·품절">
+      <Link to="/notices" className={active === "price" ? "active" : ""} aria-current={active === "price" ? "page" : undefined}><TrendingUp size={16} aria-hidden="true" /> 가격변동</Link>
+      <Link to="/sold-out" className={active === "soldout" ? "active" : ""} aria-current={active === "soldout" ? "page" : undefined}><Ban size={16} strokeWidth={2.4} aria-hidden="true" /> 품절이슈{soldOutCount ? <b>{soldOutCount.toLocaleString("ko-KR")}</b> : null}</Link>
+    </nav>
   );
 }
 
@@ -575,6 +593,7 @@ export function PageFrame({ children }: { children: ReactNode }) {
             <Link to="/new-products">신규상품</Link>
             <Link to="/notices">가격변동</Link>
             <Link to="/sold-out">품절이슈</Link>
+            <Link to="/encyclopedia">농수산물 백과사전</Link>
             <Link to="/how-to/supplier">사용방법(공급사)</Link>
             <Link to="/guide">공지사항</Link>
           </div>
@@ -703,7 +722,7 @@ function shippingFeeSummary(_product: Product, policy?: PublicShippingPolicy): S
 }
 
 // 배송비 ? 버튼 팝업: 무료/유료, 유료 방식, 무료 조건, 제주·도서산간 추가배송비, 반품·교환 배송비
-function ShippingInfoModal({ product, policy, onClose }: { product: Product; policy?: PublicShippingPolicy; onClose: () => void }) {
+export function ShippingInfoModal({ product, policy, onClose }: { product: Product; policy?: PublicShippingPolicy; onClose: () => void }) {
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -750,7 +769,7 @@ function ShippingInfoModal({ product, policy, onClose }: { product: Product; pol
   );
 }
 
-function ImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+export function ImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -1655,7 +1674,7 @@ function OperationsBoard({
 }
 
 // 단가표 표(상품 · 배송/카테고리/판매기간 · A단가 · 일반공급가 · 판매가 · 상품 안내). 단가표와 신규상품 화면이 함께 씁니다.
-function CatalogProductTable({
+export function CatalogProductTable({
   products,
   categories,
   policyById,
@@ -1849,6 +1868,28 @@ export function CatalogHome() {
   const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
   const [shippingInfo, setShippingInfo] = useState<{ product: Product; policy?: PublicShippingPolicy } | null>(null);
   const policyById = useMemo(() => new Map((data.shippingPolicies ?? []).map((policy) => [policy.id, policy])), [data.shippingPolicies]);
+  // 백과사전 "단가표에서 보기"(/?q=품목명): 필터를 풀고 그 이름으로 찾은 뒤 단가표로 이동합니다.
+  const location = useLocation();
+  const linkedQuery = new URLSearchParams(location.search).get("q")?.trim() ?? "";
+  useEffect(() => {
+    if (!linkedQuery) return;
+    setShippingType("all");
+    setCategoryId("all");
+    setSaleMonth("all");
+    setQuery(linkedQuery);
+    // 상품·공지·백과사전 미리보기가 늦게 그려지면 단가표 위치가 내려가므로, 직접 스크롤하기 전까지 몇 번 다시 맞춥니다.
+    let alignedY: number | null = null;
+    const align = () => {
+      if (alignedY !== null && Math.abs(window.scrollY - alignedY) > 4) return;
+      const table = document.querySelector("#price-table");
+      if (!table) return;
+      // 부드러운 스크롤(CSS)은 도중에 아래 내용이 늘면 엉뚱한 곳에 멈추므로 바로 옮깁니다.
+      table.scrollIntoView({ block: "start", behavior: "instant" });
+      alignedY = window.scrollY;
+    };
+    const timers = [250, 800, 1600, 3000].map((wait) => window.setTimeout(align, wait));
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [linkedQuery]);
 
   useEffect(() => {
     let active = true;
@@ -1976,6 +2017,7 @@ export function CatalogHome() {
           window.requestAnimationFrame(() => document.querySelector("#price-table")?.scrollIntoView({ behavior: "smooth", block: "start" }));
         }} />
         <HomeNoticeBoard notices={data.notices} />
+        <Suspense fallback={null}><EncyclopediaTeaser products={data.products} categories={data.categories} /></Suspense>
         <PartnerBanner />
         <section className="catalog-hero">
           <div>
@@ -2291,6 +2333,7 @@ export function NoticesPage() {
   return (
     <PageFrame>
       <main className="content-page">
+        <PriceAlertTabs active="price" soldOutCount={data.recentSoldOutIssues.length} />
         <div className="content-hero notice-hero">
           <div><span className="section-kicker">DAILY PRICE BOARD</span><h1>가격변동</h1><p>경매장 시세판처럼 오늘과 지난 3일간 상품별 변동 가격을 날짜별로 정확하게 확인할 수 있습니다.</p></div>
           <div className="notice-hero-actions">
@@ -2352,6 +2395,7 @@ export function SoldOutIssuesPage() {
   return (
     <PageFrame>
       <main className="content-page">
+        <PriceAlertTabs active="soldout" soldOutCount={data.recentSoldOutIssues.length} />
         <div className="content-hero notice-hero sold-out-hero">
           <div><span className="section-kicker">SUPPLY ALERT</span><h1>품절이슈</h1><p>공급처 사정으로 품절 처리된 상품을 처리일 기준 최근 7일간 날짜별로 정확하게 확인할 수 있습니다.</p></div>
           <div className="notice-hero-actions">

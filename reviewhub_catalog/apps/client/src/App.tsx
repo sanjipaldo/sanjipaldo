@@ -5,11 +5,24 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import NotFound from "./pages/not-found/Index";
 import { AdminGuard } from "./components/auth/AdminGuard";
 import { AdminLoginPage, CatalogAdmin } from "./pages/admin/CatalogAdmin";
-import { CatalogHome, GuidePage, NewProductsPage, NoticesPage, SoldOutIssuesPage, SourcingPage } from "./pages/catalog/PublicCatalog";
+import { lazy, Suspense, type ReactNode } from "react";
+import { CatalogHome, GuidePage, NewProductsPage, NoticesPage, PageFrame, SoldOutIssuesPage, SourcingPage } from "./pages/catalog/PublicCatalog";
 import { SellerGuidePage, SupplierGuidePage } from "./pages/catalog/UsageGuide";
 import { GuideDemoRender } from "./pages/catalog/GuideDemo";
 
 const queryClient = new QueryClient();
+
+// 백과사전은 품목 데이터가 커서 들어갈 때 따로 불러옵니다.
+const EncyclopediaPage = lazy(() => import("./pages/catalog/Encyclopedia").then((module) => ({ default: module.EncyclopediaPage })));
+const EncyclopediaDetailPage = lazy(() => import("./pages/catalog/Encyclopedia").then((module) => ({ default: module.EncyclopediaDetailPage })));
+
+function LazyPage({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<PageFrame><main className="content-page"><div className="catalog-loading-state"><div className="spinner" /><strong>화면을 여는 중입니다.</strong></div></main></PageFrame>}>
+      {children}
+    </Suspense>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -22,6 +35,8 @@ const App = () => (
           <Route path="/new-products" element={<NewProductsPage />} />
           <Route path="/notices" element={<NoticesPage />} />
           <Route path="/sold-out" element={<SoldOutIssuesPage />} />
+          <Route path="/encyclopedia" element={<LazyPage><EncyclopediaPage /></LazyPage>} />
+          <Route path="/encyclopedia/:id" element={<LazyPage><EncyclopediaDetailPage /></LazyPage>} />
           <Route path="/how-to" element={<Navigate to="/how-to/supplier" replace />} />
           <Route path="/how-to/supplier" element={<SupplierGuidePage />} />
           <Route path="/how-to/seller" element={<SellerGuidePage />} />
