@@ -15,6 +15,7 @@ import {
   searchHealth
 } from "@/lib/health-encyclopedia";
 import { formatMarginRate, saleMargin } from "@/lib/sale-margin";
+import { BODY_VIEWBOX, HEALTH_BODY_PARTS } from "@/lib/health-body-map";
 
 const categories = [
   { id: "c-farm", name: "🥕 농산", shippingType: "domestic", sortOrder: 1, isActive: true },
@@ -170,8 +171,9 @@ describe("단가표 마진율", () => {
     expect(screen.queryByRole("columnheader", { name: "상품 안내" })).toBeNull();
     expect(screen.queryByText("예전 상품 안내 문구")).toBeNull();
     const cells = Array.from(document.querySelectorAll(".catalog-margin-cell")).map((cell) => cell.textContent);
-    expect(cells[0]).toBe("35.0%개당 7,000원");
-    expect(cells[1]).toBe("-판매가 자율");
+    // 칸 맨 끝은 마진계산기를 여는 "계산" 버튼(2026-11-14)
+    expect(cells[0]).toBe("35.0%개당 7,000원 계산");
+    expect(cells[1]).toBe("-판매가 자율 계산");
   });
 });
 
@@ -228,5 +230,43 @@ describe("백과사전 화면", () => {
     await renderHealth("/encyclopedia/health/guide");
     expect(document.querySelectorAll(".hl-guide-card")).toHaveLength(6);
     expect(screen.getByText("복용하세요")).toBeTruthy();
+  });
+});
+
+describe("몸에서 고민 찾기", () => {
+  it("21개 고민이 모두 한 곳 이상 · 점은 그림 안 · 같은 쪽 이름표는 겹치지 않게", () => {
+    const covered = new Set(HEALTH_BODY_PARTS.flatMap((part) => part.concerns));
+    for (const concern of healthConcerns) expect(covered.has(concern.id), concern.id).toBe(true);
+    for (const part of HEALTH_BODY_PARTS) for (const id of part.concerns) expect(findHealthConcern(id), `${part.id}:${id}`).toBeTruthy();
+    for (const part of HEALTH_BODY_PARTS) {
+      if (!part.dot) continue;
+      expect(part.dot.x).toBeGreaterThan(0);
+      expect(part.dot.x).toBeLessThan(BODY_VIEWBOX.width);
+      expect(part.dot.y).toBeGreaterThan(0);
+      expect(part.dot.y).toBeLessThan(BODY_VIEWBOX.height);
+    }
+    for (const side of ["left", "right"] as const) {
+      const ys = HEALTH_BODY_PARTS.flatMap((part) => (part.label?.side === side ? [part.label.y] : [])).sort((a, b) => a - b);
+      for (let index = 1; index < ys.length; index += 1) expect(ys[index] - ys[index - 1]).toBeGreaterThanOrEqual(56);
+    }
+  });
+
+  it("이름표를 누르면 그 부위 고민 카드 · 주소 ?part= 로 바로 열기 · 전신 버튼", async () => {
+    await renderHealth("/encyclopedia/health");
+    const map = screen.getByRole("group", { name: "몸에서 고민 고르기" });
+    expect(within(map).getByRole("button", { name: "눈" }).getAttribute("aria-pressed")).toBe("true");
+    const detail = document.querySelector(".hl-body-detail") as HTMLElement;
+    expect(within(detail).getByRole("heading", { name: "눈" })).toBeTruthy();
+    fireEvent.click(within(map).getByRole("button", { name: "심장·혈관" }));
+    expect(within(detail).getByRole("heading", { name: "심장·혈관" })).toBeTruthy();
+    expect(within(detail).getAllByRole("link")).toHaveLength(3);
+    document.body.innerHTML = "";
+    await renderHealth("/encyclopedia/health?part=whole");
+    expect(screen.getByRole("button", { name: /전신/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(document.querySelector(".hl-body-detail") as HTMLElement).getByRole("heading", { name: "전신" })).toBeTruthy();
+    // 검색 중에는 그림 대신 검색 결과
+    document.body.innerHTML = "";
+    await renderHealth("/encyclopedia/health?q=루테인");
+    expect(screen.queryByRole("group", { name: "몸에서 고민 고르기" })).toBeNull();
   });
 });

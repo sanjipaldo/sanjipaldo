@@ -21,6 +21,7 @@ import {
   Megaphone,
   MessageSquareText,
   PackageSearch,
+  PersonStanding,
   Pill,
   Search,
   ShieldAlert,
@@ -58,7 +59,9 @@ import {
   type HealthIngredient,
   type HealthIngredientType
 } from "@/lib/health-encyclopedia";
+import { DEFAULT_BODY_PART, HEALTH_BODY_PARTS, bodyPartConcerns, bodyPartProductCount, findBodyPart } from "@/lib/health-body-map";
 import { useSharedCatalog } from "./catalog-cache";
+import { HealthBodyMap } from "./HealthBodyMap";
 import { EncyclopediaFrame, copyText, useMediaQuery } from "./encyclopedia-frame";
 import { CatalogProductTable, ImageModal, ShippingInfoModal, seasonApplies, seoulMonth } from "./PublicCatalog";
 import type { CatalogData, Product, PublicShippingPolicy } from "./types";
@@ -216,6 +219,10 @@ export function HealthHomePage() {
   const monthConcerns = concernsForMonth(month);
   const visible = group ? healthConcerns.filter((concern) => concern.group === group) : healthConcerns;
   const carried = healthIngredients.filter((item) => (grouped.get(item.id)?.length ?? 0) > 0).length;
+  // 몸에서 고민 찾기: 고른 곳은 주소(?part=)에 남깁니다(기본은 눈).
+  const bodyPart = findBodyPart(params.get("part")) ?? findBodyPart(DEFAULT_BODY_PART) ?? HEALTH_BODY_PARTS[0];
+  const bodyConcerns = bodyPartConcerns(bodyPart);
+  const wholePart = findBodyPart("whole");
   const update = (next: Record<string, string | null>) => {
     const copy = new URLSearchParams(params);
     for (const [key, value] of Object.entries(next)) {
@@ -250,6 +257,34 @@ export function HealthHomePage() {
           <Link to="/encyclopedia/health/guide"><strong>6</strong><span>판매 전 체크</span></Link>
         </div>
       </section>
+
+      {!query && (
+        <section className="hl-section hl-body" aria-labelledby="hl-body-title">
+          <SectionHead id="hl-body-title" icon={<PersonStanding size={18} />} title="몸에서 고민 찾기" desc="고객이 신경 쓰는 곳을 누르면, 그 고민에 팔기 좋은 원료와 두고푸드 상품을 바로 보여 드려요." />
+          <div className="hl-body-layout">
+            <HealthBodyMap
+              selected={bodyPart.id}
+              onSelect={(id) => update({ part: id === DEFAULT_BODY_PART ? null : id })}
+              counts={loading || !wholePart ? undefined : { whole: bodyPartProductCount(wholePart, grouped) }}
+            />
+            <div className="hl-body-detail" aria-live="polite">
+              <div className="hl-body-detail-head">
+                <span className="hl-body-detail-kicker">{bodyPart.id === "whole" ? "몸 전체" : "고른 곳"}</span>
+                <h3>{bodyPart.name}</h3>
+                <p>{bodyPart.hint}</p>
+                <div className="hl-body-detail-stats">
+                  <span>고민 <b>{bodyConcerns.length}</b>개</span>
+                  <span>두고푸드 보유 상품 <b>{loading ? "…" : bodyPartProductCount(bodyPart, grouped).toLocaleString("ko-KR")}</b>개</span>
+                </div>
+              </div>
+              <div className="hl-body-concerns">
+                {bodyConcerns.map((concern) => <ConcernCard key={concern.id} concern={concern} grouped={grouped} loading={loading} />)}
+              </div>
+              <p className="hl-body-detail-tip">카드를 누르면 팔기 좋은 원료 순위 · 써도 되는 문구 · 두고푸드 상품(공급가·마진율)이 나와요.</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {query ? (
         <section className="hl-section hl-results" aria-labelledby="hl-results-title">

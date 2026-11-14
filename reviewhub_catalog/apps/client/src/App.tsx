@@ -23,6 +23,7 @@ const HealthConcernPage = lazy(() => import("./pages/catalog/HealthEncyclopedia"
 const HealthIngredientsPage = lazy(() => import("./pages/catalog/HealthEncyclopedia").then((module) => ({ default: module.HealthIngredientsPage })));
 const HealthIngredientPage = lazy(() => import("./pages/catalog/HealthEncyclopedia").then((module) => ({ default: module.HealthIngredientPage })));
 const HealthGuidePage = lazy(() => import("./pages/catalog/HealthEncyclopedia").then((module) => ({ default: module.HealthGuidePage })));
+const MarginCalculatorPage = lazy(() => import("./pages/catalog/MarginCalculator").then((module) => ({ default: module.MarginCalculatorPage })));
 
 function LazyPage({ children }: { children: ReactNode }) {
   return (
@@ -57,6 +58,7 @@ const App = () => (
           <Route path="/how-to/supplier" element={<SupplierGuidePage />} />
           <Route path="/how-to/seller" element={<SellerGuidePage />} />
           <Route path="/sourcing" element={<SourcingPage />} />
+          <Route path="/margin" element={<LazyPage><MarginCalculatorPage /></LazyPage>} />
           <Route path="/auth" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminLoginPage />} />
           <Route path="/admin/home" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="home" /></AdminGuard>} />

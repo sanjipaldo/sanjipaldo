@@ -150,6 +150,9 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 .catalog-table .margin-rate.is-negative { color: #b91c1c; }
 .catalog-table .margin-rate.is-empty { color: var(--w-mute); font-size: 18px; font-weight: 700; }
 .catalog-table tbody tr.order-unavailable .margin-rate:not(.is-empty):not(.is-negative) { color: #5f7a52; }
+/* 마진율 칸 "계산" → 그 상품 공급가로 마진계산기 팝업 */
+.catalog-table .margin-calc-button { display: inline-flex; align-items: center; align-self: flex-start; gap: 3px; margin-top: 6px; padding: 4px 9px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-positive-deep); background: var(--w-canvas); font-size: 12px; font-weight: 800; line-height: 1.2; white-space: nowrap; cursor: pointer; }
+.catalog-table .margin-calc-button:hover, .catalog-table .margin-calc-button:focus-visible { border-color: var(--w-positive-deep); background: var(--w-primary-pale); }
 .catalog-table th { color: var(--w-body); background: var(--w-soft-2); font-size: 13px; font-weight: 600; letter-spacing: .02em; border-bottom: 1px solid var(--w-line); }
 .catalog-table th:first-child { border-radius: var(--w-radius-lg) 0 0; }
 .catalog-table th:last-child { border-radius: 0 var(--w-radius-lg) 0 0; }
@@ -2972,4 +2975,107 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 @media (max-width: 359px) {
   .enc-kind-text small { display: none; }
   .enc-kind-icon { width: 30px; height: 30px; font-size: 16px; }
+}
+
+/* ---------- 오른쪽 아래 빠른 버튼(2026-11-14): 마진계산기 · 소싱요청 · 톡상담 ----------
+   PC(1051px~)는 이름이 보이는 흰 둥근 버튼(왼쪽 색 원 + 굵은 이름), 태블릿·휴대폰은 아이콘 + 짧은 이름의 세로 묶음.
+   태블릿(721~1050px)은 아래 고정 메뉴 위에 띄웁니다. 팝업(z-index 100)보다 아래, 고정 메뉴(25)보다 위. */
+.doogo-fab { position: fixed; right: 22px; bottom: 22px; z-index: 40; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.doogo-fab-item { display: inline-flex; align-items: center; gap: 10px; min-width: 152px; height: 56px; padding: 0 20px 0 6px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-ink); background: var(--w-canvas); box-shadow: 0 10px 28px rgba(14, 15, 12, .14), 0 2px 6px rgba(14, 15, 12, .06); font-family: var(--w-font); font-size: 16px; font-weight: 800; letter-spacing: -.02em; line-height: 1; text-decoration: none; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.doogo-fab-item:hover { border-color: var(--w-ink); box-shadow: 0 14px 32px rgba(14, 15, 12, .18), 0 2px 6px rgba(14, 15, 12, .08); transform: translateY(-2px); }
+.doogo-fab-item:focus-visible { outline: 3px solid var(--w-primary); outline-offset: 2px; }
+.doogo-fab-icon { display: grid; flex: 0 0 auto; place-items: center; width: 44px; height: 44px; border-radius: 50%; }
+.doogo-fab-item.is-margin .doogo-fab-icon { color: var(--w-ink-deep); background: var(--w-primary); }
+.doogo-fab-item.is-sourcing .doogo-fab-icon { color: #fff; background: var(--w-ink-deep); }
+.doogo-fab-item.is-kakao .doogo-fab-icon { color: #3c1e1e; background: #fee500; }
+/* 맨 아래까지 내렸을 때 푸터 오른쪽 끝(1:1 상담하기 버튼 등)이 버튼 아래에 가리지 않게 */
+@media (min-width: 1051px) {
+  .public-footer { padding-bottom: 96px; }
+  .public-footer .footer-bottom { padding-right: 180px; }
+}
+@media (max-width: 1050px) {
+  .doogo-fab { right: 12px; bottom: 72px; gap: 2px; padding: 4px; border: 1px solid var(--w-line); border-radius: 20px; background: rgba(255, 255, 255, .97); box-shadow: 0 10px 26px rgba(14, 15, 12, .16); }
+  .doogo-fab-item { flex-direction: column; justify-content: center; gap: 3px; width: 58px; min-width: 0; height: 54px; padding: 0; border: 0; border-radius: 15px; background: transparent; box-shadow: none; font-size: 10.5px; font-weight: 800; letter-spacing: -.04em; }
+  .doogo-fab-item:hover { border-color: transparent; background: var(--w-soft-2); box-shadow: none; transform: none; }
+  .doogo-fab-icon { width: 30px; height: 30px; }
+  .doogo-fab-icon svg { width: 17px; height: 17px; }
+  .public-footer { padding-bottom: 210px; }
+}
+@media (max-width: 720px) {
+  .doogo-fab { right: 8px; bottom: max(10px, env(safe-area-inset-bottom)); }
+  .public-footer { padding-bottom: 196px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doogo-fab-item { transition: none; }
+  .doogo-fab-item:hover { transform: none; }
+}
+
+/* ---------- 건강식품 백과사전 "몸에서 고민 찾기"(2026-11-14) ----------
+   단순한 사람 그림(청록 연한 면) + 양옆 이름표 + 점선 연결선. 고른 곳은 진한 청록 이름표·점·빛. */
+.hl-body-layout { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+.hl-body-map { display: flex; flex-direction: column; align-items: center; gap: 14px; min-width: 0; padding: 20px 12px 16px; border: 1px solid #d5ece6; border-radius: 22px; background: linear-gradient(180deg, #f1fbf8 0%, #ffffff 100%); }
+.hl-body-figure-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 190px minmax(0, 1fr); width: 100%; max-width: 560px; }
+.hl-body-figure { position: relative; aspect-ratio: 200 / 440; }
+.hl-body-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.hl-body-shape > * { fill: #d4eee7; }
+.hl-body-shape > .hl-body-limb { fill: none; stroke: #d4eee7; stroke-linecap: round; stroke-linejoin: round; }
+.hl-body-limb.is-arm { stroke-width: 18; }
+.hl-body-limb.is-leg { stroke-width: 30; }
+.hl-body-line { stroke: #9ed6c9; stroke-width: 1.2; stroke-dasharray: 3 3; }
+.hl-body-line.is-active { stroke: #0f766e; stroke-width: 1.7; stroke-dasharray: none; }
+.hl-body-point { cursor: pointer; }
+.hl-body-dot { fill: #fff; stroke: #14b8a6; stroke-width: 2.5; transition: r .15s ease; }
+.hl-body-dot.is-active { fill: #0f766e; stroke: #fff; stroke-width: 2.5; }
+.hl-body-pulse { fill: none; stroke: #14b8a6; stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: hl-body-pulse 1.8s ease-out infinite; }
+@keyframes hl-body-pulse { from { opacity: .75; transform: scale(1); } to { opacity: 0; transform: scale(2.6); } }
+.hl-body-hit { fill: transparent; }
+.hl-body-labels { position: relative; min-width: 0; }
+.hl-body-labels button { position: absolute; display: inline-flex; align-items: center; max-width: calc(100% - 10px); padding: 6px 11px; border: 1px solid #cbe6de; border-radius: 999px; color: #134e4a; background: #fff; box-shadow: 0 2px 6px rgba(15, 118, 110, .08); font-size: 13px; font-weight: 800; line-height: 1.25; white-space: nowrap; transform: translateY(-50%); cursor: pointer; }
+.hl-body-labels.is-left button { right: 10px; }
+.hl-body-labels.is-right button { left: 10px; }
+.hl-body-labels button::after { content: ""; position: absolute; top: 50%; width: 10px; border-top: 1.2px dashed #9ed6c9; }
+.hl-body-labels.is-left button::after { left: 100%; }
+.hl-body-labels.is-right button::after { right: 100%; }
+.hl-body-labels button:hover { border-color: #14b8a6; }
+.hl-body-labels button:focus-visible, .hl-body-whole:focus-visible { outline: 3px solid #79e0c4; outline-offset: 2px; }
+.hl-body-labels button[aria-pressed="true"] { border-color: #0f766e; color: #fff; background: #0f766e; box-shadow: 0 6px 14px rgba(15, 118, 110, .25); }
+.hl-body-labels button[aria-pressed="true"]::after { border-top: 1.7px solid #0f766e; }
+.hl-body-whole { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 6px; max-width: 100%; padding: 9px 16px; border: 1px solid #cbe6de; border-radius: 999px; color: #134e4a; background: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
+.hl-body-whole b { font-weight: 900; }
+.hl-body-whole span, .hl-body-whole small { white-space: nowrap; }
+.hl-body-whole small { padding: 1px 7px; border-radius: 999px; color: #0f766e; background: #ccfbf1; font-size: 12px; font-weight: 800; }
+.hl-body-whole[aria-pressed="true"] { border-color: #0f766e; color: #fff; background: #0f766e; }
+.hl-body-whole[aria-pressed="true"] small { color: #0f766e; background: #fff; }
+.hl-body-detail { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.hl-body-detail-head { padding: 18px 20px; border-radius: 20px; color: #fff; background: linear-gradient(135deg, #072b2a 0%, #0f5a54 100%); }
+.hl-body-detail-kicker { color: #79e0c4; font-size: 12px; font-weight: 900; letter-spacing: .04em; }
+.hl-body-detail-head h3 { margin: 4px 0 6px; color: #fff; font-size: 26px; font-weight: 900; letter-spacing: -.02em; }
+.hl-body-detail-head p { margin: 0; color: rgba(255, 255, 255, .82); font-size: 14px; line-height: 1.5; }
+.hl-body-detail-stats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.hl-body-detail-stats span { padding: 5px 11px; border-radius: 999px; color: #fff; background: rgba(255, 255, 255, .12); font-size: 13px; font-weight: 700; }
+.hl-body-detail-stats b { color: #79e0c4; font-weight: 900; }
+.hl-body-concerns { display: flex; flex-direction: column; gap: 10px; }
+.hl-body-concerns .hl-concern-card { margin: 0; }
+.hl-body-detail-tip { margin: 0; color: var(--w-mute); font-size: 13px; line-height: 1.5; }
+@media (max-width: 1050px) {
+  .hl-body-layout { grid-template-columns: 1fr; }
+  .hl-body-figure-wrap { grid-template-columns: minmax(0, 1fr) 170px minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .hl-body-map { padding: 16px 6px 14px; border-radius: 20px; }
+  .hl-body-figure-wrap { grid-template-columns: minmax(0, 1fr) 132px minmax(0, 1fr); }
+  .hl-body-labels button { padding: 5px 8px; font-size: 12px; }
+  .hl-body-labels.is-left button { right: 6px; }
+  .hl-body-labels.is-right button { left: 6px; }
+  .hl-body-labels button::after { width: 6px; }
+  .hl-body-detail-head { padding: 16px; border-radius: 18px; }
+  .hl-body-detail-head h3 { font-size: 22px; }
+}
+@media (max-width: 359px) {
+  .hl-body-figure-wrap { grid-template-columns: minmax(0, 1fr) 112px minmax(0, 1fr); }
+  .hl-body-labels button { padding: 4px 7px; font-size: 11px; white-space: normal; text-align: center; }
+  .hl-body-whole { border-radius: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hl-body-pulse { animation: none; opacity: 0; }
 }

@@ -43,7 +43,8 @@ import {
   MoonStar,
   Handshake,
   Megaphone,
-  Mail
+  Mail,
+  Calculator
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -52,6 +53,12 @@ import type { CatalogData, GuideContent, Notice, OperationsOverview, PriceHistor
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 import { SUPPLY_STATUS_LABELS, supplyStatus } from "@/lib/supply-status";
 import { formatMarginRate, saleMargin } from "@/lib/sale-margin";
+import { MARGIN_OPEN_EVENT, type MarginPrefill, openMarginCalculator } from "@/lib/margin-open";
+import { FloatingActions, KAKAO_CHANNEL_URL } from "./FloatingActions";
+
+// 마진계산기 팝업은 처음 열 때 따로 불러옵니다(단가표 첫 화면 용량을 늘리지 않음).
+const loadMarginCalculator = () => import("./MarginCalculator");
+const MarginCalculatorModal = lazy(() => loadMarginCalculator().then((module) => ({ default: module.MarginCalculatorModal })));
 import { NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, selectNewProducts, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 
 
@@ -539,8 +546,8 @@ function BrandHeader() {
         <NavLink to="/encyclopedia">백과사전</NavLink>
         <NavLink to="/how-to">사용방법</NavLink>
         <NavLink to="/guide">공지사항</NavLink>
-        <button className="sourcing-nav-button" type="button" onClick={() => window.dispatchEvent(new CustomEvent("doogo:sourcing-open"))}><PackageSearch size={14} /> 소싱해주세요!</button>
-        <a href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer"><MessageCircle size={14} /> 1:1 상담</a>
+        <NavLink to="/margin" className={({ isActive }) => `margin-nav-link${isActive ? " active" : ""}`}><Calculator size={14} aria-hidden="true" /> 마진계산기</NavLink>
+        <a href={KAKAO_CHANNEL_URL} target="_blank" rel="noreferrer"><MessageCircle size={14} /> 1:1 상담</a>
       </nav>
       <div className="public-external-links" aria-label="두고푸드 외부 사이트">
         <a className="company-profile-link" href="https://www.doogofood.com/" target="_blank" rel="noreferrer">
@@ -577,6 +584,13 @@ export function PageFrame({ children }: { children: ReactNode }) {
     window.addEventListener("doogo:partner-open", open);
     return () => window.removeEventListener("doogo:partner-open", open);
   }, []);
+  // 마진계산기 팝업: 오른쪽 아래 버튼(빈 계산기 = 지난번 입력 그대로) · 단가표 "계산"(그 상품 공급가·배송비를 채움)
+  const [marginOpen, setMarginOpen] = useState<{ prefill: MarginPrefill | null } | null>(null);
+  useEffect(() => {
+    const open = (event: Event) => setMarginOpen({ prefill: (event as CustomEvent<MarginPrefill | null>).detail ?? null });
+    window.addEventListener(MARGIN_OPEN_EVENT, open);
+    return () => window.removeEventListener(MARGIN_OPEN_EVENT, open);
+  }, []);
   return (
     <div className="public-app">
       <BrandHeader />
@@ -596,6 +610,7 @@ export function PageFrame({ children }: { children: ReactNode }) {
             <Link to="/sold-out">품절이슈</Link>
             <Link to="/encyclopedia">농축수산 백과사전</Link>
             <Link to="/encyclopedia/health">건강식품 백과사전</Link>
+            <Link to="/margin">마진계산기</Link>
             <Link to="/how-to/supplier">사용방법(공급사)</Link>
             <Link to="/guide">공지사항</Link>
           </div>
@@ -622,8 +637,14 @@ export function PageFrame({ children }: { children: ReactNode }) {
           <small>© 2026 DOOGO FOOD. 상품 정보는 최신 공지와 단가표를 기준으로 확인해 주세요.</small>
         </div>
       </footer>
+      <FloatingActions onSourcing={() => setSourcingOpen(true)} onMargin={() => openMarginCalculator()} onPrefetchMargin={() => void loadMarginCalculator()} />
       {sourcingOpen && <SourcingModal onClose={() => setSourcingOpen(false)} />}
       {partnerOpen && <PartnerModal onClose={() => setPartnerOpen(false)} />}
+      {marginOpen && (
+        <Suspense fallback={null}>
+          <MarginCalculatorModal prefill={marginOpen.prefill} onClose={() => setMarginOpen(null)} />
+        </Suspense>
+      )}
     </div>
   );
 }
@@ -1745,6 +1766,15 @@ export function CatalogProductTable({
                     {margin
                       ? <><b className={`margin-rate${margin.rate < 0 ? " is-negative" : ""}`}>{formatMarginRate(margin.rate)}</b><small>개당 {formatPrice(margin.amount)}</small></>
                       : <><b className="margin-rate is-empty">-</b><small>{product.salePriceMode === "autonomous" ? "판매가 자율" : options.length > 1 ? "옵션마다 달라요" : "판매가 미설정"}</small></>}
+                    {/* 마진계산기 팝업을 이 상품 공급가(A단가)·지정 판매가·대표 배송비로 채워 엽니다. */}
+                    <button
+                      type="button"
+                      className="margin-calc-button"
+                      onClick={() => openMarginCalculator({ productId: product.id, name: product.name, aPrice: minimumAPrice, generalPrice: minimumGeneralPrice, salePrice: product.salePriceMode === "fixed" ? product.salePrice : null, shippingOut: policy ? representativeFee(policy) : null })}
+                      aria-label={`${product.name} 마진계산기로 계산하기`}
+                    >
+                      <Calculator size={13} aria-hidden="true" /> 계산
+                    </button>
                   </div>
                 </td>
               </tr>
