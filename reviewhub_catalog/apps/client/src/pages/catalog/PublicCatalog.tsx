@@ -1,4 +1,4 @@
-import { FormEvent, Fragment, type ReactNode, Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, Fragment, type ReactNode, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowDownRight,
@@ -544,10 +544,9 @@ function BrandHeader() {
         <NavLink to="/new-products">신규상품</NavLink>
         <NavLink to="/notices" className={() => (priceAlertActive ? "active" : "")} aria-current={priceAlertActive ? "page" : undefined}>가격·품절</NavLink>
         <NavLink to="/encyclopedia">백과사전</NavLink>
+        <NavLink to="/margin" className={({ isActive }) => `margin-nav-link${isActive ? " active" : ""}`}><Calculator size={14} aria-hidden="true" /> 마진계산기</NavLink>
         <NavLink to="/how-to">사용방법</NavLink>
         <NavLink to="/guide">공지사항</NavLink>
-        <NavLink to="/margin" className={({ isActive }) => `margin-nav-link${isActive ? " active" : ""}`}><Calculator size={14} aria-hidden="true" /> 마진계산기</NavLink>
-        <a href={KAKAO_CHANNEL_URL} target="_blank" rel="noreferrer"><MessageCircle size={14} /> 1:1 상담</a>
       </nav>
       <div className="public-external-links" aria-label="두고푸드 외부 사이트">
         <a className="company-profile-link" href="https://www.doogofood.com/" target="_blank" rel="noreferrer">
@@ -586,6 +585,7 @@ export function PageFrame({ children }: { children: ReactNode }) {
   }, []);
   // 마진계산기 팝업: 오른쪽 아래 버튼(빈 계산기 = 지난번 입력 그대로) · 단가표 "계산"(그 상품 공급가·배송비를 채움)
   const [marginOpen, setMarginOpen] = useState<{ prefill: MarginPrefill | null } | null>(null);
+  const closeMargin = useCallback(() => setMarginOpen(null), []);
   useEffect(() => {
     const open = (event: Event) => setMarginOpen({ prefill: (event as CustomEvent<MarginPrefill | null>).detail ?? null });
     window.addEventListener(MARGIN_OPEN_EVENT, open);
@@ -621,13 +621,13 @@ export function PageFrame({ children }: { children: ReactNode }) {
           </div>
           <div>
             <h3>고객 지원</h3>
-            <a href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer">1:1 상담 <ExternalLink size={13} /></a>
+            <a href={KAKAO_CHANNEL_URL} target="_blank" rel="noreferrer">1:1 상담 <ExternalLink size={13} /></a>
             <button type="button" onClick={() => setSourcingOpen(true)}>소싱 요청</button>
             <button type="button" onClick={() => setPartnerOpen(true)}>입점 신청</button>
             <Link to="/admin">관리자센터</Link>
           </div>
         </nav>
-          <a className="footer-cta" href="https://pf.kakao.com/_NyuVn" target="_blank" rel="noreferrer"><MessageCircle size={17} /> 1:1 상담하기</a>
+          <a className="footer-cta" href={KAKAO_CHANNEL_URL} target="_blank" rel="noreferrer"><MessageCircle size={17} /> 1:1 상담하기</a>
         </div>
         <div className="footer-bottom">
           <div className="footer-business-info">
@@ -642,7 +642,7 @@ export function PageFrame({ children }: { children: ReactNode }) {
       {partnerOpen && <PartnerModal onClose={() => setPartnerOpen(false)} />}
       {marginOpen && (
         <Suspense fallback={null}>
-          <MarginCalculatorModal prefill={marginOpen.prefill} onClose={() => setMarginOpen(null)} />
+          <MarginCalculatorModal prefill={marginOpen.prefill} onClose={closeMargin} />
         </Suspense>
       )}
     </div>
@@ -2240,7 +2240,8 @@ export function GuidePage() {
             {visibleGeneralNotices.map((notice, index) => (
               <button className={`notice-row-button notice-accent-${(index % 3) + 1}${notice.id === latestNoticeId ? " is-latest" : ""}`} type="button" key={notice.id} onClick={() => setSelectedNotice(notice)}>
                 <span>{notice.id === latestNoticeId && <em className="notice-latest-badge"><Star size={12} aria-hidden="true" /> 최신</em>}{formatDate(notice.updatedAt)}</span>
-                <div><h2>{notice.title}</h2><p>{notice.content}</p></div>
+                {/* 내용은 두 줄까지만(…) 보여 주고, 전체 내용은 눌러서 팝업으로 봅니다(2026-11-14). */}
+                <div><h2>{notice.title}</h2><p>{notice.content}</p><span className="notice-read-more" aria-hidden="true">더읽기 <ChevronRight size={14} /></span></div>
                 <ChevronRight size={18} />
               </button>
             ))}

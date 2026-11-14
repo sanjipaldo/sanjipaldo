@@ -698,14 +698,20 @@ export function MarginCalculatorModal({ prefill, onClose }: { prefill: MarginPre
   const titleId = useId();
   const { overrides, setOverrides, draft, setDraft } = useMarginState(prefill);
   const sectionRef = useRef<HTMLElement>(null);
+  // 단가표 화면은 시계 때문에 1초마다 다시 그려져 onClose가 매번 새 함수로 옵니다. 포커스 옮기기는 처음 열 때 한 번만 해야
+  // 판매처 목록·입력칸이 1초마다 닫히지 않습니다(2026-11-14 수정: 예전에는 [onClose]마다 팝업 테두리로 포커스를 가져감).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
   useEffect(() => {
     sectionRef.current?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
+  }, []);
   const openPage = () => {
     saveDraft(draft);
     onClose();

@@ -193,31 +193,64 @@ describe("마진계산기 화면", () => {
     expect(document.querySelector(".mc-load-main")?.textContent).toContain("11월 루테인상품 1개");
   });
 
-  it("오른쪽 아래 빠른 버튼: 위에서부터 마진계산기 · 소싱요청 · 톡상담(마진계산기 화면에서는 마진계산기 숨김)", async () => {
+  it("오른쪽 아래 빠른 메뉴: 처음에는 닫힘 → 열면 마진계산기 · 소싱요청 · 톡상담, 고르거나 바깥·Esc면 닫힘(마진계산기 화면에서는 마진계산기 숨김)", async () => {
     const { FloatingActions } = await import("@/pages/catalog/FloatingActions");
     const onMargin = vi.fn();
     const onSourcing = vi.fn();
-    render(<MemoryRouter initialEntries={["/"]}><FloatingActions onMargin={onMargin} onSourcing={onSourcing} /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={["/"]}><div><button type="button">바깥</button><FloatingActions onMargin={onMargin} onSourcing={onSourcing} /></div></MemoryRouter>);
+    const toggle = screen.getByRole("button", { name: /빠른 메뉴 열기/ });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("navigation", { name: "빠른 메뉴" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "마진계산기" })).toBeNull();
+    fireEvent.click(toggle);
     const nav = screen.getByRole("navigation", { name: "빠른 메뉴" });
     expect(nav.textContent).toBe("마진계산기소싱요청톡상담");
-    fireEvent.click(within(nav).getByRole("button", { name: "마진계산기" }));
-    fireEvent.click(within(nav).getByRole("button", { name: "소싱요청" }));
-    expect(onMargin).toHaveBeenCalledTimes(1);
-    expect(onSourcing).toHaveBeenCalledTimes(1);
     expect(within(nav).getByRole("link", { name: /톡상담/ }).getAttribute("href")).toBe("https://pf.kakao.com/_NyuVn");
+    fireEvent.click(within(nav).getByRole("button", { name: "마진계산기" }));
+    expect(onMargin).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: /빠른 메뉴 열기/ }).getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: /빠른 메뉴 열기/ }));
+    fireEvent.click(screen.getByRole("button", { name: "소싱요청" }));
+    expect(onSourcing).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: /빠른 메뉴 열기/ }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("navigation", { name: "빠른 메뉴" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /빠른 메뉴 열기/ }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "바깥" }));
+    expect(screen.queryByRole("navigation", { name: "빠른 메뉴" })).toBeNull();
     document.body.innerHTML = "";
     render(<MemoryRouter initialEntries={["/margin"]}><FloatingActions onMargin={onMargin} onSourcing={onSourcing} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole("button", { name: /빠른 메뉴 열기/ }));
     expect(screen.queryByRole("button", { name: "마진계산기" })).toBeNull();
+    expect(screen.getByRole("button", { name: "소싱요청" })).toBeTruthy();
   });
 
-  it("상단 메뉴: '소싱해주세요!' 자리에 마진계산기 · 오른쪽 아래 버튼으로 계산기 팝업", async () => {
+  it("상단 메뉴: 백과사전 · 마진계산기 · 사용방법 · 공지사항(맨 끝), 1:1 상담 없음 · 빠른 메뉴로 계산기 팝업", async () => {
     const { PageFrame } = await import("@/pages/catalog/PublicCatalog");
     render(<MemoryRouter><PageFrame><div /></PageFrame></MemoryRouter>);
     const nav = screen.getByRole("navigation", { name: "주요 메뉴" });
+    expect(within(nav).getAllByRole("link").map((link) => link.textContent?.trim())).toEqual(["단가표", "신규상품", "가격·품절", "백과사전", "마진계산기", "사용방법", "공지사항"]);
     expect(within(nav).getByRole("link", { name: /마진계산기/ }).getAttribute("href")).toBe("/margin");
+    expect(within(nav).queryByRole("link", { name: /1:1 상담/ })).toBeNull();
     expect(within(nav).queryByRole("button", { name: /소싱해주세요/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /빠른 메뉴 열기/ }));
     fireEvent.click(within(screen.getByRole("navigation", { name: "빠른 메뉴" })).getByRole("button", { name: "마진계산기" }));
     expect(await screen.findByRole("dialog", { name: "마진계산기" })).toBeTruthy();
+  });
+
+  it("팝업은 화면이 1초마다 다시 그려져도(단가표 시계) 입력 중인 칸의 포커스를 빼앗지 않습니다", async () => {
+    const { MarginCalculatorModal } = await import("@/pages/catalog/MarginCalculator");
+    const prefill = { productId: "h9", name: "꽃게장", aPrice: 8175, generalPrice: 8175, salePrice: 10900, shippingOut: 3500 };
+    const view = render(<MemoryRouter><MarginCalculatorModal prefill={prefill} onClose={() => undefined} /></MemoryRouter>);
+    const input = screen.getByLabelText("판매가격") as HTMLInputElement;
+    input.focus();
+    expect(document.activeElement).toBe(input);
+    for (let tick = 0; tick < 3; tick += 1) view.rerender(<MemoryRouter><MarginCalculatorModal prefill={prefill} onClose={() => undefined} /></MemoryRouter>);
+    expect(document.activeElement).toBe(input);
+    const select = screen.getByLabelText("판매처") as HTMLSelectElement;
+    select.focus();
+    view.rerender(<MemoryRouter><MarginCalculatorModal prefill={prefill} onClose={() => undefined} /></MemoryRouter>);
+    expect(document.activeElement).toBe(select);
   });
 
   it("단가표 마진율 칸 '계산': 그 상품 A단가·일반공급가·지정 판매가로 계산기를 엽니다", async () => {

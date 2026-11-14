@@ -2977,10 +2977,20 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .enc-kind-icon { width: 30px; height: 30px; font-size: 16px; }
 }
 
-/* ---------- 오른쪽 아래 빠른 버튼(2026-11-14): 마진계산기 · 소싱요청 · 톡상담 ----------
-   PC(1051px~)는 이름이 보이는 흰 둥근 버튼(왼쪽 색 원 + 굵은 이름), 태블릿·휴대폰은 아이콘 + 짧은 이름의 세로 묶음.
+/* ---------- 오른쪽 아래 빠른 메뉴(2026-11-14): 처음에는 닫힌 둥근 버튼 하나 → 누르면 마진계산기 · 소싱요청 · 톡상담 ----------
+   PC(1051px~)는 펼치면 이름이 보이는 흰 둥근 버튼(왼쪽 색 원 + 굵은 이름), 태블릿·휴대폰은 아이콘 + 짧은 이름의 세로 묶음.
    태블릿(721~1050px)은 아래 고정 메뉴 위에 띄웁니다. 팝업(z-index 100)보다 아래, 고정 메뉴(25)보다 위. */
 .doogo-fab { position: fixed; right: 22px; bottom: 22px; z-index: 40; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.doogo-fab-menu { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; animation: doogo-fab-in .16s ease-out; }
+.doogo-fab-menu[hidden] { display: none; }
+@keyframes doogo-fab-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.doogo-fab-toggle { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 62px; height: 62px; padding: 0; border: 0; border-radius: 50%; color: #fff; background: var(--w-ink-deep); box-shadow: 0 10px 26px rgba(14, 15, 12, .24), 0 2px 6px rgba(14, 15, 12, .1); font-family: var(--w-font); cursor: pointer; transition: transform .15s ease, background .15s ease; }
+.doogo-fab-toggle:hover { transform: translateY(-2px); }
+.doogo-fab-toggle:focus-visible { outline: 3px solid var(--w-primary); outline-offset: 3px; }
+.doogo-fab-toggle-icon { display: grid; place-items: center; color: var(--w-primary); }
+.doogo-fab-toggle-label { font-size: 10.5px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; white-space: nowrap; }
+.doogo-fab.is-open .doogo-fab-toggle { border: 1px solid var(--w-line); color: var(--w-ink); background: var(--w-canvas); }
+.doogo-fab.is-open .doogo-fab-toggle-icon { color: var(--w-ink); }
 .doogo-fab-item { display: inline-flex; align-items: center; gap: 10px; min-width: 152px; height: 56px; padding: 0 20px 0 6px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-ink); background: var(--w-canvas); box-shadow: 0 10px 28px rgba(14, 15, 12, .14), 0 2px 6px rgba(14, 15, 12, .06); font-family: var(--w-font); font-size: 16px; font-weight: 800; letter-spacing: -.02em; line-height: 1; text-decoration: none; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
 .doogo-fab-item:hover { border-color: var(--w-ink); box-shadow: 0 14px 32px rgba(14, 15, 12, .18), 0 2px 6px rgba(14, 15, 12, .08); transform: translateY(-2px); }
 .doogo-fab-item:focus-visible { outline: 3px solid var(--w-primary); outline-offset: 2px; }
@@ -2988,27 +2998,37 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .doogo-fab-item.is-margin .doogo-fab-icon { color: var(--w-ink-deep); background: var(--w-primary); }
 .doogo-fab-item.is-sourcing .doogo-fab-icon { color: #fff; background: var(--w-ink-deep); }
 .doogo-fab-item.is-kakao .doogo-fab-icon { color: #3c1e1e; background: #fee500; }
-/* 맨 아래까지 내렸을 때 푸터 오른쪽 끝(1:1 상담하기 버튼 등)이 버튼 아래에 가리지 않게 */
+/* 맨 아래까지 내렸을 때 푸터 마지막 줄이 닫힌 둥근 버튼에 가리지 않게 */
 @media (min-width: 1051px) {
   .public-footer { padding-bottom: 96px; }
-  .public-footer .footer-bottom { padding-right: 180px; }
 }
 @media (max-width: 1050px) {
-  .doogo-fab { right: 12px; bottom: 72px; gap: 2px; padding: 4px; border: 1px solid var(--w-line); border-radius: 20px; background: rgba(255, 255, 255, .97); box-shadow: 0 10px 26px rgba(14, 15, 12, .16); }
-  .doogo-fab-item { flex-direction: column; justify-content: center; gap: 3px; width: 58px; min-width: 0; height: 54px; padding: 0; border: 0; border-radius: 15px; background: transparent; box-shadow: none; font-size: 10.5px; font-weight: 800; letter-spacing: -.04em; }
+  .doogo-fab { right: 12px; bottom: 72px; align-items: center; gap: 8px; }
+  .doogo-fab-menu { align-items: stretch; gap: 2px; padding: 4px; border: 1px solid var(--w-line); border-radius: 20px; background: rgba(255, 255, 255, .98); box-shadow: 0 10px 26px rgba(14, 15, 12, .16); }
+  .doogo-fab-item { flex-direction: column; justify-content: center; gap: 3px; width: 60px; min-width: 0; height: 56px; padding: 0; border: 0; border-radius: 15px; background: transparent; box-shadow: none; font-size: 10.5px; font-weight: 800; letter-spacing: -.04em; }
   .doogo-fab-item:hover { border-color: transparent; background: var(--w-soft-2); box-shadow: none; transform: none; }
-  .doogo-fab-icon { width: 30px; height: 30px; }
-  .doogo-fab-icon svg { width: 17px; height: 17px; }
-  .public-footer { padding-bottom: 210px; }
+  .doogo-fab-icon { width: 32px; height: 32px; }
+  .doogo-fab-icon svg { width: 18px; height: 18px; }
+  .doogo-fab-toggle { width: 56px; height: 56px; }
+  .doogo-fab-toggle-label { font-size: 10px; }
+  .public-footer { padding-bottom: 150px; }
 }
 @media (max-width: 720px) {
-  .doogo-fab { right: 8px; bottom: max(10px, env(safe-area-inset-bottom)); }
-  .public-footer { padding-bottom: 196px; }
+  .doogo-fab { right: 10px; bottom: max(12px, env(safe-area-inset-bottom)); }
+  .doogo-fab-toggle { width: 54px; height: 54px; }
+  .public-footer { padding-bottom: 84px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .doogo-fab-item { transition: none; }
-  .doogo-fab-item:hover { transform: none; }
+  .doogo-fab-menu { animation: none; }
+  .doogo-fab-item, .doogo-fab-toggle { transition: none; }
+  .doogo-fab-item:hover, .doogo-fab-toggle:hover { transform: none; }
 }
+
+/* ---------- 공지사항(/guide) 운영 공지: 내용은 두 줄까지만(…), 전체 내용은 눌러서 팝업으로 ---------- */
+.guide-notice-list .notice-row-button > div { min-width: 0; }
+.guide-notice-list .notice-row-button p { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.notice-read-more { display: inline-flex; align-items: center; gap: 1px; margin-top: 8px; color: var(--w-positive-deep); font-size: 13px; font-weight: 800; }
+.notice-row-button:hover .notice-read-more { text-decoration: underline; }
 
 /* ---------- 건강식품 백과사전 "몸에서 고민 찾기"(2026-11-14) ----------
    단순한 사람 그림(청록 연한 면) + 양옆 이름표 + 점선 연결선. 고른 곳은 진한 청록 이름표·점·빛. */

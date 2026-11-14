@@ -1,6 +1,6 @@
 // 메인 홈 공지에서 넘어온 주소(/guide?notice=공지 id)로 공지사항 화면을 열면 그 공지 팝업이 바로 열리고, 주소의 notice는 지워집니다.
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { GuidePage } from "@/pages/catalog/PublicCatalog";
@@ -42,5 +42,27 @@ describe("공지사항 화면 ?notice= 바로 열기", () => {
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).toContain("[긴급공지] 카드결제 중단 안내");
     await waitFor(() => expect(lastSearch).toBe(""));
+  });
+});
+
+describe("공지사항 운영 공지 목록", () => {
+  it("내용은 미리보기(두 줄) + 더읽기, 누르면 팝업에서 전체 내용", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/catalog/notices")) return json({ notices });
+      if (url.includes("/catalog/guide")) return json({ settings: {} });
+      return new Response(JSON.stringify({ ok: false }), { status: 503, headers: { "Content-Type": "application/json" } });
+    }));
+    render(
+      <MemoryRouter initialEntries={["/guide"]}>
+        <Routes><Route path="/guide" element={<GuidePage />} /></Routes>
+      </MemoryRouter>
+    );
+    const row = (await screen.findByText("[긴급공지] 카드결제 중단 안내")).closest("button") as HTMLButtonElement;
+    expect(row.querySelector(".notice-read-more")?.textContent).toContain("더읽기");
+    expect(document.querySelectorAll(".guide-notice-list .notice-read-more")).toHaveLength(2);
+    fireEvent.click(row);
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/빠른 정상화를 위해 최선을 다하겠습니다/)).toBeTruthy();
   });
 });
