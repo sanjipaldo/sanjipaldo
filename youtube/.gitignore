@@ -1,0 +1,15 @@
+# 원본 영상·렌더 결과·대용량 파일은 커밋하지 않는다 (구글 드라이브로 주고받기)
+*.mp4
+*.mov
+*.m4v
+*.webm
+*.mkv
+*.wav
+*.mp3
+*.m4a
+# setup.sh 가 채우는 파일
+**/assets/fonts/
+**/assets/gsap.min.js
+# HyperFrames 작업 기록·캐시
+**/.hyperframes/
+**/node_modules/

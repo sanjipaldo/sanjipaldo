@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ko" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Pretendard"; font-weight: 900; src: url("assets/fonts/Pretendard-Black.woff2") format("woff2"); }
+      @font-face { font-family: "Pretendard"; font-weight: 800; src: url("assets/fonts/Pretendard-ExtraBold.woff2") format("woff2"); }
+      @font-face { font-family: "Pretendard"; font-weight: 700; src: url("assets/fonts/Pretendard-Bold.woff2") format("woff2"); }
+      @font-face { font-family: "Pretendard"; font-weight: 600; src: url("assets/fonts/Pretendard-SemiBold.woff2") format("woff2"); }
+      :root {
+        --accent: #FF3B3B;      /* brand accent: caption line 2, highlights */
+        --bg-1: #0B0E17;        /* panel background top */
+        --bg-2: #161B2C;        /* panel background bottom */
+        --card: #1C2234;
+        --line: #2C3552;
+        --ink-dim: #8D97B5;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--bg-1); }
+      body { font-family: "Pretendard", sans-serif; color: #fff; }
+      .abs { position: absolute; }
+
+      /* ---------- face window ---------- */
+      #faceClip { position: absolute; inset: 0; z-index: 2; }
+      #faceMove { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+      #facePh { position: absolute; inset: 0; }
+      #facePh svg { position: absolute; inset: 0; }
+      .ph-label { position: absolute; left: 0; width: 1080px; top: 1150px; text-align: center;
+                  font-weight: 700; font-size: 40px; color: rgba(255,255,255,.62); letter-spacing: -0.5px; }
+
+      /* ---------- panels ---------- */
+      .panel-top { position: absolute; left: 0; top: 0; width: 1080px; height: 960px; z-index: 1;
+                   background: linear-gradient(180deg, var(--bg-1), var(--bg-2)); overflow: hidden; }
+      .panel-full { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 1;
+                    background: linear-gradient(180deg, var(--bg-1), var(--bg-2) 70%, var(--bg-1)); overflow: hidden; }
+      .glow { position: absolute; width: 900px; height: 900px; border-radius: 50%;
+              background: radial-gradient(circle, color-mix(in srgb, var(--accent) 16%, transparent), transparent 65%); }
+      .pill { display: inline-block; background: var(--accent); color: #fff; font-weight: 800;
+              font-size: 34px; padding: 10px 26px; border-radius: 999px; letter-spacing: 0.5px; }
+      .win { position: absolute; left: 90px; width: 900px; background: var(--card);
+             border: 2px solid var(--line); border-radius: 32px; overflow: hidden;
+             box-shadow: 0 30px 80px rgba(0,0,0,.45); }
+      .win-bar { height: 76px; display: flex; align-items: center; gap: 14px; padding: 0 30px;
+                 border-bottom: 2px solid var(--line); font-weight: 700; font-size: 30px; color: var(--ink-dim); }
+      .dot { width: 18px; height: 18px; border-radius: 50%; background: #3A4466; }
+      .row { display: flex; align-items: center; gap: 22px; height: 118px; padding: 0 34px;
+             border-bottom: 2px solid rgba(44,53,82,.6); font-weight: 700; font-size: 42px; }
+      .tc { font-weight: 800; font-size: 30px; color: var(--ink-dim); width: 120px; }
+      .tag { font-weight: 800; font-size: 28px; padding: 8px 18px; border-radius: 14px;
+             background: #2A3150; color: #C9D2EE; }
+      .tag.hot { background: var(--accent); color: #fff; }
+      .row-hl { position: absolute; left: 0; width: 900px; height: 118px; background: color-mix(in srgb, var(--accent) 12%, transparent);
+                border-left: 8px solid var(--accent); }
+
+      .bar { position: absolute; bottom: 0; width: 18px; border-radius: 9px; background: #3A4466; }
+      .chip { display: inline-block; font-weight: 800; font-size: 46px; padding: 16px 30px; border-radius: 20px;
+              background: #222944; color: #AEB8D8; margin: 0 8px; }
+      .track { position: absolute; left: 140px; top: 1180px; width: 800px; height: 14px; border-radius: 7px; background: #2A3150; }
+      .track-fill { position: absolute; left: 0; top: 0; width: 800px; height: 14px; border-radius: 7px; background: var(--accent); }
+
+      .cmt { display: flex; gap: 26px; align-items: flex-start; padding: 34px; }
+      .avatar { width: 96px; height: 96px; border-radius: 50%; background: linear-gradient(135deg, #5B6CFF, #A35BFF); flex: none; }
+      .cmt-name { font-weight: 700; font-size: 30px; color: var(--ink-dim); margin-bottom: 10px; }
+      .cmt-text { font-weight: 800; font-size: 56px; letter-spacing: -1px; }
+      .cmt-text span { display: inline-block; }
+
+      /* ---------- captions (centre band, straddles the split seam) ---------- */
+      .cap { position: absolute; left: 0; top: 838px; width: 1080px; text-align: center; z-index: 5; overflow: visible; }
+      .cap-in { display: inline-block; }
+      .l1, .l2 { font-weight: 900; font-size: 88px; line-height: 1.12; letter-spacing: -2.5px;
+                 text-shadow: 0 5px 0 rgba(0,0,0,.35), 0 0 28px rgba(0,0,0,.75), 0 0 6px rgba(0,0,0,.9); }
+      .l1 { color: #fff; }
+      .l2 { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="9" data-width="1080" data-height="1920">
+
+      <!-- FACE WINDOW. In a real short, replace #facePh with:
+           <video id="face" class="clip" src="assets/face.mp4" playsinline data-has-audio="true"
+                  data-start="0" data-duration="9" data-track-index="1"
+                  style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover"></video> -->
+      <div id="faceClip">
+        <div id="faceMove">
+          <div id="facePh" class="clip" data-start="0" data-duration="9" data-track-index="1">
+            <svg width="1080" height="1920" viewBox="0 0 1080 1920">
+              <defs>
+                <linearGradient id="room" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#4C423C" /><stop offset="1" stop-color="#211D1B" />
+                </linearGradient>
+                <radialGradient id="lamp" cx="0.82" cy="0.18" r="0.5">
+                  <stop offset="0" stop-color="#FFD9A8" stop-opacity="0.35" /><stop offset="1" stop-color="#FFD9A8" stop-opacity="0" />
+                </radialGradient>
+                <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#7A6C63" /><stop offset="1" stop-color="#4E443E" />
+                </linearGradient>
+              </defs>
+              <rect width="1080" height="1920" fill="url(#room)" />
+              <rect width="1080" height="1920" fill="url(#lamp)" />
+              <path d="M150 1920 C170 1300 230 1080 540 1000 C850 1080 910 1300 930 1920 Z" fill="url(#body)" />
+              <rect x="472" y="800" width="136" height="230" rx="40" fill="#8A7B71" />
+              <ellipse cx="540" cy="640" rx="152" ry="190" fill="#9A8A7F" />
+            </svg>
+            <div class="ph-label">얼굴 영상 자리 · 가슴 위 구도</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 2 · split · step card -->
+      <div id="sc2" class="clip panel-top" data-start="2.4" data-duration="3.1" data-track-index="2">
+        <div class="glow" style="left:-300px; top:-420px"></div>
+        <div class="abs" id="sc2-pill" style="left:90px; top:186px"><span class="pill">STEP 1</span></div>
+        <div class="win" id="sc2-win" style="top:270px">
+          <div class="win-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;대본 → 장면 구성표</div>
+          <div style="position:relative">
+            <div class="row-hl" id="sc2-hl" style="top:0"></div>
+            <div class="row" id="sc2-r1"><span class="tc">00:00</span><span class="tag hot">얼굴</span>훅 한 문장</div>
+            <div class="row" id="sc2-r2"><span class="tc">00:03</span><span class="tag">화면</span>핵심 설명 카드</div>
+            <div class="row" id="sc2-r3"><span class="tc">00:08</span><span class="tag hot">얼굴</span>댓글 유도</div>
+            <div class="row" id="sc2-r4" style="border-bottom:0"><span class="tc">00:11</span><span class="tag">화면</span>단계별 화면</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 3 · full graphic · caption sync -->
+      <div id="sc3" class="clip panel-full" data-start="5.5" data-duration="1.8" data-track-index="3">
+        <div class="glow" style="left:90px; top:-260px"></div>
+        <div class="abs" style="left:0; width:1080px; top:200px; text-align:center"><span class="pill" id="sc3-pill">자막 싱크</span></div>
+        <div class="abs" id="sc3-wave" style="left:120px; top:300px; width:840px; height:300px"></div>
+        <div class="abs" id="sc3-chips" style="left:0; width:1080px; top:650px; text-align:center">
+          <span class="chip" id="ch1">말하는</span><span class="chip" id="ch2">타이밍에</span><span class="chip" id="ch3">딱 맞춰서</span>
+        </div>
+        <div class="track"><div class="track-fill" id="sc3-fill"></div></div>
+      </div>
+
+      <!-- SCENE 4 · split · comment CTA -->
+      <div id="sc4" class="clip panel-top" data-start="7.3" data-duration="1.7" data-track-index="4">
+        <div class="glow" style="left:300px; top:-380px"></div>
+        <div class="win" id="sc4-win" style="top:260px">
+          <div class="win-bar">댓글 1,024개</div>
+          <div class="cmt">
+            <div class="avatar"></div>
+            <div>
+              <div class="cmt-name">@시청자</div>
+              <div class="cmt-text" id="sc4-text"><span id="k1">쇼</span><span id="k2">츠</span></div>
+            </div>
+            <svg id="sc4-heart" style="margin-left:auto; margin-top:20px" width="72" height="72" viewBox="0 0 24 24">
+              <path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.8 6.6 4.8c2.1 0 3.6 1.2 5.4 3 1.8-1.8 3.3-3 5.4-3 3.6 0 5.7 3.6 4.2 7-2.1 4.6-9.6 9.2-9.6 9.2z" style="fill: var(--accent)" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- CAPTIONS -->
+      <div id="c1" class="clip cap" data-start="0.25" data-duration="2.1" data-track-index="5"><div class="cap-in"><div class="l1">촬영만 하시면</div><div class="l2">편집은 끝나요</div></div></div>
+      <div id="c2" class="clip cap" data-start="2.45" data-duration="1.5" data-track-index="6"><div class="cap-in"><div class="l1">첫 번째,</div><div class="l2">대본을 주세요</div></div></div>
+      <div id="c3" class="clip cap" data-start="3.95" data-duration="1.5" data-track-index="7"><div class="cap-in"><div class="l1">말하는 타이밍에</div><div class="l2">화면이 바뀌어요</div></div></div>
+      <div id="c4" class="clip cap" data-start="5.55" data-duration="1.7" data-track-index="8"><div class="cap-in"><div class="l1">자막도</div><div class="l2">단어마다 맞춰요</div></div></div>
+      <div id="c5" class="clip cap" data-start="7.35" data-duration="1.6" data-track-index="9"><div class="cap-in"><div class="l1">댓글에 '쇼츠'라고</div><div class="l2">남겨주세요</div></div></div>
+    </div>
+
+    <script>
+      // waveform bars (fixed heights, deterministic)
+      const H = [40,90,150,210,120,260,180,80,140,230,290,170,100,60,130,240,200,110,70,160,250,190,90,50,120,210,140,60];
+      const wave = document.getElementById("sc3-wave");
+      H.forEach((h, i) => {
+        const b = document.createElement("div");
+        b.className = "bar"; b.id = "b" + i;
+        b.style.left = (i * 30) + "px"; b.style.height = h + "px";
+        wave.appendChild(b);
+      });
+
+      const ACCENT = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+      const tl = gsap.timeline({ paused: true });
+      const SPLIT_Y = 640;            // moves source y=320 to the seam (head top lands just under the caption)
+
+      // ---- face window modes: FACE (full) -> SPLIT (bottom half) -> GRAPHIC (hidden) -> SPLIT
+      tl.set("#faceClip", { clipPath: "inset(0% 0% 0% 0%)" }, 0);
+      tl.set("#faceMove", { y: 0, scale: 1, transformOrigin: "50% 34%" }, 0);
+      tl.to("#faceMove", { scale: 1.06, duration: 2.3, ease: "none" }, 0);                 // slow punch-in on the hook
+      tl.to("#faceClip", { clipPath: "inset(50% 0% 0% 0%)", duration: 0.45, ease: "power3.inOut" }, 2.4);
+      tl.to("#faceMove", { y: SPLIT_Y, scale: 1, duration: 0.45, ease: "power3.inOut" }, 2.4);
+      tl.to("#faceClip", { clipPath: "inset(100% 0% 0% 0%)", duration: 0.4, ease: "power3.in" }, 5.5);
+      tl.to("#faceMove", { y: SPLIT_Y + 300, duration: 0.4, ease: "power3.in" }, 5.5);
+      tl.set("#faceMove", { y: SPLIT_Y + 300 }, 7.29);
+      tl.to("#faceClip", { clipPath: "inset(50% 0% 0% 0%)", duration: 0.45, ease: "power3.out" }, 7.3);
+      tl.to("#faceMove", { y: SPLIT_Y, duration: 0.45, ease: "power3.out" }, 7.3);
+
+      // ---- scene 2: step card
+      tl.from("#sc2-pill", { y: -30, opacity: 0, duration: 0.3, ease: "power2.out" }, 2.6);
+      tl.from("#sc2-win", { y: 60, opacity: 0, duration: 0.4, ease: "power3.out" }, 2.65);
+      ["#sc2-r1", "#sc2-r2", "#sc2-r3", "#sc2-r4"].forEach((r, i) =>
+        tl.from(r, { x: -50, opacity: 0, duration: 0.28, ease: "power2.out" }, 2.85 + i * 0.32));
+      tl.set("#sc2-hl", { y: 0 }, 2.4);
+      tl.to("#sc2-hl", { y: 118, duration: 0.3, ease: "power2.inOut" }, 4.0);
+      tl.to("#sc2-hl", { y: 236, duration: 0.3, ease: "power2.inOut" }, 4.7);
+
+      // ---- scene 3: caption sync
+      tl.from("#sc3-pill", { scale: 0.6, opacity: 0, duration: 0.3, ease: "back.out(2)" }, 5.6);
+      H.forEach((h, i) => tl.from("#b" + i, { scaleY: 0.1, transformOrigin: "50% 100%", duration: 0.35, ease: "power2.out" }, 5.6 + i * 0.012));
+      [["#ch1", 5.85], ["#ch2", 6.25], ["#ch3", 6.65]].forEach(([c, t]) => {
+        tl.from(c, { y: 30, opacity: 0, duration: 0.2, ease: "power2.out" }, 5.65);
+        tl.set(c, { backgroundColor: ACCENT, color: "#ffffff" }, t);
+        tl.fromTo(c, { scale: 1.12 }, { scale: 1, duration: 0.18, ease: "power2.out", immediateRender: false }, t);
+      });
+      tl.set("#sc3-fill", { scaleX: 0, transformOrigin: "0% 50%" }, 5.5);
+      tl.to("#sc3-fill", { scaleX: 1, duration: 1.8, ease: "none" }, 5.5);
+
+      // ---- scene 4: comment CTA
+      tl.from("#sc4-win", { y: 60, opacity: 0, duration: 0.4, ease: "power3.out" }, 7.45);
+      tl.from("#k1", { opacity: 0, y: 12, duration: 0.1 }, 7.85);
+      tl.from("#k2", { opacity: 0, y: 12, duration: 0.1 }, 8.05);
+      tl.from("#sc4-heart", { scale: 0, transformOrigin: "50% 50%", duration: 0.35, ease: "back.out(3)" }, 8.3);
+
+      // ---- captions: pop in, fade out right before the clip ends
+      [["#c1", 0.25, 2.35], ["#c2", 2.45, 3.95], ["#c3", 3.95, 5.45], ["#c4", 5.55, 7.25], ["#c5", 7.35, 8.95]].forEach(([c, s, e]) => {
+        tl.from(c + " .cap-in", { scale: 0.88, opacity: 0, duration: 0.14, ease: "power2.out" }, s);
+        tl.to(c + " .cap-in", { opacity: 0, duration: 0.1, ease: "power2.in" }, e - 0.1);
+      });
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
