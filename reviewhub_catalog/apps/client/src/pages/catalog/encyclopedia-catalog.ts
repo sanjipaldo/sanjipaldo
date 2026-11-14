@@ -1,37 +1,12 @@
-// 백과사전 화면들이 같이 쓰는 자료 불러오기: 두고푸드 단가표(품목별 보유 상품) + 네이버 검색량.
-// 목록 ↔ 상세를 오갈 때 큰 단가표를 매번 다시 받지 않도록 1분 동안 같이 씁니다.
+// 농축수산 백과사전 화면들이 같이 쓰는 자료: 두고푸드 단가표(품목별 보유 상품, 1분 공용 캐시는 catalog-cache.ts) + 네이버 검색량.
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { groupProductsByProduce, searchKeyOf, type ProduceItem, type ProduceSearchStat, type ProduceSearchStats } from "@/lib/encyclopedia";
-import { loadCatalog } from "./PublicCatalog";
-import type { CatalogData, Product } from "./types";
-
-let catalogCache: { at: number; promise: Promise<CatalogData | null> } | null = null;
-function loadCatalogShared() {
-  if (!catalogCache || Date.now() - catalogCache.at > 60 * 1000) {
-    const promise = loadCatalog().then((data) => {
-      if (!data) catalogCache = null;
-      return data;
-    });
-    catalogCache = { at: Date.now(), promise };
-  }
-  return catalogCache.promise;
-}
+import { useSharedCatalog } from "./catalog-cache";
+import type { Product } from "./types";
 
 export function useEncyclopediaCatalog() {
-  const [catalog, setCatalog] = useState<CatalogData | null>(null);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let active = true;
-    void loadCatalogShared().then((data) => {
-      if (!active) return;
-      setCatalog(data);
-      setLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { catalog, loading } = useSharedCatalog();
   const grouped = useMemo(() => {
     if (!catalog) return new Map<string, Product[]>();
     return groupProductsByProduce(catalog.products, new Map(catalog.categories.map((category) => [category.id, category.name])));

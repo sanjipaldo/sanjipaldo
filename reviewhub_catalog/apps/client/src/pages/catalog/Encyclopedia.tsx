@@ -1,4 +1,4 @@
-// 농수산물 백과사전: 홈(/encyclopedia) · 시즌 캘린더(/encyclopedia/calendar) · 내 후보(/encyclopedia/favorites) · 품목 상세(/encyclopedia/:id).
+// 농축수산 백과사전: 홈(/encyclopedia) · 시즌 캘린더(/encyclopedia/calendar) · 내 후보(/encyclopedia/favorites) · 품목 상세(/encyclopedia/:id).
 // 첫 상품 찾기는 EncyclopediaFinder.tsx. 두고푸드 단가표에 있는 품목은 상세 위쪽(썸네일과 품목명 사이)에 A단가·일반공급가를
 // 단가표와 같은 모양으로 보여 주고, "상품 구매하기"로 두고푸드 도매몰에 바로 갑니다.
 import { type ReactNode, useMemo, useState } from "react";
@@ -134,7 +134,7 @@ function EncyclopediaHome() {
     <EncyclopediaLayout className="encyclopedia-home">
       <section className="enc-hero" aria-labelledby="enc-hero-title">
         <div className="enc-hero-copy">
-          <span className="enc-hero-kicker"><BookOpen size={14} aria-hidden="true" /> 두고푸드 농수산물 백과사전</span>
+          <span className="enc-hero-kicker"><BookOpen size={14} aria-hidden="true" /> 두고푸드 농축수산 백과사전</span>
           <h1 id="enc-hero-title"><b>{month}</b>월</h1>
           <p>지금 팔 수 있는 품목 <strong>{formatCount(selling.length)}개</strong>, 산지에 먼저 연락할 품목 <strong>{formatCount(groups.P.length)}개</strong>가 있어요.</p>
         </div>

@@ -1,57 +1,26 @@
-// 백과사전 화면(홈·시즌 캘린더·첫 상품 찾기·내 후보·상세) 공용: 바탕 틀, 하트 버튼, 품목 카드, 복사, 화면 폭.
+// 농축수산 백과사전 화면(홈·시즌 캘린더·첫 상품 찾기·내 후보·상세) 공용: 바탕 틀, 하트 버튼, 품목 카드.
+// 맨 위 "농축수산 | 건강식품" 전환과 복사·화면 폭 도구는 encyclopedia-frame.tsx(건강식품 백과사전과 공용)에 있습니다.
 import { type ReactNode, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
 import { LEVEL_LABELS, type ProduceItem } from "@/lib/encyclopedia";
-import { PageFrame } from "./PublicCatalog";
+import { EncyclopediaFrame } from "./encyclopedia-frame";
 import { EncyclopediaTabs, PhaseBadge, ProduceThumb, Stars, StockBadge, seasonSummary } from "./encyclopedia-ui";
+
+export { copyText, useMediaQuery } from "./encyclopedia-frame";
 
 export function EncyclopediaLayout({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <PageFrame>
-      <main className={`content-page encyclopedia-page ${className}`.trim()}>
-        <EncyclopediaTabs />
-        {children}
-        <p className="encyclopedia-note">시기·산지 정보는 두고푸드가 정리한 참고 자료예요. 지역·날씨·품종에 따라 해마다 달라질 수 있으니 판매 전에 산지에 꼭 확인해 주세요.</p>
-      </main>
-    </PageFrame>
+    <EncyclopediaFrame
+      kind="produce"
+      tabs={<EncyclopediaTabs />}
+      note="시기·산지 정보는 두고푸드가 정리한 참고 자료예요. 지역·날씨·품종에 따라 해마다 달라질 수 있으니 판매 전에 산지에 꼭 확인해 주세요."
+      className={className}
+    >
+      {children}
+    </EncyclopediaFrame>
   );
-}
-
-export function useMediaQuery(query: string) {
-  const [matches, setMatches] = useState(() => typeof window.matchMedia === "function" && window.matchMedia(query).matches);
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const list = window.matchMedia(query);
-    const update = () => setMatches(list.matches);
-    update();
-    list.addEventListener?.("change", update);
-    return () => list.removeEventListener?.("change", update);
-  }, [query]);
-  return matches;
-}
-
-export async function copyText(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    try {
-      const area = document.createElement("textarea");
-      area.value = text;
-      area.setAttribute("readonly", "");
-      area.style.position = "fixed";
-      area.style.opacity = "0";
-      document.body.appendChild(area);
-      area.select();
-      const copied = document.execCommand("copy");
-      area.remove();
-      return copied;
-    } catch {
-      return false;
-    }
-  }
 }
 
 export function FavoriteButton({ item, favorite, onToggle, withLabel = false }: { item: ProduceItem; favorite: boolean; onToggle: (id: string) => boolean; withLabel?: boolean }) {

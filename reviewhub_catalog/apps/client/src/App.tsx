@@ -18,6 +18,11 @@ const EncyclopediaCalendarPage = lazy(() => import("./pages/catalog/Encyclopedia
 const EncyclopediaFavoritesPage = lazy(() => import("./pages/catalog/Encyclopedia").then((module) => ({ default: module.EncyclopediaFavoritesPage })));
 const EncyclopediaDetailPage = lazy(() => import("./pages/catalog/Encyclopedia").then((module) => ({ default: module.EncyclopediaDetailPage })));
 const EncyclopediaFinderPage = lazy(() => import("./pages/catalog/EncyclopediaFinder").then((module) => ({ default: module.EncyclopediaFinderPage })));
+const HealthHomePage = lazy(() => import("./pages/catalog/HealthEncyclopedia").then((module) => ({ default: module.HealthHomePage })));
+const HealthConcernPage = lazy(() => import("./pages/catalog/HealthEncyclopedia").then((module) => ({ default: module.HealthConcernPage })));
+const HealthIngredientsPage = lazy(() => import("./pages/catalog/HealthEncyclopedia").then((module) => ({ default: module.HealthIngredientsPage })));
+const HealthIngredientPage = lazy(() => import("./pages/catalog/HealthEncyclopedia").then((module) => ({ default: module.HealthIngredientPage })));
+const HealthGuidePage = lazy(() => import("./pages/catalog/HealthEncyclopedia").then((module) => ({ default: module.HealthGuidePage })));
 
 function LazyPage({ children }: { children: ReactNode }) {
   return (
@@ -42,6 +47,11 @@ const App = () => (
           <Route path="/encyclopedia/calendar" element={<LazyPage><EncyclopediaCalendarPage /></LazyPage>} />
           <Route path="/encyclopedia/finder" element={<LazyPage><EncyclopediaFinderPage /></LazyPage>} />
           <Route path="/encyclopedia/favorites" element={<LazyPage><EncyclopediaFavoritesPage /></LazyPage>} />
+          <Route path="/encyclopedia/health" element={<LazyPage><HealthHomePage /></LazyPage>} />
+          <Route path="/encyclopedia/health/ingredients" element={<LazyPage><HealthIngredientsPage /></LazyPage>} />
+          <Route path="/encyclopedia/health/guide" element={<LazyPage><HealthGuidePage /></LazyPage>} />
+          <Route path="/encyclopedia/health/concern/:id" element={<LazyPage><HealthConcernPage /></LazyPage>} />
+          <Route path="/encyclopedia/health/ingredient/:id" element={<LazyPage><HealthIngredientPage /></LazyPage>} />
           <Route path="/encyclopedia/:id" element={<LazyPage><EncyclopediaDetailPage /></LazyPage>} />
           <Route path="/how-to" element={<Navigate to="/how-to/supplier" replace />} />
           <Route path="/how-to/supplier" element={<SupplierGuidePage />} />

@@ -282,7 +282,7 @@ a { color: inherit; text-decoration: none; }
 .catalog-col-category { width: 17%; }
 .catalog-col-price { width: 10%; }
 .catalog-col-sale { width: 10%; }
-.catalog-col-notes { width: 22%; }
+.catalog-col-margin { width: 13%; }
 .catalog-table th, .admin-table th { padding: 13px 15px; color: #f7faff; background: #25344c; font-size: 12px; text-align: left; white-space: nowrap; }
 .catalog-table th:first-child, .admin-table th:first-child { border-radius: 12px 0 0; }
 .catalog-table th:last-child, .admin-table th:last-child { border-radius: 0 12px 0 0; }
@@ -1306,14 +1306,21 @@ a { color: inherit; text-decoration: none; }
   }
   .mobile-cell-value .price { font-size: 18px; }
   .mobile-cell-value > small { margin-top: 3px; font-size: 11px; }
-  .catalog-table tbody > tr:not(.option-detail-row) > td[data-label="상품 안내"] {
+  /* 휴대폰: 마진율은 카드 맨 아래 한 줄 전체(라벨 위, 큰 숫자 + 개당 금액 옆) */
+  .catalog-table tbody > tr:not(.option-detail-row) > td[data-label="마진율"] {
     grid-column: 1 / -1;
     border-right: 0;
   }
-  .catalog-table tbody > tr:not(.option-detail-row) > td[data-label="상품 안내"] p {
-    font-size: 13px;
-    line-height: 1.55;
+  .catalog-table tbody > tr:not(.option-detail-row) > td[data-label="마진율"] .mobile-cell-value {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 4px 10px;
   }
+  .catalog-table tbody > tr:not(.option-detail-row) > td[data-label="마진율"] .mobile-cell-value > small { margin-top: 0; font-size: 12px; }
+  .catalog-table .margin-rate { font-size: 22px; }
+  .catalog-table .margin-rate.is-empty { font-size: 17px; }
   .season-badge { align-self: flex-start; white-space: normal; }
   .group-product-badge { align-self: flex-start; white-space: normal; }
   .mobile-inline-options {

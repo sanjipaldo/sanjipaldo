@@ -51,6 +51,7 @@ import { RATE_TYPE_LABELS, effectiveRate, rateTierLines, representativeFee } fro
 import type { CatalogData, GuideContent, Notice, OperationsOverview, PriceHistory, Product, PublicShippingPolicy, ShippingType, SoldOutIssue } from "./types";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 import { SUPPLY_STATUS_LABELS, supplyStatus } from "@/lib/supply-status";
+import { formatMarginRate, saleMargin } from "@/lib/sale-margin";
 import { NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, selectNewProducts, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 
 
@@ -593,7 +594,8 @@ export function PageFrame({ children }: { children: ReactNode }) {
             <Link to="/new-products">신규상품</Link>
             <Link to="/notices">가격변동</Link>
             <Link to="/sold-out">품절이슈</Link>
-            <Link to="/encyclopedia">농수산물 백과사전</Link>
+            <Link to="/encyclopedia">농축수산 백과사전</Link>
+            <Link to="/encyclopedia/health">건강식품 백과사전</Link>
             <Link to="/how-to/supplier">사용방법(공급사)</Link>
             <Link to="/guide">공지사항</Link>
           </div>
@@ -1673,7 +1675,8 @@ function OperationsBoard({
   );
 }
 
-// 단가표 표(상품 · 배송/카테고리/판매기간 · A단가 · 일반공급가 · 판매가 · 상품 안내). 단가표와 신규상품 화면이 함께 씁니다.
+// 단가표 표(상품 · 배송/카테고리/판매기간 · A단가 · 일반공급가 · 판매가 · 마진율). 단가표·신규상품·백과사전이 함께 씁니다.
+// 마진율 = A단가로 받아 지정 판매가에 팔 때 남는 비율(lib/sale-margin.ts, 판매가 자율·미설정이면 "-"). 예전 "상품 안내" 칸은 2026-11-14 관리자 요청으로 뺐습니다.
 export function CatalogProductTable({
   products,
   categories,
@@ -1701,9 +1704,9 @@ export function CatalogProductTable({
         <col className="catalog-col-price" />
         <col className="catalog-col-price" />
         <col className="catalog-col-sale" />
-        <col className="catalog-col-notes" />
+        <col className="catalog-col-margin" />
       </colgroup>
-      <thead><tr><th>상품</th><th>배송 / 카테고리 / 판매기간</th><th>A단가</th><th>일반공급가</th><th>판매가</th><th>상품 안내</th></tr></thead>
+      <thead><tr><th>상품</th><th>배송 / 카테고리 / 판매기간</th><th>A단가</th><th>일반공급가</th><th>판매가</th><th title="A단가로 받아 판매가에 팔 때 남는 비율이에요(배송비 제외).">마진율</th></tr></thead>
       <tbody>
         {products.map((product) => {
           const category = categories.find((item) => item.id === product.categoryId);
@@ -1717,6 +1720,8 @@ export function CatalogProductTable({
             ? Math.min(...sortedOptions.map((option) => option.generalPrice))
             : product.generalPrice;
           const salePolicy = salePriceLabel(product.salePriceMode, product.salePrice);
+          // 마진율: 지정 판매가가 있을 때만(옵션이 여러 개면 옵션마다 달라 계산하지 않음)
+          const margin = product.salePriceMode === "fixed" && options.length <= 1 ? saleMargin(minimumAPrice, product.salePrice) : null;
           // 판매 상태(판매중·품절·시즌 종료)는 관리자 상품 리스트와 같은 규칙(lib/supply-status)으로 정합니다.
           const status = supplyStatus(product, seasonApplies(product, category?.name), currentMonth);
           const soldOutNow = status === "sold_out";
@@ -1735,7 +1740,13 @@ export function CatalogProductTable({
                 <td data-label="A단가"><div className="mobile-cell-value"><b className="price a-price">{formatPrice(minimumAPrice)}</b><small>{options.length > 1 ? "옵션 최저 A단가" : "A회원 공급가"}</small></div></td>
                 <td data-label="일반공급가"><div className="mobile-cell-value"><b className="price">{formatPrice(minimumGeneralPrice)}</b><small>{options.length > 1 ? "옵션 최저 일반공급가" : "일반 판매자"}</small></div></td>
                 <td data-label="판매가"><div className="mobile-cell-value"><b className={`price sale-price sale-${product.salePriceMode}`}>{salePolicy.main}</b><small>{salePolicy.sub}</small></div></td>
-                <td data-label="상품 안내"><div className="mobile-cell-value"><p>{product.notes || "-"}</p>{product.packaging && <small>{product.packaging}</small>}</div></td>
+                <td data-label="마진율" className="catalog-margin-cell">
+                  <div className="mobile-cell-value">
+                    {margin
+                      ? <><b className={`margin-rate${margin.rate < 0 ? " is-negative" : ""}`}>{formatMarginRate(margin.rate)}</b><small>개당 {formatPrice(margin.amount)}</small></>
+                      : <><b className="margin-rate is-empty">-</b><small>{product.salePriceMode === "autonomous" ? "판매가 자율" : options.length > 1 ? "옵션마다 달라요" : "판매가 미설정"}</small></>}
+                  </div>
+                </td>
               </tr>
               {expanded && options.length > 0 && (
                 <tr className="option-detail-row">
