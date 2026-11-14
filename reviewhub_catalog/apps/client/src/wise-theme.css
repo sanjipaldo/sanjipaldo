@@ -649,7 +649,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .partner-banner-cta:hover { background: var(--w-ink-deep); }
 .partner-banner-cta:focus-visible { outline: 3px solid var(--w-primary); outline-offset: 3px; }
 /* "가격·품절" 메뉴 안 탭(가격변동 · 품절이슈): 두 화면 맨 위에서 오갑니다 */
-.price-alert-tabs { display: inline-flex; gap: 4px; margin: 0 0 18px; padding: 4px; border-radius: 999px; background: var(--w-soft-2); }
+.price-alert-tabs { display: flex; width: max-content; max-width: 100%; gap: 4px; margin: 0 auto 18px; padding: 4px; border-radius: 999px; background: var(--w-soft-2); }
 .price-alert-tabs a { display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 20px; border-radius: 999px; color: var(--w-body); font-size: 15px; font-weight: 700; text-decoration: none; }
 .price-alert-tabs a:hover { color: var(--w-ink); }
 .price-alert-tabs a.active { color: #fff; background: var(--w-ink); }
@@ -1676,7 +1676,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 }
 .usage-page .section-kicker { color: var(--u-strong) !important; }
 .usage-page .usage-hero .section-kicker { color: var(--u-kicker) !important; }
-.usage-audience-tabs { display: inline-flex; gap: 4px; margin: 0 0 18px; padding: 4px; border-radius: 999px; background: var(--w-soft-2); }
+.usage-audience-tabs { display: flex; width: max-content; max-width: 100%; gap: 4px; margin: 0 auto 18px; padding: 4px; border-radius: 999px; background: var(--w-soft-2); }
 .usage-audience-tabs a { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 18px; border-radius: 999px; color: var(--w-body); font-size: 14px; font-weight: 700; text-decoration: none; }
 .usage-audience-tabs a.active { color: #fff; background: var(--u-deep); }
 .usage-hero { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: 22px; align-items: stretch; padding: 34px; border-radius: var(--w-radius-xl); background: var(--u-deep); color: #fff; }
@@ -2389,7 +2389,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .produce-thumb.size-lg .produce-glyph.len-4 { font-size: 30px; }
 .encyclopedia-tabs-bar { position: sticky; top: 76px; z-index: 12; margin: -8px 0 10px; padding: 8px 0; background: var(--w-canvas); }
 .encyclopedia-tabs-bar::after { content: ""; position: absolute; top: 100%; right: 0; left: 0; height: 10px; background: linear-gradient(var(--w-canvas), rgba(255, 255, 255, 0)); pointer-events: none; }
-.encyclopedia-tabs { display: flex; gap: 4px; width: max-content; max-width: 100%; padding: 4px; overflow-x: auto; border-radius: 999px; background: var(--w-soft-2); box-shadow: 0 6px 18px rgba(14, 15, 12, .06); scrollbar-width: none; }
+.encyclopedia-tabs { display: flex; gap: 4px; width: max-content; max-width: 100%; margin: 0 auto; padding: 4px; overflow-x: auto; border-radius: 999px; background: var(--w-soft-2); box-shadow: 0 6px 18px rgba(14, 15, 12, .06); scrollbar-width: none; }
 .encyclopedia-tabs::-webkit-scrollbar { display: none; }
 .encyclopedia-tabs a { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; height: 42px; padding: 0 18px; border-radius: 999px; color: var(--w-body); font-size: 15px; font-weight: 800; text-decoration: none; white-space: nowrap; }
 .encyclopedia-tabs a span { display: inline-flex; align-items: center; gap: 6px; }
@@ -2688,7 +2688,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 }
 
 /* ───────── 백과사전 전환(농축수산 | 건강식품) + 건강식품 백과사전(2026-11-14) ───────── */
-.enc-kind-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 620px; margin: 0 0 10px; }
+.enc-kind-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 620px; margin: 0 auto 10px; }
 .enc-kind-switch a { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px; border: 1px solid var(--w-line); border-radius: 18px; color: var(--w-body); background: #fff; text-decoration: none; transition: border-color .15s ease, box-shadow .15s ease; }
 .enc-kind-switch a:hover { border-color: #b9c6b2; }
 .enc-kind-icon { display: grid; flex: 0 0 auto; place-items: center; width: 42px; height: 42px; border-radius: 13px; background: var(--w-soft-2); font-size: 22px; line-height: 1; }

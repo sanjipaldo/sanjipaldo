@@ -24,7 +24,6 @@ import {
   Factory,
   ImageOff,
   Info,
-  MessageCircle,
   PackageCheck,
   PackageSearch,
   PackageX,
@@ -627,7 +626,6 @@ export function PageFrame({ children }: { children: ReactNode }) {
             <Link to="/admin">관리자센터</Link>
           </div>
         </nav>
-          <a className="footer-cta" href={KAKAO_CHANNEL_URL} target="_blank" rel="noreferrer"><MessageCircle size={17} /> 1:1 상담하기</a>
         </div>
         <div className="footer-bottom">
           <div className="footer-business-info">
