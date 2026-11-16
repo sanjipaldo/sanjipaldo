@@ -63,6 +63,7 @@ import { NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProd
 
 // 메인 홈 "이번 달 제철 백과사전" 미리보기(품목 데이터는 따로 불러와 단가표 첫 화면을 무겁게 하지 않습니다)
 const EncyclopediaTeaser = lazy(() => import("./EncyclopediaTeaser"));
+const HealthEncyclopediaTeaser = lazy(() => import("./HealthEncyclopediaTeaser"));
 
 const fallbackGuideContent: GuideContent = {
   highlights: [
@@ -2057,6 +2058,7 @@ export function CatalogHome() {
         }} />
         <HomeNoticeBoard notices={data.notices} />
         <Suspense fallback={null}><EncyclopediaTeaser products={data.products} categories={data.categories} /></Suspense>
+        <Suspense fallback={null}><HealthEncyclopediaTeaser products={data.products} categories={data.categories} /></Suspense>
         <PartnerBanner />
         <section className="catalog-hero">
           <div>

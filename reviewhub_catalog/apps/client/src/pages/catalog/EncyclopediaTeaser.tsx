@@ -31,7 +31,8 @@ export default function EncyclopediaTeaser({ products, categories }: { products:
           <span className="encyclopedia-teaser-more-label">백과사전</span> 전체 보기 <ChevronRight size={17} aria-hidden="true" />
         </Link>
       </div>
-      <div className="encyclopedia-teaser-list">
+      {/* 보유 수에 따라 순서가 바뀌면 목록을 새로 그려 휴대폰 가로 넘기기가 첫 카드에서 시작하게 합니다(scroll-snap이 옮겨 간 카드를 따라가지 않게). */}
+      <div className="encyclopedia-teaser-list" key={picks.map((item) => item.id).join(",")}>
         {picks.map((item) => {
           const phase = phaseOf(item, month);
           const count = grouped.get(item.id)?.length ?? 0;

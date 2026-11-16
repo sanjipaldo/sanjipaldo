@@ -2334,7 +2334,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .encyclopedia-teaser-title h2 { font-size: 19px; }
   .encyclopedia-teaser-title p { font-size: 13px; }
   .encyclopedia-teaser .encyclopedia-teaser-more { width: 100%; justify-content: center; min-height: 44px; font-size: 14px; }
-  .encyclopedia-teaser-list { display: flex; gap: 8px; margin: 0 -16px; padding: 0 16px 4px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .encyclopedia-teaser-list { display: flex; gap: 8px; margin: 0 -16px; padding: 0 16px 4px; overflow-x: auto; scroll-padding-inline: 16px; scroll-snap-type: x mandatory; scrollbar-width: none; }
   .encyclopedia-teaser-list::-webkit-scrollbar { display: none; }
   .encyclopedia-teaser .encyclopedia-teaser-item { flex: 0 0 min(240px, 74%); scroll-snap-align: start; }
 }
@@ -3472,3 +3472,27 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .enc-cal-search > p:first-child span { font-size: 12.5px; }
 }
 .enc-psearch.is-open .enc-psearch-chips { visibility: hidden; }
+
+/* ── 메인 홈 건강식품 백과사전 미리보기(농축수산 "N월 제철 백과사전" 아래, 2026-11-16) ──
+   농축수산 미리보기(.encyclopedia-teaser)와 같은 틀·크기에 건강식품 백과사전의 청록 색을 입힙니다. */
+.encyclopedia-teaser.is-health { background: linear-gradient(145deg, #fff 0%, #f5fcf9 55%, #e2f6ef 100%); box-shadow: 0 12px 30px rgba(15, 90, 84, .08); }
+.encyclopedia-teaser.is-health .encyclopedia-teaser-title h2 { white-space: normal; word-break: keep-all; }
+.encyclopedia-teaser.is-health .encyclopedia-teaser-icon { color: #fff; background: linear-gradient(135deg, #0f5a54 0%, #1f8a7d 100%); }
+.encyclopedia-teaser.is-health .encyclopedia-teaser-title .section-kicker { color: #0f766e !important; }
+.encyclopedia-teaser.is-health .encyclopedia-teaser-more { background: #0b3b38; }
+.encyclopedia-teaser.is-health .encyclopedia-teaser-more:hover { background: #072b2a; }
+.encyclopedia-teaser.is-health .encyclopedia-teaser-item { border-color: #d3eee6; }
+.encyclopedia-teaser.is-health .encyclopedia-teaser-item:hover { border-color: #79e0c4; }
+.health-teaser-emoji { display: grid; flex: 0 0 auto; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(150deg, #effaf6 0%, #d3f1e7 100%); font-size: 27px; line-height: 1; }
+.health-teaser-when { color: var(--w-body); font-weight: 800; }
+.health-teaser-when.is-hot { color: #0f766e; }
+.encyclopedia-teaser .health-teaser-check { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 11px 14px; border: 1px dashed #9edfcc; border-radius: var(--w-radius-lg); color: #0b3b38; background: rgba(255, 255, 255, .72); font-size: 13.5px; line-height: 1.45; }
+.encyclopedia-teaser .health-teaser-check:hover { border-color: #0f766e; background: #fff; }
+.health-teaser-check svg { flex: 0 0 auto; color: #0f766e; }
+.health-teaser-check span { flex: 1 1 auto; min-width: 0; word-break: keep-all; }
+.health-teaser-check b { font-weight: 900; }
+@media (max-width: 720px) {
+  .encyclopedia-teaser .health-teaser-check { align-items: flex-start; margin-top: 10px; padding: 10px 12px; font-size: 12.5px; }
+  .health-teaser-check svg { margin-top: 1px; }
+  .health-teaser-check b { display: block; }
+}
