@@ -34,6 +34,10 @@ export function EncyclopediaSearchAdmin() {
   const [error, setError] = useState("");
   const [checking, setChecking] = useState(false);
   const [check, setCheck] = useState<CheckResult | null>(null);
+  const [keywordTotal, setKeywordTotal] = useState(204);
+  useEffect(() => {
+    void import("@/lib/encyclopedia").then(({ produceItems }) => setKeywordTotal(new Set(produceItems.map((item) => item.keyword.trim()).filter(Boolean)).size));
+  }, []);
 
   const load = async () => {
     try {
@@ -52,18 +56,25 @@ export function EncyclopediaSearchAdmin() {
     const { produceItems } = await import("@/lib/encyclopedia");
     const keywords = [...new Set(produceItems.map((item) => item.keyword.trim()).filter(Boolean))];
     setProgress({ done: 0, total: keywords.length });
+    let trendsError = "";
     try {
       for (let index = 0; index < keywords.length; index += 20) {
         const chunk = keywords.slice(index, index + 20);
-        await readApi(await apiFetch("/catalog/admin/produce-search/refresh", {
+        const result = await readApi<{ trendsError?: string | null }>(await apiFetch("/catalog/admin/produce-search/refresh", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ keywords: chunk }),
           silent: true
         }));
+        if (result.trendsError) trendsError = result.trendsError;
         setProgress({ done: Math.min(index + chunk.length, keywords.length), total: keywords.length });
       }
-      toast.success(`검색어 ${keywords.length}개의 검색량을 새로 받았습니다.`);
+      if (trendsError) {
+        setError(`검색수·경쟁 정도는 받았지만 월별 추이(1~12월 그래프)는 받지 못했어요. ${trendsError}`);
+        toast.warning(`검색어 ${keywords.length}개의 검색수를 받았습니다. 월별 추이는 받지 못했어요.`);
+      } else {
+        toast.success(`검색어 ${keywords.length}개의 검색량을 새로 받았습니다.`);
+      }
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : "검색량을 받지 못했습니다.");
     } finally {
@@ -133,6 +144,15 @@ export function EncyclopediaSearchAdmin() {
         </div>
         {!status?.searchAd && <p className="encyclopedia-search-note">검색광고 API 키를 넣고 다시 배포하면 "검색량 새로고침"을 누를 수 있어요. 그 전에는 공개 화면에 검색어와 네이버 쇼핑 바로가기만 보입니다.</p>}
         {status?.searchAd && <p className="encyclopedia-search-note">"연결 확인"은 검색어 하나('사과')로 두 API를 불러 보기만 하고 저장하지 않아요. 둘 다 연결됨이면 "검색량 새로고침"으로 품목 검색어 전체를 받습니다(약 1~2분).</p>}
+        <div className="encyclopedia-search-quota" aria-label="호출 한도 안내">
+          <strong>호출량·요금 안내</strong>
+          <ul>
+            <li>새로고침 1번 = 검색어 {keywordTotal.toLocaleString("ko-KR")}개 · 검색광고 키워드 도구 약 {Math.ceil(keywordTotal / 5)}회 + 검색어 트렌드 약 {Math.ceil(keywordTotal / 5)}회 호출(한 번에 5개씩). "연결 확인"은 각 1회.</li>
+            <li>NAVER API HUB 검색어트렌드는 <b>한 달 50,000회</b>까지(넘으면 자동 차단, 50%·80%·100%에서 메일 안내) — 매일 새로고침해도 한 달 약 {(Math.ceil(keywordTotal / 5) * 31).toLocaleString("ko-KR")}회({((Math.ceil(keywordTotal / 5) * 31 / 50000) * 100).toFixed(1)}%)입니다.</li>
+            <li>NAVER API HUB는 지금 <b>한시적 무료</b>이고 유료로 바뀌면 네이버가 미리 공지합니다. 혹시 모를 요금을 막으려면 콘솔 › Application › API 관리의 "한도 및 알림"에서 월 한도(예: 5,000회)를 걸어 두세요. 검색광고 API는 무료입니다.</li>
+            <li>검색량은 한 달에 한두 번(월초) 새로고침하면 충분해요. 검색광고 수치는 최근 30일, 트렌드는 지난 12개월 기준입니다.</li>
+          </ul>
+        </div>
         {error && <p className="encyclopedia-search-error" role="alert">{error}</p>}
         {rows.length > 0 && (
           <div className="admin-table-wrap">

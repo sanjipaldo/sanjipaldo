@@ -3323,3 +3323,53 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .enc-season-cta { grid-template-columns: 1fr; }
   .enc-month-stepper select { padding: 0 22px 0 10px; font-size: 13px; }
 }
+
+/* 농축수산 백과사전 상세 "네이버 검색 수요"(2026-11-16): 숫자 4칸 · 12달 막대 + 판매 시기 줄 · 한 줄 조언 */
+.produce-search .produce-search-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+.produce-search .produce-search-stats > div { padding: 14px 16px; border: 1px solid var(--w-card-border); border-radius: 16px; background: #fff; }
+.produce-search .produce-search-stats strong { font-size: 22px; letter-spacing: -.02em; }
+.produce-search .produce-search-stats .is-comp-high strong { color: var(--w-negative); }
+.produce-search .produce-search-stats .is-comp-mid strong { color: #b45309; }
+.produce-search .produce-search-stats .is-comp-low strong { color: #1e8e3e; }
+.produce-search .produce-search-stats .is-peak { border-color: #cfe8bd; background: #f6fcf1; }
+.produce-search .produce-search-stats .is-peak strong { color: var(--w-positive-deep); }
+.produce-search-chart { margin: 0 0 14px; padding: 16px 16px 12px; border: 1px solid var(--w-card-border); border-radius: 16px; background: #fff; }
+.produce-search .produce-search-bars { gap: 6px; height: 150px; margin: 0; }
+.produce-search .produce-search-bars i { border-radius: 8px 8px 3px 3px; background: #cfe8bd; }
+.produce-search .produce-search-bars li.peak i { background: var(--w-positive); }
+.produce-search .produce-search-bars li.current i { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--w-ink-deep); }
+.produce-search .produce-search-bars li.current span { color: #fff; border-radius: 6px; background: var(--w-ink-deep); }
+.produce-search-season { display: grid; gap: 4px; margin-top: 10px; }
+.produce-search-season em { color: var(--w-mute); font-size: 11.5px; font-style: normal; font-weight: 800; }
+.produce-search-season ol { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.produce-search-season li { height: 8px; border-radius: 4px; }
+.produce-search-season li.phase-peak { background: var(--enc-peak); }
+.produce-search-season li.phase-harvest { background: var(--enc-harvest); }
+.produce-search-season li.phase-ending { background: var(--enc-ending); }
+.produce-search-season li.phase-storage { background: var(--enc-storage); }
+.produce-search-season li.phase-prep { background: var(--enc-prep); }
+.produce-search-season li.phase-off { background: var(--enc-off); }
+.produce-search-season li.current { box-shadow: 0 0 0 2px var(--w-ink-deep); }
+.produce-search-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 12px 0 0; padding: 0; color: var(--w-body); font-size: 12px; font-weight: 700; list-style: none; }
+.produce-search-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.produce-search-legend i { width: 12px; height: 12px; border-radius: 3px; }
+.produce-search-legend i.is-peak { background: var(--w-positive); }
+.produce-search-legend i.is-base { background: #cfe8bd; }
+.produce-search-legend i.is-current { box-shadow: inset 0 0 0 2px var(--w-ink-deep); }
+.produce-search-advice { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 14px !important; padding: 12px 14px; border-radius: 14px; color: var(--w-ink) !important; background: #f6fcf1; font-weight: 700; }
+.produce-search-advice svg { flex: 0 0 auto; margin-top: 2px; color: var(--w-positive-deep); }
+@media (max-width: 1050px) {
+  .produce-search .produce-search-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .produce-search .produce-search-stats { gap: 8px; }
+  .produce-search .produce-search-stats > div { padding: 12px; }
+  .produce-search .produce-search-stats strong { font-size: 18px; }
+  .produce-search-chart { padding: 12px 10px 10px; }
+  .produce-search .produce-search-bars { gap: 3px; height: 110px; }
+  .produce-search-season ol { gap: 3px; }
+}
+.encyclopedia-search-quota { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--w-card-border); border-radius: var(--w-radius-lg); background: var(--w-soft-2); }
+.encyclopedia-search-quota strong { color: var(--w-ink); font-size: 14px; font-weight: 900; }
+.encyclopedia-search-quota ul { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 0; padding-left: 18px; color: var(--w-body); font-size: 13px; line-height: 1.6; word-break: keep-all; }
+.encyclopedia-search-quota b { color: var(--w-ink); }

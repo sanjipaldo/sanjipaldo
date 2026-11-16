@@ -60,6 +60,7 @@ import {
   produceItems,
   relatedProduceItems,
   salesMonths,
+  seasonPhases,
   type ProduceCategory,
   type ProduceItem,
   type ProduceSearchStat
@@ -803,7 +804,7 @@ function ProduceDetail({
 
         <SearchSection item={item} month={month} stat={stat} naverShopping={naverShopping} naverSearch={naverSearch} />
 
-        <section className="produce-section produce-tip">
+        <section className="produce-section produce-tip span-2">
           <DetailHead icon={<Lightbulb size={18} />} eyebrow="SELLER TIP" title="셀러 팁" />
           <p>{item.tip}</p>
         </section>
@@ -905,33 +906,79 @@ function DetailHead({ icon, eyebrow, title, extra }: { icon: ReactNode; eyebrow:
   );
 }
 
-// 네이버 검색: 검색어 + (모아 둔 값이 있으면) 최근 30일 검색수·경쟁·1~12월 추정 그래프·연관 검색어
+// 네이버 검색: 검색어 + (모아 둔 값이 있으면) 숫자 4칸(최근 30일 · 월평균 추정 · 광고 경쟁 · 많이 찾는 달) ·
+// 1~12월 추정 검색수 막대(많이 찾는 달 진하게, 이번 달 테두리) + 그 아래 판매 시기 줄 · 검색과 성수기를 비교한 한 줄 조언 · 연관 검색어
+const COMP_CLASS: Record<string, string> = { 높음: "high", 중간: "mid", 낮음: "low" };
+
+export function searchPeakMonths(months: number[]) {
+  const max = Math.max(...months, 0);
+  if (max <= 0) return [];
+  return months.map((value, index) => (value >= max * 0.7 ? index + 1 : 0)).filter((month) => month > 0);
+}
+
+export function formatSearchCount(value: number) {
+  if (value >= 10000) return `약 ${(value / 10000).toFixed(value >= 100000 ? 0 : 1).replace(/\.0$/, "")}만 회`;
+  return `약 ${formatCount(Math.round(value))}회`;
+}
+
+// 검색이 많은 달과 판매 성수기를 비교해 셀러가 할 일을 한 줄로 알려 줍니다.
+export function searchSeasonAdvice(searchPeaks: number[], salesPeaks: number[]) {
+  const range = formatMonthRange(searchPeaks);
+  if (searchPeaks.length === 0) return null;
+  if (searchPeaks.length >= 10) return "1년 내내 찾는 사람이 꾸준한 검색어예요. 시즌보다 가격·구성·후기로 경쟁하세요.";
+  if (salesPeaks.length === 0) return `연중 판매하는 품목이에요. 검색이 많은 ${range}에 맞춰 기획전·광고를 잡아 보세요.`;
+  const sales = new Set(salesPeaks);
+  if (searchPeaks.some((month) => sales.has(month))) return `검색이 많은 달(${range})이 성수기와 맞물려요. 성수기 전에 산지와 물량·가격을 먼저 확정해 두세요.`;
+  const firstSales = [...sales].find((month) => !sales.has(month === 1 ? 12 : month - 1)) ?? salesPeaks[0];
+  const before = [1, 2].map((step) => ((firstSales - 1 - step + 12) % 12) + 1);
+  if (searchPeaks.some((month) => before.includes(month))) return `검색이 성수기보다 먼저 늘어요. ${range}에 상세페이지와 광고를 미리 열어 두세요.`;
+  return `검색이 많은 달(${range})과 성수기가 달라요. 그때 팔 수 있는 저장 물량·가공품이 있는지 산지에 물어보세요.`;
+}
+
 function SearchSection({ item, month, stat, naverShopping, naverSearch }: { item: ProduceItem; month: number; stat?: ProduceSearchStat; naverShopping: string; naverSearch: string }) {
   const months = stat?.months && stat.months.length === 12 ? stat.months : null;
   const max = months ? Math.max(...months, 1) : 1;
-  const peakMonth = months ? months.indexOf(Math.max(...months)) + 1 : null;
+  const peaks = months ? searchPeakMonths(months) : [];
+  const peakSet = new Set(peaks);
+  const topValue = months ? Math.max(...months) : 0;
+  const average = months ? Math.round(months.reduce((sum, value) => sum + value, 0) / 12) : 0;
+  const phases = seasonPhases(item);
+  const advice = months ? searchSeasonAdvice(peaks, peakMonths(item)) : null;
   return (
-    <section className="produce-section produce-search">
+    <section className="produce-section produce-search span-2">
       <DetailHead icon={<Search size={18} />} eyebrow="SEARCH" title="네이버 검색 수요" extra={<small className="produce-section-badge">검색어 ‘{item.keyword}’</small>} />
       {stat && stat.total > 0 ? (
         <div className="produce-search-stats">
-          <div><span>최근 30일 검색수</span><strong>{formatCount(stat.total)}</strong><small>PC {formatCount(stat.pc)} · 모바일 {formatCount(stat.mobile)}</small></div>
-          {stat.comp && <div><span>광고 경쟁</span><strong>{stat.comp}</strong><small>네이버 검색광고 기준</small></div>}
-          {peakMonth && <div><span>가장 많이 찾는 달</span><strong>{peakMonth}월</strong><small>월별 추정 검색수 기준</small></div>}
+          <div><span>최근 30일 검색수</span><strong>{formatCount(stat.total)}회</strong><small>PC {formatCount(stat.pc)} · 모바일 {formatCount(stat.mobile)}</small></div>
+          {months && <div><span>월평균(추정)</span><strong>{formatCount(average)}회</strong><small>지난 12개월 추이로 계산</small></div>}
+          {stat.comp && <div className={`is-comp-${COMP_CLASS[stat.comp] ?? "mid"}`}><span>광고 경쟁</span><strong>{stat.comp}</strong><small>네이버 검색광고 기준</small></div>}
+          {months && peaks.length > 0 && <div className="is-peak"><span>많이 찾는 달</span><strong>{formatMonthRange(peaks)}</strong><small>가장 많은 달 {formatSearchCount(topValue)}</small></div>}
         </div>
       ) : (
-        <p>이 검색어로 경쟁 상품의 가격·구성·후기를 먼저 살펴보세요.</p>
+        <p>이 검색어로 경쟁 상품의 가격·구성·후기를 먼저 살펴보세요. 두고푸드가 네이버 검색량을 받아 오면 월별 검색 그래프가 여기에 나와요.</p>
       )}
       {months && (
-        <ol className="produce-search-bars" aria-label="1~12월 추정 검색수">
-          {months.map((value, index) => (
-            <li key={index} className={`${index + 1 === month ? "current" : ""}${index + 1 === peakMonth ? " peak" : ""}`.trim()} title={`${index + 1}월 약 ${formatCount(value)}회`}>
-              <i style={{ height: `${Math.max(4, Math.round((value / max) * 100))}%` }} aria-hidden="true" />
-              <span>{index + 1}</span>
-            </li>
-          ))}
-        </ol>
+        <div className="produce-search-chart">
+          <ol className="produce-search-bars" aria-label="1~12월 추정 검색수">
+            {months.map((value, index) => (
+              <li key={index} className={`${index + 1 === month ? "current" : ""}${peakSet.has(index + 1) ? " peak" : ""}`.trim()} title={`${index + 1}월 ${formatSearchCount(value)}`}>
+                <i style={{ height: `${Math.max(4, Math.round((value / max) * 100))}%` }} aria-hidden="true" />
+                <span>{index + 1}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="produce-search-season" aria-label={`${item.name} 판매 시기`}>
+            <em>판매 시기</em>
+            <ol>{phases.map((phase, index) => <li key={index} className={`phase-${phaseClass(phase)}${index + 1 === month ? " current" : ""}`} title={`${index + 1}월 · ${PHASE_META[phase].label}`} />)}</ol>
+          </div>
+          <ul className="produce-search-legend">
+            <li><i className="is-peak" aria-hidden="true" />많이 찾는 달</li>
+            <li><i className="is-base" aria-hidden="true" />그 밖의 달</li>
+            <li><i className="is-current" aria-hidden="true" />이번 달({month}월)</li>
+          </ul>
+        </div>
       )}
+      {advice && <p className="produce-search-advice"><Lightbulb size={16} aria-hidden="true" /> {advice}</p>}
       {stat?.related && stat.related.length > 0 && (
         <div className="produce-related-keywords"><span>연관 검색어</span>{stat.related.map(([keyword, total]) => <i key={keyword}>{keyword} <b>{formatCount(total)}</b></i>)}</div>
       )}
@@ -952,7 +999,7 @@ function SearchSection({ item, month, stat, naverShopping, naverSearch }: { item
         <a href={naverShopping} target="_blank" rel="noreferrer">네이버 쇼핑 <ExternalLink size={13} aria-hidden="true" /></a>
         <a href={naverSearch} target="_blank" rel="noreferrer">네이버 통합검색 <ExternalLink size={13} aria-hidden="true" /></a>
       </div>
-      {stat?.updatedAt && <p className="produce-search-date">네이버 검색광고·데이터랩 자료 · {stat.updatedAt.slice(0, 10).replace(/-/g, ".")} 기준 · 월별 값은 추정치예요.</p>}
+      {stat?.updatedAt && <p className="produce-search-date">네이버 검색광고·검색어 트렌드 자료 · {stat.updatedAt.slice(0, 10).replace(/-/g, ".")} 기준 · 월별 값은 지난 12개월 추이로 낸 추정치예요.</p>}
     </section>
   );
 }

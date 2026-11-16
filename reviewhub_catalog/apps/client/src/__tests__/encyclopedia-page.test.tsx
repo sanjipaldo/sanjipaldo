@@ -109,8 +109,15 @@ describe("백과사전 상세", () => {
     expect(screen.getByText("산지 연락 시기").nextElementSibling?.textContent).toBe("9월");
     expect(screen.getByText("재배·형태").nextElementSibling?.textContent).toBe("노지·저장");
     // 네이버 검색량(관리자가 모아 둔 값)
-    expect(await screen.findByText("12,000")).toBeTruthy();
-    expect(screen.getByText("12월")).toBeTruthy();
+    expect(await screen.findByText("12,000회")).toBeTruthy();
+    const search = document.querySelector(".produce-search") as HTMLElement;
+    // 월평균(추정) = 12달 합 77,000 ÷ 12 · 많이 찾는 달 = 가장 많은 달(15,000)의 70% 이상인 11~12월 · 성수기(11~12월)와 겹친다는 조언
+    expect(within(search).getByText("6,417회")).toBeTruthy();
+    expect(within(search).getByText("11~12월")).toBeTruthy();
+    expect(within(search).getByText("가장 많은 달 약 1.5만 회")).toBeTruthy();
+    expect(within(search).getByText(/검색이 많은 달\(11~12월\)이 성수기와 맞물려요/)).toBeTruthy();
+    expect(search.querySelectorAll(".produce-search-bars li.peak")).toHaveLength(2);
+    expect(search.querySelectorAll(".produce-search-season li")).toHaveLength(12);
     expect(screen.getByText(/청송부사사과/)).toBeTruthy();
   });
 
@@ -146,6 +153,22 @@ describe("백과사전 상세", () => {
   it("없는 품목 주소는 안내를 보여 줍니다", async () => {
     await renderEncyclopedia("/encyclopedia/no-such-item");
     expect(screen.getByText("찾는 품목이 없어요.")).toBeTruthy();
+  });
+});
+
+describe("네이버 검색 수요 계산", () => {
+  it("많이 찾는 달 · 검색수 표기 · 성수기와 비교한 조언", async () => {
+    const { searchPeakMonths, formatSearchCount, searchSeasonAdvice } = await import("@/pages/catalog/Encyclopedia");
+    expect(searchPeakMonths([100, 90, 80, 10, 10, 10, 10, 10, 10, 10, 20, 95])).toEqual([1, 2, 3, 12]);
+    expect(searchPeakMonths([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])).toEqual([]);
+    expect(formatSearchCount(19000)).toBe("약 1.9만 회");
+    expect(formatSearchCount(120000)).toBe("약 12만 회");
+    expect(formatSearchCount(840)).toBe("약 840회");
+    expect(searchSeasonAdvice([12, 1, 2], [1, 2])).toContain("성수기와 맞물려요");
+    expect(searchSeasonAdvice([3], [5, 6])).toContain("성수기보다 먼저 늘어요");
+    expect(searchSeasonAdvice([9], [3, 4])).toContain("성수기가 달라요");
+    expect(searchSeasonAdvice([5], [])).toContain("연중 판매하는 품목");
+    expect(searchSeasonAdvice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [5])).toContain("1년 내내");
   });
 });
 

@@ -217,6 +217,9 @@ export async function fetchSearchTrends(keywords: string[], config: NonNullable<
     }
     if (!results) {
       const keyProblem = tried.every((entry) => / (401|403|404)( |$)/.test(entry));
+      if (tried.some((entry) => / 429( |$)/.test(entry))) {
+        throw new NaverSearchError(`네이버 검색어 트렌드 API 호출 한도를 넘었어요(${tried.join(" · ")}). NAVER API HUB 검색어트렌드는 한 달 50,000회까지이고, 콘솔에서 정한 일·월 사용 한도가 있으면 그 값까지예요. 콘솔 › Usage Statistics에서 사용량을 확인해 주세요.`);
+      }
       throw new NaverSearchError(keyProblem
         ? `네이버 검색어 트렌드 API가 키를 받지 않았어요(${tried.join(" · ")}). Client ID·Client Secret과 검색어 트렌드 API 사용 신청을 확인해 주세요.`
         : `네이버 검색어 트렌드 API 응답 오류(${tried.join(" · ")})`);
@@ -263,7 +266,16 @@ export async function refreshProduceSearch(keywords: string[], options: { env?: 
   if (!config.searchAd) throw new NaverSearchError("네이버 검색광고 API 키가 아직 없어요. Vercel 환경 변수에 키를 넣은 뒤 다시 배포해 주세요.", 409);
   const now = options.now ?? new Date();
   const volumes = await fetchKeywordVolumes(keywords, config.searchAd, options.fetcher);
-  const trends = config.datalab ? await fetchSearchTrends(keywords, config.datalab, now, options.fetcher) : new Map<string, { ratios: number[]; lastMonth: number }>();
+  // 검색어 트렌드(월별 추이)가 실패해도 검색수·경쟁·연관 검색어는 저장하고, 예전에 받은 월별 값은 그대로 둡니다.
+  let trends: Map<string, { ratios: number[]; lastMonth: number }> & { provider?: DatalabProvider | null } = new Map();
+  let trendsError: string | null = null;
+  if (config.datalab) {
+    try {
+      trends = await fetchSearchTrends(keywords, config.datalab, now, options.fetcher);
+    } catch (error) {
+      trendsError = error instanceof NaverSearchError ? error.message : "검색어 트렌드를 받지 못했어요.";
+    }
+  }
   const stats = await readProduceSearchStats();
   const updatedAt = now.toISOString();
   for (const [key, volume] of volumes) {
@@ -276,9 +288,9 @@ export async function refreshProduceSearch(keywords: string[], options: { env?: 
   }
   stats.updatedAt = updatedAt;
   await saveProduceSearchStats(stats);
-  const provider = "provider" in trends ? trends.provider : null;
-  console.info(`[naver-search] refreshed ${volumes.size} keywords${provider ? ` with trends (${provider})` : ""}`);
-  return { updated: volumes.size, trends: trends.size, updatedAt };
+  const provider = trends.provider ?? null;
+  console.info(`[naver-search] refreshed ${volumes.size} keywords${provider ? ` with trends (${provider})` : trendsError ? " (trends failed)" : ""}`);
+  return { updated: volumes.size, trends: trends.size, trendsError, updatedAt };
 }
 
 // 관리자 "연결 확인": 검색어 하나("사과")로 두 API를 불러 보기만 하고 저장하지 않습니다(키 값은 돌려주지 않음).

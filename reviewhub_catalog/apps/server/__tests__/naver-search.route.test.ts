@@ -130,6 +130,14 @@ describe("검색어 트렌드: NAVER API HUB · 예전 AI·NAVER API · 개발�
     expect((error as Error).message).toContain("키를 받지 않았어요");
   });
 
+  it("한 달 호출 한도를 넘으면(429) 한도 안내 문구를 보여 줍니다", async () => {
+    const fetcher = vi.fn(async () => json({ error: { errorCode: "300", message: "Quota Exceeded" } }, 429));
+    const error = await fetchSearchTrends(["사과"], { clientId: "ab12cd34ef", clientSecret: "x" }, new Date(), fetcher).catch((caught: unknown) => caught);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect((error as Error).message).toContain("호출 한도를 넘었어요");
+    expect((error as Error).message).toContain("50,000회");
+  });
+
   it("키 문제가 아닌 오류(400 등)는 다른 곳에 다시 묻지 않고 그대로 알려 줍니다", async () => {
     const fetcher = vi.fn(async () => json({ errorMessage: "Invalid keywordGroups", errorCode: "400" }, 400));
     const error = await fetchSearchTrends(["사과"], { clientId: "ab12cd34ef", clientSecret: "x" }, new Date(), fetcher).catch((caught: unknown) => caught);
@@ -202,6 +210,33 @@ describe("검색량 API", () => {
     // 연결 확인은 저장하지 않습니다.
     const stats = await app.fetch(new Request("http://localhost/api/catalog/produce-search"));
     expect((await stats.json() as { data: { updatedAt: string | null } }).data.updatedAt).toBeNull();
+  });
+
+  it("검색어 트렌드가 실패해도 검색수·경쟁은 저장하고, 실패 이유를 함께 돌려줍니다", async () => {
+    process.env.NAVER_SEARCHAD_API_KEY = "test-access";
+    process.env.NAVER_SEARCHAD_SECRET_KEY = "test-secret";
+    process.env.NAVER_SEARCHAD_CUSTOMER_ID = "123";
+    process.env.NAVER_DATALAB_CLIENT_ID = "ab12cd34ef";
+    process.env.NAVER_DATALAB_CLIENT_SECRET = "test-client-secret";
+    const realFetch = globalThis.fetch;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith("https://api.searchad.naver.com/")) return json({ keywordList: keywordToolRows });
+      if (url.includes("ntruss.com") || url.includes("openapi.naver.com")) return json({ error: { errorCode: "210", message: "Permission Denied" } }, 401);
+      return realFetch(input, init);
+    }));
+    const token = await adminToken();
+    const refresh = await app.fetch(new Request("http://localhost/api/catalog/admin/produce-search/refresh", {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ keywords: ["부사 사과"] })
+    }));
+    expect(refresh.status).toBe(200);
+    const body = await refresh.json() as { data: { updated: number; trends: number; trendsError: string | null } };
+    expect(body.data).toMatchObject({ updated: 1, trends: 0 });
+    expect(body.data.trendsError).toContain("키를 받지 않았어요");
+    const stats = await app.fetch(new Request("http://localhost/api/catalog/produce-search"));
+    const statsBody = await stats.json() as { data: { keywords: Record<string, { total: number; months?: number[] }> } };
+    expect(statsBody.data.keywords["부사사과"]).toMatchObject({ total: 12000 });
+    expect(statsBody.data.keywords["부사사과"].months).toBeUndefined();
   });
 
   it("키가 있으면 모아서 저장하고, 공개 API로 월별 추정 검색수까지 읽습니다", async () => {
