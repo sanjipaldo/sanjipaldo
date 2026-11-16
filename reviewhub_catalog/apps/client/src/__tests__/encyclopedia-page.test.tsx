@@ -1,4 +1,4 @@
-// 백과사전 화면: 상세(두고푸드 공급가 카드 · 상품 구매하기 · 보유/미보유 · 네이버 검색량) · 시즌 캘린더 · 홈 · 첫 상품 찾기 ·
+// 백과사전 화면: 상세(두고푸드 공급가 카드 · 상품 구매하기 · 보유/미보유 · 네이버 검색량) · 시즌 캘린더 · 이달의 제철(홈) · 맞춤 추천 ·
 // 내 후보(기기 옮기기 코드) · 메인 홈 미리보기와 "단가표에서 보기"(/?q=) 연결.
 import React from "react";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -81,7 +81,7 @@ async function renderEncyclopedia(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/encyclopedia" element={<pages.EncyclopediaHomePage />} />
+        <Route path="/encyclopedia" element={<><pages.EncyclopediaHomePage /><LocationProbe /></>} />
         <Route path="/encyclopedia/calendar" element={<><pages.EncyclopediaCalendarPage /><LocationProbe /></>} />
         <Route path="/encyclopedia/finder" element={<EncyclopediaFinderPage />} />
         <Route path="/encyclopedia/favorites" element={<pages.EncyclopediaFavoritesPage />} />
@@ -176,18 +176,33 @@ describe("시즌 캘린더", () => {
 describe("백과사전 홈", () => {
   it("이달 요약·시작 순서·분류 칸을 보여 주고, 예전 목록 주소는 시즌 캘린더로 보냅니다", async () => {
     await renderEncyclopedia("/encyclopedia?month=11");
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("11월");
-    expect(screen.getByRole("heading", { level: 2, name: "처음이라면 이 순서로 시작해 보세요" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /첫 상품 찾기 질문 4개/ }).getAttribute("href")).toBe("/encyclopedia/finder");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("11월 제철 소싱 가이드");
+    expect(screen.getByRole("heading", { level: 2, name: "백과사전, 이 순서로 써 보세요" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /맞춤 추천 받기 질문 4개/ }).getAttribute("href")).toBe("/encyclopedia/finder");
     expect(screen.getByText(/김장 본시즌/)).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 2, name: "분류별로 보기" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "카테고리별 품목" })).toBeTruthy();
+    // 안 메뉴 이름(두고푸드 형식)
+    const menu = screen.getByRole("navigation", { name: "백과사전 메뉴" });
+    expect(within(menu).getAllByRole("link").map((link) => link.textContent)).toEqual(["이달의 제철", "시즌 캘린더", "맞춤 추천", "내 후보 0"]);
+    // 추천 묶음 탭: 초보 추천 → 두고푸드 보유로 바꾸면 제목·품목이 바뀝니다.
+    expect(screen.getByRole("heading", { level: 2, name: "11월, 처음 팔기 좋은 품목" })).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: /두고푸드 보유/ }));
+    expect(screen.getByRole("heading", { level: 2, name: "두고푸드 도매몰에 있는 품목" })).toBeTruthy();
+    const shelf = document.querySelector(".enc-tile-grid") as HTMLElement;
+    expect(within(shelf).getAllByRole("listitem").map((item) => item.querySelector("strong")?.textContent)).toEqual(expect.arrayContaining(["사과(부사)", "감귤"]));
+    // 기준 달 바꾸기(이전·다음 달 버튼 · 달 목록)
+    fireEvent.click(screen.getByRole("button", { name: "12월 보기" }));
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("12월 제철 소싱 가이드"));
+    expect(lastLocation).toContain("month=12");
+    fireEvent.change(screen.getByRole("combobox", { name: "기준 달" }), { target: { value: "3" } });
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("3월 제철 소싱 가이드"));
     document.body.innerHTML = "";
     await renderEncyclopedia("/encyclopedia?q=굴");
     expect(await screen.findByRole("heading", { level: 1, name: "시즌 캘린더" })).toBeTruthy();
   });
 });
 
-describe("첫 상품 찾기", () => {
+describe("맞춤 추천(첫 상품 찾기)", () => {
   it("질문 4개에 답하면 품목 5개를 이유와 함께 추천하고, 한 번에 내 후보에 담습니다", async () => {
     await renderEncyclopedia("/encyclopedia/finder");
     fireEvent.click(screen.getByRole("radio", { name: /^11월/ }));

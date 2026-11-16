@@ -284,7 +284,7 @@ export const MONTH_NOTES: Record<number, { title: string; body: string }> = {
   12: { title: "연말 · 설 선물 예약", body: "한라봉·곶감·굴비 세트는 12월부터 설 예약을 받는 셀러가 많습니다. 방어·대게 같은 겨울 별미도 성수기예요." }
 };
 
-// 첫 상품 찾기: 질문 4개 답으로 품목 5개를 고르고 이유를 붙입니다(두고푸드 보유 품목에 점수를 더 줌).
+// 맞춤 추천(첫 상품 찾기): 질문 4개 답으로 품목 5개를 고르고 이유를 붙입니다(두고푸드 보유 품목에 점수를 더 줌).
 export type FinderAnswers = {
   start: number;
   ship: "room" | "chill" | "any";

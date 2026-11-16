@@ -1,5 +1,5 @@
 // 농축수산 백과사전: 홈(/encyclopedia) · 시즌 캘린더(/encyclopedia/calendar) · 내 후보(/encyclopedia/favorites) · 품목 상세(/encyclopedia/:id).
-// 첫 상품 찾기는 EncyclopediaFinder.tsx. 두고푸드 단가표에 있는 품목은 상세 위쪽(썸네일과 품목명 사이)에 A단가·일반공급가를
+// 맞춤 추천(예전 이름 "첫 상품 찾기")은 EncyclopediaFinder.tsx. 두고푸드 단가표에 있는 품목은 상세 위쪽(썸네일과 품목명 사이)에 A단가·일반공급가를
 // 단가표와 같은 모양으로 보여 주고, "상품 구매하기"로 두고푸드 도매몰에 바로 갑니다.
 import { type ReactNode, useMemo, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -9,6 +9,7 @@ import {
   BookOpen,
   CalendarDays,
   Check,
+  ChevronLeft,
   ChevronRight,
   ClipboardCopy,
   Copy,
@@ -29,6 +30,7 @@ import {
   Sparkles,
   Sprout,
   Store,
+  Sun,
   TrendingUp,
   Truck,
   X
@@ -64,7 +66,7 @@ import {
 } from "@/lib/encyclopedia";
 import { createSyncCode, linkSyncCode, setCheck, unlinkSync, useEncyclopediaStore } from "@/lib/encyclopedia-store";
 import { searchRise, searchStatOf, useEncyclopediaCatalog, useProduceSearchStats } from "./encyclopedia-catalog";
-import { EncyclopediaLayout, FavoriteButton, MonthPicker, ProduceCard, copyText, useMediaQuery, validMonth } from "./encyclopedia-shared";
+import { EncyclopediaLayout, FavoriteButton, MonthPicker, ProducePageHead, copyText, useMediaQuery, validMonth } from "./encyclopedia-shared";
 import { MiniSeasonBar, PhaseBadge, ProduceThumb, SeasonBar, SeasonLegend, Stars, StockBadge, TagChips, phaseClass, seasonSummary, useFavoriteProduce, useSeoulMonth } from "./encyclopedia-ui";
 
 const CATEGORY_ICON: Record<ProduceCategory, string> = { 과일: "🍎", 채소: "🥬", "버섯·나물": "🍄", "곡물·견과": "🌾", 수산: "🐟", "가공·김장": "🫙" };
@@ -98,6 +100,7 @@ function EncyclopediaHome() {
       return false;
     }
   });
+  const [shelfKey, setShelfKey] = useState<ShelfKey>("beginner");
   const count = (item: ProduceItem) => grouped.get(item.id)?.length ?? 0;
   const byDoogoThenLevel = (first: ProduceItem, second: ProduceItem) => Number(count(second) > 0) - Number(count(first) > 0) || second.level - first.level || first.name.localeCompare(second.name, "ko");
   const groups = useMemo(() => itemsForMonth(month), [month]);
@@ -112,8 +115,8 @@ function EncyclopediaHome() {
         .sort((first, second) => second.rise.ratio - first.rise.ratio)
         .slice(0, 6)
     : [];
+  const riseById = new Map(rising.map((entry) => [entry.item.id, entry.rise.ratio]));
   const note = MONTH_NOTES[month];
-  const card = (item: ProduceItem) => <ProduceCard key={item.id} item={item} month={month} doogoCount={count(item)} loading={loading} favorite={favoriteSet.has(item.id)} onToggle={toggle} />;
   const pickMonth = (value: number) => {
     const next = new URLSearchParams(params);
     if (value === currentMonth) next.delete("month");
@@ -129,93 +132,132 @@ function EncyclopediaHome() {
     }
   };
   const monthQuery = month === currentMonth ? "" : `&month=${month}`;
+  const monthOnly = month === currentMonth ? "" : `?month=${month}`;
+  // 추천 품목: 묶음(초보 추천 · 두고푸드 보유 · 다음 달 시즌 · 검색 상승)을 탭처럼 바꿔 보여 줍니다(품목이 없는 묶음은 숨김).
+  const shelves: Shelf[] = [
+    { key: "beginner" as const, icon: <Sparkles size={15} aria-hidden="true" />, label: "초보 추천", title: `${month}월, 처음 팔기 좋은 품목`, desc: "지금 판매할 수 있고 배송·클레임 부담이 적은 품목이에요.", items: beginner, more: `/encyclopedia/calendar?selling=1&easy=1${monthQuery}` },
+    { key: "doogo" as const, icon: <Store size={15} aria-hidden="true" />, label: "두고푸드 보유", title: "두고푸드 도매몰에 있는 품목", desc: "공급처를 따로 찾지 않고 도매몰에서 바로 주문할 수 있어요.", items: doogoNow, more: `/encyclopedia/calendar?doogo=1${monthQuery}` },
+    { key: "opening" as const, icon: <CalendarDays size={15} aria-hidden="true" />, label: `${nextMonth}월 시즌 시작`, title: `${nextMonth}월부터 판매가 열리는 품목`, desc: "지금 산지와 물량·가격을 맞춰 두면 시즌 첫 주부터 팔 수 있어요.", items: opening, more: `/encyclopedia/calendar?month=${nextMonth}&selling=1` },
+    { key: "rising" as const, icon: <TrendingUp size={15} aria-hidden="true" />, label: "검색 상승", title: `${nextMonth}월 네이버 검색이 늘어나는 품목`, desc: "검색이 늘기 전에 상세페이지와 광고를 미리 준비해 두세요.", items: rising.map((entry) => entry.item), more: `/encyclopedia/calendar?sort=search${monthQuery}` }
+  ].filter((shelf) => shelf.items.length > 0);
+  const shelf = shelves.find((entry) => entry.key === shelfKey) ?? shelves[0];
+  const summary = [
+    { key: "peak", icon: <Sun size={18} aria-hidden="true" />, label: "성수기 품목", hint: "맛과 물량이 가장 좋은 때", value: String(groups.K.length), to: `/encyclopedia/calendar?selling=1${monthQuery}` },
+    { key: "easy", icon: <Sparkles size={18} aria-hidden="true" />, label: "초보 추천", hint: "★4 이상 · 클레임 부담 적음", value: String(beginner.length), to: `/encyclopedia/calendar?selling=1&easy=1${monthQuery}` },
+    { key: "doogo", icon: <Store size={18} aria-hidden="true" />, label: "두고푸드 보유", hint: "도매몰에서 바로 주문", value: loading ? "…" : String(grouped.size), to: `/encyclopedia/calendar?doogo=1${monthQuery}` },
+    { key: "fav", icon: <Heart size={18} aria-hidden="true" />, label: "내 후보", hint: "하트로 담아 둔 품목", value: String(favorites.length), to: "/encyclopedia/favorites" }
+  ];
 
   return (
     <EncyclopediaLayout className="encyclopedia-home">
-      <section className="enc-hero" aria-labelledby="enc-hero-title">
-        <div className="enc-hero-copy">
-          <span className="enc-hero-kicker"><BookOpen size={14} aria-hidden="true" /> 두고푸드 농축수산 백과사전</span>
-          <h1 id="enc-hero-title"><b>{month}</b>월</h1>
-          <p>지금 팔 수 있는 품목 <strong>{formatCount(selling.length)}개</strong>, 산지에 먼저 연락할 품목 <strong>{formatCount(groups.P.length)}개</strong>가 있어요.</p>
-        </div>
-        <div className="enc-hero-stats">
-          <Link to={`/encyclopedia/calendar?selling=1${monthQuery}`}><strong>{groups.K.length}</strong><span>성수기 품목</span></Link>
-          <Link to={`/encyclopedia/calendar?selling=1&easy=1${monthQuery}`}><strong>{beginner.length}</strong><span>초보 추천</span></Link>
-          <Link to={`/encyclopedia/calendar?doogo=1${monthQuery}`}><strong>{loading ? "…" : grouped.size}</strong><span>두고푸드 보유</span></Link>
-          <Link to="/encyclopedia/favorites"><strong>{favorites.length}</strong><span>내 후보</span></Link>
-        </div>
-      </section>
-      <MonthPicker month={month} currentMonth={currentMonth} onPick={pickMonth} />
-
-      {!guideHidden && (
-        <section className="enc-start" aria-labelledby="enc-start-title">
-          <div className="enc-start-head">
-            <h2 id="enc-start-title">처음이라면 이 순서로 시작해 보세요</h2>
-            <button type="button" className="enc-start-close" onClick={hideGuide} aria-label="시작 안내 닫기"><X size={16} /></button>
+      <section className="enc-season-hero" aria-labelledby="enc-hero-title">
+        <div className="enc-season-copy">
+          <span className="enc-eyebrow">SEASON SOURCING GUIDE</span>
+          <h1 id="enc-hero-title">{month}월 제철 소싱 가이드</h1>
+          <p>두고푸드가 품목 {formatCount(produceItems.length)}개의 판매 시기·배송·클레임 정보를 정리했어요. 이번 달 팔 상품과 미리 준비할 상품을 골라 보세요.</p>
+          <div className="enc-season-pills">
+            <span><Check size={15} aria-hidden="true" /> 판매 가능 <b>{formatCount(selling.length)}</b>개</span>
+            <span><PhoneCall size={15} aria-hidden="true" /> 산지 연락 시기 <b>{formatCount(groups.P.length)}</b>개</span>
           </div>
-          <p>위탁판매는 재고 없이 산지나 두고푸드가 고객에게 바로 보내 주는 방식이라, 품목 고르기와 산지 연락 시기가 가장 중요해요.</p>
-          <ol>
-            <li><Link to="/encyclopedia/finder"><b>1</b><div><strong>첫 상품 찾기</strong><span>질문 4개에 답하면 나에게 맞는 품목 5개를 골라 드려요.</span></div><ChevronRight size={18} aria-hidden="true" /></Link></li>
-            <li><Link to="/encyclopedia/favorites"><b>2</b><div><strong>후보 담고 공급처 확인하기</strong><span>두고푸드에 있으면 공급가를 바로 보고, 없으면 산지 문의 메시지를 복사해 보내세요.</span></div><ChevronRight size={18} aria-hidden="true" /></Link></li>
-            <li><Link to="/encyclopedia/calendar"><b>3</b><div><strong>시즌 캘린더로 다음 달 준비하기</strong><span>성수기·준비 기간을 보고 다음 시즌 상품을 미리 정하세요.</span></div><ChevronRight size={18} aria-hidden="true" /></Link></li>
-          </ol>
-        </section>
-      )}
-
-      {note && (
-        <section className="enc-memo" aria-label={`${month}월 메모`}>
-          <span className="enc-memo-icon" aria-hidden="true"><Lightbulb size={20} /></span>
-          <div><strong>{month}월 · {note.title}</strong><p>{note.body}</p></div>
-        </section>
-      )}
-
-      <HomeRail title={`초보에게 추천하는 ${month}월 품목`} desc="지금 팔 수 있고 클레임 걱정이 적은 품목이에요." icon={<Sparkles size={18} />} more={`/encyclopedia/calendar?selling=1&easy=1${monthQuery}`}>
-        {beginner.slice(0, 8).map(card)}
-      </HomeRail>
-      {doogoNow.length > 0 && (
-        <HomeRail title="두고푸드에서 바로 받을 수 있는 품목" desc="두고푸드 도매몰에 있는 상품이라 공급처를 따로 찾지 않아도 돼요." icon={<Store size={18} />} more={`/encyclopedia/calendar?doogo=1${monthQuery}`}>
-          {doogoNow.slice(0, 8).map(card)}
-        </HomeRail>
-      )}
-      {rising.length > 0 && (
-        <section className="enc-rising" aria-labelledby="enc-rising-title">
-          <div className="enc-section-head">
-            <span className="enc-section-icon"><TrendingUp size={18} /></span>
-            <div><h2 id="enc-rising-title">{nextMonth}월에 검색이 오르는 품목</h2><p>네이버 검색이 오르기 직전이 상세페이지·광고를 준비할 때예요.</p></div>
+          <div className="enc-season-cta">
+            <Link to="/encyclopedia/finder" className="enc-cta-primary"><Sparkles size={17} aria-hidden="true" /> 맞춤 추천 받기</Link>
+            <Link to={`/encyclopedia/calendar${monthOnly}`} className="enc-cta-ghost"><CalendarDays size={17} aria-hidden="true" /> 시즌 캘린더 보기</Link>
+          </div>
+        </div>
+        <aside className="enc-season-card" aria-label={`${month}월 한눈에 보기`}>
+          <div className="enc-season-card-head">
+            <strong><CalendarDays size={17} aria-hidden="true" /> {month}월 한눈에 보기</strong>
+            <MonthStepper month={month} currentMonth={currentMonth} onPick={pickMonth} />
           </div>
           <ul>
-            {rising.map(({ item, rise }) => (
-              <li key={item.id}>
-                <Link to={`/encyclopedia/${item.id}`}>
-                  <ProduceThumb item={item} size="sm" />
-                  <div><strong>{item.name}</strong><span>{seasonSummary(item)}</span></div>
-                  <em><ArrowUpRight size={14} aria-hidden="true" /> {rise.ratio.toFixed(1)}배</em>
+            {summary.map((row) => (
+              <li key={row.key}>
+                <Link to={row.to} className={`enc-season-row is-${row.key}`}>
+                  <span className="enc-season-row-icon">{row.icon}</span>
+                  <span className="enc-season-row-text"><strong>{row.label}</strong><small>{row.hint}</small></span>
+                  <b>{row.value}</b>
+                  <ChevronRight size={16} aria-hidden="true" />
                 </Link>
               </li>
             ))}
           </ul>
+        </aside>
+      </section>
+
+      {note && (
+        <section className="enc-season-tip" aria-label={`${month}월 시즌 팁`}>
+          <span className="enc-season-tip-label"><Lightbulb size={15} aria-hidden="true" /> SEASON TIP</span>
+          <div><strong>{month}월 · {note.title}</strong><p>{note.body}</p></div>
         </section>
       )}
-      {opening.length > 0 && (
-        <HomeRail title={`${nextMonth}월에 시즌이 열리는 품목`} desc="지금 산지와 물량·가격을 맞춰 두면 시즌 시작부터 팔 수 있어요." icon={<CalendarDays size={18} />} more={`/encyclopedia/calendar?month=${nextMonth}&selling=1`}>
-          {opening.slice(0, 8).map(card)}
-        </HomeRail>
+
+      {!guideHidden && (
+        <section className="enc-block enc-howto" aria-labelledby="enc-howto-title">
+          <div className="enc-block-head">
+            <span className="enc-block-icon" aria-hidden="true"><BookOpen size={22} /></span>
+            <div>
+              <span className="enc-eyebrow">HOW TO START</span>
+              <h2 id="enc-howto-title">백과사전, 이 순서로 써 보세요</h2>
+              <p>두고푸드에 있는 품목은 바로 팔고, 없는 품목은 시즌 전에 산지와 미리 이야기해 두면 돼요.</p>
+            </div>
+            <button type="button" className="enc-start-close" onClick={hideGuide} aria-label="시작 안내 닫기"><X size={16} /></button>
+          </div>
+          <ol className="enc-howto-steps">
+            <li><Link to="/encyclopedia/finder"><span className="enc-step-no">01</span><span className="enc-step-icon" aria-hidden="true"><Sparkles size={18} /></span><strong>맞춤 추천 받기</strong><span>질문 4개에 답하면 나에게 맞는 품목 5개를 골라 드려요.</span><em>바로 가기 <ChevronRight size={15} aria-hidden="true" /></em></Link></li>
+            <li><Link to="/encyclopedia/favorites"><span className="enc-step-no">02</span><span className="enc-step-icon" aria-hidden="true"><Heart size={18} /></span><strong>후보 담고 공급처 확인하기</strong><span>두고푸드에 있으면 공급가를 바로 보고, 없으면 산지 문의 메시지를 복사해 보내세요.</span><em>바로 가기 <ChevronRight size={15} aria-hidden="true" /></em></Link></li>
+            <li><Link to="/encyclopedia/calendar"><span className="enc-step-no">03</span><span className="enc-step-icon" aria-hidden="true"><CalendarDays size={18} /></span><strong>시즌 캘린더로 다음 달 준비하기</strong><span>성수기·준비 기간을 보고 다음 시즌 상품을 미리 정하세요.</span><em>바로 가기 <ChevronRight size={15} aria-hidden="true" /></em></Link></li>
+          </ol>
+        </section>
       )}
 
-      <section className="enc-categories" aria-labelledby="enc-categories-title">
-        <div className="enc-section-head">
-          <span className="enc-section-icon"><Sprout size={18} /></span>
-          <div><h2 id="enc-categories-title">분류별로 보기</h2><p>{month}월에 팔 수 있는 품목 수예요.</p></div>
+      {shelf && (
+        <section className="enc-block enc-showcase" aria-labelledby="enc-showcase-title">
+          <div className="enc-block-head">
+            <span className="enc-block-icon" aria-hidden="true"><Sprout size={22} /></span>
+            <div>
+              <span className="enc-eyebrow">MONTHLY PICKS</span>
+              <h2 id="enc-showcase-title">{shelf.title}</h2>
+              <p>{shelf.desc}</p>
+            </div>
+            <Link to={shelf.more} className="enc-block-more">전체 보기 <ChevronRight size={16} aria-hidden="true" /></Link>
+          </div>
+          <div className="enc-shelf-tabs" role="group" aria-label="추천 묶음 고르기">
+            {shelves.map((entry) => (
+              <button key={entry.key} type="button" className={entry.key === shelf.key ? "active" : ""} aria-pressed={entry.key === shelf.key} onClick={() => setShelfKey(entry.key)}>
+                {entry.icon}{entry.label} <b>{entry.items.length}</b>
+              </button>
+            ))}
+          </div>
+          <ul className="enc-tile-grid">
+            {shelf.items.slice(0, 8).map((item) => (
+              <ProduceTile key={item.id} item={item} month={month} doogoCount={count(item)} loading={loading} favorite={favoriteSet.has(item.id)} onToggle={toggle} rise={shelf.key === "rising" ? riseById.get(item.id) : undefined} />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="enc-block enc-cat-block" aria-labelledby="enc-categories-title">
+        <div className="enc-block-head">
+          <span className="enc-block-icon" aria-hidden="true"><PackageSearch size={22} /></span>
+          <div>
+            <span className="enc-eyebrow">CATEGORY</span>
+            <h2 id="enc-categories-title">카테고리별 품목</h2>
+            <p>{month}월에 판매중인 품목 수와 전체 품목 수예요. 누르면 시즌 캘린더에서 그 카테고리만 봐요.</p>
+          </div>
         </div>
-        <div className="enc-category-grid">
+        <div className="enc-cat-list">
           {PRODUCE_CATEGORIES.map((category) => {
             const all = produceItems.filter((item) => item.category === category);
             const now = all.filter((item) => isSelling(item, month)).length;
             return (
               <Link key={category} to={`/encyclopedia/calendar?cat=${encodeURIComponent(category)}${monthQuery}`}>
-                <span aria-hidden="true">{CATEGORY_ICON[category]}</span>
-                <strong>{category}</strong>
-                <small>{now}개 판매중 · 전체 {all.length}개</small>
+                <span className="enc-cat-emoji" aria-hidden="true">{CATEGORY_ICON[category]}</span>
+                <span className="enc-cat-text">
+                  <strong>{category}</strong>
+                  <small>판매중 {now}개 · 전체 {all.length}개</small>
+                  <i className="enc-cat-meter" aria-hidden="true"><b style={{ width: `${all.length > 0 ? Math.round((now / all.length) * 100) : 0}%` }} /></i>
+                </span>
+                <ChevronRight size={16} aria-hidden="true" />
               </Link>
             );
           })}
@@ -225,16 +267,43 @@ function EncyclopediaHome() {
   );
 }
 
-function HomeRail({ title, desc, icon, more, children }: { title: string; desc: string; icon: ReactNode; more: string; children: ReactNode }) {
+type ShelfKey = "beginner" | "doogo" | "opening" | "rising";
+type Shelf = { key: ShelfKey; icon: ReactNode; label: string; title: string; desc: string; items: ProduceItem[]; more: string };
+
+// 기준 달 바꾸기: 이전·다음 달 버튼 + 달 고르기 목록 + (다른 달을 볼 때) 이번 달로 돌아가기
+function MonthStepper({ month, currentMonth, onPick }: { month: number; currentMonth: number; onPick: (month: number) => void }) {
+  const previous = month === 1 ? 12 : month - 1;
+  const next = month === 12 ? 1 : month + 1;
   return (
-    <section className="enc-rail-section">
-      <div className="enc-section-head">
-        <span className="enc-section-icon">{icon}</span>
-        <div><h2>{title}</h2><p>{desc}</p></div>
-        <Link to={more} className="enc-more">전체 보기 <ChevronRight size={15} aria-hidden="true" /></Link>
-      </div>
-      <div className="produce-rail">{children}</div>
-    </section>
+    <div className="enc-month-stepper">
+      <button type="button" onClick={() => onPick(previous)} aria-label={`${previous}월 보기`}><ChevronLeft size={16} aria-hidden="true" /></button>
+      <select value={month} onChange={(event) => onPick(Number(event.target.value))} aria-label="기준 달">
+        {Array.from({ length: 12 }, (_, index) => index + 1).map((value) => <option key={value} value={value}>{value}월{value === currentMonth ? " (이번 달)" : ""}</option>)}
+      </select>
+      <button type="button" onClick={() => onPick(next)} aria-label={`${next}월 보기`}><ChevronRight size={16} aria-hidden="true" /></button>
+      {month !== currentMonth && <button type="button" className="enc-month-now" onClick={() => onPick(currentMonth)}>이번 달</button>}
+    </div>
+  );
+}
+
+// 추천 품목 한 칸: 왼쪽 썸네일 · 오른쪽 이름·시기·추천도·보유 표시(검색 상승 묶음이면 상승 배수)
+function ProduceTile({ item, month, doogoCount, loading, favorite, onToggle, rise }: { item: ProduceItem; month: number; doogoCount: number; loading: boolean; favorite: boolean; onToggle: (id: string) => boolean; rise?: number }) {
+  return (
+    <li className="enc-tile">
+      <Link to={`/encyclopedia/${item.id}`} className="enc-tile-link">
+        <ProduceThumb item={item} size="sm" />
+        <span className="enc-tile-body">
+          <span className="enc-tile-top"><small>{item.category} · {item.group}</small><PhaseBadge item={item} month={month} /></span>
+          <strong>{item.name}</strong>
+          <span className="enc-tile-season">{seasonSummary(item)}</span>
+          <span className="enc-tile-foot">
+            <Stars level={item.level} />
+            {rise !== undefined ? <em className="enc-tile-rise"><ArrowUpRight size={13} aria-hidden="true" /> 검색 {rise.toFixed(1)}배</em> : <StockBadge count={doogoCount} loading={loading} compact />}
+          </span>
+        </span>
+      </Link>
+      <FavoriteButton item={item} favorite={favorite} onToggle={onToggle} />
+    </li>
   );
 }
 
@@ -294,67 +363,80 @@ export function EncyclopediaCalendarPage() {
 
   return (
     <EncyclopediaLayout className="encyclopedia-calendar">
-      <div className="enc-page-head">
-        <h1>시즌 캘린더</h1>
-        <p>{produceItems.length}개 품목의 1년 판매 시기를 한 줄씩 보여 드려요. 막대는 1~12월이고, 세로선이 기준 달({month}월)이에요.</p>
-      </div>
-      <section className="encyclopedia-panel" aria-label="품목 찾기">
-        <MonthPicker month={month} currentMonth={currentMonth} onPick={(value) => updateParam("month", value === currentMonth ? null : String(value))} />
-        <div className="encyclopedia-toolbar">
-          <div className="search-field">
-            <Search size={17} />
-            <input type="search" value={query} onChange={(event) => updateParam("q", event.target.value || null)} placeholder="품목·품종·산지 검색 (예: 귤, 제주, 김장)" aria-label="시즌 캘린더 품목 검색" />
-            {query && <button type="button" className="search-clear" onClick={() => updateParam("q", null)} aria-label="검색어 지우기"><X size={15} /></button>}
+      <ProducePageHead icon={<CalendarDays size={22} />} eyebrow="SEASON CALENDAR" title="시즌 캘린더">
+        {produceItems.length}개 품목의 1년 판매 시기를 표로 보여 드려요. 칸은 1~12월이고, 테두리 칸이 기준 달({month}월)이에요.
+      </ProducePageHead>
+      <div className="enc-cal-layout">
+        <section className="encyclopedia-panel enc-cal-filters" aria-label="품목 찾기">
+          <div className="enc-cal-field">
+            <span className="enc-cal-label">기준 달</span>
+            <MonthPicker month={month} currentMonth={currentMonth} onPick={(value) => updateParam("month", value === currentMonth ? null : String(value))} />
           </div>
-          <label className="enc-sort">
-            <span>정렬</span>
-            <select value={sort} onChange={(event) => updateParam("sort", event.target.value === "recommend" ? null : event.target.value)} aria-label="정렬">
-              <option value="recommend">{month}월 시즌 순</option>
-              <option value="name">이름 순</option>
-              {hasSearch && <option value="search">검색 많은 순</option>}
-            </select>
-          </label>
-        </div>
-        <div className="category-chips encyclopedia-categories">
-          <button type="button" className={category === "all" ? "active" : ""} onClick={() => updateParam("cat", null)}>전체 <small>{produceItems.length}</small></button>
-          {PRODUCE_CATEGORIES.map((value) => (
-            <button key={value} type="button" className={category === value ? "active" : ""} onClick={() => updateParam("cat", value)}>
-              {value} <small>{produceItems.filter((item) => item.category === value).length}</small>
-            </button>
-          ))}
-        </div>
-        <div className="enc-filter-chips" role="group" aria-label="조건">
-          {CALENDAR_FILTERS.map((filter) => (
-            <button key={filter.key} type="button" className={active(filter.key) ? "active" : ""} aria-pressed={active(filter.key)} onClick={() => updateParam(filter.key, active(filter.key) ? null : "1")}>
-              {active(filter.key) && <Check size={14} aria-hidden="true" />}{filter.label(month)}
-              {filter.key === "fav" && <b>{favorites.length}</b>}
-            </button>
-          ))}
-        </div>
-        <div className="enc-calendar-legend"><SeasonLegend /><span>{visible.length}개 품목</span></div>
-      </section>
-
-      {sections.length === 0 ? (
-        <div className="empty-state encyclopedia-empty">
-          <PackageSearch size={30} />
-          <strong>조건에 맞는 품목이 없어요.</strong>
-          <span>조건을 하나씩 꺼 보거나 검색어를 바꿔 보세요.</span>
-        </div>
-      ) : (
-        sections.map((section) => (
-          <section key={section.category} className="enc-calendar-group" aria-label={`${section.category} ${section.items.length}개`}>
-            <div className="enc-calendar-group-head">
-              <h2><span aria-hidden="true">{CATEGORY_ICON[section.category]}</span> {section.category} <small>{section.items.length}</small></h2>
-              <ol className="mini-season-scale" aria-hidden="true">{Array.from({ length: 12 }, (_, index) => <li key={index} className={index + 1 === month ? "current" : ""}>{index + 1}</li>)}</ol>
+          <div className="encyclopedia-toolbar">
+            <div className="search-field">
+              <Search size={17} />
+              <input type="search" value={query} onChange={(event) => updateParam("q", event.target.value || null)} placeholder="품목·품종·산지 검색 (예: 귤, 제주, 김장)" aria-label="시즌 캘린더 품목 검색" />
+              {query && <button type="button" className="search-clear" onClick={() => updateParam("q", null)} aria-label="검색어 지우기"><X size={15} /></button>}
             </div>
-            <ul className="enc-calendar-rows">
-              {section.items.map((item) => (
-                <CalendarRow key={item.id} item={item} month={month} count={count(item)} loading={loading} favorite={favoriteSet.has(item.id)} onToggle={toggle} stat={searchStatOf(stats, item)} />
+            <label className="enc-sort">
+              <span>정렬</span>
+              <select value={sort} onChange={(event) => updateParam("sort", event.target.value === "recommend" ? null : event.target.value)} aria-label="정렬">
+                <option value="recommend">{month}월 시즌 순</option>
+                <option value="name">이름 순</option>
+                {hasSearch && <option value="search">검색 많은 순</option>}
+              </select>
+            </label>
+          </div>
+          <div className="enc-cal-field">
+            <span className="enc-cal-label">카테고리</span>
+            <div className="category-chips encyclopedia-categories">
+              <button type="button" className={category === "all" ? "active" : ""} onClick={() => updateParam("cat", null)}>전체 <small>{produceItems.length}</small></button>
+              {PRODUCE_CATEGORIES.map((value) => (
+                <button key={value} type="button" className={category === value ? "active" : ""} onClick={() => updateParam("cat", value)}>
+                  {value} <small>{produceItems.filter((item) => item.category === value).length}</small>
+                </button>
               ))}
-            </ul>
-          </section>
-        ))
-      )}
+            </div>
+          </div>
+          <div className="enc-cal-field">
+            <span className="enc-cal-label">조건</span>
+            <div className="enc-filter-chips" role="group" aria-label="조건">
+              {CALENDAR_FILTERS.map((filter) => (
+                <button key={filter.key} type="button" className={active(filter.key) ? "active" : ""} aria-pressed={active(filter.key)} onClick={() => updateParam(filter.key, active(filter.key) ? null : "1")}>
+                  {active(filter.key) && <Check size={14} aria-hidden="true" />}{filter.label(month)}
+                  {filter.key === "fav" && <b>{favorites.length}</b>}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="enc-calendar-legend"><SeasonLegend /><span>{visible.length}개 품목</span></div>
+        </section>
+
+        <div className="enc-cal-results">
+          {sections.length === 0 ? (
+            <div className="empty-state encyclopedia-empty">
+              <PackageSearch size={30} />
+              <strong>조건에 맞는 품목이 없어요.</strong>
+              <span>조건을 하나씩 꺼 보거나 검색어를 바꿔 보세요.</span>
+            </div>
+          ) : (
+            sections.map((section) => (
+              <section key={section.category} className="enc-calendar-group" aria-label={`${section.category} ${section.items.length}개`}>
+                <div className="enc-calendar-group-head">
+                  <h2><span aria-hidden="true">{CATEGORY_ICON[section.category]}</span> {section.category} <small>{section.items.length}</small></h2>
+                  <ol className="mini-season-scale" aria-hidden="true">{Array.from({ length: 12 }, (_, index) => <li key={index} className={index + 1 === month ? "current" : ""}>{index + 1}</li>)}</ol>
+                  <span className="enc-calendar-group-side" aria-hidden="true">{month}월 상태</span>
+                </div>
+                <ul className="enc-calendar-rows">
+                  {section.items.map((item) => (
+                    <CalendarRow key={item.id} item={item} month={month} count={count(item)} loading={loading} favorite={favoriteSet.has(item.id)} onToggle={toggle} stat={searchStatOf(stats, item)} />
+                  ))}
+                </ul>
+              </section>
+            ))
+          )}
+        </div>
+      </div>
     </EncyclopediaLayout>
   );
 }
@@ -392,18 +474,17 @@ export function EncyclopediaFavoritesPage() {
   const items = store.favorites.map((id) => findProduceItem(id)).filter((item): item is ProduceItem => Boolean(item));
   return (
     <EncyclopediaLayout className="encyclopedia-favorites">
-      <div className="enc-page-head">
-        <h1>내 후보 <small>{items.length}개</small></h1>
-        <p>하트를 누른 품목이 여기에 모여요. 품목을 눌러 두고푸드 공급가를 보거나 산지 문의 메시지를 복사하세요.</p>
-      </div>
+      <ProducePageHead icon={<Heart size={22} />} eyebrow="MY PICKS" title={<>내 후보 <small>{items.length}개</small></>}>
+        하트를 누른 품목이 여기에 모여요. 품목을 눌러 두고푸드 공급가를 보거나 산지 문의 메시지를 복사하세요.
+      </ProducePageHead>
       <SyncCard />
       {items.length === 0 ? (
         <div className="empty-state encyclopedia-empty">
           <Heart size={30} />
           <strong>아직 담은 품목이 없어요.</strong>
-          <span>첫 상품 찾기로 추천을 받거나, 시즌 캘린더에서 하트를 눌러 보세요.</span>
+          <span>맞춤 추천을 받거나, 시즌 캘린더에서 하트를 눌러 보세요.</span>
           <div className="enc-empty-actions">
-            <Link to="/encyclopedia/finder" className="produce-doogo-request">첫 상품 찾기 <ChevronRight size={16} aria-hidden="true" /></Link>
+            <Link to="/encyclopedia/finder" className="produce-doogo-request">맞춤 추천 받기 <ChevronRight size={16} aria-hidden="true" /></Link>
             <Link to="/encyclopedia/calendar" className="enc-secondary-link">시즌 캘린더 보기</Link>
           </div>
         </div>
@@ -689,23 +770,20 @@ function ProduceDetail({
           <div className="produce-detail-level"><Stars level={item.level} /><span>{LEVEL_LABELS[item.level]}</span></div>
           <p className="produce-detail-season">{seasonSummary(item)}</p>
           <div className="produce-detail-badges"><StockBadge count={products.length} loading={loading} /><TagChips item={item} limit={4} /></div>
-          <div className="produce-stat-grid">
-            <div className="produce-stat">
-              <span>{item.ship === "상온" ? <Truck size={15} aria-hidden="true" /> : <Snowflake size={15} aria-hidden="true" />} 배송</span>
-              <strong>{item.ship}</strong>
-              <small>{SHIP_HINT[item.ship]}</small>
+          <dl className="produce-spec">
+            <div>
+              <dt>{item.ship === "상온" ? <Truck size={15} aria-hidden="true" /> : <Snowflake size={15} aria-hidden="true" />} 배송</dt>
+              <dd><strong>{item.ship}</strong><small>{SHIP_HINT[item.ship]}</small></dd>
             </div>
-            <div className={`produce-stat risk-${RISK_CLASS[item.risk]}`}>
-              <span><ShieldAlert size={15} aria-hidden="true" /> 클레임 리스크</span>
-              <strong>{item.risk}</strong>
-              <small>{RISK_HINT[item.risk]}</small>
+            <div className={`risk-${RISK_CLASS[item.risk]}`}>
+              <dt><ShieldAlert size={15} aria-hidden="true" /> 클레임 리스크</dt>
+              <dd><strong>{item.risk}</strong><small>{RISK_HINT[item.risk]}</small></dd>
             </div>
-            <div className="produce-stat">
-              <span><CalendarDays size={15} aria-hidden="true" /> 판매 기간</span>
-              <strong>{sales.length === 12 ? "연중" : `${sales.length}개월`}</strong>
-              <small>{formatMonthRange(sales)}</small>
+            <div>
+              <dt><CalendarDays size={15} aria-hidden="true" /> 판매 기간</dt>
+              <dd><strong>{sales.length === 12 ? "연중" : `${sales.length}개월`}</strong><small>{formatMonthRange(sales)}</small></dd>
             </div>
-          </div>
+          </dl>
           <div className="produce-detail-actions">
             <FavoriteButton item={item} favorite={favorite} onToggle={onToggleFavorite} withLabel />
             <a className="produce-naver-button" href={naverShopping} target="_blank" rel="noreferrer">네이버 쇼핑 보기 <ExternalLink size={14} aria-hidden="true" /></a>
@@ -715,7 +793,7 @@ function ProduceDetail({
 
       <div className="produce-sections">
         <section className="produce-section span-2">
-          <h2><CalendarDays size={18} aria-hidden="true" /> 1년 시즌 흐름 {peaks.length > 0 && <small>성수기 {formatMonthRange(peaks)}</small>}</h2>
+          <DetailHead icon={<CalendarDays size={18} />} eyebrow="SEASON" title="월별 판매 시기" extra={peaks.length > 0 && <small className="produce-section-badge">성수기 {formatMonthRange(peaks)}</small>} />
           <SeasonBar item={item} month={month} />
           <p className="produce-section-note">
             {month}월은 <b className={`phase-text phase-${phaseClass(phase)}`}>{PHASE_META[phase].status}</b>이에요.{" "}
@@ -726,12 +804,12 @@ function ProduceDetail({
         <SearchSection item={item} month={month} stat={stat} naverShopping={naverShopping} naverSearch={naverSearch} />
 
         <section className="produce-section produce-tip">
-          <h2><Lightbulb size={18} aria-hidden="true" /> 셀러 팁</h2>
+          <DetailHead icon={<Lightbulb size={18} />} eyebrow="SELLER TIP" title="셀러 팁" />
           <p>{item.tip}</p>
         </section>
 
         <section className="produce-section span-2">
-          <h2><MessageSquareText size={18} aria-hidden="true" /> 예상 CS와 미리 막는 법</h2>
+          <DetailHead icon={<MessageSquareText size={18} />} eyebrow="CS GUIDE" title="예상 CS와 미리 막는 법" />
           <ol className="produce-cs-list">
             {produceCs(item).map((entry) => (
               <li key={entry.q}>
@@ -743,7 +821,7 @@ function ProduceDetail({
         </section>
 
         <section className="produce-section">
-          <h2><Info size={18} aria-hidden="true" /> 기본 정보</h2>
+          <DetailHead icon={<Info size={18} />} eyebrow="BASIC INFO" title="기본 정보" />
           <dl className="produce-info-list">
             <div><dt>분류</dt><dd>{item.category} › {item.group}</dd></div>
             {item.grow && <div><dt>재배·형태</dt><dd>{item.grow}</dd></div>}
@@ -760,7 +838,7 @@ function ProduceDetail({
         </section>
 
         <section className="produce-section">
-          <h2><PhoneCall size={18} aria-hidden="true" /> 산지 문의 메시지</h2>
+          <DetailHead icon={<PhoneCall size={18} />} eyebrow="CONTACT" title="산지 문의 메시지" />
           <p>문자·카카오톡으로 산지에 보낼 첫 문의 예시예요. 상황에 맞게 고쳐 쓰세요.</p>
           <pre className="produce-message">{message}</pre>
           <button
@@ -777,7 +855,7 @@ function ProduceDetail({
         </section>
 
         <section className="produce-section">
-          <h2><ListChecks size={18} aria-hidden="true" /> 산지 확인 체크리스트 <small>{checkedCount}/{checklist.length}</small></h2>
+          <DetailHead icon={<ListChecks size={18} />} eyebrow="CHECKLIST" title="산지 확인 체크리스트" extra={<small className="produce-section-badge">{checkedCount}/{checklist.length}</small>} />
           <ul className="produce-checklist">
             {checklist.map((text, index) => (
               <li key={text}>
@@ -792,7 +870,7 @@ function ProduceDetail({
         </section>
 
         <section className="produce-section">
-          <h2><Sparkles size={18} aria-hidden="true" /> 함께 보면 좋은 품목</h2>
+          <DetailHead icon={<Sparkles size={18} />} eyebrow="RELATED" title="함께 보면 좋은 품목" />
           <div className="produce-related">
             {related.map((other) => {
               const otherPhase = phaseOf(other, month);
@@ -816,6 +894,17 @@ function ProduceDetail({
   );
 }
 
+// 상세 칸 제목(두고푸드 형식): 아이콘 칸 + 영문 작은 제목 + 제목 (+ 오른쪽 작은 표시)
+function DetailHead({ icon, eyebrow, title, extra }: { icon: ReactNode; eyebrow: string; title: string; extra?: ReactNode }) {
+  return (
+    <div className="produce-section-head">
+      <span className="produce-section-icon" aria-hidden="true">{icon}</span>
+      <div><span className="enc-eyebrow">{eyebrow}</span><h2>{title}</h2></div>
+      {extra}
+    </div>
+  );
+}
+
 // 네이버 검색: 검색어 + (모아 둔 값이 있으면) 최근 30일 검색수·경쟁·1~12월 추정 그래프·연관 검색어
 function SearchSection({ item, month, stat, naverShopping, naverSearch }: { item: ProduceItem; month: number; stat?: ProduceSearchStat; naverShopping: string; naverSearch: string }) {
   const months = stat?.months && stat.months.length === 12 ? stat.months : null;
@@ -823,7 +912,7 @@ function SearchSection({ item, month, stat, naverShopping, naverSearch }: { item
   const peakMonth = months ? months.indexOf(Math.max(...months)) + 1 : null;
   return (
     <section className="produce-section produce-search">
-      <h2><Search size={18} aria-hidden="true" /> 네이버 검색 <small>검색어 ‘{item.keyword}’</small></h2>
+      <DetailHead icon={<Search size={18} />} eyebrow="SEARCH" title="네이버 검색 수요" extra={<small className="produce-section-badge">검색어 ‘{item.keyword}’</small>} />
       {stat && stat.total > 0 ? (
         <div className="produce-search-stats">
           <div><span>최근 30일 검색수</span><strong>{formatCount(stat.total)}</strong><small>PC {formatCount(stat.pc)} · 모바일 {formatCount(stat.mobile)}</small></div>

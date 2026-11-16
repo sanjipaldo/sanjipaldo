@@ -1,7 +1,7 @@
-// 백과사전 화면들(홈·시즌 캘린더·첫 상품 찾기·내 후보·상세)과 메인 홈 미리보기가 같이 쓰는 작은 부품.
+// 백과사전 화면들(이달의 제철·시즌 캘린더·맞춤 추천·내 후보·상세)과 메인 홈 미리보기가 같이 쓰는 작은 부품.
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { CalendarDays, Heart, Home, Search, Store } from "lucide-react";
+import { CalendarDays, Heart, Sparkles, Sprout, Store } from "lucide-react";
 import {
   PHASE_META,
   formatMonthRange,
@@ -60,17 +60,19 @@ export function seasonSummary(item: ProduceItem) {
   return `판매 ${formatMonthRange(salesMonths(item))} · 성수기 ${peaks.length > 0 ? formatMonthRange(peaks) : "연중 고르게"}`;
 }
 
-// 1년 시즌 흐름: 12칸 막대 + 이번 달 표시 + 범례
+// 월별 판매 시기: 12칸(달 번호 + 짧은 상태 이름) + 이번 달 표시 + 범례
 const LEGEND: SeasonPhase[] = ["S", "E", "P", "H", "K"];
+const PHASE_SHORT: Record<SeasonPhase, string> = { K: "성수기", H: "출하", E: "끝물", S: "저장", P: "준비", "-": "비수기" };
 export function SeasonBar({ item, month }: { item: ProduceItem; month: number }) {
   const phases = seasonPhases(item);
   return (
     <div className="season-flow">
-      <ol className="season-flow-bar" aria-label={`${item.name} 1년 시즌 흐름`}>
+      <ol className="season-flow-bar" aria-label={`${item.name} 월별 판매 시기`}>
         {phases.map((phase, index) => (
           <li key={index} className={`phase-${phaseClass(phase)}${index + 1 === month ? " current" : ""}`} title={`${index + 1}월 · ${PHASE_META[phase].label}`}>
             <span className="sr-only">{index + 1}월 {PHASE_META[phase].label}</span>
             <b aria-hidden="true">{index + 1}</b>
+            <small aria-hidden="true">{PHASE_SHORT[phase]}</small>
             {index + 1 === month && <em aria-hidden="true">이번 달</em>}
           </li>
         ))}
@@ -126,17 +128,17 @@ export function useFavoriteProduce() {
   return { favorites: store.favorites, toggle: toggleFavorite };
 }
 
-// 백과사전 안 메뉴: 홈 · 시즌 캘린더 · 첫 상품 찾기 · 내 후보(개수)
+// 백과사전 안 메뉴: 이달의 제철 · 시즌 캘린더 · 맞춤 추천 · 내 후보(개수)
 export function EncyclopediaTabs() {
   const { favorites } = useFavoriteProduce();
   const link = ({ isActive }: { isActive: boolean }) => (isActive ? "active" : "");
   return (
     // 바깥 띠(.encyclopedia-tabs-bar)가 위에 고정되며 흰 바탕으로 아래 내용을 가립니다(메뉴 둘레로 내용이 비치지 않게).
     <div className="encyclopedia-tabs-bar">
-      <nav className="encyclopedia-tabs" aria-label="백과사전 메뉴">
-        <NavLink to="/encyclopedia" end className={link}><Home size={16} aria-hidden="true" /><span>홈</span></NavLink>
+      <nav className="encyclopedia-tabs is-produce" aria-label="백과사전 메뉴">
+        <NavLink to="/encyclopedia" end className={link}><Sprout size={16} aria-hidden="true" /><span>이달의 제철</span></NavLink>
         <NavLink to="/encyclopedia/calendar" className={link}><CalendarDays size={16} aria-hidden="true" /><span>시즌 캘린더</span></NavLink>
-        <NavLink to="/encyclopedia/finder" className={link}><Search size={16} aria-hidden="true" /><span>첫 상품 찾기</span></NavLink>
+        <NavLink to="/encyclopedia/finder" className={link}><Sparkles size={16} aria-hidden="true" /><span>맞춤 추천</span></NavLink>
         <NavLink to="/encyclopedia/favorites" className={link}><Heart size={16} aria-hidden="true" /><span>내 후보 <b>{favorites.length}</b></span></NavLink>
       </nav>
     </div>

@@ -2158,17 +2158,6 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .encyclopedia-note { margin: 26px auto 0; color: var(--w-mute); font-size: 12.5px; line-height: 1.6; text-align: center; word-break: keep-all; }
 
 .produce-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: 14px; }
-.produce-card { position: relative; border: 1px solid var(--w-card-border); border-radius: 20px; background: var(--w-canvas); transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
-.produce-card:hover { border-color: #b8e19b; box-shadow: 0 14px 28px rgba(22, 51, 0, .1); transform: translateY(-2px); }
-.produce-card-link { display: block; padding: 10px; color: inherit; text-decoration: none; }
-.produce-card-link:focus-visible { outline: 3px solid var(--w-primary); outline-offset: 2px; border-radius: 20px; }
-.produce-card-thumb { position: relative; }
-.produce-card-thumb .produce-phase { position: absolute; top: 10px; left: 10px; z-index: 2; }
-.produce-card-body { display: flex; flex-direction: column; gap: 4px; padding: 12px 6px 6px; }
-.produce-card-body small { color: var(--w-mute); font-size: 12px; font-weight: 700; }
-.produce-card-body strong { color: var(--w-ink); font-size: 17px; font-weight: 900; letter-spacing: -.02em; }
-.produce-card-level { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--w-body); font-size: 12px; font-weight: 700; }
-.produce-card-body p { margin: 2px 0 0; color: var(--w-body); font-size: 13px; line-height: 1.5; word-break: keep-all; }
 .produce-doogo-chip { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; margin-top: 4px; padding: 4px 10px; border-radius: 999px; color: var(--w-positive-deep); background: var(--w-primary-pale); font-size: 12px; font-weight: 800; }
 .produce-fav { position: absolute; top: 18px; right: 18px; z-index: 3; display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 50%; color: #9aa39a; background: rgba(255, 255, 255, .92); box-shadow: 0 2px 10px rgba(14, 15, 12, .14); cursor: pointer; }
 .produce-fav:hover { color: #e5484d; }
@@ -2188,15 +2177,6 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .produce-detail-level .produce-stars { font-size: 17px; }
 .produce-detail-level > span:last-child { padding: 4px 10px; border-radius: 999px; color: var(--w-positive-deep); background: var(--w-primary-pale); font-size: 13px; font-weight: 800; }
 .produce-detail-season { margin: 10px 0 16px; color: var(--w-ink); font-size: 16px; font-weight: 700; }
-.produce-stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.produce-stat { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 14px 16px; border-radius: var(--w-radius-lg); background: var(--w-soft-2); }
-.produce-stat > span { display: inline-flex; align-items: center; gap: 5px; color: var(--w-body); font-size: 12.5px; font-weight: 700; }
-.produce-stat strong { color: var(--w-ink); font-size: 21px; font-weight: 900; }
-.produce-stat small { color: var(--w-body); font-size: 12px; line-height: 1.45; word-break: keep-all; }
-.produce-stat.risk-low strong { color: #1e8e3e; }
-.produce-stat.risk-mid strong { color: #b45309; }
-.produce-stat.risk-high { background: #fff1f1; }
-.produce-stat.risk-high strong { color: var(--w-negative); }
 .produce-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .produce-candidate { display: inline-flex; align-items: center; gap: 7px; height: 46px; padding: 0 20px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-ink); background: #fff; font-size: 15px; font-weight: 800; cursor: pointer; }
 .produce-candidate:hover { border-color: #e5484d; color: #e5484d; }
@@ -2320,20 +2300,8 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .encyclopedia-section { margin-top: 22px; }
   .encyclopedia-section-head h2 { font-size: 18px; }
   .produce-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .produce-card { border-radius: 16px; }
-  .produce-card-link { padding: 7px; }
-  .produce-card .produce-thumb { border-radius: 13px; }
-  .produce-card .produce-emoji { font-size: 50px; }
-  .produce-card .produce-glyph { font-size: 26px; }
-  .produce-card .produce-glyph.len-2 { font-size: 21px; }
-  .produce-card .produce-glyph.len-3 { font-size: 17px; }
-  .produce-card-thumb .produce-phase { top: 7px; left: 7px; height: 24px; padding: 0 8px; font-size: 11px; }
   .produce-fav { top: 12px; right: 12px; width: 32px; height: 32px; }
   .produce-fav svg { width: 16px; height: 16px; }
-  .produce-card-body { padding: 9px 3px 4px; }
-  .produce-card-body strong { font-size: 15px; }
-  .produce-card-level > span:last-child, .produce-card-level { font-size: 11px; }
-  .produce-card-body p { font-size: 12px; }
   .produce-doogo-chip { font-size: 11px; padding: 3px 8px; }
   .produce-detail-top { grid-template-columns: minmax(0, 1fr); grid-template-areas: "thumb" "doogo" "info"; gap: 14px; padding: 12px; border-radius: 20px; }
   .produce-thumb.size-lg { aspect-ratio: 16 / 10; border-radius: 18px; }
@@ -2349,12 +2317,6 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .produce-detail-info { padding: 0 4px 4px; }
   .produce-detail-info h1 { font-size: 27px; }
   .produce-detail-season { font-size: 14.5px; }
-  .produce-stat-grid { gap: 6px; }
-  .produce-stat { padding: 11px 9px; }
-  .produce-stat > span { gap: 3px; font-size: 11.5px; white-space: nowrap; }
-  .produce-stat > span svg { width: 13px; height: 13px; }
-  .produce-stat strong { font-size: 17px; }
-  .produce-stat small { font-size: 11px; }
   .produce-detail-actions > * { flex: 1 1 0; justify-content: center; padding: 0 12px; font-size: 14px; }
   .produce-sections { grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 12px; }
   .produce-section { padding: 16px 14px; border-radius: 16px; }
@@ -2377,7 +2339,6 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .encyclopedia-teaser .encyclopedia-teaser-item { flex: 0 0 min(240px, 74%); scroll-snap-align: start; }
 }
 @media (max-width: 359px) {
-  .produce-stat-grid { grid-template-columns: minmax(0, 1fr); }
   .produce-detail-actions { flex-direction: column; }
   .produce-detail-actions > * { flex: none; width: 100%; }
   .encyclopedia-teaser-title p { display: none; }
@@ -2400,14 +2361,8 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .produce-stock { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; white-space: nowrap; }
 .produce-stock.is-in { color: var(--w-positive-deep); background: var(--w-primary-pale); }
 .produce-stock.is-out { color: var(--w-mute); background: var(--w-soft-2); }
-.produce-card-body .produce-stock { margin-top: 4px; }
 .produce-tags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .produce-tags i { padding: 3px 8px; border-radius: 999px; color: #8a5a00; background: #fff4d6; font-size: 11.5px; font-style: normal; font-weight: 800; }
-.enc-section-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-.enc-section-head > div { flex: 1 1 auto; min-width: 0; }
-.enc-section-head h2 { margin: 0; color: var(--w-ink); font-size: 20px; font-weight: 900; letter-spacing: -.02em; }
-.enc-section-head p { margin: 2px 0 0; color: var(--w-body); font-size: 13.5px; word-break: keep-all; }
-.enc-section-icon { display: grid; flex: 0 0 auto; place-items: center; width: 40px; height: 40px; border-radius: 13px; color: var(--w-ink-deep); background: var(--w-primary-pale); }
 .enc-more { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 2px; padding: 8px 12px; border-radius: 999px; color: var(--w-ink); background: var(--w-soft-2); font-size: 13px; font-weight: 800; text-decoration: none; white-space: nowrap; }
 .enc-more:hover { background: var(--w-primary-pale); }
 .enc-page-head { margin: 0 0 14px; }
@@ -2422,49 +2377,8 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .enc-secondary-link { display: inline-flex; align-items: center; height: 42px; padding: 0 16px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-ink); background: #fff; font-size: 14px; font-weight: 800; text-decoration: none; }
 
 /* 홈 */
-.enc-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 22px; margin-bottom: 12px; padding: 28px 30px; overflow: hidden; border-radius: var(--w-radius-xl); color: #fff; background: radial-gradient(circle at 88% 8%, rgba(159, 232, 112, .32), transparent 45%), linear-gradient(140deg, #163300 0%, #20480a 60%, #2d5f10 100%); }
-.enc-hero-kicker { display: inline-flex; align-items: center; gap: 6px; color: var(--w-primary); font-size: 13px; font-weight: 800; }
-.enc-hero h1 { margin: 6px 0 4px; color: #fff; font-size: 30px; font-weight: 800; line-height: 1; }
-.enc-hero h1 b { color: var(--w-primary); font-size: 74px; font-weight: 900; letter-spacing: -.04em; }
-.enc-hero p { margin: 0; color: rgba(255, 255, 255, .86); font-size: 16px; line-height: 1.6; word-break: keep-all; }
-.enc-hero p strong { color: #fff; }
-.enc-hero-stats { display: grid; grid-template-columns: repeat(4, minmax(92px, 1fr)); gap: 8px; }
-.enc-hero-stats a { display: flex; flex-direction: column; gap: 2px; padding: 14px 14px 12px; border-radius: 16px; color: #fff; background: rgba(255, 255, 255, .1); text-decoration: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
-.enc-hero-stats a:hover { background: rgba(255, 255, 255, .16); }
-.enc-hero-stats strong { color: #fff; font-size: 28px; font-weight: 900; }
-.enc-hero-stats span { color: rgba(255, 255, 255, .78); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .encyclopedia-home .encyclopedia-months { margin: 0 0 16px; }
-.enc-start { margin: 0 0 16px; padding: 20px 22px; border: 1px solid #d5ebc6; border-radius: var(--w-radius-xl); background: linear-gradient(135deg, #f4fbee 0%, #fff 70%); }
-.enc-start-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.enc-start h2 { margin: 0; color: var(--w-ink); font-size: 19px; font-weight: 900; }
-.enc-start > p { margin: 4px 0 12px; color: var(--w-body); font-size: 14px; line-height: 1.6; word-break: keep-all; }
 .enc-start-close { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 50%; color: var(--w-body); background: rgba(14, 15, 12, .06); cursor: pointer; }
-.enc-start ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
-.enc-start ol a { display: flex; align-items: center; gap: 12px; height: 100%; padding: 14px; border: 1px solid var(--w-card-border); border-radius: var(--w-radius-lg); color: inherit; background: #fff; text-decoration: none; }
-.enc-start ol a:hover { border-color: #b8e19b; }
-.enc-start ol b { display: grid; flex: 0 0 auto; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: #fff; background: var(--w-ink); font-size: 14px; }
-.enc-start ol div { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
-.enc-start ol strong { color: var(--w-ink); font-size: 15px; font-weight: 900; }
-.enc-start ol span { color: var(--w-body); font-size: 12.5px; line-height: 1.5; word-break: keep-all; }
-.enc-start ol svg { flex: 0 0 auto; color: var(--w-mute); }
-.enc-memo { display: flex; align-items: flex-start; gap: 14px; margin: 0 0 22px; padding: 18px 20px; border: 1px solid #f3e3a2; border-radius: var(--w-radius-xl); background: linear-gradient(135deg, #fffbea 0%, #fff 75%); }
-.enc-memo-icon { display: grid; flex: 0 0 auto; place-items: center; width: 42px; height: 42px; border-radius: 14px; color: #8a5a00; background: #ffe08a; }
-.enc-memo strong { color: var(--w-ink); font-size: 16px; font-weight: 900; }
-.enc-memo p { margin: 4px 0 0; color: var(--w-body); font-size: 14px; line-height: 1.65; word-break: keep-all; }
-.enc-rail-section, .enc-rising, .enc-categories { margin-top: 26px; }
-.produce-rail { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.enc-rising ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
-.enc-rising a { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--w-card-border); border-radius: var(--w-radius-lg); color: inherit; background: #fff; text-decoration: none; }
-.enc-rising a > div { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
-.enc-rising strong { color: var(--w-ink); font-size: 15px; font-weight: 800; }
-.enc-rising span { overflow: hidden; color: var(--w-body); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.enc-rising em { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 2px; padding: 4px 9px; border-radius: 999px; color: #b42318; background: #fff1ee; font-size: 13px; font-style: normal; font-weight: 900; }
-.enc-category-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
-.enc-category-grid a { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px; border: 1px solid var(--w-card-border); border-radius: var(--w-radius-lg); color: inherit; background: #fff; text-decoration: none; }
-.enc-category-grid a:hover { border-color: #b8e19b; box-shadow: 0 10px 22px rgba(22, 51, 0, .08); }
-.enc-category-grid a > span { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; font-size: 28px; line-height: 1; }
-.enc-category-grid strong { color: var(--w-ink); font-size: 16px; font-weight: 900; }
-.enc-category-grid small { color: var(--w-body); font-size: 12px; font-weight: 700; }
 
 /* 시즌 캘린더 */
 .enc-sort { display: inline-flex; align-items: center; gap: 8px; color: var(--w-body); font-size: 13px; font-weight: 800; }
@@ -2530,10 +2444,6 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 
 /* 첫 상품 찾기 */
 .enc-finder-card, .enc-finder-result { padding: 24px; border: 1px solid var(--w-card-border); border-radius: var(--w-radius-xl); background: #fff; box-shadow: var(--w-card-shadow); }
-.enc-finder-progress { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; }
-.enc-finder-progress i { flex: 1 1 0; height: 6px; border-radius: 999px; background: var(--w-soft); }
-.enc-finder-progress i.active { background: var(--w-positive); }
-.enc-finder-progress span { flex: 0 0 auto; margin-left: 4px; color: var(--w-body); font-size: 13px; font-weight: 800; }
 .enc-finder-card h2 { margin: 0 0 6px; color: var(--w-ink); font-size: 24px; font-weight: 900; letter-spacing: -.02em; }
 .enc-finder-hint { margin: 0 0 14px; color: var(--w-body); font-size: 14px; }
 .enc-finder-months { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
@@ -2615,13 +2525,6 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .encyclopedia-search-table td:nth-child(n+2), .encyclopedia-search-table th:nth-child(n+2) { text-align: right; }
 
 @media (max-width: 1050px) {
-  .enc-hero { grid-template-columns: 1fr; }
-  .enc-hero-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .enc-start ol { grid-template-columns: 1fr; }
-  .produce-rail { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .produce-rail > :nth-child(n+7) { display: none; }
-  .enc-rising ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .enc-category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .enc-calendar-group-head { grid-template-columns: minmax(0, 1fr) 160px 120px; }
   .enc-calendar-link { grid-template-columns: 52px minmax(0, 1fr) 120px; }
   .enc-calendar-main { grid-template-columns: minmax(0, 1fr) 160px; }
@@ -2633,26 +2536,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .encyclopedia-tabs a { flex-direction: column; justify-content: center; gap: 3px; height: 54px; padding: 0 2px; border-radius: 14px; font-size: 12.5px; letter-spacing: -.03em; }
   .encyclopedia-tabs a span { gap: 3px; }
   .encyclopedia-tabs a b { min-width: 17px; padding: 0 4px; font-size: 10.5px; line-height: 16px; }
-  .enc-hero { gap: 16px; padding: 20px 18px; }
-  .enc-hero h1 { font-size: 24px; }
-  .enc-hero h1 b { font-size: 56px; }
-  .enc-hero p { font-size: 14.5px; }
-  .enc-hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .enc-hero-stats a { padding: 12px; }
-  .enc-hero-stats strong { font-size: 22px; }
-  .enc-start { padding: 16px; }
-  .enc-start h2 { font-size: 17px; }
-  .enc-memo { padding: 14px 16px; }
-  .enc-section-head h2 { font-size: 17px; }
-  .enc-section-head p { font-size: 12.5px; }
   .enc-more { padding: 7px 10px; font-size: 12px; }
-  .produce-rail { display: flex; gap: 10px; margin: 0 -12px; padding: 0 12px 4px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
-  .produce-rail::-webkit-scrollbar { display: none; }
-  .produce-rail > * { flex: 0 0 46%; scroll-snap-align: start; }
-  .produce-rail > :nth-child(n+7) { display: block; }
-  .enc-rising ul { grid-template-columns: 1fr; }
-  .enc-category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .enc-category-grid a { padding: 14px; }
   .enc-page-head h1 { font-size: 24px; }
   .enc-sort { width: 100%; }
   .enc-sort select { flex: 1 1 auto; }
@@ -2667,7 +2551,8 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .enc-sync { flex-direction: column; padding: 16px; }
   .enc-sync-code b { font-size: 22px; }
   .enc-sync-form { width: 100%; }
-  .enc-sync-form input { flex: 1 1 auto; width: auto; }
+  .enc-sync-form input { flex: 1 1 auto; width: auto; min-width: 0; }
+  .enc-sync-body { width: 100%; }
   .enc-sync-actions .produce-doogo-request { width: 100%; justify-content: center; }
   .enc-finder-card, .enc-finder-result { padding: 16px; }
   .enc-finder-card h2 { font-size: 20px; }
@@ -2975,6 +2860,10 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 @media (max-width: 359px) {
   .enc-kind-text small { display: none; }
   .enc-kind-icon { width: 30px; height: 30px; font-size: 16px; }
+  /* 320px 폭에서 "농축수산 백과사전"이 칸을 3px 넘던 문제(2026-11-16) */
+  .enc-kind-switch a { gap: 6px; padding: 8px; }
+  .enc-kind-switch a.active { padding: 7px; }
+  .enc-kind-text strong { font-size: 13.5px; }
 }
 
 /* ---------- 오른쪽 아래 빠른 메뉴(2026-11-14): 처음에는 닫힌 둥근 버튼 하나 → 누르면 마진계산기 · 소싱요청 · 톡상담 ----------
@@ -3098,4 +2987,329 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 }
 @media (prefers-reduced-motion: reduce) {
   .hl-body-pulse { animation: none; opacity: 0; }
+}
+
+/* ───────── 농축수산 백과사전 두고푸드 디자인(2026-11-16, 관리자 요청 "참고 사이트와 너무 똑같지 않게, 두고푸드 느낌으로") ─────────
+   내용·자료는 그대로 두고 화면 구성만 바꿨습니다: 진한 초록 안내 배너 + 흰 요약 카드(사용방법 화면과 같은 형식) · SEASON TIP 띠 ·
+   번호 단계 카드 · 묶음 탭으로 바꿔 보는 추천 품목 · 카테고리 목록 · 왼쪽 조건 칸 + 표처럼 보는 시즌 캘린더 · 단계 안내가 있는 맞춤 추천. */
+.enc-eyebrow { display: inline-block; color: var(--w-positive-deep); font-size: 12px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.enc-block { margin-top: 18px; padding: 26px; border: 1px solid var(--w-card-border); border-radius: var(--w-radius-xl); background: var(--w-canvas); box-shadow: var(--w-card-shadow); }
+.enc-block-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+.enc-block-head > div { flex: 1 1 auto; min-width: 0; }
+.enc-block-head h2 { margin: 4px 0 4px; color: var(--w-ink); font-size: 24px; font-weight: 900; letter-spacing: -.02em; word-break: keep-all; }
+.enc-block-head p { margin: 0; color: var(--w-body); font-size: 14px; line-height: 1.6; word-break: keep-all; }
+.enc-block-icon { display: grid; flex: 0 0 auto; place-items: center; width: 52px; height: 52px; border-radius: 16px; color: var(--w-ink-deep); background: var(--w-primary-pale); }
+.enc-block-more { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; align-self: center; height: 44px; padding: 0 18px; border-radius: 999px; color: #fff; background: var(--w-ink); font-size: 14px; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.enc-block-more:hover { background: var(--w-ink-deep); }
+.enc-block-head .enc-start-close { flex: 0 0 auto; }
+
+/* 안내 배너 */
+.enc-season-hero { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr); gap: 24px; align-items: stretch; padding: 34px; border-radius: var(--w-radius-xl); color: #fff; background: var(--w-ink-deep); }
+.enc-season-copy { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.enc-season-copy .enc-eyebrow { color: var(--w-primary); }
+.enc-season-copy h1 { margin: 10px 0 12px; color: #fff; font-size: 40px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; word-break: keep-all; }
+.enc-season-copy p { margin: 0; color: #d9ecd0; font-size: 16px; line-height: 1.7; word-break: keep-all; }
+.enc-season-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.enc-season-pills span { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; color: #e7f5dd; background: rgba(255, 255, 255, .1); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16); font-size: 14px; font-weight: 700; }
+.enc-season-pills svg { color: var(--w-primary); }
+.enc-season-pills b { color: #fff; font-size: 16px; font-weight: 900; }
+.enc-season-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.enc-cta-primary, .enc-cta-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 48px; padding: 0 22px; border-radius: 999px; font-size: 15px; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.enc-cta-primary { color: var(--w-ink-deep); background: var(--w-primary); }
+.enc-cta-primary:hover { background: var(--w-primary-active); }
+.enc-cta-ghost { color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .4); }
+.enc-cta-ghost:hover { background: rgba(255, 255, 255, .08); }
+.enc-season-card { display: flex; flex-direction: column; min-width: 0; padding: 20px; border-radius: 20px; color: var(--w-ink); background: #fff; }
+.enc-season-card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.enc-season-card-head > strong { display: inline-flex; align-items: center; gap: 6px; color: var(--w-positive-deep); font-size: 15px; font-weight: 900; }
+.enc-season-card ul { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.enc-season-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto 16px; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; color: inherit; background: var(--w-soft-2); text-decoration: none; }
+.enc-season-row:hover { background: var(--w-primary-pale); }
+.enc-season-row > svg { color: var(--w-mute); }
+.enc-season-row-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; color: var(--w-ink-deep); background: #fff; }
+.enc-season-row.is-peak .enc-season-row-icon { color: #fff; background: var(--enc-peak); }
+.enc-season-row.is-easy .enc-season-row-icon { color: #8a5a00; background: #fff1c2; }
+.enc-season-row.is-doogo .enc-season-row-icon { color: var(--w-ink-deep); background: var(--w-primary); }
+.enc-season-row.is-fav .enc-season-row-icon { color: #be185d; background: #ffe4ef; }
+.enc-season-row-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.enc-season-row-text strong { color: var(--w-ink); font-size: 15px; font-weight: 900; }
+.enc-season-row-text small { overflow: hidden; color: var(--w-body); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.enc-season-row > b { color: var(--w-ink); font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.enc-month-stepper { display: inline-flex; align-items: center; gap: 4px; }
+.enc-month-stepper button { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--w-line); border-radius: 50%; color: var(--w-ink); background: #fff; cursor: pointer; }
+.enc-month-stepper button:hover { border-color: var(--w-ink); }
+.enc-month-stepper select { height: 34px; padding: 0 28px 0 12px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-ink); background: #fff; font-size: 14px; font-weight: 800; cursor: pointer; }
+.enc-month-stepper .enc-month-now { width: auto; padding: 0 12px; border-color: var(--w-ink-deep); border-radius: 999px; color: var(--w-ink-deep); background: var(--w-primary-pale); font-size: 12.5px; font-weight: 800; white-space: nowrap; }
+
+/* SEASON TIP 띠 */
+.enc-season-tip { display: flex; align-items: flex-start; gap: 16px; margin-top: 14px; padding: 16px 20px; border: 1px solid #cfe8bd; border-radius: var(--w-radius-lg); background: #f6fcf1; }
+.enc-season-tip-label { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; margin-top: 1px; padding: 5px 11px; border-radius: 999px; color: var(--w-ink-deep); background: var(--w-primary); font-size: 12px; font-weight: 900; letter-spacing: .06em; white-space: nowrap; }
+.enc-season-tip strong { color: var(--w-ink); font-size: 15.5px; font-weight: 900; }
+.enc-season-tip p { margin: 3px 0 0; color: var(--w-body); font-size: 14px; line-height: 1.6; word-break: keep-all; }
+
+/* 시작 순서 */
+.enc-howto-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.enc-howto-steps a { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; height: 100%; padding: 18px; border: 1px solid var(--w-card-border); border-radius: 18px; color: inherit; background: var(--w-soft-2); text-decoration: none; transition: border-color .15s ease, background .15s ease; }
+.enc-howto-steps a:hover { border-color: #b8e19b; background: #f4fbee; }
+.enc-step-no { color: var(--w-positive-deep); font-size: 14px; font-weight: 900; letter-spacing: .04em; }
+.enc-step-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--w-ink-deep); background: #fff; }
+.enc-howto-steps strong { color: var(--w-ink); font-size: 17px; font-weight: 900; letter-spacing: -.02em; }
+.enc-howto-steps a > span:not([class]) { color: var(--w-body); font-size: 13.5px; line-height: 1.55; word-break: keep-all; }
+.enc-howto-steps em { display: inline-flex; align-items: center; gap: 2px; margin-top: auto; padding-top: 4px; color: var(--w-positive-deep); font-size: 13px; font-style: normal; font-weight: 800; }
+
+/* 추천 품목(묶음 탭 + 품목 칸) */
+.enc-shelf-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.enc-shelf-tabs button { display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 16px; border: 1px solid var(--w-line); border-radius: 999px; color: var(--w-body); background: #fff; font-size: 14px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.enc-shelf-tabs button:hover { border-color: var(--w-ink); color: var(--w-ink); }
+.enc-shelf-tabs button b { min-width: 22px; padding: 0 7px; border-radius: 999px; color: var(--w-body); background: var(--w-soft-2); font-size: 12px; line-height: 20px; text-align: center; }
+.enc-shelf-tabs button.active { border-color: var(--w-ink-deep); color: #fff; background: var(--w-ink-deep); }
+.enc-shelf-tabs button.active svg { color: var(--w-primary); }
+.enc-shelf-tabs button.active b { color: var(--w-ink-deep); background: var(--w-primary); }
+.enc-tile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.enc-tile { position: relative; border: 1px solid var(--w-card-border); border-radius: 18px; background: #fff; transition: border-color .15s ease, box-shadow .15s ease; }
+.enc-tile:hover { border-color: #b8e19b; box-shadow: 0 10px 22px rgba(22, 51, 0, .08); }
+.enc-tile-link { display: flex; align-items: center; gap: 14px; padding: 12px 56px 12px 12px; color: inherit; text-decoration: none; }
+.enc-tile-link:focus-visible { outline: 3px solid var(--w-primary); outline-offset: 2px; border-radius: 18px; }
+.enc-tile .produce-thumb { flex: 0 0 auto; width: 76px; height: 76px; aspect-ratio: auto; border-radius: 16px; }
+.enc-tile .produce-thumb .produce-emoji { font-size: 40px; }
+.enc-tile-body { display: flex; flex: 1 1 auto; flex-direction: column; gap: 3px; min-width: 0; }
+.enc-tile-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.enc-tile-top small { color: var(--w-mute); font-size: 12px; font-weight: 700; }
+.enc-tile-top .produce-phase { height: 22px; padding: 0 8px; font-size: 11.5px; box-shadow: none; }
+.enc-tile-body > strong { overflow: hidden; color: var(--w-ink); font-size: 16.5px; font-weight: 900; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
+.enc-tile-season { overflow: hidden; color: var(--w-body); font-size: 12.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.enc-tile-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 2px; }
+.enc-tile-foot .produce-stars { font-size: 12.5px; }
+.enc-tile-rise { display: inline-flex; align-items: center; gap: 2px; padding: 3px 9px; border-radius: 999px; color: #b42318; background: #fff1ee; font-size: 12px; font-style: normal; font-weight: 900; }
+.enc-tile .produce-fav { top: 50%; right: 12px; transform: translateY(-50%); box-shadow: none; background: var(--w-soft-2); }
+
+/* 카테고리 */
+.enc-cat-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.enc-cat-list a { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--w-card-border); border-radius: 18px; color: inherit; background: #fff; text-decoration: none; }
+.enc-cat-list a:hover { border-color: #b8e19b; background: #f8fcf5; }
+.enc-cat-list a > svg { flex: 0 0 auto; color: var(--w-mute); }
+.enc-cat-emoji { display: grid; flex: 0 0 auto; place-items: center; width: 52px; height: 52px; border-radius: 16px; background: var(--w-soft-2); font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; font-size: 28px; line-height: 1; }
+.enc-cat-text { display: flex; flex: 1 1 auto; flex-direction: column; gap: 3px; min-width: 0; }
+.enc-cat-text strong { color: var(--w-ink); font-size: 16px; font-weight: 900; }
+.enc-cat-text small { color: var(--w-body); font-size: 12.5px; font-weight: 700; }
+.enc-cat-meter { display: block; height: 6px; margin-top: 4px; overflow: hidden; border-radius: 999px; background: var(--w-soft); }
+.enc-cat-meter b { display: block; height: 100%; border-radius: 999px; background: var(--w-positive); }
+
+/* 하위 화면 제목 */
+.enc-page-banner { display: flex; align-items: center; gap: 16px; margin: 4px 0 18px; }
+.enc-page-banner > div { min-width: 0; }
+.enc-page-banner h1 { margin: 2px 0 4px; }
+
+/* 시즌 캘린더: 왼쪽 조건 칸 + 오른쪽 표 */
+.enc-cal-layout { display: grid; grid-template-columns: 284px minmax(0, 1fr); gap: 20px; align-items: start; }
+.enc-cal-filters { position: sticky; top: 146px; display: flex; min-width: 0; flex-direction: column; gap: 16px; max-height: calc(100vh - 160px); overflow-y: auto; padding: 18px; scrollbar-width: thin; }
+.enc-cal-field { display: flex; flex-direction: column; gap: 8px; }
+.enc-cal-label { color: var(--w-positive-deep); font-size: 12px; font-weight: 900; letter-spacing: .06em; }
+.enc-cal-filters .encyclopedia-months { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.enc-cal-filters .encyclopedia-months button { min-height: 40px; border-radius: 10px; font-size: 14px; }
+.enc-cal-filters .encyclopedia-months button small { font-size: 9.5px; }
+.enc-cal-filters .encyclopedia-toolbar { flex-direction: column; align-items: stretch; margin: 0; }
+.enc-cal-filters .encyclopedia-toolbar .search-field { flex: 0 0 auto; max-width: none; }
+.enc-cal-filters .enc-sort { width: 100%; }
+.enc-cal-filters .enc-sort select { flex: 1 1 auto; }
+.enc-cal-filters .encyclopedia-categories { display: flex; flex-wrap: wrap; gap: 6px; overflow: visible; }
+.enc-cal-filters .encyclopedia-categories button { padding: 7px 12px; font-size: 13px; }
+.enc-cal-filters .enc-filter-chips { margin: 0; }
+.enc-cal-filters .enc-filter-chips button { height: 36px; padding: 0 12px; font-size: 13px; }
+.enc-cal-filters .enc-calendar-legend { flex-direction: column; align-items: flex-start; margin: 0; padding-top: 14px; border-top: 1px solid var(--w-card-border); }
+.enc-cal-results { min-width: 0; }
+.enc-cal-results .encyclopedia-empty { margin-top: 0; }
+.enc-cal-results .enc-calendar-group { margin: 0 0 16px; overflow: hidden; border: 1px solid var(--w-card-border); border-radius: 20px; background: #fff; }
+.enc-cal-results .enc-calendar-group-head { grid-template-columns: minmax(0, 1fr) 288px 132px; align-items: center; margin: 0; padding: 12px 56px 12px 16px; border-bottom: 1px solid var(--w-card-border); background: var(--w-soft-2); }
+.enc-cal-results .enc-calendar-group-head h2 { font-size: 16.5px; }
+.enc-calendar-group-side { display: none; }
+.enc-cal-results .enc-calendar-group-side { display: block; color: var(--w-mute); font-size: 11.5px; font-weight: 800; text-align: right; }
+.enc-cal-results .mini-season-scale { gap: 3px; font-size: 11px; }
+.enc-cal-results .mini-season-scale li.current { border-radius: 6px; color: #fff; background: var(--w-ink-deep); }
+.enc-cal-results .enc-calendar-rows { gap: 0; }
+.enc-cal-results .enc-calendar-row { border: 0; border-radius: 0; }
+.enc-cal-results .enc-calendar-row + .enc-calendar-row { border-top: 1px solid #eef0ec; }
+.enc-cal-results .enc-calendar-row:hover { background: #f8fcf5; }
+.enc-cal-results .enc-calendar-link { grid-template-columns: 44px minmax(0, 1fr) 132px; padding: 10px 56px 10px 16px; }
+.enc-cal-results .enc-calendar-link > .produce-thumb { width: 44px; border-radius: 12px; }
+.enc-cal-results .enc-calendar-main { grid-template-columns: minmax(0, 1fr) 288px; }
+.enc-cal-results .mini-season { gap: 3px; }
+.enc-cal-results .mini-season i { height: 26px; border-radius: 6px; }
+.enc-cal-results .mini-season i.current::after { top: -3px; right: -3px; bottom: -3px; left: -3px; width: auto; border: 2px solid var(--w-ink-deep); border-radius: 8px; background: none; transform: none; }
+.enc-cal-results .enc-calendar-side { align-items: flex-end; }
+.enc-cal-results .enc-calendar-row .produce-fav { right: 12px; width: 34px; height: 34px; }
+
+/* 내 후보 */
+.encyclopedia-favorites .enc-favorite-rows { overflow: hidden; border: 1px solid var(--w-card-border); border-radius: 20px; background: #fff; gap: 0; }
+.encyclopedia-favorites .enc-favorite-rows .enc-calendar-row { border: 0; border-radius: 0; }
+.encyclopedia-favorites .enc-favorite-rows .enc-calendar-row + .enc-calendar-row { border-top: 1px solid #eef0ec; }
+.encyclopedia-favorites .enc-sync { border-color: var(--w-card-border); background: #fff; box-shadow: var(--w-card-shadow); }
+.encyclopedia-favorites .enc-sync-icon { color: var(--w-ink-deep); background: var(--w-primary-pale); }
+.encyclopedia-favorites .enc-sync-code b { box-shadow: inset 0 0 0 1px #cfe8bd; background: #f6fcf1; }
+
+/* 맞춤 추천: 왼쪽 단계 안내 + 오른쪽 질문 */
+.encyclopedia-finder .enc-finder-card { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 0; padding: 0; overflow: hidden; }
+.enc-finder-steps { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 22px 16px; list-style: none; background: var(--w-ink-deep); }
+.enc-finder-steps li > div, .enc-finder-steps li > button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; border: 0; border-radius: 14px; color: #d9ecd0; background: transparent; font: inherit; text-align: left; }
+.enc-finder-steps li > button { cursor: pointer; }
+.enc-finder-steps li > button:hover { background: rgba(255, 255, 255, .08); }
+.enc-finder-steps b { display: grid; flex: 0 0 auto; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: #d9ecd0; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .3); font-size: 13px; font-weight: 900; }
+.enc-finder-steps li > * > span { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.enc-finder-steps small { color: rgba(217, 236, 208, .7); font-size: 11px; font-weight: 800; letter-spacing: .06em; }
+.enc-finder-steps strong { color: #fff; font-size: 15px; font-weight: 800; }
+.enc-finder-steps em { overflow: hidden; color: var(--w-primary); font-size: 12.5px; font-style: normal; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.enc-finder-steps li.is-current > div { background: #fff; }
+.enc-finder-steps li.is-current b { color: var(--w-ink-deep); background: var(--w-primary); box-shadow: none; }
+.enc-finder-steps li.is-current small { color: var(--w-positive-deep); }
+.enc-finder-steps li.is-current strong { color: var(--w-ink); }
+.enc-finder-steps li.is-done b { color: var(--w-ink-deep); background: var(--w-primary); box-shadow: none; }
+.enc-finder-body { min-width: 0; padding: 26px 28px; }
+.enc-finder-body h2 { margin-top: 6px !important; }
+.encyclopedia-finder .enc-finder-months button.active, .encyclopedia-finder .enc-finder-options button.active { border-color: var(--w-ink-deep); background: var(--w-ink-deep); }
+.encyclopedia-finder .enc-finder-rank { color: #fff; background: var(--w-ink-deep); }
+
+/* 상세 */
+.produce-detail-page .produce-detail-top { border-radius: var(--w-radius-xl); }
+.produce-spec { display: flex; flex-direction: column; margin: 0; overflow: hidden; border: 1px solid var(--w-card-border); border-radius: 18px; }
+.produce-spec > div { display: grid; grid-template-columns: 136px minmax(0, 1fr); align-items: center; gap: 12px; padding: 12px 16px; }
+.produce-spec > div + div { border-top: 1px solid #eef0ec; }
+.produce-spec dt { display: inline-flex; align-items: center; gap: 6px; color: var(--w-body); font-size: 13px; font-weight: 800; }
+.produce-spec dt svg { color: var(--w-positive); }
+.produce-spec dd { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; min-width: 0; }
+.produce-spec dd strong { color: var(--w-ink); font-size: 17px; font-weight: 900; }
+.produce-spec dd small { color: var(--w-body); font-size: 12.5px; word-break: keep-all; }
+.produce-spec .risk-low dd strong { color: #1e8e3e; }
+.produce-spec .risk-mid dd strong { color: #b45309; }
+.produce-spec .risk-high { background: #fff6f6; }
+.produce-spec .risk-high dd strong { color: var(--w-negative); }
+.produce-section-head { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; }
+.produce-section-head > div { flex: 1 1 auto; min-width: 0; }
+.produce-section-head h2 { margin: 1px 0 0; color: var(--w-ink); font-size: 18px; font-weight: 900; letter-spacing: -.02em; }
+.produce-section-icon { display: grid; flex: 0 0 auto; place-items: center; width: 40px; height: 40px; border-radius: 13px; color: var(--w-ink-deep); background: var(--w-primary-pale); }
+.produce-section-badge { flex: 0 0 auto; padding: 4px 11px; border-radius: 999px; color: var(--w-positive-deep); background: var(--w-primary-pale); font-size: 12.5px; font-weight: 800; white-space: nowrap; }
+.produce-search .produce-section-badge { color: var(--w-body); background: var(--w-soft-2); }
+.produce-tip .produce-section-icon { color: #8a5a00; background: #ffe08a; }
+.produce-detail-page .season-flow-bar { gap: 0; margin-top: 4px; overflow: hidden; border: 1px solid var(--w-card-border); border-radius: 16px; }
+.produce-detail-page .season-flow-bar li { display: flex; flex-direction: column; justify-content: center; gap: 2px; height: 64px; border-radius: 0; }
+.produce-detail-page .season-flow-bar li + li { box-shadow: inset 1px 0 0 rgba(255, 255, 255, .7); }
+.produce-detail-page .season-flow-bar li b { font-size: 14px; font-weight: 900; }
+.produce-detail-page .season-flow-bar li small { font-size: 11px; font-weight: 800; opacity: .85; }
+.produce-detail-page .season-flow-bar li.current { z-index: 1; box-shadow: inset 0 0 0 3px var(--w-ink-deep); }
+.produce-detail-page .season-flow-bar li em { top: auto; bottom: 4px; padding: 0 5px; border-radius: 5px; background: var(--w-ink-deep); font-size: 9.5px; }
+.produce-detail-page .season-flow-bar li.current small { display: none; }
+
+@media (max-width: 1050px) {
+  .enc-season-hero { grid-template-columns: 1fr; padding: 28px; }
+  .enc-howto-steps { grid-template-columns: 1fr; }
+  .enc-howto-steps a { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "icon no go" "icon title go" "icon text go"; align-items: center; column-gap: 14px; row-gap: 2px; }
+  .enc-howto-steps .enc-step-no { grid-area: no; font-size: 12.5px; }
+  .enc-howto-steps .enc-step-icon { grid-area: icon; align-self: center; }
+  .enc-howto-steps strong { grid-area: title; font-size: 16px; }
+  .enc-howto-steps a > span:not([class]) { grid-area: text; }
+  .enc-howto-steps em { grid-area: go; margin: 0; padding: 0; }
+  .enc-cat-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 721px) and (max-width: 1050px) {
+  .enc-cal-layout { grid-template-columns: minmax(0, 1fr); }
+  .enc-cal-filters { position: static; max-height: none; overflow: visible; }
+  .enc-cal-filters .encyclopedia-months { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .enc-cal-filters .encyclopedia-toolbar { flex-direction: row; align-items: center; }
+  .enc-cal-filters .encyclopedia-toolbar .search-field { flex: 1 1 auto; }
+  .enc-cal-filters .enc-sort { width: auto; }
+  .enc-cal-filters .enc-calendar-legend { flex-direction: row; align-items: center; }
+  .encyclopedia-finder .enc-finder-card { grid-template-columns: 210px minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .encyclopedia-page.is-produce .encyclopedia-tabs { display: flex; width: 100%; padding: 4px; border-radius: 999px; }
+  .encyclopedia-page.is-produce .encyclopedia-tabs a { flex: 1 0 auto; flex-direction: row; justify-content: center; gap: 4px; height: 40px; padding: 0 11px; border-radius: 999px; font-size: 13px; letter-spacing: -.02em; }
+  .encyclopedia-page.is-produce .encyclopedia-tabs a svg { width: 14px; height: 14px; }
+  .enc-page-banner { gap: 12px; margin-bottom: 14px; }
+  .enc-page-banner .enc-block-icon { width: 44px; height: 44px; border-radius: 14px; }
+  .enc-cal-layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .enc-cal-filters { position: static; gap: 12px; max-height: none; overflow: visible; padding: 14px; }
+  .enc-cal-filters .encyclopedia-months { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 0; overflow: visible; }
+  .enc-cal-filters .encyclopedia-months button { flex: none; min-height: 40px; font-size: 13px; }
+  .enc-cal-filters .encyclopedia-categories, .enc-cal-filters .enc-filter-chips { flex-wrap: nowrap; margin: 0 -14px; padding: 0 14px 2px; overflow-x: auto; scrollbar-width: none; }
+  .enc-cal-filters .encyclopedia-categories::-webkit-scrollbar, .enc-cal-filters .enc-filter-chips::-webkit-scrollbar { display: none; }
+  .enc-cal-filters .encyclopedia-categories button, .enc-cal-filters .enc-filter-chips button { flex: 0 0 auto; }
+  .enc-cal-filters .enc-calendar-legend { padding-top: 10px; }
+  .enc-cal-results .enc-calendar-group-head { display: flex; padding: 10px 14px; }
+  .enc-cal-results .enc-calendar-group-side { display: none; }
+  .enc-cal-results .enc-calendar-link { grid-template-columns: 44px minmax(0, 1fr); padding: 12px 50px 12px 12px; }
+  .enc-cal-results .enc-calendar-main { grid-template-columns: minmax(0, 1fr); }
+  .enc-cal-results .mini-season i { height: 12px; border-radius: 3px; }
+  .enc-cal-results .mini-season i.current::after { top: -2px; right: -2px; bottom: -2px; left: -2px; border-radius: 5px; }
+  .enc-cal-results .enc-calendar-side { align-items: center; }
+  .enc-cal-results .enc-calendar-row .produce-fav { right: 10px; }
+  .encyclopedia-finder .enc-finder-card { grid-template-columns: 1fr; }
+  .enc-finder-steps { flex-direction: row; gap: 4px; padding: 10px; overflow-x: auto; scrollbar-width: none; }
+  .enc-finder-steps::-webkit-scrollbar { display: none; }
+  .enc-finder-steps li { flex: 1 0 auto; }
+  .enc-finder-steps li > div, .enc-finder-steps li > button { gap: 6px; padding: 8px; border-radius: 12px; }
+  .enc-finder-steps b { width: 26px; height: 26px; font-size: 11.5px; }
+  .enc-finder-steps small, .enc-finder-steps em { display: none; }
+  .enc-finder-steps strong { font-size: 12.5px; white-space: nowrap; }
+  .enc-finder-steps li:not(.is-current) strong { display: none; }
+  .enc-finder-steps li:not(.is-current) { flex: 0 0 auto; }
+  .enc-finder-body { padding: 18px 16px; }
+  .produce-spec > div { grid-template-columns: 1fr; gap: 2px; padding: 10px 14px; }
+  .produce-section-head { gap: 10px; }
+  .produce-section-icon { width: 36px; height: 36px; border-radius: 12px; }
+  .produce-section-head h2 { font-size: 16.5px; }
+  .produce-detail-page .season-flow-bar li { height: 46px; }
+  .produce-detail-page .season-flow-bar li small { display: none; }
+  .produce-detail-page .season-flow-bar li b { font-size: 12.5px; }
+  .produce-detail-page .season-flow-bar li em { display: none; }
+  .enc-block { margin-top: 14px; padding: 18px 16px; }
+  .enc-block-head { flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+  .enc-block-head > div { flex: 1 1 calc(100% - 64px); }
+  .enc-block-head h2 { font-size: 19px; }
+  .enc-block-head p { font-size: 13px; }
+  .enc-block-icon { width: 44px; height: 44px; border-radius: 14px; }
+  .enc-block-icon svg { width: 20px; height: 20px; }
+  .enc-block-more { order: 3; width: 100%; justify-content: center; height: 42px; }
+  .enc-howto .enc-block-head > div { flex-basis: calc(100% - 110px); }
+  .enc-season-hero { gap: 18px; padding: 24px 18px 18px; }
+  .enc-season-copy h1 { font-size: 28px; }
+  .enc-season-copy p { font-size: 14.5px; }
+  .enc-season-pills { margin-top: 14px; }
+  .enc-season-pills span { height: 34px; padding: 0 12px; font-size: 13px; }
+  .enc-season-cta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+  .enc-cta-primary, .enc-cta-ghost { height: 46px; padding: 0 10px; font-size: 14px; }
+  .enc-season-card { padding: 14px; border-radius: 18px; }
+  .enc-season-row { grid-template-columns: 34px minmax(0, 1fr) auto 14px; gap: 10px; padding: 9px 10px; }
+  .enc-season-row-icon { width: 34px; height: 34px; border-radius: 11px; }
+  .enc-season-row-text strong { font-size: 14.5px; }
+  .enc-season-row > b { font-size: 21px; }
+  .enc-season-tip { flex-direction: column; gap: 8px; padding: 14px 16px; }
+  .enc-season-tip p { font-size: 13.5px; }
+  .enc-howto-steps a { grid-template-columns: 36px minmax(0, 1fr); grid-template-areas: "icon no" "icon title" "icon text"; padding: 14px; }
+  .enc-howto-steps .enc-step-icon { width: 36px; height: 36px; align-self: start; }
+  .enc-howto-steps em { display: none; }
+  .enc-shelf-tabs { flex-wrap: nowrap; margin: 0 -16px 14px; padding: 0 16px 2px; overflow-x: auto; scrollbar-width: none; }
+  .enc-shelf-tabs::-webkit-scrollbar { display: none; }
+  .enc-shelf-tabs button { flex: 0 0 auto; height: 40px; padding: 0 14px; font-size: 13.5px; }
+  .enc-tile-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .enc-tile-link { gap: 12px; padding: 10px 52px 10px 10px; }
+  .enc-tile .produce-thumb { width: 64px; height: 64px; border-radius: 14px; }
+  .enc-tile .produce-thumb .produce-emoji { font-size: 34px; }
+  .enc-tile-body > strong { font-size: 15.5px; }
+  .enc-tile .produce-fav { right: 10px; }
+  .enc-tile-top small { display: none; }
+  .enc-tile-foot { flex-wrap: nowrap; gap: 6px; }
+  .enc-tile-foot .produce-stars { flex: 0 0 auto; font-size: 11px; }
+  .enc-tile-foot .produce-stock { padding: 3px 8px; font-size: 11.5px; }
+  .enc-cat-list { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .enc-cat-list a { padding: 12px 14px; }
+  .enc-cat-emoji { width: 46px; height: 46px; border-radius: 14px; font-size: 24px; }
+}
+@media (max-width: 430px) {
+  .encyclopedia-page.is-produce .encyclopedia-tabs a { padding: 0 9px; }
+  .encyclopedia-page.is-produce .encyclopedia-tabs a svg { display: none; }
+}
+@media (max-width: 359px) {
+  .encyclopedia-page.is-produce .encyclopedia-tabs a { padding: 0 7px; font-size: 12px; }
+  .enc-season-copy h1 { font-size: 25px; }
+  .enc-season-cta { grid-template-columns: 1fr; }
+  .enc-month-stepper select { padding: 0 22px 0 10px; font-size: 13px; }
 }

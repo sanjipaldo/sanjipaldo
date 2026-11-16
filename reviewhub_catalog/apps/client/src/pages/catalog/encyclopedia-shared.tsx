@@ -1,12 +1,11 @@
-// 농축수산 백과사전 화면(홈·시즌 캘린더·첫 상품 찾기·내 후보·상세) 공용: 바탕 틀, 하트 버튼, 품목 카드.
+// 농축수산 백과사전 화면(이달의 제철·시즌 캘린더·맞춤 추천·내 후보·상세) 공용: 바탕 틀, 하트 버튼, 달 고르기.
 // 맨 위 "농축수산 | 건강식품" 전환과 복사·화면 폭 도구는 encyclopedia-frame.tsx(건강식품 백과사전과 공용)에 있습니다.
 import { type ReactNode, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
-import { LEVEL_LABELS, type ProduceItem } from "@/lib/encyclopedia";
+import { type ProduceItem } from "@/lib/encyclopedia";
 import { EncyclopediaFrame } from "./encyclopedia-frame";
-import { EncyclopediaTabs, PhaseBadge, ProduceThumb, Stars, StockBadge, seasonSummary } from "./encyclopedia-ui";
+import { EncyclopediaTabs } from "./encyclopedia-ui";
 
 export { copyText, useMediaQuery } from "./encyclopedia-frame";
 
@@ -20,6 +19,20 @@ export function EncyclopediaLayout({ children, className = "" }: { children: Rea
     >
       {children}
     </EncyclopediaFrame>
+  );
+}
+
+// 화면 제목(두고푸드 형식): 아이콘 칸 + 영문 작은 제목 + 제목 + 설명
+export function ProducePageHead({ icon, eyebrow, title, children }: { icon: ReactNode; eyebrow: string; title: ReactNode; children: ReactNode }) {
+  return (
+    <div className="enc-page-head enc-page-banner">
+      <span className="enc-block-icon" aria-hidden="true">{icon}</span>
+      <div>
+        <span className="enc-eyebrow">{eyebrow}</span>
+        <h1>{title}</h1>
+        <p>{children}</p>
+      </div>
+    </div>
   );
 }
 
@@ -39,27 +52,6 @@ export function FavoriteButton({ item, favorite, onToggle, withLabel = false }: 
       <Heart size={withLabel ? 17 : 18} fill={favorite ? "currentColor" : "none"} aria-hidden="true" />
       {withLabel && (favorite ? "내 후보에 담김" : "내 후보에 담기")}
     </button>
-  );
-}
-
-export function ProduceCard({ item, month, doogoCount, loading, favorite, onToggle }: { item: ProduceItem; month: number; doogoCount: number; loading: boolean; favorite: boolean; onToggle: (id: string) => boolean }) {
-  return (
-    <article className="produce-card">
-      <Link to={`/encyclopedia/${item.id}`} className="produce-card-link">
-        <div className="produce-card-thumb">
-          <ProduceThumb item={item} />
-          <PhaseBadge item={item} month={month} />
-        </div>
-        <div className="produce-card-body">
-          <small>{item.category} › {item.group}</small>
-          <strong>{item.name}</strong>
-          <span className="produce-card-level"><Stars level={item.level} /> {LEVEL_LABELS[item.level]}</span>
-          <p>{seasonSummary(item)}</p>
-          <StockBadge count={doogoCount} loading={loading} />
-        </div>
-      </Link>
-      <FavoriteButton item={item} favorite={favorite} onToggle={onToggle} />
-    </article>
   );
 }
 

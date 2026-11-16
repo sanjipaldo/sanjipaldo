@@ -1,13 +1,13 @@
-// 백과사전 "첫 상품 찾기"(/encyclopedia/finder): 질문 4개(시작 달 · 배송 · 경험 · 판매 방향)에 답하면 품목 5개를 이유와 함께 추천합니다.
+// 백과사전 "맞춤 추천"(예전 이름 "첫 상품 찾기")(/encyclopedia/finder): 질문 4개(시작 달 · 배송 · 경험 · 판매 방향)에 답하면 품목 5개를 이유와 함께 추천합니다.
 // 두고푸드에 있는 품목(도매몰에서 바로 받을 수 있는 상품)에 점수를 더 줍니다. 추천 계산은 lib/encyclopedia.ts recommendProduce.
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Heart, RotateCcw, Search } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Heart, RotateCcw, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { finderWindow, formatMonthRange, recommendProduce, type FinderAnswers } from "@/lib/encyclopedia";
 import { addFavorites } from "@/lib/encyclopedia-store";
 import { useEncyclopediaCatalog } from "./encyclopedia-catalog";
-import { EncyclopediaLayout, FavoriteButton } from "./encyclopedia-shared";
+import { EncyclopediaLayout, FavoriteButton, ProducePageHead } from "./encyclopedia-shared";
 import { ProduceThumb, Stars, StockBadge, TagChips, seasonSummary, useFavoriteProduce, useSeoulMonth } from "./encyclopedia-ui";
 
 type Option<T extends string> = { value: T; label: string; hint: string };
@@ -30,6 +30,7 @@ const GOAL_OPTIONS: Array<Option<FinderAnswers["goal"]>> = [
 ];
 
 const STEP_TITLES = ["언제부터 팔기 시작할까요?", "배송은 어떻게 할 수 있나요?", "판매 경험은 어느 정도인가요?", "어떤 판매를 하고 싶나요?"];
+const STEP_LABELS = ["시작 달", "배송 방법", "판매 경험", "판매 방향"];
 
 export function EncyclopediaFinderPage() {
   const currentMonth = useSeoulMonth();
@@ -46,6 +47,11 @@ export function EncyclopediaFinderPage() {
     setStep(0);
   };
   const windowLabel = formatMonthRange(finderWindow(answers.start));
+  const answerLabel = (index: number) =>
+    index === 0 ? `${answers.start}월부터`
+      : index === 1 ? SHIP_OPTIONS.find((option) => option.value === answers.ship)?.label ?? ""
+        : index === 2 ? SKILL_OPTIONS.find((option) => option.value === answers.skill)?.label ?? ""
+          : GOAL_OPTIONS.find((option) => option.value === answers.goal)?.label ?? "";
 
   const choices = <T extends string>(options: Array<Option<T>>, value: T, onPick: (value: T) => void) => (
     <div className="enc-finder-options" role="radiogroup">
@@ -60,17 +66,34 @@ export function EncyclopediaFinderPage() {
 
   return (
     <EncyclopediaLayout className="encyclopedia-finder">
-      <div className="enc-page-head">
-        <h1>첫 상품 찾기</h1>
-        <p>질문 4개에 답하면 시기·배송·경험에 맞는 품목 5개를 골라 드려요. 두고푸드에 있는 품목은 공급처를 따로 찾지 않아도 돼요.</p>
-      </div>
+      <ProducePageHead icon={<Sparkles size={22} />} eyebrow="PRODUCT MATCH" title="맞춤 상품 추천">
+        질문 4개에 답하면 시기·배송·경험에 맞는 품목 5개를 골라 드려요. 두고푸드에 있는 품목은 공급처를 따로 찾지 않아도 돼요.
+      </ProducePageHead>
 
       {!done ? (
         <section className="enc-finder-card" aria-labelledby="enc-finder-question">
-          <div className="enc-finder-progress" aria-label={`질문 ${step + 1} / 4`}>
-            {STEP_TITLES.map((_, index) => <i key={index} className={index <= step ? "active" : ""} />)}
-            <span>{step + 1} / 4</span>
-          </div>
+          <ol className="enc-finder-steps" aria-label={`질문 ${step + 1} / 4`}>
+            {STEP_LABELS.map((label, index) => {
+              const state = index === step ? "is-current" : index < step ? "is-done" : "";
+              const body = (
+                <>
+                  <b aria-hidden="true">{index < step ? <Check size={15} /> : String(index + 1).padStart(2, "0")}</b>
+                  <span>
+                    <small>STEP {index + 1}</small>
+                    <strong>{label}</strong>
+                    {index < step && <em>{answerLabel(index)}</em>}
+                  </span>
+                </>
+              );
+              return (
+                <li key={label} className={state} aria-current={index === step ? "step" : undefined}>
+                  {index < step ? <button type="button" onClick={() => setStep(index)} aria-label={`${label} 다시 고르기 (지금: ${answerLabel(index)})`}>{body}</button> : <div>{body}</div>}
+                </li>
+              );
+            })}
+          </ol>
+          <div className="enc-finder-body">
+          <span className="enc-eyebrow">STEP {String(step + 1).padStart(2, "0")} / 04</span>
           <h2 id="enc-finder-question">{STEP_TITLES[step]}</h2>
           {step === 0 && (
             <>
@@ -92,6 +115,7 @@ export function EncyclopediaFinderPage() {
             {step < 3
               ? <button type="button" className="enc-primary-button" onClick={() => setStep((value) => Math.min(3, value + 1))}>다음 <ChevronRight size={16} aria-hidden="true" /></button>
               : <button type="button" className="enc-primary-button" onClick={() => setDone(true)}><Search size={16} aria-hidden="true" /> 추천 받기</button>}
+          </div>
           </div>
         </section>
       ) : (
