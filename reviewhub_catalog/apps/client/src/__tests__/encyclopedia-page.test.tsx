@@ -118,6 +118,13 @@ describe("백과사전 상세", () => {
     expect(within(search).getByText(/검색이 많은 달\(11~12월\)이 성수기와 맞물려요/)).toBeTruthy();
     expect(search.querySelectorAll(".produce-search-bars li.peak")).toHaveLength(2);
     expect(search.querySelectorAll(".produce-search-season li")).toHaveLength(12);
+    // 막대에 마우스를 올리면(휴대폰은 누르면) 그 달 추정 검색수 말풍선
+    const december = within(search).getByRole("button", { name: /^12월 추정 검색수 약 15,000회/ });
+    fireEvent.mouseEnter(december);
+    expect(within(search).getByRole("tooltip").textContent).toContain("약 15,000회");
+    expect(within(search).getByRole("tooltip").textContent).toContain("지난달보다 +25%");
+    fireEvent.click(december);
+    expect(within(search).getByRole("tooltip")).toBeTruthy();
     expect(screen.getByText(/청송부사사과/)).toBeTruthy();
   });
 
@@ -172,6 +179,41 @@ describe("네이버 검색 수요 계산", () => {
   });
 });
 
+describe("판매하는 상품 검색", () => {
+  it("정확히 일치하는 품목은 맨 위, 같은 묶음 → 이름 순, 상품명을 그대로 넣어도 품목을 찾습니다", async () => {
+    const { searchProduce } = await import("@/pages/catalog/encyclopedia-search");
+    const apple = searchProduce("사과");
+    expect(apple[0]).toMatchObject({ exact: true });
+    expect(apple[0].item.name).toBe("사과(부사)");
+    // 같은 묶음(사과) 품목이 이름만 비슷한 사과대추보다 먼저
+    const names = apple.map((hit) => hit.item.name);
+    expect(names.indexOf("홍로")).toBeLessThan(names.indexOf("사과대추"));
+    expect(searchProduce("부사")[0]).toMatchObject({ exact: true });
+    expect(searchProduce("청송 부사 사과 특품 5kg").map((hit) => hit.item.name)).toEqual(["사과(부사)"]);
+    expect(searchProduce("감귤")[0].item.name).toBe("감귤");
+    expect(searchProduce("없는상품")).toEqual([]);
+    expect(searchProduce("  ")).toEqual([]);
+  });
+
+  it("이달의 제철 검색칸: 입력하는 대로 목록, Enter로 정확히 일치한 품목 상세로 갑니다", async () => {
+    await renderEncyclopedia("/encyclopedia?month=11");
+    const input = screen.getByRole("combobox", { name: "판매하는 상품 검색" });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "사과" } });
+    const list = screen.getByRole("listbox", { name: "검색 결과" });
+    const options = within(list).getAllByRole("option");
+    expect(options.length).toBeGreaterThan(3);
+    expect(options[0].textContent).toContain("사과(부사)");
+    expect(options[0].textContent).toContain("정확히 일치");
+    fireEvent.change(input, { target: { value: "없는상품" } });
+    expect(screen.getByText(/‘없는상품’에 맞는 품목이 아직 없어요/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "소싱 요청하기" }).getAttribute("href")).toBe("/sourcing");
+    fireEvent.change(input, { target: { value: "부사" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(await screen.findByRole("heading", { level: 1, name: "사과(부사)" })).toBeTruthy();
+  });
+});
+
 describe("시즌 캘린더", () => {
   it("고른 달·분류로 줄을 보여 주고, 조건·검색으로 좁힙니다", async () => {
     await renderEncyclopedia("/encyclopedia/calendar?month=7&cat=과일");
@@ -186,6 +228,16 @@ describe("시즌 캘린더", () => {
     fireEvent.change(screen.getByRole("searchbox", { name: "시즌 캘린더 품목 검색" }), { target: { value: "고구마" } });
     fireEvent.click(screen.getByRole("button", { name: /7월 판매중/ }));
     await waitFor(() => expect(rowNames().filter((name) => name.includes("고구마"))).toEqual(expect.arrayContaining(["꿀고구마(베니하루카)", "밤고구마", "호박고구마", "고구마말랭이"])));
+  });
+
+  it("큰 검색창: 잘 맞는 순서로 보여 주고 정확히 일치는 강조합니다", async () => {
+    await renderEncyclopedia("/encyclopedia/calendar?month=11");
+    fireEvent.change(screen.getByRole("searchbox", { name: "시즌 캘린더 품목 검색" }), { target: { value: "감귤" } });
+    await waitFor(() => expect(rowNames()[0]).toBe("감귤"));
+    expect(screen.getByRole("status").textContent).toContain("품목");
+    expect(screen.getByRole("link", { name: /정확히 일치 · 감귤/ }).getAttribute("href")).toBe("/encyclopedia/mandarin");
+    expect(document.querySelector(".enc-calendar-row.is-exact strong")?.textContent).toBe("감귤");
+    expect(lastLocation).toContain("q=");
   });
 
   it("두고푸드 보유만 켜면 보유 품목만 남고, 줄마다 보유 표시가 나옵니다", async () => {

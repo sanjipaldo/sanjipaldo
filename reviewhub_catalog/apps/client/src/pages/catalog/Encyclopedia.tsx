@@ -67,6 +67,7 @@ import {
 } from "@/lib/encyclopedia";
 import { createSyncCode, linkSyncCode, setCheck, unlinkSync, useEncyclopediaStore } from "@/lib/encyclopedia-store";
 import { searchRise, searchStatOf, useEncyclopediaCatalog, useProduceSearchStats } from "./encyclopedia-catalog";
+import { ProduceSearchBox, searchProduce } from "./encyclopedia-search";
 import { EncyclopediaLayout, FavoriteButton, MonthPicker, ProducePageHead, copyText, useMediaQuery, validMonth } from "./encyclopedia-shared";
 import { MiniSeasonBar, PhaseBadge, ProduceThumb, SeasonBar, SeasonLegend, Stars, StockBadge, TagChips, phaseClass, seasonSummary, useFavoriteProduce, useSeoulMonth } from "./encyclopedia-ui";
 
@@ -90,7 +91,8 @@ function EncyclopediaHome() {
   const [params, setParams] = useSearchParams();
   const month = validMonth(params.get("month")) ?? currentMonth;
   const nextMonth = (month % 12) + 1;
-  const { loading, grouped } = useEncyclopediaCatalog();
+  const { catalog, loading, grouped } = useEncyclopediaCatalog();
+  const catalogNames = useMemo(() => (catalog?.products ?? []).map((product) => product.name), [catalog]);
   const stats = useProduceSearchStats();
   const { favorites, toggle } = useFavoriteProduce();
   const favoriteSet = new Set(favorites);
@@ -117,6 +119,16 @@ function EncyclopediaHome() {
         .slice(0, 6)
     : [];
   const riseById = new Map(rising.map((entry) => [entry.item.id, entry.rise.ratio]));
+  // 검색칸 아래 추천 검색: 이번 달 성수기 품목 중 두고푸드 보유 품목 먼저, 같은 이름은 한 번만(사과(부사)·사과(홍로) → 사과)
+  const searchSuggestions = (() => {
+    const seen = new Set<string>();
+    return [...groups.K].sort(byDoogoThenLevel).filter((item) => {
+      const label = item.name.replace(/\([^)]*\)/g, "");
+      if (seen.has(label)) return false;
+      seen.add(label);
+      return true;
+    }).slice(0, 6);
+  })();
   const note = MONTH_NOTES[month];
   const pickMonth = (value: number) => {
     const next = new URLSearchParams(params);
@@ -151,6 +163,7 @@ function EncyclopediaHome() {
 
   return (
     <EncyclopediaLayout className="encyclopedia-home">
+      <ProduceSearchBox month={month} countOf={count} loading={loading} catalogNames={catalogNames} suggestions={searchSuggestions} />
       <section className="enc-season-hero" aria-labelledby="enc-hero-title">
         <div className="enc-season-copy">
           <span className="enc-eyebrow">SEASON SOURCING GUIDE</span>
@@ -318,9 +331,6 @@ const CALENDAR_FILTERS = [
 ] as const;
 type CalendarFilter = (typeof CALENDAR_FILTERS)[number]["key"];
 
-function itemSearchText(item: ProduceItem) {
-  return normalizeText([item.name, item.group, item.category, item.keyword, item.origin ?? "", item.grow ?? "", ...(item.tags ?? []), ...(item.match ?? [])].join(" "));
-}
 
 export function EncyclopediaCalendarPage() {
   const currentMonth = useSeoulMonth();
@@ -343,6 +353,9 @@ export function EncyclopediaCalendarPage() {
     setParams(next, { replace: true });
   };
   const normalizedQuery = normalizeText(query);
+  // 검색은 이달의 제철 검색칸과 같은 규칙(searchProduce): 이름·품종·검색어·산지·쓰임 + 상품명을 그대로 넣어도 품목을 찾고, 검색 중에는 잘 맞는 순서로
+  const searchHits = useMemo(() => searchProduce(query), [query]);
+  const searchScore = new Map(searchHits.map((hit) => [hit.item.id, hit.score]));
   const count = (item: ProduceItem) => grouped.get(item.id)?.length ?? 0;
   const searchTotal = (item: ProduceItem) => searchStatOf(stats, item)?.total ?? 0;
   const visible = produceItems.filter((item) =>
@@ -352,21 +365,45 @@ export function EncyclopediaCalendarPage() {
     (!active("room") || item.ship === "상온") &&
     (!active("doogo") || count(item) > 0) &&
     (!active("fav") || favoriteSet.has(item.id)) &&
-    (!normalizedQuery || itemSearchText(item).includes(normalizedQuery))
+    (!normalizedQuery || searchScore.has(item.id))
   );
   const phaseRank: Record<string, number> = { K: 0, H: 1, E: 2, S: 3, P: 4, "-": 5 };
   const sorted = [...visible].sort((first, second) => {
+    if (normalizedQuery) {
+      const byScore = (searchScore.get(second.id) ?? 0) - (searchScore.get(first.id) ?? 0);
+      if (byScore !== 0) return byScore;
+    }
     if (sort === "name") return first.name.localeCompare(second.name, "ko");
     if (sort === "search") return searchTotal(second) - searchTotal(first) || first.name.localeCompare(second.name, "ko");
     return phaseRank[phaseOf(first, month)] - phaseRank[phaseOf(second, month)] || Number(count(second) > 0) - Number(count(first) > 0) || second.level - first.level || first.name.localeCompare(second.name, "ko");
   });
-  const sections = PRODUCE_CATEGORIES.map((value) => ({ category: value, items: sorted.filter((item) => item.category === value) })).filter((section) => section.items.length > 0);
+  const sectionList = PRODUCE_CATEGORIES.map((value) => ({ category: value, items: sorted.filter((item) => item.category === value) })).filter((section) => section.items.length > 0);
+  // 검색 중에는 가장 잘 맞는 품목이 든 분류를 맨 위로
+  const sections = normalizedQuery ? [...sectionList].sort((first, second) => (searchScore.get(second.items[0].id) ?? 0) - (searchScore.get(first.items[0].id) ?? 0)) : sectionList;
+  const exactHits = normalizedQuery ? visible.filter((item) => searchScore.get(item.id) === 100) : [];
+  const exactIds = new Set(exactHits.map((item) => item.id));
 
   return (
     <EncyclopediaLayout className="encyclopedia-calendar">
-      <ProducePageHead icon={<CalendarDays size={22} />} eyebrow="SEASON CALENDAR" title="시즌 캘린더">
-        {produceItems.length}개 품목의 1년 판매 시기를 표로 보여 드려요. 칸은 1~12월이고, 테두리 칸이 기준 달({month}월)이에요.
-      </ProducePageHead>
+      <div className="enc-cal-head">
+        <ProducePageHead icon={<CalendarDays size={22} />} eyebrow="SEASON CALENDAR" title="시즌 캘린더">
+          {produceItems.length}개 품목의 1년 판매 시기를 표로 보여 드려요. 칸은 1~12월이고, 테두리 칸이 기준 달({month}월)이에요.
+        </ProducePageHead>
+        <div className="enc-cal-search">
+          <p><strong>찾는 상품을 검색해 보세요</strong><span>상품 시즌과 검색 트렌드를 한눈에 볼 수 있어요.</span></p>
+          <div className="enc-psearch-field">
+            <Search size={20} aria-hidden="true" />
+            <input type="search" value={query} onChange={(event) => updateParam("q", event.target.value || null)} placeholder="품목·품종·산지·상품명 (예: 부사 사과, 귤, 제주, 김장)" aria-label="시즌 캘린더 품목 검색" />
+            {query && <button type="button" className="enc-psearch-clear" onClick={() => updateParam("q", null)} aria-label="검색어 지우기"><X size={16} /></button>}
+          </div>
+          {normalizedQuery && (
+            <p className="enc-cal-search-result" role="status">
+              ‘{query.trim()}’ {visible.length > 0 ? <>품목 <b>{visible.length}개</b></> : "맞는 품목이 없어요"}
+              {exactHits.slice(0, 2).map((item) => <Link key={item.id} to={`/encyclopedia/${item.id}`} className="enc-cal-search-exact">정확히 일치 · {item.name} <ChevronRight size={14} aria-hidden="true" /></Link>)}
+            </p>
+          )}
+        </div>
+      </div>
       <div className="enc-cal-layout">
         <section className="encyclopedia-panel enc-cal-filters" aria-label="품목 찾기">
           <div className="enc-cal-field">
@@ -374,11 +411,6 @@ export function EncyclopediaCalendarPage() {
             <MonthPicker month={month} currentMonth={currentMonth} onPick={(value) => updateParam("month", value === currentMonth ? null : String(value))} />
           </div>
           <div className="encyclopedia-toolbar">
-            <div className="search-field">
-              <Search size={17} />
-              <input type="search" value={query} onChange={(event) => updateParam("q", event.target.value || null)} placeholder="품목·품종·산지 검색 (예: 귤, 제주, 김장)" aria-label="시즌 캘린더 품목 검색" />
-              {query && <button type="button" className="search-clear" onClick={() => updateParam("q", null)} aria-label="검색어 지우기"><X size={15} /></button>}
-            </div>
             <label className="enc-sort">
               <span>정렬</span>
               <select value={sort} onChange={(event) => updateParam("sort", event.target.value === "recommend" ? null : event.target.value)} aria-label="정렬">
@@ -430,7 +462,7 @@ export function EncyclopediaCalendarPage() {
                 </div>
                 <ul className="enc-calendar-rows">
                   {section.items.map((item) => (
-                    <CalendarRow key={item.id} item={item} month={month} count={count(item)} loading={loading} favorite={favoriteSet.has(item.id)} onToggle={toggle} stat={searchStatOf(stats, item)} />
+                    <CalendarRow key={item.id} item={item} month={month} count={count(item)} loading={loading} favorite={favoriteSet.has(item.id)} onToggle={toggle} stat={searchStatOf(stats, item)} exact={exactIds.has(item.id)} />
                   ))}
                 </ul>
               </section>
@@ -442,10 +474,10 @@ export function EncyclopediaCalendarPage() {
   );
 }
 
-function CalendarRow({ item, month, count, loading, favorite, onToggle, stat, extra }: { item: ProduceItem; month: number; count: number; loading: boolean; favorite: boolean; onToggle: (id: string) => boolean; stat?: ProduceSearchStat; extra?: ReactNode }) {
+function CalendarRow({ item, month, count, loading, favorite, onToggle, stat, extra, exact = false }: { item: ProduceItem; month: number; count: number; loading: boolean; favorite: boolean; onToggle: (id: string) => boolean; stat?: ProduceSearchStat; extra?: ReactNode; exact?: boolean }) {
   const phase = phaseOf(item, month);
   return (
-    <li className="enc-calendar-row">
+    <li className={`enc-calendar-row${exact ? " is-exact" : ""}`}>
       <Link to={`/encyclopedia/${item.id}`} className="enc-calendar-link">
         <ProduceThumb item={item} size="sm" />
         <div className="enc-calendar-main">
@@ -944,6 +976,8 @@ function SearchSection({ item, month, stat, naverShopping, naverSearch }: { item
   const average = months ? Math.round(months.reduce((sum, value) => sum + value, 0) / 12) : 0;
   const phases = seasonPhases(item);
   const advice = months ? searchSeasonAdvice(peaks, peakMonths(item)) : null;
+  // 막대에 마우스를 올리거나(PC) 누르면(휴대폰) 그 달의 추정 검색수 말풍선
+  const [activeBar, setActiveBar] = useState<number | null>(null);
   return (
     <section className="produce-section produce-search span-2">
       <DetailHead icon={<Search size={18} />} eyebrow="SEARCH" title="네이버 검색 수요" extra={<small className="produce-section-badge">검색어 ‘{item.keyword}’</small>} />
@@ -959,13 +993,40 @@ function SearchSection({ item, month, stat, naverShopping, naverSearch }: { item
       )}
       {months && (
         <div className="produce-search-chart">
-          <ol className="produce-search-bars" aria-label="1~12월 추정 검색수">
-            {months.map((value, index) => (
-              <li key={index} className={`${index + 1 === month ? "current" : ""}${peakSet.has(index + 1) ? " peak" : ""}`.trim()} title={`${index + 1}월 ${formatSearchCount(value)}`}>
-                <i style={{ height: `${Math.max(4, Math.round((value / max) * 100))}%` }} aria-hidden="true" />
-                <span>{index + 1}</span>
-              </li>
-            ))}
+          <ol className="produce-search-bars" aria-label="1~12월 추정 검색수 (막대에 마우스를 올리거나 누르면 검색수)" onMouseLeave={() => setActiveBar(null)}>
+            {months.map((value, index) => {
+              const barMonth = index + 1;
+              const previous = months[(index + 11) % 12];
+              const change = previous > 0 ? Math.round(((value - previous) / previous) * 100) : null;
+              const phase = phases[index];
+              const active = activeBar === barMonth;
+              return (
+                <li key={index} className={`${barMonth === month ? "current" : ""}${peakSet.has(barMonth) ? " peak" : ""}${active ? " is-active" : ""}${index < 2 ? " tip-start" : index > 9 ? " tip-end" : ""}`.trim()}>
+                  <button
+                    type="button"
+                    aria-label={`${barMonth}월 추정 검색수 약 ${formatCount(value)}회 · ${PHASE_META[phase].label}${change !== null ? ` · 지난달보다 ${change >= 0 ? "+" : ""}${change}%` : ""}`}
+                    aria-describedby={active ? `search-tip-${barMonth}` : undefined}
+                    onMouseEnter={() => setActiveBar(barMonth)}
+                    onFocus={() => setActiveBar(barMonth)}
+                    onBlur={() => setActiveBar(null)}
+                    onClick={() => setActiveBar(barMonth)}
+                  >
+                    <i style={{ height: `${Math.max(4, Math.round((value / max) * 100))}%` }} aria-hidden="true" />
+                    <span aria-hidden="true">{barMonth}</span>
+                  </button>
+                  {active && (
+                    <div className="produce-search-tip" id={`search-tip-${barMonth}`} role="tooltip">
+                      <b>{barMonth}월{barMonth === month ? " · 이번 달" : ""}</b>
+                      <strong>약 {formatCount(value)}회</strong>
+                      <small>
+                        <em className={`phase-text phase-${phaseClass(phase)}`}>{PHASE_META[phase].label}</em>
+                        {change !== null && <> · 지난달보다 <em className={change >= 0 ? "is-up" : "is-down"}>{change >= 0 ? "+" : ""}{change}%</em></>}
+                      </small>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ol>
           <div className="produce-search-season" aria-label={`${item.name} 판매 시기`}>
             <em>판매 시기</em>
@@ -975,6 +1036,7 @@ function SearchSection({ item, month, stat, naverShopping, naverSearch }: { item
             <li><i className="is-peak" aria-hidden="true" />많이 찾는 달</li>
             <li><i className="is-base" aria-hidden="true" />그 밖의 달</li>
             <li><i className="is-current" aria-hidden="true" />이번 달({month}월)</li>
+            <li className="produce-search-hint">막대에 마우스를 올리거나 누르면 그 달 검색수가 보여요</li>
           </ul>
         </div>
       )}
