@@ -2618,6 +2618,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 
 /* 건강식품 홈 */
 .hl-hero { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 24px; align-items: end; margin: 0 0 16px; padding: 28px 30px; border-radius: var(--w-radius-xl); color: #fff; background: radial-gradient(circle at 88% 12%, rgba(121, 224, 196, .32), transparent 46%), linear-gradient(135deg, #072b2a 0%, #0f5a54 100%); }
+.hl-hero > * { min-width: 0; }
 .hl-hero-kicker { display: inline-flex; align-items: center; gap: 6px; color: #79e0c4; font-size: 13px; font-weight: 900; }
 .hl-hero h1 { margin: 10px 0 8px; color: #fff; font-size: 31px; font-weight: 900; letter-spacing: -.03em; line-height: 1.28; word-break: keep-all; }
 .hl-hero p { margin: 0 0 16px; color: rgba(255, 255, 255, .82); font-size: 15px; line-height: 1.6; word-break: keep-all; }
@@ -2809,7 +2810,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .hl-link-grid span { display: inline-flex; align-items: center; gap: 4px; color: var(--w-body); font-size: 13px; }
 
 @media (max-width: 1050px) {
-  .hl-hero { grid-template-columns: 1fr; }
+  .hl-hero { grid-template-columns: minmax(0, 1fr); }
   .hl-hero-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .hl-concern-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hl-link-grid { grid-template-columns: 1fr; }
