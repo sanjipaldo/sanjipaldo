@@ -66,3 +66,39 @@ describe("공지사항 운영 공지 목록", () => {
     expect(within(dialog).getByText(/빠른 정상화를 위해 최선을 다하겠습니다/)).toBeTruthy();
   });
 });
+
+describe("메인 홈 공지사항", () => {
+  it("공지 줄·필독 공지를 누르면 공지사항으로 넘어가지 않고 홈에서 바로 팝업을 엽니다", async () => {
+    vi.resetModules();
+    const catalog = { categories: [], products: [], priceHistory: [], recentSoldOutIssues: [], shippingPolicies: [], notices, settings: {} };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (/\/catalog(\/initial)?(\?|$)/.test(url)) return json(catalog);
+      return new Response(JSON.stringify({ ok: false }), { status: 503, headers: { "Content-Type": "application/json" } });
+    }));
+    const { CatalogHome } = await import("@/pages/catalog/PublicCatalog");
+    let lastPath = "";
+    function PathProbe() {
+      lastPath = useLocation().pathname + useLocation().search;
+      return null;
+    }
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes><Route path="*" element={<><CatalogHome /><PathProbe /></>} /></Routes>
+      </MemoryRouter>
+    );
+    const board = (await screen.findByRole("heading", { level: 2, name: "공지사항" })).closest("section") as HTMLElement;
+    fireEvent.click(within(board).getByText("[긴급공지] 카드결제 중단 안내").closest("button") as HTMLButtonElement);
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/빠른 정상화를 위해 최선을 다하겠습니다/)).toBeTruthy();
+    expect(lastPath).toBe("/");
+    fireEvent.click(within(dialog).getByRole("button", { name: "확인했습니다" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    // 필독 공지도 같은 자리에서 열립니다
+    fireEvent.click(within(board).getByText("발주 마감시간 안내").closest("button") as HTMLButtonElement);
+    expect((await screen.findByRole("dialog")).textContent).toContain("오전 9시 30분까지");
+    expect(lastPath).toBe("/");
+    // "공지사항 바로보기"는 그대로 공지사항 화면으로 갑니다
+    expect(within(board).getByRole("link", { name: "공지사항 바로보기" }).getAttribute("href")).toBe("/guide");
+  });
+});

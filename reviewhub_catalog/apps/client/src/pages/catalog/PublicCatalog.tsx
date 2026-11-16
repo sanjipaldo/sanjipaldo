@@ -1,4 +1,5 @@
 import { FormEvent, Fragment, type ReactNode, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowDownRight,
@@ -436,8 +437,6 @@ function splitNotices(notices: Notice[]) {
   return { pinnedNotice, generalNotices, latestNoticeId: generalNotices[0]?.id };
 }
 
-// 메인 홈에서 공지를 누르면 공지사항 탭으로 넘어가 그 공지를 바로 엽니다(/guide?notice=공지 id).
-const noticeLink = (notice: Notice) => `/guide?notice=${encodeURIComponent(notice.id)}`;
 
 // 관리자가 상품·가격을 바꾸면 공개 화면이 곧바로 다시 불러오도록: 창 포커스·탭 복귀·데이터 변경 알림(doogo:catalog-changed)에 반응합니다.
 const CATALOG_CHANGED_EVENT = "doogo:catalog-changed";
@@ -909,8 +908,11 @@ function SourcingModal({ onClose }: { onClose: () => void }) {
 // 홈 입점 안내 배너: 농가·수산·브랜드사 입점 신청 창을 엽니다.
 // 메인 홈(단가표) 맨 위 운영 현황 바로 아래 공지사항: 공지사항 화면(/guide)과 같은 모양(필독 공지 + 최신 운영 공지 3개, 가장 최근은 "★ 최신").
 // 공지를 누르면 공지사항 탭으로 넘어가 그 공지가 바로 열리고, "공지사항 바로보기"는 공지사항 탭으로 갑니다.
+// 메인 홈 공지사항: 공지 줄·필독 띠를 누르면 공지사항 화면으로 넘어가지 않고 홈 그 자리에서 공지 팝업(NoticeModal)을 엽니다(2026-11-16).
 function HomeNoticeBoard({ notices }: { notices: Notice[] }) {
   const { pinnedNotice, generalNotices, latestNoticeId } = useMemo(() => splitNotices(notices), [notices]);
+  const [openNotice, setOpenNotice] = useState<Notice | null>(null);
+  const closeNotice = useCallback(() => setOpenNotice(null), []);
   if (!pinnedNotice && generalNotices.length === 0) return null;
   return (
     <section className="home-notice-board" aria-labelledby="home-notice-title">
@@ -922,23 +924,25 @@ function HomeNoticeBoard({ notices }: { notices: Notice[] }) {
         <Link className="home-notice-more" to="/guide" aria-label="공지사항 바로보기"><span className="home-notice-more-label">공지사항 </span>바로보기 <ChevronRight size={17} /></Link>
       </div>
       {pinnedNotice && (
-        <Link className="must-read-banner page" to={noticeLink(pinnedNotice)}>
+        <button className="must-read-banner page" type="button" onClick={() => setOpenNotice(pinnedNotice)} aria-haspopup="dialog">
           <span><Bell size={17} /><b>필독 공지</b></span>
-          <div><strong>{pinnedNotice.title}</strong><small>누르면 공지사항에서 전체 내용을 확인합니다.</small></div>
+          <div><strong>{pinnedNotice.title}</strong><small>누르면 바로 전체 내용을 확인합니다.</small></div>
           <ChevronRight size={18} />
-        </Link>
+        </button>
       )}
       {generalNotices.length > 0 && (
         <div className="notice-list home-notice-list">
           {generalNotices.slice(0, 3).map((notice, index) => (
-            <Link className={`notice-row-button notice-accent-${(index % 3) + 1}${notice.id === latestNoticeId ? " is-latest" : ""}`} to={noticeLink(notice)} key={notice.id}>
+            <button className={`notice-row-button notice-accent-${(index % 3) + 1}${notice.id === latestNoticeId ? " is-latest" : ""}`} type="button" key={notice.id} onClick={() => setOpenNotice(notice)} aria-haspopup="dialog">
               <span>{notice.id === latestNoticeId && <em className="notice-latest-badge"><Star size={12} aria-hidden="true" /> 최신</em>}{formatDate(notice.updatedAt)}</span>
               <div><h3>{notice.title}</h3><p>{notice.content}</p></div>
               <ChevronRight size={18} />
-            </Link>
+            </button>
           ))}
         </div>
       )}
+      {/* 팝업은 body에 바로 그려 홈 카드의 테두리·그림자와 상관없이 화면 전체 위에 뜹니다. */}
+      {openNotice && createPortal(<NoticeModal notice={openNotice} onClose={closeNotice} />, document.body)}
     </section>
   );
 }
