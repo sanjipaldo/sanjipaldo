@@ -2518,6 +2518,16 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .encyclopedia-search-summary strong { color: var(--w-ink); font-size: 15px; }
 .encyclopedia-search-summary button { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
 .encyclopedia-search-summary button.primary-action:disabled { color: var(--w-mute) !important; background: var(--w-soft-2) !important; cursor: not-allowed; }
+.encyclopedia-search-check-button { min-height: 44px; padding: 0 18px; border: 1px solid var(--w-ink); border-radius: 999px; color: var(--w-ink); background: var(--w-canvas); font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.encyclopedia-search-check-button:hover:not(:disabled) { background: var(--w-soft-2); }
+.encyclopedia-search-summary .encyclopedia-search-check-button + .primary-action { margin-left: 0; }
+.encyclopedia-search-summary .encyclopedia-search-check-button:disabled { cursor: not-allowed; opacity: .5; }
+.encyclopedia-search-keys li.is-failed { border-color: #f3c4c4; background: #fff7f7; }
+.encyclopedia-search-keys li.is-failed svg { color: var(--w-negative); }
+.encyclopedia-search-missing { color: #b45309 !important; font-weight: 800; }
+.encyclopedia-search-check { margin-top: 2px; padding: 6px 10px; border-radius: 10px; font-weight: 800; }
+.encyclopedia-search-check.is-ok { color: var(--w-positive-deep) !important; background: var(--w-primary-pale); }
+.encyclopedia-search-check.is-fail { color: var(--w-negative-deep) !important; background: var(--w-negative-row); }
 .encyclopedia-search-summary .is-spinning { animation: encyclopedia-spin 1s linear infinite; }
 @keyframes encyclopedia-spin { to { transform: rotate(360deg); } }
 .encyclopedia-search-note { color: var(--w-body); font-size: 13px; }

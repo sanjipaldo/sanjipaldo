@@ -1,7 +1,7 @@
-// 관리자 > 백과사전 검색량: 네이버 검색광고·데이터랩 키 상태와 "검색량 새로고침"(백과사전 품목 검색어를 20개씩 나눠 서버에 요청).
-// 키 값은 이 화면에 보이지 않고(설정 여부만), Vercel 환경 변수에서만 넣습니다.
+// 관리자 > 백과사전 검색량: 네이버 검색광고·검색어 트렌드 키 상태 · "연결 확인"(검색어 하나로 불러 보기만, 저장 안 함) ·
+// "검색량 새로고침"(백과사전 품목 검색어를 20개씩 나눠 서버에 요청). 키 값은 이 화면에 보이지 않고(설정 여부·빠진 이름만), Vercel 환경 변수에서만 넣습니다.
 import { useEffect, useState } from "react";
-import { CheckCircle2, CircleAlert, RefreshCw } from "lucide-react";
+import { CheckCircle2, CircleAlert, PlugZap, RefreshCw, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 
@@ -9,10 +9,13 @@ type SearchStatus = {
   searchAd: boolean;
   datalab: boolean;
   envNames: { searchAd: string[]; datalab: string[] };
+  missing?: string[];
   updatedAt: string | null;
   keywordCount: number;
 };
 type StatRow = { keyword: string; total: number; comp?: string; months?: number[] };
+type NaverCheck = { ready: boolean; ok: boolean; message: string; provider?: string };
+type CheckResult = { searchAd: NaverCheck; datalab: NaverCheck };
 
 async function readApi<T>(response: Response) {
   const payload = await response.json().catch(() => null) as { ok?: boolean; data?: T; error?: { message?: string } } | null;
@@ -29,6 +32,8 @@ export function EncyclopediaSearchAdmin() {
   const [rows, setRows] = useState<StatRow[]>([]);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [check, setCheck] = useState<CheckResult | null>(null);
 
   const load = async () => {
     try {
@@ -67,16 +72,32 @@ export function EncyclopediaSearchAdmin() {
     }
   };
 
-  const keyLine = (ready: boolean, label: string, names: string[], note: string) => (
-    <li className={ready ? "is-ready" : "is-missing"}>
-      {ready ? <CheckCircle2 size={18} aria-hidden="true" /> : <CircleAlert size={18} aria-hidden="true" />}
-      <div>
-        <strong>{label} · {ready ? "키 있음" : "키 없음"}</strong>
-        <span>{note}</span>
-        <code>{names.join(" · ")}</code>
-      </div>
-    </li>
-  );
+  const runCheck = async () => {
+    setChecking(true);
+    try {
+      setCheck(await readApi<CheckResult>(await apiFetch("/catalog/admin/produce-search/check", { method: "POST", silent: true })));
+    } catch (checkError) {
+      toast.error(checkError instanceof Error ? checkError.message : "연결을 확인하지 못했습니다.");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const keyLine = (ready: boolean, label: string, names: string[], note: string, result?: NaverCheck) => {
+    const missing = names.filter((name) => status?.missing?.includes(name));
+    return (
+      <li className={result ? (result.ok ? "is-ready" : "is-failed") : ready ? "is-ready" : "is-missing"}>
+        {result && !result.ok ? <XCircle size={18} aria-hidden="true" /> : ready ? <CheckCircle2 size={18} aria-hidden="true" /> : <CircleAlert size={18} aria-hidden="true" />}
+        <div>
+          <strong>{label} · {ready ? "키 있음" : "키 없음"}</strong>
+          <span>{note}</span>
+          <code>{names.join(" · ")}</code>
+          {!ready && missing.length > 0 && missing.length < names.length && <span className="encyclopedia-search-missing">빠진 값: {missing.join(", ")}</span>}
+          {result && <span className={`encyclopedia-search-check ${result.ok ? "is-ok" : "is-fail"}`} role="status">연결 확인: {result.message}</span>}
+        </div>
+      </li>
+    );
+  };
 
   const peakMonth = (months?: number[]) => {
     if (!months?.length) return "-";
@@ -95,18 +116,23 @@ export function EncyclopediaSearchAdmin() {
       </div>
       <section className="admin-card encyclopedia-search-admin">
         <ul className="encyclopedia-search-keys">
-          {keyLine(Boolean(status?.searchAd), "네이버 검색광고 API (필수)", status?.envNames.searchAd ?? ["NAVER_SEARCHAD_API_KEY", "NAVER_SEARCHAD_SECRET_KEY", "NAVER_SEARCHAD_CUSTOMER_ID"], "검색광고 시스템 › 도구 › API 사용 관리에서 엑세스라이선스·비밀키·CUSTOMER_ID를 받아 Vercel 환경 변수에 넣고 다시 배포합니다. 월 검색수·경쟁 정도·연관 검색어가 채워집니다.")}
-          {keyLine(Boolean(status?.datalab), "네이버 데이터랩 API (선택)", status?.envNames.datalab ?? ["NAVER_DATALAB_CLIENT_ID", "NAVER_DATALAB_CLIENT_SECRET"], "네이버 개발자센터에서 애플리케이션(데이터랩 검색어 트렌드)을 만들고 Client ID·Secret을 넣으면 1~12월 추정 검색수 그래프가 채워집니다.")}
+          {keyLine(Boolean(status?.searchAd), "네이버 검색광고 API (필수)", status?.envNames.searchAd ?? ["NAVER_SEARCHAD_API_KEY", "NAVER_SEARCHAD_SECRET_KEY", "NAVER_SEARCHAD_CUSTOMER_ID"], "네이버 검색광고(searchad.naver.com) › 도구 › SA API 사용 관리의 엑세스라이선스·비밀키와 검색광고 Key(CUSTOMER_ID)를 Vercel 환경 변수에 넣고 다시 배포합니다. 월 검색수·경쟁 정도·연관 검색어가 채워집니다.", check?.searchAd)}
+          {keyLine(Boolean(status?.datalab), "네이버 검색어 트렌드 API (선택)", status?.envNames.datalab ?? ["NAVER_DATALAB_CLIENT_ID", "NAVER_DATALAB_CLIENT_SECRET"], "네이버 클라우드 API 허브(검색어 트렌드) 또는 네이버 개발자센터(데이터랩) 애플리케이션의 Client ID·Client Secret을 넣으면 1~12월 추정 검색수 그래프가 채워집니다. 어느 쪽 키인지는 서버가 알아서 맞춥니다.", check?.datalab)}
         </ul>
         <div className="encyclopedia-search-summary">
           <div><span>마지막 새로고침</span><strong>{seoulTime(status?.updatedAt ?? null)}</strong></div>
           <div><span>저장된 검색어</span><strong>{(status?.keywordCount ?? 0).toLocaleString("ko-KR")}개</strong></div>
+          <button type="button" className="outline-button encyclopedia-search-check-button" disabled={(!status?.searchAd && !status?.datalab) || checking || Boolean(progress)} onClick={() => void runCheck()}>
+            <PlugZap size={16} aria-hidden="true" className={checking ? "is-spinning" : undefined} />
+            {checking ? "확인 중…" : "연결 확인"}
+          </button>
           <button type="button" className="primary-action" disabled={!status?.searchAd || Boolean(progress)} onClick={() => void refresh()}>
             <RefreshCw size={16} aria-hidden="true" className={progress ? "is-spinning" : undefined} />
             {progress ? `받는 중 ${progress.done}/${progress.total}` : "검색량 새로고침"}
           </button>
         </div>
         {!status?.searchAd && <p className="encyclopedia-search-note">검색광고 API 키를 넣고 다시 배포하면 "검색량 새로고침"을 누를 수 있어요. 그 전에는 공개 화면에 검색어와 네이버 쇼핑 바로가기만 보입니다.</p>}
+        {status?.searchAd && <p className="encyclopedia-search-note">"연결 확인"은 검색어 하나('사과')로 두 API를 불러 보기만 하고 저장하지 않아요. 둘 다 연결됨이면 "검색량 새로고침"으로 품목 검색어 전체를 받습니다(약 1~2분).</p>}
         {error && <p className="encyclopedia-search-error" role="alert">{error}</p>}
         {rows.length > 0 && (
           <div className="admin-table-wrap">

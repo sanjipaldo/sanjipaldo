@@ -71,7 +71,7 @@ import { getSalesOverview } from "../services/catalog-sales";
 import { disconnectConnection, getCatalogSyncOverview, listSyncOutbox, listSyncRuns, saveConnection, setAutoSync, verifyConnection } from "../services/catalog-sync";
 import { StorageError, storagePut } from "../services/s3_storage";
 import { allowSyncCreate, createEncyclopediaSave, getEncyclopediaSave, isMissingSyncTable, normalizeSyncCode, updateEncyclopediaSave } from "../services/encyclopedia-sync";
-import { NAVER_SEARCH_ENV, NaverSearchError, naverSearchConfig, readProduceSearchStats, refreshProduceSearch } from "../services/naver-search";
+import { NAVER_SEARCH_ENV, NaverSearchError, checkNaverSearch, missingNaverEnv, naverSearchConfig, readProduceSearchStats, refreshProduceSearch } from "../services/naver-search";
 
 const ProductOptionSchema = z.object({
   id: z.string().trim().min(1).optional(),
@@ -437,9 +437,16 @@ catalogRouter.get("/admin/produce-search/status", adminRoute, async (c) => {
     searchAd: Boolean(config.searchAd),
     datalab: Boolean(config.datalab),
     envNames: NAVER_SEARCH_ENV,
+    missing: missingNaverEnv(),
     updatedAt: stats.updatedAt,
     keywordCount: Object.keys(stats.keywords).length
   }));
+});
+
+// 관리자 "연결 확인": 검색어 하나로 두 API를 불러 보기만 합니다(저장하지 않음, 키 값은 돌려주지 않음).
+catalogRouter.post("/admin/produce-search/check", adminRoute, async (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.json(apiSuccess(await checkNaverSearch()));
 });
 
 const ProduceSearchRefreshSchema = z.object({ keywords: z.array(z.string().trim().min(1).max(40)).min(1).max(25) });
