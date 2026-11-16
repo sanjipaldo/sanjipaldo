@@ -117,7 +117,7 @@ export function EncyclopediaSearchAdmin() {
       <section className="admin-card encyclopedia-search-admin">
         <ul className="encyclopedia-search-keys">
           {keyLine(Boolean(status?.searchAd), "네이버 검색광고 API (필수)", status?.envNames.searchAd ?? ["NAVER_SEARCHAD_API_KEY", "NAVER_SEARCHAD_SECRET_KEY", "NAVER_SEARCHAD_CUSTOMER_ID"], "네이버 검색광고(searchad.naver.com) › 도구 › SA API 사용 관리의 엑세스라이선스·비밀키와 검색광고 Key(CUSTOMER_ID)를 Vercel 환경 변수에 넣고 다시 배포합니다. 월 검색수·경쟁 정도·연관 검색어가 채워집니다.", check?.searchAd)}
-          {keyLine(Boolean(status?.datalab), "네이버 검색어 트렌드 API (선택)", status?.envNames.datalab ?? ["NAVER_DATALAB_CLIENT_ID", "NAVER_DATALAB_CLIENT_SECRET"], "네이버 클라우드 API 허브(검색어 트렌드) 또는 네이버 개발자센터(데이터랩) 애플리케이션의 Client ID·Client Secret을 넣으면 1~12월 추정 검색수 그래프가 채워집니다. 어느 쪽 키인지는 서버가 알아서 맞춥니다.", check?.datalab)}
+          {keyLine(Boolean(status?.datalab), "네이버 검색어 트렌드 API (선택)", status?.envNames.datalab ?? ["NAVER_DATALAB_CLIENT_ID", "NAVER_DATALAB_CLIENT_SECRET"], "네이버 클라우드 NAVER API HUB › Application › 인증 정보의 Client ID·Client Secret(검색어트렌드 API 사용 등록 필요, 네이버 개발자센터 데이터랩 키도 가능)을 넣으면 1~12월 추정 검색수 그래프가 채워집니다. 어느 쪽 키인지는 서버가 알아서 맞춥니다.", check?.datalab)}
         </ul>
         <div className="encyclopedia-search-summary">
           <div><span>마지막 새로고침</span><strong>{seoulTime(status?.updatedAt ?? null)}</strong></div>

@@ -1,8 +1,9 @@
 // 농수산물 백과사전 네이버 검색량(관리자 > 백과사전 검색량 "검색량 새로고침"):
 // ① 네이버 검색광고 키워드 도구: 최근 30일 PC·모바일 검색수 · 경쟁 정도 · 연관 검색어
 // ② 네이버 검색어 트렌드(선택): 최근 12개월 월별 비율 → ①의 검색수에 곱해 달마다 추정 검색수.
-//    네이버 클라우드 API 허브(검색어 트렌드, Client ID 10자리 · X-NCP-APIGW-API-KEY-ID 헤더)와
-//    네이버 개발자센터 데이터랩(X-Naver-Client-Id 헤더) 키를 모두 받습니다. 한쪽이 키를 거절(401·403·404)하면 다른 쪽으로 다시 묻습니다.
+//    NAVER API HUB(검색어 트렌드, naverapihub.apigw.ntruss.com, Client ID 10자리 · X-NCP-APIGW-API-KEY-ID 헤더) ·
+//    예전 AI·NAVER API(naveropenapi.apigw.ntruss.com) · 네이버 개발자센터 데이터랩(X-Naver-Client-Id 헤더) 키를 모두 받습니다.
+//    한 곳이 키를 거절(401·403·404)하면 다음 곳으로 다시 묻습니다.
 // 키는 Vercel 환경 변수에만 둡니다(코드·문서·로그·DB에 넣지 않음). 결과는 content_settings produce_search_stats(JSON)에 쌓입니다.
 import { createHmac } from "node:crypto";
 import { eq } from "drizzle-orm";
@@ -155,23 +156,36 @@ export function trendRange(now = new Date()) {
   return { startDate: day(start), endDate: day(end), lastMonth: end.getUTCMonth() + 1 };
 }
 
-export type DatalabProvider = "ncp" | "developers";
-export const DATALAB_ENDPOINTS: Record<DatalabProvider, { url: string; label: string; headers: (config: { clientId: string; clientSecret: string }) => Record<string, string> }> = {
-  ncp: {
-    url: "https://naveropenapi.apigw.ntruss.com/datalab/v1/search",
-    label: "네이버 클라우드 API 허브",
-    headers: (config) => ({ "X-NCP-APIGW-API-KEY-ID": config.clientId, "X-NCP-APIGW-API-KEY": config.clientSecret })
-  },
-  developers: {
-    url: "https://openapi.naver.com/v1/datalab/search",
-    label: "네이버 개발자센터",
-    headers: (config) => ({ "X-Naver-Client-Id": config.clientId, "X-Naver-Client-Secret": config.clientSecret })
-  }
+export type DatalabProvider = "hub" | "ncp" | "developers";
+type DatalabConfig = { clientId: string; clientSecret: string };
+const ncpHeaders = (config: DatalabConfig) => ({ "X-NCP-APIGW-API-KEY-ID": config.clientId, "X-NCP-APIGW-API-KEY": config.clientSecret });
+export const DATALAB_ENDPOINTS: Record<DatalabProvider, { url: string; label: string; headers: (config: DatalabConfig) => Record<string, string> }> = {
+  // 네이버 클라우드 NAVER API HUB(2026, 콘솔 NAVER API HUB › Application › 인증 정보) 검색어 트렌드
+  hub: { url: "https://naverapihub.apigw.ntruss.com/search-trend/v1/search", label: "NAVER API HUB", headers: ncpHeaders },
+  // 예전 네이버 클라우드 AI·NAVER API 검색어 트렌드
+  ncp: { url: "https://naveropenapi.apigw.ntruss.com/datalab/v1/search", label: "네이버 클라우드 AI·NAVER API", headers: ncpHeaders },
+  // 네이버 개발자센터 데이터랩
+  developers: { url: "https://openapi.naver.com/v1/datalab/search", label: "네이버 개발자센터", headers: (config) => ({ "X-Naver-Client-Id": config.clientId, "X-Naver-Client-Secret": config.clientSecret }) }
 };
 
-// 네이버 클라우드 API 허브 Client ID는 소문자·숫자 10자리, 개발자센터 Client ID는 20자 안팎이라 먼저 물어볼 곳을 고릅니다.
+// 네이버 클라우드(API HUB · AI·NAVER API) Client ID는 소문자·숫자 10자리, 개발자센터 Client ID는 20자 안팎이라 먼저 물어볼 곳을 고릅니다.
 export function datalabProviderOrder(clientId: string): DatalabProvider[] {
-  return /^[a-z0-9]{10}$/.test(clientId) ? ["ncp", "developers"] : ["developers", "ncp"];
+  return /^[a-z0-9]{10}$/.test(clientId) ? ["hub", "ncp", "developers"] : ["developers", "hub", "ncp"];
+}
+
+// 네이버가 돌려준 오류 문구(코드·메시지)만 짧게 꺼냅니다(키 값은 응답에 없음).
+async function naverErrorText(response: Response) {
+  const text = await response.text().catch(() => "");
+  try {
+    const body = JSON.parse(text) as Record<string, unknown>;
+    const error = (body.error && typeof body.error === "object" ? body.error : body) as Record<string, unknown>;
+    const code = error.errorCode ?? error.code;
+    const message = error.errorMessage ?? error.message ?? error.details;
+    const joined = [code, message].filter((value) => typeof value === "string" || typeof value === "number").join(" ");
+    return joined.slice(0, 120);
+  } catch {
+    return text.replace(/\s+/g, " ").trim().slice(0, 120);
+  }
 }
 
 type TrendResult = { title?: string; data?: Array<{ period?: string; ratio?: number }> };
@@ -197,11 +211,12 @@ export async function fetchSearchTrends(keywords: string[], config: NonNullable<
         order = [candidate]; // 다음 묶음부터는 통한 곳에만 묻습니다.
         break;
       }
-      tried.push(`${endpoint.label} ${response.status}`);
+      const detail = await naverErrorText(response);
+      tried.push(`${endpoint.label} ${response.status}${detail ? ` "${detail}"` : ""}`);
       if (![401, 403, 404].includes(response.status)) break;
     }
     if (!results) {
-      const keyProblem = tried.some((entry) => / (401|403|404)$/.test(entry));
+      const keyProblem = tried.every((entry) => / (401|403|404)( |$)/.test(entry));
       throw new NaverSearchError(keyProblem
         ? `네이버 검색어 트렌드 API가 키를 받지 않았어요(${tried.join(" · ")}). Client ID·Client Secret과 검색어 트렌드 API 사용 신청을 확인해 주세요.`
         : `네이버 검색어 트렌드 API 응답 오류(${tried.join(" · ")})`);

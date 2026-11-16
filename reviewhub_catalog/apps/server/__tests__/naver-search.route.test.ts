@@ -85,13 +85,14 @@ function trendResponse(init?: RequestInit) {
   return json({ results: body.keywordGroups.map((group) => ({ title: group.groupName, data: months.map((period, index) => ({ period, ratio: index === 1 ? 100 : 20 })) })) });
 }
 
-describe("검색어 트렌드: 네이버 클라우드 API 허브 · 개발자센터 키 모두 받기", () => {
+describe("검색어 트렌드: NAVER API HUB · 예전 AI·NAVER API · 개발자센터 키 모두 받기", () => {
+  const HUB_URL = "https://naverapihub.apigw.ntruss.com/search-trend/v1/search";
   const NCP_URL = "https://naveropenapi.apigw.ntruss.com/datalab/v1/search";
   const DEV_URL = "https://openapi.naver.com/v1/datalab/search";
 
-  it("API 허브 Client ID(소문자·숫자 10자리)는 API 허브 주소에 X-NCP-APIGW 헤더로 먼저 묻습니다", async () => {
-    expect(datalabProviderOrder("ab12cd34ef")).toEqual(["ncp", "developers"]);
-    expect(datalabProviderOrder("AbCdEfGhIjKlMnOpQrSt")).toEqual(["developers", "ncp"]);
+  it("네이버 클라우드 Client ID(소문자·숫자 10자리)는 NAVER API HUB 주소에 X-NCP-APIGW 헤더로 먼저 묻습니다", async () => {
+    expect(datalabProviderOrder("ab12cd34ef")).toEqual(["hub", "ncp", "developers"]);
+    expect(datalabProviderOrder("AbCdEfGhIjKlMnOpQrSt")).toEqual(["developers", "hub", "ncp"]);
     const calls: Array<{ url: string; headers: Record<string, string> }> = [];
     const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
       calls.push({ url, headers: init?.headers as Record<string, string> });
@@ -99,11 +100,11 @@ describe("검색어 트렌드: 네이버 클라우드 API 허브 · 개발자센
     });
     const trends = await fetchSearchTrends(["부사 사과", "감귤", "a", "b", "c", "d"], { clientId: "ab12cd34ef", clientSecret: "test-secret" }, new Date("2026-11-12T03:00:00Z"), fetcher);
     expect(fetcher).toHaveBeenCalledTimes(2);
-    expect(calls.every((call) => call.url === NCP_URL)).toBe(true);
+    expect(calls.every((call) => call.url === HUB_URL)).toBe(true);
     expect(calls[0].headers["X-NCP-APIGW-API-KEY-ID"]).toBe("ab12cd34ef");
     expect(calls[0].headers["X-NCP-APIGW-API-KEY"]).toBe("test-secret");
     expect(calls[0].headers["X-Naver-Client-Id"]).toBeUndefined();
-    expect(trends.provider).toBe("ncp");
+    expect(trends.provider).toBe("hub");
     expect(trends.get("부사사과")?.ratios[11]).toBe(100); // 기간 둘째 달(2025-12) = 12월 자리
   });
 
@@ -111,20 +112,29 @@ describe("검색어 트렌드: 네이버 클라우드 API 허브 · 개발자센
     const urls: string[] = [];
     const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
       urls.push(url);
-      return url === NCP_URL ? json({ errorMessage: "Authentication Failed" }, 401) : trendResponse(init);
+      return url === DEV_URL ? trendResponse(init) : json({ error: { errorCode: "200", message: "Authentication Failed" } }, 401);
     });
     const trends = await fetchSearchTrends(["a", "b", "c", "d", "e", "f"], { clientId: "ab12cd34ef", clientSecret: "test-secret" }, new Date("2026-11-12T03:00:00Z"), fetcher);
-    expect(urls).toEqual([NCP_URL, DEV_URL, DEV_URL]);
+    expect(urls).toEqual([HUB_URL, NCP_URL, DEV_URL, DEV_URL]);
     expect(trends.provider).toBe("developers");
     expect(trends.size).toBe(6);
   });
 
-  it("둘 다 거절하면 어느 쪽이 몇 번 오류인지 알려 줍니다", async () => {
-    const fetcher = vi.fn(async (url: string) => json({}, url === NCP_URL ? 401 : 403));
+  it("모두 거절하면 어느 곳이 몇 번 오류인지와 네이버 오류 문구를 알려 줍니다", async () => {
+    const fetcher = vi.fn(async (url: string) => url === HUB_URL ? json({ error: { errorCode: "210", message: "Permission Denied" } }, 403) : json({}, url === NCP_URL ? 401 : 403));
     const error = await fetchSearchTrends(["사과"], { clientId: "ab12cd34ef", clientSecret: "x" }, new Date(), fetcher).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(NaverSearchError);
-    expect((error as Error).message).toContain("네이버 클라우드 API 허브 401");
+    expect((error as Error).message).toContain('NAVER API HUB 403 "210 Permission Denied"');
+    expect((error as Error).message).toContain("네이버 클라우드 AI·NAVER API 401");
     expect((error as Error).message).toContain("네이버 개발자센터 403");
+    expect((error as Error).message).toContain("키를 받지 않았어요");
+  });
+
+  it("키 문제가 아닌 오류(400 등)는 다른 곳에 다시 묻지 않고 그대로 알려 줍니다", async () => {
+    const fetcher = vi.fn(async () => json({ errorMessage: "Invalid keywordGroups", errorCode: "400" }, 400));
+    const error = await fetchSearchTrends(["사과"], { clientId: "ab12cd34ef", clientSecret: "x" }, new Date(), fetcher).catch((caught: unknown) => caught);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect((error as Error).message).toBe('네이버 검색어 트렌드 API 응답 오류(NAVER API HUB 400 "400 Invalid keywordGroups")');
   });
 
   it("키워드 도구가 묶음을 거절(400)하면 하나씩 다시 묻고, 그래도 안 되는 검색어만 건너뜁니다", async () => {
@@ -166,7 +176,7 @@ describe("검색량 API", () => {
     const realFetch = globalThis.fetch;
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url === "https://naveropenapi.apigw.ntruss.com/datalab/v1/search") return trendResponse(init);
+      if (url === "https://naverapihub.apigw.ntruss.com/search-trend/v1/search") return trendResponse(init);
       if (url.startsWith("https://api.searchad.naver.com/")) return json({ keywordList: [{ relKeyword: "사과", monthlyPcQcCnt: 1000, monthlyMobileQcCnt: 9000 }] });
       return realFetch(input, init);
     }));
@@ -182,7 +192,7 @@ describe("검색량 API", () => {
     const firstBody = await first.json() as { data: { searchAd: { ready: boolean; ok: boolean; message: string }; datalab: { ok: boolean; provider?: string; message: string } } };
     expect(firstBody.data.searchAd).toMatchObject({ ready: false, ok: false });
     expect(firstBody.data.searchAd.message).toContain("NAVER_SEARCHAD_CUSTOMER_ID");
-    expect(firstBody.data.datalab).toMatchObject({ ok: true, provider: "네이버 클라우드 API 허브" });
+    expect(firstBody.data.datalab).toMatchObject({ ok: true, provider: "NAVER API HUB" });
 
     process.env.NAVER_SEARCHAD_CUSTOMER_ID = "123";
     const second = await app.fetch(new Request("http://localhost/api/catalog/admin/produce-search/check", { method: "POST", headers: { Authorization: `Bearer ${token}` } }));
