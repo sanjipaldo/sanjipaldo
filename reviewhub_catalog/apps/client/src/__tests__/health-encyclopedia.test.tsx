@@ -150,45 +150,6 @@ describe("건강식품 백과사전 자료", () => {
   });
 });
 
-describe("메인 홈 건강식품 백과사전 미리보기", () => {
-  it("이번 달 많이 찾는 고민 → 연중 고민 순, 같은 묶음은 두고푸드 보유 많은 순", async () => {
-    const { pickTeaserConcerns } = await import("@/pages/catalog/HealthEncyclopediaTeaser");
-    const id = (name: string) => healthConcerns.find((concern) => concern.name === name)!.id;
-    // 7월에 많이 찾는 고민은 피로·활력 하나뿐 → 그다음은 연중 고민(수면·긴장·장 건강·항산화·임신 준비)
-    const july = pickTeaserConcerns(7, () => 0);
-    expect(july).toHaveLength(8);
-    expect(july[0].id).toBe(id("피로·활력"));
-    expect(july.slice(1, 5).every((concern) => concern.months.length === 0)).toBe(true);
-    // 11월 고민 8개는 모두 11월 고민이고, 보유가 많은 고민이 먼저
-    const counts = new Map([[id("간 건강"), 90]]);
-    const november = pickTeaserConcerns(11, (concern) => counts.get(concern.id) ?? 0);
-    expect(november.every((concern) => concern.months.includes(11))).toBe(true);
-    expect(november[0].id).toBe(id("간 건강"));
-  });
-
-  it("고민 카드 8개 · 팔기 좋은 원료 · 두고푸드 보유 수 · 판매 전 체크로 이어집니다", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-11-16T03:00:00Z"));
-    try {
-      const { default: Teaser } = await import("@/pages/catalog/HealthEncyclopediaTeaser");
-      render(<MemoryRouter><Teaser products={catalog.products} categories={catalog.categories} /></MemoryRouter>);
-      expect(screen.getByRole("heading", { level: 2, name: "고객 고민으로 찾는 건강식품" })).toBeTruthy();
-      expect(screen.getByRole("link", { name: "건강식품 백과사전 전체 보기" }).getAttribute("href")).toBe("/encyclopedia/health");
-      const section = screen.getByRole("region", { name: "고객 고민으로 찾는 건강식품" });
-      const cards = within(section).getAllByRole("link").filter((link) => link.getAttribute("href")?.startsWith("/encyclopedia/health/concern/"));
-      expect(cards).toHaveLength(8);
-      const oral = cards.find((card) => card.textContent?.includes("구강·목"))!;
-      // 프로폴리스 치약은 생활용품이라 잇지 않으므로 구강·목은 보유 표시 없음
-      expect(oral.textContent).toContain("11월 인기");
-      expect(oral.textContent).toContain("프로폴리스");
-      expect(oral.textContent).not.toContain("두고푸드 보유");
-      expect(screen.getByRole("link", { name: /판매 전 체크 6가지/ }).getAttribute("href")).toBe("/encyclopedia/health/guide");
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-});
-
 describe("단가표 마진율", () => {
   it("(판매가 − A단가) ÷ 판매가, 소수점 한 자리 · 계산할 수 없으면 null", () => {
     expect(saleMargin(71500, 110000)).toEqual({ rate: 35, amount: 38500 });

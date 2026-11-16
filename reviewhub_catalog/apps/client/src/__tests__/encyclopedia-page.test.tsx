@@ -321,7 +321,7 @@ describe("내 후보 · 기기 옮기기 코드", () => {
 });
 
 describe("메인 홈", () => {
-  it("이번 달 제철 백과사전 · 건강식품 백과사전 미리보기를 보여 주고, /?q=부사로 들어오면 단가표를 그 이름으로 찾습니다", async () => {
+  it("이번 달 제철 백과사전 미리보기를 보여 주고, /?q=부사로 들어오면 단가표를 그 이름으로 찾습니다", async () => {
     const { CatalogHome } = await import("@/pages/catalog/PublicCatalog");
     render(
       <MemoryRouter initialEntries={[`/?q=${encodeURIComponent("부사")}`]}>
@@ -331,8 +331,5 @@ describe("메인 홈", () => {
     expect(await screen.findByRole("heading", { level: 2, name: /제철 백과사전/ })).toBeTruthy();
     expect(screen.getByRole("link", { name: "백과사전 전체 보기" }).getAttribute("href")).toBe("/encyclopedia");
     expect((screen.getByPlaceholderText("상품명, 원산지 검색") as HTMLInputElement).value).toBe("부사");
-    // 바로 아래 건강식품 백과사전 미리보기
-    expect(await screen.findByRole("heading", { level: 2, name: "고객 고민으로 찾는 건강식품" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "건강식품 백과사전 전체 보기" }).getAttribute("href")).toBe("/encyclopedia/health");
   });
 });
