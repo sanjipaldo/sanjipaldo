@@ -2385,7 +2385,7 @@ export function NoticesPage() {
             <small>{downloadLabel} 가격변동·품절을 카톡 공지용 표로 받습니다.</small>
           </div>
         </div>
-        <section className="history-page-panel">
+        <section className="history-page-panel is-price">
           <div className="section-heading"><div><span className="section-kicker">PRICE HISTORY</span><h2>날짜별 가격변동</h2><p>상품 썸네일, 상품명, 옵션명과 변경 전후 금액을 함께 표시합니다.</p></div>{today && <div className="today-date-badge" aria-live="polite"><CalendarRange size={16} /><span>오늘</span><strong>{seoulFullDate(today)}</strong></div>}</div>
           <div className="history-search-bar">
             <div className="search-field"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" aria-label="가격변동 상품 검색" />{query && <button type="button" className="search-clear" onClick={() => setQuery("")} aria-label="검색어 지우기"><X size={15} /></button>}</div>
@@ -2447,7 +2447,7 @@ export function SoldOutIssuesPage() {
             <small>다시 판매중이 되면 바로 빠지고, 7일이 지나면 자동으로 정리됩니다.</small>
           </div>
         </div>
-        <section className="history-page-panel">
+        <section className="history-page-panel is-soldout">
           <div className="section-heading"><div><span className="section-kicker">SOLD OUT HISTORY</span><h2>날짜별 품절이슈</h2><p>상품 썸네일, 상품명과 품절 처리된 날짜·시간을 함께 표시합니다.</p></div>{today && <div className="today-date-badge" aria-live="polite"><CalendarRange size={16} /><span>오늘</span><strong>{seoulFullDate(today)}</strong></div>}</div>
           <div className="history-search-bar">
             <div className="search-field"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" aria-label="품절 상품 검색" />{query && <button type="button" className="search-clear" onClick={() => setQuery("")} aria-label="검색어 지우기"><X size={15} /></button>}</div>
