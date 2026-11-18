@@ -2,7 +2,7 @@
 # 유튜브 영상 작업 환경 준비. 새 클라우드 세션에서 한 번 실행한다 (처음엔 2~3분).
 #   - HyperFrames CLI(버전 고정) + 렌더용 Chrome
 #   - 한국어 음성 인식: whisper.cpp 빌드 + large-v3-turbo 모델(1.6GB)
-#   - 템플릿 assets 에 한글 폰트(Pretendard)와 GSAP 채우기
+#   - 템플릿 assets 에 한글 폰트(Pretendard)·GSAP·효과음 채우기
 # 다시 실행해도 안전하다 (이미 있는 것은 건너뜀).
 set -euo pipefail
 
@@ -36,11 +36,14 @@ mkdir -p "${TOOLS}"
 if [ ! -d "${TOOLS}/node_modules/pretendard" ] || [ ! -d "${TOOLS}/node_modules/gsap" ]; then
   (cd "${TOOLS}" && { [ -f package.json ] || npm init -y >/dev/null; } && npm i --no-audit --no-fund pretendard@1.3.9 gsap@3.13.0 >/dev/null)
 fi
-for proj in "${HERE}"/shorts-format "${HERE}"/projects/*/; do
+SFX="${HERE}/../.claude/skills/media-use/audio/assets/sfx"
+for proj in "${HERE}"/shorts-format "${HERE}"/longform-format "${HERE}"/projects/*/; do
   [ -f "${proj}/index.html" ] || continue
   mkdir -p "${proj}/assets/fonts"
   cp "${TOOLS}/node_modules/gsap/dist/gsap.min.js" "${proj}/assets/"
-  cp "${TOOLS}"/node_modules/pretendard/dist/web/static/woff2/Pretendard-{Black,ExtraBold,Bold,SemiBold}.woff2 "${proj}/assets/fonts/"
+  cp "${TOOLS}"/node_modules/pretendard/dist/web/static/woff2/Pretendard-{Black,ExtraBold,Bold,SemiBold,Medium}.woff2 "${proj}/assets/fonts/"
+  # 효과음(Pixabay 라이선스, media-use 스킬 기본 제공)
+  mkdir -p "${proj}/assets/sfx" && cp "${SFX}"/*.mp3 "${proj}/assets/sfx/"
 done
 
 echo "준비 완료: hyperframes $(hyperframes --version)"

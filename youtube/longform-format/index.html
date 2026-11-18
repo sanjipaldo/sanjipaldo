@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Pretendard"; font-weight: 900; src: url("assets/fonts/Pretendard-Black.woff2") format("woff2"); }
+      @font-face { font-family: "Pretendard"; font-weight: 800; src: url("assets/fonts/Pretendard-ExtraBold.woff2") format("woff2"); }
+      @font-face { font-family: "Pretendard"; font-weight: 700; src: url("assets/fonts/Pretendard-Bold.woff2") format("woff2"); }
+      @font-face { font-family: "Pretendard"; font-weight: 600; src: url("assets/fonts/Pretendard-SemiBold.woff2") format("woff2"); }
+      @font-face { font-family: "Pretendard"; font-weight: 500; src: url("assets/fonts/Pretendard-Medium.woff2") format("woff2"); }
+      :root {
+        --accent: #FF3B3B;   /* 브랜드 빨강 */
+        --ink: #17171B;
+        --ink-2: #6B6862;
+        --paper: #F4F1EA;
+        --card-line: #E2DCCF;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0A0A0B; }
+      body { font-family: "Pretendard", sans-serif; }
+      .scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; }
+      .in { position: absolute; inset: 0; }
+      .dark { background: radial-gradient(ellipse 70% 75% at 50% 46%, #2B1416 0%, #140C0D 48%, #0A0A0B 100%); }
+      .paper { background-color: var(--paper);
+               background-image: linear-gradient(rgba(23,23,27,.05) 1px, transparent 1px),
+                                 linear-gradient(90deg, rgba(23,23,27,.05) 1px, transparent 1px);
+               background-size: 40px 40px; }
+
+      /* title cards */
+      .t-wrap { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: flex;
+                flex-direction: column; align-items: center; justify-content: center; }
+      .t-big { color: #fff; font-weight: 900; font-size: 112px; letter-spacing: -3px; white-space: nowrap; }
+      .t-light { font-weight: 500; font-size: 76px; letter-spacing: -1px; color: rgba(255,255,255,.82); }
+      .t-bar { width: 96px; height: 8px; border-radius: 4px; background: var(--accent); margin-top: 34px; }
+      .t-two { color: #fff; font-weight: 900; font-size: 92px; letter-spacing: -2.5px; line-height: 1.22; text-align: center; }
+      .t-two em { font-style: normal; color: var(--accent); }
+
+      /* paper scenes */
+      .head { position: absolute; left: 140px; top: 96px; font-weight: 900; font-size: 54px; letter-spacing: -1.5px; color: var(--ink); }
+      .head small { font-weight: 500; font-size: 40px; letter-spacing: -0.5px; color: var(--ink-2); margin-left: 10px; }
+      .card { position: absolute; width: 520px; height: 204px; background: #fff; border: 2px solid var(--card-line);
+              border-radius: 24px; padding: 34px 36px; box-shadow: 0 6px 18px rgba(23,23,27,.05); }
+      .card .q { font-weight: 900; font-size: 44px; line-height: 1; color: #C9C2B3; }
+      .card .tx { margin-top: 10px; font-weight: 800; font-size: 36px; letter-spacing: -1px; color: var(--ink); line-height: 1.3; }
+      .ring { position: absolute; inset: -8px; border: 5px solid var(--accent); border-radius: 30px; }
+      .dot { position: absolute; right: -12px; top: -12px; width: 30px; height: 30px; border-radius: 50%; background: var(--accent);
+             box-shadow: 0 0 0 6px rgba(255,59,59,.18); }
+
+      .col { position: absolute; top: 300px; width: 460px; text-align: center; }
+      .icon { width: 168px; height: 168px; margin: 0 auto; border-radius: 50%; background: #fff; border: 3px solid var(--ink);
+              display: flex; align-items: center; justify-content: center; }
+      .icon.hot { background: var(--accent); border-color: var(--accent); }
+      .role-s { margin-top: 34px; font-weight: 600; font-size: 38px; color: var(--ink-2); }
+      .role-b { margin-top: 4px; font-weight: 900; font-size: 76px; letter-spacing: -2px; color: var(--ink); }
+      .role-b.hot { color: var(--accent); }
+      .role-d { margin-top: 16px; font-weight: 600; font-size: 32px; color: var(--ink-2); }
+
+      .step { position: absolute; left: 200px; width: 1520px; height: 118px; background: #fff; border: 2px solid var(--card-line);
+              border-radius: 22px; display: flex; align-items: center; gap: 34px; padding: 0 36px; }
+      .num { width: 74px; height: 74px; border-radius: 50%; background: var(--ink); color: #fff; font-weight: 900; font-size: 34px;
+             display: flex; align-items: center; justify-content: center; flex: none; }
+      .step .tx { font-weight: 800; font-size: 42px; letter-spacing: -1px; color: var(--ink); }
+
+      /* browser window */
+      .win { position: absolute; left: 210px; top: 48px; width: 1500px; height: 860px; border-radius: 18px; overflow: hidden;
+             background: #fff; box-shadow: 0 40px 120px rgba(0,0,0,.6); }
+      .bar { height: 56px; background: #EEEEF1; display: flex; align-items: center; padding: 0 22px; gap: 10px; border-bottom: 1px solid #DADAE0; }
+      .tl { width: 16px; height: 16px; border-radius: 50%; }
+      .tab { margin-left: 24px; height: 36px; padding: 0 22px; border-radius: 10px; background: #fff; font-weight: 700; font-size: 20px;
+             color: #444; display: flex; align-items: center; }
+      .vp { position: absolute; left: 0; top: 56px; width: 1500px; height: 804px; overflow: hidden; }
+      .shot { position: absolute; left: 0; top: 0; width: 1500px; }
+      .hl { position: absolute; left: 600px; top: 242px; width: 674px; height: 532px; border: 6px solid var(--accent); border-radius: 22px; }
+      .hl-chip { position: absolute; left: 600px; top: 188px; background: var(--accent); color: #fff; font-weight: 800; font-size: 26px;
+                 padding: 8px 18px; border-radius: 10px; }
+
+      /* subtitles (reference: small, bottom centre, dark box) */
+      .sub { position: absolute; left: 0; top: 952px; width: 1920px; text-align: center; z-index: 10; }
+      .sub-in { display: inline-block; background: rgba(12,12,14,.7); color: #fff; font-weight: 700; font-size: 42px;
+                letter-spacing: -0.5px; padding: 10px 26px; border-radius: 10px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="41" data-width="1920" data-height="1080">
+
+      <!-- S1 · title card -->
+      <div id="s1" class="clip scene dark" data-start="0" data-duration="5" data-track-index="1">
+        <div class="in" id="s1-in"><div class="t-wrap">
+          <div class="t-big" id="s1-t">위탁판매, 첫 판매까지 <span class="t-light">(5단계)</span></div>
+          <div class="t-bar" id="s1-bar"></div>
+        </div></div>
+      </div>
+
+      <!-- S2 · worries (paper) -->
+      <div id="s2" class="clip scene paper" data-start="5" data-duration="7.5" data-track-index="1">
+        <div class="in" id="s2-in">
+          <div class="head" id="s2-h">처음 시작할 때 드는 고민</div>
+          <div class="card" id="p1" style="left:140px; top:296px"><div class="q">“</div><div class="tx">뭘 팔아야 할지<br />모르겠어요</div></div>
+          <div class="card" id="p2" style="left:700px; top:296px"><div class="q">“</div><div class="tx">상품 등록만 하다<br />하루가 가요</div></div>
+          <div class="card" id="p3" style="left:1260px; top:296px"><div class="q">“</div><div class="tx">주문이 들어오면<br />겁부터 나요</div><div class="ring" id="p3r"></div><div class="dot" id="p3d"></div></div>
+          <div class="card" id="p4" style="left:140px; top:540px"><div class="q">“</div><div class="tx">재고 쌓아 둘<br />돈도 공간도 없어요</div><div class="ring" id="p4r"></div><div class="dot" id="p4d"></div></div>
+          <div class="card" id="p5" style="left:700px; top:540px"><div class="q">“</div><div class="tx">주문·송장 정리가<br />끝이 없어요</div><div class="ring" id="p5r"></div><div class="dot" id="p5d"></div></div>
+          <div class="card" id="p6" style="left:1260px; top:540px"><div class="q">“</div><div class="tx">판로를 넓히고 싶은데<br />방법을 몰라요</div></div>
+        </div>
+      </div>
+
+      <!-- S3 · roles (paper) -->
+      <div id="s3" class="clip scene paper" data-start="12.5" data-duration="7" data-track-index="1">
+        <div class="in" id="s3-in">
+          <div class="head" id="s3-h">위탁판매는 이렇게 나눠요</div>
+          <div class="col" id="c1" style="left:200px">
+            <div class="icon"><svg width="86" height="86" viewBox="0 0 24 24" fill="none" stroke="#17171B" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.5 3.5 7v10L12 21.5 20.5 17V7z" /><path d="M3.5 7 12 11.5 20.5 7M12 11.5v10" /></svg></div>
+            <div class="role-s">물건은</div><div class="role-b">공급사가</div><div class="role-d">재고·포장·배송</div>
+          </div>
+          <div class="col" id="c2" style="left:730px">
+            <div class="icon"><svg width="86" height="86" viewBox="0 0 24 24" fill="none" stroke="#17171B" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="7.5" r="4.2" /><path d="M3.8 21c.9-4.3 4.2-6.6 8.2-6.6s7.3 2.3 8.2 6.6" /></svg></div>
+            <div class="role-s">판매는</div><div class="role-b">내가</div><div class="role-d">상품 고르고 판매가 정하기</div>
+          </div>
+          <div class="col" id="c3" style="left:1260px">
+            <div class="icon hot"><svg width="86" height="86" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1" /><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" /></svg></div>
+            <div class="role-s">나머지는</div><div class="role-b hot">두고가</div><div class="role-d">쇼핑몰 등록·발주·송장</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- S4 · real screen (DOOGO MARKET landing, captured) -->
+      <div id="s4" class="clip scene dark" data-start="19.5" data-duration="7.5" data-track-index="1">
+        <div class="in" id="s4-in">
+          <div class="win" id="s4-win">
+            <div class="bar"><span class="tl" style="background:#FF5F57"></span><span class="tl" style="background:#FEBC2E"></span><span class="tl" style="background:#28C840"></span><span class="tab">두고마켓</span></div>
+            <div class="vp">
+              <img class="shot" id="s4-shot" src="assets/page.jpg" alt="" />
+              <div class="hl" id="s4-hl"></div>
+              <div class="hl-chip" id="s4-chip">실제 셀러센터 화면</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- S5 · five steps (paper) -->
+      <div id="s5" class="clip scene paper" data-start="27" data-duration="10" data-track-index="1">
+        <div class="in" id="s5-in">
+          <div class="head" id="s5-h">첫 판매까지 다섯 단계<small>(두고마켓 셀러)</small></div>
+          <div class="step" id="r1" style="top:230px"><div class="num" id="n1">01</div><div class="tx">마음에 드는 상품을 PICK, 판매가만 정하세요</div></div>
+          <div class="step" id="r2" style="top:362px"><div class="num" id="n2">02</div><div class="tx">쇼핑몰 여러 곳에, 버튼 한 번으로 등록</div></div>
+          <div class="step" id="r3" style="top:494px"><div class="num" id="n3">03</div><div class="tx">들어온 주문은, 가장 싼 공급가로 연결</div></div>
+          <div class="step" id="r4" style="top:626px"><div class="num" id="n4">04</div><div class="tx">결제 한 번이면, 공급사 발주까지 끝</div></div>
+          <div class="step" id="r5" style="top:758px"><div class="num" id="n5">05</div><div class="tx">송장은 주문한 쇼핑몰로 자동 전송</div></div>
+        </div>
+      </div>
+
+      <!-- S6 · outro -->
+      <div id="s6" class="clip scene dark" data-start="37" data-duration="4" data-track-index="1">
+        <div class="in" id="s6-in"><div class="t-wrap">
+          <div class="t-two" id="s6-t">물건은 공급사가, 판매는 내가,<br />나머지는 <em>두고가.</em></div>
+        </div></div>
+      </div>
+
+      <!-- subtitles -->
+      <div id="u1" class="clip sub" data-start="0.4" data-duration="2.2" data-track-index="2"><span class="sub-in">재고 쌓아 둘 돈도, 공간도 없는데</span></div>
+      <div id="u2" class="clip sub" data-start="2.6" data-duration="2.3" data-track-index="2"><span class="sub-in">위탁판매로 시작할 수 있을까요?</span></div>
+      <div id="u3" class="clip sub" data-start="5.2" data-duration="2.5" data-track-index="2"><span class="sub-in">처음 시작하면 다들 이런 고민부터 하세요</span></div>
+      <div id="u4" class="clip sub" data-start="7.7" data-duration="2.4" data-track-index="2"><span class="sub-in">특히 재고, 주문, 송장</span></div>
+      <div id="u5" class="clip sub" data-start="10.1" data-duration="2.2" data-track-index="2"><span class="sub-in">이 세 가지가 제일 막막하죠</span></div>
+      <div id="u6" class="clip sub" data-start="12.7" data-duration="2.6" data-track-index="2"><span class="sub-in">물건은 공급사가, 판매는 내가 하고</span></div>
+      <div id="u7" class="clip sub" data-start="15.3" data-duration="2.1" data-track-index="2"><span class="sub-in">나머지는 두고마켓이</span></div>
+      <div id="u8" class="clip sub" data-start="17.4" data-duration="1.9" data-track-index="2"><span class="sub-in">알아서 처리하는 구조예요</span></div>
+      <div id="u9" class="clip sub" data-start="19.7" data-duration="2.3" data-track-index="2"><span class="sub-in">실제 화면으로 볼게요</span></div>
+      <div id="u10" class="clip sub" data-start="22.0" data-duration="2.5" data-track-index="2"><span class="sub-in">첫 단계는 마음에 드는 상품을 PICK하고</span></div>
+      <div id="u11" class="clip sub" data-start="24.5" data-duration="2.3" data-track-index="2"><span class="sub-in">판매가만 정하면 끝이에요</span></div>
+      <div id="u12" class="clip sub" data-start="27.2" data-duration="1.9" data-track-index="2"><span class="sub-in">정리하면 다섯 단계예요</span></div>
+      <div id="u13" class="clip sub" data-start="29.1" data-duration="1.8" data-track-index="2"><span class="sub-in">여러 쇼핑몰에 한 번에 등록하고</span></div>
+      <div id="u14" class="clip sub" data-start="30.9" data-duration="1.8" data-track-index="2"><span class="sub-in">주문은 가장 싼 공급가로 연결돼요</span></div>
+      <div id="u15" class="clip sub" data-start="32.7" data-duration="1.8" data-track-index="2"><span class="sub-in">결제 한 번이면 발주까지 끝나고</span></div>
+      <div id="u16" class="clip sub" data-start="34.5" data-duration="2.3" data-track-index="2"><span class="sub-in">송장은 쇼핑몰로 자동 전송돼요</span></div>
+      <div id="u17" class="clip sub" data-start="37.3" data-duration="3.4" data-track-index="2"><span class="sub-in">다음 영상에서 하나씩 자세히 보여드릴게요</span></div>
+
+      <!-- sound: scene whooshes, highlight pops, step clicks (Pixabay, bundled with media-use) -->
+      <audio id="w1" src="assets/sfx/whoosh-short.mp3" data-start="4.92" data-duration="0.57" data-track-index="3" data-volume="0.35"></audio>
+      <audio id="w2" src="assets/sfx/whoosh-short.mp3" data-start="12.42" data-duration="0.57" data-track-index="3" data-volume="0.35"></audio>
+      <audio id="w3" src="assets/sfx/whoosh-short.mp3" data-start="19.42" data-duration="0.57" data-track-index="3" data-volume="0.35"></audio>
+      <audio id="w4" src="assets/sfx/whoosh-short.mp3" data-start="26.92" data-duration="0.57" data-track-index="3" data-volume="0.35"></audio>
+      <audio id="w5" src="assets/sfx/whoosh-short.mp3" data-start="36.92" data-duration="0.57" data-track-index="3" data-volume="0.35"></audio>
+      <audio id="o1" src="assets/sfx/pop.mp3" data-start="8.2" data-duration="0.72" data-track-index="4" data-volume="0.3"></audio>
+      <audio id="o2" src="assets/sfx/pop.mp3" data-start="8.9" data-duration="0.72" data-track-index="4" data-volume="0.3"></audio>
+      <audio id="o3" src="assets/sfx/pop.mp3" data-start="9.6" data-duration="0.72" data-track-index="4" data-volume="0.3"></audio>
+      <audio id="o4" src="assets/sfx/pop.mp3" data-start="15.4" data-duration="0.72" data-track-index="4" data-volume="0.35"></audio>
+      <audio id="o5" src="assets/sfx/pop.mp3" data-start="23.0" data-duration="0.72" data-track-index="4" data-volume="0.35"></audio>
+      <audio id="k1" src="assets/sfx/click-soft.mp3" data-start="27.4" data-duration="0.36" data-track-index="5" data-volume="0.35"></audio>
+      <audio id="k2" src="assets/sfx/click-soft.mp3" data-start="29.2" data-duration="0.36" data-track-index="5" data-volume="0.35"></audio>
+      <audio id="k3" src="assets/sfx/click-soft.mp3" data-start="31.0" data-duration="0.36" data-track-index="5" data-volume="0.35"></audio>
+      <audio id="k4" src="assets/sfx/click-soft.mp3" data-start="32.8" data-duration="0.36" data-track-index="5" data-volume="0.35"></audio>
+      <audio id="k5" src="assets/sfx/click-soft.mp3" data-start="34.6" data-duration="0.36" data-track-index="5" data-volume="0.35"></audio>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const ACCENT = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+      const enter = (sel, t) => tl.from(sel, { opacity: 0, y: 18, duration: 0.4, ease: "power2.out" }, t);
+
+      // S1
+      tl.from("#s1-t", { opacity: 0, y: 30, duration: 0.6, ease: "power3.out" }, 0.15);
+      tl.from("#s1-bar", { scaleX: 0, transformOrigin: "50% 50%", duration: 0.5, ease: "power3.out" }, 0.55);
+      tl.to("#s1-in", { opacity: 0, duration: 0.25, ease: "power1.in" }, 4.75);
+
+      // S2 worries: cards in, then three highlights land on "재고, 주문, 송장"
+      enter("#s2-h", 5.05);
+      ["#p1", "#p2", "#p3", "#p4", "#p5", "#p6"].forEach((c, i) => enter(c, 5.3 + i * 0.16));
+      [["#p4", 8.2], ["#p3", 8.9], ["#p5", 9.6]].forEach(([c, t]) => {
+        tl.from(c + "r", { opacity: 0, scale: 1.08, transformOrigin: "50% 50%", duration: 0.25, ease: "power2.out" }, t);
+        tl.from(c + "d", { scale: 0, transformOrigin: "50% 50%", duration: 0.3, ease: "back.out(3)" }, t + 0.05);
+      });
+      ["#p1", "#p2", "#p6"].forEach(c => tl.to(c, { opacity: 0.45, duration: 0.4, ease: "power1.out" }, 10.2));
+
+      // S3 roles: one column per spoken role, the third lands in red
+      enter("#s3-h", 12.55);
+      tl.from("#c1", { opacity: 0, y: 40, duration: 0.45, ease: "power3.out" }, 12.8);
+      tl.from("#c2", { opacity: 0, y: 40, duration: 0.45, ease: "power3.out" }, 14.1);
+      tl.from("#c3", { opacity: 0, y: 40, duration: 0.45, ease: "power3.out" }, 15.35);
+      tl.fromTo("#c3 .icon", { scale: 1 }, { scale: 1.12, duration: 0.18, yoyo: true, repeat: 1, ease: "power2.out", immediateRender: false }, 15.8);
+
+      // S4 real screen: hold on the hero, scroll to the steps, frame the seller-centre capture
+      tl.from("#s4-win", { opacity: 0, y: 40, scale: 0.97, duration: 0.5, ease: "power3.out" }, 19.5);
+      tl.set("#s4-shot", { y: 0 }, 19.5);
+      tl.to("#s4-shot", { y: -3476, duration: 1.7, ease: "power2.inOut" }, 20.9);
+      tl.from("#s4-hl", { opacity: 0, scale: 1.06, transformOrigin: "50% 50%", duration: 0.3, ease: "power2.out" }, 23.0);
+      tl.from("#s4-chip", { opacity: 0, y: 12, duration: 0.25, ease: "power2.out" }, 23.15);
+      tl.to("#s4-win", { scale: 1.035, transformOrigin: "62% 58%", duration: 3.3, ease: "none" }, 23.4);
+
+      // S5 steps: each row on its line, the current number turns red
+      enter("#s5-h", 27.05);
+      [27.4, 29.2, 31.0, 32.8, 34.6].forEach((t, i) => {
+        const n = i + 1;
+        tl.from("#r" + n, { opacity: 0, x: -40, duration: 0.35, ease: "power3.out" }, t);
+        tl.set("#n" + n, { backgroundColor: ACCENT }, t);
+        if (n > 1) tl.set("#n" + (n - 1), { backgroundColor: "#17171B" }, t);
+      });
+
+      // S6 outro
+      tl.from("#s6-t", { opacity: 0, y: 26, duration: 0.6, ease: "power3.out" }, 37.15);
+
+      // subtitles: quick fade in/out inside each clip
+      [["#u1",0.4,2.6],["#u2",2.6,4.9],["#u3",5.2,7.7],["#u4",7.7,10.1],["#u5",10.1,12.3],["#u6",12.7,15.3],["#u7",15.3,17.4],
+       ["#u8",17.4,19.3],["#u9",19.7,22.0],["#u10",22.0,24.5],["#u11",24.5,26.8],["#u12",27.2,29.1],["#u13",29.1,30.9],
+       ["#u14",30.9,32.7],["#u15",32.7,34.5],["#u16",34.5,36.8],["#u17",37.3,40.7]].forEach(([u, s, e]) => {
+        tl.from(u + " .sub-in", { opacity: 0, duration: 0.12, ease: "power1.out" }, s);
+        tl.to(u + " .sub-in", { opacity: 0, duration: 0.1, ease: "power1.in" }, e - 0.1);
+      });
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
