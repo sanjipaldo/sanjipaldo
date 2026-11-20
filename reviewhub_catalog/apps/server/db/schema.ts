@@ -531,3 +531,72 @@ export const integrationConnections = sqliteTable("integration_connections", {
 
 export type ProductSyncOutbox = typeof productSyncOutbox.$inferSelect;
 export type SyncRun = typeof syncRuns.$inferSelect;
+
+// 공급사 센터(migration 032). 공급사 로그인 계정: 로그인 자체는 user/account(better-auth),
+// 여기에는 어느 공급사(suppliers.id) 계정인지와 정산 설정(수수료율 %, 정산 주기)만 둡니다. 공급사마다 1개.
+export const supplierAccounts = sqliteTable("supplier_accounts", {
+  id: text("id").primaryKey(),
+  supplierId: text("supplierId").notNull().unique().references(() => suppliers.id, { onDelete: "cascade" }),
+  userId: text("userId").notNull().unique().references(() => user.id, { onDelete: "cascade" }),
+  username: text("username").notNull().unique(),
+  isActive: integer("isActive", { mode: "boolean" }).notNull().default(true),
+  commissionRate: real("commissionRate").notNull().default(10),
+  settlementCycle: text("settlementCycle", { enum: ["monthly", "weekly"] }).notNull().default("monthly"),
+  lastLoginAt: text("lastLoginAt"),
+  createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+});
+
+// 공급사가 보낸 상품 변경 요청(kind update)·신규 상품 등록 요청(kind create). 마스터가 승인하면 상품에 반영합니다.
+// changes = 바꾸려는 값 JSON, snapshot = 요청 때의 상품 값 JSON(수정 요청만)
+export const supplierRequests = sqliteTable(
+  "supplier_requests",
+  {
+    id: text("id").primaryKey(),
+    supplierId: text("supplierId").notNull(),
+    supplierName: text("supplierName").notNull(),
+    productId: text("productId"),
+    productName: text("productName").notNull(),
+    kind: text("kind", { enum: ["update", "create"] }).notNull().default("update"),
+    status: text("status", { enum: ["pending", "approved", "rejected", "cancelled"] }).notNull().default("pending"),
+    changes: text("changes").notNull().default("{}"),
+    snapshot: text("snapshot"),
+    note: text("note"),
+    reviewNote: text("reviewNote"),
+    reviewedBy: text("reviewedBy"),
+    reviewedAt: text("reviewedAt"),
+    createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    index("idx_supplier_requests_status").on(table.status, table.createdAt),
+    index("idx_supplier_requests_supplier").on(table.supplierId, table.createdAt),
+    index("idx_supplier_requests_product").on(table.productId, table.status)
+  ]
+);
+
+// 공급사별 판매·반품 내역(날짜·상품·수량·금액). 주문 데이터 연결(발주오라) 후 채웁니다.
+export const supplierSales = sqliteTable(
+  "supplier_sales",
+  {
+    id: text("id").primaryKey(),
+    saleDate: text("saleDate").notNull(),
+    supplierName: text("supplierName").notNull(),
+    productId: text("productId"),
+    productCode: text("productCode"),
+    productName: text("productName").notNull(),
+    kind: text("kind", { enum: ["sale", "return"] }).notNull().default("sale"),
+    quantity: integer("quantity").notNull().default(0),
+    amount: integer("amount").notNull().default(0),
+    orderCount: integer("orderCount").notNull().default(0),
+    source: text("source").notNull().default("baljuora"),
+    externalId: text("externalId"),
+    createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [index("idx_supplier_sales_supplier_date").on(table.supplierName, table.saleDate)]
+);
+
+export type SupplierAccount = typeof supplierAccounts.$inferSelect;
+export type SupplierRequest = typeof supplierRequests.$inferSelect;
+export type SupplierSale = typeof supplierSales.$inferSelect;

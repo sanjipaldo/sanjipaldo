@@ -3593,3 +3593,13 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .new-products-page > .catalog-panel > .section-heading,
   .content-page > .guide-notice-list > .section-heading { padding-bottom: 12px; }
 }
+
+/* 공급사 센터(관리자 쪽, 2026-11-20): 왼쪽 메뉴 "변경 요청" 승인 대기 숫자 · 공급사 관리 표의 공급사 센터 계정 칸
+   (변경 요청 화면·계정 창 자체는 처음 열 때 불러오는 pages/supplier/supplier-center.css) */
+.admin-nav-badge { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 2px; padding: 0 6px; border-radius: 999px; color: var(--w-ink); background: var(--w-warning); font-size: 11px; font-weight: 800; line-height: 1; }
+.supplier-table .supplier-account-cell { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.supplier-table .supplier-account-cell strong { color: var(--w-ink); }
+.supplier-table .supplier-account-cell .status-pill { margin: 0; }
+.supplier-table .supplier-account-none { color: var(--w-mute); }
+.row-actions button.supplier-account-button { border-color: var(--w-ink); color: var(--w-ink); }
+.supplier-table { min-width: 1060px; }

@@ -24,6 +24,9 @@ const HealthIngredientsPage = lazy(() => import("./pages/catalog/HealthEncyclope
 const HealthIngredientPage = lazy(() => import("./pages/catalog/HealthEncyclopedia").then((module) => ({ default: module.HealthIngredientPage })));
 const HealthGuidePage = lazy(() => import("./pages/catalog/HealthEncyclopedia").then((module) => ({ default: module.HealthGuidePage })));
 const MarginCalculatorPage = lazy(() => import("./pages/catalog/MarginCalculator").then((module) => ({ default: module.MarginCalculatorPage })));
+// 공급사 센터(/supplier)는 공급사만 쓰므로 들어갈 때 따로 불러옵니다.
+const SupplierLoginPage = lazy(() => import("./pages/supplier/SupplierCenter").then((module) => ({ default: module.SupplierLoginPage })));
+const SupplierCenterRoute = lazy(() => import("./pages/supplier/SupplierCenter").then((module) => ({ default: module.SupplierCenterRoute })));
 
 function LazyPage({ children }: { children: ReactNode }) {
   return (
@@ -31,6 +34,10 @@ function LazyPage({ children }: { children: ReactNode }) {
       {children}
     </Suspense>
   );
+}
+
+function LazySupplierPage({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<div className="admin-loading"><div className="spinner" /><span>공급사 센터를 여는 중…</span></div>}>{children}</Suspense>;
 }
 
 const App = () => (
@@ -71,6 +78,7 @@ const App = () => (
           <Route path="/admin/categories" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="categories" /></AdminGuard>} />
           <Route path="/admin/shippingPolicies" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="shippingPolicies" /></AdminGuard>} />
           <Route path="/admin/suppliers" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="suppliers" /></AdminGuard>} />
+          <Route path="/admin/supplierRequests" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="supplierRequests" /></AdminGuard>} />
           <Route path="/admin/sales" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sales" /></AdminGuard>} />
           <Route path="/admin/notices" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="notices" /></AdminGuard>} />
           <Route path="/admin/usageGuide" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="usageGuide" /></AdminGuard>} />
@@ -79,6 +87,8 @@ const App = () => (
           <Route path="/admin/sourcing" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sourcing" /></AdminGuard>} />
           <Route path="/admin/sync" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sync" /></AdminGuard>} />
           <Route path="/admin/backup" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="backup" /></AdminGuard>} />
+          <Route path="/supplier" element={<LazySupplierPage><SupplierLoginPage /></LazySupplierPage>} />
+          <Route path="/supplier/:section" element={<LazySupplierPage><SupplierCenterRoute /></LazySupplierPage>} />
           {/* 개발 서버 전용: 사용법 안내 영상을 mp4로 뽑을 때 쓰는 화면(scripts/render-guide-videos.mjs) */}
           {import.meta.env.DEV && <Route path="/dev/guide-demo/:id" element={<GuideDemoRender />} />}
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

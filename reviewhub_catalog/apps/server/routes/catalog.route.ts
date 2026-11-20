@@ -72,6 +72,17 @@ import { disconnectConnection, getCatalogSyncOverview, listSyncOutbox, listSyncR
 import { StorageError, storagePut } from "../services/s3_storage";
 import { allowSyncCreate, createEncyclopediaSave, getEncyclopediaSave, isMissingSyncTable, normalizeSyncCode, updateEncyclopediaSave } from "../services/encyclopedia-sync";
 import { NAVER_SEARCH_ENV, NaverSearchError, checkNaverSearch, missingNaverEnv, naverSearchConfig, readProduceSearchStats, refreshProduceSearch } from "../services/naver-search";
+import {
+  approveSupplierRequest,
+  createSupplierAccount,
+  deleteSupplierAccount,
+  getSupplierAdminExtras,
+  listAdminSupplierRequests,
+  pendingSupplierRequestCount,
+  rejectSupplierRequest,
+  renameSupplierLinks,
+  updateSupplierAccount
+} from "../services/supplier-portal";
 
 const ProductOptionSchema = z.object({
   id: z.string().trim().min(1).optional(),
@@ -297,6 +308,32 @@ const SupplierSchema = z.object({
   memo: z.string().trim().max(1000).nullable().optional(),
   isActive: z.boolean().optional()
 });
+// 공급사 센터 로그인 계정(마스터가 만들어 줌). 비밀번호는 서버에서 해시만 저장하고 로그에 남기지 않습니다.
+const SupplierAccountCreateSchema = z.object({
+  username: z.string().trim().min(1).max(60),
+  password: z.string().min(1).max(128),
+  commissionRate: z.number().min(0).max(100).nullable().optional(),
+  settlementCycle: z.enum(["monthly", "weekly"]).optional()
+});
+const SupplierAccountUpdateSchema = z.object({
+  password: z.string().min(1).max(128).nullable().optional(),
+  isActive: z.boolean().optional(),
+  commissionRate: z.number().min(0).max(100).nullable().optional(),
+  settlementCycle: z.enum(["monthly", "weekly"]).optional()
+});
+const SupplierApproveSchema = z.object({
+  aPrice: z.number().int().min(0).max(100_000_000).nullable().optional(),
+  generalPrice: z.number().int().min(0).max(100_000_000).nullable().optional(),
+  costPrice: z.number().int().min(0).max(100_000_000).nullable().optional(),
+  productCode: z.string().trim().max(80).nullable().optional(),
+  categoryId: z.string().trim().max(80).nullable().optional(),
+  shippingType: z.enum(["domestic", "overseas"]).nullable().optional(),
+  shippingPolicyId: z.string().trim().max(80).nullable().optional(),
+  isVisible: z.boolean().optional(),
+  note: z.string().trim().max(1000).nullable().optional()
+});
+const SupplierRejectSchema = z.object({ reason: z.string().trim().max(1000).nullable().optional() });
+const SupplierRequestStatusQuery = z.enum(["pending", "approved", "rejected", "cancelled", "all"]);
 const ShippingPolicySchema = z.object({
   name: z.string().trim().min(1).max(160),
   shippingType: z.enum(["domestic", "overseas"]),
@@ -349,6 +386,8 @@ function errorResponse(c: Context, error: unknown) {
     if (error.status === 400) return c.json(apiFailure(error.code, error.message), 400);
     if (error.status === 404) return c.json(apiFailure(error.code, error.message), 404);
     if (error.status === 409) return c.json(apiFailure(error.code, error.message), 409);
+    if (error.status === 403) return c.json(apiFailure(error.code, error.message), 403);
+    if (error.status === 503) return c.json(apiFailure("SERVICE_UNAVAILABLE", error.message), 503);
     return c.json(apiFailure(error.code, error.message), 502);
   }
   throw error;
@@ -563,7 +602,11 @@ catalogRouter.delete("/admin/groups/:id", adminRoute, async (c) => {
   }
 });
 
-catalogRouter.get("/admin/suppliers", adminRoute, async (c) => c.json(apiSuccess(await getSuppliers())));
+// 공급사 목록 + 공급사 센터 로그인 계정·연결된 상품 수(migration 032 전에는 계정 없이)
+catalogRouter.get("/admin/suppliers", adminRoute, async (c) => {
+  const [base, extras] = await Promise.all([getSuppliers(), getSupplierAdminExtras()]);
+  return c.json(apiSuccess({ ...base, ...extras }));
+});
 
 catalogRouter.post("/admin/suppliers", adminRoute, async (c) => {
   const parsed = SupplierSchema.safeParse(await c.req.json().catch(() => null));
@@ -579,7 +622,77 @@ catalogRouter.put("/admin/suppliers/:id", adminRoute, async (c) => {
   const parsed = SupplierSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "매입처 정보를 확인해 주세요."), 400);
   try {
-    return c.json(apiSuccess({ supplier: await updateSupplier(c.req.param("id"), parsed.data) }));
+    const previousName = (await getSuppliers(true)).suppliers.find((item) => item.id === c.req.param("id"))?.name;
+    const supplier = await updateSupplier(c.req.param("id"), parsed.data);
+    // 이름을 바꾸면 상품·판매 내역의 공급사 이름도 함께 바꿉니다(공급사 센터 연결 유지).
+    if (previousName && previousName !== supplier.name) await renameSupplierLinks(previousName, supplier.name);
+    return c.json(apiSuccess({ supplier }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+catalogRouter.post("/admin/suppliers/:id/account", adminRoute, async (c) => {
+  const parsed = SupplierAccountCreateSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "아이디·비밀번호를 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess({ account: await createSupplierAccount(c.req.param("id"), parsed.data) }), 201);
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+catalogRouter.put("/admin/suppliers/:id/account", adminRoute, async (c) => {
+  const parsed = SupplierAccountUpdateSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "계정 설정을 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess({ account: await updateSupplierAccount(c.req.param("id"), parsed.data) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+catalogRouter.delete("/admin/suppliers/:id/account", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess({ deleted: await deleteSupplierAccount(c.req.param("id")) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 공급사 변경 요청(상품 수정·신규 등록): 승인하면 상품에 반영합니다.
+catalogRouter.get("/admin/supplier-requests/summary", adminRoute, async (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.json(apiSuccess(await pendingSupplierRequestCount()));
+});
+
+catalogRouter.get("/admin/supplier-requests", adminRoute, async (c) => {
+  const status = SupplierRequestStatusQuery.safeParse(c.req.query("status") || "pending");
+  try {
+    c.header("Cache-Control", "no-store");
+    return c.json(apiSuccess(await listAdminSupplierRequests(status.success ? status.data : "pending")));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+catalogRouter.post("/admin/supplier-requests/:id/approve", adminRoute, async (c) => {
+  const parsed = SupplierApproveSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "승인 내용을 확인해 주세요."), 400);
+  try {
+    const user = c.var.currentUser;
+    return c.json(apiSuccess(await approveSupplierRequest(c.req.param("id"), parsed.data, user.username || user.email)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+catalogRouter.post("/admin/supplier-requests/:id/reject", adminRoute, async (c) => {
+  const parsed = SupplierRejectSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "반려 사유를 확인해 주세요."), 400);
+  try {
+    const user = c.var.currentUser;
+    return c.json(apiSuccess(await rejectSupplierRequest(c.req.param("id"), parsed.data.reason, user.username || user.email)));
   } catch (error) {
     return errorResponse(c, error);
   }

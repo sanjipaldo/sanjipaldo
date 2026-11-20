@@ -1,5 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
+import { authClient, clearAuthToken } from "@/lib/auth";
 import { RequireAuth } from "./route-guards";
 
 type AdminGuardProps = {
@@ -8,7 +10,7 @@ type AdminGuardProps = {
   forbiddenFallback?: ReactNode;
 };
 
-type RoleState = "checking" | "admin" | "user";
+type RoleState = "checking" | "admin" | "supplier" | "user";
 
 function AdminAccessLoading() {
   return (
@@ -19,14 +21,33 @@ function AdminAccessLoading() {
 }
 
 function AdminAccessForbidden() {
+  const navigate = useNavigate();
+  const signOut = async () => {
+    await authClient.signOut().catch(() => undefined);
+    clearAuthToken();
+    navigate("/admin", { replace: true });
+  };
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="max-w-md rounded-lg border bg-card p-6 text-center shadow-sm">
-        <h1 className="text-2xl font-semibold text-foreground">403 Forbidden</h1>
-        <p className="mt-2 text-sm text-muted-foreground">This account does not have admin access.</p>
+        <p className="text-xs font-semibold text-muted-foreground">403 Forbidden</p>
+        <h1 className="mt-1 text-2xl font-semibold text-foreground">관리자 권한이 없어요</h1>
+        <p className="mt-2 text-sm text-muted-foreground">이 계정은 마스터 관리자 화면을 볼 수 없습니다. 관리자 계정으로 다시 로그인해 주세요.</p>
+        <button type="button" className="mt-4 rounded-full border px-4 py-2 text-sm font-semibold" onClick={() => void signOut()}>로그아웃</button>
       </div>
     </div>
   );
+}
+
+export async function isSupplierAccount() {
+  try {
+    const response = await apiFetch("/supplier/me", { silent: true });
+    if (!response.ok) return false;
+    const payload = (await response.json()) as { ok?: boolean; data?: { supplier?: { id?: string } } };
+    return Boolean(payload.ok && payload.data?.supplier?.id);
+  } catch {
+    return false;
+  }
 }
 
 async function readApiData<T>(response: Response): Promise<T | null> {
@@ -47,11 +68,17 @@ function RequireAdminRole({ children, forbiddenFallback }: Omit<AdminGuardProps,
 
     void apiFetch("/me/profile")
       .then((response) => readApiData<{ profile: { role: "admin" | "user" } }>(response))
-      .then((data) => {
+      .then(async (data) => {
         if (!active) {
           return;
         }
-        setRole(data?.profile.role === "admin" ? "admin" : "user");
+        if (data?.profile.role === "admin") {
+          setRole("admin");
+          return;
+        }
+        // 공급사 계정이면 관리자 화면 대신 공급사 센터로 보냅니다(공급사 정보가 실제로 온 경우만).
+        const supplier = await isSupplierAccount();
+        if (active) setRole(supplier ? "supplier" : "user");
       })
       .catch(() => {
         if (active) {
@@ -66,6 +93,10 @@ function RequireAdminRole({ children, forbiddenFallback }: Omit<AdminGuardProps,
 
   if (role === "checking") {
     return <AdminAccessLoading />;
+  }
+
+  if (role === "supplier") {
+    return <Navigate to="/supplier/home" replace />;
   }
 
   if (role !== "admin") {
