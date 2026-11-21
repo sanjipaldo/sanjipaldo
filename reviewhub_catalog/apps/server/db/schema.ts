@@ -269,6 +269,9 @@ export const productGroups = sqliteTable(
     imageUrl: text("imageUrl"),
     categoryId: text("categoryId").references(() => categories.id),
     description: text("description"),
+    // migration 033: 옵션 묶음 팝업의 배송 안내 문구와 상세페이지·사진 자료 링크
+    shippingNote: text("shippingNote"),
+    materialsUrl: text("materialsUrl"),
     displayOrder: integer("displayOrder").notNull().default(1000000),
     isVisible: integer("isVisible", { mode: "boolean" }).notNull().default(true),
     createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -291,6 +294,8 @@ export const productGroupItems = sqliteTable(
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
     sortOrder: integer("sortOrder").notNull().default(0),
+    // migration 033: 팝업 옵션표에 보일 옵션 이름(비우면 상품명에서 자동으로 줄임)
+    optionLabel: text("optionLabel"),
     createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`)
   },
   (table) => [
@@ -330,7 +335,11 @@ export const priceHistories = sqliteTable(
     changedBy: text("changedBy").notNull(),
     changedAt: text("changedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
   },
-  (table) => [index("idx_price_histories_changed_at").on(table.changedAt)]
+  (table) => [
+    index("idx_price_histories_changed_at").on(table.changedAt),
+    // migration 033: 옵션 팝업의 상품별 가격 흐름 조회
+    index("idx_price_histories_product").on(table.productId, table.changedAt)
+  ]
 );
 
 export const catalogActivityLogs = sqliteTable(

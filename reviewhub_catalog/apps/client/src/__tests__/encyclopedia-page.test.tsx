@@ -94,12 +94,14 @@ async function renderEncyclopedia(path: string) {
 const rowNames = () => Array.from(document.querySelectorAll(".enc-calendar-main strong")).map((element) => element.textContent ?? "");
 
 describe("백과사전 상세", () => {
-  it("두고푸드에 있는 품목: 단가표 카드(A단가·일반공급가) · 보유 표시 · 상품 구매하기(도매몰) · 네이버 검색량", async () => {
+  it("두고푸드에 있는 품목: 단가표 카드(수강생 단가·일반공급가) · 보유 표시 · 상품 구매하기(도매몰) · 네이버 검색량", async () => {
     await renderEncyclopedia("/encyclopedia/apple-fuji");
     expect(screen.getByRole("heading", { level: 1, name: "사과(부사)" })).toBeTruthy();
     expect(await screen.findByText("[본] 청송 부사 사과 특품 5kg")).toBeTruthy();
-    expect(screen.getAllByText("21,000원").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("23,500원").length).toBeGreaterThan(0);
+    // 카드 가격 칸: 숫자와 "원"을 따로 그려서 칸 전체 글자로 확인합니다(수강생 단가 21,000원 · 일반공급가 23,500원).
+    const prices = Array.from(document.querySelectorAll(".product-card-prices dd")).map((element) => element.textContent);
+    expect(prices).toContain("21,000원");
+    expect(prices).toContain("23,500원");
     expect(screen.queryByText("부사 사과 콜라겐 젤리 30포")).toBeNull();
     expect(screen.getByRole("link", { name: /단가표에서 보기/ }).getAttribute("href")).toBe(`/?q=${encodeURIComponent("부사")}`);
     const buy = screen.getByRole("link", { name: /상품 구매하기/ });

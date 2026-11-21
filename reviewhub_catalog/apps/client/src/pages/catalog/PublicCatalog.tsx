@@ -48,11 +48,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
-import { RATE_TYPE_LABELS, effectiveRate, rateTierLines, representativeFee } from "@/lib/shipping-rates";
 import type { CatalogData, GuideContent, Notice, OperationsOverview, PriceHistory, Product, PublicShippingPolicy, ShippingType, SoldOutIssue } from "./types";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
-import { SUPPLY_STATUS_LABELS, supplyStatus } from "@/lib/supply-status";
-import { formatMarginRate, saleMargin } from "@/lib/sale-margin";
+import { isMonthInSeason, seasonApplies } from "@repo/shared/supply-status";
+import { ProductThumb, formatPrice, salePriceLabel, seasonLabel, shippingFeeSummary, shippingInfoRows } from "./catalog-format";
+import { CatalogProductGrid, buildCatalogCards, catalogOptionCount } from "./product-cards";
 import { MARGIN_OPEN_EVENT, type MarginPrefill, openMarginCalculator } from "@/lib/margin-open";
 import { FloatingActions, KAKAO_CHANNEL_URL } from "./FloatingActions";
 
@@ -193,30 +193,6 @@ export const emptyCatalogData: CatalogData = {
   priceHistory: [],
   recentSoldOutIssues: []
 };
-
-function formatPrice(value: number | null | undefined) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "-";
-  return `${value.toLocaleString("ko-KR")}원`;
-}
-
-function effectiveAPrice(aPrice: number | null | undefined, generalPrice: number) {
-  return typeof aPrice === "number" && aPrice > 0 ? aPrice : generalPrice;
-}
-
-function weightSortValue(value: string) {
-  const match = value.match(/(\d+(?:\.\d+)?)\s*(kg|g)\b/i);
-  if (!match) return Number.MAX_SAFE_INTEGER;
-  const amount = Number(match[1]);
-  return match[2].toLowerCase() === "kg" ? amount * 1000 : amount;
-}
-
-function sortedProductOptions(product: Product) {
-  return [...(product.options ?? [])].sort((first, second) =>
-    weightSortValue(first.name) - weightSortValue(second.name)
-    || first.sortOrder - second.sortOrder
-    || first.name.localeCompare(second.name, "ko")
-  );
-}
 
 function formatDate(value: string) {
   const normalized = value.length === 10
@@ -462,42 +438,8 @@ function onCatalogRefreshSignal(refresh: () => void) {
   };
 }
 
-const seasonalCategories = new Set(["농산", "수산", "축산", "선물세트", "식품"]);
-
-function plainCategoryName(name?: string) {
-  return name?.replace(/^[^\p{L}\p{N}[]+\s*/u, "").trim() ?? "";
-}
-
-function isSeasonalCategory(categoryName?: string) {
-  return seasonalCategories.has(plainCategoryName(categoryName));
-}
-
-// 제철 적용 여부: 제철 카테고리이거나, 카테고리와 상관없이 상품에 제철 월이 지정된 경우
-export function seasonApplies(product: Pick<Product, "isAlwaysOnSale" | "saleStartMonth" | "saleEndMonth">, categoryName?: string) {
-  return isSeasonalCategory(categoryName) || Boolean(!product.isAlwaysOnSale && product.saleStartMonth && product.saleEndMonth);
-}
-
-function isMonthInSeason(month: number, startMonth: number | null, endMonth: number | null) {
-  if (!startMonth || !endMonth) return true;
-  if (startMonth <= endMonth) return month >= startMonth && month <= endMonth;
-  return month >= startMonth || month <= endMonth;
-}
-
-function seasonLabel(product: Product, categoryName?: string) {
-  if (!seasonApplies(product, categoryName)) return "상시 판매";
-  if (product.isAlwaysOnSale) return "상시 판매";
-  if (!product.saleStartMonth || !product.saleEndMonth) return "판매기간 미설정";
-  if (product.saleStartMonth === product.saleEndMonth) return `${product.saleStartMonth}월 판매`;
-  return `${product.saleStartMonth}월 ~ ${product.saleEndMonth}월`;
-}
-
-function salePriceLabel(mode: "autonomous" | "fixed", value: number | null) {
-  if (mode === "autonomous") return { main: "자율", sub: "판매자 자율 판매가" };
-  return {
-    main: value === null ? "미설정" : formatPrice(value),
-    sub: "지정 판매가"
-  };
-}
+// 제철 적용 여부·판매기간 규칙은 서버(상품 엑셀)와 같이 쓰는 공용 모듈에 있습니다.
+export { seasonApplies };
 
 function priceFieldLabel(field: PriceHistory["field"]) {
   if (field === "aPrice") return "A단가";
@@ -646,56 +588,6 @@ export function PageFrame({ children }: { children: ReactNode }) {
   );
 }
 
-function productImageSrc(product: Product) {
-  if (product.imageUrl) return product.imageUrl;
-  const known: Record<string, string> = {
-    "muskmelon-gift": "/assets/products/muskmelon-gift.webp",
-    "premium-rice-cake": "/assets/products/rice-cake-gift.webp",
-    "ramie-songpyeon": "/assets/products/songpyeon.webp",
-    "gold-mango": "/assets/products/gold-mango.webp",
-    "naju-pear": "/assets/products/naju-pear.webp",
-    "shine-muscat": "/assets/products/shine-muscat.webp",
-    "hami-melon": "/assets/products/hami-melon.webp",
-    "global-supplement": "/assets/products/health-supplement.webp"
-  };
-  return known[product.id] || "";
-}
-
-function ProductThumb({ product }: { product: Product }) {
-  const [failed, setFailed] = useState(false);
-  const src = productImageSrc(product);
-  const slot = product.id === "muskmelon-gift" ? "product.muskmelon-gift.card"
-    : product.id === "premium-rice-cake" ? "product.rice-cake-gift.card"
-    : product.id === "ramie-songpyeon" ? "product.songpyeon.card"
-    : product.id === "gold-mango" ? "product.gold-mango.card"
-    : product.id === "naju-pear" ? "product.naju-pear.card"
-    : product.id === "shine-muscat" ? "product.shine-muscat.card"
-    : product.id === "hami-melon" ? "product.hami-melon.card"
-    : product.id === "global-supplement" ? "product.health-supplement.card" : undefined;
-  if (!src || failed) {
-    return <div className="product-thumb product-thumb-empty"><ImageOff size={26} /><span>이미지 준비중</span></div>;
-  }
-  return <img data-image-slot={slot} className="product-thumb" src={src} alt={product.name} width="112" height="112" onError={() => setFailed(true)} />;
-}
-
-function PublicOptionList({ product }: { product: Product }) {
-  return (
-    <div className="option-price-list">
-      {sortedProductOptions(product).map((option) => (
-        <article className={option.isSoldOut ? "sold-out" : ""} key={option.id}>
-          <ProductThumb product={product} />
-          <div className="option-name-cell"><strong>{product.name}</strong><small>{option.name}</small>{option.isSoldOut && <em>품절</em>}</div>
-          <dl>
-            <div><dt>A단가</dt><dd>{formatPrice(option.aPrice)}</dd></div>
-            <div><dt>일반공급가</dt><dd>{formatPrice(option.generalPrice)}</dd></div>
-            <div><dt>판매가</dt><dd>{salePriceLabel(option.salePriceMode, option.salePrice).main}</dd><small>{salePriceLabel(option.salePriceMode, option.salePrice).sub}</small></div>
-          </dl>
-        </article>
-      ))}
-    </div>
-  );
-}
-
 function NoticeModal({ notice, onClose }: { notice: Notice; onClose: () => void }) {
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -729,18 +621,6 @@ function NoticeModal({ notice, onClose }: { notice: Notice; onClose: () => void 
 // 배송비 한 줄 요약
 // - 배송 정책이 연결된 상품: "배송비 무료" 또는 "배송비 유료(기본 배송비)"
 // - 배송 정책이 없는 상품: "배송비 확인"(누르면 상품에 적힌 배송비 문구를 팝업으로 안내)
-type ShippingSummary = { kind: "free" | "paid" | "unknown"; text: string };
-
-function shippingFeeSummary(_product: Product, policy?: PublicShippingPolicy): ShippingSummary {
-  if (!policy) return { kind: "unknown", text: "확인" };
-  const rate = effectiveRate(policy);
-  const fee = representativeFee(policy);
-  const lastFee = rate.tiers?.last.repeat ? fee : rate.tiers?.last.fee ?? 0;
-  if (rate.rateType === "free" || (fee === 0 && lastFee === 0)) return { kind: "free", text: "무료" };
-  // 구간형은 첫 구간(가장 적게 주문할 때) 배송비를 대표 금액으로 보여 주고, 자세한 구간은 팝업에서 안내합니다.
-  return { kind: "paid", text: fee > 0 ? `유료 (${formatPrice(fee)})` : "유료" };
-}
-
 // 배송비 ? 버튼 팝업: 무료/유료, 유료 방식, 무료 조건, 제주·도서산간 추가배송비, 반품·교환 배송비
 export function ShippingInfoModal({ product, policy, onClose }: { product: Product; policy?: PublicShippingPolicy; onClose: () => void }) {
   useEffect(() => {
@@ -751,28 +631,7 @@ export function ShippingInfoModal({ product, policy, onClose }: { product: Produ
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
   const summary = shippingFeeSummary(product, policy);
-  const extra = (value: number) => value > 0 ? `+${formatPrice(value)}` : "추가 없음";
-  const rows: Array<[string, string]> = [];
-  if (policy) {
-    const rate = effectiveRate(policy);
-    rows.push(["배송비 유형", RATE_TYPE_LABELS[rate.rateType]]);
-    if (rate.rateType === "free") {
-      rows.push(["배송비", policy.freeWholeOrder ? "무료배송 (이 상품이 포함된 주문은 배송비 전체 무료)" : "무료배송"]);
-    } else if (rate.rateType === "fixed" || !rate.tiers) {
-      rows.push(["배송비", `${formatPrice(rate.fee)} (주문 금액에 관계없이)`]);
-    } else {
-      // 금액별·수량별·단위별: 구간마다 한 줄씩
-      rows.push([rate.rateType === "amount" ? "주문 금액별 배송비" : rate.rateType === "quantity" ? "주문 수량별 배송비" : "단위별 배송비", rateTierLines(rate.rateType, rate.tiers, rate.unitLabel).join("\n")]);
-    }
-    rows.push(["제주 추가배송비", extra(policy.jejuExtraFee)]);
-    rows.push(["도서산간 추가배송비", extra(policy.islandExtraFee)]);
-    if (policy.returnFee != null) rows.push(["반품 배송비(편도)", formatPrice(policy.returnFee)]);
-    if (policy.exchangeFee != null) rows.push(["교환 배송비(왕복)", formatPrice(policy.exchangeFee)]);
-    rows.push(["택배사", policy.courier || product.courier || "택배사 지정"]);
-  } else {
-    rows.push(["배송비", product.shippingFee || "상품별로 달라 문의가 필요합니다"]);
-    rows.push(["택배사", product.courier || "택배사 지정"]);
-  }
+  const rows = shippingInfoRows(product, policy);
   return (
     <div className="public-modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="shipping-info-modal" role="dialog" aria-modal="true" aria-labelledby="shipping-info-title" onMouseDown={(event) => event.stopPropagation()}>
@@ -784,24 +643,6 @@ export function ShippingInfoModal({ product, policy, onClose }: { product: Produ
         <dl className="shipping-info-list">{rows.map(([label, value]) => <div key={label} className={value.includes("\n") ? "multi" : undefined}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
         {policy?.description && <p className="shipping-info-note">{policy.description}</p>}
         {!policy && <p className="shipping-info-note">이 상품은 배송 정책이 아직 정해지지 않았습니다. 정확한 배송비와 제주·도서산간 추가배송비는 1:1 상담으로 문의해 주세요.</p>}
-      </section>
-    </div>
-  );
-}
-
-export function ImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
-  return (
-    <div className="public-modal-backdrop image-modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <section className="image-modal" role="dialog" aria-modal="true" aria-label={`${alt} 이미지`} onMouseDown={(event) => event.stopPropagation()}>
-        <button className="public-modal-close" onClick={onClose} aria-label="이미지 닫기"><X size={20} /></button>
-        <img src={src} alt={alt} />
       </section>
     </div>
   );
@@ -1698,106 +1539,6 @@ function OperationsBoard({
   );
 }
 
-// 단가표 표(상품 · 배송/카테고리/판매기간 · A단가 · 일반공급가 · 판매가 · 마진율). 단가표·신규상품·백과사전이 함께 씁니다.
-// 마진율 = A단가로 받아 지정 판매가에 팔 때 남는 비율(lib/sale-margin.ts, 판매가 자율·미설정이면 "-"). 예전 "상품 안내" 칸은 2026-11-14 관리자 요청으로 뺐습니다.
-export function CatalogProductTable({
-  products,
-  categories,
-  policyById,
-  currentMonth,
-  onImage,
-  onShipping,
-  renderBadge
-}: {
-  products: Product[];
-  categories: CatalogData["categories"];
-  policyById: Map<string, PublicShippingPolicy>;
-  currentMonth: number;
-  onImage: (preview: { src: string; alt: string }) => void;
-  onShipping: (info: { product: Product; policy?: PublicShippingPolicy }) => void;
-  renderBadge?: (product: Product) => ReactNode;
-}) {
-  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
-  useEffect(() => { setExpandedProductId(null); }, [products]);
-  return (
-    <table className="catalog-table">
-      <colgroup>
-        <col className="catalog-col-product" />
-        <col className="catalog-col-category" />
-        <col className="catalog-col-price" />
-        <col className="catalog-col-price" />
-        <col className="catalog-col-sale" />
-        <col className="catalog-col-margin" />
-      </colgroup>
-      <thead><tr><th>상품</th><th>배송 / 카테고리 / 판매기간</th><th>A단가</th><th>일반공급가</th><th>판매가</th><th title="A단가로 받아 판매가에 팔 때 남는 비율이에요(배송비 제외).">마진율</th></tr></thead>
-      <tbody>
-        {products.map((product) => {
-          const category = categories.find((item) => item.id === product.categoryId);
-          const options = product.options ?? [];
-          const sortedOptions = sortedProductOptions(product);
-          const expanded = expandedProductId === product.id;
-          const minimumAPrice = options.length > 0
-            ? Math.min(...sortedOptions.map((option) => effectiveAPrice(option.aPrice, option.generalPrice)))
-            : effectiveAPrice(product.aPrice, product.generalPrice);
-          const minimumGeneralPrice = options.length > 0
-            ? Math.min(...sortedOptions.map((option) => option.generalPrice))
-            : product.generalPrice;
-          const salePolicy = salePriceLabel(product.salePriceMode, product.salePrice);
-          // 마진율: 지정 판매가가 있을 때만(옵션이 여러 개면 옵션마다 달라 계산하지 않음)
-          const margin = product.salePriceMode === "fixed" && options.length <= 1 ? saleMargin(minimumAPrice, product.salePrice) : null;
-          // 판매 상태(판매중·품절·시즌 종료)는 관리자 상품 리스트와 같은 규칙(lib/supply-status)으로 정합니다.
-          const status = supplyStatus(product, seasonApplies(product, category?.name), currentMonth);
-          const soldOutNow = status === "sold_out";
-          const availableNow = status === "on_sale";
-          const supplyLabel = SUPPLY_STATUS_LABELS[status];
-          const policy = product.shippingPolicyId ? policyById.get(product.shippingPolicyId) : undefined;
-          const shippingSummary = shippingFeeSummary(product, policy);
-          return (
-            <Fragment key={product.id}>
-              <tr className={`${expanded ? "expanded " : ""}${soldOutNow ? "sold-out order-unavailable" : availableNow ? "supply-active" : "season-waiting order-unavailable"}`.trim()}>
-                <td className="catalog-product-cell">
-                  <div className="product-cell"><button type="button" className="product-image-button" onClick={() => { const src = productImageSrc(product); if (src) onImage({ src, alt: product.name }); }} aria-label={`${product.name} 이미지 크게 보기`}><ProductThumb product={product} />{soldOutNow && <span className="thumb-sold-out" aria-hidden="true">품절</span>}</button><div>{renderBadge?.(product)}<span className={`delivery-badge ${product.shippingType}`}>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</span><strong>{product.name}</strong>{product.origin && <small>{product.origin}</small>}<em className={soldOutNow ? "supply-sold-out" : availableNow ? "supply-on-sale" : "supply-season-waiting"}>{soldOutNow && <Ban size={13} strokeWidth={2.6} aria-hidden="true" />}{supplyLabel}</em>{options.length > 0 && <button className="option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />} 옵션 {options.length}개 {expanded ? "접기" : "보기"}</button>}</div></div>
-                  {expanded && options.length > 0 && <div className="mobile-inline-options"><PublicOptionList product={product} /></div>}
-                </td>
-                <td data-label="카테고리·판매기간"><div className="mobile-cell-value"><strong>{category?.name ?? "-"}</strong><button type="button" className={`shipping-fee-button ${shippingSummary.kind}`} onClick={() => onShipping({ product, policy })} aria-label={`${product.name} 배송비 안내 보기`}><span className="shipping-fee-text">배송비 <b>{shippingSummary.text}</b></span><CircleHelp size={14} aria-hidden="true" /></button><span className="season-badge"><CalendarRange size={12} /> {seasonLabel(product, category?.name)}</span></div></td>
-                <td data-label="A단가"><div className="mobile-cell-value"><b className="price a-price">{formatPrice(minimumAPrice)}</b><small>{options.length > 1 ? "옵션 최저 A단가" : "A회원 공급가"}</small></div></td>
-                <td data-label="일반공급가"><div className="mobile-cell-value"><b className="price">{formatPrice(minimumGeneralPrice)}</b><small>{options.length > 1 ? "옵션 최저 일반공급가" : "일반 판매자"}</small></div></td>
-                <td data-label="판매가"><div className="mobile-cell-value"><b className={`price sale-price sale-${product.salePriceMode}`}>{salePolicy.main}</b><small>{salePolicy.sub}</small></div></td>
-                <td data-label="마진율" className="catalog-margin-cell">
-                  <div className="mobile-cell-value">
-                    {margin
-                      ? <><b className={`margin-rate${margin.rate < 0 ? " is-negative" : ""}`}>{formatMarginRate(margin.rate)}</b><small>개당 {formatPrice(margin.amount)}</small></>
-                      : <><b className="margin-rate is-empty">-</b><small>{product.salePriceMode === "autonomous" ? "판매가 자율" : options.length > 1 ? "옵션마다 달라요" : "판매가 미설정"}</small></>}
-                    {/* 마진계산기 팝업을 이 상품 공급가(A단가)·지정 판매가·대표 배송비로 채워 엽니다. */}
-                    <button
-                      type="button"
-                      className="margin-calc-button"
-                      onClick={() => openMarginCalculator({ productId: product.id, name: product.name, aPrice: minimumAPrice, generalPrice: minimumGeneralPrice, salePrice: product.salePriceMode === "fixed" ? product.salePrice : null, shippingOut: policy ? representativeFee(policy) : null })}
-                      aria-label={`${product.name} 마진계산기로 계산하기`}
-                    >
-                      <Calculator size={13} aria-hidden="true" /> 계산
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              {expanded && options.length > 0 && (
-                <tr className="option-detail-row">
-                  <td colSpan={6}>
-                    <div className="option-detail-panel">
-                      <div className="option-detail-heading"><div><span>OPTION PRICE</span><strong>{product.name} 옵션별 공급가</strong></div><small>사이즈와 구성에 따라 단가가 달라집니다.</small></div>
-                      <PublicOptionList product={product} />
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </Fragment>
-          );
-        })}
-      </tbody>
-    </table>
-  );
-}
-
 // 월별 제철상품(월 버튼 · SEASON TIP · "N월 제철" 품목 키워드). 단가표와 신규상품이 함께 씁니다.
 function SeasonMonthFilter({
   products,
@@ -1905,10 +1646,9 @@ export function CatalogHome() {
   const [shippingType, setShippingType] = useState<"all" | ShippingType>("all");
   const [categoryId, setCategoryId] = useState("all");
   const [saleMonth, setSaleMonth] = useState<number | "all">("all");
-  const [catalogPageSize, setCatalogPageSize] = useState(5);
-  useEffect(() => { setCatalogPageSize(readStoredPageSize("public-catalog", 5, 200)); }, []);
+  const [catalogPageSize, setCatalogPageSize] = useState(12);
+  useEffect(() => { setCatalogPageSize(readStoredPageSize("public-catalog", 12, 200)); }, []);
   const [currentPage, setCurrentPage] = useState(1);
-  const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
   const [shippingInfo, setShippingInfo] = useState<{ product: Product; policy?: PublicShippingPolicy } | null>(null);
   const policyById = useMemo(() => new Map((data.shippingPolicies ?? []).map((policy) => [policy.id, policy])), [data.shippingPolicies]);
   // 백과사전 "단가표에서 보기"(/?q=품목명): 필터를 풀고 그 이름으로 찾은 뒤 단가표로 이동합니다.
@@ -2009,11 +1749,14 @@ export function CatalogHome() {
       ))
       && (!normalized || `${product.name} ${product.origin ?? ""} ${category}`.toLowerCase().includes(normalized));
   }), [data.categories, data.products, query, saleMonth, selectedChip, shippingType]);
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / catalogPageSize));
-  const paginatedProducts = useMemo(() => {
+  // 옵션 묶음으로 묶은 상품은 카드 하나로 보여 주므로, 쪽 나누기도 카드 기준입니다.
+  const catalogCards = useMemo(() => buildCatalogCards(filteredProducts, data.products, data.groups), [data.groups, data.products, filteredProducts]);
+  const totalPages = Math.max(1, Math.ceil(catalogCards.length / catalogPageSize));
+  const paginatedCards = useMemo(() => {
     const startIndex = (currentPage - 1) * catalogPageSize;
-    return filteredProducts.slice(startIndex, startIndex + catalogPageSize);
-  }, [catalogPageSize, currentPage, filteredProducts]);
+    return catalogCards.slice(startIndex, startIndex + catalogPageSize);
+  }, [catalogCards, catalogPageSize, currentPage]);
+  const catalogOptionTotal = catalogOptionCount(catalogCards);
   const visiblePageNumbers = useMemo(() => {
     const pageWindowSize = 5;
     let startPage = Math.max(1, currentPage - Math.floor(pageWindowSize / 2));
@@ -2076,10 +1819,10 @@ export function CatalogHome() {
         </section>
         <section className="catalog-panel" id="price-table">
           <div className="section-heading table-heading">
-            <div><span className="section-kicker">PRODUCT LIST</span><h2>상품 단가표</h2><p>상품 이미지를 누르면 크게 확인할 수 있습니다.</p></div>
+            <div><span className="section-kicker">PRODUCT LIST</span><h2>상품 단가표</h2><p>상품을 누르면 옵션별 공급가·최근 7일 가격 흐름·상품 안내를 한 번에 볼 수 있습니다.</p></div>
             <div className="catalog-table-tools">
-              <span className="result-count">총 {filteredProducts.length}개 상품</span>
-              <PageSizeInput value={catalogPageSize} onChange={setCatalogPageSize} label="페이지당 상품 수" suffix="개" max={200} presets={[5, 10, 20, 30, 50, 100]} storageKey="public-catalog" className="page-size-control" />
+              <span className="result-count">총 {catalogCards.length.toLocaleString("ko-KR")}개 상품{catalogOptionTotal > catalogCards.length && <small> · 옵션 {catalogOptionTotal.toLocaleString("ko-KR")}개</small>}</span>
+              <PageSizeInput value={catalogPageSize} onChange={setCatalogPageSize} label="페이지당 상품 수" suffix="개" max={200} presets={[8, 12, 20, 40, 80]} storageKey="public-catalog" className="page-size-control" />
             </div>
           </div>
           <div className="filter-toolbar">
@@ -2098,8 +1841,8 @@ export function CatalogHome() {
           </div>
           <SeasonMonthFilter products={data.products} categories={data.categories} saleMonth={saleMonth} onSaleMonth={setSaleMonth} currentMonth={currentMonth} query={query} onQuery={setQuery} />
           <div className="order-legend" aria-label="주문 가능 여부 안내">
-            <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 행 · 판매중(지금 주문 가능)</span>
-            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 분홍색 행 · 품절 또는 시즌 종료(주문 불가)</span>
+            <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 카드 · 판매중(지금 주문 가능)</span>
+            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 분홍색 카드 · 품절 또는 시즌 종료(주문 불가)</span>
           </div>
           {fullLoadFailed && data.isPartial && (
             <div className="catalog-partial-warning" role="status">
@@ -2108,12 +1851,11 @@ export function CatalogHome() {
             </div>
           )}
           <div className="catalog-table-wrap">
-            <CatalogProductTable
-              products={paginatedProducts}
+            <CatalogProductGrid
+              cards={paginatedCards}
               categories={data.categories}
               policyById={policyById}
               currentMonth={currentMonth}
-              onImage={setImagePreview}
               onShipping={setShippingInfo}
             />
             {catalogLoading ? <div className="catalog-loading-state"><div className="spinner" /><strong>최신 상품을 불러오고 있습니다.</strong><span>이전 상품 대신 현재 데이터만 표시합니다.</span></div> : filteredProducts.length === 0 && <div className="empty-state"><PackageSearch size={30} /><strong>조건에 맞는 상품이 없습니다.</strong><span>검색어나 카테고리를 변경해 주세요.</span></div>}
@@ -2121,8 +1863,8 @@ export function CatalogHome() {
           {totalPages > 1 && (
             <div className="catalog-pagination">
               <span className="catalog-pagination-summary">
-                {(currentPage - 1) * catalogPageSize + 1}-{Math.min(currentPage * catalogPageSize, filteredProducts.length)}
-                <small> / 총 {filteredProducts.length}개</small>
+                {(currentPage - 1) * catalogPageSize + 1}-{Math.min(currentPage * catalogPageSize, catalogCards.length)}
+                <small> / 총 {catalogCards.length}개</small>
               </span>
               <nav aria-label="상품 단가표 페이지">
                 <button
@@ -2182,7 +1924,6 @@ export function CatalogHome() {
           )}
         </section>
       </main>
-      {imagePreview && <ImageModal src={imagePreview.src} alt={imagePreview.alt} onClose={() => setImagePreview(null)} />}
       {shippingInfo && <ShippingInfoModal product={shippingInfo.product} policy={shippingInfo.policy} onClose={() => setShippingInfo(null)} />}
     </PageFrame>
   );
@@ -2494,10 +2235,9 @@ export function NewProductsPage() {
   // 처음 들어오면 "오늘" 탭(한국 날짜)을 엽니다.
   const [pickedDay, setPickedDay] = useState("");
   const [saleMonth, setSaleMonth] = useState<number | "all">("all");
-  const [pageSize, setPageSize] = useState(10);
-  useEffect(() => { setPageSize(readStoredPageSize("public-new-products", 10, 200)); }, []);
+  const [pageSize, setPageSize] = useState(12);
+  useEffect(() => { setPageSize(readStoredPageSize("public-new-products", 12, 200)); }, []);
   const [page, setPage] = useState(1);
-  const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
   const [shippingInfo, setShippingInfo] = useState<{ product: Product; policy?: PublicShippingPolicy } | null>(null);
   const policyById = useMemo(() => new Map((data.shippingPolicies ?? []).map((policy) => [policy.id, policy])), [data.shippingPolicies]);
   const categoryNameById = useMemo(() => new Map(data.categories.map((category) => [category.id, category.name])), [data.categories]);
@@ -2546,9 +2286,11 @@ export function NewProductsPage() {
     });
     return [...counts.entries()].sort((first, second) => second[1] - first[1]).slice(0, 6);
   }, [categoryNameById, visibleProducts]);
-  const totalPages = Math.max(1, Math.ceil(visibleProducts.length / pageSize));
+  // 옵션 묶음으로 묶은 신규상품은 카드 하나로(옵션은 묶음 전체) 보여 주고, 쪽 나누기도 카드 기준입니다.
+  const newProductCards = useMemo(() => buildCatalogCards(visibleProducts, data.products, data.groups), [data.groups, data.products, visibleProducts]);
+  const totalPages = Math.max(1, Math.ceil(newProductCards.length / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const pagedProducts = useMemo(() => visibleProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize), [currentPage, pageSize, visibleProducts]);
+  const pagedCards = useMemo(() => newProductCards.slice((currentPage - 1) * pageSize, currentPage * pageSize), [currentPage, newProductCards, pageSize]);
   useEffect(() => { setPage(1); }, [categoryId, normalizedQuery, pageSize, saleMonth, selectedDay, shippingType]);
   const currentMonth = today ? seoulMonth(today) : 0;
   const selectedLabel = selectedDay === "all" ? `최근 ${settings.days}일` : selectedDay === todayKey ? "오늘" : shortDayLabel(selectedDay);
@@ -2570,10 +2312,10 @@ export function NewProductsPage() {
         </div>
         <section className="catalog-panel" id="new-product-table">
           <div className="section-heading table-heading">
-            <div><span className="section-kicker">NEW PRODUCTS</span><h2>날짜별 신규상품</h2><p>단가표와 같은 형식으로 보여 줍니다. 상품 이미지를 누르면 크게 확인할 수 있습니다.</p></div>
+            <div><span className="section-kicker">NEW PRODUCTS</span><h2>날짜별 신규상품</h2><p>단가표와 같은 카드로 보여 줍니다. 상품을 누르면 옵션별 공급가와 가격 흐름을 볼 수 있습니다.</p></div>
             <div className="catalog-table-tools">
               <span className="result-count">{selectedLabel} {visibleProducts.length.toLocaleString("ko-KR")}개</span>
-              <PageSizeInput value={pageSize} onChange={setPageSize} label="페이지당 상품 수" suffix="개" max={200} presets={[5, 10, 20, 30, 50, 100]} storageKey="public-new-products" className="page-size-control" />
+              <PageSizeInput value={pageSize} onChange={setPageSize} label="페이지당 상품 수" suffix="개" max={200} presets={[8, 12, 20, 40, 80]} storageKey="public-new-products" className="page-size-control" />
             </div>
           </div>
           {dayKeys.length > 0 && (
@@ -2611,16 +2353,15 @@ export function NewProductsPage() {
           )}
           <SeasonMonthFilter products={newProducts} categories={data.categories} saleMonth={saleMonth} onSaleMonth={setSaleMonth} currentMonth={currentMonth} query={query} onQuery={setQuery} />
           <div className="order-legend" aria-label="주문 가능 여부 안내">
-            <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 행 · 판매중(지금 주문 가능)</span>
-            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 분홍색 행 · 품절 또는 시즌 종료(주문 불가)</span>
+            <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 카드 · 판매중(지금 주문 가능)</span>
+            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 분홍색 카드 · 품절 또는 시즌 종료(주문 불가)</span>
           </div>
           <div className="catalog-table-wrap">
-            <CatalogProductTable
-              products={pagedProducts}
+            <CatalogProductGrid
+              cards={pagedCards}
               categories={data.categories}
               policyById={policyById}
               currentMonth={currentMonth}
-              onImage={setImagePreview}
               onShipping={setShippingInfo}
               renderBadge={(product) => {
                 const day = createdDayKey(product.createdAt);
@@ -2636,7 +2377,6 @@ export function NewProductsPage() {
           <PageNumbers page={currentPage} totalPages={totalPages} onChange={changePage} label="신규상품 페이지" />
         </section>
       </main>
-      {imagePreview && <ImageModal src={imagePreview.src} alt={imagePreview.alt} onClose={() => setImagePreview(null)} />}
       {shippingInfo && <ShippingInfoModal product={shippingInfo.product} policy={shippingInfo.policy} onClose={() => setShippingInfo(null)} />}
     </PageFrame>
   );

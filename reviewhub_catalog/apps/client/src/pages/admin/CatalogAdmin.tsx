@@ -39,7 +39,6 @@ import {
   X,
   LayoutDashboard,
   DatabaseBackup,
-  ListOrdered,
   Sparkles,
   Eye,
   EyeOff,
@@ -49,7 +48,8 @@ import {
   Mail,
   Video,
   Inbox,
-  KeyRound
+  KeyRound,
+  Layers
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
@@ -60,6 +60,7 @@ import { isSupplierAccount } from "@/components/auth/AdminGuard";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
 import { authClient, clearAuthToken } from "@/lib/auth";
 import { SUPPLY_STATUS_LABELS, supplyStatus, type SupplyStatus } from "@/lib/supply-status";
+import { GroupTag, ProductGroupField, suggestGroupFor, useGroupMemberships } from "./product-group-tools";
 import { PARTNER_CONTRACT_LABELS, PARTNER_CONTRACT_TYPES, PARTNER_STAGES, PARTNER_STAGE_LABELS, partnerContractSummary, type PartnerContractType, type PartnerStage } from "@repo/shared/partner-deal";
 import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_GUIDE_SETTING_KEY, SUPPLIER_TERM_LABELS, SUPPLIER_VIDEO_GROUPS, hasSupplierDemo, parseSupplierGuide, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideTerms, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
 import { SELLER_GUIDE_SETTING_KEY, SELLER_VIDEO_GROUPS, hasSellerDemo, parseSellerGuide, type SellerGuideSettings } from "@repo/shared/seller-guide";
@@ -71,6 +72,9 @@ type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "
 // 공급사 센터 관련 관리자 화면(변경 요청 검토 · 공급사 계정 창)은 처음 열 때만 불러옵니다.
 const SupplierRequestsAdmin = lazy(() => import("./SupplierPortalAdmin").then((module) => ({ default: module.SupplierRequestsAdmin })));
 const SupplierAccountModal = lazy(() => import("./SupplierPortalAdmin").then((module) => ({ default: module.SupplierAccountModal })));
+// 옵션 묶음 관리(migration 033): 페이지와 "옵션 묶기" 창은 필요할 때만 불러옵니다.
+const ProductGroupsAdmin = lazy(() => import("./ProductGroupsAdmin").then((module) => ({ default: module.ProductGroupsAdmin })));
+const SelectionGroupModal = lazy(() => import("./ProductGroupsAdmin").then((module) => ({ default: module.SelectionGroupModal })));
 type ProductOptionDraft = Pick<ProductOption, "id" | "name" | "costPrice" | "aPrice" | "generalPrice" | "salePrice" | "salePriceMode" | "isSoldOut" | "sortOrder">;
 type BulkWorkbookPreview = {
   totalRows: number;
@@ -182,7 +186,6 @@ const emptyData: AdminCatalogData = { categories: [], products: [], notices: [],
 // loader again.
 const adminDataCache = new Map<AdminSection, AdminCatalogData>();
 let adminHomeCache: AdminHomeData | null = null;
-let bundleGroupsCache: { groups: ProductGroup[]; storedAt: number } | null = null;
 const fallbackGuide: GuideContent = {
   highlights: [
     "두고푸드 상품은 상품별 마감시간을 기준으로 순차 출고됩니다.",
@@ -564,6 +567,7 @@ export function AdminLoginPage() {
 const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes; group?: "product" | "transfer" | "openapi" }> = [
   { section: "home", label: "홈", icon: LayoutDashboard },
   { section: "products", label: "상품 리스트", icon: Boxes, group: "product" },
+  { section: "bundles", label: "옵션 묶음 관리", icon: Layers, group: "product" },
   { section: "newProducts", label: "신규상품 관리", icon: Sparkles, group: "product" },
   { section: "sort", label: "상품 진열순서 설정", icon: ArrowDown, group: "product" },
   { section: "categories", label: "상품 카테고리", icon: Tags, group: "product" },
@@ -819,7 +823,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
             <>
               {section === "home" && <AdminHome data={homeData} />}
               {section === "products" && <ProductsAdmin data={data} refresh={refresh} updateData={setData} />}
-              {section === "bundles" && <BundlesAdmin data={data} />}
+              {section === "bundles" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>옵션 묶음을 불러오는 중…</span></div>}><ProductGroupsAdmin /></Suspense>}
               {section === "newProducts" && <NewProductsAdmin data={data} refresh={refresh} />}
               {section === "sort" && <ProductsAdmin data={data} refresh={refresh} updateData={setData} sortOnly />}
               {section === "changes" && <ChangeQueueAdmin mode="changes" />}
@@ -948,6 +952,11 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const [page, setPage] = useState(1);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(() => new Set());
   const [bulkEditOpen, setBulkEditOpen] = useState<false | "all" | "seasonInfo">(false);
+  // 옵션 묶음(migration 033): 상품마다 들어 있는 묶음, "옵션 묶기" 창, 상품 등록 창의 묶음 선택
+  const groupTools = useGroupMemberships();
+  const [groupSelectionOpen, setGroupSelectionOpen] = useState(false);
+  const [editingGroupId, setEditingGroupId] = useState("");
+  const [originalGroupId, setOriginalGroupId] = useState("");
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [editing, setEditing] = useState<ProductDraft | null>(null);
   // "복사"로 연 신규 등록 창이면 원본 상품명·상품코드를 기억해 안내합니다.
@@ -1289,6 +1298,9 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const startEdit = (product?: Product) => {
     setCopySource(null);
     setEditing(product ? productDraft(product) : { ...blankProduct, categoryId: data.categories[0]?.id || "" });
+    const groupId = product ? groupTools.memberships[product.id]?.groupId ?? "" : "";
+    setEditingGroupId(groupId);
+    setOriginalGroupId(groupId);
   };
   // 복사: 원본 값을 그대로 채운 "신규 상품 등록" 창을 엽니다. 상품코드는 중복될 수 없어 "원본코드-1"(비어 있는 번호)을 제안합니다.
   const suggestCopyCode = (code: string) => {
@@ -1308,11 +1320,15 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const startCopy = (product: Product) => {
     setCopySource({ name: product.name, productCode: product.productCode || "" });
     setEditing(toCopyDraft(productDraft(product)));
+    // 복사본은 원본과 같은 묶음(같은 상품의 다른 사이즈)에 넣도록 미리 골라 둡니다.
+    setEditingGroupId(groupTools.memberships[product.id]?.groupId ?? "");
+    setOriginalGroupId("");
   };
   const copyEditing = () => {
     if (!editing) return;
     setCopySource({ name: editing.name, productCode: editing.productCode });
     setEditing(toCopyDraft(editing));
+    setOriginalGroupId("");
     toast.success("복사본을 만들었습니다. 상품코드를 확인한 뒤 저장하면 새 상품으로 등록됩니다.");
     window.requestAnimationFrame(() => document.querySelector(".editor-panel")?.scrollTo({ top: 0, behavior: "smooth" }));
   };
@@ -1333,6 +1349,15 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         body: JSON.stringify(editing)
       });
       const payload = await readData<{ product: Product }>(response);
+      // 옵션 묶음을 바꿨으면 상품 저장 뒤에 묶음에 넣거나 뺍니다(실패해도 상품 저장은 그대로).
+      if (groupTools.ready && editingGroupId !== originalGroupId) {
+        try {
+          await readData(await apiFetch("/catalog/admin/groups/assign", { method: "POST", silent: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIds: [payload.product.id], groupId: editingGroupId || null }) }));
+          void groupTools.reload();
+        } catch (groupError) {
+          toast.error(groupError instanceof Error ? `상품은 저장했지만 옵션 묶음을 바꾸지 못했습니다: ${groupError.message}` : "상품은 저장했지만 옵션 묶음을 바꾸지 못했습니다.");
+        }
+      }
       updateData((current) => {
         const exists = current.products.some((product) => product.id === payload.product.id);
         const products = exists
@@ -1622,7 +1647,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             <button type="button" disabled={quickBusy} onClick={() => void quickBulkUpdate({ isVisible: false }, "숨김")}>숨김</button>
             <button type="button" className="bulk-season-quick" disabled={quickBusy} onClick={() => setBulkEditOpen("seasonInfo")}><CalendarDays size={15} /> 제철 월·상품 안내</button>
           </div>
-          <div className="bulk-main-actions"><button type="button" className="bulk-delete" onClick={() => void bulkDelete()} disabled={quickBusy}><Trash2 size={15} /> 선택 삭제</button><button type="button" className="primary-action" onClick={() => setBulkEditOpen("all")} disabled={quickBusy}><Pencil size={15} /> 상세 일괄 변경</button><button type="button" onClick={() => setSelectedProductIds(new Set())} disabled={quickBusy}>선택 해제</button></div>
+          <div className="bulk-main-actions">{groupTools.ready && <button type="button" className="bulk-group-action" onClick={() => setGroupSelectionOpen(true)} disabled={quickBusy} title="고른 상품을 공개 단가표에서 카드 하나의 옵션으로 묶습니다"><Layers size={15} /> 옵션 묶기</button>}<button type="button" className="bulk-delete" onClick={() => void bulkDelete()} disabled={quickBusy}><Trash2 size={15} /> 선택 삭제</button><button type="button" className="primary-action" onClick={() => setBulkEditOpen("all")} disabled={quickBusy}><Pencil size={15} /> 상세 일괄 변경</button><button type="button" onClick={() => setSelectedProductIds(new Set())} disabled={quickBusy}>선택 해제</button></div>
         </div>}
         <div className="admin-table-wrap product-admin-table-wrap" id="admin-product-list"><table className="admin-table product-admin-table"><thead><tr><th className="product-select-column"><label className="product-select-control"><input type="checkbox" ref={(element) => { if (element) element.indeterminate = selectedOnCurrentPage > 0 && !allCurrentPageSelected; }} checked={allCurrentPageSelected} onChange={toggleCurrentPageSelection} aria-label="현재 페이지 상품 전체 선택" /><span>선택</span></label></th><th>상품정보</th><th>노출순서</th><th>배송/카테고리</th><th>판매기간</th><th>매입처</th><th>원가</th><th>A단가</th><th>일반공급가</th><th>판매가</th><th>마진(1개)</th><th>상태</th><th>관리</th></tr></thead><tbody>
           {pagedProducts.map((product) => {
@@ -1655,7 +1680,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
               <Fragment key={product.id}>
                 <tr className={`${expanded ? "expanded " : ""}${rowStatus !== "on_sale" ? `is-unavailable is-${rowStatus}` : ""}`.trim()}>
                   <td className="product-select-cell" data-label="선택"><label className="product-select-control"><input type="checkbox" checked={selectedProductIds.has(product.id)} onChange={() => toggleProductSelection(product.id)} aria-label={`${product.name} 선택`} /><span>선택</span></label></td>
-                  <td className="admin-product-primary"><div className="admin-product-cell">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={20} /></span>}<div className="admin-product-copy"><strong>{product.name}</strong><small>{product.productCode || product.id} · {product.origin || "-"}</small>{options.length > 0 && <button type="button" className="admin-option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? "옵션 접기" : `옵션 ${options.length}개 보기`} <ChevronRight size={14} /></button>}</div></div>{optionPanel && <div className="admin-inline-options">{optionPanel}</div>}</td>
+                  <td className="admin-product-primary"><div className="admin-product-cell">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={20} /></span>}<div className="admin-product-copy"><strong>{product.name}</strong><small>{product.productCode || product.id} · {product.origin || "-"}</small><GroupTag membership={groupTools.memberships[product.id]} />{options.length > 0 && <button type="button" className="admin-option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? "옵션 접기" : `옵션 ${options.length}개 보기`} <ChevronRight size={14} /></button>}</div></div>{optionPanel && <div className="admin-inline-options">{optionPanel}</div>}</td>
                   <td data-label="노출순서"><strong className="display-order-number">{productOrderMap.get(product.id) ?? "-"}</strong></td>
                   <td data-label="배송·카테고리"><strong>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</strong><small>{category?.name || "-"}</small></td>
                   <td data-label="판매기간"><strong>{seasonApplies(product, category) ? product.isAlwaysOnSale ? "상시 판매" : `${product.saleStartMonth || "-"}월 ~ ${product.saleEndMonth || "-"}월` : "상시"}</strong><small>{seasonApplies(product, category) ? product.isAlwaysOnSale ? "연중 판매" : "월별 제철상품" : "제철 월 미지정"}</small></td>
@@ -1760,7 +1785,20 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <label>택배사<input value={editing.courier} onChange={(event) => setEditing({ ...editing, courier: event.target.value })} /></label>
         <label>포장방법<input value={editing.packaging} onChange={(event) => setEditing({ ...editing, packaging: event.target.value })} /></label>
         <label className="full">참고사항<textarea rows={4} value={editing.notes} onChange={(event) => setEditing({ ...editing, notes: event.target.value })} /></label>
+        {groupTools.ready && <ProductGroupField value={editingGroupId} onChange={setEditingGroupId} groups={groupTools.groups} suggestion={suggestGroupFor(editing, data.products.filter((product) => product.id !== editing.id), groupTools.memberships)} />}
       </div><div className="editor-footer">{editing.id && <button type="button" className="editor-copy-button" onClick={copyEditing} disabled={saving} title="지금 입력한 값 그대로 새 상품으로 복사합니다(원본은 바뀌지 않음)"><Copy size={16} /> 복사</button>}<button type="button" onClick={closeEditor} disabled={saving}>취소</button><button className="primary-action" type="submit" disabled={saving}><Save size={16} /> {saving ? "빠르게 저장 중…" : copySource && !editing.id ? "복사본 저장하기" : "저장하기"}</button></div></form></div>}
+      {groupSelectionOpen && (
+        <Suspense fallback={null}>
+          <SelectionGroupModal
+            products={data.products.filter((product) => selectedProductIds.has(product.id))}
+            groups={groupTools.groups}
+            memberships={groupTools.memberships}
+            categories={data.categories}
+            onClose={() => setGroupSelectionOpen(false)}
+            onDone={() => { setGroupSelectionOpen(false); setSelectedProductIds(new Set()); void groupTools.reload(); }}
+          />
+        </Suspense>
+      )}
       {bulkEditOpen && <BulkEditModal ids={Array.from(selectedProductIds)} categories={data.categories} shippingPolicies={shippingPolicies} suppliers={suppliers} preset={bulkEditOpen === "seasonInfo" ? "seasonInfo" : undefined} onClose={() => setBulkEditOpen(false)} onDone={() => { setBulkEditOpen(false); setSelectedProductIds(new Set()); void refresh(true); }} />}
       {bulkPreview && <div className="editor-overlay"><section className="excel-preview-panel"><div className="editor-header"><div><span>EXCEL PREVIEW</span><h2>상품 일괄변경 미리보기</h2></div><button type="button" onClick={() => { setBulkPreview(null); setBulkFile(null); }} aria-label="닫기"><X size={21} /></button></div>
         <div className="excel-preview-summary"><article><span>읽은 행</span><strong>{bulkPreview.totalRows}</strong></article><article><span>매칭 행</span><strong>{bulkPreview.matchedRows}</strong></article><article><span>변경 상품</span><strong>{bulkPreview.affectedProducts}</strong></article><article><span>변경 항목</span><strong>{bulkPreview.changes.length}</strong></article>{bulkPreview.newProducts ? <article><span>신규 상품</span><strong>{bulkPreview.newProducts}</strong></article> : null}{bulkPreview.restoredProducts ? <article><span>복원 상품</span><strong>{bulkPreview.restoredProducts}</strong></article> : null}</div>
@@ -1774,188 +1812,6 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
       </section></div>}
     </>
   );
-}
-
-function BundlesAdmin({ data }: { data: AdminCatalogData }) {
-  const cachedProductData = adminDataCache.get("products");
-  const [groups, setGroups] = useState<ProductGroup[]>(bundleGroupsCache?.groups ?? []);
-  const [products, setProducts] = useState<Product[]>(Array.isArray(cachedProductData?.products) && cachedProductData.products.length > 0
-    ? cachedProductData.products
-    : Array.isArray(data.products) ? data.products : []);
-  const [productsPartial, setProductsPartial] = useState(Boolean(cachedProductData?.isPartial || data.isPartial));
-  const [loading, setLoading] = useState(() => !bundleGroupsCache);
-  const [productsLoading, setProductsLoading] = useState(false);
-  const [categories, setCategories] = useState<Category[]>(Array.isArray(data.categories) ? data.categories : []);
-  const [editing, setEditing] = useState<ProductGroup | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [description, setDescription] = useState("");
-  const [query, setQuery] = useState("");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [candidatePageSize, setCandidatePageSize] = useState(30);
-  const [candidatePage, setCandidatePage] = useState(1);
-  const [imageBusy, setImageBusy] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
-  const [sortItems, setSortItems] = useState<ProductGroup[]>([]);
-  const [sortSaving, setSortSaving] = useState(false);
-  const bundleImageInputRef = useRef<HTMLInputElement>(null);
-
-  const load = async (silent = false) => {
-    if (!silent) setLoading(true);
-    try {
-      const response = await apiFetch("/catalog/admin/groups");
-      const payload = await readData<{ groups?: ProductGroup[] }>(response);
-      const nextGroups = Array.isArray(payload.groups) ? payload.groups : [];
-      const sortedGroups = [...nextGroups].sort((first, second) => first.displayOrder - second.displayOrder || first.name.localeCompare(second.name));
-      bundleGroupsCache = { groups: sortedGroups, storedAt: Date.now() };
-      setGroups(sortedGroups);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "묶음상품을 불러오지 못했습니다.");
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  };
-  useEffect(() => {
-    void load(Boolean(bundleGroupsCache));
-  }, []);
-  useEffect(() => {
-    if (!formOpen) return;
-    if (categories.length === 0) {
-      void apiFetch("/catalog/admin/categories/summary", { silent: true }).then(async (response) => {
-        if (!response.ok) return;
-        const payload = await readData<{ categories: Category[] }>(response);
-        setCategories(Array.isArray(payload.categories) ? payload.categories : []);
-      }).catch(() => undefined);
-    }
-    if ((products.length === 0 || productsPartial) && !productsLoading) {
-      setProductsLoading(true);
-      void apiFetch("/catalog/admin/products", { silent: true }).then(async (response) => {
-        if (!response.ok) return;
-        const payload = await readData<AdminCatalogData>(response);
-        const nextProducts = Array.isArray(payload.products) ? payload.products : [];
-        setProducts(nextProducts);
-        setProductsPartial(Boolean(payload.isPartial));
-        adminDataCache.set("products", payload);
-      }).catch(() => undefined).finally(() => setProductsLoading(false));
-    }
-  }, [categories.length, formOpen, products.length, productsLoading, productsPartial]);
-  const open = (group?: ProductGroup) => {
-    setFormOpen(true);
-    setEditing(group ?? null);
-    setName(group?.name ?? "");
-    setImageUrl(group?.imageUrl ?? "");
-    setCategoryId(group?.categoryId ?? "");
-    setDescription(group?.description ?? "");
-    setQuery("");
-    setCandidatePage(1);
-    setSelectedIds(group?.items.map((item) => item.productId) ?? []);
-  };
-  const uploadBundleImage = async (file: File) => {
-    if (!["image/jpeg", "image/png"].includes(file.type)) {
-      toast.error("대표 이미지는 JPEG 또는 PNG만 업로드할 수 있습니다.");
-      return;
-    }
-    if (file.size >= 5 * 1024 * 1024) {
-      toast.error("대표 이미지는 5MB 미만만 업로드할 수 있습니다.");
-      return;
-    }
-    setImageBusy(true);
-    try {
-      const form = new FormData();
-      form.set("file", file);
-      const response = await apiFetch("/catalog/admin/groups/image-upload", { method: "POST", body: form });
-      const payload = await readData<{ file: { downloadUrl: string } }>(response);
-      setImageUrl(payload.file.downloadUrl);
-      toast.success("묶음상품 대표 이미지를 업로드했습니다.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "대표 이미지 업로드에 실패했습니다.");
-    } finally {
-      setImageBusy(false);
-      if (bundleImageInputRef.current) bundleImageInputRef.current.value = "";
-    }
-  };
-  const save = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!name.trim()) return;
-    const response = await apiFetch(editing ? `/catalog/admin/groups/${editing.id}` : "/catalog/admin/groups", {
-      method: editing ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, imageUrl: imageUrl || null, categoryId: categoryId || null, description: description || null, productIds: selectedIds, isVisible: true })
-    });
-    if (!response.ok) return;
-    toast.success(editing ? "묶음상품을 수정했습니다." : "묶음상품을 등록했습니다.");
-    setEditing(null); setFormOpen(false); setImageUrl("");
-    await load();
-  };
-  const remove = async (group: ProductGroup) => {
-    if (!window.confirm(`${group.name} 묶음상품을 삭제할까요?`)) return;
-    const response = await apiFetch(`/catalog/admin/groups/${group.id}`, { method: "DELETE" });
-    if (response.ok) { toast.success("묶음상품을 삭제했습니다."); await load(); }
-  };
-  const filteredCandidates = products.filter((product) => {
-    const normalized = query.trim().toLowerCase();
-    return !normalized || `${product.name} ${product.productCode ?? ""}`.toLowerCase().includes(normalized);
-  });
-  const candidateTotalPages = Math.max(1, Math.ceil(filteredCandidates.length / candidatePageSize));
-  const visibleCandidates = filteredCandidates.slice((candidatePage - 1) * candidatePageSize, candidatePage * candidatePageSize);
-  const allFilteredSelected = filteredCandidates.length > 0 && filteredCandidates.every((product) => selectedIds.includes(product.id));
-  useEffect(() => {
-    setCandidatePage((current) => Math.min(current, candidateTotalPages));
-  }, [candidateTotalPages]);
-  const toggleProduct = (id: string) => setSelectedIds((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
-  const toggleAllCandidates = () => setSelectedIds((current) => allFilteredSelected
-    ? current.filter((id) => !filteredCandidates.some((product) => product.id === id))
-    : Array.from(new Set([...current, ...filteredCandidates.map((product) => product.id)])));
-  const openSortManager = () => {
-    setSortItems([...groups]);
-    setSortOpen(true);
-  };
-  const moveGroup = (groupId: string, direction: "up" | "down") => {
-    setSortItems((current) => {
-      const sourceIndex = current.findIndex((group) => group.id === groupId);
-      if (sourceIndex < 0) return current;
-      const targetIndex = direction === "up" ? sourceIndex - 1 : sourceIndex + 1;
-      if (targetIndex < 0 || targetIndex >= current.length) return current;
-      const next = [...current];
-      [next[sourceIndex], next[targetIndex]] = [next[targetIndex], next[sourceIndex]];
-      return next;
-    });
-  };
-  const saveGroupOrder = async () => {
-    const items = sortItems.map((group, index) => ({ id: group.id, displayOrder: (index + 1) * 10 }));
-    setSortSaving(true);
-    try {
-      const response = await apiFetch("/catalog/admin/groups/display-order", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items })
-      });
-      if (!response.ok) return;
-      toast.success("묶음상품 순위를 저장했습니다.");
-      setSortOpen(false);
-      await load();
-    } finally {
-      setSortSaving(false);
-    }
-  };
-  return <><div className="admin-page-heading"><div><span>BUNDLE PRODUCTS</span><h1>묶음상품 리스트</h1><p>일반상품을 여러 개 묶어 대표 썸네일과 함께 관리합니다.</p></div><div className="admin-heading-actions"><button className="display-order-action" type="button" onClick={openSortManager}><ListOrdered size={16} /> 상품 순위 변경</button><button className="primary-action" type="button" onClick={() => open()}><Plus size={16} /> 묶음상품 등록</button></div></div>
-    {loading ? <div className="admin-loading inline"><div className="spinner" /><span>묶음상품을 불러오는 중…</span></div> : <div className="bundle-grid">{groups.map((group, index) => {
-      const validItems = group.items.filter((item) => item.product);
-      const groupSupplyPrices = validItems.flatMap((item) => {
-        const options = item.product?.options ?? [];
-        return options.length > 0
-          ? options.map((option) => effectiveAPrice(option.aPrice, option.generalPrice))
-          : [effectiveAPrice(item.product?.aPrice, item.product?.generalPrice ?? 0)];
-      });
-      const lowestGroupSupplyPrice = groupSupplyPrices.length > 0 ? Math.min(...groupSupplyPrices) : null;
-      const groupImage = group.imageUrl || validItems[0]?.product?.imageUrl || "";
-      return <article className="bundle-card" key={group.id}><div className="bundle-thumb">{groupImage ? <img src={groupImage} alt="" loading="lazy" /> : <PackagePlus size={30} />}<div className="bundle-thumb-overlay"><div className="bundle-parent-line"><span>그룹상품 {index + 1}</span><small>일반상품 {group.items.length}개</small></div><h2>{group.name}</h2>{lowestGroupSupplyPrice !== null && <div className="bundle-price-summary">대표 공급가 최저 <strong>{formatPrice(lowestGroupSupplyPrice)}</strong></div>}</div></div><div className="bundle-card-body"><div className="bundle-card-summary"><span>묶음상품명</span><strong>{group.name}</strong><small>매핑된 일반상품 <b>{group.items.length.toLocaleString("ko-KR")}개</b></small></div><p>{group.description || "대표 상품을 선택해 묶음으로 관리합니다."}</p><div className="bundle-item-strip">{group.items.slice(0, 5).map((item) => <img key={item.id} src={item.product?.imageUrl || "/assets/products/placeholder.webp"} alt="" loading="lazy" />)}</div>{validItems.length !== group.items.length && <div className="bundle-missing-item">연결된 상품 정보 일부를 불러오지 못했습니다.</div>}<div className="bundle-card-actions"><button type="button" onClick={() => open(group)}><Pencil size={14} /> 수정</button><button type="button" onClick={() => void remove(group)}><Trash2 size={14} /> 삭제</button></div></div></article>;
-    })}{groups.length === 0 && <div className="empty-state"><PackagePlus size={28} /><strong>등록된 묶음상품이 없습니다.</strong><span>일반상품을 묶어 첫 그룹상품을 만들어 보세요.</span></div>}</div>}
-    {formOpen ? <div className="editor-overlay" role="presentation"><form className="editor-panel bundle-editor" onSubmit={save}><div className="editor-header"><div><span>BUNDLE EDITOR</span><h2>{editing ? "묶음상품 수정" : "묶음상품 등록"}</h2></div><button type="button" onClick={() => { setEditing(null); setFormOpen(false); setName(""); setImageUrl(""); }} aria-label="닫기"><X size={20} /></button></div><div className="editor-grid"><label>그룹상품명<input value={name} onChange={(event) => setName(event.target.value)} required /></label><label>대표 카테고리<select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">선택 안 함</option>{categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label><label className="full bundle-image-field">대표 이미지<input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://... 또는 아래에서 업로드" /><span className="image-upload-row"><button type="button" onClick={() => bundleImageInputRef.current?.click()} disabled={imageBusy}><Upload size={14} /> {imageBusy ? "업로드 중…" : "JPEG/PNG 업로드"}</button><input ref={bundleImageInputRef} type="file" accept="image/jpeg,image/png" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadBundleImage(file); }} />{imageUrl && <img src={imageUrl} alt="묶음상품 대표 이미지 미리보기" />}</span><small>발주오라의 상품 이미지처럼 대표 썸네일로 사용합니다. 상세페이지 입력은 제공하지 않습니다.</small></label><label className="full">설명<textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} /></label><label className="full">일반상품 검색<input value={query} onChange={(event) => { setQuery(event.target.value); setCandidatePage(1); }} placeholder="상품명 또는 상품코드" /></label><div className="bundle-picker-toolbar full"><label className="bundle-select-all"><input type="checkbox" checked={allFilteredSelected} onChange={toggleAllCandidates} disabled={filteredCandidates.length === 0} /> 전체 선택</label><span>검색 결과 {productsLoading ? "불러오는 중…" : `${filteredCandidates.length.toLocaleString("ko-KR")}개 · 현재 ${visibleCandidates.length}개`}</span><label>페이지당<select aria-label="묶음상품 일반상품 페이지당 표시 수" value={candidatePageSize} onChange={(event) => { setCandidatePageSize(Number(event.target.value)); setCandidatePage(1); }}><option value={10}>10개</option><option value={20}>20개</option><option value={30}>30개</option></select></label></div><div className="bundle-product-picker full">{productsLoading ? <div className="bundle-picker-empty">일반상품 목록을 빠르게 불러오는 중입니다…</div> : visibleCandidates.map((product) => <label key={product.id} className={`bundle-product-option ${selectedIds.includes(product.id) ? "selected" : ""}`}><input type="checkbox" checked={selectedIds.includes(product.id)} onChange={() => toggleProduct(product.id)} /><img src={product.imageUrl || "/assets/products/placeholder.webp"} alt="" loading="lazy" /><span className="bundle-product-main"><strong>{product.name}</strong><small>{product.productCode || product.id}</small></span><span className="bundle-product-prices"><b>공급가 {formatPrice(lowestProductGeneralPrice(product))}</b><b>A단가 {formatPrice(lowestProductAPrice(product))}</b></span></label>)}{!productsLoading && visibleCandidates.length === 0 && <div className="bundle-picker-empty">검색 결과가 없습니다.</div>}</div><div className="bundle-picker-pagination full" aria-label="묶음상품 일반상품 페이지"><button type="button" disabled={candidatePage <= 1} onClick={() => setCandidatePage((current) => current - 1)} aria-label="이전 일반상품 페이지"><ChevronLeft size={15} /></button>{Array.from({ length: candidateTotalPages }, (_, index) => index + 1).slice(0, 7).map((page) => <button type="button" key={page} className={page === candidatePage ? "active" : ""} onClick={() => setCandidatePage(page)}>{page}</button>)}<button type="button" disabled={candidatePage >= candidateTotalPages} onClick={() => setCandidatePage((current) => current + 1)} aria-label="다음 일반상품 페이지"><ChevronRight size={15} /></button></div></div><div className="editor-actions bundle-editor-actions"><span>{selectedIds.length}개 일반상품 선택</span><button type="submit" className="primary-action">저장</button></div></form></div> : null}
-    {sortOpen ? <div className="editor-overlay" role="presentation"><section className="editor-panel bundle-sort-panel" role="dialog" aria-modal="true" aria-labelledby="bundle-sort-title"><div className="editor-header"><div><span>BUNDLE ORDER</span><h2 id="bundle-sort-title">묶음상품 순위 변경</h2><p>위로·아래로 이동한 순서가 공개 화면의 묶음상품 노출 순서가 됩니다.</p></div><button type="button" onClick={() => setSortOpen(false)} aria-label="묶음상품 순위 변경 닫기"><X size={20} /></button></div><div className="bundle-sort-list">{sortItems.map((group, index) => <article key={group.id}><strong className="bundle-sort-rank">{index + 1}</strong><img src={group.imageUrl || group.items[0]?.product?.imageUrl || "/assets/products/placeholder.webp"} alt="" /><div><b>{group.name}</b><small>일반상품 {group.items.length}개</small></div><div className="bundle-sort-controls"><button type="button" onClick={() => moveGroup(group.id, "up")} disabled={index === 0 || sortSaving} aria-label={`${group.name} 위로 이동`}><ArrowUp size={15} /> 위로</button><button type="button" onClick={() => moveGroup(group.id, "down")} disabled={index === sortItems.length - 1 || sortSaving} aria-label={`${group.name} 아래로 이동`}><ArrowDown size={15} /> 아래로</button></div></article>)}{sortItems.length === 0 && <div className="empty-state">등록된 묶음상품이 없습니다.</div>}</div><div className="editor-footer"><button type="button" onClick={() => setSortOpen(false)}>취소</button><button className="primary-action" type="button" onClick={() => void saveGroupOrder()} disabled={sortSaving || sortItems.length === 0}><Save size={16} /> {sortSaving ? "저장 중…" : "순위 저장"}</button></div></section></div> : null}
-  </>;
 }
 
 // 배송 정책: 발주오라 "배송비 정책 등록"과 같은 5가지 유형(고정·무료·금액별·수량별·단위별)으로 관리합니다.
@@ -2605,7 +2461,7 @@ function HistoryAdmin({ data }: { data: AdminCatalogData }) {
               return <section className={`history-group-card ${expanded ? "open" : ""}`} key={section.id}>
                 <button type="button" className="history-group-heading" onClick={() => setExpandedGroups((state) => ({ ...state, [section.id]: !expanded }))} aria-expanded={expanded}>
                   <span className="history-group-image">{section.imageUrl ? <img src={section.imageUrl} alt="" /> : <Boxes size={18} />}</span>
-                  <span><small>{section.isBundle ? "묶음상품" : "일반 상품"}</small><strong>{section.title}</strong><em>{section.histories.length}건의 가격변동</em></span>
+                  <span><small>{section.isBundle ? "옵션 묶음" : "일반 상품"}</small><strong>{section.title}</strong><em>{section.histories.length}건의 가격변동</em></span>
                   <ChevronDown size={18} />
                 </button>
                 {expanded && <div className="history-group-body"><div className="admin-table-wrap history-admin-wrap"><table className="admin-table history-admin-table"><thead><tr><th>변경일시</th><th>상품·옵션</th><th>변경 항목</th><th>이전 가격</th><th>변경 가격</th><th>증감액</th><th>관리자</th></tr></thead><tbody>{section.histories.map(renderHistoryRow)}</tbody></table></div></div>}

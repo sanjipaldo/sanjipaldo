@@ -28,6 +28,8 @@ import { DatabaseError, getDb } from "../_core/db";
 import {
   account,
   categories,
+  productGroupItems,
+  productGroups,
   productOptions,
   products,
   session,
@@ -338,11 +340,19 @@ export async function listSupplierProducts(context: SupplierContext) {
       .from(supplierRequests)
       .where(and(eq(supplierRequests.supplierId, context.supplier.id), eq(supplierRequests.status, "pending"), eq(supplierRequests.kind, "update")));
     const pendingByProduct = new Map(pending.map((row) => [row.productId, row]));
+    // 옵션 묶음(공개 단가표에서 카드 하나로 같이 보이는 상품): 예전부터 있던 칸만 읽어 033 전 DB에서도 됩니다.
+    const groupRows = rows.length === 0 ? [] : await db.select({ productId: productGroupItems.productId, name: productGroups.name })
+      .from(productGroupItems)
+      .innerJoin(productGroups, eq(productGroups.id, productGroupItems.groupId))
+      .where(inArray(productGroupItems.productId, rows.map((row) => row.id)))
+      .catch(() => [] as Array<{ productId: string; name: string }>);
+    const groupByProduct = new Map(groupRows.map((row) => [row.productId, row.name]));
     return {
       products: rows.map((row) => ({
         ...row,
         categoryName: categoryName.get(row.categoryId) ?? null,
-        pendingRequestId: pendingByProduct.get(row.id)?.id ?? null
+        pendingRequestId: pendingByProduct.get(row.id)?.id ?? null,
+        groupName: groupByProduct.get(row.id) ?? null
       }))
     };
   });

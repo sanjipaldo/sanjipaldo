@@ -1,4 +1,5 @@
 import type { PartnerDeal } from "@repo/shared/partner-deal";
+import type { PublicProductGroup } from "@repo/shared/product-groups";
 export type ShippingType = "domestic" | "overseas";
 
 export type Category = {
@@ -253,6 +254,8 @@ export type CatalogData = {
   categories: Category[];
   shippingPolicies?: PublicShippingPolicy[];
   products: Product[];
+  // 옵션 묶음(migration 033): 같은 상품의 사이즈들을 카드 하나 + 옵션 팝업으로 보여 줄 상품 ID 묶음
+  groups?: PublicProductGroup[];
   notices: Notice[];
   priceHistory: PriceHistory[];
   // 공개 단가표 응답은 최근 가격변동 일부만 싣고, 기간 안 전체 건수는 여기에 담습니다.

@@ -63,7 +63,8 @@ import { DEFAULT_BODY_PART, HEALTH_BODY_PARTS, bodyPartConcerns, bodyPartProduct
 import { useSharedCatalog } from "./catalog-cache";
 import { HealthBodyMap } from "./HealthBodyMap";
 import { EncyclopediaFrame, copyText, useMediaQuery } from "./encyclopedia-frame";
-import { CatalogProductTable, ImageModal, ShippingInfoModal, seasonApplies, seoulMonth } from "./PublicCatalog";
+import { ShippingInfoModal, seasonApplies, seoulMonth } from "./PublicCatalog";
+import { CatalogProductGrid, buildCatalogCards } from "./product-cards";
 import type { CatalogData, Product, PublicShippingPolicy } from "./types";
 
 // 두고푸드 도매몰(위탁셀러 주문 입력). 농축수산 백과사전의 "상품 구매하기"와 같은 주소예요.
@@ -371,8 +372,9 @@ function DoogoProducts({ products, catalog, loading, keyword, name }: { products
   const compact = useMediaQuery("(max-width: 720px)");
   const initialCount = compact ? 1 : 3;
   const [showAll, setShowAll] = useState(false);
-  const visible = showAll ? sorted : sorted.slice(0, initialCount);
-  const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
+  // 옵션 묶음으로 묶은 상품은 카드 하나(옵션은 묶음 전체)로 보여 주고, "더 보기"도 카드 수로 셉니다.
+  const productCards = useMemo(() => buildCatalogCards(sorted, catalog?.products ?? sorted, catalog?.groups), [catalog, sorted]);
+  const visibleCards = showAll ? productCards : productCards.slice(0, initialCount);
   const [shippingInfo, setShippingInfo] = useState<{ product: Product; policy?: PublicShippingPolicy } | null>(null);
   const titleId = useId();
 
@@ -402,11 +404,11 @@ function DoogoProducts({ products, catalog, loading, keyword, name }: { products
       ) : products.length > 0 ? (
         <>
           <div className="catalog-table-wrap produce-doogo-table">
-            <CatalogProductTable products={visible} categories={categories} policyById={policyById} currentMonth={month} onImage={setImagePreview} onShipping={setShippingInfo} />
+            <CatalogProductGrid cards={visibleCards} categories={categories} policyById={policyById} currentMonth={month} onShipping={setShippingInfo} />
           </div>
-          {sorted.length > initialCount && (
+          {productCards.length > initialCount && (
             <button type="button" className="produce-doogo-more" aria-expanded={showAll} onClick={() => setShowAll((value) => !value)}>
-              {showAll ? "접기" : `${sorted.length - initialCount}개 더 보기`}
+              {showAll ? "접기" : `${productCards.length - initialCount}개 더 보기`}
             </button>
           )}
           <p className="produce-doogo-hint">상품명에 원료 이름이 든 상품을 모았어요. 상세페이지 문구는 상품마다 포장의 표시사항(건강기능식품 여부)을 확인한 뒤 쓰세요.</p>
@@ -418,7 +420,6 @@ function DoogoProducts({ products, catalog, loading, keyword, name }: { products
           <Link to="/sourcing" className="produce-doogo-request">소싱 요청하기 <ChevronRight size={16} aria-hidden="true" /></Link>
         </div>
       )}
-      {imagePreview && <ImageModal src={imagePreview.src} alt={imagePreview.alt} onClose={() => setImagePreview(null)} />}
       {shippingInfo && <ShippingInfoModal product={shippingInfo.product} policy={shippingInfo.policy} onClose={() => setShippingInfo(null)} />}
     </section>
   );

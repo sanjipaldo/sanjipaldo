@@ -583,6 +583,7 @@ export function SupplierProducts({ reloadKey, onCreate, onChanged }: { reloadKey
                                 <strong>{product.name}</strong>
                                 <small>{product.productCode || "상품코드 없음"} · {product.categoryName ?? "카테고리 미정"} · {product.shippingType === "overseas" ? "해외배송" : "국내배송"}</small>
                                 {product.origin && <small>원산지 {product.origin}</small>}
+                                {product.groupName && <span className="sup-group-tag" title="두고푸드 단가표에서 이 이름의 카드 하나에 다른 사이즈와 함께 옵션으로 보여요.">단가표 묶음 · {product.groupName}</span>}
                               </div>
                             </div>
                           </td>

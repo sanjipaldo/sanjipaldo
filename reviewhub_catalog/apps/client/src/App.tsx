@@ -70,7 +70,7 @@ const App = () => (
           <Route path="/admin" element={<AdminLoginPage />} />
           <Route path="/admin/home" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="home" /></AdminGuard>} />
           <Route path="/admin/products" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="products" /></AdminGuard>} />
-          <Route path="/admin/bundles" element={<Navigate to="/admin/products" replace />} />
+          <Route path="/admin/bundles" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="bundles" /></AdminGuard>} />
           <Route path="/admin/newProducts" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="newProducts" /></AdminGuard>} />
           <Route path="/admin/sort" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sort" /></AdminGuard>} />
           <Route path="/admin/changes" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="changes" /></AdminGuard>} />

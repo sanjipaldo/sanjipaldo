@@ -36,7 +36,8 @@ import {
   X
 } from "lucide-react";
 import { toast } from "sonner";
-import { CatalogProductTable, ImageModal, ShippingInfoModal, seasonApplies } from "./PublicCatalog";
+import { ShippingInfoModal, seasonApplies } from "./PublicCatalog";
+import { CatalogProductGrid, buildCatalogCards } from "./product-cards";
 import type { CatalogData, Product, PublicShippingPolicy } from "./types";
 import { supplyStatus } from "@/lib/supply-status";
 import {
@@ -713,8 +714,9 @@ function ProduceDetail({
   const compact = useMediaQuery("(max-width: 720px)");
   const initialCount = compact ? 1 : 3;
   const [showAllProducts, setShowAllProducts] = useState(false);
-  const visibleProducts = showAllProducts ? sortedProducts : sortedProducts.slice(0, initialCount);
-  const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
+  // 옵션 묶음으로 묶은 상품은 카드 하나(옵션은 묶음 전체)로 보여 주고, "더 보기"도 카드 수로 셉니다.
+  const productCards = useMemo(() => buildCatalogCards(sortedProducts, catalog?.products ?? sortedProducts, catalog?.groups), [catalog, sortedProducts]);
+  const visibleCards = showAllProducts ? productCards : productCards.slice(0, initialCount);
   const [shippingInfo, setShippingInfo] = useState<{ product: Product; policy?: PublicShippingPolicy } | null>(null);
   const checklist = produceChecklist(item);
   const checked = Array.from({ length: checklist.length }, (_, index) => store.checks[item.id]?.[index] === true);
@@ -773,11 +775,11 @@ function ProduceDetail({
           ) : products.length > 0 ? (
             <>
               <div className="catalog-table-wrap produce-doogo-table">
-                <CatalogProductTable products={visibleProducts} categories={categories} policyById={policyById} currentMonth={month} onImage={setImagePreview} onShipping={setShippingInfo} />
+                <CatalogProductGrid cards={visibleCards} categories={categories} policyById={policyById} currentMonth={month} onShipping={setShippingInfo} />
               </div>
-              {sortedProducts.length > initialCount && (
+              {productCards.length > initialCount && (
                 <button type="button" className="produce-doogo-more" aria-expanded={showAllProducts} onClick={() => setShowAllProducts((value) => !value)}>
-                  {showAllProducts ? "접기" : `${sortedProducts.length - initialCount}개 더 보기`}
+                  {showAllProducts ? "접기" : `${productCards.length - initialCount}개 더 보기`}
                 </button>
               )}
               <p className="produce-doogo-hint">주문은 두고푸드 도매몰에서 해요. 도매몰에 로그인한 뒤 같은 상품코드로 찾으면 됩니다.</p>
@@ -921,7 +923,6 @@ function ProduceDetail({
           </div>
         </section>
       </div>
-      {imagePreview && <ImageModal src={imagePreview.src} alt={imagePreview.alt} onClose={() => setImagePreview(null)} />}
       {shippingInfo && <ShippingInfoModal product={shippingInfo.product} policy={shippingInfo.policy} onClose={() => setShippingInfo(null)} />}
     </EncyclopediaLayout>
   );

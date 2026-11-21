@@ -7,7 +7,6 @@ import {
   createCategory,
   createNotice,
   createProduct,
-  createProductGroup,
   createShippingPolicy,
   createPartnerRequest,
   buildPartnerProposal,
@@ -26,7 +25,6 @@ import {
   getAdminProductsCatalog,
   getAdminSourcingCatalog,
   getAdminCategoriesSummary,
-  getAdminProductGroups,
   getSuppliers,
   getShippingPolicies,
   getPublicCatalog,
@@ -38,21 +36,28 @@ import {
   removeCategory,
   removeProduct,
   removeProducts,
-  removeProductGroup,
   removeSupplier,
   removeShippingPolicy,
   saveSetting,
   updateCategory,
   updateNotice,
   updateProduct,
-  updateProductGroup,
-  updateProductGroupDisplayOrder,
   updateProductDisplayOrder,
   updateSupplier,
   updateShippingPolicy,
   updateSourcingStatus
 } from "../services/catalog";
 import { buildPriceChangeNoticeWorkbook } from "../services/price-notice-excel";
+import {
+  assignProductsToGroup,
+  getAdminProductGroups,
+  getProductGroupMemberships,
+  getProductGroupSuggestions,
+  getPublicProductOptions,
+  removeProductGroup,
+  saveProductGroup
+} from "../services/product-groups";
+import { buildProductOptionsWorkbook } from "../services/product-group-excel";
 import {
   applyBulkProductWorkbook,
   bulkUpdateProducts,
@@ -283,20 +288,22 @@ const ProductDisplayOrderSchema = z.object({
     displayOrder: z.coerce.number().int().min(-100000000).max(100000000)
   })).min(1).max(5000)
 });
+// 옵션 묶음(migration 033): 단일 상품 여러 개를 공개 단가표에서 카드 하나 + 옵션 팝업으로 보여 줍니다.
 const ProductGroupSchema = z.object({
   name: z.string().trim().min(1).max(160),
   imageUrl: z.string().trim().max(1200).nullable().optional(),
-  categoryId: z.string().trim().min(1).nullable().optional(),
-  description: z.string().trim().max(2000).nullable().optional(),
-  displayOrder: z.coerce.number().int().min(-100000000).max(100000000).optional(),
-  isVisible: z.boolean().optional(),
-  productIds: z.array(z.string().trim().min(1)).max(5000).optional()
-});
-const ProductGroupDisplayOrderSchema = z.object({
+  categoryId: z.string().trim().max(80).nullable().optional(),
+  description: z.string().trim().max(4000).nullable().optional(),
+  shippingNote: z.string().trim().max(1000).nullable().optional(),
+  materialsUrl: z.string().trim().max(1200).nullable().optional(),
   items: z.array(z.object({
-    id: z.string().trim().min(1),
-    displayOrder: z.coerce.number().int().min(-100000000).max(100000000)
-  })).min(1).max(5000)
+    productId: z.string().trim().min(1).max(80),
+    optionLabel: z.string().trim().max(120).nullable().optional()
+  })).min(1).max(200)
+});
+const ProductGroupAssignSchema = z.object({
+  productIds: z.array(z.string().trim().min(1).max(80)).min(1).max(500),
+  groupId: z.string().trim().min(1).max(80).nullable()
 });
 const SupplierSchema = z.object({
   name: z.string().trim().min(1).max(160),
@@ -413,6 +420,26 @@ catalogRouter.get("/price-changes/export", publicRoute, async (c) => {
   return c.body(bytes, 200, {
     "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    "Cache-Control": "no-store"
+  });
+});
+
+// 옵션 팝업(누구나): 상품이 들어 있는 옵션 묶음의 안내 문구와 옵션별 최근 7일 가격 흐름(일반공급가·수강생 단가, 원가 제외)
+catalogRouter.get("/options/:productId", publicRoute, async (c) => {
+  const detail = await getPublicProductOptions(c.req.param("productId"));
+  if (!detail) return c.json(apiFailure("NOT_FOUND", "상품을 찾을 수 없습니다."), 404);
+  c.header("Cache-Control", "no-store");
+  return c.json(apiSuccess(detail));
+});
+
+// "이 상품 엑셀 다운로드"(누구나): 옵션별 공급가 표(원가·매입처 제외)
+catalogRouter.get("/options/:productId/export", publicRoute, async (c) => {
+  const origin = new URL(c.req.url).origin;
+  const workbook = await buildProductOptionsWorkbook(c.req.param("productId"), origin);
+  if (!workbook) return c.json(apiFailure("NOT_FOUND", "상품을 찾을 수 없습니다."), 404);
+  return c.body(workbook.bytes, 200, {
+    "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(workbook.filename)}`,
     "Cache-Control": "no-store"
   });
 });
@@ -563,12 +590,21 @@ catalogRouter.get("/admin/products", adminRoute, async (c) => c.json(apiSuccess(
 catalogRouter.get("/admin/categories/summary", adminRoute, async (c) => c.json(apiSuccess(await getAdminCategoriesSummary())));
 
 catalogRouter.get("/admin/groups", adminRoute, async (c) => c.json(apiSuccess(await getAdminProductGroups())));
-
-catalogRouter.put("/admin/groups/display-order", adminRoute, async (c) => {
-  const parsed = ProductGroupDisplayOrderSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "묶음상품 노출순서를 확인해 주세요."), 400);
+catalogRouter.get("/admin/groups/memberships", adminRoute, async (c) => c.json(apiSuccess(await getProductGroupMemberships())));
+catalogRouter.get("/admin/groups/suggestions", adminRoute, async (c) => {
   try {
-    return c.json(apiSuccess(await updateProductGroupDisplayOrder(parsed.data.items)));
+    return c.json(apiSuccess(await getProductGroupSuggestions()));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 상품을 기존 묶음에 넣기(groupId) / 묶음에서 빼기(groupId null): 상품 등록·상품 리스트 일괄 작업
+catalogRouter.post("/admin/groups/assign", adminRoute, async (c) => {
+  const parsed = ProductGroupAssignSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "묶음에 넣을 상품을 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess(await assignProductsToGroup(parsed.data.productIds, parsed.data.groupId)));
   } catch (error) {
     return errorResponse(c, error);
   }
@@ -576,9 +612,9 @@ catalogRouter.put("/admin/groups/display-order", adminRoute, async (c) => {
 
 catalogRouter.post("/admin/groups", adminRoute, async (c) => {
   const parsed = ProductGroupSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "묶음상품 입력값을 확인해 주세요."), 400);
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "옵션 묶음 입력값을 확인해 주세요."), 400);
   try {
-    return c.json(apiSuccess({ group: await createProductGroup(parsed.data) }), 201);
+    return c.json(apiSuccess(await saveProductGroup(null, parsed.data)), 201);
   } catch (error) {
     return errorResponse(c, error);
   }
@@ -586,9 +622,9 @@ catalogRouter.post("/admin/groups", adminRoute, async (c) => {
 
 catalogRouter.put("/admin/groups/:id", adminRoute, async (c) => {
   const parsed = ProductGroupSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "묶음상품 입력값을 확인해 주세요."), 400);
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "옵션 묶음 입력값을 확인해 주세요."), 400);
   try {
-    return c.json(apiSuccess({ group: await updateProductGroup(c.req.param("id"), parsed.data) }));
+    return c.json(apiSuccess(await saveProductGroup(c.req.param("id"), parsed.data)));
   } catch (error) {
     return errorResponse(c, error);
   }

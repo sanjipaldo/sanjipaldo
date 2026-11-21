@@ -160,20 +160,19 @@ describe("단가표 마진율", () => {
     expect(saleMargin(0, 20000)).toBeNull();
   });
 
-  it("단가표 표에서 상품 안내 칸 대신 마진율(지정 판매가) · 판매가 자율 안내를 보여 줍니다", async () => {
-    const { CatalogProductTable } = await import("@/pages/catalog/PublicCatalog");
+  it("단가표 카드에 지정 판매가 마진율 · 판매가 자율 안내를 보여 주고, 예전 상품 안내 문구는 보이지 않습니다", async () => {
+    const { CatalogProductGrid, buildCatalogCards } = await import("@/pages/catalog/product-cards");
+    const products = catalog.products.slice(0, 2) as never;
     render(
       <MemoryRouter>
-        <CatalogProductTable products={catalog.products.slice(0, 2) as never} categories={categories as never} policyById={new Map()} currentMonth={11} onImage={() => undefined} onShipping={() => undefined} />
+        <CatalogProductGrid cards={buildCatalogCards(products, products)} categories={categories as never} policyById={new Map()} currentMonth={11} onShipping={() => undefined} />
       </MemoryRouter>
     );
-    expect(screen.getByRole("columnheader", { name: "마진율" })).toBeTruthy();
-    expect(screen.queryByRole("columnheader", { name: "상품 안내" })).toBeNull();
     expect(screen.queryByText("예전 상품 안내 문구")).toBeNull();
-    const cells = Array.from(document.querySelectorAll(".catalog-margin-cell")).map((cell) => cell.textContent);
-    // 칸 맨 끝은 마진계산기를 여는 "계산" 버튼(2026-11-14)
-    expect(cells[0]).toBe("35.0%개당 7,000원 계산");
-    expect(cells[1]).toBe("-판매가 자율 계산");
+    const cells = Array.from(document.querySelectorAll(".product-card-sale")).map((cell) => cell.textContent);
+    // 맨 끝은 마진계산기를 여는 "계산" 버튼(2026-11-14)
+    expect(cells[0]).toBe("판매가 20,000원마진 35.0% 계산");
+    expect(cells[1]).toBe("판매가 자율 계산");
   });
 });
 

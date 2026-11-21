@@ -52,6 +52,8 @@ export type SupplierProduct = {
   createdAt: string;
   updatedAt: string;
   pendingRequestId: string | null;
+  // 공개 단가표에서 같이 보이는 옵션 묶음 이름(두고푸드 관리자가 묶음, 없으면 null)
+  groupName?: string | null;
 };
 
 export type SupplierCategory = { id: string; name: string; shippingType: "domestic" | "overseas"; sortOrder: number };

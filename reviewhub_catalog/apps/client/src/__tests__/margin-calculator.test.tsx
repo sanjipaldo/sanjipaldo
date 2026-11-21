@@ -253,13 +253,13 @@ describe("마진계산기 화면", () => {
     expect(document.activeElement).toBe(select);
   });
 
-  it("단가표 마진율 칸 '계산': 그 상품 A단가·일반공급가·지정 판매가로 계산기를 엽니다", async () => {
-    const { CatalogProductTable } = await import("@/pages/catalog/PublicCatalog");
+  it("단가표 카드 '계산': 그 상품 수강생 단가·일반공급가·지정 판매가로 계산기를 엽니다", async () => {
+    const { CatalogProductGrid, buildCatalogCards } = await import("@/pages/catalog/product-cards");
     const listener = vi.fn();
     window.addEventListener(MARGIN_OPEN_EVENT, listener);
     render(
       <MemoryRouter>
-        <CatalogProductTable products={[fixedProduct] as never} categories={categories as never} policyById={new Map()} currentMonth={11} onImage={() => undefined} onShipping={() => undefined} />
+        <CatalogProductGrid cards={buildCatalogCards([fixedProduct] as never, [fixedProduct] as never)} categories={categories as never} policyById={new Map()} currentMonth={11} onShipping={() => undefined} />
       </MemoryRouter>
     );
     fireEvent.click(screen.getByRole("button", { name: `${fixedProduct.name} 마진계산기로 계산하기` }));

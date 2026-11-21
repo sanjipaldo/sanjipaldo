@@ -11,8 +11,6 @@ import {
   contentSettings,
   notices,
   priceHistories,
-  productGroupItems,
-  productGroups,
   productOptions,
   products,
   shippingPolicies,
@@ -21,6 +19,7 @@ import {
   partnerDeals
 } from "../db/schema";
 import { enqueueProductSync } from "./catalog-sync";
+import { loadPublicGroupRows, summarizePublicGroups } from "./product-groups";
 import { legacyFeeFields, parseRateTiers, rateSummaryLabel, type ShippingRateTiers, type ShippingRateType } from "./shipping-rates";
 
 export type ProductOptionInput = {
@@ -79,16 +78,6 @@ export type NoticeInput = {
   youtubeUrl?: string | null;
   isPinned?: boolean;
   isActive?: boolean;
-};
-
-export type ProductGroupInput = {
-  name: string;
-  imageUrl?: string | null;
-  categoryId?: string | null;
-  description?: string | null;
-  displayOrder?: number;
-  isVisible?: boolean;
-  productIds?: string[];
 };
 
 export type ShippingPolicyInput = {
@@ -359,7 +348,7 @@ export async function getPublicPriceHistory(now = Date.now()) {
 }
 
 // 공개 단가표의 "배송비 ?" 안내에 쓰는 배송 정책(사용 중인 정책만, 운영용 정렬값 제외)
-async function publicShippingPolicyRows() {
+export async function publicShippingPolicyRows() {
   const rows = await getDb().select({
     ...publicPolicyLegacyColumns(),
     rateType: shippingPolicies.rateType,
@@ -446,7 +435,7 @@ async function publicSoldOutIssues(rows: ActivityRow[]) {
 export async function getPublicCatalog() {
   const db = getDb();
   const soldOutSince = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)).toISOString();
-  const [categoryRows, productRows, optionRows, noticeRows, historyRows, soldOutRows, settingsRows, totalProductRows, policyRows] = await Promise.all([
+  const [categoryRows, productRows, optionRows, noticeRows, historyRows, soldOutRows, settingsRows, totalProductRows, policyRows, groupRows] = await Promise.all([
     db.select().from(categories).where(eq(categories.isActive, true)).orderBy(asc(categories.shippingType), asc(categories.sortOrder)),
     db.select().from(products).where(and(eq(products.isVisible, true), sql`${products.deletedAt} IS NULL`)).orderBy(asc(products.displayOrder), desc(products.updatedAt)),
     db.select().from(productOptions).orderBy(asc(productOptions.productId), asc(productOptions.sortOrder)),
@@ -458,7 +447,8 @@ export async function getPublicCatalog() {
       .limit(500),
     db.select().from(contentSettings),
     db.select({ count: sql<number>`count(*)` }).from(products).where(sql`${products.deletedAt} IS NULL`),
-    publicShippingPolicyRows()
+    publicShippingPolicyRows(),
+    loadPublicGroupRows()
   ]);
 
   const recentHistory = historyRows.filter((history) => history.field !== "costPrice" && isPublicPriceHistoryDate(history.changedAt));
@@ -469,6 +459,8 @@ export async function getPublicCatalog() {
     categories: categoryRows,
     shippingPolicies: policyRows,
     products: publicProducts,
+    // 옵션 묶음(migration 033): 같은 상품의 사이즈들을 카드 하나로 보여 줄 상품 ID 묶음
+    groups: summarizePublicGroups(groupRows, new Set(productRows.map((product) => product.id))),
     notices: noticeRows,
     priceHistory: recentHistory.slice(0, PUBLIC_CATALOG_HISTORY_PREVIEW).map(publicHistoryRow),
     priceHistoryCount: recentHistory.length,
@@ -509,7 +501,7 @@ export async function getPublicPriceChangeNoticeData(dayKeys: string[], now = Da
 export async function getPublicCatalogInitial() {
   const db = getDb();
   const soldOutSince = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)).toISOString();
-  const [categoryRows, productRows, noticeRows, historyRows, soldOutRows, settingsRows, totalProductRows, policyRows] = await Promise.all([
+  const [categoryRows, productRows, noticeRows, historyRows, soldOutRows, settingsRows, totalProductRows, policyRows, groupRows] = await Promise.all([
     db.select().from(categories).where(eq(categories.isActive, true)).orderBy(asc(categories.shippingType), asc(categories.sortOrder)),
     db.select().from(products)
       .where(and(eq(products.isVisible, true), sql`${products.deletedAt} IS NULL`))
@@ -523,7 +515,8 @@ export async function getPublicCatalogInitial() {
       .limit(30),
     db.select().from(contentSettings),
     db.select({ count: sql<number>`count(*)` }).from(products).where(sql`${products.deletedAt} IS NULL`),
-    publicShippingPolicyRows()
+    publicShippingPolicyRows(),
+    loadPublicGroupRows()
   ]);
   const visibleProductIds = productRows.map((product) => product.id);
   const optionRows = visibleProductIds.length > 0
@@ -535,6 +528,7 @@ export async function getPublicCatalogInitial() {
     categories: categoryRows,
     shippingPolicies: policyRows,
     products: publicProductView(productRows, optionRows),
+    groups: summarizePublicGroups(groupRows, new Set(visibleProductIds)),
     notices: noticeRows,
     priceHistory: enrichPriceHistory(recentHistory, productRows),
     recentSoldOutIssues,
@@ -653,191 +647,6 @@ export async function getAdminCategoriesSummary() {
     .groupBy(categories.id)
     .orderBy(asc(categories.shippingType), asc(categories.sortOrder));
   return { categories: rows };
-}
-
-async function attachGroupItems(groupRows: Array<typeof productGroups.$inferSelect>) {
-  if (groupRows.length === 0) return [];
-  const db = getDb();
-  const itemRows = await db
-    .select({
-      id: productGroupItems.id,
-      groupId: productGroupItems.groupId,
-      productId: productGroupItems.productId,
-      sortOrder: productGroupItems.sortOrder,
-      product: products
-    })
-    .from(productGroupItems)
-    .innerJoin(products, eq(products.id, productGroupItems.productId))
-    .where(inArray(productGroupItems.groupId, groupRows.map((group) => group.id)))
-    .orderBy(asc(productGroupItems.sortOrder), asc(products.displayOrder));
-  const grouped = new Map<string, typeof itemRows>();
-  for (const item of itemRows) {
-    const current = grouped.get(item.groupId) ?? [];
-    current.push(item);
-    grouped.set(item.groupId, current);
-  }
-  return groupRows.map((group) => ({
-    ...group,
-    items: (grouped.get(group.id) ?? []).map((item) => ({
-      id: item.id,
-      productId: item.productId,
-      sortOrder: item.sortOrder,
-      product: item.product
-    }))
-  }));
-}
-
-export async function getAdminProductGroups() {
-  const db = getDb();
-  // The list view only needs one compact joined result. The previous
-  // two-query groups-then-items flow added a full round trip before the card
-  // grid could render.
-  const rows = await db
-    .select({
-      id: productGroups.id,
-      name: productGroups.name,
-      imageUrl: productGroups.imageUrl,
-      categoryId: productGroups.categoryId,
-      description: productGroups.description,
-      displayOrder: productGroups.displayOrder,
-      isVisible: productGroups.isVisible,
-      createdAt: productGroups.createdAt,
-      updatedAt: productGroups.updatedAt,
-      itemId: productGroupItems.id,
-      itemProductId: productGroupItems.productId,
-      itemSortOrder: productGroupItems.sortOrder,
-      product: {
-        id: products.id,
-        productCode: products.productCode,
-        name: products.name,
-        imageUrl: products.imageUrl,
-        costPrice: products.costPrice,
-        aPrice: products.aPrice,
-        generalPrice: products.generalPrice,
-        shippingType: products.shippingType,
-        categoryId: products.categoryId,
-        displayOrder: products.displayOrder,
-        isVisible: products.isVisible,
-        isSoldOut: products.isSoldOut
-      }
-    })
-    .from(productGroups)
-    .leftJoin(productGroupItems, eq(productGroupItems.groupId, productGroups.id))
-    .leftJoin(products, eq(products.id, productGroupItems.productId))
-    .orderBy(asc(productGroups.displayOrder), desc(productGroups.updatedAt), asc(productGroupItems.sortOrder));
-  const grouped = new Map<string, {
-    id: string;
-    name: string;
-    imageUrl: string | null;
-    categoryId: string | null;
-    description: string | null;
-    displayOrder: number;
-    isVisible: boolean;
-    createdAt: string;
-    updatedAt: string;
-    items: Array<{ id: string; productId: string; sortOrder: number; product: typeof rows[number]["product"] }>;
-  }>();
-  for (const row of rows) {
-    const group = grouped.get(row.id) ?? {
-      id: row.id,
-      name: row.name,
-      imageUrl: row.imageUrl,
-      categoryId: row.categoryId,
-      description: row.description,
-      displayOrder: row.displayOrder,
-      isVisible: row.isVisible,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      items: []
-    };
-    if (row.itemId && row.itemProductId) {
-      group.items.push({
-        id: row.itemId,
-        productId: row.itemProductId,
-        sortOrder: row.itemSortOrder ?? 0,
-        product: row.product
-      });
-    }
-    grouped.set(row.id, group);
-  }
-  return { groups: Array.from(grouped.values()) };
-}
-
-export async function createProductGroup(input: ProductGroupInput) {
-  const db = getDb();
-  const now = new Date().toISOString();
-  const groupId = crypto.randomUUID();
-  const productIds = [...new Set(input.productIds ?? [])];
-  if (productIds.length > 0) {
-    const existing = await db.select({ id: products.id }).from(products).where(inArray(products.id, productIds));
-    if (existing.length !== productIds.length) {
-      throw new DatabaseError("DATABASE_QUERY_FAILED", "연결하려는 일반상품을 찾을 수 없습니다.", 400);
-    }
-  }
-  const rows = await db.insert(productGroups).values({
-    id: groupId,
-    name: input.name,
-    imageUrl: input.imageUrl || null,
-    categoryId: input.categoryId || null,
-    description: input.description || null,
-    displayOrder: input.displayOrder ?? 1000000,
-    isVisible: input.isVisible ?? true,
-    createdAt: now,
-    updatedAt: now
-  }).returning();
-  if (productIds.length) {
-    await db.insert(productGroupItems).values(
-      productIds.map((productId, index) => ({
-        id: crypto.randomUUID(),
-        groupId,
-        productId,
-        sortOrder: (index + 1) * 10,
-        createdAt: now
-      }))
-    );
-  }
-  return (await attachGroupItems(rows))[0];
-}
-
-export async function updateProductGroup(id: string, input: ProductGroupInput) {
-  const db = getDb();
-  const now = new Date().toISOString();
-  const productIds = [...new Set(input.productIds ?? [])];
-  if (productIds.length > 0) {
-    const existing = await db.select({ id: products.id }).from(products).where(inArray(products.id, productIds));
-    if (existing.length !== productIds.length) {
-      throw new DatabaseError("DATABASE_QUERY_FAILED", "연결하려는 일반상품을 찾을 수 없습니다.", 400);
-    }
-  }
-  const rows = await db.update(productGroups).set({
-    name: input.name,
-    imageUrl: input.imageUrl || null,
-    categoryId: input.categoryId || null,
-    description: input.description || null,
-    displayOrder: input.displayOrder ?? 1000000,
-    isVisible: input.isVisible ?? true,
-    updatedAt: now
-  }).where(eq(productGroups.id, id)).returning();
-  if (!rows[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "묶음상품을 찾을 수 없습니다.", 404);
-  await db.delete(productGroupItems).where(eq(productGroupItems.groupId, id));
-  if (productIds.length) {
-    await db.insert(productGroupItems).values(
-      productIds.map((productId, index) => ({
-        id: crypto.randomUUID(),
-        groupId: id,
-        productId,
-        sortOrder: (index + 1) * 10,
-        createdAt: now
-      }))
-    );
-  }
-  return (await attachGroupItems(rows))[0];
-}
-
-export async function removeProductGroup(id: string) {
-  const rows = await getDb().delete(productGroups).where(eq(productGroups.id, id)).returning();
-  if (!rows[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "묶음상품을 찾을 수 없습니다.", 404);
-  return rows[0];
 }
 
 // 상품 저장에 필요한 배송 정책 칸만 읽습니다(새 칸이 없는 DB에서도 상품 저장이 되도록).
@@ -1473,32 +1282,6 @@ export async function updateProductDisplayOrder(items: Array<{ id: string; displ
         .update(products)
         .set({ displayOrder: item.displayOrder })
         .where(eq(products.id, item.id));
-    }
-  });
-  return { updated: items.length };
-}
-
-export async function updateProductGroupDisplayOrder(items: Array<{ id: string; displayOrder: number }>) {
-  if (items.length === 0) return { updated: 0 };
-  const uniqueIds = new Set(items.map((item) => item.id));
-  if (uniqueIds.size !== items.length) {
-    throw new DatabaseError("DATABASE_QUERY_FAILED", "중복된 묶음상품이 포함되어 있습니다.", 400);
-  }
-  const db = getDb();
-  const existingRows = await db
-    .select({ id: productGroups.id })
-    .from(productGroups)
-    .where(inArray(productGroups.id, [...uniqueIds]));
-  if (existingRows.length !== items.length) {
-    throw new DatabaseError("DATABASE_QUERY_FAILED", "노출순서를 변경할 묶음상품을 찾을 수 없습니다.", 404);
-  }
-  const updatedAt = new Date().toISOString();
-  await db.transaction(async (transaction) => {
-    for (const item of items) {
-      await transaction
-        .update(productGroups)
-        .set({ displayOrder: item.displayOrder, updatedAt })
-        .where(eq(productGroups.id, item.id));
     }
   });
   return { updated: items.length };
