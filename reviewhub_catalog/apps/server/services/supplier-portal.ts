@@ -306,7 +306,7 @@ type SupplierProductRow = Pick<Product,
   "id" | "productCode" | "name" | "imageUrl" | "origin" | "costPrice" | "salePrice" | "salePriceMode" | "saleStartMonth" | "saleEndMonth"
   | "isAlwaysOnSale" | "shippingType" | "categoryId" | "isVisible" | "isSoldOut" | "isSeasonEnded" | "createdAt" | "updatedAt">;
 
-// 두고푸드 A단가·일반공급가(셀러에게 파는 값)는 공급사 화면에 보내지 않습니다. 공급가(= 원가)와 권장 판매가만 보냅니다.
+// 두고푸드 수강생 단가·일반공급가(셀러에게 파는 값)는 공급사 화면에 보내지 않습니다. 공급가(= 원가)와 권장 판매가만 보냅니다.
 const supplierProductColumns = {
   id: products.id,
   productCode: products.productCode,

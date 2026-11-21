@@ -202,7 +202,7 @@ describe("공급사 판매·정산 달력", () => {
 });
 
 describe("관리자 변경 요청 승인", () => {
-  it("검토 창에서 마진 버튼으로 A단가·일반공급가를 채워 승인합니다", async () => {
+  it("검토 창에서 마진 버튼으로 수강생 단가·일반공급가를 채워 승인합니다", async () => {
     const request = {
       id: "req-1", supplierId: "s1", supplierName: "봄날농원", productId: "p-melon", productName: "당도선별 머스크메론 3.2kg 2수",
       kind: "update", status: "pending", changes: { costPrice: 17000 }, snapshot: { costPrice: 16000 }, note: "12월부터 인상",

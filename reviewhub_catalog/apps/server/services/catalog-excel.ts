@@ -24,7 +24,7 @@ export type BulkWorkbookChange = {
   productName: string;
   optionName: string | null;
   field:
-    | "상품명" | "A단가" | "일반공급가" | "원가" | "노출여부" | "품절여부" | "상품 간략설명" | "해외배송"
+    | "상품명" | "수강생 단가" | "일반공급가" | "원가" | "노출여부" | "품절여부" | "상품 간략설명" | "해외배송"
     | "매입처" | "택배사" | "신규 등록" | "복원";
   before: string | number | boolean | null;
   after: string | number | boolean | null;
@@ -490,11 +490,11 @@ async function buildPreview(bytes: Uint8Array, priceFields: PriceField[] = ALL_P
         errors.push({ row: rowNumber, message: "옵션 식별ID가 현재 상품과 일치하지 않습니다." });
         continue;
       }
-      const aPrice = cellNumber(row.getCell(5), rowNumber, "매입원가(A단가)", errors);
+      const aPrice = cellNumber(row.getCell(5), rowNumber, "매입원가(수강생 단가)", errors);
       const generalPrice = cellNumber(row.getCell(7), rowNumber, "공급가(일반공급가)", errors);
       const soldOut = cellBoolean(row.getCell(10), rowNumber, "품절여부", errors);
       if (aPrice !== null) {
-        recordChange(rowNumber, product, option.name, "A단가", option.aPrice, aPrice);
+        recordChange(rowNumber, product, option.name, "수강생 단가", option.aPrice, aPrice);
         option.aPrice = aPrice;
       }
       if (generalPrice !== null) {
@@ -509,7 +509,7 @@ async function buildPreview(bytes: Uint8Array, priceFields: PriceField[] = ALL_P
     }
 
     const name = cellText(row.getCell(4));
-    const aPrice = cellNumber(row.getCell(5), rowNumber, "매입원가(A단가)", errors);
+    const aPrice = cellNumber(row.getCell(5), rowNumber, "매입원가(수강생 단가)", errors);
     const generalPrice = cellNumber(row.getCell(7), rowNumber, "공급가(일반공급가)", errors);
     const visible = cellBoolean(row.getCell(9), rowNumber, "노출여부", errors);
     const soldOut = cellBoolean(row.getCell(10), rowNumber, "품절여부", errors);
@@ -521,7 +521,7 @@ async function buildPreview(bytes: Uint8Array, priceFields: PriceField[] = ALL_P
       product.name = name;
     }
     if (aPrice !== null) {
-      recordChange(rowNumber, product, null, "A단가", product.aPrice, aPrice);
+      recordChange(rowNumber, product, null, "수강생 단가", product.aPrice, aPrice);
       product.aPrice = aPrice;
     }
     if (generalPrice !== null) {
@@ -561,7 +561,7 @@ async function buildPreview(bytes: Uint8Array, priceFields: PriceField[] = ALL_P
     changes,
     errors,
     warnings: [
-      "매입원가는 A단가, 공급가는 일반공급가로 반영됩니다.",
+      "매입원가는 수강생 단가, 공급가는 일반공급가로 반영됩니다.",
       "부자재가·소비자가·과세여부·관리코드·바코드·출고지·제조연월일·소비기한·발주상품명·발주단위는 현재 데이터센터에 보관되지 않아 변경하지 않습니다.",
       "발주오라 실시간 API 동기화는 별도 보안 인증 연결 후 활성화됩니다."
     ]
@@ -644,7 +644,7 @@ async function buildBaljuoraPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
     const visible = status(row, rowNumber, "노출여부", ["노출중", "노출"], ["미노출", "숨김"]);
     const soldOut = status(row, rowNumber, "품절여부", ["품절"], ["판매중"]);
     const overseas = status(row, rowNumber, "해외배송", ["해외"], ["국내"]);
-    // 기존 발주오라 데이터와 같은 규칙: 매입원가(총 원가 우선) → 원가(비공개), 공급가 → A단가·일반공급가(공개)
+    // 기존 발주오라 데이터와 같은 규칙: 매입원가(총 원가 우선) → 원가(비공개), 공급가 → 수강생 단가·일반공급가(공개)
     const purchasePrice = number(row, rowNumber, "매입원가");
     const totalCost = number(row, rowNumber, "총원가(부자재비용포함)", "총 원가");
     const costPrice = totalCost ?? purchasePrice;
@@ -667,8 +667,8 @@ async function buildBaljuoraPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
         continue;
       }
       matchedRows += 1;
-      // A단가는 관리자가 따로 정한 값(일반공급가와 다름)이면 유지하고, 같이 움직이던 값이면 공급가를 따라갑니다.
-      if (aPrice !== null && (option.aPrice === option.generalPrice || !option.aPrice)) { record(rowNumber, product.name, option.name, "A단가", option.aPrice, aPrice, product.id); option.aPrice = aPrice; }
+      // 수강생 단가는 관리자가 따로 정한 값(일반공급가와 다름)이면 유지하고, 같이 움직이던 값이면 공급가를 따라갑니다.
+      if (aPrice !== null && (option.aPrice === option.generalPrice || !option.aPrice)) { record(rowNumber, product.name, option.name, "수강생 단가", option.aPrice, aPrice, product.id); option.aPrice = aPrice; }
       if (costPrice !== null) { record(rowNumber, product.name, option.name, "원가", option.costPrice, costPrice, product.id); option.costPrice = costPrice; }
       if (generalPrice !== null) { record(rowNumber, product.name, option.name, "일반공급가", option.generalPrice, generalPrice, product.id); option.generalPrice = generalPrice; }
       if (soldOut !== null) { record(rowNumber, product.name, option.name, "품절여부", option.isSoldOut, soldOut, product.id); option.isSoldOut = soldOut; }
@@ -711,7 +711,7 @@ async function buildBaljuoraPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
     matchedRows += 1;
     const id = product.id;
     if (name) { record(rowNumber, product.name, null, "상품명", product.name, name, id); product.name = name; }
-    if (aPrice !== null && (product.aPrice === product.generalPrice || !product.aPrice)) { record(rowNumber, product.name, null, "A단가", product.aPrice, aPrice, id); product.aPrice = aPrice; }
+    if (aPrice !== null && (product.aPrice === product.generalPrice || !product.aPrice)) { record(rowNumber, product.name, null, "수강생 단가", product.aPrice, aPrice, id); product.aPrice = aPrice; }
     if (costPrice !== null) { record(rowNumber, product.name, null, "원가", product.costPrice, costPrice, id); product.costPrice = costPrice; }
     if (generalPrice !== null) { record(rowNumber, product.name, null, "일반공급가", product.generalPrice, generalPrice, id); product.generalPrice = generalPrice; }
     if (visible !== null) { record(rowNumber, product.name, null, "노출여부", product.isVisible, visible, id); product.isVisible = visible; }
@@ -745,7 +745,7 @@ async function buildBaljuoraPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
     format: "baljuora",
     newProducts: newProducts.length,
     warnings: [
-      "발주오라 상품리스트 양식으로 읽었습니다. 매입원가(총 원가) → 원가(비공개), 공급가 → A단가·일반공급가로 반영되고 가격 변경은 가격변동 이력에 기록됩니다.",
+      "발주오라 상품리스트 양식으로 읽었습니다. 매입원가(총 원가) → 원가(비공개), 공급가 → 수강생 단가·일반공급가로 반영되고 가격 변경은 가격변동 이력에 기록됩니다.",
       ...(newProducts.length > 0 ? [`신규 상품 ${newProducts.length}개는 '${UNCATEGORIZED_NAME}' 카테고리로 등록됩니다. 등록 후 카테고리·이미지·제철 월을 지정해 주세요.`] : []),
       ...(missingCount > 0 ? [`파일에 없는 기존 상품 ${missingCount.toLocaleString("ko-KR")}개는 변경하지 않습니다(삭제·품절 처리 없음).`] : []),
       "제철(판매 월·연중판매), 노출순서, 카테고리, 이미지는 데이터센터 값이 유지됩니다.",
@@ -822,7 +822,7 @@ async function buildDangaPreview(worksheet: ExcelJS.Worksheet, columns: Map<stri
     const supplyPrice = number(row, rowNumber, "공급가");
     if (isGroup) {
       if (fields.has("a") && supplyPrice !== null) {
-        record(rowNumber, product, "A단가", product.aPrice, supplyPrice);
+        record(rowNumber, product, "수강생 단가", product.aPrice, supplyPrice);
         product.aPrice = supplyPrice;
       }
       continue;
@@ -841,7 +841,7 @@ async function buildDangaPreview(worksheet: ExcelJS.Worksheet, columns: Map<stri
     }
   }
 
-  const fieldLabels = { cost: "매입원가 → 원가(비공개)", a: "황금농부 수강생 그룹 공급가 → A급 단가", general: "공급가 → 일반공급가" } as const;
+  const fieldLabels = { cost: "매입원가 → 원가(비공개)", a: "황금농부 수강생 그룹 공급가 → 수강생 단가", general: "공급가 → 일반공급가" } as const;
   const preview: BulkWorkbookPreview = {
     totalRows,
     matchedRows: matchedCodes.size,
@@ -968,7 +968,7 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
         continue;
       }
       const marginLabel = (price: number) => `${(Math.round(((price - cost) / price) * 1000) / 10).toFixed(1)}%`;
-      const priceText = `원가 ${cost.toLocaleString("ko-KR")} · A ${nextA.toLocaleString("ko-KR")}(${marginLabel(nextA)}) · 일반 ${nextGeneral.toLocaleString("ko-KR")}(${marginLabel(nextGeneral)})`;
+      const priceText = `원가 ${cost.toLocaleString("ko-KR")} · 수강생 ${nextA.toLocaleString("ko-KR")}(${marginLabel(nextA)}) · 일반 ${nextGeneral.toLocaleString("ko-KR")}(${marginLabel(nextGeneral)})`;
       // 상품코드: 엑셀 상품코드 열 → 미리보기에서 입력한 코드 순서로 씁니다.
       const typedCode = contract.newCodes?.[String(rowNumber)]?.trim() ?? "";
       const effectiveCode = code || typedCode;
@@ -1016,7 +1016,7 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
       product.costPrice = cost;
     }
     if (fields.has("a")) {
-      record(rowNumber, product, "A단가", product.aPrice, nextA);
+      record(rowNumber, product, "수강생 단가", product.aPrice, nextA);
       product.aPrice = nextA;
     }
     if (fields.has("general")) {
@@ -1027,7 +1027,7 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
 
   const fieldLabels = {
     cost: "원가(공급사 공급가, A급단가가 있으면 A급단가)",
-    a: `A급 단가(원가 기준 판매가 마진 ${contract.aMargin}%)`,
+    a: `수강생 단가(원가 기준 판매가 마진 ${contract.aMargin}%)`,
     general: `일반공급가(원가 기준 판매가 마진 ${contract.generalMargin}%)`
   } as const;
   const example = 5250;
@@ -1046,8 +1046,8 @@ async function buildContractPreview(worksheet: ExcelJS.Worksheet, columns: Map<s
     priceFields: ALL_PRICE_FIELDS.filter((field) => fields.has(field)),
     warnings: [
       `공급사 단가표(계약 마진) 양식으로 읽었습니다. 반영 항목: ${ALL_PRICE_FIELDS.filter((field) => fields.has(field)).map((field) => fieldLabels[field]).join(", ") || "없음"}. 가격 변경은 가격변동 이력에 기록됩니다.`,
-      `계산: A급 단가 = 원가 ÷ (1 − ${contract.aMargin}%), 일반공급가 = 원가 ÷ (1 − ${contract.generalMargin}%)를 끝자리 00원으로 올립니다(100원 단위로 올리면 마진이 ${CONTRACT_ROUNDING_TOLERANCE_PERCENT}%p 넘게 커지는 저가 상품만 50원 단위). 그래서 실제 마진은 입력값보다 조금 높을 수 있습니다. 예) 원가 ${example.toLocaleString("ko-KR")}원 → A급 단가 ${priceWithMargin(example, contract.aMargin).toLocaleString("ko-KR")}원 · 일반공급가 ${priceWithMargin(example, contract.generalMargin).toLocaleString("ko-KR")}원. "변경" 칸에 값이 있으면 변경 값을 씁니다.`,
-      ...(newProducts.length > 0 ? [`데이터센터에 없는 ${newProducts.length.toLocaleString("ko-KR")}개 상품은 신규 등록합니다(📦 기타 카테고리 · 숨김 상태 · 원가·A급 단가·일반공급가 모두 입력). 카테고리·이미지·배송 정책을 채운 뒤 "일괄 변경"으로 노출해 주세요.`] : []),
+      `계산: 수강생 단가 = 원가 ÷ (1 − ${contract.aMargin}%), 일반공급가 = 원가 ÷ (1 − ${contract.generalMargin}%)를 끝자리 00원으로 올립니다(100원 단위로 올리면 마진이 ${CONTRACT_ROUNDING_TOLERANCE_PERCENT}%p 넘게 커지는 저가 상품만 50원 단위). 그래서 실제 마진은 입력값보다 조금 높을 수 있습니다. 예) 원가 ${example.toLocaleString("ko-KR")}원 → 수강생 단가 ${priceWithMargin(example, contract.aMargin).toLocaleString("ko-KR")}원 · 일반공급가 ${priceWithMargin(example, contract.generalMargin).toLocaleString("ko-KR")}원. "변경" 칸에 값이 있으면 변경 값을 씁니다.`,
+      ...(newProducts.length > 0 ? [`데이터센터에 없는 ${newProducts.length.toLocaleString("ko-KR")}개 상품은 신규 등록합니다(📦 기타 카테고리 · 숨김 상태 · 원가·수강생 단가·일반공급가 모두 입력). 카테고리·이미지·배송 정책을 채운 뒤 "일괄 변경"으로 노출해 주세요.`] : []),
       ...(aPriceBased > 0 ? [`A급단가 칸에 값이 있는 ${aPriceBased.toLocaleString("ko-KR")}개 행은 A급단가를 원가로 썼습니다.`] : []),
       `기존 상품은 ${columns.has("상품코드") ? "상품코드" : "상품명(띄어쓰기 차이 무시)"}으로 찾아 가격만 바꿉니다. 판매가·품절·노출·카테고리 등 다른 값은 바꾸지 않습니다.${contract.createMissing ? "" : " 없는 상품은 신규 등록하지 않습니다."}`,
       ...(missing.length > 0 ? [`데이터센터에서 찾지 못한 ${missing.length.toLocaleString("ko-KR")}개 행은 건너뜁니다(신규 등록 꺼짐): ${list(missing)}`] : []),

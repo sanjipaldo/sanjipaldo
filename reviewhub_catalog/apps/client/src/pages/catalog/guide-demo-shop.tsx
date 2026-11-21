@@ -374,7 +374,7 @@ export function CatalogView({ view, t, actor, party }: ViewProps<"catalog">) {
             <small className="gd-cat-code">{row.code}</small>
             <span className={`gd-cat-pill is-sale${fixed ? " is-fixed" : ""}`}>{fixed ? `지정 ${row.sale}` : "판매가 자율"}</span>
             <span className={`gd-cat-pill is-ship${row.ship === "무료" ? " is-free" : ""}`}>배송비 {row.ship}</span>
-            <span className="gd-cat-price"><small>A단가</small><b>{won(row.a)}</b></span>
+            <span className="gd-cat-price"><small>수강생 단가</small><b>{won(row.a)}</b></span>
             <span className="gd-cat-price is-general"><small>일반공급가</small><b>{won(row.general)}</b></span>
           </div>
         );
@@ -443,7 +443,7 @@ export function FeedView({ view, t, actor, party }: ViewProps<"feed">) {
             <small className="gd-feed-code">{item.code}{price && item.when ? ` · ${item.when}` : ""}</small>
             {price ? (
               <div className="gd-feed-change">
-                <span className="gd-feed-label">A단가</span>
+                <span className="gd-feed-label">수강생 단가</span>
                 <s>{won(item.from ?? 0)}</s>
                 <span>→</span>
                 <b>{won(item.to ?? 0)}</b>

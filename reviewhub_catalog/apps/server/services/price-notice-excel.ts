@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import { getPublicPriceChangeNoticeData, historyDayKey } from "./catalog";
 
-// 가격변동 공지 엑셀(카톡 공지용): 날짜별로 "상품명 | 기존/변동 A단가 | 기존/변동 일반공급가 | 비고" 표를 만들고,
+// 가격변동 공지 엑셀(카톡 공지용): 날짜별로 "상품명 | 기존/변동 수강생 단가 | 기존/변동 일반공급가 | 비고" 표를 만들고,
 // 인상·인하·변동끼리 묶어 비고 칸을 합칩니다. 품절 상품은 표 아래에 모아 "품절" 비고로 안내합니다.
 
 type NoticeData = Awaited<ReturnType<typeof getPublicPriceChangeNoticeData>>;
@@ -61,7 +61,7 @@ export async function buildPriceChangeNoticeWorkbook(dayKeys: string[]) {
   const short = (day: string) => day.slice(5).replace("-", "");
   const sheetName = days.length === 1 ? `${short(days[0])} 공지` : "가격변동 공지";
   const sheet = workbook.addWorksheet(sheetName, { views: [{ showGridLines: false }] });
-  sheet.columns = [{ width: 50 }, { width: 13 }, { width: 13 }, { width: 15 }, { width: 15 }, { width: 36 }];
+  sheet.columns = [{ width: 50 }, { width: 16 }, { width: 16 }, { width: 15 }, { width: 15 }, { width: 36 }];
   const font = { name: "맑은 고딕", size: 10, color: { argb: "FF000000" } };
   const thin = { style: "thin" as const, color: { argb: "FF000000" } };
   const border = { top: thin, left: thin, bottom: thin, right: thin };
@@ -91,7 +91,7 @@ export async function buildPriceChangeNoticeWorkbook(dayKeys: string[]) {
     titleRow.getCell(1).font = { ...font, size: 13, bold: true };
     titleRow.getCell(1).alignment = { horizontal: "left", vertical: "middle" };
 
-    const header = sheet.addRow(["상품명", "기존 A단가", "변동 A단가", "기존 일반공급가", "변동 일반공급가", "비고"]);
+    const header = sheet.addRow(["상품명", "기존 수강생 단가", "변동 수강생 단가", "기존 일반공급가", "변동 일반공급가", "비고"]);
     header.height = 24;
     styleRow(header.number);
     header.eachCell((cell) => {

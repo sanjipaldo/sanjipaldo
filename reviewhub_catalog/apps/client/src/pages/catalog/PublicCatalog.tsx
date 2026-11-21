@@ -442,7 +442,7 @@ function onCatalogRefreshSignal(refresh: () => void) {
 export { seasonApplies };
 
 function priceFieldLabel(field: PriceHistory["field"]) {
-  if (field === "aPrice") return "A단가";
+  if (field === "aPrice") return "수강생 단가";
   if (field === "generalPrice") return "일반공급가";
   return "지정 판매가";
 }
@@ -996,7 +996,7 @@ function groupPriceHistories(histories: PriceHistory[]) {
   const groups = new Map<string, PriceHistoryGroup>();
   histories.forEach((history) => {
     // A single save uses one changedAt for all fields. Grouping here avoids
-    // showing the same product twice when A단가 and 일반공급가 changed together.
+    // showing the same product twice when 수강생 단가 and 일반공급가 changed together.
     const key = `${history.productId}|${history.optionId || "base"}|${history.changedAt}`;
     const current = groups.get(key);
     if (current) {

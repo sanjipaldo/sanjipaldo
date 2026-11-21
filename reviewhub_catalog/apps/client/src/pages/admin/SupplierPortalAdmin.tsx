@@ -265,9 +265,9 @@ function SupplierRequestReview({ request, categories, policies, categoryName, on
     if (isCreate) {
       if (!productCode.trim()) return setFormError("상품코드를 입력해 주세요. 발주 엑셀과 맞추는 코드라 꼭 필요해요.");
       if (!categoryId) return setFormError("카테고리를 골라 주세요.");
-      if (!a || !general) return setFormError("A단가와 일반공급가를 입력해 주세요.");
+      if (!a || !general) return setFormError("수강생 단가와 일반공급가를 입력해 주세요.");
     } else if (a === null || general === null) {
-      return setFormError("A단가와 일반공급가를 확인해 주세요.");
+      return setFormError("수강생 단가와 일반공급가를 확인해 주세요.");
     }
     setBusy("approve");
     setFormError("");
@@ -318,7 +318,7 @@ function SupplierRequestReview({ request, categories, policies, categoryName, on
             <dl className="sup-detail-meta sup-current-meta full">
               <div><dt>상품코드</dt><dd>{current.productCode || "-"}</dd></div>
               <div><dt>지금 원가</dt><dd>{won(current.costPrice)}</dd></div>
-              <div><dt>지금 A단가</dt><dd>{won(current.aPrice)}</dd></div>
+              <div><dt>지금 수강생 단가</dt><dd>{won(current.aPrice)}</dd></div>
               <div><dt>지금 일반공급가</dt><dd>{won(current.generalPrice)}</dd></div>
               <div><dt>지금 판매가</dt><dd>{current.salePriceMode === "fixed" ? won(current.salePrice) : "자율"}</dd></div>
               <div><dt>지금 상태</dt><dd>{current.isSoldOut ? "품절" : "판매중"}{current.isVisible ? "" : " · 숨김"}</dd></div>
@@ -336,7 +336,7 @@ function SupplierRequestReview({ request, categories, policies, categoryName, on
             <>
               <div className="sup-approve-head full">
                 <strong>{isCreate ? "등록 정보(두고푸드가 정함)" : "승인하면서 두고푸드 판매가 확인"}</strong>
-                <button type="button" className="sup-margin-button" onClick={applyMargins}>A {margins.a}% · 일반 {margins.general}% 마진으로 계산</button>
+                <button type="button" className="sup-margin-button" onClick={applyMargins}>수강생 {margins.a}% · 일반 {margins.general}% 마진으로 계산</button>
               </div>
               {isCreate && (
                 <>
@@ -363,7 +363,7 @@ function SupplierRequestReview({ request, categories, policies, categoryName, on
                 </>
               )}
               <label>원가(공급가)<span className="sup-price-input"><input inputMode="numeric" value={costPrice ? Number(costPrice).toLocaleString("ko-KR") : ""} onChange={(event) => setCostPrice(digitsOnly(event.target.value))} /><em>원</em></span><small>공급사 요청 값 {won(requestedCost)}{cost !== requestedCost ? " · 고친 값으로 저장돼요" : ""}</small></label>
-              <label>A단가{isCreate ? "*" : ""}<span className="sup-price-input"><input inputMode="numeric" value={aPrice ? Number(aPrice).toLocaleString("ko-KR") : ""} onChange={(event) => setAPrice(digitsOnly(event.target.value))} /><em>원</em></span><small>마진 {marginText(aPrice === "" ? null : Number(aPrice), cost)}</small></label>
+              <label>수강생 단가{isCreate ? "*" : ""}<span className="sup-price-input"><input inputMode="numeric" value={aPrice ? Number(aPrice).toLocaleString("ko-KR") : ""} onChange={(event) => setAPrice(digitsOnly(event.target.value))} /><em>원</em></span><small>마진 {marginText(aPrice === "" ? null : Number(aPrice), cost)}</small></label>
               <label>일반공급가{isCreate ? "*" : ""}<span className="sup-price-input"><input inputMode="numeric" value={generalPrice ? Number(generalPrice).toLocaleString("ko-KR") : ""} onChange={(event) => setGeneralPrice(digitsOnly(event.target.value))} /><em>원</em></span><small>마진 {marginText(generalPrice === "" ? null : Number(generalPrice), cost)}</small></label>
               {isCreate && <label className="check-label sup-visible-check"><input type="checkbox" checked={isVisible} onChange={(event) => setIsVisible(event.target.checked)} /> 승인하면 단가표에 바로 보이기</label>}
               <label className="full">처리 메모(공급사에게 보여요)<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} rows={2} placeholder="예: 12월 1일 출고분부터 반영했습니다." /></label>

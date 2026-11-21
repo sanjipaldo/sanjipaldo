@@ -1,7 +1,7 @@
 // 건강식품 백과사전: 고민별 찾기(/encyclopedia/health) · 고민 상세(/encyclopedia/health/concern/:id) · 원료 사전(/encyclopedia/health/ingredients) ·
 // 원료 상세(/encyclopedia/health/ingredient/:id) · 판매 전 체크(/encyclopedia/health/guide).
 // 셀러가 "이런 고민의 고객에게 무엇을 팔지", "내 상품 원료로 어떤 말을 써도 되는지" 아이디어를 얻는 화면이에요.
-// 두고푸드 건강식품(국내·해외) 상품을 원료 이름으로 잇고, 단가표 카드(A단가·일반공급가)와 "상품 구매하기"(도매몰)로 이어집니다.
+// 두고푸드 건강식품(국내·해외) 상품을 원료 이름으로 잇고, 단가표 카드(수강생 단가·일반공급가)와 "상품 구매하기"(도매몰)로 이어집니다.
 import { type FormEvent, type ReactNode, useEffect, useId, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {

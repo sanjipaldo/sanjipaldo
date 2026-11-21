@@ -1,5 +1,5 @@
 // 농축수산 백과사전: 홈(/encyclopedia) · 시즌 캘린더(/encyclopedia/calendar) · 내 후보(/encyclopedia/favorites) · 품목 상세(/encyclopedia/:id).
-// 맞춤 추천(예전 이름 "첫 상품 찾기")은 EncyclopediaFinder.tsx. 두고푸드 단가표에 있는 품목은 상세 위쪽(썸네일과 품목명 사이)에 A단가·일반공급가를
+// 맞춤 추천(예전 이름 "첫 상품 찾기")은 EncyclopediaFinder.tsx. 두고푸드 단가표에 있는 품목은 상세 위쪽(썸네일과 품목명 사이)에 수강생 단가·일반공급가를
 // 단가표와 같은 모양으로 보여 주고, "상품 구매하기"로 두고푸드 도매몰에 바로 갑니다.
 import { type ReactNode, useMemo, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";

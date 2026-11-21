@@ -129,7 +129,7 @@ describe("공급사 계정", () => {
 });
 
 describe("공급사 상품과 변경 요청", () => {
-  it("자기 상품만 보이고, 두고푸드 판매가(A단가·일반공급가)는 보내지 않습니다", async () => {
+  it("자기 상품만 보이고, 두고푸드 판매가(수강생 단가·일반공급가)는 보내지 않습니다", async () => {
     const admin = await adminToken();
     const token = await supplierToken(admin);
     const res = await fetchWithAuth(app, token, "/api/supplier/products");

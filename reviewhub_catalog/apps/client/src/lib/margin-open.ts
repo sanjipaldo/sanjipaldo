@@ -3,7 +3,7 @@
 export type MarginPrefill = {
   productId: string;
   name: string;
-  /** 화면에 보이는 A단가(A단가가 없으면 일반공급가) */
+  /** 화면에 보이는 수강생 단가(따로 정하지 않았으면 일반공급가) */
   aPrice: number;
   generalPrice: number;
   /** 지정 판매가(자율이면 null) */

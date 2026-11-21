@@ -321,7 +321,7 @@ function ProductPicker({ onPick }: { onPick: (prefill: MarginPrefill) => void })
             results.map((product) => (
               <button key={product.id} type="button" onClick={() => pick(product)}>
                 <strong>{product.name}</strong>
-                <span>A단가 {formatWon(effectiveA(product))} · 판매가 {product.salePriceMode === "fixed" && product.salePrice ? formatWon(product.salePrice) : "자율"}</span>
+                <span>수강생 단가 {formatWon(effectiveA(product))} · 판매가 {product.salePriceMode === "fixed" && product.salePrice ? formatWon(product.salePrice) : "자율"}</span>
               </button>
             ))
           ) : (
@@ -394,12 +394,12 @@ export function MarginCalculatorCard({ draft, onDraft, overrides, onOverrides, v
         />
         <NumberField
           label="매입가"
-          hint="두고푸드 공급가(A단가 또는 일반공급가)"
+          hint="두고푸드 공급가(수강생 단가 또는 일반공급가)"
           value={draft.cost}
           onChange={(value) => update({ cost: value, costBasis: "manual" })}
           extra={hasProduct ? (
             <div className="mc-basis-toggle" role="group" aria-label="매입가 기준">
-              <button type="button" aria-pressed={draft.costBasis === "a"} onClick={() => update({ cost: draft.aPrice, costBasis: "a" })}>A단가 {formatWon(draft.aPrice ?? 0)}</button>
+              <button type="button" aria-pressed={draft.costBasis === "a"} onClick={() => update({ cost: draft.aPrice, costBasis: "a" })}>수강생 단가 {formatWon(draft.aPrice ?? 0)}</button>
               <button type="button" aria-pressed={draft.costBasis === "general"} onClick={() => update({ cost: draft.generalPrice, costBasis: "general" })}>일반공급가 {formatWon(draft.generalPrice ?? 0)}</button>
             </div>
           ) : null}

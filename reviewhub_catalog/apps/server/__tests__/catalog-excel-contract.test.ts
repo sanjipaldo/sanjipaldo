@@ -57,7 +57,7 @@ describe("공급사 단가표(계약 마진) 업로드", () => {
     }
   });
 
-  it("공급가를 원가로 쓰고 A급 단가 10%·일반공급가 20% 이상 마진을 적용합니다", async () => {
+  it("공급가를 원가로 쓰고 수강생 단가 10%·일반공급가 20% 이상 마진을 적용합니다", async () => {
     const bytes = await workbook([
       ["상품명", "기존원가", "변경원가", "기존공급가", "변경공급가"],
       ["[당도보장]  제주 감귤 소과 3S 3kg", 8050, null, 8400, null]
@@ -67,7 +67,7 @@ describe("공급사 단가표(계약 마진) 업로드", () => {
     expect(preview.errors).toEqual([]);
     expect(preview.changes.map((change) => [change.field, change.after])).toEqual([
       ["원가", 8400],
-      ["A단가", 9400],
+      ["수강생 단가", 9400],
       ["일반공급가", 10500]
     ]);
   });
@@ -80,7 +80,7 @@ describe("공급사 단가표(계약 마진) 업로드", () => {
     const preview = await previewBulkProductWorkbook(bytes);
     expect(preview.changes.map((change) => [change.field, change.after])).toEqual([
       ["원가", 5250],
-      ["A단가", 5900],
+      ["수강생 단가", 5900],
       ["일반공급가", 6600]
     ]);
   });
@@ -93,7 +93,7 @@ describe("공급사 단가표(계약 마진) 업로드", () => {
       ["같은 이름 상품", 1000]
     ]);
     const preview = await previewBulkProductWorkbook(bytes, ["a"], { aMargin: 10, generalMargin: 20, createMissing: false });
-    expect(preview.changes.map((change) => change.field)).toEqual(["A단가"]);
+    expect(preview.changes.map((change) => change.field)).toEqual(["수강생 단가"]);
     expect(preview.matchedRows).toBe(1);
     expect(preview.warnings.some((warning) => warning.includes("없는 상품"))).toBe(true);
     expect(preview.warnings.some((warning) => warning.includes("같은 이름 상품"))).toBe(true);
@@ -118,7 +118,7 @@ describe("공급사 단가표(계약 마진) 업로드", () => {
     expect(preview.contract).toEqual({ aMargin: 15, generalMargin: 25, createMissing: false });
     expect(preview.changes.map((change) => [change.field, change.after])).toEqual([
       ["원가", 8400],
-      ["A단가", 9900],
+      ["수강생 단가", 9900],
       ["일반공급가", 11200]
     ]);
   });

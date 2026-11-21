@@ -171,10 +171,10 @@ function ContractMarginControls({ value, disabled, onChange }: { value: Contract
   return (
     <div className="contract-margin-fields" role="group" aria-label="마진 설정">
       <strong>마진 설정</strong>
-      <label>A급 단가<span className="contract-margin-input"><input type="number" inputMode="decimal" min={0} max={90} step={0.1} value={draft.aMargin} disabled={disabled} onChange={(event) => update("aMargin", event.target.value)} aria-label="A급 단가 마진(%)" />%</span></label>
+      <label>수강생 단가<span className="contract-margin-input"><input type="number" inputMode="decimal" min={0} max={90} step={0.1} value={draft.aMargin} disabled={disabled} onChange={(event) => update("aMargin", event.target.value)} aria-label="수강생 단가 마진(%)" />%</span></label>
       <label>일반공급가<span className="contract-margin-input"><input type="number" inputMode="decimal" min={0} max={90} step={0.1} value={draft.generalMargin} disabled={disabled} onChange={(event) => update("generalMargin", event.target.value)} aria-label="일반공급가 마진(%)" />%</span></label>
       <label className="contract-create-missing"><input type="checkbox" checked={value.createMissing} disabled={disabled} onChange={(event) => onChange({ ...value, createMissing: event.target.checked })} /> 데이터센터에 없는 상품은 신규 등록</label>
-      <small>{aMargin === null || generalMargin === null ? "마진은 0~90% 사이로 입력해 주세요." : `예) 원가 ${example.toLocaleString("ko-KR")}원 → A급 단가 ${contractPrice(example, aMargin).toLocaleString("ko-KR")}원(마진 ${marginText(contractPrice(example, aMargin))}) · 일반공급가 ${contractPrice(example, generalMargin).toLocaleString("ko-KR")}원(마진 ${marginText(contractPrice(example, generalMargin))}). 입력한 마진 이상으로, 끝자리 00원(저가 상품은 50원)에 맞춰 올립니다.`}</small>
+      <small>{aMargin === null || generalMargin === null ? "마진은 0~90% 사이로 입력해 주세요." : `예) 원가 ${example.toLocaleString("ko-KR")}원 → 수강생 단가 ${contractPrice(example, aMargin).toLocaleString("ko-KR")}원(마진 ${marginText(contractPrice(example, aMargin))}) · 일반공급가 ${contractPrice(example, generalMargin).toLocaleString("ko-KR")}원(마진 ${marginText(contractPrice(example, generalMargin))}). 입력한 마진 이상으로, 끝자리 00원(저가 상품은 50원)에 맞춰 올립니다.`}</small>
     </div>
   );
 }
@@ -412,7 +412,7 @@ function formatDateTime(value: string) {
 }
 
 function priceFieldLabel(field: "costPrice" | "aPrice" | "generalPrice" | "salePrice") {
-  return field === "costPrice" ? "원가" : field === "aPrice" ? "A단가" : field === "generalPrice" ? "일반공급가" : "지정 판매가";
+  return field === "costPrice" ? "원가" : field === "aPrice" ? "수강생 단가" : field === "generalPrice" ? "일반공급가" : "지정 판매가";
 }
 
 function marginRate(aPrice: number | undefined, costPrice: number | undefined) {
@@ -420,7 +420,7 @@ function marginRate(aPrice: number | undefined, costPrice: number | undefined) {
   return Math.max(0, ((aPrice - costPrice) / aPrice) * 100);
 }
 
-// 1개 판매 시 마진 금액(A단가 − 원가). 원가·A단가가 없으면 계산하지 않습니다.
+// 1개 판매 시 마진 금액(수강생 단가 − 원가). 원가·수강생 단가가 없으면 계산하지 않습니다.
 function marginAmount(aPrice: number | undefined, costPrice: number | undefined) {
   if (!aPrice || aPrice <= 0 || !costPrice || costPrice < 0) return null;
   return aPrice - costPrice;
@@ -975,7 +975,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const [dragOverSortProductId, setDragOverSortProductId] = useState<string | null>(null);
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkPreview, setBulkPreview] = useState<BulkWorkbookPreview | null>(null);
-  // 단가관리 엑셀: 반영할 가격 항목(매입원가·A급 단가·공급가)
+  // 단가관리 엑셀: 반영할 가격 항목(매입원가·수강생 단가·공급가)
   const [priceFields, setPriceFields] = useState<PriceField[]>(["cost", "a", "general"]);
   const [contractOptions, setContractOptions] = useState<ContractOptions>(readContractOptions);
   // 공급사 단가표: 행마다 입력한 신규 상품코드(파일을 새로 고르면 비웁니다)
@@ -1613,7 +1613,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <div className="excel-sync-panel">
           <div>
             <span className="excel-icon"><FileSpreadsheet size={21} /></span>
-            <div><strong>발주오라형 엑셀 상품 관리</strong><small>발주오라 상품리스트 엑셀을 그대로 올리면 가격·품절·노출이 반영되고 신규 상품이 등록됩니다. 가격 변경은 가격변동 이력에 자동 기록됩니다. 단가관리(danga-admin) "엑셀 일괄변경" 파일도 그대로 올리면 매입원가·A급 단가(황금농부 수강생)·공급가를 골라 한 번에 바꿉니다. 공급사 "단가표" 엑셀은 "엑셀 대량 업로드"로 올리면 공급가(A급단가가 있으면 A급단가)를 원가로 넣고, 미리보기에서 입력한 마진(기본 A급 10%·일반 20%) 이상으로 끝자리 00원에 맞춰 계산하며 없는 상품은 신규 등록합니다.</small></div>
+            <div><strong>발주오라형 엑셀 상품 관리</strong><small>발주오라 상품리스트 엑셀을 그대로 올리면 가격·품절·노출이 반영되고 신규 상품이 등록됩니다. 가격 변경은 가격변동 이력에 자동 기록됩니다. 단가관리(danga-admin) "엑셀 일괄변경" 파일도 그대로 올리면 매입원가·수강생 단가(단가관리의 황금농부 수강생 그룹 공급가)·공급가를 골라 한 번에 바꿉니다. 공급사 "단가표" 엑셀은 "엑셀 대량 업로드"로 올리면 공급가(A급단가가 있으면 A급단가)를 원가로 넣고, 미리보기에서 입력한 마진(기본 수강생 단가 10%·일반공급가 20%) 이상으로 끝자리 00원에 맞춰 계산하며 없는 상품은 신규 등록합니다.</small></div>
           </div>
           <div className="excel-actions">
             <button type="button" className="selected-excel-action" title="체크한 상품을 발주오라 대량상품등록 양식으로 받습니다" onClick={() => void downloadSelectedWorkbook()} disabled={excelBusy || selectedProductIds.size === 0}><Download size={15} /> 선택 상품 {selectedProductIds.size > 0 ? `(${selectedProductIds.size})` : ""} 다운로드</button>
@@ -1649,7 +1649,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
           </div>
           <div className="bulk-main-actions">{groupTools.ready && <button type="button" className="bulk-group-action" onClick={() => setGroupSelectionOpen(true)} disabled={quickBusy} title="고른 상품을 공개 단가표에서 카드 하나의 옵션으로 묶습니다"><Layers size={15} /> 옵션 묶기</button>}<button type="button" className="bulk-delete" onClick={() => void bulkDelete()} disabled={quickBusy}><Trash2 size={15} /> 선택 삭제</button><button type="button" className="primary-action" onClick={() => setBulkEditOpen("all")} disabled={quickBusy}><Pencil size={15} /> 상세 일괄 변경</button><button type="button" onClick={() => setSelectedProductIds(new Set())} disabled={quickBusy}>선택 해제</button></div>
         </div>}
-        <div className="admin-table-wrap product-admin-table-wrap" id="admin-product-list"><table className="admin-table product-admin-table"><thead><tr><th className="product-select-column"><label className="product-select-control"><input type="checkbox" ref={(element) => { if (element) element.indeterminate = selectedOnCurrentPage > 0 && !allCurrentPageSelected; }} checked={allCurrentPageSelected} onChange={toggleCurrentPageSelection} aria-label="현재 페이지 상품 전체 선택" /><span>선택</span></label></th><th>상품정보</th><th>노출순서</th><th>배송/카테고리</th><th>판매기간</th><th>매입처</th><th>원가</th><th>A단가</th><th>일반공급가</th><th>판매가</th><th>마진(1개)</th><th>상태</th><th>관리</th></tr></thead><tbody>
+        <div className="admin-table-wrap product-admin-table-wrap" id="admin-product-list"><table className="admin-table product-admin-table"><thead><tr><th className="product-select-column"><label className="product-select-control"><input type="checkbox" ref={(element) => { if (element) element.indeterminate = selectedOnCurrentPage > 0 && !allCurrentPageSelected; }} checked={allCurrentPageSelected} onChange={toggleCurrentPageSelection} aria-label="현재 페이지 상품 전체 선택" /><span>선택</span></label></th><th>상품정보</th><th>노출순서</th><th>배송/카테고리</th><th>판매기간</th><th>매입처</th><th>원가</th><th>수강생 단가</th><th>일반공급가</th><th>판매가</th><th>마진(1개)</th><th>상태</th><th>관리</th></tr></thead><tbody>
           {pagedProducts.map((product) => {
             const options = product.options ?? [];
             const representativeOption = options.length > 0
@@ -1667,11 +1667,11 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             // 옵션 단가 패널: PC는 표 아래 펼침 행, 모바일은 옵션 버튼 바로 아래에 같은 내용을 보여줍니다.
             const optionPanel = expanded && options.length > 0 ? (
               <div className="admin-option-panel">
-                        <div className="admin-option-panel-heading"><div><span>OPTION PRICE</span><strong>{product.name} 옵션 단가</strong></div><small>옵션별 원가와 A단가 마진을 한눈에 확인할 수 있습니다.</small></div>
+                        <div className="admin-option-panel-heading"><div><span>OPTION PRICE</span><strong>{product.name} 옵션 단가</strong></div><small>옵션별 원가와 수강생 단가 마진을 한눈에 확인할 수 있습니다.</small></div>
                         <div className="admin-option-list">
                           {options.map((option) => {
                             const optionMargin = marginRate(effectiveAPrice(option.aPrice, option.generalPrice), option.costPrice);
-                            return <article key={option.id}>{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={18} /></span>}<div className="admin-option-name"><strong>{option.name}</strong><small>{product.name}</small></div><div><span>원가</span><b className="cost-price">{formatPrice(option.costPrice ?? 0)}</b></div><div><span>A단가</span><b className="admin-a-price">{formatPrice(effectiveAPrice(option.aPrice, option.generalPrice))}</b></div><div><span>일반공급가</span><b className="admin-general-price">{formatPrice(option.generalPrice)}</b></div><div><span>판매가</span><b className="admin-sale-price">{option.salePriceMode === "fixed" ? option.salePrice === null ? "미설정" : formatPrice(option.salePrice) : "자율"}</b></div><div><span>마진율</span><em className="prominent">{optionMargin !== null ? `${Math.round(optionMargin)}%` : "-"}</em></div><div><span>상태</span><b className={option.isSoldOut ? "admin-option-sold-out" : ""}>{option.isSoldOut ? "품절" : "판매중"}</b></div></article>;
+                            return <article key={option.id}>{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={18} /></span>}<div className="admin-option-name"><strong>{option.name}</strong><small>{product.name}</small></div><div><span>원가</span><b className="cost-price">{formatPrice(option.costPrice ?? 0)}</b></div><div><span>수강생 단가</span><b className="admin-a-price">{formatPrice(effectiveAPrice(option.aPrice, option.generalPrice))}</b></div><div><span>일반공급가</span><b className="admin-general-price">{formatPrice(option.generalPrice)}</b></div><div><span>판매가</span><b className="admin-sale-price">{option.salePriceMode === "fixed" ? option.salePrice === null ? "미설정" : formatPrice(option.salePrice) : "자율"}</b></div><div><span>마진율</span><em className="prominent">{optionMargin !== null ? `${Math.round(optionMargin)}%` : "-"}</em></div><div><span>상태</span><b className={option.isSoldOut ? "admin-option-sold-out" : ""}>{option.isSoldOut ? "품절" : "판매중"}</b></div></article>;
                           })}
                         </div>
                       </div>
@@ -1686,7 +1686,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
                   <td data-label="판매기간"><strong>{seasonApplies(product, category) ? product.isAlwaysOnSale ? "상시 판매" : `${product.saleStartMonth || "-"}월 ~ ${product.saleEndMonth || "-"}월` : "상시"}</strong><small>{seasonApplies(product, category) ? product.isAlwaysOnSale ? "연중 판매" : "월별 제철상품" : "제철 월 미지정"}</small></td>
                   <td data-label="매입처"><strong>{product.supplierName || "미지정"}</strong></td>
                   <td data-label="원가"><b className="cost-price">{formatPrice(costPrice)}</b></td>
-                  <td data-label="A단가"><b className="admin-a-price">{formatPrice(minimumAPrice)}</b><small>{options.length > 0 ? "옵션 최저 A단가" : "기본 A단가"}</small></td>
+                  <td data-label="수강생 단가"><b className="admin-a-price">{formatPrice(minimumAPrice)}</b><small>{options.length > 0 ? "옵션 최저 수강생 단가" : "기본 수강생 단가"}</small></td>
                   <td data-label="일반공급가"><b className="admin-general-price">{formatPrice(minimumGeneralPrice)}</b><small>{options.length > 0 ? "옵션 최저가" : "기본가"}</small></td>
                   <td data-label="판매가"><b className="admin-sale-price">{product.salePriceMode === "fixed" ? product.salePrice === null ? "미설정" : formatPrice(product.salePrice) : "자율"}</b><small>{product.salePriceMode === "fixed" ? "지정 판매가" : "판매자 자율"}</small></td>
                   <td data-label="마진(1개)">{margin !== null && marginWon !== null ? <div className="margin-cell"><strong className="margin-rate prominent">{Math.round(margin)}%</strong><span className={`margin-amount ${marginWon < 0 ? "negative" : ""}`}>개당 {formatSignedPrice(marginWon)}</span></div> : <small>계산 대기</small>}</td>
@@ -1760,8 +1760,8 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <label className="full">상품명<input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} required /></label>
         <label>배송유형<select value={editing.shippingType} onChange={(event) => { const shippingType = event.target.value as ShippingType; const category = data.categories.find((item) => item.shippingType === shippingType); const health = isHealthCategory(category); setEditing({ ...editing, shippingType, categoryId: category?.id || "", shippingPolicyId: null, salePriceMode: health ? "fixed" : editing.salePriceMode, options: editing.options.map((option) => ({ ...option, salePriceMode: health ? "fixed" : option.salePriceMode })) }); }}><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select></label>
         <label>카테고리<select value={editing.categoryId} onChange={(event) => { const category = data.categories.find((item) => item.id === event.target.value); const health = isHealthCategory(category); setEditing({ ...editing, categoryId: event.target.value, salePriceMode: health ? "fixed" : editing.salePriceMode, options: editing.options.map((option) => ({ ...option, salePriceMode: health ? "fixed" : option.salePriceMode })) }); }} required>{data.categories.filter((item) => item.shippingType === editing.shippingType).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <label>원가<input type="number" min="0" value={editing.costPrice} onChange={(event) => setEditing({ ...editing, costPrice: Number(event.target.value) })} required /><small>원가 기준 A단가 마진율이 자동 계산됩니다.</small></label>
-        <label>A단가<input type="number" min="0" value={editing.aPrice} onChange={(event) => setEditing({ ...editing, aPrice: Number(event.target.value) })} required /><strong className="margin-rate editor-margin">{marginRate(editing.aPrice, editing.costPrice)?.toFixed(1) ?? "-"}% 마진{marginAmount(editing.aPrice, editing.costPrice) !== null ? ` · 개당 ${formatSignedPrice(marginAmount(editing.aPrice, editing.costPrice)!)}` : ""}</strong></label>
+        <label>원가<input type="number" min="0" value={editing.costPrice} onChange={(event) => setEditing({ ...editing, costPrice: Number(event.target.value) })} required /><small>원가 기준 수강생 단가 마진율이 자동 계산됩니다.</small></label>
+        <label>수강생 단가<input type="number" min="0" value={editing.aPrice} onChange={(event) => setEditing({ ...editing, aPrice: Number(event.target.value) })} required /><strong className="margin-rate editor-margin">{marginRate(editing.aPrice, editing.costPrice)?.toFixed(1) ?? "-"}% 마진{marginAmount(editing.aPrice, editing.costPrice) !== null ? ` · 개당 ${formatSignedPrice(marginAmount(editing.aPrice, editing.costPrice)!)}` : ""}</strong></label>
         <label>일반공급가<input type="number" min="0" value={editing.generalPrice} onChange={(event) => setEditing({ ...editing, generalPrice: Number(event.target.value) })} required /></label>
         <label>판매가 정책<select value={editingHealthProduct ? "fixed" : editing.salePriceMode} disabled={editingHealthProduct} onChange={(event) => setEditing({ ...editing, salePriceMode: event.target.value as "autonomous" | "fixed" })}><option value="autonomous">자율 판매가</option><option value="fixed">지정 판매가</option></select><small>{editingHealthProduct ? "건강식품은 지정 판매가만 사용할 수 있습니다." : "판매자가 자유롭게 정하거나 지정가를 안내할 수 있습니다."}</small></label>
         <label>지정 판매가<input type="number" min="0" value={editing.salePrice ?? ""} disabled={(editingHealthProduct ? "fixed" : editing.salePriceMode) !== "fixed"} onChange={(event) => setEditing({ ...editing, salePrice: event.target.value ? Number(event.target.value) : null })} placeholder="지정 판매가 입력" /></label>
@@ -1804,7 +1804,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <div className="excel-preview-summary"><article><span>읽은 행</span><strong>{bulkPreview.totalRows}</strong></article><article><span>매칭 행</span><strong>{bulkPreview.matchedRows}</strong></article><article><span>변경 상품</span><strong>{bulkPreview.affectedProducts}</strong></article><article><span>변경 항목</span><strong>{bulkPreview.changes.length}</strong></article>{bulkPreview.newProducts ? <article><span>신규 상품</span><strong>{bulkPreview.newProducts}</strong></article> : null}{bulkPreview.restoredProducts ? <article><span>복원 상품</span><strong>{bulkPreview.restoredProducts}</strong></article> : null}</div>
         {bulkPreview.format === "contract" && <ContractMarginControls value={contractOptions} disabled={excelBusy} onChange={updateContractOptions} />}
         {bulkPreview.format === "contract" && (bulkPreview.needsCode?.length ?? 0) > 0 && <NewCodeInputs key={bulkFile?.name ?? "codes"} rows={bulkPreview.needsCode ?? []} value={newCodes} disabled={excelBusy} onChange={updateNewCodes} />}
-        {(bulkPreview.format === "danga" || bulkPreview.format === "contract") && <div className="excel-price-fields" role="group" aria-label="반영할 가격 항목"><strong>반영할 항목</strong>{(bulkPreview.format === "contract" ? [["cost", "원가 (공급사 공급가·A급단가)"], ["a", `A급 단가 (마진 ${contractOptions.aMargin}% 이상)`], ["general", `일반공급가 (마진 ${contractOptions.generalMargin}% 이상)`]] as Array<[PriceField, string]> : [["cost", "매입원가"], ["a", "A급 단가 (황금농부 수강생)"], ["general", "공급가"]] as Array<[PriceField, string]>).map(([field, label]) => <label key={field}><input type="checkbox" checked={priceFields.includes(field)} disabled={excelBusy} onChange={(event) => { const next = event.target.checked ? [...priceFields, field] : priceFields.filter((item) => item !== field); setPriceFields(next); if (bulkFile) void previewWorkbook(bulkFile, next); }} /> {label}</label>)}</div>}
+        {(bulkPreview.format === "danga" || bulkPreview.format === "contract") && <div className="excel-price-fields" role="group" aria-label="반영할 가격 항목"><strong>반영할 항목</strong>{(bulkPreview.format === "contract" ? [["cost", "원가 (공급사 공급가·A급단가)"], ["a", `수강생 단가 (마진 ${contractOptions.aMargin}% 이상)`], ["general", `일반공급가 (마진 ${contractOptions.generalMargin}% 이상)`]] as Array<[PriceField, string]> : [["cost", "매입원가"], ["a", "수강생 단가 (단가관리 황금농부 수강생 그룹)"], ["general", "공급가"]] as Array<[PriceField, string]>).map(([field, label]) => <label key={field}><input type="checkbox" checked={priceFields.includes(field)} disabled={excelBusy} onChange={(event) => { const next = event.target.checked ? [...priceFields, field] : priceFields.filter((item) => item !== field); setPriceFields(next); if (bulkFile) void previewWorkbook(bulkFile, next); }} /> {label}</label>)}</div>}
         {bulkPreview.errors.length > 0 && <div className="excel-error-list"><strong>수정이 필요한 행</strong>{bulkPreview.errors.map((error) => <p key={`${error.row}-${error.message}`}>{error.row}행 · {error.message}</p>)}</div>}
         <div className="excel-change-list">{bulkPreview.changes.length === 0 ? <p className="excel-empty">변경되는 값이 없습니다.</p> : bulkPreview.changes.slice(0, 100).map((change, index) => <div key={`${change.row}-${change.field}-${index}`}><span>{change.row}행</span><strong>{change.productName}{change.optionName ? <small>{change.optionName}</small> : null}</strong><em>{change.field}</em><del>{typeof change.before === "number" ? change.before.toLocaleString("ko-KR") : String(change.before ?? "-")}</del><ChevronRight size={14} /><b>{typeof change.after === "number" ? change.after.toLocaleString("ko-KR") : String(change.after ?? "-")}</b></div>)}</div>
         <div className="excel-warning-list">{bulkPreview.warnings.map((warning) => <p key={warning}>• {warning}</p>)}</div>
@@ -2318,7 +2318,7 @@ function NewProductsAdmin({ data, refresh }: { data: AdminCatalogData; refresh: 
         <div className="history-filter-toolbar"><div className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·상품코드 검색" /></div><span>{rows.length}개</span></div>
         <div className="admin-table-wrap">
           <table className="admin-table new-products-admin-table">
-            <thead><tr><th>등록일</th><th>상품</th><th>카테고리</th><th>A단가 / 일반공급가</th><th>공개 상태</th><th>신규상품 표시</th></tr></thead>
+            <thead><tr><th>등록일</th><th>상품</th><th>카테고리</th><th>수강생 단가 / 일반공급가</th><th>공개 상태</th><th>신규상품 표시</th></tr></thead>
             <tbody>
               {rows.map((product) => {
                 const status = statusOf(product);
@@ -2328,7 +2328,7 @@ function NewProductsAdmin({ data, refresh }: { data: AdminCatalogData; refresh: 
                     <td data-label="등록일"><strong>{shortDayLabel(day)}</strong><small>{formatDateTime(product.createdAt)}</small></td>
                     <td data-label="상품" className="history-product-cell"><span className="history-product-image">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <Boxes size={16} />}</span><span><strong>{product.name}</strong><small>{product.productCode || "코드 없음"}</small></span></td>
                     <td data-label="카테고리">{categoryNameById.get(product.categoryId ?? "") ?? "📦 기타"}</td>
-                    <td data-label="A단가 / 일반공급가">{formatPrice(product.aPrice || product.generalPrice)} / {formatPrice(product.generalPrice)}</td>
+                    <td data-label="수강생 단가 / 일반공급가">{formatPrice(product.aPrice || product.generalPrice)} / {formatPrice(product.generalPrice)}</td>
                     <td data-label="공개 상태"><span className={`new-product-status is-${status}`}>{statusLabel[status]}</span>{status === "invisible" && <small className="new-product-status-hint">상품 리스트에서 노출을 켜면 보입니다.</small>}</td>
                     <td data-label="신규상품 표시"><button type="button" className="new-product-toggle" onClick={() => toggleHidden(product)} disabled={saving}>{hiddenSet.has(product.id) ? <><Eye size={14} /> 다시 보이기</> : <><EyeOff size={14} /> 신규상품에서 빼기</>}</button></td>
                   </tr>
@@ -3110,7 +3110,7 @@ function AdminPager({ total, page, pageSize, onPage, label }: { total: number; p
   return <div className="catalog-pagination admin-history-pagination"><span>{(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)}개 <small>/ 총 {total.toLocaleString("ko-KR")}건</small></span><nav aria-label={`${label} 페이지`}><button type="button" onClick={() => onPage(Math.max(1, page - 1))} disabled={page === 1} aria-label={`이전 ${label} 페이지`}><ChevronLeft size={15} /></button>{pages.map((value) => <button type="button" className={value === page ? "active" : ""} key={value} onClick={() => onPage(value)}>{value}</button>)}<button type="button" onClick={() => onPage(Math.min(pageCount, page + 1))} disabled={page === pageCount} aria-label={`다음 ${label} 페이지`}><ChevronRight size={15} /></button></nav></div>;
 }
 
-const syncFieldLabels: Record<string, string> = { aPrice: "A단가", generalPrice: "일반공급가", costPrice: "원가", salePrice: "판매가", isSoldOut: "품절", isVisible: "노출", name: "상품명", imageUrl: "이미지" };
+const syncFieldLabels: Record<string, string> = { aPrice: "수강생 단가", generalPrice: "일반공급가", costPrice: "원가", salePrice: "판매가", isSoldOut: "품절", isVisible: "노출", name: "상품명", imageUrl: "이미지" };
 const syncPriceFields = new Set(["aPrice", "generalPrice", "costPrice", "salePrice"]);
 // 변경 대기열 값: 가격은 "23,000원", 품절·노출은 예/아니오로 읽기 쉽게 표시합니다.
 function syncValueLabel(field: string | null | undefined, value: unknown) {

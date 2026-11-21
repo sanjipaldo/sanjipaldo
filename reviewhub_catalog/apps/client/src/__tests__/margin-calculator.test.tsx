@@ -144,7 +144,7 @@ describe("계산표 · 이 기기 저장", () => {
 });
 
 describe("마진계산기 화면", () => {
-  it("팝업: 단가표 상품으로 채우고 판매가를 넣으면 바로 계산 · A단가/일반공급가 전환 · 계산표에 담기", async () => {
+  it("팝업: 단가표 상품으로 채우고 판매가를 넣으면 바로 계산 · 수강생 단가/일반공급가 전환 · 계산표에 담기", async () => {
     const { MarginCalculatorModal } = await import("@/pages/catalog/MarginCalculator");
     render(
       <MemoryRouter>

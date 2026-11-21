@@ -97,6 +97,41 @@ export async function publicGroupSummaries(publicProductIds: Set<string>) {
   return summarizePublicGroups(await loadPublicGroupRows(), publicProductIds);
 }
 
+// ── 미리보기 예시 묶음(배포 전 확인용) ─────────────────────────────────
+// 미리보기 배포에만 CATALOG_EXAMPLE_GROUPS=1을 주면, 실제 묶음이 하나도 없을 때(운영 DB에 033 전이거나 아직 안 묶음)
+// 이름이 비슷한 상품을 묶음 추천 규칙으로 자동으로 묶어 "보여 주기만" 합니다. DB에는 아무것도 저장하지 않습니다.
+// 운영 배포(VERCEL_ENV=production)에서는 값이 있어도 켜지지 않습니다.
+export function exampleGroupsEnabled() {
+  return process.env.CATALOG_EXAMPLE_GROUPS === "1" && process.env.VERCEL_ENV !== "production";
+}
+
+type ExampleSource = { id: string; name: string; categoryId: string | null; shippingType: string; generalPrice: number };
+
+export function exampleGroupSummaries(products: ExampleSource[]): PublicProductGroup[] {
+  const byId = new Map(products.map((product) => [product.id, product]));
+  return suggestProductGroups(products).map((suggestion) => ({
+    id: `example-${suggestion.key}`,
+    name: suggestion.name,
+    imageUrl: null,
+    categoryId: suggestion.categoryId,
+    productIds: [...suggestion.productIds].sort((first, second) => byId.get(first)!.generalPrice - byId.get(second)!.generalPrice || byId.get(first)!.name.localeCompare(byId.get(second)!.name, "ko")),
+    example: true
+  }));
+}
+
+async function findExampleGroup(productId: string) {
+  if (!exampleGroupsEnabled() || (await loadPublicGroupRows()).length > 0) return null;
+  const rows = await getDb().select({ id: products.id, name: products.name, categoryId: products.categoryId, shippingType: products.shippingType, generalPrice: products.generalPrice })
+    .from(products)
+    .where(and(eq(products.isVisible, true), isNull(products.deletedAt)));
+  const group = exampleGroupSummaries(rows).find((item) => item.productIds.includes(productId));
+  if (!group) return null;
+  return {
+    group: { id: group.id, name: group.name, imageUrl: null, description: null, shippingNote: null, materialsUrl: null, example: true },
+    items: group.productIds.map((id) => ({ productId: id, optionLabel: null }))
+  };
+}
+
 // ── 옵션 팝업: 묶음 안내 + 옵션별 최근 7일 가격 흐름 ──────────────────
 
 type HistoryRow = { productId: string; field: string; oldPrice: number; newPrice: number; changedAt: string };
@@ -190,7 +225,7 @@ async function findGroupForProduct(productId: string): Promise<{ group: GroupDet
 // 옵션 팝업 데이터. 상품이 공개(노출·미삭제)가 아니면 null(404)입니다.
 export async function getPublicProductOptions(productId: string, now = Date.now()): Promise<ProductOptionsDetail | null> {
   const db = getDb();
-  const found = await findGroupForProduct(productId);
+  const found = (await findGroupForProduct(productId)) ?? (await findExampleGroup(productId));
   const candidateIds = found ? found.items.map((item) => item.productId) : [productId];
   if (!candidateIds.includes(productId)) candidateIds.push(productId);
   const productRows = await db.select({ id: products.id, aPrice: products.aPrice, generalPrice: products.generalPrice, createdAt: products.createdAt })

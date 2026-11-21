@@ -1,7 +1,7 @@
 // 공개 단가표 상품 카드 + 옵션 팝업(2026-11-21 관리자 요청).
 // 두고푸드는 사이즈·등급마다 상품을 따로 등록하고(발주오라 상품코드 1:1), 관리자 "옵션 묶음"으로 묶은 상품은
 // 카드 하나로 보여 줍니다. 카드를 누르면 팝업에서 전체 옵션(일반공급가·수강생 단가·상태), 상품 안내, 배송 안내,
-// 상세페이지·사진 자료, 최근 7일 가격 흐름(이전·현재·예정 공급가 + 그래프), 이 상품 엑셀 다운로드를 봅니다.
+// 상세페이지·사진 자료, 최근 7일 가격 흐름(이전·현재 공급가 + 그래프), 이 상품 엑셀 다운로드를 봅니다.
 // 묶지 않은 상품은 옵션 1개짜리 카드입니다. 원가·매입처는 다루지 않습니다.
 import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -146,6 +146,7 @@ function ProductCard({ card, categories, policyById, currentMonth, onOpen, onShi
           {renderBadge?.(card.lead)}
           <span className={`delivery-badge ${first.shippingType}`}>{first.shippingType === "domestic" ? "국내배송" : "해외배송"}</span>
           {categoryName && <span className="product-card-category">{categoryName}</span>}
+          {card.group?.example && <span className="product-card-example" title="미리보기에서만 이름이 비슷한 상품을 자동으로 묶어 보여 주는 예시예요. 실제 사이트에서는 관리자가 묶은 대로 보여요.">미리보기 예시 묶음</span>}
         </div>
         <h3 className="product-card-title"><button type="button" onClick={onOpen}>{card.name}</button></h3>
         {origins.length > 0 && <p className="product-card-origin">{origins.join(" · ")}</p>}
@@ -325,6 +326,9 @@ export function ProductOptionsModal({ card, categories, policyById, currentMonth
                 <Download size={15} aria-hidden="true" /> {downloading ? "만드는 중…" : "이 상품 엑셀 다운로드"}
               </button>
             </div>
+            {(card.group?.example || detail?.group?.example) && (
+              <p className="product-options-example">미리보기 예시: 이름이 비슷한 상품을 자동으로 묶어 보여 드려요. 실제 사이트에서는 관리자가 “옵션 묶음 관리”에서 묶은 대로 보입니다.</p>
+            )}
             <div className="product-options-table-wrap">
               <table className="product-options-table">
                 <thead><tr><th scope="col">옵션</th><th scope="col">{GENERAL_PRICE_LABEL}</th><th scope="col">{STUDENT_PRICE_LABEL}</th><th scope="col">상태</th></tr></thead>
@@ -410,11 +414,6 @@ export function ProductOptionsModal({ card, categories, policyById, currentMonth
                       <div><dt>{STUDENT_PRICE_LABEL}</dt><dd>{formatPrice(trend.current.student)}</dd></div>
                     </dl>
                   </article>
-                  <article className="price-step-card is-planned">
-                    <h4>예정 공급가</h4>
-                    <small>확정된 일정 없음</small>
-                    <p>기록 없음</p>
-                  </article>
                 </div>
                 <PriceTrendChart
                   days={days}
@@ -423,7 +422,7 @@ export function ProductOptionsModal({ card, categories, policyById, currentMonth
                     { key: "student", label: STUDENT_PRICE_LABEL, values: trend.student, color: "#008300", dash: "6 4" }
                   ]}
                 />
-                <p className="product-options-footnote">그래프는 오늘까지 실제로 적용된 하루 마감 가격입니다. 이전 공급가는 마지막 가격 변경 직전 가격이에요. 정해진 예정 가격이 생기면 예정 공급가에 보여 드립니다.</p>
+                <p className="product-options-footnote">그래프는 오늘까지 실제로 적용된 하루 마감 가격입니다. 이전 공급가는 마지막 가격 변경 직전 가격이에요.</p>
               </>
             )}
           </section>

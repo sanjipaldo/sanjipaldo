@@ -138,7 +138,7 @@ const ProductSchema = z.object({
 
 const PRODUCT_FIELD_LABELS: Record<string, string> = {
   productCode: "상품코드", name: "상품명", imageUrl: "상품 이미지 주소", origin: "원산지", supplierName: "매입처",
-  costPrice: "원가", aPrice: "A단가", generalPrice: "일반공급가", salePrice: "판매가", salePriceMode: "판매가 방식",
+  costPrice: "원가", aPrice: "수강생 단가", generalPrice: "일반공급가", salePrice: "판매가", salePriceMode: "판매가 방식",
   saleStartMonth: "판매 시작월", saleEndMonth: "판매 종료월", shippingFee: "배송비", releaseInfo: "출고 안내",
   notes: "상품 간략설명", optionsInfo: "옵션 안내", packaging: "포장", courier: "택배사", shippingType: "배송유형",
   shippingPolicyId: "배송 정책", categoryId: "카테고리", options: "옵션", sortOrder: "옵션 순서"

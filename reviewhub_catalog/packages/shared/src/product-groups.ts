@@ -20,6 +20,8 @@ export type PublicProductGroup = {
   optionLabels?: Record<string, string>;
   // 상세페이지·사진 자료 링크(있을 때만)
   materialsUrl?: string;
+  // 미리보기 예시 묶음(미리보기 배포에서 이름이 비슷한 상품을 자동으로 묶어 보여 주기만 한 것, DB에 없음)
+  example?: boolean;
 };
 
 // 옵션 팝업(/api/catalog/options/:productId): 묶음 안내 문구와 옵션별 최근 7일 가격 흐름
@@ -41,6 +43,7 @@ export type ProductOptionsDetail = {
     description: string | null;
     shippingNote: string | null;
     materialsUrl: string | null;
+    example?: boolean;
   } | null;
   productIds: string[];
   optionLabels: Record<string, string>;

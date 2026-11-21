@@ -440,7 +440,7 @@ export function SellerGuidePage() {
     { icon: <Store size={20} />, title: "내 판매처에 등록·판매", body: "판매가는 자율이 기본이고 ‘지정 판매가’ 상품은 안내된 금액으로 판매합니다. 상품 이미지는 두고푸드 상품 판매 목적에만 씁니다." }
   ];
   const menus = [
-    { to: "/", icon: <FileSpreadsheet size={20} />, title: "상품 단가표", body: "A단가·일반공급가·판매가·배송비·판매기간을 한 번에 봅니다." },
+    { to: "/", icon: <FileSpreadsheet size={20} />, title: "상품 단가표", body: "수강생 단가·일반공급가·판매가·배송비·판매기간을 한 번에 봅니다." },
     { to: "/new-products", icon: <Sparkles size={20} />, title: "신규상품", body: "최근 7일 새로 들어온 상품을 등록일별로 봅니다." },
     { to: "/notices", icon: <TrendingUp size={20} />, title: "가격변동", body: "오늘과 지난 3일 바뀐 가격 · 공지용 엑셀 받기." },
     { to: "/sold-out", icon: <Ban size={20} />, title: "품절이슈", body: "최근 7일 품절된 상품을 날짜별로 봅니다." },
@@ -448,7 +448,7 @@ export function SellerGuidePage() {
     { to: "/sourcing", icon: <PackageSearch size={20} />, title: "소싱 요청", body: "찾는 상품이 없으면 상품과 희망 조건을 남깁니다." }
   ];
   const priceTerms = [
-    { label: "A단가", value: "제휴 조건이 적용된 단가입니다." },
+    { label: "수강생 단가", value: "수강생에게 적용되는 공급가입니다(따로 정하지 않은 상품은 일반공급가와 같아요)." },
     { label: "일반공급가", value: "일반 판매자 기준 공급가입니다. 도매몰에서는 내 거래 조건 단가가 자동으로 적용됩니다." },
     { label: "판매가", value: "자율이 기본입니다. 단가표에 ‘지정 판매가’가 있는 상품은 안내된 금액으로 판매해 주세요." },
     { label: "배송비", value: "‘배송비 무료’ 또는 금액으로 표시되고, 누르면 배송 정책(제주·도서산간 추가비 등)이 보입니다." },

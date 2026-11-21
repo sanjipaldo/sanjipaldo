@@ -135,10 +135,10 @@ export const SELLER_DEMO_SCRIPTS: Record<string, DemoScript> = {
         view: { kind: "catalog", query: "사과", typeAt: 0.7, rows: APPLE_ROWS, status: "셀러가 상품을 검색하고 있어요" }
       },
       {
-        caption: { kicker: "공급가는 두 가지예요", title: "**A단가·일반공급가**" },
+        caption: { kicker: "공급가는 두 가지예요", title: "**수강생 단가·일반공급가**" },
         duration: 4.2,
         actor: "seller",
-        view: { kind: "catalog", query: "사과", rows: APPLE_ROWS, focus: [{ at: 0.7, row: 0, field: "price", note: "A단가: 제휴 조건이 적용된 단가\n일반공급가: 일반 판매자 기준" }], status: "셀러가 공급가를 보고 있어요" }
+        view: { kind: "catalog", query: "사과", rows: APPLE_ROWS, focus: [{ at: 0.7, row: 0, field: "price", note: "수강생 단가: 수강생에게 적용되는 공급가\n일반공급가: 일반 판매자 기준" }], status: "셀러가 공급가를 보고 있어요" }
       },
       {
         caption: { kicker: "판매가는", title: "**자율**이 기본이에요" },

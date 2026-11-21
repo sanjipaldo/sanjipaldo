@@ -151,7 +151,7 @@ describe("건강식품 백과사전 자료", () => {
 });
 
 describe("단가표 마진율", () => {
-  it("(판매가 − A단가) ÷ 판매가, 소수점 한 자리 · 계산할 수 없으면 null", () => {
+  it("(판매가 − 수강생 단가) ÷ 판매가, 소수점 한 자리 · 계산할 수 없으면 null", () => {
     expect(saleMargin(71500, 110000)).toEqual({ rate: 35, amount: 38500 });
     expect(formatMarginRate(saleMargin(27000, 49000)!.rate)).toBe("44.9%");
     expect(formatMarginRate(saleMargin(10000, 10000)!.rate)).toBe("0.0%");

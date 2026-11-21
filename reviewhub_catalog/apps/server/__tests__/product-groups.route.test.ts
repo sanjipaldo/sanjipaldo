@@ -221,3 +221,44 @@ describe("옵션 묶음 관리자 API", () => {
     expect((await json(badUrl)).error?.message).toContain("http");
   });
 });
+
+describe("미리보기 예시 묶음(미리보기 배포에만 CATALOG_EXAMPLE_GROUPS=1)", () => {
+  it("실제 묶음이 없으면 이름이 비슷한 공개 상품을 저장하지 않고 묶어 보여 주고, 실제 묶음이 생기거나 운영이면 쓰지 않습니다", async () => {
+    process.env.CATALOG_EXAMPLE_GROUPS = "1";
+    try {
+      const catalog = await json<{ groups: Array<{ id: string; name: string; productIds: string[]; example?: boolean }> }>(await app.fetch(new Request("http://localhost/api/catalog")));
+      const example = catalog.data.groups.find((group) => group.productIds.includes("pg-1"))!;
+      expect(example).toMatchObject({ example: true, name: "(테스트) 여주 꿀고구마 (베니하루카)" });
+      // 일반공급가 낮은 순 · 숨김 상품 제외 · 혼자인 상품(한라봉)은 묶지 않음
+      expect(example.productIds).toEqual(["pg-1", "pg-2", "pg-3", "pg-4"]);
+      expect(catalog.data.groups.some((group) => group.productIds.includes("pg-x"))).toBe(false);
+
+      const options = await json<{ group: { name: string; example?: boolean }; productIds: string[] }>(await app.fetch(new Request("http://localhost/api/catalog/options/pg-2")));
+      expect(options.data.group).toMatchObject({ name: example.name, example: true });
+      expect(options.data.productIds).toEqual(["pg-1", "pg-2", "pg-3", "pg-4"]);
+      const exportRes = await app.fetch(new Request("http://localhost/api/catalog/options/pg-2/export"));
+      expect(exportRes.status).toBe(200);
+      // DB에는 아무것도 저장하지 않습니다.
+      expect((await executeSql("SELECT COUNT(*) AS count FROM product_groups")).rows[0].count).toBe(0);
+
+      // 운영(VERCEL_ENV=production)에서는 값이 있어도 켜지지 않습니다.
+      process.env.VERCEL_ENV = "production";
+      const production = await json<{ groups: unknown[] }>(await app.fetch(new Request("http://localhost/api/catalog")));
+      expect(production.data.groups).toEqual([]);
+      delete process.env.VERCEL_ENV;
+
+      // 실제 묶음이 하나라도 생기면 예시는 쓰지 않습니다.
+      const admin = await adminToken();
+      expect((await send(admin, "/api/catalog/admin/groups", "POST", { name: "실제 묶음", items: [{ productId: "pg-3" }, { productId: "pg-4" }] })).status).toBe(201);
+      const after = await json<{ groups: Array<{ name: string; example?: boolean }> }>(await app.fetch(new Request("http://localhost/api/catalog")));
+      expect(after.data.groups.map((group) => group.name)).toEqual(["실제 묶음"]);
+      expect(after.data.groups.some((group) => group.example)).toBe(false);
+      const single = await json<{ group: unknown; productIds: string[] }>(await app.fetch(new Request("http://localhost/api/catalog/options/pg-1")));
+      expect(single.data.group).toBeNull();
+      expect(single.data.productIds).toEqual(["pg-1"]);
+    } finally {
+      delete process.env.CATALOG_EXAMPLE_GROUPS;
+      delete process.env.VERCEL_ENV;
+    }
+  });
+});

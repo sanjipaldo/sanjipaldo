@@ -276,7 +276,7 @@ export type MarginDraft = MarginInput & {
   name: string;
   marketId: string;
   productId: string | null;
-  /** 두고푸드 상품을 불러왔을 때의 공급가(매입가 A단가/일반공급가 전환용) */
+  /** 두고푸드 상품을 불러왔을 때의 공급가(매입가 수강생 단가/일반공급가 전환용) */
   aPrice: number | null;
   generalPrice: number | null;
   costBasis: "a" | "general" | "manual";
