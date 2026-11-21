@@ -146,7 +146,6 @@ function ProductCard({ card, categories, policyById, currentMonth, onOpen, onShi
           {renderBadge?.(card.lead)}
           <span className={`delivery-badge ${first.shippingType}`}>{first.shippingType === "domestic" ? "국내배송" : "해외배송"}</span>
           {categoryName && <span className="product-card-category">{categoryName}</span>}
-          {card.group?.example && <span className="product-card-example" title="미리보기에서만 이름이 비슷한 상품을 자동으로 묶어 보여 주는 예시예요. 실제 사이트에서는 관리자가 묶은 대로 보여요.">미리보기 예시 묶음</span>}
         </div>
         <h3 className="product-card-title"><button type="button" onClick={onOpen}>{card.name}</button></h3>
         {origins.length > 0 && <p className="product-card-origin">{origins.join(" · ")}</p>}
@@ -326,9 +325,6 @@ export function ProductOptionsModal({ card, categories, policyById, currentMonth
                 <Download size={15} aria-hidden="true" /> {downloading ? "만드는 중…" : "이 상품 엑셀 다운로드"}
               </button>
             </div>
-            {(card.group?.example || detail?.group?.example) && (
-              <p className="product-options-example">미리보기 예시: 이름이 비슷한 상품을 자동으로 묶어 보여 드려요. 실제 사이트에서는 관리자가 “옵션 묶음 관리”에서 묶은 대로 보입니다.</p>
-            )}
             <div className="product-options-table-wrap">
               <table className="product-options-table">
                 <thead><tr><th scope="col">옵션</th><th scope="col">{GENERAL_PRICE_LABEL}</th><th scope="col">{STUDENT_PRICE_LABEL}</th><th scope="col">상태</th></tr></thead>

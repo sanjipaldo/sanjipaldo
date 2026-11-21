@@ -19,7 +19,8 @@ import {
   partnerDeals
 } from "../db/schema";
 import { enqueueProductSync } from "./catalog-sync";
-import { exampleGroupSummaries, exampleGroupsEnabled, loadPublicGroupRows, summarizePublicGroups } from "./product-groups";
+import { autoGroupSummaries, loadPublicGroupRows, summarizePublicGroups } from "./product-groups";
+import { PRODUCT_GROUP_EXCLUSIONS_KEY, parseGroupExclusions } from "@repo/shared/product-groups";
 import { legacyFeeFields, parseRateTiers, rateSummaryLabel, type ShippingRateTiers, type ShippingRateType } from "./shipping-rates";
 
 export type ProductOptionInput = {
@@ -460,10 +461,15 @@ export async function getPublicCatalog() {
     shippingPolicies: policyRows,
     products: publicProducts,
     // 옵션 묶음(migration 033): 같은 상품의 사이즈들을 카드 하나로 보여 줄 상품 ID 묶음.
-    // 미리보기 배포에서 예시를 켰고 실제 묶음이 없으면, 이름이 비슷한 상품을 묶은 예시를 보여 줍니다(저장 안 함).
-    groups: groupRows.length === 0 && exampleGroupsEnabled()
-      ? exampleGroupSummaries(productRows)
-      : summarizePublicGroups(groupRows, new Set(productRows.map((product) => product.id))),
+    // 관리자가 저장한 묶음 + 나머지 공개 상품 중 이름이 비슷한 상품을 자동으로 묶은 묶음("따로 보이기" 상품 제외, 저장 안 함).
+    groups: [
+      ...summarizePublicGroups(groupRows, new Set(productRows.map((product) => product.id))),
+      ...autoGroupSummaries(
+        productRows,
+        new Set(groupRows.map((row) => row.productId)),
+        new Set(parseGroupExclusions(settingsRows.find((row) => row.key === PRODUCT_GROUP_EXCLUSIONS_KEY)?.value))
+      )
+    ],
     notices: noticeRows,
     priceHistory: recentHistory.slice(0, PUBLIC_CATALOG_HISTORY_PREVIEW).map(publicHistoryRow),
     priceHistoryCount: recentHistory.length,

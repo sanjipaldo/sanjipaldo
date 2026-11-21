@@ -55,7 +55,8 @@ import {
   getProductGroupSuggestions,
   getPublicProductOptions,
   removeProductGroup,
-  saveProductGroup
+  saveProductGroup,
+  setProductGroupExclusions
 } from "../services/product-groups";
 import { buildProductOptionsWorkbook } from "../services/product-group-excel";
 import {
@@ -304,6 +305,10 @@ const ProductGroupSchema = z.object({
 const ProductGroupAssignSchema = z.object({
   productIds: z.array(z.string().trim().min(1).max(80)).min(1).max(500),
   groupId: z.string().trim().min(1).max(80).nullable()
+});
+const ProductGroupExclusionSchema = z.object({
+  productIds: z.array(z.string().trim().min(1).max(80)).min(1).max(500),
+  excluded: z.boolean()
 });
 const SupplierSchema = z.object({
   name: z.string().trim().min(1).max(160),
@@ -605,6 +610,17 @@ catalogRouter.post("/admin/groups/assign", adminRoute, async (c) => {
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "묶음에 넣을 상품을 확인해 주세요."), 400);
   try {
     return c.json(apiSuccess(await assignProductsToGroup(parsed.data.productIds, parsed.data.groupId)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// "따로 보이기"(자동 묶음에서 빼기) 켜기/끄기
+catalogRouter.post("/admin/groups/exclusions", adminRoute, async (c) => {
+  const parsed = ProductGroupExclusionSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "따로 보일 상품을 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess(await setProductGroupExclusions(parsed.data.productIds, parsed.data.excluded)));
   } catch (error) {
     return errorResponse(c, error);
   }

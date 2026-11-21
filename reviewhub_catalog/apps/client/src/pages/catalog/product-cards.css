@@ -22,7 +22,6 @@
 .product-card-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .product-card-tags .delivery-badge { padding: 4px 9px; }
 .product-card-category { color: var(--w-body); font-size: 12px; font-weight: 700; }
-.product-card-example { display: inline-flex; padding: 3px 8px; border: 1px dashed #c08a00; border-radius: 999px; color: #7a5600; background: #fff8e1; font-size: 11px; font-weight: 800; }
 .product-card-title { margin: 0; font-size: 17px; line-height: 1.38; letter-spacing: -.01em; }
 .product-card-title button { display: -webkit-box; overflow: hidden; padding: 0; border: 0; color: var(--w-ink); background: none; font: inherit; font-weight: 800; text-align: left; word-break: keep-all; overflow-wrap: anywhere; cursor: pointer; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .product-card-title button:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -113,7 +112,6 @@
 .product-option-status.is-sold_out { color: #fff; background: var(--w-negative); }
 .product-option-status.is-season_ended { color: var(--w-warning-content); background: var(--w-warning-pale); }
 .product-options-hint { margin: 8px 0 0; color: var(--w-mute); font-size: 12px; line-height: 1.5; }
-.product-options-example { margin: 0 0 10px; padding: 10px 12px; border: 1px dashed #c08a00; border-radius: 12px; color: #6b4c00; background: #fff8e1; font-size: 13px; font-weight: 700; line-height: 1.5; }
 .product-options-text { margin: 8px 0 0; color: var(--w-body); font-size: 14px; line-height: 1.65; white-space: pre-line; overflow-wrap: anywhere; }
 .product-options-muted { margin: 8px 0 0; color: var(--w-mute); font-size: 13px; }
 .product-options-lines { margin: 0; padding-left: 18px; color: var(--w-body); font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }

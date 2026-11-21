@@ -60,7 +60,7 @@ import { isSupplierAccount } from "@/components/auth/AdminGuard";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
 import { authClient, clearAuthToken } from "@/lib/auth";
 import { SUPPLY_STATUS_LABELS, supplyStatus, type SupplyStatus } from "@/lib/supply-status";
-import { GroupTag, ProductGroupField, suggestGroupFor, useGroupMemberships } from "./product-group-tools";
+import { GroupTag, ProductGroupField, SINGLE_GROUP_VALUE, suggestGroupFor, useGroupMemberships } from "./product-group-tools";
 import { PARTNER_CONTRACT_LABELS, PARTNER_CONTRACT_TYPES, PARTNER_STAGES, PARTNER_STAGE_LABELS, partnerContractSummary, type PartnerContractType, type PartnerStage } from "@repo/shared/partner-deal";
 import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_GUIDE_SETTING_KEY, SUPPLIER_TERM_LABELS, SUPPLIER_VIDEO_GROUPS, hasSupplierDemo, parseSupplierGuide, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideTerms, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
 import { SELLER_GUIDE_SETTING_KEY, SELLER_VIDEO_GROUPS, hasSellerDemo, parseSellerGuide, type SellerGuideSettings } from "@repo/shared/seller-guide";
@@ -1298,7 +1298,8 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const startEdit = (product?: Product) => {
     setCopySource(null);
     setEditing(product ? productDraft(product) : { ...blankProduct, categoryId: data.categories[0]?.id || "" });
-    const groupId = product ? groupTools.memberships[product.id]?.groupId ?? "" : "";
+    // 옵션 묶음 칸: 저장한 묶음 ID / "따로 보이기" / ""(자동으로 묶기)
+    const groupId = product ? groupTools.memberships[product.id]?.groupId ?? (groupTools.excluded.has(product.id) ? SINGLE_GROUP_VALUE : "") : "";
     setEditingGroupId(groupId);
     setOriginalGroupId(groupId);
   };
@@ -1349,10 +1350,15 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         body: JSON.stringify(editing)
       });
       const payload = await readData<{ product: Product }>(response);
-      // 옵션 묶음을 바꿨으면 상품 저장 뒤에 묶음에 넣거나 뺍니다(실패해도 상품 저장은 그대로).
+      // 옵션 묶음을 바꿨으면 상품 저장 뒤에 묶음에 넣거나 빼거나 "따로 보이기"를 바꿉니다(실패해도 상품 저장은 그대로).
       if (groupTools.ready && editingGroupId !== originalGroupId) {
         try {
-          await readData(await apiFetch("/catalog/admin/groups/assign", { method: "POST", silent: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIds: [payload.product.id], groupId: editingGroupId || null }) }));
+          const productIds = [payload.product.id];
+          const groupRequest = async (path: string, body: unknown) => readData(await apiFetch(path, { method: "POST", silent: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
+          if (editingGroupId === SINGLE_GROUP_VALUE) await groupRequest("/catalog/admin/groups/exclusions", { productIds, excluded: true });
+          else if (editingGroupId) await groupRequest("/catalog/admin/groups/assign", { productIds, groupId: editingGroupId });
+          else if (originalGroupId === SINGLE_GROUP_VALUE) await groupRequest("/catalog/admin/groups/exclusions", { productIds, excluded: false });
+          else await groupRequest("/catalog/admin/groups/assign", { productIds, groupId: null });
           void groupTools.reload();
         } catch (groupError) {
           toast.error(groupError instanceof Error ? `상품은 저장했지만 옵션 묶음을 바꾸지 못했습니다: ${groupError.message}` : "상품은 저장했지만 옵션 묶음을 바꾸지 못했습니다.");
@@ -1680,7 +1686,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
               <Fragment key={product.id}>
                 <tr className={`${expanded ? "expanded " : ""}${rowStatus !== "on_sale" ? `is-unavailable is-${rowStatus}` : ""}`.trim()}>
                   <td className="product-select-cell" data-label="선택"><label className="product-select-control"><input type="checkbox" checked={selectedProductIds.has(product.id)} onChange={() => toggleProductSelection(product.id)} aria-label={`${product.name} 선택`} /><span>선택</span></label></td>
-                  <td className="admin-product-primary"><div className="admin-product-cell">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={20} /></span>}<div className="admin-product-copy"><strong>{product.name}</strong><small>{product.productCode || product.id} · {product.origin || "-"}</small><GroupTag membership={groupTools.memberships[product.id]} />{options.length > 0 && <button type="button" className="admin-option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? "옵션 접기" : `옵션 ${options.length}개 보기`} <ChevronRight size={14} /></button>}</div></div>{optionPanel && <div className="admin-inline-options">{optionPanel}</div>}</td>
+                  <td className="admin-product-primary"><div className="admin-product-cell">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <span className="admin-image-placeholder"><Boxes size={20} /></span>}<div className="admin-product-copy"><strong>{product.name}</strong><small>{product.productCode || product.id} · {product.origin || "-"}</small><GroupTag membership={groupTools.memberships[product.id]} auto={groupTools.auto[product.id]} excluded={groupTools.excluded.has(product.id)} />{options.length > 0 && <button type="button" className="admin-option-toggle" onClick={() => setExpandedProductId(expanded ? null : product.id)} aria-expanded={expanded}>{expanded ? "옵션 접기" : `옵션 ${options.length}개 보기`} <ChevronRight size={14} /></button>}</div></div>{optionPanel && <div className="admin-inline-options">{optionPanel}</div>}</td>
                   <td data-label="노출순서"><strong className="display-order-number">{productOrderMap.get(product.id) ?? "-"}</strong></td>
                   <td data-label="배송·카테고리"><strong>{product.shippingType === "domestic" ? "국내배송" : "해외배송"}</strong><small>{category?.name || "-"}</small></td>
                   <td data-label="판매기간"><strong>{seasonApplies(product, category) ? product.isAlwaysOnSale ? "상시 판매" : `${product.saleStartMonth || "-"}월 ~ ${product.saleEndMonth || "-"}월` : "상시"}</strong><small>{seasonApplies(product, category) ? product.isAlwaysOnSale ? "연중 판매" : "월별 제철상품" : "제철 월 미지정"}</small></td>
@@ -1785,7 +1791,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <label>택배사<input value={editing.courier} onChange={(event) => setEditing({ ...editing, courier: event.target.value })} /></label>
         <label>포장방법<input value={editing.packaging} onChange={(event) => setEditing({ ...editing, packaging: event.target.value })} /></label>
         <label className="full">참고사항<textarea rows={4} value={editing.notes} onChange={(event) => setEditing({ ...editing, notes: event.target.value })} /></label>
-        {groupTools.ready && <ProductGroupField value={editingGroupId} onChange={setEditingGroupId} groups={groupTools.groups} suggestion={suggestGroupFor(editing, data.products.filter((product) => product.id !== editing.id), groupTools.memberships)} />}
+        {groupTools.ready && <ProductGroupField value={editingGroupId} onChange={setEditingGroupId} groups={groupTools.groups} suggestion={suggestGroupFor(editing, data.products.filter((product) => product.id !== editing.id), groupTools.memberships)} autoMembership={editing.id ? groupTools.auto[editing.id] : undefined} isNew={!editing.id} />}
       </div><div className="editor-footer">{editing.id && <button type="button" className="editor-copy-button" onClick={copyEditing} disabled={saving} title="지금 입력한 값 그대로 새 상품으로 복사합니다(원본은 바뀌지 않음)"><Copy size={16} /> 복사</button>}<button type="button" onClick={closeEditor} disabled={saving}>취소</button><button className="primary-action" type="submit" disabled={saving}><Save size={16} /> {saving ? "빠르게 저장 중…" : copySource && !editing.id ? "복사본 저장하기" : "저장하기"}</button></div></form></div>}
       {groupSelectionOpen && (
         <Suspense fallback={null}>
@@ -1793,6 +1799,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             products={data.products.filter((product) => selectedProductIds.has(product.id))}
             groups={groupTools.groups}
             memberships={groupTools.memberships}
+            excluded={groupTools.excluded}
             categories={data.categories}
             onClose={() => setGroupSelectionOpen(false)}
             onDone={() => { setGroupSelectionOpen(false); setSelectedProductIds(new Set()); void groupTools.reload(); }}

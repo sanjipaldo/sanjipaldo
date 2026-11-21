@@ -20,9 +20,23 @@ export type PublicProductGroup = {
   optionLabels?: Record<string, string>;
   // 상세페이지·사진 자료 링크(있을 때만)
   materialsUrl?: string;
-  // 미리보기 예시 묶음(미리보기 배포에서 이름이 비슷한 상품을 자동으로 묶어 보여 주기만 한 것, DB에 없음)
-  example?: boolean;
+  // 자동 묶음(관리자가 저장한 묶음이 아니라, 이름이 비슷한 상품을 묶음 추천 규칙으로 자동으로 묶어 보여 주는 것. DB에 없음)
+  auto?: boolean;
 };
+
+// "따로 보이기": 자동 묶음에서 뺀 상품 ID 목록. content_settings `product_group_exclusions` = {"ids":[…]}
+export const PRODUCT_GROUP_EXCLUSIONS_KEY = "product_group_exclusions";
+
+export function parseGroupExclusions(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as { ids?: unknown };
+    if (!Array.isArray(parsed.ids)) return [];
+    return [...new Set(parsed.ids.filter((id): id is string => typeof id === "string").map((id) => id.trim()).filter(Boolean))];
+  } catch {
+    return [];
+  }
+}
 
 // 옵션 팝업(/api/catalog/options/:productId): 묶음 안내 문구와 옵션별 최근 7일 가격 흐름
 export type ProductOptionTrend = {
@@ -43,7 +57,7 @@ export type ProductOptionsDetail = {
     description: string | null;
     shippingNote: string | null;
     materialsUrl: string | null;
-    example?: boolean;
+    auto?: boolean;
   } | null;
   productIds: string[];
   optionLabels: Record<string, string>;
@@ -79,6 +93,11 @@ export function groupBaseName(name: string) {
 
 export function groupBaseKey(name: string) {
   return groupBaseName(name).replace(/\s+/gu, "").toLowerCase();
+}
+
+// 묶음 추천·자동 묶음에서 "같은 상품"으로 보는 기준: 배송유형 + 카테고리 + 기본 이름
+export function productGroupKey(product: { name: string; categoryId: string | null; shippingType: string }) {
+  return `${product.shippingType}|${product.categoryId ?? ""}|${groupBaseKey(product.name)}`;
 }
 
 export type GroupSuggestionProduct = { id: string; name: string; categoryId: string | null; shippingType: string };

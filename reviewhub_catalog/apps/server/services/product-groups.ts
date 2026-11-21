@@ -1,9 +1,11 @@
 import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { DatabaseError, getDb } from "../_core/db";
-import { priceHistories, productGroupItems, productGroups, products } from "../db/schema";
+import { contentSettings, priceHistories, productGroupItems, productGroups, products } from "../db/schema";
 import {
   PRICE_TREND_DAYS,
-  groupBaseKey,
+  PRODUCT_GROUP_EXCLUSIONS_KEY,
+  parseGroupExclusions,
+  productGroupKey,
   suggestProductGroups,
   type ProductOptionTrend,
   type ProductOptionsDetail,
@@ -13,7 +15,9 @@ import {
 // 옵션 묶음(2026-11-21 관리자 요청): 사이즈·등급별로 따로 등록한 단일 상품을 공개 단가표에서 카드 하나 + 옵션 팝업으로 보여 줍니다.
 // - 상품 데이터(가격·품절·노출·상품코드)는 상품마다 그대로이고, 묶음은 "어떤 상품을 같이 보여 줄지"만 정합니다.
 // - 상품 하나는 묶음 하나에만 들어갑니다(다른 묶음에 넣으면 원래 묶음에서 빠지고, 비게 된 묶음은 지웁니다).
-// - migration 033 전 DB(운영 DB를 같이 쓰는 미리보기)에서는 공개 화면은 묶음 없이 보이고, 관리자 묶음 저장은 막습니다.
+// - 자동 묶음(2026-11-22): 저장한 묶음에 없는 공개 상품은 묶음 추천 규칙으로 자동으로 묶어 보여 줍니다(아래 "자동 묶음").
+//   "따로 보이기"로 뺀 상품은 자동으로 묶지 않습니다(content_settings `product_group_exclusions`).
+// - migration 033 전 DB(운영 DB를 같이 쓰는 미리보기)에서는 저장한 묶음 없이 자동 묶음만 보이고, 관리자 묶음 저장은 막습니다.
 
 export class ProductGroupsUnavailableError extends DatabaseError {
   constructor() {
@@ -97,37 +101,56 @@ export async function publicGroupSummaries(publicProductIds: Set<string>) {
   return summarizePublicGroups(await loadPublicGroupRows(), publicProductIds);
 }
 
-// ── 미리보기 예시 묶음(배포 전 확인용) ─────────────────────────────────
-// 미리보기 배포에만 CATALOG_EXAMPLE_GROUPS=1을 주면, 실제 묶음이 하나도 없을 때(운영 DB에 033 전이거나 아직 안 묶음)
-// 이름이 비슷한 상품을 묶음 추천 규칙으로 자동으로 묶어 "보여 주기만" 합니다. DB에는 아무것도 저장하지 않습니다.
-// 운영 배포(VERCEL_ENV=production)에서는 값이 있어도 켜지지 않습니다.
-export function exampleGroupsEnabled() {
-  return process.env.CATALOG_EXAMPLE_GROUPS === "1" && process.env.VERCEL_ENV !== "production";
-}
+// ── 자동 묶음(2026-11-22, 관리자 요청 "미리보기처럼 운영에서도 옵션으로 묶여 보이게") ──────────
+// 저장한 묶음에 없고 "따로 보이기"도 아닌 공개 상품을 묶음 추천 규칙(무게·개수·등급을 뺀 이름 + 카테고리 + 배송유형이 같은
+// 상품 2개 이상, 옵션은 일반공급가 낮은 순)으로 자동으로 묶어 보여 줍니다. DB에는 저장하지 않습니다(관리자가 저장하면 저장한 묶음).
+// 저장한 묶음과 기본 이름이 같은 상품(새로 등록한 사이즈, 묶음에서 뺀 상품)은 자동으로 묶지 않고 따로 보입니다 —
+// 같은 이름의 카드가 두 개 생기지 않게 하려는 것으로, 관리자 "기존 묶음에 넣을 상품"에서 넣습니다.
+type AutoSource = { id: string; name: string; categoryId: string | null; shippingType: string; generalPrice: number };
 
-type ExampleSource = { id: string; name: string; categoryId: string | null; shippingType: string; generalPrice: number };
-
-export function exampleGroupSummaries(products: ExampleSource[]): PublicProductGroup[] {
-  const byId = new Map(products.map((product) => [product.id, product]));
-  return suggestProductGroups(products).map((suggestion) => ({
-    id: `example-${suggestion.key}`,
+export function autoGroupSummaries(publicProducts: AutoSource[], savedProductIds: Set<string>, excludedIds: Set<string>): PublicProductGroup[] {
+  const savedKeys = new Set(publicProducts.filter((product) => savedProductIds.has(product.id)).map(productGroupKey));
+  const candidates = publicProducts.filter((product) => !savedProductIds.has(product.id) && !excludedIds.has(product.id) && !savedKeys.has(productGroupKey(product)));
+  const byId = new Map(candidates.map((product) => [product.id, product]));
+  return suggestProductGroups(candidates).map((suggestion) => ({
+    id: `auto-${suggestion.key}`,
     name: suggestion.name,
     imageUrl: null,
     categoryId: suggestion.categoryId,
     productIds: [...suggestion.productIds].sort((first, second) => byId.get(first)!.generalPrice - byId.get(second)!.generalPrice || byId.get(first)!.name.localeCompare(byId.get(second)!.name, "ko")),
-    example: true
+    auto: true
   }));
 }
 
-async function findExampleGroup(productId: string) {
-  if (!exampleGroupsEnabled() || (await loadPublicGroupRows()).length > 0) return null;
-  const rows = await getDb().select({ id: products.id, name: products.name, categoryId: products.categoryId, shippingType: products.shippingType, generalPrice: products.generalPrice })
+// "따로 보이기"로 뺀 상품 ID
+export async function loadGroupExclusions(): Promise<Set<string>> {
+  const rows = await getDb().select({ value: contentSettings.value }).from(contentSettings).where(eq(contentSettings.key, PRODUCT_GROUP_EXCLUSIONS_KEY)).limit(1);
+  return new Set(parseGroupExclusions(rows[0]?.value));
+}
+
+async function updateGroupExclusions(add: string[], remove: string[]) {
+  const current = await loadGroupExclusions();
+  if (!add.some((id) => !current.has(id)) && !remove.some((id) => current.has(id))) return;
+  for (const id of remove) current.delete(id);
+  for (const id of add) current.add(id);
+  const value = JSON.stringify({ ids: [...current] });
+  const now = new Date().toISOString();
+  await getDb().insert(contentSettings).values({ key: PRODUCT_GROUP_EXCLUSIONS_KEY, value, updatedAt: now })
+    .onConflictDoUpdate({ target: contentSettings.key, set: { value, updatedAt: now } });
+}
+
+function publicAutoSources() {
+  return getDb().select({ id: products.id, name: products.name, categoryId: products.categoryId, shippingType: products.shippingType, generalPrice: products.generalPrice })
     .from(products)
     .where(and(eq(products.isVisible, true), isNull(products.deletedAt)));
-  const group = exampleGroupSummaries(rows).find((item) => item.productIds.includes(productId));
+}
+
+async function findAutoGroup(productId: string) {
+  const [sources, savedRows, excluded] = await Promise.all([publicAutoSources(), loadPublicGroupRows(), loadGroupExclusions()]);
+  const group = autoGroupSummaries(sources, new Set(savedRows.map((row) => row.productId)), excluded).find((item) => item.productIds.includes(productId));
   if (!group) return null;
   return {
-    group: { id: group.id, name: group.name, imageUrl: null, description: null, shippingNote: null, materialsUrl: null, example: true },
+    group: { id: group.id, name: group.name, imageUrl: null, description: null, shippingNote: null, materialsUrl: null, auto: true },
     items: group.productIds.map((id) => ({ productId: id, optionLabel: null }))
   };
 }
@@ -225,7 +248,7 @@ async function findGroupForProduct(productId: string): Promise<{ group: GroupDet
 // 옵션 팝업 데이터. 상품이 공개(노출·미삭제)가 아니면 null(404)입니다.
 export async function getPublicProductOptions(productId: string, now = Date.now()): Promise<ProductOptionsDetail | null> {
   const db = getDb();
-  const found = (await findGroupForProduct(productId)) ?? (await findExampleGroup(productId));
+  const found = (await findGroupForProduct(productId)) ?? (await findAutoGroup(productId));
   const candidateIds = found ? found.items.map((item) => item.productId) : [productId];
   if (!candidateIds.includes(productId)) candidateIds.push(productId);
   const productRows = await db.select({ id: products.id, aPrice: products.aPrice, generalPrice: products.generalPrice, createdAt: products.createdAt })
@@ -441,6 +464,8 @@ export async function saveProductGroup(id: string | null, input: ProductGroupInp
       createdAt: now
     })));
     const removedGroups = await removeEmptyGroups(previousGroups.map((row) => row.groupId));
+    // 직접 묶은 상품은 "따로 보이기"에서도 풉니다.
+    await updateGroupExclusions([], productIds);
     const [group] = await readAdminGroups([currentGroupId]);
     return { group, movedFromGroups: previousGroups.length, removedGroups };
   });
@@ -482,6 +507,7 @@ export async function assignProductsToGroup(productIds: string[], groupId: strin
         }));
       }
       await db.update(productGroups).set({ updatedAt: now }).where(eq(productGroups.id, groupId));
+      await updateGroupExclusions([], ids);
     } else {
       await db.delete(productGroupItems).where(inArray(productGroupItems.productId, ids));
     }
@@ -490,32 +516,75 @@ export async function assignProductsToGroup(productIds: string[], groupId: strin
   });
 }
 
+// "따로 보이기": 자동 묶음에서 빼고 상품마다 카드 하나로 보여 줍니다(저장한 묶음에 있던 상품은 그 묶음에서도 뺌).
+// excluded=false면 다시 자동 묶음 규칙을 따릅니다.
+export async function setProductGroupExclusions(productIds: string[], excluded: boolean) {
+  return guarded(async () => {
+    const ids = [...new Set(productIds.map((id) => id.trim()).filter(Boolean))];
+    if (ids.length === 0) fail("상품을 골라 주세요.");
+    await assertProductsExist(ids);
+    let leftGroups = 0;
+    let removedGroups = 0;
+    if (excluded) {
+      const db = getDb();
+      const previousGroups = await db.selectDistinct({ groupId: productGroupItems.groupId }).from(productGroupItems).where(inArray(productGroupItems.productId, ids));
+      if (previousGroups.length > 0) {
+        await db.delete(productGroupItems).where(inArray(productGroupItems.productId, ids));
+        leftGroups = previousGroups.length;
+        removedGroups = await removeEmptyGroups(previousGroups.map((row) => row.groupId));
+      }
+      await updateGroupExclusions(ids, []);
+    } else {
+      await updateGroupExclusions([], ids);
+    }
+    return { updated: ids.length, excluded, leftGroups, removedGroups };
+  });
+}
+
 // 상품 리스트에 붙일 "어느 묶음에 들어 있는지"(상품 ID → 묶음 ID·이름·상품 수). 033 전 DB에서는 빈 목록입니다.
 export async function getProductGroupMemberships() {
   try {
     // optionLabel(033에서 추가한 칸)을 함께 읽어, 033 전 DB면 실패하게 해서 ready:false로 알려 줍니다.
-    const rows = await getDb().select({
-      productId: productGroupItems.productId,
-      optionLabel: productGroupItems.optionLabel,
-      groupId: productGroups.id,
-      name: productGroups.name
-    }).from(productGroupItems)
-      .innerJoin(productGroups, eq(productGroups.id, productGroupItems.groupId))
-      .innerJoin(products, and(eq(products.id, productGroupItems.productId), isNull(products.deletedAt)));
+    const [rows, sources, excluded] = await Promise.all([
+      getDb().select({
+        productId: productGroupItems.productId,
+        optionLabel: productGroupItems.optionLabel,
+        groupId: productGroups.id,
+        name: productGroups.name
+      }).from(productGroupItems)
+        .innerJoin(productGroups, eq(productGroups.id, productGroupItems.groupId))
+        .innerJoin(products, and(eq(products.id, productGroupItems.productId), isNull(products.deletedAt))),
+      publicAutoSources(),
+      loadGroupExclusions()
+    ]);
     const sizes = new Map<string, number>();
     for (const row of rows) sizes.set(row.groupId, (sizes.get(row.groupId) ?? 0) + 1);
-    const memberships: Record<string, { groupId: string; name: string; size: number }> = {};
+    const memberships: Record<string, Membership> = {};
     for (const row of rows) {
       if (!memberships[row.productId]) memberships[row.productId] = { groupId: row.groupId, name: row.name, size: sizes.get(row.groupId) ?? 1 };
     }
-    return { ready: true, memberships };
+    return { ready: true, memberships, auto: autoMemberships(sources, new Set(rows.map((row) => row.productId)), excluded), excluded: [...excluded] };
   } catch (error) {
-    if (isMissingGroupColumn(error)) return { ready: false, memberships: {} as Record<string, { groupId: string; name: string; size: number }> };
-    throw error;
+    if (!isMissingGroupColumn(error)) throw error;
+    // 033 전 DB: 저장한 묶음은 없고 자동 묶음만 보입니다(저장은 막음).
+    const [sources, excluded] = await Promise.all([publicAutoSources(), loadGroupExclusions()]);
+    return { ready: false, memberships: {} as Record<string, Membership>, auto: autoMemberships(sources, new Set(), excluded), excluded: [...excluded] };
   }
 }
 
-// 묶음 추천: (1) 아직 묶지 않은 상품끼리 새 묶음 후보 (2) 기존 묶음과 기본 이름이 같은, 아직 묶지 않은 상품(새로 등록한 사이즈 등)
+type Membership = { groupId: string; name: string; size: number };
+
+// 상품 ID → 지금 공개 단가표에서 들어가 있는 자동 묶음
+function autoMemberships(sources: AutoSource[], savedProductIds: Set<string>, excluded: Set<string>) {
+  const auto: Record<string, Membership> = {};
+  for (const group of autoGroupSummaries(sources, savedProductIds, excluded)) {
+    for (const productId of group.productIds) auto[productId] = { groupId: group.id, name: group.name, size: group.productIds.length };
+  }
+  return auto;
+}
+
+// 관리자 "자동 묶음" 탭: (1) 지금 공개 단가표에 자동으로 묶여 보이는 묶음(= 새 묶음 후보, 공개 화면 `autoGroupSummaries`와 같은 결과)
+// (2) 저장한 묶음과 기본 이름이 같아 자동으로 묶이지 않고 따로 보이는 상품(새로 등록한 사이즈 등) (3) "따로 보이기" 상품. 숨김 상품은 넣지 않습니다.
 export async function getProductGroupSuggestions() {
   return guarded(async () => {
     const db = getDb();
@@ -525,21 +594,23 @@ export async function getProductGroupSuggestions() {
         .from(productGroupItems)
         .innerJoin(productGroups, eq(productGroups.id, productGroupItems.groupId))
     ]);
+    const excluded = await loadGroupExclusions();
     const byId = new Map(productRows.map((row) => [row.id, row]));
     const groupedIds = new Set(itemRows.map((row) => row.productId));
-    const ungrouped = productRows.filter((row) => !groupedIds.has(row.id));
+    // 공개 단가표에 보이는 상품만(자동 묶음 = 지금 단가표에 보이는 묶음). "따로 보이기"로 뺀 상품은 넣지 않습니다.
+    const ungrouped = productRows.filter((row) => row.isVisible && !groupedIds.has(row.id) && !excluded.has(row.id));
     // 기존 묶음의 기본 이름 키 → 묶음
     const groupKeys = new Map<string, { groupId: string; groupName: string }>();
     for (const row of itemRows) {
       const product = byId.get(row.productId);
-      if (!product) continue;
-      const key = `${product.shippingType}|${product.categoryId ?? ""}|${groupBaseKey(product.name)}`;
+      if (!product?.isVisible) continue;
+      const key = productGroupKey(product);
       if (!groupKeys.has(key)) groupKeys.set(key, { groupId: row.groupId, groupName: row.groupName });
     }
     const joins = new Map<string, { groupId: string; groupName: string; productIds: string[] }>();
     const fresh: typeof ungrouped = [];
     for (const product of ungrouped) {
-      const key = `${product.shippingType}|${product.categoryId ?? ""}|${groupBaseKey(product.name)}`;
+      const key = productGroupKey(product);
       const target = groupKeys.get(key);
       if (target) {
         const join = joins.get(target.groupId) ?? { ...target, productIds: [] };
@@ -549,12 +620,14 @@ export async function getProductGroupSuggestions() {
         fresh.push(product);
       }
     }
-    const suggestions = suggestProductGroups(fresh).slice(0, 300);
-    const usedIds = new Set([...suggestions.flatMap((item) => item.productIds), ...Array.from(joins.values()).flatMap((item) => item.productIds)]);
+    const suggestions = suggestProductGroups(fresh).slice(0, 1000);
+    const excludedIds = productRows.filter((row) => excluded.has(row.id)).map((row) => row.id);
+    const usedIds = new Set([...suggestions.flatMap((item) => item.productIds), ...Array.from(joins.values()).flatMap((item) => item.productIds), ...excludedIds]);
     return {
       ungroupedCount: ungrouped.length,
       suggestions,
       joins: Array.from(joins.values()),
+      excludedIds,
       products: productRows.filter((row) => usedIds.has(row.id))
     };
   });

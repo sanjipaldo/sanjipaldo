@@ -6,6 +6,10 @@
 .admin-group-tag .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .admin-group-tag b { flex: 0 0 auto; padding: 0 5px; border-radius: 999px; color: #fff; background: #3c8a24; font-size: 10px; }
 .admin-group-tag:hover { border-color: #3c8a24; }
+/* 자동 묶음(저장 전, 이름이 비슷해 자동으로 묶여 보임) · 따로 보이기 */
+.admin-group-tag.is-auto { border-style: dashed; color: #36531f; background: #fbfdf8; }
+.admin-group-tag.is-auto b { color: #163300; background: #d9f2c6; }
+.admin-group-tag.is-single { border-color: #dfe3dc; color: #5c6559; background: #f6f7f5; }
 
 .bulk-selection-bar .bulk-main-actions button.bulk-group-action { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid #3c8a24; color: #163300; background: #e2f6d5; }
 .bulk-selection-bar .bulk-main-actions button.bulk-group-action:hover:not(:disabled) { background: #9fe870; }
@@ -14,6 +18,7 @@
 }
 
 .product-group-field select { width: 100%; }
+.product-group-status { margin-top: 6px; color: #3d5a2a; font-size: 12px; font-weight: 700; line-height: 1.5; }
 .product-group-suggest { display: inline-flex; align-items: center; gap: 5px; width: fit-content; margin-top: 6px; padding: 6px 11px; border: 1px dashed #3c8a24; border-radius: 999px; color: #1f5a12; background: #f1fae9; font-size: 12px; font-weight: 800; cursor: pointer; }
 
 .group-admin-notice { margin-bottom: 14px; padding: 12px 16px; border: 1px solid #f0dc9c; border-radius: 12px; color: #6b5310; background: #fffbea; font-size: 13px; font-weight: 700; }
@@ -63,6 +68,11 @@
 .group-suggestion-block ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .group-suggestion-block li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 14px; border: 1px solid #e3e8e0; border-radius: 12px; background: #fff; }
 .group-suggestion-block.is-join li { border-color: #cfe5c0; background: #f7fcf2; }
+.group-suggestion-block.is-single { margin-top: 18px; }
+.group-suggestion-block.is-single li { background: #fafbf9; }
+.group-suggestion-block.is-single li > button { display: inline-flex; align-items: center; gap: 5px; height: 38px; padding: 0 12px; border: 1px solid #d8dcd5; border-radius: 10px; color: #0e0f0c; background: #fff; font-size: 12px; font-weight: 800; cursor: pointer; }
+.group-suggestion-block.is-single li.is-more { display: block; color: #6b7468; font-size: 12px; }
+.group-suggestion-actions .group-single-button { color: #8a2f2f; }
 .group-suggestion-block li > div:first-child { display: grid; flex: 1 1 320px; gap: 3px; min-width: 0; }
 .group-suggestion-block li strong { color: #0e0f0c; font-size: 14px; overflow-wrap: anywhere; }
 .group-suggestion-block li strong em { margin-left: 6px; padding: 1px 8px; border-radius: 999px; color: #163300; background: #e2f6d5; font-size: 11px; font-style: normal; }
@@ -112,6 +122,7 @@
 .group-select-options strong { color: #0e0f0c; font-size: 14px; }
 .group-select-options span, .group-select-options em { color: #6b7468; font-size: 12px; font-style: normal; }
 .group-select-options .primary-action, .group-select-options .danger-action { width: fit-content; }
+.group-select-options article > button:not(.primary-action):not(.danger-action) { display: inline-flex; align-items: center; gap: 6px; width: fit-content; padding: 9px 14px; border: 1px solid #163300; border-radius: 10px; color: #163300; background: #e2f6d5; font-weight: 800; cursor: pointer; }
 .group-select-row { display: flex; gap: 6px; }
 .group-select-row select { flex: 1; min-width: 0; padding: 9px 10px; border: 1px solid #d8dcd5; border-radius: 10px; }
 .group-select-row button { padding: 0 16px; border: 1px solid #163300; border-radius: 10px; color: #163300; background: #e2f6d5; font-weight: 800; cursor: pointer; }

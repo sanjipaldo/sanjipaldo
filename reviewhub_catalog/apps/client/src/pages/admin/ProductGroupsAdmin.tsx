@@ -1,13 +1,14 @@
-// 관리자 > 옵션 묶음 관리(2026-11-21 관리자 요청).
+// 관리자 > 옵션 묶음 관리(2026-11-21 관리자 요청, 2026-11-22 자동 묶음).
 // 사이즈·등급별로 따로 등록한 상품(발주오라 상품코드 1:1)을 "옵션 묶음"으로 묶어 공개 단가표에서 카드 하나 + 옵션 팝업으로 보여 줍니다.
-// - 묶음 목록: 이름·옵션 수·가격 범위·판매 상태, 수정·삭제
-// - 묶음 추천: 무게·개수·등급을 뺀 기본 이름이 같은 상품 후보(이대로 묶기·고쳐서 묶기·보이는 추천 모두 묶기)와
-//   기존 묶음에 넣을 새 상품(새로 등록한 사이즈 등)
+// 이름이 비슷한 상품(무게·개수·등급만 다른 상품)은 저장하지 않아도 공개 단가표에서 자동으로 묶여 보입니다.
+// - 저장한 묶음: 이름·옵션 이름·안내 문구를 바꾼 묶음(수정·풀기, 풀면 다시 자동 묶음)
+// - 자동 묶음: 지금 자동으로 묶여 보이는 묶음(이대로 저장·고쳐서 저장·따로 보이기), 기존 묶음에 넣을 새 상품,
+//   "따로 보이기"로 뺀 상품(다시 자동으로)
 // - 편집 창: 이름·대표 이미지·카테고리·상품 안내·배송 안내·자료 링크, 옵션 순서·옵션 이름, 상품 찾아 넣기
 // 상품 하나는 묶음 하나에만 들어갑니다(다른 묶음에 넣으면 옮겨지고, 비게 된 묶음은 지워집니다).
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Layers, Pencil, Plus, Save, Search, Sparkles, Trash2, Upload, Wand2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, EyeOff, Layers, Pencil, Plus, RotateCcw, Save, Search, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { autoOptionLabels, groupBaseName, type ProductGroupSuggestion } from "@repo/shared/product-groups";
@@ -30,7 +31,7 @@ type AdminGroup = {
   updatedAt: string;
   items: Array<{ productId: string; sortOrder: number; optionLabel: string | null; product: GroupProduct }>;
 };
-type SuggestionsPayload = { ungroupedCount: number; suggestions: ProductGroupSuggestion[]; joins: Array<{ groupId: string; groupName: string; productIds: string[] }>; products: GroupProduct[] };
+type SuggestionsPayload = { ungroupedCount: number; suggestions: ProductGroupSuggestion[]; joins: Array<{ groupId: string; groupName: string; productIds: string[] }>; excludedIds?: string[]; products: GroupProduct[] };
 export type GroupDraft = { id: string | null; name: string; imageUrl: string; categoryId: string; description: string; shippingNote: string; materialsUrl: string; items: Array<{ productId: string; optionLabel: string }> };
 
 const PAGE_SIZE = 20;
@@ -153,12 +154,16 @@ export function ProductGroupsAdmin() {
   const [suggestions, setSuggestions] = useState<SuggestionsPayload | null>(null);
   const [categories, setCategories] = useState<Category[]>(categoryCache ?? []);
   const [products, setProducts] = useState<GroupProduct[]>(productListCache ?? []);
-  const [tab, setTab] = useState<"groups" | "suggestions">("groups");
-  const [query, setQuery] = useState("");
+  // 처음에는 자동 묶음 탭. 상품 리스트의 "옵션 묶음" 표시(?group=…)에서 들어오면 저장한 묶음 탭,
+  // "자동 묶음" 표시(?tab=auto&q=이름)에서 들어오면 자동 묶음 탭을 그 이름으로 거른 채 엽니다.
+  const [tab, setTab] = useState<"groups" | "suggestions">(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("group") || params.get("tab") === "saved" ? "groups" : "suggestions";
+  });
+  const [query, setQuery] = useState(() => new URLSearchParams(location.search).get("q") ?? "");
   const [page, setPage] = useState(1);
   const [draft, setDraft] = useState<GroupDraft | null>(null);
   const [busy, setBusy] = useState(false);
-  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
 
   const loadGroups = useCallback(async () => {
     const payload = await readData<{ ready: boolean; groups: AdminGroup[] }>(await apiFetch("/catalog/admin/groups"));
@@ -226,6 +231,11 @@ export function ProductGroupsAdmin() {
   const filteredJoins = useMemo(() => (suggestions?.joins ?? []).filter((join) => !normalized
     || join.groupName.toLowerCase().includes(normalized)
     || join.productIds.some((id) => (productById.get(id)?.name ?? "").toLowerCase().includes(normalized))), [normalized, productById, suggestions]);
+  const excludedIds = useMemo(() => suggestions?.excludedIds ?? [], [suggestions]);
+  const filteredExcluded = useMemo(() => excludedIds.filter((id) => !normalized || `${productById.get(id)?.name ?? ""} ${productById.get(id)?.productCode ?? ""}`.toLowerCase().includes(normalized)), [excludedIds, normalized, productById]);
+  const autoCount = suggestions?.suggestions.length ?? 0;
+  const autoProductCount = (suggestions?.suggestions ?? []).reduce((sum, suggestion) => sum + suggestion.productIds.length, 0);
+  const joinProductCount = (suggestions?.joins ?? []).reduce((sum, join) => sum + join.productIds.length, 0);
   const categoryName = (id: string | null) => categories.find((category) => category.id === id)?.name ?? "";
 
   const createFromSuggestion = async (suggestion: ProductGroupSuggestion, silent = false) => {
@@ -237,7 +247,7 @@ export function ProductGroupsAdmin() {
       body: JSON.stringify({ name: suggestion.name || draftValue.name, categoryId: suggestion.categoryId || draftValue.categoryId || null, items: draftValue.items.map((item) => ({ productId: item.productId })) })
     });
     await readData(response);
-    if (!silent) toast.success(`“${suggestion.name}” 묶음을 만들었습니다(옵션 ${suggestion.productIds.length}개).`);
+    if (!silent) toast.success(`“${suggestion.name}” 묶음을 저장했습니다(옵션 ${suggestion.productIds.length}개). “저장한 묶음”에서 이름·옵션 이름을 바꿀 수 있어요.`);
   };
 
   const quickCreate = async (suggestion: ProductGroupSuggestion) => {
@@ -246,32 +256,24 @@ export function ProductGroupsAdmin() {
       await createFromSuggestion(suggestion);
       await Promise.all([loadGroups(), loadSuggestions()]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "묶음을 만들지 못했습니다.");
+      toast.error(error instanceof Error ? error.message : "묶음을 저장하지 못했습니다.");
     } finally {
       setBusy(false);
     }
   };
 
-  const createAllVisible = async () => {
-    const targets = filteredSuggestions;
-    if (targets.length === 0) return;
-    if (!window.confirm(`${normalized ? `“${query.trim()}” 검색 결과의 ` : ""}추천 ${targets.length.toLocaleString("ko-KR")}개를 한 번에 묶을까요?\n상품 데이터(가격·품절·상품코드)는 바뀌지 않고, 공개 단가표에서 카드 하나로 보이게만 바뀝니다. 잘못 묶인 묶음은 나중에 수정·삭제할 수 있어요.`)) return;
+  // "따로 보이기": 자동 묶음에서 빼고 상품마다 카드 하나로 / 다시 자동으로
+  const setExcluded = async (productIds: string[], excluded: boolean, label: string) => {
     setBusy(true);
-    setBulkProgress({ done: 0, total: targets.length });
-    let failed = 0;
-    for (const [index, suggestion] of targets.entries()) {
-      try {
-        await createFromSuggestion(suggestion, true);
-      } catch {
-        failed += 1;
-      }
-      setBulkProgress({ done: index + 1, total: targets.length });
+    try {
+      await readData(await apiFetch("/catalog/admin/groups/exclusions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIds, excluded }) }));
+      toast.success(excluded ? `${label} 상품 ${productIds.length}개를 따로 보이게 했습니다.` : `${label} 상품 ${productIds.length}개를 다시 자동 묶음으로 돌렸습니다.`);
+      await Promise.all([loadGroups(), loadSuggestions()]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "바꾸지 못했습니다.");
+    } finally {
+      setBusy(false);
     }
-    await Promise.all([loadGroups(), loadSuggestions()]).catch(() => undefined);
-    setBulkProgress(null);
-    setBusy(false);
-    if (failed > 0) toast.error(`${targets.length - failed}개를 묶었고 ${failed}개는 실패했습니다. 잠시 뒤 다시 시도해 주세요.`);
-    else toast.success(`추천 ${targets.length.toLocaleString("ko-KR")}개를 묶었습니다.`);
   };
 
   const joinGroup = async (join: SuggestionsPayload["joins"][number]) => {
@@ -288,11 +290,11 @@ export function ProductGroupsAdmin() {
   };
 
   const removeGroup = async (group: AdminGroup) => {
-    if (!window.confirm(`“${group.name}” 묶음을 풀까요?\n상품 ${group.items.length}개는 그대로 남고, 공개 단가표에서 다시 상품마다 카드로 보입니다.`)) return;
+    if (!window.confirm(`“${group.name}” 묶음을 풀까요?\n상품 ${group.items.length}개는 그대로 남고, 이름이 비슷한 상품끼리 다시 자동으로 묶여 보여요(저장한 이름·옵션 이름·안내 문구는 없어집니다). 따로 보이게 하려면 “자동 묶음” 탭이나 상품 리스트에서 “따로 보이기”를 쓰세요.`)) return;
     setBusy(true);
     try {
       await readData(await apiFetch(`/catalog/admin/groups/${encodeURIComponent(group.id)}`, { method: "DELETE" }));
-      toast.success("묶음을 풀었습니다. 상품은 그대로입니다.");
+      toast.success("묶음을 풀었습니다. 상품은 그대로이고, 이름이 비슷한 상품끼리 다시 자동으로 묶여 보여요.");
       await Promise.all([loadGroups(), loadSuggestions()]);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "묶음을 풀지 못했습니다.");
@@ -315,32 +317,31 @@ export function ProductGroupsAdmin() {
         <div>
           <span>OPTION GROUPS</span>
           <h1>옵션 묶음 관리</h1>
-          <p>사이즈·등급별로 따로 등록한 상품을 묶어 공개 단가표에서 카드 하나로 보여 줍니다. 카드를 누르면 옵션별 공급가·최근 7일 가격 흐름·상품 안내가 팝업으로 열려요. 상품코드·가격·품절은 상품마다 그대로입니다.</p>
+          <p>사이즈·등급별로 따로 등록한 상품은 이름이 비슷하면(무게·개수·등급만 다르면) 공개 단가표에서 <strong>자동으로 묶여</strong> 카드 하나로 보여요. 카드를 누르면 옵션별 공급가·최근 7일 가격 흐름·상품 안내가 팝업으로 열립니다. 묶음 이름·옵션 이름·안내 문구를 바꾸려면 저장하고, 따로 보여야 하는 상품은 “따로 보이기”로 뺍니다. 상품코드·가격·품절은 상품마다 그대로입니다.</p>
         </div>
         <button className="primary-action group-new-button" type="button" onClick={() => setDraft(draftFromProducts([]))} disabled={!ready}><Plus size={16} /> 새 묶음 만들기</button>
       </div>
-      {!ready && <div className="group-admin-notice" role="status">옵션 묶음은 운영 배포(DB 033 적용)가 끝난 뒤 저장할 수 있어요. 지금은 공개 단가표가 상품마다 카드로 보입니다.</div>}
+      {!ready && <div className="group-admin-notice" role="status">옵션 묶음 저장은 운영 배포(DB 033 적용)가 끝난 뒤 할 수 있어요. 지금도 공개 단가표에는 이름이 비슷한 상품이 자동으로 묶여 보입니다.</div>}
       <section className="admin-card group-admin-card">
         <div className="group-admin-summary">
-          <article><span>옵션 묶음</span><strong>{groups.length.toLocaleString("ko-KR")}</strong><small>공개 단가표 카드 수</small></article>
-          <article><span>묶인 상품</span><strong>{groupedCount.toLocaleString("ko-KR")}</strong><small>옵션으로 보이는 상품</small></article>
-          <article><span>아직 안 묶은 상품</span><strong>{(suggestions?.ungroupedCount ?? 0).toLocaleString("ko-KR")}</strong><small>상품마다 카드 하나</small></article>
-          <article className="is-accent"><span>묶음 추천</span><strong>{((suggestions?.suggestions.length ?? 0) + (suggestions?.joins.length ?? 0)).toLocaleString("ko-KR")}</strong><small>이름이 비슷한 상품</small></article>
+          <article className="is-accent"><span>자동 묶음</span><strong>{autoCount.toLocaleString("ko-KR")}</strong><small>이름이 비슷해 자동으로 묶여 보여요(상품 {autoProductCount.toLocaleString("ko-KR")}개)</small></article>
+          <article><span>저장한 묶음</span><strong>{groups.length.toLocaleString("ko-KR")}</strong><small>이름·옵션 이름을 정한 묶음(상품 {groupedCount.toLocaleString("ko-KR")}개)</small></article>
+          <article><span>기존 묶음에 넣을 상품</span><strong>{joinProductCount.toLocaleString("ko-KR")}</strong><small>저장한 묶음과 이름이 같은 새 상품</small></article>
+          <article><span>따로 보이는 상품</span><strong>{excludedIds.length.toLocaleString("ko-KR")}</strong><small>자동 묶음에서 뺀 상품</small></article>
         </div>
         <div className="group-admin-toolbar">
           <div className="group-admin-tabs" role="tablist" aria-label="옵션 묶음 보기">
-            <button type="button" role="tab" aria-selected={tab === "groups"} className={tab === "groups" ? "active" : ""} onClick={() => setTab("groups")}><Layers size={15} /> 묶음 목록 <b>{groups.length}</b></button>
-            <button type="button" role="tab" aria-selected={tab === "suggestions"} className={tab === "suggestions" ? "active" : ""} onClick={() => setTab("suggestions")}><Sparkles size={15} /> 묶음 추천 <b>{(suggestions?.suggestions.length ?? 0) + (suggestions?.joins.length ?? 0)}</b></button>
+            <button type="button" role="tab" aria-selected={tab === "suggestions"} className={tab === "suggestions" ? "active" : ""} onClick={() => setTab("suggestions")}><Sparkles size={15} /> 자동 묶음 <b>{autoCount}</b></button>
+            <button type="button" role="tab" aria-selected={tab === "groups"} className={tab === "groups" ? "active" : ""} onClick={() => setTab("groups")}><Layers size={15} /> 저장한 묶음 <b>{groups.length}</b></button>
           </div>
           <div className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="묶음 이름·상품명·상품코드 검색" aria-label="옵션 묶음 검색" /></div>
         </div>
-        {bulkProgress && <div className="group-admin-progress" role="status"><span style={{ width: `${Math.round((bulkProgress.done / bulkProgress.total) * 100)}%` }} /><b>{bulkProgress.done} / {bulkProgress.total} 묶는 중…</b></div>}
         {loading ? <div className="admin-loading inline"><div className="spinner" /><span>옵션 묶음을 불러오는 중…</span></div> : tab === "groups" ? (
           filteredGroups.length === 0 ? (
             <div className="empty-admin group-admin-empty">
-              <strong>{groups.length === 0 ? "아직 만든 옵션 묶음이 없습니다." : "검색 결과가 없습니다."}</strong>
-              {groups.length === 0 && <span>“묶음 추천” 탭에서 이름이 비슷한 상품을 한 번에 묶거나, 상품 리스트에서 상품을 골라 “옵션 묶기”를 눌러 보세요.</span>}
-              {groups.length === 0 && <button type="button" className="primary-action" onClick={() => setTab("suggestions")}><Sparkles size={15} /> 묶음 추천 보기</button>}
+              <strong>{groups.length === 0 ? "아직 저장한 묶음이 없습니다." : "검색 결과가 없습니다."}</strong>
+              {groups.length === 0 && <span>이름이 비슷한 상품은 저장하지 않아도 공개 단가표에서 자동으로 묶여 보여요. 묶음 이름·옵션 이름·안내 문구를 바꾸고 싶은 묶음만 “자동 묶음” 탭에서 저장하세요.</span>}
+              {groups.length === 0 && <button type="button" className="primary-action" onClick={() => setTab("suggestions")}><Sparkles size={15} /> 자동 묶음 보기</button>}
             </div>
           ) : (
             <>
@@ -375,7 +376,7 @@ export function ProductGroupsAdmin() {
           <div className="group-suggestions">
             {filteredJoins.length > 0 && (
               <section className="group-suggestion-block is-join">
-                <h3>기존 묶음에 넣을 상품 <small>새로 등록한 사이즈 등 이름이 같은 상품</small></h3>
+                <h3>기존 묶음에 넣을 상품 <small>저장한 묶음과 이름이 같은 새 상품은 자동으로 들어가지 않고 따로 보여요. 넣어 주세요.</small></h3>
                 <ul>{filteredJoins.map((join) => (
                   <li key={join.groupId}>
                     <div><strong>“{join.groupName}” 묶음에 {join.productIds.length}개</strong><span>{join.productIds.map((id) => productById.get(id)?.name ?? id).slice(0, 4).join(" · ")}{join.productIds.length > 4 ? ` 외 ${join.productIds.length - 4}개` : ""}</span></div>
@@ -386,10 +387,9 @@ export function ProductGroupsAdmin() {
             )}
             <section className="group-suggestion-block">
               <div className="group-suggestion-head">
-                <h3>새로 묶을 후보 <small>{filteredSuggestions.length.toLocaleString("ko-KR")}개 · 무게·개수·등급을 뺀 이름·카테고리·배송유형이 같은 상품</small></h3>
-                {filteredSuggestions.length > 0 && <button type="button" className="group-bulk-button" onClick={() => void createAllVisible()} disabled={busy || !ready}><Wand2 size={15} /> {normalized ? "검색 결과" : "추천"} {filteredSuggestions.length.toLocaleString("ko-KR")}개 모두 묶기</button>}
+                <h3>자동 묶음 <small>{filteredSuggestions.length.toLocaleString("ko-KR")}개 · 무게·개수·등급을 뺀 이름·카테고리·배송유형이 같은 상품이라 공개 단가표에 이렇게 묶여 보여요(숨김 상품은 단가표에 안 보임). 이름·옵션 이름·안내 문구를 바꾸려면 저장하세요.</small></h3>
               </div>
-              {filteredSuggestions.length === 0 ? <div className="empty-admin">{suggestions ? "추천할 묶음이 없습니다." : "추천을 불러오는 중이거나 운영 배포 후 볼 수 있어요."}</div> : (
+              {filteredSuggestions.length === 0 ? <div className="empty-admin">{suggestions ? "자동으로 묶인 묶음이 없습니다." : "자동 묶음을 불러오는 중이거나 운영 배포 후 볼 수 있어요."}</div> : (
                 <>
                   <ul>{pageSuggestions.map((suggestion) => {
                     const items = suggestion.productIds.map((id) => productById.get(id)).filter((item): item is GroupProduct => Boolean(item));
@@ -402,8 +402,9 @@ export function ProductGroupsAdmin() {
                           <span className="group-label-preview">{labels.slice(0, 6).join(" · ")}{labels.length > 6 ? ` 외 ${labels.length - 6}개` : ""}</span>
                         </div>
                         <div className="group-suggestion-actions">
-                          <button type="button" onClick={() => setDraft({ ...draftFromProducts(items), name: suggestion.name })} disabled={busy || !ready}><Pencil size={14} /> 고쳐서 묶기</button>
-                          <button type="button" className="primary-action" onClick={() => void quickCreate(suggestion)} disabled={busy || !ready}><Layers size={14} /> 이대로 묶기</button>
+                          <button type="button" className="group-single-button" onClick={() => { if (window.confirm(`“${suggestion.name}” 상품 ${suggestion.productIds.length}개를 따로 보이게 할까요?\n자동 묶음에서 빠져 공개 단가표에서 상품마다 카드 하나로 보여요. 아래 “따로 보이는 상품”에서 되돌릴 수 있어요.`)) void setExcluded(suggestion.productIds, true, `“${suggestion.name}”`); }} disabled={busy}><EyeOff size={14} /> 따로 보이기</button>
+                          <button type="button" onClick={() => setDraft({ ...draftFromProducts(items), name: suggestion.name })} disabled={busy || !ready}><Pencil size={14} /> 고쳐서 저장</button>
+                          <button type="button" className="primary-action" onClick={() => void quickCreate(suggestion)} disabled={busy || !ready}><Save size={14} /> 이대로 저장</button>
                         </div>
                       </li>
                     );
@@ -412,6 +413,20 @@ export function ProductGroupsAdmin() {
                 </>
               )}
             </section>
+            {filteredExcluded.length > 0 && (
+              <section className="group-suggestion-block is-single">
+                <div className="group-suggestion-head">
+                  <h3>따로 보이는 상품 <small>{filteredExcluded.length.toLocaleString("ko-KR")}개 · 자동 묶음에서 빼서 상품마다 카드 하나로 보여요</small></h3>
+                  <button type="button" className="group-bulk-button" onClick={() => void setExcluded(filteredExcluded, false, normalized ? "검색 결과" : "따로 보이던")} disabled={busy}><RotateCcw size={15} /> {filteredExcluded.length.toLocaleString("ko-KR")}개 모두 다시 자동으로</button>
+                </div>
+                <ul>{filteredExcluded.slice(0, 60).map((id) => (
+                  <li key={id}>
+                    <div><strong>{productById.get(id)?.name ?? id}</strong><span>{productById.get(id)?.productCode ?? ""}{productById.get(id) && !productById.get(id)!.isVisible ? " · 단가표 숨김" : ""}</span></div>
+                    <button type="button" onClick={() => void setExcluded([id], false, "")} disabled={busy}><RotateCcw size={14} /> 다시 자동으로</button>
+                  </li>
+                ))}{filteredExcluded.length > 60 && <li className="is-more">외 {filteredExcluded.length - 60}개 — 검색으로 찾아 주세요.</li>}</ul>
+              </section>
+            )}
           </div>
         )}
       </section>
@@ -595,12 +610,13 @@ export function ProductGroupEditorModal({ initial, products, categories, members
   );
 }
 
-// ── 상품 리스트에서 고른 상품: 새 묶음 만들기 / 기존 묶음에 넣기 / 묶음에서 빼기 ─────────────────
+// ── 상품 리스트에서 고른 상품: 새 묶음 만들기 / 기존 묶음에 넣기 / 따로 보이기 / 다시 자동으로 / 묶음에서 빼기 ─────────────────
 
-export function SelectionGroupModal({ products, groups, memberships, categories, onClose, onDone }: {
+export function SelectionGroupModal({ products, groups, memberships, excluded, categories, onClose, onDone }: {
   products: GroupProduct[];
   groups: GroupChoice[];
   memberships: Record<string, GroupMembership>;
+  excluded?: Set<string>;
   categories: Category[];
   onClose: () => void;
   onDone: () => void;
@@ -610,6 +626,7 @@ export function SelectionGroupModal({ products, groups, memberships, categories,
   const [editorDraft, setEditorDraft] = useState<GroupDraft | null>(null);
   const [allProducts, setAllProducts] = useState<GroupProduct[]>(products);
   const groupedCount = products.filter((product) => memberships[product.id]).length;
+  const excludedCount = products.filter((product) => excluded?.has(product.id)).length;
   useEffect(() => {
     void loadAdminProducts().then((list) => setAllProducts(list)).catch(() => undefined);
   }, []);
@@ -625,6 +642,19 @@ export function SelectionGroupModal({ products, groups, memberships, categories,
       setBusy(false);
     }
   };
+  const setSingle = async (single: boolean) => {
+    setBusy(true);
+    try {
+      const productIds = single ? products.map((product) => product.id) : products.filter((product) => excluded?.has(product.id)).map((product) => product.id);
+      await readData(await apiFetch("/catalog/admin/groups/exclusions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIds, excluded: single }) }));
+      toast.success(single ? `상품 ${productIds.length}개를 따로 보이게 했습니다.` : `상품 ${productIds.length}개를 다시 자동 묶음으로 돌렸습니다.`);
+      onDone();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "바꾸지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
   if (editorDraft) {
     return <ProductGroupEditorModal initial={editorDraft} products={allProducts} categories={categories} memberships={memberships} onClose={onClose} onSaved={onDone} />;
   }
@@ -632,11 +662,11 @@ export function SelectionGroupModal({ products, groups, memberships, categories,
     <div className="editor-overlay" role="presentation" onMouseDown={() => { if (!busy) onClose(); }}>
       <section className="editor-panel group-select-panel" role="dialog" aria-modal="true" aria-label="선택한 상품 옵션 묶기" onMouseDown={(event) => event.stopPropagation()}>
         <div className="editor-header">
-          <div><span>OPTION GROUP</span><h2>선택한 상품 {products.length}개 묶기</h2><p>묶은 상품은 공개 단가표에서 카드 하나의 옵션으로 보여요. 상품코드·가격·품절은 그대로입니다.</p></div>
+          <div><span>OPTION GROUP</span><h2>선택한 상품 {products.length}개 묶기</h2><p>묶은 상품은 공개 단가표에서 카드 하나의 옵션으로 보여요(이름이 비슷한 상품은 저장하지 않아도 자동으로 묶여요). 상품코드·가격·품절은 그대로입니다.</p></div>
           <button type="button" onClick={onClose} aria-label="닫기"><X size={20} /></button>
         </div>
         <div className="group-select-body">
-        <ul className="group-select-products">{products.slice(0, 6).map((product) => <li key={product.id}>{product.name}{memberships[product.id] ? <em> · 지금 “{memberships[product.id].name}”</em> : null}</li>)}{products.length > 6 && <li className="is-more">외 {products.length - 6}개</li>}</ul>
+        <ul className="group-select-products">{products.slice(0, 6).map((product) => <li key={product.id}>{product.name}{memberships[product.id] ? <em> · 지금 “{memberships[product.id].name}”</em> : excluded?.has(product.id) ? <em> · 지금 따로 보이기</em> : null}</li>)}{products.length > 6 && <li className="is-more">외 {products.length - 6}개</li>}</ul>
         <div className="group-select-options">
           <article>
             <strong>새 묶음 만들기</strong>
@@ -653,10 +683,22 @@ export function SelectionGroupModal({ products, groups, memberships, categories,
               </div>
             )}
           </article>
+          <article>
+            <strong>따로 보이기</strong>
+            <span>자동 묶음·저장한 묶음에서 빼고 상품마다 카드 하나로 보여요.</span>
+            <button type="button" className="danger-action" onClick={() => void setSingle(true)} disabled={busy}><EyeOff size={15} /> 따로 보이기</button>
+          </article>
+          {excludedCount > 0 && (
+            <article>
+              <strong>다시 자동으로 묶기</strong>
+              <span>고른 상품 중 {excludedCount}개가 따로 보이고 있어요. 되돌리면 이름이 비슷한 상품과 자동으로 묶여 보여요.</span>
+              <button type="button" onClick={() => void setSingle(false)} disabled={busy}><RotateCcw size={15} /> 다시 자동으로</button>
+            </article>
+          )}
           {groupedCount > 0 && (
             <article>
-              <strong>묶음에서 빼기</strong>
-              <span>고른 상품 중 {groupedCount}개가 묶음에 있어요. 빼면 상품마다 카드로 보입니다.</span>
+              <strong>저장한 묶음에서 빼기</strong>
+              <span>고른 상품 중 {groupedCount}개가 저장한 묶음에 있어요. 빼면 같은 이름 묶음이 남아 있는 상품은 따로 보이고, 아니면 자동 묶음 규칙을 따릅니다.</span>
               <button type="button" className="danger-action" onClick={() => void assign(null)} disabled={busy}><Trash2 size={15} /> 묶음에서 빼기</button>
             </article>
           )}

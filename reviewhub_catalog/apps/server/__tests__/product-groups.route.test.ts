@@ -199,17 +199,17 @@ describe("옵션 묶음 관리자 API", () => {
     expect(after.data.groups).toEqual([]);
   });
 
-  it("추천: 아직 안 묶은 비슷한 이름 상품은 새 묶음 후보, 기존 묶음과 이름이 같은 상품은 넣을 후보로 알려 줍니다", async () => {
+  it("자동 묶음 탭: 안 묶은 비슷한 이름 공개 상품은 자동 묶음(숨김 제외), 저장한 묶음과 이름이 같은 상품은 넣을 후보로 알려 줍니다", async () => {
     const admin = await adminToken();
     const before = await json<{ suggestions: Array<{ productIds: string[] }>; joins: unknown[] }>(await fetchWithAuth(app, admin, "/api/catalog/admin/groups/suggestions"));
     const testSuggestion = before.data.suggestions.find((item) => item.productIds.includes("pg-1"))!;
-    expect(testSuggestion.productIds.sort()).toEqual(["pg-1", "pg-2", "pg-3", "pg-4", "pg-hidden"]);
+    expect(testSuggestion.productIds.sort()).toEqual(["pg-1", "pg-2", "pg-3", "pg-4"]);
     expect(before.data.suggestions.some((item) => item.productIds.includes("pg-x"))).toBe(false);
 
     const group = (await json<{ group: { id: string } }>(await send(admin, "/api/catalog/admin/groups", "POST", { name: "(테스트) 여주 꿀고구마", items: [{ productId: "pg-1" }, { productId: "pg-2" }] }))).data.group;
     const after = await json<{ joins: Array<{ groupId: string; productIds: string[] }> }>(await fetchWithAuth(app, admin, "/api/catalog/admin/groups/suggestions"));
     const join = after.data.joins.find((item) => item.groupId === group.id)!;
-    expect(join.productIds.sort()).toEqual(["pg-3", "pg-4", "pg-hidden"]);
+    expect(join.productIds.sort()).toEqual(["pg-3", "pg-4"]);
   });
 
   it("입력 확인: 상품 없음·없는 상품·http(s)가 아닌 자료 링크는 400입니다", async () => {
@@ -222,43 +222,76 @@ describe("옵션 묶음 관리자 API", () => {
   });
 });
 
-describe("미리보기 예시 묶음(미리보기 배포에만 CATALOG_EXAMPLE_GROUPS=1)", () => {
-  it("실제 묶음이 없으면 이름이 비슷한 공개 상품을 저장하지 않고 묶어 보여 주고, 실제 묶음이 생기거나 운영이면 쓰지 않습니다", async () => {
-    process.env.CATALOG_EXAMPLE_GROUPS = "1";
+describe("자동 묶음(2026-11-22: 저장하지 않아도 이름이 비슷한 상품은 운영에서 자동으로 묶여 보임)", () => {
+  type CatalogGroups = { groups: Array<{ id: string; name: string; productIds: string[]; auto?: boolean }> };
+  const catalogGroups = async () => (await json<CatalogGroups>(await app.fetch(new Request("http://localhost/api/catalog")))).data.groups;
+  const options = async (id: string) => (await json<{ group: { name: string; auto?: boolean } | null; productIds: string[] }>(await app.fetch(new Request(`http://localhost/api/catalog/options/${id}`)))).data;
+
+  it("저장한 묶음이 없어도 이름이 비슷한 공개 상품을 묶어 보여 주고(DB 저장 없음), 운영 환경 값과 상관없습니다", async () => {
+    process.env.VERCEL_ENV = "production";
     try {
-      const catalog = await json<{ groups: Array<{ id: string; name: string; productIds: string[]; example?: boolean }> }>(await app.fetch(new Request("http://localhost/api/catalog")));
-      const example = catalog.data.groups.find((group) => group.productIds.includes("pg-1"))!;
-      expect(example).toMatchObject({ example: true, name: "(테스트) 여주 꿀고구마 (베니하루카)" });
+      const auto = (await catalogGroups()).find((group) => group.productIds.includes("pg-1"))!;
+      expect(auto).toMatchObject({ auto: true, name: "(테스트) 여주 꿀고구마 (베니하루카)" });
       // 일반공급가 낮은 순 · 숨김 상품 제외 · 혼자인 상품(한라봉)은 묶지 않음
-      expect(example.productIds).toEqual(["pg-1", "pg-2", "pg-3", "pg-4"]);
-      expect(catalog.data.groups.some((group) => group.productIds.includes("pg-x"))).toBe(false);
+      expect(auto.productIds).toEqual(["pg-1", "pg-2", "pg-3", "pg-4"]);
+      expect((await catalogGroups()).some((group) => group.productIds.includes("pg-x"))).toBe(false);
 
-      const options = await json<{ group: { name: string; example?: boolean }; productIds: string[] }>(await app.fetch(new Request("http://localhost/api/catalog/options/pg-2")));
-      expect(options.data.group).toMatchObject({ name: example.name, example: true });
-      expect(options.data.productIds).toEqual(["pg-1", "pg-2", "pg-3", "pg-4"]);
-      const exportRes = await app.fetch(new Request("http://localhost/api/catalog/options/pg-2/export"));
-      expect(exportRes.status).toBe(200);
-      // DB에는 아무것도 저장하지 않습니다.
+      const detail = await options("pg-2");
+      expect(detail.group).toMatchObject({ name: auto.name, auto: true });
+      expect(detail.productIds).toEqual(["pg-1", "pg-2", "pg-3", "pg-4"]);
+      expect((await app.fetch(new Request("http://localhost/api/catalog/options/pg-2/export"))).status).toBe(200);
+      expect((await app.fetch(new Request("http://localhost/api/catalog/options/pg-hidden"))).status).toBe(404);
       expect((await executeSql("SELECT COUNT(*) AS count FROM product_groups")).rows[0].count).toBe(0);
-
-      // 운영(VERCEL_ENV=production)에서는 값이 있어도 켜지지 않습니다.
-      process.env.VERCEL_ENV = "production";
-      const production = await json<{ groups: unknown[] }>(await app.fetch(new Request("http://localhost/api/catalog")));
-      expect(production.data.groups).toEqual([]);
-      delete process.env.VERCEL_ENV;
-
-      // 실제 묶음이 하나라도 생기면 예시는 쓰지 않습니다.
-      const admin = await adminToken();
-      expect((await send(admin, "/api/catalog/admin/groups", "POST", { name: "실제 묶음", items: [{ productId: "pg-3" }, { productId: "pg-4" }] })).status).toBe(201);
-      const after = await json<{ groups: Array<{ name: string; example?: boolean }> }>(await app.fetch(new Request("http://localhost/api/catalog")));
-      expect(after.data.groups.map((group) => group.name)).toEqual(["실제 묶음"]);
-      expect(after.data.groups.some((group) => group.example)).toBe(false);
-      const single = await json<{ group: unknown; productIds: string[] }>(await app.fetch(new Request("http://localhost/api/catalog/options/pg-1")));
-      expect(single.data.group).toBeNull();
-      expect(single.data.productIds).toEqual(["pg-1"]);
     } finally {
-      delete process.env.CATALOG_EXAMPLE_GROUPS;
       delete process.env.VERCEL_ENV;
     }
+  });
+
+  it("따로 보이기: 관리자만 바꿀 수 있고, 뺀 상품은 혼자 보이며 되돌리면 다시 자동으로 묶입니다", async () => {
+    const user = await signUpAndGetToken(app);
+    expect((await send(user.token, "/api/catalog/admin/groups/exclusions", "POST", { productIds: ["pg-4"], excluded: true })).status).toBe(403);
+    const admin = await adminToken();
+    expect((await send(admin, "/api/catalog/admin/groups/exclusions", "POST", { productIds: [], excluded: true })).status).toBe(400);
+    expect((await send(admin, "/api/catalog/admin/groups/exclusions", "POST", { productIds: ["pg-4"], excluded: true })).status).toBe(200);
+
+    expect((await catalogGroups()).find((group) => group.productIds.includes("pg-1"))!.productIds).toEqual(["pg-1", "pg-2", "pg-3"]);
+    expect(await options("pg-4")).toMatchObject({ group: null, productIds: ["pg-4"] });
+    const memberships = await json<{ excluded: string[]; auto: Record<string, { size: number; name: string }> }>(await fetchWithAuth(app, admin, "/api/catalog/admin/groups/memberships"));
+    expect(memberships.data.excluded).toEqual(["pg-4"]);
+    expect(memberships.data.auto["pg-1"]).toMatchObject({ size: 3, name: "(테스트) 여주 꿀고구마 (베니하루카)" });
+    expect(memberships.data.auto["pg-4"]).toBeUndefined();
+    const suggestions = await json<{ suggestions: Array<{ productIds: string[] }>; excludedIds: string[] }>(await fetchWithAuth(app, admin, "/api/catalog/admin/groups/suggestions"));
+    expect(suggestions.data.excludedIds).toEqual(["pg-4"]);
+    expect(suggestions.data.suggestions.some((item) => item.productIds.includes("pg-4"))).toBe(false);
+
+    expect((await send(admin, "/api/catalog/admin/groups/exclusions", "POST", { productIds: ["pg-4"], excluded: false })).status).toBe(200);
+    expect((await catalogGroups()).find((group) => group.productIds.includes("pg-1"))!.productIds).toEqual(["pg-1", "pg-2", "pg-3", "pg-4"]);
+  });
+
+  it("저장한 묶음이 먼저입니다: 같은 이름의 남은 상품은 자동으로 묶지 않고, 풀면 다시 자동 묶음이 됩니다", async () => {
+    const admin = await adminToken();
+    const saved = (await json<{ group: { id: string } }>(await send(admin, "/api/catalog/admin/groups", "POST", { name: "실제 묶음", items: [{ productId: "pg-3" }, { productId: "pg-4" }] }))).data.group;
+    const groups = await catalogGroups();
+    expect(groups.find((group) => group.id === saved.id)).toMatchObject({ name: "실제 묶음", productIds: ["pg-3", "pg-4"] });
+    expect(groups.find((group) => group.id === saved.id)?.auto).toBeUndefined();
+    // pg-1·pg-2는 저장한 묶음과 기본 이름이 같아 자동으로 묶지 않고 따로 보입니다(관리자 "기존 묶음에 넣을 상품").
+    expect(groups.some((group) => group.auto && group.productIds.includes("pg-1"))).toBe(false);
+    expect(await options("pg-1")).toMatchObject({ group: null, productIds: ["pg-1"] });
+
+    expect((await fetchWithAuth(app, admin, `/api/catalog/admin/groups/${saved.id}`, { method: "DELETE" })).status).toBe(200);
+    expect((await catalogGroups()).find((group) => group.productIds.includes("pg-1"))).toMatchObject({ auto: true, productIds: ["pg-1", "pg-2", "pg-3", "pg-4"] });
+  });
+
+  it("저장한 묶음의 상품을 따로 보이게 하면 그 묶음에서 빠지고, 다시 묶음에 넣으면 따로 보이기가 풀립니다", async () => {
+    const admin = await adminToken();
+    const saved = (await json<{ group: { id: string } }>(await send(admin, "/api/catalog/admin/groups", "POST", { name: "실제 묶음", items: [{ productId: "pg-3" }] }))).data.group;
+    const result = await json<{ leftGroups: number; removedGroups: number }>(await send(admin, "/api/catalog/admin/groups/exclusions", "POST", { productIds: ["pg-3"], excluded: true }));
+    expect(result.data).toMatchObject({ leftGroups: 1, removedGroups: 1 });
+    expect((await executeSql("SELECT COUNT(*) AS count FROM product_groups WHERE id = ?", [saved.id])).rows[0].count).toBe(0);
+
+    const again = (await json<{ group: { id: string } }>(await send(admin, "/api/catalog/admin/groups", "POST", { name: "다시 묶음", items: [{ productId: "pg-3" }, { productId: "pg-4" }] }))).data.group;
+    expect(again.id).toBeTruthy();
+    const memberships = await json<{ excluded: string[] }>(await fetchWithAuth(app, admin, "/api/catalog/admin/groups/memberships"));
+    expect(memberships.data.excluded).toEqual([]);
   });
 });
