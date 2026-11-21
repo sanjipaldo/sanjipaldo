@@ -131,12 +131,7 @@ body { color: var(--w-ink); background: var(--w-soft); font-family: var(--w-font
 .season-highlight-keywords button:hover { background: var(--w-primary-neutral); }
 .season-highlight-keywords button.active { color: var(--w-ink); background: var(--w-primary); }
 
-/* 주문 가능 여부 안내 */
-.order-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 12px; color: var(--w-body); font-size: 13px; font-weight: 500; }
-.order-legend-item { display: inline-flex; align-items: center; gap: 7px; }
-.order-legend-item i { width: 18px; height: 12px; border-radius: 4px; }
-.order-legend-item.available i { border: 1px solid var(--w-line); background: var(--w-canvas); }
-.order-legend-item.unavailable i { border: 1px solid #f2b8ba; background: var(--w-negative-row); box-shadow: inset 3px 0 0 var(--w-negative); }
+/* 주문 가능 여부 안내: 맨 아래 "주문 가능 여부 안내 · N월 제철 카드" 묶음 */
 
 /* 단가표 표 */
 .catalog-table-wrap { border: 1px solid var(--w-line); border-radius: var(--w-radius-lg); }
@@ -1600,15 +1595,15 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .sold-out-shortcut-go { justify-content: center; width: 100%; }
 }
 
-/* 품절·시즌 종료 행 3차: 품절이슈 카드와 같은 흰색 → 연분홍 그라데이션(단가표·신규상품·관리자 상품 리스트 공통, 진한 빨간 띠 없음) */
+/* 품절·시즌 종료 행 3차: 품절이슈 카드와 같은 흰색 → 연분홍 그라데이션(단가표·신규상품·관리자 상품 리스트 공통, 진한 빨간 띠 없음)
+   2026-11-22: "자세히 안 보면 분홍색인지 모른다"는 관리자 의견으로 끝 색·테두리를 한 단계 진하게(#fff4f5 → #ffe9ed, #f0d0d3 → #efc3ca) */
 :root {
-  --w-unavailable-gradient: linear-gradient(135deg, #fff 0%, #fff4f5 100%);
-  --w-unavailable-gradient-hover: linear-gradient(135deg, #fff 0%, #ffeef0 100%);
-  --w-unavailable-border: #f0d0d3;
-  --w-unavailable-end: #fff4f5;
-  --w-unavailable-end-hover: #ffeef0;
+  --w-unavailable-gradient: linear-gradient(135deg, #fff 0%, #ffe9ed 100%);
+  --w-unavailable-gradient-hover: linear-gradient(135deg, #fff 0%, #ffe1e7 100%);
+  --w-unavailable-border: #efc3ca;
+  --w-unavailable-end: #ffe9ed;
+  --w-unavailable-end-hover: #ffe1e7;
 }
-.order-legend-item.unavailable i { border: 1px solid var(--w-unavailable-border); background: linear-gradient(135deg, #fff 0%, #fde4e7 100%); box-shadow: none; }
 /* 공개 단가표·신규상품(PC 표): 줄 전체에 그라데이션, 칸은 투명 */
 .catalog-table tbody tr.order-unavailable { background: var(--w-unavailable-gradient); }
 .catalog-table tbody tr.order-unavailable:hover { background: var(--w-unavailable-gradient-hover); }
@@ -3603,3 +3598,52 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .supplier-table .supplier-account-none { color: var(--w-mute); }
 .row-actions button.supplier-account-button { border-color: var(--w-ink); color: var(--w-ink); }
 .supplier-table { min-width: 1060px; }
+
+/* ── 주문 가능 여부 안내 · N월 제철 카드(2026-11-22 관리자 요청: 휴대폰에서 끊겨 보이고 읽기 어렵다 · 흰색/분홍색 카드 뜻이 잘 안 보인다) ── */
+/* 주문 가능 여부: 카드 모양을 줄인 그림 + "주문 가능 / 주문 불가"를 나란히(휴대폰도 두 칸, 359px 이하는 위아래) */
+.order-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-width: 720px; margin: 2px 0 16px; }
+.order-legend-item { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 14px; border: 1.5px solid #d3dbcc; border-radius: 14px; background: #fff; }
+.order-legend-item.unavailable { border-color: var(--w-unavailable-border); background: var(--w-unavailable-gradient); }
+.order-legend-card { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 46px; height: 36px; border-radius: 9px; }
+.order-legend-item.available .order-legend-card { border: 1.5px solid #d3dbcc; background: #fff; }
+.order-legend-item.unavailable .order-legend-card { border: 1.5px solid var(--w-unavailable-border); background: linear-gradient(135deg, #fff 0%, #ffdbe2 100%); }
+.order-legend-card i { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; color: #fff; }
+.order-legend-item.available .order-legend-card i { background: #2f9e44; }
+.order-legend-item.unavailable .order-legend-card i { background: #d64550; }
+.order-legend-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.order-legend-text strong { font-size: 15px; font-weight: 800; line-height: 1.25; }
+.order-legend-item.available .order-legend-text strong { color: #1f7a33; }
+.order-legend-item.unavailable .order-legend-text strong { color: #c2343f; }
+.order-legend-text small { color: var(--w-body); font-size: 12px; font-weight: 600; line-height: 1.4; }
+/* 주문 불가 카드의 상태 표시에 "· 주문 불가" */
+.product-card-status em { font-style: normal; font-weight: 800; }
+@media (max-width: 720px) {
+  .order-legend { gap: 8px; margin-bottom: 14px; }
+  .order-legend-item { gap: 9px; padding: 10px; }
+  .order-legend-card { width: 38px; height: 30px; border-radius: 8px; }
+  .order-legend-card i { width: 19px; height: 19px; }
+  .order-legend-card svg { width: 12px; height: 12px; }
+  .order-legend-text strong { font-size: 14px; }
+  .order-legend-text small { font-size: 11px; }
+}
+@media (max-width: 359px) {
+  .order-legend { grid-template-columns: 1fr; }
+}
+
+/* N월 제철: 상품 수는 굵은 표시, 카테고리별 수는 줄바꿈되는 작은 칩(예전에는 "·"로 이은 긴 문장) */
+.season-highlight-title { align-items: center; }
+.season-highlight-total { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; color: var(--w-ink-deep); background: var(--w-primary); font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.season-highlight-categories { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.season-highlight-categories li { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border: 1px solid #dfe5da; border-radius: 999px; color: var(--w-body); background: #f7f9f5; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.season-highlight-categories li b { color: var(--w-ink); font-weight: 800; font-variant-numeric: tabular-nums; }
+.season-highlight-keywords .season-keyword-more { display: none; }
+/* 휴대폰: 품목 키워드는 좌우로 밀지 않고 줄바꿈해서 8개까지, 나머지는 "+N개 더보기"(고른 키워드는 항상 보임) */
+@media (max-width: 720px) {
+  .season-highlight { gap: 12px; padding: 14px; }
+  .season-highlight-title strong { font-size: 17px; }
+  .season-keyword-slider .season-keyword-arrow { display: none; }
+  .season-keyword-slider .season-highlight-keywords { flex-wrap: wrap; gap: 7px; padding: 0; overflow: visible; scroll-snap-type: none; }
+  .season-keyword-slider .season-highlight-keywords button { padding: 8px 12px; font-size: 13px; }
+  .season-highlight-keywords.is-collapsed button:nth-child(n+9):not(.active):not(.season-keyword-more) { display: none; }
+  .season-highlight-keywords .season-keyword-more { display: inline-flex; align-items: center; padding: 8px 12px; border: 1px dashed var(--w-ink); border-radius: 999px; color: var(--w-ink); background: #fff; font-size: 13px; font-weight: 700; }
+}

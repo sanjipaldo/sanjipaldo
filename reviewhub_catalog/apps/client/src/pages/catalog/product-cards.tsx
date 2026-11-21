@@ -138,7 +138,7 @@ function ProductCard({ card, categories, policyById, currentMonth, onOpen, onShi
     <article className={`product-card is-${summary.status}`}>
       <button type="button" className="product-card-media" onClick={onOpen} aria-label={`${card.name} 옵션·가격 보기`}>
         <ProductThumb product={card.imageProduct} src={card.group?.imageUrl} className="product-card-image" size={360} alt="" />
-        <span className={`product-card-status is-${summary.status}`}>{summary.status === "sold_out" && <Ban size={12} strokeWidth={2.6} aria-hidden="true" />}{SUPPLY_STATUS_LABELS[summary.status]}</span>
+        <span className={`product-card-status is-${summary.status}`}>{summary.status === "sold_out" && <Ban size={12} strokeWidth={2.6} aria-hidden="true" />}{SUPPLY_STATUS_LABELS[summary.status]}{summary.status !== "on_sale" && <em> · 주문 불가</em>}</span>
         {multi && <span className="product-card-count"><Layers size={12} aria-hidden="true" /> 옵션 {card.options.length}</span>}
       </button>
       <div className="product-card-body">

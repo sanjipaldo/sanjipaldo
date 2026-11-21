@@ -7,6 +7,7 @@ import {
   Ban,
   Bell,
   CalendarRange,
+  Check,
   Cloud,
   CloudLightning,
   CloudRain,
@@ -1539,6 +1540,26 @@ function OperationsBoard({
   );
 }
 
+// 휴대폰에서 처음 보여 줄 제철 품목 키워드 수(나머지는 "더보기")
+const SEASON_KEYWORD_PREVIEW = 8;
+
+// 주문 가능 여부 안내(2026-11-22 관리자 요청 "흰색·분홍색 카드 뜻이 자세히 안 보면 안 보임"):
+// 카드 모양을 그대로 줄인 그림 + "주문 가능 / 주문 불가"를 나란히 보여 줍니다. 단가표·신규상품 공용.
+function OrderLegend() {
+  return (
+    <div className="order-legend" role="note" aria-label="카드 색으로 보는 주문 가능 여부">
+      <div className="order-legend-item available">
+        <span className="order-legend-card" aria-hidden="true"><i><Check size={13} strokeWidth={3.2} /></i></span>
+        <span className="order-legend-text"><strong>주문 가능</strong><small>흰색 카드 · 지금 판매중</small></span>
+      </div>
+      <div className="order-legend-item unavailable">
+        <span className="order-legend-card" aria-hidden="true"><i><Ban size={13} strokeWidth={2.8} /></i></span>
+        <span className="order-legend-text"><strong>주문 불가</strong><small>분홍색 카드 · 품절 또는 시즌 종료</small></span>
+      </div>
+    </div>
+  );
+}
+
 // 월별 제철상품(월 버튼 · SEASON TIP · "N월 제철" 품목 키워드). 단가표와 신규상품이 함께 씁니다.
 function SeasonMonthFilter({
   products,
@@ -1560,6 +1581,9 @@ function SeasonMonthFilter({
   // 제철 정보: 선택한 달(전체면 이번 달)에 판매기간이 걸친 제철 상품을 품목명 기준으로 묶어 보여줍니다.
   const highlightMonth = saleMonth === "all" ? currentMonth : saleMonth;
   const keywordRowRef = useRef<HTMLDivElement>(null);
+  // 휴대폰(720px 이하)은 품목 키워드를 좌우로 밀지 않고 두세 줄로 펼쳐 보여 주고, 나머지는 "더보기"로 엽니다.
+  const [keywordsOpen, setKeywordsOpen] = useState(false);
+  useEffect(() => { setKeywordsOpen(false); }, [highlightMonth]);
   // 좌우로 더 밀 수 있을 때만 화살표를 켭니다.
   const [keywordScroll, setKeywordScroll] = useState({ left: false, right: false });
   useEffect(() => {
@@ -1614,17 +1638,27 @@ function SeasonMonthFilter({
         <div className="season-highlight" aria-live="polite">
           <div className="season-highlight-title">
             <strong>{highlightMonth}월 제철</strong>
-            <span>{seasonalHighlights.total > 0 ? `${seasonalHighlights.total}개 상품 · ${seasonalHighlights.byCategory.map((item) => `${item.name} ${item.count}`).join(" · ")}` : "등록된 제철 상품이 없습니다."}</span>
+            {seasonalHighlights.total > 0 ? <b className="season-highlight-total">{seasonalHighlights.total.toLocaleString("ko-KR")}개 상품</b> : <span>등록된 제철 상품이 없습니다.</span>}
           </div>
+          {seasonalHighlights.byCategory.length > 0 && (
+            <ul className="season-highlight-categories" aria-label={`${highlightMonth}월 제철 카테고리별 상품 수`}>
+              {seasonalHighlights.byCategory.map((item) => <li key={item.name}>{item.name}<b>{item.count.toLocaleString("ko-KR")}</b></li>)}
+            </ul>
+          )}
           {seasonalHighlights.keywords.length > 0 && (
             <div className="season-keyword-slider">
             <button type="button" className="season-keyword-arrow prev" disabled={!keywordScroll.left} onClick={() => keywordRowRef.current?.scrollBy({ left: -Math.max(240, (keywordRowRef.current?.clientWidth ?? 600) * 0.8), behavior: "smooth" })} aria-label="제철 품목 왼쪽으로"><ChevronLeft size={18} /></button>
-            <div className="season-highlight-keywords" ref={keywordRowRef}>
+            <div className={`season-highlight-keywords${keywordsOpen ? "" : " is-collapsed"}`} ref={keywordRowRef}>
               {seasonalHighlights.keywords.map((item) => (
                 <button type="button" key={item.keyword} className={query.trim() === item.keyword ? "active" : ""} onClick={() => onQuery(query.trim() === item.keyword ? "" : item.keyword)} aria-pressed={query.trim() === item.keyword}>
                   {item.keyword}<small>{item.count}</small>
                 </button>
               ))}
+              {seasonalHighlights.keywords.length > SEASON_KEYWORD_PREVIEW && (
+                <button type="button" className="season-keyword-more" onClick={() => setKeywordsOpen((open) => !open)} aria-expanded={keywordsOpen}>
+                  {keywordsOpen ? "접기" : `+${seasonalHighlights.keywords.length - SEASON_KEYWORD_PREVIEW}개 더보기`}
+                </button>
+              )}
             </div>
             <button type="button" className="season-keyword-arrow next" disabled={!keywordScroll.right} onClick={() => keywordRowRef.current?.scrollBy({ left: Math.max(240, (keywordRowRef.current?.clientWidth ?? 600) * 0.8), behavior: "smooth" })} aria-label="제철 품목 오른쪽으로"><ChevronRight size={18} /></button>
             </div>
@@ -1840,10 +1874,7 @@ export function CatalogHome() {
             {visibleCategories.map((chip) => <button key={chip.key} className={categoryId === chip.key ? "active" : ""} onClick={() => setCategoryId(chip.key)}>{chip.name}</button>)}
           </div>
           <SeasonMonthFilter products={data.products} categories={data.categories} saleMonth={saleMonth} onSaleMonth={setSaleMonth} currentMonth={currentMonth} query={query} onQuery={setQuery} />
-          <div className="order-legend" aria-label="주문 가능 여부 안내">
-            <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 카드 · 판매중(지금 주문 가능)</span>
-            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 분홍색 카드 · 품절 또는 시즌 종료(주문 불가)</span>
-          </div>
+          <OrderLegend />
           {fullLoadFailed && data.isPartial && (
             <div className="catalog-partial-warning" role="status">
               <strong>전체 상품을 아직 불러오지 못해 일부({data.products.length}개)만 보이고 있습니다.</strong>
@@ -2352,10 +2383,7 @@ export function NewProductsPage() {
             </div>
           )}
           <SeasonMonthFilter products={newProducts} categories={data.categories} saleMonth={saleMonth} onSaleMonth={setSaleMonth} currentMonth={currentMonth} query={query} onQuery={setQuery} />
-          <div className="order-legend" aria-label="주문 가능 여부 안내">
-            <span className="order-legend-item available"><i aria-hidden="true" /> 흰색 카드 · 판매중(지금 주문 가능)</span>
-            <span className="order-legend-item unavailable"><i aria-hidden="true" /> 분홍색 카드 · 품절 또는 시즌 종료(주문 불가)</span>
-          </div>
+          <OrderLegend />
           <div className="catalog-table-wrap">
             <CatalogProductGrid
               cards={pagedCards}
