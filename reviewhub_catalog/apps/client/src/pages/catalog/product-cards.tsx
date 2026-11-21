@@ -3,7 +3,7 @@
 // 카드 하나로 보여 줍니다. 카드를 누르면 팝업에서 전체 옵션(일반공급가·수강생 단가·상태), 상품 안내, 배송 안내,
 // 상세페이지·사진 자료, 최근 7일 가격 흐름(이전·현재 공급가 + 그래프), 이 상품 엑셀 다운로드를 봅니다.
 // 묶지 않은 상품은 옵션 1개짜리 카드입니다. 원가·매입처는 다루지 않습니다.
-import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowUpRight, Ban, CalendarRange, Calculator, ChevronRight, CircleHelp, Download, Layers, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
@@ -104,6 +104,8 @@ type GridProps = {
 export function CatalogProductGrid({ cards, categories, policyById, currentMonth, onShipping, renderBadge }: GridProps) {
   const [openKey, setOpenKey] = useState<string | null>(null);
   const openCard = cards.find((card) => card.key === openKey) ?? null;
+  // 닫기 함수는 매번 새로 만들지 않습니다(단가표는 시계 때문에 1초마다 다시 그려짐).
+  const closeOptions = useCallback(() => setOpenKey(null), []);
   useEffect(() => {
     if (openKey && !cards.some((card) => card.key === openKey)) setOpenKey(null);
   }, [cards, openKey]);
@@ -115,7 +117,7 @@ export function CatalogProductGrid({ cards, categories, policyById, currentMonth
         ))}
       </div>
       {openCard && (
-        <ProductOptionsModal card={openCard} categories={categories} policyById={policyById} currentMonth={currentMonth} onShipping={onShipping} onClose={() => setOpenKey(null)} />
+        <ProductOptionsModal card={openCard} categories={categories} policyById={policyById} currentMonth={currentMonth} onShipping={onShipping} onClose={closeOptions} />
       )}
     </>
   );
@@ -253,6 +255,10 @@ export function ProductOptionsModal({ card, categories, policyById, currentMonth
   }, [card.lead.id, reloadKey]);
 
   // 열려 있는 동안 뒤 화면이 스크롤되지 않게 하고, 닫으면 원래대로 돌립니다. Esc는 맨 위 팝업일 때만 닫습니다.
+  // 처음 열 때 한 번만 팝업으로 포커스를 옮깁니다(2026-11-22 수정: 예전에는 닫기 함수가 바뀔 때마다 = 단가표가 1초마다
+  // 다시 그려질 때마다 포커스를 옮겨, 휴대폰에서 "확인할 옵션" 목록을 열면 1초 안에 닫혔음). 닫기 함수는 ref로 듭니다.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -260,14 +266,14 @@ export function ProductOptionsModal({ card, categories, policyById, currentMonth
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       const dialogs = Array.from(document.querySelectorAll('[aria-modal="true"]'));
-      if (dialogs[dialogs.length - 1] === sectionRef.current || dialogs.length === 0) onClose();
+      if (dialogs[dialogs.length - 1] === sectionRef.current || dialogs.length === 0) onCloseRef.current();
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [onClose]);
+  }, []);
 
   const download = async () => {
     setDownloading(true);
@@ -336,7 +342,12 @@ export function ProductOptionsModal({ card, categories, policyById, currentMonth
                       <tr key={option.product.id} className={`${isSelected ? "is-selected " : ""}is-${option.status}`} onClick={() => setSelectedId(option.product.id)}>
                         <th scope="row">
                           <button type="button" className="product-option-name" aria-pressed={isSelected} onClick={(event) => { event.stopPropagation(); setSelectedId(option.product.id); }}>{option.label}</button>
-                          {option.product.salePriceMode === "fixed" && <small>지정 판매가 {formatPrice(option.product.salePrice)}{fixedMargin ? ` · 마진 ${formatMarginRate(fixedMargin.rate)}` : ""}</small>}
+                          {option.product.salePriceMode === "fixed" && (
+                            <span className="product-option-sale">
+                              <span className="product-option-sale-price"><em>지정 판매가</em><b>{salePriceLabel("fixed", option.product.salePrice).main}</b></span>
+                              {fixedMargin && <span className={`product-option-sale-margin${fixedMargin.rate < 0 ? " is-negative" : ""}`}><em>마진</em><b>{formatMarginRate(fixedMargin.rate)}</b></span>}
+                            </span>
+                          )}
                         </th>
                         <td className="is-general">{formatPrice(option.general)}</td>
                         <td className="is-student">{formatPrice(option.student)}</td>
