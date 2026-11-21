@@ -37,7 +37,7 @@ if [ ! -d "${TOOLS}/node_modules/pretendard" ] || [ ! -d "${TOOLS}/node_modules/
   (cd "${TOOLS}" && { [ -f package.json ] || npm init -y >/dev/null; } && npm i --no-audit --no-fund pretendard@1.3.9 gsap@3.13.0 >/dev/null)
 fi
 SFX="${HERE}/../.claude/skills/media-use/audio/assets/sfx"
-for proj in "${HERE}"/shorts-format "${HERE}"/longform-format "${HERE}"/projects/*/; do
+for proj in "${HERE}"/shorts-format "${HERE}"/shorts-format-v2 "${HERE}"/longform-format "${HERE}"/projects/*/; do
   [ -f "${proj}/index.html" ] || continue
   mkdir -p "${proj}/assets/fonts"
   cp "${TOOLS}/node_modules/gsap/dist/gsap.min.js" "${proj}/assets/"
