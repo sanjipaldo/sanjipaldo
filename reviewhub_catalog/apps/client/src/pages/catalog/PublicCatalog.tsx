@@ -477,7 +477,11 @@ function BrandHeader() {
   return (
     <header className="public-header">
       <Link to="/" className="public-brand" aria-label="두고푸드 상품 DB 홈">
-        <BrandLogo />
+        {/* 휴대폰(720px 이하)은 한 줄 로고(마크 + DOOGO FOOD)를 크게, 그 밖은 두 줄 로고(2026-11-22 관리자 요청) */}
+        <picture className="public-brand-logo">
+          <source media="(max-width: 720px)" srcSet="/assets/brand/doogo-food-logo-line-color.png" width={960} height={131} />
+          <BrandLogo />
+        </picture>
       </Link>
       <nav className="public-nav" aria-label="주요 메뉴">
         <NavLink to="/" end>단가표</NavLink>

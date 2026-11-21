@@ -1119,7 +1119,9 @@ a { color: inherit; text-decoration: none; }
     height: auto;
     padding: 8px 12px 9px;
   }
-  .public-header .doogo-logo { width: 59px; height: 24px; }
+  /* 한 줄 로고(마크 + DOOGO FOOD): 오른쪽 버튼 두 개를 뺀 남는 폭을 쓰되 최대 196px */
+  .public-header .public-brand-logo { display: block; width: 100%; max-width: 196px; }
+  .public-header .doogo-logo { width: 100%; max-width: 196px; height: auto; }
   .public-brand { grid-column: 1; grid-row: 1; min-width: 0; }
   .public-brand small { display: none; }
   .public-external-links {
