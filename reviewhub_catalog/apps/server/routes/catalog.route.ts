@@ -73,8 +73,7 @@ import {
 } from "../services/catalog-excel";
 import { getCatalogOperationsOverview } from "../services/catalog-operations";
 import { SHIPPING_RATE_TYPES, SHIPPING_UNIT_LABELS, validateRateTiers } from "../services/shipping-rates";
-import { getSalesOverview } from "../services/catalog-sales";
-import { disconnectConnection, getCatalogSyncOverview, listSyncOutbox, listSyncRuns, saveConnection, setAutoSync, verifyConnection } from "../services/catalog-sync";
+import { getBaljuoraHomeSummary } from "../services/baljuora-sync";
 import { StorageError, storagePut } from "../services/s3_storage";
 import { allowSyncCreate, createEncyclopediaSave, getEncyclopediaSave, isMissingSyncTable, normalizeSyncCode, updateEncyclopediaSave } from "../services/encyclopedia-sync";
 import { NAVER_SEARCH_ENV, NaverSearchError, checkNaverSearch, missingNaverEnv, naverSearchConfig, readProduceSearchStats, refreshProduceSearch } from "../services/naver-search";
@@ -795,69 +794,10 @@ catalogRouter.get("/admin/history", adminRoute, async (c) => c.json(apiSuccess(a
 catalogRouter.get("/admin/sourcing", adminRoute, async (c) => c.json(apiSuccess(await getAdminSourcingCatalog())));
 
 catalogRouter.get("/admin/overview", adminRoute, async (c) => {
-  const [overview, sync, sales] = await Promise.all([
-    getAdminOverview(),
-    getCatalogSyncOverview(),
-    getSalesOverview("")
-  ]);
-  return c.json(apiSuccess({ overview, sync, sales }));
+  const [overview, baljuora] = await Promise.all([getAdminOverview(), getBaljuoraHomeSummary()]);
+  return c.json(apiSuccess({ overview, baljuora }));
 });
 
-catalogRouter.get("/admin/sync", adminRoute, async (c) => {
-  const [overview, runs, outbox] = await Promise.all([
-    getCatalogSyncOverview(),
-    listSyncRuns(),
-    listSyncOutbox()
-  ]);
-  return c.json(apiSuccess({ overview, runs, outbox }));
-});
-
-catalogRouter.post("/admin/sync/transmit/:id", adminRoute, async (c) => {
-  return c.json(apiFailure(
-    "BALJUORA_WRITE_BLOCKED",
-    "발주오라 공식 쓰기 API와 서버 전용 인증 계약이 확인되지 않아 실제 전송을 시작하지 않았습니다."
-  ), 409);
-});
-
-catalogRouter.put("/admin/sync/connection", adminRoute, async (c) => {
-  const parsed = z.object({
-    mallId: z.string().trim().max(80).nullable().optional(),
-    username: z.string().trim().max(120).nullable().optional(),
-    apiKey: z.string().trim().min(8).max(500).nullable().optional(),
-    apiBaseUrl: z.string().trim().max(300).nullable().optional()
-  }).safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "연결 정보를 확인해 주세요. (API 키는 8자 이상)"), 400);
-  try {
-    return c.json(apiSuccess({ connection: await saveConnection(parsed.data) }));
-  } catch (error) {
-    return errorResponse(c, error);
-  }
-});
-
-catalogRouter.post("/admin/sync/connection/verify", adminRoute, async (c) => {
-  try {
-    const result = await verifyConnection();
-    return c.json(apiSuccess(result));
-  } catch (error) {
-    return errorResponse(c, error);
-  }
-});
-
-catalogRouter.delete("/admin/sync/connection", adminRoute, async (c) => c.json(apiSuccess({ connection: await disconnectConnection() })));
-
-catalogRouter.put("/admin/sync/auto", adminRoute, async (c) => {
-  const parsed = z.object({ autoPush: z.boolean().optional(), autoPull: z.boolean().optional() }).safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "자동 동기화 설정을 확인해 주세요."), 400);
-  try {
-    return c.json(apiSuccess({ connection: await setAutoSync(parsed.data) }));
-  } catch (error) {
-    return errorResponse(c, error);
-  }
-});
-
-catalogRouter.get("/admin/sales", adminRoute, async (c) => {
-  return c.json(apiSuccess(await getSalesOverview(c.req.query("month") || "")));
-});
 
 catalogRouter.get("/admin/products/export", adminRoute, async (c) => {
   const mode = c.req.query("mode") === "bulk" ? "bulk" : "list";

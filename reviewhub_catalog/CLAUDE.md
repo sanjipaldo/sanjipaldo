@@ -36,9 +36,8 @@
 - 상품 API 라우트: `apps/server/routes/catalog.route.ts`
 - 상품 핵심 서비스: `apps/server/services/catalog.ts`
 - 엑셀 처리: `apps/server/services/catalog-excel.ts`
-- 발주오라 동기화 상태: `apps/server/services/catalog-sync.ts`
+- 발주오라 수동 동기화: 서버 `apps/server/services/baljuora-sync.ts` + API `apps/server/routes/baljuora.route.ts`(/api/baljuora), 공용 규칙 `packages/shared/src/baljuora-sync.ts`(값 정리·비교·방향), 책갈피 스크립트 `apps/client/public/baljuora-sync.js`(발주오라 관리자 창에서 실행), 관리자 화면 `apps/client/src/pages/admin/BaljuoraSyncAdmin.tsx` + `baljuora-sync-admin.css`(처음 열 때 불러옴), 테스트 `apps/server/__tests__/baljuora-sync.route.test.ts`·`apps/client/src/__tests__/baljuora-runner.test.ts`
 - 운영 현황: `apps/server/services/catalog-operations.ts`
-- 매출 통계: `apps/server/services/catalog-sales.ts`
 - DB 스키마: `apps/server/db/schema.ts`
 - 마이그레이션: `apps/server/migrations/`
 - 공급사 센터 화면: `apps/client/src/pages/supplier/`(SupplierCenter·SupplierProducts·SupplierRequests·SupplierSales·supplier-api·supplier-ui·supplier-center.css)
@@ -62,15 +61,18 @@
 - 사용자 DB 데이터를 임의로 초기화하거나 샘플 데이터로 덮어쓰지 않습니다.
 - 상품은 일반상품(단일 상품) 모델입니다: 상품코드·가격·품절·노출은 상품마다 따로이고 발주오라 상품과 1:1입니다. 2026-11-21 관리자 요청으로 **옵션 묶음**(여러 단일 상품을 공개 단가표에서 카드 하나 + 옵션 팝업으로 보여 주기만 하는 표시용 묶음, 아래 "옵션 묶음")을 씁니다. 예전 "묶음상품"(따로 가격을 가진 세트 상품·그룹상품 등록 화면)은 다시 만들지 않습니다.
 
-## 5. 발주오라 연동 안전 경계
+## 5. 발주오라 동기화 안전 경계(2026-11-22 관리자 결정)
 
-- 발주오라 공식 쓰기 API와 서버 전용 인증 계약이 확인되지 않았습니다.
-- 계정 아이디/비밀번호만으로 연결 성공이나 상품 전송 성공을 가장하지 않습니다.
-- 현재 기능은 외부 상품 ID, 변경 대기열, 전송 상태, 실패 사유를 관리하는 안전한 준비 단계입니다.
-- 연결 방식(발주오라 오픈 API 개발 중): 관리자 > 발주오라 연동에서 몰 ID·API 키·API 주소(https://…baljuora.com만)를 등록합니다. API 키는 AES-GCM으로 암호화해 `integration_connections`에 저장하고 끝 4자리만 표시합니다(migration 021).
-- "연결됨"은 등록한 API 주소가 API 키로 실제 2xx 응답했을 때만 표시합니다. 자동 동기화(데이터센터→발주오라, 발주오라→데이터센터) 스위치는 연결됨일 때만 켤 수 있으며, 실제 전송·가져오기 작업은 API 사양 공개 후 구현합니다.
-- 공식 API 또는 서버 토큰이 제공되기 전에는 외부 상품 생성·수정·삭제를 실행하지 않습니다.
-- 비밀번호 원문을 DB에 저장하지 않습니다.
+- 발주오라는 공개 API가 없고(관리자 확인: "API 제공은 절대 안 됨"), 관리자 로그인(`auth/merchant/login`)에 Cloudflare 사람 확인(turnstile)이 있습니다. **서버가 아이디·비밀번호로 대신 로그인하거나 사람 확인을 우회하는 기능은 만들지 않습니다.** 발주오라 비밀번호·로그인 토큰을 DB·코드·로그에 저장하지 않습니다.
+- 동기화 방식(관리자 선택 "책갈피 버튼"): 관리자 > 발주오라 동기화에서 작업(비교 또는 보내기)을 만들면 10글자 작업 코드(SHA-256만 저장, 30분 만료, 기다리는 작업은 1개)와 발주오라 관리자 창(`console.baljuora.com/<주소 이름>/dashboard#doogo-sync=<코드>`)이 열립니다. 관리자가 **직접 로그인해 둔** 그 창에서 즐겨찾기의 책갈피 "두고푸드 동기화"를 누르면 `public/baljuora-sync.js`가 그 창의 로그인으로(발주오라 화면처럼 `/api/auth/refresh` → `api.baljuora.com`, 화면과 같은 잠금 이름 `baljuora-token-refresh`) 작업을 실행하고 결과·진단 정보(응답 칸 이름·형식·오류 문구, 값·토큰 없음)를 `/api/baljuora/runner/:code`로 돌려줍니다. 발주오라 창에는 CSP가 없어 책갈피가 DB센터 스크립트를 불러올 수 있습니다(발주오라가 CSP를 넣으면 크롬 확장 방식으로 바꿔야 함).
+- 발주오라 관리자 화면이 쓰는 내부 주소(공식 API 아님): 상품 목록 `GET products`, 상세 `GET products/:id`, 등록 `POST products`, 가격 `PUT products/:id/pricing`, 정보 `PUT products/:id/info`, 카테고리 `GET merchant/categories/tree`, 매출처 그룹 `GET merchant/seller-groups`, 이미지 `POST files/presign` → 업로드. 정확한 요청 형식은 공개되지 않아 스크립트가 상세 정보를 읽어 같은 모양으로 보내고, 받지 않는 칸("property X should not exist")은 빼고 다시 보내며, 보낸 뒤 다시 읽어 실제 저장값을 확인합니다(다르면 "반영 안 됨"으로 표시). 발주오라 화면이 바뀌면 고쳐야 할 수 있습니다 — 실패하면 작업 "자세히 보기 > 기술 정보"와 서버 로그 `[baljuora-sync]`로 원인을 봅니다.
+- 보내는 값: 상품명 · 공급가 ← 일반공급가 · 매출처 그룹(이름에 "황금농부", 설정에서 바꿈) 공급가 ← 수강생 단가(따로 정한 수강생 단가가 있을 때만) · 소비자가 ← 지정 판매가(자율이면 비움) · 매입원가 ← 원가(0원이면 안 보냄) · 카테고리(카테고리 연결 설정, 이름이 같으면 자동 연결, 발주오라 하위 카테고리 상품은 상위와 맞는 것으로 봄) · 대표 이미지(DB센터 이미지를 받아 발주오라 저장소에 올림, 4MB까지). 품절·노출 상태는 아직 보내지 않습니다.
+- 신규 등록: 발주오라에 없는 DB센터 상품은 같은 매입처의 연결 상품(없으면 설정의 "설정 복사용 상품코드")에서 매입처·매입/매출 배송정책 등을 복사해 등록합니다. 등록 직전에 발주오라 상품 목록을 다시 읽어 같은 상품코드가 있으면 등록하지 않습니다(중복 방지). 상품코드 없이 등록하면 발주오라가 만든 코드를 DB센터에 적습니다.
+- 비교(불러오기)는 발주오라를 바꾸지 않고 읽기만 합니다: 상품코드(없으면 예전 엑셀 가져오기 상품 id `baljuora-<발주오라 id>`)로 연결하고 `external_product_links`에 발주오라 값과 "마지막으로 맞춘 값"(기준)을 저장합니다. 변경 방향: DB센터에서 바뀜(보낼 변경) / 발주오라에서 바뀜(가져오기 또는 이대로 두기) / 처음부터 다름. 예전 "발주오라 연동 준비" 기능이 남긴 연결(형식이 다름)은 비교 전까지 세지 않고, 비교 때 발주오라에서 못 찾으면 신규 등록 대상입니다.
+- 발주오라 → DB센터: "발주오라 값 가져오기"(연결 상품, `updateProduct`로 저장해 가격변동 이력에 남음), "DB센터로 가져오기"(발주오라에만 있는 상품을 **숨김**으로 새로 등록).
+- 설정·마지막 비교 결과(매입원가 포함)는 공개 단가표가 내보내는 `content_settings`가 아니라 `baljuora_sync_store`에 둡니다(migration 034, 새 표만 추가). 공개 응답에 넣지 않습니다.
+- 처음 운영에서 쓸 때는 1~2개 상품으로 먼저 보내고 발주오라 관리자에서 값을 확인한 뒤 나머지를 보냅니다. 운영 발주오라에서의 테스트는 관리자가 직접 합니다(개발 중에는 로컬 가짜 발주오라로만 확인).
+- 2026-11-22 메뉴 정리: API를 전제로 만든 관리자 메뉴 "상품 변경전·상품 변경완료(전송 대기열)·발주오라 연동(API 키 등록)"과 주문 자료가 들어오지 않던 "통계(매출 현황)"를 없앴습니다(예전 주소 /admin/changes·/admin/transmissions → /admin/sync, /admin/sales → /admin/home). 상품 저장 때 쌓던 전송 대기열(`product_sync_outbox`)도 더 쌓지 않습니다(표와 기존 데이터는 그대로 둠). 관리자 메뉴 묶음: 홈 / 상품 관리(상품 리스트·옵션 묶음·신규상품·진열순서·카테고리·배송 정책·가격변동 이력) / 발주오라 도매몰(발주오라 동기화) / 공급사·입점(공급사 관리·변경 요청·입점·소싱 요청) / 공지·운영(공지·필독·사용방법 관리·백과사전 검색량·DB 백업).
 
 ## 6. 현재 상품 운영 규칙
 

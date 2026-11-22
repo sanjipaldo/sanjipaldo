@@ -2,6 +2,7 @@ import { FormEvent, Fragment, lazy, Suspense, type Dispatch, type PointerEvent a
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowDown,
+  RefreshCw,
   ArrowUp,
   Bell,
   Boxes,
@@ -25,7 +26,6 @@ import {
   Copy,
   Plus,
   Save,
-  Send,
   Search,
   ShieldCheck,
   ShoppingCart,
@@ -35,7 +35,6 @@ import {
   Trash2,
   Truck,
   Upload,
-  WalletCards,
   X,
   LayoutDashboard,
   DatabaseBackup,
@@ -65,15 +64,17 @@ import { PARTNER_CONTRACT_LABELS, PARTNER_CONTRACT_TYPES, PARTNER_STAGES, PARTNE
 import { DEFAULT_SUPPLIER_GUIDE, SUPPLIER_GUIDE_SETTING_KEY, SUPPLIER_TERM_LABELS, SUPPLIER_VIDEO_GROUPS, hasSupplierDemo, parseSupplierGuide, supplierVideoEmbed, type SupplierGuideSettings, type SupplierGuideTerms, type SupplierGuideVideo } from "@repo/shared/supplier-guide";
 import { SELLER_GUIDE_SETTING_KEY, SELLER_VIDEO_GROUPS, hasSellerDemo, parseSellerGuide, type SellerGuideSettings } from "@repo/shared/seller-guide";
 import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
-import type { AdminCatalogData, AdminHomeData, AdminOverview, BaljuoraConnection, Category, CatalogSyncOutboxItem, CatalogSyncOverview, CatalogSyncRun, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, SalesOverview, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
+import type { AdminCatalogData, AdminHomeData, Category, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
-type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "supplierRequests" | "changes" | "transmissions" | "sales" | "notices" | "usageGuide" | "encyclopedia" | "history" | "sourcing" | "sync" | "backup";
+type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "supplierRequests" | "notices" | "usageGuide" | "encyclopedia" | "history" | "sourcing" | "sync" | "backup";
 
 // 공급사 센터 관련 관리자 화면(변경 요청 검토 · 공급사 계정 창)은 처음 열 때만 불러옵니다.
 const SupplierRequestsAdmin = lazy(() => import("./SupplierPortalAdmin").then((module) => ({ default: module.SupplierRequestsAdmin })));
 const SupplierAccountModal = lazy(() => import("./SupplierPortalAdmin").then((module) => ({ default: module.SupplierAccountModal })));
 // 옵션 묶음 관리(migration 033): 페이지와 "옵션 묶기" 창은 필요할 때만 불러옵니다.
 const ProductGroupsAdmin = lazy(() => import("./ProductGroupsAdmin").then((module) => ({ default: module.ProductGroupsAdmin })));
+// 발주오라 동기화(2026-11-22): 책갈피로 로그인해 둔 발주오라 관리자 창에서 실행하는 수동 동기화 화면(처음 열 때 불러옴)
+const BaljuoraSyncAdmin = lazy(() => import("./BaljuoraSyncAdmin").then((module) => ({ default: module.BaljuoraSyncAdmin })));
 const SelectionGroupModal = lazy(() => import("./ProductGroupsAdmin").then((module) => ({ default: module.SelectionGroupModal })));
 type ProductOptionDraft = Pick<ProductOption, "id" | "name" | "costPrice" | "aPrice" | "generalPrice" | "salePrice" | "salePriceMode" | "isSoldOut" | "sortOrder">;
 type BulkWorkbookPreview = {
@@ -564,7 +565,11 @@ export function AdminLoginPage() {
   );
 }
 
-const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes; group?: "product" | "transfer" | "openapi" }> = [
+// 마스터 관리자 메뉴(2026-11-22 정리): 발주오라 API를 전제로 만든 "상품 변경전·상품 변경완료·발주오라 연동(API 키)"과
+// 주문 자료가 들어오지 않던 "통계"를 빼고, 실제로 동작하는 "발주오라 동기화" 하나로 합쳤습니다.
+type AdminNavGroup = "product" | "baljuora" | "supplier" | "operations";
+const adminNavGroupLabels: Record<AdminNavGroup, string> = { product: "상품 관리", baljuora: "발주오라 도매몰", supplier: "공급사·입점", operations: "공지·운영" };
+const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes; group?: AdminNavGroup }> = [
   { section: "home", label: "홈", icon: LayoutDashboard },
   { section: "products", label: "상품 리스트", icon: Boxes, group: "product" },
   { section: "bundles", label: "옵션 묶음 관리", icon: Layers, group: "product" },
@@ -572,18 +577,15 @@ const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes
   { section: "sort", label: "상품 진열순서 설정", icon: ArrowDown, group: "product" },
   { section: "categories", label: "상품 카테고리", icon: Tags, group: "product" },
   { section: "shippingPolicies", label: "배송 정책", icon: Truck, group: "product" },
-  { section: "suppliers", label: "공급사 관리", icon: Store, group: "product" },
-  { section: "supplierRequests", label: "변경 요청", icon: Inbox, group: "product" },
-  { section: "changes", label: "상품 변경전", icon: ClipboardList, group: "transfer" },
-  { section: "transmissions", label: "상품 변경완료", icon: Send, group: "transfer" },
-  { section: "sales", label: "통계", icon: CalendarDays },
-  { section: "notices", label: "공지·필독", icon: Bell },
-  { section: "usageGuide", label: "사용방법 관리", icon: BookOpen },
-  { section: "encyclopedia", label: "백과사전 검색량", icon: Search },
-  { section: "history", label: "가격변동 이력", icon: History },
-  { section: "sourcing", label: "입점·소싱 요청", icon: ClipboardList },
-  { section: "backup", label: "DB 백업", icon: DatabaseBackup },
-  { section: "sync", label: "발주오라 연동", icon: TrendingUp, group: "openapi" }
+  { section: "history", label: "가격변동 이력", icon: History, group: "product" },
+  { section: "sync", label: "발주오라 동기화", icon: RefreshCw, group: "baljuora" },
+  { section: "suppliers", label: "공급사 관리", icon: Store, group: "supplier" },
+  { section: "supplierRequests", label: "변경 요청", icon: Inbox, group: "supplier" },
+  { section: "sourcing", label: "입점·소싱 요청", icon: ClipboardList, group: "supplier" },
+  { section: "notices", label: "공지·필독", icon: Bell, group: "operations" },
+  { section: "usageGuide", label: "사용방법 관리", icon: BookOpen, group: "operations" },
+  { section: "encyclopedia", label: "백과사전 검색량", icon: Search, group: "operations" },
+  { section: "backup", label: "DB 백업", icon: DatabaseBackup, group: "operations" }
 ];
 
 const blankProduct = {
@@ -654,11 +656,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
   const [clock, setClock] = useState(() => new Date());
   // 공급사 변경 요청 중 승인 대기 건수(왼쪽 메뉴 "변경 요청" 옆 숫자, 1분마다 새로 확인)
   const [supplierPending, setSupplierPending] = useState(0);
-  const [openNavGroups, setOpenNavGroups] = useState<Record<"product" | "transfer" | "openapi", boolean>>({
-    product: true,
-    transfer: true,
-    openapi: true
-  });
+  const [openNavGroups, setOpenNavGroups] = useState<Record<AdminNavGroup, boolean>>({ product: true, baljuora: true, supplier: true, operations: true });
 
   // Keep the page underneath the drawer from moving while the mobile menu is
   // open. The drawer itself remains the scroll container so every menu item
@@ -677,7 +675,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
     // Bundles load only their group payload on demand. Fetching the complete
     // 2,347-product catalog here made the bundle list wait for data it never
     // renders.
-    const childOwnsData = new Set<AdminSection>(["bundles", "shippingPolicies", "suppliers", "supplierRequests", "sales", "changes", "transmissions", "sync", "backup", "encyclopedia"]);
+    const childOwnsData = new Set<AdminSection>(["bundles", "shippingPolicies", "suppliers", "supplierRequests", "sync", "backup", "encyclopedia"]);
     if (childOwnsData.has(section)) {
       if (!silent) setLoading(false);
       return;
@@ -804,7 +802,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
                 onClick={() => setOpenNavGroups((state) => ({ ...state, [item.group!]: !state[item.group!] }))}
                 aria-expanded={openNavGroups[item.group]}
               >
-                <span>{item.group === "product" ? "상품 관리" : item.group === "transfer" ? "상품 전송 현황" : "OPEN API"}</span>
+                <span>{adminNavGroupLabels[item.group]}</span>
                 <ChevronDown size={14} />
               </button>
               : null;
@@ -826,19 +824,16 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               {section === "bundles" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>옵션 묶음을 불러오는 중…</span></div>}><ProductGroupsAdmin /></Suspense>}
               {section === "newProducts" && <NewProductsAdmin data={data} refresh={refresh} />}
               {section === "sort" && <ProductsAdmin data={data} refresh={refresh} updateData={setData} sortOnly />}
-              {section === "changes" && <ChangeQueueAdmin mode="changes" />}
-              {section === "transmissions" && <ChangeQueueAdmin mode="transmissions" />}
               {section === "categories" && <CategoriesAdmin data={data} refresh={refresh} />}
               {section === "shippingPolicies" && <ShippingPoliciesAdmin />}
               {section === "suppliers" && <SuppliersAdmin />}
               {section === "supplierRequests" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>변경 요청을 불러오는 중…</span></div>}><SupplierRequestsAdmin onChanged={() => void refreshSupplierPending()} /></Suspense>}
-              {section === "sales" && <SalesAdmin />}
               {section === "notices" && <NoticesAdmin data={data} refresh={refresh} />}
               {section === "usageGuide" && <UsageGuideAdmin data={data} refresh={refresh} />}
               {section === "encyclopedia" && <EncyclopediaSearchAdmin />}
               {section === "history" && <HistoryAdmin data={data} />}
               {section === "sourcing" && <SourcingAdmin data={data} refresh={refresh} />}
-              {section === "sync" && <CatalogSyncAdmin />}
+              {section === "sync" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>발주오라 동기화를 불러오는 중…</span></div>}><BaljuoraSyncAdmin /></Suspense>}
               {section === "backup" && <BackupAdmin />}
             </>
           )}
@@ -881,8 +876,7 @@ function AdminHome({ data }: { data: AdminHomeData | null }) {
   if (!data) {
     return <div className="admin-loading inline"><div className="spinner" /><span>운영 요약을 불러오는 중…</span></div>;
   }
-  const { overview, sync, sales } = data;
-  const salesConnected = sales.sourceConnected;
+  const { overview, baljuora } = data;
   return (
     <>
       <div className="admin-page-heading admin-home-heading">
@@ -916,13 +910,10 @@ function AdminHome({ data }: { data: AdminHomeData | null }) {
           </div>
         </section>
         <section className="admin-card admin-home-panel">
-          <div className="card-heading"><TrendingUp size={19} /><div><h2>발주오라 연동</h2><p>실제 인증 상태만 표시합니다.</p></div><Link to="/admin/sync">상세 보기 <ChevronRight size={14} /></Link></div>
-          <div className="admin-home-connection"><span className={`connection-dot ${sync.writeIntegration.status === "connected" ? "connected" : ""}`} /><strong>{sync.writeIntegration.account ? `${sync.writeIntegration.account} 계정 연결` : "연결된 계정 없음"}</strong><small>{sync.writeIntegration.status === "connected" ? "실시간 연동중" : "추가 인증 필요"}</small></div>
-          <div className="admin-home-connection-meta"><div><span>연결 상품</span><b>{sync.linkedProducts.toLocaleString("ko-KR")}개</b></div><div><span>전송 대기</span><b>{sync.outbox.blocked.toLocaleString("ko-KR")}개</b></div></div>
-        </section>
-        <section className="admin-card admin-home-panel">
-          <div className="card-heading"><WalletCards size={19} /><div><h2>매출 현황</h2><p>{salesConnected ? "발주오라 주문 원본 기준" : "주문 원본 연결 상태"}</p></div><Link to="/admin/sales">상세 보기 <ChevronRight size={14} /></Link></div>
-          {salesConnected ? <div className="admin-home-sales"><strong>{sales.totals.revenue.toLocaleString("ko-KR")}원</strong><span>이번 달 매출</span><small>순이익 {sales.totals.profit.toLocaleString("ko-KR")}원 · 주문 {sales.totals.orderCount.toLocaleString("ko-KR")}건</small></div> : <div className="admin-home-unavailable"><Info size={18} /><span>발주오라 주문 원본이 연결되면 매출·순이익이 표시됩니다.</span></div>}
+          <div className="card-heading"><RefreshCw size={19} /><div><h2>발주오라 동기화</h2><p>DB센터에서 고친 상품을 발주오라 도매몰에 반영합니다.</p></div><Link to="/admin/sync">동기화하기 <ChevronRight size={14} /></Link></div>
+          {baljuora.ready ? (
+            <div className="admin-home-connection-meta"><div><span>연결 상품</span><b>{baljuora.linkedCount.toLocaleString("ko-KR")}개</b></div><div><span>마지막 동기화</span><b>{baljuora.lastPushAt ? formatDateTime(baljuora.lastPushAt) : "아직 없음"}</b></div></div>
+          ) : <div className="admin-home-unavailable"><Info size={18} /><span>DB 업데이트(034)가 적용되면 사용할 수 있습니다.</span></div>}
         </section>
         <section className="admin-card admin-home-panel admin-home-notice-panel">
           <div className="card-heading"><Bell size={19} /><div><h2>최근 공지</h2><p>공개 공지사항에 표시되는 내용입니다.</p></div><Link to="/admin/notices">관리 <ChevronRight size={14} /></Link></div>
@@ -3084,165 +3075,6 @@ function SellerGuideAdmin({ data, refresh }: { data: AdminCatalogData; refresh: 
   );
 }
 
-const syncActionLabels: Record<string, string> = {
-  create: "신규 상품",
-  update: "상품 정보",
-  price: "가격",
-  visibility: "노출 상태",
-  soldout: "품절 상태",
-  delete: "상품 삭제",
-  image: "이미지"
-};
-
-const syncStatusLabels: Record<string, string> = {
-  blocked: "연동 필요",
-  pending: "전송가능",
-  processing: "전송중",
-  succeeded: "전송완료",
-  completed: "전송완료",
-  failed: "전송실패",
-  running: "전송중"
-};
-
-function syncStatusLabel(status: string) {
-  return syncStatusLabels[status] || status;
-}
-
-// 관리자 목록 공통 페이지 나눔: 페이지 번호는 현재 페이지 주변 최대 7개만 보여 줍니다.
-function AdminPager({ total, page, pageSize, onPage, label }: { total: number; page: number; pageSize: number; onPage: (page: number) => void; label: string }) {
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  if (total === 0) return null;
-  const start = Math.max(1, Math.min(page - 3, pageCount - 6));
-  const pages = Array.from({ length: Math.min(7, pageCount) }, (_, index) => start + index);
-  return <div className="catalog-pagination admin-history-pagination"><span>{(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)}개 <small>/ 총 {total.toLocaleString("ko-KR")}건</small></span><nav aria-label={`${label} 페이지`}><button type="button" onClick={() => onPage(Math.max(1, page - 1))} disabled={page === 1} aria-label={`이전 ${label} 페이지`}><ChevronLeft size={15} /></button>{pages.map((value) => <button type="button" className={value === page ? "active" : ""} key={value} onClick={() => onPage(value)}>{value}</button>)}<button type="button" onClick={() => onPage(Math.min(pageCount, page + 1))} disabled={page === pageCount} aria-label={`다음 ${label} 페이지`}><ChevronRight size={15} /></button></nav></div>;
-}
-
-const syncFieldLabels: Record<string, string> = { aPrice: "수강생 단가", generalPrice: "일반공급가", costPrice: "원가", salePrice: "판매가", isSoldOut: "품절", isVisible: "노출", name: "상품명", imageUrl: "이미지" };
-const syncPriceFields = new Set(["aPrice", "generalPrice", "costPrice", "salePrice"]);
-// 변경 대기열 값: 가격은 "23,000원", 품절·노출은 예/아니오로 읽기 쉽게 표시합니다.
-function syncValueLabel(field: string | null | undefined, value: unknown) {
-  if (value === null || value === undefined || value === "") return "-";
-  if (field && syncPriceFields.has(field) && Number.isFinite(Number(value))) return `${Number(value).toLocaleString("ko-KR")}원`;
-  if (typeof value === "boolean") return field === "isSoldOut" ? (value ? "품절" : "판매중") : field === "isVisible" ? (value ? "노출" : "숨김") : value ? "예" : "아니오";
-  return String(value);
-}
-
-function ChangeQueueAdmin({ mode }: { mode: "changes" | "transmissions" }) {
-  const navigate = useNavigate();
-  const [items, setItems] = useState<CatalogSyncOutboxItem[]>([]);
-  const [runs, setRuns] = useState<CatalogSyncRun[]>([]);
-  const [overview, setOverview] = useState<CatalogSyncOverview | null>(null);
-  const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [selectedFailure, setSelectedFailure] = useState<CatalogSyncOutboxItem | null>(null);
-  const [selectedFailureSummary, setSelectedFailureSummary] = useState<CatalogSyncRun | null>(null);
-  const load = async () => {
-    setLoading(true);
-    try {
-      const response = await apiFetch("/catalog/admin/sync");
-      const payload = await readData<{ overview: CatalogSyncOverview; runs: CatalogSyncRun[]; outbox: CatalogSyncOutboxItem[] }>(response);
-      setOverview(payload.overview);
-      setItems(payload.outbox);
-      setRuns(payload.runs);
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => { void load(); }, []);
-  const filtered = items.filter((item) => !query.trim() || `${item.productName || ""} ${item.action}`.toLowerCase().includes(query.trim().toLowerCase()));
-  const pageKey = mode === "changes" ? "admin-changes" : "admin-transmissions";
-  const [pageSize, setPageSize] = useState(() => readStoredPageSize(pageKey, 20));
-  const [page, setPage] = useState(1);
-  useEffect(() => { setPage(1); }, [query, pageSize, mode]);
-  const listItems = mode === "changes" ? filtered : items;
-  const currentPage = Math.min(page, Math.max(1, Math.ceil(listItems.length / pageSize)));
-  const pagedItems = listItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-  if (mode === "transmissions") {
-    return <>
-      <div className="admin-page-heading"><div><span>TRANSMISSION LOG</span><h1>상품 변경완료</h1><p>발주오라로 보낸 실행과 성공·실패·보류 결과를 확인합니다.</p></div><button className="outline-button" onClick={() => void load()}><History size={15} /> 새로고침</button></div>
-      <section className="admin-card sync-explainer-card"><div className="card-heading"><ShieldCheck size={19} /><div><h2>{overview?.writeIntegration.account ? `${overview.writeIntegration.account} 계정` : "연결된 발주오라 계정 없음"}</h2><p>{overview?.writeIntegration.reason || "연동 상태를 확인하고 있습니다."}</p></div><span className={`sync-safe-badge ${overview?.writeIntegration.status === "connected" ? "connected" : ""}`}>{overview?.writeIntegration.status === "connected" ? "실시간 연동중" : "추가 인증 필요"}</span></div></section>
-      <section className="admin-card">
-        <div className="card-heading"><History size={19} /><div><h2>실행 이력</h2><p>영문 상태 대신 실제 전송 결과를 한국어로 표시합니다.</p></div></div>
-        {loading ? <div className="admin-loading inline"><div className="spinner" /></div> : runs.length === 0 ? <div className="empty-admin">전송 실행 내역이 없습니다.</div> : <div className="admin-table-wrap"><table className="admin-table stackable-table"><thead><tr><th>실행 시각</th><th>방향</th><th>트리거</th><th>전체</th><th>성공</th><th>실패/충돌</th><th>상태</th></tr></thead><tbody>{runs.map((run) => { const successCount = Math.max(0, run.total - run.failedCount - run.conflictCount); return <tr key={run.id}><td data-label="실행 시각">{formatDateTime(run.startedAt)}</td><td data-label="방향">{run.direction === "push" ? "두고푸드 → 발주오라" : "발주오라 → 두고푸드"}</td><td data-label="트리거">{run.trigger}</td><td data-label="전체">{run.total.toLocaleString("ko-KR")}</td><td data-label="성공"><strong className="transmission-success-count">{successCount.toLocaleString("ko-KR")} / {run.total.toLocaleString("ko-KR")} 성공</strong></td><td data-label="실패/충돌">{run.failedCount > 0 || run.conflictCount > 0 ? <button type="button" className="transmission-failure-summary" onClick={() => setSelectedFailureSummary(run)}>{run.failedCount + run.conflictCount}건 상세 보기</button> : "0건"}</td><td data-label="상태"><span className={`status-pill ${run.status === "completed" ? "active" : run.status === "failed" ? "danger" : "pending"}`}>{syncStatusLabel(run.status)}</span></td></tr>; })}</tbody></table></div>}
-      </section>
-      <section className="admin-card">
-        <div className="card-heading"><ClipboardList size={19} /><div><h2>상품별 전송 상태</h2><p>전송실패 행을 누르면 상세 사유를 확인할 수 있습니다.</p></div><PageSizeInput value={pageSize} onChange={setPageSize} label="상품별 전송 상태 페이지당 표시 수" suffix="개" storageKey={pageKey} /></div>
-        {items.length === 0 ? <div className="empty-admin">상품 전송 내역이 없습니다.</div> : <div className="admin-table-wrap"><table className="admin-table transmission-item-table stackable-table"><thead><tr><th>기록 시각</th><th>상품</th><th>작업</th><th>상태</th><th>처리 시각</th></tr></thead><tbody>{pagedItems.map((item) => <tr className={item.status === "failed" ? "failure-row" : ""} key={item.id} onClick={() => { if (item.status === "failed") setSelectedFailure(item); }}><td data-label="기록 시각">{formatDateTime(item.createdAt)}</td><td data-label="상품" className="change-queue-product"><strong>{item.productName || item.productId}</strong></td><td data-label="작업">{syncActionLabels[item.action] || item.action}</td><td data-label="상태"><span className={`status-pill ${item.status === "succeeded" ? "active" : item.status === "failed" ? "danger" : "pending"}`}>{syncStatusLabel(item.status)}</span></td><td data-label="처리 시각">{item.processedAt ? formatDateTime(item.processedAt) : "-"}</td></tr>)}</tbody></table></div>}
-        <AdminPager total={items.length} page={currentPage} pageSize={pageSize} onPage={setPage} label="상품별 전송 상태" />
-      </section>
-      {selectedFailure && <div className="editor-overlay" role="presentation" onMouseDown={() => setSelectedFailure(null)}><section className="sync-failure-modal" role="dialog" aria-modal="true" aria-labelledby="sync-failure-title" onMouseDown={(event) => event.stopPropagation()}><div className="editor-header"><div><span>TRANSMISSION FAILED</span><h2 id="sync-failure-title">전송실패 사유</h2></div><button type="button" onClick={() => setSelectedFailure(null)} aria-label="닫기"><X size={21} /></button></div><strong>{selectedFailure.productName || selectedFailure.productId}</strong><p>{selectedFailure.lastError || "발주오라에서 상세 실패 사유를 반환하지 않았습니다."}</p><button className="primary-action" type="button" onClick={() => setSelectedFailure(null)}>확인</button></section></div>}
-      {selectedFailureSummary && <div className="editor-overlay" role="presentation" onMouseDown={() => setSelectedFailureSummary(null)}><section className="sync-failure-modal transmission-summary-modal" role="dialog" aria-modal="true" aria-labelledby="transmission-summary-title" onMouseDown={(event) => event.stopPropagation()}><div className="editor-header"><div><span>TRANSMISSION SUMMARY</span><h2 id="transmission-summary-title">실패 건 상세</h2></div><button type="button" onClick={() => setSelectedFailureSummary(null)} aria-label="닫기"><X size={21} /></button></div><p className="transmission-summary-copy">{Math.max(0, selectedFailureSummary.total - selectedFailureSummary.failedCount - selectedFailureSummary.conflictCount)} / {selectedFailureSummary.total}건 성공 · {selectedFailureSummary.failedCount + selectedFailureSummary.conflictCount}건 실패·충돌</p><div className="transmission-failure-list">{items.filter((item) => item.status === "failed").slice(0, 20).map((item) => <article key={item.id}><div><strong>{item.productName || item.productId}</strong><small>{syncActionLabels[item.action] || item.action}</small></div><p>{item.lastError || "상세 실패 사유가 반환되지 않았습니다."}</p><Link className="outline-button" to="/admin/products" onClick={() => setSelectedFailureSummary(null)}>상품 수정</Link></article>)}{items.filter((item) => item.status === "failed").length === 0 && <div className="empty-admin">실패 상세가 아직 동기화되지 않았습니다.</div>}</div><button className="primary-action" type="button" onClick={() => setSelectedFailureSummary(null)}>확인</button></section></div>}
-    </>;
-  }
-
-  return <>
-    <div className="admin-page-heading"><div><span>CHANGE QUEUE</span><h1>상품 변경전</h1><p>상품 등록·가격·품절·이미지·삭제 변경을 발주오라 전송 전에 검토합니다.</p></div><Link className="primary-action" to="/admin/transmissions"><Send size={16} /> 상품 변경완료 보기</Link></div>
-    <section className="admin-card">
-      <div className="admin-toolbar"><div className="search-field"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="상품명·작업 검색" /></div><div className="admin-toolbar-meta"><PageSizeInput value={pageSize} onChange={setPageSize} label="상품 변경전 페이지당 표시 수" suffix="개" storageKey={pageKey} /><span>총 {filtered.length}건</span></div></div>
-      {loading ? <div className="admin-loading inline"><div className="spinner" /></div> : filtered.length === 0 ? <div className="empty-admin">검토할 변경사항이 없습니다.</div> : <div className="admin-table-wrap"><table className="admin-table change-queue-table stackable-table"><thead><tr><th>변경 시각</th><th>상품</th><th>변경 구분</th><th>주요 변경값</th><th>전송 상태</th><th>발주오라 전송</th></tr></thead><tbody>{pagedItems.map((item) => {
-        const changes = Array.isArray(item.payload.changes) ? item.payload.changes as Array<{ field?: string; optionName?: string | null; before?: unknown; after?: unknown }> : [];
-        const canTransmit = item.status === "pending" && overview?.writeIntegration.status === "connected";
-        const transmit = async () => {
-          if (!canTransmit) return;
-          const response = await apiFetch(`/catalog/admin/sync/transmit/${item.id}`, { method: "POST" });
-          if (!response.ok) {
-            const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
-            toast.error(payload?.error?.message || "상품 전송을 시작하지 못했습니다.");
-            return;
-          }
-          toast.success("상품 변경을 전송했고, 상품 변경완료 탭으로 이동합니다.");
-          navigate("/admin/transmissions");
-        };
-        return <tr key={item.id}><td data-label="변경 시각">{formatDateTime(item.createdAt)}</td><td data-label="상품" className="change-queue-product"><strong>{item.productName || item.productId}</strong></td><td data-label="변경 구분"><span className="change-action-badge">{syncActionLabels[item.action] || item.action}</span></td><td data-label="주요 변경값">{changes.length > 0 ? changes.slice(0, 3).map((change, index) => <small key={index}>{change.optionName ? `${change.optionName} · ` : ""}{syncFieldLabels[change.field ?? ""] ?? change.field}: {syncValueLabel(change.field, change.before)} → {syncValueLabel(change.field, change.after)}</small>) : <small>{item.action === "create" ? "신규 상품 전체 정보" : item.action === "delete" ? "상품 삭제 요청" : "상품 정보 변경"}</small>}</td><td data-label="전송 상태"><span className={`status-pill ${item.status === "succeeded" ? "active" : item.status === "failed" ? "danger" : "pending"}`}>{syncStatusLabel(item.status)}</span></td><td data-label="발주오라 전송"><button className="transmit-button" type="button" onClick={() => void transmit()} disabled={!canTransmit} title={canTransmit ? "발주오라로 전송 후 상품 변경완료 탭으로 이동" : overview?.writeIntegration.reason || "발주오라 연결 후 활성화됩니다."}><Send size={14} /> {canTransmit ? "수정 전송" : item.status === "succeeded" ? "전송완료" : item.status === "failed" ? "전송실패" : "연동 필요"}</button></td></tr>;
-      })}</tbody></table></div>}
-      <AdminPager total={filtered.length} page={currentPage} pageSize={pageSize} onPage={setPage} label="상품 변경전" />
-    </section>
-  </>;
-}
-
-function SalesAdmin() {
-  const today = new Date();
-  const [month, setMonth] = useState(`${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, "0")}`);
-  const [data, setData] = useState<SalesOverview | null>(null);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    void apiFetch(`/catalog/admin/sales?month=${month}`).then((response) => readData<SalesOverview>(response)).then((value) => { if (active) setData(value); }).finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [month]);
-  const [year, monthNumber] = month.split("-").map(Number);
-  const firstWeekday = new Date(Date.UTC(year, monthNumber - 1, 1)).getUTCDay();
-  const dayCount = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
-  const dayMap = new Map(data?.days.map((day) => [Number(day.date.slice(-2)), day]) ?? []);
-  const cells = [...Array.from({ length: firstWeekday }, () => null), ...Array.from({ length: dayCount }, (_, index) => index + 1)];
-  const moveMonth = (amount: number) => {
-    const next = new Date(Date.UTC(year, monthNumber - 1 + amount, 1));
-    setMonth(`${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}`);
-  };
-  return <>
-    <div className="admin-page-heading"><div><span>SALES CALENDAR</span><h1>매출 현황</h1><p>일별·월별 매출과 매입처별 순이익을 확인합니다.</p></div><span className={`source-status ${data?.sourceConnected ? "connected" : ""}`}>{data?.sourceStatus || "데이터 확인 중"}</span></div>
-    <section className="sales-kpi-grid">
-      <article><span>월 매출</span><strong>{formatPrice(data?.totals.revenue ?? 0)}</strong></article>
-      <article><span>예상 순이익</span><strong>{formatPrice(data?.totals.profit ?? 0)}</strong></article>
-      <article><span>총 주문</span><strong>{(data?.totals.orderCount ?? 0).toLocaleString("ko-KR")}건</strong></article>
-      <article><span>평균 수익률</span><strong>{data?.totals.profitRate ?? 0}%</strong></article>
-    </section>
-    <div className="sales-layout">
-      <section className="admin-card sales-calendar-card">
-        <div className="sales-calendar-heading"><button onClick={() => moveMonth(-1)} aria-label="이전 달"><ChevronLeft size={17} /></button><h2>{year}년 {monthNumber}월</h2><button onClick={() => moveMonth(1)} aria-label="다음 달"><ChevronRight size={17} /></button></div>
-        <div className="sales-weekdays">{["일","월","화","수","목","금","토"].map((day) => <span key={day}>{day}</span>)}</div>
-        <div className="sales-calendar">{cells.map((day, index) => {
-          const item = day ? dayMap.get(day) : null;
-          return <article key={index} className={!day ? "blank" : ""}>{day && <><b>{day}</b>{item ? <><strong>{formatPrice(item.revenue)}</strong><small>순익 {formatPrice(item.profit)} · {item.orderCount}건</small></> : <small className="sales-day-empty">판매 데이터 없음</small>}</>}</article>;
-        })}</div>
-      </section>
-      <aside className="admin-card supplier-sales"><h2>매입처별 매출 순위</h2>{loading ? <div className="spinner" /> : data?.suppliers.length ? data.suppliers.map((supplier, index) => <article key={supplier.supplierName}><div className="supplier-sales-heading"><b className={`supplier-rank rank-${Math.min(index + 1, 3)}`}>{index + 1}순위</b><strong>{supplier.supplierName}</strong></div><span>총 매출 {formatPrice(supplier.revenue)}</span><small>순수익 {formatPrice(supplier.profit)} · 판매 {supplier.orderCount.toLocaleString("ko-KR")}건</small></article>) : <div className="sales-empty"><CalendarDays size={28} /><strong>연결된 매출 데이터가 없습니다.</strong><p>발주오라 주문·매출 원본이 연결되면 날짜와 매입처별 실적이 자동 집계됩니다.</p></div>}</aside>
-    </div>
-  </>;
-}
-
 type BackupFileItem = { pathname: string; size: number; uploadedAt: string };
 type BackupOverview = { storageConfigured: boolean; keepDays: number; files: BackupFileItem[] };
 
@@ -3335,191 +3167,4 @@ function BackupAdmin() {
       <p className="backup-note">백업 파일(.json.gz)은 복원용 원본 데이터입니다. 복원이 필요하면 해당 파일을 전달해 주세요. 원가 등 비공개 정보가 들어 있으니 외부에 공유하지 마세요.</p>
     </section>
   </>;
-}
-
-function CatalogSyncAdmin() {
-  const [overview, setOverview] = useState<CatalogSyncOverview | null>(null);
-  const [runs, setRuns] = useState<CatalogSyncRun[]>([]);
-  const [outbox, setOutbox] = useState<CatalogSyncOutboxItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [mallId, setMallId] = useState("");
-  const [username, setUsername] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [apiBaseUrl, setApiBaseUrl] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [verifyMessage, setVerifyMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  const [outboxLimit, setOutboxLimit] = useState(10);
-
-  const applyConnection = (connection: BaljuoraConnection) => {
-    setOverview((current) => current ? { ...current, connection } : current);
-    setMallId(connection.mallId ?? "");
-    setUsername(connection.username ?? "");
-    setApiBaseUrl(connection.apiBaseUrl ?? "");
-  };
-
-  const refresh = async () => {
-    setLoading(true);
-    try {
-      const response = await apiFetch("/catalog/admin/sync");
-      const payload = await readData<{ overview: CatalogSyncOverview; runs: CatalogSyncRun[]; outbox: CatalogSyncOutboxItem[] }>(response);
-      setOverview(payload.overview);
-      setRuns(payload.runs);
-      setOutbox(payload.outbox);
-      setMallId(payload.overview.connection?.mallId ?? "");
-      setUsername(payload.overview.connection?.username ?? "");
-      setApiBaseUrl(payload.overview.connection?.apiBaseUrl ?? "");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "연동 상태를 불러오지 못했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void refresh();
-  }, []);
-
-  const connection = overview?.connection;
-  const status = connection?.status ?? "not_configured";
-
-  const save = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSaving(true);
-    setVerifyMessage(null);
-    try {
-      const body: Record<string, string | null> = { mallId: mallId || null, username: username || null, apiBaseUrl: apiBaseUrl || null };
-      if (apiKey.trim()) body.apiKey = apiKey.trim();
-      const payload = await readData<{ connection: BaljuoraConnection }>(await apiFetch("/catalog/admin/sync/connection", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
-      applyConnection(payload.connection);
-      setApiKey("");
-      toast.success(payload.connection.apiKeyRegistered ? "연결 정보를 저장했습니다. '연결 확인'을 눌러 주세요." : "연결 정보를 저장했습니다.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "연결 정보를 저장하지 못했습니다.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const verify = async () => {
-    setVerifying(true);
-    try {
-      const payload = await readData<{ ok: boolean; message: string; connection: BaljuoraConnection }>(await apiFetch("/catalog/admin/sync/connection/verify", { method: "POST" }));
-      applyConnection(payload.connection);
-      setVerifyMessage({ ok: payload.ok, text: payload.message });
-      if (payload.ok) toast.success("발주오라와 연결되었습니다.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "연결을 확인하지 못했습니다.");
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  const disconnect = async () => {
-    if (!window.confirm("발주오라 연결을 해지할까요? 저장된 API 키가 삭제되고 자동 동기화가 꺼집니다.")) return;
-    try {
-      const payload = await readData<{ connection: BaljuoraConnection }>(await apiFetch("/catalog/admin/sync/connection", { method: "DELETE" }));
-      applyConnection(payload.connection);
-      setVerifyMessage(null);
-      toast.success("발주오라 연결을 해지했습니다.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "연결을 해지하지 못했습니다.");
-    }
-  };
-
-  const toggleAuto = async (key: "autoPush" | "autoPull", value: boolean) => {
-    try {
-      const payload = await readData<{ connection: BaljuoraConnection }>(await apiFetch("/catalog/admin/sync/auto", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [key]: value }) }));
-      applyConnection(payload.connection);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "자동 동기화 설정을 바꾸지 못했습니다.");
-    }
-  };
-
-  if (loading && !overview) {
-    return <div className="admin-loading inline"><div className="spinner" /><span>발주오라 연동 상태 확인 중…</span></div>;
-  }
-
-  const statusInfo = {
-    not_configured: { label: "미연결", tone: "idle", text: "발주오라 몰 ID와 API 키를 등록하면 연결을 확인할 수 있습니다." },
-    key_registered: { label: "연결 확인 대기", tone: "wait", text: connection?.lastError || "API 키가 등록되었습니다. '연결 확인'을 눌러 발주오라 응답을 확인해 주세요." },
-    connected: { label: "연결됨", tone: "ok", text: `발주오라 API 응답 확인 완료${connection?.lastVerifiedAt ? ` · ${connection.lastVerifiedAt.slice(0, 16).replace("T", " ")}` : ""}` },
-    failed: { label: "연결 오류", tone: "error", text: connection?.lastError || "발주오라 API 연결에 실패했습니다." }
-  }[status];
-  const steps = [
-    { label: "발주오라 계정", done: Boolean(connection?.mallId) },
-    { label: "API 키 등록", done: Boolean(connection?.apiKeyRegistered) },
-    { label: "연결 확인", done: status === "connected" }
-  ];
-  const connected = status === "connected";
-
-  return (
-    <>
-      <div className="admin-page-heading">
-        <div><span>INTEGRATION</span><h1>발주오라 연동</h1><p>발주오라 도매몰과 두고푸드 데이터센터를 오픈 API로 양방향 연결합니다.</p></div>
-        <button className="outline-button" type="button" onClick={() => void refresh()}><History size={15} /> 새로고침</button>
-      </div>
-
-      <section className={`admin-card bj-status-card ${statusInfo.tone}`}>
-        <div className="bj-status-main">
-          <span className={`bj-status-pill ${statusInfo.tone}`}><i />{statusInfo.label}</span>
-          <h2>{connected ? `발주오라 · ${connection?.mallId ?? ""} 와 연결되어 있습니다` : "발주오라 도매몰 연결"}</h2>
-          <p>{statusInfo.text}</p>
-        </div>
-        <ol className="bj-steps" aria-label="연결 단계">
-          {steps.map((step, index) => <li key={step.label} className={step.done ? "done" : ""}><b>{step.done ? "✓" : index + 1}</b>{step.label}</li>)}
-        </ol>
-      </section>
-
-      <section className="admin-card bj-flow-card">
-        <div className="bj-flow">
-          <div className="bj-node"><strong>두고푸드 데이터센터</strong><small>doogofood.site · 상품 원본</small></div>
-          <div className="bj-lanes">
-            <div className={`bj-lane ${connection?.autoPush ? "on" : ""}`}>
-              <div><b>데이터센터 → 발주오라</b><small>상품 등록·가격·품절·노출 변경을 발주오라로 보냅니다. 대기 {(overview?.outbox.blocked ?? 0) + (overview?.outbox.pending ?? 0)}건</small></div>
-              <label className="bj-switch"><input type="checkbox" checked={Boolean(connection?.autoPush)} disabled={!connected} onChange={(event) => void toggleAuto("autoPush", event.target.checked)} /><span /></label>
-            </div>
-            <div className={`bj-lane ${connection?.autoPull ? "on" : ""}`}>
-              <div><b>발주오라 → 데이터센터</b><small>발주오라 신규 상품·가격 변경을 가져옵니다. 연결 전에는 상품 리스트의 엑셀 업로드로 반영하세요.</small></div>
-              <label className="bj-switch"><input type="checkbox" checked={Boolean(connection?.autoPull)} disabled={!connected} onChange={(event) => void toggleAuto("autoPull", event.target.checked)} /><span /></label>
-            </div>
-          </div>
-          <div className="bj-node"><strong>발주오라 도매몰</strong><small>{connection?.mallId ? `console.baljuora.com/${connection.mallId}` : "몰 ID 미등록"}</small></div>
-        </div>
-        {!connected && <p className="bj-flow-note">자동 동기화 스위치는 발주오라 API 연결이 확인된 뒤에 켤 수 있습니다. 발주오라 오픈 API 사양이 공개되면 전송·가져오기 작업을 이어서 연결합니다.</p>}
-      </section>
-
-      <section className="admin-card bj-form-card">
-        <div className="card-heading"><ShieldCheck size={19} /><div><h2>연결 정보</h2><p>발주오라에서 발급받은 API 키로 연결합니다. 비밀번호는 입력받지 않으며, API 키는 암호화해 저장하고 끝 4자리만 표시합니다.</p></div></div>
-        <form className="bj-form" onSubmit={save}>
-          <label>발주오라 몰 ID<input value={mallId} onChange={(event) => setMallId(event.target.value)} placeholder="예: doogobiz24" autoComplete="off" /><small>관리자 주소 console.baljuora.com/<b>몰 ID</b>/…</small></label>
-          <label>마스터 아이디 (선택)<input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="발주오라 마스터 아이디" autoComplete="off" /><small>표시용으로만 저장합니다.</small></label>
-          <label className="bj-full">API 키<input value={apiKey} onChange={(event) => setApiKey(event.target.value)} type="password" autoComplete="new-password" placeholder={connection?.apiKeyRegistered ? `등록됨 ••••${connection.apiKeyLast4 ?? ""} · 바꿀 때만 입력` : "발주오라에서 받은 API 키"} /><small>{connection?.apiKeyRegistered ? "새 키를 입력하고 저장하면 기존 키를 대체합니다." : "발주오라 오픈 API 발급 후 입력해 주세요."}</small></label>
-          <label className="bj-full">API 주소 (발주오라 안내값)<input value={apiBaseUrl} onChange={(event) => setApiBaseUrl(event.target.value)} inputMode="url" placeholder="예: https://api.baljuora.com/v1" autoComplete="off" /><small>https://…baljuora.com 주소만 등록할 수 있습니다. 아직 모르면 비워 두세요.</small></label>
-          {verifyMessage && <p className={`bj-verify-result ${verifyMessage.ok ? "ok" : "warn"}`}>{verifyMessage.text}</p>}
-          <div className="bj-actions">
-            <button className="outline-button" type="submit" disabled={saving}>{saving ? "저장 중…" : "저장"}</button>
-            <button className="primary-action" type="button" onClick={() => void verify()} disabled={verifying || !connection?.apiKeyRegistered}>{verifying ? "확인 중…" : "연결 확인"}</button>
-            {connection?.apiKeyRegistered && <button className="bj-disconnect" type="button" onClick={() => void disconnect()}>연결 해지</button>}
-          </div>
-        </form>
-      </section>
-
-      <section className="sync-summary-grid">
-        <article className="admin-card sync-summary-card"><span>연결된 상품</span><strong>{overview?.linkedProducts.toLocaleString("ko-KR")}<small>건</small></strong><em>발주오라 상품코드 매칭</em></article>
-        <article className="admin-card sync-summary-card"><span>전송 대기</span><strong>{((overview?.outbox.blocked ?? 0) + (overview?.outbox.pending ?? 0)).toLocaleString("ko-KR")}<small>건</small></strong><em>{connected ? "자동 전송 준비" : "연결 후 전송"}</em></article>
-        <article className="admin-card sync-summary-card"><span>전송 실패</span><strong>{overview?.outbox.failed.toLocaleString("ko-KR")}<small>건</small></strong><em>재시도 필요</em></article>
-        <article className="admin-card sync-summary-card"><span>마지막 연결 확인</span><strong className="sync-summary-date">{connection?.lastVerifiedAt ? connection.lastVerifiedAt.slice(0, 10) : "-"}</strong><em>{statusInfo.label}</em></article>
-      </section>
-      <section className="admin-card">
-        <div className="card-heading"><History size={19} /><div><h2>동기화 실행 이력</h2><p>초기 읽기 이관과 향후 반영 실행을 확인합니다.</p></div></div>
-        {runs.length === 0 ? <div className="empty-admin">아직 실행 이력이 없습니다.</div> : <div className="admin-table-wrap"><table className="admin-table stackable-table"><thead><tr><th>실행 시각</th><th>방향</th><th>트리거</th><th>전체</th><th>생성</th><th>수정</th><th>실패/충돌</th><th>상태</th></tr></thead><tbody>{runs.map((run) => <tr key={run.id}><td data-label="실행 시각">{formatDateTime(run.startedAt)}</td><td data-label="방향">{run.direction === "pull" ? "발주오라 → 두고푸드" : "두고푸드 → 발주오라"}</td><td data-label="트리거">{run.trigger}</td><td data-label="전체">{run.total.toLocaleString("ko-KR")}</td><td data-label="생성">{run.createdCount.toLocaleString("ko-KR")}</td><td data-label="수정">{run.updatedCount.toLocaleString("ko-KR")}</td><td data-label="실패/충돌">{run.failedCount} / {run.conflictCount}</td><td data-label="상태"><span className={`status-pill ${run.status === "completed" ? "active" : run.status === "failed" ? "danger" : "pending"}`}>{syncStatusLabel(run.status)}</span></td></tr>)}</tbody></table></div>}
-      </section>
-      <section className="admin-card">
-        <div className="card-heading"><ClipboardList size={19} /><div><h2>발주오라 반영 대기열</h2><p>상품 변경이 기록된 목록입니다. 발주오라 연결이 확인되고 자동 전송을 켜면 순서대로 반영됩니다.</p></div></div>
-        {outbox.length === 0 ? <div className="empty-admin">대기 중인 변경이 없습니다.</div> : <div className="admin-table-wrap"><table className="admin-table stackable-table"><thead><tr><th>기록 시각</th><th>상품</th><th>작업</th><th>상태</th><th>사유</th></tr></thead><tbody>{outbox.slice(0, outboxLimit).map((item) => <tr key={item.id}><td data-label="기록 시각">{formatDateTime(item.createdAt)}</td><td data-label="상품" className="change-queue-product"><strong>{item.productName || item.productId}</strong></td><td data-label="작업">{syncActionLabels[item.action] || item.action}</td><td data-label="상태"><span className={`status-pill ${item.status === "succeeded" ? "active" : item.status === "failed" ? "danger" : "pending"}`}>{syncStatusLabel(item.status)}</span></td><td data-label="사유" className="change-queue-product">{item.lastError || "-"}</td></tr>)}</tbody></table></div>}
-        {outbox.length > outboxLimit && <button type="button" className="outline-button bj-more" onClick={() => setOutboxLimit((value) => value + 20)}>더 보기 ({(outbox.length - outboxLimit).toLocaleString("ko-KR")}건 남음)</button>}
-      </section>
-    </>
-  );
 }

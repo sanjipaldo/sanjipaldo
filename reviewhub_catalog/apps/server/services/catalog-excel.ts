@@ -375,7 +375,7 @@ async function parseWorkbook(bytes: Uint8Array) {
   return { worksheet, format: "bulk" as const, columns };
 }
 
-function asProductInput(product: ProductDraft): ProductInput {
+export function asProductInput(product: ProductDraft): ProductInput {
   return {
     productCode: product.productCode,
     name: product.name,
@@ -1112,7 +1112,7 @@ export async function applyBulkProductWorkbook(bytes: Uint8Array, changedBy: str
 }
 
 // 상품 리스트에서 선택한 상품을 한 번에 바꿉니다(발주오라 "상품 일괄 변경"과 같은 방식: 체크한 항목만 반영).
-// 각 상품은 기존 상품 저장(updateProduct)으로 저장되어 가격 이력·발주오라 변경 대기열이 그대로 남습니다.
+// 각 상품은 기존 상품 저장(updateProduct)으로 저장되어 가격 이력이 그대로 남습니다.
 export type BulkProductChanges = {
   isVisible?: boolean;
   isSoldOut?: boolean;

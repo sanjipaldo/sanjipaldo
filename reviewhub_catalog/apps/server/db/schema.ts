@@ -541,6 +541,38 @@ export const integrationConnections = sqliteTable("integration_connections", {
 export type ProductSyncOutbox = typeof productSyncOutbox.$inferSelect;
 export type SyncRun = typeof syncRuns.$inferSelect;
 
+// 발주오라 수동 동기화(migration 034). 작업 코드는 SHA-256(codeHash)만 저장합니다.
+export const baljuoraSyncJobs = sqliteTable(
+  "baljuora_sync_jobs",
+  {
+    id: text("id").primaryKey(),
+    codeHash: text("codeHash").notNull(),
+    type: text("type", { enum: ["compare", "push"] }).notNull(),
+    status: text("status", { enum: ["waiting", "running", "done", "failed", "expired", "cancelled"] }).notNull().default("waiting"),
+    plan: text("plan").notNull(),
+    progress: text("progress"),
+    summary: text("summary"),
+    results: text("results"),
+    diagnostics: text("diagnostics"),
+    createdBy: text("createdBy"),
+    createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+    startedAt: text("startedAt"),
+    finishedAt: text("finishedAt"),
+    expiresAt: text("expiresAt").notNull()
+  },
+  (table) => [
+    uniqueIndex("idx_baljuora_sync_jobs_code").on(table.codeHash),
+    index("idx_baljuora_sync_jobs_created").on(table.createdAt)
+  ]
+);
+// 동기화 설정·마지막 비교 결과(공개 단가표에 나가지 않는 저장소)
+export const baljuoraSyncStore = sqliteTable("baljuora_sync_store", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+});
+export type BaljuoraSyncJob = typeof baljuoraSyncJobs.$inferSelect;
+
 // 공급사 센터(migration 032). 공급사 로그인 계정: 로그인 자체는 user/account(better-auth),
 // 여기에는 어느 공급사(suppliers.id) 계정인지와 정산 설정(수수료율 %, 정산 주기)만 둡니다. 공급사마다 1개.
 export const supplierAccounts = sqliteTable("supplier_accounts", {

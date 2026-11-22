@@ -18,7 +18,6 @@ import {
   sourcingRequests,
   partnerDeals
 } from "../db/schema";
-import { enqueueProductSync } from "./catalog-sync";
 import { autoGroupSummaries, loadPublicGroupRows, summarizePublicGroups } from "./product-groups";
 import { PRODUCT_GROUP_EXCLUSIONS_KEY, parseGroupExclusions } from "@repo/shared/product-groups";
 import { legacyFeeFields, parseRateTiers, rateSummaryLabel, type ShippingRateTiers, type ShippingRateType } from "./shipping-rates";
@@ -1020,18 +1019,6 @@ export async function createProduct(input: ProductInput) {
     ]);
     return { product, normalizedOptions };
   });
-  await enqueueProductSync(product.id, "create", {
-    productCode: product.productCode,
-    name: product.name,
-    costPrice: product.costPrice,
-    aPrice: product.aPrice,
-    generalPrice: product.generalPrice,
-    salePrice: product.salePrice,
-    supplierName: product.supplierName,
-    imageUrl: product.imageUrl,
-    isVisible: product.isVisible,
-    isSoldOut: product.isSoldOut
-  });
   return { ...product, options: normalizedOptions };
 }
 
@@ -1040,7 +1027,7 @@ export async function getDeletedProductsForRestore() {
   return getDb().select({ id: products.id, productCode: products.productCode, name: products.name }).from(products).where(sql`${products.deletedAt} IS NOT NULL`);
 }
 
-// 삭제된 상품을 다시 살려 진열순서 맨 앞에 둡니다. 가격·이름은 이어서 updateProduct로 저장합니다(가격 이력·발주오라 대기열 기록).
+// 삭제된 상품을 다시 살려 진열순서 맨 앞에 둡니다. 가격·이름은 이어서 updateProduct로 저장합니다(가격 이력 기록).
 export async function restoreDeletedProduct(id: string) {
   const db = getDb();
   const top = await db.select({ value: sql<number>`coalesce(min(${products.displayOrder}), 0)` }).from(products).where(sql`${products.deletedAt} IS NULL`);
@@ -1093,7 +1080,7 @@ export async function updateProduct(id: string, input: ProductInput, changedBy: 
   }));
 
   // 상품·가격이력·활동기록·옵션을 한 번에 저장합니다. 중간에 실패하면 모두 되돌려 반쯤 저장된 상품이 남지 않게 합니다.
-  const { updated, changes } = await db.transaction(async (tx) => {
+  const { updated } = await db.transaction(async (tx) => {
     const updated = await tx
       .update(products)
       .set({
@@ -1238,35 +1225,6 @@ export async function updateProduct(id: string, input: ProductInput, changedBy: 
     return { updated, changes };
   });
 
-  const changedAction = changes.length > 0
-    ? "price" as const
-    : previous[0].imageUrl !== (input.imageUrl || null)
-      ? "image" as const
-    : previous[0].isVisible !== (input.isVisible ?? true)
-      ? "visibility" as const
-      : previous[0].isSoldOut !== (input.isSoldOut ?? false)
-        ? "soldout" as const
-        : "update" as const;
-  await enqueueProductSync(id, changedAction, {
-    productCode: updated[0]?.productCode ?? productInput.productCode,
-    name: updated[0]?.name ?? productInput.name,
-    costPrice: updated[0]?.costPrice ?? productInput.costPrice,
-    aPrice: updated[0]?.aPrice ?? productInput.aPrice,
-    generalPrice: updated[0]?.generalPrice ?? productInput.generalPrice,
-    salePrice: updated[0]?.salePrice ?? normalizedSaleFields.salePrice,
-    supplierName: updated[0]?.supplierName ?? input.supplierName ?? null,
-    imageUrl: updated[0]?.imageUrl ?? input.imageUrl ?? null,
-    isVisible: updated[0]?.isVisible ?? input.isVisible ?? true,
-    isSoldOut: updated[0]?.isSoldOut ?? input.isSoldOut ?? false,
-    changes: changes.map((change) => ({
-      field: change.field,
-      optionId: change.optionId ?? null,
-      optionName: change.optionName ?? null,
-      before: change.oldPrice,
-      after: change.newPrice
-    })),
-    changedAt
-  });
 
   return { ...updated[0], options: normalizedOptions };
 }
@@ -1306,16 +1264,10 @@ export async function removeProduct(id: string) {
     deletedAt,
     updatedAt: deletedAt
   }).where(eq(products.id, id)).returning();
-  await enqueueProductSync(id, "delete", {
-    productCode: previous[0].productCode,
-    name: previous[0].name,
-    supplierName: previous[0].supplierName,
-    deletedAt
-  });
   return rows[0];
 }
 
-// 여러 상품 삭제: 먼저 모두 있는지 확인한 뒤, 한 개씩 기존 삭제와 똑같이 처리합니다(숨김 + 삭제 표시, 발주오라 대기열 기록).
+// 여러 상품 삭제: 먼저 모두 있는지 확인한 뒤, 한 개씩 기존 삭제와 똑같이 처리합니다(숨김 + 삭제 표시).
 export async function removeProducts(ids: string[]) {
   const unique = [...new Set(ids)];
   const found = await getDb().select({ id: products.id }).from(products)

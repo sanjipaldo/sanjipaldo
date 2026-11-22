@@ -73,13 +73,14 @@ const App = () => (
           <Route path="/admin/bundles" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="bundles" /></AdminGuard>} />
           <Route path="/admin/newProducts" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="newProducts" /></AdminGuard>} />
           <Route path="/admin/sort" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sort" /></AdminGuard>} />
-          <Route path="/admin/changes" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="changes" /></AdminGuard>} />
-          <Route path="/admin/transmissions" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="transmissions" /></AdminGuard>} />
+          {/* 2026-11-22 메뉴 정리: 예전 발주오라 전송 현황·통계 주소는 새 화면으로 보냅니다 */}
+          <Route path="/admin/changes" element={<Navigate to="/admin/sync" replace />} />
+          <Route path="/admin/transmissions" element={<Navigate to="/admin/sync" replace />} />
           <Route path="/admin/categories" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="categories" /></AdminGuard>} />
           <Route path="/admin/shippingPolicies" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="shippingPolicies" /></AdminGuard>} />
           <Route path="/admin/suppliers" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="suppliers" /></AdminGuard>} />
           <Route path="/admin/supplierRequests" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="supplierRequests" /></AdminGuard>} />
-          <Route path="/admin/sales" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="sales" /></AdminGuard>} />
+          <Route path="/admin/sales" element={<Navigate to="/admin/home" replace />} />
           <Route path="/admin/notices" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="notices" /></AdminGuard>} />
           <Route path="/admin/usageGuide" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="usageGuide" /></AdminGuard>} />
           <Route path="/admin/encyclopedia" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="encyclopedia" /></AdminGuard>} />

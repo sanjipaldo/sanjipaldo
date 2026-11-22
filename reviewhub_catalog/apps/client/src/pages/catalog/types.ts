@@ -293,98 +293,12 @@ export type AdminOverview = {
 
 export type AdminHomeData = {
   overview: AdminOverview;
-  sync: CatalogSyncOverview;
-  sales: SalesOverview;
-};
-
-export type CatalogSyncOverview = {
-  provider: "baljuora";
-  sourceOfTruth: "doogofood";
-  target: "baljuora";
-  initialImport: {
-    status: string;
-    total: number;
-    imported: number;
-    lastRunAt: string | null;
+  // 발주오라 동기화 요약(관리자 > 발주오라 동기화). ready=false면 DB 업데이트(034) 전입니다.
+  baljuora: {
+    ready: boolean;
+    linkedCount: number;
+    lastCompareAt: string | null;
+    lastPushAt: string | null;
+    lastPushSummary: Record<string, unknown> | null;
   };
-  products: number;
-  linkedProducts: number;
-  outbox: { pending: number; failed: number; blocked: number };
-  writeIntegration: {
-    status: "disconnected" | "verification_required" | "connected" | "error";
-    account: string | null;
-    connectedAt: string | null;
-    reason: string;
-    safeMode: boolean;
-  };
-  connection: BaljuoraConnection;
-};
-
-export type BaljuoraConnection = {
-  mallId: string | null;
-  username: string | null;
-  apiBaseUrl: string | null;
-  apiKeyRegistered: boolean;
-  apiKeyLast4: string | null;
-  status: "not_configured" | "key_registered" | "connected" | "failed";
-  lastVerifiedAt: string | null;
-  lastError: string | null;
-  autoPush: boolean;
-  autoPull: boolean;
-};
-
-export type CatalogSyncRun = {
-  id: string;
-  direction: string;
-  trigger: string;
-  total: number;
-  createdCount: number;
-  updatedCount: number;
-  skippedCount: number;
-  failedCount: number;
-  conflictCount: number;
-  status: string;
-  startedAt: string;
-  finishedAt: string | null;
-};
-
-export type CatalogSyncOutboxItem = {
-  id: string;
-  productId: string;
-  productName: string | null;
-  action: string;
-  status: string;
-  attempts: number;
-  payload: Record<string, unknown>;
-  lastError: string | null;
-  createdAt: string;
-  processedAt: string | null;
-};
-
-export type SalesOverview = {
-  month: string;
-  sourceConnected: boolean;
-  sourceStatus: string;
-  updatedAt: string | null;
-  totals: {
-    revenue: number;
-    cost: number;
-    orderCount: number;
-    profit: number;
-    profitRate: number;
-  };
-  days: Array<{
-    date: string;
-    revenue: number;
-    cost: number;
-    orderCount: number;
-    profit: number;
-  }>;
-  suppliers: Array<{
-    supplierName: string;
-    revenue: number;
-    cost: number;
-    orderCount: number;
-    profit: number;
-  }>;
 };
