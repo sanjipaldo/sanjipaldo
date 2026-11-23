@@ -3692,20 +3692,18 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   gap: 11px;
   width: 100%;
   margin: 0;
-  padding: 9px 12px;
-  border-radius: 11px;
+  padding: 6px 10px;
+  border-radius: 12px;
   color: var(--sb-text);
   font-size: 16px;
   font-weight: 600;
   line-height: 22px;
 }
-.admin-sidebar.is-master nav a svg,
-.admin-sidebar.is-master nav a.nav-child svg:first-child { flex: 0 0 auto; width: 19px; height: 19px; margin-left: 0; color: var(--sb-icon); opacity: 1; }
+.admin-sidebar.is-master nav a .admin-nav-icon svg,
+.admin-sidebar.is-master nav a.nav-child .admin-nav-icon svg:first-child { flex: 0 0 auto; width: 17px; height: 17px; margin: 0; color: inherit; opacity: 1; }
 .admin-sidebar.is-master nav a:hover { color: var(--sb-text); background: var(--sb-hover); }
 .admin-sidebar.is-master nav a.active,
 .admin-sidebar.is-master nav a.nav-child.active { color: var(--sb-text); background: var(--sb-accent); font-weight: 800; box-shadow: 0 6px 14px rgba(63, 143, 34, .18); }
-.admin-sidebar.is-master nav a.active svg,
-.admin-sidebar.is-master nav a.nav-child.active svg:first-child { color: var(--sb-text); }
 .admin-sidebar.is-master nav a:focus-visible,
 .admin-sidebar.is-master nav .nav-group-caption:focus-visible,
 .admin-sidebar.is-master .sidebar-bottom a:focus-visible,
@@ -3727,6 +3725,35 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .admin-sidebar.is-master .sidebar-bottom button:hover { color: var(--sb-text); background: var(--sb-hover); }
 .admin-sidebar.is-master .sidebar-bottom svg { flex: 0 0 auto; color: var(--sb-icon); }
 
+/* 메뉴 아이콘 타일(2026-11-23 3차, 관리자 요청 "아이콘을 다른 색이나 입체감 있게, 과하지 않게"):
+   묶음마다 연한 색 칸(홈 진한 초록 · 상품 관리 초록 · 발주오라 파랑 · 공급사 노랑 · 공지·운영 청록) + 위쪽 빛·아래 그림자로 살짝 도톰하게 */
+.admin-sidebar.is-master nav a { --tile-a: #eef9e4; --tile-b: #d3eebd; --tile-icon: #3f8f22; --tile-line: rgba(63, 143, 34, .2); --tile-shadow: rgba(63, 143, 34, .22); gap: 12px; }
+.admin-sidebar.is-master nav a[data-group="home"] { --tile-a: #2f5f14; --tile-b: #163300; --tile-icon: #b6f08c; --tile-line: rgba(22, 51, 0, .5); --tile-shadow: rgba(22, 51, 0, .3); }
+.admin-sidebar.is-master nav a[data-group="baljuora"] { --tile-a: #eef5ff; --tile-b: #d2e4fc; --tile-icon: #2a6fcb; --tile-line: rgba(42, 111, 203, .2); --tile-shadow: rgba(42, 111, 203, .22); }
+.admin-sidebar.is-master nav a[data-group="supplier"] { --tile-a: #fff8e2; --tile-b: #fde6aa; --tile-icon: #b06d08; --tile-line: rgba(176, 109, 8, .2); --tile-shadow: rgba(176, 109, 8, .22); }
+.admin-sidebar.is-master nav a[data-group="operations"] { --tile-a: #e9f8f5; --tile-b: #c6ebe3; --tile-icon: #0f7f71; --tile-line: rgba(15, 127, 113, .2); --tile-shadow: rgba(15, 127, 113, .22); }
+.admin-sidebar.is-master .admin-nav-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--tile-line);
+  border-radius: 9px;
+  color: var(--tile-icon);
+  background: linear-gradient(160deg, var(--tile-a) 0%, var(--tile-b) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), inset 0 -2px 3px rgba(0, 0, 0, .04), 0 2px 5px var(--tile-shadow);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.admin-sidebar.is-master nav a[data-group="home"] .admin-nav-icon { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 2px 6px var(--tile-shadow); }
+.admin-sidebar.is-master nav a:hover .admin-nav-icon { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), inset 0 -2px 3px rgba(0, 0, 0, .04), 0 4px 9px var(--tile-shadow); }
+/* 지금 메뉴(연두 줄) 안에서는 칸을 흰색으로 띄워 아이콘이 또렷하게 */
+.admin-sidebar.is-master nav a.active:not([data-group="home"]) .admin-nav-icon { border-color: rgba(22, 51, 0, .12); background: linear-gradient(160deg, #ffffff 0%, #f1f9e8 100%); box-shadow: inset 0 1px 0 #fff, 0 3px 8px rgba(22, 51, 0, .18); }
+@media (prefers-reduced-motion: reduce) {
+  .admin-sidebar.is-master .admin-nav-icon { transition: none; }
+  .admin-sidebar.is-master nav a:hover .admin-nav-icon { transform: none; }
+}
+
 /* 낮은 화면(노트북 125% 배율 등): 위쪽을 줄여 메뉴가 더 많이 보이게 */
 @media (max-height: 820px) {
   .admin-sidebar.is-master { padding-top: 12px; }
@@ -3735,7 +3762,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .admin-sidebar.is-master .admin-role { margin-bottom: 8px; padding: 7px 11px; }
   .admin-sidebar.is-master .admin-sidebar-primary { min-height: 40px; margin-bottom: 10px; }
   .admin-sidebar.is-master nav a,
-  .admin-sidebar.is-master nav a.nav-child { padding-top: 7px; padding-bottom: 7px; }
+  .admin-sidebar.is-master nav a.nav-child { padding-top: 4px; padding-bottom: 4px; }
   .admin-sidebar.is-master nav .nav-group-caption { margin-top: 10px; margin-bottom: 2px; }
   .admin-sidebar.is-master .sidebar-bottom { padding-top: 9px; }
   .admin-sidebar.is-master .sidebar-bottom a,

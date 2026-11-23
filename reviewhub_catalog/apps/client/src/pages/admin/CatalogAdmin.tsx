@@ -864,7 +864,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               : null;
             const groupOpen = !item.group || openNavGroups[item.group];
             const badge = item.section === "supplierRequests" && supplierPending > 0 ? <span className="admin-nav-badge" aria-label={`승인 대기 ${supplierPending}건`}>{supplierPending}</span> : null;
-            return <Fragment key={item.section}>{groupCaption}{groupOpen && <Link to={`/admin/${item.section}`} className={`${section === item.section ? "active" : ""} ${item.group ? "nav-child" : ""}`} aria-current={section === item.section ? "page" : undefined} onClick={() => setSidebarOpen(false)}><Icon size={19} /><span className="admin-nav-label">{item.label}</span>{badge}</Link>}</Fragment>;
+            return <Fragment key={item.section}>{groupCaption}{groupOpen && <Link to={`/admin/${item.section}`} className={`${section === item.section ? "active" : ""} ${item.group ? "nav-child" : ""}`} data-group={item.group ?? "home"} aria-current={section === item.section ? "page" : undefined} onClick={() => setSidebarOpen(false)}><span className="admin-nav-icon" aria-hidden="true"><Icon size={17} strokeWidth={2.1} /></span><span className="admin-nav-label">{item.label}</span>{badge}</Link>}</Fragment>;
           })}
         </nav>
         <div className="sidebar-bottom"><Link to="/" onClick={() => setSidebarOpen(false)} title="공개 페이지 보기"><Truck size={17} /> 공개 페이지</Link><button onClick={() => void signOut()}><LogOut size={17} /> 로그아웃</button></div>
