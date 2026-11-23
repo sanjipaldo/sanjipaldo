@@ -19,9 +19,11 @@ import {
   type BaljuoraProductSnapshot,
   type BaljuoraSyncField
 } from "@repo/shared/baljuora-sync";
+import { BaljuoraMasterPanel } from "./BaljuoraMasterPanel";
+import { BaljuoraAlignSettings, type BaljuoraPolicyOption, type DoogoPolicyOption } from "./BaljuoraAlignSettings";
 import "./baljuora-sync-admin.css";
 
-type Settings = { merchantSlug: string; groupKeyword: string; categoryMap: Record<string, string>; templateCode: string | null };
+type Settings = { merchantSlug: string; groupKeyword: string; categoryMap: Record<string, string>; baljuoraCategoryMap: Record<string, string>; shippingPolicyMap: Record<string, string>; templateCode: string | null };
 type JobView = {
   id: string;
   type: "compare" | "push";
@@ -40,6 +42,8 @@ type Overview = {
   settings: Settings;
   doogoCategories: Array<{ id: string; name: string; shippingType: string }>;
   baljuoraCategories: BaljuoraCategory[];
+  doogoShippingPolicies?: DoogoPolicyOption[];
+  baljuoraShippingPolicies?: BaljuoraPolicyOption[];
   group: { id: string; name: string } | null;
   linkedCount: number;
   lastCompareAt: string | null;
@@ -117,8 +121,9 @@ function BookmarkletLink({ origin }: { origin: string }) {
   );
 }
 
-function DiffValue({ field, value, categoryPath }: { field: BaljuoraSyncField; value: string | number | null; categoryPath: (id: string) => string }) {
+function DiffValue({ field, value, categoryPath, policyName }: { field: BaljuoraSyncField; value: string | number | null; categoryPath: (id: string) => string; policyName: (id: string) => string }) {
   if (field === "image") return value ? <img className="bj-diff-thumb" src={String(value)} alt="" loading="lazy" /> : <span className="bj-muted">없음</span>;
+  if (field === "shippingPolicy") return <span>{value ? policyName(String(value)) : "없음"}</span>;
   if (field === "category") return <span>{value ? String(value).split(",").map(categoryPath).join(", ") : "없음"}</span>;
   if (field === "name") return <span>{value || "없음"}</span>;
   return <span>{won(value)}</span>;
@@ -183,6 +188,10 @@ export function BaljuoraSyncAdmin() {
 
   const categoryPath = useCallback((id: string) => overview?.baljuoraCategories.find((category) => category.id === id)?.path ?? id.slice(0, 8), [overview]);
   const doogoCategoryName = useCallback((id: string) => overview?.doogoCategories.find((category) => category.id === id)?.name ?? "", [overview]);
+  // 배송비 정책 이름: DB센터 정책 id(DB센터 쪽 값) 또는 발주오라 정책 id(발주오라 쪽 값)
+  const policyName = useCallback((id: string) => overview?.doogoShippingPolicies?.find((policy) => policy.id === id)?.name
+    ?? overview?.baljuoraShippingPolicies?.find((policy) => policy.id === id)?.name
+    ?? id.slice(0, 8), [overview]);
 
   const lists = useMemo(() => {
     const items = changes?.items ?? [];
@@ -244,7 +253,8 @@ export function BaljuoraSyncAdmin() {
     if (!window.confirm(message)) return;
     setBusy("pull");
     try {
-      const body = tab === "only" ? { baljuoraIds: ids } : { productIds: ids };
+      // '발주오라에서 바뀜' 탭: 발주오라에서 바뀐 칸만 가져옵니다(DB센터에서 고친 칸은 그대로).
+      const body = tab === "only" ? { baljuoraIds: ids } : { productIds: ids, onlyPulled: true };
       const result = await readData<{ updated: number; created: number; failed: Array<{ name: string; error: string }> }>(await apiFetch("/baljuora/admin/pull", jsonInit("POST", body)));
       toast.success(tab === "only" ? `${result.created}개를 DB센터에 등록했습니다.` : `${result.updated}개를 발주오라 값으로 바꿨습니다.`);
       if (result.failed.length) toast.error(`${result.failed.length}개 실패: ${result.failed.slice(0, 2).map((item) => `${item.name} (${item.error})`).join(", ")}`);
@@ -325,7 +335,7 @@ export function BaljuoraSyncAdmin() {
         <div>
           <span>BALJUORA SYNC</span>
           <h1>발주오라 동기화</h1>
-          <p>DB센터에서 고친 신규 상품·가격·이미지·카테고리를 동기화 버튼으로 발주오라 도매몰에 똑같이 반영합니다.</p>
+          <p>DB센터와 발주오라 도매몰의 상품·가격·썸네일·카테고리·배송비 정책을 양쪽 같게 맞춥니다. DB센터에서 고친 값은 발주오라로 보내고(보낼 변경), 발주오라에서 먼저 고친 값은 발주오라 기준으로 가져옵니다.</p>
         </div>
         <button type="button" className="outline-button" onClick={() => { setLoading(true); void load(); }}><RefreshCw size={15} /> 새로고침</button>
       </div>
@@ -404,6 +414,7 @@ export function BaljuoraSyncAdmin() {
 
       <section className="admin-card bj-actions">
         <div>
+          <span className="bj-direction is-push">DB센터 → 발주오라</span>
           <h2>{compared ? "변경 목록" : "먼저 발주오라 상품을 불러와 주세요"}</h2>
           <p>{compared ? "고른 상품만 동기화합니다. 처음에는 1~2개로 먼저 해 보고 발주오라에서 확인한 뒤 나머지를 보내 주세요." : "두 쪽 상품을 상품코드로 연결해야 무엇이 다른지 정확히 보입니다. 발주오라 상품은 바뀌지 않습니다(읽기만 함)."}</p>
         </div>
@@ -411,6 +422,17 @@ export function BaljuoraSyncAdmin() {
           {busy === "compare" ? <Loader2 className="bj-spin" size={15} /> : <Link2 size={15} />} 발주오라 상품 불러오기(비교)
         </button>
       </section>
+
+      <BaljuoraMasterPanel
+        items={changes?.items ?? []}
+        baljuoraOnlyIds={(changes?.baljuoraOnly ?? []).map((snapshot) => snapshot.id)}
+        doogoOnlyCount={lists.new.length}
+        compared={compared}
+        lastCompareAt={changes?.lastCompareAt ?? overview?.lastCompareAt ?? null}
+        disabled={Boolean(busy) || jobActive}
+        onCompare={() => void startJob({ type: "compare" }, "compare")}
+        onDone={load}
+      />
 
       {changes?.compared && changes.groupPriceReadable === false && (
         <p className="bj-notice"><AlertTriangle size={15} aria-hidden="true" /> 지금 목록은 수강생 단가(‘{overview?.settings.groupKeyword || "황금농부"}’ 매출처 그룹 공급가)를 읽기 전 비교 결과예요. <b>발주오라 상품 불러오기(비교)</b>를 한 번 다시 하면 수강생 단가·매입원가·카테고리를 새로 읽어 진짜 차이만 남아요(그 전에 보내는 상품도 수강생 단가를 함께 맞춥니다).</p>
@@ -479,8 +501,8 @@ export function BaljuoraSyncAdmin() {
                             <span key={diff.field} className={`bj-diff is-${diff.direction}`} title={`${BALJUORA_FIELD_LABELS[diff.field]} · ${BALJUORA_DIRECTION_LABELS[diff.direction]}`}>
                               <b>{BALJUORA_FIELD_SHORT_LABELS[diff.field]}</b>
                               {tab === "pull"
-                                ? <><DiffValue field={diff.field} value={diff.doogo} categoryPath={categoryPath} /><ChevronLeft size={12} aria-hidden="true" /><DiffValue field={diff.field} value={diff.baljuora} categoryPath={categoryPath} /></>
-                                : <><DiffValue field={diff.field} value={diff.baljuora} categoryPath={categoryPath} /><ChevronRight size={12} aria-hidden="true" /><DiffValue field={diff.field} value={diff.doogo} categoryPath={categoryPath} /></>}
+                                ? <><DiffValue field={diff.field} value={diff.doogo} categoryPath={categoryPath} policyName={policyName} /><ChevronLeft size={12} aria-hidden="true" /><DiffValue field={diff.field} value={diff.baljuora} categoryPath={categoryPath} policyName={policyName} /></>
+                                : <><DiffValue field={diff.field} value={diff.baljuora} categoryPath={categoryPath} policyName={policyName} /><ChevronRight size={12} aria-hidden="true" /><DiffValue field={diff.field} value={diff.doogo} categoryPath={categoryPath} policyName={policyName} /></>}
                               {diff.direction !== "push" && <i>{BALJUORA_DIRECTION_LABELS[diff.direction]}</i>}
                             </span>
                           ))}
@@ -505,7 +527,7 @@ export function BaljuoraSyncAdmin() {
 
       <section className="admin-card bj-settings">
         <button type="button" className="bj-settings-toggle" onClick={() => setSettingsOpen((open) => !open)} aria-expanded={settingsOpen}>
-          <Settings2 size={17} aria-hidden="true" /> 동기화 설정 <small>카테고리 연결 · 수강생 그룹 · 신규 상품 기본 설정</small><ChevronDown size={16} className={settingsOpen ? "is-open" : ""} aria-hidden="true" />
+          <Settings2 size={17} aria-hidden="true" /> 동기화 설정 <small>카테고리·배송비 정책 맞추기 · 수강생 그룹 · 신규 상품 기본 설정</small><ChevronDown size={16} className={settingsOpen ? "is-open" : ""} aria-hidden="true" />
         </button>
         {settingsOpen && settingsDraft && overview && (
           <div className="bj-settings-body">
@@ -514,7 +536,7 @@ export function BaljuoraSyncAdmin() {
               <label><span>수강생 단가 = 이 이름이 들어간 매출처 그룹의 공급가</span><input value={settingsDraft.groupKeyword} onChange={(event) => setSettingsDraft({ ...settingsDraft, groupKeyword: event.target.value })} placeholder="황금농부" /><small>{overview.group ? `찾은 그룹: ${overview.group.name}` : "발주오라 상품 불러오기 후 찾은 그룹이 보입니다."}</small></label>
               <label><span>신규 상품 설정 복사용 발주오라 상품코드</span><input value={settingsDraft.templateCode ?? ""} onChange={(event) => setSettingsDraft({ ...settingsDraft, templateCode: event.target.value || null })} placeholder="예: PD1794971213122" /><small>새 상품의 매입처·매입/매출 배송정책을 이 상품에서 복사합니다. 같은 매입처의 연결 상품이 있으면 그 상품을 먼저 씁니다.</small></label>
             </div>
-            <h3>카테고리 연결 <small>DB센터 카테고리 → 발주오라 카테고리 (이름이 같으면 자동으로 연결)</small></h3>
+            <h3>카테고리 연결 <small>DB센터 카테고리 → 발주오라 카테고리 (보낼 곳 · 이름이 같으면 자동으로 연결)</small></h3>
             {overview.baljuoraCategories.length === 0 ? <p className="bj-muted">발주오라 상품 불러오기를 하면 발주오라 카테고리 목록이 보입니다.</p> : (
               <div className="bj-category-map">
                 {overview.doogoCategories.map((category) => (
@@ -532,6 +554,19 @@ export function BaljuoraSyncAdmin() {
                 ))}
               </div>
             )}
+            <BaljuoraAlignSettings
+              baljuoraCategories={overview.baljuoraCategories}
+              doogoCategories={overview.doogoCategories}
+              savedCategoryMap={overview.settings.categoryMap}
+              savedReverseMap={overview.settings.baljuoraCategoryMap ?? {}}
+              reverseMap={settingsDraft.baljuoraCategoryMap ?? {}}
+              onReverseMapChange={(next) => setSettingsDraft({ ...settingsDraft, baljuoraCategoryMap: next })}
+              doogoPolicies={overview.doogoShippingPolicies ?? []}
+              baljuoraPolicies={overview.baljuoraShippingPolicies ?? []}
+              policyMap={settingsDraft.shippingPolicyMap ?? {}}
+              onPolicyMapChange={(next) => setSettingsDraft({ ...settingsDraft, shippingPolicyMap: next })}
+              onCategoriesCreated={load}
+            />
             <div className="bj-settings-actions"><button type="button" className="primary-action" onClick={() => void saveSettings()} disabled={busy === "settings"}>{busy === "settings" ? <Loader2 className="bj-spin" size={15} /> : <CheckCircle2 size={15} />} 설정 저장</button></div>
           </div>
         )}

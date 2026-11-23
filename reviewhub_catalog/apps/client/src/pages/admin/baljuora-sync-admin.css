@@ -144,10 +144,58 @@
 .bj-diagnostics summary { color: #4c5868; font-size: 12.5px; font-weight: 800; cursor: pointer; }
 .bj-diagnostics pre { max-height: 320px; margin: 8px 0 0; padding: 12px; overflow: auto; border-radius: 10px; background: #f4f6f8; color: #22303d; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
 
+/* 방향 표시(2026-11-23): DB센터 → 발주오라(보낼 변경) · 발주오라 → DB센터(발주오라 기준 맞추기) */
+.bj-direction { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; letter-spacing: .02em; }
+.bj-direction.is-push { color: #0f5f42; background: #e7f8f1; }
+.bj-direction.is-pull { color: #1f4f8a; background: #e8f1fc; }
+
+/* 발주오라 → DB센터 맞추기 */
+.bj-master { display: grid; gap: 14px; border-color: #cfdff3; background: linear-gradient(135deg, #f5f9fe, #fff 55%); }
+.bj-master-head h2 { margin: 0 0 6px; }
+.bj-master-head p { margin: 0; color: #4c5868; font-size: 13px; line-height: 1.6; }
+.bj-master-steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.bj-master-steps > li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid #e3eaf3; border-radius: 14px; background: #fff; }
+.bj-master-steps > li:nth-child(2) { grid-template-columns: 28px minmax(0, 1fr); align-items: start; }
+.bj-master-steps > li > b { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: #fff; background: #2f6fb8; font-size: 13px; }
+.bj-master-steps > li > div { display: grid; gap: 4px; min-width: 0; }
+.bj-master-steps strong { font-size: 14px; }
+.bj-master-steps small { color: #6b7686; font-size: 12px; line-height: 1.5; }
+.bj-master-steps small.is-warn { color: #b45309; font-weight: 700; }
+.bj-master-fields { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.bj-master-field { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 11px; border: 1px solid #d9e1ea; border-radius: 999px; background: #fff; color: #22303d; font-size: 12.5px; font-weight: 800; cursor: pointer; }
+.bj-master-field input { margin: 0; }
+.bj-master-field em { min-width: 20px; padding: 1px 7px; border-radius: 999px; background: #e8f1fc; color: #1f4f8a; font-style: normal; font-size: 11.5px; text-align: center; font-variant-numeric: tabular-nums; }
+.bj-master-field.is-wide { border-radius: 14px; padding-block: 6px; }
+.bj-master-field.is-zero { color: #8491a2; }
+.bj-master-field.is-zero em { background: #f1f4f7; color: #8491a2; }
+.bj-master-running { display: grid; gap: 6px; }
+.bj-master-running span { color: #4c5868; font-size: 12.5px; }
+.bj-master-result { display: grid; gap: 6px; padding: 12px 14px; border-radius: 12px; background: #f6faf8; font-size: 13px; }
+.bj-master-result ul { display: grid; gap: 3px; margin: 0; padding-left: 18px; color: #4c5868; font-size: 12px; line-height: 1.5; }
+.bj-master-result li.is-failed { color: #b42318; }
+.bj-master-note { margin: 0; color: #6b7686; font-size: 12px; line-height: 1.6; }
+
+/* 카테고리·배송비 정책 맞추기(동기화 설정 안) */
+.bj-align { display: grid; gap: 10px; }
+.bj-align-box { display: grid; gap: 10px; padding: 12px; border: 1px solid #f2d08a; border-radius: 12px; background: #fffcf3; }
+.bj-align-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bj-align-actions select { height: 38px; padding: 0 10px; border: 1px solid #d9e1ea; border-radius: 10px; background: #fff; color: #1f2a3a; font-size: 13px; }
+.bj-align-box small, .bj-align-note { margin: 0; color: #6b7686; font-size: 12px; line-height: 1.6; }
+.bj-align-ok { margin: 0; color: #0f5f42; font-size: 12.5px; }
+.bj-align-lead { margin: 0; color: #5f4b12; font-size: 12.5px; line-height: 1.6; }
+.bj-align-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+.bj-align-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 8px; align-items: center; padding: 7px 10px; border: 1px solid #edf1f5; border-radius: 10px; background: #fff; }
+.bj-align-row.is-unmapped { border-color: #f2d08a; }
+.bj-align-name { display: flex; align-items: center; gap: 7px; min-width: 0; color: #22303d; font-size: 12.5px; font-weight: 800; }
+.bj-align-name span { overflow-wrap: anywhere; }
+.bj-align-name input { flex: none; margin: 0; }
+.bj-align-row select { width: 100%; height: 36px; padding: 0 8px; border: 1px solid #d9e1ea; border-radius: 9px; background: #fff; color: #1f2a3a; font-size: 12.5px; }
+
 @media (max-width: 1100px) {
   .bj-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .bj-settings-grid { grid-template-columns: 1fr; }
   .bj-category-map { grid-template-columns: 1fr; }
+  .bj-align-rows { grid-template-columns: 1fr; }
 }
 @media (max-width: 720px) {
   .bj-howto { grid-template-columns: 1fr; }
@@ -165,4 +213,8 @@
   .bj-history-list button { grid-template-columns: 1fr auto; }
   .bj-history-list small { grid-column: 1 / -1; }
   .bj-code strong { font-size: 24px; }
+  .bj-master-steps > li { grid-template-columns: 28px minmax(0, 1fr); }
+  .bj-master-steps > li > .primary-action, .bj-master-steps > li > .outline-button { grid-column: 1 / -1; justify-content: center; }
+  .bj-align-actions select, .bj-align-actions .outline-button { flex: 1 1 100%; }
+  .bj-align-row { grid-template-columns: 1fr; }
 }

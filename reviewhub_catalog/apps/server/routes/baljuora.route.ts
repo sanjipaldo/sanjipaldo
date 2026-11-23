@@ -10,6 +10,7 @@ import { adminRoute, publicRoute } from "../_core/route-helpers";
 import {
   cancelBaljuoraJob,
   createBaljuoraJob,
+  createDoogoCategoriesFromBaljuora,
   getBaljuoraJob,
   getBaljuoraOverview,
   getBaljuoraProductPrices,
@@ -71,6 +72,8 @@ baljuoraRouter.put("/admin/settings", adminRoute, async (c) => {
     merchantSlug: z.string().trim().min(1).max(60).optional(),
     groupKeyword: z.string().trim().min(1).max(60).optional(),
     categoryMap: z.record(z.string().max(120), z.string().max(120)).optional(),
+    shippingPolicyMap: z.record(z.string().max(120), z.string().max(120)).optional(),
+    baljuoraCategoryMap: z.record(z.string().max(120), z.string().max(120)).optional(),
     templateCode: z.string().trim().max(80).nullable().optional()
   }).safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "동기화 설정 값을 확인해 주세요."), 400);
@@ -130,13 +133,29 @@ baljuoraRouter.post("/admin/pull", adminRoute, async (c) => {
   const parsed = z.object({
     productIds: ProductIdsSchema.max(500).optional(),
     baljuoraIds: z.array(z.string().trim().min(1).max(80)).max(500).optional(),
-    fields: z.array(FieldSchema).max(BALJUORA_SYNC_FIELDS.length).optional()
+    fields: z.array(FieldSchema).max(BALJUORA_SYNC_FIELDS.length).optional(),
+    // '가져올 변경' 탭: 발주오라에서 바뀐 칸만. 없으면 '발주오라 기준 맞추기'(다른 칸 전부, fields로 고름)
+    onlyPulled: z.boolean().optional()
   }).refine((value) => (value.productIds?.length ?? 0) + (value.baljuoraIds?.length ?? 0) > 0)
     .safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "가져올 상품을 골라 주세요."), 400);
   try {
     const user = c.var.currentUser;
     return c.json(apiSuccess(await pullFromBaljuora(parsed.data as never, user?.username || user?.email || "admin")));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 카테고리 맞추기: 연결되지 않은 발주오라 카테고리를 DB센터에 같은 이름으로 만들고 연결합니다(발주오라는 바꾸지 않음).
+baljuoraRouter.post("/admin/categories/from-baljuora", adminRoute, async (c) => {
+  const parsed = z.object({
+    baljuoraCategoryIds: z.array(z.string().trim().min(1).max(80)).min(1).max(100),
+    shippingType: z.enum(["domestic", "overseas"])
+  }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "만들 발주오라 카테고리를 골라 주세요."), 400);
+  try {
+    return c.json(apiSuccess(await createDoogoCategoriesFromBaljuora(parsed.data)));
   } catch (error) {
     return errorResponse(c, error);
   }
@@ -188,6 +207,8 @@ baljuoraRouter.post("/runner/:code/results", publicRoute, async (c) => {
       error: typeof body.error === "string" ? body.error : null,
       diagnostics: body.diagnostics && typeof body.diagnostics === "object" ? body.diagnostics as Record<string, unknown> : null,
       categories: body.categories,
+      // 발주오라 배송비 정책 목록(1.5.0부터, 서비스에서 칸을 정리함)
+      shippingPolicies: Array.isArray(body.shippingPolicies) ? body.shippingPolicies : undefined,
       group: body.group === null ? null : body.group && typeof body.group === "object" ? body.group as { id: string; name: string } : undefined,
       snapshots: Array.isArray(body.snapshots) ? body.snapshots as never : undefined,
       items: Array.isArray(body.items) ? body.items as never : undefined

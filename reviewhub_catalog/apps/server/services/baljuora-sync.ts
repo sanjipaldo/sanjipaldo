@@ -17,34 +17,39 @@ import {
   BALJUORA_JOB_TTL_MINUTES,
   BALJUORA_SYNC_FIELDS,
   baljuoraComparable,
-  categoryMatches,
   collapseName,
   diffBaljuoraProduct,
   doogoComparable,
+  doogoCategoryForBaljuora,
   doogoSyncValues,
   flattenBaljuoraCategories,
   normalizeBaljuoraCode,
   plainCategoryName,
   suggestCategoryMapping,
+  suggestShippingPolicyMapping,
+  baljuoraPolicyRate,
   toPrice,
   type BaljuoraBaseline,
   type BaljuoraCategory,
   type BaljuoraFieldDiff,
   type BaljuoraLinkState,
   type BaljuoraProductSnapshot,
+  type BaljuoraShippingPolicy,
   type BaljuoraSyncField,
   type DoogoSyncValues
 } from "@repo/shared/baljuora-sync";
 import { DatabaseError, getDb } from "../_core/db";
-import { baljuoraSyncJobs, baljuoraSyncStore, categories, externalProductLinks, products, type BaljuoraSyncJob } from "../db/schema";
+import { baljuoraSyncJobs, baljuoraSyncStore, categories, externalProductLinks, products, shippingPolicies, type BaljuoraSyncJob } from "../db/schema";
 import { asProductInput } from "./catalog-excel";
-import { createProduct, getAdminCatalog, updateProduct } from "./catalog";
+import { createCategory, createProduct, createShippingPolicy, getAdminCatalog, updateProduct } from "./catalog";
 
 const PROVIDER = "baljuora";
 const STORE_SETTINGS = "settings";
 const STORE_CATEGORIES = "categories";
 const STORE_GROUP = "group";
 const STORE_ONLY = "baljuora_only";
+// 마지막 비교 때 읽은 발주오라 배송비 정책(매출배송정책) 목록
+const STORE_POLICIES = "shipping_policies";
 const MAX_SNAPSHOTS_PER_POST = 1000;
 const MAX_ITEMS_PER_POST = 1000;
 const UNCATEGORIZED_NAMES = new Set(["📦 기타", "미분류"]);
@@ -54,6 +59,11 @@ export type BaljuoraSettings = {
   groupKeyword: string;
   // DB센터 카테고리 id → 발주오라 카테고리 id
   categoryMap: Record<string, string>;
+  // 발주오라 카테고리 id → DB센터 카테고리 id(여러 개 → 하나). DB센터는 대표 카테고리 7개, 발주오라는 세부 카테고리가 많아
+  // 발주오라에서 가져오거나 비교할 때 세부 카테고리를 어느 DB센터 카테고리로 볼지 정합니다(카테고리 맞추기).
+  baljuoraCategoryMap: Record<string, string>;
+  // DB센터 배송 정책 id → 발주오라 배송비 정책 id(배송비 코드·이름이 같으면 비교 때 자동 연결)
+  shippingPolicyMap: Record<string, string>;
   // 신규 상품 등록 때 매입처·배송정책 등 설정을 복사할 발주오라 상품코드(같은 매입처의 연결 상품이 없을 때)
   templateCode: string | null;
 };
@@ -62,6 +72,8 @@ const DEFAULT_SETTINGS: BaljuoraSettings = {
   merchantSlug: BALJUORA_DEFAULT_MERCHANT_SLUG,
   groupKeyword: BALJUORA_DEFAULT_GROUP_KEYWORD,
   categoryMap: {},
+  baljuoraCategoryMap: {},
+  shippingPolicyMap: {},
   templateCode: null
 };
 
@@ -85,6 +97,8 @@ export type PushPlanItem = {
     categoryId: string | null;
     imageUrl: string | null;
     isTaxable: boolean;
+    // 연결한 발주오라 매출배송정책 id(DB센터 상품의 배송 정책과 같은 정책, 없으면 null)
+    baljuoraShippingPolicyId: string | null;
   };
 };
 
@@ -109,6 +123,7 @@ export type RunnerResultInput = {
   error?: string | null;
   diagnostics?: Record<string, unknown> | null;
   categories?: unknown;
+  shippingPolicies?: unknown;
   group?: { id: string; name: string } | null;
   snapshots?: BaljuoraProductSnapshot[];
   items?: RunnerItemResult[];
@@ -169,8 +184,17 @@ function cleanSettings(input: Partial<BaljuoraSettings>, base: BaljuoraSettings)
   for (const [key, value] of Object.entries(input.categoryMap ?? base.categoryMap)) {
     if (typeof key === "string" && typeof value === "string" && key && value) categoryMap[key] = value;
   }
+  const cleanMap = (value: Record<string, string> | undefined) => {
+    const result: Record<string, string> = {};
+    for (const [key, item] of Object.entries(value ?? {})) {
+      if (typeof key === "string" && typeof item === "string" && key && item) result[key] = item;
+    }
+    return result;
+  };
+  const shippingPolicyMap = cleanMap(input.shippingPolicyMap ?? base.shippingPolicyMap);
+  const baljuoraCategoryMap = cleanMap(input.baljuoraCategoryMap ?? base.baljuoraCategoryMap);
   const templateCode = input.templateCode === undefined ? base.templateCode : (typeof input.templateCode === "string" && input.templateCode.trim()) || null;
-  return { merchantSlug: slug || DEFAULT_SETTINGS.merchantSlug, groupKeyword: keyword || DEFAULT_SETTINGS.groupKeyword, categoryMap, templateCode };
+  return { merchantSlug: slug || DEFAULT_SETTINGS.merchantSlug, groupKeyword: keyword || DEFAULT_SETTINGS.groupKeyword, categoryMap, baljuoraCategoryMap, shippingPolicyMap, templateCode };
 }
 
 export async function getBaljuoraSettings(): Promise<BaljuoraSettings> {
@@ -183,6 +207,11 @@ export async function saveBaljuoraSettings(input: Partial<BaljuoraSettings>) {
     await writeStore(STORE_SETTINGS, next);
     return next;
   });
+}
+
+// DB센터 상품 → 비교용 값(카테고리 연결 두 방향·배송비 정책 연결을 설정에서 씀)
+function syncValues(product: Parameters<typeof doogoSyncValues>[0], settings: BaljuoraSettings) {
+  return doogoSyncValues(product, settings.categoryMap, settings.shippingPolicyMap, settings.baljuoraCategoryMap);
 }
 
 function generateCode() {
@@ -237,6 +266,7 @@ type ProductRow = {
   isVisible: boolean;
   isSoldOut: boolean;
   shippingType: "domestic" | "overseas";
+  shippingPolicyId: string | null;
 };
 
 async function loadProductRows(ids?: string[]): Promise<ProductRow[]> {
@@ -255,7 +285,8 @@ async function loadProductRows(ids?: string[]): Promise<ProductRow[]> {
     supplierName: products.supplierName,
     isVisible: products.isVisible,
     isSoldOut: products.isSoldOut,
-    shippingType: products.shippingType
+    shippingType: products.shippingType,
+    shippingPolicyId: products.shippingPolicyId
   };
   if (ids && ids.length === 0) return [];
   const where = ids ? and(sql`${products.deletedAt} IS NULL`, inArray(products.id, ids)) : sql`${products.deletedAt} IS NULL`;
@@ -339,14 +370,15 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
   for (const productId of wanted) {
     const product = productById.get(productId);
     if (!product) continue;
-    const values = doogoSyncValues(product, settings.categoryMap);
+    const values = syncValues(product, settings);
     const anyLink = linkByProduct.get(productId);
     // 예전 형식 연결(비교 때 발주오라에서 찾지 못한 상품)은 새로 등록합니다.
     const link = anyLink && linkState(anyLink) ? anyLink : undefined;
     const requested = input.fieldsByProduct?.[productId]?.filter((field) => BALJUORA_SYNC_FIELDS.includes(field));
     let fields: BaljuoraSyncField[];
     if (!link) {
-      fields = BALJUORA_SYNC_FIELDS.filter((field) => field !== "groupPrice" || values.groupPrice !== values.supplyPrice);
+      // 배송비 정책은 DB센터 정책과 연결한 발주오라 정책이 있을 때만 넣습니다(없으면 설정 복사용 상품의 정책을 따름).
+      fields = BALJUORA_SYNC_FIELDS.filter((field) => (field !== "groupPrice" || values.groupPrice !== values.supplyPrice) && (field !== "shippingPolicy" || Boolean(values.baljuoraShippingPolicyId)));
     } else {
       const state = linkState(link);
       const diffs = state ? diffBaljuoraProduct(values, state, baljuoraCategories) : [];
@@ -383,7 +415,8 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
         purchaseCost: values.purchaseCost,
         categoryId: values.baljuoraCategoryId,
         imageUrl: values.imageUrl,
-        isTaxable: isHealthCategoryName(categoryName.get(product.categoryId))
+        isTaxable: isHealthCategoryName(categoryName.get(product.categoryId)),
+        baljuoraShippingPolicyId: values.baljuoraShippingPolicyId
       }
     });
   }
@@ -518,7 +551,45 @@ function sanitizeSnapshot(input: unknown): BaljuoraProductSnapshot | null {
   };
   if ("groupPrice" in record && record.groupPrice !== undefined) snapshot.groupPrice = toPrice(record.groupPrice);
   if (Array.isArray(record.categoryIds)) snapshot.categoryIds = strings(record.categoryIds);
+  if ("shippingPolicyId" in record && record.shippingPolicyId !== undefined) {
+    snapshot.shippingPolicyId = typeof record.shippingPolicyId === "string" && record.shippingPolicyId.trim() ? record.shippingPolicyId.trim().slice(0, 80) : null;
+  }
   return snapshot;
+}
+
+// 발주오라 배송비 정책 목록(책갈피가 읽어 보냄)을 정리합니다. 값은 정책 이름·코드·배송비 구간뿐입니다.
+function sanitizeShippingPolicies(input: unknown): BaljuoraShippingPolicy[] {
+  if (!Array.isArray(input)) return [];
+  const result: BaljuoraShippingPolicy[] = [];
+  for (const item of input.slice(0, 300)) {
+    if (!item || typeof item !== "object") continue;
+    const record = item as Record<string, unknown>;
+    if (typeof record.id !== "string" || !record.id.trim()) continue;
+    const rules = Array.isArray(record.rules) ? record.rules.slice(0, 50).filter((rule): rule is Record<string, unknown> => Boolean(rule) && typeof rule === "object").map((rule) => ({
+      startRange: toPrice(rule.startRange),
+      endRange: toPrice(rule.endRange),
+      fee: toPrice(rule.fee) ?? 0,
+      unitType: typeof rule.unitType === "string" ? rule.unitType.slice(0, 20) : null
+    })) : [];
+    result.push({
+      id: record.id.trim().slice(0, 80),
+      code: typeof record.code === "string" && record.code.trim() ? record.code.trim().slice(0, 40) : null,
+      name: collapseName(typeof record.name === "string" ? record.name : "").slice(0, 100),
+      type: typeof record.type === "string" ? record.type.slice(0, 30) : null,
+      fixedFee: toPrice(record.fixedFee),
+      isConditionRepeat: record.isConditionRepeat === true,
+      isSameOrderFree: record.isSameOrderFree === true,
+      isJejuAndRemoteAdditionalFee: record.isJejuAndRemoteAdditionalFee === true,
+      jejuAdditionalFee: toPrice(record.jejuAdditionalFee) ?? 0,
+      remoteAdditionalFee: toPrice(record.remoteAdditionalFee) ?? 0,
+      rules
+    });
+  }
+  return result;
+}
+
+async function loadDoogoShippingPolicies() {
+  return getDb().select({ id: shippingPolicies.id, name: shippingPolicies.name, policyCode: shippingPolicies.policyCode, shippingType: shippingPolicies.shippingType, isActive: shippingPolicies.isActive }).from(shippingPolicies);
 }
 
 function chunk<T>(items: T[], size: number) {
@@ -598,7 +669,7 @@ async function ingestCompareBatch(row: BaljuoraSyncJob, snapshots: BaljuoraProdu
     usedCodes.add(externalCode);
     const previous = linkByExternal.get(snapshot.id);
     const previousState = previous && previous.productId === product.id ? linkState(previous) : null;
-    const values = doogoSyncValues(product, settings.categoryMap);
+    const values = syncValues(product, settings);
     // 처음 연결하는 상품은 지금 값을 기준으로 삼습니다(이미지는 발주오라에 이미지가 있으면 같다고 봄).
     const baseline: BaljuoraBaseline = previousState?.baseline ?? {
       doogo: doogoComparable(values),
@@ -658,7 +729,7 @@ async function ingestPushItems(plan: PushPlan, items: RunnerItemResult[], result
       continue;
     }
     const snapshot = sanitizeSnapshot(item.snapshot) ?? (link ? linkState(link)?.snapshot : null) ?? null;
-    const values = doogoSyncValues(product, settings.categoryMap);
+    const values = syncValues(product, settings);
     const previous = link ? linkState(link) : null;
     const after: BaljuoraProductSnapshot = snapshot ?? {
       id: record.baljuoraId,
@@ -730,8 +801,20 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
         if (flat.length > 0) {
           await writeStore(STORE_CATEGORIES, flat);
           const settings = await getBaljuoraSettings();
-          const doogoCategories = await db.select({ id: categories.id, name: categories.name }).from(categories);
-          await writeStore(STORE_SETTINGS, { ...settings, categoryMap: suggestCategoryMapping(doogoCategories, flat, settings.categoryMap) });
+          // 숨긴(합쳐진) DB센터 카테고리는 자동 연결하지 않고, 예전에 연결된 것도 뺍니다(공개 화면에 없는 카테고리).
+          const doogoCategories = await db.select({ id: categories.id, name: categories.name }).from(categories).where(eq(categories.isActive, true));
+          const activeIds = new Set(doogoCategories.map((category) => category.id));
+          const activeMap = Object.fromEntries(Object.entries(settings.categoryMap).filter(([doogoId]) => activeIds.has(doogoId)));
+          await writeStore(STORE_SETTINGS, { ...settings, categoryMap: suggestCategoryMapping(doogoCategories, flat, activeMap) });
+        }
+      }
+      if (input.shippingPolicies !== undefined) {
+        const policies = sanitizeShippingPolicies(input.shippingPolicies);
+        // 목록을 읽지 못했으면(빈 목록) 예전 목록·연결을 그대로 둡니다.
+        if (policies.length > 0) {
+          await writeStore(STORE_POLICIES, policies);
+          const settings = await getBaljuoraSettings();
+          await writeStore(STORE_SETTINGS, { ...settings, shippingPolicyMap: suggestShippingPolicyMapping(await loadDoogoShippingPolicies(), policies, settings.shippingPolicyMap) });
         }
       }
       if (input.group !== undefined) await writeStore(STORE_GROUP, input.group && typeof input.group.id === "string" ? { id: input.group.id.slice(0, 80), name: collapseName(String(input.group.name)).slice(0, 120) } : null);
@@ -844,7 +927,7 @@ export async function listBaljuoraChanges() {
     let groupPriceRead = 0;
     for (const product of productRows) {
       const link = linkByProduct.get(product.id);
-      const values: DoogoSyncValues = doogoSyncValues(product, settings.categoryMap);
+      const values: DoogoSyncValues = syncValues(product, settings);
       const state = link ? linkState(link) : null;
       // 연결이 없거나, 예전 형식 연결만 있는 상품(비교 때 발주오라에서 찾지 못함)은 신규 등록 대상입니다.
       if (!link || !state) {
@@ -926,17 +1009,21 @@ export async function getBaljuoraOverview() {
   return guard(async () => {
     const db = getDb();
     await expireStaleJobs();
-    const [settings, { doogoCategories, baljuoraCategories }, group, linkCount, recentJobs, active] = await Promise.all([
+    const [settings, { doogoCategories, baljuoraCategories }, group, linkCount, recentJobs, active, doogoPolicies, baljuoraPolicies] = await Promise.all([
       getBaljuoraSettings(),
       loadCategoryContext(),
       readStore<{ id: string; name: string } | null>(STORE_GROUP, null),
       db.select({ count: freshLinkCount }).from(externalProductLinks).where(eq(externalProductLinks.provider, PROVIDER)),
       db.select().from(baljuoraSyncJobs).orderBy(desc(baljuoraSyncJobs.createdAt)).limit(12),
-      db.select().from(baljuoraSyncJobs).where(inArray(baljuoraSyncJobs.status, ["waiting", "running"])).orderBy(desc(baljuoraSyncJobs.createdAt)).limit(1)
+      db.select().from(baljuoraSyncJobs).where(inArray(baljuoraSyncJobs.status, ["waiting", "running"])).orderBy(desc(baljuoraSyncJobs.createdAt)).limit(1),
+      loadDoogoShippingPolicies(),
+      readStore<BaljuoraShippingPolicy[]>(STORE_POLICIES, [])
     ]);
     const lastCompare = recentJobs.find((job) => job.type === "compare" && job.status === "done");
     const lastPush = recentJobs.find((job) => job.type === "push" && job.status === "done");
     return {
+      doogoShippingPolicies: doogoPolicies.filter((policy) => policy.isActive).map((policy) => ({ id: policy.id, name: policy.name, policyCode: policy.policyCode, shippingType: policy.shippingType })),
+      baljuoraShippingPolicies: (Array.isArray(baljuoraPolicies) ? baljuoraPolicies : []).map((policy) => ({ id: policy.id, code: policy.code, name: policy.name, type: policy.type, convertible: baljuoraPolicyRate(policy) !== null })),
       settings,
       doogoCategories: doogoCategories.filter((category) => category.isActive).map((category) => ({ id: category.id, name: category.name, shippingType: category.shippingType })),
       baljuoraCategories,
@@ -976,14 +1063,50 @@ export async function getBaljuoraHomeSummary() {
 // ─── 발주오라 → DB센터 가져오기 ──────────────────────────────────────────────────
 
 function reverseCategory(snapshot: BaljuoraProductSnapshot, settings: BaljuoraSettings, baljuoraCategories: BaljuoraCategory[], doogoCategories: Array<{ id: string; name: string; shippingType: "domestic" | "overseas"; isActive: boolean }>) {
-  const ids = snapshot.categoryIds ?? [];
-  for (const [doogoId, baljuoraId] of Object.entries(settings.categoryMap)) {
-    if (ids.length > 0 && categoryMatches(ids, baljuoraId, baljuoraCategories) && doogoCategories.some((category) => category.id === doogoId && category.isActive)) return doogoId;
-  }
-  return null;
+  const active = new Set(doogoCategories.filter((category) => category.isActive).map((category) => category.id));
+  return doogoCategoryForBaljuora(snapshot.categoryIds, settings.categoryMap, settings.baljuoraCategoryMap, baljuoraCategories, (id) => active.has(id));
 }
 
-export async function pullFromBaljuora(input: { productIds?: string[]; fields?: BaljuoraSyncField[]; baljuoraIds?: string[] }, changedBy: string) {
+// 발주오라 배송비 정책 → DB센터 배송 정책: 연결한 DB센터 정책(같은 배송유형)을 쓰고, 없으면 발주오라 정책 내용(유형·구간·제주/도서산간)으로
+// DB센터 정책을 새로 만들어 연결합니다(발주오라 기준 맞추기). DB센터 형식으로 옮길 수 없는 정책이면 이유를 알려 줍니다.
+type PolicyContext = {
+  doogoPolicies: Array<{ id: string; name: string; policyCode: string | null; shippingType: string; isActive: boolean }>;
+  baljuoraPolicies: BaljuoraShippingPolicy[];
+  map: Record<string, string>;
+  changed: boolean;
+};
+
+async function doogoPolicyFor(baljuoraPolicyId: string, shippingType: "domestic" | "overseas", context: PolicyContext) {
+  const connected = new Set(Object.entries(context.map).filter(([, baljuoraId]) => baljuoraId === baljuoraPolicyId).map(([doogoId]) => doogoId));
+  const existing = context.doogoPolicies.find((policy) => connected.has(policy.id) && policy.shippingType === shippingType && policy.isActive);
+  if (existing) return existing.id;
+  const definition = context.baljuoraPolicies.find((policy) => policy.id === baljuoraPolicyId);
+  if (!definition) throw new Error("발주오라 배송비 정책 정보를 읽지 못했습니다. '발주오라 상품 불러오기(비교)'를 다시 한 뒤 가져와 주세요.");
+  const rate = baljuoraPolicyRate(definition);
+  if (!rate) throw new Error(`발주오라 배송비 정책 '${definition.name}'을 DB센터 형식으로 옮기지 못했습니다. 배송 정책 메뉴에서 같은 이름으로 만든 뒤 다시 가져와 주세요.`);
+  const code = definition.code && /^[A-Za-z0-9]{1,20}$/.test(definition.code) && !context.doogoPolicies.some((policy) => policy.policyCode === definition.code) ? definition.code : null;
+  const created = await createShippingPolicy({
+    name: definition.name.slice(0, 20) || "발주오라 배송비",
+    shippingType,
+    rateType: rate.rateType,
+    fee: rate.fee,
+    rateTiers: rate.tiers,
+    unitLabel: rate.unitLabel,
+    freeWholeOrder: rate.freeWholeOrder,
+    policyCode: code,
+    jejuExtraFee: rate.jejuExtraFee,
+    islandExtraFee: rate.islandExtraFee,
+    description: "발주오라 매출배송정책에서 가져옴"
+  });
+  context.doogoPolicies.push({ id: created.id, name: created.name, policyCode: created.policyCode ?? null, shippingType, isActive: true });
+  context.map[created.id] = baljuoraPolicyId;
+  context.changed = true;
+  return created.id;
+}
+
+// 발주오라 → DB센터: 고른 상품에서 지금 발주오라와 다른 칸만 발주오라 값으로 바꿉니다(같은 칸은 그대로).
+// onlyPulled: '가져올 변경' 탭처럼 발주오라에서 바뀐 칸(pull·both)만. 없으면 '발주오라 기준 맞추기'처럼 다른 칸 전부(fields로 고름).
+export async function pullFromBaljuora(input: { productIds?: string[]; fields?: BaljuoraSyncField[]; baljuoraIds?: string[]; onlyPulled?: boolean }, changedBy: string) {
   return guard(async () => {
     const settings = await getBaljuoraSettings();
     const [{ doogoCategories, baljuoraCategories }, onlyList, catalog] = await Promise.all([
@@ -993,8 +1116,12 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
     ]);
     const fields = (input.fields?.length ? input.fields : BALJUORA_SYNC_FIELDS).filter((field) => BALJUORA_SYNC_FIELDS.includes(field));
     const productById = new Map(catalog.products.map((product) => [product.id, product]));
-    const result = { updated: 0, created: 0, failed: [] as Array<{ id: string; name: string; error: string }> };
+    const result = { updated: 0, created: 0, unchanged: 0, failed: [] as Array<{ id: string; name: string; error: string }>, skipped: [] as Array<{ id: string; name: string; field: BaljuoraSyncField; reason: string }> };
     const now = nowIso();
+    const policyContext: PolicyContext | null = fields.includes("shippingPolicy")
+      ? { doogoPolicies: await loadDoogoShippingPolicies(), baljuoraPolicies: await readStore<BaljuoraShippingPolicy[]>(STORE_POLICIES, []), map: { ...settings.shippingPolicyMap }, changed: false }
+      : null;
+    const categoryPath = new Map(baljuoraCategories.map((category) => [category.id, category.path]));
 
     // 1) 연결된 상품: 발주오라 값으로 DB센터 상품을 바꿉니다(가격 변경은 가격변동 이력에 남습니다).
     const productIds = [...new Set(input.productIds ?? [])].slice(0, 500);
@@ -1005,23 +1132,45 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
       if (!state || !product) continue;
       const snapshot = state.snapshot;
       try {
+        // 지금 다른 칸만 바꿉니다(예: 같은 그림인데 주소만 다른 이미지를 바꾸거나, 맞는 카테고리를 다른 연결 카테고리로 옮기지 않게).
+        const before = syncValues(product, settings);
+        // '이대로 두기'로 뺀 칸은 화면 목록과 같게 건너뜁니다(보여 준 칸만 바꿈).
+        const differing = new Set(diffBaljuoraProduct(before, state, baljuoraCategories)
+          .filter((diff) => !input.onlyPulled || diff.direction === "pull" || diff.direction === "both")
+          .map((diff) => diff.field));
+        const wants = (field: BaljuoraSyncField) => fields.includes(field) && differing.has(field);
+        if (![...differing].some((field) => fields.includes(field))) {
+          result.unchanged += 1;
+          continue;
+        }
         const next = asProductInput(product);
-        if (fields.includes("name") && snapshot.name) next.name = snapshot.name;
-        if (fields.includes("supplyPrice") && snapshot.supplyPrice !== null) next.generalPrice = snapshot.supplyPrice;
-        if (fields.includes("groupPrice") && snapshot.groupPrice !== undefined) next.aPrice = snapshot.groupPrice ?? next.generalPrice;
-        if (fields.includes("consumerPrice")) {
+        if (wants("name") && snapshot.name) next.name = snapshot.name;
+        if (wants("supplyPrice") && snapshot.supplyPrice !== null) next.generalPrice = snapshot.supplyPrice;
+        if (wants("groupPrice") && snapshot.groupPrice !== undefined) next.aPrice = snapshot.groupPrice ?? next.generalPrice;
+        if (wants("consumerPrice")) {
           next.salePrice = snapshot.consumerPrice;
           next.salePriceMode = snapshot.consumerPrice ? "fixed" : "autonomous";
         }
-        if (fields.includes("purchaseCost") && snapshot.purchaseCost !== null) next.costPrice = snapshot.purchaseCost;
-        if (fields.includes("image") && snapshot.imageUrls[0]) next.imageUrl = snapshot.imageUrls[0];
-        if (fields.includes("category")) {
+        if (wants("purchaseCost") && snapshot.purchaseCost !== null) next.costPrice = snapshot.purchaseCost;
+        if (wants("image") && snapshot.imageUrls[0]) next.imageUrl = snapshot.imageUrls[0];
+        if (wants("category")) {
           const categoryId = reverseCategory(snapshot, settings, baljuoraCategories, doogoCategories);
           const category = doogoCategories.find((item) => item.id === categoryId);
           if (category && category.shippingType === next.shippingType) next.categoryId = category.id;
+          else {
+            const path = (snapshot.categoryIds ?? []).map((id) => categoryPath.get(id) ?? id).join(", ") || "없음";
+            result.skipped.push({ id: product.id, name: product.name, field: "category", reason: category ? `연결된 DB센터 카테고리 '${category.name}'의 배송유형이 상품과 달라 바꾸지 않았습니다.` : `발주오라 카테고리(${path})와 연결된 DB센터 카테고리가 없습니다. 동기화 설정 > 카테고리 맞추기에서 연결하거나 만들어 주세요.` });
+          }
+        }
+        if (wants("shippingPolicy") && snapshot.shippingPolicyId && policyContext) {
+          try {
+            next.shippingPolicyId = await doogoPolicyFor(snapshot.shippingPolicyId, next.shippingType, policyContext);
+          } catch (error) {
+            result.skipped.push({ id: product.id, name: product.name, field: "shippingPolicy", reason: error instanceof Error ? error.message : "배송비 정책을 가져오지 못했습니다." });
+          }
         }
         const saved = await updateProduct(product.id, next, changedBy);
-        const values = doogoSyncValues(saved, settings.categoryMap);
+        const values = syncValues(saved, settings);
         const baseline: BaljuoraBaseline = { doogo: doogoComparable(values), baljuora: baljuoraComparable(snapshot), pushedImageUrl: state.baseline?.pushedImageUrl ?? null, at: now };
         await getDb().update(externalProductLinks).set({ rawSnapshot: stateJson({ snapshot, baseline, ignored: state.ignored }), syncStatus: "imported", updatedAt: now }).where(eq(externalProductLinks.id, link.id));
         result.updated += 1;
@@ -1057,7 +1206,7 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
             isSoldOut: snapshot.isSoldOut ?? false,
             isAlwaysOnSale: true
           });
-          const values = doogoSyncValues(created, settings.categoryMap);
+          const values = syncValues(created, settings);
           upserts.push({
             provider: PROVIDER,
             externalProductId: snapshot.id,
@@ -1083,7 +1232,34 @@ export async function pullFromBaljuora(input: { productIds?: string[]; fields?: 
         await writeStore(STORE_ONLY, (Array.isArray(onlyList) ? onlyList : []).filter((snapshot) => !linkedIds.has(snapshot.id)));
       }
     }
+    // 가져오면서 새로 만든 DB센터 배송 정책은 발주오라 정책과 연결해 둡니다(다음 비교부터 같은 정책으로 봄).
+    if (policyContext?.changed) await saveBaljuoraSettings({ shippingPolicyMap: policyContext.map });
     return result;
+  });
+}
+
+// 카테고리 맞추기: DB센터 카테고리와 연결되지 않은 발주오라 카테고리를 DB센터에 같은 이름으로 만들고 연결합니다
+// (같은 이름의 DB센터 카테고리가 이미 있으면 새로 만들지 않고 연결만). 발주오라 카테고리는 바꾸지 않습니다.
+export async function createDoogoCategoriesFromBaljuora(input: { baljuoraCategoryIds: string[]; shippingType: "domestic" | "overseas" }) {
+  return guard(async () => {
+    const [settings, { doogoCategories, baljuoraCategories }] = await Promise.all([getBaljuoraSettings(), loadCategoryContext()]);
+    const map = { ...settings.categoryMap };
+    const activeIds = new Set(doogoCategories.filter((category) => category.isActive).map((category) => category.id));
+    const connected = new Set([...Object.entries(map).filter(([doogoId]) => activeIds.has(doogoId)).map(([, baljuoraId]) => baljuoraId), ...Object.keys(settings.baljuoraCategoryMap)]);
+    const created: Array<{ id: string; name: string; baljuoraId: string; reused: boolean }> = [];
+    for (const id of [...new Set(input.baljuoraCategoryIds)].slice(0, 100)) {
+      const category = baljuoraCategories.find((item) => item.id === id);
+      if (!category || connected.has(id)) continue;
+      const key = plainCategoryName(category.name);
+      const same = doogoCategories.find((item) => item.isActive && item.shippingType === input.shippingType && !map[item.id] && key && plainCategoryName(item.name) === key);
+      const target = same ?? await createCategory({ name: category.name.slice(0, 60), shippingType: input.shippingType, sortOrder: 1000 + created.length, isActive: true });
+      if (!same) doogoCategories.push({ id: target.id, name: target.name, shippingType: input.shippingType, isActive: true });
+      map[target.id] = id;
+      connected.add(id);
+      created.push({ id: target.id, name: target.name, baljuoraId: id, reused: Boolean(same) });
+    }
+    if (created.length > 0) await saveBaljuoraSettings({ categoryMap: map });
+    return { created };
   });
 }
 
@@ -1099,7 +1275,7 @@ export async function ignoreBaljuoraDifferences(productIds: string[], fields?: B
       const state = linkState(link);
       const product = productById.get(link.productId);
       if (!state || !product) continue;
-      const values = doogoSyncValues(product, settings.categoryMap);
+      const values = syncValues(product, settings);
       const diffs = diffBaljuoraProduct(values, { ...state, ignored: undefined }, baljuoraCategories).filter((diff) => !fields?.length || fields.includes(diff.field));
       if (diffs.length === 0) continue;
       const ignored = { ...(state.ignored ?? {}) };

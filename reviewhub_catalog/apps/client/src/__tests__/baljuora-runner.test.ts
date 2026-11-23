@@ -22,11 +22,17 @@ function jsonResponse(status: number, body: unknown) {
 
 const GROUP = { id: "grp-1", name: "황금농부 수강생" };
 
+// 발주오라 배송비 정책(매출배송정책): 목록에는 구간(rules)이 없고 정책 상세에 있습니다.
+const BJ_POLICIES = [
+  { id: "bj-pol-1", code: "SP100", name: "택배 3000", type: "fixed", fixedFee: 3000, isConditionRepeat: false, isSameOrderFree: false, isJejuAndRemoteAdditionalFee: false, jejuAdditionalFee: 0, remoteAdditionalFee: 0, rules: [] },
+  { id: "bj-pol-2", code: "SP200", name: "조건부무료", type: "byPrice", fixedFee: null, isConditionRepeat: false, isSameOrderFree: false, isJejuAndRemoteAdditionalFee: true, jejuAdditionalFee: 3000, remoteAdditionalFee: 5000, rules: [{ id: "r1", startRange: "0.00", endRange: "30000.00", fee: 3000, unitType: "won" }, { id: "r2", startRange: "30000.00", endRange: null, fee: 0, unitType: "won" }] }
+];
+
 // 실제 발주오라 상품 수정(PUT products/:id, 2026-11-23 화면 코드 확인): 바뀐 칸만 받고,
 // 개별공급가는 sellerProductPrices 목록 전체 [{ targetType: "group" | "seller", targetId, shippingPolicyId?, supplyPrice }]로 바꿉니다.
 function applyProductPut(product: any, body: any, options: { allowed?: string[]; rowAllowed?: string[] } = {}) {
   if (!product) return jsonResponse(404, { statusCode: 404, message: "Not Found" });
-  const allowed = options.allowed ?? ["sellerProductPrices"];
+  const allowed = options.allowed ?? ["sellerProductPrices", "sellShippingPolicyId"];
   const extra = Object.keys(body).filter((key) => !allowed.includes(key));
   if (extra.length) return jsonResponse(400, { statusCode: 400, message: extra.map((key) => `property ${key} should not exist`), error: "Bad Request" });
   if (body.sellerProductPrices !== undefined) {
@@ -47,6 +53,10 @@ function applyProductPut(product: any, body: any, options: { allowed?: string[];
         : { seller: previous?.seller ?? { id: row.targetId, companyName: "매출처" } };
       return { id: previous?.id ?? `pr-new-${index}`, productId: product.id, targetType: row.targetType, targetId: row.targetId, shippingPolicyId: row.shippingPolicyId ?? null, supplyPrice: row.supplyPrice, ...target };
     });
+  }
+  if (body.sellShippingPolicyId !== undefined) {
+    product.sellShippingPolicyId = body.sellShippingPolicyId;
+    product.shippingPolicy = BJ_POLICIES.find((item) => item.id === body.sellShippingPolicyId) ?? null;
   }
   return jsonResponse(200, { statusCode: 200, data: { id: product.id } });
 }
@@ -269,7 +279,9 @@ function createIncludeFake(options: { rowAllowed?: string[]; productPutAllowed?:
       { id: "pr-1", createdAt: "2026-11-01T00:00:00Z", updatedAt: "2026-11-01T00:00:00Z", productId: "bj-y", targetType: "group", targetId: "grp-1", shippingPolicyId: null, supplyPrice: 6270, sellerGroup: { ...GROUP } },
       { id: "pr-2", createdAt: "2026-11-01T00:00:00Z", updatedAt: "2026-11-01T00:00:00Z", productId: "bj-y", targetType: "seller", targetId: "s-9", shippingPolicyId: null, supplyPrice: 6000, seller: { id: "s-9", companyName: "황금농부 김씨" } }
     ],
-    visibility: []
+    visibility: [],
+    sellShippingPolicyId: "bj-pol-1",
+    shippingPolicy: { ...BJ_POLICIES[0] }
   };
   const calls: Array<{ method: string; url: string; body?: any }> = [];
   const view = (withInclude: boolean) => {
@@ -286,6 +298,11 @@ function createIncludeFake(options: { rowAllowed?: string[]; productPutAllowed?:
     const path = url.pathname.replace(/^\//, "");
     if (method === "GET" && path === "merchant/seller-groups") return jsonResponse(200, { data: { items: [GROUP] } });
     if (method === "GET" && path === "merchant/categories/tree") return jsonResponse(200, { data: [] });
+    if (method === "GET" && path === "merchant/shipping-policies") return jsonResponse(200, { data: { items: BJ_POLICIES.map(({ rules, ...rest }) => { void rules; return rest; }), meta: { page: 1, totalPages: 1, hasNext: false } } });
+    if (method === "GET" && path.startsWith("merchant/shipping-policies/")) {
+      const found = BJ_POLICIES.find((item) => item.id === decodeURIComponent(path.slice("merchant/shipping-policies/".length)));
+      return found ? jsonResponse(200, { data: found }) : jsonResponse(404, { message: "Not Found" });
+    }
     if (method === "GET" && path === "products") return jsonResponse(200, { data: { items: [view(false)], meta: { page: 1, totalPages: 1, hasNext: false } } });
     if (method === "GET" && path === "products/bj-y") return jsonResponse(200, { data: view(String(url.searchParams.get("include") || "").split(",").includes("prices")) });
     if (method === "PUT" && path === "products/bj-y/pricing") {
@@ -497,6 +514,50 @@ describe("수강생 단가 = 황금농부 개별공급가(prices, 2026-11-23)", 
     internals.verifyApplied(result, { values: { groupPrice: 6400, supplyPrice: 6900 } }, { supplyPrice: 6900, groupPrice: 6270 });
     expect(result.applied).toEqual([]);
     expect(result.skipped[0]).toEqual({ field: "groupPrice", reason: "보낸 값(6400)과 발주오라에 저장된 값(6270)이 다릅니다." });
+  });
+});
+
+describe("배송비 정책(매출배송정책, 2026-11-23)", () => {
+  const values = { name: "[본] 대왕 수제약과 [9입] 450g", supplyPrice: 6900, groupPrice: 6270, consumerPrice: null, purchaseCost: 5700, categoryId: null, imageUrl: null, isTaxable: false };
+  const runnerOf = (fake: ReturnType<typeof createIncludeFake>) => internals.createRunner({ fetch: fake.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+
+  it("상품의 매출배송정책(sellShippingPolicyId, 없으면 shippingPolicy.id)을 읽고, 칸이 없으면 읽지 못함으로 둡니다", () => {
+    expect(internals.normalizeProduct({ id: "a", sellShippingPolicyId: "bj-pol-1" }, {}).shippingPolicyId).toBe("bj-pol-1");
+    expect(internals.normalizeProduct({ id: "a", sellShippingPolicyId: null }, {}).shippingPolicyId).toBeNull();
+    expect(internals.normalizeProduct({ id: "a", shippingPolicy: { id: "bj-pol-2" } }, {}).shippingPolicyId).toBe("bj-pol-2");
+    expect("shippingPolicyId" in internals.normalizeProduct({ id: "a" }, {})).toBe(false);
+  });
+
+  it("비교 때 배송비 정책 목록을 읽고, 목록에 구간이 없으면 정책 상세(또는 상품 상세에 딸린 정책)로 채워 DB센터로 보냅니다", async () => {
+    const fake = createIncludeFake();
+    const report = createReport();
+    await runnerOf(fake).runCompare({ type: "compare", groupKeyword: "황금농부", detailIds: ["bj-y"] }, report);
+    const [batch] = report.posted;
+    expect(batch.shippingPolicies.map((item: any) => [item.id, item.type, item.rules.length])).toEqual([["bj-pol-1", "fixed", 0], ["bj-pol-2", "byPrice", 2]]);
+    expect(batch.shippingPolicies[1].rules[0]).toEqual({ startRange: 0, endRange: 30000, fee: 3000, unitType: "won" });
+    expect(batch.snapshots.find((item: any) => item.id === "bj-y").shippingPolicyId).toBe("bj-pol-1");
+    // bj-pol-1 구간은 상품 상세에 딸려 와서 정책 상세를 다시 읽지 않음
+    expect(fake.calls.filter((call) => call.url.includes("/merchant/shipping-policies/")).map((call) => new URL(call.url).pathname)).toEqual(["/merchant/shipping-policies/bj-pol-2"]);
+    expect(fake.calls.some((call) => call.method !== "GET" && call.url.startsWith("https://api.baljuora.com"))).toBe(false);
+  });
+
+  it("보낼 때: 연결한 발주오라 정책과 다르면 PUT products/:id 로 sellShippingPolicyId를 보내고 다시 읽어 확인합니다", async () => {
+    const fake = createIncludeFake();
+    const result = await runnerOf(fake).pushItem(pushItem({ baljuoraId: "bj-y", code: "ass00050", fields: ["shippingPolicy"], values: { ...values, baljuoraShippingPolicyId: "bj-pol-2" } }), { groupKeyword: "황금농부" }, { group: GROUP, groupKeyword: "황금농부" }, "CODE");
+    expect(fake.calls.filter((call) => call.method === "PUT").map((call) => [new URL(call.url).pathname, call.body])).toEqual([["/products/bj-y", { sellShippingPolicyId: "bj-pol-2" }]]);
+    expect({ ok: result.ok, applied: result.applied, skipped: result.skipped }).toEqual({ ok: true, applied: ["shippingPolicy"], skipped: [] });
+    expect(result.snapshot.shippingPolicyId).toBe("bj-pol-2");
+  });
+
+  it("보낼 때: 이미 같으면 보내지 않고 '반영됨', 연결한 발주오라 정책이 없으면 보내지 않고 이유를 알립니다", async () => {
+    const same = createIncludeFake();
+    const sameResult = await runnerOf(same).pushItem(pushItem({ baljuoraId: "bj-y", code: "ass00050", fields: ["shippingPolicy"], values: { ...values, baljuoraShippingPolicyId: "bj-pol-1" } }), { groupKeyword: "황금농부" }, { group: GROUP, groupKeyword: "황금농부" }, "CODE");
+    expect(same.calls.some((call) => call.method === "PUT")).toBe(false);
+    expect(sameResult.applied).toEqual(["shippingPolicy"]);
+    const none = createIncludeFake();
+    const noneResult = await runnerOf(none).pushItem(pushItem({ baljuoraId: "bj-y", code: "ass00050", fields: ["shippingPolicy"], values: { ...values, baljuoraShippingPolicyId: null } }), { groupKeyword: "황금농부" }, { group: GROUP, groupKeyword: "황금농부" }, "CODE");
+    expect(none.calls.some((call) => call.method === "PUT")).toBe(false);
+    expect(noneResult.skipped).toEqual([{ field: "shippingPolicy", reason: expect.stringContaining("연결된 발주오라 매출배송정책이 없습니다") }]);
   });
 });
 

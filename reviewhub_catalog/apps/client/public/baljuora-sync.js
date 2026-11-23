@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.4.0";
+  var VERSION = "1.5.0";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   var INFO_FIELDS = ["name", "category", "image"];
@@ -174,7 +174,31 @@
     if (categoryIds !== undefined) snapshot.categoryIds = categoryIds;
     var groupPrice = extractGroupPrice(record, context && context.group, context && context.groupKeyword);
     if (groupPrice !== undefined) snapshot.groupPrice = groupPrice;
+    // 매출배송정책(배송비 정책): sellShippingPolicyId(없으면 shippingPolicy.id). 칸이 아예 없으면 읽지 못함(보내지 않음)
+    if ("sellShippingPolicyId" in record) snapshot.shippingPolicyId = typeof record.sellShippingPolicyId === "string" && record.sellShippingPolicyId ? record.sellShippingPolicyId : null;
+    else if (isObject(record.shippingPolicy) && typeof record.shippingPolicy.id === "string") snapshot.shippingPolicyId = record.shippingPolicy.id;
     return snapshot;
+  }
+
+  // 발주오라 배송비 정책(GET merchant/shipping-policies): 유형 fixed·free·byPrice·byQuantity·byUnit, 구간 rules[{startRange, endRange, fee, unitType}].
+  // 구간을 읽지 못했으면 rules는 null(정책 상세를 다시 읽음).
+  function normalizeShippingPolicy(raw) {
+    if (!isObject(raw) || typeof raw.id !== "string") return null;
+    return {
+      id: raw.id,
+      code: typeof raw.code === "string" && raw.code ? raw.code : null,
+      name: String(raw.name || "").replace(/\s+/g, " ").trim(),
+      type: typeof raw.type === "string" ? raw.type : null,
+      fixedFee: toNumber(raw.fixedFee),
+      isConditionRepeat: raw.isConditionRepeat === true,
+      isSameOrderFree: raw.isSameOrderFree === true,
+      isJejuAndRemoteAdditionalFee: raw.isJejuAndRemoteAdditionalFee === true,
+      jejuAdditionalFee: toNumber(raw.jejuAdditionalFee) || 0,
+      remoteAdditionalFee: toNumber(raw.remoteAdditionalFee) || 0,
+      rules: Array.isArray(raw.rules) ? raw.rules.filter(isObject).map(function (rule) {
+        return { startRange: toNumber(rule.startRange), endRange: toNumber(rule.endRange), fee: toNumber(rule.fee) || 0, unitType: typeof rule.unitType === "string" ? rule.unitType : null };
+      }) : null
+    };
   }
 
   // 목록에서 읽은 값에 상세에서 읽은 값을 더합니다(상세에만 있는 카테고리·그룹 가격·상품코드).
@@ -409,6 +433,7 @@
   }
 
   function expectedValue(field, values) {
+    if (field === "shippingPolicy") return values.baljuoraShippingPolicyId === undefined ? undefined : values.baljuoraShippingPolicyId;
     if (field === "supplyPrice") return values.supplyPrice;
     if (field === "consumerPrice") return values.consumerPrice;
     if (field === "purchaseCost") return values.purchaseCost;
@@ -422,7 +447,7 @@
     var still = [];
     (result.applied || []).forEach(function (field) {
       var expected = expectedValue(field, item.values);
-      var actual = field === "name" ? snapshot.name : snapshot[field];
+      var actual = field === "name" ? snapshot.name : field === "shippingPolicy" ? snapshot.shippingPolicyId : snapshot[field];
       if (field === "category") {
         if (snapshot.categoryIds !== undefined && item.values.categoryId && snapshot.categoryIds.indexOf(item.values.categoryId) < 0) {
           result.skipped.push({ field: field, reason: "발주오라에 저장된 카테고리가 다릅니다." });
@@ -543,6 +568,38 @@
         state.errors.push({ path: "GET merchant/seller-groups", status: error.status || 0, messages: messagesOf(error).slice(0, 3) });
         return null;
       }
+    }
+
+    // 배송비 정책 목록(최대 10쪽). 목록에 구간이 없으면 정책 상세를 읽고, 그래도 없으면 상품 상세에서 모은 정책으로 채웁니다.
+    async function loadShippingPolicies(fromDetails) {
+      var list = [];
+      try {
+        for (var page = 1; page <= 10; page += 1) {
+          var payload = unwrap(await api("GET", "merchant/shipping-policies", undefined, { params: { page: page, limit: 100 } }));
+          var items = pickArray(payload);
+          if (items[0] && !state.structure.shippingPolicy) state.structure.shippingPolicy = structureOf(items[0]);
+          items.forEach(function (item) { var policy = normalizeShippingPolicy(item); if (policy && !list.some(function (known) { return known.id === policy.id; })) list.push(policy); });
+          var meta = isObject(payload) && isObject(payload.meta) ? payload.meta : null;
+          if (items.length === 0 || !meta || !(meta.hasNext || (meta.totalPages && page < meta.totalPages))) break;
+        }
+      } catch (error) {
+        state.errors.push({ path: "GET merchant/shipping-policies", status: error.status || 0, messages: messagesOf(error).slice(0, 3) });
+      }
+      var known = fromDetails || {};
+      Object.keys(known).forEach(function (id) { if (!list.some(function (policy) { return policy.id === id; })) list.push(known[id]); });
+      var missing = list.filter(function (policy) { return policy.rules === null; }).slice(0, 60);
+      for (var index = 0; index < missing.length; index += 1) {
+        var policy = missing[index];
+        if (known[policy.id] && known[policy.id].rules) { policy.rules = known[policy.id].rules; continue; }
+        try {
+          var detail = normalizeShippingPolicy(unwrap(await api("GET", "merchant/shipping-policies/" + encodeURIComponent(policy.id))));
+          if (detail && detail.rules) policy.rules = detail.rules;
+        } catch (error) {
+          state.errors.push({ path: "GET merchant/shipping-policies/:id", status: error.status || 0, messages: messagesOf(error).slice(0, 3) });
+        }
+      }
+      list.forEach(function (policy) { if (policy.rules === null) policy.rules = []; });
+      return list;
     }
 
     async function loadCategories() {
@@ -682,7 +739,8 @@
       var raw = await listAllProducts(function (count, total) { report.progress(count, total || count, "발주오라 상품 목록 " + count + (total ? " / " + total : "") + "개 읽음"); });
       var snapshots = raw.map(function (record) { return normalizeProduct(record, context); }).filter(Boolean);
       var products = snapshots.filter(function (snapshot) { return snapshot.kind === "product"; });
-      var needsDetail = products.some(function (snapshot) { return snapshot.categoryIds === undefined || snapshot.groupPrice === undefined || !snapshot.code; });
+      var needsDetail = products.some(function (snapshot) { return snapshot.categoryIds === undefined || snapshot.groupPrice === undefined || snapshot.shippingPolicyId === undefined || !snapshot.code; });
+      var policiesFromDetails = {};
       // 목록에 상품코드가 거의 없으면 상품코드로 연결할 수 있게 모든 상품의 상세를 읽습니다(최대 5,000개).
       var withoutCode = products.filter(function (snapshot) { return !snapshot.code; }).length;
       var readAll = products.length > 0 && withoutCode / products.length > 0.5;
@@ -694,6 +752,9 @@
         var details = await mapLimit(targets, 5, async function (snapshot) {
           try {
             var detail = await getDetail(snapshot.id);
+            // 상세에 딸려 오는 매출배송정책(구간 포함)도 모아 둡니다(정책 목록을 못 읽을 때 대신 씀).
+            var policy = isObject(detail) ? normalizeShippingPolicy(detail.shippingPolicy) : null;
+            if (policy && !policiesFromDetails[policy.id]) policiesFromDetails[policy.id] = policy;
             return normalizeProduct(detail, context);
           } catch (error) {
             if (error.status === 404) return null;
@@ -713,6 +774,8 @@
         report.progress(0, 0, "발주오라 상품 화면 정보를 확인하는 중…");
         await discoverProductForm(products[0].id);
       }
+      report.progress(0, 0, "발주오라 배송비 정책을 읽는 중…");
+      var shippingPolicies = await loadShippingPolicies(policiesFromDetails);
       report.progress(0, snapshots.length, "DB센터로 결과를 보내는 중…");
       var batchSize = 400;
       for (var index = 0; index < snapshots.length || index === 0; index += batchSize) {
@@ -723,6 +786,7 @@
           final: last,
           snapshots: batch,
           categories: first ? categories : undefined,
+          shippingPolicies: first && shippingPolicies.length > 0 ? shippingPolicies : undefined,
           group: first ? group : undefined,
           diagnostics: last ? diagnostics({ group: group, categories: categories.length, products: products.length, bundles: snapshots.length - products.length }) : undefined
         });
@@ -847,6 +911,22 @@
       });
     }
 
+    // 매출배송정책(배송비 정책): 발주오라 상품 수정 화면처럼 PUT products/:id 에 sellShippingPolicyId 를 보냅니다(2026-11-23 화면 코드 확인).
+    // DB센터 배송 정책과 연결한 발주오라 정책이 없으면 보내지 않고 이유를 알립니다. 이미 같으면 보내지 않고 '반영됨'.
+    async function applyShipping(id, detail, item, result) {
+      var target = item.values.baljuoraShippingPolicyId;
+      if (!target) {
+        result.skipped.push({ field: "shippingPolicy", reason: "이 상품의 DB센터 배송 정책과 연결된 발주오라 매출배송정책이 없습니다(동기화 설정 > 배송비 정책 맞추기)." });
+        return;
+      }
+      var live = typeof detail.sellShippingPolicyId === "string" ? detail.sellShippingPolicyId : isObject(detail.shippingPolicy) && typeof detail.shippingPolicy.id === "string" ? detail.shippingPolicy.id : null;
+      if (live === target) { result.applied.push("shippingPolicy"); return; }
+      var body = { sellShippingPolicyId: target };
+      await sendAdaptive("PUT", "products/" + encodeURIComponent(id), body, null, {});
+      if ("sellShippingPolicyId" in body) result.applied.push("shippingPolicy");
+      else result.skipped.push({ field: "shippingPolicy", reason: "발주오라가 이 칸을 받지 않았습니다." });
+    }
+
     // 상품 정보 저장(PUT products/:id/info)은 상품명이 꼭 있어야 합니다(2026-11-23 운영: 카테고리만 보내자 "상품명은 문자열이어야 합니다.").
     // 그래서 바꾸지 않는 칸도 지금 값(상품명·이미지·카테고리)을 함께 보내, 빠진 칸 때문에 발주오라 값이 지워지지 않게 합니다.
     async function applyInfo(id, detail, item, fields, result, code) {
@@ -950,6 +1030,9 @@
         }
         if (infoFields.length) {
           try { await applyInfo(id, detail, item, infoFields, result, code); } catch (error) { if (error && error.status === 401) throw error; markFailed(infoFields, error); }
+        }
+        if (fields.indexOf("shippingPolicy") >= 0) {
+          try { await applyShipping(id, detail, item, result); } catch (error) { if (error && error.status === 401) throw error; markFailed(["shippingPolicy"], error); }
         }
         var after = normalizeProduct(await getDetail(id), context);
         if (after) {
@@ -1574,6 +1657,7 @@
     koreanFieldsOf: koreanFieldsOf,
     writable: writable,
     buildSellerProductPrices: buildSellerProductPrices,
+    normalizeShippingPolicy: normalizeShippingPolicy,
     extractPurchaseCost: extractPurchaseCost,
     chunkPathsOf: chunkPathsOf,
     codeSnippets: codeSnippets,

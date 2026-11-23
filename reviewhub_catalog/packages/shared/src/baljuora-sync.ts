@@ -13,8 +13,8 @@ export const BALJUORA_JOB_TTL_MINUTES = 30;
 export const BALJUORA_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 export const BALJUORA_CODE_LENGTH = 10;
 
-export type BaljuoraSyncField = "name" | "supplyPrice" | "groupPrice" | "consumerPrice" | "purchaseCost" | "category" | "image";
-export const BALJUORA_SYNC_FIELDS: BaljuoraSyncField[] = ["name", "supplyPrice", "groupPrice", "consumerPrice", "purchaseCost", "category", "image"];
+export type BaljuoraSyncField = "name" | "supplyPrice" | "groupPrice" | "consumerPrice" | "purchaseCost" | "category" | "image" | "shippingPolicy";
+export const BALJUORA_SYNC_FIELDS: BaljuoraSyncField[] = ["name", "supplyPrice", "groupPrice", "consumerPrice", "purchaseCost", "category", "image", "shippingPolicy"];
 export const BALJUORA_PRICE_FIELDS: BaljuoraSyncField[] = ["supplyPrice", "groupPrice", "consumerPrice", "purchaseCost"];
 
 // 화면 이름: 발주오라 칸 ← DB센터 칸
@@ -25,7 +25,8 @@ export const BALJUORA_FIELD_LABELS: Record<BaljuoraSyncField, string> = {
   consumerPrice: "소비자가 ← 지정 판매가",
   purchaseCost: "매입원가 ← 원가",
   category: "카테고리",
-  image: "대표 이미지"
+  image: "대표 이미지",
+  shippingPolicy: "매출배송정책 ← 배송 정책"
 };
 export const BALJUORA_FIELD_SHORT_LABELS: Record<BaljuoraSyncField, string> = {
   name: "상품명",
@@ -34,7 +35,8 @@ export const BALJUORA_FIELD_SHORT_LABELS: Record<BaljuoraSyncField, string> = {
   consumerPrice: "소비자가",
   purchaseCost: "매입원가",
   category: "카테고리",
-  image: "이미지"
+  image: "이미지",
+  shippingPolicy: "배송비 정책"
 };
 
 // 발주오라 상품을 비교용으로 줄인 값(책갈피 스크립트가 읽어서 보냄). undefined = 그 칸을 읽지 못함.
@@ -48,6 +50,8 @@ export type BaljuoraProductSnapshot = {
   purchaseCost: number | null;
   groupPrice?: number | null;
   categoryIds?: string[];
+  // 발주오라 매출배송정책 id(sellShippingPolicyId). undefined = 읽지 못함, null = 지정 없음
+  shippingPolicyId?: string | null;
   imageUrls: string[];
   isVisible: boolean | null;
   isSoldOut: boolean | null;
@@ -55,6 +59,27 @@ export type BaljuoraProductSnapshot = {
 };
 
 export type BaljuoraCategory = { id: string; name: string; parentId: string | null; path: string };
+
+// 발주오라 배송비 정책(매출배송정책, GET merchant/shipping-policies — 2026-11-23 화면 코드 확인).
+// 유형: fixed 고정 · free 무료 · byPrice 금액별 · byQuantity 수량별 · byUnit 단위별(DB센터 배송 정책 5가지와 같음)
+export type BaljuoraShippingRule = { startRange: number | null; endRange: number | null; fee: number; unitType: string | null };
+export type BaljuoraShippingPolicy = {
+  id: string;
+  code: string | null;
+  name: string;
+  type: string | null;
+  fixedFee: number | null;
+  isConditionRepeat: boolean;
+  isSameOrderFree: boolean;
+  isJejuAndRemoteAdditionalFee: boolean;
+  jejuAdditionalFee: number;
+  remoteAdditionalFee: number;
+  rules: BaljuoraShippingRule[];
+};
+export const BALJUORA_POLICY_TYPE_LABELS: Record<string, string> = { fixed: "고정배송비", free: "배송비무료", byPrice: "금액별배송비", byQuantity: "수량별배송비", byUnit: "단위별배송비" };
+
+// DB센터 배송 정책 중 연결에 쓰는 칸
+export type DoogoShippingPolicyRef = { id: string; name: string; policyCode: string | null; shippingType: string };
 
 // DB센터 상품 중 동기화에 쓰는 칸
 export type DoogoProductForSync = {
@@ -68,6 +93,7 @@ export type DoogoProductForSync = {
   costPrice: number | null;
   categoryId: string | null;
   imageUrl: string | null;
+  shippingPolicyId?: string | null;
 };
 
 export type DoogoSyncValues = {
@@ -79,7 +105,12 @@ export type DoogoSyncValues = {
   purchaseCost: number | null;
   categoryId: string | null;
   baljuoraCategoryId: string | null;
+  // 이 DB센터 카테고리와 같다고 보는 발주오라 카테고리 전체(보낼 곳 1개 + '발주오라 카테고리 → DB센터' 연결로 이어진 카테고리들)
+  baljuoraCategoryIds: string[];
   imageUrl: string | null;
+  // DB센터 배송 정책 id와, 연결한 발주오라 매출배송정책 id(연결 없으면 null)
+  shippingPolicyId: string | null;
+  baljuoraShippingPolicyId: string | null;
 };
 
 // 연결(external_product_links.rawSnapshot)에 저장하는 기준: 마지막으로 맞춘 때의 양쪽 값
@@ -127,7 +158,7 @@ function priceOrNull(value: unknown) {
   return price && price > 0 ? price : null;
 }
 
-export function doogoSyncValues(product: DoogoProductForSync, categoryMap: Record<string, string>): DoogoSyncValues {
+export function doogoSyncValues(product: DoogoProductForSync, categoryMap: Record<string, string>, shippingPolicyMap: Record<string, string> = {}, baljuoraCategoryMap: Record<string, string> = {}): DoogoSyncValues {
   const generalPrice = toPrice(product.generalPrice) ?? 0;
   const aPrice = priceOrNull(product.aPrice);
   return {
@@ -139,7 +170,12 @@ export function doogoSyncValues(product: DoogoProductForSync, categoryMap: Recor
     purchaseCost: priceOrNull(product.costPrice),
     categoryId: product.categoryId || null,
     baljuoraCategoryId: product.categoryId ? categoryMap[product.categoryId] || null : null,
-    imageUrl: product.imageUrl?.trim() || null
+    baljuoraCategoryIds: product.categoryId
+      ? [...new Set([categoryMap[product.categoryId], ...Object.entries(baljuoraCategoryMap).filter(([, doogoId]) => doogoId === product.categoryId).map(([baljuoraId]) => baljuoraId)].filter((id): id is string => Boolean(id)))]
+      : [],
+    imageUrl: product.imageUrl?.trim() || null,
+    shippingPolicyId: product.shippingPolicyId || null,
+    baljuoraShippingPolicyId: product.shippingPolicyId ? shippingPolicyMap[product.shippingPolicyId] || null : null
   };
 }
 
@@ -152,7 +188,8 @@ export function doogoComparable(values: DoogoSyncValues): BaljuoraBaseline["doog
     consumerPrice: values.consumerPrice,
     purchaseCost: values.purchaseCost,
     category: values.categoryId,
-    image: values.imageUrl
+    image: values.imageUrl,
+    shippingPolicy: values.shippingPolicyId
   };
 }
 
@@ -164,7 +201,8 @@ export function baljuoraComparable(snapshot: BaljuoraProductSnapshot): BaljuoraB
     consumerPrice: priceOrNull(snapshot.consumerPrice),
     purchaseCost: priceOrNull(snapshot.purchaseCost),
     category: snapshot.categoryIds === undefined ? undefined : [...snapshot.categoryIds].sort().join(",") || null,
-    image: snapshot.imageUrls[0] ?? null
+    image: snapshot.imageUrls[0] ?? null,
+    shippingPolicy: snapshot.shippingPolicyId === undefined ? undefined : snapshot.shippingPolicyId ?? null
   };
 }
 
@@ -261,18 +299,46 @@ export function diffBaljuoraProduct(values: DoogoSyncValues, state: BaljuoraLink
   if (doogo.purchaseCost !== null && doogo.purchaseCost !== baljuora.purchaseCost) {
     diffs.push({ field: "purchaseCost", doogo: doogo.purchaseCost ?? null, baljuora: baljuora.purchaseCost ?? null, direction: directionFor("purchaseCost", doogo.purchaseCost, baljuora.purchaseCost, baseline) });
   }
-  if (values.baljuoraCategoryId && !categoryMatches(snapshot.categoryIds, values.baljuoraCategoryId, categories)) {
+  // 카테고리: 발주오라 상품 카테고리(또는 그 위 카테고리)가 이 DB센터 카테고리와 연결된 발주오라 카테고리 중 하나면 같음.
+  // (DB센터는 대표 카테고리 7개, 발주오라는 세부 카테고리가 많아 '발주오라 카테고리 → DB센터 카테고리' 연결은 여러 개 → 하나)
+  const connectedCategories = values.baljuoraCategoryIds ?? (values.baljuoraCategoryId ? [values.baljuoraCategoryId] : []);
+  if (connectedCategories.length > 0 && !connectedCategories.some((id) => categoryMatches(snapshot.categoryIds, id, categories))) {
     const doogoChanged = Boolean(baseline && baseline.doogo.category !== undefined && baseline.doogo.category !== values.categoryId);
     const baljuoraChanged = Boolean(baseline && baseline.baljuora.category !== undefined && baseline.baljuora.category !== baljuora.category);
     const direction: BaljuoraDiffDirection = !baseline ? "initial" : doogoChanged && baljuoraChanged ? "both" : doogoChanged ? "push" : baljuoraChanged ? "pull" : "initial";
     diffs.push({ field: "category", doogo: values.baljuoraCategoryId, baljuora: (snapshot.categoryIds ?? []).join(",") || null, direction });
   }
+  let imageDiff = false;
   if (values.imageUrl) {
     const inSnapshot = snapshot.imageUrls.includes(values.imageUrl);
     const alreadyPushed = baseline?.pushedImageUrl === values.imageUrl;
     const sameAsBaseline = baseline ? baseline.doogo.image === values.imageUrl : snapshot.imageUrls.length > 0;
     if (!inSnapshot && !alreadyPushed && (!sameAsBaseline || snapshot.imageUrls.length === 0)) {
       diffs.push({ field: "image", doogo: values.imageUrl, baljuora: snapshot.imageUrls[0] ?? null, direction: !baseline ? "initial" : "push" });
+      imageDiff = true;
+    }
+  }
+  // 발주오라에서 대표 이미지(썸네일)를 바꿨으면(마지막으로 맞춘 때의 발주오라 첫 이미지와 다름) 가져올 변경으로 올립니다(2026-11-23 관리자 요청).
+  // DB센터가 보낸 이미지는 발주오라에 새 주소로 올라가므로 주소끼리가 아니라 "마지막으로 맞춘 때의 발주오라 이미지"와 비교합니다.
+  const baljuoraImage = snapshot.imageUrls[0] ?? null;
+  const baselineImage = baseline?.baljuora.image;
+  if (!imageDiff && baseline && typeof baselineImage === "string" && baljuoraImage && baljuoraImage !== baselineImage && baljuoraImage !== values.imageUrl) {
+    const doogoChanged = baseline.doogo.image !== undefined && baseline.doogo.image !== values.imageUrl;
+    diffs.push({ field: "image", doogo: values.imageUrl, baljuora: baljuoraImage, direction: doogoChanged ? "both" : "pull" });
+    imageDiff = true;
+  }
+  // DB센터 상품에 대표 이미지가 없고 발주오라에는 있으면 가져올 수만 있습니다(가져올 변경).
+  if (!imageDiff && !values.imageUrl && baljuoraImage) {
+    diffs.push({ field: "image", doogo: null, baljuora: baljuoraImage, direction: "pull" });
+  }
+  // 배송비 정책: DB센터 상품의 배송 정책과 연결한 발주오라 매출배송정책이 발주오라 상품의 매출배송정책과 같은지 봅니다.
+  // DB센터 상품에 배송 정책이 없으면 발주오라 정책을 가져오는 것만 됩니다(가져올 변경). 발주오라에서 읽지 못했으면 비교하지 않습니다.
+  if (snapshot.shippingPolicyId !== undefined && (values.shippingPolicyId || snapshot.shippingPolicyId)) {
+    const current = snapshot.shippingPolicyId ?? null;
+    const differs = values.shippingPolicyId ? values.baljuoraShippingPolicyId !== current : true;
+    if (differs) {
+      const direction: BaljuoraDiffDirection = values.shippingPolicyId ? directionFor("shippingPolicy", doogo.shippingPolicy, baljuora.shippingPolicy, baseline) : "pull";
+      diffs.push({ field: "shippingPolicy", doogo: values.shippingPolicyId, baljuora: current, direction });
     }
   }
   const ignored = state.ignored ?? {};
@@ -289,4 +355,113 @@ export function formatBaljuoraCode(code: string) {
 
 export function normalizeBaljuoraCode(code: string) {
   return code.replace(/[^0-9A-Za-z]/gu, "").toUpperCase();
+}
+
+// 배송비 정책 연결(DB센터 정책 id → 발주오라 정책 id): 배송비 코드가 같으면 먼저, 아니면 이름(이모지·띄어쓰기 무시)이 같은 정책.
+// 지금 목록에 없는 발주오라 정책과의 연결은 지웁니다(목록을 읽지 못했으면 부르지 않습니다).
+export function suggestShippingPolicyMapping(doogoPolicies: DoogoShippingPolicyRef[], policies: BaljuoraShippingPolicy[], current: Record<string, string>) {
+  const next: Record<string, string> = { ...current };
+  const valid = new Set(policies.map((policy) => policy.id));
+  for (const [doogoId, baljuoraId] of Object.entries(next)) {
+    if (!valid.has(baljuoraId)) delete next[doogoId];
+  }
+  for (const policy of doogoPolicies) {
+    if (next[policy.id]) continue;
+    const code = policy.policyCode?.trim().toUpperCase();
+    const byCode = code ? policies.find((candidate) => candidate.code?.trim().toUpperCase() === code) : undefined;
+    const key = plainCategoryName(policy.name);
+    const match = byCode ?? (key ? policies.find((candidate) => plainCategoryName(candidate.name) === key) : undefined);
+    if (match) next[policy.id] = match.id;
+  }
+  return next;
+}
+
+// 발주오라 배송비 정책 → DB센터 배송 정책 값(배송비 유형·구간). DB센터 규칙(구간은 1부터 차례로 커짐)에 맞지 않으면 null(만들지 않음).
+export type DoogoRateFromBaljuora = {
+  rateType: "fixed" | "free" | "amount" | "quantity" | "unit";
+  fee: number;
+  tiers: { tiers: Array<{ upTo: number; fee: number }>; last: { fee: number; repeat: boolean } } | null;
+  unitLabel: string | null;
+  freeWholeOrder: boolean;
+  jejuExtraFee: number;
+  islandExtraFee: number;
+};
+const RATE_BY_BALJUORA_TYPE: Record<string, DoogoRateFromBaljuora["rateType"]> = { fixed: "fixed", free: "free", byPrice: "amount", byQuantity: "quantity", byUnit: "unit" };
+const DOOGO_UNIT_LABELS = ["개", "박스", "kg", "g", "팩", "봉", "세트"];
+
+export function baljuoraPolicyRate(policy: BaljuoraShippingPolicy): DoogoRateFromBaljuora | null {
+  const rateType = policy.type ? RATE_BY_BALJUORA_TYPE[policy.type] : undefined;
+  if (!rateType) return null;
+  const money = (value: unknown) => Math.max(0, Math.round(Number(value) || 0));
+  const extra = policy.isJejuAndRemoteAdditionalFee
+    ? { jejuExtraFee: money(policy.jejuAdditionalFee), islandExtraFee: money(policy.remoteAdditionalFee) }
+    : { jejuExtraFee: 0, islandExtraFee: 0 };
+  if (rateType === "fixed") return { rateType, fee: money(policy.fixedFee ?? policy.rules[0]?.fee ?? 0), tiers: null, unitLabel: null, freeWholeOrder: false, ...extra };
+  if (rateType === "free") return { rateType, fee: 0, tiers: null, unitLabel: null, freeWholeOrder: Boolean(policy.isSameOrderFree), ...extra };
+  const rules = [...policy.rules].sort((first, second) => (first.startRange ?? 0) - (second.startRange ?? 0));
+  const tiers: Array<{ upTo: number; fee: number }> = [];
+  let last: { fee: number; repeat: boolean } | null = null;
+  let previousEnd: number | null = null;
+  for (const [index, rule] of rules.entries()) {
+    if (index > 0 && previousEnd !== null && rule.startRange !== null && Math.round(rule.startRange) !== previousEnd) return null;
+    if (rule.endRange === null) {
+      if (index !== rules.length - 1) return null;
+      last = { fee: policy.isConditionRepeat ? 0 : money(rule.fee), repeat: Boolean(policy.isConditionRepeat) };
+      break;
+    }
+    const upTo = Math.round(rule.endRange);
+    if (upTo <= (previousEnd ?? 1)) return null;
+    tiers.push({ upTo, fee: money(rule.fee) });
+    previousEnd = upTo;
+  }
+  if (!last) {
+    if (!policy.isConditionRepeat) return null;
+    last = { fee: 0, repeat: true };
+  }
+  if (tiers.length === 0) return null;
+  const unit = String(rules.find((rule) => rule.unitType)?.unitType ?? "").trim();
+  const unitLabel = rateType === "unit" ? DOOGO_UNIT_LABELS.find((label) => label.toLowerCase() === unit.toLowerCase()) ?? "개" : null;
+  return { rateType, fee: 0, tiers: { tiers, last }, unitLabel, freeWholeOrder: false, ...extra };
+}
+
+// 카테고리 맞추기 화면: DB센터 카테고리와 연결되지 않은 발주오라 카테고리 중 꼭 필요한 것만 고릅니다.
+// - 자기나 위 카테고리가 연결돼 있으면 제외(발주오라 하위 카테고리 상품은 위 카테고리 연결로 맞춤)
+// - 아래 카테고리가 하나도 연결되지 않은 위 카테고리는 위 카테고리 하나만(아래는 위를 만들면 함께 맞춰짐)
+// - 형제 중 일부만 연결된 경우는 연결 안 된 형제를 따로 보여 줍니다
+export function unconnectedBaljuoraCategories(categories: BaljuoraCategory[], categoryMap: Record<string, string>, baljuoraCategoryMap: Record<string, string> = {}) {
+  const connected = new Set([...Object.values(categoryMap), ...Object.keys(baljuoraCategoryMap)]);
+  const parentOf = new Map(categories.map((category) => [category.id, category.parentId]));
+  const isUnder = (id: string, ancestorId: string) => {
+    let current = parentOf.get(id) ?? null;
+    for (let depth = 0; current && depth < 10; depth += 1) {
+      if (current === ancestorId) return true;
+      current = parentOf.get(current) ?? null;
+    }
+    return false;
+  };
+  const covered = (id: string) => connected.has(id) || [...connected].some((connectedId) => isUnder(id, connectedId));
+  const hasConnectedBelow = (id: string) => [...connected].some((connectedId) => isUnder(connectedId, id));
+  return categories.filter((category) => !covered(category.id)
+    && !hasConnectedBelow(category.id)
+    && (category.parentId === null || hasConnectedBelow(category.parentId)));
+}
+
+// 발주오라 → DB센터 카테고리: 발주오라 상품 카테고리에서 위로 올라가며 가장 가까운 연결을 씁니다.
+// 각 단계에서 '발주오라 카테고리 → DB센터' 연결(baljuoraCategoryMap)을 먼저, 없으면 'DB센터 → 발주오라' 연결(categoryMap)을 거꾸로 봅니다.
+export function doogoCategoryForBaljuora(categoryIds: string[] | undefined, categoryMap: Record<string, string>, baljuoraCategoryMap: Record<string, string>, categories: BaljuoraCategory[], usable: (doogoId: string) => boolean = () => true) {
+  if (!categoryIds || categoryIds.length === 0) return null;
+  const parentOf = new Map(categories.map((category) => [category.id, category.parentId]));
+  const byBaljuora = new Map<string, string[]>();
+  for (const [doogoId, baljuoraId] of Object.entries(categoryMap)) byBaljuora.set(baljuoraId, [...(byBaljuora.get(baljuoraId) ?? []), doogoId]);
+  for (const id of categoryIds) {
+    let current: string | null | undefined = id;
+    for (let depth = 0; current && depth < 10; depth += 1) {
+      const direct = baljuoraCategoryMap[current];
+      if (direct && usable(direct)) return direct;
+      const viaForward = (byBaljuora.get(current) ?? []).find(usable);
+      if (viaForward) return viaForward;
+      current = parentOf.get(current);
+    }
+  }
+  return null;
 }
