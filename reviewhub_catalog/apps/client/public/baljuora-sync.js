@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.3.1";
+  var VERSION = "1.4.0";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   var INFO_FIELDS = ["name", "category", "image"];
@@ -306,48 +306,46 @@
     return result;
   }
 
-  function buildGroupPricing(detail, group, keyword, price) {
-    var keys = groupArrayKeys(detail);
-    for (var index = 0; index < keys.length; index += 1) {
-      var key = keys[index];
-      var list = detail[key].map(function (entry) { return Object.assign({}, entry); });
-      var priceKey = null;
-      var found = false;
-      list.forEach(function (entry) {
-        var info = groupEntryInfo(entry);
-        if (info && info.priceKey && !priceKey) priceKey = info.priceKey;
-        if (matchesGroup(info, group, keyword)) {
-          entry[info.priceKey || "supplyPrice"] = price;
-          found = true;
-        }
-      });
-      if (!found) {
-        if (!group || !group.id) return null;
-        var sample = list.find(function (entry) { var info = groupEntryInfo(entry); return info && info.kind === "group"; });
-        var added = {};
-        if (sample && "targetType" in sample) {
-          added.targetType = sample.targetType;
-          added.targetId = group.id;
-        } else if (sample && "type" in sample) {
-          added.type = sample.type;
-          added.targetId = group.id;
-        } else {
-          added[sample && sample.groupId !== undefined ? "groupId" : "sellerGroupId"] = group.id;
-        }
-        added[priceKey || "supplyPrice"] = price;
-        list.push(added);
-      }
-      return { key: key, value: list.map(priceEntryForWrite) };
+  function firstId(values) {
+    for (var index = 0; index < values.length; index += 1) {
+      var value = values[index];
+      if (typeof value === "string" && value) return value;
+      if (isObject(value) && typeof value.id === "string" && value.id) return value.id;
     }
     return null;
   }
 
-  // 개별공급가 줄을 보낼 모양으로: 읽기 전용 칸(id·작성자·상품 연결)을 빼고, 연결된 대상은 id 칸으로(sellerGroup → sellerGroupId), 빈 연결(null)은 뺍니다.
-  function priceEntryForWrite(entry) {
-    var copy = writable(entry);
-    ["author", "authorId", "product", "productId", "merchantId", "createdById", "updatedById"].forEach(function (key) { delete copy[key]; });
-    Object.keys(copy).forEach(function (key) { if (copy[key] === null && !/Id$/.test(key)) delete copy[key]; });
-    return copy;
+  // 개별공급가(매출처/그룹별 공급가) 저장 모양 — 2026-11-23 발주오라 상품 수정 화면 코드 확인:
+  // 화면은 PUT products/:id 에 바뀐 칸만 보내고, 개별공급가는 sellerProductPrices 목록 전체
+  // [{ targetType: "group" | "seller", targetId, shippingPolicyId?, supplyPrice }]로 보냅니다.
+  // (PUT products/:id/pricing 에 prices 목록을 보내면 발주오라가 오류 없이 무시합니다 — 운영 약과 18:31, 공급가만 바뀜.)
+  // 목록에서 빠진 줄은 지워질 수 있으므로 지금 줄을 모두 그대로 옮기고 황금농부 줄만 바꿉니다(없으면 추가).
+  // 대상(id)·공급가를 모르는 줄이 하나라도 있으면 다른 매출처 값이 바뀔 수 있어 보내지 않습니다(null).
+  function buildSellerProductPrices(detail, group, keyword, price) {
+    if (!isObject(detail) || !Array.isArray(detail.prices)) return null;
+    var list = [];
+    var found = false;
+    for (var index = 0; index < detail.prices.length; index += 1) {
+      var entry = detail.prices[index];
+      var info = groupEntryInfo(entry);
+      if (!info || !info.kind) return null;
+      var targetId = firstId([entry.targetId, entry.sellerGroupId, entry.sellerId, entry.sellerGroup, entry.seller, entry.target]);
+      var supply = toNumber(entry.supplyPrice);
+      if (!targetId || supply === null || supply < 0) return null;
+      var row = { targetType: info.kind === "seller" ? "seller" : "group", targetId: targetId, supplyPrice: supply };
+      var shipping = firstId([entry.shippingPolicyId, entry.shippingPolicy]);
+      if (shipping) row.shippingPolicyId = shipping;
+      if (matchesGroup(info, group, keyword)) {
+        row.supplyPrice = price;
+        found = true;
+      }
+      list.push(row);
+    }
+    if (!found) {
+      if (!group || !group.id) return null;
+      list.push({ targetType: "group", targetId: group.id, supplyPrice: price });
+    }
+    return list;
   }
 
   // ─── 발주오라 화면 코드에서 저장 방식 찾기 ─────────────────────────────────────
@@ -785,8 +783,9 @@
         if (typeof liveCost === "number" && liveCost === values.purchaseCost) same.purchaseCost = true;
         else body.purchaseCost = values.purchaseCost;
       }
-      var groupKey = null;
+      var groupList = null;
       var groupSame = false;
+      var groupMissing = null;
       if (fields.indexOf("groupPrice") >= 0) {
         // 황금농부 공급가가 이미 수강생 단가와 같거나, 황금농부 줄이 없고 수강생 단가 = 일반공급가(공급가로 삼)이면 개별공급가 목록은 건드리지 않습니다.
         var current = extractGroupPrice(detail, context.group, context.groupKeyword);
@@ -795,28 +794,55 @@
         } else if (!(values.groupPrice > 0)) {
           blank.groupPrice = true;
         } else {
-          var pricing = buildGroupPricing(detail, context.group, context.groupKeyword, values.groupPrice);
-          if (pricing) {
-            body[pricing.key] = pricing.value;
-            groupKey = pricing.key;
-          } else {
-            result.skipped.push({ field: "groupPrice", reason: context.group ? "발주오라 상품 정보에서 매출처 그룹 공급가 칸을 찾지 못했습니다." : "발주오라에서 '" + context.groupKeyword + "' 매출처 그룹을 찾지 못했습니다." });
+          groupList = buildSellerProductPrices(detail, context.group, context.groupKeyword, values.groupPrice);
+          if (!groupList) {
+            groupMissing = !Array.isArray(detail.prices)
+              ? "발주오라 상품 정보에서 개별공급가 목록을 읽지 못해 보내지 않았습니다."
+              : !context.group && extractGroupPrice(detail, context.group, context.groupKeyword) === null
+                ? "발주오라에서 '" + context.groupKeyword + "' 매출처 그룹을 찾지 못했습니다."
+                : "발주오라 개별공급가 목록에 대상이나 공급가를 알 수 없는 줄이 있어 보내지 않았습니다(다른 매출처 값 보호).";
           }
         }
       }
+      // 공급가·소비자가·매입원가는 가격 저장으로, 개별공급가는 발주오라 상품 수정 화면처럼 PUT products/:id 로 따로 보냅니다.
+      // 한쪽이 실패해도 다른 쪽 결과는 그대로 남깁니다(401은 그대로 중단).
+      var pricingError = null;
       if (Object.keys(body).length > 0) {
-        var tracker = {};
-        await sendAdaptive("PUT", "products/" + encodeURIComponent(id) + "/pricing", body, writable(detail), tracker);
+        try {
+          await sendAdaptive("PUT", "products/" + encodeURIComponent(id) + "/pricing", body, writable(detail), {});
+        } catch (error) {
+          if (error && error.status === 401) throw error;
+          pricingError = error;
+        }
+      }
+      var groupError = null;
+      var groupSent = false;
+      if (groupList) {
+        var groupBody = { sellerProductPrices: groupList };
+        // 발주오라가 다른 칸을 꼭 달라고 하면(예: "상품명은 문자열이어야 합니다.") 지금 값으로만 채워 다시 보냅니다(값은 바뀌지 않음).
+        var currentValues = {};
+        ["name", "code", "supplyPrice", "categoryIds", "imageUrls"].forEach(function (key) { if (detail[key] !== undefined && detail[key] !== null) currentValues[key] = detail[key]; });
+        try {
+          await sendAdaptive("PUT", "products/" + encodeURIComponent(id), groupBody, currentValues, {});
+          groupSent = Array.isArray(groupBody.sellerProductPrices);
+        } catch (error) {
+          if (error && error.status === 401) throw error;
+          groupError = error;
+        }
       }
       fields.forEach(function (field) {
         if ((field === "groupPrice" && groupSame) || same[field]) { result.applied.push(field); return; }
         if (blank[field]) { result.skipped.push({ field: field, reason: "DB센터 값이 0원이라 보내지 않았습니다(발주오라 가격을 0원으로 바꾸지 않음)." }); return; }
         if (field === "purchaseCost" && values.purchaseCost === null) { result.skipped.push({ field: field, reason: "DB센터 원가가 비어 있어 보내지 않았습니다." }); return; }
-        var key = field === "groupPrice" ? groupKey : field;
-        if (!key || !(key in body)) {
-          if (field !== "groupPrice" || groupKey) result.skipped.push({ field: field, reason: "발주오라가 이 칸을 받지 않았습니다." });
+        if (field === "groupPrice") {
+          if (groupMissing) { result.skipped.push({ field: field, reason: groupMissing }); return; }
+          if (groupError) { result.skipped.push({ field: field, reason: describeError(groupError) }); return; }
+          if (!groupSent) { result.skipped.push({ field: field, reason: "발주오라가 개별공급가 목록(sellerProductPrices)을 받지 않았습니다." }); return; }
+          result.applied.push(field);
           return;
         }
+        if (pricingError) { result.skipped.push({ field: field, reason: describeError(pricingError) }); return; }
+        if (!(field in body)) { result.skipped.push({ field: field, reason: "발주오라가 이 칸을 받지 않았습니다." }); return; }
         result.applied.push(field);
       });
     }
@@ -1547,8 +1573,7 @@
     missingProperties: missingProperties,
     koreanFieldsOf: koreanFieldsOf,
     writable: writable,
-    buildGroupPricing: buildGroupPricing,
-    priceEntryForWrite: priceEntryForWrite,
+    buildSellerProductPrices: buildSellerProductPrices,
     extractPurchaseCost: extractPurchaseCost,
     chunkPathsOf: chunkPathsOf,
     codeSnippets: codeSnippets,
