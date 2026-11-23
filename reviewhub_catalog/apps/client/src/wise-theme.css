@@ -3754,6 +3754,37 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .admin-sidebar.is-master nav a:hover .admin-nav-icon { transform: none; }
 }
 
+/* 메뉴 모양 B(2026-11-23 4차, 관리자 요청 "한번만 다른 느낌으로"): 연한 연두 바탕 + 선명한 원형 아이콘(묶음 색) + 지금 메뉴는 흰 카드와 연두 띠.
+   aside에서 menu-style-b를 빼면 바로 위의 A(흰 바탕 + 연한 색 칸 아이콘 + 연두 줄)로 돌아갑니다. */
+.admin-sidebar.is-master.menu-style-b { --sb-line: #dfe9d3; border-right: 1px solid #dfe9d3; background: linear-gradient(180deg, #f8fbf3 0%, #edf5e3 100%); box-shadow: none; }
+.admin-sidebar.is-master.menu-style-b .admin-role { border-color: #dbe8cc; background: #fff; }
+.admin-sidebar.is-master.menu-style-b nav a { --dot: #4b9a2f; --dot-icon: #ffffff; --dot-shadow: rgba(75, 154, 47, .32); }
+.admin-sidebar.is-master.menu-style-b nav a[data-group="home"] { --dot: #163300; --dot-icon: #b6f08c; --dot-shadow: rgba(22, 51, 0, .32); }
+.admin-sidebar.is-master.menu-style-b nav a[data-group="baljuora"] { --dot: #2f7fd8; --dot-shadow: rgba(47, 127, 216, .32); }
+.admin-sidebar.is-master.menu-style-b nav a[data-group="supplier"] { --dot: #e09a17; --dot-shadow: rgba(224, 154, 23, .34); }
+.admin-sidebar.is-master.menu-style-b nav a[data-group="operations"] { --dot: #13998a; --dot-shadow: rgba(19, 153, 138, .32); }
+.admin-sidebar.is-master.menu-style-b .admin-nav-icon,
+.admin-sidebar.is-master.menu-style-b nav a[data-group="home"] .admin-nav-icon,
+.admin-sidebar.is-master.menu-style-b nav a.active:not([data-group="home"]) .admin-nav-icon {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--dot-icon);
+  background: var(--dot);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), inset 0 -2px 0 rgba(0, 0, 0, .12), 0 3px 8px var(--dot-shadow);
+}
+.admin-sidebar.is-master.menu-style-b nav a:hover { background: rgba(255, 255, 255, .78); }
+.admin-sidebar.is-master.menu-style-b nav a:hover .admin-nav-icon { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), inset 0 -2px 0 rgba(0, 0, 0, .12), 0 5px 11px var(--dot-shadow); }
+.admin-sidebar.is-master.menu-style-b nav a.active,
+.admin-sidebar.is-master.menu-style-b nav a.nav-child.active { position: relative; color: var(--sb-text); background: #fff; box-shadow: 0 6px 16px rgba(22, 51, 0, .08), 0 1px 2px rgba(22, 51, 0, .06); }
+.admin-sidebar.is-master.menu-style-b nav a.active::before { position: absolute; top: 10px; bottom: 10px; left: 0; width: 4px; border-radius: 0 4px 4px 0; background: #7cc94a; content: ""; }
+.admin-sidebar.is-master.menu-style-b nav a.active .admin-nav-badge { color: var(--w-ink); background: var(--w-warning); }
+.admin-sidebar.is-master.menu-style-b .sidebar-bottom a,
+.admin-sidebar.is-master.menu-style-b .sidebar-bottom button { border-color: #dbe8cc; background: #fff; }
+.admin-sidebar.is-master.menu-style-b .sidebar-bottom a:hover,
+.admin-sidebar.is-master.menu-style-b .sidebar-bottom button:hover { background: #f4faee; }
+
 /* 낮은 화면(노트북 125% 배율 등): 위쪽을 줄여 메뉴가 더 많이 보이게 */
 @media (max-height: 820px) {
   .admin-sidebar.is-master { padding-top: 12px; }

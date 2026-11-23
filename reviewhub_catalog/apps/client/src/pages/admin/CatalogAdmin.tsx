@@ -843,7 +843,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
 
   return (
     <div className="admin-shell">
-      <aside className={`admin-sidebar is-master ${sidebarOpen ? "open" : ""}`}>
+      <aside className={`admin-sidebar is-master menu-style-b ${sidebarOpen ? "open" : ""}`}>
         <div className="admin-brand"><Link to="/admin/home" aria-label="관리자 홈으로 이동"><DoogoLogo /></Link><button onClick={() => setSidebarOpen(false)} aria-label="메뉴 닫기"><X size={20} /></button></div>
         <div className="admin-role"><ShieldCheck size={17} /><span><small>MASTER</small><strong>마스터 관리자</strong></span></div>
         <Link to="/admin/products" className="admin-sidebar-primary" onClick={() => setSidebarOpen(false)}><Plus size={17} /> 상품 등록</Link>
