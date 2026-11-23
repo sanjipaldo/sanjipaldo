@@ -843,7 +843,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
 
   return (
     <div className="admin-shell">
-      <aside className={`admin-sidebar is-master menu-style-b ${sidebarOpen ? "open" : ""}`}>
+      <aside className={`admin-sidebar is-master ${sidebarOpen ? "open" : ""}`}>
         <div className="admin-brand"><Link to="/admin/home" aria-label="관리자 홈으로 이동"><DoogoLogo /></Link><button onClick={() => setSidebarOpen(false)} aria-label="메뉴 닫기"><X size={20} /></button></div>
         <div className="admin-role"><ShieldCheck size={17} /><span><small>MASTER</small><strong>마스터 관리자</strong></span></div>
         <Link to="/admin/products" className="admin-sidebar-primary" onClick={() => setSidebarOpen(false)}><Plus size={17} /> 상품 등록</Link>
@@ -864,7 +864,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               : null;
             const groupOpen = !item.group || openNavGroups[item.group];
             const badge = item.section === "supplierRequests" && supplierPending > 0 ? <span className="admin-nav-badge" aria-label={`승인 대기 ${supplierPending}건`}>{supplierPending}</span> : null;
-            return <Fragment key={item.section}>{groupCaption}{groupOpen && <Link to={`/admin/${item.section}`} className={`${section === item.section ? "active" : ""} ${item.group ? "nav-child" : ""}`} data-group={item.group ?? "home"} aria-current={section === item.section ? "page" : undefined} onClick={() => setSidebarOpen(false)}><span className="admin-nav-icon" aria-hidden="true"><Icon size={17} strokeWidth={2.1} /></span><span className="admin-nav-label">{item.label}</span>{badge}</Link>}</Fragment>;
+            return <Fragment key={item.section}>{groupCaption}{groupOpen && <Link to={`/admin/${item.section}`} className={`${section === item.section ? "active" : ""} ${item.group ? "nav-child" : ""}`} data-group={item.group ?? "home"} aria-current={section === item.section ? "page" : undefined} onClick={() => setSidebarOpen(false)}><span className="admin-nav-icon" aria-hidden="true"><Icon size={20} strokeWidth={1.8} /></span><span className="admin-nav-label">{item.label}</span>{badge}</Link>}</Fragment>;
           })}
         </nav>
         <div className="sidebar-bottom"><Link to="/" onClick={() => setSidebarOpen(false)} title="공개 페이지 보기"><Truck size={17} /> 공개 페이지</Link><button onClick={() => void signOut()}><LogOut size={17} /> 로그아웃</button></div>
