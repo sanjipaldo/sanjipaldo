@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "blender": {
+      "command": "uvx",
+      "args": ["mcp-for-blender@2.3.1"],
+      "env": {
+        "BLENDER_MCP_DISABLE_TELEMETRY": "1",
+        "DISABLE_TELEMETRY": "1"
+      }
+    }
+  }
+}

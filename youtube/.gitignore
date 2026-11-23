@@ -13,3 +13,6 @@
 # HyperFrames 작업 기록·캐시
 **/.hyperframes/
 **/node_modules/
+# Remotion 빌드 결과와 setup-ai.sh 가 채우는 폰트
+remotion/out/
+remotion/public/fonts/
