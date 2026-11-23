@@ -284,8 +284,39 @@ describe("매출처 그룹 공급가 저장 방식 찾기(2026-11-23)", () => {
     const runner = internals.createRunner({ fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", pagePath: "/doogobiz24/dashboard", loadedScripts: [], apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
     const report = createReport();
     await runner.runCompare({ type: "compare", groupKeyword: "황금농부", detailIds: ["bj-a", "bj-b"] }, report);
-    expect(consoleCalls).toEqual([]);
-    expect(report.posted[report.posted.length - 1].diagnostics.discovery).toBeUndefined();
+    // 상품 저장 화면은 찾지 않음(카테고리 화면 코드 확인만, 2026-11-23 1.5.2)
+    expect(consoleCalls).toEqual(["/doogobiz24/products/category"]);
+    const discovery = report.posted[report.posted.length - 1].diagnostics.discovery;
+    expect(discovery.pages).toBeUndefined();
+    expect(discovery.categoryPage).toMatchObject({ status: 404, chunks: [], pageChunks: [] });
+  });
+
+  it("카테고리 화면 코드 확인: 이 창의 로그인으로 상품 카테고리 화면 코드 경로·저장 부분만 읽어 기술 정보로 보냅니다(카테고리는 바꾸지 않음)", async () => {
+    const fake = createFake();
+    const page = "static/chunks/app/console/%5Bmerchant%5D/(main)/products/category/page-c4t.js";
+    const shared = "static/chunks/3518-tree.js";
+    const consoleCalls: string[] = [];
+    const fetch = async (input: string, init: RequestInit = {}) => {
+      const url = new URL(input);
+      if (url.origin === "https://console.baljuora.com" && url.pathname !== "/api/auth/refresh") {
+        consoleCalls.push(`${url.pathname}${(init.headers as Record<string, string> | undefined)?.RSC ? " (RSC)" : ""}`);
+        if (url.pathname === "/doogobiz24/products/category") return new Response(`1:I[1,["${shared}","${page}"],"default"]`, { status: 200, headers: { "Content-Type": "text/x-component" } });
+        if (url.pathname === `/_next/${page}`) return new Response('t=1;children:"저장하기",onClick:async()=>{await s.mutateAsync({data:{categories:n.map(c)}})}', { status: 200 });
+        return new Response("", { status: 404 });
+      }
+      return fake.fetch(input, init);
+    };
+    const runner = internals.createRunner({ fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", pagePath: "/doogobiz24/dashboard", loadedScripts: [], apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const report = createReport();
+    await runner.runCompare({ type: "compare", groupKeyword: "황금농부" }, report);
+    const last = report.posted[report.posted.length - 1].diagnostics;
+    expect(last.discovery.categoryPage).toMatchObject({ status: 200, chunks: [shared, page], pageChunks: [page] });
+    expect(last.discovery.categoryPage.snippets[0]).toMatchObject({ chunk: "page-c4t.js", anchor: "mutateAsync" });
+    expect(last.discovery.categoryPage.snippets[0].text).toContain("data:{categories:");
+    expect(last.structure.categoryTree).toBeDefined();
+    expect(consoleCalls.slice(0, 2)).toEqual(["/doogobiz24/products/category (RSC)", `/_next/${page}`]);
+    expect(consoleCalls).not.toContain(`/_next/${shared}`); // 저장 부분이 든 카테고리 화면 파일만 받음
+    expect(fake.calls.some((call) => call.method !== "GET" && call.url.includes("categories"))).toBe(false);
   });
 });
 

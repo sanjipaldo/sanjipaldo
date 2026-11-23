@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.5.1";
+  var VERSION = "1.5.2";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   var INFO_FIELDS = ["name", "category"];
@@ -691,6 +691,7 @@
     async function loadCategories() {
       try {
         var payload = unwrap(await api("GET", "merchant/categories/tree"));
+        if (!state.structure.categoryTree) state.structure.categoryTree = structureOf(payload);
         return flattenCategories(payload);
       } catch (error) {
         state.errors.push({ path: "GET merchant/categories/tree", status: error.status || 0, messages: messagesOf(error).slice(0, 3) });
@@ -768,6 +769,37 @@
 
     // 매출처 그룹 공급가를 읽거나 저장하지 못했을 때 한 번만: 발주오라 상품 수정 화면의 코드(js)를 찾아 기술 정보로 남깁니다.
     // 2차(1.2.0): 상품 화면이 불러오는 코드 파일 이름을 모두 남기고, 그중 "개별공급가·매출처별" 화면(저장하는 코드)을 찾아 앞뒤를 넉넉히 잘라 보냅니다.
+    // 발주오라 상품 카테고리 화면이 카테고리 트리를 어떻게 저장하는지(POST merchant/categories/tree 본문 모양) 확인하려고(2026-11-23),
+    // 이 창의 로그인으로 그 화면의 코드 조각 경로(RSC)와 저장 부분 코드 일부만 읽어 진단 정보로 보냅니다(공개 js 코드만, 상품 값·토큰 없음).
+    // 발주오라는 모르는 칸을 오류 없이 버리므로, 형식을 확인하기 전에는 카테고리 트리를 바꾸지 않습니다.
+    async function discoverCategoryPage() {
+      if (state.categoryDiscovery || !env.consoleOrigin || !env.pagePath) return;
+      var out = state.categoryDiscovery = { status: null, chunks: [], pageChunks: [], snippets: [] };
+      try {
+        var slug = String(env.pagePath).split("/").filter(Boolean)[0] || "";
+        if (!slug) return;
+        var response = await env.fetch(new URL("/" + slug + "/products/category", env.consoleOrigin).toString(), { headers: { RSC: "1" }, credentials: "include" });
+        var text = await response.text();
+        out.status = response.status;
+        out.chunks = chunkPathsOf(text).slice(0, 80);
+        out.pageChunks = out.chunks.filter(function (chunk) { return /products/i.test(chunk) && /categor/i.test(chunk); });
+        var budget = 9000;
+        for (var index = 0; index < out.pageChunks.length && index < 4 && budget > 0; index += 1) {
+          var chunkPath = out.pageChunks[index];
+          var file = await env.fetch(new URL("/_next/" + chunkPath, env.consoleOrigin).toString());
+          if (!file.ok) continue;
+          var code = await file.text();
+          var pieces = codeSnippets(code, ["mutateAsync", "저장하기", "parentId", "children:"], 600, 2);
+          for (var pieceIndex = 0; pieceIndex < pieces.length && budget > 0; pieceIndex += 1) {
+            budget -= pieces[pieceIndex].text.length;
+            out.snippets.push({ chunk: chunkPath.split("/").slice(-1)[0], anchor: pieces[pieceIndex].anchor, at: pieces[pieceIndex].at, text: pieces[pieceIndex].text });
+          }
+        }
+      } catch (error) {
+        out.error = describeError(error);
+      }
+    }
+
     async function discoverProductForm(sampleId) {
       if (state.discovery || !env.consoleOrigin || !env.pagePath) return;
       var out = state.discovery = { pages: [], allChunks: [], formChunks: [], snippets: [] };
@@ -820,6 +852,7 @@
       report.progress(0, 0, "발주오라 매출처 그룹·카테고리를 읽는 중…");
       var group = await findGroup(plan.groupKeyword);
       var categories = await loadCategories();
+      await discoverCategoryPage();
       var context = { group: group, groupKeyword: plan.groupKeyword };
       report.progress(0, 0, "발주오라 상품 목록을 읽는 중…");
       var raw = await listAllProducts(function (count, total) { report.progress(count, total || count, "발주오라 상품 목록 " + count + (total ? " / " + total : "") + "개 읽음"); });
@@ -1153,6 +1186,7 @@
 
     async function runPush(plan, report, code) {
       report.progress(0, plan.items.length, "발주오라 매출처 그룹을 확인하는 중…");
+      await discoverCategoryPage();
       var group = plan.groupId ? { id: plan.groupId, name: plan.groupKeyword } : null;
       if (plan.items.some(function (item) { return item.fields.indexOf("groupPrice") >= 0; }) && !group) group = await findGroup(plan.groupKeyword);
       var context = { group: group, groupKeyword: plan.groupKeyword, existingCodes: null };
@@ -1185,7 +1219,8 @@
     }
 
     function diagnostics(extra) {
-      return { version: VERSION, at: new Date().toISOString(), structure: state.structure, endpoints: state.endpoints, errors: state.errors.slice(0, 30), extra: extra || {}, discovery: state.discovery || undefined };
+      var discovery = state.discovery || state.categoryDiscovery ? Object.assign({}, state.discovery || {}, state.categoryDiscovery ? { categoryPage: state.categoryDiscovery } : {}) : undefined;
+      return { version: VERSION, at: new Date().toISOString(), structure: state.structure, endpoints: state.endpoints, errors: state.errors.slice(0, 30), extra: extra || {}, discovery: discovery };
     }
 
     return { api: api, refreshToken: refreshToken, runCompare: runCompare, runPush: runPush, pushItem: pushItem, diagnostics: diagnostics, state: state };
