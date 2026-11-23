@@ -214,6 +214,18 @@ describe("발주오라 동기화 API", () => {
     expect(tangerine.data).toMatchObject({ linked: true, supplyPrice: 12000, groupPrice: null, groupPriceKnown: false, purchaseCost: null });
   });
 
+  it("예전 비교라 황금농부 공급가를 모르는 상품은 보낼 때 수강생 단가도 함께 맞춥니다(약과 사례)", async () => {
+    const admin = await adminToken();
+    const compare = await startCompare(admin);
+    // 1.2.0 이전 책갈피처럼 groupPrice 칸 없이 들어온 연결(bj-test-3: 일반공급가 12,000 · 수강생 단가 11,000)
+    await post(`/api/baljuora/runner/${compare.code}/results`, { final: true, categories: CATEGORY_TREE, group: { id: "grp-1", name: "황금농부 수강생" }, snapshots: [snapshot({ id: "bj-c", code: "BJT-003", name: "이웃 감귤 3kg", supplyPrice: 11500, purchaseCost: 9000 })] });
+    const push = await json<{ code: string }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "push", productIds: ["bj-test-3"] }) }));
+    const plan = await json<{ plan: { items: Array<{ productId: string; fields: string[]; values: Record<string, unknown> }> } }>(await app.fetch(new Request(`http://localhost/api/baljuora/runner/${push.data.code}`)));
+    const item = plan.data.plan.items.find((entry) => entry.productId === "bj-test-3");
+    expect(item?.fields).toEqual(["supplyPrice", "groupPrice"]);
+    expect(item?.values).toMatchObject({ supplyPrice: 12000, groupPrice: 11000 });
+  });
+
   it("이대로 두기 · 발주오라에만 있는 상품 가져오기(숨김 등록)", async () => {
     const admin = await adminToken();
     const compare = await startCompare(admin);

@@ -4,10 +4,12 @@
 //       → 그 창에서 책갈피 누르기 → 이 화면에 진행 상황·결과가 보입니다.
 // 탭: 보낼 변경(DB센터에서 바뀐 값) · 신규 등록(발주오라에 없는 DB센터 상품) · 발주오라에서 바뀜(가져오기/이대로 두기) · 발주오라에만 있음(가져오기)
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, ArrowDownToLine, Bookmark, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, RefreshCw, Search, Send, Settings2, X } from "lucide-react";
+import { AlertTriangle, ArrowDownToLine, Bookmark, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Landmark, Link2, Loader2, RefreshCw, Search, Send, Settings2, X } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import {
+  BALJUORA_CONSOLE_ORIGIN,
+  BALJUORA_DEFAULT_MERCHANT_SLUG,
   BALJUORA_DIRECTION_LABELS,
   BALJUORA_FIELD_LABELS,
   BALJUORA_FIELD_SHORT_LABELS,
@@ -328,6 +330,24 @@ export function BaljuoraSyncAdmin() {
         <button type="button" className="outline-button" onClick={() => { setLoading(true); void load(); }}><RefreshCw size={15} /> 새로고침</button>
       </div>
 
+      {/* 입금·정산 반영 도우미(2026-11-23 관리자 요청): 발주오라 정산 관리 > 입/출금 계좌 조회의 버튼을 책갈피가 대신 누름 */}
+      <section className="admin-card bj-settle" aria-labelledby="bj-settle-title">
+        <div className="bj-settle-copy">
+          <h2 id="bj-settle-title"><Landmark size={18} aria-hidden="true" /> 입금·정산 반영 도우미</h2>
+          <p>발주오라 <b>정산 관리 › 입/출금 계좌 조회</b>에서 손으로 하던 정산 반영을 책갈피 한 번으로 대신 눌러 드려요.</p>
+          <ol>
+            <li>발주오라 입/출금 계좌 조회 화면(또는 <b>발주오라 정산 화면 열기</b>로 연 창)에서 즐겨찾기의 <b>두고푸드 동기화</b>를 누릅니다.</li>
+            <li><b>계좌내역 조회</b>로 새 입출금을 모은 뒤, <b>업체구분·거래처명이 모두 들어간 정산 대기 건</b>만 골라 목록을 보여 줍니다.</li>
+            <li>목록을 확인하고 <b>N건 정산 반영하기</b>를 누르면 <b>정산 반영 처리 → 적용하기</b>까지 눌러 줍니다. 매출처 입금 건은 발주오라가 주문대기 주문을 주문접수로 넘겨요.</li>
+          </ol>
+          <small>거래처가 비어 있는 건은 건드리지 않고 "직접 확인할 건"으로 알려 줘요. 발주오라 <b>자동 매칭 관리</b>에서 매칭마다 <b>자동 정산완료</b>를 켜 두면, 그 거래처의 새 계좌내역은 발주오라가 확인 없이 바로 정산완료 처리합니다.</small>
+        </div>
+        <div className="bj-settle-action">
+          <a className="bj-settle-open" href={`${BALJUORA_CONSOLE_ORIGIN}/${overview?.settings.merchantSlug || BALJUORA_DEFAULT_MERCHANT_SLUG}/dashboard#doogo-settle`} target="_blank" rel="noreferrer"><ExternalLink size={15} aria-hidden="true" /> 발주오라 정산 화면 열기</a>
+          <small>열린 창에서 책갈피를 누르면 입/출금 계좌 조회로 이동해 시작해요.</small>
+        </div>
+      </section>
+
       <section className="admin-card bj-howto">
         <div className="bj-howto-copy">
           <h2><Bookmark size={18} aria-hidden="true" /> 처음 한 번: 책갈피 만들기</h2>
@@ -393,7 +413,7 @@ export function BaljuoraSyncAdmin() {
       </section>
 
       {changes?.compared && changes.groupPriceReadable === false && (
-        <p className="bj-notice"><AlertTriangle size={15} aria-hidden="true" /> 수강생 단가(‘{overview?.settings.groupKeyword || "황금농부"}’ 매출처 그룹 공급가)는 아직 발주오라에서 읽지 못해 자동으로 보내지 않습니다. 발주오라 상품 수정 &gt; 매출처별 설정 &gt; 개별공급가에서 직접 바꿔 주세요.</p>
+        <p className="bj-notice"><AlertTriangle size={15} aria-hidden="true" /> 지금 목록은 수강생 단가(‘{overview?.settings.groupKeyword || "황금농부"}’ 매출처 그룹 공급가)를 읽기 전 비교 결과예요. <b>발주오라 상품 불러오기(비교)</b>를 한 번 다시 하면 수강생 단가·매입원가·카테고리를 새로 읽어 진짜 차이만 남아요(그 전에 보내는 상품도 수강생 단가를 함께 맞춥니다).</p>
       )}
       {changes && changes.unmappedCategories.length > 0 && overview && overview.baljuoraCategories.length > 0 && (
         <p className="bj-notice"><AlertTriangle size={15} aria-hidden="true" /> 발주오라 카테고리와 연결되지 않은 DB센터 카테고리 {changes.unmappedCategories.length}개: {changes.unmappedCategories.slice(0, 4).map((category) => category.name).join(", ")}{changes.unmappedCategories.length > 4 ? " 등" : ""} · <button type="button" onClick={() => setSettingsOpen(true)}>카테고리 연결하기</button></p>

@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.2.0";
+  var VERSION = "1.3.0";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   var INFO_FIELDS = ["name", "category", "image"];
@@ -264,6 +264,23 @@
     return names;
   }
 
+  // 발주오라는 칸 검사 오류를 한글로 돌려줍니다(예: "상품명은 문자열이어야 합니다."). 문구 속 칸 이름으로 어느 칸인지 찾습니다.
+  var KOREAN_FIELD_LABELS = [["상품명", "name"], ["상품코드", "code"], ["카테고리", "categoryIds"], ["이미지", "imageUrls"], ["과세", "isTaxable"], ["매입원가", "purchaseCost"], ["소비자가", "consumerPrice"], ["공급가", "supplyPrice"]];
+
+  function koreanFieldsOf(messages) {
+    var names = [];
+    messages.forEach(function (message) {
+      var text = String(message);
+      if (!/(이어야|필수|입력|선택해|비어|없습니다|해야|올바르지)/.test(text)) return;
+      KOREAN_FIELD_LABELS.some(function (pair) {
+        if (text.indexOf(pair[0]) < 0) return false;
+        if (names.indexOf(pair[1]) < 0) names.push(pair[1]);
+        return true;
+      });
+    });
+    return names;
+  }
+
   function describeError(error) {
     if (!error) return "알 수 없는 오류";
     if (error.name === "SyncError") return error.message;
@@ -505,7 +522,7 @@
             if (Object.keys(body).length === 0) throw error;
             continue;
           }
-          var missing = source ? missingProperties(messages).filter(function (name) { return !(name in body) && name in source; }) : [];
+          var missing = source ? missingProperties(messages).concat(koreanFieldsOf(messages)).filter(function (name, index, list) { return list.indexOf(name) === index && !(name in body) && name in source; }) : [];
           if (missing.length > 0) {
             missing.forEach(function (name) { body[name] = writable(source[name]); });
             continue;
@@ -756,19 +773,29 @@
       if (fields.indexOf("consumerPrice") >= 0) body.consumerPrice = values.consumerPrice;
       if (fields.indexOf("purchaseCost") >= 0 && values.purchaseCost !== null) body.purchaseCost = values.purchaseCost;
       var groupKey = null;
+      var groupSame = false;
       if (fields.indexOf("groupPrice") >= 0) {
-        var pricing = buildGroupPricing(detail, context.group, context.groupKeyword, values.groupPrice);
-        if (pricing) {
-          body[pricing.key] = pricing.value;
-          groupKey = pricing.key;
+        // 보내기 직전에 읽은 황금농부 공급가가 이미 DB센터 수강생 단가와 같으면 개별공급가 목록은 건드리지 않습니다.
+        var current = extractGroupPrice(detail, context.group, context.groupKeyword);
+        if (typeof current === "number" && current === values.groupPrice) {
+          groupSame = true;
         } else {
-          result.skipped.push({ field: "groupPrice", reason: context.group ? "발주오라 상품 정보에서 매출처 그룹 공급가 칸을 찾지 못했습니다." : "발주오라에서 '" + context.groupKeyword + "' 매출처 그룹을 찾지 못했습니다." });
+          var pricing = buildGroupPricing(detail, context.group, context.groupKeyword, values.groupPrice);
+          if (pricing) {
+            body[pricing.key] = pricing.value;
+            groupKey = pricing.key;
+          } else {
+            result.skipped.push({ field: "groupPrice", reason: context.group ? "발주오라 상품 정보에서 매출처 그룹 공급가 칸을 찾지 못했습니다." : "발주오라에서 '" + context.groupKeyword + "' 매출처 그룹을 찾지 못했습니다." });
+          }
         }
       }
-      if (Object.keys(body).length === 0) return;
-      var tracker = {};
-      await sendAdaptive("PUT", "products/" + encodeURIComponent(id) + "/pricing", body, writable(detail), tracker);
+      if (Object.keys(body).length > 0) {
+        var tracker = {};
+        await sendAdaptive("PUT", "products/" + encodeURIComponent(id) + "/pricing", body, writable(detail), tracker);
+      }
       fields.forEach(function (field) {
+        if (field === "groupPrice" && groupSame) { result.applied.push(field); return; }
+        if (field === "purchaseCost" && values.purchaseCost === null) { result.skipped.push({ field: field, reason: "DB센터 원가가 비어 있어 보내지 않았습니다." }); return; }
         var key = field === "groupPrice" ? groupKey : field;
         if (!key || !(key in body)) {
           if (field !== "groupPrice" || groupKey) result.skipped.push({ field: field, reason: "발주오라가 이 칸을 받지 않았습니다." });
@@ -778,9 +805,24 @@
       });
     }
 
+    // 상품 정보 저장(PUT products/:id/info)은 상품명이 꼭 있어야 합니다(2026-11-23 운영: 카테고리만 보내자 "상품명은 문자열이어야 합니다.").
+    // 그래서 바꾸지 않는 칸도 지금 값(상품명·이미지·카테고리)을 함께 보내, 빠진 칸 때문에 발주오라 값이 지워지지 않게 합니다.
     async function applyInfo(id, detail, item, fields, result, code) {
       var body = {};
       var sent = {};
+      var baseKeys = [];
+      var currentName = typeof detail.name === "string" ? detail.name : "";
+      body.name = currentName || item.values.name;
+      var categoryKey = categoryKeyOf(detail);
+      if (Array.isArray(detail.categoryIds)) {
+        body.categoryIds = detail.categoryIds.filter(function (value) { return typeof value === "string"; });
+        baseKeys.push("categoryIds");
+      }
+      if (Array.isArray(detail.imageUrls)) {
+        body.imageUrls = detail.imageUrls.filter(function (value) { return typeof value === "string"; });
+        baseKeys.push("imageUrls");
+      }
+      var dropBase = function (key) { var index = baseKeys.indexOf(key); if (index >= 0) baseKeys.splice(index, 1); };
       if (fields.indexOf("name") >= 0 && item.values.name) {
         body.name = item.values.name;
         sent.name = "name";
@@ -789,9 +831,9 @@
         if (!item.values.categoryId) {
           result.skipped.push({ field: "category", reason: "DB센터 카테고리와 연결한 발주오라 카테고리가 없습니다(동기화 설정 > 카테고리 연결)." });
         } else {
-          var key = categoryKeyOf(detail);
-          body[key] = key === "categoryIds" ? [item.values.categoryId] : item.values.categoryId;
-          sent.category = key;
+          body[categoryKey] = categoryKey === "categoryIds" ? [item.values.categoryId] : item.values.categoryId;
+          sent.category = categoryKey;
+          dropBase(categoryKey);
         }
       }
       if (fields.indexOf("image") >= 0) {
@@ -800,12 +842,22 @@
           var existing = extractImages(detail).filter(function (value) { return value !== url; });
           body.imageUrls = [url].concat(existing.slice(1)).slice(0, 10);
           sent.image = "imageUrls";
+          dropBase("imageUrls");
         } catch (error) {
           result.skipped.push({ field: "image", reason: describeError(error) });
         }
       }
-      if (Object.keys(body).length === 0) return;
-      await sendAdaptive("PUT", "products/" + encodeURIComponent(id) + "/info", body, writable(detail));
+      if (Object.keys(sent).length === 0) return;
+      var path = "products/" + encodeURIComponent(id) + "/info";
+      try {
+        await sendAdaptive("PUT", path, body, writable(detail));
+      } catch (error) {
+        // 함께 보낸 '지금 값' 칸(이미지·카테고리) 때문에 거절됐을 수 있어 그 칸만 빼고 한 번 더 보냅니다(상품명·바꾸는 칸은 그대로).
+        var base = baseKeys.filter(function (key) { return key in body; });
+        if (error.status !== 400 || base.length === 0) throw error;
+        base.forEach(function (key) { delete body[key]; });
+        await sendAdaptive("PUT", path, body, writable(detail));
+      }
       Object.keys(sent).forEach(function (field) {
         if (sent[field] in body) result.applied.push(field);
         else result.skipped.push({ field: field, reason: "발주오라가 이 칸을 받지 않았습니다." });
@@ -844,8 +896,19 @@
         if (isObject(detail) && groupArrayKeys(detail).length === 0) await discoverProductForm(id);
         var priceFields = fields.filter(function (field) { return PRICE_FIELDS.indexOf(field) >= 0; });
         var infoFields = fields.filter(function (field) { return INFO_FIELDS.indexOf(field) >= 0; });
-        if (priceFields.length) await applyPricing(id, detail, item, priceFields, result, context);
-        if (infoFields.length) await applyInfo(id, detail, item, infoFields, result, code);
+        // 가격과 상품 정보는 따로 저장합니다. 한쪽이 실패해도 다른 쪽에서 반영된 칸은 '반영됨'으로 남기고, 실패한 칸만 사유와 함께 알립니다.
+        var markFailed = function (list, error) {
+          var reason = describeError(error);
+          list.forEach(function (field) {
+            if (result.applied.indexOf(field) < 0 && !result.skipped.some(function (entry) { return entry.field === field; })) result.skipped.push({ field: field, reason: reason });
+          });
+        };
+        if (priceFields.length) {
+          try { await applyPricing(id, detail, item, priceFields, result, context); } catch (error) { if (error && error.status === 401) throw error; markFailed(priceFields, error); }
+        }
+        if (infoFields.length) {
+          try { await applyInfo(id, detail, item, infoFields, result, code); } catch (error) { if (error && error.status === 401) throw error; markFailed(infoFields, error); }
+        }
         var after = normalizeProduct(await getDetail(id), context);
         if (after) {
           verifyApplied(result, item, after);
@@ -902,19 +965,374 @@
     return { api: api, refreshToken: refreshToken, runCompare: runCompare, runPush: runPush, pushItem: pushItem, diagnostics: diagnostics, state: state };
   }
 
+  // ─── 입금·정산 반영 도우미(2026-11-23 관리자 요청) ─────────────────────────────
+  // 발주오라 정산 관리 > 입/출금 계좌 조회 화면에서 관리자가 손으로 하던 순서를 그 화면의 버튼으로 그대로 합니다:
+  //   계좌내역 조회 → (수집 중…) → 업체구분·거래처명이 모두 들어간 '정산 대기' 건만 체크 → 정산 반영 처리 → 확인 창 "적용하기"
+  // 발주오라 내부 주소를 직접 부르지 않고 화면의 버튼을 누르므로, 발주오라 화면의 검사·확인 창(registerLedger
+  // "선택한 업체구분에 따라 매출처관리대장 / 매입처관리대장에 적용 됩니다")을 그대로 거칩니다.
+  // 반영 전에 패널에 반영할 건(일시·입금/출금·업체구분·거래처·예금주·금액)을 보여 주고 관리자가 한 번 더 눌러야 반영하며,
+  // 업체구분이나 거래처명이 비어 있는 건은 건드리지 않고 "직접 확인할 건"으로 알려 줍니다. 패널을 닫으면 반영하지 않습니다.
+
+  var SETTLE = {
+    pageTitle: "입/출금 계좌 조회",
+    menu: "정산 관리",
+    collect: "계좌내역 조회",
+    collecting: /^수집\s*중/,
+    apply: "정산 반영 처리",
+    confirm: /^(적용하기|적용)$/,
+    waiting: /정산\s*대기\s*([\d,]+)\s*건/
+  };
+  var SETTLE_HEADERS = {
+    at: ["입/출금 일시", "입출금 일시", "거래 일시", "일시"],
+    kind: ["구분"],
+    partnerType: ["업체구분"],
+    partnerName: ["거래처명", "거래처"],
+    depositor: ["상대계좌 예금주명", "예금주명"],
+    amount: ["금액"]
+  };
+  var SETTLE_TIMING = { poll: 300, page: 15000, start: 5000, collect: 180000, settle: 1500, enable: 5000, dialog: 6000, verify: 30000 };
+  var PLACEHOLDER_VALUE = /^(선택|선택하세요|선택해 ?주세요|-|없음|미지정)$/;
+
+  function cleanText(value) {
+    return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+  }
+
+  // 발주오라 화면에 보이는 요소인지(숨김·우리 패널 안은 제외)
+  function isPageElement(win, element, allowHidden) {
+    if (!element || element.isConnected === false) return false;
+    for (var node = element; node && node.nodeType === 1; node = node.parentElement) {
+      if (node.id === "doogo-sync-panel") return false;
+      if (allowHidden) continue;
+      if (node.hidden || node.getAttribute("aria-hidden") === "true") return false;
+      var style = win.getComputedStyle ? win.getComputedStyle(node) : null;
+      if (style && (style.display === "none" || style.visibility === "hidden")) return false;
+    }
+    return true;
+  }
+
+  function textMatches(text, matcher) {
+    return typeof matcher === "string" ? text === matcher : matcher.test(text);
+  }
+
+  function findControl(win, matcher, selector, allowHidden) {
+    var nodes = win.document.querySelectorAll(selector || "button, [role='button'], a");
+    for (var index = 0; index < nodes.length; index += 1) {
+      var node = nodes[index];
+      if (textMatches(cleanText(node.textContent), matcher) && isPageElement(win, node, allowHidden)) return node;
+    }
+    return null;
+  }
+
+  function findControls(win, matcher) {
+    var found = [];
+    var nodes = win.document.querySelectorAll("button, [role='button']");
+    for (var index = 0; index < nodes.length; index += 1) {
+      if (textMatches(cleanText(nodes[index].textContent), matcher) && isPageElement(win, nodes[index])) found.push(nodes[index]);
+    }
+    return found;
+  }
+
+  function isEnabled(node) {
+    return Boolean(node) && !node.disabled && node.getAttribute("aria-disabled") !== "true";
+  }
+
+  function waitFor(check, timeoutMs, intervalMs) {
+    return new Promise(function (resolve) {
+      var started = Date.now();
+      (function tick() {
+        var value = null;
+        try { value = check(); } catch { value = null; }
+        if (value) return resolve(value);
+        if (Date.now() - started >= timeoutMs) return resolve(null);
+        setTimeout(tick, intervalMs || SETTLE_TIMING.poll);
+      })();
+    });
+  }
+
+  function pause(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  // 표 칸의 선택값(업체구분·거래처명): 기본 선택칸 → 입력칸 값 → 콤보박스 글자 → 칸 글자
+  function controlValue(cell) {
+    if (!cell) return "";
+    var select = cell.querySelector("select");
+    if (select) {
+      var options = Array.prototype.slice.call(select.querySelectorAll("option"));
+      var option = options.filter(function (node) { return node.selected; })[0] || (typeof select.selectedIndex === "number" && select.selectedIndex >= 0 ? options[select.selectedIndex] : null);
+      return cleanText(option ? option.textContent : select.value);
+    }
+    var inputs = cell.querySelectorAll("input");
+    for (var index = 0; index < inputs.length; index += 1) {
+      var input = inputs[index];
+      if (input.type === "checkbox" || input.type === "hidden" || input.type === "radio") continue;
+      if (cleanText(input.value)) return cleanText(input.value);
+    }
+    var combo = cell.querySelector("[role='combobox'], button");
+    if (combo && cleanText(combo.textContent)) return cleanText(combo.textContent);
+    return cleanText(cell.textContent);
+  }
+
+  function hasValue(value) {
+    return Boolean(value) && !PLACEHOLDER_VALUE.test(value);
+  }
+
+  // 머리글은 "상대계좌<br>예금주명"처럼 줄을 바꿔 쓰면 글자가 붙어 읽히므로 띄어쓰기를 빼고 비교합니다.
+  function headerIndex(headers, names) {
+    var compact = headers.map(function (text) { return text.replace(/\s+/g, ""); });
+    for (var index = 0; index < names.length; index += 1) {
+      var found = compact.indexOf(names[index].replace(/\s+/g, ""));
+      if (found >= 0) return found;
+    }
+    return -1;
+  }
+
+  // 칸 글자: 줄바꿈(<br>)·블록 사이는 띄어 읽습니다("2026-11-23<br>14:11:08" → "2026-11-23 14:11:08").
+  function readableText(node) {
+    if (!node) return "";
+    var out = "";
+    Array.prototype.forEach.call(node.childNodes || [], function (child) {
+      if (child.nodeType === 3) out += child.nodeValue;
+      else if (child.nodeType === 1) {
+        if (child.tagName === "BR") out += " ";
+        else if (/^(DIV|P|LI|TR|TD|TH)$/.test(child.tagName)) out += " " + readableText(child) + " ";
+        else out += readableText(child);
+      }
+    });
+    return cleanText(out);
+  }
+
+  function rowCells(row) {
+    return Array.prototype.filter.call(row.children || [], function (cell) { return cell.tagName === "TD" || cell.tagName === "TH"; });
+  }
+
+  // 입/출금 표 읽기: 머리 줄 글자로 칸 위치를 찾고(업체구분·거래처명 필수), 체크칸이 있는 줄만 거래로 봅니다.
+  function readBankTable(win) {
+    var tables = win.document.querySelectorAll("table");
+    for (var tableIndex = 0; tableIndex < tables.length; tableIndex += 1) {
+      var table = tables[tableIndex];
+      if (!isPageElement(win, table)) continue;
+      var allRows = Array.prototype.filter.call(table.querySelectorAll("tr"), function (row) { return row.closest("table") === table; });
+      var headRow = table.querySelector("thead tr") || allRows[0];
+      if (!headRow) continue;
+      var headers = rowCells(headRow).map(function (cell) { return readableText(cell); });
+      var columns = {};
+      Object.keys(SETTLE_HEADERS).forEach(function (key) { columns[key] = headerIndex(headers, SETTLE_HEADERS[key]); });
+      if (columns.partnerType < 0 || columns.partnerName < 0) continue;
+      var rows = [];
+      allRows.forEach(function (row) {
+        if (row === headRow || row.closest("thead")) return;
+        var checkbox = row.querySelector("input[type='checkbox']");
+        if (!checkbox) return;
+        var cells = rowCells(row);
+        var text = function (key) { return columns[key] >= 0 && cells[columns[key]] ? readableText(cells[columns[key]]) : ""; };
+        var item = {
+          row: row,
+          checkbox: checkbox,
+          at: text("at"),
+          kind: text("kind"),
+          partnerType: controlValue(cells[columns.partnerType]),
+          partnerName: controlValue(cells[columns.partnerName]),
+          depositor: text("depositor"),
+          amount: toNumber(text("amount"))
+        };
+        item.signature = [item.at, item.kind, item.amount, item.depositor].join("|");
+        item.missing = [];
+        if (!hasValue(item.partnerType)) item.missing.push("업체구분");
+        if (!hasValue(item.partnerName)) item.missing.push("거래처명");
+        item.eligible = item.missing.length === 0 && !checkbox.disabled;
+        rows.push(item);
+      });
+      return { table: table, rows: rows, columns: columns };
+    }
+    return null;
+  }
+
+  // 위쪽 요약 칸 "정산 대기 N 건"(우리 패널 글자는 빼고 읽음)
+  function readWaitingCount(win) {
+    var body = win.document.body;
+    if (!body) return null;
+    var text = "";
+    Array.prototype.forEach.call(body.children, function (child) { if (child.id !== "doogo-sync-panel") text += " " + child.textContent; });
+    var match = SETTLE.waiting.exec(cleanText(text));
+    return match ? toNumber(match[1]) : null;
+  }
+
+  function isBankPage(win) {
+    return Boolean(findControl(win, SETTLE.collect) || findControl(win, SETTLE.collecting));
+  }
+
+  function formatWon(value) {
+    return typeof value === "number" ? value.toLocaleString("ko-KR") + "원" : "금액 확인";
+  }
+
+  function describeBankRow(item) {
+    return [item.at || "일시 없음", item.kind || "", hasValue(item.partnerType) ? item.partnerType : "업체구분 없음", hasValue(item.partnerName) ? item.partnerName : "거래처 없음"].filter(Boolean).join(" · ") + (item.depositor ? " (예금주 " + item.depositor + ")" : "") + " · " + formatWon(item.amount);
+  }
+
+  function summarizeBankRows(rows) {
+    var groups = {};
+    rows.forEach(function (item) {
+      var key = item.kind || "기타";
+      groups[key] = groups[key] || { count: 0, amount: 0 };
+      groups[key].count += 1;
+      groups[key].amount += item.amount || 0;
+    });
+    return Object.keys(groups).map(function (key) { return key + " " + groups[key].count + "건 " + formatWon(groups[key].amount); }).join(" · ");
+  }
+
+  function createSettlementHelper(win, timingOverride) {
+    var timing = Object.assign({}, SETTLE_TIMING, timingOverride || {});
+
+    // 입/출금 계좌 조회 화면이 아니면 왼쪽 메뉴의 링크를 눌러 이동합니다(발주오라는 화면 안에서 이동해 이 스크립트가 유지됨).
+    async function openBankPage() {
+      if (isBankPage(win)) return true;
+      var link = findControl(win, SETTLE.pageTitle, "a[href], [role='link'], button") || findControl(win, SETTLE.pageTitle, "a[href], [role='link'], button", true);
+      if (!link) {
+        var menu = findControl(win, SETTLE.menu, "a, button, [role='button']");
+        if (menu) {
+          menu.click();
+          link = await waitFor(function () { return findControl(win, SETTLE.pageTitle, "a[href], [role='link'], button", true); }, 2000, timing.poll);
+        }
+      }
+      if (!link) return false;
+      link.click();
+      return Boolean(await waitFor(function () { return isBankPage(win); }, timing.page, timing.poll));
+    }
+
+    // 계좌내역 조회 → "수집 중…"이 끝나 버튼이 다시 눌리는 상태가 될 때까지 기다립니다.
+    async function collect() {
+      var button = await waitFor(function () { return findControl(win, SETTLE.collect) || findControl(win, SETTLE.collecting); }, timing.page, timing.poll);
+      if (!button) throw SyncError("'계좌내역 조회' 버튼을 찾지 못했습니다. 발주오라 정산 관리 > 입/출금 계좌 조회 화면에서 책갈피를 다시 눌러 주세요.");
+      if (textMatches(cleanText(button.textContent), SETTLE.collect) && isEnabled(button)) {
+        var before = findControls(win, "확인");
+        var newConfirm = function () { return findControls(win, "확인").filter(function (node) { return before.indexOf(node) < 0; })[0] || null; };
+        button.click();
+        // "수집 중…"으로 바뀌거나, 발주오라가 확인 창을 띄우면 새로 생긴 '확인'만 누릅니다(화면에 원래 있던 버튼은 건드리지 않음).
+        var started = await waitFor(function () {
+          var ok = newConfirm();
+          if (ok) return { ok: ok };
+          return findControl(win, SETTLE.collecting) ? { collecting: true } : null;
+        }, timing.start, timing.poll);
+        if (started && started.ok) {
+          started.ok.click();
+          await waitFor(function () { return findControl(win, SETTLE.collecting); }, timing.start, timing.poll);
+        }
+      }
+      var finished = await waitFor(function () {
+        var node = findControl(win, SETTLE.collect);
+        return isEnabled(node) && !findControl(win, SETTLE.collecting) ? node : null;
+      }, timing.collect, timing.poll);
+      if (!finished) throw SyncError("계좌내역 수집이 " + Math.max(1, Math.round(timing.collect / 60000)) + "분 안에 끝나지 않았습니다. 발주오라 화면에서 수집이 끝난 뒤 책갈피를 다시 눌러 주세요.");
+      await pause(timing.settle);
+    }
+
+    // 고른 건만 체크 → 정산 반영 처리 → 확인 창 '적용하기' → 정산 대기 목록에서 사라졌는지 확인
+    async function apply(rows) {
+      var wanted = {};
+      rows.forEach(function (item) { wanted[item.signature] = true; });
+      var table = readBankTable(win);
+      if (!table) throw SyncError("입/출금 목록 표를 찾지 못했습니다.");
+      table.rows.forEach(function (item) {
+        var shouldCheck = Boolean(wanted[item.signature]) && item.eligible;
+        if (Boolean(item.checkbox.checked) !== shouldCheck) item.checkbox.click();
+      });
+      await pause(timing.poll);
+      var checked = (readBankTable(win) || { rows: [] }).rows.filter(function (item) { return item.checkbox.checked; });
+      if (checked.some(function (item) { return !wanted[item.signature]; })) throw SyncError("반영하지 않을 건이 함께 선택돼 멈췄습니다. 발주오라 화면을 새로고침한 뒤 다시 실행해 주세요.");
+      if (checked.length < rows.length) throw SyncError("반영할 건을 모두 선택하지 못했습니다(" + checked.length + " / " + rows.length + "). 발주오라 화면을 새로고침한 뒤 다시 실행해 주세요.");
+      var applyButton = await waitFor(function () { var node = findControl(win, SETTLE.apply); return isEnabled(node) ? node : null; }, timing.enable, timing.poll);
+      if (!applyButton) throw SyncError("'정산 반영 처리' 버튼이 눌리지 않습니다. 발주오라 화면을 확인해 주세요.");
+      applyButton.click();
+      var confirmButton = await waitFor(function () { return findControl(win, SETTLE.confirm); }, timing.dialog, timing.poll);
+      if (confirmButton) confirmButton.click();
+      await waitFor(function () {
+        var now = readBankTable(win);
+        return now && !now.rows.some(function (item) { return wanted[item.signature]; });
+      }, timing.verify, timing.poll);
+      var after = readBankTable(win);
+      var left = after ? after.rows.filter(function (item) { return wanted[item.signature]; }) : [];
+      var leftKeys = {};
+      left.forEach(function (item) { leftKeys[item.signature] = true; });
+      return { applied: rows.filter(function (item) { return !leftKeys[item.signature]; }), left: left, confirmed: Boolean(confirmButton) };
+    }
+
+    return { openBankPage: openBankPage, collect: collect, apply: apply, read: function () { return readBankTable(win); }, waitingCount: function () { return readWaitingCount(win); }, timing: timing };
+  }
+
+  // 패널과 함께 전체 순서를 진행합니다. options.confirm(rows)가 없으면 패널 버튼으로 관리자에게 묻습니다.
+  async function runSettlement(win, panel, options) {
+    var settings = options || {};
+    var helper = createSettlementHelper(win, settings.timing);
+    var result = { applied: [], left: [], skipped: [], rounds: 0, collected: false, stopped: false };
+    panel.status("입/출금 계좌 조회 화면을 확인하는 중…");
+    panel.progress(1, 10);
+    if (!(await helper.openBankPage())) throw SyncError("입/출금 계좌 조회 화면을 열지 못했습니다. 발주오라 왼쪽 메뉴 정산 관리 > 입/출금 계좌 조회를 연 뒤 책갈피를 다시 눌러 주세요.");
+    panel.status("계좌내역을 조회(수집)하는 중… 1~2분 걸릴 수 있어요.");
+    panel.progress(3, 10);
+    await helper.collect();
+    result.collected = true;
+    panel.log("계좌내역 조회(수집)를 마쳤습니다.");
+    var seen = {};
+    for (var round = 0; round < 10; round += 1) {
+      if (panel.closed) { result.stopped = true; break; }
+      var table = helper.read();
+      if (!table) throw SyncError("입/출금 목록 표(업체구분·거래처명 칸)를 찾지 못했습니다. 발주오라 화면이 바뀌었으면 DB센터에 알려 주세요.");
+      var waiting = helper.waitingCount();
+      if (waiting !== null && table.rows.length > waiting) throw SyncError("지금 표에 정산 대기가 아닌 건도 보입니다(표 " + table.rows.length + "건 · 정산 대기 " + waiting + "건). 위쪽 '정산 대기' 칸을 눌러 대기 건만 보이게 한 뒤 다시 실행해 주세요.");
+      var fresh = table.rows.filter(function (item) { return !seen[item.signature]; });
+      fresh.forEach(function (item) { seen[item.signature] = true; });
+      var eligible = fresh.filter(function (item) { return item.eligible; });
+      var skipped = fresh.filter(function (item) { return !item.eligible; });
+      result.skipped = result.skipped.concat(skipped);
+      skipped.forEach(function (item) { panel.log("직접 확인: " + describeBankRow(item) + " — " + (item.missing.length ? item.missing.join("·") + " 비어 있음" : "선택할 수 없는 건"), true); });
+      if (eligible.length === 0) break;
+      result.rounds += 1;
+      panel.progress(6, 10);
+      panel.status("정산 반영할 건 " + eligible.length + "개 · " + summarizeBankRows(eligible));
+      eligible.forEach(function (item) { panel.log("반영 예정: " + describeBankRow(item)); });
+      var go = settings.confirm ? await settings.confirm(eligible) : (await panel.ask([{ key: "apply", label: eligible.length + "건 정산 반영하기", primary: true }, { key: "stop", label: "그만두기" }])) === "apply";
+      if (!go || panel.closed) { result.stopped = true; panel.log("정산 반영을 하지 않았습니다."); break; }
+      panel.status(eligible.length + "건 정산 반영 처리 중…");
+      panel.progress(8, 10);
+      var applied = await helper.apply(eligible);
+      result.applied = result.applied.concat(applied.applied);
+      result.left = result.left.concat(applied.left);
+      applied.applied.forEach(function (item) { panel.log("✓ 반영됨: " + describeBankRow(item)); });
+      applied.left.forEach(function (item) { panel.log("✕ 반영 안 됨: " + describeBankRow(item), true); });
+      if (applied.left.length > 0) break;
+      // 한 쪽(기본 20개)보다 대기 건이 많으면 반영 후 다음 건이 보이므로 한 번 더 확인합니다.
+      var remaining = helper.waitingCount();
+      if (remaining === null || remaining === 0) break;
+    }
+    panel.progress(10, 10);
+    var parts = [];
+    parts.push(result.applied.length ? "정산 반영 " + result.applied.length + "건(" + summarizeBankRows(result.applied) + ")" : "정산 반영한 건 없음");
+    if (result.left.length) parts.push("반영 안 됨 " + result.left.length + "건 — 발주오라 화면 안내를 확인해 주세요");
+    if (result.skipped.length) parts.push("직접 확인할 건 " + result.skipped.length + "개(업체구분·거래처명을 고른 뒤 정산 반영)");
+    panel.status((result.stopped ? "멈춤: " : "완료: ") + parts.join(" · "));
+    if (result.applied.some(function (item) { return /매출/.test(item.partnerType); })) panel.log("매출처 입금 건은 발주오라가 매출처관리대장에 반영해 그 매출처의 주문대기 주문을 주문접수로 넘깁니다.");
+    return result;
+  }
+
   // ─── 화면(발주오라 창 오른쪽 아래 작은 패널) ─────────────────────────────────
 
-  function createPanel(doc) {
+  function createPanel(doc, options) {
+    var settings = options || {};
     var old = doc.getElementById("doogo-sync-panel");
     if (old) old.remove();
     var panel = doc.createElement("section");
     panel.id = "doogo-sync-panel";
     panel.setAttribute("role", "status");
-    panel.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:2147483647;width:min(420px,calc(100vw - 36px));max-height:70vh;display:flex;flex-direction:column;gap:10px;padding:16px 16px 14px;border:2px solid #163300;border-radius:16px;background:#fff;color:#0e0f0c;box-shadow:0 18px 50px rgba(0,0,0,.25);font:14px/1.5 -apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
-    panel.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><strong style="font-size:15px">두고푸드 DB센터 → 발주오라 동기화</strong><button type="button" data-close aria-label="닫기" style="border:0;background:#f1f3ef;border-radius:8px;padding:4px 10px;font-size:13px;cursor:pointer">닫기</button></div><p data-status style="margin:0;font-weight:700"></p><div style="height:8px;border-radius:99px;background:#e8ebe6;overflow:hidden"><div data-bar style="height:100%;width:0;background:#9fe870;transition:width .3s"></div></div><ol data-log style="margin:0;padding:0 0 0 18px;overflow:auto;max-height:36vh;font-size:12.5px;color:#454745"></ol><small style="color:#6b6e6a">이 창을 닫지 말고 끝날 때까지 기다려 주세요. 결과는 DB센터 동기화 화면에도 그대로 보입니다.</small>';
+    panel.style.cssText = "box-sizing:border-box;position:fixed;right:18px;bottom:18px;z-index:2147483647;width:min(420px,calc(100vw - 36px));max-height:70vh;display:flex;flex-direction:column;gap:10px;padding:16px 16px 14px;border:2px solid #163300;border-radius:16px;background:#fff;color:#0e0f0c;box-shadow:0 18px 50px rgba(0,0,0,.25);font:14px/1.5 -apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
+    panel.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><strong data-title style="font-size:15px"></strong><button type="button" data-close aria-label="닫기" style="border:0;background:#f1f3ef;border-radius:8px;padding:4px 10px;font-size:13px;cursor:pointer">닫기</button></div><p data-status style="margin:0;font-weight:700"></p><div style="height:8px;border-radius:99px;background:#e8ebe6;overflow:hidden"><div data-bar style="height:100%;width:0;background:#9fe870;transition:width .3s"></div></div><ol data-log style="margin:0;padding:0 0 0 18px;overflow:auto;max-height:36vh;font-size:12.5px;color:#454745"></ol><div data-actions style="display:none;flex-wrap:wrap;gap:8px"></div><small data-note style="color:#6b6e6a"></small>';
+    panel.querySelector("[data-title]").textContent = settings.title || "두고푸드 DB센터 → 발주오라 동기화";
+    panel.querySelector("[data-note]").textContent = settings.note || "이 창을 닫지 말고 끝날 때까지 기다려 주세요. 결과는 DB센터 동기화 화면에도 그대로 보입니다.";
     doc.body.appendChild(panel);
-    panel.querySelector("[data-close]").addEventListener("click", function () { panel.remove(); });
-    return {
+    var pending = null;
+    var api = {
+      closed: false,
+      element: panel,
       status: function (text) { panel.querySelector("[data-status]").textContent = text; },
       progress: function (done, total) { panel.querySelector("[data-bar]").style.width = (total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 8) + "%"; },
       log: function (text, isError) {
@@ -925,21 +1343,96 @@
         log.appendChild(line);
         while (log.children.length > 60) log.removeChild(log.firstChild);
         log.scrollTop = log.scrollHeight;
+      },
+      // 버튼을 보여 주고 누른 버튼의 key를 돌려줍니다(패널을 닫으면 null).
+      ask: function (buttons) {
+        var box = panel.querySelector("[data-actions]");
+        box.innerHTML = "";
+        box.style.display = "flex";
+        return new Promise(function (resolve) {
+          pending = resolve;
+          buttons.forEach(function (button) {
+            var element = doc.createElement("button");
+            element.type = "button";
+            element.textContent = button.label;
+            element.setAttribute("data-action", button.key);
+            element.style.cssText = button.primary
+              ? "flex:1 1 auto;min-height:40px;border:0;border-radius:10px;padding:8px 14px;background:#163300;color:#9fe870;font-weight:800;font-size:14px;cursor:pointer"
+              : "flex:0 0 auto;min-height:40px;border:1px solid #d5dbd1;border-radius:10px;padding:8px 14px;background:#fff;color:#0e0f0c;font-weight:700;font-size:14px;cursor:pointer";
+            element.addEventListener("click", function () {
+              box.innerHTML = "";
+              box.style.display = "none";
+              pending = null;
+              resolve(button.key);
+            });
+            box.appendChild(element);
+          });
+        });
       }
     };
+    panel.querySelector("[data-close]").addEventListener("click", function () {
+      api.closed = true;
+      panel.remove();
+      if (pending) { var resolve = pending; pending = null; resolve(null); }
+    });
+    return api;
+  }
+
+  function codeFromLocation(win) {
+    var match = /doogo-sync=([0-9A-Za-z-]{10,16})/.exec(win.location.hash || "") || /doogo-sync=([0-9A-Za-z-]{10,16})/.exec(win.location.search || "");
+    if (!match) return null;
+    try { win.sessionStorage.setItem("doogo-sync-code", match[1]); } catch { /* 저장이 막힌 브라우저 */ }
+    try { win.history.replaceState(null, "", win.location.pathname + win.location.search.replace(/[?&]doogo-sync=[^&]*/, "")); } catch { /* 무시 */ }
+    return match[1];
   }
 
   function readCode(win) {
-    var match = /doogo-sync=([0-9A-Za-z-]{10,16})/.exec(win.location.hash || "") || /doogo-sync=([0-9A-Za-z-]{10,16})/.exec(win.location.search || "");
+    var code = codeFromLocation(win);
+    if (code) return code;
     var stored = null;
     try { stored = win.sessionStorage.getItem("doogo-sync-code"); } catch { stored = null; }
-    if (match) {
-      try { win.sessionStorage.setItem("doogo-sync-code", match[1]); } catch { /* 저장이 막힌 브라우저 */ }
-      try { win.history.replaceState(null, "", win.location.pathname + win.location.search.replace(/[?&]doogo-sync=[^&]*/, "")); } catch { /* 무시 */ }
-      return match[1];
-    }
     var typed = win.prompt("DB센터 '발주오라 동기화' 화면에 보이는 작업 코드 10글자를 입력해 주세요.", stored || "");
     return typed ? typed.trim() : null;
+  }
+
+  // DB센터 "발주오라 정산 화면 열기"로 연 창(#doogo-settle)이거나 입/출금 계좌 조회 화면이면 정산 반영 도우미로 시작합니다.
+  function settleRequested(win) {
+    return /(^|[#&?])doogo-settle(\b|$)/.test((win.location.hash || "") + "&" + (win.location.search || ""));
+  }
+
+  function clearSettleHash(win) {
+    if (!/doogo-settle/.test(win.location.hash || "")) return;
+    try { win.history.replaceState(null, "", win.location.pathname + win.location.search); } catch { /* 무시 */ }
+  }
+
+  async function chooseMode(win) {
+    var panel = createPanel(win.document, { title: "두고푸드 책갈피", note: "상품 동기화는 DB센터 '발주오라 동기화'에서 작업을 만든 뒤 이 책갈피를 누르면 바로 시작됩니다." });
+    panel.status("무엇을 할까요?");
+    panel.log("입금·정산 반영: 입/출금 계좌 조회 → 업체구분·거래처가 들어간 정산 대기 건 정산 반영");
+    panel.log("상품 동기화: DB센터에서 받은 작업 코드 10글자로 비교·보내기");
+    var mode = await panel.ask([{ key: "settle", label: "입금·정산 반영", primary: true }, { key: "sync", label: "상품 동기화(작업 코드)" }]);
+    if (mode && mode !== "settle") panel.element.remove();
+    return { mode: mode, panel: panel };
+  }
+
+  async function runSettlementMode(win, panel) {
+    win.__doogoSyncRunning = true;
+    clearSettleHash(win);
+    var view = panel || createPanel(win.document, { title: "두고푸드 · 입금·정산 반영", note: "발주오라 화면의 버튼을 대신 누릅니다. 반영 전에 목록을 확인하고, 이 창을 닫으면 반영하지 않습니다." });
+    if (panel) {
+      view.element.querySelector("[data-title]").textContent = "두고푸드 · 입금·정산 반영";
+      view.element.querySelector("[data-note]").textContent = "발주오라 화면의 버튼을 대신 누릅니다. 반영 전에 목록을 확인하고, 이 창을 닫으면 반영하지 않습니다.";
+    }
+    try {
+      return await runSettlement(win, view, win.__doogoSettleOptions);
+    } catch (error) {
+      var message = describeError(error);
+      view.status("중단: " + message);
+      view.log(message, true);
+      return null;
+    } finally {
+      win.__doogoSyncRunning = false;
+    }
   }
 
   async function main(win) {
@@ -951,12 +1444,22 @@
       win.alert("발주오라 관리자 화면(console.baljuora.com)에서 책갈피를 눌러 주세요.");
       return;
     }
+    // 작업 코드가 주소에 있으면 상품 동기화, 없으면 정산 반영 도우미(정산 화면·#doogo-settle) 또는 고르기
+    var code = codeFromLocation(win);
+    if (!code) {
+      if (settleRequested(win) || isBankPage(win)) return runSettlementMode(win);
+      win.__doogoSyncRunning = true;
+      var picked;
+      try { picked = await chooseMode(win); } finally { win.__doogoSyncRunning = false; }
+      if (picked.mode === "settle") return runSettlementMode(win, picked.panel);
+      if (picked.mode !== "sync") return;
+      code = readCode(win);
+      if (!code) return;
+    }
     if (!doogoOrigin) {
       win.alert("DB센터 주소를 알 수 없습니다. DB센터 동기화 화면에서 책갈피를 다시 만들어 주세요.");
       return;
     }
-    var code = readCode(win);
-    if (!code) return;
     win.__doogoSyncRunning = true;
     var panel = createPanel(win.document);
     panel.status("DB센터에서 작업을 받는 중…");
@@ -1026,6 +1529,7 @@
     messagesOf: messagesOf,
     forbiddenProperties: forbiddenProperties,
     missingProperties: missingProperties,
+    koreanFieldsOf: koreanFieldsOf,
     writable: writable,
     buildGroupPricing: buildGroupPricing,
     priceEntryForWrite: priceEntryForWrite,
@@ -1036,6 +1540,14 @@
     verifyApplied: verifyApplied,
     createRunner: createRunner,
     readCode: readCode,
+    codeFromLocation: codeFromLocation,
+    settleRequested: settleRequested,
+    readBankTable: readBankTable,
+    readableText: readableText,
+    readWaitingCount: readWaitingCount,
+    createSettlementHelper: createSettlementHelper,
+    runSettlement: runSettlement,
+    createPanel: createPanel,
     main: main
   };
 
