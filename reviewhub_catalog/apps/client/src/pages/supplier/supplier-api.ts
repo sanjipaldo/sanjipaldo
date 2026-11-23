@@ -7,7 +7,8 @@ import {
   type SupplierProductChanges,
   type SupplierRequestKind,
   type SupplierRequestStatus,
-  type SupplierSettlementCycle
+  type SupplierSettlementCycle,
+  type SupplierSettlementState
 } from "@repo/shared/supplier-portal";
 
 export type SupplierProfile = {
@@ -120,6 +121,8 @@ export type SettlementSummary = {
   commission: number;
   payoutAmount: number;
   netIncome: number;
+  // 두고푸드가 바꾼 월 정산 상태(정산 대기 → 판매 대금 입금 완료 → 정산 완료). 아직 없으면 null(정산 대기)
+  state?: SupplierSettlementState | null;
 };
 
 export type SalesMonth = {
@@ -132,7 +135,8 @@ export type SalesMonth = {
   days: SalesDay[];
   ranking: SalesRankItem[];
   settlements: SettlementSummary[];
-  payoutDays: Array<{ date: string; endDate: string; periodStart: string; periodEnd: string; amount: number; done: boolean }>;
+  payoutDays: Array<{ date: string; endDate: string; periodStart: string; periodEnd: string; amount: number; done: boolean; state?: SupplierSettlementState | null }>;
+  settlementState?: SupplierSettlementState | null;
 };
 
 export type SupplierDashboard = SupplierProfile & {

@@ -261,3 +261,32 @@ export function supplierCommission(netAmount: number, rate: number) {
   if (!Number.isFinite(netAmount) || !Number.isFinite(rate) || netAmount <= 0 || rate <= 0) return 0;
   return Math.round((netAmount * rate) / 100);
 }
+
+// ── 월 정산 상태(2026-11-23, migration 036) ─────────────────────────────────
+// 마스터가 바꾸고 공급사 센터에서 함께 봅니다: 정산 대기 → 판매 대금 입금(두고푸드 → 공급사 100%) → 정산 완료(수수료까지 확인).
+export type SupplierSettlementStatus = "pending" | "paid" | "done";
+export const SUPPLIER_SETTLEMENT_STATUSES: SupplierSettlementStatus[] = ["pending", "paid", "done"];
+export const SUPPLIER_SETTLEMENT_STATUS_LABELS: Record<SupplierSettlementStatus, string> = {
+  pending: "정산 대기",
+  paid: "판매 대금 입금 완료",
+  done: "정산 완료"
+};
+export const SUPPLIER_SETTLEMENT_STATUS_HINTS: Record<SupplierSettlementStatus, string> = {
+  pending: "두고푸드가 판매 대금을 아직 보내지 않았어요.",
+  paid: "판매 대금 100%를 보냈어요. 수수료 입금을 확인하면 정산 완료로 바뀝니다.",
+  done: "판매 대금 입금과 수수료 확인까지 끝났어요."
+};
+
+/** 마스터가 적어 둔 월 정산 상태(없으면 정산 대기) */
+export type SupplierSettlementState = {
+  month: string;
+  status: SupplierSettlementStatus;
+  saleAmount: number;
+  commission: number;
+  payoutAmount: number;
+  commissionRate: number;
+  paidAt: string | null;
+  doneAt: string | null;
+  memo: string | null;
+  updatedAt: string | null;
+};

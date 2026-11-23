@@ -25,6 +25,19 @@ import {
   saveBaljuoraSettings,
   startRunnerJob
 } from "../services/baljuora-sync";
+import {
+  buildHometaxFile,
+  getHometaxPreview,
+  getHometaxSettings,
+  getSalesDashboard,
+  listBuyers,
+  listSupplierSettlements,
+  saveHometaxSettings,
+  updateBuyer,
+  updateSupplierSettlement
+} from "../services/baljuora-sales";
+import { BUYER_OVERRIDE_FIELDS } from "@repo/shared/baljuora-sales";
+import { SUPPLIER_SETTLEMENT_STATUSES } from "@repo/shared/supplier-portal";
 
 export const baljuoraRouter = new Hono();
 
@@ -77,7 +90,9 @@ baljuoraRouter.put("/admin/settings", adminRoute, async (c) => {
     baljuoraCategoryMap: z.record(z.string().max(120), z.string().max(120)).optional(),
     subcategoryMap: z.record(z.string().max(120), z.string().max(120)).optional(),
     categoryTreeExclude: z.array(z.string().trim().min(1).max(50)).max(10).optional(),
-    templateCode: z.string().trim().max(80).nullable().optional()
+    templateCode: z.string().trim().max(80).nullable().optional(),
+    salesOnCompare: z.boolean().optional(),
+    salesMonths: z.number().int().min(1).max(12).optional()
   }).safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "동기화 설정 값을 확인해 주세요."), 400);
   try {
@@ -89,7 +104,10 @@ baljuoraRouter.put("/admin/settings", adminRoute, async (c) => {
 
 baljuoraRouter.post("/admin/jobs", adminRoute, async (c) => {
   const parsed = z.discriminatedUnion("type", [
-    z.object({ type: z.literal("compare") }),
+    // sales: 비교 때 판매·매출처도 함께 읽을지(없으면 동기화 설정을 따름)
+    z.object({ type: z.literal("compare"), sales: z.boolean().optional() }),
+    // 판매·매출처만 읽기(이번 달 포함 최근 months개월)
+    z.object({ type: z.literal("sales"), months: z.number().int().min(1).max(12).optional() }),
     z.object({
       type: z.literal("push"),
       productIds: ProductIdsSchema,
@@ -102,8 +120,10 @@ baljuoraRouter.post("/admin/jobs", adminRoute, async (c) => {
   try {
     const user = c.var.currentUser;
     const input = parsed.data.type === "compare"
-      ? { type: "compare" as const }
-      : { type: "push" as const, productIds: parsed.data.productIds, fieldsByProduct: parsed.data.fieldsByProduct as Record<string, Array<(typeof BALJUORA_SYNC_FIELDS)[number]>> | undefined, categoryTree: parsed.data.categoryTree };
+      ? { type: "compare" as const, sales: parsed.data.sales }
+      : parsed.data.type === "sales"
+        ? { type: "sales" as const, months: parsed.data.months }
+        : { type: "push" as const, productIds: parsed.data.productIds, fieldsByProduct: parsed.data.fieldsByProduct as Record<string, Array<(typeof BALJUORA_SYNC_FIELDS)[number]>> | undefined, categoryTree: parsed.data.categoryTree };
     return c.json(apiSuccess(await createBaljuoraJob(input, user?.username || user?.email || null)));
   } catch (error) {
     return errorResponse(c, error);
@@ -188,6 +208,130 @@ baljuoraRouter.post("/admin/ignore", adminRoute, async (c) => {
   }
 });
 
+// ─── 판매·매출처·홈택스·공급사 정산(migration 036) ─────────────────────────────
+
+const MonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+
+// 판매 현황: from~to(주문일) 합계·일별·상품/공급사/카테고리/매출처 순위, 오늘 판매
+baljuoraRouter.get("/admin/sales/summary", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess(await getSalesDashboard({ from: c.req.query("from") ?? null, to: c.req.query("to") ?? null })));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+baljuoraRouter.get("/admin/buyers", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess(await listBuyers({ search: c.req.query("search") ?? null })));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 매출처: 세금계산서용 칸 고치기(발주오라는 바꾸지 않음)·메모
+baljuoraRouter.put("/admin/buyers/:id", adminRoute, async (c) => {
+  const overrideShape = Object.fromEntries(BUYER_OVERRIDE_FIELDS.map((field) => [field, z.string().max(200).nullable().optional()]));
+  const parsed = z.object({
+    overrides: z.object(overrideShape).nullable().optional(),
+    memo: z.string().max(500).nullable().optional()
+  }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "매출처 정보를 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess(await updateBuyer(c.req.param("id"), parsed.data as { overrides?: Record<string, string | null> | null; memo?: string | null })));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+baljuoraRouter.get("/admin/hometax/settings", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess({ settings: await getHometaxSettings() }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+baljuoraRouter.put("/admin/hometax/settings", adminRoute, async (c) => {
+  const parsed = z.object({
+    supplier: z.object({
+      businessNumber: z.string().max(20).optional(),
+      branchNumber: z.string().max(10).optional(),
+      companyName: z.string().max(100).optional(),
+      ceoName: z.string().max(60).optional(),
+      address: z.string().max(200).optional(),
+      businessType: z.string().max(80).optional(),
+      businessItem: z.string().max(120).optional(),
+      email: z.string().max(80).optional()
+    }).optional(),
+    vatIncluded: z.boolean().optional(),
+    receiptType: z.enum(["01", "02"]).optional(),
+    includeShipping: z.boolean().optional()
+  }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "홈택스 설정 값을 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess({ settings: await saveHometaxSettings(parsed.data) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 홈택스 신고 미리보기: 그 달 매출처별 세금계산서(과세)·계산서(면세) 목록과 빠진 매출처
+baljuoraRouter.get("/admin/hometax", adminRoute, async (c) => {
+  const month = MonthSchema.safeParse(c.req.query("month"));
+  if (!month.success) return c.json(apiFailure("INVALID_INPUT", "신고할 달을 골라 주세요."), 400);
+  try {
+    return c.json(apiSuccess(await getHometaxPreview(month.data)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 홈택스 일괄발급 엑셀(양식과 같은 칸, 100건씩 나눔)
+baljuoraRouter.get("/admin/hometax/file", adminRoute, async (c) => {
+  const month = MonthSchema.safeParse(c.req.query("month"));
+  const kind = z.enum(["taxable", "exempt"]).safeParse(c.req.query("kind"));
+  if (!month.success || !kind.success) return c.json(apiFailure("INVALID_INPUT", "달과 종류(세금계산서/계산서)를 골라 주세요."), 400);
+  try {
+    const file = await buildHometaxFile(month.data, kind.data, Number(c.req.query("part") || 1));
+    return c.body(file.bytes, 200, {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
+      "Cache-Control": "no-store"
+    });
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 공급사 월 정산: 판매 금액·수수료·정산 상태
+baljuoraRouter.get("/admin/settlements", adminRoute, async (c) => {
+  const month = MonthSchema.safeParse(c.req.query("month"));
+  if (!month.success) return c.json(apiFailure("INVALID_INPUT", "정산할 달을 골라 주세요."), 400);
+  try {
+    return c.json(apiSuccess(await listSupplierSettlements(month.data)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+baljuoraRouter.put("/admin/settlements", adminRoute, async (c) => {
+  const parsed = z.object({
+    supplierName: z.string().trim().min(1).max(120),
+    month: MonthSchema,
+    status: z.enum(SUPPLIER_SETTLEMENT_STATUSES as [string, ...string[]]),
+    memo: z.string().max(500).nullable().optional()
+  }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "정산 상태를 확인해 주세요."), 400);
+  try {
+    const user = c.var.currentUser;
+    const state = await updateSupplierSettlement({ ...parsed.data, status: parsed.data.status as (typeof SUPPLIER_SETTLEMENT_STATUSES)[number] }, user?.username || user?.email || null);
+    return c.json(apiSuccess({ state }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
 // ─── 책갈피 스크립트(발주오라 관리자 창) ─────────────────────────────────────────
 
 const CodeSchema = z.string().trim().min(10).max(16);
@@ -229,7 +373,12 @@ baljuoraRouter.post("/runner/:code/results", publicRoute, async (c) => {
       snapshots: Array.isArray(body.snapshots) ? body.snapshots as never : undefined,
       items: Array.isArray(body.items) ? body.items as never : undefined,
       // 카테고리 트리 맞추기 결과(서비스에서 작업에 든 추가만 받고 칸을 정리함)
-      categoryTree: body.categoryTree && typeof body.categoryTree === "object" ? body.categoryTree : undefined
+      categoryTree: body.categoryTree && typeof body.categoryTree === "object" ? body.categoryTree : undefined,
+      // 판매·매출처(1.7.0, 서비스에서 칸을 정리함): 주문 상품 줄·매출처·상품 과세 여부·판매 읽기 끝
+      salesLines: Array.isArray(body.salesLines) ? body.salesLines : undefined,
+      buyers: Array.isArray(body.buyers) ? body.buyers : undefined,
+      productTax: body.productTax && typeof body.productTax === "object" && !Array.isArray(body.productTax) ? body.productTax : undefined,
+      salesDone: body.salesDone && typeof body.salesDone === "object" ? body.salesDone as { complete?: unknown; error?: unknown } : undefined
     })));
   } catch (error) {
     return errorResponse(c, error);

@@ -565,7 +565,7 @@ export const baljuoraSyncJobs = sqliteTable(
   {
     id: text("id").primaryKey(),
     codeHash: text("codeHash").notNull(),
-    type: text("type", { enum: ["compare", "push"] }).notNull(),
+    type: text("type", { enum: ["compare", "push", "sales"] }).notNull(),
     status: text("status", { enum: ["waiting", "running", "done", "failed", "expired", "cancelled"] }).notNull().default("waiting"),
     plan: text("plan").notNull(),
     progress: text("progress"),
@@ -659,3 +659,102 @@ export const supplierSales = sqliteTable(
 export type SupplierAccount = typeof supplierAccounts.$inferSelect;
 export type SupplierRequest = typeof supplierRequests.$inferSelect;
 export type SupplierSale = typeof supplierSales.$inferSelect;
+
+// 발주오라 판매·매출처(migration 036). 관리자 동기화(책갈피) 때마다 고른 기간의 발주오라 주문 상품 줄을 다시 읽어 덮어씁니다.
+// netQuantity = 취소·반품을 뺀 수량, amount = 공급가(unitPrice) × netQuantity. isTaxable 1 = 과세, 0 = 면세.
+export const baljuoraSalesLines = sqliteTable(
+  "baljuora_sales_lines",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("orderId"),
+    saleDate: text("saleDate").notNull(),
+    orderedAt: text("orderedAt"),
+    status: text("status"),
+    baljuoraProductId: text("baljuoraProductId"),
+    productId: text("productId"),
+    productCode: text("productCode"),
+    productName: text("productName").notNull(),
+    categoryId: text("categoryId"),
+    supplierName: text("supplierName"),
+    baljuoraSupplierName: text("baljuoraSupplierName"),
+    sellerId: text("sellerId"),
+    sellerName: text("sellerName"),
+    quantity: integer("quantity").notNull().default(0),
+    netQuantity: integer("netQuantity").notNull().default(0),
+    unitPrice: integer("unitPrice").notNull().default(0),
+    unitCost: integer("unitCost"),
+    amount: integer("amount").notNull().default(0),
+    costAmount: integer("costAmount"),
+    salesShippingFee: integer("salesShippingFee").notNull().default(0),
+    purchaseShippingFee: integer("purchaseShippingFee").notNull().default(0),
+    isTaxable: integer("isTaxable", { mode: "boolean" }),
+    taxSource: text("taxSource"),
+    syncJobId: text("syncJobId"),
+    createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    index("idx_baljuora_sales_date").on(table.saleDate),
+    index("idx_baljuora_sales_supplier").on(table.supplierName, table.saleDate),
+    index("idx_baljuora_sales_seller").on(table.sellerId, table.saleDate)
+  ]
+);
+
+// 발주오라 매출처(셀러). overrides = DB센터에서 고친 세금계산서용 칸(JSON, 동기화가 덮어쓰지 않음).
+export const baljuoraBuyers = sqliteTable(
+  "baljuora_buyers",
+  {
+    id: text("id").primaryKey(),
+    companyName: text("companyName").notNull(),
+    representativeName: text("representativeName"),
+    businessNumber: text("businessNumber"),
+    businessType: text("businessType"),
+    businessCategory: text("businessCategory"),
+    email: text("email"),
+    phone: text("phone"),
+    managerName: text("managerName"),
+    zipCode: text("zipCode"),
+    address: text("address"),
+    addressDetail: text("addressDetail"),
+    groupId: text("groupId"),
+    groupName: text("groupName"),
+    status: text("status"),
+    orderAcceptType: text("orderAcceptType"),
+    username: text("username"),
+    lastLoginAt: text("lastLoginAt"),
+    joinedAt: text("joinedAt"),
+    overrides: text("overrides"),
+    memo: text("memo"),
+    firstSyncedAt: text("firstSyncedAt"),
+    lastSyncedAt: text("lastSyncedAt"),
+    createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [index("idx_baljuora_buyers_company").on(table.companyName)]
+);
+
+// 공급사 월 정산 상태: pending(정산 대기) → paid(판매 대금 입금) → done(정산 완료). 상태를 바꿀 때 금액을 함께 적어 둡니다.
+export const supplierSettlements = sqliteTable(
+  "supplier_settlements",
+  {
+    id: text("id").primaryKey(),
+    supplierName: text("supplierName").notNull(),
+    month: text("month").notNull(),
+    status: text("status", { enum: ["pending", "paid", "done"] }).notNull().default("pending"),
+    saleAmount: integer("saleAmount").notNull().default(0),
+    commissionRate: real("commissionRate").notNull().default(10),
+    commission: integer("commission").notNull().default(0),
+    payoutAmount: integer("payoutAmount").notNull().default(0),
+    paidAt: text("paidAt"),
+    doneAt: text("doneAt"),
+    memo: text("memo"),
+    updatedBy: text("updatedBy"),
+    createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [uniqueIndex("idx_supplier_settlements_month").on(table.supplierName, table.month)]
+);
+
+export type BaljuoraSalesLine = typeof baljuoraSalesLines.$inferSelect;
+export type BaljuoraBuyer = typeof baljuoraBuyers.$inferSelect;
+export type SupplierSettlement = typeof supplierSettlements.$inferSelect;

@@ -44,7 +44,8 @@ import {
   type DoogoSyncValues
 } from "@repo/shared/baljuora-sync";
 import { DatabaseError, getDb } from "../_core/db";
-import { baljuoraSyncJobs, baljuoraSyncStore, categories, externalProductLinks, products, shippingPolicies, subcategories, type BaljuoraSyncJob } from "../db/schema";
+import { baljuoraSalesLines, baljuoraSyncJobs, baljuoraSyncStore, categories, externalProductLinks, products, shippingPolicies, subcategories, type BaljuoraSyncJob } from "../db/schema";
+import { finalizeSalesSync, ingestBuyers, ingestProductTax, ingestSalesLines, isMissingSalesTable, knownTaxProductIds, salesRangeFor } from "./baljuora-sales";
 import { asProductInput } from "./catalog-excel";
 import { createCategory, createProduct, createShippingPolicy, createSubcategory, getAdminCatalog, updateProduct } from "./catalog";
 
@@ -75,6 +76,9 @@ export type BaljuoraSettings = {
   subcategoryMap: Record<string, string>;
   // 카테고리 트리 맞추기에서 통째로 뺄 발주오라 1차 카테고리 이름(기본 브랜드별). 상품 카테고리를 보낼 때도 이 아래 카테고리는 그대로 둡니다.
   categoryTreeExclude: string[];
+  // 발주오라 상품 불러오기(비교) 때 판매·매출처도 함께 불러올지(migration 036, 기본 켬)와 불러올 기간(이번 달 포함 최근 N개월)
+  salesOnCompare: boolean;
+  salesMonths: number;
 };
 
 const DEFAULT_SETTINGS: BaljuoraSettings = {
@@ -85,10 +89,12 @@ const DEFAULT_SETTINGS: BaljuoraSettings = {
   shippingPolicyMap: {},
   templateCode: null,
   subcategoryMap: {},
-  categoryTreeExclude: DEFAULT_CATEGORY_TREE_EXCLUDE
+  categoryTreeExclude: DEFAULT_CATEGORY_TREE_EXCLUDE,
+  salesOnCompare: true,
+  salesMonths: 2
 };
 
-export type BaljuoraJobType = "compare" | "push";
+export type BaljuoraJobType = "compare" | "push" | "sales";
 
 export type PushPlanItem = {
   productId: string;
@@ -115,7 +121,10 @@ export type PushPlanItem = {
   };
 };
 
-export type ComparePlan = { type: "compare"; groupKeyword: string; detailIds: string[] };
+// 판매·매출처 읽기(책갈피): start~end(주문일, 한국 날짜) 주문 상품 줄 + 매출처 회원. knownTax = 과세 여부를 이미 아는 발주오라 상품 id.
+export type SalesStep = { start: string; end: string; buyers: boolean; knownTax: string[] };
+export type ComparePlan = { type: "compare"; groupKeyword: string; detailIds: string[]; sales?: SalesStep | null };
+export type SalesPlan = { type: "sales" } & SalesStep;
 export type PushPlan = {
   type: "push";
   groupKeyword: string;
@@ -126,7 +135,7 @@ export type PushPlan = {
   // 상품 카테고리를 보낼 때 그대로 둘 발주오라 1차 카테고리 이름(브랜드별 아래 카테고리는 지우지 않음)
   categoryExclude?: string[];
 };
-export type BaljuoraPlan = ComparePlan | PushPlan;
+export type BaljuoraPlan = ComparePlan | PushPlan | SalesPlan;
 
 export type RunnerItemResult = {
   productId: string;
@@ -150,6 +159,11 @@ export type RunnerResultInput = {
   snapshots?: BaljuoraProductSnapshot[];
   items?: RunnerItemResult[];
   categoryTree?: unknown;
+  // 판매·매출처(1.7.0): 주문 상품 줄·매출처 회원·상품 과세 여부, 마지막에 salesDone(끝까지 읽었는지)
+  salesLines?: unknown[];
+  buyers?: unknown[];
+  productTax?: unknown;
+  salesDone?: { complete?: unknown; error?: unknown } | null;
 };
 
 export type CategoryTreeResult = {
@@ -166,6 +180,7 @@ type JobResults = {
   received: number;
   bundles?: number;
   categoryTree?: CategoryTreeResult;
+  sales?: { lines: number; buyers: number; taxRead: number; done: boolean; complete: boolean; error: string | null };
 };
 
 function nowIso() {
@@ -228,7 +243,10 @@ function cleanSettings(input: Partial<BaljuoraSettings>, base: BaljuoraSettings)
   const subcategoryMap = cleanMap(input.subcategoryMap ?? base.subcategoryMap);
   const exclude = Array.isArray(input.categoryTreeExclude) ? input.categoryTreeExclude : base.categoryTreeExclude;
   const categoryTreeExclude = (Array.isArray(exclude) ? exclude : DEFAULT_CATEGORY_TREE_EXCLUDE).filter((name): name is string => typeof name === "string" && Boolean(name.trim())).map((name) => name.trim().slice(0, 50)).slice(0, 10);
-  return { merchantSlug: slug || DEFAULT_SETTINGS.merchantSlug, groupKeyword: keyword || DEFAULT_SETTINGS.groupKeyword, categoryMap, baljuoraCategoryMap, shippingPolicyMap, templateCode, subcategoryMap, categoryTreeExclude };
+  const salesOnCompare = typeof input.salesOnCompare === "boolean" ? input.salesOnCompare : base.salesOnCompare !== false;
+  const months = typeof input.salesMonths === "number" && Number.isFinite(input.salesMonths) ? input.salesMonths : base.salesMonths;
+  const salesMonths = Math.min(12, Math.max(1, Math.round(Number(months) || DEFAULT_SETTINGS.salesMonths)));
+  return { merchantSlug: slug || DEFAULT_SETTINGS.merchantSlug, groupKeyword: keyword || DEFAULT_SETTINGS.groupKeyword, categoryMap, baljuoraCategoryMap, shippingPolicyMap, templateCode, subcategoryMap, categoryTreeExclude, salesOnCompare, salesMonths };
 }
 
 export async function getBaljuoraSettings(): Promise<BaljuoraSettings> {
@@ -272,6 +290,7 @@ export function jobView(row: BaljuoraSyncJob, withDetails = false) {
     finishedAt: row.finishedAt,
     expiresAt: row.expiresAt,
     total: plan?.type === "push" ? plan.items.length : null,
+    salesRange: plan && plan.type !== "push" && (plan.type === "sales" ? plan : plan.sales) ? { start: (plan.type === "sales" ? plan : plan.sales as SalesStep).start, end: (plan.type === "sales" ? plan : plan.sales as SalesStep).end } : null,
     progress: parseJson<{ done: number; total: number; message: string } | null>(row.progress, null),
     summary: parseJson<Record<string, unknown> | null>(row.summary, null),
     items: withDetails ? (results?.items ?? []) : undefined,
@@ -401,15 +420,45 @@ async function loadCategoryTree(settings: BaljuoraSettings) {
 // ─── 작업 만들기 ────────────────────────────────────────────────────────────────
 
 export type CreateJobInput =
-  | { type: "compare" }
-  | { type: "push"; productIds: string[]; fieldsByProduct?: Record<string, BaljuoraSyncField[]>; categoryTree?: boolean };
+  | { type: "compare"; sales?: boolean }
+  | { type: "push"; productIds: string[]; fieldsByProduct?: Record<string, BaljuoraSyncField[]>; categoryTree?: boolean }
+  | { type: "sales"; months?: number };
 
-async function buildComparePlan(settings: BaljuoraSettings): Promise<ComparePlan> {
+// 판매·매출처 읽기 범위(이번 달 포함 최근 N개월). 판매 표(036)가 없으면(운영 배포 전) 판매는 빼고 null.
+async function buildSalesStep(months: number): Promise<SalesStep | null> {
+  try {
+    const range = salesRangeFor(months);
+    return { ...range, buyers: true, knownTax: await knownTaxProductIds() };
+  } catch (error) {
+    if (isMissingSalesTable(error)) return null;
+    throw error;
+  }
+}
+
+async function salesTablesReady() {
+  try {
+    await getDb().select({ id: baljuoraSalesLines.id }).from(baljuoraSalesLines).limit(1);
+    return true;
+  } catch (error) {
+    if (isMissingSalesTable(error)) return false;
+    throw error;
+  }
+}
+
+async function buildComparePlan(settings: BaljuoraSettings, withSales: boolean): Promise<ComparePlan> {
   const [links, productRows] = await Promise.all([loadLinks(), getDb().select({ id: products.id }).from(products).where(sql`${products.deletedAt} IS NULL`)]);
   const ids = new Set(links.map((link) => link.externalProductId));
   // 예전에 발주오라 엑셀로 가져온 상품은 DB센터 id가 "baljuora-<발주오라 상품 id>"입니다.
   for (const row of productRows) if (row.id.startsWith("baljuora-")) ids.add(row.id.slice("baljuora-".length));
-  return { type: "compare", groupKeyword: settings.groupKeyword, detailIds: [...ids].slice(0, 6000) };
+  const sales = withSales && await salesTablesReady() ? await buildSalesStep(settings.salesMonths) : null;
+  return { type: "compare", groupKeyword: settings.groupKeyword, detailIds: [...ids].slice(0, 6000), sales };
+}
+
+async function buildSalesPlan(settings: BaljuoraSettings, months: number | undefined): Promise<SalesPlan> {
+  if (!await salesTablesReady()) throw new DatabaseError("DATABASE_QUERY_FAILED", "DB 업데이트(036 판매·매출처 표)가 아직 적용되지 않았습니다. 운영 배포 후 사용할 수 있어요.", 503);
+  const step = await buildSalesStep(months ?? settings.salesMonths);
+  if (!step) throw new DatabaseError("DATABASE_QUERY_FAILED", "판매 기간을 만들지 못했습니다.", 500);
+  return { type: "sales", ...step };
 }
 
 function pickTemplateId(product: ProductRow, productRows: ProductRow[], linkByProduct: Map<string, LinkRow>, settings: BaljuoraSettings, linkByCode: Map<string, LinkRow>) {
@@ -524,7 +573,11 @@ export async function createBaljuoraJob(input: CreateJobInput, createdBy: string
     const db = getDb();
     const settings = await getBaljuoraSettings();
     await expireStaleJobs();
-    const plan: BaljuoraPlan = input.type === "compare" ? await buildComparePlan(settings) : await buildPushPlan(input, settings);
+    const plan: BaljuoraPlan = input.type === "compare"
+      ? await buildComparePlan(settings, input.sales ?? settings.salesOnCompare)
+      : input.type === "sales"
+        ? await buildSalesPlan(settings, input.months)
+        : await buildPushPlan(input, settings);
     if (plan.type === "push" && plan.items.length === 0 && !plan.categoryTree) {
       throw new DatabaseError("DATABASE_QUERY_FAILED", "보낼 변경이 없습니다. 이미 발주오라와 같거나, 고른 상품에 바뀐 칸이 없습니다.", 400);
     }
@@ -645,6 +698,8 @@ function sanitizeSnapshot(input: unknown): BaljuoraProductSnapshot | null {
     isSoldOut: bool(record.isSoldOut),
     updatedAt: typeof record.updatedAt === "string" ? record.updatedAt.slice(0, 40) : null
   };
+  // 과세 여부(1.7.0부터): 홈택스 세금계산서/계산서 나누기에 씁니다.
+  if (typeof record.isTaxable === "boolean") snapshot.isTaxable = record.isTaxable;
   if ("groupPrice" in record && record.groupPrice !== undefined) snapshot.groupPrice = toPrice(record.groupPrice);
   if (Array.isArray(record.categoryIds)) snapshot.categoryIds = strings(record.categoryIds);
   if ("shippingPolicyId" in record && record.shippingPolicyId !== undefined) {
@@ -950,10 +1005,28 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
         }
       }
       if (input.group !== undefined) await writeStore(STORE_GROUP, input.group && typeof input.group.id === "string" ? { id: input.group.id.slice(0, 80), name: collapseName(String(input.group.name)).slice(0, 120) } : null);
-    } else {
+    } else if (plan.type === "push") {
       if (input.categoryTree !== undefined && plan.categoryTree) await ingestCategoryTreeResult(plan, input.categoryTree, results);
       const items = (Array.isArray(input.items) ? input.items : []).slice(0, MAX_ITEMS_PER_POST).filter((item) => item && typeof item.productId === "string");
       if (items.length > 0) await ingestPushItems(plan, items, results);
+    }
+
+    // 판매·매출처(1.7.0): 판매 작업 또는 판매를 함께 읽는 비교 작업. 과세 여부 → 매출처 → 판매 줄 순서로 저장합니다.
+    const salesStep: SalesStep | null = plan.type === "sales" ? plan : plan.type === "compare" ? plan.sales ?? null : null;
+    if (salesStep) {
+      const sales = results.sales ?? { lines: 0, buyers: 0, taxRead: 0, done: false, complete: false, error: null };
+      if (input.productTax !== undefined) sales.taxRead += await ingestProductTax(input.productTax);
+      if (Array.isArray(input.buyers) && input.buyers.length > 0) sales.buyers += await ingestBuyers(input.buyers);
+      if (Array.isArray(input.salesLines) && input.salesLines.length > 0) sales.lines += await ingestSalesLines(row.id, input.salesLines);
+      const finishing = Boolean(input.salesDone) || (Boolean(input.final) && (sales.lines > 0 || sales.buyers > 0));
+      if (finishing && !sales.done) {
+        sales.done = true;
+        sales.complete = Boolean(input.salesDone && input.salesDone.complete === true);
+        const reason = input.salesDone && typeof input.salesDone.error === "string" ? input.salesDone.error : !input.salesDone && input.error ? String(input.error) : null;
+        sales.error = reason ? collapseName(reason).slice(0, 400) : null;
+        await finalizeSalesSync({ jobId: row.id, start: salesStep.start, end: salesStep.end, complete: sales.complete, lines: sales.lines, buyers: sales.buyers, error: sales.error });
+      }
+      results.sales = sales;
     }
 
     const final = Boolean(input.final);
@@ -964,11 +1037,17 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
     };
     if (final) {
       update.finishedAt = nowIso();
-      update.status = fatal && (plan.type === "compare" ? results.received === 0 : results.items.length === 0 && !(results.categoryTree?.applied.length)) ? "failed" : "done";
+      const salesSummary = results.sales ? { lines: results.sales.lines, buyers: results.sales.buyers, complete: results.sales.complete, error: results.sales.error } : null;
+      const salesText = results.sales ? ` · 판매 ${results.sales.lines.toLocaleString("ko-KR")}줄 · 매출처 ${results.sales.buyers.toLocaleString("ko-KR")}곳${results.sales.complete ? "" : " (일부만)"}` : "";
+      update.status = fatal && (plan.type === "compare" ? results.received === 0 : plan.type === "sales" ? !results.sales || (results.sales.lines === 0 && results.sales.buyers === 0) : results.items.length === 0 && !(results.categoryTree?.applied.length)) ? "failed" : "done";
       if (plan.type === "compare") {
         await writeStore(STORE_ONLY, results.unmatched.filter((snapshot) => snapshot.kind !== "bundle").slice(0, 5000));
-        update.summary = JSON.stringify({ received: results.received, linked: results.linked, baljuoraOnly: results.unmatched.filter((snapshot) => snapshot.kind !== "bundle").length, bundles: results.bundles ?? 0, error: fatal });
-        update.progress = JSON.stringify({ done: results.received, total: results.received, message: fatal ? `중단: ${fatal}` : `발주오라 상품 ${results.received.toLocaleString("ko-KR")}개를 읽고 ${results.linked.toLocaleString("ko-KR")}개를 연결했습니다.` });
+        update.summary = JSON.stringify({ received: results.received, linked: results.linked, baljuoraOnly: results.unmatched.filter((snapshot) => snapshot.kind !== "bundle").length, bundles: results.bundles ?? 0, sales: salesSummary, error: fatal });
+        update.progress = JSON.stringify({ done: results.received, total: results.received, message: fatal ? `중단: ${fatal}` : `발주오라 상품 ${results.received.toLocaleString("ko-KR")}개를 읽고 ${results.linked.toLocaleString("ko-KR")}개를 연결했습니다.${salesText}` });
+      } else if (plan.type === "sales") {
+        update.summary = JSON.stringify({ ...(salesSummary ?? { lines: 0, buyers: 0, complete: false, error: null }), start: plan.start, end: plan.end, error: fatal ?? salesSummary?.error ?? null });
+        const lines = results.sales?.lines ?? 0;
+        update.progress = JSON.stringify({ done: lines, total: lines, message: fatal ? `중단: ${fatal}` : `완료: ${plan.start} ~ ${plan.end}${salesText}` });
       } else {
         const succeeded = results.items.filter((item) => item.ok).length;
         const failed = results.items.filter((item) => !item.ok).length;

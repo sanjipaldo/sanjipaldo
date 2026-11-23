@@ -48,7 +48,11 @@ import {
   Video,
   Inbox,
   KeyRound,
-  Layers
+  Layers,
+  BarChart3,
+  Users,
+  Receipt,
+  HandCoins
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
@@ -68,7 +72,7 @@ import { SELLER_GUIDE_SETTING_KEY, SELLER_VIDEO_GROUPS, hasSellerDemo, parseSell
 import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 import type { AdminCatalogData, AdminHomeData, Category, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
-type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "supplierRequests" | "notices" | "usageGuide" | "encyclopedia" | "history" | "sourcing" | "sync" | "backup";
+type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "supplierRequests" | "notices" | "usageGuide" | "encyclopedia" | "history" | "sourcing" | "sync" | "backup" | "sales" | "buyers" | "taxInvoices" | "settlements";
 
 // 공급사 센터 관련 관리자 화면(변경 요청 검토 · 공급사 계정 창)은 처음 열 때만 불러옵니다.
 const SupplierRequestsAdmin = lazy(() => import("./SupplierPortalAdmin").then((module) => ({ default: module.SupplierRequestsAdmin })));
@@ -78,6 +82,11 @@ const ProductGroupsAdmin = lazy(() => import("./ProductGroupsAdmin").then((modul
 // 발주오라 동기화(2026-11-22): 책갈피로 로그인해 둔 발주오라 관리자 창에서 실행하는 수동 동기화 화면(처음 열 때 불러옴)
 const BaljuoraSyncAdmin = lazy(() => import("./BaljuoraSyncAdmin").then((module) => ({ default: module.BaljuoraSyncAdmin })));
 const SelectionGroupModal = lazy(() => import("./ProductGroupsAdmin").then((module) => ({ default: module.SelectionGroupModal })));
+// 발주오라 판매·매출처·홈택스 신고·공급사 정산(2026-11-23, migration 036): 처음 열 때 불러옵니다.
+const SalesDashboardAdmin = lazy(() => import("./SalesDashboardAdmin").then((module) => ({ default: module.SalesDashboardAdmin })));
+const BuyersAdmin = lazy(() => import("./BuyersAdmin").then((module) => ({ default: module.BuyersAdmin })));
+const TaxInvoiceAdmin = lazy(() => import("./TaxInvoiceAdmin").then((module) => ({ default: module.TaxInvoiceAdmin })));
+const SupplierSettlementsAdmin = lazy(() => import("./SupplierSettlementsAdmin").then((module) => ({ default: module.SupplierSettlementsAdmin })));
 type ProductOptionDraft = Pick<ProductOption, "id" | "name" | "costPrice" | "aPrice" | "generalPrice" | "salePrice" | "salePriceMode" | "isSoldOut" | "sortOrder">;
 type BulkWorkbookPreview = {
   totalRows: number;
@@ -581,7 +590,11 @@ const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes
   { section: "shippingPolicies", label: "배송 정책", icon: Truck, group: "product" },
   { section: "history", label: "가격변동 이력", icon: History, group: "product" },
   { section: "sync", label: "발주오라 동기화", icon: RefreshCw, group: "baljuora" },
+  { section: "sales", label: "판매 현황", icon: BarChart3, group: "baljuora" },
+  { section: "buyers", label: "매출처(셀러)", icon: Users, group: "baljuora" },
+  { section: "taxInvoices", label: "세금계산서 신고", icon: Receipt, group: "baljuora" },
   { section: "suppliers", label: "공급사 관리", icon: Store, group: "supplier" },
+  { section: "settlements", label: "공급사 정산", icon: HandCoins, group: "supplier" },
   { section: "supplierRequests", label: "변경 요청", icon: Inbox, group: "supplier" },
   { section: "sourcing", label: "입점·소싱 요청", icon: ClipboardList, group: "supplier" },
   { section: "notices", label: "공지·필독", icon: Bell, group: "operations" },
@@ -701,7 +714,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
     // Bundles load only their group payload on demand. Fetching the complete
     // 2,347-product catalog here made the bundle list wait for data it never
     // renders.
-    const childOwnsData = new Set<AdminSection>(["bundles", "shippingPolicies", "suppliers", "supplierRequests", "sync", "backup", "encyclopedia"]);
+    const childOwnsData = new Set<AdminSection>(["bundles", "shippingPolicies", "suppliers", "supplierRequests", "sync", "backup", "encyclopedia", "sales", "buyers", "taxInvoices", "settlements"]);
     if (childOwnsData.has(section)) {
       if (!silent) setLoading(false);
       return;
@@ -893,6 +906,14 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               {section === "sourcing" && <SourcingAdmin data={data} refresh={refresh} />}
               {section === "sync" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>발주오라 동기화를 불러오는 중…</span></div>}><BaljuoraSyncAdmin /></Suspense>}
               {section === "backup" && <BackupAdmin />}
+              {(section === "sales" || section === "buyers" || section === "taxInvoices" || section === "settlements") && (
+                <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>불러오는 중…</span></div>}>
+                  {section === "sales" && <SalesDashboardAdmin />}
+                  {section === "buyers" && <BuyersAdmin />}
+                  {section === "taxInvoices" && <TaxInvoiceAdmin />}
+                  {section === "settlements" && <SupplierSettlementsAdmin />}
+                </Suspense>
+              )}
             </>
           )}
         </div>

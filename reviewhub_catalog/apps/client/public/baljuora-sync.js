@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.6.0";
+  var VERSION = "1.7.0";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   var INFO_FIELDS = ["name", "category"];
@@ -174,6 +174,8 @@
       isSoldOut: typeof record.isSoldOut === "boolean" ? record.isSoldOut : null,
       updatedAt: typeof record.updatedAt === "string" ? record.updatedAt : typeof record.createdAt === "string" ? record.createdAt : null
     };
+    // 과세 여부(1.7.0): 홈택스 세금계산서(과세)·계산서(면세) 나누기에 씀. 칸이 없으면 보내지 않음.
+    if (typeof record.isTaxable === "boolean") snapshot.isTaxable = record.isTaxable;
     var categoryIds = extractCategoryIds(record);
     if (categoryIds !== undefined) snapshot.categoryIds = categoryIds;
     var groupPrice = extractGroupPrice(record, context && context.group, context && context.groupKeyword);
@@ -217,6 +219,86 @@
       merged[key] = value;
     });
     return merged;
+  }
+
+  // ─── 판매·매출처(1.7.0, 2026-11-23 관리자 요청 "1차 개발") ─────────────────────
+  // 발주오라 주문 목록 화면과 같은 API(GET orders/items, 커서 방식 meta.nextCursor)로 주문 상품 줄을 읽습니다
+  // (발주오라 판매자·관리자 화면 공용 코드 확인: limit·rangeType·startDate·endDate·cursor, 항목 id·orderId·createdAt·quantity·
+  //  csProcessedQuantity(취소·반품 처리 수량)·effectiveQuantity·supplyPrice·purchaseCost·salesShippingFee·purchaseShippingFee·
+  //  productId·productName·supplierId·supplierName·sellerName·status). 받는 사람 이름·연락처는 읽어도 보내지 않습니다.
+  function pickString(record, keys) {
+    if (!isObject(record)) return null;
+    var found = firstString(record, keys);
+    return found ? found.value : null;
+  }
+
+  function normalizeOrderItem(record) {
+    if (!isObject(record)) return null;
+    var id = pickString(record, ["id", "orderItemId", "itemId"]);
+    if (!id) return null;
+    var product = isObject(record.product) ? record.product : {};
+    var seller = isObject(record.seller) ? record.seller : isObject(record.sellerTarget) ? record.sellerTarget : {};
+    var supplier = isObject(record.supplier) ? record.supplier : {};
+    var order = isObject(record.order) ? record.order : {};
+    var quantity = Math.max(0, toNumber(record.quantity) || 0);
+    var processed = Math.max(0, toNumber(record.csProcessedQuantity) || 0);
+    var effective = record.effectiveQuantity !== undefined && record.effectiveQuantity !== null ? toNumber(record.effectiveQuantity) : quantity - processed;
+    var supplyPrice = toNumber(record.supplyPrice);
+    if (supplyPrice === null) supplyPrice = toNumber(record.unitPrice !== undefined ? record.unitPrice : record.price);
+    return {
+      id: id,
+      orderId: pickString(record, ["orderId"]) || pickString(order, ["id"]),
+      orderedAt: pickString(record, ["orderedAt", "orderDate", "createdAt"]) || pickString(order, ["orderedAt", "createdAt"]),
+      status: (pickString(record, ["status", "orderStatus"]) || pickString(order, ["status"]) || "").toLowerCase() || null,
+      productId: pickString(record, ["productId"]) || pickString(product, ["id"]),
+      productCode: pickString(record, ["productCode"]) || pickString(product, ["code"]),
+      productName: (pickString(record, ["productName"]) || pickString(product, ["name"]) || "").replace(/\s+/g, " ").trim(),
+      supplierId: pickString(record, ["supplierId"]) || pickString(supplier, ["id"]),
+      supplierName: pickString(record, ["supplierName"]) || pickString(supplier, ["companyName", "name"]),
+      sellerId: pickString(record, ["sellerId", "sellerTargetId"]) || pickString(seller, ["id"]),
+      sellerName: pickString(record, ["sellerName", "sellerCompanyName"]) || pickString(seller, ["companyName", "name"]),
+      quantity: quantity,
+      netQuantity: Math.max(0, Math.min(quantity, effective === null ? quantity : effective)),
+      supplyPrice: supplyPrice === null ? 0 : supplyPrice,
+      purchaseCost: toNumber(record.purchaseCost),
+      salesShippingFee: Math.max(0, toNumber(record.salesShippingFee) || 0),
+      purchaseShippingFee: Math.max(0, toNumber(record.purchaseShippingFee) || 0)
+    };
+  }
+
+  // 발주오라 매출처(셀러) 회원(GET merchant/sellers, 매출처 상세 화면과 같은 칸). 계좌·비밀번호·사업자등록증 파일·설정은 보내지 않습니다.
+  function normalizeSeller(record, groupNames) {
+    if (!isObject(record)) return null;
+    var id = pickString(record, ["id"]);
+    if (!id) return null;
+    var group = isObject(record.group) ? record.group : isObject(record.sellerGroup) ? record.sellerGroup : {};
+    var groupId = pickString(record, ["groupId"]) || pickString(group, ["id"]);
+    return {
+      id: id,
+      companyName: pickString(record, ["companyName"]) || pickString(record, ["name", "username"]) || id,
+      representativeName: pickString(record, ["representativeName", "ceoName"]),
+      businessNumber: pickString(record, ["businessNumber", "businessRegistrationNumber"]),
+      businessType: pickString(record, ["businessType"]),
+      businessCategory: pickString(record, ["businessCategory", "businessItem"]),
+      email: pickString(record, ["email"]),
+      phone: pickString(record, ["phone", "phoneNumber"]),
+      managerName: pickString(record, ["name", "managerName"]),
+      zipCode: pickString(record, ["zipCode"]),
+      address: pickString(record, ["address"]),
+      addressDetail: pickString(record, ["addressDetail"]),
+      groupId: groupId,
+      groupName: pickString(group, ["name"]) || (groupId && groupNames && groupNames[groupId]) || null,
+      status: pickString(record, ["status"]),
+      orderAcceptType: pickString(record, ["orderAcceptType"]),
+      username: pickString(record, ["username"]),
+      lastLoginAt: pickString(record, ["lastLoginAt"]),
+      joinedAt: pickString(record, ["createdAt"])
+    };
+  }
+
+  // 목록에 세금계산서용 칸(사업자번호·대표자·주소)이 없으면 매출처 상세를 읽습니다.
+  function sellerNeedsDetail(buyer) {
+    return !buyer.businessNumber || !buyer.representativeName || !buyer.address;
   }
 
   function flattenCategories(tree) {
@@ -593,6 +675,37 @@
     return merged.map(function (slot) { return { anchor: slot.anchor, at: slot.start, text: text.slice(slot.start, slot.end) }; });
   }
 
+  // 매입원가(2026-11-24 운영 확인): 가격 저장(PUT products/:id/pricing)에 purchaseCost를 넣으면 발주오라가 오류 없이 버려 매입원가가 그대로였습니다.
+  // 발주오라 매입원가는 매입처 줄(productSuppliers)에 있어, 발주오라 상품 수정 화면처럼 매입처 목록 전체
+  // productSuppliers [{ supplierId, shippingPolicyId, purchaseCost, materialCost, isDefault }]를 PUT products/:id 로 보냅니다.
+  // 기본 매입처 줄의 매입원가만 바꾸고 다른 매입처 줄(매입처·매입배송정책·매입원가·부자재가)은 그대로 둡니다.
+  // 매입처·매입원가·매입배송정책을 알 수 없는 줄이 있거나 기본 매입처를 못 찾으면 null(다른 매입처 값 보호를 위해 보내지 않음).
+  function buildProductSuppliers(detail, cost) {
+    if (!isObject(detail) || !Array.isArray(detail.productSuppliers)) return null;
+    var rows = detail.productSuppliers.filter(isObject);
+    if (rows.length === 0) return null;
+    var defaults = rows.filter(function (row) { return row.isDefault === true || row.isMain === true || row.default === true; });
+    var main = defaults.length === 1 ? defaults[0] : rows.length === 1 ? rows[0] : null;
+    if (!main) return null;
+    var list = [];
+    for (var index = 0; index < rows.length; index += 1) {
+      var row = rows[index];
+      var supplierId = typeof row.supplierId === "string" && row.supplierId ? row.supplierId : isObject(row.supplier) && typeof row.supplier.id === "string" && row.supplier.id ? row.supplier.id : null;
+      if (!supplierId) return null;
+      var current = toNumber(row.purchaseCost !== undefined ? row.purchaseCost : row.purchasePrice);
+      if (row !== main && (current === null || current < 0)) return null;
+      var material = toNumber(row.materialCost);
+      var entry = { supplierId: supplierId, purchaseCost: row === main ? cost : current, materialCost: material !== null && material >= 0 ? material : 0, isDefault: row === main };
+      // 매입배송정책: 줄에 정책 칸이 아예 없으면(include 없이 읽음 등) 정책을 모르는 것이라, 빼고 보내면 발주오라 매입배송정책이
+      // 지워질 수 있어 보내지 않습니다. 정책 칸이 null이면 정책 없는 줄(발주오라 화면도 shippingPolicyId 없이 보냄).
+      if (!("shippingPolicy" in row) && !("shippingPolicyId" in row)) return null;
+      var policyId = typeof row.shippingPolicyId === "string" && row.shippingPolicyId ? row.shippingPolicyId : isObject(row.shippingPolicy) && typeof row.shippingPolicy.id === "string" && row.shippingPolicy.id ? row.shippingPolicy.id : null;
+      if (policyId) entry.shippingPolicyId = policyId;
+      list.push(entry);
+    }
+    return list;
+  }
+
   function categoryKeyOf(detail) {
     if (Array.isArray(detail.categoryIds)) return "categoryIds";
     return "categoryId";
@@ -607,7 +720,16 @@
     body.name = item.values.name;
     body.supplyPrice = item.values.supplyPrice;
     if ("consumerPrice" in template || item.values.consumerPrice !== null) body.consumerPrice = item.values.consumerPrice;
-    if (item.values.purchaseCost !== null) body.purchaseCost = item.values.purchaseCost;
+    // 신규 등록은 설정 복사용 상품의 매입처 줄을 그대로 복사하므로, 그 기본 매입처 줄의 매입원가를 DB센터 원가로 바꿉니다.
+    if (item.values.purchaseCost !== null) {
+      var suppliers = buildProductSuppliers(template, item.values.purchaseCost);
+      if (suppliers) {
+        body.productSuppliers = suppliers;
+        delete body.purchaseCost;
+      } else {
+        body.purchaseCost = item.values.purchaseCost;
+      }
+    }
     if ("isTaxable" in template) body.isTaxable = Boolean(item.values.isTaxable);
     if ("isVisible" in template) body.isVisible = true;
     if (item.values.categoryId) body[categoryKeyOf(template)] = categoryKeyOf(template) === "categoryIds" ? [item.values.categoryId] : item.values.categoryId;
@@ -1026,6 +1148,189 @@
       }
     }
 
+    // 목록 읽기: 발주오라는 목록마다 커서(meta.nextCursor) 또는 쪽(page) 방식을 씁니다. 둘 다 지원하고, 같은 쪽이 되풀이되면 멈춥니다.
+    async function listAll(path, params, options) {
+      var opts = options || {};
+      var limit = opts.limit || 100;
+      var query = Object.assign({}, params || {});
+      var items = [];
+      var cursor = null;
+      var page = 1;
+      var mode = null;
+      var lastFirstId = null;
+      for (var round = 0; round < (opts.maxPages || 1000); round += 1) {
+        var request = Object.assign({}, query, { limit: limit });
+        if (mode === "cursor" && cursor) request.cursor = cursor;
+        if (mode === "page") request.page = page;
+        var payload;
+        try {
+          payload = unwrap(await api("GET", path, undefined, { params: request }));
+        } catch (error) {
+          if (items.length === 0 && error.status === 400) {
+            var text = messagesOf(error).join(" ");
+            var dropped = (opts.optionalParams || []).filter(function (key) { return key in query && text.indexOf(key) >= 0; });
+            if (dropped.length > 0) {
+              dropped.forEach(function (key) { delete query[key]; });
+              state.errors.push({ path: "GET " + path, status: 400, messages: ["보내지 않음: " + dropped.join(",")] });
+              round -= 1;
+              continue;
+            }
+            if (limit > 20) {
+              limit = limit === 100 ? 50 : 20;
+              round -= 1;
+              continue;
+            }
+          }
+          throw error;
+        }
+        var list = pickArray(payload);
+        if (round === 0 && opts.onStructure) opts.onStructure(list[0] ? structureOf(list[0]) : structureOf(payload));
+        var firstId = list[0] && isObject(list[0]) ? list[0].id : null;
+        if (round > 0 && firstId && firstId === lastFirstId) break;
+        lastFirstId = firstId;
+        items = items.concat(list);
+        if (opts.onPage) opts.onPage(items.length);
+        if (list.length === 0) break;
+        var meta = isObject(payload) && isObject(payload.meta) ? payload.meta : {};
+        var next = typeof meta.nextCursor === "string" && meta.nextCursor ? meta.nextCursor : null;
+        if (next) {
+          if (next === cursor) break;
+          mode = "cursor";
+          cursor = next;
+          continue;
+        }
+        if (mode === "cursor" || "nextCursor" in meta) break;
+        var info = pageMeta(payload);
+        if (info.hasNext === false) break;
+        if (info.totalPages && page >= info.totalPages) break;
+        if (info.hasNext === undefined && !info.totalPages && list.length < limit) break;
+        mode = "page";
+        page += 1;
+      }
+      return items;
+    }
+
+    async function loadSellerGroupNames() {
+      var names = {};
+      try {
+        var groups = await listAll("merchant/seller-groups", {}, { limit: 100, maxPages: 20 });
+        groups.forEach(function (group) { if (isObject(group) && typeof group.id === "string" && typeof group.name === "string") names[group.id] = group.name; });
+      } catch (error) {
+        state.errors.push({ path: "GET merchant/seller-groups", status: error.status || 0, messages: messagesOf(error).slice(0, 3) });
+      }
+      return names;
+    }
+
+    // 판매·매출처 읽기: 매출처 → 주문 상품 줄(주문일 start~end) → 아직 모르는 상품의 과세 여부 → DB센터로 보내기.
+    // options.final = false 면 마지막 보고를 끝으로 하지 않음(비교 작업 안에서 쓸 때는 true로 끝냄). options.taxMap = 이번 비교에서 읽은 과세 여부.
+    async function runSales(step, report, options) {
+      var opts = options || {};
+      var result = { lines: 0, buyers: 0, complete: false, error: null };
+      var known = {};
+      (step.knownTax || []).forEach(function (id) { known[id] = true; });
+      var productTax = Object.assign({}, opts.taxMap || {});
+      if (step.buyers !== false) {
+        report.progress(0, 0, "발주오라 매출처(셀러) 목록을 읽는 중…");
+        try {
+          var groupNames = await loadSellerGroupNames();
+          var rawSellers = await listAll("merchant/sellers", {}, {
+            limit: 100,
+            maxPages: 300,
+            onStructure: function (shape) { state.structure.sellerList = shape; },
+            onPage: function (count) { report.progress(count, 0, "매출처 " + count + "곳 읽음"); }
+          });
+          var buyers = rawSellers.map(function (record) { return normalizeSeller(record, groupNames); }).filter(Boolean);
+          var needDetail = buyers.filter(sellerNeedsDetail).slice(0, 1500);
+          if (needDetail.length > 0) {
+            var detailDone = 0;
+            var details = await mapLimit(needDetail, 5, async function (buyer) {
+              try {
+                var detail = unwrap(await api("GET", "merchant/sellers/" + encodeURIComponent(buyer.id)));
+                if (isObject(detail) && isObject(detail.seller) && !detail.id) detail = detail.seller;
+                if (!state.structure.sellerDetail && isObject(detail)) state.structure.sellerDetail = structureOf(detail);
+                return normalizeSeller(detail, groupNames);
+              } catch (error) {
+                if (error.status !== 404) state.errors.push({ path: "GET merchant/sellers/:id", status: error.status || 0, messages: messagesOf(error).slice(0, 3) });
+                return null;
+              } finally {
+                detailDone += 1;
+                if (detailDone % 20 === 0 || detailDone === needDetail.length) report.progress(detailDone, needDetail.length, "매출처 상세 " + detailDone + " / " + needDetail.length + "곳 읽음");
+              }
+            });
+            var byId = {};
+            needDetail.forEach(function (buyer, index) { if (details[index]) byId[buyer.id] = details[index]; });
+            buyers = buyers.map(function (buyer) {
+              var detail = byId[buyer.id];
+              if (!detail) return buyer;
+              var merged = Object.assign({}, buyer);
+              Object.keys(detail).forEach(function (key) { if (detail[key] !== null && detail[key] !== undefined && detail[key] !== "") merged[key] = detail[key]; });
+              return merged;
+            });
+          }
+          for (var start = 0; start < buyers.length; start += 500) await report.results({ final: false, buyers: buyers.slice(start, start + 500) });
+          result.buyers = buyers.length;
+          report.log("매출처 " + buyers.length + "곳을 보냈습니다.");
+        } catch (error) {
+          state.errors.push({ path: "GET merchant/sellers", status: error.status || 0, messages: messagesOf(error).slice(0, 3) });
+          report.log("매출처를 읽지 못했습니다: " + describeError(error), true);
+        }
+      }
+      report.progress(0, 0, "발주오라 주문(" + step.start + " ~ " + step.end + ")을 읽는 중…");
+      var lines = [];
+      try {
+        var rawItems = await listAll("orders/items", { rangeType: "order", startDate: step.start, endDate: step.end }, {
+          limit: 100,
+          maxPages: 3000,
+          optionalParams: ["rangeType"],
+          onStructure: function (shape) { state.structure.orderItem = shape; },
+          onPage: function (count) { report.progress(count, 0, "주문 상품 " + count + "줄 읽음"); }
+        });
+        lines = rawItems.map(normalizeOrderItem).filter(function (line) { return line && line.orderedAt; });
+        result.complete = true;
+      } catch (error) {
+        result.error = describeError(error);
+        state.errors.push({ path: "GET orders/items", status: error.status || 0, messages: messagesOf(error).slice(0, 3) });
+        report.log("주문을 끝까지 읽지 못했습니다: " + result.error, true);
+      }
+      var seen = {};
+      var unknown = [];
+      lines.forEach(function (line) {
+        var id = line.productId;
+        if (!id || seen[id] || known[id] || typeof productTax[id] === "boolean") return;
+        seen[id] = true;
+        unknown.push(id);
+      });
+      unknown = unknown.slice(0, 1500);
+      if (unknown.length > 0) {
+        var taxDone = 0;
+        await mapLimit(unknown, 5, async function (id) {
+          try {
+            var detail = await getDetail(id);
+            if (isObject(detail) && typeof detail.isTaxable === "boolean") productTax[id] = detail.isTaxable;
+          } catch (error) {
+            if (error.status !== 404) state.errors.push({ path: "GET products/:id (tax)", status: error.status || 0, messages: messagesOf(error).slice(0, 3) });
+          } finally {
+            taxDone += 1;
+            if (taxDone % 20 === 0 || taxDone === unknown.length) report.progress(taxDone, unknown.length, "상품 과세 여부 " + taxDone + " / " + unknown.length + "개 확인");
+          }
+        });
+      }
+      if (Object.keys(productTax).length > 0) await report.results({ final: false, productTax: productTax });
+      report.progress(0, lines.length, "판매 " + lines.length + "줄을 DB센터로 보내는 중…");
+      for (var index = 0; index < lines.length; index += 1000) {
+        await report.results({ final: false, salesLines: lines.slice(index, index + 1000) });
+        report.progress(Math.min(index + 1000, lines.length), lines.length, "판매 " + lines.length + "줄을 DB센터로 보내는 중…");
+      }
+      result.lines = lines.length;
+      var isFinal = opts.final !== false;
+      await report.results({
+        final: isFinal,
+        salesDone: { complete: result.complete, error: result.error },
+        diagnostics: isFinal ? diagnostics({ sales: { start: step.start, end: step.end, lines: result.lines, buyers: result.buyers, taxRead: unknown.length, complete: result.complete } }) : undefined
+      });
+      return result;
+    }
+
     async function runCompare(plan, report) {
       report.progress(0, 0, "발주오라 매출처 그룹·카테고리를 읽는 중…");
       var group = await findGroup(plan.groupKeyword);
@@ -1079,7 +1384,7 @@
         var first = index === 0;
         var last = index + batchSize >= snapshots.length;
         await report.results({
-          final: last,
+          final: last && !plan.sales,
           snapshots: batch,
           categories: first ? categories : undefined,
           shippingPolicies: first && shippingPolicies.length > 0 ? shippingPolicies : undefined,
@@ -1089,7 +1394,14 @@
         report.progress(Math.min(index + batchSize, snapshots.length), snapshots.length, "DB센터로 결과를 보내는 중…");
         if (last) break;
       }
-      return { received: snapshots.length, products: products.length };
+      // 판매·매출처도 함께(1.7.0): 이번에 읽은 상품의 과세 여부를 그대로 써서 상세를 다시 읽지 않습니다.
+      var sales = null;
+      if (plan.sales) {
+        var taxMap = {};
+        snapshots.forEach(function (snapshot) { if (typeof snapshot.isTaxable === "boolean") taxMap[snapshot.id] = snapshot.isTaxable; });
+        sales = await runSales(plan.sales, report, { final: true, taxMap: taxMap });
+      }
+      return { received: snapshots.length, products: products.length, sales: sales };
     }
 
     // DB센터 상품 이미지를 받아 발주오라 상품 등록·수정 화면과 같은 방식으로 발주오라 저장소에 올리고, imageUrls 에 넣을 값을 돌려줍니다.
@@ -1162,9 +1474,22 @@
         else blank.supplyPrice = true;
       }
       if (fields.indexOf("consumerPrice") >= 0) body.consumerPrice = values.consumerPrice;
+      // 매입원가는 가격 저장이 아니라 매입처 목록(productSuppliers)으로 보냅니다(위 buildProductSuppliers 설명).
+      var supplierList = null;
+      var costMissing = null;
       if (fields.indexOf("purchaseCost") >= 0 && values.purchaseCost !== null) {
         if (typeof liveCost === "number" && liveCost === values.purchaseCost) same.purchaseCost = true;
-        else body.purchaseCost = values.purchaseCost;
+        else if (values.purchaseCost < 0) blank.purchaseCost = true;
+        else {
+          supplierList = buildProductSuppliers(detail, values.purchaseCost);
+          if (!supplierList) {
+            costMissing = !Array.isArray(detail.productSuppliers)
+              ? "발주오라 상품 정보에서 매입처 목록을 읽지 못해 매입원가를 보내지 않았습니다."
+              : detail.productSuppliers.length === 0
+                ? "발주오라 상품에 매입처가 없어 매입원가를 보낼 곳이 없습니다(발주오라에서 매입처를 먼저 넣어 주세요)."
+                : "발주오라 매입처 목록에 기본 매입처·매입원가·매입배송정책을 알 수 없는 줄이 있어 보내지 않았습니다(다른 매입처 값 보호).";
+          }
+        }
       }
       var groupList = null;
       var groupSame = false;
@@ -1211,10 +1536,29 @@
           groupError = error;
         }
       }
+      var costError = null;
+      var costSent = false;
+      if (supplierList) {
+        var costBody = { productSuppliers: supplierList };
+        try {
+          await sendAdaptive("PUT", "products/" + encodeURIComponent(id), costBody, currentProductValues(detail), {});
+          costSent = Array.isArray(costBody.productSuppliers);
+        } catch (error) {
+          if (error && error.status === 401) throw error;
+          costError = error;
+        }
+      }
       fields.forEach(function (field) {
         if ((field === "groupPrice" && groupSame) || same[field]) { result.applied.push(field); return; }
         if (blank[field]) { result.skipped.push({ field: field, reason: "DB센터 값이 0원이라 보내지 않았습니다(발주오라 가격을 0원으로 바꾸지 않음)." }); return; }
         if (field === "purchaseCost" && values.purchaseCost === null) { result.skipped.push({ field: field, reason: "DB센터 원가가 비어 있어 보내지 않았습니다." }); return; }
+        if (field === "purchaseCost") {
+          if (costMissing) { result.skipped.push({ field: field, reason: costMissing }); return; }
+          if (costError) { result.skipped.push({ field: field, reason: describeError(costError) }); return; }
+          if (!costSent) { result.skipped.push({ field: field, reason: "발주오라가 매입처 목록(productSuppliers)을 받지 않았습니다." }); return; }
+          result.applied.push(field);
+          return;
+        }
         if (field === "groupPrice") {
           if (groupMissing) { result.skipped.push({ field: field, reason: groupMissing }); return; }
           if (groupError) { result.skipped.push({ field: field, reason: describeError(groupError) }); return; }
@@ -1475,7 +1819,7 @@
       return { version: VERSION, at: new Date().toISOString(), structure: state.structure, endpoints: state.endpoints, errors: state.errors.slice(0, 30), extra: extra || {}, discovery: discovery };
     }
 
-    return { api: api, refreshToken: refreshToken, runCompare: runCompare, runPush: runPush, pushItem: pushItem, diagnostics: diagnostics, state: state };
+    return { api: api, refreshToken: refreshToken, runCompare: runCompare, runPush: runPush, runSales: runSales, listAll: listAll, pushItem: pushItem, diagnostics: diagnostics, state: state };
   }
 
   // ─── 입금·정산 반영 도우미(2026-11-23 관리자 요청) ─────────────────────────────
@@ -1999,7 +2343,7 @@
     var runner = null;
     try {
       var job = await postJson("");
-      panel.log("작업을 받았습니다: " + (job.type === "compare" ? "발주오라 상품 불러오기(비교)" : "DB센터 변경 " + job.plan.items.length + "개 보내기"));
+      panel.log("작업을 받았습니다: " + (job.type === "compare" ? "발주오라 상품 불러오기(비교)" + (job.plan.sales ? " + 판매·매출처" : "") : job.type === "sales" ? "판매·매출처 불러오기(" + job.plan.start + " ~ " + job.plan.end + ")" : "DB센터 변경 " + job.plan.items.length + "개 보내기"));
       var loadedScripts = [];
       try { loadedScripts = Array.prototype.map.call(win.document.scripts, function (script) { return script.src; }).filter(Boolean); } catch { /* 무시 */ }
       runner = createRunner({ fetch: win.fetch.bind(win), locks: win.navigator && win.navigator.locks, consoleOrigin: win.location.origin, pagePath: win.location.pathname, loadedScripts: loadedScripts, apiBase: win.__doogoSyncApiBase || API_BASE, doogoOrigin: doogoOrigin, convertImage: makeImageConverter(win) });
@@ -2007,7 +2351,11 @@
       runner.state.token = await runner.refreshToken();
       if (job.type === "compare") {
         var compared = await runner.runCompare(job.plan, report);
-        panel.status("완료: 발주오라 상품 " + compared.received + "개를 읽었습니다. DB센터 화면에서 변경 목록을 확인하세요.");
+        panel.status("완료: 발주오라 상품 " + compared.received + "개" + (compared.sales ? " · 판매 " + compared.sales.lines + "줄 · 매출처 " + compared.sales.buyers + "곳" : "") + "을 읽었습니다. DB센터 화면에서 확인하세요.");
+        panel.progress(1, 1);
+      } else if (job.type === "sales") {
+        var sold = await runner.runSales(job.plan, report, { final: true });
+        panel.status("완료: 판매 " + sold.lines + "줄 · 매출처 " + sold.buyers + "곳을 읽었습니다" + (sold.complete ? "." : "(주문은 일부만).") + " DB센터 판매 현황에서 확인하세요.");
         panel.progress(1, 1);
       } else {
         var pushed = await runner.runPush(job.plan, report, code);
@@ -2057,6 +2405,10 @@
     makeImageConverter: makeImageConverter,
     PRODUCT_IMAGE: PRODUCT_IMAGE,
     extractPurchaseCost: extractPurchaseCost,
+    buildProductSuppliers: buildProductSuppliers,
+    normalizeOrderItem: normalizeOrderItem,
+    normalizeSeller: normalizeSeller,
+    sellerNeedsDetail: sellerNeedsDetail,
     chunkPathsOf: chunkPathsOf,
     codeSnippets: codeSnippets,
     buildCreateBody: buildCreateBody,

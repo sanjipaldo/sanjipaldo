@@ -32,7 +32,7 @@ const BJ_POLICIES = [
 // 개별공급가는 sellerProductPrices 목록 전체 [{ targetType: "group" | "seller", targetId, shippingPolicyId?, supplyPrice }]로 바꿉니다.
 function applyProductPut(product: any, body: any, options: { allowed?: string[]; rowAllowed?: string[]; ignoreImageUrls?: boolean } = {}) {
   if (!product) return jsonResponse(404, { statusCode: 404, message: "Not Found" });
-  const allowed = options.allowed ?? ["sellerProductPrices", "sellShippingPolicyId", "imageUrls"];
+  const allowed = options.allowed ?? ["sellerProductPrices", "sellShippingPolicyId", "imageUrls", "productSuppliers"];
   const extra = Object.keys(body).filter((key) => !allowed.includes(key));
   if (extra.length) return jsonResponse(400, { statusCode: 400, message: extra.map((key) => `property ${key} should not exist`), error: "Bad Request" });
   // 상품 이미지(imageUrls): 발주오라 상품 화면은 최대 5장(2026-11-23 화면 코드 maxFiles 5).
@@ -57,6 +57,26 @@ function applyProductPut(product: any, body: any, options: { allowed?: string[];
         ? { sellerGroup: previous?.sellerGroup ?? { id: row.targetId, name: row.targetId === GROUP.id ? GROUP.name : "기타 그룹" } }
         : { seller: previous?.seller ?? { id: row.targetId, companyName: "매출처" } };
       return { id: previous?.id ?? `pr-new-${index}`, productId: product.id, targetType: row.targetType, targetId: row.targetId, shippingPolicyId: row.shippingPolicyId ?? null, supplyPrice: row.supplyPrice, ...target };
+    });
+  }
+  // 매입처 목록(productSuppliers, 2026-11-24 발주오라 상품 수정 화면 코드 확인): 목록 전체로 바꾸고, 기본 매입처는 정확히 1개, 매입원가는 0 이상.
+  if (body.productSuppliers !== undefined) {
+    const rows: any[] = body.productSuppliers;
+    const errors: string[] = [];
+    if (!Array.isArray(rows) || rows.length === 0) errors.push("최소 1개의 매입처가 필요합니다.");
+    else {
+      rows.forEach((row, index) => {
+        Object.keys(row).filter((key) => !["supplierId", "shippingPolicyId", "purchaseCost", "materialCost", "isDefault"].includes(key)).forEach((key) => errors.push(`productSuppliers.${index}.property ${key} should not exist`));
+        if (typeof row.supplierId !== "string" || !row.supplierId) errors.push(`productSuppliers.${index}.supplierId should not be empty`);
+        if (typeof row.purchaseCost !== "number" || row.purchaseCost < 0) errors.push(`productSuppliers.${index}.purchaseCost must not be less than 0`);
+      });
+      if (rows.filter((row) => row.isDefault === true).length !== 1) errors.push("기본 매입처는 정확히 1개만 지정해야 합니다.");
+    }
+    if (errors.length) return jsonResponse(400, { statusCode: 400, message: errors, error: "Bad Request" });
+    const before: any[] = product.productSuppliers || [];
+    product.productSuppliers = rows.map((row: any, index: number) => {
+      const previous = before.find((old) => (old.supplier?.id ?? old.supplierId) === row.supplierId);
+      return { id: previous?.id ?? `ps-new-${index}`, supplier: previous?.supplier ?? { id: row.supplierId, name: "매입처" }, shippingPolicy: row.shippingPolicyId ? previous?.shippingPolicy?.id === row.shippingPolicyId ? previous.shippingPolicy : { id: row.shippingPolicyId } : null, purchaseCost: row.purchaseCost, materialCost: row.materialCost ?? null, isDefault: row.isDefault };
     });
   }
   if (body.sellShippingPolicyId !== undefined) {
@@ -218,7 +238,7 @@ describe("비교(읽기만)", () => {
     const runner = runnerFor(fake);
     const report = createReport();
     const result = await runner.runCompare({ type: "compare", groupKeyword: "황금농부", detailIds: ["bj-a", "bj-b"] }, report);
-    expect(result).toEqual({ received: 3, products: 2 });
+    expect(result).toEqual({ received: 3, products: 2, sales: null });
     expect(fake.calls.some((call) => call.method !== "GET" && call.url.startsWith("https://api.baljuora.com"))).toBe(false);
     const [batch] = report.posted;
     expect(batch.final).toBe(true);
@@ -358,9 +378,9 @@ function createIncludeFake(options: { rowAllowed?: string[]; productPutAllowed?:
     if (method === "GET" && path === "products/bj-y") return jsonResponse(200, { data: view(String(url.searchParams.get("include") || "").split(",").includes("prices")) });
     if (method === "PUT" && path === "products/bj-y/pricing") {
       // 모르는 칸(prices·sellerProductPrices 등)은 오류 없이 버립니다(운영과 같음).
+      // 2026-11-24 운영(샤인머스캣): purchaseCost도 오류 없이 버려 매입원가(매입처 줄)는 그대로입니다.
       if (body.supplyPrice !== undefined) product.supplyPrice = body.supplyPrice;
       if (body.consumerPrice !== undefined) product.consumerPrice = body.consumerPrice;
-      if (body.purchaseCost !== undefined) product.productSuppliers.find((row: any) => row.isDefault).purchaseCost = body.purchaseCost;
       return jsonResponse(200, { data: view(true) });
     }
     if (method === "PUT" && path === "products/bj-y") return applyProductPut(product, body, { rowAllowed: options.rowAllowed, allowed: options.productPutAllowed });
@@ -869,16 +889,16 @@ describe("보내기", () => {
   });
 
   it("발주오라가 받지 않는 칸은 빼고 다시 보내고, 그 칸은 '받지 않음'으로 알려 줍니다", async () => {
-    const fake = createFake({ pricingAllowed: ["supplyPrice", "consumerPrice"] });
+    const fake = createFake({ pricingAllowed: ["supplyPrice"] });
     const runner = runnerFor(fake);
     const report = createReport();
-    await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [pushItem({ fields: ["supplyPrice", "purchaseCost"] })] }, report, "ABCDE23456");
+    await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [pushItem({ fields: ["supplyPrice", "consumerPrice"], values: { ...pushItem({}).values, consumerPrice: 41000 } })] }, report, "ABCDE23456");
     const pricingCalls = fake.calls.filter((call) => call.method === "PUT" && call.url.endsWith("/pricing"));
-    expect(pricingCalls.map((call) => Object.keys(call.body))).toEqual([["supplyPrice", "purchaseCost"], ["supplyPrice"]]);
+    expect(pricingCalls.map((call) => Object.keys(call.body))).toEqual([["supplyPrice", "consumerPrice"], ["supplyPrice"]]);
     const [result] = report.posted[0].items;
     expect(result.ok).toBe(true);
     expect(result.applied).toEqual(["supplyPrice"]);
-    expect(result.skipped).toEqual([{ field: "purchaseCost", reason: "발주오라가 이 칸을 받지 않았습니다." }]);
+    expect(result.skipped).toEqual([{ field: "consumerPrice", reason: "발주오라가 이 칸을 받지 않았습니다." }]);
   });
 
   it("신규 등록: 설정 복사용 상품의 매입처·배송정책을 복사해 등록합니다", async () => {
@@ -1100,5 +1120,242 @@ describe("입금·정산 반영 도우미(입/출금 계좌 조회 화면 버튼
     const fakeWin = { location: { hash: "#doogo-sync=ABCDE23456", search: "", pathname: "/doogobiz24/dashboard" }, sessionStorage: { setItem() {}, getItem() { return null; } }, history: { replaceState: (_a: unknown, _b: string, url: string) => replaced.push(url) } };
     expect(internals.codeFromLocation(fakeWin)).toBe("ABCDE23456");
     expect(internals.codeFromLocation({ ...fakeWin, location: { hash: "", search: "", pathname: "/" } })).toBeNull();
+  });
+});
+
+// ─── 판매·매출처 읽기(1.7.0, 2026-11-23 관리자 요청 "1차 개발") ─────────────────
+// 발주오라 주문 목록 화면 공용 코드(GET orders/items, 커서 meta.nextCursor)와 매출처 상세 화면 칸(merchant/sellers)을 흉내 냅니다.
+function createSalesFake(options: { rejectRangeType?: boolean; failOrdersAtCursor?: string } = {}) {
+  const sellers: any[] = [
+    {
+      id: "s-1", merchantId: "m-1", groupId: "grp-1", username: "greenmarket", name: "박담당", phone: "010-1111-2222", email: "green@example.com",
+      companyName: "그린마켓", representativeName: "김대표", businessNumber: "123-45-67890", businessType: "도소매", businessCategory: "농산물",
+      zipCode: "06000", address: "서울시 강남구 테헤란로 1", addressDetail: "2층", status: "ACTIVE", orderAcceptType: "PREPAID",
+      bankAccount: { bankName: "국민은행", accountHolder: "김대표", accountNumber: "000-000" }, businessLicense: { value: "https://files.example/license.pdf" },
+      settings: { secret: true }, lastLoginAt: "2026-11-20T01:00:00Z", createdAt: "2026-01-02T00:00:00Z"
+    },
+    { id: "s-2", merchantId: "m-1", companyName: "바다상회", status: "ACTIVE", createdAt: "2026-03-01T00:00:00Z" }
+  ];
+  const sellerDetails: Record<string, any> = {
+    "s-2": { ...sellers[1], representativeName: "이대표", businessNumber: "2223344445", businessType: "소매", businessCategory: "수산물", address: "부산시 해운대구", email: "sea@example.com", bankAccount: { accountNumber: "999" } }
+  };
+  const item = (id: string, extra: Record<string, unknown>) => ({
+    id, orderId: `o-${id}`, createdAt: "2026-11-03T15:30:00.000Z", status: "delivered", productId: "bj-a", productName: "봄날 사과 5kg", productImageUrl: "https://files.example/a.jpg",
+    quantity: 2, csProcessedQuantity: 0, supplyPrice: 26000, purchaseCost: 20000, salesShippingFee: 3000, purchaseShippingFee: 2500,
+    supplierId: "sup-1", supplierName: "봄날농원", sellerName: "그린마켓", recipientName: "홍길동", recipientPhone: "010-9999-8888", trackingNumber: "1234",
+    csRequests: [], ...extra
+  });
+  const orderItems = [
+    item("i-1", {}),
+    item("i-2", { quantity: 3, csProcessedQuantity: 1, productId: "bj-b", productName: "봄날 배", supplyPrice: 38000 }),
+    item("i-3", { sellerName: "바다상회", productId: "bj-c", productName: "건강즙", supplyPrice: 11000, effectiveQuantity: 0, quantity: 1, csProcessedQuantity: 1 }),
+    item("i-4", { status: "pending", productId: "bj-c", productName: "건강즙", supplyPrice: 11000 }),
+    item("i-5", { sellerName: "바다상회", productId: "bj-b", productName: "봄날 배", supplyPrice: 38000, quantity: 1 })
+  ];
+  const taxable: Record<string, boolean> = { "bj-a": false, "bj-b": false, "bj-c": true };
+  const calls: Array<{ method: string; url: URL }> = [];
+  const fetch = async (input: string, init: RequestInit = {}) => {
+    const method = (init.method || "GET").toUpperCase();
+    const url = new URL(input);
+    calls.push({ method, url });
+    if (url.origin === "https://console.baljuora.com" && url.pathname === "/api/auth/refresh") return jsonResponse(200, { accessToken: "t1" });
+    const path = url.pathname.replace(/^\//, "");
+    if (method === "GET" && path === "merchant/seller-groups") return jsonResponse(200, { statusCode: 200, data: { items: [GROUP], meta: { nextCursor: null } } });
+    if (method === "GET" && path === "merchant/sellers") return jsonResponse(200, { statusCode: 200, data: { items: sellers, meta: { nextCursor: null } } });
+    if (method === "GET" && path.startsWith("merchant/sellers/")) {
+      const detail = sellerDetails[decodeURIComponent(path.slice("merchant/sellers/".length))];
+      return detail ? jsonResponse(200, { statusCode: 200, data: detail }) : jsonResponse(404, { statusCode: 404, message: "Not Found" });
+    }
+    if (method === "GET" && path === "orders/items") {
+      if (options.rejectRangeType && url.searchParams.has("rangeType")) return jsonResponse(400, { statusCode: 400, message: ["rangeType must be one of the following values: accepted, purchase, shipping"], error: "Bad Request" });
+      const cursor = url.searchParams.get("cursor");
+      if (options.failOrdersAtCursor && cursor === options.failOrdersAtCursor) return jsonResponse(500, { statusCode: 500, message: "Internal Server Error" });
+      const start = cursor ? Number(cursor.slice(1)) : 0;
+      const limit = Math.min(Number(url.searchParams.get("limit")) || 20, 2);
+      const pageItems = orderItems.slice(start, start + limit);
+      const next = start + limit < orderItems.length ? `c${start + limit}` : null;
+      return jsonResponse(200, { statusCode: 200, data: { items: pageItems, meta: { nextCursor: next } } });
+    }
+    if (method === "GET" && path.startsWith("products/")) {
+      const id = decodeURIComponent(path.slice("products/".length));
+      return id in taxable ? jsonResponse(200, { statusCode: 200, data: { id, name: id, isTaxable: taxable[id] } }) : jsonResponse(404, { statusCode: 404, message: "Not Found" });
+    }
+    return jsonResponse(404, { message: `not found ${input}` });
+  };
+  return { fetch, calls, sellers, orderItems };
+}
+
+function salesRunner(fake: ReturnType<typeof createSalesFake>) {
+  return internals.createRunner({ fetch: fake.fetch, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+}
+
+describe("판매·매출처 읽기(1.7.0)", () => {
+  const step = { start: "2026-10-01", end: "2026-11-23", buyers: true, knownTax: ["bj-a"] };
+
+  it("주문 상품 줄 정리: 취소·반품 처리 수량을 뺀 수량, 받는 사람 이름·연락처는 넣지 않습니다", () => {
+    const line = internals.normalizeOrderItem({ id: "i-9", orderId: "o-9", createdAt: "2026-11-01T00:00:00Z", status: "DELIVERED", productId: "bj-a", productName: " 사과  5kg ", quantity: 5, csProcessedQuantity: 2, supplyPrice: "1,000", purchaseCost: 700, sellerName: "그린마켓", recipientName: "홍길동", recipientPhone: "010" });
+    expect(line).toEqual({ id: "i-9", orderId: "o-9", orderedAt: "2026-11-01T00:00:00Z", status: "delivered", productId: "bj-a", productCode: null, productName: "사과 5kg", supplierId: null, supplierName: null, sellerId: null, sellerName: "그린마켓", quantity: 5, netQuantity: 3, supplyPrice: 1000, purchaseCost: 700, salesShippingFee: 0, purchaseShippingFee: 0 });
+    expect(internals.normalizeOrderItem({ id: "i-10", createdAt: "2026-11-01", quantity: 2, effectiveQuantity: 5, supplyPrice: 10 }).netQuantity).toBe(2);
+  });
+
+  it("매출처(상세로 빈 칸 채움) → 주문 상품 줄(커서로 끝까지) → 모르는 상품만 과세 여부 → DB센터로 보내고 끝냅니다(발주오라는 읽기만)", async () => {
+    const fake = createSalesFake();
+    const report = createReport();
+    const result = await salesRunner(fake).runSales(step, report, { final: true });
+    expect(result).toEqual({ lines: 5, buyers: 2, complete: true, error: null });
+    expect(fake.calls.some((call) => call.method !== "GET" && call.url.origin === "https://api.baljuora.com")).toBe(false);
+    // 주문 목록은 주문일 기준 기간으로, 커서를 따라 끝까지
+    const orderCalls = fake.calls.filter((call) => call.url.pathname === "/orders/items");
+    expect(orderCalls[0].url.searchParams.get("rangeType")).toBe("order");
+    expect(orderCalls[0].url.searchParams.get("startDate")).toBe("2026-10-01");
+    expect(orderCalls[0].url.searchParams.get("endDate")).toBe("2026-11-23");
+    expect(orderCalls.map((call) => call.url.searchParams.get("cursor"))).toEqual([null, "c2", "c4"]);
+    // 매출처: 목록에 빈 칸이 있는 바다상회만 상세를 읽고, 계좌·사업자등록증·설정은 보내지 않음
+    const buyers = report.posted.filter((body) => body.buyers).flatMap((body) => body.buyers);
+    expect(fake.calls.filter((call) => call.url.pathname.startsWith("/merchant/sellers/")).map((call) => call.url.pathname)).toEqual(["/merchant/sellers/s-2"]);
+    expect(buyers.find((buyer: any) => buyer.id === "s-1")).toMatchObject({ companyName: "그린마켓", representativeName: "김대표", businessNumber: "123-45-67890", businessType: "도소매", businessCategory: "농산물", managerName: "박담당", groupName: GROUP.name, joinedAt: "2026-01-02T00:00:00Z" });
+    expect(buyers.find((buyer: any) => buyer.id === "s-2")).toMatchObject({ representativeName: "이대표", businessNumber: "2223344445", address: "부산시 해운대구", email: "sea@example.com" });
+    expect(JSON.stringify(buyers)).not.toMatch(/bankAccount|accountNumber|license|secret/);
+    // 과세 여부: 이미 아는 bj-a는 빼고 bj-b·bj-c만 상세로 확인
+    expect(fake.calls.filter((call) => call.url.pathname.startsWith("/products/")).map((call) => call.url.pathname).sort()).toEqual(["/products/bj-b", "/products/bj-c"]);
+    expect(report.posted.find((body) => body.productTax).productTax).toEqual({ "bj-b": false, "bj-c": true });
+    // 판매 줄: 받는 사람 정보 없음, 남은 수량
+    const lines = report.posted.filter((body) => body.salesLines).flatMap((body) => body.salesLines);
+    expect(lines.map((line: any) => [line.id, line.quantity, line.netQuantity, line.status])).toEqual([["i-1", 2, 2, "delivered"], ["i-2", 3, 2, "delivered"], ["i-3", 1, 0, "delivered"], ["i-4", 2, 2, "pending"], ["i-5", 1, 1, "delivered"]]);
+    expect(JSON.stringify(lines)).not.toMatch(/홍길동|010-9999|recipient|tracking/);
+    // 순서: 매출처 → 과세 여부 → 판매 줄 → 마지막 보고(끝까지 읽음)
+    const kinds = report.posted.map((body) => body.buyers ? "buyers" : body.productTax ? "tax" : body.salesLines ? "lines" : body.salesDone ? "done" : "other");
+    expect(kinds).toEqual(["buyers", "tax", "lines", "done"]);
+    const last = report.posted[report.posted.length - 1];
+    expect(last).toMatchObject({ final: true, salesDone: { complete: true, error: null } });
+    expect(last.diagnostics.structure.orderItem.supplyPrice).toBe("number");
+    expect(last.diagnostics.structure.sellerList.companyName).toBe("string");
+  });
+
+  it("발주오라가 rangeType을 받지 않으면 빼고 다시 읽습니다", async () => {
+    const fake = createSalesFake({ rejectRangeType: true });
+    const report = createReport();
+    const result = await salesRunner(fake).runSales({ ...step, buyers: false }, report, { final: true });
+    expect(result.complete).toBe(true);
+    expect(result.lines).toBe(5);
+    const orderCalls = fake.calls.filter((call) => call.url.pathname === "/orders/items");
+    expect(orderCalls[0].url.searchParams.has("rangeType")).toBe(true);
+    expect(orderCalls.slice(1).every((call) => !call.url.searchParams.has("rangeType"))).toBe(true);
+  });
+
+  it("주문을 읽다 멈추면 '끝까지 읽지 않음'으로 알리고(DB센터는 사라진 줄을 지우지 않음) 읽은 줄과 매출처는 보냅니다", async () => {
+    const fake = createSalesFake({ failOrdersAtCursor: "c2" });
+    const report = createReport();
+    const result = await salesRunner(fake).runSales(step, report, { final: true });
+    expect(result.complete).toBe(false);
+    expect(result.error).toBeTruthy();
+    expect(result.buyers).toBe(2);
+    const last = report.posted[report.posted.length - 1];
+    expect(last.final).toBe(true);
+    expect(last.salesDone.complete).toBe(false);
+    expect(report.logs.some((text) => text.includes("주문을 끝까지 읽지 못했습니다"))).toBe(true);
+  });
+
+  it("비교 작업에 판매가 들어 있으면 상품을 보낸 뒤 판매·매출처를 읽고 마지막에 끝냅니다(이번에 읽은 과세 여부를 씀)", async () => {
+    const compareFake = createFake();
+    const salesFake = createSalesFake();
+    const fetch = async (input: string, init: RequestInit = {}) => {
+      const path = new URL(input).pathname;
+      if (path.startsWith("/merchant/sellers") || path === "/orders/items") return salesFake.fetch(input, init);
+      return compareFake.fetch(input, init);
+    };
+    const runner = internals.createRunner({ fetch, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const report = createReport();
+    const result = await runner.runCompare({ type: "compare", groupKeyword: "황금농부", detailIds: ["bj-a", "bj-b"], sales: { ...step, knownTax: [] } }, report);
+    expect(result.received).toBe(3);
+    expect(result.sales).toMatchObject({ lines: 5, buyers: 2, complete: true });
+    const finals = report.posted.filter((body) => body.final);
+    expect(finals).toHaveLength(1);
+    expect(finals[0].salesDone).toBeTruthy();
+    expect(report.posted[0].final).toBe(false);
+    // 비교에서 읽은 과세 여부(bj-a: 면세)는 다시 읽지 않고 함께 보냄
+    const apple = report.posted[0].snapshots.find((snapshot: any) => snapshot.id === "bj-a");
+    expect(apple.isTaxable).toBe(false);
+    expect(report.posted.find((body) => body.productTax).productTax["bj-a"]).toBe(false);
+  });
+});
+
+// ─── 매입원가(2026-11-24 운영: 샤인머스캣 원가 6,600을 보냈는데 발주오라 매입원가 6,400 그대로) ─────────────────
+// 가격 저장(PUT products/:id/pricing)은 purchaseCost를 오류 없이 버립니다. 발주오라 상품 수정 화면처럼 매입처 목록 전체를 PUT products/:id 로 보냅니다.
+describe("매입원가 보내기(매입처 목록 productSuppliers)", () => {
+  const shine = { name: "[다] [당도 선별] 샤인머스캣 500g(1송이)", supplyPrice: 7700, groupPrice: 7200, consumerPrice: null, purchaseCost: 6600, categoryId: null, imageUrl: null, isTaxable: false };
+
+  function shineFake() {
+    const fake = createIncludeFake();
+    fake.product.name = shine.name;
+    fake.product.supplyPrice = 7680;
+    fake.product.productSuppliers = [{ id: "ps-dami", supplier: { id: "sup-dami", name: "농업회사법인 다미 주식회사" }, purchaseCost: 6400, materialCost: null, isDefault: true, shippingPolicy: { id: "pship-dami", name: "다미" } }];
+    return fake;
+  }
+
+  it("보낼 매입처 목록: 기본 매입처 줄의 매입원가만 바꾸고 다른 매입처 줄(매입처·매입배송정책·매입원가·부자재가)은 그대로", () => {
+    const detail = { productSuppliers: [
+      { id: "ps-1", supplier: { id: "sup-a" }, shippingPolicy: { id: "sh-a" }, purchaseCost: 6400, materialCost: null, isDefault: true },
+      { id: "ps-2", supplier: { id: "sup-b" }, shippingPolicy: { id: "sh-b" }, purchaseCost: 6100, materialCost: 300, isDefault: false }
+    ] };
+    expect(internals.buildProductSuppliers(detail, 6600)).toEqual([
+      { supplierId: "sup-a", shippingPolicyId: "sh-a", purchaseCost: 6600, materialCost: 0, isDefault: true },
+      { supplierId: "sup-b", shippingPolicyId: "sh-b", purchaseCost: 6100, materialCost: 300, isDefault: false }
+    ]);
+    // 기본 매입처를 알 수 없거나(둘 다 기본 아님), 매입원가를 모르는 다른 줄이 있거나, 매입처가 없으면 보내지 않음
+    expect(internals.buildProductSuppliers({ productSuppliers: detail.productSuppliers.map((row) => ({ ...row, isDefault: false })) }, 6600)).toBeNull();
+    expect(internals.buildProductSuppliers({ productSuppliers: [detail.productSuppliers[0], { ...detail.productSuppliers[1], purchaseCost: null }] }, 6600)).toBeNull();
+    expect(internals.buildProductSuppliers({ productSuppliers: [] }, 6600)).toBeNull();
+    expect(internals.buildProductSuppliers({}, 6600)).toBeNull();
+    // 매입처가 하나뿐이면 기본 표시가 없어도 그 줄을 기본으로. 매입배송정책이 null(정책 없음)이면 발주오라 화면처럼 shippingPolicyId 없이
+    expect(internals.buildProductSuppliers({ productSuppliers: [{ supplierId: "sup-z", shippingPolicy: null, purchaseCost: 100 }] }, 150)).toEqual([{ supplierId: "sup-z", purchaseCost: 150, materialCost: 0, isDefault: true }]);
+    // 매입배송정책 칸이 아예 없는 줄(정책을 모름)은 빼고 보내면 정책이 지워질 수 있어 보내지 않음
+    expect(internals.buildProductSuppliers({ productSuppliers: [{ supplierId: "sup-z", purchaseCost: 100 }] }, 150)).toBeNull();
+    expect(internals.buildProductSuppliers({ productSuppliers: [detail.productSuppliers[0], { id: "ps-2", supplier: { id: "sup-b" }, purchaseCost: 6100, isDefault: false }] }, 6600)).toBeNull();
+  });
+
+  it("샤인머스캣 재현: 원가 6,400 → 6,600을 매입처 목록으로 보내 발주오라 매입원가가 바뀌고, 다시 읽어 확인합니다(공급가·황금농부도 함께)", async () => {
+    const fake = shineFake();
+    const runner = internals.createRunner({ fetch: fake.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const result = await runner.pushItem(pushItem({ baljuoraId: "bj-y", code: "ass00050", name: shine.name, fields: ["purchaseCost", "supplyPrice", "groupPrice"], values: shine }), { groupKeyword: "황금농부" }, { group: GROUP, groupKeyword: "황금농부" }, "CODE");
+    const pricing = fake.calls.find((call) => call.method === "PUT" && call.url.endsWith("/pricing"));
+    expect(pricing?.body).toEqual({ supplyPrice: 7700 }); // 가격 저장에는 매입원가를 넣지 않음(발주오라가 버림)
+    const updates = fake.calls.filter((call) => call.method === "PUT" && call.url === "https://api.baljuora.com/products/bj-y").map((call) => call.body);
+    expect(updates).toContainEqual({ productSuppliers: [{ supplierId: "sup-dami", shippingPolicyId: "pship-dami", purchaseCost: 6600, materialCost: 0, isDefault: true }] });
+    expect(fake.product.productSuppliers[0]).toMatchObject({ purchaseCost: 6600, supplier: { id: "sup-dami" }, shippingPolicy: { id: "pship-dami" }, isDefault: true });
+    expect(result.ok).toBe(true);
+    expect(result.applied.sort()).toEqual(["groupPrice", "purchaseCost", "supplyPrice"]);
+    expect(result.skipped).toEqual([]);
+    expect(result.snapshot).toMatchObject({ supplyPrice: 7700, groupPrice: 7200, purchaseCost: 6600 });
+  });
+
+  it("발주오라가 매입처 목록을 거절하면 매입원가만 사유와 함께 알리고, 공급가는 그대로 반영됨", async () => {
+    const fake = createIncludeFake({ productPutAllowed: ["sellerProductPrices"] });
+    fake.product.productSuppliers[0].purchaseCost = 5000;
+    const runner = internals.createRunner({ fetch: fake.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const result = await runner.pushItem(pushItem({ baljuoraId: "bj-y", code: "ass00050", fields: ["purchaseCost", "supplyPrice"], values: { name: "약과", supplyPrice: 7100, groupPrice: 6270, consumerPrice: null, purchaseCost: 5700, categoryId: null, imageUrl: null, isTaxable: false } }), { groupKeyword: "황금농부" }, { group: GROUP, groupKeyword: "황금농부" }, "CODE");
+    expect(result.applied).toEqual(["supplyPrice"]);
+    expect(result.skipped).toEqual([{ field: "purchaseCost", reason: expect.stringContaining("productSuppliers") }]);
+    expect(fake.product.productSuppliers[0].purchaseCost).toBe(5000);
+  });
+
+  it("기본 매입처를 알 수 없으면 매입처 목록을 보내지 않고 이유를 알립니다(다른 매입처 값 보호)", async () => {
+    const fake = createIncludeFake();
+    fake.product.productSuppliers = [
+      { id: "ps-1", supplier: { id: "sup-a" }, purchaseCost: 5000, materialCost: null, isDefault: false, shippingPolicy: { id: "sh-a" } },
+      { id: "ps-2", supplier: { id: "sup-b" }, purchaseCost: 5100, materialCost: null, isDefault: false, shippingPolicy: { id: "sh-b" } }
+    ];
+    const runner = internals.createRunner({ fetch: fake.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const result = await runner.pushItem(pushItem({ baljuoraId: "bj-y", code: "ass00050", fields: ["purchaseCost"], values: { name: "약과", supplyPrice: 6900, groupPrice: 6270, consumerPrice: null, purchaseCost: 5700, categoryId: null, imageUrl: null, isTaxable: false } }), { groupKeyword: "황금농부" }, { group: GROUP, groupKeyword: "황금농부" }, "CODE");
+    expect(fake.calls.some((call) => call.method === "PUT" && call.body && "productSuppliers" in call.body)).toBe(false);
+    expect(result.skipped).toEqual([{ field: "purchaseCost", reason: expect.stringContaining("기본 매입처") }]);
+  });
+
+  it("신규 등록: 설정 복사용 상품의 매입처 줄을 복사하면서 기본 매입처 매입원가를 DB센터 원가로 바꿉니다", () => {
+    const template = { id: "bj-t", code: "T-1", name: "템플릿", supplyPrice: 1000, isTaxable: false, isVisible: true, productSuppliers: [{ id: "ps-t", createdAt: "x", updatedAt: "x", supplier: { id: "sup-dami" }, shippingPolicy: { id: "pship-dami" }, purchaseCost: 900, materialCost: null, isDefault: true }] };
+    const body = internals.buildCreateBody(template, pushItem({ action: "create", code: "NEW-1", values: { ...shine, name: "새 샤인머스캣" } }));
+    expect(body.productSuppliers).toEqual([{ supplierId: "sup-dami", shippingPolicyId: "pship-dami", purchaseCost: 6600, materialCost: 0, isDefault: true }]);
+    expect(body).not.toHaveProperty("purchaseCost");
+    expect(body).toMatchObject({ code: "NEW-1", name: "새 샤인머스캣", supplyPrice: 7700 });
   });
 });

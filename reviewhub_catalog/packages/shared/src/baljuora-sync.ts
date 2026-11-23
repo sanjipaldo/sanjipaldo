@@ -56,6 +56,8 @@ export type BaljuoraProductSnapshot = {
   isVisible: boolean | null;
   isSoldOut: boolean | null;
   updatedAt: string | null;
+  // 과세 여부(1.7.0부터 읽음). undefined = 읽지 못함. 홈택스 세금계산서(과세)/계산서(면세) 나누기에 씀.
+  isTaxable?: boolean;
 };
 
 export type BaljuoraCategory = { id: string; name: string; parentId: string | null; path: string };

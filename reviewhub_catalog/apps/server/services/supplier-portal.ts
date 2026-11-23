@@ -14,6 +14,7 @@ import {
   SUPPLIER_USERNAME_PATTERN,
   addDays,
   monthRange,
+  nextMonthKey,
   seoulDateKey,
   settlementPeriodFor,
   supplierCommission,
@@ -46,6 +47,7 @@ import {
   type SupplierRequest
 } from "../db/schema";
 import { createProduct, updateProduct, type ProductInput } from "./catalog";
+import { settlementStatesFor } from "./baljuora-sales";
 
 export class SupplierPortalUnavailableError extends DatabaseError {
   constructor() {
@@ -846,6 +848,9 @@ export async function getSupplierSalesMonth(context: SupplierContext, month: str
     }
 
     const hasAnySales = monthRows.length > 0 || (await getDb().select({ id: supplierSales.id }).from(supplierSales).where(eq(supplierSales.supplierName, context.supplier.name)).limit(1)).length > 0;
+    // 마스터가 바꾼 월 정산 상태(정산 대기 → 판매 대금 입금 → 정산 완료). 입금일 달력의 지난달 판매분도 함께 봅니다.
+    const states = await settlementStatesFor(context.supplier.name, [month, nextMonthKey(month, -1), ...payoutDays.map((payout) => payout.periodStart.slice(0, 7))]);
+    const stateOf = (periodStart: string) => states.get(periodStart.slice(0, 7)) ?? null;
     return {
       month,
       today,
@@ -855,8 +860,9 @@ export async function getSupplierSalesMonth(context: SupplierContext, month: str
       totals: { ...totals, netAmount, commission, payoutAmount: Math.max(0, netAmount), netIncome: Math.max(0, netAmount) - commission },
       days,
       ranking,
-      settlements: periods.map((period) => settlementSummary(period, byDate, rate)),
-      payoutDays
+      settlements: periods.map((period) => ({ ...settlementSummary(period, byDate, rate), state: stateOf(period.start) })),
+      payoutDays: payoutDays.map((payout) => ({ ...payout, state: stateOf(payout.periodStart) })),
+      settlementState: states.get(month) ?? null
     };
   });
 }
@@ -869,7 +875,8 @@ export async function getSupplierDashboard(context: SupplierContext, today = seo
     const cycle: SupplierSettlementCycle = context.account.settlementCycle === "weekly" ? "weekly" : "monthly";
     const upcoming = upcomingSettlement(today, cycle);
     const upcomingRows = await salesRows(context.supplier.name, upcoming.start, upcoming.end);
-    const upcomingSummary = settlementSummary(upcoming, dayTotals(upcomingRows), context.account.commissionRate);
+    const upcomingStates = await settlementStatesFor(context.supplier.name, [upcoming.start.slice(0, 7)]);
+    const upcomingSummary = { ...settlementSummary(upcoming, dayTotals(upcomingRows), context.account.commissionRate), state: upcomingStates.get(upcoming.start.slice(0, 7)) ?? null };
     const productRows = await db.select({ isVisible: products.isVisible, isSoldOut: products.isSoldOut })
       .from(products)
       .where(and(eq(products.supplierName, context.supplier.name), sql`${products.deletedAt} IS NULL`));

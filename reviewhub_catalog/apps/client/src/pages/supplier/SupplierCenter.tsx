@@ -41,7 +41,7 @@ import { count, dayLabel, monthLabel, shortDateTime, supplierGet, supplierPost, 
 import { CreateRequestModal, SupplierProducts } from "./SupplierProducts";
 import { SupplierRequests } from "./SupplierRequests";
 import { SupplierSales, cycleDescription } from "./SupplierSales";
-import { RequestStatusPill } from "./supplier-ui";
+import { RequestStatusPill, SettlementStatus } from "./supplier-ui";
 import "./supplier-center.css";
 
 export const SUPPLIER_SECTIONS = ["home", "products", "requests", "sales", "account"] as const;
@@ -424,6 +424,7 @@ function SupplierHome({ profile, reloadKey, onCreate }: { profile: SupplierProfi
         </section>
         <section className="admin-card admin-home-panel">
           <div className="card-heading"><Banknote size={19} aria-hidden="true" /><div><h2>다음 정산</h2><p>{SUPPLIER_CYCLE_LABELS[upcoming.cycle]} · {formatPeriodLabel(upcoming)} 판매분</p></div><Link to="/supplier/sales">정산 달력 <ArrowRight size={13} /></Link></div>
+          <SettlementStatus state={upcoming.state} detail />
           <dl className="sup-money-list">
             <div><dt>입금 예정일</dt><dd>{formatPayoutLabel(upcoming)}</dd></div>
             <div><dt>판매 대금(100%)</dt><dd>{won(upcoming.payoutAmount)}</dd></div>

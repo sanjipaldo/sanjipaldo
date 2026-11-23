@@ -24,10 +24,12 @@ import { BaljuoraCategoryTreeCard, type CategoryTreeView } from "./BaljuoraCateg
 import { BaljuoraAlignSettings, type BaljuoraPolicyOption, type DoogoPolicyOption } from "./BaljuoraAlignSettings";
 import "./baljuora-sync-admin.css";
 
-type Settings = { merchantSlug: string; groupKeyword: string; categoryMap: Record<string, string>; baljuoraCategoryMap: Record<string, string>; shippingPolicyMap: Record<string, string>; templateCode: string | null };
+// salesOnCompare·salesMonths(2026-11-23): 발주오라 상품 불러오기(비교) 때 판매·매출처도 함께 불러올지, 기간(이번 달 포함 최근 N개월)
+type Settings = { merchantSlug: string; groupKeyword: string; categoryMap: Record<string, string>; baljuoraCategoryMap: Record<string, string>; shippingPolicyMap: Record<string, string>; templateCode: string | null; salesOnCompare?: boolean; salesMonths?: number };
 type JobView = {
   id: string;
-  type: "compare" | "push";
+  type: "compare" | "push" | "sales";
+  salesRange?: { start: string; end: string } | null;
   status: "waiting" | "running" | "done" | "failed" | "expired" | "cancelled";
   createdAt: string;
   startedAt: string | null;
@@ -109,6 +111,13 @@ function won(value: string | number | null) {
 const STATUS_LABELS: Record<JobView["status"], string> = { waiting: "책갈피 기다리는 중", running: "진행 중", done: "완료", failed: "실패", expired: "만료", cancelled: "취소" };
 
 // 북마클릿: 발주오라 관리자 창에 DB센터의 동기화 스크립트를 불러옵니다(React는 javascript: 주소를 막아서 직접 넣습니다).
+// 판매·매출처 결과 한 줄(비교 작업 summary.sales 또는 판매 작업 summary)
+function salesText(value: unknown) {
+  if (!value || typeof value !== "object") return "";
+  const sales = value as { lines?: number; buyers?: number; complete?: boolean };
+  return ` · 판매 ${Number(sales.lines ?? 0).toLocaleString("ko-KR")}줄 · 매출처 ${Number(sales.buyers ?? 0).toLocaleString("ko-KR")}곳${sales.complete === false ? " (주문은 일부만)" : ""}`;
+}
+
 function bookmarkletHref(origin: string) {
   return `javascript:(function(){var o=${JSON.stringify(origin)};window.__doogoSyncOrigin=o;var s=document.createElement("script");s.src=o+"/baljuora-sync.js?t="+Date.now();s.onerror=function(){alert("두고푸드 동기화 스크립트를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.")};document.body.appendChild(s);})();`;
 }
@@ -183,7 +192,7 @@ export function BaljuoraSyncAdmin() {
         if (stopped) return;
         setJob((current) => current && current.view.id === next.id ? { ...current, view: next } : current);
         if (next.status !== "waiting" && next.status !== "running") {
-          if (next.status === "done") toast.success(next.type === "compare" ? "발주오라 상품을 불러왔습니다." : "동기화를 마쳤습니다.");
+          if (next.status === "done") toast.success(next.type === "compare" ? "발주오라 상품을 불러왔습니다." : next.type === "sales" ? "발주오라 판매·매출처를 불러왔습니다." : "동기화를 마쳤습니다.");
           void load();
         }
       } catch {
@@ -442,7 +451,7 @@ export function BaljuoraSyncAdmin() {
         <section className={`admin-card bj-job is-${view.status}`} aria-live="polite">
           <div className="bj-job-head">
             <div>
-              <span className="bj-job-kind">{view.type === "compare" ? "발주오라 상품 불러오기(비교)" : `동기화 ${view.total ?? 0}개`}</span>
+              <span className="bj-job-kind">{view.type === "compare" ? `발주오라 상품 불러오기(비교)${view.salesRange ? " + 판매·매출처" : ""}` : view.type === "sales" ? `판매·매출처 불러오기${view.salesRange ? ` (${view.salesRange.start} ~ ${view.salesRange.end})` : ""}` : `동기화 ${view.total ?? 0}개`}</span>
               <h2>{STATUS_LABELS[view.status]}{view.status === "running" && <Loader2 className="bj-spin" size={18} aria-hidden="true" />}</h2>
             </div>
             {jobDone ? <button type="button" className="bj-icon-button" onClick={() => setJob(null)} aria-label="작업 닫기"><X size={18} /></button> : <button type="button" className="outline-button" onClick={() => void cancelJob()} disabled={busy === "cancel"}>작업 취소</button>}
@@ -459,8 +468,10 @@ export function BaljuoraSyncAdmin() {
           {jobDone && view.summary && (
             <div className="bj-job-summary">
               {view.type === "compare"
-                ? <span>발주오라 상품 {Number(view.summary.received ?? 0).toLocaleString("ko-KR")}개 읽음 · 연결 {Number(view.summary.linked ?? 0).toLocaleString("ko-KR")}개 · 발주오라에만 있음 {Number(view.summary.baljuoraOnly ?? 0).toLocaleString("ko-KR")}개</span>
-                : <span>성공 {Number(view.summary.succeeded ?? 0)}개 (신규 {Number(view.summary.created ?? 0)} · 수정 {Number(view.summary.updated ?? 0)}) · 실패 {Number(view.summary.failed ?? 0)}개</span>}
+                ? <span>발주오라 상품 {Number(view.summary.received ?? 0).toLocaleString("ko-KR")}개 읽음 · 연결 {Number(view.summary.linked ?? 0).toLocaleString("ko-KR")}개 · 발주오라에만 있음 {Number(view.summary.baljuoraOnly ?? 0).toLocaleString("ko-KR")}개{salesText(view.summary.sales)}</span>
+                : view.type === "sales"
+                  ? <span>{salesText(view.summary).replace(/^ · /, "")} · <a href="/admin/sales">판매 현황 보기</a></span>
+                  : <span>성공 {Number(view.summary.succeeded ?? 0)}개 (신규 {Number(view.summary.created ?? 0)} · 수정 {Number(view.summary.updated ?? 0)}) · 실패 {Number(view.summary.failed ?? 0)}개</span>}
               {typeof view.summary.error === "string" && view.summary.error && <p className="bj-error"><AlertTriangle size={15} aria-hidden="true" /> {view.summary.error}</p>}
               <button type="button" className="outline-button" onClick={() => void openJobDetail(view.id)}>자세히 보기</button>
             </div>
@@ -624,6 +635,17 @@ export function BaljuoraSyncAdmin() {
               <label><span>발주오라 관리자 주소 이름</span><input value={settingsDraft.merchantSlug} onChange={(event) => setSettingsDraft({ ...settingsDraft, merchantSlug: event.target.value })} placeholder="doogobiz24" /><small>console.baljuora.com/<b>{settingsDraft.merchantSlug || "doogobiz24"}</b>/dashboard</small></label>
               <label><span>수강생 단가 = 이 이름이 들어간 매출처 그룹의 공급가</span><input value={settingsDraft.groupKeyword} onChange={(event) => setSettingsDraft({ ...settingsDraft, groupKeyword: event.target.value })} placeholder="황금농부" /><small>{overview.group ? `찾은 그룹: ${overview.group.name}` : "발주오라 상품 불러오기 후 찾은 그룹이 보입니다."}</small></label>
               <label><span>신규 상품 설정 복사용 발주오라 상품코드</span><input value={settingsDraft.templateCode ?? ""} onChange={(event) => setSettingsDraft({ ...settingsDraft, templateCode: event.target.value || null })} placeholder="예: PD1794971213122" /><small>새 상품의 매입처·매입/매출 배송정책을 이 상품에서 복사합니다. 같은 매입처의 연결 상품이 있으면 그 상품을 먼저 씁니다.</small></label>
+              <label>
+                <span>상품 불러오기(비교) 때 판매·매출처도 함께</span>
+                <select value={settingsDraft.salesOnCompare === false ? "off" : String(settingsDraft.salesMonths ?? 2)} onChange={(event) => setSettingsDraft(event.target.value === "off" ? { ...settingsDraft, salesOnCompare: false } : { ...settingsDraft, salesOnCompare: true, salesMonths: Number(event.target.value) })}>
+                  <option value="1">함께 불러오기 · 이번 달</option>
+                  <option value="2">함께 불러오기 · 최근 2개월</option>
+                  <option value="3">함께 불러오기 · 최근 3개월</option>
+                  <option value="6">함께 불러오기 · 최근 6개월</option>
+                  <option value="off">불러오지 않기</option>
+                </select>
+                <small>주문(주문일 기준)과 매출처 회원을 읽어 판매 현황·매출처·세금계산서·공급사 정산에 씁니다. 판매만 따로 불러오려면 <a href="/admin/sales">판매 현황</a>에서 하세요.</small>
+              </label>
             </div>
             <h3>카테고리 연결 <small>DB센터 카테고리 → 발주오라 카테고리 (보낼 곳 · 이름이 같으면 자동으로 연결)</small></h3>
             {overview.baljuoraCategories.length === 0 ? <p className="bj-muted">발주오라 상품 불러오기를 하면 발주오라 카테고리 목록이 보입니다.</p> : (

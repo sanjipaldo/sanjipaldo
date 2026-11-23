@@ -13,6 +13,7 @@ import {
   weekdayOf
 } from "@repo/shared/supplier-portal";
 import { compactWon, count, dayLabel, monthLabel, supplierGet, won, type SalesMonth } from "./supplier-api";
+import { SettlementStatus } from "./supplier-ui";
 
 type PayoutDay = SalesMonth["payoutDays"][number];
 
@@ -176,6 +177,7 @@ export function SupplierSales() {
                   {view.settlements.map((settlement) => (
                     <article key={settlement.start}>
                       <div className="sup-settle-head"><span>{formatPeriodLabel(settlement)} 판매분</span><strong>{formatPayoutLabel(settlement)} 입금</strong></div>
+                      <SettlementStatus state={settlement.state} detail />
                       <dl className="sup-money-list">
                         <div><dt>판매 대금(100%)</dt><dd>{won(settlement.payoutAmount)}</dd></div>
                         <div><dt>수수료({rate}%)</dt><dd>{settlement.commission ? `-${won(settlement.commission)}` : "0원"}</dd></div>
@@ -195,7 +197,7 @@ export function SupplierSales() {
                         <b>{formatPayoutLabel({ payoutStart: payout.date, payoutEnd: payout.endDate })}</b>
                         <span>{formatPeriodLabel({ start: payout.periodStart, end: payout.periodEnd })} 판매분</span>
                         <strong>{payout.amount > 0 ? won(payout.amount) : "판매 없음"}</strong>
-                        <em>{payout.done ? "지난 정산" : "입금 예정"}</em>
+                        {payout.state ? <SettlementStatus state={payout.state} /> : <em>{payout.done ? "지난 정산" : "입금 예정"}</em>}
                       </li>
                     ))}
                   </ul>

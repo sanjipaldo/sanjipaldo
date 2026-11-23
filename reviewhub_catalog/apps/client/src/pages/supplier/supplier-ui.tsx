@@ -2,14 +2,35 @@
 import { ArrowRight, ImageOff } from "lucide-react";
 import {
   SUPPLIER_REQUEST_STATUS_LABELS,
+  SUPPLIER_SETTLEMENT_STATUS_HINTS,
+  SUPPLIER_SETTLEMENT_STATUS_LABELS,
   supplierChangeRows,
   type SupplierChangeField,
   type SupplierProductChanges,
-  type SupplierRequestStatus
+  type SupplierRequestStatus,
+  type SupplierSettlementState
 } from "@repo/shared/supplier-portal";
 
 export function RequestStatusPill({ status }: { status: SupplierRequestStatus }) {
   return <span className={`status-pill sup-status is-${status}`}>{SUPPLIER_REQUEST_STATUS_LABELS[status]}</span>;
+}
+
+function shortDate(value: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : `${date.getMonth() + 1}.${date.getDate()}`;
+}
+
+/** 두고푸드가 바꾼 월 정산 상태(없으면 정산 대기). detail = 안내 글·메모까지 */
+export function SettlementStatus({ state, detail = false }: { state: SupplierSettlementState | null | undefined; detail?: boolean }) {
+  const status = state?.status ?? "pending";
+  const when = status === "done" ? shortDate(state?.doneAt ?? null) : status === "paid" ? shortDate(state?.paidAt ?? null) : "";
+  return (
+    <span className={`sup-settle-status is-${status} ${detail ? "is-detail" : ""}`}>
+      <b>{SUPPLIER_SETTLEMENT_STATUS_LABELS[status]}{when ? ` · ${when}` : ""}</b>
+      {detail && <small>{SUPPLIER_SETTLEMENT_STATUS_HINTS[status]}{state?.memo ? ` · 메모: ${state.memo}` : ""}</small>}
+    </span>
+  );
 }
 
 function ImageValue({ url, label }: { url: string | null; label: string }) {
