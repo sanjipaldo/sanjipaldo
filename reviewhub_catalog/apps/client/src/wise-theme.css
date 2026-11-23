@@ -3656,33 +3656,36 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
 .admin-sidebar .sidebar-bottom { flex: 0 0 auto; }
 .admin-sidebar .admin-nav-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* 마스터 관리자 메뉴: 두고푸드 진한 초록 바탕 + 흰 글씨 + 연두(지금 메뉴·아이콘), 글씨 16px */
+/* 마스터 관리자 메뉴(2026-11-23 2차, 관리자 요청 "진한 초록 바탕은 안 쓰는 색이라 흰 배경으로"):
+   흰 바탕 + 진한 초록 글씨 16px(회색 글씨 없음) + 초록 아이콘 + 연두(지금 메뉴·상품 등록) */
 .admin-sidebar.is-master {
-  --sb-bg: var(--w-ink-deep);
-  --sb-text: #f1f9ea;
-  --sb-caption: #b8dd9c;
+  --sb-bg: #ffffff;
+  --sb-text: var(--w-ink-deep);
+  --sb-caption: #4f7a3a;
+  --sb-icon: #3f8f22;
   --sb-accent: var(--w-primary);
-  --sb-line: rgba(255, 255, 255, .13);
+  --sb-hover: #f1f9e9;
+  --sb-line: #e3ebdc;
   padding: 18px 14px 14px;
   color: var(--sb-text);
-  border-right: 0;
+  border-right: 1px solid var(--sb-line);
   background: var(--sb-bg);
-  box-shadow: none;
-  scrollbar-color: rgba(159, 232, 112, .45) transparent;
+  box-shadow: 6px 0 22px rgba(22, 51, 0, .04);
+  scrollbar-color: rgba(22, 51, 0, .22) transparent;
 }
 .admin-sidebar.is-master .admin-brand { padding: 2px 6px 14px; }
 .admin-sidebar.is-master .admin-brand .doogo-logo { width: 138px; height: 48px; object-position: left center; }
-.admin-sidebar.is-master .admin-brand button { color: #fff; }
-.admin-sidebar.is-master .admin-role { gap: 9px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid rgba(159, 232, 112, .3); border-radius: 12px; background: rgba(255, 255, 255, .06); }
-.admin-sidebar.is-master .admin-role svg { flex: 0 0 auto; color: var(--sb-accent); }
+.admin-sidebar.is-master .admin-brand button { color: var(--sb-text); }
+.admin-sidebar.is-master .admin-role { gap: 9px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid #d6e9c6; border-radius: 12px; background: #f4faee; }
+.admin-sidebar.is-master .admin-role svg { flex: 0 0 auto; color: var(--sb-icon); }
 .admin-sidebar.is-master .admin-role span { flex-direction: row; align-items: baseline; gap: 8px; min-width: 0; }
-.admin-sidebar.is-master .admin-role small { color: var(--sb-accent); font-size: 11px; font-weight: 800; letter-spacing: .1em; }
-.admin-sidebar.is-master .admin-role strong { margin-top: 0; color: #fff; font-size: 15px; font-weight: 700; white-space: nowrap; }
-.admin-sidebar.is-master .admin-sidebar-primary { min-height: 46px; margin: 0 0 14px; color: var(--sb-bg) !important; font-size: 16px; font-weight: 800; }
+.admin-sidebar.is-master .admin-role small { color: var(--sb-icon); font-size: 11px; font-weight: 800; letter-spacing: .1em; }
+.admin-sidebar.is-master .admin-role strong { margin-top: 0; color: var(--sb-text); font-size: 15px; font-weight: 700; white-space: nowrap; }
+.admin-sidebar.is-master .admin-sidebar-primary { min-height: 46px; margin: 0 0 14px; color: var(--sb-text) !important; font-size: 16px; font-weight: 800; }
 .admin-sidebar.is-master nav { gap: 2px; margin: 0 -6px; padding: 6px 6px 12px; border-top: 1px solid var(--sb-line); }
 .admin-sidebar.is-master nav::-webkit-scrollbar { width: 6px; }
 .admin-sidebar.is-master nav::-webkit-scrollbar-track { background: transparent; }
-.admin-sidebar.is-master nav::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(159, 232, 112, .45); }
+.admin-sidebar.is-master nav::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(22, 51, 0, .2); }
 .admin-sidebar.is-master nav a,
 .admin-sidebar.is-master nav a.nav-child {
   flex: 0 0 auto;
@@ -3697,32 +3700,32 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   line-height: 22px;
 }
 .admin-sidebar.is-master nav a svg,
-.admin-sidebar.is-master nav a.nav-child svg:first-child { flex: 0 0 auto; width: 19px; height: 19px; margin-left: 0; color: var(--sb-accent); opacity: 1; }
-.admin-sidebar.is-master nav a:hover { color: #fff; background: rgba(255, 255, 255, .09); }
+.admin-sidebar.is-master nav a.nav-child svg:first-child { flex: 0 0 auto; width: 19px; height: 19px; margin-left: 0; color: var(--sb-icon); opacity: 1; }
+.admin-sidebar.is-master nav a:hover { color: var(--sb-text); background: var(--sb-hover); }
 .admin-sidebar.is-master nav a.active,
-.admin-sidebar.is-master nav a.nav-child.active { color: var(--sb-bg); background: var(--sb-accent); font-weight: 800; box-shadow: 0 8px 18px rgba(0, 0, 0, .22); }
+.admin-sidebar.is-master nav a.nav-child.active { color: var(--sb-text); background: var(--sb-accent); font-weight: 800; box-shadow: 0 6px 14px rgba(63, 143, 34, .18); }
 .admin-sidebar.is-master nav a.active svg,
-.admin-sidebar.is-master nav a.nav-child.active svg:first-child { color: var(--sb-bg); }
+.admin-sidebar.is-master nav a.nav-child.active svg:first-child { color: var(--sb-text); }
 .admin-sidebar.is-master nav a:focus-visible,
 .admin-sidebar.is-master nav .nav-group-caption:focus-visible,
 .admin-sidebar.is-master .sidebar-bottom a:focus-visible,
-.admin-sidebar.is-master .sidebar-bottom button:focus-visible { outline: 2px solid var(--sb-accent); outline-offset: 2px; }
+.admin-sidebar.is-master .sidebar-bottom button:focus-visible { outline: 2px solid var(--sb-icon); outline-offset: 2px; }
 .admin-sidebar.is-master nav .nav-group-caption { flex: 0 0 auto; width: 100%; margin: 14px 0 4px; padding: 4px 12px; color: var(--sb-caption); font-size: 13px; font-weight: 800; letter-spacing: .02em; }
 .admin-sidebar.is-master nav .nav-group-caption:first-of-type { margin-top: 10px; }
-.admin-sidebar.is-master nav .nav-group-caption:hover { color: #fff; }
+.admin-sidebar.is-master nav .nav-group-caption:hover { color: var(--sb-text); }
 .admin-sidebar.is-master .admin-nav-badge { margin-left: auto; }
-.admin-sidebar.is-master nav a.active .admin-nav-badge { color: #fff; background: var(--sb-bg); }
+.admin-sidebar.is-master nav a.active .admin-nav-badge { color: #fff; background: var(--sb-text); }
 /* 위·아래에 메뉴가 더 있으면 그쪽 끝을 흐리게 */
 .admin-sidebar.is-master nav.can-scroll-down { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); }
 .admin-sidebar.is-master nav.can-scroll-up { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 32px); mask-image: linear-gradient(to bottom, transparent, #000 32px); }
 .admin-sidebar.is-master nav.can-scroll-up.can-scroll-down { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 40px), transparent); }
-/* 아래: 공개 페이지 보기 · 로그아웃을 한 줄 두 칸으로 */
+/* 아래: 공개 페이지 · 로그아웃을 한 줄 두 칸으로 */
 .admin-sidebar.is-master .sidebar-bottom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-top: 0; padding-top: 12px; border-top: 1px solid var(--sb-line); }
 .admin-sidebar.is-master .sidebar-bottom a,
-.admin-sidebar.is-master .sidebar-bottom button { justify-content: center; gap: 5px; min-width: 0; padding: 10px 4px; border-radius: 10px; color: var(--sb-text); background: rgba(255, 255, 255, .07); font-size: 14px; font-weight: 600; line-height: 20px; white-space: nowrap; }
+.admin-sidebar.is-master .sidebar-bottom button { justify-content: center; gap: 5px; min-width: 0; padding: 10px 4px; border: 1px solid var(--sb-line); border-radius: 10px; color: var(--sb-text); background: #f7faf4; font-size: 14px; font-weight: 600; line-height: 20px; white-space: nowrap; }
 .admin-sidebar.is-master .sidebar-bottom a:hover,
-.admin-sidebar.is-master .sidebar-bottom button:hover { color: #fff; background: rgba(255, 255, 255, .14); }
-.admin-sidebar.is-master .sidebar-bottom svg { flex: 0 0 auto; color: var(--sb-accent); }
+.admin-sidebar.is-master .sidebar-bottom button:hover { color: var(--sb-text); background: var(--sb-hover); }
+.admin-sidebar.is-master .sidebar-bottom svg { flex: 0 0 auto; color: var(--sb-icon); }
 
 /* 낮은 화면(노트북 125% 배율 등): 위쪽을 줄여 메뉴가 더 많이 보이게 */
 @media (max-height: 820px) {
