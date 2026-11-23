@@ -3647,3 +3647,117 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .season-highlight-keywords.is-collapsed button:nth-child(n+9):not(.active):not(.season-keyword-more) { display: none; }
   .season-highlight-keywords .season-keyword-more { display: inline-flex; align-items: center; padding: 8px 12px; border: 1px dashed var(--w-ink); border-radius: 999px; color: var(--w-ink); background: #fff; font-size: 13px; font-weight: 700; }
 }
+
+/* ---------- 관리자 왼쪽 메뉴(2026-11-23 관리자 요청 "노트북에서 메뉴가 다 안 보이고, 글씨가 작고 회색") ----------
+   메뉴 목록(nav)만 왼쪽 칸 안에서 스크롤하고, 위(로고·상품 등록)와 아래(공개 페이지·로그아웃)는 그대로 둡니다.
+   화면이 아주 낮으면 왼쪽 칸 전체가 스크롤됩니다. 공급사 센터도 같은 틀이라 스크롤만 함께 받습니다. */
+.admin-sidebar { overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+.admin-sidebar nav { position: relative; flex: 1 1 auto; min-height: 160px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.admin-sidebar .sidebar-bottom { flex: 0 0 auto; }
+.admin-sidebar .admin-nav-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 마스터 관리자 메뉴: 두고푸드 진한 초록 바탕 + 흰 글씨 + 연두(지금 메뉴·아이콘), 글씨 16px */
+.admin-sidebar.is-master {
+  --sb-bg: var(--w-ink-deep);
+  --sb-text: #f1f9ea;
+  --sb-caption: #b8dd9c;
+  --sb-accent: var(--w-primary);
+  --sb-line: rgba(255, 255, 255, .13);
+  padding: 18px 14px 14px;
+  color: var(--sb-text);
+  border-right: 0;
+  background: var(--sb-bg);
+  box-shadow: none;
+  scrollbar-color: rgba(159, 232, 112, .45) transparent;
+}
+.admin-sidebar.is-master .admin-brand { padding: 2px 6px 14px; }
+.admin-sidebar.is-master .admin-brand .doogo-logo { width: 138px; height: 48px; object-position: left center; }
+.admin-sidebar.is-master .admin-brand button { color: #fff; }
+.admin-sidebar.is-master .admin-role { gap: 9px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid rgba(159, 232, 112, .3); border-radius: 12px; background: rgba(255, 255, 255, .06); }
+.admin-sidebar.is-master .admin-role svg { flex: 0 0 auto; color: var(--sb-accent); }
+.admin-sidebar.is-master .admin-role span { flex-direction: row; align-items: baseline; gap: 8px; min-width: 0; }
+.admin-sidebar.is-master .admin-role small { color: var(--sb-accent); font-size: 11px; font-weight: 800; letter-spacing: .1em; }
+.admin-sidebar.is-master .admin-role strong { margin-top: 0; color: #fff; font-size: 15px; font-weight: 700; white-space: nowrap; }
+.admin-sidebar.is-master .admin-sidebar-primary { min-height: 46px; margin: 0 0 14px; color: var(--sb-bg) !important; font-size: 16px; font-weight: 800; }
+.admin-sidebar.is-master nav { gap: 2px; margin: 0 -6px; padding: 6px 6px 12px; border-top: 1px solid var(--sb-line); }
+.admin-sidebar.is-master nav::-webkit-scrollbar { width: 6px; }
+.admin-sidebar.is-master nav::-webkit-scrollbar-track { background: transparent; }
+.admin-sidebar.is-master nav::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(159, 232, 112, .45); }
+.admin-sidebar.is-master nav a,
+.admin-sidebar.is-master nav a.nav-child {
+  flex: 0 0 auto;
+  gap: 11px;
+  width: 100%;
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 11px;
+  color: var(--sb-text);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.admin-sidebar.is-master nav a svg,
+.admin-sidebar.is-master nav a.nav-child svg:first-child { flex: 0 0 auto; width: 19px; height: 19px; margin-left: 0; color: var(--sb-accent); opacity: 1; }
+.admin-sidebar.is-master nav a:hover { color: #fff; background: rgba(255, 255, 255, .09); }
+.admin-sidebar.is-master nav a.active,
+.admin-sidebar.is-master nav a.nav-child.active { color: var(--sb-bg); background: var(--sb-accent); font-weight: 800; box-shadow: 0 8px 18px rgba(0, 0, 0, .22); }
+.admin-sidebar.is-master nav a.active svg,
+.admin-sidebar.is-master nav a.nav-child.active svg:first-child { color: var(--sb-bg); }
+.admin-sidebar.is-master nav a:focus-visible,
+.admin-sidebar.is-master nav .nav-group-caption:focus-visible,
+.admin-sidebar.is-master .sidebar-bottom a:focus-visible,
+.admin-sidebar.is-master .sidebar-bottom button:focus-visible { outline: 2px solid var(--sb-accent); outline-offset: 2px; }
+.admin-sidebar.is-master nav .nav-group-caption { flex: 0 0 auto; width: 100%; margin: 14px 0 4px; padding: 4px 12px; color: var(--sb-caption); font-size: 13px; font-weight: 800; letter-spacing: .02em; }
+.admin-sidebar.is-master nav .nav-group-caption:first-of-type { margin-top: 10px; }
+.admin-sidebar.is-master nav .nav-group-caption:hover { color: #fff; }
+.admin-sidebar.is-master .admin-nav-badge { margin-left: auto; }
+.admin-sidebar.is-master nav a.active .admin-nav-badge { color: #fff; background: var(--sb-bg); }
+/* 위·아래에 메뉴가 더 있으면 그쪽 끝을 흐리게 */
+.admin-sidebar.is-master nav.can-scroll-down { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); }
+.admin-sidebar.is-master nav.can-scroll-up { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 32px); mask-image: linear-gradient(to bottom, transparent, #000 32px); }
+.admin-sidebar.is-master nav.can-scroll-up.can-scroll-down { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 40px), transparent); }
+/* 아래: 공개 페이지 보기 · 로그아웃을 한 줄 두 칸으로 */
+.admin-sidebar.is-master .sidebar-bottom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-top: 0; padding-top: 12px; border-top: 1px solid var(--sb-line); }
+.admin-sidebar.is-master .sidebar-bottom a,
+.admin-sidebar.is-master .sidebar-bottom button { justify-content: center; gap: 5px; min-width: 0; padding: 10px 4px; border-radius: 10px; color: var(--sb-text); background: rgba(255, 255, 255, .07); font-size: 14px; font-weight: 600; line-height: 20px; white-space: nowrap; }
+.admin-sidebar.is-master .sidebar-bottom a:hover,
+.admin-sidebar.is-master .sidebar-bottom button:hover { color: #fff; background: rgba(255, 255, 255, .14); }
+.admin-sidebar.is-master .sidebar-bottom svg { flex: 0 0 auto; color: var(--sb-accent); }
+
+/* 낮은 화면(노트북 125% 배율 등): 위쪽을 줄여 메뉴가 더 많이 보이게 */
+@media (max-height: 820px) {
+  .admin-sidebar.is-master { padding-top: 12px; }
+  .admin-sidebar.is-master .admin-brand { padding-bottom: 8px; }
+  .admin-sidebar.is-master .admin-brand .doogo-logo { width: 118px; height: 40px; }
+  .admin-sidebar.is-master .admin-role { margin-bottom: 8px; padding: 7px 11px; }
+  .admin-sidebar.is-master .admin-sidebar-primary { min-height: 40px; margin-bottom: 10px; }
+  .admin-sidebar.is-master nav a,
+  .admin-sidebar.is-master nav a.nav-child { padding-top: 7px; padding-bottom: 7px; }
+  .admin-sidebar.is-master nav .nav-group-caption { margin-top: 10px; margin-bottom: 2px; }
+  .admin-sidebar.is-master .sidebar-bottom { padding-top: 9px; }
+  .admin-sidebar.is-master .sidebar-bottom a,
+  .admin-sidebar.is-master .sidebar-bottom button { padding-top: 8px; padding-bottom: 8px; }
+}
+
+/* ---------- 상품 등록·수정 창 가격 칸(2026-11-23 관리자 요청): 원가 → 수강생 단가 → 일반공급가를 위에서 아래로, 두 단가 모두 마진 표시 ---------- */
+.editor-grid .editor-price-block { display: grid; padding: 2px 18px 4px; border: 1px solid #d5e6c8; border-radius: 16px; background: linear-gradient(180deg, #fbfef8 0%, #f3f9ec 100%); }
+.editor-price-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 13px 0 11px; border-bottom: 1px solid #dfecd4; }
+.editor-price-head strong { color: var(--w-ink-deep); font-size: 15px; font-weight: 800; }
+.editor-price-head small { color: #5d705e; font-size: 12px; font-weight: 600; }
+.editor-grid label.editor-price-row { display: grid; grid-template-columns: 116px minmax(0, 250px) minmax(0, 1fr); align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px dashed #d9e7cd; color: var(--w-ink-deep); font-size: 14px; font-weight: 800; }
+.editor-grid label.editor-price-row:last-child { border-bottom: 0; }
+.editor-price-label { color: var(--w-ink-deep); font-size: 15px; font-weight: 800; }
+.editor-price-input { position: relative; display: block; min-width: 0; }
+.editor-grid .editor-price-input input { padding-right: 38px; color: var(--w-ink-deep); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; -moz-appearance: textfield; }
+.editor-grid .editor-price-input input::-webkit-outer-spin-button,
+.editor-grid .editor-price-input input::-webkit-inner-spin-button { margin: 0; -webkit-appearance: none; }
+.editor-price-input em { position: absolute; top: 50%; right: 14px; color: #66786a; font-size: 14px; font-style: normal; font-weight: 700; transform: translateY(-50%); pointer-events: none; }
+.editor-price-margin { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px; justify-self: start; padding: 7px 13px; border-radius: 999px; color: #0b6b3a; background: #e3f6d3; font-size: 14px; font-weight: 700; line-height: 1.35; }
+.editor-price-margin b { font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.editor-price-margin.is-negative { color: #b42318; background: #fde8e8; }
+.editor-price-margin.is-empty,
+.editor-price-margin.is-base { color: #66786a; background: #edf2e8; font-weight: 600; }
+@media (max-width: 720px) {
+  .editor-grid .editor-price-block { padding: 2px 13px 4px; }
+  .editor-grid label.editor-price-row { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px 0 13px; }
+}

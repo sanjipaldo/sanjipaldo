@@ -588,6 +588,20 @@ const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes
   { section: "backup", label: "DB 백업", icon: DatabaseBackup, group: "operations" }
 ];
 
+// 왼쪽 메뉴 묶음을 접어 둔 상태는 이 기기에 기억합니다(노트북처럼 화면이 낮으면 잘 안 쓰는 묶음을 접어 한 화면에 맞춤).
+const ADMIN_NAV_GROUPS_KEY = "doogo:admin:nav-groups";
+function readAdminNavGroups(): Record<AdminNavGroup, boolean> {
+  const open = { product: true, baljuora: true, supplier: true, operations: true };
+  try {
+    const saved: unknown = JSON.parse(window.localStorage.getItem(ADMIN_NAV_GROUPS_KEY) ?? "null");
+    if (!saved || typeof saved !== "object") return open;
+    const record = saved as Partial<Record<AdminNavGroup, unknown>>;
+    return { product: record.product !== false, baljuora: record.baljuora !== false, supplier: record.supplier !== false, operations: record.operations !== false };
+  } catch {
+    return open;
+  }
+}
+
 const blankProduct = {
   id: "",
   productCode: "",
@@ -656,7 +670,17 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
   const [clock, setClock] = useState(() => new Date());
   // 공급사 변경 요청 중 승인 대기 건수(왼쪽 메뉴 "변경 요청" 옆 숫자, 1분마다 새로 확인)
   const [supplierPending, setSupplierPending] = useState(0);
-  const [openNavGroups, setOpenNavGroups] = useState<Record<AdminNavGroup, boolean>>({ product: true, baljuora: true, supplier: true, operations: true });
+  const [openNavGroups, setOpenNavGroups] = useState<Record<AdminNavGroup, boolean>>(readAdminNavGroups);
+  // 메뉴 목록은 왼쪽 칸 안에서 따로 스크롤됩니다. 위·아래에 메뉴가 더 있으면 그쪽을 흐리게 보여 줍니다.
+  const navRef = useRef<HTMLElement>(null);
+  const [navScroll, setNavScroll] = useState({ up: false, down: false });
+  const updateNavScroll = useCallback(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const up = nav.scrollTop > 2;
+    const down = nav.scrollTop + nav.clientHeight < nav.scrollHeight - 2;
+    setNavScroll((current) => (current.up === up && current.down === down ? current : { up, down }));
+  }, []);
 
   // Keep the page underneath the drawer from moving while the mobile menu is
   // open. The drawer itself remains the scroll container so every menu item
@@ -737,8 +761,40 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
 
   useEffect(() => {
     const current = adminNav.find((item) => item.section === section)?.group;
-    if (current) setOpenNavGroups((state) => ({ ...state, [current]: true }));
+    if (current) setOpenNavGroups((state) => (state[current] ? state : { ...state, [current]: true }));
   }, [section]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(ADMIN_NAV_GROUPS_KEY, JSON.stringify(openNavGroups));
+    } catch {
+      /* 저장이 막힌 브라우저는 이 화면에서만 기억 */
+    }
+  }, [openNavGroups]);
+
+  // 화면 높이가 바뀌거나 묶음을 접고 펴면 "메뉴가 더 있음" 표시를 다시 계산합니다.
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    updateNavScroll();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateNavScroll);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [openNavGroups, updateNavScroll]);
+
+  // 지금 연 메뉴가 메뉴 칸 밖(아래쪽)에 있으면 보이는 곳으로 옮깁니다(예: 주소로 바로 연 "DB 백업").
+  useEffect(() => {
+    const nav = navRef.current;
+    const active = nav?.querySelector<HTMLElement>("a.active");
+    if (!nav || !active) return;
+    const top = active.offsetTop;
+    const bottom = top + active.offsetHeight;
+    if (top < nav.scrollTop || bottom > nav.scrollTop + nav.clientHeight) {
+      nav.scrollTop = Math.max(0, top - (nav.clientHeight - active.offsetHeight) / 2);
+    }
+    updateNavScroll();
+  }, [openNavGroups, section, updateNavScroll]);
 
   const refreshSupplierPending = useCallback(async () => {
     try {
@@ -787,11 +843,11 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
 
   return (
     <div className="admin-shell">
-      <aside className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="admin-brand"><Link to="/admin/home" aria-label="관리자 홈으로 이동"><DoogoLogo /></Link><button onClick={() => setSidebarOpen(false)} aria-label="메뉴 닫기"><X size={20} /></button></div>
+      <aside className={`admin-sidebar is-master ${sidebarOpen ? "open" : ""}`}>
+        <div className="admin-brand"><Link to="/admin/home" aria-label="관리자 홈으로 이동"><DoogoLogo light /></Link><button onClick={() => setSidebarOpen(false)} aria-label="메뉴 닫기"><X size={20} /></button></div>
         <div className="admin-role"><ShieldCheck size={17} /><span><small>MASTER</small><strong>마스터 관리자</strong></span></div>
-        <Link to="/admin/products" className="admin-sidebar-primary" onClick={() => setSidebarOpen(false)}><Plus size={16} /> 상품 등록</Link>
-        <nav>
+        <Link to="/admin/products" className="admin-sidebar-primary" onClick={() => setSidebarOpen(false)}><Plus size={17} /> 상품 등록</Link>
+        <nav ref={navRef} onScroll={updateNavScroll} className={`${navScroll.up ? "can-scroll-up" : ""} ${navScroll.down ? "can-scroll-down" : ""}`} aria-label="관리자 메뉴">
           {adminNav.map((item, index) => {
             const Icon = item.icon;
             const previousGroup = adminNav[index - 1]?.group;
@@ -808,10 +864,10 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               : null;
             const groupOpen = !item.group || openNavGroups[item.group];
             const badge = item.section === "supplierRequests" && supplierPending > 0 ? <span className="admin-nav-badge" aria-label={`승인 대기 ${supplierPending}건`}>{supplierPending}</span> : null;
-            return <Fragment key={item.section}>{groupCaption}{groupOpen && <Link to={`/admin/${item.section}`} className={`${section === item.section ? "active" : ""} ${item.group ? "nav-child" : ""}`} onClick={() => setSidebarOpen(false)}><Icon size={18} />{item.label}{badge}<ChevronRight size={15} /></Link>}</Fragment>;
+            return <Fragment key={item.section}>{groupCaption}{groupOpen && <Link to={`/admin/${item.section}`} className={`${section === item.section ? "active" : ""} ${item.group ? "nav-child" : ""}`} aria-current={section === item.section ? "page" : undefined} onClick={() => setSidebarOpen(false)}><Icon size={19} /><span className="admin-nav-label">{item.label}</span>{badge}</Link>}</Fragment>;
           })}
         </nav>
-        <div className="sidebar-bottom"><Link to="/" onClick={() => setSidebarOpen(false)}><Truck size={17} /> 공개 페이지 보기</Link><button onClick={() => void signOut()}><LogOut size={17} /> 로그아웃</button></div>
+        <div className="sidebar-bottom"><Link to="/" onClick={() => setSidebarOpen(false)} title="공개 페이지 보기"><Truck size={17} /> 공개 페이지</Link><button onClick={() => void signOut()}><LogOut size={17} /> 로그아웃</button></div>
       </aside>
       {sidebarOpen && <button className="admin-sidebar-backdrop" type="button" onClick={() => setSidebarOpen(false)} aria-label="관리자 메뉴 닫기" />}
       <main className="admin-main">
@@ -1757,9 +1813,35 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
         <label className="full">상품명<input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} required /></label>
         <label>배송유형<select value={editing.shippingType} onChange={(event) => { const shippingType = event.target.value as ShippingType; const category = data.categories.find((item) => item.shippingType === shippingType); const health = isHealthCategory(category); setEditing({ ...editing, shippingType, categoryId: category?.id || "", shippingPolicyId: null, salePriceMode: health ? "fixed" : editing.salePriceMode, options: editing.options.map((option) => ({ ...option, salePriceMode: health ? "fixed" : option.salePriceMode })) }); }}><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select></label>
         <label>카테고리<select value={editing.categoryId} onChange={(event) => { const category = data.categories.find((item) => item.id === event.target.value); const health = isHealthCategory(category); setEditing({ ...editing, categoryId: event.target.value, salePriceMode: health ? "fixed" : editing.salePriceMode, options: editing.options.map((option) => ({ ...option, salePriceMode: health ? "fixed" : option.salePriceMode })) }); }} required>{data.categories.filter((item) => item.shippingType === editing.shippingType).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <label>원가<input type="number" min="0" value={editing.costPrice} onChange={(event) => setEditing({ ...editing, costPrice: Number(event.target.value) })} required /><small>원가 기준 수강생 단가 마진율이 자동 계산됩니다.</small></label>
-        <label>수강생 단가<input type="number" min="0" value={editing.aPrice} onChange={(event) => setEditing({ ...editing, aPrice: Number(event.target.value) })} required /><strong className="margin-rate editor-margin">{marginRate(editing.aPrice, editing.costPrice)?.toFixed(1) ?? "-"}% 마진{marginAmount(editing.aPrice, editing.costPrice) !== null ? ` · 개당 ${formatSignedPrice(marginAmount(editing.aPrice, editing.costPrice)!)}` : ""}</strong></label>
-        <label>일반공급가<input type="number" min="0" value={editing.generalPrice} onChange={(event) => setEditing({ ...editing, generalPrice: Number(event.target.value) })} required /></label>
+        {(() => {
+          // 가격 칸(2026-11-23 관리자 요청): 원가 → 수강생 단가 → 일반공급가를 위에서 아래로 두고,
+          // 수강생 단가·일반공급가 모두 원가 기준 마진(%·개당 금액)을 바로 옆에 보여 줍니다.
+          const setPrice = (key: "costPrice" | "aPrice" | "generalPrice", value: number) => setEditing({ ...editing, ...(key === "costPrice" ? { costPrice: value } : key === "aPrice" ? { aPrice: value } : { generalPrice: value }) });
+          const rows = [
+            { key: "costPrice", label: "원가", value: editing.costPrice },
+            { key: "aPrice", label: "수강생 단가", value: editing.aPrice },
+            { key: "generalPrice", label: "일반공급가", value: editing.generalPrice }
+          ] as const;
+          return (
+            <div className="full editor-price-block" role="group" aria-labelledby="editor-price-title">
+              <div className="editor-price-head"><strong id="editor-price-title">가격</strong><small>원가를 기준으로 수강생 단가·일반공급가 마진이 자동 계산됩니다.</small></div>
+              {rows.map((row) => {
+                const amount = row.key === "costPrice" ? null : marginAmount(row.value, editing.costPrice);
+                // 원가보다 낮게 받으면 마이너스 마진을 그대로(빨간색) 보여 줍니다.
+                const rate = amount === null ? null : (amount / row.value) * 100;
+                return (
+                  <label key={row.key} className={`editor-price-row is-${row.key}`}>
+                    <span className="editor-price-label">{row.label}</span>
+                    <span className="editor-price-input"><input type="number" min="0" inputMode="numeric" value={row.value} onChange={(event) => setPrice(row.key, Number(event.target.value))} required /><em>원</em></span>
+                    {row.key === "costPrice"
+                      ? <span className="editor-price-margin is-base">마진 계산 기준</span>
+                      : <span className={`editor-price-margin${amount !== null && amount < 0 ? " is-negative" : ""}${amount === null ? " is-empty" : ""}`}>{amount === null || rate === null ? "원가를 넣으면 마진이 보여요" : <><b>{rate.toFixed(1)}%</b> 마진 · 개당 {formatSignedPrice(amount)}</>}</span>}
+                  </label>
+                );
+              })}
+            </div>
+          );
+        })()}
         <label>판매가 정책<select value={editingHealthProduct ? "fixed" : editing.salePriceMode} disabled={editingHealthProduct} onChange={(event) => setEditing({ ...editing, salePriceMode: event.target.value as "autonomous" | "fixed" })}><option value="autonomous">자율 판매가</option><option value="fixed">지정 판매가</option></select><small>{editingHealthProduct ? "건강식품은 지정 판매가만 사용할 수 있습니다." : "판매자가 자유롭게 정하거나 지정가를 안내할 수 있습니다."}</small></label>
         <label>지정 판매가<input type="number" min="0" value={editing.salePrice ?? ""} disabled={(editingHealthProduct ? "fixed" : editing.salePriceMode) !== "fixed"} onChange={(event) => setEditing({ ...editing, salePrice: event.target.value ? Number(event.target.value) : null })} placeholder="지정 판매가 입력" /></label>
           <label>판매 시작월<select value={editing.isAlwaysOnSale ? "always" : editing.saleStartMonth ?? ""} onChange={(event) => event.target.value === "always" ? setEditing({ ...editing, isAlwaysOnSale: true, saleStartMonth: null, saleEndMonth: null }) : setEditing({ ...editing, isAlwaysOnSale: false, saleStartMonth: event.target.value ? Number(event.target.value) : null })}><option value="">미설정</option><option value="always">상시 판매</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((month) => <option key={month} value={month}>{month}월</option>)}</select><small>상시 판매를 선택하면 종료월은 사용할 수 없습니다.</small></label>

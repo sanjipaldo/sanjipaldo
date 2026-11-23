@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.0.0";
+  var VERSION = "1.1.0";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   var INFO_FIELDS = ["name", "category", "image"];
@@ -283,6 +283,45 @@
     return null;
   }
 
+  // ─── 발주오라 화면 코드에서 저장 방식 찾기 ─────────────────────────────────────
+  // 매출처별 개별공급가(수강생 단가 = '황금농부' 그룹 공급가)는 상품 정보(GET products/:id)에 들어 있지 않습니다(2026-11-23 운영 확인).
+  // 발주오라 상품 수정 화면이 그 값을 어떻게 읽고 저장하는지 알 수 있게, 그 화면의 공개 코드(js)에서 관련 부분만 잘라 기술 정보로 보냅니다.
+  // 화면 코드만 보내고 상품 값·로그인 정보는 보내지 않습니다.
+  var DISCOVERY_ANCHORS = ["개별공급가", "매출처별", "매출처/그룹", "노출/숨김", "매입원가", "sellerGroup", "SellerGroup", "productSuppliers", "purchasePrice", "pricing", "getProductsById", "productDisplays", "supplyPrice"];
+
+  function chunkPathsOf(text) {
+    var found = String(text || "").match(/static\/chunks\/[^"'\s\\,\]]+?\.js/g) || [];
+    return found.filter(function (path, index) { return found.indexOf(path) === index; });
+  }
+
+  // 코드에서 표시 단어 앞뒤 radius 글자를 잘라 냅니다(겹치는 부분은 하나로 합침). 단어 순서가 앞일수록 먼저 담습니다.
+  function codeSnippets(code, anchors, radius, perAnchor) {
+    var text = String(code || "");
+    var windows = [];
+    anchors.forEach(function (anchor, rank) {
+      var from = 0;
+      for (var count = 0; count < perAnchor; count += 1) {
+        var at = text.indexOf(anchor, from);
+        if (at < 0) break;
+        windows.push({ start: Math.max(0, at - radius), end: Math.min(text.length, at + anchor.length + radius), anchor: anchor, rank: rank });
+        from = at + anchor.length + radius;
+      }
+    });
+    windows.sort(function (a, b) { return a.start - b.start; });
+    var merged = [];
+    windows.forEach(function (slot) {
+      var last = merged[merged.length - 1];
+      if (last && slot.start <= last.end) {
+        last.end = Math.max(last.end, slot.end);
+        if (slot.rank < last.rank) { last.rank = slot.rank; last.anchor = slot.anchor; }
+      } else {
+        merged.push({ start: slot.start, end: slot.end, anchor: slot.anchor, rank: slot.rank });
+      }
+    });
+    merged.sort(function (a, b) { return a.rank - b.rank || a.start - b.start; });
+    return merged.map(function (slot) { return { anchor: slot.anchor, at: slot.start, text: text.slice(slot.start, slot.end) }; });
+  }
+
   function categoryKeyOf(detail) {
     if (Array.isArray(detail.categoryIds)) return "categoryIds";
     return "categoryId";
@@ -491,6 +530,55 @@
       return detail;
     }
 
+    // 상품 정보에 매출처 그룹 공급가 칸이 없을 때 한 번만: 발주오라 상품 수정·등록 화면의 코드(js)에서 관련 부분을 찾아 기술 정보로 남깁니다.
+    async function discoverProductForm(sampleId) {
+      if (state.discovery || !env.consoleOrigin || !env.pagePath) return;
+      var out = state.discovery = { pages: [], chunks: [], snippets: [] };
+      try {
+        var slug = String(env.pagePath).split("/").filter(Boolean)[0] || "";
+        if (!slug) return;
+        var id = sampleId ? encodeURIComponent(sampleId) : null;
+        var candidates = (id ? ["/products/" + id, "/products/" + id + "/edit", "/products/edit/" + id] : []).concat(["/products/create", "/products/new"]);
+        var loaded = {};
+        (env.loadedScripts || []).forEach(function (src) { chunkPathsOf(src).forEach(function (path) { loaded[path] = true; }); });
+        var score = {};
+        for (var index = 0; index < candidates.length; index += 1) {
+          var path = "/" + slug + candidates[index];
+          var shown = candidates[index].replace(id || "\u0000", ":id");
+          try {
+            var response = await env.fetch(new URL(path, env.consoleOrigin).toString(), { headers: { RSC: "1" }, credentials: "include" });
+            var text = await response.text();
+            var chunks = chunkPathsOf(text);
+            var routeChunks = chunks.filter(function (chunk) { return /products/i.test(chunk); });
+            out.pages.push({ path: shown, status: response.status, size: text.length, chunks: chunks.length, routeChunks: routeChunks });
+            chunks.forEach(function (chunk) { if (!loaded[chunk]) score[chunk] = (score[chunk] || 0) + (routeChunks.indexOf(chunk) >= 0 ? 10 : 1); });
+          } catch (error) {
+            out.pages.push({ path: shown, error: describeError(error) });
+          }
+        }
+        out.chunks = Object.keys(score).sort(function (a, b) { return score[b] - score[a]; }).slice(0, 16);
+        var budget = 45000;
+        for (var chunkIndex = 0; chunkIndex < out.chunks.length && budget > 0; chunkIndex += 1) {
+          var chunkPath = out.chunks[chunkIndex];
+          try {
+            var file = await env.fetch(new URL("/_next/" + chunkPath, env.consoleOrigin).toString());
+            if (!file.ok) continue;
+            var code = await file.text();
+            var pieces = codeSnippets(code, DISCOVERY_ANCHORS, 600, 3);
+            for (var pieceIndex = 0; pieceIndex < pieces.length && budget > 0; pieceIndex += 1) {
+              var piece = pieces[pieceIndex];
+              budget -= piece.text.length;
+              out.snippets.push({ chunk: chunkPath.split("/").slice(-3).join("/"), anchor: piece.anchor, at: piece.at, text: piece.text });
+            }
+          } catch (error) {
+            out.snippets.push({ chunk: chunkPath, error: describeError(error) });
+          }
+        }
+      } catch (error) {
+        out.error = describeError(error);
+      }
+    }
+
     async function runCompare(plan, report) {
       report.progress(0, 0, "발주오라 매출처 그룹·카테고리를 읽는 중…");
       var group = await findGroup(plan.groupKeyword);
@@ -525,6 +613,11 @@
         var byId = {};
         targets.forEach(function (snapshot, index) { byId[snapshot.id] = details[index]; });
         snapshots = snapshots.map(function (snapshot) { return byId[snapshot.id] ? mergeSnapshots(snapshot, byId[snapshot.id]) : snapshot; });
+      }
+      // 매출처 그룹 공급가를 목록·상세 어디에서도 읽지 못했으면, 발주오라 화면 코드에서 읽고 저장하는 방식을 찾아 둡니다.
+      if (products.length > 0 && snapshots.every(function (snapshot) { return snapshot.kind !== "product" || snapshot.groupPrice === undefined; })) {
+        report.progress(0, 0, "발주오라 상품 화면 정보를 확인하는 중…");
+        await discoverProductForm(products[0].id);
       }
       report.progress(0, snapshots.length, "DB센터로 결과를 보내는 중…");
       var batchSize = 400;
@@ -669,6 +762,7 @@
           if (!id) throw SyncError("연결된 발주오라 상품이 없습니다.");
           detail = await getDetail(id);
         }
+        if (isObject(detail) && groupArrayKeys(detail).length === 0) await discoverProductForm(id);
         var priceFields = fields.filter(function (field) { return PRICE_FIELDS.indexOf(field) >= 0; });
         var infoFields = fields.filter(function (field) { return INFO_FIELDS.indexOf(field) >= 0; });
         if (priceFields.length) await applyPricing(id, detail, item, priceFields, result, context);
@@ -721,7 +815,7 @@
     }
 
     function diagnostics(extra) {
-      return { version: VERSION, at: new Date().toISOString(), structure: state.structure, endpoints: state.endpoints, errors: state.errors.slice(0, 30), extra: extra || {} };
+      return { version: VERSION, at: new Date().toISOString(), structure: state.structure, endpoints: state.endpoints, errors: state.errors.slice(0, 30), extra: extra || {}, discovery: state.discovery || undefined };
     }
 
     return { api: api, refreshToken: refreshToken, runCompare: runCompare, runPush: runPush, pushItem: pushItem, diagnostics: diagnostics, state: state };
@@ -809,7 +903,9 @@
     try {
       var job = await postJson("");
       panel.log("작업을 받았습니다: " + (job.type === "compare" ? "발주오라 상품 불러오기(비교)" : "DB센터 변경 " + job.plan.items.length + "개 보내기"));
-      runner = createRunner({ fetch: win.fetch.bind(win), FormData: win.FormData, locks: win.navigator && win.navigator.locks, consoleOrigin: win.location.origin, apiBase: win.__doogoSyncApiBase || API_BASE, doogoOrigin: doogoOrigin });
+      var loadedScripts = [];
+      try { loadedScripts = Array.prototype.map.call(win.document.scripts, function (script) { return script.src; }).filter(Boolean); } catch { /* 무시 */ }
+      runner = createRunner({ fetch: win.fetch.bind(win), FormData: win.FormData, locks: win.navigator && win.navigator.locks, consoleOrigin: win.location.origin, pagePath: win.location.pathname, loadedScripts: loadedScripts, apiBase: win.__doogoSyncApiBase || API_BASE, doogoOrigin: doogoOrigin });
       panel.status("발주오라 로그인 확인 중…");
       runner.state.token = await runner.refreshToken();
       if (job.type === "compare") {
@@ -851,6 +947,8 @@
     missingProperties: missingProperties,
     writable: writable,
     buildGroupPricing: buildGroupPricing,
+    chunkPathsOf: chunkPathsOf,
+    codeSnippets: codeSnippets,
     buildCreateBody: buildCreateBody,
     verifyApplied: verifyApplied,
     createRunner: createRunner,

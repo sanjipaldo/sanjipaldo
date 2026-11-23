@@ -136,9 +136,10 @@ describe("발주오라 동기화 API", () => {
     expect(overview.data.group?.id).toBe("grp-1");
     expect(overview.data.linkedCount).toBe(2);
 
-    type Changes = { compared: boolean; items: Array<{ productId: string; kind: string; diffs: Array<{ field: string; direction: string }> }>; baljuoraOnly: Array<{ id: string }> };
+    type Changes = { compared: boolean; groupPriceReadable: boolean; items: Array<{ productId: string; kind: string; diffs: Array<{ field: string; direction: string }> }>; baljuoraOnly: Array<{ id: string }> };
     let changes = await json<Changes>(await fetchWithAuth(app, admin, "/api/baljuora/admin/changes"));
     expect(changes.data.compared).toBe(true);
+    expect(changes.data.groupPriceReadable).toBe(true); // 비교 때 매출처 그룹 공급가를 읽은 상품이 있음
     const byId = new Map(changes.data.items.map((item) => [item.productId, item]));
     expect(byId.has("bj-test-1")).toBe(false); // 값이 모두 같음
     expect(byId.get(`baljuora-${BJ_UUID}`)?.diffs.map((diff) => `${diff.field}:${diff.direction}`)).toEqual(["supplyPrice:initial"]);

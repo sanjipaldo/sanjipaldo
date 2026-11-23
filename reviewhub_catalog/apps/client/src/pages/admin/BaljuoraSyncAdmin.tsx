@@ -63,6 +63,8 @@ type Changes = {
   compared: boolean;
   lastCompareAt: string | null;
   linkedCount: number;
+  // 발주오라에서 매출처 그룹(황금농부) 공급가를 읽었는지. false면 수강생 단가는 비교·전송하지 못합니다.
+  groupPriceReadable?: boolean;
   productCount: number;
   items: ChangeItem[];
   baljuoraOnly: BaljuoraProductSnapshot[];
@@ -390,6 +392,9 @@ export function BaljuoraSyncAdmin() {
         </button>
       </section>
 
+      {changes?.compared && changes.groupPriceReadable === false && (
+        <p className="bj-notice"><AlertTriangle size={15} aria-hidden="true" /> 수강생 단가(‘{overview?.settings.groupKeyword || "황금농부"}’ 매출처 그룹 공급가)는 아직 발주오라에서 읽지 못해 자동으로 보내지 않습니다. 발주오라 상품 수정 &gt; 매출처별 설정 &gt; 개별공급가에서 직접 바꿔 주세요.</p>
+      )}
       {changes && changes.unmappedCategories.length > 0 && overview && overview.baljuoraCategories.length > 0 && (
         <p className="bj-notice"><AlertTriangle size={15} aria-hidden="true" /> 발주오라 카테고리와 연결되지 않은 DB센터 카테고리 {changes.unmappedCategories.length}개: {changes.unmappedCategories.slice(0, 4).map((category) => category.name).join(", ")}{changes.unmappedCategories.length > 4 ? " 등" : ""} · <button type="button" onClick={() => setSettingsOpen(true)}>카테고리 연결하기</button></p>
       )}

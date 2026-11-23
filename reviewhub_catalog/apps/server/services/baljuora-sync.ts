@@ -728,7 +728,7 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
     const fatal = input.error ? collapseName(String(input.error)).slice(0, 600) : null;
     const update: Partial<typeof baljuoraSyncJobs.$inferInsert> = {
       results: JSON.stringify({ ...results, unmatched: plan.type === "compare" ? results.unmatched : [] }),
-      diagnostics: JSON.stringify(diagnostics).slice(0, 60_000)
+      diagnostics: JSON.stringify(diagnostics).slice(0, 150_000)
     };
     if (final) {
       update.finishedAt = nowIso();
@@ -746,6 +746,12 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
       if (Object.keys(diagnostics).length > 0) {
         // 운영 확인용: 발주오라 응답 구조(칸 이름·형식)만 남깁니다. 값·토큰은 남기지 않습니다.
         console.info(`[baljuora-sync] ${plan.type} diagnostics ${JSON.stringify(diagnostics.structure ?? {}).slice(0, 3000)}`);
+        // 매출처 그룹 공급가 저장 방식 찾기: 발주오라 화면의 공개 코드 일부(값·토큰 없음)를 여러 줄로 나눠 남깁니다.
+        if (diagnostics.discovery && typeof diagnostics.discovery === "object") {
+          const text = JSON.stringify(diagnostics.discovery).slice(0, 60_000);
+          const parts = Math.ceil(text.length / 3000);
+          for (let part = 0; part < parts; part += 1) console.info(`[baljuora-sync] discovery ${part + 1}/${parts} ${text.slice(part * 3000, (part + 1) * 3000)}`);
+        }
       }
     }
     await db.update(baljuoraSyncJobs).set(update).where(eq(baljuoraSyncJobs.id, row.id));
@@ -819,6 +825,8 @@ export async function listBaljuoraChanges() {
     const linkByProduct = new Map(links.map((link) => [link.productId, link]));
     const items: BaljuoraChangeItem[] = [];
     let linkedCount = 0;
+    // 연결 상품 중 발주오라 매출처 그룹 공급가를 읽은 상품이 하나라도 있는지(없으면 수강생 단가는 비교·전송하지 못함)
+    let groupPriceRead = 0;
     for (const product of productRows) {
       const link = linkByProduct.get(product.id);
       const values: DoogoSyncValues = doogoSyncValues(product, settings.categoryMap);
@@ -829,6 +837,7 @@ export async function listBaljuoraChanges() {
         continue;
       }
       linkedCount += 1;
+      if (state.snapshot.groupPrice !== undefined) groupPriceRead += 1;
       const diffs = diffBaljuoraProduct(values, state, baljuoraCategories);
       if (diffs.length === 0 && link.syncStatus !== "failed") continue;
       items.push({ productId: product.id, kind: "update", code: values.code, name: values.name, imageUrl: values.imageUrl, categoryId: product.categoryId, isVisible: product.isVisible, baljuoraId: link.externalProductId, supplierName: product.supplierName, diffs, syncStatus: link.syncStatus, lastPushedAt: link.lastPushedAt });
@@ -838,6 +847,7 @@ export async function listBaljuoraChanges() {
       compared: Boolean(lastCompare[0]?.finishedAt),
       lastCompareAt: lastCompare[0]?.finishedAt ?? null,
       linkedCount,
+      groupPriceReadable: linkedCount === 0 || groupPriceRead > 0,
       productCount: productRows.length,
       items,
       baljuoraOnly: (Array.isArray(onlyList) ? onlyList : []).filter((snapshot) => !linkByProductCode(links, snapshot)),
