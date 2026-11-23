@@ -31,10 +31,20 @@ describe("상품 수정 창의 발주오라 가격", () => {
     expect(baljuoraPriceCells({ costPrice: 5700, aPrice: 6300, generalPrice: 6900 }, prices).aPrice.status).toBe("diff");
   });
 
-  it("황금농부 가격을 아직 못 읽었으면 '못 읽음'(다음 비교 때 읽음), DB센터 원가가 비어 있으면 원가는 비교하지 않습니다", () => {
+  it("황금농부 가격을 아직 못 읽었으면 '못 읽음'(다음 비교·동기화 때 읽음), DB센터 원가가 비어 있으면 원가는 비교하지 않습니다", () => {
     const cells = baljuoraPriceCells({ costPrice: 0, aPrice: 6300, generalPrice: 6900 }, { ...base, groupPrice: null, groupPriceKnown: false });
-    expect(cells.aPrice).toMatchObject({ value: null, note: "다음 ‘발주오라와 비교’ 때 읽어 와요", status: "unknown" });
+    expect(cells.aPrice).toMatchObject({ value: null, note: "다음 비교·동기화 때 읽어 와요", status: "unknown" });
     expect(cells.costPrice).toMatchObject({ value: 5700, status: "none" });
+  });
+
+  it("예전 비교 기록(약과 12:32)은 매입원가가 비어 있어도 '없음·다름'이 아니라 '못 읽음'입니다", () => {
+    const legacy = { ...base, groupPrice: null, groupPriceKnown: false, purchaseCost: null, supplyPrice: 6900 };
+    const cells = baljuoraPriceCells({ costPrice: 5700, aPrice: 6400, generalPrice: 6900 }, legacy);
+    expect(cells.costPrice).toMatchObject({ value: null, status: "unknown", note: "다음 비교·동기화 때 읽어 와요" });
+    expect(cells.aPrice.status).toBe("unknown");
+    expect(cells.generalPrice).toMatchObject({ value: 6900, status: "same" });
+    // 새 기록에서 매입원가가 정말 없으면 그대로 '다름'
+    expect(baljuoraPriceCells({ costPrice: 5700, aPrice: 6400, generalPrice: 6900 }, { ...base, purchaseCost: null }).costPrice.status).toBe("diff");
   });
 
   it("입력 중인 값과 바로 비교합니다(수강생 단가를 6,270으로 고치면 같음)", () => {

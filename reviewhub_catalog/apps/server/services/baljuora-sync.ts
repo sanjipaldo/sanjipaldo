@@ -354,10 +354,15 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
       fields = requested?.length
         ? requested.filter((field) => diffFields.includes(field) || field === "image")
         : diffs.filter((diff) => diff.direction !== "pull").map((diff) => diff.field);
-      // 1.2.0 이전 비교 기록이라 발주오라 황금농부 공급가를 모르는 상품(2026-11-23 약과 사례)은, 다른 칸을 보낼 때
-      // DB센터에 따로 정한 수강생 단가도 함께 맞춥니다. 책갈피가 보내기 직전에 발주오라 값을 읽어 같으면 건드리지 않습니다.
-      if (state && state.snapshot.groupPrice === undefined && values.groupPrice !== values.supplyPrice && fields.length > 0 && !fields.includes("groupPrice")) {
-        fields = [...fields, "groupPrice"];
+      // 1.2.0 이전 비교 기록(황금농부 공급가·매입원가를 못 읽은 기록, 2026-11-23 약과 사례)은 저장된 발주오라 값을 믿을 수 없어,
+      // 보낼 때 가격 3종(일반공급가 → 공급가 · 수강생 단가 → 황금농부 개별공급가 · 원가 → 매입원가)을 모두 넣습니다.
+      // 책갈피가 보내기 직전에 발주오라 실제 값을 읽어 같은 칸은 건드리지 않고 다른 칸만 맞춥니다.
+      if (state && state.snapshot.groupPrice === undefined && fields.length > 0) {
+        const trio: BaljuoraSyncField[] = [];
+        if (values.supplyPrice > 0) trio.push("supplyPrice");
+        if (values.groupPrice > 0) trio.push("groupPrice");
+        if (values.purchaseCost !== null) trio.push("purchaseCost");
+        fields = [...fields, ...trio.filter((field) => !fields.includes(field))];
       }
     }
     if (fields.length === 0) continue;

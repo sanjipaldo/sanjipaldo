@@ -214,7 +214,7 @@ describe("발주오라 동기화 API", () => {
     expect(tangerine.data).toMatchObject({ linked: true, supplyPrice: 12000, groupPrice: null, groupPriceKnown: false, purchaseCost: null });
   });
 
-  it("예전 비교라 황금농부 공급가를 모르는 상품은 보낼 때 수강생 단가도 함께 맞춥니다(약과 사례)", async () => {
+  it("예전 비교라 황금농부 공급가·매입원가를 모르는 상품은 보낼 때 가격 3종을 모두 넣습니다(약과 사례, 같은 칸은 책갈피가 건너뜀)", async () => {
     const admin = await adminToken();
     const compare = await startCompare(admin);
     // 1.2.0 이전 책갈피처럼 groupPrice 칸 없이 들어온 연결(bj-test-3: 일반공급가 12,000 · 수강생 단가 11,000)
@@ -222,8 +222,14 @@ describe("발주오라 동기화 API", () => {
     const push = await json<{ code: string }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "push", productIds: ["bj-test-3"] }) }));
     const plan = await json<{ plan: { items: Array<{ productId: string; fields: string[]; values: Record<string, unknown> }> } }>(await app.fetch(new Request(`http://localhost/api/baljuora/runner/${push.data.code}`)));
     const item = plan.data.plan.items.find((entry) => entry.productId === "bj-test-3");
-    expect(item?.fields).toEqual(["supplyPrice", "groupPrice"]);
-    expect(item?.values).toMatchObject({ supplyPrice: 12000, groupPrice: 11000 });
+    expect(item?.fields).toEqual(["supplyPrice", "groupPrice", "purchaseCost"]);
+    expect(item?.values).toMatchObject({ supplyPrice: 12000, groupPrice: 11000, purchaseCost: 9000 });
+
+    // DB센터 일반공급가·수강생 단가·원가가 0원이면 3종을 넣지 않습니다(0원으로 발주오라 가격을 바꾸지 않음).
+    await executeSql("UPDATE products SET name = '이웃 감귤 3kg 특', generalPrice = 0, aPrice = 0, costPrice = 0 WHERE id = 'bj-test-3'");
+    const zeroPush = await json<{ code: string }>(await fetchWithAuth(app, admin, "/api/baljuora/admin/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "push", productIds: ["bj-test-3"] }) }));
+    const zeroPlan = await json<{ plan: { items: Array<{ productId: string; fields: string[] }> } }>(await app.fetch(new Request(`http://localhost/api/baljuora/runner/${zeroPush.data.code}`)));
+    expect(zeroPlan.data.plan.items.find((entry) => entry.productId === "bj-test-3")?.fields).toEqual(["name"]);
   });
 
   it("이대로 두기 · 발주오라에만 있는 상품 가져오기(숨김 등록)", async () => {

@@ -28,9 +28,17 @@ function won(value: number) {
   return `${value.toLocaleString("ko-KR")}원`;
 }
 
+const UNREAD_NOTE = "다음 비교·동기화 때 읽어 와요";
+
+// 1.2.0 이전 비교 기록(황금농부 공급가를 못 읽음)은 매입원가도 읽지 못한 기록입니다(매입처 목록이 비어 있었음).
+export function isLegacyBaljuoraRecord(prices: BaljuoraProductPrices) {
+  return prices.linked && !prices.groupPriceKnown;
+}
+
 export function baljuoraPriceCell(key: EditorPriceKey, draft: Draft, prices: BaljuoraProductPrices): BaljuoraPriceCell {
   if (key === "costPrice") {
     const value = prices.purchaseCost;
+    if (value === null && isLegacyBaljuoraRecord(prices)) return { caption: "매입원가", value: null, note: UNREAD_NOTE, status: "unknown" };
     // DB센터 원가가 비어 있으면 보내지 않으므로 비교하지 않습니다.
     if (!(draft.costPrice > 0)) return { caption: "매입원가", value, note: value === null ? "매입원가 없음" : null, status: "none" };
     return { caption: "매입원가", value, note: value === null ? "매입원가 없음" : null, status: value === draft.costPrice ? "same" : "diff" };
@@ -41,7 +49,7 @@ export function baljuoraPriceCell(key: EditorPriceKey, draft: Draft, prices: Bal
     return { caption: "공급가", value, note: null, status: value === draft.generalPrice ? "same" : "diff" };
   }
   const caption = `${prices.groupKeyword} 수강생`;
-  if (!prices.groupPriceKnown) return { caption, value: null, note: "다음 ‘발주오라와 비교’ 때 읽어 와요", status: "unknown" };
+  if (!prices.groupPriceKnown) return { caption, value: null, note: UNREAD_NOTE, status: "unknown" };
   // DB센터 수강생 단가가 비어 있으면 일반공급가로 삽니다(발주오라에 개별공급가가 없으면 공급가로 사는 것과 같음).
   const student = draft.aPrice > 0 ? draft.aPrice : draft.generalPrice;
   if (prices.groupPrice === null) {

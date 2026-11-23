@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.3.0";
+  var VERSION = "1.3.1";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   var INFO_FIELDS = ["name", "category", "image"];
@@ -430,8 +430,8 @@
           result.skipped.push({ field: field, reason: "발주오라에 저장된 카테고리가 다릅니다." });
           return;
         }
-      } else if (field === "groupPrice" && actual === undefined) {
-        // 그룹 가격을 다시 읽을 수 없으면 보낸 것으로 둡니다.
+      } else if (field === "groupPrice" && (actual === undefined || (actual === null && (expected === snapshot.supplyPrice || expected === item.values.supplyPrice)))) {
+        // 그룹 가격을 다시 읽을 수 없거나, 황금농부 줄이 없고 수강생 단가 = 공급가(그룹도 공급가로 삼)면 맞는 것으로 봅니다.
       } else if (expected !== undefined && actual !== undefined && String(expected === null ? "" : expected) !== String(actual === null ? "" : actual)) {
         result.skipped.push({ field: field, reason: "보낸 값(" + expected + ")과 발주오라에 저장된 값(" + actual + ")이 다릅니다." });
         return;
@@ -769,16 +769,31 @@
     async function applyPricing(id, detail, item, fields, result, context) {
       var body = {};
       var values = item.values;
-      if (fields.indexOf("supplyPrice") >= 0) body.supplyPrice = values.supplyPrice;
+      // 보내기 직전에 읽은 발주오라 값과 이미 같은 칸은 보내지 않고 '반영됨'으로 둡니다(예전 비교 기록으로 넣은 칸 포함).
+      // 0원(비어 있음)으로는 발주오라 가격을 바꾸지 않습니다(변경 목록도 0원은 비교하지 않음).
+      var same = {};
+      var blank = {};
+      var liveSupply = toNumber(detail.supplyPrice);
+      var liveCost = extractPurchaseCost(detail);
+      if (fields.indexOf("supplyPrice") >= 0) {
+        if (liveSupply !== null && liveSupply === values.supplyPrice) same.supplyPrice = true;
+        else if (values.supplyPrice > 0) body.supplyPrice = values.supplyPrice;
+        else blank.supplyPrice = true;
+      }
       if (fields.indexOf("consumerPrice") >= 0) body.consumerPrice = values.consumerPrice;
-      if (fields.indexOf("purchaseCost") >= 0 && values.purchaseCost !== null) body.purchaseCost = values.purchaseCost;
+      if (fields.indexOf("purchaseCost") >= 0 && values.purchaseCost !== null) {
+        if (typeof liveCost === "number" && liveCost === values.purchaseCost) same.purchaseCost = true;
+        else body.purchaseCost = values.purchaseCost;
+      }
       var groupKey = null;
       var groupSame = false;
       if (fields.indexOf("groupPrice") >= 0) {
-        // 보내기 직전에 읽은 황금농부 공급가가 이미 DB센터 수강생 단가와 같으면 개별공급가 목록은 건드리지 않습니다.
+        // 황금농부 공급가가 이미 수강생 단가와 같거나, 황금농부 줄이 없고 수강생 단가 = 일반공급가(공급가로 삼)이면 개별공급가 목록은 건드리지 않습니다.
         var current = extractGroupPrice(detail, context.group, context.groupKeyword);
-        if (typeof current === "number" && current === values.groupPrice) {
+        if ((typeof current === "number" && current === values.groupPrice) || (current === null && values.groupPrice === values.supplyPrice)) {
           groupSame = true;
+        } else if (!(values.groupPrice > 0)) {
+          blank.groupPrice = true;
         } else {
           var pricing = buildGroupPricing(detail, context.group, context.groupKeyword, values.groupPrice);
           if (pricing) {
@@ -794,7 +809,8 @@
         await sendAdaptive("PUT", "products/" + encodeURIComponent(id) + "/pricing", body, writable(detail), tracker);
       }
       fields.forEach(function (field) {
-        if (field === "groupPrice" && groupSame) { result.applied.push(field); return; }
+        if ((field === "groupPrice" && groupSame) || same[field]) { result.applied.push(field); return; }
+        if (blank[field]) { result.skipped.push({ field: field, reason: "DB센터 값이 0원이라 보내지 않았습니다(발주오라 가격을 0원으로 바꾸지 않음)." }); return; }
         if (field === "purchaseCost" && values.purchaseCost === null) { result.skipped.push({ field: field, reason: "DB센터 원가가 비어 있어 보내지 않았습니다." }); return; }
         var key = field === "groupPrice" ? groupKey : field;
         if (!key || !(key in body)) {

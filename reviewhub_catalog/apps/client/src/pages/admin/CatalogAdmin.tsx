@@ -53,7 +53,7 @@ import {
 import { toast } from "sonner";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 import { apiFetch } from "@/lib/api";
-import { baljuoraPriceCells, type BaljuoraProductPrices } from "@/lib/baljuora-editor-prices";
+import { baljuoraPriceCells, isLegacyBaljuoraRecord, type BaljuoraProductPrices } from "@/lib/baljuora-editor-prices";
 import { EncyclopediaSearchAdmin } from "./EncyclopediaSearchAdmin";
 import type { SupplierAccountView } from "./SupplierPortalAdmin";
 import { isSupplierAccount } from "@/components/auth/AdminGuard";
@@ -1878,6 +1878,7 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
                 );
               })}
               {baljuora && !baljuora.linked && <p className="editor-price-bj-foot is-muted">발주오라와 아직 연결되지 않은 상품이에요. <b>발주오라 동기화</b> 메뉴에서 ‘발주오라와 비교’를 하면 상품코드로 연결되고, 여기에 발주오라 가격이 보여요.</p>}
+              {cells && baljuora && isLegacyBaljuoraRecord(baljuora) && <p className="editor-price-bj-foot is-muted">발주오라 값이 예전 비교 기록이라 매입원가·황금농부 수강생 값을 읽지 못했어요. 이 상품을 <b>발주오라 동기화</b>로 보내거나 <b>발주오라 상품 불러오기(비교)</b>를 다시 하면 실제 값으로 바뀌어요.</p>}
               {cells && differs.length > 0 && <p className="editor-price-bj-foot is-diff"><b>{differs.join(" · ")}</b>가 발주오라와 달라요. 저장한 뒤 <b>발주오라 동기화 → 보낼 변경</b>에서 보내면 두고도매몰 가격도 같이 바뀌어요.</p>}
             </div>
           );

@@ -217,7 +217,7 @@ describe("매출처 그룹 공급가 저장 방식 찾기(2026-11-23)", () => {
 function createIncludeFake(options: { pricingAllowed?: string[]; rowAllowed?: string[] } = {}) {
   const product: any = {
     id: "bj-y", code: "ass00050", name: "[본] 대왕 수제약과 [9입] 450g", supplyPrice: 6900, consumerPrice: null, imageUrls: [], categoryIds: [], categories: [],
-    productSuppliers: [{ id: "ps-1", supplier: { id: "sup-k", name: "캄므커머스" }, purchasePrice: 5700, isDefault: true, purchaseShippingPolicy: { id: "pship-1", name: "수제약과" } }],
+    productSuppliers: [{ id: "ps-1", supplier: { id: "sup-k", name: "캄므커머스" }, purchaseCost: 5700, materialCost: null, isDefault: true, shippingPolicy: { id: "pship-1", name: "수제약과" } }],
     prices: [
       { id: "pr-1", targetType: "SELLER_GROUP", targetId: "grp-1", sellerGroup: { ...GROUP }, seller: null, supplyPrice: 6270, sellShippingPolicyId: null, author: { id: "u-1", name: "관리자" } },
       { id: "pr-2", targetType: "SELLER", targetId: "s-9", seller: { id: "s-9", name: "황금농부 김씨" }, sellerGroup: null, supplyPrice: 6000, sellShippingPolicyId: null }
@@ -321,6 +321,42 @@ describe("상품 정보(상품명·카테고리·이미지) 저장 — 2026-11-2
     const put = fake.calls.find((call) => call.method === "PUT");
     expect(put?.body).toEqual({ supplyPrice: 7000 });
     expect(result.applied).toEqual(["supplyPrice", "groupPrice"]);
+  });
+
+  it("약과 재현: 예전 비교 기록으로 가격 3종을 함께 보내면 발주오라 실제 값과 다른 칸만 맞춥니다(공급가 7,000→6,900 · 황금농부 6,270→6,400 · 매입원가 5,700 그대로)", async () => {
+    const fake = createIncludeFake();
+    fake.product.supplyPrice = 7000;
+    const wrapped = withInfoEndpoint(fake);
+    const runner = internals.createRunner({ fetch: wrapped.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const result = await runner.pushItem(pushItem({ baljuoraId: "bj-y", code: "ass00050", fields: ["purchaseCost", "category", "supplyPrice", "groupPrice"], values: { name: "[본] 대왕 수제약과 [9입] 450g", supplyPrice: 6900, groupPrice: 6400, consumerPrice: null, purchaseCost: 5700, categoryId: "bj-cat-food", imageUrl: null, isTaxable: false } }), { groupKeyword: "황금농부" }, { group: GROUP, groupKeyword: "황금농부" }, "CODE");
+    const pricing = fake.calls.find((call) => call.method === "PUT" && call.url.endsWith("/pricing"));
+    expect(Object.keys(pricing?.body).sort()).toEqual(["prices", "supplyPrice"]); // 매입원가는 이미 같아 보내지 않음
+    expect(pricing?.body.supplyPrice).toBe(6900);
+    expect(pricing?.body.prices[0]).toMatchObject({ targetType: "SELLER_GROUP", targetId: "grp-1", supplyPrice: 6400 });
+    expect(result.ok).toBe(true);
+    expect(result.applied.sort()).toEqual(["category", "groupPrice", "purchaseCost", "supplyPrice"]);
+    expect(result.snapshot).toMatchObject({ supplyPrice: 6900, groupPrice: 6400, purchaseCost: 5700, categoryIds: ["bj-cat-food"] });
+  });
+
+  it("황금농부 줄이 없고 수강생 단가가 일반공급가와 같으면 황금농부 줄을 새로 만들지 않습니다", async () => {
+    const fake = createIncludeFake();
+    fake.product.prices = fake.product.prices.filter((row: any) => row.targetType !== "SELLER_GROUP");
+    const runner = internals.createRunner({ fetch: fake.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const result = await runner.pushItem(pushItem({ baljuoraId: "bj-y", code: "ass00050", fields: ["supplyPrice", "groupPrice"], values: { name: "약과", supplyPrice: 6900, groupPrice: 6900, consumerPrice: null, purchaseCost: 5700, categoryId: null, imageUrl: null, isTaxable: false } }), { groupKeyword: "황금농부" }, { group: GROUP, groupKeyword: "황금농부" }, "CODE");
+    expect({ applied: result.applied, skipped: result.skipped, error: result.error }).toEqual({ applied: ["supplyPrice", "groupPrice"], skipped: [], error: null });
+    expect(fake.calls.some((call) => call.method === "PUT")).toBe(false); // 공급가도 이미 같아 아무것도 보내지 않음
+  });
+
+  it("DB센터 값이 0원이면 발주오라 공급가·황금농부 공급가를 0원으로 바꾸지 않습니다", async () => {
+    const fake = createIncludeFake();
+    fake.product.supplyPrice = 7000;
+    const runner = internals.createRunner({ fetch: fake.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const result = await runner.pushItem(pushItem({ baljuoraId: "bj-y", code: "ass00050", fields: ["supplyPrice", "groupPrice"], values: { name: "약과", supplyPrice: 0, groupPrice: 0, consumerPrice: null, purchaseCost: 5700, categoryId: null, imageUrl: null, isTaxable: false } }), { groupKeyword: "황금농부" }, { group: GROUP, groupKeyword: "황금농부" }, "CODE");
+    expect(fake.calls.some((call) => call.method === "PUT")).toBe(false);
+    expect(result.applied).toEqual([]);
+    expect(result.skipped.map((entry: { field: string }) => entry.field)).toEqual(["supplyPrice", "groupPrice"]);
+    expect(result.skipped[0].reason).toMatch(/0원/);
+    expect(fake.product.supplyPrice).toBe(7000);
   });
 
   it("한글 칸 검사 오류에서 칸 이름을 찾습니다", () => {
