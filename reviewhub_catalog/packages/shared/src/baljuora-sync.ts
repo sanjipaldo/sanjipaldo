@@ -465,3 +465,153 @@ export function doogoCategoryForBaljuora(categoryIds: string[] | undefined, cate
   }
   return null;
 }
+
+// ─── 카테고리 트리 맞추기(DB센터 → 발주오라 상품 카테고리, 2026-11-23 관리자 요청) ─────────────────
+// DB센터 1차·2차 카테고리를 기준으로 발주오라 상품 카테고리 트리에 없는 카테고리를 추가하고 이름이 다르면 DB센터 이름으로 바꿉니다.
+// 발주오라 카테고리는 지우지 않습니다(DB센터에 없는 발주오라 카테고리는 그대로 둠).
+// 발주오라 1차 카테고리 중 아래 이름(이모지·띄어쓰기 무시)은 통째로 뺍니다: 브랜드별(1차 > 2차 > 3차 브랜드라 DB센터와 맞지 않음).
+export const DEFAULT_CATEGORY_TREE_EXCLUDE = ["브랜드별"];
+
+export type DoogoCategoryRef = { id: string; name: string; sortOrder?: number };
+export type DoogoSubcategoryRef = { id: string; categoryId: string; name: string; sortOrder?: number };
+export type CategoryTreeOp =
+  | { type: "rename"; level: 1 | 2; baljuoraId: string; from: string; to: string; doogoId: string }
+  | { type: "add"; level: 1 | 2; ref: string; name: string; doogoId: string; parentBaljuoraId: string | null; parentRef: string | null };
+export type CategoryTreePlan = {
+  ops: CategoryTreeOp[];
+  // 이름이 같아 새로 만들지 않고 연결만 하는 것(DB센터 id → 발주오라 id)
+  links: { categoryMap: Record<string, string>; subcategoryMap: Record<string, string> };
+  // 발주오라에만 있는 카테고리(맞추기에서 지우지 않음, 제외한 브랜드별 아래는 넣지 않음)
+  baljuoraOnly: Array<{ id: string; path: string }>;
+  // 제외한 발주오라 1차 카테고리 이름(브랜드별)
+  excluded: string[];
+  notes: Array<{ doogoId: string; name: string; reason: string }>;
+};
+
+export function isExcludedCategoryName(name: string, excludeNames: string[]) {
+  const key = plainCategoryName(name);
+  return Boolean(key) && excludeNames.some((exclude) => plainCategoryName(exclude) === key);
+}
+
+// 제외한 발주오라 1차 카테고리(브랜드별)와 그 아래 모든 카테고리 id
+export function excludedBaljuoraCategoryIds(categories: BaljuoraCategory[], excludeNames: string[]) {
+  const roots = new Set(categories.filter((category) => category.parentId === null && isExcludedCategoryName(category.name, excludeNames)).map((category) => category.id));
+  const parentOf = new Map(categories.map((category) => [category.id, category.parentId]));
+  const result = new Set<string>();
+  for (const category of categories) {
+    let current: string | null | undefined = category.id;
+    for (let depth = 0; current && depth < 10; depth += 1) {
+      if (roots.has(current)) {
+        result.add(category.id);
+        break;
+      }
+      current = parentOf.get(current);
+    }
+  }
+  return result;
+}
+
+const byOrder = <T extends { sortOrder?: number; name: string }>(first: T, second: T) => (first.sortOrder ?? 0) - (second.sortOrder ?? 0) || first.name.localeCompare(second.name, "ko");
+
+export function buildCategoryTreePlan(input: {
+  doogoCategories: DoogoCategoryRef[];
+  subcategories: DoogoSubcategoryRef[];
+  baljuoraCategories: BaljuoraCategory[];
+  categoryMap: Record<string, string>;
+  subcategoryMap: Record<string, string>;
+  excludeNames: string[];
+}): CategoryTreePlan {
+  const { baljuoraCategories: list, excludeNames } = input;
+  const byId = new Map(list.map((category) => [category.id, category]));
+  const excludedIds = excludedBaljuoraCategoryIds(list, excludeNames);
+  const plan: CategoryTreePlan = { ops: [], links: { categoryMap: {}, subcategoryMap: {} }, baljuoraOnly: [], excluded: list.filter((category) => category.parentId === null && excludedIds.has(category.id)).map((category) => category.name), notes: [] };
+  const used = new Map<string, string>();
+  const parents = new Map<string, { baljuoraId: string | null; ref: string | null }>();
+  const sameName = (name: string, parentId: string | null) => list.find((category) => category.parentId === parentId && !excludedIds.has(category.id) && !used.has(category.id) && plainCategoryName(category.name) === plainCategoryName(name));
+
+  for (const category of [...input.doogoCategories].sort(byOrder)) {
+    if (isExcludedCategoryName(category.name, excludeNames)) continue;
+    const mapped = input.categoryMap[category.id];
+    let node = mapped ? byId.get(mapped) : undefined;
+    if (node && excludedIds.has(node.id)) {
+      plan.notes.push({ doogoId: category.id, name: category.name, reason: "제외한 발주오라 카테고리(브랜드별 아래)와 연결돼 있어 맞추지 않습니다." });
+      continue;
+    }
+    if (node && node.parentId !== null) {
+      // 상품을 발주오라 2차 카테고리로 보내도록 연결한 경우: 그 카테고리는 이 DB센터 1차 카테고리가 아니라서 이름·2차는 맞추지 않습니다.
+      plan.notes.push({ doogoId: category.id, name: category.name, reason: `발주오라 '${node.path}'(1차가 아님)에 연결돼 있어 이름과 2차 카테고리는 맞추지 않습니다.` });
+      continue;
+    }
+    if (!node) {
+      node = sameName(category.name, null);
+      if (node) plan.links.categoryMap[category.id] = node.id;
+    }
+    if (node) {
+      if (used.has(node.id)) {
+        plan.notes.push({ doogoId: category.id, name: category.name, reason: `다른 DB센터 카테고리(${used.get(node.id)})와 같은 발주오라 카테고리에 연결돼 있어 맞추지 않습니다.` });
+        continue;
+      }
+      used.set(node.id, category.name);
+      parents.set(category.id, { baljuoraId: node.id, ref: null });
+      if (node.name.trim() !== category.name.trim()) plan.ops.push({ type: "rename", level: 1, baljuoraId: node.id, from: node.name, to: category.name.trim(), doogoId: category.id });
+    } else {
+      const ref = `c:${category.id}`;
+      parents.set(category.id, { baljuoraId: null, ref });
+      plan.ops.push({ type: "add", level: 1, ref, name: category.name.trim(), doogoId: category.id, parentBaljuoraId: null, parentRef: null });
+    }
+  }
+
+  const categoryOrder = new Map([...input.doogoCategories].sort(byOrder).map((category, index) => [category.id, index]));
+  const subs = input.subcategories.filter((sub) => parents.has(sub.categoryId)).sort((first, second) => (categoryOrder.get(first.categoryId) ?? 0) - (categoryOrder.get(second.categoryId) ?? 0) || byOrder(first, second));
+  for (const sub of subs) {
+    const parent = parents.get(sub.categoryId)!;
+    const mapped = input.subcategoryMap[sub.id];
+    let node = mapped ? byId.get(mapped) : undefined;
+    if (node && excludedIds.has(node.id)) {
+      plan.notes.push({ doogoId: sub.id, name: sub.name, reason: "제외한 발주오라 카테고리(브랜드별 아래)와 연결돼 있어 맞추지 않습니다." });
+      continue;
+    }
+    if (!node && parent.baljuoraId) {
+      node = sameName(sub.name, parent.baljuoraId);
+      if (node) plan.links.subcategoryMap[sub.id] = node.id;
+    }
+    if (node) {
+      if (used.has(node.id)) {
+        plan.notes.push({ doogoId: sub.id, name: sub.name, reason: `다른 DB센터 카테고리(${used.get(node.id)})와 같은 발주오라 카테고리에 연결돼 있어 맞추지 않습니다.` });
+        continue;
+      }
+      used.set(node.id, sub.name);
+      if (parent.baljuoraId && node.parentId !== parent.baljuoraId) plan.notes.push({ doogoId: sub.id, name: sub.name, reason: `발주오라에서는 '${node.path}'에 있어 위치는 바꾸지 않습니다.` });
+      if (node.name.trim() !== sub.name.trim()) plan.ops.push({ type: "rename", level: 2, baljuoraId: node.id, from: node.name, to: sub.name.trim(), doogoId: sub.id });
+    } else {
+      plan.ops.push({ type: "add", level: 2, ref: `s:${sub.id}`, name: sub.name.trim(), doogoId: sub.id, parentBaljuoraId: parent.baljuoraId, parentRef: parent.ref });
+    }
+  }
+  plan.baljuoraOnly = list.filter((category) => !excludedIds.has(category.id) && !used.has(category.id)).map((category) => ({ id: category.id, path: category.path }));
+  return plan;
+}
+
+// DB센터로 가져올 수 있는 발주오라 2차 카테고리: DB센터 1차 카테고리와 연결된 발주오라 1차 카테고리 바로 아래 카테고리 중
+// 아직 DB센터 2차 카테고리와 연결되지 않은 것(브랜드별 아래 제외). 가져오면 같은 이름으로 DB센터 2차 카테고리를 만들고 연결합니다.
+export function importableBaljuoraSubcategories(input: {
+  doogoCategories: DoogoCategoryRef[];
+  subcategories: DoogoSubcategoryRef[];
+  baljuoraCategories: BaljuoraCategory[];
+  categoryMap: Record<string, string>;
+  subcategoryMap: Record<string, string>;
+  excludeNames: string[];
+}) {
+  const plan = buildCategoryTreePlan(input);
+  const excludedIds = excludedBaljuoraCategoryIds(input.baljuoraCategories, input.excludeNames);
+  const rootToDoogo = new Map<string, string>();
+  for (const category of input.doogoCategories) {
+    if (isExcludedCategoryName(category.name, input.excludeNames)) continue;
+    const root = input.categoryMap[category.id] ?? plan.links.categoryMap[category.id];
+    const node = root ? input.baljuoraCategories.find((item) => item.id === root) : undefined;
+    if (node && node.parentId === null && !excludedIds.has(node.id) && !rootToDoogo.has(node.id)) rootToDoogo.set(node.id, category.id);
+  }
+  const represented = new Set([...Object.values(input.subcategoryMap), ...Object.values(plan.links.subcategoryMap)]);
+  return input.baljuoraCategories
+    .filter((category) => category.parentId !== null && rootToDoogo.has(category.parentId) && !excludedIds.has(category.id) && !represented.has(category.id))
+    .map((category) => ({ baljuoraId: category.id, name: category.name, path: category.path, doogoCategoryId: rootToDoogo.get(category.parentId as string) as string }));
+}

@@ -14,6 +14,7 @@ import {
   productOptions,
   products,
   shippingPolicies,
+  subcategories,
   suppliers,
   sourcingRequests,
   partnerDeals
@@ -1370,8 +1371,54 @@ export async function updateCategory(id: string, input: CategoryInput) {
 export async function removeCategory(id: string) {
   const linked = await getDb().select({ id: products.id }).from(products).where(eq(products.categoryId, id)).limit(1);
   if (linked[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "상품이 연결된 카테고리는 삭제할 수 없습니다.", 409);
+  const children = await getDb().select({ id: subcategories.id }).from(subcategories).where(eq(subcategories.categoryId, id)).limit(1);
+  if (children[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "2차 카테고리가 있는 카테고리는 2차 카테고리를 먼저 지워 주세요.", 409);
   const rows = await getDb().delete(categories).where(eq(categories.id, id)).returning();
   if (!rows[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "카테고리를 찾을 수 없습니다.", 404);
+  return rows[0];
+}
+
+// ─── 2차 카테고리(migration 035) ──────────────────────────────────────────────
+// 1차 카테고리 아래 이름만 둡니다(상품은 넣지 않음). 발주오라 상품 카테고리 트리(1차 > 2차)를 DB센터에서 관리하는 데 씁니다.
+
+export async function listSubcategories() {
+  return getDb().select().from(subcategories).where(eq(subcategories.isActive, true)).orderBy(asc(subcategories.categoryId), asc(subcategories.sortOrder), asc(subcategories.name));
+}
+
+async function assertUniqueSubcategory(categoryId: string, name: string, exceptId?: string) {
+  const siblings = await getDb().select({ id: subcategories.id, name: subcategories.name }).from(subcategories).where(and(eq(subcategories.categoryId, categoryId), eq(subcategories.isActive, true)));
+  if (siblings.some((row) => row.id !== exceptId && row.name.trim() === name)) throw new DatabaseError("DATABASE_QUERY_FAILED", "같은 이름의 2차 카테고리가 이미 있습니다.", 409);
+  return siblings;
+}
+
+export async function createSubcategory(input: { categoryId: string; name: string }) {
+  const db = getDb();
+  const name = input.name.trim();
+  const [parent] = await db.select({ id: categories.id }).from(categories).where(and(eq(categories.id, input.categoryId), eq(categories.isActive, true))).limit(1);
+  if (!parent) throw new DatabaseError("DATABASE_QUERY_FAILED", "1차 카테고리를 찾을 수 없습니다.", 404);
+  const siblings = await assertUniqueSubcategory(input.categoryId, name);
+  const last = siblings.length ? (await db.select({ sortOrder: subcategories.sortOrder }).from(subcategories).where(eq(subcategories.categoryId, input.categoryId)).orderBy(desc(subcategories.sortOrder)).limit(1))[0]?.sortOrder ?? 0 : -1;
+  const rows = await db.insert(subcategories).values({ categoryId: input.categoryId, name, sortOrder: last + 1, isActive: true, updatedAt: new Date().toISOString() }).returning();
+  return rows[0];
+}
+
+export async function updateSubcategory(id: string, input: { name?: string; sortOrder?: number }) {
+  const db = getDb();
+  const [current] = await db.select().from(subcategories).where(eq(subcategories.id, id)).limit(1);
+  if (!current) throw new DatabaseError("DATABASE_QUERY_FAILED", "2차 카테고리를 찾을 수 없습니다.", 404);
+  const name = input.name?.trim();
+  if (name) await assertUniqueSubcategory(current.categoryId, name, id);
+  const rows = await db.update(subcategories).set({
+    ...(name ? { name } : {}),
+    ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
+    updatedAt: new Date().toISOString()
+  }).where(eq(subcategories.id, id)).returning();
+  return rows[0];
+}
+
+export async function removeSubcategory(id: string) {
+  const rows = await getDb().delete(subcategories).where(eq(subcategories.id, id)).returning();
+  if (!rows[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "2차 카테고리를 찾을 수 없습니다.", 404);
   return rows[0];
 }
 

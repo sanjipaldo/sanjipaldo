@@ -128,6 +128,24 @@ export const categories = sqliteTable(
   (table) => [index("idx_categories_shipping_type").on(table.shippingType)]
 );
 
+// 2차 카테고리(migration 035): 1차 카테고리 아래 이름만 둡니다. 발주오라 상품 카테고리 트리(1차 > 2차)를 DB센터에서 관리하는 데 쓰고,
+// 단가표·상품 등록은 1차 카테고리만 씁니다(상품은 2차에 넣지 않음).
+export const subcategories = sqliteTable(
+  "subcategories",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    categoryId: text("categoryId").notNull(),
+    name: text("name").notNull(),
+    sortOrder: integer("sortOrder").notNull().default(0),
+    isActive: integer("isActive", { mode: "boolean" }).notNull().default(true),
+    createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [index("idx_subcategories_category").on(table.categoryId)]
+);
+
 export const shippingPolicies = sqliteTable(
   "shipping_policies",
   {

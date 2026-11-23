@@ -1991,3 +1991,30 @@ a { color: inherit; text-decoration: none; }
   .bundle-card-body p { font-size: 13px; }
   .bundle-card-actions button { flex: 1; justify-content: center; font-size: 14px; }
 }
+
+/* 상품 카테고리: 2차 카테고리(발주오라 상품 카테고리 1차 > 2차와 맞춤, 2026-11-23) */
+.category-tree-help { margin: -4px 0 14px; padding: 11px 14px; border: 1px solid #dbe9e1; border-radius: 12px; background: #f6fbf8; color: #3f5148; font-size: 12.5px; line-height: 1.55; }
+.category-tree-help b { color: #0f5f42; }
+.category-admin-list > .category-admin-item { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.category-admin-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 9px; align-items: center; min-width: 0; }
+.category-admin-row > span { min-width: 0; overflow-wrap: anywhere; }
+.category-admin-list button.is-edit { color: #3d5f52; background: #eef5f1; }
+.category-exclude-tag { margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: #f2f4f7; color: #6b7685; font-size: 10.5px; font-style: normal; font-weight: 800; white-space: nowrap; }
+.category-sub-list { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 12px; border-left: 2px solid #e3eee8; }
+.category-sub-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 4px 6px 4px 10px; border: 1px solid #dce8e1; border-radius: 999px; background: #fff; font-size: 12px; }
+.category-sub-chip > span { min-width: 0; overflow-wrap: anywhere; font-weight: 700; }
+.category-admin-list .category-sub-chip button { width: 22px; height: 22px; border-radius: 999px; }
+.category-sub-chip.is-editing { padding: 3px; }
+.category-admin-list button.category-sub-add { display: inline-flex; gap: 4px; width: auto; height: 28px; padding: 0 11px; border: 1px dashed #b9d4c6; border-radius: 999px; color: #0f5f42; background: #fbfefc; font-size: 12px; font-weight: 800; }
+.category-name-edit, .category-sub-add.is-open { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.category-name-edit input, .category-sub-add.is-open input { width: min(220px, 100%); min-width: 0; height: 32px; padding: 0 10px; border: 1px solid #b9d4c6; border-radius: 8px; outline: 0; font-size: 13px; }
+.category-name-edit input:focus, .category-sub-add.is-open input:focus { border-color: #159565; box-shadow: 0 0 0 3px rgba(21,149,101,.12); }
+.category-admin-list button.is-save { color: #fff; background: #159565; }
+.category-admin-list button.is-cancel { color: #5d6b7b; background: #eef1f5; }
+@media (max-width: 720px) {
+  .category-admin-row { grid-template-columns: 1fr auto auto; }
+  .category-admin-row > small { grid-column: 1 / -1; order: 3; }
+  .category-sub-list { padding-left: 8px; }
+  .category-name-edit input, .category-sub-add.is-open input { width: 100%; }
+  .category-name-edit, .category-sub-add.is-open { width: 100%; }
+}

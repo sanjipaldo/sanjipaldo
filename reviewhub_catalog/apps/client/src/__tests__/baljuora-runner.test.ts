@@ -284,15 +284,12 @@ describe("매출처 그룹 공급가 저장 방식 찾기(2026-11-23)", () => {
     const runner = internals.createRunner({ fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", pagePath: "/doogobiz24/dashboard", loadedScripts: [], apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
     const report = createReport();
     await runner.runCompare({ type: "compare", groupKeyword: "황금농부", detailIds: ["bj-a", "bj-b"] }, report);
-    // 상품 저장 화면은 찾지 않음(카테고리 화면 코드 확인만, 2026-11-23 1.5.2)
-    expect(consoleCalls).toEqual(["/doogobiz24/products/category"]);
-    const discovery = report.posted[report.posted.length - 1].diagnostics.discovery;
-    expect(discovery.pages).toBeUndefined();
-    expect(discovery.categoryPage).toMatchObject({ status: 404, chunks: [], pageChunks: [] });
+    expect(consoleCalls).toEqual([]);
+    expect(report.posted[report.posted.length - 1].diagnostics.discovery).toBeUndefined();
   });
 
-  it("카테고리 화면 코드 확인: 이 창의 로그인으로 상품 카테고리 화면 코드 경로·저장 부분만 읽어 기술 정보로 보냅니다(카테고리는 바꾸지 않음)", async () => {
-    const fake = createFake();
+  it("카테고리 저장이 실패하면 이 창의 로그인으로 상품 카테고리 화면 코드 경로·저장 부분만 읽어 기술 정보로 보냅니다(다음 수정용)", async () => {
+    const tree = createTreeFake();
     const page = "static/chunks/app/console/%5Bmerchant%5D/(main)/products/category/page-c4t.js";
     const shared = "static/chunks/3518-tree.js";
     const consoleCalls: string[] = [];
@@ -304,19 +301,20 @@ describe("매출처 그룹 공급가 저장 방식 찾기(2026-11-23)", () => {
         if (url.pathname === `/_next/${page}`) return new Response('t=1;children:"저장하기",onClick:async()=>{await s.mutateAsync({data:{categories:n.map(c)}})}', { status: 200 });
         return new Response("", { status: 404 });
       }
-      return fake.fetch(input, init);
+      // 발주오라가 카테고리 저장을 거절(400)
+      if (url.pathname === "/merchant/categories/tree" && (init.method || "GET").toUpperCase() === "POST") return jsonResponse(400, { statusCode: 400, message: ["categories.0.name must be a string"] });
+      return tree.fetch(input, init);
     };
-    const runner = internals.createRunner({ fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", pagePath: "/doogobiz24/dashboard", loadedScripts: [], apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const runner = internals.createRunner({ fetch, locks: undefined, consoleOrigin: "https://console.baljuora.com", pagePath: "/doogobiz24/dashboard", loadedScripts: [], apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
     const report = createReport();
-    await runner.runCompare({ type: "compare", groupKeyword: "황금농부" }, report);
+    await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [], categoryTree: { ops: [{ type: "add", level: 1, ref: "c:x", name: "새 1차", doogoId: "x", parentBaljuoraId: null, parentRef: null }], excludeNames: ["브랜드별"] } }, report, "ABCDE23456");
+    expect(report.posted[0].categoryTree.error).toContain("categories.0.name must be a string");
     const last = report.posted[report.posted.length - 1].diagnostics;
     expect(last.discovery.categoryPage).toMatchObject({ status: 200, chunks: [shared, page], pageChunks: [page] });
     expect(last.discovery.categoryPage.snippets[0]).toMatchObject({ chunk: "page-c4t.js", anchor: "mutateAsync" });
     expect(last.discovery.categoryPage.snippets[0].text).toContain("data:{categories:");
     expect(last.structure.categoryTree).toBeDefined();
-    expect(consoleCalls.slice(0, 2)).toEqual(["/doogobiz24/products/category (RSC)", `/_next/${page}`]);
-    expect(consoleCalls).not.toContain(`/_next/${shared}`); // 저장 부분이 든 카테고리 화면 파일만 받음
-    expect(fake.calls.some((call) => call.method !== "GET" && call.url.includes("categories"))).toBe(false);
+    expect(consoleCalls).toEqual(["/doogobiz24/products/category (RSC)", `/_next/${page}`]); // 저장 부분이 든 카테고리 화면 파일만 받음
   });
 });
 
@@ -698,6 +696,148 @@ describe("썸네일(대표 이미지) 보내기", () => {
     expect(drawn).toEqual([[2000, 1500], [1400, 1050]]);
     expect(fills).toEqual(["#ffffff", "#ffffff"]);
     expect(closed).toBe(1);
+  });
+});
+
+// 발주오라 상품 카테고리 트리(2026-11-23 화면 코드 page-3ad178912d96b35e.js): 저장 = POST merchant/categories/tree { categories: 트리 전체 },
+// 새 카테고리는 id 없음, 트리에 없는 카테고리는 지워짐, 모르는 칸은 오류 없이 버림(운영과 같게 흉내).
+function treeNode(id: string, name: string, children: any[] = [], extra: Record<string, unknown> = {}) {
+  return { id, name, description: null, sortOrder: 0, isVisible: true, createdAt: "2026-11-01T00:00:00Z", children, ...extra };
+}
+
+function createTreeFake() {
+  let seq = 0;
+  let roots: any[] = [
+    treeNode("t-food", "🥦 식자재"),
+    treeNode("t-farm", "🥕 농산", [treeNode("t-fruit", "과일류")]),
+    treeNode("t-ovs", "✈️ 해외 건강식품", [treeNode("t-ca", "캐나다 건강식품"), treeNode("t-nz", "뉴질랜드 건강식품")]),
+    treeNode("t-brand", "🌏 브랜드별", [treeNode("t-brand-kr", "국내 건강식품", [treeNode("t-kd", "광동365"), treeNode("t-enb", "ENB")])])
+  ];
+  const posts: any[] = [];
+  const normalize = (nodes: any[]): any[] => nodes.map((node, index) => ({ ...node, sortOrder: index, children: normalize(node.children || []) }));
+  roots = normalize(roots);
+  const product: any = { id: "bj-p", code: "HP-1", name: "광동 홍삼", supplyPrice: 10000, consumerPrice: null, imageUrls: [], categoryIds: ["t-ovs", "t-kd"], prices: [], productSuppliers: [] };
+  const calls: Array<{ method: string; path: string; body?: any }> = [];
+  const fetch = async (input: string, init: RequestInit = {}) => {
+    const method = (init.method || "GET").toUpperCase();
+    const body = typeof init.body === "string" ? JSON.parse(init.body) : undefined;
+    const url = new URL(input);
+    if (url.pathname === "/api/auth/refresh") return jsonResponse(200, { accessToken: "t1" });
+    if (url.origin !== "https://api.baljuora.com") return jsonResponse(404, {});
+    const path = url.pathname.replace(/^\//, "");
+    calls.push({ method, path, body });
+    if (method === "GET" && path === "merchant/categories/tree") return jsonResponse(200, { statusCode: 200, data: roots });
+    if (method === "POST" && path === "merchant/categories/tree") {
+      posts.push(body);
+      const save = (nodes: any[]): any[] => nodes.map((node) => ({ id: node.id ?? `t-new-${++seq}`, name: node.name, description: node.description ?? null, sortOrder: node.sortOrder, isVisible: node.isVisible ?? true, createdAt: "2026-11-23T00:00:00Z", children: save(node.children || []) }));
+      roots = save(body.categories);
+      return jsonResponse(201, { statusCode: 201, data: roots });
+    }
+    if (method === "GET" && path === "merchant/seller-groups") return jsonResponse(200, { data: { items: [GROUP] } });
+    if (method === "GET" && path === "products/bj-p") return jsonResponse(200, { data: product });
+    if (method === "PUT" && path === "products/bj-p/info") {
+      Object.assign(product, body);
+      return jsonResponse(200, { data: product });
+    }
+    return jsonResponse(404, { message: `not found ${path}` });
+  };
+  return { fetch, posts, calls, product, roots: () => roots };
+}
+
+const flatOf = (roots: any[]) => internals.flattenCategories(roots).map((category: any) => category.path);
+
+describe("발주오라 상품 카테고리 맞추기(DB센터 → 발주오라)", () => {
+  const ops = [
+    { type: "rename", level: 2, baljuoraId: "t-ca", from: "캐나다 건강식품", to: "캐나다 영양제", doogoId: "s-ca" },
+    { type: "add", level: 2, ref: "s:s-au", name: "호주 건강식품", doogoId: "s-au", parentBaljuoraId: "t-ovs", parentRef: null },
+    { type: "add", level: 1, ref: "c:c-imp", name: "🍍 수입과일", doogoId: "c-imp", parentBaljuoraId: null, parentRef: null },
+    { type: "add", level: 2, ref: "s:s-mango", name: "망고", doogoId: "s-mango", parentBaljuoraId: null, parentRef: "c:c-imp" }
+  ];
+
+  it("저장 모양은 발주오라 화면과 같습니다: 트리 전체, sortOrder = 같은 단계 순서, 새 카테고리는 id 없이, 브랜드별은 그대로 맨 뒤", () => {
+    const fake = createTreeFake();
+    const saved = internals.planTreeSave(fake.roots(), ops, ["브랜드별"]);
+    expect(saved.changed).toBe(true);
+    expect(saved.skipped).toEqual([]);
+    const body = internals.treeSaveBody(saved.draft);
+    expect(body.map((node: any) => [node.id, node.name, node.sortOrder])).toEqual([["t-food", "🥦 식자재", 0], ["t-farm", "🥕 농산", 1], ["t-ovs", "✈️ 해외 건강식품", 2], [undefined, "🍍 수입과일", 3], ["t-brand", "🌏 브랜드별", 4]]);
+    expect(body[2].children.map((node: any) => [node.id, node.name, node.sortOrder])).toEqual([["t-ca", "캐나다 영양제", 0], ["t-nz", "뉴질랜드 건강식품", 1], [undefined, "호주 건강식품", 2]]);
+    expect(body[3].children).toEqual([{ id: undefined, name: "망고", description: "", sortOrder: 0, isVisible: true, children: [] }]);
+    // 브랜드별 아래(3단계 브랜드 포함)는 id·이름 그대로
+    expect(JSON.stringify(body[4])).toBe(JSON.stringify({ id: "t-brand", name: "🌏 브랜드별", sortOrder: 4, isVisible: true, children: [{ id: "t-brand-kr", name: "국내 건강식품", sortOrder: 0, isVisible: true, children: [{ id: "t-kd", name: "광동365", sortOrder: 0, isVisible: true, children: [] }, { id: "t-enb", name: "ENB", sortOrder: 1, isVisible: true, children: [] }] }] }));
+    // 읽기 전용 칸(createdAt)·내부 표시(ref)는 보내지 않음
+    expect(JSON.stringify(body)).not.toContain("createdAt");
+    expect(JSON.stringify(body)).not.toContain("ref");
+  });
+
+  it("브랜드별 아래는 바꾸지 않고, 겹치는 이름·없는 카테고리·3단계 넘는 추가는 보내지 않고 이유를 알립니다", () => {
+    const fake = createTreeFake();
+    const saved = internals.planTreeSave(fake.roots(), [
+      { type: "rename", level: 2, baljuoraId: "t-brand-kr", from: "국내 건강식품", to: "국내 브랜드", doogoId: "x1" },
+      { type: "rename", level: 2, baljuoraId: "t-nz", from: "뉴질랜드 건강식품", to: "ENB", doogoId: "x2" },
+      { type: "rename", level: 2, baljuoraId: "t-gone", from: "없음", to: "새 이름", doogoId: "x3" },
+      { type: "add", level: 2, ref: "s:x4", name: "브랜드 A", doogoId: "x4", parentBaljuoraId: "t-brand", parentRef: null },
+      { type: "add", level: 2, ref: "s:x5", name: "과일류", doogoId: "x5", parentBaljuoraId: "t-farm", parentRef: null },
+      { type: "add", level: 2, ref: "s:x6", name: "망고", doogoId: "x6", parentBaljuoraId: null, parentRef: "c:none" }
+    ], ["브랜드별"]);
+    expect(saved.changed).toBe(false);
+    expect(saved.skipped).toEqual([
+      { key: "r:t-brand-kr", name: "국내 브랜드", reason: expect.stringContaining("브랜드별 아래 카테고리라") },
+      { key: "r:t-nz", name: "ENB", reason: expect.stringContaining("같은 이름의 카테고리가 이미 있어") },
+      { key: "r:t-gone", name: "새 이름", reason: expect.stringContaining("이 카테고리를 찾지 못했습니다") },
+      { key: "s:x4", name: "브랜드 A", reason: expect.stringContaining("브랜드별 아래에는 추가하지 않습니다") },
+      { key: "s:x6", name: "망고", reason: expect.stringContaining("1차 카테고리를 먼저 만들지 못해") }
+    ]);
+    // 같은 이름의 2차가 이미 있으면 새로 만들지 않고 연결만
+    expect(saved.linked).toEqual({ "s:x5": "t-fruit" });
+  });
+
+  it("보내기: 카테고리를 먼저 맞추고(트리 전체 저장 → 다시 읽어 확인), 새 카테고리 id를 DB센터로 보내고, 상품의 브랜드 카테고리는 그대로 둡니다", async () => {
+    const fake = createTreeFake();
+    const runner = internals.createRunner({ fetch: fake.fetch, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const report = createReport();
+    const item = pushItem({ productId: "p-hp", baljuoraId: "bj-p", code: "HP-1", name: "광동 홍삼", fields: ["category"], values: { name: "광동 홍삼", supplyPrice: 10000, groupPrice: 10000, consumerPrice: null, purchaseCost: null, categoryId: null, doogoCategoryId: "c-imp", imageUrl: null, isTaxable: true } });
+    const summary = await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [item], categoryTree: { ops, excludeNames: ["브랜드별"] }, categoryExclude: ["브랜드별"] }, report, "ABCDE23456");
+    expect(summary).toEqual({ ok: 1, failed: 0 });
+    expect(fake.posts).toHaveLength(1);
+    const tree = report.posted[0].categoryTree;
+    expect(tree.error).toBeNull();
+    expect(tree.skipped).toEqual([]);
+    expect(tree.applied.map((entry: any) => entry.key)).toEqual(["r:t-ca", "s:s-au", "c:c-imp", "s:s-mango"]);
+    expect(Object.keys(tree.created).sort()).toEqual(["c:c-imp", "s:s-au", "s:s-mango"]);
+    expect(flatOf(fake.roots())).toEqual([
+      "🥦 식자재", "🥕 농산", "🥕 농산 > 과일류", "✈️ 해외 건강식품", "✈️ 해외 건강식품 > 캐나다 영양제", "✈️ 해외 건강식품 > 뉴질랜드 건강식품", "✈️ 해외 건강식품 > 호주 건강식품",
+      "🍍 수입과일", "🍍 수입과일 > 망고", "🌏 브랜드별", "🌏 브랜드별 > 국내 건강식품", "🌏 브랜드별 > 국내 건강식품 > 광동365", "🌏 브랜드별 > 국내 건강식품 > ENB"
+    ]);
+    expect(internals.flattenCategories(fake.roots()).find((category: any) => category.id === "t-kd").path).toContain("광동365");
+    // 상품은 새로 만든 '수입과일'로, 붙어 있던 브랜드 카테고리(광동365)는 그대로(원래 대표 카테고리 해외 건강식품은 바뀜)
+    expect(fake.product.categoryIds).toEqual([tree.created["c:c-imp"], "t-kd"]);
+    expect(report.posted[report.posted.length - 1].items[0]).toMatchObject({ ok: true, applied: ["category"] });
+  });
+
+  it("발주오라 카테고리 트리를 읽지 못하거나 모양이 다르면 저장하지 않고 이유를 알립니다(상품은 계속)", async () => {
+    const fake = createTreeFake();
+    const broken = async (input: string, init: RequestInit = {}) => {
+      if (new URL(input).pathname === "/merchant/categories/tree" && (init.method || "GET") === "GET") return jsonResponse(200, { data: [{ name: "id 없음", children: [] }] });
+      return fake.fetch(input, init);
+    };
+    const runner = internals.createRunner({ fetch: broken, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const report = createReport();
+    await runner.runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [], categoryTree: { ops, excludeNames: ["브랜드별"] } }, report, "ABCDE23456");
+    expect(fake.posts).toHaveLength(0);
+    const tree = report.posted[0].categoryTree;
+    expect(tree.error).toContain("모양이 예상과 달라");
+    expect(tree.skipped).toHaveLength(4);
+    expect(tree.applied).toEqual([]);
+  });
+
+  it("저장 뒤 원래 카테고리가 사라지면 오류로 알립니다", () => {
+    const fake = createTreeFake();
+    const before = fake.roots();
+    const saved = internals.planTreeSave(before, [ops[0]], ["브랜드별"]);
+    const after = before.filter((node: any) => node.id !== "t-brand");
+    const check = internals.verifyTreeSave(before, after, saved);
+    expect(check.missing.map((category: any) => category.path)).toEqual(["🌏 브랜드별", "🌏 브랜드별 > 국내 건강식품", "🌏 브랜드별 > 국내 건강식품 > 광동365", "🌏 브랜드별 > 국내 건강식품 > ENB"]);
   });
 });
 

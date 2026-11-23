@@ -20,6 +20,7 @@ import {
   type BaljuoraSyncField
 } from "@repo/shared/baljuora-sync";
 import { BaljuoraMasterPanel } from "./BaljuoraMasterPanel";
+import { BaljuoraCategoryTreeCard, type CategoryTreeView } from "./BaljuoraCategoryTreeCard";
 import { BaljuoraAlignSettings, type BaljuoraPolicyOption, type DoogoPolicyOption } from "./BaljuoraAlignSettings";
 import "./baljuora-sync-admin.css";
 
@@ -39,6 +40,8 @@ type JobView = {
   diagnostics?: Record<string, unknown> | null;
 };
 type Overview = {
+  // DB센터 → 발주오라 상품 카테고리 맞추기(추가·이름 바꾸기, 브랜드별 제외)
+  categoryTree?: CategoryTreeView;
   settings: Settings;
   doogoCategories: Array<{ id: string; name: string; shippingType: string }>;
   baljuoraCategories: BaljuoraCategory[];
@@ -76,7 +79,8 @@ type Changes = {
   baljuoraOnly: BaljuoraProductSnapshot[];
   unmappedCategories: Array<{ id: string; name: string }>;
 };
-type Tab = "push" | "new" | "pull" | "only";
+// changed = DB센터에서 바꿈(마지막으로 맞춘 뒤 DB센터에서 고친 칸만, 2026-11-23 관리자 요청 "내가 지금 바꿔서 발주오라에 보내야 할 것만 따로")
+type Tab = "changed" | "push" | "new" | "pull" | "only";
 const PAGE_SIZE = 40;
 
 async function readData<T>(response: Response): Promise<T> {
@@ -120,6 +124,9 @@ function BookmarkletLink({ origin }: { origin: string }) {
     </a>
   );
 }
+
+// 마지막으로 맞춘 뒤 DB센터에서 바꾼 칸(양쪽에서 바뀐 칸 포함): 'DB센터에서 바꿈' 탭과 요약 줄에 씀
+const isDoogoChange = (diff: BaljuoraFieldDiff) => diff.direction === "push" || diff.direction === "both";
 
 function DiffValue({ field, value, categoryPath, policyName }: { field: BaljuoraSyncField; value: string | number | null; categoryPath: (id: string) => string; policyName: (id: string) => string }) {
   if (field === "image") return value ? <img className="bj-diff-thumb" src={String(value)} alt="" loading="lazy" /> : <span className="bj-muted">없음</span>;
@@ -198,14 +205,27 @@ export function BaljuoraSyncAdmin() {
     const push = items.filter((item) => item.kind === "update" && (item.diffs.some((diff) => diff.direction !== "pull") || item.syncStatus === "failed"));
     const pull = items.filter((item) => item.kind === "update" && item.diffs.some((diff) => diff.direction === "pull" || diff.direction === "both"));
     const fresh = items.filter((item) => item.kind === "new");
-    return { push, pull, new: fresh, newVisible: fresh.filter((item) => item.isVisible) };
+    const changed = items.filter((item) => item.kind === "update" && item.diffs.some(isDoogoChange));
+    return { changed, push, pull, new: fresh, newVisible: fresh.filter((item) => item.isVisible) };
   }, [changes]);
+  // DB센터에서 바꾼 칸별 상품 수(요약 줄)
+  const changedFieldCounts = useMemo(() => {
+    const counts = new Map<BaljuoraSyncField, number>();
+    lists.changed.forEach((item) => item.diffs.filter(isDoogoChange).forEach((diff) => counts.set(diff.field, (counts.get(diff.field) ?? 0) + 1)));
+    return [...counts.entries()];
+  }, [lists]);
+  // 처음 열 때 DB센터에서 바꾼 상품이 있으면 그 탭부터 보여 줍니다(관리자가 고른 탭은 그대로).
+  const tabTouched = useRef(false);
+  useEffect(() => {
+    if (!tabTouched.current && changes && lists.changed.length > 0) setTab("changed");
+  }, [changes, lists.changed.length]);
+  const chooseTab = (next: Tab) => { tabTouched.current = true; setTab(next); };
 
   const rows = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     const match = (text: string) => !keyword || text.toLowerCase().includes(keyword);
     if (tab === "only") return (changes?.baljuoraOnly ?? []).filter((item) => match(`${item.code ?? ""} ${item.name}`));
-    const source = tab === "push" ? lists.push : tab === "pull" ? lists.pull : includeHidden ? lists.new : lists.newVisible;
+    const source = tab === "changed" ? lists.changed : tab === "push" ? lists.push : tab === "pull" ? lists.pull : includeHidden ? lists.new : lists.newVisible;
     return source.filter((item) => match(`${item.code ?? ""} ${item.name} ${item.supplierName ?? ""}`));
   }, [tab, query, lists, includeHidden, changes]);
 
@@ -241,7 +261,42 @@ export function BaljuoraSyncAdmin() {
   const pushSelected = () => {
     const ids = [...selected];
     if (ids.length === 0) return toast.info("동기화할 상품을 골라 주세요.");
+    if (tab === "changed") return pushChanged(ids);
     void startJob({ type: "push", productIds: ids }, "push");
+  };
+
+  // DB센터에서 바꿈: 고른 상품의 'DB센터에서 바뀜·양쪽에서 바뀜' 칸만 보냅니다('처음부터 다름' 칸은 건드리지 않음).
+  // 카테고리 맞추기(추가·이름 바꾸기)가 있으면 서버가 같은 작업에 먼저 넣습니다.
+  const pushChanged = (ids: string[]) => {
+    const fieldsByProduct: Record<string, BaljuoraSyncField[]> = {};
+    const wanted = new Set(ids);
+    lists.changed.forEach((item) => {
+      if (!wanted.has(item.productId)) return;
+      const fields = item.diffs.filter(isDoogoChange).map((diff) => diff.field);
+      if (fields.length) fieldsByProduct[item.productId] = fields;
+    });
+    const productIds = Object.keys(fieldsByProduct);
+    if (productIds.length === 0) return toast.info("DB센터에서 바꾼 칸이 있는 상품을 골라 주세요.");
+    void startJob({ type: "push", productIds, fieldsByProduct }, "push");
+  };
+
+  // 요약 줄의 "바꾼 것 모두 보내기": DB센터에서 바꾼 상품의 바꾼 칸 + 카테고리 맞추기를 한 작업으로 보냅니다.
+  const pushAllChanged = () => {
+    const productCount = lists.changed.length;
+    const ops = overview?.categoryTree?.ops.length ?? 0;
+    if (productCount === 0 && ops === 0) return;
+    if (productCount === 0) return pushCategoryTree();
+    const parts = [`상품 ${productCount.toLocaleString("ko-KR")}개의 바꾼 칸(${changedFieldCounts.map(([field, count]) => `${BALJUORA_FIELD_SHORT_LABELS[field]} ${count}`).join(", ")})`];
+    if (ops > 0) parts.push(`카테고리 ${ops}건(추가·이름 변경, 먼저 보냄)`);
+    if (!window.confirm(`DB센터에서 바꾼 ${parts.join("과 ")}을 발주오라에 보냅니다. '처음부터 다름' 칸은 보내지 않습니다. 계속할까요?`)) return;
+    pushChanged(lists.changed.map((item) => item.productId));
+  };
+
+  const pushCategoryTree = () => {
+    const ops = overview?.categoryTree?.ops ?? [];
+    if (ops.length === 0) return;
+    if (!window.confirm(`발주오라 상품 카테고리에 ${ops.length}건(추가·이름 변경)을 보냅니다. 발주오라 카테고리는 지우지 않고, 브랜드별은 건드리지 않습니다. 계속할까요?`)) return;
+    void startJob({ type: "push", productIds: [], categoryTree: true }, "push");
   };
 
   const pullSelected = async () => {
@@ -324,7 +379,8 @@ export function BaljuoraSyncAdmin() {
   if (loading) return <div className="admin-loading inline"><div className="spinner" /><span>발주오라 동기화 정보를 불러오는 중…</span></div>;
 
   const compared = Boolean(changes?.compared);
-  const counts = { push: lists.push.length, new: includeHidden ? lists.new.length : lists.newVisible.length, pull: lists.pull.length, only: changes?.baljuoraOnly.length ?? 0 };
+  const counts = { changed: lists.changed.length, push: lists.push.length, new: includeHidden ? lists.new.length : lists.newVisible.length, pull: lists.pull.length, only: changes?.baljuoraOnly.length ?? 0 };
+  const treeOps = overview?.categoryTree?.ops.length ?? 0;
   const view = job?.view;
   const jobDone = view && !["waiting", "running"].includes(view.status);
   const progressPercent = view?.progress && view.progress.total > 0 ? Math.min(100, Math.round((view.progress.done / view.progress.total) * 100)) : view?.status === "done" ? 100 : 6;
@@ -441,15 +497,44 @@ export function BaljuoraSyncAdmin() {
         <p className="bj-notice"><AlertTriangle size={15} aria-hidden="true" /> 발주오라 카테고리와 연결되지 않은 DB센터 카테고리 {changes.unmappedCategories.length}개: {changes.unmappedCategories.slice(0, 4).map((category) => category.name).join(", ")}{changes.unmappedCategories.length > 4 ? " 등" : ""} · <button type="button" onClick={() => setSettingsOpen(true)}>카테고리 연결하기</button></p>
       )}
 
+      {compared && (counts.changed > 0 || treeOps > 0) && (
+        <section className="bj-changed-strip" aria-label="DB센터에서 바꾼 것">
+          <div className="bj-changed-text">
+            <span className="bj-direction is-push">DB센터 → 발주오라</span>
+            <strong>DB센터에서 바꾼 것 · 발주오라에 보낼 것</strong>
+            <span>
+              {counts.changed > 0 && <>상품 <b>{counts.changed.toLocaleString("ko-KR")}개</b> — {changedFieldCounts.map(([field, count]) => `${BALJUORA_FIELD_SHORT_LABELS[field]} ${count.toLocaleString("ko-KR")}`).join(" · ")}</>}
+              {counts.changed > 0 && treeOps > 0 && <> · </>}
+              {treeOps > 0 && <>카테고리 <b>{treeOps}건</b>(추가·이름 변경)</>}
+            </span>
+          </div>
+          <div className="bj-changed-actions">
+            {counts.changed > 0 && <button type="button" className="outline-button" onClick={() => chooseTab("changed")}>목록 보기</button>}
+            <button type="button" className="primary-action" onClick={pushAllChanged} disabled={Boolean(busy) || jobActive}>{busy === "push" ? <Loader2 className="bj-spin" size={15} /> : <Send size={15} />} 바꾼 것 모두 보내기</button>
+          </div>
+        </section>
+      )}
+
+      <BaljuoraCategoryTreeCard
+        tree={overview?.categoryTree}
+        doogoCategories={overview?.doogoCategories ?? []}
+        baljuoraCategories={overview?.baljuoraCategories ?? []}
+        disabled={Boolean(busy) || jobActive}
+        sending={busy === "push"}
+        onSend={pushCategoryTree}
+        onChanged={load}
+      />
+
       <section className="admin-card bj-list">
         <div className="bj-tabs" role="tablist" aria-label="변경 종류">
           {([
-            ["push", "보낼 변경", counts.push],
+            ["changed", "DB센터에서 바꿈", counts.changed],
+            ["push", "보낼 변경(전체)", counts.push],
             ["new", "신규 등록", counts.new],
             ["pull", "발주오라에서 바뀜", counts.pull],
             ["only", "발주오라에만 있음", counts.only]
           ] as Array<[Tab, string, number]>).map(([key, label, count]) => (
-            <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{label}<b>{count.toLocaleString("ko-KR")}</b></button>
+            <button key={key} type="button" role="tab" aria-selected={tab === key} className={`${tab === key ? "active" : ""}${key === "changed" ? " is-changed" : ""}`} onClick={() => chooseTab(key)}>{label}<b>{count.toLocaleString("ko-KR")}</b></button>
           ))}
         </div>
         <div className="bj-toolbar">
@@ -457,15 +542,15 @@ export function BaljuoraSyncAdmin() {
           {tab === "new" && <label className="bj-check"><input type="checkbox" checked={includeHidden} onChange={(event) => setIncludeHidden(event.target.checked)} /> 숨긴 상품도 보기</label>}
           <div className="bj-toolbar-actions">
             <span>{selected.size > 0 ? `${selected.size}개 선택` : `${rows.length.toLocaleString("ko-KR")}개`}</span>
-            {(tab === "push" || tab === "new") && <button type="button" className="primary-action" onClick={pushSelected} disabled={!compared || selected.size === 0 || Boolean(busy) || jobActive}>{busy === "push" ? <Loader2 className="bj-spin" size={15} /> : <Send size={15} />} 선택 {selected.size}개 동기화</button>}
+            {(tab === "changed" || tab === "push" || tab === "new") && <button type="button" className="primary-action" onClick={pushSelected} disabled={!compared || selected.size === 0 || Boolean(busy) || jobActive}>{busy === "push" ? <Loader2 className="bj-spin" size={15} /> : <Send size={15} />} 선택 {selected.size}개 {tab === "changed" ? "바꾼 칸 보내기" : "동기화"}</button>}
             {(tab === "pull" || tab === "only") && <button type="button" className="primary-action" onClick={() => void pullSelected()} disabled={selected.size === 0 || Boolean(busy)}><ArrowDownToLine size={15} /> {tab === "only" ? "DB센터로 가져오기" : "발주오라 값 가져오기"}</button>}
-            {(tab === "push" || tab === "pull") && <button type="button" className="outline-button" onClick={() => void ignoreSelected()} disabled={selected.size === 0 || Boolean(busy)}>이대로 두기</button>}
+            {(tab === "changed" || tab === "push" || tab === "pull") && <button type="button" className="outline-button" onClick={() => void ignoreSelected()} disabled={selected.size === 0 || Boolean(busy)}>이대로 두기</button>}
           </div>
         </div>
-        {!compared && tab !== "push" ? (
+        {!compared && tab !== "push" && tab !== "changed" ? (
           <div className="empty-admin">먼저 <b>발주오라 상품 불러오기(비교)</b>를 해 주세요.</div>
         ) : rows.length === 0 ? (
-          <div className="empty-admin">{tab === "push" ? "보낼 변경이 없습니다. DB센터와 발주오라 값이 같습니다." : tab === "new" ? "발주오라에 새로 등록할 상품이 없습니다." : tab === "pull" ? "발주오라에서 따로 바뀐 값이 없습니다." : "발주오라에만 있는 상품이 없습니다."}</div>
+          <div className="empty-admin">{tab === "changed" ? "마지막으로 맞춘 뒤 DB센터에서 바꾼 값이 없습니다. (처음부터 다른 값은 '보낼 변경(전체)' 탭에 있습니다.)" : tab === "push" ? "보낼 변경이 없습니다. DB센터와 발주오라 값이 같습니다." : tab === "new" ? "발주오라에 새로 등록할 상품이 없습니다." : tab === "pull" ? "발주오라에서 따로 바뀐 값이 없습니다." : "발주오라에만 있는 상품이 없습니다."}</div>
         ) : (
           <>
             <div className="bj-rows" role="list">
@@ -485,7 +570,7 @@ export function BaljuoraSyncAdmin() {
                   );
                 }
                 const item = row;
-                const shown = tab === "pull" ? item.diffs.filter((diff) => diff.direction === "pull" || diff.direction === "both") : item.diffs.filter((diff) => diff.direction !== "pull");
+                const shown = tab === "pull" ? item.diffs.filter((diff) => diff.direction === "pull" || diff.direction === "both") : tab === "changed" ? item.diffs.filter(isDoogoChange) : item.diffs.filter((diff) => diff.direction !== "pull");
                 return (
                   <label key={item.productId} className={`bj-row${item.syncStatus === "failed" ? " is-failed" : ""}`} role="listitem">
                     <input type="checkbox" checked={selected.has(item.productId)} onChange={() => toggle(item.productId)} />
@@ -570,6 +655,7 @@ export function BaljuoraSyncAdmin() {
               policyMap={settingsDraft.shippingPolicyMap ?? {}}
               onPolicyMapChange={(next) => setSettingsDraft({ ...settingsDraft, shippingPolicyMap: next })}
               onCategoriesCreated={load}
+              excludeNames={overview.categoryTree?.excludeNames}
             />
             <div className="bj-settings-actions"><button type="button" className="primary-action" onClick={() => void saveSettings()} disabled={busy === "settings"}>{busy === "settings" ? <Loader2 className="bj-spin" size={15} /> : <CheckCircle2 size={15} />} 설정 저장</button></div>
           </div>

@@ -16,6 +16,7 @@ import {
   getBaljuoraProductPrices,
   getRunnerImage,
   ignoreBaljuoraDifferences,
+  importBaljuoraSubcategories,
   ingestRunnerResults,
   listBaljuoraChanges,
   listBaljuoraJobs,
@@ -74,6 +75,8 @@ baljuoraRouter.put("/admin/settings", adminRoute, async (c) => {
     categoryMap: z.record(z.string().max(120), z.string().max(120)).optional(),
     shippingPolicyMap: z.record(z.string().max(120), z.string().max(120)).optional(),
     baljuoraCategoryMap: z.record(z.string().max(120), z.string().max(120)).optional(),
+    subcategoryMap: z.record(z.string().max(120), z.string().max(120)).optional(),
+    categoryTreeExclude: z.array(z.string().trim().min(1).max(50)).max(10).optional(),
     templateCode: z.string().trim().max(80).nullable().optional()
   }).safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "동기화 설정 값을 확인해 주세요."), 400);
@@ -89,16 +92,18 @@ baljuoraRouter.post("/admin/jobs", adminRoute, async (c) => {
     z.object({ type: z.literal("compare") }),
     z.object({
       type: z.literal("push"),
-      productIds: ProductIdsSchema.min(1),
-      fieldsByProduct: z.record(z.string().max(120), z.array(FieldSchema).max(BALJUORA_SYNC_FIELDS.length)).optional()
+      productIds: ProductIdsSchema,
+      fieldsByProduct: z.record(z.string().max(120), z.array(FieldSchema).max(BALJUORA_SYNC_FIELDS.length)).optional(),
+      // true: 상품이 없어도 DB센터 → 발주오라 상품 카테고리 맞추기(추가·이름 바꾸기)만 보냄
+      categoryTree: z.boolean().optional()
     })
   ]).safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "동기화할 상품을 골라 주세요."), 400);
+  if (!parsed.success || (parsed.data.type === "push" && parsed.data.productIds.length === 0 && !parsed.data.categoryTree)) return c.json(apiFailure("INVALID_INPUT", "동기화할 상품을 골라 주세요."), 400);
   try {
     const user = c.var.currentUser;
     const input = parsed.data.type === "compare"
       ? { type: "compare" as const }
-      : { type: "push" as const, productIds: parsed.data.productIds, fieldsByProduct: parsed.data.fieldsByProduct as Record<string, Array<(typeof BALJUORA_SYNC_FIELDS)[number]>> | undefined };
+      : { type: "push" as const, productIds: parsed.data.productIds, fieldsByProduct: parsed.data.fieldsByProduct as Record<string, Array<(typeof BALJUORA_SYNC_FIELDS)[number]>> | undefined, categoryTree: parsed.data.categoryTree };
     return c.json(apiSuccess(await createBaljuoraJob(input, user?.username || user?.email || null)));
   } catch (error) {
     return errorResponse(c, error);
@@ -161,6 +166,17 @@ baljuoraRouter.post("/admin/categories/from-baljuora", adminRoute, async (c) => 
   }
 });
 
+// 카테고리 트리 맞추기: 발주오라 2차 카테고리를 DB센터 2차 카테고리로 가져와 연결합니다(브랜드별 제외, 발주오라는 바꾸지 않음).
+baljuoraRouter.post("/admin/categories/import-subcategories", adminRoute, async (c) => {
+  const parsed = z.object({ baljuoraIds: z.array(z.string().trim().min(1).max(80)).max(300).optional() }).safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "가져올 발주오라 카테고리를 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess(await importBaljuoraSubcategories(parsed.data)));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
 baljuoraRouter.post("/admin/ignore", adminRoute, async (c) => {
   const parsed = z.object({ productIds: ProductIdsSchema.min(1), fields: z.array(FieldSchema).max(BALJUORA_SYNC_FIELDS.length).optional() })
     .safeParse(await c.req.json().catch(() => null));
@@ -211,7 +227,9 @@ baljuoraRouter.post("/runner/:code/results", publicRoute, async (c) => {
       shippingPolicies: Array.isArray(body.shippingPolicies) ? body.shippingPolicies : undefined,
       group: body.group === null ? null : body.group && typeof body.group === "object" ? body.group as { id: string; name: string } : undefined,
       snapshots: Array.isArray(body.snapshots) ? body.snapshots as never : undefined,
-      items: Array.isArray(body.items) ? body.items as never : undefined
+      items: Array.isArray(body.items) ? body.items as never : undefined,
+      // 카테고리 트리 맞추기 결과(서비스에서 작업에 든 추가만 받고 칸을 정리함)
+      categoryTree: body.categoryTree && typeof body.categoryTree === "object" ? body.categoryTree : undefined
     })));
   } catch (error) {
     return errorResponse(c, error);

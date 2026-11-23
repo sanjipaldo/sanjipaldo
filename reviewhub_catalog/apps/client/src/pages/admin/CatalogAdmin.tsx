@@ -55,6 +55,7 @@ import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 import { apiFetch } from "@/lib/api";
 import { baljuoraPriceCells, isLegacyBaljuoraRecord, type BaljuoraProductPrices } from "@/lib/baljuora-editor-prices";
 import { EncyclopediaSearchAdmin } from "./EncyclopediaSearchAdmin";
+import { CategoriesAdmin } from "./CategoriesAdmin";
 import type { SupplierAccountView } from "./SupplierPortalAdmin";
 import { isSupplierAccount } from "@/components/auth/AdminGuard";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
@@ -2231,25 +2232,6 @@ function SuppliersAdmin() {
   </>;
 }
 
-function CategoriesAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () => Promise<void> }) {
-  const [name, setName] = useState("");
-  const [shippingType, setShippingType] = useState<ShippingType>("domestic");
-  const create = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const response = await apiFetch("/catalog/admin/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, shippingType, sortOrder: data.categories.length + 1, isActive: true }) });
-    if (!response.ok) return;
-    setName("");
-    toast.success("카테고리를 추가했습니다.");
-    await refresh();
-  };
-  const remove = async (category: Category) => {
-    if (!window.confirm(`'${category.name}' 카테고리를 삭제할까요?`)) return;
-    const response = await apiFetch(`/catalog/admin/categories/${category.id}`, { method: "DELETE" });
-    if (!response.ok) return;
-    await refresh();
-  };
-  return <><div className="admin-page-heading"><div><span>CATEGORY</span><h1>상품 카테고리</h1><p>두고푸드 7개 대카테고리와 상품 수를 관리합니다.</p></div></div><div className="category-admin-grid">{(["domestic", "overseas"] as const).map((type) => <section className="admin-card" key={type}><div className="card-heading"><Truck size={19} /><div><h2>{type === "domestic" ? "국내배송" : "해외배송"}</h2><p>{data.categories.filter((item) => item.shippingType === type).length}개 카테고리</p></div></div><div className="category-admin-list">{data.categories.filter((item) => item.shippingType === type).map((category) => <div key={category.id}><span>{category.name}</span><small>상품 {category.productCount ?? data.products.filter((item) => item.categoryId === category.id).length}개</small><button onClick={() => void remove(category)} aria-label={`${category.name} 삭제`}><Trash2 size={15} /></button></div>)}</div></section>)}</div><form className="admin-card inline-create" onSubmit={create}><div><h2>카테고리 추가</h2><p>새 분류를 배송유형에 연결합니다.</p></div><select value={shippingType} onChange={(event) => setShippingType(event.target.value as ShippingType)}><option value="domestic">국내배송</option><option value="overseas">해외배송</option></select><input value={name} onChange={(event) => setName(event.target.value)} placeholder="카테고리명" required /><button className="primary-action" type="submit"><Plus size={16} /> 추가</button></form></>;
-}
 
 function NoticesAdmin({ data, refresh }: { data: AdminCatalogData; refresh: () => Promise<void> }) {
   const [title, setTitle] = useState("");

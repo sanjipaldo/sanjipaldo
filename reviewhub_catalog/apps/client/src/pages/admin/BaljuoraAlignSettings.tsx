@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { FolderPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
-import { BALJUORA_POLICY_TYPE_LABELS, unconnectedBaljuoraCategories, type BaljuoraCategory } from "@repo/shared/baljuora-sync";
+import { BALJUORA_POLICY_TYPE_LABELS, DEFAULT_CATEGORY_TREE_EXCLUDE, excludedBaljuoraCategoryIds, unconnectedBaljuoraCategories, type BaljuoraCategory } from "@repo/shared/baljuora-sync";
 
 export type DoogoPolicyOption = { id: string; name: string; policyCode: string | null; shippingType: string };
 export type BaljuoraPolicyOption = { id: string; code: string | null; name: string; type: string | null; convertible: boolean };
@@ -17,7 +17,9 @@ export function baljuoraPolicyLabel(policy: BaljuoraPolicyOption) {
   return `${policy.name || "(이름 없음)"}${policy.code ? ` (${policy.code})` : ""}${type ? ` · ${type}` : ""}`;
 }
 
-export function BaljuoraAlignSettings({ baljuoraCategories, doogoCategories, savedCategoryMap, savedReverseMap, reverseMap, onReverseMapChange, doogoPolicies, baljuoraPolicies, policyMap, onPolicyMapChange, onCategoriesCreated }: {
+export function BaljuoraAlignSettings({ baljuoraCategories, doogoCategories, savedCategoryMap, savedReverseMap, reverseMap, onReverseMapChange, doogoPolicies, baljuoraPolicies, policyMap, onPolicyMapChange, onCategoriesCreated, excludeNames = DEFAULT_CATEGORY_TREE_EXCLUDE }: {
+  // 카테고리 맞추기에서 뺀 발주오라 1차 카테고리(브랜드별): 그 아래 브랜드 카테고리는 연결할 목록에 넣지 않습니다.
+  excludeNames?: string[];
   baljuoraCategories: BaljuoraCategory[];
   doogoCategories: Array<{ id: string; name: string; shippingType: string }>;
   savedCategoryMap: Record<string, string>;
@@ -35,7 +37,10 @@ export function BaljuoraAlignSettings({ baljuoraCategories, doogoCategories, sav
     const active = new Set(doogoCategories.map((category) => category.id));
     return Object.fromEntries(Object.entries(savedCategoryMap).filter(([doogoId]) => active.has(doogoId)));
   }, [doogoCategories, savedCategoryMap]);
-  const missing = useMemo(() => unconnectedBaljuoraCategories(baljuoraCategories, activeCategoryMap, savedReverseMap), [baljuoraCategories, activeCategoryMap, savedReverseMap]);
+  const missing = useMemo(() => {
+    const excluded = excludedBaljuoraCategoryIds(baljuoraCategories, excludeNames);
+    return unconnectedBaljuoraCategories(baljuoraCategories, activeCategoryMap, savedReverseMap).filter((category) => !excluded.has(category.id));
+  }, [baljuoraCategories, activeCategoryMap, savedReverseMap, excludeNames]);
   const reverseDirty = JSON.stringify(Object.entries(reverseMap).sort()) !== JSON.stringify(Object.entries(savedReverseMap).sort());
   // 표에 보일 줄: 이미 '발주오라 → DB센터'로 연결한 카테고리 + 아직 연결 안 된 카테고리
   const rows = useMemo(() => {

@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.5.2";
+  var VERSION = "1.6.0";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   var INFO_FIELDS = ["name", "category"];
@@ -232,6 +232,184 @@
     }
     walk(Array.isArray(tree) ? tree : pickArray(tree), null);
     return result;
+  }
+
+  // ─── 발주오라 상품 카테고리 트리 맞추기(DB센터 → 발주오라, 2026-11-23) ───────────────────────────
+  // 발주오라 상품 카테고리 화면 코드(page-3ad178912d96b35e.js) 확인 결과:
+  //  - 읽기 GET merchant/categories/tree → [{ id, name, description, sortOrder, isVisible, children: [...] }]
+  //  - 저장 POST merchant/categories/tree { categories: 트리 전체 } — 각 칸 { id(새 카테고리는 없음), name, description, sortOrder: 같은 단계 순서(0부터), isVisible, children }
+  //    트리에 없는 카테고리는 지워집니다. 그래서 지금 트리를 그대로 두고 추가·이름 바꾸기만 더해 전체를 보냅니다(브랜드별 아래도 그대로).
+  //  - 최대 3단계, 카테고리 이름은 트리 전체에서 겹치면 안 됩니다(앞뒤 공백·대소문자 무시).
+
+  // 이모지·띄어쓰기를 뺀 이름(제외할 1차 카테고리 '브랜드별' 찾기)
+  function plainName(name) {
+    return String(name || "").replace(/[^\p{L}\p{N}]+/gu, "").toLowerCase();
+  }
+
+  function treeRootsOf(payload) {
+    var value = unwrap(payload);
+    if (Array.isArray(value)) return value;
+    if (isObject(value) && Array.isArray(value.categories)) return value.categories;
+    var list = pickArray(value);
+    return list.length || Array.isArray(value) ? list : null;
+  }
+
+  // 모든 칸에 id·이름·children 목록이 있어야 저장할 수 있습니다(하나라도 다르면 바꾸지 않음).
+  function treeShapeProblem(roots) {
+    var problem = null;
+    var seen = 0;
+    (function walk(nodes, depth) {
+      if (problem) return;
+      if (!Array.isArray(nodes)) { problem = "children 목록 없음"; return; }
+      nodes.forEach(function (node) {
+        if (problem) return;
+        seen += 1;
+        if (!isObject(node) || typeof node.id !== "string" || !node.id) problem = "id 없는 카테고리";
+        else if (typeof node.name !== "string") problem = "이름 없는 카테고리";
+        else if (node.children !== undefined && node.children !== null && !Array.isArray(node.children)) problem = "children 형식 다름";
+        else if (depth > 5) problem = "단계가 너무 깊음";
+        else walk(node.children || [], depth + 1);
+      });
+    })(roots, 0);
+    if (!problem && seen === 0) problem = "카테고리가 하나도 없음";
+    return problem;
+  }
+
+  // 제외한 1차 카테고리(브랜드별) 아래 모든 카테고리 id
+  function excludedTreeIds(flat, excludeNames) {
+    var names = (excludeNames || []).map(plainName).filter(Boolean);
+    var roots = {};
+    flat.forEach(function (category) { if (category.parentId === null && names.indexOf(plainName(category.name)) >= 0) roots[category.id] = true; });
+    var parentOf = {};
+    flat.forEach(function (category) { parentOf[category.id] = category.parentId; });
+    var result = {};
+    flat.forEach(function (category) {
+      var current = category.id;
+      for (var depth = 0; current && depth < 10; depth += 1) {
+        if (roots[current]) { result[category.id] = true; break; }
+        current = parentOf[current];
+      }
+    });
+    return result;
+  }
+
+  // 지금 트리에 추가·이름 바꾸기를 더한 저장용 트리를 만듭니다(원래 트리는 바꾸지 않음).
+  function planTreeSave(roots, ops, excludeNames) {
+    var draft = (function copy(nodes) {
+      return nodes.map(function (node) {
+        return { id: node.id, name: node.name, description: node.description === null ? undefined : node.description, isVisible: node.isVisible, children: copy(Array.isArray(node.children) ? node.children : []) };
+      });
+    })(roots);
+    var index = {};
+    (function walk(nodes, parent, depth) {
+      nodes.forEach(function (node) { index[node.id] = { node: node, parent: parent, depth: depth }; walk(node.children, node, depth + 1); });
+    })(draft, null, 0);
+    var flat = flattenCategories(roots);
+    var excluded = excludedTreeIds(flat, excludeNames);
+    var names = function () {
+      var list = [];
+      (function walk(nodes) { nodes.forEach(function (node) { list.push({ node: node, key: String(node.name).trim().toLowerCase() }); walk(node.children); }); })(draft);
+      return list;
+    };
+    var nameTaken = function (name, except) {
+      var key = String(name).trim().toLowerCase();
+      return names().some(function (entry) { return entry.node !== except && entry.key === key; });
+    };
+    var result = { draft: draft, changed: false, applied: [], skipped: [], pending: {}, linked: {} };
+    var label = function (op) { return op.type === "rename" ? op.to : op.name; };
+    var keyOf = function (op) { return op.type === "rename" ? "r:" + op.baljuoraId : op.ref; };
+    var skip = function (op, reason) { result.skipped.push({ key: keyOf(op), name: label(op), reason: reason }); };
+    (ops || []).forEach(function (op) {
+      if (!isObject(op)) return;
+      if (op.type === "rename") {
+        var entry = index[op.baljuoraId];
+        if (!entry) return skip(op, "발주오라에서 이 카테고리를 찾지 못했습니다(발주오라 상품 불러오기를 다시 해 주세요).");
+        if (excluded[op.baljuoraId]) return skip(op, "브랜드별 아래 카테고리라 바꾸지 않았습니다.");
+        var to = String(op.to || "").trim();
+        if (!to) return skip(op, "새 이름이 비어 있습니다.");
+        if (String(entry.node.name).trim() === to) { result.applied.push({ key: keyOf(op), type: "rename", name: to, already: true }); return; }
+        if (nameTaken(to, entry.node)) return skip(op, "발주오라에 같은 이름의 카테고리가 이미 있어 바꾸지 않았습니다(발주오라는 카테고리 이름이 겹치면 안 됩니다).");
+        entry.node.name = to;
+        result.changed = true;
+        result.applied.push({ key: keyOf(op), type: "rename", name: to, from: op.from, baljuoraId: op.baljuoraId });
+        return;
+      }
+      if (op.type !== "add") return;
+      var name = String(op.name || "").trim();
+      if (!name) return skip(op, "이름이 비어 있습니다.");
+      var siblings;
+      if (op.parentBaljuoraId) {
+        var parent = index[op.parentBaljuoraId];
+        if (!parent) return skip(op, "발주오라에서 1차 카테고리를 찾지 못했습니다(발주오라 상품 불러오기를 다시 해 주세요).");
+        if (excluded[op.parentBaljuoraId]) return skip(op, "브랜드별 아래에는 추가하지 않습니다.");
+        if (parent.depth >= 2) return skip(op, "발주오라 카테고리는 3단계까지만 만들 수 있습니다.");
+        siblings = parent.node.children;
+      } else if (op.parentRef) {
+        var pendingParent = result.pending[op.parentRef];
+        if (!pendingParent) return skip(op, "1차 카테고리를 먼저 만들지 못해 추가하지 않았습니다.");
+        siblings = pendingParent.children;
+      } else {
+        siblings = draft;
+      }
+      var same = siblings.filter(function (node) { return String(node.name).trim().toLowerCase() === name.toLowerCase() || plainName(node.name) === plainName(name); })[0];
+      if (same) {
+        // 발주오라에 이미 같은 이름이 있으면 새로 만들지 않고 연결만 합니다.
+        result.pending[op.ref] = same;
+        if (same.id) result.linked[op.ref] = same.id;
+        result.applied.push({ key: op.ref, type: "add", name: same.name, linked: true });
+        return;
+      }
+      if (nameTaken(name, null)) return skip(op, "발주오라 다른 곳에 같은 이름의 카테고리가 있어 추가하지 않았습니다(발주오라는 카테고리 이름이 겹치면 안 됩니다).");
+      var node = { name: name, description: "", isVisible: true, children: [], ref: op.ref };
+      if (siblings === draft) {
+        // 새 1차 카테고리는 제외한 카테고리(브랜드별) 앞에 넣어 브랜드별이 맨 뒤에 그대로 있게 합니다.
+        var at = draft.findIndex(function (item) { return item.id && excluded[item.id]; });
+        if (at < 0) draft.push(node); else draft.splice(at, 0, node);
+      } else {
+        siblings.push(node);
+      }
+      result.pending[op.ref] = node;
+      result.changed = true;
+      result.applied.push({ key: op.ref, type: "add", name: name });
+    });
+    return result;
+  }
+
+  // 발주오라 상품 카테고리 화면의 저장(prepareForSave)과 같은 모양: sortOrder = 같은 단계 순서, 새 카테고리는 id 없음
+  function treeSaveBody(nodes) {
+    return nodes.map(function (node, index) {
+      return { id: node.id || undefined, name: node.name, description: node.description, sortOrder: index, isVisible: node.isVisible, children: treeSaveBody(node.children || []) };
+    });
+  }
+
+  // 저장 뒤 다시 읽은 트리 확인: 원래 카테고리가 모두 있는지, 바꾼 이름·새 카테고리가 보이는지(새 카테고리 id를 찾음)
+  function verifyTreeSave(beforeRoots, afterRoots, saved) {
+    var after = flattenCategories(afterRoots);
+    var byId = {};
+    after.forEach(function (category) { byId[category.id] = category; });
+    var missing = flattenCategories(beforeRoots).filter(function (category) { return !byId[category.id]; });
+    var created = {};
+    var failed = [];
+    saved.applied.forEach(function (entry) {
+      if (entry.type === "rename" && !entry.already) {
+        var now = byId[entry.baljuoraId];
+        if (!now || String(now.name).trim() !== entry.name) failed.push({ key: entry.key, name: entry.name, reason: "저장 뒤 다시 읽은 이름이 바뀌지 않았습니다." });
+      }
+      if (entry.type === "add") {
+        var node = saved.pending[entry.key];
+        if (node && node.id) { created[entry.key] = node.id; return; }
+        var parent = null;
+        Object.keys(saved.pending).forEach(function (ref) { if (saved.pending[ref] && (saved.pending[ref].children || []).indexOf(node) >= 0) parent = saved.pending[ref]; });
+        var parentId = parent ? parent.id || created[parent.ref] || null : null;
+        if (!parentId) {
+          (function find(nodes) { nodes.forEach(function (item) { if ((item.children || []).indexOf(node) >= 0) parentId = item.id || created[item.ref] || null; find(item.children || []); }); })(saved.draft);
+        }
+        var match = after.filter(function (category) { return String(category.name).trim() === entry.name && (category.parentId || null) === (parentId || null); })[0];
+        if (match) created[entry.key] = match.id;
+        else failed.push({ key: entry.key, name: entry.name, reason: "저장 뒤 다시 읽은 발주오라 카테고리에서 찾지 못했습니다." });
+      }
+    });
+    return { missing: missing, created: created, failed: failed, categories: after };
   }
 
   // 발주오라 응답의 칸 이름·형식만 남깁니다(값은 남기지 않음).
@@ -852,7 +1030,6 @@
       report.progress(0, 0, "발주오라 매출처 그룹·카테고리를 읽는 중…");
       var group = await findGroup(plan.groupKeyword);
       var categories = await loadCategories();
-      await discoverCategoryPage();
       var context = { group: group, groupKeyword: plan.groupKeyword };
       report.progress(0, 0, "발주오라 상품 목록을 읽는 중…");
       var raw = await listAllProducts(function (count, total) { report.progress(count, total || count, "발주오라 상품 목록 " + count + (total ? " / " + total : "") + "개 읽음"); });
@@ -1051,6 +1228,56 @@
       });
     }
 
+    // 발주오라 상품 카테고리 트리 맞추기: 지금 트리를 읽어 추가·이름 바꾸기만 더한 전체 트리를 발주오라 화면처럼 저장하고, 다시 읽어 확인합니다.
+    // 원래 카테고리가 하나라도 안 보이면 오류로 알립니다(브랜드별 아래 포함 모든 카테고리를 그대로 보냄).
+    async function applyCategoryTree(tree) {
+      var ops = isObject(tree) && Array.isArray(tree.ops) ? tree.ops : [];
+      var result = { applied: [], skipped: [], created: {}, categories: undefined, error: null, flat: null };
+      var unresolved = function (reason) {
+        ops.forEach(function (op) {
+          var key = op.type === "rename" ? "r:" + op.baljuoraId : op.ref;
+          if (!result.applied.some(function (entry) { return entry.key === key; }) && !result.skipped.some(function (entry) { return entry.key === key; })) result.skipped.push({ key: key, name: op.type === "rename" ? op.to : op.name, reason: reason });
+        });
+      };
+      try {
+        var before = treeRootsOf(await api("GET", "merchant/categories/tree"));
+        if (!before) throw SyncError("발주오라 카테고리 트리를 읽지 못해 카테고리는 바꾸지 않았습니다.");
+        if (!state.structure.categoryTree) state.structure.categoryTree = structureOf(before);
+        var problem = treeShapeProblem(before);
+        if (problem) throw SyncError("발주오라 카테고리 트리 모양이 예상과 달라(" + problem + ") 카테고리는 바꾸지 않았습니다.");
+        var saved = planTreeSave(before, ops, tree.excludeNames || ["브랜드별"]);
+        result.skipped = saved.skipped.slice();
+        if (!saved.changed) {
+          result.applied = saved.applied.map(function (entry) { return { key: entry.key, type: entry.type, name: entry.name }; });
+          result.created = Object.assign({}, saved.linked);
+          result.flat = flattenCategories(before);
+          result.categories = result.flat;
+          return result;
+        }
+        await api("POST", "merchant/categories/tree", { categories: treeSaveBody(saved.draft) });
+        var after = treeRootsOf(await api("GET", "merchant/categories/tree"));
+        if (!after) throw SyncError("카테고리를 저장했지만 다시 읽지 못했습니다. 발주오라 상품 카테고리 화면에서 확인해 주세요.");
+        var check = verifyTreeSave(before, after, saved);
+        result.created = check.created;
+        result.flat = check.categories;
+        result.categories = check.categories;
+        var failedKeys = {};
+        check.failed.forEach(function (entry) { failedKeys[entry.key] = true; result.skipped.push(entry); });
+        result.applied = saved.applied.filter(function (entry) { return !failedKeys[entry.key]; }).map(function (entry) { return { key: entry.key, type: entry.type, name: entry.name }; });
+        if (check.missing.length > 0) {
+          result.error = "발주오라 카테고리를 저장한 뒤 원래 카테고리 " + check.missing.length + "개가 보이지 않습니다(" + check.missing.slice(0, 5).map(function (category) { return category.path; }).join(", ") + "). 발주오라 상품 카테고리 화면에서 바로 확인해 주세요.";
+          state.errors.push({ path: "POST merchant/categories/tree", status: 0, messages: ["missing after save: " + check.missing.length] });
+        }
+      } catch (error) {
+        if (error && error.status === 401) throw error;
+        result.error = describeError(error);
+        unresolved(result.error);
+      }
+      // 저장이 실패하거나 확인이 어긋나면 발주오라 카테고리 화면 코드가 바뀌었을 수 있어, 다음 수정을 위해 그 화면 코드 경로를 기술 정보로 남깁니다.
+      if (result.error || result.skipped.some(function (entry) { return /저장 뒤/.test(entry.reason); })) await discoverCategoryPage();
+      return result;
+    }
+
     // 매출배송정책(배송비 정책): 발주오라 상품 수정 화면처럼 PUT products/:id 에 sellShippingPolicyId 를 보냅니다(2026-11-23 화면 코드 확인).
     // DB센터 배송 정책과 연결한 발주오라 정책이 없으면 보내지 않고 이유를 알립니다. 이미 같으면 보내지 않고 '반영됨'.
     async function applyShipping(id, detail, item, result) {
@@ -1070,7 +1297,7 @@
     // 상품 정보 저장(PUT products/:id/info)은 상품명이 꼭 있어야 합니다(2026-11-23 운영: 카테고리만 보내자 "상품명은 문자열이어야 합니다.").
     // 그래서 바꾸지 않는 칸도 지금 값(상품명·이미지·카테고리)을 함께 보내, 빠진 칸 때문에 발주오라 값이 지워지지 않게 합니다.
     // 썸네일은 applyImage 가 이 저장 뒤에 따로 저장합니다(여기서 보내는 '지금 이미지'가 새 썸네일을 되돌리지 않게 순서 고정).
-    async function applyInfo(id, detail, item, fields, result) {
+    async function applyInfo(id, detail, item, fields, result, context) {
       var body = {};
       var sent = {};
       var baseKeys = [];
@@ -1091,10 +1318,19 @@
         sent.name = "name";
       }
       if (fields.indexOf("category") >= 0) {
+        // 같은 작업에서 발주오라에 새로 만든 카테고리(DB센터 카테고리 추가)로도 보낼 수 있습니다.
+        var created = context && context.createdCategories && item.values.doogoCategoryId ? context.createdCategories["c:" + item.values.doogoCategoryId] : null;
+        if (!item.values.categoryId && created) item.values.categoryId = created;
         if (!item.values.categoryId) {
           result.skipped.push({ field: "category", reason: "DB센터 카테고리와 연결한 발주오라 카테고리가 없습니다(동기화 설정 > 카테고리 연결)." });
+        } else if (categoryKey === "categoryIds") {
+          // 상품에 붙은 브랜드별(제외한 카테고리) 아래 카테고리는 그대로 둡니다(2026-11-23 관리자 요청 "브랜드별은 특별히 제외").
+          var keep = (Array.isArray(detail.categoryIds) ? detail.categoryIds : []).filter(function (categoryId) { return typeof categoryId === "string" && categoryId !== item.values.categoryId && context && context.preserveCategoryIds && context.preserveCategoryIds[categoryId]; });
+          body.categoryIds = [item.values.categoryId].concat(keep);
+          sent.category = categoryKey;
+          dropBase(categoryKey);
         } else {
-          body[categoryKey] = categoryKey === "categoryIds" ? [item.values.categoryId] : item.values.categoryId;
+          body[categoryKey] = item.values.categoryId;
           sent.category = categoryKey;
           dropBase(categoryKey);
         }
@@ -1159,7 +1395,7 @@
           try { await applyPricing(id, detail, item, priceFields, result, context); } catch (error) { if (error && error.status === 401) throw error; markFailed(priceFields, error); }
         }
         if (infoFields.length) {
-          try { await applyInfo(id, detail, item, infoFields, result); } catch (error) { if (error && error.status === 401) throw error; markFailed(infoFields, error); }
+          try { await applyInfo(id, detail, item, infoFields, result, context); } catch (error) { if (error && error.status === 401) throw error; markFailed(infoFields, error); }
         }
         var checks = {};
         if (fields.indexOf("image") >= 0) {
@@ -1186,10 +1422,26 @@
 
     async function runPush(plan, report, code) {
       report.progress(0, plan.items.length, "발주오라 매출처 그룹을 확인하는 중…");
-      await discoverCategoryPage();
       var group = plan.groupId ? { id: plan.groupId, name: plan.groupKeyword } : null;
       if (plan.items.some(function (item) { return item.fields.indexOf("groupPrice") >= 0; }) && !group) group = await findGroup(plan.groupKeyword);
-      var context = { group: group, groupKeyword: plan.groupKeyword, existingCodes: null };
+      var context = { group: group, groupKeyword: plan.groupKeyword, existingCodes: null, createdCategories: {}, preserveCategoryIds: null };
+      var categoriesNow = null;
+      // 1) DB센터 → 발주오라 상품 카테고리 맞추기(추가·이름 바꾸기)를 상품보다 먼저 합니다.
+      if (isObject(plan.categoryTree) && Array.isArray(plan.categoryTree.ops) && plan.categoryTree.ops.length > 0) {
+        report.progress(0, plan.items.length, "발주오라 상품 카테고리를 맞추는 중…");
+        var treeResult = await applyCategoryTree(plan.categoryTree);
+        context.createdCategories = Object.assign({}, treeResult.created);
+        categoriesNow = treeResult.flat;
+        var treeLine = "카테고리 맞추기: 반영 " + treeResult.applied.length + "건" + (treeResult.skipped.length ? " · 못 한 것 " + treeResult.skipped.length + "건" : "");
+        report.log((treeResult.error || treeResult.skipped.length ? "✕ " : "✓ ") + treeLine + (treeResult.error ? " — " + treeResult.error : ""), Boolean(treeResult.error || treeResult.skipped.length));
+        treeResult.skipped.slice(0, 5).forEach(function (entry) { report.log("  · " + entry.name + ": " + entry.reason, true); });
+        await report.results({ final: false, items: [], categoryTree: { applied: treeResult.applied, skipped: treeResult.skipped, created: treeResult.created, categories: treeResult.categories, error: treeResult.error } });
+      }
+      // 2) 상품 카테고리를 보낼 때 상품에 붙은 브랜드별 아래 카테고리는 지우지 않게 지금 발주오라 트리에서 찾아 둡니다.
+      if (plan.items.some(function (item) { return item.fields.indexOf("category") >= 0; })) {
+        if (!categoriesNow) categoriesNow = await loadCategories();
+        context.preserveCategoryIds = excludedTreeIds(categoriesNow || [], plan.categoryExclude || ["브랜드별"]);
+      }
       if (plan.items.some(function (item) { return item.action === "create"; })) {
         report.progress(0, plan.items.length, "같은 상품코드가 발주오라에 이미 있는지 확인하는 중…");
         var listed = await listAllProducts();
@@ -1795,6 +2047,13 @@
     buildSellerProductPrices: buildSellerProductPrices,
     normalizeShippingPolicy: normalizeShippingPolicy,
     fitsProductImage: fitsProductImage,
+    plainName: plainName,
+    treeRootsOf: treeRootsOf,
+    treeShapeProblem: treeShapeProblem,
+    excludedTreeIds: excludedTreeIds,
+    planTreeSave: planTreeSave,
+    treeSaveBody: treeSaveBody,
+    verifyTreeSave: verifyTreeSave,
     makeImageConverter: makeImageConverter,
     PRODUCT_IMAGE: PRODUCT_IMAGE,
     extractPurchaseCost: extractPurchaseCost,

@@ -34,6 +34,10 @@ import {
   getPublicGuideSettings,
   getPublicNotices,
   removeCategory,
+  listSubcategories,
+  createSubcategory,
+  updateSubcategory,
+  removeSubcategory,
   removeProduct,
   removeProducts,
   removeSupplier,
@@ -161,6 +165,16 @@ const CategorySchema = z.object({
   shippingType: z.enum(["domestic", "overseas"]),
   sortOrder: z.coerce.number().int().min(0).max(999).optional(),
   isActive: z.boolean().optional()
+});
+
+// 2차 카테고리(migration 035): 발주오라 상품 카테고리 2차와 맞추는 이름(상품은 넣지 않음)
+const SubcategorySchema = z.object({
+  categoryId: z.string().trim().min(1).max(80),
+  name: z.string().trim().min(1).max(50)
+});
+const SubcategoryUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(50).optional(),
+  sortOrder: z.coerce.number().int().min(0).max(999).optional()
 });
 
 const NoticeSchema = z.object({
@@ -1061,6 +1075,36 @@ catalogRouter.put("/admin/categories/:id", adminRoute, async (c) => {
 catalogRouter.delete("/admin/categories/:id", adminRoute, async (c) => {
   try {
     return c.json(apiSuccess({ category: await removeCategory(c.req.param("id")) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+catalogRouter.get("/admin/subcategories", adminRoute, async (c) => c.json(apiSuccess({ subcategories: await listSubcategories() })));
+
+catalogRouter.post("/admin/subcategories", adminRoute, async (c) => {
+  const parsed = SubcategorySchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "2차 카테고리 이름을 확인해 주세요(1~50자)."), 400);
+  try {
+    return c.json(apiSuccess({ subcategory: await createSubcategory(parsed.data) }), 201);
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+catalogRouter.put("/admin/subcategories/:id", adminRoute, async (c) => {
+  const parsed = SubcategoryUpdateSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "2차 카테고리 이름을 확인해 주세요(1~50자)."), 400);
+  try {
+    return c.json(apiSuccess({ subcategory: await updateSubcategory(c.req.param("id"), parsed.data) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+catalogRouter.delete("/admin/subcategories/:id", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess({ subcategory: await removeSubcategory(c.req.param("id")) }));
   } catch (error) {
     return errorResponse(c, error);
   }
