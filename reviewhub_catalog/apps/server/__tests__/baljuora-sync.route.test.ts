@@ -186,6 +186,34 @@ describe("발주오라 동기화 API", () => {
     expect((await app.fetch(new Request(`http://localhost/api/baljuora/runner/${push.data.code}`))).status).toBe(409);
   });
 
+  it("상품 수정 창: 마지막 비교·동기화 때 읽은 발주오라 가격(공급가·황금농부 그룹 공급가·매입원가)을 관리자만 봅니다", async () => {
+    expect((await app.fetch(new Request("http://localhost/api/baljuora/admin/products/bj-test-1"))).status).toBe(401);
+    const admin = await adminToken();
+    type Prices = { linked: boolean; baljuoraId: string | null; code: string | null; groupKeyword: string; syncedAt: string | null; supplyPrice: number | null; groupPrice: number | null; groupPriceKnown: boolean; purchaseCost: number | null };
+    const before = await json<Prices>(await fetchWithAuth(app, admin, "/api/baljuora/admin/products/bj-test-1"));
+    expect(before.data).toMatchObject({ linked: false, groupKeyword: "황금농부", supplyPrice: null, groupPriceKnown: false });
+
+    const compare = await startCompare(admin);
+    await post(`/api/baljuora/runner/${compare.code}/results`, {
+      final: true,
+      categories: CATEGORY_TREE,
+      group: { id: "grp-1", name: "황금농부 수강생" },
+      snapshots: [
+        snapshot({ id: "bj-a", code: "BJT-001", name: "봄날 사과 5kg", supplyPrice: 26000, consumerPrice: 39000, purchaseCost: 20000, groupPrice: 23500, categoryIds: ["bj-cat-fruit"] }),
+        snapshot({ id: BJ_UUID, code: "BJT-002", name: "봄날 배 7.5kg", supplyPrice: 38000, purchaseCost: 30000, groupPrice: null }),
+        snapshot({ id: "bj-c", code: "BJT-003", name: "이웃 감귤 3kg", supplyPrice: 12000, purchaseCost: null })
+      ]
+    });
+    const apple = await json<Prices>(await fetchWithAuth(app, admin, "/api/baljuora/admin/products/bj-test-1"));
+    expect(apple.data).toMatchObject({ linked: true, baljuoraId: "bj-a", code: "BJT-001", supplyPrice: 26000, groupPrice: 23500, groupPriceKnown: true, purchaseCost: 20000 });
+    expect(apple.data.syncedAt).toBeTruthy();
+    // 황금농부 개별공급가가 없으면 null(수강생도 공급가로 삼), 읽지 못했으면 groupPriceKnown=false
+    const pear = await json<Prices>(await fetchWithAuth(app, admin, `/api/baljuora/admin/products/baljuora-${BJ_UUID}`));
+    expect(pear.data).toMatchObject({ linked: true, groupPrice: null, groupPriceKnown: true });
+    const tangerine = await json<Prices>(await fetchWithAuth(app, admin, "/api/baljuora/admin/products/bj-test-3"));
+    expect(tangerine.data).toMatchObject({ linked: true, supplyPrice: 12000, groupPrice: null, groupPriceKnown: false, purchaseCost: null });
+  });
+
   it("이대로 두기 · 발주오라에만 있는 상품 가져오기(숨김 등록)", async () => {
     const admin = await adminToken();
     const compare = await startCompare(admin);

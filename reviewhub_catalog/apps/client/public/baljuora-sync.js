@@ -11,12 +11,17 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.1.0";
+  var VERSION = "1.2.0";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   var INFO_FIELDS = ["name", "category", "image"];
   var CODE_KEYS = ["code", "productCode", "sku", "skuCode", "managementCode", "manageCode", "customCode", "itemCode", "goodsCode"];
   var READ_ONLY_KEYS = ["id", "createdAt", "updatedAt", "deletedAt", "merchantId", "merchant", "creator", "updater", "createdBy", "updatedBy", "stats", "statistics", "inventory", "inventories", "histories", "orderCount", "salesCount"];
+
+  // 발주오라 상품 수정 화면과 같은 방식으로 상세를 읽습니다(2026-11-23 화면 코드 확인: getProductsById(id, { include: [...] }),
+  // 발주오라 API 도구는 배열을 쉼표로 이어 보냄). prices = 매출처별 개별공급가(황금농부 그룹 공급가 포함), productSuppliers = 매입처·매입원가.
+  var DETAIL_INCLUDE = "categories,productSuppliers,shippingPolicy,prices,visibility";
+  var LIST_INCLUDE = "productSuppliers,prices";
 
   // ─── 순수 도우미(테스트에서도 씀) ─────────────────────────────────────────────
 
@@ -95,11 +100,17 @@
 
   function groupEntryInfo(entry) {
     if (!isObject(entry)) return null;
-    var group = isObject(entry.sellerGroup) ? entry.sellerGroup : isObject(entry.group) ? entry.group : {};
+    // 개별공급가 줄은 매출처(셀러) 줄과 그룹 줄이 섞여 있습니다(발주오라 화면 "타입: 그룹/매출처").
+    var type = String(entry.targetType || entry.type || entry.priceType || entry.kind || "").toUpperCase();
+    var target = isObject(entry.target) ? entry.target : null;
+    var group = isObject(entry.sellerGroup) ? entry.sellerGroup : isObject(entry.group) ? entry.group : target && /GROUP/.test(type) ? target : {};
+    var sellerOnly = (/SELLER/.test(type) && !/GROUP/.test(type)) || (!group.id && !entry.sellerGroupId && !entry.groupId && (isObject(entry.seller) || typeof entry.sellerId === "string"));
     var price = ["supplyPrice", "price", "groupPrice", "groupSupplyPrice", "amount", "unitPrice"].find(function (key) { return key in entry; });
+    var id = entry.sellerGroupId || entry.groupId || group.id || (/GROUP/.test(type) && typeof entry.targetId === "string" ? entry.targetId : null) || null;
     return {
-      id: entry.sellerGroupId || entry.groupId || group.id || null,
-      name: entry.sellerGroupName || entry.groupName || group.name || entry.name || "",
+      kind: sellerOnly ? "seller" : id || /GROUP/.test(type) ? "group" : null,
+      id: sellerOnly ? null : id,
+      name: sellerOnly ? "" : entry.sellerGroupName || entry.groupName || group.name || entry.targetName || (target && target.name) || entry.name || "",
       priceKey: price || null,
       price: price ? toNumber(entry[price]) : null
     };
@@ -107,12 +118,12 @@
 
   function groupArrayKeys(record) {
     return Object.keys(record).filter(function (key) {
-      return Array.isArray(record[key]) && /group|tier|grade/i.test(key) && record[key].every(function (entry) { return isObject(entry); });
+      return Array.isArray(record[key]) && /group|tier|grade|^prices$|sellerPrices|customPrices|individualPrices/i.test(key) && record[key].every(function (entry) { return isObject(entry); });
     });
   }
 
   function matchesGroup(info, group, keyword) {
-    if (!info) return false;
+    if (!info || info.kind === "seller") return false;
     if (group && group.id && info.id === group.id) return true;
     return Boolean(keyword && info.name && String(info.name).indexOf(keyword) >= 0);
   }
@@ -131,6 +142,18 @@
     return null;
   }
 
+  // 매입원가: 상품 칸(purchaseCost·purchasePrice)이 없으면 매입처 목록(productSuppliers)의 기본 매입처 매입원가를 씁니다. 못 읽으면 undefined.
+  function extractPurchaseCost(record) {
+    if (record.purchaseCost !== undefined) return toNumber(record.purchaseCost);
+    if (record.purchasePrice !== undefined) return toNumber(record.purchasePrice);
+    if (!Array.isArray(record.productSuppliers)) return undefined;
+    var entries = record.productSuppliers.filter(isObject);
+    var main = entries.find(function (entry) { return entry.isDefault === true || entry.isMain === true || entry.default === true; }) || entries[0];
+    if (!main) return undefined;
+    var key = ["purchasePrice", "purchaseCost", "costPrice", "price", "unitPrice"].find(function (name) { return main[name] !== undefined && main[name] !== null; });
+    return key ? toNumber(main[key]) : undefined;
+  }
+
   function normalizeProduct(record, context) {
     if (!isObject(record) || typeof record.id !== "string") return null;
     var code = firstString(record, CODE_KEYS);
@@ -141,7 +164,7 @@
       name: String(record.name || record.productName || "").replace(/\s+/g, " ").trim(),
       supplyPrice: toNumber(record.supplyPrice),
       consumerPrice: toNumber(record.consumerPrice !== undefined ? record.consumerPrice : record.retailPrice),
-      purchaseCost: toNumber(record.purchaseCost !== undefined ? record.purchaseCost : record.purchasePrice),
+      purchaseCost: (function () { var cost = extractPurchaseCost(record); return cost === undefined ? null : cost; })(),
       imageUrls: extractImages(record).slice(0, 20),
       isVisible: typeof record.isVisible === "boolean" ? record.isVisible : null,
       isSoldOut: typeof record.isSoldOut === "boolean" ? record.isSoldOut : null,
@@ -222,6 +245,16 @@
     return names;
   }
 
+  // 목록 안쪽 칸 오류("prices.0.property sellShippingPolicyId should not exist") → [{ parent: "prices", key: "sellShippingPolicyId" }]
+  function nestedForbidden(messages) {
+    var list = [];
+    messages.forEach(function (message) {
+      var match = /([A-Za-z][A-Za-z0-9_]*)\.\d+\.property\s+([A-Za-z0-9_]+)\s+should not exist/i.exec(message);
+      if (match) list.push({ parent: match[1], key: match[2] });
+    });
+    return list;
+  }
+
   function missingProperties(messages) {
     var names = [];
     messages.forEach(function (message) {
@@ -273,14 +306,31 @@
       });
       if (!found) {
         if (!group || !group.id) return null;
+        var sample = list.find(function (entry) { var info = groupEntryInfo(entry); return info && info.kind === "group"; });
         var added = {};
-        added[list.length && groupEntryInfo(list[0]) && list[0].groupId !== undefined ? "groupId" : "sellerGroupId"] = group.id;
+        if (sample && "targetType" in sample) {
+          added.targetType = sample.targetType;
+          added.targetId = group.id;
+        } else if (sample && "type" in sample) {
+          added.type = sample.type;
+          added.targetId = group.id;
+        } else {
+          added[sample && sample.groupId !== undefined ? "groupId" : "sellerGroupId"] = group.id;
+        }
         added[priceKey || "supplyPrice"] = price;
         list.push(added);
       }
-      return { key: key, value: writable(list) };
+      return { key: key, value: list.map(priceEntryForWrite) };
     }
     return null;
+  }
+
+  // 개별공급가 줄을 보낼 모양으로: 읽기 전용 칸(id·작성자·상품 연결)을 빼고, 연결된 대상은 id 칸으로(sellerGroup → sellerGroupId), 빈 연결(null)은 뺍니다.
+  function priceEntryForWrite(entry) {
+    var copy = writable(entry);
+    ["author", "authorId", "product", "productId", "merchantId", "createdById", "updatedById"].forEach(function (key) { delete copy[key]; });
+    Object.keys(copy).forEach(function (key) { if (copy[key] === null && !/Id$/.test(key)) delete copy[key]; });
+    return copy;
   }
 
   // ─── 발주오라 화면 코드에서 저장 방식 찾기 ─────────────────────────────────────
@@ -438,6 +488,17 @@
         } catch (error) {
           if (error.status !== 400) throw error;
           var messages = messagesOf(error);
+          // 목록 안쪽 칸만 거절했으면 그 칸만 각 줄에서 빼고 다시 보냅니다(목록 자체는 그대로).
+          var nested = nestedForbidden(messages).filter(function (entry) {
+            return Array.isArray(body[entry.parent]) && body[entry.parent].some(function (row) { return isObject(row) && entry.key in row; });
+          });
+          if (nested.length > 0) {
+            nested.forEach(function (entry) {
+              body[entry.parent].forEach(function (row) { if (isObject(row)) delete row[entry.key]; });
+              removed.push(entry.parent + "[]." + entry.key);
+            });
+            continue;
+          }
           var forbidden = forbiddenProperties(messages).filter(function (name) { return name in body; });
           if (forbidden.length > 0) {
             forbidden.forEach(function (name) { delete body[name]; removed.push(name); });
@@ -485,8 +546,13 @@
       for (var page = 1; page <= 400; page += 1) {
         var payload;
         try {
-          payload = unwrap(await api("GET", "products", undefined, { params: { page: page, limit: limit } }));
+          payload = unwrap(await api("GET", "products", undefined, { params: state.listInclude === false ? { page: page, limit: limit } : { page: page, limit: limit, include: LIST_INCLUDE } }));
         } catch (error) {
+          if (page === 1 && error.status === 400 && state.listInclude !== false) {
+            state.listInclude = false;
+            page -= 1;
+            continue;
+          }
           if (page === 1 && error.status === 400 && limit > 20) {
             limit = limit === 100 ? 50 : 20;
             page -= 1;
@@ -524,51 +590,64 @@
     }
 
     async function getDetail(id) {
-      var detail = unwrap(await api("GET", "products/" + encodeURIComponent(id)));
+      var path = "products/" + encodeURIComponent(id);
+      var detail;
+      if (state.includeOk !== false) {
+        try {
+          detail = unwrap(await api("GET", path, undefined, { params: { include: DETAIL_INCLUDE } }));
+          state.includeOk = true;
+        } catch (error) {
+          if (error.status !== 400 || state.includeOk === true) throw error;
+          state.includeOk = false;
+          state.errors.push({ path: "GET products/:id?include", status: 400, messages: messagesOf(error).slice(0, 3) });
+        }
+      }
+      if (detail === undefined) detail = unwrap(await api("GET", path));
       if (isObject(detail) && isObject(detail.product) && typeof detail.product.id === "string" && !detail.id) detail = detail.product;
       if (!state.structure.productDetail && isObject(detail)) state.structure.productDetail = structureOf(detail);
       return detail;
     }
 
-    // 상품 정보에 매출처 그룹 공급가 칸이 없을 때 한 번만: 발주오라 상품 수정·등록 화면의 코드(js)에서 관련 부분을 찾아 기술 정보로 남깁니다.
+    // 매출처 그룹 공급가를 읽거나 저장하지 못했을 때 한 번만: 발주오라 상품 수정 화면의 코드(js)를 찾아 기술 정보로 남깁니다.
+    // 2차(1.2.0): 상품 화면이 불러오는 코드 파일 이름을 모두 남기고, 그중 "개별공급가·매출처별" 화면(저장하는 코드)을 찾아 앞뒤를 넉넉히 잘라 보냅니다.
     async function discoverProductForm(sampleId) {
       if (state.discovery || !env.consoleOrigin || !env.pagePath) return;
-      var out = state.discovery = { pages: [], chunks: [], snippets: [] };
+      var out = state.discovery = { pages: [], allChunks: [], formChunks: [], snippets: [] };
       try {
         var slug = String(env.pagePath).split("/").filter(Boolean)[0] || "";
         if (!slug) return;
         var id = sampleId ? encodeURIComponent(sampleId) : null;
-        var candidates = (id ? ["/products/" + id, "/products/" + id + "/edit", "/products/edit/" + id] : []).concat(["/products/create", "/products/new"]);
+        var candidates = (id ? ["/products/" + id] : []).concat(["/products/create"]);
         var loaded = {};
         (env.loadedScripts || []).forEach(function (src) { chunkPathsOf(src).forEach(function (path) { loaded[path] = true; }); });
-        var score = {};
-        for (var index = 0; index < candidates.length; index += 1) {
+        for (var index = 0; index < candidates.length && out.allChunks.length === 0; index += 1) {
           var path = "/" + slug + candidates[index];
           var shown = candidates[index].replace(id || "\u0000", ":id");
           try {
             var response = await env.fetch(new URL(path, env.consoleOrigin).toString(), { headers: { RSC: "1" }, credentials: "include" });
             var text = await response.text();
             var chunks = chunkPathsOf(text);
-            var routeChunks = chunks.filter(function (chunk) { return /products/i.test(chunk); });
-            out.pages.push({ path: shown, status: response.status, size: text.length, chunks: chunks.length, routeChunks: routeChunks });
-            chunks.forEach(function (chunk) { if (!loaded[chunk]) score[chunk] = (score[chunk] || 0) + (routeChunks.indexOf(chunk) >= 0 ? 10 : 1); });
+            out.pages.push({ path: shown, status: response.status, size: text.length, chunks: chunks.length });
+            if (response.ok && chunks.some(function (chunk) { return /products/i.test(chunk); })) out.allChunks = chunks;
           } catch (error) {
             out.pages.push({ path: shown, error: describeError(error) });
           }
         }
-        out.chunks = Object.keys(score).sort(function (a, b) { return score[b] - score[a]; }).slice(0, 16);
-        var budget = 45000;
-        for (var chunkIndex = 0; chunkIndex < out.chunks.length && budget > 0; chunkIndex += 1) {
-          var chunkPath = out.chunks[chunkIndex];
+        var budget = 52000;
+        var targets = out.allChunks.filter(function (chunk) { return !loaded[chunk]; }).slice(0, 60);
+        for (var chunkIndex = 0; chunkIndex < targets.length && budget > 0; chunkIndex += 1) {
+          var chunkPath = targets[chunkIndex];
           try {
             var file = await env.fetch(new URL("/_next/" + chunkPath, env.consoleOrigin).toString());
             if (!file.ok) continue;
             var code = await file.text();
-            var pieces = codeSnippets(code, DISCOVERY_ANCHORS, 600, 3);
+            if (code.indexOf("개별공급가") < 0 && code.indexOf("매출처별") < 0) continue;
+            out.formChunks.push(chunkPath);
+            var pieces = codeSnippets(code, ["개별공급가", "prices", "visibility", "productSuppliers", "mutate", "onSubmit", "supplyPrice"], 900, 4);
             for (var pieceIndex = 0; pieceIndex < pieces.length && budget > 0; pieceIndex += 1) {
               var piece = pieces[pieceIndex];
               budget -= piece.text.length;
-              out.snippets.push({ chunk: chunkPath.split("/").slice(-3).join("/"), anchor: piece.anchor, at: piece.at, text: piece.text });
+              out.snippets.push({ chunk: chunkPath.split("/").slice(-1)[0], anchor: piece.anchor, at: piece.at, text: piece.text });
             }
           } catch (error) {
             out.snippets.push({ chunk: chunkPath, error: describeError(error) });
@@ -773,6 +852,8 @@
           result.snapshot = after;
           result.code = after.code || result.code;
         }
+        // 수강생 단가(황금농부 그룹 공급가)를 저장하지 못했으면 다음 고칠 때 쓸 수 있게 발주오라 저장 코드를 찾아 둡니다.
+        if (result.skipped.some(function (entry) { return entry.field === "groupPrice"; })) await discoverProductForm(id);
         result.ok = result.applied.length > 0 || item.action === "create";
         if (!result.ok && !result.error) result.error = result.skipped.map(function (entry) { return entry.reason; }).join(" / ") || "바뀐 칸이 없습니다.";
       } catch (error) {
@@ -947,6 +1028,8 @@
     missingProperties: missingProperties,
     writable: writable,
     buildGroupPricing: buildGroupPricing,
+    priceEntryForWrite: priceEntryForWrite,
+    extractPurchaseCost: extractPurchaseCost,
     chunkPathsOf: chunkPathsOf,
     codeSnippets: codeSnippets,
     buildCreateBody: buildCreateBody,

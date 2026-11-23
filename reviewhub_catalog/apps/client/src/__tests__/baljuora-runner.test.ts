@@ -166,17 +166,19 @@ describe("매출처 그룹 공급가 저장 방식 찾기(2026-11-23)", () => {
     expect(internals.chunkPathsOf(`1:I[1,["static/chunks/1234-ab.js","${page}"],"default"] "static/chunks/1234-ab.js"`)).toEqual(["static/chunks/1234-ab.js", page]);
   });
 
-  it("상품 정보에 그룹 공급가가 없으면 비교 때 발주오라 상품 화면 코드에서 관련 부분을 찾아 기술 정보로 보냅니다(발주오라는 바꾸지 않음)", async () => {
+  it("상품 정보에 그룹 공급가가 없으면 비교 때 발주오라 상품 화면 코드에서 저장 화면 부분을 찾아 기술 정보로 보냅니다(발주오라는 바꾸지 않음)", async () => {
     const fake = createFake();
     Object.values(fake.products).forEach((product: any) => { delete product.sellerGroupPrices; });
-    const page = "static/chunks/app/console/%5Bmerchant%5D/(main)/products/%5Bid%5D/page-abc.js";
+    const page = "static/chunks/app/console/%5Bmerchant%5D/(default)/products/%5Bid%5D/page-abc.js";
+    const form = "static/chunks/6327-form.js";
     const consoleCalls: string[] = [];
     const fetch = async (input: string, init: RequestInit = {}) => {
       const url = new URL(input);
       if (url.origin === "https://console.baljuora.com" && url.pathname !== "/api/auth/refresh") {
         consoleCalls.push(`${url.pathname}${(init.headers as Record<string, string> | undefined)?.RSC ? " (RSC)" : ""}`);
-        if (url.pathname === "/doogobiz24/products/bj-a") return new Response(`1:I[1,["static/chunks/1111-aa.js","${page}"],"default"]`, { status: 200, headers: { "Content-Type": "text/x-component" } });
-        if (url.pathname === `/_next/${page}`) return new Response('t=1;label:"개별공급가",onSubmit:()=>m.mutate({id:i,data:{sellerPrices:[{targetId:g,supplyPrice:p}]}})', { status: 200 });
+        if (url.pathname === "/doogobiz24/products/bj-a") return new Response(`1:I[1,["static/chunks/1111-aa.js","${form}","${page}"],"default"]`, { status: 200, headers: { "Content-Type": "text/x-component" } });
+        if (url.pathname === `/_next/${page}`) return new Response("t=1;", { status: 200 });
+        if (url.pathname === `/_next/${form}`) return new Response('t=1;label:"개별공급가",onSubmit:()=>m.mutate({id:i,data:{prices:[{targetType:"SELLER_GROUP",targetId:g,supplyPrice:p}]}})', { status: 200 });
         return new Response("", { status: 404 });
       }
       return fake.fetch(input, init);
@@ -185,11 +187,13 @@ describe("매출처 그룹 공급가 저장 방식 찾기(2026-11-23)", () => {
     const report = createReport();
     await runner.runCompare({ type: "compare", groupKeyword: "황금농부", detailIds: ["bj-a", "bj-b"] }, report);
     const discovery = report.posted[report.posted.length - 1].diagnostics.discovery;
-    expect(discovery.pages[0]).toMatchObject({ path: "/products/:id", status: 200, routeChunks: [page] });
-    expect(discovery.chunks).toEqual([page]); // 이미 열린 화면이 불러온 공용 코드는 다시 받지 않음
+    expect(discovery.pages[0]).toMatchObject({ path: "/products/:id", status: 200, chunks: 3 });
+    expect(discovery.allChunks).toEqual(["static/chunks/1111-aa.js", form, page]);
+    expect(discovery.formChunks).toEqual([form]); // 저장 화면 코드가 든 파일만, 이미 열린 화면이 불러온 공용 코드는 다시 받지 않음
     expect(discovery.snippets[0]).toMatchObject({ anchor: "개별공급가" });
-    expect(discovery.snippets[0].text).toContain("sellerPrices");
+    expect(discovery.snippets[0].text).toContain("prices");
     expect(consoleCalls).toContain("/doogobiz24/products/bj-a (RSC)");
+    expect(consoleCalls).not.toContain("/_next/static/chunks/1111-aa.js");
     expect(fake.calls.some((call) => call.method !== "GET" && call.url.startsWith("https://api.baljuora.com"))).toBe(false);
   });
 
@@ -206,6 +210,99 @@ describe("매출처 그룹 공급가 저장 방식 찾기(2026-11-23)", () => {
     await runner.runCompare({ type: "compare", groupKeyword: "황금농부", detailIds: ["bj-a", "bj-b"] }, report);
     expect(consoleCalls).toEqual([]);
     expect(report.posted[report.posted.length - 1].diagnostics.discovery).toBeUndefined();
+  });
+});
+
+// 실제 발주오라처럼: 상세는 include를 줘야 개별공급가(prices)·매입처(productSuppliers)가 옵니다(2026-11-23 운영 확인).
+function createIncludeFake(options: { pricingAllowed?: string[]; rowAllowed?: string[] } = {}) {
+  const product: any = {
+    id: "bj-y", code: "ass00050", name: "[본] 대왕 수제약과 [9입] 450g", supplyPrice: 6900, consumerPrice: null, imageUrls: [], categoryIds: [], categories: [],
+    productSuppliers: [{ id: "ps-1", supplier: { id: "sup-k", name: "캄므커머스" }, purchasePrice: 5700, isDefault: true, purchaseShippingPolicy: { id: "pship-1", name: "수제약과" } }],
+    prices: [
+      { id: "pr-1", targetType: "SELLER_GROUP", targetId: "grp-1", sellerGroup: { ...GROUP }, seller: null, supplyPrice: 6270, sellShippingPolicyId: null, author: { id: "u-1", name: "관리자" } },
+      { id: "pr-2", targetType: "SELLER", targetId: "s-9", seller: { id: "s-9", name: "황금농부 김씨" }, sellerGroup: null, supplyPrice: 6000, sellShippingPolicyId: null }
+    ],
+    visibility: []
+  };
+  const calls: Array<{ method: string; url: string; body?: any }> = [];
+  const allowed = options.pricingAllowed ?? ["supplyPrice", "consumerPrice", "purchaseCost", "prices"];
+  const view = (withInclude: boolean) => {
+    const { prices, productSuppliers, visibility, ...rest } = product;
+    return withInclude ? { ...rest, prices, productSuppliers, visibility } : { ...rest, productSuppliers: [] };
+  };
+  const fetch = async (input: string, init: RequestInit = {}) => {
+    const method = (init.method || "GET").toUpperCase();
+    const body = typeof init.body === "string" ? JSON.parse(init.body) : undefined;
+    calls.push({ method, url: input, body });
+    const url = new URL(input);
+    if (url.pathname === "/api/auth/refresh") return jsonResponse(200, { accessToken: "t1" });
+    if (url.origin !== "https://api.baljuora.com") return jsonResponse(404, {});
+    const path = url.pathname.replace(/^\//, "");
+    if (method === "GET" && path === "merchant/seller-groups") return jsonResponse(200, { data: { items: [GROUP] } });
+    if (method === "GET" && path === "merchant/categories/tree") return jsonResponse(200, { data: [] });
+    if (method === "GET" && path === "products") return jsonResponse(200, { data: { items: [view(false)], meta: { page: 1, totalPages: 1, hasNext: false } } });
+    if (method === "GET" && path === "products/bj-y") return jsonResponse(200, { data: view(String(url.searchParams.get("include") || "").split(",").includes("prices")) });
+    if (method === "PUT" && path === "products/bj-y/pricing") {
+      const extra = Object.keys(body).filter((key) => !allowed.includes(key));
+      if (extra.length) return jsonResponse(400, { message: extra.map((key) => `property ${key} should not exist`) });
+      const rowAllowed = options.rowAllowed ?? ["targetType", "targetId", "sellerGroupId", "sellerId", "supplyPrice", "sellShippingPolicyId"];
+      const rowErrors = (body.prices || []).flatMap((row: any, index: number) => Object.keys(row).filter((key) => !rowAllowed.includes(key)).map((key) => `prices.${index}.property ${key} should not exist`));
+      if (rowErrors.length) return jsonResponse(400, { message: rowErrors });
+      if (body.supplyPrice !== undefined) product.supplyPrice = body.supplyPrice;
+      if (body.prices) product.prices = body.prices.map((row: any, index: number) => ({ id: `pr-new-${index}`, ...row, sellerGroup: row.targetType === "SELLER_GROUP" ? { ...GROUP } : null }));
+      return jsonResponse(200, { data: view(true) });
+    }
+    return jsonResponse(404, { message: `not found ${path}` });
+  };
+  return { fetch, product, calls };
+}
+
+describe("수강생 단가 = 황금농부 개별공급가(prices, 2026-11-23)", () => {
+  it("상세를 include로 읽어 황금농부 그룹 공급가와 기본 매입처 매입원가를 가져옵니다(이름에 황금농부가 든 매출처 줄은 무시)", async () => {
+    const fake = createIncludeFake();
+    const runner = internals.createRunner({ fetch: fake.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const report = createReport();
+    await runner.runCompare({ type: "compare", groupKeyword: "황금농부", detailIds: ["bj-y"] }, report);
+    const snapshot = report.posted[0].snapshots.find((item: any) => item.id === "bj-y");
+    expect(snapshot).toMatchObject({ code: "ass00050", supplyPrice: 6900, groupPrice: 6270, purchaseCost: 5700 });
+    expect(fake.calls.some((call) => call.url.includes("products/bj-y?include=categories%2CproductSuppliers%2CshippingPolicy%2Cprices%2Cvisibility"))).toBe(true);
+  });
+
+  it("수강생 단가를 보내면 개별공급가 목록에서 황금농부 줄만 바꾸고(다른 매출처 줄은 그대로), 다시 읽어 저장된 값을 확인합니다", async () => {
+    const fake = createIncludeFake();
+    const runner = internals.createRunner({ fetch: fake.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const result = await runner.pushItem(pushItem({ baljuoraId: "bj-y", code: "ass00050", name: "[본] 대왕 수제약과 [9입] 450g", fields: ["groupPrice"], values: { name: "[본] 대왕 수제약과 [9입] 450g", supplyPrice: 6900, groupPrice: 6300, consumerPrice: null, purchaseCost: 5700, categoryId: null, imageUrl: null, isTaxable: false } }), { groupKeyword: "황금농부" }, { group: GROUP, groupKeyword: "황금농부" }, "CODE");
+    expect(result.ok).toBe(true);
+    expect(result.applied).toEqual(["groupPrice"]);
+    const put = fake.calls.find((call) => call.method === "PUT");
+    // 개별공급가 줄의 id·작성자 같은 읽기 전용 칸은 빼고, 연결 칸(…Id)은 비어 있어도 그대로 둡니다(배송정책 지정 없음 유지).
+    expect(put?.body.prices).toEqual([
+      { targetType: "SELLER_GROUP", targetId: "grp-1", sellerGroupId: "grp-1", supplyPrice: 6300, sellShippingPolicyId: null },
+      { targetType: "SELLER", targetId: "s-9", sellerId: "s-9", supplyPrice: 6000, sellShippingPolicyId: null }
+    ]);
+    expect(fake.product.prices.find((row: any) => row.targetType === "SELLER").supplyPrice).toBe(6000);
+    expect(result.snapshot.groupPrice).toBe(6300);
+  });
+
+  it("개별공급가 줄 안쪽 칸을 거절하면(prices.0.property … should not exist) 그 칸만 빼고 다시 보내 저장합니다", async () => {
+    const fake = createIncludeFake({ rowAllowed: ["targetType", "targetId", "sellerGroupId", "sellerId", "supplyPrice"] });
+    const runner = internals.createRunner({ fetch: fake.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const result = await runner.pushItem(pushItem({ baljuoraId: "bj-y", code: "ass00050", fields: ["supplyPrice", "groupPrice"], values: { name: "약과", supplyPrice: 6900, groupPrice: 6300, consumerPrice: null, purchaseCost: 5700, categoryId: null, imageUrl: null, isTaxable: false } }), { groupKeyword: "황금농부" }, { group: GROUP, groupKeyword: "황금농부" }, "CODE");
+    expect(result.applied).toEqual(["supplyPrice", "groupPrice"]);
+    const puts = fake.calls.filter((call) => call.method === "PUT");
+    expect(puts).toHaveLength(2);
+    expect(puts[1].body.prices.every((row: any) => !("sellShippingPolicyId" in row))).toBe(true);
+    expect(result.snapshot.groupPrice).toBe(6300);
+  });
+
+  it("발주오라가 가격 저장에서 개별공급가를 받지 않으면 수강생 단가는 '받지 않음'으로 알리고 공급가는 그대로 보냅니다", async () => {
+    const fake = createIncludeFake({ pricingAllowed: ["supplyPrice", "consumerPrice", "purchaseCost"] });
+    const runner = internals.createRunner({ fetch: fake.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+    const result = await runner.pushItem(pushItem({ baljuoraId: "bj-y", code: "ass00050", fields: ["supplyPrice", "groupPrice"], values: { name: "약과", supplyPrice: 7000, groupPrice: 6300, consumerPrice: null, purchaseCost: 5700, categoryId: null, imageUrl: null, isTaxable: false } }), { groupKeyword: "황금농부" }, { group: GROUP, groupKeyword: "황금농부" }, "CODE");
+    expect(result.applied).toEqual(["supplyPrice"]);
+    expect(result.skipped).toEqual([{ field: "groupPrice", reason: "발주오라가 이 칸을 받지 않았습니다." }]);
+    expect(fake.product.supplyPrice).toBe(7000);
+    expect(fake.product.prices[0].supplyPrice).toBe(6270);
   });
 });
 

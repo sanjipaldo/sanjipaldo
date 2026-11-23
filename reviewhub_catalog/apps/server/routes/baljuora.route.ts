@@ -12,6 +12,7 @@ import {
   createBaljuoraJob,
   getBaljuoraJob,
   getBaljuoraOverview,
+  getBaljuoraProductPrices,
   getRunnerImage,
   ignoreBaljuoraDifferences,
   ingestRunnerResults,
@@ -49,6 +50,17 @@ baljuoraRouter.get("/admin/overview", adminRoute, async (c) => {
 baljuoraRouter.get("/admin/changes", adminRoute, async (c) => {
   try {
     return c.json(apiSuccess(await listBaljuoraChanges()));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 상품 수정 창: 마지막 비교·동기화 때 읽은 발주오라 가격(공급가·황금농부 그룹 공급가·매입원가)
+baljuoraRouter.get("/admin/products/:productId", adminRoute, async (c) => {
+  const productId = c.req.param("productId").trim();
+  if (!productId || productId.length > 120) return c.json(apiFailure("INVALID_INPUT", "상품 id를 확인해 주세요."), 400);
+  try {
+    return c.json(apiSuccess(await getBaljuoraProductPrices(productId)));
   } catch (error) {
     return errorResponse(c, error);
   }

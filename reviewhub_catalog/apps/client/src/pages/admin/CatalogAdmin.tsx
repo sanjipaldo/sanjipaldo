@@ -53,6 +53,7 @@ import {
 import { toast } from "sonner";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 import { apiFetch } from "@/lib/api";
+import { baljuoraPriceCells, type BaljuoraProductPrices } from "@/lib/baljuora-editor-prices";
 import { EncyclopediaSearchAdmin } from "./EncyclopediaSearchAdmin";
 import type { SupplierAccountView } from "./SupplierPortalAdmin";
 import { isSupplierAccount } from "@/components/auth/AdminGuard";
@@ -1006,6 +1007,27 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
   const [originalGroupId, setOriginalGroupId] = useState("");
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [editing, setEditing] = useState<ProductDraft | null>(null);
+  // 상품 수정 창: 이 상품이 발주오라에 어떤 가격으로 저장돼 있는지(마지막 비교·동기화 때 읽은 값)
+  const [baljuoraPrices, setBaljuoraPrices] = useState<{ productId: string; data: BaljuoraProductPrices | null } | null>(null);
+  const editingProductId = editing?.id ?? "";
+  useEffect(() => {
+    if (!editingProductId) {
+      setBaljuoraPrices(null);
+      return;
+    }
+    let cancelled = false;
+    setBaljuoraPrices(null);
+    void (async () => {
+      try {
+        const data = await readData<BaljuoraProductPrices>(await apiFetch(`/baljuora/admin/products/${encodeURIComponent(editingProductId)}`, { silent: true }));
+        if (!cancelled) setBaljuoraPrices({ productId: editingProductId, data });
+      } catch {
+        // 동기화 표가 아직 없거나 잠깐 실패해도 수정 창은 그대로 씁니다(발주오라 값만 안 보임).
+        if (!cancelled) setBaljuoraPrices({ productId: editingProductId, data: null });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [editingProductId]);
   // "복사"로 연 신규 등록 창이면 원본 상품명·상품코드를 기억해 안내합니다.
   const [copySource, setCopySource] = useState<{ name: string; productCode: string } | null>(null);
   const [sortOpen, setSortOpen] = useState(false);
@@ -1822,9 +1844,15 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
             { key: "aPrice", label: "수강생 단가", value: editing.aPrice },
             { key: "generalPrice", label: "일반공급가", value: editing.generalPrice }
           ] as const;
+          // 발주오라 값(2026-11-23): 원가 ↔ 매입원가, 수강생 단가 ↔ 황금농부 수강생 개별공급가, 일반공급가 ↔ 공급가.
+          // 입력 중인 값과 바로 비교해 같음/다름을 보여 줍니다. 다름 = 저장 후 동기화 화면 '보낼 변경'에 올라오는 칸.
+          const baljuora = editing.id && baljuoraPrices?.productId === editing.id ? baljuoraPrices.data : null;
+          const cells = baljuora?.linked ? baljuoraPriceCells(editing, baljuora) : null;
+          const differs = cells ? rows.filter((row) => cells[row.key].status === "diff").map((row) => row.label) : [];
+          const statusText = { same: "같음", diff: "다름", unknown: "못 읽음", none: "" } as const;
           return (
-            <div className="full editor-price-block" role="group" aria-labelledby="editor-price-title">
-              <div className="editor-price-head"><strong id="editor-price-title">가격</strong><small>원가를 기준으로 수강생 단가·일반공급가 마진이 자동 계산됩니다.</small></div>
+            <div className={`full editor-price-block${cells ? " has-baljuora" : ""}`} role="group" aria-labelledby="editor-price-title">
+              <div className="editor-price-head"><strong id="editor-price-title">가격</strong><small>원가를 기준으로 수강생 단가·일반공급가 마진이 자동 계산됩니다.</small>{cells && baljuora && <span className="editor-price-bj-head" title="발주오라 값은 서버가 발주오라를 다시 읽지 않고, 마지막 ‘발주오라와 비교’·동기화 때 읽은 값입니다.">발주오라 값 · {baljuora.syncedAt ? `${formatDateTime(baljuora.syncedAt)} 비교·동기화 기준` : "마지막 비교 기준"}</span>}</div>
               {rows.map((row) => {
                 const amount = row.key === "costPrice" ? null : marginAmount(row.value, editing.costPrice);
                 // 원가보다 낮게 받으면 마이너스 마진을 그대로(빨간색) 보여 줍니다.
@@ -1836,9 +1864,21 @@ function ProductsAdmin({ data, refresh, updateData, sortOnly = false }: { data: 
                     {row.key === "costPrice"
                       ? <span className="editor-price-margin is-base">마진 계산 기준</span>
                       : <span className={`editor-price-margin${amount !== null && amount < 0 ? " is-negative" : ""}${amount === null ? " is-empty" : ""}`}>{amount === null || rate === null ? "원가를 넣으면 마진이 보여요" : <><b>{rate.toFixed(1)}%</b> 마진 · 개당 {formatSignedPrice(amount)}</>}</span>}
+                    {cells && (() => {
+                      const cell = cells[row.key];
+                      return (
+                        <span className={`editor-price-bj is-${cell.status}`}>
+                          <span className="editor-price-bj-caption">발주오라 {cell.caption}</span>
+                          <span className="editor-price-bj-value">{cell.value !== null ? <b>{formatPrice(cell.value)}</b> : <em>{cell.note}</em>}{cell.value !== null && cell.note && <em>{cell.note}</em>}</span>
+                          {cell.status !== "none" && <span className="editor-price-bj-status">{statusText[cell.status]}</span>}
+                        </span>
+                      );
+                    })()}
                   </label>
                 );
               })}
+              {baljuora && !baljuora.linked && <p className="editor-price-bj-foot is-muted">발주오라와 아직 연결되지 않은 상품이에요. <b>발주오라 동기화</b> 메뉴에서 ‘발주오라와 비교’를 하면 상품코드로 연결되고, 여기에 발주오라 가격이 보여요.</p>}
+              {cells && differs.length > 0 && <p className="editor-price-bj-foot is-diff"><b>{differs.join(" · ")}</b>가 발주오라와 달라요. 저장한 뒤 <b>발주오라 동기화 → 보낼 변경</b>에서 보내면 두고도매몰 가격도 같이 바뀌어요.</p>}
             </div>
           );
         })()}

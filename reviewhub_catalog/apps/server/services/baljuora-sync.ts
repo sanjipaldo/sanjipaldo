@@ -694,6 +694,12 @@ async function ingestPushItems(plan: PushPlan, items: RunnerItemResult[], result
   await upsertLinks(upserts);
 }
 
+function logParts(label: string, text: string, limit: number) {
+  const body = text.slice(0, limit);
+  const parts = Math.max(1, Math.ceil(body.length / 3000));
+  for (let part = 0; part < parts; part += 1) console.info(`[baljuora-sync] ${label} ${part + 1}/${parts} ${body.slice(part * 3000, (part + 1) * 3000)}`);
+}
+
 export async function ingestRunnerResults(code: string, input: RunnerResultInput) {
   return guard(async () => {
     const db = getDb();
@@ -745,13 +751,12 @@ export async function ingestRunnerResults(code: string, input: RunnerResultInput
       }
       if (Object.keys(diagnostics).length > 0) {
         // 운영 확인용: 발주오라 응답 구조(칸 이름·형식)만 남깁니다. 값·토큰은 남기지 않습니다.
-        console.info(`[baljuora-sync] ${plan.type} diagnostics ${JSON.stringify(diagnostics.structure ?? {}).slice(0, 3000)}`);
+        // 상세에 개별공급가·매입처(include)가 붙으면서 구조가 길어져 여러 줄로 나눕니다(로그 한 줄 길이 제한).
+        logParts(`${plan.type} diagnostics`, JSON.stringify({ version: diagnostics.version, structure: diagnostics.structure ?? {} }), 15_000);
+        // 발주오라가 돌려준 오류 문구(예: "prices.0.property … should not exist")와 보낸 칸 이름만 남깁니다(값 없음).
+        if (Array.isArray(diagnostics.errors) && diagnostics.errors.length > 0) logParts(`${plan.type} errors`, JSON.stringify(diagnostics.errors), 6000);
         // 매출처 그룹 공급가 저장 방식 찾기: 발주오라 화면의 공개 코드 일부(값·토큰 없음)를 여러 줄로 나눠 남깁니다.
-        if (diagnostics.discovery && typeof diagnostics.discovery === "object") {
-          const text = JSON.stringify(diagnostics.discovery).slice(0, 60_000);
-          const parts = Math.ceil(text.length / 3000);
-          for (let part = 0; part < parts; part += 1) console.info(`[baljuora-sync] discovery ${part + 1}/${parts} ${text.slice(part * 3000, (part + 1) * 3000)}`);
-        }
+        if (diagnostics.discovery && typeof diagnostics.discovery === "object") logParts("discovery", JSON.stringify(diagnostics.discovery), 60_000);
       }
     }
     await db.update(baljuoraSyncJobs).set(update).where(eq(baljuoraSyncJobs.id, row.id));
@@ -852,6 +857,53 @@ export async function listBaljuoraChanges() {
       items,
       baljuoraOnly: (Array.isArray(onlyList) ? onlyList : []).filter((snapshot) => !linkByProductCode(links, snapshot)),
       unmappedCategories
+    };
+  });
+}
+
+// 상품 수정 창: 이 상품이 발주오라에 마지막으로 어떤 가격으로 저장돼 있었는지(마지막 비교·동기화 때 읽은 값).
+// 발주오라를 지금 다시 읽지는 않습니다(서버는 발주오라에 로그인하지 않음). 매입원가가 들어 있어 관리자만 봅니다.
+export type BaljuoraProductPrices = {
+  linked: boolean;
+  baljuoraId: string | null;
+  code: string | null;
+  groupKeyword: string;
+  syncedAt: string | null;
+  lastPushedAt: string | null;
+  syncStatus: string | null;
+  supplyPrice: number | null;
+  groupPrice: number | null;
+  // false: 그때 발주오라에서 매출처 그룹 공급가를 읽지 못함(1.2.0 이전 비교) → "아직 못 읽음"
+  groupPriceKnown: boolean;
+  purchaseCost: number | null;
+  consumerPrice: number | null;
+};
+
+export async function getBaljuoraProductPrices(productId: string): Promise<BaljuoraProductPrices> {
+  return guard(async () => {
+    const [links, settings] = await Promise.all([loadLinks([productId]), getBaljuoraSettings()]);
+    const empty: BaljuoraProductPrices = { linked: false, baljuoraId: null, code: null, groupKeyword: settings.groupKeyword, syncedAt: null, lastPushedAt: null, syncStatus: null, supplyPrice: null, groupPrice: null, groupPriceKnown: false, purchaseCost: null, consumerPrice: null };
+    const candidates = links
+      .map((link) => ({ link, state: linkState(link) }))
+      .filter((entry): entry is { link: LinkRow; state: BaljuoraLinkState } => entry.state !== null)
+      .sort((first, second) => String(second.link.lastPulledAt ?? "").localeCompare(String(first.link.lastPulledAt ?? "")));
+    const found = candidates[0];
+    if (!found) return empty;
+    const { link, state } = found;
+    const known = state.snapshot.groupPrice !== undefined;
+    return {
+      linked: true,
+      baljuoraId: link.externalProductId,
+      code: state.snapshot.code ?? (link.externalProductCode.startsWith("id:") ? null : link.externalProductCode),
+      groupKeyword: settings.groupKeyword,
+      syncedAt: link.lastPulledAt ?? null,
+      lastPushedAt: link.lastPushedAt ?? null,
+      syncStatus: link.syncStatus,
+      supplyPrice: toPrice(state.snapshot.supplyPrice),
+      groupPrice: known ? toPrice(state.snapshot.groupPrice) : null,
+      groupPriceKnown: known,
+      purchaseCost: toPrice(state.snapshot.purchaseCost),
+      consumerPrice: toPrice(state.snapshot.consumerPrice)
     };
   });
 }
