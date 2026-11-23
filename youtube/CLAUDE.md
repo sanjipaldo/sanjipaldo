@@ -14,14 +14,14 @@ HyperFrames(HTML → MP4)로 쇼츠·롱폼을 편집하는 작업 폴더. 두�
 |---|---|---|
 | WhisperX 3.8.6 | 자막 타이밍의 기본. 단어별 시작·끝을 wav2vec2로 강제 정렬해 whisper.cpp보다 정확 | `HF_HUB_DISABLE_XET=1 ~/.cache/video-ai/wx/bin/python youtube/tools/transcribe_ko.py <파일> <출력.json>` |
 | CosyVoice3 (Fun-CosyVoice3-0.5B, RL 가중치) | 말 실수 한 줄 고치기, 보충 내레이션. 대표님 본인 목소리 샘플(10~20초)로만 복제 | `~/.cache/video-ai/cv/bin/python youtube/tools/tts_ko.py "<문장>" <출력.wav> [샘플.wav "샘플 문장"]` |
-| Blender 4.0.2 + MCP for Blender 2.3.1 | 3D 상품·상자·로고 컷 | `xvfb-run -a -s "-screen 0 1280x720x24" blender --python youtube/blender/start_mcp.py &` 후 `.mcp.json`의 `blender` 서버 또는 `uvx --from mcp-for-blender@2.3.1 python <MCP 클라이언트>` |
+| Blender 4.0.2 + MCP for Blender 2.3.1 | 3D 상품·상자·로고 컷 | `xvfb-run -a -s "-screen 0 1280x720x24" blender --python youtube/blender/start_mcp.py`를 Bash `run_in_background`(timeout 7200000)로 띄운 뒤 `.mcp.json`의 `blender` 서버 또는 `uvx --from mcp-for-blender@2.3.1 python <MCP 클라이언트>` |
 | Remotion 4.0.546 + 공식 스킬 10개 | 보조. 기본 제작은 HyperFrames | `youtube/remotion/`에서 `npx remotion render <id> out/x.mp4 --browser-executable="$(hyperframes browser path \| tail -1)"` |
 | FFmpeg 6.1.1 | 자르기·인코딩 | 기본 설치 |
 
 주의할 점
 - WhisperX: Hugging Face Xet 전송 서버(cas-server.xethub.hf.co)는 막혀 있어 `HF_HUB_DISABLE_XET=1` 필수. NLTK `punkt_tab`은 setup-ai.sh가 직접 받는다. 7.7초 음성 기준 전사 14초 + 정렬 2초(CPU). 숫자는 "5단계"처럼 아라비아 숫자로 나올 수 있으니 대본 표기로 바꾼다.
 - CosyVoice: CPU에서 음성 길이의 약 4배 시간이 걸린다. 텍스트 정규화 모델이 modelscope.cn(막힘)에 있어 꺼진 상태 → 문장 속 숫자·영문 약어는 한글로 풀어 쓴다. "위탁"이 "미탁"처럼 들릴 수 있으니 생성 후 WhisperX로 되받아 확인한다. 다른 사람 목소리는 동의 없이 복제하지 않는다.
-- Blender: 우분투 빌드에 OpenImageDenoise가 없다 → Cycles에서 `scene.cycles.use_denoising = False`로 두고 샘플을 올린다(48 샘플, 960×540에 약 17초). 브랜드 빨강을 정확히 내려면 `view_settings.view_transform = "Standard"`. 애드온은 배경 모드(`blender -b`)에서 서버를 켜지 않으므로 가상 화면(xvfb)으로 띄운다. 사용 기록 수집은 애드온 기본값(꺼짐) + 서버 환경변수로 끈다.
+- Blender: 우분투 빌드에 OpenImageDenoise가 없다 → Cycles에서 `scene.cycles.use_denoising = False`로 두고 샘플을 올린다(48 샘플, 960×540에 약 17초). 브랜드 빨강을 정확히 내려면 `view_settings.view_transform = "Standard"`. 애드온은 배경 모드(`blender -b`)에서 서버를 켜지 않으므로 가상 화면(xvfb)으로 띄운다. 사용 기록 수집은 애드온 기본값(꺼짐) + 서버 환경변수로 끈다. 백그라운드 작업은 시간 제한(기본 30분, 최대 2시간)이 지나면 꺼진다 → 3D 작업 직전에 띄우고, 9876 포트가 닫혀 있으면 다시 띄운다. 꺼진 뒤 남는 `Xvfb` 프로세스는 정리한다.
 - Blender MCP 자동 승인은 넣지 않았다. `.mcp.json`의 `blender` 서버는 사용자가 승인해야 켜진다.
 - Remotion 라이선스: 개인·직원 3명 이하 회사·비영리는 무료, 그 외 영리 회사는 유료 Company License가 필요하다(`remotion-license` 스킬). HyperFrames는 Apache 2.0이라 제한이 없다.
 
