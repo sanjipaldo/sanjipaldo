@@ -99,6 +99,8 @@
 .bj-diff.is-new { border-color: #cfe1f7; background: #f2f7fe; color: #1f4f8f; font-weight: 800; }
 .bj-diff.is-pull, .bj-diff.is-both { border-color: #f2d6a2; background: #fffaf0; }
 .bj-diff.is-initial { border-color: #e1e4e8; background: #fafbfc; }
+.bj-diff.is-blocked { border-style: dashed; border-color: #e8b4b4; background: #fff7f7; }
+.bj-diff .bj-diff-need { color: #b42318; }
 .bj-diff-thumb { width: 26px; height: 26px; border-radius: 6px; object-fit: cover; }
 .bj-pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 12px; color: #4c5868; font-size: 13px; font-weight: 800; }
 .bj-pager button { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid #dfe6ee; border-radius: 10px; background: #fff; cursor: pointer; }

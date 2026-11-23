@@ -367,6 +367,7 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
   const linkByCode = new Map(freshLinks.map((link) => [link.externalProductCode, link]));
   const categoryName = new Map(doogoCategories.map((category) => [category.id, category.name]));
   const items: PushPlanItem[] = [];
+  let unmappedShippingOnly = 0;
   for (const productId of wanted) {
     const product = productById.get(productId);
     if (!product) continue;
@@ -386,6 +387,12 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
       fields = requested?.length
         ? requested.filter((field) => diffFields.includes(field) || field === "image")
         : diffs.filter((diff) => diff.direction !== "pull").map((diff) => diff.field);
+      // 배송비 정책은 DB센터 정책과 연결한 발주오라 매출배송정책이 있을 때만 보냅니다. 연결이 없으면 빼서(화면에 '연결 필요' 표시)
+      // 같은 상품의 다른 칸(썸네일·가격)까지 실패로 보이지 않게 합니다(2026-11-23 운영: 완숙토마토 '국내 무료배송').
+      if (!values.baljuoraShippingPolicyId && fields.includes("shippingPolicy")) {
+        fields = fields.filter((field) => field !== "shippingPolicy");
+        if (fields.length === 0) unmappedShippingOnly += 1;
+      }
       // 1.2.0 이전 비교 기록(황금농부 공급가·매입원가를 못 읽은 기록, 2026-11-23 약과 사례)은 저장된 발주오라 값을 믿을 수 없어,
       // 보낼 때 가격 3종(일반공급가 → 공급가 · 수강생 단가 → 황금농부 개별공급가 · 원가 → 매입원가)을 모두 넣습니다.
       // 책갈피가 보내기 직전에 발주오라 실제 값을 읽어 같은 칸은 건드리지 않고 다른 칸만 맞춥니다.
@@ -419,6 +426,9 @@ export async function buildPushPlan(input: { productIds: string[]; fieldsByProdu
         baljuoraShippingPolicyId: values.baljuoraShippingPolicyId
       }
     });
+  }
+  if (items.length === 0 && unmappedShippingOnly > 0) {
+    throw new DatabaseError("DATABASE_QUERY_FAILED", "고른 상품은 배송비 정책만 다른데, 그 DB센터 배송 정책과 연결한 발주오라 매출배송정책이 없어 보낼 수 없습니다. 동기화 설정 > 배송비 정책 맞추기에서 연결한 뒤 다시 보내 주세요.", 400);
   }
   return { type: "push", groupKeyword: settings.groupKeyword, groupId: group?.id ?? null, items };
 }

@@ -497,15 +497,19 @@ export function BaljuoraSyncAdmin() {
                         <div className="bj-diffs"><span className="bj-diff is-new">발주오라에 새로 등록</span></div>
                       ) : (
                         <div className="bj-diffs">
-                          {shown.map((diff) => (
-                            <span key={diff.field} className={`bj-diff is-${diff.direction}`} title={`${BALJUORA_FIELD_LABELS[diff.field]} · ${BALJUORA_DIRECTION_LABELS[diff.direction]}`}>
-                              <b>{BALJUORA_FIELD_SHORT_LABELS[diff.field]}</b>
-                              {tab === "pull"
-                                ? <><DiffValue field={diff.field} value={diff.doogo} categoryPath={categoryPath} policyName={policyName} /><ChevronLeft size={12} aria-hidden="true" /><DiffValue field={diff.field} value={diff.baljuora} categoryPath={categoryPath} policyName={policyName} /></>
-                                : <><DiffValue field={diff.field} value={diff.baljuora} categoryPath={categoryPath} policyName={policyName} /><ChevronRight size={12} aria-hidden="true" /><DiffValue field={diff.field} value={diff.doogo} categoryPath={categoryPath} policyName={policyName} /></>}
-                              {diff.direction !== "push" && <i>{BALJUORA_DIRECTION_LABELS[diff.direction]}</i>}
-                            </span>
-                          ))}
+                          {shown.map((diff) => {
+                            // DB센터 배송 정책과 연결한 발주오라 매출배송정책이 없으면 이 칸은 보내지 않습니다(보내기에서 빠짐).
+                            const needsPolicyLink = tab !== "pull" && diff.field === "shippingPolicy" && Boolean(diff.doogo) && !overview?.settings.shippingPolicyMap?.[String(diff.doogo)];
+                            return (
+                              <span key={diff.field} className={`bj-diff is-${diff.direction}${needsPolicyLink ? " is-blocked" : ""}`} title={needsPolicyLink ? "이 DB센터 배송 정책과 연결한 발주오라 매출배송정책이 없어 보내지 않습니다. 동기화 설정 > 배송비 정책 맞추기에서 연결해 주세요." : `${BALJUORA_FIELD_LABELS[diff.field]} · ${BALJUORA_DIRECTION_LABELS[diff.direction]}`}>
+                                <b>{BALJUORA_FIELD_SHORT_LABELS[diff.field]}</b>
+                                {tab === "pull"
+                                  ? <><DiffValue field={diff.field} value={diff.doogo} categoryPath={categoryPath} policyName={policyName} /><ChevronLeft size={12} aria-hidden="true" /><DiffValue field={diff.field} value={diff.baljuora} categoryPath={categoryPath} policyName={policyName} /></>
+                                  : <><DiffValue field={diff.field} value={diff.baljuora} categoryPath={categoryPath} policyName={policyName} /><ChevronRight size={12} aria-hidden="true" /><DiffValue field={diff.field} value={diff.doogo} categoryPath={categoryPath} policyName={policyName} /></>}
+                                {needsPolicyLink ? <i className="bj-diff-need">연결 필요 · 보내지 않음</i> : diff.direction !== "push" && <i>{BALJUORA_DIRECTION_LABELS[diff.direction]}</i>}
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

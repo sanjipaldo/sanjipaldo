@@ -30,11 +30,16 @@ const BJ_POLICIES = [
 
 // 실제 발주오라 상품 수정(PUT products/:id, 2026-11-23 화면 코드 확인): 바뀐 칸만 받고,
 // 개별공급가는 sellerProductPrices 목록 전체 [{ targetType: "group" | "seller", targetId, shippingPolicyId?, supplyPrice }]로 바꿉니다.
-function applyProductPut(product: any, body: any, options: { allowed?: string[]; rowAllowed?: string[] } = {}) {
+function applyProductPut(product: any, body: any, options: { allowed?: string[]; rowAllowed?: string[]; ignoreImageUrls?: boolean } = {}) {
   if (!product) return jsonResponse(404, { statusCode: 404, message: "Not Found" });
-  const allowed = options.allowed ?? ["sellerProductPrices", "sellShippingPolicyId"];
+  const allowed = options.allowed ?? ["sellerProductPrices", "sellShippingPolicyId", "imageUrls"];
   const extra = Object.keys(body).filter((key) => !allowed.includes(key));
   if (extra.length) return jsonResponse(400, { statusCode: 400, message: extra.map((key) => `property ${key} should not exist`), error: "Bad Request" });
+  // 상품 이미지(imageUrls): 발주오라 상품 화면은 최대 5장(2026-11-23 화면 코드 maxFiles 5).
+  if (body.imageUrls !== undefined) {
+    if (!Array.isArray(body.imageUrls) || body.imageUrls.some((url: unknown) => typeof url !== "string")) return jsonResponse(400, { statusCode: 400, message: ["each value in imageUrls must be a string"], error: "Bad Request" });
+    if (body.imageUrls.length > 5) return jsonResponse(400, { statusCode: 400, message: ["imageUrls must contain no more than 5 elements"], error: "Bad Request" });
+  }
   if (body.sellerProductPrices !== undefined) {
     const rowAllowed = options.rowAllowed ?? ["targetType", "targetId", "shippingPolicyId", "supplyPrice"];
     const errors: string[] = [];
@@ -58,10 +63,11 @@ function applyProductPut(product: any, body: any, options: { allowed?: string[];
     product.sellShippingPolicyId = body.sellShippingPolicyId;
     product.shippingPolicy = BJ_POLICIES.find((item) => item.id === body.sellShippingPolicyId) ?? null;
   }
+  if (body.imageUrls !== undefined && !options.ignoreImageUrls) product.imageUrls = body.imageUrls;
   return jsonResponse(200, { statusCode: 200, data: { id: product.id } });
 }
 
-function createFake(options: { pricingAllowed?: string[]; validToken?: string } = {}) {
+function createFake(options: { pricingAllowed?: string[]; validToken?: string; doogoImage?: { type: string; size: number }; ignoreImageUrls?: boolean } = {}) {
   const products: Record<string, any> = {
     "bj-a": {
       id: "bj-a", code: "BJT-001", name: "봄날 사과 5kg", supplyPrice: 26000, consumerPrice: 39000, purchaseCost: 20000,
@@ -73,7 +79,7 @@ function createFake(options: { pricingAllowed?: string[]; validToken?: string } 
     "bj-b": { id: "bj-b", code: "BJT-002", name: "봄날 배", supplyPrice: 38000, consumerPrice: null, purchaseCost: 30000, categoryId: "bj-cat-farm", imageUrls: [], prices: [], supplier: { id: "sup-1", name: "봄날농원" }, isVisible: true, isSoldOut: false }
   };
   const calls: Array<{ method: string; url: string; body?: any }> = [];
-  const state = { refreshCount: 0, validToken: options.validToken ?? "t1" };
+  const state = { refreshCount: 0, validToken: options.validToken ?? "t1", presigns: [] as any[], uploads: [] as Array<{ headers: Record<string, string>; size: number; type: string }> };
   const pricingAllowed = options.pricingAllowed ?? ["supplyPrice", "consumerPrice", "purchaseCost"];
   const listView = (product: any) => ({ id: product.id, targetType: "product", code: product.code, name: product.name, supplyPrice: product.supplyPrice, consumerPrice: product.consumerPrice, purchaseCost: product.purchaseCost, imageUrls: product.imageUrls, isVisible: product.isVisible, isSoldOut: product.isSoldOut });
   const fetch = async (input: string, init: RequestInit = {}) => {
@@ -109,8 +115,17 @@ function createFake(options: { pricingAllowed?: string[]; validToken?: string } 
         return jsonResponse(200, { statusCode: 200, data: product });
       }
       const update = /^products\/([^/]+)$/.exec(path);
-      if (method === "PUT" && update) return applyProductPut(products[decodeURIComponent(update[1])], body);
-      if (method === "POST" && path === "files/presign") return jsonResponse(200, { statusCode: 200, data: { uploadUrl: "https://s3.example.com/upload?sig=1", fileUrl: "https://files.baljuora.com/product-image/new.jpg" } });
+      if (method === "PUT" && update) return applyProductPut(products[decodeURIComponent(update[1])], body, { ignoreImageUrls: options.ignoreImageUrls });
+      if (method === "POST" && path === "files/presign") {
+        // 실제 발주오라(2026-11-23 운영): kind·size가 없으면 400 "kind should not be empty / … / size must be an integer number".
+        // 받으면 { uploadUrl, headers, file: { value, url, … } } — 발주오라 화면은 file.value 를 imageUrls 에 넣습니다.
+        const errors: string[] = [];
+        if (typeof body.kind !== "string" || !body.kind) errors.push("kind should not be empty", "kind must be a string");
+        if (!Number.isInteger(body.size) || body.size < 1) errors.push("size must not be less than 1", "size must be an integer number");
+        if (errors.length) return jsonResponse(400, { statusCode: 400, message: errors, error: "Bad Request" });
+        state.presigns.push(body);
+        return jsonResponse(201, { statusCode: 201, data: { uploadUrl: "https://s3.example.com/upload?sig=1", headers: { "Content-Type": body.contentType, "x-amz-meta-kind": body.kind }, file: { id: "file-1", name: body.fileName, url: "https://files.baljuora.com/product-image/new.jpg", value: "https://files.baljuora.com/product-image/new.jpg", visibility: "public" } } });
+      }
       if (method === "POST" && path === "products") {
         if (!body.supplierId) return jsonResponse(400, { statusCode: 400, message: ["supplierId should not be empty"] });
         const created = { ...body, id: "bj-new", code: body.code || "PD999", imageUrls: [], prices: [], supplier: { id: body.supplierId, name: "봄날농원" } };
@@ -119,15 +134,22 @@ function createFake(options: { pricingAllowed?: string[]; validToken?: string } 
         return jsonResponse(201, { statusCode: 201, data: created });
       }
     }
-    if (url.origin === "https://s3.example.com") return new Response("", { status: 200 });
-    if (url.origin === "https://doogofood.test") return new Response("image-bytes", { status: 200, headers: { "Content-Type": "image/jpeg" } });
+    if (url.origin === "https://s3.example.com") {
+      const blob = init.body as Blob;
+      state.uploads.push({ headers: init.headers as Record<string, string>, size: blob.size, type: blob.type });
+      return new Response("", { status: 200 });
+    }
+    if (url.origin === "https://doogofood.test") {
+      if (options.doogoImage) return new Response(new Uint8Array(options.doogoImage.size), { status: 200, headers: { "Content-Type": options.doogoImage.type } });
+      return new Response("image-bytes", { status: 200, headers: { "Content-Type": "image/jpeg" } });
+    }
     return jsonResponse(404, { message: `not found ${input}` });
   };
   return { fetch, products, calls, state };
 }
 
-function runnerFor(fake: ReturnType<typeof createFake>) {
-  return internals.createRunner({ fetch: fake.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test" });
+function runnerFor(fake: ReturnType<typeof createFake>, extra: Record<string, unknown> = {}) {
+  return internals.createRunner({ fetch: fake.fetch, FormData, locks: undefined, consoleOrigin: "https://console.baljuora.com", apiBase: "https://api.baljuora.com/", doogoOrigin: "https://doogofood.test", ...extra });
 }
 
 function createReport() {
@@ -561,6 +583,93 @@ describe("배송비 정책(매출배송정책, 2026-11-23)", () => {
   });
 });
 
+// 2026-11-23 운영: DB센터에서 바꾼 썸네일이 "발주오라 응답 400 (POST files/presign): kind should not be empty … size must be an integer number"로 실패.
+// 발주오라 상품 등록·수정 화면과 같은 방식(presign kind "product-image" → 받은 headers 로 PUT → file.value 를 imageUrls 첫 칸)으로 올립니다.
+describe("썸네일(대표 이미지) 보내기", () => {
+  const run = (fake: ReturnType<typeof createFake>, report: ReturnType<typeof createReport>, extra: Record<string, unknown> = {}) =>
+    runnerFor(fake, extra).runPush({ type: "push", groupKeyword: "황금농부", groupId: GROUP.id, items: [pushItem({ fields: ["image"] })] }, report, "ABCDE23456");
+
+  it("WEBP이거나 1MB가 넘는 DB센터 이미지는 이 창에서 JPG 1MB 이하로 바꿔 올립니다", async () => {
+    const fake = createFake({ doogoImage: { type: "image/webp", size: 2_000_000 } });
+    const seen: Array<[string, number, number]> = [];
+    const convertImage = async (blob: Blob, maxBytes: number) => {
+      seen.push([blob.type, blob.size, maxBytes]);
+      return new Blob([new Uint8Array(500_000)], { type: "image/jpeg" });
+    };
+    const report = createReport();
+    expect(await run(fake, report, { convertImage })).toEqual({ ok: 1, failed: 0 });
+    expect(seen).toEqual([["image/webp", 2_000_000, 1024 * 1024]]);
+    expect(fake.state.presigns).toEqual([{ kind: "product-image", fileName: "BJT-001.jpg", contentType: "image/jpeg", size: 500_000, source: "product-form" }]);
+    expect(fake.state.uploads[0]).toMatchObject({ size: 500_000, type: "image/jpeg" });
+    expect(fake.products["bj-a"].imageUrls).toEqual(["https://files.baljuora.com/product-image/new.jpg", "https://files.baljuora.com/a-2.jpg"]);
+    expect(report.posted[0].items[0]).toMatchObject({ ok: true, applied: ["image"], skipped: [] });
+  });
+
+  it("1MB 이하 JPG·PNG는 바꾸지 않고 그대로 올립니다(PNG는 PNG로)", async () => {
+    const fake = createFake({ doogoImage: { type: "image/png", size: 5000 } });
+    let converted = 0;
+    const report = createReport();
+    await run(fake, report, { convertImage: async () => { converted += 1; return new Blob([]); } });
+    expect(converted).toBe(0);
+    expect(fake.state.presigns).toEqual([{ kind: "product-image", fileName: "BJT-001.png", contentType: "image/png", size: 5000, source: "product-form" }]);
+    expect(report.posted[0].items[0]).toMatchObject({ ok: true, applied: ["image"] });
+  });
+
+  it("이미지를 바꿀 수 없는 창이면 JPG·PNG 1MB 이하만 받는다고 알리고 발주오라에는 올리지 않습니다", async () => {
+    const fake = createFake({ doogoImage: { type: "image/webp", size: 3000 } });
+    const report = createReport();
+    expect(await run(fake, report)).toEqual({ ok: 0, failed: 1 });
+    expect(fake.state.presigns).toEqual([]);
+    expect(report.posted[0].items[0].skipped).toEqual([{ field: "image", reason: expect.stringContaining("JPG·PNG, 1MB 이하") }]);
+    expect(fake.products["bj-a"].imageUrls[0]).toBe("https://files.baljuora.com/a.jpg");
+  });
+
+  it("발주오라 이미지는 최대 5장: 첫 이미지(대표)만 새 이미지로 바꾸고 나머지는 그대로 둡니다", async () => {
+    const fake = createFake();
+    const others = ["u2", "u3", "u4", "u5"].map((name) => `https://files.baljuora.com/${name}.jpg`);
+    fake.products["bj-a"].imageUrls = ["https://files.baljuora.com/u1.jpg", ...others];
+    const report = createReport();
+    expect(await run(fake, report)).toEqual({ ok: 1, failed: 0 });
+    expect(fake.products["bj-a"].imageUrls).toEqual(["https://files.baljuora.com/product-image/new.jpg", ...others]);
+  });
+
+  it("저장 뒤 다시 읽어 대표 이미지가 그대로면 '반영 안 됨'으로 알립니다", async () => {
+    const fake = createFake({ ignoreImageUrls: true });
+    const report = createReport();
+    expect(await run(fake, report)).toEqual({ ok: 0, failed: 1 });
+    expect(report.posted[0].items[0].skipped).toEqual([{ field: "image", reason: "발주오라 대표 이미지가 바뀌지 않았습니다(저장 뒤 다시 읽은 값 기준)." }]);
+  });
+
+  it("이미지 줄이기: 긴 변 2000px부터 화질·크기를 낮춰 1MB 이하 JPG를 만들고, 투명한 곳은 흰 배경으로 채웁니다", async () => {
+    const drawn: Array<[number, number]> = [];
+    const fills: string[] = [];
+    let closed = 0;
+    const fakeWindow = {
+      createImageBitmap: async () => ({ width: 4000, height: 3000, close: () => { closed += 1; } }),
+      document: {
+        createElement: () => {
+          const canvas: any = { width: 0, height: 0 };
+          canvas.getContext = () => ({
+            set fillStyle(value: string) { fills.push(value); },
+            fillRect: () => undefined,
+            drawImage: (_source: unknown, _x: number, _y: number, width: number, height: number) => { drawn.push([width, height]); }
+          });
+          // 크기 = 가로 × 세로 × 화질 × 0.5 바이트로 흉내
+          canvas.toBlob = (callback: (blob: Blob) => void, type: string, quality: number) => callback(new Blob([new Uint8Array(Math.round(canvas.width * canvas.height * quality * 0.5))], { type }));
+          return canvas;
+        }
+      },
+      URL: { createObjectURL: () => "blob:x", revokeObjectURL: () => undefined }
+    };
+    const output = await internals.makeImageConverter(fakeWindow)(new Blob(["x"], { type: "image/webp" }), 1024 * 1024);
+    expect(output.type).toBe("image/jpeg");
+    expect(output.size).toBeLessThanOrEqual(1024 * 1024);
+    expect(drawn).toEqual([[2000, 1500], [1400, 1050]]);
+    expect(fills).toEqual(["#ffffff", "#ffffff"]);
+    expect(closed).toBe(1);
+  });
+});
+
 describe("보내기", () => {
   it("가격·그룹 공급가·카테고리·이미지를 보내고, 다시 읽어 저장된 값을 확인합니다", async () => {
     const fake = createFake();
@@ -574,12 +683,17 @@ describe("보내기", () => {
     expect(update?.body).toEqual({ sellerProductPrices: [{ targetType: "group", targetId: "grp-1", supplyPrice: 25000 }] });
     const info = fake.calls.find((call) => call.method === "PUT" && call.url.endsWith("/info"));
     // 상품 정보 저장에는 상품명(지금 값)을 항상 함께 보냅니다(발주오라는 상품명이 없으면 "상품명은 문자열이어야 합니다.").
-    expect(info?.body).toEqual({ name: "봄날 사과 5kg", categoryId: "bj-cat-farm", imageUrls: ["https://files.baljuora.com/product-image/new.jpg", "https://files.baljuora.com/a-2.jpg"] });
+    // 이미지는 지금 값 그대로(썸네일은 뒤에서 따로 저장하므로 여기서 되돌리지 않음).
+    expect(info?.body).toEqual({ name: "봄날 사과 5kg", categoryId: "bj-cat-farm", imageUrls: ["https://files.baljuora.com/a.jpg", "https://files.baljuora.com/a-2.jpg"] });
     expect(fake.calls.some((call) => call.url === "https://doogofood.test/api/baljuora/runner/ABCDE23456/image/p-1")).toBe(true);
-    expect(fake.calls.some((call) => call.method === "PUT" && call.url.startsWith("https://s3.example.com/upload"))).toBe(true);
+    // 썸네일: 발주오라 상품 화면과 같은 presign 형식 → 받은 headers 로 PUT → file.value 를 첫 이미지로 PUT products/:id
+    expect(fake.state.presigns).toEqual([{ kind: "product-image", fileName: "BJT-001.jpg", contentType: "image/jpeg", size: 11, source: "product-form" }]);
+    expect(fake.state.uploads).toEqual([{ headers: { "Content-Type": "image/jpeg", "x-amz-meta-kind": "product-image" }, size: 11, type: "image/jpeg" }]);
+    const imagePut = fake.calls.find((call) => call.method === "PUT" && call.url === "https://api.baljuora.com/products/bj-a" && call.body?.imageUrls);
+    expect(imagePut?.body).toEqual({ imageUrls: ["https://files.baljuora.com/product-image/new.jpg", "https://files.baljuora.com/a-2.jpg"] });
     const [result] = report.posted[0].items;
     expect(result).toMatchObject({ productId: "p-1", ok: true, applied: ["supplyPrice", "groupPrice", "category", "image"], skipped: [] });
-    expect(result.snapshot).toMatchObject({ supplyPrice: 27000, groupPrice: 25000, categoryIds: ["bj-cat-farm"] });
+    expect(result.snapshot).toMatchObject({ supplyPrice: 27000, groupPrice: 25000, categoryIds: ["bj-cat-farm"], imageUrls: ["https://files.baljuora.com/product-image/new.jpg", "https://files.baljuora.com/a-2.jpg"] });
     expect(report.posted[0].final).toBe(true);
   });
 

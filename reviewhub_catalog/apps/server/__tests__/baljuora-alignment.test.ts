@@ -208,6 +208,19 @@ describe("발주오라 ↔ DB센터 맞추기(API)", () => {
     const push = await call<{ code: string }>(admin, "/admin/jobs", "POST", { type: "push", productIds: ["aln-1"], fieldsByProduct: { "aln-1": ["shippingPolicy"] } });
     const plan = await json<{ plan: { items: Array<{ productId: string; fields: string[]; values: Record<string, unknown> }> } }>(await app.fetch(new Request(`http://localhost/api/baljuora/runner/${push.code}`)));
     expect(plan.data.plan.items[0]).toMatchObject({ productId: "aln-1", fields: ["shippingPolicy"], values: { baljuoraShippingPolicyId: "bj-pol-2" } });
+
+    // 8) 발주오라 정책과 연결하지 않은 DB센터 배송 정책(2026-11-23 운영: 완숙토마토 '국내 무료배송')은 보내기에서 빼고,
+    //    같은 상품의 썸네일은 그대로 보냅니다(연결이 없다고 상품 전체가 실패하지 않게). 배송비 정책만 다르면 연결하라고 알려 줌.
+    await executeSql("INSERT INTO shipping_policies (id, name, shippingType, fee, feeLabel, feeType, feeBasis, rateType, policyCode, isActive, sortOrder) VALUES ('pol-free', '국내 무료배송', 'domestic', 0, '무료', 'free', 'order', 'free', NULL, 1, 1)");
+    await executeSql("UPDATE products SET shippingPolicyId = 'pol-free', imageUrl = 'https://doogo.test/a-v2.jpg' WHERE id = 'aln-1'");
+    changes = await call<Changes>(admin, "/admin/changes");
+    expect(diffsOf(changes, "aln-1").map((diff) => [diff.field, diff.direction])).toEqual(expect.arrayContaining([["image", "push"], ["shippingPolicy", "push"]]));
+    const imagePush = await call<{ code: string }>(admin, "/admin/jobs", "POST", { type: "push", productIds: ["aln-1"] });
+    const imagePlan = await json<{ plan: { items: Array<{ productId: string; fields: string[]; values: Record<string, unknown> }> } }>(await app.fetch(new Request(`http://localhost/api/baljuora/runner/${imagePush.code}`)));
+    expect(imagePlan.data.plan.items[0]).toMatchObject({ productId: "aln-1", values: { imageUrl: "https://doogo.test/a-v2.jpg", baljuoraShippingPolicyId: null } });
+    expect(imagePlan.data.plan.items[0].fields).toContain("image");
+    expect(imagePlan.data.plan.items[0].fields).not.toContain("shippingPolicy");
+    await expect(call(admin, "/admin/jobs", "POST", { type: "push", productIds: ["aln-1"], fieldsByProduct: { "aln-1": ["shippingPolicy"] } })).rejects.toThrow("배송비 정책 맞추기에서 연결");
   });
 
   it("카테고리 맞추기: 연결되지 않은 발주오라 카테고리를 DB센터에 같은 이름으로 만들고 연결(이미 연결된 것은 다시 만들지 않음)", async () => {

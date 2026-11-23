@@ -11,10 +11,14 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.5.0";
+  var VERSION = "1.5.1";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
-  var INFO_FIELDS = ["name", "category", "image"];
+  var INFO_FIELDS = ["name", "category"];
+  // 발주오라 상품 이미지 올리기(2026-11-23 발주오라 상품 등록·수정 화면 코드 확인):
+  // POST files/presign {kind:"product-image", fileName, contentType, size, source:"product-form"} → 받은 uploadUrl 로 PUT(받은 headers 그대로)
+  // → 받은 file.value 를 imageUrls 에 넣어 PUT products/:id. 발주오라 화면은 상품 이미지를 JPG·PNG, 1MB 이하, 최대 5장만 받습니다.
+  var PRODUCT_IMAGE = { kind: "product-image", source: "product-form", maxBytes: 1024 * 1024, types: ["image/jpeg", "image/png"], limit: 5, maxSide: 2000 };
   var CODE_KEYS = ["code", "productCode", "sku", "skuCode", "managementCode", "manageCode", "customCode", "itemCode", "goodsCode"];
   var READ_ONLY_KEYS = ["id", "createdAt", "updatedAt", "deletedAt", "merchantId", "merchant", "creator", "updater", "createdBy", "updatedBy", "stats", "statistics", "inventory", "inventories", "histories", "orderCount", "salesCount"];
 
@@ -432,6 +436,80 @@
     return body;
   }
 
+  // 발주오라 상품 이미지 조건(JPG·PNG, 1MB 이하)에 맞는지. 형식 이름은 소문자·"image/jpg" → "image/jpeg"로 맞춥니다.
+  function productImageType(type) {
+    var value = String(type || "").split(";")[0].trim().toLowerCase();
+    return value === "image/jpg" ? "image/jpeg" : value;
+  }
+
+  function fitsProductImage(blob) {
+    return Boolean(blob) && blob.size >= 1 && blob.size <= PRODUCT_IMAGE.maxBytes && PRODUCT_IMAGE.types.indexOf(productImageType(blob.type)) >= 0;
+  }
+
+  // 발주오라가 다른 칸을 꼭 달라고 할 때(예: "상품명은 문자열이어야 합니다.") 채울 지금 값(값은 바뀌지 않음).
+  function currentProductValues(detail, keys) {
+    var values = {};
+    (keys || ["name", "code", "supplyPrice", "categoryIds", "imageUrls"]).forEach(function (key) { if (detail[key] !== undefined && detail[key] !== null) values[key] = detail[key]; });
+    return values;
+  }
+
+  // 이 창(브라우저)에서 이미지를 JPG로 바꿔 maxBytes 이하로 줄입니다(긴 변 최대 2000px부터 시작해 화질·크기를 차례로 낮춤).
+  // 투명한 부분은 흰 배경으로 채웁니다. DB센터에서 받은 파일(blob)이라 다른 사이트 이미지 제한(캔버스 오염)이 없습니다.
+  function makeImageConverter(win) {
+    return async function (blob, maxBytes) {
+      var bitmap = null;
+      var objectUrl = null;
+      try {
+        var source = null;
+        var width = 0;
+        var height = 0;
+        if (typeof win.createImageBitmap === "function") {
+          try { bitmap = await win.createImageBitmap(blob); } catch { bitmap = null; }
+        }
+        if (bitmap) {
+          source = bitmap;
+          width = bitmap.width;
+          height = bitmap.height;
+        } else {
+          objectUrl = win.URL.createObjectURL(blob);
+          source = await new Promise(function (resolve, reject) {
+            var image = new win.Image();
+            image.onload = function () { resolve(image); };
+            image.onerror = function () { reject(SyncError("DB센터 이미지를 열지 못했습니다. JPG·PNG 이미지로 다시 올려 주세요.")); };
+            image.src = objectUrl;
+          });
+          width = source.naturalWidth || source.width;
+          height = source.naturalHeight || source.height;
+        }
+        if (!width || !height) throw SyncError("DB센터 이미지 크기를 읽지 못했습니다. 이미지를 다시 올려 주세요.");
+        var toJpeg = function (canvas, quality) {
+          return new Promise(function (resolve) { canvas.toBlob(function (result) { resolve(result); }, "image/jpeg", quality); });
+        };
+        var scale = Math.min(1, PRODUCT_IMAGE.maxSide / Math.max(width, height));
+        for (var round = 0; round < 6; round += 1) {
+          var canvas = win.document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(width * scale));
+          canvas.height = Math.max(1, Math.round(height * scale));
+          var context = canvas.getContext("2d");
+          if (!context) throw SyncError("이 브라우저에서 이미지를 줄이지 못했습니다. JPG 1MB 이하 이미지로 다시 올려 주세요.");
+          context.fillStyle = "#ffffff";
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          context.drawImage(source, 0, 0, canvas.width, canvas.height);
+          var qualities = [0.9, 0.8, 0.7];
+          for (var step = 0; step < qualities.length; step += 1) {
+            var output = await toJpeg(canvas, qualities[step]);
+            if (output && output.size >= 1 && output.size <= maxBytes) return output;
+          }
+          scale *= 0.7;
+        }
+        throw SyncError("이미지를 1MB 이하로 줄이지 못했습니다. 더 작은 이미지로 다시 올려 주세요.");
+      } finally {
+        if (bitmap && typeof bitmap.close === "function") bitmap.close();
+        if (objectUrl) win.URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }
+
   function expectedValue(field, values) {
     if (field === "shippingPolicy") return values.baljuoraShippingPolicyId === undefined ? undefined : values.baljuoraShippingPolicyId;
     if (field === "supplyPrice") return values.supplyPrice;
@@ -443,12 +521,20 @@
   }
 
   // 보낸 칸이 발주오라에 실제로 저장됐는지 다시 읽어 확인합니다.
-  function verifyApplied(result, item, snapshot) {
+  // checks.image = { before: 보내기 전 첫 이미지, sent: 올려서 넣은 이미지 } — 저장 뒤 첫 이미지가 그대로면 반영 안 됨으로 봅니다.
+  function verifyApplied(result, item, snapshot, checks) {
     var still = [];
+    var imageCheck = checks && checks.image;
     (result.applied || []).forEach(function (field) {
       var expected = expectedValue(field, item.values);
       var actual = field === "name" ? snapshot.name : field === "shippingPolicy" ? snapshot.shippingPolicyId : snapshot[field];
-      if (field === "category") {
+      if (field === "image") {
+        var first = Array.isArray(snapshot.imageUrls) ? snapshot.imageUrls[0] || null : undefined;
+        if (imageCheck && first !== undefined && first !== imageCheck.sent && (first === null || first === imageCheck.before)) {
+          result.skipped.push({ field: field, reason: "발주오라 대표 이미지가 바뀌지 않았습니다(저장 뒤 다시 읽은 값 기준)." });
+          return;
+        }
+      } else if (field === "category") {
         if (snapshot.categoryIds !== undefined && item.values.categoryId && snapshot.categoryIds.indexOf(item.values.categoryId) < 0) {
           result.skipped.push({ field: field, reason: "발주오라에 저장된 카테고리가 다릅니다." });
           return;
@@ -796,6 +882,8 @@
       return { received: snapshots.length, products: products.length };
     }
 
+    // DB센터 상품 이미지를 받아 발주오라 상품 등록·수정 화면과 같은 방식으로 발주오라 저장소에 올리고, imageUrls 에 넣을 값을 돌려줍니다.
+    // (2026-11-23 운영: 예전 방식 { fileName, contentType, fileSize, category } 는 "kind should not be empty / size must not be less than 1"로 거절됨)
     async function uploadImage(item, code) {
       var response = await env.fetch(env.doogoOrigin + "/api/baljuora/runner/" + encodeURIComponent(code) + "/image/" + encodeURIComponent(item.productId));
       if (!response.ok) {
@@ -803,29 +891,50 @@
         throw SyncError((failure && failure.error && failure.error.message) || "DB센터 이미지를 받지 못했습니다.");
       }
       var blob = await response.blob();
-      var type = blob.type || "image/jpeg";
-      var extension = (type.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/g, "");
-      var fileName = String(item.code || item.productId).replace(/[^A-Za-z0-9_-]/g, "") + "." + extension;
-      var presignBody = { fileName: fileName, contentType: type, fileSize: blob.size, category: "product-image" };
+      if (!blob || blob.size < 1) throw SyncError("DB센터 이미지 파일이 비어 있습니다. 이미지를 다시 올려 주세요.");
+      if (!fitsProductImage(blob)) {
+        // 발주오라는 상품 이미지를 JPG·PNG, 1MB 이하만 받으므로 WEBP·GIF나 큰 이미지는 이 창에서 JPG로 줄여 올립니다.
+        if (typeof env.convertImage !== "function") throw SyncError("발주오라는 상품 이미지를 JPG·PNG, 1MB 이하만 받습니다. DB센터 이미지를 JPG 1MB 이하로 바꿔 다시 올려 주세요.");
+        var original = { type: productImageType(blob.type), size: blob.size };
+        blob = await env.convertImage(blob, PRODUCT_IMAGE.maxBytes);
+        if (!fitsProductImage(blob)) throw SyncError("이미지를 JPG 1MB 이하로 바꾸지 못했습니다. 더 작은 JPG·PNG 이미지로 다시 올려 주세요.");
+        note("image:converted " + (original.type || "unknown") + (original.size > PRODUCT_IMAGE.maxBytes ? " >1MB" : ""), 200);
+      }
+      var type = productImageType(blob.type);
+      var fileName = (String(item.code || item.productId).replace(/[^A-Za-z0-9_-]/g, "") || "product") + (type === "image/png" ? ".png" : ".jpg");
+      var presignBody = { kind: PRODUCT_IMAGE.kind, fileName: fileName, contentType: type, size: blob.size, source: PRODUCT_IMAGE.source };
       var presign = unwrap(await sendAdaptive("POST", "files/presign", presignBody, null));
       if (!state.structure.filesPresign) state.structure.filesPresign = structureOf(presign);
-      var target = isObject(presign) && isObject(presign.file) ? Object.assign({}, presign, presign.file) : presign;
-      var uploadUrl = target && (target.uploadUrl || target.presignedUrl || target.signedUrl || target.putUrl || target.url);
-      var fileUrl = target && (target.fileUrl || target.publicUrl || target.cdnUrl || target.downloadUrl || (target.key ? "https://files.baljuora.com/" + String(target.key).replace(/^\//, "") : null));
+      var target = isObject(presign) && !presign.uploadUrl && isObject(presign.data) ? presign.data : presign;
+      var uploadUrl = isObject(target) ? target.uploadUrl || target.presignedUrl || target.signedUrl || target.putUrl || null : null;
+      var file = isObject(target) && isObject(target.file) ? target.file : null;
+      // 발주오라 화면은 올린 파일의 file.value 를 imageUrls 에 그대로 넣습니다(기존 이미지는 value = 주소).
+      var value = file ? (typeof file.value === "string" && file.value) || (typeof file.url === "string" && file.url) || null : null;
+      if (!value && isObject(target)) value = typeof target.fileUrl === "string" ? target.fileUrl : typeof target.publicUrl === "string" ? target.publicUrl : null;
       if (!uploadUrl) throw SyncError("발주오라 이미지 업로드 주소를 받지 못했습니다.");
+      if (!value) throw SyncError("발주오라가 올릴 이미지의 주소를 알려 주지 않았습니다.");
+      var headers = isObject(target.headers) ? Object.assign({}, target.headers) : { "Content-Type": type };
       var uploaded;
-      if (isObject(target.fields)) {
-        var form = new env.FormData();
-        Object.keys(target.fields).forEach(function (key) { form.append(key, target.fields[key]); });
-        form.append("file", blob, fileName);
-        uploaded = await env.fetch(uploadUrl, { method: "POST", body: form });
-      } else {
-        uploaded = await env.fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": type }, body: blob });
+      try {
+        uploaded = await env.fetch(uploadUrl, { method: "PUT", headers: headers, body: blob });
+      } catch {
+        throw SyncError("발주오라 저장소에 이미지를 올리지 못했습니다(연결 실패). 잠시 뒤 다시 동기화해 주세요.");
       }
       note("upload:image", uploaded.status);
       if (!uploaded.ok) throw SyncError("발주오라 저장소에 이미지를 올리지 못했습니다(" + uploaded.status + ").");
-      if (!fileUrl) fileUrl = String(uploadUrl).split("?")[0];
-      return fileUrl;
+      return value;
+    }
+
+    // 썸네일(대표 이미지): 올린 이미지를 첫 이미지로, 나머지 이미지는 그대로 두고 발주오라 상품 수정 화면처럼 PUT products/:id {imageUrls} 로 저장합니다.
+    async function applyImage(id, detail, item, result, code, checks) {
+      var url = await uploadImage(item, code);
+      var before = extractImages(detail);
+      var images = [url].concat(before.slice(1).filter(function (value) { return value !== url; })).slice(0, PRODUCT_IMAGE.limit);
+      if (checks) checks.image = { before: before[0] || null, sent: url };
+      var body = { imageUrls: images };
+      await sendAdaptive("PUT", "products/" + encodeURIComponent(id), body, currentProductValues(detail, ["name", "code", "supplyPrice", "categoryIds"]), {});
+      if ("imageUrls" in body) result.applied.push("image");
+      else result.skipped.push({ field: "image", reason: "발주오라가 이미지 칸(imageUrls)을 받지 않았습니다." });
     }
 
     async function applyPricing(id, detail, item, fields, result, context) {
@@ -884,10 +993,8 @@
       if (groupList) {
         var groupBody = { sellerProductPrices: groupList };
         // 발주오라가 다른 칸을 꼭 달라고 하면(예: "상품명은 문자열이어야 합니다.") 지금 값으로만 채워 다시 보냅니다(값은 바뀌지 않음).
-        var currentValues = {};
-        ["name", "code", "supplyPrice", "categoryIds", "imageUrls"].forEach(function (key) { if (detail[key] !== undefined && detail[key] !== null) currentValues[key] = detail[key]; });
         try {
-          await sendAdaptive("PUT", "products/" + encodeURIComponent(id), groupBody, currentValues, {});
+          await sendAdaptive("PUT", "products/" + encodeURIComponent(id), groupBody, currentProductValues(detail), {});
           groupSent = Array.isArray(groupBody.sellerProductPrices);
         } catch (error) {
           if (error && error.status === 401) throw error;
@@ -929,7 +1036,8 @@
 
     // 상품 정보 저장(PUT products/:id/info)은 상품명이 꼭 있어야 합니다(2026-11-23 운영: 카테고리만 보내자 "상품명은 문자열이어야 합니다.").
     // 그래서 바꾸지 않는 칸도 지금 값(상품명·이미지·카테고리)을 함께 보내, 빠진 칸 때문에 발주오라 값이 지워지지 않게 합니다.
-    async function applyInfo(id, detail, item, fields, result, code) {
+    // 썸네일은 applyImage 가 이 저장 뒤에 따로 저장합니다(여기서 보내는 '지금 이미지'가 새 썸네일을 되돌리지 않게 순서 고정).
+    async function applyInfo(id, detail, item, fields, result) {
       var body = {};
       var sent = {};
       var baseKeys = [];
@@ -956,17 +1064,6 @@
           body[categoryKey] = categoryKey === "categoryIds" ? [item.values.categoryId] : item.values.categoryId;
           sent.category = categoryKey;
           dropBase(categoryKey);
-        }
-      }
-      if (fields.indexOf("image") >= 0) {
-        try {
-          var url = await uploadImage(item, code);
-          var existing = extractImages(detail).filter(function (value) { return value !== url; });
-          body.imageUrls = [url].concat(existing.slice(1)).slice(0, 10);
-          sent.image = "imageUrls";
-          dropBase("imageUrls");
-        } catch (error) {
-          result.skipped.push({ field: "image", reason: describeError(error) });
         }
       }
       if (Object.keys(sent).length === 0) return;
@@ -1029,14 +1126,18 @@
           try { await applyPricing(id, detail, item, priceFields, result, context); } catch (error) { if (error && error.status === 401) throw error; markFailed(priceFields, error); }
         }
         if (infoFields.length) {
-          try { await applyInfo(id, detail, item, infoFields, result, code); } catch (error) { if (error && error.status === 401) throw error; markFailed(infoFields, error); }
+          try { await applyInfo(id, detail, item, infoFields, result); } catch (error) { if (error && error.status === 401) throw error; markFailed(infoFields, error); }
+        }
+        var checks = {};
+        if (fields.indexOf("image") >= 0) {
+          try { await applyImage(id, detail, item, result, code, checks); } catch (error) { if (error && error.status === 401) throw error; markFailed(["image"], error); }
         }
         if (fields.indexOf("shippingPolicy") >= 0) {
           try { await applyShipping(id, detail, item, result); } catch (error) { if (error && error.status === 401) throw error; markFailed(["shippingPolicy"], error); }
         }
         var after = normalizeProduct(await getDetail(id), context);
         if (after) {
-          verifyApplied(result, item, after);
+          verifyApplied(result, item, after, checks);
           result.snapshot = after;
           result.code = after.code || result.code;
         }
@@ -1614,7 +1715,7 @@
       panel.log("작업을 받았습니다: " + (job.type === "compare" ? "발주오라 상품 불러오기(비교)" : "DB센터 변경 " + job.plan.items.length + "개 보내기"));
       var loadedScripts = [];
       try { loadedScripts = Array.prototype.map.call(win.document.scripts, function (script) { return script.src; }).filter(Boolean); } catch { /* 무시 */ }
-      runner = createRunner({ fetch: win.fetch.bind(win), FormData: win.FormData, locks: win.navigator && win.navigator.locks, consoleOrigin: win.location.origin, pagePath: win.location.pathname, loadedScripts: loadedScripts, apiBase: win.__doogoSyncApiBase || API_BASE, doogoOrigin: doogoOrigin });
+      runner = createRunner({ fetch: win.fetch.bind(win), locks: win.navigator && win.navigator.locks, consoleOrigin: win.location.origin, pagePath: win.location.pathname, loadedScripts: loadedScripts, apiBase: win.__doogoSyncApiBase || API_BASE, doogoOrigin: doogoOrigin, convertImage: makeImageConverter(win) });
       panel.status("발주오라 로그인 확인 중…");
       runner.state.token = await runner.refreshToken();
       if (job.type === "compare") {
@@ -1658,6 +1759,9 @@
     writable: writable,
     buildSellerProductPrices: buildSellerProductPrices,
     normalizeShippingPolicy: normalizeShippingPolicy,
+    fitsProductImage: fitsProductImage,
+    makeImageConverter: makeImageConverter,
+    PRODUCT_IMAGE: PRODUCT_IMAGE,
     extractPurchaseCost: extractPurchaseCost,
     chunkPathsOf: chunkPathsOf,
     codeSnippets: codeSnippets,
