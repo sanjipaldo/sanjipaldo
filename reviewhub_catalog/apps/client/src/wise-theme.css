@@ -3797,3 +3797,20 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .editor-grid .editor-price-block.has-baljuora .editor-price-bj { grid-column: auto; }
   .editor-price-head .editor-price-bj-head { margin-left: 0; }
 }
+
+/* ---------- PC 좌우 여백(2026-11-23 관리자 요청, 넓은 화면에서도 가운데 정렬 + 양옆 여백) ----------
+   머리글(로고·메뉴·바로가기)·본문·푸터를 같은 가운데 폭(1200px)에 맞춥니다. 배경·머리글 아래 선은 화면 끝까지 그대로.
+   예전: 메인(단가표 /)만 화면 끝까지(최대 1880px), 다른 메뉴 1100px, 푸터 1200px로 제각각이었음. 휴대폰·태블릿(1050px 이하)은 그대로. */
+:root { --public-container: 1200px; --public-gutter: 24px; --public-inline: max(var(--public-gutter), calc((100% - var(--public-container)) / 2)); }
+@media (min-width: 1051px) {
+  .public-header { padding-left: var(--public-inline); padding-right: var(--public-inline); }
+  .catalog-main,
+  .content-page:not(.sourcing-page) { width: min(var(--public-container), calc(100% - var(--public-gutter) * 2)); max-width: var(--public-container); }
+  .public-footer { padding-left: var(--public-inline); padding-right: var(--public-inline); }
+  .public-footer::before { left: var(--public-inline); }
+  /* 메인 위 카드 3개: 폭이 줄어도 날씨 카드의 지역 9칸이 카드 밖으로 나가지 않게(칸은 남는 폭을 나눠 쓰고, 날씨 글자는 두 줄까지) */
+  .catalog-main .operations-overview { grid-template-columns: minmax(0, 1.72fr) minmax(0, .82fr) minmax(0, .82fr); }
+  .catalog-main .weather-region-list { grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 5px; }
+  .catalog-main .weather-region-list > button { padding-left: 3px; padding-right: 3px; }
+  .catalog-main .weather-region-list small { overflow: visible; line-height: 1.25; text-overflow: clip; white-space: normal; }
+}
