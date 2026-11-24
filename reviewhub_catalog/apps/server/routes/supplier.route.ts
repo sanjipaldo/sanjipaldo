@@ -18,6 +18,7 @@ import {
   listSupplierProducts,
   listSupplierRequests,
   supplierProfile,
+  supplierSettlementSettings,
   touchSupplierLogin,
   type SupplierContext
 } from "../services/supplier-portal";
@@ -59,7 +60,8 @@ const supplierAuth: MiddlewareHandler = async (c, next) => {
 supplierRouter.get("/me", supplierAuth, async (c) => {
   const context = c.var.supplierContext;
   await touchSupplierLogin(context.account.id).catch(() => undefined);
-  return c.json(apiSuccess(supplierProfile(context)));
+  // 정산 방식(판매수수료 · 일반 도매)과 지급 주기: 두고푸드 관리자가 공급사 관리에서 정합니다.
+  return c.json(apiSuccess({ ...supplierProfile(context), settlement: await supplierSettlementSettings(context) }));
 });
 
 supplierRouter.get("/dashboard", supplierAuth, async (c) => {

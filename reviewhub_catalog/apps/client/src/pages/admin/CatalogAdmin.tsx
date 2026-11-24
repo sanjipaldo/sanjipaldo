@@ -62,6 +62,7 @@ import { baljuoraPriceCells, isLegacyBaljuoraRecord, type BaljuoraProductPrices 
 import { EncyclopediaSearchAdmin } from "./EncyclopediaSearchAdmin";
 import { CategoriesAdmin } from "./CategoriesAdmin";
 import type { SupplierAccountView } from "./SupplierPortalAdmin";
+import { SettlementBadge, SupplierSettlementFields, parseSettlementDraft, saveSupplierSettlement, settlementDraft, type SettlementDraft, type SupplierSettlementView } from "./SupplierSettlementFields";
 import { isSupplierAccount } from "@/components/auth/AdminGuard";
 import { RATE_TYPE_LABELS, RATE_TYPE_OPTIONS, SHIPPING_UNIT_LABELS, effectiveRate, rangeUnit, rateTierLines } from "@/lib/shipping-rates";
 import { authClient, clearAuthToken } from "@/lib/auth";
@@ -2119,6 +2120,9 @@ function SuppliersAdmin() {
   // 공급사 센터 로그인 계정(공급사 id → 계정)·연결된 상품 수(매입처 이름 → 개수). migration 032 전이면 portalReady=false.
   const [accounts, setAccounts] = useState<Record<string, SupplierAccountView>>({});
   const [productCounts, setProductCounts] = useState<Record<string, number>>({});
+  // 정산 방식(공급사 id → 판매수수료/일반 도매·수수료율·지급 주기, 2026-11-25)
+  const [settlements, setSettlements] = useState<Record<string, SupplierSettlementView>>({});
+  const [settlement, setSettlement] = useState<SettlementDraft>(() => settlementDraft());
   const [portalReady, setPortalReady] = useState(true);
   const [accountTarget, setAccountTarget] = useState<Supplier | null>(null);
   const [loading, setLoading] = useState(true);
@@ -2138,8 +2142,9 @@ function SuppliersAdmin() {
     try {
       const response = await apiFetch("/catalog/admin/suppliers");
       if (response.ok) {
-        const result = await readData<{ suppliers: Supplier[]; accounts?: SupplierAccountView[]; productCounts?: Record<string, number>; portalReady?: boolean }>(response);
+        const result = await readData<{ suppliers: Supplier[]; accounts?: SupplierAccountView[]; productCounts?: Record<string, number>; portalReady?: boolean; settlements?: Record<string, SupplierSettlementView> }>(response);
         setSuppliers(result.suppliers);
+        setSettlements(result.settlements ?? {});
         setAccounts(Object.fromEntries((result.accounts ?? []).map((account) => [account.supplierId, account])));
         setProductCounts(result.productCounts ?? {});
         setPortalReady(result.portalReady !== false);
@@ -2163,6 +2168,7 @@ function SuppliersAdmin() {
     setEmail("");
     setAddress("");
     setMemo("");
+    setSettlement(settlementDraft());
   };
 
   const open = (supplier?: Supplier) => {
@@ -2175,10 +2181,17 @@ function SuppliersAdmin() {
     setEmail(supplier?.email ?? "");
     setAddress(supplier?.address ?? "");
     setMemo(supplier?.memo ?? "");
+    setSettlement(settlementDraft(supplier ? settlements[supplier.id] : null));
   };
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    try {
+      parseSettlementDraft(settlement);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "정산 방식을 확인해 주세요.");
+      return;
+    }
     const payload = { name, businessNumber: businessNumber || null, representative: representative || null, phone: phone || null, email: email || null, address: address || null, memo: memo || null, isActive: true };
     const response = await apiFetch(editing ? `/catalog/admin/suppliers/${editing.id}` : "/catalog/admin/suppliers", {
       method: editing ? "PUT" : "POST",
@@ -2186,6 +2199,14 @@ function SuppliersAdmin() {
       body: JSON.stringify(payload)
     });
     if (!response.ok) return;
+    const supplierId = editing?.id ?? (await readData<{ supplier: Supplier }>(response).then((result) => result.supplier.id).catch(() => null));
+    if (supplierId) {
+      try {
+        await saveSupplierSettlement(supplierId, settlement);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "정산 방식을 저장하지 못했습니다.");
+      }
+    }
     toast.success(editing ? "공급처 정보를 수정했습니다." : "공급처를 등록했습니다.");
     reset();
     await load();
@@ -2203,13 +2224,13 @@ function SuppliersAdmin() {
   return <><div className="admin-page-heading"><div><span>SUPPLIER MANAGEMENT</span><h1>공급사 관리</h1><p>상품에 연결할 공급사(매입처) 정보와 공급사 센터 로그인 계정을 관리합니다. 상품의 매입처를 이 공급사로 지정하면 공급사 센터에 그 상품이 보여요.</p></div><button className="primary-action" type="button" onClick={() => open()}><Plus size={16} /> 신규 등록</button></div>
     <section className="supplier-admin-card admin-card">
       <div className="supplier-admin-toolbar"><div><strong>공급사 리스트</strong><span>상품 편집기에서 선택할 수 있는 활성 공급사 {suppliers.filter((supplier) => supplier.isActive).length}개 · 공급사 센터 계정 {Object.keys(accounts).length}개</span></div><span className="supplier-admin-note">공급사 센터 로그인 주소: {window.location.origin}/supplier</span></div>
-      {loading ? <div className="admin-loading inline"><div className="spinner" /><span>공급처를 불러오는 중…</span></div> : suppliers.length === 0 ? <div className="empty-state"><Store size={28} /><strong>등록된 공급처가 없습니다.</strong><span>신규 등록 버튼으로 첫 매입처를 추가해 주세요.</span></div> : <div className="admin-table-wrap supplier-table-wrap"><table className="admin-table supplier-table stackable-table"><thead><tr><th>번호</th><th>매입처명</th><th>사업자등록번호</th><th>대표자</th><th>담당자 연락처</th><th>주소</th><th>상품 수</th><th>공급사 센터 계정</th><th>상태</th><th>관리</th></tr></thead><tbody>{suppliers.map((supplier, index) => {
+      {loading ? <div className="admin-loading inline"><div className="spinner" /><span>공급처를 불러오는 중…</span></div> : suppliers.length === 0 ? <div className="empty-state"><Store size={28} /><strong>등록된 공급처가 없습니다.</strong><span>신규 등록 버튼으로 첫 매입처를 추가해 주세요.</span></div> : <div className="admin-table-wrap supplier-table-wrap"><table className="admin-table supplier-table stackable-table"><thead><tr><th>번호</th><th>매입처명</th><th>사업자등록번호</th><th>대표자</th><th>담당자 연락처</th><th>주소</th><th>상품 수</th><th>정산 방식</th><th>공급사 센터 계정</th><th>상태</th><th>관리</th></tr></thead><tbody>{suppliers.map((supplier, index) => {
         const account = accounts[supplier.id];
-        return <tr key={supplier.id}><td data-label="번호">{suppliers.length - index}</td><td data-label="매입처명" className="stack-wide"><strong>{supplier.name}</strong>{supplier.memo && <small>{supplier.memo}</small>}</td><td data-label="사업자등록번호">{supplier.businessNumber || "-"}</td><td data-label="대표자">{supplier.representative || "-"}</td><td data-label="담당자 연락처">{supplier.phone || "-"}</td><td data-label="주소" className="stack-wide">{supplier.address || "-"}</td><td data-label="상품 수"><strong>{(productCounts[supplier.name] ?? 0).toLocaleString("ko-KR")}개</strong></td><td data-label="공급사 센터 계정">{account ? <span className="supplier-account-cell"><strong>{account.username}</strong><span className={`status-pill ${account.isActive ? "active" : "danger"}`}>{account.isActive ? "로그인 가능" : "멈춤"}</span></span> : <span className="supplier-account-none">{portalReady ? "계정 없음" : "운영 배포 후"}</span>}</td><td data-label="상태"><span className={`status-pill ${supplier.isActive ? "active" : "danger"}`}>{supplier.isActive ? "사용" : "중지"}</span></td><td data-label="관리"><div className="row-actions"><button type="button" onClick={() => open(supplier)}><Pencil size={14} /> 수정</button><button type="button" className="supplier-account-button" onClick={() => setAccountTarget(supplier)}><KeyRound size={14} /> {account ? "계정" : "계정 만들기"}</button>{supplier.isActive && <button type="button" className="danger" onClick={() => void remove(supplier)}><Trash2 size={14} /> 중지</button>}</div></td></tr>;
+        return <tr key={supplier.id}><td data-label="번호">{suppliers.length - index}</td><td data-label="매입처명" className="stack-wide"><strong>{supplier.name}</strong>{supplier.memo && <small>{supplier.memo}</small>}</td><td data-label="사업자등록번호">{supplier.businessNumber || "-"}</td><td data-label="대표자">{supplier.representative || "-"}</td><td data-label="담당자 연락처">{supplier.phone || "-"}</td><td data-label="주소" className="stack-wide">{supplier.address || "-"}</td><td data-label="상품 수"><strong>{(productCounts[supplier.name] ?? 0).toLocaleString("ko-KR")}개</strong></td><td data-label="정산 방식"><SettlementBadge value={settlements[supplier.id]} /></td><td data-label="공급사 센터 계정">{account ? <span className="supplier-account-cell"><strong>{account.username}</strong><span className={`status-pill ${account.isActive ? "active" : "danger"}`}>{account.isActive ? "로그인 가능" : "멈춤"}</span></span> : <span className="supplier-account-none">{portalReady ? "계정 없음" : "운영 배포 후"}</span>}</td><td data-label="상태"><span className={`status-pill ${supplier.isActive ? "active" : "danger"}`}>{supplier.isActive ? "사용" : "중지"}</span></td><td data-label="관리"><div className="row-actions"><button type="button" onClick={() => open(supplier)}><Pencil size={14} /> 수정</button><button type="button" className="supplier-account-button" onClick={() => setAccountTarget(supplier)}><KeyRound size={14} /> {account ? "계정" : "계정 만들기"}</button>{supplier.isActive && <button type="button" className="danger" onClick={() => void remove(supplier)}><Trash2 size={14} /> 중지</button>}</div></td></tr>;
       })}</tbody></table></div>}
     </section>
-    {formOpen && <div className="editor-overlay" role="presentation" onMouseDown={reset}><form className="editor-panel supplier-editor" onSubmit={save} onMouseDown={(event) => event.stopPropagation()}><div className="editor-header"><div><span>SUPPLIER REGISTER</span><h2>{editing ? "매입처 수정" : "매입처 신규 등록"}</h2><p>상품에서 선택할 매입처 기본정보를 입력합니다.</p></div><button type="button" onClick={reset} aria-label="공급처 등록 닫기"><X size={20} /></button></div><div className="editor-grid"><label>매입처명*<input value={name} onChange={(event) => setName(event.target.value)} placeholder="상호명을 입력해 주세요." required /></label><label>대표자 성함<input value={representative} onChange={(event) => setRepresentative(event.target.value)} placeholder="대표자 성함" /></label><label>사업자등록번호<input value={businessNumber} onChange={(event) => setBusinessNumber(event.target.value)} placeholder="사업자등록번호" /></label><label>담당자 휴대폰번호<input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="010-0000-0000" /></label><label>담당자 이메일<input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="example@company.com" /></label><label className="full">주소<input value={address} onChange={(event) => setAddress(event.target.value)} placeholder="주소를 입력해 주세요." /></label><label className="full">비고<textarea value={memo} onChange={(event) => setMemo(event.target.value)} rows={4} placeholder="배송·정산·연락 가능 시간 등 참고사항" /></label></div><div className="editor-footer"><button type="button" onClick={reset}>취소</button><button className="primary-action" type="submit"><Save size={16} /> 저장하기</button></div></form></div>}
-    {accountTarget && <Suspense fallback={null}><SupplierAccountModal supplier={accountTarget} account={accounts[accountTarget.id] ?? null} portalReady={portalReady} productCount={productCounts[accountTarget.name] ?? 0} onClose={() => setAccountTarget(null)} onChanged={() => void load(true)} /></Suspense>}
+    {formOpen && <div className="editor-overlay" role="presentation" onMouseDown={reset}><form className="editor-panel supplier-editor" onSubmit={save} onMouseDown={(event) => event.stopPropagation()}><div className="editor-header"><div><span>SUPPLIER REGISTER</span><h2>{editing ? "매입처 수정" : "매입처 신규 등록"}</h2><p>상품에서 선택할 매입처 기본정보를 입력합니다.</p></div><button type="button" onClick={reset} aria-label="공급처 등록 닫기"><X size={20} /></button></div><div className="editor-grid"><label>매입처명*<input value={name} onChange={(event) => setName(event.target.value)} placeholder="상호명을 입력해 주세요." required /></label><label>대표자 성함<input value={representative} onChange={(event) => setRepresentative(event.target.value)} placeholder="대표자 성함" /></label><label>사업자등록번호<input value={businessNumber} onChange={(event) => setBusinessNumber(event.target.value)} placeholder="사업자등록번호" /></label><label>담당자 휴대폰번호<input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="010-0000-0000" /></label><label>담당자 이메일<input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="example@company.com" /></label><label className="full">주소<input value={address} onChange={(event) => setAddress(event.target.value)} placeholder="주소를 입력해 주세요." /></label><label className="full">비고<textarea value={memo} onChange={(event) => setMemo(event.target.value)} rows={4} placeholder="배송·정산·연락 가능 시간 등 참고사항" /></label><section className="full ssf-section" aria-label="정산 방식"><h3>정산 방식</h3><p>입점 때 두 가지 중 하나를 골라요. 가능하면 판매수수료 10%로 맞추면 매출의 10%가 바로 두고푸드 수익으로 잡혀요.</p><SupplierSettlementFields value={settlement} onChange={setSettlement} idPrefix={editing ? `sup-${editing.id}` : "sup-new"} /></section></div><div className="editor-footer"><button type="button" onClick={reset}>취소</button><button className="primary-action" type="submit"><Save size={16} /> 저장하기</button></div></form></div>}
+    {accountTarget && <Suspense fallback={null}><SupplierAccountModal supplier={accountTarget} account={accounts[accountTarget.id] ?? null} settlement={settlements[accountTarget.id] ?? null} portalReady={portalReady} productCount={productCounts[accountTarget.name] ?? 0} onClose={() => setAccountTarget(null)} onChanged={() => void load(true)} /></Suspense>}
   </>;
 }
 

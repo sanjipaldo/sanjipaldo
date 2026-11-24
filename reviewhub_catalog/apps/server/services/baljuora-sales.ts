@@ -35,17 +35,31 @@ import {
   type HometaxSettings
 } from "@repo/shared/baljuora-sales";
 import {
-  DEFAULT_SUPPLIER_COMMISSION_RATE,
-  SUPPLIER_SETTLEMENT_STATUSES,
   addDays,
+  feeDueRange,
+  isSettlementPeriod,
   monthRange,
   nextMonthKey,
   seoulDateKey,
-  supplierCommission,
-  type SupplierSettlementState,
+  settlementAmounts,
+  settlementRecordKey,
+  weekStartOf,
+  type SettlementRecordKind,
+  type SupplierSettlementSettings,
   type SupplierSettlementStatus
 } from "@repo/shared/supplier-portal";
 import { DatabaseError, getDb } from "../_core/db";
+import {
+  emptyLedgerRow,
+  feeState,
+  ledgerBySupplier,
+  loadSettlementDirectory,
+  payoutState,
+  recordState,
+  settlementRecords,
+  type LedgerRow,
+  type SettlementDirectory
+} from "./supplier-settlement";
 import {
   baljuoraBuyers,
   baljuoraSalesLines,
@@ -53,10 +67,8 @@ import {
   categories,
   externalProductLinks,
   products,
-  supplierAccounts,
   supplierSales,
   supplierSettlements,
-  suppliers,
   type BaljuoraBuyer
 } from "../db/schema";
 
@@ -551,12 +563,15 @@ export async function getSalesDashboard(input: { from?: string | null; to?: stri
     const imageRows = imageIds.length > 0 ? await db.select({ id: products.id, imageUrl: products.imageUrl }).from(products).where(inArray(products.id, imageIds)) : [];
     const imageById = new Map(imageRows.map((row) => [row.id, row.imageUrl]));
     const withImage = <T extends { productId: string | null; categoryId: string | null }>(row: T) => ({ ...named(row), imageUrl: row.productId ? imageById.get(row.productId) ?? null : null });
+    // 두고푸드 수익 나눠 보기(판매수수료 예상 · 일반 도매 마진 · 배송비 차익 · 공급사에 줄 배송비)
+    const [ledgers, directory] = await Promise.all([ledgerBySupplier(from, to), loadSettlementDirectory()]);
     return {
       from,
       to,
       today,
       hasData: anyRows.length > 0,
       totals,
+      breakdown: profitBreakdown(ledgers, directory),
       previous: { from: previous.start, to: previous.end, amount: previousTotals.amount, orders: previousTotals.orders },
       pending: { count: Number(pendingRows[0]?.count ?? 0), amount: Number(pendingRows[0]?.amount ?? 0) },
       todaySales: { totals: todayTotals, topProducts: todayTop.map(withImage) },
@@ -870,140 +885,173 @@ export async function buildHometaxFile(month: string, kind: HometaxKind, part: n
   });
 }
 
-// ─── 공급사 월 정산 ───────────────────────────────────────────────────────────
+// ─── 공급사 정산(2026-11-25: 주 정산 지급 · 월 정산 지급 · 판매 수수료 청구) ─────────────────────────────
+// 정산 방식은 services/supplier-settlement.ts(공급사마다 판매수수료/일반 도매, 수수료율, 지급 주기).
+// - 주 정산: 판매 주(월~일) → 다음 주 월요일 지급, 기록 열쇠 "w:<월요일>"(지급 대기 → 지급 완료)
+// - 월 정산: 1일~말일 → 다음 달 1~3일 지급, 열쇠 "YYYY-MM"(예전 월 정산 기록과 같음 — 예전 "정산 완료"는 지급 완료 + 수수료 확인)
+// - 판매 수수료: 판매수수료 방식 공급사의 한 달 판매 대금 × 수수료율 → 다음 달 1~3일 공급사가 두고푸드에 입금,
+//   열쇠 "fee:YYYY-MM"(청구 전 → 세금계산서 발행 → 수수료 입금 확인)
+type SettlementListInput = { kind?: string | null; period?: string | null; month?: string | null };
 
-function settlementState(row: typeof supplierSettlements.$inferSelect | undefined, month: string): SupplierSettlementState | null {
-  if (!row) return null;
-  return {
-    month,
-    status: SUPPLIER_SETTLEMENT_STATUSES.includes(row.status as SupplierSettlementStatus) ? row.status as SupplierSettlementStatus : "pending",
-    saleAmount: row.saleAmount,
-    commission: row.commission,
-    payoutAmount: row.payoutAmount,
-    commissionRate: row.commissionRate,
-    paidAt: row.paidAt,
-    doneAt: row.doneAt,
-    memo: row.memo,
-    updatedAt: row.updatedAt
-  };
+function settlementKind(value: string | null | undefined): SettlementRecordKind {
+  return value === "weekly" || value === "fee" ? value : "monthly";
 }
 
-/** 공급사 센터용: 그 공급사의 달별 정산 상태(표가 없으면 빈 값 — 운영 배포 전 미리보기) */
-export async function settlementStatesFor(supplierName: string, months: string[]) {
-  const result = new Map<string, SupplierSettlementState>();
-  const wanted = [...new Set(months.filter(isMonthKey))];
-  if (wanted.length === 0) return result;
-  try {
-    const rows = await getDb().select().from(supplierSettlements).where(and(eq(supplierSettlements.supplierName, supplierName), inArray(supplierSettlements.month, wanted)));
-    for (const row of rows) {
-      const state = settlementState(row, row.month);
-      if (state) result.set(row.month, state);
-    }
-  } catch (error) {
-    if (!isMissingSalesTable(error)) throw error;
+export function defaultSettlementPeriod(kind: SettlementRecordKind, today = seoulDateKey()) {
+  // 주 정산은 지난주 판매분(이번 주 월요일 지급), 월 정산·수수료는 지난달 판매분(이번 달 1~3일)을 먼저 보여 줍니다.
+  if (kind === "weekly") return weekStartOf(addDays(today, -7));
+  return nextMonthKey(today.slice(0, 7), -1);
+}
+
+function settlementWindow(kind: SettlementRecordKind, period: string) {
+  if (kind === "weekly") {
+    const payout = addDays(period, 7);
+    return { start: period, end: addDays(period, 6), payoutStart: payout, payoutEnd: payout };
   }
-  return result;
+  return { ...monthRange(period), ...feeDueRange(period) };
 }
 
-async function supplierMonthAmounts(month: string, supplierName?: string) {
-  const { start, end } = monthRange(month);
-  const conditions = [gte(supplierSales.saleDate, start), lte(supplierSales.saleDate, end)];
-  if (supplierName) conditions.push(eq(supplierSales.supplierName, supplierName));
-  const rows = await getDb().select({
-    supplierName: supplierSales.supplierName,
-    saleAmount: sql<number>`coalesce(sum(case when ${supplierSales.kind} = 'return' then 0 else ${supplierSales.amount} end), 0)`,
-    returnAmount: sql<number>`coalesce(sum(case when ${supplierSales.kind} = 'return' then ${supplierSales.amount} else 0 end), 0)`,
-    quantity: sql<number>`coalesce(sum(case when ${supplierSales.kind} = 'return' then -${supplierSales.quantity} else ${supplierSales.quantity} end), 0)`,
-    orders: sql<number>`coalesce(sum(${supplierSales.orderCount}), 0)`
-  }).from(supplierSales).where(and(...conditions)).groupBy(supplierSales.supplierName);
-  return new Map(rows.map((row) => [row.supplierName, { saleAmount: Number(row.saleAmount), returnAmount: Number(row.returnAmount), quantity: Number(row.quantity), orders: Number(row.orders) }]));
+function belongsTo(kind: SettlementRecordKind, settings: SupplierSettlementSettings) {
+  if (kind === "fee") return settings.type === "commission";
+  return settings.cycle === kind;
 }
 
-async function supplierRates() {
-  const rows = await getDb().select({ supplierId: suppliers.id, name: suppliers.name, commissionRate: supplierAccounts.commissionRate, settlementCycle: supplierAccounts.settlementCycle, accountId: supplierAccounts.id })
-    .from(suppliers).leftJoin(supplierAccounts, eq(supplierAccounts.supplierId, suppliers.id));
-  return new Map(rows.map((row) => [row.name, { supplierId: row.supplierId, hasAccount: Boolean(row.accountId), commissionRate: row.commissionRate ?? DEFAULT_SUPPLIER_COMMISSION_RATE, cycle: row.settlementCycle === "weekly" ? "weekly" as const : "monthly" as const }]));
+async function settlementRowsFor(kind: SettlementRecordKind, period: string) {
+  const window = settlementWindow(kind, period);
+  const key = settlementRecordKey(kind, period);
+  const [ledgers, directory, records] = await Promise.all([
+    ledgerBySupplier(window.start, window.end),
+    loadSettlementDirectory(),
+    settlementRecords(kind === "fee" ? [key, period] : [key])
+  ]);
+  const savedNames = [...records.values()].filter((row) => row.month === key).map((row) => row.supplierName);
+  const names = new Set<string>([...savedNames]);
+  const otherCycle = { suppliers: 0, payoutAmount: 0 };
+  for (const [name, ledger] of ledgers) {
+    if (ledger.quantity <= 0) continue;
+    const settings = directory.resolve(name);
+    if (belongsTo(kind, settings)) names.add(name);
+    else if (kind !== "fee") {
+      otherCycle.suppliers += 1;
+      otherCycle.payoutAmount += settlementAmounts(ledger, settings).payoutAmount;
+    }
+  }
+  const rows = [...names].map((supplierName) => {
+    const ledger = ledgers.get(supplierName) ?? emptyLedgerRow();
+    const settings = directory.resolve(supplierName);
+    const amounts = settlementAmounts(ledger, settings);
+    const row = records.get(`${supplierName}|${key}`);
+    const state = kind === "fee" ? feeState(row, records.get(`${supplierName}|${period}`)) : payoutState(row);
+    const recorded = state && state.status !== "pending" ? { saleAmount: state.saleAmount, commission: state.commission, payoutAmount: state.payoutAmount } : null;
+    return {
+      supplierName,
+      supplierId: settings.supplierId,
+      registered: settings.registered,
+      hasAccount: settings.hasAccount,
+      type: settings.type,
+      cycle: settings.cycle,
+      commissionRate: settings.commissionRate,
+      explicit: settings.explicit,
+      saleAmount: ledger.saleAmount,
+      returnAmount: ledger.returnAmount,
+      netAmount: ledger.netAmount,
+      costAmount: ledger.costAmount,
+      costMissing: settings.type === "wholesale" ? ledger.costMissing : 0,
+      quantity: ledger.netQuantity,
+      orders: ledger.orders,
+      goodsAmount: amounts.goodsAmount,
+      shippingFee: amounts.shippingFee,
+      payoutAmount: amounts.payoutAmount,
+      commission: amounts.commission,
+      netIncome: amounts.netIncome,
+      doogoProfit: amounts.doogoProfit,
+      status: state?.status ?? "pending",
+      paidAt: state?.paidAt ?? null,
+      doneAt: state?.doneAt ?? null,
+      memo: state?.memo ?? null,
+      updatedAt: state?.updatedAt ?? null,
+      updatedBy: row?.updatedBy ?? null,
+      recorded,
+      changedAfterRecord: Boolean(recorded && (kind === "fee" ? recorded.commission !== amounts.commission : recorded.payoutAmount !== amounts.payoutAmount))
+    };
+  });
+  return { window, key, rows, otherCycle };
 }
 
-export async function listSupplierSettlements(month: string) {
+export async function listSupplierSettlements(input: SettlementListInput) {
   return guarded(async () => {
-    if (!isMonthKey(month)) throw new DatabaseError("DATABASE_QUERY_FAILED", "정산할 달을 YYYY-MM 형식으로 골라 주세요.", 400);
-    const [amounts, rates, saved] = await Promise.all([
-      supplierMonthAmounts(month),
-      supplierRates(),
-      getDb().select().from(supplierSettlements).where(eq(supplierSettlements.month, month))
-    ]);
-    const savedByName = new Map(saved.map((row) => [row.supplierName, row]));
-    const names = new Set<string>([...amounts.keys(), ...saved.map((row) => row.supplierName)]);
-    const rows = [...names].map((supplierName) => {
-      const amount = amounts.get(supplierName) ?? { saleAmount: 0, returnAmount: 0, quantity: 0, orders: 0 };
-      const rate = rates.get(supplierName);
-      const commissionRate = rate?.commissionRate ?? DEFAULT_SUPPLIER_COMMISSION_RATE;
-      const netAmount = Math.max(0, amount.saleAmount - amount.returnAmount);
-      const commission = supplierCommission(netAmount, commissionRate);
-      const state = settlementState(savedByName.get(supplierName), month);
-      const recorded = state && state.status !== "pending" ? { saleAmount: state.saleAmount, commission: state.commission, payoutAmount: state.payoutAmount } : null;
-      return {
-        supplierName,
-        supplierId: rate?.supplierId ?? null,
-        registered: Boolean(rate),
-        hasAccount: rate?.hasAccount ?? false,
-        cycle: rate?.cycle ?? "monthly",
-        commissionRate,
-        saleAmount: amount.saleAmount,
-        returnAmount: amount.returnAmount,
-        netAmount,
-        quantity: amount.quantity,
-        orders: amount.orders,
-        commission,
-        payoutAmount: netAmount,
-        netIncome: netAmount - commission,
-        status: state?.status ?? "pending",
-        paidAt: state?.paidAt ?? null,
-        doneAt: state?.doneAt ?? null,
-        memo: state?.memo ?? null,
-        updatedAt: state?.updatedAt ?? null,
-        updatedBy: savedByName.get(supplierName)?.updatedBy ?? null,
-        recorded,
-        changedAfterRecord: Boolean(recorded && (recorded.saleAmount !== netAmount || recorded.commission !== commission))
-      };
-    }).sort((first, second) => second.netAmount - first.netAmount || first.supplierName.localeCompare(second.supplierName, "ko"));
-    const totals = rows.reduce((sum, row) => ({
+    const kind = settlementKind(input.kind);
+    const period = input.period ?? input.month ?? defaultSettlementPeriod(kind);
+    if (!isSettlementPeriod(kind, period)) {
+      throw new DatabaseError("DATABASE_QUERY_FAILED", kind === "weekly" ? "정산할 주를 월요일 날짜(YYYY-MM-DD)로 골라 주세요." : "정산할 달을 YYYY-MM 형식으로 골라 주세요.", 400);
+    }
+    const { window, rows, otherCycle } = await settlementRowsFor(kind, period);
+    const sorted = rows.sort((first, second) => (kind === "fee" ? second.commission - first.commission : second.payoutAmount - first.payoutAmount) || first.supplierName.localeCompare(second.supplierName, "ko"));
+    const owed = (row: (typeof rows)[number]) => (kind === "fee" ? row.commission > 0 : row.payoutAmount > 0);
+    const totals = sorted.reduce((sum, row) => ({
       netAmount: sum.netAmount + row.netAmount,
+      goodsAmount: sum.goodsAmount + row.goodsAmount,
+      shippingFee: sum.shippingFee + row.shippingFee,
+      payoutAmount: sum.payoutAmount + row.payoutAmount,
       commission: sum.commission + row.commission,
+      doogoProfit: sum.doogoProfit + row.doogoProfit,
       done: sum.done + (row.status === "done" ? 1 : 0),
       paid: sum.paid + (row.status === "paid" ? 1 : 0),
-      pending: sum.pending + (row.status === "pending" && row.netAmount > 0 ? 1 : 0)
-    }), { netAmount: 0, commission: 0, done: 0, paid: 0, pending: 0 });
-    const { end } = monthRange(month);
-    return { month, payoutFrom: `${nextMonthKey(month)}-01`, payoutTo: `${nextMonthKey(month)}-03`, closed: end < seoulDateKey(), rows, totals, sync: await getSalesSyncState() };
+      pending: sum.pending + (row.status === "pending" && owed(row) ? 1 : 0)
+    }), { netAmount: 0, goodsAmount: 0, shippingFee: 0, payoutAmount: 0, commission: 0, doogoProfit: 0, done: 0, paid: 0, pending: 0 });
+    return {
+      kind,
+      period,
+      month: kind === "weekly" ? period.slice(0, 7) : period,
+      start: window.start,
+      end: window.end,
+      payoutFrom: window.payoutStart,
+      payoutTo: window.payoutEnd,
+      closed: window.end < seoulDateKey(),
+      rows: sorted,
+      totals,
+      otherCycle,
+      sync: await getSalesSyncState()
+    };
   });
 }
 
-export async function updateSupplierSettlement(input: { supplierName: string; month: string; status: SupplierSettlementStatus; memo?: string | null }, updatedBy: string | null) {
+const PAYOUT_STATUSES: Record<SettlementRecordKind, SupplierSettlementStatus[]> = {
+  weekly: ["pending", "paid"],
+  // 예전 월 정산 기록의 "정산 완료"(지급 + 수수료 확인)도 그대로 받습니다.
+  monthly: ["pending", "paid", "done"],
+  fee: ["pending", "paid", "done"]
+};
+
+export async function updateSupplierSettlement(
+  input: { supplierName: string; kind?: string | null; period?: string | null; month?: string | null; status: SupplierSettlementStatus; memo?: string | null },
+  updatedBy: string | null
+) {
   return guarded(async () => {
     const supplierName = cleanText(input.supplierName, 120);
-    if (!supplierName || !isMonthKey(input.month)) throw new DatabaseError("DATABASE_QUERY_FAILED", "공급사와 달을 확인해 주세요.", 400);
-    if (!SUPPLIER_SETTLEMENT_STATUSES.includes(input.status)) throw new DatabaseError("DATABASE_QUERY_FAILED", "정산 상태가 올바르지 않습니다.", 400);
+    const kind = settlementKind(input.kind);
+    const period = input.period ?? input.month ?? "";
+    if (!supplierName || !isSettlementPeriod(kind, period)) throw new DatabaseError("DATABASE_QUERY_FAILED", "공급사와 정산 기간을 확인해 주세요.", 400);
+    if (!PAYOUT_STATUSES[kind].includes(input.status)) throw new DatabaseError("DATABASE_QUERY_FAILED", "정산 상태가 올바르지 않습니다.", 400);
     const db = getDb();
-    const [amounts, rates, existingRows] = await Promise.all([
-      supplierMonthAmounts(input.month, supplierName),
-      supplierRates(),
-      db.select().from(supplierSettlements).where(and(eq(supplierSettlements.supplierName, supplierName), eq(supplierSettlements.month, input.month))).limit(1)
+    const window = settlementWindow(kind, period);
+    const key = settlementRecordKey(kind, period);
+    const [ledgers, directory, existingRows] = await Promise.all([
+      ledgerBySupplier(window.start, window.end),
+      loadSettlementDirectory(),
+      db.select().from(supplierSettlements).where(and(eq(supplierSettlements.supplierName, supplierName), eq(supplierSettlements.month, key))).limit(1)
     ]);
-    const amount = amounts.get(supplierName) ?? { saleAmount: 0, returnAmount: 0 };
-    const commissionRate = rates.get(supplierName)?.commissionRate ?? DEFAULT_SUPPLIER_COMMISSION_RATE;
-    const netAmount = Math.max(0, amount.saleAmount - amount.returnAmount);
-    const commission = supplierCommission(netAmount, commissionRate);
+    const settings = directory.resolve(supplierName);
+    const amounts = settlementAmounts(ledgers.get(supplierName) ?? emptyLedgerRow(), settings);
     const existing = existingRows[0];
     const now = nowIso();
     const values = {
       status: input.status,
-      saleAmount: netAmount,
-      commissionRate,
-      commission,
-      payoutAmount: netAmount,
-      // 판매 대금 입금일은 처음 입금 완료로 바꾼 때를 남기고, 정산 대기로 되돌리면 지웁니다.
+      saleAmount: amounts.goodsAmount,
+      commissionRate: settings.type === "commission" ? settings.commissionRate : 0,
+      commission: amounts.commission,
+      payoutAmount: amounts.payoutAmount,
+      // 지급(수수료는 세금계산서 발행) 시각은 처음 바꾼 때를 남기고, 대기로 되돌리면 지웁니다.
       paidAt: input.status === "pending" ? null : existing?.paidAt ?? now,
       doneAt: input.status === "done" ? existing?.doneAt ?? now : null,
       memo: input.memo === undefined ? existing?.memo ?? null : cleanText(input.memo, 500),
@@ -1011,8 +1059,56 @@ export async function updateSupplierSettlement(input: { supplierName: string; mo
       updatedAt: now
     };
     if (existing) await db.update(supplierSettlements).set(values).where(eq(supplierSettlements.id, existing.id));
-    else await db.insert(supplierSettlements).values({ id: randomUUID(), supplierName, month: input.month, createdAt: now, ...values });
-    const saved = await db.select().from(supplierSettlements).where(and(eq(supplierSettlements.supplierName, supplierName), eq(supplierSettlements.month, input.month))).limit(1);
-    return settlementState(saved[0], input.month);
+    else await db.insert(supplierSettlements).values({ id: randomUUID(), supplierName, month: key, createdAt: now, ...values });
+    const saved = await db.select().from(supplierSettlements).where(and(eq(supplierSettlements.supplierName, supplierName), eq(supplierSettlements.month, key))).limit(1);
+    return recordState(saved[0]);
   });
+}
+
+// ─── 두고푸드 수익 나눠 보기(2026-11-25 관리자 요청) ─────────────────────────────────────
+// 판매 금액을 정산 방식별로 나눠 두고푸드 몫을 바로 계산합니다: 판매수수료 공급사 = 판매 금액 × 수수료율(예상 수수료),
+// 일반 도매 공급사 = 판매 금액 − 원가(마진), 배송비 = 매출처가 낸 배송비 − 공급사에 줄 매입 배송비(100% 지급).
+export type ProfitBreakdown = {
+  commission: { amount: number; fee: number; suppliers: number; minRate: number | null; maxRate: number | null };
+  wholesale: { amount: number; cost: number; margin: number; suppliers: number; costMissing: number };
+  shipping: { received: number; paid: number; margin: number };
+  unassigned: { amount: number; suppliers: number };
+  profit: number;
+};
+
+export function profitBreakdown(ledgers: Map<string, LedgerRow>, directory: SettlementDirectory): ProfitBreakdown {
+  const result: ProfitBreakdown = {
+    commission: { amount: 0, fee: 0, suppliers: 0, minRate: null, maxRate: null },
+    wholesale: { amount: 0, cost: 0, margin: 0, suppliers: 0, costMissing: 0 },
+    shipping: { received: 0, paid: 0, margin: 0 },
+    unassigned: { amount: 0, suppliers: 0 },
+    profit: 0
+  };
+  for (const [name, ledger] of ledgers) {
+    if (ledger.quantity <= 0 && ledger.shippingFee === 0 && ledger.shippingReceived === 0) continue;
+    const settings = directory.resolve(name);
+    const amounts = settlementAmounts(ledger, settings);
+    if (!settings.registered) {
+      result.unassigned.amount += ledger.netAmount;
+      result.unassigned.suppliers += 1;
+    }
+    if (settings.type === "wholesale") {
+      result.wholesale.amount += ledger.netAmount;
+      result.wholesale.cost += ledger.costAmount;
+      result.wholesale.margin += amounts.doogoProfit;
+      result.wholesale.costMissing += ledger.costMissing;
+      result.wholesale.suppliers += 1;
+    } else {
+      result.commission.amount += ledger.netAmount;
+      result.commission.fee += amounts.commission;
+      result.commission.suppliers += 1;
+      result.commission.minRate = result.commission.minRate === null ? settings.commissionRate : Math.min(result.commission.minRate, settings.commissionRate);
+      result.commission.maxRate = result.commission.maxRate === null ? settings.commissionRate : Math.max(result.commission.maxRate, settings.commissionRate);
+    }
+    result.shipping.received += ledger.shippingReceived;
+    result.shipping.paid += ledger.shippingFee;
+  }
+  result.shipping.margin = result.shipping.received - result.shipping.paid;
+  result.profit = result.commission.fee + result.wholesale.margin + result.shipping.margin;
+  return result;
 }

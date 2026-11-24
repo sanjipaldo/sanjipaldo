@@ -286,3 +286,39 @@
 .aa-page .sa-modal-actions { position: static; padding-top: 0; background: none; }
 .aa-page .primary-action { border-radius: 999px; color: var(--w-ink, #0e0f0c); background: var(--w-primary, #9fe870); }
 .aa-page .primary-action:hover:not(:disabled) { background: var(--w-primary-active, #8bd65c); }
+
+/* 두고푸드 수익 나눠 보기(2026-11-25, ProfitBreakdownCards) — 판매 현황·운영 홈 판매 요약 */
+.sa-kpi article.is-profit { border-color: #163300; background: linear-gradient(135deg, #f3fbec, #fff); }
+.sa-kpi article.is-profit strong { color: #163300; }
+.sa-profit-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.sa-profit-grid article { display: grid; gap: 6px; align-content: start; min-width: 0; padding: 14px 16px; border: 1px dashed #cfd8c8; border-radius: 16px; background: #fff; }
+.sa-profit-grid span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--w-body, #454745); font-size: 13px; font-weight: 800; }
+.sa-profit-grid span svg { flex: 0 0 auto; }
+.sa-profit-grid span em { padding: 1px 7px; border-radius: 999px; color: #054d28; background: #e2f6d5; font-size: 10.5px; font-style: normal; }
+.sa-profit-grid strong { color: var(--w-ink, #0e0f0c); font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.sa-profit-grid small { color: var(--w-mute, #868685); font-size: 12px; font-weight: 600; line-height: 1.45; }
+.sa-profit-grid .is-commission { border-style: solid; border-color: #b7dfa0; background: #f6fbf1; }
+.sa-profit-grid .is-commission svg { color: #2f7d1c; }
+.sa-profit-grid .is-wholesale svg { color: #1f5fa8; }
+.sa-profit-grid .is-shipping svg { color: #9a6a00; }
+.sa-profit-grid .is-payout span em { color: #7a4b00; background: #fff1cc; }
+.sa-profit-grid .is-payout svg { color: #7a4b00; }
+.sa-profit-note { margin: 8px 2px 0; color: #7a4b00; font-size: 12px; line-height: 1.5; }
+@container (max-width: 760px) {
+  .sa-profit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 1050px) {
+  .sa-profit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 420px) {
+  .sa-profit-grid { grid-template-columns: minmax(0, 1fr); }
+}
+/* 공급사 정산 탭(2026-11-25, SupplierSettlementsAdmin.tsx) */
+.ssa-tabs { margin: 0 0 14px; }
+.ssa-tabs button { display: inline-flex; align-items: center; gap: 6px; }
+.ssa-type { display: inline-flex; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.ssa-type.is-commission { color: #163300; background: #e2f6d5; }
+.ssa-type.is-wholesale { color: #0f2747; background: #dcebff; }
+.ssa-ship { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.ssa-total { color: #163300; font-size: 15.5px; }
+.ssa-info { color: #0f2747; background: #eaf2fd; }

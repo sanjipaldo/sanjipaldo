@@ -3,18 +3,27 @@
 // - 날짜별 판매 막대: 마우스를 올리거나(PC) 누르거나(휴대폰) 키보드로 고르면 그날 판매 금액(원 단위)·주문·수량 말풍선
 // - TOP 10 수량·판매 금액 글씨를 키움
 import { useMemo, useRef, useState } from "react";
-import { Crown, Package } from "lucide-react";
+import { BadgePercent, Boxes, Crown, Package, Truck, Wallet } from "lucide-react";
 import { addDays, monthRange, nextMonthKey, weekdayOf } from "@repo/shared/supplier-portal";
 import { compactWon, percent, won, type SalesSyncState } from "./sales-admin-shared";
 
 export type SalesTotals = { amount: number; quantity: number; orders: number; buyers: number; cost: number; returnAmount: number; lines: number };
 export type SalesProductRank = { key: string; productId: string | null; name: string; supplierName: string | null; categoryName: string; amount: number; quantity: number; orders: number; imageUrl?: string | null };
+// 두고푸드 수익 나눠 보기(2026-11-25, 서버 profitBreakdown): 판매수수료 예상 · 일반 도매 마진 · 배송비 차익 · 공급사에 줄 배송비
+export type ProfitBreakdown = {
+  commission: { amount: number; fee: number; suppliers: number; minRate: number | null; maxRate: number | null };
+  wholesale: { amount: number; cost: number; margin: number; suppliers: number; costMissing: number };
+  shipping: { received: number; paid: number; margin: number };
+  unassigned: { amount: number; suppliers: number };
+  profit: number;
+};
 export type SalesSummary = {
   from: string;
   to: string;
   today: string;
   hasData: boolean;
   totals: SalesTotals;
+  breakdown?: ProfitBreakdown;
   previous: { from: string; to: string; amount: number; orders: number };
   pending: { count: number; amount: number };
   todaySales: { totals: SalesTotals; topProducts: SalesProductRank[] };
@@ -70,13 +79,57 @@ export function SalesThumb({ src, size = 44 }: { src?: string | null; size?: num
 export function SalesKpiCards({ summary }: { summary: SalesSummary }) {
   const totals = summary.totals;
   const margin = totals.amount - totals.cost;
+  const profit = summary.breakdown?.profit;
   return (
     <section className="sales-kpi-grid sa-kpi">
       <article><span>판매 금액</span><strong>{won(totals.amount)}</strong><SalesChange now={totals.amount} before={summary.previous.amount} /></article>
       <article><span>주문</span><strong>{count(totals.orders)}건</strong><small>상품 {count(totals.quantity)}개{totals.returnAmount ? ` · 취소·반품 -${won(totals.returnAmount)}` : ""}</small></article>
       <article><span>주문한 매출처</span><strong>{count(totals.buyers)}곳</strong><small>셀러(매출처) 수</small></article>
-      <article><span>매입원가 뺀 금액</span><strong>{won(margin)}</strong><small>{totals.amount ? `판매 금액의 ${percent(margin, totals.amount)}% · 매입원가가 있는 줄 기준` : "판매 없음"}</small></article>
+      {profit === undefined ? (
+        <article><span>매입원가 뺀 금액</span><strong>{won(margin)}</strong><small>{totals.amount ? `판매 금액의 ${percent(margin, totals.amount)}% · 매입원가가 있는 줄 기준` : "판매 없음"}</small></article>
+      ) : (
+        <article className="is-profit"><span>두고푸드 예상 수익</span><strong>{won(profit)}</strong><small>{totals.amount ? `판매 금액의 ${percent(profit, totals.amount)}% · 수수료 + 도매 마진 + 배송비 차익` : "판매 없음"}</small></article>
+      )}
     </section>
+  );
+}
+
+function rateLabel(minRate: number | null, maxRate: number | null) {
+  if (minRate === null || maxRate === null) return "10%";
+  return minRate === maxRate ? `${minRate}%` : `${minRate}~${maxRate}%`;
+}
+
+/** 두고푸드 수익 나눠 보기: 판매 금액을 정산 방식별로 나눠 두고푸드 몫을 바로 셈합니다(공급사 관리의 정산 방식 기준). */
+export function ProfitBreakdownCards({ summary }: { summary: SalesSummary }) {
+  const breakdown = summary.breakdown;
+  if (!breakdown) return null;
+  const { commission, wholesale, shipping, unassigned } = breakdown;
+  return (
+    <>
+      <section className="sa-profit-grid" aria-label="두고푸드 수익 나눠 보기">
+        <article className="is-commission">
+          <span><BadgePercent size={16} aria-hidden="true" /> 판매수수료 예상 <em>순이익</em></span>
+          <strong>{won(commission.fee)}</strong>
+          <small>판매 {won(commission.amount)} × {rateLabel(commission.minRate, commission.maxRate)} · 공급사 {count(commission.suppliers)}곳 · 다음 달 1~3일 받음</small>
+        </article>
+        <article className="is-wholesale">
+          <span><Boxes size={16} aria-hidden="true" /> 일반 도매 파트</span>
+          <strong>{won(wholesale.amount)}</strong>
+          <small>{wholesale.suppliers ? `마진 ${won(wholesale.margin)} (원가 ${won(wholesale.cost)}) · 공급사 ${count(wholesale.suppliers)}곳` : "도매(매입) 공급사 판매 없음"}{wholesale.costMissing ? ` · 원가 모르는 판매 ${count(wholesale.costMissing)}줄` : ""}</small>
+        </article>
+        <article className="is-shipping">
+          <span><Truck size={16} aria-hidden="true" /> 배송비 차익 <em>순이익</em></span>
+          <strong>{won(shipping.margin)}</strong>
+          <small>받은 배송비 {won(shipping.received)} − 공급사 지급 {won(shipping.paid)}</small>
+        </article>
+        <article className="is-payout">
+          <span><Wallet size={16} aria-hidden="true" /> 공급사에 줄 배송비 <em>100% 지급</em></span>
+          <strong>{won(shipping.paid)}</strong>
+          <small>공급사 매입 배송비 · 정산 때 그대로 보냄</small>
+        </article>
+      </section>
+      {unassigned.amount > 0 && <p className="sa-profit-note">공급사 목록에 없는 매입처 {count(unassigned.suppliers)}곳(판매 {won(unassigned.amount)})은 판매수수료 10%로 셈했어요. 공급사 관리에서 등록하고 정산 방식을 정해 주세요.</p>}
+    </>
   );
 }
 
@@ -107,7 +160,7 @@ export function TodayTopCard({ summary, limit = 5 }: { summary: SalesSummary; li
 }
 
 // 날짜별 판매 막대. 막대를 가리키면(마우스·탭·키보드) 위쪽 말풍선에 그날 판매 금액·주문·수량을 원 단위로 보여 줍니다.
-export function DailySalesChart({ summary }: { summary: SalesSummary }) {
+export function DailySalesChart({ summary }: { summary: Pick<SalesSummary, "daily" | "from" | "to" | "today"> }) {
   const [active, setActive] = useState<number | null>(null);
   // 휴대폰(크롬)은 막대를 누른 직후 마우스가 떠난 것처럼(mouseleave) 알려 말풍선이 바로 닫히므로, 누른 직후의 떠남은 무시합니다.
   const touchedAt = useRef(0);

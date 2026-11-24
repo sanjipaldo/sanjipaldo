@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { seoulDateKey } from "@repo/shared/supplier-portal";
 import { apiFetch } from "@/lib/api";
 import { SalesSyncCard, readData, won } from "./sales-admin-shared";
-import { BuyerRankList, CategoryRankList, DailySalesChart, SalesKpiCards, SupplierRankList, TodayTopCard, TopProductsTable, salesRangeFor, type SalesPreset, type SalesSummary } from "./sales-widgets";
+import { BuyerRankList, CategoryRankList, DailySalesChart, ProfitBreakdownCards, SalesKpiCards, SupplierRankList, TodayTopCard, TopProductsTable, salesRangeFor, type SalesPreset, type SalesSummary } from "./sales-widgets";
 import "./sales-admin.css";
 
 const PRESETS: Array<{ key: SalesPreset; label: string }> = [
@@ -65,6 +65,7 @@ export function SalesDashboardAdmin() {
       ) : (
         <div className={`sa-stack ${loading ? "sa-dim" : ""}`}>
           <SalesKpiCards summary={summary} />
+          <ProfitBreakdownCards summary={summary} />
           {summary.pending.count > 0 && <p className="sa-notice"><Info size={15} aria-hidden="true" /><span>주문대기(입금 전) {summary.pending.count.toLocaleString("ko-KR")}줄 · {won(summary.pending.amount)}은 매출에서 뺐어요. 입금되면 다음 불러오기 때 들어옵니다.</span></p>}
 
           <div className="sa-grid-2">

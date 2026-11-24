@@ -6,7 +6,6 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
-  ArrowRight,
   Banknote,
   BookOpen,
   Boxes,
@@ -19,8 +18,8 @@ import {
   LogOut,
   Menu,
   PackagePlus,
+  ShieldAlert,
   Store,
-  Trophy,
   Truck,
   UserRound,
   X
@@ -30,18 +29,17 @@ import { RequireAuth } from "@/components/auth/route-guards";
 import { apiFetch } from "@/lib/api";
 import { authClient, clearAuthToken } from "@/lib/auth";
 import {
-  SUPPLIER_CYCLE_LABELS,
   SUPPLIER_PASSWORD_MIN,
   SUPPLIER_PASSWORD_RECOMMENDED,
-  SUPPLIER_REQUEST_KIND_LABELS,
-  formatPayoutLabel,
-  formatPeriodLabel
+  SUPPLIER_RETURN_POLICY,
+  SUPPLIER_SETTLEMENT_TYPE_LABELS,
+  settlementPlanText
 } from "@repo/shared/supplier-portal";
-import { count, dayLabel, monthLabel, shortDateTime, supplierGet, supplierPost, won, type SupplierDashboard, type SupplierProfile, type SupplierRequestItem } from "./supplier-api";
+import { shortDateTime, supplierGet, supplierPost, type SupplierProfile, type SupplierRequestItem } from "./supplier-api";
 import { CreateRequestModal, SupplierProducts } from "./SupplierProducts";
 import { SupplierRequests } from "./SupplierRequests";
-import { SupplierSales, cycleDescription } from "./SupplierSales";
-import { RequestStatusPill, SettlementStatus } from "./supplier-ui";
+import { SupplierSales } from "./SupplierSales";
+import { SupplierHome, settlementOf } from "./supplier-dashboard";
 import "./supplier-center.css";
 
 export const SUPPLIER_SECTIONS = ["home", "products", "requests", "sales", "account"] as const;
@@ -364,106 +362,6 @@ function SupplierShell({ section, profile }: { section: SupplierSection; profile
 }
 
 // ── 대시보드 ────────────────────────────────────────────────────────────
-function SupplierHome({ profile, reloadKey, onCreate }: { profile: SupplierProfile; reloadKey: number; onCreate: () => void }) {
-  const [data, setData] = useState<SupplierDashboard | null>(null);
-  const [error, setError] = useState("");
-  const [retry, setRetry] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-    void supplierGet<SupplierDashboard>("/dashboard")
-      .then((value) => { if (active) { setData(value); setError(""); } })
-      .catch((failure) => { if (active) setError(failure instanceof Error ? failure.message : "대시보드를 불러오지 못했어요."); });
-    return () => { active = false; };
-  }, [reloadKey, retry]);
-
-  if (error && !data) {
-    return <section className="admin-card"><div className="empty-state"><CircleAlert size={28} /><strong>대시보드를 불러오지 못했어요.</strong><span>{error}</span><button type="button" className="sup-retry" onClick={() => setRetry((value) => value + 1)}>다시 불러오기</button></div></section>;
-  }
-  if (!data) return <div className="admin-loading inline"><div className="spinner" /><span>대시보드를 불러오는 중…</span></div>;
-
-  const { sales, upcomingSettlement: upcoming, products, requests } = data;
-  const rate = data.account.commissionRate;
-  const onSale = Math.max(0, products.total - products.soldOut);
-  return (
-    <>
-      <div className="admin-page-heading">
-        <div><span>SUPPLIER DASHBOARD</span><h1>대시보드</h1><p>{dayLabel(data.today)} 기준 · 이번 달 판매와 다음 정산, 변경 요청 진행 상황을 한눈에 봅니다.</p></div>
-        <button className="primary-action" type="button" onClick={onCreate}><PackagePlus size={16} /> 상품 등록 요청</button>
-      </div>
-      <section className="admin-home-hero sup-hero">
-        <div>
-          <span className="sup-hero-kicker">{profile.supplier.name}</span>
-          <h2>다음 정산은 <mark>{formatPayoutLabel(upcoming)}</mark> 입금 예정이에요.</h2>
-          <p>{formatPeriodLabel(upcoming)} 판매분 · 판매 대금 {won(upcoming.payoutAmount)}{upcoming.commission ? ` · 수수료 ${rate}% ${won(upcoming.commission)}` : ""}</p>
-        </div>
-        <Link to="/supplier/sales" className="admin-home-live"><span className="live-dot" /> 정산 달력 보기</Link>
-      </section>
-      <section className="admin-home-stat-grid">
-        <Link to="/supplier/sales" className="admin-home-stat featured"><span>{monthLabel(data.month)} 판매 금액</span><strong>{won(sales.totals.netAmount)}</strong><small>판매 {won(sales.totals.saleAmount)} · 반품 {won(sales.totals.returnAmount)}</small></Link>
-        <Link to="/supplier/sales" className="admin-home-stat"><span>다음 정산 입금</span><strong>{won(upcoming.payoutAmount)}</strong><small>{formatPayoutLabel(upcoming)} · 실 수령 예상 {won(upcoming.netIncome)}</small></Link>
-        <Link to="/supplier/products" className="admin-home-stat"><span>판매 중인 상품</span><strong>{count(onSale)}</strong><small>내 상품 {count(products.total)} · 품절 {count(products.soldOut)}{products.hidden ? ` · 숨김 ${count(products.hidden)}` : ""}</small></Link>
-        <Link to="/supplier/requests" className="admin-home-stat"><span>승인 대기 요청</span><strong>{count(requests.pending, "건")}</strong><small>두고푸드 승인 후 상품에 반영돼요</small></Link>
-      </section>
-      <div className="admin-home-grid">
-        <section className="admin-card admin-home-panel">
-          <div className="card-heading"><Trophy size={19} aria-hidden="true" /><div><h2>이번 달 잘 팔린 상품</h2><p>순매출이 큰 순서 TOP 5</p></div><Link to="/supplier/sales">전체 순위 <ArrowRight size={13} /></Link></div>
-          {sales.ranking.length === 0 ? (
-            <div className="admin-home-unavailable"><CalendarDays size={17} aria-hidden="true" /> 아직 이번 달 판매 내역이 없어요. 두고푸드 주문 데이터가 연결되면 순위가 자동으로 채워져요.</div>
-          ) : (
-            <ol className="sup-rank-list">
-              {sales.ranking.map((item, index) => (
-                <li key={`${item.productId ?? item.productCode ?? item.productName}`}>
-                  <b className={`supplier-rank rank-${Math.min(index + 1, 3)}`}>{index + 1}위</b>
-                  <strong>{item.productName}</strong>
-                  <span>{won(item.netAmount)}<small>{item.netQuantity.toLocaleString("ko-KR")}개</small></span>
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
-        <section className="admin-card admin-home-panel">
-          <div className="card-heading"><Banknote size={19} aria-hidden="true" /><div><h2>다음 정산</h2><p>{SUPPLIER_CYCLE_LABELS[upcoming.cycle]} · {formatPeriodLabel(upcoming)} 판매분</p></div><Link to="/supplier/sales">정산 달력 <ArrowRight size={13} /></Link></div>
-          <SettlementStatus state={upcoming.state} detail />
-          <dl className="sup-money-list">
-            <div><dt>입금 예정일</dt><dd>{formatPayoutLabel(upcoming)}</dd></div>
-            <div><dt>판매 대금(100%)</dt><dd>{won(upcoming.payoutAmount)}</dd></div>
-            <div><dt>수수료({rate}%)</dt><dd>{upcoming.commission ? `-${won(upcoming.commission)}` : "0원"}</dd></div>
-            <div className="is-total"><dt>실 수령 예상</dt><dd>{won(upcoming.netIncome)}</dd></div>
-          </dl>
-          <p className="sup-card-note">{cycleDescription(upcoming.cycle, rate)}</p>
-        </section>
-        <section className="admin-card admin-home-panel">
-          <div className="card-heading"><ClipboardList size={19} aria-hidden="true" /><div><h2>최근 변경 요청</h2><p>승인 대기 {requests.pending}건</p></div><Link to="/supplier/requests">요청 내역 <ArrowRight size={13} /></Link></div>
-          {requests.recent.length === 0 ? (
-            <div className="admin-home-unavailable"><ClipboardList size={17} aria-hidden="true" /> 아직 보낸 요청이 없어요. 내 상품에서 변경 요청을 보내거나 새 상품 등록을 요청해 보세요.</div>
-          ) : (
-            <ul className="sup-recent-list">
-              {requests.recent.map((request) => (
-                <li key={request.id}>
-                  <span className={`sup-kind is-${request.kind}`}>{SUPPLIER_REQUEST_KIND_LABELS[request.kind]}</span>
-                  <strong>{request.productName}</strong>
-                  <RequestStatusPill status={request.status} />
-                  <small>{shortDateTime(request.updatedAt)}</small>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-        <section className="admin-card admin-home-panel">
-          <div className="card-heading"><Boxes size={19} aria-hidden="true" /><div><h2>바로 가기</h2><p>자주 쓰는 메뉴</p></div></div>
-          <div className="sup-quick-grid">
-            <button type="button" onClick={onCreate}><PackagePlus size={18} /><span><strong>상품 등록 요청</strong><small>새 상품 정보를 보내요</small></span></button>
-            <Link to="/supplier/products"><Boxes size={18} /><span><strong>공급가·판매가 확인</strong><small>내 상품 {count(products.total)}</small></span></Link>
-            <Link to="/supplier/sales"><CalendarDays size={18} /><span><strong>정산 달력</strong><small>날짜별 판매·반품</small></span></Link>
-            <Link to="/how-to/supplier"><BookOpen size={18} /><span><strong>공급사 사용방법</strong><small>주문·송장·정산 안내</small></span></Link>
-          </div>
-        </section>
-      </div>
-    </>
-  );
-}
-
 // ── 내 정보 ─────────────────────────────────────────────────────────────
 function SupplierAccount({ profile }: { profile: SupplierProfile }) {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -471,6 +369,7 @@ function SupplierAccount({ profile }: { profile: SupplierProfile }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const { supplier, account } = profile;
+  const settlement = settlementOf(profile);
   const infoRows: Array<[string, string | null]> = [
     ["업체명", supplier.name],
     ["대표자", supplier.representative],
@@ -518,11 +417,13 @@ function SupplierAccount({ profile }: { profile: SupplierProfile }) {
           <div className="card-heading"><Banknote size={19} aria-hidden="true" /><div><h2>계정·정산</h2><p>정산 방식과 수수료는 두고푸드와 계약한 기준이에요.</p></div></div>
           <dl className="sup-info-list">
             <div><dt>아이디</dt><dd>{account.username}</dd></div>
-            <div><dt>정산 방식</dt><dd>{SUPPLIER_CYCLE_LABELS[account.settlementCycle]}</dd></div>
-            <div><dt>판매 수수료</dt><dd>{account.commissionRate}%</dd></div>
+            <div><dt>정산 방식</dt><dd>{SUPPLIER_SETTLEMENT_TYPE_LABELS[settlement.type]}</dd></div>
+            <div><dt>지급 주기</dt><dd>{settlement.cycle === "weekly" ? "주 정산 · 월~일 판매분 → 다음 주 월요일" : "월 정산 · 1일~말일 → 다음 달 1~3일"}</dd></div>
+            {settlement.type === "commission" && <div><dt>판매 수수료</dt><dd>{settlement.commissionRate}% · 다음 달 1~3일</dd></div>}
             <div><dt>마지막 접속</dt><dd>{shortDateTime(account.lastLoginAt)}</dd></div>
           </dl>
-          <p className="sup-card-note">{cycleDescription(account.settlementCycle, account.commissionRate)}</p>
+          <p className="sup-card-note">{settlementPlanText(settlement)}</p>
+          <p className="sup-policy"><ShieldAlert size={15} aria-hidden="true" /><span>{SUPPLIER_RETURN_POLICY}</span></p>
         </section>
         <form className="admin-card sup-password-card" onSubmit={submit}>
           <div className="card-heading"><KeyRound size={19} aria-hidden="true" /><div><h2>비밀번호 바꾸기</h2><p>바꾸면 이 기기를 뺀 다른 기기는 로그아웃돼요.</p></div></div>

@@ -43,6 +43,14 @@ const summary = {
   topSuppliers: [{ name: "대현에덴", amount: 5_510_000, quantity: 432, products: 50 }],
   categories: [{ categoryId: "cat-health", categoryName: "건강식품", amount: 5_870_000, quantity: 465 }],
   topBuyers: [{ key: "b1", name: "나도건강", amount: 3_460_000, orders: 99, quantity: 270 }],
+  // 두고푸드 수익 나눠 보기(2026-11-25)
+  breakdown: {
+    commission: { amount: 8_921_066, fee: 892_107, suppliers: 12, minRate: 10, maxRate: 10 },
+    wholesale: { amount: 1_000_000, cost: 820_000, margin: 180_000, suppliers: 2, costMissing: 0 },
+    shipping: { received: 99_000, paid: 72_000, margin: 27_000 },
+    unassigned: { amount: 0, suppliers: 0 },
+    profit: 1_099_107
+  },
   sync: null
 };
 
@@ -121,6 +129,14 @@ describe("운영 홈", () => {
     expect(await screen.findByText("9,921,066원")).toBeTruthy();
     expect(widgetOrder(container)).toEqual(DEFAULT_HOME_LAYOUT);
     expect(screen.queryByText(/데이터센터가 오늘도 준비되어 있습니다/)).toBeNull();
+    // 판매 요약: 두고푸드 예상 수익 + 판매수수료 예상 · 일반 도매 · 배송비 차익 · 공급사에 줄 배송비(100%)
+    const kpi = container.querySelector<HTMLElement>('[data-widget="sales-kpi"]')!;
+    expect(within(kpi).getByText("두고푸드 예상 수익")).toBeTruthy();
+    expect(within(kpi).getByText("1,099,107원")).toBeTruthy();
+    expect(within(kpi).getByText("892,107원")).toBeTruthy();
+    expect(within(kpi).getByText(/마진 180,000원 \(원가 820,000원\)/)).toBeTruthy();
+    expect(within(kpi).getByText("27,000원")).toBeTruthy();
+    expect(within(kpi).getByText("72,000원")).toBeTruthy();
     // 매출처·공급사 증감
     const members = container.querySelector<HTMLElement>('[data-widget="members"]')!;
     expect(await within(members).findByText("816")).toBeTruthy();

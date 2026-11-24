@@ -77,6 +77,7 @@ import {
 import { getCatalogOperationsOverview } from "../services/catalog-operations";
 import { getAdminHomeLayout, getMemberStats, resetAdminHomeLayout, saveAdminHomeLayout } from "../services/admin-home";
 import { AdminAccountError, changeOwnAdminPassword, createAdminAccount, deleteAdminAccount, listAdminAccounts, resetAdminPassword } from "../services/admin-accounts";
+import { loadSettlementDirectory, saveSupplierSettlementSettings } from "../services/supplier-settlement";
 import { SHIPPING_RATE_TYPES, SHIPPING_UNIT_LABELS, validateRateTiers } from "../services/shipping-rates";
 import { getBaljuoraHomeSummary } from "../services/baljuora-sync";
 import { StorageError, storagePut } from "../services/s3_storage";
@@ -682,10 +683,30 @@ catalogRouter.delete("/admin/groups/:id", adminRoute, async (c) => {
   }
 });
 
-// 공급사 목록 + 공급사 센터 로그인 계정·연결된 상품 수(migration 032 전에는 계정 없이)
+// 공급사 목록 + 공급사 센터 로그인 계정·연결된 상품 수(migration 032 전에는 계정 없이) + 정산 방식(공급사 id → 판매수수료/일반 도매·수수료율·주기)
 catalogRouter.get("/admin/suppliers", adminRoute, async (c) => {
-  const [base, extras] = await Promise.all([getSuppliers(), getSupplierAdminExtras()]);
-  return c.json(apiSuccess({ ...base, ...extras }));
+  const [base, extras, directory] = await Promise.all([getSuppliers(), getSupplierAdminExtras(), loadSettlementDirectory()]);
+  const settlements = Object.fromEntries([...directory.byId.entries()].map(([id, item]) => [id, { type: item.type, commissionRate: item.commissionRate, cycle: item.cycle, explicit: item.explicit, updatedAt: item.updatedAt, updatedBy: item.updatedBy }]));
+  return c.json(apiSuccess({ ...base, ...extras, settlements }));
+});
+
+// 공급사 정산 방식 저장(2026-11-25): 판매수수료(수수료율) · 일반 도매(매입), 지급 주기(주 정산 · 월 정산)
+const SupplierSettlementSchema = z.object({
+  type: z.enum(["commission", "wholesale"]),
+  commissionRate: z.number().min(0).max(100).optional(),
+  cycle: z.enum(["weekly", "monthly"])
+});
+
+catalogRouter.put("/admin/suppliers/:id/settlement", adminRoute, async (c) => {
+  const parsed = SupplierSettlementSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "정산 방식·수수료율(0~100%)·지급 주기를 확인해 주세요."), 400);
+  try {
+    const user = c.var.currentUser;
+    const saved = await saveSupplierSettlementSettings(c.req.param("id"), parsed.data, user.username || user.email || null);
+    return c.json(apiSuccess({ settlement: { type: saved.type, commissionRate: saved.commissionRate, cycle: saved.cycle, explicit: saved.explicit, updatedAt: saved.updatedAt, updatedBy: saved.updatedBy } }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
 });
 
 catalogRouter.post("/admin/suppliers", adminRoute, async (c) => {

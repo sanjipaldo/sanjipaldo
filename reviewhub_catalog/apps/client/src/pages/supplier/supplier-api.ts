@@ -8,7 +8,9 @@ import {
   type SupplierRequestKind,
   type SupplierRequestStatus,
   type SupplierSettlementCycle,
-  type SupplierSettlementState
+  type SupplierSettlementSettings,
+  type SupplierSettlementState,
+  type SupplierSettlementType
 } from "@repo/shared/supplier-portal";
 
 export type SupplierProfile = {
@@ -30,6 +32,8 @@ export type SupplierProfile = {
     lastLoginAt: string | null;
     createdAt: string;
   };
+  // 정산 방식(판매수수료 · 일반 도매)과 지급 주기(2026-11-25, 두고푸드 관리자가 정함). 예전 서버면 없음.
+  settlement?: SupplierSettlementSettings;
 };
 
 export type SupplierProduct = {
@@ -77,6 +81,7 @@ export type SupplierRequestItem = {
   updatedAt: string;
 };
 
+// 금액은 정산 방식에 따라: 판매수수료 = 판매 금액, 일반 도매 = 공급가(원가) × 수량(두고푸드 판매가는 오지 않음)
 export type SalesTotals = {
   saleAmount: number;
   saleQuantity: number;
@@ -84,6 +89,9 @@ export type SalesTotals = {
   returnQuantity: number;
   orderCount: number;
   netAmount: number;
+  goodsAmount?: number; // 물품 대금(정산 입금의 물품 부분)
+  shippingFee?: number; // 배송비(100% 입금)
+  costMissing?: number; // 원가를 모르는 판매 줄 수(도매)
   commission: number;
   payoutAmount: number;
   netIncome: number;
@@ -97,6 +105,7 @@ export type SalesDay = {
   returnQuantity: number;
   orderCount: number;
   netAmount: number;
+  shippingFee?: number;
 };
 
 export type SalesRankItem = {
@@ -109,6 +118,7 @@ export type SalesRankItem = {
   returnAmount: number;
   netAmount: number;
   netQuantity: number;
+  imageUrl?: string | null;
 };
 
 export type SettlementSummary = {
@@ -118,6 +128,9 @@ export type SettlementSummary = {
   payoutStart: string;
   payoutEnd: string;
   netAmount: number;
+  goodsAmount?: number;
+  shippingFee?: number;
+  costMissing?: number;
   commission: number;
   payoutAmount: number;
   netIncome: number;
@@ -125,9 +138,24 @@ export type SettlementSummary = {
   state?: SupplierSettlementState | null;
 };
 
+/** 판매 수수료(판매수수료 방식만): 그 달 판매 대금 × 수수료율 → 다음 달 1~3일 공급사가 두고푸드에 입금 */
+export type SupplierFee = {
+  month: string;
+  netAmount: number;
+  commission: number;
+  commissionRate: number;
+  payoutStart: string;
+  payoutEnd: string;
+  closed: boolean;
+  state: SupplierSettlementState | null;
+};
+
 export type SalesMonth = {
   month: string;
   today: string;
+  type?: SupplierSettlementType;
+  settings?: SupplierSettlementSettings;
+  fees?: SupplierFee[];
   cycle: SupplierSettlementCycle;
   commissionRate: number;
   hasAnySales: boolean;
@@ -142,8 +170,9 @@ export type SalesMonth = {
 export type SupplierDashboard = SupplierProfile & {
   today: string;
   month: string;
-  sales: { totals: SalesTotals; ranking: SalesRankItem[]; hasAnySales: boolean; days: SalesDay[] };
+  sales: { totals: SalesTotals; ranking: SalesRankItem[]; hasAnySales: boolean; days: SalesDay[]; payoutDays?: SalesMonth["payoutDays"] };
   upcomingSettlement: SettlementSummary;
+  fees?: SupplierFee[];
   products: { total: number; soldOut: number; hidden: number };
   requests: { pending: number; recent: SupplierRequestItem[] };
 };

@@ -22,6 +22,9 @@ beforeEach(async () => {
   await resetDatabase();
   await executeSql("DELETE FROM supplier_requests");
   await executeSql("DELETE FROM supplier_sales");
+  await executeSql("DELETE FROM baljuora_sales_lines");
+  await executeSql("DELETE FROM supplier_settlements");
+  await executeSql("DELETE FROM baljuora_sync_store WHERE key = 'supplier_settlement_settings'");
   await executeSql("DELETE FROM supplier_accounts");
   await executeSql("DELETE FROM price_histories WHERE productId IN ('p-a1', 'p-a2', 'p-b1')");
   await executeSql("DELETE FROM product_options WHERE productId IN ('p-a1', 'p-a2', 'p-b1')");
@@ -229,31 +232,52 @@ describe("공급사 상품과 변경 요청", () => {
   });
 });
 
+// 판매·정산은 발주오라 판매 줄(baljuora_sales_lines, 정산 장부)로 계산합니다(2026-11-25).
+async function saleLine(id: string, values: { saleDate: string; supplierName?: string; productId?: string | null; productName: string; quantity: number; netQuantity?: number; unitPrice: number; unitCost?: number | null; purchaseShippingFee?: number; salesShippingFee?: number; status?: string }) {
+  const net = values.netQuantity ?? values.quantity;
+  await executeSql(
+    "INSERT INTO baljuora_sales_lines (id, orderId, saleDate, status, productId, productName, supplierName, quantity, netQuantity, unitPrice, unitCost, amount, salesShippingFee, purchaseShippingFee) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [id, `o-${id}`, values.saleDate, values.status ?? "delivered", values.productId ?? null, values.productName, values.supplierName ?? "봄날농원(테스트)", values.quantity, net, values.unitPrice, values.unitCost ?? null, values.unitPrice * net, values.salesShippingFee ?? 0, values.purchaseShippingFee ?? 0]
+  );
+}
+
+async function putSettlement(admin: string, supplierId: string, body: unknown) {
+  return fetchWithAuth(app, admin, `/api/catalog/admin/suppliers/${supplierId}/settlement`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+}
+
 describe("공급사 판매·정산", () => {
-  it("이번 달 판매·반품·순위·수수료와 다음 달 1~3일 입금일을 계산합니다", async () => {
+  it("판매수수료 방식: 이번 달 판매·반품·순위·수수료·배송비와 다음 달 1~3일 입금일·수수료 청구를 계산합니다", async () => {
     const admin = await adminToken();
     const token = await supplierToken(admin);
-    const insert = "INSERT INTO supplier_sales (id, saleDate, supplierName, productId, productCode, productName, kind, quantity, amount, orderCount) VALUES (?, ?, '봄날농원(테스트)', ?, ?, ?, ?, ?, ?, ?)";
-    await executeSql(insert, ["s1", "2026-10-31", "p-a1", "TST-A1", "봄날 사과 5kg", "sale", 10, 200000, 10]);
-    await executeSql(insert, ["s2", "2026-11-02", "p-a1", "TST-A1", "봄날 사과 5kg", "sale", 5, 100000, 5]);
-    await executeSql(insert, ["s3", "2026-11-02", "p-a2", "TST-A2", "봄날 배 7.5kg", "sale", 6, 180000, 6]);
-    await executeSql(insert, ["s4", "2026-11-03", "p-a1", "TST-A1", "봄날 사과 5kg", "return", 1, 20000, 0]);
-    await executeSql("INSERT INTO supplier_sales (id, saleDate, supplierName, productName, kind, quantity, amount) VALUES ('s5', '2026-11-02', '이웃농장(테스트)', '이웃 감귤 3kg', 'sale', 99, 990000)");
+    await saleLine("s1", { saleDate: "2026-10-31", productId: "p-a1", productName: "봄날 사과 5kg", quantity: 10, unitPrice: 20000 });
+    await saleLine("s2", { saleDate: "2026-11-02", productId: "p-a1", productName: "봄날 사과 5kg", quantity: 5, netQuantity: 4, unitPrice: 20000 });
+    await saleLine("s3", { saleDate: "2026-11-02", productId: "p-a2", productName: "봄날 배 7.5kg", quantity: 6, unitPrice: 30000, purchaseShippingFee: 3000 });
+    await saleLine("s4", { saleDate: "2026-11-03", productId: "p-a2", productName: "봄날 배 7.5kg", quantity: 2, unitPrice: 30000, status: "pending" });
+    await saleLine("s5", { saleDate: "2026-11-02", supplierName: "이웃농장(테스트)", productId: "p-b1", productName: "이웃 감귤 3kg", quantity: 99, unitPrice: 10000 });
     const res = await fetchWithAuth(app, token, "/api/supplier/sales?month=2026-11");
     const body = await json<{
-      totals: { saleAmount: number; returnAmount: number; netAmount: number; commission: number; netIncome: number };
-      ranking: Array<{ productName: string; netAmount: number; returnQuantity: number }>;
-      settlements: Array<{ payoutStart: string; payoutEnd: string; netAmount: number }>;
+      type: string;
+      totals: { saleAmount: number; returnAmount: number; netAmount: number; goodsAmount: number; shippingFee: number; payoutAmount: number; commission: number; netIncome: number };
+      ranking: Array<{ productName: string; netAmount: number; returnQuantity: number; imageUrl: string | null }>;
+      settlements: Array<{ payoutStart: string; payoutEnd: string; netAmount: number; payoutAmount: number }>;
       payoutDays: Array<{ date: string; amount: number }>;
       days: Array<{ date: string }>;
+      fees: Array<{ month: string; commission: number; payoutStart: string; payoutEnd: string }>;
     }>(res);
-    expect(body.data.totals).toMatchObject({ saleAmount: 280000, returnAmount: 20000, netAmount: 260000, commission: 26000, netIncome: 234000 });
+    expect(body.data.type).toBe("commission");
+    // 주문대기(s4)·다른 공급사(s5)는 빼고, 배송비는 100% 입금에 더함
+    expect(body.data.totals).toMatchObject({ saleAmount: 280000, returnAmount: 20000, netAmount: 260000, goodsAmount: 260000, shippingFee: 3000, payoutAmount: 263000, commission: 26000, netIncome: 237000 });
     expect(body.data.ranking.map((item) => item.productName)).toEqual(["봄날 배 7.5kg", "봄날 사과 5kg"]);
     expect(body.data.ranking[1]).toMatchObject({ netAmount: 80000, returnQuantity: 1 });
-    expect(body.data.settlements).toEqual([expect.objectContaining({ payoutStart: "2026-12-01", payoutEnd: "2026-12-03", netAmount: 260000 })]);
+    expect(body.data.settlements).toEqual([expect.objectContaining({ payoutStart: "2026-12-01", payoutEnd: "2026-12-03", netAmount: 260000, payoutAmount: 263000 })]);
     // 11월 달력에는 10월 판매분 입금일(11/1~3)이 찍힙니다.
     expect(body.data.payoutDays).toEqual([expect.objectContaining({ date: "2026-11-01", amount: 200000 })]);
-    expect(body.data.days.map((day) => day.date)).toEqual(["2026-11-02", "2026-11-03"]);
+    expect(body.data.days.map((day) => day.date)).toEqual(["2026-11-02"]);
+    // 판매 수수료: 지난달·이번 달 판매분 → 다음 달 1~3일 두고푸드로
+    expect(body.data.fees).toEqual([
+      expect.objectContaining({ month: "2026-10", commission: 20000, payoutStart: "2026-11-01", payoutEnd: "2026-11-03" }),
+      expect.objectContaining({ month: "2026-11", commission: 26000, payoutStart: "2026-12-01", payoutEnd: "2026-12-03" })
+    ]);
   });
 
   it("주 정산이면 월~일 판매분을 다음 주 월요일에 입금합니다", async () => {
@@ -261,12 +285,54 @@ describe("공급사 판매·정산", () => {
     await createAccount(admin);
     await fetchWithAuth(app, admin, "/api/catalog/admin/suppliers/sup-a/account", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settlementCycle: "weekly", commissionRate: 7 }) });
     const token = (await signIn("sup", "sup")).token!;
-    await executeSql("INSERT INTO supplier_sales (id, saleDate, supplierName, productName, kind, quantity, amount) VALUES ('w1', '2026-11-18', '봄날농원(테스트)', '봄날 사과 5kg', 'sale', 2, 40000)");
+    await saleLine("w1", { saleDate: "2026-11-18", productId: "p-a1", productName: "봄날 사과 5kg", quantity: 2, unitPrice: 20000 });
     const body = await json<{ cycle: string; commissionRate: number; settlements: Array<{ start: string; payoutStart: string; netAmount: number; commission: number }> }>(
       await fetchWithAuth(app, token, "/api/supplier/sales?month=2026-11")
     );
     expect(body.data.cycle).toBe("weekly");
     const week = body.data.settlements.find((item) => item.start === "2026-11-16");
     expect(week).toMatchObject({ payoutStart: "2026-11-23", netAmount: 40000, commission: 2800 });
+  });
+
+  it("일반 도매(매입) 방식: 원가 × 수량 + 배송비를 주 정산으로, 수수료 없음 — 공급사 화면에는 두고푸드 판매가가 오지 않습니다", async () => {
+    const admin = await adminToken();
+    const token = await supplierToken(admin);
+    // 정산 방식 저장(관리자만, 잘못된 값은 400). 계정 수수료율·주기도 같은 값으로 맞춤
+    expect((await putSettlement(token, "sup-a", { type: "wholesale", cycle: "weekly" })).status).toBe(403);
+    expect((await putSettlement(admin, "sup-a", { type: "wholesale", cycle: "daily" })).status).toBe(400);
+    expect((await putSettlement(admin, "sup-a", { type: "commission", commissionRate: 150, cycle: "weekly" })).status).toBe(400);
+    const saved = await json<{ settlement: { type: string; cycle: string; explicit: boolean } }>(await putSettlement(admin, "sup-a", { type: "wholesale", cycle: "weekly" }));
+    expect(saved.data.settlement).toMatchObject({ type: "wholesale", cycle: "weekly", explicit: true });
+    const list = await json<{ settlements: Record<string, { type: string; cycle: string; explicit: boolean }>; accounts: Array<{ supplierId: string; settlementCycle: string }> }>(await fetchWithAuth(app, admin, "/api/catalog/admin/suppliers"));
+    expect(list.data.settlements["sup-a"]).toMatchObject({ type: "wholesale", cycle: "weekly", explicit: true });
+    expect(list.data.settlements["sup-b"]).toMatchObject({ type: "commission", commissionRate: 10, cycle: "weekly", explicit: false });
+    expect(list.data.accounts.find((item) => item.supplierId === "sup-a")?.settlementCycle).toBe("weekly");
+
+    // 두고푸드 판매가 26,000원 · 원가 20,000원(발주오라 매입원가) / 원가가 없으면 DB센터 원가(배 30,000원) / 둘 다 없으면 '원가 모름'
+    await saleLine("d1", { saleDate: "2026-11-18", productId: "p-a1", productName: "봄날 사과 5kg", quantity: 3, netQuantity: 2, unitPrice: 26000, unitCost: 20000, purchaseShippingFee: 4000, salesShippingFee: 5000 });
+    await saleLine("d2", { saleDate: "2026-11-19", productId: "p-a2", productName: "봄날 배 7.5kg", quantity: 1, unitPrice: 38000, unitCost: null });
+    await saleLine("d3", { saleDate: "2026-11-19", productId: null, productName: "모르는 상품", quantity: 1, unitPrice: 9000, unitCost: null });
+    const res = await fetchWithAuth(app, token, "/api/supplier/sales?month=2026-11");
+    const text = await res.clone().text();
+    const body = await json<{
+      type: string;
+      totals: { saleAmount: number; returnAmount: number; netAmount: number; goodsAmount: number; shippingFee: number; payoutAmount: number; commission: number; costMissing: number };
+      settlements: Array<{ start: string; payoutStart: string; payoutAmount: number; commission: number; costMissing: number }>;
+      ranking: Array<{ productName: string; amount: number; netAmount: number }>;
+      fees: unknown[];
+    }>(res);
+    expect(body.data.type).toBe("wholesale");
+    expect(body.data.totals).toMatchObject({ saleAmount: 90000, returnAmount: 20000, netAmount: 70000, goodsAmount: 70000, shippingFee: 4000, payoutAmount: 74000, commission: 0, costMissing: 1 });
+    expect(body.data.settlements.find((item) => item.start === "2026-11-16")).toMatchObject({ payoutStart: "2026-11-23", payoutAmount: 74000, commission: 0, costMissing: 1 });
+    expect(body.data.ranking.find((item) => item.productName === "봄날 사과 5kg")).toMatchObject({ amount: 60000, netAmount: 40000 });
+    expect(body.data.fees).toEqual([]);
+    // 두고푸드 판매가(26,000·52,000·38,000원)는 공급사 응답에 없음
+    for (const price of ["26000", "52000", "78000", "38000"]) expect(text).not.toContain(price);
+
+    const me = await json<{ settlement: { type: string; cycle: string } }>(await fetchWithAuth(app, token, "/api/supplier/me"));
+    expect(me.data.settlement).toMatchObject({ type: "wholesale", cycle: "weekly" });
+    const dashboard = await json<{ settlement: { type: string }; fees: unknown[]; sales: { totals: { netAmount: number } } }>(await fetchWithAuth(app, token, "/api/supplier/dashboard"));
+    expect(dashboard.data.settlement.type).toBe("wholesale");
+    expect(dashboard.data.fees).toEqual([]);
   });
 });

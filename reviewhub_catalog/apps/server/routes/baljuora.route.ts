@@ -308,12 +308,14 @@ baljuoraRouter.get("/admin/hometax/file", adminRoute, async (c) => {
   }
 });
 
-// 공급사 월 정산: 판매 금액·수수료·정산 상태
+// 공급사 정산 목록: kind = weekly(주 정산 지급, period = 판매 주 월요일 YYYY-MM-DD) · monthly(월 정산 지급, YYYY-MM) · fee(판매 수수료 청구, YYYY-MM).
+// 예전처럼 ?month=YYYY-MM만 주면 월 정산입니다. period를 비우면 지난주·지난달.
 baljuoraRouter.get("/admin/settlements", adminRoute, async (c) => {
-  const month = MonthSchema.safeParse(c.req.query("month"));
-  if (!month.success) return c.json(apiFailure("INVALID_INPUT", "정산할 달을 골라 주세요."), 400);
+  const kind = c.req.query("kind");
+  if (kind && !["weekly", "monthly", "fee"].includes(kind)) return c.json(apiFailure("INVALID_INPUT", "정산 종류를 확인해 주세요."), 400);
   try {
-    return c.json(apiSuccess(await listSupplierSettlements(month.data)));
+    c.header("Cache-Control", "no-store");
+    return c.json(apiSuccess(await listSupplierSettlements({ kind: kind ?? null, period: c.req.query("period") ?? null, month: c.req.query("month") ?? null })));
   } catch (error) {
     return errorResponse(c, error);
   }
@@ -322,10 +324,12 @@ baljuoraRouter.get("/admin/settlements", adminRoute, async (c) => {
 baljuoraRouter.put("/admin/settlements", adminRoute, async (c) => {
   const parsed = z.object({
     supplierName: z.string().trim().min(1).max(120),
-    month: MonthSchema,
+    kind: z.enum(["weekly", "monthly", "fee"]).optional(),
+    period: z.string().trim().max(10).optional(),
+    month: MonthSchema.optional(),
     status: z.enum(SUPPLIER_SETTLEMENT_STATUSES as [string, ...string[]]),
     memo: z.string().max(500).nullable().optional()
-  }).safeParse(await c.req.json().catch(() => null));
+  }).refine((value) => Boolean(value.period || value.month)).safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json(apiFailure("INVALID_INPUT", "정산 상태를 확인해 주세요."), 400);
   try {
     const user = c.var.currentUser;

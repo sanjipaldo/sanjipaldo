@@ -347,3 +347,78 @@
 .sup-settle-status small { color: var(--w-body, #454745); font-size: 12.5px; line-height: 1.5; }
 .sup-settle-status.is-detail { display: flex; margin: 6px 0 8px; }
 .sup-payout-card li .sup-settle-status b { font-size: 11.5px; padding: 3px 8px; }
+
+/* ── 대시보드 판매 현황·정산 금액(2026-11-25, supplier-dashboard.tsx) ───────────────────────── */
+.sup-dash-sales { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+.sup-dash-sales > .admin-card { min-width: 0; margin-top: 0 !important; }
+.sup-dash-chart .sa-chart { margin-top: 12px; }
+.sup-dash-sales .card-heading { align-items: flex-start; }
+.sup-dash-sales .card-heading > a { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 3px; margin-left: auto; color: #137b57; font-size: 12px; font-weight: 800; white-space: nowrap; text-decoration: none; }
+.sup-mini-cal { margin-top: 12px; }
+.sup-mini-week, .sup-mini-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.sup-mini-week span { color: var(--w-mute); font-size: 11.5px; font-weight: 700; text-align: center; }
+.sup-mini-week span:first-child { color: var(--w-negative); }
+.sup-mini-grid { margin-top: 6px; }
+.sup-mini-cell { position: relative; display: grid; align-content: start; gap: 2px; min-width: 0; min-height: 54px; padding: 5px 5px 6px; border: 1px solid #edf0eb; border-radius: 10px; color: var(--w-ink); background: #fff; text-decoration: none; overflow: hidden; }
+.sup-mini-cell.is-blank { border: 0; background: transparent; }
+.sup-mini-cell b { color: var(--w-body); font-size: 11.5px; font-weight: 700; }
+.sup-mini-cell span { overflow: hidden; color: var(--w-positive-deep); font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.sup-mini-cell.has-sale { border-color: #d4ecc4; background: #f3fbec; }
+.sup-mini-cell.is-payout { box-shadow: inset 0 -3px 0 #2a78d6; }
+.sup-mini-cell em { position: absolute; top: 4px; right: 4px; padding: 0 5px; border-radius: 999px; color: #fff; background: #2a78d6; font-size: 9.5px; font-style: normal; font-weight: 800; line-height: 15px; }
+.sup-mini-cell.is-today { border-color: #163300; box-shadow: inset 0 0 0 1px #163300; }
+.sup-mini-cell.is-today.is-payout { box-shadow: inset 0 0 0 1px #163300, inset 0 -3px 0 #2a78d6; }
+.sup-mini-cell:hover { border-color: #9fe870; }
+.sup-mini-cell:focus-visible { outline: 2px solid var(--w-ink); outline-offset: 1px; }
+.sup-mini-legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 0; color: var(--w-mute); font-size: 11.5px; }
+.sup-mini-legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 3px; vertical-align: -1px; }
+.sup-mini-legend .is-sale::before { background: #d4ecc4; }
+.sup-mini-legend .is-payout::before { background: #2a78d6; }
+.sup-mini-legend .is-today::before { width: 6px; height: 6px; border: 2px solid #163300; }
+
+/* 잘 팔린 상품 썸네일 */
+.sup-rank-list.has-thumb li { grid-template-columns: auto 44px minmax(0, 1fr) auto; }
+.sup-rank-list.has-thumb strong { display: -webkit-box; overflow: hidden; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.4; }
+.sup-rank-list.has-thumb strong small { display: block; color: var(--w-mute); font-size: 11.5px; font-weight: 600; }
+.sup-rank-list.has-thumb > li > span { font-size: 15px; }
+
+/* 정산 금액(자동 계산) */
+.sup-settle-state { margin: 10px 0 2px; }
+.sup-pay-status { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+.sup-pay-status.is-pending { color: #0f2747; background: #e3eefc; }
+.sup-pay-status.is-late { color: #7a4b00; background: #fff1cc; }
+.sup-pay-status.is-paid { color: #054d28; background: #e2f6d5; }
+.sup-pay-status small { font-size: 11px; font-weight: 600; }
+.sup-fee-status { display: inline-flex; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 800; }
+.sup-fee-status.is-pending { color: var(--w-body); background: #eef1ec; }
+.sup-fee-status.is-paid { color: #7a4b00; background: #fff1cc; }
+.sup-fee-status.is-done { color: #054d28; background: #e2f6d5; }
+.sup-settle-money .is-fee dt small { display: block; margin-top: 2px; color: var(--w-mute); font-size: 11.5px; }
+.sup-settle-money .is-fee dd { color: var(--w-negative); }
+.sup-settle-money .is-income dd { color: #163300; font-size: 16px; }
+.sup-settle-money .is-warn dt { color: #7a4b00; font-size: 12px; }
+.sup-fee-block { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #dfe5da; }
+.sup-fee-block h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; color: var(--w-ink); font-size: 14px; font-weight: 800; }
+.sup-fee-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.sup-fee-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding: 10px 12px; border: 1px solid #edf0eb; border-radius: 12px; background: #fbfcfa; }
+.sup-fee-list li > div { display: grid; gap: 2px; min-width: 0; }
+.sup-fee-list strong { color: var(--w-ink); font-size: 13.5px; }
+.sup-fee-list span { color: var(--w-mute); font-size: 12px; line-height: 1.45; }
+.sup-fee-list b { color: var(--w-ink); font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sup-fee-list .sup-fee-status { grid-column: 1 / -1; justify-self: start; }
+.sup-policy { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; color: #7a4b00; background: #fff7e6; font-size: 12.5px; line-height: 1.55; }
+.sup-policy svg { flex: 0 0 auto; margin-top: 2px; }
+.supplier-shell .admin-home-stat strong.is-text { font-size: 22px; }
+
+@media (max-width: 1050px) {
+  .sup-dash-sales { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .sup-mini-cell { min-height: 46px; padding: 4px 3px; }
+  .sup-mini-cell span { font-size: 10px; letter-spacing: -.02em; }
+  .sup-mini-cell em { position: static; justify-self: start; font-size: 9px; }
+}
+/* 판매·정산 상품 순위 썸네일(2026-11-25) */
+.sup-rank-product { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sup-rank-product > span { display: grid; gap: 2px; min-width: 0; }
+.sup-rank-list.sup-rank-mobile li { grid-template-columns: auto 40px minmax(0, 1fr) auto; }

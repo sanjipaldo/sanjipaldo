@@ -1,0 +1,35 @@
+/* 공급사 정산 방식 고르기(2026-11-25, SupplierSettlementFields.tsx) — 공급사 수정 창·공급사 센터 계정 창 */
+.ssf { display: grid; gap: 12px; min-width: 0; }
+.ssf-types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ssf-type { position: relative; display: grid !important; grid-template-columns: 22px minmax(0, 1fr); gap: 10px !important; align-items: start; padding: 14px 14px 14px 12px; border: 1.5px solid var(--w-line, #d8dcd5); border-radius: 16px; background: #fff; cursor: pointer; transition: border-color .15s, background .15s, box-shadow .15s; }
+.ssf-type:hover { border-color: #b7dfa0; }
+.ssf-type input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.ssf-type > svg { margin-top: 1px; color: var(--w-mute, #868685); }
+.ssf-type > span { display: grid; gap: 4px; min-width: 0; }
+.ssf-type strong { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--w-ink, #0e0f0c); font-size: 15px; font-weight: 800; }
+.ssf-type strong em { padding: 1px 8px; border-radius: 999px; color: var(--w-positive-deep, #054d28); background: var(--w-primary-pale, #e2f6d5); font-size: 11px; font-style: normal; font-weight: 800; }
+.ssf-type small { color: var(--w-body, #454745); font-size: 12.5px; font-weight: 500; line-height: 1.5; }
+.ssf-type.is-active { border-color: #163300; background: #f6fbf1; box-shadow: 0 0 0 3px rgba(159, 232, 112, .35); }
+.ssf-type.is-active > svg { color: #163300; }
+.ssf-type:has(input:focus-visible) { outline: 2px solid var(--w-ink, #0e0f0c); outline-offset: 2px; }
+.ssf-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+.ssf-grid label { display: grid; gap: 5px; min-width: 0; color: var(--w-body, #454745); font-size: 13px; font-weight: 700; }
+.ssf-grid small { color: var(--w-mute, #868685); font-size: 11.5px; font-weight: 500; }
+.ssf-preview { margin: 0; padding: 10px 12px; border-radius: 12px; color: #163300; background: #eef8e6; font-size: 12.5px; font-weight: 600; line-height: 1.55; }
+.ssf-policy { display: flex; gap: 6px; align-items: flex-start; margin: 0; color: #7a4b00; font-size: 12px; line-height: 1.5; }
+.ssf-policy svg { flex: 0 0 auto; margin-top: 2px; }
+.ssf-section { display: grid; gap: 10px; padding: 16px; border: 1px solid #e4e9e0; border-radius: 16px; background: #fbfcfa; }
+.ssf-section h3 { margin: 0; color: var(--w-ink, #0e0f0c); font-size: 15px; font-weight: 800; }
+.ssf-section > p { margin: -4px 0 0; color: var(--w-mute, #868685); font-size: 12.5px; }
+
+/* 공급사 목록 칸 */
+.ssf-badge-cell { display: inline-grid; gap: 3px; }
+.ssf-badge { display: inline-flex; align-items: center; width: fit-content; padding: 3px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 800; white-space: nowrap; }
+.ssf-badge.is-commission { color: #163300; background: #e2f6d5; }
+.ssf-badge.is-wholesale { color: #0f2747; background: #dcebff; }
+.ssf-badge-cell small { color: var(--w-mute, #868685); font-size: 11.5px; white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .ssf-types, .ssf-grid { grid-template-columns: minmax(0, 1fr); }
+  .ssf-section { padding: 14px 12px; }
+}

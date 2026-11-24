@@ -16,7 +16,7 @@ import { authClient } from "@/lib/auth";
 import type { AdminHomeData } from "@/pages/catalog/types";
 import { jsonInit, readData, won } from "./sales-admin-shared";
 import {
-  BuyerRankList, CategoryRankList, DailySalesChart, SalesKpiCards, SupplierRankList, TodayTopList, TopProductsTable,
+  BuyerRankList, CategoryRankList, DailySalesChart, ProfitBreakdownCards, SalesKpiCards, SupplierRankList, TodayTopList, TopProductsTable,
   salesRangeFor, type SalesSummary
 } from "./sales-widgets";
 import "./sales-admin.css";
@@ -404,6 +404,7 @@ export function AdminHomeBoard({ overview }: { overview: AdminHomeData | null })
             {salesGate((summary) => (
               <>
                 <SalesKpiCards summary={summary} />
+                <ProfitBreakdownCards summary={summary} />
                 {summary.pending.count > 0 && <p className="sa-notice"><Info size={15} aria-hidden="true" /><span>주문대기(입금 전) {count(summary.pending.count)}줄 · {won(summary.pending.amount)}은 매출에서 뺐어요.</span></p>}
               </>
             ))}

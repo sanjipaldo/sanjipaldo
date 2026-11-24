@@ -1,19 +1,25 @@
-// 공급사 센터 > 판매·정산: 날짜별 판매·반품 달력, 정산 입금일, 상품 판매 순위.
-// 판매 데이터(supplier_sales)는 두고푸드 주문 데이터 연결 후 채워집니다. 연결 전에는 0원과 안내만 보입니다.
+// 공급사 센터 > 판매·정산: 날짜별 판매·반품 달력, 정산 입금일, 상품 판매 순위(썸네일).
+// 2026-11-25부터 정산 방식(판매수수료 · 일반 도매)에 따라 금액이 바뀝니다: 판매수수료 = 판매 금액, 일반 도매 = 공급가(원가) × 수량.
+// 정산 입금 = 물품 대금 + 배송비(100%), 판매수수료 방식은 한 달 판매 대금의 수수료를 다음 달 1~3일에 두고푸드로 보냅니다.
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, CalendarDays, ChevronLeft, ChevronRight, CircleAlert, Trophy } from "lucide-react";
+import { BadgePercent, Banknote, CalendarDays, ChevronLeft, ChevronRight, CircleAlert, ShieldAlert, Trophy } from "lucide-react";
 import {
-  SUPPLIER_CYCLE_LABELS,
+  SUPPLIER_RETURN_POLICY,
   addDays,
   formatPayoutLabel,
   formatPeriodLabel,
   monthRange,
   nextMonthKey,
   seoulDateKey,
-  weekdayOf
+  settlementPlanText,
+  settlementSettingsLabel,
+  weekdayOf,
+  type SupplierSettlementSettings
 } from "@repo/shared/supplier-portal";
+import { SalesThumb } from "../admin/sales-widgets";
+import "../admin/sales-admin.css";
 import { compactWon, count, dayLabel, monthLabel, supplierGet, won, type SalesMonth } from "./supplier-api";
-import { SettlementStatus } from "./supplier-ui";
+import { FeeList, PayoutStatus, SettlementMoneyList } from "./supplier-dashboard";
 
 type PayoutDay = SalesMonth["payoutDays"][number];
 
@@ -27,12 +33,9 @@ function defaultSelected(data: SalesMonth) {
   return data.payoutDays[0]?.date && data.payoutDays[0].date >= start ? data.payoutDays[0].date : start;
 }
 
-// 정산 방식 안내(공급사 사용방법·입점 제안서와 같은 기준)
-export function cycleDescription(cycle: SalesMonth["cycle"], rate: number) {
-  if (cycle === "weekly") {
-    return `주 정산: 월요일~일요일 판매분을 다음 주 월요일에 판매 대금 100%로 먼저 입금해요. 수수료 ${rate}%는 매월 1일에 지난달 거래 금액 기준으로 한 번 보내 주시면 됩니다.`;
-  }
-  return `월 정산: 매달 1일~말일 판매분을 양사가 확인한 뒤 다음 달 1~3일에 판매 대금 100%를 먼저 입금해요. 받으신 뒤 수수료 ${rate}%를 보내 주시면 두고푸드가 수수료 세금계산서를 발행합니다.`;
+// 정산 방식(예전 서버 응답이면 주기·수수료율 + 판매수수료 방식)
+function settingsOf(view: SalesMonth | null): SupplierSettlementSettings {
+  return view?.settings ?? { type: view?.type ?? "commission", commissionRate: view?.commissionRate ?? 10, cycle: view?.cycle ?? "weekly" };
 }
 
 export function SupplierSales() {
@@ -76,14 +79,16 @@ export function SupplierSales() {
   const selectedDay = selected ? dayMap.get(selected) : undefined;
   const selectedPayout = selected ? payoutMap.get(selected) : undefined;
   const totals = view?.totals;
-  const rate = view?.commissionRate ?? 0;
-  const cycle = view?.cycle ?? "monthly";
+  const settings = settingsOf(view);
+  const rate = settings.commissionRate;
+  const commission = settings.type === "commission";
+  const amountLabel = commission ? "판매 금액" : "공급 금액";
 
   return (
     <>
       <div className="admin-page-heading">
         <div><span>SALES &amp; SETTLEMENT</span><h1>판매·정산</h1><p>날짜별 판매·반품과 정산 입금일을 달력으로 확인합니다. 날짜를 누르면 그날 내역이 보여요.</p></div>
-        {view && <span className="source-status connected">{SUPPLIER_CYCLE_LABELS[cycle]} · 수수료 {rate}%</span>}
+        {view && <span className="source-status connected">{settlementSettingsLabel(settings)}</span>}
       </div>
       {error && !view ? (
         <section className="admin-card"><div className="empty-state"><CircleAlert size={28} /><strong>판매 내역을 불러오지 못했어요.</strong><span>{error}</span><button type="button" className="sup-retry" onClick={() => setRetry((value) => value + 1)}>다시 불러오기</button></div></section>
@@ -94,14 +99,18 @@ export function SupplierSales() {
           {!view.hasAnySales && (
             <div className="sup-info-banner">
               <CalendarDays size={20} aria-hidden="true" />
-              <div><strong>아직 들어온 판매 내역이 없어요.</strong><p>두고푸드 주문 데이터가 연결되면 날짜별 판매·반품과 정산 금액이 자동으로 채워져요. {cycleDescription(cycle, rate)}</p></div>
+              <div><strong>아직 들어온 판매 내역이 없어요.</strong><p>두고푸드 주문이 들어오면 날짜별 판매·반품과 정산 금액이 자동으로 채워져요. {settlementPlanText(settings)}</p></div>
             </div>
           )}
           <section className="sales-kpi-grid sup-kpi">
-            <article><span>판매 금액</span><strong>{won(totals?.saleAmount ?? 0)}</strong><small>{count(totals?.orderCount ?? 0, "건")} · {count(totals?.saleQuantity ?? 0)}</small></article>
+            <article><span>{amountLabel}</span><strong>{won(totals?.saleAmount ?? 0)}</strong><small>{count(totals?.orderCount ?? 0, "건")} · {count(totals?.saleQuantity ?? 0)}{commission ? "" : " · 공급가 기준"}</small></article>
             <article><span>반품 금액</span><strong className={totals?.returnAmount ? "is-return" : ""}>{totals?.returnAmount ? `-${won(totals.returnAmount)}` : "0원"}</strong><small>{count(totals?.returnQuantity ?? 0)} 반품</small></article>
-            <article><span>정산 대상 금액</span><strong>{won(totals?.netAmount ?? 0)}</strong><small>판매 금액 − 반품 금액</small></article>
-            <article><span>실 수령 예상</span><strong>{won(totals?.netIncome ?? 0)}</strong><small>수수료 {rate}% {won(totals?.commission ?? 0)} 빼고</small></article>
+            <article><span>물품 대금</span><strong>{won(totals?.goodsAmount ?? totals?.netAmount ?? 0)}</strong><small>{commission ? "판매 − 반품" : "공급가 × 판매 수량"} · 배송비 {won(totals?.shippingFee ?? 0)} 별도</small></article>
+            {commission ? (
+              <article><span>실 수령 예상</span><strong>{won(totals?.netIncome ?? 0)}</strong><small>입금 {won(totals?.payoutAmount ?? 0)} − 수수료 {rate}% {won(totals?.commission ?? 0)}</small></article>
+            ) : (
+              <article><span>입금 합계</span><strong>{won(totals?.payoutAmount ?? 0)}</strong><small>물품 대금 + 배송비 · 수수료 없음</small></article>
+            )}
           </section>
           <div className="sales-layout sup-sales-layout">
             <section className="admin-card sales-calendar-card sup-calendar-card" aria-busy={loading}>
@@ -154,10 +163,11 @@ export function SupplierSales() {
                   <h2>{dayLabel(selected)}</h2>
                   {selectedDay ? (
                     <dl className="sup-money-list">
-                      <div><dt>판매 금액</dt><dd>{won(selectedDay.saleAmount)}</dd></div>
+                      <div><dt>{amountLabel}</dt><dd>{won(selectedDay.saleAmount)}</dd></div>
                       <div><dt>주문 · 수량</dt><dd>{selectedDay.orderCount}건 · {selectedDay.saleQuantity}개</dd></div>
                       <div><dt>반품</dt><dd className={selectedDay.returnAmount ? "is-return" : ""}>{selectedDay.returnAmount ? `-${won(selectedDay.returnAmount)} (${selectedDay.returnQuantity}개)` : "없음"}</dd></div>
-                      <div className="is-total"><dt>순매출</dt><dd>{won(selectedDay.netAmount)}</dd></div>
+                      <div className="is-total"><dt>{commission ? "순매출" : "공급 금액(반품 뺌)"}</dt><dd>{won(selectedDay.netAmount)}</dd></div>
+                      {selectedDay.shippingFee ? <div><dt>배송비</dt><dd>{won(selectedDay.shippingFee)}</dd></div> : null}
                     </dl>
                   ) : <p className="sup-muted-text">이 날 판매·반품 내역이 없어요.</p>}
                   {selectedPayout && (
@@ -172,21 +182,24 @@ export function SupplierSales() {
                 </section>
               )}
               <section className="admin-card sup-settle-card">
-                <div className="card-heading"><Banknote size={19} aria-hidden="true" /><div><h2>{monthLabel(month)} 판매분 정산</h2><p>{SUPPLIER_CYCLE_LABELS[cycle]} · 수수료 {rate}%</p></div></div>
+                <div className="card-heading"><Banknote size={19} aria-hidden="true" /><div><h2>{monthLabel(month)} 판매분 정산</h2><p>{settlementSettingsLabel(settings)} · 자동 계산</p></div></div>
                 <div className="sup-settle-list">
                   {view.settlements.map((settlement) => (
                     <article key={settlement.start}>
                       <div className="sup-settle-head"><span>{formatPeriodLabel(settlement)} 판매분</span><strong>{formatPayoutLabel(settlement)} 입금</strong></div>
-                      <SettlementStatus state={settlement.state} detail />
-                      <dl className="sup-money-list">
-                        <div><dt>판매 대금(100%)</dt><dd>{won(settlement.payoutAmount)}</dd></div>
-                        <div><dt>수수료({rate}%)</dt><dd>{settlement.commission ? `-${won(settlement.commission)}` : "0원"}</dd></div>
-                        <div className="is-total"><dt>실 수령 예상</dt><dd>{won(settlement.netIncome)}</dd></div>
-                      </dl>
+                      <PayoutStatus state={settlement.state} done={settlement.payoutEnd < view.today} />
+                      <SettlementMoneyList summary={settlement} settings={settings} />
                     </article>
                   ))}
                 </div>
-                <p className="sup-card-note">{cycleDescription(cycle, rate)}</p>
+                {commission && (view.fees?.length ?? 0) > 0 && (
+                  <div className="sup-fee-block">
+                    <h3><BadgePercent size={16} aria-hidden="true" /> 판매 수수료 (공급사 → 두고푸드)</h3>
+                    <FeeList fees={[...(view.fees ?? [])].reverse()} />
+                  </div>
+                )}
+                <p className="sup-card-note">{settlementPlanText(settings)}</p>
+                <p className="sup-policy"><ShieldAlert size={15} aria-hidden="true" /><span>{SUPPLIER_RETURN_POLICY}</span></p>
               </section>
               {view.payoutDays.length > 0 && (
                 <section className="admin-card sup-payout-card">
@@ -197,7 +210,7 @@ export function SupplierSales() {
                         <b>{formatPayoutLabel({ payoutStart: payout.date, payoutEnd: payout.endDate })}</b>
                         <span>{formatPeriodLabel({ start: payout.periodStart, end: payout.periodEnd })} 판매분</span>
                         <strong>{payout.amount > 0 ? won(payout.amount) : "판매 없음"}</strong>
-                        {payout.state ? <SettlementStatus state={payout.state} /> : <em>{payout.done ? "지난 정산" : "입금 예정"}</em>}
+                        <PayoutStatus state={payout.state} done={payout.done} />
                       </li>
                     ))}
                   </ul>
@@ -206,21 +219,21 @@ export function SupplierSales() {
             </aside>
           </div>
           <section className="admin-card sup-ranking-card">
-            <div className="card-heading"><Trophy size={19} aria-hidden="true" /><div><h2>{monthLabel(month)} 상품 판매 순위</h2><p>순매출(판매 − 반품)이 큰 순서예요.</p></div></div>
+            <div className="card-heading"><Trophy size={19} aria-hidden="true" /><div><h2>{monthLabel(month)} 상품 판매 순위</h2><p>{commission ? "순매출(판매 − 반품)" : "공급 금액(공급가 × 판매 수량, 반품 뺌)"}이 큰 순서예요.</p></div></div>
             {view.ranking.length === 0 ? (
               <div className="sales-empty"><Trophy size={28} /><strong>이 달 판매 내역이 없어요.</strong><p>판매가 들어오면 가장 잘 팔린 상품부터 순위가 보여요.</p></div>
             ) : (
               <div className="admin-table-wrap">
                 <table className="admin-table stackable-table sup-ranking-table">
-                  <thead><tr><th>순위</th><th>상품</th><th>판매</th><th>반품</th><th>순매출</th></tr></thead>
+                  <thead><tr><th>순위</th><th>상품</th><th>판매</th><th>반품</th><th>{commission ? "순매출" : "공급 금액"}</th></tr></thead>
                   <tbody>
                     {view.ranking.map((item, index) => (
                       <tr key={`${item.productId ?? item.productCode ?? item.productName}`}>
                         <td data-label="순위"><b className={`supplier-rank rank-${Math.min(index + 1, 3)}`}>{index + 1}위</b></td>
-                        <td data-label="상품" className="stack-wide"><strong>{item.productName}</strong>{item.productCode && <small>{item.productCode}</small>}</td>
+                        <td data-label="상품" className="stack-wide"><span className="sup-rank-product"><SalesThumb src={item.imageUrl} size={44} /><span><strong>{item.productName}</strong>{item.productCode && <small>{item.productCode}</small>}</span></span></td>
                         <td data-label="판매">{won(item.amount)}<small>{item.quantity.toLocaleString("ko-KR")}개</small></td>
                         <td data-label="반품" className={item.returnAmount ? "is-return" : ""}>{item.returnAmount ? `-${won(item.returnAmount)}` : "-"}{item.returnQuantity > 0 && <small>{item.returnQuantity.toLocaleString("ko-KR")}개</small>}</td>
-                        <td data-label="순매출"><b className="sup-money">{won(item.netAmount)}</b></td>
+                        <td data-label={commission ? "순매출" : "공급 금액"}><b className="sup-money">{won(item.netAmount)}</b></td>
                       </tr>
                     ))}
                   </tbody>
@@ -232,8 +245,9 @@ export function SupplierSales() {
                 {view.ranking.map((item, index) => (
                   <li key={`${item.productId ?? item.productCode ?? item.productName}`}>
                     <b className={`supplier-rank rank-${Math.min(index + 1, 3)}`}>{index + 1}위</b>
+                    <SalesThumb src={item.imageUrl} size={40} />
                     <strong>{item.productName}<small>판매 {count(item.quantity)}{item.returnQuantity ? ` · 반품 ${count(item.returnQuantity)}` : ""}</small></strong>
-                    <span>{won(item.netAmount)}<small>{item.returnAmount ? `반품 -${won(item.returnAmount)}` : `순매출`}</small></span>
+                    <span>{won(item.netAmount)}<small>{item.returnAmount ? `반품 -${won(item.returnAmount)}` : commission ? "순매출" : "공급 금액"}</small></span>
                   </li>
                 ))}
               </ol>

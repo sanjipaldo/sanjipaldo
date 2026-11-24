@@ -290,3 +290,145 @@ export type SupplierSettlementState = {
   memo: string | null;
   updatedAt: string | null;
 };
+
+// ── 정산 방식(2026-11-25 관리자 요청 "정산 시스템 2가지: 판매수수료 / 일반 도매") ──────────────────────
+// - 판매수수료(commission, 기본·권장): 원가 = 수강생 단가 = 일반공급가를 같게 등록합니다. 물품 대금(판매 금액) 100%를
+//   정산일에 먼저 보내고, 판매 수수료(기본 10%)는 한 달 판매 대금 기준으로 다음 달 1~3일에 공급사가 두고푸드에 보냅니다
+//   (두고푸드가 '마케팅·세일즈 수수료' 세금계산서를 발행). 매출 1억이면 1,000만원이 두고푸드 수익으로 바로 잡힙니다.
+// - 일반 도매(wholesale, 매입): 공급사 원가로 사서 두고푸드가 10~20% 마진을 붙여 수강생 단가·일반공급가로 팝니다.
+//   원가 × 판매 수량을 정산일에 보내고 수수료는 없습니다. 공급사 화면에는 두고푸드 판매가 대신 원가 기준 금액만 보입니다.
+// - 지급 주기: 주 정산(월~일 판매분 → 다음 주 월요일, 기본) · 월 정산(1일~말일 → 다음 달 1~3일).
+// - 배송비: 공급사 매입 배송비는 100% 공급사에 줍니다(정산 입금에 더함).
+export type SupplierSettlementType = "commission" | "wholesale";
+export const SUPPLIER_SETTLEMENT_TYPES: readonly SupplierSettlementType[] = ["commission", "wholesale"];
+export const SUPPLIER_SETTLEMENT_TYPE_LABELS: Record<SupplierSettlementType, string> = {
+  commission: "판매수수료",
+  wholesale: "일반 도매(매입)"
+};
+export type SupplierSettlementSettings = { type: SupplierSettlementType; commissionRate: number; cycle: SupplierSettlementCycle };
+export const DEFAULT_SETTLEMENT_SETTINGS: SupplierSettlementSettings = { type: "commission", commissionRate: DEFAULT_SUPPLIER_COMMISSION_RATE, cycle: "weekly" };
+/** 판매 수수료 세금계산서 품목 이름(두고푸드 → 공급사) */
+export const COMMISSION_INVOICE_ITEM = "마케팅·세일즈 수수료";
+/** 반품·환불 책임(공급사 화면·관리자 정산 설정에 같은 글) */
+export const SUPPLIER_RETURN_POLICY = "반품·환불: 공급사 귀책(상품 문제)이면 위탁셀러(수강생) 응대(CS)는 두고푸드가 맡고, 제품 파손·변질은 공급사가 100% 책임지고 보상해요. 반품·환불된 금액은 정산 금액에서 빠져요.";
+
+/** 저장·입력 값 정리(모르는 값이면 null). 빠진 칸은 base 값을 씁니다. 수수료율은 0~100%, 소수 첫째 자리까지. */
+export function cleanSettlementSettings(input: unknown, base: SupplierSettlementSettings = DEFAULT_SETTLEMENT_SETTINGS): SupplierSettlementSettings | null {
+  if (!input || typeof input !== "object") return null;
+  const value = input as Record<string, unknown>;
+  const type = value.type === undefined ? base.type : value.type;
+  if (type !== "commission" && type !== "wholesale") return null;
+  const cycle = value.cycle === undefined ? base.cycle : value.cycle;
+  if (cycle !== "weekly" && cycle !== "monthly") return null;
+  const rate = value.commissionRate === undefined || value.commissionRate === null || value.commissionRate === "" ? base.commissionRate : Number(value.commissionRate);
+  if (!Number.isFinite(rate) || rate < 0 || rate > 100) return null;
+  return { type, cycle, commissionRate: Math.round(rate * 10) / 10 };
+}
+
+/** "판매수수료 10% · 주 정산" · "일반 도매(매입) · 월 정산" */
+export function settlementSettingsLabel(settings: SupplierSettlementSettings) {
+  const type = settings.type === "commission" ? `판매수수료 ${settings.commissionRate}%` : SUPPLIER_SETTLEMENT_TYPE_LABELS.wholesale;
+  return `${type} · ${SUPPLIER_CYCLE_LABELS[settings.cycle]}`;
+}
+
+/** 정산 방식 안내(공급사 화면·관리자 설정 창) */
+export function settlementPlanText(settings: SupplierSettlementSettings) {
+  const when = settings.cycle === "weekly" ? "월요일~일요일 판매분을 다음 주 월요일에" : "매달 1일~말일 판매분을 다음 달 1~3일에";
+  if (settings.type === "wholesale") {
+    return `일반 도매(매입) · ${SUPPLIER_CYCLE_LABELS[settings.cycle]}: ${when} 공급가(원가) × 판매 수량과 배송비를 입금해요. 판매 수수료는 없어요.`;
+  }
+  return `판매수수료 ${settings.commissionRate}% · ${SUPPLIER_CYCLE_LABELS[settings.cycle]}: ${when} 판매 대금 100%와 배송비를 먼저 입금해요. 판매 수수료 ${settings.commissionRate}%는 한 달 판매 대금 기준으로 다음 달 1~3일에 두고푸드로 보내 주시면, 두고푸드가 '${COMMISSION_INVOICE_ITEM}' 세금계산서를 발행해요.`;
+}
+
+/** 판매 줄을 모은 금액(정산 계산 재료). 반품 = 취소·반품 처리 수량. 원가를 모르는 줄은 원가 0원으로 세고 costMissing에 셉니다. */
+export type SettlementLedger = {
+  saleAmount: number; // 판매 금액(두고푸드 공급가 × 판매 수량)
+  returnAmount: number; // 취소·반품(두고푸드 공급가 기준)
+  netAmount: number; // 판매 − 반품
+  costAmount: number; // 원가 × 남은 수량(도매 정산 물품 대금)
+  costReturnAmount: number; // 원가 × 반품 수량
+  costMissing: number; // 원가를 모르는 판매 줄 수
+  shippingFee: number; // 공급사 매입 배송비(100% 지급)
+  shippingReceived: number; // 매출처(셀러)가 낸 배송비
+};
+
+export function emptyLedger(): SettlementLedger {
+  return { saleAmount: 0, returnAmount: 0, netAmount: 0, costAmount: 0, costReturnAmount: 0, costMissing: 0, shippingFee: 0, shippingReceived: 0 };
+}
+
+export function addLedger<T extends SettlementLedger>(target: T, source: SettlementLedger): T {
+  target.saleAmount += source.saleAmount;
+  target.returnAmount += source.returnAmount;
+  target.netAmount += source.netAmount;
+  target.costAmount += source.costAmount;
+  target.costReturnAmount += source.costReturnAmount;
+  target.costMissing += source.costMissing;
+  target.shippingFee += source.shippingFee;
+  target.shippingReceived += source.shippingReceived;
+  return target;
+}
+
+export type SettlementAmounts = {
+  goodsAmount: number; // 물품 대금(판매수수료 = 판매 금액, 도매 = 원가 × 수량)
+  shippingFee: number; // 배송비(100% 지급)
+  payoutAmount: number; // 두고푸드 → 공급사 입금 합계
+  commission: number; // 판매 수수료(공급사 → 두고푸드, 다음 달 1~3일)
+  netIncome: number; // 공급사 실 수령(입금 − 수수료)
+  doogoProfit: number; // 두고푸드 몫(수수료 또는 도매 마진)
+};
+
+export function settlementAmounts(ledger: SettlementLedger, settings: Pick<SupplierSettlementSettings, "type" | "commissionRate">): SettlementAmounts {
+  const net = Math.max(0, ledger.netAmount);
+  const cost = Math.max(0, ledger.costAmount);
+  const shipping = Math.max(0, ledger.shippingFee);
+  if (settings.type === "wholesale") {
+    return { goodsAmount: cost, shippingFee: shipping, payoutAmount: cost + shipping, commission: 0, netIncome: cost + shipping, doogoProfit: net - cost };
+  }
+  const commission = supplierCommission(net, settings.commissionRate);
+  return { goodsAmount: net, shippingFee: shipping, payoutAmount: net + shipping, commission, netIncome: net + shipping - commission, doogoProfit: commission };
+}
+
+/** 공급사 화면에 보이는 판매 금액: 판매수수료 = 판매 금액, 도매 = 원가 기준 공급 금액(두고푸드 판매가는 보여 주지 않음) */
+export function supplierFacingAmounts(ledger: SettlementLedger, type: SupplierSettlementType) {
+  if (type === "wholesale") return { saleAmount: ledger.costAmount + ledger.costReturnAmount, returnAmount: ledger.costReturnAmount, netAmount: ledger.costAmount };
+  return { saleAmount: ledger.saleAmount, returnAmount: ledger.returnAmount, netAmount: ledger.netAmount };
+}
+
+// ── 정산 기록(supplier_settlements.month 칸에 기간 열쇠를 적음) ─────────────────────────────
+// 주 정산 지급 = "w:<판매 주 월요일>", 월 정산 지급 = "YYYY-MM"(예전 월 정산 기록과 같은 열쇠), 판매 수수료 = "fee:YYYY-MM".
+export type SettlementRecordKind = "weekly" | "monthly" | "fee";
+export const SETTLEMENT_RECORD_KINDS: readonly SettlementRecordKind[] = ["weekly", "monthly", "fee"];
+
+export function isDateKey(value: string | null | undefined): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  return utcToKey(keyToUtc(value)) === value;
+}
+
+/** 그 날짜가 든 주의 월요일 */
+export function weekStartOf(date: string) {
+  return addDays(date, -((weekdayOf(date) + 6) % 7));
+}
+
+/** 기록 열쇠. 주 정산은 판매 주 월요일 날짜, 나머지는 YYYY-MM */
+export function settlementRecordKey(kind: SettlementRecordKind, period: string) {
+  if (kind === "weekly") return `w:${period}`;
+  if (kind === "fee") return `fee:${period}`;
+  return period;
+}
+
+/** 기간이 그 종류에 맞는지(주 정산 = 월요일 날짜, 월·수수료 = YYYY-MM) */
+export function isSettlementPeriod(kind: SettlementRecordKind, period: string | null | undefined): period is string {
+  if (kind === "weekly") return isDateKey(period) && weekdayOf(period) === 1;
+  return isMonthKey(period);
+}
+
+/** 판매 수수료 납부 기간: 그 달 판매분 → 다음 달 1~3일 */
+export function feeDueRange(month: string) {
+  const next = nextMonthKey(month);
+  return { payoutStart: `${next}-01`, payoutEnd: `${next}-03` };
+}
+
+export const PAYOUT_STATUS_LABELS: Record<SupplierSettlementStatus, string> = { pending: "지급 대기", paid: "지급 완료", done: "지급 완료" };
+export const FEE_STATUS_LABELS: Record<SupplierSettlementStatus, string> = { pending: "청구 전", paid: "세금계산서 발행", done: "수수료 입금 확인" };
+export const SUPPLIER_PAYOUT_STATUS_LABELS: Record<SupplierSettlementStatus, string> = { pending: "입금 예정", paid: "입금 완료", done: "입금 완료" };
+export const SUPPLIER_FEE_STATUS_LABELS: Record<SupplierSettlementStatus, string> = { pending: "수수료 청구 전", paid: "세금계산서 발행 · 수수료 입금 대기", done: "수수료 입금 확인" };

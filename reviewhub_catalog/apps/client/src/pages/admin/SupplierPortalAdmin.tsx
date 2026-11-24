@@ -8,8 +8,6 @@ import { CheckCircle2, ClipboardList, Copy, Eye, EyeOff, Inbox, KeyRound, Pause,
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import {
-  DEFAULT_SUPPLIER_COMMISSION_RATE,
-  SUPPLIER_CYCLE_LABELS,
   SUPPLIER_FIELD_LABELS,
   SUPPLIER_PASSWORD_MIN,
   SUPPLIER_PASSWORD_RECOMMENDED,
@@ -23,6 +21,7 @@ import {
 } from "@repo/shared/supplier-portal";
 import { digitsOnly, shortDateTime, type SupplierRequestItem } from "../supplier/supplier-api";
 import { ChangeRowList, RequestStatusPill } from "../supplier/supplier-ui";
+import { SupplierSettlementFields, parseSettlementDraft, saveSupplierSettlement, settlementDraft, type SettlementDraft, type SupplierSettlementView } from "./SupplierSettlementFields";
 import "../supplier/supplier-center.css";
 
 async function readResult<T>(response: Response): Promise<T> {
@@ -416,9 +415,11 @@ function PasswordInput({ value, onChange, placeholder, autoComplete = "new-passw
   );
 }
 
-export function SupplierAccountModal({ supplier, account, portalReady, productCount, onClose, onChanged }: {
+export function SupplierAccountModal({ supplier, account, settlement: savedSettlement, portalReady, productCount, onClose, onChanged }: {
   supplier: SupplierLite;
   account: SupplierAccountView | null;
+  // 공급사 정산 방식(공급사 관리 목록에서 받은 값, 2026-11-25)
+  settlement?: SupplierSettlementView | null;
   portalReady: boolean;
   productCount: number;
   onClose: () => void;
@@ -427,8 +428,7 @@ export function SupplierAccountModal({ supplier, account, portalReady, productCo
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [commissionRate, setCommissionRate] = useState(String(account?.commissionRate ?? DEFAULT_SUPPLIER_COMMISSION_RATE));
-  const [settlementCycle, setSettlementCycle] = useState<SupplierSettlementCycle>(account?.settlementCycle ?? "monthly");
+  const [settlement, setSettlement] = useState<SettlementDraft>(() => settlementDraft(savedSettlement ?? (account ? { commissionRate: account.commissionRate, cycle: account.settlementCycle } : null)));
   const [busy, setBusy] = useState("");
   const loginUrl = `${window.location.origin}/supplier`;
   const normalizedUsername = username.trim().toLowerCase();
@@ -451,18 +451,14 @@ export function SupplierAccountModal({ supplier, account, portalReady, productCo
     }
   };
 
-  const rateNumber = () => {
-    const rate = Number(commissionRate);
-    if (commissionRate.trim() === "" || !Number.isFinite(rate) || rate < 0 || rate > 100) throw new Error("수수료율은 0~100% 사이로 입력해 주세요.");
-    return rate;
-  };
-
   const create = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void run("create", async () => {
       if (!usernameValid) throw new Error("아이디는 영문 소문자·숫자·밑줄(_)·마침표(.)로 3~30자 입력해 주세요.");
       if (password.length < SUPPLIER_PASSWORD_MIN) throw new Error(`비밀번호는 ${SUPPLIER_PASSWORD_MIN}자 이상 입력해 주세요.`);
-      await readResult(await sendJson(`/catalog/admin/suppliers/${encodeURIComponent(supplier.id)}/account`, "POST", { username: normalizedUsername, password, commissionRate: rateNumber(), settlementCycle }));
+      const parsed = parseSettlementDraft(settlement);
+      await readResult(await sendJson(`/catalog/admin/suppliers/${encodeURIComponent(supplier.id)}/account`, "POST", { username: normalizedUsername, password, commissionRate: parsed.commissionRate, settlementCycle: parsed.cycle }));
+      await saveSupplierSettlement(supplier.id, settlement);
       toast.success(`'${normalizedUsername}' 공급사 계정을 만들었습니다. 아이디·비밀번호와 로그인 주소를 공급사에 전해 주세요.`);
       setPassword("");
       onChanged();
@@ -470,8 +466,8 @@ export function SupplierAccountModal({ supplier, account, portalReady, productCo
   };
 
   const saveSettings = () => run("settings", async () => {
-    await readResult(await sendJson(`/catalog/admin/suppliers/${encodeURIComponent(supplier.id)}/account`, "PUT", { commissionRate: rateNumber(), settlementCycle }));
-    toast.success("정산 설정을 저장했습니다.");
+    await saveSupplierSettlement(supplier.id, settlement);
+    toast.success("정산 방식을 저장했습니다. 공급사 센터에도 바로 보여요.");
     onChanged();
   });
 
@@ -532,13 +528,7 @@ export function SupplierAccountModal({ supplier, account, portalReady, productCo
               <div className="sup-form-grid">
                 <label>아이디*<input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="예: bomnal" autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={30} /><small>{username && !usernameValid ? "영문 소문자·숫자·밑줄(_)·마침표(.)로 3~30자" : "영문 소문자·숫자 3~30자 · 로그인할 때 대소문자는 구분하지 않아요."}</small></label>
                 <label>비밀번호*<PasswordInput value={password} onChange={setPassword} placeholder={`${SUPPLIER_PASSWORD_MIN}자 이상`} /><small className={weakPassword(password) ? "is-warning" : ""}>{weakPassword(password) ? `${SUPPLIER_PASSWORD_RECOMMENDED}자 이상을 권장해요. 짧은 비밀번호는 추측되기 쉬워요.` : `${SUPPLIER_PASSWORD_RECOMMENDED}자 이상, 영문·숫자를 섞어 주세요.`}</small></label>
-                <label>판매 수수료(%)<input inputMode="decimal" value={commissionRate} onChange={(event) => setCommissionRate(event.target.value.replace(/[^\d.]/g, "").slice(0, 5))} /><small>판매 대금에서 받는 수수료 · 기본 {DEFAULT_SUPPLIER_COMMISSION_RATE}%</small></label>
-                <label>정산 방식
-                  <select value={settlementCycle} onChange={(event) => setSettlementCycle(event.target.value === "weekly" ? "weekly" : "monthly")}>
-                    <option value="monthly">월 정산 (1일~말일 → 다음 달 1~3일)</option>
-                    <option value="weekly">주 정산 (월~일 → 다음 주 월요일)</option>
-                  </select>
-                </label>
+                <div className="full"><SupplierSettlementFields value={settlement} onChange={setSettlement} idPrefix={`acct-new-${supplier.id}`} /></div>
               </div>
               <div className="sup-account-actions"><button className="primary-action" type="submit" disabled={busy === "create"}><KeyRound size={16} /> {busy === "create" ? "만드는 중…" : "계정 만들기"}</button></div>
             </form>
@@ -550,16 +540,8 @@ export function SupplierAccountModal({ supplier, account, portalReady, productCo
                 <div><dt>마지막 접속</dt><dd>{shortDateTime(account.lastLoginAt)}</dd></div>
               </dl>
               <section className="sup-account-section full">
-                <h3>정산 설정</h3>
-                <div className="sup-form-grid">
-                  <label>판매 수수료(%)<input inputMode="decimal" value={commissionRate} onChange={(event) => setCommissionRate(event.target.value.replace(/[^\d.]/g, "").slice(0, 5))} /></label>
-                  <label>정산 방식
-                    <select value={settlementCycle} onChange={(event) => setSettlementCycle(event.target.value === "weekly" ? "weekly" : "monthly")}>
-                      <option value="monthly">{SUPPLIER_CYCLE_LABELS.monthly} (1일~말일 → 다음 달 1~3일)</option>
-                      <option value="weekly">{SUPPLIER_CYCLE_LABELS.weekly} (월~일 → 다음 주 월요일)</option>
-                    </select>
-                  </label>
-                </div>
+                <h3>정산 방식</h3>
+                <SupplierSettlementFields value={settlement} onChange={setSettlement} idPrefix={`acct-${supplier.id}`} />
                 <div className="sup-account-actions"><button type="button" className="primary-action" onClick={() => void saveSettings()} disabled={Boolean(busy)}><Save size={16} /> {busy === "settings" ? "저장 중…" : "설정 저장"}</button></div>
               </section>
               <section className="sup-account-section full">

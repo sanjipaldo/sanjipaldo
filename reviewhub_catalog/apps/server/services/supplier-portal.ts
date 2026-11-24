@@ -4,7 +4,7 @@
 //   마스터가 승인해야 상품에 반영됩니다(가격 이력 기록은 기존 저장 함수 그대로).
 // - 판매·정산 화면은 supplier_sales(판매·반품 내역)로 계산합니다. 주문 데이터 연결 전에는 비어 있습니다.
 // - migration 032 전 DB(운영 DB를 쓰는 미리보기)에서는 표가 없어 503 "운영 배포 후 사용" 안내를 돌려줍니다.
-import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 import {
   DEFAULT_SUPPLIER_COMMISSION_RATE,
@@ -13,21 +13,26 @@ import {
   SUPPLIER_UPDATE_FIELDS,
   SUPPLIER_USERNAME_PATTERN,
   addDays,
+  feeDueRange,
   monthRange,
   nextMonthKey,
   seoulDateKey,
+  settlementAmounts,
   settlementPeriodFor,
-  supplierCommission,
+  settlementRecordKey,
+  supplierFacingAmounts,
   upcomingSettlement,
   type SettlementPeriod,
   type SupplierChangeField,
   type SupplierProductChanges,
   type SupplierRequestStatus,
-  type SupplierSettlementCycle
+  type SupplierSettlementCycle,
+  type SupplierSettlementSettings
 } from "@repo/shared/supplier-portal";
 import { DatabaseError, getDb } from "../_core/db";
 import {
   account,
+  baljuoraSalesLines,
   categories,
   productGroupItems,
   productGroups,
@@ -38,6 +43,7 @@ import {
   supplierAccounts,
   supplierRequests,
   supplierSales,
+  supplierSettlements,
   suppliers,
   user,
   type Product,
@@ -47,7 +53,17 @@ import {
   type SupplierRequest
 } from "../db/schema";
 import { createProduct, updateProduct, type ProductInput } from "./catalog";
-import { settlementStatesFor } from "./baljuora-sales";
+import {
+  effectiveSettlementFor,
+  feeState,
+  ledgerBetween,
+  payoutState,
+  settlementRecords,
+  supplierLedgerByDay,
+  supplierLedgerByProduct,
+  syncStoredSettlementFromAccount,
+  type LedgerRow
+} from "./supplier-settlement";
 
 export class SupplierPortalUnavailableError extends DatabaseError {
   constructor() {
@@ -217,6 +233,9 @@ export async function updateSupplierAccount(
         .where(and(eq(account.userId, current.userId), eq(account.providerId, "credential")));
     }
     await db.update(supplierAccounts).set(patch).where(eq(supplierAccounts.id, current.id));
+    if (input.commissionRate !== undefined || input.settlementCycle) {
+      await syncStoredSettlementFromAccount(supplierId, { commissionRate: patch.commissionRate, settlementCycle: patch.settlementCycle });
+    }
     // 비밀번호를 바꾸거나 계정을 멈추면 로그인해 있던 기기에서도 바로 로그아웃됩니다.
     if (input.password || input.isActive === false) await revokeSessions(current.userId);
     const row = (await db.select().from(supplierAccounts).where(eq(supplierAccounts.id, current.id)).limit(1))[0];
@@ -249,6 +268,18 @@ export async function renameSupplierLinks(oldName: string, newName: string) {
     await db.update(supplierSales).set({ supplierName: newName }).where(eq(supplierSales.supplierName, oldName));
   } catch (error) {
     if (!isMissingSupplierTable(error)) throw error;
+  }
+  // 정산 장부(판매 줄)·정산 기록도 같은 이름으로(다음 판매 불러오기 전에도 공급사 센터·정산 화면이 이어지게)
+  for (const work of [
+    () => db.update(baljuoraSalesLines).set({ supplierName: newName }).where(eq(baljuoraSalesLines.supplierName, oldName)),
+    () => db.update(supplierSettlements).set({ supplierName: newName }).where(eq(supplierSettlements.supplierName, oldName))
+  ]) {
+    try {
+      await work();
+    } catch (error) {
+      const text = error instanceof Error ? `${error.message} ${(error as { cause?: { message?: string } }).cause?.message ?? ""}` : String(error);
+      if (!/no such table|UNIQUE constraint/i.test(text)) throw error;
+    }
   }
 }
 
@@ -744,89 +775,97 @@ export async function rejectSupplierRequest(id: string, reason: string | null | 
 }
 
 // ── 판매·정산 ────────────────────────────────────────────────────────────
-type DayTotals = { saleAmount: number; saleQuantity: number; returnAmount: number; returnQuantity: number; orderCount: number };
+// 2026-11-25부터 발주오라 판매 줄(정산 장부, services/supplier-settlement.ts)로 계산합니다. 금액은 정산 방식에 따라:
+// 판매수수료 = 두고푸드 판매 금액(원가 = 공급가가 같음), 일반 도매 = 원가 × 수량(두고푸드 판매가는 공급사에게 보내지 않음).
+type SupplierDay = { date: string; saleAmount: number; saleQuantity: number; returnAmount: number; returnQuantity: number; orderCount: number; netAmount: number; shippingFee: number };
 
-function emptyDay(): DayTotals {
-  return { saleAmount: 0, saleQuantity: 0, returnAmount: 0, returnQuantity: 0, orderCount: 0 };
+function facingDay(date: string, row: LedgerRow, type: SupplierSettlementSettings["type"]): SupplierDay {
+  const amounts = supplierFacingAmounts(row, type);
+  return { date, saleAmount: amounts.saleAmount, saleQuantity: row.quantity, returnAmount: amounts.returnAmount, returnQuantity: row.returnQuantity, orderCount: row.orders, netAmount: amounts.netAmount, shippingFee: row.shippingFee };
 }
 
-async function salesRows(supplierName: string, start: string, end: string) {
-  return getDb().select().from(supplierSales)
-    .where(and(eq(supplierSales.supplierName, supplierName), gte(supplierSales.saleDate, start), lte(supplierSales.saleDate, end)))
-    .orderBy(asc(supplierSales.saleDate));
+function periodSummary(period: SettlementPeriod, byDay: Map<string, LedgerRow>, settings: SupplierSettlementSettings) {
+  const ledger = ledgerBetween(byDay, period.start, period.end);
+  const amounts = settlementAmounts(ledger, settings);
+  const facing = supplierFacingAmounts(ledger, settings.type);
+  return {
+    ...period,
+    netAmount: facing.netAmount,
+    goodsAmount: amounts.goodsAmount,
+    shippingFee: amounts.shippingFee,
+    payoutAmount: amounts.payoutAmount,
+    commission: amounts.commission,
+    netIncome: amounts.netIncome,
+    costMissing: settings.type === "wholesale" ? ledger.costMissing : 0
+  };
 }
 
-function dayTotals(rows: Awaited<ReturnType<typeof salesRows>>) {
-  const byDate = new Map<string, DayTotals>();
-  for (const row of rows) {
-    const day = byDate.get(row.saleDate) ?? emptyDay();
-    if (row.kind === "return") {
-      day.returnAmount += row.amount;
-      day.returnQuantity += row.quantity;
-    } else {
-      day.saleAmount += row.amount;
-      day.saleQuantity += row.quantity;
-      day.orderCount += row.orderCount;
-    }
-    byDate.set(row.saleDate, day);
+function payoutRecordKey(period: Pick<SettlementPeriod, "cycle" | "start">) {
+  return period.cycle === "weekly" ? settlementRecordKey("weekly", period.start) : settlementRecordKey("monthly", period.start.slice(0, 7));
+}
+
+export async function supplierSettlementSettings(context: SupplierContext): Promise<SupplierSettlementSettings> {
+  try {
+    const effective = await effectiveSettlementFor(context.supplier.id);
+    return { type: effective.type, commissionRate: effective.commissionRate, cycle: effective.cycle };
+  } catch {
+    return { type: "commission", commissionRate: context.account.commissionRate, cycle: context.account.settlementCycle === "weekly" ? "weekly" : "monthly" };
   }
-  return byDate;
 }
 
-function netBetween(byDate: Map<string, DayTotals>, start: string, end: string) {
-  let net = 0;
-  for (const [date, day] of byDate) if (date >= start && date <= end) net += day.saleAmount - day.returnAmount;
-  return net;
-}
-
-function settlementSummary(period: SettlementPeriod, byDate: Map<string, DayTotals>, rate: number) {
-  const net = Math.max(0, netBetween(byDate, period.start, period.end));
-  const commission = supplierCommission(net, rate);
-  return { ...period, netAmount: net, commission, payoutAmount: net, netIncome: net - commission };
-}
-
-export async function getSupplierSalesMonth(context: SupplierContext, month: string, today = seoulDateKey()) {
+export async function getSupplierSalesMonth(context: SupplierContext, month: string, today = seoulDateKey(), knownSettings?: SupplierSettlementSettings) {
   return guarded(async () => {
+    const settings = knownSettings ?? await supplierSettlementSettings(context);
     const { start, end } = monthRange(month);
-    const cycle: SupplierSettlementCycle = context.account.settlementCycle === "weekly" ? "weekly" : "monthly";
-    const rate = context.account.commissionRate;
+    const { cycle, commissionRate: rate, type } = settings;
+    const supplierName = context.supplier.name;
     // 입금일 표시를 위해 지난달 판매분과, 주 정산이면 이 달에 걸친 주 전체를 함께 읽습니다.
     const rangeStart = addDays(start, -40);
     const rangeEnd = addDays(end, 7);
-    const rows = await salesRows(context.supplier.name, rangeStart, rangeEnd);
-    const byDate = dayTotals(rows);
-    const monthRows = rows.filter((row) => row.saleDate >= start && row.saleDate <= end);
+    const [byDay, productRows] = await Promise.all([
+      supplierLedgerByDay(supplierName, rangeStart, rangeEnd),
+      supplierLedgerByProduct(supplierName, start, end)
+    ]);
 
-    const days = [...byDate.entries()]
+    const days = [...byDay.entries()]
       .filter(([date]) => date >= start && date <= end)
-      .map(([date, value]) => ({ date, ...value, netAmount: value.saleAmount - value.returnAmount }));
+      .sort(([first], [second]) => first.localeCompare(second))
+      .map(([date, row]) => facingDay(date, row, type));
 
-    const productMap = new Map<string, { productId: string | null; productCode: string | null; productName: string; quantity: number; amount: number; returnQuantity: number; returnAmount: number }>();
-    for (const row of monthRows) {
-      const key = row.productId || row.productCode || row.productName;
-      const item = productMap.get(key) ?? { productId: row.productId, productCode: row.productCode, productName: row.productName, quantity: 0, amount: 0, returnQuantity: 0, returnAmount: 0 };
-      if (row.kind === "return") {
-        item.returnQuantity += row.quantity;
-        item.returnAmount += row.amount;
-      } else {
-        item.quantity += row.quantity;
-        item.amount += row.amount;
-      }
-      productMap.set(key, item);
-    }
-    const ranking = [...productMap.values()]
-      .map((item) => ({ ...item, netAmount: item.amount - item.returnAmount, netQuantity: item.quantity - item.returnQuantity }))
+    const ranking = productRows.map((row) => {
+      const facing = supplierFacingAmounts(row, type);
+      return {
+        productId: row.productId,
+        productCode: row.productCode,
+        productName: row.productName,
+        imageUrl: row.imageUrl,
+        quantity: row.quantity,
+        amount: facing.saleAmount,
+        returnQuantity: row.returnQuantity,
+        returnAmount: facing.returnAmount,
+        netAmount: facing.netAmount,
+        netQuantity: row.netQuantity
+      };
+    }).filter((item) => item.quantity > 0)
       .sort((first, second) => second.netAmount - first.netAmount || second.netQuantity - first.netQuantity || first.productName.localeCompare(second.productName, "ko"));
 
-    const totals = days.reduce((sum, day) => ({
-      saleAmount: sum.saleAmount + day.saleAmount,
-      saleQuantity: sum.saleQuantity + day.saleQuantity,
-      returnAmount: sum.returnAmount + day.returnAmount,
-      returnQuantity: sum.returnQuantity + day.returnQuantity,
-      orderCount: sum.orderCount + day.orderCount
-    }), emptyDay());
-    const netAmount = totals.saleAmount - totals.returnAmount;
-    const commission = supplierCommission(Math.max(0, netAmount), rate);
+    const monthLedger = ledgerBetween(byDay, start, end);
+    const monthFacing = supplierFacingAmounts(monthLedger, type);
+    const monthAmounts = settlementAmounts(monthLedger, settings);
+    const totals = {
+      saleAmount: monthFacing.saleAmount,
+      saleQuantity: monthLedger.quantity,
+      returnAmount: monthFacing.returnAmount,
+      returnQuantity: monthLedger.returnQuantity,
+      orderCount: days.reduce((sum, day) => sum + day.orderCount, 0),
+      netAmount: monthFacing.netAmount,
+      goodsAmount: monthAmounts.goodsAmount,
+      shippingFee: monthAmounts.shippingFee,
+      payoutAmount: monthAmounts.payoutAmount,
+      commission: monthAmounts.commission,
+      netIncome: monthAmounts.netIncome,
+      costMissing: type === "wholesale" ? monthLedger.costMissing : 0
+    };
 
     // 이 달 판매분이 들어가는 정산(월 정산 1번, 주 정산은 이 달에 걸친 주마다)
     const periods: SettlementPeriod[] = [];
@@ -836,33 +875,58 @@ export async function getSupplierSalesMonth(context: SupplierContext, month: str
       for (let cursor = settlementPeriodFor(start, cycle); cursor.start <= end; cursor = settlementPeriodFor(addDays(cursor.end, 1), cycle)) periods.push(cursor);
     }
     // 이 달 달력에 찍을 입금일(지난 기간 판매분 포함)
-    const payoutDays: Array<{ date: string; endDate: string; periodStart: string; periodEnd: string; amount: number; done: boolean }> = [];
+    const payoutPeriods: SettlementPeriod[] = [];
     if (cycle === "monthly") {
-      const previous = settlementPeriodFor(addDays(start, -1), cycle);
-      payoutDays.push({ date: previous.payoutStart, endDate: previous.payoutEnd, periodStart: previous.start, periodEnd: previous.end, amount: Math.max(0, netBetween(byDate, previous.start, previous.end)), done: previous.payoutEnd < today });
+      payoutPeriods.push(settlementPeriodFor(addDays(start, -1), cycle));
     } else {
       for (let cursor = settlementPeriodFor(addDays(start, -7), cycle); cursor.payoutStart <= end; cursor = settlementPeriodFor(addDays(cursor.end, 1), cycle)) {
-        if (cursor.payoutStart < start) continue;
-        payoutDays.push({ date: cursor.payoutStart, endDate: cursor.payoutEnd, periodStart: cursor.start, periodEnd: cursor.end, amount: Math.max(0, netBetween(byDate, cursor.start, cursor.end)), done: cursor.payoutEnd < today });
+        if (cursor.payoutStart >= start) payoutPeriods.push(cursor);
       }
     }
+    // 판매 수수료(판매수수료 방식만): 이 달 판매분(다음 달 1~3일)과 지난달 판매분(이 달 1~3일)
+    const feeMonths = type === "commission" ? [nextMonthKey(month, -1), month] : [];
+    const records = await settlementRecords([
+      ...periods.map(payoutRecordKey),
+      ...payoutPeriods.map(payoutRecordKey),
+      ...feeMonths.map((feeMonth) => settlementRecordKey("fee", feeMonth)),
+      ...feeMonths
+    ], supplierName);
+    const recordOf = (key: string) => records.get(`${supplierName}|${key}`);
+    // 지난달은 판매도 기록도 없으면 빼요("0원 · 수수료 청구 전" 줄이 헷갈리지 않게). 이 달 판매분은 늘 보여요.
+    const fees = feeMonths.map((feeMonth) => {
+      const range = monthRange(feeMonth);
+      const ledger = feeMonth === month ? monthLedger : ledgerBetween(byDay, range.start, range.end);
+      const amounts = settlementAmounts(ledger, settings);
+      return {
+        month: feeMonth,
+        netAmount: amounts.goodsAmount,
+        commission: amounts.commission,
+        commissionRate: rate,
+        ...feeDueRange(feeMonth),
+        closed: range.end < today,
+        state: feeState(recordOf(settlementRecordKey("fee", feeMonth)), recordOf(feeMonth))
+      };
+    }).filter((fee) => fee.month === month || fee.netAmount !== 0 || fee.commission !== 0 || fee.state !== null);
 
-    const hasAnySales = monthRows.length > 0 || (await getDb().select({ id: supplierSales.id }).from(supplierSales).where(eq(supplierSales.supplierName, context.supplier.name)).limit(1)).length > 0;
-    // 마스터가 바꾼 월 정산 상태(정산 대기 → 판매 대금 입금 → 정산 완료). 입금일 달력의 지난달 판매분도 함께 봅니다.
-    const states = await settlementStatesFor(context.supplier.name, [month, nextMonthKey(month, -1), ...payoutDays.map((payout) => payout.periodStart.slice(0, 7))]);
-    const stateOf = (periodStart: string) => states.get(periodStart.slice(0, 7)) ?? null;
+    const hasAnySales = monthLedger.quantity > 0 || (await getDb().select({ id: baljuoraSalesLines.id }).from(baljuoraSalesLines)
+      .where(sql`trim(coalesce(${baljuoraSalesLines.supplierName}, '')) = ${supplierName.trim()}`).limit(1)).length > 0;
     return {
       month,
       today,
+      type,
       cycle,
       commissionRate: rate,
+      settings,
       hasAnySales,
-      totals: { ...totals, netAmount, commission, payoutAmount: Math.max(0, netAmount), netIncome: Math.max(0, netAmount) - commission },
+      totals,
       days,
       ranking,
-      settlements: periods.map((period) => ({ ...settlementSummary(period, byDate, rate), state: stateOf(period.start) })),
-      payoutDays: payoutDays.map((payout) => ({ ...payout, state: stateOf(payout.periodStart) })),
-      settlementState: states.get(month) ?? null
+      settlements: periods.map((period) => ({ ...periodSummary(period, byDay, settings), state: payoutState(recordOf(payoutRecordKey(period))) })),
+      payoutDays: payoutPeriods.map((period) => {
+        const summary = periodSummary(period, byDay, settings);
+        return { date: period.payoutStart, endDate: period.payoutEnd, periodStart: period.start, periodEnd: period.end, amount: summary.payoutAmount, done: period.payoutEnd < today, state: payoutState(recordOf(payoutRecordKey(period))) };
+      }),
+      fees
     };
   });
 }
@@ -871,12 +935,12 @@ export async function getSupplierDashboard(context: SupplierContext, today = seo
   return guarded(async () => {
     const db = getDb();
     const month = today.slice(0, 7);
-    const sales = await getSupplierSalesMonth(context, month, today);
-    const cycle: SupplierSettlementCycle = context.account.settlementCycle === "weekly" ? "weekly" : "monthly";
-    const upcoming = upcomingSettlement(today, cycle);
-    const upcomingRows = await salesRows(context.supplier.name, upcoming.start, upcoming.end);
-    const upcomingStates = await settlementStatesFor(context.supplier.name, [upcoming.start.slice(0, 7)]);
-    const upcomingSummary = { ...settlementSummary(upcoming, dayTotals(upcomingRows), context.account.commissionRate), state: upcomingStates.get(upcoming.start.slice(0, 7)) ?? null };
+    const settings = await supplierSettlementSettings(context);
+    const sales = await getSupplierSalesMonth(context, month, today, settings);
+    const upcoming = upcomingSettlement(today, settings.cycle);
+    const upcomingDays = await supplierLedgerByDay(context.supplier.name, upcoming.start, upcoming.end);
+    const upcomingRecords = await settlementRecords([payoutRecordKey(upcoming)], context.supplier.name);
+    const upcomingSummary = { ...periodSummary(upcoming, upcomingDays, settings), state: payoutState(upcomingRecords.get(`${context.supplier.name}|${payoutRecordKey(upcoming)}`)) };
     const productRows = await db.select({ isVisible: products.isVisible, isSoldOut: products.isSoldOut })
       .from(products)
       .where(and(eq(products.supplierName, context.supplier.name), sql`${products.deletedAt} IS NULL`));
@@ -888,10 +952,12 @@ export async function getSupplierDashboard(context: SupplierContext, today = seo
       .where(and(eq(supplierRequests.supplierId, context.supplier.id), eq(supplierRequests.status, "pending")));
     return {
       ...supplierProfile(context),
+      settlement: settings,
       today,
       month,
-      sales: { totals: sales.totals, ranking: sales.ranking.slice(0, 5), hasAnySales: sales.hasAnySales, days: sales.days },
+      sales: { totals: sales.totals, ranking: sales.ranking.slice(0, 5), hasAnySales: sales.hasAnySales, days: sales.days, payoutDays: sales.payoutDays },
       upcomingSettlement: upcomingSummary,
+      fees: sales.fees,
       products: {
         total: productRows.length,
         soldOut: productRows.filter((row) => row.isSoldOut).length,

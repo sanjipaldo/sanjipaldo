@@ -16,7 +16,7 @@ import {
   type HometaxBuyer,
   type HometaxSaleLine
 } from "@repo/shared/baljuora-sales";
-import { addDays, nextMonthKey, seoulDateKey } from "@repo/shared/supplier-portal";
+import { addDays, nextMonthKey, seoulDateKey, weekStartOf } from "@repo/shared/supplier-portal";
 
 process.env.SKYBASE_DB_ENDPOINT = `file:${join(mkdtempSync(join(tmpdir(), "baljuora-sales-")), "test.db")}`;
 const { default: app } = await import("../_core/create-app");
@@ -267,26 +267,71 @@ describe("발주오라 판매·매출처 → 판매 현황·매출처·홈택스
     expect(row.getCell(1).numFmt).toBe("@");
     expect(sheet.getRow(8).getCell(1).value).toBeNull();
 
-    // 공급사 정산: 공급사별 판매 금액(반품 뺀 금액)·수수료 10%·정산 상태
+    // 두고푸드 수익 나눠 보기(2026-11-25): 처음에는 모두 판매수수료 10%(김공장은 공급사 목록에 없어 기본값)
+    let breakdown = (await call<any>(admin, `/admin/sales/summary?from=${firstDay}&to=${today}`)).breakdown;
+    expect(breakdown).toMatchObject({
+      commission: { amount: 181000, fee: 12800 + 3300 + 2000, suppliers: 3, minRate: 10, maxRate: 10 },
+      wholesale: { amount: 0, cost: 0, margin: 0, suppliers: 0 },
+      shipping: { received: 3000, paid: 0, margin: 3000 },
+      unassigned: { amount: 20000, suppliers: 1 },
+      profit: 18100 + 3000
+    });
+    // 정산 방식 바꾸기: 봄날농원 = 판매수수료 10% · 월 정산, 바다상회 = 일반 도매(매입) · 주 정산
+    const setSettlement = (id: string, body: unknown) => fetchWithAuth(app, admin, `/api/catalog/admin/suppliers/${id}/settlement`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    expect((await setSettlement("sup-spring", { type: "commission", commissionRate: 10, cycle: "monthly" })).status).toBe(200);
+    expect((await setSettlement("sup-sea", { type: "wholesale", cycle: "weekly" })).status).toBe(200);
+    breakdown = (await call<any>(admin, `/admin/sales/summary?from=${firstDay}&to=${today}`)).breakdown;
+    expect(breakdown).toMatchObject({
+      commission: { amount: 148000, fee: 12800 + 2000, suppliers: 2 },
+      wholesale: { amount: 33000, cost: 25000, margin: 8000, suppliers: 1, costMissing: 0 },
+      profit: 14800 + 8000 + 3000
+    });
+
+    // 월 정산 지급(?month= 그대로): 월 정산 공급사만, 주 정산 공급사는 따로 셈
     let settlements = await call<any>(admin, `/admin/settlements?month=${month}`);
     const spring = () => settlements.rows.find((item: any) => item.supplierName === "봄날농원");
-    expect(spring()).toMatchObject({ registered: true, saleAmount: 166000, returnAmount: 38000, netAmount: 128000, commissionRate: 10, commission: 12800, payoutAmount: 128000, status: "pending", recorded: null });
-    expect(settlements.rows.find((item: any) => item.supplierName === "김공장")).toMatchObject({ registered: false, netAmount: 20000 });
+    expect(settlements.kind).toBe("monthly");
+    expect(settlements.rows.map((item: any) => item.supplierName)).toEqual(["봄날농원"]);
+    expect(spring()).toMatchObject({ registered: true, type: "commission", cycle: "monthly", saleAmount: 166000, returnAmount: 38000, netAmount: 128000, commissionRate: 10, commission: 12800, goodsAmount: 128000, shippingFee: 0, payoutAmount: 128000, status: "pending", recorded: null });
+    expect(settlements.otherCycle).toEqual({ suppliers: 2, payoutAmount: 25000 + 20000 });
     const paid = await call<any>(admin, "/admin/settlements", "PUT", { supplierName: "봄날농원", month, status: "paid", memo: "12/1 국민 입금" });
-    expect(paid.state).toMatchObject({ status: "paid", saleAmount: 128000, commission: 12800, memo: "12/1 국민 입금" });
+    expect(paid.state).toMatchObject({ status: "paid", saleAmount: 128000, commission: 12800, payoutAmount: 128000, memo: "12/1 국민 입금" });
     expect(paid.state.paidAt).toBeTruthy();
+    // 예전 월 정산의 "정산 완료"(지급 + 수수료 확인)도 받습니다
     const done = await call<any>(admin, "/admin/settlements", "PUT", { supplierName: "봄날농원", month, status: "done" });
     expect(done.state).toMatchObject({ status: "done", memo: "12/1 국민 입금" });
     expect(done.state.paidAt).toBe(paid.state.paidAt);
     expect(done.state.doneAt).toBeTruthy();
     settlements = await call<any>(admin, `/admin/settlements?month=${month}`);
-    expect(spring()).toMatchObject({ status: "done", changedAfterRecord: false, recorded: { saleAmount: 128000, commission: 12800 } });
-    expect(settlements.totals).toMatchObject({ done: 1, netAmount: 181000 });
+    expect(spring()).toMatchObject({ status: "done", changedAfterRecord: false, recorded: { saleAmount: 128000, commission: 12800, payoutAmount: 128000 } });
+    expect(settlements.totals).toMatchObject({ done: 1, payoutAmount: 128000 });
+
+    // 주 정산 지급: 이번 주(월요일 날짜) 판매분 → 다음 주 월요일. 도매는 원가 × 수량, 공급사 목록에 없는 매입처는 판매수수료 10% 기본값
+    const week = weekStartOf(today);
+    const weekly = await call<any>(admin, `/admin/settlements?kind=weekly&period=${week}`);
+    expect(weekly.payoutFrom).toBe(addDays(week, 7));
+    expect(weekly.rows.map((item: any) => item.supplierName).sort()).toEqual(["김공장", "바다상회"]);
+    expect(weekly.rows.find((item: any) => item.supplierName === "바다상회")).toMatchObject({ type: "wholesale", netAmount: 33000, goodsAmount: 25000, payoutAmount: 25000, commission: 0, doogoProfit: 8000 });
+    expect(weekly.rows.find((item: any) => item.supplierName === "김공장")).toMatchObject({ registered: false, type: "commission", goodsAmount: 20000, commission: 2000, payoutAmount: 20000 });
+    const weeklyPaid = await call<any>(admin, "/admin/settlements", "PUT", { supplierName: "바다상회", kind: "weekly", period: week, status: "paid", memo: "월요일 입금" });
+    expect(weeklyPaid.state).toMatchObject({ status: "paid", payoutAmount: 25000, commission: 0, memo: "월요일 입금" });
+    const put = (body: unknown) => fetchWithAuth(app, admin, "/api/baljuora/admin/settlements", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    expect((await put({ supplierName: "바다상회", kind: "weekly", period: week, status: "done" })).status).toBe(400);
+    expect((await put({ supplierName: "바다상회", kind: "weekly", period: addDays(week, 1), status: "paid" })).status).toBe(400);
+    expect((await fetchWithAuth(app, admin, `/api/baljuora/admin/settlements?kind=weekly&period=${addDays(week, 2)}`)).status).toBe(400);
 
     // 정산 완료 뒤 반품이 들어오면(다시 동기화) 금액이 바뀌었다고 알림
     await syncSales(admin, LINES.map((item) => item.id === "i-1" ? { ...item, netQuantity: 1 } : item));
     settlements = await call<any>(admin, `/admin/settlements?month=${month}`);
     expect(spring()).toMatchObject({ status: "done", netAmount: 102000, changedAfterRecord: true });
+
+    // 판매 수수료 청구(달마다): 판매수수료 방식 공급사만(도매 바다상회는 없음). 예전 월 정산 "정산 완료"는 수수료 입금 확인으로 봄
+    const fees = await call<any>(admin, `/admin/settlements?kind=fee&period=${month}`);
+    expect(fees.rows.map((item: any) => [item.supplierName, item.commission, item.status])).toEqual([["봄날농원", 10200, "done"], ["김공장", 2000, "pending"]]);
+    expect(fees.totals).toMatchObject({ commission: 12200, pending: 1, done: 1 });
+    expect(fees.payoutFrom).toBe(`${nextMonthKey(month)}-01`);
+    const invoiced = await call<any>(admin, "/admin/settlements", "PUT", { supplierName: "김공장", kind: "fee", period: month, status: "paid" });
+    expect(invoiced.state).toMatchObject({ status: "paid", commission: 2000 });
 
     // 공급사 센터: 봄날농원 계정으로 판매·정산 상태를 봄
     expect((await fetchWithAuth(app, admin, "/api/catalog/admin/suppliers/sup-spring/account", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "spring", password: "spring" }) })).status).toBe(201);
@@ -295,9 +340,10 @@ describe("발주오라 판매·매출처 → 판매 현황·매출처·홈택스
     const supplierSales = await json<any>(await fetchWithAuth(app, supplierToken, `/api/supplier/sales?month=${month}`));
     expect(supplierSales.ok).toBe(true);
     expect(supplierSales.data.hasAnySales).toBe(true);
+    expect(supplierSales.data).toMatchObject({ type: "commission", cycle: "monthly" });
     expect(supplierSales.data.totals).toMatchObject({ saleAmount: 166000, returnAmount: 64000, netAmount: 102000, commission: 10200 });
-    expect(supplierSales.data.settlementState).toMatchObject({ status: "done", memo: "12/1 국민 입금" });
-    expect(supplierSales.data.settlements[0].state).toMatchObject({ status: "done" });
+    expect(supplierSales.data.settlements[0].state).toMatchObject({ status: "done", memo: "12/1 국민 입금" });
+    expect(supplierSales.data.fees.find((fee: any) => fee.month === month)).toMatchObject({ commission: 10200, state: { status: "done" } });
   });
 
   it("끝까지 읽은 동기화만 기간 안에서 사라진 줄을 지웁니다(중간에 멈추면 그대로 둠)", async () => {
