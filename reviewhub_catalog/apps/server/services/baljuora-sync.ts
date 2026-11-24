@@ -601,6 +601,22 @@ export async function createBaljuoraJob(input: CreateJobInput, createdBy: string
   });
 }
 
+// 작업 코드는 SHA-256만 저장해 다시 보여 줄 수 없습니다. DB센터 화면을 새로 열었거나 다른 기기라 코드를 모르면,
+// 기다리는 작업에 새 코드를 줍니다(예전 코드는 더 이상 쓰지 못함). 이미 시작한 작업은 그 창이 코드로 진행·결과를 보내므로 바꾸지 않습니다.
+export async function reissueBaljuoraJobCode(id: string) {
+  return guard(async () => {
+    await expireStaleJobs();
+    const settings = await getBaljuoraSettings();
+    const code = generateCode();
+    const rows = await getDb().update(baljuoraSyncJobs)
+      .set({ codeHash: hashJobCode(code) })
+      .where(and(eq(baljuoraSyncJobs.id, id), eq(baljuoraSyncJobs.status, "waiting")))
+      .returning();
+    if (!rows[0]) throw new DatabaseError("DATABASE_QUERY_FAILED", "기다리는 작업이 아니라 코드를 다시 줄 수 없습니다. 이미 시작했거나 끝난 작업이면 결과를 확인하고, 필요하면 새로 시작해 주세요.", 409);
+    return { job: jobView(rows[0]), code, consoleUrl: consoleUrlFor(settings.merchantSlug, code) };
+  });
+}
+
 export async function cancelBaljuoraJob(id: string) {
   return guard(async () => {
     const rows = await getDb().update(baljuoraSyncJobs)

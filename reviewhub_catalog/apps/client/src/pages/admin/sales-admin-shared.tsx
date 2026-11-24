@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
-import { formatBaljuoraCode } from "@repo/shared/baljuora-sync";
 import { apiFetch } from "@/lib/api";
+import { clearJobCode, latestJobCode, saveJobCode } from "@/lib/baljuora-job-code";
+import { BaljuoraJobCode, type ReissuedJobCode } from "./BaljuoraJobCode";
 
 export async function readData<T>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => ({ ok: false }))) as { ok: boolean; data: T; error?: { message?: string } };
@@ -92,11 +93,30 @@ export function SalesSyncCard({ sync, onDone, compact = false }: { sync: SalesSy
   const [job, setJob] = useState<{ view: JobView; code: string; consoleUrl: string } | null>(null);
   const active = job ? job.view.status === "waiting" || job.view.status === "running" : false;
 
+  // 이 기기에서 만든 판매 불러오기 작업이 아직 진행 중이면 화면을 새로 열어도 작업 코드와 진행 상황을 다시 보여 줍니다.
+  useEffect(() => {
+    const saved = latestJobCode("sales");
+    if (!saved) return;
+    let stopped = false;
+    void (async () => {
+      try {
+        const { job: view } = await readData<{ job: JobView }>(await apiFetch(`/baljuora/admin/jobs/${saved.id}`, { silent: true }));
+        if (stopped) return;
+        if (view.status === "waiting" || view.status === "running") setJob((current) => current ?? { view, code: saved.code, consoleUrl: saved.consoleUrl });
+        else clearJobCode(saved.id);
+      } catch {
+        // 작업을 찾지 못하면(지워졌거나 오래됨) 그냥 둡니다.
+      }
+    })();
+    return () => { stopped = true; };
+  }, []);
+
   const start = async () => {
     setBusy(true);
     try {
       const created = await readData<{ job: JobView; code: string; consoleUrl: string }>(await apiFetch("/baljuora/admin/jobs", jsonInit("POST", { type: "sales", months })));
       setJob({ view: created.job, code: created.code, consoleUrl: created.consoleUrl });
+      saveJobCode({ id: created.job.id, type: "sales", code: created.code, consoleUrl: created.consoleUrl, expiresAt: created.job.expiresAt ?? null });
       window.open(created.consoleUrl, "_blank", "noopener");
       toast.success("발주오라 관리자 창을 열었어요. 그 창에서 책갈피 '두고푸드 동기화'를 눌러 주세요.");
     } catch (error) {
@@ -109,6 +129,7 @@ export function SalesSyncCard({ sync, onDone, compact = false }: { sync: SalesSy
   const cancel = async () => {
     if (!job) return;
     await apiFetch(`/baljuora/admin/jobs/${job.view.id}/cancel`, { method: "POST" });
+    clearJobCode(job.view.id);
     setJob(null);
   };
 
@@ -116,6 +137,7 @@ export function SalesSyncCard({ sync, onDone, compact = false }: { sync: SalesSy
   const poll = useCallback(async (id: string) => {
     const { job: next } = await readData<{ job: JobView }>(await apiFetch(`/baljuora/admin/jobs/${id}`, { silent: true }));
     setJob((current) => current && current.view.id === next.id ? { ...current, view: next } : current);
+    if (next.status !== "waiting" && next.status !== "running") clearJobCode(next.id);
     if (next.status === "done") {
       toast.success("발주오라 판매·매출처를 불러왔어요.");
       onDone();
@@ -163,7 +185,15 @@ export function SalesSyncCard({ sync, onDone, compact = false }: { sync: SalesSy
           {view.status === "waiting" && (
             <div className="sa-job-waiting">
               <p>열린 <b>발주오라 관리자 창</b>에서 즐겨찾기 막대의 <b>두고푸드 동기화</b>를 눌러 주세요. 책갈피는 <b>발주오라 동기화</b> 메뉴에서 만들 수 있어요.</p>
-              <div className="sa-code"><span>작업 코드</span><strong>{formatBaljuoraCode(job.code)}</strong></div>
+              <BaljuoraJobCode
+                jobId={view.id}
+                code={job.code}
+                expiresAt={view.expiresAt}
+                onReissued={(result: ReissuedJobCode<JobView>) => {
+                  saveJobCode({ id: result.job.id, type: "sales", code: result.code, consoleUrl: result.consoleUrl, expiresAt: result.job.expiresAt ?? null });
+                  setJob({ view: result.job, code: result.code, consoleUrl: result.consoleUrl });
+                }}
+              />
               <a className="outline-button" href={job.consoleUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={15} /> 발주오라 관리자 창 다시 열기</a>
             </div>
           )}

@@ -9,6 +9,7 @@ import { DatabaseError } from "../_core/db";
 import { adminRoute, publicRoute } from "../_core/route-helpers";
 import {
   cancelBaljuoraJob,
+  reissueBaljuoraJobCode,
   createBaljuoraJob,
   createDoogoCategoriesFromBaljuora,
   getBaljuoraJob,
@@ -145,6 +146,15 @@ baljuoraRouter.get("/admin/jobs", adminRoute, async (c) => {
 baljuoraRouter.get("/admin/jobs/:id", adminRoute, async (c) => {
   try {
     return c.json(apiSuccess({ job: await getBaljuoraJob(c.req.param("id")) }));
+  } catch (error) {
+    return errorResponse(c, error);
+  }
+});
+
+// 작업 코드 다시 받기(기다리는 작업만): DB센터 화면을 새로 열어 코드가 안 보일 때
+baljuoraRouter.post("/admin/jobs/:id/code", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess(await reissueBaljuoraJobCode(c.req.param("id"))));
   } catch (error) {
     return errorResponse(c, error);
   }

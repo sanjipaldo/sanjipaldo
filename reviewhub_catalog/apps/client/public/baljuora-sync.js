@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "1.7.0";
+  var VERSION = "1.7.1";
   var API_BASE = "https://api.baljuora.com/";
   var PRICE_FIELDS = ["supplyPrice", "consumerPrice", "purchaseCost", "groupPrice"];
   var INFO_FIELDS = ["name", "category"];
@@ -2248,7 +2248,9 @@
     if (code) return code;
     var stored = null;
     try { stored = win.sessionStorage.getItem("doogo-sync-code"); } catch { stored = null; }
-    var typed = win.prompt("DB센터 '발주오라 동기화' 화면에 보이는 작업 코드 10글자를 입력해 주세요.", stored || "");
+    // 발주오라가 로그인 화면 등으로 주소를 바꾸면 #doogo-sync=코드가 사라져 여기서 물어봅니다.
+    // 코드는 DB센터 화면의 '작업 코드' 칸에 있고, 그 화면을 새로 열어 안 보이면 '작업 코드 다시 받기'로 새 코드를 받습니다.
+    var typed = win.prompt("DB센터 '발주오라 동기화'(또는 판매 현황) 화면의 '작업 코드' 10글자를 넣어 주세요. 예: ABCDE-FGH23\n코드가 안 보이면 그 화면에서 '작업 코드 다시 받기'를 누르세요.", stored || "");
     return typed ? typed.trim() : null;
   }
 

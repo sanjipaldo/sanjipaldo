@@ -13,7 +13,6 @@ import {
   BALJUORA_DIRECTION_LABELS,
   BALJUORA_FIELD_LABELS,
   BALJUORA_FIELD_SHORT_LABELS,
-  formatBaljuoraCode,
   type BaljuoraCategory,
   type BaljuoraFieldDiff,
   type BaljuoraProductSnapshot,
@@ -22,6 +21,8 @@ import {
 import { BaljuoraMasterPanel } from "./BaljuoraMasterPanel";
 import { BaljuoraCategoryTreeCard, type CategoryTreeView } from "./BaljuoraCategoryTreeCard";
 import { BaljuoraAlignSettings, type BaljuoraPolicyOption, type DoogoPolicyOption } from "./BaljuoraAlignSettings";
+import { BaljuoraJobCode, type ReissuedJobCode } from "./BaljuoraJobCode";
+import { clearJobCode, loadJobCode, saveJobCode } from "@/lib/baljuora-job-code";
 import "./baljuora-sync-admin.css";
 
 // salesOnCompare·salesMonths(2026-11-23): 발주오라 상품 불러오기(비교) 때 판매·매출처도 함께 불러올지, 기간(이번 달 포함 최근 N개월)
@@ -170,7 +171,14 @@ export function BaljuoraSyncAdmin() {
       setOverview(nextOverview);
       setChanges(nextChanges);
       setSettingsDraft(nextOverview.settings);
-      setJob((current) => current ?? (nextOverview.activeJob ? { view: nextOverview.activeJob, code: null, consoleUrl: null } : null));
+      // 화면을 새로 열면 진행 중 작업은 서버에서, 작업 코드는 이 기기에 기억해 둔 값에서 다시 채웁니다(코드는 서버에 SHA-256만 있음).
+      setJob((current) => {
+        if (current) return current;
+        const active = nextOverview.activeJob;
+        if (!active) return null;
+        const saved = loadJobCode(active.id);
+        return { view: active, code: saved?.code ?? null, consoleUrl: saved?.consoleUrl ?? null };
+      });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "발주오라 동기화 정보를 불러오지 못했습니다.");
     } finally {
@@ -192,6 +200,7 @@ export function BaljuoraSyncAdmin() {
         if (stopped) return;
         setJob((current) => current && current.view.id === next.id ? { ...current, view: next } : current);
         if (next.status !== "waiting" && next.status !== "running") {
+          clearJobCode(next.id);
           if (next.status === "done") toast.success(next.type === "compare" ? "발주오라 상품을 불러왔습니다." : next.type === "sales" ? "발주오라 판매·매출처를 불러왔습니다." : "동기화를 마쳤습니다.");
           void load();
         }
@@ -257,6 +266,7 @@ export function BaljuoraSyncAdmin() {
     try {
       const created = await readData<{ job: JobView; code: string; consoleUrl: string }>(await apiFetch("/baljuora/admin/jobs", jsonInit("POST", body)));
       setJob({ view: created.job, code: created.code, consoleUrl: created.consoleUrl });
+      saveJobCode({ id: created.job.id, type: created.job.type, code: created.code, consoleUrl: created.consoleUrl, expiresAt: created.job.expiresAt });
       window.open(created.consoleUrl, "_blank", "noopener");
       toast.success("발주오라 관리자 창을 열었습니다. 그 창에서 책갈피 '두고푸드 동기화'를 눌러 주세요.");
       setSelected(new Set());
@@ -353,6 +363,7 @@ export function BaljuoraSyncAdmin() {
     setBusy("cancel");
     try {
       const { job: view } = await readData<{ job: JobView }>(await apiFetch(`/baljuora/admin/jobs/${job.view.id}/cancel`, { method: "POST" }));
+      clearJobCode(job.view.id);
       setJob({ ...job, view });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "취소하지 못했습니다.");
@@ -454,12 +465,20 @@ export function BaljuoraSyncAdmin() {
               <span className="bj-job-kind">{view.type === "compare" ? `발주오라 상품 불러오기(비교)${view.salesRange ? " + 판매·매출처" : ""}` : view.type === "sales" ? `판매·매출처 불러오기${view.salesRange ? ` (${view.salesRange.start} ~ ${view.salesRange.end})` : ""}` : `동기화 ${view.total ?? 0}개`}</span>
               <h2>{STATUS_LABELS[view.status]}{view.status === "running" && <Loader2 className="bj-spin" size={18} aria-hidden="true" />}</h2>
             </div>
-            {jobDone ? <button type="button" className="bj-icon-button" onClick={() => setJob(null)} aria-label="작업 닫기"><X size={18} /></button> : <button type="button" className="outline-button" onClick={() => void cancelJob()} disabled={busy === "cancel"}>작업 취소</button>}
+            {jobDone ? <button type="button" className="bj-icon-button" onClick={() => { clearJobCode(view.id); setJob(null); }} aria-label="작업 닫기"><X size={18} /></button> : <button type="button" className="outline-button" onClick={() => void cancelJob()} disabled={busy === "cancel"}>작업 취소</button>}
           </div>
           {view.status === "waiting" && (
             <div className="bj-job-waiting">
               <p>열린 <b>발주오라 관리자 창</b>에서 즐겨찾기 막대의 <b>두고푸드 동기화</b>를 눌러 주세요. 로그인 화면이 나오면 로그인한 뒤 다시 누르면 됩니다.</p>
-              {job?.code && <div className="bj-code"><span>작업 코드</span><strong>{formatBaljuoraCode(job.code)}</strong><small>창에서 코드를 물어보면 이 코드를 넣으세요 · {formatDateTime(view.expiresAt)}까지</small></div>}
+              <BaljuoraJobCode
+                jobId={view.id}
+                code={job?.code ?? null}
+                expiresAt={view.expiresAt}
+                onReissued={(result: ReissuedJobCode<JobView>) => {
+                  saveJobCode({ id: result.job.id, type: result.job.type, code: result.code, consoleUrl: result.consoleUrl, expiresAt: result.job.expiresAt });
+                  setJob({ view: result.job, code: result.code, consoleUrl: result.consoleUrl });
+                }}
+              />
               {job?.consoleUrl && <a className="primary-action" href={job.consoleUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={15} /> 발주오라 관리자 창 다시 열기</a>}
             </div>
           )}

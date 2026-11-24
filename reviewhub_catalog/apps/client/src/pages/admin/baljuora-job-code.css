@@ -1,0 +1,17 @@
+/* 발주오라 작업 코드 칸(2026-11-25, BaljuoraJobCode.tsx) — 발주오라 동기화 화면·판매·매출처 불러오기 칸 */
+.bjc { display: grid; gap: 6px; min-width: 0; padding: 12px 16px; border: 1.5px dashed #9fd47e; border-radius: 14px; background: #f6fbf1; }
+.bjc-label { color: #3f6a24; font-size: 12px; font-weight: 800; }
+.bjc-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.bjc-code { color: #163300; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 30px; font-weight: 800; letter-spacing: .12em; line-height: 1.15; word-break: break-all; }
+.bjc-copy { display: inline-flex; align-items: center; gap: 5px; padding: 7px 12px; border: 1px solid #c9dcbd; border-radius: 999px; color: #163300; background: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+.bjc-copy:hover { border-color: #163300; }
+.bjc small { color: #5f6b5a; font-size: 12px; line-height: 1.5; }
+.bjc-missing { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; border-color: #f0c674; background: #fffaf0; }
+.bjc-missing p { display: flex; flex: 1 1 260px; gap: 6px; align-items: flex-start; margin: 0; color: #7a4b00; font-size: 13px; line-height: 1.55; }
+.bjc-missing p svg { flex: 0 0 auto; margin-top: 2px; }
+.bjc-spin { animation: bjc-spin 1s linear infinite; }
+@keyframes bjc-spin { to { transform: rotate(360deg); } }
+@media (max-width: 720px) {
+  .bjc { padding: 10px 12px; }
+  .bjc-code { font-size: 24px; letter-spacing: .08em; }
+}

@@ -105,6 +105,27 @@ describe("발주오라 동기화 API", () => {
     expect(expired.status).toBe(409);
   });
 
+  it("작업 코드 다시 받기(2026-11-25): 기다리는 작업에 새 코드를 주고 예전 코드는 막으며, 시작한 작업·로그인 없는 요청은 거절합니다", async () => {
+    const admin = await adminToken();
+    const job = await startCompare(admin);
+    expect((await app.fetch(new Request(`http://localhost/api/baljuora/admin/jobs/${job.job.id}/code`, { method: "POST" }))).status).toBe(401);
+    const reissued = await json<{ job: { id: string; status: string }; code: string; consoleUrl: string }>(await fetchWithAuth(app, admin, `/api/baljuora/admin/jobs/${job.job.id}/code`, { method: "POST" }));
+    expect(reissued.ok).toBe(true);
+    expect(reissued.data.job).toMatchObject({ id: job.job.id, status: "waiting" });
+    expect(reissued.data.code).toMatch(/^[2-9A-HJ-NP-Z]{10}$/);
+    expect(reissued.data.code).not.toBe(job.code);
+    expect(reissued.data.consoleUrl).toBe(`https://console.baljuora.com/doogobiz24/dashboard#doogo-sync=${reissued.data.code}`);
+    // 예전 코드는 더 이상 찾을 수 없고, 새 코드는 가운데 줄·소문자로 넣어도 됩니다(책갈피 입력창).
+    expect((await app.fetch(new Request(`http://localhost/api/baljuora/runner/${job.code}`))).status).toBe(404);
+    const typed = `${reissued.data.code.slice(0, 5)}-${reissued.data.code.slice(5)}`.toLowerCase();
+    const started = await app.fetch(new Request(`http://localhost/api/baljuora/runner/${encodeURIComponent(typed)}`));
+    expect(started.status).toBe(200);
+    // 책갈피가 시작한 작업은 그 창이 코드로 진행·결과를 보내므로 코드를 바꾸지 않습니다.
+    const again = await fetchWithAuth(app, admin, `/api/baljuora/admin/jobs/${job.job.id}/code`, { method: "POST" });
+    expect(again.status).toBe(409);
+    expect((await fetchWithAuth(app, admin, "/api/baljuora/admin/jobs/no-such-job/code", { method: "POST" })).status).toBe(409);
+  });
+
   it("비교 → 상품코드·예전 id로 연결 → 변경 목록 → 동기화 결과 반영까지", async () => {
     const admin = await adminToken();
     const compare = await startCompare(admin);
