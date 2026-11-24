@@ -66,7 +66,8 @@ import { NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProd
 
 
 // 메인 홈 "이번 달 제철 백과사전" 미리보기(품목 데이터는 따로 불러와 단가표 첫 화면을 무겁게 하지 않습니다)
-const EncyclopediaTeaser = lazy(() => import("./EncyclopediaTeaser"));
+// 메인 홈 제철 백과사전 미리보기는 2026-11-24 관리자 요청으로 잠시 뺐습니다(아래 CatalogHome의 주석과 함께 풀면 다시 보임).
+// const EncyclopediaTeaser = lazy(() => import("./EncyclopediaTeaser"));
 
 const fallbackGuideContent: GuideContent = {
   highlights: [
@@ -727,7 +728,8 @@ function SourcingModal({ onClose }: { onClose: () => void }) {
 }
 
 // 홈 입점 안내 배너: 농가·수산·브랜드사 입점 신청 창을 엽니다.
-// 메인 홈(단가표) 맨 위 운영 현황 바로 아래 공지사항: 공지사항 화면(/guide)과 같은 모양(필독 공지 + 최신 운영 공지 3개, 가장 최근은 "★ 최신").
+// 메인 홈(단가표) 운영 현황·입점 배너 아래 공지사항: 필독 공지 + 최신 운영 공지 3개(가장 최근은 "★ 최신").
+// 2026-11-24부터 메인 홈 공지 칸만 흰색 목록 디자인입니다(wise-theme.css 맨 아래 "메인 홈 공지사항 흰색 디자인", /guide 화면은 그대로).
 // 공지를 누르면 공지사항 탭으로 넘어가 그 공지가 바로 열리고, "공지사항 바로보기"는 공지사항 탭으로 갑니다.
 // 메인 홈 공지사항: 공지 줄·필독 띠를 누르면 공지사항 화면으로 넘어가지 않고 홈 그 자리에서 공지 팝업(NoticeModal)을 엽니다(2026-11-16).
 function HomeNoticeBoard({ notices }: { notices: Notice[] }) {
@@ -1740,8 +1742,8 @@ export function CatalogHome() {
     };
     refreshOperations();
     setClock(new Date());
-    // 운영 현황(날씨·선과장·이번 달 현황)도 화면이 보일 때만 1분마다 새로 받습니다.
-    const stopOperations = startVisibleInterval(refreshOperations, 60 * 1000);
+    // 운영 현황(날씨·선과장·이번 달 현황)은 화면이 보일 때만 5분마다 새로 받습니다(서버도 5분 동안 같은 값을 다시 씀).
+    const stopOperations = startVisibleInterval(refreshOperations, 5 * 60 * 1000);
     const clockTimer = window.setInterval(() => setClock(new Date()), 1000);
     return () => {
       active = false;
@@ -1816,9 +1818,13 @@ export function CatalogHome() {
           setQuery(name);
           window.requestAnimationFrame(() => document.querySelector("#price-table")?.scrollIntoView({ behavior: "smooth", block: "start" }));
         }} />
-        <HomeNoticeBoard notices={data.notices} />
-        <Suspense fallback={null}><EncyclopediaTeaser products={data.products} categories={data.categories} /></Suspense>
+        {/* 입점 안내 배너는 운영 현황(날씨) 바로 아래, 공지사항 위에 둡니다(2026-11-24 관리자 요청). */}
         <PartnerBanner />
+        <HomeNoticeBoard notices={data.notices} />
+        {/* N월 제철 백과사전 미리보기: 2026-11-24 관리자 요청으로 메인 홈에서 잠시 뺐습니다(백과사전 메뉴는 그대로).
+            다시 보이려면 아래 줄과 파일 위쪽 EncyclopediaTeaser lazy import의 주석을 풀면 됩니다.
+        <Suspense fallback={null}><EncyclopediaTeaser products={data.products} categories={data.categories} /></Suspense>
+        */}
         <section className="catalog-hero">
           <div>
             <span className="hero-eyebrow"><Sparkles size={14} /> 판매자를 위한 실시간 상품 정보</span>

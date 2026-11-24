@@ -61,8 +61,8 @@ export const catalogRevisionMiddleware: MiddlewareHandler = async (c, next) => {
 };
 
 // 서버에 만들어 둔 응답 재사용은 Vercel(운영·미리보기)에서만 켭니다. 테스트·로컬 개발은 DB를 직접 고치는 일이 많아 늘 새로 만듭니다
-// (테스트에서 재사용을 확인할 때는 CATALOG_CACHE=1).
-function catalogCacheEnabled() {
+// (테스트에서 재사용을 확인할 때는 CATALOG_CACHE=1). 운영 현황(services/catalog-operations.ts)도 같은 기준을 씁니다.
+export function catalogCacheEnabled() {
   return process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV) || process.env.CATALOG_CACHE === "1";
 }
 

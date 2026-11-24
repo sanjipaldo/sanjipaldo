@@ -654,7 +654,7 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .price-alert-tabs { display: flex; width: 100%; margin-bottom: 14px; }
   .price-alert-tabs a { flex: 1; justify-content: center; height: 44px; padding: 0 10px; font-size: 14px; }
 }
-/* 메인 홈 공지사항(운영 현황 바로 아래, 입점 배너 위): 공지사항 화면(/guide)과 같은 필독 공지·운영 공지 줄 + 눈에 띄는 연두 아이콘·진한 "공지사항 바로보기" 버튼 */
+/* 메인 홈 공지사항(운영 현황·입점 배너 아래, 2026-11-24부터 흰색 디자인 — 파일 맨 아래 "메인 홈 공지사항 흰색 디자인"): 공지사항 화면(/guide)과 같은 필독 공지·운영 공지 줄 */
 .home-notice-board { margin: 16px 0; padding: 22px 26px 24px; border: 1px solid var(--w-card-border); border-radius: var(--w-radius-xl); background: linear-gradient(145deg, #fff 0%, #fbfef8 55%, #f1fbe9 100%); box-shadow: 0 12px 30px rgba(22, 51, 0, .07); }
 .home-notice-board a { color: inherit; text-decoration: none; }
 .home-notice-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
@@ -3813,4 +3813,119 @@ body, .public-app, .admin-shell, .admin-main { background: var(--w-canvas); }
   .catalog-main .weather-region-list { grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 5px; }
   .catalog-main .weather-region-list > button { padding-left: 3px; padding-right: 3px; }
   .catalog-main .weather-region-list small { overflow: visible; line-height: 1.25; text-overflow: clip; white-space: normal; }
+}
+
+/* ── 메인 홈 공지사항 흰색 디자인(2026-11-24, 관리자 요청 "공지사항은 조금 다른 디자인으로 그냥 흰색 느낌으로 하는게 더 깔끔") ──
+   메인 홈(.catalog-main) 공지 칸만 바꿉니다: 흰 바탕 + 연한 테두리, 연두 윗선·그라데이션 없음, 진한 버튼 대신 흰 테두리 버튼,
+   공지 줄은 카드·왼쪽 색 띠 대신 가는 구분선 목록. 색은 "필독 공지"·"★ 최신" 작은 알약에만 남깁니다.
+   공지사항 화면(/guide)의 필독 띠·공지 줄 모양은 그대로입니다. */
+.catalog-main > .home-notice-board {
+  --home-accent: transparent;
+  padding-bottom: 14px;
+  border-color: #e3e8df !important;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(22, 51, 0, .04), 0 10px 28px rgba(22, 51, 0, .05) !important;
+}
+.catalog-main > .home-notice-board .home-notice-head { margin-bottom: 4px; border-bottom-color: #edf0ea; }
+.catalog-main > .home-notice-board .home-notice-icon { color: #2c3428; background: #f3f6f0; box-shadow: inset 0 0 0 1px #e3e8df; }
+.catalog-main > .home-notice-board .home-notice-title .section-kicker { color: #6a7a62; }
+.catalog-main > .home-notice-board .home-notice-more { color: var(--w-ink); background: #fff; box-shadow: inset 0 0 0 1px #d4dbcf; }
+.catalog-main > .home-notice-board .home-notice-more:hover { color: var(--w-ink); background: #f5f7f3; }
+/* 필독 공지: 노란 띠 대신 흰 줄 + 왼쪽 "필독 공지" 알약(공지 줄의 날짜 칸과 같은 폭) */
+.catalog-main > .home-notice-board .must-read-banner {
+  grid-template-columns: 132px minmax(0, 1fr) auto;
+  gap: 22px;
+  margin: 0;
+  padding: 16px 22px;
+  border: 0;
+  border-radius: 0;
+  color: var(--w-ink);
+  background: #fff;
+  box-shadow: none;
+}
+.catalog-main > .home-notice-board .must-read-banner:hover { background: #f7f9f5; }
+.catalog-main > .home-notice-board .must-read-banner > span { justify-self: start; font-size: 12px; }
+.catalog-main > .home-notice-board .must-read-banner strong { color: var(--w-ink); font-size: 16px; font-weight: 800; }
+.catalog-main > .home-notice-board .must-read-banner small { color: #8a9584; font-size: 12.5px; }
+.catalog-main > .home-notice-board .must-read-banner > svg { color: #a3ad9d; }
+/* 공지 줄: 가는 구분선 목록 */
+.catalog-main > .home-notice-board .home-notice-list { display: flex; flex-direction: column; gap: 0; }
+.catalog-main > .home-notice-board .home-notice-list .notice-row-button,
+.catalog-main > .home-notice-board .home-notice-list .notice-row-button.is-latest {
+  border: 0 !important;
+  border-top: 1px solid #edf0ea !important;
+  border-radius: 0;
+  background: #fff !important;
+  box-shadow: none !important;
+  transform: none;
+}
+.catalog-main > .home-notice-board .home-notice-head + .home-notice-list .notice-row-button:first-child { border-top-color: transparent !important; }
+.catalog-main > .home-notice-board .home-notice-list .notice-row-button:hover { background: #f7f9f5 !important; transform: none; }
+.catalog-main > .home-notice-board .home-notice-list .notice-row-button::after { display: none; }
+.catalog-main > .home-notice-board .home-notice-list .notice-row-button > span { color: #5f6b59; font-size: 14px; }
+.catalog-main > .home-notice-board .home-notice-list p { color: #6b7566; font-size: 14.5px; }
+.catalog-main > .home-notice-board .home-notice-list .notice-row-button > svg { color: #a3ad9d; }
+.catalog-main > .home-notice-board :is(.must-read-banner, .notice-row-button):focus-visible { outline: 3px solid rgba(75, 154, 47, .28); outline-offset: -3px; }
+@media (max-width: 720px) {
+  .catalog-main > .home-notice-board { padding-bottom: 8px; }
+  .catalog-main > .home-notice-board .must-read-banner { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 14px 6px; }
+  .catalog-main > .home-notice-board .must-read-banner > svg { display: none; }
+  .catalog-main > .home-notice-board .home-notice-list .notice-row-button { padding: 14px 6px; }
+  .catalog-main > .home-notice-board .home-notice-list .notice-row-button > span { font-size: 13px; }
+  .catalog-main > .home-notice-board .home-notice-list p { font-size: 14px; }
+}
+
+/* ── 관리자(마스터) 로그인: 왼쪽 실사 농가 사진 + 오른쪽 밝은 연두빛 배경(2026-11-24, 관리자 요청
+   "진짜 농가 실사 사진 느낌을 왼쪽에 두고, 오른쪽 회색 느낌을 다른 느낌으로") ──
+   사진: Unsplash 무료 사진(Unsplash License — 상업 이용 가능, 출처 표시 의무 없음, Unsplash+ 아님)
+   https://images.unsplash.com/photo-1586771107445-d3ca888129ff 를 4:5로 잘라 WebP로 줄였습니다
+   (public/assets/login/admin-login-farm.webp 1600px 약 190KB · admin-login-farm-sm.webp 900px 약 100KB).
+   로고는 사진 위라 흰 로고, 큰 제목은 사진 아래쪽 어두운 곳에 둡니다. 공급사 로그인(.supplier-login-page)은 그대로입니다. */
+.master-login-page .login-brand-panel {
+  position: relative;
+  isolation: isolate;
+  justify-content: flex-start;
+  gap: 28px;
+  overflow: hidden;
+  color: #fff;
+  border-right: 0;
+  background: #24331a url("/assets/login/admin-login-farm.webp") center 58% / cover no-repeat;
+}
+.master-login-page .login-brand-panel::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(8, 22, 4, .62) 0%, rgba(8, 22, 4, .18) 22%, rgba(8, 22, 4, .12) 40%, rgba(7, 19, 3, .62) 66%, rgba(5, 15, 2, .9) 100%),
+    linear-gradient(90deg, rgba(5, 15, 2, .45) 0%, rgba(5, 15, 2, 0) 75%);
+  content: "";
+}
+.master-login-page .login-brand-panel > .public-brand { margin-bottom: auto; }
+.master-login-page .login-brand-panel .doogo-logo { filter: drop-shadow(0 1px 10px rgba(0, 0, 0, .35)); }
+.master-login-page .login-kicker { color: #b9f28f; }
+.master-login-page .login-brand-panel h1 { color: #fff; text-shadow: 0 2px 24px rgba(0, 0, 0, .28); }
+.master-login-page .login-brand-panel h1 .hero-highlight { color: var(--w-ink-deep); background: var(--w-primary); border-radius: .1em; text-shadow: none; }
+.master-login-page .login-brand-panel p { color: rgba(255, 255, 255, .86); }
+.master-login-page .login-brand-footer small { color: rgba(255, 255, 255, .72); }
+.master-login-page .login-landing-actions button,
+.master-login-page .login-landing-actions a { border-color: rgba(255, 255, 255, .72); color: #fff; background: rgba(255, 255, 255, .1); backdrop-filter: blur(6px); }
+.master-login-page .login-landing-actions button:hover,
+.master-login-page .login-landing-actions a:hover { background: rgba(255, 255, 255, .22); }
+.master-login-page .login-landing-actions :is(button, a):focus-visible { outline: 3px solid var(--w-primary); outline-offset: 3px; }
+/* 오른쪽: 회색 대신 흰 바탕 + 연두 빛 번짐 + 옅은 점 무늬 */
+.master-login-page .login-form-panel {
+  background:
+    radial-gradient(circle at 86% 10%, rgba(159, 232, 112, .32) 0, rgba(159, 232, 112, 0) 44%),
+    radial-gradient(circle at 10% 94%, rgba(75, 154, 47, .13) 0, rgba(75, 154, 47, 0) 46%),
+    radial-gradient(rgba(22, 51, 0, .075) 1px, transparent 1.4px) 0 0 / 22px 22px,
+    #fbfdf8;
+}
+.master-login-page .login-card { border-color: #e1e9da; box-shadow: 0 1px 3px rgba(22, 51, 0, .05), 0 28px 70px rgba(22, 51, 0, .13); }
+.master-login-page .login-icon { color: var(--w-ink-deep); background: var(--w-primary); }
+@media (max-width: 1050px) {
+  .master-login-page .login-brand-panel { min-height: 380px; gap: 18px; padding: 24px 24px 26px; border-bottom: 0; background-position: center 62%; }
+}
+@media (max-width: 720px) {
+  .master-login-page .login-brand-panel { min-height: 420px; padding: 22px 20px 24px; background-image: url("/assets/login/admin-login-farm-sm.webp"); }
+  .master-login-page .login-brand-panel h1 { font-size: 32px; }
 }

@@ -551,9 +551,10 @@ export function AdminLoginPage() {
   };
 
   return (
-    <main className="admin-login-page">
+    // 관리자 로그인만 왼쪽에 실사 농가 사진을 둡니다(2026-11-24, wise-theme.css "관리자(마스터) 로그인"). 사진 위라 흰 로고를 씁니다.
+    <main className="admin-login-page master-login-page">
       <section className="login-brand-panel">
-        <Link to="/" className="public-brand"><DoogoLogo /></Link>
+        <Link to="/" className="public-brand"><DoogoLogo light /></Link>
         <div><span className="login-kicker">MASTER CONSOLE</span><h1>상품과 가격 변동을<br /><mark className="hero-highlight">한 곳에서</mark> 관리하세요.</h1><p>상품 등록부터 카테고리, 공지, 소싱 요청과 가격 이력까지 연결된 운영 공간입니다.</p></div>
         <div className="login-brand-footer">
           <small>© 2026 DOOGO FOOD</small>
@@ -842,7 +843,8 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
       }
     };
     void loadOperations();
-    const stopOperations = startVisibleInterval(() => void loadOperations(), 60 * 1000);
+    // 운영 현황은 서버가 5분 동안 같은 값을 다시 쓰므로 화면도 보일 때만 5분마다 받습니다.
+    const stopOperations = startVisibleInterval(() => void loadOperations(), 5 * 60 * 1000);
     const clockTimer = window.setInterval(() => setClock(new Date()), 1000);
     return () => {
       active = false;

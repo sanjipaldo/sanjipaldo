@@ -323,15 +323,23 @@ describe("내 후보 · 기기 옮기기 코드", () => {
 });
 
 describe("메인 홈", () => {
-  it("이번 달 제철 백과사전 미리보기를 보여 주고, /?q=부사로 들어오면 단가표를 그 이름으로 찾습니다", async () => {
+  it("제철 백과사전 미리보기는 메인에서 빼고(2026-11-24) 입점 배너를 단가표 위에 두며, /?q=부사로 들어오면 단가표를 그 이름으로 찾습니다", async () => {
     const { CatalogHome } = await import("@/pages/catalog/PublicCatalog");
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={[`/?q=${encodeURIComponent("부사")}`]}>
         <Routes><Route path="/" element={<CatalogHome />} /></Routes>
       </MemoryRouter>
     );
-    expect(await screen.findByRole("heading", { level: 2, name: /제철 백과사전/ })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "백과사전 전체 보기" }).getAttribute("href")).toBe("/encyclopedia");
-    expect((screen.getByPlaceholderText("상품명, 원산지 검색") as HTMLInputElement).value).toBe("부사");
+    const search = (await screen.findByPlaceholderText("상품명, 원산지 검색")) as HTMLInputElement;
+    await waitFor(() => expect(search.value).toBe("부사"));
+    expect(screen.queryByRole("heading", { level: 2, name: /제철 백과사전/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: "백과사전 전체 보기" })).toBeNull();
+    const banner = container.querySelector(".catalog-main > .partner-banner");
+    const hero = container.querySelector(".catalog-main > .catalog-hero");
+    expect(banner).toBeTruthy();
+    expect(hero).toBeTruthy();
+    expect(banner!.compareDocumentPosition(hero!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const operations = container.querySelector(".catalog-main > .operations-overview");
+    if (operations) expect(operations.compareDocumentPosition(banner!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
