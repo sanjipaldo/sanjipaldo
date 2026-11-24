@@ -1,0 +1,124 @@
+/* 관리자 운영 홈(2026-11-24, AdminHomeBoard.tsx): 칸(위젯) 격자 + 칸 편집(손잡이로 끌어 옮기기·↑↓·반 칸/한 줄·빼기·+ 칸 추가).
+   카드 모양은 관리자 공용(.admin-card·.admin-home-stat·.sales-kpi-grid)을 그대로 쓰고, 이 화면만의 모양은 ahb- 이름으로 둡니다. */
+.ahb-board { display: grid; gap: 18px; min-width: 0; }
+.ahb-board .outline-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 0 14px; border: 1px solid var(--w-ink, #0e0f0c); border-radius: 999px; color: var(--w-ink, #0e0f0c); background: #fff; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.ahb-board .outline-button:hover { background: var(--w-soft-2, #f2f4f1); }
+.ahb-heading { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 0 !important; }
+.ahb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ahb-period { gap: 6px; }
+.ahb-edit-toggle { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 16px; border: 1px solid var(--w-ink, #0e0f0c); border-radius: 999px; color: var(--w-ink, #0e0f0c); background: #fff; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.ahb-edit-toggle:hover { background: var(--w-soft-2, #f2f4f1); }
+.ahb-edit-toggle.is-on { color: #fff; background: var(--w-ink, #0e0f0c); }
+.ahb-edit-toggle:focus-visible { outline: 3px solid var(--w-primary, #9fe870); outline-offset: 2px; }
+.ahb-editbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 16px; border: 1px dashed #9fd6a8; border-radius: 16px; color: var(--w-body, #454745); background: #f6fcf3; font-size: 13px; line-height: 1.55; }
+.ahb-editbar > span:first-child { flex: 1 1 360px; }
+.ahb-editbar svg { display: inline-block; vertical-align: -2px; }
+.ahb-save-state { color: var(--w-positive-deep, #054d28); font-weight: 700; }
+
+/* 격자: PC 두 칸(반 칸 = 한 칸, 한 줄 = 두 칸), 1050px 이하 한 칸 */
+.ahb-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 18px; align-items: stretch; }
+.ahb-widget { position: relative; display: flex; flex-direction: column; min-width: 0; border-radius: 26px; container-type: inline-size; transition: opacity .15s, outline-color .15s; outline: 2px solid transparent; outline-offset: 6px; }
+.ahb-widget.size-full { grid-column: 1 / -1; }
+.ahb-widget > .admin-card, .ahb-widget > .ahb-block { flex: 1 1 auto; margin: 0 !important; }
+.ahb-widget .admin-home-panel { min-height: 0; }
+.ahb-widget .admin-home-stat-grid, .ahb-widget .sales-kpi-grid { margin: 0 !important; }
+.ahb-widget .sa-notice { margin-top: 10px; }
+
+/* 칸 도구: 마우스를 올리면(PC) 오른쪽 위에, "화면 편집" 중에는 늘 보입니다. */
+.ahb-tools { position: absolute; top: -15px; right: 16px; z-index: 5; display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--w-line, #d8dcd5); border-radius: 999px; background: #fff; box-shadow: 0 6px 18px rgba(14, 15, 12, .13); opacity: 0; pointer-events: none; transform: translateY(4px); transition: opacity .15s, transform .15s; }
+.ahb-tools button, .ahb-handle { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 999px; color: var(--w-ink, #0e0f0c); background: transparent; cursor: pointer; }
+.ahb-tools button:hover, .ahb-handle:hover { background: var(--w-soft-2, #f2f4f1); }
+.ahb-tools button:disabled { opacity: .28; cursor: default; }
+.ahb-tools button:focus-visible { outline: 2px solid var(--w-ink, #0e0f0c); outline-offset: 1px; }
+.ahb-tools .is-remove:hover { color: var(--w-negative, #d03238); background: #fde8e8; }
+.ahb-handle { cursor: grab; }
+.ahb-handle:active { cursor: grabbing; }
+@media (hover: hover) {
+  .ahb-widget:hover > .ahb-tools { opacity: 1; pointer-events: auto; transform: none; }
+  .ahb-widget:hover { outline-color: rgba(159, 232, 112, .75); }
+}
+/* 마우스가 있는 기기에서 키보드로 칸 안을 다닐 때도(:focus-visible) 도구를 보입니다. 휴대폰(마우스 없음)은 막대·링크를 눌러도
+   도구가 제목을 가리지 않고, "화면 편집"을 켜서 옮기기·빼기를 합니다. :has를 모르는 브라우저에서 아래 편집 규칙까지 버려지지 않게 따로 씁니다. */
+@media (hover: hover) {
+  .ahb-widget:has(:focus-visible) > .ahb-tools { opacity: 1; pointer-events: auto; transform: none; }
+}
+.ahb-grid.is-editing .ahb-tools { opacity: 1; pointer-events: auto; transform: none; }
+.ahb-grid.is-editing .ahb-widget { outline: 2px dashed #b7dfa0; }
+.ahb-grid.is-dragging .ahb-widget:hover > .ahb-tools { opacity: 0; }
+
+/* 끌어 옮기는 중: 놓을 자리를 초록 선으로(반 칸은 왼쪽·오른쪽, 한 줄은 위·아래) */
+.ahb-widget.is-dragged { opacity: .4; }
+.ahb-widget.is-drop-before::before, .ahb-widget.is-drop-after::after { content: ""; position: absolute; z-index: 6; border-radius: 999px; background: #2ead4b; box-shadow: 0 0 0 3px rgba(46, 173, 75, .18); pointer-events: none; }
+.ahb-widget.size-half.is-drop-before::before { top: 8px; bottom: 8px; left: -12px; width: 4px; }
+.ahb-widget.size-half.is-drop-after::after { top: 8px; bottom: 8px; right: -12px; width: 4px; }
+.ahb-widget.size-full.is-drop-before::before { top: -13px; left: 8px; right: 8px; height: 4px; }
+.ahb-widget.size-full.is-drop-after::after { bottom: -13px; left: 8px; right: 8px; height: 4px; }
+
+/* 카드 묶음 칸(판매 요약·매출처·공급사·상품 현황) 제목 줄 */
+.ahb-block { display: grid; align-content: start; gap: 12px; min-width: 0; }
+.ahb-block-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 0 4px; }
+.ahb-block-head svg { color: var(--w-positive-deep, #054d28); }
+.ahb-block-head h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.02em; }
+.ahb-block-head > span { color: var(--w-mute, #868685); font-size: 12.5px; font-weight: 600; }
+.ahb-block-head > a, .ahb-inline-link { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; color: var(--w-positive-deep, #054d28); font-size: 12.5px; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.ahb-block-head > a:hover, .ahb-inline-link:hover { text-decoration: underline; }
+.sa-home-card .card-heading > a { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; color: var(--w-positive-deep, #054d28); font-size: 12.5px; font-weight: 800; text-decoration: none; white-space: nowrap; }
+
+/* 매출처·공급사 */
+.ahb-members { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ahb-member-card { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 18px 20px; border: 1px solid var(--w-card-border, #e6e9e3); border-radius: var(--w-radius-xl, 24px); background: var(--w-canvas, #fff); box-shadow: var(--w-card-shadow, none); }
+.ahb-member-top { display: flex; align-items: center; gap: 8px; color: var(--w-body, #454745); font-size: 14px; font-weight: 700; }
+.ahb-member-icon { display: grid; flex: 0 0 auto; place-items: center; width: 32px; height: 32px; border-radius: 10px; color: var(--w-ink-deep, #163300); background: var(--w-primary-pale, #e2f6d5); }
+.ahb-member-top a { display: inline-flex; align-items: center; margin-left: auto; color: var(--w-positive-deep, #054d28); font-size: 12px; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.ahb-member-card > strong { color: var(--w-ink, #0e0f0c); font-size: 32px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.ahb-member-card > strong small { margin-left: 3px; font-size: 16px; font-weight: 700; }
+.ahb-member-card > p { margin: 0; color: var(--w-body, #454745); font-size: 12.5px; line-height: 1.5; }
+.ahb-member-card > small { color: var(--w-mute, #868685); font-size: 12px; line-height: 1.5; }
+.ahb-member-card .ahb-basis { color: #8a9584; font-size: 11.5px; }
+.ahb-member-card.is-empty p { color: var(--w-body, #454745); font-size: 13px; }
+.ahb-change { display: inline-flex; align-items: center; gap: 5px; justify-self: start; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 800; }
+.ahb-change em { font-style: normal; font-weight: 700; opacity: .85; }
+.ahb-change.is-up { color: #0c5a2e; background: #dff5e3; }
+.ahb-change.is-down { color: #a72027; background: #fde8e8; }
+.ahb-change.is-flat { color: var(--w-body, #454745); background: var(--w-soft-2, #f2f4f1); }
+
+/* 불러오는 중·안내 */
+.ahb-state { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 22px 18px; border: 1px dashed var(--w-line, #d8dcd5); border-radius: 18px; color: var(--w-body, #454745); font-size: 13px; line-height: 1.55; }
+.ahb-state .spinner { width: 18px; height: 18px; }
+.ahb-state.is-message svg { flex: 0 0 auto; color: var(--w-mute, #868685); }
+.ahb-state.is-message span { flex: 1 1 220px; }
+.ahb-empty { grid-column: 1 / -1; padding: 28px; border: 1px dashed var(--w-line, #d8dcd5); border-radius: 18px; color: var(--w-body, #454745); text-align: center; }
+
+/* + 칸 추가 */
+.ahb-add { grid-column: 1 / -1; display: grid; gap: 10px; }
+.ahb-add-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 18px; border: 1.5px dashed #b9cdb1; border-radius: 16px; color: var(--w-body, #454745); background: #fbfcfa; font-size: 14px; font-weight: 700; cursor: pointer; }
+.ahb-add-toggle:hover:not(:disabled) { border-color: #2ead4b; color: var(--w-ink, #0e0f0c); background: #f3fbef; }
+.ahb-add-toggle:disabled { cursor: default; opacity: .6; }
+.ahb-add-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ahb-add-list li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--w-line, #d8dcd5); border-radius: 14px; background: #fff; }
+.ahb-add-list li > span { display: grid; flex: 1 1 auto; gap: 2px; min-width: 0; }
+.ahb-add-list strong { font-size: 14px; }
+.ahb-add-list small { color: var(--w-mute, #868685); font-size: 12px; line-height: 1.45; }
+
+/* 칸 안쪽: 반 칸처럼 좁으면 카드 네 개를 두 줄로 */
+@container (max-width: 760px) {
+  .sales-kpi-grid, .admin-home-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@container (max-width: 470px) {
+  .ahb-members { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 1050px) {
+  .ahb-grid { grid-template-columns: minmax(0, 1fr); }
+  .ahb-widget.size-half.is-drop-before::before { top: -13px; bottom: auto; left: 8px; right: 8px; width: auto; height: 4px; }
+  .ahb-widget.size-half.is-drop-after::after { top: auto; bottom: -13px; left: 8px; right: 8px; width: auto; height: 4px; }
+  .ahb-add-list { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .ahb-heading { align-items: stretch; }
+  .ahb-actions { width: 100%; justify-content: space-between; }
+  .ahb-grid { gap: 26px 0; }
+  .ahb-tools { right: 10px; }
+  .ahb-member-card { padding: 16px; }
+  .ahb-member-card > strong { font-size: 28px; }
+}

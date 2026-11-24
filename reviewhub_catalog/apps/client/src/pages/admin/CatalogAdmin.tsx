@@ -18,7 +18,6 @@ import {
   Download,
   FileSpreadsheet,
   History,
-  Info,
   LogOut,
   Menu,
   PackagePlus,
@@ -52,7 +51,8 @@ import {
   BarChart3,
   Users,
   Receipt,
-  HandCoins
+  HandCoins,
+  UserCog
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
@@ -73,7 +73,7 @@ import { SELLER_GUIDE_SETTING_KEY, SELLER_VIDEO_GROUPS, hasSellerDemo, parseSell
 import { NEW_PRODUCT_DEFAULT_DAYS, NEW_PRODUCT_MAX_DAYS, NEW_PRODUCT_SETTING_KEY, createdDayKey, newProductDayKeys, parseNewProductSettings, relativeDayName, seoulDayKey, shortDayLabel } from "@/lib/new-products";
 import type { AdminCatalogData, AdminHomeData, Category, GuideContent, Notice, OperationsOverview, PriceHistory, Product, ProductGroup, ProductOption, ShippingPolicy, ShippingRateTiers, ShippingRateType, ShippingType, SourcingRequest, Supplier } from "../catalog/types";
 
-type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "supplierRequests" | "notices" | "usageGuide" | "encyclopedia" | "history" | "sourcing" | "sync" | "backup" | "sales" | "buyers" | "taxInvoices" | "settlements";
+type AdminSection = "home" | "products" | "newProducts" | "bundles" | "sort" | "categories" | "shippingPolicies" | "suppliers" | "supplierRequests" | "notices" | "usageGuide" | "encyclopedia" | "history" | "sourcing" | "sync" | "backup" | "sales" | "buyers" | "taxInvoices" | "settlements" | "admins";
 
 // 공급사 센터 관련 관리자 화면(변경 요청 검토 · 공급사 계정 창)은 처음 열 때만 불러옵니다.
 const SupplierRequestsAdmin = lazy(() => import("./SupplierPortalAdmin").then((module) => ({ default: module.SupplierRequestsAdmin })));
@@ -88,6 +88,9 @@ const SalesDashboardAdmin = lazy(() => import("./SalesDashboardAdmin").then((mod
 const BuyersAdmin = lazy(() => import("./BuyersAdmin").then((module) => ({ default: module.BuyersAdmin })));
 const TaxInvoiceAdmin = lazy(() => import("./TaxInvoiceAdmin").then((module) => ({ default: module.TaxInvoiceAdmin })));
 const SupplierSettlementsAdmin = lazy(() => import("./SupplierSettlementsAdmin").then((module) => ({ default: module.SupplierSettlementsAdmin })));
+// 운영 홈(2026-11-24: 판매 요약·매출처·공급사·칸 편집)과 관리자 계정(서브 마스터)은 처음 열 때 불러옵니다.
+const AdminHomeBoard = lazy(() => import("./AdminHomeBoard"));
+const AdminAccountsAdmin = lazy(() => import("./AdminAccountsAdmin").then((module) => ({ default: module.AdminAccountsAdmin })));
 type ProductOptionDraft = Pick<ProductOption, "id" | "name" | "costPrice" | "aPrice" | "generalPrice" | "salePrice" | "salePriceMode" | "isSoldOut" | "sortOrder">;
 type BulkWorkbookPreview = {
   totalRows: number;
@@ -602,7 +605,8 @@ const adminNav: Array<{ section: AdminSection; label: string; icon: typeof Boxes
   { section: "notices", label: "공지·필독", icon: Bell, group: "operations" },
   { section: "usageGuide", label: "사용방법 관리", icon: BookOpen, group: "operations" },
   { section: "encyclopedia", label: "백과사전 검색량", icon: Search, group: "operations" },
-  { section: "backup", label: "DB 백업", icon: DatabaseBackup, group: "operations" }
+  { section: "backup", label: "DB 백업", icon: DatabaseBackup, group: "operations" },
+  { section: "admins", label: "관리자 계정", icon: UserCog, group: "operations" }
 ];
 
 // 왼쪽 메뉴 묶음을 접어 둔 상태는 이 기기에 기억합니다(노트북처럼 화면이 낮으면 잘 안 쓰는 묶음을 접어 한 화면에 맞춤).
@@ -677,6 +681,10 @@ function seasonApplies(product: Pick<Product, "isAlwaysOnSale" | "saleStartMonth
 
 export function CatalogAdmin({ section }: { section: AdminSection }) {
   const navigate = useNavigate();
+  // 로그인한 관리자 이름(메인 마스터 "마스터 관리자", 서브 마스터는 만들 때 정한 이름 — 2026-11-24 관리자 계정)
+  const { data: adminSession } = authClient.useSession();
+  const adminName = adminSession?.user?.name || "관리자";
+  const isPrimaryAdmin = adminSession?.user?.id === "reviewhub-master-admin";
   const cachedData = adminDataCache.get(section);
   const [data, setData] = useState<AdminCatalogData>(cachedData ?? emptyData);
   const [homeData, setHomeData] = useState<AdminHomeData | null>(section === "home" ? adminHomeCache : null);
@@ -716,7 +724,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
     // Bundles load only their group payload on demand. Fetching the complete
     // 2,347-product catalog here made the bundle list wait for data it never
     // renders.
-    const childOwnsData = new Set<AdminSection>(["bundles", "shippingPolicies", "suppliers", "supplierRequests", "sync", "backup", "encyclopedia", "sales", "buyers", "taxInvoices", "settlements"]);
+    const childOwnsData = new Set<AdminSection>(["bundles", "shippingPolicies", "suppliers", "supplierRequests", "sync", "backup", "encyclopedia", "sales", "buyers", "taxInvoices", "settlements", "admins"]);
     if (childOwnsData.has(section)) {
       if (!silent) setLoading(false);
       return;
@@ -863,7 +871,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
     <div className="admin-shell">
       <aside className={`admin-sidebar is-master ${sidebarOpen ? "open" : ""}`}>
         <div className="admin-brand"><Link to="/admin/home" aria-label="관리자 홈으로 이동"><DoogoLogo /></Link><button onClick={() => setSidebarOpen(false)} aria-label="메뉴 닫기"><X size={20} /></button></div>
-        <div className="admin-role"><ShieldCheck size={17} /><span><small>MASTER</small><strong>마스터 관리자</strong></span></div>
+        <div className="admin-role"><ShieldCheck size={17} /><span><small>{isPrimaryAdmin ? "MASTER" : "SUB MASTER"}</small><strong>{adminName}</strong></span></div>
         <Link to="/admin/products" className="admin-sidebar-primary" onClick={() => setSidebarOpen(false)}><Plus size={17} /> 상품 등록</Link>
         <nav ref={navRef} onScroll={updateNavScroll} className={`${navScroll.up ? "can-scroll-up" : ""} ${navScroll.down ? "can-scroll-down" : ""}`} aria-label="관리자 메뉴">
           {adminNav.map((item, index) => {
@@ -889,11 +897,11 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
       </aside>
       {sidebarOpen && <button className="admin-sidebar-backdrop" type="button" onClick={() => setSidebarOpen(false)} aria-label="관리자 메뉴 닫기" />}
       <main className="admin-main">
-        <header className="admin-topbar"><button className="mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="메뉴 열기"><Menu size={21} /></button><div><strong>{adminNav.find((item) => item.section === section)?.label}</strong><span>DOOGO FOOD 상품 정보 운영</span></div><div className="admin-topbar-tools"><button type="button" className="today-chip" onClick={() => setOperationsOpen(true)}><CalendarDays size={14} /> 오늘 운영</button><span className="admin-chip"><ShieldCheck size={15} /> 마스터 관리자</span></div></header>
+        <header className="admin-topbar"><button className="mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="메뉴 열기"><Menu size={21} /></button><div><strong>{adminNav.find((item) => item.section === section)?.label}</strong><span>DOOGO FOOD 상품 정보 운영</span></div><div className="admin-topbar-tools"><button type="button" className="today-chip" onClick={() => setOperationsOpen(true)}><CalendarDays size={14} /> 오늘 운영</button><span className="admin-chip"><ShieldCheck size={15} /> {adminName}</span></div></header>
         <div className="admin-content">
           {loading ? <div className="admin-loading inline"><div className="spinner" /><span>데이터 불러오는 중…</span></div> : (
             <>
-              {section === "home" && <AdminHome data={homeData} />}
+              {section === "home" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>운영 홈을 불러오는 중…</span></div>}><AdminHomeBoard overview={homeData} /></Suspense>}
               {section === "products" && <ProductsAdmin data={data} refresh={refresh} updateData={setData} />}
               {section === "bundles" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>옵션 묶음을 불러오는 중…</span></div>}><ProductGroupsAdmin /></Suspense>}
               {section === "newProducts" && <NewProductsAdmin data={data} refresh={refresh} />}
@@ -909,6 +917,7 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
               {section === "sourcing" && <SourcingAdmin data={data} refresh={refresh} />}
               {section === "sync" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>발주오라 동기화를 불러오는 중…</span></div>}><BaljuoraSyncAdmin /></Suspense>}
               {section === "backup" && <BackupAdmin />}
+              {section === "admins" && <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>관리자 계정을 불러오는 중…</span></div>}><AdminAccountsAdmin /></Suspense>}
               {(section === "sales" || section === "buyers" || section === "taxInvoices" || section === "settlements") && (
                 <Suspense fallback={<div className="admin-loading inline"><div className="spinner" /><span>불러오는 중…</span></div>}>
                   {section === "sales" && <SalesDashboardAdmin />}
@@ -951,58 +960,6 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
         </div>
       )}
     </div>
-  );
-}
-
-function AdminHome({ data }: { data: AdminHomeData | null }) {
-  if (!data) {
-    return <div className="admin-loading inline"><div className="spinner" /><span>운영 요약을 불러오는 중…</span></div>;
-  }
-  const { overview, baljuora } = data;
-  return (
-    <>
-      <div className="admin-page-heading admin-home-heading">
-        <div>
-          <span>DOOGO FOOD DATA CENTER</span>
-          <h1>운영 홈</h1>
-          <p>상품, 가격, 소싱 요청과 발주오라 연결 상태를 한눈에 확인합니다.</p>
-        </div>
-      </div>
-      <section className="admin-home-hero">
-        <div>
-          <span className="section-kicker">TODAY AT DOOGO FOOD</span>
-          <h2>데이터센터가 오늘도 준비되어 있습니다.</h2>
-          <p>실제 DB에 저장된 상품과 요청만 집계해 보여드립니다.</p>
-        </div>
-        <div className="admin-home-live"><span className="live-dot" /> 실시간 DB 요약</div>
-      </section>
-      <div className="admin-home-stat-grid">
-        <Link className="admin-home-stat featured" to="/admin/products"><span>전체 상품</span><strong>{overview.productCount.toLocaleString("ko-KR")}</strong><small>노출 {overview.visibleProductCount.toLocaleString("ko-KR")}개</small></Link>
-        <Link className="admin-home-stat" to="/admin/products"><span>판매중 상품</span><strong>{Math.max(0, overview.visibleProductCount - overview.soldOutProductCount).toLocaleString("ko-KR")}</strong><small>현재 공개 공급 상품</small></Link>
-        <Link className="admin-home-stat" to="/admin/products"><span>품절 상품</span><strong>{overview.soldOutProductCount.toLocaleString("ko-KR")}</strong><small>관리자에서 품절 처리한 상품</small></Link>
-        <Link className="admin-home-stat" to="/admin/history"><span>가격변동 로그</span><strong>{overview.priceHistoryCount.toLocaleString("ko-KR")}</strong><small>전체 누적 이력</small></Link>
-      </div>
-      <div className="admin-home-grid">
-        <section className="admin-card admin-home-panel">
-          <div className="card-heading"><ClipboardList size={19} /><div><h2>입점·소싱 요청</h2><p>새로 들어온 소싱 요청과 입점 신청 처리 현황입니다.</p></div><Link to="/admin/sourcing">전체 보기 <ChevronRight size={14} /></Link></div>
-          <div className="admin-home-request-stats">
-            <Link to="/admin/sourcing?status=received"><span>접수</span><strong>{overview.sourcingCounts.received}</strong></Link>
-            <Link to="/admin/sourcing?status=reviewing"><span>검토중</span><strong>{overview.sourcingCounts.reviewing}</strong></Link>
-            <Link to="/admin/sourcing?status=completed"><span>완료</span><strong>{overview.sourcingCounts.completed}</strong></Link>
-          </div>
-        </section>
-        <section className="admin-card admin-home-panel">
-          <div className="card-heading"><RefreshCw size={19} /><div><h2>발주오라 동기화</h2><p>DB센터에서 고친 상품을 발주오라 도매몰에 반영합니다.</p></div><Link to="/admin/sync">동기화하기 <ChevronRight size={14} /></Link></div>
-          {baljuora.ready ? (
-            <div className="admin-home-connection-meta"><div><span>연결 상품</span><b>{baljuora.linkedCount.toLocaleString("ko-KR")}개</b></div><div><span>마지막 동기화</span><b>{baljuora.lastPushAt ? formatDateTime(baljuora.lastPushAt) : "아직 없음"}</b></div></div>
-          ) : <div className="admin-home-unavailable"><Info size={18} /><span>DB 업데이트(034)가 적용되면 사용할 수 있습니다.</span></div>}
-        </section>
-        <section className="admin-card admin-home-panel admin-home-notice-panel">
-          <div className="card-heading"><Bell size={19} /><div><h2>최근 공지</h2><p>공개 공지사항에 표시되는 내용입니다.</p></div><Link to="/admin/notices">관리 <ChevronRight size={14} /></Link></div>
-          <div className="admin-home-notices">{overview.recentNotices.length > 0 ? overview.recentNotices.map((notice) => <Link key={notice.id} to="/admin/notices"><span>{notice.isPinned ? "필독" : "공지"}</span><strong>{notice.title}</strong><small>{notice.updatedAt.slice(0, 10)}</small></Link>) : <div className="admin-home-unavailable"><Info size={18} /><span>등록된 공지가 없습니다.</span></div>}</div>
-        </section>
-      </div>
-    </>
   );
 }
 

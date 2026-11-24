@@ -52,11 +52,15 @@ export async function getCatalogVersion(now = Date.now()): Promise<string> {
 }
 
 // 관리자(/admin/*)·동기화 결과(/runner/:code/results) 라우터에 붙입니다. 저장(GET·HEAD·OPTIONS가 아닌 요청)이 성공하면 바뀜 표시를 새로 적습니다.
+// 운영 홈 화면 배치·관리자 계정처럼 공개 단가표와 상관없는 저장은 바뀜 표시를 적지 않습니다(공개 화면이 괜히 전체를 다시 받지 않게).
+const NON_CATALOG_ADMIN_PATH = /\/admin\/(home-layout|admins)(\/|$)/;
+
 export const catalogRevisionMiddleware: MiddlewareHandler = async (c, next) => {
   await next();
   const method = c.req.method;
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return;
   if (c.res.status >= 400) return;
+  if (NON_CATALOG_ADMIN_PATH.test(c.req.path)) return;
   await bumpCatalogRevision();
 };
 

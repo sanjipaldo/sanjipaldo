@@ -84,6 +84,7 @@ const App = () => (
           <Route path="/admin/buyers" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="buyers" /></AdminGuard>} />
           <Route path="/admin/taxInvoices" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="taxInvoices" /></AdminGuard>} />
           <Route path="/admin/settlements" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="settlements" /></AdminGuard>} />
+          <Route path="/admin/admins" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="admins" /></AdminGuard>} />
           <Route path="/admin/notices" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="notices" /></AdminGuard>} />
           <Route path="/admin/usageGuide" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="usageGuide" /></AdminGuard>} />
           <Route path="/admin/encyclopedia" element={<AdminGuard redirectTo="/admin"><CatalogAdmin section="encyclopedia" /></AdminGuard>} />

@@ -191,7 +191,11 @@ describe("발주오라 판매·매출처 → 판매 현황·매출처·홈택스
     expect(stored.rows.find((row) => row.id === "i-3")?.saleDate).toBe(today);
 
     // 판매 현황(이번 달): 주문대기(i-4)는 매출에서 빼고 따로 알림
+    await executeSql("UPDATE products SET imageUrl = ? WHERE id = ?", ["https://img.test/apple.jpg", "sl-apple"]);
     const summary = await call<any>(admin, `/admin/sales/summary?from=${firstDay}&to=${today}`);
+    // 상품 썸네일(2026-11-24): DB센터 상품과 이어진 줄만 그 상품 이미지
+    expect(summary.topProducts.find((item: any) => item.name === "사과 5kg")?.imageUrl).toBe("https://img.test/apple.jpg");
+    expect(summary.topProducts.find((item: any) => item.name === "발주오라에만 있는 김")?.imageUrl).toBeNull();
     expect(summary.totals).toMatchObject({ amount: 52000 + 76000 + 33000 + 20000, quantity: 2 + 2 + 1 + 4, orders: 4, buyers: 2, returnAmount: 38000 });
     expect(summary.pending).toEqual({ count: 1, amount: 130000 });
     expect(summary.topProducts.map((item: any) => [item.name, item.amount])).toEqual([["배 7kg", 76000], ["사과 5kg", 52000], ["홍삼정", 33000], ["발주오라에만 있는 김", 20000]]);

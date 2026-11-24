@@ -75,6 +75,8 @@ import {
   DEFAULT_CONTRACT_OPTIONS
 } from "../services/catalog-excel";
 import { getCatalogOperationsOverview } from "../services/catalog-operations";
+import { getAdminHomeLayout, getMemberStats, resetAdminHomeLayout, saveAdminHomeLayout } from "../services/admin-home";
+import { AdminAccountError, changeOwnAdminPassword, createAdminAccount, deleteAdminAccount, listAdminAccounts, resetAdminPassword } from "../services/admin-accounts";
 import { SHIPPING_RATE_TYPES, SHIPPING_UNIT_LABELS, validateRateTiers } from "../services/shipping-rates";
 import { getBaljuoraHomeSummary } from "../services/baljuora-sync";
 import { StorageError, storagePut } from "../services/s3_storage";
@@ -823,6 +825,57 @@ catalogRouter.get("/admin/sourcing", adminRoute, async (c) => c.json(apiSuccess(
 catalogRouter.get("/admin/overview", adminRoute, async (c) => {
   const [overview, baljuora] = await Promise.all([getAdminOverview(), getBaljuoraHomeSummary()]);
   return c.json(apiSuccess({ overview, baljuora }));
+});
+
+// 운영 홈(2026-11-24): 매출처(셀러)·공급사 총수와 30일 전 대비 증감, 아이디(로그인 계정)마다 저장하는 화면 배치
+catalogRouter.get("/admin/member-stats", adminRoute, async (c) => c.json(apiSuccess(await getMemberStats())));
+catalogRouter.get("/admin/home-layout", adminRoute, async (c) => c.json(apiSuccess({ layout: await getAdminHomeLayout(c.var.currentUser.id) })));
+catalogRouter.put("/admin/home-layout", adminRoute, async (c) => {
+  const layout = await saveAdminHomeLayout(c.var.currentUser.id, await c.req.json().catch(() => null));
+  if (!layout) return c.json(apiFailure("VALIDATION_ERROR", "화면 배치 형식이 올바르지 않아요."), 400);
+  return c.json(apiSuccess({ layout }));
+});
+catalogRouter.delete("/admin/home-layout", adminRoute, async (c) => c.json(apiSuccess(await resetAdminHomeLayout(c.var.currentUser.id))));
+
+// 관리자 계정(2026-11-24, 서브 마스터 MD): 같은 권한(role admin)의 계정 만들기·비밀번호 새로 정하기·지우기·내 비밀번호 바꾸기
+function adminAccountResponse(c: Context, error: unknown) {
+  if (error instanceof AdminAccountError) {
+    const status = error.status === 403 || error.status === 404 || error.status === 409 ? error.status : 400;
+    return c.json(apiFailure(status === 400 ? "VALIDATION_ERROR" : status === 403 ? "FORBIDDEN" : status === 404 ? "NOT_FOUND" : "CONFLICT", error.message), status);
+  }
+  throw error;
+}
+catalogRouter.get("/admin/admins", adminRoute, async (c) => c.json(apiSuccess({ admins: await listAdminAccounts(c.var.currentUser.id) })));
+catalogRouter.post("/admin/admins", adminRoute, async (c) => {
+  try {
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    return c.json(apiSuccess({ admin: await createAdminAccount(body, c.var.currentUser.id) }), 201);
+  } catch (error) {
+    return adminAccountResponse(c, error);
+  }
+});
+catalogRouter.post("/admin/admins/me/password", adminRoute, async (c) => {
+  try {
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    return c.json(apiSuccess(await changeOwnAdminPassword(c.var.currentUser.id, body.currentPassword, body.newPassword, c.var.session?.id)));
+  } catch (error) {
+    return adminAccountResponse(c, error);
+  }
+});
+catalogRouter.put("/admin/admins/:id/password", adminRoute, async (c) => {
+  try {
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    return c.json(apiSuccess(await resetAdminPassword(c.req.param("id"), body.password, c.var.currentUser.id)));
+  } catch (error) {
+    return adminAccountResponse(c, error);
+  }
+});
+catalogRouter.delete("/admin/admins/:id", adminRoute, async (c) => {
+  try {
+    return c.json(apiSuccess(await deleteAdminAccount(c.req.param("id"), c.var.currentUser.id)));
+  } catch (error) {
+    return adminAccountResponse(c, error);
+  }
 });
 
 

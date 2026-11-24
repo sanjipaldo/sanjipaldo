@@ -67,7 +67,8 @@
 
 .sa-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .sa-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.sa-grid-2 > .admin-card, .sa-grid-3 > .admin-card { min-width: 0; }
+/* 그리드 안 카드는 위아래 간격 규칙(.admin-card + .admin-card)을 쓰지 않아 나란한 카드의 윗선이 어긋나지 않게 */
+.sa-page .sa-grid-2 > .admin-card, .sa-page .sa-grid-3 > .admin-card { min-width: 0; margin-top: 0; }
 
 /* 순위 목록 */
 .sa-rank-list { display: grid; gap: 4px; margin: 14px 0 0; padding: 0; list-style: none; }
@@ -85,13 +86,62 @@
 .sa-share i { display: block; flex: 1 1 auto; height: 6px; max-width: 120px; border-radius: 999px; background: linear-gradient(90deg, #2ead4b, #9fe870); }
 .sa-share em { color: var(--w-body, #454745); font-size: 11.5px; font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
 
-/* 날짜별 막대 */
-.sa-bars { display: flex; align-items: flex-end; gap: 3px; height: 190px; margin-top: 16px; padding: 0 2px 20px; border-bottom: 1px solid #edf0eb; }
-.sa-bars span { position: relative; display: flex; flex: 1 1 0; align-items: flex-end; height: 100%; min-width: 2px; }
-.sa-bars i { display: block; width: 100%; border-radius: 4px 4px 0 0; background: #b9e3c6; }
-.sa-bars span:hover i { background: #2ead4b; }
-.sa-bars span.is-today i { background: var(--w-ink-deep, #163300); }
-.sa-bars em { position: absolute; bottom: -19px; left: 50%; transform: translateX(-50%); color: var(--w-mute, #868685); font-size: 10px; font-style: normal; }
+/* 날짜별 막대(2026-11-24: 막대마다 단추 — 마우스를 올리거나 누르거나 키보드로 고르면 위쪽 말풍선에 그날 판매 금액을 원 단위로).
+   위쪽 66px은 말풍선 자리라 막대가 올라오지 않습니다. */
+.sa-chart { display: grid; gap: 6px; min-width: 0; }
+.sa-bars { position: relative; display: flex; align-items: flex-end; gap: 3px; height: 236px; margin-top: 10px; padding: 66px 2px 20px; border-bottom: 1px solid #edf0eb; }
+.sa-bar { position: relative; display: flex; flex: 1 1 0; align-items: flex-end; height: 100%; min-width: 2px; padding: 0; border: 0; border-radius: 4px 4px 0 0; background: transparent; cursor: pointer; }
+.sa-bar i { display: block; width: 100%; border-radius: 4px 4px 0 0; background: #b9e3c6; transition: background .12s; }
+.sa-bar:hover i, .sa-bar.is-active i { background: #2ead4b; }
+.sa-bar.is-today i { background: var(--w-ink-deep, #163300); }
+.sa-bar.is-today:hover i, .sa-bar.is-today.is-active i { background: #2f6418; }
+.sa-bar:focus-visible { outline: 2px solid var(--w-ink, #0e0f0c); outline-offset: 2px; }
+.sa-bar em { position: absolute; bottom: -19px; left: 50%; transform: translateX(-50%); color: var(--w-mute, #868685); font-size: 10px; font-style: normal; pointer-events: none; }
+.sa-bar-tip { position: absolute; top: 0; z-index: 2; display: grid; gap: 1px; min-width: 150px; padding: 8px 12px; border-radius: 12px; color: #fff; background: var(--w-ink, #0e0f0c); box-shadow: 0 10px 24px rgba(0, 0, 0, .18); transform: translateX(-50%); pointer-events: none; white-space: nowrap; }
+.sa-bar-tip.is-start { transform: translateX(-14%); }
+.sa-bar-tip.is-end { transform: translateX(-86%); }
+.sa-bar-tip span { color: rgba(255, 255, 255, .72); font-size: 11.5px; font-weight: 600; }
+.sa-bar-tip strong { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.sa-bar-tip small { color: rgba(255, 255, 255, .8); font-size: 11.5px; }
+.sa-chart-foot { margin: 10px 2px 0; color: var(--w-body, #454745); font-size: 12.5px; line-height: 1.6; }
+.sa-chart-foot b { color: var(--w-ink, #0e0f0c); font-variant-numeric: tabular-nums; }
+
+/* 상품 썸네일(2026-11-24): 오늘 잘 팔린 상품·TOP 10 */
+.sa-thumb { display: block; flex: 0 0 auto; border-radius: 10px; object-fit: cover; background: #f3f5f1; box-shadow: inset 0 0 0 1px rgba(14, 15, 12, .06); }
+.sa-thumb.is-empty { display: grid !important; place-items: center; color: #a3ad9d; }
+.sa-product-list li { grid-template-columns: 30px 44px minmax(0, 1fr) auto; }
+.sa-product-list strong { font-size: 14.5px; }
+.sa-product-list em { font-size: 15px; }
+.sa-product-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.sa-product-cell strong { font-size: 15px !important; line-height: 1.4; }
+.sa-top-table td { vertical-align: middle; }
+.sa-top-table .sa-qty b { display: block; font-size: 15.5px; font-weight: 800; white-space: nowrap; }
+.sa-top-table .sa-qty small { font-size: 13px !important; }
+.sa-top-table .sa-amount b { font-size: 16.5px; font-weight: 800; white-space: nowrap; }
+/* 좁은 칸(휴대폰 · 운영 홈 반 칸)에서는 상품 판매 TOP 10을 상품마다 짧은 카드 한 장으로:
+   순위 | 썸네일 · 상품명 · 공급사 · 카테고리 / 수량 · 판매 금액 / 비중 (예전 휴대폰 카드는 상품 하나가 한 화면 가까이 차지) */
+.sa-top-box { container-type: inline-size; }
+.sa-product-text { display: grid; gap: 3px; min-width: 0; }
+.sa-top-box .sa-top-table .sa-product-meta { display: none; margin: 0; color: var(--w-mute, #868685); font-size: 12px; line-height: 1.4; }
+@container (max-width: 640px) {
+  .sa-top-box .admin-table-wrap { overflow: visible; border: 0; border-radius: 0; background: none; box-shadow: none; }
+  .sa-top-box table.sa-top-table, .sa-top-box table.sa-top-table tbody { display: block; width: 100%; min-width: 0 !important; }
+  .sa-top-box table.sa-top-table thead { display: none; }
+  .sa-top-box table.sa-top-table tbody { display: grid; gap: 8px; }
+  .sa-top-box table.sa-top-table tbody tr { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "rank product product" "rank qty amount" "rank share share"; align-items: center; gap: 8px 10px; padding: 12px 14px 12px 10px; border: 1px solid var(--w-line, #d8dcd5); border-radius: 16px; background: #fff; overflow: hidden; }
+  .sa-top-box table.sa-top-table tbody tr td { display: block; min-width: 0; padding: 0 !important; border: 0 !important; background: none !important; font-size: 14px !important; white-space: normal !important; }
+  .sa-top-box table.sa-top-table tbody tr td::before { content: none !important; }
+  .sa-top-box table.sa-top-table tbody tr td:nth-child(1) { grid-area: rank; align-self: start; padding-top: 10px !important; }
+  .sa-top-box table.sa-top-table tbody tr td:nth-child(2) { grid-area: product; }
+  .sa-top-box table.sa-top-table tbody tr td:nth-child(3), .sa-top-box table.sa-top-table tbody tr td:nth-child(4) { display: none; }
+  .sa-top-box table.sa-top-table tbody tr td.sa-qty { grid-area: qty; display: flex; flex-direction: row; align-items: baseline; gap: 6px; }
+  .sa-top-box .sa-top-table .sa-qty b { display: inline; }
+  .sa-top-box table.sa-top-table tbody tr td.sa-amount { grid-area: amount; text-align: right; }
+  .sa-top-box table.sa-top-table tbody tr td:last-child { grid-area: share; }
+  .sa-top-box .sa-product-cell strong { font-size: 14.5px !important; }
+  .sa-top-box .sa-top-table .sa-product-meta { display: block; }
+  .sa-top-box .sa-share i { max-width: none; }
+}
 
 /* 표 공통 */
 .sa-table td small { display: block; margin-top: 2px; color: var(--w-mute, #868685); font-size: 12px; line-height: 1.45; }
@@ -203,7 +253,8 @@
   .sa-period button { min-height: 36px; padding: 0 12px; font-size: 13px; }
   .sa-period-label, .sa-period-dates { width: 100%; margin-left: 0; }
   .sa-period-dates input { flex: 1 1 0; min-width: 0; }
-  .sa-bars { height: 150px; }
+  .sa-bars { height: 200px; padding-top: 62px; }
+  .sa-product-list li { grid-template-columns: 28px 40px minmax(0, 1fr) auto; gap: 8px; }
   .sa-search { width: 100%; }
   .sa-form-grid { grid-template-columns: 1fr; }
   .sa-modal-backdrop { align-items: end; padding: 0; }
@@ -219,3 +270,19 @@
   .sa-table td.stack-wide, .sa-table td.sa-wide-mobile { grid-column: 1 / -1; }
   .sa-settle-actions .primary-action { width: 100%; }
 }
+
+/* 관리자 계정(2026-11-24, AdminAccountsAdmin.tsx) */
+.aa-table td strong { margin-right: 6px; }
+.aa-table .sa-badge { margin: 2px 4px 2px 0; }
+.aa-table td small { color: var(--w-mute, #868685); }
+.aa-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.aa-page .aa-danger { border-color: #e7b9bb; color: var(--w-negative, #d03238); }
+.aa-page .aa-danger:hover { background: #fde8e8; }
+.aa-inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.aa-inline-form input { flex: 1 1 160px; min-width: 0; min-height: 38px; padding: 0 12px; border: 1px solid var(--w-line, #d8dcd5); border-radius: 10px; font-size: 13.5px; }
+.aa-form { margin-top: 14px; }
+.aa-wide { grid-column: 1 / -1; }
+/* 팝업용 "휴대폰에서 아래에 붙는 버튼 줄"(.sa-modal-actions sticky)은 이 화면의 폼에서는 입력칸을 가려 쓰지 않음 */
+.aa-page .sa-modal-actions { position: static; padding-top: 0; background: none; }
+.aa-page .primary-action { border-radius: 999px; color: var(--w-ink, #0e0f0c); background: var(--w-primary, #9fe870); }
+.aa-page .primary-action:hover:not(:disabled) { background: var(--w-primary-active, #8bd65c); }

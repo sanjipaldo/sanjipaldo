@@ -408,7 +408,7 @@ export type SalesSyncState = {
   error: string | null;
 };
 
-const revenueWhere = (): SQL => sql`(${baljuoraSalesLines.status} IS NULL OR lower(${baljuoraSalesLines.status}) NOT IN (${sql.join(SALES_EXCLUDED_STATUSES.map((status) => sql`${status}`), sql`, `)}))`;
+export const revenueWhere = (): SQL => sql`(${baljuoraSalesLines.status} IS NULL OR lower(${baljuoraSalesLines.status}) NOT IN (${sql.join(SALES_EXCLUDED_STATUSES.map((status) => sql`${status}`), sql`, `)}))`;
 
 /** 공급사 센터용 supplier_sales(날짜·공급사·상품별 판매·반품)를 판매 줄로 다시 만듭니다. */
 async function rebuildSupplierSales(start: string, end: string) {
@@ -546,6 +546,11 @@ export async function getSalesDashboard(input: { from?: string | null; to?: stri
     ]);
     const categoryName = new Map(categoryNames.map((row) => [row.id, row.name]));
     const named = <T extends { categoryId: string | null }>(row: T) => ({ ...row, categoryName: row.categoryId ? categoryName.get(row.categoryId) ?? "(삭제된 카테고리)" : "DB센터 미연결 상품" });
+    // 상품 썸네일(2026-11-24 관리자 요청 "잘 팔린 상품·TOP 10 앞에 상품 이미지"): DB센터 상품과 이어진 줄만 그 상품 이미지를 붙입니다.
+    const imageIds = [...new Set([...products10, ...todayTop].map((row) => row.productId).filter((id): id is string => Boolean(id)))];
+    const imageRows = imageIds.length > 0 ? await db.select({ id: products.id, imageUrl: products.imageUrl }).from(products).where(inArray(products.id, imageIds)) : [];
+    const imageById = new Map(imageRows.map((row) => [row.id, row.imageUrl]));
+    const withImage = <T extends { productId: string | null; categoryId: string | null }>(row: T) => ({ ...named(row), imageUrl: row.productId ? imageById.get(row.productId) ?? null : null });
     return {
       from,
       to,
@@ -554,9 +559,9 @@ export async function getSalesDashboard(input: { from?: string | null; to?: stri
       totals,
       previous: { from: previous.start, to: previous.end, amount: previousTotals.amount, orders: previousTotals.orders },
       pending: { count: Number(pendingRows[0]?.count ?? 0), amount: Number(pendingRows[0]?.amount ?? 0) },
-      todaySales: { totals: todayTotals, topProducts: todayTop.map(named) },
+      todaySales: { totals: todayTotals, topProducts: todayTop.map(withImage) },
       daily: daily.map((row) => ({ date: row.date, amount: Number(row.amount), orders: Number(row.orders), quantity: Number(row.quantity) })),
-      topProducts: products10.map(named),
+      topProducts: products10.map(withImage),
       topSuppliers: suppliers10.map((row) => ({ name: row.name, amount: Number(row.amount), quantity: Number(row.quantity), products: Number(row.products) })),
       categories: categoryRows.map((row) => named({ categoryId: row.categoryId, amount: Number(row.amount), quantity: Number(row.quantity) })),
       topBuyers: buyers10.map((row) => ({ key: row.key, name: row.name, amount: Number(row.amount), orders: Number(row.orders), quantity: Number(row.quantity) })),
