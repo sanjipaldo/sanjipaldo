@@ -57,6 +57,7 @@ import {
 import { toast } from "sonner";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 import { apiFetch } from "@/lib/api";
+import { startVisibleInterval } from "@/lib/visible-interval";
 import { baljuoraPriceCells, isLegacyBaljuoraRecord, type BaljuoraProductPrices } from "@/lib/baljuora-editor-prices";
 import { EncyclopediaSearchAdmin } from "./EncyclopediaSearchAdmin";
 import { CategoriesAdmin } from "./CategoriesAdmin";
@@ -824,8 +825,8 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
 
   useEffect(() => {
     void refreshSupplierPending();
-    const timer = window.setInterval(() => void refreshSupplierPending(), 60 * 1000);
-    return () => window.clearInterval(timer);
+    // 관리자 화면을 열어 두기만 한 숨은 탭에서는 서버를 부르지 않습니다(화면이 보일 때만 1분마다).
+    return startVisibleInterval(() => void refreshSupplierPending(), 60 * 1000);
   }, [refreshSupplierPending]);
 
   useEffect(() => {
@@ -841,11 +842,11 @@ export function CatalogAdmin({ section }: { section: AdminSection }) {
       }
     };
     void loadOperations();
-    const operationsTimer = window.setInterval(() => void loadOperations(), 60 * 1000);
+    const stopOperations = startVisibleInterval(() => void loadOperations(), 60 * 1000);
     const clockTimer = window.setInterval(() => setClock(new Date()), 1000);
     return () => {
       active = false;
-      window.clearInterval(operationsTimer);
+      stopOperations();
       window.clearInterval(clockTimer);
     };
   }, []);

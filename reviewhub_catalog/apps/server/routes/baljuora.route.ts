@@ -38,8 +38,12 @@ import {
 } from "../services/baljuora-sales";
 import { BUYER_OVERRIDE_FIELDS } from "@repo/shared/baljuora-sales";
 import { SUPPLIER_SETTLEMENT_STATUSES } from "@repo/shared/supplier-portal";
+import { catalogRevisionMiddleware } from "../services/catalog-version";
 
 export const baljuoraRouter = new Hono();
+// 관리자 저장·책갈피 결과가 성공하면 공개 단가표 "바뀜 표시"를 새로 적습니다(services/catalog-version.ts).
+baljuoraRouter.use("/admin/*", catalogRevisionMiddleware);
+baljuoraRouter.use("/runner/:code/results", catalogRevisionMiddleware);
 
 function errorResponse(c: Context, error: unknown) {
   if (error instanceof DatabaseError) {

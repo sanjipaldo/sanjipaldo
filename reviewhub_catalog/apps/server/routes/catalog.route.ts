@@ -27,7 +27,6 @@ import {
   getAdminCategoriesSummary,
   getSuppliers,
   getShippingPolicies,
-  getPublicCatalog,
   getPublicPriceHistory,
   getMonthlyActivity,
   getPublicCatalogInitial,
@@ -81,6 +80,7 @@ import { getBaljuoraHomeSummary } from "../services/baljuora-sync";
 import { StorageError, storagePut } from "../services/s3_storage";
 import { allowSyncCreate, createEncyclopediaSave, getEncyclopediaSave, isMissingSyncTable, normalizeSyncCode, updateEncyclopediaSave } from "../services/encyclopedia-sync";
 import { NAVER_SEARCH_ENV, NaverSearchError, checkNaverSearch, missingNaverEnv, naverSearchConfig, readProduceSearchStats, refreshProduceSearch } from "../services/naver-search";
+import { catalogRevisionMiddleware, getCatalogVersion, publicCatalogBody } from "../services/catalog-version";
 import {
   approveSupplierRequest,
   createSupplierAccount,
@@ -405,6 +405,8 @@ function shippingPolicyError(error: z.ZodError) {
 }
 
 export const catalogRouter = new Hono();
+// 관리자 저장이 성공하면 공개 단가표 "바뀜 표시"를 새로 적습니다(화면은 이 표시가 바뀔 때만 전체 목록을 다시 받음, services/catalog-version.ts).
+catalogRouter.use("/admin/*", catalogRevisionMiddleware);
 
 function errorResponse(c: Context, error: unknown) {
   if (error instanceof DatabaseError) {
@@ -418,8 +420,19 @@ function errorResponse(c: Context, error: unknown) {
   throw error;
 }
 
-catalogRouter.get("", publicRoute, async (c) => c.json(apiSuccess(await getPublicCatalog())));
-catalogRouter.get("/", publicRoute, async (c) => c.json(apiSuccess(await getPublicCatalog())));
+// 공개 단가표 전체: 같은 버전이면 서버가 만들어 둔 응답을 그대로 보냅니다(응답에 catalogVersion 포함).
+const publicCatalogHandler = async (c: Context) => c.body(await publicCatalogBody(), 200, { "Content-Type": "application/json; charset=UTF-8" });
+catalogRouter.get("", publicRoute, publicCatalogHandler);
+catalogRouter.get("/", publicRoute, publicCatalogHandler);
+// 공개 단가표 버전(아주 가벼움): 화면이 1분마다 묻고, 바뀌었을 때만 전체 목록을 다시 받습니다.
+catalogRouter.get("/version", publicRoute, async (c) => {
+  c.header("Cache-Control", "no-store");
+  try {
+    return c.json(apiSuccess({ version: await getCatalogVersion() }));
+  } catch {
+    return c.json(apiSuccess({ version: null }));
+  }
+});
 catalogRouter.get("/monthly-activity", publicRoute, async (c) => {
   const type = c.req.query("type") === "sold_out" ? "sold_out" : "new_product";
   return c.json(apiSuccess(await getMonthlyActivity(type)));

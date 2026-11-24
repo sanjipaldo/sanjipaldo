@@ -49,6 +49,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
+import { startVisibleInterval } from "@/lib/visible-interval";
+import { useCatalogVersionRef, watchCatalogVersion } from "./catalog-updates";
 import type { CatalogData, GuideContent, Notice, OperationsOverview, PriceHistory, Product, PublicShippingPolicy, ShippingType, SoldOutIssue } from "./types";
 import { PageSizeInput, readStoredPageSize } from "@/components/PageSizeInput";
 import { isMonthInSeason, seasonApplies } from "@repo/shared/supply-status";
@@ -415,29 +417,6 @@ function splitNotices(notices: Notice[]) {
 }
 
 
-// 관리자가 상품·가격을 바꾸면 공개 화면이 곧바로 다시 불러오도록: 창 포커스·탭 복귀·데이터 변경 알림(doogo:catalog-changed)에 반응합니다.
-const CATALOG_CHANGED_EVENT = "doogo:catalog-changed";
-
-function onCatalogRefreshSignal(refresh: () => void) {
-  let lastRun = 0;
-  const run = () => {
-    const now = Date.now();
-    if (now - lastRun < 3000) return;
-    lastRun = now;
-    refresh();
-  };
-  const onVisible = () => {
-    if (document.visibilityState === "visible") run();
-  };
-  window.addEventListener("focus", run);
-  window.addEventListener(CATALOG_CHANGED_EVENT, run);
-  document.addEventListener("visibilitychange", onVisible);
-  return () => {
-    window.removeEventListener("focus", run);
-    window.removeEventListener(CATALOG_CHANGED_EVENT, run);
-    document.removeEventListener("visibilitychange", onVisible);
-  };
-}
 
 // 제철 적용 여부·판매기간 규칙은 서버(상품 엑셀)와 같이 쓰는 공용 모듈에 있습니다.
 export { seasonApplies };
@@ -1708,6 +1687,7 @@ export function CatalogHome() {
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [linkedQuery]);
 
+  const catalogVersionRef = useCatalogVersionRef(data.catalogVersion);
   useEffect(() => {
     let active = true;
     const refreshCatalog = async () => {
@@ -1743,14 +1723,13 @@ export function CatalogHome() {
       });
     };
     retryFullLoad.current = reloadCatalog;
-    const timer = window.setInterval(reloadCatalog, 60 * 1000);
-    const stopRefreshSignal = onCatalogRefreshSignal(reloadCatalog);
+    // 화면이 보일 때만 1분마다(그리고 창에 돌아올 때) '바뀐 게 있는지'만 묻고, 바뀌었을 때만 전체 목록을 다시 받습니다(catalog-updates.ts).
+    const stopWatching = watchCatalogVersion({ currentVersion: () => catalogVersionRef.current, onChange: reloadCatalog });
     return () => {
       active = false;
-      window.clearInterval(timer);
-      stopRefreshSignal();
+      stopWatching();
     };
-  }, []);
+  }, [catalogVersionRef]);
 
   useEffect(() => {
     let active = true;
@@ -1761,11 +1740,12 @@ export function CatalogHome() {
     };
     refreshOperations();
     setClock(new Date());
-    const operationsTimer = window.setInterval(refreshOperations, 60 * 1000);
+    // 운영 현황(날씨·선과장·이번 달 현황)도 화면이 보일 때만 1분마다 새로 받습니다.
+    const stopOperations = startVisibleInterval(refreshOperations, 60 * 1000);
     const clockTimer = window.setInterval(() => setClock(new Date()), 1000);
     return () => {
       active = false;
-      window.clearInterval(operationsTimer);
+      stopOperations();
       window.clearInterval(clockTimer);
     };
   }, []);
@@ -2084,11 +2064,9 @@ export function NoticesPage() {
   const [histories, setHistories] = useState<PriceHistory[] | null>(null);
   useEffect(() => {
     let active = true;
-    const reload = () => { void loadPriceHistory().then((next) => { if (active && next) setHistories(next); }); };
-    reload();
-    const timer = window.setInterval(reload, 60 * 1000);
-    const stop = onCatalogRefreshSignal(reload);
-    return () => { active = false; window.clearInterval(timer); stop(); };
+    // 가격변동은 처음 한 번 받고, 그 뒤에는 아래 단가표 버전 확인에서 바뀌었을 때만 다시 받습니다.
+    void loadPriceHistory().then((next) => { if (active && next) setHistories(next); });
+    return () => { active = false; };
   }, []);
   const [query, setQuery] = useState("");
   // 오늘 날짜는 접속 기기 시계와 상관없이 한국 시간으로 표시하고, 자정이 지나면 바로 바뀝니다.
@@ -2130,6 +2108,7 @@ export function NoticesPage() {
     }
   };
   const downloadLabel = selectedDay === "all" ? "최근 4일" : selectedDay === todayKey ? "오늘" : dayTabLabel(selectedDay);
+  const catalogVersionRef = useCatalogVersionRef(data.catalogVersion);
   useEffect(() => {
     let active = true;
     const reloadCatalog = () => {
@@ -2137,15 +2116,24 @@ export function NoticesPage() {
         if (active && next) setData(next);
       });
     };
+    const reloadHistory = () => {
+      void loadPriceHistory().then((next) => {
+        if (active && next) setHistories(next);
+      });
+    };
     reloadCatalog();
-    const timer = window.setInterval(reloadCatalog, 60 * 1000);
-    const stopRefreshSignal = onCatalogRefreshSignal(reloadCatalog);
+    const stopWatching = watchCatalogVersion({
+      currentVersion: () => catalogVersionRef.current,
+      onChange: () => {
+        reloadCatalog();
+        reloadHistory();
+      }
+    });
     return () => {
       active = false;
-      window.clearInterval(timer);
-      stopRefreshSignal();
+      stopWatching();
     };
-  }, []);
+  }, [catalogVersionRef]);
   return (
     <PageFrame>
       <main className="content-page">
@@ -2177,6 +2165,7 @@ export function NoticesPage() {
 export function SoldOutIssuesPage() {
   const [data, setData] = useState<CatalogData>(emptyCatalogData);
   const [loading, setLoading] = useState(true);
+  const catalogVersionRef = useCatalogVersionRef(data.catalogVersion);
   useEffect(() => {
     let active = true;
     const reloadCatalog = () => {
@@ -2187,14 +2176,12 @@ export function SoldOutIssuesPage() {
       });
     };
     reloadCatalog();
-    const timer = window.setInterval(reloadCatalog, 60 * 1000);
-    const stopRefreshSignal = onCatalogRefreshSignal(reloadCatalog);
+    const stopWatching = watchCatalogVersion({ currentVersion: () => catalogVersionRef.current, onChange: reloadCatalog });
     return () => {
       active = false;
-      window.clearInterval(timer);
-      stopRefreshSignal();
+      stopWatching();
     };
-  }, []);
+  }, [catalogVersionRef]);
   const [query, setQuery] = useState("");
   // 오늘 날짜는 접속 기기 시계와 상관없이 한국 시간으로 표시하고, 자정이 지나면 바로 바뀝니다.
   const [today, setToday] = useState<Date | null>(null);
@@ -2234,6 +2221,7 @@ export function SoldOutIssuesPage() {
 export function NewProductsPage() {
   const [data, setData] = useState<CatalogData>(emptyCatalogData);
   const [loading, setLoading] = useState(true);
+  const catalogVersionRef = useCatalogVersionRef(data.catalogVersion);
   useEffect(() => {
     let active = true;
     const reloadCatalog = () => {
@@ -2244,14 +2232,12 @@ export function NewProductsPage() {
       });
     };
     reloadCatalog();
-    const timer = window.setInterval(reloadCatalog, 60 * 1000);
-    const stopRefreshSignal = onCatalogRefreshSignal(reloadCatalog);
+    const stopWatching = watchCatalogVersion({ currentVersion: () => catalogVersionRef.current, onChange: reloadCatalog });
     return () => {
       active = false;
-      window.clearInterval(timer);
-      stopRefreshSignal();
+      stopWatching();
     };
-  }, []);
+  }, [catalogVersionRef]);
   // 오늘(한국 날짜)은 접속 기기 시간대와 상관없이 맞추고, 자정이 지나면 바로 바뀝니다.
   const [today, setToday] = useState<Date | null>(null);
   useEffect(() => {

@@ -263,6 +263,8 @@ export type CatalogData = {
   recentSoldOutIssues: SoldOutIssue[];
   settings: Record<string, string>;
   isPartial?: boolean;
+  // 공개 단가표 버전(서버 /api/catalog 응답, 2026-11-24): 화면이 1분마다 /api/catalog/version과 비교해 바뀌었을 때만 다시 받습니다.
+  catalogVersion?: string | null;
   catalogTotals?: {
     productCount: number;
     visibleProductCount: number;
